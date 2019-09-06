@@ -531,7 +531,7 @@ void BiDirCPURenderThread::RenderFunc() {
 
 	// Setup the sampler
 	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, engine->film, engine->sampleSplatter,
-			engine->samplerSharedData);
+			engine->samplerSharedData, Properties());
 	const u_int sampleSize = 
 		sampleBootSize + // To generate the initial light vertex and trace eye ray
 		engine->maxLightPathDepth * sampleLightStepSize + // For each light vertex

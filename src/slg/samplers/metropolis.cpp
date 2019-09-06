@@ -46,10 +46,11 @@ SamplerSharedData *MetropolisSamplerSharedData::FromProperties(const Properties 
 
 MetropolisSampler::MetropolisSampler(RandomGenerator *rnd, Film *flm,
 		const FilmSampleSplatter *flmSplatter, const u_int maxRej,
-		const float pLarge, const float imgRange,
+		const float pLarge, const bool imgRangeEnable, const float imgRange,
 		MetropolisSamplerSharedData *samplerSharedData) : Sampler(rnd, flm, flmSplatter),
 		sharedData(samplerSharedData),
-		maxRejects(maxRej),	largeMutationProbability(pLarge), imageMutationRange(imgRange),
+		maxRejects(maxRej),	largeMutationProbability(pLarge),
+		imageMutationRange(imgRange), imageMutationRangeEnable(imgRangeEnable),
 		samples(NULL), sampleStamps(NULL), currentSamples(NULL), currentSampleStamps(NULL),
 		cooldown(true) {
 }
@@ -141,7 +142,7 @@ float MetropolisSampler::GetSample(const u_int index) {
 		s = samples[index];
 
 	// Mutate the sample up to the currentStamp
-	if (film && ((index == 0) || (index == 1))) {
+	if (imageMutationRangeEnable && film && ((index == 0) || (index == 1))) {
 		// 0 and 1 are used for image X/Y
 		for (u_int i = sampleStamp; i < stamp; ++i)
 			s = MutateScaled(s, imageMutationRange, rndGen->floatValue());
@@ -354,10 +355,11 @@ Sampler *MetropolisSampler::FromProperties(const Properties &cfg, RandomGenerato
 		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData) {
 	const float rate = Clamp(cfg.Get(GetDefaultProps().Get("sampler.metropolis.largesteprate")).Get<float>(), 0.f, 1.f);
 	const u_int reject = cfg.Get(GetDefaultProps().Get("sampler.metropolis.maxconsecutivereject")).Get<u_int>();
+	const bool mutationRateEnabled = cfg.Get(GetDefaultProps().Get("sampler.metropolis.imagemutationrate.enable")).Get<bool>();
 	const float mutationRate = Clamp(cfg.Get(GetDefaultProps().Get("sampler.metropolis.imagemutationrate")).Get<float>(), 0.f, 1.f);
 
 	return new MetropolisSampler(rndGen, film, flmSplatter,
-			reject, rate, mutationRate,
+			reject, rate, mutationRateEnabled, mutationRate,
 			(MetropolisSamplerSharedData *)sharedData);
 }
 
@@ -382,6 +384,7 @@ const Properties &MetropolisSampler::GetDefaultProps() {
 			Property("sampler.type")(GetObjectTag()) <<
 			Property("sampler.metropolis.largesteprate")(.4f) <<
 			Property("sampler.metropolis.maxconsecutivereject")(512) <<
+			Property("sampler.metropolis.imagemutationrate.enable")(true) <<
 			Property("sampler.metropolis.imagemutationrate")(.1f);
 
 	return props;

@@ -55,7 +55,7 @@ void RTPathCPURenderThread::RTRenderFunc() {
 	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + 1 + threadIndex);
 	// Setup the sampler
 	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, engine->film, NULL,
-			engine->samplerSharedData);
+			engine->samplerSharedData, Properties());
 	((RTPathCPUSampler *)sampler)->SetRenderEngine(engine);
 	sampler->RequestSamples(PIXEL_NORMALIZED_ONLY, pathTracer.eyeSampleSize);
 

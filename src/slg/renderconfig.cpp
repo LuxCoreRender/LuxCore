@@ -279,8 +279,11 @@ SamplerSharedData *RenderConfig::AllocSamplerSharedData(RandomGenerator *rndGen,
 }
 
 Sampler *RenderConfig::AllocSampler(RandomGenerator *rndGen, Film *film, const FilmSampleSplatter *flmSplatter,
-		SamplerSharedData *sharedData) const {
-	return Sampler::FromProperties(cfg, rndGen, film, flmSplatter, sharedData);
+		SamplerSharedData *sharedData, const Properties &additionalProps) const {
+	Properties props = cfg;
+	props << additionalProps;
+
+	return Sampler::FromProperties(props, rndGen, film, flmSplatter, sharedData);
 }
 
 RenderEngine *RenderConfig::AllocRenderEngine() const {
