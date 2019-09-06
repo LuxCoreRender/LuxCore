@@ -320,6 +320,8 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 	if (isLargeMutation) {
 		stamp = 1;
 		fill(sampleStamps, sampleStamps + requestedSamples, 0);
+		
+		++largeMutationCount;
 	} else
 		++stamp;
 }

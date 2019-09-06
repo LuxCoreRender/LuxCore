@@ -77,6 +77,8 @@ public:
 
 	virtual luxrays::Properties ToProperties() const;
 
+	u_int GetLargeMutationCount() const { return largeMutationCount; }
+	
 	//--------------------------------------------------------------------------
 	// Static methods used by SamplerRegistry
 	//--------------------------------------------------------------------------
@@ -115,6 +117,8 @@ private:
 	MetropolisSampleType lastSampleAcceptance;
 	float lastSampleWeight;
 
+	u_int largeMutationCount;
+	
 	bool isLargeMutation, cooldown;
 };
 

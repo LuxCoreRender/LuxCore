@@ -39,7 +39,6 @@ void LightCPURenderThread::RenderFunc() {
 	//--------------------------------------------------------------------------
 
 	LightCPURenderEngine *engine = (LightCPURenderEngine *)renderEngine;
-	engine->pathTracer.Preprocess(engine->film);
 	const PathTracer &pathTracer = engine->pathTracer;
 	// (engine->seedBase + 1) seed is used for sharedRndGen
 	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + 1 + threadIndex);

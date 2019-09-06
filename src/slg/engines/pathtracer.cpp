@@ -19,13 +19,13 @@
 #include "slg/engines/pathtracer.h"
 #include "slg/engines/caches/photongi/photongicache.h"
 #include "slg/utils/pathinfo.h"
+#include "slg/samplers/metropolis.h"
 
 using namespace std;
 using namespace luxrays;
 using namespace slg;
 
-PathTracer::PathTracer() : pixelFilterDistribution(nullptr), photonGICache(nullptr),
-		mollificationCountersWidth(0), mollificationCountersHeight(0) {
+PathTracer::PathTracer() : pixelFilterDistribution(nullptr), photonGICache(nullptr) {
 }
 
 PathTracer::~PathTracer() {
@@ -55,26 +55,6 @@ void PathTracer::InitEyeSampleResults(const Film *film, vector<SampleResult> &sa
 			Film::ALBEDO | Film::AVG_SHADING_NORMAL | Film::NOISE,
 			film->GetRadianceGroupCount());
 	sampleResult.useFilmSplat = false;
-}
-
-void PathTracer::Preprocess(const Film *film) {
-	boost::unique_lock<boost::mutex> lock(preprocessMutex);
-
-	if (pathSpaceRegularizationEnable) {
-		if ((mollificationCountersWidth != film->GetWidth()) ||
-				(mollificationCountersHeight != film->GetHeight())) {
-			mollificationCountersWidth = film->GetWidth();
-			mollificationCountersHeight = film->GetHeight();
-
-			mollificationCounters.resize(mollificationCountersWidth * mollificationCountersHeight);
-			fill(mollificationCounters.begin(), mollificationCounters.end(), 0);
-		}
-	} else {
-		if (mollificationCounters.size() > 0) {
-			mollificationCounters.clear();
-			mollificationCounters.shrink_to_fit();
-		}
-	}
 }
 
 //------------------------------------------------------------------------------
@@ -608,7 +588,7 @@ static float Mollify(const float mollificationFactor, const Vector &dir,
 }
 
 void PathTracer::ConnectToEye(IntersectionDevice *device, const Scene *scene,
-		const Film *film, const float time, const float u0,
+		const Film *film, Sampler *sampler, const float time, const float u0,
 		const LightSource &light, const BSDF &bsdf, 
 		const Spectrum &flux, const LightPathInfo &pathInfo,
 		vector<SampleResult> &sampleResults) const {
@@ -651,8 +631,11 @@ void PathTracer::ConnectToEye(IntersectionDevice *device, const Scene *scene,
 				if (!PathInfo::IsNearlySpecular(bsdfEvent, bsdf.GetGlossiness(), hybridBackForwardEnable))
 					return;
 
+				// There is a safety check at start of PathTracer::RenderLightSample()
+				MetropolisSampler *metropolisSampler = (MetropolisSampler *)sampler;
+
 				// Mollification shrinkage
-				const u_int mollificationCount = AtomicInc(&mollificationCounters[pixelX + pixelY * mollificationCountersWidth]);
+				const u_int mollificationCount = metropolisSampler->GetLargeMutationCount();
 				const float mollificationFactor = pathSpaceRegularizationScale * powf(1.f + mollificationCount, -1.f / 6.f);
 
 				// Check if the direction is inside the mollification angle
@@ -713,6 +696,10 @@ void PathTracer::ConnectToEye(IntersectionDevice *device, const Scene *scene,
 
 void PathTracer::RenderLightSample(IntersectionDevice *device, const Scene *scene, const Film *film,
 		Sampler *sampler, vector<SampleResult> &sampleResults) const {
+	// A safety check
+	if (pathSpaceRegularizationEnable && (sampler->GetType() != METROPOLIS))
+		throw runtime_error("Path space regularization is supported only with Metropolis sampler, not with sampler: " + ToString(sampler->GetType()));
+
 	sampleResults.clear();
 
 	Spectrum lightPathFlux;
@@ -761,70 +748,69 @@ void PathTracer::RenderLightSample(IntersectionDevice *device, const Scene *scen
 			const bool hit = scene->Intersect(device, true, false, &pathInfo.volume, sampler->GetSample(sampleOffset),
 					&nextEventRay, &nextEventRayHit, &bsdf,
 					&connectionThroughput);
-
-			if (hit) {
-				// Something was hit
-
-				lightPathFlux *= connectionThroughput;
-
-				//--------------------------------------------------------------
-				// Try to connect the light path vertex with the eye
-				//--------------------------------------------------------------
-
-				if (!hybridBackForwardEnable || (pathInfo.depth.depth > 0)) {
-					ConnectToEye(device, scene, film,
-							nextEventRay.time, sampler->GetSample(sampleOffset + 1),
-							*light, bsdf, lightPathFlux, pathInfo, sampleResults);
-				}
-
-				if (pathInfo.depth.depth == maxPathDepth.depth - 1)
-					break;
-
-				//--------------------------------------------------------------
-				// Build the next vertex path ray
-				//--------------------------------------------------------------
-
-				float bsdfPdf;
-				Vector sampledDir;
-				BSDFEvent bsdfEvent;
-				float cosSampleDir;
-				Spectrum bsdfSample = bsdf.Sample(&sampledDir,
-						sampler->GetSample(sampleOffset + 2),
-						sampler->GetSample(sampleOffset + 3),
-						&bsdfPdf, &cosSampleDir, &bsdfEvent);
-				if (bsdfSample.Black())
-					break;	
-
-				pathInfo.AddVertex(bsdf, bsdfEvent, hybridBackForwardGlossinessThreshold);
-				
-				// If it isn't anymore a (nearly) specular path, I can stop
-				if (hybridBackForwardEnable && !pathSpaceRegularizationEnable && !pathInfo.IsSpecularPath())
-					break;
-
-				// If it isn't a S*, S*D or S*DS* path, I can stop
-				if (hybridBackForwardEnable && pathSpaceRegularizationEnable &&
-						(!pathInfo.IsSpecularPath() && !pathInfo.IsSDPath() && !pathInfo.IsSDSPath()))
-					break;
-
-				// Russian Roulette
-				if (pathInfo.UseRR(rrDepth)) {
-					// Russian Roulette
-					const float rrProb = RenderEngine::RussianRouletteProb(bsdfSample, rrImportanceCap);
-					if (rrProb < sampler->GetSample(sampleOffset + 4))
-						break;
-
-					// Increase path contribution
-					bsdfSample /= rrProb;
-				}
-
-				lightPathFlux *= bsdfSample;
-				assert (!lightPathFlux.IsNaN() && !lightPathFlux.IsInf());
-		
-				nextEventRay.Update(bsdf.GetRayOrigin(sampledDir), sampledDir);
-			} else {
+			if (!hit) {
 				// Ray lost in space...
 				break;
 			}
+
+			// Something was hit
+
+			lightPathFlux *= connectionThroughput;
+
+			//--------------------------------------------------------------
+			// Try to connect the light path vertex with the eye
+			//--------------------------------------------------------------
+
+			if (!hybridBackForwardEnable || (pathInfo.depth.depth > 0)) {
+				ConnectToEye(device, scene, film, sampler,
+							nextEventRay.time, sampler->GetSample(sampleOffset + 1),
+						*light, bsdf, lightPathFlux, pathInfo, sampleResults);
+			}
+
+			if (pathInfo.depth.depth == maxPathDepth.depth - 1)
+				break;
+
+			//--------------------------------------------------------------
+			// Build the next vertex path ray
+			//--------------------------------------------------------------
+
+			float bsdfPdf;
+			Vector sampledDir;
+			BSDFEvent bsdfEvent;
+			float cosSampleDir;
+			Spectrum bsdfSample = bsdf.Sample(&sampledDir,
+					sampler->GetSample(sampleOffset + 2),
+					sampler->GetSample(sampleOffset + 3),
+					&bsdfPdf, &cosSampleDir, &bsdfEvent);
+			if (bsdfSample.Black())
+				break;	
+
+			pathInfo.AddVertex(bsdf, bsdfEvent, hybridBackForwardGlossinessThreshold);
+
+			// If it isn't anymore a (nearly) specular path, I can stop
+			if (hybridBackForwardEnable && !pathSpaceRegularizationEnable && !pathInfo.IsSpecularPath())
+				break;
+
+			// If it isn't a S*, S*D or S*DS* path, I can stop
+			if (hybridBackForwardEnable && pathSpaceRegularizationEnable &&
+					(!pathInfo.IsSpecularPath() && !pathInfo.IsSDPath() && !pathInfo.IsSDSPath()))
+				break;
+
+			// Russian Roulette
+			if (pathInfo.UseRR(rrDepth)) {
+				// Russian Roulette
+				const float rrProb = RenderEngine::RussianRouletteProb(bsdfSample, rrImportanceCap);
+				if (rrProb < sampler->GetSample(sampleOffset + 4))
+					break;
+
+				// Increase path contribution
+				bsdfSample /= rrProb;
+			}
+
+			lightPathFlux *= bsdfSample;
+			assert (!lightPathFlux.IsNaN() && !lightPathFlux.IsInf());
+
+			nextEventRay.Update(bsdf.GetRayOrigin(sampledDir), sampledDir);
 		}
 	}
 }

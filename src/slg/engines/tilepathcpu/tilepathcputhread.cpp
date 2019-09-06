@@ -58,7 +58,6 @@ void TilePathCPURenderThread::RenderFunc() {
 	//--------------------------------------------------------------------------
 
 	TilePathCPURenderEngine *engine = (TilePathCPURenderEngine *)renderEngine;
-	engine->pathTracer.Preprocess(engine->film);
 	const PathTracer &pathTracer = engine->pathTracer;
 	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + threadIndex);
 

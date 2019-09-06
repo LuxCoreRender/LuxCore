@@ -52,8 +52,6 @@ public:
 	
 	void ParseOptions(const luxrays::Properties &cfg, const luxrays::Properties &defaultProps);
 
-	void Preprocess(const Film *film);
-
 	void InitEyeSampleResults(const Film *film, std::vector<SampleResult> &sampleResults) const;
 	void RenderEyeSample(luxrays::IntersectionDevice *device, const Scene *scene,
 			const Film *film, Sampler *sampler, std::vector<SampleResult> &sampleResults) const;
@@ -120,19 +118,13 @@ private:
 	SampleResult &AddLightSampleResult(std::vector<SampleResult> &sampleResults,
 			const Film *film) const;
 	void ConnectToEye(luxrays::IntersectionDevice *device, const Scene *scene,
-			const Film *film, const float time, const float u0,
+			const Film *film, Sampler *sampler, const float time, const float u0,
 			const LightSource &light,  const BSDF &bsdf,
 			const luxrays::Spectrum &flux, const LightPathInfo &pathInfo,
 			std::vector<SampleResult> &sampleResults) const;
 
 	FilterDistribution *pixelFilterDistribution;
 	const PhotonGICache *photonGICache;
-	
-	// Used for path space regularization
-	mutable u_int mollificationCountersWidth, mollificationCountersHeight;
-	mutable std::vector<u_int> mollificationCounters;
-
-	boost::mutex preprocessMutex;
 };
 
 }

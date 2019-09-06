@@ -130,6 +130,7 @@ inline std::ostream &operator<<(std::ostream &os, const LightPathInfo &lpi) {
 	os << "LightPathInfo[" <<
 			lpi.depth << ", " <<
 			lpi.volume << ", " <<
+			lpi.lensPoint << ", " <<
 			lpi.lastBSDFEvent << ", " <<
 			lpi.IsSpecularPath() << ", " <<
 			lpi.IsSDPath() << ", " <<
