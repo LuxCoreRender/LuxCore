@@ -193,8 +193,14 @@ void PathOCLNativeRenderThread::RenderThreadImpl() {
 
 		// Variance clamping
 		if (varianceClamping.hasClamping()) {
-			for(u_int i = 0; i < (*sampleResults).size(); ++i)
-				varianceClamping.Clamp(*(engine->film), (*sampleResults)[i]);
+			for(u_int i = 0; i < (*sampleResults).size(); ++i) {
+				SampleResult &sampleResult = (*sampleResults)[i];
+
+				// I clamp only eye paths samples (variance clamping would cut
+				// SDS path values due to high scale of PSR samples)
+				if (sampleResult.HasChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED))
+					varianceClamping.Clamp(*(engine->film), sampleResult);
+			}
 		}
 
 		sampler->NextSample(*sampleResults);
