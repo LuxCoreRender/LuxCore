@@ -24,14 +24,18 @@
 
 OPENCL_FORCE_INLINE void EyePathInfo_Init(__global EyePathInfo *pathInfo) {
 	PathDepthInfo_Init(&pathInfo->depth);
+#if defined(PARAM_HAS_VOLUMES)
 	PathVolumeInfo_Init(&pathInfo->volume);
+#endif
 	
 	pathInfo->isPassThroughPath = true;
 
 	pathInfo->lastBSDFEvent = SPECULAR; // SPECULAR is required to avoid MIS
 	pathInfo->lastBSDFPdfW = 1.f;
 	pathInfo->lastGlossiness = 0.f;
+#if defined(PARAM_HAS_VOLUMES)
 	pathInfo->lastFromVolume = false;
+#endif
 
 	pathInfo->isNearlyCaustic = false;
 	pathInfo->isNearlyS = false;
@@ -67,9 +71,11 @@ OPENCL_FORCE_INLINE void EyePathInfo_AddVertex(__global EyePathInfo *pathInfo,
 
 	// Increment path depth informations
 	PathDepthInfo_IncDepths(&pathInfo->depth, event);
-	
+
+#if defined(PARAM_HAS_VOLUMES)
 	// Update volume information
 	PathVolumeInfo_Update(&pathInfo->volume, event, bsdf MATERIALS_PARAM);
+#endif
 
 	const float glossiness = BSDF_GetGlossiness(bsdf MATERIALS_PARAM);
 	const bool isNewVertexNearlySpecular = EyePathInfo_IsNearlySpecular(pathInfo,
@@ -102,7 +108,9 @@ OPENCL_FORCE_INLINE void EyePathInfo_AddVertex(__global EyePathInfo *pathInfo,
 	pathInfo->lastBSDFPdfW = pdfW;
 	const float3 shadeN = VLOAD3F(&bsdf->hitPoint.shadeN.x);
 	VSTORE3F(bsdf->hitPoint.intoObject ? shadeN : -shadeN, &pathInfo->lastShadeN.x);
+#if defined(PARAM_HAS_VOLUMES)
 	pathInfo->lastFromVolume =  bsdf->isVolume;
+#endif
 	pathInfo->lastGlossiness = glossiness;
 }
 

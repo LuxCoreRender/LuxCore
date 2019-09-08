@@ -58,7 +58,7 @@ typedef enum {
 } PathState;
 
 typedef struct {
-	unsigned int lightIndex;	
+	unsigned int lightIndex;
 	float pickPdf;
 
 	Vector dir;
