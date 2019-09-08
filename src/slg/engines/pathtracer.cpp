@@ -588,7 +588,8 @@ static float Mollify(const float mollificationFactor, const Vector &dir,
 }
 
 void PathTracer::ConnectToEye(IntersectionDevice *device, const Scene *scene,
-		const Film *film, Sampler *sampler, const float time, const float u0,
+		const Film *film, Sampler *sampler, const float time,
+		const float u0,const float u1,
 		const LightSource &light, const BSDF &bsdf, 
 		const Spectrum &flux, const LightPathInfo &pathInfo,
 		vector<SampleResult> &sampleResults) const {
@@ -624,7 +625,7 @@ void PathTracer::ConnectToEye(IntersectionDevice *device, const Scene *scene,
 				BSDFEvent bsdfEvent;
 				float bsdfPdf, cosSampleDir;
 				bsdfEval = bsdf.Sample(&sampledDir,
-						u0,
+						u1,
 						0.f,
 						&bsdfPdf, &cosSampleDir, &bsdfEvent);
 
@@ -764,7 +765,9 @@ void PathTracer::RenderLightSample(IntersectionDevice *device, const Scene *scen
 
 			if (!hybridBackForwardEnable || (pathInfo.depth.depth > 0)) {
 				ConnectToEye(device, scene, film, sampler,
-							nextEventRay.time, sampler->GetSample(sampleOffset + 1),
+						nextEventRay.time,
+						sampler->GetSample(sampleOffset + 1),
+						sampler->GetSample(sampleOffset + 2),
 						*light, bsdf, lightPathFlux, pathInfo, sampleResults);
 			}
 
@@ -780,8 +783,8 @@ void PathTracer::RenderLightSample(IntersectionDevice *device, const Scene *scen
 			BSDFEvent bsdfEvent;
 			float cosSampleDir;
 			Spectrum bsdfSample = bsdf.Sample(&sampledDir,
-					sampler->GetSample(sampleOffset + 2),
 					sampler->GetSample(sampleOffset + 3),
+					sampler->GetSample(sampleOffset + 4),
 					&bsdfPdf, &cosSampleDir, &bsdfEvent);
 			if (bsdfSample.Black())
 				break;	
@@ -801,7 +804,7 @@ void PathTracer::RenderLightSample(IntersectionDevice *device, const Scene *scen
 			if (pathInfo.UseRR(rrDepth)) {
 				// Russian Roulette
 				const float rrProb = RenderEngine::RussianRouletteProb(bsdfSample, rrImportanceCap);
-				if (rrProb < sampler->GetSample(sampleOffset + 4))
+				if (rrProb < sampler->GetSample(sampleOffset + 5))
 					break;
 
 				// Increase path contribution
@@ -872,7 +875,7 @@ void PathTracer::ParseOptions(const luxrays::Properties &cfg, const luxrays::Pro
 	
 	// Update light sample size
 	lightSampleBootSize = 9;
-	lightSampleStepSize = 5;
+	lightSampleStepSize = 6;
 	lightSampleSize = 
 		lightSampleBootSize + // To generate eye ray
 		maxPathDepth.depth * lightSampleStepSize; // For each path vertex
