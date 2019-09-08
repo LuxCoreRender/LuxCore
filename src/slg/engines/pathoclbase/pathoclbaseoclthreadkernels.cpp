@@ -792,7 +792,12 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 	ssKernel <<
 			slg::ocl::KernelSource_bsdfutils_funcs << // Must be before volumeinfo_funcs
 			slg::ocl::KernelSource_volume_funcs <<
-			slg::ocl::KernelSource_volumeinfo_funcs <<
+			slg::ocl::KernelSource_pathdepthinfo_types <<
+			slg::ocl::KernelSource_pathvolumeinfo_types <<
+			slg::ocl::KernelSource_pathinfo_types <<
+			slg::ocl::KernelSource_pathdepthinfo_funcs <<
+			slg::ocl::KernelSource_pathvolumeinfo_funcs <<
+			slg::ocl::KernelSource_pathinfo_funcs <<
 			slg::ocl::KernelSource_camera_funcs <<
 			slg::ocl::KernelSource_dlsc_funcs <<
 			slg::ocl::KernelSource_elvc_funcs <<
@@ -802,7 +807,6 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_sampleresult_funcs <<
 			slg::ocl::KernelSource_filmdenoiser_funcs <<
 			slg::ocl::KernelSource_film_funcs <<
-			slg::ocl::KernelSource_pathdepthinfo_types <<
 			slg::ocl::KernelSource_varianceclamping_funcs <<
 			slg::ocl::KernelSource_sampler_random_funcs <<
 			slg::ocl::KernelSource_sampler_sobol_funcs <<

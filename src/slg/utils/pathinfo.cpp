@@ -88,13 +88,11 @@ void EyePathInfo::AddVertex(const BSDF &bsdf,
 	//--------------------------------------------------------------------------
 
 	// Update isNearlyCaustic
-	if (depth.depth == 0) {
+	isNearlyCaustic = (depth.depth == 0) ?
 		// First vertex must a nearly diffuse
-		isNearlyCaustic = !isNewVertexNearlySpecular;
-	} else {
+		(!isNewVertexNearlySpecular) :
 		// All other vertices must be nearly specular
-		isNearlyCaustic = isNearlyCaustic && isNewVertexNearlySpecular;
-	}
+		(isNearlyCaustic && isNewVertexNearlySpecular);
 	
 	// Update last path vertex information
 	lastBSDFPdfW = pdfW;

@@ -1,4 +1,4 @@
-#line 2 "volumeinfo_funcs.cl"
+#line 2 "pathvolumeinfo_funcs.cl"
 
 /***************************************************************************
  * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *

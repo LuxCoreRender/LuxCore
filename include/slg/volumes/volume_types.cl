@@ -20,14 +20,4 @@
 
 // NOTE: check VolumeParam in material_type.cl for volume definitions
 
-#define OPENCL_PATHVOLUMEINFO_SIZE 8
-
-typedef struct {
-	unsigned int currentVolumeIndex;
-	unsigned int volumeIndexList[OPENCL_PATHVOLUMEINFO_SIZE];
-	unsigned int volumeIndexListSize;
-
-	int scatteredStart;
-} PathVolumeInfo;
-
 typedef Material Volume;

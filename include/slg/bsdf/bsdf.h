@@ -27,6 +27,7 @@
 #include "slg/lights/trianglelight.h"
 #include "slg/materials/material.h"
 #include "slg/volumes/volume.h"
+#include "slg/utils/pathvolumeinfo.h"
 #include "slg/bsdf/bsdfevents.h"
 #include "slg/bsdf/hitpoint.h"
 

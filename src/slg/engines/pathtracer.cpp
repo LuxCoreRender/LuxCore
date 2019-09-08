@@ -857,6 +857,9 @@ void PathTracer::ParseOptions(const luxrays::Properties &cfg, const luxrays::Pro
 	forceBlackBackground = cfg.Get(defaultProps.Get("path.forceblackbackground.enable")).Get<bool>();
 	
 	hybridBackForwardEnable = cfg.Get(defaultProps.Get("path.hybridbackforward.enable")).Get<bool>();
+	// hybridBackForwardGlossinessThreshold is used by LIGHTCPU when PSR is enabled
+	// so I have always to set the value
+	hybridBackForwardGlossinessThreshold = .05f;
 	if (hybridBackForwardEnable) {
 		hybridBackForwardPartition = Clamp(cfg.Get(defaultProps.Get("path.hybridbackforward.partition")).Get<float>(), 0.f, 1.f);
 		hybridBackForwardGlossinessThreshold = Clamp(cfg.Get(defaultProps.Get("path.hybridbackforward.glossinessthreshold")).Get<float>(), 0.f, 1.f);

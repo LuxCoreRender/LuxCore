@@ -23,7 +23,7 @@
 
 #include "slg/slg.h"
 #include "slg/utils/pathdepthinfo.h"
-#include "slg/volumes/volume.h"
+#include "slg/utils/pathvolumeinfo.h"
 
 namespace slg {
 

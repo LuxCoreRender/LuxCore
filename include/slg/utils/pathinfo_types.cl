@@ -1,4 +1,4 @@
-#line 2 "varianceclamping_funcs.cl"
+#line 2 "pathinfo_types.cl"
 
 /***************************************************************************
  * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
@@ -17,3 +17,21 @@
  * See the License for the specific language governing permissions and     *
  * limitations under the License.                                          *
  ***************************************************************************/
+
+typedef struct {
+	PathDepthInfo depth;
+	PathVolumeInfo volume;
+
+	int isPassThroughPath;
+
+	// Last path vertex information
+	BSDFEvent lastBSDFEvent;
+	float lastBSDFPdfW;
+	float lastGlossiness;
+	Normal lastShadeN;
+	bool lastFromVolume;
+
+	int isNearlyCaustic;
+	// Specular, Specular+ Diffuse and Specular+ Diffuse Specular+ paths
+	int isNearlyS, isNearlySD, isNearlySDS;
+} EyePathInfo;

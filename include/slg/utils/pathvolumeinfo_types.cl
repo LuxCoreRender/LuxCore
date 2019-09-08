@@ -1,4 +1,4 @@
-#line 2 "pathdepthinfo_types.cl"
+#line 2 "pathvolumeinfo_types.cl"
 
 /***************************************************************************
  * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
@@ -18,6 +18,12 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#define OPENCL_PATHVOLUMEINFO_SIZE 8
+
 typedef struct {
-	unsigned int depth, diffuseDepth, glossyDepth, specularDepth;
-} PathDepthInfo;
+	unsigned int currentVolumeIndex;
+	unsigned int volumeIndexList[OPENCL_PATHVOLUMEINFO_SIZE];
+	unsigned int volumeIndexListSize;
+
+	int scatteredStart;
+} PathVolumeInfo;
