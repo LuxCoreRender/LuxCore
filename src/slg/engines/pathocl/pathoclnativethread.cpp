@@ -115,8 +115,8 @@ void PathOCLNativeRenderThread::RenderThreadImpl() {
 		props <<
 			Property("sampler.type")("METROPOLIS") <<
 			// Disable image plane meaning for samples 0 and 1
-			Property("sampler.metropolis.imagemutationrate.enable")(false);
-		
+			Property("sampler.imagesamples.enable")(false);
+
 		lightSampler = Sampler::FromProperties(props, rndGen, film, nullptr,
 				engine->lightSamplerSharedData);
 		

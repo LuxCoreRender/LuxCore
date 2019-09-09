@@ -40,7 +40,7 @@ SamplerSharedData *TilePathSamplerSharedData::FromProperties(const Properties &c
 //------------------------------------------------------------------------------
 
 TilePathSampler::TilePathSampler(luxrays::RandomGenerator *rnd, Film *flm,
-		const FilmSampleSplatter *flmSplatter) : Sampler(rnd, flm, flmSplatter),
+		const FilmSampleSplatter *flmSplatter) : Sampler(rnd, flm, flmSplatter, true),
 		sobolSequence(), rngGenerator() {
 	aaSamples = 1;
 }

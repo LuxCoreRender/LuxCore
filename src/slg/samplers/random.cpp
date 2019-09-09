@@ -61,10 +61,10 @@ SamplerSharedData *RandomSamplerSharedData::FromProperties(const Properties &cfg
 //------------------------------------------------------------------------------
 
 RandomSampler::RandomSampler(luxrays::RandomGenerator *rnd, Film *flm,
-			const FilmSampleSplatter *flmSplatter,
+			const FilmSampleSplatter *flmSplatter, const bool imgSamplesEnable,
 			const float adaptiveStr,
 			RandomSamplerSharedData *samplerSharedData) :
-		Sampler(rnd, flm, flmSplatter), sharedData(samplerSharedData),
+		Sampler(rnd, flm, flmSplatter, imgSamplesEnable), sharedData(samplerSharedData),
 		adaptiveStrength(adaptiveStr) {
 }
 
@@ -82,7 +82,7 @@ void RandomSampler::InitNewSample() {
 		// Initialize sample0 and sample 1
 
 		u_int pixelX, pixelY;
-		if (film) {
+		if (imageSamplesEnable && film) {
 			const u_int *subRegion = film->GetSubRegion();
 
 			const u_int pixelIndex = (pixelIndexBase + pixelIndexOffset) % sharedData->filmRegionPixelCount;
@@ -172,14 +172,18 @@ Properties RandomSampler::ToProperties() const {
 Properties RandomSampler::ToProperties(const Properties &cfg) {
 	return Properties() <<
 			cfg.Get(GetDefaultProps().Get("sampler.type")) <<
+			cfg.Get(GetDefaultProps().Get("sampler.imagesamples.enable")) <<
 			cfg.Get(GetDefaultProps().Get("sampler.random.adaptive.strength"));
 }
 
 Sampler *RandomSampler::FromProperties(const Properties &cfg, RandomGenerator *rndGen,
 		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData) {
+	const bool imageSamplesEnable = cfg.Get(GetDefaultProps().Get("sampler.imagesamples.enable")).Get<bool>();
+
 	const float str = Clamp(cfg.Get(GetDefaultProps().Get("sampler.random.adaptive.strength")).Get<float>(), 0.f, .95f);
 
-	return new RandomSampler(rndGen, film, flmSplatter, str, (RandomSamplerSharedData *)sharedData);
+	return new RandomSampler(rndGen, film, flmSplatter, imageSamplesEnable,
+			str, (RandomSamplerSharedData *)sharedData);
 }
 
 slg::ocl::Sampler *RandomSampler::FromPropertiesOCL(const Properties &cfg) {
@@ -192,9 +196,11 @@ slg::ocl::Sampler *RandomSampler::FromPropertiesOCL(const Properties &cfg) {
 }
 
 Film::FilmChannelType RandomSampler::GetRequiredChannels(const luxrays::Properties &cfg) {
+	const bool imageSamplesEnable = cfg.Get(GetDefaultProps().Get("sampler.imagesamples.enable")).Get<bool>();
+
 	const float str = cfg.Get(GetDefaultProps().Get("sampler.random.adaptive.strength")).Get<float>();
 
-	if (str > 0.f)
+	if (imageSamplesEnable && (str > 0.f))
 		return Film::NOISE;
 	else
 		return Film::NONE;

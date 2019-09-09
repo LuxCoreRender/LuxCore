@@ -63,7 +63,7 @@ private:
 class RandomSampler : public Sampler {
 public:
 	RandomSampler(luxrays::RandomGenerator *rnd, Film *flm,
-			const FilmSampleSplatter *flmSplatter,
+			const FilmSampleSplatter *flmSplatter, const bool imgSamplesEnable,
 			const float adaptiveStrength,
 			RandomSamplerSharedData *samplerSharedData);
 	virtual ~RandomSampler() { }

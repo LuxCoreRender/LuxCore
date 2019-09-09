@@ -122,7 +122,7 @@ static void Film2SceneRadiusThread(Film2SceneRadiusThreadParams &params) {
 	// Initialize the sampler
 	RandomGenerator rnd(1 + params.threadIndex);
 	SobolSamplerSharedData sobolSharedData(131, nullptr);
-	SobolSampler sampler(&rnd, NULL, NULL, 0.f, &sobolSharedData);
+	SobolSampler sampler(&rnd, NULL, NULL, true, 0.f, &sobolSharedData);
 	
 	// Request the samples
 	const u_int sampleBootSize = 5;

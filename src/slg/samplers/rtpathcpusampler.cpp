@@ -89,7 +89,7 @@ SamplerSharedData *RTPathCPUSamplerSharedData::FromProperties(const Properties &
 RTPathCPUSampler::RTPathCPUSampler(luxrays::RandomGenerator *rnd, Film *flm,
 			const FilmSampleSplatter *flmSplatter,
 			RTPathCPUSamplerSharedData *samplerSharedData) :
-			Sampler(rnd, flm, flmSplatter), sharedData(samplerSharedData) {
+			Sampler(rnd, flm, flmSplatter, true), sharedData(samplerSharedData) {
 	film = flm;
 	// Disable denoiser statistics collection
 	film->GetDenoiser().SetEnabled(false);
