@@ -117,8 +117,8 @@ void PathOCLNativeRenderThread::RenderThreadImpl() {
 			// I want to focus on hard paths like caustic and SDS one
 			Property("sampler.metropolis.largesteprate")(.1f) <<
 			// Disable image plane meaning for samples 0 and 1
-			Property("sampler.metropolis.imagemutationrate.enable")(false);
-		
+			Property("sampler.imagesamples.enable")(false);
+
 		lightSampler = Sampler::FromProperties(props, rndGen, film, nullptr,
 				engine->lightSamplerSharedData);
 		
