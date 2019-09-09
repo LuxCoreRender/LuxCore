@@ -91,7 +91,7 @@ typedef struct {
 #endif
 
 	BSDFEvent firstPathVertexEvent;
-	int firstPathVertex, lastPathVertex, passThroughPath, specularGlossyCausticPath;
+	int firstPathVertex, lastPathVertex;
 } SampleResult;
 
 #endif

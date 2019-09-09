@@ -209,7 +209,6 @@ static void Film2SceneRadiusThread(Film2SceneRadiusThreadParams &params) {
 						sampler.GetSample(sampleOffset + 1),
 						sampler.GetSample(sampleOffset + 2),
 						&lastPdfW, &cosSampledDir, &lastBSDFEvent);
-			sampleResult.passThroughPath = false;
 
 			assert (!bsdfSample.IsNaN() && !bsdfSample.IsInf());
 			if (bsdfSample.Black())

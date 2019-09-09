@@ -42,8 +42,6 @@ void SampleResult::Init(const u_int channelTypes, const u_int radianceGroupCount
 	// lastPathVertex can not be really initialized here without knowing
 	// the max. path depth.
 	lastPathVertex = false;
-	passThroughPath = true;
-	specularGlossyCausticPath = true;
 }
 
 Spectrum SampleResult::GetSpectrum(const vector<RadianceChannelScale> &radianceChannelScales) const {

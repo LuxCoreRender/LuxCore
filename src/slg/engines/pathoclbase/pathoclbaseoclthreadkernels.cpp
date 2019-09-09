@@ -574,6 +574,9 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 	if (renderEngine->pathTracer.hybridBackForwardEnable) {
 		ssParams << " -D PARAM_HYBRID_BACKFORWARD" <<
 				" -D PARAM_HYBRID_BACKFORWARD_GLOSSINESSTHRESHOLD=" << renderEngine->pathTracer.hybridBackForwardGlossinessThreshold << "f";
+		
+		if (renderEngine->pathTracer.pathSpaceRegularizationEnable)
+			ssParams << " -D PARAM_HYBRID_BACKFORWARD_PSR";
 	}
 
 	const slg::ocl::Sampler *sampler = renderEngine->oclSampler;
@@ -792,7 +795,12 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 	ssKernel <<
 			slg::ocl::KernelSource_bsdfutils_funcs << // Must be before volumeinfo_funcs
 			slg::ocl::KernelSource_volume_funcs <<
-			slg::ocl::KernelSource_volumeinfo_funcs <<
+			slg::ocl::KernelSource_pathdepthinfo_types <<
+			slg::ocl::KernelSource_pathvolumeinfo_types <<
+			slg::ocl::KernelSource_pathinfo_types <<
+			slg::ocl::KernelSource_pathdepthinfo_funcs <<
+			slg::ocl::KernelSource_pathvolumeinfo_funcs <<
+			slg::ocl::KernelSource_pathinfo_funcs <<
 			slg::ocl::KernelSource_camera_funcs <<
 			slg::ocl::KernelSource_dlsc_funcs <<
 			slg::ocl::KernelSource_elvc_funcs <<
@@ -802,7 +810,6 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_sampleresult_funcs <<
 			slg::ocl::KernelSource_filmdenoiser_funcs <<
 			slg::ocl::KernelSource_film_funcs <<
-			slg::ocl::KernelSource_pathdepthinfo_types <<
 			slg::ocl::KernelSource_varianceclamping_funcs <<
 			slg::ocl::KernelSource_sampler_random_funcs <<
 			slg::ocl::KernelSource_sampler_sobol_funcs <<
@@ -902,8 +909,6 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 }
 
 void PathOCLBaseOCLRenderThread::SetInitKernelArgs(const u_int filmIndex) {
-	CompiledScene *cscene = renderEngine->compiledScene;
-
 	// initSeedKernel kernel
 	u_int argIndex = 0;
 	initSeedKernel->setArg(argIndex++, sizeof(cl::Buffer), tasksBuff);
@@ -918,8 +923,7 @@ void PathOCLBaseOCLRenderThread::SetInitKernelArgs(const u_int filmIndex) {
 	initKernel->setArg(argIndex++, sizeof(cl::Buffer), samplerSharedDataBuff);
 	initKernel->setArg(argIndex++, sizeof(cl::Buffer), samplesBuff);
 	initKernel->setArg(argIndex++, sizeof(cl::Buffer), sampleDataBuff);
-	if (cscene->HasVolumes())
-		initKernel->setArg(argIndex++, sizeof(cl::Buffer), pathVolInfosBuff);
+	initKernel->setArg(argIndex++, sizeof(cl::Buffer), eyePathInfosBuff);
 	initKernel->setArg(argIndex++, sizeof(cl::Buffer), pixelFilterBuff);
 	initKernel->setArg(argIndex++, sizeof(cl::Buffer), raysBuff);
 	initKernel->setArg(argIndex++, sizeof(cl::Buffer), cameraBuff);
@@ -942,10 +946,9 @@ void PathOCLBaseOCLRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePa
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), samplerSharedDataBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), samplesBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), sampleDataBuff);
-	if (cscene->HasVolumes()) {
-		advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), pathVolInfosBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), eyePathInfosBuff);
+	if (cscene->HasVolumes())
 		advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), directLightVolInfosBuff);
-	}
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), raysBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), hitsBuff);
 

@@ -234,6 +234,9 @@ public:
 		statsTotalSampleCount += luxrays::Max(RADIANCE_PER_PIXEL_NORMALIZED_count, RADIANCE_PER_SCREEN_NORMALIZED_count);
 		RADIANCE_PER_SCREEN_NORMALIZED_SampleCount += RADIANCE_PER_SCREEN_NORMALIZED_count;
 	}
+	double GetSampleCount_RADIANCE_PER_SCREEN_NORMALIZED() const {
+		return RADIANCE_PER_SCREEN_NORMALIZED_SampleCount;
+	}
 
 	// Normal method versions
 	void AddSample(const u_int x, const u_int y,

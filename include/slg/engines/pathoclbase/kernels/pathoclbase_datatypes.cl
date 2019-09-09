@@ -58,7 +58,7 @@ typedef enum {
 } PathState;
 
 typedef struct {
-	unsigned int lightIndex;	
+	unsigned int lightIndex;
 	float pickPdf;
 
 	Vector dir;
@@ -80,7 +80,6 @@ typedef struct {
 // The state used to keep track of the rendered path
 typedef struct {
 	PathState state;
-	PathDepthInfo depthInfo;
 
 	Spectrum throughput;
 	BSDF bsdf; // Variable size structure
@@ -100,14 +99,6 @@ typedef enum {
 typedef struct {
 	// Used to store some intermediate result
 	DirectLightIlluminateInfo illumInfo;
-
-	BSDFEvent lastBSDFEvent;
-	float lastPdfW, lastGlossiness;
-
-	Normal lastNormal;
-#if defined(PARAM_HAS_VOLUMES)
-	int lastIsVolume;
-#endif
 
 #if defined(PARAM_HAS_PASSTHROUGH)
 	Seed seedPassThroughEvent;

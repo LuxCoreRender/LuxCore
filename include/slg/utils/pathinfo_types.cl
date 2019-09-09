@@ -1,4 +1,4 @@
-#line 2 "pathdepthinfo_types.cl"
+#line 2 "pathinfo_types.cl"
 
 /***************************************************************************
  * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
@@ -18,6 +18,29 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+// This is defined only under OpenCL because of variable size structures
+#if defined(SLG_OPENCL_KERNEL)
+
 typedef struct {
-	unsigned int depth, diffuseDepth, glossyDepth, specularDepth;
-} PathDepthInfo;
+	PathDepthInfo depth;
+#if defined(PARAM_HAS_VOLUMES)
+	PathVolumeInfo volume;
+#endif
+
+	int isPassThroughPath;
+
+	// Last path vertex information
+	BSDFEvent lastBSDFEvent;
+	float lastBSDFPdfW;
+	float lastGlossiness;
+	Normal lastShadeN;
+#if defined(PARAM_HAS_VOLUMES)
+	bool lastFromVolume;
+#endif
+
+	int isNearlyCaustic;
+	// Specular, Specular+ Diffuse and Specular+ Diffuse Specular+ paths
+	int isNearlyS, isNearlySD, isNearlySDS;
+} EyePathInfo;
+
+#endif
