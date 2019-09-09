@@ -61,6 +61,8 @@
 * Reworked Direct Light Sampling Cache
 * Direct Light Sampling Cache now supports persistent cache on file
 
+''Beta4 released''
+
 ### Fixed Bugs
 
 * Fixed rendering resume feature
@@ -131,6 +133,10 @@
 * Fixed an out of bound memory access in automatic lookup radius code
 * Fixed a problem with Disney material, hybrid backward/forward path tracing and low roughness values
 * Fixed bump mapping black halo for large scale values
+
+''Beta4 released''
+
+* Fixed the allocation of light tracing sampler shared data in hybrid backward/forward path tracing
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
