@@ -18,15 +18,15 @@ scene.camera.type = "perspective"
 scene.camera.oculusrift.barrelpostpro.enable = 0
 scene.camera.fieldofview = 67.3801346
 ##
-scene.lights.__WORLD_BACKGROUND_LIGHT__.gain = 1 1 1
-scene.lights.__WORLD_BACKGROUND_LIGHT__.transformation = 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1
-scene.lights.__WORLD_BACKGROUND_LIGHT__.id = 0
-scene.lights.__WORLD_BACKGROUND_LIGHT__.visibility.indirect.diffuse.enable = 1
-scene.lights.__WORLD_BACKGROUND_LIGHT__.visibility.indirect.glossy.enable = 1
-scene.lights.__WORLD_BACKGROUND_LIGHT__.visibility.indirect.specular.enable = 1
-scene.lights.__WORLD_BACKGROUND_LIGHT__.type = "sky2"
-scene.lights.__WORLD_BACKGROUND_LIGHT__.dir = -0.579227984 -0.579227984 0.57357645
-scene.lights.__WORLD_BACKGROUND_LIGHT__.turbidity = 2.20000005
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.gain = 1 1 1
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.transformation = 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.id = 0
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.visibility.indirect.diffuse.enable = 1
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.visibility.indirect.glossy.enable = 1
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.visibility.indirect.specular.enable = 1
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.type = "sky2"
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.dir = -0.579227984 -0.579227984 0.57357645
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.turbidity = 2.20000005
 ##
 scene.lights.Lamp_Sun_139998120638984.gain = 3 3 3
 scene.lights.Lamp_Sun_139998120638984.transformation = 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1
@@ -91,7 +91,7 @@ scene.textures.139998112432136Color.amount = "139998120406024Color"
 scene.textures.139998112432136Color.offset0 = 0
 scene.textures.139998112432136Color.value0 = 0.30968973 0.30968973 0.30968973
 scene.textures.139998112432136Color.offset1 = 1
-scene.textures.139998112432136Color.value1 = 0 0 0
+scene.textures.139998112432136Color.value1 = 0.75 0.75 0.75
 scene.textures.Implicit-ConstFloatTexture-eb82e331-4a7f-4b97-beee-c02de3e56da4.type = "constfloat1"
 scene.textures.Implicit-ConstFloatTexture-eb82e331-4a7f-4b97-beee-c02de3e56da4.value = 0.0199999996
 scene.textures.139998120405512Bump.type = "scale"
@@ -120,6 +120,7 @@ scene.volumes.139997951428488.absorption = "Implicit-ConstFloatTexture3-9f35ae3b
 scene.volumes.139997951428488.priority = 0
 scene.volumes.139997951428488.ior = "Implicit-ConstFloatTexture-ea938c00-b7d1-4a75-945f-4c76ac561bc4"
 scene.volumes.139997951428488.id = 3364224
+##
 scene.materials.Surface_Material_139997951233032.type = "glass"
 scene.materials.Surface_Material_139997951233032.kr = "Implicit-ConstFloatTexture3-5130e230-1b7d-4082-b747-3d4ee77e0ebd"
 scene.materials.Surface_Material_139997951233032.kt = "Implicit-ConstFloatTexture3-f3515dcb-4c3c-49b8-9461-e5136b9f20ee"
@@ -137,6 +138,7 @@ scene.materials.Surface_Material_139997951233032.visibility.indirect.glossy.enab
 scene.materials.Surface_Material_139997951233032.visibility.indirect.specular.enable = 1
 scene.materials.Surface_Material_139997951233032.shadowcatcher.enable = 0
 scene.materials.Surface_Material_139997951233032.shadowcatcher.onlyinfinitelights = 0
+##
 scene.materials.Surface_Material__001_139997951234568.type = "glossy2"
 scene.materials.Surface_Material__001_139997951234568.kd = "139998120406536Color"
 scene.materials.Surface_Material__001_139997951234568.ks = "Implicit-ConstFloatTexture3-f906e8d6-0501-43e0-83da-5c18b53f9d22"
@@ -161,6 +163,9 @@ scene.materials.Surface_Material__001_139997951234568.visibility.indirect.specul
 scene.materials.Surface_Material__001_139997951234568.shadowcatcher.enable = 0
 scene.materials.Surface_Material__001_139997951234568.shadowcatcher.onlyinfinitelights = 0
 ##
+scene.materials.mat_mate.type = "matte"
+scene.materials.mat_mate.kd = 0.6 0.6 0.6
+##
 scene.objects.Mesh_Plane_139998120635912000.material = "Surface_Material_139997951233032"
 scene.objects.Mesh_Plane_139998120635912000.ply = "mesh-00000.ply"
 scene.objects.Mesh_Plane_139998120635912000.camerainvisible = 0
@@ -174,4 +179,5 @@ scene.objects.Mesh_Cube_139998120634376000.appliedtransformation = 1 0 0 0 0 1 0
 ##
 scene.objects.wall.ply = "wall.ply"
 scene.objects.wall.material = "Surface_Material__001_139997951234568"
+#scene.objects.wall.material = mat_mate
 

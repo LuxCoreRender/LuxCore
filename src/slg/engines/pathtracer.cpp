@@ -617,7 +617,7 @@ void PathTracer::ConnectToEye(IntersectionDevice *device, const Scene *scene,
 		if ((pixelX >= subRegion[0]) && (pixelX <= subRegion[1]) &&
 				(pixelY >= subRegion[2]) && (pixelY <= subRegion[3])) {
 			Spectrum bsdfEval;
-			if (pathSpaceRegularizationEnable && PathInfo::CanBeNearlySpecular(bsdf, hybridBackForwardEnable)) {
+			if (pathSpaceRegularizationEnable && PathInfo::CanBeNearlySpecular(bsdf, hybridBackForwardGlossinessThreshold)) {
 				// "Path Space Regularization for Holistic and Robust Light Transport" (https://cg.ivd.kit.edu/english/PSR.php)
 				// by Anton S. Kaplanyan and Carsten Dachsbacher
 
@@ -629,10 +629,11 @@ void PathTracer::ConnectToEye(IntersectionDevice *device, const Scene *scene,
 						0.f,
 						&bsdfPdf, &cosSampleDir, &bsdfEvent);
 
-				if (!PathInfo::IsNearlySpecular(bsdfEvent, bsdf.GetGlossiness(), hybridBackForwardEnable))
+				if (!PathInfo::IsNearlySpecular(bsdfEvent, bsdf.GetGlossiness(), hybridBackForwardGlossinessThreshold))
 					return;
 
 				// There is a safety check at start of PathTracer::RenderLightSample()
+				assert (sampler->GetType() == METROPOLIS);
 				MetropolisSampler *metropolisSampler = (MetropolisSampler *)sampler;
 
 				// Mollification shrinkage
