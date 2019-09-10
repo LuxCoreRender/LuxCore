@@ -330,12 +330,29 @@ void LuxCoreApp::DrawCaptions() {
 
 	// Bottom screen label
 
-	const string msg = boost::str(boost::format("[Pass %3d][Avg. samples/sec % 3.2fM][Avg. rays/sample %.2f on %.1fK tris]") %
-		stats.Get("stats.renderengine.pass").Get<int>() %
-		(stats.Get("stats.renderengine.total.samplesec").Get<double>() / 1000000.0) %
+	const u_int eyePass = stats.Get("stats.renderengine.pass.eye").Get<u_int>();
+	const u_int lightPass = stats.Get("stats.renderengine.pass.light").Get<u_int>();
+	const string msgPass = ((eyePass > 0) && (lightPass > 0)) ?
+		boost::str(boost::format("[Pass %d (%d+%d)]") %
+			stats.Get("stats.renderengine.pass").Get<u_int>() % eyePass % lightPass) :
+		boost::str(boost::format("[Pass %d]") % stats.Get("stats.renderengine.pass").Get<u_int>());
+
+	const u_int eyeSemplesSec = stats.Get("stats.renderengine.total.samplesec.eye").Get<double>();
+	const u_int lightSemplesSec = stats.Get("stats.renderengine.total.samplesec.light").Get<double>();
+
+	const string msgSemplesSec = ((eyePass > 0) && (lightPass > 0)) ?
+		boost::str(boost::format("[Avg. samples/sec % 3.2fM (%.2fM+%.2fM)]") %
+			(stats.Get("stats.renderengine.total.samplesec").Get<double>() / 1000000.0) %
+			(eyeSemplesSec / 1000000.0) % (lightSemplesSec / 1000000.0)) :
+		boost::str(boost::format("[Avg. samples/sec % 3.2fM]") %
+			(stats.Get("stats.renderengine.total.samplesec").Get<double>() / 1000000.0));
+	
+	const string msgTriSec = boost::str(boost::format("[Avg. rays/sample %.2f on %.1fK tris]") %
 		(stats.Get("stats.renderengine.performance.total").Get<double>() /
 			stats.Get("stats.renderengine.total.samplesec").Get<double>()) %
 		(stats.Get("stats.dataset.trianglecount").Get<double>() / 1000.0));
+	
+	const string msg = msgPass + msgSemplesSec + msgTriSec;
 
 	ImVec2 textSize = ImGui::CalcTextSize(msg.c_str());
 	const ImVec2 windowSize = ImVec2(frameBufferWidth, textSize.y + 9);

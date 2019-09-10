@@ -990,8 +990,12 @@ void RenderSessionImpl::UpdateStats() {
 
 	stats.Set(Property("stats.renderengine.total.raysec")(renderSession->renderEngine->GetTotalRaysSec()));
 	stats.Set(Property("stats.renderengine.total.samplesec")(renderSession->renderEngine->GetTotalSamplesSec()));
+	stats.Set(Property("stats.renderengine.total.samplesec.eye")(renderSession->renderEngine->GetTotalEyeSamplesSec()));
+	stats.Set(Property("stats.renderengine.total.samplesec.light")(renderSession->renderEngine->GetTotalLightSamplesSec()));
 	stats.Set(Property("stats.renderengine.total.samplecount")(renderSession->renderEngine->GetTotalSampleCount()));
 	stats.Set(Property("stats.renderengine.pass")(renderSession->renderEngine->GetPass()));
+	stats.Set(Property("stats.renderengine.pass.eye")(renderSession->renderEngine->GetEyePass()));
+	stats.Set(Property("stats.renderengine.pass.light")(renderSession->renderEngine->GetLightPass()));
 	stats.Set(Property("stats.renderengine.time")(renderSession->renderEngine->GetRenderingTime()));
 	stats.Set(Property("stats.renderengine.convergence")(renderSession->film->GetConvergence()));
 

@@ -198,12 +198,26 @@ public:
 	double GetTotalSampleCount() const {
 		return statsTotalSampleCount;
 	}
+	double GetTotalEyeSampleCount() const {
+		return statsTotalSampleCount - RADIANCE_PER_SCREEN_NORMALIZED_SampleCount;
+	}
+	double GetTotalLightSampleCount() const {
+		return RADIANCE_PER_SCREEN_NORMALIZED_SampleCount;
+	}
 	double GetTotalTime() const {
 		return luxrays::WallClockTime() - statsStartSampleTime;
 	}
 	double GetAvgSampleSec() {
 		const double t = GetTotalTime();
 		return (t > 0.0) ? (GetTotalSampleCount() / t) : 0.0;
+	}
+	double GetAvgEyeSampleSec() {
+		const double t = GetTotalTime();
+		return (t > 0.0) ? (GetTotalEyeSampleCount() / t) : 0.0;
+	}
+	double GetAvgLightSampleSec() {
+		const double t = GetTotalTime();
+		return (t > 0.0) ? (GetTotalLightSampleCount() / t) : 0.0;
 	}
 
 	//--------------------------------------------------------------------------
