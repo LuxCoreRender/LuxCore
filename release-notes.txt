@@ -137,6 +137,7 @@
 ''Beta4 released''
 
 * Fixed the allocation of light tracing sampler shared data in hybrid backward/forward path tracing
+* Fixed a problem when using flat instances and OpenCL rendering
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
