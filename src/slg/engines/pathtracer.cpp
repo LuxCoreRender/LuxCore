@@ -584,7 +584,8 @@ static float Mollify(const float mollificationFactor, const Vector &dir,
 	
 	const float dotEyeSampledDir = Dot(dir, deltaSampledDir);
 	
-	return (dotEyeSampledDir >= cosMax) ? (1.f / (solidAngle * dotEyeSampledDir)) : 0.f; // Mollify
+	// Return mollify factor
+	return (dotEyeSampledDir >= cosMax) ? (1.f / (solidAngle * dotEyeSampledDir)) : 0.f;
 }
 
 void PathTracer::ConnectToEye(IntersectionDevice *device, const Scene *scene,
