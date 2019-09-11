@@ -119,7 +119,7 @@ private:
 			const Film *film) const;
 	void ConnectToEye(luxrays::IntersectionDevice *device, const Scene *scene,
 			const Film *film, Sampler *sampler, const float time,
-			const float u0, const float u1,
+			const float u0, const float u1, const float u2,
 			const LightSource &light,  const BSDF &bsdf,
 			const luxrays::Spectrum &flux, const LightPathInfo &pathInfo,
 			std::vector<SampleResult> &sampleResults) const;

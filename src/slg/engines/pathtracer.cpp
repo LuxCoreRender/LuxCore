@@ -590,7 +590,7 @@ static float Mollify(const float mollificationFactor, const Vector &dir,
 
 void PathTracer::ConnectToEye(IntersectionDevice *device, const Scene *scene,
 		const Film *film, Sampler *sampler, const float time,
-		const float u0,const float u1,
+		const float u0, const float u1, const float u2,
 		const LightSource &light, const BSDF &bsdf, 
 		const Spectrum &flux, const LightPathInfo &pathInfo,
 		vector<SampleResult> &sampleResults) const {
@@ -627,7 +627,7 @@ void PathTracer::ConnectToEye(IntersectionDevice *device, const Scene *scene,
 				float bsdfPdf, cosSampleDir;
 				bsdfEval = bsdf.Sample(&sampledDir,
 						u1,
-						0.f,
+						u2,
 						&bsdfPdf, &cosSampleDir, &bsdfEvent);
 
 				if (!PathInfo::IsNearlySpecular(bsdfEvent, bsdf.GetGlossiness(), hybridBackForwardGlossinessThreshold))
@@ -770,6 +770,7 @@ void PathTracer::RenderLightSample(IntersectionDevice *device, const Scene *scen
 						nextEventRay.time,
 						sampler->GetSample(sampleOffset + 1),
 						sampler->GetSample(sampleOffset + 2),
+						sampler->GetSample(sampleOffset + 3),
 						*light, bsdf, lightPathFlux, pathInfo, sampleResults);
 			}
 
@@ -785,8 +786,8 @@ void PathTracer::RenderLightSample(IntersectionDevice *device, const Scene *scen
 			BSDFEvent bsdfEvent;
 			float cosSampleDir;
 			Spectrum bsdfSample = bsdf.Sample(&sampledDir,
-					sampler->GetSample(sampleOffset + 3),
 					sampler->GetSample(sampleOffset + 4),
+					sampler->GetSample(sampleOffset + 5),
 					&bsdfPdf, &cosSampleDir, &bsdfEvent);
 			if (bsdfSample.Black())
 				break;	
@@ -806,7 +807,7 @@ void PathTracer::RenderLightSample(IntersectionDevice *device, const Scene *scen
 			if (pathInfo.UseRR(rrDepth)) {
 				// Russian Roulette
 				const float rrProb = RenderEngine::RussianRouletteProb(bsdfSample, rrImportanceCap);
-				if (rrProb < sampler->GetSample(sampleOffset + 5))
+				if (rrProb < sampler->GetSample(sampleOffset + 6))
 					break;
 
 				// Increase path contribution
@@ -880,7 +881,7 @@ void PathTracer::ParseOptions(const luxrays::Properties &cfg, const luxrays::Pro
 	
 	// Update light sample size
 	lightSampleBootSize = 9;
-	lightSampleStepSize = 6;
+	lightSampleStepSize = 7;
 	lightSampleSize = 
 		lightSampleBootSize + // To generate eye ray
 		maxPathDepth.depth * lightSampleStepSize; // For each path vertex
