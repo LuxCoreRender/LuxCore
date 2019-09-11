@@ -177,7 +177,12 @@ scene.objects.Mesh_Cube_139998120634376000.camerainvisible = 0
 scene.objects.Mesh_Cube_139998120634376000.id = 1326487202
 scene.objects.Mesh_Cube_139998120634376000.appliedtransformation = 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1
 ##
-scene.objects.wall.ply = "wall.ply"
-scene.objects.wall.material = "Surface_Material__001_139997951234568"
-#scene.objects.wall.material = mat_mate
-
+#scene.objects.wall.ply = "wall.ply"
+#scene.objects.wall.material = "Surface_Material__001_139997951234568"
+##
+#scene.objects.sphere.ply = "sphere.ply"
+scene.objects.sphere.ply = "sphere-flat.ply"
+scene.objects.sphere.material = mat_mate
+##
+#scene.objects.sphere.ply = "sphere2.ply"
+#scene.objects.sphere.material = mat_mate
