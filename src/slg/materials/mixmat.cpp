@@ -55,7 +55,17 @@ void MixMaterial::Preprocess() {
 
 	eventTypes = GetEventTypesImpl();
 
-	glossiness = Min(matA->GetGlossiness(), matB->GetGlossiness());
+	if (matA->GetEventTypes() & GLOSSY) {
+		if (matB->GetEventTypes() & GLOSSY)
+			glossiness = Min(matA->GetGlossiness(), matB->GetGlossiness());
+		else
+			glossiness = matA->GetGlossiness();
+	} else {
+		if (matB->GetEventTypes() & GLOSSY)
+			glossiness = matB->GetGlossiness();
+		else
+			glossiness = 0.f;
+	}
 
 	isLightSource = IsLightSourceImpl();
 	hasBumpTex = HasBumpTexImpl();
