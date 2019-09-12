@@ -139,6 +139,7 @@
 * Fixed the allocation of light tracing sampler shared data in hybrid backward/forward path tracing
 * Fixed a problem when using flat instances and OpenCL rendering
 * Fixed/Enabled PhotonGI cache on Mix and GlossyCoatting materials when possible
+* Fixed a regression in BIDIRCPU causing dark edges on glancing surfaces
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
