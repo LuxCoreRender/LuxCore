@@ -156,7 +156,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 	bool checkDirectLightHit = true;
 	
 #if defined(PARAM_FORCE_BLACK_BACKGROUND)
-	checkDirectLightHit = checkDirectLightHit && (!pathInfo->passThroughPath);
+	checkDirectLightHit = checkDirectLightHit && (!pathInfo->isPassThroughPath);
 #endif
 
 #if defined(PARAM_HYBRID_BACKFORWARD)
