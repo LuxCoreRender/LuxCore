@@ -40,7 +40,7 @@ Spectrum MirrorMaterial::Evaluate(const HitPoint &hitPoint,
 Spectrum MirrorMaterial::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
-	float *pdfW, BSDFEvent *event) const {
+	float *pdfW, BSDFEvent *event, const BSDFEvent eventHint) const {
 	*event = SPECULAR | REFLECT;
 
 	*localSampledDir = Vector(-localFixedDir.x, -localFixedDir.y, localFixedDir.z);

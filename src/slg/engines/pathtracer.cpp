@@ -624,11 +624,14 @@ void PathTracer::ConnectToEye(IntersectionDevice *device, const Scene *scene,
 
 				Vector sampledDir;
 				BSDFEvent bsdfEvent;
+				// Do I need transmission or reflection ?
+				BSDFEvent bsdfHint = ((Dot(-eyeDir, bsdf.hitPoint.geometryN) > 0.f) == bsdf.hitPoint.intoObject) ?
+					REFLECT : TRANSMIT;
 				float bsdfPdf, cosSampleDir;
 				bsdfEval = bsdf.Sample(&sampledDir,
-						u1,
-						u2,
-						&bsdfPdf, &cosSampleDir, &bsdfEvent);
+						u1, u2,
+						&bsdfPdf, &cosSampleDir,
+						&bsdfEvent, bsdfHint);
 
 				if (!PathInfo::IsNearlySpecular(bsdfEvent, bsdf.GetGlossiness(), hybridBackForwardGlossinessThreshold))
 					return;

@@ -72,7 +72,8 @@ public:
 		const float u1, 
 		const float passThroughEvent,
 		float *pdfW,
-		BSDFEvent *event
+		BSDFEvent *event,
+		const BSDFEvent eventHint = NONE
 	) const;
 
 	virtual void Pdf(

@@ -479,6 +479,7 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/utils/scenevisibility.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/pathdepthinfo.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/pathinfo.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/utils/pathvolumeinfo.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/varianceclamping.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/volumes/clear.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/volumes/heterogenous.cpp

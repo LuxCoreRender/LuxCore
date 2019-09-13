@@ -135,7 +135,7 @@ Spectrum HeterogeneousVolume::Evaluate(const HitPoint &hitPoint,
 Spectrum HeterogeneousVolume::Sample(const HitPoint &hitPoint,
 		const Vector &localFixedDir, Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
-		float *pdfW, BSDFEvent *event) const {
+		float *pdfW, BSDFEvent *event, const BSDFEvent eventHint) const {
 	return schlickScatter.Sample(hitPoint, localFixedDir, localSampledDir,
 			u0, u1, passThroughEvent, pdfW, event);
 }

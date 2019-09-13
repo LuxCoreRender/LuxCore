@@ -95,7 +95,7 @@ Spectrum ClearVolume::Evaluate(const HitPoint &hitPoint,
 Spectrum ClearVolume::Sample(const HitPoint &hitPoint,
 		const Vector &localFixedDir, Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
-		float *pdfW, BSDFEvent *event) const {
+		float *pdfW, BSDFEvent *event, const BSDFEvent eventHint) const {
 	throw runtime_error("Internal error: called ClearVolume::Sample()");
 }
 

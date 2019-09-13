@@ -218,14 +218,15 @@ Spectrum DisneyMaterial::DisneySheen(const Spectrum &color, const float sheen,
 }
 
 Spectrum DisneyMaterial::Sample(
-	const HitPoint &hitPoint,
-	const Vector &localFixedDir,
-	Vector *localSampledDir,
-	const float u0,
-	const float u1,
-	const float passThroughEvent,
-	float *pdfW,
-	BSDFEvent *event) const {
+		const HitPoint &hitPoint,
+		const Vector &localFixedDir,
+		Vector *localSampledDir,
+		const float u0,
+		const float u1,
+		const float passThroughEvent,
+		float *pdfW,
+		BSDFEvent *event,
+		const BSDFEvent eventHint) const {
 	const Spectrum color = BaseColor->GetSpectrumValue(hitPoint).Clamp(0.0f, 1.0f);
 	const float subsurface = Clamp(Subsurface->GetFloatValue(hitPoint), 0.0f, 1.0f);
 	const float roughness = Clamp(Roughness->GetFloatValue(hitPoint), 0.0f, 1.0f);
