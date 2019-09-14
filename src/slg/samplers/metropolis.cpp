@@ -62,6 +62,8 @@ MetropolisSampler::~MetropolisSampler() {
 }
 
 // Mutate a value in the range [0-1]
+//
+// The original version used in old LuxRender
 static float Mutate(const float x, const float randomValue) {
 	static const float s1 = 1.f / 512.f;
 	static const float s2 = 1.f / 16.f;
@@ -84,6 +86,32 @@ static float Mutate(const float x, const float randomValue) {
 
 	return mutatedX;
 }
+
+// Mutate a value in the range [0-1]
+//
+// Original version from paper "A Simple and Robust Mutation Strategy for the
+// Metropolis Light Transport Algorithm"
+/*static float Mutate(const float x, const float randomValue) {
+	static const float s1 = 1.f / 1024.f;
+	static const float s2 = 1.f / 64.f;
+
+	const float dx = s2 * expf(-logf(s2 / s1) * randomValue);
+
+	float mutatedX = x;
+	if (randomValue < .5f) {
+		mutatedX += dx;
+		mutatedX = (mutatedX < 1.f) ? mutatedX : (mutatedX - 1.f);
+	} else {
+		mutatedX -= dx;
+		mutatedX = (mutatedX < 0.f) ? (mutatedX + 1.f) : mutatedX;
+	}
+
+	// mutatedX can still be 1.f due to numerical precision problems
+	if (mutatedX == 1.f)
+		mutatedX = 0.f;
+
+	return mutatedX;
+}*/
 
 // Mutate a value max. by a range value
 float MutateScaled(const float x, const float range, const float randomValue) {
