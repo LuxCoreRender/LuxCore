@@ -35,6 +35,8 @@ Properties PhotonGICache::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("path.photongi.photon.maxdepth")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.photon.time.start")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.photon.time.end")) <<
+			cfg.Get(GetDefaultProps().Get("path.photongi.visibility.lookup.radius")) <<
+			cfg.Get(GetDefaultProps().Get("path.photongi.visibility.lookup.normalangle")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.visibility.targethitrate")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.visibility.maxsamplecount")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.glossinessusagethreshold")) <<
@@ -67,6 +69,8 @@ const Properties &PhotonGICache::GetDefaultProps() {
 			// Time start/end are used only if time.end > time.start
 			Property("path.photongi.photon.time.start")(0.0) <<
 			Property("path.photongi.photon.time.end")(-1.0) <<
+			Property("path.photongi.visibility.lookup.radius")(0.f) <<
+			Property("path.photongi.visibility.lookup.normalangle")(10.f) <<
 			Property("path.photongi.visibility.targethitrate")(.99f) <<
 			Property("path.photongi.visibility.maxsamplecount")(1024 * 1024) <<
 			Property("path.photongi.glossinessusagethreshold")(.05f) <<
@@ -105,6 +109,8 @@ PhotonGICache *PhotonGICache::FromProperties(const Scene *scn, const Properties 
 		params.photon.timeStart = cfg.Get(GetDefaultProps().Get("path.photongi.photon.time.start")).Get<float>();
 		params.photon.timeEnd = cfg.Get(GetDefaultProps().Get("path.photongi.photon.time.end")).Get<float>();
 
+		params.visibility.lookUpRadius = Max(0.f, cfg.Get(GetDefaultProps().Get("path.photongi.visibility.lookup.radius")).Get<float>());
+		params.visibility.lookUpNormalAngle = Max(DEFAULT_EPSILON_MIN, cfg.Get(GetDefaultProps().Get("path.photongi.visibility.lookup.normalangle")).Get<float>());
 		params.visibility.targetHitRate = cfg.Get(GetDefaultProps().Get("path.photongi.visibility.targethitrate")).Get<float>();
 		params.visibility.maxSampleCount = cfg.Get(GetDefaultProps().Get("path.photongi.visibility.maxsamplecount")).Get<u_int>();
 
