@@ -471,7 +471,11 @@ void GlossyCoatingMaterial::UpdateTextureReferences(const Texture *oldTex, const
 		index = newTex;
 
 	// Always update glossiness just in case matBase->GetGlossiness() has changed
-	glossiness = Min(ComputeGlossiness(nu, nv), matBase->GetGlossiness());
+	const float coatGlossiness = ComputeGlossiness(nu, nv);
+	if (matBase->GetEventTypes() & GLOSSY)
+		glossiness = Min(coatGlossiness, matBase->GetGlossiness());
+	else
+		glossiness = coatGlossiness;
 }
 
 Properties GlossyCoatingMaterial::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const  {
