@@ -132,12 +132,14 @@ public:
 	
 	// Compiled PhotonGI cache
 
-	// Indirect cache
+	float pgicGlossinessUsageThreshold;
+
+	// PhotonGI indirect cache
 	std::vector<slg::ocl::RadiancePhoton> pgicRadiancePhotons;
 	std::vector<slg::ocl::IndexBVHArrayNode> pgicRadiancePhotonsBVHArrayNode;
 	float pgicIndirectLookUpRadius, pgicIndirectLookUpNormalCosAngle,
-		pgicIndirectGlossinessUsageThreshold, pgicIndirectUsageThresholdScale;
-	// Caustic cache
+		pgicIndirectUsageThresholdScale;
+	// PhotonGI caustic cache
 	std::vector<slg::ocl::Photon> pgicCausticPhotons;
 	std::vector<slg::ocl::IndexBVHArrayNode> pgicCausticPhotonsBVHArrayNode;
 	u_int pgicCausticPhotonTracedCount;

@@ -782,9 +782,9 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 #define KERNEL_ARGS_PHOTONGI \
 		, __global const RadiancePhoton* restrict pgicRadiancePhotons \
 		, __global const IndexBVHArrayNode* restrict pgicRadiancePhotonsBVHNodes \
+		, const float pgicGlossinessUsageThreshold \
 		, const float pgicIndirectLookUpRadius \
 		, const float pgicIndirectLookUpNormalCosAngle \
-		, const float pgicIndirectGlossinessUsageThreshold \
 		, const float pgicIndirectUsageThresholdScale \
 		, __global const Photon* restrict pgicCausticPhotons \
 		, __global const IndexBVHArrayNode* restrict pgicCausticPhotonsBVHNodes \

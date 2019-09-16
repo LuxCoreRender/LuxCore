@@ -64,12 +64,12 @@ OPENCL_FORCE_INLINE bool PhotonGICache_IsPhotonGIEnabled(__global const BSDF *bs
 OPENCL_FORCE_INLINE float PhotonGICache_GetIndirectUsageThreshold(
 		const BSDFEvent lastBSDFEvent, const float lastGlossiness,
 		const float u0,
-		const float pgicIndirectGlossinessUsageThreshold,
+		const float pgicGlossinessUsageThreshold,
 		const float pgicIndirectUsageThresholdScale,
 		const float pgicIndirectLookUpRadius) {
 	// Decide if the glossy surface is "nearly specular"
 
-	if ((lastBSDFEvent & GLOSSY) && (lastGlossiness < pgicIndirectGlossinessUsageThreshold)) {
+	if ((lastBSDFEvent & GLOSSY) && (lastGlossiness < pgicGlossinessUsageThreshold)) {
 		// Disable the cache, the surface is "nearly specular"
 		return INFINITY;
 	} else {

@@ -1003,9 +1003,9 @@ void PathOCLBaseOCLRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePa
 	if (cscene->photonGICache) {
 		advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), pgicRadiancePhotonsBuff);
 		advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), pgicRadiancePhotonsBVHNodesBuff);
+		advancePathsKernel->setArg(argIndex++, cscene->pgicGlossinessUsageThreshold);
 		advancePathsKernel->setArg(argIndex++, cscene->pgicIndirectLookUpRadius);
 		advancePathsKernel->setArg(argIndex++, cscene->pgicIndirectLookUpNormalCosAngle);
-		advancePathsKernel->setArg(argIndex++, cscene->pgicIndirectGlossinessUsageThreshold);
 		advancePathsKernel->setArg(argIndex++, cscene->pgicIndirectUsageThresholdScale);
 
 		advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), pgicCausticPhotonsBuff);

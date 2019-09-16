@@ -199,11 +199,13 @@ typedef struct {
 		float lookUpRadius, lookUpRadius2, lookUpNormalAngle, lookUpNormalCosAngle;
 	} visibility;
 
+	float glossinessUsageThreshold;
+
 	struct {
 		bool enabled;
 		u_int maxSize;
 		float lookUpRadius, lookUpRadius2, lookUpNormalAngle,
-				glossinessUsageThreshold, usageThresholdScale,
+				usageThresholdScale,
 				filterRadiusScale, haltThreshold;
 	} indirect;
 
@@ -237,12 +239,13 @@ protected:
 		ar & visibility.lookUpNormalAngle;
 		ar & visibility.lookUpNormalCosAngle;
 
+		ar & glossinessUsageThreshold;
+
 		ar & indirect.enabled;
 		ar & indirect.maxSize;
 		ar & indirect.lookUpRadius;
 		ar & indirect.lookUpRadius2;
 		ar & indirect.lookUpNormalAngle;
-		ar & indirect.glossinessUsageThreshold;
 		ar & indirect.usageThresholdScale;
 		ar & indirect.filterRadiusScale;
 		ar & indirect.haltThreshold;
@@ -372,7 +375,7 @@ BOOST_CLASS_VERSION(slg::GenericPhoton, 1)
 BOOST_CLASS_VERSION(slg::PGICVisibilityParticle, 1)
 BOOST_CLASS_VERSION(slg::Photon, 1)
 BOOST_CLASS_VERSION(slg::RadiancePhoton, 1)
-BOOST_CLASS_VERSION(slg::PhotonGICacheParams, 2)
+BOOST_CLASS_VERSION(slg::PhotonGICacheParams, 3)
 BOOST_CLASS_VERSION(slg::PhotonGICache, 2)
 
 BOOST_CLASS_EXPORT_KEY(slg::GenericPhoton)

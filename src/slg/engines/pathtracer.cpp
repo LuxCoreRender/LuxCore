@@ -417,7 +417,7 @@ void PathTracer::RenderEyeSample(IntersectionDevice *device, const Scene *scene,
 			} else if (photonGICache->GetDebugType() == PhotonGIDebugType::PGIC_DEBUG_SHOWCAUSTIC) {
 				if (isPhotonGIEnabled)
 					sampleResult.radiance[0] += photonGICache->GetCausticRadiance(bsdf);
-				break;
+					break;
 			} else if (photonGICache->GetDebugType() == PhotonGIDebugType::PGIC_DEBUG_SHOWINDIRECTPATHMIX) {
 				if (isPhotonGIEnabled && photonGICacheEnabledOnLastHit &&
 						(eyeRayHit.t > photonGICache->GetIndirectUsageThreshold(pathInfo.lastBSDFEvent,
@@ -427,31 +427,31 @@ void PathTracer::RenderEyeSample(IntersectionDevice *device, const Scene *scene,
 					photonGIShowIndirectPathMixUsed = true;
 					break;
 				}
-			}
+			} else {
+				// Check if the cache is enabled for this material
+				if (isPhotonGIEnabled) {
+					// TODO: add support for AOVs (possible ?)
+					// TODO: support for radiance groups (possible ?)
 
-			// Check if the cache is enabled for this material
-			if (isPhotonGIEnabled) {
-				// TODO: add support for AOVs (possible ?)
-				// TODO: support for radiance groups (possible ?)
-
-				if (photonGICache->IsIndirectEnabled() && photonGICacheEnabledOnLastHit &&
-						(eyeRayHit.t > photonGICache->GetIndirectUsageThreshold(pathInfo.lastBSDFEvent,
-							pathInfo.lastGlossiness,
-							// I hope to not introduce strange sample correlations
-							// by using passThrough here
-							passThrough))) {
-					sampleResult.radiance[0] += pathThroughput * photonGICache->GetIndirectRadiance(bsdf);
-					// I can terminate the path, all done
-					break;
-				}
+					if (photonGICache->IsIndirectEnabled() && photonGICacheEnabledOnLastHit &&
+							(eyeRayHit.t > photonGICache->GetIndirectUsageThreshold(pathInfo.lastBSDFEvent,
+								pathInfo.lastGlossiness,
+								// I hope to not introduce strange sample correlations
+								// by using passThrough here
+								passThrough))) {
+						sampleResult.radiance[0] += pathThroughput * photonGICache->GetIndirectRadiance(bsdf);
+						// I can terminate the path, all done
+						break;
+					}
 
 				if (photonGICache->IsCausticEnabled() && !photonGICausticCacheAlreadyUsed)
-					sampleResult.radiance[0] += pathThroughput * photonGICache->GetCausticRadiance(bsdf);
+						sampleResult.radiance[0] += pathThroughput * photonGICache->GetCausticRadiance(bsdf);
 
-				photonGICausticCacheAlreadyUsed = true;
-				photonGICacheEnabledOnLastHit = true;
-			} else
-				photonGICacheEnabledOnLastHit = false;
+					photonGICausticCacheAlreadyUsed = true;
+					photonGICacheEnabledOnLastHit = true;
+				} else
+					photonGICacheEnabledOnLastHit = false;
+			}
 		}
 
 		//------------------------------------------------------------------

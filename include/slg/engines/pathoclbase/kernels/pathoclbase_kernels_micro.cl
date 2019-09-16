@@ -340,7 +340,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 	//----------------------------------------------------------------------
 
 #if defined(PARAM_PGIC_ENABLED)
-	const bool isPhotonGIEnabled = PhotonGICache_IsPhotonGIEnabled(bsdf, pgicIndirectGlossinessUsageThreshold
+	const bool isPhotonGIEnabled = PhotonGICache_IsPhotonGIEnabled(bsdf, pgicGlossinessUsageThreshold
 			MATERIALS_PARAM);
 
 #if defined(PARAM_PGIC_DEBUG_SHOWINDIRECT)
@@ -382,7 +382,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 					// I hope to not introduce strange sample correlations
 					// by using passThrough here
 					passThroughEvent,
-					pgicIndirectGlossinessUsageThreshold,
+					pgicGlossinessUsageThreshold,
 					pgicIndirectUsageThresholdScale,
 					pgicIndirectLookUpRadius))) {
 			VSTORE3F((float3)(0.f, 0.f, 1.f), sample->result.radiancePerPixelNormalized[0].c);
@@ -410,7 +410,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 					// I hope to not introduce strange sample correlations
 					// by using passThrough here
 					passThroughEvent,
-					pgicIndirectGlossinessUsageThreshold,
+					pgicGlossinessUsageThreshold,
 					pgicIndirectUsageThresholdScale,
 					pgicIndirectLookUpRadius))) {
 			const float3 radiance = PhotonGICache_GetIndirectRadiance(bsdf,

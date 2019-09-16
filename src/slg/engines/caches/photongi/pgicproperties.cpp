@@ -37,12 +37,12 @@ Properties PhotonGICache::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("path.photongi.photon.time.end")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.visibility.targethitrate")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.visibility.maxsamplecount")) <<
+			cfg.Get(GetDefaultProps().Get("path.photongi.glossinessusagethreshold")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.indirect.enabled")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.indirect.maxsize")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.indirect.haltthreshold")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.indirect.lookup.radius")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.indirect.lookup.normalangle")) <<
-			cfg.Get(GetDefaultProps().Get("path.photongi.indirect.glossinessusagethreshold")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.indirect.usagethresholdscale")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.indirect.filter.radiusscale")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.caustic.enabled")) <<
@@ -69,12 +69,12 @@ const Properties &PhotonGICache::GetDefaultProps() {
 			Property("path.photongi.photon.time.end")(-1.0) <<
 			Property("path.photongi.visibility.targethitrate")(.99f) <<
 			Property("path.photongi.visibility.maxsamplecount")(1024 * 1024) <<
+			Property("path.photongi.glossinessusagethreshold")(.05f) <<
 			Property("path.photongi.indirect.enabled")(false) <<
 			Property("path.photongi.indirect.maxsize")(0) <<
 			Property("path.photongi.indirect.haltthreshold")(.05f) <<
 			Property("path.photongi.indirect.lookup.radius")(0.f) <<
 			Property("path.photongi.indirect.lookup.normalangle")(10.f) <<
-			Property("path.photongi.indirect.glossinessusagethreshold")(.05f) <<
 			Property("path.photongi.indirect.usagethresholdscale")(8.f) <<
 			Property("path.photongi.indirect.filter.radiusscale")(3.f) <<
 			Property("path.photongi.caustic.enabled")(false) <<
@@ -108,6 +108,8 @@ PhotonGICache *PhotonGICache::FromProperties(const Scene *scn, const Properties 
 		params.visibility.targetHitRate = cfg.Get(GetDefaultProps().Get("path.photongi.visibility.targethitrate")).Get<float>();
 		params.visibility.maxSampleCount = cfg.Get(GetDefaultProps().Get("path.photongi.visibility.maxsamplecount")).Get<u_int>();
 
+		params.glossinessUsageThreshold = Max(0.f, cfg.Get(GetDefaultProps().Get("path.photongi.glossinessusagethreshold")).Get<float>());
+
 		if (params.indirect.enabled) {
 			params.indirect.maxSize = Max(0u, cfg.Get(GetDefaultProps().Get("path.photongi.indirect.maxsize")).Get<u_int>());
 			params.indirect.haltThreshold = Max(DEFAULT_EPSILON_MIN, cfg.Get(GetDefaultProps().Get("path.photongi.indirect.haltthreshold")).Get<float>());
@@ -115,7 +117,6 @@ PhotonGICache *PhotonGICache::FromProperties(const Scene *scn, const Properties 
 			params.indirect.lookUpRadius = Max(0.f, cfg.Get(GetDefaultProps().Get("path.photongi.indirect.lookup.radius")).Get<float>());
 			params.indirect.lookUpNormalAngle = Max(DEFAULT_EPSILON_MIN, cfg.Get(GetDefaultProps().Get("path.photongi.indirect.lookup.normalangle")).Get<float>());
 
-			params.indirect.glossinessUsageThreshold = Max(0.f, cfg.Get(GetDefaultProps().Get("path.photongi.indirect.glossinessusagethreshold")).Get<float>());
 			params.indirect.usageThresholdScale = Max(0.f, cfg.Get(GetDefaultProps().Get("path.photongi.indirect.usagethresholdscale")).Get<float>());
 
 			params.indirect.filterRadiusScale = Max(1.f, cfg.Get(GetDefaultProps().Get("path.photongi.indirect.filter.radiusscale")).Get<float>());
@@ -128,7 +129,7 @@ PhotonGICache *PhotonGICache::FromProperties(const Scene *scn, const Properties 
 			params.caustic.lookUpMaxCount = Max(1u, cfg.Get(GetDefaultProps().Get("path.photongi.caustic.lookup.maxcount")).Get<u_int>());
 			params.caustic.lookUpRadius = Max(DEFAULT_EPSILON_MIN, cfg.Get(GetDefaultProps().Get("path.photongi.caustic.lookup.radius")).Get<float>());
 			params.caustic.lookUpNormalAngle = Max(DEFAULT_EPSILON_MIN, cfg.Get(GetDefaultProps().Get("path.photongi.caustic.lookup.normalangle")).Get<float>());
-			
+
 			params.caustic.mergeRadiusScale = Max(0.f, cfg.Get(GetDefaultProps().Get("path.photongi.caustic.merge.radiusscale")).Get<float>());
 		}
 

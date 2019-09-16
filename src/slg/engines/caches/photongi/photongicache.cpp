@@ -61,10 +61,7 @@ bool PhotonGICache::IsPhotonGIEnabled(const BSDF &bsdf) const {
 	const BSDFEvent eventTypes = bsdf.GetEventTypes();
 	
 	if ((eventTypes & TRANSMIT) || (eventTypes & SPECULAR) ||
-			// Note: params.indirect.glossinessUsageThreshold is not initialized
-			// if indirect cache is not enabled
-			((eventTypes & GLOSSY) && (params.indirect.enabled) &&
-			(bsdf.GetGlossiness() < params.indirect.glossinessUsageThreshold)))
+			((eventTypes & GLOSSY) && (bsdf.GetGlossiness() < params.glossinessUsageThreshold)))
 		return false;
 	else
 		return bsdf.IsPhotonGIEnabled();
@@ -74,7 +71,7 @@ float PhotonGICache::GetIndirectUsageThreshold(const BSDFEvent lastBSDFEvent,
 		const float lastGlossiness, const float u0) const {
 	// Decide if the glossy surface is "nearly specular"
 
-	if ((lastBSDFEvent & GLOSSY) && (lastGlossiness < params.indirect.glossinessUsageThreshold)) {
+	if ((lastBSDFEvent & GLOSSY) && (lastGlossiness < params.glossinessUsageThreshold)) {
 		// Disable the cache, the surface is "nearly specular"
 		return numeric_limits<float>::infinity();
 	} else {

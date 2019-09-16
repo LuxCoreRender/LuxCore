@@ -51,7 +51,9 @@ void CompiledScene::CompilePhotonGI() {
 	
 	wasPhotonGICompiled = true;
 	pgicDebugType = photonGICache->GetDebugType();
-	
+
+	pgicGlossinessUsageThreshold = photonGICache->GetParams().glossinessUsageThreshold;
+
 	//--------------------------------------------------------------------------
 	// Indirect cache
 	//--------------------------------------------------------------------------
@@ -85,7 +87,6 @@ void CompiledScene::CompilePhotonGI() {
 
 			pgicIndirectLookUpRadius = radiancePhotonsBVH->GetEntryRadius();
 			pgicIndirectLookUpNormalCosAngle = radiancePhotonsBVH->GetEntryNormalCosAngle();
-			pgicIndirectGlossinessUsageThreshold = photonGICache->GetParams().indirect.glossinessUsageThreshold;
 			pgicIndirectUsageThresholdScale = photonGICache->GetParams().indirect.usageThresholdScale;
 		}
 	}
