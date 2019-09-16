@@ -641,9 +641,13 @@ void PathTracer::ConnectToEye(IntersectionDevice *device, const Scene *scene,
 				MetropolisSampler *metropolisSampler = (MetropolisSampler *)sampler;
 
 				// Mollification shrinkage
+
+				// Mollification factor for normal sampler
+				//const float mollificationFactor = pathSpaceRegularizationScale * powf(1.f + mollificationCount, -1.f / 6.f);
+
+				// Mollification factor for normal sampler
 				const u_int mollificationCount = metropolisSampler->GetLargeMutationCount();
-				// "1 / 6" for normal samplers, Metropolis requires a very small value like "1 / 32"
-				const float mollificationFactor = pathSpaceRegularizationScale * powf(1.f + mollificationCount, -1.f / 32.f);
+				const float mollificationFactor = pathSpaceRegularizationScale * powf(pathSpaceRegularizationSpeed, mollificationCount);
 
 				// Check if the direction is inside the mollification angle
 				bsdfEval *= Mollify(mollificationFactor, -eyeDir, sampledDir, eyeDistance);
@@ -872,8 +876,10 @@ void PathTracer::ParseOptions(const luxrays::Properties &cfg, const luxrays::Pro
 	}
 
 	pathSpaceRegularizationEnable = cfg.Get(defaultProps.Get("path.pathspaceregularization.enable")).Get<bool>();
-	if (pathSpaceRegularizationEnable)
+	if (pathSpaceRegularizationEnable) {
 		pathSpaceRegularizationScale = Max(cfg.Get(defaultProps.Get("path.pathspaceregularization.scale")).Get<float>(), 0.f);
+		pathSpaceRegularizationSpeed = Clamp(cfg.Get(defaultProps.Get("path.pathspaceregularization.speed")).Get<float>(), 0.f, 1.f);
+	}
 	
 	// Update eye sample size
 	eyeSampleBootSize = 5;
@@ -923,6 +929,7 @@ Properties PathTracer::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("path.hybridbackforward.glossinessthreshold")) <<
 			cfg.Get(GetDefaultProps().Get("path.pathspaceregularization.enable")) <<
 			cfg.Get(GetDefaultProps().Get("path.pathspaceregularization.scale")) <<
+			cfg.Get(GetDefaultProps().Get("path.pathspaceregularization.speed")) <<
 			cfg.Get(GetDefaultProps().Get("path.russianroulette.depth")) <<
 			cfg.Get(GetDefaultProps().Get("path.russianroulette.cap")) <<
 			cfg.Get(GetDefaultProps().Get("path.clamping.variance.maxvalue")) <<
@@ -939,6 +946,7 @@ const Properties &PathTracer::GetDefaultProps() {
 			Property("path.hybridbackforward.glossinessthreshold")(.05f) <<
 			Property("path.pathspaceregularization.enable")(false) <<
 			Property("path.pathspaceregularization.scale")(2.f) <<
+			Property("path.pathspaceregularization.speed")(.999999f) <<
 			Property("path.pathdepth.total")(6) <<
 			Property("path.pathdepth.diffuse")(4) <<
 			Property("path.pathdepth.glossy")(4) <<
