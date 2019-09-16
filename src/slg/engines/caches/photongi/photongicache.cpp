@@ -492,7 +492,18 @@ void PhotonGICache::Preprocess(const u_int threadCnt) {
 	// Fill all photon vectors
 	//--------------------------------------------------------------------------
 
-	TracePhotons(params.indirect.enabled, params.caustic.enabled);
+	// I build indirect and caustic caches with 2 different steps in order to
+	// have Metropolis work at beast for the 2 different tasks
+
+	if (params.indirect.enabled) {
+		SLG_LOG("PhotonGI tracing indirect cache photons");
+		TracePhotons(true, false);
+	}
+
+	if (params.caustic.enabled) {
+		SLG_LOG("PhotonGI tracing caustic cache photons");
+		TracePhotons(false, true);
+	}
 
 	//--------------------------------------------------------------------------
 	// Radiance photon map

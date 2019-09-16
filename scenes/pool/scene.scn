@@ -166,11 +166,15 @@ scene.materials.Surface_Material__001_139997951234568.shadowcatcher.onlyinfinite
 scene.materials.mat_mate.type = "matte"
 scene.materials.mat_mate.kd = 0.6 0.6 0.6
 ##
+#scene.objects.Mesh_Plane_139998120635912000.material = "Surface_Material_139997951233032"
+#scene.objects.Mesh_Plane_139998120635912000.ply = "mesh-00000.ply"
+#scene.objects.Mesh_Plane_139998120635912000.camerainvisible = 0
+#scene.objects.Mesh_Plane_139998120635912000.id = 3772660237
+#scene.objects.Mesh_Plane_139998120635912000.appliedtransformation = 1.00000012 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1
+#
 scene.objects.Mesh_Plane_139998120635912000.material = "Surface_Material_139997951233032"
-scene.objects.Mesh_Plane_139998120635912000.ply = "mesh-00000.ply"
-scene.objects.Mesh_Plane_139998120635912000.camerainvisible = 0
-scene.objects.Mesh_Plane_139998120635912000.id = 3772660237
-scene.objects.Mesh_Plane_139998120635912000.appliedtransformation = 1.00000012 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1
+scene.objects.Mesh_Plane_139998120635912000.ply = "plane.ply"
+##
 scene.objects.Mesh_Cube_139998120634376000.material = "Surface_Material__001_139997951234568"
 scene.objects.Mesh_Cube_139998120634376000.ply = "mesh-00001.ply"
 scene.objects.Mesh_Cube_139998120634376000.camerainvisible = 0
