@@ -51,7 +51,7 @@ MetropolisSampler::MetropolisSampler(RandomGenerator *rnd, Film *flm,
 		sharedData(samplerSharedData),
 		maxRejects(maxRej),	largeMutationProbability(pLarge), imageMutationRange(imgRange),
 		samples(NULL), sampleStamps(NULL), currentSamples(NULL), currentSampleStamps(NULL),
-		cooldown(true) {
+		largeMutationCount(0), cooldown(true) {
 }
 
 MetropolisSampler::~MetropolisSampler() {
