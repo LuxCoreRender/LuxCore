@@ -1,0 +1,15 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\include",
+    "\\include\\luxrays",
+    "\\include\\slg",
+    "\\include\\slg\\textures",
+    "\\src",
+    "\\src\\slg",
+    "\\src\\slg\\engines",
+    "\\src\\slg\\engines\\pathoclbase"
+  ],
+  "SelectedNode": "\\src\\slg\\engines\\pathoclbase\\compiletextures.cpp",
+  "PreviewInSolutionExplorer": false
+}
