@@ -29,6 +29,7 @@ echo "Detected build type: $VERSION_STRING"
 if [[ $VERSION_STRING == *"alpha"* ]] || \
    [[ $VERSION_STRING == *"beta"* ]] || \
    [[ $VERSION_STRING == *"RC"* ]] || \
+   [[ $VERSION_STRING == *"rc"* ]] || \
    [[ $VERSION_STRING == "latest" ]] ; then
     FINAL="FALSE"
 else

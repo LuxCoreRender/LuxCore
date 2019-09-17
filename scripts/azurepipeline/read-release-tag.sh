@@ -10,7 +10,8 @@ echo $RELEASE_TAG
 
 if [[ $RELEASE_TAG == *"alpha"* ]] || \
    [[ $RELEASE_TAG == *"beta"* ]] || \
-   [[ $RELEASE_TAG == *"RC"* ]] ; then
+   [[ $RELEASE_TAG == *"RC"* ]] || \
+   [[ $RELEASE_TAG == *"rc"* ]] ; then
     FINAL="FALSE"
 elif [[ $RELEASE_TAG == *"latest"* ]] ; then
     FINAL="FALSE"
