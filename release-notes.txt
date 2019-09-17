@@ -140,6 +140,7 @@
 * Fixed a problem when using flat instances and OpenCL rendering
 * Fixed/Enabled PhotonGI cache on Mix and GlossyCoatting materials when possible
 * Fixed a regression in BIDIRCPU causing dark edges on glancing surfaces
+* Fixed a crash when PhotonGI caustic cache is enabled but empty (issue #236)
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
