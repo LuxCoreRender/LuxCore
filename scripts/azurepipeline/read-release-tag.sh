@@ -9,7 +9,8 @@ RELEASE_TAG=$(cat $SYSTEM_DEFAULTWORKINGDIRECTORY/_LuxCoreRender.LuxCore/LuxCore
 echo $RELEASE_TAG
 
 if [[ $RELEASE_TAG == *"alpha"* ]] || \
-   [[ $RELEASE_TAG == *"beta"* ]] ; then
+   [[ $RELEASE_TAG == *"beta"* ]] || \
+   [[ $RELEASE_TAG == *"RC"* ]] ; then
     FINAL="FALSE"
 elif [[ $RELEASE_TAG == *"latest"* ]] ; then
     FINAL="FALSE"

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Called by the "LuxCoreRender.LuxCore" build pipeline
-# Detect release type (daily, alpha, beta or final) and set version string
+# Detect release type (daily, alpha, beta, RC or final) and set version string
 # One, and only one, tag in the form "luxcorerender_v*" is needed, 
 # otherwise the official release build aborts.
 
@@ -28,6 +28,7 @@ echo "Detected build type: $VERSION_STRING"
 
 if [[ $VERSION_STRING == *"alpha"* ]] || \
    [[ $VERSION_STRING == *"beta"* ]] || \
+   [[ $VERSION_STRING == *"RC"* ]] || \
    [[ $VERSION_STRING == "latest" ]] ; then
     FINAL="FALSE"
 else
