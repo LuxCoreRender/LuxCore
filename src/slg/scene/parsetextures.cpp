@@ -34,6 +34,7 @@
 #include "slg/textures/blackbody.h"
 #include "slg/textures/blender_texture.h"
 #include "slg/textures/brick.h"
+#include "slg/textures/brightcontrast.h"
 #include "slg/textures/checkerboard.h"
 #include "slg/textures/colordepth.h"
 #include "slg/textures/constfloat.h"
@@ -560,9 +561,14 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
         const Texture *increment = GetTexture(props.Get(Property(propName + ".increment")(0.5f)));
         tex = new RoundingTexture(texture, increment);
     } else if (texType == "modulo") {
-        const Texture *texture = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
-        const Texture *modulo = GetTexture(props.Get(Property(propName + ".modulo")(0.5f)));
-        tex = new ModuloTexture(texture, modulo);
+		const Texture *texture = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
+		const Texture *modulo = GetTexture(props.Get(Property(propName + ".modulo")(0.5f)));
+		tex = new ModuloTexture(texture, modulo);
+	} else if (texType == "brightcontrast") {
+		const Texture *texture = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
+		const Texture *brightnessTex = GetTexture(props.Get(Property(propName + ".brightness")(0.f)));
+		const Texture *contrastTex = GetTexture(props.Get(Property(propName + ".contrast")(0.f)));
+		tex = new BrightContrastTexture(texture, brightnessTex, contrastTex);
 	} else
 		throw runtime_error("Unknown texture type: " + texType);
 
