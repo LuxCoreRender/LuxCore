@@ -25,19 +25,35 @@
 
 namespace slg {
 
+class DLSCacheEntry;
+
 class DLSCBvh : public IndexBvh<DLSCacheEntry> {
 public:
-	DLSCBvh(const std::vector<DLSCacheEntry> *ae, const float r, const float na);
+	DLSCBvh(const std::vector<DLSCacheEntry> *entries,
+			const float radius, const float normalAngle);
 	virtual ~DLSCBvh();
 
-	const DLSCacheEntry *GetEntry(const luxrays::Point &p, const luxrays::Normal &n,
+	const DLSCacheEntry *GetNearestEntry(const luxrays::Point &p,
+			const luxrays::Normal &n, const bool isVolume) const;
+	void GetAllNearEntries(std::vector<u_int> &allNearEntryIndices,
+			const luxrays::Point &p, const luxrays::Normal &n,
 			const bool isVolume) const;
-	
+
 	// Used for OpenCL data translation
 	const std::vector<DLSCacheEntry> *GetAllEntries() const { return allEntries; }
 
+	friend class boost::serialization::access;
+
 private:
-	float entryNormalCosAngle;
+	// Used by serialization
+	DLSCBvh() { }
+
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(IndexBvh);
+		ar & normalCosAngle;
+	}
+
+	float normalCosAngle;
 };
 
 }

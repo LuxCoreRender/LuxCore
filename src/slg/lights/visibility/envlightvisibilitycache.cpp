@@ -475,6 +475,7 @@ void EnvLightVisibilityCache::BuildCacheEntry(const u_int entryIndex) {
 void EnvLightVisibilityCache::BuildCacheEntries() {
 	SLG_LOG("EnvLightVisibilityCache building cache entries: " << visibilityParticles.size());
 
+	const double startTime = WallClockTime();
 	double lastPrintTime = WallClockTime();
 	atomic<u_int> counter(0);
 
@@ -497,7 +498,9 @@ void EnvLightVisibilityCache::BuildCacheEntries() {
 		if (tid == 0) {
 			const double now = WallClockTime();
 			if (now - lastPrintTime > 2.0) {
-				SLG_LOG("EnvLightVisibilityCache initializing distributions: " << counter << "/" << visibilityParticles.size() <<" (" << (u_int)((100.0 * counter) / visibilityParticles.size()) << "%)");
+				SLG_LOG("EnvLightVisibilityCache initializing distributions: " << counter << "/" << visibilityParticles.size() <<" (" <<
+						(boost::format("%.2f entries/sec, ") % (counter / (now - startTime))) <<
+						(u_int)((100.0 * counter) / visibilityParticles.size()) << "%)");
 				lastPrintTime = now;
 			}
 		}
@@ -565,6 +568,10 @@ const ELVCacheEntry *ELVCBvh::GetNearestEntry(const Point &p, const Normal &n, c
 //------------------------------------------------------------------------------
 
 void EnvLightVisibilityCache::Build() {
+	//--------------------------------------------------------------------------
+	// Load the persistent cache file if required
+	//--------------------------------------------------------------------------
+
 	if (params.persistent.fileName != "") {
 		// Check if the file already exist
 		if (boost::filesystem::exists(params.persistent.fileName)) {

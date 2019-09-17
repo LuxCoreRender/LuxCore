@@ -140,7 +140,7 @@ void IndexOctree<T>::AddImpl(IndexOctreeNode *node, const BBox &nodeBBox,
 // C++ can be quite horrible...
 
 namespace slg {
-template class IndexOctree<DLSCacheEntry>;
+template class IndexOctree<DLSCVisibilityParticle>;
 template class IndexOctree<PGICVisibilityParticle>;
 template class IndexOctree<ELVCVisibilityParticle>;
 }

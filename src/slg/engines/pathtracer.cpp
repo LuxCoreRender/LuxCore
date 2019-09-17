@@ -672,20 +672,20 @@ void PathTracer::RenderLightSample(IntersectionDevice *device, const Scene *scen
 
 	Spectrum lightPathFlux;
 
-	const float timeSample = sampler->GetSample(12);
+	const float timeSample = sampler->GetSample(8);
 	const float time = scene->camera->GenerateRayTime(timeSample);
 
 	// Select one light source
 	float lightPickPdf;
 	const LightSource *light = scene->lightDefs.GetEmitLightStrategy()->
-			SampleLights(sampler->GetSample(2), &lightPickPdf);
+			SampleLights(sampler->GetSample(0), &lightPickPdf);
 
 	if (light) {
 		// Initialize the light path
 		float lightEmitPdfW;
 		Ray nextEventRay;
 		lightPathFlux = light->Emit(*scene,
-			sampler->GetSample(3), sampler->GetSample(4), sampler->GetSample(5), sampler->GetSample(6), sampler->GetSample(7),
+			sampler->GetSample(1), sampler->GetSample(2), sampler->GetSample(3), sampler->GetSample(4), sampler->GetSample(5),
 				&nextEventRay.o, &nextEventRay.d, &lightEmitPdfW);
 		nextEventRay.UpdateMinMaxWithEpsilon();
 		nextEventRay.time = time;
@@ -698,7 +698,7 @@ void PathTracer::RenderLightSample(IntersectionDevice *device, const Scene *scen
 
 		// Sample a point on the camera lens
 		Point lensPoint;
-		if (!scene->camera->SampleLens(time, sampler->GetSample(8), sampler->GetSample(9),
+		if (!scene->camera->SampleLens(time, sampler->GetSample(6), sampler->GetSample(7),
 				&lensPoint))
 			return;
 
@@ -744,7 +744,7 @@ void PathTracer::RenderLightSample(IntersectionDevice *device, const Scene *scen
 				Vector sampledDir;
 				BSDFEvent lastBSDFEvent;
 				float cosSampleDir;
-				const Spectrum bsdfSample = bsdf.Sample(&sampledDir,
+				Spectrum bsdfSample = bsdf.Sample(&sampledDir,
 						sampler->GetSample(sampleOffset + 2),
 						sampler->GetSample(sampleOffset + 3),
 						&bsdfPdf, &cosSampleDir, &lastBSDFEvent);
@@ -753,13 +753,14 @@ void PathTracer::RenderLightSample(IntersectionDevice *device, const Scene *scen
 							!((lastBSDFEvent & GLOSSY) && (bsdf.GetGlossiness() <= hybridBackForwardGlossinessThreshold)))))
 					break;
 
-				if (depthInfo.GetRRDepth() >= rrDepth) {
-					// Russian Roulette
-					const float prob = RenderEngine::RussianRouletteProb(bsdfSample, rrImportanceCap);
-					if (sampler->GetSample(sampleOffset + 4) < prob)
-						bsdfPdf *= prob;
-					else
+				// Russian Roulette
+				if (!(lastBSDFEvent & SPECULAR) && (depthInfo.GetRRDepth() >= rrDepth)) {
+					const float rrProb = RenderEngine::RussianRouletteProb(bsdfSample, rrImportanceCap);
+					if (rrProb < sampler->GetSample(sampleOffset + 4))
 						break;
+
+					// Increase path contribution
+					lightPathFlux /= rrProb;
 				}
 
 				lightPathFlux *= bsdfSample;
@@ -831,7 +832,7 @@ void PathTracer::ParseOptions(const luxrays::Properties &cfg, const luxrays::Pro
 		(maxPathDepth.depth + 1) * eyeSampleStepSize; // For each path vertex
 	
 	// Update light sample size
-	lightSampleBootSize = 13;
+	lightSampleBootSize = 9;
 	lightSampleStepSize = 5;
 	lightSampleSize = 
 		lightSampleBootSize + // To generate eye ray

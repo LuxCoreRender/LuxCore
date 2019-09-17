@@ -146,6 +146,9 @@ OPENCL_FORCE_INLINE float3 PhotonGICache_GetIndirectRadiance(__global const BSDF
 		__global const RadiancePhoton* restrict pgicRadiancePhotons,
 		__global const IndexBVHArrayNode* restrict pgicRadiancePhotonsBVHNodes,
 		const float pgicIndirectLookUpRadius2, const float pgicIndirectLookUpNormalCosAngle) {
+	if (!pgicRadiancePhotons)
+		return BLACK;
+
 	const float3 p = VLOAD3F(&bsdf->hitPoint.p.x);
 	const float3 n = (bsdf->hitPoint.intoObject ? 1.f: -1.f) * VLOAD3F(&bsdf->hitPoint.geometryN.x);
 
@@ -369,6 +372,9 @@ OPENCL_FORCE_NOT_INLINE float3 PhotonGICache_GetCausticRadiance(__global const B
 		const float pgicCausticLookUpRadius2, const float pgicCausticLookUpNormalCosAngle,
 		const uint pgicCausticLookUpMaxCount
 		MATERIALS_PARAM_DECL) {
+	if (!pgicCausticPhotons)
+		return BLACK;
+
 	const float3 p = VLOAD3F(&bsdf->hitPoint.p.x);
 	const float3 n = (bsdf->hitPoint.intoObject ? 1.f: -1.f) * VLOAD3F(&bsdf->hitPoint.geometryN.x);
 

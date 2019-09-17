@@ -208,7 +208,6 @@ protected:
 	cl::Buffer *lightsDistributionBuff;
 	cl::Buffer *infiniteLightSourcesDistributionBuff;
 	cl::Buffer *dlscAllEntriesBuff;
-	cl::Buffer *dlscDistributionIndexToLightIndexBuff;
 	cl::Buffer *dlscDistributionsBuff;
 	cl::Buffer *dlscBVHNodesBuff;
 	cl::Buffer *elvcAllEntriesBuff;

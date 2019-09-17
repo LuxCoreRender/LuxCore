@@ -19,6 +19,7 @@
 #include "slg/engines/pathcpu/pathcpu.h"
 #include "slg/volumes/volume.h"
 #include "slg/utils/varianceclamping.h"
+#include "slg/samplers/metropolis.h"
 
 using namespace std;
 using namespace luxrays;
@@ -56,15 +57,17 @@ void PathCPURenderThread::RenderFunc() {
 	Sampler *lightSampler = nullptr;
 
 	eyeSampler = engine->renderConfig->AllocSampler(rndGen, engine->film,
-			nullptr, engine->samplerSharedData);
+			nullptr, engine->samplerSharedData, Properties());
 	eyeSampler->RequestSamples(PIXEL_NORMALIZED_ONLY, pathTracer.eyeSampleSize);
 
 	if (pathTracer.hybridBackForwardEnable) {
 		// Light path sampler is always Metropolis
 		Properties props;
 		props <<
-			Property("sampler.type")("METROPOLIS");
-		
+			Property("sampler.type")("METROPOLIS") <<
+			// Disable image plane meaning for samples 0 and 1
+			Property("sampler.imagesamples.enable")(false);
+
 		lightSampler = Sampler::FromProperties(props, rndGen, engine->film, nullptr,
 				engine->lightSamplerSharedData);
 		

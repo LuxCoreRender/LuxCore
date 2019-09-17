@@ -145,7 +145,7 @@ void PathOCLRenderEngine::StartLockLess() {
 		eyeSamplerSharedData = renderConfig->AllocSamplerSharedData(&seedBaseGenerator, film);
 		
 		if (pathTracer.hybridBackForwardEnable)
-			lightSamplerSharedData = renderConfig->AllocSamplerSharedData(&seedBaseGenerator, film);
+			lightSamplerSharedData = MetropolisSamplerSharedData::FromProperties(Properties(), &seedBaseGenerator, film);
 	}
 
 	//--------------------------------------------------------------------------

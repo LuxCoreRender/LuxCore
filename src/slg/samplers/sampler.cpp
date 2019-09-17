@@ -44,6 +44,11 @@ SamplerSharedData *SamplerSharedData::FromProperties(const Properties &cfg, Rand
 // Sampler
 //------------------------------------------------------------------------------
 
+void Sampler::RequestSamples(const SampleType smplType, const u_int size) {
+	sampleType = smplType;
+	requestedSamples = size;
+}
+
 void Sampler::AtomicAddSamplesToFilm(const vector<SampleResult> &sampleResults, const float weight) const {
 	for (vector<SampleResult>::const_iterator sr = sampleResults.begin(); sr < sampleResults.end(); ++sr) {
 		if (sr->useFilmSplat && filmSplatter)
@@ -55,7 +60,8 @@ void Sampler::AtomicAddSamplesToFilm(const vector<SampleResult> &sampleResults, 
 
 Properties Sampler::ToProperties() const {
 	return Properties() <<
-			Property("sampler.type")(SamplerType2String(GetType()));
+			Property("sampler.type")(SamplerType2String(GetType())) <<
+			Property("sampler.imagesamples.enable")(imageSamplesEnable);
 }
 
 //------------------------------------------------------------------------------
@@ -67,9 +73,10 @@ Properties Sampler::ToProperties(const Properties &cfg) {
 
 	SamplerRegistry::ToProperties func;
 
-	if (SamplerRegistry::STATICTABLE_NAME(ToProperties).Get(type, func))
-		return Properties() << func(cfg);
-	else
+	if (SamplerRegistry::STATICTABLE_NAME(ToProperties).Get(type, func)) {
+		return func(cfg) <<
+				cfg.Get(GetDefaultProps().Get("sampler.imagesamples.enable"));
+	} else
 		throw runtime_error("Unknown sampler type in Sampler::ToProperties(): " + type);
 }
 
@@ -121,7 +128,8 @@ string Sampler::SamplerType2String(const SamplerType type) {
 }
 
 const Properties &Sampler::GetDefaultProps() {
-	static Properties props;
+	static Properties props = Properties() <<
+			Property("sampler.imagesamples.enable")(true);
 
 	return props;
 }

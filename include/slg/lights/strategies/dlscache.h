@@ -37,7 +37,7 @@ namespace ocl {
 
 class LightStrategyDLSCache : public LightStrategy {
 public:
-	LightStrategyDLSCache(const DirectLightSamplingCacheParams &params);
+	LightStrategyDLSCache(const DLSCParams &params);
 	virtual ~LightStrategyDLSCache();
 
 	virtual void Preprocess(const Scene *scene, const LightStrategyTask taskType,
@@ -64,8 +64,8 @@ public:
 	const luxrays::Distribution1D *GetLightsDistribution() const { return distributionStrategy.GetLightsDistribution(); }
 	const DLSCBvh *GetBVH() const { return DLSCache.GetBVH(); }
 	bool UseRTMode() const { return useRTMode; }
-	float GetEntryRadius() const { return DLSCache.GetParams().entry.radius; }
-	float GetEntryNormalAngle() const { return DLSCache.GetParams().entry.normalAngle; }
+	float GetEntryRadius() const { return DLSCache.GetParams().visibility.lookUpRadius; }
+	float GetEntryNormalAngle() const { return DLSCache.GetParams().visibility.lookUpNormalAngle; }
 
 	//--------------------------------------------------------------------------
 	// Static methods used by LightStrategyRegistry

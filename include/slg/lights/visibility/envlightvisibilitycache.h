@@ -61,7 +61,7 @@ struct ELVCVisibilityParticle {
 		volInfoList.insert(volInfoList.end(), part.volInfoList.begin(), part.volInfoList.end());
 	}
 
-	// field required by IndexOctree<T> class
+	// Field required by IndexOctree<T> class
 	luxrays::Point p;
 
 	std::vector<BSDF> bsdfList;
@@ -233,7 +233,10 @@ private:
 
 	ELVCParams params;
 
+	// Used only during the building phase
 	std::vector<ELVCVisibilityParticle> visibilityParticles;
+
+	// Used during the rendering phase
 	std::vector<ELVCacheEntry> cacheEntries;
 	ELVCBvh *cacheEntriesBVH;
 };

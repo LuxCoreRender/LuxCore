@@ -179,7 +179,6 @@ typedef struct {
 	__global const float* restrict lightsDistribution, \
 	__global const float* restrict infiniteLightSourcesDistribution, \
 	__global const DLSCacheEntry* restrict dlscAllEntries, \
-	__global const uint* restrict dlscDistributionIndexToLightIndex, \
 	__global const float* restrict dlscDistributions, \
 	__global const IndexBVHArrayNode* restrict dlscBVHNodes, \
 	const float dlscRadius2, const float dlscNormalCosAngle, \
@@ -197,7 +196,6 @@ typedef struct {
 	lightsDistribution, \
 	infiniteLightSourcesDistribution, \
 	dlscAllEntries, \
-	dlscDistributionIndexToLightIndex, \
 	dlscDistributions, \
 	dlscBVHNodes, \
 	dlscRadius2, \

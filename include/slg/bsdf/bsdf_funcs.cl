@@ -485,7 +485,9 @@ OPENCL_FORCE_NOT_INLINE float3 BSDF_Evaluate(__global const BSDF *bsdf,
 	if (!bsdf->isVolume) {
 #endif
 		// Shadow terminator artefact avoidance
-		if ((*event & (DIFFUSE | GLOSSY)) && ((shadeN.x != interpolatedN.x) || (shadeN.y != interpolatedN.y) || (shadeN.z != interpolatedN.z)))
+		if ((*event & REFLECT) &&
+				(*event & (DIFFUSE | GLOSSY)) &&
+				((shadeN.x != interpolatedN.x) || (shadeN.y != interpolatedN.y) || (shadeN.z != interpolatedN.z)))
 			result *= BSDF_ShadowTerminatorAvoidanceFactor(BSDF_GetLandingInterpolatedN(bsdf),
 					BSDF_GetLandingShadeN(bsdf), lightDir);
 #if defined(PARAM_HAS_VOLUMES)
@@ -521,7 +523,9 @@ OPENCL_FORCE_NOT_INLINE float3 BSDF_Sample(__global const BSDF *bsdf, const floa
 		// Shadow terminator artefact avoidance
 		const float3 shadeN = VLOAD3F(&bsdf->hitPoint.shadeN.x);
 		const float3 interpolatedN = VLOAD3F(&bsdf->hitPoint.interpolatedN.x);
-		if ((*event & (DIFFUSE | GLOSSY)) && ((shadeN.x != interpolatedN.x) || (shadeN.y != interpolatedN.y) || (shadeN.z != interpolatedN.z)))
+		if ((*event & REFLECT) &&
+				(*event & (DIFFUSE | GLOSSY)) &&
+				((shadeN.x != interpolatedN.x) || (shadeN.y != interpolatedN.y) || (shadeN.z != interpolatedN.z)))
 			result *= BSDF_ShadowTerminatorAvoidanceFactor(BSDF_GetLandingInterpolatedN(bsdf),
 					BSDF_GetLandingShadeN(bsdf), *sampledDir);
 #if defined(PARAM_HAS_VOLUMES)

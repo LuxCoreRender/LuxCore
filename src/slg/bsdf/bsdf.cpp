@@ -240,7 +240,9 @@ Spectrum BSDF::Evaluate(const Vector &generatedDir,
 
 	if (!IsVolume()) {
 		// Shadow terminator artefact avoidance
-		if ((*event & (DIFFUSE | GLOSSY)) && (hitPoint.shadeN != hitPoint.interpolatedN))
+		if ((*event & REFLECT) &&
+				(*event & (DIFFUSE | GLOSSY)) &&
+				(hitPoint.shadeN != hitPoint.interpolatedN))
 			result *= ShadowTerminatorAvoidanceFactor(hitPoint.GetLandingInterpolatedN(),
 					hitPoint.GetLandingShadeN(), lightDir);
 
@@ -287,7 +289,9 @@ Spectrum BSDF::Sample(Vector *sampledDir,
 	*sampledDir = frame.ToWorld(localSampledDir);
 
 	// Shadow terminator artefact avoidance
-	if ((*event & (DIFFUSE | GLOSSY)) && (hitPoint.shadeN != hitPoint.interpolatedN)) {
+	if ((*event & REFLECT) &&
+			(*event & (DIFFUSE | GLOSSY))
+			&& (hitPoint.shadeN != hitPoint.interpolatedN)) {
 		const Vector &lightDir = hitPoint.fromLight ? hitPoint.fixedDir : (*sampledDir);
 
 		result *= ShadowTerminatorAvoidanceFactor(hitPoint.GetLandingInterpolatedN(),

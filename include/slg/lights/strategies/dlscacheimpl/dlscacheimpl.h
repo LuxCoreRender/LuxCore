@@ -36,127 +36,175 @@ namespace slg {
 // DLSCacheEntry
 //------------------------------------------------------------------------------
 
-class DLSCacheEntry {
-public:
-	DLSCacheEntry();
-    // Move constructor, takes a rvalue reference &&
-    DLSCacheEntry(DLSCacheEntry &&other);
-	~DLSCacheEntry();
+struct DLSCVisibilityParticle {
+	DLSCVisibilityParticle(const BSDF &bsdf, const PathVolumeInfo &vi) {
+		p = bsdf.hitPoint.p;
 
-	// Move assignment, takes a rvalue reference &&
-    DLSCacheEntry &operator=(DLSCacheEntry &&other);
-	
-	void Init(const BSDF &bsdf, const PathVolumeInfo &vi);
-	
-	bool IsDirectLightSamplingDisabled() const {
-		return (lightsDistribution == nullptr);
+		Add(bsdf, vi);
 	}
 
-	void AddSamplingPoint(const BSDF &bsdf, const PathVolumeInfo &vi);
+	void Add(const BSDF &bsdf, const PathVolumeInfo &vi) {
+		bsdfList.push_back(bsdf);
+		volInfoList.push_back(vi);
+	}
+
+	void Add(const DLSCVisibilityParticle &part) {
+		bsdfList.insert(bsdfList.end(), part.bsdfList.begin(), part.bsdfList.end());
+		volInfoList.insert(volInfoList.end(), part.volInfoList.begin(), part.volInfoList.end());
+	}
+
+	// Field required by IndexOctree<T> class
+	luxrays::Point p;
+
+	std::vector<BSDF> bsdfList;
+	std::vector<PathVolumeInfo> volInfoList;
+};
+
+//------------------------------------------------------------------------------
+// DLSCacheEntry
+//------------------------------------------------------------------------------
+
+class DLSCacheEntry {
+public:
+	DLSCacheEntry() : lightsDistribution(nullptr) {
+	}
+	DLSCacheEntry(const BSDF &bsdf) {
+		p = bsdf.hitPoint.p;
+		n = bsdf.hitPoint.GetLandingShadeN();
+		isVolume = bsdf.IsVolume();
+
+		lightsDistribution = nullptr;
+	}
+
+	~DLSCacheEntry() {
+		delete lightsDistribution;
+	}
 
 	// Point information
 	luxrays::Point p;
 	luxrays::Normal n;
 	bool isVolume;
-	
+
 	// Cache information
-	std::vector<u_int> distributionIndexToLightIndex;
 	luxrays::Distribution1D *lightsDistribution;
 
-	friend class DirectLightSamplingCache;
+	friend class boost::serialization::access;
 	
-private:
-	typedef struct {
-		std::vector<BSDF> bsdfList;
-		std::vector<PathVolumeInfo> volInfoList;
-
-		std::vector<float> lightReceivedLuminance;
-		std::vector<u_int> distributionIndexToLightIndex;
-		
-		std::vector<float> mergedLightReceivedLuminance;
-		std::vector<u_int> mergedDistributionIndexToLightIndex;
-
-		bool isTransparent;
-	} TemporayInformation;
-
-	// Prevent copy constructor to be used
-	DLSCacheEntry(const DLSCacheEntry &);
-	// Prevent copy assignment to be used
-    DLSCacheEntry &operator=(const DLSCacheEntry &);
-
-	void DeleteTmpInfo() {
-		delete tmpInfo;
-		tmpInfo = nullptr;
+protected:
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & p;
+		ar & n;
+		ar & isVolume;
+		ar & lightsDistribution;
 	}
-
-	TemporayInformation *tmpInfo;
 };
 
 //------------------------------------------------------------------------------
 // Direct light sampling cache
 //------------------------------------------------------------------------------
 
-typedef struct {
+struct DLSCParams {
+	DLSCParams() {
+		entry.maxPasses = 1024;
+		entry.warmUpSamples = 24;
+		entry.convergenceThreshold = .01f;
+
+		visibility.maxSampleCount = 1024 * 1024;
+		visibility.maxPathDepth = 4;
+		visibility.targetHitRate = .99f;
+		visibility.lookUpRadius = 0.f;
+		visibility.lookUpNormalAngle = 25.f;
+	}
+
 	struct {
-		float radius, normalAngle, convergenceThreshold;
-		u_int maxPasses, warmUpSamples, mergePasses;
-		
-		bool enabledOnVolumes;
+		u_int maxPasses, warmUpSamples;
+		float convergenceThreshold;
 	} entry;
 
-	u_int maxSampleCount, maxDepth, maxEntryPasses;
-	float targetCacheHitRate, lightThreshold;
-} DirectLightSamplingCacheParams;
+	struct {
+		u_int maxSampleCount, maxPathDepth;
 
-class DLSCOctree;
+		float targetHitRate, lookUpRadius, lookUpNormalAngle;
+	} visibility;
+
+	struct {
+		std::string fileName;
+		bool safeSave;
+	} persistent;
+
+	friend class boost::serialization::access;
+
+protected:
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & entry.maxPasses;
+		ar & entry.warmUpSamples;
+		ar & entry.convergenceThreshold;
+
+		ar & visibility.maxSampleCount;
+		ar & visibility.maxPathDepth;
+		ar & visibility.targetHitRate;
+		ar & visibility.lookUpRadius;
+		ar & visibility.lookUpNormalAngle;
+
+		ar & persistent.fileName;
+		ar & persistent.safeSave;
+	}
+};
+
 class DLSCBvh;
 
 class DirectLightSamplingCache {
 public:
-	DirectLightSamplingCache();
+	DirectLightSamplingCache(const DLSCParams &params);
 	virtual ~DirectLightSamplingCache();
 
-	void SetParams(const DirectLightSamplingCacheParams &p) { params = p; }
-	const DirectLightSamplingCacheParams &GetParams() const { return params; }
-	bool IsDLSCEnabled(const BSDF &bsdf) const;
+	bool IsCacheEnabled(const BSDF &bsdf) const;
+	const DLSCParams &GetParams() const { return params; }
+	const DLSCBvh *GetBVH() const { return cacheEntriesBVH; }
 
 	void Build(const Scene *scene);
 	
-	const DLSCacheEntry *GetEntry(const luxrays::Point &p, const luxrays::Normal &n,
+	const luxrays::Distribution1D *GetLightDistribution(const luxrays::Point &p, const luxrays::Normal &n,
 			const bool isVolume) const;
 
-	// Used for OpenCL data translation
-	const DLSCBvh *GetBVH() const { return bvh; }
+	friend class DLSCSceneVisibility;
 
 private:
-	void GenerateEyeRay(const Camera *camera, luxrays::Ray &eyeRay,
-			PathVolumeInfo &volInfo, Sampler *sampler, SampleResult &sampleResult) const;
-	float SampleLight(const Scene *scene, DLSCacheEntry *entry,
+	float SampleLight(const DLSCVisibilityParticle &visibilityParticle,
 		const LightSource *light, const u_int pass) const;
 	
-	float EvaluateBestRadius(const Scene *scene);
-	void BuildCacheEntries(const Scene *scene);
-	void FillCacheEntry(const Scene *scene, DLSCacheEntry *entry);
-	void FillCacheEntries(const Scene *scene);
-	void MergeCacheEntry(const Scene *scene, const u_int entryIndex);
-	void FinalizedMergeCacheEntry(const u_int entryIndex);
-	void MergeCacheEntries(const Scene *scene);
-	void InitDistributionEntry(const Scene *scene, DLSCacheEntry *entry);
-	void InitDistributionEntries(const Scene *scene);
-	void BuildBVH(const Scene *scene);
+	float EvaluateBestRadius();
+	void TraceVisibilityParticles();
+	void InitCacheEntry(const u_int entryIndex);
+	void ComputeCacheEntryReceivedLuminance(const u_int entryIndex);
+	void BuildCacheEntryLightDistribution(const u_int entryIndex, const DLSCBvh &bvh);
+	void BuildCacheEntries();
 
 	void DebugExport(const std::string &fileName, const float sphereRadius) const;
 
-	DirectLightSamplingCacheParams params;
+	void LoadPersistentCache(const std::string &fileName);
+	void SavePersistentCache(const std::string &fileName);
 
-	std::vector<DLSCacheEntry> allEntries;
+	DLSCParams params;
 
 	// Used only during the building phase
-	DLSCOctree *octree;
+	const Scene *scene;
+	std::vector<DLSCVisibilityParticle> visibilityParticles;
+	std::vector<std::vector<float> > cacheEntriesReceivedLuminance;
+
 	// Used during the rendering phase
-	DLSCBvh *bvh;
+	std::vector<DLSCacheEntry> cacheEntries;
+	DLSCBvh *cacheEntriesBVH;
 };
 
 }
 
+BOOST_CLASS_VERSION(slg::DLSCacheEntry, 1)
+BOOST_CLASS_VERSION(slg::DLSCBvh, 1)
+BOOST_CLASS_VERSION(slg::DLSCParams, 1)
+
+BOOST_CLASS_EXPORT_KEY(slg::DLSCacheEntry)
+BOOST_CLASS_EXPORT_KEY(slg::DLSCBvh)
+BOOST_CLASS_EXPORT_KEY(slg::DLSCParams)
+		
 #endif	/* _SLG_LIGHTSTRATEGY_DLSCACHEIMPL_H */

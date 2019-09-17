@@ -189,7 +189,17 @@ void BiDirCPURenderThread::ConnectToEye(const float time,
 				const float cosToCamera = Dot(lightVertex.bsdf.hitPoint.shadeN, -eyeDir);
 				const float cameraPdfW = scene->camera->GetPDF(eyeRay, filmX, filmY);
 				const float cameraPdfA = PdfWtoA(cameraPdfW, eyeDistance, cosToCamera);
-				const float fluxToRadianceFactor = cameraPdfA;
+				// Was:
+				//  const float fluxToRadianceFactor = cameraPdfA;	
+				//	
+				// but now BSDF::Evaluate() follows LuxRender habit to return the	
+				// result multiplied by cosThetaToLight
+				//
+				// However this is not true for volumes (see bug
+				// report http://forums.luxcorerender.org/viewtopic.php?f=4&t=1146&start=10#p13491)
+				const float fluxToRadianceFactor = lightVertex.bsdf.IsVolume() ?
+					cameraPdfA :
+					(cameraPdfW / (eyeDistance * eyeDistance));
 
 				const float weightLight = MIS(cameraPdfA) *
 					(misVmWeightFactor + lightVertex.dVCM + lightVertex.dVC * MIS(bsdfRevPdfW));
@@ -531,7 +541,7 @@ void BiDirCPURenderThread::RenderFunc() {
 
 	// Setup the sampler
 	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, engine->film, engine->sampleSplatter,
-			engine->samplerSharedData);
+			engine->samplerSharedData, Properties());
 	const u_int sampleSize = 
 		sampleBootSize + // To generate the initial light vertex and trace eye ray
 		engine->maxLightPathDepth * sampleLightStepSize + // For each light vertex

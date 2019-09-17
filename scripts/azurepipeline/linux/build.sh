@@ -15,7 +15,9 @@ fi
 if [[ "$BLENDER280" == "TRUE" ]] ; then
     VERSION_STRING=$VERSION_STRING-blender2.80
     git checkout blender2.80
-    git merge --no-commit origin/master
+    git config user.email "email"
+    git config user.name "name"
+    git merge --no-commit origin/$BUILD_SOURCEBRANCHNAME
 fi
 
 if [[ "$FINAL" == "TRUE" ]] ; then
