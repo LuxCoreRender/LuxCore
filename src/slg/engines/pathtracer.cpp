@@ -572,15 +572,19 @@ static float FastArcTan(const float x) {
 	return ((A * xx + B) * xx + C) * x;
 }
 
-static float Mollify(const float mollificationFactor, const Vector &dir,
+static float Mollify(const float radius, const Vector &dir,
 		const Vector &deltaSampledDir, const float distance) {
-	const float r = FastArcTan(mollificationFactor / distance);
+	// I'm not really doing mollification because it is useless: at some point,
+	// the angle will start to be too small and it will produce only black
+	// samples. To resolve this problem I have to place a cap to the reduction
+	// but, at that point, it is just better to use the cap value.
+	const float r = FastArcTan(radius / distance);
 
 	// Cone angle
 	const float cosMax = 1.f / sqrtf(1.f + r * r);
 
 	// Solid angle of the cone
-	const float solidAngle = 2.f * M_PI * (1. - cosMax);
+	const float solidAngle = 2.f * M_PI * (1.f - cosMax);
 	
 	const float dotEyeSampledDir = Dot(dir, deltaSampledDir);
 	
@@ -636,21 +640,8 @@ void PathTracer::ConnectToEye(IntersectionDevice *device, const Scene *scene,
 				if (!PathInfo::IsNearlySpecular(bsdfEvent, bsdf.GetGlossiness(), hybridBackForwardGlossinessThreshold))
 					return;
 
-				// There is a safety check at start of PathTracer::RenderLightSample()
-				assert (sampler->GetType() == METROPOLIS);
-				MetropolisSampler *metropolisSampler = (MetropolisSampler *)sampler;
-
-				// Mollification shrinkage
-
-				// Mollification factor for normal sampler
-				//const float mollificationFactor = pathSpaceRegularizationScale * powf(1.f + mollificationCount, -1.f / 6.f);
-
-				// Mollification factor for normal sampler
-				const u_int mollificationCount = metropolisSampler->GetLargeMutationCount();
-				const float mollificationFactor = pathSpaceRegularizationScale * powf(pathSpaceRegularizationSpeed, mollificationCount);
-
 				// Check if the direction is inside the mollification angle
-				bsdfEval *= Mollify(mollificationFactor, -eyeDir, sampledDir, eyeDistance);
+				bsdfEval *= Mollify(pathSpaceRegularizationScale, -eyeDir, sampledDir, eyeDistance);
 			} else {
 				if (bsdf.IsDelta())
 					return;
@@ -876,10 +867,8 @@ void PathTracer::ParseOptions(const luxrays::Properties &cfg, const luxrays::Pro
 	}
 
 	pathSpaceRegularizationEnable = cfg.Get(defaultProps.Get("path.pathspaceregularization.enable")).Get<bool>();
-	if (pathSpaceRegularizationEnable) {
+	if (pathSpaceRegularizationEnable)
 		pathSpaceRegularizationScale = Max(cfg.Get(defaultProps.Get("path.pathspaceregularization.scale")).Get<float>(), 0.f);
-		pathSpaceRegularizationSpeed = Clamp(cfg.Get(defaultProps.Get("path.pathspaceregularization.speed")).Get<float>(), 0.f, 1.f);
-	}
 	
 	// Update eye sample size
 	eyeSampleBootSize = 5;
@@ -929,7 +918,6 @@ Properties PathTracer::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("path.hybridbackforward.glossinessthreshold")) <<
 			cfg.Get(GetDefaultProps().Get("path.pathspaceregularization.enable")) <<
 			cfg.Get(GetDefaultProps().Get("path.pathspaceregularization.scale")) <<
-			cfg.Get(GetDefaultProps().Get("path.pathspaceregularization.speed")) <<
 			cfg.Get(GetDefaultProps().Get("path.russianroulette.depth")) <<
 			cfg.Get(GetDefaultProps().Get("path.russianroulette.cap")) <<
 			cfg.Get(GetDefaultProps().Get("path.clamping.variance.maxvalue")) <<
@@ -945,8 +933,7 @@ const Properties &PathTracer::GetDefaultProps() {
 			Property("path.hybridbackforward.partition")(0.8) <<
 			Property("path.hybridbackforward.glossinessthreshold")(.05f) <<
 			Property("path.pathspaceregularization.enable")(false) <<
-			Property("path.pathspaceregularization.scale")(2.f) <<
-			Property("path.pathspaceregularization.speed")(.999999f) <<
+			Property("path.pathspaceregularization.scale")(.5f) <<
 			Property("path.pathdepth.total")(6) <<
 			Property("path.pathdepth.diffuse")(4) <<
 			Property("path.pathdepth.glossy")(4) <<

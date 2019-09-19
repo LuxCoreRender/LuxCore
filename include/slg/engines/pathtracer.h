@@ -79,7 +79,7 @@ public:
 	float hybridBackForwardPartition, hybridBackForwardGlossinessThreshold;
 
 	// Path space regularization settings
-	float pathSpaceRegularizationScale, pathSpaceRegularizationSpeed;
+	float pathSpaceRegularizationScale;
 
 	// Option flags
 	bool forceBlackBackground, hybridBackForwardEnable, pathSpaceRegularizationEnable;
