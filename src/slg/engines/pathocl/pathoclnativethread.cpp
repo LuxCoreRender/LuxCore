@@ -187,9 +187,9 @@ void PathOCLNativeRenderThread::RenderThreadImpl() {
 		}
 
 		if (sampler == eyeSampler)
-			pathTracer.RenderEyeSample(intersectionDevice, engine->renderConfig->scene, engine->film, sampler, *sampleResults);
+			pathTracer.RenderEyeSample(threadIndex, intersectionDevice, engine->renderConfig->scene, engine->film, sampler, *sampleResults);
 		else
-			pathTracer.RenderLightSample(intersectionDevice, engine->renderConfig->scene, engine->film, sampler, *sampleResults);
+			pathTracer.RenderLightSample(threadIndex, intersectionDevice, engine->renderConfig->scene, engine->film, sampler, *sampleResults);
 
 		// Variance clamping
 		if (varianceClamping.hasClamping()) {

@@ -49,15 +49,19 @@ public:
 	void DeletePixelFilterDistribution();
 
 	void SetPhotonGICache(const PhotonGICache *cache) { photonGICache = cache; }
-	
+	void SetPSRCounters(const u_int width, const u_int height,
+			std::vector<std::vector<u_int> > *counters);
+
 	void ParseOptions(const luxrays::Properties &cfg, const luxrays::Properties &defaultProps);
 
 	void InitEyeSampleResults(const Film *film, std::vector<SampleResult> &sampleResults) const;
-	void RenderEyeSample(luxrays::IntersectionDevice *device, const Scene *scene,
-			const Film *film, Sampler *sampler, std::vector<SampleResult> &sampleResults) const;
+	void RenderEyeSample(const u_int threadIndex, luxrays::IntersectionDevice *device,
+			const Scene *scene, const Film *film, Sampler *sampler,
+			std::vector<SampleResult> &sampleResults) const;
 
-	void RenderLightSample(luxrays::IntersectionDevice *device, const Scene *scene,
-			const Film *film, Sampler *sampler, std::vector<SampleResult> &sampleResults) const;
+	void RenderLightSample(const u_int threadIndex, luxrays::IntersectionDevice *device,
+			const Scene *scene, const Film *film, Sampler *sampler,
+			std::vector<SampleResult> &sampleResults) const;
 
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	static const luxrays::Properties &GetDefaultProps();
@@ -79,7 +83,7 @@ public:
 	float hybridBackForwardPartition, hybridBackForwardGlossinessThreshold;
 
 	// Path space regularization settings
-	float pathSpaceRegularizationScale;
+	float pathSpaceRegularizationScale, pathSpaceRegularizationSpeed;
 
 	// Option flags
 	bool forceBlackBackground, hybridBackForwardEnable, pathSpaceRegularizationEnable;
@@ -117,8 +121,9 @@ private:
 
 	SampleResult &AddLightSampleResult(std::vector<SampleResult> &sampleResults,
 			const Film *film) const;
-	void ConnectToEye(luxrays::IntersectionDevice *device, const Scene *scene,
-			const Film *film, Sampler *sampler, const float time,
+	void ConnectToEye(const u_int threadIndex,
+			luxrays::IntersectionDevice *device, const Scene *scene,
+			const Film *film, const float time,
 			const float u0, const float u1, const float u2,
 			const LightSource &light,  const BSDF &bsdf,
 			const luxrays::Spectrum &flux, const LightPathInfo &pathInfo,
@@ -126,6 +131,11 @@ private:
 
 	FilterDistribution *pixelFilterDistribution;
 	const PhotonGICache *photonGICache;
+	
+	// Used for path space regularization
+	u_int mollificationCountersWidth, mollificationCountersHeight;
+	// One for each thread
+	std::vector<std::vector<u_int> > *mollificationCounters;	
 };
 
 }

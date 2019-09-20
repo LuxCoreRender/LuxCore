@@ -18,15 +18,15 @@ scene.camera.type = "perspective"
 scene.camera.oculusrift.barrelpostpro.enable = 0
 scene.camera.fieldofview = 67.3801346
 ##
-scene.lights.__WORLD_BACKGROUND_LIGHT__.gain = 1 1 1
-scene.lights.__WORLD_BACKGROUND_LIGHT__.transformation = 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1
-scene.lights.__WORLD_BACKGROUND_LIGHT__.id = 0
-scene.lights.__WORLD_BACKGROUND_LIGHT__.visibility.indirect.diffuse.enable = 1
-scene.lights.__WORLD_BACKGROUND_LIGHT__.visibility.indirect.glossy.enable = 1
-scene.lights.__WORLD_BACKGROUND_LIGHT__.visibility.indirect.specular.enable = 1
-scene.lights.__WORLD_BACKGROUND_LIGHT__.type = "sky2"
-scene.lights.__WORLD_BACKGROUND_LIGHT__.dir = -0.579227984 -0.579227984 0.57357645
-scene.lights.__WORLD_BACKGROUND_LIGHT__.turbidity = 2.20000005
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.gain = 1 1 1
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.transformation = 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.id = 0
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.visibility.indirect.diffuse.enable = 1
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.visibility.indirect.glossy.enable = 1
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.visibility.indirect.specular.enable = 1
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.type = "sky2"
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.dir = -0.579227984 -0.579227984 0.57357645
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.turbidity = 2.20000005
 ##
 scene.lights.Lamp_Sun_139998120638984.gain = 3 3 3
 scene.lights.Lamp_Sun_139998120638984.transformation = 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1
@@ -186,9 +186,9 @@ scene.objects.Mesh_Cube_139998120634376000.appliedtransformation = 1 0 0 0 0 1 0
 scene.objects.wall.ply = "wall.ply"
 scene.objects.wall.material = "Surface_Material__001_139997951234568"
 ##
-#scene.objects.sphere.ply = "sphere.ply"
+scene.objects.sphere.ply = "sphere.ply"
 #scene.objects.sphere.ply = "sphere-flat.ply"
-#scene.objects.sphere.material = mat_mate
+scene.objects.sphere.material = mat_mate
 ##
 #scene.objects.sphere.ply = "sphere2.ply"
 #scene.objects.sphere.material = mat_mate
