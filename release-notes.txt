@@ -63,6 +63,8 @@
 
 ''Beta4 released''
 
+''RC1 released''
+
 ### Fixed Bugs
 
 * Fixed rendering resume feature
@@ -141,6 +143,8 @@
 * Fixed/Enabled PhotonGI cache on Mix and GlossyCoatting materials when possible
 * Fixed a regression in BIDIRCPU causing dark edges on glancing surfaces
 * Fixed a crash when PhotonGI caustic cache is enabled but empty (issue #236)
+
+''RC1 released''
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
