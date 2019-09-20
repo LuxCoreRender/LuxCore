@@ -351,6 +351,7 @@ void PathOCLBaseOCLRenderThread::InitPhotonGI() {
 	} else {
 		FreeOCLBuffer(&pgicCausticPhotonsBuff);
 		FreeOCLBuffer(&pgicCausticPhotonsBVHNodesBuff);
+		FreeOCLBuffer(&pgicCausticNearPhotonsBuff);
 	}
 }
 

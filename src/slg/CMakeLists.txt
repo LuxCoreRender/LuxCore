@@ -426,6 +426,7 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/textures/blender_noiselib.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/blender_texture.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/brick.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/brightcontrast.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/checkerboard.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/colordepth.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/constfloat.cpp
