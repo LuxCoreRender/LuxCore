@@ -28,6 +28,7 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/classification.hpp>
+#include <boost/algorithm/string/predicate.hpp>
 #include <boost/format.hpp>
 #include <boost/unordered_set.hpp>
 
@@ -99,6 +100,11 @@ Properties Scene::ToProperties(const bool useRealFileName) const {
 
 		// Write the textures information
 		for (auto const &texName : texNames) {
+			// I can skip all textures starting with Implicit-ConstFloatTexture(3)
+			// because they are expanded inline
+			if (boost::starts_with(texName, "Implicit-ConstFloatTexture"))
+				continue;
+
 			const Texture *tex = texDefs.GetTexture(texName);
 			props.Set(tex->ToProperties(imgMapCache, useRealFileName));
 		}

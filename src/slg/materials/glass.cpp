@@ -278,14 +278,14 @@ Properties GlassMaterial::ToProperties(const ImageMapCache &imgMapCache, const b
 
 	const string name = GetName();
 	props.Set(Property("scene.materials." + name + ".type")("glass"));
-	props.Set(Property("scene.materials." + name + ".kr")(Kr->GetName()));
-	props.Set(Property("scene.materials." + name + ".kt")(Kt->GetName()));
+	props.Set(Property("scene.materials." + name + ".kr")(Kr->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".kt")(Kt->GetSDLValue()));
 	if (exteriorIor)
-		props.Set(Property("scene.materials." + name + ".exteriorior")(exteriorIor->GetName()));
+		props.Set(Property("scene.materials." + name + ".exteriorior")(exteriorIor->GetSDLValue()));
 	if (interiorIor)
-		props.Set(Property("scene.materials." + name + ".interiorior")(interiorIor->GetName()));
+		props.Set(Property("scene.materials." + name + ".interiorior")(interiorIor->GetSDLValue()));
 	if (cauchyC)
-		props.Set(Property("scene.materials." + name + ".cauchyc")(cauchyC->GetName()));
+		props.Set(Property("scene.materials." + name + ".cauchyc")(cauchyC->GetSDLValue()));
 	props.Set(Material::ToProperties(imgMapCache, useRealFileName));
 
 	return props;

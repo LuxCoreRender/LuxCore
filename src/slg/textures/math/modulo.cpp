@@ -47,8 +47,8 @@ Properties ModuloTexture::ToProperties(const ImageMapCache &imgMapCache, const b
 
     const string name = GetName();
     props.Set(Property("scene.textures." + name + ".type")("modulo"));
-    props.Set(Property("scene.textures." + name + ".texture")(texture->GetName()));
-    props.Set(Property("scene.textures." + name + ".modulo")(modulo->GetName()));
+    props.Set(Property("scene.textures." + name + ".texture")(texture->GetSDLValue()));
+    props.Set(Property("scene.textures." + name + ".modulo")(modulo->GetSDLValue()));
 
     return props;
 }

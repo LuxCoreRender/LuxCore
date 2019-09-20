@@ -183,9 +183,9 @@ Properties HomogeneousVolume::ToProperties() const {
 
 	const string name = GetName();
 	props.Set(Property("scene.volumes." + name + ".type")("homogeneous"));
-	props.Set(Property("scene.volumes." + name + ".absorption")(sigmaA->GetName()));
-	props.Set(Property("scene.volumes." + name + ".scattering")(sigmaS->GetName()));
-	props.Set(Property("scene.volumes." + name + ".asymmetry")(schlickScatter.g->GetName()));
+	props.Set(Property("scene.volumes." + name + ".absorption")(sigmaA->GetSDLValue()));
+	props.Set(Property("scene.volumes." + name + ".scattering")(sigmaS->GetSDLValue()));
+	props.Set(Property("scene.volumes." + name + ".asymmetry")(schlickScatter.g->GetSDLValue()));
 	props.Set(Property("scene.volumes." + name + ".multiscattering")(multiScattering));
 	props.Set(Volume::ToProperties());
 

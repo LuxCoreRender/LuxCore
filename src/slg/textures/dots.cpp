@@ -62,8 +62,8 @@ Properties DotsTexture::ToProperties(const ImageMapCache &imgMapCache, const boo
 
 	const string name = GetName();
 	props.Set(Property("scene.textures." + name + ".type")("dots"));
-	props.Set(Property("scene.textures." + name + ".inside")(insideTex->GetName()));
-	props.Set(Property("scene.textures." + name + ".outside")(outsideTex->GetName()));
+	props.Set(Property("scene.textures." + name + ".inside")(insideTex->GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".outside")(outsideTex->GetSDLValue()));
 	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;

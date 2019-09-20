@@ -398,7 +398,7 @@ Properties MixMaterial::ToProperties(const ImageMapCache &imgMapCache, const boo
 	props.Set(Property("scene.materials." + name + ".type")("mix"));
 	props.Set(Property("scene.materials." + name + ".material1")(matA->GetName()));
 	props.Set(Property("scene.materials." + name + ".material2")(matB->GetName()));
-	props.Set(Property("scene.materials." + name + ".amount")(mixFactor->GetName()));
+	props.Set(Property("scene.materials." + name + ".amount")(mixFactor->GetSDLValue()));
 	props.Set(Material::ToProperties(imgMapCache, useRealFileName));
 
 	return props;

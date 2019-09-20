@@ -459,17 +459,17 @@ Properties DisneyMaterial::ToProperties(const ImageMapCache &imgMapCache, const 
 
 	const string name = GetName();
 	props.Set(Property("scene.materials." + name + ".type")("disney"));
-	props.Set(Property("scene.materials." + name + ".basecolor")(BaseColor->GetName()));
-	props.Set(Property("scene.materials." + name + ".subsurface")(Subsurface->GetName()));
-	props.Set(Property("scene.materials." + name + ".roughness")(Roughness->GetName()));
-	props.Set(Property("scene.materials." + name + ".metallic")(Metallic->GetName()));
-	props.Set(Property("scene.materials." + name + ".specular")(Specular->GetName()));
-	props.Set(Property("scene.materials." + name + ".speculartint")(SpecularTint->GetName()));
-	props.Set(Property("scene.materials." + name + ".clearcoat")(Clearcoat->GetName()));
-	props.Set(Property("scene.materials." + name + ".clearcoatgloss")(ClearcoatGloss->GetName()));
-	props.Set(Property("scene.materials." + name + ".anisotropic")(Anisotropic->GetName()));
-	props.Set(Property("scene.materials." + name + ".sheen")(Sheen->GetName()));
-	props.Set(Property("scene.materials." + name + ".sheentint")(SheenTint->GetName()));
+	props.Set(Property("scene.materials." + name + ".basecolor")(BaseColor->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".subsurface")(Subsurface->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".roughness")(Roughness->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".metallic")(Metallic->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".specular")(Specular->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".speculartint")(SpecularTint->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".clearcoat")(Clearcoat->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".clearcoatgloss")(ClearcoatGloss->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".anisotropic")(Anisotropic->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".sheen")(Sheen->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".sheentint")(SheenTint->GetSDLValue()));
 	props.Set(Material::ToProperties(imgMapCache, useRealFileName));
 
 	return props;

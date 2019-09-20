@@ -83,9 +83,9 @@ Properties MixTexture::ToProperties(const ImageMapCache &imgMapCache, const bool
 
 	const string name = GetName();
 	props.Set(Property("scene.textures." + name + ".type")("mix"));
-	props.Set(Property("scene.textures." + name + ".amount")(amount->GetName()));
-	props.Set(Property("scene.textures." + name + ".texture1")(tex1->GetName()));
-	props.Set(Property("scene.textures." + name + ".texture2")(tex2->GetName()));
+	props.Set(Property("scene.textures." + name + ".amount")(amount->GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".texture1")(tex1->GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".texture2")(tex2->GetSDLValue()));
 
 	return props;
 }

@@ -4,6 +4,7 @@
 
 * Path space regularization can now be used to render SDS paths with hybrid backward/forward path tracing
 * LuxCoreUI now shows eye and light pass counters if light tracing is enabled
+* FILESAVER now expands inline exported constant texture values
 
 ### Fixed Bugs
 

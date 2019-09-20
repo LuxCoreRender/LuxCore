@@ -98,7 +98,7 @@ Properties MatteMaterial::ToProperties(const ImageMapCache &imgMapCache, const b
 
 	const string name = GetName();
 	props.Set(Property("scene.materials." + name + ".type")("matte"));
-	props.Set(Property("scene.materials." + name + ".kd")(Kd->GetName()));
+	props.Set(Property("scene.materials." + name + ".kd")(Kd->GetSDLValue()));
 	props.Set(Material::ToProperties(imgMapCache, useRealFileName));
 
 	return props;

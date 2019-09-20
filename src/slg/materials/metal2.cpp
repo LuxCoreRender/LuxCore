@@ -210,13 +210,13 @@ Properties Metal2Material::ToProperties(const ImageMapCache &imgMapCache, const 
 	const string name = GetName();
 	props.Set(Property("scene.materials." + name + ".type")("metal2"));
 	if (fresnelTex)
-		props.Set(Property("scene.materials." + name + ".fresnel")(fresnelTex->GetName()));
+		props.Set(Property("scene.materials." + name + ".fresnel")(fresnelTex->GetSDLValue()));
 	if (n)
-		props.Set(Property("scene.materials." + name + ".n")(n->GetName()));
+		props.Set(Property("scene.materials." + name + ".n")(n->GetSDLValue()));
 	if (k)
-		props.Set(Property("scene.materials." + name + ".k")(k->GetName()));
-	props.Set(Property("scene.materials." + name + ".uroughness")(nu->GetName()));
-	props.Set(Property("scene.materials." + name + ".vroughness")(nv->GetName()));
+		props.Set(Property("scene.materials." + name + ".k")(k->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".uroughness")(nu->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".vroughness")(nv->GetSDLValue()));
 	props.Set(Material::ToProperties(imgMapCache, useRealFileName));
 
 	return props;

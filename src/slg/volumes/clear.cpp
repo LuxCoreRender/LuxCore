@@ -123,7 +123,7 @@ Properties ClearVolume::ToProperties() const {
 
 	const string name = GetName();
 	props.Set(Property("scene.volumes." + name + ".type")("clear"));
-	props.Set(Property("scene.volumes." + name + ".absorption")(sigmaA->GetName()));
+	props.Set(Property("scene.volumes." + name + ".absorption")(sigmaA->GetSDLValue()));
 	props.Set(Volume::ToProperties());
 
 	return props;

@@ -155,11 +155,11 @@ Properties VelvetMaterial::ToProperties(const ImageMapCache &imgMapCache, const 
 
 	const std::string name = GetName();
 	props.Set(Property("scene.materials." + name + ".type")("velvet"));
-	props.Set(Property("scene.materials." + name + ".kd")(Kd->GetName()));
-	props.Set(Property("scene.materials." + name + ".p1")(P1->GetName()));
-	props.Set(Property("scene.materials." + name + ".p2")(P2->GetName()));
-	props.Set(Property("scene.materials." + name + ".p3")(P3->GetName()));
-	props.Set(Property("scene.materials." + name + ".thickness")(Thickness->GetName()));
+	props.Set(Property("scene.materials." + name + ".kd")(Kd->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".p1")(P1->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".p2")(P2->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".p3")(P3->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".thickness")(Thickness->GetSDLValue()));
 	props.Set(Material::ToProperties(imgMapCache, useRealFileName));
 
 	return props;

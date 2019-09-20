@@ -124,8 +124,8 @@ Properties RoughMatteMaterial::ToProperties(const ImageMapCache &imgMapCache, co
 
 	const string name = GetName();
 	props.Set(Property("scene.materials." + name + ".type")("roughmatte"));
-	props.Set(Property("scene.materials." + name + ".kd")(Kd->GetName()));
-	props.Set(Property("scene.materials." + name + ".sigma")(sigma->GetName()));
+	props.Set(Property("scene.materials." + name + ".kd")(Kd->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".sigma")(sigma->GetSDLValue()));
 	props.Set(Material::ToProperties(imgMapCache, useRealFileName));
 
 	return props;

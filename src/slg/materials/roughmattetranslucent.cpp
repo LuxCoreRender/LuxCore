@@ -238,9 +238,9 @@ Properties RoughMatteTranslucentMaterial::ToProperties(const ImageMapCache &imgM
 
 	const string name = GetName();
 	props.Set(Property("scene.materials." + name + ".type")("roughmattetranslucent"));
-	props.Set(Property("scene.materials." + name + ".kr")(Kr->GetName()));
-	props.Set(Property("scene.materials." + name + ".kt")(Kt->GetName()));
-	props.Set(Property("scene.materials." + name + ".sigma")(sigma->GetName()));
+	props.Set(Property("scene.materials." + name + ".kr")(Kr->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".kt")(Kt->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".sigma")(sigma->GetSDLValue()));
 	props.Set(Material::ToProperties(imgMapCache, useRealFileName));
 
 	return props;

@@ -34,9 +34,9 @@ Properties Volume::ToProperties() const {
 
 	const string name = GetName();
 	props.Set(Property("scene.volumes." + name + ".priority")(priority));
-	props.Set(Property("scene.volumes." + name + ".ior")(iorTex->GetName()));
+	props.Set(Property("scene.volumes." + name + ".ior")(iorTex->GetSDLValue()));
 	if (volumeEmissionTex) {
-		props.Set(Property("scene.volumes." + name + ".emission")(volumeEmissionTex->GetName()));
+		props.Set(Property("scene.volumes." + name + ".emission")(volumeEmissionTex->GetSDLValue()));
 		props.Set(Property("scene.volumes." + name + ".emission.id")(volumeLightID));
 	}
 	props.Set(Property("scene.volumes." + name + ".id")(matID));

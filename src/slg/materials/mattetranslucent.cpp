@@ -205,8 +205,8 @@ Properties MatteTranslucentMaterial::ToProperties(const ImageMapCache &imgMapCac
 
 	const string name = GetName();
 	props.Set(Property("scene.materials." + name + ".type")("mattetranslucent"));
-	props.Set(Property("scene.materials." + name + ".kr")(Kr->GetName()));
-	props.Set(Property("scene.materials." + name + ".kt")(Kt->GetName()));
+	props.Set(Property("scene.materials." + name + ".kr")(Kr->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".kt")(Kt->GetSDLValue()));
 	props.Set(Material::ToProperties(imgMapCache, useRealFileName));
 
 	return props;

@@ -55,7 +55,7 @@ Properties NormalMapTexture::ToProperties(const ImageMapCache &imgMapCache, cons
 	
 	const string name = GetName();
 	props.Set(Property("scene.textures." + name + ".type")("normalmap"));
-	props.Set(Property("scene.textures." + name + ".texture")(tex->GetName()));
+	props.Set(Property("scene.textures." + name + ".texture")(tex->GetSDLValue()));
 	props.Set(Property("scene.textures." + name + ".scale")(scale));
 
 	return props;

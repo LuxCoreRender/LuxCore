@@ -657,10 +657,10 @@ Properties ClothMaterial::ToProperties(const ImageMapCache &imgMapCache, const b
 	    break;
 	}
 
-	props.Set(Property("scene.materials." + name + ".weft_kd")(Weft_Kd->GetName()));
-	props.Set(Property("scene.materials." + name + ".weft_ks")(Weft_Ks->GetName()));
-	props.Set(Property("scene.materials." + name + ".warp_kd")(Warp_Kd->GetName()));
-	props.Set(Property("scene.materials." + name + ".warp_ks")(Warp_Ks->GetName()));
+	props.Set(Property("scene.materials." + name + ".weft_kd")(Weft_Kd->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".weft_ks")(Weft_Ks->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".warp_kd")(Warp_Kd->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".warp_ks")(Warp_Ks->GetSDLValue()));
 	props.Set(Property("scene.materials." + name + ".repeat_u")(Repeat_U));
 	props.Set(Property("scene.materials." + name + ".repeat_v")(Repeat_V));
 	props.Set(Material::ToProperties(imgMapCache, useRealFileName));
