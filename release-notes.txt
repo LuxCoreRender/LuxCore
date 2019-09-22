@@ -146,6 +146,8 @@
 
 ''RC1 released''
 
+* Removed a workaround for Glossy roughness values < sqrt(.0001) for AMD OpenCL driver
+
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
 
