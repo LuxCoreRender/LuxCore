@@ -65,6 +65,8 @@
 
 ''RC1 released''
 
+* Disney material glossiness is now computed as the square root of the previous value to match Glossy2/Metal roughness
+
 ### Fixed Bugs
 
 * Fixed rendering resume feature
