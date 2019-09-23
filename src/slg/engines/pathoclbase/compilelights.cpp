@@ -415,6 +415,7 @@ void CompiledScene::CompileLights() {
 				const EnvLightVisibilityCache *visibilityMapCache;
 				il->GetPreprocessedData(&dist, &visibilityMapCache);
 
+				oclLight->notIntersectable.infinite.useVisibilityMapCache = false;
 				if (il->useVisibilityMapCache && visibilityMapCache) {
 					if (elvcAllEntries.size() > 0) {
 						SLG_LOG("WARNING: OpenCL rendering supports only one EnvLightVisibilityCache");
@@ -472,6 +473,7 @@ void CompiledScene::CompileLights() {
 						&dist,
 						&visibilityMapCache);
 
+				oclLight->notIntersectable.sky2.useVisibilityMapCache = false;
 				if (sl->useVisibilityMapCache && visibilityMapCache) {
 					if (elvcAllEntries.size() > 0) {
 						SLG_LOG("WARNING: OpenCL rendering supports only one EnvLightVisibilityCache");
@@ -637,6 +639,7 @@ void CompiledScene::CompileLights() {
 				const EnvLightVisibilityCache *visibilityMapCache;
 				cil->GetPreprocessedData(&visibilityMapCache);
 
+				oclLight->notIntersectable.constantInfinite.useVisibilityMapCache = false;
 				if (cil->useVisibilityMapCache && visibilityMapCache) {
 					if (elvcAllEntries.size() > 0) {
 						SLG_LOG("WARNING: OpenCL rendering supports only one EnvLightVisibilityCache");
