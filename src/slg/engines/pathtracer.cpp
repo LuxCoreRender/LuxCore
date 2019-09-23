@@ -620,43 +620,40 @@ void PathTracer::ConnectToEye(IntersectionDevice *device, const Scene *scene,
 		float filmX, filmY;
 		if (scene->camera->GetSamplePosition(&eyeRay, &filmX, &filmY)) {
 			const u_int *subRegion = film->GetSubRegion();
+			
+			// I have to flip the direction of the traced ray because
+			// the information inside PathVolumeInfo are about the path from
+			// the light toward the camera (i.e. ray.o would be in the wrong
+			// place).
+			Ray traceRay(bsdf.GetRayOrigin(-eyeRay.d), -eyeRay.d,
+					eyeDistance - eyeRay.maxt,
+					eyeDistance - eyeRay.mint,
+					time);
+			traceRay.UpdateMinMaxWithEpsilon();
+			RayHit traceRayHit;
 
-			if ((filmX >= subRegion[0]) && (filmX <= subRegion[1]) &&
-					(filmY >= subRegion[2]) && (filmY <= subRegion[3])) {
-				// I have to flip the direction of the traced ray because
-				// the information inside PathVolumeInfo are about the path from
-				// the light toward the camera (i.e. ray.o would be in the wrong
-				// place).
-				Ray traceRay(bsdf.GetRayOrigin(-eyeRay.d), -eyeRay.d,
-						eyeDistance - eyeRay.maxt,
-						eyeDistance - eyeRay.mint,
-						time);
-				traceRay.UpdateMinMaxWithEpsilon();
-				RayHit traceRayHit;
+			BSDF bsdfConn;
+			Spectrum connectionThroughput;
+			if (!scene->Intersect(device, true, true, &volInfo, u0, &traceRay, &traceRayHit, &bsdfConn,
+					&connectionThroughput)) {
+				// Nothing was hit, the light path vertex is visible
 
-				BSDF bsdfConn;
-				Spectrum connectionThroughput;
-				if (!scene->Intersect(device, true, true, &volInfo, u0, &traceRay, &traceRayHit, &bsdfConn,
-						&connectionThroughput)) {
-					// Nothing was hit, the light path vertex is visible
+				const float cameraPdfW = scene->camera->GetPDF(eyeRay, filmX, filmY);
+				const float fluxToRadianceFactor = cameraPdfW / (eyeDistance * eyeDistance);
 
-					const float cameraPdfW = scene->camera->GetPDF(eyeRay, filmX, filmY);
-					const float fluxToRadianceFactor = cameraPdfW / (eyeDistance * eyeDistance);
+				SampleResult &sampleResult = AddLightSampleResult(sampleResults, film);
+				sampleResult.filmX = filmX;
+				sampleResult.filmY = filmY;
 
-					SampleResult &sampleResult = AddLightSampleResult(sampleResults, film);
-					sampleResult.filmX = filmX;
-					sampleResult.filmY = filmY;
+				sampleResult.pixelX = Floor2UInt(filmX);
+				sampleResult.pixelY = Floor2UInt(filmY);
+				assert (sampleResult.pixelX >= subRegion[0]);
+				assert (sampleResult.pixelX <= subRegion[1]);
+				assert (sampleResult.pixelY >= subRegion[2]);
+				assert (sampleResult.pixelY <= subRegion[3]);
 
-					sampleResult.pixelX = Floor2UInt(filmX);
-					sampleResult.pixelY = Floor2UInt(filmY);
-					assert (sampleResult.pixelX >= subRegion[0]);
-					assert (sampleResult.pixelX <= subRegion[1]);
-					assert (sampleResult.pixelY >= subRegion[2]);
-					assert (sampleResult.pixelY <= subRegion[3]);
-
-					// Add radiance from the light source
-					sampleResult.radiance[light.GetID()] = connectionThroughput * flux * fluxToRadianceFactor * bsdfEval;
-				}
+				// Add radiance from the light source
+				sampleResult.radiance[light.GetID()] = connectionThroughput * flux * fluxToRadianceFactor * bsdfEval;
 			}
 		}
 	}
