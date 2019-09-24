@@ -626,86 +626,83 @@ void PathTracer::ConnectToEye(const u_int threadIndex,
 		const u_int pixelX = Floor2UInt(filmX);
 		const u_int pixelY = Floor2UInt(filmY);
 
-		if ((pixelX >= subRegion[0]) && (pixelX <= subRegion[1]) &&
-				(pixelY >= subRegion[2]) && (pixelY <= subRegion[3])) {
-			Spectrum bsdfEval;
-			if (pathSpaceRegularizationEnable && PathInfo::CanBeNearlySpecular(bsdf, hybridBackForwardGlossinessThreshold)) {
-				// "Path Space Regularization for Holistic and Robust Light Transport" (https://cg.ivd.kit.edu/english/PSR.php)
-				// by Anton S. Kaplanyan and Carsten Dachsbacher
+		Spectrum bsdfEval;
+		if (pathSpaceRegularizationEnable && PathInfo::CanBeNearlySpecular(bsdf, hybridBackForwardGlossinessThreshold)) {
+			// "Path Space Regularization for Holistic and Robust Light Transport" (https://cg.ivd.kit.edu/english/PSR.php)
+			// by Anton S. Kaplanyan and Carsten Dachsbacher
 
-				Vector sampledDir;
-				BSDFEvent bsdfEvent;
-				// Do I need transmission or reflection ?
-				BSDFEvent bsdfHint = ((Dot(-eyeDir, bsdf.hitPoint.geometryN) > 0.f) == bsdf.hitPoint.intoObject) ?
-					REFLECT : TRANSMIT;
-				float bsdfPdf, cosSampleDir;
-				bsdfEval = bsdf.Sample(&sampledDir,
-						u1, u2,
-						&bsdfPdf, &cosSampleDir,
-						&bsdfEvent, bsdfHint);
+			Vector sampledDir;
+			BSDFEvent bsdfEvent;
+			// Do I need transmission or reflection ?
+			BSDFEvent bsdfHint = ((Dot(-eyeDir, bsdf.hitPoint.geometryN) > 0.f) == bsdf.hitPoint.intoObject) ?
+				REFLECT : TRANSMIT;
+			float bsdfPdf, cosSampleDir;
+			bsdfEval = bsdf.Sample(&sampledDir,
+					u1, u2,
+					&bsdfPdf, &cosSampleDir,
+					&bsdfEvent, bsdfHint);
 
-				if (!PathInfo::IsNearlySpecular(bsdfEvent, bsdf.GetGlossiness(), hybridBackForwardGlossinessThreshold))
-					return;
+			if (!PathInfo::IsNearlySpecular(bsdfEvent, bsdf.GetGlossiness(), hybridBackForwardGlossinessThreshold))
+				return;
 
-				// Mollification shrinkage
+			// Mollification shrinkage
 
-				u_int &mollificationCount = (*mollificationCounters)[threadIndex][pixelX + pixelY * mollificationCountersWidth];
+			u_int &mollificationCount = (*mollificationCounters)[threadIndex][pixelX + pixelY * mollificationCountersWidth];
 
-				// Mollification factor for normal sampler
-				//const float mollificationFactor = pathSpaceRegularizationScale * powf(1.f + mollificationCount, -1.f / 6.f);
+			// Mollification factor for normal sampler
+			//const float mollificationFactor = pathSpaceRegularizationScale * powf(1.f + mollificationCount, -1.f / 6.f);
 
-				// Mollification factor for metropolis sampler
-				const float mollificationFactor = pathSpaceRegularizationScale * powf(pathSpaceRegularizationSpeed, mollificationCount);
+			// Mollification factor for metropolis sampler
+			const float mollificationFactor = pathSpaceRegularizationScale * powf(pathSpaceRegularizationSpeed, mollificationCount);
 
-				// Check if the direction is inside the mollification angle
-				bsdfEval *= Mollify(mollificationFactor, -eyeDir, sampledDir, eyeDistance);
-				
-				++mollificationCount;
-			} else {
-				if (bsdf.IsDelta())
-					return;
+			// Check if the direction is inside the mollification angle
+			bsdfEval *= Mollify(mollificationFactor, -eyeDir, sampledDir, eyeDistance);
 
-				BSDFEvent event;
-				bsdfEval = bsdf.Evaluate(-eyeDir, &event);
-			}
+			++mollificationCount;
+		} else {
+			if (bsdf.IsDelta())
+				return;
 
-			if (!bsdfEval.Black()) {
-				// I have to flip the direction of the traced ray because
-				// the information inside PathVolumeInfo are about the path from
-				// the light toward the camera (i.e. ray.o would be in the wrong
-				// place).
-				Ray traceRay(bsdf.GetRayOrigin(-eyeRay.d), -eyeRay.d,
-						eyeDistance - eyeRay.maxt,
-						eyeDistance - eyeRay.mint,
-						time);
-				traceRay.UpdateMinMaxWithEpsilon();
-				RayHit traceRayHit;
+			BSDFEvent event;
+			bsdfEval = bsdf.Evaluate(-eyeDir, &event);
+		}
 
-				BSDF bsdfConn;
-				Spectrum connectionThroughput;
-				// Create a new PathVolumeInfo for the path to the light source
-				PathVolumeInfo volInfo = pathInfo.volume;
-				if (!scene->Intersect(device, true, true, &volInfo, u0, &traceRay, &traceRayHit, &bsdfConn,
-						&connectionThroughput)) {
-					// Nothing was hit, the light path vertex is visible
+		if (!bsdfEval.Black()) {
+			// I have to flip the direction of the traced ray because
+			// the information inside PathVolumeInfo are about the path from
+			// the light toward the camera (i.e. ray.o would be in the wrong
+			// place).
+			Ray traceRay(bsdf.GetRayOrigin(-eyeRay.d), -eyeRay.d,
+					eyeDistance - eyeRay.maxt,
+					eyeDistance - eyeRay.mint,
+					time);
+			traceRay.UpdateMinMaxWithEpsilon();
+			RayHit traceRayHit;
 
-					const float cameraPdfW = scene->camera->GetPDF(eyeRay, filmX, filmY);
-					const float fluxToRadianceFactor = cameraPdfW / (eyeDistance * eyeDistance);
+			BSDF bsdfConn;
+			Spectrum connectionThroughput;
+			// Create a new PathVolumeInfo for the path to the light source
+			PathVolumeInfo volInfo = pathInfo.volume;
+			if (!scene->Intersect(device, true, true, &volInfo, u0, &traceRay, &traceRayHit, &bsdfConn,
+					&connectionThroughput)) {
+				// Nothing was hit, the light path vertex is visible
 
-					SampleResult &sampleResult = AddLightSampleResult(sampleResults, film);
-					sampleResult.filmX = filmX;
-					sampleResult.filmY = filmY;
+				const float cameraPdfW = scene->camera->GetPDF(eyeRay, filmX, filmY);
+				const float fluxToRadianceFactor = cameraPdfW / (eyeDistance * eyeDistance);
 
-					sampleResult.pixelX = pixelX;
-					sampleResult.pixelY = pixelY;
-					assert (sampleResult.pixelX >= subRegion[0]);
-					assert (sampleResult.pixelX <= subRegion[1]);
-					assert (sampleResult.pixelY >= subRegion[2]);
-					assert (sampleResult.pixelY <= subRegion[3]);
+				SampleResult &sampleResult = AddLightSampleResult(sampleResults, film);
+				sampleResult.filmX = filmX;
+				sampleResult.filmY = filmY;
 
-					// Add radiance from the light source
-					sampleResult.radiance[light.GetID()] = connectionThroughput * flux * fluxToRadianceFactor * bsdfEval;
-				}
+				sampleResult.pixelX = pixelX;
+				sampleResult.pixelY = pixelY;
+				assert (sampleResult.pixelX >= subRegion[0]);
+				assert (sampleResult.pixelX <= subRegion[1]);
+				assert (sampleResult.pixelY >= subRegion[2]);
+				assert (sampleResult.pixelY <= subRegion[3]);
+
+				// Add radiance from the light source
+				sampleResult.radiance[light.GetID()] = connectionThroughput * flux * fluxToRadianceFactor * bsdfEval;
 			}
 		}
 	}

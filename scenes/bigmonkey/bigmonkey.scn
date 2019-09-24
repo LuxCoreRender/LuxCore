@@ -87,4 +87,4 @@ scene.objects.red.ply = monkey
 ##
 scene.objects.l1.material = whitelight
 scene.objects.l1.ply = scenes/bigmonkey/bigmonkey-lights.ply
-scene.objects.l1.camerainvisible = 1
+#scene.objects.l1.camerainvisible = 1
