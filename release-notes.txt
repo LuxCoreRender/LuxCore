@@ -151,6 +151,7 @@
 * Removed a workaround for Glossy roughness values < sqrt(.0001) for AMD OpenCL driver
 * Fixed the shift of one pixel on light tracing pass of LIGHTCPU, BIDIRCPU and Hybrid Path (issue #237)
 * Fixed a crash when re-defining light source (from constantinfinite to infinite) (issue #238)
+* Fixed pyluxcoretool CLI not working without pyside (issue #131)
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
