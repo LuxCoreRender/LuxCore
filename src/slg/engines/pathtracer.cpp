@@ -18,12 +18,39 @@
 
 #include "slg/engines/pathtracer.h"
 #include "slg/engines/caches/photongi/photongicache.h"
-#include "slg/utils/pathinfo.h"
 #include "slg/samplers/metropolis.h"
+#include "slg/utils/varianceclamping.h"
 
 using namespace std;
 using namespace luxrays;
 using namespace slg;
+
+//------------------------------------------------------------------------------
+// PathTracer
+//------------------------------------------------------------------------------
+
+PathTracerThreadState::PathTracerThreadState(const u_int thrdIndex,
+		luxrays::IntersectionDevice *dev,
+		Sampler *eSampler, Sampler *lSampler,
+		const Scene *scn, Film *flm,
+		const VarianceClamping *varClamping) : threadIndex(thrdIndex), device(dev),
+		eyeSampler(eSampler), lightSampler(lSampler), scene(scn), film(flm),
+		varianceClamping(varClamping) {
+	// Initialize Eye SampleResults
+	eyeSampleResults.resize(1);
+	PathTracer::InitEyeSampleResults(film, eyeSampleResults);
+
+	eyeSampleCount = 0.0;
+	// Using 1.0 instead of 0.0 to avoid a division by zero
+	lightSampleCount = 1.0;
+}
+
+PathTracerThreadState::~PathTracerThreadState() {
+}
+
+//------------------------------------------------------------------------------
+// PathTracer
+//------------------------------------------------------------------------------
 
 PathTracer::PathTracer() : pixelFilterDistribution(nullptr), photonGICache(nullptr),
 	mollificationCountersWidth(0), mollificationCountersHeight(0),
@@ -45,7 +72,7 @@ void  PathTracer::DeletePixelFilterDistribution() {
 	pixelFilterDistribution = NULL;
 }
 
-void PathTracer::InitEyeSampleResults(const Film *film, vector<SampleResult> &sampleResults) const {
+void PathTracer::InitEyeSampleResults(const Film *film, vector<SampleResult> &sampleResults) {
 	SampleResult &sampleResult = sampleResults[0];
 
 	sampleResult.Init(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA | Film::DEPTH |
@@ -64,6 +91,54 @@ void PathTracer::SetPSRCounters(const u_int width, const u_int height,
 	mollificationCountersWidth = width;
 	mollificationCountersHeight = height;
 	mollificationCounters = counters;
+}
+
+void PathTracer::RenderSample(PathTracerThreadState &state) const {
+	// Check if I have to trace an eye or light path
+	Sampler *sampler;
+	vector<SampleResult> *sampleResults;
+	if (hybridBackForwardEnable) {
+		const double ratio = state.eyeSampleCount / state.lightSampleCount;
+		if ((hybridBackForwardPartition == 1.f) ||
+				(ratio < hybridBackForwardPartition)) {
+			// Trace an eye path
+			sampler = state.eyeSampler;
+			sampleResults = &state.eyeSampleResults;
+
+			state.eyeSampleCount += 1.0;
+		} else {
+			// Trace a light path
+
+			sampler = state.lightSampler;
+			sampleResults = &state.lightSampleResults;
+
+			state.lightSampleCount += 1.0;
+		}
+	} else {
+		sampler = state.eyeSampler;
+		sampleResults = &state.eyeSampleResults;
+
+		state.eyeSampleCount += 1.0;
+	}
+
+	if (sampler == state.eyeSampler)
+		RenderEyeSample(state.threadIndex, state.device, state.scene, state.film, sampler, *sampleResults);
+	else
+		RenderLightSample(state.threadIndex, state.device, state.scene, state.film, sampler, *sampleResults);
+
+	// Variance clamping
+	if (state.varianceClamping->hasClamping()) {
+		for(u_int i = 0; i < sampleResults->size(); ++i) {
+			SampleResult &sampleResult = (*sampleResults)[i];
+
+			// I clamp only eye paths samples (variance clamping would cut
+			// SDS path values due to high scale of PSR samples)
+			if (sampleResult.HasChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED))
+				state.varianceClamping->Clamp(*state.film, sampleResult);
+		}
+	}
+
+	sampler->NextSample(*sampleResults);
 }
 
 //------------------------------------------------------------------------------

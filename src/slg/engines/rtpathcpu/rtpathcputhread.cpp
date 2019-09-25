@@ -65,7 +65,7 @@ void RTPathCPURenderThread::RTRenderFunc() {
 
 	vector<SampleResult> sampleResults(1);
 	SampleResult &sampleResult = sampleResults[0];
-	pathTracer.InitEyeSampleResults(engine->film, sampleResults);
+	PathTracer::InitEyeSampleResults(engine->film, sampleResults);
 
 	VarianceClamping varianceClamping(pathTracer.sqrtVarianceClampMaxValue);
 

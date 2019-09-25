@@ -38,6 +38,34 @@ namespace slg {
 // by render threads	
 //------------------------------------------------------------------------------
 
+class PathTracer;
+class VarianceClamping;
+
+class PathTracerThreadState {
+public:
+	PathTracerThreadState(const u_int threadIndex,
+			luxrays::IntersectionDevice *device,
+			Sampler *eyeSampler, Sampler *lightSampler,
+			const Scene *scene, Film *film,
+			const VarianceClamping *varianceClamping);
+	virtual ~PathTracerThreadState();
+
+	friend class PathTracer;
+
+private:
+	const u_int threadIndex;
+	luxrays::IntersectionDevice *device;
+
+	Sampler *eyeSampler, *lightSampler;
+	const Scene *scene;
+	Film *film;
+	const VarianceClamping *varianceClamping;
+	
+	std::vector<SampleResult> eyeSampleResults, lightSampleResults;
+	
+	double eyeSampleCount, lightSampleCount;
+};
+
 class PhotonGICache;
 
 class PathTracer {
@@ -54,7 +82,6 @@ public:
 
 	void ParseOptions(const luxrays::Properties &cfg, const luxrays::Properties &defaultProps);
 
-	void InitEyeSampleResults(const Film *film, std::vector<SampleResult> &sampleResults) const;
 	void RenderEyeSample(const u_int threadIndex, luxrays::IntersectionDevice *device,
 			const Scene *scene, const Film *film, Sampler *sampler,
 			std::vector<SampleResult> &sampleResults) const;
@@ -62,6 +89,10 @@ public:
 	void RenderLightSample(const u_int threadIndex, luxrays::IntersectionDevice *device,
 			const Scene *scene, const Film *film, Sampler *sampler,
 			std::vector<SampleResult> &sampleResults) const;
+	
+	void RenderSample(PathTracerThreadState &state) const;
+
+	static void InitEyeSampleResults(const Film *film, std::vector<SampleResult> &sampleResults);
 
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	static const luxrays::Properties &GetDefaultProps();

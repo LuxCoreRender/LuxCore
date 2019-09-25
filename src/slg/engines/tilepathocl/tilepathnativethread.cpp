@@ -86,7 +86,7 @@ void TilePathNativeRenderThread::RenderThreadImpl() {
 
 	// Initialize SampleResult
 	vector<SampleResult> sampleResults(1);
-	pathTracer.InitEyeSampleResults(engine->film, sampleResults);
+	PathTracer::InitEyeSampleResults(engine->film, sampleResults);
 
 	//--------------------------------------------------------------------------
 	// Extract the tile to render
