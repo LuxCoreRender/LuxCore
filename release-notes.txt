@@ -63,6 +63,10 @@
 
 ''Beta4 released''
 
+''RC1 released''
+
+* Disney material glossiness is now computed as the square root of the previous value to match Glossy2/Metal roughness
+
 ### Fixed Bugs
 
 * Fixed rendering resume feature
@@ -141,6 +145,13 @@
 * Fixed/Enabled PhotonGI cache on Mix and GlossyCoatting materials when possible
 * Fixed a regression in BIDIRCPU causing dark edges on glancing surfaces
 * Fixed a crash when PhotonGI caustic cache is enabled but empty (issue #236)
+
+''RC1 released''
+
+* Removed a workaround for Glossy roughness values < sqrt(.0001) for AMD OpenCL driver
+* Fixed the shift of one pixel on light tracing pass of LIGHTCPU, BIDIRCPU and Hybrid Path (issue #237)
+* Fixed a crash when re-defining light source (from constantinfinite to infinite) (issue #238)
+* Fixed pyluxcoretool CLI not working without pyside (issue #131)
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
