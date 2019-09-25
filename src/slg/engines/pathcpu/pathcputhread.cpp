@@ -65,8 +65,8 @@ void PathCPURenderThread::RenderFunc() {
 		Properties props;
 		props <<
 			Property("sampler.type")("METROPOLIS") <<
-			// I want to focus on hard paths like caustic and SDS one
-			Property("sampler.metropolis.largesteprate")(.1f) <<
+			// Reduce maxconsecutivereject to not be stuck on some path
+			Property("sampler.metropolis.maxconsecutivereject")(64) <<
 			// Disable image plane meaning for samples 0 and 1
 			Property("sampler.imagesamples.enable")(false);
 

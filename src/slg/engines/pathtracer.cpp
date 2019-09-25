@@ -622,7 +622,6 @@ void PathTracer::ConnectToEye(const u_int threadIndex,
 
 	float filmX, filmY;
 	if (scene->camera->GetSamplePosition(&eyeRay, &filmX, &filmY)) {
-		const u_int *subRegion = film->GetSubRegion();
 		const u_int pixelX = Floor2UInt(filmX);
 		const u_int pixelY = Floor2UInt(filmY);
 
@@ -660,7 +659,7 @@ void PathTracer::ConnectToEye(const u_int threadIndex,
 
 			++mollificationCount;
 		} else {
-			if (bsdf.IsDelta())
+			if (bsdf.IsDelta() || (hybridBackForwardEnable && !pathInfo.IsSpecularPath()))
 				return;
 
 			BSDFEvent event;
@@ -951,7 +950,7 @@ const Properties &PathTracer::GetDefaultProps() {
 			Property("path.hybridbackforward.glossinessthreshold")(.05f) <<
 			Property("path.pathspaceregularization.enable")(false) <<
 			Property("path.pathspaceregularization.scale")(.5f) <<
-			Property("path.pathspaceregularization.speed")(.999f) <<
+			Property("path.pathspaceregularization.speed")(.9999f) <<
 			Property("path.pathdepth.total")(6) <<
 			Property("path.pathdepth.diffuse")(4) <<
 			Property("path.pathdepth.glossy")(4) <<
