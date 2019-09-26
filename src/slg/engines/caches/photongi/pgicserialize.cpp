@@ -45,6 +45,7 @@ void PhotonGICache::LoadPersistentCache(const std::string &fileName) {
 	sif.GetArchive() >> causticPhotons;
 	sif.GetArchive() >> causticPhotonsBVH;
 	sif.GetArchive() >> causticPhotonTracedCount;
+	sif.GetArchive() >> causticPhotonPass;
 
 	if (!sif.IsGood())
 		throw runtime_error("Error while loading PhotonGI persistent cache: " + fileName);
@@ -69,6 +70,7 @@ void PhotonGICache::SavePersistentCache(const std::string &fileName) {
 		sof.GetArchive() << causticPhotons;
 		sof.GetArchive() << causticPhotonsBVH;
 		sof.GetArchive() << causticPhotonTracedCount;
+		sof.GetArchive() << causticPhotonPass;
 
 		if (!sof.IsGood())
 			throw runtime_error("Error while saving PhotonGI persistent cache: " + fileName);
@@ -110,6 +112,7 @@ template<class Archive> void PhotonGICache::serialize(Archive &ar, const u_int v
 	ar & causticPhotons;	
 	ar & causticPhotonsBVH;
 	ar & causticPhotonTracedCount;
+	ar & causticPhotonPass;
 
 	threadsSyncBarrier.reset(new boost::barrier(threadCount));
 }

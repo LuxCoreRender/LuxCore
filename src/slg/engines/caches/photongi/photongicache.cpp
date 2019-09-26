@@ -25,6 +25,7 @@
 #include "slg/utils/pathdepthinfo.h"
 #include "slg/engines/caches/photongi/photongicache.h"
 #include "slg/engines/caches/photongi/tracephotonsthread.h"
+#include "slg/utils/pathinfo.h"
 
 using namespace std;
 using namespace luxrays;
@@ -47,7 +48,8 @@ PhotonGICache::PhotonGICache(const Scene *scn, const PhotonGICacheParams &p) :
 		radiancePhotonsBVH(nullptr) ,
 		indirectPhotonTracedCount(0),
 		causticPhotonsBVH(nullptr),
-		causticPhotonTracedCount(0) {
+		causticPhotonTracedCount(0),
+		causticPhotonPass(0) {
 }
 
 PhotonGICache::~PhotonGICache() {
@@ -84,16 +86,14 @@ float PhotonGICache::GetIndirectUsageThreshold(const BSDFEvent lastBSDFEvent,
 	}
 }
 
-bool PhotonGICache::IsDirectLightHitVisible(const bool causticCacheAlreadyUsed,
-		const BSDFEvent lastBSDFEvent, const PathDepthInfo &depthInfo) const {
+bool PhotonGICache::IsDirectLightHitVisible(const EyePathInfo &pathInfo) const {
 	// This is a specific check to cut fireflies created by some glossy or
 	// specular bounce
-	if (!(lastBSDFEvent & DIFFUSE) && (depthInfo.diffuseDepth > 0))
+	if (!(pathInfo.lastBSDFEvent & DIFFUSE) && (pathInfo.depth.diffuseDepth > 0))
 		return false;
 	else if (!params.caustic.enabled)
 		return true;
-	else if ((!causticCacheAlreadyUsed || !(lastBSDFEvent & SPECULAR)) &&
-			(params.debugType == PGIC_DEBUG_NONE))
+	else if (!pathInfo.IsCausticPath() && (params.debugType == PGIC_DEBUG_NONE))
 		return true;
 	else
 		return false;
@@ -346,81 +346,6 @@ void PhotonGICache::CreateRadiancePhotons() {
 	SLG_LOG("PhotonGI total radiance photon stored: " << radiancePhotons.size());
 }
 
-void PhotonGICache::MergeCausticPhotons() {
-	// Build a BVH in order to make fast look ups. Note the numeric_limits<u_int>::max()
-	// to get all of them.
-	PGICPhotonBvh *photonsBVH = new PGICPhotonBvh(&causticPhotons, numeric_limits<u_int>::max(),
-			params.caustic.lookUpRadius * params.caustic.mergeRadiusScale,
-			params.caustic.lookUpNormalAngle);
-	
-	// Merge all "similar" photons
-
-	vector<bool> usedPhotons(causticPhotons.size(), false);
-	vector<NearPhoton> entries;
-	float maxDistance2;
-	vector<Photon> mergedCausticPhotons;
-	const float normalCosAngle = cosf(Radians(params.caustic.lookUpNormalAngle));
-	double lastPrintTime = WallClockTime();
-
-	for (u_int i = 0; i < causticPhotons.size(); ++i) {
-		// Check if I have already used this photon
-		if (usedPhotons[i])
-			continue;
-
-		const Photon &photon = causticPhotons[i];
-
-		// Look for near photons
-		entries.clear();
-		photonsBVH->GetAllNearEntries(entries, photon.p, photon.landingSurfaceNormal,
-				photon.isVolume, maxDistance2);
-
-		// I must find the same photon at least
-		assert (entries.size() >= 1);
-
-		Photon newPhoton(photon.p, photon.d, Spectrum(), photon.landingSurfaceNormal, photon.isVolume);
-		for (u_int j = 0; j < entries.size(); ++j) {
-			const u_int entryIndex = entries[j].photonIndex;
-
-			// Check if I have already used this photon
-			if (usedPhotons[entryIndex])
-				continue;
-
-			// Check if the direction vector is near "enough"
-			if (Dot(causticPhotons[entryIndex].d, photon.d) <= normalCosAngle)
-				continue;
-
-			// Accumulate all photon alpha
-			newPhoton.alpha += causticPhotons[entryIndex].alpha;
-			// Accumulate all photon directions
-			newPhoton.d += causticPhotons[entryIndex].d;
-
-			// Mark the photon as used
-			usedPhotons[entries[j].photonIndex] = true;
-		}
-		newPhoton.d = Normalize(newPhoton.d);
-
-		// Add the new merged photon
-		mergedCausticPhotons.push_back(newPhoton);
-		
-		const double now = WallClockTime();
-		if (now - lastPrintTime > 2.0) {
-			SLG_LOG(boost::format("PhotonGI caustic photons merged: %d/%d [%.1f%%]") %
-					i % causticPhotons.size() %
-					((100.0 * i) / causticPhotons.size()));
-			lastPrintTime = now;
-		}
-	}
-	
-	delete photonsBVH;
-
-	SLG_LOG(boost::format("PhotonGI merged caustics photons: %d => %d [%.1f%%]") %
-			causticPhotons.size() % mergedCausticPhotons.size() %
-			(100.0 * mergedCausticPhotons.size() / causticPhotons.size()));
-
-	causticPhotons = mergedCausticPhotons;
-	mergedCausticPhotons.shrink_to_fit();
-}
-
 void PhotonGICache::Preprocess(const u_int threadCnt) {
 	threadCount = threadCnt;
 	threadsSyncBarrier.reset(new boost::barrier(threadCount));
@@ -525,13 +450,8 @@ void PhotonGICache::Preprocess(const u_int threadCnt) {
 	//--------------------------------------------------------------------------
 
 	if ((causticPhotons.size() > 0) && params.caustic.enabled) {
-		if (params.caustic.mergeRadiusScale > 0.f) {
-			SLG_LOG("PhotonGI merging caustic photons BVH");
-			MergeCausticPhotons();
-		}
-
 		SLG_LOG("PhotonGI building caustic photons BVH");
-		causticPhotonsBVH = new PGICPhotonBvh(&causticPhotons, params.caustic.lookUpMaxCount,
+		causticPhotonsBVH = new PGICPhotonBvh(&causticPhotons, causticPhotonTracedCount,
 				params.caustic.lookUpRadius, params.caustic.lookUpNormalAngle);
 	}
 
@@ -576,62 +496,6 @@ void PhotonGICache::Preprocess(const u_int threadCnt) {
 		SavePersistentCache(params.persistent.fileName);
 }
 
-// Simpson filter from PBRT v2. Filter the photons according their
-// distance, giving more weight to the nearest.
-static inline float SimpsonKernel(const Point &p1, const Point &p2,
-		const float maxDist2) {
-	const float dist2 = DistanceSquared(p1, p2);
-
-	// The distance between p1 and p2 is supposed to be < maxDist2
-	assert (dist2 <= maxDist2);
-    const float s = (1.f - dist2 / maxDist2);
-
-    return 3.f * INV_PI * s * s;
-}
-
-Spectrum PhotonGICache::ProcessCacheEntries(const vector<NearPhoton> &entries,
-		const float maxDistance2,
-		const vector<Photon> &photons, const u_int photonTracedCount,
-		const BSDF &bsdf) const {
-	Spectrum result;
-
-	if (entries.size() > 0) {
-		if (bsdf.GetMaterialType() == MaterialType::MATTE) {
-			// A fast path for matte material
-
-			for (auto const &nearPhoton : entries) {
-				const Photon &photon = photons[nearPhoton.photonIndex];
-
-				// Using a Simpson filter here
-				result += SimpsonKernel(bsdf.hitPoint.p, photon.p, maxDistance2) * 
-						photon.alpha;
-			}
-
-			result *= bsdf.EvaluateTotal() * INV_PI;
-		} else {
-			// Generic path
-
-			BSDFEvent event;
-			for (auto const &nearPhoton : entries) {
-				const Photon &photon = photons[nearPhoton.photonIndex];
-
-				// bsdf.Evaluate() multiplies the result by AbsDot(bsdf.hitPoint.shadeN, -photon->d)
-				// so I have to cancel that factor. It is already included in photon density
-				// estimation.
-				const Spectrum bsdfEval = bsdf.Evaluate(-photon.d, &event, nullptr, nullptr) / AbsDot(bsdf.hitPoint.shadeN, -photon.d);
-				
-				// Using a Simpson filter here
-				result += SimpsonKernel(bsdf.hitPoint.p, photon.p, maxDistance2) *
-						bsdfEval * photon.alpha;
-			}
-		}
-
-		result /= photonTracedCount * maxDistance2;
-	}
-
-	return result;
-}
-
 Spectrum PhotonGICache::GetIndirectRadiance(const BSDF &bsdf) const {
 	assert (IsPhotonGIEnabled(bsdf));
 
@@ -654,21 +518,12 @@ Spectrum PhotonGICache::GetIndirectRadiance(const BSDF &bsdf) const {
 	return result;
 }
 
-Spectrum PhotonGICache::GetCausticRadiance(const BSDF &bsdf) const {
+Spectrum PhotonGICache::ConnectWithCausticPaths(const BSDF &bsdf) const {
 	assert (IsPhotonGIEnabled(bsdf));
 
 	Spectrum result;
 	if (causticPhotonsBVH) {
-		vector<NearPhoton> entries;
-		entries.reserve(causticPhotonsBVH->GetEntryMaxLookUpCount());
-
-		// Flip the normal if required
-		const Normal n = (bsdf.hitPoint.intoObject ? 1.f: -1.f) * bsdf.hitPoint.geometryN;
-		float maxDistance2;
-		causticPhotonsBVH->GetAllNearEntries(entries, bsdf.hitPoint.p, n, bsdf.IsVolume(),
-				maxDistance2);
-
-		result = ProcessCacheEntries(entries, maxDistance2, causticPhotons, causticPhotonTracedCount, bsdf);
+		result = causticPhotonsBVH->ConnectAllNearEntries(bsdf);
 
 		assert (result.IsValid());
 	}

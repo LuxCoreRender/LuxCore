@@ -23,6 +23,7 @@
 
 #include "luxrays/core/bvh/bvhbuild.h"
 #include "slg/engines/caches/photongi/photongicache.h"
+#include "slg/bsdf/bsdf.h"
 
 using namespace std;
 using namespace luxrays;
@@ -34,18 +35,47 @@ using namespace slg;
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::PGICPhotonBvh)
 
-PGICPhotonBvh::PGICPhotonBvh(const vector<Photon> *entries, const u_int maxLookUpCount,
+PGICPhotonBvh::PGICPhotonBvh(const vector<Photon> *entries, const u_int count,
 		const float radius, const float normalAngle) :
-		IndexBvh(entries, radius), entryMaxLookUpCount(maxLookUpCount),
-		entryNormalCosAngle(cosf(Radians(normalAngle))) {
+		IndexBvh(entries, radius), entryNormalCosAngle(cosf(Radians(normalAngle))),
+		photonTracedCount(count) {
 }
 
 PGICPhotonBvh::~PGICPhotonBvh() {
 }
 
-void PGICPhotonBvh::GetAllNearEntries(vector<NearPhoton> &entries,
-		const Point &p, const Normal &n, const bool isVolume, float &maxDistance2) const {
-	maxDistance2 = entryRadius2;
+Spectrum PGICPhotonBvh::ConnectCacheEntry(const Photon &photon, const BSDF &bsdf) const {
+	Spectrum result;
+
+	if (bsdf.GetMaterialType() == MaterialType::MATTE) {
+		// A fast path for matte material
+
+		result = photon.alpha * bsdf.EvaluateTotal() * INV_PI;
+	} else {
+		// Generic path
+
+		BSDFEvent event;
+		Spectrum bsdfEval = bsdf.Evaluate(-photon.d, &event, nullptr, nullptr);
+		// bsdf.Evaluate() multiplies the result by AbsDot(bsdf.hitPoint.shadeN, -photon->d)
+		// so I have to cancel that factor. It is already included in photon density
+		// estimation.
+		if (!bsdf.IsVolume())
+			bsdfEval /= AbsDot(bsdf.hitPoint.shadeN, -photon.d);
+
+		// Using a Simpson filter here
+		result = photon.alpha * bsdfEval;
+	}
+
+	return result;
+}
+
+Spectrum PGICPhotonBvh::ConnectAllNearEntries(const BSDF &bsdf) const {
+	const Point &p = bsdf.hitPoint.p;
+	// Flip the normal if required
+	const Normal n = (bsdf.hitPoint.intoObject ? 1.f: -1.f) * bsdf.hitPoint.geometryN;
+	const bool isVolume = bsdf.IsVolume();
+
+	Spectrum result;
 
 	u_int currentNode = 0; // Root Node
 	const u_int stopNode = IndexBVHNodeData_GetSkipIndex(arrayNodes[0].nodeData); // Non-existent
@@ -56,38 +86,16 @@ void PGICPhotonBvh::GetAllNearEntries(vector<NearPhoton> &entries,
 		const u_int nodeData = node.nodeData;
 		if (IndexBVHNodeData_IsLeaf(nodeData)) {
 			// It is a leaf, check the entry
-			const Photon *entry = &((*allEntries)[node.entryLeaf.entryIndex]);
+			const Photon &entry = ((*allEntries)[node.entryLeaf.entryIndex]);
 
-			const float distance2 = DistanceSquared(p, entry->p);
-			if ((distance2 < maxDistance2) && (entry->isVolume == isVolume) &&
+			const float distance2 = DistanceSquared(p, entry.p);
+			if ((distance2 < entryRadius2) && (entry.isVolume == isVolume) &&
 					(isVolume ||
-						((Dot(n, -entry->d) > DEFAULT_COS_EPSILON_STATIC) &&
-						(Dot(n, entry->landingSurfaceNormal) > entryNormalCosAngle)))) {
+						((Dot(n, -entry.d) > DEFAULT_COS_EPSILON_STATIC) &&
+						(Dot(n, entry.landingSurfaceNormal) > entryNormalCosAngle)))) {
 				// I have found a valid entry
 
-				NearPhoton nearPhoton(node.entryLeaf.entryIndex, distance2);
-
-				if (entries.size() < entryMaxLookUpCount) {
-					// Just add the entry
-					entries.push_back(nearPhoton);
-
-					// Check if the array is now full and sort the entries for
-					// the next addition
-					if (entries.size() == entryMaxLookUpCount)
-						make_heap(&entries[0], &entries[entryMaxLookUpCount]);
-				} else {
-					// Check if the new entry is nearer than the farthest array entry
-					if (distance2 < entries[0].distance2) {
-						// Remove the farthest array entry
-						pop_heap(&entries[0], &entries[entryMaxLookUpCount]);
-						// Add the new entry
-						entries[entryMaxLookUpCount - 1] = nearPhoton;
-						push_heap(&entries[0], &entries[entryMaxLookUpCount]);
-
-						// Update max. squared distance
-						maxDistance2 = entries[0].distance2;
-					}
-				}
+				result += ConnectCacheEntry(entry, bsdf);
 			}
 
 			++currentNode;
@@ -104,6 +112,10 @@ void PGICPhotonBvh::GetAllNearEntries(vector<NearPhoton> &entries,
 			}
 		}
 	}
+	
+	result /= photonTracedCount * M_PI * entryRadius2;
+
+	return result;
 }
 
 //------------------------------------------------------------------------------

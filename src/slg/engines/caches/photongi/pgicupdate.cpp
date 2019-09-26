@@ -52,19 +52,22 @@ bool PhotonGICache::Update(const u_int threadIndex, const Film &film,
 				causticPhotonsBVH = nullptr;
 				causticPhotons.clear();
 
+				// Reduce the look up radius
+				params.caustic.lookUpRadius = params.caustic.lookUpRadius /
+						powf(float(causticPhotonPass + 1), .5f * (1.f - params.caustic.radiusReduction));
+				// Place a cap to radius reduction
+				params.caustic.lookUpRadius = Max(params.caustic.lookUpRadius, params.caustic.minLookUpRadius);
+				params.caustic.lookUpRadius2 = Sqr(params.caustic.lookUpRadius);
+				SLG_LOG("New PhotonGI caustic cache lookup radius: " << params.caustic.lookUpRadius);
+				++causticPhotonPass;
+				
 				// Trace the photons for a new one
 				TracePhotons(false, params.caustic.enabled);
 
 				if (causticPhotons.size() > 0) {
-					// Marge photons if required
-					if (params.caustic.mergeRadiusScale > 0.f) {
-						SLG_LOG("PhotonGI merging caustic photons BVH");
-						MergeCausticPhotons();
-					}
-
 					// Build a new BVH
 					SLG_LOG("PhotonGI building caustic photons BVH");
-					causticPhotonsBVH = new PGICPhotonBvh(&causticPhotons, params.caustic.lookUpMaxCount,
+					causticPhotonsBVH = new PGICPhotonBvh(&causticPhotons, causticPhotonTracedCount,
 							params.caustic.lookUpRadius, params.caustic.lookUpNormalAngle);
 				}
 

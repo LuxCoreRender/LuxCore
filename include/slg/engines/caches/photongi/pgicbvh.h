@@ -30,36 +30,34 @@ namespace slg {
 // PGICPhotonBvh
 //------------------------------------------------------------------------------
 
+class BSDF;
 class Photon;
-class NearPhoton;
 
 class PGICPhotonBvh : public IndexBvh<Photon> {
 public:
-	PGICPhotonBvh(const std::vector<Photon> *entries, const u_int entryMaxLookUpCount,
+	PGICPhotonBvh(const std::vector<Photon> *entries, const u_int photonTracedCount,
 			const float radius, const float normalAngle);
 	virtual ~PGICPhotonBvh();
 
-	u_int GetEntryMaxLookUpCount() const { return entryMaxLookUpCount; }
 	float GetEntryNormalCosAngle() const { return entryNormalCosAngle; }
 	
-	void GetAllNearEntries(std::vector<NearPhoton> &entries,
-			const luxrays::Point &p, const luxrays::Normal &n, const bool isVolume,
-			float &maxDistance2) const;
+	luxrays::Spectrum ConnectAllNearEntries(const BSDF &bsdf) const;
 
 	friend class boost::serialization::access;
 
 private:
+	luxrays::Spectrum ConnectCacheEntry(const Photon &photon, const BSDF &bsdf) const;
+
 	// Used by serialization
 	PGICPhotonBvh() { }
 
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(IndexBvh);
-		ar & entryMaxLookUpCount;
 		ar & entryNormalCosAngle;
 	}
 
-	u_int entryMaxLookUpCount;
 	float entryNormalCosAngle;
+	u_int photonTracedCount;
 };
 
 //------------------------------------------------------------------------------
@@ -95,7 +93,7 @@ private:
 
 }
 
-BOOST_CLASS_VERSION(slg::PGICPhotonBvh, 1)
+BOOST_CLASS_VERSION(slg::PGICPhotonBvh, 2)
 BOOST_CLASS_VERSION(slg::PGICRadiancePhotonBvh, 1)
 
 BOOST_CLASS_EXPORT_KEY(slg::PGICPhotonBvh)
