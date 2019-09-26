@@ -28,7 +28,7 @@ scene.camera.fieldofview = 67.3801346
 #scene.lights.__WORLD_BACKGROUND_LIGHT__.dir = -0.579227984 -0.579227984 0.57357645
 #scene.lights.__WORLD_BACKGROUND_LIGHT__.turbidity = 2.20000005
 ##
-scene.lights.Lamp_Sun_139998120638984.gain = 3 3 3
+scene.lights.Lamp_Sun_139998120638984.gain = 1 1 1
 scene.lights.Lamp_Sun_139998120638984.transformation = 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1
 scene.lights.Lamp_Sun_139998120638984.id = 0
 scene.lights.Lamp_Sun_139998120638984.visibility.indirect.diffuse.enable = 1

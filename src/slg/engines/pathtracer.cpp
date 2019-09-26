@@ -516,6 +516,9 @@ void PathTracer::RenderEyeSample(const u_int threadIndex,
 					// TODO: add support for AOVs (possible ?)
 					// TODO: support for radiance groups (possible ?)
 
+					if (photonGICache->IsCausticEnabled())
+						sampleResult.radiance[0] += pathThroughput * photonGICache->ConnectWithCausticPaths(bsdf);
+
 					if (photonGICache->IsIndirectEnabled() && photonGICacheEnabledOnLastHit &&
 							(eyeRayHit.t > photonGICache->GetIndirectUsageThreshold(pathInfo.lastBSDFEvent,
 								pathInfo.lastGlossiness,
@@ -526,9 +529,6 @@ void PathTracer::RenderEyeSample(const u_int threadIndex,
 						// I can terminate the path, all done
 						break;
 					}
-
-					if (photonGICache->IsCausticEnabled())
-						sampleResult.radiance[0] += pathThroughput * photonGICache->ConnectWithCausticPaths(bsdf);
 
 					photonGICacheEnabledOnLastHit = true;
 				} else
