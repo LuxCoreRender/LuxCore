@@ -119,11 +119,8 @@ bool PerspectiveCamera::GetSamplePosition(Ray *ray, float *x, float *y) const {
 	*y = filmHeight - 1 - pO.y;
 
 	// Check if we are inside the image plane
-	const u_int pixelX = Floor2UInt(*x);
-	const u_int pixelY = Floor2UInt(*y);
-
-	if ((*x < filmSubRegion[0]) || (*x > filmSubRegion[1] + 1) ||
-			(*y < filmSubRegion[2]) || (*y > filmSubRegion[3] + 1))
+	if ((*x < filmSubRegion[0]) || (*x >= filmSubRegion[1] + 1) ||
+			(*y < filmSubRegion[2]) || (*y >= filmSubRegion[3] + 1))
 		return false;
 	else {
 		// World arbitrary clipping plane support

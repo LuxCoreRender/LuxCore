@@ -106,8 +106,8 @@ bool OrthographicCamera::GetSamplePosition(Ray *ray, float *x, float *y) const {
 	ray->UpdateMinMaxWithEpsilon();
 	
 	// Check if we are inside the image plane
-	if ((*x < filmSubRegion[0]) || (*x > filmSubRegion[1] + 1) ||
-			(*y < filmSubRegion[2]) || (*y > filmSubRegion[3] + 1))
+	if ((*x < filmSubRegion[0]) || (*x >= filmSubRegion[1] + 1) ||
+			(*y < filmSubRegion[2]) || (*y >= filmSubRegion[3] + 1))
 		return false;
 	else {
 		// World arbitrary clipping plane support
