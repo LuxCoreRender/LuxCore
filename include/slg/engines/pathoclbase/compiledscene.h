@@ -144,7 +144,6 @@ public:
 	std::vector<slg::ocl::IndexBVHArrayNode> pgicCausticPhotonsBVHArrayNode;
 	u_int pgicCausticPhotonTracedCount;
 	float pgicCausticLookUpRadius, pgicCausticLookUpNormalCosAngle;
-	u_int pgicCausticLookUpMaxCount;
 
 	PhotonGIDebugType pgicDebugType;
 

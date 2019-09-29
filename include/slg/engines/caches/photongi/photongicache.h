@@ -272,11 +272,11 @@ public:
 	const PhotonGICacheParams &GetParams() const { return params; }
 
 	void Preprocess(const u_int threadCount);
-	bool Update(const u_int threadIndex, const Film &film,
+	bool Update(const u_int threadIndex, const u_int filmSPP,
 		const boost::function<void()> &threadZeroCallback);
-	bool Update(const u_int threadIndex, const Film &film) {
+	bool Update(const u_int threadIndex, const u_int filmSPP) {
 		const boost::function<void()> noCallback;
-		return Update(threadIndex, film, noCallback);
+		return Update(threadIndex, filmSPP, noCallback);
 	}
 
 	luxrays::Spectrum GetIndirectRadiance(const BSDF &bsdf) const;

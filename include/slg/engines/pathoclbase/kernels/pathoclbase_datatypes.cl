@@ -88,7 +88,7 @@ typedef struct {
 	Seed seedPassThroughEvent;
 #endif
 	
-	int albedoToDo, photonGICausticCacheAlreadyUsed, photonGICacheEnabledOnLastHit,
+	int albedoToDo, photonGICacheEnabledOnLastHit,
 			photonGIShowIndirectPathMixUsed;
 } GPUTaskState;
 

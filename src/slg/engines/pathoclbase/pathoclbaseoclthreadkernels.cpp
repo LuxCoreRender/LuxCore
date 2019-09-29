@@ -1012,11 +1012,9 @@ void PathOCLBaseOCLRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePa
 
 		advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), pgicCausticPhotonsBuff);
 		advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), pgicCausticPhotonsBVHNodesBuff);
-		advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), pgicCausticNearPhotonsBuff);
 		advancePathsKernel->setArg(argIndex++, cscene->pgicCausticPhotonTracedCount);
 		advancePathsKernel->setArg(argIndex++, cscene->pgicCausticLookUpRadius);
 		advancePathsKernel->setArg(argIndex++, cscene->pgicCausticLookUpNormalCosAngle);
-		advancePathsKernel->setArg(argIndex++, cscene->pgicCausticLookUpMaxCount);
 	}
 }
 

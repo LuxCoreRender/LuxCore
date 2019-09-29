@@ -242,7 +242,6 @@ protected:
 	cl::Buffer *pgicRadiancePhotonsBVHNodesBuff;
 	cl::Buffer *pgicCausticPhotonsBuff;
 	cl::Buffer *pgicCausticPhotonsBVHNodesBuff;
-	cl::Buffer *pgicCausticNearPhotonsBuff;
 
 	u_int initKernelArgsCount;
 	std::string kernelsParameters;

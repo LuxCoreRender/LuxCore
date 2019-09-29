@@ -346,12 +346,9 @@ void PathOCLBaseOCLRenderThread::InitPhotonGI() {
 			cscene->pgicCausticPhotons.size() * sizeof(slg::ocl::Photon), "PhotonGI caustic cache all entries");
 		AllocOCLBufferRO(&pgicCausticPhotonsBVHNodesBuff, &cscene->pgicCausticPhotonsBVHArrayNode[0],
 			cscene->pgicCausticPhotonsBVHArrayNode.size() * sizeof(slg::ocl::IndexBVHArrayNode), "PhotonGI caustic cache BVH nodes");
-		AllocOCLBufferRW(&pgicCausticNearPhotonsBuff,
-			renderEngine->taskCount * cscene->pgicCausticLookUpMaxCount * sizeof(slg::ocl::NearPhoton), "PhotonGI near photon buffers");
 	} else {
 		FreeOCLBuffer(&pgicCausticPhotonsBuff);
 		FreeOCLBuffer(&pgicCausticPhotonsBVHNodesBuff);
-		FreeOCLBuffer(&pgicCausticNearPhotonsBuff);
 	}
 }
 
@@ -430,7 +427,6 @@ void PathOCLBaseOCLRenderThread::InitGPUTaskBuffer() {
 			sizeof(slg::ocl::PathDepthInfo) + // depthInfo
 			sizeof(Spectrum) + // throughput
 			sizeof(int) + // albedoToDo
-			sizeof(int) + // photonGICausticCacheAlreadyUsed
 			sizeof(int) + // photonGICacheEnabledOnLastHit
 			sizeof(int); // photonGIShowIndirectPathMixUsed
 

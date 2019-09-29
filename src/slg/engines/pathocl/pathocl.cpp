@@ -261,6 +261,28 @@ void PathOCLRenderEngine::UpdateTaskCount() {
 		SLG_LOG("[PathOCLRenderEngine] OpenCL task count: " << taskCount);
 }
 
+u_int PathOCLRenderEngine::GetTotalEyeSPP() const {
+	u_int spp = 0;
+	for (size_t i = 0; i < renderOCLThreads.size(); ++i) {
+		if (renderOCLThreads[i]) {
+			const PathOCLOpenCLRenderThread *thread = (const PathOCLOpenCLRenderThread *)renderOCLThreads[i];
+			const Film *film = thread->threadFilms[0]->film;
+			spp += film->GetTotalEyeSampleCount() / film->GetPixelCount();
+		}
+	}
+
+	if (renderNativeThreads.size() > 0) {
+		// All threads use the film of the first one
+		if (renderNativeThreads[0]) {
+			const PathOCLNativeRenderThread *thread = (const PathOCLNativeRenderThread *)renderNativeThreads[0];
+			const Film *film = thread->threadFilm;
+			spp += film->GetTotalEyeSampleCount() / film->GetPixelCount();
+		}
+	}
+
+	return spp;
+}
+
 //------------------------------------------------------------------------------
 // Static methods used by RenderEngineRegistry
 //------------------------------------------------------------------------------

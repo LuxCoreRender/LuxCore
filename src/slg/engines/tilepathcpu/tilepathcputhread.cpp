@@ -123,8 +123,10 @@ void TilePathCPURenderThread::RenderFunc() {
 			}
 		}
 		
-		if (engine->photonGICache)
-			engine->photonGICache->Update(threadIndex, *(engine->film));
+		if (engine->photonGICache) {
+			const u_int spp = engine->film->GetTotalEyeSampleCount() / engine->film->GetPixelCount();
+			engine->photonGICache->Update(threadIndex, spp);
+		}
 	}
 
 	delete rndGen;

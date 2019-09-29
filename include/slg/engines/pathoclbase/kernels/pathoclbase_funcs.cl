@@ -412,7 +412,6 @@ OPENCL_FORCE_NOT_INLINE void GenerateEyePath(
 	taskState->state = MK_RT_NEXT_VERTEX;
 	VSTORE3F(WHITE, taskState->throughput.c);
 	taskState->albedoToDo = true;
-	taskState->photonGICausticCacheAlreadyUsed = false;
 	taskState->photonGICacheEnabledOnLastHit = false;
 	taskState->photonGIShowIndirectPathMixUsed = false;
 
@@ -788,11 +787,9 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 		, const float pgicIndirectUsageThresholdScale \
 		, __global const Photon* restrict pgicCausticPhotons \
 		, __global const IndexBVHArrayNode* restrict pgicCausticPhotonsBVHNodes \
-		, __global NearPhoton *pgicCausticNearPhotons \
 		, const uint pgicCausticPhotonTracedCount \
 		, const float pgicCausticLookUpRadius \
-		, const float pgicCausticLookUpNormalCosAngle \
-		, const uint pgicCausticLookUpMaxCount
+		, const float pgicCausticLookUpNormalCosAngle
 #else
 #define KERNEL_ARGS_PHOTONGI
 #endif

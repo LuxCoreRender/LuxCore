@@ -45,28 +45,15 @@ PGICPhotonBvh::~PGICPhotonBvh() {
 }
 
 Spectrum PGICPhotonBvh::ConnectCacheEntry(const Photon &photon, const BSDF &bsdf) const {
-	Spectrum result;
+	BSDFEvent event;
+	Spectrum bsdfEval = bsdf.Evaluate(-photon.d, &event, nullptr, nullptr);
+	// bsdf.Evaluate() multiplies the result by AbsDot(bsdf.hitPoint.shadeN, -photon->d)
+	// so I have to cancel that factor. It is already included in photon density
+	// estimation.
+	if (!bsdf.IsVolume())
+		bsdfEval /= AbsDot(bsdf.hitPoint.shadeN, -photon.d);
 
-	if (bsdf.GetMaterialType() == MaterialType::MATTE) {
-		// A fast path for matte material
-
-		result = photon.alpha * bsdf.EvaluateTotal() * INV_PI;
-	} else {
-		// Generic path
-
-		BSDFEvent event;
-		Spectrum bsdfEval = bsdf.Evaluate(-photon.d, &event, nullptr, nullptr);
-		// bsdf.Evaluate() multiplies the result by AbsDot(bsdf.hitPoint.shadeN, -photon->d)
-		// so I have to cancel that factor. It is already included in photon density
-		// estimation.
-		if (!bsdf.IsVolume())
-			bsdfEval /= AbsDot(bsdf.hitPoint.shadeN, -photon.d);
-
-		// Using a Simpson filter here
-		result = photon.alpha * bsdfEval;
-	}
-
-	return result;
+	return photon.alpha * bsdfEval;
 }
 
 Spectrum PGICPhotonBvh::ConnectAllNearEntries(const BSDF &bsdf) const {

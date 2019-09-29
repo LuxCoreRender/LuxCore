@@ -111,6 +111,8 @@ protected:
 	virtual void UpdateCounters();
 	void UpdateTaskCount();
 
+	u_int GetTotalEyeSPP() const;
+	
 	SamplerSharedData *eyeSamplerSharedData;
 	SamplerSharedData *lightSamplerSharedData;
 

@@ -116,8 +116,10 @@ void PathCPURenderThread::RenderFunc() {
 		if (engine->film->GetConvergence() == 1.f)
 			break;
 		
-		if (engine->photonGICache)
-			engine->photonGICache->Update(threadIndex, *(engine->film));
+		if (engine->photonGICache) {
+			const u_int spp = engine->film->GetTotalEyeSampleCount() / engine->film->GetPixelCount();
+			engine->photonGICache->Update(threadIndex, spp);
+		}
 	}
 
 	delete eyeSampler;

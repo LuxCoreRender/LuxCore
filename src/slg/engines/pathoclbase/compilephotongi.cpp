@@ -126,8 +126,6 @@ void CompiledScene::CompilePhotonGI() {
 			pgicCausticPhotonTracedCount = photonGICache->GetCausticPhotonTracedCount();
 			pgicCausticLookUpRadius = causticPhotonsBVH->GetEntryRadius();
 			pgicCausticLookUpNormalCosAngle = causticPhotonsBVH->GetEntryNormalCosAngle();
-			// TODO
-			pgicCausticLookUpMaxCount = 128;
 		}
 	}
 }

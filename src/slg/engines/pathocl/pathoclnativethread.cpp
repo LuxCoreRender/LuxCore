@@ -167,7 +167,7 @@ void PathOCLNativeRenderThread::RenderThreadImpl() {
 			break;
 
 		if (engine->photonGICache)
-			engine->photonGICache->Update(engine->renderOCLThreads.size() + threadIndex, *(engine->film));
+			engine->photonGICache->Update(engine->renderOCLThreads.size() + threadIndex, engine->GetTotalEyeSPP());
 	}
 
 	delete eyeSampler;

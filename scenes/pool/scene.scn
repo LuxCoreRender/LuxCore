@@ -116,15 +116,15 @@ scene.textures.Implicit-ConstFloatTexture-56647ec1-6b78-4161-8c5e-b9adf34cecbd.v
 scene.textures.Implicit-ConstFloatTexture-3849b3ec-110b-4d57-a8ca-97a901045c57.type = "constfloat1"
 scene.textures.Implicit-ConstFloatTexture-3849b3ec-110b-4d57-a8ca-97a901045c57.value = 1.5
 scene.volumes.139997951428488.type = "clear"
-#scene.volumes.139997951428488.absorption = "Implicit-ConstFloatTexture3-9f35ae3b-2883-42ad-a920-37e48e20ff6b"
-scene.volumes.139997951428488.absorption = 0 0 0
+scene.volumes.139997951428488.absorption = "Implicit-ConstFloatTexture3-9f35ae3b-2883-42ad-a920-37e48e20ff6b"
+#scene.volumes.139997951428488.absorption = 0 0 0
 scene.volumes.139997951428488.priority = 0
 scene.volumes.139997951428488.ior = "Implicit-ConstFloatTexture-ea938c00-b7d1-4a75-945f-4c76ac561bc4"
 scene.volumes.139997951428488.id = 3364224
 ##
 scene.materials.Surface_Material_139997951233032.type = "glass"
-#scene.materials.Surface_Material_139997951233032.kr = "Implicit-ConstFloatTexture3-5130e230-1b7d-4082-b747-3d4ee77e0ebd"
-scene.materials.Surface_Material_139997951233032.kr = 0 0 0
+scene.materials.Surface_Material_139997951233032.kr = "Implicit-ConstFloatTexture3-5130e230-1b7d-4082-b747-3d4ee77e0ebd"
+#scene.materials.Surface_Material_139997951233032.kr = 0 0 0
 scene.materials.Surface_Material_139997951233032.kt = "Implicit-ConstFloatTexture3-f3515dcb-4c3c-49b8-9461-e5136b9f20ee"
 scene.materials.Surface_Material_139997951233032.id = 6728256
 scene.materials.Surface_Material_139997951233032.emission.gain = 1 1 1

@@ -172,8 +172,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 
 #if defined(PARAM_PGIC_ENABLED)
 	checkDirectLightHit = checkDirectLightHit &&
-			PhotonGICache_IsDirectLightHitVisible(taskState->photonGICausticCacheAlreadyUsed,
-				pathInfo->lastBSDFEvent, &pathInfo->depth);
+			PhotonGICache_IsDirectLightHitVisible(pathInfo);
 #endif
 
 	if (checkDirectLightHit) {
@@ -319,8 +318,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 
 #if defined(PARAM_PGIC_ENABLED)
 	checkDirectLightHit = checkDirectLightHit &&
-			PhotonGICache_IsDirectLightHitVisible(taskState->photonGICausticCacheAlreadyUsed,
-				pathInfo->lastBSDFEvent, &pathInfo->depth);
+			PhotonGICache_IsDirectLightHitVisible(pathInfo);
 #endif
 
 	// Check if it is a light source (note: I can hit only triangle area light sources)
@@ -357,11 +355,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 #elif defined(PARAM_PGIC_DEBUG_SHOWCAUSTIC)
 
 	if (isPhotonGIEnabled) {
-		const float3 radiance = PhotonGICache_GetCausticRadiance(bsdf,
+		const float3 radiance = PhotonGICache_ConnectAllNearEntries(bsdf,
 				pgicCausticPhotons, pgicCausticPhotonsBVHNodes,
-				&pgicCausticNearPhotons[gid * pgicCausticLookUpMaxCount],
 				pgicCausticPhotonTracedCount, pgicCausticLookUpRadius * pgicCausticLookUpRadius,
-				pgicCausticLookUpNormalCosAngle, pgicCausticLookUpMaxCount
+				pgicCausticLookUpNormalCosAngle
 				MATERIALS_PARAM);
 
 		VADD3F(sample->result.radiancePerPixelNormalized[0].c, VLOAD3F(taskState->throughput.c) * radiance);
@@ -399,6 +396,16 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 #else
 
 	if (isPhotonGIEnabled) {
+#if defined(PARAM_PGIC_CAUSTIC_ENABLED)
+		const float3 radiance = PhotonGICache_ConnectWithCausticPaths(bsdf,
+				pgicCausticPhotons, pgicCausticPhotonsBVHNodes,
+				pgicCausticPhotonTracedCount, pgicCausticLookUpRadius * pgicCausticLookUpRadius,
+				pgicCausticLookUpNormalCosAngle
+				MATERIALS_PARAM);
+
+		VADD3F(sample->result.radiancePerPixelNormalized[0].c, VLOAD3F(taskState->throughput.c) * radiance);
+#endif
+
 #if defined(PARAM_PGIC_INDIRECT_ENABLED)
 		Seed seedPassThroughEvent = taskState->seedPassThroughEvent;
 		const float passThroughEvent = Rnd_FloatValue(&seedPassThroughEvent);
@@ -425,20 +432,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 		}
 #endif
 
-#if defined(PARAM_PGIC_CAUSTIC_ENABLED)
-		if (!taskState->photonGICausticCacheAlreadyUsed) {
-			const float3 radiance = PhotonGICache_GetCausticRadiance(bsdf,
-					pgicCausticPhotons, pgicCausticPhotonsBVHNodes,
-					&pgicCausticNearPhotons[gid * pgicCausticLookUpMaxCount],
-					pgicCausticPhotonTracedCount, pgicCausticLookUpRadius * pgicCausticLookUpRadius,
-					pgicCausticLookUpNormalCosAngle, pgicCausticLookUpMaxCount
-					MATERIALS_PARAM);
-
-			VADD3F(sample->result.radiancePerPixelNormalized[0].c, VLOAD3F(taskState->throughput.c) * radiance);
-		}
-#endif
-
-		taskState->photonGICausticCacheAlreadyUsed = true;
 		taskState->photonGICacheEnabledOnLastHit = true;
 	} else
 		taskState->photonGICacheEnabledOnLastHit = false;
