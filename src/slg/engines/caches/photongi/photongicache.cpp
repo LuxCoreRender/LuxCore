@@ -384,17 +384,19 @@ void PhotonGICache::Preprocess(const u_int threadCnt) {
 		params.caustic.maxSize = 0;
 
 	if (params.indirect.enabled) {
-		// I always use indirect cache parameters for Visibility particles if the
+		// I must use indirect cache parameters for Visibility particles if the
 		// cache is enabled
 		params.visibility.lookUpRadius = params.indirect.lookUpRadius;
 		params.visibility.lookUpNormalAngle = params.indirect.lookUpNormalAngle;
 	} else {
-		if (params.caustic.enabled) {
-			// Caustic radius is too small for visibility check
-			params.visibility.lookUpRadius = EvaluateBestRadius();
-			params.visibility.lookUpNormalAngle = params.caustic.lookUpNormalAngle;
-		} else
-			throw runtime_error("Indirect and/or caustic cache must be enabled in PhotonGI");
+		if (params.visibility.lookUpRadius == 0.f) {
+			if (params.caustic.enabled) {
+				// Caustic radius is too small for visibility check
+				params.visibility.lookUpRadius = EvaluateBestRadius();
+				params.visibility.lookUpNormalAngle = params.caustic.lookUpNormalAngle;
+			} else
+				throw runtime_error("Indirect and/or caustic cache must be enabled in PhotonGI");
+		}
 	}
 	SLG_LOG("PhotonGI visibility lookup radius: " << params.visibility.lookUpRadius);
 	params.visibility.lookUpNormalCosAngle = cosf(Radians(params.visibility.lookUpNormalAngle));
