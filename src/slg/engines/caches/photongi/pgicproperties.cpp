@@ -50,7 +50,7 @@ Properties PhotonGICache::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("path.photongi.caustic.enabled")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.caustic.maxsize")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.caustic.updatespp")) <<
-			cfg.Get(GetDefaultProps().Get("path.photongi.caustic.updatespp.rediusreduction")) <<
+			cfg.Get(GetDefaultProps().Get("path.photongi.caustic.updatespp.radiusreduction")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.caustic.updatespp.minradius")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.caustic.lookup.maxcount")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.caustic.lookup.radius")) <<
@@ -85,7 +85,7 @@ const Properties &PhotonGICache::GetDefaultProps() {
 			Property("path.photongi.caustic.enabled")(false) <<
 			Property("path.photongi.caustic.maxsize")(100000) <<
 			Property("path.photongi.caustic.updatespp")(8) <<
-			Property("path.photongi.caustic.updatespp.rediusreduction")(.96f) <<
+			Property("path.photongi.caustic.updatespp.radiusreduction")(.96f) <<
 			Property("path.photongi.caustic.updatespp.minradius")(.003f) <<
 			Property("path.photongi.caustic.lookup.maxcount")(128) <<
 			Property("path.photongi.caustic.lookup.radius")(.15f) <<
@@ -137,7 +137,7 @@ PhotonGICache *PhotonGICache::FromProperties(const Scene *scn, const Properties 
 			params.caustic.lookUpRadius = Max(DEFAULT_EPSILON_MIN, cfg.Get(GetDefaultProps().Get("path.photongi.caustic.lookup.radius")).Get<float>());
 			params.caustic.lookUpNormalAngle = Max(DEFAULT_EPSILON_MIN, cfg.Get(GetDefaultProps().Get("path.photongi.caustic.lookup.normalangle")).Get<float>());
 
-			params.caustic.radiusReduction = Max(0.f, cfg.Get(GetDefaultProps().Get("path.photongi.caustic.updatespp.rediusreduction")).Get<float>());
+			params.caustic.radiusReduction = Max(0.f, cfg.Get(GetDefaultProps().Get("path.photongi.caustic.updatespp.radiusreduction")).Get<float>());
 			params.caustic.minLookUpRadius = Max(0.f, cfg.Get(GetDefaultProps().Get("path.photongi.caustic.updatespp.minradius")).Get<float>());
 		}
 
