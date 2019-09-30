@@ -41,7 +41,6 @@ import pyluxcoretools.pyluxcoreconsole.cmd as consoleCmd
 import pyluxcoretools.pyluxcoremerge.cmd as mergeCmd
 import pyluxcoretools.pyluxcorenetconsole.cmd as netConsoleCmd
 import pyluxcoretools.pyluxcorenetnode.cmd as netNodeCmd
-import pyluxcoretools.pyluxcoremenu.cmd as menuCmd
 
 if __name__ == '__main__':
 	# Prepare the render configuration options parser
@@ -71,6 +70,7 @@ if __name__ == '__main__':
 		import pyluxcoretools.pyluxcorenetnode.ui as netNodeUI
 		netNodeUI.main(cmdArgv)
 	elif generalArgs.commandToExecute == "menu":
+		import pyluxcoretools.pyluxcoremenu.cmd as menuCmd
 		menuCmd.main(cmdArgv)
 	else:
 		raise TypeError("Unknown command to execute: " + generalArgs.commandToExecute)
