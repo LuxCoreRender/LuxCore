@@ -627,8 +627,12 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 		if (cscene->photonGICache->GetParams().indirect.enabled)
 			ssParams << " -D PARAM_PGIC_INDIRECT_ENABLED";
 
-		if (cscene->photonGICache->GetParams().caustic.enabled)
+		if (cscene->photonGICache->GetParams().caustic.enabled) {
 			ssParams << " -D PARAM_PGIC_CAUSTIC_ENABLED";
+			
+			if (cscene->photonGICache->GetParams().caustic.useOnlyForSDS)
+				ssParams << " -D PARAM_PGIC_CAUSTIC_USE_ONLY_FOR_SDS";
+		}
 	}
 	
 	ssParams << AdditionalKernelOptions();

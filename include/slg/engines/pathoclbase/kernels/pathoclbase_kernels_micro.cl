@@ -355,7 +355,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 #elif defined(PARAM_PGIC_DEBUG_SHOWCAUSTIC)
 
 	if (isPhotonGIEnabled) {
-		const float3 radiance = PhotonGICache_ConnectAllNearEntries(bsdf,
+		const float3 radiance = PhotonGICache_ConnectWithCausticPaths(bsdf,
 				pgicCausticPhotons, pgicCausticPhotonsBVHNodes,
 				pgicCausticPhotonTracedCount, pgicCausticLookUpRadius * pgicCausticLookUpRadius,
 				pgicCausticLookUpNormalCosAngle
@@ -397,13 +397,19 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 
 	if (isPhotonGIEnabled) {
 #if defined(PARAM_PGIC_CAUSTIC_ENABLED)
-		const float3 radiance = PhotonGICache_ConnectWithCausticPaths(bsdf,
-				pgicCausticPhotons, pgicCausticPhotonsBVHNodes,
-				pgicCausticPhotonTracedCount, pgicCausticLookUpRadius * pgicCausticLookUpRadius,
-				pgicCausticLookUpNormalCosAngle
-				MATERIALS_PARAM);
+#if defined (PARAM_PGIC_CAUSTIC_USE_ONLY_FOR_SDS)
+		if (pathInfo->isNearlyS) {
+#endif
+			const float3 radiance = PhotonGICache_ConnectWithCausticPaths(bsdf,
+					pgicCausticPhotons, pgicCausticPhotonsBVHNodes,
+					pgicCausticPhotonTracedCount, pgicCausticLookUpRadius * pgicCausticLookUpRadius,
+					pgicCausticLookUpNormalCosAngle
+					MATERIALS_PARAM);
 
-		VADD3F(sample->result.radiancePerPixelNormalized[0].c, VLOAD3F(taskState->throughput.c) * radiance);
+			VADD3F(sample->result.radiancePerPixelNormalized[0].c, VLOAD3F(taskState->throughput.c) * radiance);
+#if defined (PARAM_PGIC_CAUSTIC_USE_ONLY_FOR_SDS)
+		}
+#endif
 #endif
 
 #if defined(PARAM_PGIC_INDIRECT_ENABLED)

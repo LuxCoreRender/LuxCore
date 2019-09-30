@@ -6,6 +6,7 @@
 * LuxCoreUI now shows eye and light pass counters if light tracing is enabled
 * FILESAVER now expands inline exported constant texture values
 * PhotonGI caustic scene re-factored to work with Vertex Merging (i.e. SPPM in this case)
+* It is now possible to use light tracing for normal caustics and PhotonGI cache for SDS paths
 
 ### Fixed Bugs
 

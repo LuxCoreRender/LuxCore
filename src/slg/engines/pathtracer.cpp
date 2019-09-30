@@ -516,7 +516,7 @@ void PathTracer::RenderEyeSample(const u_int threadIndex,
 					// TODO: add support for AOVs (possible ?)
 					// TODO: support for radiance groups (possible ?)
 
-					if (photonGICache->IsCausticEnabled())
+					if (photonGICache->IsCausticEnabled() && (!photonGICache->GetParams().caustic.useOnlyForSDS || pathInfo.IsSpecularPath()))
 						sampleResult.radiance[0] += pathThroughput * photonGICache->ConnectWithCausticPaths(bsdf);
 
 					if (photonGICache->IsIndirectEnabled() && photonGICacheEnabledOnLastHit &&
