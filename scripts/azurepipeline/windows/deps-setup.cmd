@@ -10,7 +10,8 @@ if "%BLENDER280%" EQU "TRUE" (
 cd ..
 git lfs install
 git clone --branch master https://github.com/LuxCoreRender/WindowsCompile .\WindowsCompile
-git clone --branch master https://github.com/LuxCoreRender/WindowsCompileDeps .\WindowsCompileDeps
+.\WindowsCompile\support\bin\wget https://github.com/LuxCoreRender/WindowsCompileDeps/releases/download/luxcorerender_v2.2/WindowsCompileDeps.7z
+.\WindowsCompile\support\bin\7z x -oWindowsCompileDeps WindowsCompileDeps.7z
 
 mklink /J Luxcore %SYSTEM_DEFAULTWORKINGDIRECTORY%
 
