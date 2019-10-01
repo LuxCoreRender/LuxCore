@@ -201,7 +201,6 @@ typedef struct {
 		float lookUpRadius, lookUpRadius2, lookUpNormalAngle,
 				radiusReduction, minLookUpRadius;
 		u_int updateSpp;
-		bool useOnlyForSDS;
 	} caustic;
 
 	PhotonGIDebugType debugType;
@@ -243,7 +242,6 @@ protected:
 		ar & caustic.lookUpNormalAngle;
 		ar & caustic.radiusReduction;
 		ar & caustic.minLookUpRadius;
-		ar & caustic.useOnlyForSDS;
 
 		ar & debugType;
 		
@@ -357,7 +355,7 @@ BOOST_CLASS_VERSION(slg::GenericPhoton, 1)
 BOOST_CLASS_VERSION(slg::PGICVisibilityParticle, 1)
 BOOST_CLASS_VERSION(slg::Photon, 1)
 BOOST_CLASS_VERSION(slg::RadiancePhoton, 1)
-BOOST_CLASS_VERSION(slg::PhotonGICacheParams, 5)
+BOOST_CLASS_VERSION(slg::PhotonGICacheParams, 6)
 BOOST_CLASS_VERSION(slg::PhotonGICache, 3)
 
 BOOST_CLASS_EXPORT_KEY(slg::GenericPhoton)

@@ -55,7 +55,6 @@ Properties PhotonGICache::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("path.photongi.caustic.lookup.maxcount")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.caustic.lookup.radius")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.caustic.lookup.normalangle")) <<
-			cfg.Get(GetDefaultProps().Get("path.photongi.caustic.useonlyforsds")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.debug.type")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.persistent.file")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.persistent.safesave"));
@@ -91,7 +90,6 @@ const Properties &PhotonGICache::GetDefaultProps() {
 			Property("path.photongi.caustic.lookup.maxcount")(128) <<
 			Property("path.photongi.caustic.lookup.radius")(.15f) <<
 			Property("path.photongi.caustic.lookup.normalangle")(10.f) <<
-			Property("path.photongi.caustic.useonlyforsds")(false) <<
 			Property("path.photongi.debug.type")("none") <<
 			Property("path.photongi.persistent.file")("") <<
 			Property("path.photongi.persistent.safesave")(true);
@@ -141,8 +139,6 @@ PhotonGICache *PhotonGICache::FromProperties(const Scene *scn, const Properties 
 
 			params.caustic.radiusReduction = Max(0.f, cfg.Get(GetDefaultProps().Get("path.photongi.caustic.updatespp.radiusreduction")).Get<float>());
 			params.caustic.minLookUpRadius = Max(0.f, cfg.Get(GetDefaultProps().Get("path.photongi.caustic.updatespp.minradius")).Get<float>());
-			
-			params.caustic.useOnlyForSDS = cfg.Get(GetDefaultProps().Get("path.photongi.caustic.useonlyforsds")).Get<bool>();
 		}
 
 		params.debugType = String2DebugType(cfg.Get(GetDefaultProps().Get("path.photongi.debug.type")).Get<string>());

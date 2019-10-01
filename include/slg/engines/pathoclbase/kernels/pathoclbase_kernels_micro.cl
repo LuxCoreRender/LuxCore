@@ -397,8 +397,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 
 	if (isPhotonGIEnabled) {
 #if defined(PARAM_PGIC_CAUSTIC_ENABLED)
-#if defined (PARAM_PGIC_CAUSTIC_USE_ONLY_FOR_SDS)
-		if (pathInfo->isNearlyS) {
+#if defined(PARAM_HYBRID_BACKFORWARD)
+		if (pathInfo->depth.depth != 0) {
 #endif
 			const float3 radiance = PhotonGICache_ConnectWithCausticPaths(bsdf,
 					pgicCausticPhotons, pgicCausticPhotonsBVHNodes,
@@ -407,7 +407,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 					MATERIALS_PARAM);
 
 			VADD3F(sample->result.radiancePerPixelNormalized[0].c, VLOAD3F(taskState->throughput.c) * radiance);
-#if defined (PARAM_PGIC_CAUSTIC_USE_ONLY_FOR_SDS)
+#if defined(PARAM_HYBRID_BACKFORWARD)
 		}
 #endif
 #endif
