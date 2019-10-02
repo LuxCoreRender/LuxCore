@@ -84,18 +84,6 @@ void LightCPURenderEngine::StartLockLess() {
 
 	pathTracer.InitPixelFilterDistribution(pixelFilter);
 
-	if (pathTracer.pathSpaceRegularizationEnable) {
-		mollificationCounters.resize(renderThreads.size());
-
-		const u_int pixelsCount = film->GetWidth() * film->GetHeight();
-		for (auto &c : mollificationCounters) {
-			c.resize(pixelsCount);
-			fill(c.begin(), c.end(), 0);
-		}
-		
-		pathTracer.SetPSRCounters(film->GetWidth(), film->GetHeight(), &mollificationCounters);
-	}
-
 	delete sampleSplatter;
 	sampleSplatter = new FilmSampleSplatter(pixelFilter);
 

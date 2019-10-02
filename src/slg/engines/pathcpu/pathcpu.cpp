@@ -138,18 +138,6 @@ void PathCPURenderEngine::StartLockLess() {
 	pathTracer.InitPixelFilterDistribution(pixelFilter);
 	pathTracer.SetPhotonGICache(photonGICache);
 	
-	if (pathTracer.hybridBackForwardEnable && pathTracer.pathSpaceRegularizationEnable) {
-		mollificationCounters.resize(renderThreads.size());
-
-		const u_int pixelsCount = film->GetWidth() * film->GetHeight();
-		for (auto &c : mollificationCounters) {
-			c.resize(pixelsCount);
-			fill(c.begin(), c.end(), 0);
-		}
-		
-		pathTracer.SetPSRCounters(film->GetWidth(), film->GetHeight(), &mollificationCounters);
-	}
-
 	//--------------------------------------------------------------------------
 
 	CPUNoTileRenderEngine::StartLockLess();

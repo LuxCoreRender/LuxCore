@@ -116,9 +116,6 @@ protected:
 	SamplerSharedData *eyeSamplerSharedData;
 	SamplerSharedData *lightSamplerSharedData;
 
-	// Used for path space regularization (one set of counters for each thread)
-	std::vector<std::vector<u_int> > mollificationCounters;
-
 	bool hasStartFilm;
 };
 

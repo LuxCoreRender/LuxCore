@@ -77,8 +77,6 @@ public:
 	void DeletePixelFilterDistribution();
 
 	void SetPhotonGICache(const PhotonGICache *cache) { photonGICache = cache; }
-	void SetPSRCounters(const u_int width, const u_int height,
-			std::vector<std::vector<u_int> > *counters);
 
 	void ParseOptions(const luxrays::Properties &cfg, const luxrays::Properties &defaultProps);
 
@@ -113,11 +111,8 @@ public:
 	// Hybrid backward/forward path tracing settings
 	float hybridBackForwardPartition, hybridBackForwardGlossinessThreshold;
 
-	// Path space regularization settings
-	float pathSpaceRegularizationScale, pathSpaceRegularizationSpeed;
-
 	// Option flags
-	bool forceBlackBackground, hybridBackForwardEnable, pathSpaceRegularizationEnable;
+	bool forceBlackBackground, hybridBackForwardEnable;
 
 private:
 	void GenerateEyeRay(const Camera *camera, const Film *film,
@@ -161,12 +156,7 @@ private:
 			std::vector<SampleResult> &sampleResults) const;
 
 	FilterDistribution *pixelFilterDistribution;
-	const PhotonGICache *photonGICache;
-	
-	// Used for path space regularization
-	u_int mollificationCountersWidth, mollificationCountersHeight;
-	// One for each thread
-	std::vector<std::vector<u_int> > *mollificationCounters;	
+	const PhotonGICache *photonGICache;	
 };
 
 }

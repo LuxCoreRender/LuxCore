@@ -162,12 +162,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 #if defined(PARAM_HYBRID_BACKFORWARD)
 	checkDirectLightHit = checkDirectLightHit &&
 			// Avoid to render caustic path if hybridBackForwardEnable
-			!pathInfo->isNearlyCaustic
-#if defined(PARAM_HYBRID_BACKFORWARD_PSR)
-			// Avoid to render SDS path if hybridBackForwardEnable and pathSpaceRegularizationEnable
-			&& !pathInfo->isNearlySDS
-#endif
-			;
+			!pathInfo->isNearlyCaustic;
 #endif
 
 #if defined(PARAM_PGIC_ENABLED)
@@ -308,12 +303,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 #if defined(PARAM_HYBRID_BACKFORWARD)
 	checkDirectLightHit = checkDirectLightHit &&
 			// Avoid to render caustic path if hybridBackForwardEnable
-			!pathInfo->isNearlyCaustic
-#if defined(PARAM_HYBRID_BACKFORWARD_PSR)
-			// Avoid to render SDS path if hybridBackForwardEnable and pathSpaceRegularizationEnable
-			&& !pathInfo->isNearlySDS
-#endif
-			;
+			!pathInfo->isNearlyCaustic;
 #endif
 
 #if defined(PARAM_PGIC_ENABLED)

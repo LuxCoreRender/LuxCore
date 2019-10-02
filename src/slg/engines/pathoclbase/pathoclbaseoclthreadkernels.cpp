@@ -576,9 +576,6 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 	if (renderEngine->pathTracer.hybridBackForwardEnable) {
 		ssParams << " -D PARAM_HYBRID_BACKFORWARD" <<
 				" -D PARAM_HYBRID_BACKFORWARD_GLOSSINESSTHRESHOLD=" << renderEngine->pathTracer.hybridBackForwardGlossinessThreshold << "f";
-		
-		if (renderEngine->pathTracer.pathSpaceRegularizationEnable)
-			ssParams << " -D PARAM_HYBRID_BACKFORWARD_PSR";
 	}
 
 	const slg::ocl::Sampler *sampler = renderEngine->oclSampler;

@@ -153,19 +153,6 @@ void PathOCLRenderEngine::StartLockLess() {
 	// Initialize the PathTracer class
 	pathTracer.InitPixelFilterDistribution(pixelFilter);
 
-	if (pathTracer.hybridBackForwardEnable && pathTracer.pathSpaceRegularizationEnable &&
-			(renderNativeThreads.size() > 0)) {
-		mollificationCounters.resize(renderNativeThreads.size());
-
-		const u_int pixelsCount = film->GetWidth() * film->GetHeight();
-		for (auto &c : mollificationCounters) {
-			c.resize(pixelsCount);
-			fill(c.begin(), c.end(), 0);
-		}
-		
-		pathTracer.SetPSRCounters(film->GetWidth(), film->GetHeight(), &mollificationCounters);
-	}
-
 	PathOCLBaseRenderEngine::StartLockLess();
 
 	// Set pathTracer PhotonGI. photonGICache is eventually initialized
