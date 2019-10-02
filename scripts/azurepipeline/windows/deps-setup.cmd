@@ -10,7 +10,8 @@ if "%BLENDER280%" EQU "TRUE" (
 cd ..
 git lfs install
 git clone --branch master https://github.com/LuxCoreRender/WindowsCompile .\WindowsCompile
-git clone --branch master https://github.com/LuxCoreRender/WindowsCompileDeps .\WindowsCompileDeps
+.\WindowsCompile\support\bin\wget https://github.com/LuxCoreRender/WindowsCompileDeps/releases/download/luxcorerender_v2.2/WindowsCompileDeps.7z
+.\WindowsCompile\support\bin\7z x -oWindowsCompileDeps WindowsCompileDeps.7z
 
 mklink /J Luxcore %SYSTEM_DEFAULTWORKINGDIRECTORY%
 
@@ -35,4 +36,4 @@ if "%PPP1%.%PPP2%" EQU "3.5" (
 pip install PySide2
 
 .\WindowsCompile\support\bin\wget.exe https://github.com/GPUOpen-LibrariesAndSDKs/OCL-SDK/files/1406216/lightOCLSDK.zip
-.\WindowsCompile\support\bin\7za.exe x -oWindowsCompile\OCL_SDK_Light lightOCLSDK.zip
+.\WindowsCompile\support\bin\7z.exe x -oWindowsCompile\OCL_SDK_Light lightOCLSDK.zip
