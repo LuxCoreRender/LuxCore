@@ -428,6 +428,7 @@ void PathOCLBaseOCLRenderThread::InitGPUTaskBuffer() {
 			sizeof(Spectrum) + // throughput
 			sizeof(int) + // albedoToDo
 			sizeof(int) + // photonGICacheEnabledOnLastHit
+			sizeof(int) + // photonGICausticCacheUsed
 			sizeof(int); // photonGIShowIndirectPathMixUsed
 
 	// Add seedPassThroughEvent memory size

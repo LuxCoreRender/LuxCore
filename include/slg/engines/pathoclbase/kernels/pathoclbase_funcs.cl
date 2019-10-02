@@ -413,6 +413,7 @@ OPENCL_FORCE_NOT_INLINE void GenerateEyePath(
 	VSTORE3F(WHITE, taskState->throughput.c);
 	taskState->albedoToDo = true;
 	taskState->photonGICacheEnabledOnLastHit = false;
+	taskState->photonGICausticCacheUsed = false;
 	taskState->photonGIShowIndirectPathMixUsed = false;
 
 #if defined(PARAM_HAS_PASSTHROUGH)

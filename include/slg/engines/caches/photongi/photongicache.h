@@ -267,7 +267,8 @@ public:
 	bool IsPhotonGIEnabled(const BSDF &bsdf) const;
 	float GetIndirectUsageThreshold(const BSDFEvent lastBSDFEvent,
 			const float lastGlossiness, const float u0) const;
-	bool IsDirectLightHitVisible(const EyePathInfo &pathInfo) const;
+	bool IsDirectLightHitVisible(const EyePathInfo &pathInfo,
+		const bool photonGICausticCacheUsed) const;
 	
 	const PhotonGICacheParams &GetParams() const { return params; }
 

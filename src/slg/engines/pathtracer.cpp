@@ -395,6 +395,7 @@ void PathTracer::RenderEyeSample(const u_int threadIndex,
 	pathInfo.lastShadeN = Normal(eyeRay.d);
 
 	bool photonGIShowIndirectPathMixUsed = false;
+	bool photonGICausticCacheUsed = false;
 	bool photonGICacheEnabledOnLastHit = false;
 	bool albedoToDo = true;
 	Spectrum pathThroughput(1.f);
@@ -418,7 +419,7 @@ void PathTracer::RenderEyeSample(const u_int threadIndex,
 				(!hybridBackForwardEnable || !pathInfo.IsCausticPath()) &&
 				// Avoid to render caustic path if PhotonGI caustic cache is enabled
 				(!photonGICache ||
-					photonGICache->IsDirectLightHitVisible(pathInfo));
+					photonGICache->IsDirectLightHitVisible(pathInfo, photonGICausticCacheUsed));
 
 		if (!hit) {
 			// Nothing was hit, look for env. lights
@@ -505,8 +506,14 @@ void PathTracer::RenderEyeSample(const u_int threadIndex,
 					// TODO: add support for AOVs (possible ?)
 					// TODO: support for radiance groups (possible ?)
 
-					if (photonGICache->IsCausticEnabled() && (!hybridBackForwardEnable || pathInfo.depth.depth != 0))
-						sampleResult.radiance[0] += pathThroughput * photonGICache->ConnectWithCausticPaths(bsdf);
+					if (photonGICache->IsCausticEnabled() && (!hybridBackForwardEnable || pathInfo.depth.depth != 0)) {
+						const Spectrum causticRadiance = photonGICache->ConnectWithCausticPaths(bsdf);
+
+						if (!causticRadiance.Black()) {
+							sampleResult.radiance[0] += pathThroughput * causticRadiance;
+							photonGICausticCacheUsed = true;
+						}
+					}
 
 					if (photonGICache->IsIndirectEnabled() && photonGICacheEnabledOnLastHit &&
 							(eyeRayHit.t > photonGICache->GetIndirectUsageThreshold(pathInfo.lastBSDFEvent,

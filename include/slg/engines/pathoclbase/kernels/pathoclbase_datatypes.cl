@@ -89,7 +89,7 @@ typedef struct {
 #endif
 	
 	int albedoToDo, photonGICacheEnabledOnLastHit,
-			photonGIShowIndirectPathMixUsed;
+			photonGICausticCacheUsed, photonGIShowIndirectPathMixUsed;
 } GPUTaskState;
 
 typedef enum {

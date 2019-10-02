@@ -86,12 +86,13 @@ float PhotonGICache::GetIndirectUsageThreshold(const BSDFEvent lastBSDFEvent,
 	}
 }
 
-bool PhotonGICache::IsDirectLightHitVisible(const EyePathInfo &pathInfo) const {
+bool PhotonGICache::IsDirectLightHitVisible(const EyePathInfo &pathInfo,
+		const bool photonGICausticCacheUsed) const {
 	// This is a specific check to cut fireflies created by some glossy or
 	// specular bounce
 	if (!(pathInfo.lastBSDFEvent & DIFFUSE) && (pathInfo.depth.diffuseDepth > 0))
 		return false;
-	else if (!params.caustic.enabled)
+	else if (!params.caustic.enabled || !photonGICausticCacheUsed)
 		return true;
 	else if (!pathInfo.IsCausticPath() && (params.debugType == PGIC_DEBUG_NONE))
 		return true;

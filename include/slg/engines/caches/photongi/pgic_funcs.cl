@@ -40,13 +40,15 @@ OPENCL_FORCE_INLINE bool PhotonGICache_IsPhotonGIEnabled(__global const BSDF *bs
 }
 
 OPENCL_FORCE_INLINE bool PhotonGICache_IsDirectLightHitVisible(
-		__global const EyePathInfo *pathInfo) {
+		__global const EyePathInfo *pathInfo,
+		const bool photonGICausticCacheUsed) {
 	// This is a specific check to cut fireflies created by some glossy or
 	// specular bounce
 	if (!(pathInfo->lastBSDFEvent & DIFFUSE) && (pathInfo->depth.diffuseDepth > 0))
 		return false;
 #if !defined(PARAM_PGIC_CAUSTIC_ENABLED)
-	return true;
+	if (photonGICausticCacheUsed)
+		return true;
 #endif
 #if defined(PARAM_PGIC_DEBUG_NONE)
 	if (!pathInfo->isNearlyCaustic)
