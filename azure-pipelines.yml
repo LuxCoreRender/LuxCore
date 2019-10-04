@@ -1,7 +1,7 @@
 # Azure build pipeline script
 # Add steps that build, run tests, deploy, and more: https://aka.ms/yaml
 
-# This script processes daily and official releases (alpha/beta/RC and final)
+# This script processes daily and official releases (alpha/beta/rc and final)
 # To trigger an official release, add a commit tagged in the form "luxcorerender_v*"
 # The "version_string" after the "_" in the tag is used in following steps
 # to generate binary names like "luxcorerender-<version_string>-<platform>-..."
@@ -38,6 +38,9 @@ jobs:
     condition: eq(variables['System.PullRequest.IsFork'], 'False')
     
     
+#==============================================================================
+# Linux binaries
+#==============================================================================
 - job: LuxCoreRenderLinux
   dependsOn: DetectBuildType
   condition: succeeded()
@@ -93,6 +96,9 @@ jobs:
       build: 'SDK'
 
 
+#==============================================================================
+# Windows binaries
+#==============================================================================
 - job: LuxCoreRenderWindows
   dependsOn: DetectBuildType
   condition: succeeded()
@@ -211,6 +217,9 @@ jobs:
     condition: eq(variables['System.PullRequest.IsFork'], 'False')
 
 
+#==============================================================================
+# MacOS binaries
+#==============================================================================
 #- job: LuxCoreRenderMacOS
 #  timeoutInMinutes: 0
 #  pool:
@@ -225,6 +234,9 @@ jobs:
 #    displayName: Testing LuxCore
 
 
+#==============================================================================
+# Daily build finalization
+#==============================================================================
 # Next job deletes "latest" tag from LuxCore repo, so that it is then
 # recreated at the current commit by the following release pipeline
 # Runs only if:
