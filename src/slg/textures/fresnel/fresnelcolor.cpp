@@ -56,7 +56,7 @@ Properties FresnelColorTexture::ToProperties(const ImageMapCache &imgMapCache, c
 
 	const string name = GetName();
 	props.Set(Property("scene.textures." + name + ".type")("fresnelcolor"));
-	props.Set(Property("scene.textures." + name + ".kr")(kr->GetName()));
+	props.Set(Property("scene.textures." + name + ".kr")(kr->GetSDLValue()));
 
 	return props;
 }

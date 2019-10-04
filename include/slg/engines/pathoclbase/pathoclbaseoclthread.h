@@ -186,6 +186,7 @@ protected:
 	// OpenCL structure size
 	size_t GetOpenCLHitPointSize() const;
 	size_t GetOpenCLBSDFSize() const;
+	size_t GetEyePathInfoSize() const;
 	size_t GetOpenCLSampleResultSize() const;
 
 	u_int threadIndex;
@@ -234,14 +235,13 @@ protected:
 	cl::Buffer *samplesBuff;
 	cl::Buffer *sampleDataBuff;
 	cl::Buffer *taskStatsBuff;
-	cl::Buffer *pathVolInfosBuff;
+	cl::Buffer *eyePathInfosBuff;
 	cl::Buffer *directLightVolInfosBuff;
 	cl::Buffer *pixelFilterBuff;
 	cl::Buffer *pgicRadiancePhotonsBuff;
 	cl::Buffer *pgicRadiancePhotonsBVHNodesBuff;
 	cl::Buffer *pgicCausticPhotonsBuff;
 	cl::Buffer *pgicCausticPhotonsBVHNodesBuff;
-	cl::Buffer *pgicCausticNearPhotonsBuff;
 
 	u_int initKernelArgsCount;
 	std::string kernelsParameters;

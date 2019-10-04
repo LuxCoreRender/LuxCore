@@ -230,7 +230,7 @@ Spectrum GlossyCoatingMaterial::Evaluate(const HitPoint &hitPoint,
 Spectrum GlossyCoatingMaterial::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
-	float *pdfW, BSDFEvent *event) const {
+	float *pdfW, BSDFEvent *event, const BSDFEvent eventHint) const {
 	if (fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 
@@ -263,7 +263,7 @@ Spectrum GlossyCoatingMaterial::Sample(const HitPoint &hitPoint,
 		const Vector fixedDirBase = frameBase.ToLocal(frame.ToWorld(localFixedDir));
 		// Sample base layer
 		baseF = matBase->Sample(hitPointBase, fixedDirBase, localSampledDir, u0, u1, passThroughEvent / wBase,
-			&basePdf, event);
+			&basePdf, event, eventHint);
 		assert (baseF.IsValid());
 
 		if (baseF.Black())
@@ -484,12 +484,12 @@ Properties GlossyCoatingMaterial::ToProperties(const ImageMapCache &imgMapCache,
 	const string name = GetName();
 	props.Set(Property("scene.materials." + name + ".type")("glossycoating"));
 	props.Set(Property("scene.materials." + name + ".base")(matBase->GetName()));
-	props.Set(Property("scene.materials." + name + ".ks")(Ks->GetName()));
-	props.Set(Property("scene.materials." + name + ".uroughness")(nu->GetName()));
-	props.Set(Property("scene.materials." + name + ".vroughness")(nv->GetName()));
-	props.Set(Property("scene.materials." + name + ".ka")(Ka->GetName()));
-	props.Set(Property("scene.materials." + name + ".d")(depth->GetName()));
-	props.Set(Property("scene.materials." + name + ".index")(index->GetName()));
+	props.Set(Property("scene.materials." + name + ".ks")(Ks->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".uroughness")(nu->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".vroughness")(nv->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".ka")(Ka->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".d")(depth->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".index")(index->GetSDLValue()));
 	props.Set(Property("scene.materials." + name + ".multibounce")(multibounce));
 	props.Set(Material::ToProperties(imgMapCache, useRealFileName));
 

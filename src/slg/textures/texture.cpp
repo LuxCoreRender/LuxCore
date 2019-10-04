@@ -40,6 +40,10 @@ using namespace slg;
 // Texture
 //------------------------------------------------------------------------------
 
+string Texture::GetSDLValue() const {
+	return GetName();
+}
+
 // The generic implementation
 Normal Texture::Bump(const HitPoint &hitPoint, const float sampleDistance) const {
     // Calculate bump map value at intersection point

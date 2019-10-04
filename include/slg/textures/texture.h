@@ -74,6 +74,9 @@ public:
 	virtual ~Texture() { }
 
 	virtual TextureType GetType() const = 0;
+	// Return the texture name or the values for constant textures, it is
+	// used when exporting the scene in text format
+	virtual std::string GetSDLValue() const;
 
 	virtual float GetFloatValue(const HitPoint &hitPoint) const = 0;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const = 0;

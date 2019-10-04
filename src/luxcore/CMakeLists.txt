@@ -27,7 +27,7 @@
 ################################################################################
 
 set(LUXCORE_VERSION_MAJOR 2)
-set(LUXCORE_VERSION_MINOR 2)
+set(LUXCORE_VERSION_MINOR 3alpha0)
 
 # Configure a header file to pass some of the CMake settings
 # to the source code:
@@ -86,11 +86,11 @@ if(DOXYGEN_FOUND)
 	add_custom_target(apidoc_luxcore DEPENDS ${DOXYGEN_LUXCORE_OUTPUT})
 endif(DOXYGEN_FOUND)
 
-#############################################################################
+################################################################################
 #
 # Custom Commnad
 #
-#############################################################################
+################################################################################
 
 set(generated_parser_dir "${GENERATED_DIR}/luxparser")
 file(MAKE_DIRECTORY ${generated_parser_dir})

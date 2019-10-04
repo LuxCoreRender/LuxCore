@@ -101,44 +101,6 @@ private:
 	luxrays::Spectrum GetColor(const HitPoint &hitPoint) const;
 };
 
-// A class used to store volume related information on the on going path
-#define PATHVOLUMEINFO_SIZE 8
-
-class PathVolumeInfo {
-public:
-	PathVolumeInfo();
-
-	const Volume *GetCurrentVolume() const { return currentVolume; }
-	const u_int GetListSize() const { return volumeListSize; }
-
-	void AddVolume(const Volume *vol);
-	void RemoveVolume(const Volume *vol);
-
-	const Volume *SimulateRemoveVolume(const Volume *vol) const;
-	const Volume *SimulateAddVolume(const Volume *vol) const;
-
-	void SetScatteredStart(const bool v) { scatteredStart = v; }
-	bool IsScatteredStart() const { return scatteredStart; }
-	
-	void Update(const BSDFEvent eventType, const BSDF &bsdf);
-	bool ContinueToTrace(const BSDF &bsdf) const;
-
-	void SetHitPointVolumes(HitPoint &hitPoint,
-		const Volume *matInteriorVolume,
-		const Volume *matExteriorVolume,
-		const Volume *defaultWorldVolume) const;
-
-private:
-	static bool CompareVolumePriorities(const Volume *vol1, const Volume *vol2);
-
-	const Volume *currentVolume;
-	// Using a fixed array here mostly to have the same code as the OpenCL implementation
-	const Volume *volumeList[PATHVOLUMEINFO_SIZE];
-	u_int volumeListSize;
-	
-	bool scatteredStart;
-};
-
 }
 
 #endif	/* _SLG_VOLUME_H */

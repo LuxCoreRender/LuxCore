@@ -53,8 +53,8 @@ Properties BrightContrastTexture::ToProperties(const ImageMapCache &imgMapCache,
 	const string name = GetName();
 	props.Set(Property("scene.textures." + name + ".type")("brightcontrast"));
 	props.Set(Property("scene.textures." + name + ".texture")(tex->GetName()));
-	props.Set(Property("scene.textures." + name + ".brightness")(brightnessTex->GetName()));
-	props.Set(Property("scene.textures." + name + ".contrast")(contrastTex->GetName()));
+	props.Set(Property("scene.textures." + name + ".brightness")(brightnessTex->GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".contrast")(contrastTex->GetSDLValue()));
 
 	return props;
 }

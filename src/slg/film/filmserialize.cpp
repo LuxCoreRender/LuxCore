@@ -103,6 +103,7 @@ template<class Archive> void Film::load(Archive &ar, const u_int version) {
 	ar & byMaterialIDs;
 
 	ar & statsTotalSampleCount;
+	ar & RADIANCE_PER_PIXEL_NORMALIZED_SampleCount;
 	ar & RADIANCE_PER_SCREEN_NORMALIZED_SampleCount;
 	ar & statsStartSampleTime;
 
@@ -179,6 +180,7 @@ template<class Archive> void Film::save(Archive &ar, const u_int version) const 
 	ar & byMaterialIDs;
 
 	ar & statsTotalSampleCount;
+	ar & RADIANCE_PER_PIXEL_NORMALIZED_SampleCount;
 	ar & RADIANCE_PER_SCREEN_NORMALIZED_SampleCount;
 	ar & statsStartSampleTime;
 

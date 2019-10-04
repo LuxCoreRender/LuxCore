@@ -218,14 +218,15 @@ Spectrum DisneyMaterial::DisneySheen(const Spectrum &color, const float sheen,
 }
 
 Spectrum DisneyMaterial::Sample(
-	const HitPoint &hitPoint,
-	const Vector &localFixedDir,
-	Vector *localSampledDir,
-	const float u0,
-	const float u1,
-	const float passThroughEvent,
-	float *pdfW,
-	BSDFEvent *event) const {
+		const HitPoint &hitPoint,
+		const Vector &localFixedDir,
+		Vector *localSampledDir,
+		const float u0,
+		const float u1,
+		const float passThroughEvent,
+		float *pdfW,
+		BSDFEvent *event,
+		const BSDFEvent eventHint) const {
 	const Spectrum color = BaseColor->GetSpectrumValue(hitPoint).Clamp(0.0f, 1.0f);
 	const float subsurface = Clamp(Subsurface->GetFloatValue(hitPoint), 0.0f, 1.0f);
 	const float roughness = Clamp(Roughness->GetFloatValue(hitPoint), 0.0f, 1.0f);
@@ -458,17 +459,17 @@ Properties DisneyMaterial::ToProperties(const ImageMapCache &imgMapCache, const 
 
 	const string name = GetName();
 	props.Set(Property("scene.materials." + name + ".type")("disney"));
-	props.Set(Property("scene.materials." + name + ".basecolor")(BaseColor->GetName()));
-	props.Set(Property("scene.materials." + name + ".subsurface")(Subsurface->GetName()));
-	props.Set(Property("scene.materials." + name + ".roughness")(Roughness->GetName()));
-	props.Set(Property("scene.materials." + name + ".metallic")(Metallic->GetName()));
-	props.Set(Property("scene.materials." + name + ".specular")(Specular->GetName()));
-	props.Set(Property("scene.materials." + name + ".speculartint")(SpecularTint->GetName()));
-	props.Set(Property("scene.materials." + name + ".clearcoat")(Clearcoat->GetName()));
-	props.Set(Property("scene.materials." + name + ".clearcoatgloss")(ClearcoatGloss->GetName()));
-	props.Set(Property("scene.materials." + name + ".anisotropic")(Anisotropic->GetName()));
-	props.Set(Property("scene.materials." + name + ".sheen")(Sheen->GetName()));
-	props.Set(Property("scene.materials." + name + ".sheentint")(SheenTint->GetName()));
+	props.Set(Property("scene.materials." + name + ".basecolor")(BaseColor->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".subsurface")(Subsurface->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".roughness")(Roughness->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".metallic")(Metallic->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".specular")(Specular->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".speculartint")(SpecularTint->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".clearcoat")(Clearcoat->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".clearcoatgloss")(ClearcoatGloss->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".anisotropic")(Anisotropic->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".sheen")(Sheen->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".sheentint")(SheenTint->GetSDLValue()));
 	props.Set(Material::ToProperties(imgMapCache, useRealFileName));
 
 	return props;

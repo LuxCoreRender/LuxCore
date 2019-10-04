@@ -21,18 +21,18 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string/replace.hpp>
 
+#include "luxcore/cfg.h"
 #include "luxrays/core/geometry/transform.h"
 #include "luxrays/utils/ocl.h"
 #include "luxrays/core/oclintersectiondevice.h"
 #include "luxrays/kernels/kernels.h"
-
-#include "luxcore/cfg.h"
 
 #include "slg/slg.h"
 #include "slg/kernels/kernels.h"
 #include "slg/renderconfig.h"
 #include "slg/engines/pathoclbase/pathoclbase.h"
 #include "slg/samplers/sobol.h"
+#include "slg/utils/pathinfo.h"
 
 using namespace std;
 using namespace luxrays;
@@ -89,6 +89,40 @@ size_t PathOCLBaseOCLRenderThread::GetOpenCLBSDFSize() const {
 	return bsdfSize;
 }
 
+size_t PathOCLBaseOCLRenderThread::GetEyePathInfoSize() const {
+	// Add PathDepthInfo memory size
+	size_t eyePathInfoSize = sizeof(slg::ocl::PathDepthInfo);
+	// Add PathVolumeInfo memory size
+	if (renderEngine->compiledScene->HasVolumes())
+		eyePathInfoSize += sizeof(slg::ocl::PathVolumeInfo);
+
+	// Add isPassThroughPath memory size
+	eyePathInfoSize += sizeof(int);
+
+	// Add lastBSDFEvent memory size
+	eyePathInfoSize += sizeof(slg::ocl::BSDFEvent);
+	// Add lastBSDFPdfW memory size
+	eyePathInfoSize += sizeof(float);
+	// Add lastGlossiness memory size
+	eyePathInfoSize += sizeof(float);
+	// Add lastShadeN memory size
+	eyePathInfoSize += sizeof(slg::ocl::Normal);
+	// Add lastFromVolume memory size
+	if (renderEngine->compiledScene->HasVolumes())
+		eyePathInfoSize += sizeof(int);
+
+	// Add isNearlyCaustic memory size
+	eyePathInfoSize += sizeof(int);
+	// Add isNearlyS memory size
+	eyePathInfoSize += sizeof(int);
+	// Add isNearlySD memory size
+	eyePathInfoSize += sizeof(int);
+	// Add isNearlySDS memory size
+	eyePathInfoSize += sizeof(int);
+
+	return eyePathInfoSize;
+}
+
 size_t PathOCLBaseOCLRenderThread::GetOpenCLSampleResultSize() const {
 	//--------------------------------------------------------------------------
 	// SampleResult size
@@ -97,8 +131,8 @@ size_t PathOCLBaseOCLRenderThread::GetOpenCLSampleResultSize() const {
 	// All thread films are supposed to have the same parameters
 	const Film *threadFilm = threadFilms[0]->film;
 
-	// SampleResult.filmX and SampleResult.filmY
-	size_t sampleResultSize = 2 * sizeof(float);
+	// filmX, filmY, pixelX and pixelY fields
+	size_t sampleResultSize = 2 * sizeof(float) + 2 * sizeof(u_int);
 	// SampleResult.radiancePerPixelNormalized[PARAM_FILM_RADIANCE_GROUP_COUNT]
 	sampleResultSize += sizeof(slg::ocl::Spectrum) * threadFilm->GetRadianceGroupCount();
 	if (threadFilm->HasChannel(Film::ALPHA))
@@ -143,11 +177,11 @@ size_t PathOCLBaseOCLRenderThread::GetOpenCLSampleResultSize() const {
 	if (threadFilm->HasChannel(Film::ALBEDO))
 		sampleResultSize += sizeof(Spectrum);
 
-	sampleResultSize += sizeof(BSDFEvent) +
-			// firstPathVertex, lastPathVertex, passThroughPath, specularGlossyCausticPath fields
-			4 * sizeof(int) +
-			// pixelX and pixelY fields
-			sizeof(u_int) * 2;
+	sampleResultSize += 
+			// firstPathVertexEvent field
+			sizeof(slg::ocl::BSDFEvent) +
+			// firstPathVertex and lastPathVertex fields
+			2 * sizeof(int);
 
 	return sampleResultSize;
 }
@@ -312,12 +346,9 @@ void PathOCLBaseOCLRenderThread::InitPhotonGI() {
 			cscene->pgicCausticPhotons.size() * sizeof(slg::ocl::Photon), "PhotonGI caustic cache all entries");
 		AllocOCLBufferRO(&pgicCausticPhotonsBVHNodesBuff, &cscene->pgicCausticPhotonsBVHArrayNode[0],
 			cscene->pgicCausticPhotonsBVHArrayNode.size() * sizeof(slg::ocl::IndexBVHArrayNode), "PhotonGI caustic cache BVH nodes");
-		AllocOCLBufferRW(&pgicCausticNearPhotonsBuff,
-			renderEngine->taskCount * cscene->pgicCausticLookUpMaxCount * sizeof(slg::ocl::NearPhoton), "PhotonGI near photon buffers");
 	} else {
 		FreeOCLBuffer(&pgicCausticPhotonsBuff);
 		FreeOCLBuffer(&pgicCausticPhotonsBVHNodesBuff);
-		FreeOCLBuffer(&pgicCausticNearPhotonsBuff);
 	}
 }
 
@@ -378,11 +409,6 @@ void PathOCLBaseOCLRenderThread::InitGPUTaskBuffer() {
 
 	size_t gpuDirectLightTaskSize = 
 			sizeof(slg::ocl::pathoclbase::DirectLightIlluminateInfo) + 
-			sizeof(BSDFEvent) + // lastBSDFEvent
-			sizeof(float) + // lastPdfW
-			sizeof(float) + // lastGlossiness
-			sizeof(Normal) + // lastNormal
-			(renderEngine->compiledScene->HasVolumes() ? sizeof(int) : 0) + // lastIsVolume
 			sizeof(int); // directLightResult
 
 	// Add seedPassThroughEvent memory size
@@ -401,8 +427,8 @@ void PathOCLBaseOCLRenderThread::InitGPUTaskBuffer() {
 			sizeof(slg::ocl::PathDepthInfo) + // depthInfo
 			sizeof(Spectrum) + // throughput
 			sizeof(int) + // albedoToDo
-			sizeof(int) + // photonGICausticCacheAlreadyUsed
 			sizeof(int) + // photonGICacheEnabledOnLastHit
+			sizeof(int) + // photonGICausticCacheUsed
 			sizeof(int); // photonGIShowIndirectPathMixUsed
 
 	// Add seedPassThroughEvent memory size
@@ -741,10 +767,14 @@ void PathOCLBaseOCLRenderThread::InitRender() {
 	// Allocate volume info buffers if required
 	//--------------------------------------------------------------------------
 
-	if (renderEngine->compiledScene->HasVolumes()) {
-		AllocOCLBufferRW(&pathVolInfosBuff, sizeof(slg::ocl::PathVolumeInfo) * taskCount, "PathVolumeInfo");
+	AllocOCLBufferRW(&eyePathInfosBuff, GetEyePathInfoSize() * taskCount, "PathInfo");
+
+	//--------------------------------------------------------------------------
+	// Allocate volume info buffers if required
+	//--------------------------------------------------------------------------
+
+	if (renderEngine->compiledScene->HasVolumes())
 		AllocOCLBufferRW(&directLightVolInfosBuff, sizeof(slg::ocl::PathVolumeInfo) * taskCount, "DirectLightVolumeInfo");
-	}
 
 	//--------------------------------------------------------------------------
 	// Allocate GPU pixel filter distribution

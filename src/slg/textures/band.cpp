@@ -107,7 +107,7 @@ Properties BandTexture::ToProperties(const ImageMapCache &imgMapCache, const boo
 	const string name = GetName();
 	props.Set(Property("scene.textures." + name + ".type")("band"));
 	props.Set(Property("scene.textures." + name + ".interpolation")(InterpolationType2String(interpType)));
-	props.Set(Property("scene.textures." + name + ".amount")(amount->GetName()));
+	props.Set(Property("scene.textures." + name + ".amount")(amount->GetSDLValue()));
 
 	for (u_int i = 0; i < offsets.size(); ++i) {
 		props.Set(Property("scene.textures." + name + ".offset" + ToString(i))(offsets[i]));

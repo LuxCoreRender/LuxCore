@@ -135,7 +135,7 @@ Spectrum HeterogeneousVolume::Evaluate(const HitPoint &hitPoint,
 Spectrum HeterogeneousVolume::Sample(const HitPoint &hitPoint,
 		const Vector &localFixedDir, Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
-		float *pdfW, BSDFEvent *event) const {
+		float *pdfW, BSDFEvent *event, const BSDFEvent eventHint) const {
 	return schlickScatter.Sample(hitPoint, localFixedDir, localSampledDir,
 			u0, u1, passThroughEvent, pdfW, event);
 }
@@ -170,9 +170,9 @@ Properties HeterogeneousVolume::ToProperties() const {
 
 	const string name = GetName();
 	props.Set(Property("scene.volumes." + name + ".type")("heterogeneous"));
-	props.Set(Property("scene.volumes." + name + ".absorption")(sigmaA->GetName()));
-	props.Set(Property("scene.volumes." + name + ".scattering")(sigmaS->GetName()));
-	props.Set(Property("scene.volumes." + name + ".asymmetry")(schlickScatter.g->GetName()));
+	props.Set(Property("scene.volumes." + name + ".absorption")(sigmaA->GetSDLValue()));
+	props.Set(Property("scene.volumes." + name + ".scattering")(sigmaS->GetSDLValue()));
+	props.Set(Property("scene.volumes." + name + ".asymmetry")(schlickScatter.g->GetSDLValue()));
 	props.Set(Property("scene.volumes." + name + ".multiscattering")(multiScattering));
 	props.Set(Property("scene.volumes." + name + ".steps.size")(stepSize));
 	props.Set(Property("scene.volumes." + name + ".steps.maxcount")(maxStepsCount));

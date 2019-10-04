@@ -138,16 +138,16 @@ void RandomSampler::NextSample(const vector<SampleResult> &sampleResults) {
 		double pixelNormalizedCount, screenNormalizedCount;
 		switch (sampleType) {
 			case PIXEL_NORMALIZED_ONLY:
-				pixelNormalizedCount = 1.f;
-				screenNormalizedCount = 0.f;
+				pixelNormalizedCount = 1.0;
+				screenNormalizedCount = 0.0;
 				break;
 			case SCREEN_NORMALIZED_ONLY:
-				pixelNormalizedCount = 0.f;
-				screenNormalizedCount = 1.f;
+				pixelNormalizedCount = 0.0;
+				screenNormalizedCount = 1.0;
 				break;
 			case PIXEL_NORMALIZED_AND_SCREEN_NORMALIZED:
-				pixelNormalizedCount = 1.f;
-				screenNormalizedCount = 1.f;
+				pixelNormalizedCount = 1.0;
+				screenNormalizedCount = 1.0;
 				break;
 			default:
 				throw runtime_error("Unknown sample type in RandomSampler::NextSample(): " + ToString(sampleType));

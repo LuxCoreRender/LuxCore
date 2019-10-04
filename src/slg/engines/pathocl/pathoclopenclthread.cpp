@@ -224,7 +224,7 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl() {
 				break;
 
 			if (engine->photonGICache &&
-					engine->photonGICache->Update(threadIndex, *(engine->film), pgicUpdateCallBack)) {
+					engine->photonGICache->Update(threadIndex, engine->GetTotalEyeSPP(), pgicUpdateCallBack)) {
 				InitPhotonGI();
 				SetKernelArgs();
 			}

@@ -27,6 +27,7 @@
 #include "slg/lights/trianglelight.h"
 #include "slg/materials/material.h"
 #include "slg/volumes/volume.h"
+#include "slg/utils/pathvolumeinfo.h"
 #include "slg/bsdf/bsdfevents.h"
 #include "slg/bsdf/hitpoint.h"
 
@@ -91,7 +92,8 @@ public:
 		BSDFEvent *event, float *directPdfW = NULL, float *reversePdfW = NULL) const;
 	luxrays::Spectrum Sample(luxrays::Vector *sampledDir,
 		const float u0, const float u1,
-		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
+		float *pdfW, float *absCosSampledDir,
+		BSDFEvent *event, const BSDFEvent eventHint = NONE) const;
 	luxrays::Spectrum ShadowCatcherSample(Vector *sampledDir,
 		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
 	void Pdf(const luxrays::Vector &sampledDir, float *directPdfW, float *reversePdfW) const;

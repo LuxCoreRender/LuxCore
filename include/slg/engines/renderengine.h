@@ -109,11 +109,25 @@ public:
 	u_int GetPass() const {
 		return static_cast<u_int>(film->GetTotalSampleCount() / (film->GetWidth() * film->GetHeight()));
 	}
-	double GetTotalSampleCount() const { return film->GetTotalSampleCount(); }
-	double GetTotalSamplesSec() const {
-		return film->GetAvgSampleSec();
+	u_int GetEyePass() const {
+		return static_cast<u_int>(film->GetTotalEyeSampleCount() / (film->GetWidth() * film->GetHeight()));
 	}
-	double GetTotalRaysSec() const { return (film->GetTotalTime() == 0.0) ? 0.0 : (raysCount / film->GetTotalTime()); }
+	u_int GetLightPass() const {
+		return static_cast<u_int>(film->GetTotalLightSampleCount() / (film->GetWidth() * film->GetHeight()));
+	}
+
+	double GetTotalSampleCount() const { return film->GetTotalSampleCount(); }
+	double GetTotalEyeSampleCount() const { return film->GetTotalEyeSampleCount(); }
+	double GetTotalLightSampleCount() const { return film->GetTotalLightSampleCount(); }
+
+	double GetTotalSamplesSec() const { return film->GetAvgSampleSec(); }
+	double GetTotalEyeSamplesSec() const { return film->GetAvgEyeSampleSec(); }
+	double GetTotalLightSamplesSec() const { return film->GetAvgLightSampleSec(); }
+
+	double GetTotalRaysSec() const {
+		const double t = film->GetTotalTime();
+		return (t == 0.0) ? 0.0 : (raysCount / t);
+	}
 	double GetRenderingTime() const { return film->GetTotalTime(); }
 
 	//--------------------------------------------------------------------------

@@ -315,44 +315,6 @@ OPENCL_FORCE_NOT_INLINE bool Scene_Intersect(
 }
 
 //------------------------------------------------------------------------------
-// PathDepthInfo
-//------------------------------------------------------------------------------
-
-OPENCL_FORCE_INLINE void PathDepthInfo_Init(__global PathDepthInfo *depthInfo) {
-	depthInfo->depth = 0;
-	depthInfo->diffuseDepth = 0;
-	depthInfo->glossyDepth = 0;
-	depthInfo->specularDepth = 0;
-}
-
-OPENCL_FORCE_INLINE void PathDepthInfo_IncDepths(__global PathDepthInfo *depthInfo, const BSDFEvent event) {
-	++(depthInfo->depth);
-	if (event & DIFFUSE)
-		++(depthInfo->diffuseDepth);
-	if (event & GLOSSY)
-		++(depthInfo->glossyDepth);
-	if (event & SPECULAR)
-		++(depthInfo->specularDepth);
-}
-
-OPENCL_FORCE_INLINE bool PathDepthInfo_IsLastPathVertex(__global PathDepthInfo *depthInfo, const BSDFEvent event) {
-	return (depthInfo->depth + 1 >= PARAM_MAX_PATH_DEPTH) ||
-			((event & DIFFUSE) && (depthInfo->diffuseDepth + 1 >= PARAM_MAX_PATH_DEPTH_DIFFUSE)) ||
-			((event & GLOSSY) && (depthInfo->glossyDepth + 1 >= PARAM_MAX_PATH_DEPTH_GLOSSY)) ||
-			((event & SPECULAR) && (depthInfo->specularDepth + 1 >= PARAM_MAX_PATH_DEPTH_SPECULAR));
-}
-
-OPENCL_FORCE_INLINE bool PathDepthInfo_CheckComponentDepths(const BSDFEvent component) {
-	return ((PARAM_MAX_PATH_DEPTH_DIFFUSE > 0) && (component & DIFFUSE)) ||
-			((PARAM_MAX_PATH_DEPTH_GLOSSY > 0) && (component & GLOSSY)) ||
-			((PARAM_MAX_PATH_DEPTH_SPECULAR > 0) && (component & SPECULAR));
-}
-
-OPENCL_FORCE_INLINE uint PathDepthInfo_GetRRDepth(__global PathDepthInfo *depthInfo) {
-	return depthInfo->diffuseDepth + depthInfo->glossyDepth;
-}
-
-//------------------------------------------------------------------------------
 // Init functions
 //------------------------------------------------------------------------------
 
@@ -403,9 +365,7 @@ OPENCL_FORCE_NOT_INLINE void GenerateEyePath(
 		const uint filmSubRegion2, const uint filmSubRegion3,
 		__global float *pixelFilterDistribution,
 		__global Ray *ray,
-#if defined(PARAM_HAS_VOLUMES)
-		__global PathVolumeInfo *volInfo,
-#endif
+		__global EyePathInfo *pathInfo,
 		Seed *seed
 #if defined(RENDER_ENGINE_TILEPATHOCL) || defined(RENDER_ENGINE_RTPATHOCL)
 		// cameraFilmWidth/cameraFilmHeight and filmWidth/filmHeight are usually
@@ -414,6 +374,8 @@ OPENCL_FORCE_NOT_INLINE void GenerateEyePath(
 		const uint tileStartX, const uint tileStartY
 #endif
 		) {
+	EyePathInfo_Init(pathInfo);
+
 	InitSampleResult(sample, sampleDataPathBase,
 			filmWidth, filmHeight,
 			filmSubRegion0, filmSubRegion1,
@@ -430,7 +392,7 @@ OPENCL_FORCE_NOT_INLINE void GenerateEyePath(
 	Camera_GenerateRay(camera, cameraFilmWidth, cameraFilmHeight,
 			ray,
 #if defined(PARAM_HAS_VOLUMES)
-			volInfo,
+			&pathInfo->volume,
 #endif
 			sample->result.filmX + tileStartX, sample->result.filmY + tileStartY,
 			timeSample,
@@ -439,7 +401,7 @@ OPENCL_FORCE_NOT_INLINE void GenerateEyePath(
 	Camera_GenerateRay(camera, filmWidth, filmHeight,
 			ray,
 #if defined(PARAM_HAS_VOLUMES)
-			volInfo,
+			&pathInfo->volume,
 #endif
 			sample->result.filmX, sample->result.filmY,
 			timeSample,
@@ -448,15 +410,11 @@ OPENCL_FORCE_NOT_INLINE void GenerateEyePath(
 
 	// Initialize the path state
 	taskState->state = MK_RT_NEXT_VERTEX;
-	PathDepthInfo_Init(&taskState->depthInfo);
 	VSTORE3F(WHITE, taskState->throughput.c);
 	taskState->albedoToDo = true;
-	taskState->photonGICausticCacheAlreadyUsed = false;
 	taskState->photonGICacheEnabledOnLastHit = false;
+	taskState->photonGICausticCacheUsed = false;
 	taskState->photonGIShowIndirectPathMixUsed = false;
-	taskDirectLight->lastGlossiness = 0.f;
-	taskDirectLight->lastBSDFEvent = SPECULAR; // SPECULAR is required to avoid MIS
-	taskDirectLight->lastPdfW = 1.f;
 
 #if defined(PARAM_HAS_PASSTHROUGH)
 	// Initialize the pass-through event seed
@@ -496,34 +454,10 @@ OPENCL_FORCE_INLINE bool CheckDirectHitVisibilityFlags(__global const LightSourc
 	return false;
 }
 
-#if defined(PARAM_HYBRID_BACKFORWARD)
-bool IsStillSpecularGlossyCausticPath(const bool isSpecularGlossyCausticPath,
-		__global const BSDF *bsdf,
-		const BSDFEvent lastBSDFEvent,
-		__global PathDepthInfo *depthInfo
-		MATERIALS_PARAM_DECL) {
-	// First bounce condition
-	if (depthInfo->depth == 0)
-		return (lastBSDFEvent & DIFFUSE) ||
-				((lastBSDFEvent & GLOSSY) && (BSDF_GetGlossiness(bsdf MATERIALS_PARAM) > PARAM_HYBRID_BACKFORWARD_GLOSSINESSTHRESHOLD));
-
-	// All other bounce conditions
-	return isSpecularGlossyCausticPath && ((lastBSDFEvent & SPECULAR) ||
-			((lastBSDFEvent & GLOSSY) && (BSDF_GetGlossiness(bsdf MATERIALS_PARAM) <= PARAM_HYBRID_BACKFORWARD_GLOSSINESSTHRESHOLD)));
-}
-#endif
-
 #if defined(PARAM_HAS_ENVLIGHTS)
 OPENCL_FORCE_NOT_INLINE void DirectHitInfiniteLight(
-		__global PathDepthInfo *depthInfo,
-		const BSDFEvent lastBSDFEvent,
-		__global const Spectrum* restrict pathThroughput,
-		__global const BSDF *bsdf,
-		const __global Ray *ray, const float3 rayNormal,
-#if defined(PARAM_HAS_VOLUMES)
-		const bool rayFromVolume,
-#endif
-		const float lastPdfW, __global SampleResult *sampleResult
+		__global EyePathInfo *pathInfo, __global const Spectrum* restrict pathThroughput,
+		const __global Ray *ray, __global const BSDF *bsdf, __global SampleResult *sampleResult
 		LIGHTS_PARAM_DECL) {
 	const float3 throughput = VLOAD3F(pathThroughput->c);
 
@@ -531,7 +465,7 @@ OPENCL_FORCE_NOT_INLINE void DirectHitInfiniteLight(
 		__global const LightSource* restrict light = &lights[envLightIndices[i]];
 
 		// Check if the light source is visible according the settings
-		if (!CheckDirectHitVisibilityFlags(light, depthInfo, lastBSDFEvent))
+		if (!CheckDirectHitVisibilityFlags(light, &pathInfo->depth, pathInfo->lastBSDFEvent))
 			continue;
 
 		float directPdfW;
@@ -541,19 +475,19 @@ OPENCL_FORCE_NOT_INLINE void DirectHitInfiniteLight(
 
 		if (!Spectrum_IsBlack(lightRadiance)) {
 			float weight;
-			if (!(lastBSDFEvent & SPECULAR)) {
+			if (!(pathInfo->lastBSDFEvent & SPECULAR)) {
 				const float lightPickProb = LightStrategy_SampleLightPdf(lightsDistribution,
 						dlscAllEntries,
 						dlscDistributions, dlscBVHNodes,
 						dlscRadius2, dlscNormalCosAngle,
-						VLOAD3F(&ray->o.x), rayNormal,
+						VLOAD3F(&ray->o.x), VLOAD3F(&pathInfo->lastShadeN.x),
 #if defined(PARAM_HAS_VOLUMES)
-						rayFromVolume,
+						pathInfo->lastFromVolume,
 #endif
 						light->lightSceneIndex);
 
 				// MIS between BSDF sampling and direct light sampling
-				weight = PowerHeuristic(lastPdfW, directPdfW * lightPickProb);
+				weight = PowerHeuristic(pathInfo->lastBSDFPdfW, directPdfW * lightPickProb);
 			} else
 				weight = 1.f;
 
@@ -564,20 +498,15 @@ OPENCL_FORCE_NOT_INLINE void DirectHitInfiniteLight(
 #endif
 
 OPENCL_FORCE_NOT_INLINE void DirectHitFiniteLight(
-		__global PathDepthInfo *depthInfo,
-		const BSDFEvent lastBSDFEvent,
-		__global const Spectrum* restrict pathThroughput,
-		const __global Ray *ray, const float3 rayNormal,
-#if defined(PARAM_HAS_VOLUMES)
-		const bool rayFromVolume,
-#endif
+		__global EyePathInfo *pathInfo,
+		__global const Spectrum* restrict pathThroughput, const __global Ray *ray,
 		const float distance, __global const BSDF *bsdf,
-		const float lastPdfW, __global SampleResult *sampleResult
+		__global SampleResult *sampleResult
 		LIGHTS_PARAM_DECL) {
 	__global const LightSource* restrict light = &lights[bsdf->triangleLightSourceIndex];
 
 	// Check if the light source is visible according the settings
-	if (!CheckDirectHitVisibilityFlags(light, depthInfo, lastBSDFEvent))
+	if (!CheckDirectHitVisibilityFlags(light, &pathInfo->depth, pathInfo->lastBSDFEvent))
 		return;
 	
 	float directPdfA;
@@ -587,14 +516,14 @@ OPENCL_FORCE_NOT_INLINE void DirectHitFiniteLight(
 	if (!Spectrum_IsBlack(emittedRadiance)) {
 		// Add emitted radiance
 		float weight = 1.f;
-		if (!(lastBSDFEvent & SPECULAR)) {
+		if (!(pathInfo->lastBSDFEvent & SPECULAR)) {
 			const float lightPickProb = LightStrategy_SampleLightPdf(lightsDistribution,
 					dlscAllEntries,
 					dlscDistributions, dlscBVHNodes,
 					dlscRadius2, dlscNormalCosAngle,
-					VLOAD3F(&ray->o.x), rayNormal,
+					VLOAD3F(&ray->o.x), VLOAD3F(&pathInfo->lastShadeN.x),
 #if defined(PARAM_HAS_VOLUMES)
-					rayFromVolume,
+					pathInfo->lastFromVolume,
 #endif
 					light->lightSceneIndex);
 
@@ -610,7 +539,7 @@ OPENCL_FORCE_NOT_INLINE void DirectHitFiniteLight(
 			// MIS between BSDF sampling and direct light sampling
 			//
 			// Note: mats[bsdf->materialIndex].avgPassThroughTransparency = lightSource->GetAvgPassThroughTransparency()
-			weight = PowerHeuristic(lastPdfW * Light_GetAvgPassThroughTransparency(light LIGHTS_PARAM), directPdfW * lightPickProb);
+			weight = PowerHeuristic(pathInfo->lastBSDFPdfW * Light_GetAvgPassThroughTransparency(light LIGHTS_PARAM), directPdfW * lightPickProb);
 		}
 
 		SampleResult_AddEmission(sampleResult, BSDF_GetLightID(bsdf
@@ -692,13 +621,10 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 		__global DirectLightIlluminateInfo *info,
 		const float time,
 		const bool lastPathVertex,
-		__global PathDepthInfo *depthInfo,
+		__global EyePathInfo *pathInfo,
 		__global PathDepthInfo *tmpDepthInfo,
 		__global const BSDF *bsdf,
 		__global Ray *shadowRay
-#if defined(PARAM_HYBRID_BACKFORWARD)
-		, const bool specularGlossyCausticPath
-#endif
 		LIGHTS_PARAM_DECL) {
 	const float3 lightRayDir = VLOAD3F(&info->dir.x);
 	
@@ -711,10 +637,7 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 
 	if (Spectrum_IsBlack(bsdfEval)
 #if defined(PARAM_HYBRID_BACKFORWARD)
-			|| ((depthInfo->depth > 0) &&
-				IsStillSpecularGlossyCausticPath(specularGlossyCausticPath,
-					bsdf, event, depthInfo
-					MATERIALS_PARAM))
+			|| EyePathInfo_IsCausticPath(pathInfo, event, BSDF_GetGlossiness(bsdf MATERIALS_PARAM), PARAM_HYBRID_BACKFORWARD_GLOSSINESSTHRESHOLD)
 #endif
 			)
 		return false;
@@ -723,7 +646,7 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 	//
 	// Note: I was using a local variable before to save, use and than restore
 	// the depthInfo variable but it was triggering a AMD OpenCL compiler bug.
-	*tmpDepthInfo = *depthInfo;
+	*tmpDepthInfo = pathInfo->depth;
 	PathDepthInfo_IncDepths(tmpDepthInfo, event);
 
 	const float directLightSamplingPdfW = info->directPdfW * info->pickPdf;
@@ -767,7 +690,6 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 
 #if defined(PARAM_HAS_VOLUMES)
 #define KERNEL_ARGS_VOLUMES \
-		, __global PathVolumeInfo *pathVolInfos \
 		, __global PathVolumeInfo *directLightVolInfos
 #else
 #define KERNEL_ARGS_VOLUMES
@@ -860,17 +782,15 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 #define KERNEL_ARGS_PHOTONGI \
 		, __global const RadiancePhoton* restrict pgicRadiancePhotons \
 		, __global const IndexBVHArrayNode* restrict pgicRadiancePhotonsBVHNodes \
+		, const float pgicGlossinessUsageThreshold \
 		, const float pgicIndirectLookUpRadius \
 		, const float pgicIndirectLookUpNormalCosAngle \
-		, const float pgicIndirectGlossinessUsageThreshold \
 		, const float pgicIndirectUsageThresholdScale \
 		, __global const Photon* restrict pgicCausticPhotons \
 		, __global const IndexBVHArrayNode* restrict pgicCausticPhotonsBVHNodes \
-		, __global NearPhoton *pgicCausticNearPhotons \
 		, const uint pgicCausticPhotonTracedCount \
 		, const float pgicCausticLookUpRadius \
-		, const float pgicCausticLookUpNormalCosAngle \
-		, const uint pgicCausticLookUpMaxCount
+		, const float pgicCausticLookUpNormalCosAngle
 #else
 #define KERNEL_ARGS_PHOTONGI
 #endif
@@ -884,6 +804,7 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 		, __global SamplerSharedData *samplerSharedData \
 		, __global Sample *samples \
 		, __global float *samplesData \
+		, __global EyePathInfo *eyePathInfos \
 		KERNEL_ARGS_VOLUMES \
 		, __global Ray *rays \
 		, __global RayHit *rayHits \
@@ -1011,9 +932,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 		__global SamplerSharedData *samplerSharedData,
 		__global Sample *samples,
 		__global float *samplesData,
-#if defined(PARAM_HAS_VOLUMES)
-		__global PathVolumeInfo *pathVolInfos,
-#endif
+		__global EyePathInfo *eyePathInfos,
 		__global float *pixelFilterDistribution,
 		__global Ray *rays,
 		__global Camera *camera
@@ -1070,19 +989,13 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 	if (validSample) {
 		__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
 
-#if defined(PARAM_HAS_VOLUMES)
-		PathVolumeInfo_Init(&pathVolInfos[gid]);
-#endif
-
 		// Generate the eye path
 		GenerateEyePath(taskDirectLight, taskState, sample, sampleDataPathBase, camera,
 				filmWidth, filmHeight,
 				filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3,
 				pixelFilterDistribution,
 				&rays[gid],
-#if defined(PARAM_HAS_VOLUMES)
-				&pathVolInfos[gid],
-#endif
+				&eyePathInfos[gid],
 				seed
 #if defined(RENDER_ENGINE_TILEPATHOCL) || defined(RENDER_ENGINE_RTPATHOCL)
 				, cameraFilmWidth, cameraFilmHeight,

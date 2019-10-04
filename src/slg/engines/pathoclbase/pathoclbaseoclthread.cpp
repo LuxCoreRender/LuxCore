@@ -92,14 +92,13 @@ PathOCLBaseOCLRenderThread::PathOCLBaseOCLRenderThread(const u_int index,
 	samplesBuff = nullptr;
 	sampleDataBuff = nullptr;
 	taskStatsBuff = nullptr;
-	pathVolInfosBuff = nullptr;
+	eyePathInfosBuff = nullptr;
 	directLightVolInfosBuff = nullptr;
 	pixelFilterBuff = nullptr;
 	pgicRadiancePhotonsBuff = nullptr;
 	pgicRadiancePhotonsBVHNodesBuff = nullptr;
 	pgicCausticPhotonsBuff = nullptr;
 	pgicCausticPhotonsBVHNodesBuff = nullptr;
-	pgicCausticNearPhotonsBuff = nullptr;
 
 	// Check the kind of kernel cache to use
 	string type = renderEngine->renderConfig->cfg.Get(Property("opencl.kernelcache")("PERSISTENT")).Get<string>();
@@ -214,14 +213,13 @@ void PathOCLBaseOCLRenderThread::Stop() {
 	FreeOCLBuffer(&samplesBuff);
 	FreeOCLBuffer(&sampleDataBuff);
 	FreeOCLBuffer(&taskStatsBuff);
-	FreeOCLBuffer(&pathVolInfosBuff);
+	FreeOCLBuffer(&eyePathInfosBuff);
 	FreeOCLBuffer(&directLightVolInfosBuff);
 	FreeOCLBuffer(&pixelFilterBuff);
 	FreeOCLBuffer(&pgicRadiancePhotonsBuff);
 	FreeOCLBuffer(&pgicRadiancePhotonsBVHNodesBuff);
 	FreeOCLBuffer(&pgicCausticPhotonsBuff);
 	FreeOCLBuffer(&pgicCausticPhotonsBVHNodesBuff);
-	FreeOCLBuffer(&pgicCausticNearPhotonsBuff);
 
 	started = false;
 

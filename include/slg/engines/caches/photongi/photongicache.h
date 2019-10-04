@@ -158,20 +158,6 @@ protected:
 	}
 };
 
-struct NearPhoton {
-    NearPhoton(const u_int index = NULL_INDEX, const float d2 = INFINITY) : photonIndex(index),
-			distance2(d2) {
-	}
-
-    bool operator<(const NearPhoton &p2) const {
-        return (distance2 == p2.distance2) ?
-            (photonIndex < p2.photonIndex) : (distance2 < p2.distance2);
-    }
-
-    u_int photonIndex;
-    float distance2;
-};
-
 //------------------------------------------------------------------------------
 // PhotonGICache
 //------------------------------------------------------------------------------
@@ -199,20 +185,21 @@ typedef struct {
 		float lookUpRadius, lookUpRadius2, lookUpNormalAngle, lookUpNormalCosAngle;
 	} visibility;
 
+	float glossinessUsageThreshold;
+
 	struct {
 		bool enabled;
 		u_int maxSize;
 		float lookUpRadius, lookUpRadius2, lookUpNormalAngle,
-				glossinessUsageThreshold, usageThresholdScale,
+				usageThresholdScale,
 				filterRadiusScale, haltThreshold;
 	} indirect;
 
 	struct {
 		bool enabled;
 		u_int maxSize;
-		u_int lookUpMaxCount;
 		float lookUpRadius, lookUpRadius2, lookUpNormalAngle,
-				mergeRadiusScale;
+				radiusReduction, minLookUpRadius;
 		u_int updateSpp;
 	} caustic;
 
@@ -237,23 +224,24 @@ protected:
 		ar & visibility.lookUpNormalAngle;
 		ar & visibility.lookUpNormalCosAngle;
 
+		ar & glossinessUsageThreshold;
+
 		ar & indirect.enabled;
 		ar & indirect.maxSize;
 		ar & indirect.lookUpRadius;
 		ar & indirect.lookUpRadius2;
 		ar & indirect.lookUpNormalAngle;
-		ar & indirect.glossinessUsageThreshold;
 		ar & indirect.usageThresholdScale;
 		ar & indirect.filterRadiusScale;
 		ar & indirect.haltThreshold;
 
 		ar & caustic.enabled;
 		ar & caustic.maxSize;
-		ar & caustic.lookUpMaxCount;
 		ar & caustic.lookUpRadius;
 		ar & caustic.lookUpRadius2;
 		ar & caustic.lookUpNormalAngle;
-		ar & caustic.mergeRadiusScale;
+		ar & caustic.radiusReduction;
+		ar & caustic.minLookUpRadius;
 
 		ar & debugType;
 		
@@ -264,6 +252,7 @@ protected:
 
 class PGICSceneVisibility;
 class TracePhotonsThread;
+class EyePathInfo;
 
 class PhotonGICache {
 public:
@@ -278,21 +267,21 @@ public:
 	bool IsPhotonGIEnabled(const BSDF &bsdf) const;
 	float GetIndirectUsageThreshold(const BSDFEvent lastBSDFEvent,
 			const float lastGlossiness, const float u0) const;
-	bool IsDirectLightHitVisible(const bool causticCacheAlreadyUsed,
-			const BSDFEvent lastBSDFEvent, const PathDepthInfo &depthInfo) const;
+	bool IsDirectLightHitVisible(const EyePathInfo &pathInfo,
+		const bool photonGICausticCacheUsed) const;
 	
 	const PhotonGICacheParams &GetParams() const { return params; }
 
 	void Preprocess(const u_int threadCount);
-	bool Update(const u_int threadIndex, const Film &film,
+	bool Update(const u_int threadIndex, const u_int filmSPP,
 		const boost::function<void()> &threadZeroCallback);
-	bool Update(const u_int threadIndex, const Film &film) {
+	bool Update(const u_int threadIndex, const u_int filmSPP) {
 		const boost::function<void()> noCallback;
-		return Update(threadIndex, film, noCallback);
+		return Update(threadIndex, filmSPP, noCallback);
 	}
 
 	luxrays::Spectrum GetIndirectRadiance(const BSDF &bsdf) const;
-	luxrays::Spectrum GetCausticRadiance(const BSDF &bsdf) const;
+	luxrays::Spectrum ConnectWithCausticPaths(const BSDF &bsdf) const;
 	
 	const std::vector<RadiancePhoton> &GetRadiancePhotons() const { return radiancePhotons; }
 	const PGICRadiancePhotonBvh *GetRadiancePhotonsBVH() const { return radiancePhotonsBVH; }
@@ -333,11 +322,6 @@ private:
 	void FilterVisibilityParticlesRadiance(const std::vector<luxrays::Spectrum> &radianceValues,
 			std::vector<luxrays::Spectrum> &filteredRadianceValues) const;
 	void CreateRadiancePhotons();
-	void MergeCausticPhotons();
-	luxrays::Spectrum ProcessCacheEntries(const std::vector<NearPhoton> &entries,
-			const float maxDistance2,
-			const std::vector<Photon> &photons, const u_int photonTracedCount,
-			const BSDF &bsdf) const;
 
 	void LoadPersistentCache(const std::string &fileName);
 	void SavePersistentCache(const std::string &fileName);
@@ -363,7 +347,7 @@ private:
 	// Caustic photon maps
 	std::vector<Photon> causticPhotons;
 	PGICPhotonBvh *causticPhotonsBVH;
-	u_int causticPhotonTracedCount;
+	u_int causticPhotonTracedCount, causticPhotonPass;
 };
 
 }
@@ -372,8 +356,8 @@ BOOST_CLASS_VERSION(slg::GenericPhoton, 1)
 BOOST_CLASS_VERSION(slg::PGICVisibilityParticle, 1)
 BOOST_CLASS_VERSION(slg::Photon, 1)
 BOOST_CLASS_VERSION(slg::RadiancePhoton, 1)
-BOOST_CLASS_VERSION(slg::PhotonGICacheParams, 2)
-BOOST_CLASS_VERSION(slg::PhotonGICache, 2)
+BOOST_CLASS_VERSION(slg::PhotonGICacheParams, 6)
+BOOST_CLASS_VERSION(slg::PhotonGICache, 3)
 
 BOOST_CLASS_EXPORT_KEY(slg::GenericPhoton)
 BOOST_CLASS_EXPORT_KEY(slg::PGICVisibilityParticle)

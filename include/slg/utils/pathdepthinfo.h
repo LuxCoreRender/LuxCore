@@ -26,7 +26,7 @@
 
 namespace slg {
 
-	// OpenCL data types
+// OpenCL data types
 namespace ocl {
 #include "slg/utils/pathdepthinfo_types.cl"
 }

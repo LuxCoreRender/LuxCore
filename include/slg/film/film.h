@@ -198,12 +198,26 @@ public:
 	double GetTotalSampleCount() const {
 		return statsTotalSampleCount;
 	}
+	double GetTotalEyeSampleCount() const {
+		return RADIANCE_PER_PIXEL_NORMALIZED_SampleCount;
+	}
+	double GetTotalLightSampleCount() const {
+		return RADIANCE_PER_SCREEN_NORMALIZED_SampleCount;
+	}
 	double GetTotalTime() const {
 		return luxrays::WallClockTime() - statsStartSampleTime;
 	}
 	double GetAvgSampleSec() {
 		const double t = GetTotalTime();
 		return (t > 0.0) ? (GetTotalSampleCount() / t) : 0.0;
+	}
+	double GetAvgEyeSampleSec() {
+		const double t = GetTotalTime();
+		return (t > 0.0) ? (GetTotalEyeSampleCount() / t) : 0.0;
+	}
+	double GetAvgLightSampleSec() {
+		const double t = GetTotalTime();
+		return (t > 0.0) ? (GetTotalLightSampleCount() / t) : 0.0;
 	}
 
 	//--------------------------------------------------------------------------
@@ -232,7 +246,14 @@ public:
 	void AddSampleCount(const double RADIANCE_PER_PIXEL_NORMALIZED_count,
 			const double RADIANCE_PER_SCREEN_NORMALIZED_count) {
 		statsTotalSampleCount += luxrays::Max(RADIANCE_PER_PIXEL_NORMALIZED_count, RADIANCE_PER_SCREEN_NORMALIZED_count);
+		RADIANCE_PER_PIXEL_NORMALIZED_SampleCount += RADIANCE_PER_PIXEL_NORMALIZED_count;
 		RADIANCE_PER_SCREEN_NORMALIZED_SampleCount += RADIANCE_PER_SCREEN_NORMALIZED_count;
+	}
+	double GetSampleCount_RADIANCE_PER_PIXEL_NORMALIZED() const {
+		return RADIANCE_PER_PIXEL_NORMALIZED_SampleCount;
+	}
+	double GetSampleCount_RADIANCE_PER_SCREEN_NORMALIZED() const {
+		return RADIANCE_PER_SCREEN_NORMALIZED_SampleCount;
 	}
 
 	// Normal method versions
@@ -416,7 +437,7 @@ private:
 	bool hasDataChannel, hasComposingChannel;
 
 	double statsTotalSampleCount, statsStartSampleTime, statsConvergence;
-	double RADIANCE_PER_SCREEN_NORMALIZED_SampleCount;
+	double RADIANCE_PER_PIXEL_NORMALIZED_SampleCount, RADIANCE_PER_SCREEN_NORMALIZED_SampleCount;
 
 	std::vector<ImagePipeline *> imagePipelines;
 	boost::thread *imagePipelineThread;
@@ -451,7 +472,7 @@ template<> void Film::GetOutput<u_int>(const FilmOutputs::FilmOutputType type, u
 
 }
 
-BOOST_CLASS_VERSION(slg::Film, 22)
+BOOST_CLASS_VERSION(slg::Film, 23)
 
 BOOST_CLASS_EXPORT_KEY(slg::Film)
 

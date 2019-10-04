@@ -237,7 +237,7 @@ Spectrum MixMaterial::Evaluate(const HitPoint &hitPoint,
 Spectrum MixMaterial::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
-	float *pdfW, BSDFEvent *event) const {
+	float *pdfW, BSDFEvent *event, const BSDFEvent eventHint) const {
 	const Frame frame(hitPoint.GetFrame());
 
 	HitPoint hitPointA(hitPoint);
@@ -273,7 +273,7 @@ Spectrum MixMaterial::Sample(const HitPoint &hitPoint,
 
 	// Sample the first material
 	Spectrum result = matFirst->Sample(hitPoint1, fixedDir1, localSampledDir,
-			u0, u1, passThroughEventFirst, pdfW, event);
+			u0, u1, passThroughEventFirst, pdfW, event, eventHint);
 	if (result.Black())
 		return Spectrum();
 
@@ -398,7 +398,7 @@ Properties MixMaterial::ToProperties(const ImageMapCache &imgMapCache, const boo
 	props.Set(Property("scene.materials." + name + ".type")("mix"));
 	props.Set(Property("scene.materials." + name + ".material1")(matA->GetName()));
 	props.Set(Property("scene.materials." + name + ".material2")(matB->GetName()));
-	props.Set(Property("scene.materials." + name + ".amount")(mixFactor->GetName()));
+	props.Set(Property("scene.materials." + name + ".amount")(mixFactor->GetSDLValue()));
 	props.Set(Material::ToProperties(imgMapCache, useRealFileName));
 
 	return props;

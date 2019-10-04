@@ -86,7 +86,7 @@ void TilePathNativeRenderThread::RenderThreadImpl() {
 
 	// Initialize SampleResult
 	vector<SampleResult> sampleResults(1);
-	pathTracer.InitEyeSampleResults(engine->film, sampleResults);
+	PathTracer::InitEyeSampleResults(engine->film, sampleResults);
 
 	//--------------------------------------------------------------------------
 	// Extract the tile to render
@@ -121,7 +121,8 @@ void TilePathNativeRenderThread::RenderThreadImpl() {
 			for (u_int x = 0; x < tileWork.GetCoord().width && !interruptionRequested; ++x) {
 				for (u_int sampleY = 0; sampleY < engine->aaSamples; ++sampleY) {
 					for (u_int sampleX = 0; sampleX < engine->aaSamples; ++sampleX) {
-						pathTracer.RenderEyeSample(intersectionDevice, engine->renderConfig->scene,
+						pathTracer.RenderEyeSample(threadIndex,
+								intersectionDevice, engine->renderConfig->scene,
 								engine->film, sampler, sampleResults);
 
 						sampler->NextSample(sampleResults);
@@ -136,8 +137,10 @@ void TilePathNativeRenderThread::RenderThreadImpl() {
 			}
 		}
 
-		if (engine->photonGICache)
-			engine->photonGICache->Update(engine->renderOCLThreads.size() + threadIndex, *(engine->film));
+		if (engine->photonGICache) {
+			const u_int spp = engine->film->GetTotalEyeSampleCount() / engine->film->GetPixelCount();
+			engine->photonGICache->Update(engine->renderOCLThreads.size() + threadIndex, spp);
+		}
 	}
 
 	delete rndGen;
