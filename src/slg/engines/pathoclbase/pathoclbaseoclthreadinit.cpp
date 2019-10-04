@@ -107,6 +107,8 @@ size_t PathOCLBaseOCLRenderThread::GetEyePathInfoSize() const {
 	eyePathInfoSize += sizeof(float);
 	// Add lastShadeN memory size
 	eyePathInfoSize += sizeof(slg::ocl::Normal);
+	// Add lastPassThroughShadowTransparency memory size
+	eyePathInfoSize += sizeof(slg::ocl::Spectrum);
 	// Add lastFromVolume memory size
 	if (renderEngine->compiledScene->HasVolumes())
 		eyePathInfoSize += sizeof(int);

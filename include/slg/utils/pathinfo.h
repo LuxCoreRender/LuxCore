@@ -85,6 +85,7 @@ public:
 	// Last path vertex information
 	float lastBSDFPdfW;
 	float lastGlossiness;
+	luxrays::Spectrum lastPassThroughShadowTransparency;
 	luxrays::Normal lastShadeN;
 	bool lastFromVolume;
 

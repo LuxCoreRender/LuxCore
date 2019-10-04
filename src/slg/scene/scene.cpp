@@ -41,6 +41,7 @@
 #include "slg/scene/scene.h"
 #include "slg/textures/constfloat.h"
 #include "slg/textures/constfloat3.h"
+#include "slg/utils/pathinfo.h"
 
 using namespace std;
 using namespace luxrays;
@@ -477,7 +478,7 @@ void Scene::DeleteLight(const string &lightName) {
 //------------------------------------------------------------------------------
 
 bool Scene::Intersect(IntersectionDevice *device,
-		const bool fromLight, const bool cameraRay, PathVolumeInfo *volInfo,
+		const SceneRayType rayType, PathVolumeInfo *volInfo,
 		const float initialPassThrough, Ray *ray, RayHit *rayHit, BSDF *bsdf,
 		Spectrum *connectionThroughput, const Spectrum *pathThroughput,
 		SampleResult *sampleResult, const bool backTracing) const {
@@ -489,6 +490,10 @@ bool Scene::Intersect(IntersectionDevice *device,
 
 	float passThrough = rng.floatValue();
 	const float originalMaxT = ray->maxt;
+
+	const bool fromLight = rayType & LIGHT_RAY;
+	const bool cameraRay = rayType & CAMERA_RAY;
+	const bool shadowRay = rayType & SHADOW_RAY;
 
 	for (;;) {
 		const bool hit = device ? device->TraceRay(ray, rayHit) : dataSet->GetAccelerator()->Intersect(ray, rayHit);
@@ -547,6 +552,15 @@ bool Scene::Intersect(IntersectionDevice *device,
 			// Check if it is a pass through point
 			if (!continueToTrace) {
 				const Spectrum transp = bsdf->GetPassThroughTransparency(backTracing);
+				if (!transp.Black()) {
+					*connectionThroughput *= transp;
+					continueToTrace = true;
+				}
+			}
+
+			if (!continueToTrace && shadowRay) {
+				const Spectrum &transp = bsdf->GetPassThroughShadowTransparency();
+				
 				if (!transp.Black()) {
 					*connectionThroughput *= transp;
 					continueToTrace = true;

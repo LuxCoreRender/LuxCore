@@ -154,7 +154,7 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 				RayHit nextEventRayHit;
 				BSDF bsdf;
 				Spectrum connectionThroughput;
-				const bool hit = scene->Intersect(nullptr, true, false, &pathInfo.volume, samples[sampleOffset],
+				const bool hit = scene->Intersect(nullptr, LIGHT_RAY | GENERIC_RAY, &pathInfo.volume, samples[sampleOffset],
 						&nextEventRay, &nextEventRayHit, &bsdf,
 						&connectionThroughput);
 

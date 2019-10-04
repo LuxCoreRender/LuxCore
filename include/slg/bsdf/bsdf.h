@@ -84,6 +84,7 @@ public:
 	MaterialType GetMaterialType() const { return material->GetType(); }
 
 	luxrays::Spectrum GetPassThroughTransparency(const bool backTracing) const;
+	const luxrays::Spectrum &GetPassThroughShadowTransparency() const { return material->GetPassThroughShadowTransparency(); }
 	const luxrays::Frame &GetFrame() const { return frame; }
 
 	luxrays::Spectrum Albedo() const;
