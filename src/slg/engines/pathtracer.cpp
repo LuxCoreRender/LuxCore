@@ -696,6 +696,10 @@ void PathTracer::ConnectToEye(const u_int threadIndex,
 
 				sampleResult.pixelX = Floor2UInt(filmX);
 				sampleResult.pixelY = Floor2UInt(filmY);
+
+#if !defined(NDEBUG)
+				const u_int *subRegion = film->GetSubRegion();
+#endif
 				assert (sampleResult.pixelX >= subRegion[0]);
 				assert (sampleResult.pixelX <= subRegion[1]);
 				assert (sampleResult.pixelY >= subRegion[2]);
