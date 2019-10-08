@@ -170,6 +170,8 @@ void CompiledScene::CompileMaterials() {
 		} else
 			mat->backTranspTexIndex = NULL_INDEX;
 
+		ASSIGN_SPECTRUM(mat->passThroughShadowTransparency, m->GetPassThroughShadowTransparency());
+
 		// Material emission
 		const Texture *emitTex = m->GetEmitTexture();
 		if (emitTex)

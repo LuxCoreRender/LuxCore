@@ -278,7 +278,9 @@ typedef struct {
 	Spectrum emittedFactor;
 	float emittedCosThetaMax;
 	int usePrimitiveArea;
-	unsigned int frontTranspTexIndex, backTranspTexIndex, emitTexIndex, bumpTexIndex;
+	unsigned int frontTranspTexIndex, backTranspTexIndex;
+	Spectrum passThroughShadowTransparency;
+	unsigned int emitTexIndex, bumpTexIndex;
 	// Type of indirect paths where a light source is visible with a direct hit. It is
 	// an OR of DIFFUSE, GLOSSY and SPECULAR.
 	BSDFEvent visibility;

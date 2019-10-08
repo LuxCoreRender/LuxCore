@@ -72,7 +72,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 #endif
 
 	const bool continueToTrace = Scene_Intersect(
-			(pathInfo->depth.depth == 0),
+			EYE_RAY | ((pathInfo->depth.depth == 0) ? CAMERA_RAY : GENERIC_RAY),
 #if defined(PARAM_HAS_VOLUMES)
 			&pathInfo->volume,
 			&tasks[gid].tmpHitPoint,
@@ -494,7 +494,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 #if defined(PARAM_HAS_PASSTHROUGH) || defined(PARAM_HAS_VOLUMES)
 	const bool continueToTrace =
 		Scene_Intersect(
-			false,
+			EYE_RAY | SHADOW_RAY,
 #if defined(PARAM_HAS_VOLUMES)
 			&directLightVolInfos[gid],
 			&task->tmpHitPoint,

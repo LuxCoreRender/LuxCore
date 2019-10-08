@@ -222,6 +222,7 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_template_mix.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/material_main_withoutdynamic.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/material_main.cl
+	${LuxRays_SOURCE_DIR}/include/slg/scene/scene_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/scene/scene_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/scene/sceneobject_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/mapping/mapping_types.cl
@@ -598,6 +599,7 @@ set(SLG_KERNEL_SRCS
 	${generated_kernels_dir}/elvc_types_kernel.cpp
 	${generated_kernels_dir}/elvc_funcs_kernel.cpp
 	${generated_kernels_dir}/lightstrategy_funcs_kernel.cpp
+	${generated_kernels_dir}/scene_types_kernel.cpp
 	${generated_kernels_dir}/scene_funcs_kernel.cpp
 	${generated_kernels_dir}/sceneobject_types_kernel.cpp
 	${generated_kernels_dir}/mapping_types_kernel.cpp

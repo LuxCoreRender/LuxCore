@@ -815,6 +815,7 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_sampler_metropolis_funcs <<
 			slg::ocl::KernelSource_sampler_tilepath_funcs <<
 			slg::ocl::KernelSource_bsdf_funcs <<
+			slg::ocl::KernelSource_scene_types <<
 			slg::ocl::KernelSource_scene_funcs <<
 			slg::ocl::KernelSource_pgic_funcs <<
 			// PathOCL Funcs

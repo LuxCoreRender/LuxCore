@@ -193,7 +193,7 @@ PathTracer::DirectLightResult PathTracer::DirectLightSampling(
 					// Create a new PathVolumeInfo for the path to the light source
 					PathVolumeInfo volInfo = pathInfo.volume;
 					// Check if the light source is visible
-					if (!scene->Intersect(device, false, false, &volInfo, u4, &shadowRay,
+					if (!scene->Intersect(device, EYE_RAY | SHADOW_RAY, &volInfo, u4, &shadowRay,
 							&shadowRayHit, &shadowBsdf, &connectionThroughput, nullptr,
 							nullptr, true)) {
 						// Add the light contribution only if it is not a shadow catcher
@@ -281,7 +281,8 @@ void PathTracer::DirectHitFiniteLight(const Scene *scene,
 
 	if (!emittedRadiance.Black()) {
 		float weight;
-		if (!(pathInfo.lastBSDFEvent & SPECULAR)) {
+		if (!(pathInfo.lastBSDFEvent & SPECULAR) &&
+				pathInfo.lastPassThroughShadowTransparency.Black()) {
 			const LightStrategy *lightStrategy = scene->lightDefs.GetIlluminateLightStrategy();
 			const float lightPickProb = lightStrategy->SampleLightPdf(lightSource,
 					ray.o, pathInfo.lastShadeN, pathInfo.lastFromVolume);
@@ -315,7 +316,8 @@ void PathTracer::DirectHitInfiniteLight(const Scene *scene,
 		const Spectrum envRadiance = envLight->GetRadiance(*scene, bsdf, -ray.d, &directPdfW);
 		if (!envRadiance.Black()) {
 			float weight;
-			if (!(pathInfo.lastBSDFEvent & SPECULAR)) {
+			if (!(pathInfo.lastBSDFEvent & SPECULAR) &&
+					pathInfo.lastPassThroughShadowTransparency.Black()) {
 				const float lightPickProb = scene->lightDefs.GetIlluminateLightStrategy()->
 						SampleLightPdf(envLight, ray.o, pathInfo.lastShadeN, pathInfo.lastFromVolume);
 
@@ -407,7 +409,8 @@ void PathTracer::RenderEyeSample(const u_int threadIndex,
 		RayHit eyeRayHit;
 		Spectrum connectionThroughput;
 		const float passThrough = sampler->GetSample(sampleOffset);
-		const bool hit = scene->Intersect(device, false, sampleResult.firstPathVertex,
+		const bool hit = scene->Intersect(device,
+				EYE_RAY | (sampleResult.firstPathVertex ? CAMERA_RAY : GENERIC_RAY),
 				&pathInfo.volume, passThrough,
 				&eyeRay, &eyeRayHit, &bsdf, &connectionThroughput,
 				&pathThroughput, &sampleResult);
@@ -683,7 +686,7 @@ void PathTracer::ConnectToEye(const u_int threadIndex,
 			Spectrum connectionThroughput;
 			// Create a new PathVolumeInfo for the path to the light source
 			PathVolumeInfo volInfo = pathInfo.volume;
-			if (!scene->Intersect(device, true, true, &volInfo, u0, &traceRay, &traceRayHit, &bsdfConn,
+			if (!scene->Intersect(device, LIGHT_RAY | CAMERA_RAY, &volInfo, u0, &traceRay, &traceRayHit, &bsdfConn,
 					&connectionThroughput)) {
 				// Nothing was hit, the light path vertex is visible
 
@@ -764,7 +767,7 @@ void PathTracer::RenderLightSample(const u_int threadIndex,
 			RayHit nextEventRayHit;
 			BSDF bsdf;
 			Spectrum connectionThroughput;
-			const bool hit = scene->Intersect(device, true, false, &pathInfo.volume, sampler->GetSample(sampleOffset),
+			const bool hit = scene->Intersect(device, LIGHT_RAY | GENERIC_RAY, &pathInfo.volume, sampler->GetSample(sampleOffset),
 					&nextEventRay, &nextEventRayHit, &bsdf,
 					&connectionThroughput);
 			if (!hit) {
