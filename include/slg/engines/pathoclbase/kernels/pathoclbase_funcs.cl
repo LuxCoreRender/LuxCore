@@ -320,7 +320,7 @@ OPENCL_FORCE_NOT_INLINE void DirectHitInfiniteLight(
 		if (!Spectrum_IsBlack(lightRadiance)) {
 			float weight;
 			if (!(pathInfo->lastBSDFEvent & SPECULAR) &&
-					Spectrum_IsBlack(VLOAD3F(&pathInfo->passThroughShadowTransparency.c[0]))) {
+					Spectrum_IsBlack(VLOAD3F(&pathInfo->lastPassThroughShadowTransparency.c[0]))) {
 				const float lightPickProb = LightStrategy_SampleLightPdf(lightsDistribution,
 						dlscAllEntries,
 						dlscDistributions, dlscBVHNodes,
