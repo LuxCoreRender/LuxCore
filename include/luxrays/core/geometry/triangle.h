@@ -114,7 +114,11 @@ public:
 
 	void Sample(const Point *verts, const float u0,
 		const float u1, Point *p, float *b0, float *b1, float *b2) const {
-		UniformSampleTriangle(u0, u1, b0, b1);
+		// UniformSampleTriangle(u0, u1, b0, b1);
+
+		//This new implementation samples from a one dimensional sample.
+		// I hope it is ok just to ignore the second sample that is received by the function
+		LowDiscrepancySampleTriangle(u0, b0, b1);
 
 		// Get triangle vertices in _p1_, _p2_, and _p3_
 		const Point &p0 = verts[v[0]];
