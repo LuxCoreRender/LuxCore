@@ -167,7 +167,8 @@ static void Film2SceneRadiusThread(Film2SceneRadiusThreadParams &params) {
 
 			RayHit eyeRayHit;
 			Spectrum connectionThroughput;
-			const bool hit = params.scene->Intersect(NULL, false, sampleResult.firstPathVertex,
+			const bool hit = params.scene->Intersect(nullptr,
+					EYE_RAY | (sampleResult.firstPathVertex ? CAMERA_RAY : GENERIC_RAY),
 					&volInfo, sampler.GetSample(sampleOffset),
 					&eyeRay, &eyeRayHit, &bsdf, &connectionThroughput,
 					&pathThroughput, &sampleResult);

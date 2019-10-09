@@ -49,7 +49,27 @@
 
 namespace slg {
 
+	// OpenCL data types
+namespace ocl {
+#include "slg/scene/scene_types.cl"
+}
+
 #define TRIANGLE_LIGHT_POSTFIX "__triangle__light__"
+
+typedef enum {
+	// Mandatory setting: one or the other must be used
+	EYE_RAY = 1,
+	LIGHT_RAY = 2,
+
+	// This is used to disable any type of ray switch
+	GENERIC_RAY = 4,
+	// For the very first eye ray
+	CAMERA_RAY = 8,
+	// For rays used for direct light sampling
+	SHADOW_RAY = 16
+} SceneRayTypeType;
+
+typedef int SceneRayType;
 
 class Scene {
 public:
@@ -59,11 +79,10 @@ public:
 	Scene(const luxrays::Properties &scnProp, const float imageScale = 1.f);
 	~Scene();
 
-	bool Intersect(luxrays::IntersectionDevice *device,
-		const bool fromLight, const bool cameraRay, PathVolumeInfo *volInfo,
+	bool Intersect(luxrays::IntersectionDevice *device, const SceneRayType rayType, PathVolumeInfo *volInfo,
 		const float passThrough, luxrays::Ray *ray, luxrays::RayHit *rayHit, BSDF *bsdf,
-		luxrays::Spectrum *connectionThroughput, const luxrays::Spectrum *pathThroughput = NULL,
-		SampleResult *sampleResult = NULL, const bool backTracing = false) const;
+		luxrays::Spectrum *connectionThroughput, const luxrays::Spectrum *pathThroughput = nullptr,
+		SampleResult *sampleResult = nullptr, const bool backTracing = false) const;
 
 	void PreprocessCamera(const u_int filmWidth, const u_int filmHeight, const u_int *filmSubRegion);
 	void Preprocess(luxrays::Context *ctx,

@@ -221,7 +221,7 @@ float DirectLightSamplingCache::SampleLight(const DLSCVisibilityParticle &visibi
 
 		// Check if the light source is visible
 		PathVolumeInfo volInfo = visibilityParticle.volInfoList[bsdfListIndexIndex];
-		if (!scene->Intersect(nullptr, false, false, &volInfo, u5, &shadowRay,
+		if (!scene->Intersect(nullptr, EYE_RAY | SHADOW_RAY, &volInfo, u5, &shadowRay,
 				&shadowRayHit, &shadowBsdf, &connectionThroughput, nullptr,
 				nullptr, true)) {
 			// It is

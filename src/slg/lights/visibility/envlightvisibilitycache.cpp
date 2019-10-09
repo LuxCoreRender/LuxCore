@@ -319,7 +319,7 @@ void EnvLightVisibilityCache::BuildCacheEntry(const u_int entryIndex) {
 		Spectrum connectionThroughput;
 
 		PathVolumeInfo volInfo = visibilityParticle.volInfoList[pointIndex];
-		if (!scene->Intersect(nullptr, false, false, &volInfo, u4, &shadowRay,
+		if (!scene->Intersect(nullptr, EYE_RAY | SHADOW_RAY, &volInfo, u4, &shadowRay,
 				&shadowRayHit, &shadowBsdf, &connectionThroughput)) {
 			// Nothing was hit, the light source is visible
 
