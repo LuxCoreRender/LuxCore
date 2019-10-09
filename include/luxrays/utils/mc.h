@@ -35,6 +35,7 @@ namespace luxrays {
 	float  UniformConePdf(float costhetamax);
 	void UniformSampleDisk(float u1, float u2, float *x, float *y);
 	void UniformSampleTriangle(float ud1, float ud2, float *u, float *v);
+	void LowDiscrepancySampleTriangle(float u1, float *u, float *v);
 	Vector SampleHG(const Vector &w, float g, float u1, float u2);
 	float PhaseHG(const Vector &w, const Vector &wp, float g);
 	float HGPdf(const Vector &w, const Vector &wp, float g);
