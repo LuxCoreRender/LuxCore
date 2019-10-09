@@ -18,16 +18,47 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-void Triangle_UniformSample(const float u0, const float u1, float *b1, float *b2) {
+/*void Triangle_UniformSample(const float u0, const float u1, float *b1, float *b2) {
 	const float su1 = sqrt(u0);
 	*b1 = 1.f - su1;
 	*b2 = u1 * su1;
+}*/
+
+void Triangle_LowDiscrepancySample(const float u1, float *u, float *v) {
+	// New implementation from: https://pharr.org/matt/blog/2019/02/27/triangle-sampling-1.html
+	// and: https://pharr.org/matt/blog/2019/03/13/triangle-sampling-1.5.html
+	
+	// Using 1ull crashes AMD, NVIDIA and Intel OpenCL compilers !
+	//uint uf = u1 * (1ull << 32);  // Fixed point
+	uint uf = u1 * 0xffffffffu;  // Fixed point
+	
+	float cx = 0.f, cy = 0.f;
+	float w = .5f;
+
+	for (uint i = 0; i < 16; i++) {
+		uint uu = uf >> 30;
+		bool flip = (uu & 3) == 0;
+
+		cy += ((uu & 1) == 0) * w;
+		cx += ((uu & 2) == 0) * w;
+
+		w *= flip ? -.5f : .5f;
+		uf <<= 2;
+	}
+
+	*u = cx + w / 3.f;
+	*v = cy + w / 3.f;
 }
 
 float3 Triangle_Sample(const float3 p0, const float3 p1, const float3 p2,
 	const float u0, const float u1,
 	float *b0, float *b1, float *b2) {
-	Triangle_UniformSample(u0, u1, b1, b2);
+	// Old triangle uniform sampling
+	//Triangle_UniformSample(u0, u1, b1, b2);
+
+	// This new implementation samples from a one dimensional sample
+	Triangle_LowDiscrepancySample(u0, b1, b2);
+	
 	*b0 = 1.f - (*b1) - (*b2);
 
 	return (*b0) * p0 + (*b1) * p1 + (*b2) * p2;

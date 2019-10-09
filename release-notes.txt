@@ -7,6 +7,7 @@
 * PhotonGI caustic scene re-factored to work with Vertex Merging (i.e. SPPM in this case)
 * It is now possible to use light tracing for normal caustics and PhotonGI cache for SDS paths
 * Added the support for shadow rays transparency for path tracers (aka hybrid glass, issue #233)
+* Added the support for Basu and Owen's low discrepancy triangle light mapping (pull request #246)
 
 ### Fixed Bugs
 
