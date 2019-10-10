@@ -52,7 +52,6 @@ Properties PhotonGICache::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("path.photongi.caustic.updatespp")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.caustic.updatespp.radiusreduction")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.caustic.updatespp.minradius")) <<
-			cfg.Get(GetDefaultProps().Get("path.photongi.caustic.lookup.maxcount")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.caustic.lookup.radius")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.caustic.lookup.normalangle")) <<
 			cfg.Get(GetDefaultProps().Get("path.photongi.debug.type")) <<
@@ -87,7 +86,6 @@ const Properties &PhotonGICache::GetDefaultProps() {
 			Property("path.photongi.caustic.updatespp")(8) <<
 			Property("path.photongi.caustic.updatespp.radiusreduction")(.96f) <<
 			Property("path.photongi.caustic.updatespp.minradius")(.003f) <<
-			Property("path.photongi.caustic.lookup.maxcount")(128) <<
 			Property("path.photongi.caustic.lookup.radius")(.15f) <<
 			Property("path.photongi.caustic.lookup.normalangle")(10.f) <<
 			Property("path.photongi.debug.type")("none") <<
