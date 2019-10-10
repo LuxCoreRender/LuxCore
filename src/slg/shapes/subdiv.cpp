@@ -16,6 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <boost/format.hpp>
+
 #include <opensubdiv/far/topologyDescriptor.h>
 #include <opensubdiv/far/primvarRefiner.h>
 
@@ -27,7 +29,12 @@ using namespace luxrays;
 using namespace slg;
 using namespace OpenSubdiv;
 
-SubdivShape::SubdivShape(ExtTriangleMesh *srcMesh) : Shape() {
+SubdivShape::SubdivShape(ExtTriangleMesh *srcMesh, const u_int maxLvl) :
+		Shape(), maxLevel(maxLvl) {
+	SDL_LOG("Subdividing shape " << srcMesh->GetName() << " at level: " << maxLevel);
+
+	const double startTime = WallClockTime();
+
 	Sdc::SchemeType type = Sdc::SCHEME_LOOP;
 
 	Sdc::Options options;
@@ -40,47 +47,67 @@ SubdivShape::SubdivShape(ExtTriangleMesh *srcMesh) : Shape() {
 	desc.numVertsPerFace = &vertPerFace[0];
 	desc.vertIndicesPerFace = (const int *)srcMesh->GetTriangles();
 
-
 	// Instantiate a Far::TopologyRefiner from the descriptor
 	Far::TopologyRefiner *refiner = Far::TopologyRefinerFactory<Far::TopologyDescriptor>::Create(desc,
 			Far::TopologyRefinerFactory<Far::TopologyDescriptor>::Options(type, options));
 
-	const u_int maxLevel = 2;
-
     // Uniformly refine the topology up to 'maxlevel'
     refiner->RefineUniform(Far::TopologyRefiner::UniformOptions(maxLevel));
 
-    // Allocate a buffer for vertex primvar data. The buffer length is set to
-    // be the sum of all children vertices up to the highest level of refinement.
-    vector<Point> vertsBuffer(refiner->GetNumVerticesTotal());
-    Point *verts = &vertsBuffer[0];
+	//--------------------------------------------------------------------------
+	// We want buffers for the last/finest subdivision level to persist.  We
+	// have no interest in the intermediate levels.
+    //
+    // Determine the sizes for our needs:
+    const u_int tmpVertsCount = refiner->GetNumVerticesTotal() -
+		srcMesh->GetTotalVertexCount() - refiner->GetLevel(maxLevel).GetNumVertices();
+
+	// Allocate intermediate and final storage to be populated
+	vector<Point> tmpVertsBuffer(tmpVertsCount);
+    vector<Point> vertsBuffer(refiner->GetLevel(maxLevel).GetNumVertices());
 	
-	// Initialize coarse mesh positions
-	copy(srcMesh->GetVertices(), srcMesh->GetVertices() + srcMesh->GetTotalVertexCount(), verts);
+	vector<Normal> tmpNormsBuffer;
+    vector<Normal> normsBuffer;
+	if (srcMesh->HasNormals()) {
+		tmpNormsBuffer.resize(tmpVertsCount);
+		normsBuffer.resize(refiner->GetLevel(maxLevel).GetNumVertices());
+	}
 	
     // Interpolate vertex primvar data
     Far::PrimvarRefiner primvarRefiner(*refiner);
 
-    Point *src = verts;
-	for (u_int level = 1; level <= maxLevel; ++level) {
-		Point *dst = src + refiner->GetLevel(level - 1).GetNumVertices();
-		primvarRefiner.Interpolate(level, src, dst);
-		src = dst;
+    Point *srcVert = srcMesh->GetVertices();
+	Point *dstVert = &tmpVertsBuffer[0];
+
+	Normal *srcNorm = srcMesh->HasNormals() ? srcMesh->GetNormals() : nullptr;
+	Normal *dstNorm = srcMesh->HasNormals() ? &tmpNormsBuffer[0] : nullptr;
+
+	for (u_int level = 1; level < maxLevel; ++level) {
+		primvarRefiner.Interpolate(level, srcVert, dstVert);
+
+		srcVert = dstVert;
+		dstVert += refiner->GetLevel(level).GetNumVertices();
+
+		if (srcMesh->HasNormals()) {
+			primvarRefiner.InterpolateVarying(level, srcNorm, dstNorm);
+			srcNorm = dstNorm;
+			dstNorm += refiner->GetLevel(level).GetNumVertices();
+		}
 	}
 
+	//--------------------------------------------------------------------------
 	// Create a new mesh of the highest level refined
+	//--------------------------------------------------------------------------
+
 	Far::TopologyLevel const &refLastLevel = refiner->GetLevel(maxLevel);
 
 	const u_int newVertsCount = refLastLevel.GetNumVertices();
 	Point *newVerts = TriangleMesh::AllocVerticesBuffer(newVertsCount);
+	// Interpolate the last level into the separate buffers for our final data
+    primvarRefiner.Interpolate(maxLevel, srcVert, newVerts);
 
 	const u_int newTrisCount = refLastLevel.GetNumFaces();
 	Triangle *newTris = TriangleMesh::AllocTrianglesBuffer(newTrisCount);
-
-	const u_int firstOfLastVerts = refiner->GetNumVerticesTotal() - newVertsCount;
-
-	for (u_int vertIndex = 0; vertIndex < newVertsCount; ++vertIndex)
-		newVerts[vertIndex] = verts[firstOfLastVerts + vertIndex];
 
 	for (u_int triIndex = 0; triIndex < newTrisCount; ++triIndex) {
 		Far::ConstIndexArray triVerts = refLastLevel.GetFaceVertices(triIndex);
@@ -91,8 +118,19 @@ SubdivShape::SubdivShape(ExtTriangleMesh *srcMesh) : Shape() {
 		tri.v[1] = triVerts[1];
 		tri.v[2] = triVerts[2];
     }
+
+	Normal *newNorms = nullptr;
+	if (srcMesh->HasNormals()) {
+		newNorms = new Normal[newVertsCount];
+		// Interpolate the last level into the separate buffers for our final data
+		primvarRefiner.InterpolateVarying(maxLevel, srcNorm, newNorms);
+	}
 	
-	mesh = new ExtTriangleMesh(newVertsCount, newTrisCount, newVerts, newTris);
+	SDL_LOG("Subdividing shape from " << desc.numFaces << " to " << newTrisCount << " faces");
+	mesh = new ExtTriangleMesh(newVertsCount, newTrisCount, newVerts, newTris, newNorms);
+	
+	const double endTime = WallClockTime();
+	SDL_LOG("Subdividing time: " << (boost::format("%.3f") % (endTime - startTime)) << "secs");
 }
 
 SubdivShape::~SubdivShape() {

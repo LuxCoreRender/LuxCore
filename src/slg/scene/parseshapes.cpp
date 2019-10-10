@@ -266,7 +266,9 @@ ExtTriangleMesh *Scene::CreateShape(const string &shapeName, const Properties &p
 		if (!extMeshCache.IsExtMeshDefined(sourceMeshName))
 			throw runtime_error("Unknown shape name in a subdiv shape: " + shapeName);
 		
-		shape = new SubdivShape((ExtTriangleMesh *)extMeshCache.GetExtMesh(sourceMeshName));
+		const u_int maxLevel = Max(props.Get(Property(propName + ".maxlevel")(2)).Get<u_int>(), 1u);
+		
+		shape = new SubdivShape((ExtTriangleMesh *)extMeshCache.GetExtMesh(sourceMeshName), maxLevel);
 	} else
 		throw runtime_error("Unknown shape type: " + shapeType);
 

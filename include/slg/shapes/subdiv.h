@@ -27,13 +27,15 @@ namespace slg {
 
 class SubdivShape : public Shape {
 public:
-	SubdivShape(luxrays::ExtTriangleMesh *srcMesh);
+	SubdivShape(luxrays::ExtTriangleMesh *srcMesh, const u_int maxLevel);
 	virtual ~SubdivShape();
 
 	virtual ShapeType GetType() const { return SUBDIV; }
 
 protected:
 	virtual luxrays::ExtTriangleMesh *RefineImpl(const Scene *scene);
+
+	const u_int maxLevel;
 
 	luxrays::ExtTriangleMesh *mesh;
 };

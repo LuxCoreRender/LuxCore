@@ -117,6 +117,11 @@ public:
 		delete[] alphas;
 	}
 
+	virtual Normal *GetNormals() const { return normals; }
+	virtual UV *GetUVs() const { return uvs; }
+	virtual Spectrum *GetColors() const { return cols; }
+	virtual float *Getalphas() const { return alphas; }
+
 	Normal *ComputeNormals();
 
 	virtual MeshType GetType() const { return TYPE_EXT_TRIANGLE; }
