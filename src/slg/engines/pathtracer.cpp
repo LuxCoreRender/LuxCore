@@ -219,7 +219,8 @@ PathTracer::DirectLightResult PathTracer::DirectLightSampling(
 							// Note: I have to avoid MIS on the last path vertex
 							const bool misEnabled = !sampleResult->lastPathVertex &&
 								(light->IsEnvironmental() || light->IsIntersectable()) &&
-								CheckDirectHitVisibilityFlags(light, directLightDepthInfo, event);
+								CheckDirectHitVisibilityFlags(light, directLightDepthInfo, event) &&
+								!shadowBsdf.hitPoint.throughShadowTransparency;
 
 							const float weight = misEnabled ? PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
 							const Spectrum incomingRadiance = bsdfEval * (weight * factor) * connectionThroughput * lightRadiance;

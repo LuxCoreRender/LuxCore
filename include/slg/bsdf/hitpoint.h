@@ -54,8 +54,10 @@ typedef struct {
 	// Interior and exterior volume (this includes volume priority system
 	// computation and scene default world volume)
 	const Volume *interiorVolume, *exteriorVolume;
-	bool fromLight, intoObject;
 	u_int objectID;
+	bool fromLight, intoObject;
+	// If I got here going trough a shadow transparency. It can be used to disable MIS.
+	bool throughShadowTransparency;
 
 	luxrays::Frame GetFrame() const { return luxrays::Frame(dpdu, dpdv, shadeN); }
 	luxrays::Normal GetLandingGeometryN() const { return (intoObject ? 1.f : -1.f) * geometryN; }

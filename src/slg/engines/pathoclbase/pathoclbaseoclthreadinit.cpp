@@ -60,13 +60,15 @@ size_t PathOCLBaseOCLRenderThread::GetOpenCLHitPointSize() const {
 	// Volume fields
 	if (renderEngine->compiledScene->HasVolumes())
 		hitPointSize += 2 * sizeof(u_int) + 2 * sizeof(u_int);
-	// intoObject
-	hitPointSize += sizeof(int);
 	// Object ID
 	if (renderEngine->compiledScene->IsTextureCompiled(OBJECTID_TEX) ||
 			renderEngine->compiledScene->IsTextureCompiled(OBJECTID_COLOR_TEX) ||
 			renderEngine->compiledScene->IsTextureCompiled(OBJECTID_NORMALIZED_TEX))
 		hitPointSize += sizeof(u_int);
+	// intoObject
+	hitPointSize += sizeof(int);
+	// throughShadowTransparency
+	hitPointSize += sizeof(int);
 
 	return hitPointSize;
 }
@@ -411,7 +413,8 @@ void PathOCLBaseOCLRenderThread::InitGPUTaskBuffer() {
 
 	size_t gpuDirectLightTaskSize = 
 			sizeof(slg::ocl::pathoclbase::DirectLightIlluminateInfo) + 
-			sizeof(int); // directLightResult
+			sizeof(int) + // directLightResult
+			sizeof(int);  // throughShadowTransparency
 
 	// Add seedPassThroughEvent memory size
 	if (hasPassThrough)
@@ -431,7 +434,8 @@ void PathOCLBaseOCLRenderThread::InitGPUTaskBuffer() {
 			sizeof(int) + // albedoToDo
 			sizeof(int) + // photonGICacheEnabledOnLastHit
 			sizeof(int) + // photonGICausticCacheUsed
-			sizeof(int); // photonGIShowIndirectPathMixUsed
+			sizeof(int) + // photonGIShowIndirectPathMixUsed
+			sizeof(int);  // throughShadowTransparency
 
 	// Add seedPassThroughEvent memory size
 	if (hasPassThrough)

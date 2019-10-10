@@ -60,11 +60,12 @@ typedef struct {
 	// so I use HitPoint to carry texture index information
 	unsigned int interiorIorTexIndex, exteriorIorTexIndex;
 #endif
-	int intoObject;
 
 #if defined(PARAM_ENABLE_TEX_OBJECTID) || defined(PARAM_ENABLE_TEX_OBJECTID_COLOR) || defined(PARAM_ENABLE_TEX_OBJECTID_NORMALIZED)
 	unsigned int objectID;
 #endif
+
+	int intoObject, throughShadowTransparency;
 } HitPoint;
 
 #endif

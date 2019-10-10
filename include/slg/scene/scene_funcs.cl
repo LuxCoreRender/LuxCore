@@ -20,6 +20,7 @@
 
 OPENCL_FORCE_NOT_INLINE bool Scene_Intersect(
 		const SceneRayType rayType,
+		int *throughShadowTransparency,
 #if defined(PARAM_HAS_VOLUMES)
 		__global PathVolumeInfo *volInfo,
 		__global HitPoint *tmpHitPoint,
@@ -59,6 +60,7 @@ OPENCL_FORCE_NOT_INLINE bool Scene_Intersect(
 	if (hit) {
 		// Initialize the BSDF of the hit point
 		BSDF_Init(bsdf,
+				*throughShadowTransparency,
 				meshDescs,
 				sceneObjs,
 				lightIndexOffsetByMeshIndex,
@@ -121,7 +123,7 @@ OPENCL_FORCE_NOT_INLINE bool Scene_Intersect(
 			// used (and the bug will be noticed)
 			rayHit->meshIndex = 0xfffffffeu;
 
-			BSDF_InitVolume(bsdf, mats, ray, rayVolumeIndex, t, passThrough);
+			BSDF_InitVolume(bsdf, *throughShadowTransparency, mats, ray, rayVolumeIndex, t, passThrough);
 			volInfo->scatteredStart = true;
 
 			return false;
@@ -159,6 +161,7 @@ OPENCL_FORCE_NOT_INLINE bool Scene_Intersect(
 
 			if (!Spectrum_IsBlack(transp)) {
 				*connectionThroughput *= transp;
+				*throughShadowTransparency = true;
 				continueToTrace = true;
 			}
 		}

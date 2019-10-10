@@ -47,18 +47,22 @@ public:
 	BSDF() : material(NULL) { };
 
 	// A BSDF initialized from a ray hit
-	BSDF(const bool fixedFromLight, const Scene &scene, const luxrays::Ray &ray,
+	BSDF(const bool fixedFromLight, const bool throughShadowTransparency,
+		const Scene &scene, const luxrays::Ray &ray,
 		const luxrays::RayHit &rayHit, const float passThroughEvent,
 		const PathVolumeInfo *volInfo) {
 		assert (!rayHit.Miss());
-		Init(fixedFromLight, scene, ray, rayHit, passThroughEvent, volInfo);
+		Init(fixedFromLight, throughShadowTransparency, scene,
+				ray, rayHit, passThroughEvent, volInfo);
 	}
 	// Used when hitting a surface
-	void Init(const bool fixedFromLight, const Scene &scene, const luxrays::Ray &ray,
+	void Init(const bool fixedFromLight, const bool throughShadowTransparency,
+		const Scene &scene, const luxrays::Ray &ray,
 		const luxrays::RayHit &rayHit, const float passThroughEvent,
 		const PathVolumeInfo *volInfo);
 	// Used when hitting a volume scatter point
-	void Init(const bool fixedFromLight, const Scene &scene, const luxrays::Ray &ray,
+	void Init(const bool fixedFromLight, const bool throughShadowTransparency,
+		const Scene &scene, const luxrays::Ray &ray,
 		const Volume &volume, const float t, const float passThroughEvent);
 
 	bool IsEmpty() const { return (material == NULL); }

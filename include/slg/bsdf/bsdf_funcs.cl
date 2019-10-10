@@ -126,7 +126,7 @@ OPENCL_FORCE_NOT_INLINE void ExtMesh_GetDifferentials(
 // Used when hitting a surface
 OPENCL_FORCE_NOT_INLINE void BSDF_Init(
 		__global BSDF *bsdf,
-		//const bool fromL,
+		const bool throughShadowTransparency,
 		__global const Mesh* restrict meshDescs,
 		__global const SceneObject* restrict sceneObjs,
 		__global const uint* restrict lightIndexOffsetByMeshIndex,
@@ -147,7 +147,7 @@ OPENCL_FORCE_NOT_INLINE void BSDF_Init(
 #endif
 		MATERIALS_PARAM_DECL
 		) {
-	//bsdf->fromLight = fromL;
+	bsdf->hitPoint.throughShadowTransparency = throughShadowTransparency;
 #if defined(PARAM_HAS_PASSTHROUGH)
 	bsdf->hitPoint.passThroughEvent = u0;
 #endif
@@ -338,9 +338,12 @@ OPENCL_FORCE_NOT_INLINE void BSDF_Init(
 // Used when hitting a volume scatter point
 OPENCL_FORCE_NOT_INLINE void BSDF_InitVolume(
 		__global BSDF *bsdf,
+		const bool throughShadowTransparency,
 		__global const Material* restrict mats,
 		__global Ray *ray,
 		const uint volumeIndex, const float t, const float passThroughEvent) {
+	bsdf->hitPoint.throughShadowTransparency = throughShadowTransparency;
+
 	const float3 rayOrig = VLOAD3F(&ray->o.x);
 	const float3 rayDir = VLOAD3F(&ray->d.x);
 

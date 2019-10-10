@@ -71,8 +71,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 	taskState->seedPassThroughEvent = seedPassThroughEvent;
 #endif
 
+	int throughShadowTransparency = taskState->throughShadowTransparency;
 	const bool continueToTrace = Scene_Intersect(
 			EYE_RAY | ((pathInfo->depth.depth == 0) ? CAMERA_RAY : GENERIC_RAY),
+			&throughShadowTransparency,
 #if defined(PARAM_HAS_VOLUMES)
 			&pathInfo->volume,
 			&tasks[gid].tmpHitPoint,
@@ -97,6 +99,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 			false
 			MATERIALS_PARAM
 			);
+	taskState->throughShadowTransparency = throughShadowTransparency;
 	VSTORE3F(connectionThroughput * VLOAD3F(taskState->throughput.c), taskState->throughput.c);
 
 	// If continueToTrace, there is nothing to do, just keep the same state
@@ -492,9 +495,11 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 #endif
 
 #if defined(PARAM_HAS_PASSTHROUGH) || defined(PARAM_HAS_VOLUMES)
+	int throughShadowTransparency = taskDirectLight->throughShadowTransparency;
 	const bool continueToTrace =
 		Scene_Intersect(
 			EYE_RAY | SHADOW_RAY,
+			&throughShadowTransparency,
 #if defined(PARAM_HAS_VOLUMES)
 			&directLightVolInfos[gid],
 			&task->tmpHitPoint,
@@ -519,6 +524,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 			true
 			MATERIALS_PARAM
 			);
+	taskDirectLight->throughShadowTransparency = throughShadowTransparency;
 	VSTORE3F(connectionThroughput * VLOAD3F(taskDirectLight->illumInfo.lightRadiance.c), taskDirectLight->illumInfo.lightRadiance.c);
 #if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
 	VSTORE3F(connectionThroughput * VLOAD3F(taskDirectLight->illumInfo.lightIrradiance.c), taskDirectLight->illumInfo.lightIrradiance.c);
@@ -726,6 +732,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 		// Save the seed
 		task->seed = seedValue;
 #endif
+
+		// Initialize the trough a shadow transparency flag used by Scene_Intersect()
+		tasksDirectLight[gid].throughShadowTransparency = false;
+
 #if defined(PARAM_HAS_VOLUMES)
 		// Make a copy of current PathVolumeInfo for tracing the
 		// shadow ray
@@ -876,6 +886,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 		Rnd_InitFloat(passThroughEvent, &seedPassThroughEvent);
 		taskState->seedPassThroughEvent = seedPassThroughEvent;
 #endif
+
+		// Initialize the trough a shadow transparency flag used by Scene_Intersect()
+		taskState->throughShadowTransparency = false;
+
 
 		pathState = MK_RT_NEXT_VERTEX;
 	} else

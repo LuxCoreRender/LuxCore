@@ -25,9 +25,11 @@ using namespace slg;
 using namespace std;
 
 // Used when hitting a surface
-void BSDF::Init(const bool fixedFromLight, const Scene &scene, const Ray &ray,
+void BSDF::Init(const bool fixedFromLight, const bool throughShadowTransparency,
+		const Scene &scene, const Ray &ray,
 		const RayHit &rayHit, const float passThroughEvent, const PathVolumeInfo *volInfo) {
 	hitPoint.fromLight = fixedFromLight;
+	hitPoint.throughShadowTransparency = throughShadowTransparency;
 	hitPoint.passThroughEvent = passThroughEvent;
 
 	hitPoint.p = ray(rayHit.t);
@@ -86,9 +88,11 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const Ray &ray,
 }
 
 // Used when hitting a volume scatter point
-void BSDF::Init(const bool fixedFromLight, const Scene &scene, const luxrays::Ray &ray,
+void BSDF::Init(const bool fixedFromLight, const bool throughShadowTransparency,
+		const Scene &scene, const luxrays::Ray &ray,
 		const Volume &volume, const float t, const float passThroughEvent) {
 	hitPoint.fromLight = fixedFromLight;
+	hitPoint.throughShadowTransparency = throughShadowTransparency;
 	hitPoint.passThroughEvent = passThroughEvent;
 
 	hitPoint.p = ray(t);

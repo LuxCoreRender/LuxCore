@@ -89,7 +89,9 @@ typedef struct {
 #endif
 	
 	int albedoToDo, photonGICacheEnabledOnLastHit,
-			photonGICausticCacheUsed, photonGIShowIndirectPathMixUsed;
+			photonGICausticCacheUsed, photonGIShowIndirectPathMixUsed,
+			// The shadow transparency lag used by Scene_Intersect()
+			throughShadowTransparency;
 } GPUTaskState;
 
 typedef enum {
@@ -105,6 +107,9 @@ typedef struct {
 #endif
 
 	DirectLightResult directLightResult;
+
+	// The shadow transparency lag used by Scene_Intersect()
+	int throughShadowTransparency;
 } GPUTaskDirectLight;
 
 typedef struct {

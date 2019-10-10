@@ -494,13 +494,14 @@ bool Scene::Intersect(IntersectionDevice *device,
 	const bool fromLight = rayType & LIGHT_RAY;
 	const bool cameraRay = rayType & CAMERA_RAY;
 	const bool shadowRay = rayType & SHADOW_RAY;
+	bool throughShadowTransparency = false;
 
 	for (;;) {
 		const bool hit = device ? device->TraceRay(ray, rayHit) : dataSet->GetAccelerator()->Intersect(ray, rayHit);
 
 		const Volume *rayVolume = volInfo->GetCurrentVolume();
 		if (hit) {
-			bsdf->Init(fromLight, *this, *ray, *rayHit, passThrough, volInfo);
+			bsdf->Init(fromLight, throughShadowTransparency, *this, *ray, *rayHit, passThrough, volInfo);
 			rayVolume = bsdf->hitPoint.intoObject ? bsdf->hitPoint.exteriorVolume : bsdf->hitPoint.interiorVolume;
 			ray->maxt = rayHit->t;
 		} else if (!rayVolume) {
@@ -535,7 +536,7 @@ bool Scene::Intersect(IntersectionDevice *device,
 				// used (and the bug will be noticed)
 				rayHit->meshIndex = 0xfffffffeu;
 
-				bsdf->Init(fromLight, *this, *ray, *rayVolume, t, passThrough);
+				bsdf->Init(fromLight, throughShadowTransparency, *this, *ray, *rayVolume, t, passThrough);
 				volInfo->SetScatteredStart(true);
 
 				return true;
@@ -563,6 +564,7 @@ bool Scene::Intersect(IntersectionDevice *device,
 				
 				if (!transp.Black()) {
 					*connectionThroughput *= transp;
+					throughShadowTransparency = true;
 					continueToTrace = true;
 				}
 			}
