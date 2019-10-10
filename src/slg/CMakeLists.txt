@@ -187,6 +187,9 @@ SOURCE_GROUP("Source Files\\OpenSubdiv Library" FILES ${OPENSUBDIV_SRCS})
 
 include_directories(${LuxRays_SOURCE_DIR}/deps/opensubdiv-3.4.0)
 
+# Required by VisualStudio to have M_PI defined
+add_definitions("-D_USE_MATH_DEFINES")
+
 add_library(opensubdiv STATIC ${OPENSUBDIV_SRCS})
 
 ###########################################################################
