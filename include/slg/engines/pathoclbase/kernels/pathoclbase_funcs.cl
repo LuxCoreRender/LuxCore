@@ -303,6 +303,11 @@ OPENCL_FORCE_NOT_INLINE void DirectHitInfiniteLight(
 		__global EyePathInfo *pathInfo, __global const Spectrum* restrict pathThroughput,
 		const __global Ray *ray, __global const BSDF *bsdf, __global SampleResult *sampleResult
 		LIGHTS_PARAM_DECL) {
+	// If the material is shadow transparent, Direct Light sampling
+	// will take care of transporting all emitted light
+	if (!Spectrum_IsBlack(VLOAD3F(&pathInfo->lastPassThroughShadowTransparency.c[0])))
+		return;
+
 	const float3 throughput = VLOAD3F(pathThroughput->c);
 
 	for (uint i = 0; i < envLightCount; ++i) {
@@ -319,8 +324,7 @@ OPENCL_FORCE_NOT_INLINE void DirectHitInfiniteLight(
 
 		if (!Spectrum_IsBlack(lightRadiance)) {
 			float weight;
-			if (!(pathInfo->lastBSDFEvent & SPECULAR) &&
-					Spectrum_IsBlack(VLOAD3F(&pathInfo->lastPassThroughShadowTransparency.c[0]))) {
+			if (!(pathInfo->lastBSDFEvent & SPECULAR)) {
 				const float lightPickProb = LightStrategy_SampleLightPdf(lightsDistribution,
 						dlscAllEntries,
 						dlscDistributions, dlscBVHNodes,
@@ -351,7 +355,10 @@ OPENCL_FORCE_NOT_INLINE void DirectHitFiniteLight(
 	__global const LightSource* restrict light = &lights[bsdf->triangleLightSourceIndex];
 
 	// Check if the light source is visible according the settings
-	if (!CheckDirectHitVisibilityFlags(light, &pathInfo->depth, pathInfo->lastBSDFEvent))
+	if (!CheckDirectHitVisibilityFlags(light, &pathInfo->depth, pathInfo->lastBSDFEvent) ||
+			// If the material is shadow transparent, Direct Light sampling
+			// will take care of transporting all emitted light
+			!Spectrum_IsBlack(VLOAD3F(&pathInfo->lastPassThroughShadowTransparency.c[0])))
 		return;
 	
 	float directPdfA;
@@ -361,8 +368,7 @@ OPENCL_FORCE_NOT_INLINE void DirectHitFiniteLight(
 	if (!Spectrum_IsBlack(emittedRadiance)) {
 		// Add emitted radiance
 		float weight = 1.f;
-		if (!(pathInfo->lastBSDFEvent & SPECULAR) &&
-				Spectrum_IsBlack(VLOAD3F(&pathInfo->lastPassThroughShadowTransparency.c[0]))) {
+		if (!(pathInfo->lastBSDFEvent & SPECULAR)) {
 			const float lightPickProb = LightStrategy_SampleLightPdf(lightsDistribution,
 					dlscAllEntries,
 					dlscDistributions, dlscBVHNodes,
