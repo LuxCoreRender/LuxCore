@@ -31,6 +31,7 @@
 #include "slg/shapes/pointiness.h"
 #include "slg/shapes/strands.h"
 #include "slg/shapes/groupshape.h"
+#include "slg/shapes/subdiv.h"
 
 using namespace std;
 using namespace luxrays;
@@ -260,6 +261,12 @@ ExtTriangleMesh *Scene::CreateShape(const string &shapeName, const Properties &p
 			shape = new GroupShape(meshes, trans);
 		} else
 			throw runtime_error("A shape group can not be empty: " + shapeName);
+	} else if (shapeType == "subdiv") {
+		const string sourceMeshName = props.Get(Property(propName + ".source")("")).Get<string>();
+		if (!extMeshCache.IsExtMeshDefined(sourceMeshName))
+			throw runtime_error("Unknown shape name in a subdiv shape: " + shapeName);
+		
+		shape = new SubdivShape((ExtTriangleMesh *)extMeshCache.GetExtMesh(sourceMeshName));
 	} else
 		throw runtime_error("Unknown shape type: " + shapeType);
 
