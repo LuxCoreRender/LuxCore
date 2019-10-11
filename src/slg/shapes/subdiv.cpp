@@ -29,6 +29,20 @@ using namespace luxrays;
 using namespace slg;
 using namespace OpenSubdiv;
 
+// used for Mesh Alpha channel
+
+struct ScalarValue {
+	void Clear(void * = 0) {
+		value = 0.f;
+	}
+
+	void AddWithWeight(ScalarValue const &src, float weight) {
+		value += weight * src.value;
+	}
+
+	float value;
+};
+
 SubdivShape::SubdivShape(ExtTriangleMesh *srcMesh, const u_int maxLvl) :
 		Shape(), maxLevel(maxLvl) {
 	SDL_LOG("Subdividing shape " << srcMesh->GetName() << " at level: " << maxLevel);
@@ -38,7 +52,7 @@ SubdivShape::SubdivShape(ExtTriangleMesh *srcMesh, const u_int maxLvl) :
 	Sdc::SchemeType type = Sdc::SCHEME_LOOP;
 
 	Sdc::Options options;
-	options.SetVtxBoundaryInterpolation(Sdc::Options::VTX_BOUNDARY_EDGE_ONLY);
+	options.SetVtxBoundaryInterpolation(Sdc::Options::VTX_BOUNDARY_EDGE_AND_CORNER);
 
 	Far::TopologyDescriptor desc;
 	desc.numVertices = srcMesh->GetTotalVertexCount();
@@ -63,24 +77,52 @@ SubdivShape::SubdivShape(ExtTriangleMesh *srcMesh, const u_int maxLvl) :
 		srcMesh->GetTotalVertexCount() - refiner->GetLevel(maxLevel).GetNumVertices();
 
 	// Allocate intermediate and final storage to be populated
+	
+	// Vertices
 	vector<Point> tmpVertsBuffer(tmpVertsCount);
-    vector<Point> vertsBuffer(refiner->GetLevel(maxLevel).GetNumVertices());
-	
+
+	// Normals
 	vector<Normal> tmpNormsBuffer;
-    vector<Normal> normsBuffer;
-	if (srcMesh->HasNormals()) {
+	if (srcMesh->HasNormals())
 		tmpNormsBuffer.resize(tmpVertsCount);
-		normsBuffer.resize(refiner->GetLevel(maxLevel).GetNumVertices());
-	}
-	
+
+	// UVs
+	vector<UV> tmpUVsBuffer;
+	if (srcMesh->HasUVs())
+		tmpUVsBuffer.resize(tmpVertsCount);
+
+	// Colors
+	vector<Spectrum> tmpColsBuffer;
+	if (srcMesh->HasColors())
+		tmpColsBuffer.resize(tmpVertsCount);
+
+	// Alphas
+	vector<ScalarValue> tmpAlphasBuffer;
+	if (srcMesh->HasAlphas())
+		tmpAlphasBuffer.resize(tmpVertsCount);
+
     // Interpolate vertex primvar data
     Far::PrimvarRefiner primvarRefiner(*refiner);
 
+	// Vertices
     Point *srcVert = srcMesh->GetVertices();
 	Point *dstVert = &tmpVertsBuffer[0];
 
+	// Normals
 	Normal *srcNorm = srcMesh->HasNormals() ? srcMesh->GetNormals() : nullptr;
 	Normal *dstNorm = srcMesh->HasNormals() ? &tmpNormsBuffer[0] : nullptr;
+
+	// UVs
+	UV *srcUV = srcMesh->HasUVs() ? srcMesh->GetUVs() : nullptr;
+	UV *dstUV = srcMesh->HasUVs() ? &tmpUVsBuffer[0] : nullptr;
+
+	// Colors
+	Spectrum *srcCol = srcMesh->HasColors() ? srcMesh->GetColors() : nullptr;
+	Spectrum *dstCol = srcMesh->HasColors() ? &tmpColsBuffer[0] : nullptr;
+
+	// Alphas
+	ScalarValue *srcAlpha = srcMesh->HasAlphas() ? (ScalarValue *)srcMesh->GetAlphas() : nullptr;
+	ScalarValue *dstAlpha = srcMesh->HasAlphas() ? &tmpAlphasBuffer[0] : nullptr;
 
 	for (u_int level = 1; level < maxLevel; ++level) {
 		primvarRefiner.Interpolate(level, srcVert, dstVert);
@@ -89,9 +131,27 @@ SubdivShape::SubdivShape(ExtTriangleMesh *srcMesh, const u_int maxLvl) :
 		dstVert += refiner->GetLevel(level).GetNumVertices();
 
 		if (srcMesh->HasNormals()) {
-			primvarRefiner.InterpolateVarying(level, srcNorm, dstNorm);
+			primvarRefiner.Interpolate(level, srcNorm, dstNorm);
 			srcNorm = dstNorm;
 			dstNorm += refiner->GetLevel(level).GetNumVertices();
+		}
+
+		if (srcMesh->HasUVs()) {
+			primvarRefiner.Interpolate(level, srcUV, dstUV);
+			srcUV = dstUV;
+			dstUV += refiner->GetLevel(level).GetNumVertices();
+		}
+
+		if (srcMesh->HasColors()) {
+			primvarRefiner.Interpolate(level, srcCol, dstCol);
+			srcCol = dstCol;
+			dstCol += refiner->GetLevel(level).GetNumVertices();
+		}
+
+		if (srcMesh->HasAlphas()) {
+			primvarRefiner.Interpolate(level, srcAlpha, dstAlpha);
+			srcAlpha = dstAlpha;
+			dstAlpha += refiner->GetLevel(level).GetNumVertices();
 		}
 	}
 
@@ -101,11 +161,13 @@ SubdivShape::SubdivShape(ExtTriangleMesh *srcMesh, const u_int maxLvl) :
 
 	Far::TopologyLevel const &refLastLevel = refiner->GetLevel(maxLevel);
 
+	// Vertices
 	const u_int newVertsCount = refLastLevel.GetNumVertices();
 	Point *newVerts = TriangleMesh::AllocVerticesBuffer(newVertsCount);
 	// Interpolate the last level into the separate buffers for our final data
     primvarRefiner.Interpolate(maxLevel, srcVert, newVerts);
 
+	// Triangle
 	const u_int newTrisCount = refLastLevel.GetNumFaces();
 	Triangle *newTris = TriangleMesh::AllocTrianglesBuffer(newTrisCount);
 
@@ -119,16 +181,43 @@ SubdivShape::SubdivShape(ExtTriangleMesh *srcMesh, const u_int maxLvl) :
 		tri.v[2] = triVerts[2];
     }
 
+	// Normals
 	Normal *newNorms = nullptr;
 	if (srcMesh->HasNormals()) {
 		newNorms = new Normal[newVertsCount];
 		// Interpolate the last level into the separate buffers for our final data
-		primvarRefiner.InterpolateVarying(maxLevel, srcNorm, newNorms);
+		primvarRefiner.Interpolate(maxLevel, srcNorm, newNorms);
 	}
-	
+
+	// UVs
+	UV *newUVs = nullptr;
+	if (srcMesh->HasUVs()) {
+		newUVs = new UV[newVertsCount];
+		// Interpolate the last level into the separate buffers for our final data
+		primvarRefiner.Interpolate(maxLevel, srcUV, newUVs);
+	}
+
+	// Colors
+	Spectrum *newCols = nullptr;
+	if (srcMesh->HasColors()) {
+		newCols = new Spectrum[newVertsCount];
+		// Interpolate the last level into the separate buffers for our final data
+		primvarRefiner.Interpolate(maxLevel, srcCol, newCols);
+	}
+
+	// Alphas
+	float *newAlphas = nullptr;
+	if (srcMesh->HasAlphas()) {
+		newAlphas = new float[newVertsCount];
+		ScalarValue *newAlphasScalar = (ScalarValue *)newAlphas;
+		// Interpolate the last level into the separate buffers for our final data
+		primvarRefiner.Interpolate(maxLevel, srcAlpha, newAlphasScalar);
+	}
+
 	SDL_LOG("Subdividing shape from " << desc.numFaces << " to " << newTrisCount << " faces");
-	mesh = new ExtTriangleMesh(newVertsCount, newTrisCount, newVerts, newTris, newNorms);
-	
+	mesh = new ExtTriangleMesh(newVertsCount, newTrisCount, newVerts, newTris,
+			newNorms, newUVs, newCols, newAlphas);
+
 	const double endTime = WallClockTime();
 	SDL_LOG("Subdividing time: " << (boost::format("%.3f") % (endTime - startTime)) << "secs");
 }

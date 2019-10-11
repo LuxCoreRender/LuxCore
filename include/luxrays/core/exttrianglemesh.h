@@ -120,7 +120,7 @@ public:
 	virtual Normal *GetNormals() const { return normals; }
 	virtual UV *GetUVs() const { return uvs; }
 	virtual Spectrum *GetColors() const { return cols; }
-	virtual float *Getalphas() const { return alphas; }
+	virtual float *GetAlphas() const { return alphas; }
 
 	Normal *ComputeNormals();
 
