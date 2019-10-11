@@ -2,6 +2,8 @@
 
 ### LuxCoreRender
 
+![LuxCoreRender alt text](https://luxcorerender.org/wp-content/uploads/2017/12/wallpaper_lux_05_rend1b.jpg)
+
 LuxCoreRender is a physically correct, unbiased rendering engine. It is built on
 physically based equations that model the transportation of light. This allows
 it to accurately capture a wide range of phenomena which most other rendering
