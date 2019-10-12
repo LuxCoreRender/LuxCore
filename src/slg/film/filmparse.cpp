@@ -45,6 +45,7 @@
 #include "slg/film/imagepipeline/plugins/premultiplyalpha.h"
 #include "slg/film/imagepipeline/plugins/mist.h"
 #include "slg/film/imagepipeline/plugins/intel_oidn.h"
+#include "slg/film/imagepipeline/plugins/whitebalance.h"
 
 using namespace std;
 using namespace luxrays;
@@ -609,6 +610,10 @@ ImagePipeline *Film::CreateImagePipeline(const Properties &props, const string &
 			} else if (type == "INTEL_OIDN") {
 				const int oidnMemLimit = props.Get(Property(prefix + ".oidnmemory")(6000)).Get<int>();
 				imagePipeline->AddPlugin(new IntelOIDN(oidnMemLimit));
+			} else if (type == "WHITE_BALANCE") {
+				const float temperature = Clamp(props.Get(Property(prefix + ".temperature")(6500.f)).Get<float>(),1000.f, 40000.f);
+				const float blend = Clamp(props.Get(Property(prefix + ".blend")(.5f)).Get<float>(), 0.f, 1.f);
+				imagePipeline->AddPlugin(new WhiteBalance(temperature, blend));
 			} else
 				throw runtime_error("Unknown image pipeline plugin type: " + type);
 		}
