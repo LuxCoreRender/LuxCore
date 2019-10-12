@@ -35,7 +35,8 @@ namespace slg {
 class WhiteBalance : public ImagePipelinePlugin {
 public:
 	WhiteBalance();
-    WhiteBalance(float temperature, float blend);
+	WhiteBalance(float temperature);
+    WhiteBalance(luxrays::Spectrum whitePoint);
 
 	virtual ImagePipelinePlugin *Copy() const;
 
@@ -45,8 +46,6 @@ public:
 
 private:
 
-    float temperature;
-	float blend;
 	luxrays::Spectrum whitePoint;
 
 	luxrays::Spectrum TemperatureToWhitePoint(const float temperature);

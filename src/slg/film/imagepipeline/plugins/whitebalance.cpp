@@ -29,16 +29,17 @@ using namespace slg;
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::WhiteBalance)
 
-WhiteBalance::WhiteBalance(): temperature(6500.f), blend(0.5) {
-    whitePoint = TemperatureToWhitePoint(temperature);
+WhiteBalance::WhiteBalance(): whitePoint(TemperatureToWhitePoint(6500.f)) {
 }
 
-WhiteBalance::WhiteBalance(float tmp, float bld): temperature(tmp), blend(bld) {
-    whitePoint = TemperatureToWhitePoint(temperature);
+WhiteBalance::WhiteBalance(float tmp): whitePoint(TemperatureToWhitePoint(tmp)) {
+}
+
+WhiteBalance::WhiteBalance(Spectrum wht_pt): whitePoint(wht_pt) {
 }
 
 ImagePipelinePlugin *WhiteBalance::Copy() const {
-    return new WhiteBalance(temperature, blend);
+    return new WhiteBalance(whitePoint);
 }
 
 Spectrum WhiteBalance::TemperatureToWhitePoint(const float temperature) {

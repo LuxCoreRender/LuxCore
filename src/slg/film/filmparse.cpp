@@ -612,8 +612,7 @@ ImagePipeline *Film::CreateImagePipeline(const Properties &props, const string &
 				imagePipeline->AddPlugin(new IntelOIDN(oidnMemLimit));
 			} else if (type == "WHITE_BALANCE") {
 				const float temperature = Clamp(props.Get(Property(prefix + ".temperature")(6500.f)).Get<float>(),1000.f, 40000.f);
-				const float blend = Clamp(props.Get(Property(prefix + ".blend")(.5f)).Get<float>(), 0.f, 1.f);
-				imagePipeline->AddPlugin(new WhiteBalance(temperature, blend));
+				imagePipeline->AddPlugin(new WhiteBalance(temperature));
 			} else
 				throw runtime_error("Unknown image pipeline plugin type: " + type);
 		}
