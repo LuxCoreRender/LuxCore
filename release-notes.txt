@@ -8,6 +8,7 @@
 * It is now possible to use light tracing for normal caustics and PhotonGI cache for SDS paths
 * Added the support for shadow rays transparency for path tracers (aka hybrid glass, issue #233)
 * Added the support for Basu and Owen's low discrepancy triangle light sampling (pull request #246)
+* Added an option to normalize BlackBody texture output
 
 ### Fixed Bugs
 
