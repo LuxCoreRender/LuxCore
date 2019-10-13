@@ -33,9 +33,9 @@ using namespace slg;
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::FilmConvTest)
 
 FilmConvTest::FilmConvTest(const Film *flm, const float thresholdVal,
-		const u_int warmupVal, const u_int testStepVal, const bool useFilt, const u_int index) :
+		const u_int warmupVal, const u_int testStepVal, const bool useFilt, const u_int idx) :
 		threshold(thresholdVal), warmup(warmupVal),	testStep(testStepVal),
-		index(index), useFilter(useFilt), film(flm), referenceImage(NULL) {
+		useFilter(useFilt), imagePipelineIndex(idx), film(flm), referenceImage(NULL) {
 	Reset();
 }
 
@@ -77,6 +77,8 @@ u_int FilmConvTest::Test() {
 
 	if (IsTestUpdateRequired()) {
 		lastSamplesCount = film->GetTotalSampleCount();
+
+		const u_int index = Min(imagePipelineIndex, film->GetImagePipelineCount() - 1);
 
 		if (firstTest) {
 			SLG_LOG("Convergence test first pass");

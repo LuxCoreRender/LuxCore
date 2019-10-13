@@ -735,15 +735,16 @@ void Film::Parse(const Properties &props) {
 						props.Get(Property("batch.haltthreshold.stoprendering.enable")(true)).Get<bool>()
 					)).Get<bool>();
 				
-			haltNoiseThresholdIndex = props.Get(Property("batch.haltnoisethreshold.index")(0)).Get<u_int>();
+			haltNoiseThresholdImagePipelineIndex = props.Get(Property("batch.haltnoisethreshold.index")(0)).Get<u_int>();
 
-			if (haltNoiseThresholdIndex > numImagePipeline) {
+			if (haltNoiseThresholdImagePipelineIndex > numImagePipeline) {
 				SLG_LOG("WARNING: Halt thereshold index not available. Reverting to first image pipeline");
-				haltNoiseThresholdIndex = 0;
+				haltNoiseThresholdImagePipelineIndex = 0;
 			}
 
 			convTest = new FilmConvTest(this, haltNoiseThreshold, haltNoiseThresholdWarmUp,
-					haltNoiseThresholdTestStep, haltNoiseThresholdUseFilter, haltNoiseThresholdIndex);
+					haltNoiseThresholdTestStep, haltNoiseThresholdUseFilter,
+					haltNoiseThresholdImagePipelineIndex);
 		}
 	}
 
