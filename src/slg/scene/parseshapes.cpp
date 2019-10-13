@@ -32,6 +32,7 @@
 #include "slg/shapes/strands.h"
 #include "slg/shapes/groupshape.h"
 #include "slg/shapes/subdiv.h"
+#include "slg/shapes/displacement.h"
 
 using namespace std;
 using namespace luxrays;
@@ -269,6 +270,18 @@ ExtTriangleMesh *Scene::CreateShape(const string &shapeName, const Properties &p
 		const u_int maxLevel = Max(props.Get(Property(propName + ".maxlevel")(2)).Get<u_int>(), 1u);
 		
 		shape = new SubdivShape((ExtTriangleMesh *)extMeshCache.GetExtMesh(sourceMeshName), maxLevel);
+	} else if (shapeType == "displacement") {
+		const string sourceMeshName = props.Get(Property(propName + ".source")("")).Get<string>();
+		if (!extMeshCache.IsExtMeshDefined(sourceMeshName))
+			throw runtime_error("Unknown shape name in a displacement shape: " + shapeName);
+		
+		const Texture *tex = GetTexture(props.Get(Property(propName + ".map")(0.f)));
+		const float dispScale = Max(0.f, props.Get(Property(propName + ".scale")(1.f)).Get<float>());
+		const float dispOffset = Max(0.f, props.Get(Property(propName + ".offset")(0.f)).Get<float>());
+		const float dispNormalSmooth = props.Get(Property(propName + ".normalsmooth")(1)).Get<bool>();
+		
+		shape = new DisplacementShape((ExtTriangleMesh *)extMeshCache.GetExtMesh(sourceMeshName),
+				*tex, dispScale, dispOffset, dispNormalSmooth);
 	} else
 		throw runtime_error("Unknown shape type: " + shapeType);
 

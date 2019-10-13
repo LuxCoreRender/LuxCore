@@ -1,0 +1,56 @@
+scene.camera.cliphither = 0.00100000005
+scene.camera.clipyon = 1.00000002e+30
+scene.camera.shutteropen = 0
+scene.camera.shutterclose = 1
+scene.camera.autovolume.enable = 1
+scene.camera.lookat.orig = 8.34077549 -7.03312111 4.53552628
+scene.camera.lookat.target = -4.52398491 3.39883137 0.837888479
+scene.camera.up = 0 0 1
+scene.camera.lensradius = 0
+scene.camera.focaldistance = 10
+scene.camera.autofocus.enable = 0
+scene.camera.type = "perspective"
+scene.camera.oculusrift.barrelpostpro.enable = 0
+scene.camera.fieldofview = 45
+################################################################################
+scene.lights.l1.type = sphere
+scene.lights.l1.position = 4.0 -2.0 5.0
+scene.lights.l1.radius = 0.5
+scene.lights.l1.gain = 1000 1000 1000
+################################################################################
+## From: https://3dtextures.me/2019/09/30/fabric-padded-004/
+scene.textures.fabric_col.type = imagemap
+scene.textures.fabric_col.file = Fabric_Padded_004_basecolor.jpg
+scene.textures.fabric_col.gamma = 1.0
+scene.textures.fabric_col.mapping.type = uvmapping2d
+scene.textures.fabric_col.mapping.uvscale = 2.0 1.0
+scene.textures.fabric_disp.type = imagemap
+scene.textures.fabric_disp.file = Fabric_Padded_004_height.png
+scene.textures.fabric_disp.gamma = 1.0
+scene.textures.fabric_disp.mapping.type = uvmapping2d
+scene.textures.fabric_disp.mapping.uvscale = 2.0 1.0
+################################################################################
+scene.materials.redmat.type = matte
+scene.materials.redmat.kd = fabric_col
+scene.materials.whitematte.type = matte
+scene.materials.whitematte.kd = 0.6 0.6 0.6
+################################################################################
+scene.shapes.sphereply.type = mesh
+scene.shapes.sphereply.ply = sphere.ply
+##
+scene.shapes.spheresubdiv.type = subdiv
+scene.shapes.spheresubdiv.source = sphereply
+scene.shapes.spheresubdiv.maxlevel = 5
+##
+scene.shapes.sphere.type = displacement
+scene.shapes.sphere.source = spheresubdiv
+scene.shapes.sphere.offset = 0.0
+scene.shapes.sphere.normalsmooth = 1
+scene.shapes.sphere.map = fabric_disp
+scene.shapes.sphere.scale = 0.15
+################################################################################
+scene.objects.back.material = whitematte
+scene.objects.back.ply = scenes/bigmonkey/room.ply
+##
+scene.objects.red.material = redmat
+scene.objects.red.ply = sphere

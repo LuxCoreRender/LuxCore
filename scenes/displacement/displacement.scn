@@ -1,0 +1,63 @@
+scene.camera.cliphither = 0.00100000005
+scene.camera.clipyon = 1.00000002e+30
+scene.camera.shutteropen = 0
+scene.camera.shutterclose = 1
+scene.camera.autovolume.enable = 1
+scene.camera.lookat.orig = 8.34077549 -7.03312111 4.53552628
+scene.camera.lookat.target = -4.52398491 3.39883137 0.837888479
+scene.camera.up = 0 0 1
+scene.camera.lensradius = 0
+scene.camera.focaldistance = 10
+scene.camera.autofocus.enable = 0
+scene.camera.type = "perspective"
+scene.camera.oculusrift.barrelpostpro.enable = 0
+scene.camera.fieldofview = 45
+################################################################################
+scene.lights.l1.type = sphere
+scene.lights.l1.position = 3.0 -1.0 5.0
+scene.lights.l1.radius = 0.5
+scene.lights.l1.gain = 1000 1000 1000
+################################################################################
+scene.textures.fbmtex.type = fbm
+scene.textures.fbmtex.octaves = 8
+scene.textures.fbmtex.omega = 0.5
+scene.textures.fbmtex.mapping.type = globalmapping3d
+#scene.textures.fbmtex.mapping.transformation = 10.0 0.0 0.0 0.0  0.0 10.0 0.0 0.0  0.0 0.0 10.0 0.0  0.0 0.0 0.0 1.0
+scene.textures.fbmtex.mapping.transformation = 3.0 0.0 0.0 0.0  0.0 3.0 0.0 0.0  0.0 0.0 3.0 0.0  0.0 0.0 0.0 1.0
+##
+scene.textures.checktex.type = checkerboard2d
+scene.textures.checktex.texture1 = 0.0 0.0 0.0
+scene.textures.checktex.texture2 = 1.0 1.0 1.0
+scene.textures.checktex.mapping.type = uvmapping2d
+scene.textures.checktex.mapping.uvscale = 20.0 10.0
+################################################################################
+scene.materials.redmat.type = disney
+scene.materials.redmat.basecolor = 0.6 0.0 0.0
+#scene.materials.redmat.basecolor = checktex
+scene.materials.redmat.specular = 1.0
+scene.materials.redmat.roughness = 0.2
+scene.materials.redmat.clearcoatgloss = 1.0
+scene.materials.whitematte.type = matte
+scene.materials.whitematte.kd = 0.75 0.75 0.75
+################################################################################
+scene.shapes.sphereply.type = mesh
+scene.shapes.sphereply.ply = sphere.ply
+##
+scene.shapes.spheresubdiv.type = subdiv
+scene.shapes.spheresubdiv.source = sphereply
+scene.shapes.spheresubdiv.maxlevel = 5
+##
+scene.shapes.sphere.type = displacement
+scene.shapes.sphere.source = spheresubdiv
+scene.shapes.sphere.offset = 0.0
+scene.shapes.sphere.normalsmooth = 1
+#scene.shapes.sphere.map = checktex
+#scene.shapes.sphere.scale = 0.3
+scene.shapes.sphere.map = fbmtex
+scene.shapes.sphere.scale = 0.15
+################################################################################
+scene.objects.back.material = whitematte
+scene.objects.back.ply = scenes/bigmonkey/room.ply
+##
+scene.objects.red.material = redmat
+scene.objects.red.ply = sphere

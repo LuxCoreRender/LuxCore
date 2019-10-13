@@ -63,7 +63,7 @@ bool PointinessShape::IsSameVertex(const ExtTriangleMesh *srcMesh,
 	return true;
 }
 
-PointinessShape::PointinessShape(ExtTriangleMesh *srcMesh) : Shape() {
+PointinessShape::PointinessShape(ExtTriangleMesh *srcMesh) {
 	SDL_LOG("Pointiness shape " << srcMesh->GetName());
 
 	const double startTime = WallClockTime();

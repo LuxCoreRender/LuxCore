@@ -35,8 +35,6 @@ public:
 protected:
 	virtual luxrays::ExtTriangleMesh *RefineImpl(const Scene *scene);
 
-	const u_int maxLevel;
-
 	luxrays::ExtTriangleMesh *mesh;
 };
 

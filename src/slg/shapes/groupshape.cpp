@@ -24,7 +24,7 @@ using namespace luxrays;
 using namespace slg;
 
 GroupShape::GroupShape(const vector<const ExtTriangleMesh *> &ms, const vector<Transform> &ts) :
-			Shape(), meshes(ms), trans(ts) {
+			meshes(ms), trans(ts) {
 }
 
 GroupShape::~GroupShape() {

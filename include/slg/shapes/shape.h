@@ -34,7 +34,8 @@ public:
 		POINTINESS,
 		STRANDS,
 		GROUP,
-		SUBDIV
+		SUBDIV,
+		DISPLACEMENT
 	} ShapeType;
 
 	Shape() : refined(false) { }

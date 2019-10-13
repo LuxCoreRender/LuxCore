@@ -43,8 +43,7 @@ struct ScalarValue {
 	float value;
 };
 
-SubdivShape::SubdivShape(ExtTriangleMesh *srcMesh, const u_int maxLvl) :
-		Shape(), maxLevel(maxLvl) {
+SubdivShape::SubdivShape(ExtTriangleMesh *srcMesh, const u_int maxLevel) {
 	SDL_LOG("Subdividing shape " << srcMesh->GetName() << " at level: " << maxLevel);
 
 	const double startTime = WallClockTime();

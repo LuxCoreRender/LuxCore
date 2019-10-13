@@ -16,34 +16,31 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "slg/shapes/meshshape.h"
-#include "slg/scene/scene.h"
+#ifndef _SLG_DISPLACEMENTSHAPE_H
+#define	_SLG_DISPLACEMENTSHAPE_H
 
-using namespace std;
-using namespace luxrays;
-using namespace slg;
+#include <string>
 
-MeshShape::MeshShape(ExtTriangleMesh *m) {
-	mesh = m;
+#include "slg/shapes/shape.h"
+
+namespace slg {
+
+class Texture;
+
+class DisplacementShape : public Shape {
+public:
+	DisplacementShape(luxrays::ExtTriangleMesh *srcMesh, const Texture &dispMap,
+			const float dispScale, const float dispOffset, const bool dispNormalSmooth);
+	virtual ~DisplacementShape();
+
+	virtual ShapeType GetType() const { return DISPLACEMENT; }
+
+protected:
+	virtual luxrays::ExtTriangleMesh *RefineImpl(const Scene *scene);
+
+	luxrays::ExtTriangleMesh *mesh;
+};
+
 }
 
-MeshShape::MeshShape(const string &fileName) {
-	mesh = ExtTriangleMesh::Load(fileName);
-}
-
-MeshShape::~MeshShape() {
-	if (!refined)
-		delete mesh;
-}
-
-void MeshShape::SetLocal2World(const luxrays::Transform &trans) {
-	mesh->SetLocal2World(trans);
-}
-
-void MeshShape::ApplyTransform(const Transform &trans) {
-	mesh->ApplyTransform(trans);
-}
-
-ExtTriangleMesh *MeshShape::RefineImpl(const Scene *scene) {
-	return mesh;
-}
+#endif	/* _SLG_SUBDIVSHAPE_H */
