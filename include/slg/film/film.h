@@ -449,7 +449,7 @@ private:
 	u_int haltSPP;
 	
 	float haltNoiseThreshold;
-	u_int haltNoiseThresholdWarmUp, haltNoiseThresholdTestStep;
+	u_int haltNoiseThresholdWarmUp, haltNoiseThresholdTestStep, haltNoiseThresholdIndex;
 	bool haltNoiseThresholdUseFilter, haltNoiseThresholdStopRendering;
 
 	// Adaptive sampling
@@ -457,6 +457,7 @@ private:
 
 	u_int noiseEstimationWarmUp, noiseEstimationTestStep;
 	u_int noiseEstimationFilterScale;
+	u_int noiseEstimationIndex;
 
 	FilmOutputs filmOutputs;
 

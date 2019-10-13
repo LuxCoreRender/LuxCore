@@ -16,61 +16,49 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_FILMCONVTEST_H
-#define	_SLG_FILMCONVTEST_H
+#ifndef _SLG_WHITE_BALANCE_H
+#define	_SLG_WHITE_BALANCE_H
 
-#include "luxrays/utils/properties.h"
-#include "luxrays/utils/serializationutils.h"
-#include "slg/slg.h"
-#include "slg/film/framebuffer.h"
+#include <boost/format.hpp>
 
+#include "luxrays/luxrays.h"
+#include "luxrays/core/color/color.h"
+#include "slg/film/film.h"
+#include "slg/film/imagepipeline/imagepipeline.h"
+
+
+//------------------------------------------------------------------------------
+// White balance filter using Piccante library
+//------------------------------------------------------------------------------
 namespace slg {
 
-//------------------------------------------------------------------------------
-// FilmConvTest
-//------------------------------------------------------------------------------
-
-class Film;
-
-class FilmConvTest {
+class WhiteBalance : public ImagePipelinePlugin {
 public:
-	FilmConvTest(const Film *film, const float threshold, const u_int warmup,
-			const u_int testStep, const bool useFilter, const u_int index);
-	~FilmConvTest();
+	WhiteBalance();
+	WhiteBalance(float temperature);
+    WhiteBalance(luxrays::Spectrum whitePoint);
 
-	bool IsTestUpdateRequired() const;
+	virtual ImagePipelinePlugin *Copy() const;
 
-	void Reset();
-	u_int Test();
+	virtual void Apply(Film &film, const u_int index);
 
-	u_int todoPixelsCount;
-	float maxError;
-	
 	friend class boost::serialization::access;
 
 private:
-	// Used by serialization
-	FilmConvTest();
 
-	template<class Archive> void serialize(Archive &ar, const u_int version);
+	luxrays::Spectrum whitePoint;
 
-	float threshold;
-	u_int warmup;
-	u_int testStep;
-	bool useFilter;
-	u_int index;
+	luxrays::Spectrum TemperatureToWhitePoint(const float temperature);
 
-	const Film *film;
-
-	GenericFrameBuffer<3, 0, float> *referenceImage;
-	double lastSamplesCount;
-	bool firstTest;
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImagePipelinePlugin);
+	}
 };
 
 }
 
-BOOST_CLASS_VERSION(slg::FilmConvTest, 2)
+BOOST_CLASS_VERSION(slg::WhiteBalance, 1)
 
-BOOST_CLASS_EXPORT_KEY(slg::FilmConvTest)
+BOOST_CLASS_EXPORT_KEY(slg::WhiteBalance)
 
-#endif	/* _SLG_FILMCONVTEST_H */
+#endif

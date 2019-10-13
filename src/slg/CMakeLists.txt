@@ -724,6 +724,7 @@ set(SLG_FILM_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/tonemaps/reinhard02.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/tonemaps/tonemap.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/intel_oidn.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/whitebalance.cpp
 )
 SOURCE_GROUP("Source Files\\SLG Film Library" FILES ${SLG_FILM_SRCS})
 

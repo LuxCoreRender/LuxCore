@@ -32,9 +32,9 @@ using namespace slg;
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::FilmNoiseEstimation)
 
 FilmNoiseEstimation::FilmNoiseEstimation(const Film *flm, const u_int warmupVal, 
-		const u_int testStepVal, const u_int filtScale) :
+		const u_int testStepVal, const u_int filtScale, const u_int index) :
 		warmup(warmupVal),	testStep(testStepVal),
-		filterScale(filtScale), film(flm), referenceImage(NULL) {
+		filterScale(filtScale), index(index), film(flm), referenceImage(NULL) {
 	Reset();
 }
 
@@ -93,12 +93,12 @@ void FilmNoiseEstimation::Test() {
 		SLG_LOG("Noise estimation: first pass");
 
 		// Copy the current image
-		referenceImage->Copy(film->channel_IMAGEPIPELINEs[0]);
+		referenceImage->Copy(film->channel_IMAGEPIPELINEs[index]);
 		firstTest = false;
 	} else {
 
 		const float *ref = referenceImage->GetPixels();
-		const float *img = film->channel_IMAGEPIPELINEs[0]->GetPixels();
+		const float *img = film->channel_IMAGEPIPELINEs[index]->GetPixels();
 
 		const u_int pixelsCount = film->GetWidth() * film->GetHeight();
 		vector<float> pixelErrorVector(pixelsCount, 0);
