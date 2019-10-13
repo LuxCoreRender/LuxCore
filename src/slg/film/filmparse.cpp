@@ -711,6 +711,9 @@ void Film::Parse(const Properties &props) {
 		delete convTest;
 		convTest = NULL;
 
+		//How many image pipelines are defined
+		u_int numImagePipeline = props.GetAllUniqueSubNames("film.imagepipelines").size();
+
 		haltNoiseThreshold = props.Get(Property("batch.haltnoisethreshold")(
 				props.Get(Property("batch.haltthreshold")(-1.f)).Get<float>()
 				)).Get<float>();
@@ -731,9 +734,16 @@ void Film::Parse(const Properties &props) {
 			haltNoiseThresholdStopRendering = props.Get(Property("batch.haltnoisethreshold.stoprendering.enable")(
 						props.Get(Property("batch.haltthreshold.stoprendering.enable")(true)).Get<bool>()
 					)).Get<bool>();
+				
+			haltNoiseThresholdIndex = props.Get(Property("batch.haltnoisethreshold.index")(0)).Get<u_int>();
+
+			if (haltNoiseThresholdIndex > numImagePipeline) {
+				SLG_LOG("WARNING: Halt thereshold index not available. Reverting to first image pipeline");
+				haltNoiseThresholdIndex = 0;
+			}
 
 			convTest = new FilmConvTest(this, haltNoiseThreshold, haltNoiseThresholdWarmUp,
-					haltNoiseThresholdTestStep, haltNoiseThresholdUseFilter);
+					haltNoiseThresholdTestStep, haltNoiseThresholdUseFilter, haltNoiseThresholdIndex);
 		}
 	}
 
@@ -752,11 +762,21 @@ void Film::Parse(const Properties &props) {
 		delete noiseEstimation;
 		noiseEstimation = NULL;
 
+		//How many image pipelines are defined
+		u_int numImagePipeline = props.GetAllUniqueSubNames("film.imagepipelines").size();
+
 		noiseEstimationWarmUp = props.Get(Property("film.noiseestimation.warmup")(32)).Get<u_int>();
 		noiseEstimationTestStep = props.Get(Property("film.noiseestimation.step")(32)).Get<u_int>();
 		noiseEstimationFilterScale = props.Get(Property("film.noiseestimation.filter.scale")(4)).Get<u_int>();
 
+
+		noiseEstimationIndex = props.Get(Property("film.noiseestimation.index")(0)).Get<u_int>();
+		if (noiseEstimationIndex > numImagePipeline) {
+			SLG_LOG("WARNING: Noise estimation index not available. Reverting to first image pipeline");
+			noiseEstimationIndex = 0;
+		}
+
 		noiseEstimation = new FilmNoiseEstimation(this, noiseEstimationWarmUp,
-				noiseEstimationTestStep, noiseEstimationFilterScale);
+				noiseEstimationTestStep, noiseEstimationFilterScale, noiseEstimationIndex);
 	}
 }

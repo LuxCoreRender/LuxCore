@@ -33,9 +33,9 @@ using namespace slg;
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::FilmConvTest)
 
 FilmConvTest::FilmConvTest(const Film *flm, const float thresholdVal,
-		const u_int warmupVal, const u_int testStepVal, const bool useFilt) :
+		const u_int warmupVal, const u_int testStepVal, const bool useFilt, const u_int index) :
 		threshold(thresholdVal), warmup(warmupVal),	testStep(testStepVal),
-		useFilter(useFilt), film(flm), referenceImage(NULL) {
+		index(index), useFilter(useFilt), film(flm), referenceImage(NULL) {
 	Reset();
 }
 
@@ -82,12 +82,12 @@ u_int FilmConvTest::Test() {
 			SLG_LOG("Convergence test first pass");
 
 			// Copy the current image
-			referenceImage->Copy(film->channel_IMAGEPIPELINEs[0]);
+			referenceImage->Copy(film->channel_IMAGEPIPELINEs[index]);
 			firstTest = false;
 		} else {
 			// Check the number of pixels over the threshold
 			const float *ref = referenceImage->GetPixels();
-			const float *img = film->channel_IMAGEPIPELINEs[0]->GetPixels();
+			const float *img = film->channel_IMAGEPIPELINEs[index]->GetPixels();
 
 			todoPixelsCount = 0;
 			maxError = 0.f;
