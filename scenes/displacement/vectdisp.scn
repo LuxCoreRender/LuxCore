@@ -1,0 +1,57 @@
+scene.camera.cliphither = 0.00100000005
+scene.camera.clipyon = 1.00000002e+30
+scene.camera.shutteropen = 0
+scene.camera.shutterclose = 1
+scene.camera.autovolume.enable = 1
+scene.camera.lookat.orig = 8.34077549 -7.03312111 4.53552628
+scene.camera.lookat.target = -4.52398491 3.39883137 0.837888479
+scene.camera.up = 0 0 1
+scene.camera.lensradius = 0
+scene.camera.focaldistance = 10
+scene.camera.autofocus.enable = 0
+scene.camera.type = "perspective"
+scene.camera.oculusrift.barrelpostpro.enable = 0
+scene.camera.fieldofview = 45
+################################################################################
+scene.lights.l1.type = sphere
+scene.lights.l1.position = 4.0 -2.0 5.0
+scene.lights.l1.radius = 0.5
+scene.lights.l1.gain = 1000 1000 1000
+################################################################################
+scene.textures.vect_disp.type = imagemap
+scene.textures.vect_disp.file = vector_displacement_ear.exr
+scene.textures.vect_disp.gamma = 1.0
+scene.textures.vect_disp.mapping.type = uvmapping2d
+scene.textures.vect_disp.mapping.uvscale = 8 -4
+################################################################################
+scene.materials.redmat.type = matte
+scene.materials.redmat.kd = 0.6 0.2 0.2
+#scene.materials.redmat.kd = vect_disp
+scene.materials.whitematte.type = matte
+scene.materials.whitematte.kd = 0.6 0.6 0.6
+################################################################################
+scene.shapes.sphereply.type = mesh
+scene.shapes.sphereply.ply = sphere.ply
+#scene.shapes.sphereply.ply = plane.ply
+##
+scene.shapes.spheresubdiv.type = subdiv
+scene.shapes.spheresubdiv.source = sphereply
+scene.shapes.spheresubdiv.maxlevel = 5
+##
+scene.shapes.sphere.type = displacement
+scene.shapes.sphere.source = spheresubdiv
+scene.shapes.sphere.offset = 0.0
+scene.shapes.sphere.normalsmooth = 1
+scene.shapes.sphere.map = vect_disp
+scene.shapes.sphere.map.type = vector
+# Mudbox channels order:
+scene.shapes.sphere.map.channels = 0 2 1
+# Blender channels order:
+#scene.shapes.sphere.map.channels = 2 0 1
+scene.shapes.sphere.scale = 2.0
+################################################################################
+scene.objects.back.material = whitematte
+scene.objects.back.ply = scenes/bigmonkey/room.ply
+##
+scene.objects.red.material = redmat
+scene.objects.red.ply = sphere

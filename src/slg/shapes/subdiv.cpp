@@ -217,6 +217,9 @@ SubdivShape::SubdivShape(ExtTriangleMesh *srcMesh, const u_int maxLevel) {
 	mesh = new ExtTriangleMesh(newVertsCount, newTrisCount, newVerts, newTris,
 			newNorms, newUVs, newCols, newAlphas);
 
+	// For some debugging
+	//mesh->Save("debug.ply");
+
 	const double endTime = WallClockTime();
 	SDL_LOG("Subdividing time: " << (boost::format("%.3f") % (endTime - startTime)) << "secs");
 }

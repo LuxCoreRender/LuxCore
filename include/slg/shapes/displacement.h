@@ -29,8 +29,21 @@ class Texture;
 
 class DisplacementShape : public Shape {
 public:
+	typedef enum {
+		HIGHT_DISPLACEMENT,
+		VECTOR_DISPLACEMENT
+	} DisplacementType;
+	
+	typedef struct {
+		DisplacementType mapType;
+		u_int mapChannels[3];
+		float scale;
+		float offset;
+		bool normalSmooth;
+	} Params;
+
 	DisplacementShape(luxrays::ExtTriangleMesh *srcMesh, const Texture &dispMap,
-			const float dispScale, const float dispOffset, const bool dispNormalSmooth);
+			const Params &params);
 	virtual ~DisplacementShape();
 
 	virtual ShapeType GetType() const { return DISPLACEMENT; }

@@ -11,6 +11,7 @@
 * Added an option to normalize BlackBody texture output
 * Pointiness shape is now able to handle duplicate/similar vertices like if they were the same
 * Added the support for Displacement shape
+* Added the support for vector displacement to Displacement shape
 
 ### Fixed Bugs
 

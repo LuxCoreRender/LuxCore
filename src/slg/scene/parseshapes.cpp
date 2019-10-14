@@ -276,12 +276,35 @@ ExtTriangleMesh *Scene::CreateShape(const string &shapeName, const Properties &p
 			throw runtime_error("Unknown shape name in a displacement shape: " + shapeName);
 		
 		const Texture *tex = GetTexture(props.Get(Property(propName + ".map")(0.f)));
-		const float dispScale = Max(0.f, props.Get(Property(propName + ".scale")(1.f)).Get<float>());
-		const float dispOffset = Max(0.f, props.Get(Property(propName + ".offset")(0.f)).Get<float>());
-		const float dispNormalSmooth = props.Get(Property(propName + ".normalsmooth")(1)).Get<bool>();
 		
+		DisplacementShape::Params params;
+
+		const string vectorSpaceStr = props.Get(Property(propName + ".map.type")("height")).Get<string>();
+		if (vectorSpaceStr == "height")
+			params.mapType = DisplacementShape::HIGHT_DISPLACEMENT;
+		else if (vectorSpaceStr == "vector")
+			params.mapType = DisplacementShape::VECTOR_DISPLACEMENT;
+		else
+			throw runtime_error("Unknown map type in displacement shape: " + shapeName);
+
+		// Blender standard: R is an offset along
+		// the tangent, G along the normal and B along the bitangent.
+		// So map.channels = 2 0 1
+		//
+		// Mudbox standard: map.channels = 0 2 1
+		const Property propChannels = props.Get(Property(propName + ".map.channels")(2u, 0u, 1u));
+		if (propChannels.GetSize() != 3)
+			throw runtime_error("Wrong number of map channel indices in a displacement shape: " + shapeName);
+		params.mapChannels[0] = Min(propChannels.Get<u_int>(0), 2u);
+		params.mapChannels[1] = Min(propChannels.Get<u_int>(1), 2u);
+		params.mapChannels[2] = Min(propChannels.Get<u_int>(2), 2u);
+
+		params.scale = props.Get(Property(propName + ".scale")(1.f)).Get<float>();
+		params.offset = props.Get(Property(propName + ".offset")(0.f)).Get<float>();
+		params.normalSmooth = props.Get(Property(propName + ".normalsmooth")(1)).Get<bool>();
+
 		shape = new DisplacementShape((ExtTriangleMesh *)extMeshCache.GetExtMesh(sourceMeshName),
-				*tex, dispScale, dispOffset, dispNormalSmooth);
+				*tex, params);
 	} else
 		throw runtime_error("Unknown shape type: " + shapeType);
 

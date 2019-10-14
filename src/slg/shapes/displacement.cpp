@@ -26,18 +26,57 @@ using namespace luxrays;
 using namespace slg;
 
 DisplacementShape::DisplacementShape(luxrays::ExtTriangleMesh *srcMesh, const Texture &dispMap,
-			const float dispScale, const float dispOffset, const bool dispNormalSmooth) {
+		const Params &params) {
 	SDL_LOG("Displacement shape " << srcMesh->GetName() << " with texture " << dispMap.GetName());
 
+	// I need vertex normals
 	if (!srcMesh->HasNormals())
-		throw runtime_error("Displacement shape can be used only with mesh having vertex normals defined");
-			
+		srcMesh->ComputeNormals();
+
+	// I need vertex UVs for vector displacement
+	if ((params.mapType == VECTOR_DISPLACEMENT) && !srcMesh->HasUVs())
+		throw runtime_error("Displacement shape for vector displacement can be used only with mesh having UVs defined");
+
 	const double startTime = WallClockTime();
 
 	const u_int vertCount = srcMesh->GetTotalVertexCount();
 	const Point *vertices = srcMesh->GetVertices();
 	Point *newVertices = ExtTriangleMesh::AllocVerticesBuffer(vertCount);
-	
+
+	// I need to build the dpdu, dpdv, dndu, dndv for each vertex. They are mostly
+	// used for vector displacement but they may be used by the texture too.
+	vector<Vector> dpdu(vertCount);
+	vector<Vector> dpdv(vertCount);
+	vector<Normal> dndu(vertCount);
+	vector<Normal> dndv(vertCount);
+
+	// Go trough the faces and save the information
+	vector<bool> doneVerts(vertCount, false);
+	const u_int triCount = srcMesh->GetTotalTriangleCount();
+	const Triangle *tris = srcMesh->GetTriangles();
+	for (u_int i = 0; i < triCount; ++i) {
+		const Triangle &tri = tris[i];
+
+		for (u_int j = 0; j < 3; ++j) {
+			const u_int vertIndex = tri.v[j];
+
+			if (!doneVerts[vertIndex]) {
+				const Normal shadeN = srcMesh->GetShadeNormal(0.f, vertIndex);
+
+				// Compute geometry differentials
+				srcMesh->GetDifferentials(Transform::TRANS_IDENTITY, i, shadeN,
+						&dpdu[vertIndex], &dpdv[vertIndex],
+						&dndu[vertIndex], &dndv[vertIndex]);
+
+				doneVerts[vertIndex] = true;
+			}
+		}
+	}
+
+	const u_int binormalIndex = params.mapChannels[0];
+	const u_int tangentIndex = params.mapChannels[1];
+	const u_int normalIndex = params.mapChannels[2];
+
 	#pragma omp parallel for
 	for (
 			// Visual C++ 2013 supports only OpenMP 2.5
@@ -57,10 +96,10 @@ DisplacementShape::DisplacementShape(luxrays::ExtTriangleMesh *srcMesh, const Te
 		hitPoint.shadeN = hitPoint.interpolatedN;
 
 		hitPoint.color =  srcMesh->HasColors() ? srcMesh->GetColor(i) : Spectrum(1.f);
-		hitPoint.dpdu = 0.f;
-		hitPoint.dpdv = 0.f;
-		hitPoint.dndu = 0.f;
-		hitPoint.dndv = 0.f;
+		hitPoint.dpdu = dpdu[i];
+		hitPoint.dpdv = dpdv[i];
+		hitPoint.dndu = dndu[i];
+		hitPoint.dndv = dndv[i];
 		hitPoint.alpha = srcMesh->HasAlphas() ? srcMesh->GetAlpha(i) : 1.f;
 		hitPoint.passThroughEvent = 0.f;
 		srcMesh->GetLocal2World(0.f, hitPoint.localToWorld);
@@ -71,15 +110,36 @@ DisplacementShape::DisplacementShape(luxrays::ExtTriangleMesh *srcMesh, const Te
 		hitPoint.intoObject = true;
 		hitPoint.throughShadowTransparency = false;
 
-		const Vector disp = (dispMap.GetFloatValue(hitPoint) * dispScale + dispOffset) *
-				Vector(hitPoint.shadeN);
+		Vector disp;
+		if (params.mapType == HIGHT_DISPLACEMENT)
+			disp = (dispMap.GetFloatValue(hitPoint) * params.scale + params.offset) *
+					Vector(hitPoint.shadeN);
+		else {
+			// Not using dispOffset parameter because it doesn't make very much sense
+			// for vector displacement
+			const Spectrum dispValue = dispMap.GetSpectrumValue(hitPoint) * params.scale;
+
+			// Build the local reference system, uses shadeN, dpdu and dpdv
+			const Frame frame = hitPoint.GetFrame();
+			
+			disp = frame.ToWorld(Vector(dispValue.c[binormalIndex], dispValue.c[tangentIndex], dispValue.c[normalIndex]));
+
+
+			// I work on tangent space and in this case: R is an offset along
+			// the tangent, G along the normal and B along the bitangent.
+			// This is the Blender standard.
+			//disp = frame.ToWorld(Vector(dispValue.c[2], dispValue.c[0], dispValue.c[1]));
+			
+			// This is the Mudbox standard.
+			//disp = frame.ToWorld(Vector(dispValue.c[0], dispValue.c[2], dispValue.c[1]));
+		}
 
 		newVertices[i] = vertices[i] + disp;
 	}
 	
 	// Make a copy of the original mesh and overwrite vertex informations
 	mesh = srcMesh->Copy(newVertices, nullptr, nullptr, nullptr, nullptr, nullptr);
-	if (dispNormalSmooth)
+	if (params.normalSmooth)
 		mesh->ComputeNormals();
 	
 	// For some debugging
