@@ -1,3 +1,5 @@
+#line 2 "plugin_whitebalance_funcs.cl"
+
 /***************************************************************************
  * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
  *                                                                         *
@@ -16,60 +18,24 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_WHITE_BALANCE_H
-#define	_SLG_WHITE_BALANCE_H
-
-#include <boost/format.hpp>
-
-#include "luxrays/luxrays.h"
-#include "luxrays/core/color/color.h"
-#include "slg/film/film.h"
-#include "slg/film/imagepipeline/imagepipeline.h"
-
-
 //------------------------------------------------------------------------------
-// White balance filter using Piccante library
+// WhiteBalance_Apply
 //------------------------------------------------------------------------------
-namespace slg {
 
-class WhiteBalance : public ImagePipelinePlugin {
-public:
-	WhiteBalance();
-	WhiteBalance(const float temperature);
-	~WhiteBalance();
+__kernel __attribute__((work_group_size_hint(256, 1, 1))) void WhiteBalance_Apply(
+		const uint filmWidth, const uint filmHeight,
+		__global float *channel_IMAGEPIPELINE,
+		const float whitePointR, const float whitePointG, const float whitePointB) {
+	const size_t gid = get_global_id(0);
+	if (gid >= filmWidth * filmHeight)
+		return;
 
-	virtual ImagePipelinePlugin *Copy() const;
+	// Check if the pixel has received any sample
+	if (!isinf(channel_IMAGEPIPELINE[gid * 3])) {
+		__global float *pixel = &channel_IMAGEPIPELINE[gid * 3];
 
-	virtual void Apply(Film &film, const u_int index);
-
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	virtual bool CanUseOpenCL() const { return true; }
-	virtual void ApplyOCL(Film &film, const u_int index);
-#endif
-
-	friend class boost::serialization::access;
-
-private:
-	WhiteBalance(const luxrays::Spectrum &whitePoint);
-
-	luxrays::Spectrum whitePoint;
-
-	static luxrays::Spectrum TemperatureToWhitePoint(const float temperature);
-
-	template<class Archive> void serialize(Archive &ar, const u_int version) {
-		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImagePipelinePlugin);
-		ar & whitePoint;
+		pixel[0] *= whitePointR;
+		pixel[1] *= whitePointG;
+		pixel[2] *= whitePointB;
 	}
-
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	cl::Kernel *applyKernel;
-#endif
-};
-
 }
-
-BOOST_CLASS_VERSION(slg::WhiteBalance, 1)
-
-BOOST_CLASS_EXPORT_KEY(slg::WhiteBalance)
-
-#endif

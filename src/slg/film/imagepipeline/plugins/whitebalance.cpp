@@ -16,8 +16,10 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "slg/film/imagepipeline/plugins/whitebalance.h"
 #include "luxrays/core/color/spds/blackbodyspd.h"
+
+#include "slg/kernels/kernels.h"
+#include "slg/film/imagepipeline/plugins/whitebalance.h"
 
 using namespace std;
 using namespace luxrays;
@@ -30,12 +32,28 @@ using namespace slg;
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::WhiteBalance)
 
 WhiteBalance::WhiteBalance(): whitePoint(TemperatureToWhitePoint(6500.f)) {
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	applyKernel = nullptr;
+#endif
 }
 
-WhiteBalance::WhiteBalance(float tmp): whitePoint(TemperatureToWhitePoint(tmp)) {
+WhiteBalance::WhiteBalance(const float temperature):
+		whitePoint(TemperatureToWhitePoint(temperature)) {
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	applyKernel = nullptr;
+#endif
 }
 
-WhiteBalance::WhiteBalance(Spectrum wht_pt): whitePoint(wht_pt) {
+WhiteBalance::WhiteBalance(const Spectrum &wht_pt): whitePoint(wht_pt) {
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	applyKernel = nullptr;
+#endif
+}
+
+WhiteBalance::~WhiteBalance() {
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	delete applyKernel;
+#endif
 }
 
 ImagePipelinePlugin *WhiteBalance::Copy() const {
@@ -43,7 +61,6 @@ ImagePipelinePlugin *WhiteBalance::Copy() const {
 }
 
 Spectrum WhiteBalance::TemperatureToWhitePoint(const float temperature) {
-
     // Same code as in the RadianceChannelScale class
     BlackbodySPD spd(temperature);
     XYZColor colorTemp = spd.ToXYZ();
@@ -55,23 +72,56 @@ Spectrum WhiteBalance::TemperatureToWhitePoint(const float temperature) {
 }
 
 void WhiteBalance::Apply(Film &film, const u_int index) {
+	Spectrum *pixels = (Spectrum *) film.channel_IMAGEPIPELINEs[index]->GetPixels();
 
-    Spectrum *pixels = (Spectrum *)film.channel_IMAGEPIPELINEs[index]->GetPixels();
+	const u_int width = film.GetWidth();
+	const u_int height = film.GetHeight();
 
-    const u_int width = film.GetWidth();
-    const u_int height = film.GetHeight();
+	const u_int pixelCount = width * height;
 
-    const u_int pixelCount = width * height;
 	#pragma omp parallel for
 	for (
 			// Visual C++ 2013 supports only OpenMP 2.5
-    #if _OPENMP >= 200805
-		unsigned
-    #endif
-        int i = 0; i < pixelCount; ++i) {
-            pixels[i].c[0] *= whitePoint.c[0];
-            pixels[i].c[1] *= whitePoint.c[1];
-            pixels[i].c[2] *= whitePoint.c[2];
-        }
-
+#if _OPENMP >= 200805
+			unsigned
+#endif
+			int i = 0; i < pixelCount; ++i) {
+		pixels[i] *= whitePoint;
+	}
 }
+
+//------------------------------------------------------------------------------
+// OpenCL version
+//------------------------------------------------------------------------------
+
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+void WhiteBalance::ApplyOCL(Film &film, const u_int index) {
+	if (!applyKernel) {
+		// Compile sources
+		const double tStart = WallClockTime();
+
+		cl::Program *program = ImagePipelinePlugin::CompileProgram(film, "",
+				slg::ocl::KernelSource_plugin_whitebalance_funcs, "WhiteBalance");
+
+		SLG_LOG("[WhiteBalance] Compiling WhiteBalance_Apply Kernel");
+		applyKernel = new cl::Kernel(*program, "WhiteBalance_Apply");
+
+		delete program;
+
+		// Set kernel arguments
+		u_int argIndex = 0;
+		applyKernel->setArg(argIndex++, film.GetWidth());
+		applyKernel->setArg(argIndex++, film.GetHeight());
+		applyKernel->setArg(argIndex++, *(film.ocl_IMAGEPIPELINE));
+		applyKernel->setArg(argIndex++, whitePoint.c[0]);
+		applyKernel->setArg(argIndex++, whitePoint.c[1]);
+		applyKernel->setArg(argIndex++, whitePoint.c[2]);
+
+		const double tEnd = WallClockTime();
+		SLG_LOG("[WhiteBalance] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
+	}
+
+	film.oclIntersectionDevice->GetOpenCLQueue().enqueueNDRangeKernel(*applyKernel,
+			cl::NullRange, cl::NDRange(RoundUp(film.GetWidth() * film.GetHeight(), 256u)), cl::NDRange(256));
+}
+#endif

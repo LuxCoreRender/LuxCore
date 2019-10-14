@@ -12,6 +12,7 @@
 * Pointiness shape is now able to handle duplicate/similar vertices like if they were the same
 * Added the support for Displacement shape
 * Added the support for vector displacement to Displacement shape
+* New image pipeline plugin: White balance
 
 ### Fixed Bugs
 

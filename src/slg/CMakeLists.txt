@@ -218,8 +218,9 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_gammacorrection_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_gaussianblur3x3_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_objectidmask_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_vignetting_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_premultiplyalpha_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_vignetting_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_whitebalance_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/tonemaps/tonemap_reduce_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/tonemaps/tonemap_autolinear_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/tonemaps/tonemap_linear_funcs.cl
@@ -576,8 +577,9 @@ set(SLG_KERNEL_SRCS
 	${generated_kernels_dir}/plugin_gammacorrection_funcs_kernel.cpp
 	${generated_kernels_dir}/plugin_gaussianblur3x3_funcs_kernel.cpp
 	${generated_kernels_dir}/plugin_objectidmask_funcs_kernel.cpp
-	${generated_kernels_dir}/plugin_vignetting_funcs_kernel.cpp
 	${generated_kernels_dir}/plugin_premultiplyalpha_funcs_kernel.cpp
+	${generated_kernels_dir}/plugin_vignetting_funcs_kernel.cpp
+	${generated_kernels_dir}/plugin_whitebalance_funcs_kernel.cpp
 	${generated_kernels_dir}/tonemap_reduce_funcs_kernel.cpp
 	${generated_kernels_dir}/tonemap_autolinear_funcs_kernel.cpp
 	${generated_kernels_dir}/tonemap_linear_funcs_kernel.cpp
