@@ -183,6 +183,15 @@ set(OPENSUBDIV_SRCS
 	${LuxRays_SOURCE_DIR}/deps/opensubdiv-3.4.0/opensubdiv/version.cpp
 )
 
+if (OPENMP_FOUND)
+	set(OPENSUBDIV_SRCS
+		${OPENSUBDIV_SRCS}
+		${LuxRays_SOURCE_DIR}/deps/opensubdiv-3.4.0/opensubdiv/osd/ompEvaluator.cpp
+		${LuxRays_SOURCE_DIR}/deps/opensubdiv-3.4.0/opensubdiv/osd/ompKernel.cpp
+	)
+
+endif()
+
 SOURCE_GROUP("Source Files\\OpenSubdiv Library" FILES ${OPENSUBDIV_SRCS})
 
 include_directories(${LuxRays_SOURCE_DIR}/deps/opensubdiv-3.4.0)

@@ -24,9 +24,20 @@
 #include <opensubdiv/far/patchTableFactory.h>
 #include <opensubdiv/far/stencilTableFactory.h>
 #include <opensubdiv/far/topologyRefinerFactory.h>
-#include <opensubdiv/osd/cpuEvaluator.h>
 #include <opensubdiv/osd/cpuPatchTable.h>
 #include <opensubdiv/osd/cpuVertexBuffer.h>
+
+#if defined(_OPENMP)
+
+#include <opensubdiv/osd/ompEvaluator.h>
+#define OSD_EVALUATOR Osd::OmpEvaluator
+
+#else
+
+#include <opensubdiv/osd/cpuEvaluator.h>
+#define OSD_EVALUATOR Osd::CpuEvaluator
+
+#endif
 
 #include "slg/shapes/subdiv.h"
 #include "slg/scene/scene.h"
@@ -83,9 +94,9 @@ SubdivShape::SubdivShape(ExtTriangleMesh *srcMesh, const u_int maxLevel) {
 			Far::PatchTableFactory::Create(*refiner, patchOptions);
 
 	// Append local point stencils
-	if (const Far::StencilTable * localPointStencilTable =
+	if (const Far::StencilTable *localPointStencilTable =
 			patchTable->GetLocalPointStencilTable()) {
-		if (const Far::StencilTable * combinedTable =
+		if (const Far::StencilTable *combinedTable =
 				Far::StencilTableFactory::AppendLocalPointStencilTable(
 				*refiner, stencilTable, localPointStencilTable)) {
 			delete stencilTable;
@@ -100,10 +111,8 @@ SubdivShape::SubdivShape(ExtTriangleMesh *srcMesh, const u_int maxLevel) {
 	// Setup a buffer for vertex primvar data
 	const u_int vertsCount = refiner->GetLevel(0).GetNumVertices();
     const u_int newVertsCount = refiner->GetNumVerticesTotal();
+	const u_int totalVertsCount = vertsCount + newVertsCount;
 
-	const u_int totalVertsCount = stencilTable->GetNumControlVertices() +
-                       stencilTable->GetNumStencils();
-	
 	// Vertices
     Osd::CpuVertexBuffer *vertsBuffer =
         Osd::CpuVertexBuffer::Create(3, totalVertsCount);
@@ -116,7 +125,7 @@ SubdivShape::SubdivShape(ExtTriangleMesh *srcMesh, const u_int maxLevel) {
 	vertsBuffer->UpdateData((const float *)srcMesh->GetVertices(), 0, vertsCount);
 
 	// Refine vertex points (coarsePoints -> refinedPoints)
-	Osd::CpuEvaluator::EvalStencils(vertsBuffer, vertsDesc,
+	OSD_EVALUATOR::EvalStencils(vertsBuffer, vertsDesc,
 		vertsBuffer, newVertsDesc,
 		stencilTable);
 	
@@ -130,7 +139,7 @@ SubdivShape::SubdivShape(ExtTriangleMesh *srcMesh, const u_int maxLevel) {
 		
 		normsBuffer->UpdateData((const float *)srcMesh->GetNormals(), 0, vertsCount);
 
-		Osd::CpuEvaluator::EvalStencils(normsBuffer, normsDesc,
+		OSD_EVALUATOR::EvalStencils(normsBuffer, normsDesc,
 				normsBuffer, newNormsDesc,
 				stencilTable);
 	}
@@ -145,7 +154,7 @@ SubdivShape::SubdivShape(ExtTriangleMesh *srcMesh, const u_int maxLevel) {
 		
 		uvsBuffer->UpdateData((const float *)srcMesh->GetUVs(), 0, vertsCount);
 
-		Osd::CpuEvaluator::EvalStencils(uvsBuffer, uvsDesc,
+		OSD_EVALUATOR::EvalStencils(uvsBuffer, uvsDesc,
 				uvsBuffer, newUVsDesc,
 				stencilTable);
 	}
@@ -160,7 +169,7 @@ SubdivShape::SubdivShape(ExtTriangleMesh *srcMesh, const u_int maxLevel) {
 		
 		colsBuffer->UpdateData((const float *)srcMesh->GetColors(), 0, vertsCount);
 
-		Osd::CpuEvaluator::EvalStencils(colsBuffer, colsDesc,
+		OSD_EVALUATOR::EvalStencils(colsBuffer, colsDesc,
 				colsBuffer, newColsDesc,
 				stencilTable);
 	}
@@ -175,7 +184,7 @@ SubdivShape::SubdivShape(ExtTriangleMesh *srcMesh, const u_int maxLevel) {
 		
 		alphasBuffer->UpdateData((const float *)srcMesh->GetAlphas(), 0, vertsCount);
 
-		Osd::CpuEvaluator::EvalStencils(alphasBuffer, alphasDesc,
+		OSD_EVALUATOR::EvalStencils(alphasBuffer, alphasDesc,
 				alphasBuffer, newAlphasDesc,
 				stencilTable);
 	}
