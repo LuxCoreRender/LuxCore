@@ -39,7 +39,7 @@ namespace OPENSUBDIV_VERSION {
 
 namespace Far{
     class PatchTable;
-};
+}
 
 namespace Osd {
 

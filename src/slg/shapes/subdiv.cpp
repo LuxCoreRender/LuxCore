@@ -19,7 +19,14 @@
 #include <boost/format.hpp>
 
 #include <opensubdiv/far/topologyDescriptor.h>
-#include <opensubdiv/far/primvarRefiner.h>
+#include <opensubdiv/far/patchMap.h>
+#include <opensubdiv/far/patchTable.h>
+#include <opensubdiv/far/patchTableFactory.h>
+#include <opensubdiv/far/stencilTableFactory.h>
+#include <opensubdiv/far/topologyRefinerFactory.h>
+#include <opensubdiv/osd/cpuEvaluator.h>
+#include <opensubdiv/osd/cpuPatchTable.h>
+#include <opensubdiv/osd/cpuVertexBuffer.h>
 
 #include "slg/shapes/subdiv.h"
 #include "slg/scene/scene.h"
@@ -28,20 +35,6 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 using namespace OpenSubdiv;
-
-// used for Mesh Alpha channel
-
-struct ScalarValue {
-	void Clear(void * = 0) {
-		value = 0.f;
-	}
-
-	void AddWithWeight(ScalarValue const &src, float weight) {
-		value += weight * src.value;
-	}
-
-	float value;
-};
 
 SubdivShape::SubdivShape(ExtTriangleMesh *srcMesh, const u_int maxLevel) {
 	SDL_LOG("Subdividing shape " << srcMesh->GetName() << " at level: " << maxLevel);
@@ -68,151 +61,204 @@ SubdivShape::SubdivShape(ExtTriangleMesh *srcMesh, const u_int maxLevel) {
     refiner->RefineUniform(Far::TopologyRefiner::UniformOptions(maxLevel));
 
 	//--------------------------------------------------------------------------
-	// We want buffers for the last/finest subdivision level to persist.  We
-	// have no interest in the intermediate levels.
-    //
-    // Determine the sizes for our needs:
-    const u_int tmpVertsCount = refiner->GetNumVerticesTotal() -
-		srcMesh->GetTotalVertexCount() - refiner->GetLevel(maxLevel).GetNumVertices();
+	// Setup a factory and create StencilTable
+	//--------------------------------------------------------------------------
 
-	// Allocate intermediate and final storage to be populated
+	Far::StencilTableFactory::Options stencilOptions;
+    stencilOptions.generateOffsets = true;
+    stencilOptions.generateIntermediateLevels = false;
 	
-	// Vertices
-	vector<Point> tmpVertsBuffer(tmpVertsCount);
+	const Far::StencilTable *stencilTable =
+		Far::StencilTableFactory::Create(*refiner, stencilOptions);
+	
+	//--------------------------------------------------------------------------
+    // Setup a factory to create PatchTable
+	//--------------------------------------------------------------------------
 
-	// Normals
-	vector<Normal> tmpNormsBuffer;
-	if (srcMesh->HasNormals())
-		tmpNormsBuffer.resize(tmpVertsCount);
+    Far::PatchTableFactory::Options patchOptions;
+	patchOptions.SetEndCapType(
+			Far::PatchTableFactory::Options::ENDCAP_BSPLINE_BASIS);
 
-	// UVs
-	vector<UV> tmpUVsBuffer;
-	if (srcMesh->HasUVs())
-		tmpUVsBuffer.resize(tmpVertsCount);
+	const Far::PatchTable *patchTable =
+			Far::PatchTableFactory::Create(*refiner, patchOptions);
 
-	// Colors
-	vector<Spectrum> tmpColsBuffer;
-	if (srcMesh->HasColors())
-		tmpColsBuffer.resize(tmpVertsCount);
-
-	// Alphas
-	vector<ScalarValue> tmpAlphasBuffer;
-	if (srcMesh->HasAlphas())
-		tmpAlphasBuffer.resize(tmpVertsCount);
-
-    // Interpolate vertex primvar data
-    Far::PrimvarRefiner primvarRefiner(*refiner);
-
-	// Vertices
-    Point *srcVert = srcMesh->GetVertices();
-	Point *dstVert = &tmpVertsBuffer[0];
-
-	// Normals
-	Normal *srcNorm = srcMesh->HasNormals() ? srcMesh->GetNormals() : nullptr;
-	Normal *dstNorm = srcMesh->HasNormals() ? &tmpNormsBuffer[0] : nullptr;
-
-	// UVs
-	UV *srcUV = srcMesh->HasUVs() ? srcMesh->GetUVs() : nullptr;
-	UV *dstUV = srcMesh->HasUVs() ? &tmpUVsBuffer[0] : nullptr;
-
-	// Colors
-	Spectrum *srcCol = srcMesh->HasColors() ? srcMesh->GetColors() : nullptr;
-	Spectrum *dstCol = srcMesh->HasColors() ? &tmpColsBuffer[0] : nullptr;
-
-	// Alphas
-	ScalarValue *srcAlpha = srcMesh->HasAlphas() ? (ScalarValue *)srcMesh->GetAlphas() : nullptr;
-	ScalarValue *dstAlpha = srcMesh->HasAlphas() ? &tmpAlphasBuffer[0] : nullptr;
-
-	for (u_int level = 1; level < maxLevel; ++level) {
-		primvarRefiner.Interpolate(level, srcVert, dstVert);
-
-		srcVert = dstVert;
-		dstVert += refiner->GetLevel(level).GetNumVertices();
-
-		if (srcMesh->HasNormals()) {
-			primvarRefiner.Interpolate(level, srcNorm, dstNorm);
-			srcNorm = dstNorm;
-			dstNorm += refiner->GetLevel(level).GetNumVertices();
-		}
-
-		if (srcMesh->HasUVs()) {
-			primvarRefiner.Interpolate(level, srcUV, dstUV);
-			srcUV = dstUV;
-			dstUV += refiner->GetLevel(level).GetNumVertices();
-		}
-
-		if (srcMesh->HasColors()) {
-			primvarRefiner.Interpolate(level, srcCol, dstCol);
-			srcCol = dstCol;
-			dstCol += refiner->GetLevel(level).GetNumVertices();
-		}
-
-		if (srcMesh->HasAlphas()) {
-			primvarRefiner.Interpolate(level, srcAlpha, dstAlpha);
-			srcAlpha = dstAlpha;
-			dstAlpha += refiner->GetLevel(level).GetNumVertices();
+	// Append local point stencils
+	if (const Far::StencilTable * localPointStencilTable =
+			patchTable->GetLocalPointStencilTable()) {
+		if (const Far::StencilTable * combinedTable =
+				Far::StencilTableFactory::AppendLocalPointStencilTable(
+				*refiner, stencilTable, localPointStencilTable)) {
+			delete stencilTable;
+			stencilTable = combinedTable;
 		}
 	}
 
 	//--------------------------------------------------------------------------
-	// Create a new mesh of the highest level refined
+	// Set buffers and evaluate the stencil
 	//--------------------------------------------------------------------------
 
-	Far::TopologyLevel const &refLastLevel = refiner->GetLevel(maxLevel);
+	// Setup a buffer for vertex primvar data
+	const u_int vertsCount = refiner->GetLevel(0).GetNumVertices();
+    const u_int newVertsCount = refiner->GetNumVerticesTotal();
 
+	const u_int totalVertsCount = stencilTable->GetNumControlVertices() +
+                       stencilTable->GetNumStencils();
+	
 	// Vertices
-	const u_int newVertsCount = refLastLevel.GetNumVertices();
-	Point *newVerts = TriangleMesh::AllocVerticesBuffer(newVertsCount);
-	// Interpolate the last level into the separate buffers for our final data
-    primvarRefiner.Interpolate(maxLevel, srcVert, newVerts);
+    Osd::CpuVertexBuffer *vertsBuffer =
+        Osd::CpuVertexBuffer::Create(3, totalVertsCount);
 
-	// Triangle
-	const u_int newTrisCount = refLastLevel.GetNumFaces();
-	Triangle *newTris = TriangleMesh::AllocTrianglesBuffer(newTrisCount);
+    Osd::BufferDescriptor vertsDesc(0, 3, 3);
+    Osd::BufferDescriptor newVertsDesc(vertsCount * 3, 3, 3);
 
-	for (u_int triIndex = 0; triIndex < newTrisCount; ++triIndex) {
-		Far::ConstIndexArray triVerts = refLastLevel.GetFaceVertices(triIndex);
-		assert(triVerts.size() == 3);
-		
-		Triangle &tri = newTris[triIndex];
-		tri.v[0] = triVerts[0];
-		tri.v[1] = triVerts[1];
-		tri.v[2] = triVerts[2];
-    }
+	// Pack the control vertex data at the start of the vertex buffer
+	// and update every time control data changes
+	vertsBuffer->UpdateData((const float *)srcMesh->GetVertices(), 0, vertsCount);
 
+	// Refine vertex points (coarsePoints -> refinedPoints)
+	Osd::CpuEvaluator::EvalStencils(vertsBuffer, vertsDesc,
+		vertsBuffer, newVertsDesc,
+		stencilTable);
+	
 	// Normals
+    Osd::CpuVertexBuffer *normsBuffer = nullptr;
+	if (srcMesh->HasNormals()) {
+        normsBuffer = Osd::CpuVertexBuffer::Create(3, totalVertsCount);
+
+		Osd::BufferDescriptor normsDesc(0, 3, 3);
+		Osd::BufferDescriptor newNormsDesc(vertsCount * 3, 3, 3);
+		
+		normsBuffer->UpdateData((const float *)srcMesh->GetNormals(), 0, vertsCount);
+
+		Osd::CpuEvaluator::EvalStencils(normsBuffer, normsDesc,
+				normsBuffer, newNormsDesc,
+				stencilTable);
+	}
+
+	// UVs
+    Osd::CpuVertexBuffer *uvsBuffer = nullptr;
+	if (srcMesh->HasUVs()) {
+        uvsBuffer = Osd::CpuVertexBuffer::Create(2, totalVertsCount);
+
+		Osd::BufferDescriptor uvsDesc(0, 2, 2);
+		Osd::BufferDescriptor newUVsDesc(vertsCount * 2, 2, 2);
+		
+		uvsBuffer->UpdateData((const float *)srcMesh->GetUVs(), 0, vertsCount);
+
+		Osd::CpuEvaluator::EvalStencils(uvsBuffer, uvsDesc,
+				uvsBuffer, newUVsDesc,
+				stencilTable);
+	}
+
+	// Cols
+    Osd::CpuVertexBuffer *colsBuffer = nullptr;
+	if (srcMesh->HasColors()) {
+        colsBuffer = Osd::CpuVertexBuffer::Create(3, totalVertsCount);
+
+		Osd::BufferDescriptor colsDesc(0, 3, 3);
+		Osd::BufferDescriptor newColsDesc(vertsCount * 3, 3, 3);
+		
+		colsBuffer->UpdateData((const float *)srcMesh->GetColors(), 0, vertsCount);
+
+		Osd::CpuEvaluator::EvalStencils(colsBuffer, colsDesc,
+				colsBuffer, newColsDesc,
+				stencilTable);
+	}
+
+	// Alphas
+    Osd::CpuVertexBuffer *alphasBuffer = nullptr;
+	if (srcMesh->HasAlphas()) {
+        alphasBuffer = Osd::CpuVertexBuffer::Create(1, totalVertsCount);
+
+		Osd::BufferDescriptor alphasDesc(0, 1, 1);
+		Osd::BufferDescriptor newAlphasDesc(vertsCount * 1, 1, 1);
+		
+		alphasBuffer->UpdateData((const float *)srcMesh->GetAlphas(), 0, vertsCount);
+
+		Osd::CpuEvaluator::EvalStencils(alphasBuffer, alphasDesc,
+				alphasBuffer, newAlphasDesc,
+				stencilTable);
+	}
+
+	//--------------------------------------------------------------------------
+	// Build the new mesh
+	//--------------------------------------------------------------------------
+
+	// New vertices
+	Point *newVerts = TriangleMesh::AllocVerticesBuffer(newVertsCount);
+
+	const float *refinedVerts = vertsBuffer->BindCpuBuffer() + 3 * vertsCount;
+	copy(refinedVerts, refinedVerts + 3 * newVertsCount, &newVerts->x);
+
+	// New triangles
+	u_int newTrisCount = 0;
+	for (int array = 0; array < patchTable->GetNumPatchArrays(); ++array)
+		for (int patch = 0; patch < patchTable->GetNumPatches(array); ++patch)
+			++newTrisCount;
+
+	Triangle *newTris = TriangleMesh::AllocTrianglesBuffer(newTrisCount);
+	u_int triIndex = 0;
+	for (int array = 0; array < patchTable->GetNumPatchArrays(); ++array) {
+		for (int patch = 0; patch < patchTable->GetNumPatches(array); ++patch) {
+			const Far::ConstIndexArray faceVerts =
+				patchTable->GetPatchVertices(array, patch);
+			
+			assert (faceVerts.size() == 3);
+			newTris[triIndex].v[0] = faceVerts[0] - vertsCount;
+			newTris[triIndex].v[1] = faceVerts[1] - vertsCount;
+			newTris[triIndex].v[2] = faceVerts[2] - vertsCount;
+
+			++triIndex;
+		}
+	}
+
+	// New normals
 	Normal *newNorms = nullptr;
 	if (srcMesh->HasNormals()) {
 		newNorms = new Normal[newVertsCount];
-		// Interpolate the last level into the separate buffers for our final data
-		primvarRefiner.Interpolate(maxLevel, srcNorm, newNorms);
+
+		const float *refinedNorms = normsBuffer->BindCpuBuffer() + 3 * vertsCount;
+		copy(refinedNorms, refinedNorms + 3 * newVertsCount, &newNorms->x);
 	}
 
-	// UVs
+	// New UVs
 	UV *newUVs = nullptr;
 	if (srcMesh->HasUVs()) {
 		newUVs = new UV[newVertsCount];
-		// Interpolate the last level into the separate buffers for our final data
-		primvarRefiner.Interpolate(maxLevel, srcUV, newUVs);
+
+		const float *refinedUVs = uvsBuffer->BindCpuBuffer() + 2 * vertsCount;
+		copy(refinedUVs, refinedUVs + 2 * newVertsCount, &newUVs->u);
 	}
 
-	// Colors
+	// New colors
 	Spectrum *newCols = nullptr;
 	if (srcMesh->HasColors()) {
 		newCols = new Spectrum[newVertsCount];
-		// Interpolate the last level into the separate buffers for our final data
-		primvarRefiner.Interpolate(maxLevel, srcCol, newCols);
+
+		const float *refinedCols = colsBuffer->BindCpuBuffer() + 3 * vertsCount;
+		copy(refinedCols, refinedCols + 3 * newVertsCount, &newCols->c[0]);
 	}
 
-	// Alphas
+	// New alphas
 	float *newAlphas = nullptr;
 	if (srcMesh->HasAlphas()) {
 		newAlphas = new float[newVertsCount];
-		ScalarValue *newAlphasScalar = (ScalarValue *)newAlphas;
-		// Interpolate the last level into the separate buffers for our final data
-		primvarRefiner.Interpolate(maxLevel, srcAlpha, newAlphasScalar);
+
+		const float *refinedAlphas = alphasBuffer->BindCpuBuffer() + 1 * vertsCount;
+		copy(refinedAlphas, refinedAlphas + 1 * newVertsCount, newAlphas);
 	}
 
+	// Free memory
+	delete refiner;
+	delete stencilTable;
+	delete patchTable;
+    delete vertsBuffer;
+	delete normsBuffer;
+	delete uvsBuffer;
+	delete colsBuffer;
+	delete alphasBuffer;
+
+	// Allocate the new mesh
 	SDL_LOG("Subdividing shape from " << desc.numFaces << " to " << newTrisCount << " faces");
 	mesh = new ExtTriangleMesh(newVertsCount, newTrisCount, newVerts, newTris,
 			newNorms, newUVs, newCols, newAlphas);

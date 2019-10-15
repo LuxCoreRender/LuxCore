@@ -21,7 +21,7 @@ scene.shapes.obj_redply.type = mesh
 scene.shapes.obj_redply.ply = scenes/bump/mat_red.ply
 scene.shapes.obj_red.type = subdiv
 scene.shapes.obj_red.source = obj_redply
-scene.shapes.obj_red.maxlevel = 2
+scene.shapes.obj_red.maxlevel = 1
 ################################################################################
 scene.objects.obj_light.ply = scenes/bump/mat_light.ply
 scene.objects.obj_light.material = mat_light
