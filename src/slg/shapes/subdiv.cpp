@@ -30,6 +30,7 @@
 #if defined(_OPENMP)
 
 #include <opensubdiv/osd/ompEvaluator.h>
+#include <unordered_map>
 #define OSD_EVALUATOR Osd::OmpEvaluator
 
 #else
@@ -47,10 +48,39 @@ using namespace luxrays;
 using namespace slg;
 using namespace OpenSubdiv;
 
+struct Edge {
+	Edge(const u_int v0Index, const u_int v1Index) {
+		if (v0Index <= v1Index) {
+			vIndex[0] = v0Index;
+			vIndex[1] = v1Index;
+		} else {
+			vIndex[0] = v1Index;
+			vIndex[1] = v0Index;
+		}
+	}
+
+	bool operator==(const Edge &edge) const {
+		return (vIndex[0] == edge.vIndex[0]) && (vIndex[1] == edge.vIndex[1]);
+	}
+
+	u_int vIndex[2];
+};
+
+class EdgeHashFunction {
+public:
+	size_t operator()(const Edge &edge) const {
+		return (edge.vIndex[0] * 0x1f1f1f1fu) ^ edge.vIndex[1];
+	}
+};
+
 SubdivShape::SubdivShape(ExtTriangleMesh *srcMesh, const u_int maxLevel) {
 	SDL_LOG("Subdividing shape " << srcMesh->GetName() << " at level: " << maxLevel);
 
 	const double startTime = WallClockTime();
+
+	//--------------------------------------------------------------------------
+	// Define the mesh
+	//--------------------------------------------------------------------------
 
 	Sdc::SchemeType type = Sdc::SCHEME_LOOP;
 
@@ -63,6 +93,64 @@ SubdivShape::SubdivShape(ExtTriangleMesh *srcMesh, const u_int maxLevel) {
 	vector<int> vertPerFace(desc.numFaces, 3);
 	desc.numVertsPerFace = &vertPerFace[0];
 	desc.vertIndicesPerFace = (const int *)srcMesh->GetTriangles();
+
+	// Look for mesh boundary edges
+	unordered_map<Edge, u_int, EdgeHashFunction> edgesMap;
+		const u_int triCount = srcMesh->GetTotalTriangleCount();
+	const Triangle *tris = srcMesh->GetTriangles();
+
+	// Count how many times an edge is shared
+	for (u_int i = 0; i < triCount; ++i) {
+		const Triangle &tri = tris[i];
+		
+		 const Edge edge0(tri.v[0], tri.v[1]);
+		 if (edgesMap.find(edge0) != edgesMap.end())
+			edgesMap[edge0] += 1;
+		 else
+			edgesMap[edge0] = 1;
+		
+		 const Edge edge1(tri.v[1], tri.v[2]);
+		 if (edgesMap.find(edge1) != edgesMap.end())
+			edgesMap[edge1] += 1;
+		 else
+			edgesMap[edge1] = 1;
+		
+		 const Edge edge2(tri.v[2], tri.v[0]);
+		 if (edgesMap.find(edge2) != edgesMap.end())
+			edgesMap[edge2] += 1;
+		 else
+			edgesMap[edge2] = 1;
+	}
+
+	vector<bool> isBoundaryVertex(srcMesh->GetTotalVertexCount(), false);
+	vector<Far::Index> cornerVertexIndices;
+	vector<float> cornerWeights;
+	for (auto em : edgesMap) {
+		if (em.second == 1) {
+			// It is a boundary edge
+			
+			const Edge &e = em.first;
+			
+			if (!isBoundaryVertex[e.vIndex[0]]) {
+				cornerVertexIndices.push_back(e.vIndex[0]);
+				cornerWeights.push_back(10.f);
+				isBoundaryVertex[e.vIndex[0]] = true;
+			}
+			
+			if (!isBoundaryVertex[e.vIndex[1]]) {
+				cornerVertexIndices.push_back(e.vIndex[1]);
+				cornerWeights.push_back(10.f);
+				isBoundaryVertex[e.vIndex[1]] = true;
+			}
+		}
+	}
+	
+	// Initialize TopologyDescriptor corners if I have some
+	if (cornerVertexIndices.size() > 0) {
+		desc.numCorners = cornerVertexIndices.size();
+		desc.cornerVertexIndices = &cornerVertexIndices[0];
+		desc.cornerWeights = &cornerWeights[0];
+	}
 
 	// Instantiate a Far::TopologyRefiner from the descriptor
 	Far::TopologyRefiner *refiner = Far::TopologyRefinerFactory<Far::TopologyDescriptor>::Create(desc,
