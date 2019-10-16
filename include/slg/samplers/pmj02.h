@@ -16,110 +16,113 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_SAMPLER_H
-#define	_SLG_SAMPLER_H
+#ifndef _SLG_pmj02_SAMPLER_H
+#define	_SLG_pmj02_SAMPLER_H
 
 #include <string>
 #include <vector>
+#include <array>
 
 #include "luxrays/core/randomgen.h"
+#include "luxrays/utils/atomic.h"
 #include "slg/slg.h"
 #include "slg/film/film.h"
-#include "slg/film/filmsamplesplatter.h"
-#include "slg/film/sampleresult.h"
+#include "slg/samplers/sampler.h"
 
 namespace slg {
 
 //------------------------------------------------------------------------------
-// OpenCL data types
-//------------------------------------------------------------------------------
-
-namespace ocl {
-#include "slg/samplers/sampler_types.cl"
-}
-
-//------------------------------------------------------------------------------
-// SamplerSharedData
+// PMJ02SamplerSharedData
 //
 // Used to share sampler specific data across multiple threads
 //------------------------------------------------------------------------------
 
-class SamplerSharedDataRegistry;
-
-class SamplerSharedData {
+class PMJ02SamplerSharedData : public SamplerSharedData {
 public:
-	SamplerSharedData() { }
-	virtual ~SamplerSharedData() { }
+	PMJ02SamplerSharedData(Film *engineFilm);
+	virtual ~PMJ02SamplerSharedData() { }
 
+	u_int GetNewPixelIndex();
+	
 	static SamplerSharedData *FromProperties(const luxrays::Properties &cfg,
 			luxrays::RandomGenerator *rndGen, Film *film);
+
+	Film *engineFilm;
+	u_int filmRegionPixelCount;
+
+private:
+	luxrays::SpinLock spinLock;
+	u_int pixelIndex;
 };
 
 //------------------------------------------------------------------------------
-// Sampler
+// PMJ02Sampler sampler
 //------------------------------------------------------------------------------
 
-typedef enum {
-	RANDOM, METROPOLIS, SOBOL, RTPATHCPUSAMPLER, TILEPATHSAMPLER, PMJ02,
-	SAMPLER_TYPE_COUNT
-} SamplerType;
+#define PMJ02_THREAD_WORK_SIZE 4096
 
-typedef enum {
-	PIXEL_NORMALIZED_ONLY, SCREEN_NORMALIZED_ONLY, PIXEL_NORMALIZED_AND_SCREEN_NORMALIZED
-} SampleType;
-
-class Sampler : public luxrays::NamedObject {
+class PMJ02Sampler : public Sampler {
 public:
-	Sampler(luxrays::RandomGenerator *rnd, Film *flm,
-			const FilmSampleSplatter *flmSplatter,
-			const bool imgSamplesEnable) : NamedObject("sampler"), 
-			rndGen(rnd), film(flm), filmSplatter(flmSplatter),
-					imageSamplesEnable(imgSamplesEnable) { }
-	virtual ~Sampler() { }
+	PMJ02Sampler(luxrays::RandomGenerator *rnd, Film *flm,
+			const FilmSampleSplatter *flmSplatter, const bool imgSamplesEnable,
+			const float adaptiveStrength,
+			PMJ02SamplerSharedData *samplerSharedData);
+	virtual ~PMJ02Sampler() { }
 
-	virtual SamplerType GetType() const = 0;
-	virtual std::string GetTag() const = 0;
+	virtual SamplerType GetType() const { return GetObjectType(); }
+	virtual std::string GetTag() const { return GetObjectTag(); }
 	virtual void RequestSamples(const SampleType sampleType, const u_int size);
 
-	// index 0 and 1 are always image X and image Y
-	virtual float GetSample(const u_int index) = 0;
-	virtual void NextSample(const std::vector<SampleResult> &sampleResults) = 0;
+	virtual float GetSample(const u_int index);
+	virtual void NextSample(const std::vector<SampleResult> &sampleResults);
 
-	// Transform the current object in Properties
 	virtual luxrays::Properties ToProperties() const;
 
 	//--------------------------------------------------------------------------
 	// Static methods used by SamplerRegistry
 	//--------------------------------------------------------------------------
 
-	// Transform the current configuration Properties in a complete list of
-	// object Properties (including all defaults values)
+	static SamplerType GetObjectType() { return PMJ02; }
+	static std::string GetObjectTag() { return "PMJ02"; }
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
-	// Allocate a Object based on the cfg definition
 	static Sampler *FromProperties(const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen,
 		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData);
 	static slg::ocl::Sampler *FromPropertiesOCL(const luxrays::Properties &cfg);
-
 	static Film::FilmChannelType GetRequiredChannels(const luxrays::Properties &cfg);
 
-	static SamplerType String2SamplerType(const std::string &type);
-	static std::string SamplerType2String(const SamplerType type);
+private:
+	void InitNewSample();
 
-protected:
 	static const luxrays::Properties &GetDefaultProps();
 
-	void AtomicAddSamplesToFilm(const std::vector<SampleResult> &sampleResults, const float weight = 1.f) const;
+	PMJ02SamplerSharedData *sharedData;
+	float adaptiveStrength;
 
-	luxrays::RandomGenerator *rndGen;
-	Film *film;
-	const FilmSampleSplatter *filmSplatter;
+	float sample0, sample1;
+	u_int pixelIndexBase, pixelIndexOffset;
+
+	struct float2 {
+		float x;
+		float y;
+	};
+
+	void generate_2D(float2 points[], u_int size, luxrays::RandomGenerator *rndGen);
+	void mark_occupied_strata(float2 points[], u_int N);
+	void generate_sample_point(float2 points[], float i, float j, float xhalf, float yhalf, u_int n, u_int N);
+	void extend_sequence_even(float2 points[], u_int N);
+	void extend_sequence_odd(float2 points[], u_int N);
+	void mark_occupied_strata1(float2 pt, u_int NN);
+	bool is_occupied(float2 pt, u_int NN);
+	void shuffle(float2 points[], u_int size);
 	
-	SampleType sampleType;
-	u_int requestedSamples;
-	// If samples 0 and 1 should be expressed in pixels
-	bool imageSamplesEnable;
+	std::vector<std::vector<bool>> occupiedStrata;
+	std::vector<bool> occupied1Dx, occupied1Dy;
+
+	// Hardcode that for now
+	u_int num_samples = 4096;
+
 };
 
 }
 
-#endif	/* _SLG_SAMPLER_H */
+#endif	/* _SLG_pmj02_SAMPLER_H */
