@@ -16,8 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_pmj02_SAMPLER_H
-#define	_SLG_pmj02_SAMPLER_H
+#ifndef _SLG_PMJ02_SAMPLER_H
+#define	_SLG_PMJ02_SAMPLER_H
 
 #include <string>
 #include <vector>
@@ -28,6 +28,7 @@
 #include "slg/slg.h"
 #include "slg/film/film.h"
 #include "slg/samplers/sampler.h"
+#include "slg/samplers/pmj02sequence.h"
 
 namespace slg {
 
@@ -101,28 +102,8 @@ private:
 	float sample0, sample1;
 	u_int pixelIndexBase, pixelIndexOffset;
 
-	struct float2 {
-		float x;
-		float y;
-	};
-
-	void generate_2D(float2 points[], u_int size, luxrays::RandomGenerator *rndGen);
-	void mark_occupied_strata(float2 points[], u_int N);
-	void generate_sample_point(float2 points[], float i, float j, float xhalf, float yhalf, u_int n, u_int N);
-	void extend_sequence_even(float2 points[], u_int N);
-	void extend_sequence_odd(float2 points[], u_int N);
-	void mark_occupied_strata1(float2 pt, u_int NN);
-	bool is_occupied(float2 pt, u_int NN);
-	void shuffle(float2 points[], u_int size);
-	
-	std::vector<std::vector<bool>> occupiedStrata;
-	std::vector<bool> occupied1Dx, occupied1Dy;
-
-	// Hardcode that for now
-	u_int num_samples = 4096;
-
 };
 
 }
 
-#endif	/* _SLG_pmj02_SAMPLER_H */
+#endif	/* _SLG_PMJ02_SAMPLER_H */
