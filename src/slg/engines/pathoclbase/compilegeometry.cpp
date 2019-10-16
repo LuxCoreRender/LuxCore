@@ -31,10 +31,6 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
-static bool MeshPtrCompare(Mesh *p0, Mesh *p1) {
-	return p0 < p1;
-}
-
 void CompiledScene::CompileGeometry() {
 	SLG_LOG("Compile Geometry");
 	wasGeometryCompiled = true;
@@ -56,8 +52,10 @@ void CompiledScene::CompileGeometry() {
 	// Translate geometry
 	//--------------------------------------------------------------------------
 
+	meshToMeshDecsIndex.clear();
+
 	// Not using boost::unordered_map because the key is an ExtMesh pointer
-	map<ExtMesh *, u_int, bool (*)(Mesh *, Mesh *)> definedMeshs(MeshPtrCompare);
+	map<ExtMesh *, u_int, bool (*)(const Mesh *, const Mesh *)> definedMeshs(MeshPtrCompare);
 
 	slg::ocl::Mesh newMeshDesc;
 	newMeshDesc.vertsOffset = 0;
@@ -247,6 +245,7 @@ void CompiledScene::CompileGeometry() {
 				tris.push_back(mtris[j]);
 		}
 
+		meshToMeshDecsIndex[mesh] = meshDescs.size();
 		meshDescs.push_back(currentMeshDesc);
 	}
 

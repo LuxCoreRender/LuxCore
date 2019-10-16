@@ -461,8 +461,12 @@ OPENCL_FORCE_NOT_INLINE float3 TriangleLight_Illuminate(__global const LightSour
 	const float3 n2 = VLOAD3F(&triLight->triangle.n2.x);
 	const float3 shadeN = Triangle_InterpolateNormal(n0, n1, n2, b0, b1, b2);
 
+	const float3 geometryN = VLOAD3F(&triLight->triangle.geometryN.x);
+	const bool intoObject = dot(geometryN, samplePoint - VLOAD3F(&bsdf->hitPoint.p.x)) < 0.f;
+
 	// Move p along the geometry normal by an epsilon to avoid self-shadow problems	
-	samplePoint += shadeN * MachineEpsilon_E_Float3(shadeN);
+	samplePoint += geometryN * MachineEpsilon_E_Float3(shadeN) *
+			(intoObject ? 1.f : -1.f);
 
 	const float3 pSurface = BSDF_GetRayOrigin(bsdf, samplePoint - VLOAD3F(&bsdf->hitPoint.p.x));
 	*dir = samplePoint - pSurface;
@@ -474,7 +478,7 @@ OPENCL_FORCE_NOT_INLINE float3 TriangleLight_Illuminate(__global const LightSour
 	const float cosThetaMax = Material_GetEmittedCosThetaMax(triLight->triangle.materialIndex
 			MATERIALS_PARAM);
 	// emissionFunc can emit light even backward, this is for compatibility with classic Lux
-	if ((triLight->triangle.imageMapIndex == NULL_INDEX) && (cosAtLight < cosThetaMax - DEFAULT_COS_EPSILON_STATIC))
+	if ((triLight->triangle.imageMapIndex == NULL_INDEX) && (cosAtLight < cosThetaMax + DEFAULT_COS_EPSILON_STATIC))
 		return BLACK;
 
 	// Build a temporary hit point on the emitting point of the light source
@@ -484,7 +488,6 @@ OPENCL_FORCE_NOT_INLINE float3 TriangleLight_Illuminate(__global const LightSour
 	tmpHitPoint->passThroughEvent = passThroughEvent;
 #endif
 
-	const float3 geometryN = VLOAD3F(&triLight->triangle.geometryN.x);
 	VSTORE3F(geometryN, &tmpHitPoint->geometryN.x);
     VSTORE3F(shadeN, &tmpHitPoint->shadeN.x);
 	VSTORE3F(-shadeN, &tmpHitPoint->fixedDir.x);
@@ -505,7 +508,7 @@ OPENCL_FORCE_NOT_INLINE float3 TriangleLight_Illuminate(__global const LightSour
 #if defined(PARAM_HAS_VOLUMES)
 	tmpHitPoint->interiorVolumeIndex = NULL_INDEX;
 	tmpHitPoint->exteriorVolumeIndex = NULL_INDEX;
-	tmpHitPoint->intoObject = true;
+	tmpHitPoint->intoObject = intoObject;
 #endif
 
 	const float2 uv0 = VLOAD2F(&triLight->triangle.uv0.u);
@@ -514,13 +517,22 @@ OPENCL_FORCE_NOT_INLINE float3 TriangleLight_Illuminate(__global const LightSour
 	const float2 triUV = Triangle_InterpolateUV(uv0, uv1, uv2, b0, b1, b2);
 	VSTORE2F(triUV, &tmpHitPoint->uv.u);
 
-	// Apply Bump mapping and get proper differentials?
-#if defined(PARAM_HAS_BUMPMAPS)
-	float3 dpdu, dpdv;
-	CoordinateSystem(shadeN, &dpdu, &dpdv);
+	float3 dndu, dndv, dpdu, dpdv;
+	ExtMesh_GetDifferentials(
+			meshDescs,
+			vertices,
+			vertNormals,
+			vertUVs,
+			triangles,
+			triLight->triangle.meshIndex,
+			triLight->triangle.triangleIndex,
+			shadeN,
+			&dpdu, &dpdv,
+			&dndu, &dndv);
 	VSTORE3F(dpdu, &tmpHitPoint->dpdu.x);
 	VSTORE3F(dpdv, &tmpHitPoint->dpdv.x);
-#endif
+	VSTORE3F(dndu, &tmpHitPoint->dndu.x);
+	VSTORE3F(dndv, &tmpHitPoint->dndv.x);
 
 #if defined(PARAM_ENABLE_TEX_OBJECTID) || defined(PARAM_ENABLE_TEX_OBJECTID_COLOR) || defined(PARAM_ENABLE_TEX_OBJECTID_NORMALIZED)
 	tmpHitPoint->objectID = triLight->triangle.objectID;
@@ -530,10 +542,10 @@ OPENCL_FORCE_NOT_INLINE float3 TriangleLight_Illuminate(__global const LightSour
 #if defined(PARAM_HAS_IMAGEMAPS)
 	if (triLight->triangle.imageMapIndex != NULL_INDEX) {
 		// Build the local frame
-		float3 X, Y;
-		CoordinateSystem(shadeN, &X, &Y);
+		Frame frame;
+		HitPoint_GetFrame(tmpHitPoint, &frame);
 
-		const float3 localFromLight = ToLocal(X, Y, shadeN, -(*dir));
+		const float3 localFromLight = normalize(Frame_ToLocal_Private(&frame, -(*dir)));
 
 		// Retrieve the image map information
 		__global const ImageMap *imageMap = &imageMapDescs[triLight->triangle.imageMapIndex];
@@ -562,7 +574,7 @@ OPENCL_FORCE_NOT_INLINE float3 TriangleLight_GetRadiance(__global const LightSou
 	const float cosThetaMax = Material_GetEmittedCosThetaMax(triLight->triangle.materialIndex
 			MATERIALS_PARAM);
 	// emissionFunc can emit light even backward, this is for compatibility with classic Lux
-	if (((triLight->triangle.imageMapIndex == NULL_INDEX) && (cosOutLight < cosThetaMax - DEFAULT_COS_EPSILON_STATIC)) ||
+	if (((triLight->triangle.imageMapIndex == NULL_INDEX) && (cosOutLight < cosThetaMax + DEFAULT_COS_EPSILON_STATIC)) ||
 			// A safety check to avoid NaN/Inf
 			(triLight->triangle.invTriangleArea == 0.f) || (triLight->triangle.invMeshArea == 0.f))
 		return BLACK;
@@ -574,10 +586,10 @@ OPENCL_FORCE_NOT_INLINE float3 TriangleLight_GetRadiance(__global const LightSou
 #if defined(PARAM_HAS_IMAGEMAPS)
 	if (triLight->triangle.imageMapIndex != NULL_INDEX) {
 		// Build the local frame
-		float3 X, Y;
-		CoordinateSystem(hitPointNormal, &X, &Y);
+		Frame frame;
+		HitPoint_GetFrame(hitPoint, &frame);
 
-		const float3 localFromLight = ToLocal(X, Y, hitPointNormal, dir);
+		const float3 localFromLight = normalize(Frame_ToLocal_Private(&frame, dir));
 
 		// Retrieve the image map information
 		__global const ImageMap *imageMap = &imageMapDescs[triLight->triangle.imageMapIndex];

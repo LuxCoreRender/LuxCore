@@ -84,6 +84,9 @@ public:
 	std::vector<luxrays::Triangle> tris;
 	std::vector<luxrays::ocl::Mesh> meshDescs;
 	luxrays::BSphere worldBSphere;
+	// Not using boost::unordered_map because the key is an ExtMesh pointer
+	// Maps mesh pointer to mesh description index
+	std::map<const luxrays::ExtMesh *, u_int, bool (*)(const luxrays::Mesh *, const luxrays::Mesh *)> meshToMeshDecsIndex;
 
 	// Compiled Scene Objects
 	std::vector<slg::ocl::SceneObject> sceneObjs;
@@ -153,6 +156,8 @@ public:
 		wasPhotonGICompiled;
 
 private:
+	static bool MeshPtrCompare(const luxrays::Mesh *p0, const luxrays::Mesh *p1);
+
 	void AddEnabledImageMapCode();
 	// There is no AddEnabledTextureCode() version because all textures not already
 	// included by default have source code dynamically generated (because they
@@ -180,7 +185,7 @@ private:
 
 	u_int maxMemPageSize;
 	boost::unordered_set<std::string> enabledCode;
-	bool useTransparency, useBumpMapping;
+	bool useTransparency;
 }; 
 
 }

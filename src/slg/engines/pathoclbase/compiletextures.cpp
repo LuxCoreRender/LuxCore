@@ -2107,9 +2107,7 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 	// Add bump and normal mapping functions
 	source << slg::ocl::KernelSource_texture_bump_funcs;
 
-	source << "#if defined(PARAM_HAS_BUMPMAPS)\n";
 	AddTextureBumpSource(source, texs);
-	source << "#endif\n";
 
 	return source.str();
 }

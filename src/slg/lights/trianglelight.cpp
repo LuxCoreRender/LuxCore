@@ -162,9 +162,11 @@ Spectrum TriangleLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 
 	// Use relevant time data?
 	const Normal geometryN = mesh->GetGeometryNormal(0.f, triangleIndex);
+	const bool intoObject = Dot(geometryN, tmpHitPoint.p - bsdf.hitPoint.p) < 0.f;
 
 	// Move p along the geometry normal by an epsilon to avoid self-shadow problems
-	tmpHitPoint.p += Vector(geometryN * MachineEpsilon::E(tmpHitPoint.p));
+	tmpHitPoint.p += Vector(geometryN * MachineEpsilon::E(tmpHitPoint.p)) *
+			(intoObject ? 1.f : -1.f);
 
 	*dir = tmpHitPoint.p - bsdf.GetRayOrigin(tmpHitPoint.p - bsdf.hitPoint.p);
 	const float distanceSquared = dir->LengthSquared();
@@ -190,7 +192,7 @@ Spectrum TriangleLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 	tmpHitPoint.fixedDir = Vector(-tmpHitPoint.geometryN);
 	// Use relevant time data?
 	tmpHitPoint.shadeN = sampleN;
-	tmpHitPoint.intoObject = false;
+	tmpHitPoint.intoObject = intoObject;
 	tmpHitPoint.color = mesh->InterpolateTriColor(triangleIndex, b1, b2);
 	tmpHitPoint.alpha = mesh->InterpolateTriAlpha(triangleIndex, b1, b2);
 	// Use relevant volume?
@@ -232,9 +234,6 @@ Spectrum TriangleLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 		*directPdfW = invTriangleArea * distanceSquared / fabsf(cosAtLight);
 	}
 
-	if (isnan(*directPdfW) || isinf(*directPdfW)) {
-		cout<<*directPdfW<<"="<<emissionFunc<<"==="<<invTriangleArea<<"="<<distanceSquared<<"==="<<cosAtLight<<"\n";
-	}
 	assert (!isnan(*directPdfW) && !isinf(*directPdfW));
 
 	return lightMaterial->GetEmittedRadiance(tmpHitPoint, invMeshArea) * emissionColor;
@@ -278,10 +277,7 @@ Spectrum TriangleLight::GetRadiance(const HitPoint &hitPoint,
 
 	Spectrum emissionColor(1.f);
 	if (emissionFunc) {
-		// Build the local frame
-		Frame frame(hitPoint.shadeN);
-
-		const Vector localFromLight = Normalize(frame.ToLocal(hitPoint.fixedDir));
+		const Vector localFromLight = Normalize(hitPoint.GetFrame().ToLocal(hitPoint.fixedDir));
 		
 		if (emissionPdfW) {
 			const float emissionFuncPdf = emissionFunc->Pdf(localFromLight);

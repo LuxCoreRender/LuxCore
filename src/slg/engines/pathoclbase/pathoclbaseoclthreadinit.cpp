@@ -55,8 +55,7 @@ size_t PathOCLBaseOCLRenderThread::GetOpenCLHitPointSize() const {
 	if (renderEngine->compiledScene->RequiresPassThrough())
 		hitPointSize += sizeof(float);
 	// Fields dpdu, dpdv, dndu, dndv
-	if (renderEngine->compiledScene->HasBumpMaps())
-		hitPointSize += 2 * sizeof(Vector) + 2 * sizeof(Normal);
+	hitPointSize += 2 * sizeof(Vector) + 2 * sizeof(Normal);
 	// Volume fields
 	if (renderEngine->compiledScene->HasVolumes())
 		hitPointSize += 2 * sizeof(u_int) + 2 * sizeof(u_int);

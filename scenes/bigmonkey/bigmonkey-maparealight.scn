@@ -1,7 +1,7 @@
-scene.camera.lookat.orig = -13.2048445 5.02277756 7.85687399
-scene.camera.lookat.target = -1.63691139 -1.88996172 5.75992012
-#scene.camera.lookat.orig = 8.0 -11.0 5.0
-#scene.camera.lookat.target = 1.0 0.0 1.0
+#scene.camera.lookat.orig = -13.2048445 5.02277756 7.85687399
+#scene.camera.lookat.target = -1.63691139 -1.88996172 5.75992012
+scene.camera.lookat.orig = 8.0 -11.0 5.0
+scene.camera.lookat.target = 1.0 0.0 1.0
 ################################################################################
 scene.materials.mat1.type = matte
 scene.materials.mat1.kd = 0.75 0.0 0.0
@@ -27,8 +27,8 @@ scene.materials.whitematte.kd = 0.75 0.75 0.75
 scene.materials.maplight.type = matte
 scene.materials.maplight.kd = 0.75 0.75 0.75
 scene.materials.maplight.emission = 100.0 100.0 100.0
-scene.materials.maplight.emission.mapfile = map-test.png
-#scene.materials.maplight.emission.iesfile = scenes/bigmonkey/ASA_15M_R2.ies
+#scene.materials.maplight.emission.mapfile = map-test.png
+scene.materials.maplight.emission.iesfile = scenes/bigmonkey/ASA_15M_R2.ies
 #scene.materials.maplight.emission.flipz = 1
 #scene.materials.maplight.emission.map.width = 256
 #scene.materials.maplight.emission.map.height = 128

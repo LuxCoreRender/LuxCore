@@ -381,6 +381,11 @@ void CompiledScene::CompileLights() {
 				const float meshArea = tl->GetMeshArea();
 				oclLight->triangle.invMeshArea = (meshArea == 0.f) ? 0.f : (1.f / meshArea);
 
+				auto it = meshToMeshDecsIndex.find(mesh);
+				if (it == meshToMeshDecsIndex.end())
+					throw runtime_error("Internal error, unable to find mesh " + mesh->GetName() + " in CompiledScene::CompileLights()");
+				oclLight->triangle.meshIndex = it->second;
+				oclLight->triangle.triangleIndex = tl->triangleIndex;
 				oclLight->triangle.materialIndex = scene->matDefs.GetMaterialIndex(tl->lightMaterial);
 				oclLight->triangle.objectID = tl->objectID;
 

@@ -256,6 +256,7 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/bsdf/bsdf_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/bsdf/bsdfutils_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/bsdf/hitpoint_types.cl
+	${LuxRays_SOURCE_DIR}/include/slg/bsdf/hitpoint_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/material_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_generic.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_default.cl
@@ -668,6 +669,7 @@ set(SLG_KERNEL_SRCS
 	${generated_kernels_dir}/mapping_types_kernel.cpp
 	${generated_kernels_dir}/mapping_funcs_kernel.cpp
 	${generated_kernels_dir}/hitpoint_types_kernel.cpp
+	${generated_kernels_dir}/hitpoint_funcs_kernel.cpp
 	${generated_kernels_dir}/pgic_types_kernel.cpp
 	${generated_kernels_dir}/pgic_funcs_kernel.cpp
 	${generated_kernels_dir}/pathoclbase_datatypes_kernel.cpp

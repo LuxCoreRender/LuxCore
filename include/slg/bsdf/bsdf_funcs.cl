@@ -191,23 +191,21 @@ OPENCL_FORCE_NOT_INLINE void BSDF_Init(
 			shadeN,
 			&dpdu, &dpdv,
 			&dndu, &dndv);
+	VSTORE3F(dpdu, &bsdf->hitPoint.dpdu.x);
+	VSTORE3F(dpdv, &bsdf->hitPoint.dpdv.x);
+	VSTORE3F(dndu, &bsdf->hitPoint.dndu.x);
+	VSTORE3F(dndv, &bsdf->hitPoint.dndv.x);
 	
 	//--------------------------------------------------------------------------
 	// Apply bump or normal mapping
 	//--------------------------------------------------------------------------
 
-#if defined(PARAM_HAS_BUMPMAPS)
-	VSTORE3F(dpdu, &bsdf->hitPoint.dpdu.x);
-	VSTORE3F(dpdv, &bsdf->hitPoint.dpdv.x);
-	VSTORE3F(dndu, &bsdf->hitPoint.dndu.x);
-	VSTORE3F(dndv, &bsdf->hitPoint.dndv.x);
 	Material_Bump(matIndex, &bsdf->hitPoint
 			MATERIALS_PARAM);
 	// Re-read the shadeN modified by Material_Bump()
 	shadeN = VLOAD3F(&bsdf->hitPoint.shadeN.x);
 	dpdu = VLOAD3F(&bsdf->hitPoint.dpdu.x);
 	dpdv = VLOAD3F(&bsdf->hitPoint.dpdv.x);
-#endif
 
 	//--------------------------------------------------------------------------
 	// Build the local reference system
@@ -247,14 +245,13 @@ OPENCL_FORCE_NOT_INLINE void BSDF_InitVolume(
 	VSTORE3F(geometryN, &bsdf->hitPoint.geometryN.x);
 	VSTORE3F(geometryN, &bsdf->hitPoint.interpolatedN.x);
 	VSTORE3F(geometryN, &bsdf->hitPoint.shadeN.x);
-#if defined(PARAM_HAS_BUMPMAPS)
+
 	float3 dpdu, dpdv;
 	CoordinateSystem(geometryN, &dpdu, &dpdv);
 	VSTORE3F(dpdu, &bsdf->hitPoint.dpdu.x);
 	VSTORE3F(dpdv, &bsdf->hitPoint.dpdv.x);
 	VSTORE3F((float3)(0.f, 0.f, 0.f), &bsdf->hitPoint.dndu.x);
 	VSTORE3F((float3)(0.f, 0.f, 0.f), &bsdf->hitPoint.dndv.x);
-#endif
 
 	bsdf->hitPoint.intoObject = true;
 	bsdf->hitPoint.interiorVolumeIndex = volumeIndex;

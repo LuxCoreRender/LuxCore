@@ -13,10 +13,12 @@
 * Added the support for Displacement shape
 * Added the support for vector displacement to Displacement shape
 * New image pipeline plugin: White balance
+* Using/Not Using bump/normal mapping doesn't requires OpenCLl compilation anymore (removed PARAM_HAS_BUMPMAPS conditional OpenCL compilation)
 
 ### Fixed Bugs
 
-* None
+* Fixed triangle lights back face emission when using an IES or image map profile
+* Fixed OpenCL code for rotate triangle light when using IES or image map profile
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.

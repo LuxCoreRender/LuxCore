@@ -30,11 +30,9 @@ typedef struct {
 	Normal geometryN;
 	Normal interpolatedN;
 	Normal shadeN;
-#if defined(PARAM_HAS_BUMPMAPS)
 	// Note: dpdu and dpdv are orthogonal to shading normal (i.e not geometry normal)
 	Vector dpdu, dpdv;
 	Normal dndu, dndv;
-#endif
 
 #if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR) || defined(PARAM_ENABLE_TEX_HITPOINTGREY) || defined(PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR)
 	Spectrum color;

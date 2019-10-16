@@ -144,7 +144,6 @@ void CompiledScene::CompileMaterials() {
 
 	mats.resize(materialsCount);
 	useTransparency = false;
-	useBumpMapping = enabledCode.count("HAS_BUMPMAPS");
 
 	for (u_int i = 0; i < materialsCount; ++i) {
 		const Material *m = scene->matDefs.GetMaterial(i);
@@ -184,10 +183,9 @@ void CompiledScene::CompileMaterials() {
 
 		// Material bump mapping
 		const Texture *bumpTex = m->GetBumpTexture();
-		if (bumpTex) {
+		if (bumpTex)
 			mat->bumpTexIndex = scene->texDefs.GetTextureIndex(bumpTex);
-			useBumpMapping = true;
-		} else
+		else
 			mat->bumpTexIndex = NULL_INDEX;
 
 		mat->visibility =

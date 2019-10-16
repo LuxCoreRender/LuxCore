@@ -85,15 +85,15 @@ OPENCL_FORCE_INLINE float3 BSDF_GetPassThroughShadowTransparency(__global const 
 }
 
 OPENCL_FORCE_INLINE float3 BSDF_GetLandingGeometryN(__global const BSDF *bsdf) {
-	return (bsdf->hitPoint.intoObject ? 1.f : -1.f) * VLOAD3F(&bsdf->hitPoint.geometryN.x);
+	return HitPoint_GetGeometryN(&bsdf->hitPoint);
 }
 
 OPENCL_FORCE_INLINE float3 BSDF_GetLandingInterpolatedN(__global const BSDF *bsdf) {
-	return (bsdf->hitPoint.intoObject ? 1.f : -1.f) * VLOAD3F(&bsdf->hitPoint.interpolatedN.x);
+	return HitPoint_GetInterpolatedN(&bsdf->hitPoint);
 }
 
 OPENCL_FORCE_INLINE float3 BSDF_GetLandingShadeN(__global const BSDF *bsdf) {
-	return (bsdf->hitPoint.intoObject ? 1.f : -1.f) * VLOAD3F(&bsdf->hitPoint.shadeN.x);
+	return HitPoint_GetShadeN(&bsdf->hitPoint);
 }
 
 OPENCL_FORCE_INLINE float3 BSDF_GetRayOrigin(__global const BSDF *bsdf, const float3 sampleDir) {

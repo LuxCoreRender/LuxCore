@@ -495,9 +495,6 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			ssParams << " -D PARAM_HAS_IMAGEMAPS_WRAP_CLAMP";
 	}
 
-	if (renderEngine->compiledScene->HasBumpMaps())
-		ssParams << " -D PARAM_HAS_BUMPMAPS";
-
 	if (renderEngine->compiledScene->HasVolumes()) {
 		ssParams << " -D PARAM_HAS_VOLUMES";
 		ssParams << " -D SCENE_DEFAULT_VOLUME_INDEX=" << renderEngine->compiledScene->defaultWorldVolumeIndex;
@@ -792,6 +789,7 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_material_main;
 
 	ssKernel <<
+			slg::ocl::KernelSource_hitpoint_funcs <<
 			slg::ocl::KernelSource_bsdfutils_funcs << // Must be before volumeinfo_funcs
 			slg::ocl::KernelSource_volume_funcs <<
 			slg::ocl::KernelSource_pathdepthinfo_types <<

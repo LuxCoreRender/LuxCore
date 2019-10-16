@@ -31,7 +31,12 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
-CompiledScene::CompiledScene(Scene *scn, const PhotonGICache *pgi) {
+bool CompiledScene::MeshPtrCompare(const Mesh *p0, const Mesh *p1) {
+	return p0 < p1;
+}
+
+CompiledScene::CompiledScene(Scene *scn, const PhotonGICache *pgi) :
+		meshToMeshDecsIndex(MeshPtrCompare) {
 	scene = scn;
 	photonGICache = pgi;
 	maxMemPageSize = 0xffffffffu;
@@ -126,10 +131,6 @@ bool CompiledScene::IsImageMapChannelCountCompiled(const u_int count) const {
 
 bool CompiledScene::IsImageMapWrapCompiled(const ImageMapStorage::WrapType type) const {
 	return (usedImageMapWrapTypes.find(type) != usedImageMapWrapTypes.end());
-}
-
-bool CompiledScene::HasBumpMaps() const {
-	return useBumpMapping;
 }
 
 bool CompiledScene::RequiresPassThrough() const {

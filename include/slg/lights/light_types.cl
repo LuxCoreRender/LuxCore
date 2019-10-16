@@ -140,8 +140,8 @@ typedef struct {
 	float alpha0, alpha1, alpha2;
 	float invTriangleArea, invMeshArea;
 
+	unsigned int meshIndex, triangleIndex;
 	unsigned int materialIndex;
-	unsigned int lightSceneIndex;
 	unsigned int objectID;
 
 	// Used for image map and/or IES map
