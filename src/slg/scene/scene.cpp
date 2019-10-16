@@ -496,6 +496,10 @@ bool Scene::Intersect(IntersectionDevice *device,
 	const bool shadowRay = rayType & SHADOW_RAY;
 	bool throughShadowTransparency = false;
 
+	// This field can be checked by the calling code even if there was no
+	// intersection (and not BSDF initialization)
+	bsdf->hitPoint.throughShadowTransparency = false;
+
 	for (;;) {
 		const bool hit = device ? device->TraceRay(ray, rayHit) : dataSet->GetAccelerator()->Intersect(ray, rayHit);
 
