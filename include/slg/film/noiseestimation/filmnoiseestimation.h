@@ -59,7 +59,7 @@ private:
 	u_int warmup;
 	u_int testStep;
 	u_int filterScale;
-	u_int index;
+	u_int imagePipelineIndex;
 
 	const Film *film;
 

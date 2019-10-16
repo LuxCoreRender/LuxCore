@@ -711,9 +711,6 @@ void Film::Parse(const Properties &props) {
 		delete convTest;
 		convTest = NULL;
 
-		//How many image pipelines are defined
-		u_int numImagePipeline = props.GetAllUniqueSubNames("film.imagepipelines").size();
-
 		haltNoiseThreshold = props.Get(Property("batch.haltnoisethreshold")(
 				props.Get(Property("batch.haltthreshold")(-1.f)).Get<float>()
 				)).Get<float>();
@@ -737,8 +734,8 @@ void Film::Parse(const Properties &props) {
 				
 			haltNoiseThresholdImagePipelineIndex = props.Get(Property("batch.haltnoisethreshold.index")(0)).Get<u_int>();
 
-			if (haltNoiseThresholdImagePipelineIndex > numImagePipeline) {
-				SLG_LOG("WARNING: Halt thereshold index not available. Reverting to first image pipeline");
+			if (haltNoiseThresholdImagePipelineIndex >= GetImagePipelineCount()) {
+				SLG_LOG("WARNING: Halt thereshold image pipeline index not available. Reverting to first image pipeline");
 				haltNoiseThresholdImagePipelineIndex = 0;
 			}
 
@@ -763,21 +760,17 @@ void Film::Parse(const Properties &props) {
 		delete noiseEstimation;
 		noiseEstimation = NULL;
 
-		//How many image pipelines are defined
-		u_int numImagePipeline = props.GetAllUniqueSubNames("film.imagepipelines").size();
-
 		noiseEstimationWarmUp = props.Get(Property("film.noiseestimation.warmup")(32)).Get<u_int>();
 		noiseEstimationTestStep = props.Get(Property("film.noiseestimation.step")(32)).Get<u_int>();
 		noiseEstimationFilterScale = props.Get(Property("film.noiseestimation.filter.scale")(4)).Get<u_int>();
 
-
-		noiseEstimationIndex = props.Get(Property("film.noiseestimation.index")(0)).Get<u_int>();
-		if (noiseEstimationIndex > numImagePipeline) {
-			SLG_LOG("WARNING: Noise estimation index not available. Reverting to first image pipeline");
-			noiseEstimationIndex = 0;
+		noiseEstimationImagePipelineIndex = props.Get(Property("film.noiseestimation.index")(0)).Get<u_int>();
+		if (noiseEstimationImagePipelineIndex >= GetImagePipelineCount()) {
+			SLG_LOG("WARNING: Noise estimation image pipeline index not available. Reverting to first image pipeline");
+			noiseEstimationImagePipelineIndex = 0;
 		}
 
 		noiseEstimation = new FilmNoiseEstimation(this, noiseEstimationWarmUp,
-				noiseEstimationTestStep, noiseEstimationFilterScale, noiseEstimationIndex);
+				noiseEstimationTestStep, noiseEstimationFilterScale, noiseEstimationImagePipelineIndex);
 	}
 }

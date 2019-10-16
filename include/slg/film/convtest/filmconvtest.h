@@ -35,7 +35,7 @@ class Film;
 class FilmConvTest {
 public:
 	FilmConvTest(const Film *film, const float threshold, const u_int warmup,
-			const u_int testStep, const bool useFilter, const u_int index);
+			const u_int testStep, const bool useFilter, const u_int imagePipelineIndex);
 	~FilmConvTest();
 
 	bool IsTestUpdateRequired() const;

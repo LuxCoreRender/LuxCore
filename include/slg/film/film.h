@@ -457,7 +457,7 @@ private:
 
 	u_int noiseEstimationWarmUp, noiseEstimationTestStep;
 	u_int noiseEstimationFilterScale;
-	u_int noiseEstimationIndex;
+	u_int noiseEstimationImagePipelineIndex;
 
 	FilmOutputs filmOutputs;
 

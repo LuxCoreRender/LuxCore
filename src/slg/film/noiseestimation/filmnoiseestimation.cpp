@@ -34,7 +34,7 @@ BOOST_CLASS_EXPORT_IMPLEMENT(slg::FilmNoiseEstimation)
 FilmNoiseEstimation::FilmNoiseEstimation(const Film *flm, const u_int warmupVal, 
 		const u_int testStepVal, const u_int filtScale, const u_int index) :
 		warmup(warmupVal),	testStep(testStepVal),
-		filterScale(filtScale), index(index), film(flm), referenceImage(NULL) {
+		filterScale(filtScale), imagePipelineIndex(index), film(flm), referenceImage(NULL) {
 	Reset();
 }
 
@@ -88,6 +88,8 @@ void FilmNoiseEstimation::Test() {
 		return;
 	
 	lastSamplesCount = film->GetTotalSampleCount();
+
+	const u_int index = Min(imagePipelineIndex, film->GetImagePipelineCount() - 1);
 
 	if (firstTest) {
 		SLG_LOG("Noise estimation: first pass");
