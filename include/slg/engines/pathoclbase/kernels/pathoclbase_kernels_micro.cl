@@ -85,17 +85,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 			&rays[gid], &rayHits[gid], &taskState->bsdf,
 			&connectionThroughput, VLOAD3F(taskState->throughput.c),
 			&samples[gid].result,
-			// BSDF_Init parameters
-			meshDescs,
-			sceneObjs,
-			lightIndexOffsetByMeshIndex,
-			lightIndexByTriIndex,
-			vertices,
-			vertNormals,
-			vertUVs,
-			vertCols,
-			vertAlphas,
-			triangles,
 			false
 			MATERIALS_PARAM
 			);
@@ -510,17 +499,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 			&rays[gid], &rayHits[gid], &task->tmpBsdf,
 			&connectionThroughput, WHITE,
 			NULL,
-			// BSDF_Init parameters
-			meshDescs,
-			sceneObjs,
-			lightIndexOffsetByMeshIndex,
-			lightIndexByTriIndex,
-			vertices,
-			vertNormals,
-			vertUVs,
-			vertCols,
-			vertAlphas,
-			triangles,
 			true
 			MATERIALS_PARAM
 			);

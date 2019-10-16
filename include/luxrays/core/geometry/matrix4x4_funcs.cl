@@ -18,7 +18,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-float3 Matrix4x4_ApplyPoint(__global const Matrix4x4* restrict m, const float3 point) {
+OPENCL_FORCE_INLINE float3 Matrix4x4_ApplyPoint(__global const Matrix4x4* restrict m, const float3 point) {
 	const float4 point4 = (float4)(point.x, point.y, point.z, 1.f);
 
 	const float4 row3 = VLOAD4F(&m->m[3][0]);
@@ -34,7 +34,7 @@ float3 Matrix4x4_ApplyPoint(__global const Matrix4x4* restrict m, const float3 p
 			);
 }
 
-float3 Matrix4x4_ApplyPoint_Align(__global const Matrix4x4* restrict m, const float3 point) {
+OPENCL_FORCE_INLINE float3 Matrix4x4_ApplyPoint_Align(__global const Matrix4x4* restrict m, const float3 point) {
 	const float4 point4 = (float4)(point.x, point.y, point.z, 1.f);
 
 	const float4 row3 = VLOAD4F_Align(&m->m[3][0]);
@@ -50,7 +50,7 @@ float3 Matrix4x4_ApplyPoint_Align(__global const Matrix4x4* restrict m, const fl
 			);
 }
 
-float3 Matrix4x4_ApplyPoint_Private(const Matrix4x4 *m, const float3 point) {
+OPENCL_FORCE_INLINE float3 Matrix4x4_ApplyPoint_Private(const Matrix4x4 *m, const float3 point) {
 	const float4 point4 = (float4)(point.x, point.y, point.z, 1.f);
 
 	const float4 row3 = VLOAD4F_Private(&m->m[3][0]);
@@ -66,7 +66,7 @@ float3 Matrix4x4_ApplyPoint_Private(const Matrix4x4 *m, const float3 point) {
 			);
 }
 
-float3 Matrix4x4_ApplyVector(__global const Matrix4x4* restrict m, const float3 vector) {
+OPENCL_FORCE_INLINE float3 Matrix4x4_ApplyVector(__global const Matrix4x4* restrict m, const float3 vector) {
 	const float3 row0 = VLOAD3F(&m->m[0][0]);
 	const float3 row1 = VLOAD3F(&m->m[1][0]);
 	const float3 row2 = VLOAD3F(&m->m[2][0]);
@@ -77,7 +77,7 @@ float3 Matrix4x4_ApplyVector(__global const Matrix4x4* restrict m, const float3 
 			);
 }
 
-float3 Matrix4x4_ApplyVector_Private(Matrix4x4 *m, const float3 vector) {
+OPENCL_FORCE_INLINE float3 Matrix4x4_ApplyVector_Private(Matrix4x4 *m, const float3 vector) {
 	const float3 row0 = VLOAD3F_Private(&m->m[0][0]);
 	const float3 row1 = VLOAD3F_Private(&m->m[1][0]);
 	const float3 row2 = VLOAD3F_Private(&m->m[2][0]);
@@ -88,7 +88,7 @@ float3 Matrix4x4_ApplyVector_Private(Matrix4x4 *m, const float3 vector) {
 			);
 }
 
-float3 Matrix4x4_ApplyNormal(__global const Matrix4x4* restrict m, const float3 normal) {
+OPENCL_FORCE_INLINE float3 Matrix4x4_ApplyNormal(__global const Matrix4x4* restrict m, const float3 normal) {
 	const float3 row0 = (float3)(m->m[0][0], m->m[1][0], m->m[2][0]);
 	const float3 row1 = (float3)(m->m[0][1], m->m[1][1], m->m[2][1]);
 	const float3 row2 = (float3)(m->m[0][2], m->m[1][2], m->m[2][2]);
@@ -99,19 +99,19 @@ float3 Matrix4x4_ApplyNormal(__global const Matrix4x4* restrict m, const float3 
 			);
 }
 
-void Matrix4x4_Identity(Matrix4x4 *m) {
+OPENCL_FORCE_INLINE void Matrix4x4_Identity(Matrix4x4 *m) {
 	for (int j = 0; j < 4; ++j)
 		for (int i = 0; i < 4; ++i)
 			m->m[i][j] = (i == j) ? 1.f : 0.f;
 }
 
-void Matrix4x4_IdentityGlobal(__global Matrix4x4 *m) {
+OPENCL_FORCE_INLINE void Matrix4x4_IdentityGlobal(__global Matrix4x4 *m) {
 	for (int j = 0; j < 4; ++j)
 		for (int i = 0; i < 4; ++i)
 			m->m[i][j] = (i == j) ? 1.f : 0.f;
 }
 
-void Matrix4x4_Invert(Matrix4x4 *m) {
+OPENCL_FORCE_INLINE void Matrix4x4_Invert(Matrix4x4 *m) {
 	int indxc[4], indxr[4];
 	int ipiv[4] = {0, 0, 0, 0};
 
@@ -181,7 +181,7 @@ void Matrix4x4_Invert(Matrix4x4 *m) {
 	}
 }
 
-Matrix4x4 Matrix4x4_Mul(__global const Matrix4x4 *a, __global const Matrix4x4 *b) {
+OPENCL_FORCE_INLINE Matrix4x4 Matrix4x4_Mul(__global const Matrix4x4 *a, __global const Matrix4x4 *b) {
 	Matrix4x4 r;
 	for (int i = 0; i < 4; ++i)
 		for (int j = 0; j < 4; ++j)

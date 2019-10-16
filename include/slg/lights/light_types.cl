@@ -173,8 +173,6 @@ typedef struct {
 #define LIGHTS_PARAM_DECL , __global const LightSource* restrict lights, \
 	__global const uint* restrict envLightIndices, \
 	const uint envLightCount, \
-	__global const uint* restrict lightIndexOffsetByMeshIndex, \
-	__global const uint* restrict lightIndexByTriIndex, \
 	__global const float* restrict envLightDistribution, \
 	__global const float* restrict lightsDistribution, \
 	__global const float* restrict infiniteLightSourcesDistribution, \
@@ -190,8 +188,6 @@ typedef struct {
 #define LIGHTS_PARAM , lights, \
 	envLightIndices, \
 	envLightCount, \
-	lightIndexOffsetByMeshIndex, \
-	lightIndexByTriIndex, \
 	envLightDistribution, \
 	lightsDistribution, \
 	infiniteLightSourcesDistribution, \

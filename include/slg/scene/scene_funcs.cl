@@ -33,17 +33,6 @@ OPENCL_FORCE_NOT_INLINE bool Scene_Intersect(
 		__global BSDF *bsdf,
 		float3 *connectionThroughput,  const float3 pathThroughput,
 		__global SampleResult *sampleResult,
-		// BSDF_Init parameters
-		__global const Mesh* restrict meshDescs,
-		__global const SceneObject* restrict sceneObjs,
-		__global const uint* restrict lightIndexOffsetByMeshIndex,
-		__global const uint* restrict lightIndexByTriIndex,
-		__global const Point* restrict vertices,
-		__global const Vector* restrict vertNormals,
-		__global const UV* restrict vertUVs,
-		__global const Spectrum* restrict vertCols,
-		__global const float* restrict vertAlphas,
-		__global const Triangle* restrict triangles,
 		const bool backTracing
 		MATERIALS_PARAM_DECL
 		) {
@@ -61,16 +50,7 @@ OPENCL_FORCE_NOT_INLINE bool Scene_Intersect(
 		// Initialize the BSDF of the hit point
 		BSDF_Init(bsdf,
 				*throughShadowTransparency,
-				meshDescs,
-				sceneObjs,
-				lightIndexOffsetByMeshIndex,
-				lightIndexByTriIndex,
-				vertices,
-				vertNormals,
-				vertUVs,
-				vertCols,
-				vertAlphas,
-				triangles, ray, rayHit
+				ray, rayHit
 #if defined(PARAM_HAS_PASSTHROUGH)
 				, passThrough
 #endif

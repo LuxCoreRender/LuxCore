@@ -18,8 +18,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-void Frame_Set(__global Frame *frame, const float3 x, const float3 y, const float3 z)
-{
+OPENCL_FORCE_INLINE void Frame_Set(__global Frame *frame, const float3 x, const float3 y, const float3 z) {
 	const float3 Y = normalize(cross(z, x));
 	const float3 X = cross(Y, z);
 
@@ -28,8 +27,7 @@ void Frame_Set(__global Frame *frame, const float3 x, const float3 y, const floa
 	VSTORE3F(z, &frame->Z.x);
 }
 
-void Frame_Set_Private(Frame *frame, const float3 x, const float3 y, const float3 z)
-{
+OPENCL_FORCE_INLINE void Frame_Set_Private(Frame *frame, const float3 x, const float3 y, const float3 z) {
 	const float3 Y = normalize(cross(z, x));
 	const float3 X = cross(Y, z);
 
@@ -44,7 +42,7 @@ void Frame_Set_Private(Frame *frame, const float3 x, const float3 y, const float
 	frame->Z.z = z.z;
 }
 
-void Frame_SetFromZ(__global Frame *frame, const float3 Z) {
+OPENCL_FORCE_INLINE void Frame_SetFromZ(__global Frame *frame, const float3 Z) {
 	float3 X, Y;
 	CoordinateSystem(Z, &X, &Y);
 
@@ -53,7 +51,7 @@ void Frame_SetFromZ(__global Frame *frame, const float3 Z) {
 	VSTORE3F(Z, &frame->Z.x);
 }
 
-void Frame_SetFromZ_Private(Frame *frame, const float3 Z)
+OPENCL_FORCE_INLINE void Frame_SetFromZ_Private(Frame *frame, const float3 Z)
 {
 	float3 X, Y;
 	CoordinateSystem(Z, &X, &Y);
@@ -69,30 +67,30 @@ void Frame_SetFromZ_Private(Frame *frame, const float3 Z)
 	frame->Z.z = Z.z;
 }
 
-float3 ToWorld(const float3 X, const float3 Y, const float3 Z, const float3 v) {
+OPENCL_FORCE_INLINE float3 ToWorld(const float3 X, const float3 Y, const float3 Z, const float3 v) {
 	return X * v.x + Y * v.y + Z * v.z;
 }
 
-float3 ToLocal(const float3 X, const float3 Y, const float3 Z, const float3 a) {
+OPENCL_FORCE_INLINE float3 ToLocal(const float3 X, const float3 Y, const float3 Z, const float3 a) {
 	return (float3)(dot(a, X), dot(a, Y), dot(a, Z));
 }
 
-float3 Frame_ToWorld(__global const Frame* restrict frame, const float3 v) {
+OPENCL_FORCE_INLINE float3 Frame_ToWorld(__global const Frame* restrict frame, const float3 v) {
 	return ToWorld(VLOAD3F(&frame->X.x), VLOAD3F(&frame->Y.x), VLOAD3F(&frame->Z.x), v);
 }
 
-float3 Frame_ToWorld_Private(const Frame *frame, const float3 v) {
+OPENCL_FORCE_INLINE float3 Frame_ToWorld_Private(const Frame *frame, const float3 v) {
 	return ToWorld(
 			(float3)(frame->X.x, frame->X.y, frame->X.z),
 			(float3)(frame->Y.x, frame->Y.y, frame->Y.z),
 			(float3)(frame->Z.x, frame->Z.y, frame->Z.z), v);
 }
 
-float3 Frame_ToLocal(__global const Frame* restrict frame, const float3 v) {
+OPENCL_FORCE_INLINE float3 Frame_ToLocal(__global const Frame* restrict frame, const float3 v) {
 	return ToLocal(VLOAD3F(&frame->X.x), VLOAD3F(&frame->Y.x), VLOAD3F(&frame->Z.x), v);
 }
 
-float3 Frame_ToLocal_Private(const Frame *frame, const float3 v) {
+OPENCL_FORCE_INLINE float3 Frame_ToLocal_Private(const Frame *frame, const float3 v) {
 	return ToLocal(
 			(float3)(frame->X.x, frame->X.y, frame->X.z),
 			(float3)(frame->Y.x, frame->Y.y, frame->Y.z),

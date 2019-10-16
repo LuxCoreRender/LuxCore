@@ -318,7 +318,7 @@ typedef struct {
 
 #if defined(SLG_OPENCL_KERNEL)
 
-#define MATERIALS_PARAM_DECL , __global const Material* restrict mats TEXTURES_PARAM_DECL
-#define MATERIALS_PARAM , mats TEXTURES_PARAM
+#define MATERIALS_PARAM_DECL , __global const Material* restrict mats TEXTURES_PARAM_DECL SCENEOBJECTS_PARAM_DECL
+#define MATERIALS_PARAM , mats TEXTURES_PARAM SCENEOBJECTS_PARAM
 
 #endif
