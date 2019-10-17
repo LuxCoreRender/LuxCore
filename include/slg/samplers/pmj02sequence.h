@@ -33,7 +33,7 @@ namespace slg {
 
 class PMJ02Sequence {
 public:
-	PMJ02Sequence();
+	PMJ02Sequence(luxrays::RandomGenerator *rndGen);
 	~PMJ02Sequence();
 	
 	void RequestSamples(const u_int size);
@@ -63,6 +63,10 @@ private:
 
 	// Vector to hold each bidimensional table
 	std::vector<std::vector<float2>> samplePoints;
+
+	u_int current_sample;
+	luxrays::RandomGenerator *rndGend;
+
 };
 
 }

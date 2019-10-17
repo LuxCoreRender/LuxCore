@@ -30,14 +30,29 @@ using namespace slg;
 // PMJ02SamplerSharedData
 //------------------------------------------------------------------------------
 
-PMJ02SamplerSharedData::PMJ02SamplerSharedData(Film *engineFlm) {
+
+PMJ02SamplerSharedData::PMJ02SamplerSharedData(const u_int seed, Film *engineFlm) : SamplerSharedData() {
+	Init(seed, engineFlm);
+}
+
+PMJ02SamplerSharedData::PMJ02SamplerSharedData(RandomGenerator *rndGen, Film *engineFlm) : SamplerSharedData() {
+	Init(rndGen->uintValue() % (0xFFFFFFFFu - 1u) + 1u, engineFlm);
+}
+
+void PMJ02SamplerSharedData::Init(const u_int seed, Film *engineFlm) {
 	engineFilm = engineFlm;
+	seedBase = seed;
 
 	if (engineFilm) {
 		const u_int *subRegion = engineFilm->GetSubRegion();
 		filmRegionPixelCount = (subRegion[1] - subRegion[0] + 1) * (subRegion[3] - subRegion[2] + 1);
-	} else
+		
+		// All passes start at 0
+		passPerPixel.resize(filmRegionPixelCount, 0);
+	} else {
 		filmRegionPixelCount = 0;
+		passPerPixel.resize(1, 0);
+	}
 
 	pixelIndex = 0;
 }
@@ -51,9 +66,14 @@ u_int PMJ02SamplerSharedData::GetNewPixelIndex() {
 	return result;
 }
 
+u_int PMJ02SamplerSharedData::GetNewPixelPass(const u_int pixelIndex) {
+	// Iterate pass of this pixel
+	return AtomicInc(&passPerPixel[pixelIndex]);
+}
+
 SamplerSharedData *PMJ02SamplerSharedData::FromProperties(const Properties &cfg,
 		RandomGenerator *rndGen, Film *film) {
-	return new PMJ02SamplerSharedData(film);
+	return new PMJ02SamplerSharedData(rndGen, film);
 }
 
 //------------------------------------------------------------------------------
@@ -65,7 +85,7 @@ PMJ02Sampler::PMJ02Sampler(luxrays::RandomGenerator *rnd, Film *flm,
 			const float adaptiveStr,
 			PMJ02SamplerSharedData *samplerSharedData) :
 		Sampler(rnd, flm, flmSplatter, imgSamplesEnable), sharedData(samplerSharedData),
-		adaptiveStrength(adaptiveStr) {
+		pmj02sequence(rnd), adaptiveStrength(adaptiveStr) {
 }
 
 void PMJ02Sampler::InitNewSample() {
@@ -102,19 +122,25 @@ void PMJ02Sampler::InitNewSample() {
 					continue;
 				}
 			}
+
+			pass = sharedData->GetNewPixelPass(pixelIndex);
 		} else {
 			pixelX = 0;
 			pixelY = 0;
+
+			pass = sharedData->GetNewPixelPass();
 		}
 
-		sample0 = pixelX + rndGen->floatValue();
-		sample1 = pixelY + rndGen->floatValue();
+		sample0 = pixelX + pmj02sequence.GetSample(pass, 0);
+		sample1 = pixelY + pmj02sequence.GetSample(pass, 1);
 		break;
 	}
 }
 
 void PMJ02Sampler::RequestSamples(const SampleType smplType, const u_int size) {
 	Sampler::RequestSamples(smplType, size);
+
+	pmj02sequence.RequestSamples(size);
 
 	pixelIndexOffset = PMJ02_THREAD_WORK_SIZE;
 	InitNewSample();
@@ -129,7 +155,7 @@ float PMJ02Sampler::GetSample(const u_int index) {
 		case 1:
 			return sample1;
 		default:
-			return rndGen->floatValue();
+			return pmj02sequence.GetSample(pass, index);
 	}
 }
 

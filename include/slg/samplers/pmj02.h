@@ -40,20 +40,29 @@ namespace slg {
 
 class PMJ02SamplerSharedData : public SamplerSharedData {
 public:
-	PMJ02SamplerSharedData(Film *engineFilm);
+	PMJ02SamplerSharedData(luxrays::RandomGenerator *rndGen, Film *engineFlm);
+	PMJ02SamplerSharedData(const u_int seed, Film *engineFlm);
 	virtual ~PMJ02SamplerSharedData() { }
 
-	u_int GetNewPixelIndex();
-	
 	static SamplerSharedData *FromProperties(const luxrays::Properties &cfg,
 			luxrays::RandomGenerator *rndGen, Film *film);
 
+	u_int GetNewPixelIndex();
+
+	u_int GetNewPixelPass(const u_int pixelIndex = 0);
+
 	Film *engineFilm;
+	u_int seedBase;
 	u_int filmRegionPixelCount;
 
 private:
+	void Init(const u_int seed, Film *engineFlm);
+
 	luxrays::SpinLock spinLock;
 	u_int pixelIndex;
+
+	// Holds the current pass for each pixel when using adaptive sampling
+	std::vector<u_int> passPerPixel;
 };
 
 //------------------------------------------------------------------------------
@@ -97,10 +106,11 @@ private:
 	static const luxrays::Properties &GetDefaultProps();
 
 	PMJ02SamplerSharedData *sharedData;
+	PMJ02Sequence pmj02sequence;
 	float adaptiveStrength;
 
 	float sample0, sample1;
-	u_int pixelIndexBase, pixelIndexOffset;
+	u_int pixelIndexBase, pixelIndexOffset, pass;
 
 };
 

@@ -28,20 +28,45 @@ using namespace slg;
 // PMJ02Sequence
 //------------------------------------------------------------------------------
 
-PMJ02Sequence::PMJ02Sequence() : directions(NULL) {
-	rngPass = 0;
-	rng0 = 0.f;
-	rng1 = 0.f;
+PMJ02Sequence::PMJ02Sequence(luxrays::RandomGenerator *rnd) : rndGen(rnd), current_sample(0) {
 }
 
 PMJ02Sequence::~PMJ02Sequence() {
 }
 
 void PMJ02Sequence::RequestSamples(const u_int size) {
+	const u_int currentSize = samplePoints.size();
+
+	// More dimensions than generated are being requested
+	if (size > currentSize) {
+		u_int dimensionsToGenerate = size - currentSize;
+		
+		// We cannot generate an odd number of dimensions
+		if (dimensionsToGenerate % 2) {
+			dimensionsToGenerate += 1;
+		}
+
+		samplePoints.resize(size);
+		for (u_int i = currentSize; i < dimensionsToGenerate; i++) {
+			samplePoints[i].reserve(num_samples);
+
+			generate_2D(samplePoints[i].data(), rndGen);
+		}
+	}
 }
 
 float PMJ02Sequence::GetSample(const u_int pass, const u_int index) {
-	return 0.f;
+	// More samples than generated are boing requested
+	if (pass > current_sample) {
+		RequestSamples(samplePoints.size() * 2);
+	}
+	
+	const u_int vectorIndex = index / 2;
+	
+	if (index % 2) {
+		return samplePoints[vectorIndex].y;
+	} 
+	return samplePoints[vectorIndex].x;
 }
 
 
