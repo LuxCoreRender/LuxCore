@@ -33,13 +33,18 @@ namespace slg {
 
 class PMJ02Sequence {
 public:
-	PMJ02Sequence(luxrays::RandomGenerator *rndGen);
+	PMJ02Sequence(luxrays::RandomGenerator *rndGen, u_int pixelCount);
 	~PMJ02Sequence();
 	
 	void RequestSamples(const u_int size);
+	
 	float GetSample(const u_int pass, const u_int index);
 
 private:
+	// Generates for a single pixel index
+	void RequestSamples(const u_int size, const u_int index);
+	
+	luxrays::RandomGenerator *rndGend;
 
 	struct float2 {
 		float x;
@@ -58,15 +63,18 @@ private:
 	std::vector<std::vector<bool>> occupiedStrata;
 	std::vector<bool> occupied1Dx, occupied1Dy;
 
-	// Hardcode that for now
-	u_int num_samples = 4096;
+	// How many samples per pixel should be generated at once
+	u_int num_samples;
 
-	// Vector to hold each bidimensional table
-	std::vector<std::vector<float2>> samplePoints;
 
-	u_int current_sample;
-	luxrays::RandomGenerator *rndGend;
-
+	// Stores how many samples have been taken by a given pixel so we can regenerate them if needed
+	std::vector<u_int> passPerPixel;
+	
+	// Vector to hold the actual samples
+	// One vector per pixel to be sampled
+	// 		A vector with each pair of dimensions
+	// 			A vector with the (num_samples) samples for that pixel
+	std::vector<std::vector<std::vector<float2>>> samplePoints;
 };
 
 }

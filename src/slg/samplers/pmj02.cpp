@@ -85,7 +85,7 @@ PMJ02Sampler::PMJ02Sampler(luxrays::RandomGenerator *rnd, Film *flm,
 			const float adaptiveStr,
 			PMJ02SamplerSharedData *samplerSharedData) :
 		Sampler(rnd, flm, flmSplatter, imgSamplesEnable), sharedData(samplerSharedData),
-		pmj02sequence(rnd), adaptiveStrength(adaptiveStr) {
+		pmj02sequence(rnd, samplerSharedData->filmRegionPixelCount), adaptiveStrength(adaptiveStr) {
 }
 
 void PMJ02Sampler::InitNewSample() {

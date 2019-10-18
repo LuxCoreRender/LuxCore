@@ -28,45 +28,54 @@ using namespace slg;
 // PMJ02Sequence
 //------------------------------------------------------------------------------
 
-PMJ02Sequence::PMJ02Sequence(luxrays::RandomGenerator *rnd) : rndGen(rnd), current_sample(0) {
+PMJ02Sequence::PMJ02Sequence(luxrays::RandomGenerator *rnd, u_int pixelCount) : 
+	rndGen(rnd), num_samples(128) {
+	
+	// This sequence will be generated for every pixel
+	samplePoints.reserve(pixelCount);
 }
 
 PMJ02Sequence::~PMJ02Sequence() {
 }
 
 void PMJ02Sequence::RequestSamples(const u_int size) {
-	const u_int currentSize = samplePoints.size();
 
-	// More dimensions than generated are being requested
-	if (size > currentSize) {
-		u_int dimensionsToGenerate = size - currentSize;
-		
-		// We cannot generate an odd number of dimensions
-		if (dimensionsToGenerate % 2) {
-			dimensionsToGenerate += 1;
-		}
+	// We cannot generate an odd number of dimensions
+	if (size % 2) {
+		const u_int tablesToGenerate = size / 2 + 1;
+	} else {
+		const u_int tablesToGenerate = size / 2;
+	}
 
-		samplePoints.resize(size);
-		for (u_int i = currentSize; i < dimensionsToGenerate; i++) {
-			samplePoints[i].reserve(num_samples);
-
-			generate_2D(samplePoints[i].data(), rndGen);
-		}
+	// For every pixel
+	for (u_int i = 0; i < pixelCount; i++) {
+		RequestSamples(tablesToGenerate, index)
+		passPerPixel[index] += num_samples;
 	}
 }
 
+void PMJ02Sequence::RequestSamples(const u_int size, const u_int index) {
+
+	// For every dimension
+	for (u_int j = 0; j < size; j++) {
+		samplePoints[index][j].reserve(num_samples);
+		generate_2D(samplePoints[index][j].data(), num_samples, rndGen);
+	}
+
+}
+
 float PMJ02Sequence::GetSample(const u_int pass, const u_int index) {
-	// More samples than generated are boing requested
-	if (pass > current_sample) {
-		RequestSamples(samplePoints.size() * 2);
+	// More samples than generated are being requested
+	if (pass > samplePoints[index])
+		RequestSamples(samplePoints[i].size() * 2);
 	}
 	
-	const u_int vectorIndex = index / 2;
+	const u_int dimensionIndex = index / 2;
 	
 	if (index % 2) {
-		return samplePoints[vectorIndex].y;
+		return samplePoints[pass][dimensionIndex].y;
 	} 
-	return samplePoints[vectorIndex].x;
+	return samplePoints[pass][dimensionIndex].x;
 }
 
 
