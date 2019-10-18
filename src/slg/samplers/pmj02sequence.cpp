@@ -32,28 +32,29 @@ PMJ02Sequence::PMJ02Sequence(luxrays::RandomGenerator *rnd, u_int pixelCount) :
 	rndGen(rnd), num_samples(128) {
 	
 	// This sequence will be generated for every pixel
-	samplePoints.reserve(pixelCount);
+	samplePoints.resize(pixelCount);
+
+	passPerPixel.resize(pixelCount, 0);
 }
 
 PMJ02Sequence::~PMJ02Sequence() {
 }
 
+// This is public and the interface expects size to be the number of dimensions
 void PMJ02Sequence::RequestSamples(const u_int size) {
 
 	// We cannot generate an odd number of dimensions
-	if (size % 2) {
-		const u_int tablesToGenerate = size / 2 + 1;
-	} else {
-		const u_int tablesToGenerate = size / 2;
-	}
+	u_int tablesToGenerate = size / 2;
+	if (size % 2) tablesToGenerate += 1;
 
 	// For every pixel
-	for (u_int i = 0; i < pixelCount; i++) {
-		RequestSamples(tablesToGenerate, index)
-		passPerPixel[index] += num_samples;
+	for (u_int i = 0; i < samplePoints.size(); i++) {
+		RequestSamples(tablesToGenerate, i);
+		passPerPixel[i] += num_samples;
 	}
 }
 
+// This is private and expects size to be the amount of dimension tables to be generated
 void PMJ02Sequence::RequestSamples(const u_int size, const u_int index) {
 
 	// For every dimension
@@ -66,20 +67,20 @@ void PMJ02Sequence::RequestSamples(const u_int size, const u_int index) {
 
 float PMJ02Sequence::GetSample(const u_int pass, const u_int index) {
 	// More samples than generated are being requested
-	if (pass > samplePoints[index])
-		RequestSamples(samplePoints[i].size() * 2);
+	if (pass > passPerPixel[index]) {
+		RequestSamples(samplePoints[index].size() * 2);
 	}
-	
+	const u_int currentPass = pass % num_samples;
 	const u_int dimensionIndex = index / 2;
 	
 	if (index % 2) {
-		return samplePoints[pass][dimensionIndex].y;
+		return samplePoints[index][dimensionIndex][currentPass].y;
 	} 
-	return samplePoints[pass][dimensionIndex].x;
+	return samplePoints[index][dimensionIndex][currentPass].x;
 }
 
 
-void PMJ02Sampler::generate_2D(float2 points[], u_int size, luxrays::RandomGenerator *rndGen) {
+void PMJ02Sequence::generate_2D(float2 points[], u_int size, luxrays::RandomGenerator *rndGen) {
 	points[0].x = rndGen->floatValue();
 	points[0].y = rndGen->floatValue();
 	for (u_int N = 1; N < size; N = 4 *N) {
@@ -87,7 +88,7 @@ void PMJ02Sampler::generate_2D(float2 points[], u_int size, luxrays::RandomGener
 		extend_sequence_odd(points, 2 * N);
 	}
 }
-void PMJ02Sampler::mark_occupied_strata(float2 points[], u_int N) {
+void PMJ02Sequence::mark_occupied_strata(float2 points[], u_int N) {
 	u_int NN = 2 * N;
 	u_int num_shapes = (int)log2f(NN) + 1;
 	occupiedStrata.resize(num_shapes);
@@ -102,7 +103,7 @@ void PMJ02Sampler::mark_occupied_strata(float2 points[], u_int N) {
 	}
 }
 
-void PMJ02Sampler::mark_occupied_strata1(float2 pt, u_int NN) {
+void PMJ02Sequence::mark_occupied_strata1(float2 pt, u_int NN) {
 	u_int shape = 0;
 	u_int xdivs = NN;
 	u_int ydivs = 1;
@@ -118,7 +119,7 @@ void PMJ02Sampler::mark_occupied_strata1(float2 pt, u_int NN) {
 	} while (xdivs > 0);
 }
 
-void PMJ02Sampler::generate_sample_point(float2 points[], float i, float j, float xhalf, float yhalf, u_int n, u_int N) {
+void PMJ02Sequence::generate_sample_point(float2 points[], float i, float j, float xhalf, float yhalf, u_int n, u_int N) {
 	u_int NN = 2 * N;
 	float2 pt;
 	do {
@@ -129,7 +130,7 @@ void PMJ02Sampler::generate_sample_point(float2 points[], float i, float j, floa
 	points[num_samples] = pt;
 	++num_samples;
 }
-void PMJ02Sampler::extend_sequence_even(float2 points[], u_int N) {
+void PMJ02Sequence::extend_sequence_even(float2 points[], u_int N) {
 	u_int n = (int)sqrtf(N);
 	occupied1Dx.resize(2 * N);
 	occupied1Dy.resize(2 * N);
@@ -146,7 +147,7 @@ void PMJ02Sampler::extend_sequence_even(float2 points[], u_int N) {
 	}
 }
 
-void PMJ02Sampler::extend_sequence_odd(float2 points[], u_int N) {
+void PMJ02Sequence::extend_sequence_odd(float2 points[], u_int N) {
 	u_int n = (int)sqrtf(N / 2);
 	occupied1Dx.resize(2 * N);
 	occupied1Dy.resize(2 * N);
@@ -179,7 +180,7 @@ void PMJ02Sampler::extend_sequence_odd(float2 points[], u_int N) {
 	}
 }
 
-bool PMJ02Sampler::is_occupied(float2 pt, u_int NN) {
+bool PMJ02Sequence::is_occupied(float2 pt, u_int NN) {
 	u_int shape = 0;
 	u_int xdivs = NN;
 	u_int ydivs = 1;
@@ -197,7 +198,7 @@ bool PMJ02Sampler::is_occupied(float2 pt, u_int NN) {
 	return false;
 }
 
-void PMJ02Sampler::shuffle(float2 points[], u_int size) {
+void PMJ02Sequence::shuffle(float2 points[], u_int size) {
 
 	constexpr u_int odd[8] = { 0, 1, 4, 5, 10, 11, 14, 15 };
 	constexpr u_int even[8] = { 2, 3, 6, 7, 8, 9, 12, 13 };

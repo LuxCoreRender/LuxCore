@@ -44,7 +44,7 @@ private:
 	// Generates for a single pixel index
 	void RequestSamples(const u_int size, const u_int index);
 	
-	luxrays::RandomGenerator *rndGend;
+	luxrays::RandomGenerator *rndGen;
 
 	struct float2 {
 		float x;
@@ -65,7 +65,6 @@ private:
 
 	// How many samples per pixel should be generated at once
 	u_int num_samples;
-
 
 	// Stores how many samples have been taken by a given pixel so we can regenerate them if needed
 	std::vector<u_int> passPerPixel;
