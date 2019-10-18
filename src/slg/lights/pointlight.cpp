@@ -71,12 +71,13 @@ float PointLight::GetPower(const Scene &scene) const {
 }
 
 Spectrum PointLight::Emit(const Scene &scene,
-		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
-		Point *orig, Vector *dir,
-		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
-	*orig = absolutePos;
-	*dir = UniformSampleSphere(u0, u1);
-	*emissionPdfW = 1.f / (4.f * M_PI);
+		const float time, const float u0, const float u1,
+		const float u2, const float u3, const float passThroughEvent,
+		Point &rayOrig, Vector &rayDir, float &emissionPdfW,
+		float *directPdfA, float *cosThetaAtLight) const {
+	rayOrig = absolutePos;
+	rayDir = UniformSampleSphere(u0, u1);
+	emissionPdfW = 1.f / (4.f * M_PI);
 
 	if (directPdfA)
 		*directPdfA = 1.f;
@@ -87,21 +88,21 @@ Spectrum PointLight::Emit(const Scene &scene,
 }
 
 Spectrum PointLight::Illuminate(const Scene &scene, const BSDF &bsdf,
-		const float u0, const float u1, const float passThroughEvent,
-        Vector *dir, float *distance, float *directPdfW,
+		const float time, const float u0, const float u1, const float passThroughEvent,
+        Vector &shadowRayDir, float &shadowRayDistance, float &directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
 	const Point &pSurface = bsdf.GetRayOrigin(absolutePos - bsdf.hitPoint.p);
 	const Vector toLight(absolutePos - pSurface);
-	const float centerDistanceSquared = toLight.LengthSquared();
-	const float centerDistance = sqrtf(centerDistanceSquared);
+	const float distanceSquared = toLight.LengthSquared();
+	const float distance = sqrtf(distanceSquared);
 
-	*distance = centerDistance;
-	*dir = toLight / centerDistance;
+	shadowRayDistance = distance;
+	shadowRayDir = toLight / distance;
 
 	if (cosThetaAtLight)
 		*cosThetaAtLight = 1.f;
 
-	*directPdfW = centerDistanceSquared;
+	directPdfW = distanceSquared;
 
 	if (emissionPdfW)
 		*emissionPdfW = UniformSpherePdf();

@@ -66,7 +66,7 @@ scene.materials.DarkGreen.kd = 0. 0.4 0.
 #scene.materials.DarkGreen.photongi.enable = 1
 ##
 scene.materials.Light.type = matte
-scene.materials.Light.emission = 10. 10. 10.
+scene.materials.Light.emission = 30. 30. 30.
 #scene.materials.Light.emission.directlightsampling.type = DISABLED
 #scene.materials.Light.emission.theta = 20.0
 scene.materials.Light.kd = 0.75 0.75 0.75
@@ -80,6 +80,13 @@ scene.objects.DarkGreen.ply = scenes/cornell/DarkGreen.ply
 ################################################################################
 scene.objects.Grey.material = Light
 scene.objects.Grey.ply = scenes/cornell/Grey.ply
+# Instance
+scene.objects.Grey.transformation = 1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  -1.95 0.0 0.0 1.0
+# Motion blur
+#scene.objects.Grey.motion.0.time = 0.0
+#scene.objects.Grey.motion.0.transformation = 1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  -1.95 0.0 0.0 1.0
+#scene.objects.Grey.motion.1.time = 1.0
+#scene.objects.Grey.motion.1.transformation = 1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  -1.95 0.0 0.0 1.0
 ##
 #scene.lights.l1.type = point
 #scene.lights.l1.position = -2.78 2.79 4

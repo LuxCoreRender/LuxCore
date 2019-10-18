@@ -162,7 +162,7 @@ PathTracer::DirectLightResult PathTracer::DirectLightSampling(
 			Vector lightRayDir;
 			float distance, directPdfW;
 			Spectrum lightRadiance = light->Illuminate(*scene, bsdf,
-					u1, u2, u3, &lightRayDir, &distance, &directPdfW);
+					time, u1, u2, u3, lightRayDir, distance, directPdfW);
 			assert (!lightRadiance.IsNaN() && !lightRadiance.IsInf());
 
 			if (!lightRadiance.Black()) {
@@ -747,8 +747,9 @@ void PathTracer::RenderLightSample(const u_int threadIndex,
 		float lightEmitPdfW;
 		Ray nextEventRay;
 		lightPathFlux = light->Emit(*scene,
-			sampler->GetSample(1), sampler->GetSample(2), sampler->GetSample(3), sampler->GetSample(4), sampler->GetSample(5),
-				&nextEventRay.o, &nextEventRay.d, &lightEmitPdfW);
+				time, sampler->GetSample(1), sampler->GetSample(2),
+				sampler->GetSample(3), sampler->GetSample(4), sampler->GetSample(5),
+				nextEventRay.o, nextEventRay.d, lightEmitPdfW);
 		nextEventRay.UpdateMinMaxWithEpsilon();
 		nextEventRay.time = time;
 

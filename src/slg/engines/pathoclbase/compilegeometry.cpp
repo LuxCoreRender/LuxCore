@@ -31,6 +31,10 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
+static bool MeshPtrCompare(const Mesh *p0, const Mesh *p1) {
+	return p0 < p1;
+}
+
 void CompiledScene::CompileGeometry() {
 	SLG_LOG("Compile Geometry");
 	wasGeometryCompiled = true;
@@ -42,39 +46,42 @@ void CompiledScene::CompileGeometry() {
 	// Clear vectors
 	verts.resize(0);
 	normals.resize(0);
+	triNormals.resize(0);
 	uvs.resize(0);
 	cols.resize(0);
 	alphas.resize(0);
 	tris.resize(0);
+	motionSystems.resize(0);
+	interpolatedTransforms.resize(0);
 	meshDescs.resize(0);
 
 	//--------------------------------------------------------------------------
 	// Translate geometry
 	//--------------------------------------------------------------------------
 
-	meshToMeshDecsIndex.clear();
-
 	// Not using boost::unordered_map because the key is an ExtMesh pointer
 	map<ExtMesh *, u_int, bool (*)(const Mesh *, const Mesh *)> definedMeshs(MeshPtrCompare);
 
-	slg::ocl::Mesh newMeshDesc;
+	slg::ocl::ExtMesh newMeshDesc;
 	newMeshDesc.vertsOffset = 0;
 	newMeshDesc.trisOffset = 0;
 	newMeshDesc.normalsOffset = 0;
+	newMeshDesc.triNormalsOffset = 0;
 	newMeshDesc.uvsOffset = 0;
 	newMeshDesc.colsOffset = 0;
 	newMeshDesc.alphasOffset = 0;
-	// newMeshDesc.trans is initialized below (different for each mesh type)
 
-	slg::ocl::Mesh currentMeshDesc;
+	slg::ocl::ExtMesh currentMeshDesc;
 	for (u_int i = 0; i < objCount; ++i) {
 		const ExtMesh *mesh = scene->objDefs.GetSceneObject(i)->GetExtMesh();
 
 		bool isExistingInstance;
+		const ExtTriangleMesh *baseMesh = nullptr;
 		switch (mesh->GetType()) {
 			case TYPE_EXT_TRIANGLE_INSTANCE: {
 				// It is an instanced mesh
 				ExtInstanceTriangleMesh *imesh = (ExtInstanceTriangleMesh *)mesh;
+				baseMesh = imesh->GetExtTriangleMesh();
 
 				// Check if is one of the already defined meshes
 				map<ExtMesh *, u_int, bool (*)(Mesh *, Mesh *)>::iterator it = definedMeshs.find(imesh->GetExtTriangleMesh());
@@ -82,16 +89,17 @@ void CompiledScene::CompileGeometry() {
 					// It is a new one
 					currentMeshDesc = newMeshDesc;
 
-					newMeshDesc.vertsOffset += mesh->GetTotalVertexCount();
-					newMeshDesc.trisOffset += mesh->GetTotalTriangleCount();
-					if (mesh->HasNormals())
-						newMeshDesc.normalsOffset += mesh->GetTotalVertexCount();
-					if (mesh->HasUVs())
-						newMeshDesc.uvsOffset += mesh->GetTotalVertexCount();
-					if (mesh->HasColors())
-						newMeshDesc.colsOffset += mesh->GetTotalVertexCount();
-					if (mesh->HasAlphas())
-						newMeshDesc.alphasOffset += mesh->GetTotalVertexCount();
+					newMeshDesc.vertsOffset += imesh->GetTotalVertexCount();
+					newMeshDesc.trisOffset += imesh->GetTotalTriangleCount();
+					newMeshDesc.triNormalsOffset += imesh->GetTotalTriangleCount();
+					if (imesh->HasNormals())
+						newMeshDesc.normalsOffset += imesh->GetTotalVertexCount();
+					if (imesh->HasUVs())
+						newMeshDesc.uvsOffset += imesh->GetTotalVertexCount();
+					if (imesh->HasColors())
+						newMeshDesc.colsOffset += imesh->GetTotalVertexCount();
+					if (imesh->HasAlphas())
+						newMeshDesc.alphasOffset += imesh->GetTotalVertexCount();
 
 					isExistingInstance = false;
 
@@ -104,18 +112,15 @@ void CompiledScene::CompileGeometry() {
 				}
 
 				currentMeshDesc.type = slg::ocl::TYPE_EXT_TRIANGLE_INSTANCE;
-
-				// Overwrite the only different fields in an instanced mesh
-				memcpy(&currentMeshDesc.trans.m, &imesh->GetTransformation().m, sizeof(float[4][4]));
-				memcpy(&currentMeshDesc.trans.mInv, &imesh->GetTransformation().mInv, sizeof(float[4][4]));
-
-				// In order to express normals and vertices in local coordinates
-				mesh = imesh->GetExtTriangleMesh();
+cout<<i<<"=========="<<imesh->GetTransformation()<<"\n";
+				memcpy(&currentMeshDesc.instance.trans.m, &imesh->GetTransformation().m, sizeof(float[4][4]));
+				memcpy(&currentMeshDesc.instance.trans.mInv, &imesh->GetTransformation().mInv, sizeof(float[4][4]));
 				break;
 			}
 			case TYPE_EXT_TRIANGLE_MOTION: {
 				// It is an instanced mesh
 				ExtMotionTriangleMesh *mmesh = (ExtMotionTriangleMesh *)mesh;
+				baseMesh = mmesh->GetExtTriangleMesh();
 
 				// Check if is one of the already defined meshes
 				map<ExtMesh *, u_int, bool (*)(Mesh *, Mesh *)>::iterator it = definedMeshs.find(mmesh->GetExtTriangleMesh());
@@ -123,16 +128,17 @@ void CompiledScene::CompileGeometry() {
 					// It is a new one
 					currentMeshDesc = newMeshDesc;
 
-					newMeshDesc.vertsOffset += mesh->GetTotalVertexCount();
-					newMeshDesc.trisOffset += mesh->GetTotalTriangleCount();
-					if (mesh->HasNormals())
-						newMeshDesc.normalsOffset += mesh->GetTotalVertexCount();
-					if (mesh->HasUVs())
-						newMeshDesc.uvsOffset += mesh->GetTotalVertexCount();
-					if (mesh->HasColors())
-						newMeshDesc.colsOffset += mesh->GetTotalVertexCount();
-					if (mesh->HasAlphas())
-						newMeshDesc.alphasOffset += mesh->GetTotalVertexCount();
+					newMeshDesc.vertsOffset += mmesh->GetTotalVertexCount();
+					newMeshDesc.trisOffset += mmesh->GetTotalTriangleCount();
+					newMeshDesc.triNormalsOffset += mmesh->GetTotalTriangleCount();
+					if (mmesh->HasNormals())
+						newMeshDesc.normalsOffset += mmesh->GetTotalVertexCount();
+					if (mmesh->HasUVs())
+						newMeshDesc.uvsOffset += mmesh->GetTotalVertexCount();
+					if (mmesh->HasColors())
+						newMeshDesc.colsOffset += mmesh->GetTotalVertexCount();
+					if (mmesh->HasAlphas())
+						newMeshDesc.alphasOffset += mmesh->GetTotalVertexCount();
 
 					isExistingInstance = false;
 
@@ -146,25 +152,38 @@ void CompiledScene::CompileGeometry() {
 
 				currentMeshDesc.type = slg::ocl::TYPE_EXT_TRIANGLE_MOTION;
 				
-				// Overwrite the only different fields in an instanced mesh
-				//
-				// This transformation is used only to compute dpdu/dpdv and
-				// dndu/dndv so I can use the any time and the result will be
-				// the same (if the transformation doesn't include a scale).
-				const Transform t = Inverse(Transform(mmesh->GetMotionSystem().Sample(0.f)));
-				memcpy(&currentMeshDesc.trans.m, &t.m, sizeof(float[4][4]));
-				memcpy(&currentMeshDesc.trans.mInv, &t.mInv, sizeof(float[4][4]));
+				const MotionSystem &ms = mmesh->GetMotionSystem();
 
-				// In order to express normals and vertices in local coordinates
-				mesh = mmesh->GetExtTriangleMesh();
+				// Copy the motion system information
+
+				// Forward transformations
+				currentMeshDesc.motion.motionSystem.interpolatedTransformFirstIndex = interpolatedTransforms.size();
+				for (auto const &it : ms.interpolatedTransforms) {
+					// Here, I assume that luxrays::ocl::InterpolatedTransform and
+					// luxrays::InterpolatedTransform are the same
+					interpolatedTransforms.push_back(*((const luxrays::ocl::InterpolatedTransform *)&it));
+				}
+				currentMeshDesc.motion.motionSystem.interpolatedTransformLastIndex = interpolatedTransforms.size() - 1;
+
+				// Backward transformations
+				currentMeshDesc.motion.motionSystem.interpolatedInverseTransformFirstIndex = interpolatedTransforms.size();
+				for (auto const &it : ms.interpolatedInverseTransforms) {
+					// Here, I assume that luxrays::ocl::InterpolatedTransform and
+					// luxrays::InterpolatedTransform are the same
+					interpolatedTransforms.push_back(*((const luxrays::ocl::InterpolatedTransform *)&it));
+				}
+				currentMeshDesc.motion.motionSystem.interpolatedInverseTransformLastIndex = interpolatedTransforms.size() - 1;
 				break;
 			}
 			case TYPE_EXT_TRIANGLE: {
+				baseMesh = (const ExtTriangleMesh *)mesh;
+
 				// It is a not instanced mesh
 				currentMeshDesc = newMeshDesc;
 
 				newMeshDesc.vertsOffset += mesh->GetTotalVertexCount();
 				newMeshDesc.trisOffset += mesh->GetTotalTriangleCount();
+				newMeshDesc.triNormalsOffset += mesh->GetTotalTriangleCount();
 				if (mesh->HasNormals())
 					newMeshDesc.normalsOffset += mesh->GetTotalVertexCount();
 				if (mesh->HasUVs())
@@ -177,9 +196,10 @@ void CompiledScene::CompileGeometry() {
 				currentMeshDesc.type = slg::ocl::TYPE_EXT_TRIANGLE;
 
 				Transform t;
-				mesh->GetLocal2World(0.f, t);
-				memcpy(&currentMeshDesc.trans.m, &t.m, sizeof(float[4][4]));
-				memcpy(&currentMeshDesc.trans.mInv, &t.mInv, sizeof(float[4][4]));
+				// Time doesn't matter for ExtTriangleMesh
+				baseMesh->GetLocal2World(0.f, t);
+				memcpy(&currentMeshDesc.triangle.trans.m, &t.m, sizeof(float[4][4]));
+				memcpy(&currentMeshDesc.triangle.trans.mInv, &t.mInv, sizeof(float[4][4]));
 
 				isExistingInstance = false;
 				break;
@@ -188,24 +208,34 @@ void CompiledScene::CompileGeometry() {
 				throw runtime_error("Unsupported mesh type in CompiledScene::CompileGeometry(): " + ToString(mesh->GetType()));
 		}
 
-		if (!isExistingInstance) {
+		if (!isExistingInstance) {		
 			//------------------------------------------------------------------
 			// Translate mesh normals (expressed in local coordinates)
 			//------------------------------------------------------------------
 
-			if (mesh->HasNormals()) {
-				for (u_int j = 0; j < mesh->GetTotalVertexCount(); ++j)
-					normals.push_back(mesh->GetShadeNormal(0.f, j));
+			if (baseMesh->HasNormals()) {
+				const Normal *n = baseMesh->GetNormals();
+				normals.insert(normals.end(), n, n + baseMesh->GetTotalVertexCount());
 			} else
 				currentMeshDesc.normalsOffset = NULL_INDEX;
+
+			//------------------------------------------------------------------
+			// Translate mesh triangle normals (expressed in local coordinates)
+			//------------------------------------------------------------------
+
+			const Normal *tn = baseMesh->GetTriNormals();
+			triNormals.insert(triNormals.end(), tn, tn + baseMesh->GetTotalTriangleCount());
 
 			//------------------------------------------------------------------
 			// Translate vertex uvs
 			//------------------------------------------------------------------
 
-			if (mesh->HasUVs()) {
-				for (u_int j = 0; j < mesh->GetTotalVertexCount(); ++j)
-					uvs.push_back(mesh->GetUV(j));
+			if (baseMesh->HasUVs()) {
+				const UV *u = baseMesh->GetUVs();
+				uvs.insert(uvs.end(), u, u + baseMesh->GetTotalVertexCount());
+
+				for (u_int j = 0; j < baseMesh->GetTotalVertexCount(); ++j)
+					uvs.push_back(baseMesh->GetUV(j));
 			} else
 				currentMeshDesc.uvsOffset = NULL_INDEX;
 
@@ -213,9 +243,9 @@ void CompiledScene::CompileGeometry() {
 			// Translate vertex colors
 			//------------------------------------------------------------------
 
-			if (mesh->HasColors()) {
-				for (u_int j = 0; j < mesh->GetTotalVertexCount(); ++j)
-					cols.push_back(mesh->GetColor(j));
+			if (baseMesh->HasColors()) {
+				const Spectrum *c = baseMesh->GetColors();
+				cols.insert(cols.end(), c, c + baseMesh->GetTotalVertexCount());
 			} else
 				currentMeshDesc.colsOffset = NULL_INDEX;
 
@@ -223,29 +253,27 @@ void CompiledScene::CompileGeometry() {
 			// Translate vertex alphas
 			//------------------------------------------------------------------
 
-			if (mesh->HasAlphas()) {
-				for (u_int j = 0; j < mesh->GetTotalVertexCount(); ++j)
-					alphas.push_back(mesh->GetAlpha(j));
+			if (baseMesh->HasAlphas()) {
+				const float *a = baseMesh->GetAlphas();
+				alphas.insert(alphas.end(), a, a + baseMesh->GetTotalVertexCount());
 			} else
 				currentMeshDesc.alphasOffset = NULL_INDEX;
 
 			//------------------------------------------------------------------
-			// Translate mesh vertices (expressed in local coordinates)
+			// Translate baseMesh vertices (expressed in local coordinates)
 			//------------------------------------------------------------------
 
-			for (u_int j = 0; j < mesh->GetTotalVertexCount(); ++j)
-				verts.push_back(mesh->GetVertex(0.f, j));
+			const Point *v = baseMesh->GetVertices();
+			verts.insert(verts.end(), v, v + baseMesh->GetTotalVertexCount());
 
 			//------------------------------------------------------------------
-			// Translate mesh indices
+			// Translate baseMesh indices
 			//------------------------------------------------------------------
 
-			Triangle *mtris = mesh->GetTriangles();
-			for (u_int j = 0; j < mesh->GetTotalTriangleCount(); ++j)
-				tris.push_back(mtris[j]);
+			const Triangle *t = baseMesh->GetTriangles();
+			tris.insert(tris.end(), t, t + baseMesh->GetTotalTriangleCount());
 		}
 
-		meshToMeshDecsIndex[mesh] = meshDescs.size();
 		meshDescs.push_back(currentMeshDesc);
 	}
 

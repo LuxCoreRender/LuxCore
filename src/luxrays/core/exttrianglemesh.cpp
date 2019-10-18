@@ -138,7 +138,7 @@ Normal *ExtTriangleMesh::ComputeNormals() {
 
 // The optimized version for ExtTriangleMesh where I can ignore localToWorld
 // because it is an identity
-void ExtTriangleMesh::GetDifferentials(const Transform &localToWorld,
+void ExtTriangleMesh::GetDifferentials(const float time,
 		const u_int triIndex, const Normal &shadeNormal,
         Vector *dpdu, Vector *dpdv,
         Normal *dndu, Normal *dndv) const {
@@ -370,7 +370,7 @@ ExtTriangleMesh *ExtTriangleMesh::Merge(const vector<const ExtTriangleMesh *> &m
 //------------------------------------------------------------------------------
 
 // The optimized version for ExtInstanceTriangleMesh
-void ExtInstanceTriangleMesh::GetDifferentials(const Transform &localToWorld,
+void ExtInstanceTriangleMesh::GetDifferentials(const float time,
 		const u_int triIndex, const Normal &shadeNormal,
         Vector *dpdu, Vector *dpdv,
         Normal *dndu, Normal *dndv) const {
@@ -404,6 +404,8 @@ void ExtInstanceTriangleMesh::GetDifferentials(const Transform &localToWorld,
 
 		// Using localToWorld in order to do all computation relative to
 		// the global coordinate system
+		const Transform &localToWorld = trans;
+
 		const Point *vertices = GetVertices();
 		const Point p0 = localToWorld * vertices[tri.v[0]];
 		const Point p1 = localToWorld * vertices[tri.v[1]];
@@ -459,7 +461,7 @@ BOOST_CLASS_EXPORT_IMPLEMENT(luxrays::ExtInstanceTriangleMesh)
 //------------------------------------------------------------------------------
 
 // The optimized version for ExtMotionTriangleMesh
-void ExtMotionTriangleMesh::GetDifferentials(const Transform &localToWorld,
+void ExtMotionTriangleMesh::GetDifferentials(const float time,
 		const u_int triIndex, const Normal &shadeNormal,
         Vector *dpdu, Vector *dpdv,
         Normal *dndu, Normal *dndv) const {
@@ -493,6 +495,9 @@ void ExtMotionTriangleMesh::GetDifferentials(const Transform &localToWorld,
 
 		// Using localToWorld in order to do all computation relative to
 		// the global coordinate system
+		const Matrix4x4 m = motionSystem.Sample(time);
+		const Transform localToWorld = Inverse(Transform(m));
+
 		const Point *vertices = GetVertices();
 		const Point p0 = localToWorld * vertices[tri.v[0]];
 		const Point p1 = localToWorld * vertices[tri.v[1]];

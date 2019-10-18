@@ -27,26 +27,14 @@ typedef struct {
 #if defined(SLG_OPENCL_KERNEL)
 
 #define SCENEOBJECTS_PARAM_DECL , \
-		__global const Mesh* restrict meshDescs, \
 		__global const SceneObject* restrict sceneObjs, \
 		__global const uint* restrict lightIndexOffsetByMeshIndex, \
-		__global const uint* restrict lightIndexByTriIndex, \
-		__global const Point* restrict vertices, \
-		__global const Vector* restrict vertNormals, \
-		__global const UV* restrict vertUVs, \
-		__global const Spectrum* restrict vertCols, \
-		__global const float* restrict vertAlphas, \
-		__global const Triangle* restrict triangles
+		__global const uint* restrict lightIndexByTriIndex \
+		EXTMESH_PARAM_DECL
 #define SCENEOBJECTS_PARAM , \
-		meshDescs, \
 		sceneObjs, \
 		lightIndexOffsetByMeshIndex, \
-		lightIndexByTriIndex, \
-		vertices, \
-		vertNormals, \
-		vertUVs, \
-		vertCols, \
-		vertAlphas, \
-		triangles
+		lightIndexByTriIndex \
+		EXTMESH_PARAM
 
 #endif

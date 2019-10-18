@@ -697,6 +697,7 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			luxrays::ocl::KernelSource_transform_types <<
 			luxrays::ocl::KernelSource_motionsystem_types <<
 			luxrays::ocl::KernelSource_trianglemesh_types <<
+			luxrays::ocl::KernelSource_exttrianglemesh_types <<
 			// OpenCL LuxRays Funcs
 			luxrays::ocl::KernelSource_randomgen_funcs <<
 			luxrays::ocl::KernelSource_atomic_funcs <<
@@ -713,7 +714,7 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			luxrays::ocl::KernelSource_transform_funcs <<
 			luxrays::ocl::KernelSource_motionsystem_funcs <<
 			luxrays::ocl::KernelSource_triangle_funcs <<
-			luxrays::ocl::KernelSource_trianglemesh_funcs <<
+			luxrays::ocl::KernelSource_exttrianglemesh_funcs <<
 			// OpenCL SLG Types
 			slg::ocl::KernelSource_hitpoint_types <<
 			slg::ocl::KernelSource_mapping_types <<
@@ -964,6 +965,7 @@ void PathOCLBaseOCLRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePa
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), meshDescsBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), vertsBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), normalsBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), triNormalsBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), uvsBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), colsBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), alphasBuff);

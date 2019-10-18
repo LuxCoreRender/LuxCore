@@ -99,10 +99,11 @@ set(LUXRAYS_KERNELS
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/bvh/bvhbuild_types.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/accelerators/bvh.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/accelerators/mbvh.cl
+	${LuxRays_SOURCE_DIR}/include/luxrays/core/exttrianglemesh_types.cl
+	${LuxRays_SOURCE_DIR}/include/luxrays/core/exttrianglemesh_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/randomgen_types.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/randomgen_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/trianglemesh_types.cl
-	${LuxRays_SOURCE_DIR}/include/luxrays/core/trianglemesh_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/matrix4x4_types.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/matrix4x4_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/transform_types.cl
@@ -206,7 +207,8 @@ set(LUXRAYS_SRCS_KERNELS
 	${generated_kernels_dir}/randomgen_types_kernel.cpp
 	${generated_kernels_dir}/randomgen_funcs_kernel.cpp
 	${generated_kernels_dir}/trianglemesh_types_kernel.cpp
-	${generated_kernels_dir}/trianglemesh_funcs_kernel.cpp
+	${generated_kernels_dir}/exttrianglemesh_types_kernel.cpp
+	${generated_kernels_dir}/exttrianglemesh_funcs_kernel.cpp
 	${generated_kernels_dir}/matrix4x4_types_kernel.cpp
 	${generated_kernels_dir}/matrix4x4_funcs_kernel.cpp
 	${generated_kernels_dir}/transform_types_kernel.cpp

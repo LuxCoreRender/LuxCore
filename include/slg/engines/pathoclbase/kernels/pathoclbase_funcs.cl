@@ -409,7 +409,7 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_Illuminate(
 		const float worldCenterZ,
 		const float worldRadius,
 		__global HitPoint *tmpHitPoint,
-		const float u0, const float u1, const float u2,
+		const float time, const float u0, const float u1, const float u2,
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float lightPassThroughEvent,
 #endif
@@ -445,7 +445,7 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_Illuminate(
 	const float3 lightRadiance = Light_Illuminate(
 			&lights[lightIndex],
 			bsdf,
-			u1, u2,
+			time, u1, u2,
 #if defined(PARAM_HAS_PASSTHROUGH)
 			lightPassThroughEvent,
 #endif
@@ -553,7 +553,9 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 		, const float worldRadius
 
 #define KERNEL_ARGS_NORMALS_BUFFER \
-		, __global const Vector* restrict vertNormals
+		, __global const Normal* restrict vertNormals
+#define KERNEL_ARGS_TRINORMALS_BUFFER \
+		, __global const Normal* restrict triNormals
 #define KERNEL_ARGS_UVS_BUFFER \
 		, __global const UV* restrict vertUVs
 #define KERNEL_ARGS_COLS_BUFFER \
@@ -666,9 +668,10 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 		, __global const Material* restrict mats \
 		, __global const Texture* restrict texs \
 		, __global const SceneObject* restrict sceneObjs \
-		, __global const Mesh* restrict meshDescs \
+		, __global const ExtMesh* restrict meshDescs \
 		, __global const Point* restrict vertices \
 		KERNEL_ARGS_NORMALS_BUFFER \
+		KERNEL_ARGS_TRINORMALS_BUFFER \
 		KERNEL_ARGS_UVS_BUFFER \
 		KERNEL_ARGS_COLS_BUFFER \
 		KERNEL_ARGS_ALPHAS_BUFFER \

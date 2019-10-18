@@ -164,10 +164,14 @@ public:
 					interpolatedTransforms.push_back(*((const luxrays::ocl::InterpolatedTransform *)&it));
 				}
 				oclMotionSystem.interpolatedTransformLastIndex = interpolatedTransforms.size() - 1;
-				
+
+				// I don't need inverse transformations for MBVH traversal
+				oclMotionSystem.interpolatedInverseTransformFirstIndex = NULL_INDEX;
+				oclMotionSystem.interpolatedInverseTransformLastIndex = NULL_INDEX;
+
 				motionSystems.push_back(oclMotionSystem);
 			}
-
+			
 			// Allocate the motion system buffer
 			LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
 				"] Leaf motion systems buffer size: " <<

@@ -38,6 +38,11 @@
 
 namespace luxrays {
 
+// OpenCL data types
+namespace ocl {
+#include "luxrays/core/exttrianglemesh_types.cl"
+}
+
 /*
  * The inheritance scheme used here:
  *
@@ -73,7 +78,7 @@ public:
 
 	virtual bool GetTriBaryCoords(const float time, const u_int triIndex, const Point &hitPoint, float *b1, float *b2) const = 0;
 	virtual void GetLocal2World(const float time, luxrays::Transform &t) const = 0;
-    virtual void GetDifferentials(const luxrays::Transform &localToWorld,
+    virtual void GetDifferentials(const float time,
 			const u_int triIndex, const Normal &shadeNormal,
 			Vector *dpdu, Vector *dpdv,
 			Normal *dndu, Normal *dndv) const = 0;
@@ -117,10 +122,11 @@ public:
 		delete[] alphas;
 	}
 
-	virtual Normal *GetNormals() const { return normals; }
-	virtual UV *GetUVs() const { return uvs; }
-	virtual Spectrum *GetColors() const { return cols; }
-	virtual float *GetAlphas() const { return alphas; }
+	Normal *GetNormals() const { return normals; }
+	Normal *GetTriNormals() const { return triNormals; }
+	UV *GetUVs() const { return uvs; }
+	Spectrum *GetColors() const { return cols; }
+	float *GetAlphas() const { return alphas; }
 
 	Normal *ComputeNormals();
 
@@ -150,7 +156,7 @@ public:
 	virtual void GetLocal2World(const float time, luxrays::Transform &t) const {
 		t = appliedTrans;
 	}
-	virtual void GetDifferentials(const luxrays::Transform &localToWorld,
+	virtual void GetDifferentials(const float time,
 			const u_int triIndex, const Normal &shadeNormal,
 			Vector *dpdu, Vector *dpdv,
 			Normal *dndu, Normal *dndv) const;
@@ -358,7 +364,7 @@ public:
 	virtual void GetLocal2World(const float time, luxrays::Transform &t) const {
 		t = trans;
 	}
-	virtual void GetDifferentials(const luxrays::Transform &localToWorld,
+	virtual void GetDifferentials(const float time,
 			const u_int triIndex, const Normal &shadeNormal,
 			Vector *dpdu, Vector *dpdv,
 			Normal *dndu, Normal *dndv) const;
@@ -490,7 +496,7 @@ public:
 		const Matrix4x4 m = motionSystem.Sample(time);
 		t = Inverse(Transform(m));
 	}
-	virtual void GetDifferentials(const luxrays::Transform &localToWorld,
+	virtual void GetDifferentials(const float time,
 			const u_int triIndex, const Normal &shadeNormal,
 			Vector *dpdu, Vector *dpdv,
 			Normal *dndu, Normal *dndv) const;
@@ -531,9 +537,13 @@ public:
 
 		return Triangle::Area(GetVertex(time, tri.v[0]), GetVertex(time, tri.v[1]), GetVertex(time, tri.v[2]));
 	}
-	virtual void Sample(const float time, const u_int triIndex, const float u0, const float u1, Point *p, float *b0, float *b1, float *b2) const  {
+	virtual void Sample(const float time, const u_int triIndex, const float u0, const float u1,
+			Point *p, float *b0, float *b1, float *b2) const  {
+		const Matrix4x4 m = motionSystem.Sample(time);
+		const Transform t = Inverse(Transform(m));
+
 		static_cast<ExtTriangleMesh *>(mesh)->Sample(time, triIndex, u0, u1, p , b0, b1, b2);
-		*p *= motionSystem.Sample(time);
+		*p = t * (*p);
 	}
 
 	virtual void Save(const std::string &fileName) const { static_cast<ExtTriangleMesh *>(mesh)->Save(fileName); }

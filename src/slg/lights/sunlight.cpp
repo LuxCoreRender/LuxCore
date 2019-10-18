@@ -146,38 +146,39 @@ float SunLight::GetPower(const Scene &scene) const {
 }
 
 Spectrum SunLight::Emit(const Scene &scene,
-		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
-		Point *orig, Vector *dir,
-		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
+		const float time, const float u0, const float u1,
+		const float u2, const float u3, const float passThroughEvent,
+		Point &rayOrig, Vector &rayDir, float &emissionPdfW,
+		float *directPdfA, float *cosThetaAtLight) const {
 	const Point worldCenter = scene.dataSet->GetBSphere().center;
 	const float envRadius = GetEnvRadius(scene);
 
 	// Set ray origin and direction for infinite light ray
 	float d1, d2;
 	ConcentricSampleDisk(u0, u1, &d1, &d2);
-	*orig = worldCenter + envRadius * (absoluteSunDir + d1 * x + d2 * y);
-	*dir = -UniformSampleCone(u2, u3, cosThetaMax, x, y, absoluteSunDir);
+	rayOrig = worldCenter + envRadius * (absoluteSunDir + d1 * x + d2 * y);
+	rayDir = -UniformSampleCone(u2, u3, cosThetaMax, x, y, absoluteSunDir);
 
 	const float uniformConePdf = UniformConePdf(cosThetaMax);
-	*emissionPdfW = uniformConePdf / (M_PI * envRadius * envRadius);
+	emissionPdfW = uniformConePdf / (M_PI * envRadius * envRadius);
 
 	if (directPdfA)
 		*directPdfA = uniformConePdf;
 
 	if (cosThetaAtLight)
-		*cosThetaAtLight = Dot(absoluteSunDir, -(*dir));
+		*cosThetaAtLight = Dot(absoluteSunDir, -rayDir);
 
 	return color;
 }
 
 Spectrum SunLight::Illuminate(const Scene &scene, const BSDF &bsdf,
-		const float u0, const float u1, const float passThroughEvent,
-        Vector *dir, float *distance, float *directPdfW,
+		const float time, const float u0, const float u1, const float passThroughEvent,
+        Vector &shadowRayDir, float &shadowRayDistance, float &directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
-	*dir = UniformSampleCone(u0, u1, cosThetaMax, x, y, absoluteSunDir);
+	shadowRayDir = UniformSampleCone(u0, u1, cosThetaMax, x, y, absoluteSunDir);
 
 	// Check if the point can be inside the sun cone of light
-	const float cosAtLight = Dot(absoluteSunDir, *dir);
+	const float cosAtLight = Dot(absoluteSunDir, shadowRayDir);
 	if (cosAtLight <= cosThetaMax)
 		return Spectrum();
 
@@ -186,13 +187,13 @@ Spectrum SunLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 
 	const Point &pSurface = bsdf.GetRayOrigin(worldCenter - bsdf.hitPoint.p);
 	const Vector toCenter(worldCenter - pSurface);
-	const float centerDistance = Dot(toCenter, toCenter);
-	const float approach = Dot(toCenter, *dir);
-	*distance = approach + sqrtf(Max(0.f, envRadius * envRadius -
-		centerDistance + approach * approach));
+	const float centerDistanceSquared = Dot(toCenter, toCenter);
+	const float approach = Dot(toCenter, shadowRayDir);
+	shadowRayDistance = approach + sqrtf(Max(0.f, envRadius * envRadius -
+		centerDistanceSquared + approach * approach));
 	
 	const float uniformConePdf = UniformConePdf(cosThetaMax);
-	*directPdfW = uniformConePdf;
+	directPdfW = uniformConePdf;
 
 	if (cosThetaAtLight)
 		*cosThetaAtLight = cosAtLight;

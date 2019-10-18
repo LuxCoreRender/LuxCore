@@ -100,13 +100,14 @@ static float LocalFalloff(const Vector &w, const float cosTotalWidth, const floa
 }
 
 Spectrum SpotLight::Emit(const Scene &scene,
-		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
-		Point *orig, Vector *dir,
-		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
-	*orig = absolutePos;
+		const float time, const float u0, const float u1,
+		const float u2, const float u3, const float passThroughEvent,
+		Point &rayOrig, Vector &rayDir, float &emissionPdfW,
+		float *directPdfA, float *cosThetaAtLight) const {
+	rayOrig = absolutePos;
 	const Vector localFromLight = UniformSampleCone(u0, u1, cosTotalWidth);
-	*dir = Normalize(alignedLight2World * localFromLight);
-	*emissionPdfW = UniformConePdf(cosTotalWidth);
+	rayDir = Normalize(alignedLight2World * localFromLight);
+	emissionPdfW = UniformConePdf(cosTotalWidth);
 
 	if (directPdfA)
 		*directPdfA = 1.f;
@@ -117,16 +118,16 @@ Spectrum SpotLight::Emit(const Scene &scene,
 }
 
 Spectrum SpotLight::Illuminate(const Scene &scene, const BSDF &bsdf,
-		const float u0, const float u1, const float passThroughEvent,
-        Vector *dir, float *distance, float *directPdfW,
+		const float time, const float u0, const float u1, const float passThroughEvent,
+        Vector &shadowRayDir, float &shadowRayDistance, float &directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
 	const Point &pSurface = bsdf.GetRayOrigin(absolutePos - bsdf.hitPoint.p);
 	const Vector toLight(absolutePos - pSurface);
 	const float distanceSquared = toLight.LengthSquared();
-	*distance = sqrtf(distanceSquared);
-	*dir = toLight / *distance;
+	shadowRayDistance = sqrtf(distanceSquared);
+	shadowRayDir = toLight / shadowRayDistance;
 
-	const Vector localFromLight = Normalize(Inverse(alignedLight2World) * (-(*dir)));
+	const Vector localFromLight = Normalize(Inverse(alignedLight2World) * (-shadowRayDir));
 	const float falloff = LocalFalloff(localFromLight, cosTotalWidth, cosFalloffStart);
 	if (falloff == 0.f)
 		return Spectrum();
@@ -134,7 +135,7 @@ Spectrum SpotLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 	if (cosThetaAtLight)
 		*cosThetaAtLight = CosTheta(localFromLight);
 
-	*directPdfW = distanceSquared;
+	directPdfW = distanceSquared;
 
 	if (emissionPdfW)
 		*emissionPdfW = UniformConePdf(cosTotalWidth);

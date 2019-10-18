@@ -217,6 +217,7 @@ protected:
 	cl::Buffer *envLightDistributionsBuff;
 	cl::Buffer *vertsBuff;
 	cl::Buffer *normalsBuff;
+	cl::Buffer *triNormalsBuff;
 	cl::Buffer *uvsBuff;
 	cl::Buffer *colsBuff;
 	cl::Buffer *alphasBuff;

@@ -320,9 +320,7 @@ void CompiledScene::CompileLights() {
 		switch (l->GetType()) {
 			case TYPE_TRIANGLE: {
 				const TriangleLight *tl = (const TriangleLight *)l;
-
 				const ExtMesh *mesh = tl->mesh;
-				const Triangle *tri = &(mesh->GetTriangles()[tl->triangleIndex]);
 
 				// Check if I have a triangle light source with vertex colors
 				if (mesh->HasColors())
@@ -332,62 +330,13 @@ void CompiledScene::CompileLights() {
 				oclLight->type = slg::ocl::TYPE_TRIANGLE;
 
 				// TriangleLight data
-				ASSIGN_VECTOR(oclLight->triangle.v0, mesh->GetVertex(0.f, tri->v[0]));
-				ASSIGN_VECTOR(oclLight->triangle.v1, mesh->GetVertex(0.f, tri->v[1]));
-				ASSIGN_VECTOR(oclLight->triangle.v2, mesh->GetVertex(0.f, tri->v[2]));
-				const Normal geometryN = mesh->GetGeometryNormal(0.f, tl->triangleIndex);
-				ASSIGN_VECTOR(oclLight->triangle.geometryN, geometryN);
-				if (mesh->HasNormals()) {
-					ASSIGN_VECTOR(oclLight->triangle.n0, mesh->GetShadeNormal(0.f, tl->triangleIndex, 0));
-					ASSIGN_VECTOR(oclLight->triangle.n1, mesh->GetShadeNormal(0.f, tl->triangleIndex, 1));
-					ASSIGN_VECTOR(oclLight->triangle.n2, mesh->GetShadeNormal(0.f, tl->triangleIndex, 2));
-				} else {
-					ASSIGN_VECTOR(oclLight->triangle.n0, geometryN);
-					ASSIGN_VECTOR(oclLight->triangle.n1, geometryN);
-					ASSIGN_VECTOR(oclLight->triangle.n2, geometryN);
-				}
-				if (mesh->HasUVs()) {
-					ASSIGN_UV(oclLight->triangle.uv0, mesh->GetUV(tri->v[0]));
-					ASSIGN_UV(oclLight->triangle.uv1, mesh->GetUV(tri->v[1]));
-					ASSIGN_UV(oclLight->triangle.uv2, mesh->GetUV(tri->v[2]));
-				} else {
-					const UV zero;
-					ASSIGN_UV(oclLight->triangle.uv0, zero);
-					ASSIGN_UV(oclLight->triangle.uv1, zero);
-					ASSIGN_UV(oclLight->triangle.uv2, zero);
-				}
-				if (mesh->HasColors()) {
-					ASSIGN_SPECTRUM(oclLight->triangle.rgb0, mesh->GetColor(tri->v[0]));
-					ASSIGN_SPECTRUM(oclLight->triangle.rgb1, mesh->GetColor(tri->v[1]));
-					ASSIGN_SPECTRUM(oclLight->triangle.rgb2, mesh->GetColor(tri->v[2]));					
-				} else {
-					const Spectrum one(1.f);
-					ASSIGN_SPECTRUM(oclLight->triangle.rgb0, one);
-					ASSIGN_SPECTRUM(oclLight->triangle.rgb1, one);
-					ASSIGN_SPECTRUM(oclLight->triangle.rgb2, one);
-				}
-				if (mesh->HasAlphas()) {
-					oclLight->triangle.alpha0 = mesh->GetAlpha(tri->v[0]);
-					oclLight->triangle.alpha1 = mesh->GetAlpha(tri->v[1]);
-					oclLight->triangle.alpha2 = mesh->GetAlpha(tri->v[2]);
-				} else {
-					oclLight->triangle.alpha0 = 1.f;
-					oclLight->triangle.alpha1 = 1.f;
-					oclLight->triangle.alpha2 = 1.f;
-				}
 
 				const float triangleArea = tl->GetTriangleArea();
 				oclLight->triangle.invTriangleArea = (triangleArea == 0.f) ? 0.f : (1.f / triangleArea);
 				const float meshArea = tl->GetMeshArea();
 				oclLight->triangle.invMeshArea = (meshArea == 0.f) ? 0.f : (1.f / meshArea);
-
-				auto it = meshToMeshDecsIndex.find(mesh);
-				if (it == meshToMeshDecsIndex.end())
-					throw runtime_error("Internal error, unable to find mesh " + mesh->GetName() + " in CompiledScene::CompileLights()");
-				oclLight->triangle.meshIndex = it->second;
+				oclLight->triangle.meshIndex = tl->meshIndex;
 				oclLight->triangle.triangleIndex = tl->triangleIndex;
-				oclLight->triangle.materialIndex = scene->matDefs.GetMaterialIndex(tl->lightMaterial);
-				oclLight->triangle.objectID = tl->objectID;
 
 				const SampleableSphericalFunction *emissionFunc = tl->lightMaterial->GetEmissionFunc();
 				if (emissionFunc) {

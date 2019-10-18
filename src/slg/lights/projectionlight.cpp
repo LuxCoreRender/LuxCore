@@ -129,16 +129,17 @@ float ProjectionLight::GetPower(const Scene &scene) const {
 }
 
 Spectrum ProjectionLight::Emit(const Scene &scene,
-		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
-		Point *orig, Vector *dir,
-		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
-	*orig = absolutePos;
+		const float time, const float u0, const float u1,
+		const float u2, const float u3, const float passThroughEvent,
+		Point &rayOrig, Vector &rayDir, float &emissionPdfW,
+		float *directPdfA, float *cosThetaAtLight) const {
+	rayOrig = absolutePos;
 	const Point ps = Inverse(lightProjection) *
 		Point(u0 * (screenX1 - screenX0) + screenX0, u1 * (screenY1 - screenY0) + screenY0, 0.f);
-	*dir = Normalize(alignedLight2World * Vector(ps.x, ps.y, ps.z));
-	const float cos = Dot(*dir, lightNormal);
+	rayDir = Normalize(alignedLight2World * Vector(ps.x, ps.y, ps.z));
+	const float cos = Dot(rayDir, lightNormal);
 	const float cos2 = cos * cos;
-	*emissionPdfW = 1.f / (area * cos2 * cos);
+	emissionPdfW = 1.f / (area * cos2 * cos);
 
 	if (directPdfA)
 		*directPdfA = 1.f;
@@ -153,26 +154,26 @@ Spectrum ProjectionLight::Emit(const Scene &scene,
 }
 
 Spectrum ProjectionLight::Illuminate(const Scene &scene, const BSDF &bsdf,
-		const float u0, const float u1, const float passThroughEvent,
-        Vector *dir, float *distance, float *directPdfW,
+		const float time, const float u0, const float u1, const float passThroughEvent,
+        Vector &shadowRayDir, float &shadowRayDistance, float &directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
 	const Point &pSurface = bsdf.GetRayOrigin(absolutePos - bsdf.hitPoint.p);
 	const Vector toLight(absolutePos - pSurface);
 	const float distanceSquared = toLight.LengthSquared();
-	*distance = sqrtf(distanceSquared);
-	*dir = toLight / *distance;
+	shadowRayDistance = sqrtf(distanceSquared);
+	shadowRayDir = toLight / shadowRayDistance;
 
 	// Check the side
-	if (Dot(-(*dir), lightNormal) < 0.f)
+	if (Dot(-shadowRayDir, lightNormal) < 0.f)
 		return Spectrum();
 
 	// Check if the point is inside the image plane
-	const Vector localFromLight = Normalize(Inverse(alignedLight2World) * (-(*dir)));
+	const Vector localFromLight = Normalize(Inverse(alignedLight2World) * (-shadowRayDir));
 	const Point p0 = lightProjection * Point(localFromLight.x, localFromLight.y, localFromLight.z);
 	if ((p0.x < screenX0) || (p0.x >= screenX1) || (p0.y < screenY0) || (p0.y >= screenY1))
 		return Spectrum();
 
-	*directPdfW = distanceSquared;
+	directPdfW = distanceSquared;
 
 	if (cosThetaAtLight)
 		*cosThetaAtLight = 1.f;

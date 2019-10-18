@@ -64,7 +64,7 @@ DisplacementShape::DisplacementShape(luxrays::ExtTriangleMesh *srcMesh, const Te
 				const Normal shadeN = srcMesh->GetShadeNormal(0.f, vertIndex);
 
 				// Compute geometry differentials
-				srcMesh->GetDifferentials(Transform::TRANS_IDENTITY, i, shadeN,
+				srcMesh->GetDifferentials(0.f, i, shadeN,
 						&dpdu[vertIndex], &dpdv[vertIndex],
 						&dndu[vertIndex], &dndv[vertIndex]);
 

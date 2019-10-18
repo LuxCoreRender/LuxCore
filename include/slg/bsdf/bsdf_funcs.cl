@@ -25,83 +25,54 @@ OPENCL_FORCE_NOT_INLINE void BSDF_Init(
 		__global Ray *ray,
 		__global const RayHit *rayHit
 #if defined(PARAM_HAS_PASSTHROUGH)
-		, const float u0
+		, const float passThroughEvent
 #endif
 #if defined(PARAM_HAS_VOLUMES)
 		, __global PathVolumeInfo *volInfo
 #endif
 		MATERIALS_PARAM_DECL
 		) {
-	bsdf->hitPoint.throughShadowTransparency = throughShadowTransparency;
-#if defined(PARAM_HAS_PASSTHROUGH)
-	bsdf->hitPoint.passThroughEvent = u0;
-#endif
-
-	const float3 rayOrig = VLOAD3F(&ray->o.x);
-	const float3 rayDir = VLOAD3F(&ray->d.x);
-
-	const float3 hitPointP = rayOrig + rayHit->t * rayDir;
-	VSTORE3F(hitPointP, &bsdf->hitPoint.p.x);
-	VSTORE3F(-rayDir, &bsdf->hitPoint.fixedDir.x);
-
 	const uint meshIndex = rayHit->meshIndex;
 	const uint triangleIndex = rayHit->triangleIndex;
 
-	__global const Mesh* restrict meshDesc = &meshDescs[meshIndex];
-	__global const Point* restrict iVertices = &vertices[meshDesc->vertsOffset];
-	__global const Triangle* restrict iTriangles = &triangles[meshDesc->trisOffset];
+	const float3 rayOrig = VLOAD3F(&ray->o.x);
+	const float3 rayDir = VLOAD3F(&ray->d.x);
+	const float3 hitPointP = rayOrig + rayHit->t * rayDir;
+
+	HitPoint_Init(&bsdf->hitPoint, throughShadowTransparency,
+		meshIndex, triangleIndex,
+		ray->time, hitPointP, -rayDir,
+		rayHit->b1, rayHit->b2
+#if defined(PARAM_HAS_PASSTHROUGH)
+		, passThroughEvent
+#endif
+		MATERIALS_PARAM);
 
 	// Save the scene object index
 	bsdf->sceneObjectIndex = meshIndex;
 	
 	// Initialized world to local object space transformation
-	bsdf->hitPoint.worldToLocal = meshDesc->trans.mInv;
+	__global const ExtMesh* restrict meshDesc = &meshDescs[meshIndex];
+	switch (meshDesc->type) {
+		case TYPE_EXT_TRIANGLE:
+			bsdf->hitPoint.worldToLocal = meshDesc->triangle.trans.mInv;
+			break;
+		case TYPE_EXT_TRIANGLE_INSTANCE:
+			bsdf->hitPoint.worldToLocal = meshDesc->instance.trans.mInv;
+			break;
+		case TYPE_EXT_TRIANGLE_MOTION:
+			// TODO
+		default:
+			break;
+	}
 
 	// Get the material
 	const uint matIndex = sceneObjs[meshIndex].materialIndex;
 	bsdf->materialIndex = matIndex;
 
 	//--------------------------------------------------------------------------
-	// Get face normal
-	//--------------------------------------------------------------------------
-
-	const float b1 = rayHit->b1;
-	const float b2 = rayHit->b2;
-
-	// Geometry normal expressed in local coordinates
-	float3 geometryN = Mesh_GetGeometryNormal(iVertices, iTriangles, triangleIndex);
-
-	if (meshDesc->type != TYPE_EXT_TRIANGLE) {
-		// Transform to global coordinates
-		geometryN = normalize(Transform_InvApplyNormal(&meshDesc->trans, geometryN));
-	}
-
-	// Store the geometry normal
-	VSTORE3F(geometryN, &bsdf->hitPoint.geometryN.x);
-
-	// The interpolated and shading normal
-	float3 interpolatedN;
-	if (meshDesc->normalsOffset != NULL_INDEX) {
-		__global const Vector* restrict iVertNormals = &vertNormals[meshDesc->normalsOffset];
-		// Shading normal expressed in local coordinates
-		interpolatedN = Mesh_InterpolateNormal(iVertNormals, iTriangles, triangleIndex, b1, b2);
-
-		if (meshDesc->type != TYPE_EXT_TRIANGLE) {
-			// Transform to global coordinates
-			interpolatedN = normalize(Transform_InvApplyNormal(&meshDesc->trans, interpolatedN));
-		}
-		
-	} else
-		interpolatedN = geometryN;
-	float3 shadeN = interpolatedN;
-    VSTORE3F(interpolatedN, &bsdf->hitPoint.interpolatedN.x);
-	VSTORE3F(shadeN, &bsdf->hitPoint.shadeN.x);
-
-	//--------------------------------------------------------------------------
 	// Set interior and exterior volumes
 	//--------------------------------------------------------------------------
-
-	bsdf->hitPoint.intoObject = (dot(rayDir, geometryN) < 0.f);
 
 #if defined(PARAM_HAS_VOLUMES)
 	PathVolumeInfo_SetHitPointVolumes(
@@ -109,64 +80,15 @@ OPENCL_FORCE_NOT_INLINE void BSDF_Init(
 			&bsdf->hitPoint,
 			Material_GetInteriorVolume(matIndex, &bsdf->hitPoint
 #if defined(PARAM_HAS_PASSTHROUGH)
-				, u0
+			, passThroughEvent
 #endif
 			MATERIALS_PARAM),
 			Material_GetExteriorVolume(matIndex, &bsdf->hitPoint
 #if defined(PARAM_HAS_PASSTHROUGH)
-				, u0
+			, passThroughEvent
 #endif
 			MATERIALS_PARAM)
 			MATERIALS_PARAM);
-#endif
-
-	//--------------------------------------------------------------------------
-	// Get UV coordinate
-	//--------------------------------------------------------------------------
-
-	float2 hitPointUV;
-	if (meshDesc->uvsOffset != NULL_INDEX) {
-		__global const UV* restrict iVertUVs = &vertUVs[meshDesc->uvsOffset];
-		hitPointUV = Mesh_InterpolateUV(iVertUVs, iTriangles, triangleIndex, b1, b2);
-	} else
-		hitPointUV = 0.f;
-	VSTORE2F(hitPointUV, &bsdf->hitPoint.uv.u);
-
-	//--------------------------------------------------------------------------
-	// Get color value
-	//--------------------------------------------------------------------------
-
-#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR) || defined(PARAM_ENABLE_TEX_HITPOINTGREY) || defined(PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR)
-	float3 hitPointColor;
-	if (meshDesc->colsOffset != NULL_INDEX) {
-		__global const Spectrum* restrict iVertCols = &vertCols[meshDesc->colsOffset];
-		hitPointColor = Mesh_InterpolateColor(iVertCols, iTriangles, triangleIndex, b1, b2);
-	} else
-		hitPointColor = WHITE;
-	VSTORE3F(hitPointColor, bsdf->hitPoint.color.c);
-#endif
-
-	//--------------------------------------------------------------------------
-	// Get alpha value
-	//--------------------------------------------------------------------------
-
-#if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)
-	float hitPointAlpha;
-
-	if (meshDesc->alphasOffset != NULL_INDEX) {
-		__global const float* restrict iVertAlphas = &vertAlphas[meshDesc->alphasOffset];
-		hitPointAlpha = Mesh_InterpolateAlpha(iVertAlphas, iTriangles, triangleIndex, b1, b2);
-	} else
-		hitPointAlpha = 1.f;
-	bsdf->hitPoint.alpha = hitPointAlpha;
-#endif
-	
-	//--------------------------------------------------------------------------
-	// Get object ID
-	//--------------------------------------------------------------------------
-
-#if defined(PARAM_ENABLE_TEX_OBJECTID) || defined(PARAM_ENABLE_TEX_OBJECTID_COLOR) || defined(PARAM_ENABLE_TEX_OBJECTID_NORMALIZED)
-	bsdf->hitPoint.objectID = sceneObjs[meshIndex].objectID;
 #endif
 
 	//--------------------------------------------------------------------------
@@ -175,27 +97,6 @@ OPENCL_FORCE_NOT_INLINE void BSDF_Init(
 	const uint offset = lightIndexOffsetByMeshIndex[meshIndex];
 	bsdf->triangleLightSourceIndex = (offset == NULL_INDEX) ? NULL_INDEX : lightIndexByTriIndex[offset + triangleIndex];
 
-    //--------------------------------------------------------------------------
-	// Build the local reference system
-	//--------------------------------------------------------------------------
-
-	float3 dndu, dndv, dpdu, dpdv;
-	ExtMesh_GetDifferentials(
-			meshDescs,
-			vertices,
-			vertNormals,
-			vertUVs,
-			triangles,
-			meshIndex,
-			triangleIndex,
-			shadeN,
-			&dpdu, &dpdv,
-			&dndu, &dndv);
-	VSTORE3F(dpdu, &bsdf->hitPoint.dpdu.x);
-	VSTORE3F(dpdv, &bsdf->hitPoint.dpdv.x);
-	VSTORE3F(dndu, &bsdf->hitPoint.dndu.x);
-	VSTORE3F(dndv, &bsdf->hitPoint.dndv.x);
-	
 	//--------------------------------------------------------------------------
 	// Apply bump or normal mapping
 	//--------------------------------------------------------------------------
@@ -203,9 +104,9 @@ OPENCL_FORCE_NOT_INLINE void BSDF_Init(
 	Material_Bump(matIndex, &bsdf->hitPoint
 			MATERIALS_PARAM);
 	// Re-read the shadeN modified by Material_Bump()
-	shadeN = VLOAD3F(&bsdf->hitPoint.shadeN.x);
-	dpdu = VLOAD3F(&bsdf->hitPoint.dpdu.x);
-	dpdv = VLOAD3F(&bsdf->hitPoint.dpdv.x);
+	const float3 shadeN = VLOAD3F(&bsdf->hitPoint.shadeN.x);
+	const float3 dpdu = VLOAD3F(&bsdf->hitPoint.dpdu.x);
+	const float3 dpdv = VLOAD3F(&bsdf->hitPoint.dpdv.x);
 
 	//--------------------------------------------------------------------------
 	// Build the local reference system

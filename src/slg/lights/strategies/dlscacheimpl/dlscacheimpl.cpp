@@ -191,6 +191,7 @@ float DirectLightSamplingCache::SampleLight(const DLSCVisibilityParticle &visibi
 	const float u2 = RadicalInverse(pass, 5);
 	const float u3 = RadicalInverse(pass, 7);
 	const float u4 = RadicalInverse(pass, 11);
+	const float time = RadicalInverse(pass, 13);
 
 	// Select a sampling point
 	const size_t bsdfListSize = visibilityParticle.bsdfList.size();
@@ -200,7 +201,7 @@ float DirectLightSamplingCache::SampleLight(const DLSCVisibilityParticle &visibi
 	Vector lightRayDir;
 	float distance, directPdfW;
 	Spectrum lightRadiance = light->Illuminate(*scene, samplingBSDF,
-			u1, u2, u3, &lightRayDir, &distance, &directPdfW);
+			time, u1, u2, u3, lightRayDir, distance, directPdfW);
 	assert (!lightRadiance.IsNaN() && !lightRadiance.IsInf());
 
 	if (!lightRadiance.Black() && ((samplingBSDF.GetEventTypes() & TRANSMIT) ||

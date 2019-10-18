@@ -250,6 +250,9 @@ void PathOCLBaseOCLRenderThread::InitGeometry() {
 	else
 		FreeOCLBuffer(&alphasBuff);
 
+	AllocOCLBufferRO(&triNormalsBuff, &cscene->triNormals[0],
+				sizeof(Normal) * cscene->triNormals.size(), "Triangle normals");
+
 	AllocOCLBufferRO(&vertsBuff, &cscene->verts[0],
 		sizeof(Point) * cscene->verts.size(), "Vertices");
 
@@ -257,7 +260,7 @@ void PathOCLBaseOCLRenderThread::InitGeometry() {
 		sizeof(Triangle) * cscene->tris.size(), "Triangles");
 
 	AllocOCLBufferRO(&meshDescsBuff, &cscene->meshDescs[0],
-			sizeof(slg::ocl::Mesh) * cscene->meshDescs.size(), "Mesh description");
+			sizeof(slg::ocl::ExtMesh) * cscene->meshDescs.size(), "Mesh description");
 }
 
 void PathOCLBaseOCLRenderThread::InitMaterials() {

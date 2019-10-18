@@ -85,14 +85,15 @@ Spectrum ConstantInfiniteLight::GetRadiance(const Scene &scene,
 }
 
 Spectrum ConstantInfiniteLight::Emit(const Scene &scene,
-		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
-		Point *orig, Vector *dir,
-		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
+		const float time, const float u0, const float u1,
+		const float u2, const float u3, const float passThroughEvent,
+		Point &rayOrig, Vector &rayDir, float &emissionPdfW,
+		float *directPdfA, float *cosThetaAtLight) const {
 	const Point worldCenter = scene.dataSet->GetBSphere().center;
 	const float envRadius = GetEnvRadius(scene);
 
 	// Compute InfiniteLight ray weight
-	*emissionPdfW = UniformSpherePdf() / (M_PI * envRadius * envRadius);
+	emissionPdfW = UniformSpherePdf() / (M_PI * envRadius * envRadius);
 
 	if (directPdfA)
 		*directPdfA = UniformSpherePdf();
@@ -104,18 +105,18 @@ Spectrum ConstantInfiniteLight::Emit(const Scene &scene,
 	Point p2 = worldCenter + envRadius * UniformSampleSphere(u2, u3);
 
 	// Construct ray between p1 and p2
-	*orig = p1;
-	*dir = Normalize((p2 - p1));
+	rayOrig = p1;
+	rayDir = Normalize((p2 - p1));
 
 	if (cosThetaAtLight)
-		*cosThetaAtLight = Dot(Normalize(worldCenter -  p1), *dir);
+		*cosThetaAtLight = Dot(Normalize(worldCenter -  p1), rayDir);
 
-	return GetRadiance(scene, nullptr, *dir);
+	return GetRadiance(scene, nullptr, rayDir);
 }
 
 Spectrum ConstantInfiniteLight::Illuminate(const Scene &scene, const BSDF &bsdf,
-		const float u0, const float u1, const float passThroughEvent,
-        Vector *dir, float *distance, float *directPdfW,
+		const float time, const float u0, const float u1, const float passThroughEvent,
+        Vector &shadowRayDir, float &shadowRayDistance, float &directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
 	const float envRadius = GetEnvRadius(scene);
 
@@ -133,18 +134,18 @@ Spectrum ConstantInfiniteLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 			return Spectrum();
 
 		float latLongMappingPdf;
-		FromLatLongMapping(uv[0], uv[1], dir, &latLongMappingPdf);
+		FromLatLongMapping(uv[0], uv[1], &shadowRayDir, &latLongMappingPdf);
 		if (latLongMappingPdf == 0.f)
 			return Spectrum();
 
-		*directPdfW = distPdf * latLongMappingPdf;
+		directPdfW = distPdf * latLongMappingPdf;
 
 		if (emissionPdfW)
 			*emissionPdfW = distPdf * latLongMappingPdf / (M_PI * envRadius * envRadius);
 	} else {
-		*dir = UniformSampleSphere(u0, u1);
+		shadowRayDir = UniformSampleSphere(u0, u1);
 
-		*directPdfW = UniformSpherePdf();
+		directPdfW = UniformSpherePdf();
 
 		if (emissionPdfW)
 			*emissionPdfW = UniformSpherePdf() / (M_PI * envRadius * envRadius);
@@ -154,15 +155,15 @@ Spectrum ConstantInfiniteLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 
 	const Point &pSurface = bsdf.GetRayOrigin(worldCenter - bsdf.hitPoint.p);
 	const Vector toCenter(worldCenter - pSurface);
-	const float centerDistance = Dot(toCenter, toCenter);
-	const float approach = Dot(toCenter, *dir);
-	*distance = approach + sqrtf(Max(0.f, envRadius * envRadius -
-		centerDistance + approach * approach));
+	const float centerDistanceSquared = Dot(toCenter, toCenter);
+	const float approach = Dot(toCenter, shadowRayDir);
+	shadowRayDistance = approach + sqrtf(Max(0.f, envRadius * envRadius -
+		centerDistanceSquared + approach * approach));
 
-	const Point emisPoint(pSurface + (*distance) * (*dir));
+	const Point emisPoint(pSurface + shadowRayDistance * shadowRayDir);
 	const Normal emisNormal(Normalize(worldCenter - emisPoint));
 
-	const float cosAtLight = Dot(emisNormal, -(*dir));
+	const float cosAtLight = Dot(emisNormal, -shadowRayDir);
 	if (cosAtLight < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 	if (cosThetaAtLight)

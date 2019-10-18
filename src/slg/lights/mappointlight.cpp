@@ -56,17 +56,18 @@ float MapPointLight::GetPower(const Scene &scene) const {
 }
 
 Spectrum MapPointLight::Emit(const Scene &scene,
-		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
-		Point *orig, Vector *dir,
-		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
-	*orig = absolutePos;
+		const float time, const float u0, const float u1,
+		const float u2, const float u3, const float passThroughEvent,
+		Point &rayOrig, Vector &rayDir, float &emissionPdfW,
+		float *directPdfA, float *cosThetaAtLight) const {
+	rayOrig = absolutePos;
 
 	Vector localFromLight;
-	func->Sample(u0, u1, &localFromLight, emissionPdfW);
-	if (*emissionPdfW == 0.f)
+	func->Sample(u0, u1, &localFromLight, &emissionPdfW);
+	if (emissionPdfW == 0.f)
 		return Spectrum();
 
-	*dir = Normalize(lightToWorld * localFromLight);
+	rayDir = Normalize(lightToWorld * localFromLight);
 
 	if (directPdfA)
 		*directPdfA = 1.f;
@@ -78,8 +79,8 @@ Spectrum MapPointLight::Emit(const Scene &scene,
 }
 
 Spectrum MapPointLight::Illuminate(const Scene &scene, const BSDF &bsdf,
-		const float u0, const float u1, const float passThroughEvent,
-        Vector *dir, float *distance, float *directPdfW,
+		const float time, const float u0, const float u1, const float passThroughEvent,
+        Vector &shadowRayDir, float &shadowRayDistance, float &directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
 	const Point &pSurface = bsdf.GetRayOrigin(absolutePos - bsdf.hitPoint.p);
 	const Vector localFromLight = Normalize(Inverse(lightToWorld) * pSurface - localPos);
@@ -89,13 +90,13 @@ Spectrum MapPointLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 
 	const Vector toLight(absolutePos - pSurface);
 	const float centerDistanceSquared = toLight.LengthSquared();
-	*distance = sqrtf(centerDistanceSquared);
-	*dir = toLight / *distance;
+	shadowRayDistance = sqrtf(centerDistanceSquared);
+	shadowRayDir = toLight / shadowRayDistance;
 
 	if (cosThetaAtLight)
 		*cosThetaAtLight = 1.f;
 
-	*directPdfW = centerDistanceSquared;
+	directPdfW = centerDistanceSquared;
 
 	if (emissionPdfW)
 		*emissionPdfW = funcPdf;

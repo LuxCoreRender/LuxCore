@@ -74,6 +74,7 @@ PathOCLBaseOCLRenderThread::PathOCLBaseOCLRenderThread(const u_int index,
 	envLightDistributionsBuff = nullptr;
 	vertsBuff = nullptr;
 	normalsBuff = nullptr;
+	triNormalsBuff = nullptr;
 	uvsBuff = nullptr;
 	colsBuff = nullptr;
 	alphasBuff = nullptr;
@@ -181,6 +182,7 @@ void PathOCLBaseOCLRenderThread::Stop() {
 	FreeOCLBuffer(&meshDescsBuff);
 	FreeOCLBuffer(&scnObjsBuff);
 	FreeOCLBuffer(&normalsBuff);
+	FreeOCLBuffer(&triNormalsBuff);
 	FreeOCLBuffer(&uvsBuff);
 	FreeOCLBuffer(&colsBuff);
 	FreeOCLBuffer(&alphasBuff);

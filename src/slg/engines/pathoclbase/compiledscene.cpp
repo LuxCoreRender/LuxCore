@@ -31,12 +31,7 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
-bool CompiledScene::MeshPtrCompare(const Mesh *p0, const Mesh *p1) {
-	return p0 < p1;
-}
-
-CompiledScene::CompiledScene(Scene *scn, const PhotonGICache *pgi) :
-		meshToMeshDecsIndex(MeshPtrCompare) {
+CompiledScene::CompiledScene(Scene *scn, const PhotonGICache *pgi) {
 	scene = scn;
 	photonGICache = pgi;
 	maxMemPageSize = 0xffffffffu;

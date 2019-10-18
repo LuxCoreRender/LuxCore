@@ -241,7 +241,7 @@ void BiDirCPURenderThread::DirectLightSampling(const float time,
 			Vector lightRayDir;
 			float distance, directPdfW, emissionPdfW, cosThetaAtLight;
 			const Spectrum lightRadiance = light->Illuminate(*scene, eyeVertex.bsdf,
-					u1, u2, u3, &lightRayDir, &distance, &directPdfW, &emissionPdfW,
+					time, u1, u2, u3, lightRayDir, distance, directPdfW, &emissionPdfW,
 					&cosThetaAtLight);
 
 			if (!lightRadiance.Black()) {
@@ -378,9 +378,10 @@ bool BiDirCPURenderThread::TraceLightPath(const float time,
 	float lightEmitPdfW, lightDirectPdfW, cosThetaAtLight;
 	Ray lightRay;
 	lightVertex.throughput = light->Emit(*scene,
-		sampler->GetSample(5), sampler->GetSample(6),
-		sampler->GetSample(7), sampler->GetSample(8), sampler->GetSample(9),
-		&lightRay.o, &lightRay.d, &lightEmitPdfW, &lightDirectPdfW, &cosThetaAtLight);
+			time, sampler->GetSample(5), sampler->GetSample(6),
+			sampler->GetSample(7), sampler->GetSample(8), sampler->GetSample(9),
+			lightRay.o, lightRay.d, lightEmitPdfW,
+			&lightDirectPdfW, &cosThetaAtLight);
 	lightRay.UpdateMinMaxWithEpsilon();
 	lightRay.time = time;
 	if (!lightVertex.throughput.Black()) {

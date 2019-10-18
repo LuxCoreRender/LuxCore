@@ -22,6 +22,7 @@
 #include "luxrays/luxrays.h"
 #include "luxrays/core/epsilon.h"
 #include "luxrays/core/color/color.h"
+#include "luxrays/core/geometry/uv.h"
 #include "luxrays/core/geometry/transform.h"
 #include "luxrays/core/geometry/frame.h"
 
@@ -33,6 +34,7 @@ namespace ocl {
 }
 
 class Volume;
+class Scene;
 
 typedef struct {
 	// The incoming direction. It is the eyeDir when fromLight = false and
@@ -58,6 +60,12 @@ typedef struct {
 	bool fromLight, intoObject;
 	// If I got here going trough a shadow transparency. It can be used to disable MIS.
 	bool throughShadowTransparency;
+
+	void Init(const bool fixedFromLight, const bool throughShadowTransparency,
+		const Scene &scene, const u_int meshIndex, const u_int triangleIndex,
+		const float time, const luxrays::Point &p, const luxrays::Vector &d,
+		const float b1, const float b2,
+		const float passThroughEvent);
 
 	luxrays::Frame GetFrame() const { return luxrays::Frame(dpdu, dpdv, shadeN); }
 	luxrays::Normal GetLandingGeometryN() const { return (intoObject ? 1.f : -1.f) * geometryN; }

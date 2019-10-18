@@ -78,15 +78,15 @@ public:
 	// Compiled Scene Meshes
 	std::vector<luxrays::Point> verts;
 	std::vector<luxrays::Normal> normals;
+	std::vector<luxrays::Normal> triNormals;
 	std::vector<luxrays::UV> uvs;
 	std::vector<luxrays::Spectrum> cols;
 	std::vector<float> alphas;
 	std::vector<luxrays::Triangle> tris;
-	std::vector<luxrays::ocl::Mesh> meshDescs;
+	std::vector<luxrays::ocl::MotionSystem> motionSystems;
+	std::vector<luxrays::ocl::InterpolatedTransform> interpolatedTransforms;
+	std::vector<luxrays::ocl::ExtMesh> meshDescs;
 	luxrays::BSphere worldBSphere;
-	// Not using boost::unordered_map because the key is an ExtMesh pointer
-	// Maps mesh pointer to mesh description index
-	std::map<const luxrays::ExtMesh *, u_int, bool (*)(const luxrays::Mesh *, const luxrays::Mesh *)> meshToMeshDecsIndex;
 
 	// Compiled Scene Objects
 	std::vector<slg::ocl::SceneObject> sceneObjs;
@@ -156,8 +156,6 @@ public:
 		wasPhotonGICompiled;
 
 private:
-	static bool MeshPtrCompare(const luxrays::Mesh *p0, const luxrays::Mesh *p1);
-
 	void AddEnabledImageMapCode();
 	// There is no AddEnabledTextureCode() version because all textures not already
 	// included by default have source code dynamically generated (because they

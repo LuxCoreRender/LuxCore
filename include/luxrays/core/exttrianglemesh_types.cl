@@ -1,4 +1,4 @@
-#line 2 "motionsystem_types.cl"
+#line 2 "exttrianglemesh_types.cl"
 
 /***************************************************************************
  * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
@@ -19,36 +19,58 @@
  ***************************************************************************/
 
 typedef struct {
-	// Scaling
-	float Sx, Sy, Sz;
-	// Shearing
-	float Sxy, Sxz, Syz;
-	// Rotation
-	Matrix4x4 R;
-	// Translation
-	float Tx, Ty, Tz;
-	// Perspective
-	float Px, Py, Pz, Pw;
-	// Represents a valid series of transformations
-	bool Valid;
-} DecomposedTransform;
+	Transform trans;
+} TriangleMeshParam;
 
 typedef struct {
-	float startTime, endTime;
-	Transform start, end;
-	DecomposedTransform startT, endT;
-	Quaternion startQ, endQ;
-	int hasRotation, hasTranslation, hasScale;
-	int hasTranslationX, hasTranslationY, hasTranslationZ;
-	int hasScaleX, hasScaleY, hasScaleZ;
-	// false if start and end transformations are identical
-	int isActive;
-} InterpolatedTransform;
+	Transform trans;
+} TriangleInstanceMeshParam;
 
 typedef struct {
-	unsigned int interpolatedTransformFirstIndex;
-	unsigned int interpolatedTransformLastIndex;
+	MotionSystem motionSystem;
+} TriangleMotionMeshParam;
 
-	unsigned int interpolatedInverseTransformFirstIndex;
-	unsigned int interpolatedInverseTransformLastIndex;
-} MotionSystem;
+typedef struct {
+	MeshType type;
+
+	// Vertex information
+	unsigned int vertsOffset;
+	unsigned int normalsOffset;
+	unsigned int triNormalsOffset;
+	unsigned int uvsOffset;
+	unsigned int colsOffset;
+	unsigned int alphasOffset;
+
+	// Triangle information
+	unsigned int trisOffset;
+
+	// Object space transformation
+	union {
+		TriangleMeshParam triangle;
+		TriangleInstanceMeshParam instance;
+		TriangleMotionMeshParam motion;
+	};
+} ExtMesh;
+
+#if defined(SLG_OPENCL_KERNEL)
+
+#define EXTMESH_PARAM_DECL , \
+		__global const ExtMesh* restrict meshDescs, \
+		__global const Point* restrict vertices, \
+		__global const Normal* restrict vertNormals, \
+		__global const Normal* restrict triNormals, \
+		__global const UV* restrict vertUVs, \
+		__global const Spectrum* restrict vertCols, \
+		__global const float* restrict vertAlphas, \
+		__global const Triangle* restrict triangles
+#define EXTMESH_PARAM , \
+		meshDescs, \
+		vertices, \
+		vertNormals, \
+		triNormals, \
+		vertUVs, \
+		vertCols, \
+		vertAlphas, \
+		triangles
+
+#endif

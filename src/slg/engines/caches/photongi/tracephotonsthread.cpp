@@ -134,8 +134,8 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 		float lightEmitPdfW;
 		Ray nextEventRay;
 		lightPathFlux = light->Emit(*scene,
-			samples[2], samples[3], samples[4], samples[5], samples[6],
-				&nextEventRay.o, &nextEventRay.d, &lightEmitPdfW);
+				time, samples[2], samples[3], samples[4], samples[5], samples[6],
+				nextEventRay.o, nextEventRay.d, lightEmitPdfW);
 		nextEventRay.UpdateMinMaxWithEpsilon();
 		nextEventRay.time = time;
 
