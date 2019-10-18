@@ -176,4 +176,5 @@ SAMPLER_OBJECTSTATICREGISTRY_REGISTER(SamplerRegistry, SobolSampler);
 SAMPLER_OBJECTSTATICREGISTRY_REGISTER(SamplerRegistry, MetropolisSampler);
 SAMPLER_OBJECTSTATICREGISTRY_REGISTER(SamplerRegistry, RTPathCPUSampler);
 SAMPLER_OBJECTSTATICREGISTRY_REGISTER(SamplerRegistry, TilePathSampler);
+SAMPLER_OBJECTSTATICREGISTRY_REGISTER(SamplerRegistry, PMJ02Sampler);
 // Just add here any new Sampler (don't forget in the .h too)
