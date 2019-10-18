@@ -1473,6 +1473,9 @@ ri_stmt: ACCELERATOR STRING paramlist
 	} else if (name == "random") {
 		*renderConfigProps <<
 				Property("sampler.type")("RANDOM");
+	} else if (name == "pmj02") {
+		*renderConfigProps <<
+				Property("sampler.type")("PMJ02");
 	} else {
 		LC_LOG("LuxCore doesn't support the sampler type " + name + ", falling back to random sampler");
 		*renderConfigProps <<
