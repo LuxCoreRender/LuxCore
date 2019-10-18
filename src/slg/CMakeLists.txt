@@ -459,6 +459,7 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/samplers/soboldata.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/samplers/sobolsequence.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/samplers/pmj02.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/samplers/pmj02sequence.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/samplers/metropolis.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/scene/extmeshcache.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/scene/extmeshcacheserialize.cpp

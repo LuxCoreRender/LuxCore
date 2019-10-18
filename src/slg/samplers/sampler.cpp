@@ -154,6 +154,7 @@ SAMPLERSHAREDDATA_STATICTABLE_REGISTER(SobolSampler::GetObjectTag(), SobolSample
 SAMPLERSHAREDDATA_STATICTABLE_REGISTER(MetropolisSampler::GetObjectTag(), MetropolisSamplerSharedData);
 SAMPLERSHAREDDATA_STATICTABLE_REGISTER(RTPathCPUSampler::GetObjectTag(), RTPathCPUSamplerSharedData);
 SAMPLERSHAREDDATA_STATICTABLE_REGISTER(TilePathSampler::GetObjectTag(), TilePathSamplerSharedData);
+SAMPLERSHAREDDATA_STATICTABLE_REGISTER(PMJ02Sampler::GetObjectTag(), PMJ02SamplerSharedData);
 // Just add here any new SamplerSharedData (don't forget in the .h too)
 
 //------------------------------------------------------------------------------

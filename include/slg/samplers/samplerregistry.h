@@ -28,6 +28,7 @@
 #include "slg/samplers/metropolis.h"
 #include "slg/samplers/rtpathcpusampler.h"
 #include "slg/samplers/tilepathsampler.h"
+#include "slg/samplers/pmj02.h"
 
 namespace slg {
 
