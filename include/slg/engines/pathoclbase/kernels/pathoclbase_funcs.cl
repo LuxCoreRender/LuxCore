@@ -676,6 +676,7 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 		KERNEL_ARGS_COLS_BUFFER \
 		KERNEL_ARGS_ALPHAS_BUFFER \
 		, __global const Triangle* restrict triangles \
+		, __global const InterpolatedTransform* restrict interpolatedTransforms \
 		, __global const Camera* restrict camera \
 		/* Lights */ \
 		, __global const LightSource* restrict lights \

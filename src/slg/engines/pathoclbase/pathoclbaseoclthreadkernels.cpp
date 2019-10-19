@@ -970,6 +970,7 @@ void PathOCLBaseOCLRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePa
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), colsBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), alphasBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), trianglesBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), interpolatedTransformsBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), cameraBuff);
 	// Lights
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), lightsBuff);

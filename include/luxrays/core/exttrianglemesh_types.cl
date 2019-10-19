@@ -62,7 +62,8 @@ typedef struct {
 		__global const UV* restrict vertUVs, \
 		__global const Spectrum* restrict vertCols, \
 		__global const float* restrict vertAlphas, \
-		__global const Triangle* restrict triangles
+		__global const Triangle* restrict triangles, \
+		__global const InterpolatedTransform* restrict interpolatedTransforms
 #define EXTMESH_PARAM , \
 		meshDescs, \
 		vertices, \
@@ -71,6 +72,7 @@ typedef struct {
 		vertUVs, \
 		vertCols, \
 		vertAlphas, \
-		triangles
+		triangles, \
+		interpolatedTransforms
 
 #endif

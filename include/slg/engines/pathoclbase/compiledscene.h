@@ -83,7 +83,6 @@ public:
 	std::vector<luxrays::Spectrum> cols;
 	std::vector<float> alphas;
 	std::vector<luxrays::Triangle> tris;
-	std::vector<luxrays::ocl::MotionSystem> motionSystems;
 	std::vector<luxrays::ocl::InterpolatedTransform> interpolatedTransforms;
 	std::vector<luxrays::ocl::ExtMesh> meshDescs;
 	luxrays::BSphere worldBSphere;

@@ -40,10 +40,10 @@ OPENCL_FORCE_INLINE void HitPoint_Init(__global HitPoint *hitPoint, const bool t
 #endif
 	
 	// Interpolate face normal
-	const float3 geometryN = ExtMesh_GetGeometryNormal(meshIndex, triIndex EXTMESH_PARAM);
+	const float3 geometryN = ExtMesh_GetGeometryNormal(time, meshIndex, triIndex EXTMESH_PARAM);
 	VSTORE3F(geometryN,  &hitPoint->geometryN.x);
 
-	const float3 interpolatedN = ExtMesh_GetInterpolateNormal(meshIndex, triIndex, b1, b2 EXTMESH_PARAM);
+	const float3 interpolatedN = ExtMesh_GetInterpolateNormal(time, meshIndex, triIndex, b1, b2 EXTMESH_PARAM);
 	VSTORE3F(interpolatedN,  &hitPoint->interpolatedN.x);
 	const float3 shadeN = interpolatedN;
 	VSTORE3F(interpolatedN,  &hitPoint->shadeN.x);
@@ -51,23 +51,24 @@ OPENCL_FORCE_INLINE void HitPoint_Init(__global HitPoint *hitPoint, const bool t
 	hitPoint->intoObject = (dot(-fixedDir, geometryN) < 0.f);
 
 	// Interpolate UV coordinates
-	const float2 uv = ExtMesh_GetInterpolateUV(meshIndex, triIndex, b1, b2 EXTMESH_PARAM);
+	const float2 uv = ExtMesh_GetInterpolateUV(time, meshIndex, triIndex, b1, b2 EXTMESH_PARAM);
 	VSTORE2F(uv, &hitPoint->uv.u);
 	
 	// Interpolate color
 #if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR) || defined(PARAM_ENABLE_TEX_HITPOINTGREY) || defined(PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR)
-	const float3 color = ExtMesh_GetInterpolateColor(meshIndex, triIndex, b1, b2 EXTMESH_PARAM);
+	const float3 color = ExtMesh_GetInterpolateColor(time, meshIndex, triIndex, b1, b2 EXTMESH_PARAM);
 	VSTORE3F(color, &hitPoint->color.c[0]);
 #endif
 
 	// Interpolate alpha
 #if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)
-	hitPoint->alpha = ExtMesh_GetInterpolateAlpha(meshIndex, triIndex, b1, b2 EXTMESH_PARAM);
+	hitPoint->alpha = ExtMesh_GetInterpolateAlpha(time, meshIndex, triIndex, b1, b2 EXTMESH_PARAM);
 #endif
 	
 	// Compute geometry differentials
 	float3 dndu, dndv, dpdu, dpdv;
 	ExtMesh_GetDifferentials(
+			time,
 			meshIndex,
 			triIndex,
 			shadeN,

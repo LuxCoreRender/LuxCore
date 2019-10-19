@@ -98,9 +98,26 @@ OPENCL_FORCE_INLINE void InterpolatedTransform_Sample(__global const Interpolate
 }
 
 OPENCL_FORCE_INLINE void MotionSystem_Sample(__global const MotionSystem* restrict motionSystem, const float time,
-		__global const InterpolatedTransform *interpolatedTransforms, Matrix4x4 *result) {
+		__global const InterpolatedTransform* restrict interpolatedTransforms, Matrix4x4 *result) {
 	const uint interpolatedTransformFirstIndex = motionSystem->interpolatedTransformFirstIndex;
 	const uint interpolatedTransformLastIndex = motionSystem->interpolatedTransformLastIndex;
+
+	// Pick the right InterpolatedTransform
+	uint index = interpolatedTransformLastIndex;
+	for (uint i = interpolatedTransformFirstIndex; i <= interpolatedTransformLastIndex; ++i) {
+		if (time < interpolatedTransforms[i].endTime) {
+			index = i;
+			break;
+		}
+	}
+
+	InterpolatedTransform_Sample(&interpolatedTransforms[index], time, result);
+}
+
+OPENCL_FORCE_INLINE void MotionSystem_SampleInverse(__global const MotionSystem* restrict motionSystem, const float time,
+		__global const InterpolatedTransform* restrict interpolatedTransforms, Matrix4x4 *result) {
+	const uint interpolatedTransformFirstIndex = motionSystem->interpolatedInverseTransformFirstIndex;
+	const uint interpolatedTransformLastIndex = motionSystem->interpolatedInverseTransformLastIndex;
 
 	// Pick the right InterpolatedTransform
 	uint index = interpolatedTransformLastIndex;

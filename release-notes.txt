@@ -14,6 +14,7 @@
 * Added the support for vector displacement to Displacement shape
 * New image pipeline plugin: White balance
 * Using/Not Using bump/normal mapping doesn't requires OpenCL compilation anymore (removed PARAM_HAS_BUMPMAPS conditional OpenCL compilation)
+* Large rework of internal light interface. Fixed several instance/motion blur and lights related problems. Triangle light motion blur now works as expected in OpenCL
 
 ### Fixed Bugs
 

@@ -79,6 +79,7 @@ PathOCLBaseOCLRenderThread::PathOCLBaseOCLRenderThread(const u_int index,
 	colsBuff = nullptr;
 	alphasBuff = nullptr;
 	trianglesBuff = nullptr;
+	interpolatedTransformsBuff = nullptr;
 	cameraBuff = nullptr;
 	lightIndexOffsetByMeshIndexBuff = nullptr;
 	lightIndexByTriIndexBuff = nullptr;
@@ -187,6 +188,7 @@ void PathOCLBaseOCLRenderThread::Stop() {
 	FreeOCLBuffer(&colsBuff);
 	FreeOCLBuffer(&alphasBuff);
 	FreeOCLBuffer(&trianglesBuff);
+	FreeOCLBuffer(&interpolatedTransformsBuff);
 	FreeOCLBuffer(&vertsBuff);
 	FreeOCLBuffer(&lightsBuff);
 	FreeOCLBuffer(&envLightIndicesBuff);

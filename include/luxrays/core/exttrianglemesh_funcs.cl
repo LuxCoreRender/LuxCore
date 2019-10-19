@@ -18,8 +18,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-OPENCL_FORCE_INLINE float3 ExtMesh_GetGeometryNormal(const uint meshIndex,
-		const uint triangleIndex
+OPENCL_FORCE_INLINE float3 ExtMesh_GetGeometryNormal(const float time,
+		const uint meshIndex, const uint triangleIndex
 		EXTMESH_PARAM_DECL) {
 	__global const ExtMesh* restrict meshDesc = &meshDescs[meshIndex];
 	__global const Point* restrict vs = &vertices[meshDesc->vertsOffset];
@@ -36,8 +36,13 @@ OPENCL_FORCE_INLINE float3 ExtMesh_GetGeometryNormal(const uint meshIndex,
 			// Transform to global coordinates
 			geometryN = normalize(Transform_ApplyNormal(&meshDesc->instance.trans, geometryN));
 			break;
-		case TYPE_EXT_TRIANGLE_MOTION:
-			// TODO
+		case TYPE_EXT_TRIANGLE_MOTION: {
+			Matrix4x4 m;
+			MotionSystem_SampleInverse(&meshDesc->motion.motionSystem, time, interpolatedTransforms, &m);
+
+			geometryN = normalize(Matrix4x4_ApplyNormal_Private(&m, geometryN));
+			break;
+		}
 		default:
 			break;
 	}
@@ -45,8 +50,9 @@ OPENCL_FORCE_INLINE float3 ExtMesh_GetGeometryNormal(const uint meshIndex,
 	return geometryN;
 }
 
-OPENCL_FORCE_INLINE float3 ExtMesh_GetInterpolateNormal(const uint meshIndex,
-		const uint triangleIndex, const float b1, const float b2
+OPENCL_FORCE_INLINE float3 ExtMesh_GetInterpolateNormal(const float time,
+		const uint meshIndex, const uint triangleIndex,
+		const float b1, const float b2
 		EXTMESH_PARAM_DECL) {
 	__global const ExtMesh* restrict meshDesc = &meshDescs[meshIndex];
 
@@ -67,19 +73,25 @@ OPENCL_FORCE_INLINE float3 ExtMesh_GetInterpolateNormal(const uint meshIndex,
 				// Transform to global coordinates
 				interpolatedN = normalize(Transform_ApplyNormal(&meshDesc->instance.trans, interpolatedN));
 				break;
-			case TYPE_EXT_TRIANGLE_MOTION:
-				// TODO
+			case TYPE_EXT_TRIANGLE_MOTION: {
+				Matrix4x4 m;
+				MotionSystem_SampleInverse(&meshDesc->motion.motionSystem, time, interpolatedTransforms, &m);
+
+				interpolatedN = normalize(Matrix4x4_ApplyNormal_Private(&m, interpolatedN));
+				break;
+			}
 			default:
 				break;
 		}
 	} else
-		interpolatedN = ExtMesh_GetGeometryNormal(meshIndex, triangleIndex EXTMESH_PARAM);
+		interpolatedN = ExtMesh_GetGeometryNormal(time, meshIndex, triangleIndex EXTMESH_PARAM);
 
 	return interpolatedN;
 }
 
-OPENCL_FORCE_INLINE float2 ExtMesh_GetInterpolateUV(const uint meshIndex,
-		const uint triangleIndex, const float b1, const float b2
+OPENCL_FORCE_INLINE float2 ExtMesh_GetInterpolateUV(const float time,
+		const uint meshIndex, const uint triangleIndex,
+		const float b1, const float b2
 		EXTMESH_PARAM_DECL) {
 	__global const ExtMesh* restrict meshDesc = &meshDescs[meshIndex];
 	
@@ -99,8 +111,9 @@ OPENCL_FORCE_INLINE float2 ExtMesh_GetInterpolateUV(const uint meshIndex,
 	return uv;
 }
 
-OPENCL_FORCE_INLINE float3 ExtMesh_GetInterpolateColor(const uint meshIndex,
-		const uint triangleIndex, const float b1, const float b2
+OPENCL_FORCE_INLINE float3 ExtMesh_GetInterpolateColor(const float time,
+		const uint meshIndex, const uint triangleIndex,
+		const float b1, const float b2
 		EXTMESH_PARAM_DECL) {
 	__global const ExtMesh* restrict meshDesc = &meshDescs[meshIndex];
 	
@@ -119,8 +132,9 @@ OPENCL_FORCE_INLINE float3 ExtMesh_GetInterpolateColor(const uint meshIndex,
 	return c;
 }
 
-OPENCL_FORCE_INLINE float ExtMesh_GetInterpolateAlpha(const uint meshIndex,
-		const uint triangleIndex, const float b1, const float b2
+OPENCL_FORCE_INLINE float ExtMesh_GetInterpolateAlpha(const float time,
+		const uint meshIndex, const uint triangleIndex,
+		const float b1, const float b2
 		EXTMESH_PARAM_DECL) {
 	__global const ExtMesh* restrict meshDesc = &meshDescs[meshIndex];
 	
@@ -140,6 +154,7 @@ OPENCL_FORCE_INLINE float ExtMesh_GetInterpolateAlpha(const uint meshIndex,
 }
 
 OPENCL_FORCE_INLINE void ExtMesh_GetDifferentials(
+		const float time,
 		const uint meshIndex,
 		const uint triangleIndex,
 		float3 shadeNormal,
@@ -200,8 +215,14 @@ OPENCL_FORCE_INLINE void ExtMesh_GetDifferentials(
 				dp1 = Transform_ApplyVector(&meshDesc->instance.trans, dp1);
 				dp2 = Transform_ApplyVector(&meshDesc->instance.trans, dp2);
 				break;
-			case TYPE_EXT_TRIANGLE_MOTION:
-				// TODO
+			case TYPE_EXT_TRIANGLE_MOTION: {
+				Matrix4x4 m;
+				MotionSystem_SampleInverse(&meshDesc->motion.motionSystem, time, interpolatedTransforms, &m);
+
+				dp1 = Matrix4x4_ApplyVector_Private(&m, dp1);
+				dp2 = Matrix4x4_ApplyVector_Private(&m, dp2);
+				break;
+			}
 			default:
 				break;
 		}
@@ -238,8 +259,14 @@ OPENCL_FORCE_INLINE void ExtMesh_GetDifferentials(
 					*dndu = Transform_ApplyVector(&meshDesc->instance.trans, *dndu);
 					*dndv = Transform_ApplyVector(&meshDesc->instance.trans, *dndv);
 					break;
-				case TYPE_EXT_TRIANGLE_MOTION:
-					// TODO
+				case TYPE_EXT_TRIANGLE_MOTION: {
+					Matrix4x4 m;
+					MotionSystem_SampleInverse(&meshDesc->motion.motionSystem, time, interpolatedTransforms, &m);
+
+					*dndu = Matrix4x4_ApplyVector_Private(&m, *dndu);
+					*dndv = Matrix4x4_ApplyVector_Private(&m, *dndv);
+					break;
+				}
 				default:
 					break;
 			}
@@ -250,7 +277,7 @@ OPENCL_FORCE_INLINE void ExtMesh_GetDifferentials(
 	}
 }
 
-void ExtMesh_Sample(const uint meshIndex, const uint triangleIndex,
+OPENCL_FORCE_INLINE void ExtMesh_Sample(const uint meshIndex, const uint triangleIndex,
 		const float time, const float u0, const float u1,
 		float3 *samplePoint, float *b0, float *b1, float *b2
 		EXTMESH_PARAM_DECL) {
@@ -272,8 +299,13 @@ void ExtMesh_Sample(const uint meshIndex, const uint triangleIndex,
 		case TYPE_EXT_TRIANGLE_INSTANCE:
 			*samplePoint = Transform_ApplyPoint(&meshDesc->instance.trans, *samplePoint);
 			break;
-		case TYPE_EXT_TRIANGLE_MOTION:
-			// TODO
+		case TYPE_EXT_TRIANGLE_MOTION: {
+			Matrix4x4 m;
+			MotionSystem_SampleInverse(&meshDesc->motion.motionSystem, time, interpolatedTransforms, &m);
+
+			*samplePoint = Matrix4x4_ApplyPoint_Private(&m, *samplePoint);
+			break;
+		}
 		default:
 			break;
 	}

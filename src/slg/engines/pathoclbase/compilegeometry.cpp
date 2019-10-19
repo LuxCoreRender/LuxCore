@@ -51,7 +51,6 @@ void CompiledScene::CompileGeometry() {
 	cols.resize(0);
 	alphas.resize(0);
 	tris.resize(0);
-	motionSystems.resize(0);
 	interpolatedTransforms.resize(0);
 	meshDescs.resize(0);
 
@@ -163,7 +162,8 @@ void CompiledScene::CompileGeometry() {
 					interpolatedTransforms.push_back(*((const luxrays::ocl::InterpolatedTransform *)&it));
 				}
 				currentMeshDesc.motion.motionSystem.interpolatedTransformLastIndex = interpolatedTransforms.size() - 1;
-
+cout<<sizeof(luxrays::ocl::InterpolatedTransform)<<"#"<<sizeof(InterpolatedTransform)<<"\n";
+cout<<currentMeshDesc.motion.motionSystem.interpolatedTransformFirstIndex<<"=a============="<<currentMeshDesc.motion.motionSystem.interpolatedTransformLastIndex<<"\n";
 				// Backward transformations
 				currentMeshDesc.motion.motionSystem.interpolatedInverseTransformFirstIndex = interpolatedTransforms.size();
 				for (auto const &it : ms.interpolatedInverseTransforms) {
@@ -172,6 +172,7 @@ void CompiledScene::CompileGeometry() {
 					interpolatedTransforms.push_back(*((const luxrays::ocl::InterpolatedTransform *)&it));
 				}
 				currentMeshDesc.motion.motionSystem.interpolatedInverseTransformLastIndex = interpolatedTransforms.size() - 1;
+cout<<currentMeshDesc.motion.motionSystem.interpolatedInverseTransformFirstIndex<<"=b============="<<currentMeshDesc.motion.motionSystem.interpolatedInverseTransformLastIndex<<"\n";
 				break;
 			}
 			case TYPE_EXT_TRIANGLE: {

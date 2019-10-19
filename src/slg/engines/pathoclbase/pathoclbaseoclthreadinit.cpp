@@ -259,6 +259,12 @@ void PathOCLBaseOCLRenderThread::InitGeometry() {
 	AllocOCLBufferRO(&trianglesBuff, &cscene->tris[0],
 		sizeof(Triangle) * cscene->tris.size(), "Triangles");
 
+	if (cscene->interpolatedTransforms.size() > 0) {
+		AllocOCLBufferRO(&interpolatedTransformsBuff, &cscene->interpolatedTransforms[0],
+			sizeof(luxrays::ocl::InterpolatedTransform) * cscene->interpolatedTransforms.size(), "Interpolated transformations");
+	} else
+		FreeOCLBuffer(&interpolatedTransformsBuff);
+
 	AllocOCLBufferRO(&meshDescsBuff, &cscene->meshDescs[0],
 			sizeof(slg::ocl::ExtMesh) * cscene->meshDescs.size(), "Mesh description");
 }

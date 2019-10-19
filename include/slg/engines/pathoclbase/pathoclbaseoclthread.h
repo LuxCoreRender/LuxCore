@@ -222,6 +222,7 @@ protected:
 	cl::Buffer *colsBuff;
 	cl::Buffer *alphasBuff;
 	cl::Buffer *trianglesBuff;
+	cl::Buffer *interpolatedTransformsBuff;
 	cl::Buffer *cameraBuff;
 	cl::Buffer *lightIndexOffsetByMeshIndexBuff;
 	cl::Buffer *lightIndexByTriIndexBuff;
