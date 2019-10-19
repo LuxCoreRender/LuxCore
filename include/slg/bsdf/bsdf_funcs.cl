@@ -50,21 +50,6 @@ OPENCL_FORCE_NOT_INLINE void BSDF_Init(
 
 	// Save the scene object index
 	bsdf->sceneObjectIndex = meshIndex;
-	
-	// Initialized world to local object space transformation
-	__global const ExtMesh* restrict meshDesc = &meshDescs[meshIndex];
-	switch (meshDesc->type) {
-		case TYPE_EXT_TRIANGLE:
-			bsdf->hitPoint.worldToLocal = meshDesc->triangle.trans.mInv;
-			break;
-		case TYPE_EXT_TRIANGLE_INSTANCE:
-			bsdf->hitPoint.worldToLocal = meshDesc->instance.trans.mInv;
-			break;
-		case TYPE_EXT_TRIANGLE_MOTION:
-			// TODO
-		default:
-			break;
-	}
 
 	// Get the material
 	const uint matIndex = sceneObjs[meshIndex].materialIndex;
@@ -139,7 +124,7 @@ OPENCL_FORCE_NOT_INLINE void BSDF_InitVolume(
 	bsdf->hitPoint.passThroughEvent = passThroughEvent;
 
 	bsdf->sceneObjectIndex = NULL_INDEX;
-	Matrix4x4_IdentityGlobal(&bsdf->hitPoint.worldToLocal);
+	Matrix4x4_IdentityGlobal(&bsdf->hitPoint.localToWorld);
 
 	bsdf->materialIndex = volumeIndex;
 

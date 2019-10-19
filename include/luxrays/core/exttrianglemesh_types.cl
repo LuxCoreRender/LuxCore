@@ -19,7 +19,7 @@
  ***************************************************************************/
 
 typedef struct {
-	Transform trans;
+	Transform appliedTrans;
 } TriangleMeshParam;
 
 typedef struct {

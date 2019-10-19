@@ -22,15 +22,10 @@ OPENCL_FORCE_INLINE float3 ExtMesh_GetGeometryNormal(const float time,
 		const uint meshIndex, const uint triangleIndex
 		EXTMESH_PARAM_DECL) {
 	__global const ExtMesh* restrict meshDesc = &meshDescs[meshIndex];
-	__global const Point* restrict vs = &vertices[meshDesc->vertsOffset];
-	__global const Triangle* restrict tri = &triangles[meshDesc->trisOffset + triangleIndex];
+	__global const Normal* restrict tn = &triNormals[meshDesc->triNormalsOffset];
 
-	const float3 p0 = VLOAD3F(&vs[tri->v[0]].x);
-	const float3 p1 = VLOAD3F(&vs[tri->v[1]].x);
-	const float3 p2 = VLOAD3F(&vs[tri->v[2]].x);
+	float3 geometryN = VLOAD3F(&tn[triangleIndex].x);
 
-	float3 geometryN = Triangle_GetGeometryNormal(p0, p1, p2);
-	
 	switch (meshDesc->type) {
 		case TYPE_EXT_TRIANGLE_INSTANCE:
 			// Transform to global coordinates
@@ -97,7 +92,7 @@ OPENCL_FORCE_INLINE float2 ExtMesh_GetInterpolateUV(const float time,
 	
 	float2 uv = 0.f;
 	if (meshDesc->uvsOffset != NULL_INDEX) {
-		__global const UV* restrict uvs = &vertUVs[meshDesc->vertsOffset];
+		__global const UV* restrict uvs = &vertUVs[meshDesc->uvsOffset];
 		__global const Triangle* restrict tri = &triangles[meshDesc->trisOffset + triangleIndex];
 
 		const float2 uv0 = VLOAD2F(&uvs[tri->v[0]].u);
@@ -304,6 +299,36 @@ OPENCL_FORCE_INLINE void ExtMesh_Sample(const uint meshIndex, const uint triangl
 			MotionSystem_SampleInverse(&meshDesc->motion.motionSystem, time, interpolatedTransforms, &m);
 
 			*samplePoint = Matrix4x4_ApplyPoint_Private(&m, *samplePoint);
+			break;
+		}
+		default:
+			break;
+	}
+}
+
+OPENCL_FORCE_INLINE void ExtMesh_GetLocal2World(const float time,
+		const uint meshIndex, const uint triangleIndex,
+		__global Transform *local2World
+		EXTMESH_PARAM_DECL) {
+	// Initialized world to local object space transformation
+	__global const ExtMesh* restrict meshDesc = &meshDescs[meshIndex];
+
+	switch (meshDesc->type) {
+		case TYPE_EXT_TRIANGLE:
+			*local2World = meshDesc->triangle.appliedTrans;
+			break;
+		case TYPE_EXT_TRIANGLE_INSTANCE:
+			*local2World = meshDesc->instance.trans;
+			break;
+		case TYPE_EXT_TRIANGLE_MOTION: {
+			Matrix4x4 m;
+
+			MotionSystem_Sample(&meshDesc->motion.motionSystem, time, interpolatedTransforms, &m);
+			local2World->mInv = m;
+
+			MotionSystem_SampleInverse(&meshDesc->motion.motionSystem, time, interpolatedTransforms, &m);
+			local2World->m = m;
+
 			break;
 		}
 		default:

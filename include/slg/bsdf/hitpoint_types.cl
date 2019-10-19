@@ -47,8 +47,8 @@ typedef struct {
 	float passThroughEvent;
 #endif
 
-	// Transformation from world to local object reference frame
-	Matrix4x4 worldToLocal;
+	// Transformation from local object to world reference frame
+	Transform localToWorld;
 
 #if defined(PARAM_HAS_VOLUMES)
 	// Interior and exterior volume (this includes volume priority system

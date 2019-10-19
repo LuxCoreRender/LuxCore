@@ -162,8 +162,7 @@ void CompiledScene::CompileGeometry() {
 					interpolatedTransforms.push_back(*((const luxrays::ocl::InterpolatedTransform *)&it));
 				}
 				currentMeshDesc.motion.motionSystem.interpolatedTransformLastIndex = interpolatedTransforms.size() - 1;
-cout<<sizeof(luxrays::ocl::InterpolatedTransform)<<"#"<<sizeof(InterpolatedTransform)<<"\n";
-cout<<currentMeshDesc.motion.motionSystem.interpolatedTransformFirstIndex<<"=a============="<<currentMeshDesc.motion.motionSystem.interpolatedTransformLastIndex<<"\n";
+
 				// Backward transformations
 				currentMeshDesc.motion.motionSystem.interpolatedInverseTransformFirstIndex = interpolatedTransforms.size();
 				for (auto const &it : ms.interpolatedInverseTransforms) {
@@ -172,7 +171,6 @@ cout<<currentMeshDesc.motion.motionSystem.interpolatedTransformFirstIndex<<"=a==
 					interpolatedTransforms.push_back(*((const luxrays::ocl::InterpolatedTransform *)&it));
 				}
 				currentMeshDesc.motion.motionSystem.interpolatedInverseTransformLastIndex = interpolatedTransforms.size() - 1;
-cout<<currentMeshDesc.motion.motionSystem.interpolatedInverseTransformFirstIndex<<"=b============="<<currentMeshDesc.motion.motionSystem.interpolatedInverseTransformLastIndex<<"\n";
 				break;
 			}
 			case TYPE_EXT_TRIANGLE: {
@@ -198,8 +196,8 @@ cout<<currentMeshDesc.motion.motionSystem.interpolatedInverseTransformFirstIndex
 				Transform t;
 				// Time doesn't matter for ExtTriangleMesh
 				baseMesh->GetLocal2World(0.f, t);
-				memcpy(&currentMeshDesc.triangle.trans.m, &t.m, sizeof(float[4][4]));
-				memcpy(&currentMeshDesc.triangle.trans.mInv, &t.mInv, sizeof(float[4][4]));
+				memcpy(&currentMeshDesc.triangle.appliedTrans.m, &t.m, sizeof(float[4][4]));
+				memcpy(&currentMeshDesc.triangle.appliedTrans.mInv, &t.mInv, sizeof(float[4][4]));
 
 				isExistingInstance = false;
 				break;
@@ -210,7 +208,7 @@ cout<<currentMeshDesc.motion.motionSystem.interpolatedInverseTransformFirstIndex
 
 		if (!isExistingInstance) {		
 			//------------------------------------------------------------------
-			// Translate mesh normals (expressed in local coordinates)
+			// Compile mesh normals (expressed in local coordinates)
 			//------------------------------------------------------------------
 
 			if (baseMesh->HasNormals()) {
@@ -220,27 +218,24 @@ cout<<currentMeshDesc.motion.motionSystem.interpolatedInverseTransformFirstIndex
 				currentMeshDesc.normalsOffset = NULL_INDEX;
 
 			//------------------------------------------------------------------
-			// Translate mesh triangle normals (expressed in local coordinates)
+			// Compile mesh triangle normals (expressed in local coordinates)
 			//------------------------------------------------------------------
 
 			const Normal *tn = baseMesh->GetTriNormals();
 			triNormals.insert(triNormals.end(), tn, tn + baseMesh->GetTotalTriangleCount());
 
 			//------------------------------------------------------------------
-			// Translate vertex uvs
+			// Compile vertex uvs
 			//------------------------------------------------------------------
 
 			if (baseMesh->HasUVs()) {
 				const UV *u = baseMesh->GetUVs();
 				uvs.insert(uvs.end(), u, u + baseMesh->GetTotalVertexCount());
-
-				for (u_int j = 0; j < baseMesh->GetTotalVertexCount(); ++j)
-					uvs.push_back(baseMesh->GetUV(j));
 			} else
 				currentMeshDesc.uvsOffset = NULL_INDEX;
 
 			//------------------------------------------------------------------
-			// Translate vertex colors
+			// Compile vertex colors
 			//------------------------------------------------------------------
 
 			if (baseMesh->HasColors()) {
@@ -250,7 +245,7 @@ cout<<currentMeshDesc.motion.motionSystem.interpolatedInverseTransformFirstIndex
 				currentMeshDesc.colsOffset = NULL_INDEX;
 
 			//------------------------------------------------------------------
-			// Translate vertex alphas
+			// Compile vertex alphas
 			//------------------------------------------------------------------
 
 			if (baseMesh->HasAlphas()) {
@@ -260,14 +255,14 @@ cout<<currentMeshDesc.motion.motionSystem.interpolatedInverseTransformFirstIndex
 				currentMeshDesc.alphasOffset = NULL_INDEX;
 
 			//------------------------------------------------------------------
-			// Translate baseMesh vertices (expressed in local coordinates)
+			// Compile baseMesh vertices (expressed in local coordinates)
 			//------------------------------------------------------------------
 
 			const Point *v = baseMesh->GetVertices();
 			verts.insert(verts.end(), v, v + baseMesh->GetTotalVertexCount());
 
 			//------------------------------------------------------------------
-			// Translate baseMesh indices
+			// Compile baseMesh triangle indices
 			//------------------------------------------------------------------
 
 			const Triangle *t = baseMesh->GetTriangles();

@@ -62,4 +62,11 @@ void HitPoint::Init(const bool fixedFromLight, const bool throughShadowTransp,
 	mesh->GetDifferentials(time,
 			triangleIndex, shadeN,
 			&dpdu, &dpdv, &dndu, &dndv);
+
+	// Initialized local to world object space transformation
+	mesh->GetLocal2World(time, localToWorld);
+
+	// Note: I'm not initializing volume related information here
+	interiorVolume = nullptr;
+	exteriorVolume = nullptr;
 }

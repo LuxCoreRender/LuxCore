@@ -79,6 +79,9 @@ OPENCL_FORCE_INLINE void HitPoint_Init(__global HitPoint *hitPoint, const bool t
 	VSTORE3F(dpdv, &hitPoint->dpdv.x);
 	VSTORE3F(dndu, &hitPoint->dndu.x);
 	VSTORE3F(dndv, &hitPoint->dndv.x);
+
+	// Initialized local to world object space transformation
+	ExtMesh_GetLocal2World(time, meshIndex, triIndex, &hitPoint->localToWorld EXTMESH_PARAM);
 }
 
 OPENCL_FORCE_INLINE void HitPoint_GetFrame(__global const HitPoint *hitPoint, Frame *frame) {
