@@ -112,7 +112,6 @@ void CompiledScene::CompileGeometry() {
 				}
 
 				currentMeshDesc.type = slg::ocl::TYPE_EXT_TRIANGLE_INSTANCE;
-cout<<i<<"=========="<<imesh->GetTransformation()<<"\n";
 				memcpy(&currentMeshDesc.instance.trans.m, &imesh->GetTransformation().m, sizeof(float[4][4]));
 				memcpy(&currentMeshDesc.instance.trans.mInv, &imesh->GetTransformation().mInv, sizeof(float[4][4]));
 				break;

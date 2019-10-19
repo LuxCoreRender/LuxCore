@@ -501,28 +501,12 @@ OPENCL_FORCE_NOT_INLINE float3 TriangleLight_Illuminate(__global const LightSour
 	__global const Triangle* restrict tri = &triangles[meshDesc->trisOffset + triangleIndex];
 	const uint materialIndex = sceneObjs[meshIndex].materialIndex;
 
-	// Vertices are in local object space
-	float3 p0 = VLOAD3F(&triVerts[tri->v[0]].x);
-	float3 p1 = VLOAD3F(&triVerts[tri->v[1]].x);
-	float3 p2 = VLOAD3F(&triVerts[tri->v[2]].x);
 	float b0, b1, b2;
-	const float3 samplePoint = Triangle_Sample(
-			p0, p1, p2,
-			u0, u1,
-			&b0, &b1, &b2);
-
-	// Transform to global coordinates
-	switch (meshDesc->type) {
-		case TYPE_EXT_TRIANGLE_INSTANCE:
-			p0 = Transform_InvApplyVector(&meshDesc->instance.trans, p0);
-			p1 = Transform_InvApplyVector(&meshDesc->instance.trans, p1);
-			p2 = Transform_InvApplyVector(&meshDesc->instance.trans, p2);
-			break;
-		case TYPE_EXT_TRIANGLE_MOTION:
-			// TODO
-		default:
-			break;
-	}
+	float3 samplePoint;
+	ExtMesh_Sample(meshIndex, triangleIndex,
+			time, u0, u1,
+			&samplePoint, &b0, &b1, &b2
+			EXTMESH_PARAM);
 
 	float3 sampleDir = samplePoint - VLOAD3F(&bsdf->hitPoint.p.x);
 	const float distanceSquared = dot(sampleDir, sampleDir);

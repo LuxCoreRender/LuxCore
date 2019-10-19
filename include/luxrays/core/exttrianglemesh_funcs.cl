@@ -19,11 +19,11 @@
  ***************************************************************************/
 
 OPENCL_FORCE_INLINE float3 ExtMesh_GetGeometryNormal(const uint meshIndex,
-		const uint triIndex
+		const uint triangleIndex
 		EXTMESH_PARAM_DECL) {
 	__global const ExtMesh* restrict meshDesc = &meshDescs[meshIndex];
 	__global const Point* restrict vs = &vertices[meshDesc->vertsOffset];
-	__global const Triangle* restrict tri = &triangles[meshDesc->trisOffset + triIndex];
+	__global const Triangle* restrict tri = &triangles[meshDesc->trisOffset + triangleIndex];
 
 	const float3 p0 = VLOAD3F(&vs[tri->v[0]].x);
 	const float3 p1 = VLOAD3F(&vs[tri->v[1]].x);
@@ -34,7 +34,7 @@ OPENCL_FORCE_INLINE float3 ExtMesh_GetGeometryNormal(const uint meshIndex,
 	switch (meshDesc->type) {
 		case TYPE_EXT_TRIANGLE_INSTANCE:
 			// Transform to global coordinates
-			geometryN = normalize(Transform_InvApplyNormal(&meshDesc->instance.trans, geometryN));
+			geometryN = normalize(Transform_ApplyNormal(&meshDesc->instance.trans, geometryN));
 			break;
 		case TYPE_EXT_TRIANGLE_MOTION:
 			// TODO
@@ -46,14 +46,14 @@ OPENCL_FORCE_INLINE float3 ExtMesh_GetGeometryNormal(const uint meshIndex,
 }
 
 OPENCL_FORCE_INLINE float3 ExtMesh_GetInterpolateNormal(const uint meshIndex,
-		const uint triIndex, const float b1, const float b2
+		const uint triangleIndex, const float b1, const float b2
 		EXTMESH_PARAM_DECL) {
 	__global const ExtMesh* restrict meshDesc = &meshDescs[meshIndex];
 
 	float3 interpolatedN;
 	if (meshDesc->normalsOffset != NULL_INDEX) {
 		// Shading normal expressed in local coordinates
-		__global const Triangle* restrict tri = &triangles[meshDesc->trisOffset + triIndex];
+		__global const Triangle* restrict tri = &triangles[meshDesc->trisOffset + triangleIndex];
 		__global const Normal* restrict vns = &vertNormals[meshDesc->normalsOffset];
 		const float3 n0 = VLOAD3F(&vns[tri->v[0]].x);
 		const float3 n1 = VLOAD3F(&vns[tri->v[1]].x);
@@ -65,7 +65,7 @@ OPENCL_FORCE_INLINE float3 ExtMesh_GetInterpolateNormal(const uint meshIndex,
 		switch (meshDesc->type) {
 			case TYPE_EXT_TRIANGLE_INSTANCE:
 				// Transform to global coordinates
-				interpolatedN = normalize(Transform_InvApplyNormal(&meshDesc->instance.trans, interpolatedN));
+				interpolatedN = normalize(Transform_ApplyNormal(&meshDesc->instance.trans, interpolatedN));
 				break;
 			case TYPE_EXT_TRIANGLE_MOTION:
 				// TODO
@@ -73,20 +73,20 @@ OPENCL_FORCE_INLINE float3 ExtMesh_GetInterpolateNormal(const uint meshIndex,
 				break;
 		}
 	} else
-		interpolatedN = ExtMesh_GetGeometryNormal(meshIndex, triIndex EXTMESH_PARAM);
+		interpolatedN = ExtMesh_GetGeometryNormal(meshIndex, triangleIndex EXTMESH_PARAM);
 
 	return interpolatedN;
 }
 
 OPENCL_FORCE_INLINE float2 ExtMesh_GetInterpolateUV(const uint meshIndex,
-		const uint triIndex, const float b1, const float b2
+		const uint triangleIndex, const float b1, const float b2
 		EXTMESH_PARAM_DECL) {
 	__global const ExtMesh* restrict meshDesc = &meshDescs[meshIndex];
 	
 	float2 uv = 0.f;
 	if (meshDesc->uvsOffset != NULL_INDEX) {
 		__global const UV* restrict uvs = &vertUVs[meshDesc->vertsOffset];
-		__global const Triangle* restrict tri = &triangles[meshDesc->trisOffset + triIndex];
+		__global const Triangle* restrict tri = &triangles[meshDesc->trisOffset + triangleIndex];
 
 		const float2 uv0 = VLOAD2F(&uvs[tri->v[0]].u);
 		const float2 uv1 = VLOAD2F(&uvs[tri->v[1]].u);
@@ -100,14 +100,14 @@ OPENCL_FORCE_INLINE float2 ExtMesh_GetInterpolateUV(const uint meshIndex,
 }
 
 OPENCL_FORCE_INLINE float3 ExtMesh_GetInterpolateColor(const uint meshIndex,
-		const uint triIndex, const float b1, const float b2
+		const uint triangleIndex, const float b1, const float b2
 		EXTMESH_PARAM_DECL) {
 	__global const ExtMesh* restrict meshDesc = &meshDescs[meshIndex];
 	
 	float3 c = 0.f;
 	if (meshDesc->colsOffset != NULL_INDEX) {
 		__global const Spectrum* restrict vcs = &vertCols[meshDesc->colsOffset];
-		__global const Triangle* restrict tri = &triangles[meshDesc->trisOffset + triIndex];
+		__global const Triangle* restrict tri = &triangles[meshDesc->trisOffset + triangleIndex];
 		const float3 rgb0 = VLOAD3F(vcs[tri->v[0]].c);
 		const float3 rgb1 = VLOAD3F(vcs[tri->v[1]].c);
 		const float3 rgb2 = VLOAD3F(vcs[tri->v[2]].c);
@@ -120,14 +120,14 @@ OPENCL_FORCE_INLINE float3 ExtMesh_GetInterpolateColor(const uint meshIndex,
 }
 
 OPENCL_FORCE_INLINE float ExtMesh_GetInterpolateAlpha(const uint meshIndex,
-		const uint triIndex, const float b1, const float b2
+		const uint triangleIndex, const float b1, const float b2
 		EXTMESH_PARAM_DECL) {
 	__global const ExtMesh* restrict meshDesc = &meshDescs[meshIndex];
 	
 	float a = 0.f;
 	if (meshDesc->alphasOffset != NULL_INDEX) {
 		__global const float* restrict vas = &vertAlphas[meshDesc->alphasOffset];
-		__global const Triangle* restrict tri = &triangles[meshDesc->trisOffset + triIndex];
+		__global const Triangle* restrict tri = &triangles[meshDesc->trisOffset + triangleIndex];
 		const float a0 = vas[tri->v[0]];
 		const float a1 = vas[tri->v[1]];
 		const float a2 = vas[tri->v[2]];
@@ -197,8 +197,8 @@ OPENCL_FORCE_INLINE void ExtMesh_GetDifferentials(
 		switch (meshDesc->type) {
 			case TYPE_EXT_TRIANGLE_INSTANCE:
 				// Transform to global coordinates
-				dp1 = Transform_InvApplyVector(&meshDesc->instance.trans, dp1);
-				dp2 = Transform_InvApplyVector(&meshDesc->instance.trans, dp2);
+				dp1 = Transform_ApplyVector(&meshDesc->instance.trans, dp1);
+				dp2 = Transform_ApplyVector(&meshDesc->instance.trans, dp2);
 				break;
 			case TYPE_EXT_TRIANGLE_MOTION:
 				// TODO
@@ -235,8 +235,8 @@ OPENCL_FORCE_INLINE void ExtMesh_GetDifferentials(
 			switch (meshDesc->type) {
 				case TYPE_EXT_TRIANGLE_INSTANCE:
 					// Transform to global coordinates
-					*dndu = Transform_InvApplyVector(&meshDesc->instance.trans, *dndu);
-					*dndv = Transform_InvApplyVector(&meshDesc->instance.trans, *dndv);
+					*dndu = Transform_ApplyVector(&meshDesc->instance.trans, *dndu);
+					*dndv = Transform_ApplyVector(&meshDesc->instance.trans, *dndv);
 					break;
 				case TYPE_EXT_TRIANGLE_MOTION:
 					// TODO
@@ -247,5 +247,34 @@ OPENCL_FORCE_INLINE void ExtMesh_GetDifferentials(
 			*dndu = ZERO;
 			*dndv = ZERO;
 		}
+	}
+}
+
+void ExtMesh_Sample(const uint meshIndex, const uint triangleIndex,
+		const float time, const float u0, const float u1,
+		float3 *samplePoint, float *b0, float *b1, float *b2
+		EXTMESH_PARAM_DECL) {
+	__global const ExtMesh* restrict meshDesc = &meshDescs[meshIndex];
+	__global const Point* restrict triVerts = &vertices[meshDesc->vertsOffset];
+	__global const Triangle* restrict tri = &triangles[meshDesc->trisOffset + triangleIndex];
+
+	// Vertices are in local object space
+	float3 p0 = VLOAD3F(&triVerts[tri->v[0]].x);
+	float3 p1 = VLOAD3F(&triVerts[tri->v[1]].x);
+	float3 p2 = VLOAD3F(&triVerts[tri->v[2]].x);
+	*samplePoint = Triangle_Sample(
+			p0, p1, p2,
+			u0, u1,
+			b0, b1, b2);
+
+	// Transform to global coordinates
+	switch (meshDesc->type) {
+		case TYPE_EXT_TRIANGLE_INSTANCE:
+			*samplePoint = Transform_ApplyPoint(&meshDesc->instance.trans, *samplePoint);
+			break;
+		case TYPE_EXT_TRIANGLE_MOTION:
+			// TODO
+		default:
+			break;
 	}
 }
