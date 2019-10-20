@@ -35,13 +35,16 @@ OPENCL_FORCE_NOT_INLINE void BSDF_Init(
 	const uint meshIndex = rayHit->meshIndex;
 	const uint triangleIndex = rayHit->triangleIndex;
 
+	// Initialized local to world object space transformation
+	ExtMesh_GetLocal2World(ray->time, meshIndex, triangleIndex, &bsdf->hitPoint.localToWorld EXTMESH_PARAM);
+
 	const float3 rayOrig = VLOAD3F(&ray->o.x);
 	const float3 rayDir = VLOAD3F(&ray->d.x);
 	const float3 hitPointP = rayOrig + rayHit->t * rayDir;
 
 	HitPoint_Init(&bsdf->hitPoint, throughShadowTransparency,
 		meshIndex, triangleIndex,
-		ray->time, hitPointP, -rayDir,
+		hitPointP, -rayDir,
 		rayHit->b1, rayHit->b2
 #if defined(PARAM_HAS_PASSTHROUGH)
 		, passThroughEvent

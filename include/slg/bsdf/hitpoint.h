@@ -61,9 +61,15 @@ typedef struct {
 	// If I got here going trough a shadow transparency. It can be used to disable MIS.
 	bool throughShadowTransparency;
 
+	// Used when hitting a surface
+	//
+	// Note: very important, this method assume localToWorld file has been _already_
+	// initialized. This is done for performance reasons.
+	//
+	// Note: this is also _not_ initializing volume related information.
 	void Init(const bool fixedFromLight, const bool throughShadowTransparency,
 		const Scene &scene, const u_int meshIndex, const u_int triangleIndex,
-		const float time, const luxrays::Point &p, const luxrays::Vector &d,
+		const luxrays::Point &p, const luxrays::Vector &d,
 		const float b1, const float b2,
 		const float passThroughEvent);
 

@@ -65,10 +65,13 @@ float TriangleLight::GetPower(const Scene &scene) const {
 }
 
 void TriangleLight::Preprocess() {
-	triangleArea = mesh->GetTriangleArea(0.f, triangleIndex);
+	Transform localToWorld;
+	mesh->GetLocal2World(0.f, localToWorld);
+
+	triangleArea = mesh->GetTriangleArea(localToWorld, triangleIndex);
 	invTriangleArea = 1.f / triangleArea;
 
-	meshArea = mesh->GetMeshArea(0.f);
+	meshArea = mesh->GetMeshArea(localToWorld);
 	invMeshArea = 1.f / meshArea;
 }
 
@@ -106,16 +109,19 @@ Spectrum TriangleLight::Emit(const Scene &scene,
 		return Spectrum();
 	emissionPdfW *= invTriangleArea;
 
+	// Build a temporary HitPoint
+	HitPoint tmpHitPoint;
+	mesh->GetLocal2World(time, tmpHitPoint.localToWorld);
+
 	// Origin
 	Point samplePoint;
 	float b0, b1, b2;
-	mesh->Sample(time, triangleIndex, u0, u1, &samplePoint, &b0, &b1, &b2);
+	mesh->Sample(tmpHitPoint.localToWorld, triangleIndex, u0, u1, &samplePoint, &b0, &b1, &b2);
 
-	// Build a temporary HitPoint
-	HitPoint tmpHitPoint;
+	// Initialize the temporary HitPoint
 	tmpHitPoint.Init(true, false,
 			scene, meshIndex, triangleIndex,
-			time, samplePoint, Vector(mesh->GetGeometryNormal(time, triangleIndex)),
+			samplePoint, Vector(mesh->GetGeometryNormal(tmpHitPoint.localToWorld, triangleIndex)),
 			b1, b2,
 			passThroughEvent);
 	// Add bump?
@@ -152,20 +158,22 @@ Spectrum TriangleLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 	// Compute the sample point and direction
 	//--------------------------------------------------------------------------
 
+	HitPoint tmpHitPoint;
+	mesh->GetLocal2World(time, tmpHitPoint.localToWorld);
+
 	Point samplePoint;
 	float b0, b1, b2;
-	mesh->Sample(time, triangleIndex, u0, u1, &samplePoint, &b0, &b1, &b2);
+	mesh->Sample(tmpHitPoint.localToWorld, triangleIndex, u0, u1, &samplePoint, &b0, &b1, &b2);
 
 	Vector sampleDir = samplePoint - bsdf.hitPoint.p;
 	const float distanceSquared = sampleDir.LengthSquared();
 	const float distance = sqrtf(distanceSquared);
 	sampleDir /= distance;
 	
-	// Build a temporary HitPoint
-	HitPoint tmpHitPoint;
+	// Initialize the temporary HitPoint
 	tmpHitPoint.Init(true, false,
 			scene, meshIndex, triangleIndex,
-			time, samplePoint, -sampleDir,
+			samplePoint, -sampleDir,
 			b1, b2,
 			passThroughEvent);
 	// Add bump?
@@ -245,10 +253,17 @@ bool TriangleLight::IsAlwaysInShadow(const Scene &scene,
 
 		return (cosTheta >= lightMaterial->GetEmittedCosThetaMax() + DEFAULT_COS_EPSILON_STATIC);
 	}*/
-	
+
+	//	It is to hard to say if motion blur is enabled
+	if ((mesh->GetType() == TYPE_TRIANGLE_MOTION) || (mesh->GetType() == TYPE_EXT_TRIANGLE_MOTION))
+		return false;
+
+	Transform localToWorld;
+	mesh->GetLocal2World(0.f, localToWorld);
+
 	// I use the shading normal of the first vertex for this test (see above)
 	const Normal triNormal = mesh->HasNormals() ?
-		mesh->GetShadeNormal(0.f, triangleIndex, 0) : mesh->GetGeometryNormal(0.f, triangleIndex);
+		mesh->GetShadeNormal(localToWorld, triangleIndex, 0) : mesh->GetGeometryNormal(localToWorld, triangleIndex);
 	const float cosTheta = Dot(n, triNormal);
 
 	return (cosTheta >= lightMaterial->GetEmittedCosThetaMax() + DEFAULT_COS_EPSILON_STATIC);

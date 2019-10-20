@@ -495,16 +495,17 @@ OPENCL_FORCE_NOT_INLINE float3 TriangleLight_Illuminate(__global const LightSour
 	//--------------------------------------------------------------------------
 
 	const uint meshIndex = triLight->triangle.meshIndex;
-	const uint  triangleIndex = triLight->triangle.triangleIndex;
-	__global const ExtMesh* restrict meshDesc = &meshDescs[meshIndex];
-	__global const Point* restrict triVerts = &vertices[meshDesc->vertsOffset];
-	__global const Triangle* restrict tri = &triangles[meshDesc->trisOffset + triangleIndex];
+	const uint triangleIndex = triLight->triangle.triangleIndex;
 	const uint materialIndex = sceneObjs[meshIndex].materialIndex;
+
+	// Initialized local to world object space transformation
+	ExtMesh_GetLocal2World(time, meshIndex, triangleIndex, &tmpHitPoint->localToWorld EXTMESH_PARAM);
 
 	float b0, b1, b2;
 	float3 samplePoint;
-	ExtMesh_Sample(meshIndex, triangleIndex,
-			time, u0, u1,
+	ExtMesh_Sample(&tmpHitPoint->localToWorld,
+			meshIndex, triangleIndex,
+			u0, u1,
 			&samplePoint, &b0, &b1, &b2
 			EXTMESH_PARAM);
 
@@ -516,7 +517,7 @@ OPENCL_FORCE_NOT_INLINE float3 TriangleLight_Illuminate(__global const LightSour
 	// Build a temporary HitPoint
 	HitPoint_Init(tmpHitPoint, false,
 		meshIndex, triangleIndex,
-		time, samplePoint, -sampleDir,
+		samplePoint, -sampleDir,
 		b1, b2
 #if defined(PARAM_HAS_PASSTHROUGH)
 		, passThroughEvent

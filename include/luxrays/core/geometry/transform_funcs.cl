@@ -18,6 +18,11 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+OPENCL_FORCE_INLINE void Transform_Init(__global Transform *trans) {
+	Matrix4x4_IdentityGlobal(&trans->m);
+	Matrix4x4_IdentityGlobal(&trans->mInv);
+}
+
 OPENCL_FORCE_INLINE float3 Transform_ApplyPoint(__global const Transform* restrict trans, const float3 point) {
 	return Matrix4x4_ApplyPoint(&trans->m, point);
 }

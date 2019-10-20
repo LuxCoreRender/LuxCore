@@ -55,6 +55,15 @@ TriangleMesh::TriangleMesh(const u_int meshVertCount,
 	tris = meshTris;
 
 	cachedBBoxValid = false;
+	
+	Preprocess();
+}
+
+void TriangleMesh::Preprocess() {
+	// Compute mesh area
+	area = 0.f;
+	for (u_int i = 0; i < triCount; ++i)
+		area += tris[i].Area(vertices);
 }
 
 BBox TriangleMesh::GetBBox() const {
@@ -142,9 +151,12 @@ BOOST_CLASS_EXPORT_IMPLEMENT(luxrays::InstanceTriangleMesh)
 
 InstanceTriangleMesh::InstanceTriangleMesh(TriangleMesh *m, const Transform &t) {
 	assert (m != NULL);
-
+	
 	trans = t;
 	mesh = m;
+
+	// The mesh area is compute on demand and cached
+	cachedArea = -1.f;
 
 	cachedBBoxValid = false;
 }
@@ -170,6 +182,9 @@ MotionTriangleMesh::MotionTriangleMesh(TriangleMesh *m, const MotionSystem &ms) 
 	motionSystem = ms;
 	mesh = m;
 
+	// The mesh area is compute on demand and cached
+	cachedArea = -1.f;
+
 	cachedBBoxValid = false;
 }
 
@@ -184,6 +199,9 @@ BBox MotionTriangleMesh::GetBBox() const {
 
 void MotionTriangleMesh::ApplyTransform(const Transform &trans) {
 	motionSystem.ApplyTransform(trans);
+
+	// Invalidate the cached result
+	cachedArea = -1.f;
 
 	cachedBBoxValid = false;
 }

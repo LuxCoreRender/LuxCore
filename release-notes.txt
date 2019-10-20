@@ -14,7 +14,8 @@
 * Added the support for vector displacement to Displacement shape
 * New image pipeline plugin: White balance
 * Using/Not Using bump/normal mapping doesn't requires OpenCL compilation anymore (removed PARAM_HAS_BUMPMAPS conditional OpenCL compilation)
-* Large rework of internal light interface. Fixed several instance/motion blur and lights related problems. Triangle light motion blur now works as expected in OpenCL
+* Large rework of internal light interface. Fixed several instance/motion blur and lights related problems. Triangle light motion blur now works as expected in OpenCL.
+* Large rework of internal mesh interface. Improved the performance of instanced and motion blur meshes.
 
 ### Fixed Bugs
 
@@ -23,6 +24,13 @@
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
+
+### Known Problems
+* LuxCore API requires latin locale
+* accelerator.bvh.builder.type = EMBREE_MORTON doesn't work with the latest Embree
+* Python crashes when calling sys.exit()
+* TILEPATHOCL (and RTPATHOCL) count the layers of transparent surfaces as an iteration of the rendering finite state machine so they requires to increase the max. path depth to avoid black regions.
+* Light emitted by motion blurred triangle lights is aproximated using the triangle area of time 0.0 (computing triangle area at runtime would be expansive) so it may be not totally accurate if the motion blur transformation include a scale.
 
 **Note for Windows users:** you have to install the [Microsoft Visual C++ Redistributable
 for Visual Studio 2017](https://aka.ms/vs/15/release/vc_redist.x64.exe).

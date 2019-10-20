@@ -24,9 +24,15 @@ using namespace slg;
 using namespace std;
 
 // Used when hitting a surface
+//
+// Note: very important, this method assume localToWorld file has been _already_
+// initialized. This is done for performance reasons. 
+//
+// Note: This is also _not_ initializing volume related information.
+
 void HitPoint::Init(const bool fixedFromLight, const bool throughShadowTransp,
 		const Scene &scene, const u_int meshIndex, const u_int triangleIndex,
-		const float time, const Point &pnt, const Vector &dir,
+		const Point &pnt, const Vector &dir,
 		const float b1, const float b2,
 		const float passThroughEvnt) {
 	fromLight = fixedFromLight;
@@ -44,8 +50,8 @@ void HitPoint::Init(const bool fixedFromLight, const bool throughShadowTransp,
 	const ExtMesh *mesh = sceneObject->GetExtMesh();
 
 	// Interpolate face normal
-	geometryN = mesh->GetGeometryNormal(time, triangleIndex);
-	interpolatedN = mesh->InterpolateTriNormal(time, triangleIndex, b1, b2);
+	geometryN = mesh->GetGeometryNormal(localToWorld, triangleIndex);
+	interpolatedN = mesh->InterpolateTriNormal(localToWorld, triangleIndex, b1, b2);
 	shadeN = interpolatedN;
 	intoObject = (Dot(-fixedDir, geometryN) < 0.f);
 
@@ -59,12 +65,9 @@ void HitPoint::Init(const bool fixedFromLight, const bool throughShadowTransp,
 	alpha = mesh->InterpolateTriAlpha(triangleIndex, b1, b2);
 
 	// Compute geometry differentials
-	mesh->GetDifferentials(time,
+	mesh->GetDifferentials(localToWorld,
 			triangleIndex, shadeN,
 			&dpdu, &dpdv, &dndu, &dndv);
-
-	// Initialized local to world object space transformation
-	mesh->GetLocal2World(time, localToWorld);
 
 	// Note: I'm not initializing volume related information here
 	interiorVolume = nullptr;

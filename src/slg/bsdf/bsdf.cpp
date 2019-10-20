@@ -28,18 +28,19 @@ using namespace std;
 void BSDF::Init(const bool fixedFromLight, const bool throughShadowTransparency,
 		const Scene &scene, const Ray &ray, const RayHit &rayHit,
 		const float passThroughEvent, const PathVolumeInfo *volInfo) {
-	hitPoint.Init(fixedFromLight, throughShadowTransparency,
-			scene, rayHit.meshIndex, rayHit.triangleIndex,
-			ray.time, ray(rayHit.t), -ray.d,
-			rayHit.b1, rayHit.b2,
-			passThroughEvent);
-
 	// Get the scene object
 	sceneObject = scene.objDefs.GetSceneObject(rayHit.meshIndex);
-	
-	// Get the triangle
-	mesh = sceneObject->GetExtMesh();
 
+	// Get the mesh
+	mesh = sceneObject->GetExtMesh();
+	mesh->GetLocal2World(ray.time, hitPoint.localToWorld);
+
+	hitPoint.Init(fixedFromLight, throughShadowTransparency,
+			scene, rayHit.meshIndex, rayHit.triangleIndex,
+			ray(rayHit.t), -ray.d,
+			rayHit.b1, rayHit.b2,
+			passThroughEvent);
+	
 	// Get the material
 	material = sceneObject->GetMaterial();
 

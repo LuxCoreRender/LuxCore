@@ -36,31 +36,75 @@ using namespace luxrays;
 
 BOOST_CLASS_EXPORT_IMPLEMENT(luxrays::ExtMesh)
 
-// For some reason, LoadSerialized() and SaveSerialized() must be in the same
-// file of BOOST_CLASS_EXPORT_IMPLEMENT()
+// The optimized version for ExtTriangleMesh where I can ignore local2World
+// because it is an identity
+void ExtMesh::GetDifferentials(const Transform &local2World,
+		const u_int triIndex, const Normal &shadeNormal,
+        Vector *dpdu, Vector *dpdv,
+        Normal *dndu, Normal *dndv) const {
+    // Compute triangle partial derivatives
+    const Triangle &tri = GetTriangles()[triIndex];
+	const u_int v0Index = tri.v[0];
+	const u_int v1Index = tri.v[1];
+	const u_int v2Index = tri.v[2];
+	
+    UV uv0, uv1, uv2;
+    if (HasUVs()) {
+        uv0 = GetUV(v0Index);
+        uv1 = GetUV(v1Index);
+        uv2 = GetUV(v2Index);
+    } else {
+		uv0 = UV(.5f, .5f);
+		uv1 = UV(.5f, .5f);
+		uv2 = UV(.5f, .5f);
+	}
 
-ExtTriangleMesh *ExtTriangleMesh::LoadSerialized(const string &fileName) {
-	SerializationInputFile sif(fileName);
+    // Compute deltas for triangle partial derivatives
+	const float du1 = uv0.u - uv2.u;
+	const float du2 = uv1.u - uv2.u;
+	const float dv1 = uv0.v - uv2.v;
+	const float dv2 = uv1.v - uv2.v;
+	const float determinant = du1 * dv2 - dv1 * du2;
 
-	ExtTriangleMesh *mesh;
-	sif.GetArchive() >> mesh;
+	if (determinant == 0.f) {
+		// Handle 0 determinant for triangle partial derivative matrix
+		CoordinateSystem(Vector(shadeNormal), dpdu, dpdv);
+		*dndu = Normal();
+		*dndv = Normal();
+	} else {
+		const float invdet = 1.f / determinant;
 
-	if (!sif.IsGood())
-		throw runtime_error("Error while loading serialized scene: " + fileName);
+		// Using localToWorld in order to do all computation relative to
+		// the global coordinate system
+		const Point p0 = GetVertex(local2World, v0Index);
+		const Point p1 = GetVertex(local2World, v1Index);
+		const Point p2 = GetVertex(local2World, v2Index);
 
-	return mesh;
-}
+		const Vector dp1 = p0 - p2;
+		const Vector dp2 = p1 - p2;
 
-void ExtTriangleMesh::SaveSerialized(const string &fileName) const {
-	SerializationOutputFile sof(fileName);
+		const Vector geometryDpDu = ( dv2 * dp1 - dv1 * dp2) * invdet;
+		const Vector geometryDpDv = (-du2 * dp1 + du1 * dp2) * invdet;
 
-	const ExtTriangleMesh *mesh = this;
-	sof.GetArchive() << mesh;
+		*dpdu = Cross(shadeNormal, Cross(geometryDpDu, shadeNormal));
+		*dpdv = Cross(shadeNormal, Cross(geometryDpDv, shadeNormal));
 
-	if (!sof.IsGood())
-		throw runtime_error("Error while saving serialized mesh: " + fileName);
+		if (HasNormals()) {
+			// Using localToWorld in order to do all computation relative to
+			// the global coordinate system
+			const Normal n0 = Normalize(GetShadeNormal(local2World, v0Index));
+			const Normal n1 = Normalize(GetShadeNormal(local2World, v1Index));
+			const Normal n2 = Normalize(GetShadeNormal(local2World, v2Index));
 
-	sof.Flush();
+			const Normal dn1 = n0 - n2;
+			const Normal dn2 = n1 - n2;
+			*dndu = ( dv2 * dn1 - dv1 * dn2) * invdet;
+			*dndv = (-du2 * dn1 + du1 * dn2) * invdet;
+		} else {
+			*dndu = Normal();
+			*dndv = Normal();
+		}
+	}
 }
 
 //------------------------------------------------------------------------------
@@ -91,12 +135,9 @@ ExtTriangleMesh::ExtTriangleMesh(const u_int meshVertCount, const u_int meshTriC
 }
 
 void ExtTriangleMesh::Preprocess() {
-	// Compute all triangle normals and mesh area
-	area = 0.f;
-	for (u_int i = 0; i < triCount; ++i) {
+	// Compute all triangle normals
+	for (u_int i = 0; i < triCount; ++i)
 		triNormals[i] = tris[i].GetGeometryNormal(vertices);
-		area += tris[i].Area(vertices);
-	}
 }
 
 Normal *ExtTriangleMesh::ComputeNormals() {
@@ -134,71 +175,6 @@ Normal *ExtTriangleMesh::ComputeNormals() {
 	}
 
 	return allocated ? normals : NULL;
-}
-
-// The optimized version for ExtTriangleMesh where I can ignore localToWorld
-// because it is an identity
-void ExtTriangleMesh::GetDifferentials(const float time,
-		const u_int triIndex, const Normal &shadeNormal,
-        Vector *dpdu, Vector *dpdv,
-        Normal *dndu, Normal *dndv) const {
-    // Compute triangle partial derivatives
-    const Triangle &tri = tris[triIndex];
-    UV uv0, uv1, uv2;
-    if (HasUVs()) {
-        uv0 = uvs[tri.v[0]];
-        uv1 = uvs[tri.v[1]];
-        uv2 = uvs[tri.v[2]];
-    } else {
-		uv0 = UV(.5f, .5f);
-		uv1 = UV(.5f, .5f);
-		uv2 = UV(.5f, .5f);
-	}
-
-    // Compute deltas for triangle partial derivatives
-	const float du1 = uv0.u - uv2.u;
-	const float du2 = uv1.u - uv2.u;
-	const float dv1 = uv0.v - uv2.v;
-	const float dv2 = uv1.v - uv2.v;
-	const float determinant = du1 * dv2 - dv1 * du2;
-
-	if (determinant == 0.f) {
-		// Handle 0 determinant for triangle partial derivative matrix
-		CoordinateSystem(Vector(shadeNormal), dpdu, dpdv);
-		*dndu = Normal();
-		*dndv = Normal();
-	} else {
-		const float invdet = 1.f / determinant;
-
-		// vertices are already in global coordinates
-		const Point &p0 = vertices[tri.v[0]];
-		const Point &p1 = vertices[tri.v[1]];
-		const Point &p2 = vertices[tri.v[2]];
-
-		const Vector dp1 = p0 - p2;
-		const Vector dp2 = p1 - p2;
-
-		const Vector geometryDpDu = ( dv2 * dp1 - dv1 * dp2) * invdet;
-		const Vector geometryDpDv = (-du2 * dp1 + du1 * dp2) * invdet;
-
-		*dpdu = Cross(shadeNormal, Cross(geometryDpDu, shadeNormal));
-		*dpdv = Cross(shadeNormal, Cross(geometryDpDv, shadeNormal));
-
-		if (HasNormals()) {
-			// normals are already in global coordinates
-			const Normal &n0 = normals[tri.v[0]];
-			const Normal &n1 = normals[tri.v[1]];
-			const Normal &n2 = normals[tri.v[2]];
-
-			const Normal dn1 = n0 - n2;
-			const Normal dn2 = n1 - n2;
-			*dndu = ( dv2 * dn1 - dv1 * dn2) * invdet;
-			*dndv = (-du2 * dn1 + du1 * dn2) * invdet;
-		} else {
-			*dndu = Normal();
-			*dndv = Normal();
-		}
-	}
 }
 
 void ExtTriangleMesh::ApplyTransform(const Transform &trans) {
@@ -301,13 +277,16 @@ ExtTriangleMesh *ExtTriangleMesh::Merge(const vector<const ExtTriangleMesh *> &m
 		const ExtTriangleMesh *mesh = meshes[meshIndex];
 		const Transform *transformation = trans ? &((*trans)[meshIndex]) : nullptr;
 
+		// It is a ExtTriangleMesh so I can use Transform::TRANS_IDENTITY everywhere
+		// in the following code instead of local2World
+
 		// Copy the mesh vertices
 		if (transformation) {
 			for (u_int i = 0; i < mesh->GetTotalVertexCount(); ++i)
-				meshVertices[i + vIndex] = (*transformation) * mesh->GetVertex(0.f, i);
+				meshVertices[i + vIndex] = (*transformation) * mesh->GetVertex(Transform::TRANS_IDENTITY, i);
 		} else {
 			for (u_int i = 0; i < mesh->GetTotalVertexCount(); ++i)
-				meshVertices[i + vIndex] = mesh->GetVertex(0.f, i);			
+				meshVertices[i + vIndex] = mesh->GetVertex(Transform::TRANS_IDENTITY, i);			
 		}
 
 		// Copy the mesh normals
@@ -316,10 +295,10 @@ ExtTriangleMesh *ExtTriangleMesh::Merge(const vector<const ExtTriangleMesh *> &m
 		if (hasNormals) {
 			if (transformation) {
 				for (u_int i = 0; i < mesh->GetTotalVertexCount(); ++i)
-					meshNormals[i + vIndex] = Normalize((*transformation) * mesh->GetShadeNormal(0.f, i));
+					meshNormals[i + vIndex] = Normalize((*transformation) * mesh->GetShadeNormal(Transform::TRANS_IDENTITY, i));
 			} else {
 				for (u_int i = 0; i < mesh->GetTotalVertexCount(); ++i)
-					meshNormals[i + vIndex] = mesh->GetShadeNormal(0.f, i);
+					meshNormals[i + vIndex] = mesh->GetShadeNormal(Transform::TRANS_IDENTITY, i);
 			}
 		}
 
@@ -365,86 +344,36 @@ ExtTriangleMesh *ExtTriangleMesh::Merge(const vector<const ExtTriangleMesh *> &m
 			meshVertices, meshTris, meshNormals, meshUV, meshCols, meshAlpha);
 }
 
+// For some reason, LoadSerialized() and SaveSerialized() must be in the same
+// file of BOOST_CLASS_EXPORT_IMPLEMENT()
+
+ExtTriangleMesh *ExtTriangleMesh::LoadSerialized(const string &fileName) {
+	SerializationInputFile sif(fileName);
+
+	ExtTriangleMesh *mesh;
+	sif.GetArchive() >> mesh;
+
+	if (!sif.IsGood())
+		throw runtime_error("Error while loading serialized scene: " + fileName);
+
+	return mesh;
+}
+
+void ExtTriangleMesh::SaveSerialized(const string &fileName) const {
+	SerializationOutputFile sof(fileName);
+
+	const ExtTriangleMesh *mesh = this;
+	sof.GetArchive() << mesh;
+
+	if (!sof.IsGood())
+		throw runtime_error("Error while saving serialized mesh: " + fileName);
+
+	sof.Flush();
+}
+
 //------------------------------------------------------------------------------
 // ExtInstanceTriangleMesh
 //------------------------------------------------------------------------------
-
-// The optimized version for ExtInstanceTriangleMesh
-void ExtInstanceTriangleMesh::GetDifferentials(const float time,
-		const u_int triIndex, const Normal &shadeNormal,
-        Vector *dpdu, Vector *dpdv,
-        Normal *dndu, Normal *dndv) const {
-    // Compute triangle partial derivatives
-    const Triangle &tri = GetTriangles()[triIndex];
-    UV uv0, uv1, uv2;
-    if (HasUVs()) {
-        uv0 = GetUV(tri.v[0]);
-        uv1 = GetUV(tri.v[1]);
-        uv2 = GetUV(tri.v[2]);
-    } else {
-		uv0 = UV(.5f, .5f);
-		uv1 = UV(.5f, .5f);
-		uv2 = UV(.5f, .5f);
-	}
-
-    // Compute deltas for triangle partial derivatives
-	const float du1 = uv0.u - uv2.u;
-	const float du2 = uv1.u - uv2.u;
-	const float dv1 = uv0.v - uv2.v;
-	const float dv2 = uv1.v - uv2.v;
-	const float determinant = du1 * dv2 - dv1 * du2;
-
-	if (determinant == 0.f) {
-		// Handle 0 determinant for triangle partial derivative matrix
-		CoordinateSystem(Vector(shadeNormal), dpdu, dpdv);
-		*dndu = Normal();
-		*dndv = Normal();
-	} else {
-		const float invdet = 1.f / determinant;
-
-		// Using localToWorld in order to do all computation relative to
-		// the global coordinate system
-		const Transform &localToWorld = trans;
-
-		const Point *vertices = GetVertices();
-		const Point p0 = localToWorld * vertices[tri.v[0]];
-		const Point p1 = localToWorld * vertices[tri.v[1]];
-		const Point p2 = localToWorld * vertices[tri.v[2]];
-
-		const Vector dp1 = p0 - p2;
-		const Vector dp2 = p1 - p2;
-
-		const Vector geometryDpDu = ( dv2 * dp1 - dv1 * dp2) * invdet;
-		const Vector geometryDpDv = (-du2 * dp1 + du1 * dp2) * invdet;
-
-		*dpdu = Cross(shadeNormal, Cross(geometryDpDu, shadeNormal));
-		*dpdv = Cross(shadeNormal, Cross(geometryDpDv, shadeNormal));
-
-		if (HasNormals()) {
-			// Using localToWorld in order to do all computation relative to
-			// the global coordinate system
-			const Normal *normals = static_cast<ExtTriangleMesh *>(mesh)->normals;
-			const Normal n0 = Normalize(normals[tri.v[0]]);
-			const Normal n1 = Normalize(normals[tri.v[1]]);
-			const Normal n2 = Normalize(normals[tri.v[2]]);
-
-			const Normal dn1 = n0 - n2;
-			const Normal dn2 = n1 - n2;
-			*dndu = ( dv2 * dn1 - dv1 * dn2) * invdet;
-			*dndv = (-du2 * dn1 + du1 * dn2) * invdet;
-		} else {
-			*dndu = Normal();
-			*dndv = Normal();
-		}
-	}
-}
-
-void ExtInstanceTriangleMesh::UpdateMeshReferences(ExtTriangleMesh *oldMesh, ExtTriangleMesh *newMesh) {
-	if (static_cast<ExtTriangleMesh *>(mesh) == oldMesh) {
-		mesh = newMesh;
-		cachedArea = false;
-	}
-}
 
 // This is a workaround to a GCC bug described here:
 //  https://svn.boost.org/trac10/ticket/3730
@@ -456,87 +385,16 @@ struct is_virtual_base_of<luxrays::InstanceTriangleMesh, luxrays::ExtInstanceTri
 
 BOOST_CLASS_EXPORT_IMPLEMENT(luxrays::ExtInstanceTriangleMesh)
 
-//------------------------------------------------------------------------------
-// ExtMotionTriangleMesh
-//------------------------------------------------------------------------------
-
-// The optimized version for ExtMotionTriangleMesh
-void ExtMotionTriangleMesh::GetDifferentials(const float time,
-		const u_int triIndex, const Normal &shadeNormal,
-        Vector *dpdu, Vector *dpdv,
-        Normal *dndu, Normal *dndv) const {
-    // Compute triangle partial derivatives
-    const Triangle &tri = GetTriangles()[triIndex];
-    UV uv0, uv1, uv2;
-    if (HasUVs()) {
-        uv0 = GetUV(tri.v[0]);
-        uv1 = GetUV(tri.v[1]);
-        uv2 = GetUV(tri.v[2]);
-    } else {
-		uv0 = UV(.5f, .5f);
-		uv1 = UV(.5f, .5f);
-		uv2 = UV(.5f, .5f);
-	}
-
-    // Compute deltas for triangle partial derivatives
-	const float du1 = uv0.u - uv2.u;
-	const float du2 = uv1.u - uv2.u;
-	const float dv1 = uv0.v - uv2.v;
-	const float dv2 = uv1.v - uv2.v;
-	const float determinant = du1 * dv2 - dv1 * du2;
-
-	if (determinant == 0.f) {
-		// Handle 0 determinant for triangle partial derivative matrix
-		CoordinateSystem(Vector(shadeNormal), dpdu, dpdv);
-		*dndu = Normal();
-		*dndv = Normal();
-	} else {
-		const float invdet = 1.f / determinant;
-
-		// Using localToWorld in order to do all computation relative to
-		// the global coordinate system
-		const Matrix4x4 m = motionSystem.Sample(time);
-		const Transform localToWorld = Inverse(Transform(m));
-
-		const Point *vertices = GetVertices();
-		const Point p0 = localToWorld * vertices[tri.v[0]];
-		const Point p1 = localToWorld * vertices[tri.v[1]];
-		const Point p2 = localToWorld * vertices[tri.v[2]];
-
-		const Vector dp1 = p0 - p2;
-		const Vector dp2 = p1 - p2;
-
-		const Vector geometryDpDu = ( dv2 * dp1 - dv1 * dp2) * invdet;
-		const Vector geometryDpDv = (-du2 * dp1 + du1 * dp2) * invdet;
-
-		*dpdu = Cross(shadeNormal, Cross(geometryDpDu, shadeNormal));
-		*dpdv = Cross(shadeNormal, Cross(geometryDpDv, shadeNormal));
-
-		if (HasNormals()) {
-			// Using localToWorld in order to do all computation relative to
-			// the global coordinate system
-			const Normal *normals = static_cast<ExtTriangleMesh *>(mesh)->normals;
-			const Normal n0 = Normalize(normals[tri.v[0]]);
-			const Normal n1 = Normalize(normals[tri.v[1]]);
-			const Normal n2 = Normalize(normals[tri.v[2]]);
-
-			const Normal dn1 = n0 - n2;
-			const Normal dn2 = n1 - n2;
-			*dndu = ( dv2 * dn1 - dv1 * dn2) * invdet;
-			*dndv = (-du2 * dn1 + du1 * dn2) * invdet;
-		} else {
-			*dndu = Normal();
-			*dndv = Normal();
-		}
-	}
-}
-
-void ExtMotionTriangleMesh::UpdateMeshReferences(ExtTriangleMesh *oldMesh, ExtTriangleMesh *newMesh) {
+void ExtInstanceTriangleMesh::UpdateMeshReferences(ExtTriangleMesh *oldMesh, ExtTriangleMesh *newMesh) {
 	if (static_cast<ExtTriangleMesh *>(mesh) == oldMesh) {
-		mesh = oldMesh;
+		mesh = newMesh;
 		cachedArea = false;
 	}
 }
+
+//------------------------------------------------------------------------------
+// ExtMotionTriangleMesh
+//------------------------------------------------------------------------------
 
 // This is a workaround to a GCC bug described here:
 //  https://svn.boost.org/trac10/ticket/3730
@@ -547,3 +405,10 @@ struct is_virtual_base_of<luxrays::MotionTriangleMesh, luxrays::ExtMotionTriangl
 }
 
 BOOST_CLASS_EXPORT_IMPLEMENT(luxrays::ExtMotionTriangleMesh)
+
+void ExtMotionTriangleMesh::UpdateMeshReferences(ExtTriangleMesh *oldMesh, ExtTriangleMesh *newMesh) {
+	if (static_cast<ExtTriangleMesh *>(mesh) == oldMesh) {
+		mesh = oldMesh;
+		cachedArea = false;
+	}
+}

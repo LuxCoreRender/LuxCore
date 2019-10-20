@@ -61,10 +61,10 @@ DisplacementShape::DisplacementShape(luxrays::ExtTriangleMesh *srcMesh, const Te
 			const u_int vertIndex = tri.v[j];
 
 			if (!doneVerts[vertIndex]) {
-				const Normal shadeN = srcMesh->GetShadeNormal(0.f, vertIndex);
+				const Normal shadeN = srcMesh->GetShadeNormal(Transform::TRANS_IDENTITY, vertIndex);
 
 				// Compute geometry differentials
-				srcMesh->GetDifferentials(0.f, i, shadeN,
+				srcMesh->GetDifferentials(Transform::TRANS_IDENTITY, i, shadeN,
 						&dpdu[vertIndex], &dpdv[vertIndex],
 						&dndu[vertIndex], &dndv[vertIndex]);
 
@@ -85,13 +85,13 @@ DisplacementShape::DisplacementShape(luxrays::ExtTriangleMesh *srcMesh, const Te
 #endif
 			int i = 0; i < vertCount; ++i) {
 		HitPoint hitPoint;
-
+		
 		hitPoint.fixedDir = Vector(0.f, 0.f, 1.f);
-		hitPoint.p = srcMesh->GetVertex(0.f, i);
+		hitPoint.p = srcMesh->GetVertex(Transform::TRANS_IDENTITY, i);
 
 		hitPoint.uv = srcMesh->HasUVs() ? srcMesh->GetUV(i) : UV(0.f, 0.f);
 		
-		hitPoint.geometryN = srcMesh->GetShadeNormal(0.f, i);
+		hitPoint.geometryN = srcMesh->GetShadeNormal(Transform::TRANS_IDENTITY, i);
 		hitPoint.interpolatedN = hitPoint.geometryN;
 		hitPoint.shadeN = hitPoint.interpolatedN;
 

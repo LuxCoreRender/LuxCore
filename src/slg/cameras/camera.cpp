@@ -79,13 +79,15 @@ void Camera::UpdateAuto(const Scene *scene) {
 			const SceneObject *sceneObject = scene->objDefs.GetSceneObject(rayHit.meshIndex);
 
 			// Get the triangle
-			const luxrays::ExtMesh *mesh = sceneObject->GetExtMesh();
+			const ExtMesh *mesh = sceneObject->GetExtMesh();
 
 			// Get the material
 			const Material *material = sceneObject->GetMaterial();
 
 			// Interpolate face normal
-			const Normal geometryN = mesh->GetGeometryNormal(ray.time, rayHit.triangleIndex);
+			Transform local2world;
+			mesh->GetLocal2World(ray.time, local2world);
+			const Normal geometryN = mesh->GetGeometryNormal(local2world, rayHit.triangleIndex);
 			const bool intoObject = (Dot(ray.d, geometryN) < 0.f);
 
 			volume = intoObject ?

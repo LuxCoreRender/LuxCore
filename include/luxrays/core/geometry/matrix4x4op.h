@@ -66,6 +66,21 @@ inline Vector &operator*=(Vector &v, const Matrix4x4 &m) {
 	return v;
 }
 
+inline Normal operator*(const Matrix4x4 &m, const Normal &n) {
+	const float x = n.x, y = n.y, z = n.z;
+	return Normal(m.m[0][0] * x + m.m[0][1] * y + m.m[0][2] * z,
+			m.m[1][0] * x + m.m[1][1] * y + m.m[1][2] * z,
+			m.m[2][0] * x + m.m[2][1] * y + m.m[2][2] * z);
+}
+
+inline Normal &operator*=(Normal &n, const Matrix4x4 &m) {
+	const float x = n.x, y = n.y, z = n.z;
+	n.x = m.m[0][0] * x + m.m[0][1] * y + m.m[0][2] * z;
+	n.y = m.m[1][0] * x + m.m[1][1] * y + m.m[1][2] * z;
+	n.z = m.m[2][0] * x + m.m[2][1] * y + m.m[2][2] * z;
+	return n;
+}
+
 inline Ray operator*(const Matrix4x4 &m, const Ray &r) {
 	return Ray(m * r.o, m * r.d, r.mint, r.maxt, r.time);
 }

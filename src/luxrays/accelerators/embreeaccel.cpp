@@ -88,8 +88,10 @@ void EmbreeAccel::ExportMotionTriangleMesh(const RTCScene embreeScene, const Mot
 		Point *vertices = (Point *)rtcSetNewGeometryBuffer(geom, RTC_BUFFER_TYPE_VERTEX, step, RTC_FORMAT_FLOAT3,
 				sizeof(Point), mtm->GetTotalVertexCount());
 
+		Transform local2World;
+		mtm->GetLocal2World(ms.times[step], local2World);
 		for (u_int i = 0; i < mtm->GetTotalVertexCount(); ++i)
-			vertices[i] = mtm->GetVertex(ms.times[step], i);
+			vertices[i] = mtm->GetVertex(local2World, i);
 	}
 
 	// Share the mesh triangles

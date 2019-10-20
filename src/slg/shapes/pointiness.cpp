@@ -44,12 +44,12 @@ public:
 
 bool PointinessShape::IsSameVertex(const ExtTriangleMesh *srcMesh,
 		const u_int vertex1Index, const u_int vertex2Index) const {
-	if (DistanceSquared(srcMesh->GetVertex(0.f, vertex1Index),
-			srcMesh->GetVertex(0.f, vertex2Index)) > DEFAULT_EPSILON_STATIC)
+	if (DistanceSquared(srcMesh->GetVertex(Transform::TRANS_IDENTITY, vertex1Index),
+			srcMesh->GetVertex(Transform::TRANS_IDENTITY, vertex2Index)) > DEFAULT_EPSILON_STATIC)
 		return false;
 
-	if (srcMesh->HasNormals() && (Dot(srcMesh->GetShadeNormal(0.f, vertex1Index),
-			srcMesh->GetShadeNormal(0.f, vertex2Index)) < 1.f - DEFAULT_EPSILON_STATIC))
+	if (srcMesh->HasNormals() && (Dot(srcMesh->GetShadeNormal(Transform::TRANS_IDENTITY, vertex1Index),
+			srcMesh->GetShadeNormal(Transform::TRANS_IDENTITY, vertex2Index)) < 1.f - DEFAULT_EPSILON_STATIC))
 		return false;
 
 	if (srcMesh->HasColors() && (srcMesh->GetColor(vertex1Index) != 
@@ -127,10 +127,10 @@ PointinessShape::PointinessShape(ExtTriangleMesh *srcMesh) {
 	vector<Normal> vertexNormal(originalVertCount);
 	if (srcMesh->HasNormals()) {
 		for (u_int i = 0; i < originalVertCount; ++i) 
-			vertexNormal[i] = srcMesh->GetShadeNormal(0.f, i);
+			vertexNormal[i] = srcMesh->GetShadeNormal(Transform::TRANS_IDENTITY, i);
 	} else {
 		for (u_int i = 0; i < triCount; ++i) {
-			const Normal triNormal = srcMesh->GetGeometryNormal(0.f, i);
+			const Normal triNormal = srcMesh->GetGeometryNormal(Transform::TRANS_IDENTITY, i);
 
 			vertexNormal[uniqueVertices[tris[i].v[0]]] += triNormal;
 			vertexNormal[uniqueVertices[tris[i].v[1]]] += triNormal;

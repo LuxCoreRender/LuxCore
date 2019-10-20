@@ -53,7 +53,7 @@ OPENCL_FORCE_NOT_INLINE void Volume_InitializeTmpHitPoint(__global HitPoint *tmp
 #if defined(PARAM_HAS_PASSTHROUGH)
 	tmpHitPoint->passThroughEvent = passThroughEvent;
 #endif
-	Matrix4x4_IdentityGlobal(&tmpHitPoint->localToWorld);
+	Transform_Init(&tmpHitPoint->localToWorld);
 	tmpHitPoint->interiorVolumeIndex = NULL_INDEX;
 	tmpHitPoint->exteriorVolumeIndex = NULL_INDEX;
 	tmpHitPoint->intoObject = true;
