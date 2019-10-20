@@ -85,7 +85,7 @@ PMJ02Sampler::PMJ02Sampler(luxrays::RandomGenerator *rnd, Film *flm,
 			const float adaptiveStr,
 			PMJ02SamplerSharedData *samplerSharedData) :
 		Sampler(rnd, flm, flmSplatter, imgSamplesEnable), sharedData(samplerSharedData),
-		pmj02sequence(rnd, samplerSharedData->filmRegionPixelCount), adaptiveStrength(adaptiveStr) {
+		pmj02sequence(rnd), adaptiveStrength(adaptiveStr) {
 }
 
 void PMJ02Sampler::InitNewSample() {
@@ -130,7 +130,6 @@ void PMJ02Sampler::InitNewSample() {
 
 			pass = sharedData->GetNewPixelPass();
 		}
-
 		sample0 = pixelX + pmj02sequence.GetSample(pass, 0);
 		sample1 = pixelY + pmj02sequence.GetSample(pass, 1);
 		break;
@@ -139,9 +138,7 @@ void PMJ02Sampler::InitNewSample() {
 
 void PMJ02Sampler::RequestSamples(const SampleType smplType, const u_int size) {
 	Sampler::RequestSamples(smplType, size);
-
 	pmj02sequence.RequestSamples(size);
-
 	pixelIndexOffset = PMJ02_THREAD_WORK_SIZE;
 	InitNewSample();
 }

@@ -28,59 +28,51 @@ using namespace slg;
 // PMJ02Sequence
 //------------------------------------------------------------------------------
 
-PMJ02Sequence::PMJ02Sequence(luxrays::RandomGenerator *rnd, u_int pixelCount) : 
-	rndGen(rnd), num_samples(128) {
-	
-	// This sequence will be generated for every pixel
-	samplePoints.resize(pixelCount);
+PMJ02Sequence::PMJ02Sequence(luxrays::RandomGenerator *rnd) : 
+	rndGen(rnd), num_samples(1024) {
 
-	passPerPixel.resize(pixelCount, 0);
+	SLG_LOG("Random in sequence constructor: "<< rndGen->uintValue());
 }
 
 PMJ02Sequence::~PMJ02Sequence() {
 }
 
-// This is public and the interface expects size to be the number of dimensions
 void PMJ02Sequence::RequestSamples(const u_int size) {
-
+	// SLG_LOG("5.1: " << size);
 	// We cannot generate an odd number of dimensions
 	u_int tablesToGenerate = size / 2;
 	if (size % 2) tablesToGenerate += 1;
 
-	// For every pixel
-	for (u_int i = 0; i < samplePoints.size(); i++) {
-		RequestSamples(tablesToGenerate, i);
-		passPerPixel[i] += num_samples;
+	samplePoints.resize(tablesToGenerate);
+
+	// SLG_LOG("Generating " << num_samples << " samples for " << size << " dimensions on " << tablesToGenerate << " tables");
+	for (u_int i = 0; i < tablesToGenerate; i++) {
+		samplePoints[i].resize(num_samples);
+		float2 *points = samplePoints[i].data();
+		generate_2D(points, num_samples);
+		shuffle(points, num_samples);
+		// for (u_int j = 0; j < num_samples; j++) {
+		// 	SLG_LOG("dump: " << i << "," << j << "," << points[j].x << "," << points[j].y);
+		// }
 	}
-}
-
-// This is private and expects size to be the amount of dimension tables to be generated
-void PMJ02Sequence::RequestSamples(const u_int size, const u_int index) {
-
-	// For every dimension
-	for (u_int j = 0; j < size; j++) {
-		samplePoints[index][j].reserve(num_samples);
-		generate_2D(samplePoints[index][j].data(), num_samples, rndGen);
-	}
-
+	// SLG_LOG("Generated " << num_samples << " samples for " << size << " dimensions on " << tablesToGenerate << " tables");
 }
 
 float PMJ02Sequence::GetSample(const u_int pass, const u_int index) {
-	// More samples than generated are being requested
-	if (pass > passPerPixel[index]) {
-		RequestSamples(samplePoints[index].size() * 2);
-	}
-	const u_int currentPass = pass % num_samples;
+
+	if (pass > num_samples) return rndGen->floatValue();
+
 	const u_int dimensionIndex = index / 2;
 	
 	if (index % 2) {
-		return samplePoints[index][dimensionIndex][currentPass].y;
+		return samplePoints[dimensionIndex][pass].y;
 	} 
-	return samplePoints[index][dimensionIndex][currentPass].x;
+	return samplePoints[dimensionIndex][pass].x;
 }
 
 
-void PMJ02Sequence::generate_2D(float2 points[], u_int size, luxrays::RandomGenerator *rndGen) {
+void PMJ02Sequence::generate_2D(float2 points[], u_int size) {
+	current_sample = 1;
 	points[0].x = rndGen->floatValue();
 	points[0].y = rndGen->floatValue();
 	for (u_int N = 1; N < size; N = 4 *N) {
@@ -98,7 +90,7 @@ void PMJ02Sequence::mark_occupied_strata(float2 points[], u_int N) {
 			occupiedStrata[shape][n] = false;
 		}
 	}
-	for (int s = 0; s < N; ++s) {
+	for (u_int s = 0; s < N; ++s) {
 		mark_occupied_strata1(points[s], NN);
 	}
 }
@@ -111,7 +103,6 @@ void PMJ02Sequence::mark_occupied_strata1(float2 pt, u_int NN) {
 		u_int xstratum = (u_int)(xdivs * pt.x);
 		u_int ystratum = (u_int)(ydivs * pt.y);
 		size_t index = ystratum * xdivs + xstratum;
-
 		occupiedStrata[shape][index] = true;
 		shape = shape + 1;
 		xdivs = xdivs / 2;
@@ -127,8 +118,8 @@ void PMJ02Sequence::generate_sample_point(float2 points[], float i, float j, flo
 		pt.y = (j + 0.5f * (yhalf + rndGen->floatValue())) / n;
 	} while (is_occupied(pt, NN));
 	mark_occupied_strata1(pt, NN);
-	points[num_samples] = pt;
-	++num_samples;
+	points[current_sample] = pt;
+	++current_sample;
 }
 void PMJ02Sequence::extend_sequence_even(float2 points[], u_int N) {
 	u_int n = (int)sqrtf(N);

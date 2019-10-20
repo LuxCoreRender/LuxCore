@@ -33,12 +33,12 @@ namespace slg {
 
 class PMJ02Sequence {
 public:
-	PMJ02Sequence(luxrays::RandomGenerator *rndGen, u_int pixelCount);
+	PMJ02Sequence(luxrays::RandomGenerator *rndGen);
 	~PMJ02Sequence();
 	
 	void RequestSamples(const u_int size);
 	
-	float GetSample(const u_int pass, const u_int index);
+	float GetSample(const u_int pixelIndex, const u_int pass);
 
 private:
 	// Generates for a single pixel index
@@ -47,11 +47,15 @@ private:
 	luxrays::RandomGenerator *rndGen;
 
 	struct float2 {
+		float2() {}
+		float2(float xi, float yi) : x(xi), y(yi) {
+		}
+
 		float x;
 		float y;
 	};
 
-	void generate_2D(float2 points[], u_int size, luxrays::RandomGenerator *rndGen);
+	void generate_2D(float2 points[], u_int size);
 	void mark_occupied_strata(float2 points[], u_int N);
 	void generate_sample_point(float2 points[], float i, float j, float xhalf, float yhalf, u_int n, u_int N);
 	void extend_sequence_even(float2 points[], u_int N);
@@ -63,17 +67,16 @@ private:
 	std::vector<std::vector<bool>> occupiedStrata;
 	std::vector<bool> occupied1Dx, occupied1Dy;
 
-	// How many samples per pixel should be generated at once
+	// How many samples should be generated at once
 	u_int num_samples;
 
-	// Stores how many samples have been taken by a given pixel so we can regenerate them if needed
-	std::vector<u_int> passPerPixel;
-	
-	// Vector to hold the actual samples
-	// One vector per pixel to be sampled
-	// 		A vector with each pair of dimensions
-	// 			A vector with the (num_samples) samples for that pixel
-	std::vector<std::vector<std::vector<float2>>> samplePoints;
+	// Current sample being generated
+	// Value is only valid during a single generate_2d call
+	u_int current_sample = 1;
+
+	// A vector with each pair of dimensions
+	//	A vector with the (num_samples) 2D samples for that pixel
+	std::vector<std::vector<float2>> samplePoints;
 };
 
 }
