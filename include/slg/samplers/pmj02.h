@@ -47,7 +47,7 @@ public:
 	static SamplerSharedData *FromProperties(const luxrays::Properties &cfg,
 			luxrays::RandomGenerator *rndGen, Film *film);
 
-	u_int GetNewPixelIndex();
+	void GetNewPixelIndex(u_int &index, u_int &seed);
 
 	u_int GetNewPixelPass(const u_int pixelIndex = 0);
 
@@ -112,6 +112,7 @@ private:
 	float sample0, sample1;
 	u_int pixelIndexBase, pixelIndexOffset, pass;
 
+	luxrays::TauswortheRandomGenerator rngGenerator;
 };
 
 }

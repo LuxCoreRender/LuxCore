@@ -30,15 +30,16 @@ using namespace slg;
 
 PMJ02Sequence::PMJ02Sequence(luxrays::RandomGenerator *rnd) : 
 	rndGen(rnd), num_samples(1024) {
-
-	SLG_LOG("Random in sequence constructor: "<< rndGen->uintValue());
+	
+	shufflingSeed = rndGen->uintValue();
+	SLG_LOG("Random in sequence constructor: "<< shufflingSeed);
+	
 }
 
 PMJ02Sequence::~PMJ02Sequence() {
 }
 
 void PMJ02Sequence::RequestSamples(const u_int size) {
-	// SLG_LOG("5.1: " << size);
 	// We cannot generate an odd number of dimensions
 	u_int tablesToGenerate = size / 2;
 	if (size % 2) tablesToGenerate += 1;
@@ -51,23 +52,22 @@ void PMJ02Sequence::RequestSamples(const u_int size) {
 		float2 *points = samplePoints[i].data();
 		generate_2D(points, num_samples);
 		shuffle(points, num_samples);
-		// for (u_int j = 0; j < num_samples; j++) {
-		// 	SLG_LOG("dump: " << i << "," << j << "," << points[j].x << "," << points[j].y);
-		// }
 	}
 	// SLG_LOG("Generated " << num_samples << " samples for " << size << " dimensions on " << tablesToGenerate << " tables");
 }
 
 float PMJ02Sequence::GetSample(const u_int pass, const u_int index) {
 
+	// Revert to random if more samples than generated are being requested
 	if (pass > num_samples) return rndGen->floatValue();
 
+	const u_int samplePass = (pass + rngPass) % num_samples;
+
 	const u_int dimensionIndex = index / 2;
-	
 	if (index % 2) {
-		return samplePoints[dimensionIndex][pass].y;
+		return samplePoints[dimensionIndex][samplePass].y;
 	} 
-	return samplePoints[dimensionIndex][pass].x;
+	return samplePoints[dimensionIndex][samplePass].x;
 }
 
 
@@ -209,4 +209,12 @@ void PMJ02Sequence::shuffle(float2 points[], u_int size) {
 			points[even[xx] + yy * 16] = tmp;
 		}
 	}
+}
+
+u_int PMJ02Sequence::cmj_hash_simple(u_int i, u_int p) {
+	i = (i ^ 61) ^ p;
+	i += i << 3;
+	i ^= i >> 4;
+	i *= 0x27d4eb2d;
+	return i;
 }

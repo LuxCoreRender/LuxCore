@@ -40,6 +40,8 @@ public:
 	
 	float GetSample(const u_int pixelIndex, const u_int pass);
 
+	u_int rngPass;
+	
 private:
 	// Generates for a single pixel index
 	void RequestSamples(const u_int size, const u_int index);
@@ -63,9 +65,12 @@ private:
 	void mark_occupied_strata1(float2 pt, u_int NN);
 	bool is_occupied(float2 pt, u_int NN);
 	void shuffle(float2 points[], u_int size);
+	u_int cmj_hash_simple(u_int i, u_int p);
 
 	std::vector<std::vector<bool>> occupiedStrata;
 	std::vector<bool> occupied1Dx, occupied1Dy;
+
+	u_int shufflingSeed;
 
 	// How many samples should be generated at once
 	u_int num_samples;
@@ -77,6 +82,7 @@ private:
 	// A vector with each pair of dimensions
 	//	A vector with the (num_samples) 2D samples for that pixel
 	std::vector<std::vector<float2>> samplePoints;
+
 };
 
 }

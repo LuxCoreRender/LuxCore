@@ -57,13 +57,15 @@ void PMJ02SamplerSharedData::Init(const u_int seed, Film *engineFlm) {
 	pixelIndex = 0;
 }
 
-u_int PMJ02SamplerSharedData::GetNewPixelIndex() {
+void PMJ02SamplerSharedData::GetNewPixelIndex(u_int &index, u_int &seed) {
 	SpinLocker spinLocker(spinLock);
 
-	const u_int result = pixelIndex;
-	pixelIndex = (pixelIndex + PMJ02_THREAD_WORK_SIZE) % filmRegionPixelCount;
-
-	return result;
+	index = pixelIndex;
+	seed = (seedBase + pixelIndex) % (0xFFFFFFFFu - 1u) + 1u;
+	
+	pixelIndex += PMJ02_THREAD_WORK_SIZE;
+	if (pixelIndex >= filmRegionPixelCount)
+		pixelIndex = 0;
 }
 
 u_int PMJ02SamplerSharedData::GetNewPixelPass(const u_int pixelIndex) {
@@ -95,8 +97,11 @@ void PMJ02Sampler::InitNewSample() {
 		pixelIndexOffset++;
 		if (pixelIndexOffset >= PMJ02_THREAD_WORK_SIZE) {
 			// Ask for a new base
-			pixelIndexBase = sharedData->GetNewPixelIndex();
+			u_int seed;
+			sharedData->GetNewPixelIndex(pixelIndexBase, seed);
 			pixelIndexOffset = 0;
+			// rngPass generator
+			rngGenerator.init(seed);
 		}
 
 		// Initialize sample0 and sample 1
@@ -119,6 +124,9 @@ void PMJ02Sampler::InitNewSample() {
 
 				if (rndGen->floatValue() > noise) {
 					// Skip this pixel and try the next one
+
+					// Workaround for preserving random number distribution behavior
+					rngGenerator.uintValue();
 					continue;
 				}
 			}
@@ -130,6 +138,9 @@ void PMJ02Sampler::InitNewSample() {
 
 			pass = sharedData->GetNewPixelPass();
 		}
+
+		pmj02sequence.rngPass = rngGenerator.uintValue();
+
 		sample0 = pixelX + pmj02sequence.GetSample(pass, 0);
 		sample1 = pixelY + pmj02sequence.GetSample(pass, 1);
 		break;
