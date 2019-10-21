@@ -330,8 +330,8 @@ SOURCE_GROUP("Source Files\\SLG Kernels" FILES ${SLG_KERNELS})
 # Note: the following order of object linking is important for GCC when building
 # a static library (to avoid an undefined symbol reference with the linker)
 set(SLG_CORE_SRCS
-	${LuxRays_SOURCE_DIR}/src/slg/bsdf/bsdf.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/bsdf/hitpoint.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/bsdf/bsdf.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/cameras/camera.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/cameras/environment.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/cameras/orthographic.cpp
