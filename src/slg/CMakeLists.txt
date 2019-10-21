@@ -558,8 +558,6 @@ set(SLG_CORE_SRCS
 SOURCE_GROUP("Source Files\\SLG Core Library" FILES ${SLG_CORE_SRCS})
 
 add_library(slg-core STATIC ${SLG_CORE_SRCS})
-# This is required to avoid unresolved symbols with GCC
-set_target_properties(slg-core PROPERTIES LINK_INTERFACE_MULTIPLICITY 3)
 
 #############################################################################
 #
