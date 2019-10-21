@@ -11,7 +11,7 @@
 resources:
   containers:
   - container: LinuxContainer
-    image: ubuntu:18.04
+    image: ubuntu:14.04
 
 variables:
 - group: BuildPipelinesGroup
@@ -66,7 +66,7 @@ jobs:
     )
   timeoutInMinutes: 0
   pool:
-    vmImage: 'ubuntu-18.04'
+    vmImage: 'ubuntu-16.04'
   variables:
     version_string: $[ dependencies.DetectBuildType.outputs['setvarStep.version_string'] ]
     final: $[ dependencies.DetectBuildType.outputs['setvarStep.final'] ]
@@ -205,7 +205,7 @@ jobs:
     )
   timeoutInMinutes: 0
   pool:
-    vmImage: 'ubuntu-18.04'
+    vmImage: 'ubuntu-16.04'
     
   steps:
   - task: InstallSSHKey@0
