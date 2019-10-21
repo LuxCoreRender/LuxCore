@@ -8,11 +8,6 @@
 # One, and only one, tag in the form "luxcorerender_v*" is needed, 
 # otherwise the official release build aborts.
 
-resources:
-  containers:
-  - container: LinuxContainer
-    image: ubuntu:18.04
-
 variables:
 - group: BuildPipelinesGroup
 
@@ -50,8 +45,6 @@ jobs:
   variables:
     version_string: $[ dependencies.DetectBuildType.outputs['setvarStep.version_string'] ]
 
-  container: LinuxContainer
-
   steps:
   - template: ./scripts/azurepipeline/linux/linux_jobs.yml
 
@@ -70,8 +63,6 @@ jobs:
   variables:
     version_string: $[ dependencies.DetectBuildType.outputs['setvarStep.version_string'] ]
     final: $[ dependencies.DetectBuildType.outputs['setvarStep.final'] ]
-
-  container: LinuxContainer
 
   steps:
   - template: ./scripts/azurepipeline/linux/linux_jobs.yml
