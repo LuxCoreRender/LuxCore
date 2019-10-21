@@ -11,7 +11,7 @@
 resources:
   containers:
   - container: LinuxContainer
-    image: ubuntu:14.04
+    image: ubuntu:16.04
 
 variables:
 - group: BuildPipelinesGroup
@@ -24,7 +24,7 @@ jobs:
 - job: DetectBuildType
   timeoutInMinutes: 0
   pool:
-    vmImage: 'ubuntu-18.04'
+    vmImage: 'ubuntu-16.04'
     
   steps:
   - script: ./scripts/azurepipeline/detect-build-type.sh
@@ -46,7 +46,7 @@ jobs:
   condition: succeeded()
   timeoutInMinutes: 0
   pool:
-    vmImage: 'ubuntu-18.04'
+    vmImage: 'ubuntu-16.04'
   variables:
     version_string: $[ dependencies.DetectBuildType.outputs['setvarStep.version_string'] ]
 
