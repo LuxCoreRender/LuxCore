@@ -1,8 +1,4 @@
 #!/bin/bash
-set -x #echo on
-
-whereis sudo
-/usr/bin/sudo
 
 # Install deps
 sudo apt-get -qq update
