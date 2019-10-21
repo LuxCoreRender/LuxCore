@@ -858,7 +858,7 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 	if (!program) {
 		SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] PathOCL kernel compilation error" << endl << error);
 
-		throw runtime_error("PathOCLBase kernel compilation error");
+		throw runtime_error("PathOCLBase kernel compilation error:\n" + error);
 	}
 
 	if (cached) {

@@ -87,11 +87,12 @@ OPENCL_FORCE_NOT_INLINE float3 ConstantInfiniteLight_GetRadiance(__global const 
 OPENCL_FORCE_NOT_INLINE float3 ConstantInfiniteLight_Illuminate(__global const LightSource *constantInfiniteLight,
 		const float worldCenterX, const float worldCenterY, const float worldCenterZ,
 		const float sceneRadius,
-		__global const BSDF *bsdf, const float u0, const float u1,
-		float3 *shadowRayDir, float *shadowRayDistance, float *directPdfW
+		__global const BSDF *bsdf, const float time, const float u0, const float u1,
+		__global Ray *shadowRay, float *directPdfW
 		LIGHTS_PARAM_DECL) {
 	const bool useVisibilityMapCache = constantInfiniteLight->notIntersectable.constantInfinite.useVisibilityMapCache;
 
+	float3 shadowRayDir;
 	if (useVisibilityMapCache && EnvLightVisibilityCache_IsCacheEnabled(bsdf MATERIALS_PARAM)) {
 		float2 sampleUV;
 		float distPdf;
@@ -106,13 +107,13 @@ OPENCL_FORCE_NOT_INLINE float3 ConstantInfiniteLight_Illuminate(__global const L
 			return BLACK;
 
 		float latLongMappingPdf;
-		EnvLightSource_FromLatLongMapping(sampleUV.s0, sampleUV.s1, shadowRayDir, &latLongMappingPdf);
+		EnvLightSource_FromLatLongMapping(sampleUV.s0, sampleUV.s1, &shadowRayDir, &latLongMappingPdf);
 		if (latLongMappingPdf == 0.f)
 			return BLACK;
 
 		*directPdfW = distPdf * latLongMappingPdf;
 	} else {
-		*shadowRayDir = UniformSampleSphere(u0, u1);
+		shadowRayDir = UniformSampleSphere(u0, u1);
 
 		*directPdfW = UniformSpherePdf();
 	}
@@ -123,16 +124,20 @@ OPENCL_FORCE_NOT_INLINE float3 ConstantInfiniteLight_Illuminate(__global const L
 	const float3 pSurface = BSDF_GetRayOrigin(bsdf, worldCenter - VLOAD3F(&bsdf->hitPoint.p.x));
 	const float3 toCenter = worldCenter - pSurface;
 	const float centerDistance = dot(toCenter, toCenter);
-	const float approach = dot(toCenter, *shadowRayDir);
-	*shadowRayDistance = approach + sqrt(max(0.f, envRadius * envRadius -
+	const float approach = dot(toCenter, shadowRayDir);
+	const float shadowRayDistance = approach + sqrt(max(0.f, envRadius * envRadius -
 		centerDistance + approach * approach));
 
-	const float3 emisPoint = pSurface + (*shadowRayDistance) * (*shadowRayDir);
+	const float3 emisPoint = pSurface + shadowRayDistance * shadowRayDir;
 	const float3 emisNormal = normalize(worldCenter - emisPoint);
 
-	const float cosAtLight = dot(emisNormal, -(*shadowRayDir));
+	const float cosAtLight = dot(emisNormal, -shadowRayDir);
 	if (cosAtLight < DEFAULT_COS_EPSILON_STATIC)
 		return BLACK;
+
+	// Setup the shadow ray
+	const float3 shadowRayOrig = BSDF_GetRayOrigin(bsdf, shadowRayDir);
+	Ray_Init4(shadowRay, shadowRayOrig, shadowRayDir, 0.f, shadowRayDistance, time);
 
 	return VLOAD3F(constantInfiniteLight->notIntersectable.gain.c) *
 			VLOAD3F(constantInfiniteLight->notIntersectable.constantInfinite.color.c);
@@ -185,8 +190,8 @@ OPENCL_FORCE_NOT_INLINE float3 InfiniteLight_GetRadiance(__global const LightSou
 OPENCL_FORCE_NOT_INLINE float3 InfiniteLight_Illuminate(__global const LightSource *infiniteLight,
 		const float worldCenterX, const float worldCenterY, const float worldCenterZ,
 		const float sceneRadius,
-		__global const BSDF *bsdf, const float u0, const float u1,
-		float3 *shadowRayDir, float *shadowRayDistance, float *directPdfW
+		__global const BSDF *bsdf, const float time, const float u0, const float u1,
+		__global Ray *shadowRay, float *directPdfW
 		LIGHTS_PARAM_DECL) {
 	__global const float *infiniteLightDistribution;
 	if (infiniteLight->notIntersectable.infinite.useVisibilityMapCache &&
@@ -209,7 +214,7 @@ OPENCL_FORCE_NOT_INLINE float3 InfiniteLight_Illuminate(__global const LightSour
 	if (latLongMappingPdf == 0.f)
 		return BLACK;
 
-	*shadowRayDir = normalize(Transform_ApplyVector(&infiniteLight->notIntersectable.light2World, localDir));
+	const float3 shadowRayDir = normalize(Transform_ApplyVector(&infiniteLight->notIntersectable.light2World, localDir));
 
 	const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
 	const float envRadius = EnvLightSource_GetEnvRadius(sceneRadius);
@@ -217,18 +222,22 @@ OPENCL_FORCE_NOT_INLINE float3 InfiniteLight_Illuminate(__global const LightSour
 	const float3 pSurface = BSDF_GetRayOrigin(bsdf, worldCenter - VLOAD3F(&bsdf->hitPoint.p.x));
 	const float3 toCenter = worldCenter - pSurface;
 	const float centerDistance = dot(toCenter, toCenter);
-	const float approach = dot(toCenter, *shadowRayDir);
-	*shadowRayDistance = approach + sqrt(max(0.f, envRadius * envRadius -
+	const float approach = dot(toCenter, shadowRayDir);
+	const float shadowRayDistance = approach + sqrt(max(0.f, envRadius * envRadius -
 		centerDistance + approach * approach));
 
-	const float3 emisPoint = pSurface + (*shadowRayDistance) * (*shadowRayDir);
+	const float3 emisPoint = pSurface + shadowRayDistance * shadowRayDir;
 	const float3 emisNormal = normalize(worldCenter - emisPoint);
 
-	const float cosAtLight = dot(emisNormal, -(*shadowRayDir));
+	const float cosAtLight = dot(emisNormal, -shadowRayDir);
 	if (cosAtLight < DEFAULT_COS_EPSILON_STATIC)
 		return BLACK;
 
 	*directPdfW = distPdf * latLongMappingPdf;
+
+	// Setup the shadow ray
+	const float3 shadowRayOrig = BSDF_GetRayOrigin(bsdf, shadowRayDir);
+	Ray_Init4(shadowRay, shadowRayOrig, shadowRayDir, 0.f, shadowRayDistance, time);
 
 	// InfiniteLight_GetRadiance is expended here
 	__global const ImageMap *imageMap = &imageMapDescs[infiniteLight->notIntersectable.infinite.imageMapIndex];
@@ -324,8 +333,8 @@ OPENCL_FORCE_NOT_INLINE float3 SkyLight2_GetRadiance(__global const LightSource 
 OPENCL_FORCE_NOT_INLINE float3 SkyLight2_Illuminate(__global const LightSource *skyLight2,
 		const float worldCenterX, const float worldCenterY, const float worldCenterZ,
 		const float sceneRadius,
-		__global const BSDF *bsdf, const float u0, const float u1,
-		float3 *shadowRayDir, float *shadowRayDistance, float *directPdfW
+		__global const BSDF *bsdf, const float time, const float u0, const float u1,
+		__global Ray *shadowRay, float *directPdfW
 		LIGHTS_PARAM_DECL) {
 	__global const float *skyLightDistribution;
 	if (skyLight2->notIntersectable.sky2.useVisibilityMapCache &&
@@ -342,8 +351,9 @@ OPENCL_FORCE_NOT_INLINE float3 SkyLight2_Illuminate(__global const LightSource *
 	if (distPdf == 0.f)
 			return BLACK;
 
+	float3 shadowRayDir;
 	float latLongMappingPdf;
-	EnvLightSource_FromLatLongMapping(sampleUV.s0, sampleUV.s1, shadowRayDir, &latLongMappingPdf);
+	EnvLightSource_FromLatLongMapping(sampleUV.s0, sampleUV.s1, &shadowRayDir, &latLongMappingPdf);
 	if (latLongMappingPdf == 0.f)
 		return BLACK;
 
@@ -353,20 +363,24 @@ OPENCL_FORCE_NOT_INLINE float3 SkyLight2_Illuminate(__global const LightSource *
 	const float3 pSurface = BSDF_GetRayOrigin(bsdf, worldCenter - VLOAD3F(&bsdf->hitPoint.p.x));
 	const float3 toCenter = worldCenter - pSurface;
 	const float centerDistance = dot(toCenter, toCenter);
-	const float approach = dot(toCenter, *shadowRayDir);
-	*shadowRayDistance = approach + sqrt(max(0.f, envRadius * envRadius -
+	const float approach = dot(toCenter, shadowRayDir);
+	const float shadowRayDistance = approach + sqrt(max(0.f, envRadius * envRadius -
 		centerDistance + approach * approach));
 
-	const float3 emisPoint = pSurface + (*shadowRayDistance) * (*shadowRayDir);
+	const float3 emisPoint = pSurface + shadowRayDistance * shadowRayDir;
 	const float3 emisNormal = normalize(worldCenter - emisPoint);
 
-	const float cosAtLight = dot(emisNormal, -(*shadowRayDir));
+	const float cosAtLight = dot(emisNormal, -shadowRayDir);
 	if (cosAtLight < DEFAULT_COS_EPSILON_STATIC)
 		return BLACK;
 
 	*directPdfW = distPdf * latLongMappingPdf;
 
-	return SkyLight2_ComputeRadiance(skyLight2, *shadowRayDir);
+	// Setup the shadow ray
+	const float3 shadowRayOrig = BSDF_GetRayOrigin(bsdf, shadowRayDir);
+	Ray_Init4(shadowRay, shadowRayOrig, shadowRayDir, 0.f, shadowRayDistance, time);
+
+	return SkyLight2_ComputeRadiance(skyLight2, shadowRayDir);
 }
 
 #endif
@@ -400,15 +414,15 @@ OPENCL_FORCE_NOT_INLINE float3 SunLight_GetRadiance(__global const LightSource *
 OPENCL_FORCE_NOT_INLINE float3 SunLight_Illuminate(__global const LightSource *sunLight,
 		const float worldCenterX, const float worldCenterY, const float worldCenterZ,
 		const float sceneRadius,
-		__global const BSDF *bsdf, const float u0, const float u1,
-		float3 *shadowRayDir, float *shadowRayDistance, float *directPdfW) {
+		__global const BSDF *bsdf, const float time, const float u0, const float u1,
+		__global Ray *shadowRay, float *directPdfW) {
 
 	const float cosThetaMax = sunLight->notIntersectable.sun.cosThetaMax;
 	const float3 sunDir = VLOAD3F(&sunLight->notIntersectable.sun.absoluteDir.x);
-	*shadowRayDir = UniformSampleCone(u0, u1, cosThetaMax, VLOAD3F(&sunLight->notIntersectable.sun.x.x), VLOAD3F(&sunLight->notIntersectable.sun.y.x), sunDir);
+	const float3 shadowRayDir = UniformSampleCone(u0, u1, cosThetaMax, VLOAD3F(&sunLight->notIntersectable.sun.x.x), VLOAD3F(&sunLight->notIntersectable.sun.y.x), sunDir);
 
 	// Check if the point can be inside the sun cone of light
-	const float cosAtLight = dot(sunDir, *shadowRayDir);
+	const float cosAtLight = dot(sunDir, shadowRayDir);
 	if (cosAtLight <= cosThetaMax)
 		return BLACK;
 
@@ -418,11 +432,15 @@ OPENCL_FORCE_NOT_INLINE float3 SunLight_Illuminate(__global const LightSource *s
 	const float3 pSurface = BSDF_GetRayOrigin(bsdf, worldCenter - VLOAD3F(&bsdf->hitPoint.p.x));
 	const float3 toCenter = worldCenter - pSurface;
 	const float centerDistance = dot(toCenter, toCenter);
-	const float approach = dot(toCenter, *shadowRayDir);
-	*shadowRayDistance = approach + sqrt(max(0.f, envRadius * envRadius -
+	const float approach = dot(toCenter, shadowRayDir);
+	const float shadowRayDistance = approach + sqrt(max(0.f, envRadius * envRadius -
 		centerDistance + approach * approach));
 
 	*directPdfW = UniformConePdf(cosThetaMax);
+
+	// Setup the shadow ray
+	const float3 shadowRayOrig = BSDF_GetRayOrigin(bsdf, shadowRayDir);
+	Ray_Init4(shadowRay, shadowRayOrig, shadowRayDir, 0.f, shadowRayDistance, time);
 
 	return VLOAD3F(sunLight->notIntersectable.sun.color.c);
 }
@@ -484,7 +502,7 @@ OPENCL_FORCE_NOT_INLINE float3 TriangleLight_Illuminate(__global const LightSour
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
 #endif
-		float3 *shadowRayDir, float *shadowRayDistance, float *directPdfW
+		__global Ray *shadowRay, float *directPdfW
 		MATERIALS_PARAM_DECL) {
 	// A safety check to avoid NaN/Inf
 	if ((triLight->triangle.invTriangleArea == 0.f) || (triLight->triangle.invMeshArea == 0.f))
@@ -542,11 +560,11 @@ OPENCL_FORCE_NOT_INLINE float3 TriangleLight_Illuminate(__global const LightSour
 	const float3 shadowRayOrig = BSDF_GetRayOrigin(bsdf, sampleDir);
 
 	// Compute shadow ray direction with displaced start and end point to avoid self-shadow problems
-	*shadowRayDir = samplePoint + geometryN * MachineEpsilon_E_Float3(samplePoint) *
+	float3 shadowRayDir = samplePoint + geometryN * MachineEpsilon_E_Float3(samplePoint) *
 			(tmpHitPoint->intoObject ? 1.f : -1.f) - shadowRayOrig;
-	const float shadowRayDistanceSquared = dot(*shadowRayDir, *shadowRayDir);
-	*shadowRayDistance = sqrt(shadowRayDistanceSquared);
-	*shadowRayDir /= *shadowRayDistance;
+	const float shadowRayDistanceSquared = dot(shadowRayDir, shadowRayDir);
+	const float shadowRayDistance = sqrt(shadowRayDistanceSquared);
+	shadowRayDir /= shadowRayDistance;
 
 	//--------------------------------------------------------------------------
 	// Compute the PDF and emission color
@@ -559,7 +577,7 @@ OPENCL_FORCE_NOT_INLINE float3 TriangleLight_Illuminate(__global const LightSour
 		Frame frame;
 		HitPoint_GetFrame(tmpHitPoint, &frame);
 
-		const float3 localFromLight = normalize(Frame_ToLocal_Private(&frame, -(*shadowRayDir)));
+		const float3 localFromLight = normalize(Frame_ToLocal_Private(&frame, -shadowRayDir));
 
 		// Retrieve the image map information
 		__global const ImageMap *imageMap = &imageMapDescs[triLight->triangle.imageMapIndex];
@@ -573,6 +591,9 @@ OPENCL_FORCE_NOT_INLINE float3 TriangleLight_Illuminate(__global const LightSour
 	} else
 #endif
 		*directPdfW = triLight->triangle.invTriangleArea * shadowRayDistanceSquared / fabs(cosAtLight);
+
+	// Setup the shadow ray
+	Ray_Init4(shadowRay, shadowRayOrig, shadowRayDir, 0.f, shadowRayDistance, time);
 
 	return Material_GetEmittedRadiance(materialIndex,
 			tmpHitPoint, triLight->triangle.invMeshArea
@@ -588,17 +609,21 @@ OPENCL_FORCE_NOT_INLINE float3 TriangleLight_Illuminate(__global const LightSour
 #if defined(PARAM_HAS_POINTLIGHT)
 
 OPENCL_FORCE_NOT_INLINE float3 PointLight_Illuminate(__global const LightSource *pointLight,
-		__global const BSDF *bsdf,
-		float3 *shadowRayDir, float *shadowRayDistance, float *directPdfW) {
+		__global const BSDF *bsdf, const float time,
+		__global Ray *shadowRay, float *directPdfW) {
 	const float3 pLight = VLOAD3F(&pointLight->notIntersectable.point.absolutePos.x);	
 	const float3 pSurface = BSDF_GetRayOrigin(bsdf, pLight - VLOAD3F(&bsdf->hitPoint.p.x));
 
 	const float3 toLight = pLight - pSurface;
 	const float shadowRayDistanceSquared = dot(toLight, toLight);
-	*shadowRayDistance = sqrt(shadowRayDistanceSquared);
-	*shadowRayDir = toLight / *shadowRayDistance;
+	const float shadowRayDistance = sqrt(shadowRayDistanceSquared);
+	const float3 shadowRayDir = toLight / shadowRayDistance;
 
 	*directPdfW = shadowRayDistanceSquared;
+
+	// Setup the shadow ray
+	const float3 shadowRayOrig = BSDF_GetRayOrigin(bsdf, shadowRayDir);
+	Ray_Init4(shadowRay, shadowRayOrig, shadowRayDir, 0.f, shadowRayDistance, time);
 
 	return VLOAD3F(pointLight->notIntersectable.point.emittedFactor.c) * (1.f / (4.f * M_PI_F));
 }
@@ -641,12 +666,10 @@ OPENCL_FORCE_INLINE bool SphereLight_SphereIntersect(const float3 absolutePos, c
 }
 
 OPENCL_FORCE_NOT_INLINE float3 SphereLight_Illuminate(__global const LightSource *pointLight,
-		__global const BSDF *bsdf, const float u0, const float u1,
-		float3 *shadowRayDir, float *shadowRayDistance, float *directPdfW) {
+		__global const BSDF *bsdf, const float time, const float u0, const float u1,
+		__global Ray *shadowRay, float *directPdfW) {
 	const float3 absolutePos = VLOAD3F(&pointLight->notIntersectable.sphere.absolutePos.x);
-	const float3 pSurface = BSDF_GetRayOrigin(bsdf, absolutePos - VLOAD3F(&bsdf->hitPoint.p.x));
-
-	const float3 toLight = absolutePos - pSurface;
+	const float3 toLight = absolutePos - VLOAD3F(&bsdf->hitPoint.p.x);
 	const float centerDistanceSquared = dot(toLight, toLight);
 	const float centerDistance = sqrt(centerDistanceSquared);
 
@@ -669,20 +692,22 @@ OPENCL_FORCE_NOT_INLINE float3 SphereLight_Illuminate(__global const LightSource
 	// Sample sphere uniformly inside subtended cone
 	const float cosThetaMax = sqrt(max(0.f, 1.f - radiusSquared / centerDistanceSquared));
 
-	const float3 rayOrig = pSurface;
-	const float3 localRayDir = UniformSampleConeLocal(u0, u1, cosThetaMax);
-
+	const float3 localShadowRayDir = UniformSampleConeLocal(u0, u1, cosThetaMax);
 	if (CosTheta(localRayDir) < DEFAULT_COS_EPSILON_STATIC)
 		return BLACK;
 
-	const float3 rayDir = Frame_ToWorld_Private(&localFrame, localRayDir);
+	const float3 shadowRayDir = Frame_ToWorld_Private(&localFrame, localShadowRayDir);
 
 	// Check the intersection with the sphere
-	if (!SphereLight_SphereIntersect(absolutePos, radiusSquared, rayOrig, rayDir, shadowRayDistance))
-		*shadowRayDistance = dot(toLight, rayDir);
-	*shadowRayDir = rayDir;
+	float shadowRayDistance;
+	if (!SphereLight_SphereIntersect(absolutePos, radiusSquared, rayOrig, shadowRayDir, shadowRayDistance))
+		shadowRayDistance = dot(toLight, shadowRayDir);
 
 	*directPdfW = UniformConePdf(cosThetaMax);
+
+	// Setup the shadow ray
+	const float3 shadowRayOrig = BSDF_GetRayOrigin(bsdf, shadowRayDir);
+	Ray_Init4(shadowRay, shadowRayOrig, shadowRayDir, 0.f, shadowRayDistance, time);
 
 	const float invArea = 1.f / (4.f * M_PI_F * radiusSquared);
 
@@ -698,24 +723,26 @@ OPENCL_FORCE_NOT_INLINE float3 SphereLight_Illuminate(__global const LightSource
 #if defined(PARAM_HAS_MAPPOINTLIGHT) && defined(PARAM_HAS_IMAGEMAPS)
 
 OPENCL_FORCE_NOT_INLINE float3 MapPointLight_Illuminate(__global const LightSource *mapPointLight,
-		__global const BSDF *bsdf,
-		float3 *shadowRayDir, float *shadowRayDistance, float *directPdfW
+		__global const BSDF *bsdf, const float time,
+		__global Ray *shadowRay, float *directPdfW
 		IMAGEMAPS_PARAM_DECL) {
 	const float3 pLight = VLOAD3F(&mapPointLight->notIntersectable.mapPoint.absolutePos.x);
-	const float3 pSurface = BSDF_GetRayOrigin(bsdf, pLight - VLOAD3F(&bsdf->hitPoint.p.x));
-
-	const float3 toLight = pLight - pSurface;
+	const float3 toLight = pLight - VLOAD3F(&bsdf->hitPoint.p.x);
 	const float shadowRayDistanceSquared = dot(toLight, toLight);
-	*shadowRayDistance = sqrt(shadowRayDistanceSquared);
-	*shadowRayDir = toLight / *shadowRayDistance;
+	const float shadowRayDistance = sqrt(shadowRayDistanceSquared);
+	const float3 shadowRayDir = toLight / shadowRayDistance;
 
 	*directPdfW = shadowRayDistanceSquared;
+
+	// Setup the shadow ray
+	const float3 shadowRayOrig = BSDF_GetRayOrigin(bsdf, shadowRayDir);
+	Ray_Init4(shadowRay, shadowRayOrig, shadowRayDir, 0.f, shadowRayDistance, time);
 
 	// Retrieve the image map information
 	__global const ImageMap *imageMap = &imageMapDescs[mapPointLight->notIntersectable.mapPoint.imageMapIndex];
 
 	const float3 localFromLight = normalize(Transform_InvApplyVector(
-			&mapPointLight->notIntersectable.light2World, -(*shadowRayDir)));
+			&mapPointLight->notIntersectable.light2World, -shadowRayDir));
 	const float2 uv = (float2)(SphericalPhi(localFromLight) * (1.f / (2.f * M_PI_F)), SphericalTheta(localFromLight) * M_1_PI_F);
 	const float3 emissionColor = ImageMap_GetSpectrum(
 			imageMap,
@@ -735,16 +762,16 @@ OPENCL_FORCE_NOT_INLINE float3 MapPointLight_Illuminate(__global const LightSour
 
 OPENCL_FORCE_NOT_INLINE float3 MapSphereLight_Illuminate(__global const LightSource *mapSphereLight,
 		__global const BSDF *bsdf,	const float u0, const float u1,
-		float3 *shadowRayDir, float *shadowRayDistance, float *directPdfW
+		__global Ray *shadowRay, float *directPdfW
 		IMAGEMAPS_PARAM_DECL) {
-	const float3 result = SphereLight_Illuminate(mapSphereLight, bsdf, u0, u1,
-			shadowRayDir, shadowRayDistance, directPdfW);
+	const float3 result = SphereLight_Illuminate(mapSphereLight, bsdf, time, u0, u1,
+			shadowRay, directPdfW);
 
 	// Retrieve the image map information
 	__global const ImageMap *imageMap = &imageMapDescs[mapSphereLight->notIntersectable.mapSphere.imageMapIndex];
 
 	const float3 localFromLight = normalize(Transform_InvApplyVector(
-			&mapSphereLight->notIntersectable.light2World, -(*shadowRayDir)));
+			&mapSphereLight->notIntersectable.light2World, -shadowRayDir));
 	const float2 uv = (float2)(SphericalPhi(localFromLight) * (1.f / (2.f * M_PI_F)), SphericalTheta(localFromLight) * M_1_PI_F);
 	const float3 emissionColor = ImageMap_GetSpectrum(
 			imageMap,
@@ -775,17 +802,17 @@ OPENCL_FORCE_INLINE float SpotLight_LocalFalloff(const float3 w, const float cos
 
 OPENCL_FORCE_NOT_INLINE float3 SpotLight_Illuminate(__global const LightSource *spotLight,
 		__global const BSDF *bsdf,
-		float3 *shadowRayDir, float *shadowRayDistance, float *directPdfW) {
+		__global Ray *shadowRay, float *directPdfW) {
 	const float3 pLight = VLOAD3F(&spotLight->notIntersectable.spot.absolutePos.x);
 	const float3 pSurface = BSDF_GetRayOrigin(bsdf, pLight - VLOAD3F(&bsdf->hitPoint.p.x));
 
 	const float3 toLight = pLight - pSurface;
 	const float shadowRayDistanceSquared = dot(toLight, toLight);
-	*shadowRayDistance = sqrt(shadowRayDistanceSquared);
-	*shadowRayDir = toLight / *shadowRayDistance;
+	const float shadowRayDistance = sqrt(shadowRayDistanceSquared);
+	const float3 shadowRayDir = toLight / shadowRayDistance;
 
 	const float3 localFromLight = normalize(Transform_InvApplyVector(
-			&spotLight->notIntersectable.light2World, -(*shadowRayDir)));
+			&spotLight->notIntersectable.light2World, -shadowRayDir));
 	const float falloff = SpotLight_LocalFalloff(localFromLight,
 			spotLight->notIntersectable.spot.cosTotalWidth,
 			spotLight->notIntersectable.spot.cosFalloffStart);
@@ -793,6 +820,10 @@ OPENCL_FORCE_NOT_INLINE float3 SpotLight_Illuminate(__global const LightSource *
 		return BLACK;
 
 	*directPdfW = shadowRayDistanceSquared;
+
+	// Setup the shadow ray
+	const float3 shadowRayOrig = BSDF_GetRayOrigin(bsdf, shadowRayDir);
+	Ray_Init4(shadowRay, shadowRayOrig, shadowRayDir, 0.f, shadowRayDistance, time);
 
 	return VLOAD3F(spotLight->notIntersectable.spot.emittedFactor.c) *
 			(falloff / fabs(CosTheta(localFromLight)));
@@ -808,23 +839,23 @@ OPENCL_FORCE_NOT_INLINE float3 SpotLight_Illuminate(__global const LightSource *
 
 OPENCL_FORCE_NOT_INLINE float3 ProjectionLight_Illuminate(__global const LightSource *projectionLight,
 		__global const BSDF *bsdf,
-		float3 *shadowRayDir, float *shadowRayDistance, float *directPdfW
+		__global Ray *shadowRay, float *directPdfW
 		IMAGEMAPS_PARAM_DECL) {
 	const float3 pLight = VLOAD3F(&projectionLight->notIntersectable.projection.absolutePos.x);
 	const float3 pSurface = BSDF_GetRayOrigin(bsdf, pLight - VLOAD3F(&bsdf->hitPoint.p.x));
 
 	const float3 toLight = pLight - pSurface;
 	const float shadowRayDistanceSquared = dot(toLight, toLight);
-	*shadowRayDistance = sqrt(shadowRayDistanceSquared);
-	*shadowRayDir = toLight / *shadowRayDistance;
+	const float shadowRayDistance = sqrt(shadowRayDistanceSquared);
+	const float3 shadowRayDir = toLight / shadowRayDistance;
 
 	// Check the side
-	if (dot(-(*shadowRayDir), VLOAD3F(&projectionLight->notIntersectable.projection.lightNormal.x)) < 0.f)
+	if (dot(-shadowRayDir, VLOAD3F(&projectionLight->notIntersectable.projection.lightNormal.x)) < 0.f)
 		return BLACK;
 
 	// Check if the point is inside the image plane
 	const float3 localFromLight = normalize(Transform_InvApplyVector(
-			&projectionLight->notIntersectable.light2World, -(*shadowRayDir)));
+			&projectionLight->notIntersectable.light2World, -shadowRayDir));
 	const float3 p0 = Matrix4x4_ApplyPoint(
 			&projectionLight->notIntersectable.projection.lightProjection, localFromLight);
 
@@ -836,6 +867,10 @@ OPENCL_FORCE_NOT_INLINE float3 ProjectionLight_Illuminate(__global const LightSo
 		return BLACK;
 
 	*directPdfW = shadowRayDistanceSquared;
+
+	// Setup the shadow ray
+	const float3 shadowRayOrig = BSDF_GetRayOrigin(bsdf, shadowRayDir);
+	Ray_Init4(shadowRay, shadowRayOrig, shadowRayDir, 0.f, shadowRayDistance, time);
 
 	float3 c = VLOAD3F(projectionLight->notIntersectable.projection.emittedFactor.c);
 #if defined(PARAM_HAS_IMAGEMAPS)
@@ -869,8 +904,8 @@ OPENCL_FORCE_NOT_INLINE float3 SharpDistantLight_Illuminate(__global const Light
 		const float worldCenterX, const float worldCenterY, const float worldCenterZ,
 		const float sceneRadius,
 		__global const BSDF *bsdf,
-		float3 *shadowRayDir, float *shadowRayDistance, float *directPdfW) {
-	*shadowRayDir = -VLOAD3F(&sharpDistantLight->notIntersectable.sharpDistant.absoluteLightDir.x);
+		__global Ray *shadowRay, float *directPdfW) {
+	const float3 shadowRayDir = -VLOAD3F(&sharpDistantLight->notIntersectable.sharpDistant.absoluteLightDir.x);
 
 	const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
 	const float envRadius = EnvLightSource_GetEnvRadius(sceneRadius);
@@ -878,11 +913,15 @@ OPENCL_FORCE_NOT_INLINE float3 SharpDistantLight_Illuminate(__global const Light
 	const float3 pSurface = BSDF_GetRayOrigin(bsdf, worldCenter - VLOAD3F(&bsdf->hitPoint.p.x));
 	const float3 toCenter = worldCenter - pSurface;
 	const float centerDistance = dot(toCenter, toCenter);
-	const float approach = dot(toCenter, *shadowRayDir);
-	*shadowRayDistance = approach + sqrt(max(0.f, envRadius * envRadius -
+	const float approach = dot(toCenter, shadowRayDir);
+	const float shadowRayDistance = approach + sqrt(max(0.f, envRadius * envRadius -
 		centerDistance + approach * approach));
 
 	*directPdfW = 1.f;
+
+	// Setup the shadow ray
+	const float3 shadowRayOrig = BSDF_GetRayOrigin(bsdf, shadowRayDir);
+	Ray_Init4(shadowRay, shadowRayOrig, shadowRayDir, 0.f, shadowRayDistance, time);
 
 	return VLOAD3F(sharpDistantLight->notIntersectable.gain.c) *
 			VLOAD3F(sharpDistantLight->notIntersectable.sharpDistant.color.c);
@@ -899,13 +938,13 @@ OPENCL_FORCE_NOT_INLINE float3 SharpDistantLight_Illuminate(__global const Light
 OPENCL_FORCE_NOT_INLINE float3 DistantLight_Illuminate(__global const LightSource *distantLight,
 		const float worldCenterX, const float worldCenterY, const float worldCenterZ,
 		const float sceneRadius,
-		__global const BSDF *bsdf, const float u0, const float u1,
-		float3 *shadowRayDir, float *shadowRayDistance, float *directPdfW) {
+		__global const BSDF *bsdf, const float time, const float u0, const float u1,
+		__global Ray *shadowRay, float *directPdfW) {
 	const float3 absoluteLightDir = VLOAD3F(&distantLight->notIntersectable.distant.absoluteLightDir.x);
 	const float3 x = VLOAD3F(&distantLight->notIntersectable.distant.x.x);
 	const float3 y = VLOAD3F(&distantLight->notIntersectable.distant.y.x);
 	const float cosThetaMax = distantLight->notIntersectable.distant.cosThetaMax;
-	*shadowRayDir = -UniformSampleCone(u0, u1, cosThetaMax, x, y, absoluteLightDir);
+	const float3 shadowRayDir = -UniformSampleCone(u0, u1, cosThetaMax, x, y, absoluteLightDir);
 
 	const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
 	const float envRadius = EnvLightSource_GetEnvRadius(sceneRadius);
@@ -913,12 +952,16 @@ OPENCL_FORCE_NOT_INLINE float3 DistantLight_Illuminate(__global const LightSourc
 	const float3 pSurface = BSDF_GetRayOrigin(bsdf, worldCenter - VLOAD3F(&bsdf->hitPoint.p.x));
 	const float3 toCenter = worldCenter - pSurface;
 	const float centerDistance = dot(toCenter, toCenter);
-	const float approach = dot(toCenter, *shadowRayDir);
-	*shadowRayDistance = approach + sqrt(max(0.f, envRadius * envRadius -
+	const float approach = dot(toCenter, shadowRayDir);
+	const float shadowRayDistance = approach + sqrt(max(0.f, envRadius * envRadius -
 		centerDistance + approach * approach));
 
 	const float uniformConePdf = UniformConePdf(cosThetaMax);
 	*directPdfW = uniformConePdf;
+
+	// Setup the shadow ray
+	const float3 shadowRayOrig = BSDF_GetRayOrigin(bsdf, shadowRayDir);
+	Ray_Init4(shadowRay, shadowRayOrig, shadowRayDir, 0.f, shadowRayDistance, time);
 
 	return VLOAD3F(distantLight->notIntersectable.gain.c) *
 			VLOAD3F(distantLight->notIntersectable.sharpDistant.color.c);
@@ -933,33 +976,31 @@ OPENCL_FORCE_NOT_INLINE float3 DistantLight_Illuminate(__global const LightSourc
 #if defined(PARAM_HAS_LASERLIGHT)
 
 OPENCL_FORCE_NOT_INLINE float3 LaserLight_Illuminate(__global const LightSource *laserLight,
-		__global const BSDF *bsdf,
-		float3 *shadowRayDir, float *shadowRayDistance, float *directPdfW) {
+		__global const BSDF *bsdf, const float time,
+		__global Ray *shadowRay, float *directPdfW) {
 	const float3 absoluteLightPos = VLOAD3F(&laserLight->notIntersectable.laser.absoluteLightPos.x);
 	const float3 absoluteLightDir = VLOAD3F(&laserLight->notIntersectable.laser.absoluteLightDir.x);
 
-	*shadowRayDir = -absoluteLightDir;
-	
-	const float3 rayDir = *shadowRayDir;
-	const float3 rayOrig = BSDF_GetRayOrigin(bsdf, rayDir);
+	const float3 shadowRayDir = -absoluteLightDir;
+	const float3 rayOrig = BSDF_GetRayOrigin(bsdf, shadowRayDir);
 	const float3 planeCenter = absoluteLightPos;
 	const float3 planeNormal = absoluteLightDir;
 
 	// Intersect the shadow ray with light plane
-	const float denom = dot(planeNormal, rayDir);
+	const float denom = dot(planeNormal, shadowRayDir);
 	const float3 pr = planeCenter - rayOrig;
-	float d = dot(pr, planeNormal);
+	float shadowRayDistance = dot(pr, planeNormal);
 
 	if (fabs(denom) > DEFAULT_COS_EPSILON_STATIC) {
 		// There is a valid intersection
-		d /= denom; 
+		shadowRayDistance /= denom; 
 
-		if ((d <= 0.f) || (denom >= 0.f))
+		if ((shadowRayDistance <= 0.f) || (denom >= 0.f))
 			return BLACK;
 	} else
 		return BLACK;
 
-	const float3 lightPoint = rayOrig + d * rayDir;
+	const float3 lightPoint = rayOrig + shadowRayDistance * shadowRayDir;
 
 	// Check if the point is inside the emitting circle
 	const float radius = laserLight->notIntersectable.laser.radius;
@@ -969,8 +1010,11 @@ OPENCL_FORCE_NOT_INLINE float3 LaserLight_Illuminate(__global const LightSource 
 	
 	// Ok, the light is visible
 	
-	*shadowRayDistance = d;
 	*directPdfW = 1.f;
+
+	// Setup the shadow ray
+	const float3 shadowRayOrig = BSDF_GetRayOrigin(bsdf, shadowRayDir);
+	Ray_Init4(shadowRay, shadowRayOrig, shadowRayDir, 0.f, shadowRayDistance, time);
 
 	return VLOAD3F(laserLight->notIntersectable.laser.emittedFactor.c);
 }
@@ -1049,7 +1093,7 @@ OPENCL_FORCE_NOT_INLINE float3 Light_Illuminate(
 		const float worldCenterZ,
 		const float envRadius,
 		__global HitPoint *tmpHitPoint,
-		float3 *shadowRayDir, float *shadowRayDistance, float *directPdfW
+		__global Ray *shadowRay, float *directPdfW
 		LIGHTS_PARAM_DECL) {
 	switch (light->type) {
 #if defined(PARAM_HAS_CONSTANTINFINITELIGHT)
@@ -1057,8 +1101,8 @@ OPENCL_FORCE_NOT_INLINE float3 Light_Illuminate(
 			return ConstantInfiniteLight_Illuminate(
 					light,
 					worldCenterX, worldCenterY, worldCenterZ, envRadius,
-					bsdf, u0, u1,
-					shadowRayDir, shadowRayDistance, directPdfW
+					bsdf, time, u0, u1,
+					shadowRay, directPdfW
 					LIGHTS_PARAM);
 #endif
 #if defined(PARAM_HAS_INFINITELIGHT) && defined(PARAM_HAS_IMAGEMAPS)
@@ -1066,8 +1110,8 @@ OPENCL_FORCE_NOT_INLINE float3 Light_Illuminate(
 			return InfiniteLight_Illuminate(
 					light,
 					worldCenterX, worldCenterY, worldCenterZ, envRadius,
-					bsdf, u0, u1,
-					shadowRayDir, shadowRayDistance, directPdfW
+					bsdf, time, u0, u1,
+					shadowRay, directPdfW
 					LIGHTS_PARAM);
 #endif
 #if defined(PARAM_HAS_SKYLIGHT2)
@@ -1075,8 +1119,8 @@ OPENCL_FORCE_NOT_INLINE float3 Light_Illuminate(
 			return SkyLight2_Illuminate(
 					light,
 					worldCenterX, worldCenterY, worldCenterZ, envRadius,
-					bsdf, u0, u1,
-					shadowRayDir, shadowRayDistance, directPdfW
+					bsdf, time, u0, u1,
+					shadowRay, directPdfW
 					LIGHTS_PARAM);
 #endif
 #if defined(PARAM_HAS_SUNLIGHT)
@@ -1084,8 +1128,8 @@ OPENCL_FORCE_NOT_INLINE float3 Light_Illuminate(
 			return SunLight_Illuminate(
 					light,
 					worldCenterX, worldCenterY, worldCenterZ, envRadius,
-					bsdf, u0, u1,
-					shadowRayDir, shadowRayDistance, directPdfW);
+					bsdf, time, u0, u1,
+					shadowRay, directPdfW);
 #endif
 #if defined(PARAM_HAS_TRIANGLELIGHT)
 		case TYPE_TRIANGLE:
@@ -1096,22 +1140,22 @@ OPENCL_FORCE_NOT_INLINE float3 Light_Illuminate(
 #if defined(PARAM_HAS_PASSTHROUGH)
 					passThroughEvent,
 #endif
-					shadowRayDir, shadowRayDistance, directPdfW
+					shadowRay, directPdfW
 					MATERIALS_PARAM);
 #endif
 #if defined(PARAM_HAS_POINTLIGHT)
 		case TYPE_POINT:
 			return PointLight_Illuminate(
 					light,
-					bsdf,
-					shadowRayDir, shadowRayDistance, directPdfW);
+					bsdf, time,
+					shadowRay, directPdfW);
 #endif
 #if defined(PARAM_HAS_MAPPOINTLIGHT) && defined(PARAM_HAS_IMAGEMAPS)
 		case TYPE_MAPPOINT:
 			return MapPointLight_Illuminate(
 					light,
-					bsdf,
-					shadowRayDir, shadowRayDistance, directPdfW
+					bsdf, time,
+					shadowRay, directPdfW
 					IMAGEMAPS_PARAM);
 #endif
 #if defined(PARAM_HAS_SPOTLIGHT)
@@ -1119,14 +1163,14 @@ OPENCL_FORCE_NOT_INLINE float3 Light_Illuminate(
 			return SpotLight_Illuminate(
 					light,
 					bsdf,
-					shadowRayDir, shadowRayDistance, directPdfW);
+					shadowRay, directPdfW);
 #endif
 #if defined(PARAM_HAS_PROJECTIONLIGHT) && defined(PARAM_HAS_IMAGEMAPS)
 		case TYPE_PROJECTION:
 			return ProjectionLight_Illuminate(
 					light,
 					bsdf,
-					shadowRayDir, shadowRayDistance, directPdfW
+					shadowRay, directPdfW
 					IMAGEMAPS_PARAM);
 #endif
 #if defined(PARAM_HAS_SHARPDISTANTLIGHT)
@@ -1135,36 +1179,36 @@ OPENCL_FORCE_NOT_INLINE float3 Light_Illuminate(
 					light,
 					worldCenterX, worldCenterY, worldCenterZ, envRadius,
 					bsdf,
-					shadowRayDir, shadowRayDistance, directPdfW);
+					shadowRay, directPdfW);
 #endif
 #if defined(PARAM_HAS_DISTANTLIGHT)
 		case TYPE_DISTANT:
 			return DistantLight_Illuminate(
 					light,
 					worldCenterX, worldCenterY, worldCenterZ, envRadius,
-					bsdf, u0, u1,
-					shadowRayDir, shadowRayDistance, directPdfW);
+					bsdf, time, u0, u1,
+					shadowRay, directPdfW);
 #endif
 #if defined(PARAM_HAS_LASERLIGHT)
 		case TYPE_LASER:
 			return LaserLight_Illuminate(
 					light,
-					bsdf,
-					shadowRayDir, shadowRayDistance, directPdfW);
+					bsdf, time,
+					shadowRay, directPdfW);
 #endif
 #if defined(PARAM_HAS_SPHERELIGHT)
 		case TYPE_SPHERE:
 			return SphereLight_Illuminate(
 					light,
 					bsdf,
-					u0, u1, shadowRayDir, shadowRayDistance, directPdfW);
+					u0, u1, shadowRay, directPdfW);
 #endif
 #if defined(PARAM_HAS_MAPSPHERELIGHT) && defined(PARAM_HAS_IMAGEMAPS)
 		case TYPE_MAPSPHERE:
 			return MapSphereLight_Illuminate(
 					light,
 					bsdf,
-					u0, u1, shadowRayDir, shadowRayDistance, directPdfW
+					u0, u1, shadowRay, directPdfW
 					IMAGEMAPS_PARAM);
 #endif
 		default:

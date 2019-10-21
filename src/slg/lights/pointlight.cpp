@@ -73,10 +73,10 @@ float PointLight::GetPower(const Scene &scene) const {
 Spectrum PointLight::Emit(const Scene &scene,
 		const float time, const float u0, const float u1,
 		const float u2, const float u3, const float passThroughEvent,
-		Point &rayOrig, Vector &rayDir, float &emissionPdfW,
+		Ray &ray, float &emissionPdfW,
 		float *directPdfA, float *cosThetaAtLight) const {
-	rayOrig = absolutePos;
-	rayDir = UniformSampleSphere(u0, u1);
+	const Point rayOrig = absolutePos;
+	const Vector rayDir = UniformSampleSphere(u0, u1);
 	emissionPdfW = 1.f / (4.f * M_PI);
 
 	if (directPdfA)
@@ -84,28 +84,31 @@ Spectrum PointLight::Emit(const Scene &scene,
 	if (cosThetaAtLight)
 		*cosThetaAtLight = 1.f;
 
+	ray.Update(rayOrig, rayDir, time);
+
 	return emittedFactor * (1.f / (4.f * M_PI));
 }
 
 Spectrum PointLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 		const float time, const float u0, const float u1, const float passThroughEvent,
-        Vector &shadowRayDir, float &shadowRayDistance, float &directPdfW,
+        Ray &shadowRay, float &directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
-	const Point &pSurface = bsdf.GetRayOrigin(absolutePos - bsdf.hitPoint.p);
-	const Vector toLight(absolutePos - pSurface);
-	const float distanceSquared = toLight.LengthSquared();
-	const float distance = sqrtf(distanceSquared);
+	const Point shadowRayOrig = bsdf.GetRayOrigin(absolutePos - bsdf.hitPoint.p);
+	const Vector toLight(absolutePos - shadowRayOrig);
+	const float shadowRayDistanceSquared = toLight.LengthSquared();
+	const float shadowRayDistance = sqrtf(shadowRayDistanceSquared);
 
-	shadowRayDistance = distance;
-	shadowRayDir = toLight / distance;
+	const Vector shadowRayDir = toLight / shadowRayDistance;
 
 	if (cosThetaAtLight)
 		*cosThetaAtLight = 1.f;
 
-	directPdfW = distanceSquared;
+	directPdfW = shadowRayDistanceSquared;
 
 	if (emissionPdfW)
 		*emissionPdfW = UniformSpherePdf();
+
+	shadowRay = Ray(shadowRayOrig, shadowRayDir, 0.f, shadowRayDistance, time);
 
 	return emittedFactor * (1.f / (4.f * M_PI));
 }

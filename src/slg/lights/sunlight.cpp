@@ -148,7 +148,7 @@ float SunLight::GetPower(const Scene &scene) const {
 Spectrum SunLight::Emit(const Scene &scene,
 		const float time, const float u0, const float u1,
 		const float u2, const float u3, const float passThroughEvent,
-		Point &rayOrig, Vector &rayDir, float &emissionPdfW,
+		Ray &ray, float &emissionPdfW,
 		float *directPdfA, float *cosThetaAtLight) const {
 	const Point worldCenter = scene.dataSet->GetBSphere().center;
 	const float envRadius = GetEnvRadius(scene);
@@ -156,8 +156,8 @@ Spectrum SunLight::Emit(const Scene &scene,
 	// Set ray origin and direction for infinite light ray
 	float d1, d2;
 	ConcentricSampleDisk(u0, u1, &d1, &d2);
-	rayOrig = worldCenter + envRadius * (absoluteSunDir + d1 * x + d2 * y);
-	rayDir = -UniformSampleCone(u2, u3, cosThetaMax, x, y, absoluteSunDir);
+	const Point rayOrig = worldCenter + envRadius * (absoluteSunDir + d1 * x + d2 * y);
+	const Vector rayDir = -UniformSampleCone(u2, u3, cosThetaMax, x, y, absoluteSunDir);
 
 	const float uniformConePdf = UniformConePdf(cosThetaMax);
 	emissionPdfW = uniformConePdf / (M_PI * envRadius * envRadius);
@@ -168,14 +168,16 @@ Spectrum SunLight::Emit(const Scene &scene,
 	if (cosThetaAtLight)
 		*cosThetaAtLight = Dot(absoluteSunDir, -rayDir);
 
+	ray.Update(rayOrig, rayDir, time);
+
 	return color;
 }
 
 Spectrum SunLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 		const float time, const float u0, const float u1, const float passThroughEvent,
-        Vector &shadowRayDir, float &shadowRayDistance, float &directPdfW,
+        Ray &shadowRay, float &directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
-	shadowRayDir = UniformSampleCone(u0, u1, cosThetaMax, x, y, absoluteSunDir);
+	const Vector shadowRayDir = UniformSampleCone(u0, u1, cosThetaMax, x, y, absoluteSunDir);
 
 	// Check if the point can be inside the sun cone of light
 	const float cosAtLight = Dot(absoluteSunDir, shadowRayDir);
@@ -185,11 +187,11 @@ Spectrum SunLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 	const Point worldCenter = scene.dataSet->GetBSphere().center;
 	const float envRadius = GetEnvRadius(scene);
 
-	const Point &pSurface = bsdf.GetRayOrigin(worldCenter - bsdf.hitPoint.p);
-	const Vector toCenter(worldCenter - pSurface);
+	const Point shadowRayOrig = bsdf.GetRayOrigin(worldCenter - bsdf.hitPoint.p);
+	const Vector toCenter(worldCenter - shadowRayOrig);
 	const float centerDistanceSquared = Dot(toCenter, toCenter);
 	const float approach = Dot(toCenter, shadowRayDir);
-	shadowRayDistance = approach + sqrtf(Max(0.f, envRadius * envRadius -
+	const float shadowRayDistance = approach + sqrtf(Max(0.f, envRadius * envRadius -
 		centerDistanceSquared + approach * approach));
 	
 	const float uniformConePdf = UniformConePdf(cosThetaMax);
@@ -200,7 +202,9 @@ Spectrum SunLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 
 	if (emissionPdfW)
 		*emissionPdfW =  uniformConePdf / (M_PI * envRadius * envRadius);
-	
+
+	shadowRay = Ray(shadowRayOrig, shadowRayDir, 0.f, shadowRayDistance, time);
+
 	return color;
 }
 

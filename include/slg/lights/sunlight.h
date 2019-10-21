@@ -44,12 +44,12 @@ public:
 	virtual luxrays::Spectrum Emit(const Scene &scene,
 		const float time, const float u0, const float u1,
 		const float u2, const float u3, const float passThroughEvent,
-		luxrays::Point &rayOrig, luxrays::Vector &rayDir, float &emissionPdfW,
+		luxrays::Ray &ray, float &emissionPdfW,
 		float *directPdfA = NULL, float *cosThetaAtLight = NULL) const;
 
-	virtual luxrays::Spectrum Illuminate(const Scene &scene, const BSDF &bsdf,
+    virtual luxrays::Spectrum Illuminate(const Scene &scene, const BSDF &bsdf,
 		const float time, const float u0, const float u1, const float passThroughEvent,
-        luxrays::Vector &shadowRayDir, float &shadowRayDistance, float &directPdfW,
+        luxrays::Ray &shadowRay, float &directPdfW,
 		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
 
 	luxrays::Spectrum GetRadiance(const Scene &scene, const BSDF *bsdf,

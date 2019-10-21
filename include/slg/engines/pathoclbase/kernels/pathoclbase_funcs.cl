@@ -404,6 +404,7 @@ OPENCL_FORCE_INLINE float RussianRouletteProb(const float3 color) {
 
 OPENCL_FORCE_NOT_INLINE bool DirectLight_Illuminate(
 		__global const BSDF *bsdf,
+		__global Ray *shadowRay,
 		const float worldCenterX,
 		const float worldCenterY,
 		const float worldCenterZ,
@@ -451,14 +452,12 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_Illuminate(
 #endif
 			worldCenterX, worldCenterY, worldCenterZ, worldRadius,
 			tmpHitPoint,		
-			&lightRayDir, &distance, &directPdfW
+			shadowRay, &directPdfW
 			LIGHTS_PARAM);
 	
 	if (Spectrum_IsBlack(lightRadiance))
 		return false;
 	else {
-		VSTORE3F(lightRayDir, &info->dir.x);
-		info->distance = distance;
 		info->directPdfW = directPdfW;
 		VSTORE3F(lightRadiance, info->lightRadiance.c);
 #if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
@@ -475,15 +474,13 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 		__global EyePathInfo *pathInfo,
 		__global PathDepthInfo *tmpDepthInfo,
 		__global const BSDF *bsdf,
-		__global Ray *shadowRay
+		const float3 shadowRayDir
 		LIGHTS_PARAM_DECL) {
-	const float3 lightRayDir = VLOAD3F(&info->dir.x);
-	
 	// Sample the BSDF
 	BSDFEvent event;
 	float bsdfPdfW;
 	const float3 bsdfEval = BSDF_Evaluate(bsdf,
-			lightRayDir, &event, &bsdfPdfW
+			shadowRayDir, &event, &bsdfPdfW
 			MATERIALS_PARAM);
 
 	if (Spectrum_IsBlack(bsdfEval)
@@ -526,11 +523,6 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 #if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
 	VSTORE3F(factor * lightRadiance, info->lightIrradiance.c);
 #endif
-
-	// Setup the shadow ray
-	const float3 surfacePoint = BSDF_GetRayOrigin(bsdf, lightRayDir);
-	const float distance = info->distance;
-	Ray_Init4(shadowRay, surfacePoint, lightRayDir, 0.f, distance, time);
 
 	return true;
 }

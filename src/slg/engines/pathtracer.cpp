@@ -159,10 +159,10 @@ PathTracer::DirectLightResult PathTracer::DirectLightSampling(
 				bsdf.hitPoint.p, landingNormal, bsdf.IsVolume(), &lightPickPdf);
 
 		if (light) {
-			Vector lightRayDir;
-			float distance, directPdfW;
+			Ray shadowRay;
+			float directPdfW;
 			Spectrum lightRadiance = light->Illuminate(*scene, bsdf,
-					time, u1, u2, u3, lightRayDir, distance, directPdfW);
+					time, u1, u2, u3, shadowRay, directPdfW);
 			assert (!lightRadiance.IsNaN() && !lightRadiance.IsInf());
 
 			if (!lightRadiance.Black()) {
@@ -170,7 +170,7 @@ PathTracer::DirectLightResult PathTracer::DirectLightSampling(
 
 				BSDFEvent event;
 				float bsdfPdfW;
-				Spectrum bsdfEval = bsdf.Evaluate(lightRayDir, &event, &bsdfPdfW);
+				Spectrum bsdfEval = bsdf.Evaluate(shadowRay.d, &event, &bsdfPdfW);
 				assert (!bsdfEval.IsNaN() && !bsdfEval.IsInf());
 
 				if (!bsdfEval.Black() &&
@@ -182,11 +182,6 @@ PathTracer::DirectLightResult PathTracer::DirectLightSampling(
 					PathDepthInfo directLightDepthInfo = pathInfo.depth;
 					directLightDepthInfo.IncDepths(event);
 					
-					Ray shadowRay(bsdf.GetRayOrigin(lightRayDir), lightRayDir,
-							0.f,
-							distance,
-							time);
-					shadowRay.UpdateMinMaxWithEpsilon();
 					RayHit shadowRayHit;
 					BSDF shadowBsdf;
 					Spectrum connectionThroughput;
@@ -744,14 +739,12 @@ void PathTracer::RenderLightSample(const u_int threadIndex,
 
 	if (light) {
 		// Initialize the light path
-		float lightEmitPdfW;
 		Ray nextEventRay;
+		float lightEmitPdfW;
 		lightPathFlux = light->Emit(*scene,
 				time, sampler->GetSample(1), sampler->GetSample(2),
 				sampler->GetSample(3), sampler->GetSample(4), sampler->GetSample(5),
-				nextEventRay.o, nextEventRay.d, lightEmitPdfW);
-		nextEventRay.UpdateMinMaxWithEpsilon();
-		nextEventRay.time = time;
+				nextEventRay, lightEmitPdfW);
 
 		if (lightPathFlux.Black())
 			return;

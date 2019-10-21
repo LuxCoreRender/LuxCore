@@ -61,8 +61,7 @@ typedef struct {
 	unsigned int lightIndex;
 	float pickPdf;
 
-	Vector dir;
-	float distance, directPdfW;
+	float directPdfW;
 
 	// Radiance to add to the result if light source is visible
 	// Note: it doesn't include the pathThroughput

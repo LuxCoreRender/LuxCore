@@ -71,10 +71,10 @@ bool SphereLight::SphereIntersect(const Ray &ray, float &hitT) const {
 Spectrum SphereLight::Emit(const Scene &scene,
 		const float time, const float u0, const float u1,
 		const float u2, const float u3, const float passThroughEvent,
-		Point &rayOrig, Vector &rayDir, float &emissionPdfW,
+		Ray &ray, float &emissionPdfW,
 		float *directPdfA, float *cosThetaAtLight) const {
 	const Vector normal = UniformSampleSphere(u0, u1);
-	rayOrig = absolutePos + radius * normal;
+	const Point rayOrig = absolutePos + radius * normal;
 
 	// Build a local coordinate system
 	Frame localFrame(normal);
@@ -87,7 +87,7 @@ Spectrum SphereLight::Emit(const Scene &scene,
 	emissionPdfW *= invArea;
 
 	// The direction expressed relative to global coordinate system
-	rayDir = localFrame.ToWorld(localDirOut);
+	const Vector rayDir = localFrame.ToWorld(localDirOut);
 
 	if (directPdfA)
 		*directPdfA =  invArea;
@@ -95,15 +95,16 @@ Spectrum SphereLight::Emit(const Scene &scene,
 	if (cosThetaAtLight)
 		*cosThetaAtLight = CosTheta(localDirOut);
 
+	ray.Update(rayOrig, rayDir, time);
+
 	return emittedFactor * invArea * CosTheta(localDirOut) * INV_PI;
 }
 
 Spectrum SphereLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 		const float time, const float u0, const float u1, const float passThroughEvent,
-        Vector &shadowRayDir, float &shadowRayDistance, float &directPdfW,
+        Ray &shadowRay, float &directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
-	const Point &pSurface = bsdf.GetRayOrigin(absolutePos - bsdf.hitPoint.p);
-	const Vector toLight(absolutePos - pSurface);
+	const Vector toLight(absolutePos - bsdf.hitPoint.p);
 	const float centerDistanceSquared = toLight.LengthSquared();
 	const float centerDistance = sqrtf(centerDistanceSquared);
 
@@ -122,16 +123,17 @@ Spectrum SphereLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 	// Sample sphere uniformly inside subtended cone
 	const float cosThetaMax = sqrtf(Max(0.f, 1.f - radiusSquared / centerDistanceSquared));
 
-	const Point &rayOrig = pSurface;
 	const Vector localRayDir = UniformSampleCone(u0, u1, cosThetaMax);
 
 	if (CosTheta(localRayDir) < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 
-	shadowRayDir = localFrame.ToWorld(localRayDir);
-	const Ray ray(rayOrig, shadowRayDir);
+	const Vector shadowRayDir = localFrame.ToWorld(localRayDir);
+	const Point shadowRayOrig = bsdf.GetRayOrigin(shadowRayDir);
+	const Ray ray(shadowRayOrig, shadowRayDir);
 
 	// Check the intersection with the sphere
+	float shadowRayDistance;
 	if (!SphereIntersect(ray, shadowRayDistance))
 		shadowRayDistance = Dot(toLight, shadowRayDir);
 
@@ -142,6 +144,8 @@ Spectrum SphereLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 
 	if (emissionPdfW)
 		*emissionPdfW = invArea * CosTheta(localRayDir) * INV_PI;
+
+	shadowRay = Ray(shadowRayOrig, shadowRayDir, 0.f, shadowRayDistance, time);
 
 	return emittedFactor * invArea * INV_PI;
 }

@@ -238,23 +238,18 @@ void BiDirCPURenderThread::DirectLightSampling(const float time,
 				&lightPickPdf);
 
 		if (light) {
-			Vector lightRayDir;
-			float distance, directPdfW, emissionPdfW, cosThetaAtLight;
+			Ray shadowRay;
+			float directPdfW, emissionPdfW, cosThetaAtLight;
 			const Spectrum lightRadiance = light->Illuminate(*scene, eyeVertex.bsdf,
-					time, u1, u2, u3, lightRayDir, distance, directPdfW, &emissionPdfW,
+					time, u1, u2, u3, shadowRay, directPdfW, &emissionPdfW,
 					&cosThetaAtLight);
 
 			if (!lightRadiance.Black()) {
 				BSDFEvent event;
 				float bsdfPdfW, bsdfRevPdfW;
-				const Spectrum bsdfEval = eyeVertex.bsdf.Evaluate(lightRayDir, &event, &bsdfPdfW, &bsdfRevPdfW);
+				const Spectrum bsdfEval = eyeVertex.bsdf.Evaluate(shadowRay.d, &event, &bsdfPdfW, &bsdfRevPdfW);
 
 				if (!bsdfEval.Black()) {
-					Ray shadowRay(eyeVertex.bsdf.GetRayOrigin(lightRayDir), lightRayDir,
-							0.f,
-							distance,
-							time);
-					shadowRay.UpdateMinMaxWithEpsilon();
 					RayHit shadowRayHit;
 					BSDF shadowBsdf;
 					Spectrum connectionThroughput;
@@ -277,7 +272,7 @@ void BiDirCPURenderThread::DirectLightSampling(const float time,
 							bsdfRevPdfW *= prob;
 						}
 
-						const float cosThetaToLight = AbsDot(lightRayDir, eyeVertex.bsdf.hitPoint.shadeN);
+						const float cosThetaToLight = AbsDot(shadowRay.d, eyeVertex.bsdf.hitPoint.shadeN);
 						const float directLightSamplingPdfW = directPdfW * lightPickPdf;
 
 						// emissionPdfA / directPdfA = emissionPdfW / directPdfW
@@ -380,10 +375,8 @@ bool BiDirCPURenderThread::TraceLightPath(const float time,
 	lightVertex.throughput = light->Emit(*scene,
 			time, sampler->GetSample(5), sampler->GetSample(6),
 			sampler->GetSample(7), sampler->GetSample(8), sampler->GetSample(9),
-			lightRay.o, lightRay.d, lightEmitPdfW,
+			lightRay, lightEmitPdfW,
 			&lightDirectPdfW, &cosThetaAtLight);
-	lightRay.UpdateMinMaxWithEpsilon();
-	lightRay.time = time;
 	if (!lightVertex.throughput.Black()) {
 		lightEmitPdfW *= lightPickPdf;
 		lightDirectPdfW *= lightPickPdf;

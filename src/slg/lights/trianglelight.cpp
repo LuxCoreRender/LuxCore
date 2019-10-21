@@ -78,7 +78,7 @@ void TriangleLight::Preprocess() {
 Spectrum TriangleLight::Emit(const Scene &scene,
 		const float time, const float u0, const float u1,
 		const float u2, const float u3, const float passThroughEvent,
-		Point &rayOrig, Vector &rayDir, float &emissionPdfW,
+		Ray &ray, float &emissionPdfW,
 		float *directPdfA, float *cosThetaAtLight) const {
 	// A safety check to avoid NaN/Inf
 	if ((triangleArea == 0.f) || (meshArea == 0.f))
@@ -129,10 +129,11 @@ Spectrum TriangleLight::Emit(const Scene &scene,
 
 	const Frame frame(tmpHitPoint.GetFrame());
 
-	// Direction
-	rayDir = frame.ToWorld(localDirOut);
+	// Ray direction
+	const Vector rayDir = frame.ToWorld(localDirOut);
 
-	rayOrig = tmpHitPoint.p + Vector(tmpHitPoint.geometryN * MachineEpsilon::E(tmpHitPoint.p)) *
+	// Ray origin
+	const Point rayOrig = tmpHitPoint.p + Vector(tmpHitPoint.geometryN * MachineEpsilon::E(tmpHitPoint.p)) *
 			// With an IES/map I can emit from the backface too so I have to
 			// use rayDir here instead of tmpHitPoint.intoObject
 			((Dot(rayDir, tmpHitPoint.geometryN) > 0.f) ? 1.f : -1.f);
@@ -143,12 +144,14 @@ Spectrum TriangleLight::Emit(const Scene &scene,
 	if (cosThetaAtLight)
 		*cosThetaAtLight = fabsf(localDirOut.z);
 
+	ray.Update(rayOrig, rayDir, time);
+
 	return lightMaterial->GetEmittedRadiance(tmpHitPoint, invMeshArea) * emissionColor * fabsf(localDirOut.z);
 }
 
 Spectrum TriangleLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 		const float time, const float u0, const float u1, const float passThroughEvent,
-        Vector &shadowRayDir, float &shadowRayDistance, float &directPdfW,
+        Ray &shadowRay, float &directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
 	// A safety check to avoid NaN/Inf
 	if ((triangleArea == 0.f) || (meshArea == 0.f))
@@ -197,9 +200,9 @@ Spectrum TriangleLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 	const Point shadowRayOrig = bsdf.GetRayOrigin(sampleDir);
 
 	// Compute shadow ray direction with displaced start and end point to avoid self-shadow problems
-	shadowRayDir = tmpHitPoint.p + Vector(tmpHitPoint.geometryN * MachineEpsilon::E(tmpHitPoint.p)) *
+	Vector shadowRayDir = tmpHitPoint.p + Vector(tmpHitPoint.geometryN * MachineEpsilon::E(tmpHitPoint.p)) *
 			(tmpHitPoint.intoObject ? 1.f : -1.f) - shadowRayOrig;
-	shadowRayDistance = shadowRayDir.Length();
+	const float shadowRayDistance = shadowRayDir.Length();
 	shadowRayDir /= shadowRayDistance;
 
 	//--------------------------------------------------------------------------
@@ -239,6 +242,8 @@ Spectrum TriangleLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 
 	assert (!isnan(directPdfW) && !isinf(directPdfW));
 	
+	shadowRay = Ray(shadowRayOrig, shadowRayDir, 0.f, shadowRayDistance, time);
+
 	return lightMaterial->GetEmittedRadiance(tmpHitPoint, invMeshArea) * emissionColor;
 }
 

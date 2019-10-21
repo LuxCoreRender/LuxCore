@@ -58,21 +58,23 @@ float MapPointLight::GetPower(const Scene &scene) const {
 Spectrum MapPointLight::Emit(const Scene &scene,
 		const float time, const float u0, const float u1,
 		const float u2, const float u3, const float passThroughEvent,
-		Point &rayOrig, Vector &rayDir, float &emissionPdfW,
+		Ray &ray, float &emissionPdfW,
 		float *directPdfA, float *cosThetaAtLight) const {
-	rayOrig = absolutePos;
+	const Point rayOrig = absolutePos;
 
 	Vector localFromLight;
 	func->Sample(u0, u1, &localFromLight, &emissionPdfW);
 	if (emissionPdfW == 0.f)
 		return Spectrum();
 
-	rayDir = Normalize(lightToWorld * localFromLight);
+	const Vector rayDir = Normalize(lightToWorld * localFromLight);
 
 	if (directPdfA)
 		*directPdfA = 1.f;
 	if (cosThetaAtLight)
 		*cosThetaAtLight = 1.f;
+
+	ray.Update(rayOrig, rayDir, time);
 
 	return emittedFactor * ((SphericalFunction *)func)->Evaluate(localFromLight) /
 			(4.f * M_PI * func->Average());
@@ -80,18 +82,18 @@ Spectrum MapPointLight::Emit(const Scene &scene,
 
 Spectrum MapPointLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 		const float time, const float u0, const float u1, const float passThroughEvent,
-        Vector &shadowRayDir, float &shadowRayDistance, float &directPdfW,
+        Ray &shadowRay, float &directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
-	const Point &pSurface = bsdf.GetRayOrigin(absolutePos - bsdf.hitPoint.p);
-	const Vector localFromLight = Normalize(Inverse(lightToWorld) * pSurface - localPos);
+	const Point shadowRayOrig = bsdf.GetRayOrigin(absolutePos - bsdf.hitPoint.p);
+	const Vector localFromLight = Normalize(Inverse(lightToWorld) * shadowRayOrig - localPos);
 	const float funcPdf = func->Pdf(localFromLight);
 	if (funcPdf == 0.f)
 		return Spectrum();
 
-	const Vector toLight(absolutePos - pSurface);
+	const Vector toLight(absolutePos - shadowRayOrig);
 	const float centerDistanceSquared = toLight.LengthSquared();
-	shadowRayDistance = sqrtf(centerDistanceSquared);
-	shadowRayDir = toLight / shadowRayDistance;
+	const float shadowRayDistance = sqrtf(centerDistanceSquared);
+	const Vector shadowRayDir = toLight / shadowRayDistance;
 
 	if (cosThetaAtLight)
 		*cosThetaAtLight = 1.f;
@@ -100,6 +102,8 @@ Spectrum MapPointLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 
 	if (emissionPdfW)
 		*emissionPdfW = funcPdf;
+
+	shadowRay = Ray(shadowRayOrig, shadowRayDir, 0.f, shadowRayDistance, time);
 
 	return emittedFactor * ((SphericalFunction *)func)->Evaluate(localFromLight) /
 			(4.f * M_PI * func->Average());

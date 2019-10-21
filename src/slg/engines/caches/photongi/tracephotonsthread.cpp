@@ -135,9 +135,7 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 		Ray nextEventRay;
 		lightPathFlux = light->Emit(*scene,
 				time, samples[2], samples[3], samples[4], samples[5], samples[6],
-				nextEventRay.o, nextEventRay.d, lightEmitPdfW);
-		nextEventRay.UpdateMinMaxWithEpsilon();
-		nextEventRay.time = time;
+				nextEventRay, lightEmitPdfW);
 
 		if (!lightPathFlux.Black()) {
 			lightPathFlux /= lightEmitPdfW * lightPickPdf;

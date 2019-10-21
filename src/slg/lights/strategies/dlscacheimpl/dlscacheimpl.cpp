@@ -198,24 +198,18 @@ float DirectLightSamplingCache::SampleLight(const DLSCVisibilityParticle &visibi
 	const u_int bsdfListIndexIndex = Min<u_int>(Floor2UInt(u4 * bsdfListSize), bsdfListSize - 1);
 	const BSDF &samplingBSDF = visibilityParticle.bsdfList[bsdfListIndexIndex];
 
-	Vector lightRayDir;
-	float distance, directPdfW;
+	Ray shadowRay;
+	float directPdfW;
 	Spectrum lightRadiance = light->Illuminate(*scene, samplingBSDF,
-			time, u1, u2, u3, lightRayDir, distance, directPdfW);
+			time, u1, u2, u3, shadowRay, directPdfW);
 	assert (!lightRadiance.IsNaN() && !lightRadiance.IsInf());
 
 	if (!lightRadiance.Black() && ((samplingBSDF.GetEventTypes() & TRANSMIT) ||
-			(Dot(lightRayDir, samplingBSDF.hitPoint.GetLandingShadeN()) > 0.f))) {
+			(Dot(shadowRay.d, samplingBSDF.hitPoint.GetLandingShadeN()) > 0.f))) {
 		assert (!isnan(directPdfW) && !isinf(directPdfW));
 
-		const float time = RadicalInverse(pass, 13);
 		const float u5 = RadicalInverse(pass, 17);
 
-		Ray shadowRay(samplingBSDF.GetRayOrigin(lightRayDir), lightRayDir,
-				0.f,
-				distance,
-				time);
-		shadowRay.UpdateMinMaxWithEpsilon();
 		RayHit shadowRayHit;
 		BSDF shadowBsdf;
 		Spectrum connectionThroughput;

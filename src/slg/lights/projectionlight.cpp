@@ -131,12 +131,12 @@ float ProjectionLight::GetPower(const Scene &scene) const {
 Spectrum ProjectionLight::Emit(const Scene &scene,
 		const float time, const float u0, const float u1,
 		const float u2, const float u3, const float passThroughEvent,
-		Point &rayOrig, Vector &rayDir, float &emissionPdfW,
+		Ray &ray, float &emissionPdfW,
 		float *directPdfA, float *cosThetaAtLight) const {
-	rayOrig = absolutePos;
+	const Point rayOrig = absolutePos;
 	const Point ps = Inverse(lightProjection) *
 		Point(u0 * (screenX1 - screenX0) + screenX0, u1 * (screenY1 - screenY0) + screenY0, 0.f);
-	rayDir = Normalize(alignedLight2World * Vector(ps.x, ps.y, ps.z));
+	const Vector rayDir = Normalize(alignedLight2World * Vector(ps.x, ps.y, ps.z));
 	const float cos = Dot(rayDir, lightNormal);
 	const float cos2 = cos * cos;
 	emissionPdfW = 1.f / (area * cos2 * cos);
@@ -150,18 +150,20 @@ Spectrum ProjectionLight::Emit(const Scene &scene,
 	if (imageMap)
 		c *= imageMap->GetSpectrum(UV(u0, u1));
 
+	ray.Update(rayOrig, rayDir, time);
+
 	return c;
 }
 
 Spectrum ProjectionLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 		const float time, const float u0, const float u1, const float passThroughEvent,
-        Vector &shadowRayDir, float &shadowRayDistance, float &directPdfW,
+        Ray &shadowRay, float &directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
-	const Point &pSurface = bsdf.GetRayOrigin(absolutePos - bsdf.hitPoint.p);
-	const Vector toLight(absolutePos - pSurface);
-	const float distanceSquared = toLight.LengthSquared();
-	shadowRayDistance = sqrtf(distanceSquared);
-	shadowRayDir = toLight / shadowRayDistance;
+	const Point shadowRayOrig = bsdf.GetRayOrigin(absolutePos - bsdf.hitPoint.p);
+	const Vector toLight(absolutePos - shadowRayOrig);
+	const float shadowRayDistanceSquared = toLight.LengthSquared();
+	const float shadowRayDistance = sqrtf(shadowRayDistanceSquared);
+	const Vector shadowRayDir = toLight / shadowRayDistance;
 
 	// Check the side
 	if (Dot(-shadowRayDir, lightNormal) < 0.f)
@@ -173,7 +175,7 @@ Spectrum ProjectionLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 	if ((p0.x < screenX0) || (p0.x >= screenX1) || (p0.y < screenY0) || (p0.y >= screenY1))
 		return Spectrum();
 
-	directPdfW = distanceSquared;
+	directPdfW = shadowRayDistanceSquared;
 
 	if (cosThetaAtLight)
 		*cosThetaAtLight = 1.f;
@@ -187,6 +189,8 @@ Spectrum ProjectionLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 		const float v = (p0.y - screenY0) / (screenY1 - screenY0);
 		c *= imageMap->GetSpectrum(UV(u, v));
 	}
+
+	shadowRay = Ray(shadowRayOrig, shadowRayDir, 0.f, shadowRayDistance, time);
 
 	return c;
 }

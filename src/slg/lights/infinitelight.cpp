@@ -125,7 +125,7 @@ Spectrum InfiniteLight::GetRadiance(const Scene &scene,
 Spectrum InfiniteLight::Emit(const Scene &scene,
 		const float time, const float u0, const float u1,
 		const float u2, const float u3, const float passThroughEvent,
-		Point &rayOrig, Vector &rayDir, float &emissionPdfW,
+		Ray &ray, float &emissionPdfW,
 		float *directPdfA, float *cosThetaAtLight) const {
 	float uv[2];
 	float distPdf;
@@ -140,7 +140,7 @@ Spectrum InfiniteLight::Emit(const Scene &scene,
 		return Spectrum();
 
 	// Compute the ray direction
-	rayDir = -Normalize(lightToWorld * localDir);
+	const Vector rayDir = -Normalize(lightToWorld * localDir);
 
 	// Compute the ray origin
 	Vector x, y;
@@ -151,7 +151,7 @@ Spectrum InfiniteLight::Emit(const Scene &scene,
 	const Point worldCenter = scene.dataSet->GetBSphere().center;
 	const float envRadius = GetEnvRadius(scene);
 	const Point pDisk = worldCenter + envRadius * (d1 * x + d2 * y);
-	rayOrig = pDisk - envRadius * rayDir;
+	const Point rayOrig = pDisk - envRadius * rayDir;
 
 	// Compute InfiniteLight ray weight
 	emissionPdfW = distPdf * latLongMappingPdf / (M_PI * envRadius * envRadius);
@@ -165,12 +165,14 @@ Spectrum InfiniteLight::Emit(const Scene &scene,
 	const Spectrum result = gain * imageMap->GetSpectrum(uv);
 	assert (!result.IsNaN() && !result.IsInf() && !result.IsNeg());
 
+	ray.Update(rayOrig, rayDir, time);
+
 	return result;
 }
 
 Spectrum InfiniteLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 		const float time, const float u0, const float u1, const float passThroughEvent,
-        Vector &shadowRayDir, float &shadowRayDistance, float &directPdfW,
+        Ray &shadowRay, float &directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
 	float uv[2];
 	float distPdf;	
@@ -191,19 +193,19 @@ Spectrum InfiniteLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 	if (latLongMappingPdf == 0.f)
 		return Spectrum();
 
-	shadowRayDir = Normalize(lightToWorld * localDir);
+	const Vector shadowRayDir = Normalize(lightToWorld * localDir);
 
 	const Point worldCenter = scene.dataSet->GetBSphere().center;
 	const float envRadius = GetEnvRadius(scene);
 
-	const Point &pSurface = bsdf.GetRayOrigin(worldCenter - bsdf.hitPoint.p);
-	const Vector toCenter(worldCenter - pSurface);
+	const Point shadowRayOrig = bsdf.GetRayOrigin(worldCenter - bsdf.hitPoint.p);
+	const Vector toCenter(worldCenter - shadowRayOrig);
 	const float centerDistanceSquared = Dot(toCenter, toCenter);
 	const float approach = Dot(toCenter, shadowRayDir);
-	shadowRayDistance = approach + sqrtf(Max(0.f, envRadius * envRadius -
+	const float shadowRayDistance = approach + sqrtf(Max(0.f, envRadius * envRadius -
 		centerDistanceSquared + approach * approach));
 
-	const Point emisPoint(pSurface + shadowRayDistance * shadowRayDir);
+	const Point emisPoint(shadowRayOrig + shadowRayDistance * shadowRayDir);
 	const Normal emisNormal(Normalize(worldCenter - emisPoint));
 
 	const float cosAtLight = Dot(emisNormal, -shadowRayDir);
@@ -220,6 +222,8 @@ Spectrum InfiniteLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 
 	const Spectrum result = gain * imageMap->GetSpectrum(UV(uv[0], uv[1]));
 	assert (!result.IsNaN() && !result.IsInf() && !result.IsNeg());
+
+	shadowRay = Ray(shadowRayOrig, shadowRayDir, 0.f, shadowRayDistance, time);
 
 	return result;
 }

@@ -41,7 +41,7 @@ public:
 
 	Ray(const Point &origin, const Vector &direction) : o(origin),
 		d(direction), maxt(std::numeric_limits<float>::infinity()),
-		time(0.f) {
+		time(0.f), flags(RAY_FLAGS_NONE) {
 		mint = MachineEpsilon::E(origin);
 	}
 
@@ -70,6 +70,11 @@ public:
 		mint = MachineEpsilon::E(o);
 		maxt = std::numeric_limits<float>::infinity();
 		// Keep the same time value
+	}
+
+	void Update(const Point &origin, const Vector &direction, const float t) {
+		Update(origin, direction);
+		time = t;
 	}
 
 	// Ray Public Data

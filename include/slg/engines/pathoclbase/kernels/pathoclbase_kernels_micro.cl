@@ -620,6 +620,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 			MATERIALS_PARAM) &&
 			DirectLight_Illuminate(
 				bsdf,
+				&rays[gid],
 				worldCenterX, worldCenterY, worldCenterZ, worldRadius,
 				&task->tmpHitPoint,
 				rays[gid].time,
@@ -687,7 +688,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 			pathInfo,
 			&task->tmpPathDepthInfo,
 			&taskState->bsdf,
-			&rays[gid]
+			VLOAD3F(&rays[gid].d.x)
 			LIGHTS_PARAM)) {
 #if defined(PARAM_HAS_PASSTHROUGH)
 		const uint depth = pathInfo->depth.depth;

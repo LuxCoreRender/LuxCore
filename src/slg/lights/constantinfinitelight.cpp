@@ -87,7 +87,7 @@ Spectrum ConstantInfiniteLight::GetRadiance(const Scene &scene,
 Spectrum ConstantInfiniteLight::Emit(const Scene &scene,
 		const float time, const float u0, const float u1,
 		const float u2, const float u3, const float passThroughEvent,
-		Point &rayOrig, Vector &rayDir, float &emissionPdfW,
+		Ray &ray, float &emissionPdfW,
 		float *directPdfA, float *cosThetaAtLight) const {
 	const Point worldCenter = scene.dataSet->GetBSphere().center;
 	const float envRadius = GetEnvRadius(scene);
@@ -105,21 +105,21 @@ Spectrum ConstantInfiniteLight::Emit(const Scene &scene,
 	Point p2 = worldCenter + envRadius * UniformSampleSphere(u2, u3);
 
 	// Construct ray between p1 and p2
-	rayOrig = p1;
-	rayDir = Normalize((p2 - p1));
+	ray.Update(p1, Normalize(p2 - p1), time);
 
 	if (cosThetaAtLight)
-		*cosThetaAtLight = Dot(Normalize(worldCenter -  p1), rayDir);
+		*cosThetaAtLight = Dot(Normalize(worldCenter -  p1), ray.d);
 
-	return GetRadiance(scene, nullptr, rayDir);
+	return GetRadiance(scene, nullptr, ray.d);
 }
 
 Spectrum ConstantInfiniteLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 		const float time, const float u0, const float u1, const float passThroughEvent,
-        Vector &shadowRayDir, float &shadowRayDistance, float &directPdfW,
+        Ray &shadowRay, float &directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
 	const float envRadius = GetEnvRadius(scene);
 
+	Vector shadowRayDir;
 	if (visibilityMapCache && visibilityMapCache->IsCacheEnabled(bsdf)) {
 		float uv[2];
 		float distPdf;
@@ -153,14 +153,14 @@ Spectrum ConstantInfiniteLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 
 	const Point worldCenter = scene.dataSet->GetBSphere().center;
 
-	const Point &pSurface = bsdf.GetRayOrigin(worldCenter - bsdf.hitPoint.p);
-	const Vector toCenter(worldCenter - pSurface);
+	const Point shadowRayOrig = bsdf.GetRayOrigin(worldCenter - bsdf.hitPoint.p);
+	const Vector toCenter(worldCenter - shadowRayOrig);
 	const float centerDistanceSquared = Dot(toCenter, toCenter);
 	const float approach = Dot(toCenter, shadowRayDir);
-	shadowRayDistance = approach + sqrtf(Max(0.f, envRadius * envRadius -
+	const float shadowRayDistance = approach + sqrtf(Max(0.f, envRadius * envRadius -
 		centerDistanceSquared + approach * approach));
 
-	const Point emisPoint(pSurface + shadowRayDistance * shadowRayDir);
+	const Point emisPoint(shadowRayOrig + shadowRayDistance * shadowRayDir);
 	const Normal emisNormal(Normalize(worldCenter - emisPoint));
 
 	const float cosAtLight = Dot(emisNormal, -shadowRayDir);
@@ -169,6 +169,8 @@ Spectrum ConstantInfiniteLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 	if (cosThetaAtLight)
 		*cosThetaAtLight = cosAtLight;
 
+	shadowRay = Ray(shadowRayOrig, shadowRayDir, 0.f, shadowRayDistance, time);
+	
 	return gain * color;
 }
 
