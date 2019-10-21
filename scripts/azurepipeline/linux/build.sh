@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Install deps
-apt-get -qq update
-apt-get install -y wget libtool git cmake g++ flex bison libbz2-dev libopenimageio-dev libtiff5-dev libpng12-dev libgtk-3-dev libopenexr-dev libgl1-mesa-dev python3-dev python3-pip python3-numpy ocl-icd-opencl-dev
+sudo apt-get -qq update
+sudo apt-get install -y wget libtool git cmake g++ flex bison libbz2-dev libopenimageio-dev libtiff5-dev libpng12-dev libgtk-3-dev libopenexr-dev libgl1-mesa-dev python3-dev python3-pip python3-numpy ocl-icd-opencl-dev
 
 # Clone LinuxCompile
 git clone https://github.com/LuxCoreRender/LinuxCompile.git
