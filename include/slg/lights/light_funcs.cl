@@ -801,7 +801,7 @@ OPENCL_FORCE_INLINE float SpotLight_LocalFalloff(const float3 w, const float cos
 }
 
 OPENCL_FORCE_NOT_INLINE float3 SpotLight_Illuminate(__global const LightSource *spotLight,
-		__global const BSDF *bsdf,
+		__global const BSDF *bsdf, const float time,
 		__global Ray *shadowRay, float *directPdfW) {
 	const float3 pLight = VLOAD3F(&spotLight->notIntersectable.spot.absolutePos.x);
 	const float3 pSurface = BSDF_GetRayOrigin(bsdf, pLight - VLOAD3F(&bsdf->hitPoint.p.x));
@@ -838,7 +838,7 @@ OPENCL_FORCE_NOT_INLINE float3 SpotLight_Illuminate(__global const LightSource *
 #if defined(PARAM_HAS_PROJECTIONLIGHT) && defined(PARAM_HAS_IMAGEMAPS)
 
 OPENCL_FORCE_NOT_INLINE float3 ProjectionLight_Illuminate(__global const LightSource *projectionLight,
-		__global const BSDF *bsdf,
+		__global const BSDF *bsdf, const float time,
 		__global Ray *shadowRay, float *directPdfW
 		IMAGEMAPS_PARAM_DECL) {
 	const float3 pLight = VLOAD3F(&projectionLight->notIntersectable.projection.absolutePos.x);
@@ -903,7 +903,7 @@ OPENCL_FORCE_NOT_INLINE float3 ProjectionLight_Illuminate(__global const LightSo
 OPENCL_FORCE_NOT_INLINE float3 SharpDistantLight_Illuminate(__global const LightSource *sharpDistantLight,
 		const float worldCenterX, const float worldCenterY, const float worldCenterZ,
 		const float sceneRadius,
-		__global const BSDF *bsdf,
+		__global const BSDF *bsdf, const float time,
 		__global Ray *shadowRay, float *directPdfW) {
 	const float3 shadowRayDir = -VLOAD3F(&sharpDistantLight->notIntersectable.sharpDistant.absoluteLightDir.x);
 
@@ -1162,14 +1162,14 @@ OPENCL_FORCE_NOT_INLINE float3 Light_Illuminate(
 		case TYPE_SPOT:
 			return SpotLight_Illuminate(
 					light,
-					bsdf,
+					bsdf, time,
 					shadowRay, directPdfW);
 #endif
 #if defined(PARAM_HAS_PROJECTIONLIGHT) && defined(PARAM_HAS_IMAGEMAPS)
 		case TYPE_PROJECTION:
 			return ProjectionLight_Illuminate(
 					light,
-					bsdf,
+					bsdf, time,
 					shadowRay, directPdfW
 					IMAGEMAPS_PARAM);
 #endif
@@ -1178,7 +1178,7 @@ OPENCL_FORCE_NOT_INLINE float3 Light_Illuminate(
 			return SharpDistantLight_Illuminate(
 					light,
 					worldCenterX, worldCenterY, worldCenterZ, envRadius,
-					bsdf,
+					bsdf, time,
 					shadowRay, directPdfW);
 #endif
 #if defined(PARAM_HAS_DISTANTLIGHT)
