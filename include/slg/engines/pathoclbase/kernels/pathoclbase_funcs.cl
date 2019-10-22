@@ -304,7 +304,7 @@ OPENCL_FORCE_NOT_INLINE void DirectHitInfiniteLight(
 		LIGHTS_PARAM_DECL) {
 	// If the material is shadow transparent, Direct Light sampling
 	// will take care of transporting all emitted light
-	if (!Spectrum_IsBlack(VLOAD3F(&pathInfo->lastPassThroughShadowTransparency.c[0])))
+	if (bsdf && bsdf->hitPoint.throughShadowTransparency)
 		return;
 
 	const float3 throughput = VLOAD3F(pathThroughput->c);
@@ -357,7 +357,7 @@ OPENCL_FORCE_NOT_INLINE void DirectHitFiniteLight(
 	if (!CheckDirectHitVisibilityFlags(light, &pathInfo->depth, pathInfo->lastBSDFEvent) ||
 			// If the material is shadow transparent, Direct Light sampling
 			// will take care of transporting all emitted light
-			!Spectrum_IsBlack(VLOAD3F(&pathInfo->lastPassThroughShadowTransparency.c[0])))
+			bsdf->hitPoint.throughShadowTransparency)
 		return;
 	
 	float directPdfA;

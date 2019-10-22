@@ -108,7 +108,6 @@ OPENCL_FORCE_INLINE void EyePathInfo_AddVertex(__global EyePathInfo *pathInfo,
 	pathInfo->lastBSDFPdfW = pdfW;
 	const float3 shadeN = VLOAD3F(&bsdf->hitPoint.shadeN.x);
 	VSTORE3F(bsdf->hitPoint.intoObject ? shadeN : -shadeN, &pathInfo->lastShadeN.x);
-	VSTORE3F(BSDF_GetPassThroughShadowTransparency(bsdf MATERIALS_PARAM), &pathInfo->lastPassThroughShadowTransparency.c[0]);
 #if defined(PARAM_HAS_VOLUMES)
 	pathInfo->lastFromVolume =  bsdf->isVolume;
 #endif

@@ -34,7 +34,6 @@ typedef struct {
 	float lastBSDFPdfW;
 	float lastGlossiness;
 	Normal lastShadeN;
-	Spectrum lastPassThroughShadowTransparency;
 #if defined(PARAM_HAS_VOLUMES)
 	bool lastFromVolume;
 #endif

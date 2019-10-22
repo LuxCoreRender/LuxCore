@@ -99,7 +99,6 @@ void EyePathInfo::AddVertex(const BSDF &bsdf,
 	lastShadeN = bsdf.hitPoint.intoObject ? bsdf.hitPoint.shadeN : -bsdf.hitPoint.shadeN;
 	lastFromVolume =  bsdf.IsVolume();
 	lastGlossiness = glossiness;
-	lastPassThroughShadowTransparency = bsdf.GetPassThroughShadowTransparency();
 }
 
 bool EyePathInfo::IsCausticPath(const BSDFEvent event,

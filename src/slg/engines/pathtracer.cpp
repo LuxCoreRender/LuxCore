@@ -272,7 +272,7 @@ void PathTracer::DirectHitFiniteLight(const Scene *scene,
 	if (!CheckDirectHitVisibilityFlags(lightSource, pathInfo.depth, pathInfo.lastBSDFEvent) ||
 			// If the material is shadow transparent, Direct Light sampling
 			// will take care of transporting all emitted light
-			!pathInfo.lastPassThroughShadowTransparency.Black())
+			bsdf.hitPoint.throughShadowTransparency)
 		return;
 
 	float directPdfA;
@@ -307,7 +307,7 @@ void PathTracer::DirectHitInfiniteLight(const Scene *scene,
 		const Ray &ray, const BSDF *bsdf, SampleResult *sampleResult) const {
 	// If the material is shadow transparent, Direct Light sampling
 	// will take care of transporting all emitted light
-	if (!pathInfo.lastPassThroughShadowTransparency.Black())
+	if (bsdf && bsdf->hitPoint.throughShadowTransparency)
 		return;
 
 	BOOST_FOREACH(EnvLightSource *envLight, scene->lightDefs.GetEnvLightSources()) {
@@ -319,8 +319,7 @@ void PathTracer::DirectHitInfiniteLight(const Scene *scene,
 		const Spectrum envRadiance = envLight->GetRadiance(*scene, bsdf, -ray.d, &directPdfW);
 		if (!envRadiance.Black()) {
 			float weight;
-			if (!(pathInfo.lastBSDFEvent & SPECULAR) &&
-					pathInfo.lastPassThroughShadowTransparency.Black()) {
+			if (!(pathInfo.lastBSDFEvent & SPECULAR)) {
 				const float lightPickProb = scene->lightDefs.GetIlluminateLightStrategy()->
 						SampleLightPdf(envLight, ray.o, pathInfo.lastShadeN, pathInfo.lastFromVolume);
 
