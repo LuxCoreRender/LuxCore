@@ -761,7 +761,7 @@ OPENCL_FORCE_NOT_INLINE float3 MapPointLight_Illuminate(__global const LightSour
 #if defined(PARAM_HAS_MAPSPHERELIGHT) && defined(PARAM_HAS_IMAGEMAPS)
 
 OPENCL_FORCE_NOT_INLINE float3 MapSphereLight_Illuminate(__global const LightSource *mapSphereLight,
-		__global const BSDF *bsdf,	const float u0, const float u1,
+		__global const BSDF *bsdf,	const float time, const float u0, const float u1,
 		__global Ray *shadowRay, float *directPdfW
 		IMAGEMAPS_PARAM_DECL) {
 	const float3 result = SphereLight_Illuminate(mapSphereLight, bsdf, time, u0, u1,
@@ -771,7 +771,7 @@ OPENCL_FORCE_NOT_INLINE float3 MapSphereLight_Illuminate(__global const LightSou
 	__global const ImageMap *imageMap = &imageMapDescs[mapSphereLight->notIntersectable.mapSphere.imageMapIndex];
 
 	const float3 localFromLight = normalize(Transform_InvApplyVector(
-			&mapSphereLight->notIntersectable.light2World, -shadowRayDir));
+			&mapSphereLight->notIntersectable.light2World, -VLOAD3F(&shadowRay->d.x)));
 	const float2 uv = (float2)(SphericalPhi(localFromLight) * (1.f / (2.f * M_PI_F)), SphericalTheta(localFromLight) * M_1_PI_F);
 	const float3 emissionColor = ImageMap_GetSpectrum(
 			imageMap,
