@@ -64,20 +64,24 @@ u_int Sampler::CalculateSampleIndexes(const std::vector<SampleSize> smplSizes) {
 	u_int SampleAmount2D = 0;
 
 	for (u_int i = 0; i < smplSizes.size(); i++) {
-		size += smplSizes[i];
+		size += smplSizes[i] + 1;
 		if (smplSizes[i] == SAMPLE_1D) {
+			SLG_LOG("CalculateSampleIndexes: 1D sample");
 			++sampleAmount1D;
 		} else {
+			SLG_LOG("CalculateSampleIndexes: 2D sample");
 			++SampleAmount2D;
 		}
 	}
 
 	for (u_int i = 0; i < SampleAmount2D; i++) {
 		sampleIndexes2D.push_back(i*2);
+		SLG_LOG("CalculateSampleIndexes: 2D index " << i*2);
 	}
 
-	for (u_int i = SampleAmount2D; i < size; i++) {
+	for (u_int i = SampleAmount2D*2; i < size; i++) {
 		sampleIndexes1D.push_back(i);
+		SLG_LOG("CalculateSampleIndexes: 1D index " << i);
 	}
 
 	return size;
