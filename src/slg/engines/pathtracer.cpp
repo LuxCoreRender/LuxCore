@@ -336,8 +336,11 @@ void PathTracer::DirectHitInfiniteLight(const Scene *scene,
 
 void PathTracer::GenerateEyeRay(const Camera *camera, const Film *film, Ray &eyeRay,
 		PathVolumeInfo &volInfo, Sampler *sampler, SampleResult &sampleResult) const {
-	const float filmX = sampler->GetSample(0);
-	const float filmY = sampler->GetSample(1);
+	// const float filmX = sampler->GetSample(0);
+	// const float filmY = sampler->GetSample(1);
+	float filmX = 0;
+	float filmY = 0;
+	sampler->GetSample2D(0, filmX, filmY);
 
 	// Use fast pixel filtering, like the one used in TILEPATH.
 
@@ -359,11 +362,18 @@ void PathTracer::GenerateEyeRay(const Camera *camera, const Film *film, Ray &eye
 	sampleResult.filmX = sampleResult.pixelX + .5f + distX;
 	sampleResult.filmY = sampleResult.pixelY + .5f + distY;
 
-	const float timeSample = sampler->GetSample(4);
+	// const float timeSample = sampler->GetSample(4);
+	const float timeSample = sampler->GetSample1D(0);
+	//SLG_LOG("1");
 	const float time = camera->GenerateRayTime(timeSample);
 
+
+	float cameraX = 0;
+	float cameraY = 0;
+	sampler->GetSample2D(1, cameraX, cameraY);
+	//SLG_LOG("2");
 	camera->GenerateRay(time, sampleResult.filmX, sampleResult.filmY, &eyeRay, &volInfo,
-		sampler->GetSample(2), sampler->GetSample(3));
+		cameraX, cameraY);
 }
 
 //------------------------------------------------------------------------------
@@ -408,10 +418,14 @@ void PathTracer::RenderEyeSample(const u_int threadIndex,
 	for (;;) {
 		sampleResult.firstPathVertex = (pathInfo.depth.depth == 0);
 		const u_int sampleOffset = eyeSampleBootSize + pathInfo.depth.depth * eyeSampleStepSize;
+		const u_int sampleOffset1D = eyeSampleBootSize1D + pathInfo.depth.depth * eyeSampleStepSize1D;
+		const u_int sampleOffset2D = eyeSampleBootSize2D + pathInfo.depth.depth * eyeSampleStepSize2D;
 
 		RayHit eyeRayHit;
 		Spectrum connectionThroughput;
-		const float passThrough = sampler->GetSample(sampleOffset);
+		// const float passThrough = sampler->GetSample(sampleOffset);
+		//SLG_LOG("3");
+		const float passThrough = sampler->GetSample1D(sampleOffset1D);
 		const bool hit = scene->Intersect(device,
 				EYE_RAY | (sampleResult.firstPathVertex ? CAMERA_RAY : GENERIC_RAY),
 				&pathInfo.volume, passThrough,
@@ -549,17 +563,21 @@ void PathTracer::RenderEyeSample(const u_int threadIndex,
 		if (sampleResult.lastPathVertex && !sampleResult.firstPathVertex)
 			break;
 
+		//SLG_LOG("4");
+		float illuminateX = 0;
+		float illuminateY = 0;
+		sampler->GetSample2D(sampleOffset2D + 1, illuminateX, illuminateY);
 		const DirectLightResult directLightResult = DirectLightSampling(
 				device, scene,
 				eyeRay.time,
-				sampler->GetSample(sampleOffset + 1),
-				sampler->GetSample(sampleOffset + 2),
-				sampler->GetSample(sampleOffset + 3),
-				sampler->GetSample(sampleOffset + 4),
-				sampler->GetSample(sampleOffset + 5),
+				sampler->GetSample1D(sampleOffset1D + 1), // SampleLights sampling
+				illuminateX, // illuminate method sampling
+				illuminateY, // illuminate method sampling
+				sampler->GetSample1D(sampleOffset1D + 2), // passThroughEvent
+				sampler->GetSample1D(sampleOffset1D + 3), // Intersect
 				pathInfo, 
 				pathThroughput, bsdf, &sampleResult);
-
+		//SLG_LOG("5");
 		if (sampleResult.lastPathVertex)
 			break;
 
@@ -580,13 +598,18 @@ void PathTracer::RenderEyeSample(const u_int threadIndex,
 				sampleResult.alpha = 0.f;
 			}
 		} else {
+			float bsdfX = 0;
+			float bsdfY = 0;
+			sampler->GetSample2D(sampleOffset2D + 2, bsdfX, bsdfY);
 			bsdfSample = bsdf.Sample(&sampledDir,
-					sampler->GetSample(sampleOffset + 6),
-					sampler->GetSample(sampleOffset + 7),
+					bsdfX,
+					bsdfY,
+					//sampler->GetSample(sampleOffset + 6),
+					//sampler->GetSample(sampleOffset + 7),
 					&bsdfPdfW, &cosSampledDir, &bsdfEvent);
 			pathInfo.isPassThroughPath = false;
+			//SLG_LOG("6");
 		}
-
 		assert (!bsdfSample.IsNaN() && !bsdfSample.IsInf() && !bsdfSample.IsNeg());
 		if (bsdfSample.Black())
 			break;
@@ -601,7 +624,7 @@ void PathTracer::RenderEyeSample(const u_int threadIndex,
 		float rrProb = 1.f;
 		if (pathInfo.UseRR(rrDepth)) {
 			 rrProb = RenderEngine::RussianRouletteProb(bsdfSample, rrImportanceCap);
-			if (rrProb < sampler->GetSample(sampleOffset + 8))
+			if (rrProb < sampler->GetSample1D(sampleOffset1D + 4))
 				break;
 
 			// Increase path contribution
@@ -891,6 +914,28 @@ void PathTracer::ParseOptions(const luxrays::Properties &cfg, const luxrays::Pro
 		eyeSampleBootSize + // To generate eye ray
 		(maxPathDepth.depth + 1) * eyeSampleStepSize; // For each path vertex
 	
+	// Update eye sample size (1D and 2D)
+	eyeSampleBootSize1D = 1; // Number of 1D samples used by GenerateEyeRay
+	eyeSampleBootSize2D = 2; // Number of 2D samples used by GenerateEyeRay
+	eyeSampleStepSize1D = 5; // Number of 1D samples used by RenderEyeSample
+	eyeSampleStepSize2D = 2; // Number of 2D samples used by RenderEyeSample
+
+	// Samples used by GenerateEyeRay
+	eyeSampleSizes.push_back(SAMPLE_2D); // X and Y sampling
+	eyeSampleSizes.push_back(SAMPLE_1D); // time sampling
+	eyeSampleSizes.push_back(SAMPLE_2D); // camera sampling
+	
+	// Samples used by RenderEyeSample
+	for (u_int i = 0; i < maxPathDepth.depth + 1; i++) {
+		eyeSampleSizes.push_back(SAMPLE_1D); // passThrough sampling
+		eyeSampleSizes.push_back(SAMPLE_2D); // illuminate sampling
+		eyeSampleSizes.push_back(SAMPLE_1D); // SampleLights sampling
+		eyeSampleSizes.push_back(SAMPLE_1D); // passThroughEvent sampling
+		eyeSampleSizes.push_back(SAMPLE_1D); // Intersect sampling
+		eyeSampleSizes.push_back(SAMPLE_2D); // BSDF sampling
+		eyeSampleSizes.push_back(SAMPLE_1D); // RoussianRoullete sampling
+	}
+
 	// Update light sample size
 	lightSampleBootSize = 9;
 	lightSampleStepSize = 7;

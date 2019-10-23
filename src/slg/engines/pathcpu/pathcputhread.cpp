@@ -58,7 +58,7 @@ void PathCPURenderThread::RenderFunc() {
 
 	eyeSampler = engine->renderConfig->AllocSampler(rndGen, engine->film,
 			nullptr, engine->samplerSharedData, Properties());
-	eyeSampler->RequestSamples(PIXEL_NORMALIZED_ONLY, pathTracer.eyeSampleSize);
+	eyeSampler->RequestSamples(PIXEL_NORMALIZED_ONLY, pathTracer.eyeSampleSizes);
 
 	if (pathTracer.hybridBackForwardEnable) {
 		// Light path sampler is always Metropolis

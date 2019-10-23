@@ -99,6 +99,13 @@ public:
 	u_int eyeSampleBootSize, eyeSampleStepSize, eyeSampleSize;
 	u_int lightSampleBootSize, lightSampleStepSize, lightSampleSize;
 
+	// Used for Sampler indices (1D and 2D)
+	u_int eyeSampleBootSize1D, eyeSampleStepSize1D, eyeSampleSize1D;
+	u_int eyeSampleBootSize2D, eyeSampleStepSize2D, eyeSampleSize2D;
+	u_int lightSampleBootSize1D, lightSampleStepSize1D, lightSampleSize1D;
+	u_int lightSampleBootSize2D, lightSampleStepSize2D, lightSampleSize2D;
+	std::vector<SampleSize> eyeSampleSizes, lightSampleSizes;
+
 	// Path depth settings
 	PathDepthInfo maxPathDepth;
 
