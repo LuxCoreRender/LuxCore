@@ -28,6 +28,7 @@
 #include "slg/samplers/metropolis.h"
 #include "slg/samplers/rtpathcpusampler.h"
 #include "slg/samplers/tilepathsampler.h"
+#include "slg/samplers/pmj02.h"
 
 namespace slg {
 
@@ -57,6 +58,7 @@ protected:
 	SAMPLERSHAREDDATA_STATICTABLE_DECLARE_REGISTRATION(SamplerSharedDataRegistry, MetropolisSamplerSharedData);
 	SAMPLERSHAREDDATA_STATICTABLE_DECLARE_REGISTRATION(SamplerSharedDataRegistry, RTPathCPUSamplerSharedData);
 	SAMPLERSHAREDDATA_STATICTABLE_DECLARE_REGISTRATION(SamplerSharedDataRegistry, TilePathSamplerSharedData);
+	SAMPLERSHAREDDATA_STATICTABLE_DECLARE_REGISTRATION(SamplerSharedDataRegistry, PMJ02SamplerSharedData);
 	// Just add here any new SamplerSharedData (don't forget in the .cpp too)
 
 	friend class SamplerSharedData;
@@ -114,6 +116,7 @@ protected:
 	SAMPLER_OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(SamplerRegistry, MetropolisSampler);
 	SAMPLER_OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(SamplerRegistry, RTPathCPUSampler);
 	SAMPLER_OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(SamplerRegistry, TilePathSampler);
+	SAMPLER_OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(SamplerRegistry, PMJ02Sampler);
 	// Just add here any new Sampler (don't forget in the .cpp too)
 
 	friend class Sampler;

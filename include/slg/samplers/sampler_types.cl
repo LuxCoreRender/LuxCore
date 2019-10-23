@@ -129,6 +129,14 @@ typedef struct {
 	SampleResult result;
 } TilePathSample;
 
+typedef struct {
+	unsigned int rngPass;
+
+	unsigned int pass;
+
+	SampleResult result;
+} PMJ02Sample;
+
 #if (PARAM_SAMPLER_TYPE == 0)
 typedef RandomSample Sample;
 #endif
@@ -144,6 +152,11 @@ typedef SobolSample Sample;
 // This is a special Sampler used by TILEPATHOCL
 #if (PARAM_SAMPLER_TYPE == 3)
 typedef TilePathSample Sample;
+#endif
+
+// This is a special Sampler used by TILEPATHOCL
+#if (PARAM_SAMPLER_TYPE == 4)
+typedef PMJ02Sample Sample;
 #endif
 
 #endif
@@ -175,6 +188,12 @@ typedef struct {
 	float rng0, rng1;
 } TilePathSamplerSharedData;
 
+typedef struct {
+	unsigned int pixelBucketIndex;
+	float adaptiveStrength;
+} PMJ02SamplerSharedData;
+
+
 #if defined(SLG_OPENCL_KERNEL)
 
 typedef struct {
@@ -197,6 +216,10 @@ typedef SobolSamplerSharedData SamplerSharedData;
 typedef TilePathSamplerSharedData SamplerSharedData;
 #endif
 
+#if (PARAM_SAMPLER_TYPE == 4)
+typedef PMJ02SamplerSharedData SamplerSharedData;
+#endif
+
 #endif
 
 //------------------------------------------------------------------------------
@@ -207,7 +230,8 @@ typedef enum {
 	RANDOM = 0,
 	METROPOLIS = 1,
 	SOBOL = 2,
-	TILEPATHSAMPLER = 3
+	TILEPATHSAMPLER = 3,
+	PMJ02 = 4
 } SamplerType;
 
 typedef struct {
@@ -223,6 +247,9 @@ typedef struct {
 			float largeMutationProbability, imageMutationRange;
 			unsigned int maxRejects;
 		} metropolis;
+		struct {
+			float adaptiveStrength;
+		} pmj02;
 	};
 } Sampler;
 

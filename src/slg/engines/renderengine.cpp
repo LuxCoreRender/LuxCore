@@ -35,6 +35,7 @@
 #include "slg/samplers/sobol.h"
 #include "slg/samplers/metropolis.h"
 #include "slg/samplers/tilepathsampler.h"
+#include "slg/samplers/pmj02.h"
 
 #include "luxrays/core/intersectiondevice.h"
 #if !defined(LUXRAYS_DISABLE_OPENCL)
@@ -230,7 +231,8 @@ void RenderEngine::CheckSamplersForNoTile(const string &engineName, const Proper
 	const string samplerType = cfg.Get(Property("sampler.type")(SobolSampler::GetObjectTag())).Get<string>();
 	if ((samplerType != RandomSampler::GetObjectTag()) &&
 			(samplerType != SobolSampler::GetObjectTag()) &&
-			(samplerType != MetropolisSampler::GetObjectTag()))
+			(samplerType != MetropolisSampler::GetObjectTag()) &&
+			(samplerType != PMJ02Sampler::GetObjectTag()))
 		throw runtime_error(engineName + " render engine can use only " +
 				RandomSampler::GetObjectTag() + ", " +
 				SobolSampler::GetObjectTag() + " or " +
