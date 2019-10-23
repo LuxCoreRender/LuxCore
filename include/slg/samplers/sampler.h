@@ -68,6 +68,10 @@ typedef enum {
 	PIXEL_NORMALIZED_ONLY, SCREEN_NORMALIZED_ONLY, PIXEL_NORMALIZED_AND_SCREEN_NORMALIZED
 } SampleType;
 
+typedef enum {
+	SAMPLE_1D, SAMPLE_2D
+} SampleSize;
+
 class Sampler : public luxrays::NamedObject {
 public:
 	Sampler(luxrays::RandomGenerator *rnd, Film *flm,
@@ -84,6 +88,12 @@ public:
 	// index 0 and 1 are always image X and image Y
 	virtual float GetSample(const u_int index) = 0;
 	virtual void NextSample(const std::vector<SampleResult> &sampleResults) = 0;
+
+	// Interface to request samples while informing the Sampler which 
+	// samples should be generated in pairs or not
+	virtual void RequestSamples(const SampleType sampleType, const std::vector<SampleSize> sampleSizes) = 0;
+	virtual float GetSample1D(const u_int index) = 0;
+	virtual void GetSample2D(const u_int index, float &u0, float &u1) = 0;
 
 	// Transform the current object in Properties
 	virtual luxrays::Properties ToProperties() const;
@@ -109,6 +119,7 @@ protected:
 	static const luxrays::Properties &GetDefaultProps();
 
 	void AtomicAddSamplesToFilm(const std::vector<SampleResult> &sampleResults, const float weight = 1.f) const;
+	u_int CalculateSampleIndexes(const std::vector<SampleSize> sampleSizes);
 
 	luxrays::RandomGenerator *rndGen;
 	Film *film;
@@ -118,6 +129,9 @@ protected:
 	u_int requestedSamples;
 	// If samples 0 and 1 should be expressed in pixels
 	bool imageSamplesEnable;
+
+	std::vector<u_int> sampleIndexes2D;
+	std::vector<u_int> sampleIndexes1D;
 };
 
 }

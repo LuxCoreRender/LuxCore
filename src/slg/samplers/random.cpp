@@ -133,6 +133,31 @@ float RandomSampler::GetSample(const u_int index) {
 	}
 }
 
+void RandomSampler::RequestSamples(const SampleType smplType, const std::vector<SampleSize> smplSizes) {
+	const u_int size = CalculateSampleIndexes(smplSizes);
+	Sampler::RequestSamples(smplType, size);
+	
+	pixelIndexOffset = RANDOM_THREAD_WORK_SIZE;
+	InitNewSample();
+}
+
+float RandomSampler::GetSample1D(const u_int index) {
+	return rndGen->floatValue();
+}
+
+void RandomSampler::GetSample2D(const u_int index, float &u0, float &u1) {
+	switch (index) {
+		case 0: {
+			u0 = sample0;
+			u1 = sample1;
+		}
+		default: {
+			u1 = rndGen->floatValue();
+			u0 = rndGen->floatValue();
+		}
+	}
+}
+
 void RandomSampler::NextSample(const vector<SampleResult> &sampleResults) {
 	if (film) {
 		double pixelNormalizedCount, screenNormalizedCount;

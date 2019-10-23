@@ -193,6 +193,20 @@ float MetropolisSampler::GetSample(const u_int index) {
 	}
 }
 
+void MetropolisSampler::RequestSamples(const SampleType smplType, const std::vector<SampleSize> smplSizes) {
+	const u_int size = CalculateSampleIndexes(smplSizes);
+	MetropolisSampler::RequestSamples(smplType, size);
+}
+
+float MetropolisSampler::GetSample1D(const u_int index) {
+	return GetSample(sampleIndexes1D[index]);
+}
+
+void MetropolisSampler::GetSample2D(const u_int index, float &u0, float &u1) {
+	u0 = GetSample(sampleIndexes2D[index]);
+	u1 = GetSample(sampleIndexes2D[index + 1]);
+}
+
 void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 	if (film) {
 		double pixelNormalizedCount, screenNormalizedCount;

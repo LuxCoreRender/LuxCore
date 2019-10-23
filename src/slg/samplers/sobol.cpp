@@ -183,6 +183,33 @@ float SobolSampler::GetSample(const u_int index) {
 	}
 }
 
+void SobolSampler::RequestSamples(const SampleType smplType, const std::vector<SampleSize> smplSizes) {
+	const u_int size = CalculateSampleIndexes(smplSizes);
+	Sampler::RequestSamples(smplType, size);
+	
+	sobolSequence.RequestSamples(size);
+	
+	pixelIndexOffset = SOBOL_THREAD_WORK_SIZE;
+	InitNewSample();
+}
+
+float SobolSampler::GetSample1D(const u_int index) {
+	return sobolSequence.GetSample(pass, sampleIndexes1D[index]);
+}
+
+void SobolSampler::GetSample2D(const u_int index, float &u0, float &u1) {
+	switch (index) {
+		case 0: {
+			u0 = sample0;
+			u1 = sample1;
+		}
+		default: {
+			u0 = sobolSequence.GetSample(pass, sampleIndexes2D[index]);
+			u1 = sobolSequence.GetSample(pass, sampleIndexes2D[index + 1]);
+		}
+	}
+}
+
 void SobolSampler::NextSample(const vector<SampleResult> &sampleResults) {
 	if (film) {
 		double pixelNormalizedCount, screenNormalizedCount;

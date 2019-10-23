@@ -58,6 +58,31 @@ void Sampler::AtomicAddSamplesToFilm(const vector<SampleResult> &sampleResults, 
 	}
 }
 
+u_int Sampler::CalculateSampleIndexes(const std::vector<SampleSize> smplSizes) {
+	u_int size = 0;
+	u_int sampleAmount1D = 0;
+	u_int SampleAmount2D = 0;
+
+	for (u_int i = 0; i < smplSizes.size(); i++) {
+		size += smplSizes[i];
+		if (smplSizes[i] == SAMPLE_1D) {
+			++sampleAmount1D;
+		} else {
+			++SampleAmount2D;
+		}
+	}
+
+	for (u_int i = 0; i < SampleAmount2D; i++) {
+		sampleIndexes2D.push_back(i*2);
+	}
+
+	for (u_int i = SampleAmount2D; i < size; i++) {
+		sampleIndexes1D.push_back(i);
+	}
+
+	return size;
+}
+
 Properties Sampler::ToProperties() const {
 	return Properties() <<
 			Property("sampler.type")(SamplerType2String(GetType())) <<

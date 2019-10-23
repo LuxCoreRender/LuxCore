@@ -86,6 +86,30 @@ float TilePathSampler::GetSample(const u_int index) {
 	}
 }
 
+void TilePathSampler::RequestSamples(const SampleType smplType, const std::vector<SampleSize> smplSizes) {
+	const u_int size = CalculateSampleIndexes(smplSizes);
+	Sampler::RequestSamples(smplType, size);
+	
+	sobolSequence.RequestSamples(size);
+}
+
+float TilePathSampler::GetSample1D(const u_int index) {
+	return sobolSequence.GetSample(tilePass, sampleIndexes1D[index]);
+}
+
+void TilePathSampler::GetSample2D(const u_int index, float &u0, float &u1) {
+	switch (index) {
+		case 0: {
+			u0 = sample0;
+			u1 = sample1;
+		}
+		default: {
+			u0 = sobolSequence.GetSample(tilePass, sampleIndexes2D[index]);
+			u1 = sobolSequence.GetSample(tilePass, sampleIndexes2D[index + 1]);
+		}
+	}
+}
+
 void TilePathSampler::NextSample(const vector<SampleResult> &sampleResults) {
 	tileFilm->AddSampleCount(1.0, 0.0);
 	tileFilm->AddSample(tileX, tileY, sampleResults[0]);

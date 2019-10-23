@@ -87,6 +87,12 @@ public:
 	virtual float GetSample(const u_int index);
 	virtual void NextSample(const std::vector<SampleResult> &sampleResults);
 
+	// Interface for getting samples when Sampler has been informed of
+	// Which samples should be generated in pairs or not
+	virtual void RequestSamples(const SampleType sampleType, const std::vector<SampleSize> sampleSizes);
+	virtual float GetSample1D(const u_int index);
+	virtual void GetSample2D(const u_int index, float &u0, float &u1);
+
 	virtual luxrays::Properties ToProperties() const;
 
 	//--------------------------------------------------------------------------

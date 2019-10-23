@@ -194,6 +194,38 @@ float RTPathCPUSampler::GetSample(const u_int index) {
 	return u;
 }
 
+void RTPathCPUSampler::RequestSamples(const SampleType smplType, const std::vector<SampleSize> smplSizes) {
+	const u_int size = CalculateSampleIndexes(smplSizes);
+	Sampler::RequestSamples(smplType, size);
+}
+
+float RTPathCPUSampler::GetSample1D(const u_int index) {
+	return rndGen->floatValue();
+}
+
+void RTPathCPUSampler::GetSample2D(const u_int index, float &u0, float &u1) {
+	assert (index < requestedSamples);
+
+	switch (index) {
+		case 0: {
+			const u_int px = firstFrameDone ?
+				sharedData->pixelRenderSequence[currentX + currentY * sharedData->filmSubRegionWidth].x :
+				(currentX + sharedData->filmSubRegion[0]);
+			u0 = px + rndGen->floatValue();
+
+			const u_int py = firstFrameDone ?
+				sharedData->pixelRenderSequence[currentX + currentY * sharedData->filmSubRegionWidth].y :
+				(currentY + sharedData->filmSubRegion[2]);
+			u1 = py + rndGen->floatValue();
+		}
+		default: {
+			u0 = rndGen->floatValue();
+			u1 = rndGen->floatValue();
+		}
+	}
+}
+
+
 void RTPathCPUSampler::NextSample(const vector<SampleResult> &sampleResults) {
 	// film->AddSampleCount(1.0) is done in NextPixel()
 

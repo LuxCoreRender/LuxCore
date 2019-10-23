@@ -167,6 +167,32 @@ float PMJ02Sampler::GetSample(const u_int index) {
 	}
 }
 
+void PMJ02Sampler::RequestSamples(const SampleType smplType, const std::vector<SampleSize> smplSizes) {
+	const u_int size = CalculateSampleIndexes(smplSizes);
+	Sampler::RequestSamples(smplType, size);
+	
+	pmj02sequence.RequestSamples(size);
+	
+	pixelIndexOffset = PMJ02_THREAD_WORK_SIZE;
+	InitNewSample();
+}
+
+float PMJ02Sampler::GetSample1D(const u_int index) {
+	return pmj02sequence.GetSample(pass, sampleIndexes1D[index]);
+}
+void PMJ02Sampler::GetSample2D(const u_int index, float &u0, float &u1) {
+	switch (index) {
+		case 0: {
+			u0 = sample0;
+			u1 = sample1;
+		}
+		default: {
+			u0 = pmj02sequence.GetSample(pass, sampleIndexes2D[index]);
+			u1 = pmj02sequence.GetSample(pass, sampleIndexes2D[index + 1]);
+		}
+	}
+}
+
 void PMJ02Sampler::NextSample(const vector<SampleResult> &sampleResults) {
 	if (film) {
 		double pixelNormalizedCount, screenNormalizedCount;
