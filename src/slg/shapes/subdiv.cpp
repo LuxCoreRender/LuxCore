@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <unordered_map>
 #include <boost/format.hpp>
 
 #include <opensubdiv/far/topologyDescriptor.h>
@@ -30,7 +31,6 @@
 #if defined(_OPENMP)
 
 #include <opensubdiv/osd/ompEvaluator.h>
-#include <unordered_map>
 #define OSD_EVALUATOR Osd::OmpEvaluator
 
 #else
@@ -72,6 +72,26 @@ public:
 		return (edge.vIndex[0] * 0x1f1f1f1fu) ^ edge.vIndex[1];
 	}
 };
+
+template <u_int DIMENSIONS> static Osd::CpuVertexBuffer *BuildBuffer(
+		const Far::StencilTable *stencilTable, const float *data,
+		const u_int count, const u_int totalCount) {
+    Osd::CpuVertexBuffer *buffer = Osd::CpuVertexBuffer::Create(DIMENSIONS, totalCount);
+
+    Osd::BufferDescriptor desc(0, DIMENSIONS, DIMENSIONS);
+    Osd::BufferDescriptor newDesc(count * DIMENSIONS, DIMENSIONS, DIMENSIONS);
+
+	// Pack the control vertex data at the start of the vertex buffer
+	// and update every time control data changes
+	buffer->UpdateData(data, 0, count);
+
+	// Refine points (coarsePoints -> refinedPoints)
+	OSD_EVALUATOR::EvalStencils(buffer, desc,
+		buffer, newDesc,
+		stencilTable);
+
+	return buffer;
+}
 
 SubdivShape::SubdivShape(ExtTriangleMesh *srcMesh, const u_int maxLevel) {
 	SDL_LOG("Subdividing shape " << srcMesh->GetName() << " at level: " << maxLevel);
@@ -202,79 +222,40 @@ SubdivShape::SubdivShape(ExtTriangleMesh *srcMesh, const u_int maxLevel) {
 	const u_int totalVertsCount = vertsCount + newVertsCount;
 
 	// Vertices
-    Osd::CpuVertexBuffer *vertsBuffer =
-        Osd::CpuVertexBuffer::Create(3, totalVertsCount);
-
-    Osd::BufferDescriptor vertsDesc(0, 3, 3);
-    Osd::BufferDescriptor newVertsDesc(vertsCount * 3, 3, 3);
-
-	// Pack the control vertex data at the start of the vertex buffer
-	// and update every time control data changes
-	vertsBuffer->UpdateData((const float *)srcMesh->GetVertices(), 0, vertsCount);
-
-	// Refine vertex points (coarsePoints -> refinedPoints)
-	OSD_EVALUATOR::EvalStencils(vertsBuffer, vertsDesc,
-		vertsBuffer, newVertsDesc,
-		stencilTable);
+	Osd::CpuVertexBuffer *vertsBuffer = BuildBuffer<3>(
+		stencilTable, (const float *)srcMesh->GetVertices(),
+		vertsCount, totalVertsCount);
 	
 	// Normals
     Osd::CpuVertexBuffer *normsBuffer = nullptr;
 	if (srcMesh->HasNormals()) {
-        normsBuffer = Osd::CpuVertexBuffer::Create(3, totalVertsCount);
-
-		Osd::BufferDescriptor normsDesc(0, 3, 3);
-		Osd::BufferDescriptor newNormsDesc(vertsCount * 3, 3, 3);
-		
-		normsBuffer->UpdateData((const float *)srcMesh->GetNormals(), 0, vertsCount);
-
-		OSD_EVALUATOR::EvalStencils(normsBuffer, normsDesc,
-				normsBuffer, newNormsDesc,
-				stencilTable);
+        normsBuffer = BuildBuffer<3>(
+				stencilTable, (const float *)srcMesh->GetNormals(),
+				vertsCount, totalVertsCount);
 	}
 
 	// UVs
     Osd::CpuVertexBuffer *uvsBuffer = nullptr;
 	if (srcMesh->HasUVs()) {
-        uvsBuffer = Osd::CpuVertexBuffer::Create(2, totalVertsCount);
-
-		Osd::BufferDescriptor uvsDesc(0, 2, 2);
-		Osd::BufferDescriptor newUVsDesc(vertsCount * 2, 2, 2);
-		
-		uvsBuffer->UpdateData((const float *)srcMesh->GetUVs(), 0, vertsCount);
-
-		OSD_EVALUATOR::EvalStencils(uvsBuffer, uvsDesc,
-				uvsBuffer, newUVsDesc,
-				stencilTable);
+        uvsBuffer = BuildBuffer<2>(
+				stencilTable, (const float *)srcMesh->GetUVs(),
+				vertsCount, totalVertsCount);
 	}
 
 	// Cols
     Osd::CpuVertexBuffer *colsBuffer = nullptr;
 	if (srcMesh->HasColors()) {
-        colsBuffer = Osd::CpuVertexBuffer::Create(3, totalVertsCount);
-
-		Osd::BufferDescriptor colsDesc(0, 3, 3);
-		Osd::BufferDescriptor newColsDesc(vertsCount * 3, 3, 3);
-		
-		colsBuffer->UpdateData((const float *)srcMesh->GetColors(), 0, vertsCount);
-
-		OSD_EVALUATOR::EvalStencils(colsBuffer, colsDesc,
-				colsBuffer, newColsDesc,
-				stencilTable);
+        colsBuffer = BuildBuffer<3>(
+				stencilTable, (const float *)srcMesh->GetColors(),
+				vertsCount, totalVertsCount);
 	}
 
 	// Alphas
     Osd::CpuVertexBuffer *alphasBuffer = nullptr;
 	if (srcMesh->HasAlphas()) {
-        alphasBuffer = Osd::CpuVertexBuffer::Create(1, totalVertsCount);
-
-		Osd::BufferDescriptor alphasDesc(0, 1, 1);
-		Osd::BufferDescriptor newAlphasDesc(vertsCount * 1, 1, 1);
-		
-		alphasBuffer->UpdateData((const float *)srcMesh->GetAlphas(), 0, vertsCount);
-
-		OSD_EVALUATOR::EvalStencils(alphasBuffer, alphasDesc,
-				alphasBuffer, newAlphasDesc,
-				stencilTable);
+        alphasBuffer = BuildBuffer<1>(
+				stencilTable, (const float *)srcMesh->GetAlphas(),
+				vertsCount, totalVertsCount);
 	}
 
 	//--------------------------------------------------------------------------
