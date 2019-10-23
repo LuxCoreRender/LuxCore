@@ -196,10 +196,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 		sample->result.shadingNormal.z = 0.f;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID) || defined(PARAM_FILM_CHANNELS_HAS_BY_MATERIAL_ID) || defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID_MASK) || defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID_COLOR)
-		sample->result.materialID = NULL_INDEX;
+		sample->result.materialID = 0;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_OBJECT_ID)
-		sample->result.objectID = NULL_INDEX;
+		sample->result.objectID = 0;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_UV)
 		sample->result.uv.u = INFINITY;

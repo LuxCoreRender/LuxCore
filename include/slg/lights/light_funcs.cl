@@ -665,15 +665,15 @@ OPENCL_FORCE_INLINE bool SphereLight_SphereIntersect(const float3 absolutePos, c
 	return true;
 }
 
-OPENCL_FORCE_NOT_INLINE float3 SphereLight_Illuminate(__global const LightSource *pointLight,
+OPENCL_FORCE_NOT_INLINE float3 SphereLight_Illuminate(__global const LightSource *sphereLight,
 		__global const BSDF *bsdf, const float time, const float u0, const float u1,
 		__global Ray *shadowRay, float *directPdfW) {
-	const float3 absolutePos = VLOAD3F(&pointLight->notIntersectable.sphere.absolutePos.x);
+	const float3 absolutePos = VLOAD3F(&sphereLight->notIntersectable.sphere.absolutePos.x);
 	const float3 toLight = absolutePos - VLOAD3F(&bsdf->hitPoint.p.x);
 	const float centerDistanceSquared = dot(toLight, toLight);
 	const float centerDistance = sqrt(centerDistanceSquared);
 
-	const float radius = pointLight->notIntersectable.sphere.radius;
+	const float radius = sphereLight->notIntersectable.sphere.radius;
 	const float radiusSquared = radius * radius;
 
 	// Check if the point is inside the sphere
@@ -693,25 +693,25 @@ OPENCL_FORCE_NOT_INLINE float3 SphereLight_Illuminate(__global const LightSource
 	const float cosThetaMax = sqrt(max(0.f, 1.f - radiusSquared / centerDistanceSquared));
 
 	const float3 localShadowRayDir = UniformSampleConeLocal(u0, u1, cosThetaMax);
-	if (CosTheta(localRayDir) < DEFAULT_COS_EPSILON_STATIC)
+	if (CosTheta(localShadowRayDir) < DEFAULT_COS_EPSILON_STATIC)
 		return BLACK;
 
 	const float3 shadowRayDir = Frame_ToWorld_Private(&localFrame, localShadowRayDir);
 
 	// Check the intersection with the sphere
+	const float3 shadowRayOrig = BSDF_GetRayOrigin(bsdf, shadowRayDir);
 	float shadowRayDistance;
-	if (!SphereLight_SphereIntersect(absolutePos, radiusSquared, rayOrig, shadowRayDir, shadowRayDistance))
+	if (!SphereLight_SphereIntersect(absolutePos, radiusSquared, shadowRayOrig, shadowRayDir, &shadowRayDistance))
 		shadowRayDistance = dot(toLight, shadowRayDir);
 
 	*directPdfW = UniformConePdf(cosThetaMax);
 
 	// Setup the shadow ray
-	const float3 shadowRayOrig = BSDF_GetRayOrigin(bsdf, shadowRayDir);
 	Ray_Init4(shadowRay, shadowRayOrig, shadowRayDir, 0.f, shadowRayDistance, time);
 
 	const float invArea = 1.f / (4.f * M_PI_F * radiusSquared);
 
-	return VLOAD3F(pointLight->notIntersectable.sphere.emittedFactor.c) * invArea * M_1_PI_F;
+	return VLOAD3F(sphereLight->notIntersectable.sphere.emittedFactor.c) * invArea * M_1_PI_F;
 }
 
 #endif
@@ -1200,15 +1200,15 @@ OPENCL_FORCE_NOT_INLINE float3 Light_Illuminate(
 		case TYPE_SPHERE:
 			return SphereLight_Illuminate(
 					light,
-					bsdf,
-					u0, u1, shadowRay, directPdfW);
+					bsdf, time, u0, u1,
+					shadowRay, directPdfW);
 #endif
 #if defined(PARAM_HAS_MAPSPHERELIGHT) && defined(PARAM_HAS_IMAGEMAPS)
 		case TYPE_MAPSPHERE:
 			return MapSphereLight_Illuminate(
 					light,
-					bsdf,
-					u0, u1, shadowRay, directPdfW
+					bsdf, time, u0, u1,
+					shadowRay, directPdfW
 					IMAGEMAPS_PARAM);
 #endif
 		default:

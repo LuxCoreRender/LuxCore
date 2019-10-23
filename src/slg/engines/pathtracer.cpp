@@ -443,8 +443,8 @@ void PathTracer::RenderEyeSample(const u_int threadIndex,
 						numeric_limits<float>::infinity());
 				sampleResult.geometryNormal = Normal();
 				sampleResult.shadingNormal = Normal();
-				sampleResult.materialID = numeric_limits<u_int>::max();
-				sampleResult.objectID = numeric_limits<u_int>::max();
+				sampleResult.materialID = 0;
+				sampleResult.objectID = 0;
 				sampleResult.uv = UV(numeric_limits<float>::infinity(),
 						numeric_limits<float>::infinity());
 			}

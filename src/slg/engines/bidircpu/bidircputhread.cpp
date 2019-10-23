@@ -650,8 +650,8 @@ void BiDirCPURenderThread::RenderFunc() {
 								numeric_limits<float>::infinity());
 						eyeSampleResult.geometryNormal = Normal();
 						eyeSampleResult.shadingNormal = Normal();
-						eyeSampleResult.materialID = numeric_limits<u_int>::max();
-						eyeSampleResult.objectID = numeric_limits<u_int>::max();
+						eyeSampleResult.materialID = 0;
+						eyeSampleResult.objectID = 0;
 						eyeSampleResult.uv = UV(numeric_limits<float>::infinity(),
 								numeric_limits<float>::infinity());
 					}
