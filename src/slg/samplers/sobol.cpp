@@ -186,7 +186,7 @@ float SobolSampler::GetSample(const u_int index) {
 void SobolSampler::RequestSamples(const SampleType smplType, const std::vector<SampleSize> smplSizes) {
 	const u_int size = CalculateSampleIndexes(smplSizes);
 	Sampler::RequestSamples(smplType, size);
-	
+	SLG_LOG("RequestSamples " << size << " samples calculated as needed");
 	sobolSequence.RequestSamples(size);
 	
 	pixelIndexOffset = SOBOL_THREAD_WORK_SIZE;
@@ -202,10 +202,11 @@ void SobolSampler::GetSample2D(const u_int index, float &u0, float &u1) {
 		case 0: {
 			u0 = sample0;
 			u1 = sample1;
+			break;
 		}
 		default: {
 			u0 = sobolSequence.GetSample(pass, sampleIndexes2D[index]);
-			u1 = sobolSequence.GetSample(pass, sampleIndexes2D[index + 1]);
+			u1 = sobolSequence.GetSample(pass, sampleIndexes2D[index] + 1);
 		}
 	}
 }

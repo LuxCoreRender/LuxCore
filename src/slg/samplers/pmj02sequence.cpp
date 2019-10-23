@@ -61,9 +61,10 @@ float PMJ02Sequence::GetSample(const u_int pass, const u_int index) {
 	// Revert to random if more samples than generated are being requested
 	if (pass > num_samples) return rndGen->floatValue();
 
-	const u_int samplePass = (pass + rngPass) % num_samples;
+	// const u_int samplePass = (pass + rngPass) % num_samples;
+	const u_int samplePass = pass;
 
-	const u_int dimensionIndex = index / 2;
+	const u_int dimensionIndex = (rngPass + (index / 2)) % samplePoints.size();
 	if (index % 2) {
 		return samplePoints[dimensionIndex][samplePass].y;
 	} 

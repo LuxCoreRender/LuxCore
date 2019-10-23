@@ -217,6 +217,7 @@ void RTPathCPUSampler::GetSample2D(const u_int index, float &u0, float &u1) {
 				sharedData->pixelRenderSequence[currentX + currentY * sharedData->filmSubRegionWidth].y :
 				(currentY + sharedData->filmSubRegion[2]);
 			u1 = py + rndGen->floatValue();
+			break;
 		}
 		default: {
 			u0 = rndGen->floatValue();

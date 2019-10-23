@@ -185,10 +185,11 @@ void PMJ02Sampler::GetSample2D(const u_int index, float &u0, float &u1) {
 		case 0: {
 			u0 = sample0;
 			u1 = sample1;
+			break;
 		}
 		default: {
 			u0 = pmj02sequence.GetSample(pass, sampleIndexes2D[index]);
-			u1 = pmj02sequence.GetSample(pass, sampleIndexes2D[index + 1]);
+			u1 = pmj02sequence.GetSample(pass, sampleIndexes2D[index] + 1);
 		}
 	}
 }

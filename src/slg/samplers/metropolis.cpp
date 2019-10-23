@@ -204,7 +204,7 @@ float MetropolisSampler::GetSample1D(const u_int index) {
 
 void MetropolisSampler::GetSample2D(const u_int index, float &u0, float &u1) {
 	u0 = GetSample(sampleIndexes2D[index]);
-	u1 = GetSample(sampleIndexes2D[index + 1]);
+	u1 = GetSample(sampleIndexes2D[index] + 1);
 }
 
 void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
