@@ -120,7 +120,7 @@ float SubdivShape::MaxEdgeScreenSize(const Camera *camera, ExtTriangleMesh *srcM
 #if _OPENMP >= 200805
 			unsigned
 #endif
-			i = 0; i < triCount; ++i) {
+			int i = 0; i < triCount; ++i) {
 		const int tid =
 #if defined(_OPENMP)
 			omp_get_thread_num()
