@@ -90,6 +90,14 @@ PMJ02Sampler::PMJ02Sampler(luxrays::RandomGenerator *rnd, Film *flm,
 		pmj02sequence(rnd), adaptiveStrength(adaptiveStr) {
 }
 
+u_int cmj_hash_simple(u_int i, u_int p) {
+	i = (i ^ 61) ^ p;
+	i += i << 3;
+	i ^= i >> 4;
+	i *= 0x27d4eb2d;
+	return i;
+}
+
 void PMJ02Sampler::InitNewSample() {
 	for (;;) {
 		// Update pixelIndexOffset
@@ -139,7 +147,25 @@ void PMJ02Sampler::InitNewSample() {
 			pass = sharedData->GetNewPixelPass();
 		}
 
-		pmj02sequence.rngPass = rngGenerator.uintValue();
+		const u_int rngPass = rngGenerator.uintValue();;
+
+		std::vector<u_int> dimensionsIndexes;
+		const u_int numberTables = requestedSamples/2 + ((requestedSamples % 2) ? 1 : 0);
+		dimensionsIndexes.reserve(numberTables);
+		for (u_int i = 0; i < numberTables; i++) {
+			dimensionsIndexes.push_back(i);
+		}
+
+		// Shuffle array using Peter-Yates algorithm
+		for (u_int i = numberTables-1; i > 0; i--) { 
+			const u_int j = cmj_hash_simple(i, rngPass) % (i+1); 
+
+			const u_int tmp = dimensionsIndexes[i];
+			dimensionsIndexes[i] = dimensionsIndexes[j];
+			dimensionsIndexes[j] = tmp;
+		} 
+
+		pmj02sequence.dimensionsIndexes = dimensionsIndexes;
 
 		sample0 = pixelX + pmj02sequence.GetSample(pass, 0);
 		sample1 = pixelY + pmj02sequence.GetSample(pass, 1);

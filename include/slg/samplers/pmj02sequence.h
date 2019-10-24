@@ -41,6 +41,7 @@ public:
 	float GetSample(const u_int pixelIndex, const u_int pass);
 
 	u_int rngPass;
+	std::vector<u_int> dimensionsIndexes;
 	
 private:
 	// Generates for a single pixel index
