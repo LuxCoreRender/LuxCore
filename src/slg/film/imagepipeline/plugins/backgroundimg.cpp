@@ -219,9 +219,9 @@ void BackgroundImgPlugin::ApplyOCL(Film &film, const u_int index) {
 		cl::Program *program = ImagePipelinePlugin::CompileProgram(
 				film,
 				ssParams.str(),
-				slg::ocl::KernelSource_utils_funcs +
-				slg::ocl::KernelSource_color_types +
-				slg::ocl::KernelSource_color_funcs +
+				luxrays::ocl::KernelSource_utils_funcs +
+				luxrays::ocl::KernelSource_color_types +
+				luxrays::ocl::KernelSource_color_funcs +
 				slg::ocl::KernelSource_imagemap_types +
 				slg::ocl::KernelSource_imagemap_funcs +
 				slg::ocl::KernelSource_plugin_backgroundimg_funcs,

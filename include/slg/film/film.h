@@ -31,15 +31,11 @@
 #include <boost/thread/mutex.hpp>
 #include <bcd/core/SamplesAccumulator.h>
 
-#include "luxrays/core/geometry/point.h"
-#include "luxrays/core/geometry/normal.h"
-#include "luxrays/core/geometry/uv.h"
 #include "luxrays/core/oclintersectiondevice.h"
 #include "luxrays/utils/oclcache.h"
 #include "luxrays/utils/properties.h"
 #include "luxrays/utils/serializationutils.h"
 #include "slg/slg.h"
-#include "slg/bsdf/bsdf.h"
 #include "slg/film/imagepipeline/imagepipeline.h"
 #include "slg/film/framebuffer.h"
 #include "slg/film/filmoutputs.h"

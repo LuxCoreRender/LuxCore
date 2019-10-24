@@ -236,7 +236,7 @@ void GaussianBlur3x3FilterPlugin::ApplyOCL(Film &film, const u_int index) {
 		cl::Program *program = ImagePipelinePlugin::CompileProgram(
 				film,
 				"-D LUXRAYS_OPENCL_KERNEL -D SLG_OPENCL_KERNEL",
-				slg::ocl::KernelSource_luxrays_types +
+				luxrays::ocl::KernelSource_luxrays_types +
 				slg::ocl::KernelSource_plugin_gaussianblur3x3_funcs,
 				"GaussianBlur3x3FilterPlugin");
 

@@ -71,6 +71,8 @@ typedef enum {
 
 typedef int SceneRayType;
 
+class SampleResult;
+
 class Scene {
 public:
 	// Constructor used to create a scene by calling methods

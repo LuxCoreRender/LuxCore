@@ -153,7 +153,7 @@ Spectrum ConstantInfiniteLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 
 	const Point worldCenter = scene.dataSet->GetBSphere().center;
 
-	const Point shadowRayOrig = bsdf.GetRayOrigin(worldCenter - bsdf.hitPoint.p);
+	const Point shadowRayOrig = bsdf.GetRayOrigin(shadowRayDir);
 	const Vector toCenter(worldCenter - shadowRayOrig);
 	const float centerDistanceSquared = Dot(toCenter, toCenter);
 	const float approach = Dot(toCenter, shadowRayDir);

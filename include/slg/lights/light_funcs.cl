@@ -121,7 +121,7 @@ OPENCL_FORCE_NOT_INLINE float3 ConstantInfiniteLight_Illuminate(__global const L
 	const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
 	const float envRadius = EnvLightSource_GetEnvRadius(sceneRadius);
 
-	const float3 pSurface = BSDF_GetRayOrigin(bsdf, worldCenter - VLOAD3F(&bsdf->hitPoint.p.x));
+	const float3 pSurface = BSDF_GetRayOrigin(bsdf, shadowRayDir);
 	const float3 toCenter = worldCenter - pSurface;
 	const float centerDistance = dot(toCenter, toCenter);
 	const float approach = dot(toCenter, shadowRayDir);
@@ -360,7 +360,7 @@ OPENCL_FORCE_NOT_INLINE float3 SkyLight2_Illuminate(__global const LightSource *
 	const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
 	const float envRadius = EnvLightSource_GetEnvRadius(sceneRadius);
 
-	const float3 pSurface = BSDF_GetRayOrigin(bsdf, worldCenter - VLOAD3F(&bsdf->hitPoint.p.x));
+	const float3 pSurface = BSDF_GetRayOrigin(bsdf, shadowRayDir);
 	const float3 toCenter = worldCenter - pSurface;
 	const float centerDistance = dot(toCenter, toCenter);
 	const float approach = dot(toCenter, shadowRayDir);

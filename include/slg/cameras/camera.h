@@ -24,9 +24,6 @@
 #include "luxrays/core/geometry/motionsystem.h"
 #include "luxrays/utils/mc.h"
 
-#include "slg/film/film.h"
-#include "slg/volumes/volume.h"
-
 namespace slg {
 
 //------------------------------------------------------------------------------
@@ -39,6 +36,8 @@ using namespace luxrays::ocl;
 }
 
 class Scene;
+class Volume;
+class PathVolumeInfo;
 
 class Camera {
 public:

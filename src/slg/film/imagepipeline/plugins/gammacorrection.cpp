@@ -117,7 +117,7 @@ void GammaCorrectionPlugin::ApplyOCL(Film &film, const u_int index) {
 		cl::Program *program = ImagePipelinePlugin::CompileProgram(
 				film,
 				"-D LUXRAYS_OPENCL_KERNEL -D SLG_OPENCL_KERNEL",
-				slg::ocl::KernelSource_utils_funcs +
+				luxrays::ocl::KernelSource_utils_funcs +
 				slg::ocl::KernelSource_plugin_gammacorrection_funcs,
 				"GammaCorrectionPlugin");
 
