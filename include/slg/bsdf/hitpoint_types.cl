@@ -41,11 +41,9 @@ typedef struct {
 	float alpha;
 #endif
 
-#if defined(PARAM_HAS_PASSTHROUGH)
 	// passThroughEvent can be stored here in a path state even before of
 	// BSDF initialization (while tracing the next path vertex ray)
 	float passThroughEvent;
-#endif
 
 	// Transformation from local object to world reference frame
 	Transform localToWorld;

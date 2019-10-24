@@ -67,9 +67,7 @@ OPENCL_FORCE_NOT_INLINE float3 VelvetMaterial_Evaluate(
 OPENCL_FORCE_NOT_INLINE float3 VelvetMaterial_Sample(
 		__global const HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1,
-#if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
-#endif
 		float *pdfW, BSDFEvent *event,
 		const float3 kdVal,
 		const float A1, const float A2, const float A3,

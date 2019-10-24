@@ -128,30 +128,6 @@ bool CompiledScene::IsImageMapWrapCompiled(const ImageMapStorage::WrapType type)
 	return (usedImageMapWrapTypes.find(type) != usedImageMapWrapTypes.end());
 }
 
-bool CompiledScene::RequiresPassThrough() const {
-	return (useTransparency ||
-			IsMaterialCompiled(GLASS) ||
-			IsMaterialCompiled(ARCHGLASS) ||
-			IsMaterialCompiled(MIX) ||
-			IsMaterialCompiled(NULLMAT) ||
-			IsMaterialCompiled(MATTETRANSLUCENT) ||
-			IsMaterialCompiled(ROUGHMATTETRANSLUCENT) ||
-			IsMaterialCompiled(GLOSSY2) ||
-			IsMaterialCompiled(ROUGHGLASS) ||
-			IsMaterialCompiled(CARPAINT) ||
-			IsMaterialCompiled(GLOSSYTRANSLUCENT) ||
-			IsMaterialCompiled(GLOSSYCOATING) ||
-			IsMaterialCompiled(DISNEY) ||
-			IsMaterialCompiled(CLEAR_VOL) ||
-			IsMaterialCompiled(HOMOGENEOUS_VOL) ||
-			IsMaterialCompiled(HETEROGENEOUS_VOL) ||
-			// BLENDER_NOISE uses the pass through random variable
-			IsTextureCompiled(BLENDER_NOISE) ||
-			// PhotonGI indirect cache uses pass through random variable
-			(photonGICache && photonGICache->GetParams().indirect.enabled)
-			);
-}
-
 bool CompiledScene::HasVolumes() const {
 	return IsMaterialCompiled(HOMOGENEOUS_VOL) ||
 			IsMaterialCompiled(CLEAR_VOL) ||

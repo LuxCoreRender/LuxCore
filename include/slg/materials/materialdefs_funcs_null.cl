@@ -32,7 +32,6 @@ OPENCL_FORCE_INLINE bool NullMaterial_IsDelta() {
 	return true;
 }
 
-#if defined(PARAM_HAS_PASSTHROUGH)
 OPENCL_FORCE_NOT_INLINE float3 NullMaterial_GetPassThroughTransparency(__global const Material *material,
 		__global const HitPoint *hitPoint, const float3 localFixedDir,
 		const float passThroughEvent, const bool backTracing
@@ -54,7 +53,6 @@ OPENCL_FORCE_NOT_INLINE float3 NullMaterial_GetPassThroughTransparency(__global 
 	} else
 		return WHITE;
 }
-#endif
 
 OPENCL_FORCE_INLINE float3 NullMaterial_Evaluate(
 		__global const HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
@@ -65,9 +63,7 @@ OPENCL_FORCE_INLINE float3 NullMaterial_Evaluate(
 OPENCL_FORCE_INLINE float3 NullMaterial_Sample(
 		__global const HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1,
-#if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
-#endif
 		float *pdfW, BSDFEvent *event) {
 	*sampledDir = -fixedDir;
 

@@ -22,7 +22,6 @@
 //  PARAM_RAY_EPSILON_MIN
 //  PARAM_RAY_EPSILON_MAX
 //  PARAM_HAS_IMAGEMAPS
-//  PARAM_HAS_PASSTHROUGH
 //  PARAM_USE_PIXEL_ATOMICS
 //  PARAM_ACCEL_BVH or PARAM_ACCEL_MBVH or PARAM_ACCEL_QBVH or PARAM_ACCEL_MQBVH
 //  PARAM_LIGHT_WORLD_RADIUS_SCALE
@@ -259,13 +258,11 @@ OPENCL_FORCE_NOT_INLINE void GenerateEyePath(
 	taskState->photonGICausticCacheUsed = false;
 	taskState->photonGIShowIndirectPathMixUsed = false;
 
-#if defined(PARAM_HAS_PASSTHROUGH)
 	// Initialize the pass-through event seed
 	const float passThroughEvent = Sampler_GetSamplePath(seed, sample, sampleDataPathBase, IDX_EYE_PASSTHROUGH);
 	Seed seedPassThroughEvent;
 	Rnd_InitFloat(passThroughEvent, &seedPassThroughEvent);
 	taskState->seedPassThroughEvent = seedPassThroughEvent;
-#endif
 
 #if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
 	sample->result.directShadowMask = 1.f;
@@ -411,9 +408,7 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_Illuminate(
 		const float worldRadius,
 		__global HitPoint *tmpHitPoint,
 		const float time, const float u0, const float u1, const float u2,
-#if defined(PARAM_HAS_PASSTHROUGH)
 		const float lightPassThroughEvent,
-#endif
 		__global DirectLightIlluminateInfo *info
 		LIGHTS_PARAM_DECL) {
 	// Select the light strategy to use
@@ -447,9 +442,7 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_Illuminate(
 			&lights[lightIndex],
 			bsdf,
 			time, u1, u2,
-#if defined(PARAM_HAS_PASSTHROUGH)
 			lightPassThroughEvent,
-#endif
 			worldCenterX, worldCenterY, worldCenterZ, worldRadius,
 			tmpHitPoint,		
 			shadowRay, &directPdfW

@@ -499,9 +499,7 @@ OPENCL_FORCE_NOT_INLINE float3 TriangleLight_GetRadiance(__global const LightSou
 OPENCL_FORCE_NOT_INLINE float3 TriangleLight_Illuminate(__global const LightSource *triLight,
 		__global HitPoint *tmpHitPoint, __global const BSDF *bsdf,
 		const float time, const float u0, const float u1,
-#if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
-#endif
 		__global Ray *shadowRay, float *directPdfW
 		MATERIALS_PARAM_DECL) {
 	// A safety check to avoid NaN/Inf
@@ -536,10 +534,8 @@ OPENCL_FORCE_NOT_INLINE float3 TriangleLight_Illuminate(__global const LightSour
 	HitPoint_Init(tmpHitPoint, false,
 		meshIndex, triangleIndex,
 		samplePoint, -sampleDir,
-		b1, b2
-#if defined(PARAM_HAS_PASSTHROUGH)
-		, passThroughEvent
-#endif
+		b1, b2,
+		passThroughEvent
 		MATERIALS_PARAM);
 	// Add bump?
 		// lightMaterial->Bump(&hitPoint, 1.f);
@@ -1085,9 +1081,7 @@ OPENCL_FORCE_NOT_INLINE float3 Light_Illuminate(
 		__global const LightSource *light,
 		__global const BSDF *bsdf,
 		const float time, const float u0, const float u1,
-#if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
-#endif
 		const float worldCenterX,
 		const float worldCenterY,
 		const float worldCenterZ,
@@ -1137,9 +1131,7 @@ OPENCL_FORCE_NOT_INLINE float3 Light_Illuminate(
 					light,
 					tmpHitPoint,
 					bsdf, time ,u0, u1,
-#if defined(PARAM_HAS_PASSTHROUGH)
 					passThroughEvent,
-#endif
 					shadowRay, directPdfW
 					MATERIALS_PARAM);
 #endif

@@ -50,9 +50,7 @@ OPENCL_FORCE_NOT_INLINE void Volume_InitializeTmpHitPoint(__global HitPoint *tmp
 #if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)
 	tmpHitPoint->alpha = 0.f;
 #endif
-#if defined(PARAM_HAS_PASSTHROUGH)
 	tmpHitPoint->passThroughEvent = passThroughEvent;
-#endif
 	Transform_Init(&tmpHitPoint->localToWorld);
 	tmpHitPoint->interiorVolumeIndex = NULL_INDEX;
 	tmpHitPoint->exteriorVolumeIndex = NULL_INDEX;

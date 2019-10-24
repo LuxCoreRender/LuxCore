@@ -65,11 +65,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 
 	float3 connectionThroughput;
 
-#if defined(PARAM_HAS_PASSTHROUGH)
 	Seed seedPassThroughEvent = taskState->seedPassThroughEvent;
 	const float passThroughEvent = Rnd_FloatValue(&seedPassThroughEvent);
 	taskState->seedPassThroughEvent = seedPassThroughEvent;
-#endif
 
 	int throughShadowTransparency = taskState->throughShadowTransparency;
 	const bool continueToTrace = Scene_Intersect(
@@ -79,9 +77,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 			&pathInfo->volume,
 			&tasks[gid].tmpHitPoint,
 #endif
-#if defined(PARAM_HAS_PASSTHROUGH)
 			passThroughEvent,
-#endif
 			&rays[gid], &rayHits[gid], &taskState->bsdf,
 			&connectionThroughput, VLOAD3F(taskState->throughput.c),
 			&samples[gid].result,
@@ -477,13 +473,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 
 	float3 connectionThroughput = WHITE;
 
-#if defined(PARAM_HAS_PASSTHROUGH)
 	Seed seedPassThroughEvent = taskDirectLight->seedPassThroughEvent;
 	const float passThroughEvent = Rnd_FloatValue(&seedPassThroughEvent);
 	taskDirectLight->seedPassThroughEvent = seedPassThroughEvent;
-#endif
 
-#if defined(PARAM_HAS_PASSTHROUGH) || defined(PARAM_HAS_VOLUMES)
 	int throughShadowTransparency = taskDirectLight->throughShadowTransparency;
 	const bool continueToTrace =
 		Scene_Intersect(
@@ -493,9 +486,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 			&directLightVolInfos[gid],
 			&task->tmpHitPoint,
 #endif
-#if defined(PARAM_HAS_PASSTHROUGH)
 			passThroughEvent,
-#endif
 			&rays[gid], &rayHits[gid], &task->tmpBsdf,
 			&connectionThroughput, WHITE,
 			NULL,
@@ -506,9 +497,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 	VSTORE3F(connectionThroughput * VLOAD3F(taskDirectLight->illumInfo.lightRadiance.c), taskDirectLight->illumInfo.lightRadiance.c);
 #if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
 	VSTORE3F(connectionThroughput * VLOAD3F(taskDirectLight->illumInfo.lightIrradiance.c), taskDirectLight->illumInfo.lightIrradiance.c);
-#endif
-#else
-	const bool continueToTrace = false;
 #endif
 
 	const bool rayMiss = (rayHits[gid].meshIndex == NULL_INDEX);
@@ -627,9 +615,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 				Sampler_GetSamplePathVertex(seed, sample, sampleDataPathVertexBase, depth, IDX_DIRECTLIGHT_X),
 				Sampler_GetSamplePathVertex(seed, sample, sampleDataPathVertexBase, depth, IDX_DIRECTLIGHT_Y),
 				Sampler_GetSamplePathVertex(seed, sample, sampleDataPathVertexBase, depth, IDX_DIRECTLIGHT_Z),
-#if defined(PARAM_HAS_PASSTHROUGH)
 				Sampler_GetSamplePathVertex(seed, sample, sampleDataPathVertexBase, depth, IDX_DIRECTLIGHT_W),
-#endif
 				&taskDirectLight->illumInfo
 				LIGHTS_PARAM)) {
 		// I have now to evaluate the BSDF
@@ -690,7 +676,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 			&taskState->bsdf,
 			VLOAD3F(&rays[gid].d.x)
 			LIGHTS_PARAM)) {
-#if defined(PARAM_HAS_PASSTHROUGH)
 		const uint depth = pathInfo->depth.depth;
 
 		__global float *sampleData = Sampler_GetSampleData(sample, samplesData);
@@ -711,7 +696,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 
 		// Save the seed
 		task->seed = seedValue;
-#endif
 
 		// Initialize the trough a shadow transparency flag used by Scene_Intersect()
 		tasksDirectLight[gid].throughShadowTransparency = false;
@@ -859,13 +843,11 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 
 		sample->result.firstPathVertex = false;
 
-#if defined(PARAM_HAS_PASSTHROUGH)
 		// Initialize the pass-through event seed
 		const float passThroughEvent = Sampler_GetSamplePathVertex(seed, sample, sampleDataPathVertexBase, pathInfo->depth.depth, IDX_PASSTHROUGH);
 		Seed seedPassThroughEvent;
 		Rnd_InitFloat(passThroughEvent, &seedPassThroughEvent);
 		taskState->seedPassThroughEvent = seedPassThroughEvent;
-#endif
 
 		// Initialize the trough a shadow transparency flag used by Scene_Intersect()
 		taskState->throughShadowTransparency = false;

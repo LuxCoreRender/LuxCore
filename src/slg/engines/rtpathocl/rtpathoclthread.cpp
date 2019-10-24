@@ -105,11 +105,6 @@ void RTPathOCLRenderThread::UpdateOCLBuffers(const EditActionList &updateActions
 		InitLights();
 	}
 
-	// A material types edit can enable/disable PARAM_HAS_PASSTHROUGH parameter
-	// and change the size of the structure allocated
-	if (updateActions.Has(MATERIAL_TYPES_EDIT))
-		AdditionalInit();
-
 	//--------------------------------------------------------------------------
 	// Recompile Kernels if required
 	//--------------------------------------------------------------------------

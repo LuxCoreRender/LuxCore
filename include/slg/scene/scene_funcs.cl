@@ -25,9 +25,7 @@ OPENCL_FORCE_NOT_INLINE bool Scene_Intersect(
 		__global PathVolumeInfo *volInfo,
 		__global HitPoint *tmpHitPoint,
 #endif
-#if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThrough,
-#endif
 		__global Ray *ray,
 		__global RayHit *rayHit,
 		__global BSDF *bsdf,
@@ -50,10 +48,8 @@ OPENCL_FORCE_NOT_INLINE bool Scene_Intersect(
 		// Initialize the BSDF of the hit point
 		BSDF_Init(bsdf,
 				*throughShadowTransparency,
-				ray, rayHit
-#if defined(PARAM_HAS_PASSTHROUGH)
-				, passThrough
-#endif
+				ray, rayHit,
+				passThrough
 #if defined(PARAM_HAS_VOLUMES)
 				, volInfo
 #endif
@@ -121,7 +117,6 @@ OPENCL_FORCE_NOT_INLINE bool Scene_Intersect(
 			// Check if it is a camera invisible object and we are a tracing a camera ray
 			(cameraRay && sceneObjs[rayHit->meshIndex].cameraInvisible);
 
-#if defined(PARAM_HAS_PASSTHROUGH)
 		// Check if it is a pass through point
 		if (!continueToTrace) {
 			const float3 passThroughTrans = BSDF_GetPassThroughTransparency(bsdf, backTracing
@@ -133,7 +128,6 @@ OPENCL_FORCE_NOT_INLINE bool Scene_Intersect(
 				continueToTrace = true;
 			}
 		}
-#endif
 
 		if (!continueToTrace && shadowRay) {
 			const float3 transp = BSDF_GetPassThroughShadowTransparency(bsdf

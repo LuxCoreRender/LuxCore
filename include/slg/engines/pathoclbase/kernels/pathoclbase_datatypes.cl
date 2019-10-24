@@ -83,9 +83,7 @@ typedef struct {
 	Spectrum throughput;
 	BSDF bsdf; // Variable size structure
 
-#if defined(PARAM_HAS_PASSTHROUGH)
 	Seed seedPassThroughEvent;
-#endif
 	
 	int albedoToDo, photonGICacheEnabledOnLastHit,
 			photonGICausticCacheUsed, photonGIShowIndirectPathMixUsed,
@@ -101,9 +99,7 @@ typedef struct {
 	// Used to store some intermediate result
 	DirectLightIlluminateInfo illumInfo;
 
-#if defined(PARAM_HAS_PASSTHROUGH)
 	Seed seedPassThroughEvent;
-#endif
 
 	DirectLightResult directLightResult;
 
@@ -116,9 +112,7 @@ typedef struct {
 	Seed seed;
 
 	// Space for temporary storage
-#if defined(PARAM_HAS_PASSTHROUGH) || defined(PARAM_HAS_VOLUMES)
 	BSDF tmpBsdf; // Variable size structure
-#endif
 
 	// This is used by TriangleLight_Illuminate() to temporary store the
 	// point on the light sources.

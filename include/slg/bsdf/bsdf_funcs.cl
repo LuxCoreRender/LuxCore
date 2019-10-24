@@ -23,10 +23,8 @@ OPENCL_FORCE_NOT_INLINE void BSDF_Init(
 		__global BSDF *bsdf,
 		const bool throughShadowTransparency,
 		__global Ray *ray,
-		__global const RayHit *rayHit
-#if defined(PARAM_HAS_PASSTHROUGH)
-		, const float passThroughEvent
-#endif
+		__global const RayHit *rayHit,
+		const float passThroughEvent
 #if defined(PARAM_HAS_VOLUMES)
 		, __global PathVolumeInfo *volInfo
 #endif
@@ -45,10 +43,8 @@ OPENCL_FORCE_NOT_INLINE void BSDF_Init(
 	HitPoint_Init(&bsdf->hitPoint, throughShadowTransparency,
 		meshIndex, triangleIndex,
 		hitPointP, -rayDir,
-		rayHit->b1, rayHit->b2
-#if defined(PARAM_HAS_PASSTHROUGH)
-		, passThroughEvent
-#endif
+		rayHit->b1, rayHit->b2,
+		passThroughEvent
 		MATERIALS_PARAM);
 
 	// Save the scene object index
@@ -66,16 +62,12 @@ OPENCL_FORCE_NOT_INLINE void BSDF_Init(
 	PathVolumeInfo_SetHitPointVolumes(
 			volInfo,
 			&bsdf->hitPoint,
-			Material_GetInteriorVolume(matIndex, &bsdf->hitPoint
-#if defined(PARAM_HAS_PASSTHROUGH)
-			, passThroughEvent
-#endif
-			MATERIALS_PARAM),
-			Material_GetExteriorVolume(matIndex, &bsdf->hitPoint
-#if defined(PARAM_HAS_PASSTHROUGH)
-			, passThroughEvent
-#endif
-			MATERIALS_PARAM)
+			Material_GetInteriorVolume(matIndex, &bsdf->hitPoint,
+				passThroughEvent
+				MATERIALS_PARAM),
+			Material_GetExteriorVolume(matIndex, &bsdf->hitPoint,
+				passThroughEvent
+				MATERIALS_PARAM)
 			MATERIALS_PARAM);
 #endif
 
@@ -280,9 +272,7 @@ OPENCL_FORCE_NOT_INLINE float3 BSDF_Sample(__global const BSDF *bsdf, const floa
 
 	float3 result = Material_Sample(bsdf->materialIndex, &bsdf->hitPoint,
 			localFixedDir, &localSampledDir, u0, u1,
-#if defined(PARAM_HAS_PASSTHROUGH)
 			bsdf->hitPoint.passThroughEvent,
-#endif
 			pdfW, event
 			MATERIALS_PARAM);
 	if (Spectrum_IsBlack(result))
@@ -324,7 +314,6 @@ OPENCL_FORCE_INLINE float3 BSDF_GetEmittedRadiance(__global const BSDF *bsdf, fl
 				LIGHTS_PARAM);
 }
 
-#if defined(PARAM_HAS_PASSTHROUGH)
 OPENCL_FORCE_INLINE float3 BSDF_GetPassThroughTransparency(__global const BSDF *bsdf, const bool backTracing
 		MATERIALS_PARAM_DECL) {
 	const float3 localFixedDir = Frame_ToLocal(&bsdf->frame, VLOAD3F(&bsdf->hitPoint.fixedDir.x));
@@ -333,7 +322,6 @@ OPENCL_FORCE_INLINE float3 BSDF_GetPassThroughTransparency(__global const BSDF *
 			&bsdf->hitPoint, localFixedDir, bsdf->hitPoint.passThroughEvent,backTracing
 			MATERIALS_PARAM);
 }
-#endif
 
 OPENCL_FORCE_INLINE float BSDF_IsPhotonGIEnabled(__global const BSDF *bsdf
 		MATERIALS_PARAM_DECL) {

@@ -55,7 +55,6 @@ public:
 	bool IsImageMapWrapCompiled(const ImageMapStorage::WrapType type) const;
 	bool IsLightSourceCompiled(const LightSourceType type) const;
 
-	bool RequiresPassThrough() const;
 	bool HasVolumes() const;
 	bool HasBumpMaps() const;
 

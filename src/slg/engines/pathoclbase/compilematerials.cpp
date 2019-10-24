@@ -739,24 +739,18 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 				"__global const HitPoint *hitPoint, "
 				"const float3 fixedDir, float3 *sampledDir, "
 				"const float u0, const float u1,\n"
-				"#if defined(PARAM_HAS_PASSTHROUGH)\n"
-				"\tconst float passThroughEvent,\n"
-				"#endif\n"
+				"const float passThroughEvent,\n"
 				"\tfloat *pdfW, BSDFEvent *event "
 				"MATERIALS_PARAM_DECL",
 			"mat, hitPoint, fixedDir, sampledDir, u0, u1,\n"
-				"#if defined(PARAM_HAS_PASSTHROUGH)\n"
 				"\t\t\tpassThroughEvent,\n"
-				"#endif\n"
 				"\t\t\tpdfW, event MATERIALS_PARAM");
 
 	// Generate the code for generic GetPassThroughTransparencyWithDynamic()
-	source << "#if defined(PARAM_HAS_PASSTHROUGH)\n";
 	AddMaterialSourceSwitch(source, mats, "GetPassThroughTransparencyWithDynamic", "GetPassThroughTransparency", "float3", "BLACK",
 			"const uint index, __global const HitPoint *hitPoint, "
 				"const float3 localFixedDir, const float passThroughEvent, const bool backTracing MATERIALS_PARAM_DECL",
 			"mat, hitPoint, localFixedDir, passThroughEvent, backTracing MATERIALS_PARAM");
-	source << "#endif\n";
 
 	// Generate the code for generic Material_GetEmittedRadianceWithDynamic()
 	AddMaterialSourceSwitch(source, mats, "GetEmittedRadianceWithDynamic", "GetEmittedRadiance", "float3", "BLACK",

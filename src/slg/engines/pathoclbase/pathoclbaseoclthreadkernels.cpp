@@ -402,9 +402,6 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 	if (cscene->IsMaterialCompiled(DISNEY))
 		ssParams << " -D PARAM_ENABLE_MAT_DISNEY";
 
-	if (cscene->RequiresPassThrough())
-		ssParams << " -D PARAM_HAS_PASSTHROUGH";
-
 	switch (cscene->cameraType) {
 		case slg::ocl::PERSPECTIVE:
 			ssParams << " -D PARAM_CAMERA_TYPE=0";

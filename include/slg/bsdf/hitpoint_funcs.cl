@@ -22,15 +22,11 @@
 OPENCL_FORCE_INLINE void HitPoint_Init(__global HitPoint *hitPoint, const bool throughShadowTransp,
 		const uint meshIndex, const uint triIndex,
 		const float3 pnt, const float3 fixedDir,
-		const float b1, const float b2
-#if defined(PARAM_HAS_PASSTHROUGH)
-		, const float passThroughEvnt
-#endif
+		const float b1, const float b2,
+		const float passThroughEvnt
 		MATERIALS_PARAM_DECL) {
 	hitPoint->throughShadowTransparency = throughShadowTransp;
-#if defined(PARAM_HAS_PASSTHROUGH)
 	hitPoint->passThroughEvent = passThroughEvnt;
-#endif
 
 	VSTORE3F(pnt, &hitPoint->p.x);
 	VSTORE3F(fixedDir, &hitPoint->fixedDir.x);

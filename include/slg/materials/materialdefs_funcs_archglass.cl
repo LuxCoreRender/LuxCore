@@ -110,7 +110,6 @@ OPENCL_FORCE_NOT_INLINE float3 ArchGlassMaterial_EvalSpecularTransmission(__glob
 	return (1.f - result) * kt;
 }
 
-#if defined(PARAM_HAS_PASSTHROUGH)
 OPENCL_FORCE_NOT_INLINE float3 ArchGlassMaterial_GetPassThroughTransparency(__global const Material *material,
 		__global const HitPoint *hitPoint, const float3 localFixedDir,
 		const float passThroughEvent, const bool backTracing
@@ -163,7 +162,6 @@ OPENCL_FORCE_NOT_INLINE float3 ArchGlassMaterial_GetPassThroughTransparency(__gl
 			return BLACK;
 	}
 }
-#endif
 
 OPENCL_FORCE_INLINE float3 ArchGlassMaterial_Evaluate(
 		__global const HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
@@ -176,9 +174,7 @@ OPENCL_FORCE_INLINE float3 ArchGlassMaterial_Evaluate(
 OPENCL_FORCE_NOT_INLINE float3 ArchGlassMaterial_Sample(
 		__global const HitPoint *hitPoint, const float3 localFixedDir, float3 *localSampledDir,
 		const float u0, const float u1,
-#if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
-#endif
 		float *pdfW, BSDFEvent *event,
 		const float3 ktTexVal, const float3 krTexVal,
 		const float nc, const float nt) {

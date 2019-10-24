@@ -394,7 +394,7 @@ OPENCL_FORCE_NOT_INLINE float3 BlenderMusgraveTexture_ConstEvaluateSpectrum(__gl
 // Blender noise texture
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_ENABLE_BLENDER_NOISE) && defined(PARAM_HAS_PASSTHROUGH)
+#if defined(PARAM_ENABLE_BLENDER_NOISE)
 
 OPENCL_FORCE_INLINE float BlenderNoiseTexture_Evaluate(__global const HitPoint *hitPoint, const int noisedepth,
 		const float bright, const float contrast) {

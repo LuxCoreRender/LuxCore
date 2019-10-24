@@ -10,13 +10,16 @@
 * Added the support for Basu and Owen's low discrepancy triangle light sampling (pull request #246)
 * Added an option to normalize BlackBody texture output
 * Pointiness shape is now able to handle duplicate/similar vertices like if they were the same
+* Added the support for Subdivison shape (base don OpenSubdiv)
 * Added the support for Displacement shape
 * Added the support for vector displacement to Displacement shape
 * New image pipeline plugin: White balance
-* Using/Not Using bump/normal mapping doesn't requires OpenCL compilation anymore (removed PARAM_HAS_BUMPMAPS conditional OpenCL compilation)
+* Using/Not using bump/normal mapping doesn't requires OpenCL compilation anymore (removed PARAM_HAS_BUMPMAPS conditional OpenCL compilation)
 * Large rework of internal light interface. Fixed several instance/motion blur and lights related problems. Triangle light motion blur now works as expected in OpenCL.
 * Large rework of internal mesh interface. Improved the performance of instanced and motion blur meshes.
 * Changed object and material ID for background to 0 (from 0xffffffff)
+* Added the support for screen space subdivision limit to SubdivShape
+* Using/Not using any type of transparency doesn't requires OpenCL compilation anymore (removed PARAM_HAS_PASSTHROUGH conditional OpenCL compilation)
 
 ### Fixed Bugs
 

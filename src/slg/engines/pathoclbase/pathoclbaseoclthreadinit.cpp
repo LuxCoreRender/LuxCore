@@ -52,8 +52,8 @@ size_t PathOCLBaseOCLRenderThread::GetOpenCLHitPointSize() const {
 		hitPointSize += sizeof(Spectrum);
 	if (renderEngine->compiledScene->IsTextureCompiled(HITPOINTALPHA))
 		hitPointSize += sizeof(float);
-	if (renderEngine->compiledScene->RequiresPassThrough())
-		hitPointSize += sizeof(float);
+	// passThroughEvent
+	hitPointSize += sizeof(float);
 	// Fields dpdu, dpdv, dndu, dndv
 	hitPointSize += 2 * sizeof(Vector) + 2 * sizeof(Normal);
 	// Volume fields
@@ -388,7 +388,6 @@ void PathOCLBaseOCLRenderThread::InitImageMaps() {
 
 void PathOCLBaseOCLRenderThread::InitGPUTaskBuffer() {
 	const u_int taskCount = renderEngine->taskCount;
-	const bool hasPassThrough = renderEngine->compiledScene->RequiresPassThrough();
 	const size_t openCLBSDFSize = GetOpenCLBSDFSize();
 
 	//--------------------------------------------------------------------------
@@ -401,8 +400,7 @@ void PathOCLBaseOCLRenderThread::InitGPUTaskBuffer() {
 	// Add temporary storage space
 	
 	// Add tmpBsdf memory size
-	if (hasPassThrough || renderEngine->compiledScene->HasVolumes())
-		gpuTaskSize += openCLBSDFSize;
+	gpuTaskSize += openCLBSDFSize;
 
 	// Add tmpHitPoint memory size
 	gpuTaskSize += GetOpenCLHitPointSize();
@@ -423,8 +421,7 @@ void PathOCLBaseOCLRenderThread::InitGPUTaskBuffer() {
 			sizeof(int);  // throughShadowTransparency
 
 	// Add seedPassThroughEvent memory size
-	if (hasPassThrough)
-		gpuDirectLightTaskSize += sizeof(ocl::Seed);
+	gpuDirectLightTaskSize += sizeof(ocl::Seed);
 
 	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Size of a GPUTask DirectLight: " << gpuDirectLightTaskSize << "bytes");
 	AllocOCLBufferRW(&tasksDirectLightBuff, gpuDirectLightTaskSize * taskCount, "GPUTaskDirectLight");
@@ -444,8 +441,7 @@ void PathOCLBaseOCLRenderThread::InitGPUTaskBuffer() {
 			sizeof(int);  // throughShadowTransparency
 
 	// Add seedPassThroughEvent memory size
-	if (hasPassThrough)
-		gpuTaskStateSize += sizeof(ocl::Seed);
+	gpuTaskStateSize += sizeof(ocl::Seed);
 
 	// Add BSDF memory size
 	gpuTaskStateSize += openCLBSDFSize;
@@ -622,22 +618,21 @@ void PathOCLBaseOCLRenderThread::InitSamplesBuffer() {
 
 void PathOCLBaseOCLRenderThread::InitSampleDataBuffer() {
 	const u_int taskCount = renderEngine->taskCount;
-	const bool hasPassThrough = renderEngine->compiledScene->RequiresPassThrough();
 
 	const size_t eyePathVertexDimension =
 		// IDX_SCREEN_X, IDX_SCREEN_Y, IDX_EYE_TIME
 		3 +
 		// IDX_EYE_PASSTROUGHT
-		(hasPassThrough ? 1 : 0) +
+		1 +
 		// IDX_DOF_X, IDX_DOF_Y
 		2;
 	const size_t PerPathVertexDimension =
 		// IDX_PASSTHROUGH,
-		(hasPassThrough ? 1 : 0) +
+		1 +
 		// IDX_BSDF_X, IDX_BSDF_Y
 		2 +
 		// IDX_DIRECTLIGHT_X, IDX_DIRECTLIGHT_Y, IDX_DIRECTLIGHT_Z, IDX_DIRECTLIGHT_W, IDX_DIRECTLIGHT_A
-		4 + (hasPassThrough ? 1 : 0) +
+		5 +
 		// IDX_RR
 		1;
 
