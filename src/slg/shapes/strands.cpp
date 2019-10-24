@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "luxrays/core/exttrianglemesh.h"
 #include "slg/shapes/strands.h"
 #include "slg/scene/scene.h"
 #include "slg/cameras/perspective.h"

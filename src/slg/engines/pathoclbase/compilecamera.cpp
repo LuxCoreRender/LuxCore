@@ -83,8 +83,8 @@ void CompiledScene::CompileCamera() {
 			const OrthographicCamera *orthoCamera = (OrthographicCamera *)sceneCamera;
 			cameraType = slg::ocl::ORTHOGRAPHIC;
 
-			memcpy(camera.base.rasterToCamera.m.m, orthoCamera->GetRasterToCameraMatrix().m, 4 * 4 * sizeof(float));
-			memcpy(camera.base.cameraToWorld.m.m, orthoCamera->GetCameraToWorldMatrix().m, 4 * 4 * sizeof(float));
+			memcpy(camera.base.rasterToCamera.m.m, orthoCamera->GetRasterToCamera().m.m, 4 * 4 * sizeof(float));
+			memcpy(camera.base.cameraToWorld.m.m, orthoCamera->GetCameraToWorld().m.m, 4 * 4 * sizeof(float));
 
 			camera.ortho.projCamera.lensRadius = orthoCamera->lensRadius;
 			camera.ortho.projCamera.focalDistance = orthoCamera->focalDistance;
@@ -102,8 +102,8 @@ void CompiledScene::CompileCamera() {
 			const PerspectiveCamera *perspCamera = (PerspectiveCamera *)sceneCamera;
 			cameraType = slg::ocl::PERSPECTIVE;
 
-			memcpy(camera.base.rasterToCamera.m.m, perspCamera->GetRasterToCameraMatrix().m, 4 * 4 * sizeof(float));
-			memcpy(camera.base.cameraToWorld.m.m, perspCamera->GetCameraToWorldMatrix().m, 4 * 4 * sizeof(float));
+			memcpy(camera.base.rasterToCamera.m.m, perspCamera->GetRasterToCamera().m.m, 4 * 4 * sizeof(float));
+			memcpy(camera.base.cameraToWorld.m.m, perspCamera->GetCameraToWorld().m.m, 4 * 4 * sizeof(float));
 
 			camera.persp.projCamera.lensRadius = perspCamera->lensRadius;
 			camera.persp.projCamera.focalDistance = perspCamera->focalDistance;
@@ -127,10 +127,10 @@ void CompiledScene::CompileCamera() {
 			camera.stereo.perspCamera.projCamera.lensRadius = stereoCamera->lensRadius;
 			camera.stereo.perspCamera.projCamera.focalDistance = stereoCamera->focalDistance;
 
-			memcpy(camera.stereo.leftEyeRasterToCamera.m.m, stereoCamera->GetRasterToCameraMatrix(0).m, 4 * 4 * sizeof(float));
-			memcpy(camera.stereo.leftEyeCameraToWorld.m.m, stereoCamera->GetCameraToWorldMatrix(0).m, 4 * 4 * sizeof(float));
-			memcpy(camera.stereo.rightEyeRasterToCamera.m.m, stereoCamera->GetRasterToCameraMatrix(1).m, 4 * 4 * sizeof(float));
-			memcpy(camera.stereo.rightEyeCameraToWorld.m.m, stereoCamera->GetCameraToWorldMatrix(1).m, 4 * 4 * sizeof(float));
+			memcpy(camera.stereo.leftEyeRasterToCamera.m.m, stereoCamera->GetRasterToCamera(0).m.m, 4 * 4 * sizeof(float));
+			memcpy(camera.stereo.leftEyeCameraToWorld.m.m, stereoCamera->GetCameraToWorld(0).m.m, 4 * 4 * sizeof(float));
+			memcpy(camera.stereo.rightEyeRasterToCamera.m.m, stereoCamera->GetRasterToCamera(1).m.m, 4 * 4 * sizeof(float));
+			memcpy(camera.stereo.rightEyeCameraToWorld.m.m, stereoCamera->GetCameraToWorld(1).m.m, 4 * 4 * sizeof(float));
 
 			enableCameraOculusRiftBarrel = stereoCamera->enableOculusRiftBarrel;
 			if (stereoCamera->enableClippingPlane) {
@@ -145,8 +145,8 @@ void CompiledScene::CompileCamera() {
 			const EnvironmentCamera *envCamera = (EnvironmentCamera *)sceneCamera;
 			cameraType = slg::ocl::ENVIRONMENT;
 
-			memcpy(camera.base.rasterToCamera.m.m, envCamera->GetRasterToCameraMatrix().m, 4 * 4 * sizeof(float));
-			memcpy(camera.base.cameraToWorld.m.m, envCamera->GetCameraToWorldMatrix().m, 4 * 4 * sizeof(float));
+			memcpy(camera.base.rasterToCamera.m.m, envCamera->GetRasterToCamera().m.m, 4 * 4 * sizeof(float));
+			memcpy(camera.base.cameraToWorld.m.m, envCamera->GetCameraToWorld().m.m, 4 * 4 * sizeof(float));
 
 			camera.env.projCamera.lensRadius = envCamera->lensRadius;
 			camera.env.projCamera.focalDistance = envCamera->focalDistance;

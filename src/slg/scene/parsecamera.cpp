@@ -202,6 +202,10 @@ Camera *Scene::CreateCamera(const Properties &props) {
 
 		camera->motionSystem = new MotionSystem(times, transforms);
 	}
+	
+	// I update the camera with dummy film width/height to initialize at least
+	// all no raster related transformations
+	camera->Update(100u, 100u, nullptr);
 
 	return camera.release();
 }

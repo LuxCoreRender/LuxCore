@@ -34,22 +34,31 @@ StereoCamera::~StereoCamera() {
 	delete rightEye;
 }
 
-Matrix4x4 StereoCamera::GetRasterToCameraMatrix(const u_int index) const {
+const Transform &StereoCamera::GetRasterToCamera(const u_int index) const {
 	if (index == 0)
-		return leftEye->GetRasterToCameraMatrix();
+		return leftEye->GetRasterToCamera();
 	else if (index == 1)
-		return rightEye->GetRasterToCameraMatrix();
+		return rightEye->GetRasterToCamera();
 	else
-		throw runtime_error("Unknown index in GetRasterToCameraMatrix(): " + ToString(index));
+		throw runtime_error("Unknown index in GetRasterToCamera(): " + ToString(index));
 }
 
-Matrix4x4 StereoCamera::GetCameraToWorldMatrix(const u_int index) const {
+const Transform &StereoCamera::GetCameraToWorld(const u_int index) const {
 	if (index == 0)
-		return leftEye->GetCameraToWorldMatrix();
+		return leftEye->GetCameraToWorld();
 	else if (index == 1)
-		return rightEye->GetCameraToWorldMatrix();
+		return rightEye->GetCameraToWorld();
 	else
-		throw runtime_error("Unknown index in GetCameraToWorldMatrix(): " + ToString(index));
+		throw runtime_error("Unknown index in GetCameraToWorld(): " + ToString(index));
+}
+
+const Transform &StereoCamera::GetScreenToWorld(const u_int index) const {
+	if (index == 0)
+		return leftEye->GetScreenToWorld();
+	else if (index == 1)
+		return rightEye->GetScreenToWorld();
+	else
+		throw runtime_error("Unknown index in GetScreenToWorld(): " + ToString(index));
 }
 
 void StereoCamera::Update(const u_int width, const u_int height,

@@ -30,6 +30,7 @@
 
 #if defined(_OPENMP)
 
+#include <omp.h>
 #include <opensubdiv/osd/ompEvaluator.h>
 #define OSD_EVALUATOR Osd::OmpEvaluator
 
@@ -40,7 +41,9 @@
 
 #endif
 
+#include "luxrays/core/exttrianglemesh.h"
 #include "slg/shapes/subdiv.h"
+#include "slg/cameras/camera.h"
 #include "slg/scene/scene.h"
 
 using namespace std;
@@ -93,11 +96,59 @@ template <u_int DIMENSIONS> static Osd::CpuVertexBuffer *BuildBuffer(
 	return buffer;
 }
 
-SubdivShape::SubdivShape(ExtTriangleMesh *srcMesh, const u_int maxLevel) {
-	SDL_LOG("Subdividing shape " << srcMesh->GetName() << " at level: " << maxLevel);
+float SubdivShape::MaxEdgeScreenSize(const Camera *camera, ExtTriangleMesh *srcMesh) {
+	const u_int triCount = srcMesh->GetTotalTriangleCount();
+	const Point *verts = srcMesh->GetVertices();
+	const Triangle *tris = srcMesh->GetTriangles();
 
-	const double startTime = WallClockTime();
+	// Note VisualStudio doesn't support:
+	//#pragma omp parallel for reduction(max:maxEdgeSize)
 
+	const u_int threadCount =
+#if defined(_OPENMP)
+			omp_get_max_threads()
+#else
+			0
+#endif
+			;
+
+	const Transform wolrdToScreen = Inverse(camera->GetScreenToWorld());
+	
+	vector<float> maxEdgeSizes(threadCount, 0.f);
+	for(
+			// Visual C++ 2013 supports only OpenMP 2.5
+#if _OPENMP >= 200805
+			unsigned
+#endif
+			i = 0; i < triCount; ++i) {
+		const int tid =
+#if defined(_OPENMP)
+			omp_get_thread_num()
+#else
+			0
+#endif
+			;
+		
+		const Triangle &tri = tris[i];
+		const Point p0 = wolrdToScreen * verts[tri.v[0]];
+		const Point p1 = wolrdToScreen * verts[tri.v[1]];
+		const Point p2 = wolrdToScreen * verts[tri.v[2]];
+		
+		float maxEdgeSize = (p1 - p0).Length();
+		maxEdgeSize = Max(maxEdgeSize, (p2 - p1).Length());
+		maxEdgeSize = Max(maxEdgeSize, (p0 - p2).Length());
+		
+		maxEdgeSizes[tid] = Max(maxEdgeSizes[tid], maxEdgeSize);
+	}
+	
+	float maxEdgeSize = 0.f;
+	for (u_int i = 0; i < threadCount; ++i)
+		maxEdgeSize = Max(maxEdgeSize, maxEdgeSizes[i]);
+	
+	return maxEdgeSize;
+}
+
+ExtTriangleMesh *SubdivShape::ApplySubdiv(ExtTriangleMesh *srcMesh, const u_int maxLevel) {
 	//--------------------------------------------------------------------------
 	// Define the mesh
 	//--------------------------------------------------------------------------
@@ -116,7 +167,7 @@ SubdivShape::SubdivShape(ExtTriangleMesh *srcMesh, const u_int maxLevel) {
 
 	// Look for mesh boundary edges
 	unordered_map<Edge, u_int, EdgeHashFunction> edgesMap;
-		const u_int triCount = srcMesh->GetTotalTriangleCount();
+	const u_int triCount = srcMesh->GetTotalTriangleCount();
 	const Triangle *tris = srcMesh->GetTriangles();
 
 	// Count how many times an edge is shared
@@ -337,9 +388,47 @@ SubdivShape::SubdivShape(ExtTriangleMesh *srcMesh, const u_int maxLevel) {
 	delete alphasBuffer;
 
 	// Allocate the new mesh
-	SDL_LOG("Subdividing shape from " << desc.numFaces << " to " << newTrisCount << " faces");
-	mesh = new ExtTriangleMesh(newVertsCount, newTrisCount, newVerts, newTris,
+	return new ExtTriangleMesh(newVertsCount, newTrisCount, newVerts, newTris,
 			newNorms, newUVs, newCols, newAlphas);
+}
+
+SubdivShape::SubdivShape(const Camera *camera, ExtTriangleMesh *srcMesh,
+		const u_int maxLevel, const float maxEdgeScreenSize) {
+	const double startTime = WallClockTime();
+
+	if (maxLevel > 0) {
+		if (camera && (maxEdgeScreenSize > 0.f)) {
+			SDL_LOG("Subdividing shape " << srcMesh->GetName() << " max. at level: " << maxLevel);
+
+			mesh = srcMesh->Copy();
+			
+			for (u_int i = 0; i < maxLevel; ++i) {
+				// Check the size of the longest mesh edge on film image plane
+				const float edgeScreenSize = MaxEdgeScreenSize(camera, mesh);
+				SDL_LOG("Subdividing shape current max. edge screen size: " << edgeScreenSize);
+
+				if (edgeScreenSize <= maxEdgeScreenSize)
+					break;
+
+				// Subdivide by one level and re-try
+				ExtTriangleMesh *newMesh = ApplySubdiv(mesh, 1);
+				SDL_LOG("Subdivided shape step #" << i << " from " << mesh->GetTotalTriangleCount() << " to " << newMesh->GetTotalTriangleCount() << " faces");
+
+				// Replace old mesh with new one
+				delete mesh;
+				mesh = newMesh;
+			}
+		} else {
+			SDL_LOG("Subdividing shape " << srcMesh->GetName() << " at level: " << maxLevel);
+
+			mesh = ApplySubdiv(srcMesh, maxLevel);
+		}
+	} else {
+		// Nothing to do, just make a copy
+		srcMesh = srcMesh->Copy();
+	}
+
+	SDL_LOG("Subdivided shape from " << srcMesh->GetTotalTriangleCount() << " to " << mesh->GetTotalTriangleCount() << " faces");
 
 	// For some debugging
 	//mesh->Save("debug.ply");

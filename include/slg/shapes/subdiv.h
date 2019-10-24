@@ -25,12 +25,19 @@
 
 namespace slg {
 
+class Camera;
+
 class SubdivShape : public Shape {
 public:
-	SubdivShape(luxrays::ExtTriangleMesh *srcMesh, const u_int maxLevel);
+	SubdivShape(const Camera *camera, luxrays::ExtTriangleMesh *srcMesh,
+			const u_int maxLevel, const float maxEdgeScreenSize);
 	virtual ~SubdivShape();
 
 	virtual ShapeType GetType() const { return SUBDIV; }
+
+	static float MaxEdgeScreenSize(const Camera *camera, luxrays::ExtTriangleMesh *srcMesh);
+	static luxrays::ExtTriangleMesh *ApplySubdiv(luxrays::ExtTriangleMesh *srcMesh,
+			const u_int maxLevel);
 
 protected:
 	virtual luxrays::ExtTriangleMesh *RefineImpl(const Scene *scene);

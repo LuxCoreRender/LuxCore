@@ -1,4 +1,7 @@
-scene.camera.lookat = 7.481132 -6.50764 5.343665 0.932513 -0.400984 0.891212
+scene.camera.type = "perspective"
+scene.camera.lookat.orig = 7.48113203 -6.50763988 5.34366512
+scene.camera.lookat.target = 0.932512999 -0.400983989 0.891211987
+scene.camera.fieldofview = 45
 ################################################################################
 scene.materials.mat_light.type = matte
 scene.materials.mat_light.emission = 20. 20. 20.
@@ -21,7 +24,8 @@ scene.shapes.obj_redply.type = mesh
 scene.shapes.obj_redply.ply = scenes/bump/mat_red.ply
 scene.shapes.obj_red.type = subdiv
 scene.shapes.obj_red.source = obj_redply
-scene.shapes.obj_red.maxlevel = 1
+scene.shapes.obj_red.maxlevel = 3
+scene.shapes.obj_red.maxedgescreensize = 0.1
 ################################################################################
 scene.objects.obj_light.ply = scenes/bump/mat_light.ply
 scene.objects.obj_light.material = mat_light

@@ -18,6 +18,7 @@
 
 #include <boost/format.hpp>
 
+#include "luxrays/core/exttrianglemesh.h"
 #include "slg/shapes/pointiness.h"
 #include "slg/scene/scene.h"
 

@@ -30,8 +30,9 @@ public:
 			const luxrays::Vector &up);
 	virtual ~StereoCamera();
 
-	luxrays::Matrix4x4 GetRasterToCameraMatrix(const u_int index = 0) const;
-	luxrays::Matrix4x4 GetCameraToWorldMatrix(const u_int index = 0) const;
+	const luxrays::Transform &GetRasterToCamera(const u_int index = 0) const;
+	const luxrays::Transform &GetCameraToWorld(const u_int index = 0) const;
+	const luxrays::Transform &GetScreenToWorld(const u_int index = 0) const;
 
 	// Preprocess/update methods
 	virtual void Update(const u_int filmWidth, const u_int filmHeight,

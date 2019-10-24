@@ -41,6 +41,7 @@ scene.shapes.sphereply.ply = sphere.ply
 scene.shapes.spheresubdiv.type = subdiv
 scene.shapes.spheresubdiv.source = sphereply
 scene.shapes.spheresubdiv.maxlevel = 5
+scene.shapes.spheresubdiv.maxedgescreensize = 0.02
 ##
 scene.shapes.sphere.type = displacement
 scene.shapes.sphere.source = spheresubdiv

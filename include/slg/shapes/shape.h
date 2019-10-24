@@ -21,7 +21,9 @@
 
 #include <vector>
 
-#include "luxrays/core/exttrianglemesh.h"
+namespace luxrays {
+	class ExtTriangleMesh;
+}
 
 namespace slg {
 

@@ -59,9 +59,10 @@ public:
 	virtual luxrays::BBox GetBBox() const = 0;
 
 	virtual const luxrays::Vector GetDir() const = 0;
-	// Used for compiling camera information for OpenCL
-	virtual luxrays::Matrix4x4 GetRasterToCameraMatrix(const u_int index = 0) const = 0;
-	virtual luxrays::Matrix4x4 GetCameraToWorldMatrix(const u_int index = 0) const = 0;
+	// Used for compiling camera information for OpenCL (and more)
+	virtual const luxrays::Transform &GetRasterToCamera(const u_int index = 0) const = 0;
+	virtual const luxrays::Transform &GetCameraToWorld(const u_int index = 0) const = 0;
+	virtual const luxrays::Transform &GetScreenToWorld(const u_int index = 0) const = 0;
 
 	// Mostly used by GUIs
 	virtual void Translate(const luxrays::Vector &t) = 0;
