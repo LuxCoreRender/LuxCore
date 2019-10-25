@@ -93,8 +93,8 @@ OPENCL_FORCE_INLINE float3 ExtMesh_GetInterpolateColor(
 		const float b1, const float b2
 		EXTMESH_PARAM_DECL) {
 	__global const ExtMesh* restrict meshDesc = &meshDescs[meshIndex];
-	
-	float3 c = 0.f;
+
+	float3 c = WHITE;
 	if (meshDesc->colsOffset != NULL_INDEX) {
 		__global const Spectrum* restrict vcs = &vertCols[meshDesc->colsOffset];
 		__global const Triangle* restrict tri = &triangles[meshDesc->trisOffset + triangleIndex];
@@ -115,7 +115,7 @@ OPENCL_FORCE_INLINE float ExtMesh_GetInterpolateAlpha(
 		EXTMESH_PARAM_DECL) {
 	__global const ExtMesh* restrict meshDesc = &meshDescs[meshIndex];
 	
-	float a = 0.f;
+	float a = 1.f;
 	if (meshDesc->alphasOffset != NULL_INDEX) {
 		__global const float* restrict vas = &vertAlphas[meshDesc->alphasOffset];
 		__global const Triangle* restrict tri = &triangles[meshDesc->trisOffset + triangleIndex];
