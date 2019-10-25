@@ -78,7 +78,7 @@ u_int FilmConvTest::Test() {
 	if (IsTestUpdateRequired()) {
 		lastSamplesCount = film->GetTotalSampleCount();
 
-		const u_int index = Min(imagePipelineIndex, film->GetImagePipelineCount() - 1);
+		const u_int index = (imagePipelineIndex <= (film->GetImagePipelineCount() - 1)) ? imagePipelineIndex : 0;
 
 		if (firstTest) {
 			SLG_LOG("Convergence test first pass");
