@@ -118,7 +118,7 @@ u_int FilmConvTest::Test() {
 
 
 			// Copy the current image
-			referenceImage->Copy(film->channel_IMAGEPIPELINEs[0]);
+			referenceImage->Copy(film->channel_IMAGEPIPELINEs[index]);
 
 			SLG_LOG("Convergence test: ToDo Pixels = " << todoPixelsCount << ", Max. Error = " << maxError << " [" << (256.f * maxError) << "/256]");
 

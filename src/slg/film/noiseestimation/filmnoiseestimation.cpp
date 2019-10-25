@@ -198,7 +198,7 @@ void FilmNoiseEstimation::Test() {
 		}
 
 		// Copy the current image
-		referenceImage->Copy(film->channel_IMAGEPIPELINEs[0]);
+		referenceImage->Copy(film->channel_IMAGEPIPELINEs[index]);
 	}
 }
 
