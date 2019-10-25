@@ -48,19 +48,22 @@ scene.shapes.obj_red_3.source = obj_redsimplify_2
 ################################################################################
 scene.objects.obj_light.ply = scenes/bump/mat_light.ply
 scene.objects.obj_light.material = mat_light
-scene.objects.obj_light.transformation = 1 0 0 0  0 1 0 0  0 0 1 0  -8 -8 4 1
+scene.objects.obj_light.transformation = 1 0 0 0  0 1 0 0  0 0 1 0  -12 -8 4 1
 #scene.objects.obj_light2.ply = scenes/bump/mat_light2.ply
 #scene.objects.obj_light2.material = mat_light2
 ##
-scene.objects.obj_red_1.ply = obj_red_1
+#scene.objects.obj_red_1.ply = obj_red_1
+scene.objects.obj_red_1.ply = obj_redsubdiv
 scene.objects.obj_red_1.material = mat_red
 scene.objects.obj_red_1.transformation = 1 0 0 0  0 1 0 0  0 0 1 0  -4 0 0 1
 ##
-scene.objects.obj_red_2.ply = obj_red_2
+#scene.objects.obj_red_2.ply = obj_red_2
+scene.objects.obj_red_2.ply = obj_redsimplify_1
 scene.objects.obj_red_2.material = mat_red
 scene.objects.obj_red_2.transformation = 1 0 0 0  0 1 0 0  0 0 1 0  0 0 0 1
 ##
-scene.objects.obj_red_3.ply = obj_red_3
+#scene.objects.obj_red_3.ply = obj_red_3
+scene.objects.obj_red_3.ply = obj_redsimplify_2
 scene.objects.obj_red_3.material = mat_red
 scene.objects.obj_red_3.transformation = 1 0 0 0  0 1 0 0  0 0 1 0  4 0 0 1
 ##

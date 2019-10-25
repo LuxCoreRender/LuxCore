@@ -131,39 +131,25 @@ public:
 
 
 class Simplify {
-private:
-	struct Triangle {
-		u_int v[3];
-		Normal geometryN;
-		float err[4];
-		bool deleted, dirty;
-	};
-
-	struct Vertex {
-		Point p;
-		u_int tstart, tcount;
-		SymetricMatrix q;
-		bool border;
-	};
-
-	struct Ref {
-		int tid, tvertex;
-	};
-	
-	vector<Triangle> triangles;
-	vector<Vertex> vertices;
-	vector<Ref> refs;
-
 public:
 	Simplify(const ExtTriangleMesh &srcMesh) {
 		const u_int vertCount = srcMesh.GetTotalVertexCount();
 		const u_int triCount = srcMesh.GetTotalTriangleCount();
 		const Point *verts = srcMesh.GetVertices();
-		const luxrays::Triangle *tris = srcMesh.GetTriangles();
+		const Triangle *tris = srcMesh.GetTriangles();
 
 		vertices.resize(vertCount);
 		for (u_int i = 0; i < vertCount; ++i)
 			vertices[i].p = verts[i];
+		
+		if (srcMesh.HasNormals()) {
+			const Normal *norms = srcMesh.GetNormals();
+			for (u_int i = 0; i < vertCount; ++i)
+				vertices[i].shadeN = norms[i];
+
+			hasShadeN = true;
+		} else
+			hasShadeN = false;
 
 		triangles.resize(triCount);
 		for (u_int i = 0; i < triCount; ++i) {
@@ -179,19 +165,26 @@ public:
 	ExtTriangleMesh *GetExtMesh() const {
 		const u_int vertCount = vertices.size();
 		const u_int triCount = triangles.size();
-		Point *newVertices = ExtTriangleMesh::AllocVerticesBuffer(vertCount);
-		luxrays::Triangle *newTris = ExtTriangleMesh::AllocTrianglesBuffer(triCount);
-		
+
+		Point *newVertices = ExtTriangleMesh::AllocVerticesBuffer(vertCount);		
 		for (u_int i = 0; i < vertCount; ++i)
 			newVertices[i] = vertices[i].p;
 		
+		Normal *newNorms = nullptr;
+		if (hasShadeN) {
+			newNorms = new Normal[vertCount];
+			for (u_int i = 0; i < vertCount; ++i)
+				newNorms[i] = vertices[i].shadeN;
+		}
+		
+		Triangle *newTris = ExtTriangleMesh::AllocTrianglesBuffer(triCount);
 		for (u_int i = 0; i < triCount; ++i) {
 			newTris[i].v[0] = triangles[i].v[0];
 			newTris[i].v[1] = triangles[i].v[1];
 			newTris[i].v[2] = triangles[i].v[2];
 		}
 		
-		return new ExtTriangleMesh(vertCount, triCount, newVertices, newTris);
+		return new ExtTriangleMesh(vertCount, triCount, newVertices, newTris, newNorms);
 	}
 	
 	void Decimate(const float errorScale) {
@@ -225,7 +218,7 @@ public:
 
 			// Remove vertices & mark deleted triangles
 			for (u_int i = 0; i < triangles.size(); ++i) {
-				Triangle &t = triangles[i];
+				SimplifyTriangle &t = triangles[i];
 
 				if (t.err[3] > threshold)
 					continue;
@@ -234,13 +227,21 @@ public:
 				if (t.dirty)
 					continue;
 
+				const Point triPoint0 = vertices[t.v[0]].p;
+				const Point triPoint1 = vertices[t.v[1]].p;
+				const Point triPoint2 = vertices[t.v[2]].p;
+
+				const Normal triShadeN0 = vertices[t.v[0]].shadeN;
+				const Normal triShadeN1 = vertices[t.v[1]].shadeN;
+				const Normal triShadeN2 = vertices[t.v[2]].shadeN;
+
 				for (u_int j = 0; j < 3; ++j) {
 					if (t.err[j] < threshold) {
 						u_int i0 = t.v[j];
-						Vertex &v0 = vertices[i0];
+						SimplifyVertex &v0 = vertices[i0];
 						
 						const u_int i1 = t.v[(j + 1) % 3];
-						Vertex &v1 = vertices[i1];
+						SimplifyVertex &v1 = vertices[i1];
 
 						// Border check
 						if (v0.border != v1.border)
@@ -253,16 +254,29 @@ public:
 						deleted0.resize(v0.tcount); // normals temporarily
 						deleted1.resize(v1.tcount); // normals temporarily
 
-						// don't remove if flipped
+						// Don't remove if flipped
 						if (Flipped(p, i0, i1, v0, v1, deleted0))
 							continue;
 						if (Flipped(p, i1, i0, v1, v0, deleted1))
 							continue;
 
 						// Not flipped, so remove edge
-						v0.p = p;
+						v0.p = p;		
 						v0.q = v1.q + v0.q;
-						u_int tstart = refs.size();
+
+						// Interpolate other vertex attributes
+						float b1, b2;
+						Triangle::GetBaryCoords(
+								triPoint0,
+								triPoint1,
+								triPoint2,
+								p, &b1, &b2);
+						const float b0 = 1.f - b1 - b2;
+
+						if (hasShadeN)
+							v0.shadeN = Normalize(b0 * triShadeN0 + b1 * triShadeN1 + b2 * triShadeN2);
+
+						const u_int tstart = refs.size();
 
 						UpdateTriangles(i0, v0, deleted0, deletedTriangles);
 						UpdateTriangles(i0, v1, deleted1, deletedTriangles);
@@ -270,10 +284,11 @@ public:
 						const u_int tcount = refs.size() - tstart;
 
 						if (tcount <= v0.tcount) {
-							// save ram
-							if (tcount)memcpy(&refs[v0.tstart], &refs[tstart], tcount * sizeof (Ref));
+							// Save ram
+							if (tcount)
+								memcpy(&refs[v0.tstart], &refs[tstart], tcount * sizeof (SimplifyRef));
 						} else
-							// append
+							// Append
 							v0.tstart = tstart;
 
 						v0.tcount = tcount;
@@ -281,7 +296,10 @@ public:
 					}
 				}
 			}
-			if (deletedTriangles <= 0)break;
+
+			if (deletedTriangles <= 0)
+				break;
+
 			deletedTriangles = 0;
 		}
 
@@ -290,12 +308,38 @@ public:
 	}
 
 private:
+	struct SimplifyTriangle {
+		u_int v[3];
+		Normal geometryN;
+		float err[4];
+		bool deleted, dirty;
+	};
+
+	struct SimplifyVertex {
+		Point p;
+		Normal shadeN;
+
+		u_int tstart, tcount;
+		SymetricMatrix q;
+
+		bool border;
+	};
+
+	struct SimplifyRef {
+		int tid, tvertex;
+	};
+	
+	vector<SimplifyTriangle> triangles;
+	vector<SimplifyVertex> vertices;
+	vector<SimplifyRef> refs;
+	bool hasShadeN;
+
 	// Check if a triangle flips when this edge is removed
 	bool Flipped(const Point &p, const u_int i0, const u_int i1,
-			const Vertex &v0, const Vertex &v1,
+			const SimplifyVertex &v0, const SimplifyVertex &v1,
 			vector<bool> &deleted) {
 		for (u_int k = 0; k < v0.tcount; ++k) {
-			Triangle &t = triangles[refs[v0.tstart + k].tid];
+			SimplifyTriangle &t = triangles[refs[v0.tstart + k].tid];
 
 			if (t.deleted)
 				continue;
@@ -327,13 +371,13 @@ private:
 
 
 	// Update triangle connections and edge error after a edge is collapsed
-	void UpdateTriangles(const u_int i0, const Vertex &v, const  vector<bool> &deleted,
+	void UpdateTriangles(const u_int i0, const SimplifyVertex &v, const  vector<bool> &deleted,
 			u_int &deletedTriangles) {
 		Point p;
 
 		for (u_int k = 0; k < v.tcount; ++k) {
-			Ref &r = refs[v.tstart + k];
-			Triangle &t = triangles[r.tid];
+			SimplifyRef &r = refs[v.tstart + k];
+			SimplifyTriangle &t = triangles[r.tid];
 
 			if (t.deleted)
 				continue;
@@ -379,7 +423,7 @@ private:
 				vertices[i].q = SymetricMatrix(0.0);
 
 			for (u_int i = 0; i < triangles.size(); ++i) {
-				Triangle &t = triangles[i];
+				SimplifyTriangle &t = triangles[i];
 
 				Point p[3];
 				p[0] = vertices[t.v[0]].p;
@@ -398,7 +442,7 @@ private:
 
 			for (u_int i = 0; i < triangles.size(); ++i) {
 				// Calc Edge Error
-				Triangle &t = triangles[i];
+				SimplifyTriangle &t = triangles[i];
 
 				Point p;
 				t.err[0] = CalculateError(t.v[0], t.v[1], p);
@@ -416,7 +460,7 @@ private:
 		}
 
 		for (u_int i = 0; i < triangles.size(); ++i) {
-			Triangle &t = triangles[i];
+			SimplifyTriangle &t = triangles[i];
 
 			vertices[t.v[0]].tcount++;
 			vertices[t.v[1]].tcount++;
@@ -425,7 +469,7 @@ private:
 
 		u_int tstart = 0;
 		for (u_int i = 0; i < vertices.size(); ++i) {
-			Vertex &v = vertices[i];
+			SimplifyVertex &v = vertices[i];
 
 			v.tstart = tstart;
 			tstart += v.tcount;
@@ -435,10 +479,10 @@ private:
 		// Write References
 		refs.resize(triangles.size() * 3);
 		for (u_int i = 0; i < triangles.size(); ++i) {
-			Triangle &t = triangles[i];
+			SimplifyTriangle &t = triangles[i];
 
 			for (u_int j = 0; j < 3; ++j) {
-				Vertex &v = vertices[t.v[j]];
+				SimplifyVertex &v = vertices[t.v[j]];
 
 				refs[v.tstart + v.tcount].tid = i;
 				refs[v.tstart + v.tcount].tvertex = j;
@@ -454,13 +498,13 @@ private:
 
 			vector<u_int> vcount, vids;
 			for (u_int i = 0; i < vertices.size(); ++i) {
-				Vertex &v = vertices[i];
+				SimplifyVertex &v = vertices[i];
 				vcount.clear();
 				vids.clear();
 
 				for (u_int j = 0; j < v.tcount; ++j) {
 					int k = refs[v.tstart + j].tid;
-					Triangle &t = triangles[k];
+					SimplifyTriangle &t = triangles[k];
 
 					for (u_int k = 0; k < 3; ++k) {
 						u_int ofs = 0;
@@ -498,7 +542,7 @@ private:
 
 		for (u_int i = 0; i < triangles.size(); ++i) {
 			if (!triangles[i].deleted) {
-				Triangle &t = triangles[i];
+				const SimplifyTriangle &t = triangles[i];
 				triangles[dst++] = t;
 
 				vertices[t.v[0]].tcount = 1;
@@ -513,12 +557,14 @@ private:
 			if (vertices[i].tcount) {
 				vertices[i].tstart = dst;
 				vertices[dst].p = vertices[i].p;
+				if (hasShadeN)
+					vertices[dst].shadeN = vertices[i].shadeN;
 				dst++;
 			}
 		}
 
 		for (u_int i = 0; i < triangles.size(); ++i) {
-			Triangle &t = triangles[i];
+			SimplifyTriangle &t = triangles[i];
 
 			t.v[0] = vertices[t.v[0]].tstart;
 			t.v[1] = vertices[t.v[1]].tstart;
