@@ -34,6 +34,7 @@
 #include "slg/shapes/subdiv.h"
 #include "slg/shapes/displacement.h"
 #include "slg/shapes/harlequinshape.h"
+#include "slg/shapes/simplify.h"
 
 using namespace std;
 using namespace luxrays;
@@ -314,6 +315,14 @@ ExtTriangleMesh *Scene::CreateShape(const string &shapeName, const Properties &p
 			throw runtime_error("Unknown shape name in a harlequin shape: " + shapeName);
 		
 		shape = new HarlequinShape((ExtTriangleMesh *)extMeshCache.GetExtMesh(sourceMeshName));
+	} else if (shapeType == "simplify") {
+		const string sourceMeshName = props.Get(Property(propName + ".source")("")).Get<string>();
+		if (!extMeshCache.IsExtMeshDefined(sourceMeshName))
+			throw runtime_error("Unknown shape name in a simplify shape: " + shapeName);
+		
+		const float errorScale = props.Get(Property(propName + ".errorscale")(1.f)).Get<float>();
+		
+		shape = new SimplifyShape((ExtTriangleMesh *)extMeshCache.GetExtMesh(sourceMeshName), errorScale);
 	} else
 		throw runtime_error("Unknown shape type: " + shapeType);
 

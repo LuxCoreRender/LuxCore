@@ -58,7 +58,6 @@ HarlequinShape::HarlequinShape(luxrays::ExtTriangleMesh *srcMesh) {
 		newVertCols[newTri.v[2]] = col;
 	}
 	
-	// Make a copy of the original mesh and overwrite vertex informations
 	mesh = new ExtTriangleMesh(triCount * 3, triCount, newVertices, newTris,
 			nullptr, nullptr, newVertCols);
 	
@@ -66,7 +65,7 @@ HarlequinShape::HarlequinShape(luxrays::ExtTriangleMesh *srcMesh) {
 	//mesh->Save("debug.ply");
 	
 	const double endTime = WallClockTime();
-	SDL_LOG("Displacement time: " << (boost::format("%.3f") % (endTime - startTime)) << "secs");
+	SDL_LOG("Harlequin time: " << (boost::format("%.3f") % (endTime - startTime)) << "secs");
 }
 
 HarlequinShape::~HarlequinShape() {

@@ -114,7 +114,8 @@ A special thanks goes to:
 - Eigen authors (http://eigen.tuxfamily.org);
 - Yangli Hector Yee, Steven Myint and Jeff Terrace for perceptualdiff (https://github.com/myint/perceptualdiff);
 - Christian Pfligersdorffer for EOS portable archive (http://www.eos.info);
-- Michael Labbe for Native File Dialog (https://github.com/mlabbe/nativefiledialog).
+- Michael Labbe for Native File Dialog (https://github.com/mlabbe/nativefiledialog);
+- Sven Forstmann's quadric mesh simplification code (https://github.com/sp4cerat/Fast-Quadric-Mesh-Simplification).
 
 ### License
 

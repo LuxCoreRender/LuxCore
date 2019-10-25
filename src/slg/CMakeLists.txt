@@ -482,6 +482,7 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/shapes/meshshape.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/shapes/pointiness.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/shapes/shape.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/shapes/simplify.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/shapes/strands.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/shapes/subdiv.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/slg.cpp
