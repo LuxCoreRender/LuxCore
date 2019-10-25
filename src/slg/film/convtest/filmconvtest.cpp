@@ -78,7 +78,7 @@ u_int FilmConvTest::Test() {
 	if (IsTestUpdateRequired()) {
 		lastSamplesCount = film->GetTotalSampleCount();
 
-		const u_int index = Min(imagePipelineIndex, film->GetImagePipelineCount() - 1);
+		const u_int index = (imagePipelineIndex <= (film->GetImagePipelineCount() - 1)) ? imagePipelineIndex : 0;
 
 		if (firstTest) {
 			SLG_LOG("Convergence test first pass");
@@ -118,7 +118,7 @@ u_int FilmConvTest::Test() {
 
 
 			// Copy the current image
-			referenceImage->Copy(film->channel_IMAGEPIPELINEs[0]);
+			referenceImage->Copy(film->channel_IMAGEPIPELINEs[index]);
 
 			SLG_LOG("Convergence test: ToDo Pixels = " << todoPixelsCount << ", Max. Error = " << maxError << " [" << (256.f * maxError) << "/256]");
 

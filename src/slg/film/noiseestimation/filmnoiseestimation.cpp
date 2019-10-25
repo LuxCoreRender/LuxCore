@@ -89,7 +89,7 @@ void FilmNoiseEstimation::Test() {
 	
 	lastSamplesCount = film->GetTotalSampleCount();
 
-	const u_int index = Min(imagePipelineIndex, film->GetImagePipelineCount() - 1);
+	const u_int index = (imagePipelineIndex <= (film->GetImagePipelineCount() - 1)) ? imagePipelineIndex : 0;
 
 	if (firstTest) {
 		SLG_LOG("Noise estimation: first pass");
@@ -198,7 +198,7 @@ void FilmNoiseEstimation::Test() {
 		}
 
 		// Copy the current image
-		referenceImage->Copy(film->channel_IMAGEPIPELINEs[0]);
+		referenceImage->Copy(film->channel_IMAGEPIPELINEs[index]);
 	}
 }
 
