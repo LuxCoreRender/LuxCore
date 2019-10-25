@@ -396,6 +396,9 @@ SubdivShape::SubdivShape(const Camera *camera, ExtTriangleMesh *srcMesh,
 		const u_int maxLevel, const float maxEdgeScreenSize) {
 	const double startTime = WallClockTime();
 
+	if ((maxEdgeScreenSize > 0.f) && !camera)
+		throw runtime_error("The scene camera must be defined in order to enable subdiv maxedgescreensize option");
+
 	if (maxLevel > 0) {
 		if (camera && (maxEdgeScreenSize > 0.f)) {
 			SDL_LOG("Subdividing shape " << srcMesh->GetName() << " max. at level: " << maxLevel);

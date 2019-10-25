@@ -20,6 +20,7 @@
 * Changed object and material ID for background to 0 (from 0xffffffff)
 * Added the support for screen space subdivision limit to SubdivShape
 * Using/Not using any type of transparency doesn't requires OpenCL compilation anymore (removed PARAM_HAS_PASSTHROUGH conditional OpenCL compilation)
+* Added an Harlequin shape (mostly to debug meshes)
 
 ### Fixed Bugs
 

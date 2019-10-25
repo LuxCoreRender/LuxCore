@@ -33,6 +33,7 @@
 #include "slg/shapes/groupshape.h"
 #include "slg/shapes/subdiv.h"
 #include "slg/shapes/displacement.h"
+#include "slg/shapes/harlequinshape.h"
 
 using namespace std;
 using namespace luxrays;
@@ -307,6 +308,12 @@ ExtTriangleMesh *Scene::CreateShape(const string &shapeName, const Properties &p
 
 		shape = new DisplacementShape((ExtTriangleMesh *)extMeshCache.GetExtMesh(sourceMeshName),
 				*tex, params);
+	} else if (shapeType == "harlequin") {
+		const string sourceMeshName = props.Get(Property(propName + ".source")("")).Get<string>();
+		if (!extMeshCache.IsExtMeshDefined(sourceMeshName))
+			throw runtime_error("Unknown shape name in a harlequin shape: " + shapeName);
+		
+		shape = new HarlequinShape((ExtTriangleMesh *)extMeshCache.GetExtMesh(sourceMeshName));
 	} else
 		throw runtime_error("Unknown shape type: " + shapeType);
 

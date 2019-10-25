@@ -16,46 +16,28 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_SHAPE_H
-#define	_SLG_SHAPE_H
+#ifndef _SLG_HARLEQUINSHAPE_H
+#define	_SLG_HARLEQUINSHAPE_H
 
-#include <vector>
+#include <string>
 
-namespace luxrays {
-	class ExtTriangleMesh;
-}
+#include "slg/shapes/shape.h"
 
 namespace slg {
 
-class Scene;
-
-class Shape {
+class HarlequinShape : public Shape {
 public:
-	typedef enum {
-		MESH,
-		POINTINESS,
-		STRANDS,
-		GROUP,
-		SUBDIV,
-		DISPLACEMENT,
-		HARLEQUIN
-	} ShapeType;
+	HarlequinShape(luxrays::ExtTriangleMesh *srcMesh);
+	virtual ~HarlequinShape();
 
-	Shape() : refined(false) { }
-	virtual ~Shape() { }
-
-	virtual ShapeType GetType() const = 0;
-
-	// Note: this method can be called only once and the object is not usable
-	// anymore (this is mostly due to optimize memory management).
-	luxrays::ExtTriangleMesh *Refine(const Scene *scene);
+	virtual ShapeType GetType() const { return HARLEQUIN; }
 
 protected:
-	virtual luxrays::ExtTriangleMesh *RefineImpl(const Scene *scene) = 0;
-	
-	bool refined;
+	virtual luxrays::ExtTriangleMesh *RefineImpl(const Scene *scene);
+
+	luxrays::ExtTriangleMesh *mesh;
 };
 
 }
 
-#endif	/* _SLG_SHAPE_H */
+#endif	/* _SLG_HARLEQUINSHAPE_H */
