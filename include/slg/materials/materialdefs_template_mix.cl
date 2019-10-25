@@ -77,7 +77,6 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_GetPassTh
 		}
 	}
 }
-#endif
 
 OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Albedo(__global const Material* restrict material,
 		__global const HitPoint *hitPoint

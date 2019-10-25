@@ -119,7 +119,7 @@ OPENCL_FORCE_NOT_INLINE void BSDF_InitVolume(
 	bsdf->hitPoint.passThroughEvent = passThroughEvent;
 
 	bsdf->sceneObjectIndex = NULL_INDEX;
-	Matrix4x4_IdentityGlobal(&bsdf->hitPoint.localToWorld.m.m[0][0]);
+	Matrix4x4_IdentityGlobal(&bsdf->hitPoint.localToWorld.m);
 
 	bsdf->materialIndex = volumeIndex;
 
