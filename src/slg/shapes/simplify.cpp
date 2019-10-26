@@ -145,11 +145,38 @@ public:
 		if (srcMesh.HasNormals()) {
 			const Normal *norms = srcMesh.GetNormals();
 			for (u_int i = 0; i < vertCount; ++i)
-				vertices[i].shadeN = norms[i];
+				vertices[i].norm = norms[i];
 
-			hasShadeN = true;
+			hasNormals = true;
 		} else
-			hasShadeN = false;
+			hasNormals = false;
+		
+		if (srcMesh.HasUVs()) {
+			const UV *uvs = srcMesh.GetUVs();
+			for (u_int i = 0; i < vertCount; ++i)
+				vertices[i].uv = uvs[i];
+
+			hasUVs = true;
+		} else
+			hasUVs = false;
+		
+		if (srcMesh.HasColors()) {
+			const Spectrum *cols = srcMesh.GetColors();
+			for (u_int i = 0; i < vertCount; ++i)
+				vertices[i].col = cols[i];
+
+			hasColors = true;
+		} else
+			hasColors = false;
+
+		if (srcMesh.HasAlphas()) {
+			const float *alphas = srcMesh.GetAlphas();
+			for (u_int i = 0; i < vertCount; ++i)
+				vertices[i].alpha = alphas[i];
+
+			hasAlphas = true;
+		} else
+			hasAlphas = false;
 
 		triangles.resize(triCount);
 		for (u_int i = 0; i < triCount; ++i) {
@@ -171,10 +198,31 @@ public:
 			newVertices[i] = vertices[i].p;
 		
 		Normal *newNorms = nullptr;
-		if (hasShadeN) {
+		if (hasNormals) {
 			newNorms = new Normal[vertCount];
 			for (u_int i = 0; i < vertCount; ++i)
-				newNorms[i] = vertices[i].shadeN;
+				newNorms[i] = vertices[i].norm;
+		}
+		
+		UV *newUVs = nullptr;
+		if (hasUVs) {
+			newUVs = new UV[vertCount];
+			for (u_int i = 0; i < vertCount; ++i)
+				newUVs[i] = vertices[i].uv;
+		}
+
+		Spectrum *newCols = nullptr;
+		if (hasColors) {
+			newCols = new Spectrum[vertCount];
+			for (u_int i = 0; i < vertCount; ++i)
+				newCols[i] = vertices[i].col;
+		}
+		
+		float *newAlphas = nullptr;
+		if (hasAlphas) {
+			newAlphas = new float[vertCount];
+			for (u_int i = 0; i < vertCount; ++i)
+				newAlphas[i] = vertices[i].alpha;
 		}
 		
 		Triangle *newTris = ExtTriangleMesh::AllocTrianglesBuffer(triCount);
@@ -184,7 +232,8 @@ public:
 			newTris[i].v[2] = triangles[i].v[2];
 		}
 		
-		return new ExtTriangleMesh(vertCount, triCount, newVertices, newTris, newNorms);
+		return new ExtTriangleMesh(vertCount, triCount, newVertices, newTris, newNorms,
+				newUVs, newCols, newAlphas);
 	}
 	
 	void Decimate(const float errorScale) {
@@ -213,8 +262,6 @@ public:
 			// If it does not, try to adjust the 3 parameters
 			//
 			const float threshold = errorScale * .001f;
-			
-			SDL_LOG("Simplify iteration: " << iteration);
 
 			// Remove vertices & mark deleted triangles
 			for (u_int i = 0; i < triangles.size(); ++i) {
@@ -231,9 +278,21 @@ public:
 				const Point triPoint1 = vertices[t.v[1]].p;
 				const Point triPoint2 = vertices[t.v[2]].p;
 
-				const Normal triShadeN0 = vertices[t.v[0]].shadeN;
-				const Normal triShadeN1 = vertices[t.v[1]].shadeN;
-				const Normal triShadeN2 = vertices[t.v[2]].shadeN;
+				const Normal triNorm0 = vertices[t.v[0]].norm;
+				const Normal triNorm1 = vertices[t.v[1]].norm;
+				const Normal triNorm2 = vertices[t.v[2]].norm;
+
+				const UV triUV0 = vertices[t.v[0]].uv;
+				const UV triUV1 = vertices[t.v[1]].uv;
+				const UV triUV2 = vertices[t.v[2]].uv;
+
+				const Spectrum triCol0 = vertices[t.v[0]].col;
+				const Spectrum triCol1 = vertices[t.v[1]].col;
+				const Spectrum triCol2 = vertices[t.v[2]].col;
+
+				const float triAlpha0 = vertices[t.v[0]].alpha;
+				const float triAlpha1 = vertices[t.v[1]].alpha;
+				const float triAlpha2 = vertices[t.v[2]].alpha;
 
 				for (u_int j = 0; j < 3; ++j) {
 					if (t.err[j] < threshold) {
@@ -273,8 +332,14 @@ public:
 								p, &b1, &b2);
 						const float b0 = 1.f - b1 - b2;
 
-						if (hasShadeN)
-							v0.shadeN = Normalize(b0 * triShadeN0 + b1 * triShadeN1 + b2 * triShadeN2);
+						if (hasNormals)
+							v0.norm = Normalize(b0 * triNorm0 + b1 * triNorm1 + b2 * triNorm2);
+						if (hasUVs)
+							v0.uv = b0 * triUV0 + b1 * triUV1 + b2 * triUV2;
+						if (hasColors)
+							v0.col = b0 * triCol0 + b1 * triCol1 + b2 * triCol2;
+						if (hasAlphas)
+							v0.alpha = b0 * triAlpha0 + b1 * triAlpha1 + b2 * triAlpha2;
 
 						const u_int tstart = refs.size();
 
@@ -297,6 +362,7 @@ public:
 				}
 			}
 
+			SDL_LOG("Simplify iteration " << iteration << " (simplified " << deletedTriangles << " triangles)");
 			if (deletedTriangles <= 0)
 				break;
 
@@ -317,7 +383,10 @@ private:
 
 	struct SimplifyVertex {
 		Point p;
-		Normal shadeN;
+		Normal norm;
+		UV uv;
+		Spectrum col;
+		float alpha;
 
 		u_int tstart, tcount;
 		SymetricMatrix q;
@@ -332,7 +401,7 @@ private:
 	vector<SimplifyTriangle> triangles;
 	vector<SimplifyVertex> vertices;
 	vector<SimplifyRef> refs;
-	bool hasShadeN;
+	bool hasNormals, hasUVs, hasColors, hasAlphas;
 
 	// Check if a triangle flips when this edge is removed
 	bool Flipped(const Point &p, const u_int i0, const u_int i1,
@@ -557,8 +626,12 @@ private:
 			if (vertices[i].tcount) {
 				vertices[i].tstart = dst;
 				vertices[dst].p = vertices[i].p;
-				if (hasShadeN)
-					vertices[dst].shadeN = vertices[i].shadeN;
+
+				vertices[dst].norm = vertices[i].norm;
+				vertices[dst].uv = vertices[i].uv;
+				vertices[dst].col = vertices[i].col;
+				vertices[dst].alpha = vertices[i].alpha;
+
 				dst++;
 			}
 		}

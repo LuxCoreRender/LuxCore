@@ -40,17 +40,17 @@ scene.shapes.spheredisp.normalsmooth = 1
 scene.shapes.spheredisp.map = fabric_disp
 scene.shapes.spheredisp.scale = 0.15
 ##
-scene.shapes.sphere.type = simplify
-scene.shapes.sphere.source = spheredisp
-scene.shapes.sphere.errorscale = 0.00000000001
+#scene.shapes.sphere.type = simplify
+#scene.shapes.sphere.source = spheredisp
+#scene.shapes.sphere.errorscale = 0.00000000001
 ################################################################################
 scene.objects.back.material = whitematte
 scene.objects.back.ply = scenes/bigmonkey/room.ply
 ##
 scene.objects.red1.material = redmat
 scene.objects.red1.ply = spheredisp
-scene.objects.red1.transformation = 1 0 0 0  0 1 0 0  0 0 1 0  -1.8 -1.8 0 1
+#scene.objects.red1.transformation = 1 0 0 0  0 1 0 0  0 0 1 0  -1.8 -1.8 0 1
 #
-scene.objects.red2.material = redmat
-scene.objects.red2.ply = sphere
-scene.objects.red2.transformation = 1 0 0 0  0 1 0 0  0 0 1 0  1.8 1.8 0 1
+#scene.objects.red2.material = redmat
+#scene.objects.red2.ply = sphere
+#scene.objects.red2.transformation = 1 0 0 0  0 1 0 0  0 0 1 0  1.8 1.8 0 1
