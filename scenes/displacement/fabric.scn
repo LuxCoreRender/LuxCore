@@ -42,7 +42,7 @@ scene.shapes.spheredisp.scale = 0.15
 ##
 #scene.shapes.sphere.type = simplify
 #scene.shapes.sphere.source = spheredisp
-#scene.shapes.sphere.errorscale = 0.00000000001
+#scene.shapes.sphere.errorscale.surface = 0.00000000001
 ################################################################################
 scene.objects.back.material = whitematte
 scene.objects.back.ply = scenes/bigmonkey/room.ply

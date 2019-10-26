@@ -1,9 +1,24 @@
 scene.camera.type = "perspective"
-scene.camera.lookat.orig = 9.68146896 -8.5594759 7.79969072
-scene.camera.lookat.target = 3.45489073 -2.26856232 3.14629126
+#scene.camera.lookat.orig = 9.68146896 -8.5594759 7.79969072
+#scene.camera.lookat.target = 3.45489073 -2.26856232 3.14629126
+scene.camera.lookat.orig = 30 -4 20
+scene.camera.lookat.target = 3.45489073 -2.26856232 10
 scene.camera.fieldofview = 45
 ################################################################################
 scene.textures.vertcol.type = hitpointcolor
+##
+#scene.textures.fbmtex.type = fbm
+#scene.textures.fbmtex.octaves = 8
+#scene.textures.fbmtex.omega = 0.5
+#scene.textures.fbmtex.mapping.type = globalmapping3d
+##scene.textures.fbmtex.mapping.transformation = 10.0 0.0 0.0 0.0  0.0 10.0 0.0 0.0  0.0 0.0 10.0 0.0  0.0 0.0 0.0 1.0
+#scene.textures.fbmtex.mapping.transformation = 3.0 0.0 0.0 0.0  0.0 3.0 0.0 0.0  0.0 0.0 3.0 0.0  0.0 0.0 0.0 1.0
+##
+#scene.textures.checktex.type = checkerboard2d
+#scene.textures.checktex.texture1 = 0.0 0.0 0.0
+#scene.textures.checktex.texture2 = 1.0 1.0 1.0
+#scene.textures.checktex.mapping.type = uvmapping2d
+#scene.textures.checktex.mapping.uvscale = 20.0 20.0
 ################################################################################
 scene.materials.mat_light.type = matte
 scene.materials.mat_light.emission = 340. 340. 340.
@@ -16,35 +31,59 @@ scene.materials.mat_red.kd = vertcol
 #scene.materials.mat_red.kd = 0.8 0.0 0.0
 ##
 scene.materials.mat_white.type = matte
-scene.materials.mat_white.kd = 0.8 0.8 0.8
+scene.materials.mat_white.kd = vertcol
 ##
 #scene.materials.mat_white.type = glossytranslucent
 #scene.materials.mat_white.kd = 0.1 0.1 0.1
 #scene.materials.mat_white.kt = 1.0 1.0 1.0
 #scene.materials.mat_white.ks = 0.025 0.025 0.025
 ################################################################################
-scene.shapes.obj_redply.type = mesh
-scene.shapes.obj_redply.ply = scenes/bump/mat_red.ply
+scene.shapes.obj_whiteply.type = mesh
+scene.shapes.obj_whiteply.ply = scenes/displacement/large-plane.ply
 ##
-scene.shapes.obj_redsubdiv.type = subdiv
-scene.shapes.obj_redsubdiv.source = obj_redply
-scene.shapes.obj_redsubdiv.maxlevel = 3
-scene.shapes.obj_redsubdiv.maxedgescreensize = 0.1
+scene.shapes.obj_whitesubdiv.type = subdiv
+scene.shapes.obj_whitesubdiv.source = obj_whiteply
+scene.shapes.obj_whitesubdiv.maxlevel = 8
 #
-scene.shapes.obj_redsimplify_1.type = simplify
-scene.shapes.obj_redsimplify_1.source = obj_redsubdiv
-scene.shapes.obj_redsimplify_1.errorscale = 0.1
+#scene.shapes.obj_whitedisp.type = displacement
+#scene.shapes.obj_whitedisp.source = obj_whitesubdiv
+#scene.shapes.obj_whitedisp.offset = 0.0
+#scene.shapes.obj_whitedisp.normalsmooth = 1
+#scene.shapes.obj_whitedisp.map = fbmtex
+#scene.shapes.obj_whitedisp.scale = 1.5
+##
+scene.shapes.obj_whitesimplify.type = simplify
+scene.shapes.obj_whitesimplify.source = obj_whitesubdiv
+scene.shapes.obj_whitesimplify.errorscale.surface = 1.0
+scene.shapes.obj_whitesimplify.errorscale.screen = 1.0
+##
+scene.shapes.obj_white.type = harlequin
+scene.shapes.obj_white.source = obj_whitesimplify
+##
+##
+##
+#scene.shapes.obj_redply.type = mesh
+#scene.shapes.obj_redply.ply = scenes/bump/mat_red.ply
+##
+#scene.shapes.obj_redsubdiv.type = subdiv
+#scene.shapes.obj_redsubdiv.source = obj_redply
+#scene.shapes.obj_redsubdiv.maxlevel = 3
+#scene.shapes.obj_redsubdiv.maxedgescreensize = 0.1
 #
-scene.shapes.obj_redsimplify_2.type = simplify
-scene.shapes.obj_redsimplify_2.source = obj_redsubdiv
-scene.shapes.obj_redsimplify_2.errorscale = 4
+#scene.shapes.obj_redsimplify_1.type = simplify
+#scene.shapes.obj_redsimplify_1.source = obj_redsubdiv
+#scene.shapes.obj_redsimplify_1.errorscale.surface = 0.1
 #
-scene.shapes.obj_red_1.type = harlequin
-scene.shapes.obj_red_1.source = obj_redsubdiv
-scene.shapes.obj_red_2.type = harlequin
-scene.shapes.obj_red_2.source = obj_redsimplify_1
-scene.shapes.obj_red_3.type = harlequin
-scene.shapes.obj_red_3.source = obj_redsimplify_2
+#scene.shapes.obj_redsimplify_2.type = simplify
+#scene.shapes.obj_redsimplify_2.source = obj_redsubdiv
+#scene.shapes.obj_redsimplify_2.errorscale.surface = 4
+#
+#scene.shapes.obj_red_1.type = harlequin
+#scene.shapes.obj_red_1.source = obj_redsubdiv
+#scene.shapes.obj_red_2.type = harlequin
+#scene.shapes.obj_red_2.source = obj_redsimplify_1
+#scene.shapes.obj_red_3.type = harlequin
+#scene.shapes.obj_red_3.source = obj_redsimplify_2
 ################################################################################
 scene.objects.obj_light.ply = scenes/bump/mat_light.ply
 scene.objects.obj_light.material = mat_light
@@ -53,26 +92,26 @@ scene.objects.obj_light.transformation = 1 0 0 0  0 1 0 0  0 0 1 0  -12 -8 4 1
 #scene.objects.obj_light2.material = mat_light2
 ##
 #scene.objects.obj_red_1.ply = obj_red_1
-scene.objects.obj_red_1.ply = obj_redsubdiv
-scene.objects.obj_red_1.material = mat_red
-scene.objects.obj_red_1.transformation = 1 0 0 0  0 1 0 0  0 0 1 0  -4 0 0 1
+##scene.objects.obj_red_1.ply = obj_redsubdiv
+#scene.objects.obj_red_1.material = mat_red
+#scene.objects.obj_red_1.transformation = 1 0 0 0  0 1 0 0  0 0 1 0  -4 0 0 1
 ##
 #scene.objects.obj_red_2.ply = obj_red_2
-scene.objects.obj_red_2.ply = obj_redsimplify_1
-scene.objects.obj_red_2.material = mat_red
-scene.objects.obj_red_2.transformation = 1 0 0 0  0 1 0 0  0 0 1 0  0 0 0 1
+##scene.objects.obj_red_2.ply = obj_redsimplify_1
+#scene.objects.obj_red_2.material = mat_red
+#scene.objects.obj_red_2.transformation = 1 0 0 0  0 1 0 0  0 0 1 0  0 0 0 1
 ##
 #scene.objects.obj_red_3.ply = obj_red_3
-scene.objects.obj_red_3.ply = obj_redsimplify_2
-scene.objects.obj_red_3.material = mat_red
-scene.objects.obj_red_3.transformation = 1 0 0 0  0 1 0 0  0 0 1 0  4 0 0 1
+##scene.objects.obj_red_3.ply = obj_redsimplify_2
+#scene.objects.obj_red_3.material = mat_red
+#scene.objects.obj_red_3.transformation = 1 0 0 0  0 1 0 0  0 0 1 0  4 0 0 1
 ##
-scene.objects.obj_white.ply = scenes/bump/mat_white.ply
+scene.objects.obj_white.ply = obj_white
 scene.objects.obj_white.material = mat_white
 scene.objects.obj_white.transformation = 4 0 0 0  0 4 0 0  0 0 1 0  0 0 0 1
 ################################################################################
-#scene.lights.infinitelight.type = infinite
-#scene.lights.infinitelight.file = scenes/simple-mat/sky.exr
-#scene.lights.infinitelight.gamma = 1.0
-#scene.lights.infinitelight.gain = 1.0 1.0 1.0
-#scene.lights.infinitelight.storage = byte
+scene.lights.infinitelight.type = infinite
+scene.lights.infinitelight.file = scenes/simple-mat/sky.exr
+scene.lights.infinitelight.gamma = 1.0
+scene.lights.infinitelight.gain = 1.0 1.0 1.0
+scene.lights.infinitelight.storage = byte

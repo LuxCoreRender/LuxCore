@@ -24,6 +24,7 @@
 
 #include "luxrays/core/exttrianglemesh.h"
 #include "slg/shapes/simplify.h"
+#include "slg/cameras/camera.h"
 #include "slg/scene/scene.h"
 #include "slg/utils/harlequincolors.h"
 
@@ -236,7 +237,12 @@ public:
 				newUVs, newCols, newAlphas);
 	}
 	
-	void Decimate(const float errorScale) {
+	void Decimate(const Camera *camera, const float surfaceErrorScale,
+			const float screenErrorScale) {
+		Transform worldToScreen;
+		if (screenErrorScale > 0.f)
+			worldToScreen = Inverse(camera->GetScreenToWorld());
+
 		// Init
 		for (u_int i = 0; i < triangles.size(); ++i)
 			triangles[i].deleted = false;
@@ -245,9 +251,6 @@ public:
 		u_int deletedTriangles = 0;
 		vector<bool> deleted0, deleted1;
 		for (u_int iteration = 0;; ++iteration) {
-			if (triangles.size() <= 1)
-				break;
-
 			// Update mesh constantly
 			UpdateMesh(iteration);
 
@@ -261,13 +264,13 @@ public:
 			// The following numbers works well for most models.
 			// If it does not, try to adjust the 3 parameters
 			//
-			const float threshold = errorScale * .001f;
+			const float threshold = surfaceErrorScale * .001f;
 
 			// Remove vertices & mark deleted triangles
 			for (u_int i = 0; i < triangles.size(); ++i) {
 				SimplifyTriangle &t = triangles[i];
 
-				if (t.err[3] > threshold)
+				if ((screenErrorScale == 0.f) && (t.err[3] > threshold))
 					continue;
 				if (t.deleted)
 					continue;
@@ -295,17 +298,30 @@ public:
 				const float triAlpha2 = vertices[t.v[2]].alpha;
 
 				for (u_int j = 0; j < 3; ++j) {
-					if (t.err[j] < threshold) {
-						u_int i0 = t.v[j];
-						SimplifyVertex &v0 = vertices[i0];
-						
-						const u_int i1 = t.v[(j + 1) % 3];
-						SimplifyVertex &v1 = vertices[i1];
+					const u_int i0 = t.v[j];
+					SimplifyVertex &v0 = vertices[i0];
 
-						// Border check
-						if (v0.border != v1.border)
-							continue;
+					const u_int i1 = t.v[(j + 1) % 3];
+					SimplifyVertex &v1 = vertices[i1];
 
+					// Border check
+					if (v0.border != v1.border)
+						continue;
+
+					float screenThresholdScale = 1.f;
+					if (screenErrorScale > 0.f) {
+						// Scale the error threshold according the edge screen size
+
+						const Point screenP0 = worldToScreen * v0.p;
+						const Point screenP1 = worldToScreen * v1.p;
+
+						const float edgeScreenSize = (screenP1 - screenP0).Length();
+
+						// An edge of size 0.1 corresponds to a scale of 1.0
+						screenThresholdScale = screenErrorScale * 10.f * edgeScreenSize;
+					}
+
+					if (screenThresholdScale * t.err[j] < threshold) {
 						// Compute vertex to collapse to
 						Point p;
 						CalculateError(i0, i1, p);
@@ -425,7 +441,6 @@ private:
 
 			const Vector d1 = Normalize(vertices[id1].p - p);
 			const Vector d2 = Normalize(vertices[id2].p - p);
-
 			if (AbsDot(d1, d2) > .999f)
 				return true;
 
@@ -596,7 +611,7 @@ private:
 				
 				for (u_int j = 0; j < vcount.size(); ++j) {
 					if (vcount[j] == 1)
-						vertices[vids[j]].border = 1;
+						vertices[vids[j]].border = true;
 				}
 			}
 		}
@@ -694,13 +709,17 @@ private:
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 
-SimplifyShape::SimplifyShape(luxrays::ExtTriangleMesh *srcMesh, const float errorScale) {
-	SDL_LOG("Simplify shape " << srcMesh->GetName() << " with error scale: " << errorScale);
+SimplifyShape::SimplifyShape(const Camera *camera, luxrays::ExtTriangleMesh *srcMesh,
+		const float surfaceErrorScale, const float screenErrorScale) {
+	SDL_LOG("Simplify shape " << srcMesh->GetName() << " with surface error scale " << surfaceErrorScale << " and screen error scale " << screenErrorScale);
+
+	if ((screenErrorScale > 0.f) && !camera)
+		throw runtime_error("The scene camera must be defined in order to enable simplify errorscale.screen option");
 
 	const float startTime = WallClockTime();
 
 	Simplify simplify(*srcMesh);
-	simplify.Decimate(errorScale);
+	simplify.Decimate(camera, surfaceErrorScale, screenErrorScale);
 	mesh = simplify.GetExtMesh();
 
 	SDL_LOG("Subdivided shape from " << srcMesh->GetTotalTriangleCount() << " to " << mesh->GetTotalTriangleCount() << " faces");

@@ -112,7 +112,7 @@ float SubdivShape::MaxEdgeScreenSize(const Camera *camera, ExtTriangleMesh *srcM
 #endif
 			;
 
-	const Transform wolrdToScreen = Inverse(camera->GetScreenToWorld());
+	const Transform worldToScreen = Inverse(camera->GetScreenToWorld());
 	
 	vector<float> maxEdgeSizes(threadCount, 0.f);
 	for(
@@ -130,9 +130,9 @@ float SubdivShape::MaxEdgeScreenSize(const Camera *camera, ExtTriangleMesh *srcM
 			;
 		
 		const Triangle &tri = tris[i];
-		const Point p0 = wolrdToScreen * verts[tri.v[0]];
-		const Point p1 = wolrdToScreen * verts[tri.v[1]];
-		const Point p2 = wolrdToScreen * verts[tri.v[2]];
+		const Point p0 = worldToScreen * verts[tri.v[0]];
+		const Point p1 = worldToScreen * verts[tri.v[1]];
+		const Point p2 = worldToScreen * verts[tri.v[2]];
 		
 		float maxEdgeSize = (p1 - p0).Length();
 		maxEdgeSize = Max(maxEdgeSize, (p2 - p1).Length());
