@@ -19,12 +19,12 @@
 #include <map>
 #include <vector>
 #include <string>
+#include <queue>
 
 #include <boost/format.hpp>
 
 #include "luxrays/core/exttrianglemesh.h"
 #include "slg/shapes/simplify.h"
-#include "slg/cameras/camera.h"
 #include "slg/scene/scene.h"
 #include "slg/utils/harlequincolors.h"
 
@@ -54,7 +54,7 @@ using namespace slg;
 class SymetricMatrix {
 public:
 	// Constructor
-	SymetricMatrix(const float c = 0) {
+	SymetricMatrix(const float c = 0.f) {
 		for (u_int i = 0; i < 10; ++i)
 			m[i] = c;
 	}
@@ -237,152 +237,40 @@ public:
 				newUVs, newCols, newAlphas);
 	}
 	
-	void Decimate(const Camera *camera, const float surfaceErrorScale,
-			const float screenErrorScale) {
-		Transform worldToScreen;
-		if (screenErrorScale > 0.f)
-			worldToScreen = Inverse(camera->GetScreenToWorld());
+	void Decimate(const u_int targetTriangleCount) {
+		maxCandidateQueueSize = Max(64u, Floor2UInt(triangles.size() * 0.05));
 
 		// Init
 		for (u_int i = 0; i < triangles.size(); ++i)
 			triangles[i].deleted = false;
 
 		// Main iteration loop
-		u_int deletedTriangles = 0;
+		const u_int startTriangleCount = triangles.size();
+		deletedTriangles = 0;
 		vector<bool> deleted0, deleted1;
-		for (u_int iteration = 0;; ++iteration) {
+		for (u_int iteration = 0; iteration < 128; ++iteration) {
+			if (startTriangleCount - deletedTriangles <= targetTriangleCount)
+				break;
+
+			const u_int initialdeletedTriangles = deletedTriangles;
+
 			// Update mesh constantly
 			UpdateMesh(iteration);
 
-			// Clear dirty flag
-			for (u_int i = 0; i < triangles.size(); ++i)
-				triangles[i].dirty = false;
-
-			//
-			// All triangles with edges below the threshold will be removed
-			//
-			// The following numbers works well for most models.
-			// If it does not, try to adjust the 3 parameters
-			//
-			const float threshold = surfaceErrorScale * .001f;
+			SDL_LOG("Simplify iteration " << iteration << " candidates: " << candidateList.size() << " edges)");
 
 			// Remove vertices & mark deleted triangles
-			for (u_int i = 0; i < triangles.size(); ++i) {
-				SimplifyTriangle &t = triangles[i];
-
-				if ((screenErrorScale == 0.f) && (t.err[3] > threshold))
-					continue;
-				if (t.deleted)
-					continue;
-				if (t.dirty)
+			for (u_int i = 0; i < candidateList.size(); ++i) {
+				if (triangles[candidateList[i].tid].dirty)
 					continue;
 
-				const Point triPoint0 = vertices[t.v[0]].p;
-				const Point triPoint1 = vertices[t.v[1]].p;
-				const Point triPoint2 = vertices[t.v[2]].p;
-
-				const Normal triNorm0 = vertices[t.v[0]].norm;
-				const Normal triNorm1 = vertices[t.v[1]].norm;
-				const Normal triNorm2 = vertices[t.v[2]].norm;
-
-				const UV triUV0 = vertices[t.v[0]].uv;
-				const UV triUV1 = vertices[t.v[1]].uv;
-				const UV triUV2 = vertices[t.v[2]].uv;
-
-				const Spectrum triCol0 = vertices[t.v[0]].col;
-				const Spectrum triCol1 = vertices[t.v[1]].col;
-				const Spectrum triCol2 = vertices[t.v[2]].col;
-
-				const float triAlpha0 = vertices[t.v[0]].alpha;
-				const float triAlpha1 = vertices[t.v[1]].alpha;
-				const float triAlpha2 = vertices[t.v[2]].alpha;
-
-				for (u_int j = 0; j < 3; ++j) {
-					const u_int i0 = t.v[j];
-					SimplifyVertex &v0 = vertices[i0];
-
-					const u_int i1 = t.v[(j + 1) % 3];
-					SimplifyVertex &v1 = vertices[i1];
-
-					// Border check
-					if (v0.border != v1.border)
-						continue;
-
-					float screenThresholdScale = 1.f;
-					if (screenErrorScale > 0.f) {
-						// Scale the error threshold according the edge screen size
-
-						const Point screenP0 = worldToScreen * v0.p;
-						const Point screenP1 = worldToScreen * v1.p;
-
-						const float edgeScreenSize = (screenP1 - screenP0).Length();
-
-						// An edge of size 0.1 corresponds to a scale of 1.0
-						screenThresholdScale = screenErrorScale * 10.f * edgeScreenSize;
-					}
-
-					if (screenThresholdScale * t.err[j] < threshold) {
-						// Compute vertex to collapse to
-						Point p;
-						CalculateError(i0, i1, p);
-
-						deleted0.resize(v0.tcount); // normals temporarily
-						deleted1.resize(v1.tcount); // normals temporarily
-
-						// Don't remove if flipped
-						if (Flipped(p, i0, i1, v0, v1, deleted0))
-							continue;
-						if (Flipped(p, i1, i0, v1, v0, deleted1))
-							continue;
-
-						// Not flipped, so remove edge
-						v0.p = p;		
-						v0.q = v1.q + v0.q;
-
-						// Interpolate other vertex attributes
-						float b1, b2;
-						Triangle::GetBaryCoords(
-								triPoint0,
-								triPoint1,
-								triPoint2,
-								p, &b1, &b2);
-						const float b0 = 1.f - b1 - b2;
-
-						if (hasNormals)
-							v0.norm = Normalize(b0 * triNorm0 + b1 * triNorm1 + b2 * triNorm2);
-						if (hasUVs)
-							v0.uv = b0 * triUV0 + b1 * triUV1 + b2 * triUV2;
-						if (hasColors)
-							v0.col = b0 * triCol0 + b1 * triCol1 + b2 * triCol2;
-						if (hasAlphas)
-							v0.alpha = b0 * triAlpha0 + b1 * triAlpha1 + b2 * triAlpha2;
-
-						const u_int tstart = refs.size();
-
-						UpdateTriangles(i0, v0, deleted0, deletedTriangles);
-						UpdateTriangles(i0, v1, deleted1, deletedTriangles);
-
-						const u_int tcount = refs.size() - tstart;
-
-						if (tcount <= v0.tcount) {
-							// Save ram
-							if (tcount)
-								memcpy(&refs[v0.tstart], &refs[tstart], tcount * sizeof (SimplifyRef));
-						} else
-							// Append
-							v0.tstart = tstart;
-
-						v0.tcount = tcount;
-						break;
-					}
-				}
+				CollapseEdge(candidateList[i].tid, candidateList[i].tvertex, deleted0, deleted1);
 			}
 
-			SDL_LOG("Simplify iteration " << iteration << " (simplified " << deletedTriangles << " triangles)");
-			if (deletedTriangles <= 0)
+			const u_int iterationDeletedTriangles = deletedTriangles - initialdeletedTriangles;
+			SDL_LOG("Simplify iteration " << iteration << " (deleted " << iterationDeletedTriangles << "/" << startTriangleCount << " triangles)");
+			if (iterationDeletedTriangles == 0)
 				break;
-
-			deletedTriangles = 0;
 		}
 
 		// Clean up mesh
@@ -393,7 +281,7 @@ private:
 	struct SimplifyTriangle {
 		u_int v[3];
 		Normal geometryN;
-		float err[4];
+		float err[3];
 		bool deleted, dirty;
 	};
 
@@ -411,16 +299,140 @@ private:
 	};
 
 	struct SimplifyRef {
-		int tid, tvertex;
+		u_int tid, tvertex;
 	};
 	
+	class SimplifyRefErrCompare {
+	public:
+		SimplifyRefErrCompare(const Simplify &s) : simplify(s) { }
+
+		bool operator()(const SimplifyRef &sr1, const SimplifyRef &sr2) const {
+			return simplify.triangles[sr1.tid].err[sr1.tvertex] < simplify.triangles[sr2.tid].err[sr2.tvertex];
+		}
+
+	private:
+		const Simplify &simplify;
+	};
+
+	Transform worldToScreen;
+
 	vector<SimplifyTriangle> triangles;
 	vector<SimplifyVertex> vertices;
 	vector<SimplifyRef> refs;
+
+	u_int maxCandidateQueueSize;
+	vector<SimplifyRef> candidateList;
+
+	u_int deletedTriangles;
 	bool hasNormals, hasUVs, hasColors, hasAlphas;
 
-	// Check if a triangle flips when this edge is removed
-	bool Flipped(const Point &p, const u_int i0, const u_int i1,
+	bool CollapseEdge(const u_int trinagleIndex, const u_int startVertexIndex,
+			vector<bool> &deleted0, vector<bool> &deleted1) {
+		SimplifyTriangle &t = triangles[trinagleIndex];
+
+		if (t.deleted)
+			return false;
+		if (t.dirty)
+			return false;
+
+		const u_int i0 = t.v[startVertexIndex];
+		SimplifyVertex &v0 = vertices[i0];
+
+		const u_int i1 = t.v[(startVertexIndex + 1) % 3];
+		SimplifyVertex &v1 = vertices[i1];
+
+		// Border check
+		if (v0.border != v1.border)
+			return false;
+
+		// Compute vertex to collapse to
+		Point p;
+		CalculateError(i0, i1, p);
+
+		deleted0.resize(v0.tcount); // normals temporarily
+		deleted1.resize(v1.tcount); // normals temporarily
+
+		// Don't remove if flipped
+		if (Flipped(p, i0, i1, v0, v1, &deleted0))
+			return false;
+		if (Flipped(p, i1, i0, v1, v0, &deleted1))
+			return false;
+
+		// Save original vertex information
+		const Point triPoint0 = vertices[t.v[0]].p;
+		const Point triPoint1 = vertices[t.v[1]].p;
+		const Point triPoint2 = vertices[t.v[2]].p;
+
+		const Normal triNorm0 = vertices[t.v[0]].norm;
+		const Normal triNorm1 = vertices[t.v[1]].norm;
+		const Normal triNorm2 = vertices[t.v[2]].norm;
+
+		const UV triUV0 = vertices[t.v[0]].uv;
+		const UV triUV1 = vertices[t.v[1]].uv;
+		const UV triUV2 = vertices[t.v[2]].uv;
+
+		const Spectrum triCol0 = vertices[t.v[0]].col;
+		const Spectrum triCol1 = vertices[t.v[1]].col;
+		const Spectrum triCol2 = vertices[t.v[2]].col;
+
+		const float triAlpha0 = vertices[t.v[0]].alpha;
+		const float triAlpha1 = vertices[t.v[1]].alpha;
+		const float triAlpha2 = vertices[t.v[2]].alpha;
+
+		// Not flipped, so remove edge
+		v0.p = p;		
+		v0.q = v1.q + v0.q;
+
+		// Interpolate other vertex attributes
+		float b1, b2;
+		if (Triangle::GetBaryCoords(
+				triPoint0,
+				triPoint1,
+				triPoint2,
+				p, &b1, &b2)) {
+			const float b0 = 1.f - b1 - b2;
+
+			if (hasNormals)
+				v0.norm = Normalize(b0 * triNorm0 + b1 * triNorm1 + b2 * triNorm2);
+			if (hasUVs)
+				v0.uv = b0 * triUV0 + b1 * triUV1 + b2 * triUV2;
+			if (hasColors)
+				v0.col = b0 * triCol0 + b1 * triCol1 + b2 * triCol2;
+			if (hasAlphas)
+				v0.alpha = b0 * triAlpha0 + b1 * triAlpha1 + b2 * triAlpha2;
+		} else {
+			// Must be a malformed triangle
+			if (hasNormals)
+				v0.norm = triNorm0;
+			if (hasUVs)
+				v0.uv = triUV0;
+			if (hasColors)
+				v0.col = triCol0;
+			if (hasAlphas)
+				v0.alpha = triAlpha0;			
+		}
+
+		UpdateTriangles(i0, v0, deleted0);
+		UpdateTriangles(i0, v1, deleted1);
+
+		const u_int tstart = refs.size();
+		const u_int tcount = refs.size() - tstart;
+
+		if (tcount <= v0.tcount) {
+			// Save ram
+			if (tcount)
+				memcpy(&refs[v0.tstart], &refs[tstart], tcount * sizeof (SimplifyRef));
+		} else
+			// Append
+			v0.tstart = tstart;
+
+		v0.tcount = tcount;
+
+		return true;
+	}
+
+	// Build the list of remove triangles  when this edge is removed
+	void Deleted(const Point &p, const u_int i0, const u_int i1,
 			const SimplifyVertex &v0, const SimplifyVertex &v1,
 			vector<bool> &deleted) {
 		for (u_int k = 0; k < v0.tcount; ++k) {
@@ -434,8 +446,28 @@ private:
 			const u_int id2 = t.v[(s + 2) % 3];
 
 			// Delete ?
+			deleted[k] = (id1 == i1 || id2 == i1);
+		}
+	}
+
+	// Check if a triangle flips when this edge is removed
+	bool Flipped(const Point &p, const u_int i0, const u_int i1,
+			const SimplifyVertex &v0, const SimplifyVertex &v1,
+			vector<bool> *deleted = nullptr) {
+		for (u_int k = 0; k < v0.tcount; ++k) {
+			SimplifyTriangle &t = triangles[refs[v0.tstart + k].tid];
+
+			if (t.deleted)
+				continue;
+
+			const u_int s = refs[v0.tstart + k].tvertex;
+			const u_int id1 = t.v[(s + 1) % 3];
+			const u_int id2 = t.v[(s + 2) % 3];
+
+			// Delete ?
 			if (id1 == i1 || id2 == i1) {
-				deleted[k] = true;
+				if (deleted)
+					(*deleted)[k] = true;
 				continue;
 			}
 
@@ -445,18 +477,19 @@ private:
 				return true;
 
 			const Normal geometryN(Normalize(Cross(d1, d2)));
-			deleted[k] = false;
 			if (Dot(geometryN, t.geometryN) < .2f)
 				return true;
+
+			if (deleted)
+				(*deleted)[k] = false;
 		}
 
 		return false;
 	}
 
-
 	// Update triangle connections and edge error after a edge is collapsed
-	void UpdateTriangles(const u_int i0, const SimplifyVertex &v, const  vector<bool> &deleted,
-			u_int &deletedTriangles) {
+	void UpdateTriangles(const u_int i0, const SimplifyVertex &v,
+			const  vector<bool> &deleted) {
 		Point p;
 
 		for (u_int k = 0; k < v.tcount; ++k) {
@@ -477,7 +510,6 @@ private:
 			t.err[0] = CalculateError(t.v[0], t.v[1], p);
 			t.err[1] = CalculateError(t.v[1], t.v[2], p);
 			t.err[2] = CalculateError(t.v[2], t.v[0], p);
-			t.err[3] = Min(t.err[0], Min(t.err[1], t.err[2]));
 
 			refs.push_back(r);
 		}
@@ -502,39 +534,35 @@ private:
 		// recomputing during the simplification is not required,
 		// but mostly improves the result for closed meshes
 		//
-		if (iteration == 0) {
-			for (u_int i = 0; i < vertices.size(); ++i)
-				vertices[i].q = SymetricMatrix(0.0);
+		for (u_int i = 0; i < vertices.size(); ++i)
+			vertices[i].q = SymetricMatrix(0.0);
 
-			for (u_int i = 0; i < triangles.size(); ++i) {
-				SimplifyTriangle &t = triangles[i];
+		for (u_int i = 0; i < triangles.size(); ++i) {
+			SimplifyTriangle &t = triangles[i];
 
-				Point p[3];
-				p[0] = vertices[t.v[0]].p;
-				p[1] = vertices[t.v[1]].p;
-				p[2] = vertices[t.v[2]].p;
-				
-				const Normal geometryN(Normalize(Cross(p[1] - p[0], p[2] - p[0])));
-				t.geometryN = geometryN;
+			Point p[3];
+			p[0] = vertices[t.v[0]].p;
+			p[1] = vertices[t.v[1]].p;
+			p[2] = vertices[t.v[2]].p;
 
-				const SymetricMatrix sm(geometryN.x, geometryN.y, geometryN.z,
-						-Dot(Vector(geometryN), Vector(p[0])));
-				vertices[t.v[0]].q = vertices[t.v[0]].q + sm;
-				vertices[t.v[1]].q = vertices[t.v[1]].q + sm;
-				vertices[t.v[2]].q = vertices[t.v[2]].q + sm;
-			}
+			const Normal geometryN(Normalize(Cross(p[1] - p[0], p[2] - p[0])));
+			t.geometryN = geometryN;
 
-			for (u_int i = 0; i < triangles.size(); ++i) {
-				// Calc Edge Error
-				SimplifyTriangle &t = triangles[i];
+			const SymetricMatrix sm(geometryN.x, geometryN.y, geometryN.z,
+					-Dot(Vector(geometryN), Vector(p[0])));
+			vertices[t.v[0]].q = vertices[t.v[0]].q + sm;
+			vertices[t.v[1]].q = vertices[t.v[1]].q + sm;
+			vertices[t.v[2]].q = vertices[t.v[2]].q + sm;
+		}
 
-				Point p;
-				t.err[0] = CalculateError(t.v[0], t.v[1], p);
-				t.err[1] = CalculateError(t.v[1], t.v[2], p);
-				t.err[2] = CalculateError(t.v[2], t.v[0], p);
-				
-				t.err[3] = Min(t.err[0], Min(t.err[1], t.err[2]));
-			}
+		for (u_int i = 0; i < triangles.size(); ++i) {
+			// Calc Edge Error
+			SimplifyTriangle &t = triangles[i];
+			
+			Point p;
+			t.err[0] = CalculateError(t.v[0], t.v[1], p);
+			t.err[1] = CalculateError(t.v[1], t.v[2], p);
+			t.err[2] = CalculateError(t.v[2], t.v[0], p);
 		}
 
 		// Init Reference ID list
@@ -613,6 +641,63 @@ private:
 					if (vcount[j] == 1)
 						vertices[vids[j]].border = true;
 				}
+			}
+		}
+
+		// Clear dirty flag
+		for (u_int i = 0; i < triangles.size(); ++i)
+			triangles[i].dirty = false;
+
+		// Build the edge candidate queue
+		priority_queue<SimplifyRef, vector<SimplifyRef>, SimplifyRefErrCompare>
+			candidateQueue{ SimplifyRefErrCompare(*this) };
+		for (u_int i = 0; i < triangles.size(); ++i) {
+			const SimplifyTriangle &t = triangles[i];
+
+			for (u_int j = 0; j < 3; ++j) {
+				const u_int i0 = t.v[j];
+				SimplifyVertex &v0 = vertices[i0];
+
+				const u_int i1 = t.v[(j + 1) % 3];
+				SimplifyVertex &v1 = vertices[i1];
+
+				// Border check
+				if (v0.border != v1.border)
+					continue;
+
+				// Compute vertex to collapse to
+				Point p;
+				CalculateError(i0, i1, p);
+
+				// Don't remove if flipped
+				if (Flipped(p, i0, i1, v0, v1))
+					continue;
+				if (Flipped(p, i1, i0, v1, v0))
+					continue;
+
+				if (candidateQueue.size() < maxCandidateQueueSize) {
+					candidateQueue.push(SimplifyRef{i, j});
+					continue;
+				}
+
+				const SimplifyRef &top = candidateQueue.top();
+				if (t.err[j] < triangles[top.tid].err[top.tvertex]) {
+					candidateQueue.pop();
+					candidateQueue.push(SimplifyRef{i, j});
+				}
+			}
+		}
+
+		if (candidateQueue.size() > 0) {
+			candidateList.resize(candidateQueue.size());
+			u_int i = candidateList.size() - 1;
+			for (;;) {
+				candidateList[i] = candidateQueue.top();
+				candidateQueue.pop();
+
+				if (i == 0)
+					break;
+				--i;
 			}
 		}
 	}
@@ -709,17 +794,16 @@ private:
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 
-SimplifyShape::SimplifyShape(const Camera *camera, luxrays::ExtTriangleMesh *srcMesh,
-		const float surfaceErrorScale, const float screenErrorScale) {
-	SDL_LOG("Simplify shape " << srcMesh->GetName() << " with surface error scale " << surfaceErrorScale << " and screen error scale " << screenErrorScale);
-
-	if ((screenErrorScale > 0.f) && !camera)
-		throw runtime_error("The scene camera must be defined in order to enable simplify errorscale.screen option");
+SimplifyShape::SimplifyShape(luxrays::ExtTriangleMesh *srcMesh,
+		const float target) {
+	SDL_LOG("Simplify shape " << srcMesh->GetName() << " with target " << target);
 
 	const float startTime = WallClockTime();
 
+	const u_int targetCount = Max(1u, Floor2UInt(srcMesh->GetTotalTriangleCount() * target));
+
 	Simplify simplify(*srcMesh);
-	simplify.Decimate(camera, surfaceErrorScale, screenErrorScale);
+	simplify.Decimate(targetCount);
 	mesh = simplify.GetExtMesh();
 
 	SDL_LOG("Subdivided shape from " << srcMesh->GetTotalTriangleCount() << " to " << mesh->GetTotalTriangleCount() << " faces");

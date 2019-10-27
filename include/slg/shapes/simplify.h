@@ -25,12 +25,9 @@
 
 namespace slg {
 
-class Camera;
-
 class SimplifyShape : public Shape {
 public:
-	SimplifyShape(const Camera *camera, luxrays::ExtTriangleMesh *srcMesh,
-			const float surfaceErrorScale,	const float screenErrorScale);
+	SimplifyShape(luxrays::ExtTriangleMesh *srcMesh, const float target);
 	virtual ~SimplifyShape();
 
 	virtual ShapeType GetType() const { return SIMPLIFY; }
