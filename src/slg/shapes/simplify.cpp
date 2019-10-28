@@ -37,6 +37,8 @@ using namespace slg;
 // The following code is based on Sven Forstmann's quadric mesh simplification
 // code (https://github.com/sp4cerat/Fast-Quadric-Mesh-Simplification)
 // and heavily modified for LuxCoreRender
+//
+// Papers at https://mgarland.org/research/quadrics.html
 
 /////////////////////////////////////////////
 //
@@ -85,9 +87,9 @@ public:
 		m[4] = b * b;
 		m[5] = b * c;
 		m[6] = b * d;
-		m[7 ] = c * c;
-		m[8 ] = c * d;
-		m[9 ] = d * d;
+		m[7] = c * c;
+		m[8] = c * d;
+		m[9] = d * d;
 	}
 
 	float operator[](int c) const {
@@ -228,15 +230,20 @@ public:
 		
 		Triangle *newTris = ExtTriangleMesh::AllocTrianglesBuffer(triCount);
 		for (u_int i = 0; i < triCount; ++i) {
+			assert (triangles[i].v[0] < vertCount);
 			newTris[i].v[0] = triangles[i].v[0];
+
+			assert (triangles[i].v[1] < vertCount);
 			newTris[i].v[1] = triangles[i].v[1];
+
+			assert (triangles[i].v[2] < vertCount);
 			newTris[i].v[2] = triangles[i].v[2];
 		}
 		
 		return new ExtTriangleMesh(vertCount, triCount, newVertices, newTris, newNorms,
 				newUVs, newCols, newAlphas);
 	}
-	
+
 	void Decimate(const u_int targetTriangleCount) {
 		maxCandidateQueueSize = Max(64u, Floor2UInt(triangles.size() * 0.05));
 
@@ -248,7 +255,7 @@ public:
 		const u_int startTriangleCount = triangles.size();
 		deletedTriangles = 0;
 		vector<bool> deleted0, deleted1;
-		for (u_int iteration = 0; iteration < 128; ++iteration) {
+		for (u_int iteration = 0; iteration < 64; ++iteration) {
 			if (startTriangleCount - deletedTriangles <= targetTriangleCount)
 				break;
 
@@ -257,18 +264,12 @@ public:
 			// Update mesh constantly
 			UpdateMesh(iteration);
 
-			SDL_LOG("Simplify iteration " << iteration << " candidates: " << candidateList.size() << " edges)");
-
 			// Remove vertices & mark deleted triangles
-			for (u_int i = 0; i < candidateList.size(); ++i) {
-				if (triangles[candidateList[i].tid].dirty)
-					continue;
-
+			for (u_int i = 0; i < candidateList.size(); ++i)
 				CollapseEdge(candidateList[i].tid, candidateList[i].tvertex, deleted0, deleted1);
-			}
 
 			const u_int iterationDeletedTriangles = deletedTriangles - initialdeletedTriangles;
-			SDL_LOG("Simplify iteration " << iteration << " (deleted " << iterationDeletedTriangles << "/" << startTriangleCount << " triangles)");
+			SDL_LOG("Simplify iteration " << iteration << " (" << candidateList.size() << " edge candidates, deleted " << iterationDeletedTriangles << "/" << deletedTriangles << " of " << startTriangleCount << " triangles)");
 			if (iterationDeletedTriangles == 0)
 				break;
 		}
@@ -421,7 +422,7 @@ private:
 		if (tcount <= v0.tcount) {
 			// Save ram
 			if (tcount)
-				memcpy(&refs[v0.tstart], &refs[tstart], tcount * sizeof (SimplifyRef));
+				memcpy(&refs[v0.tstart], &refs[tstart], tcount * sizeof(SimplifyRef));
 		} else
 			// Append
 			v0.tstart = tstart;
@@ -471,11 +472,13 @@ private:
 				continue;
 			}
 
+			// Check if the triangle is too narrow
 			const Vector d1 = Normalize(vertices[id1].p - p);
 			const Vector d2 = Normalize(vertices[id2].p - p);
 			if (AbsDot(d1, d2) > .999f)
 				return true;
 
+			// Check if the Normal is changing side
 			const Normal geometryN(Normalize(Cross(d1, d2)));
 			if (Dot(geometryN, t.geometryN) < .2f)
 				return true;
@@ -500,7 +503,7 @@ private:
 				continue;
 
 			if (deleted[k]) {
-				t.deleted = 1;
+				t.deleted = true;
 				deletedTriangles++;
 				continue;
 			}
@@ -531,38 +534,39 @@ private:
 		// Init Quadrics by Plane & Edge Errors
 		//
 		// required at the beginning ( iteration == 0 )
-		// recomputing during the simplification is not required,
-		// but mostly improves the result for closed meshes
 		//
-		for (u_int i = 0; i < vertices.size(); ++i)
-			vertices[i].q = SymetricMatrix(0.0);
+		if (iteration == 0) {
+			for (u_int i = 0; i < vertices.size(); ++i)
+				vertices[i].q = SymetricMatrix(0.0);
 
-		for (u_int i = 0; i < triangles.size(); ++i) {
-			SimplifyTriangle &t = triangles[i];
+			for (u_int i = 0; i < triangles.size(); ++i) {
+				SimplifyTriangle &t = triangles[i];
 
-			Point p[3];
-			p[0] = vertices[t.v[0]].p;
-			p[1] = vertices[t.v[1]].p;
-			p[2] = vertices[t.v[2]].p;
+				SimplifyVertex &v0 = vertices[t.v[0]];
+				SimplifyVertex &v1 = vertices[t.v[1]];
+				SimplifyVertex &v2 = vertices[t.v[2]];
 
-			const Normal geometryN(Normalize(Cross(p[1] - p[0], p[2] - p[0])));
-			t.geometryN = geometryN;
+				const Normal geometryN(Normalize(Cross(v1.p - v0.p, v2.p - v0.p)));
+				t.geometryN = geometryN;
 
-			const SymetricMatrix sm(geometryN.x, geometryN.y, geometryN.z,
-					-Dot(Vector(geometryN), Vector(p[0])));
-			vertices[t.v[0]].q = vertices[t.v[0]].q + sm;
-			vertices[t.v[1]].q = vertices[t.v[1]].q + sm;
-			vertices[t.v[2]].q = vertices[t.v[2]].q + sm;
-		}
+				// It doesn't matter what vertex I use here because the triangle
+				// plane will pass for all 3
+				const SymetricMatrix sm(geometryN.x, geometryN.y, geometryN.z,
+						-Dot(Vector(geometryN), Vector(v0.p)));
+				v0.q += sm;
+				v1.q += sm;
+				v2.q += sm;
+			}
 
-		for (u_int i = 0; i < triangles.size(); ++i) {
-			// Calc Edge Error
-			SimplifyTriangle &t = triangles[i];
-			
-			Point p;
-			t.err[0] = CalculateError(t.v[0], t.v[1], p);
-			t.err[1] = CalculateError(t.v[1], t.v[2], p);
-			t.err[2] = CalculateError(t.v[2], t.v[0], p);
+			for (u_int i = 0; i < triangles.size(); ++i) {
+				// Calc Edge Error
+				SimplifyTriangle &t = triangles[i];
+
+				Point p;
+				t.err[0] = CalculateError(t.v[0], t.v[1], p);
+				t.err[1] = CalculateError(t.v[1], t.v[2], p);
+				t.err[2] = CalculateError(t.v[2], t.v[0], p);
+			}
 		}
 
 		// Init Reference ID list
@@ -644,10 +648,6 @@ private:
 			}
 		}
 
-		// Clear dirty flag
-		for (u_int i = 0; i < triangles.size(); ++i)
-			triangles[i].dirty = false;
-
 		// Build the edge candidate queue
 		priority_queue<SimplifyRef, vector<SimplifyRef>, SimplifyRefErrCompare>
 			candidateQueue{ SimplifyRefErrCompare(*this) };
@@ -699,7 +699,14 @@ private:
 					break;
 				--i;
 			}
+
+			//SDL_LOG("Min. error: " << fixed << setprecision(10) << triangles[candidateList[0].tid].err[candidateList[0].tvertex] << " (triangle " << candidateList[0].tid << ")");
 		}
+
+		// Clear dirty flag
+		for (u_int i = 0; i < triangles.size(); ++i)
+			triangles[i].dirty = false;
+
 	}
 
 	// Finally compact mesh before exiting
@@ -748,26 +755,29 @@ private:
 
 	// Error between vertex and Quadric
 	float VertexError(const SymetricMatrix &q, const float x, const float y, const float z) {
-		return q[0] * x * x + 2 * q[1] * x * y + 2 * q[2] * x * z + 2 * q[3] * x + q[4] * y * y
-				+ 2 * q[5] * y * z + 2 * q[6] * y + q[7] * z * z + 2 * q[8] * z + q[9];
+		return q[0] * x * x + 2.f * q[1] * x * y + 2.f * q[2] * x * z + 2.f * q[3] * x +
+				q[4] * y * y + 2.f * q[5] * y * z + 2.f * q[6] * y +
+				q[7] * z * z + 2.f * q[8] * z +
+				q[9];
 	}
 
 	// Error for one edge
 	float CalculateError(const u_int id_v1, const u_int id_v2, Point &pResult) {
 		// Compute interpolated vertex
 		const SymetricMatrix q = vertices[id_v1].q + vertices[id_v2].q;
-		const bool border = vertices[id_v1].border && vertices[id_v2].border;
+//		const bool border = vertices[id_v1].border && vertices[id_v2].border;
 
 		float error = 0.f;
-		const float det = q.det(0, 1, 2, 1, 4, 5, 2, 5, 7);
-		if ((det != 0.f) && !border) {
-			// q_delta is invertible
-			pResult.x = -1 / det * (q.det(1, 2, 3, 4, 5, 6, 5, 7, 8)); // vx = A41/det(q_delta)
-			pResult.y = 1 / det * (q.det(0, 2, 3, 1, 5, 6, 2, 7, 8)); // vy = A42/det(q_delta)
-			pResult.z = -1 / det * (q.det(0, 1, 3, 1, 4, 6, 2, 5, 8)); // vz = A43/det(q_delta)
-
-			error = VertexError(q, pResult.x, pResult.y, pResult.z);
-		} else {
+// The following code for finding the optimal pResult doesn't work
+//		const float det = q.det(0, 1, 2, 1, 4, 5, 2, 5, 7);
+//		if ((det != 0.f) && !border) {
+//			// q_delta is invertible
+//			pResult.x = -1.f / det * (q.det(1, 2, 3, 4, 5, 6, 5, 7, 8)); // vx = A41/det(q_delta)
+//			pResult.y = 1.f / det * (q.det(0, 2, 3, 1, 5, 6, 2, 7, 8)); // vy = A42/det(q_delta)
+//			pResult.z = -1.f / det * (q.det(0, 1, 3, 1, 4, 6, 2, 5, 8)); // vz = A43/det(q_delta)
+//
+//			error = VertexError(q, pResult.x, pResult.y, pResult.z);
+//		} else {
 			// det = 0 -> try to find best result
 			const Point &p1 = vertices[id_v1].p;
 			const Point &p2 = vertices[id_v2].p;
@@ -784,7 +794,7 @@ private:
 				pResult = p2;
 			if (error3 == error)
 				pResult = p3;
-		}
+//		}
 
 		return error;
 	}
