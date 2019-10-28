@@ -28,13 +28,17 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 float TriplanarTexture::GetFloatValue(const HitPoint &hitPoint) const {
-	const UV uv = mapping->Map(hitPoint);
     return (texX1->GetFloatValue(hitPoint) + texY1->GetFloatValue(hitPoint) + texZ1->GetFloatValue(hitPoint))/3;
 }
 
 Spectrum TriplanarTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
-	const UV uv = mapping->Map(hitPoint);
-    return (texX1->GetSpectrumValue(hitPoint) + texY1->GetSpectrumValue(hitPoint) + texZ1->GetSpectrumValue(hitPoint))/3;
+    // SLG_LOG("GetSpectrum: Hitpoint " << hitPoint.geometryN << " " << hitPoint.localToWorld);
+    float weights[3] = {pow(fabsf(hitPoint.geometryN.x),2), pow(fabsf(hitPoint.geometryN.y),2), pow(fabsf(hitPoint.geometryN.z),2)};
+    const float sum = weights[0] + weights[1] + weights[2];
+    weights[0] = weights[0]/sum;
+    weights[1] = weights[1]/sum;
+    weights[2] = weights[2]/sum;
+    return (texX1->GetSpectrumValue(hitPoint)*weights[0] + texY1->GetSpectrumValue(hitPoint)*weights[1] + texZ1->GetSpectrumValue(hitPoint)*weights[2]);
 }
 
 Properties TriplanarTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
