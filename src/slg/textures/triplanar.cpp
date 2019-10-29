@@ -32,13 +32,26 @@ float TriplanarTexture::GetFloatValue(const HitPoint &hitPoint) const {
 }
 
 Spectrum TriplanarTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
+    HitPoint hitPointX = hitPoint;
+    HitPoint hitPointY = hitPoint;
+    HitPoint hitPointZ = hitPoint;
+
+    hitPointX.uv.u = hitPoint.p.y;
+    hitPointX.uv.v = hitPoint.p.z;
+
+    hitPointY.uv.u = hitPoint.p.x;
+    hitPointY.uv.v = hitPoint.p.z;
+
+    hitPointZ.uv.u = hitPoint.p.x;
+    hitPointZ.uv.v = hitPoint.p.y;
+
     // SLG_LOG("GetSpectrum: Hitpoint " << hitPoint.geometryN << " " << hitPoint.localToWorld);
-    float weights[3] = {pow(fabsf(hitPoint.geometryN.x),2), pow(fabsf(hitPoint.geometryN.y),2), pow(fabsf(hitPoint.geometryN.z),2)};
+    float weights[3] = {pow(fabsf(hitPoint.geometryN.x),4), pow(fabsf(hitPoint.geometryN.y),4), pow(fabsf(hitPoint.geometryN.z),4)};
     const float sum = weights[0] + weights[1] + weights[2];
     weights[0] = weights[0]/sum;
     weights[1] = weights[1]/sum;
     weights[2] = weights[2]/sum;
-    return (texX1->GetSpectrumValue(hitPoint)*weights[0] + texY1->GetSpectrumValue(hitPoint)*weights[1] + texZ1->GetSpectrumValue(hitPoint)*weights[2]);
+    return (texX1->GetSpectrumValue(hitPointX)*weights[0] + texY1->GetSpectrumValue(hitPointY)*weights[1] + texZ1->GetSpectrumValue(hitPointZ)*weights[2]);
 }
 
 Properties TriplanarTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
