@@ -671,7 +671,7 @@ private:
 			
 			if (minErrorIndex == NULL_INDEX)
 				continue;
-
+			
 			if (candidateQueue.size() < maxCandidateQueueSize) {
 				candidateQueue.push(SimplifyRef{i, minErrorIndex});
 				continue;
@@ -702,7 +702,7 @@ private:
 
 				const u_int i0 = t.v[candidateList[i].tvertex];
 				SimplifyVertex &v0 = vertices[i0];
-
+			
 				const u_int i1 = t.v[(candidateList[i].tvertex + 1) % 3];
 				SimplifyVertex &v1 = vertices[i1];
 
@@ -811,7 +811,8 @@ private:
 				*pResult = p3;
 		}
 
-		return error;
+		// Adding 1.0 because error have negative values
+		return Max(error + 1.f, 0.f);
 	}
 
 	float CalculateCollapseScreenErrorScale(const Point &v0, const Point &v1) const {
@@ -846,15 +847,13 @@ private:
 	}
 	
 	void UpdateTriangleError(SimplifyTriangle &t) const {
-		// Adding 1000.0 because CalculateCollapseError() can return slightly negative values
-
-		t.err[0] = (CalculateCollapseError(t.v[0], t.v[1]) + 1000.f)*
+		t.err[0] = CalculateCollapseError(t.v[0], t.v[1]) *
 				CalculateCollapseScreenErrorScale(vertices[t.v[0]].p, vertices[t.v[1]].p);
 
-		t.err[1] = (CalculateCollapseError(t.v[1], t.v[2]) + 1000.f) *
+		t.err[1] = CalculateCollapseError(t.v[1], t.v[2]) *
 				CalculateCollapseScreenErrorScale(vertices[t.v[1]].p, vertices[t.v[2]].p);
 
-		t.err[2] = (CalculateCollapseError(t.v[2], t.v[0]) + 1000.f) *
+		t.err[2] = CalculateCollapseError(t.v[2], t.v[0]) *
 				CalculateCollapseScreenErrorScale(vertices[t.v[2]].p, vertices[t.v[0]].p);
 	}
 };
