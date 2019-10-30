@@ -20,6 +20,7 @@
 #include <vector>
 #include <string>
 #include <queue>
+#include <limits>
 
 #include <boost/format.hpp>
 
@@ -244,8 +245,13 @@ public:
 				newUVs, newCols, newAlphas);
 	}
 
-	void Decimate(const u_int targetTriangleCount) {
-		maxCandidateQueueSize = Max(64u, Floor2UInt(triangles.size() * 0.05));
+	void Decimate(const float targetTriangleCount, const Camera *scnCamera,
+			const float screenSize) {
+		camera = scnCamera;
+		edgeScreenSize = screenSize;
+
+		// Work on 10% of all triangles for each iteration
+		maxCandidateQueueSize = Max(64u, Floor2UInt(triangles.size() * .1f));
 
 		// Init
 		for (u_int i = 0; i < triangles.size(); ++i)
@@ -315,11 +321,12 @@ private:
 		const Simplify &simplify;
 	};
 
-	Transform worldToScreen;
-
 	vector<SimplifyTriangle> triangles;
 	vector<SimplifyVertex> vertices;
 	vector<SimplifyRef> refs;
+
+	const Camera *camera;
+	float edgeScreenSize;
 
 	u_int maxCandidateQueueSize;
 	vector<SimplifyRef> candidateList;
@@ -348,15 +355,16 @@ private:
 
 		// Compute vertex to collapse to
 		Point p;
-		CalculateError(i0, i1, p);
+		CalculateCollapseError(i0, i1, &p);
 
-		deleted0.resize(v0.tcount); // normals temporarily
-		deleted1.resize(v1.tcount); // normals temporarily
+		// true/false if the trinagles referencing the vertex are deleted
+		deleted0.resize(v0.tcount);
+		deleted1.resize(v1.tcount);
 
 		// Don't remove if flipped
-		if (Flipped(p, i0, i1, v0, v1, &deleted0))
+		if (Flipped(p, i0, i1, &deleted0))
 			return false;
-		if (Flipped(p, i1, i0, v1, v0, &deleted1))
+		if (Flipped(p, i1, i0, &deleted1))
 			return false;
 
 		// Save original vertex information
@@ -413,16 +421,17 @@ private:
 				v0.alpha = triAlpha0;			
 		}
 
+		const u_int tstart = refs.size();
+
 		UpdateTriangles(i0, v0, deleted0);
 		UpdateTriangles(i0, v1, deleted1);
 
-		const u_int tstart = refs.size();
 		const u_int tcount = refs.size() - tstart;
 
 		if (tcount <= v0.tcount) {
 			// Save ram
 			if (tcount)
-				memcpy(&refs[v0.tstart], &refs[tstart], tcount * sizeof(SimplifyRef));
+				copy(&refs[tstart], &refs[tstart] + tcount, &refs[v0.tstart]);
 		} else
 			// Append
 			v0.tstart = tstart;
@@ -432,31 +441,13 @@ private:
 		return true;
 	}
 
-	// Build the list of remove triangles  when this edge is removed
-	void Deleted(const Point &p, const u_int i0, const u_int i1,
-			const SimplifyVertex &v0, const SimplifyVertex &v1,
-			vector<bool> &deleted) {
-		for (u_int k = 0; k < v0.tcount; ++k) {
-			SimplifyTriangle &t = triangles[refs[v0.tstart + k].tid];
-
-			if (t.deleted)
-				continue;
-
-			const u_int s = refs[v0.tstart + k].tvertex;
-			const u_int id1 = t.v[(s + 1) % 3];
-			const u_int id2 = t.v[(s + 2) % 3];
-
-			// Delete ?
-			deleted[k] = (id1 == i1 || id2 == i1);
-		}
-	}
-
 	// Check if a triangle flips when this edge is removed
 	bool Flipped(const Point &p, const u_int i0, const u_int i1,
-			const SimplifyVertex &v0, const SimplifyVertex &v1,
-			vector<bool> *deleted = nullptr) {
+			vector<bool> *deleted = nullptr) const {
+		const SimplifyVertex &v0 = vertices[i0];
+
 		for (u_int k = 0; k < v0.tcount; ++k) {
-			SimplifyTriangle &t = triangles[refs[v0.tstart + k].tid];
+			const SimplifyTriangle &t = triangles[refs[v0.tstart + k].tid];
 
 			if (t.deleted)
 				continue;
@@ -493,10 +484,8 @@ private:
 	// Update triangle connections and edge error after a edge is collapsed
 	void UpdateTriangles(const u_int i0, const SimplifyVertex &v,
 			const  vector<bool> &deleted) {
-		Point p;
-
 		for (u_int k = 0; k < v.tcount; ++k) {
-			SimplifyRef &r = refs[v.tstart + k];
+			const SimplifyRef &r = refs[v.tstart + k];
 			SimplifyTriangle &t = triangles[r.tid];
 
 			if (t.deleted)
@@ -510,9 +499,7 @@ private:
 
 			t.v[r.tvertex] = i0;
 			t.dirty = true;
-			t.err[0] = CalculateError(t.v[0], t.v[1], p);
-			t.err[1] = CalculateError(t.v[1], t.v[2], p);
-			t.err[2] = CalculateError(t.v[2], t.v[0], p);
+			UpdateTriangleError(t);
 
 			refs.push_back(r);
 		}
@@ -521,7 +508,7 @@ private:
 	// Compact triangles, compute edge error and build reference list
 	void UpdateMesh(const u_int iteration) {
 		if (iteration > 0) {
-			// compact triangles
+			// Compact triangles
 			int dst = 0;
 			for (u_int i = 0; i < triangles.size(); ++i)
 				if (!triangles[i].deleted)
@@ -530,10 +517,9 @@ private:
 			triangles.resize(dst);
 		}
 
-		//
 		// Init Quadrics by Plane & Edge Errors
 		//
-		// required at the beginning ( iteration == 0 )
+		// Required at the beginning (iteration == 0)
 		//
 		if (iteration == 0) {
 			for (u_int i = 0; i < vertices.size(); ++i)
@@ -562,10 +548,7 @@ private:
 				// Calc Edge Error
 				SimplifyTriangle &t = triangles[i];
 
-				Point p;
-				t.err[0] = CalculateError(t.v[0], t.v[1], p);
-				t.err[1] = CalculateError(t.v[1], t.v[2], p);
-				t.err[2] = CalculateError(t.v[2], t.v[0], p);
+				UpdateTriangleError(t);
 			}
 		}
 
@@ -608,6 +591,8 @@ private:
 		}
 
 		// Identify boundary : vertices[].border=0,1
+		//
+		// Required at the beginning (iteration == 0)
 		if (iteration == 0) {
 			for (u_int i = 0; i < vertices.size(); ++i)
 				vertices[i].border = false;
@@ -645,7 +630,7 @@ private:
 					if (vcount[j] == 1)
 						vertices[vids[j]].border = true;
 				}
-			}
+			}			
 		}
 
 		// Build the edge candidate queue
@@ -654,6 +639,9 @@ private:
 		for (u_int i = 0; i < triangles.size(); ++i) {
 			const SimplifyTriangle &t = triangles[i];
 
+			// Look for the (valid) triangle vertex with the minimum error
+			u_int minErrorIndex = NULL_INDEX;
+			float minError = numeric_limits<float>::infinity();
 			for (u_int j = 0; j < 3; ++j) {
 				const u_int i0 = t.v[j];
 				SimplifyVertex &v0 = vertices[i0];
@@ -667,31 +655,38 @@ private:
 
 				// Compute vertex to collapse to
 				Point p;
-				CalculateError(i0, i1, p);
+				CalculateCollapseError(i0, i1, &p);
 
 				// Don't remove if flipped
-				if (Flipped(p, i0, i1, v0, v1))
+				if (Flipped(p, i0, i1))
 					continue;
-				if (Flipped(p, i1, i0, v1, v0))
+				if (Flipped(p, i1, i0))
 					continue;
 
-				if (candidateQueue.size() < maxCandidateQueueSize) {
-					candidateQueue.push(SimplifyRef{i, j});
-					continue;
-				}
-
-				const SimplifyRef &top = candidateQueue.top();
-				if (t.err[j] < triangles[top.tid].err[top.tvertex]) {
-					candidateQueue.pop();
-					candidateQueue.push(SimplifyRef{i, j});
+				if (t.err[j] < minError) {
+					minErrorIndex = j;
+					minError = t.err[j];
 				}
 			}
-		}
+			
+			if (minErrorIndex == NULL_INDEX)
+				continue;
 
+			if (candidateQueue.size() < maxCandidateQueueSize) {
+				candidateQueue.push(SimplifyRef{i, minErrorIndex});
+				continue;
+			}
+
+			const SimplifyRef &top = candidateQueue.top();
+			if (t.err[minErrorIndex] < triangles[top.tid].err[top.tvertex]) {
+				candidateQueue.pop();
+				candidateQueue.push(SimplifyRef{i, minErrorIndex});
+			}
+		}
+	
 		if (candidateQueue.size() > 0) {
 			candidateList.resize(candidateQueue.size());
-			u_int i = candidateList.size() - 1;
-			for (;;) {
+			for (u_int i = candidateList.size() - 1;;) {
 				candidateList[i] = candidateQueue.top();
 				candidateQueue.pop();
 
@@ -700,13 +695,42 @@ private:
 				--i;
 			}
 
-			//SDL_LOG("Min. error: " << fixed << setprecision(10) << triangles[candidateList[0].tid].err[candidateList[0].tvertex] << " (triangle " << candidateList[0].tid << ")");
+			/*for (u_int i = 0; i < Min<u_int>(candidateList.size(), 10u); ++i) {
+				const SimplifyTriangle &t = triangles[candidateList[i].tid];
+
+				SDL_LOG("#" << i << " Min. error: " << fixed << setprecision(10) << t.err[candidateList[i].tvertex] << " (triangle " << candidateList[i].tid << ")");
+
+				const u_int i0 = t.v[candidateList[i].tvertex];
+				SimplifyVertex &v0 = vertices[i0];
+
+				const u_int i1 = t.v[(candidateList[i].tvertex + 1) % 3];
+				SimplifyVertex &v1 = vertices[i1];
+
+				SDL_LOG("#" << i << " Collapse screen error scale: " << fixed << setprecision(10) <<  CalculateCollapseScreenErrorScale(v0.p, v1.p));
+				SDL_LOG("#" << i << " Triangle " << candidateList[i].tid << " border: " <<
+						vertices[t.v[candidateList[i].tvertex]].border << " " <<
+						vertices[t.v[(candidateList[i].tvertex + 1) % 3]].border);
+			}*/
+			
+			/*ExtTriangleMeshBuilder meshBuilder;
+			for (u_int i = 0; i < candidateList.size(); ++i) {
+				const SimplifyTriangle &t = triangles[candidateList[i].tid];
+
+				const u_int index = meshBuilder.vertices.size();
+				meshBuilder.AddVertex(vertices[t.v[candidateList[i].tvertex]].p);
+				meshBuilder.AddVertex(vertices[t.v[(candidateList[i].tvertex + 1) % 3]].p);
+				meshBuilder.AddVertex(vertices[t.v[(candidateList[i].tvertex + 2) % 3]].p);
+
+				meshBuilder.AddTriangle(Triangle(index, index + 1, index +2));
+			}
+			ExtTriangleMesh *debugMesh = meshBuilder.GetExtTriangleMesh();
+			debugMesh->Save("debug-candidates.ply");
+			delete debugMesh;*/
 		}
 
 		// Clear dirty flag
 		for (u_int i = 0; i < triangles.size(); ++i)
 			triangles[i].dirty = false;
-
 	}
 
 	// Finally compact mesh before exiting
@@ -754,7 +778,7 @@ private:
 	}
 
 	// Error between vertex and Quadric
-	float VertexError(const SymetricMatrix &q, const float x, const float y, const float z) {
+	float VertexError(const SymetricMatrix &q, const float x, const float y, const float z) const {
 		return q[0] * x * x + 2.f * q[1] * x * y + 2.f * q[2] * x * z + 2.f * q[3] * x +
 				q[4] * y * y + 2.f * q[5] * y * z + 2.f * q[6] * y +
 				q[7] * z * z + 2.f * q[8] * z +
@@ -762,41 +786,76 @@ private:
 	}
 
 	// Error for one edge
-	float CalculateError(const u_int id_v1, const u_int id_v2, Point &pResult) {
+	float CalculateCollapseError(const u_int v1Index, const u_int v2Index,
+			Point *pResult = nullptr) const {
+		const SymetricMatrix q = vertices[v1Index].q + vertices[v2Index].q;
+
 		// Compute interpolated vertex
-		const SymetricMatrix q = vertices[id_v1].q + vertices[id_v2].q;
-//		const bool border = vertices[id_v1].border && vertices[id_v2].border;
+		const Point &p1 = vertices[v1Index].p;
+		const Point &p2 = vertices[v2Index].p;
+		const Point p3 = (p1 + p2) / 2;
 
-		float error = 0.f;
-// The following code for finding the optimal pResult doesn't work
-//		const float det = q.det(0, 1, 2, 1, 4, 5, 2, 5, 7);
-//		if ((det != 0.f) && !border) {
-//			// q_delta is invertible
-//			pResult.x = -1.f / det * (q.det(1, 2, 3, 4, 5, 6, 5, 7, 8)); // vx = A41/det(q_delta)
-//			pResult.y = 1.f / det * (q.det(0, 2, 3, 1, 5, 6, 2, 7, 8)); // vy = A42/det(q_delta)
-//			pResult.z = -1.f / det * (q.det(0, 1, 3, 1, 4, 6, 2, 5, 8)); // vz = A43/det(q_delta)
-//
-//			error = VertexError(q, pResult.x, pResult.y, pResult.z);
-//		} else {
-			// det = 0 -> try to find best result
-			const Point &p1 = vertices[id_v1].p;
-			const Point &p2 = vertices[id_v2].p;
-			const Point p3 = (p1 + p2) / 2;
+		// Error can be negative, I add 1 to have screenErrorScale can than
+		// work as expected
+		const float error1 = VertexError(q, p1.x, p1.y, p1.z) + 1.f;
+		const float error2 = VertexError(q, p2.x, p2.y, p2.z) + 1.f;
+		const float error3 = VertexError(q, p3.x, p3.y, p3.z) + 1.f;
+		float error = Min(error1, Min(error2, error3));
 
-			const float error1 = VertexError(q, p1.x, p1.y, p1.z);
-			const float error2 = VertexError(q, p2.x, p2.y, p2.z);
-			const float error3 = VertexError(q, p3.x, p3.y, p3.z);
-			error = Min(error1, Min(error2, error3));
-
+		if (pResult) {
 			if (error1 == error)
-				pResult = p1;
+				*pResult = p1;
 			if (error2 == error)
-				pResult = p2;
+				*pResult = p2;
 			if (error3 == error)
-				pResult = p3;
-//		}
+				*pResult = p3;
+		}
 
 		return error;
+	}
+
+	float CalculateCollapseScreenErrorScale(const Point &v0, const Point &v1) const {
+		if (edgeScreenSize > 0.f) {
+			const float notVisibleScale = .5f;
+
+			float v0x, v0y;
+			if (!camera->GetSamplePosition(v0, &v0x, &v0y) ||
+					!IsValid(v0x) || !IsValid(v0y))
+				return notVisibleScale;
+
+			// Normalize
+			v0x /= camera->filmWidth;
+			v0y /= camera->filmHeight;
+
+			float v1x, v1y;
+			if (!camera->GetSamplePosition(v1, &v1x, &v1y) ||
+					!IsValid(v1x) || !IsValid(v1y))
+				return notVisibleScale;
+
+			// Normalize
+			v1x /= camera->filmWidth;
+			v1y /= camera->filmHeight;
+
+			const float edge = sqrtf(Sqr(v0x - v1x) + Sqr(v0y - v1y));
+			if (edge == 0.f)
+				return notVisibleScale;
+
+			return Max(edge / edgeScreenSize, notVisibleScale);
+		} else
+			return 1.f;
+	}
+	
+	void UpdateTriangleError(SimplifyTriangle &t) const {
+		// Adding 1000.0 because CalculateCollapseError() can return slightly negative values
+
+		t.err[0] = (CalculateCollapseError(t.v[0], t.v[1]) + 1000.f)*
+				CalculateCollapseScreenErrorScale(vertices[t.v[0]].p, vertices[t.v[1]].p);
+
+		t.err[1] = (CalculateCollapseError(t.v[1], t.v[2]) + 1000.f) *
+				CalculateCollapseScreenErrorScale(vertices[t.v[1]].p, vertices[t.v[2]].p);
+
+		t.err[2] = (CalculateCollapseError(t.v[2], t.v[0]) + 1000.f) *
+				CalculateCollapseScreenErrorScale(vertices[t.v[2]].p, vertices[t.v[0]].p);
 	}
 };
 
@@ -804,17 +863,30 @@ private:
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 
-SimplifyShape::SimplifyShape(luxrays::ExtTriangleMesh *srcMesh,
-		const float target) {
+SimplifyShape::SimplifyShape(const Camera *camera, ExtTriangleMesh *srcMesh,
+		const float target, const float edgeScreenSize) {
 	SDL_LOG("Simplify shape " << srcMesh->GetName() << " with target " << target);
+
+	if ((edgeScreenSize > 0.f) && !camera)
+		throw runtime_error("The scene camera must be defined in order to enable simplify edgescreensize option");
 
 	const float startTime = WallClockTime();
 
 	const u_int targetCount = Max(1u, Floor2UInt(srcMesh->GetTotalTriangleCount() * target));
 
+	/*srcMesh->Save("debug-start.ply");
+	ExtTriangleMesh *debugMeshStart = ScreenProjection(*camera, *srcMesh);
+	debugMeshStart->Save("debug-start-proj.ply");
+	delete debugMeshStart;*/
+
 	Simplify simplify(*srcMesh);
-	simplify.Decimate(targetCount);
+	simplify.Decimate(targetCount, camera, edgeScreenSize);
 	mesh = simplify.GetExtMesh();
+
+	/*srcMesh->Save("debug-end.ply");
+	ExtTriangleMesh *debugMeshEnd = ScreenProjection(*camera, *mesh);
+	debugMeshEnd->Save("debug-end-proj.ply");
+	delete debugMeshEnd;*/
 
 	SDL_LOG("Subdivided shape from " << srcMesh->GetTotalTriangleCount() << " to " << mesh->GetTotalTriangleCount() << " faces");
 

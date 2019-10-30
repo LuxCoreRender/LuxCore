@@ -321,8 +321,9 @@ ExtTriangleMesh *Scene::CreateShape(const string &shapeName, const Properties &p
 			throw runtime_error("Unknown shape name in a simplify shape: " + shapeName);
 		
 		const float target = props.Get(Property(propName + ".target")(.25f)).Get<float>();
+		const float edgeScreenSize = Clamp(props.Get(Property(propName + ".edgescreensize")(0.f)).Get<float>(), 0.f, 1.f);
 		
-		shape = new SimplifyShape((ExtTriangleMesh *)extMeshCache.GetExtMesh(sourceMeshName), target);
+		shape = new SimplifyShape(camera, (ExtTriangleMesh *)extMeshCache.GetExtMesh(sourceMeshName), target, edgeScreenSize);
 	} else
 		throw runtime_error("Unknown shape type: " + shapeType);
 

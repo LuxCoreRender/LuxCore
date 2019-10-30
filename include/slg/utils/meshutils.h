@@ -16,31 +16,40 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_SIMPLIFYSHAPE_H
-#define	_SLG_SIMPLIFYSHAPE_H
+#ifndef _SLG_MESHUTILS_H
+#define	_SLG_MESHUTILS_H
 
-#include <string>
+#include <vector>
 
-#include "slg/shapes/shape.h"
+#include "luxrays/core/exttrianglemesh.h"
+#include "slg/slg.h"
 
 namespace slg {
 
 class Camera;
 
-class SimplifyShape : public Shape {
+class ExtTriangleMeshBuilder {
 public:
-	SimplifyShape(const Camera *camera, luxrays::ExtTriangleMesh *srcMesh,
-			const float target, const float edgeScreenSize);
-	virtual ~SimplifyShape();
+	ExtTriangleMeshBuilder() { }
+	virtual ~ExtTriangleMeshBuilder() { }
 
-	virtual ShapeType GetType() const { return SIMPLIFY; }
+	void AddVertex(const luxrays::Point &v) {
+		vertices.push_back(v);
+	}
 
-protected:
-	virtual luxrays::ExtTriangleMesh *RefineImpl(const Scene *scene);
+	void AddTriangle(const luxrays::Triangle &t) {
+		triangles.push_back(t);
+	}
 
-	luxrays::ExtTriangleMesh *mesh;
+	luxrays::ExtTriangleMesh *GetExtTriangleMesh() const;
+
+	std::vector<luxrays::Point> vertices;
+	std::vector<luxrays::Triangle> triangles;
 };
+
+extern luxrays::ExtTriangleMesh *ScreenProjection(const Camera &camera,
+		const luxrays::ExtTriangleMesh &mesh);
 
 }
 
-#endif	/* _SLG_SIMPLIFYSHAPE_H */
+#endif	/* _SLG_MESHUTILS_H */

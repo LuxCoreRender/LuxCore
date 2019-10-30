@@ -1,0 +1,74 @@
+scene.camera.type = "perspective"
+#scene.camera.lookat.orig = 36.3096848 -48.5665436 10.8019056
+#scene.camera.lookat.target = 30.8527298 -40.4823151 8.59579945
+#scene.camera.lookat.orig = 23.7323284 -43.1974144 38.2109604
+#scene.camera.lookat.target = 20.1840496 -36.1845551 32.0279617
+#scene.camera.lookat.orig = 23.7323284 -93.1974144 30
+#scene.camera.lookat.target = 0.0 0.0 5
+#scene.camera.fieldofview = 55
+scene.camera.lookat.orig = 35 0 10
+scene.camera.lookat.target = 0 0 0
+scene.camera.fieldofview = 90
+################################################################################
+scene.textures.vertcol.type = hitpointcolor
+##
+scene.textures.fbmtex.type = fbm
+scene.textures.fbmtex.octaves = 8
+scene.textures.fbmtex.omega = 0.5
+scene.textures.fbmtex.mapping.type = globalmapping3d
+scene.textures.fbmtex.mapping.transformation = 0.1 0.0 0.0 0.0  0.0 0.1 0.0 0.0  0.0 0.0 0.1 0.0  0.0 0.0 0.0 1.0
+##
+scene.textures.fbmtex_clamped.type = clamp
+scene.textures.fbmtex_clamped.texture = fbmtex
+scene.textures.fbmtex_clamped.min = 0.2
+scene.textures.fbmtex_clamped.max = 1.0
+##
+scene.textures.checktex.type = checkerboard2d
+scene.textures.checktex.texture1 = 1.0 0.0 0.0
+scene.textures.checktex.texture2 = 1.0 1.0 1.0
+scene.textures.checktex.mapping.type = uvmapping2d
+scene.textures.checktex.mapping.uvscale = 20.0 20.0
+################################################################################
+scene.materials.mat_light.type = matte
+scene.materials.mat_light.emission = 240 240 240
+scene.materials.mat_light.kd = 0.0 0.0 0.0
+##
+scene.materials.mat_white.type = matte
+scene.materials.mat_white.kd = vertcol
+#scene.materials.mat_white.kd = checktex
+################################################################################
+scene.shapes.obj_whiteply.type = mesh
+scene.shapes.obj_whiteply.ply = scenes/displacement/large-plane.ply
+##
+scene.shapes.obj_whitesubdiv.type = subdiv
+scene.shapes.obj_whitesubdiv.source = obj_whiteply
+scene.shapes.obj_whitesubdiv.maxlevel = 8
+#
+scene.shapes.obj_whitedisp.type = displacement
+scene.shapes.obj_whitedisp.source = obj_whitesubdiv
+scene.shapes.obj_whitedisp.offset = 0.0
+scene.shapes.obj_whitedisp.normalsmooth = 1
+scene.shapes.obj_whitedisp.map = fbmtex_clamped
+#scene.shapes.obj_whitedisp.map = fbmtex
+scene.shapes.obj_whitedisp.scale = 10
+##
+scene.shapes.obj_whitesimplify.type = simplify
+scene.shapes.obj_whitesimplify.source = obj_whitedisp
+scene.shapes.obj_whitesimplify.target = 0.2
+#scene.shapes.obj_whitesimplify.edgescreensize = 0.1
+##
+scene.shapes.obj_white.type = harlequin
+scene.shapes.obj_white.source = obj_whitesimplify
+################################################################################
+#scene.objects.obj_light.ply = scenes/bump/mat_light.ply
+#scene.objects.obj_light.material = mat_light
+#scene.objects.obj_light.transformation = 1 0 0 0  0 1 0 0  0 0 1 0  -2 -8 12 1
+##
+scene.objects.obj_white.ply = obj_white
+scene.objects.obj_white.material = mat_white
+################################################################################
+scene.lights.infinitelight.type = infinite
+scene.lights.infinitelight.file = scenes/simple-mat/sky.exr
+scene.lights.infinitelight.gamma = 1.0
+scene.lights.infinitelight.gain = 1.0 1.0 1.0
+scene.lights.infinitelight.storage = byte
