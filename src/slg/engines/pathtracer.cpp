@@ -692,8 +692,8 @@ void PathTracer::ConnectToEye(const u_int threadIndex,
 					&connectionThroughput)) {
 				// Nothing was hit, the light path vertex is visible
 
-				const float cameraPdfW = scene->camera->GetPDF(eyeRay, filmX, filmY);
-				const float fluxToRadianceFactor = cameraPdfW / (eyeDistance * eyeDistance);
+				float fluxToRadianceFactor;
+				scene->camera->GetPDF(eyeRay, eyeDistance, filmX, filmY, nullptr, &fluxToRadianceFactor);
 
 				SampleResult &sampleResult = AddLightSampleResult(sampleResults, film);
 				sampleResult.filmX = filmX;

@@ -187,7 +187,8 @@ void BiDirCPURenderThread::ConnectToEye(const float time,
 				}
 
 				const float cosToCamera = Dot(lightVertex.bsdf.hitPoint.shadeN, -eyeDir);
-				const float cameraPdfW = scene->camera->GetPDF(eyeRay, filmX, filmY);
+				float cameraPdfW, fluxToRadianceFactor;
+				scene->camera->GetPDF(eyeRay, eyeDistance, filmX, filmY, &cameraPdfW, &fluxToRadianceFactor);
 				const float cameraPdfA = PdfWtoA(cameraPdfW, eyeDistance, cosToCamera);
 				// Was:
 				//  const float fluxToRadianceFactor = cameraPdfA;	
@@ -197,9 +198,7 @@ void BiDirCPURenderThread::ConnectToEye(const float time,
 				//
 				// However this is not true for volumes (see bug
 				// report http://forums.luxcorerender.org/viewtopic.php?f=4&t=1146&start=10#p13491)
-				const float fluxToRadianceFactor = lightVertex.bsdf.IsVolume() ?
-					cameraPdfA :
-					(cameraPdfW / (eyeDistance * eyeDistance));
+				fluxToRadianceFactor *= lightVertex.bsdf.IsVolume() ? fabsf(cosToCamera) : 1.f;
 
 				const float weightLight = MIS(cameraPdfA) *
 					(misVmWeightFactor + lightVertex.dVCM + lightVertex.dVC * MIS(bsdfRevPdfW));
@@ -607,7 +606,8 @@ void BiDirCPURenderThread::RenderFunc() {
 			// Required by MIS weights update
 			eyeVertex.bsdf.hitPoint.fixedDir = -eyeRay.d;
 			eyeVertex.throughput = Spectrum(1.f);
-			const float cameraPdfW = scene->camera->GetPDF(eyeRay, eyeSampleResult.filmX, eyeSampleResult.filmY);
+			float cameraPdfW;
+			scene->camera->GetPDF(eyeRay, 0.f, eyeSampleResult.filmX, eyeSampleResult.filmY, &cameraPdfW, nullptr);
 			eyeVertex.dVCM = MIS(1.f / cameraPdfW);
 			eyeVertex.dVC = 0.f;
 			eyeVertex.dVM = 0.f;

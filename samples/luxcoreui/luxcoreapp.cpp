@@ -329,15 +329,15 @@ void LuxCoreApp::StartRendering(RenderState *startState, Film *startFilm) {
 	else
 		currentTool = TOOL_CAMERA_EDIT;
 
-	// Delete scene.camera.screenwindow so frame buffer resize will
-	// automatically adjust the ratio
-	Properties cameraProps = config->GetScene().ToProperties().GetAllProperties("scene.camera");
-	cameraProps.DeleteAll(cameraProps.GetAllNames("scene.camera.screenwindow"));
-	config->GetScene().Parse(cameraProps);
-
 	unsigned int filmWidth = targetFilmWidth;
 	unsigned int filmHeight = targetFilmHeight;
 	if (currentTool != TOOL_IMAGE_VIEW) {
+		// Delete scene.camera.screenwindow so frame buffer resize will
+		// automatically adjust the ratio
+		Properties cameraProps = config->GetScene().ToProperties().GetAllProperties("scene.camera");
+		cameraProps.DeleteAll(cameraProps.GetAllNames("scene.camera.screenwindow"));
+		config->GetScene().Parse(cameraProps);
+
 		// Adjust the width and height to match the window width and height ratio
 		AdjustFilmResolutionToWindowSize(&filmWidth, &filmHeight);
 	}

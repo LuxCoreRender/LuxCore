@@ -152,7 +152,8 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 
 			eyeVertex.bsdf.hitPoint.fixedDir = -eyeRay.d;
 			eyeVertex.throughput = Spectrum(1.f);
-			const float cameraPdfW = scene->camera->GetPDF(eyeRay, eyeSampleResult.filmX, eyeSampleResult.filmY);
+			float cameraPdfW;
+			scene->camera->GetPDF(eyeRay, 0.f, eyeSampleResult.filmX, eyeSampleResult.filmY, &cameraPdfW, nullptr);
 			eyeVertex.dVCM = MIS(1.f / cameraPdfW);
 			eyeVertex.dVC = 1.f;
 			eyeVertex.dVM = 1.f;

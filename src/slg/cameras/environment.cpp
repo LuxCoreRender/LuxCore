@@ -161,11 +161,16 @@ bool EnvironmentCamera::SampleLens(const float time, const float u1, const float
 	return true;
 }
 
-float EnvironmentCamera::GetPDF(const Ray &eyeRay, const float filmX, const float filmY) const {
+void EnvironmentCamera::GetPDF(const Ray &eyeRay, const float eyeDistance,
+		const float filmX, const float filmY,
+		float *pdfW, float *fluxToRadianceFactor) const {
 	const float theta = M_PI * (filmHeight - filmY - 1.f) / filmHeight;
 	const float cameraPdfW = 1.f / (2.f * M_PI * M_PI * sinf(theta));
 
-	return cameraPdfW;
+	if (pdfW)
+		*pdfW = cameraPdfW;
+	if (fluxToRadianceFactor)
+		*fluxToRadianceFactor = cameraPdfW / (eyeDistance * eyeDistance);
 }
 
 void EnvironmentCamera::InitCameraTransforms(CameraTransforms *trans) {
