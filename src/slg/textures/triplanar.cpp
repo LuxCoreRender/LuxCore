@@ -28,7 +28,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 float TriplanarTexture::GetFloatValue(const HitPoint &hitPoint) const {
-    return (texX1->GetFloatValue(hitPoint) + texY1->GetFloatValue(hitPoint) + texZ1->GetFloatValue(hitPoint))/3;
+    return (texX->GetFloatValue(hitPoint) + texY->GetFloatValue(hitPoint) + texZ->GetFloatValue(hitPoint))/3;
 }
 
 Spectrum TriplanarTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
@@ -45,24 +45,23 @@ Spectrum TriplanarTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
     hitPointZ.uv.u = hitPoint.p.x;
     hitPointZ.uv.v = hitPoint.p.y;
 
-    // SLG_LOG("GetSpectrum: Hitpoint " << hitPoint.geometryN << " " << hitPoint.localToWorld);
     float weights[3] = {pow(fabsf(hitPoint.geometryN.x),4), pow(fabsf(hitPoint.geometryN.y),4), pow(fabsf(hitPoint.geometryN.z),4)};
     const float sum = weights[0] + weights[1] + weights[2];
     weights[0] = weights[0]/sum;
     weights[1] = weights[1]/sum;
     weights[2] = weights[2]/sum;
-    return (texX1->GetSpectrumValue(hitPointX)*weights[0] + texY1->GetSpectrumValue(hitPointY)*weights[1] + texZ1->GetSpectrumValue(hitPointZ)*weights[2]);
+
+    return (texX->GetSpectrumValue(hitPointX)*weights[0] + texY->GetSpectrumValue(hitPointY)*weights[1] + texZ->GetSpectrumValue(hitPointZ)*weights[2]);
 }
 
 Properties TriplanarTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	Properties props;
 
 	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("triplanarmapping"));
-	props.Set(Property("scene.textures." + name + ".texture1")(texX1->GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".texture2")(texY1->GetSDLValue()));
-    props.Set(Property("scene.textures." + name + ".texture3")(texZ1->GetSDLValue()));
-	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
+	props.Set(Property("scene.textures." + name + ".type")("triplanar"));
+	props.Set(Property("scene.textures." + name + ".texture1")(texX->GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".texture2")(texY->GetSDLValue()));
+    props.Set(Property("scene.textures." + name + ".texture3")(texZ->GetSDLValue()));
 
 	return props;
 }

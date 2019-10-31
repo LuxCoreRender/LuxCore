@@ -29,75 +29,55 @@ namespace slg {
 
 class TriplanarTexture : public Texture {
 public:
-	TriplanarTexture(const TextureMapping2D *mp, const Texture *t1, const Texture *t2, 
-    const Texture *t3, const Texture *t4, const Texture *t5, const Texture *t6) :
-    mapping(mp), texX1(t1), texX2(t4), texY1(t2), texY2(t5), texZ1(t3), texZ2(t6) {}
+	TriplanarTexture(const Texture *t1, const Texture *t2, 
+    const Texture *t3) :
+    texX(t1), texY(t2), texZ(t3) {}
 
-	virtual ~TriplanarTexture() { delete mapping; }
+	virtual ~TriplanarTexture() {}
 
 	virtual TextureType GetType() const { return TRIPLANAR_TEX; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
 	virtual float Y() const { 
-        return (texX1->Y() + texX2->Filter() + texY1->Filter() + texY2->Filter() + texZ1->Filter() + texZ2->Filter()) * 1.f/6.f;
+        return (texX->Y() + texY->Filter() + texZ->Filter()) * 1.f/3.f;
         }
 	virtual float Filter() const { 
-        return (texX1->Filter() + texX2->Filter() + texY1->Filter() + texY2->Filter() + texZ1->Filter() + texZ2->Filter()) * 1.f/6.f;
+        return (texX->Filter() + texY->Filter() + texZ->Filter()) * 1.f/3.f;
         }
 
 	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 		Texture::AddReferencedTextures(referencedTexs);
 
-		texX1->AddReferencedTextures(referencedTexs);
-		texX2->AddReferencedTextures(referencedTexs);
-        texY1->AddReferencedTextures(referencedTexs);
-		texY2->AddReferencedTextures(referencedTexs);
-        texZ1->AddReferencedTextures(referencedTexs);
-		texZ2->AddReferencedTextures(referencedTexs);
+		texX->AddReferencedTextures(referencedTexs);
+		texY->AddReferencedTextures(referencedTexs);
+        texZ->AddReferencedTextures(referencedTexs);
 	}
 	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
-		texX1->AddReferencedImageMaps(referencedImgMaps);
-		texX2->AddReferencedImageMaps(referencedImgMaps);
-        texY1->AddReferencedImageMaps(referencedImgMaps);
-		texY2->AddReferencedImageMaps(referencedImgMaps);
-        texZ1->AddReferencedImageMaps(referencedImgMaps);
-		texZ2->AddReferencedImageMaps(referencedImgMaps);
+		texX->AddReferencedImageMaps(referencedImgMaps);
+		texY->AddReferencedImageMaps(referencedImgMaps);
+        texZ->AddReferencedImageMaps(referencedImgMaps);
 	}
 
 	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
-		if (texX1 == oldTex)
-			texX1 = newTex;
-		if (texX2 == oldTex)
-			texX2 = newTex;
-        if (texY1 == oldTex)
-			texY1 = newTex;
-        if (texY2 == oldTex)
-			texY2 = newTex;
-        if (texZ1 == oldTex)
-			texZ1 = newTex;
-        if (texZ2 == oldTex)
-			texZ2 = newTex;    
+		if (texX == oldTex)
+			texX = newTex;
+		if (texY == oldTex)
+			texY = newTex;
+        if (texZ == oldTex)
+			texZ = newTex;
 	}
 
-	const TextureMapping2D *GetTextureMapping() const { return mapping; }
-	const Texture *GetTexture1() const { return texX1; }
-	const Texture *GetTexture2() const { return texX2; }
-    const Texture *GetTexture3() const { return texY1; }
-    const Texture *GetTexture4() const { return texY2; }
-    const Texture *GetTexture5() const { return texZ1; }
-    const Texture *GetTexture6() const { return texZ2; }
+	const Texture *GetTexture1() const { return texX; }
+	const Texture *GetTexture2() const { return texY; }
+    const Texture *GetTexture3() const { return texZ; }
 
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
-	const TextureMapping2D *mapping;
-	const Texture *texX1;
-	const Texture *texX2;
-    const Texture *texY1;
-	const Texture *texY2;
-    const Texture *texZ1;
-	const Texture *texZ2;
+	const Texture *texX;
+	const Texture *texY;
+    const Texture *texZ;
 };
 
 
