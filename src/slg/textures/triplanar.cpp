@@ -45,7 +45,7 @@ Spectrum TriplanarTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
     hitPointZ.uv.u = hitPoint.p.x;
     hitPointZ.uv.v = hitPoint.p.y;
 
-    float weights[3] = {pow(fabsf(hitPoint.geometryN.x),4), pow(fabsf(hitPoint.geometryN.y),4), pow(fabsf(hitPoint.geometryN.z),4)};
+    float weights[3] = {pow(fabsf(hitPoint.shadeN.x),4), pow(fabsf(hitPoint.shadeN.y),4), pow(fabsf(hitPoint.shadeN.z),4)};
     const float sum = weights[0] + weights[1] + weights[2];
     weights[0] = weights[0]/sum;
     weights[1] = weights[1]/sum;
