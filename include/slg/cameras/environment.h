@@ -113,10 +113,6 @@ public:
 
 	float screenOffsetX, screenOffsetY;
 
-	// User defined values
-	float lensRadius, focalDistance;
-	bool autoFocus;
-
 protected:
 	typedef struct {
 		// Note: all *ToWorld don't include camera motion blur

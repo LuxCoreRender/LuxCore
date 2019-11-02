@@ -33,8 +33,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 EnvironmentCamera::EnvironmentCamera(const Point &o, const Point &t, const Vector &u, const float *sw) :
-		Camera(ENVIRONMENT), lensRadius(0.f), focalDistance(10.f), autoFocus(false),
-		orig(o), target(t), up(Normalize(u)) {
+		Camera(ENVIRONMENT), orig(o), target(t), up(Normalize(u)) {
 	if (sw) {
 		autoUpdateScreenWindow = false;
 		screenWindow[0] = sw[0];
@@ -87,20 +86,6 @@ void EnvironmentCamera::Update(const u_int width, const u_int height, const u_in
 	InitPixelArea();
 }
 
-Properties EnvironmentCamera::ToProperties() const {
-	Properties props = Camera::ToProperties();
-
-	props.Set(Property("scene.camera.type")("environment"));
-	props.Set(Property("scene.camera.lookat.orig")(orig));
-	props.Set(Property("scene.camera.lookat.target")(target));
-	props.Set(Property("scene.camera.up")(up));
-
-	if (!autoUpdateScreenWindow)
-		props.Set(Property("scene.camera.screenwindow")(screenWindow[0], screenWindow[1], screenWindow[2], screenWindow[3]));
-
-	return props;
-}
-
 void EnvironmentCamera::GenerateRay(const float time,
 		const float filmX, const float filmY,
 		Ray *ray, PathVolumeInfo *volInfo,
@@ -147,11 +132,6 @@ bool EnvironmentCamera::GetSamplePosition(Ray *ray, float *x, float *y) const {
 
 bool EnvironmentCamera::SampleLens(const float time, const float u1, const float u2, Point *lensp) const {
 	Point lensPoint(0.f, 0.f, 0.f);
-	if (lensRadius > 0.f) {
-		ConcentricSampleDisk(u1, u2, &lensPoint.x, &lensPoint.y);
-		lensPoint.x *= lensRadius;
-		lensPoint.y *= lensRadius;
-	}
 
 	if (motionSystem)
 		*lensp = motionSystem->Sample(time) * (camTrans.cameraToWorld * lensPoint);
@@ -219,4 +199,18 @@ void EnvironmentCamera::Rotate(const float angle, const luxrays::Vector &axis) {
 	// skip this operation (it would trigger a Singular matrix in MatrixInvert)
 	if (AbsDot(Normalize(newDir), up) < 1.f - DEFAULT_EPSILON_STATIC)
 		target = orig + newDir;
+}
+
+Properties EnvironmentCamera::ToProperties() const {
+	Properties props = Camera::ToProperties();
+
+	props.Set(Property("scene.camera.type")("environment"));
+	props.Set(Property("scene.camera.lookat.orig")(orig));
+	props.Set(Property("scene.camera.lookat.target")(target));
+	props.Set(Property("scene.camera.up")(up));
+
+	if (!autoUpdateScreenWindow)
+		props.Set(Property("scene.camera.screenwindow")(screenWindow[0], screenWindow[1], screenWindow[2], screenWindow[3]));
+	
+	return props;
 }

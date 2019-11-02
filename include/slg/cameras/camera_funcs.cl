@@ -397,35 +397,7 @@ OPENCL_FORCE_NOT_INLINE void Camera_GenerateRay(
 	float3 rayOrig = (float3) (0.f, 0.f, 0.f);
 	float3 rayDir = (float3)(sin(theta)*cos(phi), cos(theta), sin(theta)*sin(phi));
 	
-	const float hither = camera->base.hither;
-
-	const float lensRadius = camera->env.projCamera.lensRadius;
-	const float focalDistance = camera->env.projCamera.focalDistance;
-	
-	if ((lensRadius > 0.f) && (focalDistance > 0.f)) {
-		// Sample point on lens
-		float lensU, lensV;
-		ConcentricSampleDisk(dofSampleX, dofSampleY, &lensU, &lensV);
-		lensU *= lensRadius;
-		lensV *= lensRadius;
-
-		// Compute point on plane of focus
-		const float dist = focalDistance - hither;
-
-		const float ft = dist / rayDir.z;
-		const float3 Pfocus = rayOrig + rayDir * ft;
-
-		// Update ray for effect of lens
-		const float k = dist / focalDistance;
-		rayOrig.x += lensU * k;
-		rayOrig.y += lensV * k;
-
-		rayDir = Pfocus - rayOrig;
-	}
-
-	rayDir = normalize(rayDir);
-
-	const float maxt = (camera->base.yon - hither);
+	const float maxt = (camera->base.yon - camera->base.hither);
 	const float time = mix(camera->base.shutterOpen, camera->base.shutterClose, timeSample);
 
 	// Transform ray in world coordinates

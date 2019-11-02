@@ -148,9 +148,6 @@ void CompiledScene::CompileCamera() {
 			memcpy(camera.base.rasterToCamera.m.m, envCamera->GetRasterToCamera().m.m, 4 * 4 * sizeof(float));
 			memcpy(camera.base.cameraToWorld.m.m, envCamera->GetCameraToWorld().m.m, 4 * 4 * sizeof(float));
 
-			camera.env.projCamera.lensRadius = envCamera->lensRadius;
-			camera.env.projCamera.focalDistance = envCamera->focalDistance;
-
 			enableCameraClippingPlane = false;
 			break;			
 		}		

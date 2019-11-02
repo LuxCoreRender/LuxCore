@@ -64,10 +64,6 @@ typedef struct {
 } OrthographicCamera;
 
 typedef struct {
-	ProjectiveCamera projCamera;
-} EnvironmentCamera;
-
-typedef struct {
 	PerspectiveCamera perspCamera;
 
 	Transform leftEyeRasterToCamera;
@@ -87,6 +83,6 @@ typedef struct {
 		PerspectiveCamera persp;
 		OrthographicCamera ortho;
 		StereoCamera stereo;
-		EnvironmentCamera env;
+		// Nothing for EnvironmentCamera;
 	};
 } Camera;

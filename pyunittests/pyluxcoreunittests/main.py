@@ -169,6 +169,7 @@ def main():
 
 		propertiesSuite = unittest.TestLoader().discover("pyluxcoreunittests.tests.properties", top_level_dir=".")
 		basicSuite = unittest.TestLoader().discover("pyluxcoreunittests.tests.basic", top_level_dir=".")
+		cameraSuite = unittest.TestLoader().discover("pyluxcoreunittests.tests.cameras", top_level_dir=".")
 		textureSuite = unittest.TestLoader().discover("pyluxcoreunittests.tests.textures", top_level_dir=".")
 		materialSuite = unittest.TestLoader().discover("pyluxcoreunittests.tests.materials", top_level_dir=".")
 		shapesSuite = unittest.TestLoader().discover("pyluxcoreunittests.tests.shapes", top_level_dir=".")
@@ -177,7 +178,7 @@ def main():
 		haltSuite = unittest.TestLoader().discover("pyluxcoreunittests.tests.halt", top_level_dir=".")
 		serializationSuite = unittest.TestLoader().discover("pyluxcoreunittests.tests.serialization", top_level_dir=".")
 
-		allTests = unittest.TestSuite([propertiesSuite, basicSuite, textureSuite, materialSuite,
+		allTests = unittest.TestSuite([propertiesSuite, basicSuite, cameraSuite, textureSuite, materialSuite,
 			shapesSuite, lightSuite, sceneSuite, haltSuite, serializationSuite])
 
 		# List the tests if required
