@@ -481,22 +481,27 @@ boost::python::list GetOpenVDBGridNames(const string &filePathStr) {
 	return gridNames;
 }
 
+
 boost::python::tuple GetOpenVDBGridInfo(const string &filePathStr, const string &gridName) {
 	boost::python::list bBox;
 	openvdb::io::File file(filePathStr);
-
+	
 	file.open();
-	openvdb::GridBase::Ptr ovdbGrid = file.readGrid(gridName);
-	const openvdb::CoordBBox gridBBox = ovdbGrid->evalActiveVoxelBoundingBox();
+	openvdb::GridBase::Ptr ovdbGrid = file.readGridMetadata(gridName);	
 
-	bBox.append(gridBBox.min()[0]);
-	bBox.append(gridBBox.min()[1]);
-	bBox.append(gridBBox.min()[2]);
-	bBox.append(gridBBox.max()[0]);
-	bBox.append(gridBBox.max()[1]);
-	bBox.append(gridBBox.max()[2]);
+	const openvdb::Vec3i bbox_min = ovdbGrid->metaValue<openvdb::Vec3i>("file_bbox_min");
+	const openvdb::Vec3i bbox_max = ovdbGrid->metaValue<openvdb::Vec3i>("file_bbox_max");
 
+	bBox.append(bbox_min[0]);
+	bBox.append(bbox_min[1]);
+	bBox.append(bbox_min[2]);
+	
+	bBox.append(bbox_max[0]);
+	bBox.append(bbox_max[1]);
+	bBox.append(bbox_max[2]);
+	
 	file.close();
+
 	return boost::python::make_tuple(bBox, ovdbGrid->valueType());
 }
 
