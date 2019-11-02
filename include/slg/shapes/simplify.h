@@ -30,7 +30,7 @@ class Camera;
 class SimplifyShape : public Shape {
 public:
 	SimplifyShape(const Camera *camera, luxrays::ExtTriangleMesh *srcMesh,
-			const float target, const float edgeScreenSize);
+			const float target, const float edgeScreenSize, const bool preserveBorder);
 	virtual ~SimplifyShape();
 
 	virtual ShapeType GetType() const { return SIMPLIFY; }

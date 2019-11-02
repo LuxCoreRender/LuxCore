@@ -305,7 +305,7 @@ ExtTriangleMesh *Scene::CreateShape(const string &shapeName, const Properties &p
 
 		params.scale = props.Get(Property(propName + ".scale")(1.f)).Get<float>();
 		params.offset = props.Get(Property(propName + ".offset")(0.f)).Get<float>();
-		params.normalSmooth = props.Get(Property(propName + ".normalsmooth")(1)).Get<bool>();
+		params.normalSmooth = props.Get(Property(propName + ".normalsmooth")(true)).Get<bool>();
 
 		shape = new DisplacementShape((ExtTriangleMesh *)extMeshCache.GetExtMesh(sourceMeshName),
 				*tex, params);
@@ -322,8 +322,10 @@ ExtTriangleMesh *Scene::CreateShape(const string &shapeName, const Properties &p
 		
 		const float target = props.Get(Property(propName + ".target")(.25f)).Get<float>();
 		const float edgeScreenSize = Clamp(props.Get(Property(propName + ".edgescreensize")(0.f)).Get<float>(), 0.f, 1.f);
+		const bool preserveBorder = props.Get(Property(propName + ".preserveborder")(false)).Get<bool>();
 		
-		shape = new SimplifyShape(camera, (ExtTriangleMesh *)extMeshCache.GetExtMesh(sourceMeshName), target, edgeScreenSize);
+		shape = new SimplifyShape(camera, (ExtTriangleMesh *)extMeshCache.GetExtMesh(sourceMeshName),
+				target, edgeScreenSize, preserveBorder);
 	} else
 		throw runtime_error("Unknown shape type: " + shapeType);
 

@@ -246,7 +246,8 @@ public:
 	}
 
 	void Decimate(const float targetTriangleCount, const Camera *scnCamera,
-			const float screenSize) {
+			const float screenSize, const bool border) {
+		preserveBorder = border;
 		camera = scnCamera;
 		edgeScreenSize = screenSize;
 
@@ -332,7 +333,7 @@ private:
 	vector<SimplifyRef> candidateList;
 
 	u_int deletedTriangles;
-	bool hasNormals, hasUVs, hasColors, hasAlphas;
+	bool hasNormals, hasUVs, hasColors, hasAlphas, preserveBorder;
 
 	bool CollapseEdge(const u_int trinagleIndex, const u_int startVertexIndex,
 			vector<bool> &deleted0, vector<bool> &deleted1) {
@@ -650,8 +651,13 @@ private:
 				SimplifyVertex &v1 = vertices[i1];
 
 				// Border check
-				if (v0.border != v1.border)
-					continue;
+				if (preserveBorder) {
+					if (v0.border && v1.border)
+						continue;
+				} else {
+					if (v0.border != v1.border)
+						continue;
+				}
 
 				// Compute vertex to collapse to
 				Point p;
@@ -800,15 +806,27 @@ private:
 		const float error1 = VertexError(q, p1.x, p1.y, p1.z) + 1.f;
 		const float error2 = VertexError(q, p2.x, p2.y, p2.z) + 1.f;
 		const float error3 = VertexError(q, p3.x, p3.y, p3.z) + 1.f;
-		float error = Min(error1, Min(error2, error3));
 
-		if (pResult) {
-			if (error1 == error)
+		float error;
+		if (preserveBorder && vertices[v1Index].border) {
+			error = error1;
+			if (pResult)
 				*pResult = p1;
-			if (error2 == error)
+		} else if (preserveBorder && vertices[v2Index].border) {
+			error = error2;
+			if (pResult)
 				*pResult = p2;
-			if (error3 == error)
-				*pResult = p3;
+		} else {
+			error = Min(error1, Min(error2, error3));
+
+			if (pResult) {
+				if (error1 == error)
+					*pResult = p1;
+				if (error2 == error)
+					*pResult = p2;
+				if (error3 == error)
+					*pResult = p3;
+			}
 		}
 
 		// Adding 1.0 because error have negative values
@@ -863,7 +881,7 @@ private:
 //------------------------------------------------------------------------------
 
 SimplifyShape::SimplifyShape(const Camera *camera, ExtTriangleMesh *srcMesh,
-		const float target, const float edgeScreenSize) {
+		const float target, const float edgeScreenSize, const bool preserveBorder) {
 	SDL_LOG("Simplify shape " << srcMesh->GetName() << " with target " << target);
 
 	if ((edgeScreenSize > 0.f) && !camera)
@@ -879,7 +897,7 @@ SimplifyShape::SimplifyShape(const Camera *camera, ExtTriangleMesh *srcMesh,
 	delete debugMeshStart;*/
 
 	Simplify simplify(*srcMesh);
-	simplify.Decimate(targetCount, camera, edgeScreenSize);
+	simplify.Decimate(targetCount, camera, edgeScreenSize, preserveBorder);
 	mesh = simplify.GetExtMesh();
 
 	/*srcMesh->Save("debug-end.ply");
