@@ -1,6 +1,12 @@
 scene.camera.fieldofview = 49.1343
 scene.camera.lookat = -13.205945 -67.920326 103.170464 -13.034013 -67.735992 102.202759
 scene.camera.up = 0.660041 0.707676 0.252073
+##
+#scene.camera.type = "orthographic"
+#scene.camera.screenwindow = -50 50 -50 50
+#scene.camera.lookat.orig = -100 -100 100
+#scene.camera.lookat.target = -20 -20 5
+#scene.camera.up = 0 0 1
 ################################################################################
 scene.textures.bumpmap.type = fbm
 scene.textures.bumpmap.octaves = 8

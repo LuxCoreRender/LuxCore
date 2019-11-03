@@ -18,6 +18,7 @@
 
 #include <vector>
 
+#include "slg/bsdf/bsdf.h"
 #include "slg/film/film.h"
 
 #ifndef _SLG_SAMPLERESULT_H
@@ -85,7 +86,7 @@ public:
 	BSDFEvent firstPathVertexEvent;
 
 	// Used to keep some state of the current sample
-	bool firstPathVertex, lastPathVertex, passThroughPath, specularGlossyCausticPath;
+	bool firstPathVertex, lastPathVertex;
 
 	bool useFilmSplat;
 

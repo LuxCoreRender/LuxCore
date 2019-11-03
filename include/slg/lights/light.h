@@ -87,14 +87,15 @@ public:
 
 	// Emits particle from the light
 	virtual luxrays::Spectrum Emit(const Scene &scene,
-		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
-		luxrays::Point *pos, luxrays::Vector *dir,
-		float *emissionPdfW, float *directPdfA = NULL, float *cosThetaAtLight = NULL) const = 0;
+		const float time, const float u0, const float u1,
+		const float u2, const float u3, const float passThroughEvent,
+		luxrays::Ray &ray, float &emissionPdfW,
+		float *directPdfA = NULL, float *cosThetaAtLight = NULL) const = 0;
 
-	// Illuminates a luxrays::Point in the scene
+	// Illuminates bsdf.hitPoint.p
     virtual luxrays::Spectrum Illuminate(const Scene &scene, const BSDF &bsdf,
-		const float u0, const float u1, const float passThroughEvent,
-        luxrays::Vector *dir, float *distance, float *directPdfW,
+		const float time, const float u0, const float u1, const float passThroughEvent,
+        luxrays::Ray &shadowRay, float &directPdfW,
 		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const = 0;
 
 	// This can be used at pre-processing stage to check if the point is always in

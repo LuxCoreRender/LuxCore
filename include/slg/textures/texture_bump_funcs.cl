@@ -18,11 +18,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-//------------------------------------------------------------------------------
 // Texture bump/normal mapping
-//------------------------------------------------------------------------------
-
-#if defined(PARAM_HAS_BUMPMAPS)
 
 //------------------------------------------------------------------------------
 // Generic texture bump mapping
@@ -184,6 +180,4 @@ OPENCL_FORCE_NOT_INLINE float3 NormalMapTexture_Bump(
 
 	return shadeN;
 }
-#endif
-
 #endif

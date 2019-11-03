@@ -137,7 +137,7 @@ void PathCPURenderEngine::StartLockLess() {
 
 	pathTracer.InitPixelFilterDistribution(pixelFilter);
 	pathTracer.SetPhotonGICache(photonGICache);
-
+	
 	//--------------------------------------------------------------------------
 
 	CPUNoTileRenderEngine::StartLockLess();

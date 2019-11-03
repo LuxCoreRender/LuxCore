@@ -198,10 +198,13 @@ void TilePathOCLRenderThread::RenderThreadImpl() {
 				SLG_LOG("[TilePathOCLRenderThread::" << threadIndex << "] Increased the number of rendered tiles to: " << tileWorks.size());
 			}
 
-			if (engine->photonGICache &&
-					engine->photonGICache->Update(threadIndex, *(engine->film), pgicUpdateCallBack)) {
-				InitPhotonGI();
-				SetKernelArgs();
+			if (engine->photonGICache) {
+				const u_int spp = engine->film->GetTotalEyeSampleCount() / engine->film->GetPixelCount();
+
+				if (engine->photonGICache->Update(threadIndex, spp, pgicUpdateCallBack)) {
+					InitPhotonGI();
+					SetKernelArgs();
+				}
 			}
 		}
 

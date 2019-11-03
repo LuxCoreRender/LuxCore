@@ -66,7 +66,6 @@ PathOCLBaseOCLRenderThread::PathOCLBaseOCLRenderThread(const u_int index,
 	lightsDistributionBuff = nullptr;
 	infiniteLightSourcesDistributionBuff = nullptr;
 	dlscAllEntriesBuff = nullptr;
-	dlscDistributionIndexToLightIndexBuff = nullptr;
 	dlscDistributionsBuff = nullptr;
 	dlscBVHNodesBuff = nullptr;
 	elvcAllEntriesBuff = nullptr;
@@ -75,10 +74,12 @@ PathOCLBaseOCLRenderThread::PathOCLBaseOCLRenderThread(const u_int index,
 	envLightDistributionsBuff = nullptr;
 	vertsBuff = nullptr;
 	normalsBuff = nullptr;
+	triNormalsBuff = nullptr;
 	uvsBuff = nullptr;
 	colsBuff = nullptr;
 	alphasBuff = nullptr;
 	trianglesBuff = nullptr;
+	interpolatedTransformsBuff = nullptr;
 	cameraBuff = nullptr;
 	lightIndexOffsetByMeshIndexBuff = nullptr;
 	lightIndexByTriIndexBuff = nullptr;
@@ -93,14 +94,13 @@ PathOCLBaseOCLRenderThread::PathOCLBaseOCLRenderThread(const u_int index,
 	samplesBuff = nullptr;
 	sampleDataBuff = nullptr;
 	taskStatsBuff = nullptr;
-	pathVolInfosBuff = nullptr;
+	eyePathInfosBuff = nullptr;
 	directLightVolInfosBuff = nullptr;
 	pixelFilterBuff = nullptr;
 	pgicRadiancePhotonsBuff = nullptr;
 	pgicRadiancePhotonsBVHNodesBuff = nullptr;
 	pgicCausticPhotonsBuff = nullptr;
 	pgicCausticPhotonsBVHNodesBuff = nullptr;
-	pgicCausticNearPhotonsBuff = nullptr;
 
 	// Check the kind of kernel cache to use
 	string type = renderEngine->renderConfig->cfg.Get(Property("opencl.kernelcache")("PERSISTENT")).Get<string>();
@@ -183,17 +183,18 @@ void PathOCLBaseOCLRenderThread::Stop() {
 	FreeOCLBuffer(&meshDescsBuff);
 	FreeOCLBuffer(&scnObjsBuff);
 	FreeOCLBuffer(&normalsBuff);
+	FreeOCLBuffer(&triNormalsBuff);
 	FreeOCLBuffer(&uvsBuff);
 	FreeOCLBuffer(&colsBuff);
 	FreeOCLBuffer(&alphasBuff);
 	FreeOCLBuffer(&trianglesBuff);
+	FreeOCLBuffer(&interpolatedTransformsBuff);
 	FreeOCLBuffer(&vertsBuff);
 	FreeOCLBuffer(&lightsBuff);
 	FreeOCLBuffer(&envLightIndicesBuff);
 	FreeOCLBuffer(&lightsDistributionBuff);
 	FreeOCLBuffer(&infiniteLightSourcesDistributionBuff);
 	FreeOCLBuffer(&dlscAllEntriesBuff);
-	FreeOCLBuffer(&dlscDistributionIndexToLightIndexBuff);
 	FreeOCLBuffer(&dlscDistributionsBuff);
 	FreeOCLBuffer(&dlscBVHNodesBuff);
 	FreeOCLBuffer(&elvcAllEntriesBuff);
@@ -216,14 +217,13 @@ void PathOCLBaseOCLRenderThread::Stop() {
 	FreeOCLBuffer(&samplesBuff);
 	FreeOCLBuffer(&sampleDataBuff);
 	FreeOCLBuffer(&taskStatsBuff);
-	FreeOCLBuffer(&pathVolInfosBuff);
+	FreeOCLBuffer(&eyePathInfosBuff);
 	FreeOCLBuffer(&directLightVolInfosBuff);
 	FreeOCLBuffer(&pixelFilterBuff);
 	FreeOCLBuffer(&pgicRadiancePhotonsBuff);
 	FreeOCLBuffer(&pgicRadiancePhotonsBVHNodesBuff);
 	FreeOCLBuffer(&pgicCausticPhotonsBuff);
 	FreeOCLBuffer(&pgicCausticPhotonsBVHNodesBuff);
-	FreeOCLBuffer(&pgicCausticNearPhotonsBuff);
 
 	started = false;
 
@@ -296,11 +296,6 @@ void PathOCLBaseOCLRenderThread::EndSceneEdit(const EditActionList &editActions)
 		// Update PhotonGI cache
 		InitPhotonGI();
 	}
-
-	// A material types edit can enable/disable PARAM_HAS_PASSTHROUGH parameter
-	// and change the size of the structure allocated
-	if (editActions.Has(MATERIAL_TYPES_EDIT))
-		AdditionalInit();
 
 	//--------------------------------------------------------------------------
 	// Recompile Kernels if required

@@ -286,6 +286,24 @@ public:
 		return 0.212671f * c[0] + 0.715160f * c[1] + 0.072169f * c[2];
 	}
 	float Filter() const { return (c[0] + c[1] + c[2]) * (1.f / 3.f); }
+
+	//--------------------------------------------------------------------------
+	// Required by OpenSubdiv interface
+	//--------------------------------------------------------------------------
+
+	void Clear(void * = 0) {
+        c[0] = 0.f;
+		c[1] = 0.f;
+		c[2] = 0.f;
+    }
+	
+	void AddWithWeight(RGBColor const &src, float weight) {
+        c[0] += weight * src.c[0];
+        c[1] += weight * src.c[1];
+        c[2] += weight * src.c[2];
+    }
+
+	//--------------------------------------------------------------------------
 };
 
 // RGBAColor Declarations

@@ -68,11 +68,10 @@ float SharpDistantLight::GetPower(const Scene &scene) const {
 }
 
 Spectrum SharpDistantLight::Emit(const Scene &scene,
-		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
-		Point *orig, Vector *dir,
-		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
-	*dir = absoluteLightDir;
-
+		const float time, const float u0, const float u1,
+		const float u2, const float u3, const float passThroughEvent,
+		Ray &ray, float &emissionPdfW,
+		float *directPdfA, float *cosThetaAtLight) const {
 	if (cosThetaAtLight)
 		*cosThetaAtLight = 1.f;
 
@@ -81,39 +80,43 @@ Spectrum SharpDistantLight::Emit(const Scene &scene,
 
 	float d1, d2;
 	ConcentricSampleDisk(u0, u1, &d1, &d2);
-	*orig = worldCenter - envRadius * (absoluteLightDir + d1 * x + d2 * y);
+	const Point rayOrig = worldCenter - envRadius * (absoluteLightDir + d1 * x + d2 * y);
 
-	*emissionPdfW = 1.f / (M_PI * envRadius * envRadius);
+	emissionPdfW = 1.f / (M_PI * envRadius * envRadius);
 
 	if (directPdfA)
 		*directPdfA = 1.f;
+
+	ray.Update(rayOrig, absoluteLightDir, time);
 
 	return gain * color;
 }
 
 Spectrum SharpDistantLight::Illuminate(const Scene &scene, const BSDF &bsdf,
-		const float u0, const float u1, const float passThroughEvent,
-        Vector *dir, float *distance, float *directPdfW,
+		const float time, const float u0, const float u1, const float passThroughEvent,
+        Ray &shadowRay, float &directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
-	*dir = -absoluteLightDir;
+	const Vector shadowRayDir = -absoluteLightDir;
 
 	const Point worldCenter = scene.dataSet->GetBSphere().center;
 	const float envRadius = GetEnvRadius(scene);
 
-	const Point &pSurface = bsdf.GetRayOrigin(worldCenter - bsdf.hitPoint.p);
-	const Vector toCenter(worldCenter - pSurface);
-	const float centerDistance = Dot(toCenter, toCenter);
-	const float approach = Dot(toCenter, *dir);
-	*distance = approach + sqrtf(Max(0.f, envRadius * envRadius -
-		centerDistance + approach * approach));
+	const Point shadowRayOrig = bsdf.GetRayOrigin(shadowRayDir);
+	const Vector toCenter(worldCenter - shadowRayOrig);
+	const float centerDistanceSquared = Dot(toCenter, toCenter);
+	const float approach = Dot(toCenter, shadowRayDir);
+	const float shadowRayDistance = approach + sqrtf(Max(0.f, envRadius * envRadius -
+		centerDistanceSquared + approach * approach));
 
-	*directPdfW = 1.f;
+	directPdfW = 1.f;
 
 	if (cosThetaAtLight)
 		*cosThetaAtLight = 1.f;
 
 	if (emissionPdfW)
 		*emissionPdfW = 1.f / (M_PI * envRadius * envRadius);
+
+	shadowRay = Ray(shadowRayOrig, shadowRayDir, 0.f, shadowRayDistance, time);
 
 	return gain * color;
 }

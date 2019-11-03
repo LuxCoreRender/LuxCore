@@ -101,6 +101,22 @@ public:
 		return isinf(u) || isinf(v);
 	}
 
+	//--------------------------------------------------------------------------
+	// Required by OpenSubdiv interface
+	//--------------------------------------------------------------------------
+
+	void Clear(void * = 0) {
+        u = 0.f;
+		v = 0.f;
+    }
+	
+	void AddWithWeight(UV const &src, float weight) {
+        u += weight * src.u;
+        v += weight * src.v;
+    }
+
+	//--------------------------------------------------------------------------
+
 	friend class boost::serialization::access;
 
 	// UV Public Data

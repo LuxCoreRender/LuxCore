@@ -30,11 +30,9 @@ typedef struct {
 	Normal geometryN;
 	Normal interpolatedN;
 	Normal shadeN;
-#if defined(PARAM_HAS_BUMPMAPS)
 	// Note: dpdu and dpdv are orthogonal to shading normal (i.e not geometry normal)
 	Vector dpdu, dpdv;
 	Normal dndu, dndv;
-#endif
 
 #if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR) || defined(PARAM_ENABLE_TEX_HITPOINTGREY) || defined(PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR)
 	Spectrum color;
@@ -43,14 +41,12 @@ typedef struct {
 	float alpha;
 #endif
 
-#if defined(PARAM_HAS_PASSTHROUGH)
 	// passThroughEvent can be stored here in a path state even before of
 	// BSDF initialization (while tracing the next path vertex ray)
 	float passThroughEvent;
-#endif
 
-	// Transformation from world to local object reference frame
-	Matrix4x4 worldToLocal;
+	// Transformation from local object to world reference frame
+	Transform localToWorld;
 
 #if defined(PARAM_HAS_VOLUMES)
 	// Interior and exterior volume (this includes volume priority system
@@ -60,11 +56,12 @@ typedef struct {
 	// so I use HitPoint to carry texture index information
 	unsigned int interiorIorTexIndex, exteriorIorTexIndex;
 #endif
-	int intoObject;
 
 #if defined(PARAM_ENABLE_TEX_OBJECTID) || defined(PARAM_ENABLE_TEX_OBJECTID_COLOR) || defined(PARAM_ENABLE_TEX_OBJECTID_NORMALIZED)
 	unsigned int objectID;
 #endif
+
+	int intoObject, throughShadowTransparency;
 } HitPoint;
 
 #endif

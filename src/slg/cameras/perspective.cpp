@@ -119,8 +119,8 @@ bool PerspectiveCamera::GetSamplePosition(Ray *ray, float *x, float *y) const {
 	*y = filmHeight - 1 - pO.y;
 
 	// Check if we are inside the image plane
-	if ((*x < filmSubRegion[0]) || (*x >= filmSubRegion[1]) ||
-			(*y < filmSubRegion[2]) || (*y >= filmSubRegion[3]))
+	if ((*x < filmSubRegion[0]) || (*x >= filmSubRegion[1] + 1) ||
+			(*y < filmSubRegion[2]) || (*y >= filmSubRegion[3] + 1))
 		return false;
 	else {
 		// World arbitrary clipping plane support
@@ -155,18 +155,27 @@ bool PerspectiveCamera::SampleLens(const float time,
 	return true;
 }
 
-float PerspectiveCamera::GetPDF(const Ray &eyeRay, const float filmX, const float filmY) const {
+void PerspectiveCamera::GetPDF(const Ray &eyeRay, const float eyeDistance,
+		const float filmX, const float filmY,
+		float *pdfW, float *fluxToRadianceFactor) const {
 	Vector globalDir = dir;
 	if (motionSystem)
 		globalDir *= motionSystem->Sample(eyeRay.time);
 
 	const float cosAtCamera = Dot(eyeRay.d, globalDir);
-	if (cosAtCamera <= 0.f)
-		return 0.f;
+	if (cosAtCamera <= 0.f) {
+		if (pdfW)
+			*pdfW = 0.f;
+		if (fluxToRadianceFactor)
+			*fluxToRadianceFactor = 0.f;
+	} else {
+		const float cameraPdfW = 1.f / (cosAtCamera * cosAtCamera * cosAtCamera * pixelArea);
 
-	const float cameraPdfW = 1.f / (cosAtCamera * cosAtCamera * cosAtCamera * pixelArea);
-
-	return cameraPdfW;
+		if (pdfW)
+			*pdfW = cameraPdfW;
+		if (fluxToRadianceFactor)
+			*fluxToRadianceFactor = cameraPdfW / (eyeDistance * eyeDistance);
+	}
 }
 
 Properties PerspectiveCamera::ToProperties() const {

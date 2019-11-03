@@ -27,20 +27,12 @@
 #define IDX_SCREEN_X 0
 #define IDX_SCREEN_Y 1
 #define IDX_EYE_TIME 2
-#if defined(PARAM_HAS_PASSTHROUGH)
 #define IDX_EYE_PASSTHROUGH 3
 #define IDX_DOF_X 4
 #define IDX_DOF_Y 5
 #define IDX_BSDF_OFFSET 6
-#else
-#define IDX_DOF_X 3
-#define IDX_DOF_Y 4
-#define IDX_BSDF_OFFSET 5
-#endif
 
 // Relative to IDX_BSDF_OFFSET + PathDepth * VERTEX_SAMPLE_SIZE
-#if defined(PARAM_HAS_PASSTHROUGH)
-
 #define IDX_PASSTHROUGH 0
 #define IDX_BSDF_X 1
 #define IDX_BSDF_Y 2
@@ -52,19 +44,6 @@
 #define IDX_RR 8
 
 #define VERTEX_SAMPLE_SIZE 9
-
-#else
-
-#define IDX_BSDF_X 0
-#define IDX_BSDF_Y 1
-#define IDX_DIRECTLIGHT_X 2
-#define IDX_DIRECTLIGHT_Y 3
-#define IDX_DIRECTLIGHT_Z 4
-#define IDX_DIRECTLIGHT_W 5
-#define IDX_RR 6
-
-#define VERTEX_SAMPLE_SIZE 7
-#endif
 
 #if (PARAM_SAMPLER_TYPE == 0)
 #define TOTAL_U_SIZE 2

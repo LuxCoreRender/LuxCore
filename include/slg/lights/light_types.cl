@@ -132,17 +132,9 @@ typedef struct {
 } NotIntersectableLightSource;
 
 typedef struct {
-	Vector v0, v1, v2;
-	Normal geometryN;
-	Normal n0, n1, n2;
-	UV uv0, uv1, uv2;
-	Spectrum rgb0, rgb1, rgb2;
-	float alpha0, alpha1, alpha2;
 	float invTriangleArea, invMeshArea;
 
-	unsigned int materialIndex;
-	unsigned int lightSceneIndex;
-	unsigned int objectID;
+	unsigned int meshIndex, triangleIndex;
 
 	// Used for image map and/or IES map
 	float avarage;
@@ -173,13 +165,10 @@ typedef struct {
 #define LIGHTS_PARAM_DECL , __global const LightSource* restrict lights, \
 	__global const uint* restrict envLightIndices, \
 	const uint envLightCount, \
-	__global const uint* restrict lightIndexOffsetByMeshIndex, \
-	__global const uint* restrict lightIndexByTriIndex, \
 	__global const float* restrict envLightDistribution, \
 	__global const float* restrict lightsDistribution, \
 	__global const float* restrict infiniteLightSourcesDistribution, \
 	__global const DLSCacheEntry* restrict dlscAllEntries, \
-	__global const uint* restrict dlscDistributionIndexToLightIndex, \
 	__global const float* restrict dlscDistributions, \
 	__global const IndexBVHArrayNode* restrict dlscBVHNodes, \
 	const float dlscRadius2, const float dlscNormalCosAngle, \
@@ -191,13 +180,10 @@ typedef struct {
 #define LIGHTS_PARAM , lights, \
 	envLightIndices, \
 	envLightCount, \
-	lightIndexOffsetByMeshIndex, \
-	lightIndexByTriIndex, \
 	envLightDistribution, \
 	lightsDistribution, \
 	infiniteLightSourcesDistribution, \
 	dlscAllEntries, \
-	dlscDistributionIndexToLightIndex, \
 	dlscDistributions, \
 	dlscBVHNodes, \
 	dlscRadius2, \

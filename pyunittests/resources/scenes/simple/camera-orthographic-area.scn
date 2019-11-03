@@ -1,0 +1,29 @@
+scene.camera.type = orthographic
+scene.camera.lookat.orig = 15 -10 10
+scene.camera.lookat.target = 0.0 0.0 1.0
+scene.camera.screenwindow = -8 8 -8 8
+################################################################################
+scene.materials.whitematte.type = matte
+scene.materials.whitematte.kd = 0.75 0.75 0.75
+scene.materials.redmatte.type = matte
+scene.materials.redmatte.kd = 0.75 0.0 0.0
+scene.materials.blumatte.type = matte
+scene.materials.blumatte.kd = 0.0 0.0 0.75
+scene.materials.greenmatte.type = matte
+scene.materials.greenmatte.kd = 0.0 0.57 0.0
+scene.materials.whitelight.type = matte
+scene.materials.whitelight.emission = 120.0 120.0 120.0
+scene.materials.whitelight.kd = 0.0 0.0 0.0
+################################################################################
+scene.objects.lightplanes.ply = resources/scenes/simple/simple-lights.ply
+scene.objects.lightplanes.material = whitelight
+scene.objects.box1.ply = resources/scenes/simple/simple-mat-cube1.ply
+scene.objects.box1.material = redmatte
+scene.objects.box2.ply = resources/scenes/simple/simple-mat-cube2.ply
+# This object position is edited by a test
+scene.objects.box2.transformation = 1 0 0 0  0 1 0 0  0 0 1 0  0 0 0 1
+scene.objects.box2.material = greenmatte
+scene.objects.box3.ply = resources/scenes/simple/simple-mat-back2.ply
+scene.objects.box3.material = blumatte
+scene.objects.box4.ply = resources/scenes/simple/simple-mat-back.ply
+scene.objects.box4.material = whitematte

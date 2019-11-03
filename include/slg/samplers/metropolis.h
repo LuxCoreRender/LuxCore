@@ -60,8 +60,8 @@ typedef enum {
 class MetropolisSampler : public Sampler {
 public:
 	MetropolisSampler(luxrays::RandomGenerator *rnd, Film *film,
-			const FilmSampleSplatter *flmSplatter, const u_int maxRej,
-			const float pLarge, const float imgRange,
+			const FilmSampleSplatter *flmSplatter, const bool imgSamplesEnable,
+			const u_int maxRej, const float pLarge, const float imgRange,
 			MetropolisSamplerSharedData *samplerSharedData);
 	virtual ~MetropolisSampler();
 
@@ -77,6 +77,8 @@ public:
 
 	virtual luxrays::Properties ToProperties() const;
 
+	u_int GetLargeMutationCount() const { return largeMutationCount; }
+	
 	//--------------------------------------------------------------------------
 	// Static methods used by SamplerRegistry
 	//--------------------------------------------------------------------------
@@ -97,7 +99,6 @@ private:
 	u_int maxRejects;
 	float largeMutationProbability, imageMutationRange;
 
-	u_int sampleSize;
 	float *samples;
 	u_int *sampleStamps;
 
@@ -116,6 +117,8 @@ private:
 	MetropolisSampleType lastSampleAcceptance;
 	float lastSampleWeight;
 
+	u_int largeMutationCount;
+	
 	bool isLargeMutation, cooldown;
 };
 

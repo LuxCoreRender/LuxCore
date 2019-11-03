@@ -71,7 +71,7 @@ OPENCL_FORCE_NOT_INLINE float2 TextureMapping2D_MapDuv(__global const TextureMap
 }
 
 //------------------------------------------------------------------------------
-// 3D mapping
+// UVMapping3D
 //------------------------------------------------------------------------------
 
 OPENCL_FORCE_INLINE float3 UVMapping3D_Map(__global const TextureMapping3D *mapping, __global const HitPoint *hitPoint) {
@@ -79,17 +79,27 @@ OPENCL_FORCE_INLINE float3 UVMapping3D_Map(__global const TextureMapping3D *mapp
 	return Transform_ApplyPoint(&mapping->worldToLocal, (float3)(uv.xy, 0.f));
 }
 
+//------------------------------------------------------------------------------
+// GlobalMapping3D
+//------------------------------------------------------------------------------
+
 OPENCL_FORCE_INLINE float3 GlobalMapping3D_Map(__global const TextureMapping3D *mapping, __global const HitPoint *hitPoint) {
 	const float3 p = VLOAD3F(&hitPoint->p.x);
 	return Transform_ApplyPoint(&mapping->worldToLocal, p);
 }
 
+//------------------------------------------------------------------------------
+// LocalMapping3D
+//------------------------------------------------------------------------------
+
 OPENCL_FORCE_INLINE float3 LocalMapping3D_Map(__global const TextureMapping3D *mapping, __global const HitPoint *hitPoint) {
-	const Matrix4x4 m = Matrix4x4_Mul(&mapping->worldToLocal.m, &hitPoint->worldToLocal);
+	const Matrix4x4 m = Matrix4x4_Mul(&mapping->worldToLocal.m, &hitPoint->localToWorld.mInv);
 	const float3 p = VLOAD3F(&hitPoint->p.x);
 
 	return Matrix4x4_ApplyPoint_Private(&m, p);
 }
+
+//------------------------------------------------------------------------------
 
 OPENCL_FORCE_NOT_INLINE float3 TextureMapping3D_Map(__global const TextureMapping3D *mapping, __global const HitPoint *hitPoint) {
 	switch (mapping->type) {

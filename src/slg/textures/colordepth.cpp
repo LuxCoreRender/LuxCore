@@ -47,7 +47,7 @@ Properties ColorDepthTexture::ToProperties(const ImageMapCache &imgMapCache, con
 
 	const string name = GetName();
 	props.Set(Property("scene.textures." + name + ".type")("colordepth"));
-	props.Set(Property("scene.textures." + name + ".kt")(kt->GetName()));
+	props.Set(Property("scene.textures." + name + ".kt")(kt->GetSDLValue()));
 	props.Set(Property("scene.textures." + name + ".depth")(-d));
 
 	return props;

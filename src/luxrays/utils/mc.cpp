@@ -147,6 +147,28 @@ void UniformSampleTriangle(const float u1, const float u2, float *u, float *v) {
 	*v = u2 * su1;
 }
 
+void LowDiscrepancySampleTriangle(const float u1, float *u, float *v) {
+	// New implementation from: https://pharr.org/matt/blog/2019/02/27/triangle-sampling-1.html
+	// and: https://pharr.org/matt/blog/2019/03/13/triangle-sampling-1.5.html
+	u_int uf = u1 * (1ull << 32);  // Fixed point
+	float cx = 0.f, cy = 0.f;
+	float w = .5f;
+
+	for (u_int i = 0; i < 16; i++) {
+		u_int uu = uf >> 30;
+		bool flip = (uu & 3) == 0;
+
+		cy += ((uu & 1) == 0) * w;
+		cx += ((uu & 2) == 0) * w;
+
+		w *= flip ? -.5f : .5f;
+		uf <<= 2;
+	}
+
+	*u = cx + w / 3.f;
+	*v = cy + w / 3.f;
+}
+
 float UniformConePdf(const float cosThetaMax) {
 	return 1.f / (2.f * M_PI * (1.f - cosThetaMax));
 }

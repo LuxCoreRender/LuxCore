@@ -123,7 +123,7 @@ Spectrum CarPaintMaterial::Evaluate(const HitPoint &hitPoint,
 Spectrum CarPaintMaterial::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
-	float *pdfW, BSDFEvent *event) const {
+	float *pdfW, BSDFEvent *event, const BSDFEvent eventHint) const {
 	if (fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 
@@ -443,18 +443,18 @@ Properties CarPaintMaterial::ToProperties(const ImageMapCache &imgMapCache, cons
 
 	const string name = GetName();
 	props.Set(Property("scene.materials." + name + ".type")("carpaint"));
-	props.Set(Property("scene.materials." + name + ".kd")(Kd->GetName()));
-	props.Set(Property("scene.materials." + name + ".ks1")(Ks1->GetName()));
-	props.Set(Property("scene.materials." + name + ".ks2")(Ks2->GetName()));
-	props.Set(Property("scene.materials." + name + ".ks3")(Ks3->GetName()));
-	props.Set(Property("scene.materials." + name + ".m1")(M1->GetName()));
-	props.Set(Property("scene.materials." + name + ".m2")(M2->GetName()));
-	props.Set(Property("scene.materials." + name + ".m3")(M3->GetName()));
-	props.Set(Property("scene.materials." + name + ".r1")(R1->GetName()));
-	props.Set(Property("scene.materials." + name + ".r2")(R2->GetName()));
-	props.Set(Property("scene.materials." + name + ".r3")(R3->GetName()));
-	props.Set(Property("scene.materials." + name + ".ka")(Ka->GetName()));
-	props.Set(Property("scene.materials." + name + ".d")(depth->GetName()));
+	props.Set(Property("scene.materials." + name + ".kd")(Kd->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".ks1")(Ks1->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".ks2")(Ks2->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".ks3")(Ks3->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".m1")(M1->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".m2")(M2->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".m3")(M3->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".r1")(R1->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".r2")(R2->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".r3")(R3->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".ka")(Ka->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".d")(depth->GetSDLValue()));
 	props.Set(Material::ToProperties(imgMapCache, useRealFileName));
 
 	return props;

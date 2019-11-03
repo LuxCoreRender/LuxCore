@@ -26,6 +26,10 @@ using namespace slg;
 // ConstFloat3 texture
 //------------------------------------------------------------------------------
 
+string ConstFloat3Texture::GetSDLValue() const {
+	return ToString(color.c[0]) + " " + ToString(color.c[1]) + " " + ToString(color.c[2]);
+}
+
 Properties ConstFloat3Texture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	Properties props;
 

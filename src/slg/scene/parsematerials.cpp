@@ -466,6 +466,8 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 	mat->SetLightID(props.Get(Property(propName + ".emission.id")(0u)).Get<u_int>());
 	mat->SetEmittedImportance(props.Get(Property(propName + ".emission.importance")(1.f)).Get<float>());
 
+	mat->SetPassThroughShadowTransparency(props.Get(Property(propName + ".transparency.shadow")(Spectrum(0.f))).Get<Spectrum>());
+
 	const string dlsType = props.Get(Property(propName + ".emission.directlightsampling.type")("AUTO")).Get<string>();
 	if (dlsType == "ENABLED")
 		mat->SetDirectLightSamplingType(DLS_ENABLED);

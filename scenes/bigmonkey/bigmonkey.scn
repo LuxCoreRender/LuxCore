@@ -23,6 +23,11 @@ scene.materials.redmat.basecolor = 0.7 0.0 0.0
 scene.materials.redmat.specular = 1.0
 scene.materials.redmat.roughness = 0.2
 scene.materials.redmat.clearcoatgloss = 1.0
+##scene.materials.redmat.transparency.shadow = 1 1 1
+##
+#scene.materials.redmat.type = mirror
+#scene.materials.redmat.kr = 0.9 0.9 0.9
+##scene.materials.redmat.transparency.shadow = 1 1 1
 ##
 #scene.materials.mat1.type = matte
 #scene.materials.mat1.kd = 0.75 0.0 0.0

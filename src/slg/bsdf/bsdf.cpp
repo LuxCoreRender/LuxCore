@@ -25,32 +25,24 @@ using namespace slg;
 using namespace std;
 
 // Used when hitting a surface
-void BSDF::Init(const bool fixedFromLight, const Scene &scene, const Ray &ray,
-		const RayHit &rayHit, const float passThroughEvent, const PathVolumeInfo *volInfo) {
-	hitPoint.fromLight = fixedFromLight;
-	hitPoint.passThroughEvent = passThroughEvent;
-
-	hitPoint.p = ray(rayHit.t);
-	hitPoint.fixedDir = -ray.d;
-
+void BSDF::Init(const bool fixedFromLight, const bool throughShadowTransparency,
+		const Scene &scene, const Ray &ray, const RayHit &rayHit,
+		const float passThroughEvent, const PathVolumeInfo *volInfo) {
 	// Get the scene object
 	sceneObject = scene.objDefs.GetSceneObject(rayHit.meshIndex);
-	hitPoint.objectID = sceneObject->GetID();
-	
-	// Get the triangle
-	mesh = sceneObject->GetExtMesh();
 
-	// Initialized local to world object space transformation
+	// Get the mesh
+	mesh = sceneObject->GetExtMesh();
 	mesh->GetLocal2World(ray.time, hitPoint.localToWorld);
 
+	hitPoint.Init(fixedFromLight, throughShadowTransparency,
+			scene, rayHit.meshIndex, rayHit.triangleIndex,
+			ray(rayHit.t), -ray.d,
+			rayHit.b1, rayHit.b2,
+			passThroughEvent);
+	
 	// Get the material
 	material = sceneObject->GetMaterial();
-
-	// Interpolate face normal
-	hitPoint.geometryN = mesh->GetGeometryNormal(ray.time, rayHit.triangleIndex);
-	hitPoint.interpolatedN = mesh->InterpolateTriNormal(ray.time, rayHit.triangleIndex, rayHit.b1, rayHit.b2);
-	hitPoint.shadeN = hitPoint.interpolatedN;
-	hitPoint.intoObject = (Dot(ray.d, hitPoint.geometryN) < 0.f);
 
 	// Set interior and exterior volumes
 	volInfo->SetHitPointVolumes(hitPoint,
@@ -58,25 +50,11 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const Ray &ray,
 			material->GetExteriorVolume(hitPoint, hitPoint.passThroughEvent),
 			scene.defaultWorldVolume);
 
-	// Interpolate color
-	hitPoint.color = mesh->InterpolateTriColor(rayHit.triangleIndex, rayHit.b1, rayHit.b2);
-
-	// Interpolate alpha
-	hitPoint.alpha = mesh->InterpolateTriAlpha(rayHit.triangleIndex, rayHit.b1, rayHit.b2);
-
 	// Check if it is a light source
 	if (material->IsLightSource())
 		triangleLightSource = scene.lightDefs.GetLightSourceByMeshAndTriIndex(rayHit.meshIndex, rayHit.triangleIndex);
 	else
 		triangleLightSource = NULL;
-
-	// Interpolate UV coordinates
-	hitPoint.uv = mesh->InterpolateTriUV(rayHit.triangleIndex, rayHit.b1, rayHit.b2);
-
-	// Compute geometry differentials
-	mesh->GetDifferentials(hitPoint.localToWorld, rayHit.triangleIndex, hitPoint.shadeN,
-		&hitPoint.dpdu, &hitPoint.dpdv,
-		&hitPoint.dndu, &hitPoint.dndv);
 
 	// Apply bump or normal mapping
 	material->Bump(&hitPoint);
@@ -86,9 +64,11 @@ void BSDF::Init(const bool fixedFromLight, const Scene &scene, const Ray &ray,
 }
 
 // Used when hitting a volume scatter point
-void BSDF::Init(const bool fixedFromLight, const Scene &scene, const luxrays::Ray &ray,
+void BSDF::Init(const bool fixedFromLight, const bool throughShadowTransparency,
+		const Scene &scene, const luxrays::Ray &ray,
 		const Volume &volume, const float t, const float passThroughEvent) {
 	hitPoint.fromLight = fixedFromLight;
+	hitPoint.throughShadowTransparency = throughShadowTransparency;
 	hitPoint.passThroughEvent = passThroughEvent;
 
 	hitPoint.p = ray(t);
@@ -240,7 +220,9 @@ Spectrum BSDF::Evaluate(const Vector &generatedDir,
 
 	if (!IsVolume()) {
 		// Shadow terminator artefact avoidance
-		if ((*event & (DIFFUSE | GLOSSY)) && (hitPoint.shadeN != hitPoint.interpolatedN))
+		if ((*event & REFLECT) &&
+				(*event & (DIFFUSE | GLOSSY)) &&
+				(hitPoint.shadeN != hitPoint.interpolatedN))
 			result *= ShadowTerminatorAvoidanceFactor(hitPoint.GetLandingInterpolatedN(),
 					hitPoint.GetLandingShadeN(), lightDir);
 
@@ -273,13 +255,17 @@ Spectrum BSDF::ShadowCatcherSample(Vector *sampledDir,
 
 Spectrum BSDF::Sample(Vector *sampledDir,
 		const float u0, const float u1,
-		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
+		float *pdfW, float *absCosSampledDir,
+		BSDFEvent *event, const BSDFEvent eventHint) const {
+	if ((eventHint != NONE) && !(GetEventTypes() & eventHint))
+		return Spectrum();
+
 	Vector localFixedDir = frame.ToLocal(hitPoint.fixedDir);
 	Vector localSampledDir;
 
 	Spectrum result = material->Sample(hitPoint,
 			localFixedDir, &localSampledDir, u0, u1, hitPoint.passThroughEvent,
-			pdfW, event);
+			pdfW, event, eventHint);
 	if (result.Black())
 		return result;
 
@@ -287,7 +273,9 @@ Spectrum BSDF::Sample(Vector *sampledDir,
 	*sampledDir = frame.ToWorld(localSampledDir);
 
 	// Shadow terminator artefact avoidance
-	if ((*event & (DIFFUSE | GLOSSY)) && (hitPoint.shadeN != hitPoint.interpolatedN)) {
+	if ((*event & REFLECT) &&
+			(*event & (DIFFUSE | GLOSSY))
+			&& (hitPoint.shadeN != hitPoint.interpolatedN)) {
 		const Vector &lightDir = hitPoint.fromLight ? hitPoint.fixedDir : (*sampledDir);
 
 		result *= ShadowTerminatorAvoidanceFactor(hitPoint.GetLandingInterpolatedN(),

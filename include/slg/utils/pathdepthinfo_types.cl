@@ -1,4 +1,4 @@
-#line 2 "varianceclamping_funcs.cl"
+#line 2 "pathdepthinfo_types.cl"
 
 /***************************************************************************
  * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *

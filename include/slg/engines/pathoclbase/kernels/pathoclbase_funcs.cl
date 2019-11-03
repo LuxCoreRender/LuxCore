@@ -22,9 +22,7 @@
 //  PARAM_RAY_EPSILON_MIN
 //  PARAM_RAY_EPSILON_MAX
 //  PARAM_HAS_IMAGEMAPS
-//  PARAM_HAS_PASSTHROUGH
 //  PARAM_USE_PIXEL_ATOMICS
-//  PARAM_HAS_BUMPMAPS
 //  PARAM_ACCEL_BVH or PARAM_ACCEL_MBVH or PARAM_ACCEL_QBVH or PARAM_ACCEL_MQBVH
 //  PARAM_LIGHT_WORLD_RADIUS_SCALE
 //  PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR
@@ -158,200 +156,6 @@
 		*ptr++ = (unsigned char)(Rnd_UintValue(&seed) & 0xff);
 }*/
 
-OPENCL_FORCE_NOT_INLINE bool Scene_Intersect(
-		const bool cameraRay,
-#if defined(PARAM_HAS_VOLUMES)
-		__global PathVolumeInfo *volInfo,
-		__global HitPoint *tmpHitPoint,
-#endif
-#if defined(PARAM_HAS_PASSTHROUGH)
-		const float passThrough,
-#endif
-		__global Ray *ray,
-		__global RayHit *rayHit,
-		__global BSDF *bsdf,
-		float3 *connectionThroughput,  const float3 pathThroughput,
-		__global SampleResult *sampleResult,
-		// BSDF_Init parameters
-		__global const Mesh* restrict meshDescs,
-		__global const SceneObject* restrict sceneObjs,
-		__global const uint* restrict lightIndexOffsetByMeshIndex,
-		__global const uint* restrict lightIndexByTriIndex,
-		__global const Point* restrict vertices,
-		__global const Vector* restrict vertNormals,
-		__global const UV* restrict vertUVs,
-		__global const Spectrum* restrict vertCols,
-		__global const float* restrict vertAlphas,
-		__global const Triangle* restrict triangles,
-		const bool backTracing
-		MATERIALS_PARAM_DECL
-		) {
-	*connectionThroughput = WHITE;
-	const bool hit = (rayHit->meshIndex != NULL_INDEX);
-
-#if defined(PARAM_HAS_VOLUMES)
-	uint rayVolumeIndex = volInfo->currentVolumeIndex;
-#endif
-	if (hit) {
-		// Initialize the BSDF of the hit point
-		BSDF_Init(bsdf,
-				meshDescs,
-				sceneObjs,
-				lightIndexOffsetByMeshIndex,
-				lightIndexByTriIndex,
-				vertices,
-				vertNormals,
-				vertUVs,
-				vertCols,
-				vertAlphas,
-				triangles, ray, rayHit
-#if defined(PARAM_HAS_PASSTHROUGH)
-				, passThrough
-#endif
-#if defined(PARAM_HAS_VOLUMES)
-				, volInfo
-#endif
-				MATERIALS_PARAM
-				);
-
-#if defined(PARAM_HAS_VOLUMES)
-		rayVolumeIndex = bsdf->hitPoint.intoObject ? bsdf->hitPoint.exteriorVolumeIndex : bsdf->hitPoint.interiorVolumeIndex;
-#endif
-	}
-#if defined(PARAM_HAS_VOLUMES)
-	else if (rayVolumeIndex == NULL_INDEX) {
-		// No volume information, I use the default volume
-		rayVolumeIndex = SCENE_DEFAULT_VOLUME_INDEX;
-	}
-#endif
-
-#if defined(PARAM_HAS_VOLUMES)
-	// Check if there is volume scatter event
-	if (rayVolumeIndex != NULL_INDEX) {
-		// This applies volume transmittance too
-		// Note: by using passThrough here, I introduce subtle correlation
-		// between scattering events and pass-through events
-		float3 connectionEmission = BLACK;
-
-		const float t = Volume_Scatter(&mats[rayVolumeIndex], ray,
-				hit ? rayHit->t : ray->maxt,
-				passThrough, volInfo->scatteredStart,
-				connectionThroughput, &connectionEmission,
-				tmpHitPoint
-				TEXTURES_PARAM);
-
-		// Add the volume emitted light to the appropriate light group
-		if (!Spectrum_IsBlack(connectionEmission) && sampleResult)
-			SampleResult_AddEmission(sampleResult, BSDF_GetLightID(bsdf
-				MATERIALS_PARAM),
-					pathThroughput, connectionEmission);
-
-		if (t > 0.f) {
-			// There was a volume scatter event
-
-			// I have to set RayHit fields even if there wasn't a real
-			// ray hit
-			rayHit->t = t;
-			// This is a trick in order to have RayHit::Miss() return
-			// false. I assume 0xfffffffeu will trigger a memory fault if
-			// used (and the bug will be noticed)
-			rayHit->meshIndex = 0xfffffffeu;
-
-			BSDF_InitVolume(bsdf, mats, ray, rayVolumeIndex, t, passThrough);
-			volInfo->scatteredStart = true;
-
-			return false;
-		}
-	}
-#endif
-
-	if (hit) {
-		bool continueToTrace =
-#if defined(PARAM_HAS_VOLUMES)
-			// Check if the volume priority system tells me to continue to trace the ray
-			PathVolumeInfo_ContinueToTrace(volInfo, bsdf
-				MATERIALS_PARAM) ||
-#endif
-			// Check if it is a camera invisible object and we are a tracing a camera ray
-			(cameraRay && sceneObjs[rayHit->meshIndex].cameraInvisible);
-
-#if defined(PARAM_HAS_PASSTHROUGH)
-		// Check if it is a pass through point
-		if (!continueToTrace) {
-			const float3 passThroughTrans = BSDF_GetPassThroughTransparency(bsdf, backTracing
-				MATERIALS_PARAM);
-			if (!Spectrum_IsBlack(passThroughTrans)) {
-				*connectionThroughput *= passThroughTrans;
-
-				// It is a pass through point, continue to trace the ray
-				continueToTrace = true;
-			}
-		}
-#endif
-
-		if (continueToTrace) {
-#if defined(PARAM_HAS_VOLUMES)
-			// Update volume information
-			const BSDFEvent eventTypes = BSDF_GetEventTypes(bsdf
-						MATERIALS_PARAM);
-			PathVolumeInfo_Update(volInfo, eventTypes, bsdf
-					MATERIALS_PARAM);
-#endif
-
-			// It is a transparent material, continue to trace the ray
-			ray->mint = rayHit->t + MachineEpsilon_E(rayHit->t);
-
-			// A safety check
-			if (ray->mint >= ray->maxt)
-				return false;
-			else
-				return true;
-		} else
-			return false;
-	} else {
-		// Nothing was hit, stop tracing the ray
-		return false;
-	}
-}
-
-//------------------------------------------------------------------------------
-// PathDepthInfo
-//------------------------------------------------------------------------------
-
-OPENCL_FORCE_INLINE void PathDepthInfo_Init(__global PathDepthInfo *depthInfo) {
-	depthInfo->depth = 0;
-	depthInfo->diffuseDepth = 0;
-	depthInfo->glossyDepth = 0;
-	depthInfo->specularDepth = 0;
-}
-
-OPENCL_FORCE_INLINE void PathDepthInfo_IncDepths(__global PathDepthInfo *depthInfo, const BSDFEvent event) {
-	++(depthInfo->depth);
-	if (event & DIFFUSE)
-		++(depthInfo->diffuseDepth);
-	if (event & GLOSSY)
-		++(depthInfo->glossyDepth);
-	if (event & SPECULAR)
-		++(depthInfo->specularDepth);
-}
-
-OPENCL_FORCE_INLINE bool PathDepthInfo_IsLastPathVertex(__global PathDepthInfo *depthInfo, const BSDFEvent event) {
-	return (depthInfo->depth + 1 >= PARAM_MAX_PATH_DEPTH) ||
-			((event & DIFFUSE) && (depthInfo->diffuseDepth + 1 >= PARAM_MAX_PATH_DEPTH_DIFFUSE)) ||
-			((event & GLOSSY) && (depthInfo->glossyDepth + 1 >= PARAM_MAX_PATH_DEPTH_GLOSSY)) ||
-			((event & SPECULAR) && (depthInfo->specularDepth + 1 >= PARAM_MAX_PATH_DEPTH_SPECULAR));
-}
-
-OPENCL_FORCE_INLINE bool PathDepthInfo_CheckComponentDepths(const BSDFEvent component) {
-	return ((PARAM_MAX_PATH_DEPTH_DIFFUSE > 0) && (component & DIFFUSE)) ||
-			((PARAM_MAX_PATH_DEPTH_GLOSSY > 0) && (component & GLOSSY)) ||
-			((PARAM_MAX_PATH_DEPTH_SPECULAR > 0) && (component & SPECULAR));
-}
-
-OPENCL_FORCE_INLINE uint PathDepthInfo_GetRRDepth(__global PathDepthInfo *depthInfo) {
-	return depthInfo->diffuseDepth + depthInfo->glossyDepth;
-}
-
 //------------------------------------------------------------------------------
 // Init functions
 //------------------------------------------------------------------------------
@@ -403,9 +207,7 @@ OPENCL_FORCE_NOT_INLINE void GenerateEyePath(
 		const uint filmSubRegion2, const uint filmSubRegion3,
 		__global float *pixelFilterDistribution,
 		__global Ray *ray,
-#if defined(PARAM_HAS_VOLUMES)
-		__global PathVolumeInfo *volInfo,
-#endif
+		__global EyePathInfo *pathInfo,
 		Seed *seed
 #if defined(RENDER_ENGINE_TILEPATHOCL) || defined(RENDER_ENGINE_RTPATHOCL)
 		// cameraFilmWidth/cameraFilmHeight and filmWidth/filmHeight are usually
@@ -414,6 +216,8 @@ OPENCL_FORCE_NOT_INLINE void GenerateEyePath(
 		const uint tileStartX, const uint tileStartY
 #endif
 		) {
+	EyePathInfo_Init(pathInfo);
+
 	InitSampleResult(sample, sampleDataPathBase,
 			filmWidth, filmHeight,
 			filmSubRegion0, filmSubRegion1,
@@ -430,7 +234,7 @@ OPENCL_FORCE_NOT_INLINE void GenerateEyePath(
 	Camera_GenerateRay(camera, cameraFilmWidth, cameraFilmHeight,
 			ray,
 #if defined(PARAM_HAS_VOLUMES)
-			volInfo,
+			&pathInfo->volume,
 #endif
 			sample->result.filmX + tileStartX, sample->result.filmY + tileStartY,
 			timeSample,
@@ -439,7 +243,7 @@ OPENCL_FORCE_NOT_INLINE void GenerateEyePath(
 	Camera_GenerateRay(camera, filmWidth, filmHeight,
 			ray,
 #if defined(PARAM_HAS_VOLUMES)
-			volInfo,
+			&pathInfo->volume,
 #endif
 			sample->result.filmX, sample->result.filmY,
 			timeSample,
@@ -448,23 +252,17 @@ OPENCL_FORCE_NOT_INLINE void GenerateEyePath(
 
 	// Initialize the path state
 	taskState->state = MK_RT_NEXT_VERTEX;
-	PathDepthInfo_Init(&taskState->depthInfo);
 	VSTORE3F(WHITE, taskState->throughput.c);
 	taskState->albedoToDo = true;
-	taskState->photonGICausticCacheAlreadyUsed = false;
 	taskState->photonGICacheEnabledOnLastHit = false;
+	taskState->photonGICausticCacheUsed = false;
 	taskState->photonGIShowIndirectPathMixUsed = false;
-	taskDirectLight->lastGlossiness = 0.f;
-	taskDirectLight->lastBSDFEvent = SPECULAR; // SPECULAR is required to avoid MIS
-	taskDirectLight->lastPdfW = 1.f;
 
-#if defined(PARAM_HAS_PASSTHROUGH)
 	// Initialize the pass-through event seed
 	const float passThroughEvent = Sampler_GetSamplePath(seed, sample, sampleDataPathBase, IDX_EYE_PASSTHROUGH);
 	Seed seedPassThroughEvent;
 	Rnd_InitFloat(passThroughEvent, &seedPassThroughEvent);
 	taskState->seedPassThroughEvent = seedPassThroughEvent;
-#endif
 
 #if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
 	sample->result.directShadowMask = 1.f;
@@ -496,42 +294,23 @@ OPENCL_FORCE_INLINE bool CheckDirectHitVisibilityFlags(__global const LightSourc
 	return false;
 }
 
-#if defined(PARAM_HYBRID_BACKFORWARD)
-bool IsStillSpecularGlossyCausticPath(const bool isSpecularGlossyCausticPath,
-		__global const BSDF *bsdf,
-		const BSDFEvent lastBSDFEvent,
-		__global PathDepthInfo *depthInfo
-		MATERIALS_PARAM_DECL) {
-	// First bounce condition
-	if (depthInfo->depth == 0)
-		return (lastBSDFEvent & DIFFUSE) ||
-				((lastBSDFEvent & GLOSSY) && (BSDF_GetGlossiness(bsdf MATERIALS_PARAM) > PARAM_HYBRID_BACKFORWARD_GLOSSINESSTHRESHOLD));
-
-	// All other bounce conditions
-	return isSpecularGlossyCausticPath && ((lastBSDFEvent & SPECULAR) ||
-			((lastBSDFEvent & GLOSSY) && (BSDF_GetGlossiness(bsdf MATERIALS_PARAM) <= PARAM_HYBRID_BACKFORWARD_GLOSSINESSTHRESHOLD)));
-}
-#endif
-
 #if defined(PARAM_HAS_ENVLIGHTS)
 OPENCL_FORCE_NOT_INLINE void DirectHitInfiniteLight(
-		__global PathDepthInfo *depthInfo,
-		const BSDFEvent lastBSDFEvent,
-		__global const Spectrum* restrict pathThroughput,
-		__global const BSDF *bsdf,
-		const __global Ray *ray, const float3 rayNormal,
-#if defined(PARAM_HAS_VOLUMES)
-		const bool rayFromVolume,
-#endif
-		const float lastPdfW, __global SampleResult *sampleResult
+		__global EyePathInfo *pathInfo, __global const Spectrum* restrict pathThroughput,
+		const __global Ray *ray, __global const BSDF *bsdf, __global SampleResult *sampleResult
 		LIGHTS_PARAM_DECL) {
+	// If the material is shadow transparent, Direct Light sampling
+	// will take care of transporting all emitted light
+	if (bsdf && bsdf->hitPoint.throughShadowTransparency)
+		return;
+
 	const float3 throughput = VLOAD3F(pathThroughput->c);
 
 	for (uint i = 0; i < envLightCount; ++i) {
 		__global const LightSource* restrict light = &lights[envLightIndices[i]];
 
 		// Check if the light source is visible according the settings
-		if (!CheckDirectHitVisibilityFlags(light, depthInfo, lastBSDFEvent))
+		if (!CheckDirectHitVisibilityFlags(light, &pathInfo->depth, pathInfo->lastBSDFEvent))
 			continue;
 
 		float directPdfW;
@@ -541,19 +320,19 @@ OPENCL_FORCE_NOT_INLINE void DirectHitInfiniteLight(
 
 		if (!Spectrum_IsBlack(lightRadiance)) {
 			float weight;
-			if (!(lastBSDFEvent & SPECULAR)) {
+			if (!(pathInfo->lastBSDFEvent & SPECULAR)) {
 				const float lightPickProb = LightStrategy_SampleLightPdf(lightsDistribution,
-						dlscAllEntries, dlscDistributionIndexToLightIndex,
+						dlscAllEntries,
 						dlscDistributions, dlscBVHNodes,
 						dlscRadius2, dlscNormalCosAngle,
-						VLOAD3F(&ray->o.x), rayNormal,
+						VLOAD3F(&ray->o.x), VLOAD3F(&pathInfo->lastShadeN.x),
 #if defined(PARAM_HAS_VOLUMES)
-						rayFromVolume,
+						pathInfo->lastFromVolume,
 #endif
 						light->lightSceneIndex);
 
 				// MIS between BSDF sampling and direct light sampling
-				weight = PowerHeuristic(lastPdfW, directPdfW * lightPickProb);
+				weight = PowerHeuristic(pathInfo->lastBSDFPdfW, directPdfW * lightPickProb);
 			} else
 				weight = 1.f;
 
@@ -564,20 +343,18 @@ OPENCL_FORCE_NOT_INLINE void DirectHitInfiniteLight(
 #endif
 
 OPENCL_FORCE_NOT_INLINE void DirectHitFiniteLight(
-		__global PathDepthInfo *depthInfo,
-		const BSDFEvent lastBSDFEvent,
-		__global const Spectrum* restrict pathThroughput,
-		const __global Ray *ray, const float3 rayNormal,
-#if defined(PARAM_HAS_VOLUMES)
-		const bool rayFromVolume,
-#endif
+		__global EyePathInfo *pathInfo,
+		__global const Spectrum* restrict pathThroughput, const __global Ray *ray,
 		const float distance, __global const BSDF *bsdf,
-		const float lastPdfW, __global SampleResult *sampleResult
+		__global SampleResult *sampleResult
 		LIGHTS_PARAM_DECL) {
 	__global const LightSource* restrict light = &lights[bsdf->triangleLightSourceIndex];
 
 	// Check if the light source is visible according the settings
-	if (!CheckDirectHitVisibilityFlags(light, depthInfo, lastBSDFEvent))
+	if (!CheckDirectHitVisibilityFlags(light, &pathInfo->depth, pathInfo->lastBSDFEvent) ||
+			// If the material is shadow transparent, Direct Light sampling
+			// will take care of transporting all emitted light
+			bsdf->hitPoint.throughShadowTransparency)
 		return;
 	
 	float directPdfA;
@@ -587,14 +364,14 @@ OPENCL_FORCE_NOT_INLINE void DirectHitFiniteLight(
 	if (!Spectrum_IsBlack(emittedRadiance)) {
 		// Add emitted radiance
 		float weight = 1.f;
-		if (!(lastBSDFEvent & SPECULAR)) {
+		if (!(pathInfo->lastBSDFEvent & SPECULAR)) {
 			const float lightPickProb = LightStrategy_SampleLightPdf(lightsDistribution,
-					dlscAllEntries, dlscDistributionIndexToLightIndex,
+					dlscAllEntries,
 					dlscDistributions, dlscBVHNodes,
 					dlscRadius2, dlscNormalCosAngle,
-					VLOAD3F(&ray->o.x), rayNormal,
+					VLOAD3F(&ray->o.x), VLOAD3F(&pathInfo->lastShadeN.x),
 #if defined(PARAM_HAS_VOLUMES)
-					rayFromVolume,
+					pathInfo->lastFromVolume,
 #endif
 					light->lightSceneIndex);
 
@@ -610,7 +387,7 @@ OPENCL_FORCE_NOT_INLINE void DirectHitFiniteLight(
 			// MIS between BSDF sampling and direct light sampling
 			//
 			// Note: mats[bsdf->materialIndex].avgPassThroughTransparency = lightSource->GetAvgPassThroughTransparency()
-			weight = PowerHeuristic(lastPdfW * Light_GetAvgPassThroughTransparency(light LIGHTS_PARAM), directPdfW * lightPickProb);
+			weight = PowerHeuristic(pathInfo->lastBSDFPdfW * Light_GetAvgPassThroughTransparency(light LIGHTS_PARAM), directPdfW * lightPickProb);
 		}
 
 		SampleResult_AddEmission(sampleResult, BSDF_GetLightID(bsdf
@@ -624,15 +401,14 @@ OPENCL_FORCE_INLINE float RussianRouletteProb(const float3 color) {
 
 OPENCL_FORCE_NOT_INLINE bool DirectLight_Illuminate(
 		__global const BSDF *bsdf,
+		__global Ray *shadowRay,
 		const float worldCenterX,
 		const float worldCenterY,
 		const float worldCenterZ,
 		const float worldRadius,
 		__global HitPoint *tmpHitPoint,
-		const float u0, const float u1, const float u2,
-#if defined(PARAM_HAS_PASSTHROUGH)
+		const float time, const float u0, const float u1, const float u2,
 		const float lightPassThroughEvent,
-#endif
 		__global DirectLightIlluminateInfo *info
 		LIGHTS_PARAM_DECL) {
 	// Select the light strategy to use
@@ -642,7 +418,7 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_Illuminate(
 	// Pick a light source to sample
 	float lightPickPdf;
 	const uint lightIndex = LightStrategy_SampleLights(lightDist,
-			dlscAllEntries, dlscDistributionIndexToLightIndex,
+			dlscAllEntries,
 			dlscDistributions, dlscBVHNodes,
 			dlscRadius2, dlscNormalCosAngle,
 			VLOAD3F(&bsdf->hitPoint.p.x), BSDF_GetLandingGeometryN(bsdf), 
@@ -665,20 +441,16 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_Illuminate(
 	const float3 lightRadiance = Light_Illuminate(
 			&lights[lightIndex],
 			bsdf,
-			u1, u2,
-#if defined(PARAM_HAS_PASSTHROUGH)
+			time, u1, u2,
 			lightPassThroughEvent,
-#endif
 			worldCenterX, worldCenterY, worldCenterZ, worldRadius,
 			tmpHitPoint,		
-			&lightRayDir, &distance, &directPdfW
+			shadowRay, &directPdfW
 			LIGHTS_PARAM);
 	
 	if (Spectrum_IsBlack(lightRadiance))
 		return false;
 	else {
-		VSTORE3F(lightRayDir, &info->dir.x);
-		info->distance = distance;
 		info->directPdfW = directPdfW;
 		VSTORE3F(lightRadiance, info->lightRadiance.c);
 #if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
@@ -692,29 +464,21 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 		__global DirectLightIlluminateInfo *info,
 		const float time,
 		const bool lastPathVertex,
-		__global PathDepthInfo *depthInfo,
+		__global EyePathInfo *pathInfo,
 		__global PathDepthInfo *tmpDepthInfo,
 		__global const BSDF *bsdf,
-		__global Ray *shadowRay
-#if defined(PARAM_HYBRID_BACKFORWARD)
-		, const bool specularGlossyCausticPath
-#endif
+		const float3 shadowRayDir
 		LIGHTS_PARAM_DECL) {
-	const float3 lightRayDir = VLOAD3F(&info->dir.x);
-	
 	// Sample the BSDF
 	BSDFEvent event;
 	float bsdfPdfW;
 	const float3 bsdfEval = BSDF_Evaluate(bsdf,
-			lightRayDir, &event, &bsdfPdfW
+			shadowRayDir, &event, &bsdfPdfW
 			MATERIALS_PARAM);
 
 	if (Spectrum_IsBlack(bsdfEval)
 #if defined(PARAM_HYBRID_BACKFORWARD)
-			|| ((depthInfo->depth > 0) &&
-				IsStillSpecularGlossyCausticPath(specularGlossyCausticPath,
-					bsdf, event, depthInfo
-					MATERIALS_PARAM))
+			|| EyePathInfo_IsCausticPath(pathInfo, event, BSDF_GetGlossiness(bsdf MATERIALS_PARAM), PARAM_HYBRID_BACKFORWARD_GLOSSINESSTHRESHOLD)
 #endif
 			)
 		return false;
@@ -723,7 +487,7 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 	//
 	// Note: I was using a local variable before to save, use and than restore
 	// the depthInfo variable but it was triggering a AMD OpenCL compiler bug.
-	*tmpDepthInfo = *depthInfo;
+	*tmpDepthInfo = pathInfo->depth;
 	PathDepthInfo_IncDepths(tmpDepthInfo, event);
 
 	const float directLightSamplingPdfW = info->directPdfW * info->pickPdf;
@@ -753,11 +517,6 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 	VSTORE3F(factor * lightRadiance, info->lightIrradiance.c);
 #endif
 
-	// Setup the shadow ray
-	const float3 surfacePoint = BSDF_GetRayOrigin(bsdf, lightRayDir);
-	const float distance = info->distance;
-	Ray_Init4(shadowRay, surfacePoint, lightRayDir, 0.f, distance, time);
-
 	return true;
 }
 
@@ -767,7 +526,6 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 
 #if defined(PARAM_HAS_VOLUMES)
 #define KERNEL_ARGS_VOLUMES \
-		, __global PathVolumeInfo *pathVolInfos \
 		, __global PathVolumeInfo *directLightVolInfos
 #else
 #define KERNEL_ARGS_VOLUMES
@@ -780,7 +538,9 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 		, const float worldRadius
 
 #define KERNEL_ARGS_NORMALS_BUFFER \
-		, __global const Vector* restrict vertNormals
+		, __global const Normal* restrict vertNormals
+#define KERNEL_ARGS_TRINORMALS_BUFFER \
+		, __global const Normal* restrict triNormals
 #define KERNEL_ARGS_UVS_BUFFER \
 		, __global const UV* restrict vertUVs
 #define KERNEL_ARGS_COLS_BUFFER \
@@ -860,17 +620,15 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 #define KERNEL_ARGS_PHOTONGI \
 		, __global const RadiancePhoton* restrict pgicRadiancePhotons \
 		, __global const IndexBVHArrayNode* restrict pgicRadiancePhotonsBVHNodes \
+		, const float pgicGlossinessUsageThreshold \
 		, const float pgicIndirectLookUpRadius \
 		, const float pgicIndirectLookUpNormalCosAngle \
-		, const float pgicIndirectGlossinessUsageThreshold \
 		, const float pgicIndirectUsageThresholdScale \
 		, __global const Photon* restrict pgicCausticPhotons \
 		, __global const IndexBVHArrayNode* restrict pgicCausticPhotonsBVHNodes \
-		, __global NearPhoton *pgicCausticNearPhotons \
 		, const uint pgicCausticPhotonTracedCount \
 		, const float pgicCausticLookUpRadius \
-		, const float pgicCausticLookUpNormalCosAngle \
-		, const uint pgicCausticLookUpMaxCount
+		, const float pgicCausticLookUpNormalCosAngle
 #else
 #define KERNEL_ARGS_PHOTONGI
 #endif
@@ -884,6 +642,7 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 		, __global SamplerSharedData *samplerSharedData \
 		, __global Sample *samples \
 		, __global float *samplesData \
+		, __global EyePathInfo *eyePathInfos \
 		KERNEL_ARGS_VOLUMES \
 		, __global Ray *rays \
 		, __global RayHit *rayHits \
@@ -894,13 +653,15 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 		, __global const Material* restrict mats \
 		, __global const Texture* restrict texs \
 		, __global const SceneObject* restrict sceneObjs \
-		, __global const Mesh* restrict meshDescs \
+		, __global const ExtMesh* restrict meshDescs \
 		, __global const Point* restrict vertices \
 		KERNEL_ARGS_NORMALS_BUFFER \
+		KERNEL_ARGS_TRINORMALS_BUFFER \
 		KERNEL_ARGS_UVS_BUFFER \
 		KERNEL_ARGS_COLS_BUFFER \
 		KERNEL_ARGS_ALPHAS_BUFFER \
 		, __global const Triangle* restrict triangles \
+		, __global const InterpolatedTransform* restrict interpolatedTransforms \
 		, __global const Camera* restrict camera \
 		/* Lights */ \
 		, __global const LightSource* restrict lights \
@@ -911,7 +672,6 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 		, __global const float* restrict lightsDistribution \
 		, __global const float* restrict infiniteLightSourcesDistribution \
 		, __global const DLSCacheEntry* restrict dlscAllEntries \
-		, __global const uint* restrict dlscDistributionIndexToLightIndex \
 		, __global const float* restrict dlscDistributions \
 		, __global const IndexBVHArrayNode* restrict dlscBVHNodes \
 		, const float dlscRadius2 \
@@ -1012,9 +772,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 		__global SamplerSharedData *samplerSharedData,
 		__global Sample *samples,
 		__global float *samplesData,
-#if defined(PARAM_HAS_VOLUMES)
-		__global PathVolumeInfo *pathVolInfos,
-#endif
+		__global EyePathInfo *eyePathInfos,
 		__global float *pixelFilterDistribution,
 		__global Ray *rays,
 		__global Camera *camera
@@ -1071,19 +829,13 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 	if (validSample) {
 		__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
 
-#if defined(PARAM_HAS_VOLUMES)
-		PathVolumeInfo_Init(&pathVolInfos[gid]);
-#endif
-
 		// Generate the eye path
 		GenerateEyePath(taskDirectLight, taskState, sample, sampleDataPathBase, camera,
 				filmWidth, filmHeight,
 				filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3,
 				pixelFilterDistribution,
 				&rays[gid],
-#if defined(PARAM_HAS_VOLUMES)
-				&pathVolInfos[gid],
-#endif
+				&eyePathInfos[gid],
 				seed
 #if defined(RENDER_ENGINE_TILEPATHOCL) || defined(RENDER_ENGINE_RTPATHOCL)
 				, cameraFilmWidth, cameraFilmHeight,

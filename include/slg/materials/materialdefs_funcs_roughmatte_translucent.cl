@@ -99,9 +99,7 @@ OPENCL_FORCE_NOT_INLINE float3 RoughMatteTranslucentMaterial_Evaluate(
 OPENCL_FORCE_NOT_INLINE float3 RoughMatteTranslucentMaterial_Sample(
 		__global const HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1,
-#if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
-#endif
 		float *pdfW, BSDFEvent *event,
 		const float3 krVal, const float3 ktVal, const float sigma) {
 	if (fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC)

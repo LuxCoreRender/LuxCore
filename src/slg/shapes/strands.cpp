@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "luxrays/core/exttrianglemesh.h"
 #include "slg/shapes/strands.h"
 #include "slg/scene/scene.h"
 #include "slg/cameras/perspective.h"
@@ -286,7 +287,7 @@ private:
 StrendsShape::StrendsShape(const Scene *scene,
 		const cyHairFile *hairFile, const TessellationType tesselType,
 		const u_int aMaxDepth, const float aError, const u_int sSideCount,
-		const bool sCapBottom, const bool sCapTop, const bool useCamPos) : Shape(), mesh(NULL) {
+		const bool sCapBottom, const bool sCapTop, const bool useCamPos) : mesh(NULL) {
 	adaptiveMaxDepth = aMaxDepth;
 	adaptiveError = aError;
 	solidSideCount = sSideCount;

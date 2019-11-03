@@ -53,6 +53,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 	//--------------------------------------------------------------------------
 	// Start of variables setup
 	//--------------------------------------------------------------------------
+	
+	__global EyePathInfo *pathInfo = &eyePathInfos[gid];
 
 	// Initialize image maps page pointer table
 	INIT_IMAGEMAPS_PAGES
@@ -63,38 +65,26 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 
 	float3 connectionThroughput;
 
-#if defined(PARAM_HAS_PASSTHROUGH)
 	Seed seedPassThroughEvent = taskState->seedPassThroughEvent;
 	const float passThroughEvent = Rnd_FloatValue(&seedPassThroughEvent);
 	taskState->seedPassThroughEvent = seedPassThroughEvent;
-#endif
 
+	int throughShadowTransparency = taskState->throughShadowTransparency;
 	const bool continueToTrace = Scene_Intersect(
-			(taskState->depthInfo.depth == 0),
+			EYE_RAY | ((pathInfo->depth.depth == 0) ? CAMERA_RAY : GENERIC_RAY),
+			&throughShadowTransparency,
 #if defined(PARAM_HAS_VOLUMES)
-			&pathVolInfos[gid],
+			&pathInfo->volume,
 			&tasks[gid].tmpHitPoint,
 #endif
-#if defined(PARAM_HAS_PASSTHROUGH)
 			passThroughEvent,
-#endif
 			&rays[gid], &rayHits[gid], &taskState->bsdf,
 			&connectionThroughput, VLOAD3F(taskState->throughput.c),
 			&samples[gid].result,
-			// BSDF_Init parameters
-			meshDescs,
-			sceneObjs,
-			lightIndexOffsetByMeshIndex,
-			lightIndexByTriIndex,
-			vertices,
-			vertNormals,
-			vertUVs,
-			vertCols,
-			vertAlphas,
-			triangles,
 			false
 			MATERIALS_PARAM
 			);
+	taskState->throughShadowTransparency = throughShadowTransparency;
 	VSTORE3F(connectionThroughput * VLOAD3F(taskState->throughput.c), taskState->throughput.c);
 
 	// If continueToTrace, there is nothing to do, just keep the same state
@@ -105,7 +95,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 			__global Sample *sample = &samples[gid];
 			const BSDFEvent eventTypes = BSDF_GetEventTypes(&taskState->bsdf
 					MATERIALS_PARAM);
-			sample->result.lastPathVertex = PathDepthInfo_IsLastPathVertex(&taskState->depthInfo, eventTypes);
+			sample->result.lastPathVertex = PathDepthInfo_IsLastPathVertex(&pathInfo->depth, eventTypes);
 
 			taskState->state = MK_HIT_OBJECT;
 		}
@@ -139,6 +129,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 
 	__global GPUTaskDirectLight *taskDirectLight = &tasksDirectLight[gid];
 	__global Sample *sample = &samples[gid];
+	__global EyePathInfo *pathInfo = &eyePathInfos[gid];
 
 	// Initialize image maps page pointer table
 	INIT_IMAGEMAPS_PAGES
@@ -150,40 +141,35 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 	// Nothing was hit, add environmental lights radiance
 
 #if defined(PARAM_HAS_ENVLIGHTS)
-	bool isDirectLightHitVisible = true;
+	bool checkDirectLightHit = true;
 	
 #if defined(PARAM_FORCE_BLACK_BACKGROUND)
-	isDirectLightHitVisible = isDirectLightHitVisible && (!sample->result.passThroughPath);
-#endif
-
-#if defined(PARAM_PGIC_ENABLED)
-	isDirectLightHitVisible = isDirectLightHitVisible &&
-			PhotonGICache_IsDirectLightHitVisible(taskState->photonGICausticCacheAlreadyUsed,
-				taskDirectLight->lastBSDFEvent, &taskState->depthInfo);
+	checkDirectLightHit = checkDirectLightHit && (!pathInfo->isPassThroughPath);
 #endif
 
 #if defined(PARAM_HYBRID_BACKFORWARD)
-	isDirectLightHitVisible = isDirectLightHitVisible &&
-			((taskState->depthInfo.depth <= 1) || !samples[gid].result.specularGlossyCausticPath);
+	checkDirectLightHit = checkDirectLightHit &&
+			// Avoid to render caustic path if hybridBackForwardEnable
+			!pathInfo->isNearlyCaustic;
 #endif
 
-	if (isDirectLightHitVisible) {
-		DirectHitInfiniteLight(
-				&taskState->depthInfo,
-				taskDirectLight->lastBSDFEvent,
-				&taskState->throughput,
-				sample->result.firstPathVertex ? NULL : &taskState->bsdf,
-				&rays[gid],  VLOAD3F(&taskDirectLight->lastNormal.x),
-#if defined(PARAM_HAS_VOLUMES)
-				taskDirectLight->lastIsVolume,
+#if defined(PARAM_PGIC_ENABLED)
+	checkDirectLightHit = checkDirectLightHit &&
+			PhotonGICache_IsDirectLightHitVisible(pathInfo, taskState->photonGICausticCacheUsed);
 #endif
-				taskDirectLight->lastPdfW,
+
+	if (checkDirectLightHit) {
+		DirectHitInfiniteLight(
+				pathInfo,
+				&taskState->throughput,
+				&rays[gid],
+				sample->result.firstPathVertex ? NULL : &taskState->bsdf,
 				&samples[gid].result
 				LIGHTS_PARAM);
 	}
 #endif
 
-	if (taskState->depthInfo.depth == 0) {
+	if (pathInfo->depth.depth == 0) {
 #if defined(PARAM_FILM_CHANNELS_HAS_ALPHA)
 		sample->result.alpha = 0.f;
 #endif
@@ -206,10 +192,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 		sample->result.shadingNormal.z = 0.f;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID) || defined(PARAM_FILM_CHANNELS_HAS_BY_MATERIAL_ID) || defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID_MASK) || defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID_COLOR)
-		sample->result.materialID = NULL_INDEX;
+		sample->result.materialID = 0;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_OBJECT_ID)
-		sample->result.objectID = NULL_INDEX;
+		sample->result.objectID = 0;
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_UV)
 		sample->result.uv.u = INFINITY;
@@ -248,6 +234,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 	__global BSDF *bsdf = &taskState->bsdf;
 	__global Sample *sample = &samples[gid];
 	__global GPUTaskDirectLight *taskDirectLight = &tasksDirectLight[gid];
+	__global EyePathInfo *pathInfo = &eyePathInfos[gid];
 
 	// Initialize image maps page pointer table
 	INIT_IMAGEMAPS_PAGES
@@ -267,7 +254,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 		taskState->albedoToDo = false;
 	}
 
-	if (taskState->depthInfo.depth == 0) {
+	if (pathInfo->depth.depth == 0) {
 #if defined(PARAM_FILM_CHANNELS_HAS_ALPHA)
 		sample->result.alpha = 1.f;
 #endif
@@ -295,25 +282,31 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 #endif
 	}
 
-	// Check if it is a light source (note: I can hit only triangle area light sources)
-	if (BSDF_IsLightSource(bsdf)
-#if defined(PARAM_PGIC_ENABLED)
-			&& PhotonGICache_IsDirectLightHitVisible(taskState->photonGICausticCacheAlreadyUsed,
-					taskDirectLight->lastBSDFEvent, &taskState->depthInfo)
-#endif
+	//--------------------------------------------------------------------------
+	// Check if it is a light source and I have to add light emission
+	//--------------------------------------------------------------------------
+
+	bool checkDirectLightHit = true;
+
 #if defined(PARAM_HYBRID_BACKFORWARD)
-			&& ((taskState->depthInfo.depth <= 1) || !samples[gid].result.specularGlossyCausticPath)
+	checkDirectLightHit = checkDirectLightHit &&
+			// Avoid to render caustic path if hybridBackForwardEnable
+			!pathInfo->isNearlyCaustic;
 #endif
-			) {
+
+#if defined(PARAM_PGIC_ENABLED)
+	checkDirectLightHit = checkDirectLightHit &&
+			PhotonGICache_IsDirectLightHitVisible(pathInfo, taskState->photonGICausticCacheUsed);
+#endif
+
+	// Check if it is a light source (note: I can hit only triangle area light sources)
+	if (BSDF_IsLightSource(bsdf) && checkDirectLightHit) {
 		DirectHitFiniteLight(
-				&taskState->depthInfo,
-				taskDirectLight->lastBSDFEvent,
+				pathInfo,
 				&taskState->throughput,
-				&rays[gid], VLOAD3F(&taskDirectLight->lastNormal.x),
-#if defined(PARAM_HAS_VOLUMES)
-				taskDirectLight->lastIsVolume,
-#endif
-				rayHits[gid].t, bsdf, taskDirectLight->lastPdfW,
+				&rays[gid],
+				rayHits[gid].t,
+				bsdf,
 				&sample->result
 				LIGHTS_PARAM);
 	}
@@ -323,7 +316,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 	//----------------------------------------------------------------------
 
 #if defined(PARAM_PGIC_ENABLED)
-	const bool isPhotonGIEnabled = PhotonGICache_IsPhotonGIEnabled(bsdf, pgicIndirectGlossinessUsageThreshold
+	const bool isPhotonGIEnabled = PhotonGICache_IsPhotonGIEnabled(bsdf, pgicGlossinessUsageThreshold
 			MATERIALS_PARAM);
 
 #if defined(PARAM_PGIC_DEBUG_SHOWINDIRECT)
@@ -340,11 +333,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 #elif defined(PARAM_PGIC_DEBUG_SHOWCAUSTIC)
 
 	if (isPhotonGIEnabled) {
-		const float3 radiance = PhotonGICache_GetCausticRadiance(bsdf,
+		const float3 radiance = PhotonGICache_ConnectWithCausticPaths(bsdf,
 				pgicCausticPhotons, pgicCausticPhotonsBVHNodes,
-				&pgicCausticNearPhotons[gid * pgicCausticLookUpMaxCount],
 				pgicCausticPhotonTracedCount, pgicCausticLookUpRadius * pgicCausticLookUpRadius,
-				pgicCausticLookUpNormalCosAngle, pgicCausticLookUpMaxCount
+				pgicCausticLookUpNormalCosAngle
 				MATERIALS_PARAM);
 
 		VADD3F(sample->result.radiancePerPixelNormalized[0].c, VLOAD3F(taskState->throughput.c) * radiance);
@@ -360,12 +352,12 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 
 		if (taskState->photonGICacheEnabledOnLastHit &&
 				(rayHits[gid].t > PhotonGICache_GetIndirectUsageThreshold(
-					taskDirectLight->lastBSDFEvent,
-					taskDirectLight->lastGlossiness,
+					pathInfo->lastBSDFEvent,
+					pathInfo->lastGlossiness,
 					// I hope to not introduce strange sample correlations
 					// by using passThrough here
 					passThroughEvent,
-					pgicIndirectGlossinessUsageThreshold,
+					pgicGlossinessUsageThreshold,
 					pgicIndirectUsageThresholdScale,
 					pgicIndirectLookUpRadius))) {
 			VSTORE3F((float3)(0.f, 0.f, 1.f), sample->result.radiancePerPixelNormalized[0].c);
@@ -382,18 +374,37 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 #else
 
 	if (isPhotonGIEnabled) {
+#if defined(PARAM_PGIC_CAUSTIC_ENABLED)
+#if defined(PARAM_HYBRID_BACKFORWARD)
+		if (pathInfo->depth.depth != 0) {
+#endif
+			const float3 causticRadiance = PhotonGICache_ConnectWithCausticPaths(bsdf,
+					pgicCausticPhotons, pgicCausticPhotonsBVHNodes,
+					pgicCausticPhotonTracedCount, pgicCausticLookUpRadius * pgicCausticLookUpRadius,
+					pgicCausticLookUpNormalCosAngle
+					MATERIALS_PARAM);
+
+			if (!Spectrum_IsBlack(causticRadiance)) {
+				VADD3F(sample->result.radiancePerPixelNormalized[0].c, VLOAD3F(taskState->throughput.c) * causticRadiance);			
+				taskState->photonGICausticCacheUsed = true;
+			}
+#if defined(PARAM_HYBRID_BACKFORWARD)
+		}
+#endif
+#endif
+
 #if defined(PARAM_PGIC_INDIRECT_ENABLED)
 		Seed seedPassThroughEvent = taskState->seedPassThroughEvent;
 		const float passThroughEvent = Rnd_FloatValue(&seedPassThroughEvent);
 
 		if (taskState->photonGICacheEnabledOnLastHit &&
 				(rayHits[gid].t > PhotonGICache_GetIndirectUsageThreshold(
-					taskDirectLight->lastBSDFEvent,
-					taskDirectLight->lastGlossiness,
+					pathInfo->lastBSDFEvent,
+					pathInfo->lastGlossiness,
 					// I hope to not introduce strange sample correlations
 					// by using passThrough here
 					passThroughEvent,
-					pgicIndirectGlossinessUsageThreshold,
+					pgicGlossinessUsageThreshold,
 					pgicIndirectUsageThresholdScale,
 					pgicIndirectLookUpRadius))) {
 			const float3 radiance = PhotonGICache_GetIndirectRadiance(bsdf,
@@ -408,20 +419,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 		}
 #endif
 
-#if defined(PARAM_PGIC_CAUSTIC_ENABLED)
-		if (!taskState->photonGICausticCacheAlreadyUsed) {
-			const float3 radiance = PhotonGICache_GetCausticRadiance(bsdf,
-					pgicCausticPhotons, pgicCausticPhotonsBVHNodes,
-					&pgicCausticNearPhotons[gid * pgicCausticLookUpMaxCount],
-					pgicCausticPhotonTracedCount, pgicCausticLookUpRadius * pgicCausticLookUpRadius,
-					pgicCausticLookUpNormalCosAngle, pgicCausticLookUpMaxCount
-					MATERIALS_PARAM);
-
-			VADD3F(sample->result.radiancePerPixelNormalized[0].c, VLOAD3F(taskState->throughput.c) * radiance);
-		}
-#endif
-
-		taskState->photonGICausticCacheAlreadyUsed = true;
 		taskState->photonGICacheEnabledOnLastHit = true;
 	} else
 		taskState->photonGICacheEnabledOnLastHit = false;
@@ -476,46 +473,30 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 
 	float3 connectionThroughput = WHITE;
 
-#if defined(PARAM_HAS_PASSTHROUGH)
 	Seed seedPassThroughEvent = taskDirectLight->seedPassThroughEvent;
 	const float passThroughEvent = Rnd_FloatValue(&seedPassThroughEvent);
 	taskDirectLight->seedPassThroughEvent = seedPassThroughEvent;
-#endif
 
-#if defined(PARAM_HAS_PASSTHROUGH) || defined(PARAM_HAS_VOLUMES)
+	int throughShadowTransparency = taskDirectLight->throughShadowTransparency;
 	const bool continueToTrace =
 		Scene_Intersect(
-			false,
+			EYE_RAY | SHADOW_RAY,
+			&throughShadowTransparency,
 #if defined(PARAM_HAS_VOLUMES)
 			&directLightVolInfos[gid],
 			&task->tmpHitPoint,
 #endif
-#if defined(PARAM_HAS_PASSTHROUGH)
 			passThroughEvent,
-#endif
 			&rays[gid], &rayHits[gid], &task->tmpBsdf,
 			&connectionThroughput, WHITE,
 			NULL,
-			// BSDF_Init parameters
-			meshDescs,
-			sceneObjs,
-			lightIndexOffsetByMeshIndex,
-			lightIndexByTriIndex,
-			vertices,
-			vertNormals,
-			vertUVs,
-			vertCols,
-			vertAlphas,
-			triangles,
 			true
 			MATERIALS_PARAM
 			);
+	taskDirectLight->throughShadowTransparency = throughShadowTransparency;
 	VSTORE3F(connectionThroughput * VLOAD3F(taskDirectLight->illumInfo.lightRadiance.c), taskDirectLight->illumInfo.lightRadiance.c);
 #if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
 	VSTORE3F(connectionThroughput * VLOAD3F(taskDirectLight->illumInfo.lightIrradiance.c), taskDirectLight->illumInfo.lightIrradiance.c);
-#endif
-#else
-	const bool continueToTrace = false;
 #endif
 
 	const bool rayMiss = (rayHits[gid].meshIndex == NULL_INDEX);
@@ -595,7 +576,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 	// Start of variables setup
 	//--------------------------------------------------------------------------
 
-	const uint depth = taskState->depthInfo.depth;
+	__global EyePathInfo *pathInfo = &eyePathInfos[gid];
+	const uint depth = pathInfo->depth.depth;
 
 	__global BSDF *bsdf = &taskState->bsdf;
 
@@ -626,14 +608,14 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 			MATERIALS_PARAM) &&
 			DirectLight_Illuminate(
 				bsdf,
+				&rays[gid],
 				worldCenterX, worldCenterY, worldCenterZ, worldRadius,
 				&task->tmpHitPoint,
+				rays[gid].time,
 				Sampler_GetSamplePathVertex(seed, sample, sampleDataPathVertexBase, depth, IDX_DIRECTLIGHT_X),
 				Sampler_GetSamplePathVertex(seed, sample, sampleDataPathVertexBase, depth, IDX_DIRECTLIGHT_Y),
 				Sampler_GetSamplePathVertex(seed, sample, sampleDataPathVertexBase, depth, IDX_DIRECTLIGHT_Z),
-#if defined(PARAM_HAS_PASSTHROUGH)
 				Sampler_GetSamplePathVertex(seed, sample, sampleDataPathVertexBase, depth, IDX_DIRECTLIGHT_W),
-#endif
 				&taskDirectLight->illumInfo
 				LIGHTS_PARAM)) {
 		// I have now to evaluate the BSDF
@@ -677,6 +659,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 
 	__global GPUTask *task = &tasks[gid];
 	__global Sample *sample = &samples[gid];
+	__global EyePathInfo *pathInfo = &eyePathInfos[gid];
 
 	// Initialize image maps page pointer table
 	INIT_IMAGEMAPS_PAGES
@@ -688,16 +671,12 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 	if (DirectLight_BSDFSampling(
 			&tasksDirectLight[gid].illumInfo,
 			rays[gid].time, sample->result.lastPathVertex,
-			&taskState->depthInfo,
+			pathInfo,
 			&task->tmpPathDepthInfo,
 			&taskState->bsdf,
-			&rays[gid]
-#if defined(PARAM_HYBRID_BACKFORWARD)
-			, sample->result.specularGlossyCausticPath
-#endif
+			VLOAD3F(&rays[gid].d.x)
 			LIGHTS_PARAM)) {
-#if defined(PARAM_HAS_PASSTHROUGH)
-		const uint depth = taskState->depthInfo.depth;
+		const uint depth = pathInfo->depth.depth;
 
 		__global float *sampleData = Sampler_GetSampleData(sample, samplesData);
 		__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
@@ -717,11 +696,14 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 
 		// Save the seed
 		task->seed = seedValue;
-#endif
+
+		// Initialize the trough a shadow transparency flag used by Scene_Intersect()
+		tasksDirectLight[gid].throughShadowTransparency = false;
+
 #if defined(PARAM_HAS_VOLUMES)
 		// Make a copy of current PathVolumeInfo for tracing the
 		// shadow ray
-		directLightVolInfos[gid] = pathVolInfos[gid];
+		directLightVolInfos[gid] = pathInfo->volume;
 #endif
 		// I have to trace the shadow ray
 		taskState->state = MK_RT_DL;
@@ -758,7 +740,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 	// Start of variables setup
 	//--------------------------------------------------------------------------
 
-	const uint depth = taskState->depthInfo.depth;
+	__global EyePathInfo *pathInfo = &eyePathInfos[gid];
+	const uint depth = pathInfo->depth.depth;
 
 	__global BSDF *bsdf = &taskState->bsdf;
 
@@ -784,14 +767,14 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 
 	// Sample the BSDF
 	float3 sampledDir;
-	float lastPdfW;
-	float cosSampledDir;
-	BSDFEvent event;
 	float3 bsdfSample;
+	float cosSampledDir;
+	float bsdfPdfW;
+	BSDFEvent bsdfEvent;
 
 	if (BSDF_IsShadowCatcher(bsdf MATERIALS_PARAM) && (tasksDirectLight[gid].directLightResult  != SHADOWED)) {
 		bsdfSample = BSDF_ShadowCatcherSample(bsdf,
-				&sampledDir, &lastPdfW, &cosSampledDir, &event
+				&sampledDir, &bsdfPdfW, &cosSampledDir, &bsdfEvent
 				MATERIALS_PARAM);
 
 #if defined(PARAM_FILM_CHANNELS_HAS_ALPHA)
@@ -804,32 +787,31 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 		bsdfSample = BSDF_Sample(bsdf,
 				Sampler_GetSamplePathVertex(seed, sample, sampleDataPathVertexBase, depth, IDX_BSDF_X),
 				Sampler_GetSamplePathVertex(seed, sample, sampleDataPathVertexBase, depth, IDX_BSDF_Y),
-				&sampledDir, &lastPdfW, &cosSampledDir, &event
+				&sampledDir, &bsdfPdfW, &cosSampledDir, &bsdfEvent
 				MATERIALS_PARAM);
 
-		sample->result.passThroughPath = false;
+		pathInfo->isPassThroughPath = false;
 	}
 
 	if (sample->result.firstPathVertex)
-		sample->result.firstPathVertexEvent = event;
+		sample->result.firstPathVertexEvent = bsdfEvent;
 
-#if defined(PARAM_HYBRID_BACKFORWARD)
-	sample->result.specularGlossyCausticPath = IsStillSpecularGlossyCausticPath(
-			sample->result.specularGlossyCausticPath, bsdf, event, &taskState->depthInfo
-			MATERIALS_PARAM);
+	EyePathInfo_AddVertex(pathInfo, bsdf, bsdfEvent, bsdfPdfW,
+#if defined(PARAM_HYBRID_BACKFORWARD_GLOSSINESSTHRESHOLD)
+			PARAM_HYBRID_BACKFORWARD_GLOSSINESSTHRESHOLD
+#else
+			0.f
 #endif
-	
-	// Increment path depth informations
-	PathDepthInfo_IncDepths(&taskState->depthInfo, event);
+			MATERIALS_PARAM);
 
 	// Russian Roulette
-	const bool rrEnabled = !(event & SPECULAR) && (PathDepthInfo_GetRRDepth(&taskState->depthInfo) >= PARAM_RR_DEPTH);
+	const bool rrEnabled = EyePathInfo_UseRR(pathInfo, PARAM_RR_DEPTH);
 	const float rrProb = rrEnabled ? RussianRouletteProb(bsdfSample) : 1.f;
 	const bool rrContinuePath = !rrEnabled ||
-		!(rrProb < Sampler_GetSamplePathVertex(seed, sample, sampleDataPathVertexBase, taskState->depthInfo.depth, IDX_RR));
+		!(rrProb < Sampler_GetSamplePathVertex(seed, sample, sampleDataPathVertexBase, pathInfo->depth.depth, IDX_RR));
 
 	// Max. path depth
-	const bool maxPathDepth = (taskState->depthInfo.depth >= PARAM_MAX_PATH_DEPTH);
+	const bool maxPathDepth = (pathInfo->depth.depth >= PARAM_MAX_PATH_DEPTH);
 
 	const bool continuePath = !Spectrum_IsBlack(bsdfSample) && rrContinuePath && !maxPathDepth;
 	if (continuePath) {
@@ -857,37 +839,19 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 			VSTORE3F(throughputFactor * VLOAD3F(sample->result.irradiancePathThroughput.c), sample->result.irradiancePathThroughput.c);
 #endif
 
-#if defined(PARAM_HAS_VOLUMES)
-		// Update volume information
-		PathVolumeInfo_Update(&pathVolInfos[gid], event, bsdf
-				MATERIALS_PARAM);
-#endif
-
 		Ray_Init2(ray, BSDF_GetRayOrigin(bsdf, sampledDir), sampledDir, ray->time);
 
 		sample->result.firstPathVertex = false;
 
-		tasksDirectLight[gid].lastBSDFEvent = event;
-		tasksDirectLight[gid].lastPdfW = lastPdfW;
-		tasksDirectLight[gid].lastGlossiness = BSDF_GetGlossiness(bsdf
-				MATERIALS_PARAM);
-
-		float3 lastNormal = VLOAD3F(&bsdf->hitPoint.shadeN.x);
-		const bool intoObject = (dot(-VLOAD3F(&bsdf->hitPoint.fixedDir.x), lastNormal) < 0.f);
-		lastNormal = intoObject ? lastNormal : -lastNormal;
-		VSTORE3F(lastNormal, &tasksDirectLight[gid].lastNormal.x);
-
-#if defined(PARAM_HAS_VOLUMES)
-		tasksDirectLight[gid].lastIsVolume = bsdf->isVolume;
-#endif
-		
-#if defined(PARAM_HAS_PASSTHROUGH)
 		// Initialize the pass-through event seed
-		const float passThroughEvent = Sampler_GetSamplePathVertex(seed, sample, sampleDataPathVertexBase, taskState->depthInfo.depth, IDX_PASSTHROUGH);
+		const float passThroughEvent = Sampler_GetSamplePathVertex(seed, sample, sampleDataPathVertexBase, pathInfo->depth.depth, IDX_PASSTHROUGH);
 		Seed seedPassThroughEvent;
 		Rnd_InitFloat(passThroughEvent, &seedPassThroughEvent);
 		taskState->seedPassThroughEvent = seedPassThroughEvent;
-#endif
+
+		// Initialize the trough a shadow transparency flag used by Scene_Intersect()
+		taskState->throughShadowTransparency = false;
+
 
 		pathState = MK_RT_NEXT_VERTEX;
 	} else
@@ -1123,6 +1087,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 	Seed seedValue = task->seed;
 
 	__global Ray *ray = &rays[gid];
+
+	__global EyePathInfo *pathInfo = &eyePathInfos[gid];
 	
 	//--------------------------------------------------------------------------
 	// End of variables setup
@@ -1130,7 +1096,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 
 	// Re-initialize the volume information
 #if defined(PARAM_HAS_VOLUMES)
-	PathVolumeInfo_Init(&pathVolInfos[gid]);
+	PathVolumeInfo_Init(&pathInfo->volume);
 #endif
 
 	GenerateEyePath(&tasksDirectLight[gid], taskState, sample, sampleDataPathBase, camera,
@@ -1138,9 +1104,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3,
 			pixelFilterDistribution,
 			ray,
-#if defined(PARAM_HAS_VOLUMES)
-			&pathVolInfos[gid],
-#endif
+			pathInfo,
 			&seedValue);
 	// taskState->state is set to RT_NEXT_VERTEX inside GenerateEyePath()
 

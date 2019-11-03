@@ -21,18 +21,18 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string/replace.hpp>
 
+#include "luxcore/cfg.h"
 #include "luxrays/core/geometry/transform.h"
 #include "luxrays/utils/ocl.h"
 #include "luxrays/core/oclintersectiondevice.h"
 #include "luxrays/kernels/kernels.h"
-
-#include "luxcore/cfg.h"
 
 #include "slg/slg.h"
 #include "slg/kernels/kernels.h"
 #include "slg/renderconfig.h"
 #include "slg/engines/pathoclbase/pathoclbase.h"
 #include "slg/samplers/sobol.h"
+#include "slg/utils/pathinfo.h"
 
 using namespace std;
 using namespace luxrays;
@@ -45,28 +45,29 @@ using namespace slg;
 size_t PathOCLBaseOCLRenderThread::GetOpenCLHitPointSize() const {
 	// HitPoint memory size
 	size_t hitPointSize = sizeof(Vector) + sizeof(Point) + sizeof(UV) +
-			3 * sizeof(Normal) + sizeof(Matrix4x4);
+			3 * sizeof(Normal) + sizeof(Transform);
 	if (renderEngine->compiledScene->IsTextureCompiled(HITPOINTCOLOR) ||
 			renderEngine->compiledScene->IsTextureCompiled(HITPOINTGREY) ||
 			renderEngine->compiledScene->hasTriangleLightWithVertexColors)
 		hitPointSize += sizeof(Spectrum);
 	if (renderEngine->compiledScene->IsTextureCompiled(HITPOINTALPHA))
 		hitPointSize += sizeof(float);
-	if (renderEngine->compiledScene->RequiresPassThrough())
-		hitPointSize += sizeof(float);
+	// passThroughEvent
+	hitPointSize += sizeof(float);
 	// Fields dpdu, dpdv, dndu, dndv
-	if (renderEngine->compiledScene->HasBumpMaps())
-		hitPointSize += 2 * sizeof(Vector) + 2 * sizeof(Normal);
+	hitPointSize += 2 * sizeof(Vector) + 2 * sizeof(Normal);
 	// Volume fields
 	if (renderEngine->compiledScene->HasVolumes())
 		hitPointSize += 2 * sizeof(u_int) + 2 * sizeof(u_int);
-	// intoObject
-	hitPointSize += sizeof(int);
 	// Object ID
 	if (renderEngine->compiledScene->IsTextureCompiled(OBJECTID_TEX) ||
 			renderEngine->compiledScene->IsTextureCompiled(OBJECTID_COLOR_TEX) ||
 			renderEngine->compiledScene->IsTextureCompiled(OBJECTID_NORMALIZED_TEX))
 		hitPointSize += sizeof(u_int);
+	// intoObject
+	hitPointSize += sizeof(int);
+	// throughShadowTransparency
+	hitPointSize += sizeof(int);
 
 	return hitPointSize;
 }
@@ -89,6 +90,40 @@ size_t PathOCLBaseOCLRenderThread::GetOpenCLBSDFSize() const {
 	return bsdfSize;
 }
 
+size_t PathOCLBaseOCLRenderThread::GetEyePathInfoSize() const {
+	// Add PathDepthInfo memory size
+	size_t eyePathInfoSize = sizeof(slg::ocl::PathDepthInfo);
+	// Add PathVolumeInfo memory size
+	if (renderEngine->compiledScene->HasVolumes())
+		eyePathInfoSize += sizeof(slg::ocl::PathVolumeInfo);
+
+	// Add isPassThroughPath memory size
+	eyePathInfoSize += sizeof(int);
+
+	// Add lastBSDFEvent memory size
+	eyePathInfoSize += sizeof(slg::ocl::BSDFEvent);
+	// Add lastBSDFPdfW memory size
+	eyePathInfoSize += sizeof(float);
+	// Add lastGlossiness memory size
+	eyePathInfoSize += sizeof(float);
+	// Add lastShadeN memory size
+	eyePathInfoSize += sizeof(slg::ocl::Normal);
+	// Add lastFromVolume memory size
+	if (renderEngine->compiledScene->HasVolumes())
+		eyePathInfoSize += sizeof(int);
+
+	// Add isNearlyCaustic memory size
+	eyePathInfoSize += sizeof(int);
+	// Add isNearlyS memory size
+	eyePathInfoSize += sizeof(int);
+	// Add isNearlySD memory size
+	eyePathInfoSize += sizeof(int);
+	// Add isNearlySDS memory size
+	eyePathInfoSize += sizeof(int);
+
+	return eyePathInfoSize;
+}
+
 size_t PathOCLBaseOCLRenderThread::GetOpenCLSampleResultSize() const {
 	//--------------------------------------------------------------------------
 	// SampleResult size
@@ -97,8 +132,8 @@ size_t PathOCLBaseOCLRenderThread::GetOpenCLSampleResultSize() const {
 	// All thread films are supposed to have the same parameters
 	const Film *threadFilm = threadFilms[0]->film;
 
-	// SampleResult.filmX and SampleResult.filmY
-	size_t sampleResultSize = 2 * sizeof(float);
+	// filmX, filmY, pixelX and pixelY fields
+	size_t sampleResultSize = 2 * sizeof(float) + 2 * sizeof(u_int);
 	// SampleResult.radiancePerPixelNormalized[PARAM_FILM_RADIANCE_GROUP_COUNT]
 	sampleResultSize += sizeof(slg::ocl::Spectrum) * threadFilm->GetRadianceGroupCount();
 	if (threadFilm->HasChannel(Film::ALPHA))
@@ -143,11 +178,11 @@ size_t PathOCLBaseOCLRenderThread::GetOpenCLSampleResultSize() const {
 	if (threadFilm->HasChannel(Film::ALBEDO))
 		sampleResultSize += sizeof(Spectrum);
 
-	sampleResultSize += sizeof(BSDFEvent) +
-			// firstPathVertex, lastPathVertex, passThroughPath, specularGlossyCausticPath fields
-			4 * sizeof(int) +
-			// pixelX and pixelY fields
-			sizeof(u_int) * 2;
+	sampleResultSize += 
+			// firstPathVertexEvent field
+			sizeof(slg::ocl::BSDFEvent) +
+			// firstPathVertex and lastPathVertex fields
+			2 * sizeof(int);
 
 	return sampleResultSize;
 }
@@ -213,14 +248,23 @@ void PathOCLBaseOCLRenderThread::InitGeometry() {
 	else
 		FreeOCLBuffer(&alphasBuff);
 
+	AllocOCLBufferRO(&triNormalsBuff, &cscene->triNormals[0],
+				sizeof(Normal) * cscene->triNormals.size(), "Triangle normals");
+
 	AllocOCLBufferRO(&vertsBuff, &cscene->verts[0],
 		sizeof(Point) * cscene->verts.size(), "Vertices");
 
 	AllocOCLBufferRO(&trianglesBuff, &cscene->tris[0],
 		sizeof(Triangle) * cscene->tris.size(), "Triangles");
 
+	if (cscene->interpolatedTransforms.size() > 0) {
+		AllocOCLBufferRO(&interpolatedTransformsBuff, &cscene->interpolatedTransforms[0],
+			sizeof(luxrays::ocl::InterpolatedTransform) * cscene->interpolatedTransforms.size(), "Interpolated transformations");
+	} else
+		FreeOCLBuffer(&interpolatedTransformsBuff);
+
 	AllocOCLBufferRO(&meshDescsBuff, &cscene->meshDescs[0],
-			sizeof(slg::ocl::Mesh) * cscene->meshDescs.size(), "Mesh description");
+			sizeof(slg::ocl::ExtMesh) * cscene->meshDescs.size(), "Mesh description");
 }
 
 void PathOCLBaseOCLRenderThread::InitMaterials() {
@@ -270,15 +314,12 @@ void PathOCLBaseOCLRenderThread::InitLights() {
 	if (cscene->dlscAllEntries.size() > 0) {
 		AllocOCLBufferRO(&dlscAllEntriesBuff, &cscene->dlscAllEntries[0],
 			cscene->dlscAllEntries.size() * sizeof(slg::ocl::DLSCacheEntry), "DLSC all entries");
-		AllocOCLBufferRO(&dlscDistributionIndexToLightIndexBuff, &cscene->dlscDistributionIndexToLightIndex[0],
-			cscene->dlscDistributionIndexToLightIndex.size() * sizeof(u_int), "DLSC indices table");
 		AllocOCLBufferRO(&dlscDistributionsBuff, &cscene->dlscDistributions[0],
 			cscene->dlscDistributions.size() * sizeof(float), "DLSC distributions table");
 		AllocOCLBufferRO(&dlscBVHNodesBuff, &cscene->dlscBVHArrayNode[0],
 			cscene->dlscBVHArrayNode.size() * sizeof(slg::ocl::IndexBVHArrayNode), "DLSC BVH nodes");
 	} else {
 		FreeOCLBuffer(&dlscAllEntriesBuff);
-		FreeOCLBuffer(&dlscDistributionIndexToLightIndexBuff);
 		FreeOCLBuffer(&dlscDistributionsBuff);
 		FreeOCLBuffer(&dlscBVHNodesBuff);
 	}
@@ -315,8 +356,6 @@ void PathOCLBaseOCLRenderThread::InitPhotonGI() {
 			cscene->pgicCausticPhotons.size() * sizeof(slg::ocl::Photon), "PhotonGI caustic cache all entries");
 		AllocOCLBufferRO(&pgicCausticPhotonsBVHNodesBuff, &cscene->pgicCausticPhotonsBVHArrayNode[0],
 			cscene->pgicCausticPhotonsBVHArrayNode.size() * sizeof(slg::ocl::IndexBVHArrayNode), "PhotonGI caustic cache BVH nodes");
-		AllocOCLBufferRW(&pgicCausticNearPhotonsBuff,
-			renderEngine->taskCount * cscene->pgicCausticLookUpMaxCount * sizeof(slg::ocl::NearPhoton), "PhotonGI near photon buffers");
 	} else {
 		FreeOCLBuffer(&pgicCausticPhotonsBuff);
 		FreeOCLBuffer(&pgicCausticPhotonsBVHNodesBuff);
@@ -349,7 +388,6 @@ void PathOCLBaseOCLRenderThread::InitImageMaps() {
 
 void PathOCLBaseOCLRenderThread::InitGPUTaskBuffer() {
 	const u_int taskCount = renderEngine->taskCount;
-	const bool hasPassThrough = renderEngine->compiledScene->RequiresPassThrough();
 	const size_t openCLBSDFSize = GetOpenCLBSDFSize();
 
 	//--------------------------------------------------------------------------
@@ -362,8 +400,7 @@ void PathOCLBaseOCLRenderThread::InitGPUTaskBuffer() {
 	// Add temporary storage space
 	
 	// Add tmpBsdf memory size
-	if (hasPassThrough || renderEngine->compiledScene->HasVolumes())
-		gpuTaskSize += openCLBSDFSize;
+	gpuTaskSize += openCLBSDFSize;
 
 	// Add tmpHitPoint memory size
 	gpuTaskSize += GetOpenCLHitPointSize();
@@ -380,16 +417,11 @@ void PathOCLBaseOCLRenderThread::InitGPUTaskBuffer() {
 
 	size_t gpuDirectLightTaskSize = 
 			sizeof(slg::ocl::pathoclbase::DirectLightIlluminateInfo) + 
-			sizeof(BSDFEvent) + // lastBSDFEvent
-			sizeof(float) + // lastPdfW
-			sizeof(float) + // lastGlossiness
-			sizeof(Normal) + // lastNormal
-			(renderEngine->compiledScene->HasVolumes() ? sizeof(int) : 0) + // lastIsVolume
-			sizeof(int); // directLightResult
+			sizeof(int) + // directLightResult
+			sizeof(int);  // throughShadowTransparency
 
 	// Add seedPassThroughEvent memory size
-	if (hasPassThrough)
-		gpuDirectLightTaskSize += sizeof(ocl::Seed);
+	gpuDirectLightTaskSize += sizeof(ocl::Seed);
 
 	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Size of a GPUTask DirectLight: " << gpuDirectLightTaskSize << "bytes");
 	AllocOCLBufferRW(&tasksDirectLightBuff, gpuDirectLightTaskSize * taskCount, "GPUTaskDirectLight");
@@ -403,13 +435,13 @@ void PathOCLBaseOCLRenderThread::InitGPUTaskBuffer() {
 			sizeof(slg::ocl::PathDepthInfo) + // depthInfo
 			sizeof(Spectrum) + // throughput
 			sizeof(int) + // albedoToDo
-			sizeof(int) + // photonGICausticCacheAlreadyUsed
 			sizeof(int) + // photonGICacheEnabledOnLastHit
-			sizeof(int); // photonGIShowIndirectPathMixUsed
+			sizeof(int) + // photonGICausticCacheUsed
+			sizeof(int) + // photonGIShowIndirectPathMixUsed
+			sizeof(int);  // throughShadowTransparency
 
 	// Add seedPassThroughEvent memory size
-	if (hasPassThrough)
-		gpuTaskStateSize += sizeof(ocl::Seed);
+	gpuTaskStateSize += sizeof(ocl::Seed);
 
 	// Add BSDF memory size
 	gpuTaskStateSize += openCLBSDFSize;
@@ -586,22 +618,21 @@ void PathOCLBaseOCLRenderThread::InitSamplesBuffer() {
 
 void PathOCLBaseOCLRenderThread::InitSampleDataBuffer() {
 	const u_int taskCount = renderEngine->taskCount;
-	const bool hasPassThrough = renderEngine->compiledScene->RequiresPassThrough();
 
 	const size_t eyePathVertexDimension =
 		// IDX_SCREEN_X, IDX_SCREEN_Y, IDX_EYE_TIME
 		3 +
 		// IDX_EYE_PASSTROUGHT
-		(hasPassThrough ? 1 : 0) +
+		1 +
 		// IDX_DOF_X, IDX_DOF_Y
 		2;
 	const size_t PerPathVertexDimension =
 		// IDX_PASSTHROUGH,
-		(hasPassThrough ? 1 : 0) +
+		1 +
 		// IDX_BSDF_X, IDX_BSDF_Y
 		2 +
 		// IDX_DIRECTLIGHT_X, IDX_DIRECTLIGHT_Y, IDX_DIRECTLIGHT_Z, IDX_DIRECTLIGHT_W, IDX_DIRECTLIGHT_A
-		4 + (hasPassThrough ? 1 : 0) +
+		5 +
 		// IDX_RR
 		1;
 
@@ -743,10 +774,14 @@ void PathOCLBaseOCLRenderThread::InitRender() {
 	// Allocate volume info buffers if required
 	//--------------------------------------------------------------------------
 
-	if (renderEngine->compiledScene->HasVolumes()) {
-		AllocOCLBufferRW(&pathVolInfosBuff, sizeof(slg::ocl::PathVolumeInfo) * taskCount, "PathVolumeInfo");
+	AllocOCLBufferRW(&eyePathInfosBuff, GetEyePathInfoSize() * taskCount, "PathInfo");
+
+	//--------------------------------------------------------------------------
+	// Allocate volume info buffers if required
+	//--------------------------------------------------------------------------
+
+	if (renderEngine->compiledScene->HasVolumes())
 		AllocOCLBufferRW(&directLightVolInfosBuff, sizeof(slg::ocl::PathVolumeInfo) * taskCount, "DirectLightVolumeInfo");
-	}
 
 	//--------------------------------------------------------------------------
 	// Allocate GPU pixel filter distribution

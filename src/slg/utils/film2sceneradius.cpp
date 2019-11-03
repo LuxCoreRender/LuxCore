@@ -122,7 +122,7 @@ static void Film2SceneRadiusThread(Film2SceneRadiusThreadParams &params) {
 	// Initialize the sampler
 	RandomGenerator rnd(1 + params.threadIndex);
 	SobolSamplerSharedData sobolSharedData(131, nullptr);
-	SobolSampler sampler(&rnd, NULL, NULL, 0.f, &sobolSharedData);
+	SobolSampler sampler(&rnd, NULL, NULL, true, 0.f, &sobolSharedData);
 	
 	// Request the samples
 	const u_int sampleBootSize = 5;
@@ -167,7 +167,8 @@ static void Film2SceneRadiusThread(Film2SceneRadiusThreadParams &params) {
 
 			RayHit eyeRayHit;
 			Spectrum connectionThroughput;
-			const bool hit = params.scene->Intersect(NULL, false, sampleResult.firstPathVertex,
+			const bool hit = params.scene->Intersect(nullptr,
+					EYE_RAY | (sampleResult.firstPathVertex ? CAMERA_RAY : GENERIC_RAY),
 					&volInfo, sampler.GetSample(sampleOffset),
 					&eyeRay, &eyeRayHit, &bsdf, &connectionThroughput,
 					&pathThroughput, &sampleResult);
@@ -209,7 +210,6 @@ static void Film2SceneRadiusThread(Film2SceneRadiusThreadParams &params) {
 						sampler.GetSample(sampleOffset + 1),
 						sampler.GetSample(sampleOffset + 2),
 						&lastPdfW, &cosSampledDir, &lastBSDFEvent);
-			sampleResult.passThroughPath = false;
 
 			assert (!bsdfSample.IsNaN() && !bsdfSample.IsInf());
 			if (bsdfSample.Black())

@@ -21,19 +21,25 @@
 
 #include <vector>
 
-#include "luxrays/core/exttrianglemesh.h"
+namespace luxrays {
+	class ExtTriangleMesh;
+}
 
 namespace slg {
 
 class Scene;
-	
+
 class Shape {
 public:
 	typedef enum {
 		MESH,
 		POINTINESS,
 		STRANDS,
-		GROUP
+		GROUP,
+		SUBDIV,
+		DISPLACEMENT,
+		HARLEQUIN,
+		SIMPLIFY
 	} ShapeType;
 
 	Shape() : refined(false) { }

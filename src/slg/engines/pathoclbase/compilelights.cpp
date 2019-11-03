@@ -100,9 +100,6 @@ void CompiledScene::CompileDLSC(const LightStrategyDLSCache *dlscLightStrategy) 
 		dlscAllEntries.clear();
 		dlscAllEntries.shrink_to_fit();
 
-		dlscDistributionIndexToLightIndex.clear();
-		dlscDistributionIndexToLightIndex.shrink_to_fit();
-
 		dlscDistributions.clear();
 		dlscDistributions.shrink_to_fit();
 
@@ -121,7 +118,6 @@ void CompiledScene::CompileDLSC(const LightStrategyDLSCache *dlscLightStrategy) 
 	const u_int entriesCount = allEntries->size();
 	
 	dlscAllEntries.resize(entriesCount);
-	dlscDistributionIndexToLightIndex.clear();
 	dlscDistributions.clear();
 	for (u_int i = 0; i < entriesCount; ++i) {
 		const DLSCacheEntry &entry = (*allEntries)[i];
@@ -132,15 +128,7 @@ void CompiledScene::CompileDLSC(const LightStrategyDLSCache *dlscLightStrategy) 
 		
 		oclEntry.isVolume = entry.isVolume;
 
-		if (entry.IsDirectLightSamplingDisabled()) {
-			oclEntry.distributionIndexToLightIndexOffset = NULL_INDEX;
-			oclEntry.lightsDistributionOffset = NULL_INDEX;
-		} else {
-			// Compile the distributionIndexToLightIndex table
-			oclEntry.distributionIndexToLightIndexOffset = dlscDistributionIndexToLightIndex.size();
-			for (auto index : entry.distributionIndexToLightIndex)
-				dlscDistributionIndexToLightIndex.push_back(index);
-
+		if (entry.lightsDistribution) {
 			// Compile the light Distribution1D
 			const u_int size = dlscDistributions.size();
 			oclEntry.lightsDistributionOffset = size;
@@ -150,13 +138,14 @@ void CompiledScene::CompileDLSC(const LightStrategyDLSCache *dlscLightStrategy) 
 
 			const u_int distributionSize4 = distributionSize / sizeof(float);
 			dlscDistributions.resize(size + distributionSize4);
-			oclEntry.distributionIndexToLightIndexSize = distributionSize4;
 
 			copy(dist, dist + distributionSize4,
 					&dlscDistributions[size]);
 
 			delete[] dist;
-		}
+		} else
+			oclEntry.lightsDistributionOffset = NULL_INDEX;
+
 	}
 	
 	// Compile the DLSC BVH
@@ -166,7 +155,6 @@ void CompiledScene::CompileDLSC(const LightStrategyDLSCache *dlscLightStrategy) 
 	copy(&nodes[0], &nodes[0] + nNodes, dlscBVHArrayNode.begin());
 
 	dlscAllEntries.shrink_to_fit();
-	dlscDistributionIndexToLightIndex.shrink_to_fit();
 	dlscDistributions.shrink_to_fit();
 	dlscBVHArrayNode.shrink_to_fit();
 }
@@ -332,9 +320,7 @@ void CompiledScene::CompileLights() {
 		switch (l->GetType()) {
 			case TYPE_TRIANGLE: {
 				const TriangleLight *tl = (const TriangleLight *)l;
-
 				const ExtMesh *mesh = tl->mesh;
-				const Triangle *tri = &(mesh->GetTriangles()[tl->triangleIndex]);
 
 				// Check if I have a triangle light source with vertex colors
 				if (mesh->HasColors())
@@ -344,57 +330,13 @@ void CompiledScene::CompileLights() {
 				oclLight->type = slg::ocl::TYPE_TRIANGLE;
 
 				// TriangleLight data
-				ASSIGN_VECTOR(oclLight->triangle.v0, mesh->GetVertex(0.f, tri->v[0]));
-				ASSIGN_VECTOR(oclLight->triangle.v1, mesh->GetVertex(0.f, tri->v[1]));
-				ASSIGN_VECTOR(oclLight->triangle.v2, mesh->GetVertex(0.f, tri->v[2]));
-				const Normal geometryN = mesh->GetGeometryNormal(0.f, tl->triangleIndex);
-				ASSIGN_VECTOR(oclLight->triangle.geometryN, geometryN);
-				if (mesh->HasNormals()) {
-					ASSIGN_VECTOR(oclLight->triangle.n0, mesh->GetShadeNormal(0.f, tl->triangleIndex, 0));
-					ASSIGN_VECTOR(oclLight->triangle.n1, mesh->GetShadeNormal(0.f, tl->triangleIndex, 1));
-					ASSIGN_VECTOR(oclLight->triangle.n2, mesh->GetShadeNormal(0.f, tl->triangleIndex, 2));
-				} else {
-					ASSIGN_VECTOR(oclLight->triangle.n0, geometryN);
-					ASSIGN_VECTOR(oclLight->triangle.n1, geometryN);
-					ASSIGN_VECTOR(oclLight->triangle.n2, geometryN);
-				}
-				if (mesh->HasUVs()) {
-					ASSIGN_UV(oclLight->triangle.uv0, mesh->GetUV(tri->v[0]));
-					ASSIGN_UV(oclLight->triangle.uv1, mesh->GetUV(tri->v[1]));
-					ASSIGN_UV(oclLight->triangle.uv2, mesh->GetUV(tri->v[2]));
-				} else {
-					const UV zero;
-					ASSIGN_UV(oclLight->triangle.uv0, zero);
-					ASSIGN_UV(oclLight->triangle.uv1, zero);
-					ASSIGN_UV(oclLight->triangle.uv2, zero);
-				}
-				if (mesh->HasColors()) {
-					ASSIGN_SPECTRUM(oclLight->triangle.rgb0, mesh->GetColor(tri->v[0]));
-					ASSIGN_SPECTRUM(oclLight->triangle.rgb1, mesh->GetColor(tri->v[1]));
-					ASSIGN_SPECTRUM(oclLight->triangle.rgb2, mesh->GetColor(tri->v[2]));					
-				} else {
-					const Spectrum one(1.f);
-					ASSIGN_SPECTRUM(oclLight->triangle.rgb0, one);
-					ASSIGN_SPECTRUM(oclLight->triangle.rgb1, one);
-					ASSIGN_SPECTRUM(oclLight->triangle.rgb2, one);
-				}
-				if (mesh->HasAlphas()) {
-					oclLight->triangle.alpha0 = mesh->GetAlpha(tri->v[0]);
-					oclLight->triangle.alpha1 = mesh->GetAlpha(tri->v[1]);
-					oclLight->triangle.alpha2 = mesh->GetAlpha(tri->v[2]);
-				} else {
-					oclLight->triangle.alpha0 = 1.f;
-					oclLight->triangle.alpha1 = 1.f;
-					oclLight->triangle.alpha2 = 1.f;
-				}
 
 				const float triangleArea = tl->GetTriangleArea();
 				oclLight->triangle.invTriangleArea = (triangleArea == 0.f) ? 0.f : (1.f / triangleArea);
 				const float meshArea = tl->GetMeshArea();
 				oclLight->triangle.invMeshArea = (meshArea == 0.f) ? 0.f : (1.f / meshArea);
-
-				oclLight->triangle.materialIndex = scene->matDefs.GetMaterialIndex(tl->lightMaterial);
-				oclLight->triangle.objectID = tl->objectID;
+				oclLight->triangle.meshIndex = tl->meshIndex;
+				oclLight->triangle.triangleIndex = tl->triangleIndex;
 
 				const SampleableSphericalFunction *emissionFunc = tl->lightMaterial->GetEmissionFunc();
 				if (emissionFunc) {
@@ -427,6 +369,7 @@ void CompiledScene::CompileLights() {
 				const EnvLightVisibilityCache *visibilityMapCache;
 				il->GetPreprocessedData(&dist, &visibilityMapCache);
 
+				oclLight->notIntersectable.infinite.useVisibilityMapCache = false;
 				if (il->useVisibilityMapCache && visibilityMapCache) {
 					if (elvcAllEntries.size() > 0) {
 						SLG_LOG("WARNING: OpenCL rendering supports only one EnvLightVisibilityCache");
@@ -484,6 +427,7 @@ void CompiledScene::CompileLights() {
 						&dist,
 						&visibilityMapCache);
 
+				oclLight->notIntersectable.sky2.useVisibilityMapCache = false;
 				if (sl->useVisibilityMapCache && visibilityMapCache) {
 					if (elvcAllEntries.size() > 0) {
 						SLG_LOG("WARNING: OpenCL rendering supports only one EnvLightVisibilityCache");
@@ -649,6 +593,7 @@ void CompiledScene::CompileLights() {
 				const EnvLightVisibilityCache *visibilityMapCache;
 				cil->GetPreprocessedData(&visibilityMapCache);
 
+				oclLight->notIntersectable.constantInfinite.useVisibilityMapCache = false;
 				if (cil->useVisibilityMapCache && visibilityMapCache) {
 					if (elvcAllEntries.size() > 0) {
 						SLG_LOG("WARNING: OpenCL rendering supports only one EnvLightVisibilityCache");

@@ -31,7 +31,8 @@ extern std::string KernelSource_bvh;
 extern std::string KernelSource_mbvh;
 
 extern std::string KernelSource_trianglemesh_types;
-extern std::string KernelSource_trianglemesh_funcs;
+extern std::string KernelSource_exttrianglemesh_types;
+extern std::string KernelSource_exttrianglemesh_funcs;
 extern std::string KernelSource_randomgen_types;
 extern std::string KernelSource_randomgen_funcs;
 extern std::string KernelSource_matrix4x4_types;

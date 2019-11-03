@@ -58,11 +58,10 @@ typedef enum {
 } PathState;
 
 typedef struct {
-	unsigned int lightIndex;	
+	unsigned int lightIndex;
 	float pickPdf;
 
-	Vector dir;
-	float distance, directPdfW;
+	float directPdfW;
 
 	// Radiance to add to the result if light source is visible
 	// Note: it doesn't include the pathThroughput
@@ -80,17 +79,16 @@ typedef struct {
 // The state used to keep track of the rendered path
 typedef struct {
 	PathState state;
-	PathDepthInfo depthInfo;
 
 	Spectrum throughput;
 	BSDF bsdf; // Variable size structure
 
-#if defined(PARAM_HAS_PASSTHROUGH)
 	Seed seedPassThroughEvent;
-#endif
 	
-	int albedoToDo, photonGICausticCacheAlreadyUsed, photonGICacheEnabledOnLastHit,
-			photonGIShowIndirectPathMixUsed;
+	int albedoToDo, photonGICacheEnabledOnLastHit,
+			photonGICausticCacheUsed, photonGIShowIndirectPathMixUsed,
+			// The shadow transparency lag used by Scene_Intersect()
+			throughShadowTransparency;
 } GPUTaskState;
 
 typedef enum {
@@ -101,19 +99,12 @@ typedef struct {
 	// Used to store some intermediate result
 	DirectLightIlluminateInfo illumInfo;
 
-	BSDFEvent lastBSDFEvent;
-	float lastPdfW, lastGlossiness;
-
-	Normal lastNormal;
-#if defined(PARAM_HAS_VOLUMES)
-	int lastIsVolume;
-#endif
-
-#if defined(PARAM_HAS_PASSTHROUGH)
 	Seed seedPassThroughEvent;
-#endif
 
 	DirectLightResult directLightResult;
+
+	// The shadow transparency lag used by Scene_Intersect()
+	int throughShadowTransparency;
 } GPUTaskDirectLight;
 
 typedef struct {
@@ -121,9 +112,7 @@ typedef struct {
 	Seed seed;
 
 	// Space for temporary storage
-#if defined(PARAM_HAS_PASSTHROUGH) || defined(PARAM_HAS_VOLUMES)
 	BSDF tmpBsdf; // Variable size structure
-#endif
 
 	// This is used by TriangleLight_Illuminate() to temporary store the
 	// point on the light sources.

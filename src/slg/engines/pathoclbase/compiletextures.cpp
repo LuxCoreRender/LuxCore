@@ -32,6 +32,7 @@
 #include "slg/textures/blackbody.h"
 #include "slg/textures/blender_texture.h"
 #include "slg/textures/brick.h"
+#include "slg/textures/brightcontrast.h"
 #include "slg/textures/checkerboard.h"
 #include "slg/textures/colordepth.h"
 #include "slg/textures/constfloat.h"
@@ -1228,6 +1229,18 @@ void CompiledScene::CompileTextures() {
 				tex->makeFloat3Tex.tex3Index = scene->texDefs.GetTextureIndex(t3);
 				break;
 			}
+			case BRIGHT_CONTRAST_TEX: {
+				const BrightContrastTexture *bct = static_cast<const BrightContrastTexture *>(t);
+
+				tex->type = slg::ocl::BRIGHT_CONTRAST_TEX;
+				const Texture *t = bct->GetTex();
+				tex->brightContrastTex.texIndex = scene->texDefs.GetTextureIndex(t);
+				const Texture *b = bct->GetBrightnessTex();
+				tex->brightContrastTex.brightnessTexIndex = scene->texDefs.GetTextureIndex(b);
+				const Texture *c = bct->GetContrastTex();
+				tex->brightContrastTex.contrastTexIndex = scene->texDefs.GetTextureIndex(c);
+				break;
+			}
 			default:
 				throw runtime_error("Unknown texture in CompiledScene::CompileTextures(): " + boost::lexical_cast<string>(t->GetType()));
 				break;
@@ -2068,6 +2081,17 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 						AddTextureSourceCall(texs, "Float", tex->makeFloat3Tex.tex3Index));
 				break;
 			}
+			case slg::ocl::BRIGHT_CONTRAST_TEX: {
+				AddTextureSource(source, "BrightContrast", "float", "Float", i,
+					AddTextureSourceCall(texs, "Float", tex->brightContrastTex.texIndex) + ", " +
+					AddTextureSourceCall(texs, "Float", tex->brightContrastTex.brightnessTexIndex) + ", " +
+					AddTextureSourceCall(texs, "Float", tex->brightContrastTex.contrastTexIndex));
+				AddTextureSource(source, "BrightContrast", "float3", "Spectrum", i,
+					AddTextureSourceCall(texs, "Spectrum", tex->brightContrastTex.texIndex) + ", " +
+					AddTextureSourceCall(texs, "Float", tex->brightContrastTex.brightnessTexIndex) + ", " +
+					AddTextureSourceCall(texs, "Float", tex->brightContrastTex.contrastTexIndex));
+				break;
+			}
 			default:
 				throw runtime_error("Unknown texture in CompiledScene::GetTexturesEvaluationSourceCode(): " + boost::lexical_cast<string>(tex->type));
 				break;
@@ -2083,9 +2107,7 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 	// Add bump and normal mapping functions
 	source << slg::ocl::KernelSource_texture_bump_funcs;
 
-	source << "#if defined(PARAM_HAS_BUMPMAPS)\n";
 	AddTextureBumpSource(source, texs);
-	source << "#endif\n";
 
 	return source.str();
 }

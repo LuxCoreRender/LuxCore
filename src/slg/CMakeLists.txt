@@ -150,6 +150,65 @@ add_library(openvdb STATIC ${OPENVDB_SRCS})
 
 ###########################################################################
 #
+# OpenSubdiv files
+#
+###########################################################################
+
+set(OPENSUBDIV_SRCS
+	${LuxRays_SOURCE_DIR}/deps/opensubdiv-3.4.0/opensubdiv/version.cpp
+	${LuxRays_SOURCE_DIR}/deps/opensubdiv-3.4.0/opensubdiv/far/bilinearPatchBuilder.cpp
+    ${LuxRays_SOURCE_DIR}/deps/opensubdiv-3.4.0/opensubdiv/far/catmarkPatchBuilder.cpp
+    ${LuxRays_SOURCE_DIR}/deps/opensubdiv-3.4.0/opensubdiv/far/error.cpp
+    ${LuxRays_SOURCE_DIR}/deps/opensubdiv-3.4.0/opensubdiv/far/loopPatchBuilder.cpp
+    ${LuxRays_SOURCE_DIR}/deps/opensubdiv-3.4.0/opensubdiv/far/patchBasis.cpp
+    ${LuxRays_SOURCE_DIR}/deps/opensubdiv-3.4.0/opensubdiv/far/patchBuilder.cpp
+    ${LuxRays_SOURCE_DIR}/deps/opensubdiv-3.4.0/opensubdiv/far/patchDescriptor.cpp
+    ${LuxRays_SOURCE_DIR}/deps/opensubdiv-3.4.0/opensubdiv/far/patchMap.cpp
+    ${LuxRays_SOURCE_DIR}/deps/opensubdiv-3.4.0/opensubdiv/far/patchTable.cpp
+    ${LuxRays_SOURCE_DIR}/deps/opensubdiv-3.4.0/opensubdiv/far/patchTableFactory.cpp
+    ${LuxRays_SOURCE_DIR}/deps/opensubdiv-3.4.0/opensubdiv/far/ptexIndices.cpp
+    ${LuxRays_SOURCE_DIR}/deps/opensubdiv-3.4.0/opensubdiv/far/stencilTable.cpp
+    ${LuxRays_SOURCE_DIR}/deps/opensubdiv-3.4.0/opensubdiv/far/stencilTableFactory.cpp
+    ${LuxRays_SOURCE_DIR}/deps/opensubdiv-3.4.0/opensubdiv/far/stencilBuilder.cpp
+    ${LuxRays_SOURCE_DIR}/deps/opensubdiv-3.4.0/opensubdiv/far/topologyDescriptor.cpp
+    ${LuxRays_SOURCE_DIR}/deps/opensubdiv-3.4.0/opensubdiv/far/topologyRefiner.cpp
+    ${LuxRays_SOURCE_DIR}/deps/opensubdiv-3.4.0/opensubdiv/far/topologyRefinerFactory.cpp
+	${LuxRays_SOURCE_DIR}/deps/opensubdiv-3.4.0/opensubdiv/osd/cpuEvaluator.cpp
+    ${LuxRays_SOURCE_DIR}/deps/opensubdiv-3.4.0/opensubdiv/osd/cpuKernel.cpp
+    ${LuxRays_SOURCE_DIR}/deps/opensubdiv-3.4.0/opensubdiv/osd/cpuPatchTable.cpp
+    ${LuxRays_SOURCE_DIR}/deps/opensubdiv-3.4.0/opensubdiv/osd/cpuVertexBuffer.cpp
+	${LuxRays_SOURCE_DIR}/deps/opensubdiv-3.4.0/opensubdiv/sdc/crease.cpp
+    ${LuxRays_SOURCE_DIR}/deps/opensubdiv-3.4.0/opensubdiv/sdc/typeTraits.cpp
+	${LuxRays_SOURCE_DIR}/deps/opensubdiv-3.4.0/opensubdiv/vtr/fvarLevel.cpp
+    ${LuxRays_SOURCE_DIR}/deps/opensubdiv-3.4.0/opensubdiv/vtr/fvarRefinement.cpp
+    ${LuxRays_SOURCE_DIR}/deps/opensubdiv-3.4.0/opensubdiv/vtr/level.cpp
+    ${LuxRays_SOURCE_DIR}/deps/opensubdiv-3.4.0/opensubdiv/vtr/quadRefinement.cpp
+    ${LuxRays_SOURCE_DIR}/deps/opensubdiv-3.4.0/opensubdiv/vtr/refinement.cpp
+    ${LuxRays_SOURCE_DIR}/deps/opensubdiv-3.4.0/opensubdiv/vtr/sparseSelector.cpp
+    ${LuxRays_SOURCE_DIR}/deps/opensubdiv-3.4.0/opensubdiv/vtr/triRefinement.cpp
+	${LuxRays_SOURCE_DIR}/deps/opensubdiv-3.4.0/opensubdiv/version.cpp
+)
+
+if (OPENMP_FOUND)
+	set(OPENSUBDIV_SRCS
+		${OPENSUBDIV_SRCS}
+		${LuxRays_SOURCE_DIR}/deps/opensubdiv-3.4.0/opensubdiv/osd/ompEvaluator.cpp
+		${LuxRays_SOURCE_DIR}/deps/opensubdiv-3.4.0/opensubdiv/osd/ompKernel.cpp
+	)
+
+endif()
+
+SOURCE_GROUP("Source Files\\OpenSubdiv Library" FILES ${OPENSUBDIV_SRCS})
+
+include_directories(${LuxRays_SOURCE_DIR}/deps/opensubdiv-3.4.0)
+
+# Required by VisualStudio to have M_PI defined
+add_definitions("-D_USE_MATH_DEFINES")
+
+add_library(opensubdiv STATIC ${OPENSUBDIV_SRCS})
+
+###########################################################################
+#
 # Kernel files
 #
 ###########################################################################
@@ -174,8 +233,9 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_gammacorrection_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_gaussianblur3x3_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_objectidmask_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_vignetting_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_premultiplyalpha_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_vignetting_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_whitebalance_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/tonemaps/tonemap_reduce_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/tonemaps/tonemap_autolinear_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/tonemaps/tonemap_linear_funcs.cl
@@ -202,6 +262,7 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/bsdf/bsdf_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/bsdf/bsdfutils_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/bsdf/hitpoint_types.cl
+	${LuxRays_SOURCE_DIR}/include/slg/bsdf/hitpoint_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/material_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_generic.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_default.cl
@@ -228,6 +289,7 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_template_mix.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/material_main_withoutdynamic.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/material_main.cl
+	${LuxRays_SOURCE_DIR}/include/slg/scene/scene_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/scene/scene_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/scene/sceneobject_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/mapping/mapping_types.cl
@@ -250,10 +312,14 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/textures/fresnel/texture_fresnelcolor_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/fresnel/texture_fresnelconst_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/utils/pathdepthinfo_types.cl
+	${LuxRays_SOURCE_DIR}/include/slg/utils/pathdepthinfo_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/utils/pathvolumeinfo_types.cl
+	${LuxRays_SOURCE_DIR}/include/slg/utils/pathvolumeinfo_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/utils/pathinfo_types.cl
+	${LuxRays_SOURCE_DIR}/include/slg/utils/pathinfo_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/utils/varianceclamping_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/volumes/volume_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/volumes/volume_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/slg/volumes/volumeinfo_funcs.cl
 )
 
 # Make sure some IDE won't try to compile CL by some built-in rule:
@@ -270,6 +336,7 @@ SOURCE_GROUP("Source Files\\SLG Kernels" FILES ${SLG_KERNELS})
 # Note: the following order of object linking is important for GCC when building
 # a static library (to avoid an undefined symbol reference with the linker)
 set(SLG_CORE_SRCS
+	${LuxRays_SOURCE_DIR}/src/slg/bsdf/hitpoint.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/bsdf/bsdf.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/cameras/camera.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/cameras/environment.cpp
@@ -415,11 +482,15 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/scene/scenepreprocess.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/scene/sceneserialize.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/scene/sceneupdate.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/shapes/displacement.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/shapes/groupshape.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/shapes/harlequinshape.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/shapes/meshshape.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/shapes/pointiness.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/shapes/shape.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/shapes/simplify.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/shapes/strands.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/shapes/subdiv.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/slg.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/mapping/mapping.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/band.cpp
@@ -428,6 +499,7 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/textures/blender_noiselib.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/blender_texture.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/brick.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/brightcontrast.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/checkerboard.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/colordepth.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/constfloat.cpp
@@ -478,8 +550,11 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/utils/filenameresolver.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/film2sceneradius.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/harlequincolors.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/utils/meshutils.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/scenevisibility.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/pathdepthinfo.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/utils/pathinfo.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/utils/pathvolumeinfo.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/varianceclamping.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/volumes/clear.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/volumes/heterogenous.cpp
@@ -522,8 +597,9 @@ set(SLG_KERNEL_SRCS
 	${generated_kernels_dir}/plugin_gammacorrection_funcs_kernel.cpp
 	${generated_kernels_dir}/plugin_gaussianblur3x3_funcs_kernel.cpp
 	${generated_kernels_dir}/plugin_objectidmask_funcs_kernel.cpp
-	${generated_kernels_dir}/plugin_vignetting_funcs_kernel.cpp
 	${generated_kernels_dir}/plugin_premultiplyalpha_funcs_kernel.cpp
+	${generated_kernels_dir}/plugin_vignetting_funcs_kernel.cpp
+	${generated_kernels_dir}/plugin_whitebalance_funcs_kernel.cpp
 	${generated_kernels_dir}/tonemap_reduce_funcs_kernel.cpp
 	${generated_kernels_dir}/tonemap_autolinear_funcs_kernel.cpp
 	${generated_kernels_dir}/tonemap_linear_funcs_kernel.cpp
@@ -582,10 +658,14 @@ set(SLG_KERNEL_SRCS
 	${generated_kernels_dir}/texture_hsv_funcs_kernel.cpp
 	${generated_kernels_dir}/texture_irregulardata_funcs_kernel.cpp
 	${generated_kernels_dir}/pathdepthinfo_types_kernel.cpp
+	${generated_kernels_dir}/pathdepthinfo_funcs_kernel.cpp
+	${generated_kernels_dir}/pathvolumeinfo_types_kernel.cpp
+	${generated_kernels_dir}/pathvolumeinfo_funcs_kernel.cpp
+	${generated_kernels_dir}/pathinfo_types_kernel.cpp
+	${generated_kernels_dir}/pathinfo_funcs_kernel.cpp
 	${generated_kernels_dir}/varianceclamping_funcs_kernel.cpp
 	${generated_kernels_dir}/volume_types_kernel.cpp
 	${generated_kernels_dir}/volume_funcs_kernel.cpp
-	${generated_kernels_dir}/volumeinfo_funcs_kernel.cpp
 	${generated_kernels_dir}/light_types_kernel.cpp
 	${generated_kernels_dir}/light_funcs_kernel.cpp
 	${generated_kernels_dir}/dlsc_types_kernel.cpp
@@ -593,11 +673,13 @@ set(SLG_KERNEL_SRCS
 	${generated_kernels_dir}/elvc_types_kernel.cpp
 	${generated_kernels_dir}/elvc_funcs_kernel.cpp
 	${generated_kernels_dir}/lightstrategy_funcs_kernel.cpp
+	${generated_kernels_dir}/scene_types_kernel.cpp
 	${generated_kernels_dir}/scene_funcs_kernel.cpp
 	${generated_kernels_dir}/sceneobject_types_kernel.cpp
 	${generated_kernels_dir}/mapping_types_kernel.cpp
 	${generated_kernels_dir}/mapping_funcs_kernel.cpp
 	${generated_kernels_dir}/hitpoint_types_kernel.cpp
+	${generated_kernels_dir}/hitpoint_funcs_kernel.cpp
 	${generated_kernels_dir}/pgic_types_kernel.cpp
 	${generated_kernels_dir}/pgic_funcs_kernel.cpp
 	${generated_kernels_dir}/pathoclbase_datatypes_kernel.cpp
@@ -665,6 +747,7 @@ set(SLG_FILM_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/tonemaps/reinhard02.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/tonemaps/tonemap.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/intel_oidn.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/whitebalance.cpp
 )
 SOURCE_GROUP("Source Files\\SLG Film Library" FILES ${SLG_FILM_SRCS})
 

@@ -22,6 +22,7 @@
 #include "luxrays/luxrays.h"
 #include "luxrays/core/epsilon.h"
 #include "luxrays/core/color/color.h"
+#include "luxrays/core/geometry/uv.h"
 #include "luxrays/core/geometry/transform.h"
 #include "luxrays/core/geometry/frame.h"
 
@@ -33,6 +34,7 @@ namespace ocl {
 }
 
 class Volume;
+class Scene;
 
 typedef struct {
 	// The incoming direction. It is the eyeDir when fromLight = false and
@@ -54,8 +56,22 @@ typedef struct {
 	// Interior and exterior volume (this includes volume priority system
 	// computation and scene default world volume)
 	const Volume *interiorVolume, *exteriorVolume;
-	bool fromLight, intoObject;
 	u_int objectID;
+	bool fromLight, intoObject;
+	// If I got here going trough a shadow transparency. It can be used to disable MIS.
+	bool throughShadowTransparency;
+
+	// Used when hitting a surface
+	//
+	// Note: very important, this method assume localToWorld file has been _already_
+	// initialized. This is done for performance reasons.
+	//
+	// Note: this is also _not_ initializing volume related information.
+	void Init(const bool fixedFromLight, const bool throughShadowTransparency,
+		const Scene &scene, const u_int meshIndex, const u_int triangleIndex,
+		const luxrays::Point &p, const luxrays::Vector &d,
+		const float b1, const float b2,
+		const float passThroughEvent);
 
 	luxrays::Frame GetFrame() const { return luxrays::Frame(dpdu, dpdv, shadeN); }
 	luxrays::Normal GetLandingGeometryN() const { return (intoObject ? 1.f : -1.f) * geometryN; }

@@ -363,9 +363,10 @@ Spectrum SkyLight2::GetRadiance(const Scene &scene,
 }
 
 Spectrum SkyLight2::Emit(const Scene &scene,
-		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
-		Point *orig, Vector *dir,
-		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
+		const float time, const float u0, const float u1,
+		const float u2, const float u3, const float passThroughEvent,
+		Ray &ray, float &emissionPdfW,
+		float *directPdfA, float *cosThetaAtLight) const {
 	float uv[2];
 	float distPdf;
 	skyDistribution->SampleContinuous(u0, u1, uv, &distPdf);
@@ -392,12 +393,8 @@ Spectrum SkyLight2::Emit(const Scene &scene,
 	const Point pDisk = worldCenter + envRadius * (d1 * x + d2 * y);
 	const Point rayOrig = pDisk - envRadius * rayDir;
 
-	// Assign ray origin and direction
-	*orig = rayOrig;
-	*dir = rayDir;
-
 	// Compute InfiniteLight ray weight
-	*emissionPdfW = distPdf * latLongMappingPdf / (M_PI * envRadius * envRadius);
+	emissionPdfW = distPdf * latLongMappingPdf / (M_PI * envRadius * envRadius);
 
 	if (directPdfA)
 		*directPdfA = distPdf * latLongMappingPdf;
@@ -408,12 +405,14 @@ Spectrum SkyLight2::Emit(const Scene &scene,
 	const Spectrum result = ComputeRadiance(-rayDir);
 	assert (!result.IsNaN() && !result.IsInf() && !result.IsNeg());
 
+	ray.Update(rayOrig, rayDir, time);
+
 	return result;
 }
 
 Spectrum SkyLight2::Illuminate(const Scene &scene, const BSDF &bsdf,
-		const float u0, const float u1, const float passThroughEvent,
-        Vector *dir, float *distance, float *directPdfW,
+		const float time, const float u0, const float u1, const float passThroughEvent,
+        Ray &shadowRay, float &directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
 	float uv[2];
 	float distPdf;
@@ -428,37 +427,40 @@ Spectrum SkyLight2::Illuminate(const Scene &scene, const BSDF &bsdf,
 	if (distPdf == 0.f)
 		return Spectrum();
 
+	Vector shadowRayDir;
 	float latLongMappingPdf;
-	FromLatLongMapping(uv[0], uv[1], dir, &latLongMappingPdf);
+	FromLatLongMapping(uv[0], uv[1], &shadowRayDir, &latLongMappingPdf);
 	if (latLongMappingPdf == 0.f)
 		return Spectrum();
 
 	const Point worldCenter = scene.dataSet->GetBSphere().center;
 	const float envRadius = GetEnvRadius(scene);
 
-	const Point &pSurface = bsdf.GetRayOrigin(worldCenter - bsdf.hitPoint.p);
-	const Vector toCenter(worldCenter - pSurface);
-	const float centerDistance2 = Dot(toCenter, toCenter);
-	const float approach = Dot(toCenter, *dir);
-	*distance = approach + sqrtf(Max(0.f, envRadius * envRadius -
-		centerDistance2 + approach * approach));
+	const Point shadowRayOrig = bsdf.GetRayOrigin(shadowRayDir);
+	const Vector toCenter(worldCenter - shadowRayOrig);
+	const float centerDistanceSquared = Dot(toCenter, toCenter);
+	const float approach = Dot(toCenter, shadowRayDir);
+	const float shadowRayDistance = approach + sqrtf(Max(0.f, envRadius * envRadius -
+		centerDistanceSquared + approach * approach));
 
-	const Point emisPoint(pSurface + (*distance) * (*dir));
+	const Point emisPoint(shadowRayOrig + shadowRayDistance * shadowRayDir);
 	const Normal emisNormal(Normalize(worldCenter - emisPoint));
 
-	const float cosAtLight = Dot(emisNormal, -(*dir));
+	const float cosAtLight = Dot(emisNormal, -shadowRayDir);
 	if (cosAtLight < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 	if (cosThetaAtLight)
 		*cosThetaAtLight = cosAtLight;
 
-	*directPdfW = distPdf * latLongMappingPdf;
-	assert (!isnan(*directPdfW) && !isinf(*directPdfW) && (*directPdfW > 0.f));
+	directPdfW = distPdf * latLongMappingPdf;
+	assert (!isnan(directPdfW) && !isinf(directPdfW) && (directPdfW > 0.f));
 	
 	if (emissionPdfW)
 		*emissionPdfW = distPdf * latLongMappingPdf / (M_PI * envRadius * envRadius);
 
-	return ComputeRadiance(*dir);
+	shadowRay = Ray(shadowRayOrig, shadowRayDir, 0.f, shadowRayDistance, time);
+
+	return ComputeRadiance(shadowRayDir);
 }
 
 UV SkyLight2::GetEnvUV(const luxrays::Vector &dir) const {

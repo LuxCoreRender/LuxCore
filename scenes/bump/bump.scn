@@ -22,9 +22,17 @@ scene.materials.mat_light.kd = 0.0 0.0 0.0
 scene.materials.mat_red.type = matte
 scene.materials.mat_red.kd = 0.8 0.0 0.0
 scene.materials.mat_red.bumptex = scaled_bumpmap
+##
 scene.materials.mat_white.type = matte
 scene.materials.mat_white.kd = 0.8 0.8 0.8
 scene.materials.mat_white.normaltex = normalmap
+scene.materials.mat_white.scaletex = 0.01
+##
+#scene.materials.mat_white.type = glossytranslucent
+#scene.materials.mat_white.kd = 0.1 0.1 0.1
+#scene.materials.mat_white.kt = 1.0 1.0 1.0
+#scene.materials.mat_white.ks = 0.025 0.025 0.025
+#scene.materials.mat_white.bumptex = scaled_bumpmap
 ################################################################################
 scene.objects.obj_light.ply = scenes/bump/mat_light.ply
 scene.objects.obj_light.material = mat_light
@@ -34,3 +42,9 @@ scene.objects.obj_red.ply = scenes/bump/mat_red.ply
 scene.objects.obj_red.material = mat_red
 scene.objects.obj_white.ply = scenes/bump/mat_white.ply
 scene.objects.obj_white.material = mat_white
+################################################################################
+#scene.lights.infinitelight.type = infinite
+#scene.lights.infinitelight.file = scenes/simple-mat/arch.exr
+#scene.lights.infinitelight.gamma = 1.0
+#scene.lights.infinitelight.gain = 1.0 1.0 1.0
+#scene.lights.infinitelight.storage = byte

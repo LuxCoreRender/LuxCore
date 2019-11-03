@@ -18,7 +18,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-void AtomicAdd(__global float *val, const float delta) {
+OPENCL_FORCE_INLINE void AtomicAdd(__global float *val, const float delta) {
 	union {
 		float f;
 		uint i;
@@ -34,7 +34,7 @@ void AtomicAdd(__global float *val, const float delta) {
 	} while (atomic_cmpxchg((__global uint *)val, oldVal.i, newVal.i) != oldVal.i);
 }
 
-bool AtomicMin(__global float *val, const float val2) {
+OPENCL_FORCE_INLINE bool AtomicMin(__global float *val, const float val2) {
 	union {
 		float f;
 		uint i;
@@ -55,7 +55,7 @@ bool AtomicMin(__global float *val, const float val2) {
 	return true;
 }
 
-uint AtomicAddMod(__global uint *val, const uint delta, const uint mod) {
+OPENCL_FORCE_INLINE uint AtomicAddMod(__global uint *val, const uint delta, const uint mod) {
 	uint oldVal, newVal;
 
 	do {

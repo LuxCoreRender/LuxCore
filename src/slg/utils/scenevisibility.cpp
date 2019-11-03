@@ -28,6 +28,8 @@
 #include "slg/utils/pathdepthinfo.h"
 
 // Required for explicit instantiations
+#include "slg/lights/strategies/dlscacheimpl/dlscacheimpl.h"
+// Required for explicit instantiations
 #include "slg/engines/caches/photongi/photongicache.h"
 // Required for explicit instantiations
 #include "slg/lights/visibility/envlightvisibilitycache.h"
@@ -109,7 +111,7 @@ void SceneVisibility<T>::TraceVisibilityThread::RenderFunc() {
 
 	// Initialize the sampler
 	RandomGenerator rnd(1 + threadIndex);
-	SobolSampler sampler(&rnd, NULL, NULL, 0.f, &visibilitySobolSharedData);
+	SobolSampler sampler(&rnd, NULL, NULL, true, 0.f, &visibilitySobolSharedData);
 	
 	// Request the samples
 	const u_int sampleBootSize = 5;
@@ -177,7 +179,8 @@ void SceneVisibility<T>::TraceVisibilityThread::RenderFunc() {
 
 				RayHit eyeRayHit;
 				Spectrum connectionThroughput;
-				const bool hit = scene->Intersect(NULL, false, sampleResult.firstPathVertex,
+				const bool hit = scene->Intersect(NULL,
+						EYE_RAY | (sampleResult.firstPathVertex ? CAMERA_RAY : GENERIC_RAY),
 						&volInfo, sampler.GetSample(sampleOffset),
 						&eyeRay, &eyeRayHit, &bsdf, &connectionThroughput,
 						&pathThroughput, &sampleResult);
@@ -212,7 +215,6 @@ void SceneVisibility<T>::TraceVisibilityThread::RenderFunc() {
 							sampler.GetSample(sampleOffset + 1),
 							sampler.GetSample(sampleOffset + 2),
 							&lastPdfW, &cosSampledDir, &lastBSDFEvent);
-				sampleResult.passThroughPath = false;
 
 				assert (!bsdfSample.IsNaN() && !bsdfSample.IsInf());
 				if (bsdfSample.Black())
@@ -383,6 +385,7 @@ void SceneVisibility<T>::Build() {
 // C++ can be quite horrible...
 
 namespace slg {
+template class SceneVisibility<DLSCVisibilityParticle>;
 template class SceneVisibility<PGICVisibilityParticle>;
 template class SceneVisibility<ELVCVisibilityParticle>;
 }

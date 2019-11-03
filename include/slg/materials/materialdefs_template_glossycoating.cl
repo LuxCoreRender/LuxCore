@@ -51,14 +51,12 @@ OPENCL_FORCE_NOT_INLINE bool Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_I
 	return false;
 }
 
-#if defined(PARAM_HAS_PASSTHROUGH)
 OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_GetPassThroughTransparency(__global const Material* restrict material,
 		__global const HitPoint *hitPoint, const float3 localFixedDir, const float passThroughEvent, const bool backTracing
 		MATERIALS_PARAM_DECL) {
 	return <<CS_MAT_BASE_PREFIX>>_GetPassThroughTransparency<<CS_MAT_BASE_POSTFIX>>(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
 			hitPoint, localFixedDir, passThroughEvent, backTracing MATERIALS_PARAM);
 }
-#endif
 
 OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Albedo(__global const Material* restrict material,
 		__global const HitPoint *hitPoint
@@ -222,9 +220,7 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>
 
 OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Sample(__global const Material* restrict material,
 		__global const HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir, const float u0, const float u1,
-#if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
-#endif
 		float *pdfW, BSDFEvent *event
 		MATERIALS_PARAM_DECL) {
 	if (fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
@@ -270,9 +266,7 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>
 		// Sample base BSDF
 		baseF = <<CS_MAT_BASE_PREFIX>>_Sample<<CS_MAT_BASE_POSTFIX>>(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
 			hitPoint, fixedDirBase, sampledDir, u0, u1,
-#if defined(PARAM_HAS_PASSTHROUGH)
 				passThroughEvent / wBase,
-#endif
 				&basePdf, event MATERIALS_PARAM);
 
 		if (Spectrum_IsBlack(baseF))

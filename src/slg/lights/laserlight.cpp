@@ -84,50 +84,52 @@ float LaserLight::GetPower(const Scene &scene) const {
 }
 
 Spectrum LaserLight::Emit(const Scene &scene,
-		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
-		Point *orig, Vector *dir,
-		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
+		const float time, const float u0, const float u1,
+		const float u2, const float u3, const float passThroughEvent,
+		Ray &ray, float &emissionPdfW,
+		float *directPdfA, float *cosThetaAtLight) const {
 	float d1, d2;
 	ConcentricSampleDisk(u0, u1, &d1, &d2);
-	*orig = absoluteLightPos - radius * (d1 * x + d2 * y);
-	*dir = absoluteLightDir;
+	const Point rayOrig = absoluteLightPos - radius * (d1 * x + d2 * y);
+	const Vector rayDir = absoluteLightDir;
 	
-	*emissionPdfW = 1.f / (M_PI * radius * radius);
+	emissionPdfW = 1.f / (M_PI * radius * radius);
 
 	if (directPdfA)
 		*directPdfA = 1.f;
 	if (cosThetaAtLight)
 		*cosThetaAtLight = 1.f;
 
+	ray.Update(rayOrig, rayDir, time);
+
 	return emittedFactor;
 }
 
 Spectrum LaserLight::Illuminate(const Scene &scene, const BSDF &bsdf,
-		const float u0, const float u1, const float passThroughEvent,
-        Vector *dir, float *distance, float *directPdfW,
+		const float time, const float u0, const float u1, const float passThroughEvent,
+        Ray &shadowRay, float &directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
-	*dir = -absoluteLightDir;
+	const Vector shadowRayDir = -absoluteLightDir;
 	
-	const Vector &rayDir = *dir;
-	const Point &rayOrig = bsdf.GetRayOrigin(rayDir);
+	const Point shadowRayOrig = bsdf.GetRayOrigin(shadowRayDir);
 	const Point &planeCenter = absoluteLightPos;
 	const Vector &planeNormal = absoluteLightDir;
 
 	// Intersect the shadow ray with light plane
-	const float denom = Dot(planeNormal, rayDir);
-	const Vector pr = planeCenter - rayOrig;
-	float d = Dot(pr, planeNormal);
+	const float denom = Dot(planeNormal, shadowRayDir);
+	const Vector pr = planeCenter - shadowRayOrig;
+	float shadowRayDistance = Dot(pr, planeNormal);
 
 	if (fabsf(denom) > DEFAULT_COS_EPSILON_STATIC) {
 		// There is a valid intersection
-		d /= denom; 
+		shadowRayDistance /= denom; 
 
-		if ((d <= 0.f) || (denom >= 0.f))
+		if ((shadowRayDistance <= 0.f) || (denom >= 0.f))
 			return Spectrum();
 	} else
 		return Spectrum();
 
-	const Point lightPoint = rayOrig + d * rayDir;
+	const Point lightPoint = shadowRayOrig + shadowRayDistance * shadowRayDir;
 
 	// Check if the point is inside the emitting circle
 	const float radius2 = radius * radius;
@@ -135,16 +137,16 @@ Spectrum LaserLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 		return Spectrum();
 	
 	// Ok, the light is visible
-	
-	*distance = d;
 
 	if (cosThetaAtLight)
 		*cosThetaAtLight = 1.f;
 
-	*directPdfW = 1.f;
+	directPdfW = 1.f;
 
 	if (emissionPdfW)
 		*emissionPdfW = 1.f / (M_PI * radius * radius);
+
+	shadowRay = Ray(bsdf.GetRayOrigin(shadowRayDir), shadowRayDir, 0.f, shadowRayDistance, time);
 
 	return emittedFactor;
 }

@@ -56,7 +56,7 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 
 	for (u_int i = 0; i < samplers.size(); ++i) {
 		Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, engine->film,
-				engine->sampleSplatter,	engine->samplerSharedData);
+				engine->sampleSplatter,	engine->samplerSharedData, Properties());
 		sampler->RequestSamples(PIXEL_NORMALIZED_AND_SCREEN_NORMALIZED, sampleSize);
 
 		samplers[i] = sampler;
@@ -152,7 +152,8 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 
 			eyeVertex.bsdf.hitPoint.fixedDir = -eyeRay.d;
 			eyeVertex.throughput = Spectrum(1.f);
-			const float cameraPdfW = scene->camera->GetPDF(eyeRay, eyeSampleResult.filmX, eyeSampleResult.filmY);
+			float cameraPdfW;
+			scene->camera->GetPDF(eyeRay, 0.f, eyeSampleResult.filmX, eyeSampleResult.filmY, &cameraPdfW, nullptr);
 			eyeVertex.dVCM = MIS(1.f / cameraPdfW);
 			eyeVertex.dVC = 1.f;
 			eyeVertex.dVM = 1.f;
@@ -169,7 +170,8 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 				// not in any other place)
 				RayHit eyeRayHit;
 				Spectrum connectionThroughput, connectEmission;
-				const bool hit = scene->Intersect(device, false, eyeSampleResult.firstPathVertex,
+				const bool hit = scene->Intersect(device,
+						EYE_RAY | (eyeSampleResult.firstPathVertex ? CAMERA_RAY : GENERIC_RAY),
 						&eyeVertex.volInfo, sampler->GetSample(sampleOffset),
 						&eyeRay, &eyeRayHit, &eyeVertex.bsdf,
 						&connectionThroughput, &eyeVertex.throughput, &eyeSampleResult);

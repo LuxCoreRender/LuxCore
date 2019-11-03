@@ -71,13 +71,15 @@ typedef enum {
 class Sampler : public luxrays::NamedObject {
 public:
 	Sampler(luxrays::RandomGenerator *rnd, Film *flm,
-			const FilmSampleSplatter *flmSplatter) : NamedObject("sampler"), 
-			rndGen(rnd), film(flm), filmSplatter(flmSplatter) { }
+			const FilmSampleSplatter *flmSplatter,
+			const bool imgSamplesEnable) : NamedObject("sampler"), 
+			rndGen(rnd), film(flm), filmSplatter(flmSplatter),
+					imageSamplesEnable(imgSamplesEnable) { }
 	virtual ~Sampler() { }
 
 	virtual SamplerType GetType() const = 0;
 	virtual std::string GetTag() const = 0;
-	virtual void RequestSamples(const SampleType sampleType, const u_int size) = 0;
+	virtual void RequestSamples(const SampleType sampleType, const u_int size);
 
 	// index 0 and 1 are always image X and image Y
 	virtual float GetSample(const u_int index) = 0;
@@ -113,6 +115,9 @@ protected:
 	const FilmSampleSplatter *filmSplatter;
 	
 	SampleType sampleType;
+	u_int requestedSamples;
+	// If samples 0 and 1 should be expressed in pixels
+	bool imageSamplesEnable;
 };
 
 }

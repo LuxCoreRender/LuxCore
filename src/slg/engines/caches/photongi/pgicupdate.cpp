@@ -22,14 +22,13 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
-bool PhotonGICache::Update(const u_int threadIndex, const Film &film,
+bool PhotonGICache::Update(const u_int threadIndex, const u_int filmSPP,
 		const boost::function<void()> &threadZeroCallback) {
 	if (!params.caustic.enabled || params.caustic.updateSpp == 0)
 		return false;
 
 	// Check if it is time to update the caustic cache
-	const u_int spp = (u_int)(film.GetTotalSampleCount() / film.GetPixelCount());
-	const u_int deltaSpp = spp - lastUpdateSpp;
+	const u_int deltaSpp = filmSPP - lastUpdateSpp;
 	if (deltaSpp > params.caustic.updateSpp) {
 		// Time to update the caustic cache
 
@@ -39,12 +38,12 @@ bool PhotonGICache::Update(const u_int threadIndex, const Film &film,
 		if (threadIndex == 0) {
 			const double startTime = WallClockTime();
 			
-			SLG_LOG("Updating PhotonGI caustic cache: " << spp << " samples/pixel");
+			SLG_LOG("Updating PhotonGI caustic cache after " << filmSPP << " samples/pixel (Pass " << causticPhotonPass << ")");
 
 			// A safety check to avoid the update if visibility map has been deallocated
 			if (visibilityParticles.size() == 0) {
 				SLG_LOG("ERROR: Updating PhotonGI caustic cache is not possible without visibility information");
-				lastUpdateSpp = spp;
+				lastUpdateSpp = filmSPP;
 				result = false;
 			} else {
 				// Drop previous cache
@@ -52,23 +51,26 @@ bool PhotonGICache::Update(const u_int threadIndex, const Film &film,
 				causticPhotonsBVH = nullptr;
 				causticPhotons.clear();
 
+				// Reduce the look up radius
+				params.caustic.lookUpRadius = params.caustic.lookUpRadius /
+						powf(float(causticPhotonPass + 1), .5f * (1.f - params.caustic.radiusReduction));
+				// Place a cap to radius reduction
+				params.caustic.lookUpRadius = Max(params.caustic.lookUpRadius, params.caustic.minLookUpRadius);
+				params.caustic.lookUpRadius2 = Sqr(params.caustic.lookUpRadius);
+				SLG_LOG("New PhotonGI caustic cache lookup radius: " << params.caustic.lookUpRadius);
+				++causticPhotonPass;
+				
 				// Trace the photons for a new one
 				TracePhotons(false, params.caustic.enabled);
 
 				if (causticPhotons.size() > 0) {
-					// Marge photons if required
-					if (params.caustic.mergeRadiusScale > 0.f) {
-						SLG_LOG("PhotonGI merging caustic photons BVH");
-						MergeCausticPhotons();
-					}
-
 					// Build a new BVH
 					SLG_LOG("PhotonGI building caustic photons BVH");
-					causticPhotonsBVH = new PGICPhotonBvh(&causticPhotons, params.caustic.lookUpMaxCount,
+					causticPhotonsBVH = new PGICPhotonBvh(&causticPhotons, causticPhotonTracedCount,
 							params.caustic.lookUpRadius, params.caustic.lookUpNormalAngle);
 				}
 
-				lastUpdateSpp = spp;
+				lastUpdateSpp = filmSPP;
 
 				if (threadZeroCallback)
 					threadZeroCallback();

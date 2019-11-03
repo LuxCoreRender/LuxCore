@@ -18,16 +18,16 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-float MachineEpsilon_FloatAdvance(const float value) {
+OPENCL_FORCE_INLINE float MachineEpsilon_FloatAdvance(const float value) {
 	return as_float(as_uint(value) + DEFAULT_EPSILON_DISTANCE_FROM_VALUE);
 }
 
-float MachineEpsilon_E(const float value) {
+OPENCL_FORCE_INLINE float MachineEpsilon_E(const float value) {
 	const float epsilon = fabs(MachineEpsilon_FloatAdvance(value) - value);
 
 	return clamp(epsilon, PARAM_RAY_EPSILON_MIN, PARAM_RAY_EPSILON_MAX);
 }
 
-float MachineEpsilon_E_Float3(const float3 v) {
+OPENCL_FORCE_INLINE float MachineEpsilon_E_Float3(const float3 v) {
 	return fmax(MachineEpsilon_E(v.x), fmax(MachineEpsilon_E(v.y), MachineEpsilon_E(v.z)));
 }

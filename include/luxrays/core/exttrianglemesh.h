@@ -38,6 +38,11 @@
 
 namespace luxrays {
 
+// OpenCL data types
+namespace ocl {
+#include "luxrays/core/exttrianglemesh_types.cl"
+}
+
 /*
  * The inheritance scheme used here:
  *
@@ -64,30 +69,23 @@ public:
 	virtual bool HasColors() const = 0;
 	virtual bool HasAlphas() const = 0;
 	
-	virtual Normal GetGeometryNormal(const float time, const u_int triIndex) const = 0;
-	virtual Normal GetShadeNormal(const float time, const u_int triIndex, const u_int vertIndex) const = 0;
-	virtual Normal GetShadeNormal(const float time, const u_int vertIndex) const = 0;
+	virtual Normal GetGeometryNormal(const luxrays::Transform &local2World, const u_int triIndex) const = 0;
+	virtual Normal GetShadeNormal(const luxrays::Transform &local2World, const u_int triIndex, const u_int vertIndex) const = 0;
+	virtual Normal GetShadeNormal(const luxrays::Transform &local2World, const u_int vertIndex) const = 0;
 	virtual UV GetUV(const u_int vertIndex) const = 0;
 	virtual Spectrum GetColor(const u_int vertIndex) const = 0;
 	virtual float GetAlpha(const u_int vertIndex) const = 0;
 
-	virtual bool GetTriBaryCoords(const float time, const u_int triIndex, const Point &hitPoint, float *b1, float *b2) const = 0;
-	virtual void GetLocal2World(const float time, luxrays::Transform &t) const = 0;
-    virtual void GetDifferentials(const luxrays::Transform &localToWorld,
+	virtual bool GetTriBaryCoords(const luxrays::Transform &local2World, const u_int triIndex, const Point &hitPoint, float *b1, float *b2) const = 0;
+    virtual void GetDifferentials(const luxrays::Transform &local2World,
 			const u_int triIndex, const Normal &shadeNormal,
 			Vector *dpdu, Vector *dpdv,
-			Normal *dndu, Normal *dndv) const = 0;
+			Normal *dndu, Normal *dndv) const;
 
-	virtual Normal InterpolateTriNormal(const float time, const u_int triIndex, const float b1, const float b2) const = 0;
+	virtual Normal InterpolateTriNormal(const luxrays::Transform &local2World, const u_int triIndex, const float b1, const float b2) const = 0;
 	virtual UV InterpolateTriUV(const u_int triIndex, const float b1, const float b2) const = 0;
 	virtual Spectrum InterpolateTriColor(const u_int triIndex, const float b1, const float b2) const = 0;
 	virtual float InterpolateTriAlpha(const u_int triIndex, const float b1, const float b2) const = 0;
-
-	// This can be a very expansive function to run
-	virtual float GetMeshArea(const float time) const = 0;
-	virtual float GetTriangleArea(const float time, const unsigned int triIndex) const = 0;
-	virtual void Sample(const float time, const u_int triIndex, const float u0, const float u1,
-		Point *p, float *b0, float *b1, float *b2) const = 0;
 
 	virtual void Delete() = 0;
 	virtual void Save(const std::string &fileName) const = 0;
@@ -117,6 +115,12 @@ public:
 		delete[] alphas;
 	}
 
+	Normal *GetNormals() const { return normals; }
+	Normal *GetTriNormals() const { return triNormals; }
+	UV *GetUVs() const { return uvs; }
+	Spectrum *GetColors() const { return cols; }
+	float *GetAlphas() const { return alphas; }
+
 	Normal *ComputeNormals();
 
 	virtual MeshType GetType() const { return TYPE_EXT_TRIANGLE; }
@@ -126,35 +130,32 @@ public:
 	virtual bool HasColors() const { return cols != NULL; }
 	virtual bool HasAlphas() const { return alphas != NULL; }
 
-	virtual Normal GetGeometryNormal(const float time, const u_int triIndex) const {
+	virtual Normal GetGeometryNormal(const luxrays::Transform &local2World, const u_int triIndex) const {
 		return triNormals[triIndex];
 	}
-	virtual Normal GetShadeNormal(const float time, const u_int triIndex, const u_int vertIndex) const { return normals[tris[triIndex].v[vertIndex]]; }
-	virtual Normal GetShadeNormal(const float time, const u_int vertIndex) const { return normals[vertIndex]; }
+	virtual Normal GetShadeNormal(const luxrays::Transform &local2World, const u_int triIndex, const u_int vertIndex) const {
+		return normals[tris[triIndex].v[vertIndex]];
+	}
+	virtual Normal GetShadeNormal(const luxrays::Transform &local2World, const u_int vertIndex) const {
+		return normals[vertIndex];
+	}
 	virtual UV GetUV(const u_int vertIndex) const { return uvs[vertIndex]; }
 	virtual Spectrum GetColor(const u_int vertIndex) const { return cols[vertIndex]; }
 	virtual float GetAlpha(const u_int vertIndex) const { return alphas[vertIndex]; }
 
-	virtual bool GetTriBaryCoords(const float time, const u_int triIndex, const Point &hitPoint, float *b1, float *b2) const {
+	virtual bool GetTriBaryCoords(const luxrays::Transform &local2World, const u_int triIndex, const Point &hitPoint, float *b1, float *b2) const {
 		const Triangle &tri = tris[triIndex];
 		return tri.GetBaryCoords(vertices, hitPoint, b1, b2);
 	}
 	void SetLocal2World(const luxrays::Transform &t) {
 		appliedTrans = t;
 	}
-	virtual void GetLocal2World(const float time, luxrays::Transform &t) const {
-		t = appliedTrans;
-	}
-	virtual void GetDifferentials(const luxrays::Transform &localToWorld,
-			const u_int triIndex, const Normal &shadeNormal,
-			Vector *dpdu, Vector *dpdv,
-			Normal *dndu, Normal *dndv) const;
 
 	virtual void ApplyTransform(const Transform &trans);
 
-	virtual Normal InterpolateTriNormal(const float time, const u_int triIndex, const float b1, const float b2) const {
+	virtual Normal InterpolateTriNormal(const luxrays::Transform &local2World, const u_int triIndex, const float b1, const float b2) const {
 		if (!normals)
-			return GetGeometryNormal(time, triIndex);
+			return GetGeometryNormal(local2World, triIndex);
 		const Triangle &tri = tris[triIndex];
 		const float b0 = 1.f - b1 - b2;
 		return Normalize(b0 * normals[tri.v[0]] + b1 * normals[tri.v[1]] + b2 * normals[tri.v[2]]);
@@ -185,19 +186,6 @@ public:
 			return b0 * alphas[tri.v[0]] + b1 * alphas[tri.v[1]] + b2 * alphas[tri.v[2]];
 		} else
 			return 1.f;
-	}
-
-	virtual float GetMeshArea(const float time) const {
-		return area;
-	}
-	
-	virtual float GetTriangleArea(const float time, const unsigned int triIndex) const {
-		return tris[triIndex].Area(vertices);
-	}
-	virtual void Sample(const float time, const u_int triIndex, const float u0, const float u1,
-			Point *p, float *b0, float *b1, float *b2) const  {
-		const Triangle &tri = tris[triIndex];
-		tri.Sample(vertices, u0, u1, p, b0, b1, b2);
 	}
 
 	virtual void Save(const std::string &fileName) const;
@@ -308,19 +296,12 @@ private:
 	UV *uvs; // Vertex uvs
 	Spectrum *cols; // Vertex color
 	float *alphas; // Vertex alpha
-	float area;
-	
-	// The transformation that was applied to the vertices
-	// (needed e.g. for LocalMapping3D evaluation)
-	Transform appliedTrans;
 };
 
 class ExtInstanceTriangleMesh : public InstanceTriangleMesh, public ExtMesh {
 public:
-	ExtInstanceTriangleMesh(ExtTriangleMesh *m, const Transform &t) :  InstanceTriangleMesh(m, t) {
-		// The mesh area is compute on demand and cached
-		cachedArea = -1.f;
-	}
+	ExtInstanceTriangleMesh(ExtTriangleMesh *m, const Transform &t) : 
+		InstanceTriangleMesh(m, t) { }
 	~ExtInstanceTriangleMesh() { };
 	virtual void Delete() {	}
 
@@ -331,35 +312,31 @@ public:
 	virtual bool HasColors() const { return static_cast<ExtTriangleMesh *>(mesh)->HasColors(); }
 	virtual bool HasAlphas() const { return static_cast<ExtTriangleMesh *>(mesh)->HasAlphas(); }
 
-	virtual Normal GetGeometryNormal(const float time, const u_int triIndex) const {
-		return Normalize(trans * static_cast<ExtTriangleMesh *>(mesh)->GetGeometryNormal(time, triIndex));
+	virtual Normal GetGeometryNormal(const luxrays::Transform &local2World, const u_int triIndex) const {
+		return Normalize(local2World * static_cast<ExtTriangleMesh *>(mesh)->GetGeometryNormal(Transform::TRANS_IDENTITY, triIndex));
 	}
-	virtual Normal GetShadeNormal(const float time, const unsigned vertIndex) const {
-		return Normalize(trans * static_cast<ExtTriangleMesh *>(mesh)->GetShadeNormal(time, vertIndex));
+	virtual Normal GetShadeNormal(const luxrays::Transform &local2World, const u_int triIndex, const u_int vertIndex) const {
+		return Normalize(local2World * static_cast<ExtTriangleMesh *>(mesh)->GetShadeNormal(Transform::TRANS_IDENTITY, triIndex, vertIndex));
 	}
-	virtual Normal GetShadeNormal(const float time, const u_int triIndex, const u_int vertIndex) const {
-		return Normalize(trans * static_cast<ExtTriangleMesh *>(mesh)->GetShadeNormal(time, triIndex, vertIndex));
+	virtual Normal GetShadeNormal(const luxrays::Transform &local2World, const u_int vertIndex) const {
+		return Normalize(local2World * static_cast<ExtTriangleMesh *>(mesh)->GetShadeNormal(Transform::TRANS_IDENTITY, vertIndex));
 	}
 	virtual UV GetUV(const unsigned vertIndex) const { return static_cast<ExtTriangleMesh *>(mesh)->GetUV(vertIndex); }
 	virtual Spectrum GetColor(const unsigned vertIndex) const { return static_cast<ExtTriangleMesh *>(mesh)->GetColor(vertIndex); }
 	virtual float GetAlpha(const unsigned vertIndex) const { return static_cast<ExtTriangleMesh *>(mesh)->GetAlpha(vertIndex); }
 
-	virtual bool GetTriBaryCoords(const float time, const u_int triIndex, const Point &hitPoint, float *b1, float *b2) const {
+	virtual bool GetTriBaryCoords(const luxrays::Transform &local2World, const u_int triIndex, const Point &hitPoint, float *b1, float *b2) const {
 		const Triangle &tri = mesh->GetTriangles()[triIndex];
 
-		return Triangle::GetBaryCoords(GetVertex(time, tri.v[0]),
-				GetVertex(time, tri.v[1]), GetVertex(time, tri.v[2]), hitPoint, b1, b2);
+		return Triangle::GetBaryCoords(
+				GetVertex(local2World, tri.v[0]),
+				GetVertex(local2World, tri.v[1]),
+				GetVertex(local2World, tri.v[2]),
+				hitPoint, b1, b2);
 	}
-	virtual void GetLocal2World(const float time, luxrays::Transform &t) const {
-		t = trans;
-	}
-	virtual void GetDifferentials(const luxrays::Transform &localToWorld,
-			const u_int triIndex, const Normal &shadeNormal,
-			Vector *dpdu, Vector *dpdv,
-			Normal *dndu, Normal *dndv) const;
 
-	virtual Normal InterpolateTriNormal(const float time, const u_int triIndex, const float b1, const float b2) const {
-		return Normalize(trans * static_cast<ExtTriangleMesh *>(mesh)->InterpolateTriNormal(time, triIndex, b1, b2));
+	virtual Normal InterpolateTriNormal(const luxrays::Transform &local2World, const u_int triIndex, const float b1, const float b2) const {
+		return Normalize(trans * static_cast<ExtTriangleMesh *>(mesh)->InterpolateTriNormal(Transform::TRANS_IDENTITY, triIndex, b1, b2));
 	}
 
 	virtual UV InterpolateTriUV(const u_int triIndex, const float b1, const float b2) const {
@@ -374,45 +351,9 @@ public:
 		return static_cast<ExtTriangleMesh *>(mesh)->InterpolateTriAlpha(triIndex, b1, b2);
 	}
 
-	virtual float GetMeshArea(const float time) const {
-		if (cachedArea < 0.f) {
-			float area = 0.f;
-			for (u_int i = 0; i < GetTotalTriangleCount(); ++i)
-				area += GetTriangleArea(0.f, i);
-
-			// Cache the result
-			cachedArea = area;
-		}
-
-		return cachedArea;
-	}
-
-	virtual float GetTriangleArea(const float time, const u_int triIndex) const {
-		const Triangle &tri = mesh->GetTriangles()[triIndex];
-
-		return Triangle::Area(GetVertex(time, tri.v[0]), GetVertex(time, tri.v[1]), GetVertex(time, tri.v[2]));
-	}
-	virtual void Sample(const float time, const u_int triIndex, const float u0, const float u1, Point *p, float *b0, float *b1, float *b2) const  {
-		static_cast<ExtTriangleMesh *>(mesh)->Sample(time, triIndex, u0, u1, p , b0, b1, b2);
-		*p *= trans;
-	}
-
 	virtual void Save(const std::string &fileName) const { static_cast<ExtTriangleMesh *>(mesh)->Save(fileName); }
 
-	virtual void ApplyTransform(const Transform &t) {
-		InstanceTriangleMesh::ApplyTransform(t);
-
-		// Invalidate the cached result
-		cachedArea = -1.f;
-	}
-
 	const Transform &GetTransformation() const { return trans; }
-	void SetTransformation(const Transform &t) {
-		InstanceTriangleMesh::SetTransformation(t);
-
-		// Invalidate the cached result
-		cachedArea = -1.f;
-	}
 	ExtTriangleMesh *GetExtTriangleMesh() const { return (ExtTriangleMesh *)mesh; };
 	
 	void UpdateMeshReferences(ExtTriangleMesh *oldMesh, ExtTriangleMesh *newMesh);
@@ -432,20 +373,14 @@ private:
 	template<class Archive>	void load(Archive &ar, const unsigned int version) {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(InstanceTriangleMesh);
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ExtMesh);
-		cachedArea = -1.f;
 	}
 	BOOST_SERIALIZATION_SPLIT_MEMBER()
-
-	mutable float cachedArea;
 };
 
 class ExtMotionTriangleMesh : public MotionTriangleMesh, public ExtMesh {
 public:
 	ExtMotionTriangleMesh(ExtTriangleMesh *m, const MotionSystem &ms) :
-		MotionTriangleMesh(m, ms) {
-		// The mesh area is compute on demand and cached
-		cachedArea = -1.f;
-	}
+		MotionTriangleMesh(m, ms) { }
 	~ExtMotionTriangleMesh() { }
 	virtual void Delete() {	}
 
@@ -456,44 +391,31 @@ public:
 	virtual bool HasColors() const { return static_cast<ExtTriangleMesh *>(mesh)->HasColors(); }
 	virtual bool HasAlphas() const { return static_cast<ExtTriangleMesh *>(mesh)->HasAlphas(); }
 
-	virtual Normal GetGeometryNormal(const float time, const u_int triIndex) const {
-		const Matrix4x4 m = motionSystem.Sample(time);
-		const Transform t = Inverse(Transform(m));
-		return Normalize(t * static_cast<ExtTriangleMesh *>(mesh)->GetGeometryNormal(time, triIndex));
+	virtual Normal GetGeometryNormal(const luxrays::Transform &local2World, const u_int triIndex) const {
+		return Normalize(local2World * static_cast<ExtTriangleMesh *>(mesh)->GetGeometryNormal(local2World, triIndex));
 	}
-	virtual Normal GetShadeNormal(const float time, const unsigned vertIndex) const {
-		const Matrix4x4 m = motionSystem.Sample(time);
-		const Transform t = Inverse(Transform(m));
-		return Normalize(t * static_cast<ExtTriangleMesh *>(mesh)->GetShadeNormal(time, vertIndex));
+	virtual Normal GetShadeNormal(const luxrays::Transform &local2World, const u_int triIndex, const u_int vertIndex) const {
+		return Normalize(local2World * static_cast<ExtTriangleMesh *>(mesh)->GetShadeNormal(local2World, triIndex, vertIndex));
 	}
-	virtual Normal GetShadeNormal(const float time, const u_int triIndex, const u_int vertIndex) const {
-		const Matrix4x4 m = motionSystem.Sample(time);
-		const Transform t = Inverse(Transform(m));
-		return Normalize(t * static_cast<ExtTriangleMesh *>(mesh)->GetShadeNormal(time, triIndex, vertIndex));
+	virtual Normal GetShadeNormal(const luxrays::Transform &local2World, const u_int vertIndex) const {
+		return Normalize(local2World * static_cast<ExtTriangleMesh *>(mesh)->GetShadeNormal(local2World, vertIndex));
 	}
 	virtual UV GetUV(const unsigned vertIndex) const { return static_cast<ExtTriangleMesh *>(mesh)->GetUV(vertIndex); }
 	virtual Spectrum GetColor(const unsigned vertIndex) const { return static_cast<ExtTriangleMesh *>(mesh)->GetColor(vertIndex); }
 	virtual float GetAlpha(const unsigned vertIndex) const { return static_cast<ExtTriangleMesh *>(mesh)->GetAlpha(vertIndex); }
 
-	virtual bool GetTriBaryCoords(const float time, const u_int triIndex, const Point &hitPoint, float *b1, float *b2) const {
+	virtual bool GetTriBaryCoords(const luxrays::Transform &local2World, const u_int triIndex,
+			const Point &hitPoint, float *b1, float *b2) const {
 		const Triangle &tri = mesh->GetTriangles()[triIndex];
 
-		return Triangle::GetBaryCoords(GetVertex(time, tri.v[0]),
-				GetVertex(time, tri.v[1]), GetVertex(time, tri.v[2]), hitPoint, b1, b2);
+		return Triangle::GetBaryCoords(GetVertex(local2World, tri.v[0]),
+				GetVertex(local2World, tri.v[1]), GetVertex(local2World, tri.v[2]),
+				hitPoint, b1, b2);
 	}
-	virtual void GetLocal2World(const float time, luxrays::Transform &t) const {
-		const Matrix4x4 m = motionSystem.Sample(time);
-		t = Inverse(Transform(m));
-	}
-	virtual void GetDifferentials(const luxrays::Transform &localToWorld,
-			const u_int triIndex, const Normal &shadeNormal,
-			Vector *dpdu, Vector *dpdv,
-			Normal *dndu, Normal *dndv) const;
 
-	virtual Normal InterpolateTriNormal(const float time, const u_int triIndex, const float b1, const float b2) const {
-		const Matrix4x4 m = motionSystem.Sample(time);
-		const Transform t = Inverse(Transform(m));
-		return Normalize(t * static_cast<ExtTriangleMesh *>(mesh)->InterpolateTriNormal(time, triIndex, b1, b2));
+	virtual Normal InterpolateTriNormal(const luxrays::Transform &local2World,
+			const u_int triIndex, const float b1, const float b2) const {
+		return Normalize(local2World * static_cast<ExtTriangleMesh *>(mesh)->InterpolateTriNormal(local2World, triIndex, b1, b2));
 	}
 
 	virtual UV InterpolateTriUV(const u_int triIndex, const float b1, const float b2) const {
@@ -508,37 +430,7 @@ public:
 		return static_cast<ExtTriangleMesh *>(mesh)->InterpolateTriAlpha(triIndex, b1, b2);
 	}
 
-	virtual float GetMeshArea(const float time) const {
-		if (cachedArea < 0.f) {
-			float area = 0.f;
-			for (u_int i = 0; i < GetTotalTriangleCount(); ++i)
-				area += GetTriangleArea(0.f, i);
-
-			// Cache the result
-			cachedArea = area;
-		}
-
-		return cachedArea;
-	}
-
-	virtual float GetTriangleArea(const float time, const u_int triIndex) const {
-		const Triangle &tri = mesh->GetTriangles()[triIndex];
-
-		return Triangle::Area(GetVertex(time, tri.v[0]), GetVertex(time, tri.v[1]), GetVertex(time, tri.v[2]));
-	}
-	virtual void Sample(const float time, const u_int triIndex, const float u0, const float u1, Point *p, float *b0, float *b1, float *b2) const  {
-		static_cast<ExtTriangleMesh *>(mesh)->Sample(time, triIndex, u0, u1, p , b0, b1, b2);
-		*p *= motionSystem.Sample(time);
-	}
-
 	virtual void Save(const std::string &fileName) const { static_cast<ExtTriangleMesh *>(mesh)->Save(fileName); }
-
-	virtual void ApplyTransform(const Transform &t) {
-		MotionTriangleMesh::ApplyTransform(t);
-
-		// Invalidate the cached result
-		cachedArea = -1.f;
-	}
 
 	const MotionSystem &GetMotionSystem() const { return motionSystem; }
 	ExtTriangleMesh *GetExtTriangleMesh() const { return (ExtTriangleMesh *)mesh; };
@@ -560,11 +452,8 @@ private:
 	template<class Archive>	void load(Archive &ar, const unsigned int version) {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(MotionTriangleMesh);
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ExtMesh);
-		cachedArea = -1.f;
 	}
 	BOOST_SERIALIZATION_SPLIT_MEMBER()
-
-	mutable float cachedArea;
 };
 
 }

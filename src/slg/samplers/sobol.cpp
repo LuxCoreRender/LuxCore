@@ -85,9 +85,9 @@ SamplerSharedData *SobolSamplerSharedData::FromProperties(const Properties &cfg,
 //------------------------------------------------------------------------------
 
 SobolSampler::SobolSampler(RandomGenerator *rnd, Film *flm,
-		const FilmSampleSplatter *flmSplatter,
+		const FilmSampleSplatter *flmSplatter, const bool imgSamplesEnable,
 		const float adaptiveStr,
-		SobolSamplerSharedData *samplerSharedData) : Sampler(rnd, flm, flmSplatter),
+		SobolSamplerSharedData *samplerSharedData) : Sampler(rnd, flm, flmSplatter, imgSamplesEnable),
 		sharedData(samplerSharedData), sobolSequence(), adaptiveStrength(adaptiveStr),
 		rngGenerator() {
 }
@@ -114,7 +114,7 @@ void SobolSampler::InitNewSample() {
 		// Initialize sample0 and sample 1
 
 		u_int pixelX, pixelY;
-		if (film) {
+		if (imageSamplesEnable && film) {
 			const u_int *subRegion = film->GetSubRegion();
 
 			const u_int pixelIndex = (pixelIndexBase + pixelIndexOffset) % sharedData->filmRegionPixelCount;
@@ -162,7 +162,7 @@ void SobolSampler::InitNewSample() {
 }
 
 void SobolSampler::RequestSamples(const SampleType smplType, const u_int size) {
-	sampleType = smplType;
+	Sampler::RequestSamples(smplType, size);
 
 	sobolSequence.RequestSamples(size);
 
@@ -171,6 +171,8 @@ void SobolSampler::RequestSamples(const SampleType smplType, const u_int size) {
 }
 
 float SobolSampler::GetSample(const u_int index) {
+	assert (index < requestedSamples);
+
 	switch (index) {
 		case 0:
 			return sample0;
@@ -186,16 +188,16 @@ void SobolSampler::NextSample(const vector<SampleResult> &sampleResults) {
 		double pixelNormalizedCount, screenNormalizedCount;
 		switch (sampleType) {
 			case PIXEL_NORMALIZED_ONLY:
-				pixelNormalizedCount = 1.f;
-				screenNormalizedCount = 0.f;
+				pixelNormalizedCount = 1.0;
+				screenNormalizedCount = 0.0;
 				break;
 			case SCREEN_NORMALIZED_ONLY:
-				pixelNormalizedCount = 0.f;
-				screenNormalizedCount = 1.f;
+				pixelNormalizedCount = 0.0;
+				screenNormalizedCount = 1.0;
 				break;
 			case PIXEL_NORMALIZED_AND_SCREEN_NORMALIZED:
-				pixelNormalizedCount = 1.f;
-				screenNormalizedCount = 1.f;
+				pixelNormalizedCount = 1.0;
+				screenNormalizedCount = 1.0;
 				break;
 			default:
 				throw runtime_error("Unknown sample type in SobolSampler::NextSample(): " + ToString(sampleType));
@@ -220,14 +222,18 @@ Properties SobolSampler::ToProperties() const {
 Properties SobolSampler::ToProperties(const Properties &cfg) {
 	return Properties() <<
 			cfg.Get(GetDefaultProps().Get("sampler.type")) <<
+			cfg.Get(GetDefaultProps().Get("sampler.imagesamples.enable")) <<
 			cfg.Get(GetDefaultProps().Get("sampler.sobol.adaptive.strength"));
 }
 
 Sampler *SobolSampler::FromProperties(const Properties &cfg, RandomGenerator *rndGen,
 		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData) {
+	const bool imageSamplesEnable = cfg.Get(GetDefaultProps().Get("sampler.imagesamples.enable")).Get<bool>();
+
 	const float str = Clamp(cfg.Get(GetDefaultProps().Get("sampler.sobol.adaptive.strength")).Get<float>(), 0.f, .95f);
 
-	return new SobolSampler(rndGen, film, flmSplatter, str, (SobolSamplerSharedData *)sharedData);
+	return new SobolSampler(rndGen, film, flmSplatter, imageSamplesEnable,
+			str, (SobolSamplerSharedData *)sharedData);
 }
 
 slg::ocl::Sampler *SobolSampler::FromPropertiesOCL(const Properties &cfg) {
@@ -240,9 +246,11 @@ slg::ocl::Sampler *SobolSampler::FromPropertiesOCL(const Properties &cfg) {
 }
 
 Film::FilmChannelType SobolSampler::GetRequiredChannels(const luxrays::Properties &cfg) {
+	const bool imageSamplesEnable = cfg.Get(GetDefaultProps().Get("sampler.imagesamples.enable")).Get<bool>();
+
 	const float str = cfg.Get(GetDefaultProps().Get("sampler.sobol.adaptive.strength")).Get<float>();
 
-	if (str > 0.f)
+	if (imageSamplesEnable && (str > 0.f))
 		return Film::NOISE;
 	else
 		return Film::NONE;

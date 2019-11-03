@@ -56,29 +56,32 @@ float MapSphereLight::GetPower(const Scene &scene) const {
 }
 
 Spectrum MapSphereLight::Emit(const Scene &scene,
-		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
-		Point *orig, Vector *dir,
-		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
+		const float time, const float u0, const float u1,
+		const float u2, const float u3, const float passThroughEvent,
+		Ray &ray, float &emissionPdfW,
+		float *directPdfA, float *cosThetaAtLight) const {
 	// I sample as SphereLight::Emit() instead of func->Sample() because I would
 	// have to reject half of the samples due to emitting below the sphere surface
-	const Spectrum result = SphereLight::Emit(scene, u0, u1, u2, u3, passThroughEvent,
-			orig, dir, emissionPdfW, directPdfA, cosThetaAtLight);
+	const Spectrum result = SphereLight::Emit(scene,
+			time, u0, u1, u2, u3, passThroughEvent,
+			ray, emissionPdfW,
+			directPdfA, cosThetaAtLight);
 
-	const Vector localFromLight = Normalize(Inverse(lightToWorld) * (*dir));
+	const Vector localFromLight = Normalize(Inverse(lightToWorld) * ray.d);
 
 	return result *	((SphericalFunction *)func)->Evaluate(localFromLight) /
 			func->Average();
 }
 
 Spectrum MapSphereLight::Illuminate(const Scene &scene, const BSDF &bsdf,
-		const float u0, const float u1, const float passThroughEvent,
-        Vector *dir, float *distance, float *directPdfW,
+		const float time, const float u0, const float u1, const float passThroughEvent,
+        Ray &shadowRay, float &directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
-	const Spectrum result = SphereLight::Illuminate(scene, bsdf, u0, u1,
-			passThroughEvent, dir, distance, directPdfW,
+	const Spectrum result = SphereLight::Illuminate(scene, bsdf, time, u0, u1,
+			passThroughEvent, shadowRay, directPdfW,
 			emissionPdfW, cosThetaAtLight);
 
-	const Vector localFromLight = Normalize(Inverse(lightToWorld) * (-(*dir)));
+	const Vector localFromLight = Normalize(Inverse(lightToWorld) * (-shadowRay.d));
 	const float funcPdf = func->Pdf(localFromLight);
 	if (funcPdf == 0.f)
 		return Spectrum();

@@ -91,7 +91,7 @@ Properties FresnelApproxNTexture::ToProperties(const ImageMapCache &imgMapCache,
 
 	const string name = GetName();
 	props.Set(Property("scene.textures." + name + ".type")("fresnelapproxn"));
-	props.Set(Property("scene.textures." + name + ".texture")(tex->GetName()));
+	props.Set(Property("scene.textures." + name + ".texture")(tex->GetSDLValue()));
 
 	return props;
 }
@@ -101,7 +101,7 @@ Properties FresnelApproxKTexture::ToProperties(const ImageMapCache &imgMapCache,
 
 	const string name = GetName();
 	props.Set(Property("scene.textures." + name + ".type")("fresnelapproxk"));
-	props.Set(Property("scene.textures." + name + ".texture")(tex->GetName()));
+	props.Set(Property("scene.textures." + name + ".texture")(tex->GetSDLValue()));
 
 	return props;
 }

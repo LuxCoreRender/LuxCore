@@ -45,6 +45,7 @@
 #include "slg/film/imagepipeline/plugins/premultiplyalpha.h"
 #include "slg/film/imagepipeline/plugins/mist.h"
 #include "slg/film/imagepipeline/plugins/intel_oidn.h"
+#include "slg/film/imagepipeline/plugins/whitebalance.h"
 
 using namespace std;
 using namespace luxrays;
@@ -609,6 +610,9 @@ ImagePipeline *Film::CreateImagePipeline(const Properties &props, const string &
 			} else if (type == "INTEL_OIDN") {
 				const int oidnMemLimit = props.Get(Property(prefix + ".oidnmemory")(6000)).Get<int>();
 				imagePipeline->AddPlugin(new IntelOIDN(oidnMemLimit));
+			} else if (type == "WHITE_BALANCE") {
+				const float temperature = Clamp(props.Get(Property(prefix + ".temperature")(6500.f)).Get<float>(),1000.f, 40000.f);
+				imagePipeline->AddPlugin(new WhiteBalance(temperature));
 			} else
 				throw runtime_error("Unknown image pipeline plugin type: " + type);
 		}
@@ -727,9 +731,17 @@ void Film::Parse(const Properties &props) {
 			haltNoiseThresholdStopRendering = props.Get(Property("batch.haltnoisethreshold.stoprendering.enable")(
 						props.Get(Property("batch.haltthreshold.stoprendering.enable")(true)).Get<bool>()
 					)).Get<bool>();
+				
+			haltNoiseThresholdImagePipelineIndex = props.Get(Property("batch.haltnoisethreshold.index")(0)).Get<u_int>();
+
+			if (haltNoiseThresholdImagePipelineIndex >= GetImagePipelineCount()) {
+				SLG_LOG("WARNING: Halt thereshold image pipeline index not available. Reverting to first image pipeline");
+				haltNoiseThresholdImagePipelineIndex = 0;
+			}
 
 			convTest = new FilmConvTest(this, haltNoiseThreshold, haltNoiseThresholdWarmUp,
-					haltNoiseThresholdTestStep, haltNoiseThresholdUseFilter);
+					haltNoiseThresholdTestStep, haltNoiseThresholdUseFilter,
+					haltNoiseThresholdImagePipelineIndex);
 		}
 	}
 
@@ -752,7 +764,13 @@ void Film::Parse(const Properties &props) {
 		noiseEstimationTestStep = props.Get(Property("film.noiseestimation.step")(32)).Get<u_int>();
 		noiseEstimationFilterScale = props.Get(Property("film.noiseestimation.filter.scale")(4)).Get<u_int>();
 
+		noiseEstimationImagePipelineIndex = props.Get(Property("film.noiseestimation.index")(0)).Get<u_int>();
+		if (noiseEstimationImagePipelineIndex >= GetImagePipelineCount()) {
+			SLG_LOG("WARNING: Noise estimation image pipeline index not available. Reverting to first image pipeline");
+			noiseEstimationImagePipelineIndex = 0;
+		}
+
 		noiseEstimation = new FilmNoiseEstimation(this, noiseEstimationWarmUp,
-				noiseEstimationTestStep, noiseEstimationFilterScale);
+				noiseEstimationTestStep, noiseEstimationFilterScale, noiseEstimationImagePipelineIndex);
 	}
 }

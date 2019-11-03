@@ -2,7 +2,7 @@
 
 # Install deps
 sudo apt-get -qq update
-sudo apt-get install -y wget libtool git cmake3 g++ flex bison libbz2-dev libopenimageio-dev libtiff5-dev libpng12-dev libgtk-3-dev libopenexr-dev libgl1-mesa-dev python3-dev python3-pip python3-numpy ocl-icd-opencl-dev
+sudo apt-get install -y libtool-bin cmake flex bison libgtk-3-dev libgl1-mesa-dev python3-numpy ocl-icd-opencl-dev
 
 # Clone LinuxCompile
 git clone https://github.com/LuxCoreRender/LinuxCompile.git
@@ -10,12 +10,6 @@ git clone https://github.com/LuxCoreRender/LinuxCompile.git
 # Set up correct names for release version and SDK
 if [[ -z "$VERSION_STRING" ]] ; then
     VERSION_STRING=latest
-fi
-
-if [[ "$BLENDER280" == "TRUE" ]] ; then
-    VERSION_STRING=$VERSION_STRING-blender2.80
-    git checkout blender2.80
-    git merge --no-commit origin/master
 fi
 
 if [[ "$FINAL" == "TRUE" ]] ; then

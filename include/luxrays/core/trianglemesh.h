@@ -52,12 +52,19 @@ public:
 	virtual MeshType GetType() const = 0;
 
 	virtual BBox GetBBox() const = 0;
-	virtual Point GetVertex(const float time, const u_int vertIndex) const = 0;
+	virtual void GetLocal2World(const float time, luxrays::Transform &local2World) const = 0;
+	virtual Point GetVertex(const luxrays::Transform &local2World, const u_int vertIndex) const = 0;
 
 	virtual Point *GetVertices() const = 0;
 	virtual Triangle *GetTriangles() const = 0;
 	virtual u_int GetTotalVertexCount() const = 0;
 	virtual u_int GetTotalTriangleCount() const = 0;
+
+	// This can be a very expansive function to run
+	virtual float GetMeshArea(const luxrays::Transform &local2World) const = 0;
+	virtual float GetTriangleArea(const luxrays::Transform &local2World, const unsigned int triIndex) const = 0;
+	virtual void Sample(const luxrays::Transform &local2World, const u_int triIndex, const float u0, const float u1,
+		Point *p, float *b0, float *b1, float *b2) const = 0;
 
 	virtual void ApplyTransform(const Transform &trans) = 0;
 
@@ -83,12 +90,29 @@ public:
 	virtual MeshType GetType() const { return TYPE_TRIANGLE; }
 
 	virtual BBox GetBBox() const;
-	virtual Point GetVertex(const float time, const u_int vertIndex) const { return vertices[vertIndex]; }
+	virtual void GetLocal2World(const float time, luxrays::Transform &local2World) const {
+		local2World = appliedTrans;
+	}
+	virtual Point GetVertex(const luxrays::Transform &local2World, const u_int vertIndex) const { return vertices[vertIndex]; }
 
 	virtual Point *GetVertices() const { return vertices; }
 	virtual Triangle *GetTriangles() const { return tris; }
 	virtual u_int GetTotalVertexCount() const { return vertCount; }
 	virtual u_int GetTotalTriangleCount() const { return triCount; }
+
+	virtual float GetMeshArea(const luxrays::Transform &local2World) const {
+		return area;
+	}
+	
+	virtual float GetTriangleArea(const luxrays::Transform &local2World, const unsigned int triIndex) const {
+		return tris[triIndex].Area(vertices);
+	}
+	virtual void Sample(const luxrays::Transform &local2World, const u_int triIndex,
+			const float u0, const float u1,
+			Point *p, float *b0, float *b1, float *b2) const  {
+		const Triangle &tri = tris[triIndex];
+		tri.Sample(vertices, u0, u1, p, b0, b1, b2);
+	}
 
 	virtual void ApplyTransform(const Transform &trans);
 
@@ -113,10 +137,17 @@ public:
 		TriangleID **preprocessedMeshTriangleIDs = NULL);
 
 protected:
+	void Preprocess();
+
 	u_int vertCount;
 	u_int triCount;
 	Point *vertices;
 	Triangle *tris;
+	float area;
+	
+	// The transformation that was applied to the vertices
+	// (needed e.g. for LocalMapping3D evaluation)
+	Transform appliedTrans;
 
 	mutable BBox cachedBBox;
 	mutable bool cachedBBoxValid;
@@ -167,8 +198,11 @@ public:
 	virtual MeshType GetType() const { return TYPE_TRIANGLE_INSTANCE; }
 
 	virtual BBox GetBBox() const;
-	virtual Point GetVertex(const float time, const u_int vertIndex) const {
-		return trans * mesh->GetVertex(time, vertIndex);
+	virtual void GetLocal2World(const float time, luxrays::Transform &local2World) const {
+		local2World = trans;
+	}
+	virtual Point GetVertex(const luxrays::Transform &local2World, const u_int vertIndex) const {
+		return trans * mesh->GetVertex(local2World, vertIndex);
 	}
 
 	virtual Point *GetVertices() const { return mesh->GetVertices(); }
@@ -176,15 +210,49 @@ public:
 	virtual u_int GetTotalVertexCount() const { return mesh->GetTotalVertexCount(); }
 	virtual u_int GetTotalTriangleCount() const { return mesh->GetTotalTriangleCount(); }
 
+	virtual float GetMeshArea(const luxrays::Transform &local2World) const {
+		if (cachedArea < 0.f) {
+			float area = 0.f;
+			for (u_int i = 0; i < GetTotalTriangleCount(); ++i)
+				area += GetTriangleArea(local2World, i);
+
+			// Cache the result
+			cachedArea = area;
+		}
+
+		return cachedArea;
+	}
+
+	virtual float GetTriangleArea(const luxrays::Transform &local2World, const u_int triIndex) const {
+		const Triangle &tri = mesh->GetTriangles()[triIndex];
+
+		return Triangle::Area(
+				GetVertex(local2World, tri.v[0]),
+				GetVertex(local2World, tri.v[1]),
+				GetVertex(local2World, tri.v[2]));
+	}
+	virtual void Sample(const luxrays::Transform &local2World, const u_int triIndex,
+			const float u0, const float u1,
+			Point *p, float *b0, float *b1, float *b2) const  {
+		mesh->Sample(local2World, triIndex, u0, u1, p , b0, b1, b2);
+		*p *= trans;
+	}
+
 	virtual void ApplyTransform(const Transform &t) {
 		trans = trans * t;
 		cachedBBoxValid = false;
+
+		// Invalidate the cached result
+		cachedArea = -1.f;
 	}
 
 	const Transform &GetTransformation() const { return trans; }
 	void SetTransformation(const Transform &t) {
 		trans = t;
 		cachedBBoxValid = false;
+
+		// Invalidate the cached result
+		cachedArea = -1.f;
 	}
 
 	TriangleMesh *GetTriangleMesh() const { return mesh; };
@@ -199,6 +267,7 @@ protected:
 	Transform trans;
 	TriangleMesh *mesh;
 
+	mutable float cachedArea;
 	mutable BBox cachedBBox;
 	mutable bool cachedBBoxValid;
 
@@ -214,6 +283,7 @@ private:
 		ar & trans;
 		ar & mesh;
 
+		cachedArea = -1.f;
 		cachedBBoxValid = false;
 	}
 	BOOST_SERIALIZATION_SPLIT_MEMBER()
@@ -227,14 +297,46 @@ public:
 	virtual MeshType GetType() const { return TYPE_TRIANGLE_MOTION; }
 
 	virtual BBox GetBBox() const;
-	virtual Point GetVertex(const float time, const u_int vertIndex) const {
-		return motionSystem.Sample(time).Inverse() * mesh->GetVertex(time, vertIndex);
+	virtual void GetLocal2World(const float time, luxrays::Transform &local2World) const {
+		const Matrix4x4 m = motionSystem.SampleInverse(time);
+		local2World = Transform(m);
+	}
+	virtual Point GetVertex(const luxrays::Transform &local2World, const u_int vertIndex) const {
+		return local2World * mesh->GetVertex(local2World, vertIndex);
 	}
 
 	virtual Point *GetVertices() const { return mesh->GetVertices(); }
 	virtual Triangle *GetTriangles() const { return mesh->GetTriangles(); }
 	virtual u_int GetTotalVertexCount() const { return mesh->GetTotalVertexCount(); }
 	virtual u_int GetTotalTriangleCount() const { return mesh->GetTotalTriangleCount(); }
+
+	virtual float GetMeshArea(const luxrays::Transform &local2World) const {
+		if (cachedArea < 0.f) {
+			float area = 0.f;
+			for (u_int i = 0; i < GetTotalTriangleCount(); ++i)
+				area += GetTriangleArea(local2World, i);
+
+			// Cache the result
+			cachedArea = area;
+		}
+
+		return cachedArea;
+	}
+
+	virtual float GetTriangleArea(const luxrays::Transform &local2World, const u_int triIndex) const {
+		const Triangle &tri = mesh->GetTriangles()[triIndex];
+
+		return Triangle::Area(
+				GetVertex(local2World, tri.v[0]),
+				GetVertex(local2World, tri.v[1]),
+				GetVertex(local2World, tri.v[2]));
+	}
+	virtual void Sample(const luxrays::Transform &local2World,
+			const u_int triIndex, const float u0, const float u1,
+			Point *p, float *b0, float *b1, float *b2) const  {
+		mesh->Sample(local2World, triIndex, u0, u1, p , b0, b1, b2);
+		*p = local2World * (*p);
+	}
 
 	virtual void ApplyTransform(const Transform &t);
 
@@ -251,6 +353,7 @@ protected:
 	MotionSystem motionSystem;
 	TriangleMesh *mesh;
 
+	mutable float cachedArea;
 	mutable BBox cachedBBox;
 	mutable bool cachedBBoxValid;
 
@@ -266,6 +369,7 @@ private:
 		ar & motionSystem;
 		ar & mesh;
 
+		cachedArea = -1.f;
 		cachedBBoxValid = false;
 	}
 	BOOST_SERIALIZATION_SPLIT_MEMBER()

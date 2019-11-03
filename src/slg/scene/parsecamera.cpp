@@ -136,10 +136,6 @@ Camera *Scene::CreateCamera(const Properties &props) {
 				environmentCamera = new EnvironmentCamera(orig, target, up);
 
 			camera.reset(environmentCamera);
-			
-			environmentCamera->lensRadius = props.Get(Property("scene.camera.lensradius")(0.f)).Get<float>();
-			environmentCamera->focalDistance = props.Get(Property("scene.camera.focaldistance")(10.f)).Get<float>();
-			environmentCamera->autoFocus = props.Get(Property("scene.camera.autofocus.enable")(false)).Get<bool>();
 		};
 
 		if (type != "environment") {
@@ -202,6 +198,10 @@ Camera *Scene::CreateCamera(const Properties &props) {
 
 		camera->motionSystem = new MotionSystem(times, transforms);
 	}
+	
+	// I update the camera with dummy film width/height to initialize at least
+	// all no raster related transformations
+	camera->Update(100u, 100u, nullptr);
 
 	return camera.release();
 }

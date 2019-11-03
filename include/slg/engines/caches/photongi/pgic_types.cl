@@ -31,8 +31,3 @@ typedef struct {
 	Normal landingSurfaceNormal;
 	int isVolume;
 } Photon;
-
-typedef struct {
-	unsigned int photonIndex;
-	float distance2;
-} NearPhoton;

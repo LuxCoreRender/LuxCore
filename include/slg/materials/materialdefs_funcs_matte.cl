@@ -46,9 +46,7 @@ OPENCL_FORCE_INLINE float3 MatteMaterial_Evaluate(
 
 OPENCL_FORCE_INLINE float3 MatteMaterial_Sample(__global const HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1, 
-#if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
-#endif
 		float *pdfW, BSDFEvent *event,
 		const float3 kdVal) {
 	if (fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
@@ -110,9 +108,7 @@ float3 RoughMatteMaterial_Evaluate(
 float3 RoughMatteMaterial_Sample(
 		__global const HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1, 
-#if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
-#endif
 		float *pdfW, BSDFEvent *event,
 		const float s, const float3 kdVal) {
 	if (fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC)

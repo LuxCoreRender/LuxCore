@@ -123,6 +123,9 @@ public:
 		const luxrays::Vector &localFixedDir, const float passThroughEvent,
 		const bool backTracing) const;
 
+	void SetPassThroughShadowTransparency(const luxrays::Spectrum &t) { passThroughShadowTransparency = t; }
+	const luxrays::Spectrum &GetPassThroughShadowTransparency() const { return passThroughShadowTransparency; }
+
 	virtual luxrays::Spectrum GetEmittedRadiance(const HitPoint &hitPoint,
 		const float oneOverPrimitiveArea) const;
 	virtual float GetEmittedRadianceY(const float oneOverPrimitiveArea) const;
@@ -174,10 +177,13 @@ public:
 	// used to extend a path, you know where you are coming from and want to
 	// know where to go next. It used by the path tracer to extend eye path and
 	// by BiDir to extend both eye and light path.
+	//
+	// Note: eventHint's valid values TRANSMIT, REFLECT or NONE and it works
+	// only for Delta materials
 	virtual luxrays::Spectrum Sample(const HitPoint &hitPoint,
 		const luxrays::Vector &localFixedDir, luxrays::Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
-		float *pdfW, BSDFEvent *event) const = 0;
+		float *pdfW, BSDFEvent *event, const BSDFEvent eventHint = NONE) const = 0;
 
 	// Pdf() is used to obtain direct and reverse PDFs while knowing the eye
 	// and light vector. It is used only by BiDir.
@@ -218,6 +224,7 @@ protected:
 
 	const Texture *frontTransparencyTex;
 	const Texture *backTransparencyTex;
+	luxrays::Spectrum passThroughShadowTransparency;
 	const Texture *emittedTex;
 	const Texture *bumpTex;
     float bumpSampleDistance;

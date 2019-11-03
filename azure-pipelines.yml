@@ -1,17 +1,12 @@
 # Azure build pipeline script
 # Add steps that build, run tests, deploy, and more: https://aka.ms/yaml
 
-# This script processes daily and official releases (alpha/beta and final)
+# This script processes daily and official releases (alpha/beta/rc and final)
 # To trigger an official release, add a commit tagged in the form "luxcorerender_v*"
 # The "version_string" after the "_" in the tag is used in following steps
 # to generate binary names like "luxcorerender-<version_string>-<platform>-..."
 # One, and only one, tag in the form "luxcorerender_v*" is needed, 
 # otherwise the official release build aborts.
-
-resources:
-  containers:
-  - container: LinuxContainer
-    image: ubuntu:14.04
 
 variables:
 - group: BuildPipelinesGroup
@@ -24,7 +19,7 @@ jobs:
 - job: DetectBuildType
   timeoutInMinutes: 0
   pool:
-    vmImage: 'ubuntu-16.04'
+    vmImage: 'ubuntu-18.04'
     
   steps:
   - script: ./scripts/azurepipeline/detect-build-type.sh
@@ -38,54 +33,20 @@ jobs:
     condition: eq(variables['System.PullRequest.IsFork'], 'False')
     
     
+#==============================================================================
+# Linux binaries
+#==============================================================================
 - job: LuxCoreRenderLinux
   dependsOn: DetectBuildType
   condition: succeeded()
   timeoutInMinutes: 0
   pool:
-    vmImage: 'ubuntu-16.04'
+    vmImage: 'ubuntu-18.04'
   variables:
     version_string: $[ dependencies.DetectBuildType.outputs['setvarStep.version_string'] ]
 
-  container: LinuxContainer
-
   steps:
-  - script: ./scripts/azurepipeline/linux/build.sh
-    displayName: Building LuxCore
-  - script: ./scripts/azurepipeline/linux/test.sh
-    displayName: Testing LuxCore
-  - task: PublishBuildArtifacts@1
-    inputs:
-      pathtoPublish: '$(Build.ArtifactStagingDirectory)'
-      artifactName: LuxCore
-    displayName: 'Upload luxcorerender-<version>-linux64.tar.bz2'
-    condition: eq(variables['System.PullRequest.IsFork'], 'False')
-
-
-- job: LuxCoreRenderLinux_Blender280
-  # Variable 'blender280' triggers use of blender2.80 branch when setting up deps
-  dependsOn: DetectBuildType
-  condition: succeeded()
-  timeoutInMinutes: 0
-  pool:
-    vmImage: 'ubuntu-16.04'
-  variables:
-    version_string: $[ dependencies.DetectBuildType.outputs['setvarStep.version_string'] ]
-    blender280: 'TRUE'
-
-  container: LinuxContainer
-
-  steps:
-  - script: ./scripts/azurepipeline/linux/build.sh
-    displayName: Building LuxCore
-  - script: ./scripts/azurepipeline/linux/test.sh
-    displayName: Testing LuxCore
-  - task: PublishBuildArtifacts@1
-    inputs:
-      pathtoPublish: '$(Build.ArtifactStagingDirectory)'
-      artifactName: LuxCore
-    displayName: 'Upload luxcorerender-<version>-linux64.tar.bz2'
-    condition: eq(variables['System.PullRequest.IsFork'], 'False')
+  - template: ./scripts/azurepipeline/linux/linux_jobs.yml
 
 
 - job: LuxCoreRenderLinuxSDK
@@ -98,24 +59,20 @@ jobs:
     )
   timeoutInMinutes: 0
   pool:
-    vmImage: 'ubuntu-16.04'
+    vmImage: 'ubuntu-18.04'
   variables:
     version_string: $[ dependencies.DetectBuildType.outputs['setvarStep.version_string'] ]
     final: $[ dependencies.DetectBuildType.outputs['setvarStep.final'] ]
 
-  container: LinuxContainer
-
   steps:
-  - script: ./scripts/azurepipeline/linux/build.sh
-    displayName: Building LuxCore SDK
-  - task: PublishBuildArtifacts@1
-    inputs:
-      pathtoPublish: '$(Build.ArtifactStagingDirectory)'
-      artifactName: LuxCore
-    displayName: 'Upload luxcorerender-<version>-linux64.tar.bz2'
-    condition: eq(variables['System.PullRequest.IsFork'], 'False')
+  - template: ./scripts/azurepipeline/linux/linux_jobs.yml
+    parameters:
+      build: 'SDK'
 
 
+#==============================================================================
+# Windows binaries
+#==============================================================================
 - job: LuxCoreRenderWindows
   dependsOn: DetectBuildType
   condition: succeeded()
@@ -128,109 +85,21 @@ jobs:
   steps:
   - task: UsePythonVersion@0
     inputs:
-      versionSpec: '3.5'
-      addToPath: true
-      architecture: 'x64'
-  - script: ./scripts/azurepipeline/windows/deps-setup.cmd
-    displayName: Getting required deps
-  - script: './scripts/azurepipeline/windows/build.cmd /cmake-only /no-ocl'
-    displayName: Generating build files with CMake - OpenCL disabled
-  - task: MSBuild@1
-    inputs:
-      solution: '..\WindowsCompile\Build_CMake\LuxCore\LuxRays.sln'
-      msbuildVersion: '15.0'
-      msbuildArchitecture: 'x64'
-      platform: 'x64'
-      configuration: 'Release'
-      msbuildArguments: '/nologo /verbosity:normal /p:WarningLevel=0'
-      # maximumCpuCount --> false to build solution 1 project at a time
-      # Avoids "Error C1002: compiler out of heap space in pass 2"
-      maximumCpuCount: false
-      createLogFile: true
-    displayName: Building LuxCore - OpenCL disabled
-  - script: './scripts/azurepipeline/windows/post-build.cmd /no-ocl'
-    displayName: Gathering and packing binaries - OpenCL disabled
-  - script: './scripts/azurepipeline/windows/build.cmd /cmake-only'
-    displayName: Generating build files with CMake - OpenCL enabled
-  - task: MSBuild@1
-    inputs:
-      solution: '..\WindowsCompile\Build_CMake\LuxCore\LuxRays.sln'
-      msbuildVersion: '15.0'
-      msbuildArchitecture: 'x64'
-      platform: 'x64'
-      configuration: 'Release'
-      msbuildArguments: '/nologo /verbosity:normal /p:WarningLevel=0'
-      # maximumCpuCount --> false to build solution 1 project at a time
-      # Avoids "Error C1002: compiler out of heap space in pass 2"
-      maximumCpuCount: false
-      createLogFile: true
-    displayName: Building LuxCore - OpenCL enabled
-  - script: './scripts/azurepipeline/windows/post-build.cmd'
-    displayName: Gathering and packing binaries - OpenCL enabled
-  - script: './scripts/azurepipeline/windows/test.cmd'
-    displayName: Testing LuxCore
-  - task: PublishBuildArtifacts@1
-    inputs:
-      pathtoPublish: '$(Build.ArtifactStagingDirectory)'
-      artifactName: LuxCore
-    displayName: 'Upload luxcorerender-<version>-win64.zip'
-    condition: eq(variables['System.PullRequest.IsFork'], 'False')
-
-
-- job: LuxCoreRenderWindows_Blender280
-  # This is based on Python 3.7
-  # Variable 'blender280' triggers use of blender2.80 branch when setting up deps
-  dependsOn: DetectBuildType
-  condition: succeeded()
-  timeoutInMinutes: 0
-  pool:
-    vmImage: 'vs2017-win2016'
-  variables:
-    version_string: $[ dependencies.DetectBuildType.outputs['setvarStep.version_string'] ]
-    blender280: 'TRUE'
-
-  steps:
-  - task: UsePythonVersion@0
-    inputs:
       versionSpec: '3.7'
       addToPath: true
       architecture: 'x64'
   - script: ./scripts/azurepipeline/windows/deps-setup.cmd
     displayName: Getting required deps
-  - script: './scripts/azurepipeline/windows/build.cmd /cmake-only /no-ocl /python37'
-    displayName: Generating build files with CMake - OpenCL disabled
-  - task: MSBuild@1
-    inputs:
-      solution: '..\WindowsCompile\Build_CMake\LuxCore\LuxRays.sln'
-      msbuildVersion: '15.0'
-      msbuildArchitecture: 'x64'
-      platform: 'x64'
-      configuration: 'Release'
-      msbuildArguments: '/nologo /verbosity:normal /p:WarningLevel=0'
-      # maximumCpuCount --> false to build solution 1 project at a time
-      # Avoids "Error C1002: compiler out of heap space in pass 2"
-      maximumCpuCount: false
-      createLogFile: true
-    displayName: Building LuxCore - OpenCL disabled
-  - script: './scripts/azurepipeline/windows/post-build.cmd /no-ocl'
-    displayName: Gathering and packing binaries - OpenCL disabled
-  - script: './scripts/azurepipeline/windows/build.cmd /cmake-only /python37'
-    displayName: Generating build files with CMake - OpenCL enabled
-  - task: MSBuild@1
-    inputs:
-      solution: '..\WindowsCompile\Build_CMake\LuxCore\LuxRays.sln'
-      msbuildVersion: '15.0'
-      msbuildArchitecture: 'x64'
-      platform: 'x64'
-      configuration: 'Release'
-      msbuildArguments: '/nologo /verbosity:normal /p:WarningLevel=0'
-      # maximumCpuCount --> false to build solution 1 project at a time
-      # Avoids "Error C1002: compiler out of heap space in pass 2"
-      maximumCpuCount: false
-      createLogFile: true
-    displayName: Building LuxCore - OpenCL enabled
-  - script: './scripts/azurepipeline/windows/post-build.cmd'
-    displayName: Gathering and packing binaries - OpenCL enabled
+  - template: ./scripts/azurepipeline/windows/windows_jobs.yml
+    parameters:
+      build_script: './scripts/azurepipeline/windows/build.cmd /cmake-only /no-ocl'
+      post_script: './scripts/azurepipeline/windows/post-build.cmd /no-ocl'
+      ocl_text: 'OpenCL disabled'
+  - template: ./scripts/azurepipeline/windows/windows_jobs.yml
+    parameters:
+      build_script: './scripts/azurepipeline/windows/build.cmd /cmake-only'
+      post_script: './scripts/azurepipeline/windows/post-build.cmd'
+      ocl_text: 'OpenCL enabled'
   - script: './scripts/azurepipeline/windows/test.cmd'
     displayName: Testing LuxCore
   - task: PublishBuildArtifacts@1
@@ -259,45 +128,21 @@ jobs:
   steps:
   - task: UsePythonVersion@0
     inputs:
-      versionSpec: '3.5'
+      versionSpec: '3.7'
       addToPath: true
       architecture: 'x64'
   - script: ./scripts/azurepipeline/windows/deps-setup.cmd
     displayName: Getting required deps
-  - script: './scripts/azurepipeline/windows/build.cmd /cmake-only /no-ocl /dll'
-    displayName: Generating build files with CMake - OpenCL disabled
-  - task: MSBuild@1
-    inputs:
-      solution: '..\WindowsCompile\Build_CMake\LuxCore\LuxRays.sln'
-      msbuildVersion: '15.0'
-      msbuildArchitecture: 'x64'
-      platform: 'x64'
-      configuration: 'Release'
-      msbuildArguments: '/nologo /verbosity:normal /p:WarningLevel=0'
-      # maximumCpuCount --> false to build solution 1 project at a time
-      # Avoids "Error C1002: compiler out of heap space in pass 2"
-      maximumCpuCount: false
-      createLogFile: true
-    displayName: Building LuxCore SDK - OpenCL disabled
-  - script: './scripts/azurepipeline/windows/post-build.cmd /no-ocl'
-    displayName: Gathering and packing binaries - OpenCL disabled
-  - script: './scripts/azurepipeline/windows/build.cmd /cmake-only /dll'
-    displayName: Generating build files with CMake - OpenCL enabled
-  - task: MSBuild@1
-    inputs:
-      solution: '..\WindowsCompile\Build_CMake\LuxCore\LuxRays.sln'
-      msbuildVersion: '15.0'
-      msbuildArchitecture: 'x64'
-      platform: 'x64'
-      configuration: 'Release'
-      msbuildArguments: '/nologo /verbosity:normal /p:WarningLevel=0'
-      # maximumCpuCount --> false to build solution 1 project at a time
-      # Avoids "Error C1002: compiler out of heap space in pass 2"
-      maximumCpuCount: false
-      createLogFile: true
-    displayName: Building LuxCore SDK - OpenCL enabled
-  - script: './scripts/azurepipeline/windows/post-build.cmd'
-    displayName: Gathering and packing binaries - OpenCL enabled
+  - template: ./scripts/azurepipeline/windows/windows_jobs.yml
+    parameters:
+      build_script: './scripts/azurepipeline/windows/build.cmd /cmake-only /no-ocl /dll'
+      post_script: './scripts/azurepipeline/windows/post-build.cmd /no-ocl'
+      ocl_text: 'OpenCL disabled'
+  - template: ./scripts/azurepipeline/windows/windows_jobs.yml
+    parameters:
+      build_script: './scripts/azurepipeline/windows/build.cmd /cmake-only /dll'
+      post_script: './scripts/azurepipeline/windows/post-build.cmd'
+      ocl_text: 'OpenCL enabled'
   - task: PublishBuildArtifacts@1
     inputs:
       pathtoPublish: '$(Build.ArtifactStagingDirectory)'
@@ -306,6 +151,9 @@ jobs:
     condition: eq(variables['System.PullRequest.IsFork'], 'False')
 
 
+#==============================================================================
+# MacOS binaries
+#==============================================================================
 #- job: LuxCoreRenderMacOS
 #  timeoutInMinutes: 0
 #  pool:
@@ -320,6 +168,9 @@ jobs:
 #    displayName: Testing LuxCore
 
 
+#==============================================================================
+# Daily build finalization
+#==============================================================================
 # Next job deletes "latest" tag from LuxCore repo, so that it is then
 # recreated at the current commit by the following release pipeline
 # Runs only if:
@@ -345,7 +196,7 @@ jobs:
     )
   timeoutInMinutes: 0
   pool:
-    vmImage: 'ubuntu-16.04'
+    vmImage: 'ubuntu-18.04'
     
   steps:
   - task: InstallSSHKey@0
@@ -354,4 +205,4 @@ jobs:
       sshPublicKey: $(PubKey)
       sshKeySecureFile: luxcore_id_rsa
   - script: ./scripts/azurepipeline/delete-latest-tag.sh
-    displayName: Detecting release type (alpha, beta or final)
+    displayName: Deleting tag to update latest build

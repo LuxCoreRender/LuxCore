@@ -122,6 +122,24 @@ public:
 		return isinf(x) || isinf(y) || isinf(z);
 	}
 
+	//--------------------------------------------------------------------------
+	// Required by OpenSubdiv interface
+	//--------------------------------------------------------------------------
+
+	void Clear(void * = 0) {
+        x = 0.f;
+		y = 0.f;
+		z = 0.f;
+    }
+	
+	void AddWithWeight(Normal const &src, float weight) {
+        x += weight * src.x;
+        y += weight * src.y;
+        z += weight * src.z;
+    }
+
+	//--------------------------------------------------------------------------
+
 	friend class boost::serialization::access;
 
 	// Normal Public Data

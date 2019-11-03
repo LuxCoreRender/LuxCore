@@ -16,18 +16,18 @@
 # limitations under the License.
 ################################################################################
 
-#############################################################################
-#############################################################################
-#############################################################################
+################################################################################
+################################################################################
+################################################################################
 ###
 ### LuxRays Library
 ###
-#############################################################################
-#############################################################################
-#############################################################################
+################################################################################
+################################################################################
+################################################################################
 
 set(LUXRAYS_VERSION_MAJOR 2)
-set(LUXRAYS_VERSION_MINOR 2beta3)
+set(LUXRAYS_VERSION_MINOR 3alpha0)
 
 # Configure a header file to pass some of the CMake settings
 # to the source code:
@@ -40,11 +40,11 @@ configure_file(
 		"${LuxRays_SOURCE_DIR}/include/luxrays/cfg.h.in"
 		"${generated_header_dir}/cfg.h")
 
-#############################################################################
+################################################################################
 #
 # LuxRays Docs
 #
-#############################################################################
+################################################################################
 
 find_package(Doxygen)
 
@@ -86,11 +86,11 @@ if(DOXYGEN_FOUND)
 	add_custom_target(apidoc_luxrays DEPENDS ${DOXYGEN_LUXRAYS_OUTPUT})
 endif(DOXYGEN_FOUND)
 
-###########################################################################
+################################################################################
 #
 # Kernel files
 #
-###########################################################################
+################################################################################
 
 set(LUXRAYS_KERNELS
 	${LuxRays_SOURCE_DIR}/include/luxrays/luxrays_types.cl
@@ -99,10 +99,11 @@ set(LUXRAYS_KERNELS
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/bvh/bvhbuild_types.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/accelerators/bvh.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/accelerators/mbvh.cl
+	${LuxRays_SOURCE_DIR}/include/luxrays/core/exttrianglemesh_types.cl
+	${LuxRays_SOURCE_DIR}/include/luxrays/core/exttrianglemesh_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/randomgen_types.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/randomgen_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/trianglemesh_types.cl
-	${LuxRays_SOURCE_DIR}/include/luxrays/core/trianglemesh_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/matrix4x4_types.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/matrix4x4_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/transform_types.cl
@@ -137,11 +138,11 @@ SET_SOURCE_FILES_PROPERTIES(
 
 SOURCE_GROUP("Source Files\\LuxRays Kernels" FILES ${LUXRAYS_KERNELS})
 
-###########################################################################
+################################################################################
 #
 # Library project files
 #
-###########################################################################
+################################################################################
 
 set(LUXRAYS_SRCS
 	${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/bvhaccel.cpp
@@ -206,7 +207,8 @@ set(LUXRAYS_SRCS_KERNELS
 	${generated_kernels_dir}/randomgen_types_kernel.cpp
 	${generated_kernels_dir}/randomgen_funcs_kernel.cpp
 	${generated_kernels_dir}/trianglemesh_types_kernel.cpp
-	${generated_kernels_dir}/trianglemesh_funcs_kernel.cpp
+	${generated_kernels_dir}/exttrianglemesh_types_kernel.cpp
+	${generated_kernels_dir}/exttrianglemesh_funcs_kernel.cpp
 	${generated_kernels_dir}/matrix4x4_types_kernel.cpp
 	${generated_kernels_dir}/matrix4x4_funcs_kernel.cpp
 	${generated_kernels_dir}/transform_types_kernel.cpp
@@ -262,10 +264,10 @@ IF (NOT LUXRAYS_DISABLE_OPENCL)
 	TARGET_LINK_LIBRARIES(luxrays ${OPENCL_LIBRARIES})
 ENDIF(NOT LUXRAYS_DISABLE_OPENCL)
 
-###########################################################################
+################################################################################
 #
 # Predefines
 #
-###########################################################################
+################################################################################
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "../lib")

@@ -65,9 +65,7 @@ OPENCL_FORCE_INLINE float GetPhi(const float a, const float b) {
 OPENCL_FORCE_INLINE void SchlickDistribution_SampleH(const float roughness, const float anisotropy,
 		const float u0, const float u1, float3 *wh, float *d, float *pdf) {
 	float u1x4 = u1 * 4.f;
-	// Values of roughness < .0001f seems to trigger some kind of exceptions with
-	// AMD OpenCL on GPUs. The result is a nearly freeze of the PC.
-	const float cos2Theta = (roughness < .0001f) ? 1.f : (u0 / (roughness * (1.f - u0) + u0));
+	const float cos2Theta = u0 / (roughness * (1.f - u0) + u0);
 	const float cosTheta = sqrt(cos2Theta);
 	const float sinTheta = sqrt(1.f - cos2Theta);
 	const float p = 1.f - fabs(anisotropy);

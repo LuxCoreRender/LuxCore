@@ -109,7 +109,7 @@ Spectrum RoughMatteTranslucentMaterial::Evaluate(const HitPoint &hitPoint,
 Spectrum RoughMatteTranslucentMaterial::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
-	float *pdfW, BSDFEvent *event) const {
+	float *pdfW, BSDFEvent *event, const BSDFEvent eventHint) const {
 	if (fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 
@@ -238,9 +238,9 @@ Properties RoughMatteTranslucentMaterial::ToProperties(const ImageMapCache &imgM
 
 	const string name = GetName();
 	props.Set(Property("scene.materials." + name + ".type")("roughmattetranslucent"));
-	props.Set(Property("scene.materials." + name + ".kr")(Kr->GetName()));
-	props.Set(Property("scene.materials." + name + ".kt")(Kt->GetName()));
-	props.Set(Property("scene.materials." + name + ".sigma")(sigma->GetName()));
+	props.Set(Property("scene.materials." + name + ".kr")(Kr->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".kt")(Kt->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".sigma")(sigma->GetSDLValue()));
 	props.Set(Material::ToProperties(imgMapCache, useRealFileName));
 
 	return props;

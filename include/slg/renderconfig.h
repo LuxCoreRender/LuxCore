@@ -46,7 +46,8 @@ public:
 	SamplerSharedData *AllocSamplerSharedData(luxrays::RandomGenerator *rndGen, Film *film) const;
 	Sampler *AllocSampler(luxrays::RandomGenerator *rndGen, Film *film,
 		const FilmSampleSplatter *flmSplatter,
-		SamplerSharedData *sharedData) const;
+		SamplerSharedData *sharedData,
+		const luxrays::Properties &additionalProps) const;
 
 	RenderEngine *AllocRenderEngine() const;
 

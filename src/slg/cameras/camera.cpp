@@ -36,6 +36,23 @@ BBox Camera::ComputeBBox(const Point &orig) const {
 		return BBox(orig);
 }
 
+bool Camera::GetSamplePosition(const luxrays::Point &p,
+		float *filmX, float *filmY) const {
+	Point lensPoint;
+	if (!SampleLens(0.f, 0.f, 0.f, &lensPoint))
+		return false;
+
+	Vector eyeDir = p - lensPoint;
+	const float eyeDistance = eyeDir.Length();
+	eyeDir /= eyeDistance;
+
+	Ray eyeRay(lensPoint, eyeDir, 0.f, eyeDistance);
+	ClampRay(&eyeRay);
+	eyeRay.UpdateMinMaxWithEpsilon();
+
+	return GetSamplePosition(&eyeRay, filmX, filmY);
+}
+
 void Camera::Update(const u_int width, const u_int height, const u_int *subRegion) {
 	filmWidth = width;
 	filmHeight = height;
@@ -79,13 +96,15 @@ void Camera::UpdateAuto(const Scene *scene) {
 			const SceneObject *sceneObject = scene->objDefs.GetSceneObject(rayHit.meshIndex);
 
 			// Get the triangle
-			const luxrays::ExtMesh *mesh = sceneObject->GetExtMesh();
+			const ExtMesh *mesh = sceneObject->GetExtMesh();
 
 			// Get the material
 			const Material *material = sceneObject->GetMaterial();
 
 			// Interpolate face normal
-			const Normal geometryN = mesh->GetGeometryNormal(ray.time, rayHit.triangleIndex);
+			Transform local2world;
+			mesh->GetLocal2World(ray.time, local2world);
+			const Normal geometryN = mesh->GetGeometryNormal(local2world, rayHit.triangleIndex);
 			const bool intoObject = (Dot(ray.d, geometryN) < 0.f);
 
 			volume = intoObject ?

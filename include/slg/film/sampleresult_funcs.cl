@@ -78,8 +78,6 @@ OPENCL_FORCE_INLINE void SampleResult_Init(__global SampleResult *sampleResult) 
 	// sampleResult->lastPathVertex can not be really initialized here without knowing
 	// the max. path depth.
 	sampleResult->lastPathVertex = true;
-	sampleResult->passThroughPath = true;
-	sampleResult->specularGlossyCausticPath = true;
 }
 
 OPENCL_FORCE_INLINE void SampleResult_AddEmission(__global SampleResult *sampleResult, const uint lightID,

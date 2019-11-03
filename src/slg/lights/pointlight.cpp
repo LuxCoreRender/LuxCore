@@ -71,40 +71,44 @@ float PointLight::GetPower(const Scene &scene) const {
 }
 
 Spectrum PointLight::Emit(const Scene &scene,
-		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
-		Point *orig, Vector *dir,
-		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
-	*orig = absolutePos;
-	*dir = UniformSampleSphere(u0, u1);
-	*emissionPdfW = 1.f / (4.f * M_PI);
+		const float time, const float u0, const float u1,
+		const float u2, const float u3, const float passThroughEvent,
+		Ray &ray, float &emissionPdfW,
+		float *directPdfA, float *cosThetaAtLight) const {
+	const Point rayOrig = absolutePos;
+	const Vector rayDir = UniformSampleSphere(u0, u1);
+	emissionPdfW = 1.f / (4.f * M_PI);
 
 	if (directPdfA)
 		*directPdfA = 1.f;
 	if (cosThetaAtLight)
 		*cosThetaAtLight = 1.f;
 
+	ray.Update(rayOrig, rayDir, time);
+
 	return emittedFactor * (1.f / (4.f * M_PI));
 }
 
 Spectrum PointLight::Illuminate(const Scene &scene, const BSDF &bsdf,
-		const float u0, const float u1, const float passThroughEvent,
-        Vector *dir, float *distance, float *directPdfW,
+		const float time, const float u0, const float u1, const float passThroughEvent,
+        Ray &shadowRay, float &directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
-	const Point &pSurface = bsdf.GetRayOrigin(absolutePos - bsdf.hitPoint.p);
-	const Vector toLight(absolutePos - pSurface);
-	const float centerDistanceSquared = toLight.LengthSquared();
-	const float centerDistance = sqrtf(centerDistanceSquared);
+	const Point shadowRayOrig = bsdf.GetRayOrigin(absolutePos - bsdf.hitPoint.p);
+	const Vector toLight(absolutePos - shadowRayOrig);
+	const float shadowRayDistanceSquared = toLight.LengthSquared();
+	const float shadowRayDistance = sqrtf(shadowRayDistanceSquared);
 
-	*distance = centerDistance;
-	*dir = toLight / centerDistance;
+	const Vector shadowRayDir = toLight / shadowRayDistance;
 
 	if (cosThetaAtLight)
 		*cosThetaAtLight = 1.f;
 
-	*directPdfW = centerDistanceSquared;
+	directPdfW = shadowRayDistanceSquared;
 
 	if (emissionPdfW)
 		*emissionPdfW = UniformSpherePdf();
+
+	shadowRay = Ray(shadowRayOrig, shadowRayDir, 0.f, shadowRayDistance, time);
 
 	return emittedFactor * (1.f / (4.f * M_PI));
 }

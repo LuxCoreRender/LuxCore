@@ -24,9 +24,6 @@
 #include "luxrays/core/geometry/motionsystem.h"
 #include "luxrays/utils/mc.h"
 
-#include "slg/film/film.h"
-#include "slg/volumes/volume.h"
-
 namespace slg {
 
 //------------------------------------------------------------------------------
@@ -39,6 +36,8 @@ using namespace luxrays::ocl;
 }
 
 class Scene;
+class Volume;
+class PathVolumeInfo;
 
 class Camera {
 public:
@@ -59,9 +58,10 @@ public:
 	virtual luxrays::BBox GetBBox() const = 0;
 
 	virtual const luxrays::Vector GetDir() const = 0;
-	// Used for compiling camera information for OpenCL
-	virtual luxrays::Matrix4x4 GetRasterToCameraMatrix(const u_int index = 0) const = 0;
-	virtual luxrays::Matrix4x4 GetCameraToWorldMatrix(const u_int index = 0) const = 0;
+	// Used for compiling camera information for OpenCL (and more)
+	virtual const luxrays::Transform &GetRasterToCamera(const u_int index = 0) const = 0;
+	virtual const luxrays::Transform &GetCameraToWorld(const u_int index = 0) const = 0;
+	virtual const luxrays::Transform &GetScreenToWorld(const u_int index = 0) const = 0;
 
 	// Mostly used by GUIs
 	virtual void Translate(const luxrays::Vector &t) = 0;
@@ -92,9 +92,13 @@ public:
 	virtual void ClampRay(luxrays::Ray *ray) const { }
 	virtual bool GetSamplePosition(luxrays::Ray *eyeRay,
 		float *filmX, float *filmY) const = 0;
+	virtual bool GetSamplePosition(const luxrays::Point &p,
+		float *filmX, float *filmY) const;
 	virtual bool SampleLens(const float time, const float u1, const float u2,
 		luxrays::Point *lensPoint) const = 0;
-	virtual float GetPDF(const luxrays::Ray &eyeRay, const float filmX, const float filmY) const = 0;
+	virtual void GetPDF(const luxrays::Ray &eyeRay, const float eyeDistance,
+		const float filmX, const float filmY,
+		float *pdfW, float *fluxToRadianceFactor) const = 0;
 
 	virtual luxrays::Properties ToProperties() const;
 	virtual void UpdateVolumeReferences(const Volume *oldVol, const Volume *newVol);

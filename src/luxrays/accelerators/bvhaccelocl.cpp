@@ -89,7 +89,9 @@ public:
 						meshVertCount = (*mesh)->GetTotalVertexCount();
 						meshVertIndex = 0;
 					}
-					tmpVerts[i] = (*mesh)->GetVertex(0.f, meshVertIndex++);
+					// This is a fast path because I know Mesh can be only TYPE_TRIANGLE/TYPE_EXT_TRIANGLE
+					// in BVH
+					tmpVerts[i] = (*mesh)->GetVertex(Transform::TRANS_IDENTITY, meshVertIndex++);
 					++vertsCopied;
 				}
 

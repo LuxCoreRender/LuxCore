@@ -275,8 +275,8 @@ void CameraResponsePlugin::ApplyOCL(Film &film, const u_int index) {
 		cl::Program *program = ImagePipelinePlugin::CompileProgram(
 				film,
 				ssParams.str(),
-				slg::ocl::KernelSource_color_types +
-				slg::ocl::KernelSource_color_funcs +
+				luxrays::ocl::KernelSource_color_types +
+				luxrays::ocl::KernelSource_color_funcs +
 				slg::ocl::KernelSource_plugin_cameraresponse_funcs,
 				"CameraResponsePlugin");
 

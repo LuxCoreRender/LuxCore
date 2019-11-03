@@ -55,7 +55,6 @@ public:
 	bool IsImageMapWrapCompiled(const ImageMapStorage::WrapType type) const;
 	bool IsLightSourceCompiled(const LightSourceType type) const;
 
-	bool RequiresPassThrough() const;
 	bool HasVolumes() const;
 	bool HasBumpMaps() const;
 
@@ -78,11 +77,13 @@ public:
 	// Compiled Scene Meshes
 	std::vector<luxrays::Point> verts;
 	std::vector<luxrays::Normal> normals;
+	std::vector<luxrays::Normal> triNormals;
 	std::vector<luxrays::UV> uvs;
 	std::vector<luxrays::Spectrum> cols;
 	std::vector<float> alphas;
 	std::vector<luxrays::Triangle> tris;
-	std::vector<luxrays::ocl::Mesh> meshDescs;
+	std::vector<luxrays::ocl::InterpolatedTransform> interpolatedTransforms;
+	std::vector<luxrays::ocl::ExtMesh> meshDescs;
 	luxrays::BSphere worldBSphere;
 
 	// Compiled Scene Objects
@@ -103,7 +104,6 @@ public:
 	u_int infiniteLightSourcesDistributionSize;
 	// DLSC related data
 	std::vector<slg::ocl::DLSCacheEntry> dlscAllEntries;
-	std::vector<u_int> dlscDistributionIndexToLightIndex;
 	std::vector<float> dlscDistributions; 
 	std::vector<slg::ocl::IndexBVHArrayNode> dlscBVHArrayNode;
 	float dlscRadius2, dlscNormalCosAngle;
@@ -133,17 +133,18 @@ public:
 	
 	// Compiled PhotonGI cache
 
-	// Indirect cache
+	float pgicGlossinessUsageThreshold;
+
+	// PhotonGI indirect cache
 	std::vector<slg::ocl::RadiancePhoton> pgicRadiancePhotons;
 	std::vector<slg::ocl::IndexBVHArrayNode> pgicRadiancePhotonsBVHArrayNode;
 	float pgicIndirectLookUpRadius, pgicIndirectLookUpNormalCosAngle,
-		pgicIndirectGlossinessUsageThreshold, pgicIndirectUsageThresholdScale;
-	// Caustic cache
+		pgicIndirectUsageThresholdScale;
+	// PhotonGI caustic cache
 	std::vector<slg::ocl::Photon> pgicCausticPhotons;
 	std::vector<slg::ocl::IndexBVHArrayNode> pgicCausticPhotonsBVHArrayNode;
 	u_int pgicCausticPhotonTracedCount;
 	float pgicCausticLookUpRadius, pgicCausticLookUpNormalCosAngle;
-	u_int pgicCausticLookUpMaxCount;
 
 	PhotonGIDebugType pgicDebugType;
 
@@ -180,7 +181,7 @@ private:
 
 	u_int maxMemPageSize;
 	boost::unordered_set<std::string> enabledCode;
-	bool useTransparency, useBumpMapping;
+	bool useTransparency;
 }; 
 
 }

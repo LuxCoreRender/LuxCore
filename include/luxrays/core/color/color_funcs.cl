@@ -18,51 +18,51 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-bool Spectrum_IsEqual(const float3 a, const float3 b) {
+OPENCL_FORCE_INLINE bool Spectrum_IsEqual(const float3 a, const float3 b) {
 	return all(isequal(a, b));
 }
 
-bool Spectrum_IsBlack(const float3 a) {
+OPENCL_FORCE_INLINE bool Spectrum_IsBlack(const float3 a) {
 	return Spectrum_IsEqual(a, BLACK);
 }
 
-bool Spectrum_IsNan(const float3 a) {
+OPENCL_FORCE_INLINE bool Spectrum_IsNan(const float3 a) {
 	return any(isnan(a));
 }
 
-bool Spectrum_IsInf(const float3 a) {
+OPENCL_FORCE_INLINE bool Spectrum_IsInf(const float3 a) {
 	return any(isinf(a));
 }
 
-bool Spectrum_IsNanOrInf(const float3 a) {
+OPENCL_FORCE_INLINE bool Spectrum_IsNanOrInf(const float3 a) {
 	return Spectrum_IsNan(a) || Spectrum_IsInf(a);
 }
 
-float Spectrum_Filter(const float3 s)  {
+OPENCL_FORCE_INLINE float Spectrum_Filter(const float3 s)  {
 	return (s.s0 + s.s1 + s.s2) * 0.33333333f;
 }
 
-float Spectrum_Y(const float3 s) {
+OPENCL_FORCE_INLINE float Spectrum_Y(const float3 s) {
 	return 0.212671f * s.s0 + 0.715160f * s.s1 + 0.072169f * s.s2;
 }
 
-float3 Spectrum_Clamp(const float3 s) {
+OPENCL_FORCE_INLINE float3 Spectrum_Clamp(const float3 s) {
 	return clamp(s, BLACK, WHITE);
 }
 
-float3 Spectrum_Exp(const float3 s) {
+OPENCL_FORCE_INLINE float3 Spectrum_Exp(const float3 s) {
 	return (float3)(exp(s.x), exp(s.y), exp(s.z));
 }
 
-float3 Spectrum_Pow(const float3 s, const float e) {
+OPENCL_FORCE_INLINE float3 Spectrum_Pow(const float3 s, const float e) {
 	return (float3)(pow(s.x, e), pow(s.y, e), pow(s.z, e));
 }
 
-float3 Spectrum_Sqrt(const float3 s) {
+OPENCL_FORCE_INLINE float3 Spectrum_Sqrt(const float3 s) {
 	return (float3)(sqrt(s.x), sqrt(s.y), sqrt(s.z));
 }
 
-float3 Spectrum_ScaledClamp(const float3 c, const float low, const float high) {
+OPENCL_FORCE_INLINE float3 Spectrum_ScaledClamp(const float3 c, const float low, const float high) {
 	float3 ret = c;
 
 	const float maxValue = fmax(c.x, fmax(c.y, c.z));

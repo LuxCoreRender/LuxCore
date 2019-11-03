@@ -95,7 +95,7 @@ Spectrum ClearVolume::Evaluate(const HitPoint &hitPoint,
 Spectrum ClearVolume::Sample(const HitPoint &hitPoint,
 		const Vector &localFixedDir, Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
-		float *pdfW, BSDFEvent *event) const {
+		float *pdfW, BSDFEvent *event, const BSDFEvent eventHint) const {
 	throw runtime_error("Internal error: called ClearVolume::Sample()");
 }
 
@@ -123,7 +123,7 @@ Properties ClearVolume::ToProperties() const {
 
 	const string name = GetName();
 	props.Set(Property("scene.volumes." + name + ".type")("clear"));
-	props.Set(Property("scene.volumes." + name + ".absorption")(sigmaA->GetName()));
+	props.Set(Property("scene.volumes." + name + ".absorption")(sigmaA->GetSDLValue()));
 	props.Set(Volume::ToProperties());
 
 	return props;

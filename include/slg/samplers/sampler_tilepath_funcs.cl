@@ -146,8 +146,8 @@ OPENCL_FORCE_NOT_INLINE void Sampler_NextSample(
 		Seed *seed,
 		__global SamplerSharedData *samplerSharedData,
 		__global Sample *sample, __global float *sampleData,
-#if defined(PARAM_FILM_CHANNELS_HAS_CONVERGENCE)
-		__global float *filmConvergence,
+#if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
+		__global float *filmNoise,
 #endif
 		const uint filmWidth, const uint filmHeight,
 		const uint filmSubRegion0, const uint filmSubRegion1,
@@ -157,8 +157,8 @@ OPENCL_FORCE_NOT_INLINE void Sampler_NextSample(
 
 OPENCL_FORCE_NOT_INLINE bool Sampler_Init(Seed *seed, __global SamplerSharedData *samplerSharedData,
 		__global Sample *sample, __global float *sampleData,
-#if defined(PARAM_FILM_CHANNELS_HAS_CONVERGENCE)
-		__global float *filmConvergence,
+#if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
+		__global float *filmNoise,
 #endif
 		const uint filmWidth, const uint filmHeight,
 		const uint filmSubRegion0, const uint filmSubRegion1,

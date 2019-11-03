@@ -144,9 +144,9 @@ void Reinhard02ToneMap::ApplyOCL(Film &film, const u_int index) {
 		cl::Program *program = ImagePipelinePlugin::CompileProgram(
 				film,
 				"-D LUXRAYS_OPENCL_KERNEL -D SLG_OPENCL_KERNEL",
-				slg::ocl::KernelSource_luxrays_types +
-				slg::ocl::KernelSource_color_types +
-				slg::ocl::KernelSource_color_funcs +
+				luxrays::ocl::KernelSource_luxrays_types +
+				luxrays::ocl::KernelSource_color_types +
+				luxrays::ocl::KernelSource_color_funcs +
 				slg::ocl::KernelSource_tonemap_reinhard02_funcs +
 				slg::ocl::KernelSource_tonemap_reduce_funcs,
 				"Reinhard02ToneMap");

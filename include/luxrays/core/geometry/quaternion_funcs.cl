@@ -19,7 +19,7 @@
  ***************************************************************************/
 
 // Get the rotation matrix from quaternion
-void Quaternion_ToMatrix(const float4 q, Matrix4x4 *m) {
+OPENCL_FORCE_INLINE void Quaternion_ToMatrix(const float4 q, Matrix4x4 *m) {
 	const float xx = q.s1 * q.s1;
 	const float yy = q.s2 * q.s2;
 	const float zz = q.s3 * q.s3;
@@ -46,7 +46,7 @@ void Quaternion_ToMatrix(const float4 q, Matrix4x4 *m) {
 	m->m[3][3] = 1.f;
 }
 
-float4 Quaternion_Slerp(float t, const float4 q1, const float4 q2) {
+OPENCL_FORCE_INLINE float4 Quaternion_Slerp(float t, const float4 q1, const float4 q2) {
 
 	float cos_phi = dot(q1, q2);
 	const float sign = (cos_phi > 0.f) ? 1.f : -1.f;

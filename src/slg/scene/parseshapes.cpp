@@ -31,6 +31,10 @@
 #include "slg/shapes/pointiness.h"
 #include "slg/shapes/strands.h"
 #include "slg/shapes/groupshape.h"
+#include "slg/shapes/subdiv.h"
+#include "slg/shapes/displacement.h"
+#include "slg/shapes/harlequinshape.h"
+#include "slg/shapes/simplify.h"
 
 using namespace std;
 using namespace luxrays;
@@ -260,6 +264,68 @@ ExtTriangleMesh *Scene::CreateShape(const string &shapeName, const Properties &p
 			shape = new GroupShape(meshes, trans);
 		} else
 			throw runtime_error("A shape group can not be empty: " + shapeName);
+	} else if (shapeType == "subdiv") {
+		const string sourceMeshName = props.Get(Property(propName + ".source")("")).Get<string>();
+		if (!extMeshCache.IsExtMeshDefined(sourceMeshName))
+			throw runtime_error("Unknown shape name in a subdiv shape: " + shapeName);
+		
+		const u_int maxLevel = props.Get(Property(propName + ".maxlevel")(2)).Get<u_int>();
+		const float maxEdgeScreenSize = Max(props.Get(Property(propName + ".maxedgescreensize")(0.f)).Get<float>(), 0.f);
+
+		shape = new SubdivShape(camera, (ExtTriangleMesh *)extMeshCache.GetExtMesh(sourceMeshName),
+				maxLevel, maxEdgeScreenSize);
+	} else if (shapeType == "displacement") {
+		const string sourceMeshName = props.Get(Property(propName + ".source")("")).Get<string>();
+		if (!extMeshCache.IsExtMeshDefined(sourceMeshName))
+			throw runtime_error("Unknown shape name in a displacement shape: " + shapeName);
+		
+		const Texture *tex = GetTexture(props.Get(Property(propName + ".map")(0.f)));
+		
+		DisplacementShape::Params params;
+
+		const string vectorSpaceStr = props.Get(Property(propName + ".map.type")("height")).Get<string>();
+		if (vectorSpaceStr == "height")
+			params.mapType = DisplacementShape::HIGHT_DISPLACEMENT;
+		else if (vectorSpaceStr == "vector")
+			params.mapType = DisplacementShape::VECTOR_DISPLACEMENT;
+		else
+			throw runtime_error("Unknown map type in displacement shape: " + shapeName);
+
+		// Blender standard: R is an offset along
+		// the tangent, G along the normal and B along the bitangent.
+		// So map.channels = 2 0 1
+		//
+		// Mudbox standard: map.channels = 0 2 1
+		const Property propChannels = props.Get(Property(propName + ".map.channels")(2u, 0u, 1u));
+		if (propChannels.GetSize() != 3)
+			throw runtime_error("Wrong number of map channel indices in a displacement shape: " + shapeName);
+		params.mapChannels[0] = Min(propChannels.Get<u_int>(0), 2u);
+		params.mapChannels[1] = Min(propChannels.Get<u_int>(1), 2u);
+		params.mapChannels[2] = Min(propChannels.Get<u_int>(2), 2u);
+
+		params.scale = props.Get(Property(propName + ".scale")(1.f)).Get<float>();
+		params.offset = props.Get(Property(propName + ".offset")(0.f)).Get<float>();
+		params.normalSmooth = props.Get(Property(propName + ".normalsmooth")(true)).Get<bool>();
+
+		shape = new DisplacementShape((ExtTriangleMesh *)extMeshCache.GetExtMesh(sourceMeshName),
+				*tex, params);
+	} else if (shapeType == "harlequin") {
+		const string sourceMeshName = props.Get(Property(propName + ".source")("")).Get<string>();
+		if (!extMeshCache.IsExtMeshDefined(sourceMeshName))
+			throw runtime_error("Unknown shape name in a harlequin shape: " + shapeName);
+		
+		shape = new HarlequinShape((ExtTriangleMesh *)extMeshCache.GetExtMesh(sourceMeshName));
+	} else if (shapeType == "simplify") {
+		const string sourceMeshName = props.Get(Property(propName + ".source")("")).Get<string>();
+		if (!extMeshCache.IsExtMeshDefined(sourceMeshName))
+			throw runtime_error("Unknown shape name in a simplify shape: " + shapeName);
+		
+		const float target = props.Get(Property(propName + ".target")(.25f)).Get<float>();
+		const float edgeScreenSize = Clamp(props.Get(Property(propName + ".edgescreensize")(0.f)).Get<float>(), 0.f, 1.f);
+		const bool preserveBorder = props.Get(Property(propName + ".preserveborder")(false)).Get<bool>();
+		
+		shape = new SimplifyShape(camera, (ExtTriangleMesh *)extMeshCache.GetExtMesh(sourceMeshName),
+				target, edgeScreenSize, preserveBorder);
 	} else
 		throw runtime_error("Unknown shape type: " + shapeType);
 

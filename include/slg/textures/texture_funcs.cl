@@ -1263,3 +1263,31 @@ OPENCL_FORCE_INLINE float3 ModuloTexture_ConstEvaluateSpectrum(__global const Hi
 }
 
 #endif
+
+//------------------------------------------------------------------------------
+// Brightness/Contrast texture
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_ENABLE_TEX_BRIGHT_CONTRAST)
+
+OPENCL_FORCE_INLINE float BrightContrastTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
+																   const float tex,
+																   const float brightnessTex,
+																   const float contrastTex) {
+	const float a = 1.f + contrastTex;
+	const float b = brightnessTex - contrastTex * 0.5f;
+
+	return clamp(tex * a + b, 0.f, INFINITY);
+}
+
+OPENCL_FORCE_INLINE float3 BrightContrastTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
+																	   const float3 tex,
+																	   const float brightnessTex,
+																	   const float contrastTex) {
+    const float a = 1.f + contrastTex;
+	const float b = brightnessTex - contrastTex * 0.5f;
+
+	return clamp(tex * a + b, 0.f, INFINITY);
+}
+
+#endif

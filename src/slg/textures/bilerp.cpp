@@ -50,10 +50,10 @@ Properties BilerpTexture::ToProperties(const ImageMapCache &imgMapCache, const b
 
 	const string name = GetName();
 	props.Set(Property("scene.textures." + name + ".type")("bilerp"));
-	props.Set(Property("scene.textures." + name + ".texture00")(t00->GetName()));
-	props.Set(Property("scene.textures." + name + ".texture01")(t01->GetName()));
-	props.Set(Property("scene.textures." + name + ".texture10")(t10->GetName()));
-	props.Set(Property("scene.textures." + name + ".texture11")(t11->GetName()));
+	props.Set(Property("scene.textures." + name + ".texture00")(t00->GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".texture01")(t01->GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".texture10")(t10->GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".texture11")(t11->GetSDLValue()));
 
 	return props;
 }

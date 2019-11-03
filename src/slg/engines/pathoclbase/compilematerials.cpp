@@ -144,7 +144,6 @@ void CompiledScene::CompileMaterials() {
 
 	mats.resize(materialsCount);
 	useTransparency = false;
-	useBumpMapping = enabledCode.count("HAS_BUMPMAPS");
 
 	for (u_int i = 0; i < materialsCount; ++i) {
 		const Material *m = scene->matDefs.GetMaterial(i);
@@ -170,6 +169,8 @@ void CompiledScene::CompileMaterials() {
 		} else
 			mat->backTranspTexIndex = NULL_INDEX;
 
+		ASSIGN_SPECTRUM(mat->passThroughShadowTransparency, m->GetPassThroughShadowTransparency());
+
 		// Material emission
 		const Texture *emitTex = m->GetEmitTexture();
 		if (emitTex)
@@ -182,10 +183,9 @@ void CompiledScene::CompileMaterials() {
 
 		// Material bump mapping
 		const Texture *bumpTex = m->GetBumpTexture();
-		if (bumpTex) {
+		if (bumpTex)
 			mat->bumpTexIndex = scene->texDefs.GetTextureIndex(bumpTex);
-			useBumpMapping = true;
-		} else
+		else
 			mat->bumpTexIndex = NULL_INDEX;
 
 		mat->visibility =
@@ -739,24 +739,18 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 				"__global const HitPoint *hitPoint, "
 				"const float3 fixedDir, float3 *sampledDir, "
 				"const float u0, const float u1,\n"
-				"#if defined(PARAM_HAS_PASSTHROUGH)\n"
-				"\tconst float passThroughEvent,\n"
-				"#endif\n"
+				"const float passThroughEvent,\n"
 				"\tfloat *pdfW, BSDFEvent *event "
 				"MATERIALS_PARAM_DECL",
 			"mat, hitPoint, fixedDir, sampledDir, u0, u1,\n"
-				"#if defined(PARAM_HAS_PASSTHROUGH)\n"
 				"\t\t\tpassThroughEvent,\n"
-				"#endif\n"
 				"\t\t\tpdfW, event MATERIALS_PARAM");
 
 	// Generate the code for generic GetPassThroughTransparencyWithDynamic()
-	source << "#if defined(PARAM_HAS_PASSTHROUGH)\n";
 	AddMaterialSourceSwitch(source, mats, "GetPassThroughTransparencyWithDynamic", "GetPassThroughTransparency", "float3", "BLACK",
 			"const uint index, __global const HitPoint *hitPoint, "
 				"const float3 localFixedDir, const float passThroughEvent, const bool backTracing MATERIALS_PARAM_DECL",
 			"mat, hitPoint, localFixedDir, passThroughEvent, backTracing MATERIALS_PARAM");
-	source << "#endif\n";
 
 	// Generate the code for generic Material_GetEmittedRadianceWithDynamic()
 	AddMaterialSourceSwitch(source, mats, "GetEmittedRadianceWithDynamic", "GetEmittedRadiance", "float3", "BLACK",

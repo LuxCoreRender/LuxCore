@@ -48,4 +48,7 @@ typedef struct {
 typedef struct {
 	unsigned int interpolatedTransformFirstIndex;
 	unsigned int interpolatedTransformLastIndex;
+
+	unsigned int interpolatedInverseTransformFirstIndex;
+	unsigned int interpolatedInverseTransformLastIndex;
 } MotionSystem;

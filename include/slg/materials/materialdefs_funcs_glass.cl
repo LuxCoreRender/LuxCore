@@ -178,9 +178,7 @@ OPENCL_FORCE_INLINE float3 GlassMaterial_EvalSpecularTransmission(__global const
 OPENCL_FORCE_NOT_INLINE float3 GlassMaterial_Sample(
 		__global const HitPoint *hitPoint, const float3 localFixedDir, float3 *localSampledDir,
 		const float u0, const float u1,
-#if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
-#endif
 		float *pdfW, BSDFEvent *event,
 		const float3 ktTexVal, const float3 krTexVal,
 		const float nc, const float nt, const float cauchyC) {

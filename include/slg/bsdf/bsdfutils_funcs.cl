@@ -56,19 +56,15 @@ OPENCL_FORCE_INLINE uint BSDF_GetLightID(__global const BSDF *bsdf
 #if defined(PARAM_HAS_VOLUMES)
 OPENCL_FORCE_INLINE uint BSDF_GetMaterialInteriorVolume(__global const BSDF *bsdf
 		MATERIALS_PARAM_DECL) {
-	return Material_GetInteriorVolume(bsdf->materialIndex, &bsdf->hitPoint
-#if defined(PARAM_HAS_PASSTHROUGH)
-			, bsdf->hitPoint.passThroughEvent
-#endif
+	return Material_GetInteriorVolume(bsdf->materialIndex, &bsdf->hitPoint,
+			bsdf->hitPoint.passThroughEvent
 			MATERIALS_PARAM);
 }
 
 OPENCL_FORCE_INLINE uint BSDF_GetMaterialExteriorVolume(__global const BSDF *bsdf
 		MATERIALS_PARAM_DECL) {
-	return Material_GetExteriorVolume(bsdf->materialIndex, &bsdf->hitPoint
-#if defined(PARAM_HAS_PASSTHROUGH)
-			, bsdf->hitPoint.passThroughEvent
-#endif
+	return Material_GetExteriorVolume(bsdf->materialIndex, &bsdf->hitPoint,
+			bsdf->hitPoint.passThroughEvent
 			MATERIALS_PARAM);
 }
 #endif
@@ -79,16 +75,21 @@ OPENCL_FORCE_INLINE float BSDF_GetGlossiness(__global const BSDF *bsdf
 			MATERIALS_PARAM);
 }
 
+OPENCL_FORCE_INLINE float3 BSDF_GetPassThroughShadowTransparency(__global const BSDF *bsdf
+		MATERIALS_PARAM_DECL) {
+	return VLOAD3F(&mats[bsdf->materialIndex].passThroughShadowTransparency.c[0]);
+}
+
 OPENCL_FORCE_INLINE float3 BSDF_GetLandingGeometryN(__global const BSDF *bsdf) {
-	return (bsdf->hitPoint.intoObject ? 1.f : -1.f) * VLOAD3F(&bsdf->hitPoint.geometryN.x);
+	return HitPoint_GetGeometryN(&bsdf->hitPoint);
 }
 
 OPENCL_FORCE_INLINE float3 BSDF_GetLandingInterpolatedN(__global const BSDF *bsdf) {
-	return (bsdf->hitPoint.intoObject ? 1.f : -1.f) * VLOAD3F(&bsdf->hitPoint.interpolatedN.x);
+	return HitPoint_GetInterpolatedN(&bsdf->hitPoint);
 }
 
 OPENCL_FORCE_INLINE float3 BSDF_GetLandingShadeN(__global const BSDF *bsdf) {
-	return (bsdf->hitPoint.intoObject ? 1.f : -1.f) * VLOAD3F(&bsdf->hitPoint.shadeN.x);
+	return HitPoint_GetShadeN(&bsdf->hitPoint);
 }
 
 OPENCL_FORCE_INLINE float3 BSDF_GetRayOrigin(__global const BSDF *bsdf, const float3 sampleDir) {

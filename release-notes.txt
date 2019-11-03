@@ -1,137 +1,43 @@
+### Release v2.3
+
 ### New Features
 
-* PhotonGI cache
-* Added ALBEDO AOV
-* Added to BiDir the support for shading normal, geometry normal, position, material ID, UV, object ID, material ID color and Albedo AOVs
-* Added AVG_SHADING_NORMAL AOV
-* Integrated Intel Open Image Denoiser (Oidn)
-
-''Alpha0 released''
-
-* Added a new way to blend brute force path tracing and cache in PhotonGI. Cache is now used more often on glossy surfaces
-* Introduced a new PhotonGI debug mode to show the mix between brute force and cached paths
-* Added the support for automatic PhotonGI indirect cache best radius estimation
-* Added the support for automatic PhotonGI indirect cache size by using convergence error estimation
-* Front and back material transparency (aka light invisible object)
-* Added PhotonGI support for volumes cache entries
-* LXS parser now supports instance definitions
-* Added the support for new "directx2opengl_normalmap" image map channel selection
-* Added new textures: Power, Less Than, Greater Than, Dot Product, Position, Shading Normal
-
-''Alpha1 released''
-
-* Saving/resuming the rendering now includes all PhotonGI cache information and entries
-* Added the support for new shape "group"
-* Added the support for nested groups to LXS parser
-* Added the support for persistent PhotonGI cache on file
-* Added the support for using persistent PhotonGI cache across multiple frames for fly-through animations
-* DLSC now automatically estimated the best radius if lightstrategy.entry.radius is set to 0.0
-* New improved Random/Sobol sampler adaptive code
-* LXS parser now supports halttime and haltspp film halt conditions
-* LXS parser now supports volumes
-* Shadow catcher is now easier to use with multiple light sources of any type
-
-''Beta1 released''
-
-* Added the support for tiled denoising to save a huge amount of ram
-* Added the support for new visibility map cache for infinitelight, constantinfinite and sky2 light sources
-* Added the support for new Disney BRDF material from Siggraph 2012 paper
-* Upgraded Intel Oidn to v0.9.0
-* Metal material uses a more accurate Albedo value (for Intel OIDN)
-* Added "rounding" texture
-* Added "modulo" texture
-* Improved tiling feature of OIDN imagepipeline plugin
-* Fix a bug in ToProperties code of "blender blend" texture when "halo" progression type was used
-
-''Beta2 released''
-
-* Added the support for periodic PhotonGI caustic cache update (aka SPPM without radius reduction)
-* PathTracer class now support eye and light path tracing. LIGHTCPU now uses PathTracer class too.
-* Added Hybrid Back/Forward path tracing support
-* Added the support for glossy caustics rendering to Hybrid Back/Forward
-* Reworked the support for new visibility map cache for infinitelight, constantinfinite and sky2 light sources
-* Transparent light sources are now rendered with the correct intensity
-* New env. visibility map cache now supports persistent cache on file
-
-''Beta3 released''
-
-* Improved shading with interpolated normals
-* Added the support for Shadow Terminator avoidance factor when using bump mapping
-* Upgraded Intel Oidn to v1.0
+* LuxCoreUI now shows eye and light pass counters if light tracing is enabled
+* FILESAVER now expands inline exported constant texture values
+* PhotonGI caustic scene re-factored to work with Vertex Merging (i.e. SPPM in this case)
+* It is now possible to use light tracing for normal caustics and PhotonGI cache for SDS paths
+* Added the support for shadow rays transparency for path tracers (aka hybrid glass, issue #233)
+* Added the support for Basu and Owen's low discrepancy triangle light sampling (pull request #246)
+* Added an option to normalize BlackBody texture output
+* Pointiness shape is now able to handle duplicate/similar vertices like if they were the same
+* Added the support for Subdivison shape (base don OpenSubdiv)
+* Added the support for Displacement shape
+* Added the support for vector displacement to Displacement shape
+* New image pipeline plugin: White balance
+* Using/Not using bump/normal mapping doesn't requires OpenCL compilation anymore (removed PARAM_HAS_BUMPMAPS conditional OpenCL compilation)
+* Large rework of internal light interface. Fixed several instance/motion blur and lights related problems. Triangle light motion blur now works as expected in OpenCL.
+* Large rework of internal mesh interface. Improved the performance of instanced and motion blur meshes.
+* Changed object and material ID for background to 0 (from 0xffffffff)
+* Added the support for screen space subdivision limit to SubdivShape
+* Using/Not using any type of transparency doesn't requires OpenCL compilation anymore (removed PARAM_HAS_PASSTHROUGH conditional OpenCL compilation)
+* Added an Harlequin shape (mostly to debug meshes)
+* Added a Simplify shape (to decimate the number of triangles in a mesh with the smaller possible error)
 
 ### Fixed Bugs
 
-* Fixed rendering resume feature
-
-''Alpha0 released''
-
-* Fixed a problem with infinite lights and BiDir or PhotonGI
-* Fixed a bug when using radiance groups with variance clamping and OpenCL
-* Fixed camera invisible objects usage with volumes
-* Fixed TASK_EMIT of LightStrategyPower
-* Fixed a crash when using RTPATHOCL and editing area lights (issue #173)
-* Fixed a bug when using radiance groups with variance clamping and OpenCL
-
-''Alpha1 released''
-
-* Fixed a crash when using negative material emission values (issue #177)
-* Fixed LXS parsing in pyluxcoretools
-* Fixed a problem when mixing transparent and solid materials with Mix (issue #183)
-* Fix a bug when using glossy coating with any specular material
-* Fixed LXS parsing of point light source position
-* Fixed object ID not being saved by FILESAVER engine
-* Fixed a major bug in carpaint material (issue #186)
-* Fixed spelling mistake in cloth material "wool gabardine" preset
-* Fixed Scene::RemoveUnusedMeshes()
-* Fixed a bug in Mix material when working with specular materials (issue #187)
-* Fixed an overflow problem when using an heterogenous volume on very large segments
-* Sun relative size has now a lower bound of 1.0 to avoid numerical precision problems
-* Fixed a problem with Scene::ToProperties() after editing a scene
-* Fixed a self-shadow problem with area light sources
-
-''Beta1 released''
-
-* Fix ToProperties() of mapspherelight and spherelight
-* Fixed a problem with caustic cache size when both PhotonGI caches were
-  enabled and automatic stop condition for indirect cache was used
-* PhotonGI Metropolis will now focus on caustic cache when indirect is done (and vice versa)
-* Fixed the access to an uninitialized variable when using PhotonGI caustic cache alone
-* Fixed the access to an uninitialized variable in ProjectionLight::Preprocess()
-* Fixed a crash when trying to render a scene without light sources with PATHOCL (issue #202)
-* Fixed DLSC to work with Front and back material transparency (aka light invisible object)
-* Fixed a problem in BIDIRCPU with camera PDF
-* Fixed a bug in Mix material transparency support (issue #210)
-* Added a workaround to an AMD OpenCL compiler bug in DirectLight_BSDFSampling()
-
-''Beta2 released''
-
-* Fixed a problem in the random number generator of PhotonGI
-* Fixed wrong theta being saved in ToProperties() of distant light
-* Fixed a compilation error in RoughMatte OpenCL code (issue #218)
-* Fixed a problem with Disney material specular tint
-* Fixed a TILEPATH bug causing black renderings
-* Fixed BIDIRCPU and LIGHTCPU camera motion blur
-* Fixed a bug related to initial camera volume in PATHOCL
-* Fixed light tracing camera motion blur and arbitrary clipping plane support
-* Fixed a bug in the OpenCL code of the splitfloat3 texture
-* Fixed normal mapping
-* Fixed a problem when saving ALBEDO AOV
-* Fixed RoughGlass event types returned by material evaluation
-* Evaluated best radius in PhotonGI, ELVC and DLSC is not affected any more by border rendering
-* Fixed a crash when resuming scene rendering without PhotonGI enabled
-* Fixed a NaNs problem when using area lights with zero area
-* Fixed the export of material emission.directlightsampling.type property
-
-''Beta3 released''
-
-* Solved a self-shadow problem on edges with interpolated normals
-* UV scale doesn't affect anymore bump map strength
-* Fixed an out of bound memory access in automatic lookup radius code
-* Fixed a problem with Disney material, hybrid backward/forward path tracing and low roughness values
-* Fixed bump mapping black halo for large scale values
+* Fixed triangle lights back face emission when using an IES or image map profile
+* Fixed OpenCL code for rotate triangle light when using IES or image map profile (BlendLuxCore iusse #310)
+* Fixed light tracing when using orthographic camera
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
+
+### Known Problems
+* LuxCore API requires latin locale
+* accelerator.bvh.builder.type = EMBREE_MORTON doesn't work with the latest Embree
+* Python crashes when calling sys.exit()
+* TILEPATHOCL (and RTPATHOCL) count the layers of transparent surfaces as an iteration of the rendering finite state machine so they requires to increase the max. path depth to avoid black regions.
+* Light emitted by motion blurred triangle lights is aproximated using the triangle area of time 0.0 (computing triangle area at runtime would be expansive) so it may be not totally accurate if the motion blur transformation include a scale.
 
 **Note for Windows users:** you have to install the [Microsoft Visual C++ Redistributable
 for Visual Studio 2017](https://aka.ms/vs/15/release/vc_redist.x64.exe).

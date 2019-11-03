@@ -27,6 +27,7 @@
 #include "slg/lights/trianglelight.h"
 #include "slg/materials/material.h"
 #include "slg/volumes/volume.h"
+#include "slg/utils/pathvolumeinfo.h"
 #include "slg/bsdf/bsdfevents.h"
 #include "slg/bsdf/hitpoint.h"
 
@@ -46,18 +47,22 @@ public:
 	BSDF() : material(NULL) { };
 
 	// A BSDF initialized from a ray hit
-	BSDF(const bool fixedFromLight, const Scene &scene, const luxrays::Ray &ray,
+	BSDF(const bool fixedFromLight, const bool throughShadowTransparency,
+		const Scene &scene, const luxrays::Ray &ray,
 		const luxrays::RayHit &rayHit, const float passThroughEvent,
 		const PathVolumeInfo *volInfo) {
 		assert (!rayHit.Miss());
-		Init(fixedFromLight, scene, ray, rayHit, passThroughEvent, volInfo);
+		Init(fixedFromLight, throughShadowTransparency, scene,
+				ray, rayHit, passThroughEvent, volInfo);
 	}
 	// Used when hitting a surface
-	void Init(const bool fixedFromLight, const Scene &scene, const luxrays::Ray &ray,
+	void Init(const bool fixedFromLight, const bool throughShadowTransparency,
+		const Scene &scene, const luxrays::Ray &ray,
 		const luxrays::RayHit &rayHit, const float passThroughEvent,
 		const PathVolumeInfo *volInfo);
 	// Used when hitting a volume scatter point
-	void Init(const bool fixedFromLight, const Scene &scene, const luxrays::Ray &ray,
+	void Init(const bool fixedFromLight, const bool throughShadowTransparency,
+		const Scene &scene, const luxrays::Ray &ray,
 		const Volume &volume, const float t, const float passThroughEvent);
 
 	bool IsEmpty() const { return (material == NULL); }
@@ -83,6 +88,7 @@ public:
 	MaterialType GetMaterialType() const { return material->GetType(); }
 
 	luxrays::Spectrum GetPassThroughTransparency(const bool backTracing) const;
+	const luxrays::Spectrum &GetPassThroughShadowTransparency() const { return material->GetPassThroughShadowTransparency(); }
 	const luxrays::Frame &GetFrame() const { return frame; }
 
 	luxrays::Spectrum Albedo() const;
@@ -91,7 +97,8 @@ public:
 		BSDFEvent *event, float *directPdfW = NULL, float *reversePdfW = NULL) const;
 	luxrays::Spectrum Sample(luxrays::Vector *sampledDir,
 		const float u0, const float u1,
-		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
+		float *pdfW, float *absCosSampledDir,
+		BSDFEvent *event, const BSDFEvent eventHint = NONE) const;
 	luxrays::Spectrum ShadowCatcherSample(Vector *sampledDir,
 		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
 	void Pdf(const luxrays::Vector &sampledDir, float *directPdfW, float *reversePdfW) const;

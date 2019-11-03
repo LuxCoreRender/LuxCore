@@ -23,89 +23,7 @@ import pyluxcore
 from pyluxcoreunittests.tests.utils import *
 from pyluxcoreunittests.tests.imagetest import *
 
-################################################################################
-# Point light test
-################################################################################
-
-def TestPointLight(cls, params):
-	StandardSceneTest(cls, params, "simple/light-point.cfg", "PointLight")
-
-class PointLight(ImageTest):
-    pass
-
-PointLight = AddTests(PointLight, TestPointLight, GetTestCases())
-
-################################################################################
-# MapPoint light test
-################################################################################
-
-def TestMapPointLight(cls, params):
-	StandardSceneTest(cls, params, "simple/light-mappoint.cfg", "MapPointLight")
-
-class MapPointLight(ImageTest):
-    pass
-
-MapPointLight = AddTests(MapPointLight, TestMapPointLight, GetTestCases())
-
-################################################################################
-# Spot light test
-################################################################################
-
-def TestSpotLight(cls, params):
-	StandardSceneTest(cls, params, "simple/light-spot.cfg", "SpotLight")
-
-class SpotLight(ImageTest):
-    pass
-
-SpotLight = AddTests(SpotLight, TestSpotLight, GetTestCases())
-
-################################################################################
-# Area light test
-################################################################################
-
-def TestAreaLight(cls, params):
-	StandardSceneTest(cls, params, "simple/light-area.cfg", "AreaLight")
-
-class AreaLight(ImageTest):
-    pass
-
-AreaLight = AddTests(AreaLight, TestAreaLight, GetTestCases())
-
-################################################################################
-# SunSky2 light test
-################################################################################
-
-def TestSunSky2Light(cls, params):
-	StandardSceneTest(cls, params, "simple/light-sunsky2.cfg", "SunSky2Light")
-
-class SunSky2Light(ImageTest):
-    pass
-
-SunSky2Light = AddTests(SunSky2Light, TestSunSky2Light, GetTestCases())
-
-################################################################################
-# Infinite light test
-################################################################################
-
-def TestInfiniteLight(cls, params):
-	StandardSceneTest(cls, params, "simple/light-infinite.cfg", "InfiniteLight")
-
-class InfiniteLight(ImageTest):
-    pass
-
-InfiniteLight = AddTests(InfiniteLight, TestInfiniteLight, GetTestCases())
-
-################################################################################
-# Projection light test
-################################################################################
-
-def TestProjectionLight(cls, params):
-	StandardSceneTest(cls, params, "simple/light-projection.cfg", "ProjectionLight")
-
-class ProjectionLight(ImageTest):
-    pass
-
-ProjectionLight = AddTests(ProjectionLight, TestProjectionLight, GetTestCases())
+# Note: keep in alphabetical order
 
 ################################################################################
 # ConstantInfinite light test
@@ -120,18 +38,6 @@ class ConstantInfiniteLight(ImageTest):
 ConstantInfiniteLight = AddTests(ConstantInfiniteLight, TestConstantInfiniteLight, GetTestCases())
 
 ################################################################################
-# SharpDistant light test
-################################################################################
-
-def TestSharpDistantLight(cls, params):
-	StandardSceneTest(cls, params, "simple/light-sharpdistant.cfg", "SharpDistantLight")
-
-class SharpDistantLight(ImageTest):
-    pass
-
-SharpDistantLight = AddTests(SharpDistantLight, TestSharpDistantLight, GetTestCases())
-
-################################################################################
 # Distant light test
 ################################################################################
 
@@ -144,6 +50,18 @@ class DistantLight(ImageTest):
 DistantLight = AddTests(DistantLight, TestDistantLight, GetTestCases())
 
 ################################################################################
+# Infinite light test
+################################################################################
+
+def TestInfiniteLight(cls, params):
+	StandardSceneTest(cls, params, "simple/light-infinite.cfg", "InfiniteLight")
+
+class InfiniteLight(ImageTest):
+    pass
+
+InfiniteLight = AddTests(InfiniteLight, TestInfiniteLight, GetTestCases())
+
+################################################################################
 # Laser light test
 ################################################################################
 
@@ -154,3 +72,123 @@ class LaserLight(ImageTest):
     pass
 
 LaserLight = AddTests(LaserLight, TestLaserLight, GetTestCases())
+
+################################################################################
+# MapPoint light test
+################################################################################
+
+def TestMapPointLight(cls, params):
+	StandardSceneTest(cls, params, "simple/light-mappoint.cfg", "MapPointLight")
+
+class MapPointLight(ImageTest):
+    pass
+
+MapPointLight = AddTests(MapPointLight, TestMapPointLight, GetTestCases())
+
+################################################################################
+# MapSphere light test
+################################################################################
+
+def TestMapSphereLight(cls, params):
+	StandardSceneTest(cls, params, "simple/light-mapsphere.cfg", "MapSphereLight")
+
+class MapSphereLight(ImageTest):
+    pass
+
+MapSphereLight = AddTests(MapSphereLight, TestMapSphereLight, GetTestCases())
+
+################################################################################
+# Point light test
+################################################################################
+
+def TestPointLight(cls, params):
+	StandardSceneTest(cls, params, "simple/light-point.cfg", "PointLight")
+
+class PointLight(ImageTest):
+    pass
+
+PointLight = AddTests(PointLight, TestPointLight, GetTestCases())
+
+################################################################################
+# Projection light test
+################################################################################
+
+def TestProjectionLight(cls, params):
+	StandardSceneTest(cls, params, "simple/light-projection.cfg", "ProjectionLight")
+
+class ProjectionLight(ImageTest):
+    pass
+
+ProjectionLight = AddTests(ProjectionLight, TestProjectionLight, GetTestCases())
+
+################################################################################
+# SharpDistant light test
+################################################################################
+
+def TestSharpDistantLight(cls, params):
+	StandardSceneTest(cls, params, "simple/light-sharpdistant.cfg", "SharpDistantLight")
+
+class SharpDistantLight(ImageTest):
+    pass
+
+SharpDistantLight = AddTests(SharpDistantLight, TestSharpDistantLight, GetTestCases())
+
+################################################################################
+# Sky2 light test
+################################################################################
+
+def TestSky2Light(cls, params):
+	StandardSceneTest(cls, params, "simple/light-sky2.cfg", "Sky2Light")
+
+class Sky2Light(ImageTest):
+    pass
+
+Sky2Light = AddTests(Sky2Light, TestSky2Light, GetTestCases())
+
+################################################################################
+# Sphere light test
+################################################################################
+
+def TestSphereLight(cls, params):
+	StandardSceneTest(cls, params, "simple/light-sphere.cfg", "SphereLight")
+
+class SphereLight(ImageTest):
+    pass
+
+SphereLight = AddTests(SphereLight, TestSphereLight, GetTestCases())
+
+################################################################################
+# Spot light test
+################################################################################
+
+def TestSpotLight(cls, params):
+	StandardSceneTest(cls, params, "simple/light-spot.cfg", "SpotLight")
+
+class SpotLight(ImageTest):
+    pass
+
+SpotLight = AddTests(SpotLight, TestSpotLight, GetTestCases())
+
+################################################################################
+# Sun light test
+################################################################################
+
+def TestSunLight(cls, params):
+	StandardSceneTest(cls, params, "simple/light-sun.cfg", "SunLight")
+
+class SunLight(ImageTest):
+    pass
+
+SunLight = AddTests(SunLight, TestSunLight, GetTestCases())
+
+################################################################################
+# Triangle light test
+################################################################################
+
+def TestTriangleLight(cls, params):
+	StandardSceneTest(cls, params, "simple/light-triangle.cfg", "TriangleLight")
+
+class TriangleLight(ImageTest):
+    pass
+
+TriangleLight = AddTests(TriangleLight, TestTriangleLight, GetTestCases())

@@ -39,8 +39,8 @@ Properties PowerTexture::ToProperties(const ImageMapCache &imgMapCache, const bo
 
 	const string name = GetName();
 	props.Set(Property("scene.textures." + name + ".type")("power"));
-	props.Set(Property("scene.textures." + name + ".base")(base->GetName()));
-	props.Set(Property("scene.textures." + name + ".exponent")(exponent->GetName()));
+	props.Set(Property("scene.textures." + name + ".base")(base->GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".exponent")(exponent->GetSDLValue()));
 
 	return props;
 }

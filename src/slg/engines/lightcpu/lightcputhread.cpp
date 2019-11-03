@@ -45,7 +45,9 @@ void LightCPURenderThread::RenderFunc() {
 
 	// Setup the sampler
 	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, engine->film,
-			engine->sampleSplatter, engine->samplerSharedData);
+			engine->sampleSplatter, engine->samplerSharedData,
+			// Disable image plane meaning for samples 0 and 1
+			Properties() << Property("sampler.metropolis.imagemutationrate.enable")(false));
 	sampler->RequestSamples(SCREEN_NORMALIZED_ONLY, pathTracer.lightSampleSize);
 
 	VarianceClamping varianceClamping(pathTracer.sqrtVarianceClampMaxValue);
@@ -71,7 +73,8 @@ void LightCPURenderThread::RenderFunc() {
 				break;
 		}
 
-		pathTracer.RenderLightSample(device, engine->renderConfig->scene, engine->film, sampler, sampleResults);
+		pathTracer.RenderLightSample(threadIndex, device, engine->renderConfig->scene,
+				engine->film, sampler, sampleResults);
 
 		// Variance clamping
 		if (varianceClamping.hasClamping()) {

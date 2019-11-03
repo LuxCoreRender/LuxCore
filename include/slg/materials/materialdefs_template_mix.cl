@@ -53,7 +53,6 @@ OPENCL_FORCE_NOT_INLINE bool Material_Index<<CS_MIX_MATERIAL_INDEX>>_IsDelta(__g
 				MATERIALS_PARAM);
 }
 
-#if defined(PARAM_HAS_PASSTHROUGH)
 OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_GetPassThroughTransparency(__global const Material *material,
 		__global const HitPoint *hitPoint, const float3 localFixedDir,
 		const float passThroughEvent, const bool backTracing
@@ -78,7 +77,6 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_GetPassTh
 		}
 	}
 }
-#endif
 
 OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Albedo(__global const Material* restrict material,
 		__global const HitPoint *hitPoint
@@ -171,9 +169,7 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Evaluate(
 
 OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Sample(__global const Material *material,
 		__global const HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir, const float u0, const float u1,
-#if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
-#endif
 		float *pdfW, BSDFEvent *event
 		MATERIALS_PARAM_DECL) {
 	const float factor = <<CS_FACTOR_TEXTURE>>;
@@ -194,15 +190,11 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Sample(__
 	float3 result = sampleMatA ?
 			<<CS_MAT_A_PREFIX>>_Sample<<CS_MAT_A_POSTFIX>>(matA, hitPoint, fixedDirFirst, sampledDir,
 				u0, u1,
-#if defined(PARAM_HAS_PASSTHROUGH)
 				passThroughEventFirst,
-#endif
 				pdfW, event MATERIALS_PARAM):
 			<<CS_MAT_B_PREFIX>>_Sample<<CS_MAT_B_POSTFIX>>(matB, hitPoint, fixedDirFirst, sampledDir,
 				u0, u1,
-#if defined(PARAM_HAS_PASSTHROUGH)
 				passThroughEventFirst,
-#endif
 				pdfW, event MATERIALS_PARAM);
 
 	if (Spectrum_IsBlack(result))

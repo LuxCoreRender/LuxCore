@@ -133,7 +133,6 @@ protected:
 	virtual void RenderThreadImpl() = 0;
 	virtual void GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight, u_int *filmSubRegion) = 0;
 
-	virtual void AdditionalInit() { }
 	virtual std::string AdditionalKernelOptions() { return ""; }
 	virtual std::string AdditionalKernelDefinitions() { return ""; }
 	virtual std::string AdditionalKernelSources() { return ""; }
@@ -186,6 +185,7 @@ protected:
 	// OpenCL structure size
 	size_t GetOpenCLHitPointSize() const;
 	size_t GetOpenCLBSDFSize() const;
+	size_t GetEyePathInfoSize() const;
 	size_t GetOpenCLSampleResultSize() const;
 
 	u_int threadIndex;
@@ -208,7 +208,6 @@ protected:
 	cl::Buffer *lightsDistributionBuff;
 	cl::Buffer *infiniteLightSourcesDistributionBuff;
 	cl::Buffer *dlscAllEntriesBuff;
-	cl::Buffer *dlscDistributionIndexToLightIndexBuff;
 	cl::Buffer *dlscDistributionsBuff;
 	cl::Buffer *dlscBVHNodesBuff;
 	cl::Buffer *elvcAllEntriesBuff;
@@ -217,10 +216,12 @@ protected:
 	cl::Buffer *envLightDistributionsBuff;
 	cl::Buffer *vertsBuff;
 	cl::Buffer *normalsBuff;
+	cl::Buffer *triNormalsBuff;
 	cl::Buffer *uvsBuff;
 	cl::Buffer *colsBuff;
 	cl::Buffer *alphasBuff;
 	cl::Buffer *trianglesBuff;
+	cl::Buffer *interpolatedTransformsBuff;
 	cl::Buffer *cameraBuff;
 	cl::Buffer *lightIndexOffsetByMeshIndexBuff;
 	cl::Buffer *lightIndexByTriIndexBuff;
@@ -235,14 +236,13 @@ protected:
 	cl::Buffer *samplesBuff;
 	cl::Buffer *sampleDataBuff;
 	cl::Buffer *taskStatsBuff;
-	cl::Buffer *pathVolInfosBuff;
+	cl::Buffer *eyePathInfosBuff;
 	cl::Buffer *directLightVolInfosBuff;
 	cl::Buffer *pixelFilterBuff;
 	cl::Buffer *pgicRadiancePhotonsBuff;
 	cl::Buffer *pgicRadiancePhotonsBVHNodesBuff;
 	cl::Buffer *pgicCausticPhotonsBuff;
 	cl::Buffer *pgicCausticPhotonsBVHNodesBuff;
-	cl::Buffer *pgicCausticNearPhotonsBuff;
 
 	u_int initKernelArgsCount;
 	std::string kernelsParameters;

@@ -39,13 +39,14 @@ public:
 	virtual float GetPower(const Scene &scene) const;
 
 	virtual luxrays::Spectrum Emit(const Scene &scene,
-		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
-		luxrays::Point *pos, luxrays::Vector *dir,
-		float *emissionPdfW, float *directPdfA = NULL, float *cosThetaAtLight = NULL) const;
+		const float time, const float u0, const float u1,
+		const float u2, const float u3, const float passThroughEvent,
+		luxrays::Ray &ray, float &emissionPdfW,
+		float *directPdfA = NULL, float *cosThetaAtLight = NULL) const;
 
     virtual luxrays::Spectrum Illuminate(const Scene &scene, const BSDF &bsdf,
-		const float u0, const float u1, const float passThroughEvent,
-        luxrays::Vector *dir, float *distance, float *directPdfW,
+		const float time, const float u0, const float u1, const float passThroughEvent,
+        luxrays::Ray &shadowRay, float &directPdfW,
 		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;

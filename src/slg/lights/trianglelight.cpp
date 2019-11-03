@@ -29,7 +29,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 TriangleLight::TriangleLight() : mesh(NULL), 
-		triangleIndex(NULL_INDEX), objectID(NULL_INDEX),
+		meshIndex(NULL_INDEX), triangleIndex(NULL_INDEX),
 		triangleArea(0.f), invTriangleArea(0.f),
 		meshArea(0.f), invMeshArea(0.f) {
 }
@@ -65,78 +65,78 @@ float TriangleLight::GetPower(const Scene &scene) const {
 }
 
 void TriangleLight::Preprocess() {
-	triangleArea = mesh->GetTriangleArea(0.f, triangleIndex);
+	Transform localToWorld;
+	mesh->GetLocal2World(0.f, localToWorld);
+
+	triangleArea = mesh->GetTriangleArea(localToWorld, triangleIndex);
 	invTriangleArea = 1.f / triangleArea;
 
-	meshArea = mesh->GetMeshArea(0.f);
+	meshArea = mesh->GetMeshArea(localToWorld);
 	invMeshArea = 1.f / meshArea;
 }
 
 Spectrum TriangleLight::Emit(const Scene &scene,
-		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
-		Point *orig, Vector *dir,
-		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
+		const float time, const float u0, const float u1,
+		const float u2, const float u3, const float passThroughEvent,
+		Ray &ray, float &emissionPdfW,
+		float *directPdfA, float *cosThetaAtLight) const {
 	// A safety check to avoid NaN/Inf
 	if ((triangleArea == 0.f) || (meshArea == 0.f))
 		return Spectrum();
-
-	HitPoint hitPoint;
-	// Origin
-	float b0, b1, b2;
-	// Use relevant time data?
-	mesh->Sample(0.f, triangleIndex, u0, u1, orig, &b0, &b1, &b2);
-
-	// Build the local frame
-	hitPoint.fromLight = false;
-	hitPoint.passThroughEvent = passThroughEvent;
-	hitPoint.p = *orig;
-	// Use relevant time data?
-	hitPoint.geometryN = mesh->GetGeometryNormal(0.f, triangleIndex);
-	hitPoint.fixedDir = Vector(-hitPoint.geometryN);
-	// Use relevant time data?
-	hitPoint.shadeN = mesh->InterpolateTriNormal(0.f, triangleIndex, b1, b2);
-	hitPoint.intoObject = false;
-	hitPoint.color = mesh->InterpolateTriColor(triangleIndex, b1, b2);
-	hitPoint.alpha = mesh->InterpolateTriAlpha(triangleIndex, b1, b2);
-	// Use relevant volume?
-	hitPoint.interiorVolume = NULL;
-	hitPoint.exteriorVolume = NULL;
-	hitPoint.objectID = objectID;
-	hitPoint.uv = mesh->InterpolateTriUV(triangleIndex, b1, b2);
-	mesh->GetDifferentials(Transform::TRANS_IDENTITY, triangleIndex, hitPoint.shadeN,
-		&hitPoint.dpdu, &hitPoint.dpdv,
-		&hitPoint.dndu, &hitPoint.dndv);
-	// Add bump?
-	// lightMaterial->Bump(&hitPoint, 1.f);
-	Frame frame(hitPoint.GetFrame());
 
 	Spectrum emissionColor(1.f);
 	Vector localDirOut;
 	const SampleableSphericalFunction *emissionFunc = lightMaterial->GetEmissionFunc();
 	if (emissionFunc) {
-		emissionFunc->Sample(u2, u3, &localDirOut, emissionPdfW);
+		emissionFunc->Sample(u2, u3, &localDirOut, &emissionPdfW);
 		emissionColor = ((SphericalFunction *)emissionFunc)->Evaluate(localDirOut) / emissionFunc->Average();
 	} else {
 		if (lightMaterial->GetEmittedTheta() == 0.f) {
 			localDirOut = Vector(0.f, 0.f, 1.f);
-			*emissionPdfW = 1.f;
+			emissionPdfW = 1.f;
 		} else if (lightMaterial->GetEmittedTheta() < 90.f) {
 			const float cosThetaMax = lightMaterial->GetEmittedCosThetaMax();
 			localDirOut = UniformSampleCone(u2, u3, cosThetaMax);
-			*emissionPdfW = UniformConePdf(cosThetaMax);
+			emissionPdfW = UniformConePdf(cosThetaMax);
 		} else
-			localDirOut = CosineSampleHemisphere(u2, u3, emissionPdfW);
+			localDirOut = CosineSampleHemisphere(u2, u3, &emissionPdfW);
 
 		// Cannot really not emit the particle, so just bias it to the correct angle
 		localDirOut.z = Max(localDirOut.z, DEFAULT_COS_EPSILON_STATIC);
 	}
 
-	if (*emissionPdfW == 0.f)
+	if (emissionPdfW == 0.f)
 		return Spectrum();
-	*emissionPdfW *= invTriangleArea;
+	emissionPdfW *= invTriangleArea;
 
-	// Direction
-	*dir = frame.ToWorld(localDirOut);
+	// Build a temporary HitPoint
+	HitPoint tmpHitPoint;
+	mesh->GetLocal2World(time, tmpHitPoint.localToWorld);
+
+	// Origin
+	Point samplePoint;
+	float b0, b1, b2;
+	mesh->Sample(tmpHitPoint.localToWorld, triangleIndex, u0, u1, &samplePoint, &b0, &b1, &b2);
+
+	// Initialize the temporary HitPoint
+	tmpHitPoint.Init(true, false,
+			scene, meshIndex, triangleIndex,
+			samplePoint, Vector(mesh->GetGeometryNormal(tmpHitPoint.localToWorld, triangleIndex)),
+			b1, b2,
+			passThroughEvent);
+	// Add bump?
+	// lightMaterial->Bump(&hitPoint, 1.f);
+
+	const Frame frame(tmpHitPoint.GetFrame());
+
+	// Ray direction
+	const Vector rayDir = frame.ToWorld(localDirOut);
+
+	// Ray origin
+	const Point rayOrig = tmpHitPoint.p + Vector(tmpHitPoint.geometryN * MachineEpsilon::E(tmpHitPoint.p)) *
+			// With an IES/map I can emit from the backface too so I have to
+			// use rayDir here instead of tmpHitPoint.intoObject
+			((Dot(rayDir, tmpHitPoint.geometryN) > 0.f) ? 1.f : -1.f);
 
 	if (directPdfA)
 		*directPdfA = invTriangleArea;
@@ -144,35 +144,45 @@ Spectrum TriangleLight::Emit(const Scene &scene,
 	if (cosThetaAtLight)
 		*cosThetaAtLight = fabsf(localDirOut.z);
 
-	return lightMaterial->GetEmittedRadiance(hitPoint, invMeshArea) * emissionColor * fabsf(localDirOut.z);
+	ray.Update(rayOrig, rayDir, time);
+
+	return lightMaterial->GetEmittedRadiance(tmpHitPoint, invMeshArea) * emissionColor * fabsf(localDirOut.z);
 }
 
 Spectrum TriangleLight::Illuminate(const Scene &scene, const BSDF &bsdf,
-		const float u0, const float u1, const float passThroughEvent,
-        Vector *dir, float *distance, float *directPdfW,
+		const float time, const float u0, const float u1, const float passThroughEvent,
+        Ray &shadowRay, float &directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
 	// A safety check to avoid NaN/Inf
 	if ((triangleArea == 0.f) || (meshArea == 0.f))
 		return Spectrum();
 
+	//--------------------------------------------------------------------------
+	// Compute the sample point and direction
+	//--------------------------------------------------------------------------
+
 	HitPoint tmpHitPoint;
+	mesh->GetLocal2World(time, tmpHitPoint.localToWorld);
+
+	Point samplePoint;
 	float b0, b1, b2;
-	// Use relevant time data?
-	mesh->Sample(0.f, triangleIndex, u0, u1, &tmpHitPoint.p, &b0, &b1, &b2);
+	mesh->Sample(tmpHitPoint.localToWorld, triangleIndex, u0, u1, &samplePoint, &b0, &b1, &b2);
 
-	// Use relevant time data?
-	const Normal geometryN = mesh->GetGeometryNormal(0.f, triangleIndex);
+	Vector sampleDir = samplePoint - bsdf.hitPoint.p;
+	const float distanceSquared = sampleDir.LengthSquared();
+	const float distance = sqrtf(distanceSquared);
+	sampleDir /= distance;
+	
+	// Initialize the temporary HitPoint
+	tmpHitPoint.Init(true, false,
+			scene, meshIndex, triangleIndex,
+			samplePoint, -sampleDir,
+			b1, b2,
+			passThroughEvent);
+	// Add bump?
+	// lightMaterial->Bump(&hitPoint, 1.f);
 
-	// Move p along the geometry normal by an epsilon to avoid self-shadow problems
-	tmpHitPoint.p += Vector(geometryN * MachineEpsilon::E(tmpHitPoint.p));
-
-	*dir = tmpHitPoint.p - bsdf.GetRayOrigin(tmpHitPoint.p - bsdf.hitPoint.p);
-	const float distanceSquared = dir->LengthSquared();
-	*distance = sqrtf(distanceSquared);
-	*dir /= (*distance);
-
-	const Normal sampleN = mesh->InterpolateTriNormal(0.f, triangleIndex, b1, b2);
-	const float cosAtLight = Dot(sampleN, -(*dir));
+	const float cosAtLight = Dot(tmpHitPoint.geometryN, -sampleDir);
 	const SampleableSphericalFunction *emissionFunc = lightMaterial->GetEmissionFunc();
 
 	// emissionFunc can emit light even backward, this is for compatibility with classic Lux
@@ -182,33 +192,31 @@ Spectrum TriangleLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 	if (cosThetaAtLight)
 		*cosThetaAtLight = fabsf(cosAtLight);
 
-	// Build a temporary hit point on the emitting point of the light source
-	tmpHitPoint.fromLight = false;
-	tmpHitPoint.passThroughEvent = passThroughEvent;
-	// Use relevant time data?
-	tmpHitPoint.geometryN = geometryN;
-	tmpHitPoint.fixedDir = Vector(-tmpHitPoint.geometryN);
-	// Use relevant time data?
-	tmpHitPoint.shadeN = sampleN;
-	tmpHitPoint.intoObject = false;
-	tmpHitPoint.color = mesh->InterpolateTriColor(triangleIndex, b1, b2);
-	tmpHitPoint.alpha = mesh->InterpolateTriAlpha(triangleIndex, b1, b2);
-	// Use relevant volume?
-	tmpHitPoint.interiorVolume = NULL;
-	tmpHitPoint.exteriorVolume = NULL;
-	tmpHitPoint.objectID = objectID;
-	tmpHitPoint.uv = mesh->InterpolateTriUV(triangleIndex, b1, b2);
-	mesh->GetDifferentials(Transform::TRANS_IDENTITY, triangleIndex, tmpHitPoint.shadeN,
-		&tmpHitPoint.dpdu, &tmpHitPoint.dpdv,
-		&tmpHitPoint.dndu, &tmpHitPoint.dndv);
+	//--------------------------------------------------------------------------
+	// Initialize the shadow ray
+	//--------------------------------------------------------------------------
+	
+	// Move shadow ray origin along the geometry normal by an epsilon to avoid self-shadow problems
+	const Point shadowRayOrig = bsdf.GetRayOrigin(sampleDir);
+
+	// Compute shadow ray direction with displaced start and end point to avoid self-shadow problems
+	Vector shadowRayDir = tmpHitPoint.p + Vector(tmpHitPoint.geometryN * MachineEpsilon::E(tmpHitPoint.p)) *
+			(tmpHitPoint.intoObject ? 1.f : -1.f) - shadowRayOrig;
+	const float shadowRayDistance = shadowRayDir.Length();
+	shadowRayDir /= shadowRayDistance;
+
+	//--------------------------------------------------------------------------
+	// Compute the PDF and emission color
+	//--------------------------------------------------------------------------
 
 	Spectrum emissionColor(1.f);
 	if (emissionFunc) {
 		// Add bump?
 		// lightMaterial->Bump(&hitPoint, 1.f);
-		Frame frame(tmpHitPoint.GetFrame());
 
-		const Vector localFromLight = Normalize(frame.ToLocal(-(*dir)));
+		const Frame frame(tmpHitPoint.GetFrame());
+
+		const Vector localFromLight = Normalize(frame.ToLocal(-sampleDir));
 		
 		if (emissionPdfW) {
 			const float emissionFuncPdf = emissionFunc->Pdf(localFromLight);
@@ -218,7 +226,7 @@ Spectrum TriangleLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 		}
 		emissionColor = ((SphericalFunction *)emissionFunc)->Evaluate(localFromLight) / emissionFunc->Average();
 		
-		*directPdfW = invTriangleArea * distanceSquared;
+		directPdfW = invTriangleArea * distanceSquared;
 	} else {
 		if (emissionPdfW) {
 			if (lightMaterial->GetEmittedTheta() == 0.f)
@@ -229,13 +237,12 @@ Spectrum TriangleLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 				*emissionPdfW = invTriangleArea * fabsf(cosAtLight) * INV_PI;
 		}
 
-		*directPdfW = invTriangleArea * distanceSquared / fabsf(cosAtLight);
+		directPdfW = invTriangleArea * distanceSquared / fabsf(cosAtLight);
 	}
 
-	if (isnan(*directPdfW) || isinf(*directPdfW)) {
-		cout<<*directPdfW<<"="<<emissionFunc<<"==="<<invTriangleArea<<"="<<distanceSquared<<"==="<<cosAtLight<<"\n";
-	}
-	assert (!isnan(*directPdfW) && !isinf(*directPdfW));
+	assert (!isnan(directPdfW) && !isinf(directPdfW));
+	
+	shadowRay = Ray(shadowRayOrig, shadowRayDir, 0.f, shadowRayDistance, time);
 
 	return lightMaterial->GetEmittedRadiance(tmpHitPoint, invMeshArea) * emissionColor;
 }
@@ -251,10 +258,17 @@ bool TriangleLight::IsAlwaysInShadow(const Scene &scene,
 
 		return (cosTheta >= lightMaterial->GetEmittedCosThetaMax() + DEFAULT_COS_EPSILON_STATIC);
 	}*/
-	
+
+	//	It is to hard to say if motion blur is enabled
+	if ((mesh->GetType() == TYPE_TRIANGLE_MOTION) || (mesh->GetType() == TYPE_EXT_TRIANGLE_MOTION))
+		return false;
+
+	Transform localToWorld;
+	mesh->GetLocal2World(0.f, localToWorld);
+
 	// I use the shading normal of the first vertex for this test (see above)
 	const Normal triNormal = mesh->HasNormals() ?
-		mesh->GetShadeNormal(0.f, triangleIndex, 0) : mesh->GetGeometryNormal(0.f, triangleIndex);
+		mesh->GetShadeNormal(localToWorld, triangleIndex, 0) : mesh->GetGeometryNormal(localToWorld, triangleIndex);
 	const float cosTheta = Dot(n, triNormal);
 
 	return (cosTheta >= lightMaterial->GetEmittedCosThetaMax() + DEFAULT_COS_EPSILON_STATIC);
@@ -278,10 +292,7 @@ Spectrum TriangleLight::GetRadiance(const HitPoint &hitPoint,
 
 	Spectrum emissionColor(1.f);
 	if (emissionFunc) {
-		// Build the local frame
-		Frame frame(hitPoint.shadeN);
-
-		const Vector localFromLight = Normalize(frame.ToLocal(hitPoint.fixedDir));
+		const Vector localFromLight = Normalize(hitPoint.GetFrame().ToLocal(hitPoint.fixedDir));
 		
 		if (emissionPdfW) {
 			const float emissionFuncPdf = emissionFunc->Pdf(localFromLight);

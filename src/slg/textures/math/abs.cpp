@@ -39,7 +39,7 @@ Properties AbsTexture::ToProperties(const ImageMapCache &imgMapCache, const bool
 
 	const string name = GetName();
 	props.Set(Property("scene.textures." + name + ".type")("abs"));
-	props.Set(Property("scene.textures." + name + ".texture")(tex->GetName()));
+	props.Set(Property("scene.textures." + name + ".texture")(tex->GetSDLValue()));
 
 	return props;
 }

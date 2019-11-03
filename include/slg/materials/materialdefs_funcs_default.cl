@@ -34,7 +34,6 @@ OPENCL_FORCE_INLINE bool DefaultMaterial_IsDelta() {
 // DefaultMaterial_GetPassThroughTransparency
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_HAS_PASSTHROUGH)
 OPENCL_FORCE_INLINE float3 DefaultMaterial_GetPassThroughTransparency(__global const Material *material,
 		__global const HitPoint *hitPoint, const float3 localFixedDir,
 		const float passThroughEvent, const bool backTracing
@@ -52,7 +51,6 @@ OPENCL_FORCE_INLINE float3 DefaultMaterial_GetPassThroughTransparency(__global c
 	} else
 		return BLACK;
 }
-#endif
 
 //------------------------------------------------------------------------------
 // DefaultMaterial_GetEmittedRadiance

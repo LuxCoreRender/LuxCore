@@ -183,9 +183,10 @@ Properties Material::ToProperties(const ImageMapCache &imgMapCache, const bool u
 
 	const string name = GetName();
 	if (frontTransparencyTex)
-		props.Set(Property("scene.materials." + name + ".transparency.front")(frontTransparencyTex->GetName()));
+		props.Set(Property("scene.materials." + name + ".transparency.front")(frontTransparencyTex->GetSDLValue()));
 	if (backTransparencyTex)
-		props.Set(Property("scene.materials." + name + ".transparency.back")(backTransparencyTex->GetName()));
+		props.Set(Property("scene.materials." + name + ".transparency.back")(backTransparencyTex->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".transparency.shadow")(passThroughShadowTransparency));
 	props.Set(Property("scene.materials." + name + ".id")(matID));
 	props.Set(Property("scene.materials." + name + ".emission.gain")(emittedGain));
 	props.Set(Property("scene.materials." + name + ".emission.power")(emittedPower));
@@ -194,7 +195,7 @@ Properties Material::ToProperties(const ImageMapCache &imgMapCache, const bool u
 	props.Set(Property("scene.materials." + name + ".emission.id")(lightID));
 	props.Set(Property("scene.materials." + name + ".emission.importance")(emittedImportance));
 	if (emittedTex)
-		props.Set(Property("scene.materials." + name + ".emission")(emittedTex->GetName()));
+		props.Set(Property("scene.materials." + name + ".emission")(emittedTex->GetSDLValue()));
 	if (emissionMap) {
 		const string fileName = useRealFileName ?
 			emissionMap->GetName() : imgMapCache.GetSequenceFileName(emissionMap);
@@ -216,7 +217,7 @@ Properties Material::ToProperties(const ImageMapCache &imgMapCache, const bool u
 	}
 
 	if (bumpTex)
-		props.Set(Property("scene.materials." + name + ".bumptex")(bumpTex->GetName()));
+		props.Set(Property("scene.materials." + name + ".bumptex")(bumpTex->GetSDLValue()));
 
 	if (interiorVolume)
 		props.Set(Property("scene.materials." + name + ".volume.interior")(interiorVolume->GetName()));
