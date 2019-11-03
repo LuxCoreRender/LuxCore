@@ -498,12 +498,6 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 	}
 
 	ssParams <<
-			" -D PARAM_MAX_PATH_DEPTH=" << renderEngine->pathTracer.maxPathDepth.depth <<
-			" -D PARAM_MAX_PATH_DEPTH_DIFFUSE=" << renderEngine->pathTracer.maxPathDepth.diffuseDepth <<
-			" -D PARAM_MAX_PATH_DEPTH_GLOSSY=" << renderEngine->pathTracer.maxPathDepth.glossyDepth <<
-			" -D PARAM_MAX_PATH_DEPTH_SPECULAR=" << renderEngine->pathTracer.maxPathDepth.specularDepth <<
-			" -D PARAM_RR_DEPTH=" << renderEngine->pathTracer.rrDepth <<
-			" -D PARAM_RR_CAP=" << renderEngine->pathTracer.rrImportanceCap << "f" <<
 			" -D PARAM_SQRT_VARIANCE_CLAMP_MAX_VALUE=" << renderEngine->pathTracer.sqrtVarianceClampMaxValue << "f";
 
 	const slg::ocl::Filter *filter = renderEngine->oclPixelFilter;
@@ -714,6 +708,7 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			luxrays::ocl::KernelSource_exttrianglemesh_funcs <<
 			// OpenCL SLG Types
 			slg::ocl::KernelSource_hitpoint_types <<
+			slg::ocl::KernelSource_imagemap_types <<
 			slg::ocl::KernelSource_mapping_types <<
 			slg::ocl::KernelSource_texture_types <<
 			slg::ocl::KernelSource_bsdf_types <<
@@ -731,7 +726,6 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_pgic_types <<
 			// OpenCL SLG Funcs
 			slg::ocl::KernelSource_mapping_funcs <<
-			slg::ocl::KernelSource_imagemap_types <<
 			slg::ocl::KernelSource_imagemap_funcs <<
 			slg::ocl::KernelSource_texture_noise_funcs <<
 			slg::ocl::KernelSource_texture_blender_noise_funcs <<
@@ -787,12 +781,17 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_material_main;
 
 	ssKernel <<
-			slg::ocl::KernelSource_hitpoint_funcs <<
-			slg::ocl::KernelSource_bsdfutils_funcs << // Must be before volumeinfo_funcs
-			slg::ocl::KernelSource_volume_funcs <<
 			slg::ocl::KernelSource_pathdepthinfo_types <<
 			slg::ocl::KernelSource_pathvolumeinfo_types <<
 			slg::ocl::KernelSource_pathinfo_types <<
+			slg::ocl::KernelSource_scene_types <<
+			// PathOCL types
+			slg::ocl::KernelSource_pathoclbase_datatypes;
+
+	ssKernel <<
+			slg::ocl::KernelSource_hitpoint_funcs <<
+			slg::ocl::KernelSource_bsdfutils_funcs << // Must be before volumeinfo_funcs
+			slg::ocl::KernelSource_volume_funcs <<
 			slg::ocl::KernelSource_pathdepthinfo_funcs <<
 			slg::ocl::KernelSource_pathvolumeinfo_funcs <<
 			slg::ocl::KernelSource_pathinfo_funcs <<
@@ -811,11 +810,9 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_sampler_metropolis_funcs <<
 			slg::ocl::KernelSource_sampler_tilepath_funcs <<
 			slg::ocl::KernelSource_bsdf_funcs <<
-			slg::ocl::KernelSource_scene_types <<
 			slg::ocl::KernelSource_scene_funcs <<
 			slg::ocl::KernelSource_pgic_funcs <<
 			// PathOCL Funcs
-			slg::ocl::KernelSource_pathoclbase_datatypes <<
 			slg::ocl::KernelSource_pathoclbase_funcs <<
 			slg::ocl::KernelSource_pathoclbase_kernels_micro;
 
@@ -912,6 +909,7 @@ void PathOCLBaseOCLRenderThread::SetInitKernelArgs(const u_int filmIndex) {
 
 	// initKernel kernel
 	argIndex = 0;
+	initKernel->setArg(argIndex++, sizeof(cl::Buffer), taskConfigBuff);
 	initKernel->setArg(argIndex++, sizeof(cl::Buffer), tasksBuff);
 	initKernel->setArg(argIndex++, sizeof(cl::Buffer), tasksDirectLightBuff);
 	initKernel->setArg(argIndex++, sizeof(cl::Buffer), tasksStateBuff);
@@ -934,6 +932,7 @@ void PathOCLBaseOCLRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePa
 	CompiledScene *cscene = renderEngine->compiledScene;
 
 	u_int argIndex = 0;
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), taskConfigBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), tasksBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), tasksDirectLightBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), tasksStateBuff);

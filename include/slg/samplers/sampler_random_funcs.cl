@@ -28,8 +28,8 @@ OPENCL_FORCE_INLINE uint SamplerSharedData_GetNewPixelBucketIndex(__global Sampl
 	return atomic_inc(&samplerSharedData->pixelBucketIndex);
 }
 
-OPENCL_FORCE_NOT_INLINE void Sampler_InitNewSample(Seed *seed,
-		__global SamplerSharedData *samplerSharedData,
+OPENCL_FORCE_NOT_INLINE void Sampler_InitNewSample(__constant GPUTaskConfiguration *taskConfig,
+		Seed *seed, __global SamplerSharedData *samplerSharedData,
 		__global Sample *sample, __global float *sampleDataPathBase,
 #if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
 		__global float *filmNoise,
@@ -100,17 +100,19 @@ OPENCL_FORCE_NOT_INLINE void Sampler_InitNewSample(Seed *seed,
 	sample->pixelIndexOffset = pixelIndexOffset;
 }
 
-OPENCL_FORCE_INLINE __global float *Sampler_GetSampleData(__global Sample *sample, __global float *samplesData) {
+OPENCL_FORCE_INLINE __global float *Sampler_GetSampleData(__constant GPUTaskConfiguration *taskConfig,
+		__global Sample *sample, __global float *samplesData) {
 	const size_t gid = get_global_id(0);
 	return &samplesData[gid * TOTAL_U_SIZE];
 }
 
-OPENCL_FORCE_INLINE __global float *Sampler_GetSampleDataPathBase(__global Sample *sample, __global float *sampleData) {
+OPENCL_FORCE_INLINE __global float *Sampler_GetSampleDataPathBase(__constant GPUTaskConfiguration *taskConfig,
+		__global Sample *sample, __global float *sampleData) {
 	return sampleData;
 }
 
-OPENCL_FORCE_INLINE __global float *Sampler_GetSampleDataPathVertex(__global Sample *sample,
-		__global float *sampleDataPathBase, const uint depth) {
+OPENCL_FORCE_INLINE __global float *Sampler_GetSampleDataPathVertex(__constant GPUTaskConfiguration *taskConfig,
+		__global Sample *sample, __global float *sampleDataPathBase, const uint depth) {
 	// This is never used in Random sampler
 	//
 	// The depth used here is counted from the first hit point of the path
@@ -118,7 +120,8 @@ OPENCL_FORCE_INLINE __global float *Sampler_GetSampleDataPathVertex(__global Sam
 	return &sampleDataPathBase[IDX_BSDF_OFFSET + depth * VERTEX_SAMPLE_SIZE];
 }
 
-OPENCL_FORCE_INLINE float Sampler_GetSamplePath(Seed *seed, __global Sample *sample,
+OPENCL_FORCE_INLINE float Sampler_GetSamplePath(__constant GPUTaskConfiguration *taskConfig,
+		Seed *seed, __global Sample *sample,
 		__global float *sampleDataPathBase, const uint index) {
 	switch (index) {
 		case IDX_SCREEN_X:
@@ -130,13 +133,15 @@ OPENCL_FORCE_INLINE float Sampler_GetSamplePath(Seed *seed, __global Sample *sam
 	}
 }
 
-OPENCL_FORCE_INLINE float Sampler_GetSamplePathVertex(Seed *seed, __global Sample *sample,
+OPENCL_FORCE_INLINE float Sampler_GetSamplePathVertex(__constant GPUTaskConfiguration *taskConfig,
+		Seed *seed, __global Sample *sample,
 		__global float *sampleDataPathVertexBase,
 		const uint depth, const uint index) {
 	return Rnd_FloatValue(seed);
 }
 
 OPENCL_FORCE_NOT_INLINE void Sampler_SplatSample(
+		__constant GPUTaskConfiguration *taskConfig,
 		Seed *seed,
 		__global SamplerSharedData *samplerSharedData,
 		__global Sample *sample, __global float *sampleData
@@ -148,6 +153,7 @@ OPENCL_FORCE_NOT_INLINE void Sampler_SplatSample(
 }
 
 OPENCL_FORCE_NOT_INLINE void Sampler_NextSample(
+		__constant GPUTaskConfiguration *taskConfig,
 		Seed *seed,
 		__global SamplerSharedData *samplerSharedData,
 		__global Sample *sample, __global float *sampleData,
@@ -157,7 +163,7 @@ OPENCL_FORCE_NOT_INLINE void Sampler_NextSample(
 		const uint filmWidth, const uint filmHeight,
 		const uint filmSubRegion0, const uint filmSubRegion1,
 		const uint filmSubRegion2, const uint filmSubRegion3) {
-	Sampler_InitNewSample(seed, samplerSharedData, sample, sampleData,
+	Sampler_InitNewSample(taskConfig, seed, samplerSharedData, sample, sampleData,
 #if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
 			filmNoise,
 #endif
@@ -165,7 +171,9 @@ OPENCL_FORCE_NOT_INLINE void Sampler_NextSample(
 			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3);
 }
 
-OPENCL_FORCE_NOT_INLINE bool Sampler_Init(Seed *seed, __global SamplerSharedData *samplerSharedData,
+OPENCL_FORCE_NOT_INLINE bool Sampler_Init(
+		__constant GPUTaskConfiguration *taskConfig,
+		Seed *seed, __global SamplerSharedData *samplerSharedData,
 		__global Sample *sample, __global float *sampleData,
 #if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
 		__global float *filmNoise,
@@ -177,7 +185,7 @@ OPENCL_FORCE_NOT_INLINE bool Sampler_Init(Seed *seed, __global SamplerSharedData
 		samplerSharedData->pixelBucketIndex = 0;
 	sample->pixelIndexOffset = RANDOM_OCL_WORK_SIZE;
 
-	Sampler_NextSample(seed, samplerSharedData, sample, sampleData,
+	Sampler_NextSample(taskConfig, seed, samplerSharedData, sample, sampleData,
 #if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
 			filmNoise,
 #endif

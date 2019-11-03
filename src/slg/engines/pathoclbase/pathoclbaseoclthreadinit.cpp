@@ -391,6 +391,12 @@ void PathOCLBaseOCLRenderThread::InitGPUTaskBuffer() {
 	const size_t openCLBSDFSize = GetOpenCLBSDFSize();
 
 	//--------------------------------------------------------------------------
+	// Allocate tasksConfigBuff
+	//--------------------------------------------------------------------------
+
+	AllocOCLBufferRO(&taskConfigBuff, &renderEngine->taskConfig, sizeof(slg::ocl::pathoclbase::GPUTaskConfiguration), "GPUTask");
+
+	//--------------------------------------------------------------------------
 	// Allocate tasksBuff
 	//--------------------------------------------------------------------------
 	

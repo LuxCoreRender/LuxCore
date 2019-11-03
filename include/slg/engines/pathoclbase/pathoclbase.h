@@ -65,6 +65,7 @@ protected:
 		throw std::runtime_error("Internal error, called PathOCLBaseRenderEngine::CreateNativeThread()");
 	}
 
+	void InitGPUTaskConfiguration();
 	void InitPixelFilterDistribution();
 
 	virtual void InitFilm();
@@ -76,6 +77,7 @@ protected:
 
 	boost::mutex setKernelArgsMutex;
 
+	slg::ocl::pathoclbase::GPUTaskConfiguration taskConfig;
 	CompiledScene *compiledScene;
 
 	std::vector<PathOCLBaseOCLRenderThread *> renderOCLThreads;

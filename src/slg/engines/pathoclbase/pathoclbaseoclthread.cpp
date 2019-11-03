@@ -84,9 +84,15 @@ PathOCLBaseOCLRenderThread::PathOCLBaseOCLRenderThread(const u_int index,
 	lightIndexOffsetByMeshIndexBuff = nullptr;
 	lightIndexByTriIndexBuff = nullptr;
 	imageMapDescsBuff = nullptr;
-	// OpenCL memory buffers
+	pgicRadiancePhotonsBuff = nullptr;
+	pgicRadiancePhotonsBVHNodesBuff = nullptr;
+	pgicCausticPhotonsBuff = nullptr;
+	pgicCausticPhotonsBVHNodesBuff = nullptr;
+
+	// OpenCL task related buffers
 	raysBuff = nullptr;
 	hitsBuff = nullptr;
+	taskConfigBuff = nullptr;
 	tasksBuff = nullptr;
 	tasksDirectLightBuff = nullptr;
 	tasksStateBuff = nullptr;
@@ -97,10 +103,6 @@ PathOCLBaseOCLRenderThread::PathOCLBaseOCLRenderThread(const u_int index,
 	eyePathInfosBuff = nullptr;
 	directLightVolInfosBuff = nullptr;
 	pixelFilterBuff = nullptr;
-	pgicRadiancePhotonsBuff = nullptr;
-	pgicRadiancePhotonsBVHNodesBuff = nullptr;
-	pgicCausticPhotonsBuff = nullptr;
-	pgicCausticPhotonsBVHNodesBuff = nullptr;
 
 	// Check the kind of kernel cache to use
 	string type = renderEngine->renderConfig->cfg.Get(Property("opencl.kernelcache")("PERSISTENT")).Get<string>();
@@ -208,8 +210,15 @@ void PathOCLBaseOCLRenderThread::Stop() {
 	for (u_int i = 0; i < imageMapsBuff.size(); ++i)
 		FreeOCLBuffer(&imageMapsBuff[i]);
 	imageMapsBuff.resize(0);
+	FreeOCLBuffer(&pgicRadiancePhotonsBuff);
+	FreeOCLBuffer(&pgicRadiancePhotonsBVHNodesBuff);
+	FreeOCLBuffer(&pgicCausticPhotonsBuff);
+	FreeOCLBuffer(&pgicCausticPhotonsBVHNodesBuff);
+
+	// OpenCL task related buffers
 	FreeOCLBuffer(&raysBuff);
 	FreeOCLBuffer(&hitsBuff);
+	FreeOCLBuffer(&taskConfigBuff);
 	FreeOCLBuffer(&tasksBuff);
 	FreeOCLBuffer(&tasksDirectLightBuff);
 	FreeOCLBuffer(&tasksStateBuff);
@@ -220,10 +229,6 @@ void PathOCLBaseOCLRenderThread::Stop() {
 	FreeOCLBuffer(&eyePathInfosBuff);
 	FreeOCLBuffer(&directLightVolInfosBuff);
 	FreeOCLBuffer(&pixelFilterBuff);
-	FreeOCLBuffer(&pgicRadiancePhotonsBuff);
-	FreeOCLBuffer(&pgicRadiancePhotonsBVHNodesBuff);
-	FreeOCLBuffer(&pgicCausticPhotonsBuff);
-	FreeOCLBuffer(&pgicCausticPhotonsBVHNodesBuff);
 
 	started = false;
 
