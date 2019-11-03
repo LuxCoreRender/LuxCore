@@ -221,9 +221,7 @@ void PathOCLRenderEngine::UpdateTaskCount() {
 		u_int taskCap = defaultTaskCount;
 		BOOST_FOREACH(DeviceDescription *devDesc, selectedDeviceDescs) {
 			if (devDesc->GetType() & DEVICE_TYPE_OPENCL_ALL) {
-				if (devDesc->GetMaxMemoryAllocSize() >= 512u * 1024u * 1024u)
-					taskCap = Min(taskCap, 512u * 1024u);
-				else if (devDesc->GetMaxMemoryAllocSize() >= 256u * 1024u * 1024u)
+				if (devDesc->GetMaxMemoryAllocSize() >= 256u * 1024u * 1024u)
 					taskCap = Min(taskCap, 256u * 1024u);
 				else if (devDesc->GetMaxMemoryAllocSize() >= 128u * 1024u * 1024u)
 					taskCap = Min(taskCap, 128u * 1024u);
