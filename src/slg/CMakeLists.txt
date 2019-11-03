@@ -145,8 +145,7 @@ include_directories(${LuxRays_SOURCE_DIR}/deps/openvdb-6.2.0)
 
 # Required by OpenVDB to read ABI 3
 #add_definitions("-D OPENVDB_USE_DEPRECATED_ABI -DOPENVDB_3_ABI_COMPATIBLE -DOPENVDB_STATICLIB -DOPENVDB_OPENEXR_STATICLIB")
-add_definitions("-DOPENVDB_STATICLIB -DOPENVDB_OPENEXR_STATICLIB")
-
+add_definitions("-DOPENVDB_USE_BLOSC -DOPENVDB_STATICLIB -DOPENVDB_OPENEXR_STATICLIB")
 add_library(openvdb STATIC ${OPENVDB_SRCS})
 
 ###########################################################################
