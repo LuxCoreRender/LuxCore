@@ -227,8 +227,15 @@ protected:
 	cl::Buffer *lightIndexByTriIndexBuff;
 	cl::Buffer *imageMapDescsBuff;
 	std::vector<cl::Buffer *> imageMapsBuff;
+	cl::Buffer *pgicRadiancePhotonsBuff;
+	cl::Buffer *pgicRadiancePhotonsBVHNodesBuff;
+	cl::Buffer *pgicCausticPhotonsBuff;
+	cl::Buffer *pgicCausticPhotonsBVHNodesBuff;
+
+	// OpenCL task related buffers
 	cl::Buffer *raysBuff;
 	cl::Buffer *hitsBuff;
+	cl::Buffer *taskConfigBuff;
 	cl::Buffer *tasksBuff;
 	cl::Buffer *tasksDirectLightBuff;
 	cl::Buffer *tasksStateBuff;
@@ -239,10 +246,6 @@ protected:
 	cl::Buffer *eyePathInfosBuff;
 	cl::Buffer *directLightVolInfosBuff;
 	cl::Buffer *pixelFilterBuff;
-	cl::Buffer *pgicRadiancePhotonsBuff;
-	cl::Buffer *pgicRadiancePhotonsBVHNodesBuff;
-	cl::Buffer *pgicCausticPhotonsBuff;
-	cl::Buffer *pgicCausticPhotonsBVHNodesBuff;
 
 	u_int initKernelArgsCount;
 	std::string kernelsParameters;

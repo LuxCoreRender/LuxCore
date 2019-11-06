@@ -50,7 +50,7 @@
 #endif
 
 #if (PARAM_SAMPLER_TYPE == 1)
-#define TOTAL_U_SIZE (IDX_BSDF_OFFSET + PARAM_MAX_PATH_DEPTH * VERTEX_SAMPLE_SIZE)
+#define TOTAL_U_SIZE (IDX_BSDF_OFFSET + taskConfig->pathTracer.maxPathDepth.depth * VERTEX_SAMPLE_SIZE)
 #endif
 
 #if (PARAM_SAMPLER_TYPE == 2)
@@ -143,8 +143,8 @@ typedef struct {
 	// Plus the a pass field for each pixel
 	//
 #if defined(SLG_OPENCL_KERNEL)
-        // This field is used to get the base address of the array of pixel passes
-        unsigned int pixelPass;
+	// This field is used to get the base address of the array of pixel passes
+	unsigned int pixelPass;
 #endif
 } SobolSamplerSharedData;
 

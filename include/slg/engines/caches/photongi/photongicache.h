@@ -242,6 +242,7 @@ protected:
 		ar & caustic.lookUpNormalAngle;
 		ar & caustic.radiusReduction;
 		ar & caustic.minLookUpRadius;
+		ar & caustic.updateSpp;
 
 		ar & debugType;
 		
