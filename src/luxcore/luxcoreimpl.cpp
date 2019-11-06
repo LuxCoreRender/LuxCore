@@ -215,6 +215,36 @@ void FilmImpl::GetOutputUInt(const FilmOutputType type, unsigned int *buffer,
 				buffer, index, executeImagePipeline);
 }
 
+void FilmImpl::UpdateOutputFloat(const FilmOutputType type, const float *buffer,
+		const unsigned int index, const bool executeImagePipeline) {
+	if (type != OUTPUT_USER_IMPORTANCE)
+		throw runtime_error("Currently, only USER_IMPORTANCE channel can be updated with Film::UpdateOutput<float>()");
+
+	if (renderSession) {
+		boost::unique_lock<boost::mutex> lock(renderSession->renderSession->filmMutex);
+
+		slg::Film *film = renderSession->renderSession->film;
+		const unsigned int pixelsCount = film->GetWidth() * film->GetHeight();
+
+		// Only USER_IMPORTANCE can be updated
+		float *destBuffer = renderSession->renderSession->film->GetChannel<float>(slg::Film::USER_IMPORTANCE,
+				index, executeImagePipeline);
+		copy(buffer, buffer + pixelsCount, destBuffer);
+	} else {
+		const unsigned int pixelsCount = standAloneFilm->GetWidth() * standAloneFilm->GetHeight();
+
+		// Only USER_IMPORTANCE can be updated
+		float *destBuffer = standAloneFilm->GetChannel<float>(slg::Film::USER_IMPORTANCE,
+				index, executeImagePipeline);
+		copy(buffer, buffer + pixelsCount, destBuffer);
+	}
+}
+
+void FilmImpl::UpdateOutputUInt(const FilmOutputType type, const unsigned int *buffer,
+		const unsigned int index, const bool executeImagePipeline) {
+	throw runtime_error("No channel can be updated with Film::UpdateOutput<unsigned int>()");
+}
+
 bool FilmImpl::HasChannel(const FilmChannelType type) const {
 	return GetSLGFilm()->HasChannel((slg::Film::FilmChannelType)type);
 }
@@ -245,6 +275,26 @@ const unsigned int *FilmImpl::GetChannelUInt(const FilmChannelType type,
 	} else
 		return standAloneFilm->GetChannel<unsigned int>((slg::Film::FilmChannelType)type,
 				index, executeImagePipeline);
+}
+
+float *FilmImpl::UpdateChannelFloat(const FilmChannelType type,
+		const unsigned int index, const bool executeImagePipeline) {
+	if (type != CHANNEL_USER_IMPORTANCE)
+		throw runtime_error("Only USER_IMPORTANCE channel can be updated with Film::UpdateChannel<float>()");
+
+	if (renderSession) {
+		boost::unique_lock<boost::mutex> lock(renderSession->renderSession->filmMutex);
+
+		return renderSession->renderSession->film->GetChannel<float>((slg::Film::FilmChannelType)type,
+				index, executeImagePipeline);
+	} else
+		return standAloneFilm->GetChannel<float>((slg::Film::FilmChannelType)type,
+				index, executeImagePipeline);
+}
+
+unsigned int *FilmImpl::UpdateChannelUInt(const FilmChannelType type,
+		const unsigned int index, const bool executeImagePipeline) {
+	throw runtime_error("No channel can be updated with Film::UpdateChannel<unsigned int>()");
 }
 
 void FilmImpl::Parse(const luxrays::Properties &props) {

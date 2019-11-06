@@ -156,7 +156,7 @@ public:
 	u_int GetMaskObjectID(const u_int index) const { return maskObjectIDs[index]; }
 	u_int GetByObjectID(const u_int index) const { return byObjectIDs[index]; }
 
-	template<class T> const T *GetChannel(const FilmChannelType type, const u_int index = 0,
+	template<class T> T *GetChannel(const FilmChannelType type, const u_int index = 0,
 			const bool executeImagePipeline = true) {
 		throw std::runtime_error("Called Film::GetChannel() with wrong type");
 	}
@@ -464,8 +464,8 @@ private:
 	bool initialized;
 };
 
-template<> const float *Film::GetChannel<float>(const FilmChannelType type, const u_int index, const bool executeImagePipeline);
-template<> const u_int *Film::GetChannel<u_int>(const FilmChannelType type, const u_int index, const bool executeImagePipeline);
+template<> float *Film::GetChannel<float>(const FilmChannelType type, const u_int index, const bool executeImagePipeline);
+template<> u_int *Film::GetChannel<u_int>(const FilmChannelType type, const u_int index, const bool executeImagePipeline);
 template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, float *buffer, const u_int index, const bool executeImagePipeline);
 template<> void Film::GetOutput<u_int>(const FilmOutputs::FilmOutputType type, u_int *buffer, const u_int index, const bool executeImagePipeline);
 

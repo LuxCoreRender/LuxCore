@@ -183,13 +183,13 @@ u_int Film::GetChannelCount(const FilmChannelType type) const {
 		case NOISE:
 			return channel_NOISE ? 1 : 0;
 		case USER_IMPORTANCE:
-			return USER_IMPORTANCE ? 1 : 0;
+			return channel_USER_IMPORTANCE ? 1 : 0;
 		default:
 			throw runtime_error("Unknown FilmChannelType in Film::GetChannelCount(): " + ToString(type));
 	}
 }
 
-template<> const float *Film::GetChannel<float>(const FilmChannelType type,
+template<> float *Film::GetChannel<float>(const FilmChannelType type,
 		const u_int index, const bool executeImagePipeline) {
 	if (!HasChannel(type))
 		throw runtime_error("Film channel not defined in Film::GetChannel<float>(): " + ToString(type));
@@ -264,7 +264,7 @@ template<> const float *Film::GetChannel<float>(const FilmChannelType type,
 	}
 }
 
-template<> const u_int *Film::GetChannel<u_int>(const FilmChannelType type,
+template<> u_int *Film::GetChannel<u_int>(const FilmChannelType type,
 		const u_int index, const bool executeImagePipeline) {
 	if (!HasChannel(type))
 		throw runtime_error("Film channel not defined in Film::GetChannel<u_int>(): " + ToString(type));

@@ -283,6 +283,16 @@ template<> void Film::GetOutput<unsigned int>(const FilmOutputType type, unsigne
 	GetOutputUInt(type, buffer, index, executeImagePipeline);
 }
 
+template<> void Film::UpdateOutput<float>(const FilmOutputType type, const float *buffer,
+		const unsigned int index, const bool executeImagePipeline) {
+	UpdateOutputFloat(type, buffer, index, executeImagePipeline);
+}
+
+template<> void Film::UpdateOutput<unsigned int>(const FilmOutputType type, const unsigned int *buffer,
+		const unsigned int index, const bool executeImagePipeline) {
+	UpdateOutputUInt(type, buffer, index, executeImagePipeline);
+}
+
 template<> const float *Film::GetChannel<float>(const FilmChannelType type,
 		const unsigned int index, const bool executeImagePipeline) {
 	return GetChannelFloat(type, index, executeImagePipeline);

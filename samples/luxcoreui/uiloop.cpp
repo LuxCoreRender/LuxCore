@@ -79,15 +79,17 @@ void LuxCoreApp::RefreshRenderingTexture() {
 	const unsigned int filmHeight = session->GetFilm().GetHeight();
 	const float *pixels = session->GetFilm().GetChannel<float>(Film::CHANNEL_IMAGEPIPELINE, imagePipelineIndex);
 
-	if (currentTool == TOOL_OBJECT_SELECTION) {
-		// Allocate the selectionBuffer if needed
-		if (!selectionBuffer || (selectionFilmWidth != filmWidth) || (selectionFilmHeight != filmHeight)) {
-			delete[] selectionBuffer;
-			selectionFilmWidth = filmWidth;
-			selectionFilmHeight = filmHeight;
-			selectionBuffer = new float[selectionFilmWidth * selectionFilmHeight * 3];
+	if ((currentTool == TOOL_OBJECT_SELECTION) || (currentTool == TOOL_USER_IMPORTANCE_PAINT)) {
+		// Allocate the renderImageBuffer if needed
+		if (!renderImageBuffer || (renderImageWidth != filmWidth) || (renderImageHeight != filmHeight)) {
+			delete[] renderImageBuffer;
+			renderImageWidth = filmWidth;
+			renderImageHeight = filmHeight;
+			renderImageBuffer = new float[renderImageWidth * renderImageHeight * 3];
 		}
+	}
 
+	if (currentTool == TOOL_OBJECT_SELECTION) {
 		// Get the mouse coordinates
 		int frameBufferWidth, frameBufferHeight;
 		glfwGetFramebufferSize(window, &frameBufferWidth, &frameBufferHeight);
@@ -100,32 +102,36 @@ void LuxCoreApp::RefreshRenderingTexture() {
 		const unsigned int *objIDpixels = session->GetFilm().GetChannel<unsigned int>(Film::CHANNEL_OBJECT_ID);
 		// 0xffffffffu is LuxRays NULL_INDEX
 		unsigned int objID = 0xffffffffu;
-		if ((mouseX >= 0) && (mouseX < (int)selectionFilmWidth) &&
-				(mouseY >= 0) && (mouseY < (int)selectionFilmHeight))
-			objID = objIDpixels[mouseX + mouseY * selectionFilmWidth];
+		if ((mouseX >= 0) && (mouseX < (int)renderImageWidth) &&
+				(mouseY >= 0) && (mouseY < (int)renderImageHeight))
+			objID = objIDpixels[mouseX + mouseY * renderImageWidth];
 
 		// 0xffffffffu is LuxRays NULL_INDEX
 		if (objID != 0xffffffffu) {
 			// Blend the current selection over the rendering
 			for (unsigned int y = 0; y < filmHeight; ++y) {
 				for (unsigned int x = 0; x < filmWidth; ++x) {
-					const unsigned int index = x + y * selectionFilmWidth;
+					const unsigned int index = x + y * renderImageWidth;
 					const unsigned int index3 = index * 3;
 
 					if (objIDpixels[index] == objID) {
-						selectionBuffer[index3] = Lerp(.5f, pixels[index3], 1.f);
-						selectionBuffer[index3 + 1] = Lerp(.5f, pixels[index3 + 1], 1.f);
-						selectionBuffer[index3 + 2] = pixels[index3 + 2];						
+						renderImageBuffer[index3] = Lerp(.5f, pixels[index3], 1.f);
+						renderImageBuffer[index3 + 1] = Lerp(.5f, pixels[index3 + 1], 1.f);
+						renderImageBuffer[index3 + 2] = pixels[index3 + 2];						
 					} else {
-						selectionBuffer[index3] = pixels[index3];
-						selectionBuffer[index3 + 1] = pixels[index3 + 1];
-						selectionBuffer[index3 + 2] = pixels[index3 + 2];
+						renderImageBuffer[index3] = pixels[index3];
+						renderImageBuffer[index3 + 1] = pixels[index3 + 1];
+						renderImageBuffer[index3 + 2] = pixels[index3 + 2];
 					}
 				}
 			}
 
-			pixels = selectionBuffer;
+			pixels = renderImageBuffer;
 		}
+	} else if (currentTool == TOOL_USER_IMPORTANCE_PAINT) {
+		userImportancePaintWindow.BlendImportanceMap(pixels, renderImageBuffer);
+	
+		pixels = renderImageBuffer;
 	}
 
 	glBindTexture(GL_TEXTURE_2D, renderFrameBufferTexID);
@@ -594,6 +600,8 @@ void LuxCoreApp::RunApp(luxcore::RenderState *startState, luxcore::Film *startFi
 		helpWindow.Draw();
 		if (session)
 			statsWindow.Draw();
+		if (session && (currentTool == TOOL_USER_IMPORTANCE_PAINT))
+			userImportancePaintWindow.Draw();
 
 		MainMenuBar();
 

@@ -200,7 +200,8 @@ public:
 		OUTPUT_MATERIAL_ID_COLOR,
 		OUTPUT_ALBEDO,
 		OUTPUT_AVG_SHADING_NORMAL,
-		OUTPUT_NOISE
+		OUTPUT_NOISE,
+		OUTPUT_USER_IMPORTANCE
 	} FilmOutputType;
 
 	/*!
@@ -238,7 +239,8 @@ public:
 		CHANNEL_MATERIAL_ID_COLOR = 1 << 27,
 		CHANNEL_ALBEDO = 1 << 28,
 		CHANNEL_AVG_SHADING_NORMAL = 1 << 29,
-		CHANNEL_NOISE = 1 << 30
+		CHANNEL_NOISE = 1 << 30,
+		CHANNEL_USER_IMPORTANCE = 1 << 31
 	} FilmChannelType;
 
 	virtual ~Film();
@@ -394,10 +396,29 @@ public:
 	 * \param buffer is the place where the data will be copied.
 	 * \param index of the buffer to use. Usually 0, however, for instance,
 	 * if more than one light group is used, select the group to return.
+	 * \param executeImagePipeline is a flag to enable/disable automatic image
+	 * pipeline execution before to perform the copy.
 	 */
 	template<class T> void GetOutput(const FilmOutputType type, T *buffer, const unsigned int index = 0,
 			const bool executeImagePipeline = true) {
 		throw std::runtime_error("Called Film::GetOutput() with wrong type");
+	}
+	/*!
+	 * \brief Copy the buffer to a Film output channel. Currently, only USER_IMPORTANCE
+	 * output channel can be updated.
+	 *
+	 * \param type is the Film output channel to use. It must be one
+	 * of the enabled channels in RenderConfig. The supported template types are
+	 * float and unsigned int.
+	 * \param buffer is the place where the data will be copied from.
+	 * \param index of the buffer to use. Usually 0, however, for instance,
+	 * if more than one light group is used, select the group to return.
+	 * \param executeImagePipeline is a flag to enable/disable automatic image
+	 * pipeline execution before to perform the copy.
+	 */
+	template<class T> void UpdateOutput(const FilmOutputType type, const T *buffer, const unsigned int index = 0,
+			const bool executeImagePipeline = true) {
+		throw std::runtime_error("Called Film::UpdateOutput() with wrong type");
 	}
 	/*!
 	 * \brief Returns if a film channel is available.
@@ -424,12 +445,33 @@ public:
 	 * float and unsigned int.
 	 * \param index of the buffer to use. Usually 0, however, for instance,
 	 * if more than one light group is used, it selects the group to return.
+	 * \param executeImagePipeline is a flag to enable/disable automatic image
+	 * pipeline execution before to perform the copy.
 	 *
 	 * \return a pointer to the requested raw buffer.
 	 */
 	template<class T> const T *GetChannel(const FilmChannelType type, const unsigned int index = 0,
 			const bool executeImagePipeline = true) {
 		throw std::runtime_error("Called Film::GetChannel() with wrong type");
+	}
+	/*!
+	 * \brief Returns a pointer to the type of channel requested. The channel is
+	 * not normalized (if it has a weight channel). Currently, only USER_IMPORTANCE
+	 * channel can be updated.
+	 *
+	 * \param type is the Film output channel to return. It must be one
+	 * of the enabled channels in RenderConfig. The supported template types are
+	 * float and unsigned int.
+	 * \param index of the buffer to use. Usually 0, however, for instance,
+	 * if more than one light group is used, it selects the group to return.
+	 * \param executeImagePipeline is a flag to enable/disable automatic image
+	 * pipeline execution before to perform the copy.
+	 *
+	 * \return a pointer to the requested raw buffer.
+	 */
+	template<class T> T *UpdateChannel(const FilmChannelType type, const unsigned int index = 0,
+			const bool executeImagePipeline = true) {
+		throw std::runtime_error("Called Film::UpdateChannel() with wrong type");
 	}
 	/*!
 	 * \brief Sets configuration Properties with new values. This method can be
@@ -479,16 +521,30 @@ protected:
 			const bool executeImagePipeline = true) = 0;
 	virtual void GetOutputUInt(const FilmOutputType type, unsigned int *buffer, const unsigned int index,
 			const bool executeImagePipeline = true) = 0;
+
+	virtual void UpdateOutputFloat(const FilmOutputType type, const float *buffer, const unsigned int index,
+			const bool executeImagePipeline = true) = 0;
+	virtual void UpdateOutputUInt(const FilmOutputType type, const unsigned int *buffer, const unsigned int index,
+			const bool executeImagePipeline = true) = 0;
 	
 	virtual const float *GetChannelFloat(const FilmChannelType type, const unsigned int index,
 			const bool executeImagePipeline = true) = 0;
 	virtual const unsigned int *GetChannelUInt(const FilmChannelType type, const unsigned int index,
+			const bool executeImagePipeline = true) = 0;
+
+	virtual float *UpdateChannelFloat(const FilmChannelType type, const unsigned int index,
+			const bool executeImagePipeline = true) = 0;
+	virtual unsigned int *UpdateChannelUInt(const FilmChannelType type, const unsigned int index,
 			const bool executeImagePipeline = true) = 0;
 };
 
 template<> CPP_API void Film::GetOutput<float>(const FilmOutputType type, float *buffer,
 		const unsigned int index, const bool executeImagePipeline);
 template<> CPP_API void Film::GetOutput<unsigned int>(const FilmOutputType type, unsigned int *buffer,
+		const unsigned int index, const bool executeImagePipeline);
+template<> CPP_API void Film::UpdateOutput<float>(const FilmOutputType type, const float *buffer,
+		const unsigned int index, const bool executeImagePipeline);
+template<> CPP_API void Film::UpdateOutput<unsigned int>(const FilmOutputType type, const unsigned int *buffer,
 		const unsigned int index, const bool executeImagePipeline);
 template<> CPP_API const float *Film::GetChannel<float>(const FilmChannelType type,
 		const unsigned int index, const bool executeImagePipeline);

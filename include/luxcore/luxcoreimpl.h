@@ -75,10 +75,18 @@ public:
 			const unsigned int index, const bool executeImagePipeline);
 	void GetOutputUInt(const FilmOutputType type, unsigned int *buffer,
 			const unsigned int index, const bool executeImagePipeline);
+	void UpdateOutputFloat(const FilmOutputType type, const float *buffer,
+			const unsigned int index, const bool executeImagePipeline);
+	void UpdateOutputUInt(const FilmOutputType type, const unsigned int *buffer,
+			const unsigned int index, const bool executeImagePipeline);
 
 	const float *GetChannelFloat(const FilmChannelType type,
 			const unsigned int index, const bool executeImagePipeline);
 	const unsigned int *GetChannelUInt(const FilmChannelType type,
+			const unsigned int index, const bool executeImagePipeline);
+	float *UpdateChannelFloat(const FilmChannelType type,
+			const unsigned int index, const bool executeImagePipeline);
+	unsigned int *UpdateChannelUInt(const FilmChannelType type,
 			const unsigned int index, const bool executeImagePipeline);
 
 	void Parse(const luxrays::Properties &props);

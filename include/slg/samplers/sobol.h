@@ -76,7 +76,7 @@ class SobolSampler : public Sampler {
 public:
 	SobolSampler(luxrays::RandomGenerator *rnd, Film *flm,
 			const FilmSampleSplatter *flmSplatter, const bool imgSamplesEnable,
-			const float adaptiveStr,
+			const float adaptiveStr, const float adaptiveUserImpWeight,
 			SobolSamplerSharedData *samplerSharedData);
 	virtual ~SobolSampler();
 

@@ -445,11 +445,6 @@ void Film::Resize(const u_int w, const u_int h) {
 		channel_USER_IMPORTANCE = new GenericFrameBuffer<1, 0, float>(width, height);
 		channel_USER_IMPORTANCE->Clear(1.f);
 		hasDataChannel = true;
-		
-		// For some testing
-		for (u_int y = height / 4; y < height / 2 + height / 4; ++y)
-			for (u_int x = width / 4; x < width / 2 + width / 4; ++x)
-				*(channel_USER_IMPORTANCE->GetPixel(x, y)) = 0.f;
 	}
 
 	// Reset BCD statistics accumulator (I need to redo the warmup period)
