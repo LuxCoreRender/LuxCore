@@ -423,7 +423,7 @@ public:
 	 * of the enabled channels in RenderConfig. The supported template types are
 	 * float and unsigned int.
 	 * \param index of the buffer to use. Usually 0, however, for instance,
-	 * if more than one light group is used, select the group to return.
+	 * if more than one light group is used, it selects the group to return.
 	 *
 	 * \return a pointer to the requested raw buffer.
 	 */

@@ -383,6 +383,12 @@ void Film::ParseOutputs(const Properties &props) {
 				filmOutputs.Add(FilmOutputs::NOISE, fileName);
 				break;
 			}
+			case FilmOutputs::USER_IMPORTANCE: {
+				if (!initialized)
+					AddChannel(Film::USER_IMPORTANCE);
+				filmOutputs.Add(FilmOutputs::USER_IMPORTANCE, fileName);				
+				break;
+			}
 			default:
 				throw runtime_error("Unknown type in film output: " + type);
 		}

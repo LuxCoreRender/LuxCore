@@ -193,10 +193,10 @@ typedef struct {
 	SamplerType type;
 	union {
 		struct {
-			float adaptiveStrength;
+			float adaptiveStrength, adaptiveUserImportanceWeight;
 		} random;
 		struct {
-			float adaptiveStrength;
+			float adaptiveStrength, adaptiveUserImportanceWeight;
 		} sobol;
 		struct {
 			float largeMutationProbability, imageMutationRange;

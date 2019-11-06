@@ -86,10 +86,10 @@ SamplerSharedData *SobolSamplerSharedData::FromProperties(const Properties &cfg,
 
 SobolSampler::SobolSampler(RandomGenerator *rnd, Film *flm,
 		const FilmSampleSplatter *flmSplatter, const bool imgSamplesEnable,
-		const float adaptiveStr,
+		const float adaptiveStr, const float adaptiveUserImpWeight,
 		SobolSamplerSharedData *samplerSharedData) : Sampler(rnd, flm, flmSplatter, imgSamplesEnable),
 		sharedData(samplerSharedData), sobolSequence(), adaptiveStrength(adaptiveStr),
-		rngGenerator() {
+		adaptiveUserImportanceWeight(adaptiveUserImpWeight), rngGenerator() {
 }
 
 SobolSampler::~SobolSampler() {
@@ -126,10 +126,27 @@ void SobolSampler::InitNewSample() {
 			const Film *film = sharedData->engineFilm;
 			if ((adaptiveStrength > 0.f) && film->HasChannel(Film::NOISE)) {
 				// Pixels are sampled in accordance with how far from convergence they are
-				// The floor for the pixel importance is given by the adaptiveness strength
-				const float noise = Max(*(film->channel_NOISE->GetPixel(pixelX, pixelY)), 1.f - adaptiveStrength);
+				const float noise = *(film->channel_NOISE->GetPixel(pixelX, pixelY));
 
-				if (rndGen->floatValue() > noise) {
+				// Factor user driven importance sampling too
+				float threshold;
+				if (film->HasChannel(Film::USER_IMPORTANCE)) {
+					const float userImportance = *(film->channel_USER_IMPORTANCE->GetPixel(pixelX, pixelY));
+
+					// Noise is initialized to INFINITY at start
+					if (isinf(noise))
+						threshold = userImportance;
+					else
+						threshold = (userImportance > 0.f) ? Lerp(adaptiveUserImportanceWeight, noise, userImportance) : 0.f;
+					
+					threshold = 1.f - threshold;
+				} else
+					threshold = noise;
+
+				// The floor for the pixel importance is given by the adaptiveness strength
+				threshold = Max(threshold, 1.f - adaptiveStrength);
+
+				if (rndGen->floatValue() > threshold) {
 
 					// Workaround for preserving random number distribution behavior
 					rngGenerator.floatValue();
@@ -212,7 +229,8 @@ void SobolSampler::NextSample(const vector<SampleResult> &sampleResults) {
 
 Properties SobolSampler::ToProperties() const {
 	return Sampler::ToProperties() <<
-			Property("sampler.sobol.adaptive.strength")(adaptiveStrength);
+			Property("sampler.sobol.adaptive.strength")(adaptiveStrength) <<
+			Property("sampler.sobol.adaptive.userimportanceweight")(adaptiveUserImportanceWeight);
 }
 
 //------------------------------------------------------------------------------
@@ -223,17 +241,20 @@ Properties SobolSampler::ToProperties(const Properties &cfg) {
 	return Properties() <<
 			cfg.Get(GetDefaultProps().Get("sampler.type")) <<
 			cfg.Get(GetDefaultProps().Get("sampler.imagesamples.enable")) <<
-			cfg.Get(GetDefaultProps().Get("sampler.sobol.adaptive.strength"));
+			cfg.Get(GetDefaultProps().Get("sampler.sobol.adaptive.strength")) <<
+			cfg.Get(GetDefaultProps().Get("sampler.sobol.adaptive.userimportanceweight"));
 }
 
 Sampler *SobolSampler::FromProperties(const Properties &cfg, RandomGenerator *rndGen,
 		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData) {
 	const bool imageSamplesEnable = cfg.Get(GetDefaultProps().Get("sampler.imagesamples.enable")).Get<bool>();
 
-	const float str = Clamp(cfg.Get(GetDefaultProps().Get("sampler.sobol.adaptive.strength")).Get<float>(), 0.f, .95f);
+	const float adaptiveStrength = Clamp(cfg.Get(GetDefaultProps().Get("sampler.sobol.adaptive.strength")).Get<float>(), 0.f, .95f);
+	const float adaptiveUserImportanceWeight = cfg.Get(GetDefaultProps().Get("sampler.sobol.adaptive.userimportanceweight")).Get<float>();
 
 	return new SobolSampler(rndGen, film, flmSplatter, imageSamplesEnable,
-			str, (SobolSamplerSharedData *)sharedData);
+			adaptiveStrength, adaptiveUserImportanceWeight,
+			(SobolSamplerSharedData *)sharedData);
 }
 
 slg::ocl::Sampler *SobolSampler::FromPropertiesOCL(const Properties &cfg) {
@@ -241,6 +262,7 @@ slg::ocl::Sampler *SobolSampler::FromPropertiesOCL(const Properties &cfg) {
 
 	oclSampler->type = slg::ocl::SOBOL;
 	oclSampler->sobol.adaptiveStrength = Clamp(cfg.Get(GetDefaultProps().Get("sampler.sobol.adaptive.strength")).Get<float>(), 0.f, .95f);
+	oclSampler->sobol.adaptiveUserImportanceWeight = cfg.Get(GetDefaultProps().Get("sampler.sobol.adaptive.userimportanceweight")).Get<float>();
 
 	return oclSampler;
 }
@@ -260,7 +282,8 @@ const Properties &SobolSampler::GetDefaultProps() {
 	static Properties props = Properties() <<
 			Sampler::GetDefaultProps() <<
 			Property("sampler.type")(GetObjectTag()) <<
-			Property("sampler.sobol.adaptive.strength")(.95f);
+			Property("sampler.sobol.adaptive.strength")(.95f) <<
+			Property("sampler.sobol.adaptive.userimportanceweight")(.75f);
 
 	return props;
 }

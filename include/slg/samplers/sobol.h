@@ -109,7 +109,7 @@ private:
 
 	SobolSamplerSharedData *sharedData;
 	SobolSequence sobolSequence;
-	float adaptiveStrength;
+	float adaptiveStrength, adaptiveUserImportanceWeight;
 
 	u_int pixelIndexBase, pixelIndexOffset, pass;
 	luxrays::TauswortheRandomGenerator rngGenerator;
