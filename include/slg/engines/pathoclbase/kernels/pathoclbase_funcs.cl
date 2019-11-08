@@ -308,11 +308,11 @@ OPENCL_FORCE_NOT_INLINE void DirectHitInfiniteLight(
 			continue;
 
 		float directPdfW;
-		const float3 lightRadiance = EnvLight_GetRadiance(light, bsdf,
+		const float3 envRadiance = EnvLight_GetRadiance(light, bsdf,
 				-VLOAD3F(&ray->d.x), &directPdfW
 				LIGHTS_PARAM);
 
-		if (!Spectrum_IsBlack(lightRadiance)) {
+		if (!Spectrum_IsBlack(envRadiance)) {
 			float weight;
 			if (!(pathInfo->lastBSDFEvent & SPECULAR)) {
 				const float lightPickProb = LightStrategy_SampleLightPdf(lightsDistribution,
@@ -329,8 +329,8 @@ OPENCL_FORCE_NOT_INLINE void DirectHitInfiniteLight(
 				weight = PowerHeuristic(pathInfo->lastBSDFPdfW, directPdfW * lightPickProb);
 			} else
 				weight = 1.f;
-
-			SampleResult_AddEmission(sampleResult, light->lightID, throughput, weight * lightRadiance);
+			
+			SampleResult_AddEmission(sampleResult, light->lightID, throughput, weight * envRadiance);
 		}
 	}
 }
