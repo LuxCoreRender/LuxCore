@@ -54,8 +54,6 @@ TriangleMesh::TriangleMesh(const u_int meshVertCount,
 	vertices = meshVertices;
 	tris = meshTris;
 
-	cachedBBoxValid = false;
-	
 	Preprocess();
 }
 
@@ -64,6 +62,8 @@ void TriangleMesh::Preprocess() {
 	area = 0.f;
 	for (u_int i = 0; i < triCount; ++i)
 		area += tris[i].Area(vertices);
+
+	cachedBBoxValid = false;
 }
 
 BBox TriangleMesh::GetBBox() const {
@@ -83,7 +83,7 @@ void TriangleMesh::ApplyTransform(const Transform &trans) {
 	for (u_int i = 0; i < vertCount; ++i)
 		vertices[i] *= trans;
 
-	cachedBBoxValid = false;
+	Preprocess();
 }
 
 TriangleMesh *TriangleMesh::Merge(

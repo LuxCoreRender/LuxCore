@@ -1275,7 +1275,7 @@ OPENCL_FORCE_INLINE float Light_GetAvgPassThroughTransparency(
 		
 		return mats[materialIndex].avgPassThroughTransparency;
 	} else
-		return 0.f;
+		return 1.f;
 #else
 	return 1.f;
 #endif
