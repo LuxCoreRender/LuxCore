@@ -71,6 +71,10 @@ void LuxCoreApp::GLFW_MousePositionCallBack(GLFWwindow *window, double x, double
 					app->session->EndSceneEdit();
 					break;
 				}
+				case TOOL_USER_IMPORTANCE_PAINT: {
+					app->userImportancePaintWindow.Paint(true);
+					break;
+				}
 				default:
 					break;
 			}
@@ -100,6 +104,10 @@ void LuxCoreApp::GLFW_MousePositionCallBack(GLFWwindow *window, double x, double
 					}
 
 					app->session->EndSceneEdit();
+					break;
+				}
+				case TOOL_USER_IMPORTANCE_PAINT: {
+					app->userImportancePaintWindow.Paint(false);
 					break;
 				}
 				default:

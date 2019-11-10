@@ -73,6 +73,7 @@ void Film::FreeChannels() {
 	delete channel_ALBEDO;
 	delete channel_AVG_SHADING_NORMAL;
 	delete channel_NOISE;
+	delete channel_USER_IMPORTANCE;
 }
 
 void Film::AddChannel(const FilmChannelType type, const Properties *prop) {
@@ -181,12 +182,14 @@ u_int Film::GetChannelCount(const FilmChannelType type) const {
 			return channel_AVG_SHADING_NORMAL ? 1 : 0;
 		case NOISE:
 			return channel_NOISE ? 1 : 0;
+		case USER_IMPORTANCE:
+			return channel_USER_IMPORTANCE ? 1 : 0;
 		default:
 			throw runtime_error("Unknown FilmChannelType in Film::GetChannelCount(): " + ToString(type));
 	}
 }
 
-template<> const float *Film::GetChannel<float>(const FilmChannelType type,
+template<> float *Film::GetChannel<float>(const FilmChannelType type,
 		const u_int index, const bool executeImagePipeline) {
 	if (!HasChannel(type))
 		throw runtime_error("Film channel not defined in Film::GetChannel<float>(): " + ToString(type));
@@ -254,12 +257,14 @@ template<> const float *Film::GetChannel<float>(const FilmChannelType type,
 			return channel_AVG_SHADING_NORMAL->GetPixels();
 		case NOISE:
 			return channel_NOISE->GetPixels();
+		case USER_IMPORTANCE:
+			return channel_USER_IMPORTANCE->GetPixels();
 		default:
 			throw runtime_error("Unknown FilmChannelType in Film::GetChannel<float>(): " + ToString(type));
 	}
 }
 
-template<> const u_int *Film::GetChannel<u_int>(const FilmChannelType type,
+template<> u_int *Film::GetChannel<u_int>(const FilmChannelType type,
 		const u_int index, const bool executeImagePipeline) {
 	if (!HasChannel(type))
 		throw runtime_error("Film channel not defined in Film::GetChannel<u_int>(): " + ToString(type));
@@ -442,6 +447,8 @@ Film::FilmChannelType Film::String2FilmChannelType(const std::string &type) {
 		return AVG_SHADING_NORMAL;
 	else if (type == "NOISE")
 		return NOISE;
+	else if (type == "USER_IMPORTANCE")
+		return USER_IMPORTANCE;
 	else
 		throw runtime_error("Unknown film output type in Film::String2FilmChannelType(): " + type);
 }
@@ -508,6 +515,8 @@ const std::string Film::FilmChannelType2String(const Film::FilmChannelType type)
 			return "AVG_SHADING_NORMAL";
 		case Film::NOISE:
 			return "NOISE";
+		case Film::USER_IMPORTANCE:
+			return "USER_IMPORTANCE";
 		default:
 			throw runtime_error("Unknown film output type in Film::FilmChannelType2String(): " + ToString(type));
 	}

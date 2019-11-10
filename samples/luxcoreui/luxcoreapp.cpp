@@ -45,15 +45,16 @@ LuxCoreApp::LuxCoreApp(luxcore::RenderConfig *renderConfig) :
 #endif
 		pixelFilterWindow(this), renderEngineWindow(this),
 		samplerWindow(this), haltConditionsWindow(this),
-		statsWindow(this), logWindow(this), helpWindow(this) {
+		statsWindow(this), logWindow(this), helpWindow(this),
+		userImportancePaintWindow(this) {
 	config = renderConfig;
 
 	session = NULL;
 	window = NULL;
 
-	selectionBuffer = NULL;
-	selectionFilmWidth = 0xffffffffu;
-	selectionFilmHeight = 0xffffffffu;
+	renderImageBuffer = NULL;
+	renderImageWidth = 0xffffffffu;
+	renderImageHeight = 0xffffffffu;
 			
 	currentTool = TOOL_CAMERA_EDIT;
 
@@ -93,7 +94,7 @@ LuxCoreApp::LuxCoreApp(luxcore::RenderConfig *renderConfig) :
 
 LuxCoreApp::~LuxCoreApp() {
 	currentLogWindow = NULL;
-	delete[] selectionBuffer;
+	delete[] renderImageBuffer;
 
 	delete session;
 	delete config;
@@ -326,6 +327,8 @@ void LuxCoreApp::StartRendering(RenderState *startState, Film *startFilm) {
 		currentTool = TOOL_OBJECT_SELECTION;
 	else if (toolTypeStr == "IMAGE_VIEW")
 		currentTool = TOOL_IMAGE_VIEW;
+	else if (toolTypeStr == "USER_IMPORTANCE_PAINT")
+		currentTool = TOOL_USER_IMPORTANCE_PAINT;
 	else
 		currentTool = TOOL_CAMERA_EDIT;
 
@@ -355,6 +358,9 @@ void LuxCoreApp::StartRendering(RenderState *startState, Film *startFilm) {
 		session->Start();
 
 		UpdateMoveStep();
+		
+		if (currentTool == TOOL_USER_IMPORTANCE_PAINT)
+			userImportancePaintWindow.Init();
 	} catch(exception &ex) {
 		LA_LOG("RenderSession starting error: " << endl << ex.what());
 

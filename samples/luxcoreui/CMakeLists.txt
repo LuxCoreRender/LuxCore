@@ -58,6 +58,7 @@ set(LUXCOREUI_SRCS
 	samplerwindow.cpp
 	haltconditionswindow.cpp
 	statswindow.cpp
+	importancewindow.cpp
 	imgui_impl_glfw.cpp
 	resources/luxlogo_bg.cpp
 	deps/imgui-1.46/imgui.cpp

@@ -492,7 +492,8 @@ void PathOCLBaseOCLRenderThread::InitSamplerSharedDataBuffer() {
 		slg::ocl::RandomSamplerSharedData rssd;
 		rssd.pixelBucketIndex = 0; // Initialized by OpenCL kernel
 		rssd.adaptiveStrength = renderEngine->oclSampler->random.adaptiveStrength;
-		
+		rssd.adaptiveUserImportanceWeight = renderEngine->oclSampler->random.adaptiveUserImportanceWeight;
+
 		cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
 		oclQueue.enqueueWriteBuffer(*samplerSharedDataBuff, CL_TRUE, 0, size, &rssd);
 	} else if (renderEngine->oclSampler->type == slg::ocl::SOBOL) {
@@ -504,7 +505,8 @@ void PathOCLBaseOCLRenderThread::InitSamplerSharedDataBuffer() {
 		sssd->seedBase = renderEngine->seedBase;
 		sssd->pixelBucketIndex = 0; // Initialized by OpenCL kernel
 		sssd->adaptiveStrength = renderEngine->oclSampler->sobol.adaptiveStrength;
-		
+		sssd->adaptiveUserImportanceWeight = renderEngine->oclSampler->sobol.adaptiveUserImportanceWeight;
+
 		// Initialize all pass values. The pass buffer is attached at the
 		// end of slg::ocl::SobolSamplerSharedData
 		u_int *passBuffer = (u_int *)(buffer + sizeof(slg::ocl::SobolSamplerSharedData));

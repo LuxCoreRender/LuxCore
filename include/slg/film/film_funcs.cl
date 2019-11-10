@@ -579,7 +579,12 @@ Error: unknown image filter !!!
 #else
 #define KERNEL_ARGS_FILM_CHANNELS_NOISE
 #endif
-
+#if defined(PARAM_FILM_CHANNELS_HAS_USER_IMPORTANCE)
+#define KERNEL_ARGS_FILM_CHANNELS_USER_IMPORTANCE \
+		, __global float *filmUserImportance
+#else
+#define KERNEL_ARGS_FILM_CHANNELS_USER_IMPORTANCE
+#endif
 //------------------------------------------------------------------------------
 
 #if defined(PARAM_FILM_DENOISER)
@@ -715,6 +720,7 @@ Error: unknown image filter !!!
 		KERNEL_ARGS_FILM_CHANNELS_ALBEDO \
 		KERNEL_ARGS_FILM_CHANNELS_AVG_SHADING_NORMAL \
 		KERNEL_ARGS_FILM_CHANNELS_NOISE \
+		KERNEL_ARGS_FILM_CHANNELS_USER_IMPORTANCE \
 		KERNEL_ARGS_FILM_DENOISER
 
 //------------------------------------------------------------------------------
@@ -907,6 +913,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Film_Clear(
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
 	filmNoise[gid] = INFINITY;
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_USER_IMPORTANCE)
+	filmNoise[gid] = 1.f;
 #endif
 
 	//--------------------------------------------------------------------------

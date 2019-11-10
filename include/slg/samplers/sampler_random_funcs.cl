@@ -34,14 +34,13 @@ OPENCL_FORCE_NOT_INLINE void Sampler_InitNewSample(__constant GPUTaskConfigurati
 #if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
 		__global float *filmNoise,
 #endif
+#if defined(PARAM_FILM_CHANNELS_HAS_USER_IMPORTANCE)
+		__global float *filmUserImportance,
+#endif
 		const uint filmWidth, const uint filmHeight,
 		const uint filmSubRegion0, const uint filmSubRegion1,
 		const uint filmSubRegion2, const uint filmSubRegion3) {
 	const uint filmRegionPixelCount = (filmSubRegion1 - filmSubRegion0 + 1) * (filmSubRegion3 - filmSubRegion2 + 1);
-
-#if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
-	const float adaptiveStrength = samplerSharedData->adaptiveStrength;
-#endif
 
 	// Update pixelIndexOffset
 
@@ -77,12 +76,30 @@ OPENCL_FORCE_NOT_INLINE void Sampler_InitNewSample(__constant GPUTaskConfigurati
 		const uint pixelY = filmSubRegion2 + (pixelIndex / subRegionWidth);
 
 #if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
+		const float adaptiveStrength = samplerSharedData->adaptiveStrength;
+
 		if (adaptiveStrength > 0.f) {
 			// Pixels are sampled in accordance with how far from convergence they are
-			// The floor for the pixel importance is given by the adaptiveness strength
-			const float convergence = fmax(filmNoise[pixelX + pixelY * filmWidth], 1.f - adaptiveStrength);
+			const float noise = filmNoise[pixelX + pixelY * filmWidth];
 
-			if (Rnd_FloatValue(seed) > convergence) {
+			// Factor user driven importance sampling too
+			float threshold;
+#if defined(PARAM_FILM_CHANNELS_HAS_USER_IMPORTANCE)
+			const float userImportance = filmUserImportance[pixelX + pixelY * filmWidth];
+
+			// Noise is initialized to INFINITY at start
+			if (isinf(noise))
+				threshold = userImportance;
+			else
+				threshold = (userImportance > 0.f) ? Lerp(samplerSharedData->adaptiveUserImportanceWeight, noise, userImportance) : 0.f;
+#else
+			threshold = noise;
+#endif
+
+			// The floor for the pixel importance is given by the adaptiveness strength
+			threshold = fmax(threshold, 1.f - adaptiveStrength);
+
+			if (Rnd_FloatValue(seed) > threshold) {
 				// Skip this pixel and try the next one
 				continue;
 			}
@@ -160,12 +177,18 @@ OPENCL_FORCE_NOT_INLINE void Sampler_NextSample(
 #if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
 		__global float *filmNoise,
 #endif
+#if defined(PARAM_FILM_CHANNELS_HAS_USER_IMPORTANCE)
+		__global float *filmUserImportance,
+#endif
 		const uint filmWidth, const uint filmHeight,
 		const uint filmSubRegion0, const uint filmSubRegion1,
 		const uint filmSubRegion2, const uint filmSubRegion3) {
 	Sampler_InitNewSample(taskConfig, seed, samplerSharedData, sample, sampleData,
 #if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
 			filmNoise,
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_USER_IMPORTANCE)
+			filmUserImportance,
 #endif
 			filmWidth, filmHeight,
 			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3);
@@ -178,6 +201,9 @@ OPENCL_FORCE_NOT_INLINE bool Sampler_Init(
 #if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
 		__global float *filmNoise,
 #endif
+#if defined(PARAM_FILM_CHANNELS_HAS_USER_IMPORTANCE)
+		__global float *filmUserImportance,
+#endif
 		const uint filmWidth, const uint filmHeight,
 		const uint filmSubRegion0, const uint filmSubRegion1,
 		const uint filmSubRegion2, const uint filmSubRegion3) {
@@ -188,6 +214,9 @@ OPENCL_FORCE_NOT_INLINE bool Sampler_Init(
 	Sampler_NextSample(taskConfig, seed, samplerSharedData, sample, sampleData,
 #if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
 			filmNoise,
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_USER_IMPORTANCE)
+			filmUserImportance,
 #endif
 			filmWidth, filmHeight,
 			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3);

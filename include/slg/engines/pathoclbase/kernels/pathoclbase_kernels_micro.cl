@@ -1034,6 +1034,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_NE
 #if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
 			filmNoise,
 #endif
+#if defined(PARAM_FILM_CHANNELS_HAS_USER_IMPORTANCE)
+			filmUserImportance,
+#endif
 			filmWidth, filmHeight,
 			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3);
 

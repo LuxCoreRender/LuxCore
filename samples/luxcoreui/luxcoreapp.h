@@ -39,6 +39,7 @@
 #include "filmchannelswindow.h"
 #include "filmradiancegroupswindow.h"
 #include "haltconditionswindow.h"
+#include "importancewindow.h"
 
 #define LA_ARRAYSIZE(_ARR)	((int)(sizeof(_ARR) / sizeof(*_ARR)))
 
@@ -76,12 +77,14 @@ public:
 	friend class SamplerWindow;
 	friend class HaltConditionsWindow;
 	friend class StatsWindow;
+	friend class UserImportancePaintWindow;
 
 private:
 	typedef enum {
 		TOOL_CAMERA_EDIT,
 		TOOL_OBJECT_SELECTION,
-		TOOL_IMAGE_VIEW
+		TOOL_IMAGE_VIEW,
+		TOOL_USER_IMPORTANCE_PAINT
 	} AppToolType;
 
 	static void ToolCameraEditKeys(GLFWwindow *window, int key, int scanCode, int action, int mods);
@@ -146,6 +149,7 @@ private:
 	StatsWindow statsWindow;
 	LogWindow logWindow;
 	HelpWindow helpWindow;
+	UserImportancePaintWindow userImportancePaintWindow;
 
 	luxcore::RenderConfig *config;
 
@@ -155,8 +159,8 @@ private:
 	GLenum renderFrameBufferTexMinFilter, renderFrameBufferTexMagFilter;
 	GLuint backgroundLogoTexID;
 
-	unsigned int selectionFilmWidth, selectionFilmHeight;
-	float *selectionBuffer;
+	unsigned int renderImageWidth, renderImageHeight;
+	float *renderImageBuffer;
 	
 	GLFWwindow *window;
 
