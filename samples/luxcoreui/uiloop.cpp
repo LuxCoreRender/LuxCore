@@ -129,9 +129,11 @@ void LuxCoreApp::RefreshRenderingTexture() {
 			pixels = renderImageBuffer;
 		}
 	} else if (currentTool == TOOL_USER_IMPORTANCE_PAINT) {
-		userImportancePaintWindow.BlendImportanceMap(pixels, renderImageBuffer);
+		if (userImportancePaintWindow.showOverlay) {
+			userImportancePaintWindow.BlendImportanceMap(pixels, renderImageBuffer);
 	
-		pixels = renderImageBuffer;
+			pixels = renderImageBuffer;
+		}
 	}
 
 	glBindTexture(GL_TEXTURE_2D, renderFrameBufferTexID);

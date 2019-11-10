@@ -39,7 +39,23 @@ void UserImportancePaintWindow::Draw() {
 	if (ImGui::Begin(windowTitle.c_str(), &opened)) {
 		ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.f);
 
-		ImGui::TextColored(LuxCoreApp::colLabel, "Test 123");
+		ImGui::Checkbox("Show map overlay", &showOverlay);
+
+		if (ImGui::SliderInt("Pen radius", &paintPenRadius, 1, 128))
+			paintPenRadius2 = paintPenRadius * paintPenRadius;
+	
+		if (ImGui::Button("Fill map with 1.0"))
+			fill(importanceMap.begin(), importanceMap.end(), 1.f);
+		if (ImGui::Button("Fill map with 0.5"))
+			fill(importanceMap.begin(), importanceMap.end(), .5f);
+		if (ImGui::Button("Fill map with 0.0"))
+			fill(importanceMap.begin(), importanceMap.end(), 0.f);
+
+		if (ImGui::Button("Set map"))
+			app->session->GetFilm().UpdateOutput<float>(Film::OUTPUT_USER_IMPORTANCE, &importanceMap[0], 0, false);
+		ImGui::SameLine();
+		if (ImGui::Button("Get map"))
+			app->session->GetFilm().GetOutput(Film::OUTPUT_USER_IMPORTANCE, &importanceMap[0], 0, false);
 
 		ImGui::PopStyleVar();
 	}
@@ -52,10 +68,12 @@ void UserImportancePaintWindow::Init() {
 		const unsigned int pixelsCount = film.GetWidth() * film.GetHeight();
 
 		importanceMap.resize(pixelsCount);
-		fill(importanceMap.begin(), importanceMap.end(), .5f);
+		fill(importanceMap.begin(), importanceMap.end(), 1.f);
 		
 		paintPenRadius = 32;
 		paintPenRadius2 = paintPenRadius * paintPenRadius;
+		
+		showOverlay = true;
 
 		Open();
 	} else

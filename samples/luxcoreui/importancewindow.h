@@ -38,6 +38,8 @@ public:
 	
 	virtual void Draw();
 
+	bool showOverlay;
+
 private:
 	std::vector<float> importanceMap;
 	int paintPenRadius, paintPenRadius2;

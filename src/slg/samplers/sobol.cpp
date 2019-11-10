@@ -138,8 +138,6 @@ void SobolSampler::InitNewSample() {
 						threshold = userImportance;
 					else
 						threshold = (userImportance > 0.f) ? Lerp(adaptiveUserImportanceWeight, noise, userImportance) : 0.f;
-					
-					threshold = 1.f - threshold;
 				} else
 					threshold = noise;
 
