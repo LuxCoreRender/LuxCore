@@ -133,13 +133,13 @@ typedef TilePathSample Sample;
 
 typedef struct {
 	unsigned int pixelBucketIndex;
-	float adaptiveStrength;
+	float adaptiveStrength, adaptiveUserImportanceWeight;
 } RandomSamplerSharedData;
 
 typedef struct {
 	unsigned int seedBase;
 	unsigned int pixelBucketIndex;
-	float adaptiveStrength;
+	float adaptiveStrength, adaptiveUserImportanceWeight;
 	// Plus the a pass field for each pixel
 	//
 #if defined(SLG_OPENCL_KERNEL)

@@ -114,6 +114,7 @@ protected:
 		cl::Buffer *channel_ALBEDO_Buff;
 		cl::Buffer *channel_AVG_SHADING_NORMAL_Buff;
 		cl::Buffer *channel_NOISE_Buff;
+		cl::Buffer *channel_USER_IMPORTANCE_Buff;
 		
 		// Denoiser sample accumulator buffers
 		cl::Buffer *denoiser_NbOfSamplesImage_Buff;
