@@ -64,7 +64,7 @@ class RandomSampler : public Sampler {
 public:
 	RandomSampler(luxrays::RandomGenerator *rnd, Film *flm,
 			const FilmSampleSplatter *flmSplatter, const bool imgSamplesEnable,
-			const float adaptiveStrength,
+			const float adaptiveStrength, const float adaptiveUserImpWeight,
 			RandomSamplerSharedData *samplerSharedData);
 	virtual ~RandomSampler() { }
 
@@ -95,7 +95,7 @@ private:
 	static const luxrays::Properties &GetDefaultProps();
 	
 	RandomSamplerSharedData *sharedData;
-	float adaptiveStrength;
+	float adaptiveStrength, adaptiveUserImportanceWeight;
 
 	float sample0, sample1;
 	u_int pixelIndexBase, pixelIndexOffset;
