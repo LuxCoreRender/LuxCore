@@ -125,6 +125,10 @@ ExtTriangleMesh::ExtTriangleMesh(const u_int meshVertCount, const u_int meshTriC
 		Point *meshVertices, Triangle *meshTris, Normal *meshNormals,
 		UV *mUVs, Spectrum *mCols, float *mAlphas) :
 		TriangleMesh(meshVertCount, meshTriCount, meshVertices, meshTris) {
+	fill(uvs.begin(), uvs.end(), nullptr);
+	fill(cols.begin(), cols.end(), nullptr);
+	fill(alphas.begin(), alphas.end(), nullptr);
+
 	array<UV *, EXTMESH_MAX_DATA_COUNT> meshUVs;
 	fill(meshUVs.begin(), meshUVs.end(), nullptr);
 	if (mUVs)
@@ -140,8 +144,7 @@ ExtTriangleMesh::ExtTriangleMesh(const u_int meshVertCount, const u_int meshTriC
 	if (mAlphas)
 		meshAlphas[0] = mAlphas;
 
-	Init(meshVertCount, meshTriCount, meshVertices, meshTris, meshNormals,
-			&meshUVs, &meshCols, &meshAlphas);	
+	Init(meshNormals, &meshUVs, &meshCols, &meshAlphas);	
 }
 
 ExtTriangleMesh::ExtTriangleMesh(const u_int meshVertCount, const u_int meshTriCount,
@@ -150,12 +153,14 @@ ExtTriangleMesh::ExtTriangleMesh(const u_int meshVertCount, const u_int meshTriC
 		array<Spectrum *, EXTMESH_MAX_DATA_COUNT> *meshCols,
 		array<float *, EXTMESH_MAX_DATA_COUNT> *meshAlphas) :
 		TriangleMesh(meshVertCount, meshTriCount, meshVertices, meshTris) {
-	Init(meshVertCount, meshTriCount, meshVertices, meshTris, meshNormals,
-			meshUVs, meshCols, meshAlphas);
+	fill(uvs.begin(), uvs.end(), nullptr);
+	fill(cols.begin(), cols.end(), nullptr);
+	fill(alphas.begin(), alphas.end(), nullptr);
+
+	Init(meshNormals, meshUVs, meshCols, meshAlphas);
 }
 
-void ExtTriangleMesh::Init(const u_int meshVertCount, const u_int meshTriCount,
-		Point *meshVertices, Triangle *meshTris, Normal *meshNormals,
+void ExtTriangleMesh::Init(Normal *meshNormals,
 		array<UV *, EXTMESH_MAX_DATA_COUNT> *meshUVs,
 		array<Spectrum *, EXTMESH_MAX_DATA_COUNT> *meshCols,
 		array<float *, EXTMESH_MAX_DATA_COUNT> *meshAlphas) {

@@ -242,8 +242,7 @@ private:
 	ExtTriangleMesh() {
 	}
 
-	void Init(const u_int meshVertCount, const u_int meshTriCount,
-			Point *meshVertices, Triangle *meshTris, Normal *meshNormals,
+	void Init(Normal *meshNormals,
 			std::array<UV *, EXTMESH_MAX_DATA_COUNT> *meshUVs,
 			std::array<Spectrum *, EXTMESH_MAX_DATA_COUNT> *meshCols,
 			std::array<float *, EXTMESH_MAX_DATA_COUNT> *meshAlphas);
@@ -263,13 +262,20 @@ private:
 			for (u_int i = 0; i < vertCount; ++i)
 				ar & normals[i];
 
-		ar & uvs;
-		ar & cols;
 		for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
-			const bool hasData = HasAlphas(i);
-			ar & hasData;
+			const bool hasUVs = HasUVs(i);
+			ar & hasUVs;
+			if (hasUVs)
+				ar & boost::serialization::make_array<UV>(uvs[i], vertCount);
 
-			if (hasData)
+			const bool hasColors = HasColors(i);
+			ar & hasColors;
+			if (hasColors)
+				ar & boost::serialization::make_array<Spectrum>(cols[i], vertCount);
+
+			const bool hasAlphas = HasAlphas(i);
+			ar & hasAlphas;
+			if (hasAlphas)
 				ar & boost::serialization::make_array<float>(alphas[i], vertCount);
 		}
 	}
@@ -288,15 +294,29 @@ private:
 			normals = nullptr;
 		triNormals = new Normal[triCount];
 
-		ar & uvs;
-		ar & cols;
 		for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
-			bool hasData;
-			ar & hasData;
+			bool hasUVs;
+			ar & hasUVs;
+			if (hasUVs) {
+				uvs[i] = new UV[vertCount];
+				ar & boost::serialization::make_array<UV>(uvs[i], vertCount);
+			} else
+				uvs[i] = nullptr;
 
-			if (hasData)
+			bool hasColors;
+			ar & hasColors;
+			if (hasColors) {
+				cols[i] = new Spectrum[vertCount];
+				ar & boost::serialization::make_array<Spectrum>(cols[i], vertCount);
+			} else
+				cols[i] = nullptr;
+
+			bool hasAlphas;
+			ar & hasAlphas;
+			if (hasAlphas) {
+				alphas[i] = new float[vertCount];
 				ar & boost::serialization::make_array<float>(alphas[i], vertCount);
-			else
+			} else
 				alphas[i] = nullptr;
 		}
 
@@ -502,9 +522,9 @@ private:
 
 BOOST_SERIALIZATION_ASSUME_ABSTRACT(luxrays::ExtMesh)
 
-BOOST_CLASS_VERSION(luxrays::ExtTriangleMesh, 2)
-BOOST_CLASS_VERSION(luxrays::ExtInstanceTriangleMesh, 2)
-BOOST_CLASS_VERSION(luxrays::ExtMotionTriangleMesh, 2)
+BOOST_CLASS_VERSION(luxrays::ExtTriangleMesh, 3)
+BOOST_CLASS_VERSION(luxrays::ExtInstanceTriangleMesh, 3)
+BOOST_CLASS_VERSION(luxrays::ExtMotionTriangleMesh, 3)
 
 BOOST_CLASS_EXPORT_KEY(luxrays::ExtTriangleMesh)
 BOOST_CLASS_EXPORT_KEY(luxrays::ExtInstanceTriangleMesh)
