@@ -277,8 +277,8 @@ ExtTriangleMesh *ExtTriangleMesh::LoadPly(const string &fileName) {
 
 		// Check if the file includes color informations
 		plyNbColors[i] = ply_set_read_cb(plyfile, "vertex", ("red" + suffix).c_str(), ColorCB, &cols[i], 0);
-		ply_set_read_cb(plyfile, "vertex", ("green" + suffix).c_str(), ColorCB, &cols, 1);
-		ply_set_read_cb(plyfile, "vertex", ("blue" + suffix).c_str(), ColorCB, &cols, 2);
+		ply_set_read_cb(plyfile, "vertex", ("green" + suffix).c_str(), ColorCB, &cols[i], 1);
+		ply_set_read_cb(plyfile, "vertex", ("blue" + suffix).c_str(), ColorCB, &cols[i], 2);
 		if ((plyNbColors[i] > 0) && (plyNbColors[i] != plyNbVerts)) {
 			stringstream ss;
 			ss << "Wrong count of colors #" << i << " in '" << fileName << "'";
@@ -332,7 +332,7 @@ ExtTriangleMesh *ExtTriangleMesh::LoadPly(const string &fileName) {
 
 		throw runtime_error(ss.str());
 	}
-
+	
 	ply_close(plyfile);
 
 	// Copy triangle indices vector

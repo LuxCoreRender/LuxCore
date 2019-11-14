@@ -47,7 +47,7 @@ void ExtMesh::GetDifferentials(const Transform &local2World,
 	const u_int v0Index = tri.v[0];
 	const u_int v1Index = tri.v[1];
 	const u_int v2Index = tri.v[2];
-	
+
     UV uv0, uv1, uv2;
     if (HasUVs(dataIndex)) {
         uv0 = GetUV(v0Index, dataIndex);
