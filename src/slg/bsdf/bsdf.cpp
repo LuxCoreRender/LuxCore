@@ -81,20 +81,23 @@ void BSDF::Init(const bool fixedFromLight, const bool throughShadowTransparency,
 	hitPoint.geometryN = Normal(-ray.d);
 	hitPoint.interpolatedN = hitPoint.geometryN;
 	hitPoint.shadeN = hitPoint.geometryN;
-	CoordinateSystem(Vector(hitPoint.shadeN), &hitPoint.dpdu, &hitPoint.dpdv);
-	hitPoint.dndu = hitPoint.dndv = Normal(0.f, 0.f, 0.f);
 
 	hitPoint.intoObject = true;
 	hitPoint.interiorVolume = &volume;
 	hitPoint.exteriorVolume = &volume;
 
-	hitPoint.color = Spectrum(1.f);
-	hitPoint.alpha = 1.f;
-
 	triangleLightSource = NULL;
 
-	hitPoint.uv = UV(0.f, 0.f);
-	
+	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
+		hitPoint.uv[i] = UV(0.f, 0.f);
+		hitPoint.color[i] = Spectrum(1.f);
+		hitPoint.alpha[i] = 1.f;
+	}
+		
+	CoordinateSystem(Vector(hitPoint.shadeN), &hitPoint.dpdu, &hitPoint.dpdv);
+	hitPoint.dndu = Normal();
+	hitPoint.dndv = Normal();
+
 	hitPoint.objectID = NULL_INDEX;
 
 	// Build the local reference system

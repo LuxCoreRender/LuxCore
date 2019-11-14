@@ -53,12 +53,16 @@ bool PointinessShape::IsSameVertex(const ExtTriangleMesh *srcMesh,
 			srcMesh->GetShadeNormal(Transform::TRANS_IDENTITY, vertex2Index)) < 1.f - DEFAULT_EPSILON_STATIC))
 		return false;
 
-	if (srcMesh->HasColors() && (srcMesh->GetColor(vertex1Index) != 
-			srcMesh->GetColor(vertex2Index)))
+	if (srcMesh->HasUVs(0) && (srcMesh->GetUV(vertex1Index, 0) != 
+			srcMesh->GetUV(vertex2Index, 0)))
 		return false;
 
-	if (srcMesh->HasAlphas() && (srcMesh->GetAlpha(vertex1Index) != 
-			srcMesh->GetAlpha(vertex2Index)))
+	if (srcMesh->HasColors(0) && (srcMesh->GetColor(vertex1Index, 0) != 
+			srcMesh->GetColor(vertex2Index, 0)))
+		return false;
+
+	if (srcMesh->HasAlphas(0) && (srcMesh->GetAlpha(vertex1Index, 0) != 
+			srcMesh->GetAlpha(vertex2Index, 0)))
 		return false;
 
 	return true;
@@ -171,7 +175,7 @@ PointinessShape::PointinessShape(ExtTriangleMesh *srcMesh) {
 	for (u_int i = 0; i < originalVertCount; ++i) {
 		if (uniqueVertices[i] == i) {
 			// It is an unique vertex
-			curvature[i] *= (srcMesh->HasAlphas() ? srcMesh->GetAlpha(i) : 1.f) / vertexCounters[i];
+			curvature[i] *= (srcMesh->HasAlphas(0) ? srcMesh->GetAlpha(i, 0) : 1.f) / vertexCounters[i];
 		} else {
 			// It is a duplicate, just copy the already compute curvature
 			curvature[i] = curvature[uniqueVertices[i]];

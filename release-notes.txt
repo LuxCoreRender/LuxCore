@@ -30,6 +30,7 @@
 * Fixed triangle lights back face emission when using an IES or image map profile
 * Fixed OpenCL code for rotate triangle light when using IES or image map profile (BlendLuxCore iusse #310)
 * Fixed light tracing when using orthographic camera
+* Fixed a light intensity problem with OpenCL rendering when using a mix of materials with emission
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.

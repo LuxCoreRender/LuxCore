@@ -28,7 +28,7 @@ using namespace slg;
 
 float BilerpTexture::GetFloatValue(const HitPoint &hitPoint) const
 {
-	UV uv = hitPoint.uv;
+	UV uv = hitPoint.uv[0];
 	uv.u -= Floor2Int(uv.u);
 	uv.v -= Floor2Int(uv.v);
 	return Lerp(uv.u, Lerp(uv.v, t00->GetFloatValue(hitPoint), t01->GetFloatValue(hitPoint)),
@@ -37,7 +37,7 @@ float BilerpTexture::GetFloatValue(const HitPoint &hitPoint) const
 
 Spectrum BilerpTexture::GetSpectrumValue(const HitPoint &hitPoint) const
 {
-	UV uv = hitPoint.uv;
+	UV uv = hitPoint.uv[0];
 	uv.u -= Floor2Int(uv.u);
 	uv.v -= Floor2Int(uv.v);
 	return Lerp(uv.u, Lerp(uv.v, t00->GetSpectrumValue(hitPoint), t01->GetSpectrumValue(hitPoint)),

@@ -18,6 +18,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#define EXTMESH_MAX_DATA_COUNT 6
+
 typedef struct {
 	Transform appliedTrans;
 } TriangleMeshParam;

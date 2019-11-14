@@ -287,25 +287,25 @@ ExtTriangleMesh *SubdivShape::ApplySubdiv(ExtTriangleMesh *srcMesh, const u_int 
 
 	// UVs
     Osd::CpuVertexBuffer *uvsBuffer = nullptr;
-	if (srcMesh->HasUVs()) {
+	if (srcMesh->HasUVs(0)) {
         uvsBuffer = BuildBuffer<2>(
-				stencilTable, (const float *)srcMesh->GetUVs(),
+				stencilTable, (const float *)srcMesh->GetUVs(0),
 				vertsCount, totalVertsCount);
 	}
 
 	// Cols
     Osd::CpuVertexBuffer *colsBuffer = nullptr;
-	if (srcMesh->HasColors()) {
+	if (srcMesh->HasColors(0)) {
         colsBuffer = BuildBuffer<3>(
-				stencilTable, (const float *)srcMesh->GetColors(),
+				stencilTable, (const float *)srcMesh->GetColors(0),
 				vertsCount, totalVertsCount);
 	}
 
 	// Alphas
     Osd::CpuVertexBuffer *alphasBuffer = nullptr;
-	if (srcMesh->HasAlphas()) {
+	if (srcMesh->HasAlphas(0)) {
         alphasBuffer = BuildBuffer<1>(
-				stencilTable, (const float *)srcMesh->GetAlphas(),
+				stencilTable, (const float *)srcMesh->GetAlphas(0),
 				vertsCount, totalVertsCount);
 	}
 
@@ -352,7 +352,7 @@ ExtTriangleMesh *SubdivShape::ApplySubdiv(ExtTriangleMesh *srcMesh, const u_int 
 
 	// New UVs
 	UV *newUVs = nullptr;
-	if (srcMesh->HasUVs()) {
+	if (srcMesh->HasUVs(0)) {
 		newUVs = new UV[newVertsCount];
 
 		const float *refinedUVs = uvsBuffer->BindCpuBuffer() + 2 * vertsCount;
@@ -361,7 +361,7 @@ ExtTriangleMesh *SubdivShape::ApplySubdiv(ExtTriangleMesh *srcMesh, const u_int 
 
 	// New colors
 	Spectrum *newCols = nullptr;
-	if (srcMesh->HasColors()) {
+	if (srcMesh->HasColors(0)) {
 		newCols = new Spectrum[newVertsCount];
 
 		const float *refinedCols = colsBuffer->BindCpuBuffer() + 3 * vertsCount;
@@ -370,7 +370,7 @@ ExtTriangleMesh *SubdivShape::ApplySubdiv(ExtTriangleMesh *srcMesh, const u_int 
 
 	// New alphas
 	float *newAlphas = nullptr;
-	if (srcMesh->HasAlphas()) {
+	if (srcMesh->HasAlphas(0)) {
 		newAlphas = new float[newVertsCount];
 
 		const float *refinedAlphas = alphasBuffer->BindCpuBuffer() + 1 * vertsCount;
