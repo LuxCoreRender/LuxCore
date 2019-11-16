@@ -40,6 +40,7 @@
 #include <cstddef>
 #include <stdexcept>
 #include <string>
+#include <array>
 
 #include <luxcore/cfg.h>
 #include <luxrays/utils/exportdefs.h>
@@ -59,6 +60,8 @@
  * \brief The LuxCore classes are defined within this namespace.
  */
 namespace luxcore {
+
+#define LC_MESH_MAX_DATA_COUNT 6
 
 CPP_EXPORT CPP_API void (*LuxCore_LogHandler)(const char *msg); // LuxCore Log Handler
 
@@ -797,8 +800,36 @@ public:
 	 */
 	virtual void DefineMesh(const std::string &meshName,
 		const long plyNbVerts, const long plyNbTris,
-		float *p, unsigned int *vi, float *n, float *uv,
-		float *cols, float *alphas) = 0;
+		float *p, unsigned int *vi, float *n,
+		float *uvs,	float *cols, float *alphas) = 0;
+	/*!
+	 * \brief This is a special version of Scene::DefineMesh() used to define
+	 * meshes with multiple set of UVs, Colors and/or Alphas.
+	 * NOTE: the array of UVs, Colors and ALphas pointers can be freed after the
+	 * call however freeing of memory for the vertices, triangle indices, etc.
+	 * depends on the setting of SetDeleteMeshData().
+	 *
+	 * \param meshName is the name of the defined mesh.
+	 * \param plyNbVerts is the number of mesh vertices.
+	 * \param plyNbTris is the number of mesh triangles.
+	 * \param p is a pointer to an array of vertices. Embree accelerator has
+	 * a very special requirement. The 4 bytes after the z-coordinate of the
+	 * last vertex have to be readable memory, thus padding is required.
+	 * \param vi is a pointer to an array of triangles.
+	 * \param n is a pointer to an array of normals. It can be NULL.
+	 * \param uv is a pointer to an array of pointers. It can be NULL. If not, each
+	 * pointer can also be NULL or a pointer to an arrays of UV coordinates.
+	 * \param cols is a pointer to an array of pointers. It can be NULL. If not, each
+	 * pointer can also be NULL or a pointer to an arrays of vertices colors.
+	 * \param alphas is a pointer to an array of pointers. It can be NULL. If not, each
+	 * pointer can also be NULL or a pointer to an arrays of vertices alphas.
+	 */
+	virtual void DefineMeshExt(const std::string &meshName,
+		const long plyNbVerts, const long plyNbTris,
+		float *p, unsigned int *vi, float *n,
+		std::array<float *, LC_MESH_MAX_DATA_COUNT> *uvs,
+		std::array<float *, LC_MESH_MAX_DATA_COUNT> *cols,
+		std::array<float *, LC_MESH_MAX_DATA_COUNT> *alphas) = 0;
 	/*!
 	 * \brief Save a previously defined mesh to file system in PLY or BPY format.
 	 *

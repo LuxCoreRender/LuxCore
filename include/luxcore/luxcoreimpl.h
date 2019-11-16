@@ -161,8 +161,14 @@ public:
 
 	void DefineMesh(const std::string &meshName,
 		const long plyNbVerts, const long plyNbTris,
-		float *p, unsigned int *vi, float *n, float *uv,
-		float *cols, float *alphas);
+		float *p, unsigned int *vi, float *n,
+		float *uvs,	float *cols, float *alphas);
+	void DefineMeshExt(const std::string &meshName,
+		const long plyNbVerts, const long plyNbTris,
+		float *p, unsigned int *vi, float *n,
+		std::array<float *, LC_MESH_MAX_DATA_COUNT> *uv,
+		std::array<float *, LC_MESH_MAX_DATA_COUNT> *cols,
+		std::array<float *, LC_MESH_MAX_DATA_COUNT> *alphas);
 
 	void SaveMesh(const std::string &meshName, const std::string &fileName);
 	void DefineStrands(const std::string &shapeName, const luxrays::cyHairFile &strandsFile,

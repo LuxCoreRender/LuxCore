@@ -198,10 +198,24 @@ void Scene::DefineMesh(ExtMesh *mesh) {
 }
 
 void Scene::DefineMesh(const string &shapeName,
-	const long plyNbVerts, const long plyNbTris,
-	Point *p, Triangle *vi, Normal *n, UV *uv,
-	Spectrum *cols, float *alphas) {
-	ExtTriangleMesh *mesh = new ExtTriangleMesh(plyNbVerts, plyNbTris, p, vi, n, uv, cols, alphas);
+		const long plyNbVerts, const long plyNbTris,
+		Point *p, Triangle *vi, Normal *n,
+		UV *uvs, Spectrum *cols, float *alphas) {
+	ExtTriangleMesh *mesh = new ExtTriangleMesh(plyNbVerts, plyNbTris, p, vi, n,
+			uvs, cols, alphas);
+	mesh->SetName(shapeName);
+	
+	DefineMesh(mesh);
+}
+
+void Scene::DefineMeshExt(const string &shapeName,
+		const long plyNbVerts, const long plyNbTris,
+		Point *p, Triangle *vi, Normal *n,
+		array<UV *, EXTMESH_MAX_DATA_COUNT> *uvs,
+		array<Spectrum *, EXTMESH_MAX_DATA_COUNT> *cols,
+		array<float *, EXTMESH_MAX_DATA_COUNT> *alphas) {
+	ExtTriangleMesh *mesh = new ExtTriangleMesh(plyNbVerts, plyNbTris, p, vi, n,
+			uvs, cols, alphas);
 	mesh->SetName(shapeName);
 	
 	DefineMesh(mesh);

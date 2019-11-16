@@ -86,7 +86,8 @@ public:
 };
 
 static void CreateBox(Scene *scene, const string &objName, const string &meshName,
-		const string &matName, const bool enableUV, const BBox &bbox) {
+		const string &matName, const bool enableUV, const bool useMultiUV,
+		const BBox &bbox) {
 	Point *p = (Point *)Scene::AllocVerticesBuffer(24);
 	// Bottom face
 	p[0] = Point(bbox.pMin.x, bbox.pMin.y, bbox.pMin.z);
@@ -144,40 +145,83 @@ static void CreateBox(Scene *scene, const string &objName, const string &meshNam
 		// Define the object
 		scene->DefineMesh(meshName, 24, 12, (float *)p, (unsigned int *)vi, NULL, NULL, NULL, NULL);
 	} else {
-		UV *uv = new UV[24];
+		UV *uv0 = new UV[24];
 		// Bottom face
-		uv[0] = UV(0.f, 0.f);
-		uv[1] = UV(1.f, 0.f);
-		uv[2] = UV(1.f, 1.f);
-		uv[3] = UV(0.f, 1.f);
+		uv0[0] = UV(0.f, 0.f);
+		uv0[1] = UV(1.f, 0.f);
+		uv0[2] = UV(1.f, 1.f);
+		uv0[3] = UV(0.f, 1.f);
 		// Top face
-		uv[4] = UV(0.f, 0.f);
-		uv[5] = UV(1.f, 0.f);
-		uv[6] = UV(1.f, 1.f);
-		uv[7] = UV(0.f, 1.f);
+		uv0[4] = UV(0.f, 0.f);
+		uv0[5] = UV(1.f, 0.f);
+		uv0[6] = UV(1.f, 1.f);
+		uv0[7] = UV(0.f, 1.f);
 		// Side left
-		uv[8] = UV(0.f, 0.f);
-		uv[9] = UV(1.f, 0.f);
-		uv[10] = UV(1.f, 1.f);
-		uv[11] = UV(0.f, 1.f);
+		uv0[8] = UV(0.f, 0.f);
+		uv0[9] = UV(1.f, 0.f);
+		uv0[10] = UV(1.f, 1.f);
+		uv0[11] = UV(0.f, 1.f);
 		// Side right
-		uv[12] = UV(0.f, 0.f);
-		uv[13] = UV(1.f, 0.f);
-		uv[14] = UV(1.f, 1.f);
-		uv[15] = UV(0.f, 1.f);
+		uv0[12] = UV(0.f, 0.f);
+		uv0[13] = UV(1.f, 0.f);
+		uv0[14] = UV(1.f, 1.f);
+		uv0[15] = UV(0.f, 1.f);
 		// Side back
-		uv[16] = UV(0.f, 0.f);
-		uv[17] = UV(1.f, 0.f);
-		uv[18] = UV(1.f, 1.f);
-		uv[19] = UV(0.f, 1.f);
+		uv0[16] = UV(0.f, 0.f);
+		uv0[17] = UV(1.f, 0.f);
+		uv0[18] = UV(1.f, 1.f);
+		uv0[19] = UV(0.f, 1.f);
 		// Side front
-		uv[20] = UV(0.f, 0.f);
-		uv[21] = UV(1.f, 0.f);
-		uv[22] = UV(1.f, 1.f);
-		uv[23] = UV(0.f, 1.f);
+		uv0[20] = UV(0.f, 0.f);
+		uv0[21] = UV(1.f, 0.f);
+		uv0[22] = UV(1.f, 1.f);
+		uv0[23] = UV(0.f, 1.f);
 
-		// Define the object
-		scene->DefineMesh(meshName, 24, 12, (float *)p, (unsigned int *)vi, NULL, (float *)uv, NULL, NULL);
+		if (!useMultiUV) {
+			// Define the object
+			scene->DefineMesh(meshName, 24, 12, (float *)p, (unsigned int *)vi, NULL, (float *)uv0, NULL, NULL);
+		} else {
+			UV *uv1 = new UV[24];
+
+			// Bottom face
+			uv1[0] = UV(0.f, 0.f);
+			uv1[1] = UV(10.f, 0.f);
+			uv1[2] = UV(10.f, 10.f);
+			uv1[3] = UV(0.f, 10.f);
+			// Top face
+			uv1[4] = UV(0.f, 0.f);
+			uv1[5] = UV(10.f, 0.f);
+			uv1[6] = UV(10.f, 10.f);
+			uv1[7] = UV(0.f, 10.f);
+			// Side left
+			uv1[8] = UV(0.f, 0.f);
+			uv1[9] = UV(10.f, 0.f);
+			uv1[10] = UV(10.f, 10.f);
+			uv1[11] = UV(0.f, 10.f);
+			// Side right
+			uv1[12] = UV(0.f, 0.f);
+			uv1[13] = UV(10.f, 0.f);
+			uv1[14] = UV(10.f, 10.f);
+			uv1[15] = UV(0.f, 10.f);
+			// Side back
+			uv1[16] = UV(0.f, 0.f);
+			uv1[17] = UV(1.f, 0.f);
+			uv1[18] = UV(10.f, 10.f);
+			uv1[19] = UV(0.f, 10.f);
+			// Side front
+			uv1[20] = UV(0.f, 0.f);
+			uv1[21] = UV(10.f, 0.f);
+			uv1[22] = UV(10.f, 10.f);
+			uv1[23] = UV(0.f, 10.f);
+
+			array<float *, LC_MESH_MAX_DATA_COUNT> uvs;
+			uvs[0] = (float *)&uv0[0];
+			uvs[1] = (float *)&uv1[0];
+			fill(&uvs[2], uvs.end(), nullptr);
+
+			// Define the object with 2 x UV sets
+			scene->DefineMeshExt(meshName, 24, 12, (float *)p, (unsigned int *)vi, NULL, &uvs, NULL, NULL);
+		}
 	}
 
 	// Add the object to the scene
@@ -277,13 +321,13 @@ int main(int argc, char *argv[]) {
 			);
 
 		// Create the ground
-		CreateBox(scene, "ground", "mesh-ground", "mat_white", true, BBox(Point(-3.f, -3.f, -.1f), Point(3.f, 3.f, 0.f)));
+		CreateBox(scene, "ground", "mesh-ground", "mat_white", true, false, BBox(Point(-3.f, -3.f, -.1f), Point(3.f, 3.f, 0.f)));
 		// Create the red box
-		CreateBox(scene, "box01", "mesh-box01", "mat_red", false, BBox(Point(-.5f, -.5f, .2f), Point(.5f, .5f, .7f)));
+		CreateBox(scene, "box01", "mesh-box01", "mat_red", false, false, BBox(Point(-.5f, -.5f, .2f), Point(.5f, .5f, .7f)));
 		// Create the glass box
-		CreateBox(scene, "box02", "mesh-box02", "mat_glass", false, BBox(Point(1.5f, 1.5f, .3f), Point(2.f, 1.75f, 1.5f)));
+		CreateBox(scene, "box02", "mesh-box02", "mat_glass", false, false, BBox(Point(1.5f, 1.5f, .3f), Point(2.f, 1.75f, 1.5f)));
 		// Create the light
-		CreateBox(scene, "box03", "mesh-box03", "whitelight", false, BBox(Point(-1.75f, 1.5f, .75f), Point(-1.5f, 1.75f, .5f)));
+		CreateBox(scene, "box03", "mesh-box03", "whitelight", false, false, BBox(Point(-1.75f, 1.5f, .75f), Point(-1.5f, 1.75f, .5f)));
 		// Create a monkey from ply-file
 		Properties props;
 		props.SetFromString(
@@ -317,10 +361,7 @@ int main(int argc, char *argv[]) {
 
 		RenderConfig *config = RenderConfig::Create(
 				Property("renderengine.type")("PATHCPU") <<
-				Property("sampler.type")("RANDOM") <<
-				Property("opencl.platform.index")(-1) <<
-				Property("opencl.cpu.use")(false) <<
-				Property("opencl.gpu.use")(true) <<
+				Property("sampler.type")("SOBOL") <<
 				Property("batch.halttime")(10.f) <<
 				Property("film.outputs.1.type")("RGB_IMAGEPIPELINE") <<
 				Property("film.outputs.1.filename")("image.png"),
@@ -376,7 +417,7 @@ int main(int argc, char *argv[]) {
 		scene->Parse(
 			Property("scene.materials.mat_white.type")("matte") <<
 			Property("scene.materials.mat_white.kr")(.7f, .7f, .7f));
-		CreateBox(scene, "box03", "mesh-box03", "mat_red", false, BBox(Point(-2.75f, 1.5f, .75f), Point(-.5f, 1.75f, .5f)));
+		CreateBox(scene, "box03", "mesh-box03", "mat_red", false, false, BBox(Point(-2.75f, 1.5f, .75f), Point(-.5f, 1.75f, .5f)));
 
 		// Translate the monkey
 		const float mat[16] = {
@@ -425,6 +466,28 @@ int main(int argc, char *argv[]) {
 		// And redo the rendering
 		DoRendering(session);
 		boost::filesystem::rename("image.png", "image4.png");
+
+		//----------------------------------------------------------------------
+		// Add a box with multiple UV sets
+		//----------------------------------------------------------------------
+
+		LC_LOG("Adding multi-UV object...");
+		session->BeginSceneEdit();
+		
+		scene->Parse(
+			Property("scene.textures.map.type")("imagemap") <<
+			Property("scene.textures.map.file")("check_texmap") <<
+			Property("scene.textures.map.gamma")(1.f) <<
+			Property("scene.textures.map.mapping.uvindex")(1) <<
+			Property("scene.materials.mat_ground.type")("matte") <<
+			Property("scene.materials.mat_ground.kd")("map"));
+		CreateBox(scene, "ground", "mesh-ground", "mat_ground", true, true, BBox(Point(-3.f, -3.f, -.1f), Point(3.f, 3.f, 0.f)));
+
+		session->EndSceneEdit();
+
+		// And redo the rendering
+		DoRendering(session);
+		boost::filesystem::rename("image.png", "image5.png");
 
 		//----------------------------------------------------------------------
 

@@ -196,6 +196,21 @@ void ExtTriangleMesh::Preprocess() {
 		triNormals[i] = tris[i].GetGeometryNormal(vertices);
 }
 
+void ExtTriangleMesh::Delete() {
+	delete[] vertices;
+	delete[] tris;
+
+	delete[] normals;
+	delete[] triNormals;
+
+	for (UV *uv : uvs)
+		delete[] uv;
+	for (Spectrum *c : cols)
+		delete[] c;
+	for (float *a : alphas)
+		delete[] a;
+}
+
 Normal *ExtTriangleMesh::ComputeNormals() {
 	bool allocated;
 	if (!normals) {

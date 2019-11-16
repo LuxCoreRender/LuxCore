@@ -116,20 +116,7 @@ public:
 			std::array<Spectrum *, EXTMESH_MAX_DATA_COUNT> *meshCols,
 			std::array<float *, EXTMESH_MAX_DATA_COUNT> *meshAlphas);
 	~ExtTriangleMesh() { };
-	virtual void Delete() {
-		delete[] vertices;
-		delete[] tris;
-
-		delete[] normals;
-		delete[] triNormals;
-		
-		for (UV *uv : uvs)
-			delete[] uv;
-		for (Spectrum *c : cols)
-			delete[] c;
-		for (float *a : alphas)
-			delete[] a;
-	}
+	virtual void Delete();
 
 	Normal *GetNormals() const { return normals; }
 	Normal *GetTriNormals() const { return triNormals; }

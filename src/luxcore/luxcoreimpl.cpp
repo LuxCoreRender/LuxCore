@@ -502,14 +502,53 @@ void SceneImpl::SetMeshAppliedTransformation(const std::string &meshName,
 
 void SceneImpl::DefineMesh(const std::string &meshName,
 		const long plyNbVerts, const long plyNbTris,
-		float *p, unsigned int *vi, float *n, float *uv,
-		float *cols, float *alphas) {
+		float *p, unsigned int *vi, float *n,
+		float *uvs, float *cols, float *alphas) {
 	// Invalidate the scene properties cache
 	scenePropertiesCache.Clear();
 
 	scene->DefineMesh(meshName, plyNbVerts, plyNbTris, (Point *)p,
-			(Triangle *)vi, (Normal *)n, (UV *)uv,
-			(Spectrum *)cols, alphas);
+			(Triangle *)vi, (Normal *)n,
+			(UV *)uvs, (Spectrum *)cols, alphas);
+}
+
+void SceneImpl::DefineMeshExt(const std::string &meshName,
+		const long plyNbVerts, const long plyNbTris,
+		float *p, unsigned int *vi, float *n,
+		array<float *, LC_MESH_MAX_DATA_COUNT> *uvs,
+		array<float *, LC_MESH_MAX_DATA_COUNT> *cols,
+		array<float *, LC_MESH_MAX_DATA_COUNT> *alphas) {
+	// A safety check
+	static_assert(LC_MESH_MAX_DATA_COUNT == EXTMESH_MAX_DATA_COUNT,
+			"LC_MESH_MAX_DATA_COUNT and EXTMESH_MAX_DATA_COUNT must have the same value");
+
+	// Invalidate the scene properties cache
+	scenePropertiesCache.Clear();
+
+	array<UV *, EXTMESH_MAX_DATA_COUNT> slgUVs;
+	if (uvs) {
+		for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i)
+			slgUVs[i] = (UV *)((*uvs)[i]);
+	} else
+		fill(slgUVs.begin(), slgUVs.end(), nullptr);
+
+	array<Spectrum *, EXTMESH_MAX_DATA_COUNT> slgCols;
+	if (cols) {
+		for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i)
+			slgCols[i] = (Spectrum *)((*cols)[i]);
+	} else
+		fill(slgCols.begin(), slgCols.end(), nullptr);
+
+	array<float *, EXTMESH_MAX_DATA_COUNT> slgAlphas;
+	if (alphas) {
+		for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i)
+			slgAlphas[i] = (*alphas)[i];
+	} else
+		fill(slgAlphas.begin(), slgAlphas.end(), nullptr);
+
+	scene->DefineMeshExt(meshName, plyNbVerts, plyNbTris, (Point *)p,
+			(Triangle *)vi, (Normal *)n,
+			&slgUVs, &slgCols, &slgAlphas);
 }
 
 void SceneImpl::SaveMesh(const string &meshName, const string &fileName) {
