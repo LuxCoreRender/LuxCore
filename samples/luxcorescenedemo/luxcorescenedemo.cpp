@@ -215,9 +215,9 @@ static void CreateBox(Scene *scene, const string &objName, const string &meshNam
 			uv1[23] = UV(0.f, 10.f);
 
 			array<float *, LC_MESH_MAX_DATA_COUNT> uvs;
+			fill(uvs.begin(), uvs.end(), nullptr);
 			uvs[0] = (float *)&uv0[0];
 			uvs[1] = (float *)&uv1[0];
-			fill(&uvs[2], uvs.end(), nullptr);
 
 			// Define the object with 2 x UV sets
 			scene->DefineMeshExt(meshName, 24, 12, (float *)p, (unsigned int *)vi, NULL, &uvs, NULL, NULL);
