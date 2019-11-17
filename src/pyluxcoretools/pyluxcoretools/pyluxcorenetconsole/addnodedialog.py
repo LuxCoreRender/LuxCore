@@ -3,7 +3,7 @@
 # Form implementation generated from reading ui file '/home/david/projects/luxcorerender/LuxCore/src/pyluxcoretools/pyluxcoretools/pyluxcorenetconsole/addnodedialog.ui',
 # licensing of '/home/david/projects/luxcorerender/LuxCore/src/pyluxcoretools/pyluxcoretools/pyluxcorenetconsole/addnodedialog.ui' applies.
 #
-# Created: Fri Nov 15 11:19:32 2019
+# Created: Sun Nov 17 16:46:41 2019
 #      by: pyside2-uic  running on PySide2 5.13.2
 #
 # WARNING! All changes made in this file will be lost!
