@@ -489,7 +489,13 @@ boost::python::tuple GetOpenVDBGridInfo(const string &filePathStr, const string 
 	
 	file.open();
 	openvdb::MetaMap::Ptr ovdbMetaMap = file.getMetadata();
-	const string creator = ovdbMetaMap->metaValue<string>("creator");
+
+	string creator = "";
+	try {
+		creator = ovdbMetaMap->metaValue<string>("creator");
+	} catch (openvdb::LookupError e) {
+		cout << "No creator file meta data found in OpenVDB file " + filePathStr << endl;
+	};
 
 	openvdb::GridBase::Ptr ovdbGrid = file.readGridMetadata(gridName);	
 
