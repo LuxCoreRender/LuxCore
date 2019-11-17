@@ -28,8 +28,20 @@ using namespace slg;
 // UVMapping2D
 //------------------------------------------------------------------------------
 
-UVMapping2D::UVMapping2D(const float rot, const float uscale, const float vscale,
-		const float udelta, const float vdelta) : uvRotation(rot), uScale(uscale),
+Properties TextureMapping2D::ToProperties(const std::string &name) const {
+	return Properties() <<
+			Property(name + ".uvindex")(dataIndex);
+}
+
+//------------------------------------------------------------------------------
+// UVMapping2D
+//------------------------------------------------------------------------------
+
+UVMapping2D::UVMapping2D(const u_int index,
+		const float rot, const float uscale, const float vscale,
+		const float udelta, const float vdelta) :
+		TextureMapping2D(index),
+		uvRotation(rot), uScale(uscale),
 		vScale(vscale), uDelta(udelta), vDelta(vdelta) {
 	sinTheta = sinf(Radians(-uvRotation));
 	cosTheta = cosf(Radians(-uvRotation));
@@ -58,17 +70,16 @@ UV UVMapping2D::MapDuv(const HitPoint &hitPoint, UV *ds, UV *dt) const {
 	*ds = UV(signUScale * cosTheta, signUScale * sinTheta);
 	*dt = UV(-signVScale * sinTheta, signVScale * cosTheta);
 
-	return Map(hitPoint.uv);
+	return Map(hitPoint.uv[dataIndex]);
 }
 
 Properties UVMapping2D::ToProperties(const std::string &name) const {
-	Properties props;
-	props.Set(Property(name + ".type")("uvmapping2d"));
-	props.Set(Property(name + ".rotation")(uvRotation));
-	props.Set(Property(name + ".uvscale")(uScale, vScale));
-	props.Set(Property(name + ".uvdelta")(uDelta, vDelta));
-
-	return props;
+	return Properties() <<
+			Property(name + ".type")("uvmapping2d") <<
+			TextureMapping2D::ToProperties(name) <<
+			Property(name + ".rotation")(uvRotation) <<
+			Property(name + ".uvscale")(uScale, vScale) <<
+			Property(name + ".uvdelta")(uDelta, vDelta);
 }
 
 //------------------------------------------------------------------------------
@@ -76,12 +87,13 @@ Properties UVMapping2D::ToProperties(const std::string &name) const {
 //------------------------------------------------------------------------------
 
 Point UVMapping3D::Map(const HitPoint &hitPoint) const {
-	return worldToLocal * Point(hitPoint.uv.u, hitPoint.uv.v, 0.f);
+	return worldToLocal * Point(hitPoint.uv[dataIndex].u, hitPoint.uv[dataIndex].v, 0.f);
 }
 
 Properties UVMapping3D::ToProperties(const std::string &name) const {
 	Properties props;
 	props.Set(Property(name + ".type")("uvmapping3d"));
+	props.Set(Property(name + ".index")(dataIndex));
 	props.Set(Property(name + ".transformation")(worldToLocal.m));
 
 	return props;

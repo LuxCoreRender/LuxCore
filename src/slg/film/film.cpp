@@ -47,41 +47,42 @@ Film::Film() : filmDenoiser(this) {
 	subRegion[3] = 0;
 	radianceGroupCount = 0;
 
-	channel_ALPHA = NULL;
-	channel_DEPTH = NULL;
-	channel_POSITION = NULL;
-	channel_GEOMETRY_NORMAL = NULL;
-	channel_SHADING_NORMAL = NULL;
-	channel_MATERIAL_ID = NULL;
-	channel_DIRECT_DIFFUSE = NULL;
-	channel_DIRECT_GLOSSY = NULL;
-	channel_EMISSION = NULL;
-	channel_INDIRECT_DIFFUSE = NULL;
-	channel_INDIRECT_GLOSSY = NULL;
-	channel_INDIRECT_SPECULAR = NULL;
-	channel_DIRECT_SHADOW_MASK = NULL;
-	channel_INDIRECT_SHADOW_MASK = NULL;
-	channel_UV = NULL;
-	channel_RAYCOUNT = NULL;
-	channel_IRRADIANCE = NULL;
-	channel_OBJECT_ID = NULL;
-	channel_SAMPLECOUNT = NULL;
-	channel_CONVERGENCE = NULL;
-	channel_MATERIAL_ID_COLOR = NULL;
-	channel_ALBEDO = NULL;
-	channel_AVG_SHADING_NORMAL = NULL;
-	channel_NOISE = NULL;
+	channel_ALPHA = nullptr;
+	channel_DEPTH = nullptr;
+	channel_POSITION = nullptr;
+	channel_GEOMETRY_NORMAL = nullptr;
+	channel_SHADING_NORMAL = nullptr;
+	channel_MATERIAL_ID = nullptr;
+	channel_DIRECT_DIFFUSE = nullptr;
+	channel_DIRECT_GLOSSY = nullptr;
+	channel_EMISSION = nullptr;
+	channel_INDIRECT_DIFFUSE = nullptr;
+	channel_INDIRECT_GLOSSY = nullptr;
+	channel_INDIRECT_SPECULAR = nullptr;
+	channel_DIRECT_SHADOW_MASK = nullptr;
+	channel_INDIRECT_SHADOW_MASK = nullptr;
+	channel_UV = nullptr;
+	channel_RAYCOUNT = nullptr;
+	channel_IRRADIANCE = nullptr;
+	channel_OBJECT_ID = nullptr;
+	channel_SAMPLECOUNT = nullptr;
+	channel_CONVERGENCE = nullptr;
+	channel_MATERIAL_ID_COLOR = nullptr;
+	channel_ALBEDO = nullptr;
+	channel_AVG_SHADING_NORMAL = nullptr;
+	channel_NOISE = nullptr;
+	channel_USER_IMPORTANCE = nullptr;
 
-	convTest = NULL;
-	noiseEstimation = NULL;
+	convTest = nullptr;
+	noiseEstimation = nullptr;
 	haltTime = 0.0;
 	haltSPP = 0;
 	haltNoiseThreshold = 0.f;
 
 	isAsyncImagePipelineRunning = false;
-	imagePipelineThread = NULL;
+	imagePipelineThread = nullptr;
 
-	// Initialize variables to NULL
+	// Initialize variables to nullptr
 	SetUpOCL();
 }
 
@@ -106,33 +107,34 @@ Film::Film(const u_int w, const u_int h, const u_int *sr) : filmDenoiser(this) {
 	}
 	radianceGroupCount = 1;
 
-	channel_ALPHA = NULL;
-	channel_DEPTH = NULL;
-	channel_POSITION = NULL;
-	channel_GEOMETRY_NORMAL = NULL;
-	channel_SHADING_NORMAL = NULL;
-	channel_MATERIAL_ID = NULL;
-	channel_DIRECT_DIFFUSE = NULL;
-	channel_DIRECT_GLOSSY = NULL;
-	channel_EMISSION = NULL;
-	channel_INDIRECT_DIFFUSE = NULL;
-	channel_INDIRECT_GLOSSY = NULL;
-	channel_INDIRECT_SPECULAR = NULL;
-	channel_DIRECT_SHADOW_MASK = NULL;
-	channel_INDIRECT_SHADOW_MASK = NULL;
-	channel_UV = NULL;
-	channel_RAYCOUNT = NULL;
-	channel_IRRADIANCE = NULL;
-	channel_OBJECT_ID = NULL;
-	channel_SAMPLECOUNT = NULL;
-	channel_CONVERGENCE = NULL;
-	channel_MATERIAL_ID_COLOR = NULL;
-	channel_ALBEDO = NULL;
-	channel_AVG_SHADING_NORMAL = NULL;
-	channel_NOISE = NULL;
+	channel_ALPHA = nullptr;
+	channel_DEPTH = nullptr;
+	channel_POSITION = nullptr;
+	channel_GEOMETRY_NORMAL = nullptr;
+	channel_SHADING_NORMAL = nullptr;
+	channel_MATERIAL_ID = nullptr;
+	channel_DIRECT_DIFFUSE = nullptr;
+	channel_DIRECT_GLOSSY = nullptr;
+	channel_EMISSION = nullptr;
+	channel_INDIRECT_DIFFUSE = nullptr;
+	channel_INDIRECT_GLOSSY = nullptr;
+	channel_INDIRECT_SPECULAR = nullptr;
+	channel_DIRECT_SHADOW_MASK = nullptr;
+	channel_INDIRECT_SHADOW_MASK = nullptr;
+	channel_UV = nullptr;
+	channel_RAYCOUNT = nullptr;
+	channel_IRRADIANCE = nullptr;
+	channel_OBJECT_ID = nullptr;
+	channel_SAMPLECOUNT = nullptr;
+	channel_CONVERGENCE = nullptr;
+	channel_MATERIAL_ID_COLOR = nullptr;
+	channel_ALBEDO = nullptr;
+	channel_AVG_SHADING_NORMAL = nullptr;
+	channel_NOISE = nullptr;
+	channel_USER_IMPORTANCE = nullptr;
 
-	convTest = NULL;
-	noiseEstimation = NULL;
+	convTest = nullptr;
+	noiseEstimation = nullptr;
 	haltTime = 0.0;
 
 	haltSPP = 0;
@@ -152,9 +154,9 @@ Film::Film(const u_int w, const u_int h, const u_int *sr) : filmDenoiser(this) {
 	noiseEstimationImagePipelineIndex = 0;
 
 	isAsyncImagePipelineRunning = false;
-	imagePipelineThread = NULL;
+	imagePipelineThread = nullptr;
 
-	// Initialize variables to NULL
+	// Initialize variables to nullptr
 	SetUpOCL();
 }
 
@@ -249,14 +251,14 @@ void Film::Resize(const u_int w, const u_int h) {
 	hasDataChannel = false;
 	hasComposingChannel = false;
 	if (HasChannel(RADIANCE_PER_PIXEL_NORMALIZED)) {
-		channel_RADIANCE_PER_PIXEL_NORMALIZEDs.resize(radianceGroupCount, NULL);
+		channel_RADIANCE_PER_PIXEL_NORMALIZEDs.resize(radianceGroupCount, nullptr);
 		for (u_int i = 0; i < radianceGroupCount; ++i) {
 			channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i] = new GenericFrameBuffer<4, 1, float>(width, height);
 			channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->Clear();
 		}
 	}
 	if (HasChannel(RADIANCE_PER_SCREEN_NORMALIZED)) {
-		channel_RADIANCE_PER_SCREEN_NORMALIZEDs.resize(radianceGroupCount, NULL);
+		channel_RADIANCE_PER_SCREEN_NORMALIZEDs.resize(radianceGroupCount, nullptr);
 		for (u_int i = 0; i < radianceGroupCount; ++i) {
 			channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i] = new GenericFrameBuffer<3, 0, float>(width, height);
 			channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->Clear();
@@ -272,7 +274,7 @@ void Film::Resize(const u_int w, const u_int h) {
 		channel_ALPHA->Clear();
 	}
 	if (HasChannel(IMAGEPIPELINE)) {
-		channel_IMAGEPIPELINEs.resize(imagePipelines.size(), NULL);
+		channel_IMAGEPIPELINEs.resize(imagePipelines.size(), nullptr);
 		for (u_int i = 0; i < channel_IMAGEPIPELINEs.size(); ++i) {
 			channel_IMAGEPIPELINEs[i] = new GenericFrameBuffer<3, 0, float>(width, height);
 			channel_IMAGEPIPELINEs[i]->Clear();
@@ -287,10 +289,10 @@ void Film::Resize(const u_int w, const u_int h) {
 			noiseEstimation->Reset();
 	} else {
 		delete convTest;
-		convTest = NULL;
+		convTest = nullptr;
 		
 		delete noiseEstimation;
-		noiseEstimation = NULL;
+		noiseEstimation = nullptr;
 	}
 	if (HasChannel(DEPTH)) {
 		channel_DEPTH = new GenericFrameBuffer<1, 0, float>(width, height);
@@ -439,6 +441,11 @@ void Film::Resize(const u_int w, const u_int h) {
 		channel_NOISE->Clear(numeric_limits<float>::infinity());
 		hasDataChannel = true;
 	}
+	if (HasChannel(USER_IMPORTANCE)) {
+		channel_USER_IMPORTANCE = new GenericFrameBuffer<1, 0, float>(width, height);
+		channel_USER_IMPORTANCE->Clear(1.f);
+		hasDataChannel = true;
+	}
 
 	// Reset BCD statistics accumulator (I need to redo the warmup period)
 	filmDenoiser.Reset();
@@ -514,7 +521,8 @@ void Film::Clear() {
 	}
 	if (HasChannel(SAMPLECOUNT))
 		channel_SAMPLECOUNT->Clear();
-	// channel_CONVERGENCE and channel_NOISE are not cleared otherwise the result of the halt test and adaptive sampling
+	// channel_CONVERGENCE, channel_NOISE and channel_USER_IMPORTANCE are not
+	// cleared otherwise the result of the halt test and adaptive sampling
 	// would be lost
 	if (HasChannel(MATERIAL_ID_COLOR))
 		channel_MATERIAL_ID_COLOR->Clear();
@@ -931,6 +939,9 @@ void Film::AddFilm(const Film &film,
 	}
 
 	// NOISE values can not really be added, they will be updated at the next test
+
+	// USER_IMPORTANCE values can not really be added, I will keep the one in the
+	// current film
 
 	//--------------------------------------------------------------------------
 	// Film denoiser related code

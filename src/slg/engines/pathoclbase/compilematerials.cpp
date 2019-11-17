@@ -754,8 +754,8 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 
 	// Generate the code for generic Material_GetEmittedRadianceWithDynamic()
 	AddMaterialSourceSwitch(source, mats, "GetEmittedRadianceWithDynamic", "GetEmittedRadiance", "float3", "BLACK",
-			"const uint index, __global const HitPoint *hitPoint MATERIALS_PARAM_DECL",
-			"mat, hitPoint MATERIALS_PARAM");
+			"const uint index, __global const HitPoint *hitPoint, const float oneOverPrimitiveArea MATERIALS_PARAM_DECL",
+			"mat, hitPoint, oneOverPrimitiveArea MATERIALS_PARAM");
 
 	// Generate the code for generic Material_GetInteriorVolumeWithDynamic() and Material_GetExteriorVolumeWithDynamic()
 	source << "#if defined(PARAM_HAS_VOLUMES)\n";

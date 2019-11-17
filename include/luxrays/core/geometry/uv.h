@@ -93,6 +93,16 @@ public:
 		return (&u)[i];
 	}
 
+	bool operator==(const UV &p) const {
+		if (u != p.u) return false;
+		if (v != p.v) return false;
+
+		return true;
+	}
+	bool operator!=(const UV &p) const {
+		return !(*this == p);
+	}
+
 	bool IsNaN() const {
 		return isnan(u) || isnan(v);
 	}

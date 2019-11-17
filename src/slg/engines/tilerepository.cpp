@@ -267,7 +267,7 @@ TileWork::TileWork() : tile(nullptr) {
 }
 
 TileWork::TileWork(Tile *t) {
-	Init(tile);
+	Init(t);
 }
 
 void TileWork::Init(Tile *t) {

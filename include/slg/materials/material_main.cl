@@ -162,13 +162,13 @@ OPENCL_FORCE_INLINE float3 Material_GetEmittedRadiance(const uint matIndex,
 
 	float3 result;
 	if (Material_IsDynamic(material))
-		result = Material_GetEmittedRadianceWithDynamic(matIndex, hitPoint
+		result = Material_GetEmittedRadianceWithDynamic(matIndex, hitPoint, oneOverPrimitiveArea
 			MATERIALS_PARAM);
 	else
-		result = Material_GetEmittedRadianceWithoutDynamic(material, hitPoint
+		result = Material_GetEmittedRadianceWithoutDynamic(material, hitPoint, oneOverPrimitiveArea
 			MATERIALS_PARAM);
 
-	return VLOAD3F(material->emittedFactor.c) * (material->usePrimitiveArea ? oneOverPrimitiveArea : 1.f) * result;
+	return result;
 }
 
 //------------------------------------------------------------------------------

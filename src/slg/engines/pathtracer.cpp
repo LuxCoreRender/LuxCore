@@ -467,7 +467,7 @@ void PathTracer::RenderEyeSample(const u_int threadIndex,
 			sampleResult.shadingNormal = bsdf.hitPoint.shadeN;
 			sampleResult.materialID = bsdf.GetMaterialID();
 			sampleResult.objectID = bsdf.GetObjectID();
-			sampleResult.uv = bsdf.hitPoint.uv;
+			sampleResult.uv = bsdf.hitPoint.uv[0];
 		}
 		sampleResult.lastPathVertex = pathInfo.depth.IsLastPathVertex(maxPathDepth, bsdf.GetEventTypes());
 		

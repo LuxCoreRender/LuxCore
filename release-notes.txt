@@ -30,16 +30,19 @@
 * Fixed triangle lights back face emission when using an IES or image map profile
 * Fixed OpenCL code for rotate triangle light when using IES or image map profile (BlendLuxCore iusse #310)
 * Fixed light tracing when using orthographic camera
+* Fixed a light intensity problem with OpenCL rendering when using a mix of materials with emission
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
 
-### Known Problems
+### Known Problems and limitations
+
 * LuxCore API requires latin locale
 * accelerator.bvh.builder.type = EMBREE_MORTON doesn't work with the latest Embree
 * Python crashes when calling sys.exit()
 * TILEPATHOCL (and RTPATHOCL) count the layers of transparent surfaces as an iteration of the rendering finite state machine so they require to increase the max. path depth to avoid black regions.
 * Light emitted by motion blurred triangle lights is approximated using the triangle area of time 0.0 (computing triangle area at runtime would be expansive) so it may be not totally accurate if the motion blur transformation include a scale.
+* Variance clamping is not applied to AOVs
 
 **Note for Windows users:** you have to install the [Microsoft Visual C++ Redistributable
 for Visual Studio 2017](https://aka.ms/vs/15/release/vc_redist.x64.exe).

@@ -215,6 +215,36 @@ void FilmImpl::GetOutputUInt(const FilmOutputType type, unsigned int *buffer,
 				buffer, index, executeImagePipeline);
 }
 
+void FilmImpl::UpdateOutputFloat(const FilmOutputType type, const float *buffer,
+		const unsigned int index, const bool executeImagePipeline) {
+	if (type != OUTPUT_USER_IMPORTANCE)
+		throw runtime_error("Currently, only USER_IMPORTANCE channel can be updated with Film::UpdateOutput<float>()");
+
+	if (renderSession) {
+		boost::unique_lock<boost::mutex> lock(renderSession->renderSession->filmMutex);
+
+		slg::Film *film = renderSession->renderSession->film;
+		const unsigned int pixelsCount = film->GetWidth() * film->GetHeight();
+
+		// Only USER_IMPORTANCE can be updated
+		float *destBuffer = renderSession->renderSession->film->GetChannel<float>(slg::Film::USER_IMPORTANCE,
+				index, executeImagePipeline);
+		copy(buffer, buffer + pixelsCount, destBuffer);
+	} else {
+		const unsigned int pixelsCount = standAloneFilm->GetWidth() * standAloneFilm->GetHeight();
+
+		// Only USER_IMPORTANCE can be updated
+		float *destBuffer = standAloneFilm->GetChannel<float>(slg::Film::USER_IMPORTANCE,
+				index, executeImagePipeline);
+		copy(buffer, buffer + pixelsCount, destBuffer);
+	}
+}
+
+void FilmImpl::UpdateOutputUInt(const FilmOutputType type, const unsigned int *buffer,
+		const unsigned int index, const bool executeImagePipeline) {
+	throw runtime_error("No channel can be updated with Film::UpdateOutput<unsigned int>()");
+}
+
 bool FilmImpl::HasChannel(const FilmChannelType type) const {
 	return GetSLGFilm()->HasChannel((slg::Film::FilmChannelType)type);
 }
@@ -245,6 +275,26 @@ const unsigned int *FilmImpl::GetChannelUInt(const FilmChannelType type,
 	} else
 		return standAloneFilm->GetChannel<unsigned int>((slg::Film::FilmChannelType)type,
 				index, executeImagePipeline);
+}
+
+float *FilmImpl::UpdateChannelFloat(const FilmChannelType type,
+		const unsigned int index, const bool executeImagePipeline) {
+	if (type != CHANNEL_USER_IMPORTANCE)
+		throw runtime_error("Only USER_IMPORTANCE channel can be updated with Film::UpdateChannel<float>()");
+
+	if (renderSession) {
+		boost::unique_lock<boost::mutex> lock(renderSession->renderSession->filmMutex);
+
+		return renderSession->renderSession->film->GetChannel<float>((slg::Film::FilmChannelType)type,
+				index, executeImagePipeline);
+	} else
+		return standAloneFilm->GetChannel<float>((slg::Film::FilmChannelType)type,
+				index, executeImagePipeline);
+}
+
+unsigned int *FilmImpl::UpdateChannelUInt(const FilmChannelType type,
+		const unsigned int index, const bool executeImagePipeline) {
+	throw runtime_error("No channel can be updated with Film::UpdateChannel<unsigned int>()");
 }
 
 void FilmImpl::Parse(const luxrays::Properties &props) {
@@ -452,14 +502,53 @@ void SceneImpl::SetMeshAppliedTransformation(const std::string &meshName,
 
 void SceneImpl::DefineMesh(const std::string &meshName,
 		const long plyNbVerts, const long plyNbTris,
-		float *p, unsigned int *vi, float *n, float *uv,
-		float *cols, float *alphas) {
+		float *p, unsigned int *vi, float *n,
+		float *uvs, float *cols, float *alphas) {
 	// Invalidate the scene properties cache
 	scenePropertiesCache.Clear();
 
 	scene->DefineMesh(meshName, plyNbVerts, plyNbTris, (Point *)p,
-			(Triangle *)vi, (Normal *)n, (UV *)uv,
-			(Spectrum *)cols, alphas);
+			(Triangle *)vi, (Normal *)n,
+			(UV *)uvs, (Spectrum *)cols, alphas);
+}
+
+void SceneImpl::DefineMeshExt(const std::string &meshName,
+		const long plyNbVerts, const long plyNbTris,
+		float *p, unsigned int *vi, float *n,
+		array<float *, LC_MESH_MAX_DATA_COUNT> *uvs,
+		array<float *, LC_MESH_MAX_DATA_COUNT> *cols,
+		array<float *, LC_MESH_MAX_DATA_COUNT> *alphas) {
+	// A safety check
+	static_assert(LC_MESH_MAX_DATA_COUNT == EXTMESH_MAX_DATA_COUNT,
+			"LC_MESH_MAX_DATA_COUNT and EXTMESH_MAX_DATA_COUNT must have the same value");
+
+	// Invalidate the scene properties cache
+	scenePropertiesCache.Clear();
+
+	array<UV *, EXTMESH_MAX_DATA_COUNT> slgUVs;
+	if (uvs) {
+		for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i)
+			slgUVs[i] = (UV *)((*uvs)[i]);
+	} else
+		fill(slgUVs.begin(), slgUVs.end(), nullptr);
+
+	array<Spectrum *, EXTMESH_MAX_DATA_COUNT> slgCols;
+	if (cols) {
+		for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i)
+			slgCols[i] = (Spectrum *)((*cols)[i]);
+	} else
+		fill(slgCols.begin(), slgCols.end(), nullptr);
+
+	array<float *, EXTMESH_MAX_DATA_COUNT> slgAlphas;
+	if (alphas) {
+		for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i)
+			slgAlphas[i] = (*alphas)[i];
+	} else
+		fill(slgAlphas.begin(), slgAlphas.end(), nullptr);
+
+	scene->DefineMeshExt(meshName, plyNbVerts, plyNbTris, (Point *)p,
+			(Triangle *)vi, (Normal *)n,
+			&slgUVs, &slgCols, &slgAlphas);
 }
 
 void SceneImpl::SaveMesh(const string &meshName, const string &fileName) {

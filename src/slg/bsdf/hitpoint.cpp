@@ -55,21 +55,40 @@ void HitPoint::Init(const bool fixedFromLight, const bool throughShadowTransp,
 	shadeN = interpolatedN;
 	intoObject = (Dot(-fixedDir, geometryN) < 0.f);
 
-	// Interpolate UV coordinates
-	uv = mesh->InterpolateTriUV(triangleIndex, b1, b2);
+	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
+		// Interpolate UV coordinates
+		uv[i] = mesh->InterpolateTriUV(triangleIndex, b1, b2, i);
 
-	// Interpolate color
-	color = mesh->InterpolateTriColor(triangleIndex, b1, b2);
+		// Interpolate color
+		color[i] = mesh->InterpolateTriColor(triangleIndex, b1, b2, i);
 
-	// Interpolate alpha
-	alpha = mesh->InterpolateTriAlpha(triangleIndex, b1, b2);
+		// Interpolate alpha
+		alpha[i] = mesh->InterpolateTriAlpha(triangleIndex, b1, b2, i);
+	}
 
-	// Compute geometry differentials
+	// Compute geometry differentials (always with the first set of UVs)
 	mesh->GetDifferentials(localToWorld,
 			triangleIndex, shadeN,
+			0, // The UV set to use, always the first
 			&dpdu, &dpdv, &dndu, &dndv);
 
 	// Note: I'm not initializing volume related information here
 	interiorVolume = nullptr;
 	exteriorVolume = nullptr;
+}
+
+// Initialize all fields (i.e. the one missing a default constructor)
+void HitPoint::Init() {
+	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
+		color[i] = Spectrum(1.f);
+		alpha[i] = 1.f;
+	}
+	
+	passThroughEvent = 0.f;
+	interiorVolume = nullptr;
+	exteriorVolume = nullptr;
+	objectID = 0;
+	fromLight = false;
+	intoObject = true;
+	throughShadowTransparency = false;
 }

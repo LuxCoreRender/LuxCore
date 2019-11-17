@@ -104,6 +104,7 @@ find_package(OpenCL)
 
 if (OPENCL_FOUND)
 	include_directories(BEFORE SYSTEM ${OPENCL_INCLUDE_DIR} ${OPENCL_C_INCLUDE_DIR})
+        ADD_DEFINITIONS(-DCL_TARGET_OPENCL_VERSION=120)
 endif ()
 
 # Intel Embree

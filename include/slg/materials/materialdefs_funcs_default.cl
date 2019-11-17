@@ -56,7 +56,8 @@ OPENCL_FORCE_INLINE float3 DefaultMaterial_GetPassThroughTransparency(__global c
 // DefaultMaterial_GetEmittedRadiance
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_INLINE float3 DefaultMaterial_GetEmittedRadiance(__global const Material *material, __global const HitPoint *hitPoint
+OPENCL_FORCE_INLINE float3 DefaultMaterial_GetEmittedRadiance(__global const Material *material,
+		__global const HitPoint *hitPoint, const float oneOverPrimitiveArea
 		TEXTURES_PARAM_DECL) {
 	const uint emitTexIndex = material->emitTexIndex;
 	if (emitTexIndex == NULL_INDEX)
@@ -66,6 +67,8 @@ OPENCL_FORCE_INLINE float3 DefaultMaterial_GetEmittedRadiance(__global const Mat
 #if defined(PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR)
 		VLOAD3F(hitPoint->color.c) *
 #endif
+		VLOAD3F(material->emittedFactor.c) *
+		(material->usePrimitiveArea ? oneOverPrimitiveArea : 1.f) *
 		clamp(Texture_GetSpectrumValue(emitTexIndex, hitPoint
 				TEXTURES_PARAM), BLACK, INFINITY);
 }

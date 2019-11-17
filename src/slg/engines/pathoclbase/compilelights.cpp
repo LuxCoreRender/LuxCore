@@ -323,7 +323,7 @@ void CompiledScene::CompileLights() {
 				const ExtMesh *mesh = tl->mesh;
 
 				// Check if I have a triangle light source with vertex colors
-				if (mesh->HasColors())
+				if (mesh->HasColors(0))
 					hasTriangleLightWithVertexColors = true;
 
 				// LightSource data

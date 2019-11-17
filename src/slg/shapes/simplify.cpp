@@ -155,8 +155,8 @@ public:
 		} else
 			hasNormals = false;
 		
-		if (srcMesh.HasUVs()) {
-			const UV *uvs = srcMesh.GetUVs();
+		if (srcMesh.HasUVs(0)) {
+			const UV *uvs = srcMesh.GetUVs(0);
 			for (u_int i = 0; i < vertCount; ++i)
 				vertices[i].uv = uvs[i];
 
@@ -164,8 +164,8 @@ public:
 		} else
 			hasUVs = false;
 		
-		if (srcMesh.HasColors()) {
-			const Spectrum *cols = srcMesh.GetColors();
+		if (srcMesh.HasColors(0)) {
+			const Spectrum *cols = srcMesh.GetColors(0);
 			for (u_int i = 0; i < vertCount; ++i)
 				vertices[i].col = cols[i];
 
@@ -173,8 +173,8 @@ public:
 		} else
 			hasColors = false;
 
-		if (srcMesh.HasAlphas()) {
-			const float *alphas = srcMesh.GetAlphas();
+		if (srcMesh.HasAlphas(0)) {
+			const float *alphas = srcMesh.GetAlphas(0);
 			for (u_int i = 0; i < vertCount; ++i)
 				vertices[i].alpha = alphas[i];
 

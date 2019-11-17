@@ -29,7 +29,7 @@ namespace slg {
 
 class HitPointColorTexture : public Texture {
 public:
-	HitPointColorTexture() { }
+	HitPointColorTexture(const u_int index) : dataIndex(index) { }
 	virtual ~HitPointColorTexture() { }
 
 	virtual TextureType GetType() const { return HITPOINTCOLOR; }
@@ -41,6 +41,9 @@ public:
 	virtual float Filter() const { return 1.f; }
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
+
+private:
+	const u_int dataIndex;
 };
 
 //------------------------------------------------------------------------------
@@ -49,7 +52,7 @@ public:
 
 class HitPointAlphaTexture : public Texture {
 public:
-	HitPointAlphaTexture() { }
+	HitPointAlphaTexture(const u_int index) : dataIndex(index) { }
 	virtual ~HitPointAlphaTexture() { }
 
 	virtual TextureType GetType() const { return HITPOINTALPHA; }
@@ -61,6 +64,9 @@ public:
 	virtual float Filter() const { return 1.f; }
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
+
+private:
+	const u_int dataIndex;
 };
 
 //------------------------------------------------------------------------------
@@ -69,7 +75,7 @@ public:
 
 class HitPointGreyTexture : public Texture {
 public:
-	HitPointGreyTexture(const u_int ch) : channel(ch) { }
+	HitPointGreyTexture(const u_int index, const u_int ch) : dataIndex(index), channel(ch) { }
 	virtual ~HitPointGreyTexture() { }
 
 	virtual TextureType GetType() const { return HITPOINTGREY; }
@@ -85,7 +91,8 @@ public:
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
-	u_int channel;
+	const u_int dataIndex;
+	const u_int channel;
 };
 
 }

@@ -25,6 +25,7 @@
 #include "luxrays/core/geometry/uv.h"
 #include "luxrays/core/geometry/transform.h"
 #include "luxrays/core/geometry/frame.h"
+#include "luxrays/core/exttrianglemesh.h"
 
 namespace slg {
 
@@ -41,15 +42,18 @@ typedef struct {
 	// lightDir when fromLight = true
 	luxrays::Vector fixedDir;
 	luxrays::Point p;
-	luxrays::UV uv;
 	luxrays::Normal geometryN;
 	luxrays::Normal interpolatedN;
 	luxrays::Normal shadeN;
-	luxrays::Spectrum color;
+
+	luxrays::UV uv[EXTMESH_MAX_DATA_COUNT];
+	luxrays::Spectrum color[EXTMESH_MAX_DATA_COUNT];
+	float alpha[EXTMESH_MAX_DATA_COUNT];
+
 	// Note: dpdu and dpdv are orthogonal to shading normal (i.e not geometry normal)
 	luxrays::Vector dpdu, dpdv;
 	luxrays::Normal dndu, dndv;
-	float alpha;
+
 	float passThroughEvent;
 	// Transformation from local object to world reference frame
 	luxrays::Transform localToWorld;
@@ -72,6 +76,9 @@ typedef struct {
 		const luxrays::Point &p, const luxrays::Vector &d,
 		const float b1, const float b2,
 		const float passThroughEvent);
+
+	// Initialize all fields (without a constructor)
+	void Init();
 
 	luxrays::Frame GetFrame() const { return luxrays::Frame(dpdu, dpdv, shadeN); }
 	luxrays::Normal GetLandingGeometryN() const { return (intoObject ? 1.f : -1.f) * geometryN; }

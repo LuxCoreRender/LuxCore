@@ -435,12 +435,28 @@ void LuxCoreApp::MenuTool() {
 					Property("film.outputs.LUXCOREUI_OBJECTSELECTION_AOV.type")("OBJECT_ID") <<
 					Property("film.outputs.LUXCOREUI_OBJECTSELECTION_AOV.filename")("dummy.png");
 		}
-		
+
 		RenderConfigParse(props);
 	}
 	if (ImGui::MenuItem("Image view", NULL, (currentTool == TOOL_IMAGE_VIEW))) {
 		currentTool = TOOL_IMAGE_VIEW;
 		RenderConfigParse(Properties() << Property("screen.tool.type")("IMAGE_VIEW"));
+	}
+	if (ImGui::MenuItem("User importance painting", NULL, (currentTool == TOOL_USER_IMPORTANCE_PAINT))) {
+		currentTool = TOOL_USER_IMPORTANCE_PAINT;
+		
+		Properties props;
+		props << Property("screen.tool.type")("USER_IMPORTANCE_PAINT");
+
+		// Check if the session a _USER_IMPORTANCE AOV enabled
+		if(!session->GetFilm().HasOutput(Film::OUTPUT_USER_IMPORTANCE)) {
+			// Enable OBJECT_ID AOV
+			props <<
+					Property("film.outputs.LUXCOREUI_USER_IMPORTANCE_AOV.type")("USER_IMPORTANCE") <<
+					Property("film.outputs.LUXCOREUI_USER_IMPORTANCE_AOV.filename")("dummy.png");
+		}
+
+		RenderConfigParse(props);
 	}
 }
 

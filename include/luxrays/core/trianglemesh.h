@@ -185,7 +185,7 @@ private:
 		for (u_int i = 0; i < triCount; ++i)
 			ar & tris[i];
 
-		cachedBBoxValid = false;
+		Preprocess();
 	}
 	BOOST_SERIALIZATION_SPLIT_MEMBER()
 };

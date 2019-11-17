@@ -45,23 +45,11 @@ Spectrum ClearVolume::SigmaS(const HitPoint &hitPoint) const {
 float ClearVolume::Scatter(const Ray &ray, const float u,
 		const bool scatteredStart, Spectrum *connectionThroughput,
 		Spectrum *connectionEmission) const {
-	const HitPoint hitPoint =  {
-		ray.d,
-		ray.o,
-		UV(),
-		Normal(-ray.d),
-		Normal(-ray.d),
-		Normal(-ray.d),
-		Spectrum(1.f),
-		Vector(0.f, 0.f, 0.f), Vector(0.f, 0.f, 0.f),
-		Normal(0.f, 0.f, 0.f), Normal(0.f, 0.f, 0.f),
-		1.f,
-		0.f, // It doesn't matter here
-		Transform(),
-		this, this, // It doesn't matter here
-		true, true, // It doesn't matter here
-		0
-	};
+	HitPoint hitPoint;
+	hitPoint.Init();
+	hitPoint.fixedDir = ray.d;
+	hitPoint.p = ray.o;
+	hitPoint.geometryN = hitPoint.interpolatedN = hitPoint.shadeN = Normal(-ray.d);
 	
 	const float distance = ray.maxt - ray.mint;
 	Spectrum transmittance(1.f);

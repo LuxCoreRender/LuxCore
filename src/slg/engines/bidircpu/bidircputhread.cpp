@@ -674,7 +674,7 @@ void BiDirCPURenderThread::RenderFunc() {
 					eyeSampleResult.shadingNormal = eyeVertex.bsdf.hitPoint.shadeN;
 					eyeSampleResult.materialID = eyeVertex.bsdf.GetMaterialID();
 					eyeSampleResult.objectID = eyeVertex.bsdf.GetObjectID();
-					eyeSampleResult.uv = eyeVertex.bsdf.hitPoint.uv;
+					eyeSampleResult.uv = eyeVertex.bsdf.hitPoint.uv[0];
 				}
 
 				// Update MIS constants
