@@ -87,7 +87,10 @@ void CompiledScene::CompileTextureMapping2D(slg::ocl::TextureMapping2D *mapping,
 	switch (m->GetType()) {
 		case UVMAPPING2D: {
 			mapping->type = slg::ocl::UVMAPPING2D;
+
 			const UVMapping2D *uvm = static_cast<const UVMapping2D *>(m);
+			mapping->dataIndex = uvm->GetDataIndex();
+
 			mapping->uvMapping2D.sinTheta = uvm->sinTheta;
 			mapping->uvMapping2D.cosTheta = uvm->cosTheta;
 			mapping->uvMapping2D.uScale = uvm->uScale;
@@ -105,13 +108,17 @@ void CompiledScene::CompileTextureMapping3D(slg::ocl::TextureMapping3D *mapping,
 	switch (m->GetType()) {
 		case UVMAPPING3D: {
 			mapping->type = slg::ocl::UVMAPPING3D;
+
 			const UVMapping3D *uvm = static_cast<const UVMapping3D *>(m);
 			memcpy(&mapping->worldToLocal.m, &uvm->worldToLocal.m, sizeof(float[4][4]));
 			memcpy(&mapping->worldToLocal.mInv, &uvm->worldToLocal.mInv, sizeof(float[4][4]));
+
+			mapping->uvMapping3D.dataIndex = uvm->GetDataIndex();
 			break;
 		}
 		case GLOBALMAPPING3D: {
 			mapping->type = slg::ocl::GLOBALMAPPING3D;
+
 			const GlobalMapping3D *gm = static_cast<const GlobalMapping3D *>(m);
 			memcpy(&mapping->worldToLocal.m, &gm->worldToLocal.m, sizeof(float[4][4]));
 			memcpy(&mapping->worldToLocal.mInv, &gm->worldToLocal.mInv, sizeof(float[4][4]));
@@ -119,6 +126,7 @@ void CompiledScene::CompileTextureMapping3D(slg::ocl::TextureMapping3D *mapping,
 		}
 		case LOCALMAPPING3D: {
 			mapping->type = slg::ocl::LOCALMAPPING3D;
+
 			const LocalMapping3D *gm = static_cast<const LocalMapping3D *>(m);
 			memcpy(&mapping->worldToLocal.m, &gm->worldToLocal.m, sizeof(float[4][4]));
 			memcpy(&mapping->worldToLocal.mInv, &gm->worldToLocal.mInv, sizeof(float[4][4]));
@@ -1001,11 +1009,17 @@ void CompiledScene::CompileTextures() {
 				break;
 			}
 			case HITPOINTCOLOR: {
+				const HitPointColorTexture *hpc = static_cast<const HitPointColorTexture *>(t);
+
 				tex->type = slg::ocl::HITPOINTCOLOR;
+				tex->hitPointColor.dataIndex = hpc->GetDataIndex();
 				break;
 			}
 			case HITPOINTALPHA: {
+				const HitPointAlphaTexture *hpa = static_cast<const HitPointAlphaTexture *>(t);
+
 				tex->type = slg::ocl::HITPOINTALPHA;
+				tex->hitPointAlpha.dataIndex = hpa->GetDataIndex();
 				break;
 			}
 			case HITPOINTGREY: {
@@ -1649,10 +1663,10 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 				break;
 			}
 			case slg::ocl::HITPOINTCOLOR:
-				AddTextureSource(source, "HitPointColor", i, "");
+				AddTextureSource(source, "HitPointColor", i, "texture->hitPointColor.dataIndex");
 				break;
 			case slg::ocl::HITPOINTALPHA:
-				AddTextureSource(source, "HitPointAlpha", i, "");
+				AddTextureSource(source, "HitPointAlpha", i, "texture->hitPointAlpha.dataIndex");
 				break;
 			case slg::ocl::HITPOINTGREY:
 				AddTextureSource(source, "HitPointGrey", i, "texture->hitPointGrey.channel");

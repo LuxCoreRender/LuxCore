@@ -407,15 +407,15 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 
 		tex = new BandTexture(interpType, amtTex, offsets, values);
 	} else if (texType == "hitpointcolor") {
-		const u_int dataIndex = props.Get(Property(propName + ".uvindex")(0u)).Get<u_int>();
+		const u_int dataIndex = Clamp(props.Get(Property(propName + ".uvindex")(0u)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
 
 		tex = new HitPointColorTexture(dataIndex);
 	} else if (texType == "hitpointalpha") {
-		const u_int dataIndex = props.Get(Property(propName + ".uvindex")(0u)).Get<u_int>();
+		const u_int dataIndex = Clamp(props.Get(Property(propName + ".uvindex")(0u)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
 
 		tex = new HitPointAlphaTexture(dataIndex);
 	} else if (texType == "hitpointgrey") {
-		const u_int dataIndex = props.Get(Property(propName + ".uvindex")(0u)).Get<u_int>();
+		const u_int dataIndex = Clamp(props.Get(Property(propName + ".uvindex")(0u)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
 		const int channel = props.Get(Property(propName + ".channel")(-1)).Get<int>();
 
 		tex = new HitPointGreyTexture(dataIndex,
@@ -631,7 +631,7 @@ TextureMapping2D *Scene::CreateTextureMapping2D(const string &prefixName, const 
 
 	if (mapType == "uvmapping2d") {
 		const float rotation = props.Get(Property(prefixName + ".rotation")(0.f)).Get<float>();
-		const u_int dataIndex = props.Get(Property(prefixName + ".uvindex")(0u)).Get<u_int>();
+		const u_int dataIndex = Clamp(props.Get(Property(prefixName + ".uvindex")(0u)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
 		const UV uvScale = props.Get(Property(prefixName + ".uvscale")(1.f, 1.f)).Get<UV>();
 		const UV uvDelta = props.Get(Property(prefixName + ".uvdelta")(0.f, 0.f)).Get<UV>();
 
@@ -644,7 +644,7 @@ TextureMapping3D *Scene::CreateTextureMapping3D(const string &prefixName, const 
 	const string mapType = props.Get(Property(prefixName + ".type")("uvmapping3d")).Get<string>();
 
 	if (mapType == "uvmapping3d") {
-		const u_int dataIndex = props.Get(Property(prefixName + ".uvindex")(0u)).Get<u_int>();
+		const u_int dataIndex = Clamp(props.Get(Property(prefixName + ".uvindex")(0u)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
 		const Matrix4x4 mat = props.Get(Property(prefixName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
 		const Transform trans(mat);
 

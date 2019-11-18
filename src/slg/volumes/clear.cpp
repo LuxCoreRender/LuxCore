@@ -45,11 +45,13 @@ Spectrum ClearVolume::SigmaS(const HitPoint &hitPoint) const {
 float ClearVolume::Scatter(const Ray &ray, const float u,
 		const bool scatteredStart, Spectrum *connectionThroughput,
 		Spectrum *connectionEmission) const {
+	// Point where to evaluate the volume
 	HitPoint hitPoint;
 	hitPoint.Init();
 	hitPoint.fixedDir = ray.d;
 	hitPoint.p = ray.o;
 	hitPoint.geometryN = hitPoint.interpolatedN = hitPoint.shadeN = Normal(-ray.d);
+	hitPoint.passThroughEvent = u;
 	
 	const float distance = ray.maxt - ray.mint;
 	Spectrum transmittance(1.f);

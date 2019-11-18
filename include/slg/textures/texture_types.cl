@@ -303,6 +303,15 @@ typedef struct {
 	Spectrum values[BAND_TEX_MAX_SIZE];
 } BandTexParam;
 
+
+typedef struct {
+	unsigned int dataIndex;
+} HitPointColorTexParam;
+
+typedef struct {
+	unsigned int dataIndex;
+} HitPointAlphaTexParam;
+
 typedef struct {
 	unsigned int channel;
 } HitPointGreyTexParam;
@@ -430,6 +439,8 @@ typedef struct {
 		WrinkledTexParam wrinkled;
 		UVTexParam uvTex;
 		BandTexParam band;
+		HitPointColorTexParam hitPointColor;
+		HitPointColorTexParam hitPointAlpha;
 		HitPointGreyTexParam hitPointGrey;
         NormalMapTexParam normalMap;
 		BlackBodyParam blackBody;

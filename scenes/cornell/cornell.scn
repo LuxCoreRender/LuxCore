@@ -88,10 +88,10 @@ scene.objects.Grey.ply = scenes/cornell/Grey.ply
 # Instance
 #scene.objects.Grey.transformation = 1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  -1.95 0.0 0.0 1.0
 # Motion blur
-scene.objects.Grey.motion.0.time = 0.0
-scene.objects.Grey.motion.0.transformation = 1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  -1.95 0.0 0.0 1.0
-scene.objects.Grey.motion.1.time = 1.0
-scene.objects.Grey.motion.1.transformation = 1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  1.95 0.0 0.0 1.0
+#scene.objects.Grey.motion.0.time = 0.0
+#scene.objects.Grey.motion.0.transformation = 1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  -1.95 0.0 0.0 1.0
+#scene.objects.Grey.motion.1.time = 1.0
+#scene.objects.Grey.motion.1.transformation = 1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  1.95 0.0 0.0 1.0
 ##
 #scene.lights.l1.type = point
 #scene.lights.l1.position = -2.78 2.79 4

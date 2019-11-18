@@ -32,6 +32,8 @@ public:
 	HitPointColorTexture(const u_int index) : dataIndex(index) { }
 	virtual ~HitPointColorTexture() { }
 
+	u_int GetDataIndex() const { return dataIndex; }
+
 	virtual TextureType GetType() const { return HITPOINTCOLOR; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
@@ -54,6 +56,8 @@ class HitPointAlphaTexture : public Texture {
 public:
 	HitPointAlphaTexture(const u_int index) : dataIndex(index) { }
 	virtual ~HitPointAlphaTexture() { }
+
+	u_int GetDataIndex() const { return dataIndex; }
 
 	virtual TextureType GetType() const { return HITPOINTALPHA; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;

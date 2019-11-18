@@ -34,11 +34,10 @@ OPENCL_FORCE_INLINE void HitPoint_Init(__global HitPoint *hitPoint, const bool t
 #if defined(PARAM_ENABLE_TEX_OBJECTID) || defined(PARAM_ENABLE_TEX_OBJECTID_COLOR) || defined(PARAM_ENABLE_TEX_OBJECTID_NORMALIZED)
 	hitPoint->objectID = sceneObjs[meshIndex].objectID;
 #endif
-	
+
 	// Interpolate face normal
 	const float3 geometryN = ExtMesh_GetGeometryNormal(&hitPoint->localToWorld, meshIndex, triIndex EXTMESH_PARAM);
 	VSTORE3F(geometryN,  &hitPoint->geometryN.x);
-
 	const float3 interpolatedN = ExtMesh_GetInterpolateNormal(&hitPoint->localToWorld, meshIndex, triIndex, b1, b2 EXTMESH_PARAM);
 	VSTORE3F(interpolatedN,  &hitPoint->interpolatedN.x);
 	const float3 shadeN = interpolatedN;
@@ -46,28 +45,30 @@ OPENCL_FORCE_INLINE void HitPoint_Init(__global HitPoint *hitPoint, const bool t
 
 	hitPoint->intoObject = (dot(-fixedDir, geometryN) < 0.f);
 
-	// Interpolate UV coordinates
-	const float2 uv = ExtMesh_GetInterpolateUV(meshIndex, triIndex, b1, b2 EXTMESH_PARAM);
-	VSTORE2F(uv, &hitPoint->uv.u);
-	
-	// Interpolate color
+	for (uint i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
+		// Interpolate UV coordinates
+		const float2 uv = ExtMesh_GetInterpolateUV(meshIndex, triIndex, b1, b2, i EXTMESH_PARAM);
+		VSTORE2F(uv, &hitPoint->uv[i].u);
+
+		// Interpolate color
 #if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR) || defined(PARAM_ENABLE_TEX_HITPOINTGREY) || defined(PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR)
-	const float3 color = ExtMesh_GetInterpolateColor(meshIndex, triIndex, b1, b2 EXTMESH_PARAM);
-	VSTORE3F(color, &hitPoint->color.c[0]);
+		const float3 color = ExtMesh_GetInterpolateColor(meshIndex, triIndex, b1, b2, i EXTMESH_PARAM);
+		VSTORE3F(color, &hitPoint->color[i].c[0]);
 #endif
 
-	// Interpolate alpha
+		// Interpolate alpha
 #if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)
-	hitPoint->alpha = ExtMesh_GetInterpolateAlpha(meshIndex, triIndex, b1, b2 EXTMESH_PARAM);
+		hitPoint->alpha[i] = ExtMesh_GetInterpolateAlpha(meshIndex, triIndex, b1, b2, i EXTMESH_PARAM);
 #endif
-	
+	}
+
 	// Compute geometry differentials
 	float3 dndu, dndv, dpdu, dpdv;
 	ExtMesh_GetDifferentials(
 			&hitPoint->localToWorld,
 			meshIndex,
 			triIndex,
-			shadeN,
+			shadeN, 0,
 			&dpdu, &dpdv,
 			&dndu, &dndv
 			EXTMESH_PARAM);
@@ -75,6 +76,49 @@ OPENCL_FORCE_INLINE void HitPoint_Init(__global HitPoint *hitPoint, const bool t
 	VSTORE3F(dpdv, &hitPoint->dpdv.x);
 	VSTORE3F(dndu, &hitPoint->dndu.x);
 	VSTORE3F(dndv, &hitPoint->dndv.x);
+}
+
+// Initialize all fields
+OPENCL_FORCE_INLINE void HitPoint_InitDefault(__global HitPoint *hitPoint) {
+	hitPoint->throughShadowTransparency = false;
+	hitPoint->passThroughEvent = 0.f;
+
+	VSTORE3F((float3)(0.f, 0.f, 0.f), &hitPoint->p.x);
+	VSTORE3F((float3)(0.f, 0.f, 0.f), &hitPoint->fixedDir.x);
+
+#if defined(PARAM_ENABLE_TEX_OBJECTID) || defined(PARAM_ENABLE_TEX_OBJECTID_COLOR) || defined(PARAM_ENABLE_TEX_OBJECTID_NORMALIZED)
+	hitPoint->objectID = 0;
+#endif
+	
+	VSTORE3F((float3)(0.f, 0.f, 0.f),  &hitPoint->geometryN.x);
+	VSTORE3F((float3)(0.f, 0.f, 0.f),  &hitPoint->interpolatedN.x);
+	VSTORE3F((float3)(0.f, 0.f, 0.f),  &hitPoint->shadeN.x);
+
+	hitPoint->intoObject = true;
+
+	for (uint i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
+		VSTORE2F((float2)(0.f, 0.f), &hitPoint->uv[i].u);
+#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR) || defined(PARAM_ENABLE_TEX_HITPOINTGREY) || defined(PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR)
+		VSTORE3F(WHITE, &hitPoint->color[i].c[0]);
+#endif
+#if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)
+		hitPoint->alpha[i] = 1.f;
+#endif
+	}
+	
+	VSTORE3F((float3)(0.f, 0.f, 0.f), &hitPoint->dpdu.x);
+	VSTORE3F((float3)(0.f, 0.f, 0.f), &hitPoint->dpdv.x);
+	VSTORE3F((float3)(0.f, 0.f, 0.f), &hitPoint->dndu.x);
+	VSTORE3F((float3)(0.f, 0.f, 0.f), &hitPoint->dndv.x);
+
+	Transform_Init(&hitPoint->localToWorld);
+
+#if defined(PARAM_HAS_VOLUMES)
+	hitPoint->interiorVolumeIndex = NULL_INDEX;
+	hitPoint->exteriorVolumeIndex = NULL_INDEX;
+	hitPoint->interiorIorTexIndex = NULL_INDEX;
+	hitPoint->exteriorIorTexIndex = NULL_INDEX;
+#endif
 }
 
 OPENCL_FORCE_INLINE void HitPoint_GetFrame(__global const HitPoint *hitPoint, Frame *frame) {

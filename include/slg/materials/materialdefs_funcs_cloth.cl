@@ -560,7 +560,7 @@ OPENCL_FORCE_NOT_INLINE float3 ClothMaterial_Evaluate(
 	float2 uv;
 	float umax, scale = s;
 	__constant Yarn *yarn = GetYarn(Preset, Weave, Repeat_U, Repeat_V,
-            hitPoint->uv.u, hitPoint->uv.v, &uv, &umax, &scale);
+            hitPoint->uv[0].u, hitPoint->uv[0].v, &uv, &umax, &scale);
     
     scale = scale * EvalSpecular(Weave, yarn, uv, umax, localLightDir, localEyeDir);
 	
@@ -595,7 +595,7 @@ OPENCL_FORCE_NOT_INLINE float3 ClothMaterial_Sample(
 	float2 uv;
 	float umax, scale = s;
 	__constant Yarn *yarn = GetYarn(Preset, Weave, Repeat_U, Repeat_V,
-            hitPoint->uv.u, hitPoint->uv.v, &uv, &umax, &scale);
+            hitPoint->uv[0].u, hitPoint->uv[0].v, &uv, &umax, &scale);
 
 //	if (!hitPoint.fromLight)
 	    scale = scale * EvalSpecular(Weave, yarn, uv, umax, localFixedDir, *localSampledDir);

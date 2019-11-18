@@ -65,7 +65,7 @@ OPENCL_FORCE_INLINE float3 DefaultMaterial_GetEmittedRadiance(__global const Mat
 
 	return
 #if defined(PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR)
-		VLOAD3F(hitPoint->color.c) *
+		VLOAD3F(hitPoint->color[0].c) *
 #endif
 		VLOAD3F(material->emittedFactor.c) *
 		(material->usePrimitiveArea ? oneOverPrimitiveArea : 1.f) *

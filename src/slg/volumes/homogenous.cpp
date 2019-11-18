@@ -101,11 +101,13 @@ float HomogeneousVolume::Scatter(const Ray &ray, const float u,
 	// Check if I have to support multi-scattering
 	const bool scatterAllowed = (!scatteredStart || multiScattering);
 
+	// Point where to evaluate the volume
 	HitPoint hitPoint;
 	hitPoint.Init();
 	hitPoint.fixedDir = ray.d;
 	hitPoint.p = ray.o;
 	hitPoint.geometryN = hitPoint.interpolatedN = hitPoint.shadeN = Normal(-ray.d);
+	hitPoint.passThroughEvent = u;
 
 	const Spectrum sigmaA = SigmaA(hitPoint);
 	const Spectrum sigmaS = SigmaS(hitPoint);

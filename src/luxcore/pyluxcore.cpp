@@ -27,6 +27,7 @@
 // The maximum number of arguments of a function being wrapped
 #define BOOST_PYTHON_MAX_ARITY 22
 
+#include <locale>
 #include <memory>
 
 #include <boost/foreach.hpp>
@@ -86,7 +87,6 @@ static void PythonDebugHandler(const char *msg) {
 static void LuxCore_Init() {
 	boost::unique_lock<boost::mutex> lock(luxCoreInitMutex);
 	Init();
-	np::initialize();
 }
 
 static void LuxCore_InitDefaultHandler(boost::python::object &logHandler) {
@@ -95,7 +95,6 @@ static void LuxCore_InitDefaultHandler(boost::python::object &logHandler) {
 	luxCoreLogHandler = logHandler;
 
 	Init(&PythonDebugHandler);
-	np::initialize();
 }
 
 static void LuxCore_SetLogHandler(boost::python::object &logHandler) {
@@ -1362,6 +1361,11 @@ static luxcore::detail::RenderStateImpl *RenderSession_GetRenderState(luxcore::d
 //------------------------------------------------------------------------------
 
 BOOST_PYTHON_MODULE(pyluxcore) {
+	// I get a crash with Ubuntu 19.10 without this line
+    //std::locale::global(std::locale(""));
+
+	np::initialize();
+
 	docstring_options doc_options(
 		true,	// Show user defined docstrings
 		true,	// Show python signatures

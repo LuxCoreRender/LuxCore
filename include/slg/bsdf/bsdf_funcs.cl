@@ -107,6 +107,7 @@ OPENCL_FORCE_NOT_INLINE void BSDF_InitVolume(
 		__global Ray *ray,
 		const uint volumeIndex, const float t, const float passThroughEvent) {
 	bsdf->hitPoint.throughShadowTransparency = throughShadowTransparency;
+	bsdf->hitPoint.passThroughEvent = passThroughEvent;
 
 	const float3 rayOrig = VLOAD3F(&ray->o.x);
 	const float3 rayDir = VLOAD3F(&ray->d.x);
@@ -116,16 +117,32 @@ OPENCL_FORCE_NOT_INLINE void BSDF_InitVolume(
 	const float3 geometryN = -rayDir;
 	VSTORE3F(geometryN, &bsdf->hitPoint.fixedDir.x);
 
-	bsdf->hitPoint.passThroughEvent = passThroughEvent;
-
 	bsdf->sceneObjectIndex = NULL_INDEX;
 	Matrix4x4_IdentityGlobal(&bsdf->hitPoint.localToWorld.m);
-
 	bsdf->materialIndex = volumeIndex;
 
 	VSTORE3F(geometryN, &bsdf->hitPoint.geometryN.x);
 	VSTORE3F(geometryN, &bsdf->hitPoint.interpolatedN.x);
 	VSTORE3F(geometryN, &bsdf->hitPoint.shadeN.x);
+
+	bsdf->hitPoint.intoObject = true;
+	bsdf->hitPoint.interiorVolumeIndex = volumeIndex;
+	bsdf->hitPoint.exteriorVolumeIndex = volumeIndex;
+	const uint iorTexIndex = (volumeIndex != NULL_INDEX) ? mats[volumeIndex].volume.iorTexIndex : NULL_INDEX;
+	bsdf->hitPoint.interiorIorTexIndex = iorTexIndex;
+	bsdf->hitPoint.exteriorIorTexIndex = iorTexIndex;
+
+	bsdf->triangleLightSourceIndex = NULL_INDEX;
+
+	for (uint i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
+		VSTORE2F((float2)(0.f, 0.f), &bsdf->hitPoint.uv[i].u);
+#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR) || defined(PARAM_ENABLE_TEX_HITPOINTGREY) || defined(PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR)
+		VSTORE3F(WHITE, bsdf->hitPoint.color[i].c);
+#endif
+#if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)
+		bsdf->hitPoint.alpha[i] = 1.f;
+#endif
+	}
 
 	float3 dpdu, dpdv;
 	CoordinateSystem(geometryN, &dpdu, &dpdv);
@@ -134,33 +151,14 @@ OPENCL_FORCE_NOT_INLINE void BSDF_InitVolume(
 	VSTORE3F((float3)(0.f, 0.f, 0.f), &bsdf->hitPoint.dndu.x);
 	VSTORE3F((float3)(0.f, 0.f, 0.f), &bsdf->hitPoint.dndv.x);
 
-	bsdf->hitPoint.intoObject = true;
-	bsdf->hitPoint.interiorVolumeIndex = volumeIndex;
-	bsdf->hitPoint.exteriorVolumeIndex = volumeIndex;
-
-	const uint iorTexIndex = (volumeIndex != NULL_INDEX) ? mats[volumeIndex].volume.iorTexIndex : NULL_INDEX;
-	bsdf->hitPoint.interiorIorTexIndex = iorTexIndex;
-	bsdf->hitPoint.exteriorIorTexIndex = iorTexIndex;
-
-#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR) || defined(PARAM_ENABLE_TEX_HITPOINTGREY) || defined(PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR)
-	VSTORE3F(WHITE, bsdf->hitPoint.color.c);
-#endif
-#if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)
-	bsdf->hitPoint.alpha = 1.f;
-#endif
-
 #if defined(PARAM_ENABLE_TEX_OBJECTID) || defined(PARAM_ENABLE_TEX_OBJECTID_COLOR) || defined(PARAM_ENABLE_TEX_OBJECTID_NORMALIZED)
 	bsdf->hitPoint.objectID = NULL_INDEX;
 #endif
 
-	bsdf->triangleLightSourceIndex = NULL_INDEX;
-
-	VSTORE2F((float2)(0.f, 0.f), &bsdf->hitPoint.uv.u);
-
-	bsdf->isVolume = true;
-
 	// Build the local reference system
 	Frame_SetFromZ(&bsdf->frame, geometryN);
+
+	bsdf->isVolume = true;
 }
 #endif
 
