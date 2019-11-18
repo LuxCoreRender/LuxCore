@@ -1361,8 +1361,9 @@ static luxcore::detail::RenderStateImpl *RenderSession_GetRenderState(luxcore::d
 //------------------------------------------------------------------------------
 
 BOOST_PYTHON_MODULE(pyluxcore) {
-	// I get a crash with Ubuntu 19.10 without this line
-    //std::locale::global(std::locale(""));
+	// I get a crash on Ubuntu 19.10 without this line and this should be
+	// good anyway to avoid problems with "," Vs. "." decimal separator, etc.
+    locale::global(locale("C.UTF-8"));
 
 	np::initialize();
 
