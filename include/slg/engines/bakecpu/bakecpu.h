@@ -71,6 +71,18 @@ public:
 	friend class BakeCPURenderThread;
 
 protected:
+	typedef enum {
+		LIGHTMAP
+	} BakeMapType;
+
+	typedef struct {
+		BakeMapType type;
+		std::string fileName;
+		u_int width, height;
+
+		std::vector<std::string> objectNames;
+	} BakeMapInfo;
+
 	static const luxrays::Properties &GetDefaultProps();
 
 	CPURenderThread *NewRenderThread(const u_int index,
@@ -81,6 +93,8 @@ protected:
 	virtual void InitFilm();
 	virtual void StartLockLess();
 	virtual void StopLockLess();
+
+	std::vector<BakeMapInfo> mapInfos;
 
 	PhotonGICache *photonGICache;
 	PathTracer pathTracer;

@@ -31,6 +31,41 @@ using namespace slg;
 
 BakeCPURenderEngine::BakeCPURenderEngine(const RenderConfig *rcfg) :
 		CPUNoTileRenderEngine(rcfg), photonGICache(nullptr) {
+	// Read the list of bake maps to render
+
+	const Properties &cfg = rcfg->cfg;
+	vector<string> mapKeys = cfg.GetAllUniqueSubNames("bake.maps");
+	for (auto const &mapKey : mapKeys) {
+		// Extract the image pipeline priority name
+		const string mapTagStr = Property::ExtractField(mapKey, 2);
+		if (mapTagStr == "")
+			throw runtime_error("Syntax error in bake map definition: " + mapKey);
+
+		const string prefix = "bake.maps." + mapTagStr;
+
+		BakeMapInfo mapInfo;
+
+		// Read the map type
+		const string mapType = cfg.Get(Property(prefix + ".type", "LIGHTMAP")).Get<string>();
+		if (mapType == "LIGHTMAP")
+			mapInfo.type = LIGHTMAP;
+		else
+			throw runtime_error("Unknown bake map type: " + mapType);
+
+		// Read the map file name and size
+		mapInfo.fileName = cfg.Get(Property(prefix + ".filename", "objectNameToBake")).Get<string>();
+		mapInfo.width = cfg.Get(Property(prefix + ".width", 512u)).Get<u_int>();
+		mapInfo.height = cfg.Get(Property(prefix + ".height", 512u)).Get<u_int>();
+
+		// Read the list of objects to bake
+		const Property &objNamesProp = cfg.Get(Property(prefix + ".objectnames", "objectNameToBake"));
+		for (u_int i = 0; i < objNamesProp.GetSize(); ++i)
+			mapInfo.objectNames.push_back(objNamesProp.Get<string>(i));
+
+		mapInfos.push_back(mapInfo);
+	}
+
+	SLG_LOG("Number of maps to bake: " + ToString(mapInfos.size()));
 }
 
 BakeCPURenderEngine::~BakeCPURenderEngine() {
