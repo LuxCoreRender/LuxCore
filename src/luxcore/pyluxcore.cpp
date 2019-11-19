@@ -542,6 +542,10 @@ typedef struct {
 	} buf;
 } BGLBuffer;
 
+//------------------------------------------------------------------------------
+// File GetOutput() related functions
+//------------------------------------------------------------------------------
+
 static void Film_GetOutputFloat1(luxcore::detail::FilmImpl *film, const Film::FilmOutputType type,
 		boost::python::object &obj, const u_int index, const bool executeImagePipeline) {
 	const size_t outputSize = film->GetOutputSize(type) * sizeof(float);
@@ -658,6 +662,100 @@ static void Film_GetOutputUInt3(luxcore::detail::FilmImpl *film, const Film::Fil
 		boost::python::object &obj, const u_int index) {
 	Film_GetOutputUInt1(film, type, obj, index, true);
 }
+
+//------------------------------------------------------------------------------
+// File UpdateOutput() related functions
+//------------------------------------------------------------------------------
+
+static void Film_UpdateOutputFloat1(luxcore::detail::FilmImpl *film, const Film::FilmOutputType type,
+		boost::python::object &obj, const u_int index, const bool executeImagePipeline) {
+	const size_t outputSize = film->GetOutputSize(type) * sizeof(float);
+
+	if (PyObject_CheckBuffer(obj.ptr())) {
+		Py_buffer view;
+		if (!PyObject_GetBuffer(obj.ptr(), &view, PyBUF_SIMPLE)) {
+			if ((size_t)view.len >= outputSize) {
+				if(!film->HasOutput(type)) {
+					const string errorMsg = "Film Output not available: " + luxrays::ToString(type);
+					PyBuffer_Release(&view);
+					throw runtime_error(errorMsg);
+				}
+
+				float *buffer = (float *)view.buf;
+
+				film->UpdateOutput<float>(type, buffer, index, executeImagePipeline);
+
+				PyBuffer_Release(&view);
+			} else {
+				const string errorMsg = "Not enough space in the buffer of Film.UpdateOutputFloat() method: " +
+						luxrays::ToString(view.len) + " instead of " + luxrays::ToString(outputSize);
+				PyBuffer_Release(&view);
+
+				throw runtime_error(errorMsg);
+			}
+		} else {
+			const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
+			throw runtime_error("Unable to get a data view in Film.UpdateOutputFloat() method: " + objType);
+		}
+	} else {
+		const PyObject *pyObj = obj.ptr();
+		const PyTypeObject *pyTypeObj = Py_TYPE(pyObj);
+
+		// Check if it is a Blender bgl.Buffer object
+		if (strcmp(pyTypeObj->tp_name, "bgl.Buffer") == 0) {
+			// This is a special path for optimizing Blender preview
+			const BGLBuffer *bglBuffer = (BGLBuffer *)pyObj;
+
+			// A safety check for buffer type and size
+			// 0x1406 is the value of GL_FLOAT
+			if (bglBuffer->type == 0x1406) {
+				if (bglBuffer->ndimensions == 1) {
+					if (bglBuffer->dimensions[0] * sizeof(float) >= outputSize) {
+						if(!film->HasOutput(type)) {
+							throw runtime_error("Film Output not available: " + luxrays::ToString(type));
+						}
+
+						film->UpdateOutput<float>(type, bglBuffer->buf.asfloat, index, executeImagePipeline);
+					} else
+						throw runtime_error("Not enough space in the Blender bgl.Buffer of Film.UpdateOutputFloat() method: " +
+								luxrays::ToString(bglBuffer->dimensions[0] * sizeof(float)) + " instead of " + luxrays::ToString(outputSize));
+				} else
+					throw runtime_error("A Blender bgl.Buffer has the wrong dimension in Film.GetOutputFloat(): " + luxrays::ToString(bglBuffer->ndimensions));
+			} else
+				throw runtime_error("A Blender bgl.Buffer has the wrong type in Film.GetOutputFloat(): " + luxrays::ToString(bglBuffer->type));
+		} else {
+			const string objType = extract<string>((obj.attr("__class__")).attr("__name__"));
+			throw runtime_error("Unsupported data type in Film.GetOutputFloat(): " + objType);
+		}
+	}
+}
+
+static void Film_UpdateOutputFloat2(luxcore::detail::FilmImpl *film, const Film::FilmOutputType type,
+		boost::python::object &obj) {
+	Film_UpdateOutputFloat1(film, type, obj, 0, false);
+}
+
+static void Film_UpdateOutputFloat3(luxcore::detail::FilmImpl *film, const Film::FilmOutputType type,
+		boost::python::object &obj, const u_int index) {
+	Film_UpdateOutputFloat1(film, type, obj, index, false);
+}
+
+static void Film_UpdateOutputUInt1(luxcore::detail::FilmImpl *film, const Film::FilmOutputType type,
+		boost::python::object &obj, const u_int index, const bool executeImagePipeline) {
+	throw runtime_error("Film Output not available: " + luxrays::ToString(type));
+}
+
+static void Film_UpdateOutputUInt2(luxcore::detail::FilmImpl *film, const Film::FilmOutputType type,
+		boost::python::object &obj) {
+	Film_UpdateOutputUInt1(film, type, obj, 0, false);
+}
+
+static void Film_UpdateOutputUInt3(luxcore::detail::FilmImpl *film, const Film::FilmOutputType type,
+		boost::python::object &obj, const u_int index) {
+	Film_UpdateOutputUInt1(film, type, obj, index, false);
+}
+
+//------------------------------------------------------------------------------
 
 static void Film_AddFilm1(luxcore::detail::FilmImpl *film, luxcore::detail::FilmImpl *srcFilm) {
 	film->AddFilm(*srcFilm);
@@ -1541,6 +1639,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.value("ALBEDO", Film::OUTPUT_ALBEDO)
 		.value("AVG_SHADING_NORMAL", Film::OUTPUT_AVG_SHADING_NORMAL)
 		.value("NOISE", Film::OUTPUT_NOISE)
+		.value("USER_IMPORTANCE", Film::OUTPUT_USER_IMPORTANCE)
 	;
 
     class_<luxcore::detail::FilmImpl>("Film", init<string>())
@@ -1567,6 +1666,12 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("GetOutputUInt", &Film_GetOutputUInt1)
 		.def("GetOutputUInt", &Film_GetOutputUInt2)
 		.def("GetOutputUInt", &Film_GetOutputUInt3)
+		.def("UpdateOutputFloat", &Film_UpdateOutputFloat1)
+		.def("UpdateOutputFloat", &Film_UpdateOutputFloat2)
+		.def("UpdateOutputFloat", &Film_UpdateOutputFloat3)
+		.def("UpdateOutputUInt", &Film_UpdateOutputUInt1)
+		.def("UpdateOutputUInt", &Film_UpdateOutputUInt2)
+		.def("UpdateOutputUInt", &Film_UpdateOutputUInt3)
 		.def("Parse", &luxcore::detail::FilmImpl::Parse)
 		.def("DeleteAllImagePipelines", &luxcore::detail::FilmImpl::DeleteAllImagePipelines)
 		.def("ExecuteImagePipeline", &luxcore::detail::FilmImpl::ExecuteImagePipeline)
