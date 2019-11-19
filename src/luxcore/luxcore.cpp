@@ -190,6 +190,7 @@ Properties luxcore::GetPlatformDesc() {
 #endif
 
 	props << Property("compile.LUXCORE_DISABLE_EMBREE_BVH_BUILDER")(false);
+	props << Property("compile.LC_MESH_MAX_DATA_COUNT")(LC_MESH_MAX_DATA_COUNT);
 
 	return props;
 }
