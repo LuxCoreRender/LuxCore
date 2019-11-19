@@ -107,8 +107,7 @@ void TilePathCPURenderThread::RenderFunc() {
 			for (u_int x = 0; x < tileWork.GetCoord().width && !interruptionRequested; ++x) {
 				for (u_int sampleY = 0; sampleY < engine->aaSamples; ++sampleY) {
 					for (u_int sampleX = 0; sampleX < engine->aaSamples; ++sampleX) {
-						pathTracer.RenderEyeSample(threadIndex,
-								device, engine->renderConfig->scene,
+						pathTracer.RenderEyeSample(device, engine->renderConfig->scene,
 								engine->film, sampler, sampleResults);
 
 						sampler->NextSample(sampleResults);

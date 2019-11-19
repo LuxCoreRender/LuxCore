@@ -78,7 +78,7 @@ void PathCPURenderThread::RenderFunc() {
 	VarianceClamping varianceClamping(pathTracer.sqrtVarianceClampMaxValue);
 
 	// Setup PathTracer thread state
-	PathTracerThreadState pathTracerThreadState(threadIndex, device,
+	PathTracerThreadState pathTracerThreadState(device,
 			eyeSampler, lightSampler,
 			engine->renderConfig->scene, engine->film,
 			&varianceClamping);

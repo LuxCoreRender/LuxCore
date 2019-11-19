@@ -29,11 +29,10 @@ using namespace slg;
 // PathTracer
 //------------------------------------------------------------------------------
 
-PathTracerThreadState::PathTracerThreadState(const u_int thrdIndex,
-		luxrays::IntersectionDevice *dev,
+PathTracerThreadState::PathTracerThreadState(IntersectionDevice *dev,
 		Sampler *eSampler, Sampler *lSampler,
 		const Scene *scn, Film *flm,
-		const VarianceClamping *varClamping) : threadIndex(thrdIndex), device(dev),
+		const VarianceClamping *varClamping) : device(dev),
 		eyeSampler(eSampler), lightSampler(lSampler), scene(scn), film(flm),
 		varianceClamping(varClamping) {
 	// Initialize Eye SampleResults
@@ -114,9 +113,9 @@ void PathTracer::RenderSample(PathTracerThreadState &state) const {
 	}
 
 	if (sampler == state.eyeSampler)
-		RenderEyeSample(state.threadIndex, state.device, state.scene, state.film, sampler, *sampleResults);
+		RenderEyeSample(state.device, state.scene, state.film, sampler, *sampleResults);
 	else
-		RenderLightSample(state.threadIndex, state.device, state.scene, state.film, sampler, *sampleResults);
+		RenderLightSample(state.device, state.scene, state.film, sampler, *sampleResults);
 
 	// Variance clamping
 	if (state.varianceClamping->hasClamping()) {
@@ -365,13 +364,14 @@ void PathTracer::GenerateEyeRay(const Camera *camera, const Film *film, Ray &eye
 		sampler->GetSample(2), sampler->GetSample(3));
 }
 
+
 //------------------------------------------------------------------------------
-// RenderEyeSample
+// RenderRay methods
 //------------------------------------------------------------------------------
 
-void PathTracer::RenderEyeSample(const u_int threadIndex,
-		IntersectionDevice *device, const Scene *scene, const Film *film,
-		Sampler *sampler, vector<SampleResult> &sampleResults) const {
+void PathTracer::RenderEyeRay(IntersectionDevice *device,
+		const Scene *scene, Sampler *sampler, EyePathInfo &pathInfo, Ray &eyeRay,
+		vector<SampleResult> &sampleResults) const {
 	SampleResult &sampleResult = sampleResults[0];
 
 	// Set to 0.0 all result colors
@@ -391,10 +391,6 @@ void PathTracer::RenderEyeSample(const u_int threadIndex,
 	// To keep track of the number of rays traced
 	const double deviceRayCount = device->GetTotalRaysCount();
 
-	EyePathInfo pathInfo;
-
-	Ray eyeRay;
-	GenerateEyeRay(scene->camera, film, eyeRay, pathInfo.volume, sampler, sampleResult);
 	// This is used by light strategy
 	pathInfo.lastShadeN = Normal(eyeRay.d);
 
@@ -631,6 +627,22 @@ void PathTracer::RenderEyeSample(const u_int threadIndex,
 }
 
 //------------------------------------------------------------------------------
+// RenderRay
+//------------------------------------------------------------------------------
+
+void PathTracer::RenderEyeSample(IntersectionDevice *device,
+		const Scene *scene, const Film *film,
+		Sampler *sampler, vector<SampleResult> &sampleResults) const {
+	SampleResult &sampleResult = sampleResults[0];
+
+	EyePathInfo pathInfo;
+	Ray eyeRay;
+	GenerateEyeRay(scene->camera, film, eyeRay, pathInfo.volume, sampler, sampleResult);
+	
+	RenderEyeRay(device, scene, sampler, pathInfo, eyeRay, sampleResults);
+}
+
+//------------------------------------------------------------------------------
 // RenderLightSample methods
 //------------------------------------------------------------------------------
 
@@ -645,8 +657,8 @@ SampleResult &PathTracer::AddLightSampleResult(vector<SampleResult> &sampleResul
 	return sampleResult;
 }
 
-void PathTracer::ConnectToEye(const u_int threadIndex,
-		IntersectionDevice *device, const Scene *scene,
+void PathTracer::ConnectToEye(IntersectionDevice *device,
+		const Scene *scene,
 		const Film *film, const float time,
 		const float u0, const float u1, const float u2,
 		const LightSource &light, const BSDF &bsdf, 
@@ -721,8 +733,8 @@ void PathTracer::ConnectToEye(const u_int threadIndex,
 // RenderLightSample
 //------------------------------------------------------------------------------
 
-void PathTracer::RenderLightSample(const u_int threadIndex,
-		IntersectionDevice *device, const Scene *scene, const Film *film,
+void PathTracer::RenderLightSample(IntersectionDevice *device,
+		const Scene *scene, const Film *film,
 		Sampler *sampler, vector<SampleResult> &sampleResults) const {
 	sampleResults.clear();
 
@@ -785,8 +797,7 @@ void PathTracer::RenderLightSample(const u_int threadIndex,
 			//--------------------------------------------------------------
 
 			if (!hybridBackForwardEnable || (pathInfo.depth.depth > 0)) {
-				ConnectToEye(threadIndex,
-						device, scene, film,
+				ConnectToEye(device, scene, film,
 						nextEventRay.time,
 						sampler->GetSample(sampleOffset + 1),
 						sampler->GetSample(sampleOffset + 2),

@@ -16,93 +16,102 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "slg/slg.h"
-#include "slg/samplers/rtpathcpusampler.h"
-#include "slg/engines/rtpathcpu/rtpathcpu.h"
+#include "slg/engines/bakecpu/bakecpu.h"
+#include "slg/volumes/volume.h"
+#include "slg/utils/varianceclamping.h"
 
 using namespace std;
 using namespace luxrays;
 using namespace slg;
 
 //------------------------------------------------------------------------------
-// RTPathCPURenderThread
+// BakeCPU RenderThread
 //------------------------------------------------------------------------------
 
-RTPathCPURenderThread::RTPathCPURenderThread(RTPathCPURenderEngine *engine, const u_int index,
-			luxrays::IntersectionDevice *device) : 
-	PathCPURenderThread(engine, index, device) {
+BakeCPURenderThread::BakeCPURenderThread(BakeCPURenderEngine *engine,
+		const u_int index, IntersectionDevice *device) :
+		CPUNoTileRenderThread(engine, index, device) {
 }
 
-RTPathCPURenderThread::~RTPathCPURenderThread() {
-}
+void BakeCPURenderThread::RenderFunc() {
+	//SLG_LOG("[BakeCPURenderEngine::" << threadIndex << "] Rendering thread started");
 
-void RTPathCPURenderThread::StartRenderThread() {
-	// Avoid to allocate the film thread because I'm going to use the global one
-
-	CPURenderThread::StartRenderThread();
-}
-
-void RTPathCPURenderThread::RTRenderFunc() {
-	//SLG_LOG("[RTPathCPURenderEngine::" << threadIndex << "] Rendering thread started");
+	// Boost barriers (used in PhotonGICache::Update()) are supposed to be not
+	// interruptible but they are and seem to be missing a way to reset them. So
+	// better to disable interruptions.
+	boost::this_thread::disable_interruption di;
 
 	//--------------------------------------------------------------------------
 	// Initialization
 	//--------------------------------------------------------------------------
 
-	RTPathCPURenderEngine *engine = (RTPathCPURenderEngine *)renderEngine;
+	BakeCPURenderEngine *engine = (BakeCPURenderEngine *)renderEngine;
 	const PathTracer &pathTracer = engine->pathTracer;
 	// (engine->seedBase + 1) seed is used for sharedRndGen
 	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + 1 + threadIndex);
-	// Setup the sampler
-	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, engine->film, NULL,
-			engine->samplerSharedData, Properties());
-	((RTPathCPUSampler *)sampler)->SetRenderEngine(engine);
-	sampler->RequestSamples(PIXEL_NORMALIZED_ONLY, pathTracer.eyeSampleSize);
+
+	// Setup the sampler(s)
+
+	Sampler *eyeSampler = nullptr;
+	Sampler *lightSampler = nullptr;
+
+	eyeSampler = engine->renderConfig->AllocSampler(rndGen, engine->film,
+			nullptr, engine->samplerSharedData, Properties());
+	eyeSampler->RequestSamples(PIXEL_NORMALIZED_ONLY, pathTracer.eyeSampleSize);
+
+	// Setup variance clamping
+	VarianceClamping varianceClamping(pathTracer.sqrtVarianceClampMaxValue);
+
+	// Setup PathTracer thread state
+	PathTracerThreadState pathTracerThreadState(device,
+			eyeSampler, lightSampler,
+			engine->renderConfig->scene, engine->film,
+			&varianceClamping);
 
 	//--------------------------------------------------------------------------
 	// Trace paths
 	//--------------------------------------------------------------------------
 
-	vector<SampleResult> sampleResults(1);
-	SampleResult &sampleResult = sampleResults[0];
-	PathTracer::InitEyeSampleResults(engine->film, sampleResults);
-
-	VarianceClamping varianceClamping(pathTracer.sqrtVarianceClampMaxValue);
+	// I can not use engine->renderConfig->GetProperty() here because the
+	// RenderConfig properties cache is not thread safe
+	const u_int haltDebug = engine->renderConfig->cfg.Get(Property("batch.haltdebug")(0u)).Get<u_int>() *
+		engine->film->GetWidth() * engine->film->GetHeight();
 
 	for (u_int steps = 0; !boost::this_thread::interruption_requested(); ++steps) {
-		// Check if we are in pause or edit mode
-		if (engine->threadsPauseMode) {
-			// Synchronize all threads
-			engine->threadsSyncBarrier->wait();
-
-			// Wait for the main thread
-			engine->threadsSyncBarrier->wait();
+		// Check if we are in pause mode
+		if (engine->pauseMode) {
+			// Check every 100ms if I have to continue the rendering
+			while (!boost::this_thread::interruption_requested() && engine->pauseMode)
+				boost::this_thread::sleep(boost::posix_time::millisec(100));
 
 			if (boost::this_thread::interruption_requested())
 				break;
-
-			((RTPathCPUSampler *)sampler)->Reset(engine->film);
 		}
 
-		pathTracer.RenderEyeSample(device, engine->renderConfig->scene,
-				engine->film, sampler, sampleResults);
-
-		// Variance clamping
-		if (varianceClamping.hasClamping())
-			varianceClamping.Clamp(*(engine->film), sampleResult);
-
-		sampler->NextSample(sampleResults);
+		pathTracer.RenderSample(pathTracerThreadState);
 
 #ifdef WIN32
 		// Work around Windows bad scheduling
 		renderThread->yield();
 #endif
+
+		// Check halt conditions
+		if ((haltDebug > 0u) && (steps >= haltDebug))
+			break;
+		if (engine->film->GetConvergence() == 1.f)
+			break;
+		
+		if (engine->photonGICache) {
+			const u_int spp = engine->film->GetTotalEyeSampleCount() / engine->film->GetPixelCount();
+			engine->photonGICache->Update(threadIndex, spp);
+		}
 	}
 
-	delete sampler;
+	delete eyeSampler;
+	delete lightSampler;
 	delete rndGen;
 
 	threadDone = true;
 
-	//SLG_LOG("[RTPathCPURenderEngine::" << threadIndex << "] Rendering thread halted");
+	//SLG_LOG("[BakeCPURenderEngine::" << threadIndex << "] Rendering thread halted");
 }

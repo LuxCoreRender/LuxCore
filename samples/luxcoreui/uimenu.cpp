@@ -222,6 +222,10 @@ void LuxCoreApp::MenuEngine() {
 		SetRenderingEngineType("RTPATHCPU");
 		CloseAllRenderConfigEditors();
 	}
+	if (ImGui::MenuItem("BAKECPU", "0", (currentEngineType == "BAKECPU"))) {
+		SetRenderingEngineType("BAKECPU");
+		CloseAllRenderConfigEditors();
+	}
 }
 
 //------------------------------------------------------------------------------

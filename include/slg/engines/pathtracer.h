@@ -43,8 +43,7 @@ class VarianceClamping;
 
 class PathTracerThreadState {
 public:
-	PathTracerThreadState(const u_int threadIndex,
-			luxrays::IntersectionDevice *device,
+	PathTracerThreadState(luxrays::IntersectionDevice *device,
 			Sampler *eyeSampler, Sampler *lightSampler,
 			const Scene *scene, Film *film,
 			const VarianceClamping *varianceClamping);
@@ -53,7 +52,6 @@ public:
 	friend class PathTracer;
 
 private:
-	const u_int threadIndex;
 	luxrays::IntersectionDevice *device;
 
 	Sampler *eyeSampler, *lightSampler;
@@ -80,11 +78,14 @@ public:
 
 	void ParseOptions(const luxrays::Properties &cfg, const luxrays::Properties &defaultProps);
 
-	void RenderEyeSample(const u_int threadIndex, luxrays::IntersectionDevice *device,
+	void RenderEyeRay(luxrays::IntersectionDevice *device,
+			const Scene *scene, Sampler *sampler, EyePathInfo &pathInfo,
+			luxrays::Ray &eyeRay, std::vector<SampleResult> &sampleResults) const;
+	void RenderEyeSample(luxrays::IntersectionDevice *device,
 			const Scene *scene, const Film *film, Sampler *sampler,
 			std::vector<SampleResult> &sampleResults) const;
 
-	void RenderLightSample(const u_int threadIndex, luxrays::IntersectionDevice *device,
+	void RenderLightSample(luxrays::IntersectionDevice *device,
 			const Scene *scene, const Film *film, Sampler *sampler,
 			std::vector<SampleResult> &sampleResults) const;
 	
@@ -147,8 +148,8 @@ private:
 
 	SampleResult &AddLightSampleResult(std::vector<SampleResult> &sampleResults,
 			const Film *film) const;
-	void ConnectToEye(const u_int threadIndex,
-			luxrays::IntersectionDevice *device, const Scene *scene,
+	void ConnectToEye(luxrays::IntersectionDevice *device,
+			const Scene *scene,
 			const Film *film, const float time,
 			const float u0, const float u1, const float u2,
 			const LightSource &light,  const BSDF &bsdf,
