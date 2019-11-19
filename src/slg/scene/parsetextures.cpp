@@ -407,15 +407,15 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 
 		tex = new BandTexture(interpType, amtTex, offsets, values);
 	} else if (texType == "hitpointcolor") {
-		const u_int dataIndex = Clamp(props.Get(Property(propName + ".uvindex")(0u)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
+		const u_int dataIndex = Clamp(props.Get(Property(propName + ".dataindex")(0u)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
 
 		tex = new HitPointColorTexture(dataIndex);
 	} else if (texType == "hitpointalpha") {
-		const u_int dataIndex = Clamp(props.Get(Property(propName + ".uvindex")(0u)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
+		const u_int dataIndex = Clamp(props.Get(Property(propName + ".dataindex")(0u)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
 
 		tex = new HitPointAlphaTexture(dataIndex);
 	} else if (texType == "hitpointgrey") {
-		const u_int dataIndex = Clamp(props.Get(Property(propName + ".uvindex")(0u)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
+		const u_int dataIndex = Clamp(props.Get(Property(propName + ".dataindex")(0u)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
 		const int channel = props.Get(Property(propName + ".channel")(-1)).Get<int>();
 
 		tex = new HitPointGreyTexture(dataIndex,
