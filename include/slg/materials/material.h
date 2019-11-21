@@ -158,7 +158,8 @@ public:
 	virtual luxrays::Spectrum Albedo(const HitPoint &hitPoint) const;
 
 	// EvaluateTotal() returns the total reflection given an constant illumination
-	// over the hemisphere. It is currently used only by PhotonGICache.
+	// over the hemisphere. It is currently used only by PhotonGICache and
+	// BakeCPU render engine.
 	//
 	// NOTE: this is called rho() in PBRT sources.
 	virtual luxrays::Spectrum EvaluateTotal(const HitPoint &hitPoint) const;

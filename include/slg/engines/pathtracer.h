@@ -51,7 +51,6 @@ public:
 
 	friend class PathTracer;
 
-private:
 	luxrays::IntersectionDevice *device;
 
 	Sampler *eyeSampler, *lightSampler;
@@ -61,6 +60,7 @@ private:
 	
 	std::vector<SampleResult> eyeSampleResults, lightSampleResults;
 	
+private:
 	double eyeSampleCount, lightSampleCount;
 };
 
@@ -78,7 +78,7 @@ public:
 
 	void ParseOptions(const luxrays::Properties &cfg, const luxrays::Properties &defaultProps);
 
-	void RenderEyeRay(luxrays::IntersectionDevice *device,
+	void RenderEyePath(luxrays::IntersectionDevice *device,
 			const Scene *scene, Sampler *sampler, EyePathInfo &pathInfo,
 			luxrays::Ray &eyeRay, std::vector<SampleResult> &sampleResults) const;
 	void RenderEyeSample(luxrays::IntersectionDevice *device,

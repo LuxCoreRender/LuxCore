@@ -84,54 +84,6 @@ void PathTracer::InitEyeSampleResults(const Film *film, vector<SampleResult> &sa
 	sampleResult.useFilmSplat = false;
 }
 
-void PathTracer::RenderSample(PathTracerThreadState &state) const {
-	// Check if I have to trace an eye or light path
-	Sampler *sampler;
-	vector<SampleResult> *sampleResults;
-	if (hybridBackForwardEnable) {
-		const double ratio = state.eyeSampleCount / state.lightSampleCount;
-		if ((hybridBackForwardPartition == 1.f) ||
-				(ratio < hybridBackForwardPartition)) {
-			// Trace an eye path
-			sampler = state.eyeSampler;
-			sampleResults = &state.eyeSampleResults;
-
-			state.eyeSampleCount += 1.0;
-		} else {
-			// Trace a light path
-
-			sampler = state.lightSampler;
-			sampleResults = &state.lightSampleResults;
-
-			state.lightSampleCount += 1.0;
-		}
-	} else {
-		sampler = state.eyeSampler;
-		sampleResults = &state.eyeSampleResults;
-
-		state.eyeSampleCount += 1.0;
-	}
-
-	if (sampler == state.eyeSampler)
-		RenderEyeSample(state.device, state.scene, state.film, sampler, *sampleResults);
-	else
-		RenderLightSample(state.device, state.scene, state.film, sampler, *sampleResults);
-
-	// Variance clamping
-	if (state.varianceClamping->hasClamping()) {
-		for(u_int i = 0; i < sampleResults->size(); ++i) {
-			SampleResult &sampleResult = (*sampleResults)[i];
-
-			// I clamp only eye paths samples (variance clamping would cut
-			// SDS path values due to high scale of PSR samples)
-			if (sampleResult.HasChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED))
-				state.varianceClamping->Clamp(*state.film, sampleResult);
-		}
-	}
-
-	sampler->NextSample(*sampleResults);
-}
-
 //------------------------------------------------------------------------------
 // RenderEyeSample methods
 //------------------------------------------------------------------------------
@@ -366,10 +318,10 @@ void PathTracer::GenerateEyeRay(const Camera *camera, const Film *film, Ray &eye
 
 
 //------------------------------------------------------------------------------
-// RenderRay methods
+// RenderEyePath methods
 //------------------------------------------------------------------------------
 
-void PathTracer::RenderEyeRay(IntersectionDevice *device,
+void PathTracer::RenderEyePath(IntersectionDevice *device,
 		const Scene *scene, Sampler *sampler, EyePathInfo &pathInfo, Ray &eyeRay,
 		vector<SampleResult> &sampleResults) const {
 	SampleResult &sampleResult = sampleResults[0];
@@ -627,7 +579,7 @@ void PathTracer::RenderEyeRay(IntersectionDevice *device,
 }
 
 //------------------------------------------------------------------------------
-// RenderRay
+// RenderEyeSample
 //------------------------------------------------------------------------------
 
 void PathTracer::RenderEyeSample(IntersectionDevice *device,
@@ -639,7 +591,7 @@ void PathTracer::RenderEyeSample(IntersectionDevice *device,
 	Ray eyeRay;
 	GenerateEyeRay(scene->camera, film, eyeRay, pathInfo.volume, sampler, sampleResult);
 	
-	RenderEyeRay(device, scene, sampler, pathInfo, eyeRay, sampleResults);
+	RenderEyePath(device, scene, sampler, pathInfo, eyeRay, sampleResults);
 }
 
 //------------------------------------------------------------------------------
@@ -846,6 +798,58 @@ void PathTracer::RenderLightSample(IntersectionDevice *device,
 			nextEventRay.Update(bsdf.GetRayOrigin(sampledDir), sampledDir);
 		}
 	}
+}
+
+//------------------------------------------------------------------------------
+// RenderSample
+//------------------------------------------------------------------------------
+
+void PathTracer::RenderSample(PathTracerThreadState &state) const {
+	// Check if I have to trace an eye or light path
+	Sampler *sampler;
+	vector<SampleResult> *sampleResults;
+	if (hybridBackForwardEnable) {
+		const double ratio = state.eyeSampleCount / state.lightSampleCount;
+		if ((hybridBackForwardPartition == 1.f) ||
+				(ratio < hybridBackForwardPartition)) {
+			// Trace an eye path
+			sampler = state.eyeSampler;
+			sampleResults = &state.eyeSampleResults;
+
+			state.eyeSampleCount += 1.0;
+		} else {
+			// Trace a light path
+
+			sampler = state.lightSampler;
+			sampleResults = &state.lightSampleResults;
+
+			state.lightSampleCount += 1.0;
+		}
+	} else {
+		sampler = state.eyeSampler;
+		sampleResults = &state.eyeSampleResults;
+
+		state.eyeSampleCount += 1.0;
+	}
+
+	if (sampler == state.eyeSampler)
+		RenderEyeSample(state.device, state.scene, state.film, sampler, *sampleResults);
+	else
+		RenderLightSample(state.device, state.scene, state.film, sampler, *sampleResults);
+
+	// Variance clamping
+	if (state.varianceClamping->hasClamping()) {
+		for(u_int i = 0; i < sampleResults->size(); ++i) {
+			SampleResult &sampleResult = (*sampleResults)[i];
+
+			// I clamp only eye paths samples (variance clamping would cut
+			// SDS path values due to high scale of PSR samples)
+			if (sampleResult.HasChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED))
+				state.varianceClamping->Clamp(*state.film, sampleResult);
+		}
+	}
+
+	sampler->NextSample(*sampleResults);
 }
 
 //------------------------------------------------------------------------------

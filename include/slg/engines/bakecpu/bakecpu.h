@@ -35,6 +35,20 @@ namespace slg {
 // Render baking PU render engine
 //------------------------------------------------------------------------------
 
+typedef enum {
+	COMBINED,
+	LIGHTMAP
+} BakeMapType;
+
+typedef struct {
+	BakeMapType type;
+	std::string fileName;
+	u_int width, height;
+	u_int uvindex;
+
+	std::vector<std::string> objectNames;
+} BakeMapInfo;
+
 class BakeCPURenderEngine;
 
 class BakeCPURenderThread : public CPUNoTileRenderThread {
@@ -45,7 +59,9 @@ public:
 	friend class BakeCPURenderEngine;
 
 protected:
+	void InitBakeWork(const BakeMapInfo &mapInfo);
 	void RenderFunc();
+
 	virtual boost::thread *AllocRenderThread() { return new boost::thread(&BakeCPURenderThread::RenderFunc, this); }
 };
 
@@ -71,18 +87,6 @@ public:
 	friend class BakeCPURenderThread;
 
 protected:
-	typedef enum {
-		LIGHTMAP
-	} BakeMapType;
-
-	typedef struct {
-		BakeMapType type;
-		std::string fileName;
-		u_int width, height;
-
-		std::vector<std::string> objectNames;
-	} BakeMapInfo;
-
 	static const luxrays::Properties &GetDefaultProps();
 
 	CPURenderThread *NewRenderThread(const u_int index,
@@ -98,6 +102,13 @@ protected:
 
 	PhotonGICache *photonGICache;
 	PathTracer pathTracer;
+	
+	Film *mapFilm;
+	std::vector<const SceneObject *> currentSceneObjsToBake;
+	luxrays::Distribution1D *currentSceneObjsDist;
+	std::vector<luxrays::Distribution1D *> currentSceneObjDist;
+
+	boost::barrier *threadsSyncBarrier;
 };
 
 }

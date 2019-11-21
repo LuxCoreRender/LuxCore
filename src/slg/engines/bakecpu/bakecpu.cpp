@@ -16,6 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <boost/thread/barrier.hpp>
+
 #include "slg/engines/bakecpu/bakecpu.h"
 #include "slg/engines/bakecpu/bakecpurenderstate.h"
 #include "slg/engines/caches/photongi/photongicache.h"
@@ -30,7 +32,8 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 BakeCPURenderEngine::BakeCPURenderEngine(const RenderConfig *rcfg) :
-		CPUNoTileRenderEngine(rcfg), photonGICache(nullptr) {
+		CPUNoTileRenderEngine(rcfg), photonGICache(nullptr), mapFilm(nullptr),
+		currentSceneObjsDist(nullptr), threadsSyncBarrier(nullptr) {
 	// Read the list of bake maps to render
 
 	const Properties &cfg = rcfg->cfg;
@@ -46,19 +49,22 @@ BakeCPURenderEngine::BakeCPURenderEngine(const RenderConfig *rcfg) :
 		BakeMapInfo mapInfo;
 
 		// Read the map type
-		const string mapType = cfg.Get(Property(prefix + ".type", "LIGHTMAP")).Get<string>();
-		if (mapType == "LIGHTMAP")
+		const string mapType = cfg.Get(Property(prefix + ".type")("COMBINED")).Get<string>();
+		if (mapType == "COMBINED")
+			mapInfo.type = COMBINED;
+		else if (mapType == "LIGHTMAP")
 			mapInfo.type = LIGHTMAP;
 		else
 			throw runtime_error("Unknown bake map type: " + mapType);
 
 		// Read the map file name and size
-		mapInfo.fileName = cfg.Get(Property(prefix + ".filename", "objectNameToBake")).Get<string>();
-		mapInfo.width = cfg.Get(Property(prefix + ".width", 512u)).Get<u_int>();
-		mapInfo.height = cfg.Get(Property(prefix + ".height", 512u)).Get<u_int>();
+		mapInfo.fileName = cfg.Get(Property(prefix + ".filename")("image.png")).Get<string>();
+		mapInfo.width = cfg.Get(Property(prefix + ".width")(512u)).Get<u_int>();
+		mapInfo.height = cfg.Get(Property(prefix + ".height")(512u)).Get<u_int>();
+		mapInfo.uvindex = Clamp(cfg.Get(Property(prefix + ".uvindex")(0u)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
 
 		// Read the list of objects to bake
-		const Property &objNamesProp = cfg.Get(Property(prefix + ".objectnames", "objectNameToBake"));
+		const Property &objNamesProp = cfg.Get(Property(prefix + ".objectnames")("objectNameToBake"));
 		for (u_int i = 0; i < objNamesProp.GetSize(); ++i)
 			mapInfo.objectNames.push_back(objNamesProp.Get<string>(i));
 
@@ -69,13 +75,18 @@ BakeCPURenderEngine::BakeCPURenderEngine(const RenderConfig *rcfg) :
 }
 
 BakeCPURenderEngine::~BakeCPURenderEngine() {
+	for (auto dist : currentSceneObjDist)
+		delete dist;
+	currentSceneObjDist.clear();
+	delete currentSceneObjsDist;
+	delete threadsSyncBarrier;
+	delete mapFilm;
 	delete photonGICache;
 }
 
 void BakeCPURenderEngine::InitFilm() {
 	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
 
-	film->SetRadianceGroupCount(renderConfig->scene->lightDefs.GetLightGroupCount());
 	film->Init();
 }
 
@@ -151,12 +162,26 @@ void BakeCPURenderEngine::StartLockLess() {
 	pathTracer.SetPhotonGICache(photonGICache);
 	
 	//--------------------------------------------------------------------------
+	
+	threadsSyncBarrier = new boost::barrier(renderThreads.size());
+
+	//--------------------------------------------------------------------------
 
 	CPUNoTileRenderEngine::StartLockLess();
 }
 
 void BakeCPURenderEngine::StopLockLess() {
 	CPUNoTileRenderEngine::StopLockLess();
+
+	for (auto dist : currentSceneObjDist)
+		delete dist;
+	currentSceneObjDist.clear();
+
+	delete currentSceneObjsDist;
+	currentSceneObjsDist = nullptr;
+	
+	delete threadsSyncBarrier;
+	threadsSyncBarrier = nullptr;
 
 	pathTracer.DeletePixelFilterDistribution();
 
@@ -175,6 +200,8 @@ Properties BakeCPURenderEngine::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
 			PathTracer::ToProperties(cfg) <<
 			PhotonGICache::ToProperties(cfg);
+
+	props << cfg.GetAllProperties("bake.maps.");
 
 	return props;
 }
