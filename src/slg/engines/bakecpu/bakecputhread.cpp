@@ -299,6 +299,14 @@ void BakeCPURenderThread::RenderFunc() {
 		delete rndGen;
 
 		engine->threadsSyncBarrier->wait();
+
+		if ((threadIndex == 0) && !boost::this_thread::interruption_requested()) {
+			// Save the rendered map
+			engine->mapFilm->Output(mapInfo.fileName, FilmOutputs::RGB_IMAGEPIPELINE);
+		}
+
+		if (boost::this_thread::interruption_requested())
+			break;
 	}
 
 	threadDone = true;
