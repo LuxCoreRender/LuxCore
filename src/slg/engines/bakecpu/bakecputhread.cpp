@@ -37,6 +37,9 @@ void BakeCPURenderThread::InitBakeWork(const BakeMapInfo &mapInfo) {
 	BakeCPURenderEngine *engine = (BakeCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
 
+	// Lock the main film
+	boost::unique_lock<boost::mutex> lock(*engine->filmMutex);
+
 	// Print some information
 	SLG_LOG("Baking map: " << mapInfo.fileName);
 	SLG_LOG("Resolution: " << mapInfo.width << "x" << mapInfo.height);
@@ -159,9 +162,6 @@ void BakeCPURenderThread::RenderFunc() {
 		//----------------------------------------------------------------------
 
 		const PathVolumeInfo volInfo;
-		vector<SampleResult> eyeSampleResults;
-
-		double lastFilmRefresh = WallClockTime();
 		for (u_int steps = 0; !boost::this_thread::interruption_requested(); ++steps) {
 			// Check if we are in pause mode
 			if (engine->pauseMode) {
@@ -292,21 +292,6 @@ void BakeCPURenderThread::RenderFunc() {
 			if (engine->photonGICache) {
 				const u_int spp = engine->film->GetTotalEyeSampleCount() / engine->film->GetPixelCount();
 				engine->photonGICache->Update(threadIndex, spp);
-			}
-
-			// Check if it is time to refresh the engine Film
-			if (threadIndex == 0) {
-				const double now = WallClockTime();
-				if (now - lastFilmRefresh > 2.0) {
-					engine->film->Clear();
-					engine->film->AddFilm(*engine->mapFilm,
-							0, 0,
-							Min(engine->mapFilm->GetWidth(), engine->film->GetWidth()),
-							Min(engine->mapFilm->GetHeight(), engine->film->GetHeight()),
-							0, 0);
-
-					lastFilmRefresh = now;
-				}
 			}
 		}
 

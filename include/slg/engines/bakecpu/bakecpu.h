@@ -97,6 +97,8 @@ protected:
 	virtual void InitFilm();
 	virtual void StartLockLess();
 	virtual void StopLockLess();
+	
+	virtual void UpdateFilmLockLess();
 
 	std::vector<BakeMapInfo> mapInfos;
 

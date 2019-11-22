@@ -189,6 +189,24 @@ void BakeCPURenderEngine::StopLockLess() {
 	photonGICache = nullptr;
 }
 
+void BakeCPURenderEngine::UpdateFilmLockLess() {
+	boost::unique_lock<boost::mutex> lock(*filmMutex);
+
+	// Film may have been not initialized because of an error during Start()
+	if (film->IsInitiliazed()) {
+		film->Clear();
+		film->GetDenoiser().Clear();
+
+		if (mapFilm) {
+			film->AddFilm(*mapFilm,
+					0, 0,
+					Min(mapFilm->GetWidth(), film->GetWidth()),
+					Min(mapFilm->GetHeight(), film->GetHeight()),
+					0, 0);
+		}
+	}
+}
+
 //------------------------------------------------------------------------------
 // Static methods used by RenderEngineRegistry
 //------------------------------------------------------------------------------
