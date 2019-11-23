@@ -1683,7 +1683,11 @@ static luxcore::detail::RenderStateImpl *RenderSession_GetRenderState(luxcore::d
 BOOST_PYTHON_MODULE(pyluxcore) {
 	// I get a crash on Ubuntu 19.10 without this line and this should be
 	// good anyway to avoid problems with "," Vs. "." decimal separator, etc.
+#ifndef WIN32    
+    // C.UTF-8 is not supported in Windows and causes an error when importing pyluxcore:
+    // "SystemError: initialization of pyluxcore raised unreported exception"
     locale::global(locale("C.UTF-8"));
+#endif
 
 	np::initialize();
 
