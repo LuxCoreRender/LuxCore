@@ -230,6 +230,8 @@ Properties Material::ToProperties(const ImageMapCache &imgMapCache, const bool u
 
 	props.Set(Property("scene.materials." + name + ".shadowcatcher.enable")(isShadowCatcher));
 	props.Set(Property("scene.materials." + name + ".shadowcatcher.onlyinfinitelights")(isShadowCatcherOnlyInfiniteLights));
+	
+	props.Set(Property("scene.materials." + name + ".photongi.enable")(isPhotonGIEnabled));
 
 	return props;
 }
