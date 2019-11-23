@@ -59,6 +59,7 @@ BakeCPURenderEngine::BakeCPURenderEngine(const RenderConfig *rcfg) :
 
 		// Read the map file name and size
 		mapInfo.fileName = cfg.Get(Property(prefix + ".filename")("image.png")).Get<string>();
+		mapInfo.imagePipelineIndex = cfg.Get(Property(prefix + ".imagepipelineindex")(0)).Get<u_int>();
 		mapInfo.width = cfg.Get(Property(prefix + ".width")(512u)).Get<u_int>();
 		mapInfo.height = cfg.Get(Property(prefix + ".height")(512u)).Get<u_int>();
 		mapInfo.uvindex = Clamp(cfg.Get(Property(prefix + ".uvindex")(0u)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);

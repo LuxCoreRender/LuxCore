@@ -84,11 +84,31 @@ void PathTracer::InitEyeSampleResults(const Film *film, vector<SampleResult> &sa
 	sampleResult.useFilmSplat = false;
 }
 
+void PathTracer::ResetEyeSampleResults(vector<SampleResult> &sampleResults) {
+	SampleResult &sampleResult = sampleResults[0];
+
+	// Set to 0.0 all result colors
+	sampleResult.emission = Spectrum();
+	for (u_int i = 0; i < sampleResult.radiance.size(); ++i)
+		sampleResult.radiance[i] = Spectrum();
+	sampleResult.directDiffuse = Spectrum();
+	sampleResult.directGlossy = Spectrum();
+	sampleResult.indirectDiffuse = Spectrum();
+	sampleResult.indirectGlossy = Spectrum();
+	sampleResult.indirectSpecular = Spectrum();
+	sampleResult.directShadowMask = 1.f;
+	sampleResult.indirectShadowMask = 1.f;
+	sampleResult.irradiance = Spectrum();
+	sampleResult.albedo = Spectrum();
+
+	sampleResult.rayCount = 0.f;
+}
+
 //------------------------------------------------------------------------------
 // RenderEyeSample methods
 //------------------------------------------------------------------------------
 
-PathTracer::DirectLightResult PathTracer::DirectLightSampling(
+DirectLightResult PathTracer::DirectLightSampling(
 		luxrays::IntersectionDevice *device, const Scene *scene,
 		const float time,
 		const float u0, const float u1, const float u2,
@@ -316,7 +336,6 @@ void PathTracer::GenerateEyeRay(const Camera *camera, const Film *film, Ray &eye
 		sampler->GetSample(2), sampler->GetSample(3));
 }
 
-
 //------------------------------------------------------------------------------
 // RenderEyePath methods
 //------------------------------------------------------------------------------
@@ -324,28 +343,13 @@ void PathTracer::GenerateEyeRay(const Camera *camera, const Film *film, Ray &eye
 void PathTracer::RenderEyePath(IntersectionDevice *device,
 		const Scene *scene, Sampler *sampler, EyePathInfo &pathInfo, Ray &eyeRay,
 		vector<SampleResult> &sampleResults) const {
-	SampleResult &sampleResult = sampleResults[0];
-
-	// Set to 0.0 all result colors
-	sampleResult.emission = Spectrum();
-	for (u_int i = 0; i < sampleResult.radiance.size(); ++i)
-		sampleResult.radiance[i] = Spectrum();
-	sampleResult.directDiffuse = Spectrum();
-	sampleResult.directGlossy = Spectrum();
-	sampleResult.indirectDiffuse = Spectrum();
-	sampleResult.indirectGlossy = Spectrum();
-	sampleResult.indirectSpecular = Spectrum();
-	sampleResult.directShadowMask = 1.f;
-	sampleResult.indirectShadowMask = 1.f;
-	sampleResult.irradiance = Spectrum();
-	sampleResult.albedo = Spectrum();
-
 	// To keep track of the number of rays traced
 	const double deviceRayCount = device->GetTotalRaysCount();
 
 	// This is used by light strategy
 	pathInfo.lastShadeN = Normal(eyeRay.d);
 
+	SampleResult &sampleResult = sampleResults[0];
 	bool photonGIShowIndirectPathMixUsed = false;
 	bool photonGICausticCacheUsed = false;
 	bool photonGICacheEnabledOnLastHit = false;
@@ -571,7 +575,7 @@ void PathTracer::RenderEyePath(IntersectionDevice *device,
 		eyeRay.Update(bsdf.GetRayOrigin(sampledDir), sampledDir);
 	}
 
-	sampleResult.rayCount = (float)(device->GetTotalRaysCount() - deviceRayCount);
+	sampleResult.rayCount += (float)(device->GetTotalRaysCount() - deviceRayCount);
 	
 	if (photonGICache && (photonGICache->GetDebugType() == PhotonGIDebugType::PGIC_DEBUG_SHOWINDIRECTPATHMIX) &&
 			!photonGIShowIndirectPathMixUsed)
@@ -585,12 +589,13 @@ void PathTracer::RenderEyePath(IntersectionDevice *device,
 void PathTracer::RenderEyeSample(IntersectionDevice *device,
 		const Scene *scene, const Film *film,
 		Sampler *sampler, vector<SampleResult> &sampleResults) const {
-	SampleResult &sampleResult = sampleResults[0];
+	ResetEyeSampleResults(sampleResults);
 
 	EyePathInfo pathInfo;
 	Ray eyeRay;
-	GenerateEyeRay(scene->camera, film, eyeRay, pathInfo.volume, sampler, sampleResult);
-	
+	GenerateEyeRay(scene->camera, film, eyeRay, pathInfo.volume, sampler, sampleResults[0]);
+
+	ResetEyeSampleResults(sampleResults);
 	RenderEyePath(device, scene, sampler, pathInfo, eyeRay, sampleResults);
 }
 

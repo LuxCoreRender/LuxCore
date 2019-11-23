@@ -146,7 +146,7 @@ void BakeCPURenderThread::RenderFunc() {
 		Sampler *eyeSampler = engine->renderConfig->AllocSampler(rndGen, engine->mapFilm,
 				nullptr, engine->samplerSharedData, samplerAdditionalProps);
 		// Below, I need 3 additional samples
-		eyeSampler->RequestSamples(PIXEL_NORMALIZED_ONLY, pathTracer.eyeSampleSize + 3);
+		eyeSampler->RequestSamples(PIXEL_NORMALIZED_ONLY, pathTracer.eyeSampleSize + 7);
 
 		// Setup variance clamping
 		VarianceClamping varianceClamping(pathTracer.sqrtVarianceClampMaxValue);
@@ -199,27 +199,44 @@ void BakeCPURenderThread::RenderFunc() {
 					timeSample, eyeSampler->GetSample(pathTracer.eyeSampleSize), &volInfo);
 
 			// Ray direction
-			float rayDirPdf;
-			const Vector localRayDir = CosineSampleHemisphere(
+			EyePathInfo pathInfo;
+			Vector sampledDir;
+			float cosSampledDir;
+			float bsdfPdfW;
+			BSDFEvent bsdfEvent;
+			const Spectrum bsdfSample = bsdf.Sample(&sampledDir,
 					eyeSampler->GetSample(pathTracer.eyeSampleSize + 1),
 					eyeSampler->GetSample(pathTracer.eyeSampleSize + 2),
-					&rayDirPdf);
-			const Vector rayDir = Normalize(bsdf.GetFrame().ToWorld(localRayDir));
+					&bsdfPdfW, &cosSampledDir, &bsdfEvent);
 
+			pathInfo.lastBSDFPdfW = bsdfPdfW;
+			pathInfo.lastBSDFEvent = bsdfEvent;
+			
 			// Ray origin
-			const Point rayOrig = bsdf.GetRayOrigin(rayDir);
+			const Point rayOrig = bsdf.GetRayOrigin(sampledDir);
 
+			//------------------------------------------------------------------
 			// Set up the ray to trace
-			Ray eyeRay(rayOrig, rayDir,
+			//------------------------------------------------------------------
+
+			Ray eyeRay(rayOrig, sampledDir,
 					MachineEpsilon::E(rayOrig), numeric_limits<float>::infinity(),
 					timeSample);
 
+			//------------------------------------------------------------------
 			// Set up the sample result
+			//------------------------------------------------------------------
+
+			PathTracer::ResetEyeSampleResults(pathTracerThreadState.eyeSampleResults);
+
 			SampleResult &eyeSampleResult = pathTracerThreadState.eyeSampleResults[0];
-			const float filmX = (bsdf.hitPoint.uv[mapInfo.uvindex].u - floorf(bsdf.hitPoint.uv[mapInfo.uvindex].u)) *
-					pathTracerThreadState.film->GetWidth() - .5f;
-			const float filmY = (bsdf.hitPoint.uv[mapInfo.uvindex].v - floorf(bsdf.hitPoint.uv[mapInfo.uvindex].v)) *
-				pathTracerThreadState.film->GetHeight()- .5f;
+
+			const UV filmUV(
+					1.f - (bsdf.hitPoint.uv[mapInfo.uvindex].u - floorf(bsdf.hitPoint.uv[mapInfo.uvindex].u)),
+					bsdf.hitPoint.uv[mapInfo.uvindex].v - floorf(bsdf.hitPoint.uv[mapInfo.uvindex].v));
+
+			const float filmX = filmUV.u * pathTracerThreadState.film->GetWidth() - .5f;
+			const float filmY = filmUV.v * pathTracerThreadState.film->GetHeight() - .5f;
 
 			const u_int *subRegion = pathTracerThreadState.film->GetSubRegion();
 			eyeSampleResult.pixelX = Clamp(Floor2UInt(filmX), subRegion[0], subRegion[1]);
@@ -227,45 +244,47 @@ void BakeCPURenderThread::RenderFunc() {
 			eyeSampleResult.filmX = filmX;
 			eyeSampleResult.filmY = filmY;
 
-			// Render path
-			EyePathInfo pathInfo;
+			//------------------------------------------------------------------
+			// Render the surface point direct light
+			//------------------------------------------------------------------
+
+			// To keep track of the number of rays traced
+			const double deviceRayCount = device->GetTotalRaysCount();
+
+			pathTracer.DirectLightSampling(
+				pathTracerThreadState.device, scene,
+				timeSample,
+				eyeSampler->GetSample(pathTracer.eyeSampleSize + 3),
+				eyeSampler->GetSample(pathTracer.eyeSampleSize + 4),
+				eyeSampler->GetSample(pathTracer.eyeSampleSize + 5),
+				eyeSampler->GetSample(pathTracer.eyeSampleSize + 6),
+				eyeSampler->GetSample(pathTracer.eyeSampleSize + 7),
+				pathInfo, 
+				Spectrum(1.f), bsdf, &pathTracerThreadState.eyeSampleResults[0]);
+
+			pathTracerThreadState.eyeSampleResults[0].rayCount += (float)(device->GetTotalRaysCount() - deviceRayCount);
+
+			//------------------------------------------------------------------
+			// Render the received light from the path
+			//------------------------------------------------------------------
+
 			pathTracer.RenderEyePath(pathTracerThreadState.device, pathTracerThreadState.scene,
 					pathTracerThreadState.eyeSampler, pathInfo, eyeRay,
 					pathTracerThreadState.eyeSampleResults);
 
-			const float factor = 1.f / (sceneObjPickPdf * triPickPdf * rayDirPdf);
 			for(u_int i = 0; i < pathTracerThreadState.eyeSampleResults.size(); ++i) {
 				SampleResult &sampleResult = pathTracerThreadState.eyeSampleResults[i];
 
 				for(u_int j = 0; j < sampleResult.radiance.size(); ++j)
-					sampleResult.radiance[j] *= factor;
+					sampleResult.radiance[j] *= bsdfSample;
 			}
 
-			switch (mapInfo.type) {
-				case COMBINED: {
-					BSDFEvent event;
-					const Spectrum bsdfEval = bsdf.Evaluate(rayDir, &event, nullptr);
-					assert (!bsdfEval.IsNaN() && !bsdfEval.IsInf());
-					
-					if (!bsdfEval.Black()) {
-						for(u_int i = 0; i < pathTracerThreadState.eyeSampleResults.size(); ++i) {
-							SampleResult &sampleResult = pathTracerThreadState.eyeSampleResults[i];
+			// TODO: add support for LIGHTMAP type
 
-							for(u_int j = 0; j < sampleResult.radiance.size(); ++j)
-								sampleResult.radiance[j] *= bsdfEval;
-						}
-					}
-					break;
-				}
-				case LIGHTMAP: {
-					// Nothing to do
-					break;
-				}
-				default:
-					throw runtime_error("Unknown bake type: " + ToString(mapInfo.type));
-			}
-
+			//------------------------------------------------------------------
 			// Variance clamping
+			//------------------------------------------------------------------
+
 			if (pathTracerThreadState.varianceClamping->hasClamping()) {
 				for(u_int i = 0; i < pathTracerThreadState.eyeSampleResults.size(); ++i) {
 					SampleResult &sampleResult = pathTracerThreadState.eyeSampleResults[i];
@@ -277,7 +296,10 @@ void BakeCPURenderThread::RenderFunc() {
 				}
 			}
 
+			//------------------------------------------------------------------
 			// Splat the sample results
+			//------------------------------------------------------------------
+
 			pathTracerThreadState.eyeSampler->NextSample(pathTracerThreadState.eyeSampleResults);
 
 #ifdef WIN32
@@ -302,7 +324,10 @@ void BakeCPURenderThread::RenderFunc() {
 
 		if ((threadIndex == 0) && !boost::this_thread::interruption_requested()) {
 			// Save the rendered map
-			engine->mapFilm->Output(mapInfo.fileName, FilmOutputs::RGB_IMAGEPIPELINE);
+			Properties props;
+			props << Property("index")(mapInfo.imagePipelineIndex);
+			engine->mapFilm->Output(mapInfo.fileName, FilmOutputs::RGB_IMAGEPIPELINE,
+					&props);
 		}
 
 		if (boost::this_thread::interruption_requested())

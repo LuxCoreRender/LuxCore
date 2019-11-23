@@ -43,6 +43,7 @@ typedef enum {
 typedef struct {
 	BakeMapType type;
 	std::string fileName;
+	u_int imagePipelineIndex;
 	u_int width, height;
 	u_int uvindex;
 

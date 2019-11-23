@@ -64,6 +64,10 @@ private:
 	double eyeSampleCount, lightSampleCount;
 };
 
+typedef enum {
+	ILLUMINATED, SHADOWED, NOT_VISIBLE
+} DirectLightResult;
+
 class PhotonGICache;
 
 class PathTracer {
@@ -77,6 +81,14 @@ public:
 	void SetPhotonGICache(const PhotonGICache *cache) { photonGICache = cache; }
 
 	void ParseOptions(const luxrays::Properties &cfg, const luxrays::Properties &defaultProps);
+
+	DirectLightResult DirectLightSampling(
+		luxrays::IntersectionDevice *device, const Scene *scene,
+		const float time, const float u0,
+		const float u1, const float u2,
+		const float u3, const float u4,
+		const EyePathInfo &pathInfo, const luxrays::Spectrum &pathThrouput,
+		const BSDF &bsdf, SampleResult *sampleResult) const;
 
 	void RenderEyePath(luxrays::IntersectionDevice *device,
 			const Scene *scene, Sampler *sampler, EyePathInfo &pathInfo,
@@ -92,6 +104,7 @@ public:
 	void RenderSample(PathTracerThreadState &state) const;
 
 	static void InitEyeSampleResults(const Film *film, std::vector<SampleResult> &sampleResults);
+	static void ResetEyeSampleResults(std::vector<SampleResult> &sampleResults);
 
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	static const luxrays::Properties &GetDefaultProps();
@@ -120,19 +133,7 @@ private:
 			luxrays::Ray &eyeRay, PathVolumeInfo &volInfo,
 			Sampler *sampler, SampleResult &sampleResult) const;
 
-	typedef enum {
-		ILLUMINATED, SHADOWED, NOT_VISIBLE
-	} DirectLightResult;
-
 	// RenderEyeSample methods
-
-	DirectLightResult DirectLightSampling(
-		luxrays::IntersectionDevice *device, const Scene *scene,
-		const float time, const float u0,
-		const float u1, const float u2,
-		const float u3, const float u4,
-		const EyePathInfo &pathInfo, const luxrays::Spectrum &pathThrouput,
-		const BSDF &bsdf, SampleResult *sampleResult) const;
 
 	void DirectHitFiniteLight(const Scene *scene, const EyePathInfo &pathInfo,
 			const luxrays::Spectrum &pathThrouput, const luxrays::Ray &ray,
