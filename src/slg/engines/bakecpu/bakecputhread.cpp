@@ -144,7 +144,7 @@ void BakeCPURenderThread::RenderFunc() {
 		// Setup the sampler(s)
 
 		Sampler *eyeSampler = engine->renderConfig->AllocSampler(rndGen, engine->mapFilm,
-				nullptr, engine->samplerSharedData, samplerAdditionalProps);
+				engine->sampleSplatter, engine->samplerSharedData, samplerAdditionalProps);
 		// Below, I need 3 additional samples
 		eyeSampler->RequestSamples(PIXEL_NORMALIZED_ONLY, pathTracer.eyeSampleSize + 7);
 
@@ -155,7 +155,8 @@ void BakeCPURenderThread::RenderFunc() {
 		PathTracerThreadState pathTracerThreadState(device,
 				eyeSampler, nullptr,
 				engine->renderConfig->scene, engine->mapFilm,
-				&varianceClamping);
+				&varianceClamping,
+				true);
 
 		//----------------------------------------------------------------------
 		// Rendering
@@ -186,7 +187,7 @@ void BakeCPURenderThread::RenderFunc() {
 			const float timeSample = eyeSampler->GetSample(4);
 			Transform localToWorld;
 			mesh->GetLocal2World(timeSample, localToWorld);
-	
+
 			// Origin
 			Point samplePoint;
 			float b0, b1, b2;

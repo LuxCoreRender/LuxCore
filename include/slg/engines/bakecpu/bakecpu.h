@@ -104,6 +104,7 @@ protected:
 	std::vector<BakeMapInfo> mapInfos;
 
 	PhotonGICache *photonGICache;
+	FilmSampleSplatter *sampleSplatter;
 	PathTracer pathTracer;
 	
 	Film *mapFilm;

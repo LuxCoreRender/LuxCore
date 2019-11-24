@@ -46,7 +46,8 @@ public:
 	PathTracerThreadState(luxrays::IntersectionDevice *device,
 			Sampler *eyeSampler, Sampler *lightSampler,
 			const Scene *scene, Film *film,
-			const VarianceClamping *varianceClamping);
+			const VarianceClamping *varianceClamping,
+			const bool useFilmSplat = false);
 	virtual ~PathTracerThreadState();
 
 	friend class PathTracer;
@@ -103,7 +104,8 @@ public:
 	
 	void RenderSample(PathTracerThreadState &state) const;
 
-	static void InitEyeSampleResults(const Film *film, std::vector<SampleResult> &sampleResults);
+	static void InitEyeSampleResults(const Film *film, std::vector<SampleResult> &sampleResults,
+			const bool useFilmSplat = false);
 	static void ResetEyeSampleResults(std::vector<SampleResult> &sampleResults);
 
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);

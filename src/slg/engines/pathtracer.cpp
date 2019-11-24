@@ -32,12 +32,13 @@ using namespace slg;
 PathTracerThreadState::PathTracerThreadState(IntersectionDevice *dev,
 		Sampler *eSampler, Sampler *lSampler,
 		const Scene *scn, Film *flm,
-		const VarianceClamping *varClamping) : device(dev),
+		const VarianceClamping *varClamping,
+		const bool useFilmSplat) : device(dev),
 		eyeSampler(eSampler), lightSampler(lSampler), scene(scn), film(flm),
 		varianceClamping(varClamping) {
 	// Initialize Eye SampleResults
 	eyeSampleResults.resize(1);
-	PathTracer::InitEyeSampleResults(film, eyeSampleResults);
+	PathTracer::InitEyeSampleResults(film, eyeSampleResults, useFilmSplat);
 
 	eyeSampleCount = 0.0;
 	// Using 1.0 instead of 0.0 to avoid a division by zero
@@ -70,7 +71,8 @@ void  PathTracer::DeletePixelFilterDistribution() {
 	pixelFilterDistribution = NULL;
 }
 
-void PathTracer::InitEyeSampleResults(const Film *film, vector<SampleResult> &sampleResults) {
+void PathTracer::InitEyeSampleResults(const Film *film, vector<SampleResult> &sampleResults,
+		const bool useFilmSplat) {
 	SampleResult &sampleResult = sampleResults[0];
 
 	sampleResult.Init(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA | Film::DEPTH |
@@ -81,7 +83,7 @@ void PathTracer::InitEyeSampleResults(const Film *film, vector<SampleResult> &sa
 			Film::OBJECT_ID | Film::SAMPLECOUNT | Film::CONVERGENCE | Film::MATERIAL_ID_COLOR |
 			Film::ALBEDO | Film::AVG_SHADING_NORMAL | Film::NOISE,
 			film->GetRadianceGroupCount());
-	sampleResult.useFilmSplat = false;
+	sampleResult.useFilmSplat = useFilmSplat;
 }
 
 void PathTracer::ResetEyeSampleResults(vector<SampleResult> &sampleResults) {

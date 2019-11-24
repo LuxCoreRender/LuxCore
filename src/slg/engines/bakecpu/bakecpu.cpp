@@ -32,8 +32,8 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 BakeCPURenderEngine::BakeCPURenderEngine(const RenderConfig *rcfg) :
-		CPUNoTileRenderEngine(rcfg), photonGICache(nullptr), mapFilm(nullptr),
-		currentSceneObjsDist(nullptr), threadsSyncBarrier(nullptr) {
+		CPUNoTileRenderEngine(rcfg), photonGICache(nullptr), sampleSplatter(nullptr),
+		mapFilm(nullptr), currentSceneObjsDist(nullptr), threadsSyncBarrier(nullptr) {
 	// Read the list of bake maps to render
 
 	const Properties &cfg = rcfg->cfg;
@@ -80,9 +80,10 @@ BakeCPURenderEngine::~BakeCPURenderEngine() {
 		delete dist;
 	currentSceneObjDist.clear();
 	delete currentSceneObjsDist;
-	delete threadsSyncBarrier;
-	delete mapFilm;
 	delete photonGICache;
+	delete sampleSplatter;
+	delete mapFilm;
+	delete threadsSyncBarrier;
 }
 
 void BakeCPURenderEngine::InitFilm() {
@@ -161,7 +162,10 @@ void BakeCPURenderEngine::StartLockLess() {
 
 	pathTracer.InitPixelFilterDistribution(pixelFilter);
 	pathTracer.SetPhotonGICache(photonGICache);
-	
+
+	delete sampleSplatter;
+	sampleSplatter = new FilmSampleSplatter(pixelFilter);
+
 	//--------------------------------------------------------------------------
 	
 	threadsSyncBarrier = new boost::barrier(renderThreads.size());
@@ -181,13 +185,19 @@ void BakeCPURenderEngine::StopLockLess() {
 	delete currentSceneObjsDist;
 	currentSceneObjsDist = nullptr;
 	
-	delete threadsSyncBarrier;
-	threadsSyncBarrier = nullptr;
-
 	pathTracer.DeletePixelFilterDistribution();
 
 	delete photonGICache;
 	photonGICache = nullptr;
+
+	delete sampleSplatter;
+	sampleSplatter = nullptr;
+
+	delete mapFilm;
+	mapFilm = nullptr;
+
+	delete threadsSyncBarrier;
+	threadsSyncBarrier = nullptr;
 }
 
 void BakeCPURenderEngine::UpdateFilmLockLess() {
