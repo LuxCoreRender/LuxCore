@@ -136,10 +136,20 @@ public:
 	const Texture *GetBackTransparencyTexture() const { return backTransparencyTex; }
 	const Texture *GetEmitTexture() const { return emittedTex; }
 	const Texture *GetBumpTexture() const { return bumpTex; }
+
 	void SetEmissionMap(const ImageMap *map);
 	const ImageMap *GetEmissionMap() const { return emissionMap; }
 	const SampleableSphericalFunction *GetEmissionFunc() const { return emissionFunc; }
 
+	bool HasCombinedBakeMap() const { return combinedBakeMap != nullptr; }
+	void SetCombinedBakeMap(const ImageMap *map, const u_int uvIndex) {
+		combinedBakeMap = map;
+		combinedBakeMapUVIndex = uvIndex;
+	}
+	const ImageMap *GetCombinedBakeMap() const { return combinedBakeMap; }
+	u_int GetombinedBakeMapUVIndex() const { return combinedBakeMapUVIndex; }
+	luxrays::Spectrum GetCombinedBakeMapValue(const luxrays::UV &uv) const;
+	
 	// MixMaterial can have multiple volumes assigned and needs the passThroughEvent
 	// information to be able to return the correct volume
 	void SetInteriorVolume(const Volume *vol) { interiorVolume = vol; }
@@ -232,6 +242,9 @@ protected:
 
 	const ImageMap *emissionMap;
 	SampleableSphericalFunction *emissionFunc;
+
+	const ImageMap *combinedBakeMap;
+	u_int combinedBakeMapUVIndex;
 
 	const Volume *interiorVolume, *exteriorVolume;
 

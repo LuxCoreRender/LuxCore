@@ -49,6 +49,8 @@
 #include "slg/materials/velvet.h"
 #include "slg/materials/disney.h"
 
+#include "slg/utils/filenameresolver.h"
+
 using namespace std;
 using namespace luxrays;
 using namespace slg;
@@ -493,6 +495,13 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 		mat->SetEmissionMap(emissionMap);
 	}
 
+	if (props.IsDefined(propName + ".bake.combined.file")) {
+		ImageMap *imgMap = ImageMap::FromProperties(props, propName + ".bake.combined");
+		const u_int uvIndex = Clamp(props.Get(Property(propName + ".bake.combined.uvindex")(0)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
+
+		mat->SetCombinedBakeMap(imgMap, uvIndex);
+	}
+	
 	// Interior volumes
 	if (props.IsDefined(propName + ".volume.interior")) {
 		const string volName = props.Get(Property(propName + ".volume.interior")("vol1")).Get<string>();

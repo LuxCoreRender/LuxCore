@@ -40,8 +40,9 @@ Material::Material(const Texture *frontTransp, const Texture *backTransp,
 		emittedGain(1.f), emittedPower(0.f), emittedEfficency(0.f),
 		frontTransparencyTex(frontTransp), backTransparencyTex(backTransp),
 		emittedTex(emitted), bumpTex(bump), bumpSampleDistance(.001f),
-		emissionMap(NULL), emissionFunc(NULL),
-		interiorVolume(NULL), exteriorVolume(NULL),
+		emissionMap(nullptr), emissionFunc(nullptr),
+		combinedBakeMap(nullptr),
+		interiorVolume(nullptr), exteriorVolume(nullptr),
 		glossiness(0.f),
 		isVisibleIndirectDiffuse(true), isVisibleIndirectGlossy(true), isVisibleIndirectSpecular(true),
 		isShadowCatcher(false), isShadowCatcherOnlyInfiniteLights(false), isPhotonGIEnabled(true) {
@@ -75,7 +76,7 @@ void Material::SetEmissionMap(const ImageMap *map) {
 	if (emissionMap)
 		emissionFunc = new SampleableSphericalFunction(new ImageMapSphericalFunction(emissionMap));
 	else
-		emissionFunc = NULL;
+		emissionFunc = nullptr;
 }
 
 Spectrum Material::GetPassThroughTransparency(const HitPoint &hitPoint,
@@ -188,6 +189,7 @@ Properties Material::ToProperties(const ImageMapCache &imgMapCache, const bool u
 		props.Set(Property("scene.materials." + name + ".transparency.back")(backTransparencyTex->GetSDLValue()));
 	props.Set(Property("scene.materials." + name + ".transparency.shadow")(passThroughShadowTransparency));
 	props.Set(Property("scene.materials." + name + ".id")(matID));
+
 	props.Set(Property("scene.materials." + name + ".emission.gain")(emittedGain));
 	props.Set(Property("scene.materials." + name + ".emission.power")(emittedPower));
 	props.Set(Property("scene.materials." + name + ".emission.efficency")(emittedEfficency));
@@ -202,6 +204,12 @@ Properties Material::ToProperties(const ImageMapCache &imgMapCache, const bool u
 		props.Set(Property("scene.materials." + name + ".emission.mapfile")(fileName));
 		props.Set(emissionMap->ToProperties("scene.materials." + name, false));
 	}
+
+	if (combinedBakeMap) {
+		props.Set(combinedBakeMap->ToProperties("scene.materials." + name + ".bake.combined", useRealFileName));
+		props.Set(Property("scene.materials." + name + ".bake.combined.uvindex")(combinedBakeMapUVIndex));
+	}
+
 	switch (directLightSamplingType) {
 		case DLS_ENABLED:
 			props.Set(Property("scene.materials." + name + ".emission.directlightsampling.type")("ENABLED"));
@@ -265,6 +273,14 @@ void Material::AddReferencedTextures(boost::unordered_set<const Texture *> &refe
 void Material::AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
 	if (emissionMap)
 		referencedImgMaps.insert(emissionMap);
+	if (combinedBakeMap)
+		referencedImgMaps.insert(combinedBakeMap);
+}
+
+Spectrum Material::GetCombinedBakeMapValue(const UV &uv) const {
+	assert (combinedBakeMap);
+
+	return combinedBakeMap->GetSpectrum(uv);
 }
 
 // Update any reference to oldTex with newTex

@@ -233,8 +233,8 @@ void BakeCPURenderThread::RenderFunc() {
 			SampleResult &eyeSampleResult = pathTracerThreadState.eyeSampleResults[0];
 
 			const UV filmUV(
-					1.f - (bsdf.hitPoint.uv[mapInfo.uvindex].u - floorf(bsdf.hitPoint.uv[mapInfo.uvindex].u)),
-					bsdf.hitPoint.uv[mapInfo.uvindex].v - floorf(bsdf.hitPoint.uv[mapInfo.uvindex].v));
+					bsdf.hitPoint.uv[mapInfo.uvindex].u - floorf(bsdf.hitPoint.uv[mapInfo.uvindex].u),
+					1.f - (bsdf.hitPoint.uv[mapInfo.uvindex].v - floorf(bsdf.hitPoint.uv[mapInfo.uvindex].v)));
 
 			const float filmX = filmUV.u * pathTracerThreadState.film->GetWidth() - .5f;
 			const float filmY = filmUV.v * pathTracerThreadState.film->GetHeight() - .5f;

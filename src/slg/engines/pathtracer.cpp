@@ -424,7 +424,16 @@ void PathTracer::RenderEyePath(IntersectionDevice *device,
 			sampleResult.uv = bsdf.hitPoint.uv[0];
 		}
 		sampleResult.lastPathVertex = pathInfo.depth.IsLastPathVertex(maxPathDepth, bsdf.GetEventTypes());
-		
+
+		//----------------------------------------------------------------------
+		// Check if it is a baked material
+		//----------------------------------------------------------------------
+
+		if (bsdf.HasCombinedBakeMap()) {
+			sampleResult.radiance[0] += pathThroughput * bsdf.GetCombinedBakeMapValue();
+			break;
+		}
+
 		//----------------------------------------------------------------------
 		// Check if it is a light source and I have to add light emission
 		//----------------------------------------------------------------------

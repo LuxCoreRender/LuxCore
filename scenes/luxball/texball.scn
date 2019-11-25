@@ -34,16 +34,28 @@ scene.materials.whitematte.kd = 0.75 0.75 0.75
 scene.materials.whitelight.type = matte
 scene.materials.whitelight.emission = 30.0 30.0 30.0
 scene.materials.whitelight.kd = 0.0 0.0 0.0
+#
+scene.materials.room-bake.type = matte
+scene.materials.room-bake.kd = 0.75 0.75 0.75
+#scene.materials.room-bake.bake.combined.file = room-bake.exr
+#scene.materials.room-bake.bake.combined.gamma = 1.0
+#
+scene.materials.shell-bake.type = matte
+scene.materials.shell-bake.kd = hsv
+#scene.materials.shell-bake.bake.combined.file = luxshell-bake.exr
+#scene.materials.shell-bake.bake.combined.gamma = 1.0
 ################################################################################
 #scene.objects.room.ply = scenes/luxball/room-nowall.ply
 scene.objects.room.ply = scenes/luxball/room.ply
-scene.objects.room.material = whitematte
+scene.objects.room.material = room-bake
+#
+scene.objects.luxshell.ply = scenes/luxball/luxball-shell.ply
+scene.objects.luxshell.material = shell-bake
+#
 scene.objects.luxinner.ply = scenes/luxball/luxball-inner.ply
 scene.objects.luxinner.material = whitematte
 scene.objects.luxtext.ply = scenes/luxball/luxball-text.ply
 scene.objects.luxtext.material = luxtext
-scene.objects.luxshell.ply = scenes/luxball/luxball-shell.ply
-scene.objects.luxshell.material = shell
 scene.objects.blacktext.ply = scenes/luxball/blacktext.ply
 scene.objects.blacktext.material = blacktext
 scene.objects.l1.ply = scenes/luxball/luxball-light1.ply
