@@ -245,42 +245,76 @@ void BakeCPURenderThread::RenderFunc() {
 			eyeSampleResult.filmX = filmX;
 			eyeSampleResult.filmY = filmY;
 
-			//------------------------------------------------------------------
-			// Render the surface point direct light
-			//------------------------------------------------------------------
+			switch (mapInfo.type) {
+				case COMBINED: {
+					//----------------------------------------------------------
+					// Render the surface point direct light
+					//----------------------------------------------------------
 
-			// To keep track of the number of rays traced
-			const double deviceRayCount = device->GetTotalRaysCount();
+					// To keep track of the number of rays traced
+					const double deviceRayCount = device->GetTotalRaysCount();
 
-			pathTracer.DirectLightSampling(
-				pathTracerThreadState.device, scene,
-				timeSample,
-				eyeSampler->GetSample(pathTracer.eyeSampleSize + 3),
-				eyeSampler->GetSample(pathTracer.eyeSampleSize + 4),
-				eyeSampler->GetSample(pathTracer.eyeSampleSize + 5),
-				eyeSampler->GetSample(pathTracer.eyeSampleSize + 6),
-				eyeSampler->GetSample(pathTracer.eyeSampleSize + 7),
-				pathInfo, 
-				Spectrum(1.f), bsdf, &pathTracerThreadState.eyeSampleResults[0]);
+					pathTracer.DirectLightSampling(pathTracerThreadState.device, scene,
+							timeSample,
+							eyeSampler->GetSample(pathTracer.eyeSampleSize + 3),
+							eyeSampler->GetSample(pathTracer.eyeSampleSize + 4),
+							eyeSampler->GetSample(pathTracer.eyeSampleSize + 5),
+							eyeSampler->GetSample(pathTracer.eyeSampleSize + 6),
+							eyeSampler->GetSample(pathTracer.eyeSampleSize + 7),
+							pathInfo, 
+							Spectrum(1.f), bsdf, &pathTracerThreadState.eyeSampleResults[0]);
 
-			pathTracerThreadState.eyeSampleResults[0].rayCount += (float)(device->GetTotalRaysCount() - deviceRayCount);
+					pathTracerThreadState.eyeSampleResults[0].rayCount += (float)(device->GetTotalRaysCount() - deviceRayCount);
 
-			//------------------------------------------------------------------
-			// Render the received light from the path
-			//------------------------------------------------------------------
+					//----------------------------------------------------------
+					// Render the received light from the path
+					//----------------------------------------------------------
 
-			pathTracer.RenderEyePath(pathTracerThreadState.device, pathTracerThreadState.scene,
-					pathTracerThreadState.eyeSampler, pathInfo, eyeRay,
-					pathTracerThreadState.eyeSampleResults);
+					pathTracer.RenderEyePath(pathTracerThreadState.device, pathTracerThreadState.scene,
+							pathTracerThreadState.eyeSampler, pathInfo, eyeRay,
+							pathTracerThreadState.eyeSampleResults);
 
-			for(u_int i = 0; i < pathTracerThreadState.eyeSampleResults.size(); ++i) {
-				SampleResult &sampleResult = pathTracerThreadState.eyeSampleResults[i];
+					for(u_int i = 0; i < pathTracerThreadState.eyeSampleResults.size(); ++i) {
+						SampleResult &sampleResult = pathTracerThreadState.eyeSampleResults[i];
 
-				for(u_int j = 0; j < sampleResult.radiance.size(); ++j)
-					sampleResult.radiance[j] *= bsdfSample;
+						for(u_int j = 0; j < sampleResult.radiance.size(); ++j)
+							sampleResult.radiance[j] *= bsdfSample;
+					}
+					break;
+				}
+				case LIGHTMAP: {
+					//----------------------------------------------------------
+					// Render the received direct light
+					//----------------------------------------------------------
+
+					// To keep track of the number of rays traced
+					const double deviceRayCount = device->GetTotalRaysCount();
+
+					pathTracer.DirectLightSampling(pathTracerThreadState.device, scene,
+							timeSample,
+							eyeSampler->GetSample(pathTracer.eyeSampleSize + 3),
+							eyeSampler->GetSample(pathTracer.eyeSampleSize + 4),
+							eyeSampler->GetSample(pathTracer.eyeSampleSize + 5),
+							eyeSampler->GetSample(pathTracer.eyeSampleSize + 6),
+							eyeSampler->GetSample(pathTracer.eyeSampleSize + 7),
+							pathInfo, 
+							Spectrum(1.f), bsdf, &pathTracerThreadState.eyeSampleResults[0],
+							false);
+
+					pathTracerThreadState.eyeSampleResults[0].rayCount += (float)(device->GetTotalRaysCount() - deviceRayCount);
+
+					//----------------------------------------------------------
+					// Render the received light from the path
+					//----------------------------------------------------------
+
+					pathTracer.RenderEyePath(pathTracerThreadState.device, pathTracerThreadState.scene,
+							pathTracerThreadState.eyeSampler, pathInfo, eyeRay,
+							pathTracerThreadState.eyeSampleResults);
+					break;
+				}
+				default:
+					throw runtime_error("Unknown bake type in BakeCPURenderThread::RenderFunc(): " + ToString(mapInfo.type));
 			}
-
-			// TODO: add support for LIGHTMAP type
 
 			//------------------------------------------------------------------
 			// Variance clamping

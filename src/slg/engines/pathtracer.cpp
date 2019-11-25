@@ -116,7 +116,8 @@ DirectLightResult PathTracer::DirectLightSampling(
 		const float u0, const float u1, const float u2,
 		const float u3, const float u4,
 		const EyePathInfo &pathInfo, const Spectrum &pathThroughput,
-		const BSDF &bsdf, SampleResult *sampleResult) const {
+		const BSDF &bsdf, SampleResult *sampleResult,
+		const bool useBSDFEVal) const {
 	if (!bsdf.IsDelta()) {
 		// Select the light strategy to use
 		const LightStrategy *lightStrategy;
@@ -191,7 +192,8 @@ DirectLightResult PathTracer::DirectLightSampling(
 								!shadowBsdf.hitPoint.throughShadowTransparency;
 
 							const float weight = misEnabled ? PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
-							const Spectrum incomingRadiance = bsdfEval * (weight * factor) * connectionThroughput * lightRadiance;
+							const Spectrum incomingRadiance = (useBSDFEVal ? bsdfEval : 1.f) *
+									(weight * factor) * connectionThroughput * lightRadiance;
 
 							sampleResult->AddDirectLight(light->GetID(), event, pathThroughput, incomingRadiance, 1.f);
 

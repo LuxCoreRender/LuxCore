@@ -89,7 +89,8 @@ public:
 		const float u1, const float u2,
 		const float u3, const float u4,
 		const EyePathInfo &pathInfo, const luxrays::Spectrum &pathThrouput,
-		const BSDF &bsdf, SampleResult *sampleResult) const;
+		const BSDF &bsdf, SampleResult *sampleResult,
+		const bool useBSDFEVal = true) const;
 
 	void RenderEyePath(luxrays::IntersectionDevice *device,
 			const Scene *scene, Sampler *sampler, EyePathInfo &pathInfo,
