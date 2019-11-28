@@ -144,10 +144,8 @@ public:
 		}
 	}
 
-	bool HasCombinedBakeMap() const { return material->HasCombinedBakeMap(); }
-	luxrays::Spectrum GetCombinedBakeMapValue() const {
-		return material->GetCombinedBakeMapValue(hitPoint.uv[material->GetombinedBakeMapUVIndex()]);
-	}
+	bool HasCombinedBakeMap() const;
+	luxrays::Spectrum GetCombinedBakeMapValue() const;
 
 	HitPoint hitPoint;
 

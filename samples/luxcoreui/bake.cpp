@@ -119,6 +119,7 @@ void LuxCoreApp::BakeAllSceneObjects() {
 				Property(prefix + ".bake.combined.file")(SanitizeName(objectName) + ".exr") <<
 				Property(prefix + ".bake.combined.gamma")(1.f);
 	}
+	completeBakeSceneProps.Save("scene-bakeallobjects.scn");
 	
 	// Start the backing rendering
 	RenderConfigParse(completeBakeCfgProps);

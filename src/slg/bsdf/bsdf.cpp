@@ -170,6 +170,14 @@ Spectrum BSDF::EvaluateTotal() const {
 	return material->EvaluateTotal(hitPoint);
 }
 
+bool BSDF::HasCombinedBakeMap() const {
+	return sceneObject->HasCombinedBakeMap();
+}
+
+Spectrum BSDF::GetCombinedBakeMapValue() const {
+	return sceneObject->GetCombinedBakeMapValue(hitPoint.uv[sceneObject->GetCombinedBakeMapUVIndex()]);
+}
+
 //------------------------------------------------------------------------------
 // "A Microfacet-Based Shadowing Function to Solve the Bump Terminator Problem"
 // by Alejandro Conty Estevez, Pascal Lecocq, and Clifford Stein

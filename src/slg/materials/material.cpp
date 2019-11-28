@@ -41,7 +41,6 @@ Material::Material(const Texture *frontTransp, const Texture *backTransp,
 		frontTransparencyTex(frontTransp), backTransparencyTex(backTransp),
 		emittedTex(emitted), bumpTex(bump), bumpSampleDistance(.001f),
 		emissionMap(nullptr), emissionFunc(nullptr),
-		combinedBakeMap(nullptr),
 		interiorVolume(nullptr), exteriorVolume(nullptr),
 		glossiness(0.f),
 		isVisibleIndirectDiffuse(true), isVisibleIndirectGlossy(true), isVisibleIndirectSpecular(true),
@@ -205,11 +204,6 @@ Properties Material::ToProperties(const ImageMapCache &imgMapCache, const bool u
 		props.Set(emissionMap->ToProperties("scene.materials." + name, false));
 	}
 
-	if (combinedBakeMap) {
-		props.Set(combinedBakeMap->ToProperties("scene.materials." + name + ".bake.combined", useRealFileName));
-		props.Set(Property("scene.materials." + name + ".bake.combined.uvindex")(combinedBakeMapUVIndex));
-	}
-
 	switch (directLightSamplingType) {
 		case DLS_ENABLED:
 			props.Set(Property("scene.materials." + name + ".emission.directlightsampling.type")("ENABLED"));
@@ -273,14 +267,6 @@ void Material::AddReferencedTextures(boost::unordered_set<const Texture *> &refe
 void Material::AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
 	if (emissionMap)
 		referencedImgMaps.insert(emissionMap);
-	if (combinedBakeMap)
-		referencedImgMaps.insert(combinedBakeMap);
-}
-
-Spectrum Material::GetCombinedBakeMapValue(const UV &uv) const {
-	assert (combinedBakeMap);
-
-	return combinedBakeMap->GetSpectrum(uv);
 }
 
 // Update any reference to oldTex with newTex
