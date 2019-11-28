@@ -60,6 +60,7 @@ set(LUXCOREUI_SRCS
 	statswindow.cpp
 	importancewindow.cpp
 	imgui_impl_glfw.cpp
+	bake.cpp
 	resources/luxlogo_bg.cpp
 	deps/imgui-1.46/imgui.cpp
 	deps/imgui-1.46/imgui_demo.cpp

@@ -122,9 +122,14 @@ void BakeCPURenderThread::RenderFunc() {
 		// Disable image plane meaning for samples 0 and 1
 		Property("sampler.imagesamples.enable")(false);
 
-	for (auto const &mapInfo : engine->mapInfos) {
-		if (threadIndex == 0)
+	
+	for (u_int mapInfoIndex = 0; mapInfoIndex < engine->mapInfos.size(); ++mapInfoIndex) {
+		const BakeMapInfo &mapInfo = engine->mapInfos[mapInfoIndex];
+
+		if (threadIndex == 0) {
+			SLG_LOG("Baking map index: " << mapInfoIndex << "/" << engine->mapInfos.size());
 			InitBakeWork(mapInfo);
+		}
 		
 		// Synchronize
 		engine->threadsSyncBarrier->wait();

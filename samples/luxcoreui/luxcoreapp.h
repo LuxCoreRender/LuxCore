@@ -131,6 +131,8 @@ private:
 	void MenuWindow();
 	void MainMenuBar();
 
+	void BakeAllSceneObjects();
+	
 	static LogWindow *currentLogWindow;
 
 	AcceleratorWindow acceleratorWindow;

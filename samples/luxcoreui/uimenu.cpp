@@ -85,6 +85,9 @@ void LuxCoreApp::MenuRendering() {
 		}
 	}
 
+	if (session && ImGui::MenuItem("Bake all objects"))
+		BakeAllSceneObjects();
+
 	ImGui::Separator();
 
 	if (session && ImGui::MenuItem("Save rendering")) {
