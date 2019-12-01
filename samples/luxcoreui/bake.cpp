@@ -73,7 +73,9 @@ void LuxCoreApp::BakeAllSceneObjects() {
 			Property("film.filter.type")("BLACKMANHARRIS") <<
 			Property("film.filter.width")(2.f) <<
 			Property("batch.haltspp")(32) <<
-			Property("batch.haltnoisethreshold")(.01f);
+			Property("batch.haltnoisethreshold")(.01f) <<
+			Property("bake.minmapautosize")(64) <<
+			Property("bake.maxmapautosize")(1024);
 
 	// Check the number of image pipelines
 	//

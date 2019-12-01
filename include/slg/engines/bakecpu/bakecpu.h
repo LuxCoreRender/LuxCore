@@ -48,6 +48,8 @@ typedef struct {
 	u_int uvindex;
 
 	std::vector<std::string> objectNames;
+
+	bool useAutoMapSize;
 } BakeMapInfo;
 
 class BakeCPURenderEngine;
@@ -101,6 +103,7 @@ protected:
 	
 	virtual void UpdateFilmLockLess();
 
+	u_int minMapAutoSize, maxMapAutoSize;
 	std::vector<BakeMapInfo> mapInfos;
 
 	PhotonGICache *photonGICache;

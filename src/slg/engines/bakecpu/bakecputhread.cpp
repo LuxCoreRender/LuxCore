@@ -50,13 +50,13 @@ void BakeCPURenderThread::InitBakeWork(const BakeMapInfo &mapInfo) {
 	engine->mapFilm->CopyDynamicSettings(*engine->film);
 	engine->mapFilm->Init();
 
-	// Build the list of object to bake and the each meshes area
+	// Build the list of object to bake and each mesh area
 	engine->currentSceneObjsToBake.clear();
 	for (auto const &objName : mapInfo.objectNames) {
 		const SceneObject *sceneObj = scene->objDefs.GetSceneObject(objName);
 		if (sceneObj)
 			engine->currentSceneObjsToBake.push_back(sceneObj);
-		 else
+		else
 			SLG_LOG("WARNING: Unknown object to bake ignored (" << objName << ")");
 	}
 

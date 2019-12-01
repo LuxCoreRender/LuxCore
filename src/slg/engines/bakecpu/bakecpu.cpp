@@ -34,9 +34,12 @@ using namespace slg;
 BakeCPURenderEngine::BakeCPURenderEngine(const RenderConfig *rcfg) :
 		CPUNoTileRenderEngine(rcfg), photonGICache(nullptr), sampleSplatter(nullptr),
 		mapFilm(nullptr), currentSceneObjsDist(nullptr), threadsSyncBarrier(nullptr) {
-	// Read the list of bake maps to render
-
 	const Properties &cfg = rcfg->cfg;
+
+	minMapAutoSize = cfg.Get(Property("bake.minmapautosize")(32u)).Get<u_int>();
+	maxMapAutoSize = Max(cfg.Get(Property("bake.maxmapautosize")(1024u)).Get<u_int>(), minMapAutoSize);
+
+	// Read the list of bake maps to render
 	vector<string> mapKeys = cfg.GetAllUniqueSubNames("bake.maps");
 	for (auto const &mapKey : mapKeys) {
 		// Extract the image pipeline priority name
@@ -63,6 +66,7 @@ BakeCPURenderEngine::BakeCPURenderEngine(const RenderConfig *rcfg) :
 		mapInfo.width = cfg.Get(Property(prefix + ".width")(512u)).Get<u_int>();
 		mapInfo.height = cfg.Get(Property(prefix + ".height")(512u)).Get<u_int>();
 		mapInfo.uvindex = Clamp(cfg.Get(Property(prefix + ".uvindex")(0u)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
+		mapInfo.useAutoMapSize = cfg.Get(Property(prefix + ".autosize.enabled")(true)).Get<bool>();
 
 		// Read the list of objects to bake
 		const Property &objNamesProp = cfg.Get(Property(prefix + ".objectnames")("objectNameToBake"));
@@ -170,6 +174,66 @@ void BakeCPURenderEngine::StartLockLess() {
 	
 	threadsSyncBarrier = new boost::barrier(renderThreads.size());
 
+	//--------------------------------------------------------------------------
+	// Auto map size support
+	//--------------------------------------------------------------------------
+
+	// Compute each map total mesh area to bake
+	vector<float> mapMeshesArea(mapInfos.size(), 0.f);
+
+#pragma omp parallel for
+	for (
+			// Visual C++ 2013 supports only OpenMP 2.5
+#if _OPENMP >= 200805
+			unsigned
+#endif
+			mapInfoIndex = 0; mapInfoIndex < mapInfos.size(); ++mapInfoIndex) {
+		const BakeMapInfo &mapInfo = mapInfos[mapInfoIndex];
+
+		for (auto const &objName : mapInfo.objectNames) {
+			const SceneObject *sceneObj = renderConfig->scene->objDefs.GetSceneObject(objName);
+			if (sceneObj) {
+				const ExtMesh *mesh = sceneObj->GetExtMesh();
+				
+				Transform localToWorld;
+				sceneObj->GetExtMesh()->GetLocal2World(0.f, localToWorld);
+
+				for (u_int triIndex = 0; triIndex < mesh->GetTotalTriangleCount(); ++triIndex)
+					mapMeshesArea[mapInfoIndex] += mesh->GetTriangleArea(localToWorld, triIndex);
+			} else
+				SLG_LOG("WARNING: Unknown object to bake ignored (" << objName << ")");
+		}
+	}
+
+	// Find the max. and the min.
+	float minMapArea = numeric_limits<float>::max();
+	float maxMapArea = numeric_limits<float>::min();
+	for (u_int mapInfoIndex = 0; mapInfoIndex < mapInfos.size(); ++mapInfoIndex) {
+		minMapArea = Min(minMapArea, mapMeshesArea[mapInfoIndex]);
+		maxMapArea = Max(maxMapArea, mapMeshesArea[mapInfoIndex]);
+	}
+
+	// Assign the auto size values
+	for (u_int mapInfoIndex = 0; mapInfoIndex < mapInfos.size(); ++mapInfoIndex) {
+		BakeMapInfo &mapInfo = mapInfos[mapInfoIndex];
+
+		if (mapInfo.useAutoMapSize) {
+			if (maxMapArea - minMapArea > 0.f) {
+				const float scale = (mapMeshesArea[mapInfoIndex] - minMapArea) / (maxMapArea - minMapArea);	
+
+				const u_int size = RoundUp<u_int>((u_int)Lerp<float>(scale, minMapAutoSize, maxMapAutoSize), 16u);
+
+				SLG_LOG("Setting bake map #" << ToString(mapInfoIndex) << " auto size to: " << size);
+				mapInfo.width = size;
+				mapInfo.height = size;				
+			} else {
+				// Something wrong
+				mapInfo.width = minMapAutoSize;
+				mapInfo.height = minMapAutoSize;
+			}
+		}
+	}
+	
 	//--------------------------------------------------------------------------
 
 	CPUNoTileRenderEngine::StartLockLess();
