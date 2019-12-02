@@ -39,7 +39,7 @@ Properties HitPointColorTexture::ToProperties(const ImageMapCache &imgMapCache, 
 
 	const string name = GetName();
 	props.Set(Property("scene.textures." + name + ".type")("hitpointcolor"));
-	props.Set(Property("scene.textures." + name + ".index")(dataIndex));
+	props.Set(Property("scene.textures." + name + ".dataindex")(dataIndex));
 
 	return props;
 }
@@ -61,7 +61,7 @@ Properties HitPointAlphaTexture::ToProperties(const ImageMapCache &imgMapCache, 
 
 	const string name = GetName();
 	props.Set(Property("scene.textures." + name + ".type")("hitpointalpha"));
-	props.Set(Property("scene.textures." + name + ".index")(dataIndex));
+	props.Set(Property("scene.textures." + name + ".dataindex")(dataIndex));
 
 	return props;
 }
@@ -84,7 +84,7 @@ Properties HitPointGreyTexture::ToProperties(const ImageMapCache &imgMapCache, c
 
 	const string name = GetName();
 	props.Set(Property("scene.textures." + name + ".type")("hitpointgrey"));
-	props.Set(Property("scene.textures." + name + ".index")(dataIndex));
+	props.Set(Property("scene.textures." + name + ".dataindex")(dataIndex));
 	props.Set(Property("scene.textures." + name + ".channel")(
 		((channel != 0) && (channel != 1) && (channel != 2)) ? -1 : ((int)channel)));
 

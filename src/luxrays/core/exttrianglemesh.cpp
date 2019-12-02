@@ -293,19 +293,19 @@ ExtTriangleMesh *ExtTriangleMesh::CopyExt(Point *meshVertices, Triangle *meshTri
 			us[i] = new UV[vertCount];
 			copy(uvs[i], uvs[i] + vertCount, us[i]);
 		} else
-			us[i] = nullptr;
+			us[i] = meshUVs ? (*meshUVs)[i] : nullptr;
 
 		if (HasColors(i) && (!meshCols || !(*meshCols)[i])) {
 			cs[i] = new Spectrum[vertCount];
 			copy(cols[i], cols[i] + vertCount, cs[i]);
 		} else
-			cs[i] = nullptr;
+			cs[i] = meshCols ? (*meshCols)[i] : nullptr;
 
 		if (HasAlphas(i) && (!meshAlphas || !(*meshAlphas)[i])) {
 			as[i] = new float[vertCount];
 			copy(alphas[i], alphas[i] + vertCount, as[i]);
 		} else
-			as[i] = nullptr;
+			as[i] = meshAlphas ? (*meshAlphas)[i] : nullptr;
 	}
 
 	ExtTriangleMesh *m = new ExtTriangleMesh(vertCount, triCount, vs, ts, ns, &us, &cs, &as);
