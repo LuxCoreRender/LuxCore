@@ -48,6 +48,8 @@ void BakeCPURenderThread::InitBakeWork(const BakeMapInfo &mapInfo) {
 	delete engine->mapFilm;
 	engine->mapFilm = new Film(mapInfo.width, mapInfo.height, nullptr);
 	engine->mapFilm->CopyDynamicSettings(*engine->film);
+	// Copy the halt conditions too
+	engine->mapFilm->CopyHaltSettings(*engine->film);
 	engine->mapFilm->Init();
 
 	// Build the list of object to bake and each mesh area
@@ -122,7 +124,7 @@ void BakeCPURenderThread::RenderFunc() {
 		// Disable image plane meaning for samples 0 and 1
 		Property("sampler.imagesamples.enable")(false);
 
-	
+	double lastPrintTime = WallClockTime();
 	for (u_int mapInfoIndex = 0; mapInfoIndex < engine->mapInfos.size(); ++mapInfoIndex) {
 		const BakeMapInfo &mapInfo = engine->mapInfos[mapInfoIndex];
 
@@ -347,12 +349,30 @@ void BakeCPURenderThread::RenderFunc() {
 			renderThread->yield();
 #endif
 
+			if (threadIndex == 0) {
+				const double now = WallClockTime();
+				if (now - lastPrintTime > 2.0) {
+					// Print some information about the rendering progress
+					const double elapsedTime = engine->mapFilm->GetTotalTime();
+					const u_int pass = static_cast<u_int>(engine->mapFilm->GetTotalSampleCount() /
+							(engine->mapFilm->GetWidth() * engine->mapFilm->GetHeight()));
+					const float convergence = engine->mapFilm->GetConvergence();
+					
+					SLG_LOG("Baking map #" << mapInfoIndex << ": "
+							"[Elapsed time " << int(elapsedTime) << " secs]"
+							"[Samples " << pass << "]"
+							"[Convergence " << (100.f * convergence) << "%]");
+
+					lastPrintTime = now;
+				}
+			}
+
 			// Check halt conditions
-			if (engine->film->GetConvergence() == 1.f)
+			if (engine->mapFilm->GetConvergence() == 1.f)
 				break;
 
 			if (engine->photonGICache) {
-				const u_int spp = engine->film->GetTotalEyeSampleCount() / engine->film->GetPixelCount();
+				const u_int spp = engine->mapFilm->GetTotalEyeSampleCount() / engine->mapFilm->GetPixelCount();
 				engine->photonGICache->Update(threadIndex, spp);
 			}
 		}

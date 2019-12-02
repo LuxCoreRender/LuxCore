@@ -278,6 +278,9 @@ void BakeCPURenderEngine::UpdateFilmLockLess() {
 					Min(mapFilm->GetWidth(), film->GetWidth()),
 					Min(mapFilm->GetHeight(), film->GetHeight()),
 					0, 0);
+
+			// Time to run the halt test on mapFilm too
+			mapFilm->RunTests();
 		}
 	}
 }
