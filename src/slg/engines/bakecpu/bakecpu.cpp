@@ -38,6 +38,7 @@ BakeCPURenderEngine::BakeCPURenderEngine(const RenderConfig *rcfg) :
 
 	minMapAutoSize = cfg.Get(Property("bake.minmapautosize")(32u)).Get<u_int>();
 	maxMapAutoSize = Max(cfg.Get(Property("bake.maxmapautosize")(1024u)).Get<u_int>(), minMapAutoSize);
+	skipExistingMapFiles = cfg.Get(Property("bake.skipexistingmapfiles")(false)).Get<u_int>();
 
 	// Read the list of bake maps to render
 	vector<string> mapKeys = cfg.GetAllUniqueSubNames("bake.maps");

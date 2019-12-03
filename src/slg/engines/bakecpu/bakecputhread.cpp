@@ -44,8 +44,21 @@ void BakeCPURenderThread::InitBakeWork(const BakeMapInfo &mapInfo) {
 	SLG_LOG("Baking map: " << mapInfo.fileName);
 	SLG_LOG("Resolution: " << mapInfo.width << "x" << mapInfo.height);
 
+	engine->currentSceneObjsToBake.clear();
+	
+	if (engine->skipExistingMapFiles) {
+		// Check if the file exist
+		if (boost::filesystem::exists(mapInfo.fileName)) {
+			SLG_LOG("Bake map file already exists: " << mapInfo.fileName);
+			// Skip this map
+			return;
+		}
+	}
+
 	// Initialize the map Film
 	delete engine->mapFilm;
+	engine->mapFilm = nullptr;
+
 	engine->mapFilm = new Film(mapInfo.width, mapInfo.height, nullptr);
 	engine->mapFilm->CopyDynamicSettings(*engine->film);
 	// Copy the halt conditions too
@@ -53,7 +66,6 @@ void BakeCPURenderThread::InitBakeWork(const BakeMapInfo &mapInfo) {
 	engine->mapFilm->Init();
 
 	// Build the list of object to bake and each mesh area
-	engine->currentSceneObjsToBake.clear();
 	for (auto const &objName : mapInfo.objectNames) {
 		const SceneObject *sceneObj = scene->objDefs.GetSceneObject(objName);
 		if (sceneObj)
@@ -358,7 +370,7 @@ void BakeCPURenderThread::RenderFunc() {
 							(engine->mapFilm->GetWidth() * engine->mapFilm->GetHeight()));
 					const float convergence = engine->mapFilm->GetConvergence();
 					
-					SLG_LOG("Baking map #" << mapInfoIndex << ": "
+					SLG_LOG("Baking map #" << mapInfoIndex << "/" << engine->mapInfos.size() << ": "
 							"[Elapsed time " << int(elapsedTime) << " secs]"
 							"[Samples " << pass << "]"
 							"[Convergence " << (100.f * convergence) << "%]");
