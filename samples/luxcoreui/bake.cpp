@@ -99,6 +99,7 @@ void LuxCoreApp::BakeAllSceneObjects() {
 			Property(prefix + ".imagepipelineindex")(imagePiplinesCount) <<
 			Property(prefix + ".width")(512) <<
 			Property(prefix + ".height")(512) <<
+			Property(prefix + ".autosize.enabled")(true) <<
 			Property(prefix + ".uvindex")(0) <<
 			Property(prefix + ".objectnames")(objectName);
 		

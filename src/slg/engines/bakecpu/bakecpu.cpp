@@ -67,7 +67,7 @@ BakeCPURenderEngine::BakeCPURenderEngine(const RenderConfig *rcfg) :
 		mapInfo.width = cfg.Get(Property(prefix + ".width")(512u)).Get<u_int>();
 		mapInfo.height = cfg.Get(Property(prefix + ".height")(512u)).Get<u_int>();
 		mapInfo.uvindex = Clamp(cfg.Get(Property(prefix + ".uvindex")(0u)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
-		mapInfo.useAutoMapSize = cfg.Get(Property(prefix + ".autosize.enabled")(true)).Get<bool>();
+		mapInfo.useAutoMapSize = cfg.Get(Property(prefix + ".autosize.enabled")(false)).Get<bool>();
 
 		// Read the list of objects to bake
 		const Property &objNamesProp = cfg.Get(Property(prefix + ".objectnames")("objectNameToBake"));
