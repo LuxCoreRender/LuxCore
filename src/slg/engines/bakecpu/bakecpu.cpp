@@ -188,7 +188,7 @@ void BakeCPURenderEngine::StartLockLess() {
 #if _OPENMP >= 200805
 			unsigned
 #endif
-			mapInfoIndex = 0; mapInfoIndex < mapInfos.size(); ++mapInfoIndex) {
+			int mapInfoIndex = 0; mapInfoIndex < mapInfos.size(); ++mapInfoIndex) {
 		const BakeMapInfo &mapInfo = mapInfos[mapInfoIndex];
 
 		for (auto const &objName : mapInfo.objectNames) {
