@@ -114,16 +114,24 @@ void LuxCoreApp::BakeAllSceneObjects() {
 	completeBakeCfgProps.Save("render-bakeallobjects.cfg");
 
 	// Write the complete new baked scene to file
-	Properties completeBakeSceneProps;
-	completeBakeSceneProps << sceneProps;
+	Properties completeBakedSceneProps;
+	completeBakedSceneProps << sceneProps;
 	for (auto const &objectName : objectNames) {
 		const string prefix = "scene.objects." + objectName;
 
-		completeBakeSceneProps <<
+		completeBakedSceneProps <<
 				Property(prefix + ".bake.combined.file")(SanitizeName(objectName) + ".exr") <<
-				Property(prefix + ".bake.combined.gamma")(1.f);
+				Property(prefix + ".bake.combined.gamma")(1.f) <<
+				Property(prefix + ".bake.combined.warp")("clamp");
 	}
-	completeBakeSceneProps.Save("scene-bakeallobjects.scn");
+	completeBakedSceneProps.Save("scene-bakedallobjects.scn");
+	
+	// Write the complete new baked config file to file
+	Properties completeBakedCfgProps;
+	completeBakedCfgProps <<
+			cfgProps <<
+			Property("scene.file")("scene-bakedallobjects.scn");
+	completeBakedCfgProps.Save("render-bakedallobjects.cfg");
 	
 	// Start the backing rendering
 	RenderConfigParse(completeBakeCfgProps);
