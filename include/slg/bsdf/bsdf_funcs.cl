@@ -376,6 +376,7 @@ OPENCL_FORCE_INLINE bool BSDF_HasCombinedBakeMap(__global const BSDF *bsdf
 
 OPENCL_FORCE_INLINE float3 BSDF_GetCombinedBakeMapValue(__global const BSDF *bsdf
 		MATERIALS_PARAM_DECL) {
+#if defined(PARAM_HAS_IMAGEMAPS)
 	const uint mapIndex = sceneObjs[bsdf->sceneObjectIndex].combinedBakeMapIndex;
 	__global const ImageMap *imageMap = &imageMapDescs[mapIndex];
 
@@ -386,4 +387,7 @@ OPENCL_FORCE_INLINE float3 BSDF_GetCombinedBakeMapValue(__global const BSDF *bsd
 			imageMap,
 			uv.s0, uv.s1
 			IMAGEMAPS_PARAM);
+#else
+	return BLACK;
+#endif
 }
