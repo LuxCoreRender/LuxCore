@@ -171,7 +171,7 @@ Spectrum BSDF::EvaluateTotal() const {
 }
 
 bool BSDF::HasCombinedBakeMap() const {
-	return sceneObject->HasCombinedBakeMap();
+	return sceneObject && sceneObject->HasCombinedBakeMap();
 }
 
 Spectrum BSDF::GetCombinedBakeMapValue() const {

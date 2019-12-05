@@ -371,7 +371,7 @@ OPENCL_FORCE_INLINE float3 BSDF_ShadowCatcherSample(__global const BSDF *bsdf,
 
 OPENCL_FORCE_INLINE bool BSDF_HasCombinedBakeMap(__global const BSDF *bsdf
 		MATERIALS_PARAM_DECL) {
-	return sceneObjs[bsdf->sceneObjectIndex].combinedBakeMapIndex != NULL_INDEX;
+	return (bsdf->sceneObjectIndex != NULL_INDEX) && sceneObjs[bsdf->sceneObjectIndex].combinedBakeMapIndex != NULL_INDEX;
 }
 
 OPENCL_FORCE_INLINE float3 BSDF_GetCombinedBakeMapValue(__global const BSDF *bsdf
