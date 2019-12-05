@@ -21,6 +21,10 @@
 typedef struct {
 	unsigned int objectID;
 	unsigned int materialIndex;
+
+	unsigned int combinedBakeMapIndex;
+	unsigned int  combinedBakeMapUVIndex;
+
 	int cameraInvisible;
 } SceneObject;
 

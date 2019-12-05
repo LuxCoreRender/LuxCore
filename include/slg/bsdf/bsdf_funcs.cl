@@ -364,3 +364,26 @@ OPENCL_FORCE_INLINE float3 BSDF_ShadowCatcherSample(__global const BSDF *bsdf,
 //	} else
 		return result;
 }
+
+//------------------------------------------------------------------------------
+// BAke related functions
+//------------------------------------------------------------------------------
+
+OPENCL_FORCE_INLINE bool BSDF_HasCombinedBakeMap(__global const BSDF *bsdf
+		MATERIALS_PARAM_DECL) {
+	return sceneObjs[bsdf->sceneObjectIndex].combinedBakeMapIndex != NULL_INDEX;
+}
+
+OPENCL_FORCE_INLINE float3 BSDF_GetCombinedBakeMapValue(__global const BSDF *bsdf
+		MATERIALS_PARAM_DECL) {
+	const uint mapIndex = sceneObjs[bsdf->sceneObjectIndex].combinedBakeMapIndex;
+	__global const ImageMap *imageMap = &imageMapDescs[mapIndex];
+
+	const uint uvIndex = sceneObjs[bsdf->sceneObjectIndex].combinedBakeMapUVIndex;
+	const float2 uv = VLOAD2F(&bsdf->hitPoint.uv[uvIndex].u);
+
+	return ImageMap_GetFloat(
+			imageMap,
+			uv.s0, uv.s1
+			IMAGEMAPS_PARAM);
+}

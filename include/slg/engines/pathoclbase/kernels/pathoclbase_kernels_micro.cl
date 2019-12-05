@@ -283,6 +283,18 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 #endif
 	}
 
+	//----------------------------------------------------------------------
+	// Check if it is a baked material
+	//----------------------------------------------------------------------
+
+	if (BSDF_HasCombinedBakeMap(bsdf MATERIALS_PARAM)) {
+		const float3 radiance = VLOAD3F(&taskState->throughput.c) * BSDF_GetCombinedBakeMapValue(bsdf MATERIALS_PARAM);
+		VADD3F(sample->result.radiancePerPixelNormalized[0].c, radiance);
+
+		taskState->state = MK_SPLAT_SAMPLE;
+		return;
+	}
+
 	//--------------------------------------------------------------------------
 	// Check if it is a light source and I have to add light emission
 	//--------------------------------------------------------------------------
