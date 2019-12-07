@@ -383,7 +383,7 @@ OPENCL_FORCE_INLINE float3 BSDF_GetCombinedBakeMapValue(__global const BSDF *bsd
 	const uint uvIndex = sceneObjs[bsdf->sceneObjectIndex].combinedBakeMapUVIndex;
 	const float2 uv = VLOAD2F(&bsdf->hitPoint.uv[uvIndex].u);
 
-	return ImageMap_GetFloat(
+	return ImageMap_GetSpectrum(
 			imageMap,
 			uv.s0, uv.s1
 			IMAGEMAPS_PARAM);
