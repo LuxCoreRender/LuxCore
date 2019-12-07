@@ -122,7 +122,7 @@ void LuxCoreApp::BakeAllSceneObjects() {
 		completeBakedSceneProps <<
 				Property(prefix + ".bake.combined.file")(SanitizeName(objectName) + ".exr") <<
 				Property(prefix + ".bake.combined.gamma")(1.f) <<
-				Property(prefix + ".bake.combined.warp")("clamp");
+				Property(prefix + ".bake.combined.wrap")("clamp");
 	}
 	completeBakedSceneProps.Save("scene-bakedallobjects.scn");
 	
