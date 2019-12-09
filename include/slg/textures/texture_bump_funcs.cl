@@ -41,14 +41,14 @@ OPENCL_FORCE_NOT_INLINE float3 GenericTexture_Bump(
 	// Compute offset positions and evaluate displacement texIndex
 	const float3 origP = VLOAD3F(&hitPoint->p.x);
 	const float3 origShadeN = VLOAD3F(&hitPoint->shadeN.x);
-	const float2 origUV = VLOAD2F(&hitPoint->uv.u);
+	const float2 origUV = VLOAD2F(&hitPoint->uv[0].u);
 
 	float2 duv;
 
 	// Shift hitPointTmp.du in the u direction and calculate value
 	const float uu = sampleDistance / length(dpdu);
 	VSTORE3F(origP + uu * dpdu, &hitPoint->p.x);
-	hitPoint->uv.u += uu;
+	hitPoint->uv[0].u += uu;
 	VSTORE3F(normalize(origShadeN + uu * dndu), &hitPoint->shadeN.x);
 	const float duValue = Texture_GetFloatValue(texIndex, hitPoint
 			TEXTURES_PARAM);
@@ -57,8 +57,8 @@ OPENCL_FORCE_NOT_INLINE float3 GenericTexture_Bump(
 	// Shift hitPointTmp.dv in the v direction and calculate value
 	const float vv = sampleDistance / length(dpdv);
 	VSTORE3F(origP + vv * dpdv, &hitPoint->p.x);
-	hitPoint->uv.u = origUV.s0;
-	hitPoint->uv.v += vv;
+	hitPoint->uv[0].u = origUV.s0;
+	hitPoint->uv[0].v += vv;
 	VSTORE3F(normalize(origShadeN + vv * dndv), &hitPoint->shadeN.x);
 	const float dvValue = Texture_GetFloatValue(texIndex, hitPoint
 			TEXTURES_PARAM);
@@ -66,7 +66,7 @@ OPENCL_FORCE_NOT_INLINE float3 GenericTexture_Bump(
 
 	// Restore HitPoint
 	VSTORE3F(origP, &hitPoint->p.x);
-	VSTORE2F(origUV, &hitPoint->uv.u);
+	VSTORE2F(origUV, &hitPoint->uv[0].u);
 
 	// Compute the new dpdu and dpdv
 	const float3 bumpDpdu = dpdu + duv.s0 * origShadeN;

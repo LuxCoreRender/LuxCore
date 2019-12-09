@@ -40,8 +40,8 @@ Material::Material(const Texture *frontTransp, const Texture *backTransp,
 		emittedGain(1.f), emittedPower(0.f), emittedEfficency(0.f),
 		frontTransparencyTex(frontTransp), backTransparencyTex(backTransp),
 		emittedTex(emitted), bumpTex(bump), bumpSampleDistance(.001f),
-		emissionMap(NULL), emissionFunc(NULL),
-		interiorVolume(NULL), exteriorVolume(NULL),
+		emissionMap(nullptr), emissionFunc(nullptr),
+		interiorVolume(nullptr), exteriorVolume(nullptr),
 		glossiness(0.f),
 		isVisibleIndirectDiffuse(true), isVisibleIndirectGlossy(true), isVisibleIndirectSpecular(true),
 		isShadowCatcher(false), isShadowCatcherOnlyInfiniteLights(false), isPhotonGIEnabled(true) {
@@ -75,7 +75,7 @@ void Material::SetEmissionMap(const ImageMap *map) {
 	if (emissionMap)
 		emissionFunc = new SampleableSphericalFunction(new ImageMapSphericalFunction(emissionMap));
 	else
-		emissionFunc = NULL;
+		emissionFunc = nullptr;
 }
 
 Spectrum Material::GetPassThroughTransparency(const HitPoint &hitPoint,
@@ -188,6 +188,7 @@ Properties Material::ToProperties(const ImageMapCache &imgMapCache, const bool u
 		props.Set(Property("scene.materials." + name + ".transparency.back")(backTransparencyTex->GetSDLValue()));
 	props.Set(Property("scene.materials." + name + ".transparency.shadow")(passThroughShadowTransparency));
 	props.Set(Property("scene.materials." + name + ".id")(matID));
+
 	props.Set(Property("scene.materials." + name + ".emission.gain")(emittedGain));
 	props.Set(Property("scene.materials." + name + ".emission.power")(emittedPower));
 	props.Set(Property("scene.materials." + name + ".emission.efficency")(emittedEfficency));
@@ -202,6 +203,7 @@ Properties Material::ToProperties(const ImageMapCache &imgMapCache, const bool u
 		props.Set(Property("scene.materials." + name + ".emission.mapfile")(fileName));
 		props.Set(emissionMap->ToProperties("scene.materials." + name, false));
 	}
+
 	switch (directLightSamplingType) {
 		case DLS_ENABLED:
 			props.Set(Property("scene.materials." + name + ".emission.directlightsampling.type")("ENABLED"));
@@ -230,6 +232,8 @@ Properties Material::ToProperties(const ImageMapCache &imgMapCache, const bool u
 
 	props.Set(Property("scene.materials." + name + ".shadowcatcher.enable")(isShadowCatcher));
 	props.Set(Property("scene.materials." + name + ".shadowcatcher.onlyinfinitelights")(isShadowCatcherOnlyInfiniteLights));
+	
+	props.Set(Property("scene.materials." + name + ".photongi.enable")(isPhotonGIEnabled));
 
 	return props;
 }

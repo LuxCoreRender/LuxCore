@@ -34,30 +34,15 @@ OPENCL_FORCE_NOT_INLINE float3 Volume_Emission(__global const Volume *vol, __glo
 OPENCL_FORCE_NOT_INLINE void Volume_InitializeTmpHitPoint(__global HitPoint *tmpHitPoint,
 		const float3 rayOrig, const float3 rayDir, const float passThroughEvent) {
 	// Initialize tmpHitPoint
+	HitPoint_InitDefault(tmpHitPoint);
+
 	VSTORE3F(rayDir, &tmpHitPoint->fixedDir.x);
 	VSTORE3F(rayOrig, &tmpHitPoint->p.x);
-	VSTORE2F((float2)(0.f, 0.f), &tmpHitPoint->uv.u);
 	VSTORE3F(-rayDir, &tmpHitPoint->geometryN.x);
 	VSTORE3F(-rayDir, &tmpHitPoint->interpolatedN.x);
 	VSTORE3F(-rayDir, &tmpHitPoint->shadeN.x);
-	VSTORE3F((float3)(0.f, 0.f, 0.f), &tmpHitPoint->dpdu.x);
-	VSTORE3F((float3)(0.f, 0.f, 0.f), &tmpHitPoint->dpdv.x);
-	VSTORE3F((float3)(0.f, 0.f, 0.f), &tmpHitPoint->dndu.x);
-	VSTORE3F((float3)(0.f, 0.f, 0.f), &tmpHitPoint->dndv.x);
-#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR) || defined(PARAM_ENABLE_TEX_HITPOINTGREY) || defined(PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR)
-	VSTORE3F(WHITE, tmpHitPoint->color.c);
-#endif
-#if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)
-	tmpHitPoint->alpha = 0.f;
-#endif
 	tmpHitPoint->passThroughEvent = passThroughEvent;
 	Transform_Init(&tmpHitPoint->localToWorld);
-	tmpHitPoint->interiorVolumeIndex = NULL_INDEX;
-	tmpHitPoint->exteriorVolumeIndex = NULL_INDEX;
-	tmpHitPoint->intoObject = true;
-#if defined(PARAM_ENABLE_TEX_OBJECTID) || defined(PARAM_ENABLE_TEX_OBJECTID_COLOR) || defined(PARAM_ENABLE_TEX_OBJECTID_NORMALIZED)
-	tmpHitPoint->objectID = NULL_INDEX;
-#endif
 }
 
 OPENCL_FORCE_INLINE float HomogeneousVolume_SegmentScatter(const float u, 

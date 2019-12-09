@@ -174,9 +174,21 @@ SceneObject *Scene::CreateObject(const u_int defaultObjID, const string &objName
 	SceneObject *scnObj = new SceneObject(mesh, mat, objID, cameraInvisible);
 	scnObj->SetName(objName);
 
+	if (props.IsDefined(propName + ".bake.combined.file")) {
+		ImageMap *imgMap = ImageMap::FromProperties(props, propName + ".bake.combined");
+
+		// Add the image map to the cache
+		const string name ="LUXCORE_BAKEMAP_" + propName;
+		imgMap->SetName(name);
+		imgMapCache.DefineImageMap(imgMap);
+
+		const u_int uvIndex = Clamp(props.Get(Property(propName + ".bake.combined.uvindex")(0)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
+
+		scnObj->SetCombinedBakeMap(imgMap, uvIndex);
+	}
+
 	return scnObj;
 }
-
 
 void Scene::DuplicateObject(const std::string &srcObjName, const std::string &dstObjName,
 		const luxrays::Transform &trans, const u_int dstObjID) {

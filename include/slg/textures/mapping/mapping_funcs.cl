@@ -24,8 +24,8 @@
 
 OPENCL_FORCE_INLINE float2 UVMapping2D_Map(__global const TextureMapping2D *mapping, __global const HitPoint *hitPoint) {
 	// Scale
-	const float uScaled = hitPoint->uv.u * mapping->uvMapping2D.uScale;
-	const float vScaled = hitPoint->uv.v * mapping->uvMapping2D.vScale;
+	const float uScaled = hitPoint->uv[mapping->dataIndex].u * mapping->uvMapping2D.uScale;
+	const float vScaled = hitPoint->uv[mapping->dataIndex].v * mapping->uvMapping2D.vScale;
 
 	// Rotate
 	const float sinTheta = mapping->uvMapping2D.sinTheta;
@@ -75,7 +75,7 @@ OPENCL_FORCE_NOT_INLINE float2 TextureMapping2D_MapDuv(__global const TextureMap
 //------------------------------------------------------------------------------
 
 OPENCL_FORCE_INLINE float3 UVMapping3D_Map(__global const TextureMapping3D *mapping, __global const HitPoint *hitPoint) {
-	const float2 uv = VLOAD2F(&hitPoint->uv.u);
+	const float2 uv = VLOAD2F(&hitPoint->uv[mapping->uvMapping3D.dataIndex].u);
 	return Transform_ApplyPoint(&mapping->worldToLocal, (float3)(uv.xy, 0.f));
 }
 

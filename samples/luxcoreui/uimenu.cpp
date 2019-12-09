@@ -85,6 +85,9 @@ void LuxCoreApp::MenuRendering() {
 		}
 	}
 
+	if (session && ImGui::MenuItem("Bake all objects"))
+		BakeAllSceneObjects();
+
 	ImGui::Separator();
 
 	if (session && ImGui::MenuItem("Save rendering")) {
@@ -220,6 +223,10 @@ void LuxCoreApp::MenuEngine() {
 #endif
 	if (ImGui::MenuItem("RTPATHCPU", "9", (currentEngineType == "RTPATHCPU"))) {
 		SetRenderingEngineType("RTPATHCPU");
+		CloseAllRenderConfigEditors();
+	}
+	if (ImGui::MenuItem("BAKECPU", "0", (currentEngineType == "BAKECPU"))) {
+		SetRenderingEngineType("BAKECPU");
 		CloseAllRenderConfigEditors();
 	}
 }

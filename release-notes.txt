@@ -24,6 +24,7 @@
 * Added a Simplify shape (to decimate the number of triangles in a mesh with the smaller possible error)
 * Reduced the default number of OpenCL threads from 512k to 256k (to save about 150MB of GPU RAM at 1-2% performance cost)
 * Changing max. path and/or Russian Roulette parameters doesn't require OpenCL compilation anymore (removed PARAM_MAX_PATH_DEPTH, PARAM_MAX_PATH_DEPTH_DIFFUSE, PARAM_MAX_PATH_DEPTH_GLOSSY, PARAM_MAX_PATH_DEPTH_SPECULAR, PARAM_RR_DEPTH and PARAM_RR_CAPPARAM_HAS_BUMPMAPS conditional OpenCL compilation)
+* Added the support the definition of meshes with multiple UVs, Colors and Alphas (issue #134)
 
 ### Fixed Bugs
 
@@ -31,6 +32,7 @@
 * Fixed OpenCL code for rotate triangle light when using IES or image map profile (BlendLuxCore iusse #310)
 * Fixed light tracing when using orthographic camera
 * Fixed a light intensity problem with OpenCL rendering when using a mix of materials with emission
+* Fixed the support for wrap mode in image maps loaded from files
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.

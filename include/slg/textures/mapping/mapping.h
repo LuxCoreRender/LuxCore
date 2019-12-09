@@ -47,6 +47,8 @@ public:
 	TextureMapping2D(const u_int index) : dataIndex(index) { }
 	virtual ~TextureMapping2D() { }
 
+	u_int GetDataIndex() const { return dataIndex; }
+
 	virtual TextureMapping2DType GetType() const = 0;
 
 	virtual luxrays::UV Map(const HitPoint &hitPoint) const {
@@ -112,6 +114,8 @@ public:
 	UVMapping3D(const u_int index, const luxrays::Transform &w2l) :
 		TextureMapping3D(w2l), dataIndex(index) { }
 	virtual ~UVMapping3D() { }
+
+	u_int GetDataIndex() const { return dataIndex; }
 
 	virtual TextureMapping3DType GetType() const { return UVMAPPING3D; }
 

@@ -47,6 +47,7 @@ RenderEngineWindow::RenderEngineWindow(LuxCoreApp *a) : ObjectEditorWindow(a, "R
 		.Add("TILEPATHOCL", 7)
 #endif
 		.Add("RTPATHCPU", 8)
+		.Add("BAKECPU", 9)
 		.SetDefault("PATHCPU");
 }
 
@@ -666,6 +667,22 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 			}
 			LuxCoreApp::HelpMarker("path.russianroulette.cap");
 		}
+
+		ThreadsGUI(props, modifiedProps);
+
+		if (ImGui::Button("Open Sampler editor"))
+			app->samplerWindow.Open();
+		ImGui::SameLine();
+		if (ImGui::Button("Open Pixel Filter editor"))
+			app->pixelFilterWindow.Open();
+	}
+
+	//--------------------------------------------------------------------------
+	// BAKECPU
+	//--------------------------------------------------------------------------
+
+	if (typeIndex == typeTable.GetVal("BAKECPU")) {
+		PathGUI(props, modifiedProps);
 
 		ThreadsGUI(props, modifiedProps);
 

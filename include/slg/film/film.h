@@ -113,6 +113,7 @@ public:
 	const ImagePipeline *GetImagePipeline(const u_int index) const { return imagePipelines[index]; }
 
 	void CopyDynamicSettings(const Film &film);
+	void CopyHaltSettings(const Film &film);
 
 	//--------------------------------------------------------------------------
 

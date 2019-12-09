@@ -92,5 +92,25 @@ Properties SceneObject::ToProperties(const ExtMeshCache &extMeshCache,
 			break;
 	}
 
+	if (combinedBakeMap) {
+		props.Set(combinedBakeMap->ToProperties("scene.objects." + name + ".bake.combined", useRealFileName));
+		props.Set(Property("scene.objects." + name + ".bake.combined.uvindex")(combinedBakeMapUVIndex));
+	}
+
 	return props;
+}
+
+Spectrum SceneObject::GetCombinedBakeMapValue(const UV &uv) const {
+	assert (combinedBakeMap);
+
+	return combinedBakeMap->GetSpectrum(uv);
+}
+
+void SceneObject::AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
+	if (combinedBakeMap)
+		referencedImgMaps.insert(combinedBakeMap);
+}
+
+void SceneObject::AddReferencedMaterials(boost::unordered_set<const Material *> &referencedMats) const {
+	mat->AddReferencedMaterials(referencedMats);
 }

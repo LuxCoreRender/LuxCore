@@ -73,7 +73,7 @@ void LightCPURenderThread::RenderFunc() {
 				break;
 		}
 
-		pathTracer.RenderLightSample(threadIndex, device, engine->renderConfig->scene,
+		pathTracer.RenderLightSample(device, engine->renderConfig->scene,
 				engine->film, sampler, sampleResults);
 
 		// Variance clamping

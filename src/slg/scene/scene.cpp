@@ -338,6 +338,8 @@ void Scene::RemoveUnusedImageMaps() {
 	boost::unordered_set<const ImageMap *> referencedImgMaps;
 	for (u_int i = 0; i < texDefs.GetSize(); ++i)
 		texDefs.GetTexture(i)->AddReferencedImageMaps(referencedImgMaps);
+	for (u_int i = 0; i < objDefs.GetSize(); ++i)
+		objDefs.GetSceneObject(i)->AddReferencedImageMaps(referencedImgMaps);
 
 	// Add the light image maps
 

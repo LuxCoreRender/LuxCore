@@ -46,6 +46,7 @@ typedef enum {
 	TILEPATHCPU,
 	TILEPATHOCL,
 	RTPATHCPU,
+	BAKECPU,
 	RENDER_ENGINE_TYPE_COUNT
 } RenderEngineType;
 

@@ -39,6 +39,8 @@ public:
 	// information about the color.
 	virtual float Y() const { return 1.f; }
 	virtual float Filter() const { return 1.f; }
+	
+	u_int GetDataIndex() const { return dataIndex; }
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
@@ -62,6 +64,8 @@ public:
 	// information about the color.
 	virtual float Y() const { return 1.f; }
 	virtual float Filter() const { return 1.f; }
+	
+	u_int GetDataIndex() const { return dataIndex; }
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
@@ -86,6 +90,7 @@ public:
 	virtual float Y() const { return 1.f; }
 	virtual float Filter() const { return 1.f; }
 
+	u_int GetDataIndex() const { return dataIndex; }
 	u_int GetChannel() const { return channel; }
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;

@@ -41,7 +41,16 @@ void CompiledScene::CompileSceneObjects() {
 
 		const Material *m = scnObj->GetMaterial();
 		oclScnObj.materialIndex = scene->matDefs.GetMaterialIndex(m);
-		
+
+		const ImageMap *combinedBakeMap = scnObj->GetCombinedBakeMap();
+		if (combinedBakeMap) {
+			oclScnObj.combinedBakeMapIndex = scene->imgMapCache.GetImageMapIndex(combinedBakeMap);
+			oclScnObj.combinedBakeMapUVIndex = scnObj->GetCombinedBakeMapUVIndex();
+		} else {
+			oclScnObj.combinedBakeMapIndex = NULL_INDEX;
+			oclScnObj.combinedBakeMapUVIndex = NULL_INDEX;
+		}
+
 		oclScnObj.cameraInvisible = scnObj->IsCameraInvisible();
 	}
 }

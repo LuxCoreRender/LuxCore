@@ -43,17 +43,15 @@ class VarianceClamping;
 
 class PathTracerThreadState {
 public:
-	PathTracerThreadState(const u_int threadIndex,
-			luxrays::IntersectionDevice *device,
+	PathTracerThreadState(luxrays::IntersectionDevice *device,
 			Sampler *eyeSampler, Sampler *lightSampler,
 			const Scene *scene, Film *film,
-			const VarianceClamping *varianceClamping);
+			const VarianceClamping *varianceClamping,
+			const bool useFilmSplat = false);
 	virtual ~PathTracerThreadState();
 
 	friend class PathTracer;
 
-private:
-	const u_int threadIndex;
 	luxrays::IntersectionDevice *device;
 
 	Sampler *eyeSampler, *lightSampler;
@@ -63,8 +61,13 @@ private:
 	
 	std::vector<SampleResult> eyeSampleResults, lightSampleResults;
 	
+private:
 	double eyeSampleCount, lightSampleCount;
 };
+
+typedef enum {
+	ILLUMINATED, SHADOWED, NOT_VISIBLE
+} DirectLightResult;
 
 class PhotonGICache;
 
@@ -80,17 +83,31 @@ public:
 
 	void ParseOptions(const luxrays::Properties &cfg, const luxrays::Properties &defaultProps);
 
-	void RenderEyeSample(const u_int threadIndex, luxrays::IntersectionDevice *device,
+	DirectLightResult DirectLightSampling(
+		luxrays::IntersectionDevice *device, const Scene *scene,
+		const float time, const float u0,
+		const float u1, const float u2,
+		const float u3, const float u4,
+		const EyePathInfo &pathInfo, const luxrays::Spectrum &pathThrouput,
+		const BSDF &bsdf, SampleResult *sampleResult,
+		const bool useBSDFEVal = true) const;
+
+	void RenderEyePath(luxrays::IntersectionDevice *device,
+			const Scene *scene, Sampler *sampler, EyePathInfo &pathInfo,
+			luxrays::Ray &eyeRay, std::vector<SampleResult> &sampleResults) const;
+	void RenderEyeSample(luxrays::IntersectionDevice *device,
 			const Scene *scene, const Film *film, Sampler *sampler,
 			std::vector<SampleResult> &sampleResults) const;
 
-	void RenderLightSample(const u_int threadIndex, luxrays::IntersectionDevice *device,
+	void RenderLightSample(luxrays::IntersectionDevice *device,
 			const Scene *scene, const Film *film, Sampler *sampler,
 			std::vector<SampleResult> &sampleResults) const;
 	
 	void RenderSample(PathTracerThreadState &state) const;
 
-	static void InitEyeSampleResults(const Film *film, std::vector<SampleResult> &sampleResults);
+	static void InitEyeSampleResults(const Film *film, std::vector<SampleResult> &sampleResults,
+			const bool useFilmSplat = false);
+	static void ResetEyeSampleResults(std::vector<SampleResult> &sampleResults);
 
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	static const luxrays::Properties &GetDefaultProps();
@@ -119,19 +136,7 @@ private:
 			luxrays::Ray &eyeRay, PathVolumeInfo &volInfo,
 			Sampler *sampler, SampleResult &sampleResult) const;
 
-	typedef enum {
-		ILLUMINATED, SHADOWED, NOT_VISIBLE
-	} DirectLightResult;
-
 	// RenderEyeSample methods
-
-	DirectLightResult DirectLightSampling(
-		luxrays::IntersectionDevice *device, const Scene *scene,
-		const float time, const float u0,
-		const float u1, const float u2,
-		const float u3, const float u4,
-		const EyePathInfo &pathInfo, const luxrays::Spectrum &pathThrouput,
-		const BSDF &bsdf, SampleResult *sampleResult) const;
 
 	void DirectHitFiniteLight(const Scene *scene, const EyePathInfo &pathInfo,
 			const luxrays::Spectrum &pathThrouput, const luxrays::Ray &ray,
@@ -147,8 +152,8 @@ private:
 
 	SampleResult &AddLightSampleResult(std::vector<SampleResult> &sampleResults,
 			const Film *film) const;
-	void ConnectToEye(const u_int threadIndex,
-			luxrays::IntersectionDevice *device, const Scene *scene,
+	void ConnectToEye(luxrays::IntersectionDevice *device,
+			const Scene *scene,
 			const Film *film, const float time,
 			const float u0, const float u1, const float u2,
 			const LightSource &light,  const BSDF &bsdf,

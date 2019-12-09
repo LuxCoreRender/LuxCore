@@ -29,16 +29,16 @@ using namespace slg;
 // PathTracer
 //------------------------------------------------------------------------------
 
-PathTracerThreadState::PathTracerThreadState(const u_int thrdIndex,
-		luxrays::IntersectionDevice *dev,
+PathTracerThreadState::PathTracerThreadState(IntersectionDevice *dev,
 		Sampler *eSampler, Sampler *lSampler,
 		const Scene *scn, Film *flm,
-		const VarianceClamping *varClamping) : threadIndex(thrdIndex), device(dev),
+		const VarianceClamping *varClamping,
+		const bool useFilmSplat) : device(dev),
 		eyeSampler(eSampler), lightSampler(lSampler), scene(scn), film(flm),
 		varianceClamping(varClamping) {
 	// Initialize Eye SampleResults
 	eyeSampleResults.resize(1);
-	PathTracer::InitEyeSampleResults(film, eyeSampleResults);
+	PathTracer::InitEyeSampleResults(film, eyeSampleResults, useFilmSplat);
 
 	eyeSampleCount = 0.0;
 	// Using 1.0 instead of 0.0 to avoid a division by zero
@@ -71,7 +71,8 @@ void  PathTracer::DeletePixelFilterDistribution() {
 	pixelFilterDistribution = NULL;
 }
 
-void PathTracer::InitEyeSampleResults(const Film *film, vector<SampleResult> &sampleResults) {
+void PathTracer::InitEyeSampleResults(const Film *film, vector<SampleResult> &sampleResults,
+		const bool useFilmSplat) {
 	SampleResult &sampleResult = sampleResults[0];
 
 	sampleResult.Init(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA | Film::DEPTH |
@@ -82,68 +83,41 @@ void PathTracer::InitEyeSampleResults(const Film *film, vector<SampleResult> &sa
 			Film::OBJECT_ID | Film::SAMPLECOUNT | Film::CONVERGENCE | Film::MATERIAL_ID_COLOR |
 			Film::ALBEDO | Film::AVG_SHADING_NORMAL | Film::NOISE,
 			film->GetRadianceGroupCount());
-	sampleResult.useFilmSplat = false;
+	sampleResult.useFilmSplat = useFilmSplat;
 }
 
-void PathTracer::RenderSample(PathTracerThreadState &state) const {
-	// Check if I have to trace an eye or light path
-	Sampler *sampler;
-	vector<SampleResult> *sampleResults;
-	if (hybridBackForwardEnable) {
-		const double ratio = state.eyeSampleCount / state.lightSampleCount;
-		if ((hybridBackForwardPartition == 1.f) ||
-				(ratio < hybridBackForwardPartition)) {
-			// Trace an eye path
-			sampler = state.eyeSampler;
-			sampleResults = &state.eyeSampleResults;
+void PathTracer::ResetEyeSampleResults(vector<SampleResult> &sampleResults) {
+	SampleResult &sampleResult = sampleResults[0];
 
-			state.eyeSampleCount += 1.0;
-		} else {
-			// Trace a light path
+	// Set to 0.0 all result colors
+	sampleResult.emission = Spectrum();
+	for (u_int i = 0; i < sampleResult.radiance.size(); ++i)
+		sampleResult.radiance[i] = Spectrum();
+	sampleResult.directDiffuse = Spectrum();
+	sampleResult.directGlossy = Spectrum();
+	sampleResult.indirectDiffuse = Spectrum();
+	sampleResult.indirectGlossy = Spectrum();
+	sampleResult.indirectSpecular = Spectrum();
+	sampleResult.directShadowMask = 1.f;
+	sampleResult.indirectShadowMask = 1.f;
+	sampleResult.irradiance = Spectrum();
+	sampleResult.albedo = Spectrum();
 
-			sampler = state.lightSampler;
-			sampleResults = &state.lightSampleResults;
-
-			state.lightSampleCount += 1.0;
-		}
-	} else {
-		sampler = state.eyeSampler;
-		sampleResults = &state.eyeSampleResults;
-
-		state.eyeSampleCount += 1.0;
-	}
-
-	if (sampler == state.eyeSampler)
-		RenderEyeSample(state.threadIndex, state.device, state.scene, state.film, sampler, *sampleResults);
-	else
-		RenderLightSample(state.threadIndex, state.device, state.scene, state.film, sampler, *sampleResults);
-
-	// Variance clamping
-	if (state.varianceClamping->hasClamping()) {
-		for(u_int i = 0; i < sampleResults->size(); ++i) {
-			SampleResult &sampleResult = (*sampleResults)[i];
-
-			// I clamp only eye paths samples (variance clamping would cut
-			// SDS path values due to high scale of PSR samples)
-			if (sampleResult.HasChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED))
-				state.varianceClamping->Clamp(*state.film, sampleResult);
-		}
-	}
-
-	sampler->NextSample(*sampleResults);
+	sampleResult.rayCount = 0.f;
 }
 
 //------------------------------------------------------------------------------
 // RenderEyeSample methods
 //------------------------------------------------------------------------------
 
-PathTracer::DirectLightResult PathTracer::DirectLightSampling(
+DirectLightResult PathTracer::DirectLightSampling(
 		luxrays::IntersectionDevice *device, const Scene *scene,
 		const float time,
 		const float u0, const float u1, const float u2,
 		const float u3, const float u4,
 		const EyePathInfo &pathInfo, const Spectrum &pathThroughput,
-		const BSDF &bsdf, SampleResult *sampleResult) const {
+		const BSDF &bsdf, SampleResult *sampleResult,
+		const bool useBSDFEVal) const {
 	if (!bsdf.IsDelta()) {
 		// Select the light strategy to use
 		const LightStrategy *lightStrategy;
@@ -218,7 +192,8 @@ PathTracer::DirectLightResult PathTracer::DirectLightSampling(
 								!shadowBsdf.hitPoint.throughShadowTransparency;
 
 							const float weight = misEnabled ? PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
-							const Spectrum incomingRadiance = bsdfEval * (weight * factor) * connectionThroughput * lightRadiance;
+							const Spectrum incomingRadiance = (useBSDFEVal ? bsdfEval : 1.f) *
+									(weight * factor) * connectionThroughput * lightRadiance;
 
 							sampleResult->AddDirectLight(light->GetID(), event, pathThroughput, incomingRadiance, 1.f);
 
@@ -366,38 +341,19 @@ void PathTracer::GenerateEyeRay(const Camera *camera, const Film *film, Ray &eye
 }
 
 //------------------------------------------------------------------------------
-// RenderEyeSample
+// RenderEyePath methods
 //------------------------------------------------------------------------------
 
-void PathTracer::RenderEyeSample(const u_int threadIndex,
-		IntersectionDevice *device, const Scene *scene, const Film *film,
-		Sampler *sampler, vector<SampleResult> &sampleResults) const {
-	SampleResult &sampleResult = sampleResults[0];
-
-	// Set to 0.0 all result colors
-	sampleResult.emission = Spectrum();
-	for (u_int i = 0; i < sampleResult.radiance.size(); ++i)
-		sampleResult.radiance[i] = Spectrum();
-	sampleResult.directDiffuse = Spectrum();
-	sampleResult.directGlossy = Spectrum();
-	sampleResult.indirectDiffuse = Spectrum();
-	sampleResult.indirectGlossy = Spectrum();
-	sampleResult.indirectSpecular = Spectrum();
-	sampleResult.directShadowMask = 1.f;
-	sampleResult.indirectShadowMask = 1.f;
-	sampleResult.irradiance = Spectrum();
-	sampleResult.albedo = Spectrum();
-
+void PathTracer::RenderEyePath(IntersectionDevice *device,
+		const Scene *scene, Sampler *sampler, EyePathInfo &pathInfo, Ray &eyeRay,
+		vector<SampleResult> &sampleResults) const {
 	// To keep track of the number of rays traced
 	const double deviceRayCount = device->GetTotalRaysCount();
 
-	EyePathInfo pathInfo;
-
-	Ray eyeRay;
-	GenerateEyeRay(scene->camera, film, eyeRay, pathInfo.volume, sampler, sampleResult);
 	// This is used by light strategy
 	pathInfo.lastShadeN = Normal(eyeRay.d);
 
+	SampleResult &sampleResult = sampleResults[0];
 	bool photonGIShowIndirectPathMixUsed = false;
 	bool photonGICausticCacheUsed = false;
 	bool photonGICacheEnabledOnLastHit = false;
@@ -470,7 +426,16 @@ void PathTracer::RenderEyeSample(const u_int threadIndex,
 			sampleResult.uv = bsdf.hitPoint.uv[0];
 		}
 		sampleResult.lastPathVertex = pathInfo.depth.IsLastPathVertex(maxPathDepth, bsdf.GetEventTypes());
-		
+
+		//----------------------------------------------------------------------
+		// Check if it is a baked material
+		//----------------------------------------------------------------------
+
+		if (bsdf.HasCombinedBakeMap()) {
+			sampleResult.radiance[0] += pathThroughput * bsdf.GetCombinedBakeMapValue();
+			break;
+		}
+
 		//----------------------------------------------------------------------
 		// Check if it is a light source and I have to add light emission
 		//----------------------------------------------------------------------
@@ -623,11 +588,28 @@ void PathTracer::RenderEyeSample(const u_int threadIndex,
 		eyeRay.Update(bsdf.GetRayOrigin(sampledDir), sampledDir);
 	}
 
-	sampleResult.rayCount = (float)(device->GetTotalRaysCount() - deviceRayCount);
+	sampleResult.rayCount += (float)(device->GetTotalRaysCount() - deviceRayCount);
 	
 	if (photonGICache && (photonGICache->GetDebugType() == PhotonGIDebugType::PGIC_DEBUG_SHOWINDIRECTPATHMIX) &&
 			!photonGIShowIndirectPathMixUsed)
 		sampleResult.radiance[0] = Spectrum(1.f, 0.f, 0.f);
+}
+
+//------------------------------------------------------------------------------
+// RenderEyeSample
+//------------------------------------------------------------------------------
+
+void PathTracer::RenderEyeSample(IntersectionDevice *device,
+		const Scene *scene, const Film *film,
+		Sampler *sampler, vector<SampleResult> &sampleResults) const {
+	ResetEyeSampleResults(sampleResults);
+
+	EyePathInfo pathInfo;
+	Ray eyeRay;
+	GenerateEyeRay(scene->camera, film, eyeRay, pathInfo.volume, sampler, sampleResults[0]);
+
+	ResetEyeSampleResults(sampleResults);
+	RenderEyePath(device, scene, sampler, pathInfo, eyeRay, sampleResults);
 }
 
 //------------------------------------------------------------------------------
@@ -645,8 +627,8 @@ SampleResult &PathTracer::AddLightSampleResult(vector<SampleResult> &sampleResul
 	return sampleResult;
 }
 
-void PathTracer::ConnectToEye(const u_int threadIndex,
-		IntersectionDevice *device, const Scene *scene,
+void PathTracer::ConnectToEye(IntersectionDevice *device,
+		const Scene *scene,
 		const Film *film, const float time,
 		const float u0, const float u1, const float u2,
 		const LightSource &light, const BSDF &bsdf, 
@@ -721,8 +703,8 @@ void PathTracer::ConnectToEye(const u_int threadIndex,
 // RenderLightSample
 //------------------------------------------------------------------------------
 
-void PathTracer::RenderLightSample(const u_int threadIndex,
-		IntersectionDevice *device, const Scene *scene, const Film *film,
+void PathTracer::RenderLightSample(IntersectionDevice *device,
+		const Scene *scene, const Film *film,
 		Sampler *sampler, vector<SampleResult> &sampleResults) const {
 	sampleResults.clear();
 
@@ -785,8 +767,7 @@ void PathTracer::RenderLightSample(const u_int threadIndex,
 			//--------------------------------------------------------------
 
 			if (!hybridBackForwardEnable || (pathInfo.depth.depth > 0)) {
-				ConnectToEye(threadIndex,
-						device, scene, film,
+				ConnectToEye(device, scene, film,
 						nextEventRay.time,
 						sampler->GetSample(sampleOffset + 1),
 						sampler->GetSample(sampleOffset + 2),
@@ -835,6 +816,58 @@ void PathTracer::RenderLightSample(const u_int threadIndex,
 			nextEventRay.Update(bsdf.GetRayOrigin(sampledDir), sampledDir);
 		}
 	}
+}
+
+//------------------------------------------------------------------------------
+// RenderSample
+//------------------------------------------------------------------------------
+
+void PathTracer::RenderSample(PathTracerThreadState &state) const {
+	// Check if I have to trace an eye or light path
+	Sampler *sampler;
+	vector<SampleResult> *sampleResults;
+	if (hybridBackForwardEnable) {
+		const double ratio = state.eyeSampleCount / state.lightSampleCount;
+		if ((hybridBackForwardPartition == 1.f) ||
+				(ratio < hybridBackForwardPartition)) {
+			// Trace an eye path
+			sampler = state.eyeSampler;
+			sampleResults = &state.eyeSampleResults;
+
+			state.eyeSampleCount += 1.0;
+		} else {
+			// Trace a light path
+
+			sampler = state.lightSampler;
+			sampleResults = &state.lightSampleResults;
+
+			state.lightSampleCount += 1.0;
+		}
+	} else {
+		sampler = state.eyeSampler;
+		sampleResults = &state.eyeSampleResults;
+
+		state.eyeSampleCount += 1.0;
+	}
+
+	if (sampler == state.eyeSampler)
+		RenderEyeSample(state.device, state.scene, state.film, sampler, *sampleResults);
+	else
+		RenderLightSample(state.device, state.scene, state.film, sampler, *sampleResults);
+
+	// Variance clamping
+	if (state.varianceClamping->hasClamping()) {
+		for(u_int i = 0; i < sampleResults->size(); ++i) {
+			SampleResult &sampleResult = (*sampleResults)[i];
+
+			// I clamp only eye paths samples (variance clamping would cut
+			// SDS path values due to high scale of PSR samples)
+			if (sampleResult.HasChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED))
+				state.varianceClamping->Clamp(*state.film, sampleResult);
+		}
+	}
+
+	sampler->NextSample(*sampleResults);
 }
 
 //------------------------------------------------------------------------------

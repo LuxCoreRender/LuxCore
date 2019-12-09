@@ -76,6 +76,7 @@ float HeterogeneousVolume::Scatter(const Ray &ray, const float u,
 	hitPoint.fixedDir = ray.d;
 	hitPoint.p = ray.o;
 	hitPoint.geometryN = hitPoint.interpolatedN = hitPoint.shadeN = Normal(-ray.d);
+	hitPoint.passThroughEvent = u;
 
 	for (u_int s = 0; s < steps; ++s) {
 		// Compute the scattering over the current step

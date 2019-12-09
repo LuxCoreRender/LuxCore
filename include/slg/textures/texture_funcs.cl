@@ -74,7 +74,6 @@ OPENCL_FORCE_NOT_INLINE float ImageMapTexture_ConstEvaluateFloat(__global const 
 		IMAGEMAPS_PARAM_DECL) {
 	__global const ImageMap *imageMap = &imageMapDescs[tex->imageMapTex.imageMapIndex];
 
-	const float2 uv = VLOAD2F(&hitPoint->uv.u);
 	const float2 mapUV = TextureMapping2D_Map(&tex->imageMapTex.mapping, hitPoint);
 
 	return tex->imageMapTex.gain * ImageMap_GetFloat(
@@ -90,7 +89,6 @@ OPENCL_FORCE_NOT_INLINE float3 ImageMapTexture_ConstEvaluateSpectrum(__global co
 	__global const float *pixels = ImageMap_GetPixelsAddress(
 			imageMapBuff, imageMap->pageIndex, imageMap->pixelsIndex);
 
-	const float2 uv = VLOAD2F(&hitPoint->uv.u);
 	const float2 mapUV = TextureMapping2D_Map(&tex->imageMapTex.mapping, hitPoint);
 
 	return tex->imageMapTex.gain * ImageMap_GetSpectrum(
@@ -179,7 +177,6 @@ OPENCL_FORCE_NOT_INLINE float3 MixTexture_ConstEvaluateSpectrum(__global const H
 
 OPENCL_FORCE_NOT_INLINE float CheckerBoard2DTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
 		const float value1, const float value2, __global const TextureMapping2D *mapping) {
-	const float2 uv = VLOAD2F(&hitPoint->uv.u);
 	const float2 mapUV = TextureMapping2D_Map(mapping, hitPoint);
 
 	return ((Floor2Int(mapUV.s0) + Floor2Int(mapUV.s1)) % 2 == 0) ? value1 : value2;
@@ -187,7 +184,6 @@ OPENCL_FORCE_NOT_INLINE float CheckerBoard2DTexture_ConstEvaluateFloat(__global 
 
 OPENCL_FORCE_NOT_INLINE float3 CheckerBoard2DTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
 		const float3 value1, const float3 value2, __global const TextureMapping2D *mapping) {
-	const float2 uv = VLOAD2F(&hitPoint->uv.u);
 	const float2 mapUV = TextureMapping2D_Map(mapping, hitPoint);
 
 	return ((Floor2Int(mapUV.s0) + Floor2Int(mapUV.s1)) % 2 == 0) ? value1 : value2;
@@ -830,12 +826,14 @@ OPENCL_FORCE_INLINE float BandTexture_ConstEvaluateFloat(__global const HitPoint
 
 #if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR)
 
-OPENCL_FORCE_INLINE float HitPointColorTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint) {
-	return Spectrum_Y(VLOAD3F(hitPoint->color.c));
+OPENCL_FORCE_INLINE float HitPointColorTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
+		const uint dataIndex) {
+	return Spectrum_Y(VLOAD3F(hitPoint->color[dataIndex].c));
 }
 
-OPENCL_FORCE_INLINE float3 HitPointColorTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint) {
-	return VLOAD3F(hitPoint->color.c);
+OPENCL_FORCE_INLINE float3 HitPointColorTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
+		const uint dataIndex) {
+	return VLOAD3F(hitPoint->color[dataIndex].c);
 }
 
 #endif
@@ -846,12 +844,14 @@ OPENCL_FORCE_INLINE float3 HitPointColorTexture_ConstEvaluateSpectrum(__global c
 
 #if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)
 
-OPENCL_FORCE_INLINE float HitPointAlphaTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint) {
-	return hitPoint->alpha;
+OPENCL_FORCE_INLINE float HitPointAlphaTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
+		const uint dataIndex) {
+	return hitPoint->alpha[dataIndex];
 }
 
-OPENCL_FORCE_INLINE float3 HitPointAlphaTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint) {
-	const float alpha = hitPoint->alpha;
+OPENCL_FORCE_INLINE float3 HitPointAlphaTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
+		const uint dataIndex) {
+	const float alpha = hitPoint->alpha[dataIndex];
 	return (float3)(alpha, alpha, alpha);
 }
 
@@ -863,33 +863,39 @@ OPENCL_FORCE_INLINE float3 HitPointAlphaTexture_ConstEvaluateSpectrum(__global c
 
 #if defined(PARAM_ENABLE_TEX_HITPOINTGREY)
 
-OPENCL_FORCE_NOT_INLINE float HitPointGreyTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint, const uint channel) {
+OPENCL_FORCE_NOT_INLINE float HitPointGreyTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
+		const uint dataIndex, const uint channel) {
+	const float3 col = VLOAD3F(hitPoint->color[dataIndex].c);
+
 	switch (channel) {
 		case 0:
-			return hitPoint->color.c[0];
+			return col.s0;
 		case 1:
-			return hitPoint->color.c[1];
+			return col.s1;
 		case 2:
-			return hitPoint->color.c[2];
+			return col.s2;
 		default:
-			return Spectrum_Y(VLOAD3F(hitPoint->color.c));
+			return Spectrum_Y(col);
 	}
 }
 
-OPENCL_FORCE_NOT_INLINE float3 HitPointGreyTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint, const uint channel) {
+OPENCL_FORCE_NOT_INLINE float3 HitPointGreyTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
+		const uint dataIndex, const uint channel) {
+	const float3 col = VLOAD3F(hitPoint->color[dataIndex].c);
+
 	float v;
 	switch (channel) {
 		case 0:
-			v = hitPoint->color.c[0];
+			v = col.s0;
 			break;
 		case 1:
-			v = hitPoint->color.c[1];
+			v = col.s1;
 			break;
 		case 2:
-			v = hitPoint->color.c[2];
+			v = col.s2;
 			break;
 		default:
-			v = Spectrum_Y(VLOAD3F(hitPoint->color.c));
+			v = Spectrum_Y(col);
 			break;
 	}
 

@@ -420,7 +420,7 @@ public:
 	 * pipeline execution before to perform the copy.
 	 */
 	template<class T> void UpdateOutput(const FilmOutputType type, const T *buffer, const unsigned int index = 0,
-			const bool executeImagePipeline = true) {
+			const bool executeImagePipeline = false) {
 		throw std::runtime_error("Called Film::UpdateOutput() with wrong type");
 	}
 	/*!
@@ -526,9 +526,9 @@ protected:
 			const bool executeImagePipeline = true) = 0;
 
 	virtual void UpdateOutputFloat(const FilmOutputType type, const float *buffer, const unsigned int index,
-			const bool executeImagePipeline = true) = 0;
+			const bool executeImagePipeline = false) = 0;
 	virtual void UpdateOutputUInt(const FilmOutputType type, const unsigned int *buffer, const unsigned int index,
-			const bool executeImagePipeline = true) = 0;
+			const bool executeImagePipeline = false) = 0;
 	
 	virtual const float *GetChannelFloat(const FilmChannelType type, const unsigned int index,
 			const bool executeImagePipeline = true) = 0;

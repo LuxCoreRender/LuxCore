@@ -136,10 +136,11 @@ public:
 	const Texture *GetBackTransparencyTexture() const { return backTransparencyTex; }
 	const Texture *GetEmitTexture() const { return emittedTex; }
 	const Texture *GetBumpTexture() const { return bumpTex; }
+
 	void SetEmissionMap(const ImageMap *map);
 	const ImageMap *GetEmissionMap() const { return emissionMap; }
 	const SampleableSphericalFunction *GetEmissionFunc() const { return emissionFunc; }
-
+	
 	// MixMaterial can have multiple volumes assigned and needs the passThroughEvent
 	// information to be able to return the correct volume
 	void SetInteriorVolume(const Volume *vol) { interiorVolume = vol; }
@@ -158,7 +159,8 @@ public:
 	virtual luxrays::Spectrum Albedo(const HitPoint &hitPoint) const;
 
 	// EvaluateTotal() returns the total reflection given an constant illumination
-	// over the hemisphere. It is currently used only by PhotonGICache.
+	// over the hemisphere. It is currently used only by PhotonGICache and
+	// BakeCPU render engine.
 	//
 	// NOTE: this is called rho() in PBRT sources.
 	virtual luxrays::Spectrum EvaluateTotal(const HitPoint &hitPoint) const;

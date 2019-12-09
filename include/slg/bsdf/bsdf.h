@@ -55,11 +55,37 @@ public:
 		Init(fixedFromLight, throughShadowTransparency, scene,
 				ray, rayHit, passThroughEvent, volInfo);
 	}
+	// A BSDF initialized with a point on a surface
+	BSDF(const Scene &scene,
+		const u_int meshIndex, const u_int triangleIndex,
+		const luxrays::Point &surfacePoint,
+		const float surfacePointBary1, const float surfacePointBary2, 
+		const float time,
+		const float passThroughEvent, const PathVolumeInfo *volInfo) {
+		Init(scene, meshIndex, triangleIndex,
+				surfacePoint, surfacePointBary1, surfacePointBary2,
+				time, passThroughEvent, volInfo);
+	}
+	// A BSDF initialized with a volume scattering point
+	BSDF(const bool fixedFromLight, const bool throughShadowTransparency,
+		const Scene &scene, const luxrays::Ray &ray,
+		const Volume &volume, const float t, const float passThroughEvent) {
+		Init(fixedFromLight, throughShadowTransparency,
+				scene, ray, volume, t, passThroughEvent);
+	}
+
 	// Used when hitting a surface
 	void Init(const bool fixedFromLight, const bool throughShadowTransparency,
 		const Scene &scene, const luxrays::Ray &ray,
 		const luxrays::RayHit &rayHit, const float passThroughEvent,
 		const PathVolumeInfo *volInfo);
+	// Used when have a point of a surface
+	void Init(const Scene &scene,
+		const u_int meshIndex, const u_int triangleIndex,
+		const luxrays::Point &surfacePoint,
+		const float surfacePointBary1, const float surfacePointBary2, 
+		const float time,
+		const float passThroughEvent, const PathVolumeInfo *volInfo);
 	// Used when hitting a volume scatter point
 	void Init(const bool fixedFromLight, const bool throughShadowTransparency,
 		const Scene &scene, const luxrays::Ray &ray,
@@ -117,6 +143,9 @@ public:
 			return hitPoint.p + riseDirection * luxrays::Vector(hitPoint.geometryN * luxrays::MachineEpsilon::E(hitPoint.p));
 		}
 	}
+
+	bool HasCombinedBakeMap() const;
+	luxrays::Spectrum GetCombinedBakeMapValue() const;
 
 	HitPoint hitPoint;
 

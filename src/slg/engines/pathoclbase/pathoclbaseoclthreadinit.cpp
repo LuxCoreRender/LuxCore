@@ -44,14 +44,17 @@ using namespace slg;
 
 size_t PathOCLBaseOCLRenderThread::GetOpenCLHitPointSize() const {
 	// HitPoint memory size
-	size_t hitPointSize = sizeof(Vector) + sizeof(Point) + sizeof(UV) +
-			3 * sizeof(Normal) + sizeof(Transform);
+	size_t hitPointSize = sizeof(Vector) +
+			sizeof(Point) +
+			3 * sizeof(Normal) +
+			EXTMESH_MAX_DATA_COUNT * sizeof(UV) +
+			sizeof(Transform);
 	if (renderEngine->compiledScene->IsTextureCompiled(HITPOINTCOLOR) ||
 			renderEngine->compiledScene->IsTextureCompiled(HITPOINTGREY) ||
 			renderEngine->compiledScene->hasTriangleLightWithVertexColors)
-		hitPointSize += sizeof(Spectrum);
+		hitPointSize += EXTMESH_MAX_DATA_COUNT * sizeof(Spectrum);
 	if (renderEngine->compiledScene->IsTextureCompiled(HITPOINTALPHA))
-		hitPointSize += sizeof(float);
+		hitPointSize += EXTMESH_MAX_DATA_COUNT * sizeof(float);
 	// passThroughEvent
 	hitPointSize += sizeof(float);
 	// Fields dpdu, dpdv, dndu, dndv
