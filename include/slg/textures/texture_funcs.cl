@@ -863,39 +863,33 @@ OPENCL_FORCE_INLINE float3 HitPointAlphaTexture_ConstEvaluateSpectrum(__global c
 
 #if defined(PARAM_ENABLE_TEX_HITPOINTGREY)
 
-OPENCL_FORCE_NOT_INLINE float HitPointGreyTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
-		const uint dataIndex, const uint channel) {
-	const float3 col = VLOAD3F(hitPoint->color[dataIndex].c);
-
+OPENCL_FORCE_NOT_INLINE float HitPointGreyTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint, const uint channel) {
 	switch (channel) {
 		case 0:
-			return col.s0;
+			return hitPoint->color.c[0];
 		case 1:
-			return col.s1;
+			return hitPoint->color.c[1];
 		case 2:
-			return col.s2;
+			return hitPoint->color.c[2];
 		default:
-			return Spectrum_Y(col);
+			return Spectrum_Y(VLOAD3F(hitPoint->color.c));
 	}
 }
 
-OPENCL_FORCE_NOT_INLINE float3 HitPointGreyTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
-		const uint dataIndex, const uint channel) {
-	const float3 col = VLOAD3F(hitPoint->color[dataIndex].c);
-
+OPENCL_FORCE_NOT_INLINE float3 HitPointGreyTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint, const uint channel) {
 	float v;
 	switch (channel) {
 		case 0:
-			v = col.s0;
+			v = hitPoint->color.c[0];
 			break;
 		case 1:
-			v = col.s1;
+			v = hitPoint->color.c[1];
 			break;
 		case 2:
-			v = col.s2;
+			v = hitPoint->color.c[2];
 			break;
 		default:
-			v = Spectrum_Y(col);
+			v = Spectrum_Y(VLOAD3F(hitPoint->color.c));
 			break;
 	}
 

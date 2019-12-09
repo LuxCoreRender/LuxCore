@@ -1026,7 +1026,6 @@ void CompiledScene::CompileTextures() {
 				const HitPointGreyTexture *hpg = static_cast<const HitPointGreyTexture *>(t);
 
 				tex->type = slg::ocl::HITPOINTGREY;
-				tex->hitPointGrey.dataIndex = hpg->GetDataIndex();
 				tex->hitPointGrey.channel = hpg->GetChannel();
 				break;
 			}
@@ -1670,9 +1669,7 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 				AddTextureSource(source, "HitPointAlpha", i, "texture->hitPointAlpha.dataIndex");
 				break;
 			case slg::ocl::HITPOINTGREY:
-				AddTextureSource(source, "HitPointGrey", i,
-						"texture->hitPointGrey.dataIndex, "
-						"texture->hitPointGrey.channel");
+				AddTextureSource(source, "HitPointGrey", i, "texture->hitPointGrey.channel");
 				break;
 			case slg::ocl::BLENDER_BLEND:
 				AddTextureSource(source, "BlenderBlend", i,

@@ -313,7 +313,6 @@ typedef struct {
 } HitPointAlphaTexParam;
 
 typedef struct {
-	unsigned int dataIndex;
 	unsigned int channel;
 } HitPointGreyTexParam;
 
@@ -443,7 +442,7 @@ typedef struct {
 		HitPointColorTexParam hitPointColor;
 		HitPointColorTexParam hitPointAlpha;
 		HitPointGreyTexParam hitPointGrey;
-		NormalMapTexParam normalMap;
+        NormalMapTexParam normalMap;
 		BlackBodyParam blackBody;
 		IrregularDataParam irregularData;
 		DensityGridParam densityGrid;
@@ -462,8 +461,8 @@ typedef struct {
 		PowerTexParam powerTex;
 		SplitFloat3TexParam splitFloat3Tex;
 		MakeFloat3TexParam makeFloat3Tex;
-		RoundingTexParam roundingTex;
-		ModuloTexParam moduloTex;
+        RoundingTexParam roundingTex;
+        ModuloTexParam moduloTex;
 		BrightContrastTexParam brightContrastTex;
 	};
 } Texture;
