@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '/home/david/projects/luxcorerender/LuxCore/src/pyluxcoretools/pyluxcoretools/pyluxcoremenu/menuwindow.ui',
-# licensing of '/home/david/projects/luxcorerender/LuxCore/src/pyluxcoretools/pyluxcoretools/pyluxcoremenu/menuwindow.ui' applies.
+# Form implementation generated from reading ui file '/Users/drquader/Documents/GitHub/LuxCore/src/pyluxcoretools/pyluxcoretools/pyluxcoremenu/menuwindow.ui',
+# licensing of '/Users/drquader/Documents/GitHub/LuxCore/src/pyluxcoretools/pyluxcoretools/pyluxcoremenu/menuwindow.ui' applies.
 #
-# Created: Sun Nov 17 16:46:41 2019
-#      by: pyside2-uic  running on PySide2 5.13.2
+# Created: Mon Dec  9 18:20:27 2019
+#      by: pyside2-uic  running on PySide2 5.13.0
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -35,7 +35,7 @@ class Ui_MenuWindow(object):
         self.pushButtonQuit.setObjectName("pushButtonQuit")
         self.verticalLayout.addWidget(self.pushButtonQuit)
         MenuWindow.setCentralWidget(self.centralwidget)
-        self.menubar = QtWidgets.QMenuBar(MenuWindow)
+        self.menubar = QtWidgets.QMenuBar()
         self.menubar.setGeometry(QtCore.QRect(0, 0, 260, 25))
         self.menubar.setObjectName("menubar")
         self.menuTools = QtWidgets.QMenu(self.menubar)
