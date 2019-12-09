@@ -49,8 +49,8 @@ Context::Context(LuxRaysDebugHandler handler, const Properties &config) : cfg(co
 	} catch (cl::Error &err) {
 		// The cl_khr_icd extension throws exceptions if zero platforms are available.
 		// We ignore that error (OpenCL is optional), but throw anything else.
-		if (err.err() != CL_PLATFORM_NOT_FOUND_KHR)
-			throw;
+		//if (err.err() != CL_PLATFORM_NOT_FOUND_KHR)
+		//	throw;
 	}
 	for (size_t i = 0; i < platforms.size(); ++i)
 		LR_LOG(this, "OpenCL Platform " << i << ": " << platforms[i].getInfo<CL_PLATFORM_VENDOR>().c_str());
