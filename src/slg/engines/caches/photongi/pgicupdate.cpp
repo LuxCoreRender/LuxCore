@@ -81,7 +81,7 @@ bool PhotonGICache::Update(const u_int threadIndex, const u_int filmSPP,
 		}
 
 		threadsSyncBarrier->wait();
-		
+
 		return result;
 	} else
 		return false;

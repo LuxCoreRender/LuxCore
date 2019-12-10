@@ -135,13 +135,6 @@ void PathOCLNativeRenderThread::RenderThreadImpl() {
 	// Trace paths
 	//--------------------------------------------------------------------------
 
-	// I can not use engine->renderConfig->GetProperty() here because the
-	// RenderConfig properties cache is not thread safe
-	const u_int filmWidth = film->GetWidth();
-	const u_int filmHeight = film->GetHeight();
-	const u_int haltDebug = engine->renderConfig->cfg.Get(Property("batch.haltdebug")(0u)).Get<u_int>() *
-		filmWidth * filmHeight;
-
 	for (u_int steps = 0; !boost::this_thread::interruption_requested(); ++steps) {
 		// Check if we are in pause mode
 		if (engine->pauseMode) {
@@ -161,8 +154,6 @@ void PathOCLNativeRenderThread::RenderThreadImpl() {
 #endif
 
 		// Check halt conditions
-		if ((haltDebug > 0u) && (steps >= haltDebug))
-			break;
 		if (engine->film->GetConvergence() == 1.f)
 			break;
 

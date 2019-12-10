@@ -116,10 +116,6 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl() {
 		// Rendering loop
 		//----------------------------------------------------------------------
 
-		// I can not use engine->renderConfig->GetProperty() here because the
-		// RenderConfig properties cache is not thread safe
-		const u_int haltDebug = engine->renderConfig->cfg.Get(Property("batch.haltdebug")(0u)).Get<u_int>();
-
 		// The film refresh time target
 		const double targetTime = 0.2; // 200ms
 
@@ -208,18 +204,13 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl() {
 						"kernel time: " << (timeKernelEnd - timeKernelStart) * 1000.0 << "ms "
 						"iterations: " << iterations << " #"<< taskCount << ")");*/
 
-			// Check if I have to adjust the number of kernel enqueued (only
-			// if haltDebug is not enabled)
-			if (haltDebug == 0u) {
-				if (timeKernelEnd - timeKernelStart > targetTime)
-					iterations = Max<u_int>(iterations - 1, 1);
-				else
-					iterations = Min<u_int>(iterations + 1, 128);
-			}
+			// Check if I have to adjust the number of kernel enqueued
+			if (timeKernelEnd - timeKernelStart > targetTime)
+				iterations = Max<u_int>(iterations - 1, 1);
+			else
+				iterations = Min<u_int>(iterations + 1, 128);
 
 			// Check halt conditions
-			if ((haltDebug > 0u) && (totalIterations >= haltDebug))
-				break;
 			if (engine->film->GetConvergence() == 1.f)
 				break;
 
