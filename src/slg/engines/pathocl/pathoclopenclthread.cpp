@@ -80,11 +80,6 @@ static void PGICUpdateCallBack(CompiledScene *compiledScene) {
 void PathOCLOpenCLRenderThread::RenderThreadImpl() {
 	//SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Rendering thread started");
 
-	// Boost barriers (used in PhotonGICache::Update()) are supposed to be not
-	// interruptible but they are and seem to be missing a way to reset them. So
-	// better to disable interruptions.
-	boost::this_thread::disable_interruption di;
-
 	cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
 	PathOCLRenderEngine *engine = (PathOCLRenderEngine *)renderEngine;
 	const u_int taskCount = engine->taskCount;
@@ -214,10 +209,16 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl() {
 			if (engine->film->GetConvergence() == 1.f)
 				break;
 
-			if (engine->photonGICache &&
-					engine->photonGICache->Update(threadIndex, engine->GetTotalEyeSPP(), pgicUpdateCallBack)) {
-				InitPhotonGI();
-				SetKernelArgs();
+			if (engine->photonGICache) {
+				try {
+					if (engine->photonGICache->Update(threadIndex, engine->GetTotalEyeSPP(), pgicUpdateCallBack)) {
+						InitPhotonGI();
+						SetKernelArgs();
+					}
+				} catch (boost::thread_interrupted &ti) {
+					// I have been interrupted, I must stop
+					break;
+				}
 			}
 		}
 
@@ -233,6 +234,14 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl() {
 	oclQueue.finish();
 	
 	threadDone = true;
+
+	// This is done to interrupt thread pending on barrier wait
+	// inside engine->photonGICache->Update(). This can happen when an
+	// halt condition is satisfied.
+	for (u_int i = 0; i < engine->renderOCLThreads.size(); ++i)
+		engine->renderOCLThreads[i]->Interrupt();
+	for (u_int i = 0; i < engine->renderNativeThreads.size(); ++i)
+		engine->renderNativeThreads[i]->Interrupt();
 }
 
 #endif

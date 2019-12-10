@@ -36,6 +36,9 @@ bool PhotonGICache::Update(const u_int threadIndex, const u_int filmSPP,
 
 		bool result = true;
 		if (threadIndex == 0) {
+			// To avoid the interruption of the following code
+			boost::this_thread::disable_interruption di;
+
 			const double startTime = WallClockTime();
 			
 			SLG_LOG("Updating PhotonGI caustic cache after " << filmSPP << " samples/pixel (Pass " << causticPhotonPass << ")");

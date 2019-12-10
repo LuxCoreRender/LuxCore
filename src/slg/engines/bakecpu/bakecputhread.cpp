@@ -115,11 +115,6 @@ void BakeCPURenderThread::InitBakeWork(const BakeMapInfo &mapInfo) {
 void BakeCPURenderThread::RenderFunc() {
 	//SLG_LOG("[BakeCPURenderEngine::" << threadIndex << "] Rendering thread started");
 
-	// Boost barriers (used in PhotonGICache::Update()) are supposed to be not
-	// interruptible but they are and seem to be missing a way to reset them. So
-	// better to disable interruptions.
-	boost::this_thread::disable_interruption di;
-
 	BakeCPURenderEngine *engine = (BakeCPURenderEngine *)renderEngine;
 	Scene *scene = engine->renderConfig->scene;
 	const PathTracer &pathTracer = engine->pathTracer;
@@ -384,8 +379,13 @@ void BakeCPURenderThread::RenderFunc() {
 				break;
 
 			if (engine->photonGICache) {
-				const u_int spp = engine->mapFilm->GetTotalEyeSampleCount() / engine->mapFilm->GetPixelCount();
-				engine->photonGICache->Update(threadIndex, spp);
+				try {
+					const u_int spp = engine->mapFilm->GetTotalEyeSampleCount() / engine->mapFilm->GetPixelCount();
+					engine->photonGICache->Update(threadIndex, spp);
+				} catch (boost::thread_interrupted &ti) {
+					// I have been interrupted, I must stop
+					break;
+				}
 			}
 		}
 
@@ -407,6 +407,11 @@ void BakeCPURenderThread::RenderFunc() {
 	}
 
 	threadDone = true;
+	// This is done to interrupt thread pending on barrier wait
+	// inside engine->photonGICache->Update(). This can happen when an
+	// halt condition is satisfied.
+	for (u_int i = 0; i < engine->renderThreads.size(); ++i)
+		engine->renderThreads[i]->Interrupt();
 
 	//SLG_LOG("[BakeCPURenderEngine::" << threadIndex << "] Rendering thread halted");
 }
