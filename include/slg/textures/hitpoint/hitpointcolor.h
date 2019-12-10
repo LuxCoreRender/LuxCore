@@ -32,8 +32,6 @@ public:
 	HitPointColorTexture(const u_int index) : dataIndex(index) { }
 	virtual ~HitPointColorTexture() { }
 
-	u_int GetDataIndex() const { return dataIndex; }
-
 	virtual TextureType GetType() const { return HITPOINTCOLOR; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
@@ -41,6 +39,8 @@ public:
 	// information about the color.
 	virtual float Y() const { return 1.f; }
 	virtual float Filter() const { return 1.f; }
+	
+	u_int GetDataIndex() const { return dataIndex; }
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
@@ -57,8 +57,6 @@ public:
 	HitPointAlphaTexture(const u_int index) : dataIndex(index) { }
 	virtual ~HitPointAlphaTexture() { }
 
-	u_int GetDataIndex() const { return dataIndex; }
-
 	virtual TextureType GetType() const { return HITPOINTALPHA; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
@@ -66,6 +64,8 @@ public:
 	// information about the color.
 	virtual float Y() const { return 1.f; }
 	virtual float Filter() const { return 1.f; }
+	
+	u_int GetDataIndex() const { return dataIndex; }
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
@@ -90,6 +90,7 @@ public:
 	virtual float Y() const { return 1.f; }
 	virtual float Filter() const { return 1.f; }
 
+	u_int GetDataIndex() const { return dataIndex; }
 	u_int GetChannel() const { return channel; }
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
