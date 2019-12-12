@@ -155,8 +155,7 @@ void BakeCPURenderThread::RenderFunc() {
 		// (engine->seedBase + 1) seed is used for sharedRndGen
 		RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + 1 + threadIndex);
 
-		// Setup the sampler(s)
-
+		// Setup the sampler
 		Sampler *eyeSampler = engine->renderConfig->AllocSampler(rndGen, engine->mapFilm,
 				engine->sampleSplatter, engine->samplerSharedData, samplerAdditionalProps);
 		// Below, I need 3 additional samples
@@ -331,6 +330,22 @@ void BakeCPURenderThread::RenderFunc() {
 			}
 
 			//------------------------------------------------------------------
+			// AOV support
+			//------------------------------------------------------------------
+
+			if (bsdf.IsAlbedoEndPoint())
+				pathTracerThreadState.eyeSampleResults[0].albedo = bsdf.Albedo();
+
+			pathTracerThreadState.eyeSampleResults[0].alpha = 1.f;
+			pathTracerThreadState.eyeSampleResults[0].depth = 0.f;
+			pathTracerThreadState.eyeSampleResults[0].position = bsdf.hitPoint.p;
+			pathTracerThreadState.eyeSampleResults[0].geometryNormal = bsdf.hitPoint.geometryN;
+			pathTracerThreadState.eyeSampleResults[0].shadingNormal = bsdf.hitPoint.shadeN;
+			pathTracerThreadState.eyeSampleResults[0].materialID = bsdf.GetMaterialID();
+			pathTracerThreadState.eyeSampleResults[0].objectID = bsdf.GetObjectID();
+			pathTracerThreadState.eyeSampleResults[0].uv = bsdf.hitPoint.uv[0];
+
+			//------------------------------------------------------------------
 			// Variance clamping
 			//------------------------------------------------------------------
 
@@ -402,11 +417,14 @@ void BakeCPURenderThread::RenderFunc() {
 					&props);
 		}
 
+		engine->threadsSyncBarrier->wait();
+
 		if (boost::this_thread::interruption_requested())
 			break;
 	}
 
 	threadDone = true;
+
 	// This is done to interrupt thread pending on barrier wait
 	// inside engine->photonGICache->Update(). This can happen when an
 	// halt condition is satisfied.

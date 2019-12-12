@@ -724,6 +724,7 @@ set(SLG_FILM_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/radiancechannelscale.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/radiancechannelscaleserialization.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/backgroundimg.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/bakemapmargin.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/bcddenoiser.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/bloom.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/cameraresponse.cpp
