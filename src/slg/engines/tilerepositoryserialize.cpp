@@ -107,7 +107,6 @@ template<class Archive> void TileRepository::load(Archive &ar, const u_int versi
 
 	ar & tileWidth;
 	ar & tileHeight;
-	ar & maxPassCount;
 	ar & convergenceTestThreshold;
 	ar & convergenceTestThresholdReduction;
 	ar & convergenceTestWarmUpSamples;
@@ -144,7 +143,6 @@ template<class Archive> void TileRepository::save(Archive &ar, const u_int versi
 
 	ar & tileWidth;
 	ar & tileHeight;
-	ar & maxPassCount;
 	ar & convergenceTestThreshold;
 	ar & convergenceTestThresholdReduction;
 	ar & convergenceTestWarmUpSamples;

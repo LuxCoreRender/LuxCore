@@ -119,10 +119,7 @@ static void PGICUpdateCallBack(CompiledScene *compiledScene) {
 void TilePathOCLRenderThread::RenderThreadImpl() {
 	//SLG_LOG("[TilePathOCLRenderThread::" << threadIndex << "] Rendering thread started");
 
-	// Boost barriers (used in PhotonGICache::Update()) are supposed to be not
-	// interruptible but they are and seem to be missing a way to reset them. So
-	// better to disable interruptions.
-	boost::this_thread::disable_interruption di;
+	TilePathOCLRenderEngine *engine = (TilePathOCLRenderEngine *)renderEngine;
 
 	try {
 		//----------------------------------------------------------------------
@@ -130,7 +127,6 @@ void TilePathOCLRenderThread::RenderThreadImpl() {
 		//----------------------------------------------------------------------
 
 		cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
-		TilePathOCLRenderEngine *engine = (TilePathOCLRenderEngine *)renderEngine;
 		const u_int taskCount = engine->taskCount;
 
 		// Initialize random number generator seeds
@@ -199,11 +195,16 @@ void TilePathOCLRenderThread::RenderThreadImpl() {
 			}
 
 			if (engine->photonGICache) {
-				const u_int spp = engine->film->GetTotalEyeSampleCount() / engine->film->GetPixelCount();
+				try {
+					const u_int spp = engine->film->GetTotalEyeSampleCount() / engine->film->GetPixelCount();
 
-				if (engine->photonGICache->Update(threadIndex, spp, pgicUpdateCallBack)) {
-					InitPhotonGI();
-					SetKernelArgs();
+					if (engine->photonGICache->Update(threadIndex, spp, pgicUpdateCallBack)) {
+						InitPhotonGI();
+						SetKernelArgs();
+					}
+				} catch (boost::thread_interrupted &ti) {
+					// I have been interrupted, I must stop
+					break;
 				}
 			}
 		}
@@ -217,6 +218,14 @@ void TilePathOCLRenderThread::RenderThreadImpl() {
 	}
 
 	threadDone = true;
+
+	// This is done to interrupt thread pending on barrier wait
+	// inside engine->photonGICache->Update(). This can happen when an
+	// halt condition is satisfied.
+	for (u_int i = 0; i < engine->renderOCLThreads.size(); ++i)
+		engine->renderOCLThreads[i]->Interrupt();
+	for (u_int i = 0; i < engine->renderNativeThreads.size(); ++i)
+		engine->renderNativeThreads[i]->Interrupt();
 }
 
 #endif

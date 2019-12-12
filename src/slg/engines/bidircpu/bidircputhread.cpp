@@ -549,10 +549,6 @@ void BiDirCPURenderThread::RenderFunc() {
 
 	vector<SampleResult> sampleResults;
 	vector<PathVertexVM> lightPathVertices;
-	// I can not use engine->renderConfig->GetProperty() here because the
-	// RenderConfig properties cache is not thread safe
-	const u_int haltDebug = engine->renderConfig->cfg.Get(Property("batch.haltdebug")(0u)).Get<u_int>() *
-		engine->film->GetWidth() * engine->film->GetHeight();
 
 	for(u_int steps = 0; !boost::this_thread::interruption_requested(); ++steps) {
 		// Check if we are in pause mode
@@ -743,8 +739,6 @@ void BiDirCPURenderThread::RenderFunc() {
 		sampler->NextSample(sampleResults);
 
 		// Check halt conditions
-		if ((haltDebug > 0u) && (steps >= haltDebug))
-			break;
 		if (engine->film->GetConvergence() == 1.f)
 			break;
 	}
