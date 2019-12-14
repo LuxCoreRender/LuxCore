@@ -25,6 +25,8 @@
 * Reduced the default number of OpenCL threads from 512k to 256k (to save about 150MB of GPU RAM at 1-2% performance cost)
 * Changing max. path and/or Russian Roulette parameters doesn't require OpenCL compilation anymore (removed PARAM_MAX_PATH_DEPTH, PARAM_MAX_PATH_DEPTH_DIFFUSE, PARAM_MAX_PATH_DEPTH_GLOSSY, PARAM_MAX_PATH_DEPTH_SPECULAR, PARAM_RR_DEPTH and PARAM_RR_CAPPARAM_HAS_BUMPMAPS conditional OpenCL compilation)
 * Added the support the definition of meshes with multiple UVs, Colors and Alphas (issue #134)
+* Added the BAKECPU engine (LuxCore API only)
+* Added the glTF v2.0 FILESAVER support (LuxCore API only)
 
 ### Fixed Bugs
 
