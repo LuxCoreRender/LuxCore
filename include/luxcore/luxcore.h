@@ -1172,14 +1172,25 @@ public:
 	/*!
 	 * \brief Save all the scene related information (the LuxCore RenderConfig,
 	 * and Scene) in a file.
+	 * 
+	 * \param fileName of file where to save.
 	 */
 	virtual void Save(const std::string &fileName) const = 0;
 	/*!
 	 * \brief Save all the scene related information (the LuxCore RenderConfig,
 	 * and Scene) in a directory using text format for the SDL. This performs the
 	 * same work of FILESAVER render engine.
+	 * 
+	 * \param dirName of directory where to save.
 	 */
 	virtual void Export(const std::string &dirName) const = 0;
+
+	/*!
+	 * \brief Save all the scene related information in glTF 2.0 format.
+	 * 
+	 * \param fileName of file where to save.
+	 */
+	virtual void ExportGLTF(const std::string &fileName) const = 0;	
 
 	/*!
 	 * \brief Returns a Properties container with all default values.

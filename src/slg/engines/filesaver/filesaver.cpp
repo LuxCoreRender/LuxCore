@@ -23,6 +23,8 @@
 #include <boost/filesystem.hpp>
 #include <boost/format.hpp>
 
+#include <nlohmann/json.hpp>
+
 #include "slg/engines/filesaver/filesaver.h"
 
 using namespace std;
@@ -30,6 +32,7 @@ using namespace luxrays;
 using namespace slg;
 
 using namespace boost::filesystem;
+using namespace nlohmann;
 
 //------------------------------------------------------------------------------
 // Scene FileSaver render engine
@@ -69,6 +72,115 @@ void FileSaverRenderEngine::SaveScene() {
 		RenderConfig::SaveSerialized(fileName, renderConfig, additionalCfg);
 	} else
 		throw runtime_error("Unknown format in FileSaverRenderEngine: " + exportFormat);
+}
+
+void FileSaverRenderEngine::ExportSceneGLTF(const RenderConfig *renderConfig,
+		const string &fileName) {
+	SLG_LOG("[FileSaverRenderEngine] Export glTF scene file: " << fileName);
+	
+	json j;
+
+	//--------------------------------------------------------------------------
+	// Scenes
+	//--------------------------------------------------------------------------
+
+	j["scenes"] = json::array({
+		json::object({
+			{ "nodes", { 0 } }
+		})
+	});
+
+	//--------------------------------------------------------------------------
+	// Nodes
+	//--------------------------------------------------------------------------
+	
+	j["nodes"] = json::array({
+		json::object({
+			{ "mesh", 0 }
+		})
+	});
+
+	//--------------------------------------------------------------------------
+	// Meshes
+	//--------------------------------------------------------------------------
+	
+	j["meshes"] = json::array({
+		json::object({
+			{ "primitives", json::array({
+				json::object({
+					{ "attributes", json::object({
+						{ "POSITION", 1 }
+					})},
+					{"indices", 0 }
+				})
+			})}
+		})
+	});
+
+	//--------------------------------------------------------------------------
+	// Buffers
+	//--------------------------------------------------------------------------
+
+	j["buffers"] = json::array({
+		json::object({
+			{ "uri", "data:application/octet-stream;base64,AAABAAIAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAAAAAAAAAACAPwAAAAA=" },
+			{ "byteLength", 44 }
+		})
+	});
+
+	//--------------------------------------------------------------------------
+	// BufferViews
+	//--------------------------------------------------------------------------
+
+	j["bufferViews"] = json::array({
+		json::object({
+			{ "buffer", 0 },
+			{ "byteOffset", 0 },
+			{ "byteLength", 6 },
+			{ "target", 34963 }
+		}),
+		json::object({
+			{ "buffer", 0 },
+			{ "byteOffset", 8 },
+			{ "byteLength", 36 },
+			{ "target", 34962 }
+		}),
+	});
+
+	//--------------------------------------------------------------------------
+	// Accessors
+	//--------------------------------------------------------------------------
+
+	j["accessors"] = json::array({
+		json::object({
+			{ "bufferView", 0 },
+			{ "byteOffset", 0 },
+			{ "componentType", 5123 },
+			{ "count", 3 },
+			{ "type", "SCALAR" },
+			{ "max", { 2 } },
+			{ "min", { 0 } }
+		}),
+		json::object({
+			{ "bufferView", 1 },
+			{ "byteOffset", 0 },
+			{ "componentType", 5126 },
+			{ "count", 3 },
+			{ "type", "VEC3" },
+			{ "max", { 1.0, 1.0, 0.0 } },
+			{ "min", { 0.0, 0.0, 0.0 } }
+		}),
+	});
+
+	//--------------------------------------------------------------------------
+	// Asset
+	//--------------------------------------------------------------------------
+
+	j["asset"]["version"] = "2.0";
+	j["asset"]["generator"] = "LuxCore API";
+
+	SLG_LOG("glTF: ");
+	SLG_LOG(endl << std::setw(4) << j);
 }
 
 void FileSaverRenderEngine::ExportScene(const RenderConfig *renderConfig,

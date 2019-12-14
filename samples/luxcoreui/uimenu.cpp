@@ -85,6 +85,17 @@ void LuxCoreApp::MenuRendering() {
 		}
 	}
 
+	if (session && ImGui::MenuItem("Export (glTF)")) {
+//		nfdchar_t *fileName = NULL;
+//		nfdresult_t result = NFD_SaveDialog("gltf", NULL, &fileName);
+//
+//		if (result == NFD_OKAY) {
+//			LA_LOG("Export current scene to file in glTF format: " << fileName);
+//			config->ExportGLTF(fileName);
+//		}
+		config->ExportGLTF("test.gltf");
+	}
+	
 	if (session && ImGui::MenuItem("Bake all objects"))
 		BakeAllSceneObjects();
 
