@@ -320,16 +320,16 @@ void FileSaverRenderEngine::ExportSceneGLTF(const RenderConfig *renderConfig,
 			// Write the image to file
 
 			const ImageMap *imgMap = scnObj->GetCombinedBakeMap();
-			const string imgMapFileName = (dirPath / imgMap->GetName()).generic_string() + ".jpg";
+			const string imgMapFileName = (dirPath / imgMap->GetName()).generic_string() + ".png";
 			SDL_LOG("  Saving image map: " << imgMapFileName);
 			imgMap->WriteImage(imgMapFileName);
 			
 			// Create the image
 			const u_int imageIndex = j["images"].size();
 			j["images"].push_back(json::object({
-				{ "uri", imgMap->GetName() + ".jpg" }
+				{ "uri", imgMap->GetName() + ".png" }
 			}));
-			
+	
 			// Create the texture
 			const u_int textureIndex = j["textures"].size();
 			j["textures"].push_back(json::object({
