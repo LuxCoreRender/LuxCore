@@ -909,6 +909,10 @@ void RenderConfigImpl::Export(const std::string &dirName) const {
 			renderConfig->GetProperty("renderengine.type").Get<string>());
 }
 
+void RenderConfigImpl::ExportGLTF(const std::string &fileName) const {
+	slg::FileSaverRenderEngine::ExportSceneGLTF(renderConfig, fileName);
+}
+
 const Properties &RenderConfigImpl::GetDefaultProperties() {
 	return slg::RenderConfig::GetDefaultProperties();
 }

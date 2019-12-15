@@ -273,6 +273,7 @@ public:
 
 	void Save(const std::string &fileName) const;
 	void Export(const std::string &dirName) const;
+	void ExportGLTF(const std::string &fileName) const;
 
 	static const luxrays::Properties &GetDefaultProperties();
 

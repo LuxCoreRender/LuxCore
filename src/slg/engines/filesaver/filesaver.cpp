@@ -22,6 +22,12 @@
 
 #include <boost/filesystem.hpp>
 #include <boost/format.hpp>
+#include <boost/archive/iterators/base64_from_binary.hpp>
+#include <boost/archive/iterators/binary_from_base64.hpp>
+#include <boost/archive/iterators/transform_width.hpp>
+#include <boost/archive/iterators/ostream_iterator.hpp>
+
+#include <nlohmann/json.hpp>
 
 #include "slg/engines/filesaver/filesaver.h"
 
@@ -30,6 +36,7 @@ using namespace luxrays;
 using namespace slg;
 
 using namespace boost::filesystem;
+using namespace nlohmann;
 
 //------------------------------------------------------------------------------
 // Scene FileSaver render engine
@@ -69,6 +76,187 @@ void FileSaverRenderEngine::SaveScene() {
 		RenderConfig::SaveSerialized(fileName, renderConfig, additionalCfg);
 	} else
 		throw runtime_error("Unknown format in FileSaverRenderEngine: " + exportFormat);
+}
+
+static string Base64Encode(const char *data, const size_t size) {
+	stringstream ss;
+	
+	typedef boost::archive::iterators::base64_from_binary<
+			boost::archive::iterators::transform_width<const char *, 6, 8>
+	> base64_t;
+
+	copy(base64_t(data), base64_t(data + size), boost::archive::iterators::ostream_iterator<char>(ss));
+
+	return ss.str();
+}
+
+void FileSaverRenderEngine::ExportSceneGLTF(const RenderConfig *renderConfig,
+		const string &fileName) {
+	SLG_LOG("[FileSaverRenderEngine] Export glTF scene file: " << fileName);
+	
+	json j;
+
+	//--------------------------------------------------------------------------
+	// Scenes
+	//--------------------------------------------------------------------------
+
+	j["scenes"] = json::array({
+		json::object({
+			{ "nodes", json::array() }
+		})
+	});
+
+	//--------------------------------------------------------------------------
+	// Nodes, Meshes and related Buffers, BufferViews and Accessors
+	//--------------------------------------------------------------------------
+	
+	SDL_LOG("Saving meshes information:");
+
+	j["nodes"] = json::array();
+	j["meshes"] = json::array();
+	j["buffers"] = json::array();
+	j["bufferViews"] = json::array();
+	j["accessors"] = json::array();
+
+	{
+		const u_int meshCount =  renderConfig->scene->extMeshCache.GetSize();
+		double lastPrint = WallClockTime();
+		for (u_int i = 0; i < meshCount; ++i) {
+			if (WallClockTime() - lastPrint > 2.0) {
+				SDL_LOG("  " << i << "/" << meshCount);
+				lastPrint = WallClockTime();
+			}
+
+			const ExtMesh *mesh = renderConfig->scene->extMeshCache.GetExtMesh(i);
+			// TODO: other mesh types
+			if (mesh->GetType() != TYPE_EXT_TRIANGLE)
+				continue;
+
+			const ExtTriangleMesh *triMesh = (const ExtTriangleMesh *)mesh;
+
+			//------------------------------------------------------------------
+			// Add vertices buffer
+
+			const size_t encodedVerticesSize = sizeof(Point) * triMesh->GetTotalVertexCount();
+			const string encodedVertices = Base64Encode((const char *)triMesh->GetVertices(),
+					encodedVerticesSize);
+
+			j["buffers"].push_back(json::object({
+				{ "uri", "data:application/octet-stream;base64," + encodedVertices },
+				{ "byteLength", encodedVerticesSize }
+			}));
+
+			// Add vertices buffer view
+
+			j["bufferViews"].push_back(json::object({
+				{ "buffer",  j["buffers"].size() - 1 },
+				{ "byteOffset", 0 },
+				{ "byteLength", encodedVerticesSize },
+				{ "target", 0x8892 }, // GL_ARRAY_BUFFER
+			}));
+			
+			// Add vertices accessor
+
+			const BBox meshBBox = triMesh->GetBBox();
+
+			const u_int verticesAccessorIndex = j["accessors"].size();
+			j["accessors"].push_back(json::object({
+				{ "bufferView", j["bufferViews"].size() - 1 },
+				{ "byteOffset", 0 },
+				{ "componentType", 0x1406 }, // GL_FLOAT
+				{ "count", triMesh->GetTotalVertexCount() },
+				{ "type", "VEC3" },
+				{ "max", { meshBBox.pMax.x, meshBBox.pMax.y, meshBBox.pMax.z } },
+				{ "min", { meshBBox.pMin.x, meshBBox.pMin.y, meshBBox.pMin.z } }
+			}));
+
+			//------------------------------------------------------------------
+			// Add triangle indices buffer
+
+			const size_t encodedTrianglesSize = sizeof(Triangle) * triMesh->GetTotalTriangleCount();
+			const string encodedTriangles = Base64Encode((const char *)triMesh->GetTriangles(),
+					encodedTrianglesSize);
+
+			j["buffers"].push_back(json::object({
+				{ "uri", "data:application/octet-stream;base64," + encodedTriangles },
+				{ "byteLength", encodedTrianglesSize }
+			}));
+
+			// Add triangle indices buffer view
+
+			j["bufferViews"].push_back(json::object({
+				{ "buffer", j["buffers"].size() - 1 },
+				{ "byteOffset", 0 },
+				{ "byteLength", encodedTrianglesSize },
+				{ "target", 0x8893 }, // GL_ELEMENT_ARRAY_BUFFER
+			}));
+
+			// Add triangle indices accessor
+
+			const u_int indicesAccessorIndex = j["accessors"].size();
+			j["accessors"].push_back(json::object({
+				{ "bufferView", j["bufferViews"].size() - 1 },
+				{ "byteOffset", 0 },
+				{ "componentType", 0x1405 }, // GL_UNSIGNED_INT
+				{ "count", triMesh->GetTotalTriangleCount() * 3 },
+				{ "type", "SCALAR" },
+				{ "max", { triMesh->GetTotalVertexCount() - 1 } },
+				{ "min", { 0 } }
+			}));
+
+			//------------------------------------------------------------------
+			// Add the mesh
+
+			const u_int meshIndex = j["meshes"].size();
+			j["meshes"].push_back(json::object({
+				{ "primitives", json::array({
+					json::object({
+						{ "mode", 0x4 }, // GL_TRIANGLES
+						{ "indices", indicesAccessorIndex },
+						{ "attributes", json::object({
+							{ "POSITION", verticesAccessorIndex }
+						}) }
+					})
+				}) }
+			}));
+
+			//------------------------------------------------------------------
+			// Add the node
+
+			const u_int nodeIndex = j["nodes"].size();
+			j["nodes"].push_back(json::object({
+				{ "mesh", meshIndex }
+			}));
+
+			j["scenes"][0]["nodes"].push_back(nodeIndex);
+
+			//------------------------------------------------------------------
+		}
+	}
+
+	//--------------------------------------------------------------------------
+	// Asset
+	//--------------------------------------------------------------------------
+
+	j["asset"]["version"] = "2.0";
+	j["asset"]["generator"] = "LuxCore API";
+
+	//--------------------------------------------------------------------------
+	// Save the glTF file
+	//--------------------------------------------------------------------------
+
+	//SLG_LOG("glTF: ");
+	//SLG_LOG(endl << std::setw(4) << j);
+	
+	BOOST_OFSTREAM gltfFile(fileName.c_str(), std::ofstream::out | std::ofstream::binary | std::ofstream::trunc);
+	if(!gltfFile.is_open())
+		throw std::runtime_error("Unable to open: " + fileName);
+
+	gltfFile << std::setw(4) << j;
+	if(!gltfFile.good())
+		throw std::runtime_error("Error while writing file: " + fileName);
+
+	gltfFile.close();
 }
 
 void FileSaverRenderEngine::ExportScene(const RenderConfig *renderConfig,
@@ -151,7 +339,7 @@ void FileSaverRenderEngine::ExportScene(const RenderConfig *renderConfig,
 				lastPrint = WallClockTime();
 			}
 
-			ExtMesh *mesh = renderConfig->scene->extMeshCache.GetExtMesh(i);
+			const ExtMesh *mesh = renderConfig->scene->extMeshCache.GetExtMesh(i);
 			// The only meshes I need to save are the real one. The others (instances, etc.)
 			// will reference only true one.
 			if (mesh->GetType() != TYPE_EXT_TRIANGLE)
