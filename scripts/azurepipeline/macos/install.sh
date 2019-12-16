@@ -4,6 +4,7 @@
 brew install bison
 brew install freeimage
 brew install pyenv
+brew install dylibbundler
 
 eval "$(pyenv init -)"
 
