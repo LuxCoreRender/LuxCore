@@ -19,8 +19,6 @@ cmake -DLUXRAYS_DISABLE_OPENCL=1 -DOSX_DEPENDENCY_ROOT=$DEPS_SOURCE ..
 cmake --build . --config Release
 popd
 
-scripts/bundle_lux_osx.sh
-
 #mkdir build
 #pushd build
 #cmake -G Xcode -DLUXRAYS_DISABLE_OPENCL=1 -DOSX_DEPENDENCY_ROOT=$DEPS_SOURCE ..
@@ -31,13 +29,11 @@ scripts/bundle_lux_osx.sh
 # Compiling OpenCL version"
 #==========================================================================
 
-mkdir build
-pushd  build
+mkdir build_ocl
+pushd  build_ocl
 cmake -DOSX_DEPENDENCY_ROOT=$DEPS_SOURCE ..
 cmake --build . --config Release
 popd
-
-scripts/bundle_lux_osx_ocl.sh
 
 #mkdir build_opencl
 #pushd build_opencl
