@@ -104,7 +104,7 @@ protected:
 	virtual void UpdateFilmLockLess();
 
 	u_int minMapAutoSize, maxMapAutoSize;
-	bool skipExistingMapFiles;
+	bool powerOf2AutoSize, skipExistingMapFiles;
 	std::vector<BakeMapInfo> mapInfos;
 
 	PhotonGICache *photonGICache;

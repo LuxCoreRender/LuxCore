@@ -38,7 +38,14 @@ BakeCPURenderEngine::BakeCPURenderEngine(const RenderConfig *rcfg) :
 
 	minMapAutoSize = cfg.Get(Property("bake.minmapautosize")(32u)).Get<u_int>();
 	maxMapAutoSize = Max(cfg.Get(Property("bake.maxmapautosize")(1024u)).Get<u_int>(), minMapAutoSize);
-	skipExistingMapFiles = cfg.Get(Property("bake.skipexistingmapfiles")(false)).Get<u_int>();
+
+	powerOf2AutoSize = cfg.Get(Property("bake.powerof2autosize.enable")(true)).Get<bool>();
+	if (powerOf2AutoSize) {
+		minMapAutoSize = RoundUpPow2(minMapAutoSize);
+		maxMapAutoSize = RoundUpPow2(maxMapAutoSize);
+	}
+
+	skipExistingMapFiles = cfg.Get(Property("bake.skipexistingmapfiles")(false)).Get<bool>();
 
 	// Read the list of bake maps to render
 	vector<string> mapKeys = cfg.GetAllUniqueSubNames("bake.maps");
@@ -222,7 +229,12 @@ void BakeCPURenderEngine::StartLockLess() {
 			if (maxMapArea - minMapArea > 0.f) {
 				const float scale = (mapMeshesArea[mapInfoIndex] - minMapArea) / (maxMapArea - minMapArea);	
 
-				const u_int size = RoundUp<u_int>((u_int)Lerp<float>(scale, minMapAutoSize, maxMapAutoSize), 16u);
+				u_int size = (u_int)Lerp<float>(scale, minMapAutoSize, maxMapAutoSize);
+				if (powerOf2AutoSize)
+					size = Min(RoundUpPow2(size), maxMapAutoSize);
+				else
+					size = RoundUp(size, 16u);
+				size = Min(size, maxMapAutoSize);
 
 				SLG_LOG("Setting bake map #" << ToString(mapInfoIndex) << " auto size to: " << size);
 				mapInfo.width = size;

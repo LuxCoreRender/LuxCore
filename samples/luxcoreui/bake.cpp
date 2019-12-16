@@ -76,6 +76,7 @@ void LuxCoreApp::BakeAllSceneObjects() {
 			Property("batch.haltnoisethreshold")(.01f) <<
 			Property("bake.minmapautosize")(64) <<
 			Property("bake.maxmapautosize")(1024) <<
+			Property("bake.powerof2autosize.enable")(true) <<
 			Property("bake.skipexistingmapfiles")(true);
 
 	// Check the number of image pipelines
