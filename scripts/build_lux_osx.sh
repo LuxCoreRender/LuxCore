@@ -1,6 +1,6 @@
 #!/bin/bash
 
- automated script build for macos 10.13 should compile and patch with dependencies in root/macos
+#automated script build for macos 10.13 should compile and patch with dependencies in root/macos
 
 rm -rf build
 
