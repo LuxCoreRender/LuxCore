@@ -8,7 +8,7 @@ MESSAGE(STATUS "Using OSX Configuration settings")
 
 # Allow for the location of OSX_DEPENDENCY_ROOT to be set from the command line
 IF( NOT OSX_DEPENDENCY_ROOT )
-  set(OSX_DEPENDENCY_ROOT ${CMAKE_SOURCE_DIR}/macos) # can be macos or usr/local for example
+  set(OSX_DEPENDENCY_ROOT ${CMAKE_SOURCE_DIR}/../MacOSCompileDeps/macos) # can be macos or usr/local for example
 ENDIF()
 
 MESSAGE(STATUS "OSX_DEPENDENCY_ROOT : " ${OSX_DEPENDENCY_ROOT})
@@ -25,7 +25,7 @@ SET(PYTHON_INCLUDE_DIRS ${PY3_INCLUDE})
 SET(PYTHONLIBS_FOUND 1)
 MESSAGE(STATUS "Python3 found !!!!")
 ELSE()
-    #SET(PYTHON_INCLUDE_DIRS "/usr/local/Cellar/python/3.7.5/Frameworks/Python.framework/Versions/3.7/include/python3.7m")
+    SET(PYTHON_INCLUDE_DIRS "/usr/local/Cellar/python/3.7.5/Frameworks/Python.framework/Versions/3.7/include/python3.7m")
     message(STATUS "Python3 include not found using hardcoded ${PYTHON_INCLUDE_DIRS}")
 ENDIF()
 
