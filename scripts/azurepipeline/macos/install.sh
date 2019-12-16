@@ -7,9 +7,9 @@ brew install pyenv
 
 eval "$(pyenv init -)"
 
-pyenv install 3.5.3
-pyenv global 3.5.3
-pyenv shell 3.5.3
+pyenv install 3.7.4
+pyenv global 3.7.4
+pyenv shell 3.7.4
 
 sudo pip3 install -U numpy
 sudo pip3 install pillow
