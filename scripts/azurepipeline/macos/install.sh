@@ -4,13 +4,12 @@
 brew install bison
 brew install freeimage
 brew install pyenv
-brew install dylibbundler
 
 eval "$(pyenv init -)"
 
-pyenv install 3.7.0
-pyenv global 3.7.0
-pyenv shell 3.7.0
+pyenv install 3.7.4
+pyenv global 3.7.4
+pyenv shell 3.7.4
 
 sudo pip3 install -U numpy
 sudo pip3 install pillow
