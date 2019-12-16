@@ -8,9 +8,9 @@ brew install dylibbundler
 
 eval "$(pyenv init -)"
 
-pyenv install 3.5.3
-pyenv global 3.5.3
-pyenv shell 3.5.3
+pyenv install 3.7.0
+pyenv global 3.7.0
+pyenv shell 3.7.0
 
 sudo pip3 install -U numpy
 sudo pip3 install pillow
