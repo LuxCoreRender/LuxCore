@@ -710,16 +710,349 @@ boost::python::list Scene_DefineBlenderMesh1(luxcore::detail::SceneImpl *scene, 
 }
 
 boost::python::list Scene_DefineBlenderMesh2(luxcore::detail::SceneImpl *scene, const string &name,
-		const size_t loopTriCount, const size_t loopTriPtr,
-		const size_t loopPtr,
-		const size_t vertPtr,
-		const size_t polyPtr,
-		const size_t loopUVsPtr,
-		const size_t loopColsPtr,
-		const u_int materialCount) {
+	const size_t loopTriCount, const size_t loopTriPtr,
+	const size_t loopPtr,
+	const size_t vertPtr,
+	const size_t polyPtr,
+	const size_t loopUVsPtr,
+	const size_t loopColsPtr,
+	const u_int materialCount) {
 	return Scene_DefineBlenderMesh1(scene, name, loopTriCount, loopTriPtr,
-			loopPtr, vertPtr, polyPtr, loopUVsPtr, loopColsPtr, materialCount,
-			boost::python::object());
+		loopPtr, vertPtr, polyPtr, loopUVsPtr, loopColsPtr, materialCount,
+		boost::python::object());
+}
+
+static bool Scene_DefineBlenderMeshExt(luxcore::detail::SceneImpl *scene, const string &name,
+	const size_t loopTriCount, const size_t loopTriPtr,
+	const size_t loopPtr,
+	const size_t vertPtr,
+	const size_t polyPtr,
+	const boost::python::object &loopUVsPtrList,
+	const boost::python::object &loopColsPtrList,
+	const short matIndex,
+	const luxrays::Transform *trans) {
+
+	const MLoopTri *loopTris = reinterpret_cast<const MLoopTri *>(loopTriPtr);
+	const MLoop *loops = reinterpret_cast<const MLoop *>(loopPtr);
+	const MVert *verts = reinterpret_cast<const MVert *>(vertPtr);
+	const MPoly *polygons = reinterpret_cast<const MPoly *>(polyPtr);
+	
+	extract<np::ndarray> getUVPtrList(loopUVsPtrList);
+	extract<np::ndarray> getColPtrList(loopColsPtrList);
+	
+	if (getUVPtrList.check()) {
+		const np::ndarray &l = getUVPtrList();
+		const boost::python::ssize_t size = len(l);
+		if (size >= EXTMESH_MAX_DATA_COUNT) {
+			throw runtime_error("Too much UV Maps in list for method Scene.DefineMesh()");
+		}
+	}
+	else {
+		const string objType = extract<string>((loopUVsPtrList.attr("__class__")).attr("__name__"));
+		throw runtime_error("Wrong data type for the list of UV maps of method Scene.DefineMesh(): " + objType);
+	}
+
+	if (getColPtrList.check()) {
+		const np::ndarray &l = getColPtrList();
+		const boost::python::ssize_t size = len(l);
+		if (size >= EXTMESH_MAX_DATA_COUNT) {
+			throw runtime_error("Too much Vertex Color Maps in list for method Scene.DefineMesh()");
+		}
+	}
+	else {
+		const string objType = extract<string>((loopUVsPtrList.attr("__class__")).attr("__name__"));
+		throw runtime_error("Wrong data type for the list of Vertex Color maps of method Scene.DefineMesh(): " + objType);
+	}
+	
+	const np::ndarray &UVList = getUVPtrList();
+	const np::ndarray &ColList = getColPtrList();
+
+	const size_t * const UVListPtr = reinterpret_cast<const size_t *>(UVList.get_data());
+	const size_t * const ColListPtr = reinterpret_cast<const size_t *>(ColList.get_data());
+
+	const int UVListSize = UVList.shape(0);
+	const int ColListSize = ColList.shape(0);
+
+	vector<const MLoopUV *> loopUVsList;
+	vector<const MLoopCol *> loopColsList;
+	vector<Point> tmpMeshVerts;
+	vector<Normal> tmpMeshNorms;
+	vector <vector<UV> > tmpMeshUVs;
+	vector <vector<Spectrum> >tmpMeshCols;
+	vector<Triangle> tmpMeshTris;
+
+	for (u_int i = 0; i < UVListSize; ++i) {
+		loopUVsList.push_back(reinterpret_cast<const MLoopUV *>(UVListPtr[i]));
+		vector<UV> temp;
+		tmpMeshUVs.push_back(temp);
+	}
+	for (u_int i = 0; i < ColListSize; ++i) {
+		loopColsList.push_back(reinterpret_cast<const MLoopCol *>(ColListPtr[i]));
+		vector<Spectrum> temp;
+		tmpMeshCols.push_back(temp);
+	}
+
+	u_int vertFreeIndex = 0;
+	boost::unordered_map<u_int, u_int> vertexMap;
+
+	const float normalScale = 1.f / 32767.f;
+	const float rgbScale = 1.f / 255.f;
+
+	for (u_int loopTriIndex = 0; loopTriIndex < loopTriCount; ++loopTriIndex) {
+		const MLoopTri &loopTri = loopTris[loopTriIndex];
+		const MPoly &poly = polygons[loopTri.poly];
+
+		if (poly.mat_nr != matIndex)
+			continue;
+
+		u_int vertIndices[3];
+
+		if (poly.flag & ME_SMOOTH) {
+			// Smooth shaded, use the Blender vertex normal
+			for (u_int i = 0; i < 3; ++i) {
+				const u_int tri = loopTri.tri[i];
+				const u_int index = loops[tri].v;
+
+				// Check if it has been already defined
+
+				bool alreadyDefined = (vertexMap.find(index) != vertexMap.end());
+				if (alreadyDefined) {
+					const u_int mappedIndex = vertexMap[index];
+					
+					for (u_int l = 0; l < loopUVsList.size(); ++l) {
+						const MLoopUV * loopUVs = loopUVsList[l];
+
+						if (loopUVs) {
+							const MLoopUV &loopUV = loopUVs[tri];
+							// Check if the already defined vertex has the right UV coordinates
+							if ((loopUV.uv[0] != tmpMeshUVs[l][mappedIndex].u) ||
+								(loopUV.uv[1] != tmpMeshUVs[l][mappedIndex].v)) {
+								// I have to create a new vertex
+								alreadyDefined = false;
+							}
+						}
+					}
+					for (u_int l = 0; l < loopColsList.size(); ++l) {
+						const MLoopCol * loopCols = loopColsList[l];
+
+						if (loopCols) {
+							const MLoopCol &loopCol = loopCols[tri];
+							// Check if the already defined vertex has the right color
+							if (((loopCol.r * rgbScale) != tmpMeshCols[l][mappedIndex].c[0]) ||
+								((loopCol.g * rgbScale) != tmpMeshCols[l][mappedIndex].c[1]) ||
+								((loopCol.b * rgbScale) != tmpMeshCols[l][mappedIndex].c[2])) {
+								// I have to create a new vertex
+								alreadyDefined = false;
+							}
+						}
+					}
+				}
+
+				if (alreadyDefined)
+					vertIndices[i] = vertexMap[index];
+				else {
+					const MVert &vertex = verts[index];
+
+					// Add the vertex
+					tmpMeshVerts.emplace_back(Point(vertex.co));
+					// Add the normal
+					tmpMeshNorms.push_back(Normalize(Normal(
+						vertex.no[0] * normalScale,
+						vertex.no[1] * normalScale,
+						vertex.no[2] * normalScale)));
+					// Add the UV
+					for (u_int l = 0; l < loopUVsList.size(); ++l) {
+						const MLoopUV * loopUVs = loopUVsList[l];
+						if (loopUVs) {
+							const MLoopUV &loopUV = loopUVs[tri];
+							tmpMeshUVs[l].push_back(UV(loopUV.uv));
+						}
+					}
+					// Add the color
+					for (u_int l = 0; l < loopColsList.size(); ++l) {
+						const MLoopCol * loopCols = loopColsList[l];
+						if (loopCols) {
+							const MLoopCol &loopCol = loopCols[tri];
+							tmpMeshCols[l].push_back(Spectrum(
+								loopCol.r * rgbScale,
+								loopCol.g * rgbScale,
+								loopCol.b * rgbScale));
+						}
+					}
+					// Add the vertex mapping
+					const u_int vertIndex = vertFreeIndex++;
+					vertexMap[index] = vertIndex;
+					vertIndices[i] = vertIndex;
+				}
+			}
+		}
+		else {
+			// Flat shaded, use the Blender face normalW
+			const MVert &v0 = verts[loops[loopTri.tri[0]].v];
+			const MVert &v1 = verts[loops[loopTri.tri[1]].v];
+			const MVert &v2 = verts[loops[loopTri.tri[2]].v];
+
+			const Point p0(v0.co);
+			const Point p1(v1.co);
+			const Point p2(v2.co);
+
+			const Vector e1 = p1 - p0;
+			const Vector e2 = p2 - p0;
+			Normal faceNormal(Cross(e1, e2));
+
+			if ((faceNormal.x != 0.f) || (faceNormal.y != 0.f) || (faceNormal.z != 0.f))
+				faceNormal /= faceNormal.Length();
+
+			for (u_int i = 0; i < 3; ++i) {
+				const u_int tri = loopTri.tri[i];
+				const u_int index = loops[tri].v;
+				const MVert &vertex = verts[index];
+
+				// Add the vertex
+				tmpMeshVerts.emplace_back(Point(vertex.co));
+				// Add the normal
+				tmpMeshNorms.push_back(faceNormal);
+				// Add the UV
+				for (u_int l = 0; l < loopUVsList.size(); ++l) {
+					const MLoopUV * loopUVs = loopUVsList[l];
+					if (loopUVs) {
+						const MLoopUV &loopUV = loopUVs[tri];
+						tmpMeshUVs[l].push_back(UV(loopUV.uv));
+					}
+				}
+				// Add the color
+				for (u_int l = 0; l < loopColsList.size(); ++l) {
+					const MLoopCol * loopCols = loopColsList[l];
+					if (loopCols) {
+						const MLoopCol &loopCol = loopCols[tri];
+						tmpMeshCols[l].push_back(Spectrum(
+							loopCol.r * rgbScale,
+							loopCol.g * rgbScale,
+							loopCol.b * rgbScale));
+					}
+				}
+				vertIndices[i] = vertFreeIndex++;
+			}
+		}
+
+		tmpMeshTris.emplace_back(Triangle(vertIndices[0], vertIndices[1], vertIndices[2]));
+	}
+
+	// Check if there wasn't any triangles with matIndex
+	if (tmpMeshTris.size() == 0)
+		return false;
+
+	// Allocate memory for LuxCore mesh data
+	Triangle *meshTris = TriangleMesh::AllocTrianglesBuffer(tmpMeshTris.size());
+	copy(tmpMeshTris.begin(), tmpMeshTris.end(), meshTris);
+
+	Point *meshVerts = TriangleMesh::AllocVerticesBuffer(tmpMeshVerts.size());
+	copy(tmpMeshVerts.begin(), tmpMeshVerts.end(), meshVerts);
+
+	Normal *meshNorms = new Normal[tmpMeshVerts.size()];
+	copy(tmpMeshNorms.begin(), tmpMeshNorms.end(), meshNorms);
+
+	array<UV *, EXTMESH_MAX_DATA_COUNT> meshUVs;
+	array<Spectrum *, EXTMESH_MAX_DATA_COUNT> meshCols;
+	
+	fill(meshUVs.begin(), meshUVs.end(), nullptr);
+	fill(meshCols.begin(), meshCols.end(), nullptr);
+	
+	for (u_int l = 0; l < loopUVsList.size(); ++l) {
+		const MLoopUV * loopUVs = loopUVsList[l];
+		if (loopUVs) {
+			meshUVs[l] = new UV[tmpMeshVerts.size()];
+			copy(tmpMeshUVs[l].begin(), tmpMeshUVs[l].end(), meshUVs[l]);
+		}
+	}
+	for (u_int l = 0; l < loopColsList.size(); ++l) {
+		const MLoopCol * loopCols = loopColsList[l];
+		if (loopCols) {
+			meshCols[l] = new Spectrum[tmpMeshVerts.size()];
+			copy(tmpMeshCols[l].begin(), tmpMeshCols[l].end(), meshCols[l]);
+		}
+	}
+
+	luxrays::ExtTriangleMesh *mesh = new luxrays::ExtTriangleMesh(tmpMeshVerts.size(),
+		tmpMeshTris.size(), meshVerts, meshTris,
+		meshNorms, &meshUVs, &meshCols, NULL);
+
+	// Apply the transformation if required
+	if (trans)
+		mesh->ApplyTransform(*trans);
+
+	mesh->SetName(name);
+	scene->DefineMesh(mesh);
+
+	return true;
+}
+
+boost::python::list Scene_DefineBlenderMeshExt1(luxcore::detail::SceneImpl *scene, const string &name,
+	const size_t loopTriCount, const size_t loopTriPtr,
+	const size_t loopPtr,
+	const size_t vertPtr,
+	const size_t polyPtr,
+	const boost::python::object &loopUVsPtrList,
+	const boost::python::object &loopColsPtrList,
+	const u_int materialCount,
+	const boost::python::object &transformation) {
+	
+	// Get the transformation if required
+	bool hasTransformation = false;
+	Transform trans;
+	if (!transformation.is_none()) {
+		extract<boost::python::list> getTransformationList(transformation);
+		if (getTransformationList.check()) {
+			const boost::python::list &l = getTransformationList();
+			const boost::python::ssize_t size = len(l);
+			if (size != 16) {
+				const string objType = extract<string>((transformation.attr("__class__")).attr("__name__"));
+				throw runtime_error("Wrong number of elements for the list of transformation values of method Scene.DefineMesh(): " + objType);
+			}
+
+			luxrays::Matrix4x4 mat;
+			boost::python::ssize_t index = 0;
+			for (u_int j = 0; j < 4; ++j)
+				for (u_int i = 0; i < 4; ++i)
+					mat.m[i][j] = extract<float>(l[index++]);
+
+			trans = luxrays::Transform(mat);
+			hasTransformation = true;
+		}
+		else {
+			const string objType = extract<string>((transformation.attr("__class__")).attr("__name__"));
+			throw runtime_error("Wrong data type for the list of transformation values of method Scene.DefineMesh(): " + objType);
+		}
+	}
+
+	boost::python::list result;
+	for (u_int matIndex = 0; matIndex < materialCount; ++matIndex) {
+		const string meshName = (boost::format(name + "%03d") % matIndex).str();
+
+		if (Scene_DefineBlenderMeshExt(scene, meshName, loopTriCount, loopTriPtr,
+			loopPtr, vertPtr, polyPtr, loopUVsPtrList, loopColsPtrList, matIndex,
+			hasTransformation ? &trans : NULL)) {
+			boost::python::list meshInfo;
+			meshInfo.append(meshName);
+			meshInfo.append(matIndex);
+			result.append(meshInfo);
+		}
+	}
+
+	return result;
+}
+
+boost::python::list Scene_DefineBlenderMeshExt2(luxcore::detail::SceneImpl *scene, const string &name,
+	const size_t loopTriCount, const size_t loopTriPtr,
+	const size_t loopPtr,
+	const size_t vertPtr,
+	const size_t polyPtr,
+	const boost::python::object &loopUVsPtrList,
+	const boost::python::object &loopColsPtrList,
+	const u_int materialCount) {
+	return Scene_DefineBlenderMeshExt1(scene, name, loopTriCount, loopTriPtr,
+		loopPtr, vertPtr, polyPtr, loopUVsPtrList, loopColsPtrList, materialCount,
+		boost::python::object());
 }
 
 //------------------------------------------------------------------------------
