@@ -13,11 +13,13 @@ eval "$(pyenv init -)"
 # Compiling OpenCL-less version"
 #==========================================================================
 
-mkdir build
-pushd  build
-cmake -DLUXRAYS_DISABLE_OPENCL=1 -DOSX_DEPENDENCY_ROOT=$DEPS_SOURCE ..
-cmake --build . --config Release
-popd
+#mkdir build
+#pushd  build
+#cmake -DLUXRAYS_DISABLE_OPENCL=1 -DOSX_DEPENDENCY_ROOT=$DEPS_SOURCE ..
+#cmake --build . --config Release
+#popd
+
+#scripts/package_lux_osx.sh
 
 #mkdir build
 #pushd build
@@ -29,11 +31,13 @@ popd
 # Compiling OpenCL version"
 #==========================================================================
 
-mkdir build_ocl
-pushd  build_ocl
+mkdir build
+pushd  build
 cmake -DOSX_DEPENDENCY_ROOT=$DEPS_SOURCE ..
 cmake --build . --config Release
 popd
+
+scripts/package_lux_osx_ocl.sh
 
 #mkdir build_opencl
 #pushd build_opencl
