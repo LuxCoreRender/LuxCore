@@ -21,6 +21,7 @@
 #include "slg/engines/bakecpu/bakecpu.h"
 #include "slg/engines/bakecpu/bakecpurenderstate.h"
 #include "slg/engines/caches/photongi/photongicache.h"
+#include "slg/samplers/metropolis.h"
 #include "slg/film/filters/filter.h"
 
 using namespace std;
@@ -33,7 +34,8 @@ using namespace slg;
 
 BakeCPURenderEngine::BakeCPURenderEngine(const RenderConfig *rcfg) :
 		CPUNoTileRenderEngine(rcfg), photonGICache(nullptr), sampleSplatter(nullptr),
-		mapFilm(nullptr), currentSceneObjsDist(nullptr), threadsSyncBarrier(nullptr) {
+		lightSamplerSharedData(nullptr), mapFilm(nullptr), currentSceneObjsDist(nullptr),
+		threadsSyncBarrier(nullptr) {
 	const Properties &cfg = rcfg->cfg;
 
 	minMapAutoSize = cfg.Get(Property("bake.minmapautosize")(32u)).Get<u_int>();
@@ -93,6 +95,7 @@ BakeCPURenderEngine::~BakeCPURenderEngine() {
 	currentSceneObjDist.clear();
 	delete currentSceneObjsDist;
 	delete photonGICache;
+	delete lightSamplerSharedData;
 	delete sampleSplatter;
 	delete mapFilm;
 	delete threadsSyncBarrier;
@@ -100,6 +103,12 @@ BakeCPURenderEngine::~BakeCPURenderEngine() {
 
 void BakeCPURenderEngine::InitFilm() {
 	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
+
+	// pathTracer has not yet been initialized
+	const bool hybridBackForwardEnable = renderConfig->cfg.Get(PathTracer::GetDefaultProps().
+			Get("path.hybridbackforward.enable")).Get<bool>();
+	if (hybridBackForwardEnable)
+		film->AddChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
 
 	film->Init();
 }
@@ -171,6 +180,9 @@ void BakeCPURenderEngine::StartLockLess() {
 	//--------------------------------------------------------------------------
 
 	pathTracer.ParseOptions(cfg, GetDefaultProps());
+
+	if (pathTracer.hybridBackForwardEnable)
+		lightSamplerSharedData = MetropolisSamplerSharedData::FromProperties(Properties(), &seedBaseGenerator, film);
 
 	pathTracer.InitPixelFilterDistribution(pixelFilter);
 	pathTracer.SetPhotonGICache(photonGICache);
@@ -263,6 +275,9 @@ void BakeCPURenderEngine::StopLockLess() {
 	currentSceneObjsDist = nullptr;
 	
 	pathTracer.DeletePixelFilterDistribution();
+
+	delete lightSamplerSharedData;
+	lightSamplerSharedData = nullptr;
 
 	delete photonGICache;
 	photonGICache = nullptr;

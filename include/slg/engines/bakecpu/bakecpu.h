@@ -1,4 +1,4 @@
-/***************************************************************************
+/**************************************************************************
  * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
@@ -63,6 +63,13 @@ public:
 
 protected:
 	void InitBakeWork(const BakeMapInfo &mapInfo);
+	void SetSampleResultXY(const BakeMapInfo &mapInfo, const HitPoint &hitPoint,
+			const Film &film, SampleResult &sampleResult) const;
+	void RenderEyeSample(const BakeMapInfo &mapInfo, PathTracerThreadState &state) const;
+	void RenderConnectToEyeCallBack(const BakeMapInfo &mapInfo, const BSDF &bsdf, const u_int lightID,
+			const luxrays::Spectrum &lightPathFlux, std::vector<SampleResult> &sampleResults) const;
+	void RenderLightSample(const BakeMapInfo &mapInfo, PathTracerThreadState &state) const;
+	void RenderSample(const BakeMapInfo &mapInfo, PathTracerThreadState &state) const;
 	void RenderFunc();
 
 	virtual boost::thread *AllocRenderThread() { return new boost::thread(&BakeCPURenderThread::RenderFunc, this); }
@@ -110,9 +117,11 @@ protected:
 	PhotonGICache *photonGICache;
 	FilmSampleSplatter *sampleSplatter;
 	PathTracer pathTracer;
+	SamplerSharedData *lightSamplerSharedData;
 	
 	Film *mapFilm;
 	std::vector<const SceneObject *> currentSceneObjsToBake;
+	std::vector<float> currentSceneObjsToBakeArea;
 	luxrays::Distribution1D *currentSceneObjsDist;
 	std::vector<luxrays::Distribution1D *> currentSceneObjDist;
 

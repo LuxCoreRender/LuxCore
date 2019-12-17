@@ -109,6 +109,7 @@ public:
 	const Volume *GetMaterialInteriorVolume() const { return material->GetInteriorVolume(hitPoint, hitPoint.passThroughEvent); }
 	const Volume *GetMaterialExteriorVolume() const { return material->GetExteriorVolume(hitPoint, hitPoint.passThroughEvent); }
 	float GetGlossiness() const { return material->GetGlossiness(); }
+	const SceneObject *GetSceneObject() const { return sceneObject; }
 
 	BSDFEvent GetEventTypes() const { return material->GetEventTypes(); }
 	MaterialType GetMaterialType() const { return material->GetType(); }
