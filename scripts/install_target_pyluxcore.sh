@@ -1,12 +1,12 @@
 #!/bin/bash
 
-cd release_OSX
+pushd release_OSX
 
 mkdir pyluxcore
 
 cp ../build/lib/pyluxcore* pyluxcore
 
-cd pyluxcore
+pushd pyluxcore
 
 #libomp
 
@@ -126,3 +126,6 @@ install_name_tool -change /Users/drquader/Documents/GitHub/LuxCore/macos/lib/lib
 install_name_tool -change @rpath/libtbbmalloc.dylib @loader_path/libtbbmalloc.dylib pyluxcore.so
 install_name_tool -rpath @loader_path @loader_path/ pyluxcore.so
 install_name_tool -rpath /Users/drquader/Documents/GitHub/LuxCore/macos/lib @loader_path/ pyluxcore.so
+
+popd
+popd

@@ -1,13 +1,13 @@
 #!/bin/bash
 
-cd release_OSX
+pushd release_OSX
 
 ###luxcoreconsole
 mkdir luxcoreconsole
 
 cp ../build/luxcoreconsole luxcoreconsole
 
-cd luxcoreconsole
+pushd luxcoreconsole
 
 #libiomp
 
@@ -161,3 +161,6 @@ install_name_tool -change /Users/drquader/Documents/GitHub/LuxCore/macos/lib/lib
 install_name_tool -change @rpath/libtbbmalloc.dylib @executable_path/libs/libtbbmalloc.dylib luxcoreconsole
 install_name_tool -rpath @loader_path @executable_path/libs/ luxcoreconsole
 install_name_tool -rpath /Users/drquader/Documents/GitHub/LuxCore/macos/lib @executable_path/libs/ luxcoreconsole
+
+popd
+popd

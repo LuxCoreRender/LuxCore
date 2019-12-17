@@ -1,8 +1,8 @@
 #!/bin/bash
 
-cd release_OSX
+pushd release_OSX
 
-cd pyluxcore
+pushd pyluxcore
 
 #libOpenImageDenoise
 
@@ -31,3 +31,5 @@ install_name_tool -change /Users/drquader/Documents/GitHub/MacOSCompileDeps/maco
 install_name_tool -change @rpath/libtbb.dylib @executable_path/libtbb.dylib denoise
 install_name_tool -change @rpath/libtbbmalloc.dylib @executable_path/libtbbmalloc.dylib denoise
 
+popd
+popd

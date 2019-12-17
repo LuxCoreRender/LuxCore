@@ -6,7 +6,7 @@
 cp -R macos/mac_bundle/LuxCore.app release_OSX
 cp build/luxcoreui release_OSX/LuxCore.app/Contents/MacOS
 
-cd release_OSX
+pushd release_OSX
 
 mkdir -p LuxCore.app/Contents/Resources/libs/
 
@@ -162,5 +162,5 @@ install_name_tool -change @rpath/libtbbmalloc.dylib @executable_path/../Resource
 install_name_tool -rpath @loader_path @executable_path/../Resources/libs/ LuxCore.app/Contents/MacOS/luxcoreui
 install_name_tool -rpath /Users/drquader/Documents/GitHub/LuxCore/macos/lib @executable_path/ LuxCore.app/Contents/MacOS/luxcoreui
 
-
+popd
 
