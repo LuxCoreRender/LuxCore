@@ -155,9 +155,13 @@ jobs:
 # MacOS binaries
 #==============================================================================
 - job: LuxCoreRenderMacOS
+  dependsOn: DetectBuildType
+  condition: succeeded()
   timeoutInMinutes: 0
   pool:
     vmImage: 'macOS-10.13'
+  variables:
+    version_string: $[ dependencies.DetectBuildType.outputs['setvarStep.version_string'] ]
 
   steps:
   - script: ./scripts/azurepipeline/macos/install.sh
@@ -192,7 +196,8 @@ jobs:
       eq(variables['Build.SourceBranchName'], 'master'),
       eq(dependencies.DetectBuildType.outputs['setvarStep.version_string'], 'latest'),
       in(dependencies.LuxCoreRenderLinux.result, 'Succeeded', 'SucceededWithIssues'),
-      in(dependencies.LuxCoreRenderWindows.result, 'Succeeded', 'SucceededWithIssues')
+      in(dependencies.LuxCoreRenderWindows.result, 'Succeeded', 'SucceededWithIssues'),
+      in(dependencies.LuxCoreRenderMacOS.result, 'Succeeded', 'SucceededWithIssues')
     )
   timeoutInMinutes: 0
   pool:
