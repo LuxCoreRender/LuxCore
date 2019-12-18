@@ -7,7 +7,7 @@ mkdir release_OSX_OCL
 ###luxcoreui bundle
 
 cp -R macos/mac_bundle/LuxCore.app release_OSX_OCL
-cp build/luxcoreui release_OSX_OCL/LuxCore.app/Contents/MacOS
+cp build_ocl/luxcoreui release_OSX_OCL/LuxCore.app/Contents/MacOS
 
 cd release_OSX_OCL
 
