@@ -171,12 +171,12 @@ jobs:
   #- script: ./scripts/azurepipeline/macos/test.sh
     #displayName: Testing LuxCore
   - script: ./scripts/azurepipeline/macos/pack.sh
-    displayName: Packing Diskimage
+    displayName: Packing DiskImage
   - task: PublishBuildArtifacts@1
     inputs:
       pathtoPublish: '$(Build.ArtifactStagingDirectory)'
       artifactName: LuxCore
-    displayName: 'Upload luxcorerender-<version>-macos.dmg'
+    displayName: 'Upload luxcorerender-<version>-macos.tar.gz'
     condition: eq(variables['System.PullRequest.IsFork'], 'False')
 
 

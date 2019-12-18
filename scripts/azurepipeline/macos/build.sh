@@ -13,11 +13,11 @@ eval "$(pyenv init -)"
 # Compiling OpenCL-less version"
 #==========================================================================
 
-mkdir build_nocl
-pushd  build_noocl
-cmake -DLUXRAYS_DISABLE_OPENCL=1 -DOSX_DEPENDENCY_ROOT=$DEPS_SOURCE ..
-cmake --build . --config Release
-popd
+#mkdir build_nocl
+#pushd  build_noocl
+#cmake -DLUXRAYS_DISABLE_OPENCL=1 -DOSX_DEPENDENCY_ROOT=$DEPS_SOURCE ..
+#cmake --build . --config Release
+#popd
 
 #==========================================================================
 # Compiling OpenCL version"

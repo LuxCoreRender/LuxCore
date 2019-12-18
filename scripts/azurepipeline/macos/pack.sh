@@ -222,13 +222,15 @@ echo "denoise installed"
 
 cd ../..
 
-echo "Creating DMG ..."
+echo "Creating TAR ..."
 
-hdiutil create LuxCoreRender2.3alpha0.dmg -volname "LuxCoreRender2.3alpha0" -fs HFS+ -srcfolder release_OSX_OCL/
+tar -czf LuxCoreRender2.3aplpha0.tar.gz ./release_OSX_OCL
 
-echo "DMG created !"
+#hdiutil create LuxCoreRender2.3alpha0.dmg -volname "LuxCoreRender2.3alpha0" -fs HFS+ -srcfolder release_OSX_OCL/
 
-mv LuxCoreRender2.3alpha0.dmg $BUILD_ARTIFACTSTAGINGDIRECTORY/LuxCoreRender2.3alpha0.dmg
+echo "TAR created !"
+
+mv LuxCoreRender2.3aplpha0.tar.gz $BUILD_ARTIFACTSTAGINGDIRECTORY/LuxCoreRender2.3aplpha0.tar.gz
 
 
 
