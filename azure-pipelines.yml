@@ -168,8 +168,8 @@ jobs:
     displayName: Install Build Tools
   - script: ./scripts/azurepipeline/macos/build.sh
     displayName: Building LuxCore
-  #- script: ./scripts/azurepipeline/macos/test.sh
-    #displayName: Testing LuxCore
+  - script: ./scripts/azurepipeline/macos/test.sh
+    displayName: Testing LuxCore
   - script: ./scripts/azurepipeline/macos/pack.sh
     displayName: Packing DiskImage
   - task: PublishBuildArtifacts@1
