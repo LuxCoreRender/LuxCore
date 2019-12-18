@@ -45,6 +45,7 @@ void BakeCPURenderThread::InitBakeWork(const BakeMapInfo &mapInfo) {
 	SLG_LOG("Resolution: " << mapInfo.width << "x" << mapInfo.height);
 
 	engine->currentSceneObjsToBake.clear();
+	engine->currentSceneObjsToBakeArea.clear();
 	
 	if (engine->skipExistingMapFiles) {
 		// Check if the file exist
@@ -79,7 +80,7 @@ void BakeCPURenderThread::InitBakeWork(const BakeMapInfo &mapInfo) {
 
 	// To sample the each mesh triangle according its area
 	engine->currentSceneObjDist.resize(engine->currentSceneObjsToBake.size(), nullptr);
-	vector<float> meshesArea(engine->currentSceneObjsToBake.size());
+	engine->currentSceneObjsToBakeArea.resize(engine->currentSceneObjsToBake.size());
 
 	#pragma omp parallel for
 	for (
@@ -95,10 +96,10 @@ void BakeCPURenderThread::InitBakeWork(const BakeMapInfo &mapInfo) {
 		sceneObj->GetExtMesh()->GetLocal2World(0.f, localToWorld);
 
 		vector<float> trisArea(mesh->GetTotalTriangleCount());
-		meshesArea[sceneObjIndex] = 0.f;
+		engine->currentSceneObjsToBakeArea[sceneObjIndex] = 0.f;
 		for (u_int triIndex = 0; triIndex < mesh->GetTotalTriangleCount(); ++triIndex) {
 			trisArea[triIndex] = mesh->GetTriangleArea(localToWorld, triIndex);
-			meshesArea[sceneObjIndex] += trisArea[triIndex];
+			engine->currentSceneObjsToBakeArea[sceneObjIndex] += trisArea[triIndex];
 		}
 		
 		engine->currentSceneObjDist[sceneObjIndex] = new Distribution1D(&trisArea[0], trisArea.size());
@@ -106,17 +107,270 @@ void BakeCPURenderThread::InitBakeWork(const BakeMapInfo &mapInfo) {
 	
 	// To sample the meshes according their area
 	delete engine->currentSceneObjsDist;
-	engine->currentSceneObjsDist = new Distribution1D(&meshesArea[0], meshesArea.size());
+	engine->currentSceneObjsDist = new Distribution1D(&engine->currentSceneObjsToBakeArea[0], engine->currentSceneObjsToBakeArea.size());
 
 	// Reset the main film
 	engine->film->Reset();
+}
+
+void BakeCPURenderThread::SetSampleResultXY(const BakeMapInfo &mapInfo,
+		const HitPoint &hitPoint, const Film &film, SampleResult &sampleResult) const {
+	const UV filmUV(
+			hitPoint.uv[mapInfo.uvindex].u - floorf(hitPoint.uv[mapInfo.uvindex].u),
+			1.f - (hitPoint.uv[mapInfo.uvindex].v - floorf(hitPoint.uv[mapInfo.uvindex].v)));
+
+	const float filmX = filmUV.u * film.GetWidth() - .5f;
+	const float filmY = filmUV.v * film.GetHeight() - .5f;
+
+	const u_int *subRegion = film.GetSubRegion();
+	sampleResult.pixelX = Clamp(Floor2UInt(filmX), subRegion[0], subRegion[1]);
+	sampleResult.pixelY = Clamp(Floor2UInt(filmY), subRegion[2], subRegion[3]);
+	sampleResult.filmX = filmX;
+	sampleResult.filmY = filmY;
+}
+
+void BakeCPURenderThread::RenderEyeSample(const BakeMapInfo &mapInfo, PathTracerThreadState &state) const {
+	BakeCPURenderEngine *engine = (BakeCPURenderEngine *)renderEngine;
+	const PathTracer &pathTracer = engine->pathTracer;
+	vector<SampleResult> &sampleResults = state.eyeSampleResults;
+	SampleResult &sampleResult = sampleResults[0];
+
+	// Pick a scene object to sample
+	float sceneObjPickPdf;
+	const u_int currentSceneObjIndex = engine->currentSceneObjsDist->SampleDiscrete(state.eyeSampler->GetSample(0), &sceneObjPickPdf);
+	const SceneObject *sceneObj = engine->currentSceneObjsToBake[currentSceneObjIndex];
+	const ExtMesh *mesh = sceneObj->GetExtMesh();
+
+	// Pick a triangle to sample
+	float triPickPdf;
+	const u_int triangleIndex = engine->currentSceneObjDist[currentSceneObjIndex]->SampleDiscrete(state.eyeSampler->GetSample(1), &triPickPdf);
+
+	const float timeSample = state.eyeSampler->GetSample(4);
+	Transform localToWorld;
+	mesh->GetLocal2World(timeSample, localToWorld);
+
+	// Origin
+	Point samplePoint;
+	float b0, b1, b2;
+	mesh->Sample(localToWorld, triangleIndex, state.eyeSampler->GetSample(2), state.eyeSampler->GetSample(3),
+			&samplePoint, &b0, &b1, &b2);
+
+	const u_int sceneObjIndex = state.scene->objDefs.GetSceneObjectIndex(sceneObj);
+	const PathVolumeInfo volInfo;
+	BSDF bsdf(*state.scene, sceneObjIndex, triangleIndex,
+			samplePoint, b1, b2,
+			timeSample, state.eyeSampler->GetSample(pathTracer.eyeSampleSize), &volInfo);
+
+	// Ray direction
+	EyePathInfo pathInfo;
+	Vector sampledDir;
+	float cosSampledDir;
+	float bsdfPdfW;
+	BSDFEvent bsdfEvent;
+	const Spectrum bsdfSample = bsdf.Sample(&sampledDir,
+			state.eyeSampler->GetSample(pathTracer.eyeSampleSize + 1),
+			state.eyeSampler->GetSample(pathTracer.eyeSampleSize + 2),
+			&bsdfPdfW, &cosSampledDir, &bsdfEvent);
+
+	pathInfo.lastBSDFPdfW = bsdfPdfW;
+	pathInfo.lastBSDFEvent = bsdfEvent;
+
+	// Ray origin
+	const Point rayOrig = bsdf.GetRayOrigin(sampledDir);
+
+	//--------------------------------------------------------------------------
+	// Set up the ray to trace
+	//--------------------------------------------------------------------------
+
+	Ray eyeRay(rayOrig, sampledDir,
+			MachineEpsilon::E(rayOrig), numeric_limits<float>::infinity(),
+			timeSample);
+
+	//--------------------------------------------------------------------------
+	// Set up the sample result
+	//--------------------------------------------------------------------------
+
+	PathTracer::ResetEyeSampleResults(sampleResults);
+	SetSampleResultXY(mapInfo, bsdf.hitPoint, *state.film, sampleResult);
+
+	switch (mapInfo.type) {
+		case COMBINED: {
+			//------------------------------------------------------------------
+			// Render the surface point direct light
+			//------------------------------------------------------------------
+
+			// To keep track of the number of rays traced
+			const double deviceRayCount = device->GetTotalRaysCount();
+
+			pathTracer.DirectLightSampling(state.device, state.scene,
+					timeSample,
+					state.eyeSampler->GetSample(pathTracer.eyeSampleSize + 3),
+					state.eyeSampler->GetSample(pathTracer.eyeSampleSize + 4),
+					state.eyeSampler->GetSample(pathTracer.eyeSampleSize + 5),
+					state.eyeSampler->GetSample(pathTracer.eyeSampleSize + 6),
+					state.eyeSampler->GetSample(pathTracer.eyeSampleSize + 7),
+					pathInfo, 
+					Spectrum(1.f), bsdf, &sampleResult);
+
+			sampleResult.rayCount += (float)(device->GetTotalRaysCount() - deviceRayCount);
+
+			//------------------------------------------------------------------
+			// Render the received light from the path
+			//------------------------------------------------------------------
+
+			pathTracer.RenderEyePath(state.device, state.scene,
+					state.eyeSampler, pathInfo, eyeRay,
+					state.eyeSampleResults);
+
+			for(u_int i = 0; i < state.eyeSampleResults.size(); ++i) {
+				SampleResult &sampleResult = state.eyeSampleResults[i];
+
+				for(u_int j = 0; j < sampleResult.radiance.size(); ++j)
+					sampleResult.radiance[j] *= bsdfSample;
+			}
+			break;
+		}
+		case LIGHTMAP: {
+			//------------------------------------------------------------------
+			// Render the received direct light
+			//------------------------------------------------------------------
+
+			// To keep track of the number of rays traced
+			const double deviceRayCount = device->GetTotalRaysCount();
+
+			pathTracer.DirectLightSampling(state.device, state.scene,
+					timeSample,
+					state.eyeSampler->GetSample(pathTracer.eyeSampleSize + 3),
+					state.eyeSampler->GetSample(pathTracer.eyeSampleSize + 4),
+					state.eyeSampler->GetSample(pathTracer.eyeSampleSize + 5),
+					state.eyeSampler->GetSample(pathTracer.eyeSampleSize + 6),
+					state.eyeSampler->GetSample(pathTracer.eyeSampleSize + 7),
+					pathInfo, 
+					Spectrum(1.f), bsdf, &sampleResult,
+					false);
+
+			sampleResult.rayCount += (float)(device->GetTotalRaysCount() - deviceRayCount);
+
+			//------------------------------------------------------------------
+			// Render the received light from the path
+			//------------------------------------------------------------------
+
+			pathTracer.RenderEyePath(state.device, state.scene,
+					state.eyeSampler, pathInfo, eyeRay,
+					state.eyeSampleResults);
+			break;
+		}
+		default:
+			throw runtime_error("Unknown bake type in BakeCPURenderThread::RenderFunc(): " + ToString(mapInfo.type));
+	}
+
+	//--------------------------------------------------------------------------
+	// AOV support
+	//--------------------------------------------------------------------------
+
+	if (bsdf.IsAlbedoEndPoint())
+		sampleResult.albedo = bsdf.Albedo();
+
+	sampleResult.alpha = 1.f;
+	sampleResult.depth = 0.f;
+	sampleResult.position = bsdf.hitPoint.p;
+	sampleResult.geometryNormal = bsdf.hitPoint.geometryN;
+	sampleResult.shadingNormal = bsdf.hitPoint.shadeN;
+	sampleResult.materialID = bsdf.GetMaterialID();
+	sampleResult.objectID = bsdf.GetObjectID();
+	sampleResult.uv = bsdf.hitPoint.uv[0];
+}
+
+void BakeCPURenderThread::RenderConnectToEyeCallBack(const BakeMapInfo &mapInfo, 
+		const BSDF &bsdf, const u_int lightID,
+		const Spectrum &lightPathFlux, vector<SampleResult> &sampleResults) const {
+	BakeCPURenderEngine *engine = (BakeCPURenderEngine *)renderEngine;
+
+	// Check if the hit point is on one of the objects I'm baking
+	for (u_int i = 0; i < engine->currentSceneObjsToBake.size(); ++i) {
+		if (engine->currentSceneObjsToBake[i] == bsdf.GetSceneObject()) {
+			SampleResult &sampleResult = PathTracer::AddLightSampleResult(sampleResults, engine->mapFilm);
+
+			SetSampleResultXY(mapInfo, bsdf.hitPoint, *engine->mapFilm, sampleResult);
+
+			const float fluxToRadianceFactor = 1.f / engine->currentSceneObjsToBakeArea[i];
+
+			BSDFEvent event;
+			const Spectrum bsdfEval = bsdf.Evaluate(Vector(bsdf.hitPoint.shadeN), &event);
+
+			sampleResult.radiance[lightID] = lightPathFlux * fluxToRadianceFactor * bsdfEval;
+
+			return;
+		}
+	}
+}
+
+void BakeCPURenderThread::RenderLightSample(const BakeMapInfo &mapInfo, PathTracerThreadState &state) const {
+	BakeCPURenderEngine *engine = (BakeCPURenderEngine *)renderEngine;
+	const PathTracer &pathTracer = engine->pathTracer;
+	
+	const PathTracer::ConnectToEyeCallBackType connectToEyeCallBack = boost::bind(
+			&BakeCPURenderThread::RenderConnectToEyeCallBack, this, mapInfo, _1, _2, _3, _4);
+
+	pathTracer.RenderLightSample(state.device, state.scene, state.film, state.lightSampler,
+			state.lightSampleResults, connectToEyeCallBack);
+}
+
+void BakeCPURenderThread::RenderSample(const BakeMapInfo &mapInfo, PathTracerThreadState &state) const {
+	BakeCPURenderEngine *engine = (BakeCPURenderEngine *)renderEngine;
+	const PathTracer &pathTracer = engine->pathTracer;
+
+	// Check if I have to trace an eye or light path
+	Sampler *sampler;
+	vector<SampleResult> *sampleResults;
+	if (pathTracer.hybridBackForwardEnable) {
+		const double ratio = state.eyeSampleCount / state.lightSampleCount;
+		if ((pathTracer.hybridBackForwardPartition == 1.f) ||
+				(ratio < pathTracer.hybridBackForwardPartition)) {
+			// Trace an eye path
+			sampler = state.eyeSampler;
+			sampleResults = &state.eyeSampleResults;
+
+			state.eyeSampleCount += 1.0;
+		} else {
+			// Trace a light path
+
+			sampler = state.lightSampler;
+			sampleResults = &state.lightSampleResults;
+
+			state.lightSampleCount += 1.0;
+		}
+	} else {
+		sampler = state.eyeSampler;
+		sampleResults = &state.eyeSampleResults;
+
+		state.eyeSampleCount += 1.0;
+	}
+
+	if (sampler == state.eyeSampler)
+		RenderEyeSample(mapInfo, state);
+	else
+		RenderLightSample(mapInfo, state);
+
+	// Variance clamping
+	if (state.varianceClamping->hasClamping()) {
+		for(u_int i = 0; i < sampleResults->size(); ++i) {
+			SampleResult &sampleResult = (*sampleResults)[i];
+
+			// I clamp only eye paths samples (variance clamping would cut
+			// SDS path values due to high scale of PSR samples)
+			if (sampleResult.HasChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED))
+				state.varianceClamping->Clamp(*state.film, sampleResult);
+		}
+	}
+
+	sampler->NextSample(*sampleResults);
 }
 
 void BakeCPURenderThread::RenderFunc() {
 	//SLG_LOG("[BakeCPURenderEngine::" << threadIndex << "] Rendering thread started");
 
 	BakeCPURenderEngine *engine = (BakeCPURenderEngine *)renderEngine;
-	Scene *scene = engine->renderConfig->scene;
 	const PathTracer &pathTracer = engine->pathTracer;
 
 	//--------------------------------------------------------------------------
@@ -155,18 +409,36 @@ void BakeCPURenderThread::RenderFunc() {
 		// (engine->seedBase + 1) seed is used for sharedRndGen
 		RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + 1 + threadIndex);
 
-		// Setup the sampler
-		Sampler *eyeSampler = engine->renderConfig->AllocSampler(rndGen, engine->mapFilm,
+		// Setup the sampler(s)
+
+		Sampler *eyeSampler = nullptr;
+		Sampler *lightSampler = nullptr;
+
+		eyeSampler = engine->renderConfig->AllocSampler(rndGen, engine->mapFilm,
 				engine->sampleSplatter, engine->samplerSharedData, samplerAdditionalProps);
-		// Below, I need 3 additional samples
+		// Below, I need 7 additional samples
 		eyeSampler->RequestSamples(PIXEL_NORMALIZED_ONLY, pathTracer.eyeSampleSize + 7);
+
+		if (pathTracer.hybridBackForwardEnable) {
+			// Light path sampler is always Metropolis
+			Properties props;
+			props <<
+				Property("sampler.type")("METROPOLIS") <<
+				// Disable image plane meaning for samples 0 and 1
+				Property("sampler.imagesamples.enable")(false);
+
+			lightSampler = Sampler::FromProperties(props, rndGen, engine->mapFilm, nullptr,
+					engine->lightSamplerSharedData);
+
+			lightSampler->RequestSamples(SCREEN_NORMALIZED_ONLY, pathTracer.lightSampleSize);
+		}
 
 		// Setup variance clamping
 		VarianceClamping varianceClamping(pathTracer.sqrtVarianceClampMaxValue);
 
 		// Setup PathTracer thread state
 		PathTracerThreadState pathTracerThreadState(device,
-				eyeSampler, nullptr,
+				eyeSampler, lightSampler,
 				engine->renderConfig->scene, engine->mapFilm,
 				&varianceClamping,
 				true);
@@ -175,7 +447,6 @@ void BakeCPURenderThread::RenderFunc() {
 		// Rendering
 		//----------------------------------------------------------------------
 
-		const PathVolumeInfo volInfo;
 		for (u_int steps = 0; !boost::this_thread::interruption_requested(); ++steps) {
 			// Check if we are in pause mode
 			if (engine->pauseMode) {
@@ -187,184 +458,7 @@ void BakeCPURenderThread::RenderFunc() {
 					break;
 			}
 
-			// Pick a scene object to sample
-			float sceneObjPickPdf;
-			const u_int currentSceneObjIndex = engine->currentSceneObjsDist->SampleDiscrete(eyeSampler->GetSample(0), &sceneObjPickPdf);
-			const SceneObject *sceneObj = engine->currentSceneObjsToBake[currentSceneObjIndex];
-			const ExtMesh *mesh = sceneObj->GetExtMesh();
-
-			// Pick a triangle to sample
-			float triPickPdf;
-			const u_int triangleIndex = engine->currentSceneObjDist[currentSceneObjIndex]->SampleDiscrete(eyeSampler->GetSample(1), &triPickPdf);
-
-			const float timeSample = eyeSampler->GetSample(4);
-			Transform localToWorld;
-			mesh->GetLocal2World(timeSample, localToWorld);
-
-			// Origin
-			Point samplePoint;
-			float b0, b1, b2;
-			mesh->Sample(localToWorld, triangleIndex, eyeSampler->GetSample(2), eyeSampler->GetSample(3),
-					&samplePoint, &b0, &b1, &b2);
-			
-			const u_int sceneObjIndex = scene->objDefs.GetSceneObjectIndex(sceneObj);
-			BSDF bsdf(*scene, sceneObjIndex, triangleIndex,
-					samplePoint, b1, b2,
-					timeSample, eyeSampler->GetSample(pathTracer.eyeSampleSize), &volInfo);
-
-			// Ray direction
-			EyePathInfo pathInfo;
-			Vector sampledDir;
-			float cosSampledDir;
-			float bsdfPdfW;
-			BSDFEvent bsdfEvent;
-			const Spectrum bsdfSample = bsdf.Sample(&sampledDir,
-					eyeSampler->GetSample(pathTracer.eyeSampleSize + 1),
-					eyeSampler->GetSample(pathTracer.eyeSampleSize + 2),
-					&bsdfPdfW, &cosSampledDir, &bsdfEvent);
-
-			pathInfo.lastBSDFPdfW = bsdfPdfW;
-			pathInfo.lastBSDFEvent = bsdfEvent;
-			
-			// Ray origin
-			const Point rayOrig = bsdf.GetRayOrigin(sampledDir);
-
-			//------------------------------------------------------------------
-			// Set up the ray to trace
-			//------------------------------------------------------------------
-
-			Ray eyeRay(rayOrig, sampledDir,
-					MachineEpsilon::E(rayOrig), numeric_limits<float>::infinity(),
-					timeSample);
-
-			//------------------------------------------------------------------
-			// Set up the sample result
-			//------------------------------------------------------------------
-
-			PathTracer::ResetEyeSampleResults(pathTracerThreadState.eyeSampleResults);
-
-			SampleResult &eyeSampleResult = pathTracerThreadState.eyeSampleResults[0];
-
-			const UV filmUV(
-					bsdf.hitPoint.uv[mapInfo.uvindex].u - floorf(bsdf.hitPoint.uv[mapInfo.uvindex].u),
-					1.f - (bsdf.hitPoint.uv[mapInfo.uvindex].v - floorf(bsdf.hitPoint.uv[mapInfo.uvindex].v)));
-
-			const float filmX = filmUV.u * pathTracerThreadState.film->GetWidth() - .5f;
-			const float filmY = filmUV.v * pathTracerThreadState.film->GetHeight() - .5f;
-
-			const u_int *subRegion = pathTracerThreadState.film->GetSubRegion();
-			eyeSampleResult.pixelX = Clamp(Floor2UInt(filmX), subRegion[0], subRegion[1]);
-			eyeSampleResult.pixelY = Clamp(Floor2UInt(filmY), subRegion[2], subRegion[3]);
-			eyeSampleResult.filmX = filmX;
-			eyeSampleResult.filmY = filmY;
-
-			switch (mapInfo.type) {
-				case COMBINED: {
-					//----------------------------------------------------------
-					// Render the surface point direct light
-					//----------------------------------------------------------
-
-					// To keep track of the number of rays traced
-					const double deviceRayCount = device->GetTotalRaysCount();
-
-					pathTracer.DirectLightSampling(pathTracerThreadState.device, scene,
-							timeSample,
-							eyeSampler->GetSample(pathTracer.eyeSampleSize + 3),
-							eyeSampler->GetSample(pathTracer.eyeSampleSize + 4),
-							eyeSampler->GetSample(pathTracer.eyeSampleSize + 5),
-							eyeSampler->GetSample(pathTracer.eyeSampleSize + 6),
-							eyeSampler->GetSample(pathTracer.eyeSampleSize + 7),
-							pathInfo, 
-							Spectrum(1.f), bsdf, &pathTracerThreadState.eyeSampleResults[0]);
-
-					pathTracerThreadState.eyeSampleResults[0].rayCount += (float)(device->GetTotalRaysCount() - deviceRayCount);
-
-					//----------------------------------------------------------
-					// Render the received light from the path
-					//----------------------------------------------------------
-
-					pathTracer.RenderEyePath(pathTracerThreadState.device, pathTracerThreadState.scene,
-							pathTracerThreadState.eyeSampler, pathInfo, eyeRay,
-							pathTracerThreadState.eyeSampleResults);
-
-					for(u_int i = 0; i < pathTracerThreadState.eyeSampleResults.size(); ++i) {
-						SampleResult &sampleResult = pathTracerThreadState.eyeSampleResults[i];
-
-						for(u_int j = 0; j < sampleResult.radiance.size(); ++j)
-							sampleResult.radiance[j] *= bsdfSample;
-					}
-					break;
-				}
-				case LIGHTMAP: {
-					//----------------------------------------------------------
-					// Render the received direct light
-					//----------------------------------------------------------
-
-					// To keep track of the number of rays traced
-					const double deviceRayCount = device->GetTotalRaysCount();
-
-					pathTracer.DirectLightSampling(pathTracerThreadState.device, scene,
-							timeSample,
-							eyeSampler->GetSample(pathTracer.eyeSampleSize + 3),
-							eyeSampler->GetSample(pathTracer.eyeSampleSize + 4),
-							eyeSampler->GetSample(pathTracer.eyeSampleSize + 5),
-							eyeSampler->GetSample(pathTracer.eyeSampleSize + 6),
-							eyeSampler->GetSample(pathTracer.eyeSampleSize + 7),
-							pathInfo, 
-							Spectrum(1.f), bsdf, &pathTracerThreadState.eyeSampleResults[0],
-							false);
-
-					pathTracerThreadState.eyeSampleResults[0].rayCount += (float)(device->GetTotalRaysCount() - deviceRayCount);
-
-					//----------------------------------------------------------
-					// Render the received light from the path
-					//----------------------------------------------------------
-
-					pathTracer.RenderEyePath(pathTracerThreadState.device, pathTracerThreadState.scene,
-							pathTracerThreadState.eyeSampler, pathInfo, eyeRay,
-							pathTracerThreadState.eyeSampleResults);
-					break;
-				}
-				default:
-					throw runtime_error("Unknown bake type in BakeCPURenderThread::RenderFunc(): " + ToString(mapInfo.type));
-			}
-
-			//------------------------------------------------------------------
-			// AOV support
-			//------------------------------------------------------------------
-
-			if (bsdf.IsAlbedoEndPoint())
-				pathTracerThreadState.eyeSampleResults[0].albedo = bsdf.Albedo();
-
-			pathTracerThreadState.eyeSampleResults[0].alpha = 1.f;
-			pathTracerThreadState.eyeSampleResults[0].depth = 0.f;
-			pathTracerThreadState.eyeSampleResults[0].position = bsdf.hitPoint.p;
-			pathTracerThreadState.eyeSampleResults[0].geometryNormal = bsdf.hitPoint.geometryN;
-			pathTracerThreadState.eyeSampleResults[0].shadingNormal = bsdf.hitPoint.shadeN;
-			pathTracerThreadState.eyeSampleResults[0].materialID = bsdf.GetMaterialID();
-			pathTracerThreadState.eyeSampleResults[0].objectID = bsdf.GetObjectID();
-			pathTracerThreadState.eyeSampleResults[0].uv = bsdf.hitPoint.uv[0];
-
-			//------------------------------------------------------------------
-			// Variance clamping
-			//------------------------------------------------------------------
-
-			if (pathTracerThreadState.varianceClamping->hasClamping()) {
-				for(u_int i = 0; i < pathTracerThreadState.eyeSampleResults.size(); ++i) {
-					SampleResult &sampleResult = pathTracerThreadState.eyeSampleResults[i];
-
-					// I clamp only eye paths samples (variance clamping would cut
-					// SDS path values due to high scale of PSR samples)
-					if (sampleResult.HasChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED))
-						pathTracerThreadState.varianceClamping->Clamp(*pathTracerThreadState.film, sampleResult);
-				}
-			}
-
-			//------------------------------------------------------------------
-			// Splat the sample results
-			//------------------------------------------------------------------
-
-			pathTracerThreadState.eyeSampler->NextSample(pathTracerThreadState.eyeSampleResults);
+			RenderSample(mapInfo, pathTracerThreadState);
 
 #ifdef WIN32
 			// Work around Windows bad scheduling

@@ -21,6 +21,7 @@
 #include "slg/engines/bakecpu/bakecpu.h"
 #include "slg/engines/bakecpu/bakecpurenderstate.h"
 #include "slg/engines/caches/photongi/photongicache.h"
+#include "slg/samplers/metropolis.h"
 #include "slg/film/filters/filter.h"
 
 using namespace std;
@@ -33,12 +34,20 @@ using namespace slg;
 
 BakeCPURenderEngine::BakeCPURenderEngine(const RenderConfig *rcfg) :
 		CPUNoTileRenderEngine(rcfg), photonGICache(nullptr), sampleSplatter(nullptr),
-		mapFilm(nullptr), currentSceneObjsDist(nullptr), threadsSyncBarrier(nullptr) {
+		lightSamplerSharedData(nullptr), mapFilm(nullptr), currentSceneObjsDist(nullptr),
+		threadsSyncBarrier(nullptr) {
 	const Properties &cfg = rcfg->cfg;
 
 	minMapAutoSize = cfg.Get(Property("bake.minmapautosize")(32u)).Get<u_int>();
 	maxMapAutoSize = Max(cfg.Get(Property("bake.maxmapautosize")(1024u)).Get<u_int>(), minMapAutoSize);
-	skipExistingMapFiles = cfg.Get(Property("bake.skipexistingmapfiles")(false)).Get<u_int>();
+
+	powerOf2AutoSize = cfg.Get(Property("bake.powerof2autosize.enable")(true)).Get<bool>();
+	if (powerOf2AutoSize) {
+		minMapAutoSize = RoundUpPow2(minMapAutoSize);
+		maxMapAutoSize = RoundUpPow2(maxMapAutoSize);
+	}
+
+	skipExistingMapFiles = cfg.Get(Property("bake.skipexistingmapfiles")(false)).Get<bool>();
 
 	// Read the list of bake maps to render
 	vector<string> mapKeys = cfg.GetAllUniqueSubNames("bake.maps");
@@ -86,6 +95,7 @@ BakeCPURenderEngine::~BakeCPURenderEngine() {
 	currentSceneObjDist.clear();
 	delete currentSceneObjsDist;
 	delete photonGICache;
+	delete lightSamplerSharedData;
 	delete sampleSplatter;
 	delete mapFilm;
 	delete threadsSyncBarrier;
@@ -93,6 +103,12 @@ BakeCPURenderEngine::~BakeCPURenderEngine() {
 
 void BakeCPURenderEngine::InitFilm() {
 	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
+
+	// pathTracer has not yet been initialized
+	const bool hybridBackForwardEnable = renderConfig->cfg.Get(PathTracer::GetDefaultProps().
+			Get("path.hybridbackforward.enable")).Get<bool>();
+	if (hybridBackForwardEnable)
+		film->AddChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
 
 	film->Init();
 }
@@ -165,6 +181,9 @@ void BakeCPURenderEngine::StartLockLess() {
 
 	pathTracer.ParseOptions(cfg, GetDefaultProps());
 
+	if (pathTracer.hybridBackForwardEnable)
+		lightSamplerSharedData = MetropolisSamplerSharedData::FromProperties(Properties(), &seedBaseGenerator, film);
+
 	pathTracer.InitPixelFilterDistribution(pixelFilter);
 	pathTracer.SetPhotonGICache(photonGICache);
 
@@ -222,7 +241,12 @@ void BakeCPURenderEngine::StartLockLess() {
 			if (maxMapArea - minMapArea > 0.f) {
 				const float scale = (mapMeshesArea[mapInfoIndex] - minMapArea) / (maxMapArea - minMapArea);	
 
-				const u_int size = RoundUp<u_int>((u_int)Lerp<float>(scale, minMapAutoSize, maxMapAutoSize), 16u);
+				u_int size = (u_int)Lerp<float>(scale, minMapAutoSize, maxMapAutoSize);
+				if (powerOf2AutoSize)
+					size = Min(RoundUpPow2(size), maxMapAutoSize);
+				else
+					size = RoundUp(size, 16u);
+				size = Min(size, maxMapAutoSize);
 
 				SLG_LOG("Setting bake map #" << ToString(mapInfoIndex) << " auto size to: " << size);
 				mapInfo.width = size;
@@ -251,6 +275,9 @@ void BakeCPURenderEngine::StopLockLess() {
 	currentSceneObjsDist = nullptr;
 	
 	pathTracer.DeletePixelFilterDistribution();
+
+	delete lightSamplerSharedData;
+	lightSamplerSharedData = nullptr;
 
 	delete photonGICache;
 	photonGICache = nullptr;

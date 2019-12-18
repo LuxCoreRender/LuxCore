@@ -50,8 +50,6 @@ public:
 			const bool useFilmSplat = false);
 	virtual ~PathTracerThreadState();
 
-	friend class PathTracer;
-
 	luxrays::IntersectionDevice *device;
 
 	Sampler *eyeSampler, *lightSampler;
@@ -61,7 +59,7 @@ public:
 	
 	std::vector<SampleResult> eyeSampleResults, lightSampleResults;
 	
-private:
+	// Used for hybrid rendering
 	double eyeSampleCount, lightSampleCount;
 };
 
@@ -73,6 +71,9 @@ class PhotonGICache;
 
 class PathTracer {
 public:
+	typedef boost::function<void(const BSDF &, const u_int, const luxrays::Spectrum &,
+			std::vector<SampleResult> &sampleResults)> ConnectToEyeCallBackType;
+
 	PathTracer();
 	virtual ~PathTracer();
 
@@ -101,13 +102,22 @@ public:
 
 	void RenderLightSample(luxrays::IntersectionDevice *device,
 			const Scene *scene, const Film *film, Sampler *sampler,
-			std::vector<SampleResult> &sampleResults) const;
+			std::vector<SampleResult> &sampleResults,
+			const ConnectToEyeCallBackType &ConnectToEyeCallBack) const;
+	void RenderLightSample(luxrays::IntersectionDevice *device,
+			const Scene *scene, const Film *film, Sampler *sampler,
+			std::vector<SampleResult> &sampleResults) const {
+		static const ConnectToEyeCallBackType noCallback;
+		RenderLightSample(device, scene, film, sampler, sampleResults, noCallback);
+	}
 	
 	void RenderSample(PathTracerThreadState &state) const;
 
 	static void InitEyeSampleResults(const Film *film, std::vector<SampleResult> &sampleResults,
 			const bool useFilmSplat = false);
 	static void ResetEyeSampleResults(std::vector<SampleResult> &sampleResults);
+	static SampleResult &AddLightSampleResult(std::vector<SampleResult> &sampleResults,
+			const Film *film);
 
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	static const luxrays::Properties &GetDefaultProps();
@@ -150,8 +160,6 @@ private:
 
 	// RenderLightSample methods
 
-	SampleResult &AddLightSampleResult(std::vector<SampleResult> &sampleResults,
-			const Film *film) const;
 	void ConnectToEye(luxrays::IntersectionDevice *device,
 			const Scene *scene,
 			const Film *film, const float time,

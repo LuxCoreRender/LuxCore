@@ -16,6 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <boost/function.hpp>
+
 #include "slg/engines/pathtracer.h"
 #include "slg/engines/caches/photongi/photongicache.h"
 #include "slg/samplers/metropolis.h"
@@ -608,7 +610,6 @@ void PathTracer::RenderEyeSample(IntersectionDevice *device,
 	Ray eyeRay;
 	GenerateEyeRay(scene->camera, film, eyeRay, pathInfo.volume, sampler, sampleResults[0]);
 
-	ResetEyeSampleResults(sampleResults);
 	RenderEyePath(device, scene, sampler, pathInfo, eyeRay, sampleResults);
 }
 
@@ -617,7 +618,7 @@ void PathTracer::RenderEyeSample(IntersectionDevice *device,
 //------------------------------------------------------------------------------
 
 SampleResult &PathTracer::AddLightSampleResult(vector<SampleResult> &sampleResults,
-		const Film *film) const {
+		const Film *film) {
 	const u_int size = sampleResults.size();
 	sampleResults.resize(size + 1);
 
@@ -705,7 +706,8 @@ void PathTracer::ConnectToEye(IntersectionDevice *device,
 
 void PathTracer::RenderLightSample(IntersectionDevice *device,
 		const Scene *scene, const Film *film,
-		Sampler *sampler, vector<SampleResult> &sampleResults) const {
+		Sampler *sampler, vector<SampleResult> &sampleResults,
+		const ConnectToEyeCallBackType &ConnectToEyeCallBack) const {
 	sampleResults.clear();
 
 	Spectrum lightPathFlux;
@@ -767,12 +769,16 @@ void PathTracer::RenderLightSample(IntersectionDevice *device,
 			//--------------------------------------------------------------
 
 			if (!hybridBackForwardEnable || (pathInfo.depth.depth > 0)) {
-				ConnectToEye(device, scene, film,
-						nextEventRay.time,
-						sampler->GetSample(sampleOffset + 1),
-						sampler->GetSample(sampleOffset + 2),
-						sampler->GetSample(sampleOffset + 3),
-						*light, bsdf, lightPathFlux, pathInfo, sampleResults);
+				if (ConnectToEyeCallBack){
+					ConnectToEyeCallBack(bsdf, light->GetID(), lightPathFlux, sampleResults);
+				} else {
+					ConnectToEye(device, scene, film,
+							nextEventRay.time,
+							sampler->GetSample(sampleOffset + 1),
+							sampler->GetSample(sampleOffset + 2),
+							sampler->GetSample(sampleOffset + 3),
+							*light, bsdf, lightPathFlux, pathInfo, sampleResults);
+				}
 			}
 
 			if (pathInfo.depth.depth == maxPathDepth.depth - 1)
