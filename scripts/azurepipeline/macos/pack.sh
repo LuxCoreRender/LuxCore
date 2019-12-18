@@ -225,11 +225,18 @@ cd ../..
 echo "Creating DMG ..."
 
 hdiutil create LuxCoreRender2.3alpha0.dmg -volname "LuxCoreRender2.3alpha0" -fs HFS+ -srcfolder release_OSX_OCL/
+<<<<<<< HEAD
 
 #hdiutil create LuxCoreRender2.3alpha0.dmg -volname "LuxCoreRender2.3alpha0" -fs HFS+ -srcfolder release_OSX_OCL/
+=======
+>>>>>>> parent of fd385f060... Added version string to name of MacOS artifacts
 
 mv LuxCoreRender2.3alpha0.dmg $BUILD_ARTIFACTSTAGINGDIRECTORY/LuxCoreRender2.3alpha0.dmg
 
+<<<<<<< HEAD
+=======
+mv LuxCoreRender2.3alpha0.dmg $BUILD_ARTIFACTSTAGINGDIRECTORY/LuxCoreRender2.3alpha0.dmg
+>>>>>>> parent of fd385f060... Added version string to name of MacOS artifacts
 
 
 
