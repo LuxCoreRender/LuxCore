@@ -222,13 +222,24 @@ echo "denoise installed"
 
 cd ../..
 
+# Set up correct names for release version and SDK
+if [[ -z "$VERSION_STRING" ]] ; then
+    VERSION_STRING=latest
+fi
+
+# if [[ "$FINAL" == "TRUE" ]] ; then
+    # SDK_BUILD=-sdk
+	# # Required to link executables
+	# export LD_LIBRARY_PATH="`pwd`/LinuxCompile/target-64-sse2/lib:$LD_LIBRARY_PATH"
+# fi
+
 echo "Creating DMG ..."
 
-hdiutil create LuxCoreRender2.3alpha0.dmg -volname "LuxCoreRender2.3alpha0" -fs HFS+ -srcfolder release_OSX_OCL/
+hdiutil create luxcorerender-$VERSION_STRING-mac64$SDK_BUILD.dmg -volname "LuxCoreRender$VERSION_STRING" -fs HFS+ -srcfolder release_OSX_OCL/
 
 echo "DMG created !"
 
-mv LuxCoreRender2.3alpha0.dmg $BUILD_ARTIFACTSTAGINGDIRECTORY/LuxCoreRender2.3alpha0.dmg
+mv luxcorerender-$VERSION_STRING-mac64$SDK_BUILD.dmg $BUILD_ARTIFACTSTAGINGDIRECTORY/luxcorerender-$VERSION_STRING-mac64$SDK_BUILD.dmg
 
 
 
