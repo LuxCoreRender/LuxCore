@@ -222,15 +222,25 @@ echo "denoise installed"
 
 cd ../..
 
-echo "Creating TAR ..."
+# Set up correct names for release version and SDK
+if [[ -z "$VERSION_STRING" ]] ; then
+    VERSION_STRING=latest
+fi
 
-tar -czf LuxCoreRender2.3aplpha0.tar.gz ./release_OSX_OCL
+# if [[ "$FINAL" == "TRUE" ]] ; then
+    # SDK_BUILD=-sdk
+	# # Required to link executables
+	# export LD_LIBRARY_PATH="`pwd`/LinuxCompile/target-64-sse2/lib:$LD_LIBRARY_PATH"
+# fi
+
+echo "Creating DMG ..."
+
+hdiutil create luxcorerender-$VERSION_STRING-mac64$SDK_BUILD.dmg -volname "LuxCoreRender$VERSION_STRING" -fs HFS+ -srcfolder release_OSX_OCL/
 
 #hdiutil create LuxCoreRender2.3alpha0.dmg -volname "LuxCoreRender2.3alpha0" -fs HFS+ -srcfolder release_OSX_OCL/
 
-echo "TAR created !"
+mv luxcorerender-$VERSION_STRING-mac64$SDK_BUILD.dmg $BUILD_ARTIFACTSTAGINGDIRECTORY/luxcorerender-$VERSION_STRING-mac64$SDK_BUILD.dmg
 
-mv LuxCoreRender2.3aplpha0.tar.gz $BUILD_ARTIFACTSTAGINGDIRECTORY/LuxCoreRender2.3aplpha0.tar.gz
 
 
 
