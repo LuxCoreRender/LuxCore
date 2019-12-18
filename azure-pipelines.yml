@@ -166,7 +166,7 @@ jobs:
     displayName: Building LuxCore
   #- script: ./scripts/azurepipeline/macos/test.sh
     #displayName: Testing LuxCore
-  - script: ./script/azurepipeline/macos/pack.sh
+  - script: ./scripts/azurepipeline/macos/pack.sh
     displayName: Packing Diskimage
 
 
