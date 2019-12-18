@@ -76,7 +76,7 @@ echo "LuxCoreUi installed"
 
 mkdir luxcoreconsole
 
-cp ../build/luxcoreconsole luxcoreconsole
+cp ../build_ocl/luxcoreconsole luxcoreconsole
 
 cd luxcoreconsole
 
@@ -145,7 +145,7 @@ cd ..
 
 mkdir pyluxcore
 
-cp ../build/lib/pyluxcore* pyluxcore
+cp ../build_ocl/lib/pyluxcore* pyluxcore
 
 cd pyluxcore
 
