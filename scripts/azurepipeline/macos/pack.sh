@@ -228,6 +228,7 @@ hdiutil create LuxCoreRender2.3alpha0.dmg -volname "LuxCoreRender2.3alpha0" -fs 
 
 echo "DMG created !"
 
+mv LuxCoreRender2.3alpha0.dmg $BUILD_ARTIFACTSTAGINGDIRECTORY/LuxCoreRender2.3alpha0.dmg
 
 
 
