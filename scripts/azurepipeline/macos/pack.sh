@@ -188,6 +188,14 @@ cp -f $DEPS_SOURCE/lib/libtbbmalloc.dylib ./libtbbmalloc.dylib
 chmod +w ./libtbbmalloc.dylib
 install_name_tool -id @loader_path/libtbbmalloc.dylib ./libtbbmalloc.dylib
 
+#libOpenImageDenoise
+
+cp -f $DEPS_SOURCE/lib/libOpenImageDenoise.1.0.0.dylib ./libOpenImageDenoise.1.0.0.dylib
+chmod +w ./libOpenImageDenoise.1.0.0.dylib
+install_name_tool -id @loader_path/libOpenImageDenoise.1.0.0.dylib ./libOpenImageDenoise.1.0.0.dylib
+install_name_tool -change @rpath/libtbb.dylib @loader_path/libtbb.dylib ./libOpenImageDenoise.1.0.0.dylib
+install_name_tool -change @rpath/libtbbmalloc.dylib @loader_path/libtbbmalloc.dylib ./libOpenImageDenoise.1.0.0.dylib
+
 #pyluxcore.so
 
 install_name_tool -change @rpath/libomp.dylib @loader_path/libomp.dylib pyluxcore.so
@@ -196,18 +204,11 @@ install_name_tool -change @rpath/libtbb.dylib @loader_path/libtbb.dylib pyluxcor
 install_name_tool -change @rpath/libtiff.5.dylib @loader_path/libtiff.5.dylib pyluxcore.so
 install_name_tool -change @rpath/libOpenImageIO.1.8.dylib @loader_path/libOpenImageIO.1.8.dylib pyluxcore.so
 install_name_tool -change @rpath/libtbbmalloc.dylib @loader_path/libtbbmalloc.dylib pyluxcore.so
+install_name_tool -change @rpath/libOpenImageDenoise.0.dylib @loader_path/libOpwnImagedenoise.1.0.0.dylib pyluxcore.so
 
 echo "PyLuxCore installed"
 
 ### denoise
-
-#libOpenImageDenoise
-
-cp -f $DEPS_SOURCE/lib/libOpenImageDenoise.1.0.0.dylib ./libOpenImageDenoise.1.0.0.dylib
-chmod +w ./libOpenImageDenoise.1.0.0.dylib
-install_name_tool -id @executable_path/libOpenImageDenoise.1.0.0.dylib ./libOpenImageDenoise.1.0.0.dylib
-install_name_tool -change @rpath/libtbb.dylib @executable_path/libtbb.dylib ./libOpenImageDenoise.1.0.0.dylib
-install_name_tool -change @rpath/libtbbmalloc.dylib @executable_path/libtbbmalloc.dylib ./libOpenImageDenoise.1.0.0.dylib
 
 #denoise
 cp ../../macos/bin/denoise .
