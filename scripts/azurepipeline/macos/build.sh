@@ -23,8 +23,14 @@ eval "$(pyenv init -)"
 # Compiling OpenCL version"
 #==========================================================================
 
-mkdir build
-pushd  build
+mkdir build_ocl
+pushd  build_ocl
 cmake -DOSX_DEPENDENCY_ROOT=$DEPS_SOURCE ..
 cmake --build . --config Release
 popd
+
+#mkdir build_opencl
+#pushd build_opencl
+#cmake -G Xcode -DOSX_DEPENDENCY_ROOT=$DEPS_SOURCE ..
+#cmake --build . --config Release
+#popd
