@@ -37,8 +37,6 @@ cmake -DOSX_DEPENDENCY_ROOT=$DEPS_SOURCE ..
 cmake --build . --config Release
 popd
 
-scripts/package_lux_osx_ocl.sh
-
 #mkdir build_opencl
 #pushd build_opencl
 #cmake -G Xcode -DOSX_DEPENDENCY_ROOT=$DEPS_SOURCE ..
