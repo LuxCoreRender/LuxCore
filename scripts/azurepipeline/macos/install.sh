@@ -4,6 +4,7 @@
 brew install bison
 brew install pyenv
 brew install freeimage
+#brew install create-dmg
 
 eval "$(pyenv init -)"
 

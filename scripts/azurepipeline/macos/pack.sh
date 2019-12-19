@@ -2,14 +2,18 @@
 
 DEPS_SOURCE=`pwd`/macos
 
-mkdir release_OSX_OCL
+### packing opencl less version
+
+mkdir release_OSX
 
 ###luxcoreui bundle
 
-cp -R macos/mac_bundle/LuxCore.app release_OSX_OCL
-cp build_ocl/luxcoreui release_OSX_OCL/LuxCore.app/Contents/MacOS
+echo "Bundeling opencl-less Version"
 
-cd release_OSX_OCL
+cp -R macos/mac_bundle/LuxCore.app release_OSX
+cp build/luxcoreui release_OSX/LuxCore.app/Contents/MacOS
+
+cd release_OSX
 
 mkdir -p LuxCore.app/Contents/Resources/libs/
 
@@ -76,7 +80,7 @@ echo "LuxCoreUi installed"
 
 mkdir luxcoreconsole
 
-cp ../build_ocl/luxcoreconsole luxcoreconsole
+cp ../build/luxcoreconsole luxcoreconsole
 
 cd luxcoreconsole
 
@@ -145,7 +149,7 @@ cd ..
 
 mkdir pyluxcore
 
-cp ../build_ocl/lib/pyluxcore* pyluxcore
+cp ../build/lib/pyluxcore* pyluxcore
 
 cd pyluxcore
 
@@ -219,7 +223,7 @@ install_name_tool -change @rpath/libOpenImageDenoise.1.0.0.dylib @executable_pat
 install_name_tool -change @rpath/libtbb.dylib @executable_path/libtbb.dylib denoise
 install_name_tool -change @rpath/libtbbmalloc.dylib @executable_path/libtbbmalloc.dylib denoise
 
-echo "denoise installed"
+echo "Denoise installed"
 
 cd ../..
 
@@ -234,13 +238,113 @@ fi
 	# export LD_LIBRARY_PATH="`pwd`/LinuxCompile/target-64-sse2/lib:$LD_LIBRARY_PATH"
 # fi
 
-echo "Creating DMG ..."
+#for fancy background 
 
-hdiutil create luxcorerender-$VERSION_STRING-mac64$SDK_BUILD.dmg -volname "LuxCoreRender$VERSION_STRING" -fs HFS+ -srcfolder release_OSX_OCL/
+#create-dmg --volname "LuxCoreRender$VERSION_STRING" --background macos/mac_bundle/back-dmg.jpg --window-size 512 300 --app-drop-link 60 175 --icon-size 64 --text-size 12 --icon LuxCore.app 0 65 --icon luxcoreconsole 120 65 --icon pyluxcore 250 65  --volicon macos/mac_bundle/LuxCore.app/Contents/Resources/luxcoreui.icns luxcorerender-$VERSION_STRING-mac64$SDK_BUILD.dmg release_OSX/
 
-echo "DMG created !"
+### creating opencl less DMG
+
+echo "Creating OpenCL less Version DMG ..."
+
+hdiutil create luxcorerender-$VERSION_STRING-mac64$SDK_BUILD.dmg -volname "LuxCoreRender-$VERSION_STRING" -fs HFS+ -srcfolder release_OSX/
+
+echo "Staging OpennCL less Version DMG"
 
 mv luxcorerender-$VERSION_STRING-mac64$SDK_BUILD.dmg $BUILD_ARTIFACTSTAGINGDIRECTORY/luxcorerender-$VERSION_STRING-mac64$SDK_BUILD.dmg
+
+
+###packing opencl version
+
+echo "Bundeling opencl Version"
+
+mkdir release_OSX_ocl
+
+cp -R release_OSX/* release_OSX_ocl
+
+cd release_OSX_ocl
+
+rm ./LuxCore.app/Contents/MacOS/luxcoreui
+
+cp ../build_ocl/luxcoreui ./LuxCore.app/Contents/MacOS
+
+rm luxcoreconsole/luxcoreconsole
+
+cp ../build_ocl/luxcoreconsole ./luxcoreconsole
+
+rm pyluxcore/pyluxcore.so
+
+cp ../build_ocl/pyluxcore.so ./pyluxcore
+
+#luxcoreui
+
+install_name_tool -change @rpath/libomp.dylib @executable_path/../Resources/libs/libomp.dylib LuxCore.app/Contents/MacOS/luxcoreui
+install_name_tool -change @rpath/libembree3.3.dylib @executable_path/../Resources/libs/libembree3.3.dylib LuxCore.app/Contents/MacOS/luxcoreui
+install_name_tool -change @rpath/libtbb.dylib @executable_path/../Resources/libs/libtbb.dylib LuxCore.app/Contents/MacOS/luxcoreui
+install_name_tool -change @rpath/libOpenImageIO.1.8.dylib @executable_path/../Resources/libs/libOpenImageIO.1.8.dylib LuxCore.app/Contents/MacOS/luxcoreui
+install_name_tool -change @rpath/libtbbmalloc.dylib @executable_path/../Resources/libs/libtbbmalloc.dylib LuxCore.app/Contents/MacOS/luxcoreui
+install_name_tool -change @rpath/libtiff.5.dylib @executable_path/../Resources/libs/libtiff.5.dylib LuxCore.app/Contents/MacOS/luxcoreui
+install_name_tool -change @rpath/libOpenImageDenoise.0.dylib @executable_path/../Resources/libs/libOpenImageDenoise.1.0.0.dylib LuxCore.app/Contents/MacOS/luxcoreui
+
+echo "LuxCoreUi installed"
+
+#luxcoreconsole
+
+cd luxcoreconsole
+
+install_name_tool -change @rpath/libomp.dylib @executable_path/libs/libomp.dylib ./luxcoreconsole
+install_name_tool -change @rpath/libembree3.3.dylib @executable_path/libs/libembree3.3.dylib ./luxcoreconsole
+install_name_tool -change @rpath/libtbb.dylib @executable_path/libs/libtbb.dylib ./luxcoreconsole
+install_name_tool -change @rpath/libOpenImageIO.1.8.dylib @executable_path/libs/libOpenImageIO.1.8.dylib ./luxcoreconsole
+install_name_tool -change @rpath/libtbbmalloc.dylib @executable_path/libs/libtbbmalloc.dylib ./luxcoreconsole
+install_name_tool -change @rpath/libtiff.5.dylib @executable_path/libs/libtiff.5.dylib ./luxcoreconsole
+install_name_tool -change @rpath/libOpenImageDenoise.0.dylib @executable_path/libs/libOpenImageDenoise.1.0.0.dylib ./luxcoreconsole
+
+cd ..
+
+echo "LuxCoreConsole installed"
+
+#pyluxcore.so
+
+cd pyluxcore
+
+install_name_tool -change @rpath/libomp.dylib @loader_path/libomp.dylib pyluxcore.so
+install_name_tool -change @rpath/libembree3.3.dylib @loader_path/libembree3.3.dylib pyluxcore.so
+install_name_tool -change @rpath/libtbb.dylib @loader_path/libtbb.dylib pyluxcore.so
+install_name_tool -change @rpath/libtiff.5.dylib @loader_path/libtiff.5.dylib pyluxcore.so
+install_name_tool -change @rpath/libOpenImageIO.1.8.dylib @loader_path/libOpenImageIO.1.8.dylib pyluxcore.so
+install_name_tool -change @rpath/libtbbmalloc.dylib @loader_path/libtbbmalloc.dylib pyluxcore.so
+install_name_tool -change @rpath/libOpenImageDenoise.0.dylib @loader_path/libOpwnImagedenoise.1.0.0.dylib pyluxcore.so
+
+echo "PyLuxCore installed"
+
+cd ..
+
+echo "Denoise installed"
+
+cd ..
+
+### creating opencl DMG
+
+#for fancy background 
+
+#create-dmg --volname "LuxCoreRender$VERSION_STRING-opencl" --background macos/mac_bundle/back-dmg.jpg --window-size 512 300 --app-drop-link 60 175 --icon-size 64 --text-size 12 --icon LuxCore.app 0 65 --icon luxcoreconsole 120 65 --icon pyluxcore 250 65  --volicon macos/mac_bundle/LuxCore.app/Contents/Resources/luxcoreui.icns luxcorerender-$VERSION_STRING-mac64$SDK_BUILD-opencl.dmg release_OSX_ocl/
+
+echo echo "Creating OpenCL Version DMG ..."
+
+hdiutil create luxcorerender-$VERSION_STRING-mac64$SDK_BUILD-opencl.dmg -volname "LuxCoreRender-$VERSION_STRING-opencl" -fs HFS+ -srcfolder release_OSX_ocl/
+
+echo "Staging OpennCL Version DMG"
+
+mv luxcorerender-$VERSION_STRING-mac64$SDK_BUILD-opencl.dmg $BUILD_ARTIFACTSTAGINGDIRECTORY/luxcorerender-$VERSION_STRING-mac64$SDK_BUILD-opencl.dmg
+
+echo "Finished ! All is good !"
+
+
+
+
+
+
+
 
 
 
