@@ -200,7 +200,7 @@ IF(APPLE)
 		SET(CMAKE_INSTALL_RPATH "@loader_path")
 
 	#### OSX-flags by jensverwiebe
-	ADD_DEFINITIONS(-Wno-everything -DHAVE_PTHREAD_H) # global compile definitions
+	ADD_DEFINITIONS(-Wno-everything -DHAVE_PTHREAD_H -DNDEBUG) # global compile definitions
 	ADD_DEFINITIONS(-fvisibility=hidden -fvisibility-inlines-hidden)
 	ADD_DEFINITIONS(-Wno-unused-local-typedef -Wno-unused-variable) # silence boost __attribute__((unused)) bug
 

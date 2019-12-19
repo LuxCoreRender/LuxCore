@@ -176,7 +176,7 @@ jobs:
     inputs:
       pathtoPublish: '$(Build.ArtifactStagingDirectory)'
       artifactName: LuxCore
-    displayName: 'Upload luxcorerender-<version>-macos'
+    displayName: 'Upload luxcorerender-<version>'
     condition: eq(variables['System.PullRequest.IsFork'], 'False')
 
 
