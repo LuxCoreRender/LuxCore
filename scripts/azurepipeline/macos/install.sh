@@ -2,8 +2,8 @@
 
 #Install Build Tools
 brew install bison
-brew install freeimage
 brew install pyenv
+brew install freeimage
 
 eval "$(pyenv init -)"
 

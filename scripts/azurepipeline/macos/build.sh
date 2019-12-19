@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #Fetch Artifacts
-wget https://github.com/LuxCoreRender/MacOSCompileDeps/releases/download/luxcorerender_v2.3alpha0/MacDistFiles.tar.gz
+wget https://github.com/LuxCoreRender/MacOSCompileDeps/releases/download/luxcorerender_v2.3alpha1/MacDistFiles.tar.gz
 tar xzf MacDistFiles.tar.gz
 
 # Set Environment Variables
@@ -13,30 +13,18 @@ eval "$(pyenv init -)"
 # Compiling OpenCL-less version"
 #==========================================================================
 
-mkdir build
-pushd  build
+mkdir build_nocl
+pushd  build_noocl
 cmake -DLUXRAYS_DISABLE_OPENCL=1 -DOSX_DEPENDENCY_ROOT=$DEPS_SOURCE ..
 cmake --build . --config Release
 popd
-
-#mkdir build
-#pushd build
-#cmake -G Xcode -DLUXRAYS_DISABLE_OPENCL=1 -DOSX_DEPENDENCY_ROOT=$DEPS_SOURCE ..
-#cmake --build . --config Release
-#popd
 
 #==========================================================================
 # Compiling OpenCL version"
 #==========================================================================
 
-mkdir build_ocl
-pushd  build_ocl
+mkdir build
+pushd  build
 cmake -DOSX_DEPENDENCY_ROOT=$DEPS_SOURCE ..
 cmake --build . --config Release
 popd
-
-#mkdir build_opencl
-#pushd build_opencl
-#cmake -G Xcode -DOSX_DEPENDENCY_ROOT=$DEPS_SOURCE ..
-#cmake --build . --config Release
-#popd
