@@ -242,7 +242,7 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 
 	if (cooldown && isLargeMutation) {
 		AtomicAdd(&sharedData->totalLuminance, newLuminance);
-		AtomicAdd(&sharedData->sampleCount, 1);
+		AtomicAdd(&sharedData->sampleCount, 1.f);
 	}
 
 	const float invMeanIntensity = (sharedData->totalLuminance > 0.) ?
@@ -335,7 +335,10 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 	if (cooldown) {
 		// Check if it is time to end the cooldown (i.e. I have an average of
 		// 1 sample for each pixel).
-		const u_int pixelCount = film ? (4 * film->GetWidth() * film->GetHeight()) : 8192;
+		//
+		// Note: I have to use a cap for pixelCount or the accumulated luminance
+		// will overflow the floating point 32bit variable
+		const u_int pixelCount = film ? Min(4u * film->GetWidth() * film->GetHeight(), 768u * 768u) : 8192;
 		if (sharedData->sampleCount > pixelCount) {
 			cooldown = false;
 			isLargeMutation = (rndGen->floatValue() < currentLargeMutationProbability);

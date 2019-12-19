@@ -35,6 +35,7 @@
 * Fixed light tracing when using orthographic camera
 * Fixed a light intensity problem with OpenCL rendering when using a mix of materials with emission
 * Fixed the support for wrap mode in image maps loaded from files
+* Fixed a brightness problem when rendering large images with Metropolis sampler
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
