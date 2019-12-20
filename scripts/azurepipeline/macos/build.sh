@@ -10,21 +10,25 @@ DEPS_SOURCE=`pwd`/macos
 eval "$(pyenv init -)"
 
 #==========================================================================
-# Compiling OpenCL-less version"
-#==========================================================================
-
-mkdir build_nocl
-pushd  build_noocl
-cmake -DLUXRAYS_DISABLE_OPENCL=1 -DOSX_DEPENDENCY_ROOT=$DEPS_SOURCE ..
-cmake --build . --config Release
-popd
-
-#==========================================================================
 # Compiling OpenCL version"
 #==========================================================================
 
 mkdir build
 pushd  build
-cmake -DOSX_DEPENDENCY_ROOT=$DEPS_SOURCE ..
-cmake --build . --config Release
+cmake -DOSX_DEPENDENCY_ROOT=$DEPS_SOURCE -DCMAKE_BUILD_TYPE=Release ..
+make
+popd
+
+mkdir build_ocl
+cp ./build/Release/luxcoreui ./build_ocl
+cp ./build/Release/luxcoreconsole ./build_ocl
+cp ./build/lib/Release/pyluxcore.so ./build_ocl
+
+#==========================================================================
+# Compiling OpenCL-less version"
+#==========================================================================
+
+pushd  build
+cmake -DLUXRAYS_DISABLE_OPENCL=1 -DOSX_DEPENDENCY_ROOT=$DEPS_SOURCE -DCMAKE_BUILD_TYPE=Release ..
+make
 popd

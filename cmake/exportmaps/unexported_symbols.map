@@ -2,8 +2,9 @@
 ## (aka visibility=hidden) and will not be global in the output file
 ## essentially atm for boost::exceptions atm., can be enlarged later
 *boost*
-*TIFF*
+*tiff*
 *OpenImageIO*
+*OpenImageDenoise*
 *png*
 *jpeg*
 *jinit*
