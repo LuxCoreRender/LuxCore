@@ -26,7 +26,7 @@ SET(PYTHONLIBS_FOUND 1)
 MESSAGE(STATUS "Python3 found !!!!")
 ELSE()
     #SET(PYTHON_INCLUDE_DIRS "/usr/local/Cellar/python/3.7.5/Frameworks/Python.framework/Versions/3.7/include/python3.7m")
-    message(STATUS "Python3 include not found using hardcoded ${PYTHON_INCLUDE_DIRS}")
+    message(STATUS "Python3 include not found !!!!!")
 ENDIF()
 
 #Find pyside2-uic so that .ui files rebuild pyside deps
