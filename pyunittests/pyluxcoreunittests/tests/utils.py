@@ -54,18 +54,24 @@ engineProperties = {
 		"""
 		film.width = 150
 		film.height = 100
+		batch.haltspp = 0
+		batch.halttime = 0
 		batch.haltthreshold = 0.075
 		"""),
 	"BIDIRCPU" : pyluxcore.Properties().SetFromString(
 		"""
 		film.width = 150
 		film.height = 100
+		batch.haltspp = 0
+		batch.halttime = 0
 		batch.haltthreshold = 0.075
 		"""),
 	"TILEPATHCPU" : pyluxcore.Properties().SetFromString(
 		"""
 		film.width = 150
 		film.height = 100
+		batch.haltspp = 0
+		batch.halttime = 0
 		batch.haltthreshold = 0.075
 		tilepath.sampling.aa.size = 2
 		"""),
@@ -73,12 +79,16 @@ engineProperties = {
 		"""
 		film.width = 150
 		film.height = 100
+		batch.haltspp = 0
+		batch.halttime = 0
 		batch.haltthreshold = 0.075
 		"""),
 	"TILEPATHOCL" : pyluxcore.Properties().SetFromString(
 		"""
 		film.width = 150
 		film.height = 100
+		batch.haltspp = 0
+		batch.halttime = 0
 		batch.haltthreshold = 0.075
 		tilepath.sampling.aa.size = 2
 		"""),

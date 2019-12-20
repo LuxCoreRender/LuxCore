@@ -31,13 +31,13 @@ import pyluxcoreunittests.tests.utils
 
 import logging
 logger = logging.getLogger("pyunittests")
-logging.basicConfig(level=logging.INFO, format="[%(threadName)s][%(asctime)s] %(message)s")
+logging.basicConfig(level=logging.INFO, format="[%(threadName)s][%(asctime)s] %(message)s", stream=sys.stderr)
 
 printLuxCoreLog = False
 
 def LuxCoreLogHandler(msg):
 	if printLuxCoreLog:
-		logger.info("[%s]%s" % (strftime("%Y-%m-%d %H:%M:%S", localtime()), msg), file=sys.stderr)
+		logger.info("[%s]%s" % (strftime("%Y-%m-%d %H:%M:%S", localtime()), msg))
 
 def FilterTests(pattern, testSuite):
 	try:
@@ -177,9 +177,14 @@ def main():
 		sceneSuite = unittest.TestLoader().discover("pyluxcoreunittests.tests.scene", top_level_dir=".")
 		haltSuite = unittest.TestLoader().discover("pyluxcoreunittests.tests.halt", top_level_dir=".")
 		serializationSuite = unittest.TestLoader().discover("pyluxcoreunittests.tests.serialization", top_level_dir=".")
+		suitesList = [propertiesSuite, basicSuite, cameraSuite, textureSuite, materialSuite,
+			shapesSuite, lightSuite, sceneSuite, haltSuite, serializationSuite]
 
-		allTests = unittest.TestSuite([propertiesSuite, basicSuite, cameraSuite, textureSuite, materialSuite,
-			shapesSuite, lightSuite, sceneSuite, haltSuite, serializationSuite])
+		if pyluxcoreunittests.tests.utils.LuxCoreTest.customConfigProps.IsDefined("luxcoretestscenes.directory"):
+			luxCoreTestScenesSuite = unittest.TestLoader().discover("pyluxcoreunittests.tests.luxcoretestscenes", top_level_dir=".")
+			suitesList += luxCoreTestScenesSuite
+
+		allTests = unittest.TestSuite(suitesList)
 
 		# List the tests if required
 

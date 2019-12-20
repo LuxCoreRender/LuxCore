@@ -30,6 +30,11 @@ To run the test with a custom configuration:
 
 python3 unittests.py --config testconfigs/dade.cfg
 
+Add the following properties to --config file to enable
+https://github.com/LuxCoreRender/LuxCoreTestScenes test scenes:
+
+luxcoretestscenes.directory = /home/david/projects/luxcorerender/LuxCoreTestScenes
+
 Reference images
 ================
 
