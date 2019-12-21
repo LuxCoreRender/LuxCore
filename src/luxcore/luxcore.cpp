@@ -190,6 +190,7 @@ Properties luxcore::GetPlatformDesc() {
 #endif
 
 	props << Property("compile.LUXCORE_DISABLE_EMBREE_BVH_BUILDER")(false);
+	props << Property("compile.LC_MESH_MAX_DATA_COUNT")(LC_MESH_MAX_DATA_COUNT);
 
 	return props;
 }
@@ -281,6 +282,16 @@ template<> void Film::GetOutput<float>(const FilmOutputType type, float *buffer,
 template<> void Film::GetOutput<unsigned int>(const FilmOutputType type, unsigned int *buffer,
 		const unsigned int index, const bool executeImagePipeline) {
 	GetOutputUInt(type, buffer, index, executeImagePipeline);
+}
+
+template<> void Film::UpdateOutput<float>(const FilmOutputType type, const float *buffer,
+		const unsigned int index, const bool executeImagePipeline) {
+	UpdateOutputFloat(type, buffer, index, executeImagePipeline);
+}
+
+template<> void Film::UpdateOutput<unsigned int>(const FilmOutputType type, const unsigned int *buffer,
+		const unsigned int index, const bool executeImagePipeline) {
+	UpdateOutputUInt(type, buffer, index, executeImagePipeline);
 }
 
 template<> const float *Film::GetChannel<float>(const FilmChannelType type,

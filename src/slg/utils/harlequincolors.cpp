@@ -32,7 +32,7 @@ using namespace slg;
 namespace slg {
 
 // Must be power of 2
-#define HARLEQUIN_TABLE_SIZE 0x1f
+#define HARLEQUIN_TABLE_SIZE 128
 
 static vector<Spectrum> InitHarlequinColorsTable(const u_int size) {
 	vector<Spectrum> table(size);
@@ -40,18 +40,22 @@ static vector<Spectrum> InitHarlequinColorsTable(const u_int size) {
 	for (u_int i = 0; i < size; i++) {
 		Spectrum &c = table[i];
 		
-		c.c[0] = RadicalInverse(i * 3 + 1, 2);
-		c.c[1] = RadicalInverse(i * 3 + 1, 3);
-		c.c[2] = RadicalInverse(i * 3 + 1, 5);
-
+		c.c[0] = RadicalInverse(i + 1, 2);
+		c.c[1] = RadicalInverse(i + 1, 3);
+		c.c[2] = RadicalInverse(i + 1, 5);
 	}
-	
+
 	return table;
 }
 
 static vector<Spectrum> HarlequinColorsTable = InitHarlequinColorsTable(HARLEQUIN_TABLE_SIZE);
 
-Spectrum GetHarlequinColorImpl(const u_longlong v) {
+const Spectrum &GetHarlequinColorByIndex(const u_int v) {
+	return HarlequinColorsTable[v & (HARLEQUIN_TABLE_SIZE - 1)];
+}
+
+const Spectrum &GetHarlequinColorByAddr(const u_longlong v) {
+	// I assume the addresd is 8 bytes aligned
 	const u_longlong index = (v & ((HARLEQUIN_TABLE_SIZE - 1) << 3)) >> 3;
 	
 	return HarlequinColorsTable[index];

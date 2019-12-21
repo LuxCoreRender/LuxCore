@@ -369,8 +369,8 @@ PropertyValue &PropertyValue::operator=(const PropertyValue &propVal) {
 	return *this;
 }
 
-void PropertyValue::Copy(const PropertyValue &propVal0, PropertyValue &prop1Val) {
-	switch (prop1Val.dataType) {
+void PropertyValue::Copy(const PropertyValue &propVal0, PropertyValue &propVal1) {
+	switch (propVal1.dataType) {
 		case NONE_VAL:
 		case BOOL_VAL:
 		case INT_VAL:
@@ -380,47 +380,47 @@ void PropertyValue::Copy(const PropertyValue &propVal0, PropertyValue &prop1Val)
 		case ULONGLONG_VAL:
 			break;
 		case STRING_VAL:
-			delete prop1Val.data.stringVal;
+			delete propVal1.data.stringVal;
 			break;
 		case BLOB_VAL:
-			delete prop1Val.data.blobVal;
+			delete propVal1.data.blobVal;
 			break;
 		default:
-			throw std::runtime_error("Unknown type in PropertyValue::Copy(): " + ToString(prop1Val.dataType));
+			throw std::runtime_error("Unknown type in PropertyValue::Copy(): " + ToString(propVal1.dataType));
 	}
 
-	prop1Val.dataType = propVal0.dataType;
+	propVal1.dataType = propVal0.dataType;
 
-	switch (prop1Val.dataType) {
+	switch (propVal1.dataType) {
 		case NONE_VAL:
 			// Nothig to do
 			break;
 		case BOOL_VAL:
-			prop1Val.data.boolVal = propVal0.data.boolVal;
+			propVal1.data.boolVal = propVal0.data.boolVal;
 			break;
 		case INT_VAL:
-			prop1Val.data.intVal = propVal0.data.intVal;
+			propVal1.data.intVal = propVal0.data.intVal;
 			break;
 		case UINT_VAL:
-			prop1Val.data.uintVal = propVal0.data.uintVal;
+			propVal1.data.uintVal = propVal0.data.uintVal;
 			break;
 		case FLOAT_VAL:
-			prop1Val.data.floatVal = propVal0.data.floatVal;
+			propVal1.data.floatVal = propVal0.data.floatVal;
 			break;
 		case DOUBLE_VAL:
-			prop1Val.data.doubleVal = propVal0.data.doubleVal;
+			propVal1.data.doubleVal = propVal0.data.doubleVal;
 			break;
 		case ULONGLONG_VAL:
-			prop1Val.data.ulonglongVal = propVal0.data.ulonglongVal;
+			propVal1.data.ulonglongVal = propVal0.data.ulonglongVal;
 			break;
 		case STRING_VAL:
-			prop1Val.data.stringVal = new std::string(*propVal0.data.stringVal);
+			propVal1.data.stringVal = new std::string(*propVal0.data.stringVal);
 			break;
 		case BLOB_VAL:
-			prop1Val.data.blobVal = new Blob(*propVal0.data.blobVal);
+			propVal1.data.blobVal = new Blob(*propVal0.data.blobVal);
 			break;
 		default:
-			throw std::runtime_error("Unknown type in PropertyValue::Copy(): " + ToString(prop1Val.dataType));
+			throw std::runtime_error("Unknown type in PropertyValue::Copy(): " + ToString(propVal1.dataType));
 	}
 }
 

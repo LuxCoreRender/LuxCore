@@ -158,10 +158,10 @@ IF(APPLE)
 
 	EXECUTE_PROCESS(COMMAND uname -r OUTPUT_VARIABLE MAC_SYS) # check for actual system-version
 
-	SET(CMAKE_OSX_DEPLOYMENT_TARGET 10.12) # Minimum OS requirements for LuxCore
+	SET(CMAKE_OSX_DEPLOYMENT_TARGET 10.13) # Minimum OS requirements for LuxCore
 
 	IF(${MAC_SYS} MATCHES 17)
-		SET(OSX_SYSTEM 10.13)
+		SET(OSX_SYSTEM 10.14)
 	ELSEIF(${MAC_SYS} MATCHES 16)
 		SET(OSX_SYSTEM 10.12)
 	ELSE()
@@ -200,40 +200,42 @@ IF(APPLE)
 		SET(CMAKE_INSTALL_RPATH "@loader_path")
 
 	#### OSX-flags by jensverwiebe
-	ADD_DEFINITIONS(-Wall -DHAVE_PTHREAD_H) # global compile definitions
+	ADD_DEFINITIONS(-Wno-everything -DHAVE_PTHREAD_H) # global compile definitions
 	ADD_DEFINITIONS(-fvisibility=hidden -fvisibility-inlines-hidden)
 	ADD_DEFINITIONS(-Wno-unused-local-typedef -Wno-unused-variable) # silence boost __attribute__((unused)) bug
 
   SET(CMAKE_CXX_STANDARD 11)
   SET(CMAKE_CXX_EXTENSIONS OFF)
   SET(CMAKE_CXX_STANDARD_REQUIRED ON)
-  SET(OSX_FLAGS_RELEASE "-ftree-vectorize -msse -msse2 -msse3 -mssse3") # only additional flags
+  
+  SET(OSX_FLAGS_RELEASE "-ftree-vectorize -msse -msse2 -msse3 -mssse3 -DNDEBUG -O3") # additional RELEASE flags
 
   SET(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} ${OSX_FLAGS_RELEASE}")
-	SET(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${OSX_FLAGS_RELEASE}")
+  SET(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${OSX_FLAGS_RELEASE}")
+  
   SET(CMAKE_EXE_LINKER_FLAGS "-Wl,-unexported_symbols_list -Wl,\"${CMAKE_SOURCE_DIR}/cmake/exportmaps/unexported_symbols.map\"")
-	SET(CMAKE_MODULE_LINKER_FLAGS "-Wl,-unexported_symbols_list -Wl,\"${CMAKE_SOURCE_DIR}/cmake/exportmaps/unexported_symbols.map\"")
+  SET(CMAKE_MODULE_LINKER_FLAGS "-Wl,-unexported_symbols_list -Wl,\"${CMAKE_SOURCE_DIR}/cmake/exportmaps/unexported_symbols.map\"")
 
-	SET(CMAKE_XCODE_ATTRIBUTE_DEPLOYMENT_POSTPROCESSING YES) # strip symbols in whole project, disabled in pylux target
-	SET(CMAKE_XCODE_ATTRIBUTE_DEAD_CODE_STRIPPING YES)
-	SET(CMAKE_XCODE_ATTRIBUTE_LLVM_LTO YES)
+  SET(CMAKE_XCODE_ATTRIBUTE_DEPLOYMENT_POSTPROCESSING YES) # strip symbols in whole project, disabled in pylux target
+  SET(CMAKE_XCODE_ATTRIBUTE_DEAD_CODE_STRIPPING YES)
+  SET(CMAKE_XCODE_ATTRIBUTE_LLVM_LTO YES)
 
-
-	MESSAGE(STATUS "")
-	MESSAGE(STATUS "################ GENERATED XCODE PROJECT INFORMATION ################")
-	MESSAGE(STATUS "")
-	MESSAGE(STATUS "DETECTED SYSTEM-VERSION: " ${OSX_SYSTEM})
-	MESSAGE(STATUS "OSX_DEPLOYMENT_TARGET : " ${CMAKE_OSX_DEPLOYMENT_TARGET})
-	MESSAGE(STATUS "CMAKE_XCODE_ATTRIBUTE_ARCHS: " ${CMAKE_XCODE_ATTRIBUTE_ARCHS})
-	MESSAGE(STATUS "OSX SDK SETTING : " ${CMAKE_XCODE_ATTRIBUTE_SDKROOT}${OSX_SYSTEM})
-	MESSAGE(STATUS "XCODE_VERSION : " ${XCODE_VERSION})
-	IF(${CMAKE_GENERATOR} MATCHES "Xcode")
+  MESSAGE(STATUS "")
+  MESSAGE(STATUS "################ GENERATED XCODE PROJECT INFORMATION ################")
+  MESSAGE(STATUS "")
+  MESSAGE(STATUS "DETECTED SYSTEM-VERSION: " ${OSX_SYSTEM})
+  MESSAGE(STATUS "OSX_DEPLOYMENT_TARGET : " ${CMAKE_OSX_DEPLOYMENT_TARGET})
+  MESSAGE(STATUS "CMAKE_XCODE_ATTRIBUTE_ARCHS: " ${CMAKE_XCODE_ATTRIBUTE_ARCHS})
+  MESSAGE(STATUS "OSX SDK SETTING : " ${CMAKE_XCODE_ATTRIBUTE_SDKROOT}${OSX_SYSTEM})
+  MESSAGE(STATUS "XCODE_VERSION : " ${XCODE_VERS_BUILDNR})
+  
+  IF(${CMAKE_GENERATOR} MATCHES "Xcode")
 		MESSAGE(STATUS "BUILD_TYPE : Please set in Xcode ALL_BUILD target to aimed type")
-	ELSE()
+  ELSE()
 		MESSAGE(STATUS "BUILD_TYPE : " ${CMAKE_BUILD_TYPE} " - compile with: make " )
-	ENDIF()
-	MESSAGE(STATUS "")
-	MESSAGE(STATUS "#####################################################################")
+  ENDIF()
+  MESSAGE(STATUS "")
+  MESSAGE(STATUS "#####################################################################")
 
 ENDIF(APPLE)
 
@@ -256,9 +258,9 @@ IF(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
 ENDIF()
 
 IF(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-	SET(CMAKE_EXE_LINKER_FLAGS -Wl,--version-script='${CMAKE_SOURCE_DIR}/cmake/exportmaps/linux_symbol_exports.map')
-	SET(CMAKE_SHARED_LINKER_FLAGS -Wl,--version-script='${CMAKE_SOURCE_DIR}/cmake/exportmaps/linux_symbol_exports.map')
-	SET(CMAKE_MODULE_LINKER_FLAGS -Wl,--version-script='${CMAKE_SOURCE_DIR}/cmake/exportmaps/linux_symbol_exports.map')
+	SET(CMAKE_EXE_LINKER_FLAGS -Wl,--disable-new-dtags,--version-script='${CMAKE_SOURCE_DIR}/cmake/exportmaps/linux_symbol_exports.map')
+	SET(CMAKE_SHARED_LINKER_FLAGS -Wl,--disable-new-dtags,--version-script='${CMAKE_SOURCE_DIR}/cmake/exportmaps/linux_symbol_exports.map')
+	SET(CMAKE_MODULE_LINKER_FLAGS -Wl,--disable-new-dtags,--version-script='${CMAKE_SOURCE_DIR}/cmake/exportmaps/linux_symbol_exports.map')
 	SET(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 	SET(CMAKE_INSTALL_RPATH "$ORIGIN")
 ENDIF()

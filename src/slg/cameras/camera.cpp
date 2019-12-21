@@ -36,6 +36,23 @@ BBox Camera::ComputeBBox(const Point &orig) const {
 		return BBox(orig);
 }
 
+bool Camera::GetSamplePosition(const luxrays::Point &p,
+		float *filmX, float *filmY) const {
+	Point lensPoint;
+	if (!SampleLens(0.f, 0.f, 0.f, &lensPoint))
+		return false;
+
+	Vector eyeDir = p - lensPoint;
+	const float eyeDistance = eyeDir.Length();
+	eyeDir /= eyeDistance;
+
+	Ray eyeRay(lensPoint, eyeDir, 0.f, eyeDistance);
+	ClampRay(&eyeRay);
+	eyeRay.UpdateMinMaxWithEpsilon();
+
+	return GetSamplePosition(&eyeRay, filmX, filmY);
+}
+
 void Camera::Update(const u_int width, const u_int height, const u_int *subRegion) {
 	filmWidth = width;
 	filmHeight = height;

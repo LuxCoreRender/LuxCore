@@ -408,14 +408,20 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 
 		tex = new BandTexture(interpType, amtTex, offsets, values);
 	} else if (texType == "hitpointcolor") {
-		tex = new HitPointColorTexture();
+		const u_int dataIndex = Clamp(props.Get(Property(propName + ".dataindex")(0u)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
+
+		tex = new HitPointColorTexture(dataIndex);
 	} else if (texType == "hitpointalpha") {
-		tex = new HitPointAlphaTexture();
+		const u_int dataIndex = Clamp(props.Get(Property(propName + ".dataindex")(0u)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
+
+		tex = new HitPointAlphaTexture(dataIndex);
 	} else if (texType == "hitpointgrey") {
+		const u_int dataIndex = Clamp(props.Get(Property(propName + ".dataindex")(0u)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
 		const int channel = props.Get(Property(propName + ".channel")(-1)).Get<int>();
 
-		tex = new HitPointGreyTexture(((channel != 0) && (channel != 1) && (channel != 2)) ?
-			numeric_limits<u_int>::max() : static_cast<u_int>(channel));
+		tex = new HitPointGreyTexture(dataIndex,
+				((channel != 0) && (channel != 1) && (channel != 2)) ?
+					numeric_limits<u_int>::max() : static_cast<u_int>(channel));
 	} else if (texType == "cloud") {
 		const float radius = props.Get(Property(propName + ".radius")(.5f)).Get<float>();
 		const float noisescale = props.Get(Property(propName + ".noisescale")(.5f)).Get<float>();
@@ -621,7 +627,7 @@ const Texture *Scene::GetTexture(const luxrays::Property &prop) {
 			} else
 				throw runtime_error("Wrong number of arguments in the implicit definition of a constant texture: " +
 						boost::lexical_cast<string>(floats.size()));
-		} catch (boost::bad_lexical_cast) {
+		} catch (boost::bad_lexical_cast &) {
 			throw runtime_error("Syntax error in texture name: " + name);
 		}
 	}
@@ -634,10 +640,11 @@ TextureMapping2D *Scene::CreateTextureMapping2D(const string &prefixName, const 
 
 	if (mapType == "uvmapping2d") {
 		const float rotation = props.Get(Property(prefixName + ".rotation")(0.f)).Get<float>();
+		const u_int dataIndex = Clamp(props.Get(Property(prefixName + ".uvindex")(0u)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
 		const UV uvScale = props.Get(Property(prefixName + ".uvscale")(1.f, 1.f)).Get<UV>();
 		const UV uvDelta = props.Get(Property(prefixName + ".uvdelta")(0.f, 0.f)).Get<UV>();
 
-		return new UVMapping2D(rotation, uvScale.u, uvScale.v, uvDelta.u, uvDelta.v);
+		return new UVMapping2D(dataIndex, rotation, uvScale.u, uvScale.v, uvDelta.u, uvDelta.v);
 	} else
 		throw runtime_error("Unknown 2D texture coordinate mapping type: " + mapType);
 }
@@ -646,10 +653,11 @@ TextureMapping3D *Scene::CreateTextureMapping3D(const string &prefixName, const 
 	const string mapType = props.Get(Property(prefixName + ".type")("uvmapping3d")).Get<string>();
 
 	if (mapType == "uvmapping3d") {
+		const u_int dataIndex = Clamp(props.Get(Property(prefixName + ".uvindex")(0u)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
 		const Matrix4x4 mat = props.Get(Property(prefixName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
 		const Transform trans(mat);
 
-		return new UVMapping3D(trans);
+		return new UVMapping3D(dataIndex, trans);
 	} else if (mapType == "globalmapping3d") {
 		const Matrix4x4 mat = props.Get(Property(prefixName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
 		const Transform trans(mat);

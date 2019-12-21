@@ -52,7 +52,7 @@ Normal Texture::Bump(const HitPoint &hitPoint, const float sampleDistance) const
     // Compute offset positions and evaluate displacement texture
     const Point origP = hitPoint.p;
     const Normal origShadeN = hitPoint.shadeN;
-    const float origU = hitPoint.uv.u;
+    const float origU = hitPoint.uv[0].u;
 
     UV duv;
     HitPoint hitPointTmp = hitPoint;
@@ -60,15 +60,15 @@ Normal Texture::Bump(const HitPoint &hitPoint, const float sampleDistance) const
     // Shift hitPointTmp.du in the u direction and calculate value
     const float uu = sampleDistance / hitPoint.dpdu.Length();
     hitPointTmp.p += uu * hitPoint.dpdu;
-    hitPointTmp.uv.u += uu;
+    hitPointTmp.uv[0].u += uu;
     hitPointTmp.shadeN = Normalize(origShadeN + uu * hitPoint.dndu);
     duv.u = (GetFloatValue(hitPointTmp) - base) / uu;
 
     // Shift hitPointTmp.dv in the v direction and calculate value
     const float vv = sampleDistance / hitPoint.dpdv.Length();
     hitPointTmp.p = origP + vv * hitPoint.dpdv;
-    hitPointTmp.uv.u = origU;
-    hitPointTmp.uv.v += vv;
+    hitPointTmp.uv[0].u = origU;
+    hitPointTmp.uv[0].v += vv;
     hitPointTmp.shadeN = Normalize(origShadeN + vv * hitPoint.dndv);
     duv.v = (GetFloatValue(hitPointTmp) - base) / vv;
 

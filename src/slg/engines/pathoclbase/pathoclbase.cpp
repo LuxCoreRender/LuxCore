@@ -132,6 +132,17 @@ PathOCLBaseRenderEngine::~PathOCLBaseRenderEngine() {
 	delete oclPixelFilter;
 }
 
+void PathOCLBaseRenderEngine::InitGPUTaskConfiguration() {
+	// Path Tracer configuration
+	taskConfig.pathTracer.maxPathDepth.depth = pathTracer.maxPathDepth.depth;
+	taskConfig.pathTracer.maxPathDepth.diffuseDepth = pathTracer.maxPathDepth.diffuseDepth;
+	taskConfig.pathTracer.maxPathDepth.glossyDepth = pathTracer.maxPathDepth.glossyDepth;
+	taskConfig.pathTracer.maxPathDepth.specularDepth = pathTracer.maxPathDepth.specularDepth;
+	
+	taskConfig.pathTracer.rrDepth = pathTracer.rrDepth;
+	taskConfig.pathTracer.rrImportanceCap = pathTracer.rrImportanceCap;
+}
+
 void PathOCLBaseRenderEngine::InitPixelFilterDistribution() {
 	unique_ptr<Filter> pixelFilter(renderConfig->AllocPixelFilter());
 
@@ -215,6 +226,12 @@ void PathOCLBaseRenderEngine::StartLockLess() {
 	compiledScene->EnableCode(cfg.Get(Property("opencl.code.alwaysenabled")("")).Get<string>());
 	compiledScene->Compile();
 
+	//--------------------------------------------------------------------------
+	// Compile the configuration
+	//--------------------------------------------------------------------------
+
+	InitGPUTaskConfiguration();
+	
 	//--------------------------------------------------------------------------
 	// Start OpenCL render threads
 	//--------------------------------------------------------------------------

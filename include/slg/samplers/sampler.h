@@ -74,7 +74,7 @@ public:
 			const FilmSampleSplatter *flmSplatter,
 			const bool imgSamplesEnable) : NamedObject("sampler"), 
 			rndGen(rnd), film(flm), filmSplatter(flmSplatter),
-					imageSamplesEnable(imgSamplesEnable) { }
+			imageSamplesEnable(imgSamplesEnable) { }
 	virtual ~Sampler() { }
 
 	virtual SamplerType GetType() const = 0;

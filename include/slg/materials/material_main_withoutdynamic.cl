@@ -182,7 +182,7 @@ OPENCL_FORCE_NOT_INLINE float3 Material_AlbedoWithoutDynamic(__global const Mate
 #if defined (PARAM_ENABLE_MAT_CLOTH)
 		case CLOTH:
 			return ClothMaterial_Albedo(
-					hitPoint->uv.u, hitPoint->uv.v,
+					hitPoint->uv[0].u, hitPoint->uv[0].v,
 					material->cloth.Preset,
 					material->cloth.Repeat_U,
 					material->cloth.Repeat_V,
@@ -756,9 +756,10 @@ OPENCL_FORCE_NOT_INLINE float3 Material_GetPassThroughTransparencyWithoutDynamic
 // Material_GetEmittedRadianceWithoutDynamic
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_NOT_INLINE float3 Material_GetEmittedRadianceWithoutDynamic(__global const Material* restrict material, __global const HitPoint *hitPoint
+OPENCL_FORCE_NOT_INLINE float3 Material_GetEmittedRadianceWithoutDynamic(__global const Material* restrict material,
+		__global const HitPoint *hitPoint, const float oneOverPrimitiveArea
 		MATERIALS_PARAM_DECL) {
-	return DefaultMaterial_GetEmittedRadiance(material, hitPoint
+	return DefaultMaterial_GetEmittedRadiance(material, hitPoint, oneOverPrimitiveArea
 		TEXTURES_PARAM);
 }
 

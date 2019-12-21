@@ -1,46 +1,47 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '/home/david/projects/luxcorerender/LuxCore/src/pyluxcoretools/pyluxcoretools/pyluxcoremenu/menuwindow.ui'
+# Form implementation generated from reading ui file '/home/david/projects/luxcorerender/LuxCore/src/pyluxcoretools/pyluxcoretools/pyluxcoremenu/menuwindow.ui',
+# licensing of '/home/david/projects/luxcorerender/LuxCore/src/pyluxcoretools/pyluxcoretools/pyluxcoremenu/menuwindow.ui' applies.
 #
-# Created: Sun Jun  3 10:43:14 2018
-#      by: pyside-uic 0.2.15 running on PySide 1.2.4
+# Created: Sun Nov 17 16:46:41 2019
+#      by: pyside2-uic  running on PySide2 5.13.2
 #
 # WARNING! All changes made in this file will be lost!
 
-from PySide import QtCore, QtGui
+from PySide2 import QtCore, QtGui, QtWidgets
 
 class Ui_MenuWindow(object):
     def setupUi(self, MenuWindow):
         MenuWindow.setObjectName("MenuWindow")
         MenuWindow.resize(260, 240)
-        sizePolicy = QtGui.QSizePolicy(QtGui.QSizePolicy.Preferred, QtGui.QSizePolicy.Preferred)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(MenuWindow.sizePolicy().hasHeightForWidth())
         MenuWindow.setSizePolicy(sizePolicy)
-        self.centralwidget = QtGui.QWidget(MenuWindow)
+        self.centralwidget = QtWidgets.QWidget(MenuWindow)
         self.centralwidget.setObjectName("centralwidget")
-        self.verticalLayout = QtGui.QVBoxLayout(self.centralwidget)
+        self.verticalLayout = QtWidgets.QVBoxLayout(self.centralwidget)
         self.verticalLayout.setObjectName("verticalLayout")
-        self.pushButtonNetNode = QtGui.QPushButton(self.centralwidget)
+        self.pushButtonNetNode = QtWidgets.QPushButton(self.centralwidget)
         self.pushButtonNetNode.setObjectName("pushButtonNetNode")
         self.verticalLayout.addWidget(self.pushButtonNetNode)
-        self.pushButtonNetConsole = QtGui.QPushButton(self.centralwidget)
+        self.pushButtonNetConsole = QtWidgets.QPushButton(self.centralwidget)
         self.pushButtonNetConsole.setObjectName("pushButtonNetConsole")
         self.verticalLayout.addWidget(self.pushButtonNetConsole)
-        spacerItem = QtGui.QSpacerItem(20, 40, QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Expanding)
+        spacerItem = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.verticalLayout.addItem(spacerItem)
-        self.pushButtonQuit = QtGui.QPushButton(self.centralwidget)
+        self.pushButtonQuit = QtWidgets.QPushButton(self.centralwidget)
         self.pushButtonQuit.setObjectName("pushButtonQuit")
         self.verticalLayout.addWidget(self.pushButtonQuit)
         MenuWindow.setCentralWidget(self.centralwidget)
-        self.menubar = QtGui.QMenuBar(MenuWindow)
+        self.menubar = QtWidgets.QMenuBar(MenuWindow)
         self.menubar.setGeometry(QtCore.QRect(0, 0, 260, 25))
         self.menubar.setObjectName("menubar")
-        self.menuTools = QtGui.QMenu(self.menubar)
+        self.menuTools = QtWidgets.QMenu(self.menubar)
         self.menuTools.setObjectName("menuTools")
         MenuWindow.setMenuBar(self.menubar)
-        self.actionQuit = QtGui.QAction(MenuWindow)
+        self.actionQuit = QtWidgets.QAction(MenuWindow)
         self.actionQuit.setObjectName("actionQuit")
         self.menuTools.addAction(self.actionQuit)
         self.menubar.addAction(self.menuTools.menuAction())
@@ -55,11 +56,11 @@ class Ui_MenuWindow(object):
         MenuWindow.setTabOrder(self.pushButtonNetConsole, self.pushButtonQuit)
 
     def retranslateUi(self, MenuWindow):
-        MenuWindow.setWindowTitle(QtGui.QApplication.translate("MenuWindow", "PyLuxCore Tools Menu", None, QtGui.QApplication.UnicodeUTF8))
-        self.pushButtonNetNode.setText(QtGui.QApplication.translate("MenuWindow", "NetNode", None, QtGui.QApplication.UnicodeUTF8))
-        self.pushButtonNetConsole.setText(QtGui.QApplication.translate("MenuWindow", "NetConsole", None, QtGui.QApplication.UnicodeUTF8))
-        self.pushButtonQuit.setText(QtGui.QApplication.translate("MenuWindow", "Quit", None, QtGui.QApplication.UnicodeUTF8))
-        self.menuTools.setTitle(QtGui.QApplication.translate("MenuWindow", "Tools", None, QtGui.QApplication.UnicodeUTF8))
-        self.actionQuit.setText(QtGui.QApplication.translate("MenuWindow", "&Quit", None, QtGui.QApplication.UnicodeUTF8))
-        self.actionQuit.setShortcut(QtGui.QApplication.translate("MenuWindow", "Ctrl+Q", None, QtGui.QApplication.UnicodeUTF8))
+        MenuWindow.setWindowTitle(QtWidgets.QApplication.translate("MenuWindow", "PyLuxCore Tools Menu", None, -1))
+        self.pushButtonNetNode.setText(QtWidgets.QApplication.translate("MenuWindow", "NetNode", None, -1))
+        self.pushButtonNetConsole.setText(QtWidgets.QApplication.translate("MenuWindow", "NetConsole", None, -1))
+        self.pushButtonQuit.setText(QtWidgets.QApplication.translate("MenuWindow", "Quit", None, -1))
+        self.menuTools.setTitle(QtWidgets.QApplication.translate("MenuWindow", "Tools", None, -1))
+        self.actionQuit.setText(QtWidgets.QApplication.translate("MenuWindow", "&Quit", None, -1))
+        self.actionQuit.setShortcut(QtWidgets.QApplication.translate("MenuWindow", "Ctrl+Q", None, -1))
 

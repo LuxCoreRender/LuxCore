@@ -113,6 +113,8 @@ size_t Film::GetOutputSize(const FilmOutputs::FilmOutputType type) const {
 			return 3 * pixelCount;
 		case FilmOutputs::NOISE:
 			return pixelCount;
+		case FilmOutputs::USER_IMPORTANCE:
+			return pixelCount;
 		default:
 			throw runtime_error("Unknown FilmOutputType in Film::GetOutputSize(): " + ToString(type));
 	}
@@ -188,6 +190,8 @@ bool Film::HasOutput(const FilmOutputs::FilmOutputType type) const {
 			return HasChannel(AVG_SHADING_NORMAL);
 		case FilmOutputs::NOISE:
 			return HasChannel(NOISE);
+		case FilmOutputs::USER_IMPORTANCE:
+			return HasChannel(USER_IMPORTANCE);
 		default:
 			throw runtime_error("Unknown film output type in Film::HasOutput(): " + ToString(type));
 	}
@@ -437,6 +441,11 @@ void Film::Output(const string &fileName,const FilmOutputs::FilmOutputType type,
 				return;
 			channelCount = 1;
 			break;
+		case FilmOutputs::USER_IMPORTANCE:
+			if (!HasChannel(USER_IMPORTANCE))
+				return;
+			channelCount = 1;
+			break;
 		default:
 			throw runtime_error("Unknown film output type in Film::Output(): " + ToString(type));
 	}
@@ -659,6 +668,10 @@ void Film::Output(const string &fileName,const FilmOutputs::FilmOutputType type,
 				}
 				case FilmOutputs::NOISE: {
 					channel_NOISE->GetWeightedPixel(x, y, pixel);
+					break;
+				}
+				case FilmOutputs::USER_IMPORTANCE: {
+					channel_USER_IMPORTANCE->GetWeightedPixel(x, y, pixel);
 					break;
 				}
 				default:
@@ -899,6 +912,9 @@ template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, f
 		}
 		case FilmOutputs::NOISE:
 			copy(channel_NOISE->GetPixels(), channel_NOISE->GetPixels() + pixelCount, buffer);
+			break;
+		case FilmOutputs::USER_IMPORTANCE:
+			copy(channel_USER_IMPORTANCE->GetPixels(), channel_USER_IMPORTANCE->GetPixels() + pixelCount, buffer);
 			break;
 		default:
 			throw runtime_error("Unknown film output type in Film::GetOutput<float>(): " + ToString(type));

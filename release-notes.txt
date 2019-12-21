@@ -14,27 +14,40 @@
 * Added the support for Displacement shape
 * Added the support for vector displacement to Displacement shape
 * New image pipeline plugin: White balance
-* Using/Not using bump/normal mapping doesn't requires OpenCL compilation anymore (removed PARAM_HAS_BUMPMAPS conditional OpenCL compilation)
+* Using/Not using bump/normal mapping doesn't require OpenCL compilation anymore (removed PARAM_HAS_BUMPMAPS conditional OpenCL compilation)
 * Large rework of internal light interface. Fixed several instance/motion blur and lights related problems. Triangle light motion blur now works as expected in OpenCL.
 * Large rework of internal mesh interface. Improved the performance of instanced and motion blur meshes.
 * Changed object and material ID for background to 0 (from 0xffffffff)
 * Added the support for screen space subdivision limit to SubdivShape
-* Using/Not using any type of transparency doesn't requires OpenCL compilation anymore (removed PARAM_HAS_PASSTHROUGH conditional OpenCL compilation)
+* Using/Not using any type of transparency doesn't require OpenCL compilation anymore (removed PARAM_HAS_PASSTHROUGH conditional OpenCL compilation)
+* Added an Harlequin shape (mostly to debug meshes)
+* Added a Simplify shape (to decimate the number of triangles in a mesh with the smaller possible error)
+* Reduced the default number of OpenCL threads from 512k to 256k (to save about 150MB of GPU RAM at 1-2% performance cost)
+* Changing max. path and/or Russian Roulette parameters doesn't require OpenCL compilation anymore (removed PARAM_MAX_PATH_DEPTH, PARAM_MAX_PATH_DEPTH_DIFFUSE, PARAM_MAX_PATH_DEPTH_GLOSSY, PARAM_MAX_PATH_DEPTH_SPECULAR, PARAM_RR_DEPTH and PARAM_RR_CAPPARAM_HAS_BUMPMAPS conditional OpenCL compilation)
+* Added the support the definition of meshes with multiple UVs, Colors and Alphas (issue #134)
+* Added the BAKECPU engine (LuxCore API only)
+* Added the glTF v2.0 FILESAVER support (LuxCore API only)
 
 ### Fixed Bugs
 
 * Fixed triangle lights back face emission when using an IES or image map profile
 * Fixed OpenCL code for rotate triangle light when using IES or image map profile (BlendLuxCore iusse #310)
+* Fixed light tracing when using orthographic camera
+* Fixed a light intensity problem with OpenCL rendering when using a mix of materials with emission
+* Fixed the support for wrap mode in image maps loaded from files
+* Fixed a brightness problem when rendering large images with Metropolis sampler
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
 
-### Known Problems
+### Known Problems and limitations
+
 * LuxCore API requires latin locale
 * accelerator.bvh.builder.type = EMBREE_MORTON doesn't work with the latest Embree
 * Python crashes when calling sys.exit()
-* TILEPATHOCL (and RTPATHOCL) count the layers of transparent surfaces as an iteration of the rendering finite state machine so they requires to increase the max. path depth to avoid black regions.
-* Light emitted by motion blurred triangle lights is aproximated using the triangle area of time 0.0 (computing triangle area at runtime would be expansive) so it may be not totally accurate if the motion blur transformation include a scale.
+* TILEPATHOCL (and RTPATHOCL) count the layers of transparent surfaces as an iteration of the rendering finite state machine so they require to increase the max. path depth to avoid black regions.
+* Light emitted by motion blurred triangle lights is approximated using the triangle area of time 0.0 (computing triangle area at runtime would be expansive) so it may be not totally accurate if the motion blur transformation include a scale.
+* Variance clamping is not applied to AOVs
 
 **Note for Windows users:** you have to install the [Microsoft Visual C++ Redistributable
 for Visual Studio 2017](https://aka.ms/vs/15/release/vc_redist.x64.exe).

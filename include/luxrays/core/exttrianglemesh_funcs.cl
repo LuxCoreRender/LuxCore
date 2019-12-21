@@ -68,13 +68,13 @@ OPENCL_FORCE_INLINE float3 ExtMesh_GetInterpolateNormal(
 
 OPENCL_FORCE_INLINE float2 ExtMesh_GetInterpolateUV(
 		const uint meshIndex, const uint triangleIndex,
-		const float b1, const float b2
+		const float b1, const float b2, const uint dataIndex
 		EXTMESH_PARAM_DECL) {
 	__global const ExtMesh* restrict meshDesc = &meshDescs[meshIndex];
 	
 	float2 uv = 0.f;
-	if (meshDesc->uvsOffset != NULL_INDEX) {
-		__global const UV* restrict uvs = &vertUVs[meshDesc->uvsOffset];
+	if (meshDesc->uvsOffset[dataIndex] != NULL_INDEX) {
+		__global const UV* restrict uvs = &vertUVs[meshDesc->uvsOffset[dataIndex]];
 		__global const Triangle* restrict tri = &triangles[meshDesc->trisOffset + triangleIndex];
 
 		const float2 uv0 = VLOAD2F(&uvs[tri->v[0]].u);
@@ -90,13 +90,13 @@ OPENCL_FORCE_INLINE float2 ExtMesh_GetInterpolateUV(
 
 OPENCL_FORCE_INLINE float3 ExtMesh_GetInterpolateColor(
 		const uint meshIndex, const uint triangleIndex,
-		const float b1, const float b2
+		const float b1, const float b2, const uint dataIndex
 		EXTMESH_PARAM_DECL) {
 	__global const ExtMesh* restrict meshDesc = &meshDescs[meshIndex];
-	
-	float3 c = 0.f;
-	if (meshDesc->colsOffset != NULL_INDEX) {
-		__global const Spectrum* restrict vcs = &vertCols[meshDesc->colsOffset];
+
+	float3 c = WHITE;
+	if (meshDesc->colsOffset[dataIndex] != NULL_INDEX) {
+		__global const Spectrum* restrict vcs = &vertCols[meshDesc->colsOffset[dataIndex]];
 		__global const Triangle* restrict tri = &triangles[meshDesc->trisOffset + triangleIndex];
 		const float3 rgb0 = VLOAD3F(vcs[tri->v[0]].c);
 		const float3 rgb1 = VLOAD3F(vcs[tri->v[1]].c);
@@ -111,13 +111,13 @@ OPENCL_FORCE_INLINE float3 ExtMesh_GetInterpolateColor(
 
 OPENCL_FORCE_INLINE float ExtMesh_GetInterpolateAlpha(
 		const uint meshIndex, const uint triangleIndex,
-		const float b1, const float b2
+		const float b1, const float b2, const uint dataIndex
 		EXTMESH_PARAM_DECL) {
 	__global const ExtMesh* restrict meshDesc = &meshDescs[meshIndex];
 	
-	float a = 0.f;
-	if (meshDesc->alphasOffset != NULL_INDEX) {
-		__global const float* restrict vas = &vertAlphas[meshDesc->alphasOffset];
+	float a = 1.f;
+	if (meshDesc->alphasOffset[dataIndex] != NULL_INDEX) {
+		__global const float* restrict vas = &vertAlphas[meshDesc->alphasOffset[dataIndex]];
 		__global const Triangle* restrict tri = &triangles[meshDesc->trisOffset + triangleIndex];
 		const float a0 = vas[tri->v[0]];
 		const float a1 = vas[tri->v[1]];
@@ -135,6 +135,7 @@ OPENCL_FORCE_INLINE void ExtMesh_GetDifferentials(
 		const uint meshIndex,
 		const uint triangleIndex,
 		float3 shadeNormal,
+		const uint dataIndex,
 		float3 *dpdu, float3 *dpdv,
         float3 *dndu, float3 *dndv
 		EXTMESH_PARAM_DECL) {
@@ -149,11 +150,11 @@ OPENCL_FORCE_INLINE void ExtMesh_GetDifferentials(
 	const uint vi2 = tri->v[2];
 
 	float2 uv0, uv1, uv2;
-	if (meshDesc->uvsOffset != NULL_INDEX) {
+	if (meshDesc->uvsOffset[dataIndex] != NULL_INDEX) {
 		// Ok, UV coordinates are available, use them to build the reference
 		// system around the shading normal.
 
-		__global const UV* restrict iVertUVs = &vertUVs[meshDesc->uvsOffset];
+		__global const UV* restrict iVertUVs = &vertUVs[meshDesc->uvsOffset[dataIndex]];
 		uv0 = VLOAD2F(&iVertUVs[vi0].u);
 		uv1 = VLOAD2F(&iVertUVs[vi1].u);
 		uv2 = VLOAD2F(&iVertUVs[vi2].u);

@@ -26,20 +26,21 @@ typedef struct {
 	// lightDir when fromLight = true
 	Vector fixedDir;
 	Point p;
-	UV uv;
 	Normal geometryN;
 	Normal interpolatedN;
 	Normal shadeN;
+
+	UV uv[EXTMESH_MAX_DATA_COUNT];
+#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR) || defined(PARAM_ENABLE_TEX_HITPOINTGREY) || defined(PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR)
+	Spectrum color[EXTMESH_MAX_DATA_COUNT];
+#endif
+#if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)
+	float alpha[EXTMESH_MAX_DATA_COUNT];
+#endif
+
 	// Note: dpdu and dpdv are orthogonal to shading normal (i.e not geometry normal)
 	Vector dpdu, dpdv;
 	Normal dndu, dndv;
-
-#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR) || defined(PARAM_ENABLE_TEX_HITPOINTGREY) || defined(PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR)
-	Spectrum color;
-#endif
-#if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)
-	float alpha;
-#endif
 
 	// passThroughEvent can be stored here in a path state even before of
 	// BSDF initialization (while tracing the next path vertex ray)

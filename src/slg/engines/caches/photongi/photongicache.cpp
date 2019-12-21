@@ -144,8 +144,12 @@ void PhotonGICache::TracePhotons(const u_int seedBase, const u_int photonTracedC
 		delete renderThreads[i];
 	}
 
-	indirectPhotonTracedCount = globalIndirectPhotonsTraced;
-	causticPhotonTracedCount = globalCausticPhotonsTraced;
+	// Update the count only if I have traced this kind of photons
+	if (!indirectCacheDone)
+		indirectPhotonTracedCount = globalIndirectPhotonsTraced;
+	// Update the count only if I have traced this kind of photons
+	if (!causticCacheDone)
+		causticPhotonTracedCount = globalCausticPhotonsTraced;
 
 	SLG_LOG("PhotonGI additional indirect photon stored: " << indirectPhotonStored);
 	SLG_LOG("PhotonGI additional caustic photon stored: " << causticPhotonStored);
@@ -161,8 +165,12 @@ void PhotonGICache::TracePhotons(const bool indirectEnabled, const bool causticE
 	boost::atomic<u_int> globalIndirectSize(0);
 	boost::atomic<u_int> globalCausticSize(0);
 
-	indirectPhotonTracedCount = 0;
-	causticPhotonTracedCount = 0;
+	// Update the count only if I have traced this kind of photons
+	if (indirectEnabled)
+		indirectPhotonTracedCount = 0;
+	// Update the count only if I have traced this kind of photons
+	if (causticEnabled)
+		causticPhotonTracedCount = 0;
 
 	if (indirectEnabled && (params.indirect.maxSize == 0)) {
 		// Automatic indirect cache convergence test is required

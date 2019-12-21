@@ -37,12 +37,12 @@ BlackBodyTexture::BlackBodyTexture(const float temp, const bool norm) :
 		colorTemp /= colorTemp.Y();
 
 	ColorSystem colorSpace;
-	rgb = colorSpace.ToRGBConstrained(spd.ToXYZ());
+	rgb = colorSpace.ToRGBConstrained(colorTemp);
 
 	if (normalize)
-		rgb.Clamp(0.f, 1.f);
+		rgb = rgb.Clamp(0.f, 1.f);
 	else
-		rgb.Clamp(0.f);
+		rgb = rgb.Clamp(0.f);
 }
 
 Properties BlackBodyTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {

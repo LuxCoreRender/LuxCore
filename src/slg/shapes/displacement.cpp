@@ -35,7 +35,7 @@ DisplacementShape::DisplacementShape(luxrays::ExtTriangleMesh *srcMesh, const Te
 		srcMesh->ComputeNormals();
 
 	// I need vertex UVs for vector displacement
-	if ((params.mapType == VECTOR_DISPLACEMENT) && !srcMesh->HasUVs())
+	if ((params.mapType == VECTOR_DISPLACEMENT) && !srcMesh->HasUVs(0))
 		throw runtime_error("Displacement shape for vector displacement can be used only with mesh having UVs defined");
 
 	const double startTime = WallClockTime();
@@ -65,7 +65,7 @@ DisplacementShape::DisplacementShape(luxrays::ExtTriangleMesh *srcMesh, const Te
 				const Normal shadeN = srcMesh->GetShadeNormal(Transform::TRANS_IDENTITY, vertIndex);
 
 				// Compute geometry differentials
-				srcMesh->GetDifferentials(Transform::TRANS_IDENTITY, i, shadeN,
+				srcMesh->GetDifferentials(Transform::TRANS_IDENTITY, i, shadeN, 0,
 						&dpdu[vertIndex], &dpdv[vertIndex],
 						&dndu[vertIndex], &dndv[vertIndex]);
 
@@ -90,18 +90,21 @@ DisplacementShape::DisplacementShape(luxrays::ExtTriangleMesh *srcMesh, const Te
 		hitPoint.fixedDir = Vector(0.f, 0.f, 1.f);
 		hitPoint.p = srcMesh->GetVertex(Transform::TRANS_IDENTITY, i);
 
-		hitPoint.uv = srcMesh->HasUVs() ? srcMesh->GetUV(i) : UV(0.f, 0.f);
-		
 		hitPoint.geometryN = srcMesh->GetShadeNormal(Transform::TRANS_IDENTITY, i);
 		hitPoint.interpolatedN = hitPoint.geometryN;
 		hitPoint.shadeN = hitPoint.interpolatedN;
 
-		hitPoint.color =  srcMesh->HasColors() ? srcMesh->GetColor(i) : Spectrum(1.f);
+		for (u_int j = 0; j < EXTMESH_MAX_DATA_COUNT; ++j) {
+			hitPoint.uv[j] = srcMesh->HasUVs(j) ? srcMesh->GetUV(i, j) : UV(0.f, 0.f);
+			hitPoint.color[j] =  srcMesh->HasColors(j) ? srcMesh->GetColor(i, j) : Spectrum(1.f);
+			hitPoint.alpha[j] = srcMesh->HasAlphas(j) ? srcMesh->GetAlpha(i, j) : 1.f;
+		}
+
 		hitPoint.dpdu = dpdu[i];
 		hitPoint.dpdv = dpdv[i];
 		hitPoint.dndu = dndu[i];
 		hitPoint.dndv = dndv[i];
-		hitPoint.alpha = srcMesh->HasAlphas() ? srcMesh->GetAlpha(i) : 1.f;
+
 		hitPoint.passThroughEvent = 0.f;
 		srcMesh->GetLocal2World(0.f, hitPoint.localToWorld);
 		hitPoint.interiorVolume = nullptr;

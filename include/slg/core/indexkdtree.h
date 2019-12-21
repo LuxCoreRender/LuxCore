@@ -80,7 +80,7 @@ protected:
 	template<class Archive> void save(Archive &ar, const unsigned int version) const {
 		ar & allEntries;
 
-		ar & boost::serialization::make_array<IndexKdTreeArrayNode>(arrayNodes, allEntries->size());		
+		ar & boost::serialization::make_array<IndexKdTreeArrayNode>(arrayNodes, allEntries->size());
 	}
 
 	template<class Archive>	void load(Archive &ar, const unsigned int version) {

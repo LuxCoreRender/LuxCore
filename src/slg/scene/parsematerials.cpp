@@ -49,6 +49,8 @@
 #include "slg/materials/velvet.h"
 #include "slg/materials/disney.h"
 
+#include "slg/utils/filenameresolver.h"
+
 using namespace std;
 using namespace luxrays;
 using namespace slg;
@@ -435,7 +437,6 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 		const bool multibounce = props.Get(Property(propName + ".multibounce")(false)).Get<bool>();
 
 		mat = new GlossyCoatingMaterial(frontTransparencyTex, backTransparencyTex, emissionTex, bumpTex, matBase, ks, nu, nv, ka, d, index, multibounce);
-
 	} else if (matType == "disney") {
 		const Texture *baseColor = GetTexture(props.Get(Property(propName + ".basecolor")(.5f, .5f, .5f)));
 		const Texture *subsurface = GetTexture(props.Get(Property(propName + ".subsurface")(0.f)));

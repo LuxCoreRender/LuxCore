@@ -60,7 +60,7 @@ void OrthographicCamera::InitCameraTransforms(CameraTransforms *trans) {
 void OrthographicCamera::InitCameraData() {
 	const float xPixelWidth = screenWindow[1] - screenWindow[0];
 	const float yPixelHeight = screenWindow[3] - screenWindow[2];
-	cameraPDF = (filmWidth * filmHeight) / (xPixelWidth * yPixelHeight);
+	cameraPdf = 1.f / (xPixelWidth * yPixelHeight);
 }
 
 void OrthographicCamera::InitRay(Ray *ray, const float filmX, const float filmY) const {
@@ -135,8 +135,13 @@ bool OrthographicCamera::SampleLens(const float time,
 	return true;
 }
 
-float OrthographicCamera::GetPDF(const Ray &eyeRay, const float filmX, const float filmY) const {
-	return cameraPDF;
+void OrthographicCamera::GetPDF(const Ray &eyeRay, const float eyeDistance,
+		const float filmX, const float filmY,
+		float *pdfW, float *fluxToRadianceFactor) const {
+	if (pdfW)
+		*pdfW = cameraPdf;
+	if (fluxToRadianceFactor)
+		*fluxToRadianceFactor = cameraPdf;
 }
 
 Properties OrthographicCamera::ToProperties() const {

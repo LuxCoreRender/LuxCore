@@ -113,33 +113,39 @@ add_library(bcd STATIC ${BCD_SRCS})
 ###########################################################################
 
 set(OPENVDB_SRCS
-	${LuxRays_SOURCE_DIR}/deps/openvdb-3.1.0/openvdb/Grid.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-3.1.0/openvdb/Platform.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-3.1.0/openvdb/openvdb.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-3.1.0/openvdb/io/Archive.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-3.1.0/openvdb/io/Compression.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-3.1.0/openvdb/io/File.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-3.1.0/openvdb/io/GridDescriptor.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-3.1.0/openvdb/io/Queue.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-3.1.0/openvdb/io/Stream.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-3.1.0/openvdb/io/TempFile.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-3.1.0/openvdb/math/Maps.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-3.1.0/openvdb/math/Proximity.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-3.1.0/openvdb/math/QuantizedUnitVec.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-3.1.0/openvdb/math/Transform.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-3.1.0/openvdb/metadata/MetaMap.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-3.1.0/openvdb/metadata/Metadata.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-3.1.0/openvdb/util/Formats.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-3.1.0/openvdb/util/Util.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-6.2.0/openvdb/Grid.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-6.2.0/openvdb/Metadata.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-6.2.0/openvdb/MetaMap.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-6.2.0/openvdb/Platform.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-6.2.0/openvdb/openvdb.cc	
+	${LuxRays_SOURCE_DIR}/deps/openvdb-6.2.0/openvdb/io/Archive.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-6.2.0/openvdb/io/Compression.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-6.2.0/openvdb/io/File.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-6.2.0/openvdb/io/GridDescriptor.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-6.2.0/openvdb/io/Queue.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-6.2.0/openvdb/io/Stream.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-6.2.0/openvdb/io/TempFile.cc	
+	${LuxRays_SOURCE_DIR}/deps/openvdb-6.2.0/openvdb/math/Maps.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-6.2.0/openvdb/math/Proximity.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-6.2.0/openvdb/math/QuantizedUnitVec.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-6.2.0/openvdb/math/Transform.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-6.2.0/openvdb/points/AttributeArray.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-6.2.0/openvdb/points/AttributeArrayString.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-6.2.0/openvdb/points/AttributeGroup.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-6.2.0/openvdb/points/AttributeSet.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-6.2.0/openvdb/points/points.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-6.2.0/openvdb/points/StreamCompression.cc	
+	${LuxRays_SOURCE_DIR}/deps/openvdb-6.2.0/openvdb/util/Formats.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-6.2.0/openvdb/util/Util.cc
 )
 
 SOURCE_GROUP("Source Files\\OpenVDB Library" FILES ${OPENVDB_SRCS})
 
-include_directories(${LuxRays_SOURCE_DIR}/deps/openvdb-3.1.0)
+include_directories(${LuxRays_SOURCE_DIR}/deps/openvdb-6.2.0)
 
 # Required by OpenVDB to read ABI 3
-add_definitions("-DOPENVDB_3_ABI_COMPATIBLE -DOPENVDB_STATICLIB -DOPENVDB_OPENEXR_STATICLIB")
-
+#add_definitions("-D OPENVDB_USE_DEPRECATED_ABI -DOPENVDB_3_ABI_COMPATIBLE -DOPENVDB_STATICLIB -DOPENVDB_OPENEXR_STATICLIB")
+add_definitions("-DOPENVDB_USE_BLOSC -DOPENVDB_STATICLIB -DOPENVDB_OPENEXR_STATICLIB")
 add_library(openvdb STATIC ${OPENVDB_SRCS})
 
 ###########################################################################
@@ -350,6 +356,9 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathtracer.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/tilerepository.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/tilerepositoryserialize.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/bakecpu/bakecpu.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/bakecpu/bakecpurenderstate.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/bakecpu/bakecputhread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/bidircpu/bidircpu.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/bidircpu/bidircputhread.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/bidircpu/bidircpurenderstate.cpp
@@ -478,9 +487,11 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/scene/sceneupdate.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/shapes/displacement.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/shapes/groupshape.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/shapes/harlequinshape.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/shapes/meshshape.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/shapes/pointiness.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/shapes/shape.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/shapes/simplify.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/shapes/strands.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/shapes/subdiv.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/slg.cpp
@@ -543,6 +554,7 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/utils/filenameresolver.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/film2sceneradius.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/harlequincolors.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/utils/meshutils.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/scenevisibility.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/pathdepthinfo.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/pathinfo.cpp
@@ -719,6 +731,7 @@ set(SLG_FILM_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/radiancechannelscale.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/radiancechannelscaleserialization.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/backgroundimg.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/bakemapmargin.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/bcddenoiser.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/bloom.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/cameraresponse.cpp

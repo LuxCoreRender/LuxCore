@@ -112,7 +112,7 @@ float SubdivShape::MaxEdgeScreenSize(const Camera *camera, ExtTriangleMesh *srcM
 #endif
 			;
 
-	const Transform wolrdToScreen = Inverse(camera->GetScreenToWorld());
+	const Transform worldToScreen = Inverse(camera->GetScreenToWorld());
 	
 	vector<float> maxEdgeSizes(threadCount, 0.f);
 	for(
@@ -130,9 +130,9 @@ float SubdivShape::MaxEdgeScreenSize(const Camera *camera, ExtTriangleMesh *srcM
 			;
 		
 		const Triangle &tri = tris[i];
-		const Point p0 = wolrdToScreen * verts[tri.v[0]];
-		const Point p1 = wolrdToScreen * verts[tri.v[1]];
-		const Point p2 = wolrdToScreen * verts[tri.v[2]];
+		const Point p0 = worldToScreen * verts[tri.v[0]];
+		const Point p1 = worldToScreen * verts[tri.v[1]];
+		const Point p2 = worldToScreen * verts[tri.v[2]];
 		
 		float maxEdgeSize = (p1 - p0).Length();
 		maxEdgeSize = Max(maxEdgeSize, (p2 - p1).Length());
@@ -287,25 +287,25 @@ ExtTriangleMesh *SubdivShape::ApplySubdiv(ExtTriangleMesh *srcMesh, const u_int 
 
 	// UVs
     Osd::CpuVertexBuffer *uvsBuffer = nullptr;
-	if (srcMesh->HasUVs()) {
+	if (srcMesh->HasUVs(0)) {
         uvsBuffer = BuildBuffer<2>(
-				stencilTable, (const float *)srcMesh->GetUVs(),
+				stencilTable, (const float *)srcMesh->GetUVs(0),
 				vertsCount, totalVertsCount);
 	}
 
 	// Cols
     Osd::CpuVertexBuffer *colsBuffer = nullptr;
-	if (srcMesh->HasColors()) {
+	if (srcMesh->HasColors(0)) {
         colsBuffer = BuildBuffer<3>(
-				stencilTable, (const float *)srcMesh->GetColors(),
+				stencilTable, (const float *)srcMesh->GetColors(0),
 				vertsCount, totalVertsCount);
 	}
 
 	// Alphas
     Osd::CpuVertexBuffer *alphasBuffer = nullptr;
-	if (srcMesh->HasAlphas()) {
+	if (srcMesh->HasAlphas(0)) {
         alphasBuffer = BuildBuffer<1>(
-				stencilTable, (const float *)srcMesh->GetAlphas(),
+				stencilTable, (const float *)srcMesh->GetAlphas(0),
 				vertsCount, totalVertsCount);
 	}
 
@@ -352,7 +352,7 @@ ExtTriangleMesh *SubdivShape::ApplySubdiv(ExtTriangleMesh *srcMesh, const u_int 
 
 	// New UVs
 	UV *newUVs = nullptr;
-	if (srcMesh->HasUVs()) {
+	if (srcMesh->HasUVs(0)) {
 		newUVs = new UV[newVertsCount];
 
 		const float *refinedUVs = uvsBuffer->BindCpuBuffer() + 2 * vertsCount;
@@ -361,7 +361,7 @@ ExtTriangleMesh *SubdivShape::ApplySubdiv(ExtTriangleMesh *srcMesh, const u_int 
 
 	// New colors
 	Spectrum *newCols = nullptr;
-	if (srcMesh->HasColors()) {
+	if (srcMesh->HasColors(0)) {
 		newCols = new Spectrum[newVertsCount];
 
 		const float *refinedCols = colsBuffer->BindCpuBuffer() + 3 * vertsCount;
@@ -370,7 +370,7 @@ ExtTriangleMesh *SubdivShape::ApplySubdiv(ExtTriangleMesh *srcMesh, const u_int 
 
 	// New alphas
 	float *newAlphas = nullptr;
-	if (srcMesh->HasAlphas()) {
+	if (srcMesh->HasAlphas(0)) {
 		newAlphas = new float[newVertsCount];
 
 		const float *refinedAlphas = alphasBuffer->BindCpuBuffer() + 1 * vertsCount;
@@ -395,6 +395,9 @@ ExtTriangleMesh *SubdivShape::ApplySubdiv(ExtTriangleMesh *srcMesh, const u_int 
 SubdivShape::SubdivShape(const Camera *camera, ExtTriangleMesh *srcMesh,
 		const u_int maxLevel, const float maxEdgeScreenSize) {
 	const double startTime = WallClockTime();
+
+	if ((maxEdgeScreenSize > 0.f) && !camera)
+		throw runtime_error("The scene camera must be defined in order to enable subdiv maxedgescreensize option");
 
 	if (maxLevel > 0) {
 		if (camera && (maxEdgeScreenSize > 0.f)) {

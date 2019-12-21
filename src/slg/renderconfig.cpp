@@ -368,8 +368,6 @@ Properties RenderConfig::ToProperties(const Properties &cfg) {
 	props << cfg.Get(Property("screen.tiles.passcount.show")(false));
 	props << cfg.Get(Property("screen.tiles.error.show")(false));
 
-	props << cfg.Get(Property("batch.haltdebug")(0u));
-
 	return props;
 }
 

@@ -39,7 +39,7 @@ BOOST_CLASS_EXPORT_IMPLEMENT(luxrays::ExtMesh)
 // The optimized version for ExtTriangleMesh where I can ignore local2World
 // because it is an identity
 void ExtMesh::GetDifferentials(const Transform &local2World,
-		const u_int triIndex, const Normal &shadeNormal,
+		const u_int triIndex, const Normal &shadeNormal, const u_int dataIndex,
         Vector *dpdu, Vector *dpdv,
         Normal *dndu, Normal *dndv) const {
     // Compute triangle partial derivatives
@@ -47,12 +47,12 @@ void ExtMesh::GetDifferentials(const Transform &local2World,
 	const u_int v0Index = tri.v[0];
 	const u_int v1Index = tri.v[1];
 	const u_int v2Index = tri.v[2];
-	
+
     UV uv0, uv1, uv2;
-    if (HasUVs()) {
-        uv0 = GetUV(v0Index);
-        uv1 = GetUV(v1Index);
-        uv2 = GetUV(v2Index);
+    if (HasUVs(dataIndex)) {
+        uv0 = GetUV(v0Index, dataIndex);
+        uv1 = GetUV(v1Index, dataIndex);
+        uv2 = GetUV(v2Index, dataIndex);
     } else {
 		uv0 = UV(.5f, .5f);
 		uv1 = UV(.5f, .5f);
@@ -122,15 +122,71 @@ struct is_virtual_base_of<luxrays::TriangleMesh, luxrays::ExtTriangleMesh>: publ
 BOOST_CLASS_EXPORT_IMPLEMENT(luxrays::ExtTriangleMesh)
 
 ExtTriangleMesh::ExtTriangleMesh(const u_int meshVertCount, const u_int meshTriCount,
-		Point *meshVertices, Triangle *meshTris, Normal *meshNormals, UV *meshUV,
-			Spectrum *meshCols, float *meshAlpha) :
+		Point *meshVertices, Triangle *meshTris, Normal *meshNormals,
+		UV *mUVs, Spectrum *mCols, float *mAlphas) :
 		TriangleMesh(meshVertCount, meshTriCount, meshVertices, meshTris) {
-	normals = meshNormals;
-	uvs = meshUV;
-	cols = meshCols;
-	alphas = meshAlpha;
+	fill(uvs.begin(), uvs.end(), nullptr);
+	fill(cols.begin(), cols.end(), nullptr);
+	fill(alphas.begin(), alphas.end(), nullptr);
 
+	array<UV *, EXTMESH_MAX_DATA_COUNT> meshUVs;
+	fill(meshUVs.begin(), meshUVs.end(), nullptr);
+	if (mUVs)
+		meshUVs[0] = mUVs;
+
+	array<Spectrum *, EXTMESH_MAX_DATA_COUNT> meshCols;
+	fill(meshCols.begin(), meshCols.end(), nullptr);
+	if (mCols)
+		meshCols[0] = mCols;
+
+	array<float *, EXTMESH_MAX_DATA_COUNT> meshAlphas;
+	fill(meshAlphas.begin(), meshAlphas.end(), nullptr);
+	if (mAlphas)
+		meshAlphas[0] = mAlphas;
+
+	Init(meshNormals, &meshUVs, &meshCols, &meshAlphas);	
+}
+
+ExtTriangleMesh::ExtTriangleMesh(const u_int meshVertCount, const u_int meshTriCount,
+		Point *meshVertices, Triangle *meshTris, Normal *meshNormals,
+		array<UV *, EXTMESH_MAX_DATA_COUNT> *meshUVs,
+		array<Spectrum *, EXTMESH_MAX_DATA_COUNT> *meshCols,
+		array<float *, EXTMESH_MAX_DATA_COUNT> *meshAlphas) :
+		TriangleMesh(meshVertCount, meshTriCount, meshVertices, meshTris) {
+	fill(uvs.begin(), uvs.end(), nullptr);
+	fill(cols.begin(), cols.end(), nullptr);
+	fill(alphas.begin(), alphas.end(), nullptr);
+
+	Init(meshNormals, meshUVs, meshCols, meshAlphas);
+}
+
+void ExtTriangleMesh::Init(Normal *meshNormals,
+		array<UV *, EXTMESH_MAX_DATA_COUNT> *meshUVs,
+		array<Spectrum *, EXTMESH_MAX_DATA_COUNT> *meshCols,
+		array<float *, EXTMESH_MAX_DATA_COUNT> *meshAlphas) {
+	if (meshUVs && (meshUVs->size() > EXTMESH_MAX_DATA_COUNT)) {
+		throw runtime_error("Error in ExtTriangleMesh::ExtTriangleMesh(): trying to define more (" +
+				ToString(meshUVs->size()) + ") UV sets than EXTMESH_MAX_DATA_COUNT");
+	}
+	if (meshCols && (meshCols->size() > EXTMESH_MAX_DATA_COUNT)) {
+		throw runtime_error("Error in ExtTriangleMesh::ExtTriangleMesh(): trying to define more (" +
+				ToString(meshCols->size()) + ") Color sets than EXTMESH_MAX_DATA_COUNT");
+	}
+	if (meshAlphas && (meshAlphas->size() > EXTMESH_MAX_DATA_COUNT)) {
+		throw runtime_error("Error in ExtTriangleMesh::ExtTriangleMesh(): trying to define more (" +
+				ToString(meshAlphas->size()) + ") Alpha sets than EXTMESH_MAX_DATA_COUNT");
+	}
+
+	normals = meshNormals;
 	triNormals = new Normal[triCount];
+
+	if (meshUVs)
+		uvs = *meshUVs;
+	if (meshCols)
+		cols = *meshCols;
+	if (meshAlphas)
+		alphas = *meshAlphas;
+
 	Preprocess();
 }
 
@@ -138,6 +194,21 @@ void ExtTriangleMesh::Preprocess() {
 	// Compute all triangle normals
 	for (u_int i = 0; i < triCount; ++i)
 		triNormals[i] = tris[i].GetGeometryNormal(vertices);
+}
+
+void ExtTriangleMesh::Delete() {
+	delete[] vertices;
+	delete[] tris;
+
+	delete[] normals;
+	delete[] triNormals;
+
+	for (UV *uv : uvs)
+		delete[] uv;
+	for (Spectrum *c : cols)
+		delete[] c;
+	for (float *a : alphas)
+		delete[] a;
 }
 
 Normal *ExtTriangleMesh::ComputeNormals() {
@@ -192,8 +263,10 @@ void ExtTriangleMesh::ApplyTransform(const Transform &trans) {
 	Preprocess();
 }
 
-ExtTriangleMesh *ExtTriangleMesh::Copy(Point *meshVertices, Triangle *meshTris, Normal *meshNormals, UV *meshUV,
-			Spectrum *meshCols, float *meshAlpha) const {
+ExtTriangleMesh *ExtTriangleMesh::CopyExt(Point *meshVertices, Triangle *meshTris, Normal *meshNormals,
+		array<UV *, EXTMESH_MAX_DATA_COUNT> *meshUVs,
+		array<Spectrum *, EXTMESH_MAX_DATA_COUNT> *meshCols,
+		array<float *, EXTMESH_MAX_DATA_COUNT> *meshAlphas) const {
 	Point *vs = meshVertices;
 	if (!vs) {
 		vs = AllocVerticesBuffer(vertCount);
@@ -212,27 +285,53 @@ ExtTriangleMesh *ExtTriangleMesh::Copy(Point *meshVertices, Triangle *meshTris, 
 		copy(normals, normals + vertCount, ns);
 	}
 
-	UV *us = meshUV;
-	if (!us && HasUVs()) {
-		us = new UV[vertCount];
-		copy(uvs, uvs + vertCount, us);
+	array<UV *, EXTMESH_MAX_DATA_COUNT> us;
+	array<Spectrum *, EXTMESH_MAX_DATA_COUNT> cs;
+	array<float *, EXTMESH_MAX_DATA_COUNT> as;
+	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
+		if (HasUVs(i) && (!meshUVs || !(*meshUVs)[i])) {
+			us[i] = new UV[vertCount];
+			copy(uvs[i], uvs[i] + vertCount, us[i]);
+		} else
+			us[i] = meshUVs ? (*meshUVs)[i] : nullptr;
+
+		if (HasColors(i) && (!meshCols || !(*meshCols)[i])) {
+			cs[i] = new Spectrum[vertCount];
+			copy(cols[i], cols[i] + vertCount, cs[i]);
+		} else
+			cs[i] = meshCols ? (*meshCols)[i] : nullptr;
+
+		if (HasAlphas(i) && (!meshAlphas || !(*meshAlphas)[i])) {
+			as[i] = new float[vertCount];
+			copy(alphas[i], alphas[i] + vertCount, as[i]);
+		} else
+			as[i] = meshAlphas ? (*meshAlphas)[i] : nullptr;
 	}
 
-	Spectrum *cs = meshCols;
-	if (!cs && HasColors()) {
-		cs = new Spectrum[vertCount];
-		copy(cols, cols + vertCount, cs);
-	}
-	
-	float *as = meshAlpha;
-	if (!as && HasAlphas()) {
-		as = new float[vertCount];
-		copy(alphas, alphas + vertCount, as);
-	}
-
-	ExtTriangleMesh *m = new ExtTriangleMesh(vertCount, triCount, vs, ts, ns, us, cs, as);
+	ExtTriangleMesh *m = new ExtTriangleMesh(vertCount, triCount, vs, ts, ns, &us, &cs, &as);
 	m->appliedTrans = appliedTrans;
+
 	return m;
+}
+
+ExtTriangleMesh *ExtTriangleMesh::Copy(Point *meshVertices, Triangle *meshTris, Normal *meshNormals,
+		UV *mUVs, Spectrum *mCols, float *mAlphas) const {
+	array<UV *, EXTMESH_MAX_DATA_COUNT> meshUVs;
+	fill(meshUVs.begin(), meshUVs.end(), nullptr);
+	if (mUVs)
+		meshUVs[0] = mUVs;
+
+	array<Spectrum *, EXTMESH_MAX_DATA_COUNT> meshCols;
+	fill(meshCols.begin(), meshCols.end(), nullptr);
+	if (mCols)
+		meshCols[0] = mCols;
+
+	array<float *, EXTMESH_MAX_DATA_COUNT> meshAlphas;
+	fill(meshAlphas.begin(), meshAlphas.end(), nullptr);
+	if (mAlphas)
+		meshAlphas[0] = mAlphas;
+
+	return CopyExt(meshVertices, meshTris, meshNormals, &meshUVs, &meshCols, &meshAlphas);
 }
 
 ExtTriangleMesh *ExtTriangleMesh::Merge(const vector<const ExtTriangleMesh *> &meshes,
@@ -253,23 +352,29 @@ ExtTriangleMesh *ExtTriangleMesh::Merge(const vector<const ExtTriangleMesh *> &m
 	Triangle *meshTris = AllocTrianglesBuffer(totalTriangleCount);
 
 	Normal *meshNormals = nullptr;
-	UV *meshUV = nullptr;
-	Spectrum *meshCols = nullptr;
-	float *meshAlpha = nullptr;
+	array<UV *, EXTMESH_MAX_DATA_COUNT> meshUVs;
+	array<Spectrum *, EXTMESH_MAX_DATA_COUNT> meshCols;
+	array<float *, EXTMESH_MAX_DATA_COUNT> meshAlphas;
 
-	const bool hasNormals = meshes[0]->HasNormals();
-	const bool hasUVs = meshes[0]->HasUVs();
-	const bool hasColors = meshes[0]->HasColors();
-	const bool hasAlphas = meshes[0]->HasAlphas();
-
-	if (hasNormals)
+	if (meshes[0]->HasNormals())
 		meshNormals = new Normal[totalVertexCount];
-	if (hasUVs)
-		meshUV = new UV[totalVertexCount];
-	if (hasColors)
-		meshCols = new Spectrum[totalVertexCount];
-	if (hasAlphas)
-		meshAlpha = new float[totalVertexCount];
+
+	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
+		if (meshes[0]->HasUVs(i))
+			meshUVs[i] = new UV[totalVertexCount];
+		else
+			meshUVs[i] = nullptr;
+
+		if (meshes[0]->HasColors(i))
+			meshCols[i] = new Spectrum[totalVertexCount];
+		else
+			meshCols[i] = nullptr;
+
+		if (meshes[0]->HasAlphas(i))
+			meshAlphas[i] = new float[totalVertexCount];
+		else
+			meshAlphas[i] = nullptr;
+	}
 	
 	u_int vIndex = 0;
 	u_int iIndex = 0;
@@ -290,9 +395,9 @@ ExtTriangleMesh *ExtTriangleMesh::Merge(const vector<const ExtTriangleMesh *> &m
 		}
 
 		// Copy the mesh normals
-		if (hasNormals != mesh->HasNormals())
+		if (meshes[0]->HasNormals() != mesh->HasNormals())
 			throw runtime_error("Error in ExtTriangleMesh::Merge(): trying to merge meshes with different type of normal definitions");
-		if (hasNormals) {
+		if (meshes[0]->HasNormals()) {
 			if (transformation) {
 				for (u_int i = 0; i < mesh->GetTotalVertexCount(); ++i)
 					meshNormals[i + vIndex] = Normalize((*transformation) * mesh->GetShadeNormal(Transform::TRANS_IDENTITY, i));
@@ -302,28 +407,30 @@ ExtTriangleMesh *ExtTriangleMesh::Merge(const vector<const ExtTriangleMesh *> &m
 			}
 		}
 
-		// Copy the mesh uvs
-		if (hasUVs != mesh->HasUVs())
-			throw runtime_error("Error in ExtTriangleMesh::Merge(): trying to merge meshes with different type of UV definitions");
-		if (hasUVs) {
-			for (u_int i = 0; i < mesh->GetTotalVertexCount(); ++i)
-				meshUV[i + vIndex] = mesh->GetUV(i);
-		}
+		for (u_int dataIndex = 0; dataIndex < EXTMESH_MAX_DATA_COUNT; dataIndex++) {
+			// Copy the mesh uvs
+			if (meshes[0]->HasUVs(dataIndex) != mesh->HasUVs(dataIndex))
+				throw runtime_error("Error in ExtTriangleMesh::Merge(): trying to merge meshes with different type of UV definitions");
+			if (meshes[0]->HasUVs(dataIndex)) {
+				for (u_int i = 0; i < mesh->GetTotalVertexCount(); ++i)
+					meshUVs[dataIndex][i + vIndex] = mesh->GetUV(i, dataIndex);
+			}
 
-		// Copy the mesh colors
-		if (hasColors != mesh->HasColors())
-			throw runtime_error("Error in ExtTriangleMesh::Merge(): trying to merge meshes with different type of color definitions");
-		if (hasColors) {
-			for (u_int i = 0; i < mesh->GetTotalVertexCount(); ++i)
-				meshCols[i + vIndex] = mesh->GetColor(i);
-		}
+			// Copy the mesh colors
+			if (meshes[0]->HasColors(dataIndex) != mesh->HasColors(dataIndex))
+				throw runtime_error("Error in ExtTriangleMesh::Merge(): trying to merge meshes with different type of color definitions");
+			if (meshes[0]->HasColors(dataIndex)) {
+				for (u_int i = 0; i < mesh->GetTotalVertexCount(); ++i)
+					meshCols[dataIndex][i + vIndex] = mesh->GetColor(i, dataIndex);
+			}
 
-		// Copy the mesh alphas
-		if (hasAlphas != mesh->HasAlphas())
-			throw runtime_error("Error in ExtTriangleMesh::Merge(): trying to merge meshes with different type of alpha definitions");
-		if (hasAlphas) {
-			for (u_int i = 0; i < mesh->GetTotalVertexCount(); ++i)
-				meshAlpha[i + vIndex] = mesh->GetAlpha(i);
+			// Copy the mesh alphas
+			if (meshes[0]->HasAlphas(dataIndex) != mesh->HasAlphas(dataIndex))
+				throw runtime_error("Error in ExtTriangleMesh::Merge(): trying to merge meshes with different type of alpha definitions");
+			if (meshes[0]->HasAlphas(dataIndex)) {
+				for (u_int i = 0; i < mesh->GetTotalVertexCount(); ++i)
+					meshAlphas[dataIndex][i + vIndex] = mesh->GetAlpha(i, dataIndex);
+			}
 		}
 
 		// Translate mesh indices
@@ -341,7 +448,7 @@ ExtTriangleMesh *ExtTriangleMesh::Merge(const vector<const ExtTriangleMesh *> &m
 	}
 
 	return new ExtTriangleMesh(totalVertexCount, totalTriangleCount,
-			meshVertices, meshTris, meshNormals, meshUV, meshCols, meshAlpha);
+			meshVertices, meshTris, meshNormals, &meshUVs, &meshCols, &meshAlphas);
 }
 
 // For some reason, LoadSerialized() and SaveSerialized() must be in the same

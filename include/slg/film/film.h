@@ -88,7 +88,8 @@ public:
 		MATERIAL_ID_COLOR = 1 << 27,
 		ALBEDO = 1 << 28,
 		AVG_SHADING_NORMAL = 1 << 29,
-		NOISE = 1 << 30
+		NOISE = 1 << 30,
+		USER_IMPORTANCE = 1 << 31
 	} FilmChannelType;
 
 	Film(const u_int width, const u_int height, const u_int *subRegion = NULL);
@@ -112,6 +113,7 @@ public:
 	const ImagePipeline *GetImagePipeline(const u_int index) const { return imagePipelines[index]; }
 
 	void CopyDynamicSettings(const Film &film);
+	void CopyHaltSettings(const Film &film);
 
 	//--------------------------------------------------------------------------
 
@@ -155,7 +157,7 @@ public:
 	u_int GetMaskObjectID(const u_int index) const { return maskObjectIDs[index]; }
 	u_int GetByObjectID(const u_int index) const { return byObjectIDs[index]; }
 
-	template<class T> const T *GetChannel(const FilmChannelType type, const u_int index = 0,
+	template<class T> T *GetChannel(const FilmChannelType type, const u_int index = 0,
 			const bool executeImagePipeline = true) {
 		throw std::runtime_error("Called Film::GetChannel() with wrong type");
 	}
@@ -349,6 +351,7 @@ public:
 	GenericFrameBuffer<4, 1, float> *channel_MATERIAL_ID_COLOR;
 	GenericFrameBuffer<4, 1, float> *channel_ALBEDO;
 	GenericFrameBuffer<1, 0, float> *channel_NOISE;
+	GenericFrameBuffer<1, 0, float> *channel_USER_IMPORTANCE;
 
 	// (Optional) OpenCL context
 	bool oclEnable;
@@ -462,14 +465,14 @@ private:
 	bool initialized;
 };
 
-template<> const float *Film::GetChannel<float>(const FilmChannelType type, const u_int index, const bool executeImagePipeline);
-template<> const u_int *Film::GetChannel<u_int>(const FilmChannelType type, const u_int index, const bool executeImagePipeline);
+template<> float *Film::GetChannel<float>(const FilmChannelType type, const u_int index, const bool executeImagePipeline);
+template<> u_int *Film::GetChannel<u_int>(const FilmChannelType type, const u_int index, const bool executeImagePipeline);
 template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, float *buffer, const u_int index, const bool executeImagePipeline);
 template<> void Film::GetOutput<u_int>(const FilmOutputs::FilmOutputType type, u_int *buffer, const u_int index, const bool executeImagePipeline);
 
 }
 
-BOOST_CLASS_VERSION(slg::Film, 23)
+BOOST_CLASS_VERSION(slg::Film, 24)
 
 BOOST_CLASS_EXPORT_KEY(slg::Film)
 

@@ -46,6 +46,7 @@
 #include "slg/film/imagepipeline/plugins/mist.h"
 #include "slg/film/imagepipeline/plugins/intel_oidn.h"
 #include "slg/film/imagepipeline/plugins/whitebalance.h"
+#include "slg/film/imagepipeline/plugins/bakemapmargin.h"
 
 using namespace std;
 using namespace luxrays;
@@ -383,6 +384,12 @@ void Film::ParseOutputs(const Properties &props) {
 				filmOutputs.Add(FilmOutputs::NOISE, fileName);
 				break;
 			}
+			case FilmOutputs::USER_IMPORTANCE: {
+				if (!initialized)
+					AddChannel(Film::USER_IMPORTANCE);
+				filmOutputs.Add(FilmOutputs::USER_IMPORTANCE, fileName);				
+				break;
+			}
 			default:
 				throw runtime_error("Unknown type in film output: " + type);
 		}
@@ -588,7 +595,7 @@ ImagePipeline *Film::CreateImagePipeline(const Properties &props, const string &
 				const bool filterSpikes = props.Get(Property(prefix + ".filterspikes")(false)).Get<bool>();
 				const bool applyDenoise = props.Get(Property(prefix + ".applydenoise")(true)).Get<bool>();
 				const float prefilterThresholdStDevFactor = props.Get(Property(prefix + ".spikestddev")(2.f)).Get<float>();
-				
+
 				const int threadCount = (userThreadCount > 0) ? userThreadCount : boost::thread::hardware_concurrency();
 				
 				imagePipeline->AddPlugin(new BCDDenoiserPlugin(
@@ -613,6 +620,9 @@ ImagePipeline *Film::CreateImagePipeline(const Properties &props, const string &
 			} else if (type == "WHITE_BALANCE") {
 				const float temperature = Clamp(props.Get(Property(prefix + ".temperature")(6500.f)).Get<float>(),1000.f, 40000.f);
 				imagePipeline->AddPlugin(new WhiteBalance(temperature));
+			} else if (type == "BAKEMAP_MARGIN") {
+				const u_int marginPixels = Max(props.Get(Property(prefix + ".margin")(2)).Get<int>(), 1);
+				imagePipeline->AddPlugin(new BakeMapMarginPlugin(marginPixels));
 			} else
 				throw runtime_error("Unknown image pipeline plugin type: " + type);
 		}

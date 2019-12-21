@@ -48,3 +48,15 @@ class SubdivShape(ImageTest):
     pass
 
 SubdivShape = AddTests(SubdivShape, TestSubdivShape, GetTestCases())
+
+################################################################################
+# Simplify shape test
+################################################################################
+
+def TestSimplifyShape(cls, params):
+	StandardSceneTest(cls, params, "simple/shape-simplify-area.cfg", "SimplifyShape")
+
+class SimplifyShape(ImageTest):
+    pass
+
+SimplifyShape = AddTests(SimplifyShape, TestSimplifyShape, GetTestCases())

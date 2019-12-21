@@ -38,6 +38,9 @@
 #include <OpenImageIO/imagebuf.h>
 #include <OpenImageIO/dassert.h>
 
+#include <openvdb/openvdb.h>
+#include <openvdb/io/File.h>
+
 #include <Python.h>
 
 #include "luxcore/luxcore.h"
@@ -461,6 +464,136 @@ void ConvertFilmChannelOutput_3xFloat_To_4xUChar(const u_int width, const u_int 
 	
 	PyBuffer_Release(&srcView);
 	PyBuffer_Release(&dstView);
+}
+
+//------------------------------------------------------------------------------
+// OpenVDB helper functions
+//------------------------------------------------------------------------------
+boost::python::list GetOpenVDBGridNames(const string &filePathStr) {
+	boost::python::list gridNames;
+
+	openvdb::io::File file(filePathStr);
+	file.open();
+	for (auto i = file.beginName(); i != file.endName(); ++i)
+		gridNames.append(*i);
+
+	file.close();
+	return gridNames;
+}
+
+
+boost::python::tuple GetOpenVDBGridInfo(const string &filePathStr, const string &gridName) {
+	boost::python::list bBox;
+	boost::python::list BlenderMetadata;
+	openvdb::io::File file(filePathStr);
+	
+	file.open();
+	openvdb::MetaMap::Ptr ovdbMetaMap = file.getMetadata();
+
+	string creator = "";
+	try {
+		creator = ovdbMetaMap->metaValue<string>("creator");
+	} catch (openvdb::LookupError &e) {
+		cout << "No creator file meta data found in OpenVDB file " + filePathStr << endl;
+	};
+
+	openvdb::GridBase::Ptr ovdbGrid = file.readGridMetadata(gridName);	
+
+	const openvdb::Vec3i bbox_min = ovdbGrid->metaValue<openvdb::Vec3i>("file_bbox_min");
+	const openvdb::Vec3i bbox_max = ovdbGrid->metaValue<openvdb::Vec3i>("file_bbox_max");
+
+	bBox.append(bbox_min[0]);
+	bBox.append(bbox_min[1]);
+	bBox.append(bbox_min[2]);
+	
+	bBox.append(bbox_max[0]);
+	bBox.append(bbox_max[1]);
+	bBox.append(bbox_max[2]);
+
+	if (creator == "Blender/Smoke") {
+		boost::python::list min_bbox_list;
+		boost::python::list max_bbox_list;
+		boost::python::list res_list;
+		boost::python::list minres_list;
+		boost::python::list maxres_list;
+		boost::python::list baseres_list;
+		boost::python::list obmat_list;
+		boost::python::list obj_shift_f_list;
+
+		openvdb::Vec3s min_bbox = ovdbMetaMap->metaValue<openvdb::Vec3s>("blender/smoke/min_bbox");
+		openvdb::Vec3s max_bbox = ovdbMetaMap->metaValue<openvdb::Vec3s>("blender/smoke/max_bbox");
+		openvdb::Vec3i res = ovdbMetaMap->metaValue<openvdb::Vec3i>("blender/smoke/resolution");
+
+		//adaptive domain settings
+		openvdb::Vec3i minres = ovdbMetaMap->metaValue<openvdb::Vec3i>("blender/smoke/min_resolution");
+		openvdb::Vec3i maxres = ovdbMetaMap->metaValue<openvdb::Vec3i>("blender/smoke/max_resolution");
+
+		openvdb::Vec3i base_res = ovdbMetaMap->metaValue<openvdb::Vec3i>("blender/smoke/base_resolution");
+
+		openvdb::Mat4s obmat = ovdbMetaMap->metaValue<openvdb::Mat4s>("blender/smoke/obmat");
+		openvdb::Vec3s obj_shift_f = ovdbMetaMap->metaValue<openvdb::Vec3s>("blender/smoke/obj_shift_f");
+
+		min_bbox_list.append(min_bbox[0]);
+		min_bbox_list.append(min_bbox[1]);
+		min_bbox_list.append(min_bbox[2]);
+
+		max_bbox_list.append(max_bbox[0]);
+		max_bbox_list.append(max_bbox[1]);
+		max_bbox_list.append(max_bbox[2]);
+		
+		res_list.append(res[0]);
+		res_list.append(res[1]);
+		res_list.append(res[2]);
+
+		minres_list.append(minres[0]);
+		minres_list.append(minres[1]);
+		minres_list.append(minres[2]);
+		
+		maxres_list.append(maxres[0]);
+		maxres_list.append(maxres[1]);
+		maxres_list.append(maxres[2]);
+
+		baseres_list.append(base_res[0]);
+		baseres_list.append(base_res[1]);
+		baseres_list.append(base_res[2]);
+
+		obmat_list.append(obmat[0][0]);
+		obmat_list.append(obmat[0][1]);
+		obmat_list.append(obmat[0][2]);
+		obmat_list.append(obmat[0][3]);
+
+		obmat_list.append(obmat[1][0]);
+		obmat_list.append(obmat[1][1]);
+		obmat_list.append(obmat[1][2]);
+		obmat_list.append(obmat[1][3]);
+
+		obmat_list.append(obmat[2][0]);
+		obmat_list.append(obmat[2][1]);
+		obmat_list.append(obmat[2][2]);
+		obmat_list.append(obmat[2][3]);
+
+		obmat_list.append(obmat[3][0]);
+		obmat_list.append(obmat[3][1]);
+		obmat_list.append(obmat[3][2]);
+		obmat_list.append(obmat[3][3]);
+
+		obj_shift_f_list.append(obj_shift_f[0]);
+		obj_shift_f_list.append(obj_shift_f[1]);
+		obj_shift_f_list.append(obj_shift_f[2]);
+
+		BlenderMetadata.append(min_bbox_list);
+		BlenderMetadata.append(max_bbox_list);
+		BlenderMetadata.append(res_list);
+		BlenderMetadata.append(minres_list);
+		BlenderMetadata.append(maxres_list);
+		BlenderMetadata.append(baseres_list);
+		BlenderMetadata.append(obmat_list);
+		BlenderMetadata.append(obj_shift_f_list);
+	};
+
+	file.close();
+
+	return boost::python::make_tuple(creator, bBox, ovdbGrid->valueType(), BlenderMetadata);
 }
 
 //------------------------------------------------------------------------------
@@ -1197,6 +1330,7 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 			useCameraPosition);
 	return true;
 }
+
 
 }  // namespace blender
 }  // namespace luxcore

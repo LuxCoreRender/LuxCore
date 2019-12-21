@@ -18,6 +18,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#define EXTMESH_MAX_DATA_COUNT 6u
+
 typedef struct {
 	Transform appliedTrans;
 } TriangleMeshParam;
@@ -37,9 +39,9 @@ typedef struct {
 	unsigned int vertsOffset;
 	unsigned int normalsOffset;
 	unsigned int triNormalsOffset;
-	unsigned int uvsOffset;
-	unsigned int colsOffset;
-	unsigned int alphasOffset;
+	unsigned int uvsOffset[EXTMESH_MAX_DATA_COUNT];
+	unsigned int colsOffset[EXTMESH_MAX_DATA_COUNT];
+	unsigned int alphasOffset[EXTMESH_MAX_DATA_COUNT];
 
 	// Triangle information
 	unsigned int trisOffset;

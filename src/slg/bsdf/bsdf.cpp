@@ -63,6 +63,48 @@ void BSDF::Init(const bool fixedFromLight, const bool throughShadowTransparency,
 	frame = hitPoint.GetFrame();
 }
 
+// Used when have a point of a surface
+void BSDF::Init(const Scene &scene,
+		const u_int meshIndex, const u_int triangleIndex,
+		const Point &surfacePoint,
+		const float surfacePointBary1, const float surfacePointBary2, 
+		const float time,
+		const float passThroughEvent, const PathVolumeInfo *volInfo) {
+	// Get the scene object
+	sceneObject = scene.objDefs.GetSceneObject(meshIndex);
+
+	// Get the mesh
+	mesh = sceneObject->GetExtMesh();
+	mesh->GetLocal2World(time, hitPoint.localToWorld);
+
+	hitPoint.Init(false, false,
+			scene, meshIndex, triangleIndex,
+			surfacePoint, Vector(0.f, 0.f, 0.f),
+			surfacePointBary1, surfacePointBary2, passThroughEvent);
+	hitPoint.fixedDir = Vector(hitPoint.geometryN);
+	
+	// Get the material
+	material = sceneObject->GetMaterial();
+
+	// Set interior and exterior volumes
+	volInfo->SetHitPointVolumes(hitPoint,
+			material->GetInteriorVolume(hitPoint, hitPoint.passThroughEvent),
+			material->GetExteriorVolume(hitPoint, hitPoint.passThroughEvent),
+			scene.defaultWorldVolume);
+
+	// Check if it is a light source
+	if (material->IsLightSource())
+		triangleLightSource = scene.lightDefs.GetLightSourceByMeshAndTriIndex(meshIndex, triangleIndex);
+	else
+		triangleLightSource = NULL;
+
+	// Apply bump or normal mapping
+	material->Bump(&hitPoint);
+
+	// Build the local reference system
+	frame = hitPoint.GetFrame();
+}
+
 // Used when hitting a volume scatter point
 void BSDF::Init(const bool fixedFromLight, const bool throughShadowTransparency,
 		const Scene &scene, const luxrays::Ray &ray,
@@ -81,20 +123,23 @@ void BSDF::Init(const bool fixedFromLight, const bool throughShadowTransparency,
 	hitPoint.geometryN = Normal(-ray.d);
 	hitPoint.interpolatedN = hitPoint.geometryN;
 	hitPoint.shadeN = hitPoint.geometryN;
-	CoordinateSystem(Vector(hitPoint.shadeN), &hitPoint.dpdu, &hitPoint.dpdv);
-	hitPoint.dndu = hitPoint.dndv = Normal(0.f, 0.f, 0.f);
 
 	hitPoint.intoObject = true;
 	hitPoint.interiorVolume = &volume;
 	hitPoint.exteriorVolume = &volume;
 
-	hitPoint.color = Spectrum(1.f);
-	hitPoint.alpha = 1.f;
-
 	triangleLightSource = NULL;
 
-	hitPoint.uv = UV(0.f, 0.f);
-	
+	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
+		hitPoint.uv[i] = UV(0.f, 0.f);
+		hitPoint.color[i] = Spectrum(1.f);
+		hitPoint.alpha[i] = 1.f;
+	}
+		
+	CoordinateSystem(Vector(hitPoint.shadeN), &hitPoint.dpdu, &hitPoint.dpdv);
+	hitPoint.dndu = Normal();
+	hitPoint.dndv = Normal();
+
 	hitPoint.objectID = NULL_INDEX;
 
 	// Build the local reference system
@@ -123,6 +168,14 @@ Spectrum BSDF::Albedo() const {
 
 Spectrum BSDF::EvaluateTotal() const {
 	return material->EvaluateTotal(hitPoint);
+}
+
+bool BSDF::HasCombinedBakeMap() const {
+	return sceneObject && sceneObject->HasCombinedBakeMap();
+}
+
+Spectrum BSDF::GetCombinedBakeMapValue() const {
+	return sceneObject->GetCombinedBakeMapValue(hitPoint.uv[sceneObject->GetCombinedBakeMapUVIndex()]);
 }
 
 //------------------------------------------------------------------------------

@@ -513,7 +513,8 @@ void DirectLightSamplingCache::Build(const Scene *scn) {
 	// Build cache entries
 	//--------------------------------------------------------------------------
 
-	BuildCacheEntries();
+	if (visibilityParticles.size() > 0)
+		BuildCacheEntries();
 
 	//--------------------------------------------------------------------------
 	// Free memory

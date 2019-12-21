@@ -84,7 +84,7 @@ void RTPathCPURenderThread::RTRenderFunc() {
 			((RTPathCPUSampler *)sampler)->Reset(engine->film);
 		}
 
-		pathTracer.RenderEyeSample(threadIndex, device, engine->renderConfig->scene,
+		pathTracer.RenderEyeSample(device, engine->renderConfig->scene,
 				engine->film, sampler, sampleResults);
 
 		// Variance clamping

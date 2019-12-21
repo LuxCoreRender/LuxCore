@@ -121,8 +121,7 @@ void TilePathNativeRenderThread::RenderThreadImpl() {
 			for (u_int x = 0; x < tileWork.GetCoord().width && !interruptionRequested; ++x) {
 				for (u_int sampleY = 0; sampleY < engine->aaSamples; ++sampleY) {
 					for (u_int sampleX = 0; sampleX < engine->aaSamples; ++sampleX) {
-						pathTracer.RenderEyeSample(threadIndex,
-								intersectionDevice, engine->renderConfig->scene,
+						pathTracer.RenderEyeSample(intersectionDevice, engine->renderConfig->scene,
 								engine->film, sampler, sampleResults);
 
 						sampler->NextSample(sampleResults);
@@ -138,14 +137,27 @@ void TilePathNativeRenderThread::RenderThreadImpl() {
 		}
 
 		if (engine->photonGICache) {
-			const u_int spp = engine->film->GetTotalEyeSampleCount() / engine->film->GetPixelCount();
-			engine->photonGICache->Update(engine->renderOCLThreads.size() + threadIndex, spp);
+			try {
+				const u_int spp = engine->film->GetTotalEyeSampleCount() / engine->film->GetPixelCount();
+				engine->photonGICache->Update(engine->renderOCLThreads.size() + threadIndex, spp);
+			} catch (boost::thread_interrupted &ti) {
+				// I have been interrupted, I must stop
+				break;
+			}
 		}
 	}
 
 	delete rndGen;
 
 	threadDone = true;
+
+	// This is done to interrupt thread pending on barrier wait
+	// inside engine->photonGICache->Update(). This can happen when an
+	// halt condition is satisfied.
+	for (u_int i = 0; i < engine->renderOCLThreads.size(); ++i)
+		engine->renderOCLThreads[i]->Interrupt();
+	for (u_int i = 0; i < engine->renderNativeThreads.size(); ++i)
+		engine->renderNativeThreads[i]->Interrupt();
 
 	//SLG_LOG("[TilePathNativeRenderThread::" << threadIndex << "] Rendering thread halted");
 }

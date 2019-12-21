@@ -61,14 +61,50 @@ void CompiledScene::CompileGeometry() {
 	// Not using boost::unordered_map because the key is an ExtMesh pointer
 	map<ExtMesh *, u_int, bool (*)(const Mesh *, const Mesh *)> definedMeshs(MeshPtrCompare);
 
-	slg::ocl::ExtMesh newMeshDesc;
-	newMeshDesc.vertsOffset = 0;
-	newMeshDesc.trisOffset = 0;
-	newMeshDesc.normalsOffset = 0;
-	newMeshDesc.triNormalsOffset = 0;
-	newMeshDesc.uvsOffset = 0;
-	newMeshDesc.colsOffset = 0;
-	newMeshDesc.alphasOffset = 0;
+	u_int vertsOffset = 0;
+	u_int trisOffset = 0;
+	u_int normalsOffset = 0;
+	u_int triNormalsOffset = 0;
+	u_int uvsOffset = 0;
+	u_int colsOffset = 0;
+	u_int alphasOffset = 0;
+
+	auto InitMeshDesc = [&](slg::ocl::ExtMesh &dstMeshDesc, const ExtMesh &srcMesh) { 
+        dstMeshDesc.vertsOffset = vertsOffset;
+		vertsOffset += srcMesh.GetTotalVertexCount();
+
+		dstMeshDesc.trisOffset = trisOffset;
+		trisOffset += srcMesh.GetTotalTriangleCount();
+
+		if (srcMesh.HasNormals()) {
+			dstMeshDesc.normalsOffset = normalsOffset;
+			normalsOffset += srcMesh.GetTotalVertexCount();
+		} else
+			dstMeshDesc.normalsOffset = NULL_INDEX;
+
+		dstMeshDesc.triNormalsOffset = triNormalsOffset;
+		triNormalsOffset += srcMesh.GetTotalTriangleCount();
+
+		for (u_int dataIndex = 0; dataIndex < EXTMESH_MAX_DATA_COUNT; ++dataIndex) {
+			if (srcMesh.HasUVs(dataIndex)) {
+				dstMeshDesc.uvsOffset[dataIndex] = uvsOffset;
+				uvsOffset += srcMesh.GetTotalVertexCount();
+			} else
+				dstMeshDesc.uvsOffset[dataIndex] = NULL_INDEX;
+
+			if (srcMesh.HasColors(dataIndex)) {
+				dstMeshDesc.colsOffset[dataIndex] = colsOffset;
+				colsOffset += srcMesh.GetTotalVertexCount();
+			} else
+				dstMeshDesc.colsOffset[dataIndex] = NULL_INDEX;
+
+			if (srcMesh.HasAlphas(dataIndex)) {
+				dstMeshDesc.alphasOffset[dataIndex] = alphasOffset;
+				alphasOffset += srcMesh.GetTotalVertexCount();
+			} else
+				dstMeshDesc.alphasOffset[dataIndex] = NULL_INDEX;
+		}
+    };
 
 	slg::ocl::ExtMesh currentMeshDesc;
 	for (u_int i = 0; i < objCount; ++i) {
@@ -86,19 +122,7 @@ void CompiledScene::CompileGeometry() {
 				map<ExtMesh *, u_int, bool (*)(Mesh *, Mesh *)>::iterator it = definedMeshs.find(imesh->GetExtTriangleMesh());
 				if (it == definedMeshs.end()) {
 					// It is a new one
-					currentMeshDesc = newMeshDesc;
-
-					newMeshDesc.vertsOffset += imesh->GetTotalVertexCount();
-					newMeshDesc.trisOffset += imesh->GetTotalTriangleCount();
-					newMeshDesc.triNormalsOffset += imesh->GetTotalTriangleCount();
-					if (imesh->HasNormals())
-						newMeshDesc.normalsOffset += imesh->GetTotalVertexCount();
-					if (imesh->HasUVs())
-						newMeshDesc.uvsOffset += imesh->GetTotalVertexCount();
-					if (imesh->HasColors())
-						newMeshDesc.colsOffset += imesh->GetTotalVertexCount();
-					if (imesh->HasAlphas())
-						newMeshDesc.alphasOffset += imesh->GetTotalVertexCount();
+					InitMeshDesc(currentMeshDesc, *imesh);
 
 					isExistingInstance = false;
 
@@ -124,19 +148,7 @@ void CompiledScene::CompileGeometry() {
 				map<ExtMesh *, u_int, bool (*)(Mesh *, Mesh *)>::iterator it = definedMeshs.find(mmesh->GetExtTriangleMesh());
 				if (it == definedMeshs.end()) {
 					// It is a new one
-					currentMeshDesc = newMeshDesc;
-
-					newMeshDesc.vertsOffset += mmesh->GetTotalVertexCount();
-					newMeshDesc.trisOffset += mmesh->GetTotalTriangleCount();
-					newMeshDesc.triNormalsOffset += mmesh->GetTotalTriangleCount();
-					if (mmesh->HasNormals())
-						newMeshDesc.normalsOffset += mmesh->GetTotalVertexCount();
-					if (mmesh->HasUVs())
-						newMeshDesc.uvsOffset += mmesh->GetTotalVertexCount();
-					if (mmesh->HasColors())
-						newMeshDesc.colsOffset += mmesh->GetTotalVertexCount();
-					if (mmesh->HasAlphas())
-						newMeshDesc.alphasOffset += mmesh->GetTotalVertexCount();
+					InitMeshDesc(currentMeshDesc, *mmesh);
 
 					isExistingInstance = false;
 
@@ -177,19 +189,7 @@ void CompiledScene::CompileGeometry() {
 				baseMesh = (const ExtTriangleMesh *)mesh;
 
 				// It is a not instanced mesh
-				currentMeshDesc = newMeshDesc;
-
-				newMeshDesc.vertsOffset += mesh->GetTotalVertexCount();
-				newMeshDesc.trisOffset += mesh->GetTotalTriangleCount();
-				newMeshDesc.triNormalsOffset += mesh->GetTotalTriangleCount();
-				if (mesh->HasNormals())
-					newMeshDesc.normalsOffset += mesh->GetTotalVertexCount();
-				if (mesh->HasUVs())
-					newMeshDesc.uvsOffset += mesh->GetTotalVertexCount();
-				if (mesh->HasColors())
-					newMeshDesc.colsOffset += mesh->GetTotalVertexCount();
-				if (mesh->HasAlphas())
-					newMeshDesc.alphasOffset += mesh->GetTotalVertexCount();
+				InitMeshDesc(currentMeshDesc, *baseMesh);
 
 				currentMeshDesc.type = slg::ocl::TYPE_EXT_TRIANGLE;
 
@@ -214,8 +214,7 @@ void CompiledScene::CompileGeometry() {
 			if (baseMesh->HasNormals()) {
 				const Normal *n = baseMesh->GetNormals();
 				normals.insert(normals.end(), n, n + baseMesh->GetTotalVertexCount());
-			} else
-				currentMeshDesc.normalsOffset = NULL_INDEX;
+			}
 
 			//------------------------------------------------------------------
 			// Compile mesh triangle normals (expressed in local coordinates)
@@ -224,35 +223,34 @@ void CompiledScene::CompileGeometry() {
 			const Normal *tn = baseMesh->GetTriNormals();
 			triNormals.insert(triNormals.end(), tn, tn + baseMesh->GetTotalTriangleCount());
 
-			//------------------------------------------------------------------
-			// Compile vertex uvs
-			//------------------------------------------------------------------
+			for (u_int dataIndex = 0; dataIndex < EXTMESH_MAX_DATA_COUNT; ++dataIndex) {
+				//--------------------------------------------------------------
+				// Compile vertex uvs
+				//--------------------------------------------------------------
 
-			if (baseMesh->HasUVs()) {
-				const UV *u = baseMesh->GetUVs();
-				uvs.insert(uvs.end(), u, u + baseMesh->GetTotalVertexCount());
-			} else
-				currentMeshDesc.uvsOffset = NULL_INDEX;
+				if (baseMesh->HasUVs(dataIndex)) {
+					const UV *u = baseMesh->GetUVs(dataIndex);
+					uvs.insert(uvs.end(), u, u + baseMesh->GetTotalVertexCount());
+				}
 
-			//------------------------------------------------------------------
-			// Compile vertex colors
-			//------------------------------------------------------------------
+				//--------------------------------------------------------------
+				// Compile vertex colors
+				//--------------------------------------------------------------
 
-			if (baseMesh->HasColors()) {
-				const Spectrum *c = baseMesh->GetColors();
-				cols.insert(cols.end(), c, c + baseMesh->GetTotalVertexCount());
-			} else
-				currentMeshDesc.colsOffset = NULL_INDEX;
+				if (baseMesh->HasColors(dataIndex)) {
+					const Spectrum *c = baseMesh->GetColors(dataIndex);
+					cols.insert(cols.end(), c, c + baseMesh->GetTotalVertexCount());
+				}
 
-			//------------------------------------------------------------------
-			// Compile vertex alphas
-			//------------------------------------------------------------------
+				//--------------------------------------------------------------
+				// Compile vertex alphas
+				//--------------------------------------------------------------
 
-			if (baseMesh->HasAlphas()) {
-				const float *a = baseMesh->GetAlphas();
-				alphas.insert(alphas.end(), a, a + baseMesh->GetTotalVertexCount());
-			} else
-				currentMeshDesc.alphasOffset = NULL_INDEX;
+				if (baseMesh->HasAlphas(dataIndex)) {
+					const float *a = baseMesh->GetAlphas(dataIndex);
+					alphas.insert(alphas.end(), a, a + baseMesh->GetTotalVertexCount());
+				}
+			}
 
 			//------------------------------------------------------------------
 			// Compile baseMesh vertices (expressed in local coordinates)

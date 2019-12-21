@@ -120,8 +120,14 @@ public:
 	void DefineMesh(luxrays::ExtMesh *mesh);
 	void DefineMesh(const std::string &shapeName,
 		const long plyNbVerts, const long plyNbTris,
-		luxrays::Point *p, luxrays::Triangle *vi, luxrays::Normal *n, luxrays::UV *uv,
-		luxrays::Spectrum *cols, float *alphas);
+		luxrays::Point *p, luxrays::Triangle *vi, luxrays::Normal *n,
+		luxrays::UV *uv, luxrays::Spectrum *cols, float *alphas);
+	void DefineMeshExt(const std::string &shapeName,
+		const long plyNbVerts, const long plyNbTris,
+		luxrays::Point *p, luxrays::Triangle *vi, luxrays::Normal *n,
+		std::array<luxrays::UV *, EXTMESH_MAX_DATA_COUNT> *uvs,
+		std::array<luxrays::Spectrum *, EXTMESH_MAX_DATA_COUNT> *cols,
+		std::array<float *, EXTMESH_MAX_DATA_COUNT> *alphas);
 	void DefineMesh(const std::string &instMeshName, const std::string &meshName,
 		const luxrays::Transform &trans);
 	void DefineMesh(const std::string &motMeshName, const std::string &meshName,

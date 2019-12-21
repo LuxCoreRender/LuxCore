@@ -3,8 +3,6 @@
 cd ..
 git lfs install
 git clone --branch master https://github.com/LuxCoreRender/WindowsCompile .\WindowsCompile
-.\WindowsCompile\support\bin\wget https://github.com/LuxCoreRender/WindowsCompileDeps/releases/download/luxcorerender_v2.2/WindowsCompileDeps.7z
-.\WindowsCompile\support\bin\7z x -oWindowsCompileDeps WindowsCompileDeps.7z
 
 mklink /J Luxcore %SYSTEM_DEFAULTWORKINGDIRECTORY%
 

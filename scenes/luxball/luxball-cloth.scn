@@ -6,7 +6,8 @@ scene.camera.lookat = 0.5 -1.4 1.7 0.0 0.0 0.4
 #scene.materials.cloth.ks = 0.5 0.5 0.5
 #scene.materials.cloth.uroughness = 0.3
 #scene.materials.cloth.vroughness = 0.3
-scene.materials.cloth.type = cloth
+##
+#scene.materials.cloth.type = cloth
 #scene.materials.cloth.preset = silk_shantung
 #scene.materials.cloth.warp_kd = 0.0096037 0.003146 0.0029804
 #scene.materials.cloth.warp_ks = 0.059085 0.063159 0.068253
@@ -14,6 +15,8 @@ scene.materials.cloth.type = cloth
 #scene.materials.cloth.weft_ks = 0.25977 0.088627 0.080477
 #scene.materials.cloth.repeat_u = 224.0
 #scene.materials.cloth.repeat_v = 168.0
+##
+#scene.materials.cloth.type = cloth
 #scene.materials.cloth.preset = wool_gabardine
 #scene.materials.cloth.warp_kd = 0.29531 0.045165 0.019687
 #scene.materials.cloth.warp_ks = 0.33414 0.11662 0.089103
@@ -21,6 +24,8 @@ scene.materials.cloth.type = cloth
 #scene.materials.cloth.weft_ks = 0.33414 0.11662 0.089103
 #scene.materials.cloth.repeat_u = 100.8
 #scene.materials.cloth.repeat_v = 67.2
+##
+#scene.materials.cloth.type = cloth
 #scene.materials.cloth.preset = cotton_twill
 #scene.materials.cloth.warp_kd = 0.069492 0.045238 0.053414
 #scene.materials.cloth.warp_ks = 0.076142 0.076142 0.076142
@@ -28,13 +33,16 @@ scene.materials.cloth.type = cloth
 #scene.materials.cloth.weft_ks = 0.076142 0.076142 0.076142
 #scene.materials.cloth.repeat_u = 125.0
 #scene.materials.cloth.repeat_v = 62.5
-scene.materials.cloth.preset = silk_charmeuse
-scene.materials.cloth.warp_kd = 0.065344 0.00076876 0.00051252
-scene.materials.cloth.warp_ks = 0.27408 0.048368 0.040844
-scene.materials.cloth.weft_kd = 0.065344 0.00076876 0.00051252
-scene.materials.cloth.weft_ks = 0.27085 0.047292 0.040844
-scene.materials.cloth.repeat_u = 200.0
-scene.materials.cloth.repeat_v = 100.0
+##
+#scene.materials.cloth.type = cloth
+#scene.materials.cloth.preset = silk_charmeuse
+#scene.materials.cloth.warp_kd = 0.065344 0.00076876 0.00051252
+#scene.materials.cloth.warp_ks = 0.27408 0.048368 0.040844
+#scene.materials.cloth.weft_kd = 0.065344 0.00076876 0.00051252
+#scene.materials.cloth.weft_ks = 0.27085 0.047292 0.040844
+#scene.materials.cloth.repeat_u = 200.0
+#scene.materials.cloth.repeat_v = 100.0
+##
 #scene.materials.cloth.preset = polyester_lining_cloth
 #scene.materials.cloth.warp_kd = 0.24033 0.034872 0.017907
 #scene.materials.cloth.warp_ks = 0.10686 0.056992 0.052382
@@ -49,6 +57,16 @@ scene.materials.cloth.repeat_v = 100.0
 #scene.materials.cloth.weft_ks = 0.35359 0.35359 0.35359
 #scene.materials.cloth.repeat_u = 117.0
 #scene.materials.cloth.repeat_v = 58.5
+##
+scene.materials.cloth.type = "cloth"
+scene.materials.cloth.preset = "denim"
+scene.materials.cloth.weft_kd = "0.64 0.64 0.64"
+scene.materials.cloth.weft_ks = "0.04 0.04 0.04"
+scene.materials.cloth.warp_kd = "0 0 0"
+scene.materials.cloth.warp_ks = "0.04 0.04 0.04"
+scene.materials.cloth.repeat_u = 150
+scene.materials.cloth.repeat_v = 150
+##
 scene.materials.shell.type = matte
 scene.materials.shell.kd = 0.5 0.0 0.0
 scene.materials.whitematte.type = matte

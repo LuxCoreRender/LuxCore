@@ -44,14 +44,17 @@ using namespace slg;
 
 size_t PathOCLBaseOCLRenderThread::GetOpenCLHitPointSize() const {
 	// HitPoint memory size
-	size_t hitPointSize = sizeof(Vector) + sizeof(Point) + sizeof(UV) +
-			3 * sizeof(Normal) + sizeof(Transform);
+	size_t hitPointSize = sizeof(Vector) +
+			sizeof(Point) +
+			3 * sizeof(Normal) +
+			EXTMESH_MAX_DATA_COUNT * sizeof(UV) +
+			sizeof(Transform);
 	if (renderEngine->compiledScene->IsTextureCompiled(HITPOINTCOLOR) ||
 			renderEngine->compiledScene->IsTextureCompiled(HITPOINTGREY) ||
 			renderEngine->compiledScene->hasTriangleLightWithVertexColors)
-		hitPointSize += sizeof(Spectrum);
+		hitPointSize += EXTMESH_MAX_DATA_COUNT * sizeof(Spectrum);
 	if (renderEngine->compiledScene->IsTextureCompiled(HITPOINTALPHA))
-		hitPointSize += sizeof(float);
+		hitPointSize += EXTMESH_MAX_DATA_COUNT * sizeof(float);
 	// passThroughEvent
 	hitPointSize += sizeof(float);
 	// Fields dpdu, dpdv, dndu, dndv
@@ -391,6 +394,12 @@ void PathOCLBaseOCLRenderThread::InitGPUTaskBuffer() {
 	const size_t openCLBSDFSize = GetOpenCLBSDFSize();
 
 	//--------------------------------------------------------------------------
+	// Allocate tasksConfigBuff
+	//--------------------------------------------------------------------------
+
+	AllocOCLBufferRO(&taskConfigBuff, &renderEngine->taskConfig, sizeof(slg::ocl::pathoclbase::GPUTaskConfiguration), "GPUTask");
+
+	//--------------------------------------------------------------------------
 	// Allocate tasksBuff
 	//--------------------------------------------------------------------------
 	
@@ -486,7 +495,8 @@ void PathOCLBaseOCLRenderThread::InitSamplerSharedDataBuffer() {
 		slg::ocl::RandomSamplerSharedData rssd;
 		rssd.pixelBucketIndex = 0; // Initialized by OpenCL kernel
 		rssd.adaptiveStrength = renderEngine->oclSampler->random.adaptiveStrength;
-		
+		rssd.adaptiveUserImportanceWeight = renderEngine->oclSampler->random.adaptiveUserImportanceWeight;
+
 		cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
 		oclQueue.enqueueWriteBuffer(*samplerSharedDataBuff, CL_TRUE, 0, size, &rssd);
 	} else if (renderEngine->oclSampler->type == slg::ocl::SOBOL) {
@@ -498,7 +508,8 @@ void PathOCLBaseOCLRenderThread::InitSamplerSharedDataBuffer() {
 		sssd->seedBase = renderEngine->seedBase;
 		sssd->pixelBucketIndex = 0; // Initialized by OpenCL kernel
 		sssd->adaptiveStrength = renderEngine->oclSampler->sobol.adaptiveStrength;
-		
+		sssd->adaptiveUserImportanceWeight = renderEngine->oclSampler->sobol.adaptiveUserImportanceWeight;
+
 		// Initialize all pass values. The pass buffer is attached at the
 		// end of slg::ocl::SobolSamplerSharedData
 		u_int *passBuffer = (u_int *)(buffer + sizeof(slg::ocl::SobolSamplerSharedData));

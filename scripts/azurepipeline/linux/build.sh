@@ -4,6 +4,10 @@
 sudo apt-get -qq update
 sudo apt-get install -y libtool-bin cmake flex bison libgtk-3-dev libgl1-mesa-dev python3-numpy ocl-icd-opencl-dev
 
+# Get cl.hpp file
+wget https://www.khronos.org/registry/OpenCL/api/2.1/cl.hpp
+sudo cp cl.hpp /usr/include/CL/cl.hpp
+
 # Clone LinuxCompile
 git clone https://github.com/LuxCoreRender/LinuxCompile.git
 

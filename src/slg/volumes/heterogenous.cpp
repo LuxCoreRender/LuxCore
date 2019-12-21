@@ -71,23 +71,12 @@ float HeterogeneousVolume::Scatter(const Ray &ray, const float u,
 	const bool scatterAllowed = (!scatteredStart || multiScattering);
 
 	// Point where to evaluate the volume
-	HitPoint hitPoint =  {
-		ray.d,
-		ray(ray.mint),
-		UV(),
-		Normal(-ray.d),
-		Normal(-ray.d),
-		Normal(-ray.d),
-		Spectrum(1.f),
-		Vector(0.f, 0.f, 0.f), Vector(0.f, 0.f, 0.f),
-		Normal(0.f, 0.f, 0.f), Normal(0.f, 0.f, 0.f),
-		1.f,
-		0.f, // It doesn't matter here
-		Transform(),
-		this, this, // It doesn't matter here
-		true, true, // It doesn't matter here
-		0
-	};
+	HitPoint hitPoint;
+	hitPoint.Init();
+	hitPoint.fixedDir = ray.d;
+	hitPoint.p = ray.o;
+	hitPoint.geometryN = hitPoint.interpolatedN = hitPoint.shadeN = Normal(-ray.d);
+	hitPoint.passThroughEvent = u;
 
 	for (u_int s = 0; s < steps; ++s) {
 		// Compute the scattering over the current step

@@ -33,6 +33,8 @@
 #include "slg/shapes/groupshape.h"
 #include "slg/shapes/subdiv.h"
 #include "slg/shapes/displacement.h"
+#include "slg/shapes/harlequinshape.h"
+#include "slg/shapes/simplify.h"
 
 using namespace std;
 using namespace luxrays;
@@ -303,10 +305,27 @@ ExtTriangleMesh *Scene::CreateShape(const string &shapeName, const Properties &p
 
 		params.scale = props.Get(Property(propName + ".scale")(1.f)).Get<float>();
 		params.offset = props.Get(Property(propName + ".offset")(0.f)).Get<float>();
-		params.normalSmooth = props.Get(Property(propName + ".normalsmooth")(1)).Get<bool>();
+		params.normalSmooth = props.Get(Property(propName + ".normalsmooth")(true)).Get<bool>();
 
 		shape = new DisplacementShape((ExtTriangleMesh *)extMeshCache.GetExtMesh(sourceMeshName),
 				*tex, params);
+	} else if (shapeType == "harlequin") {
+		const string sourceMeshName = props.Get(Property(propName + ".source")("")).Get<string>();
+		if (!extMeshCache.IsExtMeshDefined(sourceMeshName))
+			throw runtime_error("Unknown shape name in a harlequin shape: " + shapeName);
+		
+		shape = new HarlequinShape((ExtTriangleMesh *)extMeshCache.GetExtMesh(sourceMeshName));
+	} else if (shapeType == "simplify") {
+		const string sourceMeshName = props.Get(Property(propName + ".source")("")).Get<string>();
+		if (!extMeshCache.IsExtMeshDefined(sourceMeshName))
+			throw runtime_error("Unknown shape name in a simplify shape: " + shapeName);
+		
+		const float target = props.Get(Property(propName + ".target")(.25f)).Get<float>();
+		const float edgeScreenSize = Clamp(props.Get(Property(propName + ".edgescreensize")(0.f)).Get<float>(), 0.f, 1.f);
+		const bool preserveBorder = props.Get(Property(propName + ".preserveborder")(false)).Get<bool>();
+		
+		shape = new SimplifyShape(camera, (ExtTriangleMesh *)extMeshCache.GetExtMesh(sourceMeshName),
+				target, edgeScreenSize, preserveBorder);
 	} else
 		throw runtime_error("Unknown shape type: " + shapeType);
 

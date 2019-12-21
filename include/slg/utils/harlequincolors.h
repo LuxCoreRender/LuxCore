@@ -24,12 +24,8 @@
 
 namespace slg {
 
-luxrays::Spectrum GetHarlequinColorImpl(const u_longlong v);
-
-template <class T>
-luxrays::Spectrum GetHarlequinColor(const T v) {
-	return GetHarlequinColorImpl((const u_longlong)v);
-}
+const luxrays::Spectrum &GetHarlequinColorByIndex(const u_int v);
+const luxrays::Spectrum &GetHarlequinColorByAddr(const u_longlong v);
 
 }
 

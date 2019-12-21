@@ -49,6 +49,8 @@ void LuxCoreApp::MenuRendering() {
 		}
 	}
 
+	ImGui::Separator();
+
 	if (session && ImGui::MenuItem("Export")) {
 		nfdchar_t *outPath = NULL;
 		nfdresult_t result = NFD_SaveDialog(NULL, NULL, &outPath);
@@ -84,6 +86,21 @@ void LuxCoreApp::MenuRendering() {
 			config->Save(fileName);
 		}
 	}
+
+	if (session && ImGui::MenuItem("Export (glTF)")) {
+		nfdchar_t *fileName = NULL;
+		nfdresult_t result = NFD_SaveDialog("gltf", NULL, &fileName);
+
+		if (result == NFD_OKAY) {
+			LA_LOG("Export current scene to file in glTF format: " << fileName);
+			config->ExportGLTF(fileName);
+		}
+	}
+	
+	ImGui::Separator();
+
+	if (session && ImGui::MenuItem("Bake all objects"))
+		BakeAllSceneObjects();
 
 	ImGui::Separator();
 
@@ -220,6 +237,10 @@ void LuxCoreApp::MenuEngine() {
 #endif
 	if (ImGui::MenuItem("RTPATHCPU", "9", (currentEngineType == "RTPATHCPU"))) {
 		SetRenderingEngineType("RTPATHCPU");
+		CloseAllRenderConfigEditors();
+	}
+	if (ImGui::MenuItem("BAKECPU", "0", (currentEngineType == "BAKECPU"))) {
+		SetRenderingEngineType("BAKECPU");
 		CloseAllRenderConfigEditors();
 	}
 }
@@ -435,12 +456,28 @@ void LuxCoreApp::MenuTool() {
 					Property("film.outputs.LUXCOREUI_OBJECTSELECTION_AOV.type")("OBJECT_ID") <<
 					Property("film.outputs.LUXCOREUI_OBJECTSELECTION_AOV.filename")("dummy.png");
 		}
-		
+
 		RenderConfigParse(props);
 	}
 	if (ImGui::MenuItem("Image view", NULL, (currentTool == TOOL_IMAGE_VIEW))) {
 		currentTool = TOOL_IMAGE_VIEW;
 		RenderConfigParse(Properties() << Property("screen.tool.type")("IMAGE_VIEW"));
+	}
+	if (ImGui::MenuItem("User importance painting", NULL, (currentTool == TOOL_USER_IMPORTANCE_PAINT))) {
+		currentTool = TOOL_USER_IMPORTANCE_PAINT;
+		
+		Properties props;
+		props << Property("screen.tool.type")("USER_IMPORTANCE_PAINT");
+
+		// Check if the session a _USER_IMPORTANCE AOV enabled
+		if(!session->GetFilm().HasOutput(Film::OUTPUT_USER_IMPORTANCE)) {
+			// Enable OBJECT_ID AOV
+			props <<
+					Property("film.outputs.LUXCOREUI_USER_IMPORTANCE_AOV.type")("USER_IMPORTANCE") <<
+					Property("film.outputs.LUXCOREUI_USER_IMPORTANCE_AOV.filename")("dummy.png");
+		}
+
+		RenderConfigParse(props);
 	}
 }
 

@@ -1,17 +1,7 @@
-scene.camera.cliphither = 0.00100000005
-scene.camera.clipyon = 1.00000002e+30
-scene.camera.shutteropen = 0
-scene.camera.shutterclose = 1
-scene.camera.autovolume.enable = 1
+scene.camera.type = "perspective"
 scene.camera.lookat.orig = 8.34077549 -7.03312111 4.53552628
 scene.camera.lookat.target = -4.52398491 3.39883137 0.837888479
-scene.camera.up = 0 0 1
-scene.camera.lensradius = 0
-scene.camera.focaldistance = 10
-scene.camera.autofocus.enable = 0
-scene.camera.type = "perspective"
-scene.camera.oculusrift.barrelpostpro.enable = 0
-scene.camera.fieldofview = 45
+scene.camera.fieldofview = 55
 ################################################################################
 scene.lights.l1.type = sphere
 scene.lights.l1.position = 4.0 -2.0 5.0
@@ -43,15 +33,24 @@ scene.shapes.spheresubdiv.source = sphereply
 scene.shapes.spheresubdiv.maxlevel = 5
 scene.shapes.spheresubdiv.maxedgescreensize = 0.02
 ##
-scene.shapes.sphere.type = displacement
-scene.shapes.sphere.source = spheresubdiv
-scene.shapes.sphere.offset = 0.0
-scene.shapes.sphere.normalsmooth = 1
-scene.shapes.sphere.map = fabric_disp
-scene.shapes.sphere.scale = 0.15
+scene.shapes.spheredisp.type = displacement
+scene.shapes.spheredisp.source = spheresubdiv
+scene.shapes.spheredisp.offset = 0.0
+scene.shapes.spheredisp.normalsmooth = 1
+scene.shapes.spheredisp.map = fabric_disp
+scene.shapes.spheredisp.scale = 0.15
+##
+#scene.shapes.sphere.type = simplify
+#scene.shapes.sphere.source = spheredisp
+#scene.shapes.sphere.errorscale.surface = 0.00000000001
 ################################################################################
 scene.objects.back.material = whitematte
 scene.objects.back.ply = scenes/bigmonkey/room.ply
 ##
-scene.objects.red.material = redmat
-scene.objects.red.ply = sphere
+scene.objects.red1.material = redmat
+scene.objects.red1.ply = spheredisp
+#scene.objects.red1.transformation = 1 0 0 0  0 1 0 0  0 0 1 0  -1.8 -1.8 0 1
+#
+#scene.objects.red2.material = redmat
+#scene.objects.red2.ply = sphere
+#scene.objects.red2.transformation = 1 0 0 0  0 1 0 0  0 0 1 0  1.8 1.8 0 1

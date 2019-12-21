@@ -37,7 +37,9 @@ public:
 		STRANDS,
 		GROUP,
 		SUBDIV,
-		DISPLACEMENT
+		DISPLACEMENT,
+		HARLEQUIN,
+		SIMPLIFY
 	} ShapeType;
 
 	Shape() : refined(false) { }

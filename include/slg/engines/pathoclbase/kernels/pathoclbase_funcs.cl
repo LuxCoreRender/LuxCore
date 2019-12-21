@@ -90,6 +90,7 @@
 //  PARAM_FILM_CHANNELS_HAS_ALBEDO
 //  PARAM_FILM_CHANNELS_HAS_AVG_SHADING_NORMAL
 //  PARAM_FILM_CHANNELS_HAS_NOISE
+//  PARAM_FILM_CHANNELS_HAS_USER_IMPORTANCE
 //
 //  PARAM_FILM_DENOISER
 
@@ -107,14 +108,6 @@
 //  PARAM_HAS_LASERLIGHT
 //  PARAM_HAS_TRIANGLELIGHT
 //  PARAM_HAS_ENVLIGHTS (if it has any env. light)
-
-// List of symbols defined at compile time:
-//  PARAM_MAX_PATH_DEPTH
-//  PARAM_MAX_PATH_DEPTH_DIFFUSE
-//  PARAM_MAX_PATH_DEPTH_GLOSSY
-//  PARAM_MAX_PATH_DEPTH_SPECULAR
-//  PARAM_RR_DEPTH
-//  PARAM_RR_CAP
 
 // (optional)
 //  PARAM_CAMERA_TYPE (0 = Perspective, 1 = Orthographic, 2 = Stereo)
@@ -161,6 +154,7 @@
 //------------------------------------------------------------------------------
 
 OPENCL_FORCE_NOT_INLINE void InitSampleResult(
+		__constant GPUTaskConfiguration *taskConfig,
 		__global Sample *sample,
 		__global float *sampleDataPathBase,
 		const uint filmWidth, const uint filmHeight,
@@ -170,8 +164,8 @@ OPENCL_FORCE_NOT_INLINE void InitSampleResult(
 		Seed *seed) {
 	SampleResult_Init(&sample->result);
 
-	float filmX = Sampler_GetSamplePath(seed, sample, sampleDataPathBase, IDX_SCREEN_X);
-	float filmY = Sampler_GetSamplePath(seed, sample, sampleDataPathBase, IDX_SCREEN_Y);
+	float filmX = Sampler_GetSamplePath(taskConfig, seed, sample, sampleDataPathBase, IDX_SCREEN_X);
+	float filmY = Sampler_GetSamplePath(taskConfig, seed, sample, sampleDataPathBase, IDX_SCREEN_Y);
 
 #if (PARAM_SAMPLER_TYPE == 1)
 	// Metropolis return IDX_SCREEN_X and IDX_SCREEN_Y between [0.0, 1.0] instead
@@ -197,6 +191,7 @@ OPENCL_FORCE_NOT_INLINE void InitSampleResult(
 }
 
 OPENCL_FORCE_NOT_INLINE void GenerateEyePath(
+		__constant GPUTaskConfiguration *taskConfig,
 		__global GPUTaskDirectLight *taskDirectLight,
 		__global GPUTaskState *taskState,
 		__global Sample *sample,
@@ -218,17 +213,17 @@ OPENCL_FORCE_NOT_INLINE void GenerateEyePath(
 		) {
 	EyePathInfo_Init(pathInfo);
 
-	InitSampleResult(sample, sampleDataPathBase,
+	InitSampleResult(taskConfig, sample, sampleDataPathBase,
 			filmWidth, filmHeight,
 			filmSubRegion0, filmSubRegion1,
 			filmSubRegion2, filmSubRegion3,
 			pixelFilterDistribution, seed);
 
 	// Generate the came ray
-	const float timeSample = Sampler_GetSamplePath(seed, sample, sampleDataPathBase, IDX_EYE_TIME);
+	const float timeSample = Sampler_GetSamplePath(taskConfig, seed, sample, sampleDataPathBase, IDX_EYE_TIME);
 
-	const float dofSampleX = Sampler_GetSamplePath(seed, sample, sampleDataPathBase, IDX_DOF_X);
-	const float dofSampleY = Sampler_GetSamplePath(seed, sample, sampleDataPathBase, IDX_DOF_Y);
+	const float dofSampleX = Sampler_GetSamplePath(taskConfig, seed, sample, sampleDataPathBase, IDX_DOF_X);
+	const float dofSampleY = Sampler_GetSamplePath(taskConfig, seed, sample, sampleDataPathBase, IDX_DOF_Y);
 
 #if defined(RENDER_ENGINE_TILEPATHOCL) || defined(RENDER_ENGINE_RTPATHOCL)
 	Camera_GenerateRay(camera, cameraFilmWidth, cameraFilmHeight,
@@ -259,7 +254,7 @@ OPENCL_FORCE_NOT_INLINE void GenerateEyePath(
 	taskState->photonGIShowIndirectPathMixUsed = false;
 
 	// Initialize the pass-through event seed
-	const float passThroughEvent = Sampler_GetSamplePath(seed, sample, sampleDataPathBase, IDX_EYE_PASSTHROUGH);
+	const float passThroughEvent = Sampler_GetSamplePath(taskConfig, seed, sample, sampleDataPathBase, IDX_EYE_PASSTHROUGH);
 	Seed seedPassThroughEvent;
 	Rnd_InitFloat(passThroughEvent, &seedPassThroughEvent);
 	taskState->seedPassThroughEvent = seedPassThroughEvent;
@@ -271,7 +266,7 @@ OPENCL_FORCE_NOT_INLINE void GenerateEyePath(
 	sample->result.indirectShadowMask = 1.f;
 #endif
 
-	sample->result.lastPathVertex = (PARAM_MAX_PATH_DEPTH == 1);
+	sample->result.lastPathVertex = (taskConfig->pathTracer.maxPathDepth.depth == 1);
 }
 
 //------------------------------------------------------------------------------
@@ -314,11 +309,11 @@ OPENCL_FORCE_NOT_INLINE void DirectHitInfiniteLight(
 			continue;
 
 		float directPdfW;
-		const float3 lightRadiance = EnvLight_GetRadiance(light, bsdf,
+		const float3 envRadiance = EnvLight_GetRadiance(light, bsdf,
 				-VLOAD3F(&ray->d.x), &directPdfW
 				LIGHTS_PARAM);
 
-		if (!Spectrum_IsBlack(lightRadiance)) {
+		if (!Spectrum_IsBlack(envRadiance)) {
 			float weight;
 			if (!(pathInfo->lastBSDFEvent & SPECULAR)) {
 				const float lightPickProb = LightStrategy_SampleLightPdf(lightsDistribution,
@@ -335,8 +330,8 @@ OPENCL_FORCE_NOT_INLINE void DirectHitInfiniteLight(
 				weight = PowerHeuristic(pathInfo->lastBSDFPdfW, directPdfW * lightPickProb);
 			} else
 				weight = 1.f;
-
-			SampleResult_AddEmission(sampleResult, light->lightID, throughput, weight * lightRadiance);
+			
+			SampleResult_AddEmission(sampleResult, light->lightID, throughput, weight * envRadiance);
 		}
 	}
 }
@@ -395,8 +390,8 @@ OPENCL_FORCE_NOT_INLINE void DirectHitFiniteLight(
 	}
 }
 
-OPENCL_FORCE_INLINE float RussianRouletteProb(const float3 color) {
-	return clamp(Spectrum_Filter(color), PARAM_RR_CAP, 1.f);
+OPENCL_FORCE_INLINE float RussianRouletteProb(const float importanceCap, const float3 color) {
+	return clamp(Spectrum_Filter(color), importanceCap, 1.f);
 }
 
 OPENCL_FORCE_NOT_INLINE bool DirectLight_Illuminate(
@@ -461,6 +456,7 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_Illuminate(
 }
 
 OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
+		__constant GPUTaskConfiguration *taskConfig,
 		__global DirectLightIlluminateInfo *info,
 		const float time,
 		const bool lastPathVertex,
@@ -494,7 +490,9 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 	const float factor = 1.f / directLightSamplingPdfW;
 
 	// Russian Roulette
-	bsdfPdfW *= (PathDepthInfo_GetRRDepth(tmpDepthInfo) >= PARAM_RR_DEPTH) ? RussianRouletteProb(bsdfEval) : 1.f;
+	bsdfPdfW *= (PathDepthInfo_GetRRDepth(tmpDepthInfo) >= taskConfig->pathTracer.rrDepth) ?
+		RussianRouletteProb(taskConfig->pathTracer.rrImportanceCap, bsdfEval) :
+		1.f;
 
 	// Account for material transparency
 	__global const LightSource* restrict light = &lights[info->lightIndex];
@@ -634,7 +632,8 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 #endif
 
 #define KERNEL_ARGS \
-		__global GPUTask *tasks \
+		__constant GPUTaskConfiguration *taskConfig \
+		, __global GPUTask *tasks \
 		, __global GPUTaskDirectLight *tasksDirectLight \
 		, __global GPUTaskState *tasksState \
 		, __global GPUTaskStats *taskStats \
@@ -765,6 +764,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void InitSeed(__global 
 }
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
+		__constant GPUTaskConfiguration *taskConfig,
 		__global GPUTask *tasks,
 		__global GPUTaskDirectLight *tasksDirectLight,
 		__global GPUTaskState *tasksState,
@@ -811,10 +811,13 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 
 	// Initialize the sample and path
 	__global Sample *sample = &samples[gid];
-	__global float *sampleData = Sampler_GetSampleData(sample, samplesData);
-	const bool validSample = Sampler_Init(seed, samplerSharedData, sample, sampleData,
+	__global float *sampleData = Sampler_GetSampleData(taskConfig, sample, samplesData);
+	const bool validSample = Sampler_Init(taskConfig, seed, samplerSharedData, sample, sampleData,
 #if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
 			filmNoise,
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_USER_IMPORTANCE)
+			filmUserImportance,
 #endif
 			filmWidth, filmHeight,
 			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3
@@ -827,10 +830,11 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 			);
 
 	if (validSample) {
-		__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(sample, sampleData);
+		__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(taskConfig, sample, sampleData);
 
 		// Generate the eye path
-		GenerateEyePath(taskDirectLight, taskState, sample, sampleDataPathBase, camera,
+		GenerateEyePath(taskConfig,
+				taskDirectLight, taskState, sample, sampleDataPathBase, camera,
 				filmWidth, filmHeight,
 				filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3,
 				pixelFilterDistribution,

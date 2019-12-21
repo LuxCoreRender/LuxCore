@@ -19,6 +19,7 @@
 #include <boost/lexical_cast.hpp>
 
 #include "luxrays/core/color/color.h"
+#include "luxrays/utils/atomic.h"
 #include "slg/samplers/sampler.h"
 #include "slg/samplers/metropolis.h"
 
@@ -239,11 +240,9 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 		}
 	}
 
-	if (isLargeMutation) {
-		// Atomic 64bit for double are not available on all CPUs so I simply
-		// avoid synchronization.
-		sharedData->totalLuminance += newLuminance;
-		sharedData->sampleCount += 1.;
+	if (cooldown && isLargeMutation) {
+		AtomicAdd(&sharedData->totalLuminance, newLuminance);
+		AtomicAdd(&sharedData->sampleCount, 1.f);
 	}
 
 	const float invMeanIntensity = (sharedData->totalLuminance > 0.) ?
@@ -336,7 +335,10 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 	if (cooldown) {
 		// Check if it is time to end the cooldown (i.e. I have an average of
 		// 1 sample for each pixel).
-		const u_int pixelCount = film ? (film->GetWidth() * film->GetHeight()) : 8192;
+		//
+		// Note: I have to use a cap for pixelCount or the accumulated luminance
+		// will overflow the floating point 32bit variable
+		const u_int pixelCount = film ? Min(4u * film->GetWidth() * film->GetHeight(), 768u * 768u) : 8192;
 		if (sharedData->sampleCount > pixelCount) {
 			cooldown = false;
 			isLargeMutation = (rndGen->floatValue() < currentLargeMutationProbability);

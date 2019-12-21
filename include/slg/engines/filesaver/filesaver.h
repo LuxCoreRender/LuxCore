@@ -43,6 +43,7 @@ public:
 
 	static void ExportScene(const RenderConfig *renderConfig, const std::string &directoryName,
 		const std::string &renderEngineType);
+	static void ExportSceneGLTF(const RenderConfig *renderConfig, const std::string &fileName);
 
 	//--------------------------------------------------------------------------
 	// Static methods used by RenderEngineRegistry

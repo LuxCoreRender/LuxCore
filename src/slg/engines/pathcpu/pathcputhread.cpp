@@ -37,11 +37,6 @@ PathCPURenderThread::PathCPURenderThread(PathCPURenderEngine *engine,
 void PathCPURenderThread::RenderFunc() {
 	//SLG_LOG("[PathCPURenderEngine::" << threadIndex << "] Rendering thread started");
 
-	// Boost barriers (used in PhotonGICache::Update()) are supposed to be not
-	// interruptible but they are and seem to be missing a way to reset them. So
-	// better to disable interruptions.
-	boost::this_thread::disable_interruption di;
-
 	//--------------------------------------------------------------------------
 	// Initialization
 	//--------------------------------------------------------------------------
@@ -78,7 +73,7 @@ void PathCPURenderThread::RenderFunc() {
 	VarianceClamping varianceClamping(pathTracer.sqrtVarianceClampMaxValue);
 
 	// Setup PathTracer thread state
-	PathTracerThreadState pathTracerThreadState(threadIndex, device,
+	PathTracerThreadState pathTracerThreadState(device,
 			eyeSampler, lightSampler,
 			engine->renderConfig->scene, engine->film,
 			&varianceClamping);
@@ -86,11 +81,6 @@ void PathCPURenderThread::RenderFunc() {
 	//--------------------------------------------------------------------------
 	// Trace paths
 	//--------------------------------------------------------------------------
-
-	// I can not use engine->renderConfig->GetProperty() here because the
-	// RenderConfig properties cache is not thread safe
-	const u_int haltDebug = engine->renderConfig->cfg.Get(Property("batch.haltdebug")(0u)).Get<u_int>() *
-		engine->film->GetWidth() * engine->film->GetHeight();
 
 	for (u_int steps = 0; !boost::this_thread::interruption_requested(); ++steps) {
 		// Check if we are in pause mode
@@ -111,14 +101,17 @@ void PathCPURenderThread::RenderFunc() {
 #endif
 
 		// Check halt conditions
-		if ((haltDebug > 0u) && (steps >= haltDebug))
-			break;
 		if (engine->film->GetConvergence() == 1.f)
 			break;
 		
 		if (engine->photonGICache) {
-			const u_int spp = engine->film->GetTotalEyeSampleCount() / engine->film->GetPixelCount();
-			engine->photonGICache->Update(threadIndex, spp);
+			try {
+				const u_int spp = engine->film->GetTotalEyeSampleCount() / engine->film->GetPixelCount();
+				engine->photonGICache->Update(threadIndex, spp);
+			} catch (boost::thread_interrupted &ti) {
+				// I have been interrupted, I must stop
+				break;
+			}
 		}
 	}
 
@@ -127,6 +120,12 @@ void PathCPURenderThread::RenderFunc() {
 	delete rndGen;
 
 	threadDone = true;
+
+	// This is done to interrupt thread pending on barrier wait
+	// inside engine->photonGICache->Update(). This can happen when an
+	// halt condition is satisfied.
+	for (u_int i = 0; i < engine->renderThreads.size(); ++i)
+		engine->renderThreads[i]->Interrupt();
 
 	//SLG_LOG("[PathCPURenderEngine::" << threadIndex << "] Rendering thread halted");
 }
