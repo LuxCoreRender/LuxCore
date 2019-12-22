@@ -75,8 +75,8 @@ extern boost::python::list Scene_DefineBlenderMesh1(luxcore::detail::SceneImpl *
 		const size_t loopPtr,
 		const size_t vertPtr,
 		const size_t polyPtr,
-		const size_t loopUVsPtr,
-		const size_t loopColsPtr,
+		const boost::python::object &loopUVsPtrList,
+		const boost::python::object &loopColsPtrList,
 		const u_int materialCount,
 		const boost::python::object &transformation);
 		
@@ -85,9 +85,10 @@ extern boost::python::list Scene_DefineBlenderMesh2(luxcore::detail::SceneImpl *
 		const size_t loopPtr,
 		const size_t vertPtr,
 		const size_t polyPtr,
-		const size_t loopUVsPtr,
-		const size_t loopColsPtr,
+		const boost::python::object &loopUVsPtrList,
+		const boost::python::object &loopColsPtrList,
 		const u_int materialCount);
+	
 
 extern bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 		const std::string &shapeName,
