@@ -16,7 +16,7 @@ eval "$(pyenv init -)"
 mkdir build
 pushd  build
 cmake -DOSX_DEPENDENCY_ROOT=$DEPS_SOURCE -DCMAKE_BUILD_TYPE=Release ..
-make 
+make
 popd
 
 mkdir build_ocl
@@ -30,5 +30,5 @@ cp ./build/lib/Release/pyluxcore.so ./build_ocl
 
 pushd  build
 cmake -DLUXRAYS_DISABLE_OPENCL=1 -DOSX_DEPENDENCY_ROOT=$DEPS_SOURCE -DCMAKE_BUILD_TYPE=Release ..
-make 
+make
 popd
