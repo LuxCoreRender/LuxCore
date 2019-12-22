@@ -63,14 +63,14 @@ public:
 	double eyeSampleCount, lightSampleCount;
 };
 
-typedef enum {
-	ILLUMINATED, SHADOWED, NOT_VISIBLE
-} DirectLightResult;
-
 class PhotonGICache;
 
 class PathTracer {
 public:
+	typedef enum {
+		ILLUMINATED, SHADOWED, NOT_VISIBLE
+	} DirectLightResult;
+
 	typedef boost::function<void(const BSDF &, const u_int, const luxrays::Spectrum &,
 			std::vector<SampleResult> &sampleResults)> ConnectToEyeCallBackType;
 
@@ -111,6 +111,9 @@ public:
 		RenderLightSample(device, scene, film, sampler, sampleResults, noCallback);
 	}
 	
+	bool HasToRenderEyeSample(PathTracerThreadState &state) const;
+	void ApplyVarianceClamp(const PathTracerThreadState &state,
+			std::vector<SampleResult> &sampleResults) const;
 	void RenderSample(PathTracerThreadState &state) const;
 
 	static void InitEyeSampleResults(const Film *film, std::vector<SampleResult> &sampleResults,
@@ -121,7 +124,7 @@ public:
 
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	static const luxrays::Properties &GetDefaultProps();
-	
+
 	// Used for Sampler indices
 	u_int eyeSampleBootSize, eyeSampleStepSize, eyeSampleSize;
 	u_int lightSampleBootSize, lightSampleStepSize, lightSampleSize;
