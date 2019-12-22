@@ -64,6 +64,10 @@ typedef struct {
 		// Russian roulette
 		unsigned int rrDepth;
 		float rrImportanceCap;
+
+		// Hybrid backward/forward path tracing settings
+		int hybridBackForwardEnable;
+		float hybridBackForwardGlossinessThreshold;
 	} pathTracer;
 } GPUTaskConfiguration;
 

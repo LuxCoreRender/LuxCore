@@ -28,7 +28,6 @@
 //  PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR
 //  PARAM_HAS_VOLUMEs (and SCENE_DEFAULT_VOLUME_INDEX)
 //  PARAM_PGIC_ENABLED (and PARAM_PGIC_INDIRECT_ENABLED and PARAM_PGIC_CAUSTIC_ENABLED)
-//  PARAM_HYBRID_BACKFORWARD (and PARAM_HYBRID_BACKFORWARD_GLOSSINESSTHRESHOLD)
 //  PARAM_ELVC_GLOSSINESSTHRESHOLD
 
 // To enable single material support
@@ -472,10 +471,11 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 			shadowRayDir, &event, &bsdfPdfW
 			MATERIALS_PARAM);
 
-	if (Spectrum_IsBlack(bsdfEval)
-#if defined(PARAM_HYBRID_BACKFORWARD)
-			|| EyePathInfo_IsCausticPath(pathInfo, event, BSDF_GetGlossiness(bsdf MATERIALS_PARAM), PARAM_HYBRID_BACKFORWARD_GLOSSINESSTHRESHOLD)
-#endif
+	if (Spectrum_IsBlack(bsdfEval) ||
+			(taskConfig->pathTracer.hybridBackForwardEnable &&
+			EyePathInfo_IsCausticPath(pathInfo, event,
+				BSDF_GetGlossiness(bsdf MATERIALS_PARAM),
+				taskConfig->pathTracer.hybridBackForwardGlossinessThreshold))
 			)
 		return false;
 

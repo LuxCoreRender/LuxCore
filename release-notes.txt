@@ -27,6 +27,7 @@
 * Added the support the definition of meshes with multiple UVs, Colors and Alphas (issue #134)
 * Added the BAKECPU engine (LuxCore API only)
 * Added the glTF v2.0 FILESAVER support (LuxCore API only)
+* Changing hybrid backward/forward path tracing settings doesn't require OpenCL compilation anymore (removed PARAM_HYBRID_BACKFORWARD and PARAM_HYBRID_BACKFORWARD_GLOSSINESSTHRESHOLD conditional OpenCL compilation)
 
 ### Fixed Bugs
 

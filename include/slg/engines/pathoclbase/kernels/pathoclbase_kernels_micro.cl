@@ -145,14 +145,13 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 	bool checkDirectLightHit = true;
 	
 #if defined(PARAM_FORCE_BLACK_BACKGROUND)
-	checkDirectLightHit = checkDirectLightHit && (!pathInfo->isPassThroughPath);
+	checkDirectLightHit = checkDirectLightHit &&
+			(!pathInfo->isPassThroughPath);
 #endif
 
-#if defined(PARAM_HYBRID_BACKFORWARD)
 	checkDirectLightHit = checkDirectLightHit &&
 			// Avoid to render caustic path if hybridBackForwardEnable
-			!pathInfo->isNearlyCaustic;
-#endif
+			(!taskConfig->pathTracer.hybridBackForwardEnable || !pathInfo->isNearlyCaustic);
 
 #if defined(PARAM_PGIC_ENABLED)
 	checkDirectLightHit = checkDirectLightHit &&
@@ -301,11 +300,9 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 
 	bool checkDirectLightHit = true;
 
-#if defined(PARAM_HYBRID_BACKFORWARD)
 	checkDirectLightHit = checkDirectLightHit &&
 			// Avoid to render caustic path if hybridBackForwardEnable
-			!pathInfo->isNearlyCaustic;
-#endif
+			(!taskConfig->pathTracer.hybridBackForwardEnable || !pathInfo->isNearlyCaustic);
 
 #if defined(PARAM_PGIC_ENABLED)
 	checkDirectLightHit = checkDirectLightHit &&
@@ -388,9 +385,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 
 	if (isPhotonGIEnabled) {
 #if defined(PARAM_PGIC_CAUSTIC_ENABLED)
-#if defined(PARAM_HYBRID_BACKFORWARD)
-		if (pathInfo->depth.depth != 0) {
-#endif
+		if (taskConfig->pathTracer.hybridBackForwardEnable && (pathInfo->depth.depth != 0)) {
 			const float3 causticRadiance = PhotonGICache_ConnectWithCausticPaths(bsdf,
 					pgicCausticPhotons, pgicCausticPhotonsBVHNodes,
 					pgicCausticPhotonTracedCount, pgicCausticLookUpRadius * pgicCausticLookUpRadius,
@@ -401,9 +396,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 				VADD3F(sample->result.radiancePerPixelNormalized[0].c, VLOAD3F(taskState->throughput.c) * causticRadiance);			
 				taskState->photonGICausticCacheUsed = true;
 			}
-#if defined(PARAM_HYBRID_BACKFORWARD)
 		}
-#endif
 #endif
 
 #if defined(PARAM_PGIC_INDIRECT_ENABLED)
@@ -811,11 +804,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 		sample->result.firstPathVertexEvent = bsdfEvent;
 
 	EyePathInfo_AddVertex(pathInfo, bsdf, bsdfEvent, bsdfPdfW,
-#if defined(PARAM_HYBRID_BACKFORWARD_GLOSSINESSTHRESHOLD)
-			PARAM_HYBRID_BACKFORWARD_GLOSSINESSTHRESHOLD
-#else
-			0.f
-#endif
+			taskConfig->pathTracer.hybridBackForwardEnable ? taskConfig->pathTracer.hybridBackForwardGlossinessThreshold : 0.f
 			MATERIALS_PARAM);
 
 	// Russian Roulette

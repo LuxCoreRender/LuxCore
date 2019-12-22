@@ -141,6 +141,9 @@ void PathOCLBaseRenderEngine::InitGPUTaskConfiguration() {
 	
 	taskConfig.pathTracer.rrDepth = pathTracer.rrDepth;
 	taskConfig.pathTracer.rrImportanceCap = pathTracer.rrImportanceCap;
+
+	taskConfig.pathTracer.hybridBackForwardEnable = pathTracer.hybridBackForwardEnable;
+	taskConfig.pathTracer.hybridBackForwardGlossinessThreshold = pathTracer.hybridBackForwardGlossinessThreshold;
 }
 
 void PathOCLBaseRenderEngine::InitPixelFilterDistribution() {
