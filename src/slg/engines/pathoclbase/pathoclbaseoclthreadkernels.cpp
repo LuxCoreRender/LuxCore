@@ -499,9 +499,6 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 		ssParams << " -D SCENE_DEFAULT_VOLUME_INDEX=" << renderEngine->compiledScene->defaultWorldVolumeIndex;
 	}
 
-	ssParams <<
-			" -D PARAM_SQRT_VARIANCE_CLAMP_MAX_VALUE=" << renderEngine->pathTracer.sqrtVarianceClampMaxValue << "f";
-
 	const slg::ocl::Filter *filter = renderEngine->oclPixelFilter;
 	switch (filter->type) {
 		case slg::ocl::FILTER_NONE:

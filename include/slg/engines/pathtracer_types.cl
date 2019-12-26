@@ -23,6 +23,11 @@ typedef struct {
 	unsigned int rrDepth;
 	float rrImportanceCap;
 
+	// Clamping settings
+	float sqrtVarianceClampMaxValue;
+
+	int forceBlackBackground;
+
 	// Hybrid backward/forward path tracing settings
 	struct {
 		int enabled;
@@ -43,6 +48,4 @@ typedef struct {
 
 		PhotonGIDebugType debugType;
 	} pgic;
-
-	int forceBlackBackground;
 } PathTracer;

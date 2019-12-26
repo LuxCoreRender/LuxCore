@@ -971,9 +971,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_SP
 	// Variance clamping
 	//--------------------------------------------------------------------------
 
-	if (PARAM_SQRT_VARIANCE_CLAMP_MAX_VALUE > 0.f) {
+	const float sqrtVarianceClampMaxValue = taskConfig->pathTracer.sqrtVarianceClampMaxValue;
+	if (sqrtVarianceClampMaxValue > 0.f) {
 		// Radiance clamping
-		VarianceClamping_Clamp(&sample->result, PARAM_SQRT_VARIANCE_CLAMP_MAX_VALUE
+		VarianceClamping_Clamp(&sample->result, sqrtVarianceClampMaxValue
 				FILM_PARAM);
 	}
 

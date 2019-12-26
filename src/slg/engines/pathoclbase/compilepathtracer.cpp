@@ -41,6 +41,8 @@ void CompiledScene::CompilePathTracer() {
 	
 	compiledPathTracer.rrDepth = pathTracer->rrDepth;
 	compiledPathTracer.rrImportanceCap = pathTracer->rrImportanceCap;
+	
+	compiledPathTracer.sqrtVarianceClampMaxValue = pathTracer->sqrtVarianceClampMaxValue;
 
 	compiledPathTracer.hybridBackForward.enabled = pathTracer->hybridBackForwardEnable;
 	compiledPathTracer.hybridBackForward.glossinessThreshold = pathTracer->hybridBackForwardGlossinessThreshold;

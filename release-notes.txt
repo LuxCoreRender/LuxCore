@@ -30,6 +30,7 @@
 * Changing hybrid backward/forward path tracing settings doesn't require OpenCL compilation anymore (removed PARAM_HYBRID_BACKFORWARD and PARAM_HYBRID_BACKFORWARD_GLOSSINESSTHRESHOLD conditional OpenCL compilation)
 * Changing PhotonGI settings doesn't require OpenCL compilation anymore (removed PARAM_PGIC_ENABLED, PARAM_PGIC_INDIRECT_ENABLED, PARAM_PGIC_CAUSTIC_ENABLED, etc.)
 * Changing force black background flag doesn't require OpenCL compilation anymore (removed PARAM_FORCE_BLACK_BACKGROUND)
+* Changing variance clamping settings doesn't require OpenCL compilation anymore (removed PARAM_SQRT_VARIANCE_CLAMP_MAX_VALUE)
 
 ### Fixed Bugs
 
