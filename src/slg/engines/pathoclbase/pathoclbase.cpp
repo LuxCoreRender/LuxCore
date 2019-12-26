@@ -211,6 +211,8 @@ void PathOCLBaseRenderEngine::StartLockLess() {
 			photonGICache->Preprocess(renderNativeThreads.size() + renderOCLThreads.size());
 	}
 
+	pathTracer.SetPhotonGICache(photonGICache);
+
 	//--------------------------------------------------------------------------
 	// Compile the scene
 	//--------------------------------------------------------------------------

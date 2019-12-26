@@ -464,14 +464,20 @@ void PathTracer::RenderEyePath(IntersectionDevice *device,
 					sampleResult.radiance[0] += photonGICache->ConnectWithCausticPaths(bsdf);
 					break;
 			} else if (photonGICache->GetDebugType() == PhotonGIDebugType::PGIC_DEBUG_SHOWINDIRECTPATHMIX) {
-				if (isPhotonGIEnabled && photonGICacheEnabledOnLastHit &&
-						(eyeRayHit.t > photonGICache->GetIndirectUsageThreshold(pathInfo.lastBSDFEvent,
-							pathInfo.lastGlossiness,
-							passThrough))) {
-					sampleResult.radiance[0] = Spectrum(0.f, 0.f, 1.f);
-					photonGIShowIndirectPathMixUsed = true;
-					break;
-				}
+				// Check if the cache is enabled for this material
+				if (isPhotonGIEnabled) {
+					if (photonGICacheEnabledOnLastHit &&
+							(eyeRayHit.t > photonGICache->GetIndirectUsageThreshold(pathInfo.lastBSDFEvent,
+								pathInfo.lastGlossiness,
+								passThrough))) {
+						sampleResult.radiance[0] = Spectrum(0.f, 0.f, 1.f);
+						photonGIShowIndirectPathMixUsed = true;
+						break;
+					}
+
+					photonGICacheEnabledOnLastHit = true;
+				} else
+					photonGICacheEnabledOnLastHit = false;
 			} else {
 				// Check if the cache is enabled for this material
 				if (isPhotonGIEnabled) {

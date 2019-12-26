@@ -377,12 +377,14 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 					taskState->photonGICacheEnabledOnLastHit = true;
 				} else
 					taskState->photonGICacheEnabledOnLastHit = false;
+
+				break;
 			}
 			case PGIC_DEBUG_NONE:
 			default: {
 				if (isPhotonGIEnabled) {
 					if (taskConfig->pathTracer.pgic.causticEnabled &&
-							taskConfig->pathTracer.hybridBackForward.enabled && (pathInfo->depth.depth != 0)) {
+							(!taskConfig->pathTracer.hybridBackForward.enabled || (pathInfo->depth.depth != 0))) {
 						const float3 causticRadiance = PhotonGICache_ConnectWithCausticPaths(bsdf,
 								pgicCausticPhotons, pgicCausticPhotonsBVHNodes,
 								taskConfig->pathTracer.pgic.causticPhotonTracedCount,
@@ -964,7 +966,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_SP
 
 	if (taskConfig->pathTracer.pgic.indirectEnabled &&
 			(taskConfig->pathTracer.pgic.debugType == PGIC_DEBUG_SHOWINDIRECTPATHMIX) &&
-			taskState->photonGIShowIndirectPathMixUsed)
+			!taskState->photonGIShowIndirectPathMixUsed)
 		VSTORE3F((float3)(1.f, 0.f, 0.f), sample->result.radiancePerPixelNormalized[0].c);
 
 	//--------------------------------------------------------------------------
