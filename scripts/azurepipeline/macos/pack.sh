@@ -194,7 +194,7 @@ fi
 
 echo "Creating OpenCL less Version DMG ..."
 
-hdiutil create luxcorerender-$VERSION_STRING-mac64$SDK_BUILD.dmg -volname "LuxCoreRender-$VERSION_STRING" -fs HFS+ -srcfolder release_OSX/
+hdiutil create luxcorerender-$VERSION_STRING-mac64$SDK_BUILD.dmg -volname "luxcorerender-$VERSION_STRING-mac64" -fs HFS+ -srcfolder release_OSX/
 
 echo "Staging OpenCL less Version DMG"
 
@@ -275,7 +275,7 @@ cd ..
 
 echo "Creating OpenCL Version DMG ..."
 
-hdiutil create luxcorerender-$VERSION_STRING-mac64$SDK_BUILD-opencl.dmg -volname "LuxCoreRender-$VERSION_STRING-opencl" -fs HFS+ -srcfolder release_OSX_ocl/
+hdiutil create luxcorerender-$VERSION_STRING-mac64$SDK_BUILD-opencl.dmg -volname "luxcorerender-$VERSION_STRING-mac64-opencl" -fs HFS+ -srcfolder release_OSX_ocl/
 
 echo "Staging OpenCL Version DMG"
 
