@@ -28,6 +28,7 @@
 * Added the BAKECPU engine (LuxCore API only)
 * Added the glTF v2.0 FILESAVER support (LuxCore API only)
 * Changing hybrid backward/forward path tracing settings doesn't require OpenCL compilation anymore (removed PARAM_HYBRID_BACKFORWARD and PARAM_HYBRID_BACKFORWARD_GLOSSINESSTHRESHOLD conditional OpenCL compilation)
+* Changing PhotonGI settings doesn't require OpenCL compilation anymore (removed PARAM_PGIC_ENABLED, PARAM_PGIC_INDIRECT_ENABLED, PARAM_PGIC_CAUSTIC_ENABLED, etc.)
 
 ### Fixed Bugs
 

@@ -134,16 +134,7 @@ PathOCLBaseRenderEngine::~PathOCLBaseRenderEngine() {
 
 void PathOCLBaseRenderEngine::InitGPUTaskConfiguration() {
 	// Path Tracer configuration
-	taskConfig.pathTracer.maxPathDepth.depth = pathTracer.maxPathDepth.depth;
-	taskConfig.pathTracer.maxPathDepth.diffuseDepth = pathTracer.maxPathDepth.diffuseDepth;
-	taskConfig.pathTracer.maxPathDepth.glossyDepth = pathTracer.maxPathDepth.glossyDepth;
-	taskConfig.pathTracer.maxPathDepth.specularDepth = pathTracer.maxPathDepth.specularDepth;
-	
-	taskConfig.pathTracer.rrDepth = pathTracer.rrDepth;
-	taskConfig.pathTracer.rrImportanceCap = pathTracer.rrImportanceCap;
-
-	taskConfig.pathTracer.hybridBackForwardEnable = pathTracer.hybridBackForwardEnable;
-	taskConfig.pathTracer.hybridBackForwardGlossinessThreshold = pathTracer.hybridBackForwardGlossinessThreshold;
+	taskConfig.pathTracer = compiledScene->compiledPathTracer;
 }
 
 void PathOCLBaseRenderEngine::InitPixelFilterDistribution() {
@@ -224,7 +215,7 @@ void PathOCLBaseRenderEngine::StartLockLess() {
 	// Compile the scene
 	//--------------------------------------------------------------------------
 
-	compiledScene = new CompiledScene(renderConfig->scene, photonGICache);
+	compiledScene = new CompiledScene(renderConfig->scene, &pathTracer);
 	compiledScene->SetMaxMemPageSize(maxMemPageSize);
 	compiledScene->EnableCode(cfg.Get(Property("opencl.code.alwaysenabled")("")).Get<string>());
 	compiledScene->Compile();
@@ -312,6 +303,10 @@ void PathOCLBaseRenderEngine::EndSceneEditLockLess(const EditActionList &editAct
 		renderOCLThreads[i]->EndSceneEdit(editActions);
 	for (size_t i = 0; i < renderNativeThreads.size(); ++i)
 		renderNativeThreads[i]->EndSceneEdit(editActions);
+}
+
+bool PathOCLBaseRenderEngine::IsMaterialCompiled(const MaterialType type) const {
+	return (compiledScene == NULL) ? false : compiledScene->IsMaterialCompiled(type);
 }
 
 bool PathOCLBaseRenderEngine::HasDone() const {

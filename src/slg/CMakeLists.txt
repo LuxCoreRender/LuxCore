@@ -222,6 +222,7 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/engines/pathoclbase/kernels/pathoclbase_datatypes.cl
 	${LuxRays_SOURCE_DIR}/include/slg/engines/pathoclbase/kernels/pathoclbase_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/engines/pathoclbase/kernels/pathoclbase_kernels_micro.cl
+	${LuxRays_SOURCE_DIR}/include/slg/engines/pathtracer_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/film_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/film_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/film_mergesamplebuffer_funcs.cl
@@ -381,6 +382,7 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/compileimagemaps.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/compilelights.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/compilematerials.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/compilepathtracer.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/compilephotongi.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/compilesceneobjects.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/compiletextures.cpp
@@ -688,6 +690,7 @@ set(SLG_KERNEL_SRCS
 	${generated_kernels_dir}/pathoclbase_datatypes_kernel.cpp
 	${generated_kernels_dir}/pathoclbase_funcs_kernel.cpp
 	${generated_kernels_dir}/pathoclbase_kernels_micro_kernel.cpp
+	${generated_kernels_dir}/pathtracer_types_kernel.cpp
 )
 
 SOURCE_GROUP("Source Files\\SLG Kernels\\Generated" FILES ${SLG_KERNEL_SRCS})

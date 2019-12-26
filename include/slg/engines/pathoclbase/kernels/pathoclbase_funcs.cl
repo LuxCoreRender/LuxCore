@@ -27,8 +27,6 @@
 //  PARAM_LIGHT_WORLD_RADIUS_SCALE
 //  PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR
 //  PARAM_HAS_VOLUMEs (and SCENE_DEFAULT_VOLUME_INDEX)
-//  PARAM_PGIC_ENABLED (and PARAM_PGIC_INDIRECT_ENABLED and PARAM_PGIC_CAUSTIC_ENABLED)
-//  PARAM_ELVC_GLOSSINESSTHRESHOLD
 
 // To enable single material support
 //  PARAM_ENABLE_MAT_MATTE
@@ -153,7 +151,7 @@
 //------------------------------------------------------------------------------
 
 OPENCL_FORCE_NOT_INLINE void InitSampleResult(
-		__constant GPUTaskConfiguration *taskConfig,
+		__constant const GPUTaskConfiguration* restrict taskConfig,
 		__global Sample *sample,
 		__global float *sampleDataPathBase,
 		const uint filmWidth, const uint filmHeight,
@@ -190,7 +188,7 @@ OPENCL_FORCE_NOT_INLINE void InitSampleResult(
 }
 
 OPENCL_FORCE_NOT_INLINE void GenerateEyePath(
-		__constant GPUTaskConfiguration *taskConfig,
+		__constant const GPUTaskConfiguration* restrict taskConfig,
 		__global GPUTaskDirectLight *taskDirectLight,
 		__global GPUTaskState *taskState,
 		__global Sample *sample,
@@ -455,7 +453,7 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_Illuminate(
 }
 
 OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
-		__constant GPUTaskConfiguration *taskConfig,
+		__constant const GPUTaskConfiguration* restrict taskConfig,
 		__global DirectLightIlluminateInfo *info,
 		const float time,
 		const bool lastPathVertex,
@@ -472,10 +470,10 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 			MATERIALS_PARAM);
 
 	if (Spectrum_IsBlack(bsdfEval) ||
-			(taskConfig->pathTracer.hybridBackForwardEnable &&
+			(taskConfig->pathTracer.hybridBackForward.enabled &&
 			EyePathInfo_IsCausticPath(pathInfo, event,
 				BSDF_GetGlossiness(bsdf MATERIALS_PARAM),
-				taskConfig->pathTracer.hybridBackForwardGlossinessThreshold))
+				taskConfig->pathTracer.hybridBackForward.glossinessThreshold))
 			)
 		return false;
 
@@ -614,25 +612,14 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 #define KERNEL_ARGS_FAST_PIXEL_FILTER \
 		, __global float *pixelFilterDistribution
 
-#if defined(PARAM_PGIC_ENABLED)
 #define KERNEL_ARGS_PHOTONGI \
 		, __global const RadiancePhoton* restrict pgicRadiancePhotons \
 		, __global const IndexBVHArrayNode* restrict pgicRadiancePhotonsBVHNodes \
-		, const float pgicGlossinessUsageThreshold \
-		, const float pgicIndirectLookUpRadius \
-		, const float pgicIndirectLookUpNormalCosAngle \
-		, const float pgicIndirectUsageThresholdScale \
 		, __global const Photon* restrict pgicCausticPhotons \
-		, __global const IndexBVHArrayNode* restrict pgicCausticPhotonsBVHNodes \
-		, const uint pgicCausticPhotonTracedCount \
-		, const float pgicCausticLookUpRadius \
-		, const float pgicCausticLookUpNormalCosAngle
-#else
-#define KERNEL_ARGS_PHOTONGI
-#endif
+		, __global const IndexBVHArrayNode* restrict pgicCausticPhotonsBVHNodes
 
 #define KERNEL_ARGS \
-		__constant GPUTaskConfiguration *taskConfig \
+		__constant const GPUTaskConfiguration* restrict taskConfig \
 		, __global GPUTask *tasks \
 		, __global GPUTaskDirectLight *tasksDirectLight \
 		, __global GPUTaskState *tasksState \
@@ -764,7 +751,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void InitSeed(__global 
 }
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
-		__constant GPUTaskConfiguration *taskConfig,
+		__constant const GPUTaskConfiguration* restrict taskConfig,
 		__global GPUTask *tasks,
 		__global GPUTaskDirectLight *tasksDirectLight,
 		__global GPUTaskState *tasksState,

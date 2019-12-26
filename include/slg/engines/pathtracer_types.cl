@@ -1,5 +1,3 @@
-#line 2 "pgic_types.cl"
-
 /***************************************************************************
  * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
  *                                                                         *
@@ -19,20 +17,30 @@
  ***************************************************************************/
 
 typedef struct {
-	Vector p;
-	Normal n;
-	Spectrum outgoingRadiance;
-	int isVolume;
-} RadiancePhoton;
+	PathDepthInfo maxPathDepth;
 
-typedef struct {
-	Vector p, d;
-	Spectrum alpha;
-	Normal landingSurfaceNormal;
-	int isVolume;
-} Photon;
+	// Russian roulette
+	unsigned int rrDepth;
+	float rrImportanceCap;
 
-typedef enum {
-	PGIC_DEBUG_NONE, PGIC_DEBUG_SHOWINDIRECT, PGIC_DEBUG_SHOWCAUSTIC,
-	PGIC_DEBUG_SHOWINDIRECTPATHMIX
-} PhotonGIDebugType;
+	// Hybrid backward/forward path tracing settings
+	struct {
+		int enabled;
+		float glossinessThreshold;
+	} hybridBackForward;
+
+	// PhotonGI cache settings
+	struct {
+		float glossinessUsageThreshold;
+		float indirectLookUpRadius;
+		float indirectLookUpNormalCosAngle;
+		float indirectUsageThresholdScale;
+		unsigned int causticPhotonTracedCount;
+		float causticLookUpRadius;
+		float causticLookUpNormalCosAngle;
+
+		int indirectEnabled, causticEnabled;
+
+		PhotonGIDebugType debugType;
+	} pgic;
+} PathTracer;

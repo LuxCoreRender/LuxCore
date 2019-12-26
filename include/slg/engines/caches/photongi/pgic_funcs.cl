@@ -18,8 +18,6 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#if defined(PARAM_PGIC_ENABLED)
-
 OPENCL_FORCE_INLINE bool PhotonGICache_IsPhotonGIEnabled(__global const BSDF *bsdf,
 		const float glossinessUsageThreshold
 		MATERIALS_PARAM_DECL) {
@@ -40,22 +38,19 @@ OPENCL_FORCE_INLINE bool PhotonGICache_IsPhotonGIEnabled(__global const BSDF *bs
 }
 
 OPENCL_FORCE_INLINE bool PhotonGICache_IsDirectLightHitVisible(
+		__constant const GPUTaskConfiguration* restrict taskConfig,
 		__global const EyePathInfo *pathInfo,
 		const bool photonGICausticCacheUsed) {
 	// This is a specific check to cut fireflies created by some glossy or
 	// specular bounce
 	if (!(pathInfo->lastBSDFEvent & DIFFUSE) && (pathInfo->depth.diffuseDepth > 0))
 		return false;
-#if !defined(PARAM_PGIC_CAUSTIC_ENABLED)
-	if (photonGICausticCacheUsed)
+	else if (!taskConfig->pathTracer.pgic.causticEnabled || !photonGICausticCacheUsed)
 		return true;
-#endif
-#if defined(PARAM_PGIC_DEBUG_NONE)
-	if (!pathInfo->isNearlyCaustic)
+	else if (!pathInfo->isNearlyCaustic && (taskConfig->pathTracer.pgic.debugType == PGIC_DEBUG_NONE))
 		return true;
-#endif
-
-	return false;
+	else
+		return false;
 }
 
 //------------------------------------------------------------------------------
@@ -94,7 +89,6 @@ OPENCL_FORCE_INLINE __global const RadiancePhoton* restrict RadiancePhotonsBVH_G
 		) {
 	__global const RadiancePhoton* restrict nearestEntry = NULL;
 
-#if defined(PARAM_PGIC_INDIRECT_ENABLED)
 	float nearestDistance2 = pgicIndirectLookUpRadius2;
 
 	uint currentNode = 0; // Root Node
@@ -138,7 +132,6 @@ OPENCL_FORCE_INLINE __global const RadiancePhoton* restrict RadiancePhotonsBVH_G
 			}
 		}
 	}
-#endif
 
 	return nearestEntry;
 }
@@ -197,7 +190,6 @@ OPENCL_FORCE_INLINE float3 PGICPhotonBvh_ConnectAllNearEntries(__global const BS
 		MATERIALS_PARAM_DECL) {
 	float3 result = BLACK;
 
-#if defined(PARAM_PGIC_CAUSTIC_ENABLED)
 	const float3 p = VLOAD3F(&bsdf->hitPoint.p.x);
 	// Flip the normal if required
 	const float3 n = (bsdf->hitPoint.intoObject ? 1.f: -1.f) * VLOAD3F(&bsdf->hitPoint.geometryN.x);
@@ -246,7 +238,6 @@ OPENCL_FORCE_INLINE float3 PGICPhotonBvh_ConnectAllNearEntries(__global const BS
 			}
 		}
 	}
-#endif
 
 	result /= pgicCausticPhotonTracedCount * M_PI_F * pgicCausticLookUpRadius2;
 
@@ -265,5 +256,3 @@ OPENCL_FORCE_NOT_INLINE float3 PhotonGICache_ConnectWithCausticPaths(__global co
 			pgicCausticPhotonTracedCount, pgicCausticLookUpRadius2, pgicCausticLookUpNormalCosAngle MATERIALS_PARAM) :
 		BLACK;
 }
-
-#endif

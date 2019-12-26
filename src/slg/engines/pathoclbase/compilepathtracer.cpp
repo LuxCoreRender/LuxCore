@@ -1,5 +1,3 @@
-#line 2 "pgic_types.cl"
-
 /***************************************************************************
  * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
  *                                                                         *
@@ -18,21 +16,36 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-typedef struct {
-	Vector p;
-	Normal n;
-	Spectrum outgoingRadiance;
-	int isVolume;
-} RadiancePhoton;
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 
-typedef struct {
-	Vector p, d;
-	Spectrum alpha;
-	Normal landingSurfaceNormal;
-	int isVolume;
-} Photon;
+#include <iosfwd>
+#include <limits>
 
-typedef enum {
-	PGIC_DEBUG_NONE, PGIC_DEBUG_SHOWINDIRECT, PGIC_DEBUG_SHOWCAUSTIC,
-	PGIC_DEBUG_SHOWINDIRECTPATHMIX
-} PhotonGIDebugType;
+#include <boost/lexical_cast.hpp>
+#include <boost/algorithm/string.hpp>
+
+#include "luxrays/core/bvh/bvhbuild.h"
+#include "slg/kernels/kernels.h"
+#include "slg/engines/pathoclbase/compiledscene.h"
+#include "slg/engines/caches/photongi/photongicache.h"
+
+using namespace std;
+using namespace luxrays;
+using namespace slg;
+
+void CompiledScene::CompilePathTracer() {
+	compiledPathTracer.maxPathDepth.depth = pathTracer->maxPathDepth.depth;
+	compiledPathTracer.maxPathDepth.diffuseDepth = pathTracer->maxPathDepth.diffuseDepth;
+	compiledPathTracer.maxPathDepth.glossyDepth = pathTracer->maxPathDepth.glossyDepth;
+	compiledPathTracer.maxPathDepth.specularDepth = pathTracer->maxPathDepth.specularDepth;
+	
+	compiledPathTracer.rrDepth = pathTracer->rrDepth;
+	compiledPathTracer.rrImportanceCap = pathTracer->rrImportanceCap;
+
+	compiledPathTracer.hybridBackForward.enabled = pathTracer->hybridBackForwardEnable;
+	compiledPathTracer.hybridBackForward.glossinessThreshold = pathTracer->hybridBackForwardGlossinessThreshold;
+	
+	CompilePhotonGI();
+}
+
+#endif

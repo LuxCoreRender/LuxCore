@@ -31,9 +31,9 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
-CompiledScene::CompiledScene(Scene *scn, const PhotonGICache *pgi) {
+CompiledScene::CompiledScene(Scene *scn, const PathTracer *pt) {
 	scene = scn;
-	photonGICache = pgi;
+	pathTracer = pt;
 	maxMemPageSize = 0xffffffffu;
 
 	lightsDistribution = NULL;
@@ -94,7 +94,7 @@ void CompiledScene::Recompile(const EditActionList &editActions) {
 
 	if (wasGeometryCompiled || wasMaterialsCompiled || wasSceneObjectsCompiled ||
 			wasLightsCompiled || wasImageMapsCompiled)
-		CompilePhotonGI();
+		CompilePathTracer();
 	
 	// For some debugging
 //	cout << "=========================================================\n";

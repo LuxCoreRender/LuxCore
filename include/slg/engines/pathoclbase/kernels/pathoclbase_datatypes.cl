@@ -58,17 +58,7 @@ typedef enum {
 } PathState;
 
 typedef struct {
-	struct {
-		PathDepthInfo maxPathDepth;
-
-		// Russian roulette
-		unsigned int rrDepth;
-		float rrImportanceCap;
-
-		// Hybrid backward/forward path tracing settings
-		int hybridBackForwardEnable;
-		float hybridBackForwardGlossinessThreshold;
-	} pathTracer;
+	PathTracer pathTracer;
 } GPUTaskConfiguration;
 
 typedef struct {

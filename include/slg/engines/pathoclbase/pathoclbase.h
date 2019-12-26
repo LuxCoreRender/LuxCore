@@ -37,14 +37,14 @@ namespace slg {
 // (base class for all types of OCL path tracers)
 //------------------------------------------------------------------------------
 
+class CompiledScene;
+
 class PathOCLBaseRenderEngine : public OCLRenderEngine {
 public:
 	PathOCLBaseRenderEngine(const RenderConfig *cfg, const bool supportsNativeThreads);
 	virtual ~PathOCLBaseRenderEngine();
 
-	virtual bool IsMaterialCompiled(const MaterialType type) const {
-		return (compiledScene == NULL) ? false : compiledScene->IsMaterialCompiled(type);
-	}
+	virtual bool IsMaterialCompiled(const MaterialType type) const;
 
 	virtual bool HasDone() const;
 	virtual void WaitForDone() const;

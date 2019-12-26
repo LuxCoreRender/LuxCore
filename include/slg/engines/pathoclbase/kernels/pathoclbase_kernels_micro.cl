@@ -151,12 +151,11 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 
 	checkDirectLightHit = checkDirectLightHit &&
 			// Avoid to render caustic path if hybridBackForwardEnable
-			(!taskConfig->pathTracer.hybridBackForwardEnable || !pathInfo->isNearlyCaustic);
+			(!taskConfig->pathTracer.hybridBackForward.enabled || !pathInfo->isNearlyCaustic);
 
-#if defined(PARAM_PGIC_ENABLED)
 	checkDirectLightHit = checkDirectLightHit &&
-			PhotonGICache_IsDirectLightHitVisible(pathInfo, taskState->photonGICausticCacheUsed);
-#endif
+			((!taskConfig->pathTracer.pgic.indirectEnabled && !taskConfig->pathTracer.pgic.causticEnabled) ||
+			PhotonGICache_IsDirectLightHitVisible(taskConfig, pathInfo, taskState->photonGICausticCacheUsed));
 
 	if (checkDirectLightHit) {
 		DirectHitInfiniteLight(
@@ -302,12 +301,11 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 
 	checkDirectLightHit = checkDirectLightHit &&
 			// Avoid to render caustic path if hybridBackForwardEnable
-			(!taskConfig->pathTracer.hybridBackForwardEnable || !pathInfo->isNearlyCaustic);
+			(!taskConfig->pathTracer.hybridBackForward.enabled || !pathInfo->isNearlyCaustic);
 
-#if defined(PARAM_PGIC_ENABLED)
 	checkDirectLightHit = checkDirectLightHit &&
-			PhotonGICache_IsDirectLightHitVisible(pathInfo, taskState->photonGICausticCacheUsed);
-#endif
+			((!taskConfig->pathTracer.pgic.indirectEnabled && !taskConfig->pathTracer.pgic.causticEnabled) ||
+			PhotonGICache_IsDirectLightHitVisible(taskConfig, pathInfo, taskState->photonGICausticCacheUsed));
 
 	// Check if it is a light source (note: I can hit only triangle area light sources)
 	if (BSDF_IsLightSource(bsdf) && checkDirectLightHit) {
@@ -325,113 +323,116 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 	// Check if I can use the photon cache
 	//----------------------------------------------------------------------
 
-#if defined(PARAM_PGIC_ENABLED)
-	const bool isPhotonGIEnabled = PhotonGICache_IsPhotonGIEnabled(bsdf, pgicGlossinessUsageThreshold
-			MATERIALS_PARAM);
-
-#if defined(PARAM_PGIC_DEBUG_SHOWINDIRECT)
-
-	if (isPhotonGIEnabled) {
-		const float3 radiance = PhotonGICache_GetIndirectRadiance(bsdf,
-				pgicRadiancePhotons, pgicRadiancePhotonsBVHNodes,
-				pgicIndirectLookUpRadius * pgicIndirectLookUpRadius, pgicIndirectLookUpNormalCosAngle);
-		VADD3F(sample->result.radiancePerPixelNormalized[0].c, radiance);
-	}
-	taskState->state = MK_SPLAT_SAMPLE;
-	return;
-
-#elif defined(PARAM_PGIC_DEBUG_SHOWCAUSTIC)
-
-	if (isPhotonGIEnabled) {
-		const float3 radiance = PhotonGICache_ConnectWithCausticPaths(bsdf,
-				pgicCausticPhotons, pgicCausticPhotonsBVHNodes,
-				pgicCausticPhotonTracedCount, pgicCausticLookUpRadius * pgicCausticLookUpRadius,
-				pgicCausticLookUpNormalCosAngle
+	if (taskConfig->pathTracer.pgic.indirectEnabled || taskConfig->pathTracer.pgic.causticEnabled) {
+		const bool isPhotonGIEnabled = PhotonGICache_IsPhotonGIEnabled(bsdf,
+				taskConfig->pathTracer.pgic.glossinessUsageThreshold
 				MATERIALS_PARAM);
 
-		VADD3F(sample->result.radiancePerPixelNormalized[0].c, VLOAD3F(taskState->throughput.c) * radiance);
-	}
-	taskState->state = MK_SPLAT_SAMPLE;
-	return;
+		switch (taskConfig->pathTracer.pgic.debugType) {
+			case PGIC_DEBUG_SHOWINDIRECT: {
+				if (isPhotonGIEnabled) {
+					const float3 radiance = PhotonGICache_GetIndirectRadiance(bsdf,
+							pgicRadiancePhotons, pgicRadiancePhotonsBVHNodes,
+							taskConfig->pathTracer.pgic.indirectLookUpRadius * taskConfig->pathTracer.pgic.indirectLookUpRadius,
+							taskConfig->pathTracer.pgic.indirectLookUpNormalCosAngle);
+					VADD3F(sample->result.radiancePerPixelNormalized[0].c, radiance);
+				}
+				taskState->state = MK_SPLAT_SAMPLE;
+				return;
+			}
+			case PGIC_DEBUG_SHOWCAUSTIC: {
+				if (isPhotonGIEnabled) {
+					const float3 radiance = PhotonGICache_ConnectWithCausticPaths(bsdf,
+							pgicCausticPhotons, pgicCausticPhotonsBVHNodes,
+							taskConfig->pathTracer.pgic.causticPhotonTracedCount,
+							taskConfig->pathTracer.pgic.causticLookUpRadius * taskConfig->pathTracer.pgic.causticLookUpRadius,
+							taskConfig->pathTracer.pgic.causticLookUpNormalCosAngle
+							MATERIALS_PARAM);
 
-#elif defined(PARAM_PGIC_DEBUG_SHOWINDIRECTPATHMIX)
+					VADD3F(sample->result.radiancePerPixelNormalized[0].c, VLOAD3F(taskState->throughput.c) * radiance);
+				}
+				taskState->state = MK_SPLAT_SAMPLE;
+				return;
+			}
+			case PGIC_DEBUG_SHOWINDIRECTPATHMIX: {
+				if (isPhotonGIEnabled) {
+					Seed seedPassThroughEvent = taskState->seedPassThroughEvent;
+					const float passThroughEvent = Rnd_FloatValue(&seedPassThroughEvent);
 
-	if (isPhotonGIEnabled) {
-		Seed seedPassThroughEvent = taskState->seedPassThroughEvent;
-		const float passThroughEvent = Rnd_FloatValue(&seedPassThroughEvent);
+					if (taskState->photonGICacheEnabledOnLastHit &&
+							(rayHits[gid].t > PhotonGICache_GetIndirectUsageThreshold(
+								pathInfo->lastBSDFEvent,
+								pathInfo->lastGlossiness,
+								// I hope to not introduce strange sample correlations
+								// by using passThrough here
+								passThroughEvent,
+								taskConfig->pathTracer.pgic.glossinessUsageThreshold,
+								taskConfig->pathTracer.pgic.indirectUsageThresholdScale,
+								taskConfig->pathTracer.pgic.indirectLookUpRadius))) {
+						VSTORE3F((float3)(0.f, 0.f, 1.f), sample->result.radiancePerPixelNormalized[0].c);
+						taskState->photonGIShowIndirectPathMixUsed = true;
 
-		if (taskState->photonGICacheEnabledOnLastHit &&
-				(rayHits[gid].t > PhotonGICache_GetIndirectUsageThreshold(
-					pathInfo->lastBSDFEvent,
-					pathInfo->lastGlossiness,
-					// I hope to not introduce strange sample correlations
-					// by using passThrough here
-					passThroughEvent,
-					pgicGlossinessUsageThreshold,
-					pgicIndirectUsageThresholdScale,
-					pgicIndirectLookUpRadius))) {
-			VSTORE3F((float3)(0.f, 0.f, 1.f), sample->result.radiancePerPixelNormalized[0].c);
-			taskState->photonGIShowIndirectPathMixUsed = true;
+						taskState->state = MK_SPLAT_SAMPLE;
+						return;
+					}
 
-			taskState->state = MK_SPLAT_SAMPLE;
-			return;
-		}
-		
-		taskState->photonGICacheEnabledOnLastHit = true;
-	} else
-		taskState->photonGICacheEnabledOnLastHit = false;
+					taskState->photonGICacheEnabledOnLastHit = true;
+				} else
+					taskState->photonGICacheEnabledOnLastHit = false;
+			}
+			case PGIC_DEBUG_NONE:
+			default: {
+				if (isPhotonGIEnabled) {
+					if (taskConfig->pathTracer.pgic.causticEnabled &&
+							taskConfig->pathTracer.hybridBackForward.enabled && (pathInfo->depth.depth != 0)) {
+						const float3 causticRadiance = PhotonGICache_ConnectWithCausticPaths(bsdf,
+								pgicCausticPhotons, pgicCausticPhotonsBVHNodes,
+								taskConfig->pathTracer.pgic.causticPhotonTracedCount,
+								taskConfig->pathTracer.pgic.causticLookUpRadius * taskConfig->pathTracer.pgic.causticLookUpRadius,
+								taskConfig->pathTracer.pgic.causticLookUpNormalCosAngle
+								MATERIALS_PARAM);
 
-#else
+						if (!Spectrum_IsBlack(causticRadiance)) {
+							VADD3F(sample->result.radiancePerPixelNormalized[0].c, VLOAD3F(taskState->throughput.c) * causticRadiance);			
+							taskState->photonGICausticCacheUsed = true;
+						}
+					}
 
-	if (isPhotonGIEnabled) {
-#if defined(PARAM_PGIC_CAUSTIC_ENABLED)
-		if (taskConfig->pathTracer.hybridBackForwardEnable && (pathInfo->depth.depth != 0)) {
-			const float3 causticRadiance = PhotonGICache_ConnectWithCausticPaths(bsdf,
-					pgicCausticPhotons, pgicCausticPhotonsBVHNodes,
-					pgicCausticPhotonTracedCount, pgicCausticLookUpRadius * pgicCausticLookUpRadius,
-					pgicCausticLookUpNormalCosAngle
-					MATERIALS_PARAM);
+					if (taskConfig->pathTracer.pgic.indirectEnabled) {
+						Seed seedPassThroughEvent = taskState->seedPassThroughEvent;
+						const float passThroughEvent = Rnd_FloatValue(&seedPassThroughEvent);
 
-			if (!Spectrum_IsBlack(causticRadiance)) {
-				VADD3F(sample->result.radiancePerPixelNormalized[0].c, VLOAD3F(taskState->throughput.c) * causticRadiance);			
-				taskState->photonGICausticCacheUsed = true;
+						if (taskState->photonGICacheEnabledOnLastHit &&
+								(rayHits[gid].t > PhotonGICache_GetIndirectUsageThreshold(
+									pathInfo->lastBSDFEvent,
+									pathInfo->lastGlossiness,
+									// I hope to not introduce strange sample correlations
+									// by using passThrough here
+									passThroughEvent,
+									taskConfig->pathTracer.pgic.glossinessUsageThreshold,
+									taskConfig->pathTracer.pgic.indirectUsageThresholdScale,
+									taskConfig->pathTracer.pgic.indirectLookUpRadius))) {
+							const float3 radiance = PhotonGICache_GetIndirectRadiance(bsdf,
+								pgicRadiancePhotons, pgicRadiancePhotonsBVHNodes,
+								taskConfig->pathTracer.pgic.indirectLookUpRadius * taskConfig->pathTracer.pgic.indirectLookUpRadius,
+								taskConfig->pathTracer.pgic.indirectLookUpNormalCosAngle);
+
+							VADD3F(sample->result.radiancePerPixelNormalized[0].c, VLOAD3F(taskState->throughput.c) * radiance);
+
+							// I can terminate the path, all done
+							taskState->state = MK_SPLAT_SAMPLE;
+							return;
+						}
+					}
+
+					taskState->photonGICacheEnabledOnLastHit = true;
+				} else
+					taskState->photonGICacheEnabledOnLastHit = false;
+
+				break;
 			}
 		}
-#endif
-
-#if defined(PARAM_PGIC_INDIRECT_ENABLED)
-		Seed seedPassThroughEvent = taskState->seedPassThroughEvent;
-		const float passThroughEvent = Rnd_FloatValue(&seedPassThroughEvent);
-
-		if (taskState->photonGICacheEnabledOnLastHit &&
-				(rayHits[gid].t > PhotonGICache_GetIndirectUsageThreshold(
-					pathInfo->lastBSDFEvent,
-					pathInfo->lastGlossiness,
-					// I hope to not introduce strange sample correlations
-					// by using passThrough here
-					passThroughEvent,
-					pgicGlossinessUsageThreshold,
-					pgicIndirectUsageThresholdScale,
-					pgicIndirectLookUpRadius))) {
-			const float3 radiance = PhotonGICache_GetIndirectRadiance(bsdf,
-				pgicRadiancePhotons, pgicRadiancePhotonsBVHNodes,
-				pgicIndirectLookUpRadius * pgicIndirectLookUpRadius, pgicIndirectLookUpNormalCosAngle);
-
-			VADD3F(sample->result.radiancePerPixelNormalized[0].c, VLOAD3F(taskState->throughput.c) * radiance);
-
-			// I can terminate the path, all done
-			taskState->state = MK_SPLAT_SAMPLE;
-			return;
-		}
-#endif
-
-		taskState->photonGICacheEnabledOnLastHit = true;
-	} else
-		taskState->photonGICacheEnabledOnLastHit = false;
-
-#endif
-
-#endif
+	}
 
 	//----------------------------------------------------------------------
 	// Check if this is the last path vertex (but not also the first)
@@ -804,7 +805,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 		sample->result.firstPathVertexEvent = bsdfEvent;
 
 	EyePathInfo_AddVertex(pathInfo, bsdf, bsdfEvent, bsdfPdfW,
-			taskConfig->pathTracer.hybridBackForwardEnable ? taskConfig->pathTracer.hybridBackForwardGlossinessThreshold : 0.f
+			taskConfig->pathTracer.hybridBackForward.enabled ? taskConfig->pathTracer.hybridBackForward.glossinessThreshold : 0.f
 			MATERIALS_PARAM);
 
 	// Russian Roulette
@@ -963,10 +964,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_SP
 #endif
 #endif
 
-#if defined(PARAM_PGIC_ENABLED) && defined(PARAM_PGIC_DEBUG_SHOWINDIRECTPATHMIX)
-	if (!taskState->photonGIShowIndirectPathMixUsed)
+	if (taskConfig->pathTracer.pgic.indirectEnabled &&
+			(taskConfig->pathTracer.pgic.debugType == PGIC_DEBUG_SHOWINDIRECTPATHMIX) &&
+			taskState->photonGIShowIndirectPathMixUsed)
 		VSTORE3F((float3)(1.f, 0.f, 0.f), sample->result.radiancePerPixelNormalized[0].c);
-#endif
 
 	//--------------------------------------------------------------------------
 	// Variance clamping

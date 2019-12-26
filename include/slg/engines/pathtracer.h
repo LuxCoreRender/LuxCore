@@ -27,9 +27,15 @@
 #include "slg/film/film.h"
 #include "slg/film/filmsamplesplatter.h"
 #include "slg/bsdf/bsdf.h"
+#include "slg/engines/caches/photongi/photongicache.h"
 #include "slg/utils/pathinfo.h"
 
 namespace slg {
+
+// OpenCL data types
+namespace ocl {
+#include "slg/engines/pathtracer_types.cl"
+}
 
 //------------------------------------------------------------------------------
 // Path Tracing render code
@@ -81,6 +87,7 @@ public:
 	void DeletePixelFilterDistribution();
 
 	void SetPhotonGICache(const PhotonGICache *cache) { photonGICache = cache; }
+	const PhotonGICache *GetPhotonGICache() const { return photonGICache; }
 
 	void ParseOptions(const luxrays::Properties &cfg, const luxrays::Properties &defaultProps);
 

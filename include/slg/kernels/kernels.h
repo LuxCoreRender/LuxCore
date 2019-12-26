@@ -117,6 +117,7 @@ extern std::string KernelSource_hitpoint_types;
 extern std::string KernelSource_hitpoint_funcs;
 extern std::string KernelSource_pgic_types;
 extern std::string KernelSource_pgic_funcs;
+extern std::string KernelSource_pathtracer_types;
 
 // This is string is preprocessed in CompiledScene class
 extern std::string KernelSource_materialdefs_template_glossycoating;
