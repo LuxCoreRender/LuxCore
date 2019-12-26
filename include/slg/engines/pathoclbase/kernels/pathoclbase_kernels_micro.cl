@@ -144,10 +144,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 #if defined(PARAM_HAS_ENVLIGHTS)
 	bool checkDirectLightHit = true;
 	
-#if defined(PARAM_FORCE_BLACK_BACKGROUND)
 	checkDirectLightHit = checkDirectLightHit &&
-			(!pathInfo->isPassThroughPath);
-#endif
+			(!taskConfig->pathTracer.forceBlackBackground || !pathInfo->isPassThroughPath);
 
 	checkDirectLightHit = checkDirectLightHit &&
 			// Avoid to render caustic path if hybridBackForwardEnable

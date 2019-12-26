@@ -45,6 +45,7 @@ void CompiledScene::CompilePathTracer() {
 	compiledPathTracer.hybridBackForward.enabled = pathTracer->hybridBackForwardEnable;
 	compiledPathTracer.hybridBackForward.glossinessThreshold = pathTracer->hybridBackForwardGlossinessThreshold;
 	
+	compiledPathTracer.forceBlackBackground = pathTracer->forceBlackBackground;
 	CompilePhotonGI();
 }
 

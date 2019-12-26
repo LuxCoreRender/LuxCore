@@ -43,4 +43,6 @@ typedef struct {
 
 		PhotonGIDebugType debugType;
 	} pgic;
+
+	int forceBlackBackground;
 } PathTracer;

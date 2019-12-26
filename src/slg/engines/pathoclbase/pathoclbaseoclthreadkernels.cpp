@@ -560,9 +560,6 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 	if (renderEngine->usePixelAtomics)
 		ssParams << " -D PARAM_USE_PIXEL_ATOMICS";
 
-	if (renderEngine->pathTracer.forceBlackBackground)
-		ssParams << " -D PARAM_FORCE_BLACK_BACKGROUND";
-
 	const slg::ocl::Sampler *sampler = renderEngine->oclSampler;
 	switch (sampler->type) {
 		case slg::ocl::RANDOM:
