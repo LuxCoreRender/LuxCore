@@ -175,7 +175,7 @@ OPENCL_FORCE_INLINE float3 PGICPhotonBvh_ConnectCacheEntry(__global const Photon
 	// so I have to cancel that factor. It is already included in photon density
 	// estimation.
 #if defined(PARAM_HAS_VOLUMES)
-	if (bsdf->isVolume)
+	if (!bsdf->isVolume)
 #endif
 		bsdfEval /= fabs(dot(VLOAD3F(&bsdf->hitPoint.shadeN.x), -photonDir));
 

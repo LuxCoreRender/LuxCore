@@ -347,7 +347,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 							taskConfig->pathTracer.pgic.causticLookUpNormalCosAngle
 							MATERIALS_PARAM);
 
-					VADD3F(sample->result.radiancePerPixelNormalized[0].c, VLOAD3F(taskState->throughput.c) * radiance);
+					VADD3F(sample->result.radiancePerPixelNormalized[0].c, radiance);
 				}
 				taskState->state = MK_SPLAT_SAMPLE;
 				return;
