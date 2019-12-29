@@ -29,9 +29,9 @@ namespace slg {
 
 class TriplanarTexture : public Texture {
 public:
-	TriplanarTexture(const Texture *t1, const Texture *t2, 
+	TriplanarTexture(const TextureMapping3D *mp, const Texture *t1, const Texture *t2, 
     const Texture *t3) :
-    texX(t1), texY(t2), texZ(t3) {}
+    mapping(mp), texX(t1), texY(t2), texZ(t3) {}
 
 	virtual ~TriplanarTexture() {}
 
