@@ -77,18 +77,14 @@ OPENCL_FORCE_INLINE float3 DefaultMaterial_GetEmittedRadiance(__global const Mat
 // DefaultMaterial_GetInteriorVolume
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_HAS_VOLUMES)
 OPENCL_FORCE_INLINE uint DefaultMaterial_GetInteriorVolume(__global const Material *material) {
 	return material->interiorVolumeIndex;
 }
-#endif
 
 //------------------------------------------------------------------------------
 // DefaultMaterial_GetExteriorVolume
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_HAS_VOLUMES)
 OPENCL_FORCE_INLINE uint DefaultMaterial_GetExteriorVolume(__global const Material *material) {
 	return material->exteriorVolumeIndex;
 }
-#endif

@@ -194,9 +194,6 @@ public:
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
-	// This is used to scale the world radius in sun/sky/infinite lights in order to
-	// avoid problems with objects that are near the borderline of the world bounding sphere
-	static const float LIGHT_WORLD_RADIUS_SCALE;
 	static float GetEnvRadius(const Scene &scene);
 
 protected:

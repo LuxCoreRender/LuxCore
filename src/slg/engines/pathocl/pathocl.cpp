@@ -154,10 +154,6 @@ void PathOCLRenderEngine::StartLockLess() {
 	pathTracer.InitPixelFilterDistribution(pixelFilter);
 
 	PathOCLBaseRenderEngine::StartLockLess();
-
-	// Set pathTracer PhotonGI. photonGICache is eventually initialized
-	// inside PathOCLBaseRenderEngine::StartLockLess()
-	pathTracer.SetPhotonGICache(photonGICache);
 }
 
 void PathOCLRenderEngine::StopLockLess() {

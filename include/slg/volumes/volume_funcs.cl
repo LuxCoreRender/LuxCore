@@ -18,8 +18,6 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#if defined(PARAM_HAS_VOLUMES)
-
 OPENCL_FORCE_NOT_INLINE float3 Volume_Emission(__global const Volume *vol, __global const HitPoint *hitPoint
 	TEXTURES_PARAM_DECL) {
 	const uint emiTexIndex = vol->volume.volumeEmissionTexIndex;
@@ -351,5 +349,3 @@ OPENCL_FORCE_NOT_INLINE float Volume_Scatter(__global const Volume *vol,
 			return -1.f;
 	}
 }
-
-#endif

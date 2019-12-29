@@ -24,12 +24,6 @@
 //  PARAM_HAS_IMAGEMAPS
 //  PARAM_USE_PIXEL_ATOMICS
 //  PARAM_ACCEL_BVH or PARAM_ACCEL_MBVH or PARAM_ACCEL_QBVH or PARAM_ACCEL_MQBVH
-//  PARAM_LIGHT_WORLD_RADIUS_SCALE
-//  PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR
-//  PARAM_HAS_VOLUMEs (and SCENE_DEFAULT_VOLUME_INDEX)
-//  PARAM_PGIC_ENABLED (and PARAM_PGIC_INDIRECT_ENABLED and PARAM_PGIC_CAUSTIC_ENABLED)
-//  PARAM_HYBRID_BACKFORWARD (and PARAM_HYBRID_BACKFORWARD_GLOSSINESSTHRESHOLD)
-//  PARAM_ELVC_GLOSSINESSTHRESHOLD
 
 // To enable single material support
 //  PARAM_ENABLE_MAT_MATTE
@@ -154,7 +148,7 @@
 //------------------------------------------------------------------------------
 
 OPENCL_FORCE_NOT_INLINE void InitSampleResult(
-		__constant GPUTaskConfiguration *taskConfig,
+		__constant const GPUTaskConfiguration* restrict taskConfig,
 		__global Sample *sample,
 		__global float *sampleDataPathBase,
 		const uint filmWidth, const uint filmHeight,
@@ -191,7 +185,7 @@ OPENCL_FORCE_NOT_INLINE void InitSampleResult(
 }
 
 OPENCL_FORCE_NOT_INLINE void GenerateEyePath(
-		__constant GPUTaskConfiguration *taskConfig,
+		__constant const GPUTaskConfiguration* restrict taskConfig,
 		__global GPUTaskDirectLight *taskDirectLight,
 		__global GPUTaskState *taskState,
 		__global Sample *sample,
@@ -228,18 +222,14 @@ OPENCL_FORCE_NOT_INLINE void GenerateEyePath(
 #if defined(RENDER_ENGINE_TILEPATHOCL) || defined(RENDER_ENGINE_RTPATHOCL)
 	Camera_GenerateRay(camera, cameraFilmWidth, cameraFilmHeight,
 			ray,
-#if defined(PARAM_HAS_VOLUMES)
 			&pathInfo->volume,
-#endif
 			sample->result.filmX + tileStartX, sample->result.filmY + tileStartY,
 			timeSample,
 			dofSampleX, dofSampleY);
 #else
 	Camera_GenerateRay(camera, filmWidth, filmHeight,
 			ray,
-#if defined(PARAM_HAS_VOLUMES)
 			&pathInfo->volume,
-#endif
 			sample->result.filmX, sample->result.filmY,
 			timeSample,
 			dofSampleX, dofSampleY);
@@ -321,9 +311,7 @@ OPENCL_FORCE_NOT_INLINE void DirectHitInfiniteLight(
 						dlscDistributions, dlscBVHNodes,
 						dlscRadius2, dlscNormalCosAngle,
 						VLOAD3F(&ray->o.x), VLOAD3F(&pathInfo->lastShadeN.x),
-#if defined(PARAM_HAS_VOLUMES)
 						pathInfo->lastFromVolume,
-#endif
 						light->lightSceneIndex);
 
 				// MIS between BSDF sampling and direct light sampling
@@ -365,9 +353,7 @@ OPENCL_FORCE_NOT_INLINE void DirectHitFiniteLight(
 					dlscDistributions, dlscBVHNodes,
 					dlscRadius2, dlscNormalCosAngle,
 					VLOAD3F(&ray->o.x), VLOAD3F(&pathInfo->lastShadeN.x),
-#if defined(PARAM_HAS_VOLUMES)
 					pathInfo->lastFromVolume,
-#endif
 					light->lightSceneIndex);
 
 #if !defined(RENDER_ENGINE_RTPATHOCL)
@@ -417,9 +403,7 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_Illuminate(
 			dlscDistributions, dlscBVHNodes,
 			dlscRadius2, dlscNormalCosAngle,
 			VLOAD3F(&bsdf->hitPoint.p.x), BSDF_GetLandingGeometryN(bsdf), 
-#if defined(PARAM_HAS_VOLUMES)
 			bsdf->isVolume,
-#endif
 			u0, &lightPickPdf);
 	if ((lightIndex == NULL_INDEX) || (lightPickPdf <= 0.f))
 		return false;
@@ -456,7 +440,7 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_Illuminate(
 }
 
 OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
-		__constant GPUTaskConfiguration *taskConfig,
+		__constant const GPUTaskConfiguration* restrict taskConfig,
 		__global DirectLightIlluminateInfo *info,
 		const float time,
 		const bool lastPathVertex,
@@ -472,10 +456,11 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 			shadowRayDir, &event, &bsdfPdfW
 			MATERIALS_PARAM);
 
-	if (Spectrum_IsBlack(bsdfEval)
-#if defined(PARAM_HYBRID_BACKFORWARD)
-			|| EyePathInfo_IsCausticPath(pathInfo, event, BSDF_GetGlossiness(bsdf MATERIALS_PARAM), PARAM_HYBRID_BACKFORWARD_GLOSSINESSTHRESHOLD)
-#endif
+	if (Spectrum_IsBlack(bsdfEval) ||
+			(taskConfig->pathTracer.hybridBackForward.enabled &&
+			EyePathInfo_IsCausticPath(pathInfo, event,
+				BSDF_GetGlossiness(bsdf MATERIALS_PARAM),
+				taskConfig->pathTracer.hybridBackForward.glossinessThreshold))
 			)
 		return false;
 
@@ -522,12 +507,8 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 // Kernel parameters
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_HAS_VOLUMES)
 #define KERNEL_ARGS_VOLUMES \
 		, __global PathVolumeInfo *directLightVolInfos
-#else
-#define KERNEL_ARGS_VOLUMES
-#endif
 
 #define KERNEL_ARGS_INFINITELIGHTS \
 		, const float worldCenterX \
@@ -614,25 +595,14 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 #define KERNEL_ARGS_FAST_PIXEL_FILTER \
 		, __global float *pixelFilterDistribution
 
-#if defined(PARAM_PGIC_ENABLED)
 #define KERNEL_ARGS_PHOTONGI \
 		, __global const RadiancePhoton* restrict pgicRadiancePhotons \
 		, __global const IndexBVHArrayNode* restrict pgicRadiancePhotonsBVHNodes \
-		, const float pgicGlossinessUsageThreshold \
-		, const float pgicIndirectLookUpRadius \
-		, const float pgicIndirectLookUpNormalCosAngle \
-		, const float pgicIndirectUsageThresholdScale \
 		, __global const Photon* restrict pgicCausticPhotons \
-		, __global const IndexBVHArrayNode* restrict pgicCausticPhotonsBVHNodes \
-		, const uint pgicCausticPhotonTracedCount \
-		, const float pgicCausticLookUpRadius \
-		, const float pgicCausticLookUpNormalCosAngle
-#else
-#define KERNEL_ARGS_PHOTONGI
-#endif
+		, __global const IndexBVHArrayNode* restrict pgicCausticPhotonsBVHNodes
 
 #define KERNEL_ARGS \
-		__constant GPUTaskConfiguration *taskConfig \
+		__constant const GPUTaskConfiguration* restrict taskConfig \
 		, __global GPUTask *tasks \
 		, __global GPUTaskDirectLight *tasksDirectLight \
 		, __global GPUTaskState *tasksState \
@@ -764,7 +734,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void InitSeed(__global 
 }
 
 __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
-		__constant GPUTaskConfiguration *taskConfig,
+		__constant const GPUTaskConfiguration* restrict taskConfig,
 		__global GPUTask *tasks,
 		__global GPUTaskDirectLight *tasksDirectLight,
 		__global GPUTaskState *tasksState,

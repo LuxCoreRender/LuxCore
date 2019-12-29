@@ -18,8 +18,6 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#if defined(PARAM_PGIC_ENABLED)
-
 OPENCL_FORCE_INLINE bool PhotonGICache_IsPhotonGIEnabled(__global const BSDF *bsdf,
 		const float glossinessUsageThreshold
 		MATERIALS_PARAM_DECL) {
@@ -40,22 +38,19 @@ OPENCL_FORCE_INLINE bool PhotonGICache_IsPhotonGIEnabled(__global const BSDF *bs
 }
 
 OPENCL_FORCE_INLINE bool PhotonGICache_IsDirectLightHitVisible(
+		__constant const GPUTaskConfiguration* restrict taskConfig,
 		__global const EyePathInfo *pathInfo,
 		const bool photonGICausticCacheUsed) {
 	// This is a specific check to cut fireflies created by some glossy or
 	// specular bounce
 	if (!(pathInfo->lastBSDFEvent & DIFFUSE) && (pathInfo->depth.diffuseDepth > 0))
 		return false;
-#if !defined(PARAM_PGIC_CAUSTIC_ENABLED)
-	if (photonGICausticCacheUsed)
+	else if (!taskConfig->pathTracer.pgic.causticEnabled || !photonGICausticCacheUsed)
 		return true;
-#endif
-#if defined(PARAM_PGIC_DEBUG_NONE)
-	if (!pathInfo->isNearlyCaustic)
+	else if (!pathInfo->isNearlyCaustic && (taskConfig->pathTracer.pgic.debugType == PGIC_DEBUG_NONE))
 		return true;
-#endif
-
-	return false;
+	else
+		return false;
 }
 
 //------------------------------------------------------------------------------
@@ -87,14 +82,10 @@ OPENCL_FORCE_INLINE __global const RadiancePhoton* restrict RadiancePhotonsBVH_G
 		__global const RadiancePhoton* restrict pgicRadiancePhotons,
 		__global const IndexBVHArrayNode* restrict pgicRadiancePhotonsBVHNodes,
 		const float pgicIndirectLookUpRadius2, const float pgicIndirectLookUpNormalCosAngle,
-		const float3 p, const float3 n
-#if defined(PARAM_HAS_VOLUMES)
-		, const bool isVolume
-#endif
+		const float3 p, const float3 n, const bool isVolume
 		) {
 	__global const RadiancePhoton* restrict nearestEntry = NULL;
 
-#if defined(PARAM_PGIC_INDIRECT_ENABLED)
 	float nearestDistance2 = pgicIndirectLookUpRadius2;
 
 	uint currentNode = 0; // Root Node
@@ -110,15 +101,11 @@ OPENCL_FORCE_INLINE __global const RadiancePhoton* restrict RadiancePhotonsBVH_G
 
 			const float distance2 = DistanceSquared(p, VLOAD3F(&entry->p.x));
 			if ((distance2 < nearestDistance2) && 
-#if defined(PARAM_HAS_VOLUMES)
 					(entry->isVolume == isVolume) &&
 						(isVolume ||
-#endif
 						(dot(n, VLOAD3F(&entry->n.x)) > pgicIndirectLookUpNormalCosAngle)
-#if defined(PARAM_HAS_VOLUMES)
 						)
-#endif
-					) {
+				) {
 				// I have found a valid nearer entry
 				nearestEntry = entry;
 				nearestDistance2 = distance2;
@@ -138,7 +125,6 @@ OPENCL_FORCE_INLINE __global const RadiancePhoton* restrict RadiancePhotonsBVH_G
 			}
 		}
 	}
-#endif
 
 	return nearestEntry;
 }
@@ -156,10 +142,7 @@ OPENCL_FORCE_INLINE float3 PhotonGICache_GetIndirectRadiance(__global const BSDF
 	__global const RadiancePhoton* restrict radiancePhoton = RadiancePhotonsBVH_GetNearestEntry(
 			pgicRadiancePhotons, pgicRadiancePhotonsBVHNodes,
 			pgicIndirectLookUpRadius2, pgicIndirectLookUpNormalCosAngle,
-			p, n
-#if defined(PARAM_HAS_VOLUMES)
-			, bsdf->isVolume
-#endif
+			p, n, bsdf->isVolume
 			);
 
 	if (radiancePhoton)
@@ -181,9 +164,7 @@ OPENCL_FORCE_INLINE float3 PGICPhotonBvh_ConnectCacheEntry(__global const Photon
 	// bsdf.Evaluate() multiplies the result by AbsDot(bsdf.hitPoint.shadeN, -photon->d)
 	// so I have to cancel that factor. It is already included in photon density
 	// estimation.
-#if defined(PARAM_HAS_VOLUMES)
-	if (bsdf->isVolume)
-#endif
+	if (!bsdf->isVolume)
 		bsdfEval /= fabs(dot(VLOAD3F(&bsdf->hitPoint.shadeN.x), -photonDir));
 
 	return VLOAD3F(photon->alpha.c) * bsdfEval;
@@ -197,13 +178,10 @@ OPENCL_FORCE_INLINE float3 PGICPhotonBvh_ConnectAllNearEntries(__global const BS
 		MATERIALS_PARAM_DECL) {
 	float3 result = BLACK;
 
-#if defined(PARAM_PGIC_CAUSTIC_ENABLED)
 	const float3 p = VLOAD3F(&bsdf->hitPoint.p.x);
 	// Flip the normal if required
 	const float3 n = (bsdf->hitPoint.intoObject ? 1.f: -1.f) * VLOAD3F(&bsdf->hitPoint.geometryN.x);
-#if defined(PARAM_HAS_VOLUMES)
 	const bool isVolume = bsdf->isVolume;
-#endif
 
 	uint currentNode = 0; // Root Node
 	const uint stopNode = IndexBVHNodeData_GetSkipIndex(pgicCausticPhotonsBVHNodes[0].nodeData); // Non-existent
@@ -219,16 +197,12 @@ OPENCL_FORCE_INLINE float3 PGICPhotonBvh_ConnectAllNearEntries(__global const BS
 
 			const float distance2 = DistanceSquared(p, VLOAD3F(&entry->p.x));
 			if ((distance2 < pgicCausticLookUpRadius2) &&
-#if defined(PARAM_HAS_VOLUMES)
 					(entry->isVolume == isVolume) &&
 						(isVolume ||
-#endif
 						((dot(n, -VLOAD3F(&entry->d.x)) > DEFAULT_COS_EPSILON_STATIC) &&
 						(dot(n, VLOAD3F(&entry->landingSurfaceNormal.x)) > pgicCausticLookUpNormalCosAngle))
-#if defined(PARAM_HAS_VOLUMES)
-					)
-#endif
-					) {
+						)
+				) {
 				result += PGICPhotonBvh_ConnectCacheEntry(entry, bsdf MATERIALS_PARAM);
 			}
 
@@ -246,7 +220,6 @@ OPENCL_FORCE_INLINE float3 PGICPhotonBvh_ConnectAllNearEntries(__global const BS
 			}
 		}
 	}
-#endif
 
 	result /= pgicCausticPhotonTracedCount * M_PI_F * pgicCausticLookUpRadius2;
 
@@ -265,5 +238,3 @@ OPENCL_FORCE_NOT_INLINE float3 PhotonGICache_ConnectWithCausticPaths(__global co
 			pgicCausticPhotonTracedCount, pgicCausticLookUpRadius2, pgicCausticLookUpNormalCosAngle MATERIALS_PARAM) :
 		BLACK;
 }
-
-#endif

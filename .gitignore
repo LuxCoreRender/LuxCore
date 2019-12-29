@@ -63,3 +63,5 @@ xcuserdata/
 # Emacs files
 TAGS
 .dir-locals.el
+build_lux_osx.sh
+pack_lux_osx_2.sh

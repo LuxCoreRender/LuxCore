@@ -112,7 +112,7 @@ void PathTracer::ResetEyeSampleResults(vector<SampleResult> &sampleResults) {
 // RenderEyeSample methods
 //------------------------------------------------------------------------------
 
-DirectLightResult PathTracer::DirectLightSampling(
+PathTracer::DirectLightResult PathTracer::DirectLightSampling(
 		luxrays::IntersectionDevice *device, const Scene *scene,
 		const float time,
 		const float u0, const float u1, const float u2,
@@ -464,14 +464,20 @@ void PathTracer::RenderEyePath(IntersectionDevice *device,
 					sampleResult.radiance[0] += photonGICache->ConnectWithCausticPaths(bsdf);
 					break;
 			} else if (photonGICache->GetDebugType() == PhotonGIDebugType::PGIC_DEBUG_SHOWINDIRECTPATHMIX) {
-				if (isPhotonGIEnabled && photonGICacheEnabledOnLastHit &&
-						(eyeRayHit.t > photonGICache->GetIndirectUsageThreshold(pathInfo.lastBSDFEvent,
-							pathInfo.lastGlossiness,
-							passThrough))) {
-					sampleResult.radiance[0] = Spectrum(0.f, 0.f, 1.f);
-					photonGIShowIndirectPathMixUsed = true;
-					break;
-				}
+				// Check if the cache is enabled for this material
+				if (isPhotonGIEnabled) {
+					if (photonGICacheEnabledOnLastHit &&
+							(eyeRayHit.t > photonGICache->GetIndirectUsageThreshold(pathInfo.lastBSDFEvent,
+								pathInfo.lastGlossiness,
+								passThrough))) {
+						sampleResult.radiance[0] = Spectrum(0.f, 0.f, 1.f);
+						photonGIShowIndirectPathMixUsed = true;
+						break;
+					}
+
+					photonGICacheEnabledOnLastHit = true;
+				} else
+					photonGICacheEnabledOnLastHit = false;
 			} else {
 				// Check if the cache is enabled for this material
 				if (isPhotonGIEnabled) {
@@ -828,43 +834,32 @@ void PathTracer::RenderLightSample(IntersectionDevice *device,
 // RenderSample
 //------------------------------------------------------------------------------
 
-void PathTracer::RenderSample(PathTracerThreadState &state) const {
+bool PathTracer::HasToRenderEyeSample(PathTracerThreadState &state) const {
 	// Check if I have to trace an eye or light path
-	Sampler *sampler;
-	vector<SampleResult> *sampleResults;
 	if (hybridBackForwardEnable) {
 		const double ratio = state.eyeSampleCount / state.lightSampleCount;
 		if ((hybridBackForwardPartition == 1.f) ||
 				(ratio < hybridBackForwardPartition)) {
 			// Trace an eye path
-			sampler = state.eyeSampler;
-			sampleResults = &state.eyeSampleResults;
-
 			state.eyeSampleCount += 1.0;
+			return true;
 		} else {
 			// Trace a light path
-
-			sampler = state.lightSampler;
-			sampleResults = &state.lightSampleResults;
-
 			state.lightSampleCount += 1.0;
+			return false;
 		}
 	} else {
-		sampler = state.eyeSampler;
-		sampleResults = &state.eyeSampleResults;
-
 		state.eyeSampleCount += 1.0;
+		return true;
 	}
+}
 
-	if (sampler == state.eyeSampler)
-		RenderEyeSample(state.device, state.scene, state.film, sampler, *sampleResults);
-	else
-		RenderLightSample(state.device, state.scene, state.film, sampler, *sampleResults);
-
+void PathTracer::ApplyVarianceClamp(const PathTracerThreadState &state,
+		vector<SampleResult> &sampleResults) const {
 	// Variance clamping
 	if (state.varianceClamping->hasClamping()) {
-		for(u_int i = 0; i < sampleResults->size(); ++i) {
-			SampleResult &sampleResult = (*sampleResults)[i];
+		for(u_int i = 0; i < sampleResults.size(); ++i) {
+			SampleResult &sampleResult = sampleResults[i];
 
 			// I clamp only eye paths samples (variance clamping would cut
 			// SDS path values due to high scale of PSR samples)
@@ -872,6 +867,29 @@ void PathTracer::RenderSample(PathTracerThreadState &state) const {
 				state.varianceClamping->Clamp(*state.film, sampleResult);
 		}
 	}
+}
+
+void PathTracer::RenderSample(PathTracerThreadState &state) const {
+	// Check if I have to trace an eye or light path
+	Sampler *sampler;
+	vector<SampleResult> *sampleResults;
+	if (HasToRenderEyeSample(state)) {
+		// Trace an eye path
+		sampler = state.eyeSampler;
+		sampleResults = &state.eyeSampleResults;
+	} else {
+		// Trace a light path
+		sampler = state.lightSampler;
+		sampleResults = &state.lightSampleResults;
+	}
+
+	if (sampler == state.eyeSampler)
+		RenderEyeSample(state.device, state.scene, state.film, state.eyeSampler, state.eyeSampleResults);
+	else
+		RenderLightSample(state.device, state.scene, state.film, state.lightSampler, state.lightSampleResults);
+
+	// Variance clamping
+	ApplyVarianceClamp(state, *sampleResults);
 
 	sampler->NextSample(*sampleResults);
 }

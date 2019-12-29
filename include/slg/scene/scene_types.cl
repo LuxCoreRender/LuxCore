@@ -32,3 +32,24 @@ typedef enum {
 } SceneRayTypeType;
 
 typedef int SceneRayType;
+
+typedef struct {
+	unsigned int defaultVolumeIndex;
+} Scene;
+
+#if defined(SLG_OPENCL_KERNEL)
+
+#define SCENE_PARAM_DECL , \
+		__constant const Scene* restrict scene, \
+		__global const SceneObject* restrict sceneObjs, \
+		__global const uint* restrict lightIndexOffsetByMeshIndex, \
+		__global const uint* restrict lightIndexByTriIndex \
+		EXTMESH_PARAM_DECL
+#define SCENE_PARAM , \
+		scene, \
+		sceneObjs, \
+		lightIndexOffsetByMeshIndex, \
+		lightIndexByTriIndex \
+		EXTMESH_PARAM
+
+#endif

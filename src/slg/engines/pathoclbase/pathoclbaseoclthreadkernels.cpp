@@ -106,7 +106,6 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			" -D RENDER_ENGINE_" << RenderEngine::RenderEngineType2String(renderEngine->GetType()) <<
 			" -D PARAM_RAY_EPSILON_MIN=" << MachineEpsilon::GetMin() << "f"
 			" -D PARAM_RAY_EPSILON_MAX=" << MachineEpsilon::GetMax() << "f"
-			" -D PARAM_LIGHT_WORLD_RADIUS_SCALE=" << InfiniteLightSource::LIGHT_WORLD_RADIUS_SCALE << "f"
 			;
 
 	if (cscene->hasTriangleLightWithVertexColors)
@@ -494,14 +493,6 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			ssParams << " -D PARAM_HAS_IMAGEMAPS_WRAP_CLAMP";
 	}
 
-	if (renderEngine->compiledScene->HasVolumes()) {
-		ssParams << " -D PARAM_HAS_VOLUMES";
-		ssParams << " -D SCENE_DEFAULT_VOLUME_INDEX=" << renderEngine->compiledScene->defaultWorldVolumeIndex;
-	}
-
-	ssParams <<
-			" -D PARAM_SQRT_VARIANCE_CLAMP_MAX_VALUE=" << renderEngine->pathTracer.sqrtVarianceClampMaxValue << "f";
-
 	const slg::ocl::Filter *filter = renderEngine->oclPixelFilter;
 	switch (filter->type) {
 		case slg::ocl::FILTER_NONE:
@@ -560,14 +551,6 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 	if (renderEngine->usePixelAtomics)
 		ssParams << " -D PARAM_USE_PIXEL_ATOMICS";
 
-	if (renderEngine->pathTracer.forceBlackBackground)
-		ssParams << " -D PARAM_FORCE_BLACK_BACKGROUND";
-
-	if (renderEngine->pathTracer.hybridBackForwardEnable) {
-		ssParams << " -D PARAM_HYBRID_BACKFORWARD" <<
-				" -D PARAM_HYBRID_BACKFORWARD_GLOSSINESSTHRESHOLD=" << renderEngine->pathTracer.hybridBackForwardGlossinessThreshold << "f";
-	}
-
 	const slg::ocl::Sampler *sampler = renderEngine->oclSampler;
 	switch (sampler->type) {
 		case slg::ocl::RANDOM:
@@ -591,33 +574,6 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			throw runtime_error("Unknown sampler type in PathOCLBaseRenderThread::AdditionalKernelOptions(): " + boost::lexical_cast<string>(sampler->type));
 	}
 
-	if (cscene->photonGICache) {
-		ssParams << " -D PARAM_PGIC_ENABLED";
-
-		switch (cscene->pgicDebugType) {
-			case PGIC_DEBUG_NONE:
-				ssParams << " -D PARAM_PGIC_DEBUG_NONE";
-				break;
-			case PGIC_DEBUG_SHOWINDIRECT:
-				ssParams << " -D PARAM_PGIC_DEBUG_SHOWINDIRECT";
-				break;
-			case PGIC_DEBUG_SHOWCAUSTIC:
-				ssParams << " -D PARAM_PGIC_DEBUG_SHOWCAUSTIC";
-				break;
-			case PGIC_DEBUG_SHOWINDIRECTPATHMIX:
-				ssParams << " -D PARAM_PGIC_DEBUG_SHOWINDIRECTPATHMIX";
-				break;
-			default:
-				break;
-		}
-
-		if (cscene->photonGICache->GetParams().indirect.enabled)
-			ssParams << " -D PARAM_PGIC_INDIRECT_ENABLED";
-
-		if (cscene->photonGICache->GetParams().caustic.enabled)
-			ssParams << " -D PARAM_PGIC_CAUSTIC_ENABLED";
-	}
-	
 	ssParams << AdditionalKernelOptions();
 
 	//--------------------------------------------------------------------------
@@ -709,6 +665,8 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			luxrays::ocl::KernelSource_triangle_funcs <<
 			luxrays::ocl::KernelSource_exttrianglemesh_funcs <<
 			// OpenCL SLG Types
+			slg::ocl::KernelSource_sceneobject_types <<
+			slg::ocl::KernelSource_scene_types <<
 			slg::ocl::KernelSource_hitpoint_types <<
 			slg::ocl::KernelSource_imagemap_types <<
 			slg::ocl::KernelSource_mapping_types <<
@@ -724,7 +682,6 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_indexbvh_types <<
 			slg::ocl::KernelSource_dlsc_types <<
 			slg::ocl::KernelSource_elvc_types <<
-			slg::ocl::KernelSource_sceneobject_types <<
 			slg::ocl::KernelSource_pgic_types <<
 			// OpenCL SLG Funcs
 			slg::ocl::KernelSource_mapping_funcs <<
@@ -786,7 +743,7 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_pathdepthinfo_types <<
 			slg::ocl::KernelSource_pathvolumeinfo_types <<
 			slg::ocl::KernelSource_pathinfo_types <<
-			slg::ocl::KernelSource_scene_types <<
+			slg::ocl::KernelSource_pathtracer_types <<
 			// PathOCL types
 			slg::ocl::KernelSource_pathoclbase_datatypes;
 
@@ -944,8 +901,7 @@ void PathOCLBaseOCLRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePa
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), samplesBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), sampleDataBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), eyePathInfosBuff);
-	if (cscene->HasVolumes())
-		advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), directLightVolInfosBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), directLightVolInfosBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), raysBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), hitsBuff);
 
@@ -999,20 +955,10 @@ void PathOCLBaseOCLRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePa
 	}
 
 	// PhotonGI cache
-	if (cscene->photonGICache) {
-		advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), pgicRadiancePhotonsBuff);
-		advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), pgicRadiancePhotonsBVHNodesBuff);
-		advancePathsKernel->setArg(argIndex++, cscene->pgicGlossinessUsageThreshold);
-		advancePathsKernel->setArg(argIndex++, cscene->pgicIndirectLookUpRadius);
-		advancePathsKernel->setArg(argIndex++, cscene->pgicIndirectLookUpNormalCosAngle);
-		advancePathsKernel->setArg(argIndex++, cscene->pgicIndirectUsageThresholdScale);
-
-		advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), pgicCausticPhotonsBuff);
-		advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), pgicCausticPhotonsBVHNodesBuff);
-		advancePathsKernel->setArg(argIndex++, cscene->pgicCausticPhotonTracedCount);
-		advancePathsKernel->setArg(argIndex++, cscene->pgicCausticLookUpRadius);
-		advancePathsKernel->setArg(argIndex++, cscene->pgicCausticLookUpNormalCosAngle);
-	}
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), pgicRadiancePhotonsBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), pgicRadiancePhotonsBVHNodesBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), pgicCausticPhotonsBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), pgicCausticPhotonsBVHNodesBuff);
 }
 
 void PathOCLBaseOCLRenderThread::SetAllAdvancePathsKernelArgs(const u_int filmIndex) {

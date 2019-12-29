@@ -263,7 +263,6 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_GetEmitte
 	}
 }
 
-#if defined(PARAM_HAS_VOLUMES)
 OPENCL_FORCE_NOT_INLINE uint Material_Index<<CS_MIX_MATERIAL_INDEX>>_GetInteriorVolume(__global const Material *material,
 		__global const HitPoint *hitPoint, const float passThroughEvent
 		MATERIALS_PARAM_DECL) {
@@ -302,4 +301,3 @@ OPENCL_FORCE_NOT_INLINE uint Material_Index<<CS_MIX_MATERIAL_INDEX>>_GetExterior
 					hitPoint, (passThroughEvent - weight1) / weight2
 					MATERIALS_PARAM);
 }
-#endif

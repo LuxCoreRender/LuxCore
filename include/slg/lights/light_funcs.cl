@@ -21,7 +21,7 @@
 OPENCL_FORCE_INLINE float EnvLightSource_GetEnvRadius(const float sceneRadius) {
 	// This is used to scale the world radius in sun/sky/infinite lights in order to
 	// avoid problems with objects that are near the borderline of the world bounding sphere
-	return PARAM_LIGHT_WORLD_RADIUS_SCALE * sceneRadius;
+	return LIGHT_WORLD_RADIUS_SCALE * sceneRadius;
 }
 
 OPENCL_FORCE_INLINE void EnvLightSource_ToLatLongMapping(const float3 w,

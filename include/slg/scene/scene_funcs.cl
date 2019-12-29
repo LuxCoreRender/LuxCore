@@ -21,10 +21,8 @@
 OPENCL_FORCE_NOT_INLINE bool Scene_Intersect(
 		const SceneRayType rayType,
 		int *throughShadowTransparency,
-#if defined(PARAM_HAS_VOLUMES)
 		__global PathVolumeInfo *volInfo,
 		__global HitPoint *tmpHitPoint,
-#endif
 		const float passThrough,
 		__global Ray *ray,
 		__global RayHit *rayHit,
@@ -41,33 +39,24 @@ OPENCL_FORCE_NOT_INLINE bool Scene_Intersect(
 
 	const bool hit = (rayHit->meshIndex != NULL_INDEX);
 
-#if defined(PARAM_HAS_VOLUMES)
 	uint rayVolumeIndex = volInfo->currentVolumeIndex;
-#endif
+
 	if (hit) {
 		// Initialize the BSDF of the hit point
 		BSDF_Init(bsdf,
 				*throughShadowTransparency,
 				ray, rayHit,
-				passThrough
-#if defined(PARAM_HAS_VOLUMES)
-				, volInfo
-#endif
+				passThrough,
+				volInfo
 				MATERIALS_PARAM
 				);
 
-#if defined(PARAM_HAS_VOLUMES)
 		rayVolumeIndex = bsdf->hitPoint.intoObject ? bsdf->hitPoint.exteriorVolumeIndex : bsdf->hitPoint.interiorVolumeIndex;
-#endif
-	}
-#if defined(PARAM_HAS_VOLUMES)
-	else if (rayVolumeIndex == NULL_INDEX) {
+	} else if (rayVolumeIndex == NULL_INDEX) {
 		// No volume information, I use the default volume
-		rayVolumeIndex = SCENE_DEFAULT_VOLUME_INDEX;
+		rayVolumeIndex = scene->defaultVolumeIndex;
 	}
-#endif
 
-#if defined(PARAM_HAS_VOLUMES)
 	// Check if there is volume scatter event
 	if (rayVolumeIndex != NULL_INDEX) {
 		// This applies volume transmittance too
@@ -105,15 +94,12 @@ OPENCL_FORCE_NOT_INLINE bool Scene_Intersect(
 			return false;
 		}
 	}
-#endif
 
 	if (hit) {
 		bool continueToTrace =
-#if defined(PARAM_HAS_VOLUMES)
 			// Check if the volume priority system tells me to continue to trace the ray
 			PathVolumeInfo_ContinueToTrace(volInfo, bsdf
 				MATERIALS_PARAM) ||
-#endif
 			// Check if it is a camera invisible object and we are a tracing a camera ray
 			(cameraRay && sceneObjs[rayHit->meshIndex].cameraInvisible);
 
@@ -141,13 +127,11 @@ OPENCL_FORCE_NOT_INLINE bool Scene_Intersect(
 		}
 
 		if (continueToTrace) {
-#if defined(PARAM_HAS_VOLUMES)
 			// Update volume information
 			const BSDFEvent eventTypes = BSDF_GetEventTypes(bsdf
 						MATERIALS_PARAM);
 			PathVolumeInfo_Update(volInfo, eventTypes, bsdf
 					MATERIALS_PARAM);
-#endif
 
 			// It is a transparent material, continue to trace the ray
 			ray->mint = rayHit->t + MachineEpsilon_E(rayHit->t);

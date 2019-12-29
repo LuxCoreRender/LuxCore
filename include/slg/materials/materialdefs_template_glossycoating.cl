@@ -383,7 +383,6 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>
 				   MATERIALS_PARAM);
 }
 
-#if defined(PARAM_HAS_VOLUMES)
 OPENCL_FORCE_NOT_INLINE uint Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_GetInteriorVolume(__global const Material* restrict material,
 		__global const HitPoint *hitPoint, const float passThroughEvent
 		MATERIALS_PARAM_DECL) {
@@ -405,4 +404,3 @@ OPENCL_FORCE_NOT_INLINE uint Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_G
 					hitPoint, passThroughEvent
 					MATERIALS_PARAM);
 }
-#endif

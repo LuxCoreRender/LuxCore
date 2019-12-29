@@ -18,6 +18,10 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+// This is used to scale the world radius in sun/sky/infinite lights in order to
+// avoid problems with objects that are near the borderline of the world bounding sphere
+#define LIGHT_WORLD_RADIUS_SCALE 1.05f
+
 typedef enum {
 	TYPE_IL, TYPE_SUN, TYPE_TRIANGLE, TYPE_POINT, TYPE_MAPPOINT,
 	TYPE_SPOT, TYPE_PROJECTION, TYPE_IL_CONSTANT, TYPE_SHARPDISTANT, TYPE_DISTANT,

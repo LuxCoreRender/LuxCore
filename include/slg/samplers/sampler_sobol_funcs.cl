@@ -68,7 +68,7 @@ OPENCL_FORCE_INLINE void SamplerSharedData_GetNewBucket(__global SamplerSharedDa
     *seed = (samplerSharedData->seedBase + *pixelBucketIndex) % (0xFFFFFFFFu - 1u) + 1u;
 }
 
-OPENCL_FORCE_NOT_INLINE void Sampler_InitNewSample(__constant GPUTaskConfiguration *taskConfig,
+OPENCL_FORCE_NOT_INLINE void Sampler_InitNewSample(__constant const GPUTaskConfiguration* restrict taskConfig,
 		Seed *seed, __global SamplerSharedData *samplerSharedData,
 		__global Sample *sample, __global float *sampleDataPathBase,
 #if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
@@ -201,24 +201,24 @@ OPENCL_FORCE_NOT_INLINE void Sampler_InitNewSample(__constant GPUTaskConfigurati
 	sample->pixelIndexOffset = pixelIndexOffset;
 }
 
-OPENCL_FORCE_INLINE __global float *Sampler_GetSampleData(__constant GPUTaskConfiguration *taskConfig,
+OPENCL_FORCE_INLINE __global float *Sampler_GetSampleData(__constant const GPUTaskConfiguration* restrict taskConfig,
 		__global Sample *sample, __global float *samplesData) {
 	const size_t gid = get_global_id(0);
 	return &samplesData[gid * TOTAL_U_SIZE];
 }
 
-OPENCL_FORCE_INLINE __global float *Sampler_GetSampleDataPathBase(__constant GPUTaskConfiguration *taskConfig,
+OPENCL_FORCE_INLINE __global float *Sampler_GetSampleDataPathBase(__constant const GPUTaskConfiguration* restrict taskConfig,
 		__global Sample *sample, __global float *sampleData) {
 	return sampleData;
 }
 
-OPENCL_FORCE_INLINE __global float *Sampler_GetSampleDataPathVertex(__constant GPUTaskConfiguration *taskConfig,
+OPENCL_FORCE_INLINE __global float *Sampler_GetSampleDataPathVertex(__constant const GPUTaskConfiguration* restrict taskConfig,
 		__global Sample *sample, __global float *sampleDataPathBase, const uint depth) {
 	// This is never used in Sobol sampler
 	return &sampleDataPathBase[IDX_BSDF_OFFSET + (depth - 1) * VERTEX_SAMPLE_SIZE];
 }
 
-OPENCL_FORCE_INLINE float Sampler_GetSamplePath(__constant GPUTaskConfiguration *taskConfig,
+OPENCL_FORCE_INLINE float Sampler_GetSamplePath(__constant const GPUTaskConfiguration* restrict taskConfig,
 		Seed *seed, __global Sample *sample,
 		__global float *sampleDataPathBase, const uint index) {
 	switch (index) {
@@ -231,7 +231,7 @@ OPENCL_FORCE_INLINE float Sampler_GetSamplePath(__constant GPUTaskConfiguration 
 	}
 }
 
-OPENCL_FORCE_INLINE float Sampler_GetSamplePathVertex(__constant GPUTaskConfiguration *taskConfig,
+OPENCL_FORCE_INLINE float Sampler_GetSamplePathVertex(__constant const GPUTaskConfiguration* restrict taskConfig,
 		Seed *seed, __global Sample *sample,
 		__global float *sampleDataPathVertexBase,
 		const uint depth, const uint index) {
@@ -244,7 +244,7 @@ OPENCL_FORCE_INLINE float Sampler_GetSamplePathVertex(__constant GPUTaskConfigur
 }
 
 OPENCL_FORCE_NOT_INLINE void Sampler_SplatSample(
-		__constant GPUTaskConfiguration *taskConfig,
+		__constant const GPUTaskConfiguration* restrict taskConfig,
 		Seed *seed,
 		__global SamplerSharedData *samplerSharedData,
 		__global Sample *sample, __global float *sampleData
@@ -256,7 +256,7 @@ OPENCL_FORCE_NOT_INLINE void Sampler_SplatSample(
 }
 
 OPENCL_FORCE_NOT_INLINE void Sampler_NextSample(
-		__constant GPUTaskConfiguration *taskConfig,
+		__constant const GPUTaskConfiguration* restrict taskConfig,
 		Seed *seed,
 		__global SamplerSharedData *samplerSharedData,
 		__global Sample *sample,
@@ -281,7 +281,7 @@ OPENCL_FORCE_NOT_INLINE void Sampler_NextSample(
 			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3);
 }
 
-OPENCL_FORCE_NOT_INLINE bool Sampler_Init(__constant GPUTaskConfiguration *taskConfig,
+OPENCL_FORCE_NOT_INLINE bool Sampler_Init(__constant const GPUTaskConfiguration* restrict taskConfig,
 		Seed *seed, __global SamplerSharedData *samplerSharedData,
 		__global Sample *sample, __global float *sampleData,
 #if defined(PARAM_FILM_CHANNELS_HAS_NOISE)

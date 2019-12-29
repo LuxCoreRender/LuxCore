@@ -758,14 +758,12 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 			"mat, hitPoint, oneOverPrimitiveArea MATERIALS_PARAM");
 
 	// Generate the code for generic Material_GetInteriorVolumeWithDynamic() and Material_GetExteriorVolumeWithDynamic()
-	source << "#if defined(PARAM_HAS_VOLUMES)\n";
 	AddMaterialSourceSwitch(source, mats, "GetInteriorVolumeWithDynamic", "GetInteriorVolume", "uint", "NULL_INDEX",
 			"const uint index, __global const HitPoint *hitPoint, const float passThroughEvent MATERIALS_PARAM_DECL",
 			"mat, hitPoint, passThroughEvent MATERIALS_PARAM");
 	AddMaterialSourceSwitch(source, mats, "GetExteriorVolumeWithDynamic", "GetExteriorVolume", "uint", "NULL_INDEX",
 			"const uint index, __global const HitPoint *hitPoint, const float passThroughEvent MATERIALS_PARAM_DECL",
 			"mat, hitPoint, passThroughEvent MATERIALS_PARAM");
-	source << "#endif\n";
 
 	return source.str();
 }

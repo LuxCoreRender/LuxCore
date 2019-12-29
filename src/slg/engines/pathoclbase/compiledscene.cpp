@@ -31,9 +31,9 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
-CompiledScene::CompiledScene(Scene *scn, const PhotonGICache *pgi) {
+CompiledScene::CompiledScene(Scene *scn, const PathTracer *pt) {
 	scene = scn;
-	photonGICache = pgi;
+	pathTracer = pt;
 	maxMemPageSize = 0xffffffffu;
 
 	lightsDistribution = NULL;
@@ -94,7 +94,7 @@ void CompiledScene::Recompile(const EditActionList &editActions) {
 
 	if (wasGeometryCompiled || wasMaterialsCompiled || wasSceneObjectsCompiled ||
 			wasLightsCompiled || wasImageMapsCompiled)
-		CompilePhotonGI();
+		CompilePathTracer();
 	
 	// For some debugging
 //	cout << "=========================================================\n";
@@ -126,16 +126,6 @@ bool CompiledScene::IsImageMapChannelCountCompiled(const u_int count) const {
 
 bool CompiledScene::IsImageMapWrapCompiled(const ImageMapStorage::WrapType type) const {
 	return (usedImageMapWrapTypes.find(type) != usedImageMapWrapTypes.end());
-}
-
-bool CompiledScene::HasVolumes() const {
-	return IsMaterialCompiled(HOMOGENEOUS_VOL) ||
-			IsMaterialCompiled(CLEAR_VOL) ||
-			IsMaterialCompiled(HETEROGENEOUS_VOL) ||
-			// Volume rendering may be required to evaluate the IOR
-			IsMaterialCompiled(GLASS) ||
-			IsMaterialCompiled(ARCHGLASS) ||
-			IsMaterialCompiled(ROUGHGLASS);
 }
 
 string CompiledScene::ToOCLString(const slg::ocl::Spectrum &v) {

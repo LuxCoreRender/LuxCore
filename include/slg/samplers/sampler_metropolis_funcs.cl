@@ -24,18 +24,18 @@
 
 #if (PARAM_SAMPLER_TYPE == 1)
 
-OPENCL_FORCE_INLINE __global float *Sampler_GetSampleData(__constant GPUTaskConfiguration *taskConfig,
+OPENCL_FORCE_INLINE __global float *Sampler_GetSampleData(__constant const GPUTaskConfiguration* restrict taskConfig,
 		__global Sample *sample, __global float *samplesData) {
 	const size_t gid = get_global_id(0);
 	return &samplesData[gid * (2 * TOTAL_U_SIZE)];
 }
 
-OPENCL_FORCE_INLINE __global float *Sampler_GetSampleDataPathBase(__constant GPUTaskConfiguration *taskConfig,
+OPENCL_FORCE_INLINE __global float *Sampler_GetSampleDataPathBase(__constant const GPUTaskConfiguration* restrict taskConfig,
 		__global Sample *sample, __global float *sampleData) {
 	return &sampleData[sample->proposed * TOTAL_U_SIZE];
 }
 
-OPENCL_FORCE_INLINE __global float *Sampler_GetSampleDataPathVertex(__constant GPUTaskConfiguration *taskConfig,
+OPENCL_FORCE_INLINE __global float *Sampler_GetSampleDataPathVertex(__constant const GPUTaskConfiguration* restrict taskConfig,
 		__global Sample *sample,
 		__global float *sampleDataPathBase,
 		const uint depth) {
@@ -44,21 +44,21 @@ OPENCL_FORCE_INLINE __global float *Sampler_GetSampleDataPathVertex(__constant G
 	return &sampleDataPathBase[IDX_BSDF_OFFSET + depth * VERTEX_SAMPLE_SIZE];
 }
 
-OPENCL_FORCE_INLINE float Sampler_GetSamplePath(__constant GPUTaskConfiguration *taskConfig,
+OPENCL_FORCE_INLINE float Sampler_GetSamplePath(__constant const GPUTaskConfiguration* restrict taskConfig,
 		Seed *seed, __global Sample *sample,
 		__global float *sampleDataPathBase,
 		const uint index) {
 	return sampleDataPathBase[index];
 }
 
-OPENCL_FORCE_INLINE float Sampler_GetSamplePathVertex(__constant GPUTaskConfiguration *taskConfig,
+OPENCL_FORCE_INLINE float Sampler_GetSamplePathVertex(__constant const GPUTaskConfiguration* restrict taskConfig,
 		Seed *seed, __global Sample *sample,
 		__global float *sampleDataPathVertexBase,
 		const uint depth, const uint index) {
 	return sampleDataPathVertexBase[index];
 }
 
-OPENCL_FORCE_INLINE void LargeStep(__constant GPUTaskConfiguration *taskConfig,
+OPENCL_FORCE_INLINE void LargeStep(__constant const GPUTaskConfiguration* restrict taskConfig,
 		Seed *seed, __global float *proposedU) {
 	for (int i = 0; i < TOTAL_U_SIZE; ++i)
 		proposedU[i] = Rnd_FloatValue(seed);
@@ -109,7 +109,7 @@ OPENCL_FORCE_INLINE float MutateScaled(const float x, const float range, const f
 	return mutatedX;
 }
 
-OPENCL_FORCE_INLINE void SmallStep(__constant GPUTaskConfiguration *taskConfig,
+OPENCL_FORCE_INLINE void SmallStep(__constant const GPUTaskConfiguration* restrict taskConfig,
 		Seed *seed, __global float *currentU, __global float *proposedU) {
 	// Metropolis return IDX_SCREEN_X and IDX_SCREEN_Y between [0.0, 1.0] instead
 	// that in film pixels like RANDOM and SOBOL samplers
@@ -123,7 +123,7 @@ OPENCL_FORCE_INLINE void SmallStep(__constant GPUTaskConfiguration *taskConfig,
 }
 
 OPENCL_FORCE_NOT_INLINE void Sampler_SplatSample(
-		__constant GPUTaskConfiguration *taskConfig,
+		__constant const GPUTaskConfiguration* restrict taskConfig,
 		Seed *seed,
 		__global SamplerSharedData *samplerSharedData,
 		__global Sample *sample, __global float *sampleData
@@ -248,7 +248,7 @@ OPENCL_FORCE_NOT_INLINE void Sampler_SplatSample(
 }
 
 OPENCL_FORCE_NOT_INLINE void Sampler_NextSample(
-		__constant GPUTaskConfiguration *taskConfig,
+		__constant const GPUTaskConfiguration* restrict taskConfig,
 		Seed *seed,
 		__global SamplerSharedData *samplerSharedData,
 		__global Sample *sample, __global float *sampleData,
@@ -277,7 +277,7 @@ OPENCL_FORCE_NOT_INLINE void Sampler_NextSample(
 	}
 }
 
-OPENCL_FORCE_NOT_INLINE bool Sampler_Init(__constant GPUTaskConfiguration *taskConfig,
+OPENCL_FORCE_NOT_INLINE bool Sampler_Init(__constant const GPUTaskConfiguration* restrict taskConfig,
 		Seed *seed, __global SamplerSharedData *samplerSharedData,
 		__global Sample *sample, __global float *sampleData,
 #if defined(PARAM_FILM_CHANNELS_HAS_NOISE)

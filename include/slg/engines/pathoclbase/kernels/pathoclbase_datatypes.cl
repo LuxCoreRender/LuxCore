@@ -58,13 +58,8 @@ typedef enum {
 } PathState;
 
 typedef struct {
-	struct {
-		PathDepthInfo maxPathDepth;
-
-		// Russian roulette
-		unsigned int rrDepth;
-		float rrImportanceCap;
-	} pathTracer;
+	Scene scene;
+	PathTracer pathTracer;
 } GPUTaskConfiguration;
 
 typedef struct {

@@ -31,14 +31,14 @@
 #include "slg/scene/scene.h"
 #include "slg/scene/sceneobject.h"
 #include "slg/lights/strategies/dlscache.h"
-#include "slg/engines/caches/photongi/photongicache.h"
 #include "slg/lights/visibility/envlightvisibilitycache.h"
+#include "slg/engines/pathtracer.h"
 
 namespace slg {
 
 class CompiledScene {
 public:
-	CompiledScene(Scene *scn, const PhotonGICache *photonGI);
+	CompiledScene(Scene *scn, const PathTracer *pt);
 	~CompiledScene();
 	
 	void SetMaxMemPageSize(const size_t maxSize);
@@ -55,7 +55,6 @@ public:
 	bool IsImageMapWrapCompiled(const ImageMapStorage::WrapType type) const;
 	bool IsLightSourceCompiled(const LightSourceType type) const;
 
-	bool HasVolumes() const;
 	bool HasBumpMaps() const;
 
 	std::string GetTexturesEvaluationSourceCode() const;
@@ -65,9 +64,6 @@ public:
 	static float *CompileDistribution2D(const luxrays::Distribution2D *dist, u_int *size);
 
 	static std::string ToOCLString(const slg::ocl::Spectrum &v);
-
-	Scene *scene;
-	const PhotonGICache *photonGICache;
 
 	// Compiled Camera
 	slg::ocl::CameraType cameraType;
@@ -133,20 +129,15 @@ public:
 	
 	// Compiled PhotonGI cache
 
-	float pgicGlossinessUsageThreshold;
-
 	// PhotonGI indirect cache
 	std::vector<slg::ocl::RadiancePhoton> pgicRadiancePhotons;
 	std::vector<slg::ocl::IndexBVHArrayNode> pgicRadiancePhotonsBVHArrayNode;
-	float pgicIndirectLookUpRadius, pgicIndirectLookUpNormalCosAngle,
-		pgicIndirectUsageThresholdScale;
 	// PhotonGI caustic cache
 	std::vector<slg::ocl::Photon> pgicCausticPhotons;
 	std::vector<slg::ocl::IndexBVHArrayNode> pgicCausticPhotonsBVHArrayNode;
-	u_int pgicCausticPhotonTracedCount;
-	float pgicCausticLookUpRadius, pgicCausticLookUpNormalCosAngle;
 
-	PhotonGIDebugType pgicDebugType;
+	// All global settings
+	slg::ocl::PathTracer compiledPathTracer;
 
 	// Elements compiled during the last call to Compile()/Recompile()
 	bool wasCameraCompiled, wasSceneObjectsCompiled, wasGeometryCompiled, 
@@ -178,6 +169,10 @@ private:
 	void CompileLightStrategy();
 	
 	void CompilePhotonGI();
+	void CompilePathTracer();
+
+	Scene *scene;
+	const PathTracer *pathTracer;
 
 	u_int maxMemPageSize;
 	boost::unordered_set<std::string> enabledCode;

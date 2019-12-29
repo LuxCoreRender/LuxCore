@@ -1,5 +1,3 @@
-#line 2 "pathinfo_types.cl"
-
 /***************************************************************************
  * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
  *                                                                         *
@@ -18,20 +16,39 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-typedef struct {
-	PathDepthInfo depth;
-	PathVolumeInfo volume;
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 
-	int isPassThroughPath;
+#include <iosfwd>
+#include <limits>
 
-	// Last path vertex information
-	BSDFEvent lastBSDFEvent;
-	float lastBSDFPdfW;
-	float lastGlossiness;
-	Normal lastShadeN;
-	bool lastFromVolume;
+#include <boost/lexical_cast.hpp>
+#include <boost/algorithm/string.hpp>
 
-	int isNearlyCaustic;
-	// Specular, Specular+ Diffuse and Specular+ Diffuse Specular+ paths
-	int isNearlyS, isNearlySD, isNearlySDS;
-} EyePathInfo;
+#include "luxrays/core/bvh/bvhbuild.h"
+#include "slg/kernels/kernels.h"
+#include "slg/engines/pathoclbase/compiledscene.h"
+#include "slg/engines/caches/photongi/photongicache.h"
+
+using namespace std;
+using namespace luxrays;
+using namespace slg;
+
+void CompiledScene::CompilePathTracer() {
+	compiledPathTracer.maxPathDepth.depth = pathTracer->maxPathDepth.depth;
+	compiledPathTracer.maxPathDepth.diffuseDepth = pathTracer->maxPathDepth.diffuseDepth;
+	compiledPathTracer.maxPathDepth.glossyDepth = pathTracer->maxPathDepth.glossyDepth;
+	compiledPathTracer.maxPathDepth.specularDepth = pathTracer->maxPathDepth.specularDepth;
+	
+	compiledPathTracer.rrDepth = pathTracer->rrDepth;
+	compiledPathTracer.rrImportanceCap = pathTracer->rrImportanceCap;
+	
+	compiledPathTracer.sqrtVarianceClampMaxValue = pathTracer->sqrtVarianceClampMaxValue;
+
+	compiledPathTracer.hybridBackForward.enabled = pathTracer->hybridBackForwardEnable;
+	compiledPathTracer.hybridBackForward.glossinessThreshold = pathTracer->hybridBackForwardGlossinessThreshold;
+	
+	compiledPathTracer.forceBlackBackground = pathTracer->forceBlackBackground;
+	CompilePhotonGI();
+}
+
+#endif

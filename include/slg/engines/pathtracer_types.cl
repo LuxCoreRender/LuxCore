@@ -1,5 +1,3 @@
-#line 2 "pathinfo_types.cl"
-
 /***************************************************************************
  * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
  *                                                                         *
@@ -19,19 +17,35 @@
  ***************************************************************************/
 
 typedef struct {
-	PathDepthInfo depth;
-	PathVolumeInfo volume;
+	PathDepthInfo maxPathDepth;
 
-	int isPassThroughPath;
+	// Russian roulette
+	unsigned int rrDepth;
+	float rrImportanceCap;
 
-	// Last path vertex information
-	BSDFEvent lastBSDFEvent;
-	float lastBSDFPdfW;
-	float lastGlossiness;
-	Normal lastShadeN;
-	bool lastFromVolume;
+	// Clamping settings
+	float sqrtVarianceClampMaxValue;
 
-	int isNearlyCaustic;
-	// Specular, Specular+ Diffuse and Specular+ Diffuse Specular+ paths
-	int isNearlyS, isNearlySD, isNearlySDS;
-} EyePathInfo;
+	int forceBlackBackground;
+
+	// Hybrid backward/forward path tracing settings
+	struct {
+		int enabled;
+		float glossinessThreshold;
+	} hybridBackForward;
+
+	// PhotonGI cache settings
+	struct {
+		float glossinessUsageThreshold;
+		float indirectLookUpRadius;
+		float indirectLookUpNormalCosAngle;
+		float indirectUsageThresholdScale;
+		unsigned int causticPhotonTracedCount;
+		float causticLookUpRadius;
+		float causticLookUpNormalCosAngle;
+
+		int indirectEnabled, causticEnabled;
+
+		PhotonGIDebugType debugType;
+	} pgic;
+} PathTracer;

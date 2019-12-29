@@ -31,3 +31,8 @@ typedef struct {
 	Normal landingSurfaceNormal;
 	int isVolume;
 } Photon;
+
+typedef enum {
+	PGIC_DEBUG_NONE, PGIC_DEBUG_SHOWINDIRECT, PGIC_DEBUG_SHOWCAUSTIC,
+	PGIC_DEBUG_SHOWINDIRECTPATHMIX
+} PhotonGIDebugType;

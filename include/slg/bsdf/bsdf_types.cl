@@ -45,9 +45,7 @@ typedef struct {
 
 	Frame frame;
 
-#if defined(PARAM_HAS_VOLUMES)
 	int isVolume;
-#endif
 } BSDF;
 
 #endif

@@ -40,14 +40,15 @@ OPENCL_FORCE_INLINE void PathDepthInfo_IncDepths(__global PathDepthInfo *depthIn
 }
 
 OPENCL_FORCE_INLINE bool PathDepthInfo_IsLastPathVertex(__global PathDepthInfo *depthInfo,
-		__constant PathDepthInfo *maxDepthInfo, const BSDFEvent event) {
+		__constant const PathDepthInfo* restrict maxDepthInfo, const BSDFEvent event) {
 	return (depthInfo->depth + 1 >= maxDepthInfo->depth) ||
 			((event & DIFFUSE) && (depthInfo->diffuseDepth + 1 >= maxDepthInfo->diffuseDepth)) ||
 			((event & GLOSSY) && (depthInfo->glossyDepth + 1 >= maxDepthInfo->glossyDepth)) ||
 			((event & SPECULAR) && (depthInfo->specularDepth + 1 >= maxDepthInfo->specularDepth));
 }
 
-OPENCL_FORCE_INLINE bool PathDepthInfo_CheckComponentDepths(__constant PathDepthInfo *maxDepthInfo,
+OPENCL_FORCE_INLINE bool PathDepthInfo_CheckComponentDepths(
+		__constant const PathDepthInfo* restrict maxDepthInfo,
 		const BSDFEvent component) {
 	return ((maxDepthInfo->diffuseDepth > 0) && (component & DIFFUSE)) ||
 			((maxDepthInfo->glossyDepth > 0) && (component & GLOSSY)) ||
