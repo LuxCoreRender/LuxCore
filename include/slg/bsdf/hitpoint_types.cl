@@ -45,14 +45,12 @@ typedef struct {
 	// Transformation from local object to world reference frame
 	Transform localToWorld;
 
-#if defined(PARAM_HAS_VOLUMES)
 	// Interior and exterior volume (this includes volume priority system
 	// computation and scene default world volume)
 	unsigned int interiorVolumeIndex, exteriorVolumeIndex;
 	// Material code (i.e. glass, etc.) doesn't have access to materials list
 	// so I use HitPoint to carry texture index information
 	unsigned int interiorIorTexIndex, exteriorIorTexIndex;
-#endif
 
 #if defined(PARAM_ENABLE_TEX_OBJECTID) || defined(PARAM_ENABLE_TEX_OBJECTID_COLOR) || defined(PARAM_ENABLE_TEX_OBJECTID_NORMALIZED)
 	unsigned int objectID;

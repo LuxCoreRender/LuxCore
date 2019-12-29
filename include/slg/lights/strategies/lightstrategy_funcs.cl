@@ -25,9 +25,7 @@ OPENCL_FORCE_INLINE uint LightStrategy_SampleLights(
 		__global const IndexBVHArrayNode* restrict dlscBVHNodes,
 		const float dlscRadius2, const float dlscNormalCosAngle,
 		const float3 p, const float3 n,
-#if defined(PARAM_HAS_VOLUMES)
 		const bool isVolume,
-#endif
 		const float u, float *pdf) {
 #if !defined(RENDER_ENGINE_RTPATHOCL)
 	if (dlscAllEntries) {
@@ -38,10 +36,7 @@ OPENCL_FORCE_INLINE uint LightStrategy_SampleLights(
 				dlscAllEntries,
 				dlscDistributions, dlscBVHNodes,
 				dlscRadius2, dlscNormalCosAngle,
-				p, n
-#if defined(PARAM_HAS_VOLUMES)
-				, isVolume
-#endif
+				p, n, isVolume
 		);
 
 		if (lightsDistributionOffset != NULL_INDEX) {
@@ -67,9 +62,7 @@ OPENCL_FORCE_INLINE float LightStrategy_SampleLightPdf(
 		__global const IndexBVHArrayNode* restrict dlscBVHNodes,
 		const float dlscRadius2, const float dlscNormalCosAngle,
 		const float3 p, const float3 n,
-#if defined(PARAM_HAS_VOLUMES)
 		const bool isVolume,
-#endif
 		const uint lightIndex) {
 #if !defined(RENDER_ENGINE_RTPATHOCL)
 	if (dlscAllEntries) {
@@ -80,10 +73,7 @@ OPENCL_FORCE_INLINE float LightStrategy_SampleLightPdf(
 				dlscAllEntries,
 				dlscDistributions, dlscBVHNodes,
 				dlscRadius2, dlscNormalCosAngle,
-				p, n
-#if defined(PARAM_HAS_VOLUMES)
-				, isVolume
-#endif
+				p, n, isVolume
 		);
 
 		if (lightsDistributionOffset != NULL_INDEX)

@@ -105,12 +105,10 @@ OPENCL_FORCE_INLINE void HitPoint_InitDefault(__global HitPoint *hitPoint) {
 
 	Transform_Init(&hitPoint->localToWorld);
 
-#if defined(PARAM_HAS_VOLUMES)
 	hitPoint->interiorVolumeIndex = NULL_INDEX;
 	hitPoint->exteriorVolumeIndex = NULL_INDEX;
 	hitPoint->interiorIorTexIndex = NULL_INDEX;
 	hitPoint->exteriorIorTexIndex = NULL_INDEX;
-#endif
 }
 
 OPENCL_FORCE_INLINE void HitPoint_GetFrame(__global const HitPoint *hitPoint, Frame *frame) {

@@ -133,6 +133,9 @@ PathOCLBaseRenderEngine::~PathOCLBaseRenderEngine() {
 }
 
 void PathOCLBaseRenderEngine::InitGPUTaskConfiguration() {
+	// Scene configuration
+	taskConfig.scene.defaultVolumeIndex = compiledScene->defaultWorldVolumeIndex;
+	
 	// Path Tracer configuration
 	taskConfig.pathTracer = compiledScene->compiledPathTracer;
 }

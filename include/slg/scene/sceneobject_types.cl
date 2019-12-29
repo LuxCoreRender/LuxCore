@@ -27,18 +27,3 @@ typedef struct {
 
 	int cameraInvisible;
 } SceneObject;
-
-#if defined(SLG_OPENCL_KERNEL)
-
-#define SCENEOBJECTS_PARAM_DECL , \
-		__global const SceneObject* restrict sceneObjs, \
-		__global const uint* restrict lightIndexOffsetByMeshIndex, \
-		__global const uint* restrict lightIndexByTriIndex \
-		EXTMESH_PARAM_DECL
-#define SCENEOBJECTS_PARAM , \
-		sceneObjs, \
-		lightIndexOffsetByMeshIndex, \
-		lightIndexByTriIndex \
-		EXTMESH_PARAM
-
-#endif

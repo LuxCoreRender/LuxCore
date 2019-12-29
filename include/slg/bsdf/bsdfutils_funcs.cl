@@ -53,7 +53,6 @@ OPENCL_FORCE_INLINE uint BSDF_GetLightID(__global const BSDF *bsdf
 	return mats[bsdf->materialIndex].lightID;
 }
 
-#if defined(PARAM_HAS_VOLUMES)
 OPENCL_FORCE_INLINE uint BSDF_GetMaterialInteriorVolume(__global const BSDF *bsdf
 		MATERIALS_PARAM_DECL) {
 	return Material_GetInteriorVolume(bsdf->materialIndex, &bsdf->hitPoint,
@@ -67,7 +66,6 @@ OPENCL_FORCE_INLINE uint BSDF_GetMaterialExteriorVolume(__global const BSDF *bsd
 			bsdf->hitPoint.passThroughEvent
 			MATERIALS_PARAM);
 }
-#endif
 
 OPENCL_FORCE_INLINE float BSDF_GetGlossiness(__global const BSDF *bsdf
 		MATERIALS_PARAM_DECL) {
@@ -95,17 +93,13 @@ OPENCL_FORCE_INLINE float3 BSDF_GetLandingShadeN(__global const BSDF *bsdf) {
 OPENCL_FORCE_INLINE float3 BSDF_GetRayOrigin(__global const BSDF *bsdf, const float3 sampleDir) {
 	const float3 p = VLOAD3F(&bsdf->hitPoint.p.x);
 
-#if defined(PARAM_HAS_VOLUMES)
 	if (bsdf->isVolume)
 		return p;
 	else {
-#endif
 		// Rise the ray origin along the geometry normal to avoid self intersection
 		const float3 geometryN = VLOAD3F(&bsdf->hitPoint.geometryN.x);
 		const float riseDirection = (dot(sampleDir, geometryN) > 0.f) ? 1.f : -1.f;
 		
 		return p + riseDirection * (geometryN * MachineEpsilon_E_Float3(p));
-#if defined(PARAM_HAS_VOLUMES)
 	}
-#endif
 }

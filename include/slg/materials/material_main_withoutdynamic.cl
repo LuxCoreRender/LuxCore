@@ -767,22 +767,18 @@ OPENCL_FORCE_NOT_INLINE float3 Material_GetEmittedRadianceWithoutDynamic(__globa
 // Material_GetInteriorVolumeWithoutDynamic
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_HAS_VOLUMES)
 OPENCL_FORCE_NOT_INLINE uint Material_GetInteriorVolumeWithoutDynamic(__global const Material *material,
 		__global const HitPoint *hitPoint, const float passThroughEvent
 		MATERIALS_PARAM_DECL) {
 	return DefaultMaterial_GetInteriorVolume(material);
 }
-#endif
 
 //------------------------------------------------------------------------------
 // Material_GetExteriorVolumeWithoutDynamic
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_HAS_VOLUMES)
 OPENCL_FORCE_NOT_INLINE uint Material_GetExteriorVolumeWithoutDynamic(__global const Material *material,
 		__global const HitPoint *hitPoint, const float passThroughEvent
 		MATERIALS_PARAM_DECL) {
 	return DefaultMaterial_GetExteriorVolume(material);
 }
-#endif

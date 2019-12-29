@@ -186,7 +186,6 @@ OPENCL_FORCE_INLINE float Material_GetEmittedCosThetaMax(const uint matIndex
 // Material_GetInteriorVolume
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_HAS_VOLUMES)
 OPENCL_FORCE_INLINE uint Material_GetInteriorVolume(const uint matIndex,
 		__global const HitPoint *hitPoint,
 		const float passThroughEvent
@@ -202,13 +201,11 @@ OPENCL_FORCE_INLINE uint Material_GetInteriorVolume(const uint matIndex,
 				passThroughEvent
 				MATERIALS_PARAM);
 }
-#endif
 
 //------------------------------------------------------------------------------
 // Material_GetExteriorVolume
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_HAS_VOLUMES)
 OPENCL_FORCE_INLINE uint Material_GetExteriorVolume(const uint matIndex,
 		__global const HitPoint *hitPoint,
 		const float passThroughEvent
@@ -224,7 +221,6 @@ OPENCL_FORCE_INLINE uint Material_GetExteriorVolume(const uint matIndex,
 				passThroughEvent
 				MATERIALS_PARAM);
 }
-#endif
 
 //------------------------------------------------------------------------------
 // Material_Bump

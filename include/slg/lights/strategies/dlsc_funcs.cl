@@ -23,10 +23,7 @@ OPENCL_FORCE_INLINE __global const DLSCacheEntry* restrict DirectLightSamplingCa
 		__global const float* restrict dlscDistributions,
 		__global const IndexBVHArrayNode* restrict dlscBVHNodes,
 		const float dlscRadius2, const float dlscNormalCosAngle,
-		const float3 p, const float3 n
-#if defined(PARAM_HAS_VOLUMES)
-		, const bool isVolume
-#endif
+		const float3 p, const float3 n, const bool isVolume
 		) {
 	__global const DLSCacheEntry* restrict nearestEntry = NULL;
 	float nearestDistance2 = dlscRadius2;
@@ -44,15 +41,11 @@ OPENCL_FORCE_INLINE __global const DLSCacheEntry* restrict DirectLightSamplingCa
 
 			const float distance2 = DistanceSquared(p, VLOAD3F(&entry->p.x));
 			if ((distance2 < nearestDistance2) &&
-#if defined(PARAM_HAS_VOLUMES)
 					(isVolume == entry->isVolume) && 
 					(isVolume ||
-#endif
 					(dot(n, VLOAD3F(&entry->n.x)) > dlscNormalCosAngle)
-#if defined(PARAM_HAS_VOLUMES)
 					)
-#endif
-					) {
+				) {
 				// I have found a valid nearer entry
 				nearestEntry = entry;
 				nearestDistance2 = distance2;
@@ -81,19 +74,13 @@ uint DirectLightSamplingCache_GetLightDistribution(
 		__global const float* restrict dlscDistributions,
 		__global const IndexBVHArrayNode* restrict dlscBVHNodes,
 		const float dlscRadius2, const float dlscNormalCosAngle,
-		const float3 p, const float3 n
-#if defined(PARAM_HAS_VOLUMES)
-		, const bool isVolume
-#endif
+		const float3 p, const float3 n, const bool isVolume
 		) {
 	__global const DLSCacheEntry* restrict entry = DirectLightSamplingCache_GetNearestEntry(
 			dlscAllEntries,
 			dlscDistributions, dlscBVHNodes,
 			dlscRadius2, dlscNormalCosAngle,
-			p, n
-#if defined(PARAM_HAS_VOLUMES)
-			, isVolume
-#endif
+			p, n, isVolume
 	);
 		
 	if (entry)

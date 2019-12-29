@@ -56,8 +56,7 @@ size_t PathOCLBaseOCLRenderThread::GetOpenCLHitPointSize() const {
 	// Fields dpdu, dpdv, dndu, dndv
 	hitPointSize += 2 * sizeof(Vector) + 2 * sizeof(Normal);
 	// Volume fields
-	if (renderEngine->compiledScene->HasVolumes())
-		hitPointSize += 2 * sizeof(u_int) + 2 * sizeof(u_int);
+	hitPointSize += 2 * sizeof(u_int) + 2 * sizeof(u_int);
 	// Object ID
 	if (renderEngine->compiledScene->IsTextureCompiled(OBJECTID_TEX) ||
 			renderEngine->compiledScene->IsTextureCompiled(OBJECTID_COLOR_TEX) ||
@@ -83,8 +82,7 @@ size_t PathOCLBaseOCLRenderThread::GetOpenCLBSDFSize() const {
 	// Add BSDF.Frame memory size
 	bsdfSize += sizeof(slg::ocl::Frame);
 	// Add BSDF.isVolume memory size
-	if (renderEngine->compiledScene->HasVolumes())
-		bsdfSize += sizeof(int);
+	bsdfSize += sizeof(int);
 
 	return bsdfSize;
 }
@@ -93,8 +91,7 @@ size_t PathOCLBaseOCLRenderThread::GetEyePathInfoSize() const {
 	// Add PathDepthInfo memory size
 	size_t eyePathInfoSize = sizeof(slg::ocl::PathDepthInfo);
 	// Add PathVolumeInfo memory size
-	if (renderEngine->compiledScene->HasVolumes())
-		eyePathInfoSize += sizeof(slg::ocl::PathVolumeInfo);
+	eyePathInfoSize += sizeof(slg::ocl::PathVolumeInfo);
 
 	// Add isPassThroughPath memory size
 	eyePathInfoSize += sizeof(int);
@@ -108,8 +105,7 @@ size_t PathOCLBaseOCLRenderThread::GetEyePathInfoSize() const {
 	// Add lastShadeN memory size
 	eyePathInfoSize += sizeof(slg::ocl::Normal);
 	// Add lastFromVolume memory size
-	if (renderEngine->compiledScene->HasVolumes())
-		eyePathInfoSize += sizeof(int);
+	eyePathInfoSize += sizeof(int);
 
 	// Add isNearlyCaustic memory size
 	eyePathInfoSize += sizeof(int);
@@ -787,8 +783,7 @@ void PathOCLBaseOCLRenderThread::InitRender() {
 	// Allocate volume info buffers if required
 	//--------------------------------------------------------------------------
 
-	if (renderEngine->compiledScene->HasVolumes())
-		AllocOCLBufferRW(&directLightVolInfosBuff, sizeof(slg::ocl::PathVolumeInfo) * taskCount, "DirectLightVolumeInfo");
+	AllocOCLBufferRW(&directLightVolInfosBuff, sizeof(slg::ocl::PathVolumeInfo) * taskCount, "DirectLightVolumeInfo");
 
 	//--------------------------------------------------------------------------
 	// Allocate GPU pixel filter distribution

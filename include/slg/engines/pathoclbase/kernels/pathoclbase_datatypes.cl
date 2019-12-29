@@ -58,6 +58,7 @@ typedef enum {
 } PathState;
 
 typedef struct {
+	Scene scene;
 	PathTracer pathTracer;
 } GPUTaskConfiguration;
 

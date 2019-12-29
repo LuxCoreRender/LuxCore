@@ -117,14 +117,10 @@ OPENCL_FORCE_NOT_INLINE void Camera_GenerateRay(
 		__global const Camera* restrict camera,
 		const uint filmWidth, const uint filmHeight,
 		__global Ray *ray,
-#if defined(PARAM_HAS_VOLUMES)
 		__global PathVolumeInfo *volInfo,
-#endif
 		const float filmX, const float filmY, const float timeSample,
 		const float dofSampleX, const float dofSampleY) {
-#if defined(PARAM_HAS_VOLUMES)
 	PathVolumeInfo_StartVolume(volInfo, camera->base.volumeIndex);
-#endif
 	
 #if defined(PARAM_CAMERA_ENABLE_OCULUSRIFT_BARREL)
 	float ssx, ssy;
@@ -203,14 +199,10 @@ OPENCL_FORCE_NOT_INLINE void Camera_GenerateRay(
 		__global const Camera* restrict camera,
 		const uint filmWidth, const uint filmHeight,
 		__global Ray *ray,
-#if defined(PARAM_HAS_VOLUMES)
 		__global PathVolumeInfo *volInfo,
-#endif
 		const float filmX, const float filmY, const float timeSample,
 		const float dofSampleX, const float dofSampleY) {
-#if defined(PARAM_HAS_VOLUMES)
 	PathVolumeInfo_StartVolume(volInfo, camera->base.volumeIndex);
-#endif
 
 	const float3 Pras = (float3) (filmX, filmHeight - filmY - 1.f, 0.f);
 	float3 rayOrig = Transform_ApplyPoint(&camera->base.rasterToCamera, Pras);
@@ -282,14 +274,10 @@ OPENCL_FORCE_NOT_INLINE void Camera_GenerateRay(
 		__global const Camera* restrict camera,
 		const uint origFilmWidth, const uint filmHeight,
 		__global Ray *ray,
-#if defined(PARAM_HAS_VOLUMES)
 		__global PathVolumeInfo *volInfo,
-#endif
 		const float origFilmX, const float filmY, const float timeSample,
 		const float dofSampleX, const float dofSampleY) {
-#if defined(PARAM_HAS_VOLUMES)
 	PathVolumeInfo_StartVolume(volInfo, camera->base.volumeIndex);
-#endif
 
 	__global const Transform* restrict rasterToCamera;
 	__global const Transform* restrict cameraToWorld;
@@ -382,14 +370,10 @@ OPENCL_FORCE_NOT_INLINE void Camera_GenerateRay(
 		__global const Camera* restrict camera,
 		const uint filmWidth, const uint filmHeight,
 		__global Ray *ray,
-#if defined(PARAM_HAS_VOLUMES)
 		__global PathVolumeInfo *volInfo,
-#endif
 		const float filmX, const float filmY, const float timeSample,
 		const float dofSampleX, const float dofSampleY) {
-#if defined(PARAM_HAS_VOLUMES)
 	PathVolumeInfo_StartVolume(volInfo, camera->base.volumeIndex);
-#endif
 
 	const float theta = M_PI_F * (filmHeight - filmY) / filmHeight;
 	const float phi = 2.f * M_PI_F * (filmWidth - filmX) / filmWidth - 0.5 * M_PI_F;

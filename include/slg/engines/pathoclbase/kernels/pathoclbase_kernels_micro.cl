@@ -55,6 +55,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 	//--------------------------------------------------------------------------
 	
 	__global EyePathInfo *pathInfo = &eyePathInfos[gid];
+	__constant const Scene* restrict scene = &taskConfig->scene;
 
 	// Initialize image maps page pointer table
 	INIT_IMAGEMAPS_PAGES
@@ -73,10 +74,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 	const bool continueToTrace = Scene_Intersect(
 			EYE_RAY | ((pathInfo->depth.depth == 0) ? CAMERA_RAY : GENERIC_RAY),
 			&throughShadowTransparency,
-#if defined(PARAM_HAS_VOLUMES)
 			&pathInfo->volume,
 			&tasks[gid].tmpHitPoint,
-#endif
 			passThroughEvent,
 			&rays[gid], &rayHits[gid], &taskState->bsdf,
 			&connectionThroughput, VLOAD3F(taskState->throughput.c),
@@ -131,6 +130,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 	__global GPUTaskDirectLight *taskDirectLight = &tasksDirectLight[gid];
 	__global Sample *sample = &samples[gid];
 	__global EyePathInfo *pathInfo = &eyePathInfos[gid];
+	__constant const Scene* restrict scene = &taskConfig->scene;
 
 	// Initialize image maps page pointer table
 	INIT_IMAGEMAPS_PAGES
@@ -232,6 +232,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 	__global Sample *sample = &samples[gid];
 	__global GPUTaskDirectLight *taskDirectLight = &tasksDirectLight[gid];
 	__global EyePathInfo *pathInfo = &eyePathInfos[gid];
+	__constant const Scene* restrict scene = &taskConfig->scene;
 
 	// Initialize image maps page pointer table
 	INIT_IMAGEMAPS_PAGES
@@ -470,6 +471,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 	//--------------------------------------------------------------------------
 
 	__global GPUTaskDirectLight *taskDirectLight = &tasksDirectLight[gid];
+	__constant const Scene* restrict scene = &taskConfig->scene;
 
 	// Initialize image maps page pointer table
 	INIT_IMAGEMAPS_PAGES
@@ -489,10 +491,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 		Scene_Intersect(
 			EYE_RAY | SHADOW_RAY,
 			&throughShadowTransparency,
-#if defined(PARAM_HAS_VOLUMES)
 			&directLightVolInfos[gid],
 			&task->tmpHitPoint,
-#endif
 			passThroughEvent,
 			&rays[gid], &rayHits[gid], &task->tmpBsdf,
 			&connectionThroughput, WHITE,
@@ -600,6 +600,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 	Seed *seed = &seedValue;
 
 	__global GPUTaskDirectLight *taskDirectLight = &tasksDirectLight[gid];
+	__constant const Scene* restrict scene = &taskConfig->scene;
 
 	// Initialize image maps page pointer table
 	INIT_IMAGEMAPS_PAGES
@@ -667,6 +668,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 	__global GPUTask *task = &tasks[gid];
 	__global Sample *sample = &samples[gid];
 	__global EyePathInfo *pathInfo = &eyePathInfos[gid];
+	__constant const Scene* restrict scene = &taskConfig->scene;
 
 	// Initialize image maps page pointer table
 	INIT_IMAGEMAPS_PAGES
@@ -708,11 +710,10 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 		// Initialize the trough a shadow transparency flag used by Scene_Intersect()
 		tasksDirectLight[gid].throughShadowTransparency = false;
 
-#if defined(PARAM_HAS_VOLUMES)
 		// Make a copy of current PathVolumeInfo for tracing the
 		// shadow ray
 		directLightVolInfos[gid] = pathInfo->volume;
-#endif
+
 		// I have to trace the shadow ray
 		taskState->state = MK_RT_DL;
 	} else {
@@ -763,6 +764,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 	Seed seedValue = task->seed;
 	// This trick is required by Sampler_GetSample() macro
 	Seed *seed = &seedValue;
+
+	__constant const Scene* restrict scene = &taskConfig->scene;
 
 	// Initialize image maps page pointer table
 	INIT_IMAGEMAPS_PAGES
@@ -1105,9 +1108,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 	//--------------------------------------------------------------------------
 
 	// Re-initialize the volume information
-#if defined(PARAM_HAS_VOLUMES)
 	PathVolumeInfo_Init(&pathInfo->volume);
-#endif
 
 	GenerateEyePath(taskConfig,
 			&tasksDirectLight[gid], taskState, sample, sampleDataPathBase, camera,

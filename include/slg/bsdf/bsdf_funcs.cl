@@ -24,10 +24,8 @@ OPENCL_FORCE_NOT_INLINE void BSDF_Init(
 		const bool throughShadowTransparency,
 		__global Ray *ray,
 		__global const RayHit *rayHit,
-		const float passThroughEvent
-#if defined(PARAM_HAS_VOLUMES)
-		, __global PathVolumeInfo *volInfo
-#endif
+		const float passThroughEvent,
+		__global PathVolumeInfo *volInfo
 		MATERIALS_PARAM_DECL
 		) {
 	const uint meshIndex = rayHit->meshIndex;
@@ -58,7 +56,6 @@ OPENCL_FORCE_NOT_INLINE void BSDF_Init(
 	// Set interior and exterior volumes
 	//--------------------------------------------------------------------------
 
-#if defined(PARAM_HAS_VOLUMES)
 	PathVolumeInfo_SetHitPointVolumes(
 			volInfo,
 			&bsdf->hitPoint,
@@ -69,7 +66,6 @@ OPENCL_FORCE_NOT_INLINE void BSDF_Init(
 				passThroughEvent
 				MATERIALS_PARAM)
 			MATERIALS_PARAM);
-#endif
 
 	//--------------------------------------------------------------------------
 
@@ -93,12 +89,9 @@ OPENCL_FORCE_NOT_INLINE void BSDF_Init(
 	//--------------------------------------------------------------------------
 	Frame_Set(&bsdf->frame, dpdu, dpdv, shadeN);
 
-#if defined(PARAM_HAS_VOLUMES)
 	bsdf->isVolume = false;
-#endif
 }
 
-#if defined(PARAM_HAS_VOLUMES)
 // Used when hitting a volume scatter point
 OPENCL_FORCE_NOT_INLINE void BSDF_InitVolume(
 		__global BSDF *bsdf,
@@ -156,7 +149,6 @@ OPENCL_FORCE_NOT_INLINE void BSDF_InitVolume(
 
 	bsdf->isVolume = true;
 }
-#endif
 
 OPENCL_FORCE_NOT_INLINE float3 BSDF_Albedo(__global const BSDF *bsdf
 		MATERIALS_PARAM_DECL) {
@@ -206,10 +198,9 @@ OPENCL_FORCE_NOT_INLINE float3 BSDF_Evaluate(__global const BSDF *bsdf,
 	const float dotEyeDirNG = dot(eyeDir, geometryN);
 	const float absDotEyeDirNG = fabs(dotEyeDirNG);
 
-#if defined(PARAM_HAS_VOLUMES)
 	if (!bsdf->isVolume) {
 		// These kind of tests make sense only for materials
-#endif
+
 		// Avoid glancing angles
 		if ((absDotLightDirNG < DEFAULT_COS_EPSILON_STATIC) ||
 				(absDotEyeDirNG < DEFAULT_COS_EPSILON_STATIC))
@@ -228,9 +219,7 @@ OPENCL_FORCE_NOT_INLINE float3 BSDF_Evaluate(__global const BSDF *bsdf,
 		if (((sideTestIS > 0.f) && !(matEvents & REFLECT)) ||
 				((sideTestIS < 0.f) && !(matEvents & TRANSMIT)))
 			return BLACK;
-#if defined(PARAM_HAS_VOLUMES)
 	}
-#endif
 
 	__global const Frame *frame = &bsdf->frame;
 	const float3 localLightDir = Frame_ToLocal(frame, lightDir);
@@ -241,18 +230,14 @@ OPENCL_FORCE_NOT_INLINE float3 BSDF_Evaluate(__global const BSDF *bsdf,
 	if (Spectrum_IsBlack(result))
 		return BLACK;
 
-#if defined(PARAM_HAS_VOLUMES)
 	if (!bsdf->isVolume) {
-#endif
 		// Shadow terminator artefact avoidance
 		if ((*event & REFLECT) &&
 				(*event & (DIFFUSE | GLOSSY)) &&
 				((shadeN.x != interpolatedN.x) || (shadeN.y != interpolatedN.y) || (shadeN.z != interpolatedN.z)))
 			result *= BSDF_ShadowTerminatorAvoidanceFactor(BSDF_GetLandingInterpolatedN(bsdf),
 					BSDF_GetLandingShadeN(bsdf), lightDir);
-#if defined(PARAM_HAS_VOLUMES)
 	}
-#endif
 
 	return result;
 }
@@ -275,9 +260,7 @@ OPENCL_FORCE_NOT_INLINE float3 BSDF_Sample(__global const BSDF *bsdf, const floa
 	*absCosSampledDir = fabs(CosTheta(localSampledDir));
 	*sampledDir = Frame_ToWorld(&bsdf->frame, localSampledDir);
 
-#if defined(PARAM_HAS_VOLUMES)
 	if (!bsdf->isVolume) {
-#endif
 		// Shadow terminator artefact avoidance
 		const float3 shadeN = VLOAD3F(&bsdf->hitPoint.shadeN.x);
 		const float3 interpolatedN = VLOAD3F(&bsdf->hitPoint.interpolatedN.x);
@@ -286,9 +269,7 @@ OPENCL_FORCE_NOT_INLINE float3 BSDF_Sample(__global const BSDF *bsdf, const floa
 				((shadeN.x != interpolatedN.x) || (shadeN.y != interpolatedN.y) || (shadeN.z != interpolatedN.z)))
 			result *= BSDF_ShadowTerminatorAvoidanceFactor(BSDF_GetLandingInterpolatedN(bsdf),
 					BSDF_GetLandingShadeN(bsdf), *sampledDir);
-#if defined(PARAM_HAS_VOLUMES)
 	}
-#endif
 
 	return result;
 }

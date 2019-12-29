@@ -24,7 +24,6 @@
 //  PARAM_HAS_IMAGEMAPS
 //  PARAM_USE_PIXEL_ATOMICS
 //  PARAM_ACCEL_BVH or PARAM_ACCEL_MBVH or PARAM_ACCEL_QBVH or PARAM_ACCEL_MQBVH
-//  PARAM_HAS_VOLUMEs (and SCENE_DEFAULT_VOLUME_INDEX)
 
 // To enable single material support
 //  PARAM_ENABLE_MAT_MATTE
@@ -223,18 +222,14 @@ OPENCL_FORCE_NOT_INLINE void GenerateEyePath(
 #if defined(RENDER_ENGINE_TILEPATHOCL) || defined(RENDER_ENGINE_RTPATHOCL)
 	Camera_GenerateRay(camera, cameraFilmWidth, cameraFilmHeight,
 			ray,
-#if defined(PARAM_HAS_VOLUMES)
 			&pathInfo->volume,
-#endif
 			sample->result.filmX + tileStartX, sample->result.filmY + tileStartY,
 			timeSample,
 			dofSampleX, dofSampleY);
 #else
 	Camera_GenerateRay(camera, filmWidth, filmHeight,
 			ray,
-#if defined(PARAM_HAS_VOLUMES)
 			&pathInfo->volume,
-#endif
 			sample->result.filmX, sample->result.filmY,
 			timeSample,
 			dofSampleX, dofSampleY);
@@ -316,9 +311,7 @@ OPENCL_FORCE_NOT_INLINE void DirectHitInfiniteLight(
 						dlscDistributions, dlscBVHNodes,
 						dlscRadius2, dlscNormalCosAngle,
 						VLOAD3F(&ray->o.x), VLOAD3F(&pathInfo->lastShadeN.x),
-#if defined(PARAM_HAS_VOLUMES)
 						pathInfo->lastFromVolume,
-#endif
 						light->lightSceneIndex);
 
 				// MIS between BSDF sampling and direct light sampling
@@ -360,9 +353,7 @@ OPENCL_FORCE_NOT_INLINE void DirectHitFiniteLight(
 					dlscDistributions, dlscBVHNodes,
 					dlscRadius2, dlscNormalCosAngle,
 					VLOAD3F(&ray->o.x), VLOAD3F(&pathInfo->lastShadeN.x),
-#if defined(PARAM_HAS_VOLUMES)
 					pathInfo->lastFromVolume,
-#endif
 					light->lightSceneIndex);
 
 #if !defined(RENDER_ENGINE_RTPATHOCL)
@@ -412,9 +403,7 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_Illuminate(
 			dlscDistributions, dlscBVHNodes,
 			dlscRadius2, dlscNormalCosAngle,
 			VLOAD3F(&bsdf->hitPoint.p.x), BSDF_GetLandingGeometryN(bsdf), 
-#if defined(PARAM_HAS_VOLUMES)
 			bsdf->isVolume,
-#endif
 			u0, &lightPickPdf);
 	if ((lightIndex == NULL_INDEX) || (lightPickPdf <= 0.f))
 		return false;
@@ -518,12 +507,8 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 // Kernel parameters
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_HAS_VOLUMES)
 #define KERNEL_ARGS_VOLUMES \
 		, __global PathVolumeInfo *directLightVolInfos
-#else
-#define KERNEL_ARGS_VOLUMES
-#endif
 
 #define KERNEL_ARGS_INFINITELIGHTS \
 		, const float worldCenterX \

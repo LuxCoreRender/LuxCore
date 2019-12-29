@@ -128,16 +128,6 @@ bool CompiledScene::IsImageMapWrapCompiled(const ImageMapStorage::WrapType type)
 	return (usedImageMapWrapTypes.find(type) != usedImageMapWrapTypes.end());
 }
 
-bool CompiledScene::HasVolumes() const {
-	return IsMaterialCompiled(HOMOGENEOUS_VOL) ||
-			IsMaterialCompiled(CLEAR_VOL) ||
-			IsMaterialCompiled(HETEROGENEOUS_VOL) ||
-			// Volume rendering may be required to evaluate the IOR
-			IsMaterialCompiled(GLASS) ||
-			IsMaterialCompiled(ARCHGLASS) ||
-			IsMaterialCompiled(ROUGHGLASS);
-}
-
 string CompiledScene::ToOCLString(const slg::ocl::Spectrum &v) {
 	return "(float3)(" + ToString(v.c[0]) + ", " + ToString(v.c[1]) + ", " + ToString(v.c[2]) + ")";
 }

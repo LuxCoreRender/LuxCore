@@ -18,7 +18,6 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#if defined(PARAM_HAS_VOLUMES)
 OPENCL_FORCE_INLINE float ExtractExteriorIors(__global const HitPoint *hitPoint, const uint exteriorIorTexIndex
 		TEXTURES_PARAM_DECL) {
 	uint extIndex = NULL_INDEX;
@@ -46,7 +45,6 @@ OPENCL_FORCE_INLINE float ExtractInteriorIors(__global const HitPoint *hitPoint,
 	return (intIndex == NULL_INDEX) ? 1.f : Texture_GetFloatValue(intIndex, hitPoint
 			TEXTURES_PARAM);
 }
-#endif
 
 //------------------------------------------------------------------------------
 // ArchGlass material

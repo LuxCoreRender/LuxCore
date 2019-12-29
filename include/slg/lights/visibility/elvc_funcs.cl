@@ -28,10 +28,7 @@ OPENCL_FORCE_INLINE __global const ELVCacheEntry* restrict EnvLightVisibilityCac
 		__global const float* restrict elvcDistributions,
 		__global const IndexBVHArrayNode* restrict elvcBVHNodes,
 		const float elvcRadius2, const float elvcNormalCosAngle,
-		const float3 p, const float3 n
-#if defined(PARAM_HAS_VOLUMES)
-		, const bool isVolume
-#endif
+		const float3 p, const float3 n, const bool isVolume
 		) {
 	__global const ELVCacheEntry* restrict nearestEntry = NULL;
 	float nearestDistance2 = elvcRadius2;
@@ -49,15 +46,11 @@ OPENCL_FORCE_INLINE __global const ELVCacheEntry* restrict EnvLightVisibilityCac
 
 			const float distance2 = DistanceSquared(p, VLOAD3F(&entry->p.x));
 			if ((distance2 <= nearestDistance2) &&
-#if defined(PARAM_HAS_VOLUMES)
 					(isVolume == entry->isVolume) && 
 					(isVolume ||
-#endif
 					(dot(n, VLOAD3F(&entry->n.x)) >= elvcNormalCosAngle)
-#if defined(PARAM_HAS_VOLUMES)
 					)
-#endif
-					) {
+				) {
 				// I have found a valid entry
 
 				nearestEntry = entry;
@@ -86,10 +79,7 @@ OPENCL_FORCE_INLINE __global const float* restrict EnvLightVisibilityCache_GetVi
 		LIGHTS_PARAM_DECL) {
 	__global const ELVCacheEntry* restrict cacheEntry = EnvLightVisibilityCache_GetNearestEntry(
 			elvcAllEntries, elvcDistributions, elvcBVHNodes, elvcRadius2, elvcNormalCosAngle,
-			VLOAD3F(&bsdf->hitPoint.p.x), BSDF_GetLandingShadeN(bsdf)
-#if defined(PARAM_HAS_VOLUMES)
-			, bsdf->isVolume
-#endif
+			VLOAD3F(&bsdf->hitPoint.p.x), BSDF_GetLandingShadeN(bsdf), bsdf->isVolume
 			);
 
 	return (cacheEntry && (cacheEntry->distributionOffset != NULL_INDEX)) ? &elvcDistributions[cacheEntry->distributionOffset] : NULL;

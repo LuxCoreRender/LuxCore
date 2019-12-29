@@ -18,8 +18,6 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#if defined(PARAM_HAS_VOLUMES)
-
 OPENCL_FORCE_INLINE float3 SchlickScatter_GetColor(const float3 sigmaS, const float3 sigmaA) {
 	float3 r = sigmaS;
 	if (r.x > 0.f)
@@ -97,8 +95,6 @@ OPENCL_FORCE_INLINE float3 SchlickScatter_Sample(
 
 	return SchlickScatter_GetColor(sigmaS, sigmaA);
 }
-
-#endif
 
 //------------------------------------------------------------------------------
 // HeterogeneousVol material

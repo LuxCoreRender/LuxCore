@@ -493,11 +493,6 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			ssParams << " -D PARAM_HAS_IMAGEMAPS_WRAP_CLAMP";
 	}
 
-	if (renderEngine->compiledScene->HasVolumes()) {
-		ssParams << " -D PARAM_HAS_VOLUMES";
-		ssParams << " -D SCENE_DEFAULT_VOLUME_INDEX=" << renderEngine->compiledScene->defaultWorldVolumeIndex;
-	}
-
 	const slg::ocl::Filter *filter = renderEngine->oclPixelFilter;
 	switch (filter->type) {
 		case slg::ocl::FILTER_NONE:
@@ -670,6 +665,8 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			luxrays::ocl::KernelSource_triangle_funcs <<
 			luxrays::ocl::KernelSource_exttrianglemesh_funcs <<
 			// OpenCL SLG Types
+			slg::ocl::KernelSource_sceneobject_types <<
+			slg::ocl::KernelSource_scene_types <<
 			slg::ocl::KernelSource_hitpoint_types <<
 			slg::ocl::KernelSource_imagemap_types <<
 			slg::ocl::KernelSource_mapping_types <<
@@ -685,7 +682,6 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_indexbvh_types <<
 			slg::ocl::KernelSource_dlsc_types <<
 			slg::ocl::KernelSource_elvc_types <<
-			slg::ocl::KernelSource_sceneobject_types <<
 			slg::ocl::KernelSource_pgic_types <<
 			// OpenCL SLG Funcs
 			slg::ocl::KernelSource_mapping_funcs <<
@@ -747,7 +743,6 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_pathdepthinfo_types <<
 			slg::ocl::KernelSource_pathvolumeinfo_types <<
 			slg::ocl::KernelSource_pathinfo_types <<
-			slg::ocl::KernelSource_scene_types <<
 			slg::ocl::KernelSource_pathtracer_types <<
 			// PathOCL types
 			slg::ocl::KernelSource_pathoclbase_datatypes;
@@ -906,8 +901,7 @@ void PathOCLBaseOCLRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePa
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), samplesBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), sampleDataBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), eyePathInfosBuff);
-	if (cscene->HasVolumes())
-		advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), directLightVolInfosBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), directLightVolInfosBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), raysBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), hitsBuff);
 

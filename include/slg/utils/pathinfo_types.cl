@@ -18,14 +18,9 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-// This is defined only under OpenCL because of variable size structures
-#if defined(SLG_OPENCL_KERNEL)
-
 typedef struct {
 	PathDepthInfo depth;
-#if defined(PARAM_HAS_VOLUMES)
 	PathVolumeInfo volume;
-#endif
 
 	int isPassThroughPath;
 
@@ -34,13 +29,9 @@ typedef struct {
 	float lastBSDFPdfW;
 	float lastGlossiness;
 	Normal lastShadeN;
-#if defined(PARAM_HAS_VOLUMES)
 	bool lastFromVolume;
-#endif
 
 	int isNearlyCaustic;
 	// Specular, Specular+ Diffuse and Specular+ Diffuse Specular+ paths
 	int isNearlyS, isNearlySD, isNearlySDS;
 } EyePathInfo;
-
-#endif
