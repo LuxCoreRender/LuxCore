@@ -32,6 +32,7 @@
 * Changing force black background flag doesn't require OpenCL compilation anymore (removed PARAM_FORCE_BLACK_BACKGROUND)
 * Changing variance clamping settings doesn't require OpenCL compilation anymore (removed PARAM_SQRT_VARIANCE_CLAMP_MAX_VALUE)
 * Changing LIGHT_WORLD_RADIUS_SCALE doesn't require OpenCL compilation anymore (removed PARAM_RADIUS)
+* Removed HitPoint struct variable size related to PARAM_ENABLE_TEX_HITPOINTCOLOR, PARAM_ENABLE_TEX_HITPOINTGREY, PARAM_ENABLE_TEX_HITPOINTALPHA and PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR to avoid OpenCL re-compilation
 
 ### Fixed Bugs
 

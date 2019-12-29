@@ -136,12 +136,8 @@ OPENCL_FORCE_NOT_INLINE void BSDF_InitVolume(
 
 	for (uint i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
 		VSTORE2F((float2)(0.f, 0.f), &bsdf->hitPoint.uv[i].u);
-#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR) || defined(PARAM_ENABLE_TEX_HITPOINTGREY) || defined(PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR)
 		VSTORE3F(WHITE, bsdf->hitPoint.color[i].c);
-#endif
-#if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)
 		bsdf->hitPoint.alpha[i] = 1.f;
-#endif
 	}
 
 	float3 dpdu, dpdv;

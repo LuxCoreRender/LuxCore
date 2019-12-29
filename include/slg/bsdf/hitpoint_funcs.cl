@@ -51,15 +51,11 @@ OPENCL_FORCE_INLINE void HitPoint_Init(__global HitPoint *hitPoint, const bool t
 		VSTORE2F(uv, &hitPoint->uv[i].u);
 
 		// Interpolate color
-#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR) || defined(PARAM_ENABLE_TEX_HITPOINTGREY) || defined(PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR)
 		const float3 color = ExtMesh_GetInterpolateColor(meshIndex, triIndex, b1, b2, i EXTMESH_PARAM);
 		VSTORE3F(color, &hitPoint->color[i].c[0]);
-#endif
 
 		// Interpolate alpha
-#if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)
 		hitPoint->alpha[i] = ExtMesh_GetInterpolateAlpha(meshIndex, triIndex, b1, b2, i EXTMESH_PARAM);
-#endif
 	}
 
 	// Compute geometry differentials
@@ -98,12 +94,8 @@ OPENCL_FORCE_INLINE void HitPoint_InitDefault(__global HitPoint *hitPoint) {
 
 	for (uint i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
 		VSTORE2F((float2)(0.f, 0.f), &hitPoint->uv[i].u);
-#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR) || defined(PARAM_ENABLE_TEX_HITPOINTGREY) || defined(PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR)
 		VSTORE3F(WHITE, &hitPoint->color[i].c[0]);
-#endif
-#if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)
 		hitPoint->alpha[i] = 1.f;
-#endif
 	}
 	
 	VSTORE3F((float3)(0.f, 0.f, 0.f), &hitPoint->dpdu.x);

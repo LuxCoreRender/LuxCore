@@ -291,7 +291,6 @@ void CompiledScene::CompileLights() {
 	
 	usedLightSourceTypes.clear();
 	hasEnvLights = false;
-	hasTriangleLightWithVertexColors = false;
 	AddEnabledLightCode();
 
 	const vector<LightSource *> &lightSources = scene->lightDefs.GetLightSources();
@@ -320,11 +319,6 @@ void CompiledScene::CompileLights() {
 		switch (l->GetType()) {
 			case TYPE_TRIANGLE: {
 				const TriangleLight *tl = (const TriangleLight *)l;
-				const ExtMesh *mesh = tl->mesh;
-
-				// Check if I have a triangle light source with vertex colors
-				if (mesh->HasColors(0))
-					hasTriangleLightWithVertexColors = true;
 
 				// LightSource data
 				oclLight->type = slg::ocl::TYPE_TRIANGLE;

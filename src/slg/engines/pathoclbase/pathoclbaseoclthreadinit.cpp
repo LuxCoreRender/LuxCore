@@ -49,12 +49,8 @@ size_t PathOCLBaseOCLRenderThread::GetOpenCLHitPointSize() const {
 			3 * sizeof(Normal) +
 			EXTMESH_MAX_DATA_COUNT * sizeof(UV) +
 			sizeof(Transform);
-	if (renderEngine->compiledScene->IsTextureCompiled(HITPOINTCOLOR) ||
-			renderEngine->compiledScene->IsTextureCompiled(HITPOINTGREY) ||
-			renderEngine->compiledScene->hasTriangleLightWithVertexColors)
-		hitPointSize += EXTMESH_MAX_DATA_COUNT * sizeof(Spectrum);
-	if (renderEngine->compiledScene->IsTextureCompiled(HITPOINTALPHA))
-		hitPointSize += EXTMESH_MAX_DATA_COUNT * sizeof(float);
+	hitPointSize += EXTMESH_MAX_DATA_COUNT * sizeof(Spectrum);
+	hitPointSize += EXTMESH_MAX_DATA_COUNT * sizeof(float);
 	// passThroughEvent
 	hitPointSize += sizeof(float);
 	// Fields dpdu, dpdv, dndu, dndv
