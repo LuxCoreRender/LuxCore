@@ -75,6 +75,7 @@ public:
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
+	const TextureMapping3D *mapping;
 	const Texture *texX;
 	const Texture *texY;
     const Texture *texZ;

@@ -32,24 +32,36 @@ float TriplanarTexture::GetFloatValue(const HitPoint &hitPoint) const {
 }
 
 Spectrum TriplanarTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
-    HitPoint hitPointX = hitPoint;
-    HitPoint hitPointY = hitPoint;
-    HitPoint hitPointZ = hitPoint;
-
-    hitPointX.uv.u = hitPoint.p.y;
-    hitPointX.uv.v = hitPoint.p.z;
-
-    hitPointY.uv.u = hitPoint.p.x;
-    hitPointY.uv.v = hitPoint.p.z;
-
-    hitPointZ.uv.u = hitPoint.p.x;
-    hitPointZ.uv.v = hitPoint.p.y;
 
     float weights[3] = {pow(fabsf(hitPoint.shadeN.x),4), pow(fabsf(hitPoint.shadeN.y),4), pow(fabsf(hitPoint.shadeN.z),4)};
+    
     const float sum = weights[0] + weights[1] + weights[2];
     weights[0] = weights[0]/sum;
     weights[1] = weights[1]/sum;
     weights[2] = weights[2]/sum;
+
+    if (mapping->GetType() == GLOBALMAPPING3D || mapping->GetType() == LOCALMAPPING3D) {
+        return (texX->GetSpectrumValue(hitPoint)*weights[0] + texY->GetSpectrumValue(hitPoint)*weights[1] + texZ->GetSpectrumValue(hitPoint)*weights[2]);
+    }
+    
+    const Point p = mapping->Map(hitPoint);
+
+    HitPoint hitPointX = hitPoint;
+    HitPoint hitPointY = hitPoint;
+    HitPoint hitPointZ = hitPoint;
+        
+    if (mapping->GetType() == UVMAPPING3D) {
+        const u_int dataIndex = static_cast<const UVMapping3D*>(mapping)->GetDataIndex();
+
+        hitPointX.uv[dataIndex].u = p.y;
+        hitPointX.uv[dataIndex].v = p.z;
+
+        hitPointY.uv[dataIndex].u = p.x;
+        hitPointY.uv[dataIndex].v = p.z;
+
+        hitPointZ.uv[dataIndex].u = p.x;
+        hitPointZ.uv[dataIndex].v = p.y;
+    }
 
     return (texX->GetSpectrumValue(hitPointX)*weights[0] + texY->GetSpectrumValue(hitPointY)*weights[1] + texZ->GetSpectrumValue(hitPointZ)*weights[2]);
 }
@@ -62,6 +74,7 @@ Properties TriplanarTexture::ToProperties(const ImageMapCache &imgMapCache, cons
 	props.Set(Property("scene.textures." + name + ".texture1")(texX->GetSDLValue()));
 	props.Set(Property("scene.textures." + name + ".texture2")(texY->GetSDLValue()));
     props.Set(Property("scene.textures." + name + ".texture3")(texZ->GetSDLValue()));
+    props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;
 }
