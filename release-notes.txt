@@ -31,6 +31,7 @@
 * Changing PhotonGI settings doesn't require OpenCL compilation anymore (removed PARAM_PGIC_ENABLED, PARAM_PGIC_INDIRECT_ENABLED, PARAM_PGIC_CAUSTIC_ENABLED, etc.)
 * Changing force black background flag doesn't require OpenCL compilation anymore (removed PARAM_FORCE_BLACK_BACKGROUND)
 * Changing variance clamping settings doesn't require OpenCL compilation anymore (removed PARAM_SQRT_VARIANCE_CLAMP_MAX_VALUE)
+* Changing LIGHT_WORLD_RADIUS_SCALE doesn't require OpenCL compilation anymore (removed PARAM_RADIUS)
 
 ### Fixed Bugs
 
@@ -40,6 +41,7 @@
 * Fixed a light intensity problem with OpenCL rendering when using a mix of materials with emission
 * Fixed the support for wrap mode in image maps loaded from files
 * Fixed a brightness problem when rendering large images with Metropolis sampler
+* Fixed a brightness problem when rendering caustics with PhotonGI caustic cache
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
