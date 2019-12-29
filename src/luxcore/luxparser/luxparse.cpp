@@ -3131,7 +3131,7 @@ yyreduce:
 				GetTexture(prefix + ".texture1", Property("tex1")(Spectrum(1.f,0.f,0.f)), props) <<
 				GetTexture(prefix + ".texture2", Property("tex2")(Spectrum(0.f,1.f,0.f)), props) <<
 				GetTexture(prefix + ".texture3", Property("tex3")(Spectrum(0.f,0.f,1.f)), props) <<
-				GetTextureMapping2D(prefix, props);
+				GetTextureMapping3D(prefix, currentTransform, props);
 	} else
 	//--------------------------------------------------------------------------
 	// Procedural textures
