@@ -34,9 +34,9 @@ float TriplanarTexture::GetFloatValue(const HitPoint &hitPoint) const {
 Spectrum TriplanarTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 
     float weights[3] = {
-		powf(fabsf(hitPoint.shadeN.x), 4),
-		powf(fabsf(hitPoint.shadeN.y), 4),
-		powf(fabsf(hitPoint.shadeN.z), 4)
+		Sqr(Sqr(fabsf(hitPoint.shadeN.x))),
+		Sqr(Sqr(fabsf(hitPoint.shadeN.y))),
+		Sqr(Sqr(fabsf(hitPoint.shadeN.z)))
 	};
     
     const float sum = weights[0] + weights[1] + weights[2];
@@ -53,25 +53,22 @@ Spectrum TriplanarTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 		}
 		case UVMAPPING3D: {
 			const Point p = mapping->Map(hitPoint);
-
-			HitPoint hitPointX = hitPoint;
-			HitPoint hitPointY = hitPoint;
-			HitPoint hitPointZ = hitPoint;
-        
 			const u_int dataIndex = static_cast<const UVMapping3D*>(mapping)->GetDataIndex();
 
-			hitPointX.uv[dataIndex].u = p.y;
-			hitPointX.uv[dataIndex].v = p.z;
+			HitPoint hitPointTmp = hitPoint;
+			hitPointTmp.uv[dataIndex].u = p.y;
+			hitPointTmp.uv[dataIndex].v = p.z;
+			Spectrum result = texX->GetSpectrumValue(hitPointTmp) * weights[0];
 
-			hitPointY.uv[dataIndex].u = p.x;
-			hitPointY.uv[dataIndex].v = p.z;
+			hitPointTmp.uv[dataIndex].u = p.x;
+			hitPointTmp.uv[dataIndex].v = p.z;
+			result += texY->GetSpectrumValue(hitPointTmp) * weights[1];
 
-			hitPointZ.uv[dataIndex].u = p.x;
-			hitPointZ.uv[dataIndex].v = p.y;
-		
-			return texX->GetSpectrumValue(hitPointX) * weights[0] +
-					texY->GetSpectrumValue(hitPointY) * weights[1] +
-					texZ->GetSpectrumValue(hitPointZ) * weights[2];
+			hitPointTmp.uv[dataIndex].u = p.x;
+			hitPointTmp.uv[dataIndex].v = p.y;
+			result += texZ->GetSpectrumValue(hitPointTmp) * weights[2];
+
+			return result;
 		}
 		default:
 			throw runtime_error("Unknown mapping type in TriplanarTexture: " + ToString(mapping->GetType()));
