@@ -3125,6 +3125,13 @@ yyreduce:
 		*sceneProps <<
 				Property(prefix + ".type")("lampspectrum") <<
 				Property(prefix + ".name")(props.Get(Property("name")("Incandescent2")).Get<string>());
+	} else if (texType == "triplanar") {
+		*sceneProps <<
+				Property(prefix + ".type")("triplanar") <<
+				GetTexture(prefix + ".texture1", Property("tex1")(Spectrum(1.f,0.f,0.f)), props) <<
+				GetTexture(prefix + ".texture2", Property("tex2")(Spectrum(0.f,1.f,0.f)), props) <<
+				GetTexture(prefix + ".texture3", Property("tex3")(Spectrum(0.f,0.f,1.f)), props) <<
+				GetTextureMapping3D(prefix, currentTransform, props);
 	} else
 	//--------------------------------------------------------------------------
 	// Procedural textures

@@ -80,6 +80,7 @@
 #include "slg/textures/windy.h"
 #include "slg/textures/wrinkled.h"
 #include "slg/textures/uv.h"
+#include "slg/textures/triplanar.h"
 
 using namespace std;
 using namespace luxrays;
@@ -576,6 +577,11 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const Texture *brightnessTex = GetTexture(props.Get(Property(propName + ".brightness")(0.f)));
 		const Texture *contrastTex = GetTexture(props.Get(Property(propName + ".contrast")(0.f)));
 		tex = new BrightContrastTexture(texture, brightnessTex, contrastTex);
+	} else if (texType == "triplanar") {
+		const Texture *t1 = GetTexture(props.Get(Property(propName + ".texture1")(1.f)));
+		const Texture *t2 = GetTexture(props.Get(Property(propName + ".texture2")(1.f)));
+		const Texture *t3 = GetTexture(props.Get(Property(propName + ".texture3")(1.f)));
+		tex = new TriplanarTexture(CreateTextureMapping3D(propName + ".mapping", props), t1, t2, t3);
 	} else
 		throw runtime_error("Unknown texture type: " + texType);
 
