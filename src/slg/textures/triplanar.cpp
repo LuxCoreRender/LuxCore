@@ -32,7 +32,6 @@ float TriplanarTexture::GetFloatValue(const HitPoint &hitPoint) const {
 }
 
 Spectrum TriplanarTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
-
     float weights[3] = {
 		Sqr(Sqr(fabsf(hitPoint.shadeN.x))),
 		Sqr(Sqr(fabsf(hitPoint.shadeN.y))),

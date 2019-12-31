@@ -322,6 +322,8 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 		ssParams << " -D PARAM_ENABLE_TEX_MODULO";
 	if (cscene->IsTextureCompiled(BRIGHT_CONTRAST_TEX))
 		ssParams << " -D PARAM_ENABLE_TEX_BRIGHT_CONTRAST";
+	if (cscene->IsTextureCompiled(TRIPLANAR_TEX))
+		ssParams << " -D PARAM_ENABLE_TEX_TRIPLANAR";
 
 	if (cscene->IsMaterialCompiled(MATTE))
 		ssParams << " -D PARAM_ENABLE_MAT_MATTE";

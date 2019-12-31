@@ -67,6 +67,7 @@ public:
 			texZ = newTex;
 	}
 
+	const TextureMapping3D *GetTextureMapping() const { return mapping; }
 	const Texture *GetTexture1() const { return texX; }
 	const Texture *GetTexture2() const { return texY; }
     const Texture *GetTexture3() const { return texZ; }

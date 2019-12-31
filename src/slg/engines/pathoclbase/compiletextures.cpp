@@ -77,6 +77,7 @@
 #include "slg/textures/vectormath/dotproduct.h"
 #include "slg/textures/vectormath/makefloat3.h"
 #include "slg/textures/vectormath/splitfloat3.h"
+#include "slg/textures/triplanar.h"
 
 using namespace std;
 using namespace luxrays;
@@ -1256,6 +1257,19 @@ void CompiledScene::CompileTextures() {
 				tex->brightContrastTex.contrastTexIndex = scene->texDefs.GetTextureIndex(c);
 				break;
 			}
+			case TRIPLANAR_TEX: {
+				const TriplanarTexture *trit = static_cast<const TriplanarTexture *>(t);
+
+				tex->type = slg::ocl::TRIPLANAR_TEX;
+				CompileTextureMapping3D(&tex->trilinearTex.mapping, trit->GetTextureMapping());
+				const Texture *t1 = trit->GetTexture1();
+				tex->trilinearTex.tex1Index = scene->texDefs.GetTextureIndex(t1);
+				const Texture *t2 = trit->GetTexture2();
+				tex->trilinearTex.tex2Index = scene->texDefs.GetTextureIndex(t2);
+				const Texture *t3 = trit->GetTexture3();
+				tex->trilinearTex.tex3Index = scene->texDefs.GetTextureIndex(t3);
+				break;
+			}
 			default:
 				throw runtime_error("Unknown texture in CompiledScene::CompileTextures(): " + boost::lexical_cast<string>(t->GetType()));
 				break;
@@ -2107,6 +2121,18 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 					AddTextureSourceCall(texs, "Spectrum", tex->brightContrastTex.texIndex) + ", " +
 					AddTextureSourceCall(texs, "Float", tex->brightContrastTex.brightnessTexIndex) + ", " +
 					AddTextureSourceCall(texs, "Float", tex->brightContrastTex.contrastTexIndex));
+				break;
+			}
+			case slg::ocl::TRIPLANAR_TEX: {
+				// TRIPLANAR texture uses a template .cl file
+				string triplanarSrc = slg::ocl::KernelSource_texture_template_triplanar;
+				boost::replace_all(triplanarSrc, "<<CS_TRIPLANAR_TEX_INDEX>>", ToString(i));
+
+				boost::replace_all(triplanarSrc, "<<CS_TEXTURE_X_INDEX>>", AddTextureSourceCall(texs, "Spectrum", tex->trilinearTex.tex1Index));
+				boost::replace_all(triplanarSrc, "<<CS_TEXTURE_Y_INDEX>>", AddTextureSourceCall(texs, "Spectrum", tex->trilinearTex.tex2Index));
+				boost::replace_all(triplanarSrc, "<<CS_TEXTURE_Z_INDEX>>", AddTextureSourceCall(texs, "Spectrum", tex->trilinearTex.tex3Index));
+
+				source << triplanarSrc;
 				break;
 			}
 			default:
