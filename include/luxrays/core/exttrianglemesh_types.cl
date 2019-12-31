@@ -18,7 +18,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#define EXTMESH_MAX_DATA_COUNT 6u
+#define EXTMESH_MAX_DATA_COUNT 8u
 
 typedef struct {
 	Transform appliedTrans;

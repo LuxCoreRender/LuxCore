@@ -61,7 +61,7 @@
  */
 namespace luxcore {
 
-#define LC_MESH_MAX_DATA_COUNT 6
+#define LC_MESH_MAX_DATA_COUNT 8
 
 CPP_EXPORT CPP_API void (*LuxCore_LogHandler)(const char *msg); // LuxCore Log Handler
 
