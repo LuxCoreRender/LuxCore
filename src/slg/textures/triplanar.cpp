@@ -28,7 +28,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 float TriplanarTexture::GetFloatValue(const HitPoint &hitPoint) const {
-    return (texX->GetFloatValue(hitPoint) + texY->GetFloatValue(hitPoint) + texZ->GetFloatValue(hitPoint))/3;
+    return GetSpectrumValue(hitPoint).Y();
 }
 
 Spectrum TriplanarTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
