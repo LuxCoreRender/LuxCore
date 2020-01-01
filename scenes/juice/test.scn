@@ -1,0 +1,51 @@
+scene.camera.type = "perspective"
+scene.camera.cliphither = 1
+scene.camera.clipyon = 1.00000002e+30
+scene.camera.autovolume.enable = 1
+scene.camera.lookat.orig = 10 0 0
+scene.camera.lookat.target = 0 0 0
+scene.camera.up = 0 0 1
+scene.camera.fieldofview = 55
+##
+scene.lights.point_light.type = "point"
+scene.lights.point_light.color = 10000 10000 10000
+scene.lights.point_light.position = -10 0 0
+##
+#scene.lights.il.type = constantinfinite
+#scene.lights.il.color = 1.0 1.0 1.0
+#scene.lights.il.gain = 0.25 0.25 0.25
+##
+scene.volumes.vol_juice.type = "homogeneous"
+scene.volumes.vol_juice.absorption = 0 0 0
+scene.volumes.vol_juice.scattering = 0 1 1
+scene.volumes.vol_juice.asymmetry = 0.0 0.0 0.0
+scene.volumes.vol_juice.multiscattering = 0
+scene.volumes.vol_juice.priority = 0
+scene.volumes.vol_juice.ior = 1.2
+##
+scene.volumes.vol_glass.type = "homogeneous"
+scene.volumes.vol_glass.absorption = 0 0 0
+scene.volumes.vol_glass.scattering = 0 0 0
+scene.volumes.vol_glass.asymmetry = 0.0 0.0 0.0
+scene.volumes.vol_glass.multiscattering = 0
+scene.volumes.vol_glass.priority = 0
+scene.volumes.vol_glass.ior = 1.45
+##
+scene.materials.mat_juice.type = "null"
+scene.materials.mat_juice.volume.interior = "vol_juice"
+##
+scene.materials.mat_matte.type = "matte"
+scene.materials.mat_matte.kd = 0.7 0.0 0.0
+##
+scene.materials.mat_glass.type = "glass"
+scene.materials.mat_glass.transparency.shadow = 1 1 1
+scene.materials.mat_glass.kr = 0 0 0
+scene.materials.mat_glass.kt = 1 1 1
+scene.materials.mat_glass.volume.interior = "vol_glass"
+##
+scene.objects.obj_juice.ply = "test-juice.ply"
+scene.objects.obj_juice.material = "mat_juice"
+##
+#scene.objects.obj_glass.ply = "test-glass2.ply"
+scene.objects.obj_glass.ply = "test-glass.ply"
+scene.objects.obj_glass.material = "mat_glass"
