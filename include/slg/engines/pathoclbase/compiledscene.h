@@ -108,7 +108,7 @@ public:
 	std::vector<slg::ocl::IndexBVHArrayNode> elvcBVHArrayNode;
 	float elvcRadius2, elvcNormalCosAngle;
 	
-	bool hasEnvLights, hasTriangleLightWithVertexColors;
+	bool hasEnvLights;
 
 	// Compiled Materials (and Volumes)
 	boost::unordered_set<MaterialType> usedMaterialTypes;

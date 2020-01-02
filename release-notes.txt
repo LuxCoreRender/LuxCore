@@ -35,7 +35,7 @@
 * Removed HitPoint struct variable size related to PARAM_ENABLE_TEX_HITPOINTCOLOR, PARAM_ENABLE_TEX_HITPOINTGREY, PARAM_ENABLE_TEX_HITPOINTALPHA and PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR to avoid OpenCL re-compilation
 * Enabling/disabling volumes doesn't require OpenCL compilation anymore (removed PARAM_HAS_VOLUMES and SCENE_DEFAULT_VOLUME_INDEX)
 * Added the support for trilinear mapping
-* Enabling/disabling camera clipping and/or OculusRift barrel doesn't require OpenCL compilation anymore (removed PARAM_CAMERA_ENABLE_CLIPPING_PLANE andPARAM_CAMERA_ENABLE_OCULUSRIFT_BARREL)
+* Enabling/disabling camera clipping and/or OculusRift barrel doesn't require OpenCL compilation anymore (removed PARAM_CAMERA_ENABLE_CLIPPING_PLANE and PARAM_CAMERA_ENABLE_OCULUSRIFT_BARREL)
 
 ### Fixed Bugs
 

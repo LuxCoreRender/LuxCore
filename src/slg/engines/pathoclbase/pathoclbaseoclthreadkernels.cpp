@@ -108,9 +108,6 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			" -D PARAM_RAY_EPSILON_MAX=" << MachineEpsilon::GetMax() << "f"
 			;
 
-	if (cscene->hasTriangleLightWithVertexColors)
-		ssParams << " -D PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR";
-
 	switch (intersectionDevice->GetAccelerator()->GetType()) {
 		case ACCEL_BVH:
 			ssParams << " -D PARAM_ACCEL_BVH";
