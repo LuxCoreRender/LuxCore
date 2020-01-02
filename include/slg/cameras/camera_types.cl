@@ -43,8 +43,7 @@ typedef struct {
 	// Used for camera clipping plane
 	Point clippingPlaneCenter;
 	Normal clippingPlaneNormal;
-	// Note: preprocessor macro PARAM_CAMERA_ENABLE_CLIPPING_PLANE set if to use
-	// the user defined clipping plane
+	int enableClippingPlane;
 
 	float lensRadius;
 	float focalDistance;
@@ -55,8 +54,8 @@ typedef struct {
 	
 	float screenOffsetX, screenOffsetY;
 	float fieldOfView;
-	// Note: preprocessor macro PARAM_CAMERA_ENABLE_OCULUSRIFT_BARREL set if to use
-	// Oculus Rift barrel effect
+
+	int enableOculusRiftBarrel;
 } PerspectiveCamera;
 
 typedef struct {
@@ -75,7 +74,7 @@ typedef struct {
 
 typedef struct {
 	// The type of camera in use is defined by preprocessor macro:
-	//  PARAM_CAMERA_TYPE (0 = Perspective, 1 = Orthographic, 2 = Stereo)
+	//  PARAM_CAMERA_TYPE (0 = Perspective, 1 = Orthographic, 2 = Stereo, 3 = Environment)
 
 	CameraBase base;
 

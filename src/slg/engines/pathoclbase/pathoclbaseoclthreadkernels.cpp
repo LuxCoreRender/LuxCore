@@ -422,11 +422,6 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			throw runtime_error("Unknown camera type in PathOCLBaseRenderThread::InitKernels()");
 	}
 
-	if (cscene->enableCameraClippingPlane)
-		ssParams << " -D PARAM_CAMERA_ENABLE_CLIPPING_PLANE";
-	if (cscene->enableCameraOculusRiftBarrel)
-		ssParams << " -D PARAM_CAMERA_ENABLE_OCULUSRIFT_BARREL";
-
 	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_IL))
 		ssParams << " -D PARAM_HAS_INFINITELIGHT";
 	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_IL_CONSTANT))

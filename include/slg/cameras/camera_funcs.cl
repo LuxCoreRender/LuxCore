@@ -18,7 +18,6 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#if defined(PARAM_CAMERA_ENABLE_OCULUSRIFT_BARREL)
 OPENCL_FORCE_NOT_INLINE void Camera_OculusRiftBarrelPostprocess(const float x, const float y, float *barrelX, float *barrelY) {
 	// Express the sample in coordinates relative to the eye center
 	float ex = x * 2.f - 1.f;
@@ -54,17 +53,12 @@ OPENCL_FORCE_NOT_INLINE void Camera_OculusRiftBarrelPostprocess(const float x, c
 	*barrelX = (ex + 1.f) * .5f;
 	*barrelY = (ey + 1.f) * .5f;
 }
-#endif
 
-#if defined(PARAM_CAMERA_ENABLE_CLIPPING_PLANE)
 OPENCL_FORCE_NOT_INLINE void Camera_ApplyArbitraryClippingPlane(
-		__global const Camera* restrict camera,
-		__global Ray *ray) {
+		__global const Camera* restrict camera, __global Ray *ray,
+		const float3 clippingPlaneCenter, const float3 clippingPlaneNormal) {
 	const float3 rayOrig = (float3)(ray->o.x, ray->o.y, ray->o.z);
 	const float3 rayDir = (float3)(ray->d.x, ray->d.y, ray->d.z);
-
-	const float3 clippingPlaneCenter = (float3)(camera->persp.projCamera.clippingPlaneCenter.x, camera->persp.projCamera.clippingPlaneCenter.y, camera->persp.projCamera.clippingPlaneCenter.z);
-	const float3 clippingPlaneNormal = (float3)(camera->persp.projCamera.clippingPlaneNormal.x, camera->persp.projCamera.clippingPlaneNormal.y, camera->persp.projCamera.clippingPlaneNormal.z);
 
 	// Intersect the ray with clipping plane
 	const float denom = dot(clippingPlaneNormal, rayDir);
@@ -105,7 +99,6 @@ OPENCL_FORCE_NOT_INLINE void Camera_ApplyArbitraryClippingPlane(
 		}
 	}
 }
-#endif
 
 //------------------------------------------------------------------------------
 // Perspective camera
@@ -121,14 +114,14 @@ OPENCL_FORCE_NOT_INLINE void Camera_GenerateRay(
 		const float filmX, const float filmY, const float timeSample,
 		const float dofSampleX, const float dofSampleY) {
 	PathVolumeInfo_StartVolume(volInfo, camera->base.volumeIndex);
-	
-#if defined(PARAM_CAMERA_ENABLE_OCULUSRIFT_BARREL)
-	float ssx, ssy;
-	Camera_OculusRiftBarrelPostprocess(filmX / filmWidth, (filmHeight - filmY - 1.f) / filmHeight, &ssx, &ssy);
-	const float3 Pras = (float3) (min(ssx * filmWidth, (float) (filmWidth - 1)), min(ssy * filmHeight, (float) (filmHeight - 1)), 0.f);
-#else
-	const float3 Pras = (float3) (filmX, filmHeight - filmY - 1.f, 0.f);
-#endif
+
+	float3 Pras;
+	if (camera->persp.enableOculusRiftBarrel) {
+		float ssx, ssy;
+		Camera_OculusRiftBarrelPostprocess(filmX / filmWidth, (filmHeight - filmY - 1.f) / filmHeight, &ssx, &ssy);
+		Pras = (float3) (min(ssx * filmWidth, (float) (filmWidth - 1)), min(ssy * filmHeight, (float) (filmHeight - 1)), 0.f);
+	} else
+		Pras = (float3) (filmX, filmHeight - filmY - 1.f, 0.f);
 
 	float3 rayOrig = Transform_ApplyPoint(&camera->base.rasterToCamera, Pras);
 	float3 rayDir = rayOrig;
@@ -177,10 +170,12 @@ OPENCL_FORCE_NOT_INLINE void Camera_GenerateRay(
 	}
 
 	Ray_Init3(ray, rayOrig, rayDir, maxt, time);
-
-#if defined(PARAM_CAMERA_ENABLE_CLIPPING_PLANE)
-	Camera_ApplyArbitraryClippingPlane(camera, ray);
-#endif
+	
+	if (camera->persp.projCamera.enableClippingPlane) {
+		Camera_ApplyArbitraryClippingPlane(camera, ray,
+				VLOAD3F(&camera->persp.projCamera.clippingPlaneCenter.x),
+				VLOAD3F(&camera->persp.projCamera.clippingPlaneNormal.x));
+	}
 
 	/*printf("(%f, %f, %f) (%f, %f, %f) [%f, %f]\n",
 		ray->o.x, ray->o.y, ray->o.z, ray->d.x, ray->d.y, ray->d.z,
@@ -253,9 +248,12 @@ OPENCL_FORCE_NOT_INLINE void Camera_GenerateRay(
 
 	Ray_Init3(ray, rayOrig, rayDir, maxt, time);
 
-#if defined(PARAM_CAMERA_ENABLE_CLIPPING_PLANE)
-	Camera_ApplyArbitraryClippingPlane(camera, ray);
-#endif
+	if (camera->ortho.projCamera.enableClippingPlane) {
+		Camera_ApplyArbitraryClippingPlane(camera, ray,
+				VLOAD3F(&camera->ortho.projCamera.clippingPlaneCenter.x),
+				VLOAD3F(&camera->ortho.projCamera.clippingPlaneNormal.x));
+	}
+
 
 	/*printf("(%f, %f, %f) (%f, %f, %f) [%f, %f]\n",
 		ray->o.x, ray->o.y, ray->o.z, ray->d.x, ray->d.y, ray->d.z,
@@ -293,13 +291,13 @@ OPENCL_FORCE_NOT_INLINE void Camera_GenerateRay(
 		filmX = origFilmX - filmWidth;
 	}
 
-#if defined(PARAM_CAMERA_ENABLE_OCULUSRIFT_BARREL)
-	float ssx, ssy;
-	Camera_OculusRiftBarrelPostprocess(filmX / filmWidth, (filmHeight - filmY - 1.f) / filmHeight, &ssx, &ssy);
-	const float3 Pras = (float3) (min(ssx * filmWidth, (float) (filmWidth - 1)), min(ssy * filmHeight, (float) (filmHeight - 1)), 0.f);
-#else
-	const float3 Pras = (float3) (filmX, filmHeight - filmY - 1.f, 0.f);
-#endif
+	float3 Pras;
+	if (camera->stereo.perspCamera.enableOculusRiftBarrel) {
+		float ssx, ssy;
+		Camera_OculusRiftBarrelPostprocess(filmX / filmWidth, (filmHeight - filmY - 1.f) / filmHeight, &ssx, &ssy);
+		Pras = (float3) (min(ssx * filmWidth, (float) (filmWidth - 1)), min(ssy * filmHeight, (float) (filmHeight - 1)), 0.f);
+	} else
+		Pras = (float3) (filmX, filmHeight - filmY - 1.f, 0.f);
 
 	float3 rayOrig = Transform_ApplyPoint(rasterToCamera, Pras);
 	float3 rayDir = rayOrig;
@@ -349,9 +347,11 @@ OPENCL_FORCE_NOT_INLINE void Camera_GenerateRay(
 
 	Ray_Init3(ray, rayOrig, rayDir, maxt, time);
 
-#if defined(PARAM_CAMERA_ENABLE_CLIPPING_PLANE)
-	Camera_ApplyArbitraryClippingPlane(camera, ray);
-#endif
+	if (camera->stereo.perspCamera.projCamera.enableClippingPlane) {
+		Camera_ApplyArbitraryClippingPlane(camera, ray,
+				VLOAD3F(&camera->stereo.perspCamera.projCamera.clippingPlaneCenter.x),
+				VLOAD3F(&camera->stereo.perspCamera.projCamera.clippingPlaneNormal.x));
+	}
 
 	/*printf("(%f, %f, %f) (%f, %f, %f) [%f, %f]\n",
 		ray->o.x, ray->o.y, ray->o.z, ray->d.x, ray->d.y, ray->d.z,
@@ -398,10 +398,6 @@ OPENCL_FORCE_NOT_INLINE void Camera_GenerateRay(
 	}
 
 	Ray_Init3(ray, rayOrig, rayDir, maxt, time);
-
-#if defined(PARAM_CAMERA_ENABLE_CLIPPING_PLANE)
-	Camera_ApplyArbitraryClippingPlane(camera, ray);
-#endif
 
 	/*printf("(%f, %f, %f) (%f, %f, %f) [%f, %f]\n",
 		ray->o.x, ray->o.y, ray->o.z, ray->d.x, ray->d.y, ray->d.z,

@@ -89,13 +89,12 @@ void CompiledScene::CompileCamera() {
 			camera.ortho.projCamera.lensRadius = orthoCamera->lensRadius;
 			camera.ortho.projCamera.focalDistance = orthoCamera->focalDistance;
 
-			enableCameraOculusRiftBarrel = false;
 			if (orthoCamera->enableClippingPlane) {
-				enableCameraClippingPlane = true;
+				camera.ortho.projCamera.enableClippingPlane = true;
 				ASSIGN_VECTOR(camera.ortho.projCamera.clippingPlaneCenter, orthoCamera->clippingPlaneCenter);
 				ASSIGN_VECTOR(camera.ortho.projCamera.clippingPlaneNormal, orthoCamera->clippingPlaneNormal);
 			} else
-				enableCameraClippingPlane = false;
+				camera.ortho.projCamera.enableClippingPlane = false;
 			break;
 		}
 		case Camera::PERSPECTIVE: {
@@ -111,13 +110,13 @@ void CompiledScene::CompileCamera() {
 			camera.persp.screenOffsetX = perspCamera->screenOffsetX;
 			camera.persp.screenOffsetY = perspCamera->screenOffsetY;
 
-			enableCameraOculusRiftBarrel = perspCamera->enableOculusRiftBarrel;
+			camera.persp.enableOculusRiftBarrel = perspCamera->enableOculusRiftBarrel;
 			if (perspCamera->enableClippingPlane) {
-				enableCameraClippingPlane = true;
+				camera.persp.projCamera.enableClippingPlane = true;
 				ASSIGN_VECTOR(camera.persp.projCamera.clippingPlaneCenter, perspCamera->clippingPlaneCenter);
 				ASSIGN_VECTOR(camera.persp.projCamera.clippingPlaneNormal, perspCamera->clippingPlaneNormal);
 			} else
-				enableCameraClippingPlane = false;
+				camera.persp.projCamera.enableClippingPlane = false;
 			break;
 		}
 		case Camera::STEREO: {
@@ -132,13 +131,13 @@ void CompiledScene::CompileCamera() {
 			memcpy(camera.stereo.rightEyeRasterToCamera.m.m, stereoCamera->GetRasterToCamera(1).m.m, 4 * 4 * sizeof(float));
 			memcpy(camera.stereo.rightEyeCameraToWorld.m.m, stereoCamera->GetCameraToWorld(1).m.m, 4 * 4 * sizeof(float));
 
-			enableCameraOculusRiftBarrel = stereoCamera->enableOculusRiftBarrel;
+			camera.stereo.perspCamera.enableOculusRiftBarrel = stereoCamera->enableOculusRiftBarrel;
 			if (stereoCamera->enableClippingPlane) {
-				enableCameraClippingPlane = true;
+				camera.stereo.perspCamera.projCamera.enableClippingPlane = true;
 				ASSIGN_VECTOR(camera.stereo.perspCamera.projCamera.clippingPlaneCenter, stereoCamera->clippingPlaneCenter);
 				ASSIGN_VECTOR(camera.stereo.perspCamera.projCamera.clippingPlaneNormal, stereoCamera->clippingPlaneNormal);
 			} else
-				enableCameraClippingPlane = false;
+				camera.stereo.perspCamera.projCamera.enableClippingPlane = false;
 			break;
 		}
 		case Camera::ENVIRONMENT: {
@@ -147,8 +146,6 @@ void CompiledScene::CompileCamera() {
 
 			memcpy(camera.base.rasterToCamera.m.m, envCamera->GetRasterToCamera().m.m, 4 * 4 * sizeof(float));
 			memcpy(camera.base.cameraToWorld.m.m, envCamera->GetCameraToWorld().m.m, 4 * 4 * sizeof(float));
-
-			enableCameraClippingPlane = false;
 			break;			
 		}		
 		default:

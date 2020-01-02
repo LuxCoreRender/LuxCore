@@ -68,7 +68,6 @@ public:
 	// Compiled Camera
 	slg::ocl::CameraType cameraType;
 	slg::ocl::Camera camera;
-	bool enableCameraClippingPlane, enableCameraOculusRiftBarrel;
 
 	// Compiled Scene Meshes
 	std::vector<luxrays::Point> verts;
