@@ -1268,6 +1268,7 @@ void CompiledScene::CompileTextures() {
 				tex->trilinearTex.tex2Index = scene->texDefs.GetTextureIndex(t2);
 				const Texture *t3 = trit->GetTexture3();
 				tex->trilinearTex.tex3Index = scene->texDefs.GetTextureIndex(t3);
+				tex->trilinearTex.uvIndex = trit->GetUVIndex();
 				break;
 			}
 			default:

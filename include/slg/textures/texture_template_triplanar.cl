@@ -38,45 +38,33 @@ OPENCL_FORCE_INLINE float3 Texture_Index<<CS_TRIPLANAR_TEX_INDEX>>_EvaluateSpect
     weights[1] = weights[1] / sum;
     weights[2] = weights[2] / sum;
 
-	switch (texture->trilinearTex.mapping.type) {
-		case GLOBALMAPPING3D:
-		case LOCALMAPPING3D: {
-			return <<CS_TEXTURE_X_INDEX>> * weights[0] +
-					<<CS_TEXTURE_Y_INDEX>> * weights[1] +
-					<<CS_TEXTURE_Z_INDEX>> * weights[2];
-		}
-		case UVMAPPING3D: {
-			const float3 p = TextureMapping3D_Map(&texture->trilinearTex.mapping, hitPoint);
-			const uint dataIndex = texture->trilinearTex.mapping.uvMapping3D.dataIndex;
+	const float3 p = TextureMapping3D_Map(&texture->trilinearTex.mapping, hitPoint);
+	const uint uvIndex = texture->trilinearTex.uvIndex;
 
-			// To workaround the "const" part
-			__global HitPoint *hitPointTmp = (__global HitPoint *)hitPoint;
+	// To workaround the "const" part
+	__global HitPoint *hitPointTmp = (__global HitPoint *)hitPoint;
 
-			// Save original UV values
-			const float origU = hitPointTmp->uv[dataIndex].u;
-			const float origV = hitPointTmp->uv[dataIndex].v;
+	// Save original UV values
+	const float origU = hitPointTmp->uv[uvIndex].u;
+	const float origV = hitPointTmp->uv[uvIndex].v;
 
-			hitPointTmp->uv[dataIndex].u = p.y;
-			hitPointTmp->uv[dataIndex].v = p.z;
-			float3 result = <<CS_TEXTURE_X_INDEX>> * weights[0];
+	hitPointTmp->uv[uvIndex].u = p.y;
+	hitPointTmp->uv[uvIndex].v = p.z;
+	float3 result = <<CS_TEXTURE_X_INDEX>> * weights[0];
 
-			hitPointTmp->uv[dataIndex].u = p.x;
-			hitPointTmp->uv[dataIndex].v = p.z;
-			result += <<CS_TEXTURE_Y_INDEX>> * weights[1];
+	hitPointTmp->uv[uvIndex].u = p.x;
+	hitPointTmp->uv[uvIndex].v = p.z;
+	result += <<CS_TEXTURE_Y_INDEX>> * weights[1];
 
-			hitPointTmp->uv[dataIndex].u = p.x;
-			hitPointTmp->uv[dataIndex].v = p.y;
-			result += <<CS_TEXTURE_Z_INDEX>> * weights[2];
+	hitPointTmp->uv[uvIndex].u = p.x;
+	hitPointTmp->uv[uvIndex].v = p.y;
+	result += <<CS_TEXTURE_Z_INDEX>> * weights[2];
 
-			// Restore original UV values
-			hitPointTmp->uv[dataIndex].u = origU;
-			hitPointTmp->uv[dataIndex].v = origV;
+	// Restore original UV values
+	hitPointTmp->uv[uvIndex].u = origU;
+	hitPointTmp->uv[uvIndex].v = origV;
 
-			return result;
-		}
-		default:
-			return BLACK;
-	}
+	return result;
 }
 
 OPENCL_FORCE_INLINE float Texture_Index<<CS_TRIPLANAR_TEX_INDEX>>_EvaluateFloat(__global const Texture *texture,

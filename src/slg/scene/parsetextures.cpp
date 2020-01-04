@@ -581,7 +581,8 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const Texture *t1 = GetTexture(props.Get(Property(propName + ".texture1")(1.f)));
 		const Texture *t2 = GetTexture(props.Get(Property(propName + ".texture2")(1.f)));
 		const Texture *t3 = GetTexture(props.Get(Property(propName + ".texture3")(1.f)));
-		tex = new TriplanarTexture(CreateTextureMapping3D(propName + ".mapping", props), t1, t2, t3);
+		const u_int dataIndex = Clamp(props.Get(Property(propName + ".uvindex")(0u)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
+		tex = new TriplanarTexture(CreateTextureMapping3D(propName + ".mapping", props), t1, t2, t3, dataIndex);
 	} else
 		throw runtime_error("Unknown texture type: " + texType);
 

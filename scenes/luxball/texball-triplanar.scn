@@ -1,36 +1,30 @@
 scene.camera.lookat = 0.5 -1.4 1.7 0.0 0.0 0.4
 #scene.camera.screenwindow = 0.5 1.0 0.0 1.0
 ################################################################################
-scene.textures.tex1.type = checkerboard3d
-scene.textures.tex1.gain = 0.6
+scene.textures.tex1.type = checkerboard2d
 scene.textures.tex1.texture1 = 0.7 0.0 0.0
 scene.textures.tex1.texture2 = 0.7 0.7 0.0
-scene.textures.tex1.mapping.type = globalmapping3d
-scene.textures.tex1.mapping.transformation = 30 0 0 0  0 30 0 0  0 0 30 0  0 0 0 1
-#scene.textures.tex1.mapping.type = uvmapping3d
+scene.textures.tex1.mapping.type = uvmapping2d
+scene.textures.tex1.mapping.uvscale = 20 -20
 ##
-scene.textures.tex2.type = checkerboard3d
-scene.textures.tex2.gain = 0.6
-scene.textures.tex2.texture1 = 0.7 0.0 0.7
-scene.textures.tex2.texture2 = 0.0 0.7 0.7
-scene.textures.tex2.mapping.type = globalmapping3d
-scene.textures.tex2.mapping.transformation = 30 0 0 0  0 30 0 0  0 0 30 0  0 0 0 1
-#scene.textures.tex1.mapping.type = uvmapping3d
+scene.textures.tex2.type = checkerboard2d
+scene.textures.tex2.texture1 = 0.0 0.7 0.7
+scene.textures.tex2.texture2 = 0.7 0.0 0.7
+scene.textures.tex2.mapping.type = uvmapping2d
+scene.textures.tex2.mapping.uvscale = 20 -20
 ##
-scene.textures.tex3.type = checkerboard3d
-scene.textures.tex3.gain = 0.6
-scene.textures.tex3.texture1 = 0.7 0.7 0.0
-scene.textures.tex3.texture2 = 0.7 0.0 0.7
-scene.textures.tex3.mapping.type = globalmapping3d
-scene.textures.tex3.mapping.transformation = 30 0 0 0  0 30 0 0  0 0 30 0  0 0 0 1
-#scene.textures.tex1.mapping.type = uvmapping3d
+scene.textures.tex3.type = checkerboard2d
+scene.textures.tex3.texture1 = 0.7 0.0 0.7
+scene.textures.tex3.texture2 = 0.0 0.7 0.0
+scene.textures.tex3.mapping.type = uvmapping2d
+scene.textures.tex3.mapping.uvscale = 20 -20
 ##
 scene.textures.tex.type = triplanar
 scene.textures.tex.texture1 = tex1
 scene.textures.tex.texture2 = tex2
 scene.textures.tex.texture3 = tex3
-#scene.textures.tex.mapping.type = uvmapping3d
-#scene.textures.tex.mapping.index = 0
+scene.textures.tex.uvindex = 0
+scene.textures.tex.mapping.type = localmapping3d
 ################################################################################
 scene.materials.shell.type = matte
 scene.materials.shell.kd = tex

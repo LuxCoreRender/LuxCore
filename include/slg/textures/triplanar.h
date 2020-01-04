@@ -30,32 +30,37 @@ namespace slg {
 class TriplanarTexture : public Texture {
 public:
 	TriplanarTexture(const TextureMapping3D *mp, const Texture *t1, const Texture *t2, 
-    const Texture *t3) :
-    mapping(mp), texX(t1), texY(t2), texZ(t3) {}
+    const Texture *t3, const u_int index) :
+    mapping(mp), texX(t1), texY(t2), texZ(t3), uvIndex(index) {}
 
 	virtual ~TriplanarTexture() {}
 
-	virtual TextureType GetType() const { return TRIPLANAR_TEX; }
+	virtual TextureType GetType() const {
+		return TRIPLANAR_TEX;
+	}
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
-	virtual float Y() const { 
-        return (texX->Y() + texY->Filter() + texZ->Filter()) * 1.f/3.f;
-        }
-	virtual float Filter() const { 
-        return (texX->Filter() + texY->Filter() + texZ->Filter()) * 1.f/3.f;
-        }
+
+	virtual float Y() const {
+		return (texX->Y() + texY->Y() + texZ->Y()) * (1.f / 3.f);
+	}
+
+	virtual float Filter() const {
+		return (texX->Filter() + texY->Filter() + texZ->Filter()) * (1.f / 3.f);
+	}
 
 	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 		Texture::AddReferencedTextures(referencedTexs);
 
 		texX->AddReferencedTextures(referencedTexs);
 		texY->AddReferencedTextures(referencedTexs);
-        texZ->AddReferencedTextures(referencedTexs);
+		texZ->AddReferencedTextures(referencedTexs);
 	}
+
 	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
 		texX->AddReferencedImageMaps(referencedImgMaps);
 		texY->AddReferencedImageMaps(referencedImgMaps);
-        texZ->AddReferencedImageMaps(referencedImgMaps);
+		texZ->AddReferencedImageMaps(referencedImgMaps);
 	}
 
 	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
@@ -63,7 +68,7 @@ public:
 			texX = newTex;
 		if (texY == oldTex)
 			texY = newTex;
-        if (texZ == oldTex)
+		if (texZ == oldTex)
 			texZ = newTex;
 	}
 
@@ -71,6 +76,7 @@ public:
 	const Texture *GetTexture1() const { return texX; }
 	const Texture *GetTexture2() const { return texY; }
     const Texture *GetTexture3() const { return texZ; }
+	const u_int GetUVIndex() const { return uvIndex; }
 
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
@@ -80,8 +86,9 @@ private:
 	const Texture *texX;
 	const Texture *texY;
     const Texture *texZ;
-};
 
+	const u_int uvIndex;
+};
 
 }
 

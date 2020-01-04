@@ -411,6 +411,7 @@ typedef struct {
 typedef struct {
 	TextureMapping3D mapping;
 	unsigned int tex1Index, tex2Index, tex3Index;
+	unsigned int uvIndex;
 } TrilinearTexParam;
 
 typedef struct {
