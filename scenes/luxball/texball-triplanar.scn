@@ -48,8 +48,7 @@ scene.objects.room.material = whitematte
 #
 scene.objects.luxshell.ply = scenes/luxball/luxball-shell.ply
 scene.objects.luxshell.material = shell
-#scene.objects.luxshell.bake.combined.file = luxshell-bake.exr
-#scene.objects.luxshell.bake.combined.gamma = 1.0
+scene.objects.luxshell.appliedtransformation = 0.941364586 -0.329231501 -0.0737521648 0 0.201132208 0.723118901 -0.660791099 0 0.270884842 0.607211411 0.746937573 0 0 0 0 1
 #
 scene.objects.luxinner.ply = scenes/luxball/luxball-inner.ply
 scene.objects.luxinner.material = whitematte

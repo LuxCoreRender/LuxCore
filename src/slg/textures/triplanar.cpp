@@ -32,10 +32,13 @@ float TriplanarTexture::GetFloatValue(const HitPoint &hitPoint) const {
 }
 
 Spectrum TriplanarTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
+	Normal localShadeN;
+	const Point localPoint = mapping->Map(hitPoint, &localShadeN);
+	
     float weights[3] = {
-		Sqr(Sqr(fabsf(hitPoint.shadeN.x))),
-		Sqr(Sqr(fabsf(hitPoint.shadeN.y))),
-		Sqr(Sqr(fabsf(hitPoint.shadeN.z)))
+		Sqr(Sqr(fabsf(localShadeN.x))),
+		Sqr(Sqr(fabsf(localShadeN.y))),
+		Sqr(Sqr(fabsf(localShadeN.z)))
 	};
     
     const float sum = weights[0] + weights[1] + weights[2];
@@ -43,19 +46,17 @@ Spectrum TriplanarTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
     weights[1] = weights[1] / sum;
     weights[2] = weights[2] / sum;
 
-	const Point p = mapping->Map(hitPoint);
-
 	HitPoint hitPointTmp = hitPoint;
-	hitPointTmp.uv[uvIndex].u = p.y;
-	hitPointTmp.uv[uvIndex].v = p.z;
+	hitPointTmp.uv[uvIndex].u = localPoint.y;
+	hitPointTmp.uv[uvIndex].v = localPoint.z;
 	Spectrum result = texX->GetSpectrumValue(hitPointTmp) * weights[0];
 
-	hitPointTmp.uv[uvIndex].u = p.x;
-	hitPointTmp.uv[uvIndex].v = p.z;
+	hitPointTmp.uv[uvIndex].u = localPoint.x;
+	hitPointTmp.uv[uvIndex].v = localPoint.z;
 	result += texY->GetSpectrumValue(hitPointTmp) * weights[1];
 
-	hitPointTmp.uv[uvIndex].u = p.x;
-	hitPointTmp.uv[uvIndex].v = p.y;
+	hitPointTmp.uv[uvIndex].u = localPoint.x;
+	hitPointTmp.uv[uvIndex].v = localPoint.y;
 	result += texZ->GetSpectrumValue(hitPointTmp) * weights[2];
 
 	return result;

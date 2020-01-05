@@ -27,10 +27,13 @@
 OPENCL_FORCE_INLINE float3 Texture_Index<<CS_TRIPLANAR_TEX_INDEX>>_EvaluateSpectrum(__global const Texture *texture,
 		__global const HitPoint *hitPoint
 		TEXTURES_PARAM_DECL) {
+	float3 localShadeN;
+	const float3 localPoint = TextureMapping3D_Map(&texture->trilinearTex.mapping, hitPoint, &localShadeN);
+
 	float weights[3] = {
-		Sqr(Sqr(fabs(hitPoint->shadeN.x))),
-		Sqr(Sqr(fabs(hitPoint->shadeN.y))),
-		Sqr(Sqr(fabs(hitPoint->shadeN.z)))
+		Sqr(Sqr(fabs(localShadeN.x))),
+		Sqr(Sqr(fabs(localShadeN.y))),
+		Sqr(Sqr(fabs(localShadeN.z)))
 	};
 
     const float sum = weights[0] + weights[1] + weights[2];
@@ -38,7 +41,6 @@ OPENCL_FORCE_INLINE float3 Texture_Index<<CS_TRIPLANAR_TEX_INDEX>>_EvaluateSpect
     weights[1] = weights[1] / sum;
     weights[2] = weights[2] / sum;
 
-	const float3 p = TextureMapping3D_Map(&texture->trilinearTex.mapping, hitPoint);
 	const uint uvIndex = texture->trilinearTex.uvIndex;
 
 	// To workaround the "const" part
@@ -48,16 +50,16 @@ OPENCL_FORCE_INLINE float3 Texture_Index<<CS_TRIPLANAR_TEX_INDEX>>_EvaluateSpect
 	const float origU = hitPointTmp->uv[uvIndex].u;
 	const float origV = hitPointTmp->uv[uvIndex].v;
 
-	hitPointTmp->uv[uvIndex].u = p.y;
-	hitPointTmp->uv[uvIndex].v = p.z;
+	hitPointTmp->uv[uvIndex].u = localPoint.y;
+	hitPointTmp->uv[uvIndex].v = localPoint.z;
 	float3 result = <<CS_TEXTURE_X_INDEX>> * weights[0];
 
-	hitPointTmp->uv[uvIndex].u = p.x;
-	hitPointTmp->uv[uvIndex].v = p.z;
+	hitPointTmp->uv[uvIndex].u = localPoint.x;
+	hitPointTmp->uv[uvIndex].v = localPoint.z;
 	result += <<CS_TEXTURE_Y_INDEX>> * weights[1];
 
-	hitPointTmp->uv[uvIndex].u = p.x;
-	hitPointTmp->uv[uvIndex].v = p.y;
+	hitPointTmp->uv[uvIndex].u = localPoint.x;
+	hitPointTmp->uv[uvIndex].v = localPoint.y;
 	result += <<CS_TEXTURE_Z_INDEX>> * weights[2];
 
 	// Restore original UV values

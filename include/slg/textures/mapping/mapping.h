@@ -77,7 +77,7 @@ public:
 
 	virtual TextureMapping3DType GetType() const = 0;
 
-	virtual luxrays::Point Map(const HitPoint &hitPoint) const = 0;
+	virtual luxrays::Point Map(const HitPoint &hitPoint, luxrays::Normal *shadeN = nullptr) const = 0;
 
 	virtual luxrays::Properties ToProperties(const std::string &name) const = 0;
 
@@ -119,7 +119,7 @@ public:
 
 	virtual TextureMapping3DType GetType() const { return UVMAPPING3D; }
 
-	virtual luxrays::Point Map(const HitPoint &hitPoint) const;
+	virtual luxrays::Point Map(const HitPoint &hitPoint, luxrays::Normal *shadeN = nullptr) const;
 
 	virtual luxrays::Properties ToProperties(const std::string &name) const;
 
@@ -138,7 +138,7 @@ public:
 
 	virtual TextureMapping3DType GetType() const { return GLOBALMAPPING3D; }
 
-	virtual luxrays::Point Map(const HitPoint &hitPoint) const;
+	virtual luxrays::Point Map(const HitPoint &hitPoint, luxrays::Normal *shadeN = nullptr) const;
 
 	virtual luxrays::Properties ToProperties(const std::string &name) const;
 };
@@ -154,7 +154,7 @@ public:
 
 	virtual TextureMapping3DType GetType() const { return LOCALMAPPING3D; }
 
-	virtual luxrays::Point Map(const HitPoint &hitPoint) const;
+	virtual luxrays::Point Map(const HitPoint &hitPoint, luxrays::Normal *shadeN = nullptr) const;
 
 	virtual luxrays::Properties ToProperties(const std::string &name) const;
 };

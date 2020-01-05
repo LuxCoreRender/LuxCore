@@ -74,7 +74,11 @@ OPENCL_FORCE_NOT_INLINE float2 TextureMapping2D_MapDuv(__global const TextureMap
 // UVMapping3D
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_INLINE float3 UVMapping3D_Map(__global const TextureMapping3D *mapping, __global const HitPoint *hitPoint) {
+OPENCL_FORCE_INLINE float3 UVMapping3D_Map(__global const TextureMapping3D *mapping,
+		__global const HitPoint *hitPoint, float3 *shadeN) {
+	if (shadeN)
+		*shadeN = normalize(Transform_ApplyNormal(&mapping->worldToLocal, VLOAD3F(&hitPoint->shadeN.x)));
+
 	const float2 uv = VLOAD2F(&hitPoint->uv[mapping->uvMapping3D.dataIndex].u);
 	return Transform_ApplyPoint(&mapping->worldToLocal, (float3)(uv.xy, 0.f));
 }
@@ -83,7 +87,11 @@ OPENCL_FORCE_INLINE float3 UVMapping3D_Map(__global const TextureMapping3D *mapp
 // GlobalMapping3D
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_INLINE float3 GlobalMapping3D_Map(__global const TextureMapping3D *mapping, __global const HitPoint *hitPoint) {
+OPENCL_FORCE_INLINE float3 GlobalMapping3D_Map(__global const TextureMapping3D *mapping,
+		__global const HitPoint *hitPoint, float3 *shadeN) {
+	if (shadeN)
+		*shadeN = normalize(Transform_ApplyNormal(&mapping->worldToLocal, VLOAD3F(&hitPoint->shadeN.x)));
+
 	const float3 p = VLOAD3F(&hitPoint->p.x);
 	return Transform_ApplyPoint(&mapping->worldToLocal, p);
 }
@@ -92,23 +100,28 @@ OPENCL_FORCE_INLINE float3 GlobalMapping3D_Map(__global const TextureMapping3D *
 // LocalMapping3D
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_INLINE float3 LocalMapping3D_Map(__global const TextureMapping3D *mapping, __global const HitPoint *hitPoint) {
+OPENCL_FORCE_INLINE float3 LocalMapping3D_Map(__global const TextureMapping3D *mapping,
+		__global const HitPoint *hitPoint, float3 *shadeN) {
 	const Matrix4x4 m = Matrix4x4_Mul(&mapping->worldToLocal.m, &hitPoint->localToWorld.mInv);
-	const float3 p = VLOAD3F(&hitPoint->p.x);
 
+	if (shadeN)
+		*shadeN = normalize(Matrix4x4_ApplyNormal_Private(&m, VLOAD3F(&hitPoint->shadeN.x)));
+
+	const float3 p = VLOAD3F(&hitPoint->p.x);
 	return Matrix4x4_ApplyPoint_Private(&m, p);
 }
 
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_NOT_INLINE float3 TextureMapping3D_Map(__global const TextureMapping3D *mapping, __global const HitPoint *hitPoint) {
+OPENCL_FORCE_NOT_INLINE float3 TextureMapping3D_Map(__global const TextureMapping3D *mapping,
+		__global const HitPoint *hitPoint, float3 *shadeN) {
 	switch (mapping->type) {
 		case UVMAPPING3D:
-			return UVMapping3D_Map(mapping, hitPoint);
+			return UVMapping3D_Map(mapping, hitPoint, shadeN);
 		case GLOBALMAPPING3D:
-			return GlobalMapping3D_Map(mapping, hitPoint);
+			return GlobalMapping3D_Map(mapping, hitPoint, shadeN);
 		case LOCALMAPPING3D:
-			return LocalMapping3D_Map(mapping, hitPoint);
+			return LocalMapping3D_Map(mapping, hitPoint, shadeN);
 		default:
 			return 0.f;
 	}

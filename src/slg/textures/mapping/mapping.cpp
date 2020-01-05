@@ -86,7 +86,10 @@ Properties UVMapping2D::ToProperties(const std::string &name) const {
 // UVMapping3D
 //------------------------------------------------------------------------------
 
-Point UVMapping3D::Map(const HitPoint &hitPoint) const {
+Point UVMapping3D::Map(const HitPoint &hitPoint, Normal *shadeN) const {
+	if (shadeN)
+		*shadeN = Normalize(worldToLocal * hitPoint.shadeN);
+
 	return worldToLocal * Point(hitPoint.uv[dataIndex].u, hitPoint.uv[dataIndex].v, 0.f);
 }
 
@@ -103,7 +106,10 @@ Properties UVMapping3D::ToProperties(const std::string &name) const {
 // GlobalMapping3D
 //------------------------------------------------------------------------------
 
-Point GlobalMapping3D::Map(const HitPoint &hitPoint) const {
+Point GlobalMapping3D::Map(const HitPoint &hitPoint, Normal *shadeN) const {
+	if (shadeN)
+		*shadeN = Normalize(worldToLocal * hitPoint.shadeN);
+
 	return worldToLocal * hitPoint.p;
 }
 
@@ -119,8 +125,11 @@ Properties GlobalMapping3D::ToProperties(const std::string &name) const {
 // LocalMapping3D
 //------------------------------------------------------------------------------
 
-Point LocalMapping3D::Map(const HitPoint &hitPoint) const {
+Point LocalMapping3D::Map(const HitPoint &hitPoint, Normal *shadeN) const {
 	const Transform w2t = worldToLocal / hitPoint.localToWorld;
+
+	if (shadeN)
+		*shadeN = Normalize(w2t * hitPoint.shadeN);
 
 	return w2t * hitPoint.p;
 }

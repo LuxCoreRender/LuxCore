@@ -89,9 +89,9 @@ OPENCL_FORCE_INLINE float3 Matrix4x4_ApplyVector_Private(const Matrix4x4 *m, con
 }
 
 OPENCL_FORCE_INLINE float3 Matrix4x4_ApplyNormal(__global const Matrix4x4* restrict m, const float3 normal) {
-	const float3 row0 = (float3)(m->m[0][0], m->m[1][0], m->m[2][0]);
-	const float3 row1 = (float3)(m->m[0][1], m->m[1][1], m->m[2][1]);
-	const float3 row2 = (float3)(m->m[0][2], m->m[1][2], m->m[2][2]);
+	const float3 row0 = VLOAD3F(&m->m[0][0]);
+	const float3 row1 = VLOAD3F(&m->m[1][0]);
+	const float3 row2 = VLOAD3F(&m->m[2][0]);
 	return (float3)(
 			dot(row0, normal),
 			dot(row1, normal),
@@ -100,9 +100,9 @@ OPENCL_FORCE_INLINE float3 Matrix4x4_ApplyNormal(__global const Matrix4x4* restr
 }
 
 OPENCL_FORCE_INLINE float3 Matrix4x4_ApplyNormal_Private(const Matrix4x4 *m, const float3 normal) {
-	const float3 row0 = (float3)(m->m[0][0], m->m[1][0], m->m[2][0]);
-	const float3 row1 = (float3)(m->m[0][1], m->m[1][1], m->m[2][1]);
-	const float3 row2 = (float3)(m->m[0][2], m->m[1][2], m->m[2][2]);
+	const float3 row0 = VLOAD3F_Private(&m->m[0][0]);
+	const float3 row1 = VLOAD3F_Private(&m->m[1][0]);
+	const float3 row2 = VLOAD3F_Private(&m->m[2][0]);
 	return (float3)(
 			dot(row0, normal),
 			dot(row1, normal),
