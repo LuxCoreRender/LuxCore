@@ -35,7 +35,10 @@ typedef struct {
 // Filter data types
 //------------------------------------------------------------------------------
 
-typedef enum {
+// I need only the filter width/height so exporting all the following
+// information would be redundant.
+
+/*typedef enum {
 	FILTER_NONE, FILTER_BOX, FILTER_GAUSSIAN, FILTER_MITCHELL,
 	FILTER_MITCHELL_SS, FILTER_BLACKMANHARRIS
 } FilterType;
@@ -64,4 +67,8 @@ typedef struct {
 			float widthX, widthY;
 		} blackmanharris;
 	};
+} Filter;*/
+
+typedef struct {
+	float widthX, widthY;
 } Filter;

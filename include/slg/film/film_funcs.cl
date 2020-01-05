@@ -337,28 +337,6 @@ OPENCL_FORCE_NOT_INLINE void Film_AddSample(const uint x, const uint y,
 			FILM_PARAM);
 }
 
-#if (PARAM_IMAGE_FILTER_TYPE == 0)
-
-#elif (PARAM_IMAGE_FILTER_TYPE == 1) || (PARAM_IMAGE_FILTER_TYPE == 2) || (PARAM_IMAGE_FILTER_TYPE == 3) || (PARAM_IMAGE_FILTER_TYPE == 4) || (PARAM_IMAGE_FILTER_TYPE == 5)
-
-OPENCL_FORCE_INLINE void Film_AddSampleFilteredResultColor(const int x, const int y,
-		const float distX, const float distY,
-		__global SampleResult *sampleResult, const float weight
-		FILM_PARAM_DECL) {
-	if ((x >= 0) && (x < (int)filmWidth) && (y >= 0) && (y < (int)filmHeight)) {
-		const float filterWeight = ImageFilter_Evaluate(distX, distY);
-
-		Film_AddSampleResultColor(x, y, sampleResult, weight * filterWeight
-			FILM_PARAM);
-	}
-}
-
-#else
-
-Error: unknown image filter !!!
-
-#endif
-
 //------------------------------------------------------------------------------
 // Film kernel parameters
 //------------------------------------------------------------------------------

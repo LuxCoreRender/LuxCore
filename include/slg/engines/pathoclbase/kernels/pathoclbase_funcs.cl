@@ -107,24 +107,6 @@
 //  PARAM_CAMERA_TYPE (0 = Perspective, 1 = Orthographic, 2 = Stereo)
 
 // (optional)
-//  PARAM_IMAGE_FILTER_TYPE (0 = No filter, 1 = Box, 2 = Gaussian, 3 = Mitchell, 4 = Blackman-Harris)
-//  PARAM_IMAGE_FILTER_WIDTH_X
-//  PARAM_IMAGE_FILTER_WIDTH_Y
-//  PARAM_IMAGE_FILTER_PIXEL_WIDTH_X
-//  PARAM_IMAGE_FILTER_PIXEL_WIDTH_Y
-// (Box filter)
-// (Gaussian filter)
-//  PARAM_IMAGE_FILTER_GAUSSIAN_ALPHA
-// (Mitchell filter)
-//  PARAM_IMAGE_FILTER_MITCHELL_B
-//  PARAM_IMAGE_FILTER_MITCHELL_C
-// (MitchellSS filter)
-//  PARAM_IMAGE_FILTER_MITCHELL_B
-//  PARAM_IMAGE_FILTER_MITCHELL_C
-//  PARAM_IMAGE_FILTER_MITCHELL_A0
-//  PARAM_IMAGE_FILTER_MITCHELL_A1
-
-// (optional)
 //  PARAM_SAMPLER_TYPE (0 = Inlined Random, 1 = Metropolis, 2 = Sobol, 3 = TilePathSampler)
 // (Metropolis)
 //  PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE
@@ -176,7 +158,8 @@ OPENCL_FORCE_NOT_INLINE void InitSampleResult(
 
 	// Sample according the pixel filter distribution
 	float distX, distY;
-	FilterDistribution_SampleContinuous(pixelFilterDistribution, uSubPixelX, uSubPixelY, &distX, &distY);
+	FilterDistribution_SampleContinuous(&taskConfig->pixelFilter, pixelFilterDistribution,
+			uSubPixelX, uSubPixelY, &distX, &distY);
 
 	sample->result.filmX = pixelX + .5f + distX;
 	sample->result.filmY = pixelY + .5f + distY;

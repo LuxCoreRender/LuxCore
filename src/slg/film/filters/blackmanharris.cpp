@@ -48,9 +48,12 @@ slg::ocl::Filter *BlackmanHarrisFilter::FromPropertiesOCL(const Properties &cfg)
 
 	slg::ocl::Filter *oclFilter = new slg::ocl::Filter();
 
-	oclFilter->type = slg::ocl::FILTER_BLACKMANHARRIS;
-	oclFilter->blackmanharris.widthX = filterXWidth;
-	oclFilter->blackmanharris.widthY = filterYWidth;
+//	oclFilter->type = slg::ocl::FILTER_BLACKMANHARRIS;
+//	oclFilter->blackmanharris.widthX = filterXWidth;
+//	oclFilter->blackmanharris.widthY = filterYWidth;
+
+	oclFilter->widthX = filterXWidth;
+	oclFilter->widthY = filterYWidth;
 
 	return oclFilter;
 }

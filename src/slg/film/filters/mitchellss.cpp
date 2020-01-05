@@ -57,18 +57,21 @@ slg::ocl::Filter *MitchellSSFilter::FromPropertiesOCL(const Properties &cfg) {
 	const float filterXWidth = cfg.Get(Property("film.filter.xwidth")(defaultFilterWidth)).Get<float>();
 	const float filterYWidth = cfg.Get(Property("film.filter.ywidth")(defaultFilterWidth)).Get<float>();
 
-	const float b = cfg.Get(GetDefaultProps().Get("film.filter.mitchellss.b")).Get<float>();
-	const float c = cfg.Get(GetDefaultProps().Get("film.filter.mitchellss.c")).Get<float>();
+//	const float b = cfg.Get(GetDefaultProps().Get("film.filter.mitchellss.b")).Get<float>();
+//	const float c = cfg.Get(GetDefaultProps().Get("film.filter.mitchellss.c")).Get<float>();
 
 	slg::ocl::Filter *oclFilter = new slg::ocl::Filter();
 
-	oclFilter->type = slg::ocl::FILTER_MITCHELL_SS;
-	oclFilter->mitchellss.widthX = filterXWidth;
-	oclFilter->mitchellss.widthY = filterYWidth;
-	oclFilter->mitchellss.B = b;
-	oclFilter->mitchellss.C = c;
-	oclFilter->mitchellss.a0 = CalcA0(b, c);
-	oclFilter->mitchellss.a1 = CalcA1(oclFilter->mitchellss.a0);
+//	oclFilter->type = slg::ocl::FILTER_MITCHELL_SS;
+//	oclFilter->mitchellss.widthX = filterXWidth;
+//	oclFilter->mitchellss.widthY = filterYWidth;
+//	oclFilter->mitchellss.B = b;
+//	oclFilter->mitchellss.C = c;
+//	oclFilter->mitchellss.a0 = CalcA0(b, c);
+//	oclFilter->mitchellss.a1 = CalcA1(oclFilter->mitchellss.a0);
+
+	oclFilter->widthX = filterXWidth;
+	oclFilter->widthY = filterYWidth;
 
 	return oclFilter;
 }

@@ -487,61 +487,6 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			ssParams << " -D PARAM_HAS_IMAGEMAPS_WRAP_CLAMP";
 	}
 
-	const slg::ocl::Filter *filter = renderEngine->oclPixelFilter;
-	switch (filter->type) {
-		case slg::ocl::FILTER_NONE:
-			ssParams << " -D PARAM_IMAGE_FILTER_TYPE=0"
-					" -D PARAM_IMAGE_FILTER_WIDTH_X=.5f"
-					" -D PARAM_IMAGE_FILTER_WIDTH_Y=.5f" <<
-					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_X=0" <<
-					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_Y=0";
-			break;
-		case slg::ocl::FILTER_BOX:
-			ssParams << " -D PARAM_IMAGE_FILTER_TYPE=1" <<
-					" -D PARAM_IMAGE_FILTER_WIDTH_X=" << filter->box.widthX << "f" <<
-					" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filter->box.widthY << "f" <<
-					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_X=" << Floor2Int(filter->box.widthX * .5f + .5f) <<
-					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_Y=" << Floor2Int(filter->box.widthY * .5f + .5f);
-			break;
-		case slg::ocl::FILTER_GAUSSIAN:
-			ssParams << " -D PARAM_IMAGE_FILTER_TYPE=2" <<
-					" -D PARAM_IMAGE_FILTER_WIDTH_X=" << filter->gaussian.widthX << "f" <<
-					" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filter->gaussian.widthY << "f" <<
-					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_X=" << Floor2Int(filter->gaussian.widthX * .5f + .5f) <<
-					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_Y=" << Floor2Int(filter->gaussian.widthY * .5f + .5f) <<
-					" -D PARAM_IMAGE_FILTER_GAUSSIAN_ALPHA=" << filter->gaussian.alpha << "f";
-			break;
-		case slg::ocl::FILTER_MITCHELL:
-			ssParams << " -D PARAM_IMAGE_FILTER_TYPE=3" <<
-					" -D PARAM_IMAGE_FILTER_WIDTH_X=" << filter->mitchell.widthX << "f" <<
-					" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filter->mitchell.widthY << "f" <<
-					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_X=" << Floor2Int(filter->mitchell.widthX * .5f + .5f) <<
-					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_Y=" << Floor2Int(filter->mitchell.widthY * .5f + .5f) <<
-					" -D PARAM_IMAGE_FILTER_MITCHELL_B=" << filter->mitchell.B << "f" <<
-					" -D PARAM_IMAGE_FILTER_MITCHELL_C=" << filter->mitchell.C << "f";
-			break;
-		case slg::ocl::FILTER_MITCHELL_SS:
-			ssParams << " -D PARAM_IMAGE_FILTER_TYPE=4" <<
-					" -D PARAM_IMAGE_FILTER_WIDTH_X=" << filter->mitchellss.widthX << "f" <<
-					" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filter->mitchellss.widthY << "f" <<
-					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_X=" << Floor2Int(filter->mitchellss.widthX * .5f + .5f) <<
-					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_Y=" << Floor2Int(filter->mitchellss.widthY * .5f + .5f) <<
-					" -D PARAM_IMAGE_FILTER_MITCHELL_B=" << filter->mitchellss.B << "f" <<
-					" -D PARAM_IMAGE_FILTER_MITCHELL_C=" << filter->mitchellss.C << "f" <<
-					" -D PARAM_IMAGE_FILTER_MITCHELL_A0=" << filter->mitchellss.a0 << "f" <<
-					" -D PARAM_IMAGE_FILTER_MITCHELL_A1=" << filter->mitchellss.a1 << "f";
-			break;
-		case slg::ocl::FILTER_BLACKMANHARRIS:
-			ssParams << " -D PARAM_IMAGE_FILTER_TYPE=5" <<
-					" -D PARAM_IMAGE_FILTER_WIDTH_X=" << filter->blackmanharris.widthX << "f" <<
-					" -D PARAM_IMAGE_FILTER_WIDTH_Y=" << filter->blackmanharris.widthY << "f" <<
-					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_X=" << Floor2Int(filter->blackmanharris.widthX * .5f + .5f) <<
-					" -D PARAM_IMAGE_FILTER_PIXEL_WIDTH_Y=" << Floor2Int(filter->blackmanharris.widthY * .5f + .5f);
-			break;
-		default:
-			throw runtime_error("Unknown pixel filter type: "  + boost::lexical_cast<string>(filter->type));
-	}
-
 	if (renderEngine->usePixelAtomics)
 		ssParams << " -D PARAM_USE_PIXEL_ATOMICS";
 

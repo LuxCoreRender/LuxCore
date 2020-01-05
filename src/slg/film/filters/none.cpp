@@ -40,7 +40,10 @@ Filter *NoneFilter::FromProperties(const Properties &cfg) {
 slg::ocl::Filter *NoneFilter::FromPropertiesOCL(const Properties &cfg) {
 	slg::ocl::Filter *oclFilter = new slg::ocl::Filter();
 
-	oclFilter->type = slg::ocl::FILTER_NONE;
+	//oclFilter->type = slg::ocl::FILTER_NONE;
+
+	oclFilter->widthX = .5f;
+	oclFilter->widthY = .5f;
 
 	return oclFilter;
 }

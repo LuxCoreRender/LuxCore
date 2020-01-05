@@ -60,6 +60,7 @@ typedef enum {
 typedef struct {
 	Scene scene;
 	PathTracer pathTracer;
+	Filter pixelFilter;
 } GPUTaskConfiguration;
 
 typedef struct {
