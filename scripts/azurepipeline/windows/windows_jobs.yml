@@ -16,7 +16,7 @@ steps:
     msbuildArchitecture: 'x64'
     platform: 'x64'
     configuration: 'Release'
-    msbuildArguments: ${{ '/nologo /verbosity:normal /p:WarningLevel=0 ' parameters.minimalargs }}
+    msbuildArguments: ${{ format('/nologo /verbosity:normal /p:WarningLevel=0 {0}', parameters.minimalargs) }}
     maximumCpuCount: false # Avoids "Error C1002: compiler out of heap space in pass 2"
     createLogFile: true
   displayName: Building LuxCore - ${{ parameters.ocl_text }}
