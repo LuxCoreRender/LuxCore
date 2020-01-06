@@ -74,7 +74,9 @@ Spectrum DisneyMaterial::Evaluate(
 	const float clearcoat = Clamp(Clearcoat->GetFloatValue(hitPoint), 0.0f, 1.0f);
 	const float clearcoatGloss = Clamp(ClearcoatGloss->GetFloatValue(hitPoint), 0.0f, 1.0f);
 	const float anisotropicGloss = Clamp(Anisotropic->GetFloatValue(hitPoint), 0.0f, 1.0f);
-	const float sheen = Clamp(Sheen->GetFloatValue(hitPoint), 0.0f, 1.0f);
+	// I allow sheen values > 1.0 to accentuate the effect. The result is still
+	// clamped between 0.0 and 1.0 to not break the energy conservation law.
+	const float sheen = Sheen->GetFloatValue(hitPoint);
 	const float sheenTint = Clamp(SheenTint->GetFloatValue(hitPoint), 0.0f, 1.0f);
 
 	return DisneyEvaluate(color, subsurface, roughness, metallic, specular, specularTint,
@@ -214,7 +216,7 @@ Spectrum DisneyMaterial::DisneySheen(const Spectrum &color, const float sheen,
 	const Spectrum Ctint = CalculateTint(color);
 	const Spectrum Csheen = Lerp(sheenTint, Spectrum(1.0f), Ctint);
 
-	return FH * sheen * Csheen;
+	return (FH * sheen * Csheen).Clamp(0.f, 1.f);
 }
 
 Spectrum DisneyMaterial::Sample(
@@ -236,7 +238,9 @@ Spectrum DisneyMaterial::Sample(
 	const float clearcoat = Clamp(Clearcoat->GetFloatValue(hitPoint), 0.0f, 1.0f);
 	const float clearcoatGloss = Clamp(ClearcoatGloss->GetFloatValue(hitPoint), 0.0f, 1.0f);
 	const float anisotropicGloss = Clamp(Anisotropic->GetFloatValue(hitPoint), 0.0f, 1.0f);
-	const float sheen = Clamp(Sheen->GetFloatValue(hitPoint), 0.0f, 1.0f);
+	// I allow sheen values > 1.0 to accentuate the effect. The result is still
+	// clamped between 0.0 and 1.0 to not break the energy conservation law.
+	const float sheen = Sheen->GetFloatValue(hitPoint);
 	const float sheenTint = Clamp(SheenTint->GetFloatValue(hitPoint), 0.0f, 1.0f);
 
 	const Vector wo = Normalize(localFixedDir);

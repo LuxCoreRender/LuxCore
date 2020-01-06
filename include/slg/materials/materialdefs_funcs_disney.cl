@@ -228,7 +228,7 @@ OPENCL_FORCE_INLINE float3 DisneyMaterial_DisneySheen(const float3 color,
 	const float3 Ctint = DisneyMaterial_CalculateTint(color);
 	const float3 Csheen = Lerp3(sheenTint, WHITE, Ctint);
 
-	return FH * sheen * Csheen;
+	return clamp(FH * sheen * Csheen, 0.f, 1.f);
 }
 
 OPENCL_FORCE_INLINE float3 DisneyMaterial_Evaluate(
@@ -256,7 +256,9 @@ OPENCL_FORCE_INLINE float3 DisneyMaterial_Evaluate(
 	const float clearcoat = clamp(clearcoatVal, 0.0f, 1.0f);
 	const float clearcoatGloss = clamp(clearcoatGlossVal, 0.0f, 1.0f);
 	const float anisotropicGloss = clamp(anisotropicGlossVal, 0.0f, 1.0f);
-	const float sheen = clamp(sheenVal, 0.0f, 1.0f);
+	// I allow sheen values > 1.0 to accentuate the effect. The result is still
+	// clamped between 0.0 and 1.0 to not break the energy conservation law.
+	const float sheen = sheenVal;
 	const float sheenTint = clamp(sheenTintVal, 0.0f, 1.0f);
 
 	const float3 H = normalize(wo + wi);
