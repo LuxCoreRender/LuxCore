@@ -9,14 +9,14 @@ parameters:
 steps:
 - script: ${{ parameters.build_script }}
   displayName: Generating build files with CMake - ${{ parameters.ocl_text }}
-- task: MSBuild@1
+- task: VSBuild@1
   inputs:
     solution: '..\WindowsCompile\Build_CMake\LuxCore\LuxRays.sln'
-    msbuildVersion: '15.0'
+    vsVersion: '15.0'
     msbuildArchitecture: 'x64'
     platform: 'x64'
     configuration: 'Release'
-    msbuildArguments: ${{ format('/nologo /verbosity:normal /p:WarningLevel=0 {0}', parameters.minimalargs) }}
+    msbuildArgs: ${{ format('/nologo /verbosity:normal /p:WarningLevel=0 {0}', parameters.minimalargs) }}
     maximumCpuCount: false # Avoids "Error C1002: compiler out of heap space in pass 2"
     createLogFile: true
   displayName: Building LuxCore - ${{ parameters.ocl_text }}
