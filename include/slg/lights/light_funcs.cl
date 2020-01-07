@@ -149,7 +149,7 @@ OPENCL_FORCE_NOT_INLINE float3 ConstantInfiniteLight_Illuminate(__global const L
 // InfiniteLight
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_HAS_INFINITELIGHT) && defined(PARAM_HAS_IMAGEMAPS)
+#if defined(PARAM_HAS_INFINITELIGHT)
 
 OPENCL_FORCE_NOT_INLINE float3 InfiniteLight_GetRadiance(__global const LightSource *infiniteLight,
 		__global const BSDF *bsdf, const float3 dir, float *directPdfA
@@ -473,7 +473,7 @@ OPENCL_FORCE_NOT_INLINE float3 TriangleLight_GetRadiance(__global const LightSou
 		*directPdfA = triLight->triangle.invTriangleArea;
 
 	float3 emissionColor = WHITE;
-#if defined(PARAM_HAS_IMAGEMAPS)
+
 	if (triLight->triangle.imageMapIndex != NULL_INDEX) {
 		// Build the local frame
 		Frame frame;
@@ -489,7 +489,6 @@ OPENCL_FORCE_NOT_INLINE float3 TriangleLight_GetRadiance(__global const LightSou
 				uv.s0, uv.s1
 				IMAGEMAPS_PARAM) / triLight->triangle.avarage;
 	}
-#endif
 
 	return Material_GetEmittedRadiance(materialIndex,
 			hitPoint, triLight->triangle.invMeshArea
@@ -567,7 +566,7 @@ OPENCL_FORCE_NOT_INLINE float3 TriangleLight_Illuminate(__global const LightSour
 	//--------------------------------------------------------------------------
 	
 	float3 emissionColor = WHITE;
-#if defined(PARAM_HAS_IMAGEMAPS)
+
 	if (triLight->triangle.imageMapIndex != NULL_INDEX) {
 		// Build the local frame
 		Frame frame;
@@ -585,7 +584,6 @@ OPENCL_FORCE_NOT_INLINE float3 TriangleLight_Illuminate(__global const LightSour
 
 		*directPdfW = triLight->triangle.invTriangleArea * shadowRayDistanceSquared ;
 	} else
-#endif
 		*directPdfW = triLight->triangle.invTriangleArea * shadowRayDistanceSquared / fabs(cosAtLight);
 
 	// Setup the shadow ray
@@ -630,7 +628,7 @@ OPENCL_FORCE_NOT_INLINE float3 PointLight_Illuminate(__global const LightSource 
 // SphereLight
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_HAS_SPHERELIGHT) || (defined(PARAM_HAS_MAPSPHERELIGHT) && defined(PARAM_HAS_IMAGEMAPS))
+#if defined(PARAM_HAS_SPHERELIGHT) || defined(PARAM_HAS_MAPSPHERELIGHT)
 
 OPENCL_FORCE_INLINE bool SphereLight_SphereIntersect(const float3 absolutePos, const float radiusSquared,
 		const float3 rayOrig, const float3 rayDir, float *hitT) {
@@ -716,7 +714,7 @@ OPENCL_FORCE_NOT_INLINE float3 SphereLight_Illuminate(__global const LightSource
 // MapPointLight
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_HAS_MAPPOINTLIGHT) && defined(PARAM_HAS_IMAGEMAPS)
+#if defined(PARAM_HAS_MAPPOINTLIGHT)
 
 OPENCL_FORCE_NOT_INLINE float3 MapPointLight_Illuminate(__global const LightSource *mapPointLight,
 		__global const BSDF *bsdf, const float time,
@@ -754,7 +752,7 @@ OPENCL_FORCE_NOT_INLINE float3 MapPointLight_Illuminate(__global const LightSour
 // MapSphereLight
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_HAS_MAPSPHERELIGHT) && defined(PARAM_HAS_IMAGEMAPS)
+#if defined(PARAM_HAS_MAPSPHERELIGHT)
 
 OPENCL_FORCE_NOT_INLINE float3 MapSphereLight_Illuminate(__global const LightSource *mapSphereLight,
 		__global const BSDF *bsdf,	const float time, const float u0, const float u1,
@@ -831,7 +829,7 @@ OPENCL_FORCE_NOT_INLINE float3 SpotLight_Illuminate(__global const LightSource *
 // ProjectionLight
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_HAS_PROJECTIONLIGHT) && defined(PARAM_HAS_IMAGEMAPS)
+#if defined(PARAM_HAS_PROJECTIONLIGHT)
 
 OPENCL_FORCE_NOT_INLINE float3 ProjectionLight_Illuminate(__global const LightSource *projectionLight,
 		__global const BSDF *bsdf, const float time,
@@ -869,7 +867,7 @@ OPENCL_FORCE_NOT_INLINE float3 ProjectionLight_Illuminate(__global const LightSo
 	Ray_Init4(shadowRay, shadowRayOrig, shadowRayDir, 0.f, shadowRayDistance, time);
 
 	float3 c = VLOAD3F(projectionLight->notIntersectable.projection.emittedFactor.c);
-#if defined(PARAM_HAS_IMAGEMAPS)
+
 	const uint imageMapIndex = projectionLight->notIntersectable.projection.imageMapIndex;
 	if (imageMapIndex != NULL_INDEX) {
 		const float u = (p0.x - screenX0) / (screenX1 - screenX0);
@@ -883,7 +881,6 @@ OPENCL_FORCE_NOT_INLINE float3 ProjectionLight_Illuminate(__global const LightSo
 				u, v
 				IMAGEMAPS_PARAM);
 	}
-#endif
 
 	return c;
 }
@@ -1032,7 +1029,7 @@ OPENCL_FORCE_NOT_INLINE float3 EnvLight_GetRadiance(__global const LightSource *
 					dir, directPdfA
 					LIGHTS_PARAM);
 #endif
-#if defined(PARAM_HAS_INFINITELIGHT) && defined(PARAM_HAS_IMAGEMAPS)
+#if defined(PARAM_HAS_INFINITELIGHT)
 		case TYPE_IL:
 			return InfiniteLight_GetRadiance(light,
 					bsdf,
@@ -1099,7 +1096,7 @@ OPENCL_FORCE_NOT_INLINE float3 Light_Illuminate(
 					shadowRay, directPdfW
 					LIGHTS_PARAM);
 #endif
-#if defined(PARAM_HAS_INFINITELIGHT) && defined(PARAM_HAS_IMAGEMAPS)
+#if defined(PARAM_HAS_INFINITELIGHT)
 		case TYPE_IL:
 			return InfiniteLight_Illuminate(
 					light,
@@ -1142,7 +1139,7 @@ OPENCL_FORCE_NOT_INLINE float3 Light_Illuminate(
 					bsdf, time,
 					shadowRay, directPdfW);
 #endif
-#if defined(PARAM_HAS_MAPPOINTLIGHT) && defined(PARAM_HAS_IMAGEMAPS)
+#if defined(PARAM_HAS_MAPPOINTLIGHT)
 		case TYPE_MAPPOINT:
 			return MapPointLight_Illuminate(
 					light,
@@ -1157,7 +1154,7 @@ OPENCL_FORCE_NOT_INLINE float3 Light_Illuminate(
 					bsdf, time,
 					shadowRay, directPdfW);
 #endif
-#if defined(PARAM_HAS_PROJECTIONLIGHT) && defined(PARAM_HAS_IMAGEMAPS)
+#if defined(PARAM_HAS_PROJECTIONLIGHT)
 		case TYPE_PROJECTION:
 			return ProjectionLight_Illuminate(
 					light,
@@ -1195,7 +1192,7 @@ OPENCL_FORCE_NOT_INLINE float3 Light_Illuminate(
 					bsdf, time, u0, u1,
 					shadowRay, directPdfW);
 #endif
-#if defined(PARAM_HAS_MAPSPHERELIGHT) && defined(PARAM_HAS_IMAGEMAPS)
+#if defined(PARAM_HAS_MAPSPHERELIGHT)
 		case TYPE_MAPSPHERE:
 			return MapSphereLight_Illuminate(
 					light,
@@ -1213,7 +1210,7 @@ OPENCL_FORCE_INLINE bool Light_IsEnvOrIntersectable(__global const LightSource *
 #if defined(PARAM_HAS_CONSTANTINFINITELIGHT)
 		case TYPE_IL_CONSTANT:
 #endif
-#if defined(PARAM_HAS_INFINITELIGHT) && defined(PARAM_HAS_IMAGEMAPS)
+#if defined(PARAM_HAS_INFINITELIGHT)
 		case TYPE_IL:
 #endif
 #if defined(PARAM_HAS_SKYLIGHT2)
@@ -1225,26 +1222,26 @@ OPENCL_FORCE_INLINE bool Light_IsEnvOrIntersectable(__global const LightSource *
 #if defined(PARAM_HAS_TRIANGLELIGHT)
 		case TYPE_TRIANGLE:
 #endif
-#if defined(PARAM_HAS_CONSTANTINFINITELIGHT) || (defined(PARAM_HAS_INFINITELIGHT) && defined(PARAM_HAS_IMAGEMAPS)) || defined(PARAM_HAS_SKYLIGHT2) || defined(PARAM_HAS_SUNLIGHT) || defined(PARAM_HAS_TRIANGLELIGHT)
+#if defined(PARAM_HAS_CONSTANTINFINITELIGHT) || defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT2) || defined(PARAM_HAS_SUNLIGHT) || defined(PARAM_HAS_TRIANGLELIGHT)
 			return true;
 #endif
 
 #if defined(PARAM_HAS_SPHERELIGHT)
 		case TYPE_SPHERE:
 #endif
-#if defined(PARAM_HAS_MAPSPHERELIGHT) && defined(PARAM_HAS_IMAGEMAPS)
+#if defined(PARAM_HAS_MAPSPHERELIGHT)
 		case TYPE_MAPSPHERE:
 #endif
 #if defined(PARAM_HAS_POINTLIGHT)
 		case TYPE_POINT:
 #endif
-#if defined(PARAM_HAS_MAPPOINTLIGHT) && defined(PARAM_HAS_IMAGEMAPS)
+#if defined(PARAM_HAS_MAPPOINTLIGHT)
 		case TYPE_MAPPOINT:
 #endif
 #if defined(PARAM_HAS_SPOTLIGHT)
 		case TYPE_SPOT:
 #endif
-#if defined(PARAM_HAS_PROJECTIONLIGHT) && defined(PARAM_HAS_IMAGEMAPS)
+#if defined(PARAM_HAS_PROJECTIONLIGHT)
 		case TYPE_PROJECTION:
 #endif
 #if defined(PARAM_HAS_SHARPDISTANTLIGHT)
@@ -1256,7 +1253,7 @@ OPENCL_FORCE_INLINE bool Light_IsEnvOrIntersectable(__global const LightSource *
 #if defined(PARAM_HAS_LASERLIGHT)
 		case TYPE_LASER:
 #endif
-#if defined(PARAM_HAS_POINTLIGHT) || (defined(PARAM_HAS_MAPPOINTLIGHT) && defined(PARAM_HAS_IMAGEMAPS)) || defined(PARAM_HAS_SPOTLIGHT) || (defined(PARAM_HAS_PROJECTIONLIGHT) && defined(PARAM_HAS_IMAGEMAPS)) || defined(PARAM_HAS_SHARPDISTANTLIGHT) || defined(PARAM_HAS_DISTANTLIGHT) || defined(PARAM_HAS_LASERLIGHT) || (defined(PARAM_HAS_MAPSPHERELIGHT) && defined(PARAM_HAS_IMAGEMAPS))
+#if defined(PARAM_HAS_POINTLIGHT) || defined(PARAM_HAS_MAPPOINTLIGHT) || defined(PARAM_HAS_SPOTLIGHT) || defined(PARAM_HAS_PROJECTIONLIGHT) || defined(PARAM_HAS_SHARPDISTANTLIGHT) || defined(PARAM_HAS_DISTANTLIGHT) || defined(PARAM_HAS_LASERLIGHT) || defined(PARAM_HAS_MAPSPHERELIGHT)
 			return false;
 #endif
 

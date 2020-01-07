@@ -22,7 +22,7 @@
 // DensityGrid texture
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_ENABLE_TEX_DENSITYGRID) && defined(PARAM_HAS_IMAGEMAPS)
+#if defined(PARAM_ENABLE_TEX_DENSITYGRID)
 
 OPENCL_FORCE_INLINE float3 DensityGridTexture_D(
 		__global const ImageMap *imageMap,
@@ -45,7 +45,7 @@ OPENCL_FORCE_INLINE float3 DensityGridTexture_ConstEvaluateSpectrum(__global con
 		IMAGEMAPS_PARAM_DECL) {
 	__global const ImageMap *imageMap = &imageMapDescs[imageMapIndex];
 
-	const float3 P = TextureMapping3D_Map(mapping, hitPoint);
+	const float3 P = TextureMapping3D_Map(mapping, hitPoint, NULL);
 
 	float x, y, z;
 	int vx, vy, vz;

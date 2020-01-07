@@ -125,7 +125,7 @@ OPENCL_FORCE_INLINE float3 FresnelColorTexture_Bump(__global HitPoint *hitPoint)
 // ImageMapTexture
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_ENABLE_TEX_IMAGEMAP) && defined(PARAM_HAS_IMAGEMAPS)
+#if defined(PARAM_ENABLE_TEX_IMAGEMAP)
 OPENCL_FORCE_NOT_INLINE float3 ImageMapTexture_Bump(__global const Texture *tex, __global HitPoint *hitPoint,
 		const float sampleDistance
 		IMAGEMAPS_PARAM_DECL) {

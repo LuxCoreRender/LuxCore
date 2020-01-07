@@ -21,7 +21,6 @@
 // List of symbols defined at compile time:
 //  PARAM_RAY_EPSILON_MIN
 //  PARAM_RAY_EPSILON_MAX
-//  PARAM_HAS_IMAGEMAPS
 //  PARAM_USE_PIXEL_ATOMICS
 //  PARAM_ACCEL_BVH or PARAM_ACCEL_MBVH
 
@@ -512,63 +511,16 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 #define KERNEL_ARGS_INFINITELIGHT \
 		, __global const float* restrict envLightDistribution
 
-#if defined(PARAM_IMAGEMAPS_PAGE_0)
-#define KERNEL_ARGS_IMAGEMAPS_PAGE_0 \
-		, __global const ImageMap* restrict imageMapDescs, __global const float* restrict imageMapBuff0
-#else
-#define KERNEL_ARGS_IMAGEMAPS_PAGE_0
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_1)
-#define KERNEL_ARGS_IMAGEMAPS_PAGE_1 \
-		, __global const float* restrict imageMapBuff1
-#else
-#define KERNEL_ARGS_IMAGEMAPS_PAGE_1
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_2)
-#define KERNEL_ARGS_IMAGEMAPS_PAGE_2 \
-		, __global const float* restrict imageMapBuff2
-#else
-#define KERNEL_ARGS_IMAGEMAPS_PAGE_2
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_3)
-#define KERNEL_ARGS_IMAGEMAPS_PAGE_3 \
-		, __global const float* restrict imageMapBuff3
-#else
-#define KERNEL_ARGS_IMAGEMAPS_PAGE_3
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_4)
-#define KERNEL_ARGS_IMAGEMAPS_PAGE_4 \
-		, __global const float* restrict imageMapBuff4
-#else
-#define KERNEL_ARGS_IMAGEMAPS_PAGE_4
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_5)
-#define KERNEL_ARGS_IMAGEMAPS_PAGE_5 \
-		, __global const float* restrict imageMapBuff5
-#else
-#define KERNEL_ARGS_IMAGEMAPS_PAGE_5
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_6)
-#define KERNEL_ARGS_IMAGEMAPS_PAGE_6 \
-		, __global const float* restrict imageMapBuff6
-#else
-#define KERNEL_ARGS_IMAGEMAPS_PAGE_6
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_7)
-#define KERNEL_ARGS_IMAGEMAPS_PAGE_7 \
-		, __global const float* restrict imageMapBuff7
-#else
-#define KERNEL_ARGS_IMAGEMAPS_PAGE_7
-#endif
 #define KERNEL_ARGS_IMAGEMAPS_PAGES \
-		KERNEL_ARGS_IMAGEMAPS_PAGE_0 \
-		KERNEL_ARGS_IMAGEMAPS_PAGE_1 \
-		KERNEL_ARGS_IMAGEMAPS_PAGE_2 \
-		KERNEL_ARGS_IMAGEMAPS_PAGE_3 \
-		KERNEL_ARGS_IMAGEMAPS_PAGE_4 \
-		KERNEL_ARGS_IMAGEMAPS_PAGE_5 \
-		KERNEL_ARGS_IMAGEMAPS_PAGE_6 \
-		KERNEL_ARGS_IMAGEMAPS_PAGE_7
+		, __global const ImageMap* restrict imageMapDescs \
+		, __global const float* restrict imageMapBuff0 \
+		, __global const float* restrict imageMapBuff1 \
+		, __global const float* restrict imageMapBuff2 \
+		, __global const float* restrict imageMapBuff3 \
+		, __global const float* restrict imageMapBuff4 \
+		, __global const float* restrict imageMapBuff5 \
+		, __global const float* restrict imageMapBuff6 \
+		, __global const float* restrict imageMapBuff7
 
 #define KERNEL_ARGS_FAST_PIXEL_FILTER \
 		, __global float *pixelFilterDistribution
@@ -637,61 +589,16 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 // To initialize image maps page pointer table
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_IMAGEMAPS_PAGE_0)
-#define INIT_IMAGEMAPS_PAGE_0 imageMapBuff[0] = imageMapBuff0;
-#else
-#define INIT_IMAGEMAPS_PAGE_0
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_1)
-#define INIT_IMAGEMAPS_PAGE_1 imageMapBuff[1] = imageMapBuff1;
-#else
-#define INIT_IMAGEMAPS_PAGE_1
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_2)
-#define INIT_IMAGEMAPS_PAGE_2 imageMapBuff[2] = imageMapBuff2;
-#else
-#define INIT_IMAGEMAPS_PAGE_2
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_3)
-#define INIT_IMAGEMAPS_PAGE_3 imageMapBuff[3] = imageMapBuff3;
-#else
-#define INIT_IMAGEMAPS_PAGE_3
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_4)
-#define INIT_IMAGEMAPS_PAGE_4 imageMapBuff[4] = imageMapBuff4;
-#else
-#define INIT_IMAGEMAPS_PAGE_4
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_5)
-#define INIT_IMAGEMAPS_PAGE_5 imageMapBuff[5] = imageMapBuff5;
-#else
-#define INIT_IMAGEMAPS_PAGE_5
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_6)
-#define INIT_IMAGEMAPS_PAGE_6 imageMapBuff[6] = imageMapBuff6;
-#else
-#define INIT_IMAGEMAPS_PAGE_6
-#endif
-#if defined(PARAM_IMAGEMAPS_PAGE_7)
-#define INIT_IMAGEMAPS_PAGE_7 imageMapBuff[7] = imageMapBuff7;
-#else
-#define INIT_IMAGEMAPS_PAGE_7
-#endif
-
-#if defined(PARAM_HAS_IMAGEMAPS)
 #define INIT_IMAGEMAPS_PAGES \
-	__global const float* restrict imageMapBuff[PARAM_IMAGEMAPS_COUNT]; \
-	INIT_IMAGEMAPS_PAGE_0 \
-	INIT_IMAGEMAPS_PAGE_1 \
-	INIT_IMAGEMAPS_PAGE_2 \
-	INIT_IMAGEMAPS_PAGE_3 \
-	INIT_IMAGEMAPS_PAGE_4 \
-	INIT_IMAGEMAPS_PAGE_5 \
-	INIT_IMAGEMAPS_PAGE_6 \
-	INIT_IMAGEMAPS_PAGE_7
-#else
-#define INIT_IMAGEMAPS_PAGES
-#endif
+	__global const float* restrict imageMapBuff[8]; \
+	imageMapBuff[0] = imageMapBuff0; \
+	imageMapBuff[1] = imageMapBuff1; \
+	imageMapBuff[2] = imageMapBuff2; \
+	imageMapBuff[3] = imageMapBuff3; \
+	imageMapBuff[4] = imageMapBuff4; \
+	imageMapBuff[5] = imageMapBuff5; \
+	imageMapBuff[6] = imageMapBuff6; \
+	imageMapBuff[7] = imageMapBuff7;
 
 //------------------------------------------------------------------------------
 // Init Kernels

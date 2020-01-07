@@ -31,7 +31,7 @@
 OPENCL_FORCE_INLINE float BlenderBlendTexture_Evaluate(__global const HitPoint *hitPoint,
 		const ProgressionType type, const bool direction,
  		const float contrast, const float bright, __global const TextureMapping3D *mapping) {
-	const float3 P = TextureMapping3D_Map(mapping, hitPoint);
+	const float3 P = TextureMapping3D_Map(mapping, hitPoint, NULL);
  
 	float result = 0.f;
 	float x, y, t;
@@ -100,7 +100,7 @@ OPENCL_FORCE_NOT_INLINE float3 BlenderBlendTexture_ConstEvaluateSpectrum(__globa
 OPENCL_FORCE_INLINE float BlenderCloudsTexture_Evaluate(__global const HitPoint *hitPoint,
 		const BlenderNoiseBasis noisebasis, const float noisesize, const int noisedepth,
 		const float contrast, const float bright, const bool hard, __global const TextureMapping3D *mapping) {
-	const float3 P = TextureMapping3D_Map(mapping, hitPoint);
+	const float3 P = TextureMapping3D_Map(mapping, hitPoint, NULL);
 
 	float clouds = BLI_gTurbulence(noisesize, P.x, P.y, P.z, noisedepth, hard, noisebasis);
 
@@ -135,7 +135,7 @@ OPENCL_FORCE_NOT_INLINE float3 BlenderCloudsTexture_ConstEvaluateSpectrum(__glob
 OPENCL_FORCE_INLINE float BlenderDistortedNoiseTexture_Evaluate(__global const HitPoint *hitPoint,
 		const BlenderNoiseBasis noisedistortion, const BlenderNoiseBasis noisebasis, const float distortion, const float noisesize,
 		const float contrast, const float bright, __global const TextureMapping3D *mapping) {
-	float3 P = TextureMapping3D_Map(mapping, hitPoint);
+	float3 P = TextureMapping3D_Map(mapping, hitPoint, NULL);
 
 	float result = 0.f;
 	float scale = 1.f;
@@ -175,7 +175,7 @@ OPENCL_FORCE_NOT_INLINE float3 BlenderDistortedNoiseTexture_ConstEvaluateSpectru
 OPENCL_FORCE_INLINE float3 BlenderMagicTexture_Evaluate(__global const HitPoint *hitPoint, const int noisedepth, const float turbulence, 
 			const float contrast, const float bright, __global const TextureMapping3D *mapping) {
 	
-	const float3 P = TextureMapping3D_Map(mapping, hitPoint);
+	const float3 P = TextureMapping3D_Map(mapping, hitPoint, NULL);
 	float3 s;
 
     float x, y, z, turb = 1.f;
@@ -284,7 +284,7 @@ OPENCL_FORCE_INLINE float BlenderMarbleTexture_Evaluate(__global const HitPoint 
 		const float turbulence, const int noisedepth, const float contrast, const float bright,
 		const bool hard, __global const TextureMapping3D *mapping) {
 	
-	const float3 P = TextureMapping3D_Map(mapping, hitPoint);
+	const float3 P = TextureMapping3D_Map(mapping, hitPoint, NULL);
 
 	float result = 0.f;
     float n = 5.f * (P.x + P.y + P.z);
@@ -341,7 +341,7 @@ OPENCL_FORCE_INLINE float BlenderMusgraveTexture_Evaluate(__global const HitPoin
 		
 	float scale = 1.f;
 	if(fabs(noisesize) > 0.00001f) scale = (1.f/noisesize);
-	const float3 P = scale*TextureMapping3D_Map(mapping, hitPoint);
+	const float3 P = scale*TextureMapping3D_Map(mapping, hitPoint, NULL);
 
 	float result = 0.f;
 
@@ -449,7 +449,7 @@ OPENCL_FORCE_INLINE float BlenderStucciTexture_Evaluate(__global const HitPoint 
 		const BlenderNoiseBasis noisebasis, const float noisesize, const float turbulence, const float contrast,
 		const float bright, const bool hard, __global const TextureMapping3D *mapping) {
 		
-	const float3 P = TextureMapping3D_Map(mapping, hitPoint);
+	const float3 P = TextureMapping3D_Map(mapping, hitPoint, NULL);
 	
 	float result = 0.f;
 //	neo2068: only nor[2] is used, so normal float variable is sufficient
@@ -505,7 +505,7 @@ OPENCL_FORCE_INLINE float BlenderWoodTexture_Evaluate(__global const HitPoint *h
 		const BlenderNoiseBasis noisebasis, const float noisesize, const float turbulence,
 		const float contrast, const float bright, const bool hard,
 		__global const TextureMapping3D *mapping) {
-	const float3 P = TextureMapping3D_Map(mapping, hitPoint);
+	const float3 P = TextureMapping3D_Map(mapping, hitPoint, NULL);
 
 	float wood = 0.f;
 	switch(type) {
@@ -597,7 +597,7 @@ OPENCL_FORCE_INLINE float BlenderVoronoiTexture_Evaluate(__global const HitPoint
     float da[4], pa[12]; /* distance and point coordinate arrays of 4 nearest neighbours */
 	float scale = 1.f;
 	if(fabs(noisesize) > 0.00001f) scale = (1.f/noisesize);
-	const float3 P = scale*TextureMapping3D_Map(mapping, hitPoint);
+	const float3 P = scale*TextureMapping3D_Map(mapping, hitPoint, NULL);
  
 	const float aw1 = fabs(feature_weight1);
     const float aw2 = fabs(feature_weight2);

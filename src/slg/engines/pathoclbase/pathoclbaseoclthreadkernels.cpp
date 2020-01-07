@@ -435,40 +435,6 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 	if (renderEngine->compiledScene->hasEnvLights)
 		ssParams << " -D PARAM_HAS_ENVLIGHTS";
 
-	if (imageMapDescsBuff) {
-		ssParams << " -D PARAM_HAS_IMAGEMAPS";
-		if (imageMapsBuff.size() > 8)
-			throw runtime_error("Too many memory pages required for image maps");
-		for (u_int i = 0; i < imageMapsBuff.size(); ++i)
-			ssParams << " -D PARAM_IMAGEMAPS_PAGE_" << i;
-		ssParams << " -D PARAM_IMAGEMAPS_COUNT=" << imageMapsBuff.size();
-
-		if (renderEngine->compiledScene->IsImageMapFormatCompiled(ImageMapStorage::BYTE))
-			ssParams << " -D PARAM_HAS_IMAGEMAPS_BYTE_FORMAT";
-		if (renderEngine->compiledScene->IsImageMapFormatCompiled(ImageMapStorage::HALF))
-			ssParams << " -D PARAM_HAS_IMAGEMAPS_HALF_FORMAT";
-		if (renderEngine->compiledScene->IsImageMapFormatCompiled(ImageMapStorage::FLOAT))
-			ssParams << " -D PARAM_HAS_IMAGEMAPS_FLOAT_FORMAT";
-
-		if (renderEngine->compiledScene->IsImageMapChannelCountCompiled(1))
-			ssParams << " -D PARAM_HAS_IMAGEMAPS_1xCHANNELS";
-		if (renderEngine->compiledScene->IsImageMapChannelCountCompiled(2))
-			ssParams << " -D PARAM_HAS_IMAGEMAPS_2xCHANNELS";
-		if (renderEngine->compiledScene->IsImageMapChannelCountCompiled(3))
-			ssParams << " -D PARAM_HAS_IMAGEMAPS_3xCHANNELS";
-		if (renderEngine->compiledScene->IsImageMapChannelCountCompiled(4))
-			ssParams << " -D PARAM_HAS_IMAGEMAPS_4xCHANNELS";
-
-		if (renderEngine->compiledScene->IsImageMapWrapCompiled(ImageMapStorage::REPEAT))
-			ssParams << " -D PARAM_HAS_IMAGEMAPS_WRAP_REPEAT";
-		if (renderEngine->compiledScene->IsImageMapWrapCompiled(ImageMapStorage::BLACK))
-			ssParams << " -D PARAM_HAS_IMAGEMAPS_WRAP_BLACK";
-		if (renderEngine->compiledScene->IsImageMapWrapCompiled(ImageMapStorage::WHITE))
-			ssParams << " -D PARAM_HAS_IMAGEMAPS_WRAP_WHITE";
-		if (renderEngine->compiledScene->IsImageMapWrapCompiled(ImageMapStorage::CLAMP))
-			ssParams << " -D PARAM_HAS_IMAGEMAPS_WRAP_CLAMP";
-	}
-
 	if (renderEngine->usePixelAtomics)
 		ssParams << " -D PARAM_USE_PIXEL_ATOMICS";
 
@@ -868,11 +834,12 @@ void PathOCLBaseOCLRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePa
 	advancePathsKernel->setArg(argIndex++, cscene->elvcNormalCosAngle);
 
 	// Images
-	if (imageMapDescsBuff) {
-		advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), imageMapDescsBuff);
-
-		for (u_int i = 0; i < imageMapsBuff.size(); ++i)
-			advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), (imageMapsBuff[i]));
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), imageMapDescsBuff);
+	for (u_int i = 0; i < 8; ++i) {
+		if (i < imageMapsBuff.size())
+			advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), imageMapsBuff[i]);
+		else
+			advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), nullptr);
 	}
 
 	// PhotonGI cache

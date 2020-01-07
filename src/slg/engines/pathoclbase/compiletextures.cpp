@@ -1495,8 +1495,7 @@ static void AddTextureBumpSource(stringstream &source, const vector<slg::ocl::Te
 			"#if defined(PARAM_ENABLE_TEX_CONST_FLOAT3)\n"
 			"\t\tcase CONST_FLOAT3: return ConstFloat3Texture_Bump(hitPoint);\n"
 			"#endif\n"
-			// I can have an IMAGEMAP texture only if PARAM_HAS_IMAGEMAPS is defined
-			"#if defined(PARAM_ENABLE_TEX_IMAGEMAP) && defined(PARAM_HAS_IMAGEMAPS)\n"
+			"#if defined(PARAM_ENABLE_TEX_IMAGEMAP)\n"
 			"\t\tcase IMAGEMAP: return ImageMapTexture_Bump(tex, hitPoint, sampleDistance IMAGEMAPS_PARAM);\n"
 			"#endif\n"
 			"#if defined(PARAM_ENABLE_TEX_FRESNELCONST)\n"
@@ -1565,8 +1564,7 @@ static void AddTexturesSwitchSourceCode(stringstream &source,
 			"#if defined(PARAM_ENABLE_TEX_CONST_FLOAT3)\n"
 			"\t\tcase CONST_FLOAT3: return ConstFloat3Texture_ConstEvaluate" << type << "(tex);\n"
 			"#endif\n"
-			// I can have an IMAGEMAP texture only if PARAM_HAS_IMAGEMAPS is defined
-			"#if defined(PARAM_ENABLE_TEX_IMAGEMAP) && defined(PARAM_HAS_IMAGEMAPS)\n"
+			"#if defined(PARAM_ENABLE_TEX_IMAGEMAP)\n"
 			"\t\tcase IMAGEMAP: return ImageMapTexture_ConstEvaluate" << type << "(tex, hitPoint IMAGEMAPS_PARAM);\n"
 			"#endif\n"
 			"#if defined(PARAM_ENABLE_TEX_FRESNELCONST)\n"

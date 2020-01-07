@@ -50,9 +50,6 @@ public:
 
 	bool IsMaterialCompiled(const MaterialType type) const;
 	bool IsTextureCompiled(const TextureType type) const;
-	bool IsImageMapFormatCompiled(const ImageMapStorage::StorageType type) const;
-	bool IsImageMapChannelCountCompiled(const u_int count) const;
-	bool IsImageMapWrapCompiled(const ImageMapStorage::WrapType type) const;
 	bool IsLightSourceCompiled(const LightSourceType type) const;
 
 	bool HasBumpMaps() const;
@@ -121,9 +118,6 @@ public:
 	// Compiled ImageMaps
 	std::vector<slg::ocl::ImageMap> imageMapDescs;
 	std::vector<std::vector<float> > imageMapMemBlocks;
-	boost::unordered_set<ImageMapStorage::StorageType> usedImageMapFormats;
-	boost::unordered_set<u_int> usedImageMapChannels;
-	boost::unordered_set<ImageMapStorage::WrapType> usedImageMapWrapTypes;
 	
 	// Compiled PhotonGI cache
 
@@ -143,7 +137,6 @@ public:
 		wasPhotonGICompiled;
 
 private:
-	void AddEnabledImageMapCode();
 	// There is no AddEnabledTextureCode() version because all textures not already
 	// included by default have source code dynamically generated (because they
 	// reference always other textures)

@@ -116,18 +116,6 @@ bool CompiledScene::IsTextureCompiled(const TextureType type) const {
 	return (usedTextureTypes.find(type) != usedTextureTypes.end());
 }
 
-bool CompiledScene::IsImageMapFormatCompiled(const ImageMapStorage::StorageType type) const {
-	return (usedImageMapFormats.find(type) != usedImageMapFormats.end());
-}
-
-bool CompiledScene::IsImageMapChannelCountCompiled(const u_int count) const {
-	return (usedImageMapChannels.find(count) != usedImageMapChannels.end());
-}
-
-bool CompiledScene::IsImageMapWrapCompiled(const ImageMapStorage::WrapType type) const {
-	return (usedImageMapWrapTypes.find(type) != usedImageMapWrapTypes.end());
-}
-
 string CompiledScene::ToOCLString(const slg::ocl::Spectrum &v) {
 	return "(float3)(" + ToString(v.c[0]) + ", " + ToString(v.c[1]) + ", " + ToString(v.c[2]) + ")";
 }

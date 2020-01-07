@@ -67,7 +67,7 @@ OPENCL_FORCE_INLINE float3 ConstFloat3Texture_ConstEvaluateSpectrum(__global con
 // to reduce the number of kernels compilations
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_ENABLE_TEX_IMAGEMAP) && defined(PARAM_HAS_IMAGEMAPS)
+#if defined(PARAM_ENABLE_TEX_IMAGEMAP)
 
 OPENCL_FORCE_NOT_INLINE float ImageMapTexture_ConstEvaluateFloat(__global const Texture *tex,
 		__global const HitPoint *hitPoint
@@ -196,7 +196,7 @@ OPENCL_FORCE_NOT_INLINE float3 CheckerBoard2DTexture_ConstEvaluateSpectrum(__glo
 OPENCL_FORCE_NOT_INLINE float CheckerBoard3DTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
 		const float value1, const float value2, __global const TextureMapping3D *mapping) {
 	// The +DEFAULT_EPSILON_STATIC is there as workaround for planes placed exactly on 0.0
-	const float3 mapP = TextureMapping3D_Map(mapping, hitPoint) +  DEFAULT_EPSILON_STATIC;
+	const float3 mapP = TextureMapping3D_Map(mapping, hitPoint, NULL) +  DEFAULT_EPSILON_STATIC;
 
 	return ((Floor2Int(mapP.x) + Floor2Int(mapP.y) + Floor2Int(mapP.z)) % 2 == 0) ? value1 : value2;
 }
@@ -204,7 +204,7 @@ OPENCL_FORCE_NOT_INLINE float CheckerBoard3DTexture_ConstEvaluateFloat(__global 
 OPENCL_FORCE_NOT_INLINE float3 CheckerBoard3DTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
 		const float3 value1, const float3 value2, __global const TextureMapping3D *mapping) {
 	// The +DEFAULT_EPSILON_STATIC is there as workaround for planes placed exactly on 0.0
-	const float3 mapP = TextureMapping3D_Map(mapping, hitPoint) +  DEFAULT_EPSILON_STATIC;
+	const float3 mapP = TextureMapping3D_Map(mapping, hitPoint, NULL) +  DEFAULT_EPSILON_STATIC;
 
 	return ((Floor2Int(mapP.x) + Floor2Int(mapP.y) + Floor2Int(mapP.z)) % 2 == 0) ? value1 : value2;
 }
@@ -304,7 +304,7 @@ OPENCL_FORCE_NOT_INLINE float CloudTexture_ConstEvaluateFloat(__global const Hit
 		const float omega, const float firstNoiseScale, const float noiseOffset, const float turbulenceAmount,
 		const uint numOctaves, __global const TextureMapping3D *mapping) {
 
-	const float3 mapP = TextureMapping3D_Map(mapping, hitPoint);
+	const float3 mapP = TextureMapping3D_Map(mapping, hitPoint, NULL);
 	const float3 sphereCentre = (float3)(.5f, .5f, 1.f / 3.f);
 	const float amount = CloudTexture_CloudShape(mapP + turbulenceAmount * CloudTexture_Turbulence(mapP, firstNoiseScale, noiseOffset, variability, numOctaves, radius, omega, baseFlatness, sphereCentre), baseFadeDistance, sphereCentre, numSpheres, radius);
 	const float finalValue = pow(amount * pow(10.f, .7f), sharpness);
@@ -318,7 +318,7 @@ OPENCL_FORCE_NOT_INLINE float3 CloudTexture_ConstEvaluateSpectrum(__global const
 		const float omega, const float firstNoiseScale, const float noiseOffset, const float turbulenceAmount,
 		const uint numOctaves, __global const TextureMapping3D *mapping) {
 
-	const float3 mapP = TextureMapping3D_Map(mapping, hitPoint);
+	const float3 mapP = TextureMapping3D_Map(mapping, hitPoint, NULL);
 	const float3 sphereCentre = (float3)(.5f, .5f, 1.f / 3.f);
 	const float amount = CloudTexture_CloudShape(mapP + turbulenceAmount * CloudTexture_Turbulence(mapP, firstNoiseScale, noiseOffset, variability, numOctaves, radius, omega, baseFlatness, sphereCentre), baseFadeDistance, sphereCentre, numSpheres, radius);
 	const float finalValue = pow(amount * pow(10.f, .7f), sharpness);
@@ -337,14 +337,14 @@ OPENCL_FORCE_NOT_INLINE float3 CloudTexture_ConstEvaluateSpectrum(__global const
 
 OPENCL_FORCE_NOT_INLINE float FBMTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
 	const float omega, const int octaves, __global const TextureMapping3D *mapping) {
-	const float3 mapP = TextureMapping3D_Map(mapping, hitPoint);
+	const float3 mapP = TextureMapping3D_Map(mapping, hitPoint, NULL);
 
 	return FBm(mapP, omega, octaves);
 }
 
 OPENCL_FORCE_NOT_INLINE float3 FBMTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
 	const float omega, const int octaves, __global const TextureMapping3D *mapping) {
-	const float3 mapP = TextureMapping3D_Map(mapping, hitPoint);
+	const float3 mapP = TextureMapping3D_Map(mapping, hitPoint, NULL);
 
 	return FBm(mapP, omega, octaves);
 }
@@ -373,7 +373,7 @@ __constant float MarbleTexture_c[9][3] = {
 OPENCL_FORCE_INLINE float3 MarbleTexture_Evaluate(__global const HitPoint *hitPoint, const float scale,
 		const float omega, const int octaves, const float variation,
 		__global const TextureMapping3D *mapping) {
-	const float3 P = scale * TextureMapping3D_Map(mapping, hitPoint);
+	const float3 P = scale * TextureMapping3D_Map(mapping, hitPoint, NULL);
 
 	float marble = P.y + variation * FBm(P, omega, octaves);
 	float t = .5f + .5f * sin(marble);
@@ -567,7 +567,7 @@ OPENCL_FORCE_INLINE bool BrickTexture_Evaluate(__global const HitPoint *hitPoint
 		const float proportion, const float invproportion,
 		__global const TextureMapping3D *mapping) {
 #define BRICK_EPSILON 1e-3f
-	const float3 P = TextureMapping3D_Map(mapping, hitPoint);
+	const float3 P = TextureMapping3D_Map(mapping, hitPoint, NULL);
 
 	const float offs = BRICK_EPSILON + mortarsize;
 	float3 bP = P + (float3)(offs, offs, offs);
@@ -704,7 +704,7 @@ OPENCL_FORCE_NOT_INLINE float3 SubtractTexture_ConstEvaluateSpectrum(__global co
 
 OPENCL_FORCE_NOT_INLINE float WindyTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
 		__global const TextureMapping3D *mapping) {
-	const float3 mapP = TextureMapping3D_Map(mapping, hitPoint);
+	const float3 mapP = TextureMapping3D_Map(mapping, hitPoint, NULL);
 
 	const float windStrength = FBm(.1f * mapP, .5f, 3);
 	const float waveHeight = FBm(mapP, .5f, 6);
@@ -728,7 +728,7 @@ OPENCL_FORCE_INLINE float3 WindyTexture_ConstEvaluateSpectrum(__global const Hit
 OPENCL_FORCE_NOT_INLINE float WrinkledTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
 		const float omega, const int octaves,
 		__global const TextureMapping3D *mapping) {
-	const float3 mapP = TextureMapping3D_Map(mapping, hitPoint);
+	const float3 mapP = TextureMapping3D_Map(mapping, hitPoint, NULL);
 
 	return Turbulence(mapP, omega, octaves);
 }

@@ -178,44 +178,6 @@ void BackgroundImgPlugin::ApplyOCL(Film &film, const u_int index) {
 		ssParams << scientific <<
 				" -D LUXRAYS_OPENCL_KERNEL" <<
 				" -D SLG_OPENCL_KERNEL";
-
-		ssParams << " -D PARAM_HAS_IMAGEMAPS";
-		ssParams << " -D PARAM_IMAGEMAPS_PAGE_0";
-		ssParams << " -D PARAM_IMAGEMAPS_COUNT=1";
-
-		switch (imgMapDesc.storageType) {
-			case slg::ocl::BYTE:
-				ssParams << " -D PARAM_HAS_IMAGEMAPS_BYTE_FORMAT";
-				break;
-			case slg::ocl::HALF:
-				ssParams << " -D PARAM_HAS_IMAGEMAPS_HALF_FORMAT";
-				break;
-			case slg::ocl::FLOAT:
-				ssParams << " -D PARAM_HAS_IMAGEMAPS_FLOAT_FORMAT";
-				break;
-			default:
-				throw runtime_error("Unknown storage type in BackgroundImgPlugin::ApplyOCL(): " + ToString(imgMapDesc.storageType));
-		}
-
-		switch (imgMapDesc.channelCount) {
-			case 1:
-				ssParams << " -D PARAM_HAS_IMAGEMAPS_1xCHANNELS";
-				break;
-			case 2:
-				ssParams << " -D PARAM_HAS_IMAGEMAPS_2xCHANNELS";
-				break;
-			case 3:
-				ssParams << " -D PARAM_HAS_IMAGEMAPS_3xCHANNELS";
-				break;
-			case 4:
-				ssParams << " -D PARAM_HAS_IMAGEMAPS_4xCHANNELS";
-				break;
-			default:
-				throw runtime_error("Unknown channel count in BackgroundImgPlugin::ApplyOCL(): " + ToString(imgMapDesc.channelCount));			
-		}
-
-		ssParams << " -D PARAM_HAS_IMAGEMAPS_WRAP_REPEAT";
-
 		cl::Program *program = ImagePipelinePlugin::CompileProgram(
 				film,
 				ssParams.str(),
@@ -242,6 +204,8 @@ void BackgroundImgPlugin::ApplyOCL(Film &film, const u_int index) {
 		applyKernel->setArg(argIndex++, *(film.ocl_ALPHA));
 		applyKernel->setArg(argIndex++, *oclFilmImageMapDesc);
 		applyKernel->setArg(argIndex++, *oclFilmImageMap);
+		for (u_int i = 1; i < 8; ++i)
+			applyKernel->setArg(argIndex++, nullptr);
 
 		//----------------------------------------------------------------------
 
