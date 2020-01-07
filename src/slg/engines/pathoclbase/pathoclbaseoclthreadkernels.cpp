@@ -398,26 +398,8 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 		if (cscene->IsMaterialCompiled(GLOSSYCOATING_MULTIBOUNCE))
 			ssParams << " -D PARAM_ENABLE_MAT_GLOSSYCOATING_MULTIBOUNCE";
 	}
-
 	if (cscene->IsMaterialCompiled(DISNEY))
 		ssParams << " -D PARAM_ENABLE_MAT_DISNEY";
-
-	switch (cscene->cameraType) {
-		case slg::ocl::PERSPECTIVE:
-			ssParams << " -D PARAM_CAMERA_TYPE=0";
-			break;
-		case slg::ocl::ORTHOGRAPHIC:
-			ssParams << " -D PARAM_CAMERA_TYPE=1";
-			break;
-		case slg::ocl::STEREO:
-			ssParams << " -D PARAM_CAMERA_TYPE=2";
-			break;
-		case slg::ocl::ENVIRONMENT:
-			ssParams << " -D PARAM_CAMERA_TYPE=3";
-			break;
-		default:
-			throw runtime_error("Unknown camera type in PathOCLBaseRenderThread::InitKernels()");
-	}
 
 	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_IL))
 		ssParams << " -D PARAM_HAS_INFINITELIGHT";

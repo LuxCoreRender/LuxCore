@@ -104,9 +104,7 @@ OPENCL_FORCE_NOT_INLINE void Camera_ApplyArbitraryClippingPlane(
 // Perspective camera
 //------------------------------------------------------------------------------
 
-#if (PARAM_CAMERA_TYPE == 0)
-
-OPENCL_FORCE_NOT_INLINE void Camera_GenerateRay(
+OPENCL_FORCE_NOT_INLINE void PerspectiveCamera_GenerateRay(
 		__global const Camera* restrict camera,
 		const uint filmWidth, const uint filmHeight,
 		__global Ray *ray,
@@ -182,15 +180,11 @@ OPENCL_FORCE_NOT_INLINE void Camera_GenerateRay(
 		ray->mint, ray->maxt);*/
 }
 
-#endif
-
 //------------------------------------------------------------------------------
 // Orthographic camera
 //------------------------------------------------------------------------------
 
-#if (PARAM_CAMERA_TYPE == 1)
-
-OPENCL_FORCE_NOT_INLINE void Camera_GenerateRay(
+OPENCL_FORCE_NOT_INLINE void OrthographicCamera_GenerateRay(
 		__global const Camera* restrict camera,
 		const uint filmWidth, const uint filmHeight,
 		__global Ray *ray,
@@ -260,15 +254,11 @@ OPENCL_FORCE_NOT_INLINE void Camera_GenerateRay(
 		ray->mint, ray->maxt);*/
 }
 
-#endif
-
 //------------------------------------------------------------------------------
 // Stereo camera
 //------------------------------------------------------------------------------
 
-#if (PARAM_CAMERA_TYPE == 2)
-
-OPENCL_FORCE_NOT_INLINE void Camera_GenerateRay(
+OPENCL_FORCE_NOT_INLINE void StereoCamera_GenerateRay(
 		__global const Camera* restrict camera,
 		const uint origFilmWidth, const uint filmHeight,
 		__global Ray *ray,
@@ -358,15 +348,11 @@ OPENCL_FORCE_NOT_INLINE void Camera_GenerateRay(
 		ray->mint, ray->maxt);*/
 }
 
-#endif
-
 //------------------------------------------------------------------------------
 // Environment camera
 //------------------------------------------------------------------------------
 
-#if (PARAM_CAMERA_TYPE == 3)
-
-OPENCL_FORCE_NOT_INLINE void Camera_GenerateRay(
+OPENCL_FORCE_NOT_INLINE void EnvironmentCamera_GenerateRay(
 		__global const Camera* restrict camera,
 		const uint filmWidth, const uint filmHeight,
 		__global Ray *ray,
@@ -404,4 +390,32 @@ OPENCL_FORCE_NOT_INLINE void Camera_GenerateRay(
 		ray->mint, ray->maxt);*/
 }
 
-#endif
+//------------------------------------------------------------------------------
+// Generic function
+//------------------------------------------------------------------------------
+
+OPENCL_FORCE_NOT_INLINE void Camera_GenerateRay(
+		__global const Camera* restrict camera,
+		const uint filmWidth, const uint filmHeight,
+		__global Ray *ray,
+		__global PathVolumeInfo *volInfo,
+		const float filmX, const float filmY, const float timeSample,
+		const float dofSampleX, const float dofSampleY) {
+	switch (camera->type) {
+		case PERSPECTIVE:
+			PerspectiveCamera_GenerateRay(camera, filmWidth, filmHeight, ray, volInfo, filmX, filmY, timeSample, dofSampleX, dofSampleY);
+			break;
+		case ORTHOGRAPHIC:
+			OrthographicCamera_GenerateRay(camera, filmWidth, filmHeight, ray, volInfo, filmX, filmY, timeSample, dofSampleX, dofSampleY);
+			break;
+		case STEREO:
+			StereoCamera_GenerateRay(camera, filmWidth, filmHeight, ray, volInfo, filmX, filmY, timeSample, dofSampleX, dofSampleY);
+			break;
+		case ENVIRONMENT:
+			EnvironmentCamera_GenerateRay(camera, filmWidth, filmHeight, ray, volInfo, filmX, filmY, timeSample, dofSampleX, dofSampleY);
+			break;
+		default:
+			// Something really wrong here
+			break;
+	}
+}

@@ -38,6 +38,7 @@
 * Enabling/disabling camera clipping and/or OculusRift barrel doesn't require OpenCL compilation anymore (removed PARAM_CAMERA_ENABLE_CLIPPING_PLANE and PARAM_CAMERA_ENABLE_OCULUSRIFT_BARREL)
 * Changing any pixel filter related parameter doesn't require OpenCL compilation anymore (removed all PARAM_IMAGE_FILTER_*)
 * Disney material now accepts values > 1.0 for sheen parameter
+* Changing camera type doesn't require OpenCL compilation anymore (removed PARAM_CAMERA_TYPE)
 
 ### Fixed Bugs
 

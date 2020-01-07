@@ -73,8 +73,7 @@ typedef struct {
 } StereoCamera;
 
 typedef struct {
-	// The type of camera in use is defined by preprocessor macro:
-	//  PARAM_CAMERA_TYPE (0 = Perspective, 1 = Orthographic, 2 = Stereo, 3 = Environment)
+	CameraType type;
 
 	CameraBase base;
 

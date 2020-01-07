@@ -66,7 +66,6 @@ public:
 	static std::string ToOCLString(const slg::ocl::Spectrum &v);
 
 	// Compiled Camera
-	slg::ocl::CameraType cameraType;
 	slg::ocl::Camera camera;
 
 	// Compiled Scene Meshes

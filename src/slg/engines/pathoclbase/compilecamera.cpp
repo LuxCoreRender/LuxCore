@@ -81,7 +81,7 @@ void CompiledScene::CompileCamera() {
 	switch (sceneCamera->GetType()) {
 		case Camera::ORTHOGRAPHIC: {
 			const OrthographicCamera *orthoCamera = (OrthographicCamera *)sceneCamera;
-			cameraType = slg::ocl::ORTHOGRAPHIC;
+			camera.type = slg::ocl::ORTHOGRAPHIC;
 
 			memcpy(camera.base.rasterToCamera.m.m, orthoCamera->GetRasterToCamera().m.m, 4 * 4 * sizeof(float));
 			memcpy(camera.base.cameraToWorld.m.m, orthoCamera->GetCameraToWorld().m.m, 4 * 4 * sizeof(float));
@@ -99,7 +99,7 @@ void CompiledScene::CompileCamera() {
 		}
 		case Camera::PERSPECTIVE: {
 			const PerspectiveCamera *perspCamera = (PerspectiveCamera *)sceneCamera;
-			cameraType = slg::ocl::PERSPECTIVE;
+			camera.type = slg::ocl::PERSPECTIVE;
 
 			memcpy(camera.base.rasterToCamera.m.m, perspCamera->GetRasterToCamera().m.m, 4 * 4 * sizeof(float));
 			memcpy(camera.base.cameraToWorld.m.m, perspCamera->GetCameraToWorld().m.m, 4 * 4 * sizeof(float));
@@ -121,7 +121,7 @@ void CompiledScene::CompileCamera() {
 		}
 		case Camera::STEREO: {
 			const StereoCamera *stereoCamera = (StereoCamera *)sceneCamera;
-			cameraType = slg::ocl::STEREO;
+			camera.type = slg::ocl::STEREO;
 
 			camera.stereo.perspCamera.projCamera.lensRadius = stereoCamera->lensRadius;
 			camera.stereo.perspCamera.projCamera.focalDistance = stereoCamera->focalDistance;
@@ -142,7 +142,7 @@ void CompiledScene::CompileCamera() {
 		}
 		case Camera::ENVIRONMENT: {
 			const EnvironmentCamera *envCamera = (EnvironmentCamera *)sceneCamera;
-			cameraType = slg::ocl::ENVIRONMENT;
+			camera.type = slg::ocl::ENVIRONMENT;
 
 			memcpy(camera.base.rasterToCamera.m.m, envCamera->GetRasterToCamera().m.m, 4 * 4 * sizeof(float));
 			memcpy(camera.base.cameraToWorld.m.m, envCamera->GetCameraToWorld().m.m, 4 * 4 * sizeof(float));

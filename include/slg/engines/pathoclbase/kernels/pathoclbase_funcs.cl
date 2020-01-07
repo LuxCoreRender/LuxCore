@@ -23,7 +23,7 @@
 //  PARAM_RAY_EPSILON_MAX
 //  PARAM_HAS_IMAGEMAPS
 //  PARAM_USE_PIXEL_ATOMICS
-//  PARAM_ACCEL_BVH or PARAM_ACCEL_MBVH or PARAM_ACCEL_QBVH or PARAM_ACCEL_MQBVH
+//  PARAM_ACCEL_BVH or PARAM_ACCEL_MBVH
 
 // To enable single material support
 //  PARAM_ENABLE_MAT_MATTE
@@ -102,9 +102,6 @@
 //  PARAM_HAS_LASERLIGHT
 //  PARAM_HAS_TRIANGLELIGHT
 //  PARAM_HAS_ENVLIGHTS (if it has any env. light)
-
-// (optional)
-//  PARAM_CAMERA_TYPE (0 = Perspective, 1 = Orthographic, 2 = Stereo)
 
 // (optional)
 //  PARAM_SAMPLER_TYPE (0 = Inlined Random, 1 = Metropolis, 2 = Sobol, 3 = TilePathSampler)
