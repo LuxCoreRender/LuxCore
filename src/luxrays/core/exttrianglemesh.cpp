@@ -36,8 +36,6 @@ using namespace luxrays;
 
 BOOST_CLASS_EXPORT_IMPLEMENT(luxrays::ExtMesh)
 
-// The optimized version for ExtTriangleMesh where I can ignore local2World
-// because it is an identity
 void ExtMesh::GetDifferentials(const Transform &local2World,
 		const u_int triIndex, const Normal &shadeNormal, const u_int dataIndex,
         Vector *dpdu, Vector *dpdv,

@@ -32,7 +32,7 @@ OPENCL_FORCE_INLINE float3 Transform_ApplyVector(__global const Transform* restr
 }
 
 OPENCL_FORCE_INLINE float3 Transform_ApplyNormal(__global const Transform* restrict trans, const float3 normal) {
-	return Matrix4x4_ApplyNormal(&trans->m, normal);
+	return Matrix4x4_ApplyNormal(&trans->mInv, normal);
 }
 
 OPENCL_FORCE_INLINE float3 Transform_InvApplyPoint(__global const Transform* restrict trans, const float3 point) {
@@ -44,5 +44,5 @@ OPENCL_FORCE_INLINE float3 Transform_InvApplyVector(__global const Transform* re
 }
 
 OPENCL_FORCE_INLINE float3 Transform_InvApplyNormal(__global const Transform* restrict trans, const float3 normal) {
-	return Matrix4x4_ApplyNormal(&trans->mInv, normal);
+	return Matrix4x4_ApplyNormal(&trans->m, normal);
 }
