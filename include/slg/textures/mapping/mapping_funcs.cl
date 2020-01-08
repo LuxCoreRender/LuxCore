@@ -103,10 +103,10 @@ OPENCL_FORCE_INLINE float3 GlobalMapping3D_Map(__global const TextureMapping3D *
 OPENCL_FORCE_INLINE float3 LocalMapping3D_Map(__global const TextureMapping3D *mapping,
 		__global const HitPoint *hitPoint, float3 *shadeN) {
 	if (shadeN) {
-		const Matrix4x4 mInv = Matrix4x4_Mul(&mapping->worldToLocal.mInv, &hitPoint->localToWorld.m);
+		const Matrix4x4 mInv = Matrix4x4_Mul(&hitPoint->localToWorld.m, &mapping->worldToLocal.mInv);
 		
 		const float3 sn = VLOAD3F(&hitPoint->shadeN.x);
-		*shadeN = Matrix4x4_ApplyNormal_Private(&mInv, sn);
+		*shadeN = normalize(Matrix4x4_ApplyNormal_Private(&mInv, sn));
 	}
 
 	const Matrix4x4 m = Matrix4x4_Mul(&mapping->worldToLocal.m, &hitPoint->localToWorld.mInv);
