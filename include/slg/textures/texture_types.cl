@@ -412,7 +412,8 @@ typedef struct {
 	TextureMapping3D mapping;
 	unsigned int tex1Index, tex2Index, tex3Index;
 	unsigned int uvIndex;
-} TrilinearTexParam;
+	int enableUVlessBumpMap;
+} TriplanarTexParam;
 
 typedef struct {
 	TextureType type;
@@ -472,7 +473,7 @@ typedef struct {
 		RoundingTexParam roundingTex;
 		ModuloTexParam moduloTex;
 		BrightContrastTexParam brightContrastTex;
-		TrilinearTexParam trilinearTex;
+		TriplanarTexParam triplanarTex;
 	};
 } Texture;
 

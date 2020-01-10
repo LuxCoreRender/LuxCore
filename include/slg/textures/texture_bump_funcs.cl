@@ -181,3 +181,62 @@ OPENCL_FORCE_NOT_INLINE float3 NormalMapTexture_Bump(
 	return shadeN;
 }
 #endif
+
+//------------------------------------------------------------------------------
+// TriplanarTexture
+//------------------------------------------------------------------------------
+
+#if defined(PARAM_ENABLE_TEX_TRIPLANAR)
+OPENCL_FORCE_INLINE float3 TriplanarTexture_Bump(
+		const uint texIndex,
+		__global HitPoint *hitPoint,
+		const float sampleDistance
+		TEXTURES_PARAM_DECL) {
+	__global const Texture *tex = &texs[texIndex];
+
+	if (tex->triplanarTex.enableUVlessBumpMap) {
+		// Calculate bump map value at intersection point
+		const float base = Texture_GetFloatValue(texIndex, hitPoint
+				TEXTURES_PARAM);
+
+		// Compute offset positions and evaluate displacement texture
+		const float3 origP = VLOAD3F(&hitPoint->p.x);
+
+		float3 dhdx = (float3)(0.f, 0.f, 0.f);
+
+		// Note I should update not only hitPoint.p but also hitPoint.shadeN
+		// however I can't because  I don't know dndv/dndu so this is nearly an hack.
+
+		hitPoint->p.x = origP.x + sampleDistance;
+		hitPoint->p.y = origP.y;
+		hitPoint->p.z = origP.z;
+		const float offsetX = Texture_GetFloatValue(texIndex, hitPoint
+				TEXTURES_PARAM);
+		dhdx.x = (offsetX - base) / sampleDistance;
+
+		hitPoint->p.x = origP.x;
+		hitPoint->p.y = origP.y + sampleDistance;
+		hitPoint->p.z = origP.z;
+		const float offsetY = Texture_GetFloatValue(texIndex, hitPoint
+				TEXTURES_PARAM);
+		dhdx.y = (offsetY - base) / sampleDistance;
+
+		hitPoint->p.x = origP.x;
+		hitPoint->p.y = origP.y;
+		hitPoint->p.z = origP.z + sampleDistance;
+		const float offsetZ = Texture_GetFloatValue(texIndex, hitPoint
+				TEXTURES_PARAM);
+		dhdx.z = (offsetZ - base) / sampleDistance;
+
+		// Restore original P
+		VSTORE3F(origP, &hitPoint->p.x);
+		
+		const float3 shadeN = VLOAD3F(&hitPoint->shadeN.x);
+		float3 newShadeN = normalize(shadeN - dhdx);
+		newShadeN *= (dot(shadeN, newShadeN) < 0.f) ? -1.f : 1.f;
+
+		return newShadeN;
+	} else
+		return GenericTexture_Bump(texIndex, hitPoint, sampleDistance TEXTURES_PARAM);
+}
+#endif

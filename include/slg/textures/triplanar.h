@@ -30,8 +30,9 @@ namespace slg {
 class TriplanarTexture : public Texture {
 public:
 	TriplanarTexture(const TextureMapping3D *mp, const Texture *t1, const Texture *t2, 
-    const Texture *t3, const u_int index) :
-    mapping(mp), texX(t1), texY(t2), texZ(t3), uvIndex(index) {}
+    const Texture *t3, const u_int index, const bool uvlessBumpMap) :
+    mapping(mp), texX(t1), texY(t2), texZ(t3), uvIndex(index),
+	enableUVlessBumpMap(uvlessBumpMap) {}
 
 	virtual ~TriplanarTexture() {}
 
@@ -48,6 +49,8 @@ public:
 	virtual float Filter() const {
 		return (texX->Filter() + texY->Filter() + texZ->Filter()) * (1.f / 3.f);
 	}
+
+	virtual luxrays::Normal Bump(const HitPoint &hitPoint, const float sampleDistance) const;
 
 	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 		Texture::AddReferencedTextures(referencedTexs);
@@ -77,6 +80,7 @@ public:
 	const Texture *GetTexture2() const { return texY; }
     const Texture *GetTexture3() const { return texZ; }
 	const u_int GetUVIndex() const { return uvIndex; }
+	const bool IsUVlessBumpMap() const { return enableUVlessBumpMap; }
 
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
@@ -88,6 +92,8 @@ private:
     const Texture *texZ;
 
 	const u_int uvIndex;
+
+	const bool enableUVlessBumpMap;
 };
 
 }

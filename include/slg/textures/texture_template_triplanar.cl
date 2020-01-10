@@ -28,7 +28,7 @@ OPENCL_FORCE_INLINE float3 Texture_Index<<CS_TRIPLANAR_TEX_INDEX>>_EvaluateSpect
 		__global const HitPoint *hitPoint
 		TEXTURES_PARAM_DECL) {
 	float3 localShadeN;
-	const float3 localPoint = TextureMapping3D_Map(&texture->trilinearTex.mapping, hitPoint, &localShadeN);
+	const float3 localPoint = TextureMapping3D_Map(&texture->triplanarTex.mapping, hitPoint, &localShadeN);
 
 	float weights[3] = {
 		Sqr(Sqr(fabs(localShadeN.x))),
@@ -41,7 +41,7 @@ OPENCL_FORCE_INLINE float3 Texture_Index<<CS_TRIPLANAR_TEX_INDEX>>_EvaluateSpect
     weights[1] = weights[1] / sum;
     weights[2] = weights[2] / sum;
 
-	const uint uvIndex = texture->trilinearTex.uvIndex;
+	const uint uvIndex = texture->triplanarTex.uvIndex;
 
 	// To workaround the "const" part
 	__global HitPoint *hitPointTmp = (__global HitPoint *)hitPoint;
@@ -77,5 +77,7 @@ OPENCL_FORCE_INLINE float Texture_Index<<CS_TRIPLANAR_TEX_INDEX>>_EvaluateFloat(
 
 	return Spectrum_Y(result);
 }
+
+// Note: TriplanarTexture_Bump() is defined in texture_bump_funcs.cl
 
 #endif

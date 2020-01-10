@@ -582,7 +582,9 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const Texture *t2 = GetTexture(props.Get(Property(propName + ".texture2")(1.f)));
 		const Texture *t3 = GetTexture(props.Get(Property(propName + ".texture3")(1.f)));
 		const u_int dataIndex = Clamp(props.Get(Property(propName + ".uvindex")(0u)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
-		tex = new TriplanarTexture(CreateTextureMapping3D(propName + ".mapping", props), t1, t2, t3, dataIndex);
+		const bool enableUVlessBumpMap = props.Get(Property(propName + ".uvlessbumpmap.enable")(true)).Get<bool>();
+		tex = new TriplanarTexture(CreateTextureMapping3D(propName + ".mapping", props),
+				t1, t2, t3, dataIndex, enableUVlessBumpMap);
 	} else
 		throw runtime_error("Unknown texture type: " + texType);
 

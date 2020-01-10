@@ -1261,14 +1261,15 @@ void CompiledScene::CompileTextures() {
 				const TriplanarTexture *trit = static_cast<const TriplanarTexture *>(t);
 
 				tex->type = slg::ocl::TRIPLANAR_TEX;
-				CompileTextureMapping3D(&tex->trilinearTex.mapping, trit->GetTextureMapping());
+				CompileTextureMapping3D(&tex->triplanarTex.mapping, trit->GetTextureMapping());
 				const Texture *t1 = trit->GetTexture1();
-				tex->trilinearTex.tex1Index = scene->texDefs.GetTextureIndex(t1);
+				tex->triplanarTex.tex1Index = scene->texDefs.GetTextureIndex(t1);
 				const Texture *t2 = trit->GetTexture2();
-				tex->trilinearTex.tex2Index = scene->texDefs.GetTextureIndex(t2);
+				tex->triplanarTex.tex2Index = scene->texDefs.GetTextureIndex(t2);
 				const Texture *t3 = trit->GetTexture3();
-				tex->trilinearTex.tex3Index = scene->texDefs.GetTextureIndex(t3);
-				tex->trilinearTex.uvIndex = trit->GetUVIndex();
+				tex->triplanarTex.tex3Index = scene->texDefs.GetTextureIndex(t3);
+				tex->triplanarTex.uvIndex = trit->GetUVIndex();
+				tex->triplanarTex.enableUVlessBumpMap = trit->IsUVlessBumpMap();
 				break;
 			}
 			default:
@@ -1470,7 +1471,8 @@ static void AddTextureBumpSource(stringstream &source, const vector<slg::ocl::Te
 				break;
 			}
 			default:
-				// Nothing to do for textures using GenericTexture_Bump()
+				// Nothing to do for textures using GenericTexture_Bump() or
+				// TriplanarTexture_Bump()
 				break;
 		}
 	}
@@ -1506,6 +1508,9 @@ static void AddTextureBumpSource(stringstream &source, const vector<slg::ocl::Te
 			"#endif\n"
 			"#if defined(PARAM_ENABLE_TEX_NORMALMAP)\n"
 			"\t\tcase NORMALMAP_TEX: return NormalMapTexture_Bump(tex, hitPoint, sampleDistance TEXTURES_PARAM);\n"
+			"#endif\n"
+			"#if defined(PARAM_ENABLE_TEX_TRIPLANAR)\n"
+			"\t\tcase TRIPLANAR_TEX: return TriplanarTexture_Bump(texIndex, hitPoint, sampleDistance TEXTURES_PARAM);\n"
 			"#endif\n"
 			"\t\tdefault: break;\n"
 			"\t}\n";
@@ -2127,9 +2132,9 @@ string CompiledScene::GetTexturesEvaluationSourceCode() const {
 				string triplanarSrc = slg::ocl::KernelSource_texture_template_triplanar;
 				boost::replace_all(triplanarSrc, "<<CS_TRIPLANAR_TEX_INDEX>>", ToString(i));
 
-				boost::replace_all(triplanarSrc, "<<CS_TEXTURE_X_INDEX>>", AddTextureSourceCall(texs, "Spectrum", tex->trilinearTex.tex1Index));
-				boost::replace_all(triplanarSrc, "<<CS_TEXTURE_Y_INDEX>>", AddTextureSourceCall(texs, "Spectrum", tex->trilinearTex.tex2Index));
-				boost::replace_all(triplanarSrc, "<<CS_TEXTURE_Z_INDEX>>", AddTextureSourceCall(texs, "Spectrum", tex->trilinearTex.tex3Index));
+				boost::replace_all(triplanarSrc, "<<CS_TEXTURE_X_INDEX>>", AddTextureSourceCall(texs, "Spectrum", tex->triplanarTex.tex1Index));
+				boost::replace_all(triplanarSrc, "<<CS_TEXTURE_Y_INDEX>>", AddTextureSourceCall(texs, "Spectrum", tex->triplanarTex.tex2Index));
+				boost::replace_all(triplanarSrc, "<<CS_TEXTURE_Z_INDEX>>", AddTextureSourceCall(texs, "Spectrum", tex->triplanarTex.tex3Index));
 
 				source << triplanarSrc;
 				break;

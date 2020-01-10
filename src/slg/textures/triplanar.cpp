@@ -62,6 +62,46 @@ Spectrum TriplanarTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	return result;
 }
 
+Normal TriplanarTexture::Bump(const HitPoint &hitPoint, const float sampleDistance) const {
+	if (enableUVlessBumpMap) {
+		// Calculate bump map value at intersection point
+		const float base = GetFloatValue(hitPoint);
+
+		// Compute offset positions and evaluate displacement texture
+		const Point origP = hitPoint.p;
+
+		HitPoint hitPointTmp = hitPoint;
+		Normal dhdx;
+
+		// Note I should update not only hitPointTmp.p but also hitPointTmp.shadeN
+		// however I can't because  I don't know dndv/dndu so this is nearly an hack.
+
+		hitPointTmp.p.x = origP.x + sampleDistance;
+		hitPointTmp.p.y = origP.y;
+		hitPointTmp.p.z = origP.z;
+		const float offsetX = GetFloatValue(hitPointTmp);
+		dhdx.x = (offsetX - base) / sampleDistance;
+
+		hitPointTmp.p.x = origP.x;
+		hitPointTmp.p.y = origP.y + sampleDistance;
+		hitPointTmp.p.z = origP.z;
+		const float offsetY = GetFloatValue(hitPointTmp);
+		dhdx.y = (offsetY - base) / sampleDistance;
+
+		hitPointTmp.p.x = origP.x;
+		hitPointTmp.p.y = origP.y;
+		hitPointTmp.p.z = origP.z + sampleDistance;
+		const float offsetZ = GetFloatValue(hitPointTmp);
+		dhdx.z = (offsetZ - base) / sampleDistance;
+
+		Normal newShadeN = Normalize(hitPoint.shadeN - dhdx);
+		newShadeN *= (Dot(hitPoint.shadeN, newShadeN) < 0.f) ? -1.f : 1.f;
+
+		return newShadeN;
+	} else
+		return Texture::Bump(hitPoint, sampleDistance);
+}
+
 Properties TriplanarTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	Properties props;
 
@@ -71,6 +111,7 @@ Properties TriplanarTexture::ToProperties(const ImageMapCache &imgMapCache, cons
 	props.Set(Property("scene.textures." + name + ".texture2")(texY->GetSDLValue()));
     props.Set(Property("scene.textures." + name + ".texture3")(texZ->GetSDLValue()));
 	props.Set(Property("scene.textures." + name + ".uvindex")(uvIndex));
+	props.Set(Property("scene.textures." + name + ".uvlessbumpmap.enable")(enableUVlessBumpMap));
     props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;

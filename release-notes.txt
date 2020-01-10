@@ -40,6 +40,7 @@
 * Disney material now accepts values > 1.0 for sheen parameter
 * Changing camera type doesn't require OpenCL compilation anymore (removed PARAM_CAMERA_TYPE)
 * Changing any image map related settings doesn't require OpenCL compilation anymore (removed all PARAM_HAS_IMAGEMAPS_*)
+* Added the support for UV-less bump mapping with Triplanar
 
 ### Fixed Bugs
 
