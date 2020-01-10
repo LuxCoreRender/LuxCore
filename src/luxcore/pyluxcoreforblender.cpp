@@ -618,35 +618,31 @@ static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const str
 	extract<boost::python::list> getUVPtrList(loopUVsPtrList);
 	extract<boost::python::list> getColPtrList(loopColsPtrList);
 
-	if (getUVPtrList.check()) {
-		const boost::python::list &l = getUVPtrList();
-		const boost::python::ssize_t size = len(l);
-		if (size >= EXTMESH_MAX_DATA_COUNT) {
-			throw runtime_error("Too much UV Maps in list for method Scene.DefineMesh()");
-		}
-	}
-	else {
-		const string objType = extract<string>((loopUVsPtrList.attr("__class__")).attr("__name__"));
-		throw runtime_error("Wrong data type for the list of UV maps of method Scene.DefineMesh(): " + objType);
-	}
+    // Check UVs
+    if (!getUVPtrList.check()) {
+        const string objType = extract<string>((loopUVsPtrList.attr("__class__")).attr("__name__"));
+        throw runtime_error("Wrong data type for the list of UV maps of method Scene.DefineMesh(): " + objType);
+    }
 
-	if (getColPtrList.check()) {
-		const boost::python::list &l = getColPtrList();
-		const boost::python::ssize_t size = len(l);
-		if (size >= EXTMESH_MAX_DATA_COUNT) {
-			throw runtime_error("Too much Vertex Color Maps in list for method Scene.DefineMesh()");
-		}
-	}
-	else {
-		const string objType = extract<string>((loopColsPtrList.attr("__class__")).attr("__name__"));
-		throw runtime_error("Wrong data type for the list of Vertex Color maps of method Scene.DefineMesh(): " + objType);
-	}
+    const boost::python::list &UVsList = getUVPtrList();
+    const boost::python::ssize_t loopUVsCount = len(UVsList);
 
-	const boost::python::list &UVsList = getUVPtrList();
-	const boost::python::list &ColsList = getColPtrList();
+    if (loopUVsCount > EXTMESH_MAX_DATA_COUNT) {
+        throw runtime_error("Too many UV Maps in list for method Scene.DefineMesh()");
+    }
 
-	const boost::python::ssize_t loopUVsCount = len(UVsList);
-	const boost::python::ssize_t loopColsCount = len(ColsList);
+    // Check vertex colors
+    if (!getColPtrList.check()) {
+        const string objType = extract<string>((loopColsPtrList.attr("__class__")).attr("__name__"));
+        throw runtime_error("Wrong data type for the list of Vertex Color maps of method Scene.DefineMesh(): " + objType);
+    }
+
+    const boost::python::list &ColsList = getColPtrList();
+    const boost::python::ssize_t loopColsCount = len(ColsList);
+
+    if (loopColsCount > EXTMESH_MAX_DATA_COUNT) {
+        throw runtime_error("Too many Vertex Color Maps in list for method Scene.DefineMesh()");
+    }
 
 	vector<const MLoopUV *> loopUVsList;
 	vector<const MLoopCol *> loopColsList;
