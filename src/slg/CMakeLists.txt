@@ -227,6 +227,7 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/film/film_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/film_mergesamplebuffer_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/denoiser/filmdenoiser_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/film/sampleresult_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_backgroundimg_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_bloom_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_cameraresponse_funcs.cl
@@ -597,6 +598,7 @@ set(SLG_KERNEL_SRCS
 	${generated_kernels_dir}/film_funcs_kernel.cpp
 	${generated_kernels_dir}/film_mergesamplebuffer_funcs_kernel.cpp
 	${generated_kernels_dir}/filmdenoiser_funcs_kernel.cpp
+	${generated_kernels_dir}/sampleresult_types_kernel.cpp
 	${generated_kernels_dir}/plugin_backgroundimg_funcs_kernel.cpp
 	${generated_kernels_dir}/plugin_bloom_funcs_kernel.cpp
 	${generated_kernels_dir}/plugin_cameraresponse_funcs_kernel.cpp

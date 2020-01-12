@@ -127,6 +127,7 @@ OPENCL_FORCE_INLINE void SamplesAccumulator_AddSampleAtomic(
 }
 
 OPENCL_FORCE_INLINE void FilmDenoiser_AddSample(
+		__constant const Film* restrict film,
 		const uint x, const uint y,
 		__global SampleResult *sampleResult,
 		const float weight,
@@ -135,7 +136,7 @@ OPENCL_FORCE_INLINE void FilmDenoiser_AddSample(
 	if (!filmDenoiserWarmUpDone)
 		return;
 
-	const float3 sample = clamp(SampleResult_GetSpectrum(sampleResult, filmRadianceGroupScale) * filmDenoiserSampleScale,
+	const float3 sample = clamp(SampleResult_GetSpectrum(film,sampleResult, filmRadianceGroupScale) * filmDenoiserSampleScale,
 			0.f, filmDenoiserMaxValue);
 	
 	if (!Spectrum_IsNanOrInf(sample)) {

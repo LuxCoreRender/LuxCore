@@ -53,7 +53,6 @@
 //  etc.
 
 // Film related parameters:
-//  PARAM_FILM_RADIANCE_GROUP_COUNT
 //  PARAM_FILM_CHANNELS_HAS_ALPHA
 //  PARAM_FILM_CHANNELS_HAS_DEPTH
 //  PARAM_FILM_CHANNELS_HAS_POSITION
@@ -132,7 +131,7 @@ OPENCL_FORCE_NOT_INLINE void InitSampleResult(
 		const uint filmSubRegion2, const uint filmSubRegion3,
 		__global float *pixelFilterDistribution,
 		Seed *seed) {
-	SampleResult_Init(&sample->result);
+	SampleResult_Init(&taskConfig->film, &sample->result);
 
 	float filmX = Sampler_GetSamplePath(taskConfig, seed, sample, sampleDataPathBase, IDX_SCREEN_X);
 	float filmY = Sampler_GetSamplePath(taskConfig, seed, sample, sampleDataPathBase, IDX_SCREEN_Y);
@@ -257,7 +256,7 @@ OPENCL_FORCE_INLINE bool CheckDirectHitVisibilityFlags(__global const LightSourc
 }
 
 #if defined(PARAM_HAS_ENVLIGHTS)
-OPENCL_FORCE_NOT_INLINE void DirectHitInfiniteLight(
+OPENCL_FORCE_NOT_INLINE void DirectHitInfiniteLight(__constant const Film* restrict film,
 		__global EyePathInfo *pathInfo, __global const Spectrum* restrict pathThroughput,
 		const __global Ray *ray, __global const BSDF *bsdf, __global SampleResult *sampleResult
 		LIGHTS_PARAM_DECL) {
@@ -296,13 +295,13 @@ OPENCL_FORCE_NOT_INLINE void DirectHitInfiniteLight(
 			} else
 				weight = 1.f;
 			
-			SampleResult_AddEmission(sampleResult, light->lightID, throughput, weight * envRadiance);
+			SampleResult_AddEmission(film, sampleResult, light->lightID, throughput, weight * envRadiance);
 		}
 	}
 }
 #endif
 
-OPENCL_FORCE_NOT_INLINE void DirectHitFiniteLight(
+OPENCL_FORCE_NOT_INLINE void DirectHitFiniteLight(__constant const Film* restrict film,
 		__global EyePathInfo *pathInfo,
 		__global const Spectrum* restrict pathThroughput, const __global Ray *ray,
 		const float distance, __global const BSDF *bsdf,
@@ -348,7 +347,7 @@ OPENCL_FORCE_NOT_INLINE void DirectHitFiniteLight(
 			weight = PowerHeuristic(pathInfo->lastBSDFPdfW * Light_GetAvgPassThroughTransparency(light LIGHTS_PARAM), directPdfW * lightPickProb);
 		}
 
-		SampleResult_AddEmission(sampleResult, BSDF_GetLightID(bsdf
+		SampleResult_AddEmission(film, sampleResult, BSDF_GetLightID(bsdf
 				MATERIALS_PARAM), VLOAD3F(pathThroughput->c), weight * emittedRadiance);
 	}
 }

@@ -71,7 +71,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 	taskState->seedPassThroughEvent = seedPassThroughEvent;
 
 	int throughShadowTransparency = taskState->throughShadowTransparency;
-	const bool continueToTrace = Scene_Intersect(
+	const bool continueToTrace = Scene_Intersect(taskConfig,
 			EYE_RAY | ((pathInfo->depth.depth == 0) ? CAMERA_RAY : GENERIC_RAY),
 			&throughShadowTransparency,
 			&pathInfo->volume,
@@ -157,6 +157,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 
 	if (checkDirectLightHit) {
 		DirectHitInfiniteLight(
+				&taskConfig->film,
 				pathInfo,
 				&taskState->throughput,
 				&rays[gid],
@@ -309,6 +310,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 	// Check if it is a light source (note: I can hit only triangle area light sources)
 	if (BSDF_IsLightSource(bsdf) && checkDirectLightHit) {
 		DirectHitFiniteLight(
+				&taskConfig->film,
 				pathInfo,
 				&taskState->throughput,
 				&rays[gid],
@@ -488,7 +490,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 
 	int throughShadowTransparency = taskDirectLight->throughShadowTransparency;
 	const bool continueToTrace =
-		Scene_Intersect(
+		Scene_Intersect(taskConfig,
 			EYE_RAY | SHADOW_RAY,
 			&throughShadowTransparency,
 			&directLightVolInfos[gid],
@@ -519,7 +521,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 
 			if (!BSDF_IsShadowCatcher(bsdf MATERIALS_PARAM)) {
 				const float3 lightRadiance = VLOAD3F(taskDirectLight->illumInfo.lightRadiance.c);
-				SampleResult_AddDirectLight(&sample->result, taskDirectLight->illumInfo.lightID,
+				SampleResult_AddDirectLight(&taskConfig->film,
+						&sample->result, taskDirectLight->illumInfo.lightID,
 						BSDF_GetEventTypes(bsdf
 							MATERIALS_PARAM),
 						VLOAD3F(taskState->throughput.c), lightRadiance,
@@ -912,59 +915,27 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_SP
 	//--------------------------------------------------------------------------
 
 	// Initialize Film radiance group pointer table
-	__global float *filmRadianceGroup[PARAM_FILM_RADIANCE_GROUP_COUNT];
-#if defined(PARAM_FILM_RADIANCE_GROUP_0)
+	__global float *filmRadianceGroup[FILM_MAX_RADIANCE_GROUP_COUNT];
 	filmRadianceGroup[0] = filmRadianceGroup0;
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_1)
 	filmRadianceGroup[1] = filmRadianceGroup1;
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_2)
 	filmRadianceGroup[2] = filmRadianceGroup2;
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_3)
 	filmRadianceGroup[3] = filmRadianceGroup3;
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_4)
 	filmRadianceGroup[4] = filmRadianceGroup4;
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_5)
 	filmRadianceGroup[5] = filmRadianceGroup5;
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_6)
 	filmRadianceGroup[6] = filmRadianceGroup6;
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_7)
 	filmRadianceGroup[7] = filmRadianceGroup7;
-#endif
 
 #if defined(PARAM_FILM_DENOISER)
 	// Initialize Film radiance group scale table
-	float3 filmRadianceGroupScale[PARAM_FILM_RADIANCE_GROUP_COUNT];
-#if defined(PARAM_FILM_RADIANCE_GROUP_0)
+	float3 filmRadianceGroupScale[FILM_MAX_RADIANCE_GROUP_COUNT];
 	filmRadianceGroupScale[0] = (float3)(filmRadianceGroupScale0_R, filmRadianceGroupScale0_G, filmRadianceGroupScale0_B);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_1)
 	filmRadianceGroupScale[1] = (float3)(filmRadianceGroupScale1_R, filmRadianceGroupScale1_G, filmRadianceGroupScale1_B);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_2)
 	filmRadianceGroupScale[2] = (float3)(filmRadianceGroupScale2_R, filmRadianceGroupScale2_G, filmRadianceGroupScale2_B);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_3)
 	filmRadianceGroupScale[3] = (float3)(filmRadianceGroupScale3_R, filmRadianceGroupScale3_G, filmRadianceGroupScale3_B);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_4)
 	filmRadianceGroupScale[4] = (float3)(filmRadianceGroupScale4_R, filmRadianceGroupScale4_G, filmRadianceGroupScale4_B);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_5)
 	filmRadianceGroupScale[5] = (float3)(filmRadianceGroupScale5_R, filmRadianceGroupScale5_G, filmRadianceGroupScale5_B);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_6)
 	filmRadianceGroupScale[6] = (float3)(filmRadianceGroupScale6_R, filmRadianceGroupScale6_G, filmRadianceGroupScale6_B);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_7)
 	filmRadianceGroupScale[7] = (float3)(filmRadianceGroupScale7_R, filmRadianceGroupScale7_G, filmRadianceGroupScale7_B);
-#endif
 #endif
 
 	if (taskConfig->pathTracer.pgic.indirectEnabled &&
@@ -979,7 +950,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_SP
 	const float sqrtVarianceClampMaxValue = taskConfig->pathTracer.sqrtVarianceClampMaxValue;
 	if (sqrtVarianceClampMaxValue > 0.f) {
 		// Radiance clamping
-		VarianceClamping_Clamp(&sample->result, sqrtVarianceClampMaxValue
+		VarianceClamping_Clamp(&taskConfig->film, &sample->result, sqrtVarianceClampMaxValue
 				FILM_PARAM);
 	}
 

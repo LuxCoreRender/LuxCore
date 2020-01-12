@@ -129,8 +129,8 @@ size_t PathOCLBaseOCLRenderThread::GetOpenCLSampleResultSize() const {
 
 	// filmX, filmY, pixelX and pixelY fields
 	size_t sampleResultSize = 2 * sizeof(float) + 2 * sizeof(u_int);
-	// SampleResult.radiancePerPixelNormalized[PARAM_FILM_RADIANCE_GROUP_COUNT]
-	sampleResultSize += sizeof(slg::ocl::Spectrum) * threadFilm->GetRadianceGroupCount();
+	// SampleResult.radiancePerPixelNormalized[FILM_MAX_RADIANCE_GROUP_COUNT]
+	sampleResultSize += sizeof(slg::ocl::Spectrum) * FILM_MAX_RADIANCE_GROUP_COUNT;
 	if (threadFilm->HasChannel(Film::ALPHA))
 		sampleResultSize += sizeof(float);
 	if (threadFilm->HasChannel(Film::DEPTH))

@@ -26,6 +26,11 @@
 
 namespace slg {
 
+// OpenCL data types
+namespace ocl {
+#include "slg/film/sampleresult_types.cl"
+}
+
 //------------------------------------------------------------------------------
 // SampleResult
 //------------------------------------------------------------------------------

@@ -18,33 +18,19 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-OPENCL_FORCE_INLINE void SampleResult_Init(__global SampleResult *sampleResult) {
+OPENCL_FORCE_INLINE void SampleResult_Init(__constant const Film* restrict film,
+		__global SampleResult *sampleResult) {
 	// Initialize only Spectrum fields
 
-#if defined(PARAM_FILM_RADIANCE_GROUP_0)
 	VSTORE3F(BLACK, sampleResult->radiancePerPixelNormalized[0].c);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_1)
 	VSTORE3F(BLACK, sampleResult->radiancePerPixelNormalized[1].c);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_2)
 	VSTORE3F(BLACK, sampleResult->radiancePerPixelNormalized[2].c);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_3)
 	VSTORE3F(BLACK, sampleResult->radiancePerPixelNormalized[3].c);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_4)
 	VSTORE3F(BLACK, sampleResult->radiancePerPixelNormalized[4].c);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_5)
 	VSTORE3F(BLACK, sampleResult->radiancePerPixelNormalized[5].c);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_6)
 	VSTORE3F(BLACK, sampleResult->radiancePerPixelNormalized[6].c);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_7)
 	VSTORE3F(BLACK, sampleResult->radiancePerPixelNormalized[7].c);
-#endif
+
 #if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_DIFFUSE)
 	VSTORE3F(BLACK, sampleResult->directDiffuse.c);
 #endif
@@ -80,13 +66,14 @@ OPENCL_FORCE_INLINE void SampleResult_Init(__global SampleResult *sampleResult) 
 	sampleResult->lastPathVertex = true;
 }
 
-OPENCL_FORCE_INLINE void SampleResult_AddEmission(__global SampleResult *sampleResult, const uint lightID,
+OPENCL_FORCE_INLINE void SampleResult_AddEmission(__constant const Film* restrict film,
+		__global SampleResult *sampleResult, const uint lightID,
 		const float3 pathThroughput, const float3 incomingRadiance) {
 	const float3 radiance = pathThroughput * incomingRadiance;
 
 	// Avoid out of bound access if the light group doesn't exist. This can happen
 	// with RT modes.
-	const uint id = min(lightID, PARAM_FILM_RADIANCE_GROUP_COUNT - 1u);
+	const uint id = min(lightID, film->radianceGroupCount - 1u);
 	VADD3F(sampleResult->radiancePerPixelNormalized[id].c, radiance);
 
 	if (sampleResult->firstPathVertex) {
@@ -114,14 +101,15 @@ OPENCL_FORCE_INLINE void SampleResult_AddEmission(__global SampleResult *sampleR
 	}
 }
 
-OPENCL_FORCE_INLINE void SampleResult_AddDirectLight(__global SampleResult *sampleResult, const uint lightID,
+OPENCL_FORCE_INLINE void SampleResult_AddDirectLight(__constant const Film* restrict film,
+		__global SampleResult *sampleResult, const uint lightID,
 		const BSDFEvent bsdfEvent, const float3 pathThroughput, const float3 incomingRadiance,
 		const float lightScale) {
 	const float3 radiance = pathThroughput * incomingRadiance;
 
 	// Avoid out of bound access if the light group doesn't exist. This can happen
 	// with RT modes.
-	const uint id = min(lightID, PARAM_FILM_RADIANCE_GROUP_COUNT - 1u);
+	const uint id = min(lightID, film->radianceGroupCount - 1u);
 	VADD3F(sampleResult->radiancePerPixelNormalized[id].c, radiance);
 
 	if (sampleResult->firstPathVertex) {
@@ -164,107 +152,33 @@ OPENCL_FORCE_INLINE void SampleResult_AddDirectLight(__global SampleResult *samp
 	}
 }
 
-OPENCL_FORCE_INLINE float3 SampleResult_GetSpectrum(__global SampleResult *sampleResult,
-		float3 filmRadianceGroupScale[PARAM_FILM_RADIANCE_GROUP_COUNT]) {
+OPENCL_FORCE_INLINE float3 SampleResult_GetSpectrum(__constant const Film* restrict film,
+		__global SampleResult *sampleResult,
+		float3 filmRadianceGroupScale[FILM_MAX_RADIANCE_GROUP_COUNT]) {
 	float3 c = 0.f;
-#if defined(PARAM_FILM_RADIANCE_GROUP_0)
-	c += VLOAD3F(sampleResult->radiancePerPixelNormalized[0].c) * filmRadianceGroupScale[0];
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_1)
-	c += VLOAD3F(sampleResult->radiancePerPixelNormalized[1].c) * filmRadianceGroupScale[1];
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_2)
-	c += VLOAD3F(sampleResult->radiancePerPixelNormalized[2].c) * filmRadianceGroupScale[2];
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_3)
-	c += VLOAD3F(sampleResult->radiancePerPixelNormalized[3].c) * filmRadianceGroupScale[3];
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_4)
-	c += VLOAD3F(sampleResult->radiancePerPixelNormalized[4].c) * filmRadianceGroupScale[4];
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_5)
-	c += VLOAD3F(sampleResult->radiancePerPixelNormalized[5].c) * filmRadianceGroupScale[5];
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_6)
-	c += VLOAD3F(sampleResult->radiancePerPixelNormalized[6].c) * filmRadianceGroupScale[6];
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_7)
-	c += VLOAD3F(sampleResult->radiancePerPixelNormalized[7].c) * filmRadianceGroupScale[7];
-#endif
+	for (uint i = 0; i < film->radianceGroupCount; ++i)
+		c += VLOAD3F(sampleResult->radiancePerPixelNormalized[i].c) * filmRadianceGroupScale[i];
 
 	return c;
 }
 
-OPENCL_FORCE_INLINE float SampleResult_GetRadianceY(__global SampleResult *sampleResult) {
+OPENCL_FORCE_INLINE float SampleResult_GetRadianceY(__constant const Film* restrict film,
+		__global SampleResult *sampleResult) {
 	float y = 0.f;
-#if defined(PARAM_FILM_RADIANCE_GROUP_0)
-	y += Spectrum_Y(VLOAD3F(sampleResult->radiancePerPixelNormalized[0].c));
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_1)
-	y += Spectrum_Y(VLOAD3F(sampleResult->radiancePerPixelNormalized[1].c));
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_2)
-	y += Spectrum_Y(VLOAD3F(sampleResult->radiancePerPixelNormalized[2].c));
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_3)
-	y += Spectrum_Y(VLOAD3F(sampleResult->radiancePerPixelNormalized[3].c));
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_4)
-	y += Spectrum_Y(VLOAD3F(sampleResult->radiancePerPixelNormalized[4].c));
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_5)
-	y += Spectrum_Y(VLOAD3F(sampleResult->radiancePerPixelNormalized[5].c));
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_6)
-	y += Spectrum_Y(VLOAD3F(sampleResult->radiancePerPixelNormalized[6].c));
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_7)
-	y += Spectrum_Y(VLOAD3F(sampleResult->radiancePerPixelNormalized[7].c));
-#endif
+	
+	for (uint i = 0; i < film->radianceGroupCount; ++i)
+		y += Spectrum_Y(VLOAD3F(sampleResult->radiancePerPixelNormalized[i].c));
 
 	return y;
 }
 
-OPENCL_FORCE_INLINE void SampleResult_ClampRadiance(__global SampleResult *sampleResult,
+OPENCL_FORCE_INLINE void SampleResult_ClampRadiance(__constant const Film* restrict film,
+		__global SampleResult *sampleResult,
 		const float minRadiance, const float maxRadiance) {
-#if defined(PARAM_FILM_RADIANCE_GROUP_0)
-	VSTORE3F(
-			Spectrum_ScaledClamp(VLOAD3F(sampleResult->radiancePerPixelNormalized[0].c), minRadiance, maxRadiance),
-			sampleResult->radiancePerPixelNormalized[0].c);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_1)
-	VSTORE3F(
-			Spectrum_ScaledClamp(VLOAD3F(sampleResult->radiancePerPixelNormalized[1].c), minRadiance, maxRadiance),
-			sampleResult->radiancePerPixelNormalized[1].c);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_2)
-	VSTORE3F(
-			Spectrum_ScaledClamp(VLOAD3F(sampleResult->radiancePerPixelNormalized[2].c), minRadiance, maxRadiance),
-			sampleResult->radiancePerPixelNormalized[2].c);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_3)
-	VSTORE3F(
-			Spectrum_ScaledClamp(VLOAD3F(sampleResult->radiancePerPixelNormalized[3].c), minRadiance, maxRadiance),
-			sampleResult->radiancePerPixelNormalized[3].c);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_4)
-	VSTORE3F(
-			Spectrum_ScaledClamp(VLOAD3F(sampleResult->radiancePerPixelNormalized[4].c), minRadiance, maxRadiance),
-			sampleResult->radiancePerPixelNormalized[4].c);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_5)
-	VSTORE3F(
-			Spectrum_ScaledClamp(VLOAD3F(sampleResult->radiancePerPixelNormalized[5].c), minRadiance, maxRadiance),
-			sampleResult->radiancePerPixelNormalized[5].c);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_6)
-	VSTORE3F(
-			Spectrum_ScaledClamp(VLOAD3F(sampleResult->radiancePerPixelNormalized[6].c), minRadiance, maxRadiance),
-			sampleResult->radiancePerPixelNormalized[6].c);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_7)
-	VSTORE3F(
-			Spectrum_ScaledClamp(VLOAD3F(sampleResult->radiancePerPixelNormalized[7].c), minRadiance, maxRadiance),
-			sampleResult->radiancePerPixelNormalized[7].c);
-#endif
+	
+	for (uint i = 0; i < film->radianceGroupCount; ++i) {
+		VSTORE3F(
+				Spectrum_ScaledClamp(VLOAD3F(sampleResult->radiancePerPixelNormalized[i].c), minRadiance, maxRadiance),
+				sampleResult->radiancePerPixelNormalized[i].c);
+	}
 }

@@ -61,6 +61,7 @@ typedef struct {
 	Scene scene;
 	PathTracer pathTracer;
 	Filter pixelFilter;
+	Film film;
 } GPUTaskConfiguration;
 
 typedef struct {

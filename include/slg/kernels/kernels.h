@@ -93,6 +93,7 @@ extern std::string KernelSource_texture_fresnelconst_funcs;
 extern std::string KernelSource_texture_hsv_funcs;
 extern std::string KernelSource_texture_irregulardata_funcs;
 extern std::string KernelSource_texture_funcs;
+extern std::string KernelSource_sampleresult_types;
 extern std::string KernelSource_pathdepthinfo_types;
 extern std::string KernelSource_pathdepthinfo_funcs;
 extern std::string KernelSource_pathvolumeinfo_types;

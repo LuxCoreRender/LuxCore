@@ -126,9 +126,6 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 	// All thread films are supposed to have the same parameters
 	const Film *threadFilm = threadFilms[0]->film;
 
-	for (u_int i = 0; i < threadFilms[0]->channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size(); ++i)
-		ssParams << " -D PARAM_FILM_RADIANCE_GROUP_" << i;
-	ssParams << " -D PARAM_FILM_RADIANCE_GROUP_COUNT=" << threadFilms[0]->channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size();
 	if (threadFilm->HasChannel(Film::ALPHA))
 		ssParams << " -D PARAM_FILM_CHANNELS_HAS_ALPHA";
 	if (threadFilm->HasChannel(Film::DEPTH))
@@ -561,6 +558,7 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_bsdf_types <<
 			slg::ocl::KernelSource_material_types <<
 			slg::ocl::KernelSource_volume_types <<
+			slg::ocl::KernelSource_sampleresult_types <<
 			slg::ocl::KernelSource_film_types <<
 			slg::ocl::KernelSource_filter_types <<
 			slg::ocl::KernelSource_sampler_types <<

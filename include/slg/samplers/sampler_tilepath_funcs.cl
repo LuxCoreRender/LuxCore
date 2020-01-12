@@ -134,7 +134,7 @@ OPENCL_FORCE_NOT_INLINE void Sampler_SplatSample(
 				const uint py = sample->result.pixelY + y;
 				// px and py are unsigned so there is no need to check if they are >= 0
 				if ((px < filmWidth) && (py < filmHeight)) {
-					Film_AddSample(px, py,
+					Film_AddSample(&taskConfig->film, px, py,
 							&sample->result, .001f
 							FILM_PARAM);
 				}
@@ -142,7 +142,7 @@ OPENCL_FORCE_NOT_INLINE void Sampler_SplatSample(
 		}
 	} else
 #endif
-		Film_AddSample(sample->result.pixelX, sample->result.pixelY,
+		Film_AddSample(&taskConfig->film, sample->result.pixelX, sample->result.pixelY,
 				&sample->result, 1.f
 				FILM_PARAM);
 }

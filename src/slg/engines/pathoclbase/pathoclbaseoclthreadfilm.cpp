@@ -371,8 +371,12 @@ u_int PathOCLBaseOCLRenderThread::ThreadFilm::SetFilmKernelArgs(cl::Kernel &kern
 	kernel.setArg(argIndex++, filmSubRegion[2]);
 	kernel.setArg(argIndex++, filmSubRegion[3]);
 
-	for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size(); ++i)
-		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i]);
+	for (u_int i = 0; i < FILM_MAX_RADIANCE_GROUP_COUNT; ++i) {
+		if (i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size())
+			kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i]);
+		else
+			kernel.setArg(argIndex++, sizeof(cl::Buffer), nullptr);
+	}
 	if (film->HasChannel(Film::ALPHA))
 		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_ALPHA_Buff);
 	if (film->HasChannel(Film::DEPTH))
@@ -448,14 +452,20 @@ u_int PathOCLBaseOCLRenderThread::ThreadFilm::SetFilmKernelArgs(cl::Kernel &kern
 
 		if (denoiser.IsWarmUpDone()) {
 			const vector<RadianceChannelScale> &scales = denoiser.GetRadianceChannelScales();
-			for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size(); ++i) {
-				const Spectrum s = scales[i].GetScale();
-				kernel.setArg(argIndex++, s.c[0]);
-				kernel.setArg(argIndex++, s.c[1]);
-				kernel.setArg(argIndex++, s.c[2]);
+			for (u_int i = 0; i < FILM_MAX_RADIANCE_GROUP_COUNT; ++i) {
+				if (i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size()) {
+					const Spectrum s = scales[i].GetScale();
+					kernel.setArg(argIndex++, s.c[0]);
+					kernel.setArg(argIndex++, s.c[1]);
+					kernel.setArg(argIndex++, s.c[2]);
+				} else {
+					kernel.setArg(argIndex++, 0.f);
+					kernel.setArg(argIndex++, 0.f);
+					kernel.setArg(argIndex++, 0.f);					
+				}
 			}
 		} else {
-			for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size(); ++i) {
+			for (u_int i = 0; i < FILM_MAX_RADIANCE_GROUP_COUNT; ++i) {
 				kernel.setArg(argIndex++, 0.f);
 				kernel.setArg(argIndex++, 0.f);
 				kernel.setArg(argIndex++, 0.f);

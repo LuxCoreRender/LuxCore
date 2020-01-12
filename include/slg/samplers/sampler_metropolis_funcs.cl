@@ -140,7 +140,7 @@ OPENCL_FORCE_NOT_INLINE void Sampler_SplatSample(
 		// It is the very first sample, I have still to initialize the current
 		// sample
 
-		Film_AddSample(sample->result.pixelX, sample->result.pixelY,
+		Film_AddSample(&taskConfig->film, sample->result.pixelX, sample->result.pixelY,
 				&sample->result, 1.f
 				FILM_PARAM);
 
@@ -228,7 +228,7 @@ OPENCL_FORCE_NOT_INLINE void Sampler_SplatSample(
 						contrib->radiancePerPixelNormalized[0].c[2],
 						norm, consecutiveRejects);*/
 
-			Film_AddSample(contrib->pixelX, contrib->pixelY,
+			Film_AddSample(&taskConfig->film, contrib->pixelX, contrib->pixelY,
 					contrib, norm
 					FILM_PARAM);
 		}

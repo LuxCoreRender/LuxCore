@@ -250,7 +250,7 @@ OPENCL_FORCE_NOT_INLINE void Sampler_SplatSample(
 		__global Sample *sample, __global float *sampleData
 		FILM_PARAM_DECL
 		) {
-	Film_AddSample(sample->result.pixelX, sample->result.pixelY,
+	Film_AddSample(&taskConfig->film, sample->result.pixelX, sample->result.pixelY,
 			&sample->result, 1.f
 			FILM_PARAM);
 }

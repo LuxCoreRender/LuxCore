@@ -140,6 +140,8 @@ void PathOCLBaseRenderEngine::InitGPUTaskConfiguration() {
 	taskConfig.pathTracer = compiledScene->compiledPathTracer;
 
 	taskConfig.pixelFilter = *oclPixelFilter;
+
+	taskConfig.film.radianceGroupCount = film->GetRadianceGroupCount();
 }
 
 void PathOCLBaseRenderEngine::InitPixelFilterDistribution() {

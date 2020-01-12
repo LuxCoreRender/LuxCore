@@ -19,6 +19,7 @@
  ***************************************************************************/
 
 OPENCL_FORCE_NOT_INLINE bool Scene_Intersect(
+		__constant const GPUTaskConfiguration* restrict taskConfig,
 		const SceneRayType rayType,
 		int *throughShadowTransparency,
 		__global PathVolumeInfo *volInfo,
@@ -73,7 +74,7 @@ OPENCL_FORCE_NOT_INLINE bool Scene_Intersect(
 
 		// Add the volume emitted light to the appropriate light group
 		if (!Spectrum_IsBlack(connectionEmission) && sampleResult)
-			SampleResult_AddEmission(sampleResult, BSDF_GetLightID(bsdf
+			SampleResult_AddEmission(&taskConfig->film, sampleResult, BSDF_GetLightID(bsdf
 				MATERIALS_PARAM),
 					pathThroughput, connectionEmission);
 

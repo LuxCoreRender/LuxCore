@@ -134,30 +134,11 @@ OPENCL_FORCE_INLINE void Film_AddSampleResultColor(const uint x, const uint y,
 	const uint index2 = index1 * 2;
 	const uint index4 = index1 * 4;
 
-#if defined(PARAM_FILM_RADIANCE_GROUP_0)
-	Film_AddWeightedPixel4(&((filmRadianceGroup[0])[index4]), sampleResult->radiancePerPixelNormalized[0].c, weight);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_1)
-	Film_AddWeightedPixel4(&((filmRadianceGroup[1])[index4]), sampleResult->radiancePerPixelNormalized[1].c, weight);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_2)
-	Film_AddWeightedPixel4(&((filmRadianceGroup[2])[index4]), sampleResult->radiancePerPixelNormalized[2].c, weight);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_3)
-	Film_AddWeightedPixel4(&((filmRadianceGroup[3])[index4]), sampleResult->radiancePerPixelNormalized[3].c, weight);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_4)
-	Film_AddWeightedPixel4(&((filmRadianceGroup[4])[index4]), sampleResult->radiancePerPixelNormalized[4].c, weight);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_5)
-	Film_AddWeightedPixel4(&((filmRadianceGroup[5])[index4]), sampleResult->radiancePerPixelNormalized[5].c, weight);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_6)
-	Film_AddWeightedPixel4(&((filmRadianceGroup[6])[index4]), sampleResult->radiancePerPixelNormalized[6].c, weight);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_7)
-	Film_AddWeightedPixel4(&((filmRadianceGroup[7])[index4]), sampleResult->radiancePerPixelNormalized[7].c, weight);
-#endif
+	for (uint i = 0; i < FILM_MAX_RADIANCE_GROUP_COUNT; ++i) {
+		if (filmRadianceGroup[i])
+			Film_AddWeightedPixel4(&((filmRadianceGroup[i])[index4]), sampleResult->radiancePerPixelNormalized[i].c, weight);
+	}
+
 #if defined(PARAM_FILM_CHANNELS_HAS_ALPHA)
 	Film_AddWeightedPixel2(&filmAlpha[index2], &sampleResult->alpha, weight);
 #endif
@@ -193,30 +174,10 @@ OPENCL_FORCE_INLINE void Film_AddSampleResultColor(const uint x, const uint y,
 	float3 byMaterialIDColor = BLACK;
 	
 	if (sampleResult->materialID == PARAM_FILM_BY_MATERIAL_ID) {
-#if defined(PARAM_FILM_RADIANCE_GROUP_0)
-		byMaterialIDColor += VLOAD3F(sampleResult->radiancePerPixelNormalized[0].c);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_1)
-		byMaterialIDColor += VLOAD3F(sampleResult->radiancePerPixelNormalized[1].c);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_2)
-		byMaterialIDColor += VLOAD3F(sampleResult->radiancePerPixelNormalized[2].c);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_3)
-		byMaterialIDColor += VLOAD3F(sampleResult->radiancePerPixelNormalized[3].c);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_4)
-		byMaterialIDColor += VLOAD3F(sampleResult->radiancePerPixelNormalized[4].c);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_5)
-		byMaterialIDColor += VLOAD3F(sampleResult->radiancePerPixelNormalized[5].c);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_6)
-		byMaterialIDColor += VLOAD3F(sampleResult->radiancePerPixelNormalized[6].c);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_7)
-		byMaterialIDColor += VLOAD3F(sampleResult->radiancePerPixelNormalized[7].c);
-#endif
+		for (uint i = 0; i < FILM_MAX_RADIANCE_GROUP_COUNT; ++i) {
+			if (filmRadianceGroup[i])
+				byMaterialIDColor += VLOAD3F(sampleResult->radiancePerPixelNormalized[i].c);
+		}
 	}
 	Film_AddWeightedPixel4Val(&filmByMaterialID[index4], byMaterialIDColor, weight);
 #endif
@@ -231,30 +192,10 @@ OPENCL_FORCE_INLINE void Film_AddSampleResultColor(const uint x, const uint y,
 	float3 byObjectIDColor = BLACK;
 	
 	if (sampleResult->objectID == PARAM_FILM_BY_OBJECT_ID) {
-#if defined(PARAM_FILM_RADIANCE_GROUP_0)
-		byObjectIDColor += VLOAD3F(sampleResult->radiancePerPixelNormalized[0].c);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_1)
-		byObjectIDColor += VLOAD3F(sampleResult->radiancePerPixelNormalized[1].c);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_2)
-		byObjectIDColor += VLOAD3F(sampleResult->radiancePerPixelNormalized[2].c);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_3)
-		byObjectIDColor += VLOAD3F(sampleResult->radiancePerPixelNormalized[3].c);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_4)
-		byObjectIDColor += VLOAD3F(sampleResult->radiancePerPixelNormalized[4].c);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_5)
-		byObjectIDColor += VLOAD3F(sampleResult->radiancePerPixelNormalized[5].c);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_6)
-		byObjectIDColor += VLOAD3F(sampleResult->radiancePerPixelNormalized[6].c);
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_7)
-		byObjectIDColor += VLOAD3F(sampleResult->radiancePerPixelNormalized[7].c);
-#endif
+		for (uint i = 0; i < FILM_MAX_RADIANCE_GROUP_COUNT; ++i) {
+			if (filmRadianceGroup[i])
+				byObjectIDColor += VLOAD3F(sampleResult->radiancePerPixelNormalized[i].c);
+		}
 	}
 	Film_AddWeightedPixel4Val(&filmByObjectID[index4], byObjectIDColor, weight);
 #endif
@@ -320,12 +261,13 @@ OPENCL_FORCE_INLINE void Film_AddSampleResultData(const uint x, const uint y,
 #endif
 }
 
-OPENCL_FORCE_NOT_INLINE void Film_AddSample(const uint x, const uint y,
+OPENCL_FORCE_NOT_INLINE void Film_AddSample(__constant const Film* restrict film,
+		const uint x, const uint y,
 		__global SampleResult *sampleResult, const float weight
 		FILM_PARAM_DECL) {
 #if defined(PARAM_FILM_DENOISER)
 	// Add the sample to film denoiser sample accumulator
-	FilmDenoiser_AddSample(
+	FilmDenoiser_AddSample(film,
 			x, y, sampleResult, weight,
 			filmWidth, filmHeight
 			FILM_DENOISER_PARAM);
@@ -341,54 +283,6 @@ OPENCL_FORCE_NOT_INLINE void Film_AddSample(const uint x, const uint y,
 // Film kernel parameters
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_FILM_RADIANCE_GROUP_0)
-#define KERNEL_ARGS_FILM_RADIANCE_GROUP_0 \
-		, __global float *filmRadianceGroup0
-#else
-#define KERNEL_ARGS_FILM_RADIANCE_GROUP_0
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_1)
-#define KERNEL_ARGS_FILM_RADIANCE_GROUP_1 \
-		, __global float *filmRadianceGroup1
-#else
-#define KERNEL_ARGS_FILM_RADIANCE_GROUP_1
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_2)
-#define KERNEL_ARGS_FILM_RADIANCE_GROUP_2 \
-		, __global float *filmRadianceGroup2
-#else
-#define KERNEL_ARGS_FILM_RADIANCE_GROUP_2
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_3)
-#define KERNEL_ARGS_FILM_RADIANCE_GROUP_3 \
-		, __global float *filmRadianceGroup3
-#else
-#define KERNEL_ARGS_FILM_RADIANCE_GROUP_3
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_4)
-#define KERNEL_ARGS_FILM_RADIANCE_GROUP_4 \
-		, __global float *filmRadianceGroup4
-#else
-#define KERNEL_ARGS_FILM_RADIANCE_GROUP_4
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_5)
-#define KERNEL_ARGS_FILM_RADIANCE_GROUP_5 \
-		, __global float *filmRadianceGroup5
-#else
-#define KERNEL_ARGS_FILM_RADIANCE_GROUP_5
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_6)
-#define KERNEL_ARGS_FILM_RADIANCE_GROUP_6 \
-		, __global float *filmRadianceGroup6
-#else
-#define KERNEL_ARGS_FILM_RADIANCE_GROUP_6
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_7)
-#define KERNEL_ARGS_FILM_RADIANCE_GROUP_7 \
-		, __global float *filmRadianceGroup7
-#else
-#define KERNEL_ARGS_FILM_RADIANCE_GROUP_7
-#endif
 #if defined(PARAM_FILM_CHANNELS_HAS_ALPHA)
 #define KERNEL_ARGS_FILM_CHANNELS_ALPHA \
 		, __global float *filmAlpha
@@ -567,70 +461,38 @@ OPENCL_FORCE_NOT_INLINE void Film_AddSample(const uint x, const uint y,
 
 #if defined(PARAM_FILM_DENOISER)
 
-#if defined(PARAM_FILM_RADIANCE_GROUP_0)
 #define KERNEL_ARGS_FILM_RADIANCE_GROUP_SCALE_0 \
 		, float filmRadianceGroupScale0_R \
 		, float filmRadianceGroupScale0_G \
 		, float filmRadianceGroupScale0_B
-#else
-#define KERNEL_ARGS_FILM_RADIANCE_GROUP_SCALE_0
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_1)
 #define KERNEL_ARGS_FILM_RADIANCE_GROUP_SCALE_1 \
 		, float filmRadianceGroupScale1_R \
 		, float filmRadianceGroupScale1_G \
 		, float filmRadianceGroupScale1_B
-#else
-#define KERNEL_ARGS_FILM_RADIANCE_GROUP_SCALE_1
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_2)
 #define KERNEL_ARGS_FILM_RADIANCE_GROUP_SCALE_2 \
 		, float filmRadianceGroupScale2_R \
 		, float filmRadianceGroupScale2_G \
 		, float filmRadianceGroupScale2_B
-#else
-#define KERNEL_ARGS_FILM_RADIANCE_GROUP_SCALE_2
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_3)
 #define KERNEL_ARGS_FILM_RADIANCE_GROUP_SCALE_3 \
 		, float filmRadianceGroupScale3_R \
 		, float filmRadianceGroupScale3_G \
 		, float filmRadianceGroupScale3_B
-#else
-#define KERNEL_ARGS_FILM_RADIANCE_GROUP_SCALE_3
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_4)
 #define KERNEL_ARGS_FILM_RADIANCE_GROUP_SCALE_4 \
 		, float filmRadianceGroupScale4_R \
 		, float filmRadianceGroupScale4_G \
 		, float filmRadianceGroupScale4_B
-#else
-#define KERNEL_ARGS_FILM_RADIANCE_GROUP_SCALE_4
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_5)
 #define KERNEL_ARGS_FILM_RADIANCE_GROUP_SCALE_5 \
 		, float filmRadianceGroupScale5_R \
 		, float filmRadianceGroupScale5_G \
 		, float filmRadianceGroupScale5_B
-#else
-#define KERNEL_ARGS_FILM_RADIANCE_GROUP_SCALE_5
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_6)
 #define KERNEL_ARGS_FILM_RADIANCE_GROUP_SCALE_6 \
 		, float filmRadianceGroupScale6_R \
 		, float filmRadianceGroupScale6_G \
 		, float filmRadianceGroupScale6_B
-#else
-#define KERNEL_ARGS_FILM_RADIANCE_GROUP_SCALE_6
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_7)
 #define KERNEL_ARGS_FILM_RADIANCE_GROUP_SCALE_7 \
 		, float filmRadianceGroupScale7_R \
 		, float filmRadianceGroupScale7_G \
 		, float filmRadianceGroupScale7_B
-#else
-#define KERNEL_ARGS_FILM_RADIANCE_GROUP_SCALE_7
-#endif
 
 #define KERNEL_ARGS_FILM_DENOISER \
 	, const int filmDenoiserWarmUpDone \
@@ -662,14 +524,14 @@ OPENCL_FORCE_NOT_INLINE void Film_AddSample(const uint x, const uint y,
 		, const uint filmWidth, const uint filmHeight \
 		, const uint filmSubRegion0, const uint filmSubRegion1 \
 		, const uint filmSubRegion2, const uint filmSubRegion3 \
-		KERNEL_ARGS_FILM_RADIANCE_GROUP_0 \
-		KERNEL_ARGS_FILM_RADIANCE_GROUP_1 \
-		KERNEL_ARGS_FILM_RADIANCE_GROUP_2 \
-		KERNEL_ARGS_FILM_RADIANCE_GROUP_3 \
-		KERNEL_ARGS_FILM_RADIANCE_GROUP_4 \
-		KERNEL_ARGS_FILM_RADIANCE_GROUP_5 \
-		KERNEL_ARGS_FILM_RADIANCE_GROUP_6 \
-		KERNEL_ARGS_FILM_RADIANCE_GROUP_7 \
+		, __global float *filmRadianceGroup0 \
+		, __global float *filmRadianceGroup1 \
+		, __global float *filmRadianceGroup2 \
+		, __global float *filmRadianceGroup3 \
+		, __global float *filmRadianceGroup4 \
+		, __global float *filmRadianceGroup5 \
+		, __global float *filmRadianceGroup6 \
+		, __global float *filmRadianceGroup7 \
 		KERNEL_ARGS_FILM_CHANNELS_ALPHA \
 		KERNEL_ARGS_FILM_CHANNELS_DEPTH \
 		KERNEL_ARGS_FILM_CHANNELS_POSITION \
@@ -712,54 +574,25 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Film_Clear(
 	if (gid >= filmWidth * filmHeight)
 		return;
 
-#if defined(PARAM_FILM_RADIANCE_GROUP_0)
-	filmRadianceGroup0[gid * 4] = 0.f;
-	filmRadianceGroup0[gid * 4 + 1] = 0.f;
-	filmRadianceGroup0[gid * 4 + 2] = 0.f;
-	filmRadianceGroup0[gid * 4 + 3] = 0.f;
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_1)
-	filmRadianceGroup1[gid * 4] = 0.f;
-	filmRadianceGroup1[gid * 4 + 1] = 0.f;
-	filmRadianceGroup1[gid * 4 + 2] = 0.f;
-	filmRadianceGroup1[gid * 4 + 3] = 0.f;
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_2)
-	filmRadianceGroup2[gid * 4] = 0.f;
-	filmRadianceGroup2[gid * 4 + 1] = 0.f;
-	filmRadianceGroup2[gid * 4 + 2] = 0.f;
-	filmRadianceGroup2[gid * 4 + 3] = 0.f;
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_3)
-	filmRadianceGroup3[gid * 4] = 0.f;
-	filmRadianceGroup3[gid * 4 + 1] = 0.f;
-	filmRadianceGroup3[gid * 4 + 2] = 0.f;
-	filmRadianceGroup3[gid * 4 + 3] = 0.f;
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_4)
-	filmRadianceGroup4[gid * 4] = 0.f;
-	filmRadianceGroup4[gid * 4 + 1] = 0.f;
-	filmRadianceGroup4[gid * 4 + 2] = 0.f;
-	filmRadianceGroup4[gid * 4 + 3] = 0.f;
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_5)
-	filmRadianceGroup5[gid * 4] = 0.f;
-	filmRadianceGroup5[gid * 4 + 1] = 0.f;
-	filmRadianceGroup5[gid * 4 + 2] = 0.f;
-	filmRadianceGroup5[gid * 4 + 3] = 0.f;
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_6)
-	filmRadianceGroup6[gid * 4] = 0.f;
-	filmRadianceGroup6[gid * 4 + 1] = 0.f;
-	filmRadianceGroup6[gid * 4 + 2] = 0.f;
-	filmRadianceGroup6[gid * 4 + 3] = 0.f;
-#endif
-#if defined(PARAM_FILM_RADIANCE_GROUP_7)
-	filmRadianceGroup7[gid * 4] = 0.f;
-	filmRadianceGroup7[gid * 4 + 1] = 0.f;
-	filmRadianceGroup7[gid * 4 + 2] = 0.f;
-	filmRadianceGroup7[gid * 4 + 3] = 0.f;
-#endif
+	__global float *filmRadianceGroup[FILM_MAX_RADIANCE_GROUP_COUNT];
+	filmRadianceGroup[0] = filmRadianceGroup0;
+	filmRadianceGroup[1] = filmRadianceGroup1;
+	filmRadianceGroup[2] = filmRadianceGroup2;
+	filmRadianceGroup[3] = filmRadianceGroup3;
+	filmRadianceGroup[4] = filmRadianceGroup4;
+	filmRadianceGroup[5] = filmRadianceGroup5;
+	filmRadianceGroup[6] = filmRadianceGroup6;
+	filmRadianceGroup[7] = filmRadianceGroup7;
+	
+	for (uint i = 0; i < FILM_MAX_RADIANCE_GROUP_COUNT; ++i) {
+		if (filmRadianceGroup[i]) {
+			filmRadianceGroup[i][gid * 4] = 0.f;
+			filmRadianceGroup[i][gid * 4 + 1] = 0.f;
+			filmRadianceGroup[i][gid * 4 + 2] = 0.f;
+			filmRadianceGroup[i][gid * 4 + 3] = 0.f;
+		}
+	}
+
 #if defined(PARAM_FILM_CHANNELS_HAS_ALPHA)
 	filmAlpha[gid * 2] = 0.f;
 	filmAlpha[gid * 2 + 1] = 0.f;
