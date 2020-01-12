@@ -42,6 +42,7 @@
 * Changing any image map related settings doesn't require OpenCL compilation anymore (removed all PARAM_HAS_IMAGEMAPS_*)
 * Added the support for UV-less bump mapping with triplanar mapping
 * Changing the number of light groups used doesn't require OpenCL compilation anymore (removed PARAM_FILM_RADIANCE_GROUP_*)
+* Reduced (again) the default number of OpenCL threads from 256k to 128k
 
 ### Fixed Bugs
 
