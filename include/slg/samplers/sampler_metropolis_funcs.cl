@@ -145,14 +145,14 @@ OPENCL_FORCE_NOT_INLINE void Sampler_SplatSample(
 				FILM_PARAM);
 
 		sample->currentResult = sample->result;
-		sample->totalI = SampleResult_GetRadianceY(&sample->result);
+		sample->totalI = SampleResult_GetRadianceY(&taskConfig->film, &sample->result);
 
 		current = proposed;
 		proposed ^= 1;
 	} else {
-		const float currentI = SampleResult_GetRadianceY(&sample->currentResult);
+		const float currentI = SampleResult_GetRadianceY(&taskConfig->film, &sample->currentResult);
 
-		float proposedI = SampleResult_GetRadianceY(&sample->result);
+		float proposedI = SampleResult_GetRadianceY(&taskConfig->film, &sample->result);
 		proposedI = (isnan(proposedI) || isinf(proposedI)) ? 0.f : proposedI;
 
 		float totalI = sample->totalI;
