@@ -302,6 +302,7 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 		pl->localPos = props.Get(Property(propName + ".position")(Point())).Get<Point>();
 		pl->color = props.Get(Property(propName + ".color")(Spectrum(1.f))).Get<Spectrum>();
 		pl->power = Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>());
+		pl->emittedPowerNormalize = props.Get(Property(propName + ".normalizebycolor")(true)).Get<bool>();
 		pl->efficency = Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>());
 
 		lightSource = pl;
@@ -319,6 +320,7 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 		mpl->imageMap = map;
 		mpl->color = props.Get(Property(propName + ".color")(Spectrum(1.f))).Get<Spectrum>();
 		mpl->power = Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>());
+		mpl->emittedPowerNormalize = props.Get(Property(propName + ".normalizebycolor")(true)).Get<bool>();
 		mpl->efficency = Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>());
 
 		lightSource = mpl;
@@ -332,6 +334,7 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 		sl->radius = Max(0.f, props.Get(Property(propName + ".radius")(1.f)).Get<float>());
 		sl->color = props.Get(Property(propName + ".color")(Spectrum(1.f))).Get<Spectrum>();
 		sl->power = Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>());
+		sl->emittedPowerNormalize = props.Get(Property(propName + ".normalizebycolor")(true)).Get<bool>();
 		sl->efficency = Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>());
 
 		lightSource = sl;
@@ -350,6 +353,7 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 		msl->imageMap = map;
 		msl->color = props.Get(Property(propName + ".color")(Spectrum(1.f))).Get<Spectrum>();
 		msl->power = Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>());
+		msl->emittedPowerNormalize = props.Get(Property(propName + ".normalizebycolor")(true)).Get<bool>();
 		msl->efficency = Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>());
 
 		lightSource = msl;
@@ -386,6 +390,7 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 		pl->localPos = props.Get(Property(propName + ".position")(Point())).Get<Point>();
 		pl->localTarget = props.Get(Property(propName + ".target")(Point(0.f, 0.f, 1.f))).Get<Point>();
 		pl->power = Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>());
+		pl->emittedPowerNormalize = props.Get(Property(propName + ".normalizebycolor")(true)).Get<bool>();
 		pl->efficency = Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>());
 		pl->imageMap = imgMap;
 		pl->fov = Max(0.f, props.Get(Property(propName + ".fov")(45.f)).Get<float>());
@@ -402,6 +407,7 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 		ll->radius = Max(0.f, props.Get(Property(propName + ".radius")(.01f)).Get<float>());
 		ll->color = props.Get(Property(propName + ".color")(Spectrum(1.f))).Get<Spectrum>();
 		ll->power = Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>());
+		ll->emittedPowerNormalize = props.Get(Property(propName + ".normalizebycolor")(true)).Get<bool>();
 		ll->efficency = Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>());
 
 		lightSource = ll;

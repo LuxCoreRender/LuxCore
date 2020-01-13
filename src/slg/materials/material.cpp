@@ -37,7 +37,7 @@ Material::Material(const Texture *frontTransp, const Texture *backTransp,
 		NamedObject("material"),
 		matID(0), lightID(0),
 		directLightSamplingType(DLS_AUTO), emittedImportance(1.f),
-		emittedGain(1.f), emittedPower(0.f), emittedEfficency(0.f),
+		emittedGain(1.f), emittedPower(0.f), emittedEfficency(0.f), emittedPowerNormalize(true),
 		frontTransparencyTex(frontTransp), backTransparencyTex(backTransp),
 		emittedTex(emitted), bumpTex(bump), bumpSampleDistance(.001f),
 		emissionMap(nullptr), emissionFunc(nullptr),
@@ -155,7 +155,9 @@ Spectrum Material::EvaluateTotal(const HitPoint &hitPoint) const {
 
 void Material::UpdateEmittedFactor() {
 	if (emittedTex) {
-		emittedFactor = emittedGain * (emittedPower * emittedEfficency / Max(emittedTex->Y(), 0.f));
+		const float normalizeFactor = emittedPowerNormalize ? (1.f / Max(emittedTex->Y(), 0.f)) : 1.f;
+
+		emittedFactor = emittedGain * (emittedPower * emittedEfficency  * normalizeFactor);
 		if (emittedFactor.Black() || emittedFactor.IsInf() || emittedFactor.IsNaN()) {
 			emittedFactor = emittedGain;
 			usePrimitiveArea = false;
@@ -191,6 +193,7 @@ Properties Material::ToProperties(const ImageMapCache &imgMapCache, const bool u
 
 	props.Set(Property("scene.materials." + name + ".emission.gain")(emittedGain));
 	props.Set(Property("scene.materials." + name + ".emission.power")(emittedPower));
+	props.Set(Property("scene.materials." + name + ".emission.normalizebycolor")(emittedPowerNormalize));
 	props.Set(Property("scene.materials." + name + ".emission.efficency")(emittedEfficency));
 	props.Set(Property("scene.materials." + name + ".emission.theta")(emittedTheta));
 	props.Set(Property("scene.materials." + name + ".emission.id")(lightID));

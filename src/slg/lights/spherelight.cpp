@@ -155,10 +155,6 @@ Properties SphereLight::ToProperties(const ImageMapCache &imgMapCache, const boo
 	Properties props = PointLight::ToProperties(imgMapCache, useRealFileName);
 
 	props.Set(Property(prefix + ".type")("sphere"));
-	props.Set(Property(prefix + ".color")(color));
-	props.Set(Property(prefix + ".power")(power));
-	props.Set(Property(prefix + ".efficency")(efficency));
-	props.Set(Property(prefix + ".position")(localPos));
 	props.Set(Property(prefix + ".radius")(radius));
 
 	return props;

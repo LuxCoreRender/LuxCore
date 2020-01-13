@@ -55,6 +55,7 @@ public:
 
 	luxrays::Spectrum color;
 	float power, efficency;
+	bool emittedPowerNormalize;
 
 protected:
 	luxrays::Spectrum emittedFactor;

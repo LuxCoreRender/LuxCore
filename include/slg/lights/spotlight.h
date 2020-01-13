@@ -58,6 +58,7 @@ public:
 
 	luxrays::Spectrum color;
 	float power, efficency;
+	bool emittedPowerNormalize;
 
 	luxrays::Point localPos, localTarget;
 	float coneAngle, coneDeltaAngle;
