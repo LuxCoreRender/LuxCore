@@ -29,8 +29,8 @@ OPENCL_FORCE_INLINE float3 ExtMesh_GetGeometryNormal(
 
 	// geometryN is already in world coordinates for TYPE_EXT_TRIANGLE
 	if (meshDesc->type != TYPE_EXT_TRIANGLE) {
-		// Transform to global coordinates (normal requires Inv transformation)
-		geometryN = normalize(Transform_InvApplyNormal(localToWorld, geometryN));
+		// Transform to global coordinates
+		geometryN = normalize(Transform_ApplyNormal(localToWorld, geometryN));
 	}
 
 	return geometryN;
@@ -57,8 +57,8 @@ OPENCL_FORCE_INLINE float3 ExtMesh_GetInterpolateNormal(
 
 		// interpolatedN is already in world coordinates for TYPE_EXT_TRIANGLE
 		if (meshDesc->type != TYPE_EXT_TRIANGLE) {
-			// Transform to global coordinates (normal requires Inv transformation)
-			interpolatedN = normalize(Transform_InvApplyNormal(localToWorld, interpolatedN));
+			// Transform to global coordinates
+			interpolatedN = normalize(Transform_ApplyNormal(localToWorld, interpolatedN));
 		}
 	} else
 		interpolatedN = ExtMesh_GetGeometryNormal(localToWorld, meshIndex, triangleIndex EXTMESH_PARAM);
@@ -222,9 +222,9 @@ OPENCL_FORCE_INLINE void ExtMesh_GetDifferentials(
 			
 			// dndu and dndv are already in world coordinates for TYPE_EXT_TRIANGLE
 			if (meshDesc->type != TYPE_EXT_TRIANGLE) {
-				// Transform to global coordinates (normal requires Inv transformation)
-				*dndu = Transform_InvApplyNormal(localToWorld, *dndu);
-				*dndv = Transform_InvApplyNormal(localToWorld, *dndv);
+				// Transform to global coordinates
+				*dndu = Transform_ApplyNormal(localToWorld, *dndu);
+				*dndv = Transform_ApplyNormal(localToWorld, *dndv);
 			}
 		} else {
 			*dndu = ZERO;
