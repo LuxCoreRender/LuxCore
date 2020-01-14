@@ -178,7 +178,6 @@ OpenCLIntersectionDevice::OpenCLIntersectionDevice(
 
 	deviceDesc = desc;
 	deviceName = (desc->GetName() + " Intersect").c_str();
-	reportedPermissionError = false;
 
 	// Check if OpenCL 1.1 is available
 	if (!desc->IsOpenCL_1_1()) {
@@ -295,12 +294,11 @@ void OpenCLIntersectionDevice::AllocBuffer(const cl_mem_flags clFlags, cl::Buffe
 		void *src, const size_t size, const std::string &desc) {
 	// Check if the buffer is too big
 	if (GetDeviceDesc()->GetMaxMemoryAllocSize() < size) {
-		std::stringstream ss;
-		ss << "The " << desc << " buffer is too big for " << GetName() <<
+		// This is now only a WARNING and not an ERROR because NVIDIA reported
+		// CL_DEVICE_MAX_MEM_ALLOC_SIZE is lower than the real limit.
+		LR_LOG(deviceContext, "WARNING: the " << desc << " buffer is too big for " << GetName() <<
 				" device (i.e. CL_DEVICE_MAX_MEM_ALLOC_SIZE=" <<
-				GetDeviceDesc()->GetMaxMemoryAllocSize() <<
-				"): try to reduce related parameters";
-		throw std::runtime_error(ss.str());
+				GetDeviceDesc()->GetMaxMemoryAllocSize() << ")");
 	}
 
 	// Handle the case of an empty buffer

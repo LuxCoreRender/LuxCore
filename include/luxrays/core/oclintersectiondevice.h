@@ -212,8 +212,6 @@ private:
 	// OpenCL queues
 	std::vector<OpenCLDeviceQueue *> oclQueues;
 	OpenCLKernels *kernels;
-
-	bool reportedPermissionError;
 };
 
 }
