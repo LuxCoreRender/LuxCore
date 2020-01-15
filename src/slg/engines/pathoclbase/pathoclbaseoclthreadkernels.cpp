@@ -193,9 +193,6 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 	if (threadFilm->HasChannel(Film::USER_IMPORTANCE))
 		ssParams << " -D PARAM_FILM_CHANNELS_HAS_USER_IMPORTANCE";
 
-	if (threadFilm->GetDenoiser().IsEnabled())
-		ssParams << " -D PARAM_FILM_DENOISER";
-
 	if (cscene->IsTextureCompiled(CONST_FLOAT))
 		ssParams << " -D PARAM_ENABLE_TEX_CONST_FLOAT";
 	if (cscene->IsTextureCompiled(CONST_FLOAT3))

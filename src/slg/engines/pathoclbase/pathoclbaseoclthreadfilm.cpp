@@ -471,6 +471,23 @@ u_int PathOCLBaseOCLRenderThread::ThreadFilm::SetFilmKernelArgs(cl::Kernel &kern
 				kernel.setArg(argIndex++, 0.f);
 			}
 		}
+	} else {
+		kernel.setArg(argIndex++, 0);
+		kernel.setArg(argIndex++, 0.f);
+		kernel.setArg(argIndex++, 0.f);
+		kernel.setArg(argIndex++, 0.f);
+		kernel.setArg(argIndex++, 0);
+		kernel.setArg(argIndex++, sizeof(cl::Buffer), nullptr);
+		kernel.setArg(argIndex++, sizeof(cl::Buffer), nullptr);
+		kernel.setArg(argIndex++, sizeof(cl::Buffer), nullptr);
+		kernel.setArg(argIndex++, sizeof(cl::Buffer), nullptr);
+		kernel.setArg(argIndex++, sizeof(cl::Buffer), nullptr);
+
+		for (u_int i = 0; i < FILM_MAX_RADIANCE_GROUP_COUNT; ++i) {
+			kernel.setArg(argIndex++, 0.f);
+			kernel.setArg(argIndex++, 0.f);
+			kernel.setArg(argIndex++, 0.f);
+		}
 	}
 
 	return argIndex;

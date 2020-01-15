@@ -18,8 +18,6 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#if defined(PARAM_FILM_DENOISER)
-
 OPENCL_FORCE_INLINE void SamplesAccumulator_AtomicAdd(__global float *buff,
 		const uint buffWidth, const uint buffHeight, const uint buffDepth,
 		const uint line, const uint column, const uint index,
@@ -148,5 +146,3 @@ OPENCL_FORCE_INLINE void FilmDenoiser_AddSample(
 					FILM_DENOISER_PARAM);
 	}
 }
-
-#endif

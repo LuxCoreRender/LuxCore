@@ -139,9 +139,12 @@ void PathOCLBaseRenderEngine::InitGPUTaskConfiguration() {
 	// Path Tracer configuration
 	taskConfig.pathTracer = compiledScene->compiledPathTracer;
 
+	// Pixel filter configuration
 	taskConfig.pixelFilter = *oclPixelFilter;
 
+	// Film configuration
 	taskConfig.film.radianceGroupCount = film->GetRadianceGroupCount();
+	taskConfig.film.bcdDenoiserEnable = film->GetDenoiser().IsEnabled();
 }
 
 void PathOCLBaseRenderEngine::InitPixelFilterDistribution() {

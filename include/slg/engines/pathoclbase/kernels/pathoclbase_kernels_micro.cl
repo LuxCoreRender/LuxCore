@@ -925,7 +925,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_SP
 	filmRadianceGroup[6] = filmRadianceGroup6;
 	filmRadianceGroup[7] = filmRadianceGroup7;
 
-#if defined(PARAM_FILM_DENOISER)
 	// Initialize Film radiance group scale table
 	float3 filmRadianceGroupScale[FILM_MAX_RADIANCE_GROUP_COUNT];
 	filmRadianceGroupScale[0] = (float3)(filmRadianceGroupScale0_R, filmRadianceGroupScale0_G, filmRadianceGroupScale0_B);
@@ -936,7 +935,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_SP
 	filmRadianceGroupScale[5] = (float3)(filmRadianceGroupScale5_R, filmRadianceGroupScale5_G, filmRadianceGroupScale5_B);
 	filmRadianceGroupScale[6] = (float3)(filmRadianceGroupScale6_R, filmRadianceGroupScale6_G, filmRadianceGroupScale6_B);
 	filmRadianceGroupScale[7] = (float3)(filmRadianceGroupScale7_R, filmRadianceGroupScale7_G, filmRadianceGroupScale7_B);
-#endif
 
 	if (taskConfig->pathTracer.pgic.indirectEnabled &&
 			(taskConfig->pathTracer.pgic.debugType == PGIC_DEBUG_SHOWINDIRECTPATHMIX) &&

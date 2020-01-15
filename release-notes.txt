@@ -45,6 +45,7 @@
 * Reduced (again) the default number of OpenCL threads from 256k to 128k
 * Added the support for .normalizebycolor emission property
 * Using a GPU memory block larger than CL_DEVICE_MAX_MEM_ALLOC_SIZE now triggers only a warning. Some driver/hardware (i.e. NVIDIA) is able to allocate larger blocks.
+* Enabling/disabling BCD denoiser doesn't require OpenCL compilation anymore (removed PARAM_FILM_DENOISER)
 
 ### Fixed Bugs
 

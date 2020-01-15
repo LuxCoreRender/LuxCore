@@ -24,6 +24,7 @@
 
 typedef struct {
 	unsigned int radianceGroupCount;
+	int bcdDenoiserEnable;
 } Film;
 
 //------------------------------------------------------------------------------
@@ -239,7 +240,6 @@ typedef struct {
 #define FILM_USER_IMPORTANCE_PARAM
 #endif
 
-#if defined(PARAM_FILM_DENOISER)
 #define FILM_DENOISER_PARAM_DECL \
 		, const int filmDenoiserWarmUpDone \
 		, const float filmDenoiserGamma \
@@ -264,10 +264,6 @@ typedef struct {
 		, filmDenoiserCovarImage \
 		, filmDenoiserHistoImage \
 		, filmRadianceGroupScale
-#else
-#define FILM_DENOISER_PARAM_DECL
-#define FILM_DENOISER_PARAM
-#endif
 
 #define FILM_PARAM_DECL , const uint filmWidth, const uint filmHeight, const uint filmSubRegion0, const uint filmSubRegion1, const uint filmSubRegion2, const uint filmSubRegion3 \
 	FILM_RADIANCE_GROUP_PARAM_DECL \
