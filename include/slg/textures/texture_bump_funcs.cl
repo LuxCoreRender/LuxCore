@@ -202,7 +202,7 @@ OPENCL_FORCE_INLINE float3 TriplanarTexture_Bump(
 		// Compute offset positions and evaluate displacement texture
 		const float3 origP = VLOAD3F(&hitPoint->p.x);
 
-		float3 dhdx = (float3)(0.f, 0.f, 0.f);
+		float3 dhdx;
 
 		// Note I should update not only hitPoint.p but also hitPoint.shadeN
 		// however I can't because  I don't know dndv/dndu so this is nearly an hack.

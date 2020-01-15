@@ -36,9 +36,9 @@ Spectrum TriplanarTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	const Point localPoint = mapping->Map(hitPoint, &localShadeN);
 	
     float weights[3] = {
-		Sqr(Sqr(fabsf(localShadeN.x))),
-		Sqr(Sqr(fabsf(localShadeN.y))),
-		Sqr(Sqr(fabsf(localShadeN.z)))
+		Sqr(Sqr(localShadeN.x)),
+		Sqr(Sqr(localShadeN.y)),
+		Sqr(Sqr(localShadeN.z))
 	};
     
     const float sum = weights[0] + weights[1] + weights[2];

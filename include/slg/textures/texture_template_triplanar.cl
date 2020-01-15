@@ -31,9 +31,9 @@ OPENCL_FORCE_INLINE float3 Texture_Index<<CS_TRIPLANAR_TEX_INDEX>>_EvaluateSpect
 	const float3 localPoint = TextureMapping3D_Map(&texture->triplanarTex.mapping, hitPoint, &localShadeN);
 
 	float weights[3] = {
-		Sqr(Sqr(fabs(localShadeN.x))),
-		Sqr(Sqr(fabs(localShadeN.y))),
-		Sqr(Sqr(fabs(localShadeN.z)))
+		Sqr(Sqr(localShadeN.x)),
+		Sqr(Sqr(localShadeN.y)),
+		Sqr(Sqr(localShadeN.z))
 	};
 
     const float sum = weights[0] + weights[1] + weights[2];
