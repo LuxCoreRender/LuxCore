@@ -201,7 +201,7 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Sample(__
 		return BLACK;
 
 	*pdfW *= weightFirst;
-	
+
 	if ((*event) & SPECULAR)
 		return result;
 	
@@ -215,9 +215,9 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Sample(__
 	const float isTransmitEval = (signbit(fixedDirSecond.z) != signbit(sampledDirSecond.z));
 
 	BSDFEvent eventSecond =  sampleMatA ?
-		<<CS_MAT_A_PREFIX>>_GetEventTypes<<CS_MAT_A_POSTFIX>>(&mats[<<CS_MAT_A_MATERIAL_INDEX>>]
-			MATERIALS_PARAM) :
 		<<CS_MAT_B_PREFIX>>_GetEventTypes<<CS_MAT_B_POSTFIX>>(&mats[<<CS_MAT_B_MATERIAL_INDEX>>]
+			MATERIALS_PARAM) :
+		<<CS_MAT_A_PREFIX>>_GetEventTypes<<CS_MAT_A_POSTFIX>>(&mats[<<CS_MAT_A_MATERIAL_INDEX>>]
 			MATERIALS_PARAM);
 
 	if ((!isTransmitEval && (eventSecond & REFLECT)) ||

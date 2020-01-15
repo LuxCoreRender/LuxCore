@@ -56,6 +56,7 @@
 * Fixed the support for wrap mode in image maps loaded from files
 * Fixed a brightness problem when rendering large images with Metropolis sampler
 * Fixed a brightness problem when rendering caustics with PhotonGI caustic cache
+* Fixed a bug in Mix material OpenCL code when mixing transparent and not transparent materials
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
