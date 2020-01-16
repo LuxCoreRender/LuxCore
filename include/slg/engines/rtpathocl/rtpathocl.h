@@ -47,7 +47,6 @@ public:
 	friend class RTPathOCLRenderEngine;
 
 protected:
-	virtual std::string AdditionalKernelOptions();
 	virtual void RenderThreadImpl();
 
 	void UpdateOCLBuffers(const EditActionList &updateActions);
@@ -95,6 +94,7 @@ public:
 protected:
 	static const luxrays::Properties &GetDefaultProps();
 
+	virtual void InitGPUTaskConfiguration();
 	virtual bool IsRTMode() const { return true; }
 
 	virtual PathOCLBaseOCLRenderThread *CreateOCLThread(const u_int index,

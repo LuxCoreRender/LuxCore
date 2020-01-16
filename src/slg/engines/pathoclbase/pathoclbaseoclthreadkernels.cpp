@@ -452,10 +452,8 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			ssParams << " -D PARAM_SAMPLER_TYPE=3";
 			break;
 		default:
-			throw runtime_error("Unknown sampler type in PathOCLBaseRenderThread::AdditionalKernelOptions(): " + boost::lexical_cast<string>(sampler->type));
+			throw runtime_error("Unknown sampler type in PathOCLBaseOCLRenderThread::InitKernels(): " + boost::lexical_cast<string>(sampler->type));
 	}
-
-	ssParams << AdditionalKernelOptions();
 
 	//--------------------------------------------------------------------------
 
@@ -507,7 +505,6 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 	stringstream ssKernel;
 	ssKernel <<
 			forceInlineDirective <<
-			AdditionalKernelDefinitions() <<
 			SamplerKernelDefinitions() <<
 			// OpenCL LuxRays Types
 			luxrays::ocl::KernelSource_luxrays_types <<
@@ -657,8 +654,6 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_pathoclbase_funcs <<
 			slg::ocl::KernelSource_pathoclbase_kernels_micro;
 
-	ssKernel << AdditionalKernelSources();
-
 	string kernelSource = ssKernel.str();
 
 	// Build the kernel source/parameters hash
@@ -732,9 +727,6 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			"AdvancePaths_MK_NEXT_SAMPLE");
 	CompileKernel(program, &advancePathsKernel_MK_GENERATE_CAMERA_RAY, &advancePathsWorkGroupSize,
 			"AdvancePaths_MK_GENERATE_CAMERA_RAY");
-
-	// Additional kernels
-	CompileAdditionalKernels(program);
 
 	const double tEnd = WallClockTime();
 	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");

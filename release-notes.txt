@@ -46,6 +46,7 @@
 * Added the support for .normalizebycolor emission property
 * Using a GPU memory block larger than CL_DEVICE_MAX_MEM_ALLOC_SIZE now triggers only a warning. Some driver/hardware (i.e. NVIDIA) is able to allocate larger blocks.
 * Enabling/disabling BCD denoiser doesn't require OpenCL compilation anymore (removed PARAM_FILM_DENOISER)
+* Changing RTPATHOCL rendering parameters doesn't require OpenCL compilation anymore (removed PARAM_RTPATHOCL_*)
 
 ### Fixed Bugs
 

@@ -65,7 +65,7 @@ protected:
 		throw std::runtime_error("Internal error, called PathOCLBaseRenderEngine::CreateNativeThread()");
 	}
 
-	void InitGPUTaskConfiguration();
+	virtual void InitGPUTaskConfiguration();
 	void InitPixelFilterDistribution();
 
 	virtual void InitFilm();

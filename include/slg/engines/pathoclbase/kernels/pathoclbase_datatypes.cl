@@ -58,6 +58,14 @@ typedef enum {
 } PathState;
 
 typedef struct {
+	union {
+		struct {
+			// Must be a power of 2
+			unsigned int previewResolutionReduction, previewResolutionReductionStep;
+			unsigned int resolutionReduction;
+		} rtpathocl;
+	} renderEngine;
+
 	Scene scene;
 	PathTracer pathTracer;
 	Filter pixelFilter;

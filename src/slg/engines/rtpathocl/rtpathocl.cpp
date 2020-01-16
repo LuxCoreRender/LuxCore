@@ -43,6 +43,14 @@ RTPathOCLRenderEngine::~RTPathOCLRenderEngine() {
 	delete frameBarrier;
 }
 
+void RTPathOCLRenderEngine::InitGPUTaskConfiguration() {
+	TilePathOCLRenderEngine::InitGPUTaskConfiguration();
+
+	taskConfig.renderEngine.rtpathocl.previewResolutionReduction = previewResolutionReduction;
+	taskConfig.renderEngine.rtpathocl.previewResolutionReductionStep = previewResolutionReductionStep;
+	taskConfig.renderEngine.rtpathocl.resolutionReduction = resolutionReduction;
+}
+
 PathOCLBaseOCLRenderThread *RTPathOCLRenderEngine::CreateOCLThread(const u_int index,
 	OpenCLIntersectionDevice *device) {
 	return new RTPathOCLRenderThread(index, device, this);

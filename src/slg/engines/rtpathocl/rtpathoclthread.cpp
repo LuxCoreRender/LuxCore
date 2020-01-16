@@ -51,20 +51,6 @@ void RTPathOCLRenderThread::BeginSceneEdit() {
 void RTPathOCLRenderThread::EndSceneEdit(const EditActionList &editActions) {
 }
 
-string RTPathOCLRenderThread::AdditionalKernelOptions() {
-	RTPathOCLRenderEngine *engine = (RTPathOCLRenderEngine *)renderEngine;
-
-	stringstream ss;
-	ss.precision(6);
-	ss << scientific <<
-			TilePathOCLRenderThread::AdditionalKernelOptions() <<
-			" -D PARAM_RTPATHOCL_PREVIEW_RESOLUTION_REDUCTION=" << engine->previewResolutionReduction <<
-			" -D PARAM_RTPATHOCL_PREVIEW_RESOLUTION_REDUCTION_STEP=" << engine->previewResolutionReductionStep <<
-			" -D PARAM_RTPATHOCL_RESOLUTION_REDUCTION=" << engine->resolutionReduction;
-
-	return ss.str();
-}
-
 void RTPathOCLRenderThread::UpdateOCLBuffers(const EditActionList &updateActions) {
 	RTPathOCLRenderEngine *engine = (RTPathOCLRenderEngine *)renderEngine;
 

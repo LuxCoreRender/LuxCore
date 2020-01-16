@@ -124,10 +124,10 @@ OPENCL_FORCE_NOT_INLINE void Sampler_SplatSample(
 
 #if defined(RENDER_ENGINE_RTPATHOCL)
 	// Check if I'm in preview phase
-	if (sample->pass < PARAM_RTPATHOCL_PREVIEW_RESOLUTION_REDUCTION_STEP) {
+	if (sample->pass < taskConfig->renderEngine.rtpathocl.previewResolutionReductionStep) {
 		// I have to copy the current pixel to fill the assigned square
-		for (uint y = 0; y < PARAM_RTPATHOCL_PREVIEW_RESOLUTION_REDUCTION; ++y) {
-			for (uint x = 0; x < PARAM_RTPATHOCL_PREVIEW_RESOLUTION_REDUCTION; ++x) {
+		for (uint y = 0; y < taskConfig->renderEngine.rtpathocl.previewResolutionReduction; ++y) {
+			for (uint x = 0; x < taskConfig->renderEngine.rtpathocl.resolutionReduction; ++x) {
 				// The sample weight is very low so this value is rapidly replaced
 				// during normal rendering
 				const uint px = sample->result.pixelX + x;
@@ -187,22 +187,22 @@ OPENCL_FORCE_NOT_INLINE bool Sampler_Init(__constant const GPUTaskConfiguration*
 	// 1 thread for each pixel
 
 	uint pixelX, pixelY;
-	if (tilePass < PARAM_RTPATHOCL_PREVIEW_RESOLUTION_REDUCTION_STEP) {
-		const uint samplesPerRow = filmWidth / PARAM_RTPATHOCL_PREVIEW_RESOLUTION_REDUCTION;
+	if (tilePass < taskConfig->renderEngine.rtpathocl.previewResolutionReductionStep) {
+		const uint samplesPerRow = filmWidth / taskConfig->renderEngine.rtpathocl.previewResolutionReduction;
 		const uint subPixelX = gid % samplesPerRow;
 		const uint subPixelY = gid / samplesPerRow;
 
-		pixelX = subPixelX * PARAM_RTPATHOCL_PREVIEW_RESOLUTION_REDUCTION;
-		pixelY = subPixelY * PARAM_RTPATHOCL_PREVIEW_RESOLUTION_REDUCTION;
+		pixelX = subPixelX * taskConfig->renderEngine.rtpathocl.previewResolutionReduction;
+		pixelY = subPixelY * taskConfig->renderEngine.rtpathocl.previewResolutionReduction;
 	} else {
-		const uint samplesPerRow = filmWidth / PARAM_RTPATHOCL_RESOLUTION_REDUCTION;
+		const uint samplesPerRow = filmWidth / taskConfig->renderEngine.rtpathocl.previewResolutionReduction;
 		const uint subPixelX = gid % samplesPerRow;
 		const uint subPixelY = gid / samplesPerRow;
 
-		pixelX = subPixelX * PARAM_RTPATHOCL_RESOLUTION_REDUCTION;
-		pixelY = subPixelY * PARAM_RTPATHOCL_RESOLUTION_REDUCTION;
+		pixelX = subPixelX * taskConfig->renderEngine.rtpathocl.previewResolutionReduction;
+		pixelY = subPixelY * taskConfig->renderEngine.rtpathocl.previewResolutionReduction;
 
-		const uint pixelsCount = PARAM_RTPATHOCL_RESOLUTION_REDUCTION;
+		const uint pixelsCount = taskConfig->renderEngine.rtpathocl.previewResolutionReduction;
 		const uint pixelsCount2 = pixelsCount * pixelsCount;
 
 		// Rendering according a Morton curve
