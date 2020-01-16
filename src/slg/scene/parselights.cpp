@@ -369,6 +369,7 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 		sl->coneDeltaAngle = Max(0.f, props.Get(Property(propName + ".conedeltaangle")(5.f)).Get<float>());
 		sl->color = props.Get(Property(propName + ".color")(Spectrum(1.f))).Get<Spectrum>();
 		sl->power = Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>());
+		sl->emittedPowerNormalize = props.Get(Property(propName + ".normalizebycolor")(true)).Get<bool>();
 		sl->efficency = Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>());
 
 		lightSource = sl;
