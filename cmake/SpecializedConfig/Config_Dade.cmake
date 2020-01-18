@@ -4,6 +4,8 @@
 #
 ###########################################################################
 
+# To compile c-blosc with -fPIC on linux: add "set(CMAKE_POSITION_INDEPENDENT_CODE ON)" to CMakeLists.txt
+
 #cmake -DLUXRAYS_CUSTOM_CONFIG=cmake/SpecializedConfig/Config_Dade.cmake -DPYTHON_LIBRARY=/usr/lib/x86_64-linux-gnu/libpython3.7m.so -DPYTHON_INCLUDE_DIR=/usr/include/python3.7m .
 
 MESSAGE(STATUS "Using Dade's Linux Configuration settings")
