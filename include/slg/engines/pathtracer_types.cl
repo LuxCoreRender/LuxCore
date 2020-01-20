@@ -17,6 +17,8 @@
  ***************************************************************************/
 
 typedef struct {
+	unsigned int eyeSampleBootSize, eyeSampleStepSize, eyeSampleSize;
+
 	PathDepthInfo maxPathDepth;
 
 	// Russian roulette

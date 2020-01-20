@@ -34,6 +34,10 @@ using namespace luxrays;
 using namespace slg;
 
 void CompiledScene::CompilePathTracer() {
+	compiledPathTracer.eyeSampleBootSize = pathTracer->eyeSampleBootSize;
+	compiledPathTracer.eyeSampleStepSize = pathTracer->eyeSampleStepSize;
+	compiledPathTracer.eyeSampleSize = pathTracer->eyeSampleSize;
+
 	compiledPathTracer.maxPathDepth.depth = pathTracer->maxPathDepth.depth;
 	compiledPathTracer.maxPathDepth.diffuseDepth = pathTracer->maxPathDepth.diffuseDepth;
 	compiledPathTracer.maxPathDepth.glossyDepth = pathTracer->maxPathDepth.glossyDepth;

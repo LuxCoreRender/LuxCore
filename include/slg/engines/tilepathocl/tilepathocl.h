@@ -41,6 +41,8 @@ public:
 	friend class TilePathOCLRenderEngine;
 
 protected:
+	void UpdateSamplerData(const TileWork &tileWork);
+
 	virtual void GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight, u_int *filmSubRegion);
 	virtual void RenderThreadImpl();
 	

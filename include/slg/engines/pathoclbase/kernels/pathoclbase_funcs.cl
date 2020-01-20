@@ -99,15 +99,6 @@
 //  PARAM_HAS_TRIANGLELIGHT
 //  PARAM_HAS_ENVLIGHTS (if it has any env. light)
 
-// (optional)
-//  PARAM_SAMPLER_TYPE (0 = Inlined Random, 1 = Metropolis, 2 = Sobol, 3 = TilePathSampler)
-// (Metropolis)
-//  PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE
-//  PARAM_SAMPLER_METROPOLIS_MAX_CONSECUTIVE_REJECT
-//  PARAM_SAMPLER_METROPOLIS_IMAGE_MUTATION_RANGE
-// (Sobol)
-//  PARAM_SAMPLER_SOBOL_STARTOFFSET
-
 /*void MangleMemory(__global unsigned char *ptr, const size_t size) {
 	Seed seed;
 	Rnd_Init(7 + get_global_id(0), &seed);
@@ -122,89 +113,100 @@
 
 OPENCL_FORCE_NOT_INLINE void InitSampleResult(
 		__constant const GPUTaskConfiguration* restrict taskConfig,
-		__global Sample *sample,
-		__global float *sampleDataPathBase,
 		const uint filmWidth, const uint filmHeight,
 		const uint filmSubRegion0, const uint filmSubRegion1,
 		const uint filmSubRegion2, const uint filmSubRegion3,
-		__global float *pixelFilterDistribution,
-		Seed *seed) {
-	SampleResult_Init(&taskConfig->film, &sample->result);
+		__global float *pixelFilterDistribution
+		SAMPLER_PARAM_DECL) {
+	const size_t gid = get_global_id(0);
+	__global SampleResult *sampleResult = &sampleResultsBuff[gid];
 
-	float filmX = Sampler_GetSamplePath(taskConfig, seed, sample, sampleDataPathBase, IDX_SCREEN_X);
-	float filmY = Sampler_GetSamplePath(taskConfig, seed, sample, sampleDataPathBase, IDX_SCREEN_Y);
+	SampleResult_Init(&taskConfig->film, sampleResult);
 
-#if (PARAM_SAMPLER_TYPE == 1)
+	float filmX = Sampler_GetSample(taskConfig, IDX_SCREEN_X SAMPLER_PARAM);
+	float filmY = Sampler_GetSample(taskConfig, IDX_SCREEN_Y SAMPLER_PARAM);
+
 	// Metropolis return IDX_SCREEN_X and IDX_SCREEN_Y between [0.0, 1.0] instead
 	// that in film pixels like RANDOM and SOBOL samplers
-	filmX = filmSubRegion0 + filmX * (filmSubRegion1 - filmSubRegion0 + 1);
-	filmY = filmSubRegion2 + filmY * (filmSubRegion3 - filmSubRegion2 + 1);
-#endif
+	if (taskConfig->sampler.type == METROPOLIS) {
+		filmX = filmSubRegion0 + filmX * (filmSubRegion1 - filmSubRegion0 + 1);
+		filmY = filmSubRegion2 + filmY * (filmSubRegion3 - filmSubRegion2 + 1);
+	}
 
 	const uint pixelX = min(Floor2UInt(filmX), filmSubRegion1);
 	const uint pixelY = min(Floor2UInt(filmY), filmSubRegion3);
 	const float uSubPixelX = filmX - pixelX;
 	const float uSubPixelY = filmY - pixelY;
 
-	sample->result.pixelX = pixelX;
-	sample->result.pixelY = pixelY;
+	sampleResult->pixelX = pixelX;
+	sampleResult->pixelY = pixelY;
 
 	// Sample according the pixel filter distribution
 	float distX, distY;
 	FilterDistribution_SampleContinuous(&taskConfig->pixelFilter, pixelFilterDistribution,
 			uSubPixelX, uSubPixelY, &distX, &distY);
 
-	sample->result.filmX = pixelX + .5f + distX;
-	sample->result.filmY = pixelY + .5f + distY;
+	sampleResult->filmX = pixelX + .5f + distX;
+	sampleResult->filmY = pixelY + .5f + distY;
+
+#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
+	sampleResult->directShadowMask = 1.f;
+#endif
+#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
+	sampleResult->indirectShadowMask = 1.f;
+#endif
+
+	sampleResult->lastPathVertex = (taskConfig->pathTracer.maxPathDepth.depth == 1);
 }
 
 OPENCL_FORCE_NOT_INLINE void GenerateEyePath(
 		__constant const GPUTaskConfiguration* restrict taskConfig,
 		__global GPUTaskDirectLight *taskDirectLight,
 		__global GPUTaskState *taskState,
-		__global Sample *sample,
-		__global float *sampleDataPathBase,
 		__global const Camera* restrict camera,
 		const uint filmWidth, const uint filmHeight,
 		const uint filmSubRegion0, const uint filmSubRegion1,
 		const uint filmSubRegion2, const uint filmSubRegion3,
 		__global float *pixelFilterDistribution,
 		__global Ray *ray,
-		__global EyePathInfo *pathInfo,
-		Seed *seed
+		__global EyePathInfo *pathInfo
 #if defined(RENDER_ENGINE_TILEPATHOCL) || defined(RENDER_ENGINE_RTPATHOCL)
 		// cameraFilmWidth/cameraFilmHeight and filmWidth/filmHeight are usually
 		// the same. They are different when doing tile rendering
 		, const uint cameraFilmWidth, const uint cameraFilmHeight,
 		const uint tileStartX, const uint tileStartY
 #endif
-		) {
+		SAMPLER_PARAM_DECL) {
+	const size_t gid = get_global_id(0);
+	__global SampleResult *sampleResult = &sampleResultsBuff[gid];
+
 	EyePathInfo_Init(pathInfo);
 
-	InitSampleResult(taskConfig, sample, sampleDataPathBase,
+	InitSampleResult(taskConfig,
 			filmWidth, filmHeight,
 			filmSubRegion0, filmSubRegion1,
 			filmSubRegion2, filmSubRegion3,
-			pixelFilterDistribution, seed);
+			pixelFilterDistribution
+			SAMPLER_PARAM);
 
 	// Generate the came ray
-	const float timeSample = Sampler_GetSamplePath(taskConfig, seed, sample, sampleDataPathBase, IDX_EYE_TIME);
+	const float timeSample = Sampler_GetSample(taskConfig, IDX_EYE_TIME SAMPLER_PARAM);
 
-	const float dofSampleX = Sampler_GetSamplePath(taskConfig, seed, sample, sampleDataPathBase, IDX_DOF_X);
-	const float dofSampleY = Sampler_GetSamplePath(taskConfig, seed, sample, sampleDataPathBase, IDX_DOF_Y);
+	const float dofSampleX = Sampler_GetSample(taskConfig, IDX_DOF_X SAMPLER_PARAM);
+	const float dofSampleY = Sampler_GetSample(taskConfig, IDX_DOF_Y SAMPLER_PARAM);
 
 #if defined(RENDER_ENGINE_TILEPATHOCL) || defined(RENDER_ENGINE_RTPATHOCL)
 	Camera_GenerateRay(camera, cameraFilmWidth, cameraFilmHeight,
 			ray,
 			&pathInfo->volume,
-			sample->result.filmX + tileStartX, sample->result.filmY + tileStartY,
+			sampleResult->filmX + tileStartX, sampleResult->filmY + tileStartY,
 			timeSample,
 			dofSampleX, dofSampleY);
 #else
 	Camera_GenerateRay(camera, filmWidth, filmHeight,
 			ray,
 			&pathInfo->volume,
-			sample->result.filmX, sample->result.filmY,
+			sampleResult->filmX, sampleResult->filmY,
 			timeSample,
 			dofSampleX, dofSampleY);
 #endif
@@ -218,19 +220,12 @@ OPENCL_FORCE_NOT_INLINE void GenerateEyePath(
 	taskState->photonGIShowIndirectPathMixUsed = false;
 
 	// Initialize the pass-through event seed
-	const float passThroughEvent = Sampler_GetSamplePath(taskConfig, seed, sample, sampleDataPathBase, IDX_EYE_PASSTHROUGH);
+	//
+	// Note: using the IDX_PASSTHROUGH of path depth 0
+	const float passThroughEvent = Sampler_GetSample(taskConfig, IDX_BSDF_OFFSET + IDX_PASSTHROUGH SAMPLER_PARAM);
 	Seed seedPassThroughEvent;
 	Rnd_InitFloat(passThroughEvent, &seedPassThroughEvent);
 	taskState->seedPassThroughEvent = seedPassThroughEvent;
-
-#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
-	sample->result.directShadowMask = 1.f;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
-	sample->result.indirectShadowMask = 1.f;
-#endif
-
-	sample->result.lastPathVertex = (taskConfig->pathTracer.maxPathDepth.depth == 1);
 }
 
 //------------------------------------------------------------------------------
@@ -535,9 +530,10 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 		, __global GPUTaskState *tasksState \
 		, __global GPUTaskStats *taskStats \
 		KERNEL_ARGS_FAST_PIXEL_FILTER \
-		, __global SamplerSharedData *samplerSharedData \
-		, __global Sample *samples \
-		, __global float *samplesData \
+		, __global void *samplerSharedDataBuff \
+		, __global void *samplesBuff \
+		, __global float *samplesDataBuff \
+		, __global SampleResult *sampleResultsBuff \
 		, __global EyePathInfo *eyePathInfos \
 		KERNEL_ARGS_VOLUMES \
 		, __global Ray *rays \
@@ -621,29 +617,24 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 		__global GPUTaskDirectLight *tasksDirectLight,
 		__global GPUTaskState *tasksState,
 		__global GPUTaskStats *taskStats,
-		__global SamplerSharedData *samplerSharedData,
-		__global Sample *samples,
-		__global float *samplesData,
+		__global void *samplerSharedDataBuff,
+		__global void *samplesBuff,
+		__global float *samplesDataBuff,
+		__global SampleResult *sampleResultsBuff,
 		__global EyePathInfo *eyePathInfos,
 		__global float *pixelFilterDistribution,
 		__global Ray *rays,
 		__global Camera *camera
 		KERNEL_ARGS_FILM
-#if defined(RENDER_ENGINE_TILEPATHOCL) || defined(RENDER_ENGINE_RTPATHOCL)
-		// cameraFilmWidth/cameraFilmHeight and filmWidth/filmHeight are usually
-		// the same. They are different when doing tile rendering
-		, const uint cameraFilmWidth, const uint cameraFilmHeight
-		, const uint tileStartX, const uint tileStartY
-		, const uint tileWidth, const uint tileHeight
-		, const uint tilePass, const uint aaSamples
-#endif
 		) {
 	const size_t gid = get_global_id(0);
 
 	__global GPUTaskState *taskState = &tasksState[gid];
 
 #if defined(RENDER_ENGINE_TILEPATHOCL) || defined(RENDER_ENGINE_RTPATHOCL)
-	if (gid >= filmWidth * filmHeight * aaSamples * aaSamples) {
+	__global TilePathSamplerSharedData *samplerSharedData = (__global TilePathSamplerSharedData *)samplerSharedDataBuff;
+
+	if (gid >= filmWidth * filmHeight * Sqr(samplerSharedData->aaSamples)) {
 		taskState->state = MK_DONE;
 		// Mark the ray like like one to NOT trace
 		rays[gid].flags = RAY_FLAGS_MASKED;
@@ -662,9 +653,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 	Seed *seed = &seedValue;
 
 	// Initialize the sample and path
-	__global Sample *sample = &samples[gid];
-	__global float *sampleData = Sampler_GetSampleData(taskConfig, sample, samplesData);
-	const bool validSample = Sampler_Init(taskConfig, seed, samplerSharedData, sample, sampleData,
+	const bool validSample = Sampler_Init(taskConfig,
 #if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
 			filmNoise,
 #endif
@@ -673,31 +662,31 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 #endif
 			filmWidth, filmHeight,
 			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3
-#if defined(RENDER_ENGINE_TILEPATHOCL) || defined(RENDER_ENGINE_RTPATHOCL)
-			, cameraFilmWidth, cameraFilmHeight
-			, tileStartX, tileStartY
-			, tileWidth, tileHeight
-			, tilePass, aaSamples
-#endif
-			);
+			SAMPLER_PARAM);
 
 	if (validSample) {
-		__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(taskConfig, sample, sampleData);
+#if defined(RENDER_ENGINE_TILEPATHOCL) || defined(RENDER_ENGINE_RTPATHOCL)
+		__global TilePathSamplerSharedData *samplerSharedData = (__global TilePathSamplerSharedData *)samplerSharedDataBuff;
+		const uint cameraFilmWidth = samplerSharedData->cameraFilmWidth;
+		const uint cameraFilmHeight = samplerSharedData->cameraFilmHeight;
+		const uint tileStartX = samplerSharedData->tileStartX;
+		const uint tileStartY =  samplerSharedData->tileStartY;
+#endif
 
 		// Generate the eye path
 		GenerateEyePath(taskConfig,
-				taskDirectLight, taskState, sample, sampleDataPathBase, camera,
+				taskDirectLight, taskState,
+				camera,
 				filmWidth, filmHeight,
 				filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3,
 				pixelFilterDistribution,
 				&rays[gid],
-				&eyePathInfos[gid],
-				seed
+				&eyePathInfos[gid]
 #if defined(RENDER_ENGINE_TILEPATHOCL) || defined(RENDER_ENGINE_RTPATHOCL)
 				, cameraFilmWidth, cameraFilmHeight,
 				tileStartX, tileStartY
 #endif
-				);
+				SAMPLER_PARAM);
 	} else {
 #if defined(RENDER_ENGINE_TILEPATHOCL) || defined(RENDER_ENGINE_RTPATHOCL)
 		taskState->state = MK_DONE;

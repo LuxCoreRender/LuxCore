@@ -29,7 +29,6 @@
 #include "slg/slg.h"
 #include "slg/engines/oclrenderengine.h"
 #include "slg/engines/pathoclbase/compiledscene.h"
-#include "slg/engines/tilerepository.h"
 
 namespace slg {
 
@@ -128,8 +127,6 @@ protected:
 		PathOCLBaseOCLRenderThread *renderThread;
 	};
 
-	std::string SamplerKernelDefinitions();
-
 	// Implementation specific methods
 	virtual void RenderThreadImpl() = 0;
 	virtual void GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight, u_int *filmSubRegion) = 0;
@@ -165,9 +162,7 @@ protected:
 	void InitSamplerSharedDataBuffer();
 	void InitSamplesBuffer();
 	void InitSampleDataBuffer();
-
-	// Used only by TILEPATHOCL
-	void UpdateSamplerSharedDataBuffer(const TileWork &tileWork);
+	void InitSampleResultsBuffer();
 
 	void SetInitKernelArgs(const u_int filmIndex);
 	void SetAdvancePathsKernelArgs(cl::Kernel *advancePathsKernel, const u_int filmIndex);
@@ -238,6 +233,7 @@ protected:
 	cl::Buffer *samplerSharedDataBuff;
 	cl::Buffer *samplesBuff;
 	cl::Buffer *sampleDataBuff;
+	cl::Buffer *sampleResultsBuff;
 	cl::Buffer *taskStatsBuff;
 	cl::Buffer *eyePathInfosBuff;
 	cl::Buffer *directLightVolInfosBuff;
@@ -266,8 +262,6 @@ protected:
 	cl::Kernel *advancePathsKernel_MK_NEXT_SAMPLE;
 	cl::Kernel *advancePathsKernel_MK_GENERATE_CAMERA_RAY;
 	size_t advancePathsWorkGroupSize;
-
-	u_int sampleDimensions;
 
 	slg::ocl::pathoclbase::GPUTaskStats *gpuTaskStats;
 

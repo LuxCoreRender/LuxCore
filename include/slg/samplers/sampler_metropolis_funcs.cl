@@ -22,45 +22,26 @@
 // Metropolis Sampler Kernel
 //------------------------------------------------------------------------------
 
-#if (PARAM_SAMPLER_TYPE == 1)
+#define METROPOLISSAMPLER_TOTAL_U_SIZE (IDX_BSDF_OFFSET + taskConfig->pathTracer.maxPathDepth.depth * VERTEX_SAMPLE_SIZE)
 
-OPENCL_FORCE_INLINE __global float *Sampler_GetSampleData(__constant const GPUTaskConfiguration* restrict taskConfig,
-		__global Sample *sample, __global float *samplesData) {
+
+OPENCL_FORCE_INLINE float MetropolisSampler_GetSample(
+		__constant const GPUTaskConfiguration* restrict taskConfig,
+		const uint index
+		SAMPLER_PARAM_DECL) {
 	const size_t gid = get_global_id(0);
-	return &samplesData[gid * (2 * TOTAL_U_SIZE)];
-}
+	__global MetropolisSample *samples = (__global MetropolisSample *)samplesBuff;
+	__global MetropolisSample *sample = &samples[gid];
 
-OPENCL_FORCE_INLINE __global float *Sampler_GetSampleDataPathBase(__constant const GPUTaskConfiguration* restrict taskConfig,
-		__global Sample *sample, __global float *sampleData) {
-	return &sampleData[sample->proposed * TOTAL_U_SIZE];
-}
+	__global float *samplesData = &samplesDataBuff[gid * METROPOLISSAMPLER_TOTAL_U_SIZE] +
+			sample->proposed * METROPOLISSAMPLER_TOTAL_U_SIZE;
 
-OPENCL_FORCE_INLINE __global float *Sampler_GetSampleDataPathVertex(__constant const GPUTaskConfiguration* restrict taskConfig,
-		__global Sample *sample,
-		__global float *sampleDataPathBase,
-		const uint depth) {
-	// The depth used here is counted from the first hit point of the path
-	// vertex (so it is effectively depth - 1)
-	return &sampleDataPathBase[IDX_BSDF_OFFSET + depth * VERTEX_SAMPLE_SIZE];
-}
-
-OPENCL_FORCE_INLINE float Sampler_GetSamplePath(__constant const GPUTaskConfiguration* restrict taskConfig,
-		Seed *seed, __global Sample *sample,
-		__global float *sampleDataPathBase,
-		const uint index) {
-	return sampleDataPathBase[index];
-}
-
-OPENCL_FORCE_INLINE float Sampler_GetSamplePathVertex(__constant const GPUTaskConfiguration* restrict taskConfig,
-		Seed *seed, __global Sample *sample,
-		__global float *sampleDataPathVertexBase,
-		const uint depth, const uint index) {
-	return sampleDataPathVertexBase[index];
+	return samplesData[index];
 }
 
 OPENCL_FORCE_INLINE void LargeStep(__constant const GPUTaskConfiguration* restrict taskConfig,
 		Seed *seed, __global float *proposedU) {
-	for (int i = 0; i < TOTAL_U_SIZE; ++i)
+	for (uint i = 0; i < METROPOLISSAMPLER_TOTAL_U_SIZE; ++i)
 		proposedU[i] = Rnd_FloatValue(seed);
 }
 
@@ -114,21 +95,24 @@ OPENCL_FORCE_INLINE void SmallStep(__constant const GPUTaskConfiguration* restri
 	// Metropolis return IDX_SCREEN_X and IDX_SCREEN_Y between [0.0, 1.0] instead
 	// that in film pixels like RANDOM and SOBOL samplers
 	proposedU[IDX_SCREEN_X] = MutateScaled(currentU[IDX_SCREEN_X],
-			PARAM_SAMPLER_METROPOLIS_IMAGE_MUTATION_RANGE, Rnd_FloatValue(seed));
+			taskConfig->sampler.metropolis.imageMutationRange, Rnd_FloatValue(seed));
 	proposedU[IDX_SCREEN_Y] = MutateScaled(currentU[IDX_SCREEN_Y],
-			PARAM_SAMPLER_METROPOLIS_IMAGE_MUTATION_RANGE, Rnd_FloatValue(seed));
+			taskConfig->sampler.metropolis.imageMutationRange, Rnd_FloatValue(seed));
 
-	for (int i = IDX_SCREEN_Y + 1; i < TOTAL_U_SIZE; ++i)
+	for (int i = IDX_SCREEN_Y + 1; i < METROPOLISSAMPLER_TOTAL_U_SIZE; ++i)
 		proposedU[i] = Mutate(currentU[i], Rnd_FloatValue(seed));
 }
 
-OPENCL_FORCE_NOT_INLINE void Sampler_SplatSample(
-		__constant const GPUTaskConfiguration* restrict taskConfig,
-		Seed *seed,
-		__global SamplerSharedData *samplerSharedData,
-		__global Sample *sample, __global float *sampleData
+OPENCL_FORCE_INLINE void MetropolisSampler_SplatSample(
+		__constant const GPUTaskConfiguration* restrict taskConfig
+		SAMPLER_PARAM_DECL
 		FILM_PARAM_DECL
 		) {
+	const size_t gid = get_global_id(0);
+	__global MetropolisSample *samples = (__global MetropolisSample *)samplesBuff;
+	__global MetropolisSample *sample = &samples[gid];
+	__global SampleResult *sampleResult = &sampleResultsBuff[gid];
+
 	//--------------------------------------------------------------------------
 	// Accept/Reject the sample
 	//--------------------------------------------------------------------------
@@ -140,19 +124,19 @@ OPENCL_FORCE_NOT_INLINE void Sampler_SplatSample(
 		// It is the very first sample, I have still to initialize the current
 		// sample
 
-		Film_AddSample(&taskConfig->film, sample->result.pixelX, sample->result.pixelY,
-				&sample->result, 1.f
+		Film_AddSample(&taskConfig->film, sampleResult->pixelX, sampleResult->pixelY,
+				sampleResult, 1.f
 				FILM_PARAM);
 
-		sample->currentResult = sample->result;
-		sample->totalI = SampleResult_GetRadianceY(&taskConfig->film, &sample->result);
+		sample->currentResult = *sampleResult;
+		sample->totalI = SampleResult_GetRadianceY(&taskConfig->film, sampleResult);
 
 		current = proposed;
 		proposed ^= 1;
 	} else {
 		const float currentI = SampleResult_GetRadianceY(&taskConfig->film, &sample->currentResult);
 
-		float proposedI = SampleResult_GetRadianceY(&taskConfig->film, &sample->result);
+		float proposedI = SampleResult_GetRadianceY(&taskConfig->film, sampleResult);
 		proposedI = (isnan(proposedI) || isinf(proposedI)) ? 0.f : proposedI;
 
 		float totalI = sample->totalI;
@@ -173,7 +157,7 @@ OPENCL_FORCE_NOT_INLINE void Sampler_SplatSample(
 		uint consecutiveRejects = sample->consecutiveRejects;
 
 		float accProb;
-		if ((currentI > 0.f) && (consecutiveRejects < PARAM_SAMPLER_METROPOLIS_MAX_CONSECUTIVE_REJECT))
+		if ((currentI > 0.f) && (consecutiveRejects < taskConfig->sampler.metropolis.maxRejects))
 			accProb = min(1.f, proposedI / currentI);
 		else
 			accProb = 1.f;
@@ -190,7 +174,7 @@ OPENCL_FORCE_NOT_INLINE void Sampler_SplatSample(
 					currentI, proposedI,
 					consecutiveRejects,
 					sample->currentResult.radiancePerPixelNormalized[0].c[0], sample->currentResult.radiancePerPixelNormalized[0].c[1], sample->currentResult.radiancePerPixelNormalized[0].c[2], weight, sample->weight,
-					sample->result.radiancePerPixelNormalized[0].c[0], sample->result.radiancePerPixelNormalized[0].c[1], sample->result.radiancePerPixelNormalized[0].c[2], newWeight,
+					sampleResult->radiancePerPixelNormalized[0].c[0], sampleResult->radiancePerPixelNormalized[0].c[1], sampleResult->radiancePerPixelNormalized[0].c[2], newWeight,
 					accProb, rndVal);*/
 
 		__global SampleResult *contrib;
@@ -200,7 +184,7 @@ OPENCL_FORCE_NOT_INLINE void Sampler_SplatSample(
 				printf("\t\tACCEPTED ! [%f]\n", currentI);*/
 
 			// Add accumulated contribution of previous reference sample
-			norm = weight / (currentI * invMeanI + PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE);
+			norm = weight / (currentI * invMeanI + taskConfig->sampler.metropolis.largeMutationProbability);
 			contrib = &sample->currentResult;
 
 			// Save new contributions for reference
@@ -214,8 +198,8 @@ OPENCL_FORCE_NOT_INLINE void Sampler_SplatSample(
 				printf("\t\tREJECTED ! [%f]\n", proposedI);*/
 
 			// Add contribution of new sample before rejecting it
-			norm = newWeight / (proposedI * invMeanI + PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE);
-			contrib = &sample->result;
+			norm = newWeight / (proposedI * invMeanI + taskConfig->sampler.metropolis.largeMutationProbability);
+			contrib = sampleResult;
 
 			++consecutiveRejects;
 		}
@@ -235,8 +219,8 @@ OPENCL_FORCE_NOT_INLINE void Sampler_SplatSample(
 
 		// Check if it is an accepted mutation
 		if (consecutiveRejects == 0) {
-			// I can now (after Film_SplatSample()) overwrite sample->currentResult and sample->result
-			sample->currentResult = sample->result;
+			// I can now (after Film_SplatSample()) overwrite sample->currentResult and sampleResult
+			sample->currentResult = *sampleResult;
 		}
 
 		sample->weight = weight;
@@ -247,48 +231,56 @@ OPENCL_FORCE_NOT_INLINE void Sampler_SplatSample(
 	sample->proposed = proposed;
 }
 
-OPENCL_FORCE_NOT_INLINE void Sampler_NextSample(
+OPENCL_FORCE_INLINE void MetropolisSampler_NextSample(
 		__constant const GPUTaskConfiguration* restrict taskConfig,
-		Seed *seed,
-		__global SamplerSharedData *samplerSharedData,
-		__global Sample *sample, __global float *sampleData,
 #if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
 		__global float *filmNoise,
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_USER_IMPORTANCE)
-		__global float * filmUserImportance,
+		__global float *filmUserImportance,
 #endif
 		const uint filmWidth, const uint filmHeight,
 		const uint filmSubRegion0, const uint filmSubRegion1,
-		const uint filmSubRegion2, const uint filmSubRegion3) {
+		const uint filmSubRegion2, const uint filmSubRegion3
+		SAMPLER_PARAM_DECL) {
+	const size_t gid = get_global_id(0);
+	__global MetropolisSample *samples = (__global MetropolisSample *)samplesBuff;
+	__global MetropolisSample *sample = &samples[gid];
+
 	//--------------------------------------------------------------------------
 	// Mutate the sample
 	//--------------------------------------------------------------------------
 
-	__global float *proposedU = &sampleData[sample->proposed * TOTAL_U_SIZE];
-	if (Rnd_FloatValue(seed) < PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE) {
+	__global float *proposedU = &samplesDataBuff[gid * METROPOLISSAMPLER_TOTAL_U_SIZE] +
+			sample->proposed * METROPOLISSAMPLER_TOTAL_U_SIZE;
+	if (Rnd_FloatValue(seed) < taskConfig->sampler.metropolis.largeMutationProbability) {
 		LargeStep(taskConfig, seed, proposedU);
 		sample->smallMutationCount = 0;
 	} else {
-		__global float *currentU = &sampleData[sample->current * TOTAL_U_SIZE];
+		__global float *currentU = &samplesDataBuff[gid * METROPOLISSAMPLER_TOTAL_U_SIZE] +
+			sample->current * METROPOLISSAMPLER_TOTAL_U_SIZE;
 
 		SmallStep(taskConfig, seed, currentU, proposedU);
 		sample->smallMutationCount += 1;
 	}
 }
 
-OPENCL_FORCE_NOT_INLINE bool Sampler_Init(__constant const GPUTaskConfiguration* restrict taskConfig,
-		Seed *seed, __global SamplerSharedData *samplerSharedData,
-		__global Sample *sample, __global float *sampleData,
+OPENCL_FORCE_INLINE bool MetropolisSampler_Init(
+		__constant const GPUTaskConfiguration* restrict taskConfig,
 #if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
 		__global float *filmNoise,
 #endif
 #if defined(PARAM_FILM_CHANNELS_HAS_USER_IMPORTANCE)
-		__global float * filmUserImportance,
+		__global float *filmUserImportance,
 #endif
 		const uint filmWidth, const uint filmHeight,
 		const uint filmSubRegion0, const uint filmSubRegion1,
-		const uint filmSubRegion2, const uint filmSubRegion3) {
+		const uint filmSubRegion2, const uint filmSubRegion3
+		SAMPLER_PARAM_DECL) {
+	const size_t gid = get_global_id(0);
+	__global MetropolisSample *samples = (__global MetropolisSample *)samplesBuff;
+	__global MetropolisSample *sample = &samples[gid];
+
 	sample->totalI = 0.f;
 	sample->largeMutationCount = 1.f;
 
@@ -300,10 +292,9 @@ OPENCL_FORCE_NOT_INLINE bool Sampler_Init(__constant const GPUTaskConfiguration*
 
 	sample->weight = 0.f;
 
-	__global float *sampleDataPathBase = Sampler_GetSampleDataPathBase(taskConfig, sample, sampleData);
-	LargeStep(taskConfig, seed, sampleDataPathBase);
+	__global float *samplesData = &samplesDataBuff[gid * METROPOLISSAMPLER_TOTAL_U_SIZE] +
+			sample->proposed * METROPOLISSAMPLER_TOTAL_U_SIZE;
+	LargeStep(taskConfig, seed, samplesData);
 
 	return true;
 }
-
-#endif

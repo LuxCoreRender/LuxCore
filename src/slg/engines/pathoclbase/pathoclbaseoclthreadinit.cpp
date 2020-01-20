@@ -465,10 +465,15 @@ void PathOCLBaseOCLRenderThread::InitSamplerSharedDataBuffer() {
 
 		// Plus the a pass field for each pixel
 		size += sizeof(u_int) * filmRegionPixelCount;
+
+		// Plus the Sobol directions array
+		size += sizeof(u_int) * renderEngine->pathTracer.eyeSampleSize * SOBOL_BITS;
 	} else if (renderEngine->oclSampler->type == slg::ocl::TILEPATHSAMPLER) {
+		size += sizeof(slg::ocl::TilePathSamplerSharedData);
+
 		switch (renderEngine->GetType()) {
 			case TILEPATHOCL:
-				size += sizeof(slg::ocl::TilePathSamplerSharedData) * filmRegionPixelCount;
+				size += sizeof(u_int) * renderEngine->pathTracer.eyeSampleSize * SOBOL_BITS;
 				break;
 			case RTPATHOCL:
 				break;
@@ -479,8 +484,11 @@ void PathOCLBaseOCLRenderThread::InitSamplerSharedDataBuffer() {
 	} else
 		throw runtime_error("Unknown sampler.type in PathOCLBaseRenderThread::InitSamplerSharedDataBuffer(): " +
 				boost::lexical_cast<string>(renderEngine->oclSampler->type));
-	
-	AllocOCLBufferRW(&samplerSharedDataBuff, size, "SamplerSharedData");
+
+	if (size == 0)
+		FreeOCLBuffer(&samplerSharedDataBuff);
+	else
+		AllocOCLBufferRW(&samplerSharedDataBuff, size, "SamplerSharedData");
 
 	// Initialize the sampler shared data
 	if (renderEngine->oclSampler->type == slg::ocl::RANDOM) {
@@ -501,29 +509,34 @@ void PathOCLBaseOCLRenderThread::InitSamplerSharedDataBuffer() {
 		sssd->pixelBucketIndex = 0; // Initialized by OpenCL kernel
 		sssd->adaptiveStrength = renderEngine->oclSampler->sobol.adaptiveStrength;
 		sssd->adaptiveUserImportanceWeight = renderEngine->oclSampler->sobol.adaptiveUserImportanceWeight;
+		sssd->filmRegionPixelCount = filmRegionPixelCount;
 
 		// Initialize all pass values. The pass buffer is attached at the
 		// end of slg::ocl::SobolSamplerSharedData
 		u_int *passBuffer = (u_int *)(buffer + sizeof(slg::ocl::SobolSamplerSharedData));
 		fill(passBuffer, passBuffer + filmRegionPixelCount, SOBOL_STARTOFFSET);
 
+		// Initialize the Sobol directions array values. The pass buffer is attached at the
+		// end of slg::ocl::SobolSamplerSharedData + all pass values
+
+		u_int *sobolDirections = (u_int *)(buffer + sizeof(slg::ocl::SobolSamplerSharedData) + sizeof(u_int) * filmRegionPixelCount);
+		SobolSequence::GenerateDirectionVectors(sobolDirections, renderEngine->pathTracer.eyeSampleSize);
+
+		// Write the data
 		cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
 		oclQueue.enqueueWriteBuffer(*samplerSharedDataBuff, CL_TRUE, 0, size, buffer);
-
+		
 		delete[] buffer;
 	} else if (renderEngine->oclSampler->type == slg::ocl::TILEPATHSAMPLER) {
+		// TilePathSamplerSharedData is updated in PathOCLBaseOCLRenderThread::UpdateSamplerData()
+		
 		switch (renderEngine->GetType()) {
 			case TILEPATHOCL: {
-				// rngPass, rng0 and rng1 fields
-				slg::ocl::TilePathSamplerSharedData *buffer = new slg::ocl::TilePathSamplerSharedData[filmRegionPixelCount];
+				char *buffer = new char[size];
 
-				RandomGenerator rndGen(renderEngine->seedBase);
-
-				for (u_int i = 0; i < filmRegionPixelCount; ++i) {
-					buffer[i].rngPass = rndGen.uintValue();
-					buffer[i].rng0 = rndGen.floatValue();
-					buffer[i].rng1 = rndGen.floatValue();
-				}
+				// Initialize the Sobol directions array values
+				u_int *sobolDirections = (u_int *)(buffer + sizeof(slg::ocl::TilePathSamplerSharedData));
+				SobolSequence::GenerateDirectionVectors(sobolDirections, renderEngine->pathTracer.eyeSampleSize);
 
 				cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
 				oclQueue.enqueueWriteBuffer(*samplerSharedDataBuff, CL_TRUE, 0, size, &buffer[0]);
@@ -539,131 +552,72 @@ void PathOCLBaseOCLRenderThread::InitSamplerSharedDataBuffer() {
 	}
 }
 
-// Used only by TILEPATHOCL
-void PathOCLBaseOCLRenderThread::UpdateSamplerSharedDataBuffer(const TileWork &tileWork) {
-	if (renderEngine->oclSampler->type != slg::ocl::TILEPATHSAMPLER)
-		throw runtime_error("Wrong sampler in PathOCLBaseRenderThread::UpdateSamplerSharedDataBuffer(): " +
-						boost::lexical_cast<string>(renderEngine->oclSampler->type));
-
-	switch (renderEngine->GetType()) {
-			case TILEPATHOCL: {
-				const u_int *subRegion = renderEngine->film->GetSubRegion();
-				const u_int filmRegionPixelCount = (subRegion[1] - subRegion[0] + 1) * (subRegion[3] - subRegion[2] + 1);
-
-				// rngPass, rng0 and rng1 fields
-				vector<slg::ocl::TilePathSamplerSharedData> buffer(filmRegionPixelCount);
-
-				RandomGenerator rndGen(tileWork.GetTileSeed());
-
-				for (u_int i = 0; i < filmRegionPixelCount; ++i) {
-					buffer[i].rngPass = rndGen.uintValue();
-					buffer[i].rng0 = rndGen.floatValue();
-					buffer[i].rng1 = rndGen.floatValue();
-				}
-
-				cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
-				oclQueue.enqueueWriteBuffer(*samplerSharedDataBuff, CL_TRUE, 0,
-						sizeof(slg::ocl::TilePathSamplerSharedData) * buffer.size(), &buffer[0]);
-				break;
-			}
-			case RTPATHOCL:
-				break;
-			default:
-				throw runtime_error("Unknown render engine in PathOCLBaseRenderThread::UpdateSamplerSharedDataBuffer(): " +
-						boost::lexical_cast<string>(renderEngine->GetType()));
-		}
-}
-
 void PathOCLBaseOCLRenderThread::InitSamplesBuffer() {
 	const u_int taskCount = renderEngine->taskCount;
-
-	//--------------------------------------------------------------------------
-	// SampleResult size
-	//--------------------------------------------------------------------------
-
-	const size_t sampleResultSize = GetOpenCLSampleResultSize();
 
 	//--------------------------------------------------------------------------
 	// Sample size
 	//--------------------------------------------------------------------------
 
-	size_t sampleSize = sampleResultSize;
+	size_t sampleSize = 0;
 
 	// Add Sample memory size
-	if (renderEngine->oclSampler->type == slg::ocl::RANDOM) {
-		// pixelIndexBase, pixelIndexOffset and pixelIndexRandomStart fields
-		sampleSize += 3 * sizeof(unsigned int);
-	} else if (renderEngine->oclSampler->type == slg::ocl::METROPOLIS) {
-		sampleSize += 2 * sizeof(float) + 5 * sizeof(u_int) + sampleResultSize;		
-	} else if (renderEngine->oclSampler->type == slg::ocl::SOBOL) {
-		// pixelIndexBase, pixelIndexOffset, pass and pixelIndexRandomStart fields
-		sampleSize += 4 * sizeof(u_int);
-		// Seed field
-		sampleSize += sizeof(slg::ocl::Seed);
-		// rngPass field
-		sampleSize += sizeof(u_int);
-		// rng0 and rng1 fields
-		sampleSize += 2 * sizeof(float);
-	} else if (renderEngine->oclSampler->type == slg::ocl::TILEPATHSAMPLER) {
-		// rngPass field
-		sampleSize += sizeof(u_int);
-		// rng0 and rng1 fields
-		sampleSize += 2 * sizeof(float);
-		// pass field
-		sampleSize += sizeof(u_int);
-	} else
-		throw runtime_error("Unknown sampler.type in PathOCLBaseRenderThread::InitSamplesBuffer(): " +
-				boost::lexical_cast<string>(renderEngine->oclSampler->type));
+	switch (renderEngine->oclSampler->type) {
+		case slg::ocl::RANDOM: {
+			// pixelIndexBase, pixelIndexOffset and pixelIndexRandomStart fields
+			sampleSize += sizeof(slg::ocl::RandomSample);
+			break;
+		}
+		case  slg::ocl::METROPOLIS: {
+			const size_t sampleResultSize = GetOpenCLSampleResultSize();
+			sampleSize += 2 * sizeof(float) + 5 * sizeof(u_int) + sampleResultSize;	
+			break;
+		}
+		case slg::ocl::SOBOL: {
+			sampleSize += sizeof(slg::ocl::SobolSample);
+			break;
+		}
+		case slg::ocl::TILEPATHSAMPLER: {
+			sampleSize += sizeof(slg::ocl::TilePathSample);
+			break;
+		}
+		default:
+			throw runtime_error("Unknown sampler.type in PathOCLBaseRenderThread::InitSamplesBuffer(): " +
+					boost::lexical_cast<string>(renderEngine->oclSampler->type));
+	}
 
 	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Size of a Sample: " << sampleSize << "bytes");
 	AllocOCLBufferRW(&samplesBuff, sampleSize * taskCount, "Sample");
 }
 
+void PathOCLBaseOCLRenderThread::InitSampleResultsBuffer() {
+	const u_int taskCount = renderEngine->taskCount;
+
+	const size_t sampleResultSize = GetOpenCLSampleResultSize();
+
+	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Size of a SampleResult: " << sampleResultSize << "bytes");
+	AllocOCLBufferRW(&sampleResultsBuff, sampleResultSize * taskCount, "Sample");
+}
+
 void PathOCLBaseOCLRenderThread::InitSampleDataBuffer() {
 	const u_int taskCount = renderEngine->taskCount;
 
-	const size_t eyePathVertexDimension =
-		// IDX_SCREEN_X, IDX_SCREEN_Y, IDX_EYE_TIME
-		3 +
-		// IDX_EYE_PASSTROUGHT
-		1 +
-		// IDX_DOF_X, IDX_DOF_Y
-		2;
-	const size_t PerPathVertexDimension =
-		// IDX_PASSTHROUGH,
-		1 +
-		// IDX_BSDF_X, IDX_BSDF_Y
-		2 +
-		// IDX_DIRECTLIGHT_X, IDX_DIRECTLIGHT_Y, IDX_DIRECTLIGHT_Z, IDX_DIRECTLIGHT_W, IDX_DIRECTLIGHT_A
-		5 +
-		// IDX_RR
-		1;
-
 	size_t uDataSize;
 	if (renderEngine->oclSampler->type == slg::ocl::RANDOM) {
-		sampleDimensions = 0;
-
 		// To store IDX_SCREEN_X and IDX_SCREEN_Y
 		uDataSize = 2 * sizeof(float);
 	} else if (renderEngine->oclSampler->type == slg::ocl::SOBOL) {
-		sampleDimensions = eyePathVertexDimension + PerPathVertexDimension * Min<u_int>(renderEngine->pathTracer.maxPathDepth.depth, SOBOL_MAX_DEPTH);
-
 		// To store IDX_SCREEN_X and IDX_SCREEN_Y
 		uDataSize = 2 * sizeof(float);
 	} else if (renderEngine->oclSampler->type == slg::ocl::METROPOLIS) {
-		sampleDimensions = eyePathVertexDimension + PerPathVertexDimension * renderEngine->pathTracer.maxPathDepth.depth;
-
 		// Metropolis needs 2 sets of samples, the current and the proposed mutation
-		uDataSize = 2 * sizeof(float) * sampleDimensions;
+		uDataSize = 2 * sizeof(float) * renderEngine->pathTracer.eyeSampleSize;
 	} else if (renderEngine->oclSampler->type == slg::ocl::TILEPATHSAMPLER) {
-		sampleDimensions = eyePathVertexDimension + PerPathVertexDimension * Min<u_int>(renderEngine->pathTracer.maxPathDepth.depth, SOBOL_MAX_DEPTH);
-
 		// To store IDX_SCREEN_X and IDX_SCREEN_Y
 		uDataSize = 2 * sizeof(float);
 	} else
 		throw runtime_error("Unknown sampler.type in PathOCLBaseRenderThread::InitSampleDataBuffer(): " + boost::lexical_cast<string>(renderEngine->oclSampler->type));
 
-	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Sample dimensions: " << sampleDimensions);
 	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Size of a SampleData: " << uDataSize << "bytes");
 
 	AllocOCLBufferRW(&sampleDataBuff, uDataSize * taskCount, "SampleData");
@@ -772,6 +726,12 @@ void PathOCLBaseOCLRenderThread::InitRender() {
 	//--------------------------------------------------------------------------
 
 	InitSampleDataBuffer();
+
+	//--------------------------------------------------------------------------
+	// Allocate sample result buffers
+	//--------------------------------------------------------------------------
+
+	InitSampleResultsBuffer();
 
 	//--------------------------------------------------------------------------
 	// Allocate volume info buffers if required

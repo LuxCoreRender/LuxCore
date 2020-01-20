@@ -67,6 +67,7 @@ typedef struct {
 	} renderEngine;
 
 	Scene scene;
+	Sampler sampler;
 	PathTracer pathTracer;
 	Filter pixelFilter;
 	Film film;

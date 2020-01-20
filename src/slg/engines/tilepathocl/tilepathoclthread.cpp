@@ -51,6 +51,55 @@ void TilePathOCLRenderThread::GetThreadFilmSize(u_int *filmWidth, u_int *filmHei
 	filmSubRegion[3] = engine->tileRepository->tileHeight - 1;
 }
 
+void TilePathOCLRenderThread::UpdateSamplerData(const TileWork &tileWork) {
+	TilePathOCLRenderEngine *engine = (TilePathOCLRenderEngine *)renderEngine;
+	if (engine->oclSampler->type != slg::ocl::TILEPATHSAMPLER)
+		throw runtime_error("Wrong sampler in PathOCLBaseRenderThread::UpdateSamplesBuffer(): " +
+						boost::lexical_cast<string>(engine->oclSampler->type));
+
+	cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
+
+	// Update samplesBuff	
+	switch (engine->GetType()) {
+		case TILEPATHOCL: {
+			const u_int taskCount = renderEngine->taskCount;
+
+			// rngPass, rng0 and rng1 fields
+			vector<slg::ocl::TilePathSample> buffer(taskCount);
+
+			RandomGenerator rndGen(tileWork.GetTileSeed());
+
+			for (u_int i = 0; i < taskCount; ++i) {
+				buffer[i].rngPass = rndGen.uintValue();
+				buffer[i].rng0 = rndGen.floatValue();
+				buffer[i].rng1 = rndGen.floatValue();
+			}
+
+			oclQueue.enqueueWriteBuffer(*samplesBuff, CL_TRUE, 0,
+					sizeof(slg::ocl::TilePathSample) * buffer.size(), &buffer[0]);
+			break;
+		}
+		case RTPATHOCL:
+			break;
+		default:
+			throw runtime_error("Unknown render engine in PathOCLBaseRenderThread::UpdateSamplesBuffer(): " +
+					boost::lexical_cast<string>(engine->GetType()));
+	}
+
+	// Update samplerSharedDataBuff
+	slg::ocl::TilePathSamplerSharedData sharedData;
+	sharedData.cameraFilmWidth = engine->film->GetWidth();
+	sharedData.cameraFilmHeight =  engine->film->GetHeight();
+	sharedData.tileStartX =  tileWork.GetCoord().x;
+	sharedData.tileStartY =  tileWork.GetCoord().y;
+	sharedData.tileWidth =  tileWork.GetCoord().width;
+	sharedData.tileHeight =  tileWork.GetCoord().height;
+	sharedData.tilePass =  tileWork.passToRender;
+	sharedData.aaSamples =  engine->aaSamples;
+
+	oclQueue.enqueueWriteBuffer(*samplerSharedDataBuff, CL_TRUE, 0, sizeof(slg::ocl::TilePathSamplerSharedData), &sharedData);
+}
+
 void TilePathOCLRenderThread::RenderTileWork(const TileWork &tileWork,
 		const u_int filmIndex) {
 	cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
@@ -74,23 +123,13 @@ void TilePathOCLRenderThread::RenderTileWork(const TileWork &tileWork,
 		boost::unique_lock<boost::mutex> lock(engine->setKernelArgsMutex);
 
 		SetInitKernelArgs(filmIndex);
-		// Add TILEPATHOCL specific parameters
-		u_int argIndex = initKernelArgsCount;
-		initKernel->setArg(argIndex++, engine->film->GetWidth());
-		initKernel->setArg(argIndex++, engine->film->GetHeight());
-		initKernel->setArg(argIndex++, tileWork.GetCoord().x);
-		initKernel->setArg(argIndex++, tileWork.GetCoord().y);
-		initKernel->setArg(argIndex++, tileWork.GetCoord().width);
-		initKernel->setArg(argIndex++, tileWork.GetCoord().height);
-		initKernel->setArg(argIndex++, tileWork.passToRender);
-		initKernel->setArg(argIndex++, engine->aaSamples);
 
 		SetAllAdvancePathsKernelArgs(filmIndex);
 	}
 
 	// Update Sampler shared data
-	UpdateSamplerSharedDataBuffer(tileWork);
-	
+	UpdateSamplerData(tileWork);
+
 	// Initialize the tasks buffer
 	oclQueue.enqueueNDRangeKernel(*initKernel, cl::NullRange,
 			cl::NDRange(engine->taskCount), cl::NDRange(initWorkGroupSize));
@@ -99,6 +138,7 @@ void TilePathOCLRenderThread::RenderTileWork(const TileWork &tileWork,
 	const u_int worstCaseIterationCount = (engine->pathTracer.maxPathDepth.depth == 1) ? 2 : (engine->pathTracer.maxPathDepth.depth * 2 - 1);
 	for (u_int i = 0; i < worstCaseIterationCount; ++i) {
 		// Trace rays
+
 		intersectionDevice->EnqueueTraceRayBuffer(*raysBuff,
 				*(hitsBuff), engine->taskCount, NULL, NULL);
 

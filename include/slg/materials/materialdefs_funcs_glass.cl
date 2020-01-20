@@ -80,16 +80,6 @@ OPENCL_FORCE_INLINE float3 GlassMaterial_WaveLength2RGB(const float waveLength) 
 
 	const float3 result = (float3)(r, g, b) * factor;
 
-	/*
-	Spectrum white;
-	for (u_int i = 380; i < 780; ++i)
-		white += WaveLength2RGB(i);
-	white *= 1.f / 400.f;
-	cout << std::setprecision(std::numeric_limits<float>::digits10 + 1) << white.c[0] << ", " << white.c[1] << ", " << white.c[2] << "\n";
-	 
-	 Result: 0.5652729, 0.36875, 0.265375
-	 */
-
 	// To normalize the output
 	const float3 normFactor = (float3)(1.f / .5652729f, 1.f / .36875f, 1.f / .265375f);
 	

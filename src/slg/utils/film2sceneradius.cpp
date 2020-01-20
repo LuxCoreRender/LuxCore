@@ -60,7 +60,7 @@ static void GenerateEyeRay(const Camera *camera, Ray &eyeRay,
 		camera->GenerateRayTime(timeSample);
 
 	const float u0 = sampler->GetSample(2);
-	const float u1 = sampler->GetSample(2);
+	const float u1 = sampler->GetSample(3);
 
 	camera->GenerateRay(time, sampleResult.filmX, sampleResult.filmY,
 			&eyeRay, &volInfo, u0, u1);

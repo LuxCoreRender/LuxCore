@@ -953,7 +953,6 @@ void PathTracer::ParseOptions(const luxrays::Properties &cfg, const luxrays::Pro
 	lightSampleSize = 
 		lightSampleBootSize + // To generate eye ray
 		maxPathDepth.depth * lightSampleStepSize; // For each path vertex
-
 }
 
 //------------------------------------------------------------------------------

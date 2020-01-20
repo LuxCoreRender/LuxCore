@@ -62,32 +62,6 @@ void PathOCLBaseOCLRenderThread::CompileKernel(cl::Program *program, cl::Kernel 
 	}
 }
 
-string PathOCLBaseOCLRenderThread::SamplerKernelDefinitions() {
-	if ((renderEngine->oclSampler->type == slg::ocl::SOBOL) ||
-			((renderEngine->oclSampler->type == slg::ocl::TILEPATHSAMPLER) && (renderEngine->GetType() == TILEPATHOCL))) {
-		// Generate the Sobol vectors
-		//SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Sobol table size: " << (sampleDimensions * SOBOL_BITS * sizeof(u_int)) / 1024 << "Kbytes");
-		u_int *directions = new u_int[sampleDimensions * SOBOL_BITS];
-
-		SobolSequence::GenerateDirectionVectors(directions, sampleDimensions);
-
-		stringstream sobolTableSS;
-		sobolTableSS << "#line 2 \"Sobol Table in pathoclthreadstatebase.cpp\"\n";
-		sobolTableSS << "__constant uint SOBOL_DIRECTIONS[" << sampleDimensions * SOBOL_BITS << "] = {\n";
-		for (u_int i = 0; i < sampleDimensions * SOBOL_BITS; ++i) {
-			if (i != 0)
-				sobolTableSS << ", ";
-			sobolTableSS << directions[i] << "u";
-		}
-		sobolTableSS << "};\n";
-
-		delete[] directions;
-
-		return sobolTableSS.str();
-	} else
-		return "";
-}
-
 void PathOCLBaseOCLRenderThread::InitKernels() {
 	//--------------------------------------------------------------------------
 	// Compile kernels
@@ -432,29 +406,6 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 	if (renderEngine->usePixelAtomics)
 		ssParams << " -D PARAM_USE_PIXEL_ATOMICS";
 
-	const slg::ocl::Sampler *sampler = renderEngine->oclSampler;
-	switch (sampler->type) {
-		case slg::ocl::RANDOM:
-			ssParams << " -D PARAM_SAMPLER_TYPE=0";
-			break;
-		case slg::ocl::METROPOLIS:
-			ssParams << " -D PARAM_SAMPLER_TYPE=1" <<
-					" -D PARAM_SAMPLER_METROPOLIS_LARGE_STEP_RATE=" << sampler->metropolis.largeMutationProbability << "f" <<
-					" -D PARAM_SAMPLER_METROPOLIS_IMAGE_MUTATION_RANGE=" << sampler->metropolis.imageMutationRange << "f" <<
-					" -D PARAM_SAMPLER_METROPOLIS_MAX_CONSECUTIVE_REJECT=" << sampler->metropolis.maxRejects;
-			break;
-		case slg::ocl::SOBOL: {
-			ssParams << " -D PARAM_SAMPLER_TYPE=2" <<
-					" -D PARAM_SAMPLER_SOBOL_STARTOFFSET=" << SOBOL_STARTOFFSET;
-			break;
-		}
-		case slg::ocl::TILEPATHSAMPLER:
-			ssParams << " -D PARAM_SAMPLER_TYPE=3";
-			break;
-		default:
-			throw runtime_error("Unknown sampler type in PathOCLBaseOCLRenderThread::InitKernels(): " + boost::lexical_cast<string>(sampler->type));
-	}
-
 	//--------------------------------------------------------------------------
 
 	// Check the OpenCL vendor and use some specific compiler options
@@ -505,7 +456,6 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 	stringstream ssKernel;
 	ssKernel <<
 			forceInlineDirective <<
-			SamplerKernelDefinitions() <<
 			// OpenCL LuxRays Types
 			luxrays::ocl::KernelSource_luxrays_types <<
 			luxrays::ocl::KernelSource_randomgen_types <<
@@ -647,6 +597,7 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_sampler_sobol_funcs <<
 			slg::ocl::KernelSource_sampler_metropolis_funcs <<
 			slg::ocl::KernelSource_sampler_tilepath_funcs <<
+			slg::ocl::KernelSource_sampler_funcs <<
 			slg::ocl::KernelSource_bsdf_funcs <<
 			slg::ocl::KernelSource_scene_funcs <<
 			slg::ocl::KernelSource_pgic_funcs <<
@@ -750,6 +701,7 @@ void PathOCLBaseOCLRenderThread::SetInitKernelArgs(const u_int filmIndex) {
 	initKernel->setArg(argIndex++, sizeof(cl::Buffer), samplerSharedDataBuff);
 	initKernel->setArg(argIndex++, sizeof(cl::Buffer), samplesBuff);
 	initKernel->setArg(argIndex++, sizeof(cl::Buffer), sampleDataBuff);
+	initKernel->setArg(argIndex++, sizeof(cl::Buffer), sampleResultsBuff);
 	initKernel->setArg(argIndex++, sizeof(cl::Buffer), eyePathInfosBuff);
 	initKernel->setArg(argIndex++, sizeof(cl::Buffer), pixelFilterBuff);
 	initKernel->setArg(argIndex++, sizeof(cl::Buffer), raysBuff);
@@ -774,6 +726,7 @@ void PathOCLBaseOCLRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePa
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), samplerSharedDataBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), samplesBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), sampleDataBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), sampleResultsBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), eyePathInfosBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), directLightVolInfosBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), raysBuff);

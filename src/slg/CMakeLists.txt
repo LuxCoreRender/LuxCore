@@ -256,6 +256,7 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/lights/visibility/elvc_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/lights/visibility/elvc_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/samplers/sampler_types.cl
+	${LuxRays_SOURCE_DIR}/include/slg/samplers/sampler_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/samplers/sampler_random_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/samplers/sampler_sobol_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/samplers/sampler_metropolis_funcs.cl
@@ -590,6 +591,7 @@ PreprocessOCLKernels(${generated_kernels_dir} slg ${SLG_KERNELS})
 set(SLG_KERNEL_SRCS
 	${generated_kernels_dir}/indexbvh_types_kernel.cpp
 	${generated_kernels_dir}/sampler_types_kernel.cpp
+	${generated_kernels_dir}/sampler_funcs_kernel.cpp
 	${generated_kernels_dir}/sampler_random_funcs_kernel.cpp
 	${generated_kernels_dir}/sampler_sobol_funcs_kernel.cpp
 	${generated_kernels_dir}/sampler_metropolis_funcs_kernel.cpp

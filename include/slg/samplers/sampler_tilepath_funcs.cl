@@ -22,8 +22,6 @@
 // Morton related functions
 //------------------------------------------------------------------------------
 
-#if defined(RENDER_ENGINE_RTPATHOCL)
-
 // Morton decode from https://fgiesen.wordpress.com/2009/12/13/decoding-morton-codes/
 
 // Inverse of Part1By1 - "delete" all odd-indexed bits
@@ -56,71 +54,49 @@ OPENCL_FORCE_INLINE uint DecodeMorton2Y(const uint code) {
 	return Compact1By1(code >> 1);
 }
 
-#endif
-
 //------------------------------------------------------------------------------
 // TilePath Sampler Kernel
 //------------------------------------------------------------------------------
 
-#if (PARAM_SAMPLER_TYPE == 3)
+#define TILEPATHSAMPLER_TOTAL_U_SIZE 2
 
-OPENCL_FORCE_INLINE __global float *Sampler_GetSampleData(__constant const GPUTaskConfiguration* restrict taskConfig,
-		__global Sample *sample, __global float *samplesData) {
+OPENCL_FORCE_INLINE float TilePathSampler_GetSample(
+		__constant const GPUTaskConfiguration* restrict taskConfig,
+		const uint index
+		SAMPLER_PARAM_DECL) {
 	const size_t gid = get_global_id(0);
-	return &samplesData[gid * TOTAL_U_SIZE];
-}
+	__global float *samplesData = &samplesDataBuff[gid * TILEPATHSAMPLER_TOTAL_U_SIZE];
 
-OPENCL_FORCE_INLINE __global float *Sampler_GetSampleDataPathBase(__constant const GPUTaskConfiguration* restrict taskConfig,
-		__global Sample *sample, __global float *sampleData) {
-	return sampleData;
-}
-
-OPENCL_FORCE_INLINE __global float *Sampler_GetSampleDataPathVertex(__constant const GPUTaskConfiguration* restrict taskConfig,
-		__global Sample *sample,
-		__global float *sampleDataPathBase, const uint depth) {
-	return &sampleDataPathBase[IDX_BSDF_OFFSET + depth * VERTEX_SAMPLE_SIZE];
-}
-
-OPENCL_FORCE_INLINE float Sampler_GetSamplePath(__constant const GPUTaskConfiguration* restrict taskConfig,
-		Seed *seed, __global Sample *sample,
-		__global float *sampleDataPathBase, const uint index) {
 	switch (index) {
 		case IDX_SCREEN_X:
-			return sampleDataPathBase[IDX_SCREEN_X];
+			return samplesData[IDX_SCREEN_X];
 		case IDX_SCREEN_Y:
-			return sampleDataPathBase[IDX_SCREEN_Y];
-		default:
+			return samplesData[IDX_SCREEN_Y];
+		default: {
 #if defined(RENDER_ENGINE_RTPATHOCL)
 			return Rnd_FloatValue(seed);
 #else
-			return SobolSequence_GetSample(sample, index);
+			__global const uint* restrict sobolDirections = (__global const uint* restrict)samplerSharedDataBuff;
+
+			__global TilePathSample *samples = (__global TilePathSample *)samplesBuff;
+			__global TilePathSample *sample = &samples[gid];
+
+			return SobolSequence_GetSample(sobolDirections, sample->pass,
+					sample->rngPass, sample->rng0, sample->rng1, index);	
 #endif
+		}
 	}
 }
 
-OPENCL_FORCE_INLINE float Sampler_GetSamplePathVertex(__constant const GPUTaskConfiguration* restrict taskConfig,
-		Seed *seed, __global Sample *sample,
-		__global float *sampleDataPathVertexBase,
-		const uint depth, const uint index) {
-	// The depth used here is counted from the first hit point of the path
-	// vertex (so it is effectively depth - 1)
-#if defined(RENDER_ENGINE_RTPATHOCL)
-	return Rnd_FloatValue(seed);
-#else
-	if (depth < SOBOL_MAX_DEPTH)
-		return SobolSequence_GetSample(sample, IDX_BSDF_OFFSET + depth * VERTEX_SAMPLE_SIZE + index);
-	else
-		return Rnd_FloatValue(seed);
-#endif
-}
-
-OPENCL_FORCE_NOT_INLINE void Sampler_SplatSample(
-		__constant const GPUTaskConfiguration* restrict taskConfig, Seed *seed,
-		__global SamplerSharedData *samplerSharedData,
-		__global Sample *sample, __global float *sampleData
+OPENCL_FORCE_INLINE void TilePathSampler_SplatSample(
+		__constant const GPUTaskConfiguration* restrict taskConfig
+		SAMPLER_PARAM_DECL
 		FILM_PARAM_DECL
 		) {
 	const size_t gid = get_global_id(0);
+	__global TilePathSample *samples = (__global TilePathSample *)samplesBuff;
+	__global TilePathSample *sample = &samples[gid];
+	__global SampleResult *sampleResult = &sampleResultsBuff[gid];
 
 #if defined(RENDER_ENGINE_RTPATHOCL)
 	// Check if I'm in preview phase
@@ -130,27 +106,25 @@ OPENCL_FORCE_NOT_INLINE void Sampler_SplatSample(
 			for (uint x = 0; x < taskConfig->renderEngine.rtpathocl.resolutionReduction; ++x) {
 				// The sample weight is very low so this value is rapidly replaced
 				// during normal rendering
-				const uint px = sample->result.pixelX + x;
-				const uint py = sample->result.pixelY + y;
+				const uint px = sampleResult->pixelX + x;
+				const uint py = sampleResult->pixelY + y;
 				// px and py are unsigned so there is no need to check if they are >= 0
 				if ((px < filmWidth) && (py < filmHeight)) {
 					Film_AddSample(&taskConfig->film, px, py,
-							&sample->result, .001f
+							sampleResult, .001f
 							FILM_PARAM);
 				}
 			}
 		}
 	} else
 #endif
-		Film_AddSample(&taskConfig->film, sample->result.pixelX, sample->result.pixelY,
-				&sample->result, 1.f
+		Film_AddSample(&taskConfig->film, sampleResult->pixelX, sampleResult->pixelY,
+				sampleResult, 1.f
 				FILM_PARAM);
 }
 
-OPENCL_FORCE_NOT_INLINE void Sampler_NextSample(
-		__constant const GPUTaskConfiguration* restrict taskConfig, Seed *seed,
-		__global SamplerSharedData *samplerSharedData,
-		__global Sample *sample, __global float *sampleData,
+OPENCL_FORCE_INLINE void TilePathSampler_NextSample(
+		__constant const GPUTaskConfiguration* restrict taskConfig,
 #if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
 		__global float *filmNoise,
 #endif
@@ -159,13 +133,13 @@ OPENCL_FORCE_NOT_INLINE void Sampler_NextSample(
 #endif
 		const uint filmWidth, const uint filmHeight,
 		const uint filmSubRegion0, const uint filmSubRegion1,
-		const uint filmSubRegion2, const uint filmSubRegion3) {
-	// Sampler_NextSample() is not used in TILEPATHSAMPLER
+		const uint filmSubRegion2, const uint filmSubRegion3
+		SAMPLER_PARAM_DECL) {
+	// TilePathSampler_NextSample() is not used in TILEPATHSAMPLER
 }
 
-OPENCL_FORCE_NOT_INLINE bool Sampler_Init(__constant const GPUTaskConfiguration* restrict taskConfig,
-		Seed *seed, __global SamplerSharedData *samplerSharedData,
-		__global Sample *sample, __global float *sampleData,
+OPENCL_FORCE_INLINE bool TilePathSampler_Init(
+		__constant const GPUTaskConfiguration* restrict taskConfig,
 #if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
 		__global float *filmNoise,
 #endif
@@ -174,20 +148,19 @@ OPENCL_FORCE_NOT_INLINE bool Sampler_Init(__constant const GPUTaskConfiguration*
 #endif
 		const uint filmWidth, const uint filmHeight,
 		const uint filmSubRegion0, const uint filmSubRegion1,
-		const uint filmSubRegion2, const uint filmSubRegion3,
-		// cameraFilmWidth/cameraFilmHeight and filmWidth/filmHeight are usually
-		// the same. They are different when doing tile rendering
-		const uint cameraFilmWidth, const uint cameraFilmHeight,
-		const uint tileStartX, const uint tileStartY,
-		const uint tileWidth, const uint tileHeight,
-		const uint tilePass, const uint aaSamples) {
+		const uint filmSubRegion2, const uint filmSubRegion3
+		SAMPLER_PARAM_DECL) {
 	const size_t gid = get_global_id(0);
+	__global TilePathSamplerSharedData *samplerSharedData = (__global TilePathSamplerSharedData *)samplerSharedDataBuff;
+	__global TilePathSample *samples = (__global TilePathSample *)samplesBuff;
+	__global TilePathSample *sample = &samples[gid];
+	__global float *samplesData = &samplesDataBuff[gid * TILEPATHSAMPLER_TOTAL_U_SIZE];
 
 #if defined(RENDER_ENGINE_RTPATHOCL)
 	// 1 thread for each pixel
 
 	uint pixelX, pixelY;
-	if (tilePass < taskConfig->renderEngine.rtpathocl.previewResolutionReductionStep) {
+	if (samplerSharedData->tilePass < taskConfig->renderEngine.rtpathocl.previewResolutionReductionStep) {
 		const uint samplesPerRow = filmWidth / taskConfig->renderEngine.rtpathocl.previewResolutionReduction;
 		const uint subPixelX = gid % samplesPerRow;
 		const uint subPixelY = gid / samplesPerRow;
@@ -206,7 +179,7 @@ OPENCL_FORCE_NOT_INLINE bool Sampler_Init(__constant const GPUTaskConfiguration*
 		const uint pixelsCount2 = pixelsCount * pixelsCount;
 
 		// Rendering according a Morton curve
-		const uint pixelIndex = tilePass % pixelsCount2;
+		const uint pixelIndex = samplerSharedData->tilePass % pixelsCount2;
 		const uint mortonX = DecodeMorton2X(pixelIndex);
 		const uint mortonY = DecodeMorton2Y(pixelIndex);
 
@@ -214,17 +187,17 @@ OPENCL_FORCE_NOT_INLINE bool Sampler_Init(__constant const GPUTaskConfiguration*
 		pixelY += mortonY;
 	}
 
-	if ((pixelX >= tileWidth) || (pixelY >= tileHeight))
+	if ((pixelX >= samplerSharedData->tileWidth) || (pixelY >= samplerSharedData->tileHeight))
 		return false;
 
-	sample->pass = tilePass;
+	sample->pass = samplerSharedData->tilePass;
 
-	sampleData[IDX_SCREEN_X] = pixelX + Rnd_FloatValue(seed);
-	sampleData[IDX_SCREEN_Y] = pixelY + Rnd_FloatValue(seed);
+	samplesData[IDX_SCREEN_X] = pixelX + Rnd_FloatValue(seed);
+	samplesData[IDX_SCREEN_Y] = pixelY + Rnd_FloatValue(seed);
 #else
 	// aaSamples * aaSamples threads for each pixel
 
-	const uint aaSamples2 = aaSamples * aaSamples;
+	const uint aaSamples2 = Sqr(samplerSharedData->aaSamples);
 
 	if (gid >= filmWidth * filmHeight * aaSamples2)
 		return false;
@@ -233,23 +206,19 @@ OPENCL_FORCE_NOT_INLINE bool Sampler_Init(__constant const GPUTaskConfiguration*
 
 	const uint pixelX = pixelIndex % filmWidth;
 	const uint pixelY = pixelIndex / filmWidth;
-	if ((pixelX >= tileWidth) || (pixelY >= tileHeight))
+	if ((pixelX >= samplerSharedData->tileWidth) || (pixelY >= samplerSharedData->tileHeight))
 		return false;
 
-	const uint sharedDataIndex = (tileStartX + pixelX - filmSubRegion0) +
-			(tileStartY + pixelY - filmSubRegion2) * (filmSubRegion1 - filmSubRegion0 + 1);
-	// Limit the number of pass skipped
-	sample->rngPass = samplerSharedData[sharedDataIndex].rngPass;
-	sample->rng0 = samplerSharedData[sharedDataIndex].rng0;
-	sample->rng1 = samplerSharedData[sharedDataIndex].rng1;
+	// Note: sample->rngPass, sample->rng0 and sample->rng1 are initialize by the CPU
 
-	sample->pass = tilePass * aaSamples2 + gid % aaSamples2;
-	
-	sampleData[IDX_SCREEN_X] = pixelX + SobolSequence_GetSample(sample, IDX_SCREEN_X);
-	sampleData[IDX_SCREEN_Y] = pixelY + SobolSequence_GetSample(sample, IDX_SCREEN_Y);
+	sample->pass = samplerSharedData->tilePass * aaSamples2 + gid % aaSamples2;
+
+	__global const uint* restrict sobolDirections = (__global const uint* restrict)samplerSharedDataBuff;
+	samplesData[IDX_SCREEN_X] = pixelX + SobolSequence_GetSample(sobolDirections, sample->pass,
+			sample->rngPass, sample->rng0, sample->rng1, IDX_SCREEN_X);
+	samplesData[IDX_SCREEN_Y] = pixelY + SobolSequence_GetSample(sobolDirections, sample->pass,
+			sample->rngPass, sample->rng0, sample->rng1, IDX_SCREEN_Y);
 #endif
 
 	return true;
 }
-
-#endif

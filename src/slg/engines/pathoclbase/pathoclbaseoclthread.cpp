@@ -99,6 +99,7 @@ PathOCLBaseOCLRenderThread::PathOCLBaseOCLRenderThread(const u_int index,
 	samplerSharedDataBuff = nullptr;
 	samplesBuff = nullptr;
 	sampleDataBuff = nullptr;
+	sampleResultsBuff = nullptr;
 	taskStatsBuff = nullptr;
 	eyePathInfosBuff = nullptr;
 	directLightVolInfosBuff = nullptr;
@@ -225,6 +226,7 @@ void PathOCLBaseOCLRenderThread::Stop() {
 	FreeOCLBuffer(&samplerSharedDataBuff);
 	FreeOCLBuffer(&samplesBuff);
 	FreeOCLBuffer(&sampleDataBuff);
+	FreeOCLBuffer(&sampleResultsBuff);
 	FreeOCLBuffer(&taskStatsBuff);
 	FreeOCLBuffer(&eyePathInfosBuff);
 	FreeOCLBuffer(&directLightVolInfosBuff);

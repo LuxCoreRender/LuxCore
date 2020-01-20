@@ -136,6 +136,9 @@ void PathOCLBaseRenderEngine::InitGPUTaskConfiguration() {
 	// Scene configuration
 	taskConfig.scene.defaultVolumeIndex = compiledScene->defaultWorldVolumeIndex;
 
+	// Sampler configuration
+	taskConfig.sampler = *oclSampler;
+
 	// Path Tracer configuration
 	taskConfig.pathTracer = compiledScene->compiledPathTracer;
 
