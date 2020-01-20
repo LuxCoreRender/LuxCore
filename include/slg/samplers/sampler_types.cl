@@ -111,10 +111,10 @@ typedef struct {
 typedef struct {
 	// cameraFilmWidth/cameraFilmHeight and filmWidth/filmHeight are usually
 	// the same. They are different when doing tile rendering
-	uint cameraFilmWidth, cameraFilmHeight;
-	uint tileStartX, tileStartY;
-	uint tileWidth, tileHeight;
-	uint tilePass, aaSamples;
+	unsigned int cameraFilmWidth, cameraFilmHeight;
+	unsigned int tileStartX, tileStartY;
+	unsigned int tileWidth, tileHeight;
+	unsigned int tilePass, aaSamples;
 
 	// Plus Sobol directions array
 } TilePathSamplerSharedData;
