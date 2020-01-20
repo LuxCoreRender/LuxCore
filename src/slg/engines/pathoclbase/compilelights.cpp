@@ -215,7 +215,7 @@ void CompiledScene::CompileLightStrategy() {
 }
 
 void CompiledScene::CompileELVC(const EnvLightVisibilityCache *visibilityMapCache) {
-	if (!visibilityMapCache) {
+	if (!visibilityMapCache ||  !visibilityMapCache->GetBVH()) {
 		elvcAllEntries.clear();
 		elvcAllEntries.shrink_to_fit();
 
