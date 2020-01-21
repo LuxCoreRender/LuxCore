@@ -60,6 +60,7 @@
 * Fixed a brightness problem when rendering caustics with PhotonGI caustic cache
 * Fixed a bug in Mix material OpenCL code when mixing transparent and not transparent materials
 * Fixed a crash when rendering an empty scene with OpenCL and EnvLightVisibilityCache
+* Fixed a problem with mesh light sources when deleting an object with LuxCore API (issue #290)
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.

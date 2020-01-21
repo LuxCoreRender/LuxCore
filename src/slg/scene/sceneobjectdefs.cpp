@@ -57,8 +57,9 @@ void SceneObjectDefinitions::DefineIntersectableLights(LightSourceDefinitions &l
 		TriangleLight *tl = new TriangleLight();
 		tl->SetName(obj->GetName() + TRIANGLE_LIGHT_POSTFIX + ToString(i));
 		tl->lightMaterial = obj->GetMaterial();
-		tl->mesh = mesh;
-		tl->meshIndex = GetSceneObjectIndex(obj);
+		tl->sceneObject = obj;
+		// This is initialized in LightSourceDefinitions::Preprocess()
+		tl->meshIndex = NULL_INDEX;
 		tl->triangleIndex = i;
 		tl->Preprocess();
 

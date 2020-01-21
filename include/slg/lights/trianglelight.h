@@ -27,6 +27,8 @@ namespace slg {
 // TriangleLight implementation
 //------------------------------------------------------------------------------
 
+class SceneObject;
+	
 class TriangleLight : public IntersectableLightSource {
 public:
 	TriangleLight();
@@ -62,7 +64,8 @@ public:
 			float *directPdfA = NULL,
 			float *emissionPdfW = NULL) const;
 
-	const luxrays::ExtMesh *mesh;
+	const SceneObject *sceneObject;
+	// Note: meshIndex is initialized in LightSourceDefinitions::Preprocess()
 	u_int meshIndex, triangleIndex;
 	
 private:

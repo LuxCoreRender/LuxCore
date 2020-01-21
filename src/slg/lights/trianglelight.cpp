@@ -19,6 +19,7 @@
 #include "slg/bsdf/bsdf.h"
 #include "slg/core/sphericalfunction/sphericalfunction.h"
 #include "slg/lights/trianglelight.h"
+#include "slg/scene/sceneobject.h"
 
 using namespace std;
 using namespace luxrays;
@@ -28,7 +29,7 @@ using namespace slg;
 // Triangle Area Light
 //------------------------------------------------------------------------------
 
-TriangleLight::TriangleLight() : mesh(NULL), 
+TriangleLight::TriangleLight() : sceneObject(NULL), 
 		meshIndex(NULL_INDEX), triangleIndex(NULL_INDEX),
 		triangleArea(0.f), invTriangleArea(0.f),
 		meshArea(0.f), invMeshArea(0.f) {
@@ -42,7 +43,7 @@ bool TriangleLight::IsDirectLightSamplingEnabled() const {
 		case DLS_AUTO: {
 			// Check the number of triangles and disable direct light sampling for mesh
 			// with too many elements
-			return (mesh->GetTotalTriangleCount() > 256) ? false : true;
+			return (sceneObject->GetExtMesh()->GetTotalTriangleCount() > 256) ? false : true;
 		}
 		case DLS_ENABLED:
 			return true;
@@ -65,6 +66,8 @@ float TriangleLight::GetPower(const Scene &scene) const {
 }
 
 void TriangleLight::Preprocess() {
+	const ExtMesh *mesh = sceneObject->GetExtMesh();
+
 	Transform localToWorld;
 	mesh->GetLocal2World(0.f, localToWorld);
 
@@ -108,6 +111,8 @@ Spectrum TriangleLight::Emit(const Scene &scene,
 	if (emissionPdfW == 0.f)
 		return Spectrum();
 	emissionPdfW *= invTriangleArea;
+
+	const ExtMesh *mesh = sceneObject->GetExtMesh();
 
 	// Build a temporary HitPoint
 	HitPoint tmpHitPoint;
@@ -160,6 +165,8 @@ Spectrum TriangleLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 	//--------------------------------------------------------------------------
 	// Compute the sample point and direction
 	//--------------------------------------------------------------------------
+
+	const ExtMesh *mesh = sceneObject->GetExtMesh();
 
 	HitPoint tmpHitPoint;
 	mesh->GetLocal2World(time, tmpHitPoint.localToWorld);
@@ -249,6 +256,8 @@ Spectrum TriangleLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 
 bool TriangleLight::IsAlwaysInShadow(const Scene &scene,
 			const luxrays::Point &p, const luxrays::Normal &n) const {
+	const ExtMesh *mesh = sceneObject->GetExtMesh();
+
 	// This would be the correct code but BlendLuxCore is currently always
 	// exporting the normals so I resort to the following trick
 	/*if (mesh->HasNormals())

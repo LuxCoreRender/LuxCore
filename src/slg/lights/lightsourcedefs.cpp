@@ -197,8 +197,11 @@ void LightSourceDefinitions::Preprocess(const Scene *scene, const bool useRTMode
 			envLightSources.push_back((EnvLightSource *)l);
 
 		TriangleLight *tl = dynamic_cast<TriangleLight *>(l);
-		if (tl)
+		if (tl) {
 			intersectableLightSources.push_back(tl);
+
+			tl->meshIndex = scene->objDefs.GetSceneObjectIndex(tl->sceneObject);
+		}
 
 		++i;
 	}
