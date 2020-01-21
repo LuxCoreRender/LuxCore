@@ -269,8 +269,7 @@ ExtTriangleMesh *SubdivShape::ApplySubdiv(ExtTriangleMesh *srcMesh, const u_int 
 
 	// Setup a buffer for vertex primvar data
 	const u_int vertsCount = refiner->GetLevel(0).GetNumVertices();
-    const u_int newVertsCount = refiner->GetNumVerticesTotal();
-	const u_int totalVertsCount = vertsCount + newVertsCount;
+	const u_int totalVertsCount = vertsCount + refiner->GetNumVerticesTotal();
 
 	// Vertices
 	Osd::CpuVertexBuffer *vertsBuffer = BuildBuffer<3>(
@@ -313,12 +312,6 @@ ExtTriangleMesh *SubdivShape::ApplySubdiv(ExtTriangleMesh *srcMesh, const u_int 
 	// Build the new mesh
 	//--------------------------------------------------------------------------
 
-	// New vertices
-	Point *newVerts = TriangleMesh::AllocVerticesBuffer(newVertsCount);
-
-	const float *refinedVerts = vertsBuffer->BindCpuBuffer() + 3 * vertsCount;
-	copy(refinedVerts, refinedVerts + 3 * newVertsCount, &newVerts->x);
-
 	// New triangles
 	u_int newTrisCount = 0;
 	for (int array = 0; array < patchTable->GetNumPatchArrays(); ++array)
@@ -327,6 +320,7 @@ ExtTriangleMesh *SubdivShape::ApplySubdiv(ExtTriangleMesh *srcMesh, const u_int 
 
 	Triangle *newTris = TriangleMesh::AllocTrianglesBuffer(newTrisCount);
 	u_int triIndex = 0;
+	u_int maxVertIndex = 0;
 	for (int array = 0; array < patchTable->GetNumPatchArrays(); ++array) {
 		for (int patch = 0; patch < patchTable->GetNumPatches(array); ++patch) {
 			const Far::ConstIndexArray faceVerts =
@@ -337,9 +331,20 @@ ExtTriangleMesh *SubdivShape::ApplySubdiv(ExtTriangleMesh *srcMesh, const u_int 
 			newTris[triIndex].v[1] = faceVerts[1] - vertsCount;
 			newTris[triIndex].v[2] = faceVerts[2] - vertsCount;
 
+			maxVertIndex = Max(maxVertIndex, Max(newTris[triIndex].v[0], Max(newTris[triIndex].v[1], newTris[triIndex].v[2])));
+			
 			++triIndex;
 		}
 	}
+
+	// I don't sincerely know how to get this obvious value out of OpenSubdiv
+	const u_int newVertsCount = maxVertIndex + 1;
+
+	// New vertices
+	Point *newVerts = TriangleMesh::AllocVerticesBuffer(newVertsCount);
+
+	const float *refinedVerts = vertsBuffer->BindCpuBuffer() + 3 * vertsCount;
+	copy(refinedVerts, refinedVerts + 3 * newVertsCount, &newVerts->x);
 
 	// New normals
 	Normal *newNorms = nullptr;
