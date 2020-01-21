@@ -63,9 +63,8 @@ extern void ConvertFilmChannelOutput_1xUInt_To_1xFloatList(boost::python::object
 extern void ConvertFilmChannelOutput_3xFloat_To_4xUChar(const u_int width, const u_int height,
 		boost::python::object &objSrc, boost::python::object &objDst, const bool normalize);
 
-//------------------------------------------------------------------------------
-// OpenVDB helper functions
-//------------------------------------------------------------------------------
+extern boost::python::list BlenderMatrix4x4ToList(boost::python::object &blenderMatrix);
+
 extern boost::python::list GetOpenVDBGridNames(const std::string &filePathStr);
 extern boost::python::tuple GetOpenVDBGridInfo(const std::string &filePathStr, const std::string &gridName);
 
