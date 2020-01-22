@@ -232,7 +232,7 @@ OPENCL_FORCE_INLINE float CloudTexture_NoiseMask(const float3 p, const float rad
 	return CloudTexture_CloudNoise(p / radius * 1.4f, omega, 1);
 }
 
-OPENCL_FORCE_INLINE float3 CloudTexture_Turbulence(const float3 p, const float noiseScale, const float noiseOffset, const float variability,
+OPENCL_FORCE_NOT_INLINE float3 CloudTexture_Turbulence(const float3 p, const float noiseScale, const float noiseOffset, const float variability,
                                const uint octaves, const float radius, const float omega, const float baseFlatness, const float3 sphereCentre) {
 	float3 noiseCoords[3];
 	const float baseFadeDistance = 1.f - baseFlatness;
@@ -370,7 +370,7 @@ __constant float MarbleTexture_c[9][3] = {
 	{ .58f, .58f, .6f}
 };
 
-OPENCL_FORCE_INLINE float3 MarbleTexture_Evaluate(__global const HitPoint *hitPoint, const float scale,
+OPENCL_FORCE_NOT_INLINE float3 MarbleTexture_Evaluate(__global const HitPoint *hitPoint, const float scale,
 		const float omega, const int octaves, const float variation,
 		__global const TextureMapping3D *mapping) {
 	const float3 P = scale * TextureMapping3D_Map(mapping, hitPoint, NULL);

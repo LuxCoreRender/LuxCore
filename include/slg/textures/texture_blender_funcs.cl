@@ -28,7 +28,7 @@
  
 #if defined(PARAM_ENABLE_BLENDER_BLEND)
  
-OPENCL_FORCE_INLINE float BlenderBlendTexture_Evaluate(__global const HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float BlenderBlendTexture_Evaluate(__global const HitPoint *hitPoint,
 		const ProgressionType type, const bool direction,
  		const float contrast, const float bright, __global const TextureMapping3D *mapping) {
 	const float3 P = TextureMapping3D_Map(mapping, hitPoint, NULL);
@@ -97,7 +97,7 @@ OPENCL_FORCE_NOT_INLINE float3 BlenderBlendTexture_ConstEvaluateSpectrum(__globa
 
 #if defined(PARAM_ENABLE_BLENDER_CLOUDS)
 
-OPENCL_FORCE_INLINE float BlenderCloudsTexture_Evaluate(__global const HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float BlenderCloudsTexture_Evaluate(__global const HitPoint *hitPoint,
 		const BlenderNoiseBasis noisebasis, const float noisesize, const int noisedepth,
 		const float contrast, const float bright, const bool hard, __global const TextureMapping3D *mapping) {
 	const float3 P = TextureMapping3D_Map(mapping, hitPoint, NULL);
@@ -132,7 +132,7 @@ OPENCL_FORCE_NOT_INLINE float3 BlenderCloudsTexture_ConstEvaluateSpectrum(__glob
             
 #if defined(PARAM_ENABLE_BLENDER_DISTORTED_NOISE)
 
-OPENCL_FORCE_INLINE float BlenderDistortedNoiseTexture_Evaluate(__global const HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float BlenderDistortedNoiseTexture_Evaluate(__global const HitPoint *hitPoint,
 		const BlenderNoiseBasis noisedistortion, const BlenderNoiseBasis noisebasis, const float distortion, const float noisesize,
 		const float contrast, const float bright, __global const TextureMapping3D *mapping) {
 	float3 P = TextureMapping3D_Map(mapping, hitPoint, NULL);
@@ -172,7 +172,8 @@ OPENCL_FORCE_NOT_INLINE float3 BlenderDistortedNoiseTexture_ConstEvaluateSpectru
 //------------------------------------------------------------------------------
 
 #if defined(PARAM_ENABLE_BLENDER_MAGIC)
-OPENCL_FORCE_INLINE float3 BlenderMagicTexture_Evaluate(__global const HitPoint *hitPoint, const int noisedepth, const float turbulence, 
+
+OPENCL_FORCE_NOT_INLINE float3 BlenderMagicTexture_Evaluate(__global const HitPoint *hitPoint, const int noisedepth, const float turbulence, 
 			const float contrast, const float bright, __global const TextureMapping3D *mapping) {
 	
 	const float3 P = TextureMapping3D_Map(mapping, hitPoint, NULL);
@@ -279,7 +280,8 @@ OPENCL_FORCE_NOT_INLINE float3 BlenderMagicTexture_ConstEvaluateSpectrum(__globa
 //------------------------------------------------------------------------------
 
 #if defined(PARAM_ENABLE_BLENDER_MARBLE)
-OPENCL_FORCE_INLINE float BlenderMarbleTexture_Evaluate(__global const HitPoint *hitPoint, const BlenderMarbleType type, 
+
+OPENCL_FORCE_NOT_INLINE float BlenderMarbleTexture_Evaluate(__global const HitPoint *hitPoint, const BlenderMarbleType type, 
 		const BlenderNoiseBasis noisebasis, const BlenderNoiseBase noisebasis2, const float noisesize,
 		const float turbulence, const int noisedepth, const float contrast, const float bright,
 		const bool hard, __global const TextureMapping3D *mapping) {
@@ -334,14 +336,15 @@ OPENCL_FORCE_NOT_INLINE float3 BlenderMarbleTexture_ConstEvaluateSpectrum(__glob
 //------------------------------------------------------------------------------
 
 #if defined(PARAM_ENABLE_BLENDER_MUSGRAVE)
-OPENCL_FORCE_INLINE float BlenderMusgraveTexture_Evaluate(__global const HitPoint *hitPoint, const BlenderMusgraveType type,
+
+OPENCL_FORCE_NOT_INLINE float BlenderMusgraveTexture_Evaluate(__global const HitPoint *hitPoint, const BlenderMusgraveType type,
 		const BlenderNoiseBasis noisebasis, const float dimension, const float intensity, const float lacunarity,
 		const float offset, const float gain, const float octaves, const float noisesize,
 		const float contrast, const float bright, __global const TextureMapping3D *mapping) {
 		
 	float scale = 1.f;
 	if(fabs(noisesize) > 0.00001f) scale = (1.f/noisesize);
-	const float3 P = scale*TextureMapping3D_Map(mapping, hitPoint, NULL);
+	const float3 P = scale * TextureMapping3D_Map(mapping, hitPoint, NULL);
 
 	float result = 0.f;
 
@@ -396,7 +399,7 @@ OPENCL_FORCE_NOT_INLINE float3 BlenderMusgraveTexture_ConstEvaluateSpectrum(__gl
 
 #if defined(PARAM_ENABLE_BLENDER_NOISE)
 
-OPENCL_FORCE_INLINE float BlenderNoiseTexture_Evaluate(__global const HitPoint *hitPoint, const int noisedepth,
+OPENCL_FORCE_NOT_INLINE float BlenderNoiseTexture_Evaluate(__global const HitPoint *hitPoint, const int noisedepth,
 		const float bright, const float contrast) {
 	// The original Blender code was not thread-safe
 
@@ -445,7 +448,7 @@ OPENCL_FORCE_NOT_INLINE float3 BlenderNoiseTexture_ConstEvaluateSpectrum(__globa
 
 #if defined(PARAM_ENABLE_BLENDER_STUCCI)
 
-OPENCL_FORCE_INLINE float BlenderStucciTexture_Evaluate(__global const HitPoint *hitPoint, const BlenderStucciType type,
+OPENCL_FORCE_NOT_INLINE float BlenderStucciTexture_Evaluate(__global const HitPoint *hitPoint, const BlenderStucciType type,
 		const BlenderNoiseBasis noisebasis, const float noisesize, const float turbulence, const float contrast,
 		const float bright, const bool hard, __global const TextureMapping3D *mapping) {
 		
@@ -500,7 +503,7 @@ OPENCL_FORCE_NOT_INLINE float3 BlenderStucciTexture_ConstEvaluateSpectrum(__glob
 
 #if defined(PARAM_ENABLE_BLENDER_WOOD)
 
-OPENCL_FORCE_INLINE float BlenderWoodTexture_Evaluate(__global const HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float BlenderWoodTexture_Evaluate(__global const HitPoint *hitPoint,
 		const BlenderWoodType type, const BlenderNoiseBase noisebasis2,
 		const BlenderNoiseBasis noisebasis, const float noisesize, const float turbulence,
 		const float contrast, const float bright, const bool hard,
@@ -589,7 +592,7 @@ OPENCL_FORCE_NOT_INLINE float3 BlenderWoodTexture_ConstEvaluateSpectrum(__global
  
 #if defined(PARAM_ENABLE_BLENDER_VORONOI)
  
-OPENCL_FORCE_INLINE float BlenderVoronoiTexture_Evaluate(__global const HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float BlenderVoronoiTexture_Evaluate(__global const HitPoint *hitPoint,
 		const DistanceMetric distancemetric, const float feature_weight1, const float feature_weight2, 
 		const float feature_weight3, const float feature_weight4, const float noisesize, const float intensity,
 		const float exponent, const float contrast, const float bright, __global const TextureMapping3D *mapping) {
@@ -597,7 +600,7 @@ OPENCL_FORCE_INLINE float BlenderVoronoiTexture_Evaluate(__global const HitPoint
     float da[4], pa[12]; /* distance and point coordinate arrays of 4 nearest neighbours */
 	float scale = 1.f;
 	if(fabs(noisesize) > 0.00001f) scale = (1.f/noisesize);
-	const float3 P = scale*TextureMapping3D_Map(mapping, hitPoint, NULL);
+	const float3 P = scale * TextureMapping3D_Map(mapping, hitPoint, NULL);
  
 	const float aw1 = fabs(feature_weight1);
     const float aw2 = fabs(feature_weight2);
@@ -619,7 +622,7 @@ OPENCL_FORCE_INLINE float BlenderVoronoiTexture_Evaluate(__global const HitPoint
 
     return result;
 }
-		
+
 OPENCL_FORCE_NOT_INLINE float BlenderVoronoiTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,	const DistanceMetric distancemetric, const float feature_weight1, 
 		const float feature_weight2, const float feature_weight3, const float feature_weight4, const float noisesize, const float intensity,
 		const float exponent, const float contrast, const float bright, __global const TextureMapping3D *mapping) {	
