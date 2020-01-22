@@ -114,6 +114,19 @@ struct RenderPass {
 	int pad;
 };
 
+// from blender/source/blender/python/mathutils/mathutils_Matrix.h
+typedef struct {
+	// The following is expanded form of the macro BASE_MATH_MEMBERS(matrix)
+	PyObject_VAR_HEAD float *matrix;  // The only thing we are interested in
+	PyObject *cb_user;
+	unsigned char cb_type;
+	unsigned char cb_subtype;
+	unsigned char flag;
+
+	unsigned short num_col;
+	unsigned short num_row;
+} MatrixObject;
+
 //------------------------------------------------------------------------------
 // Utility functions
 //------------------------------------------------------------------------------
@@ -464,6 +477,35 @@ void ConvertFilmChannelOutput_3xFloat_To_4xUChar(const u_int width, const u_int 
 	
 	PyBuffer_Release(&srcView);
 	PyBuffer_Release(&dstView);
+}
+
+//------------------------------------------------------------------------------
+// General utility functions for the Blender addon
+//------------------------------------------------------------------------------
+
+// No safety checks to gain speed, this function is called for each particle, 
+// potentially millions of times.
+boost::python::list BlenderMatrix4x4ToList(boost::python::object &blenderMatrix) {
+	const PyObject *pyObj = blenderMatrix.ptr();
+	const MatrixObject *blenderMatrixObj = (MatrixObject *)pyObj;
+
+	boost::python::list result;
+
+	for (int i = 0; i < 16; ++i) {
+		result.append(blenderMatrixObj->matrix[i]);
+	}
+
+	// Make invertible if necessary
+	Matrix4x4 matrix(blenderMatrixObj->matrix);
+	if (matrix.Determinant() == 0.f) {
+		const float epsilon = 1e-8f;
+		result[0] += epsilon;  // [0][0]
+		result[5] += epsilon;  // [1][1]
+		result[10] += epsilon;  // [2][2]
+		result[15] += epsilon;  // [3][3]
+	}
+
+	return result;
 }
 
 //------------------------------------------------------------------------------
