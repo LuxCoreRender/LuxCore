@@ -173,6 +173,34 @@ void ThrowIfSizeMismatch(const RenderPass *renderPass, const u_int width, const 
 	}
 }
 
+static Transform ExtractTransformation(const boost::python::object &transformation) {
+	if (transformation.is_none()) {
+		return Transform();
+	}
+
+	extract<boost::python::list> getTransformationList(transformation);
+	if (getTransformationList.check()) {
+		const boost::python::list &l = getTransformationList();
+		const boost::python::ssize_t size = len(l);
+		if (size != 16) {
+			const string objType = extract<string>((transformation.attr("__class__")).attr("__name__"));
+			throw runtime_error("Wrong number of elements for the list of transformation values: " + objType);
+		}
+
+		luxrays::Matrix4x4 mat;
+		boost::python::ssize_t index = 0;
+		for (u_int j = 0; j < 4; ++j)
+			for (u_int i = 0; i < 4; ++i)
+				mat.m[i][j] = extract<float>(l[index++]);
+
+		return Transform(mat);
+	}
+	else {
+		const string objType = extract<string>((transformation.attr("__class__")).attr("__name__"));
+		throw runtime_error("Wrong data type for the list of transformation values: " + objType);
+	}
+}
+
 //------------------------------------------------------------------------------
 // Film output conversion functions
 //------------------------------------------------------------------------------
@@ -919,28 +947,8 @@ boost::python::list Scene_DefineBlenderMesh1(luxcore::detail::SceneImpl *scene, 
 	bool hasTransformation = false;
 	Transform trans;
 	if (!transformation.is_none()) {
-		extract<boost::python::list> getTransformationList(transformation);
-		if (getTransformationList.check()) {
-			const boost::python::list &l = getTransformationList();
-			const boost::python::ssize_t size = len(l);
-			if (size != 16) {
-				const string objType = extract<string>((transformation.attr("__class__")).attr("__name__"));
-				throw runtime_error("Wrong number of elements for the list of transformation values of method Scene.DefineMesh(): " + objType);
-			}
-
-			luxrays::Matrix4x4 mat;
-			boost::python::ssize_t index = 0;
-			for (u_int j = 0; j < 4; ++j)
-				for (u_int i = 0; i < 4; ++i)
-					mat.m[i][j] = extract<float>(l[index++]);
-
-			trans = luxrays::Transform(mat);
-			hasTransformation = true;
-		}
-		else {
-			const string objType = extract<string>((transformation.attr("__class__")).attr("__name__"));
-			throw runtime_error("Wrong data type for the list of transformation values of method Scene.DefineMesh(): " + objType);
-		}
+		trans = ExtractTransformation(transformation);
+		hasTransformation = true;
 	}
 
 	boost::python::list result;
@@ -977,12 +985,6 @@ boost::python::list Scene_DefineBlenderMesh2(luxcore::detail::SceneImpl *scene, 
 //------------------------------------------------------------------------------
 // Hair/strands conversion functions
 //------------------------------------------------------------------------------
-
-Point makePoint(const float *arrayPos, const float worldscale) {
-	return Point(arrayPos[0] * worldscale,
-				 arrayPos[1] * worldscale,
-				 arrayPos[2] * worldscale);
-}
 
 bool nearlyEqual(const float a, const float b, const float epsilon) {
 	return fabs(a - b) < epsilon;
@@ -1025,8 +1027,8 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 		const string &imageFilename,
 		const float imageGamma,
 		const bool copyUVs,
-		const float worldscale,
-		const float strandDiameter, // already multiplied with worldscale
+		const boost::python::object &transformation,
+		const float strandDiameter,
 		const float rootWidth,
 		const float tipWidth,
 		const float widthOffset,
@@ -1129,6 +1131,14 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 		tessellationType = Scene::TESSEL_SOLID_ADAPTIVE;
 	else
 		throw runtime_error("Unknown tessellation type: " + tessellationTypeStr);
+
+	// Transformation
+	bool hasTransformation = false;
+	Transform trans;
+	if (!transformation.is_none()) {
+		trans = ExtractTransformation(transformation);
+		hasTransformation = true;
+	}
 	
 	//--------------------------------------------------------------------------
 	// Load image if required
@@ -1234,14 +1244,18 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 			b = *colorPtr++;
 		}
 		
-		Point currPoint = makePoint(pointPtr, worldscale);
+		Point currPoint = Point(pointPtr);
+		if (hasTransformation)
+			currPoint *= trans;
 		pointPtr += pointStride;
 		Point lastPoint;
 		
 		// Iterate over the strand. We can skip step == 0.
 		for (u_int step = 1; step < pointsPerStrand; ++step) {
 			lastPoint = currPoint;
-			currPoint = makePoint(pointPtr, worldscale);
+			currPoint = Point(pointPtr);
+			if (hasTransformation)
+				currPoint *= trans;
 			pointPtr += pointStride;
 			
 			if (lastPoint == invalidPoint || currPoint == invalidPoint) {
@@ -1384,7 +1398,7 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 	
 	const bool allSegmentsEqual = std::adjacent_find(segments.begin(), segments.end(),
 													 std::not_equal_to<u_short>()) == segments.end();
-		
+
 	//--------------------------------------------------------------------------
 	// Create hair file header
 	//--------------------------------------------------------------------------
@@ -1447,6 +1461,7 @@ bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 			tessellationType, adaptiveMaxDepth, adaptiveError,
 			solidSideCount, solidCapBottom, solidCapTop,
 			useCameraPosition);
+
 	return true;
 }
 
