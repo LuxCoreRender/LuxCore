@@ -82,12 +82,11 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			" -D PARAM_RAY_EPSILON_MAX=" << MachineEpsilon::GetMax() << "f"
 			;
 
+	// A safety check
 	switch (intersectionDevice->GetAccelerator()->GetType()) {
 		case ACCEL_BVH:
-			ssParams << " -D PARAM_ACCEL_BVH";
 			break;
 		case ACCEL_MBVH:
-			ssParams << " -D PARAM_ACCEL_MBVH";
 			break;
 		case ACCEL_EMBREE:
 			throw runtime_error("EMBREE accelerator is not supported in PathOCLBaseRenderThread::InitKernels()");
