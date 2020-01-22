@@ -300,7 +300,7 @@ OPENCL_FORCE_INLINE float noisefuncS(BlenderNoiseBasis noisebasis, float x, floa
  *    ``lacunarity''  is the gap between successive frequencies
  *    ``octaves''  is the number of frequencies in the fBm
  */
-OPENCL_FORCE_INLINE float mg_fBm(float x, float y, float z, float H, float lacunarity, float octaves, BlenderNoiseBasis noisebasis)
+OPENCL_FORCE_NOT_INLINE float mg_fBm(float x, float y, float z, float H, float lacunarity, float octaves, BlenderNoiseBasis noisebasis)
 {
 	float rmd, value=0.f, pwr=1.f, pwHL=pow(lacunarity, -H);
 	int	i;
@@ -334,7 +334,7 @@ OPENCL_FORCE_INLINE float mg_fBm(float x, float y, float z, float H, float lacun
  	* there seem to be errors in the original source code (in all three versions of proc.text&mod),
 	* I modified it to something that made sense to me, so it might be wrong... */
 
-OPENCL_FORCE_INLINE float mg_MultiFractal(float x, float y, float z, float H, float lacunarity, float octaves, BlenderNoiseBasis noisebasis) {
+OPENCL_FORCE_NOT_INLINE float mg_MultiFractal(float x, float y, float z, float H, float lacunarity, float octaves, BlenderNoiseBasis noisebasis) {
 	float rmd, value=1.f, pwr=1.f, pwHL=pow(lacunarity, -H);
 	int i;
 	
@@ -363,7 +363,7 @@ OPENCL_FORCE_INLINE float mg_MultiFractal(float x, float y, float z, float H, fl
  *       ``octaves''  is the number of frequencies in the fBm
  *       ``offset''  raises the terrain from `sea level'
  */
-OPENCL_FORCE_INLINE float mg_HeteroTerrain(float x, float y, float z, float H, float lacunarity, float octaves, float offset, BlenderNoiseBasis noisebasis)
+OPENCL_FORCE_NOT_INLINE float mg_HeteroTerrain(float x, float y, float z, float H, float lacunarity, float octaves, float offset, BlenderNoiseBasis noisebasis)
 {
 	float	value, increment, rmd;
 	int i;
@@ -402,7 +402,7 @@ OPENCL_FORCE_INLINE float mg_HeteroTerrain(float x, float y, float z, float H, f
  *      H:           0.25
  *      offset:      0.7
  */
-OPENCL_FORCE_INLINE float mg_HybridMultiFractal(float x, float y, float z, float H, float lacunarity, float octaves, float offset, float gain, BlenderNoiseBasis noisebasis)
+OPENCL_FORCE_NOT_INLINE float mg_HybridMultiFractal(float x, float y, float z, float H, float lacunarity, float octaves, float offset, float gain, BlenderNoiseBasis noisebasis)
 {
 	float result, signal, weight, rmd;
 	int i;
@@ -442,7 +442,7 @@ OPENCL_FORCE_INLINE float mg_HybridMultiFractal(float x, float y, float z, float
  *      offset:      1.0
  *      gain:        2.0
  */
-OPENCL_FORCE_INLINE float mg_RidgedMultiFractal(float x, float y, float z, float H, float lacunarity, float octaves, float offset, float gain, BlenderNoiseBasis noisebasis)
+OPENCL_FORCE_NOT_INLINE float mg_RidgedMultiFractal(float x, float y, float z, float H, float lacunarity, float octaves, float offset, float gain, BlenderNoiseBasis noisebasis)
 {
 	float result, signal, weight;
 	int	i;
@@ -474,7 +474,7 @@ OPENCL_FORCE_INLINE float mg_RidgedMultiFractal(float x, float y, float z, float
 /* "Variable Lacunarity Noise"
  * A distorted variety of Perlin noise.
  */
-OPENCL_FORCE_INLINE float mg_VLNoise(float x, float y, float z, float distortion, BlenderNoiseBasis nbas1, BlenderNoiseBasis nbas2)
+OPENCL_FORCE_NOT_INLINE float mg_VLNoise(float x, float y, float z, float distortion, BlenderNoiseBasis nbas1, BlenderNoiseBasis nbas2)
 {
 	float3 rv;
 	float result;
@@ -494,7 +494,7 @@ OPENCL_FORCE_INLINE float mg_VLNoise(float x, float y, float z, float distortion
 /****************/
 
 /* newnoise: generic noise function for use with different noisebases */
-OPENCL_FORCE_INLINE float BLI_gNoise(float noisesize, float x, float y, float z, int hard, BlenderNoiseBasis noisebasis) {
+OPENCL_FORCE_NOT_INLINE float BLI_gNoise(float noisesize, float x, float y, float z, int hard, BlenderNoiseBasis noisebasis) {
 	float result = 0.f;
 
 	if(noisebasis == BLENDER_ORIGINAL) {
@@ -549,7 +549,7 @@ OPENCL_FORCE_INLINE float BLI_gNoise(float noisesize, float x, float y, float z,
 }
 
 /* newnoise: generic turbulence function for use with different noisebasis */
-OPENCL_FORCE_INLINE float BLI_gTurbulence(float noisesize, float x, float y, float z, int oct, int hard, BlenderNoiseBasis noisebasis) {
+OPENCL_FORCE_NOT_INLINE float BLI_gTurbulence(float noisesize, float x, float y, float z, int oct, int hard, BlenderNoiseBasis noisebasis) {
 	float sum=0.f, t, amp=1.f, fscale=1.f;
 	int i;
 

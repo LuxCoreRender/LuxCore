@@ -103,7 +103,7 @@ OPENCL_FORCE_INLINE float Noise3(const float3 P) {
 	return Noise(P.x, P.y, P.z);
 }
 
-OPENCL_FORCE_INLINE float FBm(const float3 P, const float omega, const int maxOctaves) {
+OPENCL_FORCE_NOT_INLINE float FBm(const float3 P, const float omega, const int maxOctaves) {
 	// Compute sum of octaves of noise for FBm
 	float sum = 0.f, lambda = 1.f, o = 1.f;
 	for (int i = 0; i < maxOctaves; ++i) {
@@ -114,7 +114,7 @@ OPENCL_FORCE_INLINE float FBm(const float3 P, const float omega, const int maxOc
 	return sum;
 }
 
-OPENCL_FORCE_INLINE float Turbulence(const float3 P, const float omega, const int maxOctaves) {
+OPENCL_FORCE_NOT_INLINE float Turbulence(const float3 P, const float omega, const int maxOctaves) {
 	// Compute sum of octaves of noise for turbulence
 	float sum = 0.f, lambda = 1.f, o = 1.f;
 	for (int i = 0; i < maxOctaves; ++i) {
