@@ -52,38 +52,6 @@
 //  PARAM_ENABLE_TEX_SCALE
 //  etc.
 
-// Film related parameters:
-//  PARAM_FILM_CHANNELS_HAS_ALPHA
-//  PARAM_FILM_CHANNELS_HAS_DEPTH
-//  PARAM_FILM_CHANNELS_HAS_POSITION
-//  PARAM_FILM_CHANNELS_HAS_GEOMETRY_NORMAL
-//  PARAM_FILM_CHANNELS_HAS_SHADING_NORMAL
-//  PARAM_FILM_CHANNELS_HAS_MATERIAL_ID
-//  PARAM_FILM_CHANNELS_HAS_DIRECT_DIFFUSE
-//  PARAM_FILM_CHANNELS_HAS_DIRECT_GLOSSY
-//  PARAM_FILM_CHANNELS_HAS_EMISSION
-//  PARAM_FILM_CHANNELS_HAS_INDIRECT_DIFFUSE
-//  PARAM_FILM_CHANNELS_HAS_INDIRECT_GLOSSY
-//  PARAM_FILM_CHANNELS_HAS_INDIRECT_SPECULAR
-//  PARAM_FILM_CHANNELS_HAS_MATERIAL_ID_MASK (and PARAM_FILM_MASK_MATERIAL_ID)
-//  PARAM_FILM_CHANNELS_HAS_BY_MATERIAL_ID (and PARAM_FILM_BY_MATERIAL_ID)
-//  PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK
-//  PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK
-//  PARAM_FILM_CHANNELS_HAS_UV
-//  PARAM_FILM_CHANNELS_HAS_RAYCOUNT
-//  PARAM_FILM_CHANNELS_HAS_BY_MATERIAL_ID (and PARAM_FILM_BY_MATERIAL_ID)
-//  PARAM_FILM_CHANNELS_HAS_IRRADIANCE
-//  PARAM_FILM_CHANNELS_HAS_OBJECT_ID
-//  PARAM_FILM_CHANNELS_HAS_OBJECT_ID_MASK (and PARAM_FILM_MASK_OBJECT_ID)
-//  PARAM_FILM_CHANNELS_HAS_BY_OBJECT_ID (and PARAM_FILM_BY_OBJECT_ID)
-//  PARAM_FILM_CHANNELS_HAS_SAMPLECOUNT
-//  PARAM_FILM_CHANNELS_HAS_CONVERGENCE
-//  PARAM_FILM_CHANNELS_HAS_MATERIAL_ID_COLOR
-//  PARAM_FILM_CHANNELS_HAS_ALBEDO
-//  PARAM_FILM_CHANNELS_HAS_AVG_SHADING_NORMAL
-//  PARAM_FILM_CHANNELS_HAS_NOISE
-//  PARAM_FILM_CHANNELS_HAS_USER_IMPORTANCE
-
 // (optional)
 //  PARAM_HAS_INFINITELIGHT
 //  PARAM_HAS_SUNLIGHT
@@ -149,12 +117,8 @@ OPENCL_FORCE_NOT_INLINE void InitSampleResult(
 	sampleResult->filmX = pixelX + .5f + distX;
 	sampleResult->filmY = pixelY + .5f + distY;
 
-#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
 	sampleResult->directShadowMask = 1.f;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
 	sampleResult->indirectShadowMask = 1.f;
-#endif
 
 	sampleResult->lastPathVertex = (taskConfig->pathTracer.maxPathDepth.depth == 1);
 }
@@ -401,9 +365,7 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_Illuminate(
 	else {
 		info->directPdfW = directPdfW;
 		VSTORE3F(lightRadiance, info->lightRadiance.c);
-#if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
 		VSTORE3F(lightRadiance, info->lightIrradiance.c);
-#endif
 		return true;
 	}
 }
@@ -465,9 +427,7 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 
 	const float3 lightRadiance = VLOAD3F(info->lightRadiance.c);
 	VSTORE3F(bsdfEval * (weight * factor) * lightRadiance, info->lightRadiance.c);
-#if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
 	VSTORE3F(factor * lightRadiance, info->lightIrradiance.c);
-#endif
 
 	return true;
 }
@@ -654,12 +614,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
 
 	// Initialize the sample and path
 	const bool validSample = Sampler_Init(taskConfig,
-#if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
 			filmNoise,
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_USER_IMPORTANCE)
 			filmUserImportance,
-#endif
 			filmWidth, filmHeight,
 			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3
 			SAMPLER_PARAM);

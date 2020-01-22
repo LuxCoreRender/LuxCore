@@ -139,82 +139,70 @@ OPENCL_FORCE_INLINE void Film_AddSampleResultColor(const uint x, const uint y,
 			Film_AddWeightedPixel4(&((filmRadianceGroup[i])[index4]), sampleResult->radiancePerPixelNormalized[i].c, weight);
 	}
 
-#if defined(PARAM_FILM_CHANNELS_HAS_ALPHA)
-	Film_AddWeightedPixel2(&filmAlpha[index2], &sampleResult->alpha, weight);
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_DIFFUSE)
-	Film_AddWeightedPixel4(&filmDirectDiffuse[index4], sampleResult->directDiffuse.c, weight);
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_GLOSSY)
-	Film_AddWeightedPixel4(&filmDirectGlossy[index4], sampleResult->directGlossy.c, weight);
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_EMISSION)
-	Film_AddWeightedPixel4(&filmEmission[index4], sampleResult->emission.c, weight);
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_DIFFUSE)
-	Film_AddWeightedPixel4(&filmIndirectDiffuse[index4], sampleResult->indirectDiffuse.c, weight);
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_GLOSSY)
-	Film_AddWeightedPixel4(&filmIndirectGlossy[index4], sampleResult->indirectGlossy.c, weight);
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SPECULAR)
-	Film_AddWeightedPixel4(&filmIndirectSpecular[index4], sampleResult->indirectSpecular.c, weight);
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID_MASK)
-	const float materialIDMask = (sampleResult->materialID == PARAM_FILM_MASK_MATERIAL_ID) ? 1.f : 0.f;
-	Film_AddWeightedPixel2Val(&filmMaterialIDMask[index2], materialIDMask, weight);
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
-	Film_AddWeightedPixel2(&filmDirectShadowMask[index2], &sampleResult->directShadowMask, weight);
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
-	Film_AddWeightedPixel2(&filmIndirectShadowMask[index2], &sampleResult->indirectShadowMask, weight);
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_BY_MATERIAL_ID)
-	float3 byMaterialIDColor = BLACK;
-	
-	if (sampleResult->materialID == PARAM_FILM_BY_MATERIAL_ID) {
-		for (uint i = 0; i < FILM_MAX_RADIANCE_GROUP_COUNT; ++i) {
-			if (filmRadianceGroup[i])
-				byMaterialIDColor += VLOAD3F(sampleResult->radiancePerPixelNormalized[i].c);
-		}
+	if (film->hasChannelAlpha)
+		Film_AddWeightedPixel2(&filmAlpha[index2], &sampleResult->alpha, weight);
+	if (film->hasChannelDirectDiffuse)
+		Film_AddWeightedPixel4(&filmDirectDiffuse[index4], sampleResult->directDiffuse.c, weight);
+	if (film->hasChannelDirectGlossy)
+		Film_AddWeightedPixel4(&filmDirectGlossy[index4], sampleResult->directGlossy.c, weight);
+	if (film->hasChannelEmission)
+		Film_AddWeightedPixel4(&filmEmission[index4], sampleResult->emission.c, weight);
+	if (film->hasChannelIndirectDiffuse)
+		Film_AddWeightedPixel4(&filmIndirectDiffuse[index4], sampleResult->indirectDiffuse.c, weight);
+	if (film->hasChannelIndirectGlossy)
+		Film_AddWeightedPixel4(&filmIndirectGlossy[index4], sampleResult->indirectGlossy.c, weight);
+	if (film->hasChannelIndirectSpecular)
+		Film_AddWeightedPixel4(&filmIndirectSpecular[index4], sampleResult->indirectSpecular.c, weight);
+	if (film->hasChannelMaterialIDMask) {
+		const float materialIDMask = (sampleResult->materialID == film->channelMaterialIDMask) ? 1.f : 0.f;
+		Film_AddWeightedPixel2Val(&filmMaterialIDMask[index2], materialIDMask, weight);
 	}
-	Film_AddWeightedPixel4Val(&filmByMaterialID[index4], byMaterialIDColor, weight);
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
-	Film_AddWeightedPixel4(&filmIrradiance[index4], sampleResult->irradiance.c, weight);
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_OBJECT_ID_MASK)
-	const float objectIDMask = (sampleResult->objectID == PARAM_FILM_MASK_OBJECT_ID) ? 1.f : 0.f;
-	Film_AddWeightedPixel2Val(&filmObjectIDMask[index2], objectIDMask, weight);
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_BY_OBJECT_ID)
-	float3 byObjectIDColor = BLACK;
-	
-	if (sampleResult->objectID == PARAM_FILM_BY_OBJECT_ID) {
-		for (uint i = 0; i < FILM_MAX_RADIANCE_GROUP_COUNT; ++i) {
-			if (filmRadianceGroup[i])
-				byObjectIDColor += VLOAD3F(sampleResult->radiancePerPixelNormalized[i].c);
+	if (film->hasChannelDirectShadowMask)
+		Film_AddWeightedPixel2(&filmDirectShadowMask[index2], &sampleResult->directShadowMask, weight);
+	if (film->hasChannelIndirectShadowMask)
+		Film_AddWeightedPixel2(&filmIndirectShadowMask[index2], &sampleResult->indirectShadowMask, weight);
+	if (film->hasChannelByMaterialID) {
+		float3 byMaterialIDColor = BLACK;
+
+		if (sampleResult->materialID == film->channelByMaterialID) {
+			for (uint i = 0; i < FILM_MAX_RADIANCE_GROUP_COUNT; ++i) {
+				if (filmRadianceGroup[i])
+					byMaterialIDColor += VLOAD3F(sampleResult->radiancePerPixelNormalized[i].c);
+			}
 		}
+		Film_AddWeightedPixel4Val(&filmByMaterialID[index4], byMaterialIDColor, weight);
 	}
-	Film_AddWeightedPixel4Val(&filmByObjectID[index4], byObjectIDColor, weight);
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID_COLOR)
-	const uint matID = sampleResult->materialID;
+	if (film->hasChannelIrradiance)
+		Film_AddWeightedPixel4(&filmIrradiance[index4], sampleResult->irradiance.c, weight);
+	if (film->hasChannelObjectIDMask) {
+		const float objectIDMask = (sampleResult->objectID == film->channelObjectIDMask) ? 1.f : 0.f;
+		Film_AddWeightedPixel2Val(&filmObjectIDMask[index2], objectIDMask, weight);
+	}
+	if (film->hasChannelByObjectID) {
+		float3 byObjectIDColor = BLACK;
 
-	float3 matIDCol;
-	matIDCol.s0 = (matID & 0x0000ffu) * (1.f / 255.f);
-	matIDCol.s1 = ((matID & 0x00ff00u) >> 8) * (1.f / 255.f);
-	matIDCol.s2 = ((matID & 0xff0000u) >> 16) * (1.f / 255.f);
+		if (sampleResult->objectID == film->channelByObjectID) {
+			for (uint i = 0; i < FILM_MAX_RADIANCE_GROUP_COUNT; ++i) {
+				if (filmRadianceGroup[i])
+					byObjectIDColor += VLOAD3F(sampleResult->radiancePerPixelNormalized[i].c);
+			}
+		}
+		Film_AddWeightedPixel4Val(&filmByObjectID[index4], byObjectIDColor, weight);
+	}
+	if (film->hasChannelMaterialIDColor) {
+		const uint matID = sampleResult->materialID;
 
-	Film_AddWeightedPixel4Val(&filmMaterialIDColor[index4], matIDCol, weight);
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_ALBEDO)
-	Film_AddWeightedPixel4(&filmAlbedo[index4], sampleResult->albedo.c, weight);
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_AVG_SHADING_NORMAL)
-	Film_AddWeightedPixel4(&filmAvgShadingNormal[index4], &sampleResult->shadingNormal.x, weight);
-#endif
+		float3 matIDCol;
+		matIDCol.s0 = (matID & 0x0000ffu) * (1.f / 255.f);
+		matIDCol.s1 = ((matID & 0x00ff00u) >> 8) * (1.f / 255.f);
+		matIDCol.s2 = ((matID & 0xff0000u) >> 16) * (1.f / 255.f);
+
+		Film_AddWeightedPixel4Val(&filmMaterialIDColor[index4], matIDCol, weight);
+	}
+	if (film->hasChannelAlbedo)
+		Film_AddWeightedPixel4(&filmAlbedo[index4], sampleResult->albedo.c, weight);
+	if (film->hasChannelAvgShadingNormal)
+		Film_AddWeightedPixel4(&filmAvgShadingNormal[index4], &sampleResult->shadingNormal.x, weight);
 }
 
 OPENCL_FORCE_INLINE void Film_AddSampleResultData(const uint x, const uint y,
@@ -225,43 +213,35 @@ OPENCL_FORCE_INLINE void Film_AddSampleResultData(const uint x, const uint y,
 	const uint index3 = index1 * 3;
 
 	bool depthWrite = true;
-#if defined(PARAM_FILM_CHANNELS_HAS_DEPTH)
-	depthWrite = Film_MinPixel(&filmDepth[index1], sampleResult->depth);
-#endif
+	if (film->hasChannelDepth)
+		depthWrite = Film_MinPixel(&filmDepth[index1], sampleResult->depth);
 
 	if (depthWrite) {
-#if defined(PARAM_FILM_CHANNELS_HAS_POSITION)
-		Film_SetPixel3(&filmPosition[index3], &sampleResult->position.x);
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_GEOMETRY_NORMAL)
-		Film_SetPixel3(&filmGeometryNormal[index3], &sampleResult->geometryNormal.x);
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_SHADING_NORMAL)
-		Film_SetPixel3(&filmShadingNormal[index3], &sampleResult->shadingNormal.x);
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID)
-		filmMaterialID[index1] = sampleResult->materialID;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_UV)
-		Film_SetPixel2(&filmUV[index2], &sampleResult->uv.u);
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_OBJECT_ID)
-		const uint objectID = sampleResult->objectID;
-		if (objectID != NULL_INDEX)
-			filmObjectID[index1] = sampleResult->objectID;
-#endif
+		if (film->hasChannelPosition)
+			Film_SetPixel3(&filmPosition[index3], &sampleResult->position.x);
+		if (film->hasChannelGeometryNormal)
+			Film_SetPixel3(&filmGeometryNormal[index3], &sampleResult->geometryNormal.x);
+		if (film->hasChannelShadingNormal)
+			Film_SetPixel3(&filmShadingNormal[index3], &sampleResult->shadingNormal.x);
+		if (film->hasChannelMaterialID)
+			filmMaterialID[index1] = sampleResult->materialID;
+		if (film->hasChannelUV)
+			Film_SetPixel2(&filmUV[index2], &sampleResult->uv.u);
+		if (film->hasChannelObjectID) {
+			const uint objectID = sampleResult->objectID;
+			if (objectID != NULL_INDEX)
+				filmObjectID[index1] = sampleResult->objectID;
+		}
 	}
 
-#if defined(PARAM_FILM_CHANNELS_HAS_RAYCOUNT)
-	Film_AddPixelVal(&filmRayCount[index1], sampleResult->rayCount);
-#endif
+	if (film->hasChannelRayCount)
+		Film_AddPixelVal(&filmRayCount[index1], sampleResult->rayCount);
 
-#if defined(PARAM_FILM_CHANNELS_HAS_SAMPLECOUNT)
-	Film_IncPixelUInt(&filmSampleCount[index1]);
-#endif
+	if (film->hasChannelSampleCount)
+		Film_IncPixelUInt(&filmSampleCount[index1]);
 }
 
-OPENCL_FORCE_NOT_INLINE void Film_AddSample(__constant const Film* restrict film,
+OPENCL_FORCE_NOT_INLINE void Film_AddSample(
 		const uint x, const uint y,
 		__global SampleResult *sampleResult, const float weight
 		FILM_PARAM_DECL) {
@@ -281,182 +261,6 @@ OPENCL_FORCE_NOT_INLINE void Film_AddSample(__constant const Film* restrict film
 
 //------------------------------------------------------------------------------
 // Film kernel parameters
-//------------------------------------------------------------------------------
-
-#if defined(PARAM_FILM_CHANNELS_HAS_ALPHA)
-#define KERNEL_ARGS_FILM_CHANNELS_ALPHA \
-		, __global float *filmAlpha
-#else
-#define KERNEL_ARGS_FILM_CHANNELS_ALPHA
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_DEPTH)
-#define KERNEL_ARGS_FILM_CHANNELS_DEPTH \
-		, __global float *filmDepth
-#else
-#define KERNEL_ARGS_FILM_CHANNELS_DEPTH
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_POSITION)
-#define KERNEL_ARGS_FILM_CHANNELS_POSITION \
-		, __global float *filmPosition
-#else
-#define KERNEL_ARGS_FILM_CHANNELS_POSITION
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_GEOMETRY_NORMAL)
-#define KERNEL_ARGS_FILM_CHANNELS_GEOMETRY_NORMAL \
-		, __global float *filmGeometryNormal
-#else
-#define KERNEL_ARGS_FILM_CHANNELS_GEOMETRY_NORMAL
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_SHADING_NORMAL)
-#define KERNEL_ARGS_FILM_CHANNELS_SHADING_NORMAL \
-		, __global float *filmShadingNormal
-#else
-#define KERNEL_ARGS_FILM_CHANNELS_SHADING_NORMAL
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID)
-#define KERNEL_ARGS_FILM_CHANNELS_MATERIAL_ID \
-		, __global uint *filmMaterialID
-#else
-#define KERNEL_ARGS_FILM_CHANNELS_MATERIAL_ID
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_DIFFUSE)
-#define KERNEL_ARGS_FILM_CHANNELS_DIRECT_DIFFUSE \
-		, __global float *filmDirectDiffuse
-#else
-#define KERNEL_ARGS_FILM_CHANNELS_DIRECT_DIFFUSE
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_GLOSSY)
-#define KERNEL_ARGS_FILM_CHANNELS_DIRECT_GLOSSY \
-		, __global float *filmDirectGlossy
-#else
-#define KERNEL_ARGS_FILM_CHANNELS_DIRECT_GLOSSY
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_EMISSION)
-#define KERNEL_ARGS_FILM_CHANNELS_EMISSION \
-		, __global float *filmEmission
-#else
-#define KERNEL_ARGS_FILM_CHANNELS_EMISSION
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_DIFFUSE)
-#define KERNEL_ARGS_FILM_CHANNELS_INDIRECT_DIFFUSE \
-		, __global float *filmIndirectDiffuse
-#else
-#define KERNEL_ARGS_FILM_CHANNELS_INDIRECT_DIFFUSE
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_GLOSSY)
-#define KERNEL_ARGS_FILM_CHANNELS_INDIRECT_GLOSSY \
-		, __global float *filmIndirectGlossy
-#else
-#define KERNEL_ARGS_FILM_CHANNELS_INDIRECT_GLOSSY
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SPECULAR)
-#define KERNEL_ARGS_FILM_CHANNELS_INDIRECT_SPECULAR \
-		, __global float *filmIndirectSpecular
-#else
-#define KERNEL_ARGS_FILM_CHANNELS_INDIRECT_SPECULAR
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID_MASK)
-#define KERNEL_ARGS_FILM_CHANNELS_MATERIAL_ID_MASK \
-		, __global float *filmMaterialIDMask
-#else
-#define KERNEL_ARGS_FILM_CHANNELS_MATERIAL_ID_MASK
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
-#define KERNEL_ARGS_FILM_CHANNELS_DIRECT_SHADOW_MASK \
-		, __global float *filmDirectShadowMask
-#else
-#define KERNEL_ARGS_FILM_CHANNELS_DIRECT_SHADOW_MASK
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
-#define KERNEL_ARGS_FILM_CHANNELS_INDIRECT_SHADOW_MASK \
-		, __global float *filmIndirectShadowMask
-#else
-#define KERNEL_ARGS_FILM_CHANNELS_INDIRECT_SHADOW_MASK
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_UV)
-#define KERNEL_ARGS_FILM_CHANNELS_UV \
-		, __global float *filmUV
-#else
-#define KERNEL_ARGS_FILM_CHANNELS_UV
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_RAYCOUNT)
-#define KERNEL_ARGS_FILM_CHANNELS_RAYCOUNT \
-		, __global float *filmRayCount
-#else
-#define KERNEL_ARGS_FILM_CHANNELS_RAYCOUNT
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_BY_MATERIAL_ID)
-#define KERNEL_ARGS_FILM_CHANNELS_BY_MATERIAL_ID \
-		, __global float *filmByMaterialID
-#else
-#define KERNEL_ARGS_FILM_CHANNELS_BY_MATERIAL_ID
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
-#define KERNEL_ARGS_FILM_CHANNELS_IRRADIANCE \
-		, __global float *filmIrradiance
-#else
-#define KERNEL_ARGS_FILM_CHANNELS_IRRADIANCE
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_OBJECT_ID)
-#define KERNEL_ARGS_FILM_CHANNELS_OBJECT_ID \
-		, __global uint *filmObjectID
-#else
-#define KERNEL_ARGS_FILM_CHANNELS_OBJECT_ID
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_OBJECT_ID_MASK)
-#define KERNEL_ARGS_FILM_CHANNELS_OBJECT_ID_MASK \
-		, __global float *filmObjectIDMask
-#else
-#define KERNEL_ARGS_FILM_CHANNELS_OBJECT_ID_MASK
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_BY_OBJECT_ID)
-#define KERNEL_ARGS_FILM_CHANNELS_BY_OBJECT_ID \
-		, __global float *filmByObjectID
-#else
-#define KERNEL_ARGS_FILM_CHANNELS_BY_OBJECT_ID
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_SAMPLECOUNT)
-#define KERNEL_ARGS_FILM_CHANNELS_SAMPLECOUNT \
-		, __global uint *filmSampleCount
-#else
-#define KERNEL_ARGS_FILM_CHANNELS_SAMPLECOUNT
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_CONVERGENCE)
-#define KERNEL_ARGS_FILM_CHANNELS_CONVERGENCE \
-		, __global float *filmConvergence
-#else
-#define KERNEL_ARGS_FILM_CHANNELS_CONVERGENCE
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID_COLOR)
-#define KERNEL_ARGS_FILM_CHANNELS_MATERIAL_ID_COLOR \
-		, __global float *filmMaterialIDColor
-#else
-#define KERNEL_ARGS_FILM_CHANNELS_MATERIAL_ID_COLOR
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_ALBEDO)
-#define KERNEL_ARGS_FILM_CHANNELS_ALBEDO \
-		, __global float *filmAlbedo
-#else
-#define KERNEL_ARGS_FILM_CHANNELS_ALBEDO
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_AVG_SHADING_NORMAL)
-#define KERNEL_ARGS_FILM_CHANNELS_AVG_SHADING_NORMAL \
-		, __global float *filmAvgShadingNormal
-#else
-#define KERNEL_ARGS_FILM_CHANNELS_AVG_SHADING_NORMAL
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
-#define KERNEL_ARGS_FILM_CHANNELS_NOISE \
-		, __global float *filmNoise
-#else
-#define KERNEL_ARGS_FILM_CHANNELS_NOISE
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_USER_IMPORTANCE)
-#define KERNEL_ARGS_FILM_CHANNELS_USER_IMPORTANCE \
-		, __global float *filmUserImportance
-#else
-#define KERNEL_ARGS_FILM_CHANNELS_USER_IMPORTANCE
-#endif
 //------------------------------------------------------------------------------
 
 #define KERNEL_ARGS_FILM_RADIANCE_GROUP_SCALE_0 \
@@ -526,35 +330,35 @@ OPENCL_FORCE_NOT_INLINE void Film_AddSample(__constant const Film* restrict film
 		, __global float *filmRadianceGroup5 \
 		, __global float *filmRadianceGroup6 \
 		, __global float *filmRadianceGroup7 \
-		KERNEL_ARGS_FILM_CHANNELS_ALPHA \
-		KERNEL_ARGS_FILM_CHANNELS_DEPTH \
-		KERNEL_ARGS_FILM_CHANNELS_POSITION \
-		KERNEL_ARGS_FILM_CHANNELS_GEOMETRY_NORMAL \
-		KERNEL_ARGS_FILM_CHANNELS_SHADING_NORMAL \
-		KERNEL_ARGS_FILM_CHANNELS_MATERIAL_ID \
-		KERNEL_ARGS_FILM_CHANNELS_DIRECT_DIFFUSE \
-		KERNEL_ARGS_FILM_CHANNELS_DIRECT_GLOSSY \
-		KERNEL_ARGS_FILM_CHANNELS_EMISSION \
-		KERNEL_ARGS_FILM_CHANNELS_INDIRECT_DIFFUSE \
-		KERNEL_ARGS_FILM_CHANNELS_INDIRECT_GLOSSY \
-		KERNEL_ARGS_FILM_CHANNELS_INDIRECT_SPECULAR \
-		KERNEL_ARGS_FILM_CHANNELS_MATERIAL_ID_MASK \
-		KERNEL_ARGS_FILM_CHANNELS_DIRECT_SHADOW_MASK \
-		KERNEL_ARGS_FILM_CHANNELS_INDIRECT_SHADOW_MASK \
-		KERNEL_ARGS_FILM_CHANNELS_UV \
-		KERNEL_ARGS_FILM_CHANNELS_RAYCOUNT \
-		KERNEL_ARGS_FILM_CHANNELS_BY_MATERIAL_ID \
-		KERNEL_ARGS_FILM_CHANNELS_IRRADIANCE \
-		KERNEL_ARGS_FILM_CHANNELS_OBJECT_ID \
-		KERNEL_ARGS_FILM_CHANNELS_OBJECT_ID_MASK \
-		KERNEL_ARGS_FILM_CHANNELS_BY_OBJECT_ID \
-		KERNEL_ARGS_FILM_CHANNELS_SAMPLECOUNT \
-		KERNEL_ARGS_FILM_CHANNELS_CONVERGENCE \
-		KERNEL_ARGS_FILM_CHANNELS_MATERIAL_ID_COLOR \
-		KERNEL_ARGS_FILM_CHANNELS_ALBEDO \
-		KERNEL_ARGS_FILM_CHANNELS_AVG_SHADING_NORMAL \
-		KERNEL_ARGS_FILM_CHANNELS_NOISE \
-		KERNEL_ARGS_FILM_CHANNELS_USER_IMPORTANCE \
+		, __global float *filmAlpha \
+		, __global float *filmDepth \
+		, __global float *filmPosition \
+		, __global float *filmGeometryNormal \
+		, __global float *filmShadingNormal \
+		, __global uint *filmMaterialID \
+		, __global float *filmDirectDiffuse \
+		, __global float *filmDirectGlossy \
+		, __global float *filmEmission \
+		, __global float *filmIndirectDiffuse \
+		, __global float *filmIndirectGlossy \
+		, __global float *filmIndirectSpecular \
+		, __global float *filmMaterialIDMask \
+		, __global float *filmDirectShadowMask \
+		, __global float *filmIndirectShadowMask \
+		, __global float *filmUV \
+		, __global float *filmRayCount \
+		, __global float *filmByMaterialID \
+		, __global float *filmIrradiance \
+		, __global uint *filmObjectID \
+		, __global float *filmObjectIDMask \
+		, __global float *filmByObjectID \
+		, __global uint *filmSampleCount \
+		, __global float *filmConvergence \
+		, __global float *filmMaterialIDColor \
+		, __global float *filmAlbedo \
+		, __global float *filmAvgShadingNormal \
+		, __global float *filmNoise \
+		, __global float *filmUserImportance \
 		KERNEL_ARGS_FILM_DENOISER
 
 //------------------------------------------------------------------------------
@@ -587,141 +391,162 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void Film_Clear(
 		}
 	}
 
-#if defined(PARAM_FILM_CHANNELS_HAS_ALPHA)
-	filmAlpha[gid * 2] = 0.f;
-	filmAlpha[gid * 2 + 1] = 0.f;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_DEPTH)
-	filmDepth[gid] = INFINITY;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_POSITION)
-	filmPosition[gid * 3] = INFINITY;
-	filmPosition[gid * 3 + 1] = INFINITY;
-	filmPosition[gid * 3 + 2] = INFINITY;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_GEOMETRY_NORMAL)
-	filmGeometryNormal[gid * 3] = 0.f;
-	filmGeometryNormal[gid * 3 + 1] = 0.f;
-	filmGeometryNormal[gid * 3 + 2] = 0.f;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_SHADING_NORMAL)
-	filmShadingNormal[gid * 3] = 0.f;
-	filmShadingNormal[gid * 3 + 1] = 0.f;
-	filmShadingNormal[gid * 3 + 2] = 0.f;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID)
-	filmMaterialID[gid] = NULL_INDEX;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_DIFFUSE)
-	filmDirectDiffuse[gid * 4] = 0.f;
-	filmDirectDiffuse[gid * 4 + 1] = 0.f;
-	filmDirectDiffuse[gid * 4 + 2] = 0.f;
-	filmDirectDiffuse[gid * 4 + 3] = 0.f;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_GLOSSY)
-	filmDirectGlossy[gid * 4] = 0.f;
-	filmDirectGlossy[gid * 4 + 1] = 0.f;
-	filmDirectGlossy[gid * 4 + 2] = 0.f;
-	filmDirectGlossy[gid * 4 + 3] = 0.f;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_EMISSION)
-	filmEmission[gid * 4] = 0.f;
-	filmEmission[gid * 4 + 1] = 0.f;
-	filmEmission[gid * 4 + 2] = 0.f;
-	filmEmission[gid * 4 + 3] = 0.f;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_DIFFUSE)
-	filmIndirectDiffuse[gid * 4] = 0.f;
-	filmIndirectDiffuse[gid * 4 + 1] = 0.f;
-	filmIndirectDiffuse[gid * 4 + 2] = 0.f;
-	filmIndirectDiffuse[gid * 4 + 3] = 0.f;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_GLOSSY)
-	filmIndirectGlossy[gid * 4] = 0.f;
-	filmIndirectGlossy[gid * 4 + 1] = 0.f;
-	filmIndirectGlossy[gid * 4 + 2] = 0.f;
-	filmIndirectGlossy[gid * 4 + 3] = 0.f;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SPECULAR)
-	filmIndirectSpecular[gid * 4] = 0.f;
-	filmIndirectSpecular[gid * 4 + 1] = 0.f;
-	filmIndirectSpecular[gid * 4 + 2] = 0.f;
-	filmIndirectSpecular[gid * 4 + 3] = 0.f;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID_MASK)
-	filmMaterialIDMask[gid * 2] = 0.f;
-	filmMaterialIDMask[gid * 2 + 1] = 0.f;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
-	filmDirectShadowMask[gid * 2] = 0.f;
-	filmDirectShadowMask[gid * 2 + 1] = 0.f;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
-	filmIndirectShadowMask[gid * 2] = 0.f;
-	filmIndirectShadowMask[gid * 2 + 1] = 0.f;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_UV)
-	filmUV[gid * 2] = INFINITY;
-	filmUV[gid * 2 + 1] = INFINITY;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_RAYCOUNT)
-	filmRayCount[gid] = 0;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_BY_MATERIAL_ID)
-	filmByMaterialID[gid * 4] = 0.f;
-	filmByMaterialID[gid * 4 + 1] = 0.f;
-	filmByMaterialID[gid * 4 + 2] = 0.f;
-	filmByMaterialID[gid * 4 + 3] = 0.f;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
-	filmIrradiance[gid * 4] = 0.f;
-	filmIrradiance[gid * 4 + 1] = 0.f;
-	filmIrradiance[gid * 4 + 2] = 0.f;
-	filmIrradiance[gid * 4 + 3] = 0.f;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_OBJECT_ID)
-	filmObjectID[gid] = NULL_INDEX;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_OBJECT_ID_MASK)
-	filmObjectIDMask[gid * 2] = 0.f;
-	filmObjectIDMask[gid * 2 + 1] = 0.f;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_BY_OBJECT_ID)
-	filmByObjectID[gid * 4] = 0.f;
-	filmByObjectID[gid * 4 + 1] = 0.f;
-	filmByObjectID[gid * 4 + 2] = 0.f;
-	filmByObjectID[gid * 4 + 3] = 0.f;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_SAMPLECOUNT)
-	filmSampleCount[gid] = 0;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_CONVERGENCE)
-	filmConvergence[gid] = INFINITY;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID_COLOR)
-	filmMaterialIDColor[gid * 4] = 0.f;
-	filmMaterialIDColor[gid * 4 + 1] = 0.f;
-	filmMaterialIDColor[gid * 4 + 2] = 0.f;
-	filmMaterialIDColor[gid * 4 + 3] = 0.f;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_ALBEDO)
-	filmAlbedo[gid * 4] = 0.f;
-	filmAlbedo[gid * 4 + 1] = 0.f;
-	filmAlbedo[gid * 4 + 2] = 0.f;
-	filmAlbedo[gid * 4 + 3] = 0.f;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_AVG_SHADING_NORMAL)
-	filmAvgShadingNormal[gid * 4] = 0.f;
-	filmAvgShadingNormal[gid * 4 + 1] = 0.f;
-	filmAvgShadingNormal[gid * 4 + 2] = 0.f;
-	filmAvgShadingNormal[gid * 4 + 3] = 0.f;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
-	filmNoise[gid] = INFINITY;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_USER_IMPORTANCE)
-	filmNoise[gid] = 1.f;
-#endif
+	if (filmAlpha) {
+		filmAlpha[gid * 2] = 0.f;
+		filmAlpha[gid * 2 + 1] = 0.f;	
+	}
+
+	if (filmDepth)
+		filmDepth[gid] = INFINITY;
+
+	if (filmPosition) {
+		filmPosition[gid * 3] = INFINITY;
+		filmPosition[gid * 3 + 1] = INFINITY;
+		filmPosition[gid * 3 + 2] = INFINITY;
+	}
+
+	if (filmGeometryNormal) {
+		filmGeometryNormal[gid * 3] = 0.f;
+		filmGeometryNormal[gid * 3 + 1] = 0.f;
+		filmGeometryNormal[gid * 3 + 2] = 0.f;
+	}
+
+	if (filmShadingNormal) {
+		filmShadingNormal[gid * 3] = 0.f;
+		filmShadingNormal[gid * 3 + 1] = 0.f;
+		filmShadingNormal[gid * 3 + 2] = 0.f;
+	}
+
+	if (filmMaterialID)
+		filmMaterialID[gid] = NULL_INDEX;
+
+
+	if (filmDirectDiffuse) {
+		filmDirectDiffuse[gid * 4] = 0.f;
+		filmDirectDiffuse[gid * 4 + 1] = 0.f;
+		filmDirectDiffuse[gid * 4 + 2] = 0.f;
+		filmDirectDiffuse[gid * 4 + 3] = 0.f;
+	}
+	
+	if (filmDirectGlossy) {
+		filmDirectGlossy[gid * 4] = 0.f;
+		filmDirectGlossy[gid * 4 + 1] = 0.f;
+		filmDirectGlossy[gid * 4 + 2] = 0.f;
+		filmDirectGlossy[gid * 4 + 3] = 0.f;
+	}
+	
+	if (filmEmission) {
+		filmEmission[gid * 4] = 0.f;
+		filmEmission[gid * 4 + 1] = 0.f;
+		filmEmission[gid * 4 + 2] = 0.f;
+		filmEmission[gid * 4 + 3] = 0.f;
+	}
+	
+	if (filmIndirectDiffuse) {
+		filmIndirectDiffuse[gid * 4] = 0.f;
+		filmIndirectDiffuse[gid * 4 + 1] = 0.f;
+		filmIndirectDiffuse[gid * 4 + 2] = 0.f;
+		filmIndirectDiffuse[gid * 4 + 3] = 0.f;
+	}
+
+	if (filmIndirectGlossy) {
+		filmIndirectGlossy[gid * 4] = 0.f;
+		filmIndirectGlossy[gid * 4 + 1] = 0.f;
+		filmIndirectGlossy[gid * 4 + 2] = 0.f;
+		filmIndirectGlossy[gid * 4 + 3] = 0.f;
+	}
+
+	if (filmIndirectSpecular) {
+		filmIndirectSpecular[gid * 4] = 0.f;
+		filmIndirectSpecular[gid * 4 + 1] = 0.f;
+		filmIndirectSpecular[gid * 4 + 2] = 0.f;
+		filmIndirectSpecular[gid * 4 + 3] = 0.f;
+	}
+
+	if (filmMaterialIDMask) {
+		filmMaterialIDMask[gid * 2] = 0.f;
+		filmMaterialIDMask[gid * 2 + 1] = 0.f;
+	}
+
+	if (filmDirectShadowMask) {
+		filmDirectShadowMask[gid * 2] = 0.f;
+		filmDirectShadowMask[gid * 2 + 1] = 0.f;
+	}
+
+	if (filmIndirectShadowMask) {
+		filmIndirectShadowMask[gid * 2] = 0.f;
+		filmIndirectShadowMask[gid * 2 + 1] = 0.f;
+	}
+
+	if (filmUV) {
+		filmUV[gid * 2] = INFINITY;
+		filmUV[gid * 2 + 1] = INFINITY;
+	}
+
+	if (filmRayCount)
+		filmRayCount[gid] = 0;
+
+	if (filmByMaterialID) {
+		filmByMaterialID[gid * 4] = 0.f;
+		filmByMaterialID[gid * 4 + 1] = 0.f;
+		filmByMaterialID[gid * 4 + 2] = 0.f;
+		filmByMaterialID[gid * 4 + 3] = 0.f;
+	}
+	
+	if (filmIrradiance) {
+		filmIrradiance[gid * 4] = 0.f;
+		filmIrradiance[gid * 4 + 1] = 0.f;
+		filmIrradiance[gid * 4 + 2] = 0.f;
+		filmIrradiance[gid * 4 + 3] = 0.f;
+	}
+	
+	if (filmObjectID)
+		filmObjectID[gid] = NULL_INDEX;
+
+	if (filmObjectIDMask) {
+		filmObjectIDMask[gid * 2] = 0.f;
+		filmObjectIDMask[gid * 2 + 1] = 0.f;
+	}
+
+	if (filmByObjectID) {
+		filmByObjectID[gid * 4] = 0.f;
+		filmByObjectID[gid * 4 + 1] = 0.f;
+		filmByObjectID[gid * 4 + 2] = 0.f;
+		filmByObjectID[gid * 4 + 3] = 0.f;
+	}
+	
+	if (filmSampleCount)
+		filmSampleCount[gid] = 0;
+
+	if (filmConvergence)
+		filmConvergence[gid] = INFINITY;
+
+	if (filmMaterialIDColor) {
+		filmMaterialIDColor[gid * 4] = 0.f;
+		filmMaterialIDColor[gid * 4 + 1] = 0.f;
+		filmMaterialIDColor[gid * 4 + 2] = 0.f;
+		filmMaterialIDColor[gid * 4 + 3] = 0.f;
+	}
+	
+	if (filmAlbedo) {
+		filmAlbedo[gid * 4] = 0.f;
+		filmAlbedo[gid * 4 + 1] = 0.f;
+		filmAlbedo[gid * 4 + 2] = 0.f;
+		filmAlbedo[gid * 4 + 3] = 0.f;
+	}
+
+	if (filmAvgShadingNormal) {
+		filmAvgShadingNormal[gid * 4] = 0.f;
+		filmAvgShadingNormal[gid * 4 + 1] = 0.f;
+		filmAvgShadingNormal[gid * 4 + 2] = 0.f;
+		filmAvgShadingNormal[gid * 4 + 3] = 0.f;
+	}
+
+	if (filmNoise)
+		filmNoise[gid] = INFINITY;
+
+	if (filmUserImportance)
+		filmUserImportance[gid] = 1.f;
 
 	//--------------------------------------------------------------------------
 	// Film denoiser buffers

@@ -95,77 +95,9 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			throw runtime_error("Unknown accelerator in PathOCLBaseRenderThread::InitKernels()");
 	}
 
-	// Film related parameters
-
-	// All thread films are supposed to have the same parameters
-	const Film *threadFilm = threadFilms[0]->film;
-
-	if (threadFilm->HasChannel(Film::ALPHA))
-		ssParams << " -D PARAM_FILM_CHANNELS_HAS_ALPHA";
-	if (threadFilm->HasChannel(Film::DEPTH))
-		ssParams << " -D PARAM_FILM_CHANNELS_HAS_DEPTH";
-	if (threadFilm->HasChannel(Film::POSITION))
-		ssParams << " -D PARAM_FILM_CHANNELS_HAS_POSITION";
-	if (threadFilm->HasChannel(Film::GEOMETRY_NORMAL))
-		ssParams << " -D PARAM_FILM_CHANNELS_HAS_GEOMETRY_NORMAL";
-	if (threadFilm->HasChannel(Film::SHADING_NORMAL))
-		ssParams << " -D PARAM_FILM_CHANNELS_HAS_SHADING_NORMAL";
-	if (threadFilm->HasChannel(Film::MATERIAL_ID))
-		ssParams << " -D PARAM_FILM_CHANNELS_HAS_MATERIAL_ID";
-	if (threadFilm->HasChannel(Film::DIRECT_DIFFUSE))
-		ssParams << " -D PARAM_FILM_CHANNELS_HAS_DIRECT_DIFFUSE";
-	if (threadFilm->HasChannel(Film::DIRECT_GLOSSY))
-		ssParams << " -D PARAM_FILM_CHANNELS_HAS_DIRECT_GLOSSY";
-	if (threadFilm->HasChannel(Film::EMISSION))
-		ssParams << " -D PARAM_FILM_CHANNELS_HAS_EMISSION";
-	if (threadFilm->HasChannel(Film::INDIRECT_DIFFUSE))
-		ssParams << " -D PARAM_FILM_CHANNELS_HAS_INDIRECT_DIFFUSE";
-	if (threadFilm->HasChannel(Film::INDIRECT_GLOSSY))
-		ssParams << " -D PARAM_FILM_CHANNELS_HAS_INDIRECT_GLOSSY";
-	if (threadFilm->HasChannel(Film::INDIRECT_SPECULAR))
-		ssParams << " -D PARAM_FILM_CHANNELS_HAS_INDIRECT_SPECULAR";
-	if (threadFilm->HasChannel(Film::MATERIAL_ID_MASK)) {
-		ssParams << " -D PARAM_FILM_CHANNELS_HAS_MATERIAL_ID_MASK" <<
-				" -D PARAM_FILM_MASK_MATERIAL_ID=" << threadFilm->GetMaskMaterialID(0);
-	}
-	if (threadFilm->HasChannel(Film::DIRECT_SHADOW_MASK))
-		ssParams << " -D PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK";
-	if (threadFilm->HasChannel(Film::INDIRECT_SHADOW_MASK))
-		ssParams << " -D PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK";
-	if (threadFilm->HasChannel(Film::UV))
-		ssParams << " -D PARAM_FILM_CHANNELS_HAS_UV";
-	if (threadFilm->HasChannel(Film::RAYCOUNT))
-		ssParams << " -D PARAM_FILM_CHANNELS_HAS_RAYCOUNT";
-	if (threadFilm->HasChannel(Film::BY_MATERIAL_ID)) {
-		ssParams << " -D PARAM_FILM_CHANNELS_HAS_BY_MATERIAL_ID" <<
-				" -D PARAM_FILM_BY_MATERIAL_ID=" << threadFilm->GetByMaterialID(0);
-	}
-	if (threadFilm->HasChannel(Film::IRRADIANCE))
-		ssParams << " -D PARAM_FILM_CHANNELS_HAS_IRRADIANCE";
-	if (threadFilm->HasChannel(Film::OBJECT_ID))
-		ssParams << " -D PARAM_FILM_CHANNELS_HAS_OBJECT_ID";
-	if (threadFilm->HasChannel(Film::OBJECT_ID_MASK)) {
-		ssParams << " -D PARAM_FILM_CHANNELS_HAS_OBJECT_ID_MASK" <<
-				" -D PARAM_FILM_MASK_OBJECT_ID=" << threadFilm->GetMaskObjectID(0);
-	}
-	if (threadFilm->HasChannel(Film::BY_OBJECT_ID)) {
-		ssParams << " -D PARAM_FILM_CHANNELS_HAS_BY_OBJECT_ID" <<
-				" -D PARAM_FILM_BY_OBJECT_ID=" << threadFilm->GetMaskObjectID(0);
-	}
-	if (threadFilm->HasChannel(Film::SAMPLECOUNT))
-		ssParams << " -D PARAM_FILM_CHANNELS_HAS_SAMPLECOUNT";
-	if (threadFilm->HasChannel(Film::CONVERGENCE))
-		ssParams << " -D PARAM_FILM_CHANNELS_HAS_CONVERGENCE";
-	if (threadFilm->HasChannel(Film::MATERIAL_ID_COLOR))
-		ssParams << " -D PARAM_FILM_CHANNELS_HAS_MATERIAL_ID_COLOR";
-	if (threadFilm->HasChannel(Film::ALBEDO))
-		ssParams << " -D PARAM_FILM_CHANNELS_HAS_ALBEDO";
-	if (threadFilm->HasChannel(Film::AVG_SHADING_NORMAL))
-		ssParams << " -D PARAM_FILM_CHANNELS_HAS_AVG_SHADING_NORMAL";
-	if (threadFilm->HasChannel(Film::NOISE))
-		ssParams << " -D PARAM_FILM_CHANNELS_HAS_NOISE";
-	if (threadFilm->HasChannel(Film::USER_IMPORTANCE))
-		ssParams << " -D PARAM_FILM_CHANNELS_HAS_USER_IMPORTANCE";
+	//--------------------------------------------------------------------------
+	// Textures
+	//--------------------------------------------------------------------------
 
 	if (cscene->IsTextureCompiled(CONST_FLOAT))
 		ssParams << " -D PARAM_ENABLE_TEX_CONST_FLOAT";
@@ -290,6 +222,10 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 	if (cscene->IsTextureCompiled(TRIPLANAR_TEX))
 		ssParams << " -D PARAM_ENABLE_TEX_TRIPLANAR";
 
+	//--------------------------------------------------------------------------
+	// Materials
+	//--------------------------------------------------------------------------
+
 	if (cscene->IsMaterialCompiled(MATTE))
 		ssParams << " -D PARAM_ENABLE_MAT_MATTE";
 	if (cscene->IsMaterialCompiled(ROUGHMATTE))
@@ -368,6 +304,10 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 	}
 	if (cscene->IsMaterialCompiled(DISNEY))
 		ssParams << " -D PARAM_ENABLE_MAT_DISNEY";
+
+	//--------------------------------------------------------------------------
+	// Light sources
+	//--------------------------------------------------------------------------
 
 	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_IL))
 		ssParams << " -D PARAM_HAS_INFINITELIGHT";

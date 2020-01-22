@@ -71,12 +71,8 @@ OPENCL_FORCE_NOT_INLINE void Sampler_SplatSample(
 
 OPENCL_FORCE_NOT_INLINE void Sampler_NextSample(
 		__constant const GPUTaskConfiguration* restrict taskConfig,
-#if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
 		__global float *filmNoise,
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_USER_IMPORTANCE)
 		__global float *filmUserImportance,
-#endif
 		const uint filmWidth, const uint filmHeight,
 		const uint filmSubRegion0, const uint filmSubRegion1,
 		const uint filmSubRegion2, const uint filmSubRegion3
@@ -84,48 +80,32 @@ OPENCL_FORCE_NOT_INLINE void Sampler_NextSample(
 	switch (taskConfig->sampler.type) {
 		case RANDOM:
 			return RandomSampler_NextSample(taskConfig,
-#if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
 					filmNoise,
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_USER_IMPORTANCE)
 					filmUserImportance,
-#endif
 					filmWidth, filmHeight,
 					filmSubRegion0, filmSubRegion1,
 					filmSubRegion2, filmSubRegion3
 					SAMPLER_PARAM);
 		case SOBOL:
 			return SobolSampler_NextSample(taskConfig,
-#if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
 					filmNoise,
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_USER_IMPORTANCE)
 					filmUserImportance,
-#endif
 					filmWidth, filmHeight,
 					filmSubRegion0, filmSubRegion1,
 					filmSubRegion2, filmSubRegion3
 					SAMPLER_PARAM);
 		case METROPOLIS:
 			return MetropolisSampler_NextSample(taskConfig,
-#if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
 					filmNoise,
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_USER_IMPORTANCE)
 					filmUserImportance,
-#endif
 					filmWidth, filmHeight,
 					filmSubRegion0, filmSubRegion1,
 					filmSubRegion2, filmSubRegion3
 					SAMPLER_PARAM);
 		case TILEPATHSAMPLER:
 			return TilePathSampler_NextSample(taskConfig,
-#if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
 					filmNoise,
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_USER_IMPORTANCE)
 					filmUserImportance,
-#endif
 					filmWidth, filmHeight,
 					filmSubRegion0, filmSubRegion1,
 					filmSubRegion2, filmSubRegion3
@@ -138,12 +118,8 @@ OPENCL_FORCE_NOT_INLINE void Sampler_NextSample(
 
 OPENCL_FORCE_NOT_INLINE bool Sampler_Init(
 		__constant const GPUTaskConfiguration* restrict taskConfig,
-#if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
 		__global float *filmNoise,
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_USER_IMPORTANCE)
 		__global float *filmUserImportance,
-#endif
 		const uint filmWidth, const uint filmHeight,
 		const uint filmSubRegion0, const uint filmSubRegion1,
 		const uint filmSubRegion2, const uint filmSubRegion3
@@ -151,48 +127,32 @@ OPENCL_FORCE_NOT_INLINE bool Sampler_Init(
 	switch (taskConfig->sampler.type) {
 		case RANDOM:
 			return RandomSampler_Init(taskConfig,
-#if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
 					filmNoise,
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_USER_IMPORTANCE)
 					filmUserImportance,
-#endif
 					filmWidth, filmHeight,
 					filmSubRegion0, filmSubRegion1,
 					filmSubRegion2, filmSubRegion3
 					SAMPLER_PARAM);
 		case SOBOL:
 			return SobolSampler_Init(taskConfig,
-#if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
 					filmNoise,
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_USER_IMPORTANCE)
 					filmUserImportance,
-#endif
 					filmWidth, filmHeight,
 					filmSubRegion0, filmSubRegion1,
 					filmSubRegion2, filmSubRegion3
 					SAMPLER_PARAM);
 		case METROPOLIS:
 			return MetropolisSampler_Init(taskConfig,
-#if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
 					filmNoise,
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_USER_IMPORTANCE)
 					filmUserImportance,
-#endif
 					filmWidth, filmHeight,
 					filmSubRegion0, filmSubRegion1,
 					filmSubRegion2, filmSubRegion3
 					SAMPLER_PARAM);
 		case TILEPATHSAMPLER:
 			return TilePathSampler_Init(taskConfig,
-#if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
 					filmNoise,
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_USER_IMPORTANCE)
 					filmUserImportance,
-#endif
 					filmWidth, filmHeight,
 					filmSubRegion0, filmSubRegion1,
 					filmSubRegion2, filmSubRegion3

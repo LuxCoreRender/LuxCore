@@ -381,6 +381,7 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/engines/caches/photongi/photongicache.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/compiledscene.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/compilecamera.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/compilefilm.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/compilegeometry.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/compileimagemaps.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/engines/pathoclbase/compilelights.cpp

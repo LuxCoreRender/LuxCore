@@ -37,10 +37,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 	const size_t gid = get_global_id(0);
 	__global SampleResult *sampleResult = &sampleResultsBuff[gid];
 
-#if defined(PARAM_FILM_CHANNELS_HAS_RAYCOUNT)
 	// This has to be done by the first kernel to run after RT kernel
 	sampleResult->rayCount += 1;
-#endif
 
 	// Read the path state
 	__global GPUTaskState *taskState = &tasksState[gid];
@@ -175,37 +173,21 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 #endif
 
 	if (pathInfo->depth.depth == 0) {
-#if defined(PARAM_FILM_CHANNELS_HAS_ALPHA)
 		sampleResult->alpha = 0.f;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_DEPTH)
 		sampleResult->depth = INFINITY;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_POSITION)
 		sampleResult->position.x = INFINITY;
 		sampleResult->position.y = INFINITY;
 		sampleResult->position.z = INFINITY;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_GEOMETRY_NORMAL)
 		sampleResult->geometryNormal.x = 0.f;
 		sampleResult->geometryNormal.y = 0.f;
 		sampleResult->geometryNormal.z = 0.f;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_SHADING_NORMAL) || defined(PARAM_FILM_CHANNELS_HAS_AVG_SHADING_NORMAL)
 		sampleResult->shadingNormal.x = 0.f;
 		sampleResult->shadingNormal.y = 0.f;
 		sampleResult->shadingNormal.z = 0.f;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID) || defined(PARAM_FILM_CHANNELS_HAS_BY_MATERIAL_ID) || defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID_MASK) || defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID_COLOR)
 		sampleResult->materialID = 0;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_OBJECT_ID)
 		sampleResult->objectID = 0;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_UV)
 		sampleResult->uv.u = INFINITY;
 		sampleResult->uv.v = INFINITY;
-#endif
 	}
 
 	taskState->state = MK_SPLAT_SAMPLE;
@@ -256,40 +238,23 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 	// Something was hit
 
 	if (taskState->albedoToDo && BSDF_IsAlbedoEndPoint(bsdf MATERIALS_PARAM)) {
-#if defined(PARAM_FILM_CHANNELS_HAS_ALBEDO)
 		const float3 albedo = VLOAD3F(taskState->throughput.c) * BSDF_Albedo(bsdf
 				MATERIALS_PARAM);
 		VSTORE3F(albedo, sampleResult->albedo.c);
-#endif
+
 		taskState->albedoToDo = false;
 	}
 
 	if (pathInfo->depth.depth == 0) {
-#if defined(PARAM_FILM_CHANNELS_HAS_ALPHA)
 		sampleResult->alpha = 1.f;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_DEPTH)
 		sampleResult->depth = rayHits[gid].t;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_POSITION)
 		sampleResult->position = bsdf->hitPoint.p;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_GEOMETRY_NORMAL)
 		sampleResult->geometryNormal = bsdf->hitPoint.geometryN;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_SHADING_NORMAL) || defined(PARAM_FILM_CHANNELS_HAS_AVG_SHADING_NORMAL)
 		sampleResult->shadingNormal = bsdf->hitPoint.shadeN;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID) || defined(PARAM_FILM_CHANNELS_HAS_BY_MATERIAL_ID) || defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID_MASK) || defined(PARAM_FILM_CHANNELS_HAS_MATERIAL_ID_COLOR)
 		sampleResult->materialID = BSDF_GetMaterialID(bsdf
 				MATERIALS_PARAM);
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_OBJECT_ID)
 		sampleResult->objectID = BSDF_GetObjectID(bsdf, sceneObjs);
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_UV)
 		sampleResult->uv = bsdf->hitPoint.uv[0];
-#endif
 	}
 
 	//----------------------------------------------------------------------
@@ -519,9 +484,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 			);
 	taskDirectLight->throughShadowTransparency = throughShadowTransparency;
 	VSTORE3F(connectionThroughput * VLOAD3F(taskDirectLight->illumInfo.lightRadiance.c), taskDirectLight->illumInfo.lightRadiance.c);
-#if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
 	VSTORE3F(connectionThroughput * VLOAD3F(taskDirectLight->illumInfo.lightIrradiance.c), taskDirectLight->illumInfo.lightIrradiance.c);
-#endif
 
 	const bool rayMiss = (rayHits[gid].meshIndex == NULL_INDEX);
 
@@ -541,7 +504,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 						VLOAD3F(taskState->throughput.c), lightRadiance,
 						1.f);
 
-#if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
 				// The first path vertex is not handled by AddDirectLight(). This is valid
 				// for irradiance AOV only if it is not a SPECULAR material.
 				//
@@ -555,7 +517,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 							VLOAD3F(taskDirectLight->illumInfo.lightIrradiance.c);
 					VSTORE3F(irradiance, sampleResult->irradiance.c);
 				}
-#endif
 			}
 
 			taskDirectLight->directLightResult = ILLUMINATED;
@@ -791,17 +752,15 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 	float bsdfPdfW;
 	BSDFEvent bsdfEvent;
 
-	if (BSDF_IsShadowCatcher(bsdf MATERIALS_PARAM) && (tasksDirectLight[gid].directLightResult  != SHADOWED)) {
+	if (BSDF_IsShadowCatcher(bsdf MATERIALS_PARAM) && (tasksDirectLight[gid].directLightResult != SHADOWED)) {
 		bsdfSample = BSDF_ShadowCatcherSample(bsdf,
 				&sampledDir, &bsdfPdfW, &cosSampledDir, &bsdfEvent
 				MATERIALS_PARAM);
 
-#if defined(PARAM_FILM_CHANNELS_HAS_ALPHA)
 		if (sampleResult->firstPathVertex) {
 			// In this case I have also to set the value of the alpha channel to 0.0
 			sampleResult->alpha = 0.f;
 		}
-#endif
 	} else {
 		bsdfSample = BSDF_Sample(bsdf,
 				Sampler_GetSample(taskConfig, sampleOffset + IDX_BSDF_X SAMPLER_PARAM),
@@ -840,7 +799,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 
 		VSTORE3F(throughputFactor * VLOAD3F(taskState->throughput.c), taskState->throughput.c);
 
-#if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
 		// This is valid for irradiance AOV only if it is not a SPECULAR material and
 		// first path vertex. Set or update sampleResult.irradiancePathThroughput
 		if (sampleResult->firstPathVertex) {
@@ -854,7 +812,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 				VSTORE3F(BLACK, sampleResult->irradiancePathThroughput.c);
 		} else
 			VSTORE3F(throughputFactor * VLOAD3F(sampleResult->irradiancePathThroughput.c), sampleResult->irradiancePathThroughput.c);
-#endif
 
 		Ray_Init2(ray, BSDF_GetRayOrigin(bsdf, sampledDir), sampledDir, ray->time);
 
@@ -920,6 +877,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_SP
 	// This trick is required by SAMPLER_PARAM macro
 	Seed *seed = &seedValue;
 
+	__constant const Film* restrict film = &taskConfig->film;
 	__global SampleResult *sampleResult = &sampleResultsBuff[gid];
 
 	//--------------------------------------------------------------------------
@@ -960,7 +918,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_SP
 	const float sqrtVarianceClampMaxValue = taskConfig->pathTracer.sqrtVarianceClampMaxValue;
 	if (sqrtVarianceClampMaxValue > 0.f) {
 		// Radiance clamping
-		VarianceClamping_Clamp(&taskConfig->film, sampleResult, sqrtVarianceClampMaxValue
+		VarianceClamping_Clamp(sampleResult, sqrtVarianceClampMaxValue
 				FILM_PARAM);
 	}
 
@@ -1021,12 +979,8 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_NE
 	//--------------------------------------------------------------------------
 
 	Sampler_NextSample(taskConfig,
-#if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
 			filmNoise,
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_USER_IMPORTANCE)
 			filmUserImportance,
-#endif
 			filmWidth, filmHeight,
 			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3
 			SAMPLER_PARAM);

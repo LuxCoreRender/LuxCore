@@ -110,7 +110,7 @@ OPENCL_FORCE_INLINE void TilePathSampler_SplatSample(
 				const uint py = sampleResult->pixelY + y;
 				// px and py are unsigned so there is no need to check if they are >= 0
 				if ((px < filmWidth) && (py < filmHeight)) {
-					Film_AddSample(&taskConfig->film, px, py,
+					Film_AddSample(px, py,
 							sampleResult, .001f
 							FILM_PARAM);
 				}
@@ -118,19 +118,15 @@ OPENCL_FORCE_INLINE void TilePathSampler_SplatSample(
 		}
 	} else
 #endif
-		Film_AddSample(&taskConfig->film, sampleResult->pixelX, sampleResult->pixelY,
+		Film_AddSample(sampleResult->pixelX, sampleResult->pixelY,
 				sampleResult, 1.f
 				FILM_PARAM);
 }
 
 OPENCL_FORCE_INLINE void TilePathSampler_NextSample(
 		__constant const GPUTaskConfiguration* restrict taskConfig,
-#if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
 		__global float *filmNoise,
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_USER_IMPORTANCE)
 		__global float *filmUserImportance,
-#endif
 		const uint filmWidth, const uint filmHeight,
 		const uint filmSubRegion0, const uint filmSubRegion1,
 		const uint filmSubRegion2, const uint filmSubRegion3
@@ -140,12 +136,8 @@ OPENCL_FORCE_INLINE void TilePathSampler_NextSample(
 
 OPENCL_FORCE_INLINE bool TilePathSampler_Init(
 		__constant const GPUTaskConfiguration* restrict taskConfig,
-#if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
 		__global float *filmNoise,
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_USER_IMPORTANCE)
 		__global float *filmUserImportance,
-#endif
 		const uint filmWidth, const uint filmHeight,
 		const uint filmSubRegion0, const uint filmSubRegion1,
 		const uint filmSubRegion2, const uint filmSubRegion3

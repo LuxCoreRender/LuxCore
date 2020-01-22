@@ -40,7 +40,9 @@ OPENCL_FORCE_INLINE bool BSDF_IsAlbedoEndPoint(__global const BSDF *bsdf
 }
 
 OPENCL_FORCE_INLINE uint BSDF_GetObjectID(__global const BSDF *bsdf, __global const SceneObject* restrict sceneObjs) {
-	return sceneObjs[bsdf->sceneObjectIndex].objectID;
+	const uint sceneObjectIndex = bsdf->sceneObjectIndex;
+
+	return (sceneObjectIndex != NULL_INDEX) ? sceneObjs[sceneObjectIndex].objectID : NULL_INDEX;
 }
 
 OPENCL_FORCE_INLINE uint BSDF_GetMaterialID(__global const BSDF *bsdf

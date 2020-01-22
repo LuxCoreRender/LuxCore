@@ -177,7 +177,6 @@ protected:
 	size_t GetOpenCLHitPointSize() const;
 	size_t GetOpenCLBSDFSize() const;
 	size_t GetEyePathInfoSize() const;
-	size_t GetOpenCLSampleResultSize() const;
 
 	u_int threadIndex;
 	luxrays::OpenCLIntersectionDevice *intersectionDevice;

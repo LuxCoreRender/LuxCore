@@ -48,6 +48,7 @@
 * Enabling/disabling BCD denoiser doesn't require OpenCL compilation anymore (removed PARAM_FILM_DENOISER)
 * Changing RTPATHOCL rendering parameters doesn't require OpenCL compilation anymore (removed PARAM_RTPATHOCL_*)
 * Rework of OpenCL samplers code to not require OpenCL compilation anymore when changing sampler (removed PARAM_SAMPLER_*)
+* Changing AOVs used doesn't require OpenCL compilation anymore (removed PARAM_FILM_CHANNELS_*)
 
 ### Fixed Bugs
 

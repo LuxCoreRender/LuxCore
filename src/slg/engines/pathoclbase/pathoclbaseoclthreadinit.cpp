@@ -119,69 +119,6 @@ size_t PathOCLBaseOCLRenderThread::GetEyePathInfoSize() const {
 	return eyePathInfoSize;
 }
 
-size_t PathOCLBaseOCLRenderThread::GetOpenCLSampleResultSize() const {
-	//--------------------------------------------------------------------------
-	// SampleResult size
-	//--------------------------------------------------------------------------
-
-	// All thread films are supposed to have the same parameters
-	const Film *threadFilm = threadFilms[0]->film;
-
-	// filmX, filmY, pixelX and pixelY fields
-	size_t sampleResultSize = 2 * sizeof(float) + 2 * sizeof(u_int);
-	// SampleResult.radiancePerPixelNormalized[FILM_MAX_RADIANCE_GROUP_COUNT]
-	sampleResultSize += sizeof(slg::ocl::Spectrum) * FILM_MAX_RADIANCE_GROUP_COUNT;
-	if (threadFilm->HasChannel(Film::ALPHA))
-		sampleResultSize += sizeof(float);
-	if (threadFilm->HasChannel(Film::DEPTH))
-		sampleResultSize += sizeof(float);
-	if (threadFilm->HasChannel(Film::POSITION))
-		sampleResultSize += sizeof(Point);
-	if (threadFilm->HasChannel(Film::GEOMETRY_NORMAL))
-		sampleResultSize += sizeof(Normal);
-	if (threadFilm->HasChannel(Film::SHADING_NORMAL) || threadFilm->HasChannel(Film::AVG_SHADING_NORMAL))
-		sampleResultSize += sizeof(Normal);
-	if (threadFilm->HasChannel(Film::MATERIAL_ID) ||
-			threadFilm->HasChannel(Film::MATERIAL_ID_MASK) ||
-			threadFilm->HasChannel(Film::BY_MATERIAL_ID) ||
-			threadFilm->HasChannel(Film::MATERIAL_ID_COLOR))
-		sampleResultSize += sizeof(u_int);
-	if (threadFilm->HasChannel(Film::OBJECT_ID))
-		sampleResultSize += sizeof(u_int);
-	if (threadFilm->HasChannel(Film::DIRECT_DIFFUSE))
-		sampleResultSize += sizeof(Spectrum);
-	if (threadFilm->HasChannel(Film::DIRECT_GLOSSY))
-		sampleResultSize += sizeof(Spectrum);
-	if (threadFilm->HasChannel(Film::EMISSION))
-		sampleResultSize += sizeof(Spectrum);
-	if (threadFilm->HasChannel(Film::INDIRECT_DIFFUSE))
-		sampleResultSize += sizeof(Spectrum);
-	if (threadFilm->HasChannel(Film::INDIRECT_GLOSSY))
-		sampleResultSize += sizeof(Spectrum);
-	if (threadFilm->HasChannel(Film::INDIRECT_SPECULAR))
-		sampleResultSize += sizeof(Spectrum);
-	if (threadFilm->HasChannel(Film::DIRECT_SHADOW_MASK))
-		sampleResultSize += sizeof(float);
-	if (threadFilm->HasChannel(Film::INDIRECT_SHADOW_MASK))
-		sampleResultSize += sizeof(float);
-	if (threadFilm->HasChannel(Film::UV))
-		sampleResultSize += sizeof(UV);
-	if (threadFilm->HasChannel(Film::RAYCOUNT))
-		sampleResultSize += sizeof(Film::RAYCOUNT);
-	if (threadFilm->HasChannel(Film::IRRADIANCE))
-		sampleResultSize += 2 * sizeof(Spectrum);
-	if (threadFilm->HasChannel(Film::ALBEDO))
-		sampleResultSize += sizeof(Spectrum);
-
-	sampleResultSize += 
-			// firstPathVertexEvent field
-			sizeof(slg::ocl::BSDFEvent) +
-			// firstPathVertex and lastPathVertex fields
-			2 * sizeof(int);
-
-	return sampleResultSize;
-}
-
 void PathOCLBaseOCLRenderThread::AllocOCLBuffer(const cl_mem_flags clFlags, cl::Buffer **buff,
 		void *src, const size_t size, const string &desc) {
 	intersectionDevice->AllocBuffer(clFlags, buff, src, size, desc);
@@ -569,7 +506,7 @@ void PathOCLBaseOCLRenderThread::InitSamplesBuffer() {
 			break;
 		}
 		case  slg::ocl::METROPOLIS: {
-			const size_t sampleResultSize = GetOpenCLSampleResultSize();
+			const size_t sampleResultSize = sizeof(slg::ocl::SampleResult);
 			sampleSize += 2 * sizeof(float) + 5 * sizeof(u_int) + sampleResultSize;	
 			break;
 		}
@@ -593,7 +530,7 @@ void PathOCLBaseOCLRenderThread::InitSamplesBuffer() {
 void PathOCLBaseOCLRenderThread::InitSampleResultsBuffer() {
 	const u_int taskCount = renderEngine->taskCount;
 
-	const size_t sampleResultSize = GetOpenCLSampleResultSize();
+	const size_t sampleResultSize = sizeof(slg::ocl::SampleResult);
 
 	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Size of a SampleResult: " << sampleResultSize << "bytes");
 	AllocOCLBufferRW(&sampleResultsBuff, sampleResultSize * taskCount, "Sample");

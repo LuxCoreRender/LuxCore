@@ -18,16 +18,7 @@
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
-#include <iosfwd>
-#include <limits>
-
-#include <boost/lexical_cast.hpp>
-#include <boost/algorithm/string.hpp>
-
-#include "luxrays/core/bvh/bvhbuild.h"
-#include "slg/kernels/kernels.h"
 #include "slg/engines/pathoclbase/compiledscene.h"
-#include "slg/engines/caches/photongi/photongicache.h"
 
 using namespace std;
 using namespace luxrays;

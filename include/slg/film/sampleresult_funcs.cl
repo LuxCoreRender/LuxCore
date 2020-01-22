@@ -31,33 +31,15 @@ OPENCL_FORCE_INLINE void SampleResult_Init(__constant const Film* restrict film,
 	VSTORE3F(BLACK, sampleResult->radiancePerPixelNormalized[6].c);
 	VSTORE3F(BLACK, sampleResult->radiancePerPixelNormalized[7].c);
 
-#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_DIFFUSE)
 	VSTORE3F(BLACK, sampleResult->directDiffuse.c);
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_GLOSSY)
 	VSTORE3F(BLACK, sampleResult->directGlossy.c);
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_EMISSION)
 	VSTORE3F(BLACK, sampleResult->emission.c);
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_DIFFUSE)
 	VSTORE3F(BLACK, sampleResult->indirectDiffuse.c);
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_GLOSSY)
 	VSTORE3F(BLACK, sampleResult->indirectGlossy.c);
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SPECULAR)
 	VSTORE3F(BLACK, sampleResult->indirectSpecular.c);
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_RAYCOUNT)
 	sampleResult->rayCount = 0.f;
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
 	VSTORE3F(BLACK, sampleResult->irradiance.c);
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_ALBEDO)
 	VSTORE3F(BLACK, sampleResult->albedo.c);
-#endif
 
 	sampleResult->firstPathVertexEvent = NONE;
 	sampleResult->firstPathVertex = true;
@@ -77,26 +59,17 @@ OPENCL_FORCE_INLINE void SampleResult_AddEmission(__constant const Film* restric
 	VADD3F(sampleResult->radiancePerPixelNormalized[id].c, radiance);
 
 	if (sampleResult->firstPathVertex) {
-#if defined(PARAM_FILM_CHANNELS_HAS_EMISSION)
 		VADD3F(sampleResult->emission.c, radiance);
-#endif
 	} else {
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
 		sampleResult->indirectShadowMask = 0.f;
-#endif
+
 		const BSDFEvent firstPathVertexEvent = sampleResult->firstPathVertexEvent;
 		if (firstPathVertexEvent & DIFFUSE) {
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_DIFFUSE)
 			VADD3F(sampleResult->indirectDiffuse.c, radiance);
-#endif
 		} else if (firstPathVertexEvent & GLOSSY) {
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_GLOSSY)
 			VADD3F(sampleResult->indirectGlossy.c, radiance);
-#endif
 		} else if (firstPathVertexEvent & SPECULAR) {
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SPECULAR)
 			VADD3F(sampleResult->indirectSpecular.c, radiance);
-#endif
 		}
 	}
 }
@@ -113,42 +86,26 @@ OPENCL_FORCE_INLINE void SampleResult_AddDirectLight(__constant const Film* rest
 	VADD3F(sampleResult->radiancePerPixelNormalized[id].c, radiance);
 
 	if (sampleResult->firstPathVertex) {
-#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_SHADOW_MASK)
 		sampleResult->directShadowMask = fmax(0.f, sampleResult->directShadowMask - lightScale);
-#endif
 
 		if (bsdfEvent & DIFFUSE) {
-#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_DIFFUSE)
 			VADD3F(sampleResult->directDiffuse.c, radiance);
-#endif
 		} else {
-#if defined(PARAM_FILM_CHANNELS_HAS_DIRECT_GLOSSY)
 			VADD3F(sampleResult->directGlossy.c, radiance);
-#endif
 		}
 	} else {
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SHADOW_MASK)
 		sampleResult->indirectShadowMask = fmax(0.f, sampleResult->indirectShadowMask - lightScale);
-#endif
 
 		const BSDFEvent firstPathVertexEvent = sampleResult->firstPathVertexEvent;
 		if (firstPathVertexEvent & DIFFUSE) {
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_DIFFUSE)
 			VADD3F(sampleResult->indirectDiffuse.c, radiance);
-#endif
 		} else if (firstPathVertexEvent & GLOSSY) {
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_GLOSSY)
 			VADD3F(sampleResult->indirectGlossy.c, radiance);
-#endif
 		} else if (firstPathVertexEvent & SPECULAR) {
-#if defined(PARAM_FILM_CHANNELS_HAS_INDIRECT_SPECULAR)
 			VADD3F(sampleResult->indirectSpecular.c, radiance);
-#endif
 		}
 
-#if defined(PARAM_FILM_CHANNELS_HAS_IRRADIANCE)
 		VADD3F(sampleResult->irradiance.c, VLOAD3F(sampleResult->irradiancePathThroughput.c) * incomingRadiance);
-#endif
 	}
 }
 

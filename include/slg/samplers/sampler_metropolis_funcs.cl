@@ -124,7 +124,7 @@ OPENCL_FORCE_INLINE void MetropolisSampler_SplatSample(
 		// It is the very first sample, I have still to initialize the current
 		// sample
 
-		Film_AddSample(&taskConfig->film, sampleResult->pixelX, sampleResult->pixelY,
+		Film_AddSample(sampleResult->pixelX, sampleResult->pixelY,
 				sampleResult, 1.f
 				FILM_PARAM);
 
@@ -212,7 +212,7 @@ OPENCL_FORCE_INLINE void MetropolisSampler_SplatSample(
 						contrib->radiancePerPixelNormalized[0].c[2],
 						norm, consecutiveRejects);*/
 
-			Film_AddSample(&taskConfig->film, contrib->pixelX, contrib->pixelY,
+			Film_AddSample(contrib->pixelX, contrib->pixelY,
 					contrib, norm
 					FILM_PARAM);
 		}
@@ -233,12 +233,8 @@ OPENCL_FORCE_INLINE void MetropolisSampler_SplatSample(
 
 OPENCL_FORCE_INLINE void MetropolisSampler_NextSample(
 		__constant const GPUTaskConfiguration* restrict taskConfig,
-#if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
 		__global float *filmNoise,
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_USER_IMPORTANCE)
 		__global float *filmUserImportance,
-#endif
 		const uint filmWidth, const uint filmHeight,
 		const uint filmSubRegion0, const uint filmSubRegion1,
 		const uint filmSubRegion2, const uint filmSubRegion3
@@ -267,12 +263,8 @@ OPENCL_FORCE_INLINE void MetropolisSampler_NextSample(
 
 OPENCL_FORCE_INLINE bool MetropolisSampler_Init(
 		__constant const GPUTaskConfiguration* restrict taskConfig,
-#if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
 		__global float *filmNoise,
-#endif
-#if defined(PARAM_FILM_CHANNELS_HAS_USER_IMPORTANCE)
 		__global float *filmUserImportance,
-#endif
 		const uint filmWidth, const uint filmHeight,
 		const uint filmSubRegion0, const uint filmSubRegion1,
 		const uint filmSubRegion2, const uint filmSubRegion3

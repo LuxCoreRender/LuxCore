@@ -377,64 +377,36 @@ u_int PathOCLBaseOCLRenderThread::ThreadFilm::SetFilmKernelArgs(cl::Kernel &kern
 		else
 			kernel.setArg(argIndex++, sizeof(cl::Buffer), nullptr);
 	}
-	if (film->HasChannel(Film::ALPHA))
-		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_ALPHA_Buff);
-	if (film->HasChannel(Film::DEPTH))
-		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_DEPTH_Buff);
-	if (film->HasChannel(Film::POSITION))
-		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_POSITION_Buff);
-	if (film->HasChannel(Film::GEOMETRY_NORMAL))
-		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_GEOMETRY_NORMAL_Buff);
-	if (film->HasChannel(Film::SHADING_NORMAL))
-		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_SHADING_NORMAL_Buff);
-	if (film->HasChannel(Film::MATERIAL_ID))
-		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_MATERIAL_ID_Buff);
-	if (film->HasChannel(Film::DIRECT_DIFFUSE))
-		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_DIRECT_DIFFUSE_Buff);
-	if (film->HasChannel(Film::DIRECT_GLOSSY))
-		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_DIRECT_GLOSSY_Buff);
-	if (film->HasChannel(Film::EMISSION))
-		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_EMISSION_Buff);
-	if (film->HasChannel(Film::INDIRECT_DIFFUSE))
-		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_INDIRECT_DIFFUSE_Buff);
-	if (film->HasChannel(Film::INDIRECT_GLOSSY))
-		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_INDIRECT_GLOSSY_Buff);
-	if (film->HasChannel(Film::INDIRECT_SPECULAR))
-		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_INDIRECT_SPECULAR_Buff);
-	if (film->HasChannel(Film::MATERIAL_ID_MASK))
-		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_MATERIAL_ID_MASK_Buff);
-	if (film->HasChannel(Film::DIRECT_SHADOW_MASK))
-		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_DIRECT_SHADOW_MASK_Buff);
-	if (film->HasChannel(Film::INDIRECT_SHADOW_MASK))
-		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_INDIRECT_SHADOW_MASK_Buff);
-	if (film->HasChannel(Film::UV))
-		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_UV_Buff);
-	if (film->HasChannel(Film::RAYCOUNT))
-		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_RAYCOUNT_Buff);
-	if (film->HasChannel(Film::BY_MATERIAL_ID))
-		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_BY_MATERIAL_ID_Buff);
-	if (film->HasChannel(Film::IRRADIANCE))
-		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_IRRADIANCE_Buff);
-	if (film->HasChannel(Film::OBJECT_ID))
-		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_OBJECT_ID_Buff);
-	if (film->HasChannel(Film::OBJECT_ID_MASK))
-		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_OBJECT_ID_MASK_Buff);
-	if (film->HasChannel(Film::BY_OBJECT_ID))
-		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_BY_OBJECT_ID_Buff);
-	if (film->HasChannel(Film::SAMPLECOUNT))
-		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_SAMPLECOUNT_Buff);
-	if (film->HasChannel(Film::CONVERGENCE))
-		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_CONVERGENCE_Buff);
-	if (film->HasChannel(Film::MATERIAL_ID_COLOR))
-		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_MATERIAL_ID_COLOR_Buff);
-	if (film->HasChannel(Film::ALBEDO))
-		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_ALBEDO_Buff);
-	if (film->HasChannel(Film::AVG_SHADING_NORMAL))
-		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_AVG_SHADING_NORMAL_Buff);
-	if (film->HasChannel(Film::NOISE))
-		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_NOISE_Buff);
-	if (film->HasChannel(Film::USER_IMPORTANCE))
-		kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_USER_IMPORTANCE_Buff);
+
+	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_ALPHA_Buff);
+	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_DEPTH_Buff);
+	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_POSITION_Buff);
+	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_GEOMETRY_NORMAL_Buff);
+	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_SHADING_NORMAL_Buff);
+	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_MATERIAL_ID_Buff);
+	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_DIRECT_DIFFUSE_Buff);
+	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_DIRECT_GLOSSY_Buff);
+	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_EMISSION_Buff);
+	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_INDIRECT_DIFFUSE_Buff);
+	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_INDIRECT_GLOSSY_Buff);
+	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_INDIRECT_SPECULAR_Buff);
+	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_MATERIAL_ID_MASK_Buff);
+	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_DIRECT_SHADOW_MASK_Buff);
+	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_INDIRECT_SHADOW_MASK_Buff);
+	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_UV_Buff);
+	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_RAYCOUNT_Buff);
+	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_BY_MATERIAL_ID_Buff);
+	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_IRRADIANCE_Buff);
+	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_OBJECT_ID_Buff);
+	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_OBJECT_ID_MASK_Buff);
+	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_BY_OBJECT_ID_Buff);
+	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_SAMPLECOUNT_Buff);
+	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_CONVERGENCE_Buff);
+	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_MATERIAL_ID_COLOR_Buff);
+	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_ALBEDO_Buff);
+	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_AVG_SHADING_NORMAL_Buff);
+	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_NOISE_Buff);
+	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_USER_IMPORTANCE_Buff);
 
 	// Film denoiser sample accumulator parameters
 	FilmDenoiser &denoiser = film->GetDenoiser();

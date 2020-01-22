@@ -29,7 +29,7 @@ OPENCL_FORCE_INLINE float3 VarianceClamping_GetWeightedFloat4(__global float *sr
 		return 0.f;
 }
 
-OPENCL_FORCE_INLINE void VarianceClamping_Clamp(__constant const Film* restrict film,
+OPENCL_FORCE_INLINE void VarianceClamping_Clamp(
 		__global SampleResult *sampleResult, const float sqrtVarianceClampMaxValue
 		FILM_PARAM_DECL) {
 	// Recover the current pixel value

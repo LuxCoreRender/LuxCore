@@ -146,8 +146,7 @@ void PathOCLBaseRenderEngine::InitGPUTaskConfiguration() {
 	taskConfig.pixelFilter = *oclPixelFilter;
 
 	// Film configuration
-	taskConfig.film.radianceGroupCount = film->GetRadianceGroupCount();
-	taskConfig.film.bcdDenoiserEnable = film->GetDenoiser().IsEnabled();
+	CompiledScene::CompileFilm(*film, taskConfig.film);
 }
 
 void PathOCLBaseRenderEngine::InitPixelFilterDistribution() {
