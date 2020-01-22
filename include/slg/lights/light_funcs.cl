@@ -53,8 +53,6 @@ OPENCL_FORCE_INLINE void EnvLightSource_FromLatLongMapping(const float s, const 
 // ConstantInfiniteLight
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_HAS_CONSTANTINFINITELIGHT)
-
 OPENCL_FORCE_NOT_INLINE float3 ConstantInfiniteLight_GetRadiance(__global const LightSource *constantInfiniteLight,
 		__global const BSDF *bsdf, const float3 dir, float *directPdfA
 		LIGHTS_PARAM_DECL) {
@@ -143,13 +141,9 @@ OPENCL_FORCE_NOT_INLINE float3 ConstantInfiniteLight_Illuminate(__global const L
 			VLOAD3F(constantInfiniteLight->notIntersectable.constantInfinite.color.c);
 }
 
-#endif
-
 //------------------------------------------------------------------------------
 // InfiniteLight
 //------------------------------------------------------------------------------
-
-#if defined(PARAM_HAS_INFINITELIGHT)
 
 OPENCL_FORCE_NOT_INLINE float3 InfiniteLight_GetRadiance(__global const LightSource *infiniteLight,
 		__global const BSDF *bsdf, const float3 dir, float *directPdfA
@@ -250,13 +244,9 @@ OPENCL_FORCE_NOT_INLINE float3 InfiniteLight_Illuminate(__global const LightSour
 			IMAGEMAPS_PARAM);
 }
 
-#endif
-
 //------------------------------------------------------------------------------
 // Sky2Light
 //------------------------------------------------------------------------------
-
-#if defined(PARAM_HAS_SKYLIGHT2)
 
 OPENCL_FORCE_INLINE float RiCosBetween(const float3 w1, const float3 w2) {
 	return clamp(dot(w1, w2), -1.f, 1.f);
@@ -383,13 +373,9 @@ OPENCL_FORCE_NOT_INLINE float3 SkyLight2_Illuminate(__global const LightSource *
 	return SkyLight2_ComputeRadiance(skyLight2, shadowRayDir);
 }
 
-#endif
-
 //------------------------------------------------------------------------------
 // SunLight
 //------------------------------------------------------------------------------
-
-#if defined(PARAM_HAS_SUNLIGHT)
 
 OPENCL_FORCE_NOT_INLINE float3 SunLight_GetRadiance(__global const LightSource *sunLight,
 		__global const BSDF *bsdf, const float3 dir, float *directPdfA) {
@@ -445,13 +431,9 @@ OPENCL_FORCE_NOT_INLINE float3 SunLight_Illuminate(__global const LightSource *s
 	return VLOAD3F(sunLight->notIntersectable.sun.color.c);
 }
 
-#endif
-
 //------------------------------------------------------------------------------
 // TriangleLight
 //------------------------------------------------------------------------------
-
-#if defined(PARAM_HAS_TRIANGLELIGHT)
 
 OPENCL_FORCE_NOT_INLINE float3 TriangleLight_GetRadiance(__global const LightSource *triLight,
 		 __global const HitPoint *hitPoint, float *directPdfA
@@ -594,13 +576,9 @@ OPENCL_FORCE_NOT_INLINE float3 TriangleLight_Illuminate(__global const LightSour
 			MATERIALS_PARAM) * emissionColor;
 }
 
-#endif
-
 //------------------------------------------------------------------------------
 // PointLight
 //------------------------------------------------------------------------------
-
-#if defined(PARAM_HAS_POINTLIGHT)
 
 OPENCL_FORCE_NOT_INLINE float3 PointLight_Illuminate(__global const LightSource *pointLight,
 		__global const BSDF *bsdf, const float time,
@@ -622,13 +600,9 @@ OPENCL_FORCE_NOT_INLINE float3 PointLight_Illuminate(__global const LightSource 
 	return VLOAD3F(pointLight->notIntersectable.point.emittedFactor.c) * (1.f / (4.f * M_PI_F));
 }
 
-#endif
-
 //------------------------------------------------------------------------------
 // SphereLight
 //------------------------------------------------------------------------------
-
-#if defined(PARAM_HAS_SPHERELIGHT) || defined(PARAM_HAS_MAPSPHERELIGHT)
 
 OPENCL_FORCE_INLINE bool SphereLight_SphereIntersect(const float3 absolutePos, const float radiusSquared,
 		const float3 rayOrig, const float3 rayDir, float *hitT) {
@@ -708,13 +682,9 @@ OPENCL_FORCE_NOT_INLINE float3 SphereLight_Illuminate(__global const LightSource
 	return VLOAD3F(sphereLight->notIntersectable.sphere.emittedFactor.c) * invArea * M_1_PI_F;
 }
 
-#endif
-
 //------------------------------------------------------------------------------
 // MapPointLight
 //------------------------------------------------------------------------------
-
-#if defined(PARAM_HAS_MAPPOINTLIGHT)
 
 OPENCL_FORCE_NOT_INLINE float3 MapPointLight_Illuminate(__global const LightSource *mapPointLight,
 		__global const BSDF *bsdf, const float time,
@@ -746,13 +716,9 @@ OPENCL_FORCE_NOT_INLINE float3 MapPointLight_Illuminate(__global const LightSour
 	return VLOAD3F(mapPointLight->notIntersectable.mapPoint.emittedFactor.c) * emissionColor;
 }
 
-#endif
-
 //------------------------------------------------------------------------------
 // MapSphereLight
 //------------------------------------------------------------------------------
-
-#if defined(PARAM_HAS_MAPSPHERELIGHT)
 
 OPENCL_FORCE_NOT_INLINE float3 MapSphereLight_Illuminate(__global const LightSource *mapSphereLight,
 		__global const BSDF *bsdf,	const float time, const float u0, const float u1,
@@ -775,13 +741,9 @@ OPENCL_FORCE_NOT_INLINE float3 MapSphereLight_Illuminate(__global const LightSou
 	return result * emissionColor;
 }
 
-#endif
-
 //------------------------------------------------------------------------------
 // SpotLight
 //------------------------------------------------------------------------------
-
-#if defined(PARAM_HAS_SPOTLIGHT)
 
 OPENCL_FORCE_INLINE float SpotLight_LocalFalloff(const float3 w, const float cosTotalWidth, const float cosFalloffStart) {
 	if (CosTheta(w) < cosTotalWidth)
@@ -823,13 +785,9 @@ OPENCL_FORCE_NOT_INLINE float3 SpotLight_Illuminate(__global const LightSource *
 			(falloff / fabs(CosTheta(localFromLight)));
 }
 
-#endif
-
 //------------------------------------------------------------------------------
 // ProjectionLight
 //------------------------------------------------------------------------------
-
-#if defined(PARAM_HAS_PROJECTIONLIGHT)
 
 OPENCL_FORCE_NOT_INLINE float3 ProjectionLight_Illuminate(__global const LightSource *projectionLight,
 		__global const BSDF *bsdf, const float time,
@@ -885,13 +843,9 @@ OPENCL_FORCE_NOT_INLINE float3 ProjectionLight_Illuminate(__global const LightSo
 	return c;
 }
 
-#endif
-
 //------------------------------------------------------------------------------
 // SharpDistantLight
 //------------------------------------------------------------------------------
-
-#if defined(PARAM_HAS_SHARPDISTANTLIGHT)
 
 OPENCL_FORCE_NOT_INLINE float3 SharpDistantLight_Illuminate(__global const LightSource *sharpDistantLight,
 		const float worldCenterX, const float worldCenterY, const float worldCenterZ,
@@ -920,13 +874,9 @@ OPENCL_FORCE_NOT_INLINE float3 SharpDistantLight_Illuminate(__global const Light
 			VLOAD3F(sharpDistantLight->notIntersectable.sharpDistant.color.c);
 }
 
-#endif
-
 //------------------------------------------------------------------------------
 // DistantLight
 //------------------------------------------------------------------------------
-
-#if defined(PARAM_HAS_DISTANTLIGHT)
 
 OPENCL_FORCE_NOT_INLINE float3 DistantLight_Illuminate(__global const LightSource *distantLight,
 		const float worldCenterX, const float worldCenterY, const float worldCenterZ,
@@ -960,13 +910,9 @@ OPENCL_FORCE_NOT_INLINE float3 DistantLight_Illuminate(__global const LightSourc
 			VLOAD3F(distantLight->notIntersectable.sharpDistant.color.c);
 }
 
-#endif
-
 //------------------------------------------------------------------------------
 // LaserLight
 //------------------------------------------------------------------------------
-
-#if defined(PARAM_HAS_LASERLIGHT)
 
 OPENCL_FORCE_NOT_INLINE float3 LaserLight_Illuminate(__global const LightSource *laserLight,
 		__global const BSDF *bsdf, const float time,
@@ -1012,8 +958,6 @@ OPENCL_FORCE_NOT_INLINE float3 LaserLight_Illuminate(__global const LightSource 
 	return VLOAD3F(laserLight->notIntersectable.laser.emittedFactor.c);
 }
 
-#endif
-
 //------------------------------------------------------------------------------
 // Generic light functions
 //------------------------------------------------------------------------------
@@ -1022,42 +966,29 @@ OPENCL_FORCE_NOT_INLINE float3 EnvLight_GetRadiance(__global const LightSource *
 		__global const BSDF *bsdf, const float3 dir, float *directPdfA
 		LIGHTS_PARAM_DECL) {
 	switch (light->type) {
-#if defined(PARAM_HAS_CONSTANTINFINITELIGHT)
 		case TYPE_IL_CONSTANT:
 			return ConstantInfiniteLight_GetRadiance(light,
 					bsdf,
 					dir, directPdfA
 					LIGHTS_PARAM);
-#endif
-#if defined(PARAM_HAS_INFINITELIGHT)
 		case TYPE_IL:
 			return InfiniteLight_GetRadiance(light,
 					bsdf,
 					dir, directPdfA
 					LIGHTS_PARAM);
-#endif
-#if defined(PARAM_HAS_SKYLIGHT2)
 		case TYPE_IL_SKY2:
 			return SkyLight2_GetRadiance(light,
 					bsdf,
 					dir, directPdfA
 					LIGHTS_PARAM);
-#endif
-#if defined(PARAM_HAS_SUNLIGHT)
 		case TYPE_SUN:
 			return SunLight_GetRadiance(light,
 					bsdf,
 					dir, directPdfA);
-#endif
-#if defined(PARAM_HAS_SHARPDISTANTLIGHT)
 		case TYPE_SHARPDISTANT:
 			// Just return Black
-#endif
-#if defined(PARAM_HAS_DISTANTLIGHT)
 		case TYPE_DISTANT:
 			// Just return Black
-#endif
-
 		default:
 			return BLACK;
 	}
@@ -1066,12 +997,8 @@ OPENCL_FORCE_NOT_INLINE float3 EnvLight_GetRadiance(__global const LightSource *
 OPENCL_FORCE_INLINE float3 IntersectableLight_GetRadiance(__global const LightSource *light,
 		 __global const HitPoint *hitPoint, float *directPdfA
 		LIGHTS_PARAM_DECL) {
-#if defined(PARAM_HAS_TRIANGLELIGHT)
 	return TriangleLight_GetRadiance(light, hitPoint, directPdfA
 			MATERIALS_PARAM);
-#else
-	return 0.f;
-#endif
 }
 
 OPENCL_FORCE_NOT_INLINE float3 Light_Illuminate(
@@ -1087,7 +1014,6 @@ OPENCL_FORCE_NOT_INLINE float3 Light_Illuminate(
 		__global Ray *shadowRay, float *directPdfW
 		LIGHTS_PARAM_DECL) {
 	switch (light->type) {
-#if defined(PARAM_HAS_CONSTANTINFINITELIGHT)
 		case TYPE_IL_CONSTANT:
 			return ConstantInfiniteLight_Illuminate(
 					light,
@@ -1095,8 +1021,6 @@ OPENCL_FORCE_NOT_INLINE float3 Light_Illuminate(
 					bsdf, time, u0, u1,
 					shadowRay, directPdfW
 					LIGHTS_PARAM);
-#endif
-#if defined(PARAM_HAS_INFINITELIGHT)
 		case TYPE_IL:
 			return InfiniteLight_Illuminate(
 					light,
@@ -1104,8 +1028,6 @@ OPENCL_FORCE_NOT_INLINE float3 Light_Illuminate(
 					bsdf, time, u0, u1,
 					shadowRay, directPdfW
 					LIGHTS_PARAM);
-#endif
-#if defined(PARAM_HAS_SKYLIGHT2)
 		case TYPE_IL_SKY2:
 			return SkyLight2_Illuminate(
 					light,
@@ -1113,16 +1035,12 @@ OPENCL_FORCE_NOT_INLINE float3 Light_Illuminate(
 					bsdf, time, u0, u1,
 					shadowRay, directPdfW
 					LIGHTS_PARAM);
-#endif
-#if defined(PARAM_HAS_SUNLIGHT)
 		case TYPE_SUN:
 			return SunLight_Illuminate(
 					light,
 					worldCenterX, worldCenterY, worldCenterZ, envRadius,
 					bsdf, time, u0, u1,
 					shadowRay, directPdfW);
-#endif
-#if defined(PARAM_HAS_TRIANGLELIGHT)
 		case TYPE_TRIANGLE:
 			return TriangleLight_Illuminate(
 					light,
@@ -1131,75 +1049,56 @@ OPENCL_FORCE_NOT_INLINE float3 Light_Illuminate(
 					passThroughEvent,
 					shadowRay, directPdfW
 					MATERIALS_PARAM);
-#endif
-#if defined(PARAM_HAS_POINTLIGHT)
 		case TYPE_POINT:
 			return PointLight_Illuminate(
 					light,
 					bsdf, time,
 					shadowRay, directPdfW);
-#endif
-#if defined(PARAM_HAS_MAPPOINTLIGHT)
 		case TYPE_MAPPOINT:
 			return MapPointLight_Illuminate(
 					light,
 					bsdf, time,
 					shadowRay, directPdfW
 					IMAGEMAPS_PARAM);
-#endif
-#if defined(PARAM_HAS_SPOTLIGHT)
 		case TYPE_SPOT:
 			return SpotLight_Illuminate(
 					light,
 					bsdf, time,
 					shadowRay, directPdfW);
-#endif
-#if defined(PARAM_HAS_PROJECTIONLIGHT)
 		case TYPE_PROJECTION:
 			return ProjectionLight_Illuminate(
 					light,
 					bsdf, time,
 					shadowRay, directPdfW
 					IMAGEMAPS_PARAM);
-#endif
-#if defined(PARAM_HAS_SHARPDISTANTLIGHT)
 		case TYPE_SHARPDISTANT:
 			return SharpDistantLight_Illuminate(
 					light,
 					worldCenterX, worldCenterY, worldCenterZ, envRadius,
 					bsdf, time,
 					shadowRay, directPdfW);
-#endif
-#if defined(PARAM_HAS_DISTANTLIGHT)
 		case TYPE_DISTANT:
 			return DistantLight_Illuminate(
 					light,
 					worldCenterX, worldCenterY, worldCenterZ, envRadius,
 					bsdf, time, u0, u1,
 					shadowRay, directPdfW);
-#endif
-#if defined(PARAM_HAS_LASERLIGHT)
 		case TYPE_LASER:
 			return LaserLight_Illuminate(
 					light,
 					bsdf, time,
 					shadowRay, directPdfW);
-#endif
-#if defined(PARAM_HAS_SPHERELIGHT)
 		case TYPE_SPHERE:
 			return SphereLight_Illuminate(
 					light,
 					bsdf, time, u0, u1,
 					shadowRay, directPdfW);
-#endif
-#if defined(PARAM_HAS_MAPSPHERELIGHT)
 		case TYPE_MAPSPHERE:
 			return MapSphereLight_Illuminate(
 					light,
 					bsdf, time, u0, u1,
 					shadowRay, directPdfW
 					IMAGEMAPS_PARAM);
-#endif
 		default:
 			return BLACK;
 	}
@@ -1207,56 +1106,21 @@ OPENCL_FORCE_NOT_INLINE float3 Light_Illuminate(
 
 OPENCL_FORCE_INLINE bool Light_IsEnvOrIntersectable(__global const LightSource *light) {
 	switch (light->type) {
-#if defined(PARAM_HAS_CONSTANTINFINITELIGHT)
 		case TYPE_IL_CONSTANT:
-#endif
-#if defined(PARAM_HAS_INFINITELIGHT)
 		case TYPE_IL:
-#endif
-#if defined(PARAM_HAS_SKYLIGHT2)
 		case TYPE_IL_SKY2:
-#endif
-#if defined(PARAM_HAS_SUNLIGHT)
 		case TYPE_SUN:
-#endif
-#if defined(PARAM_HAS_TRIANGLELIGHT)
 		case TYPE_TRIANGLE:
-#endif
-#if defined(PARAM_HAS_CONSTANTINFINITELIGHT) || defined(PARAM_HAS_INFINITELIGHT) || defined(PARAM_HAS_SKYLIGHT2) || defined(PARAM_HAS_SUNLIGHT) || defined(PARAM_HAS_TRIANGLELIGHT)
 			return true;
-#endif
-
-#if defined(PARAM_HAS_SPHERELIGHT)
 		case TYPE_SPHERE:
-#endif
-#if defined(PARAM_HAS_MAPSPHERELIGHT)
 		case TYPE_MAPSPHERE:
-#endif
-#if defined(PARAM_HAS_POINTLIGHT)
 		case TYPE_POINT:
-#endif
-#if defined(PARAM_HAS_MAPPOINTLIGHT)
 		case TYPE_MAPPOINT:
-#endif
-#if defined(PARAM_HAS_SPOTLIGHT)
 		case TYPE_SPOT:
-#endif
-#if defined(PARAM_HAS_PROJECTIONLIGHT)
 		case TYPE_PROJECTION:
-#endif
-#if defined(PARAM_HAS_SHARPDISTANTLIGHT)
 		case TYPE_SHARPDISTANT:
-#endif
-#if defined(PARAM_HAS_DISTANTLIGHT)
 		case TYPE_DISTANT:
-#endif
-#if defined(PARAM_HAS_LASERLIGHT)
 		case TYPE_LASER:
-#endif
-#if defined(PARAM_HAS_POINTLIGHT) || defined(PARAM_HAS_MAPPOINTLIGHT) || defined(PARAM_HAS_SPOTLIGHT) || defined(PARAM_HAS_PROJECTIONLIGHT) || defined(PARAM_HAS_SHARPDISTANTLIGHT) || defined(PARAM_HAS_DISTANTLIGHT) || defined(PARAM_HAS_LASERLIGHT) || defined(PARAM_HAS_MAPSPHERELIGHT)
-			return false;
-#endif
-
 		default:
 			return false;
 	}
@@ -1265,7 +1129,6 @@ OPENCL_FORCE_INLINE bool Light_IsEnvOrIntersectable(__global const LightSource *
 OPENCL_FORCE_INLINE float Light_GetAvgPassThroughTransparency(
 		__global const LightSource *light
 		LIGHTS_PARAM_DECL) {
-#if defined(PARAM_HAS_TRIANGLELIGHT)
 	if (light->type == TYPE_TRIANGLE) {
 		const uint meshIndex = light->triangle.meshIndex;
 		const uint materialIndex = sceneObjs[meshIndex].materialIndex;
@@ -1273,7 +1136,4 @@ OPENCL_FORCE_INLINE float Light_GetAvgPassThroughTransparency(
 		return mats[materialIndex].avgPassThroughTransparency;
 	} else
 		return 1.f;
-#else
-	return 1.f;
-#endif
 }

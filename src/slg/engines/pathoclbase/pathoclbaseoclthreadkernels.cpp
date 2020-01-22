@@ -95,6 +95,9 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			throw runtime_error("Unknown accelerator in PathOCLBaseRenderThread::InitKernels()");
 	}
 
+	if (renderEngine->usePixelAtomics)
+		ssParams << " -D PARAM_USE_PIXEL_ATOMICS";
+
 	//--------------------------------------------------------------------------
 	// Textures
 	//--------------------------------------------------------------------------
@@ -304,47 +307,6 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 	}
 	if (cscene->IsMaterialCompiled(DISNEY))
 		ssParams << " -D PARAM_ENABLE_MAT_DISNEY";
-
-	//--------------------------------------------------------------------------
-	// Light sources
-	//--------------------------------------------------------------------------
-
-	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_IL))
-		ssParams << " -D PARAM_HAS_INFINITELIGHT";
-	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_IL_CONSTANT))
-		ssParams << " -D PARAM_HAS_CONSTANTINFINITELIGHT";
-	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_IL_SKY))
-		ssParams << " -D PARAM_HAS_SKYLIGHT";
-	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_IL_SKY2))
-		ssParams << " -D PARAM_HAS_SKYLIGHT2";
-	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_SUN))
-		ssParams << " -D PARAM_HAS_SUNLIGHT";
-	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_SHARPDISTANT))
-		ssParams << " -D PARAM_HAS_SHARPDISTANTLIGHT";
-	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_DISTANT))
-		ssParams << " -D PARAM_HAS_DISTANTLIGHT";
-	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_POINT))
-		ssParams << " -D PARAM_HAS_POINTLIGHT";
-	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_MAPPOINT))
-		ssParams << " -D PARAM_HAS_MAPPOINTLIGHT";
-	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_SPOT))
-		ssParams << " -D PARAM_HAS_SPOTLIGHT";
-	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_PROJECTION))
-		ssParams << " -D PARAM_HAS_PROJECTIONLIGHT";
-	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_LASER))
-		ssParams << " -D PARAM_HAS_LASERLIGHT";
-	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_TRIANGLE))
-		ssParams << " -D PARAM_HAS_TRIANGLELIGHT";
-	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_SPHERE))
-		ssParams << " -D PARAM_HAS_SPHERELIGHT";
-	if (renderEngine->compiledScene->IsLightSourceCompiled(TYPE_MAPSPHERE))
-		ssParams << " -D PARAM_HAS_MAPSPHERELIGHT";
-
-	if (renderEngine->compiledScene->hasEnvLights)
-		ssParams << " -D PARAM_HAS_ENVLIGHTS";
-
-	if (renderEngine->usePixelAtomics)
-		ssParams << " -D PARAM_USE_PIXEL_ATOMICS";
 
 	//--------------------------------------------------------------------------
 

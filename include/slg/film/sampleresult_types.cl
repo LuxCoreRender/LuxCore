@@ -25,7 +25,7 @@
 //------------------------------------------------------------------------------
 
 typedef struct {
-	uint pixelX, pixelY;
+	unsigned int pixelX, pixelY;
 	float filmX, filmY;
 
 	Spectrum radiancePerPixelNormalized[FILM_MAX_RADIANCE_GROUP_COUNT];
@@ -36,9 +36,9 @@ typedef struct {
 	Normal shadingNormal;
 	// Note: MATERIAL_ID_COLOR, MATERIAL_ID_MASK and BY_MATERIAL_ID are
 	// calculated starting from materialID field
-	uint materialID;
+	unsigned int materialID;
 	// Note: OBJECT_ID_MASK and BY_OBJECT_ID are calculated starting from objectID field
-	uint objectID;
+	unsigned int objectID;
 	Spectrum directDiffuse;
 	Spectrum directGlossy;
 	Spectrum emission;

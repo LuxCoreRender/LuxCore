@@ -146,7 +146,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 
 	// Nothing was hit, add environmental lights radiance
 
-#if defined(PARAM_HAS_ENVLIGHTS)
 	bool checkDirectLightHit = true;
 	
 	checkDirectLightHit = checkDirectLightHit &&
@@ -170,7 +169,6 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 				sampleResult
 				LIGHTS_PARAM);
 	}
-#endif
 
 	if (pathInfo->depth.depth == 0) {
 		sampleResult->alpha = 0.f;

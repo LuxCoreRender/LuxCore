@@ -52,21 +52,6 @@
 //  PARAM_ENABLE_TEX_SCALE
 //  etc.
 
-// (optional)
-//  PARAM_HAS_INFINITELIGHT
-//  PARAM_HAS_SUNLIGHT
-//  PARAM_HAS_SKYLIGHT2
-//  PARAM_HAS_POINTLIGHT
-//  PARAM_HAS_MAPPOINTLIGHT
-//  PARAM_HAS_SPOTLIGHT
-//  PARAM_HAS_PROJECTIONLIGHT
-//  PARAM_HAS_CONSTANTINFINITELIGHT
-//  PARAM_HAS_SHARPDISTANTLIGHT
-//  PARAM_HAS_DISTANTLIGHT
-//  PARAM_HAS_LASERLIGHT
-//  PARAM_HAS_TRIANGLELIGHT
-//  PARAM_HAS_ENVLIGHTS (if it has any env. light)
-
 /*void MangleMemory(__global unsigned char *ptr, const size_t size) {
 	Seed seed;
 	Rnd_Init(7 + get_global_id(0), &seed);
@@ -212,7 +197,6 @@ OPENCL_FORCE_INLINE bool CheckDirectHitVisibilityFlags(__global const LightSourc
 	return false;
 }
 
-#if defined(PARAM_HAS_ENVLIGHTS)
 OPENCL_FORCE_NOT_INLINE void DirectHitInfiniteLight(__constant const Film* restrict film,
 		__global EyePathInfo *pathInfo, __global const Spectrum* restrict pathThroughput,
 		const __global Ray *ray, __global const BSDF *bsdf, __global SampleResult *sampleResult
@@ -256,7 +240,6 @@ OPENCL_FORCE_NOT_INLINE void DirectHitInfiniteLight(__constant const Film* restr
 		}
 	}
 }
-#endif
 
 OPENCL_FORCE_NOT_INLINE void DirectHitFiniteLight(__constant const Film* restrict film,
 		__global EyePathInfo *pathInfo,

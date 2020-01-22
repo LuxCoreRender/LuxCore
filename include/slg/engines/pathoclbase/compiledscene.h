@@ -50,7 +50,6 @@ public:
 
 	bool IsMaterialCompiled(const MaterialType type) const;
 	bool IsTextureCompiled(const TextureType type) const;
-	bool IsLightSourceCompiled(const LightSourceType type) const;
 
 	bool HasBumpMaps() const;
 
@@ -83,7 +82,6 @@ public:
 	std::vector<slg::ocl::SceneObject> sceneObjs;
 
 	// Compiled Lights
-	boost::unordered_set<LightSourceType> usedLightSourceTypes;
 	std::vector<slg::ocl::LightSource> lightDefs;
 	// Additional light related information
 	std::vector<u_int> envLightIndices;
@@ -106,8 +104,6 @@ public:
 	std::vector<slg::ocl::IndexBVHArrayNode> elvcBVHArrayNode;
 	float elvcRadius2, elvcNormalCosAngle;
 	
-	bool hasEnvLights;
-
 	// Compiled Materials (and Volumes)
 	boost::unordered_set<MaterialType> usedMaterialTypes;
 	std::vector<slg::ocl::Material> mats;
@@ -143,7 +139,6 @@ private:
 	// included by default have source code dynamically generated (because they
 	// reference always other textures)
 	void AddEnabledMaterialCode();
-	void AddEnabledLightCode();
 
 	void AddToImageMapMem(slg::ocl::ImageMap &im, void *data, const size_t memSize);
 

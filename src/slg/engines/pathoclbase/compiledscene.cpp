@@ -108,10 +108,6 @@ bool CompiledScene::IsMaterialCompiled(const MaterialType type) const {
 	return (usedMaterialTypes.find(type) != usedMaterialTypes.end());
 }
 
-bool CompiledScene::IsLightSourceCompiled(const LightSourceType type) const {
-	return (usedLightSourceTypes.find(type) != usedLightSourceTypes.end());
-}
-
 bool CompiledScene::IsTextureCompiled(const TextureType type) const {
 	return (usedTextureTypes.find(type) != usedTextureTypes.end());
 }
