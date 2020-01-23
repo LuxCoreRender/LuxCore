@@ -66,6 +66,7 @@ OPENCL_FORCE_NOT_INLINE float3 GenericTexture_Bump(
 
 	// Restore HitPoint
 	VSTORE3F(origP, &hitPoint->p.x);
+	VSTORE3F(origShadeN, &hitPoint->shadeN.x);
 	VSTORE2F(origUV, &hitPoint->uv[0].u);
 
 	// Compute the new dpdu and dpdv

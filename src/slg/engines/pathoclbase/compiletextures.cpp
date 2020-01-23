@@ -1415,8 +1415,9 @@ static void AddTextureBumpSource(stringstream &source, const vector<slg::ocl::Te
 						"\t\tconst float sampleDistance\n"
 						"\t\tTEXTURES_PARAM_DECL) {\n"
 						"\tconst float3 shadeN = VLOAD3F(&hitPoint->shadeN.x);\n"
-						"\tconst float3 u = normalize(VLOAD3F(&hitPoint->dpdu.x));\n"
-						"\tconst float3 v = normalize(cross(shadeN, u));\n"
+						"\tconst float3 dpdu = VLOAD3F(&hitPoint->dpdu.x);\n"
+						"\tconst float3 u = normalize(dpdu);\n"
+						"\tconst float3 v = normalize(cross(shadeN, dpdu));\n"
 						"\tfloat3 n = " << AddTextureBumpSourceCall(texs, tex->mixTex.tex1Index) << ";\n"
 						"\tfloat nn = dot(n, shadeN);\n"
 						"\tconst float du1 = dot(n, u) / nn;\n"
@@ -1432,8 +1433,8 @@ static void AddTextureBumpSource(stringstream &source, const vector<slg::ocl::Te
 						"\tconst float t1 = " << AddTextureSourceCall(texs, "Float", tex->mixTex.tex1Index) << ";\n"
 						"\tconst float t2 = " << AddTextureSourceCall(texs, "Float", tex->mixTex.tex2Index) << ";\n"
 						"\tconst float amt = clamp(" << AddTextureSourceCall(texs, "Float", tex->mixTex.amountTexIndex) << ", 0.f, 1.f);\n"
-						"\tconst float du = mix(du1, du2, amt) + dua * (t2 - t1);\n"
-						"\tconst float dv = mix(dv1, dv2, amt) + dva * (t2 - t1);\n"
+						"\tconst float du = Lerp(amt, du1, du2) + dua * (t2 - t1);\n"
+						"\tconst float dv = Lerp(amt, dv1, dv2) + dva * (t2 - t1);\n"
 						"\treturn normalize(shadeN + du * u + dv * v);\n"
 						"}\n";
 				source << "#endif\n";
