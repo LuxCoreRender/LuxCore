@@ -224,7 +224,7 @@ OPENCL_FORCE_INLINE void SobolSampler_InitNewSample(
 		// This one works:
 		//
 		// The array of fields is attached to the SamplerSharedData structure
-		__global uint *pixelPasses = SobolSampler_GetPassesPtr(samplerSharedData) + pixelIndex;
+		__global uint *pixelPass = SobolSampler_GetPassesPtr(samplerSharedData) + pixelIndex;
 		// Get the pass to do
 		uint oldVal, newVal;
 		do {
