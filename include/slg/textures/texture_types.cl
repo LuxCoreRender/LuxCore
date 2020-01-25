@@ -18,6 +18,24 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+//------------------------------------------------------------------------------
+// Texture evaluation op
+//------------------------------------------------------------------------------
+
+typedef enum {
+	EVAL_FLOAT,
+	EVAL_SPECTRUM
+} TextureEvalOpType;
+
+typedef struct {
+	unsigned int textIndex;
+	TextureEvalOpType evalType;
+} TextureEvalOp;
+
+//------------------------------------------------------------------------------
+// Textures
+//------------------------------------------------------------------------------
+
 #define DUDV_VALUE 0.001f
 
 typedef enum {
@@ -417,6 +435,10 @@ typedef struct {
 
 typedef struct {
 	TextureType type;
+
+	unsigned int evalFloatOpStartIndex, evalFloatOpLength;
+	unsigned int evalSpectrumOpStartIndex, evalSpectrumOpLength;
+
 	union {
 		BlenderBlendTexParam blenderBlend;
  		BlenderCloudsTexParam blenderClouds;
@@ -483,7 +505,15 @@ typedef struct {
 
 #if defined(SLG_OPENCL_KERNEL)
 
-#define TEXTURES_PARAM_DECL , __global const Texture* restrict texs IMAGEMAPS_PARAM_DECL
-#define TEXTURES_PARAM , texs IMAGEMAPS_PARAM
+#define TEXTURES_PARAM_DECL \
+	, __global const Texture* restrict texs \
+	, __global const TextureEvalOp* restrict texEvalOps \
+	, __global const float* restrict texEvalStacks \
+	IMAGEMAPS_PARAM_DECL
+#define TEXTURES_PARAM \
+	, texs \
+	, texEvalOps \
+	, texEvalStacks \
+	IMAGEMAPS_PARAM
 
 #endif

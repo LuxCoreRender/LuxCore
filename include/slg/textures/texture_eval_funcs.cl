@@ -1,4 +1,4 @@
-#line 2 "hitpoint_types.cl"
+#line 2 "texture_eval_funcs.cl"
 
 /***************************************************************************
  * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
@@ -18,38 +18,25 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-typedef struct {
-	// The incoming direction. It is the eyeDir when fromLight = false and
-	// lightDir when fromLight = true
-	Vector fixedDir;
-	Point p;
-	Normal geometryN;
-	Normal interpolatedN;
-	Normal shadeN;
+//------------------------------------------------------------------------------
+// Texture evaluation functions
+//------------------------------------------------------------------------------
 
-	UV uv[EXTMESH_MAX_DATA_COUNT];
-	Spectrum color[EXTMESH_MAX_DATA_COUNT];
-	float alpha[EXTMESH_MAX_DATA_COUNT];
+OPENCL_FORCE_NOT_INLINE float Texture_GetFloatValue(const uint texIndex,
+		__global const HitPoint *hitPoint
+		TEXTURES_PARAM_DECL) {
+	return 0.f;
+}
 
-	// Note: dpdu and dpdv are orthogonal to shading normal (i.e not geometry normal)
-	Vector dpdu, dpdv;
-	Normal dndu, dndv;
+OPENCL_FORCE_NOT_INLINE float3 Texture_GetSpectrumValue(const uint texIndex,
+		__global const HitPoint *hitPoint
+		TEXTURES_PARAM_DECL) {
+	return 0.f;
+}
 
-	// passThroughEvent can be stored here in a path state even before of
-	// BSDF initialization (while tracing the next path vertex ray)
-	float passThroughEvent;
-
-	// Transformation from local object to world reference frame
-	Transform localToWorld;
-
-	// Interior and exterior volume (this includes volume priority system
-	// computation and scene default world volume)
-	unsigned int interiorVolumeIndex, exteriorVolumeIndex;
-	// Material code (i.e. glass, etc.) doesn't have access to materials list
-	// so I use HitPoint to carry texture index information
-	unsigned int interiorIorTexIndex, exteriorIorTexIndex;
-
-	unsigned int objectID;
-
-	int intoObject, throughShadowTransparency;
-} HitPoint;
+OPENCL_FORCE_NOT_INLINE float3 Texture_Bump(const uint texIndex,
+		__global HitPoint *hitPoint,
+		const float sampleDistance
+		TEXTURES_PARAM_DECL) {
+	return VLOAD3F(&hitPoint->shadeN.x);
+}

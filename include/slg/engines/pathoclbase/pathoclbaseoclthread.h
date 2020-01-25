@@ -173,11 +173,6 @@ protected:
 
 	void EnqueueAdvancePathsKernel(cl::CommandQueue &oclQueue);
 
-	// OpenCL structure size
-	size_t GetOpenCLHitPointSize() const;
-	size_t GetOpenCLBSDFSize() const;
-	size_t GetEyePathInfoSize() const;
-
 	u_int threadIndex;
 	luxrays::OpenCLIntersectionDevice *intersectionDevice;
 	PathOCLBaseRenderEngine *renderEngine;
@@ -190,6 +185,8 @@ protected:
 	// Scene buffers
 	cl::Buffer *materialsBuff;
 	cl::Buffer *texturesBuff;
+	cl::Buffer *textureEvalOpsBuff;
+	cl::Buffer *textureEvalStackBuff;
 	cl::Buffer *meshIDBuff;
 	cl::Buffer *meshDescsBuff;
 	cl::Buffer *scnObjsBuff;

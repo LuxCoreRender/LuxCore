@@ -86,21 +86,17 @@ OPENCL_FORCE_NOT_INLINE float3 GenericTexture_Bump(
 // ConstFloatTexture
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_ENABLE_TEX_CONST_FLOAT)
 OPENCL_FORCE_INLINE float3 ConstFloatTexture_Bump(__global HitPoint *hitPoint) {
 	return VLOAD3F(&hitPoint->shadeN.x);
 }
-#endif
 
 //------------------------------------------------------------------------------
 // ConstFloat3Texture
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_ENABLE_TEX_CONST_FLOAT3)
 OPENCL_FORCE_INLINE float3 ConstFloat3Texture_Bump(__global HitPoint *hitPoint) {
 	return VLOAD3F(&hitPoint->shadeN.x);
 }
-#endif
 
 //------------------------------------------------------------------------------
 // FresnelConstTexture
@@ -126,7 +122,6 @@ OPENCL_FORCE_INLINE float3 FresnelColorTexture_Bump(__global HitPoint *hitPoint)
 // ImageMapTexture
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_ENABLE_TEX_IMAGEMAP)
 OPENCL_FORCE_NOT_INLINE float3 ImageMapTexture_Bump(__global const Texture *tex, __global HitPoint *hitPoint,
 		const float sampleDistance
 		IMAGEMAPS_PARAM_DECL) {
@@ -145,7 +140,6 @@ OPENCL_FORCE_NOT_INLINE float3 ImageMapTexture_Bump(__global const Texture *tex,
 
 	return ((dot(n, shadeN) < 0.f) ? -1.f : 1.f) * n;
 }
-#endif
 
 //------------------------------------------------------------------------------
 // NormalMapTexture

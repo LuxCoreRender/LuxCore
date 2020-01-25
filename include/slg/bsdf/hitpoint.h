@@ -31,6 +31,12 @@ namespace slg {
 
 // OpenCL data types
 namespace ocl {
+using luxrays::ocl::Vector;
+using luxrays::ocl::Point;
+using luxrays::ocl::Normal;
+using luxrays::ocl::UV;
+using luxrays::ocl::Transform;
+using luxrays::ocl::Spectrum;
 #include "slg/bsdf/hitpoint_types.cl"
 }
 

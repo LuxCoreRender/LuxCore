@@ -140,9 +140,7 @@ OPENCL_FORCE_NOT_INLINE void BSDF_InitVolume(
 	VSTORE3F((float3)(0.f, 0.f, 0.f), &bsdf->hitPoint.dndu.x);
 	VSTORE3F((float3)(0.f, 0.f, 0.f), &bsdf->hitPoint.dndv.x);
 
-#if defined(PARAM_ENABLE_TEX_OBJECTID) || defined(PARAM_ENABLE_TEX_OBJECTID_COLOR) || defined(PARAM_ENABLE_TEX_OBJECTID_NORMALIZED)
 	bsdf->hitPoint.objectID = NULL_INDEX;
-#endif
 
 	// Build the local reference system
 	Frame_SetFromZ(&bsdf->frame, geometryN);

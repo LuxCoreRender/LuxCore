@@ -105,8 +105,6 @@ OPENCL_FORCE_NOT_INLINE float3 ImageMapTexture_ConstEvaluateSpectrum(__global co
 // Scale texture
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_ENABLE_TEX_SCALE)
-
 OPENCL_FORCE_NOT_INLINE float ScaleTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
 		const float tex1, const float tex2) {
 	return tex1 * tex2;
@@ -116,8 +114,6 @@ OPENCL_FORCE_NOT_INLINE float3 ScaleTexture_ConstEvaluateSpectrum(__global const
 		const float3 tex1, const float3 tex2) {
 	return tex1 * tex2;
 }
-
-#endif
 
 //------------------------------------------------------------------------------
 // FresnelApproxN & FresnelApproxK texture
