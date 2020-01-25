@@ -143,7 +143,7 @@ void PathOCLBaseOCLRenderThread::InitTextures() {
 			sizeof(slg::ocl::TextureEvalOp) * renderEngine->compiledScene->texEvalOps.size(), "Texture evaluation ops");
 
 	const u_int taskCount = renderEngine->taskCount;
-	AllocOCLBufferRO(&textureEvalOpsBuff, &renderEngine->compiledScene->texEvalOps[0],
+	AllocOCLBufferRW(&textureEvalStackBuff, 
 			sizeof(float) * renderEngine->compiledScene->maxTextureEvalStackSize *
 			taskCount, "Texture evaluation stacks");
 }

@@ -122,7 +122,7 @@ OPENCL_FORCE_INLINE float3 FresnelColorTexture_Bump(__global HitPoint *hitPoint)
 // ImageMapTexture
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_NOT_INLINE float3 ImageMapTexture_Bump(__global const Texture *tex, __global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float3 ImageMapTexture_Bump(__global const Texture* restrict tex, __global HitPoint *hitPoint,
 		const float sampleDistance
 		IMAGEMAPS_PARAM_DECL) {
 	float2 du, dv;
@@ -147,7 +147,7 @@ OPENCL_FORCE_NOT_INLINE float3 ImageMapTexture_Bump(__global const Texture *tex,
 
 #if defined(PARAM_ENABLE_TEX_NORMALMAP)
 OPENCL_FORCE_NOT_INLINE float3 NormalMapTexture_Bump(
-		__global const Texture *tex,
+		__global const Texture* restrict tex,
 		__global HitPoint *hitPoint,
 		const float sampleDistance
 		TEXTURES_PARAM_DECL) {
@@ -187,7 +187,7 @@ OPENCL_FORCE_INLINE float3 TriplanarTexture_Bump(
 		__global HitPoint *hitPoint,
 		const float sampleDistance
 		TEXTURES_PARAM_DECL) {
-	__global const Texture *tex = &texs[texIndex];
+	__global const Texture* restrict tex = &texs[texIndex];
 
 	if (tex->triplanarTex.enableUVlessBumpMap) {
 		// Calculate bump map value at intersection point

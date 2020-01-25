@@ -479,7 +479,8 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 		, __global const Material* restrict mats \
 		, __global const Texture* restrict texs \
 		, __global const TextureEvalOp* restrict texEvalOps \
-		, __global const float* restrict texEvalStacks \
+		, __global float *texEvalStacks \
+		, const uint maxTextureEvalStackSize \
 		, __global const SceneObject* restrict sceneObjs \
 		, __global const ExtMesh* restrict meshDescs \
 		, __global const Point* restrict vertices \

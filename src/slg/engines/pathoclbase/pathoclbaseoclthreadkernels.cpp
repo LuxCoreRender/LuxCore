@@ -427,26 +427,37 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 
 	// AdvancePaths kernel (Micro-Kernels)
 
+	size_t workGroupSize;
 	CompileKernel(program, &advancePathsKernel_MK_RT_NEXT_VERTEX, &advancePathsWorkGroupSize,
 			"AdvancePaths_MK_RT_NEXT_VERTEX");
-	CompileKernel(program, &advancePathsKernel_MK_HIT_NOTHING, &advancePathsWorkGroupSize,
+	CompileKernel(program, &advancePathsKernel_MK_HIT_NOTHING, &workGroupSize,
 			"AdvancePaths_MK_HIT_NOTHING");
-	CompileKernel(program, &advancePathsKernel_MK_HIT_OBJECT, &advancePathsWorkGroupSize,
+	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
+	CompileKernel(program, &advancePathsKernel_MK_HIT_OBJECT, &workGroupSize,
 			"AdvancePaths_MK_HIT_OBJECT");
-	CompileKernel(program, &advancePathsKernel_MK_RT_DL, &advancePathsWorkGroupSize,
+	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
+	CompileKernel(program, &advancePathsKernel_MK_RT_DL, &workGroupSize,
 			"AdvancePaths_MK_RT_DL");
-	CompileKernel(program, &advancePathsKernel_MK_DL_ILLUMINATE, &advancePathsWorkGroupSize,
+	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
+	CompileKernel(program, &advancePathsKernel_MK_DL_ILLUMINATE, &workGroupSize,
 			"AdvancePaths_MK_DL_ILLUMINATE");
-	CompileKernel(program, &advancePathsKernel_MK_DL_SAMPLE_BSDF, &advancePathsWorkGroupSize,
+	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
+	CompileKernel(program, &advancePathsKernel_MK_DL_SAMPLE_BSDF, &workGroupSize,
 			"AdvancePaths_MK_DL_SAMPLE_BSDF");
-	CompileKernel(program, &advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY, &advancePathsWorkGroupSize,
+	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
+	CompileKernel(program, &advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY, &workGroupSize,
 			"AdvancePaths_MK_GENERATE_NEXT_VERTEX_RAY");
-	CompileKernel(program, &advancePathsKernel_MK_SPLAT_SAMPLE, &advancePathsWorkGroupSize,
+	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
+	CompileKernel(program, &advancePathsKernel_MK_SPLAT_SAMPLE, &workGroupSize,
 			"AdvancePaths_MK_SPLAT_SAMPLE");
-	CompileKernel(program, &advancePathsKernel_MK_NEXT_SAMPLE, &advancePathsWorkGroupSize,
+	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
+	CompileKernel(program, &advancePathsKernel_MK_NEXT_SAMPLE, &workGroupSize,
 			"AdvancePaths_MK_NEXT_SAMPLE");
-	CompileKernel(program, &advancePathsKernel_MK_GENERATE_CAMERA_RAY, &advancePathsWorkGroupSize,
+	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
+	CompileKernel(program, &advancePathsKernel_MK_GENERATE_CAMERA_RAY, &workGroupSize,
 			"AdvancePaths_MK_GENERATE_CAMERA_RAY");
+	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
+	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] AdvancePaths_MK_* workgroup size: " << advancePathsWorkGroupSize);
 
 	const double tEnd = WallClockTime();
 	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
@@ -513,6 +524,7 @@ void PathOCLBaseOCLRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePa
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), texturesBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), textureEvalOpsBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), textureEvalStackBuff);
+	advancePathsKernel->setArg(argIndex++, cscene->maxTextureEvalStackSize);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), scnObjsBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), meshDescsBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), vertsBuff);

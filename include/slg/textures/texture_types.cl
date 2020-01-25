@@ -28,7 +28,7 @@ typedef enum {
 } TextureEvalOpType;
 
 typedef struct {
-	unsigned int textIndex;
+	unsigned int texIndex;
 	TextureEvalOpType evalType;
 } TextureEvalOp;
 
@@ -508,12 +508,14 @@ typedef struct {
 #define TEXTURES_PARAM_DECL \
 	, __global const Texture* restrict texs \
 	, __global const TextureEvalOp* restrict texEvalOps \
-	, __global const float* restrict texEvalStacks \
+	, __global float *texEvalStacks \
+	, const uint maxTextureEvalStackSize \
 	IMAGEMAPS_PARAM_DECL
 #define TEXTURES_PARAM \
 	, texs \
 	, texEvalOps \
 	, texEvalStacks \
+	, maxTextureEvalStackSize \
 	IMAGEMAPS_PARAM
 
 #endif

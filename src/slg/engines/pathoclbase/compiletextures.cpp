@@ -215,7 +215,7 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex, const slg::ocl::Tex
 
 	slg::ocl::TextureEvalOp op;
 
-	op.textIndex = texIndex;
+	op.texIndex = texIndex;
 	op.evalType = opType;
 
 	texEvalOps.push_back(op);
@@ -246,6 +246,7 @@ void CompiledScene::CompileTextureOps() {
 	}
 
 	SLG_LOG("Texture evaluation ops count: " << texEvalOps.size());
+	SLG_LOG("Texture evaluation max. stack size: " << maxTextureEvalStackSize);
 }
 
 void CompiledScene::CompileTextures() {

@@ -20,56 +20,37 @@
 
 //------------------------------------------------------------------------------
 // ConstFloat texture
-//
-// NOTE: the code for this type of texture is not dynamically generated in order
-// to reduce the number of kernels compilations
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_ENABLE_TEX_CONST_FLOAT)
-
-OPENCL_FORCE_INLINE float ConstFloatTexture_ConstEvaluateFloat(__global const Texture *tex) {
+OPENCL_FORCE_INLINE float ConstFloatTexture_ConstEvaluateFloat(__global const Texture* restrict tex) {
 	return tex->constFloat.value;
 }
 
-OPENCL_FORCE_INLINE float3 ConstFloatTexture_ConstEvaluateSpectrum(__global const Texture *tex) {
+OPENCL_FORCE_INLINE float3 ConstFloatTexture_ConstEvaluateSpectrum(__global const Texture* restrict tex) {
 	return tex->constFloat.value;
 }
 
 // Note: ConstFloatTexture_Bump() is defined in texture_bump_funcs.cl
 
-#endif
-
 //------------------------------------------------------------------------------
 // ConstFloat3 texture
-//
-// NOTE: the code for this type of texture is not dynamically generated in order
-// to reduce the number of kernels compilations
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_ENABLE_TEX_CONST_FLOAT3)
-
-OPENCL_FORCE_INLINE float ConstFloat3Texture_ConstEvaluateFloat(__global const Texture *tex) {
+OPENCL_FORCE_INLINE float ConstFloat3Texture_ConstEvaluateFloat(__global const Texture* restrict tex) {
 	return Spectrum_Y(VLOAD3F(tex->constFloat3.color.c));
 }
 
-OPENCL_FORCE_INLINE float3 ConstFloat3Texture_ConstEvaluateSpectrum(__global const Texture *tex) {
+OPENCL_FORCE_INLINE float3 ConstFloat3Texture_ConstEvaluateSpectrum(__global const Texture* restrict tex) {
 	return VLOAD3F(tex->constFloat3.color.c);
 }
 
 // Note: ConstFloat3Texture_Bump() is defined in texture_bump_funcs.cl
 
-#endif
-
 //------------------------------------------------------------------------------
 // ImageMap texture
-//
-// NOTE: the code for this type of texture is not dynamically generated in order
-// to reduce the number of kernels compilations
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_ENABLE_TEX_IMAGEMAP)
-
-OPENCL_FORCE_NOT_INLINE float ImageMapTexture_ConstEvaluateFloat(__global const Texture *tex,
+OPENCL_FORCE_INLINE float ImageMapTexture_ConstEvaluateFloat(__global const Texture* restrict tex,
 		__global const HitPoint *hitPoint
 		IMAGEMAPS_PARAM_DECL) {
 	__global const ImageMap *imageMap = &imageMapDescs[tex->imageMapTex.imageMapIndex];
@@ -82,7 +63,7 @@ OPENCL_FORCE_NOT_INLINE float ImageMapTexture_ConstEvaluateFloat(__global const 
 			IMAGEMAPS_PARAM);
 }
 
-OPENCL_FORCE_NOT_INLINE float3 ImageMapTexture_ConstEvaluateSpectrum(__global const Texture *tex,
+OPENCL_FORCE_INLINE float3 ImageMapTexture_ConstEvaluateSpectrum(__global const Texture* restrict tex,
 		__global const HitPoint *hitPoint
 		IMAGEMAPS_PARAM_DECL) {
 	__global const ImageMap *imageMap = &imageMapDescs[tex->imageMapTex.imageMapIndex];
@@ -99,18 +80,16 @@ OPENCL_FORCE_NOT_INLINE float3 ImageMapTexture_ConstEvaluateSpectrum(__global co
 
 // Note: ImageMapTexture_Bump() is defined in texture_bump_funcs.cl
 
-#endif
-
 //------------------------------------------------------------------------------
 // Scale texture
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_NOT_INLINE float ScaleTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
+OPENCL_FORCE_INLINE float ScaleTexture_ConstEvaluateFloat(
 		const float tex1, const float tex2) {
 	return tex1 * tex2;
 }
 
-OPENCL_FORCE_NOT_INLINE float3 ScaleTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
+OPENCL_FORCE_INLINE float3 ScaleTexture_ConstEvaluateSpectrum(
 		const float3 tex1, const float3 tex2) {
 	return tex1 * tex2;
 }
@@ -906,11 +885,11 @@ OPENCL_FORCE_NOT_INLINE float3 HitPointGreyTexture_ConstEvaluateSpectrum(__globa
 
 #if defined(PARAM_ENABLE_TEX_NORMALMAP)
 
-OPENCL_FORCE_INLINE float NormalMapTexture_ConstEvaluateFloat(__global const Texture *tex) {
+OPENCL_FORCE_INLINE float NormalMapTexture_ConstEvaluateFloat(__global const Texture* restrict tex) {
     return 0.f;
 }
 
-OPENCL_FORCE_INLINE float3 NormalMapTexture_ConstEvaluateSpectrum(__global const Texture *tex) {
+OPENCL_FORCE_INLINE float3 NormalMapTexture_ConstEvaluateSpectrum(__global const Texture* restrict tex) {
 	return 0.f;
 }
 
