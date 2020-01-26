@@ -741,7 +741,7 @@ int luxcore_parserlxs_yy_flex_debug = 0;
 char *luxcore_parserlxs_yytext;
 #line 1 "/home/david/projects/luxcorerender/LuxCore/src/luxcore/luxparser/luxlex.l"
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *

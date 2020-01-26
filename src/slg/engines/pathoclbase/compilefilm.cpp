@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -75,7 +75,6 @@ void CompiledScene::CompileFilm(const Film &film, slg::ocl::Film &oclFilm) {
 	oclFilm.hasChannelAvgShadingNormal = film.HasChannel(Film::AVG_SHADING_NORMAL);
 	oclFilm.hasChannelNoise = film.HasChannel(Film::NOISE);
 	oclFilm.hasChannelUserImportance = film.HasChannel(Film::USER_IMPORTANCE);
-
 }
 
 #endif

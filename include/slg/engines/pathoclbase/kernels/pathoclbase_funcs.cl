@@ -1,7 +1,7 @@
 #line 2 "pathoclbase_funcs.cl"
 
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -158,6 +158,8 @@ OPENCL_FORCE_NOT_INLINE void GenerateEyePath(
 	taskState->photonGICacheEnabledOnLastHit = false;
 	taskState->photonGICausticCacheUsed = false;
 	taskState->photonGIShowIndirectPathMixUsed = false;
+	// Initialize the trough a shadow transparency flag used by Scene_Intersect()
+	taskState->throughShadowTransparency = false;
 
 	// Initialize the pass-through event seed
 	//
