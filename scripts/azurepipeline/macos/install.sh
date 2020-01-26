@@ -1,5 +1,7 @@
 #!/bin/bash
 
+#switch to XCode 10.1
+xcode-select -s /Applications/Xcode_10.1.app
 #Install Build Tools
 brew install bison
 brew install pyenv
