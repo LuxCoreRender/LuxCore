@@ -24,7 +24,8 @@
 
 typedef enum {
 	EVAL_FLOAT,
-	EVAL_SPECTRUM
+	EVAL_SPECTRUM,
+	EVAL_BUMP
 } TextureEvalOpType;
 
 typedef struct {
@@ -438,6 +439,7 @@ typedef struct {
 
 	unsigned int evalFloatOpStartIndex, evalFloatOpLength;
 	unsigned int evalSpectrumOpStartIndex, evalSpectrumOpLength;
+	unsigned int evalBumpOpStartIndex, evalBumpOpLength;
 
 	union {
 		BlenderBlendTexParam blenderBlend;

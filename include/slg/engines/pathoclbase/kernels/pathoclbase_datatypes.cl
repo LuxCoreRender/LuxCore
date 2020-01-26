@@ -116,7 +116,7 @@ typedef struct {
 
 	DirectLightResult directLightResult;
 
-	// The shadow transparency lag used by Scene_Intersect()
+	// The shadow transparency flag used by Scene_Intersect()
 	int throughShadowTransparency;
 } GPUTaskDirectLight;
 

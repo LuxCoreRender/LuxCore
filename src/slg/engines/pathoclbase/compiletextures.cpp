@@ -101,7 +101,7 @@ void CompiledScene::CompileTextureMapping2D(slg::ocl::TextureMapping2D *mapping,
 			break;
 		}
 		default:
-			throw runtime_error("Unknown 2D texture mapping in CompiledScene::CompileTextureMapping2D: " + boost::lexical_cast<string>(m->GetType()));
+			throw runtime_error("Unknown 2D texture mapping in CompiledScene::CompileTextureMapping2D: " + ToString(m->GetType()));
 	}
 }
 
@@ -134,7 +134,7 @@ void CompiledScene::CompileTextureMapping3D(slg::ocl::TextureMapping3D *mapping,
 			break;
 		}
 		default:
-			throw runtime_error("Unknown 3D texture mapping in CompiledScene::CompileTextureMapping3D: " + boost::lexical_cast<string>(m->GetType()));
+			throw runtime_error("Unknown 3D texture mapping in CompiledScene::CompileTextureMapping3D: " + ToString(m->GetType()));
 	}
 }
 
@@ -191,7 +191,11 @@ float *CompiledScene::CompileDistribution2D(const Distribution2D *dist, u_int *s
 	return compDist;
 }
 
-u_int CompiledScene::CompileTextureOps(const u_int texIndex, const slg::ocl::TextureEvalOpType opType) {
+u_int CompiledScene::CompileTextureOps(const u_int texIndex,
+		const slg::ocl::TextureEvalOpType opType,
+		const vector<u_int > &evalOpsStackSizeFloat,
+		const vector<u_int > &evalOpsStackSizeSpectrum,
+		const vector<u_int > &evalOpsStackSizeBump) {
 	// Translate textures to texture evaluate ops
 
 	slg::ocl::Texture *tex = &texs[texIndex];
@@ -201,16 +205,57 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex, const slg::ocl::Tex
 		case slg::ocl::CONST_FLOAT:
 		case slg::ocl::CONST_FLOAT3:
 		case slg::ocl::IMAGEMAP: {
-			evalOpStackSize += (opType == slg::ocl::TextureEvalOpType::EVAL_FLOAT) ? 1 : 3;
+			switch (opType) {
+				case slg::ocl::TextureEvalOpType::EVAL_FLOAT:
+					evalOpStackSize += 1;
+					break;
+				case slg::ocl::TextureEvalOpType::EVAL_SPECTRUM:
+					evalOpStackSize += 3;
+					break;
+				case slg::ocl::TextureEvalOpType::EVAL_BUMP:
+					evalOpStackSize += evalOpsStackSizeFloat[texIndex];
+					break;
+				default:
+					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(): " + ToString(tex->type));
+			}
 			break;
 		}
 		case slg::ocl::SCALE_TEX: {
-			evalOpStackSize += CompileTextureOps(tex->scaleTex.tex1Index, opType);
-			evalOpStackSize += CompileTextureOps(tex->scaleTex.tex2Index, opType);
+			switch (opType) {
+				case slg::ocl::TextureEvalOpType::EVAL_FLOAT:
+				case slg::ocl::TextureEvalOpType::EVAL_SPECTRUM: {
+					evalOpStackSize += CompileTextureOps(tex->scaleTex.tex1Index, opType,
+							evalOpsStackSizeFloat, evalOpsStackSizeSpectrum, evalOpsStackSizeBump);
+					evalOpStackSize += CompileTextureOps(tex->scaleTex.tex2Index, opType,
+							evalOpsStackSizeFloat, evalOpsStackSizeSpectrum, evalOpsStackSizeBump);
+					break;
+				}
+				case slg::ocl::TextureEvalOpType::EVAL_BUMP: {
+					evalOpStackSize += CompileTextureOps(tex->scaleTex.tex1Index, slg::ocl::TextureEvalOpType::EVAL_BUMP,
+							evalOpsStackSizeFloat, evalOpsStackSizeSpectrum, evalOpsStackSizeBump);
+					evalOpStackSize += CompileTextureOps(tex->scaleTex.tex2Index, slg::ocl::TextureEvalOpType::EVAL_BUMP,
+							evalOpsStackSizeFloat, evalOpsStackSizeSpectrum, evalOpsStackSizeBump);
+
+					evalOpStackSize += CompileTextureOps(tex->scaleTex.tex1Index, slg::ocl::TextureEvalOpType::EVAL_FLOAT,
+							evalOpsStackSizeFloat, evalOpsStackSizeSpectrum, evalOpsStackSizeBump);
+					evalOpStackSize += CompileTextureOps(tex->scaleTex.tex2Index, slg::ocl::TextureEvalOpType::EVAL_FLOAT,
+							evalOpsStackSizeFloat, evalOpsStackSizeSpectrum, evalOpsStackSizeBump);
+					break;
+				}
+				default:
+					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(): " + ToString(tex->type));
+			}
+			break;
+
+			const u_int evalOpStackSizeTex1 = CompileTextureOps(tex->scaleTex.tex1Index, opType,
+							evalOpsStackSizeFloat, evalOpsStackSizeSpectrum, evalOpsStackSizeBump);
+			const u_int evalOpStackSizeTex2 = CompileTextureOps(tex->scaleTex.tex2Index, opType,
+							evalOpsStackSizeFloat, evalOpsStackSizeSpectrum, evalOpsStackSizeBump);
+			evalOpStackSize += Max(evalOpStackSizeTex1, evalOpStackSizeTex2);
 			break;
 		}
 		default:
-			throw runtime_error("Unknown texture in CompiledScene::CompileTextureOps(): " + boost::lexical_cast<string>(tex->type));
+			throw runtime_error("Unknown texture in CompiledScene::CompileTextureOps(" + ToString(opType) + "): " + ToString(tex->type));
 	}
 
 	slg::ocl::TextureEvalOp op;
@@ -229,20 +274,44 @@ void CompiledScene::CompileTextureOps() {
 	texEvalOps.clear();
 	maxTextureEvalStackSize = 0;
 
+	vector<u_int > evalOpsStackSizeFloat(texs.size(), 0);
+	vector<u_int > evalOpsStackSizeSpectrum(texs.size(), 0);
+	vector<u_int > evalOpsStackSizeBump(texs.size(), 0);
 	for (u_int i = 0; i < texs.size(); ++i) {
 		slg::ocl::Texture *tex = &texs[i];
 
+		//----------------------------------------------------------------------
+		// EVAL_FLOAT
+		//----------------------------------------------------------------------
+		
 		tex->evalFloatOpStartIndex = texEvalOps.size();
-		const u_int maxTextureFloatEvalOpsStackSize = CompileTextureOps(i, slg::ocl::TextureEvalOpType::EVAL_FLOAT);
+		evalOpsStackSizeFloat[i] = CompileTextureOps(i, slg::ocl::TextureEvalOpType::EVAL_FLOAT,
+				evalOpsStackSizeFloat, evalOpsStackSizeSpectrum, evalOpsStackSizeBump);
 		tex->evalFloatOpLength = texEvalOps.size() - tex->evalFloatOpStartIndex;
 
-		maxTextureEvalStackSize = Max(maxTextureEvalStackSize, maxTextureFloatEvalOpsStackSize);
+		maxTextureEvalStackSize = Max(maxTextureEvalStackSize, evalOpsStackSizeFloat[i]);
+
+		//----------------------------------------------------------------------
+		// EVAL_SPECTRUM
+		//----------------------------------------------------------------------
 
 		tex->evalSpectrumOpStartIndex = texEvalOps.size();
-		const u_int maxTextureSpectrumEvalOpsStackSize = CompileTextureOps(i, slg::ocl::TextureEvalOpType::EVAL_SPECTRUM);
+		evalOpsStackSizeSpectrum[i] = CompileTextureOps(i, slg::ocl::TextureEvalOpType::EVAL_SPECTRUM,
+				evalOpsStackSizeFloat, evalOpsStackSizeSpectrum, evalOpsStackSizeBump);
 		tex->evalSpectrumOpLength = texEvalOps.size() - tex->evalSpectrumOpStartIndex;
 
-		maxTextureEvalStackSize = Max(maxTextureEvalStackSize, maxTextureSpectrumEvalOpsStackSize);
+		maxTextureEvalStackSize = Max(maxTextureEvalStackSize, evalOpsStackSizeSpectrum[i]);
+
+		//----------------------------------------------------------------------
+		// EVAL_BUMP
+		//----------------------------------------------------------------------
+
+		tex->evalBumpOpStartIndex = texEvalOps.size();
+		evalOpsStackSizeBump[i] = CompileTextureOps(i, slg::ocl::TextureEvalOpType::EVAL_BUMP,
+				evalOpsStackSizeFloat, evalOpsStackSizeSpectrum, evalOpsStackSizeBump);
+		tex->evalBumpOpLength = texEvalOps.size() - tex->evalSpectrumOpStartIndex;
+
+		maxTextureEvalStackSize = Max(maxTextureEvalStackSize, evalOpsStackSizeBump[i]);
 	}
 
 	SLG_LOG("Texture evaluation ops count: " << texEvalOps.size());
@@ -1320,7 +1389,7 @@ void CompiledScene::CompileTextures() {
 				break;
 			}
 			default:
-				throw runtime_error("Unknown texture in CompiledScene::CompileTextures(): " + boost::lexical_cast<string>(t->GetType()));
+				throw runtime_error("Unknown texture in CompiledScene::CompileTextures(): " + ToString(t->GetType()));
 		}
 	}
 
