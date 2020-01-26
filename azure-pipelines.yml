@@ -161,7 +161,7 @@ jobs:
   condition: succeeded()
   timeoutInMinutes: 0
   pool:
-    vmImage: 'macOS-10.13'
+    vmImage: 'macOS-10.14'
   variables:
     version_string: $[ dependencies.DetectBuildType.outputs['setvarStep.version_string'] ]
 

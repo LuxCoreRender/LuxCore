@@ -152,6 +152,7 @@ ENDIF(MSVC)
 ###########################################################################
 
 IF(APPLE)
+
   CMAKE_MINIMUM_REQUIRED(VERSION 3.12) # Required for FindBoost 1.67.0
 
 	########## OS and hardware detection ###########
@@ -159,11 +160,13 @@ IF(APPLE)
 	EXECUTE_PROCESS(COMMAND uname -r OUTPUT_VARIABLE MAC_SYS) # check for actual system-version
 
 	SET(CMAKE_OSX_DEPLOYMENT_TARGET 10.13) # Minimum OS requirements for LuxCore
-
-	IF(${MAC_SYS} MATCHES 17)
+    
+    IF(${MAC_SYS} MATCHES 18)
+		SET(OSX_SYSTEM 10.14)
+	ELSEIF(${MAC_SYS} MATCHES 17)
 		SET(OSX_SYSTEM 10.14)
 	ELSEIF(${MAC_SYS} MATCHES 16)
-		SET(OSX_SYSTEM 10.12)
+		SET(OSX_SYSTEM 10.13)
 	ELSE()
 		SET(OSX_SYSTEM unsupported)
 	ENDIF()
@@ -176,9 +179,17 @@ IF(APPLE)
 	ENDIF()
 
 	SET(CMAKE_XCODE_ATTRIBUTE_ARCHS $(NATIVE_ARCH_ACTUAL))
-
-	SET(CMAKE_OSX_SYSROOT /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX${OSX_SYSTEM}.sdk)
-  SET(CMAKE_XCODE_ATTRIBUTE_SDKROOT macosx) # to silence sdk not found warning, just overrides CMAKE_OSX_SYSROOT, gets latest available
+    
+    
+    SET(AZURE 1) # Set 0 when compiled locally and not on azure
+    
+    IF(AZURE)
+	   SET(CMAKE_OSX_SYSROOT /Applications/Xcode_10.1.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX${OSX_SYSTEM}.sdk)
+    ELSE()
+       SET(CMAKE_OSX_SYSROOT /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX${OSX_SYSTEM}.sdk)
+    ENDIF()
+    
+    SET(CMAKE_XCODE_ATTRIBUTE_SDKROOT macosx) # to silence sdk not found warning, just overrides CMAKE_OSX_SYSROOT, gets latest available
 
 	# set a precedence of sdk path over all other default search pathes
 	SET(CMAKE_FIND_ROOT_PATH ${CMAKE_OSX_SYSROOT})
