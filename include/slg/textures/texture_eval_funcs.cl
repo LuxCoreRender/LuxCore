@@ -22,6 +22,93 @@
 // Texture evaluation functions
 //------------------------------------------------------------------------------
 
+OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
+		__global const TextureEvalOp* restrict evalOp,
+		__global float *evalStack,
+		uint *evalStackOffset,
+		__global const HitPoint *hitPoint
+		TEXTURES_PARAM_DECL) {
+
+	#define EvalStack_Push(a) { evalStack[*evalStackOffset] = a; *evalStackOffset = *evalStackOffset + 1; }
+	#define EvalStack_Pop(a) { *evalStackOffset = *evalStackOffset - 1; a = evalStack[*evalStackOffset]; }
+
+	__global const Texture* restrict tex = &texs[evalOp->texIndex];
+
+//	printf("EvalOp tex index=%d and type=%d\n", evalOp->texIndex, tex->type);
+
+	const TextureEvalOpType evalType = evalOp->evalType;
+	switch (tex->type) {
+		case CONST_FLOAT: {
+			if (evalType == EVAL_FLOAT) {
+				const float eval = ConstFloatTexture_ConstEvaluateFloat(tex);
+				EvalStack_Push(eval);
+			} else {
+				const float3 eval = ConstFloatTexture_ConstEvaluateSpectrum(tex);
+				EvalStack_Push(eval.s0);
+				EvalStack_Push(eval.s1);
+				EvalStack_Push(eval.s2);
+			}
+			break;
+		}
+		case CONST_FLOAT3: {
+			if (evalType == EVAL_FLOAT) {
+				const float eval = ConstFloat3Texture_ConstEvaluateFloat(tex);
+				EvalStack_Push(eval);
+			} else {
+				const float3 eval = ConstFloat3Texture_ConstEvaluateSpectrum(tex);
+				EvalStack_Push(eval.s0);
+				EvalStack_Push(eval.s1);
+				EvalStack_Push(eval.s2);
+			}
+			break;
+		}
+		case IMAGEMAP: {
+			if (evalType == EVAL_FLOAT) {
+				const float eval = ImageMapTexture_ConstEvaluateFloat(tex, hitPoint IMAGEMAPS_PARAM);
+				EvalStack_Push(eval);
+			} else {
+				const float3 eval = ImageMapTexture_ConstEvaluateSpectrum(tex, hitPoint IMAGEMAPS_PARAM);
+				EvalStack_Push(eval.s0);
+				EvalStack_Push(eval.s1);
+				EvalStack_Push(eval.s2);
+				
+			}
+			break;
+		}
+		case SCALE_TEX: {
+			if (evalType == EVAL_FLOAT) {
+				float tex1, tex2;
+				EvalStack_Pop(tex2);
+				EvalStack_Pop(tex1);
+
+				const float eval = ScaleTexture_ConstEvaluateFloat(tex1, tex2);
+				EvalStack_Push(eval);
+			} else {
+				float3 tex1, tex2;
+				EvalStack_Pop(tex2.s2);
+				EvalStack_Pop(tex2.s1);
+				EvalStack_Pop(tex2.s0);
+				
+				EvalStack_Pop(tex1.s2);
+				EvalStack_Pop(tex1.s1);
+				EvalStack_Pop(tex1.s0);
+
+				const float3 eval = ScaleTexture_ConstEvaluateSpectrum(tex1, tex2);
+				EvalStack_Push(eval.s0);
+				EvalStack_Push(eval.s1);
+				EvalStack_Push(eval.s2);
+			}
+			break;
+		}
+		default:
+			// Something wrong here
+			break;
+	}
+
+	#undef EvalStack_Push
+	#undef EvalStack_Pop
+}
+
 OPENCL_FORCE_NOT_INLINE float Texture_GetFloatValue(const uint texIndex,
 		__global const HitPoint *hitPoint
 		TEXTURES_PARAM_DECL) {
@@ -38,49 +125,21 @@ OPENCL_FORCE_NOT_INLINE float Texture_GetFloatValue(const uint texIndex,
 
 //	printf("texIndex=%d evalFloatOpStartIndex=%d evalFloatOpLength=%d\n", texIndex, evalFloatOpStartIndex, evalFloatOpLength);
 
+	uint evalStackOffset = 0;
 	for (uint i = 0; i < evalFloatOpLength; ++i) {
 //		printf("EvalOp: #%d\n", i);
 
 		__global const TextureEvalOp* restrict evalOp = &texEvalOps[evalFloatOpStartIndex + i];
 
-		float eval;
-		__global const Texture* restrict tex = &texs[evalOp->texIndex];
-
-//		printf("EvalOp tex index=%d and type=%d\n", evalOp->texIndex, tex->type);
-
-		switch (tex->type) {
-			case CONST_FLOAT: {
-				eval = ConstFloatTexture_ConstEvaluateFloat(tex);
-				break;
-			}
-			case CONST_FLOAT3: {
-				eval = ConstFloat3Texture_ConstEvaluateFloat(tex);
-				break;
-			}
-			case IMAGEMAP: {
-				eval = ImageMapTexture_ConstEvaluateFloat(tex, hitPoint IMAGEMAPS_PARAM);
-				break;
-			}
-			case SCALE_TEX: {
-				const float tex2 = *(--evalStack);
-				const float tex1 = *(--evalStack);
-
-				eval = ScaleTexture_ConstEvaluateFloat(tex1, tex2);
-				break;
-			}
-			default:
-				// Something wrong here
-				continue;
-		}
-
-		*evalStack++ = eval;
+		Texture_EvalOp(evalOp, evalStack, &evalStackOffset, hitPoint TEXTURES_PARAM);
 	}
-	
-	const float v = *(--evalStack);
+//		printf("evalStackOffset=#%d\n", evalStack);
+
+	const float result = evalStack[0];
 
 //	printf("Result=%f\n", v);
-
-	return v;
+	
+	return result;
 }
 
 OPENCL_FORCE_NOT_INLINE float3 Texture_GetSpectrumValue(const uint texIndex,
@@ -99,60 +158,21 @@ OPENCL_FORCE_NOT_INLINE float3 Texture_GetSpectrumValue(const uint texIndex,
 
 //	printf("texIndex=%d evalSpectrumOpStartIndex=%d evalSpectrumOpLength=%d\n", texIndex, evalSpectrumOpStartIndex, evalSpectrumOpLength);
 
+	uint evalStackOffset = 0;
 	for (uint i = 0; i < evalSpectrumOpLength; ++i) {
 //		printf("EvalOp: #%d\n", i);
 
 		__global const TextureEvalOp* restrict evalOp = &texEvalOps[evalSpectrumOpStartIndex + i];
 
-		float3 eval;
-		__global const Texture* restrict tex = &texs[evalOp->texIndex];
-
-//		printf("EvalOp tex index=%d and type=%d\n", evalOp->texIndex, tex->type);
-
-		switch (tex->type) {
-			case CONST_FLOAT: {
-				eval = ConstFloatTexture_ConstEvaluateSpectrum(tex);
-				break;
-			}
-			case CONST_FLOAT3: {
-				eval = ConstFloat3Texture_ConstEvaluateSpectrum(tex);
-				break;
-			}
-			case IMAGEMAP: {
-				eval = ImageMapTexture_ConstEvaluateSpectrum(tex, hitPoint IMAGEMAPS_PARAM);
-				break;
-			}
-			case SCALE_TEX: {
-				const float b2 = *(--evalStack);
-				const float g2 = *(--evalStack);
-				const float r2 = *(--evalStack);
-				const float3 tex2 = (float3)(r2, g2, b2);
-
-				const float b1 = *(--evalStack);
-				const float g1 = *(--evalStack);
-				const float r1 = *(--evalStack);
-				const float3 tex1 = (float3)(r1, g1, b1);
-
-				eval = ScaleTexture_ConstEvaluateSpectrum(tex1, tex2);
-				break;
-			}
-			default:
-				// Something wrong here
-				continue;
-		}
-
-		*evalStack++ = eval.s0;
-		*evalStack++ = eval.s1;
-		*evalStack++ = eval.s2;
+		Texture_EvalOp(evalOp, evalStack, &evalStackOffset, hitPoint TEXTURES_PARAM);
 	}
+//		printf("evalStackOffset=#%d\n", evalStack);
 	
-	const float b = *(--evalStack);
-	const float g = *(--evalStack);
-	const float r = *(--evalStack);
+	const float3 result = (float3)(evalStack[0], evalStack[1], evalStack[2]);
 
-//	printf("Result=(%f, %f, %f)\n", r, g, b);
+//	printf("Result=(%f, %f, %f)\n", result.s0, result.s1, result.s2);
 
-	return (float3)(r, g, b);
+	return result;
 }
 
 OPENCL_FORCE_NOT_INLINE float3 Texture_Bump(const uint texIndex,
