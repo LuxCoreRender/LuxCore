@@ -148,8 +148,6 @@ OPENCL_FORCE_NOT_INLINE float3 MixTexture_ConstEvaluateSpectrum(__global const H
 // CheckerBoard 2D & 3D texture
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_ENABLE_CHECKERBOARD2D)
-
 OPENCL_FORCE_NOT_INLINE float CheckerBoard2DTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
 		const float value1, const float value2, __global const TextureMapping2D *mapping) {
 	const float2 mapUV = TextureMapping2D_Map(mapping, hitPoint);
@@ -163,8 +161,6 @@ OPENCL_FORCE_NOT_INLINE float3 CheckerBoard2DTexture_ConstEvaluateSpectrum(__glo
 
 	return ((Floor2Int(mapUV.s0) + Floor2Int(mapUV.s1)) % 2 == 0) ? value1 : value2;
 }
-
-#endif
 
 #if defined(PARAM_ENABLE_CHECKERBOARD3D)
 

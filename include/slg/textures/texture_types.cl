@@ -25,7 +25,11 @@
 typedef enum {
 	EVAL_FLOAT,
 	EVAL_SPECTRUM,
-	EVAL_BUMP
+	EVAL_BUMP,
+	// For the very special case of Triplanar texture
+	EVAL_TRIPLANAR_STEP_1,
+	EVAL_TRIPLANAR_STEP_2,
+	EVAL_TRIPLANAR_STEP_3
 } TextureEvalOpType;
 
 typedef struct {

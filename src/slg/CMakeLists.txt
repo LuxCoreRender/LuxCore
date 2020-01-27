@@ -315,7 +315,6 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_irregulardata_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/fresnel/texture_fresnelcolor_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/fresnel/texture_fresnelconst_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_template_triplanar.cl
 	${LuxRays_SOURCE_DIR}/include/slg/utils/pathdepthinfo_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/utils/pathdepthinfo_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/utils/pathvolumeinfo_types.cl
@@ -671,7 +670,6 @@ set(SLG_KERNEL_SRCS
 	${generated_kernels_dir}/texture_fresnelconst_funcs_kernel.cpp
 	${generated_kernels_dir}/texture_hsv_funcs_kernel.cpp
 	${generated_kernels_dir}/texture_irregulardata_funcs_kernel.cpp
-	${generated_kernels_dir}/texture_template_triplanar_kernel.cpp
 	${generated_kernels_dir}/pathdepthinfo_types_kernel.cpp
 	${generated_kernels_dir}/pathdepthinfo_funcs_kernel.cpp
 	${generated_kernels_dir}/pathvolumeinfo_types_kernel.cpp

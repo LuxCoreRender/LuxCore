@@ -246,12 +246,70 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(): " + ToString(tex->type));
 			}
 			break;
+		}
+		case slg::ocl::CHECKERBOARD2D: {
+			switch (opType) {
+				case slg::ocl::TextureEvalOpType::EVAL_FLOAT:
+				case slg::ocl::TextureEvalOpType::EVAL_SPECTRUM: {
+					evalOpStackSize += CompileTextureOps(tex->checkerBoard2D.tex1Index, opType,
+							evalOpsStackSizeFloat, evalOpsStackSizeSpectrum, evalOpsStackSizeBump);
+					evalOpStackSize += CompileTextureOps(tex->checkerBoard2D.tex2Index, opType,
+							evalOpsStackSizeFloat, evalOpsStackSizeSpectrum, evalOpsStackSizeBump);
+					break;
+				}
+				case slg::ocl::TextureEvalOpType::EVAL_BUMP: {
+					// TODO
+					break;
+				}
+				default:
+					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(): " + ToString(tex->type));
+			}
+			break;
+		}
+		case slg::ocl::TRIPLANAR_TEX: {
+			switch (opType) {
+				case slg::ocl::TextureEvalOpType::EVAL_FLOAT:
+				case slg::ocl::TextureEvalOpType::EVAL_SPECTRUM: {
+					// EVAL_TRIPLANAR_STEP_1
+					slg::ocl::TextureEvalOp opStep1;
+					opStep1.texIndex = texIndex;
+					opStep1.evalType = slg::ocl::TextureEvalOpType::EVAL_TRIPLANAR_STEP_1;
+					texEvalOps.push_back(opStep1);
+					// Save original UV + 3 weights + localPoint
+					evalOpStackSize += 2 + 3 + 3;
 
-			const u_int evalOpStackSizeTex1 = CompileTextureOps(tex->scaleTex.tex1Index, opType,
+					// Eval first texture 
+					evalOpStackSize += CompileTextureOps(tex->triplanarTex.tex1Index, slg::ocl::TextureEvalOpType::EVAL_SPECTRUM,
 							evalOpsStackSizeFloat, evalOpsStackSizeSpectrum, evalOpsStackSizeBump);
-			const u_int evalOpStackSizeTex2 = CompileTextureOps(tex->scaleTex.tex2Index, opType,
+
+					// EVAL_TRIPLANAR_STEP_2
+					slg::ocl::TextureEvalOp opStep2;
+					opStep2.texIndex = texIndex;
+					opStep2.evalType = slg::ocl::TextureEvalOpType::EVAL_TRIPLANAR_STEP_2;
+					texEvalOps.push_back(opStep2);
+
+					// Eval second texture 
+					evalOpStackSize += CompileTextureOps(tex->triplanarTex.tex2Index, slg::ocl::TextureEvalOpType::EVAL_SPECTRUM,
 							evalOpsStackSizeFloat, evalOpsStackSizeSpectrum, evalOpsStackSizeBump);
-			evalOpStackSize += Max(evalOpStackSizeTex1, evalOpStackSizeTex2);
+
+
+					// EVAL_TRIPLANAR_STEP_3
+					slg::ocl::TextureEvalOp opStep3;
+					opStep3.texIndex = texIndex;
+					opStep3.evalType = slg::ocl::TextureEvalOpType::EVAL_TRIPLANAR_STEP_3;
+					texEvalOps.push_back(opStep3);
+
+					// Eval last texture 
+					evalOpStackSize += CompileTextureOps(tex->triplanarTex.tex3Index, slg::ocl::TextureEvalOpType::EVAL_SPECTRUM,
+							evalOpsStackSizeFloat, evalOpsStackSizeSpectrum, evalOpsStackSizeBump);
+					break;
+				}
+				case slg::ocl::TextureEvalOpType::EVAL_BUMP:
+					// TODO
+					break;
+				default:
+					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(): " + ToString(tex->type));
+			}
 			break;
 		}
 		default:
