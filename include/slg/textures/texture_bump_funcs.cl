@@ -24,63 +24,40 @@
 // Generic texture bump mapping
 //------------------------------------------------------------------------------
 
-//OPENCL_FORCE_NOT_INLINE float3 GenericTexture_Bump(
-//		const uint texIndex,
-//		__global HitPoint *hitPoint,
-//		const float sampleDistance
-//		TEXTURES_PARAM_DECL) {
-//	const float3 dpdu = VLOAD3F(&hitPoint->dpdu.x);
-//	const float3 dpdv = VLOAD3F(&hitPoint->dpdv.x);
-//	const float3 dndu = VLOAD3F(&hitPoint->dndu.x);
-//	const float3 dndv = VLOAD3F(&hitPoint->dndv.x);
-//
-//	// Calculate bump map value at intersection point
-//	const float base = Texture_GetFloatValue(texIndex, hitPoint
-//			TEXTURES_PARAM);
-//
-//	// Compute offset positions and evaluate displacement texIndex
-//	const float3 origP = VLOAD3F(&hitPoint->p.x);
-//	const float3 origShadeN = VLOAD3F(&hitPoint->shadeN.x);
-//	const float2 origUV = VLOAD2F(&hitPoint->uv[0].u);
-//
-//	float2 duv;
-//
-//	// Shift hitPointTmp.du in the u direction and calculate value
-//	const float uu = sampleDistance / length(dpdu);
-//	VSTORE3F(origP + uu * dpdu, &hitPoint->p.x);
-//	hitPoint->uv[0].u += uu;
-//	VSTORE3F(normalize(origShadeN + uu * dndu), &hitPoint->shadeN.x);
-//	const float duValue = Texture_GetFloatValue(texIndex, hitPoint
-//			TEXTURES_PARAM);
-//	duv.s0 = (duValue - base) / uu;
-//
-//	// Shift hitPointTmp.dv in the v direction and calculate value
-//	const float vv = sampleDistance / length(dpdv);
-//	VSTORE3F(origP + vv * dpdv, &hitPoint->p.x);
-//	hitPoint->uv[0].u = origUV.s0;
-//	hitPoint->uv[0].v += vv;
-//	VSTORE3F(normalize(origShadeN + vv * dndv), &hitPoint->shadeN.x);
-//	const float dvValue = Texture_GetFloatValue(texIndex, hitPoint
-//			TEXTURES_PARAM);
-//	duv.s1 = (dvValue - base) / vv;
-//
-//	// Restore HitPoint
-//	VSTORE3F(origP, &hitPoint->p.x);
-//	VSTORE3F(origShadeN, &hitPoint->shadeN.x);
-//	VSTORE2F(origUV, &hitPoint->uv[0].u);
-//
-//	// Compute the new dpdu and dpdv
-//	const float3 bumpDpdu = dpdu + duv.s0 * origShadeN;
-//	const float3 bumpDpdv = dpdv + duv.s1 * origShadeN;
-//	float3 newShadeN = normalize(cross(bumpDpdu, bumpDpdv));
-//
-//	// The above transform keeps the normal in the original normal
-//	// hemisphere. If they are opposed, it means UVN was indirect and
-//	// the normal needs to be reversed
-//	newShadeN *= (dot(origShadeN, newShadeN) < 0.f) ? -1.f : 1.f;
-//
-//	return newShadeN;
-//}
+OPENCL_FORCE_INLINE float3 GenericTexture_Bump(
+		__global const HitPoint *hitPoint,
+		const float sampleDistance,
+		const float evalFloatTexBase,
+		const float evalFloatTexOffsetU,
+		const float evalFloatTexOffsetV) {
+	const float3 dpdu = VLOAD3F(&hitPoint->dpdu.x);
+	const float3 dpdv = VLOAD3F(&hitPoint->dpdv.x);
+
+	float2 duv;
+
+	const float base = evalFloatTexBase;
+
+	const float uu = sampleDistance / length(dpdu);
+	const float duValue = evalFloatTexOffsetU;
+	duv.s0 = (duValue - base) / uu;
+
+	const float vv = sampleDistance / length(dpdv);
+	const float dvValue = evalFloatTexOffsetV;
+	duv.s1 = (dvValue - base) / vv;
+
+	// Compute the new dpdu and dpdv
+	const float3 shadeN = VLOAD3F(&hitPoint->shadeN.x);
+	const float3 bumpDpdu = dpdu + duv.s0 * shadeN;
+	const float3 bumpDpdv = dpdv + duv.s1 * shadeN;
+	float3 newShadeN = normalize(cross(bumpDpdu, bumpDpdv));
+
+	// The above transform keeps the normal in the original normal
+	// hemisphere. If they are opposed, it means UVN was indirect and
+	// the normal needs to be reversed
+	newShadeN *= (dot(shadeN, newShadeN) < 0.f) ? -1.f : 1.f;
+
+	return newShadeN;
+}
 
 //------------------------------------------------------------------------------
 // ConstFloatTexture

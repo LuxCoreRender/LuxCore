@@ -258,7 +258,31 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 					break;
 				}
 				case slg::ocl::TextureEvalOpType::EVAL_BUMP: {
-					// TODO
+					// Eval texture at hit point
+					evalOpStackSize += CompileTextureOps(texIndex, slg::ocl::TextureEvalOpType::EVAL_FLOAT,
+							evalOpsStackSizeFloat, evalOpsStackSizeSpectrum, evalOpsStackSizeBump);
+
+					// EVAL_BUMP_GENERIC_OFFSET_U
+					slg::ocl::TextureEvalOp opOffsetU;
+					opOffsetU.texIndex = texIndex;
+					opOffsetU.evalType = slg::ocl::TextureEvalOpType::EVAL_BUMP_GENERIC_OFFSET_U;
+					texEvalOps.push_back(opOffsetU);
+					// Save original original P, shadeN and UV
+					evalOpStackSize += 3 + 3 + 2;
+
+					// Eval texture at hit point + offset U
+					evalOpStackSize += CompileTextureOps(texIndex, slg::ocl::TextureEvalOpType::EVAL_FLOAT,
+							evalOpsStackSizeFloat, evalOpsStackSizeSpectrum, evalOpsStackSizeBump);
+
+					// EVAL_BUMP_GENERIC_OFFSET_V
+					slg::ocl::TextureEvalOp opOffsetV;
+					opOffsetV.texIndex = texIndex;
+					opOffsetV.evalType = slg::ocl::TextureEvalOpType::EVAL_BUMP_GENERIC_OFFSET_V;
+					texEvalOps.push_back(opOffsetV);
+
+					// Eval texture at hit point + offset V
+					evalOpStackSize += CompileTextureOps(texIndex, slg::ocl::TextureEvalOpType::EVAL_FLOAT,
+							evalOpsStackSizeFloat, evalOpsStackSizeSpectrum, evalOpsStackSizeBump);
 					break;
 				}
 				default:
