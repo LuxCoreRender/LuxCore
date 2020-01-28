@@ -174,35 +174,30 @@ OPENCL_FORCE_NOT_INLINE float3 NormalMapTexture_Bump(
 // TriplanarTexture
 //------------------------------------------------------------------------------
 
-//OPENCL_FORCE_INLINE float3 TriplanarTexture_Bump(
-//		__global HitPoint *hitPoint,
-//		const float evalFloatTexBase,
-//		const float evalFloatTexOffsetX,
-//		const float evalFloatTexOffsetY,
-//		const float evalFloatTexOffsetZ) {
-//	__global const Texture* restrict tex = &texs[texIndex];
-//
-//// TODO
-////	if (tex->triplanarTex.enableUVlessBumpMap) {
-//		// Calculate bump map value at intersection point
-//		const float base = evalFloatTexBase;
-//
-//		float3 dhdx;
-//
-//		const float offsetX = evalFloatTexOffsetX;
-//		dhdx.x = (offsetX - base) / sampleDistance;
-//
-//		const float offsetY = evalFloatTexOffsetY;
-//		dhdx.y = (offsetY - base) / sampleDistance;
-//
-//		const float offsetZ = evalFloatTexOffsetZ;
-//		dhdx.z = (offsetZ - base) / sampleDistance;
-//
-//		const float3 shadeN = VLOAD3F(&hitPoint->shadeN.x);
-//		float3 newShadeN = normalize(shadeN - dhdx);
-//		newShadeN *= (dot(shadeN, newShadeN) < 0.f) ? -1.f : 1.f;
-//
-//		return newShadeN;
-////	} else
-////		return GenericTexture_Bump(texIndex, hitPoint, sampleDistance TEXTURES_PARAM);
-//}
+OPENCL_FORCE_INLINE float3 TriplanarTexture_BumpUVLess(
+		__global const HitPoint *hitPoint,
+		const float sampleDistance,
+		const float evalFloatTexBase,
+		const float evalFloatTexOffsetX,
+		const float evalFloatTexOffsetY,
+		const float evalFloatTexOffsetZ) {
+	// Calculate bump map value at intersection point
+	const float base = evalFloatTexBase;
+
+	float3 dhdx;
+
+	const float offsetX = evalFloatTexOffsetX;
+	dhdx.x = (offsetX - base) / sampleDistance;
+
+	const float offsetY = evalFloatTexOffsetY;
+	dhdx.y = (offsetY - base) / sampleDistance;
+
+	const float offsetZ = evalFloatTexOffsetZ;
+	dhdx.z = (offsetZ - base) / sampleDistance;
+
+	const float3 shadeN = VLOAD3F(&hitPoint->shadeN.x);
+	float3 newShadeN = normalize(shadeN - dhdx);
+	newShadeN *= (dot(shadeN, newShadeN) < 0.f) ? -1.f : 1.f;
+
+	return newShadeN;
+}

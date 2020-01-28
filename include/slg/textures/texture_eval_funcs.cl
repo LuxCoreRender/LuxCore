@@ -392,8 +392,78 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 					}
 					break;
 				}
+				case EVAL_BUMP_TRIPLANAR_STEP_1: {
+					// Save original hit point
+					const float3 p = VLOAD3F(&hitPoint->p.x);
+					EvalStack_Push3(p);
+
+					// Update HitPoint
+					__global HitPoint *hitPointTmp = (__global HitPoint *)hitPoint;
+					hitPointTmp->p.x = p.x + sampleDistance;
+					hitPointTmp->p.y = p.y;
+					hitPointTmp->p.z = p.z;
+					break;
+				}
+				case EVAL_BUMP_TRIPLANAR_STEP_2: {
+					// Read original hit point
+					//
+					// Note: -1 is there to skip the result of EVAL_BUMP_TRIPLANAR_STEP_1
+					const float3 p = EvalStack_Read3(-1 - 3);
+
+					// Update HitPoint
+					__global HitPoint *hitPointTmp = (__global HitPoint *)hitPoint;
+					hitPointTmp->p.x = p.x;
+					hitPointTmp->p.y = p.y + sampleDistance;
+					hitPointTmp->p.z = p.z;
+					break;
+				}
+				case EVAL_BUMP_TRIPLANAR_STEP_3: {
+					// Read original hit point
+					//
+					// Note: -2 is there to skip the result of EVAL_BUMP_TRIPLANAR_STEP_2
+					const float3 p = EvalStack_Read3(-2 - 3);
+
+					// Update HitPoint
+					__global HitPoint *hitPointTmp = (__global HitPoint *)hitPoint;
+					hitPointTmp->p.x = p.x;
+					hitPointTmp->p.y = p.y;
+					hitPointTmp->p.z = p.z + sampleDistance;
+					break;
+				}
+				case EVAL_BUMP_GENERIC_OFFSET_U:
+					Texture_EvalOpGenericBumpOffsetU(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP_GENERIC_OFFSET_V:
+					Texture_EvalOpGenericBumpOffsetV(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
 				case EVAL_BUMP:
-					// TODO
+					if (tex->triplanarTex.enableUVlessBumpMap) {
+						float evalFloatTexBase, evalFloatTexOffsetX,
+								evalFloatTexOffsetY, evalFloatTexOffsetZ;
+
+						// Read X/Y/Z textures evaluation
+						EvalStack_Pop(evalFloatTexOffsetZ);
+						EvalStack_Pop(evalFloatTexOffsetY);
+						EvalStack_Pop(evalFloatTexOffsetX);
+
+						// Read and restore original hit point
+						float3 p;
+						EvalStack_Pop3(p);
+						__global HitPoint *hitPointTmp = (__global HitPoint *)hitPoint;
+						VSTORE3F(p, &hitPointTmp->p.x);
+
+						// Read base textures evaluation
+						EvalStack_Pop(evalFloatTexBase);
+
+						const float3 shadeN = TriplanarTexture_BumpUVLess(hitPoint,
+								sampleDistance, evalFloatTexBase, evalFloatTexOffsetX,
+								evalFloatTexOffsetY, evalFloatTexOffsetZ);
+						EvalStack_Push3(shadeN);
+					} else
+						Texture_EvalOpGenericBump(evalStack, evalStackOffset,
+								hitPoint, sampleDistance);
 					break;
 				default:
 					// Something wrong here
@@ -533,6 +603,10 @@ OPENCL_FORCE_NOT_INLINE float3 Texture_Bump(const uint texIndex,
 	const uint evalBumpOpStartIndex = startTex->evalBumpOpStartIndex;
 	const uint evalBumpOpLength = startTex->evalBumpOpLength;
 
+#if defined(DEBUG_PRINTF_TEXTURE_EVAL)
+	printf("texIndex=%d evalSpectrumOpStartIndex=%d evalSpectrumOpLength=%d\n", texIndex, evalBumpOpStartIndex, evalBumpOpLength);
+#endif
+
 	uint evalStackOffset = 0;
 	for (uint i = 0; i < evalBumpOpLength; ++i) {
 #if defined(DEBUG_PRINTF_TEXTURE_EVAL)
@@ -544,7 +618,7 @@ OPENCL_FORCE_NOT_INLINE float3 Texture_Bump(const uint texIndex,
 		Texture_EvalOp(evalOp, evalStack, &evalStackOffset, hitPoint, sampleDistance TEXTURES_PARAM);
 	}
 #if defined(DEBUG_PRINTF_TEXTURE_EVAL)
-	printf("evalStackOffset=#%d\n", evalStack);
+	printf("evalStackOffset=#%d\n", evalStackOffset);
 #endif
 
 	const float3 result = (float3)(evalStack[0], evalStack[1], evalStack[2]);

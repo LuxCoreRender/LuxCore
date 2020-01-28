@@ -32,7 +32,12 @@ typedef enum {
 	EVAL_TRIPLANAR_STEP_3,
 	// For evaluting generic bump mapping
 	EVAL_BUMP_GENERIC_OFFSET_U,
-	EVAL_BUMP_GENERIC_OFFSET_V
+	EVAL_BUMP_GENERIC_OFFSET_V,
+	// For the very special case of Triplanar texture
+	EVAL_BUMP_TRIPLANAR_STEP_1,
+	EVAL_BUMP_TRIPLANAR_STEP_2,
+	EVAL_BUMP_TRIPLANAR_STEP_3
+
 } TextureEvalOpType;
 
 typedef struct {
