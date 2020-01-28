@@ -60,40 +60,12 @@ OPENCL_FORCE_INLINE float3 GenericTexture_Bump(
 }
 
 //------------------------------------------------------------------------------
-// ConstFloatTexture
+// ConstTexture_Bump() for constant textures
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_INLINE float3 ConstFloatTexture_Bump(__global const HitPoint *hitPoint) {
+OPENCL_FORCE_INLINE float3 ConstTexture_Bump(__global const HitPoint *hitPoint) {
 	return VLOAD3F(&hitPoint->shadeN.x);
 }
-
-//------------------------------------------------------------------------------
-// ConstFloat3Texture
-//------------------------------------------------------------------------------
-
-OPENCL_FORCE_INLINE float3 ConstFloat3Texture_Bump(__global const HitPoint *hitPoint) {
-	return VLOAD3F(&hitPoint->shadeN.x);
-}
-
-//------------------------------------------------------------------------------
-// FresnelConstTexture
-//------------------------------------------------------------------------------
-
-#if defined(PARAM_ENABLE_TEX_FRESNELCONST)
-OPENCL_FORCE_INLINE float3 FresnelConstTexture_Bump(__global HitPoint *hitPoint) {
-	return VLOAD3F(&hitPoint->shadeN.x);
-}
-#endif
-
-//------------------------------------------------------------------------------
-// FresnelColorTexture
-//------------------------------------------------------------------------------
-
-#if defined(PARAM_ENABLE_TEX_FRESNELCOLOR)
-OPENCL_FORCE_INLINE float3 FresnelColorTexture_Bump(__global HitPoint *hitPoint) {
-	return VLOAD3F(&hitPoint->shadeN.x);
-}
-#endif
 
 //------------------------------------------------------------------------------
 // ImageMapTexture

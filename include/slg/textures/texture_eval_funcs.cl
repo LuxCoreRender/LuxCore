@@ -24,6 +24,97 @@
 // Texture evaluation functions
 //------------------------------------------------------------------------------
 
+#define EvalStack_Push(a) { evalStack[*evalStackOffset] = a; *evalStackOffset = *evalStackOffset + 1; }
+#define EvalStack_Push2(a) { EvalStack_Push(a.s0); EvalStack_Push(a.s1); }
+#define EvalStack_Push3(a) { EvalStack_Push(a.s0); EvalStack_Push(a.s1); EvalStack_Push(a.s2); }
+#define EvalStack_Pop(a) { *evalStackOffset = *evalStackOffset - 1; a = evalStack[*evalStackOffset]; }
+#define EvalStack_Pop2(a) { EvalStack_Pop(a.s1); EvalStack_Pop(a.s0); }
+#define EvalStack_Pop3(a) { EvalStack_Pop(a.s2); EvalStack_Pop(a.s1); EvalStack_Pop(a.s0); }
+#define EvalStack_Read(x) (evalStack[(*evalStackOffset) + x])
+#define EvalStack_Read2(x) ((float2)(evalStack[(*evalStackOffset) + x], evalStack[(*evalStackOffset) + x + 1]))
+#define EvalStack_Read3(x) ((float3)(evalStack[(*evalStackOffset) + x], evalStack[(*evalStackOffset) + x + 1], evalStack[(*evalStackOffset) + x + 2]))
+
+OPENCL_FORCE_NOT_INLINE void Texture_EvalOpGenericBumpOffsetU(
+		__global float *evalStack,
+		uint *evalStackOffset,
+		__global const HitPoint *hitPoint,
+		const float sampleDistance) {
+	const float3 origP = VLOAD3F(&hitPoint->p.x);
+	const float3 origShadeN = VLOAD3F(&hitPoint->shadeN.x);
+	const float2 origUV = VLOAD2F(&hitPoint->uv[0].u);
+
+	// Save original P
+	EvalStack_Push3(origP);
+	// Save original shadeN
+	EvalStack_Push3(origShadeN);
+	// Save original UV
+	EvalStack_Push2(origUV);
+
+	// Update HitPoint
+	__global HitPoint *hitPointTmp = (__global HitPoint *)hitPoint;
+	const float3 dpdu = VLOAD3F(&hitPointTmp->dpdu.x);
+	const float3 dndu = VLOAD3F(&hitPoint->dndu.x);
+	// Shift hitPointTmp.du in the u direction and calculate value
+	const float uu = sampleDistance / length(dpdu);
+	VSTORE3F(origP + uu * dpdu, &hitPointTmp->p.x);
+	hitPointTmp->uv[0].u = origUV.s0 + uu;
+	hitPointTmp->uv[0].v = origUV.s1;
+	VSTORE3F(normalize(origShadeN + uu * dndu), &hitPointTmp->shadeN.x);
+}
+
+OPENCL_FORCE_NOT_INLINE void Texture_EvalOpGenericBumpOffsetV(
+		__global float *evalStack,
+		uint *evalStackOffset,
+		__global const HitPoint *hitPoint,
+		const float sampleDistance) {
+	// -1 is for result of EVAL_BUMP_GENERIC_OFFSET_U
+	const float3 origP = EvalStack_Read3(-8 - 1);
+	const float3 origShadeN = EvalStack_Read3(-5 - 1);
+	const float2 origUV = EvalStack_Read2(-2 - 1);
+
+	// Update HitPoint
+	__global HitPoint *hitPointTmp = (__global HitPoint *)hitPoint;
+	const float3 dpdv = VLOAD3F(&hitPointTmp->dpdv.x);
+	const float3 dndv = VLOAD3F(&hitPoint->dndv.x);
+	// Shift hitPointTmp.dv in the v direction and calculate value
+	const float vv = sampleDistance / length(dpdv);
+	VSTORE3F(origP + vv * dpdv, &hitPointTmp->p.x);
+	hitPointTmp->uv[0].u = origUV.s0;
+	hitPointTmp->uv[0].v = origUV.s1 + vv;
+	VSTORE3F(normalize(origShadeN + vv * dndv), &hitPointTmp->shadeN.x);
+}
+
+OPENCL_FORCE_NOT_INLINE void Texture_EvalOpGenericBump(
+		__global float *evalStack,
+		uint *evalStackOffset,
+		__global const HitPoint *hitPoint,
+		const float sampleDistance) {
+	float evalFloatTexBase, evalFloatTexOffsetU, evalFloatTexOffsetV;
+	EvalStack_Pop(evalFloatTexOffsetV);
+	EvalStack_Pop(evalFloatTexOffsetU);
+
+	float3 origP, origShadeN;
+	float2 origUV;
+	EvalStack_Pop2(origUV);
+	EvalStack_Pop3(origShadeN);
+	EvalStack_Pop3(origP);
+
+	// evalFloatTexBase is the very first evaluation done so
+	// it is the last for a stack pop
+	EvalStack_Pop(evalFloatTexBase);
+
+	// Restore original P, shadeN and UV
+	__global HitPoint *hitPointTmp = (__global HitPoint *)hitPoint;
+	VSTORE3F(origP, &hitPointTmp->p.x);
+	VSTORE3F(origShadeN, &hitPointTmp->shadeN.x);
+	hitPointTmp->uv[0].u = origUV.s0;
+	hitPointTmp->uv[0].v = origUV.s1;
+
+	const float3 shadeN = GenericTexture_Bump(hitPoint, sampleDistance,
+			evalFloatTexBase, evalFloatTexOffsetU, evalFloatTexOffsetV);
+	EvalStack_Push3(shadeN);
+}
+
 OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		__global const TextureEvalOp* restrict evalOp,
 		__global float *evalStack,
@@ -31,17 +122,6 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		__global const HitPoint *hitPoint,
 		const float sampleDistance
 		TEXTURES_PARAM_DECL) {
-
-	#define EvalStack_Push(a) { evalStack[*evalStackOffset] = a; *evalStackOffset = *evalStackOffset + 1; }
-	#define EvalStack_Push2(a) { EvalStack_Push(a.s0); EvalStack_Push(a.s1); }
-	#define EvalStack_Push3(a) { EvalStack_Push(a.s0); EvalStack_Push(a.s1); EvalStack_Push(a.s2); }
-	#define EvalStack_Pop(a) { *evalStackOffset = *evalStackOffset - 1; a = evalStack[*evalStackOffset]; }
-	#define EvalStack_Pop2(a) { EvalStack_Pop(a.s1); EvalStack_Pop(a.s0); }
-	#define EvalStack_Pop3(a) { EvalStack_Pop(a.s2); EvalStack_Pop(a.s1); EvalStack_Pop(a.s0); }
-	#define EvalStack_Read(x) (evalStack[(*evalStackOffset) + x])
-	#define EvalStack_Read2(x) ((float2)(evalStack[(*evalStackOffset) + x], evalStack[(*evalStackOffset) + x + 1]))
-	#define EvalStack_Read3(x) ((float3)(evalStack[(*evalStackOffset) + x], evalStack[(*evalStackOffset) + x + 1], evalStack[(*evalStackOffset) + x + 2]))
-
 	__global const Texture* restrict tex = &texs[evalOp->texIndex];
 
 #if defined(DEBUG_PRINTF_TEXTURE_EVAL)
@@ -66,7 +146,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 					break;
 				}
 				case EVAL_BUMP: {
-					const float3 shadeN = ConstFloat3Texture_Bump(hitPoint);
+					const float3 shadeN = ConstTexture_Bump(hitPoint);
 					EvalStack_Push3(shadeN);
 					break;
 				}
@@ -92,7 +172,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 					break;
 				}	
 				case EVAL_BUMP: {
-					const float3 shadeN = ConstFloat3Texture_Bump(hitPoint);
+					const float3 shadeN = ConstTexture_Bump(hitPoint);
 					EvalStack_Push3(shadeN);
 					break;
 				}
@@ -195,75 +275,18 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 					EvalStack_Push3(eval);
 					break;
 				}
-				case EVAL_BUMP_GENERIC_OFFSET_U: {
-					const float3 origP = VLOAD3F(&hitPoint->p.x);
-					const float3 origShadeN = VLOAD3F(&hitPoint->shadeN.x);
-					const float2 origUV = VLOAD2F(&hitPoint->uv[0].u);
-
-					// Save original P
-					EvalStack_Push3(origP);
-					// Save original shadeN
-					EvalStack_Push3(origShadeN);
-					// Save original UV
-					EvalStack_Push2(origUV);
-
-					// Update HitPoint
-					__global HitPoint *hitPointTmp = (__global HitPoint *)hitPoint;
-					const float3 dpdu = VLOAD3F(&hitPointTmp->dpdu.x);
-					const float3 dndu = VLOAD3F(&hitPoint->dndu.x);
-					// Shift hitPointTmp.du in the u direction and calculate value
-					const float uu = sampleDistance / length(dpdu);
-					VSTORE3F(origP + uu * dpdu, &hitPointTmp->p.x);
-					hitPointTmp->uv[0].u = origUV.s0 + uu;
-					hitPointTmp->uv[0].v = origUV.s1;
-					VSTORE3F(normalize(origShadeN + uu * dndu), &hitPointTmp->shadeN.x);
+				case EVAL_BUMP_GENERIC_OFFSET_U:
+					Texture_EvalOpGenericBumpOffsetU(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
 					break;
-				}
-				case EVAL_BUMP_GENERIC_OFFSET_V: {
-					// -1 is for result of EVAL_BUMP_GENERIC_OFFSET_U
-					const float3 origP = EvalStack_Read3(-8 - 1);
-					const float3 origShadeN = EvalStack_Read3(-5 - 1);
-					const float2 origUV = EvalStack_Read2(-2 - 1);
-
-					// Update HitPoint
-					__global HitPoint *hitPointTmp = (__global HitPoint *)hitPoint;
-					const float3 dpdv = VLOAD3F(&hitPointTmp->dpdv.x);
-					const float3 dndv = VLOAD3F(&hitPoint->dndv.x);
-					// Shift hitPointTmp.dv in the v direction and calculate value
-					const float vv = sampleDistance / length(dpdv);
-					VSTORE3F(origP + vv * dpdv, &hitPointTmp->p.x);
-					hitPointTmp->uv[0].u = origUV.s0;
-					hitPointTmp->uv[0].v = origUV.s1 + vv;
-					VSTORE3F(normalize(origShadeN + vv * dndv), &hitPointTmp->shadeN.x);
+				case EVAL_BUMP_GENERIC_OFFSET_V:
+					Texture_EvalOpGenericBumpOffsetV(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
 					break;
-				}
-				case EVAL_BUMP: {
-					float evalFloatTexBase, evalFloatTexOffsetU, evalFloatTexOffsetV;
-					EvalStack_Pop(evalFloatTexOffsetV);
-					EvalStack_Pop(evalFloatTexOffsetU);
-
-					float3 origP, origShadeN;
-					float2 origUV;
-					EvalStack_Pop2(origUV);
-					EvalStack_Pop3(origShadeN);
-					EvalStack_Pop3(origP);
-
-					// evalFloatTexBase is the very first evaluation done so
-					// it is the last for a stack pop
-					EvalStack_Pop(evalFloatTexBase);
-					
-					// Restore original P, shadeN and UV
-					__global HitPoint *hitPointTmp = (__global HitPoint *)hitPoint;
-					VSTORE3F(origP, &hitPointTmp->p.x);
-					VSTORE3F(origShadeN, &hitPointTmp->shadeN.x);
-					hitPointTmp->uv[0].u = origUV.s0;
-					hitPointTmp->uv[0].v = origUV.s1;
-
-					const float3 shadeN = GenericTexture_Bump(hitPoint, sampleDistance,
-							evalFloatTexBase, evalFloatTexOffsetU, evalFloatTexOffsetV);
-					EvalStack_Push3(shadeN);
+				case EVAL_BUMP:
+					Texture_EvalOpGenericBump(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
 					break;
-				}
 				default:
 					// Something wrong here
 					break;
@@ -383,17 +406,17 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 			// Something wrong here
 			break;
 	}
-
-	#undef EvalStack_Push
-	#undef EvalStack_Push2
-	#undef EvalStack_Push3
-	#undef EvalStack_Pop
-	#undef EvalStack_Pop2
-	#undef EvalStack_Pop3
-	#undef EvalStack_Read
-	#undef EvalStack_Read2
-	#undef EvalStack_Read3
 }
+
+#undef EvalStack_Push
+#undef EvalStack_Push2
+#undef EvalStack_Push3
+#undef EvalStack_Pop
+#undef EvalStack_Pop2
+#undef EvalStack_Pop3
+#undef EvalStack_Read
+#undef EvalStack_Read2
+#undef EvalStack_Read3
 
 //------------------------------------------------------------------------------
 // Texture_GetFloatValue()
