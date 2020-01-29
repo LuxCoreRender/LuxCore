@@ -35,7 +35,7 @@ scene.materials.mat_red.bumptex = scaled_bumpmap
 ##
 scene.materials.mat_white.type = matte
 scene.materials.mat_white.kd = 0.8 0.8 0.8
-#scene.materials.mat_white.normaltex = normalmap
+scene.materials.mat_white.normaltex = normalmap
 ##
 #scene.materials.mat_white.type = glossytranslucent
 #scene.materials.mat_white.kd = 0.1 0.1 0.1

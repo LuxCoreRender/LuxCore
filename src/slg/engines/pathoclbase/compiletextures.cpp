@@ -248,7 +248,7 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 					evalOpStackSize += 3;
 					break;
 				case slg::ocl::TextureEvalOpType::EVAL_BUMP:
-					evalOpStackSize += evalOpsStackSizeFloat[texIndex];
+					evalOpStackSize += 3;
 					break;
 				default:
 					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(): " + ToString(tex->type));
@@ -298,6 +298,23 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 							evalOpsStackSizeBump);
 					break;
 				}
+				default:
+					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(): " + ToString(tex->type));
+			}
+			break;
+		}
+		case slg::ocl::NORMALMAP_TEX: {
+			switch (opType) {
+				case slg::ocl::TextureEvalOpType::EVAL_FLOAT:
+					evalOpStackSize += 1;
+					break;
+				case slg::ocl::TextureEvalOpType::EVAL_SPECTRUM:
+					evalOpStackSize += 3;
+					break;
+				case slg::ocl::TextureEvalOpType::EVAL_BUMP:
+						evalOpStackSize += CompileTextureOps(tex->normalMap.texIndex, slg::ocl::TextureEvalOpType::EVAL_SPECTRUM,
+								evalOpsStackSizeFloat, evalOpsStackSizeSpectrum, evalOpsStackSizeBump);
+					break;
 				default:
 					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(): " + ToString(tex->type));
 			}

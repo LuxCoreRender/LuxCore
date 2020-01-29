@@ -138,16 +138,12 @@ OPENCL_FORCE_INLINE float3 ScaleTexture_Bump(__global const HitPoint *hitPoint,
 // NormalMapTexture
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_ENABLE_TEX_NORMALMAP)
-OPENCL_FORCE_NOT_INLINE float3 NormalMapTexture_Bump(
+OPENCL_FORCE_INLINE float3 NormalMapTexture_Bump(
 		__global const Texture* restrict tex,
 		__global HitPoint *hitPoint,
-		const float sampleDistance
-		TEXTURES_PARAM_DECL) {
+		const float3 evalSpectrumTex) {
 	// Normal from normal map
-	float3 rgb = Texture_GetSpectrumValue(tex->normalMap.texIndex, hitPoint
-			TEXTURES_PARAM);
-	rgb = clamp(rgb, -1.f, 1.f);
+	const float3 rgb = clamp(evalSpectrumTex, 0.f, 1.f);
 
 	// Normal from normal map
 	float3 n = 2.f * rgb - (float3)(1.f, 1.f, 1.f);
@@ -156,8 +152,8 @@ OPENCL_FORCE_NOT_INLINE float3 NormalMapTexture_Bump(
 	n.y *= scale;
 
 	const float3 oldShadeN = VLOAD3F(&hitPoint->shadeN.x);
-	float3 dpdu = VLOAD3F(&hitPoint->dpdu.x);
-	float3 dpdv = VLOAD3F(&hitPoint->dpdv.x);
+	const float3 dpdu = VLOAD3F(&hitPoint->dpdu.x);
+	const float3 dpdv = VLOAD3F(&hitPoint->dpdv.x);
 	
 	Frame frame;
 	Frame_Set_Private(&frame, dpdu, dpdv, oldShadeN);
@@ -168,7 +164,6 @@ OPENCL_FORCE_NOT_INLINE float3 NormalMapTexture_Bump(
 
 	return shadeN;
 }
-#endif
 
 //------------------------------------------------------------------------------
 // TriplanarTexture

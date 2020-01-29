@@ -18,6 +18,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+//#define DEBUG_PRINTF_KERNEL_NAME 1
 //#define DEBUG_PRINTF_TEXTURE_EVAL 1
 
 //------------------------------------------------------------------------------
@@ -287,6 +288,34 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 					Texture_EvalOpGenericBump(evalStack, evalStackOffset,
 							hitPoint, sampleDistance);
 					break;
+				default:
+					// Something wrong here
+					break;
+			}
+			break;
+		}
+		//----------------------------------------------------------------------
+		// NORMALMAP_TEX
+		//----------------------------------------------------------------------
+		case NORMALMAP_TEX: {
+			switch (evalType) {
+				case EVAL_FLOAT: {
+					EvalStack_Push(0.f);
+					break;
+				}
+				case EVAL_SPECTRUM: {
+					const float3 black = BLACK;
+					EvalStack_Push3(black);
+					break;
+				}	
+				case EVAL_BUMP: {
+					float3 evalSpectrumTex;
+					EvalStack_Pop3(evalSpectrumTex);
+
+					const float3 shadeN = NormalMapTexture_Bump(tex, hitPoint, evalSpectrumTex);
+					EvalStack_Push3(shadeN);
+					break;
+				}
 				default:
 					// Something wrong here
 					break;
