@@ -267,6 +267,38 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 			}
 			break;
 		}
+		case slg::ocl::FRESNEL_APPROX_N: {
+			switch (opType) {
+				case slg::ocl::TextureEvalOpType::EVAL_FLOAT:
+				case slg::ocl::TextureEvalOpType::EVAL_SPECTRUM: {
+					evalOpStackSize += CompileTextureOps(tex->fresnelApproxN.texIndex, opType);
+					break;
+				}
+				case slg::ocl::TextureEvalOpType::EVAL_BUMP: {
+					evalOpStackSize += CompileTextureOpsGenericBumpMap(texIndex);
+					break;
+				}
+				default:
+					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(): " + ToString(tex->type));
+			}
+			break;
+		}
+		case slg::ocl::FRESNEL_APPROX_K: {
+			switch (opType) {
+				case slg::ocl::TextureEvalOpType::EVAL_FLOAT:
+				case slg::ocl::TextureEvalOpType::EVAL_SPECTRUM: {
+					evalOpStackSize += CompileTextureOps(tex->fresnelApproxK.texIndex, opType);
+					break;
+				}
+				case slg::ocl::TextureEvalOpType::EVAL_BUMP: {
+					evalOpStackSize += CompileTextureOpsGenericBumpMap(texIndex);
+					break;
+				}
+				default:
+					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(): " + ToString(tex->type));
+			}
+			break;
+		}
 		case slg::ocl::CHECKERBOARD2D: {
 			switch (opType) {
 				case slg::ocl::TextureEvalOpType::EVAL_FLOAT:

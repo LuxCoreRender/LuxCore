@@ -98,33 +98,21 @@ OPENCL_FORCE_INLINE float3 ScaleTexture_ConstEvaluateSpectrum(
 // FresnelApproxN & FresnelApproxK texture
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_ENABLE_FRESNEL_APPROX_N)
-
-OPENCL_FORCE_NOT_INLINE float FresnelApproxNTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
-		const float value) {
+OPENCL_FORCE_INLINE float FresnelApproxNTexture_ConstEvaluateFloat(const float value) {
 	return FresnelApproxN(value);
 }
 
-OPENCL_FORCE_NOT_INLINE float3 FresnelApproxNTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
-		const float3 value) {
+OPENCL_FORCE_INLINE float3 FresnelApproxNTexture_ConstEvaluateSpectrum(const float3 value) {
 	return FresnelApproxN3(value);
 }
 
-#endif
-
-#if defined(PARAM_ENABLE_FRESNEL_APPROX_K)
-
-OPENCL_FORCE_NOT_INLINE float FresnelApproxKTexture_ConstEvaluateFloat( __global const HitPoint *hitPoint,
-		const float value) {
+OPENCL_FORCE_INLINE float FresnelApproxKTexture_ConstEvaluateFloat(const float value) {
 	return FresnelApproxK(value);
 }
 
-OPENCL_FORCE_NOT_INLINE float3 FresnelApproxKTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
-		const float3 value) {
+OPENCL_FORCE_INLINE float3 FresnelApproxKTexture_ConstEvaluateSpectrum(const float3 value) {
 	return FresnelApproxK3(value);
 }
-
-#endif
 
 //------------------------------------------------------------------------------
 // Mix texture

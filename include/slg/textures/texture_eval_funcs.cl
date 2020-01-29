@@ -210,6 +210,84 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 			break;
 		}
 		//----------------------------------------------------------------------
+		// FRESNEL_APPROX_N
+		//----------------------------------------------------------------------
+		case FRESNEL_APPROX_N: {
+			switch (evalType) {
+				case EVAL_FLOAT: {
+					float tex1;
+					EvalStack_Pop(tex1);
+
+					const float eval = FresnelApproxNTexture_ConstEvaluateFloat(tex1);
+					EvalStack_Push(eval);
+					break;
+				}
+				case EVAL_SPECTRUM: {
+					float3 tex1;
+					EvalStack_Pop3(tex1);
+
+					const float3 eval = FresnelApproxNTexture_ConstEvaluateSpectrum(tex1);
+					EvalStack_Push3(eval);
+					break;
+				}
+				case EVAL_BUMP_GENERIC_OFFSET_U:
+					Texture_EvalOpGenericBumpOffsetU(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP_GENERIC_OFFSET_V:
+					Texture_EvalOpGenericBumpOffsetV(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP:
+					Texture_EvalOpGenericBump(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				default:
+					// Something wrong here
+					break;
+			}
+			break;
+		}
+		//----------------------------------------------------------------------
+		// FRESNEL_APPROX_K
+		//----------------------------------------------------------------------
+		case FRESNEL_APPROX_K: {
+			switch (evalType) {
+				case EVAL_FLOAT: {
+					float tex1;
+					EvalStack_Pop(tex1);
+
+					const float eval = FresnelApproxKTexture_ConstEvaluateFloat(tex1);
+					EvalStack_Push(eval);
+					break;
+				}
+				case EVAL_SPECTRUM: {
+					float3 tex1;
+					EvalStack_Pop3(tex1);
+
+					const float3 eval = FresnelApproxKTexture_ConstEvaluateSpectrum(tex1);
+					EvalStack_Push3(eval);
+					break;
+				}
+				case EVAL_BUMP_GENERIC_OFFSET_U:
+					Texture_EvalOpGenericBumpOffsetU(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP_GENERIC_OFFSET_V:
+					Texture_EvalOpGenericBumpOffsetV(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP:
+					Texture_EvalOpGenericBump(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				default:
+					// Something wrong here
+					break;
+			}
+			break;
+		}
+		//----------------------------------------------------------------------
 		// SCALE_TEX
 		//----------------------------------------------------------------------
 		case SCALE_TEX: {
