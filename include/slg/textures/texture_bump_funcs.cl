@@ -135,12 +135,67 @@ OPENCL_FORCE_INLINE float3 ScaleTexture_Bump(__global const HitPoint *hitPoint,
 }
 
 //------------------------------------------------------------------------------
+// MixTexture
+//------------------------------------------------------------------------------
+
+OPENCL_FORCE_INLINE float3 MixTexture_Bump(__global const HitPoint *hitPoint,
+		const float3 bumbNTex1, const float3 bumbNTex2, const float3 bumbNAmount,
+		const float evalFloatTex1, const float evalFloatTex2, const float evalFloatAmount) {
+	const float3 shadeN = VLOAD3F(&hitPoint->shadeN.x);
+	const float3 dpdu = VLOAD3F(&hitPoint->dpdu.x);
+	const float3 u = normalize(dpdu);
+	const float3 v = normalize(cross(shadeN, dpdu));
+
+	float3 n = bumbNTex1;
+	float nn = dot(n, shadeN);
+	const float du1 = dot(n, u) / nn;
+	const float dv1 = dot(n, v) / nn;
+
+	n = bumbNTex2;
+	nn = dot(n, shadeN);
+	const float du2 = dot(n, u) / nn;
+	const float dv2 = dot(n, v) / nn;
+
+	n = bumbNTex2;
+	nn = dot(n, shadeN);
+	const float dua = dot(n, u) / nn;
+	const float dva = dot(n, v) / nn;
+
+	const float t1 = evalFloatTex1;
+	const float t2 = evalFloatTex2;
+	const float amt = clamp(evalFloatAmount, 0.f, 1.f);
+
+	const float du = Lerp(amt, du1, du2) + dua * (t2 - t1);
+	const float dv = Lerp(amt, dv1, dv2) + dva * (t2 - t1);
+
+	return normalize(shadeN + du * u + dv * v);
+};
+
+//------------------------------------------------------------------------------
+// AddTexture
+//------------------------------------------------------------------------------
+
+ OPENCL_FORCE_INLINE float3 AddTexture_Bump(__global const HitPoint *hitPoint,
+		 const float3 bumbNTex1, const float3 bumbNTex2) {
+	return normalize(bumbNTex1 + bumbNTex2 - VLOAD3F(&hitPoint->shadeN.x));
+}
+
+//------------------------------------------------------------------------------
+// SubtractTexture
+//------------------------------------------------------------------------------
+
+ OPENCL_FORCE_INLINE float3 SubtractTexture_Bump(__global const HitPoint *hitPoint,
+		 const float3 bumbNTex1, const float3 bumbNTex2) {
+	return normalize(bumbNTex1 - bumbNTex2 + VLOAD3F(&hitPoint->shadeN.x));
+}
+
+//------------------------------------------------------------------------------
 // NormalMapTexture
 //------------------------------------------------------------------------------
 
 OPENCL_FORCE_INLINE float3 NormalMapTexture_Bump(
 		__global const Texture* restrict tex,
-		__global HitPoint *hitPoint,
+		__global const HitPoint *hitPoint,
 		const float3 evalSpectrumTex) {
 	// Normal from normal map
 	const float3 rgb = clamp(evalSpectrumTex, 0.f, 1.f);

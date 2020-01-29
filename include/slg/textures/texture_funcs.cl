@@ -30,7 +30,7 @@ OPENCL_FORCE_INLINE float3 ConstFloatTexture_ConstEvaluateSpectrum(__global cons
 	return tex->constFloat.value;
 }
 
-// Note: ConstFloatTexture_Bump() is defined in texture_bump_funcs.cl
+// Note: ConstTexture_Bump() is defined in texture_bump_funcs.cl
 
 //------------------------------------------------------------------------------
 // ConstFloat3 texture
@@ -44,7 +44,7 @@ OPENCL_FORCE_INLINE float3 ConstFloat3Texture_ConstEvaluateSpectrum(__global con
 	return VLOAD3F(tex->constFloat3.color.c);
 }
 
-// Note: ConstFloat3Texture_Bump() is defined in texture_bump_funcs.cl
+// Note: ConstTexture_Bump() is defined in texture_bump_funcs.cl
 
 //------------------------------------------------------------------------------
 // ImageMap texture
@@ -118,32 +118,62 @@ OPENCL_FORCE_INLINE float3 FresnelApproxKTexture_ConstEvaluateSpectrum(const flo
 // Mix texture
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_ENABLE_TEX_MIX)
-
-OPENCL_FORCE_NOT_INLINE float MixTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
-		const float amt, const float value1, const float value2) {
+OPENCL_FORCE_INLINE float MixTexture_ConstEvaluateFloat(const float value1, const float value2,
+		const float amt) {
 	return mix(value1, value2, clamp(amt, 0.f, 1.f));
 }
 
-OPENCL_FORCE_NOT_INLINE float3 MixTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
-		const float3 amt, const float3 value1, const float3 value2) {
+OPENCL_FORCE_INLINE float3 MixTexture_ConstEvaluateSpectrum(const float3 value1, const float3 value2,
+		const float3 amt) {
 	return mix(value1, value2, clamp(amt, 0.f, 1.f));
 }
 
-#endif
+// Note: MixTexture_Bump() is defined in texture_bump_funcs.cl
+
+//------------------------------------------------------------------------------
+// Add texture
+//------------------------------------------------------------------------------
+
+OPENCL_FORCE_INLINE float AddTexture_ConstEvaluateFloat(const float value1,
+		const float value2) {
+	return value1 + value2;
+}
+
+OPENCL_FORCE_INLINE float3 AddTexture_ConstEvaluateSpectrum(const float3 value1,
+		const float3 value2) {
+	return value1 + value2;
+}
+
+// Note: AddTexture_Bump() is defined in texture_bump_funcs.cl
+
+//------------------------------------------------------------------------------
+// Subtract texture
+//------------------------------------------------------------------------------
+
+OPENCL_FORCE_INLINE float SubtractTexture_ConstEvaluateFloat(const float value1,
+		const float value2) {
+	return value1 - value2;
+}
+
+OPENCL_FORCE_INLINE float3 SubtractTexture_ConstEvaluateSpectrum(const float3 value1,
+		const float3 value2) {
+	return value1 - value2;
+}
+
+// Note: SubtractTexture_Bump() is defined in texture_bump_funcs.cl
 
 //------------------------------------------------------------------------------
 // CheckerBoard 2D & 3D texture
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_NOT_INLINE float CheckerBoard2DTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
+OPENCL_FORCE_INLINE float CheckerBoard2DTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
 		const float value1, const float value2, __global const TextureMapping2D *mapping) {
 	const float2 mapUV = TextureMapping2D_Map(mapping, hitPoint);
 
 	return ((Floor2Int(mapUV.s0) + Floor2Int(mapUV.s1)) % 2 == 0) ? value1 : value2;
 }
 
-OPENCL_FORCE_NOT_INLINE float3 CheckerBoard2DTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
+OPENCL_FORCE_INLINE float3 CheckerBoard2DTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
 		const float3 value1, const float3 value2, __global const TextureMapping2D *mapping) {
 	const float2 mapUV = TextureMapping2D_Map(mapping, hitPoint);
 
@@ -615,42 +645,6 @@ OPENCL_FORCE_NOT_INLINE float3 BrickTexture_ConstEvaluateSpectrum(__global const
 			mortarheight, mortardepth,
 			proportion, invproportion,
 			mapping) ? (value1 * value3) : value2;
-}
-
-#endif
-
-//------------------------------------------------------------------------------
-// Add texture
-//------------------------------------------------------------------------------
-
-#if defined(PARAM_ENABLE_TEX_ADD)
-
-OPENCL_FORCE_NOT_INLINE float AddTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
-		const float value1, const float value2) {
-	return value1 + value2;
-}
-
-OPENCL_FORCE_NOT_INLINE float3 AddTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
-		const float3 value1, const float3 value2) {
-	return value1 + value2;
-}
-
-#endif
-
-//------------------------------------------------------------------------------
-// Subtract texture
-//------------------------------------------------------------------------------
-
-#if defined(PARAM_ENABLE_TEX_SUBTRACT)
-
-OPENCL_FORCE_NOT_INLINE float SubtractTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
-		const float value1, const float value2) {
-	return value1 - value2;
-}
-
-OPENCL_FORCE_NOT_INLINE float3 SubtractTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
-		const float3 value1, const float3 value2) {
-	return value1 - value2;
 }
 
 #endif

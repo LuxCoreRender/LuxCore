@@ -210,6 +210,50 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 			break;
 		}
 		//----------------------------------------------------------------------
+		// SCALE_TEX
+		//----------------------------------------------------------------------
+		case SCALE_TEX: {
+			switch (evalType) {
+				case EVAL_FLOAT: {
+					float tex1, tex2;
+					EvalStack_Pop(tex2);
+					EvalStack_Pop(tex1);
+
+					const float eval = ScaleTexture_ConstEvaluateFloat(tex1, tex2);
+					EvalStack_Push(eval);
+					break;
+				}
+				case EVAL_SPECTRUM: {
+					float3 tex1, tex2;
+					EvalStack_Pop3(tex2);
+					EvalStack_Pop3(tex1);
+
+					const float3 eval = ScaleTexture_ConstEvaluateSpectrum(tex1, tex2);
+					EvalStack_Push3(eval);
+					break;
+				}
+				case EVAL_BUMP: {
+					float evalFloatTex1, evalFloatTex2;
+
+					EvalStack_Pop(evalFloatTex2);
+					EvalStack_Pop(evalFloatTex1);
+
+					float3 bumbNTex1, bumbNTex2;
+
+					EvalStack_Pop3(bumbNTex2);
+					EvalStack_Pop3(bumbNTex1);
+
+					const float3 shadeN = ScaleTexture_Bump(hitPoint, bumbNTex1, bumbNTex2, evalFloatTex1, evalFloatTex2);
+					EvalStack_Push3(shadeN);
+					break;
+				}
+				default:
+					// Something wrong here
+					break;
+			}
+			break;
+		}
+		//----------------------------------------------------------------------
 		// FRESNEL_APPROX_N
 		//----------------------------------------------------------------------
 		case FRESNEL_APPROX_N: {
@@ -288,16 +332,67 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 			break;
 		}
 		//----------------------------------------------------------------------
-		// SCALE_TEX
+		// MIX_TEX
 		//----------------------------------------------------------------------
-		case SCALE_TEX: {
+		case MIX_TEX: {
+			switch (evalType) {
+				case EVAL_FLOAT: {
+					float amt, tex1, tex2;
+					EvalStack_Pop(amt);
+					EvalStack_Pop(tex2);
+					EvalStack_Pop(tex1);
+
+					const float eval = MixTexture_ConstEvaluateFloat(tex1, tex2, amt);
+					EvalStack_Push(eval);
+					break;
+				}
+				case EVAL_SPECTRUM: {
+					float amt;
+					float3 tex1, tex2;
+					EvalStack_Pop(amt);
+					EvalStack_Pop3(tex2);
+					EvalStack_Pop3(tex1);
+
+					const float3 eval = MixTexture_ConstEvaluateSpectrum(tex1, tex2, amt);
+					EvalStack_Push3(eval);
+					break;
+				}
+				case EVAL_BUMP: {
+					float evalFloatTex1, evalFloatTex2, evalFloatAmount;
+
+					EvalStack_Pop(evalFloatAmount);
+					EvalStack_Pop(evalFloatTex2);
+					EvalStack_Pop(evalFloatTex1);
+
+					float3 bumbNTex1, bumbNTex2, bumbNAmount;
+
+					EvalStack_Pop3(bumbNAmount);
+					EvalStack_Pop3(bumbNTex2);
+					EvalStack_Pop3(bumbNTex1);
+
+					const float3 shadeN = MixTexture_Bump(hitPoint,
+							bumbNTex1, bumbNTex2, bumbNAmount,
+							evalFloatTex1, evalFloatTex2, evalFloatAmount);
+					EvalStack_Push3(shadeN);
+					break;
+				}
+				default:
+					// Something wrong here
+					break;
+			}
+			break;
+		}
+		//----------------------------------------------------------------------
+		// ADD_TEX
+		//----------------------------------------------------------------------
+		case ADD_TEX: {
 			switch (evalType) {
 				case EVAL_FLOAT: {
 					float tex1, tex2;
 					EvalStack_Pop(tex2);
 					EvalStack_Pop(tex1);
 
-					const float eval = ScaleTexture_ConstEvaluateFloat(tex1, tex2);
+					const float eval = AddTexture_ConstEvaluateFloat(tex1, tex2);
 					EvalStack_Push(eval);
 					break;
 				}
@@ -306,22 +401,56 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 					EvalStack_Pop3(tex2);
 					EvalStack_Pop3(tex1);
 
-					const float3 eval = ScaleTexture_ConstEvaluateSpectrum(tex1, tex2);
+					const float3 eval = AddTexture_ConstEvaluateSpectrum(tex1, tex2);
 					EvalStack_Push3(eval);
 					break;
 				}
 				case EVAL_BUMP: {
-					float evalFloatTex1, evalFloatTex2;
-
-					EvalStack_Pop(evalFloatTex2);
-					EvalStack_Pop(evalFloatTex1);
-
 					float3 bumbNTex1, bumbNTex2;
 
 					EvalStack_Pop3(bumbNTex2);
 					EvalStack_Pop3(bumbNTex1);
 
-					const float3 shadeN = ScaleTexture_Bump(hitPoint, bumbNTex1, bumbNTex2, evalFloatTex1, evalFloatTex2);
+					const float3 shadeN = AddTexture_Bump(hitPoint, bumbNTex1, bumbNTex2);
+					EvalStack_Push3(shadeN);
+					break;
+				}
+				default:
+					// Something wrong here
+					break;
+			}
+			break;
+		}
+		//----------------------------------------------------------------------
+		// SUBTRACT_TEX
+		//----------------------------------------------------------------------
+		case SUBTRACT_TEX: {
+			switch (evalType) {
+				case EVAL_FLOAT: {
+					float tex1, tex2;
+					EvalStack_Pop(tex2);
+					EvalStack_Pop(tex1);
+
+					const float eval = SubtractTexture_ConstEvaluateFloat(tex1, tex2);
+					EvalStack_Push(eval);
+					break;
+				}
+				case EVAL_SPECTRUM: {
+					float3 tex1, tex2;
+					EvalStack_Pop3(tex2);
+					EvalStack_Pop3(tex1);
+
+					const float3 eval = SubtractTexture_ConstEvaluateSpectrum(tex1, tex2);
+					EvalStack_Push3(eval);
+					break;
+				}
+				case EVAL_BUMP: {
+					float3 bumbNTex1, bumbNTex2;
+
+					EvalStack_Pop3(bumbNTex2);
+					EvalStack_Pop3(bumbNTex1);
+
+					const float3 shadeN = SubtractTexture_Bump(hitPoint, bumbNTex1, bumbNTex2);
 					EvalStack_Push3(shadeN);
 					break;
 				}
