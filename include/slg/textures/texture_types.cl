@@ -346,7 +346,7 @@ typedef struct {
 
 typedef struct {
 	unsigned int dataIndex;
-	unsigned int channel;
+	unsigned int channelIndex;
 } HitPointGreyTexParam;
 
 typedef struct {

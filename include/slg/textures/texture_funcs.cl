@@ -163,6 +163,91 @@ OPENCL_FORCE_INLINE float3 SubtractTexture_ConstEvaluateSpectrum(const float3 va
 // Note: SubtractTexture_Bump() is defined in texture_bump_funcs.cl
 
 //------------------------------------------------------------------------------
+// HitPointColor texture
+//------------------------------------------------------------------------------
+
+OPENCL_FORCE_INLINE float HitPointColorTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
+		const uint dataIndex) {
+	return Spectrum_Y(VLOAD3F(hitPoint->color[dataIndex].c));
+}
+
+OPENCL_FORCE_INLINE float3 HitPointColorTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
+		const uint dataIndex) {
+	return VLOAD3F(hitPoint->color[dataIndex].c);
+}
+
+//------------------------------------------------------------------------------
+// HitPointAlpha texture
+//------------------------------------------------------------------------------
+
+OPENCL_FORCE_INLINE float HitPointAlphaTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
+		const uint dataIndex) {
+	return hitPoint->alpha[dataIndex];
+}
+
+OPENCL_FORCE_INLINE float3 HitPointAlphaTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
+		const uint dataIndex) {
+	const float alpha = hitPoint->alpha[dataIndex];
+	return (float3)(alpha, alpha, alpha);
+}
+//------------------------------------------------------------------------------
+// HitPointGrey texture
+//------------------------------------------------------------------------------
+
+OPENCL_FORCE_INLINE float HitPointGreyTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
+		const uint dataIndex, const uint channel) {
+	const float3 col = VLOAD3F(hitPoint->color[dataIndex].c);
+
+	switch (channel) {
+		case 0:
+			return col.s0;
+		case 1:
+			return col.s1;
+		case 2:
+			return col.s2;
+		default:
+			return Spectrum_Y(col);
+	}
+}
+
+OPENCL_FORCE_INLINE float3 HitPointGreyTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
+		const uint dataIndex, const uint channel) {
+	const float3 col = VLOAD3F(hitPoint->color[dataIndex].c);
+
+	float v;
+	switch (channel) {
+		case 0:
+			v = col.s0;
+			break;
+		case 1:
+			v = col.s1;
+			break;
+		case 2:
+			v = col.s2;
+			break;
+		default:
+			v = Spectrum_Y(col);
+			break;
+	}
+
+	return (float3)(v, v, v);
+}
+
+//------------------------------------------------------------------------------
+// NormalMap texture
+//------------------------------------------------------------------------------
+
+OPENCL_FORCE_INLINE float NormalMapTexture_ConstEvaluateFloat() {
+    return 0.f;
+}
+
+OPENCL_FORCE_INLINE float3 NormalMapTexture_ConstEvaluateSpectrum() {
+	return 0.f;
+}
+
+// Note: NormalMapTexture_Bump() is defined in texture_bump_funcs.cl
+
+//------------------------------------------------------------------------------
 // CheckerBoard 2D & 3D texture
 //------------------------------------------------------------------------------
 
@@ -770,108 +855,6 @@ OPENCL_FORCE_INLINE float BandTexture_ConstEvaluateFloat(__global const HitPoint
 	return Spectrum_Y(BandTexture_ConstEvaluateSpectrum(hitPoint,
 			interpType, size, offsets, values, amt));
 }
-
-#endif
-
-//------------------------------------------------------------------------------
-// HitPointColor texture
-//------------------------------------------------------------------------------
-
-#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR)
-
-OPENCL_FORCE_INLINE float HitPointColorTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
-		const uint dataIndex) {
-	return Spectrum_Y(VLOAD3F(hitPoint->color[dataIndex].c));
-}
-
-OPENCL_FORCE_INLINE float3 HitPointColorTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
-		const uint dataIndex) {
-	return VLOAD3F(hitPoint->color[dataIndex].c);
-}
-
-#endif
-
-//------------------------------------------------------------------------------
-// HitPointAlpha texture
-//------------------------------------------------------------------------------
-
-#if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)
-
-OPENCL_FORCE_INLINE float HitPointAlphaTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
-		const uint dataIndex) {
-	return hitPoint->alpha[dataIndex];
-}
-
-OPENCL_FORCE_INLINE float3 HitPointAlphaTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
-		const uint dataIndex) {
-	const float alpha = hitPoint->alpha[dataIndex];
-	return (float3)(alpha, alpha, alpha);
-}
-
-#endif
-
-//------------------------------------------------------------------------------
-// HitPointGrey texture
-//------------------------------------------------------------------------------
-
-#if defined(PARAM_ENABLE_TEX_HITPOINTGREY)
-
-OPENCL_FORCE_NOT_INLINE float HitPointGreyTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
-		const uint dataIndex, const uint channel) {
-	const float3 col = VLOAD3F(hitPoint->color[dataIndex].c);
-
-	switch (channel) {
-		case 0:
-			return col.s0;
-		case 1:
-			return col.s1;
-		case 2:
-			return col.s2;
-		default:
-			return Spectrum_Y(col);
-	}
-}
-
-OPENCL_FORCE_NOT_INLINE float3 HitPointGreyTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
-		const uint dataIndex, const uint channel) {
-	const float3 col = VLOAD3F(hitPoint->color[dataIndex].c);
-
-	float v;
-	switch (channel) {
-		case 0:
-			v = col.s0;
-			break;
-		case 1:
-			v = col.s1;
-			break;
-		case 2:
-			v = col.s2;
-			break;
-		default:
-			v = Spectrum_Y(col);
-			break;
-	}
-
-	return (float3)(v, v, v);
-}
-
-#endif
-
-//------------------------------------------------------------------------------
-// NormalMap texture
-//------------------------------------------------------------------------------
-
-#if defined(PARAM_ENABLE_TEX_NORMALMAP)
-
-OPENCL_FORCE_INLINE float NormalMapTexture_ConstEvaluateFloat(__global const Texture* restrict tex) {
-    return 0.f;
-}
-
-OPENCL_FORCE_INLINE float3 NormalMapTexture_ConstEvaluateSpectrum(__global const Texture* restrict tex) {
-	return 0.f;
-}
-
-// Note: NormalMapTexture_Bump() is defined in texture_bump_funcs.cl
 
 #endif
 

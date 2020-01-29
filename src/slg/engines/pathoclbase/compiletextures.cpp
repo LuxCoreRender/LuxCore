@@ -230,7 +230,10 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 	switch (tex->type) {
 		case slg::ocl::CONST_FLOAT:
 		case slg::ocl::CONST_FLOAT3:
-		case slg::ocl::IMAGEMAP: {
+		case slg::ocl::IMAGEMAP:
+		case slg::ocl::HITPOINTCOLOR:
+		case slg::ocl::HITPOINTALPHA:
+		case slg::ocl::HITPOINTGREY: {
 			switch (opType) {
 				case slg::ocl::TextureEvalOpType::EVAL_FLOAT:
 					evalOpStackSize += 1;
@@ -1359,7 +1362,7 @@ void CompiledScene::CompileTextures() {
 
 				tex->type = slg::ocl::HITPOINTGREY;
 				tex->hitPointGrey.dataIndex = hpg->GetDataIndex();
-				tex->hitPointGrey.channel = hpg->GetChannel();
+				tex->hitPointGrey.channelIndex = hpg->GetChannel();
 				break;
 			}
             case NORMALMAP_TEX: {
