@@ -53,6 +53,8 @@
 
 ''Beta1 released''
 
+* Improved light map sampling in BAKECPU
+
 ### Fixed Bugs
 
 * Fixed triangle lights back face emission when using an IES or image map profile
