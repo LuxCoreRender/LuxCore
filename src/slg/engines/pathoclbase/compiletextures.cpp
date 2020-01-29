@@ -191,15 +191,11 @@ float *CompiledScene::CompileDistribution2D(const Distribution2D *dist, u_int *s
 	return compDist;
 }
 
-u_int CompiledScene::CompileTextureOpsGenericBumpMap(const u_int texIndex,
-		const vector<u_int > &evalOpsStackSizeFloat,
-		const vector<u_int > &evalOpsStackSizeSpectrum,
-		const vector<u_int > &evalOpsStackSizeBump) {
+u_int CompiledScene::CompileTextureOpsGenericBumpMap(const u_int texIndex) {
 	u_int evalOpStackSize = 0;
 
 	// Eval texture at hit point
-	evalOpStackSize += CompileTextureOps(texIndex, slg::ocl::TextureEvalOpType::EVAL_FLOAT,
-			evalOpsStackSizeFloat, evalOpsStackSizeSpectrum, evalOpsStackSizeBump);
+	evalOpStackSize += CompileTextureOps(texIndex, slg::ocl::TextureEvalOpType::EVAL_FLOAT);
 
 	// EVAL_BUMP_GENERIC_OFFSET_U
 	slg::ocl::TextureEvalOp opOffsetU;
@@ -210,8 +206,7 @@ u_int CompiledScene::CompileTextureOpsGenericBumpMap(const u_int texIndex,
 	evalOpStackSize += 3 + 3 + 2;
 
 	// Eval texture at hit point + offset U
-	evalOpStackSize += CompileTextureOps(texIndex, slg::ocl::TextureEvalOpType::EVAL_FLOAT,
-			evalOpsStackSizeFloat, evalOpsStackSizeSpectrum, evalOpsStackSizeBump);
+	evalOpStackSize += CompileTextureOps(texIndex, slg::ocl::TextureEvalOpType::EVAL_FLOAT);
 
 	// EVAL_BUMP_GENERIC_OFFSET_V
 	slg::ocl::TextureEvalOp opOffsetV;
@@ -220,17 +215,13 @@ u_int CompiledScene::CompileTextureOpsGenericBumpMap(const u_int texIndex,
 	texEvalOps.push_back(opOffsetV);
 
 	// Eval texture at hit point + offset V
-	evalOpStackSize += CompileTextureOps(texIndex, slg::ocl::TextureEvalOpType::EVAL_FLOAT,
-			evalOpsStackSizeFloat, evalOpsStackSizeSpectrum, evalOpsStackSizeBump);\
+	evalOpStackSize += CompileTextureOps(texIndex, slg::ocl::TextureEvalOpType::EVAL_FLOAT);
 	
 	return evalOpStackSize;
 }
 					
 u_int CompiledScene::CompileTextureOps(const u_int texIndex,
-		const slg::ocl::TextureEvalOpType opType,
-		const vector<u_int > &evalOpsStackSizeFloat,
-		const vector<u_int > &evalOpsStackSizeSpectrum,
-		const vector<u_int > &evalOpsStackSizeBump) {
+		const slg::ocl::TextureEvalOpType opType) {
 	// Translate textures to texture evaluate ops
 
 	slg::ocl::Texture *tex = &texs[texIndex];
@@ -259,22 +250,16 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 			switch (opType) {
 				case slg::ocl::TextureEvalOpType::EVAL_FLOAT:
 				case slg::ocl::TextureEvalOpType::EVAL_SPECTRUM: {
-					evalOpStackSize += CompileTextureOps(tex->scaleTex.tex1Index, opType,
-							evalOpsStackSizeFloat, evalOpsStackSizeSpectrum, evalOpsStackSizeBump);
-					evalOpStackSize += CompileTextureOps(tex->scaleTex.tex2Index, opType,
-							evalOpsStackSizeFloat, evalOpsStackSizeSpectrum, evalOpsStackSizeBump);
+					evalOpStackSize += CompileTextureOps(tex->scaleTex.tex1Index, opType);
+					evalOpStackSize += CompileTextureOps(tex->scaleTex.tex2Index, opType);
 					break;
 				}
 				case slg::ocl::TextureEvalOpType::EVAL_BUMP: {
-					evalOpStackSize += CompileTextureOps(tex->scaleTex.tex1Index, slg::ocl::TextureEvalOpType::EVAL_BUMP,
-							evalOpsStackSizeFloat, evalOpsStackSizeSpectrum, evalOpsStackSizeBump);
-					evalOpStackSize += CompileTextureOps(tex->scaleTex.tex2Index, slg::ocl::TextureEvalOpType::EVAL_BUMP,
-							evalOpsStackSizeFloat, evalOpsStackSizeSpectrum, evalOpsStackSizeBump);
+					evalOpStackSize += CompileTextureOps(tex->scaleTex.tex1Index, slg::ocl::TextureEvalOpType::EVAL_BUMP);
+					evalOpStackSize += CompileTextureOps(tex->scaleTex.tex2Index, slg::ocl::TextureEvalOpType::EVAL_BUMP);
 
-					evalOpStackSize += CompileTextureOps(tex->scaleTex.tex1Index, slg::ocl::TextureEvalOpType::EVAL_FLOAT,
-							evalOpsStackSizeFloat, evalOpsStackSizeSpectrum, evalOpsStackSizeBump);
-					evalOpStackSize += CompileTextureOps(tex->scaleTex.tex2Index, slg::ocl::TextureEvalOpType::EVAL_FLOAT,
-							evalOpsStackSizeFloat, evalOpsStackSizeSpectrum, evalOpsStackSizeBump);
+					evalOpStackSize += CompileTextureOps(tex->scaleTex.tex1Index, slg::ocl::TextureEvalOpType::EVAL_FLOAT);
+					evalOpStackSize += CompileTextureOps(tex->scaleTex.tex2Index, slg::ocl::TextureEvalOpType::EVAL_FLOAT);
 					break;
 				}
 				default:
@@ -286,16 +271,12 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 			switch (opType) {
 				case slg::ocl::TextureEvalOpType::EVAL_FLOAT:
 				case slg::ocl::TextureEvalOpType::EVAL_SPECTRUM: {
-					evalOpStackSize += CompileTextureOps(tex->checkerBoard2D.tex1Index, opType,
-							evalOpsStackSizeFloat, evalOpsStackSizeSpectrum, evalOpsStackSizeBump);
-					evalOpStackSize += CompileTextureOps(tex->checkerBoard2D.tex2Index, opType,
-							evalOpsStackSizeFloat, evalOpsStackSizeSpectrum, evalOpsStackSizeBump);
+					evalOpStackSize += CompileTextureOps(tex->checkerBoard2D.tex1Index, opType);
+					evalOpStackSize += CompileTextureOps(tex->checkerBoard2D.tex2Index, opType);
 					break;
 				}
 				case slg::ocl::TextureEvalOpType::EVAL_BUMP: {
-					evalOpStackSize += CompileTextureOpsGenericBumpMap(texIndex,
-							evalOpsStackSizeFloat, evalOpsStackSizeSpectrum,
-							evalOpsStackSizeBump);
+					evalOpStackSize += CompileTextureOpsGenericBumpMap(texIndex);
 					break;
 				}
 				default:
@@ -312,8 +293,7 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 					evalOpStackSize += 3;
 					break;
 				case slg::ocl::TextureEvalOpType::EVAL_BUMP:
-						evalOpStackSize += CompileTextureOps(tex->normalMap.texIndex, slg::ocl::TextureEvalOpType::EVAL_SPECTRUM,
-								evalOpsStackSizeFloat, evalOpsStackSizeSpectrum, evalOpsStackSizeBump);
+						evalOpStackSize += CompileTextureOps(tex->normalMap.texIndex, slg::ocl::TextureEvalOpType::EVAL_SPECTRUM);
 					break;
 				default:
 					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(): " + ToString(tex->type));
@@ -333,8 +313,7 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 					evalOpStackSize += 2 + 3 + 3;
 
 					// Eval first texture 
-					evalOpStackSize += CompileTextureOps(tex->triplanarTex.tex1Index, slg::ocl::TextureEvalOpType::EVAL_SPECTRUM,
-							evalOpsStackSizeFloat, evalOpsStackSizeSpectrum, evalOpsStackSizeBump);
+					evalOpStackSize += CompileTextureOps(tex->triplanarTex.tex1Index, slg::ocl::TextureEvalOpType::EVAL_SPECTRUM);
 
 					// EVAL_TRIPLANAR_STEP_2
 					slg::ocl::TextureEvalOp opStep2;
@@ -343,8 +322,7 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 					texEvalOps.push_back(opStep2);
 
 					// Eval second texture 
-					evalOpStackSize += CompileTextureOps(tex->triplanarTex.tex2Index, slg::ocl::TextureEvalOpType::EVAL_SPECTRUM,
-							evalOpsStackSizeFloat, evalOpsStackSizeSpectrum, evalOpsStackSizeBump);
+					evalOpStackSize += CompileTextureOps(tex->triplanarTex.tex2Index, slg::ocl::TextureEvalOpType::EVAL_SPECTRUM);
 
 					// EVAL_TRIPLANAR_STEP_3
 					slg::ocl::TextureEvalOp opStep3;
@@ -353,15 +331,13 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 					texEvalOps.push_back(opStep3);
 
 					// Eval last texture 
-					evalOpStackSize += CompileTextureOps(tex->triplanarTex.tex3Index, slg::ocl::TextureEvalOpType::EVAL_SPECTRUM,
-							evalOpsStackSizeFloat, evalOpsStackSizeSpectrum, evalOpsStackSizeBump);
+					evalOpStackSize += CompileTextureOps(tex->triplanarTex.tex3Index, slg::ocl::TextureEvalOpType::EVAL_SPECTRUM);
 					break;
 				}
 				case slg::ocl::TextureEvalOpType::EVAL_BUMP:
 					if (tex->triplanarTex.enableUVlessBumpMap) {
 						// Eval original texture 
-						evalOpStackSize += CompileTextureOps(texIndex, slg::ocl::TextureEvalOpType::EVAL_FLOAT,
-								evalOpsStackSizeFloat, evalOpsStackSizeSpectrum, evalOpsStackSizeBump);
+						evalOpStackSize += CompileTextureOps(texIndex, slg::ocl::TextureEvalOpType::EVAL_FLOAT);
 
 						// EVAL_BUMP_TRIPLANAR_STEP_1
 						slg::ocl::TextureEvalOp opStep1;
@@ -372,8 +348,7 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 						evalOpStackSize += 3;
 
 						// Eval first texture 
-						evalOpStackSize += CompileTextureOps(texIndex, slg::ocl::TextureEvalOpType::EVAL_FLOAT,
-								evalOpsStackSizeFloat, evalOpsStackSizeSpectrum, evalOpsStackSizeBump);
+						evalOpStackSize += CompileTextureOps(texIndex, slg::ocl::TextureEvalOpType::EVAL_FLOAT);
 					
 						// EVAL_BUMP_TRIPLANAR_STEP_2
 						slg::ocl::TextureEvalOp opStep2;
@@ -382,8 +357,7 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 						texEvalOps.push_back(opStep2);
 
 						// Eval second texture 
-						evalOpStackSize += CompileTextureOps(texIndex, slg::ocl::TextureEvalOpType::EVAL_FLOAT,
-								evalOpsStackSizeFloat, evalOpsStackSizeSpectrum, evalOpsStackSizeBump);
+						evalOpStackSize += CompileTextureOps(texIndex, slg::ocl::TextureEvalOpType::EVAL_FLOAT);
 
 						// EVAL_BUMP_TRIPLANAR_STEP_3
 						slg::ocl::TextureEvalOp opStep3;
@@ -392,13 +366,10 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 						texEvalOps.push_back(opStep3);
 
 						// Eval last texture 
-						evalOpStackSize += CompileTextureOps(texIndex, slg::ocl::TextureEvalOpType::EVAL_FLOAT,
-								evalOpsStackSizeFloat, evalOpsStackSizeSpectrum, evalOpsStackSizeBump);
+						evalOpStackSize += CompileTextureOps(texIndex, slg::ocl::TextureEvalOpType::EVAL_FLOAT);
 					} else {
 						// Use generic bump map evaluation path
-						evalOpStackSize += CompileTextureOpsGenericBumpMap(texIndex,
-								evalOpsStackSizeFloat, evalOpsStackSizeSpectrum,
-								evalOpsStackSizeBump);
+						evalOpStackSize += CompileTextureOpsGenericBumpMap(texIndex);
 					}
 					break;
 				default:
@@ -426,9 +397,6 @@ void CompiledScene::CompileTextureOps() {
 	texEvalOps.clear();
 	maxTextureEvalStackSize = 0;
 
-	vector<u_int > evalOpsStackSizeFloat(texs.size(), 0);
-	vector<u_int > evalOpsStackSizeSpectrum(texs.size(), 0);
-	vector<u_int > evalOpsStackSizeBump(texs.size(), 0);
 	for (u_int i = 0; i < texs.size(); ++i) {
 		slg::ocl::Texture *tex = &texs[i];
 
@@ -437,33 +405,30 @@ void CompiledScene::CompileTextureOps() {
 		//----------------------------------------------------------------------
 		
 		tex->evalFloatOpStartIndex = texEvalOps.size();
-		evalOpsStackSizeFloat[i] = CompileTextureOps(i, slg::ocl::TextureEvalOpType::EVAL_FLOAT,
-				evalOpsStackSizeFloat, evalOpsStackSizeSpectrum, evalOpsStackSizeBump);
+		const u_int evalOpsStackSizeFloat = CompileTextureOps(i, slg::ocl::TextureEvalOpType::EVAL_FLOAT);
 		tex->evalFloatOpLength = texEvalOps.size() - tex->evalFloatOpStartIndex;
 
-		maxTextureEvalStackSize = Max(maxTextureEvalStackSize, evalOpsStackSizeFloat[i]);
+		maxTextureEvalStackSize = Max(maxTextureEvalStackSize, evalOpsStackSizeFloat);
 
 		//----------------------------------------------------------------------
 		// EVAL_SPECTRUM
 		//----------------------------------------------------------------------
 
 		tex->evalSpectrumOpStartIndex = texEvalOps.size();
-		evalOpsStackSizeSpectrum[i] = CompileTextureOps(i, slg::ocl::TextureEvalOpType::EVAL_SPECTRUM,
-				evalOpsStackSizeFloat, evalOpsStackSizeSpectrum, evalOpsStackSizeBump);
+		const u_int evalOpsStackSizeSpectrum = CompileTextureOps(i, slg::ocl::TextureEvalOpType::EVAL_SPECTRUM);
 		tex->evalSpectrumOpLength = texEvalOps.size() - tex->evalSpectrumOpStartIndex;
 
-		maxTextureEvalStackSize = Max(maxTextureEvalStackSize, evalOpsStackSizeSpectrum[i]);
+		maxTextureEvalStackSize = Max(maxTextureEvalStackSize, evalOpsStackSizeSpectrum);
 
 		//----------------------------------------------------------------------
 		// EVAL_BUMP
 		//----------------------------------------------------------------------
 
 		tex->evalBumpOpStartIndex = texEvalOps.size();
-		evalOpsStackSizeBump[i] = CompileTextureOps(i, slg::ocl::TextureEvalOpType::EVAL_BUMP,
-				evalOpsStackSizeFloat, evalOpsStackSizeSpectrum, evalOpsStackSizeBump);
+		const u_int evalOpsStackSizeBump = CompileTextureOps(i, slg::ocl::TextureEvalOpType::EVAL_BUMP);
 		tex->evalBumpOpLength = texEvalOps.size() - tex->evalBumpOpStartIndex;
 
-		maxTextureEvalStackSize = Max(maxTextureEvalStackSize, evalOpsStackSizeBump[i]);
+		maxTextureEvalStackSize = Max(maxTextureEvalStackSize, evalOpsStackSizeBump);
 	}
 
 	SLG_LOG("Texture evaluation ops count: " << texEvalOps.size());

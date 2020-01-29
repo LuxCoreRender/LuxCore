@@ -147,15 +147,8 @@ private:
 	void CompileMaterials();
 	void CompileTextureMapping2D(slg::ocl::TextureMapping2D *mapping, const TextureMapping2D *m);
 	void CompileTextureMapping3D(slg::ocl::TextureMapping3D *mapping, const TextureMapping3D *m);
-	u_int CompileTextureOpsGenericBumpMap(const u_int texIndex,
-		const std::vector<u_int > &evalOpsStackSizeFloat,
-		const std::vector<u_int > &evalOpsStackSizeSpectrum,
-		const std::vector<u_int > &evalOpsStackSizeBump);
-	u_int CompileTextureOps(const u_int texIndex,
-		const slg::ocl::TextureEvalOpType opType,
-		const std::vector<u_int > &evalOpsStackSizeFloat,
-		const std::vector<u_int > &evalOpsStackSizeSpectrum,
-		const std::vector<u_int > &evalOpsStackSizeBump);
+	u_int CompileTextureOpsGenericBumpMap(const u_int texIndex);
+	u_int CompileTextureOps(const u_int texIndex, const slg::ocl::TextureEvalOpType opType);
 	void CompileTextureOps();
 	void CompileTextures();
 	void CompileImageMaps();
