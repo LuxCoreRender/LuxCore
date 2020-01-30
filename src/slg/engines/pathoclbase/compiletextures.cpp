@@ -233,7 +233,9 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 		case slg::ocl::IMAGEMAP:
 		case slg::ocl::HITPOINTCOLOR:
 		case slg::ocl::HITPOINTALPHA:
-		case slg::ocl::HITPOINTGREY: {
+		case slg::ocl::HITPOINTGREY:
+		case slg::ocl::BLACKBODY_TEX:
+		case slg::ocl::IRREGULARDATA_TEX: {
 			switch (opType) {
 				case slg::ocl::TextureEvalOpType::EVAL_FLOAT:
 					evalOpStackSize += 1;

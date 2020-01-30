@@ -595,6 +595,72 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 			break;
 		}
 		//----------------------------------------------------------------------
+		// BLACKBODY_TEX
+		//----------------------------------------------------------------------
+		case BLACKBODY_TEX: {
+			switch (evalType) {
+				case EVAL_FLOAT: {
+					const float eval = BlackBodyTexture_ConstEvaluateFloat(VLOAD3F(tex->blackBody.rgb.c));
+					EvalStack_Push(eval);
+					break;
+				}
+				case EVAL_SPECTRUM: {
+					const float3 eval = BlackBodyTexture_ConstEvaluateSpectrum(VLOAD3F(tex->blackBody.rgb.c));
+					EvalStack_Push3(eval);
+					break;
+				}
+				case EVAL_BUMP_GENERIC_OFFSET_U:
+					Texture_EvalOpGenericBumpOffsetU(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP_GENERIC_OFFSET_V:
+					Texture_EvalOpGenericBumpOffsetV(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP:
+					Texture_EvalOpGenericBump(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				default:
+					// Something wrong here
+					break;
+			}
+			break;
+		}
+		//----------------------------------------------------------------------
+		// IRREGULARDATA_TEX
+		//----------------------------------------------------------------------
+		case IRREGULARDATA_TEX: {
+			switch (evalType) {
+				case EVAL_FLOAT: {
+					const float eval = IrregularDataTexture_ConstEvaluateFloat(VLOAD3F(tex->irregularData.rgb.c));
+					EvalStack_Push(eval);
+					break;
+				}
+				case EVAL_SPECTRUM: {
+					const float3 eval = IrregularDataTexture_ConstEvaluateSpectrum(VLOAD3F(tex->irregularData.rgb.c));
+					EvalStack_Push3(eval);
+					break;
+				}
+				case EVAL_BUMP_GENERIC_OFFSET_U:
+					Texture_EvalOpGenericBumpOffsetU(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP_GENERIC_OFFSET_V:
+					Texture_EvalOpGenericBumpOffsetV(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP:
+					Texture_EvalOpGenericBump(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				default:
+					// Something wrong here
+					break;
+			}
+			break;
+		}
+		//----------------------------------------------------------------------
 		// CHECKERBOARD2D
 		//----------------------------------------------------------------------
 		case CHECKERBOARD2D: {
