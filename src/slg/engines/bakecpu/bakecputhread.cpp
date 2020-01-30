@@ -196,6 +196,21 @@ void BakeCPURenderThread::RenderEyeSample(const BakeMapInfo &mapInfo, PathTracer
 					timeSample);
 
 			//------------------------------------------------------------------
+			// Render the received light from the path
+			//------------------------------------------------------------------
+
+			pathTracer.RenderEyePath(state.device, state.scene,
+					state.eyeSampler, pathInfo, eyeRay,
+					state.eyeSampleResults);
+
+			for(u_int i = 0; i < state.eyeSampleResults.size(); ++i) {
+				SampleResult &sampleResult = state.eyeSampleResults[i];
+
+				for(u_int j = 0; j < sampleResult.radiance.size(); ++j)
+					sampleResult.radiance[j] *= bsdfSample;
+			}
+
+			//------------------------------------------------------------------
 			// Render the surface point direct light
 			//------------------------------------------------------------------
 
@@ -213,21 +228,6 @@ void BakeCPURenderThread::RenderEyeSample(const BakeMapInfo &mapInfo, PathTracer
 					Spectrum(1.f), bsdf, &sampleResult);
 
 			sampleResult.rayCount += (float)(device->GetTotalRaysCount() - deviceRayCount);
-
-			//------------------------------------------------------------------
-			// Render the received light from the path
-			//------------------------------------------------------------------
-
-			pathTracer.RenderEyePath(state.device, state.scene,
-					state.eyeSampler, pathInfo, eyeRay,
-					state.eyeSampleResults);
-
-			for(u_int i = 0; i < state.eyeSampleResults.size(); ++i) {
-				SampleResult &sampleResult = state.eyeSampleResults[i];
-
-				for(u_int j = 0; j < sampleResult.radiance.size(); ++j)
-					sampleResult.radiance[j] *= bsdfSample;
-			}
 			break;
 		}
 		case LIGHTMAP: {
@@ -253,6 +253,22 @@ void BakeCPURenderThread::RenderEyeSample(const BakeMapInfo &mapInfo, PathTracer
 					timeSample);
 
 			//------------------------------------------------------------------
+			// Render the received light from the path
+			//------------------------------------------------------------------
+
+			pathTracer.RenderEyePath(state.device, state.scene,
+					state.eyeSampler, pathInfo, eyeRay,
+					state.eyeSampleResults);
+
+			const float NdotL = Dot(bsdf.hitPoint.shadeN, sampledDir);
+			for(u_int i = 0; i < state.eyeSampleResults.size(); ++i) {
+				SampleResult &sampleResult = state.eyeSampleResults[i];
+
+				for(u_int j = 0; j < sampleResult.radiance.size(); ++j)
+					sampleResult.radiance[j] *= NdotL;
+			}
+
+			//------------------------------------------------------------------
 			// Render the received direct light
 			//------------------------------------------------------------------
 
@@ -271,14 +287,6 @@ void BakeCPURenderThread::RenderEyeSample(const BakeMapInfo &mapInfo, PathTracer
 					false);
 
 			sampleResult.rayCount += (float)(device->GetTotalRaysCount() - deviceRayCount);
-
-			//------------------------------------------------------------------
-			// Render the received light from the path
-			//------------------------------------------------------------------
-
-			pathTracer.RenderEyePath(state.device, state.scene,
-					state.eyeSampler, pathInfo, eyeRay,
-					state.eyeSampleResults);
 			break;
 		}
 		default:

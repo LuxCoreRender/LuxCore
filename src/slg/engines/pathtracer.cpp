@@ -194,7 +194,7 @@ PathTracer::DirectLightResult PathTracer::DirectLightSampling(
 								!shadowBsdf.hitPoint.throughShadowTransparency;
 
 							const float weight = misEnabled ? PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
-							const Spectrum incomingRadiance = (useBSDFEVal ? bsdfEval : 1.f) *
+							const Spectrum incomingRadiance = (useBSDFEVal ? bsdfEval : Dot(shadowRay.d, bsdf.hitPoint.shadeN)) *
 									(weight * factor) * connectionThroughput * lightRadiance;
 
 							sampleResult->AddDirectLight(light->GetID(), event, pathThroughput, incomingRadiance, 1.f);

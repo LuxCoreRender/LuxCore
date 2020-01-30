@@ -71,6 +71,8 @@
 
 ''Beta1 released''
 
+* BAKECPU now correctly includes the dot product of shading normal and light direction in light maps
+
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
 
