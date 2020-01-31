@@ -54,6 +54,7 @@
 ''Beta1 released''
 
 * Improved light map sampling in BAKECPU
+* Added the support for transparencies and shadowcatcher to BAKECPU
 
 ### Fixed Bugs
 

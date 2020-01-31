@@ -321,7 +321,7 @@ void FileSaverRenderEngine::ExportSceneGLTF(const RenderConfig *renderConfig,
 
 			const ImageMap *imgMap = scnObj->GetCombinedBakeMap();
 			const string imgMapFileName = (dirPath / imgMap->GetName()).generic_string() + ".png";
-			SDL_LOG("  Saving image map: " << imgMapFileName);
+			SDL_LOG("  Saving image map: " << imgMapFileName << " (channels: " << imgMap->GetChannelCount() << ")");
 			imgMap->WriteImage(imgMapFileName);
 			
 			// Create the image

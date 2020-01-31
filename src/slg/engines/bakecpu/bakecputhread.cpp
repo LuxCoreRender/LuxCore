@@ -170,46 +170,6 @@ void BakeCPURenderThread::RenderEyeSample(const BakeMapInfo &mapInfo, PathTracer
 
 	switch (mapInfo.type) {
 		case COMBINED: {
-			// Ray direction
-			EyePathInfo pathInfo;
-			Vector sampledDir;
-			float cosSampledDir;
-			float bsdfPdfW;
-			BSDFEvent bsdfEvent;
-			const Spectrum bsdfSample = bsdf.Sample(&sampledDir,
-					state.eyeSampler->GetSample(pathTracer.eyeSampleSize + 1),
-					state.eyeSampler->GetSample(pathTracer.eyeSampleSize + 2),
-					&bsdfPdfW, &cosSampledDir, &bsdfEvent);
-
-			pathInfo.lastBSDFPdfW = bsdfPdfW;
-			pathInfo.lastBSDFEvent = bsdfEvent;
-
-			// Ray origin
-			const Point rayOrig = bsdf.GetRayOrigin(sampledDir);
-
-			//--------------------------------------------------------------------------
-			// Set up the ray to trace
-			//--------------------------------------------------------------------------
-
-			Ray eyeRay(rayOrig, sampledDir,
-					MachineEpsilon::E(rayOrig), numeric_limits<float>::infinity(),
-					timeSample);
-
-			//------------------------------------------------------------------
-			// Render the received light from the path
-			//------------------------------------------------------------------
-
-			pathTracer.RenderEyePath(state.device, state.scene,
-					state.eyeSampler, pathInfo, eyeRay,
-					state.eyeSampleResults);
-
-			for(u_int i = 0; i < state.eyeSampleResults.size(); ++i) {
-				SampleResult &sampleResult = state.eyeSampleResults[i];
-
-				for(u_int j = 0; j < sampleResult.radiance.size(); ++j)
-					sampleResult.radiance[j] *= bsdfSample;
-			}
-
 			//------------------------------------------------------------------
 			// Render the surface point direct light
 			//------------------------------------------------------------------
@@ -217,7 +177,8 @@ void BakeCPURenderThread::RenderEyeSample(const BakeMapInfo &mapInfo, PathTracer
 			// To keep track of the number of rays traced
 			const double deviceRayCount = device->GetTotalRaysCount();
 
-			pathTracer.DirectLightSampling(state.device, state.scene,
+			EyePathInfo pathInfo;
+			const PathTracer::DirectLightResult directLightResult = pathTracer.DirectLightSampling(state.device, state.scene,
 					timeSample,
 					state.eyeSampler->GetSample(pathTracer.eyeSampleSize + 3),
 					state.eyeSampler->GetSample(pathTracer.eyeSampleSize + 4),
@@ -228,54 +189,55 @@ void BakeCPURenderThread::RenderEyeSample(const BakeMapInfo &mapInfo, PathTracer
 					Spectrum(1.f), bsdf, &sampleResult);
 
 			sampleResult.rayCount += (float)(device->GetTotalRaysCount() - deviceRayCount);
+
+			if (bsdf.IsShadowCatcher() && (directLightResult != PathTracer::SHADOWED))
+				sampleResult.alpha = 0.f;
+			else {
+				sampleResult.alpha = 1.f - Clamp(bsdf.GetPassThroughTransparency(false).Y(), 0.f, 1.f);
+
+				//--------------------------------------------------------------
+				// Set up the next ray to trace
+				//--------------------------------------------------------------
+
+				// Ray direction
+				Vector sampledDir;
+				float cosSampledDir;
+				float bsdfPdfW;
+				BSDFEvent bsdfEvent;
+				const Spectrum bsdfSample = bsdf.Sample(&sampledDir,
+						state.eyeSampler->GetSample(pathTracer.eyeSampleSize + 1),
+						state.eyeSampler->GetSample(pathTracer.eyeSampleSize + 2),
+						&bsdfPdfW, &cosSampledDir, &bsdfEvent);
+
+				pathInfo.AddVertex(bsdf, bsdfEvent, bsdfPdfW, pathTracer.hybridBackForwardGlossinessThreshold);
+
+				// Ray origin
+				const Point rayOrig = bsdf.GetRayOrigin(sampledDir);
+
+				Ray eyeRay(rayOrig, sampledDir,
+						MachineEpsilon::E(rayOrig), numeric_limits<float>::infinity(),
+						timeSample);
+
+				//--------------------------------------------------------------
+				// Render the received light from the path
+				//--------------------------------------------------------------
+
+				pathTracer.RenderEyePath(state.device, state.scene,
+						state.eyeSampler, pathInfo, eyeRay, bsdfSample,
+						state.eyeSampleResults);
+			}
 			break;
 		}
 		case LIGHTMAP: {
-			// Ray direction
-			const float u1 = state.eyeSampler->GetSample(pathTracer.eyeSampleSize + 1);
-			const float u2 = state.eyeSampler->GetSample(pathTracer.eyeSampleSize + 2);
-			const Vector localSampledDir = UniformSampleHemisphere(u1, u2);
-			const Vector sampledDir = bsdf.GetFrame().ToWorld(localSampledDir);
-
-			EyePathInfo pathInfo;
-			pathInfo.lastBSDFPdfW = UniformHemispherePdf(u1, u2);
-			pathInfo.lastBSDFEvent = DIFFUSE | REFLECT;
-
-			// Ray origin
-			const Point rayOrig = bsdf.GetRayOrigin(sampledDir);
-
-			//--------------------------------------------------------------------------
-			// Set up the ray to trace
-			//--------------------------------------------------------------------------
-
-			Ray eyeRay(rayOrig, sampledDir,
-					MachineEpsilon::E(rayOrig), numeric_limits<float>::infinity(),
-					timeSample);
-
-			//------------------------------------------------------------------
-			// Render the received light from the path
-			//------------------------------------------------------------------
-
-			pathTracer.RenderEyePath(state.device, state.scene,
-					state.eyeSampler, pathInfo, eyeRay,
-					state.eyeSampleResults);
-
-			const float NdotL = Dot(bsdf.hitPoint.shadeN, sampledDir);
-			for(u_int i = 0; i < state.eyeSampleResults.size(); ++i) {
-				SampleResult &sampleResult = state.eyeSampleResults[i];
-
-				for(u_int j = 0; j < sampleResult.radiance.size(); ++j)
-					sampleResult.radiance[j] *= NdotL;
-			}
-
-			//------------------------------------------------------------------
+			//--------------------------------------------------------------
 			// Render the received direct light
-			//------------------------------------------------------------------
+			//--------------------------------------------------------------
 
 			// To keep track of the number of rays traced
 			const double deviceRayCount = device->GetTotalRaysCount();
 
-			pathTracer.DirectLightSampling(state.device, state.scene,
+			EyePathInfo pathInfo;
+			const PathTracer::DirectLightResult directLightResult = pathTracer.DirectLightSampling(state.device, state.scene,
 					timeSample,
 					state.eyeSampler->GetSample(pathTracer.eyeSampleSize + 3),
 					state.eyeSampler->GetSample(pathTracer.eyeSampleSize + 4),
@@ -287,6 +249,41 @@ void BakeCPURenderThread::RenderEyeSample(const BakeMapInfo &mapInfo, PathTracer
 					false);
 
 			sampleResult.rayCount += (float)(device->GetTotalRaysCount() - deviceRayCount);
+
+			if (bsdf.IsShadowCatcher() && (directLightResult != PathTracer::SHADOWED))
+				sampleResult.alpha = 0.f;
+			else {
+				sampleResult.alpha = 1.f - Clamp(bsdf.GetPassThroughTransparency(false).Y(), 0.f, 1.f);
+
+				//--------------------------------------------------------------
+				// Set up the next ray to trace
+				//--------------------------------------------------------------
+
+				// Ray direction
+				const float u1 = state.eyeSampler->GetSample(pathTracer.eyeSampleSize + 1);
+				const float u2 = state.eyeSampler->GetSample(pathTracer.eyeSampleSize + 2);
+				const Vector localSampledDir = UniformSampleHemisphere(u1, u2);
+				const Vector sampledDir = bsdf.GetFrame().ToWorld(localSampledDir);
+
+				pathInfo.lastBSDFPdfW = UniformHemispherePdf(u1, u2);
+				pathInfo.lastBSDFEvent = DIFFUSE | REFLECT;
+
+				// Ray origin
+				const Point rayOrig = bsdf.GetRayOrigin(sampledDir);
+
+				Ray eyeRay(rayOrig, sampledDir,
+						MachineEpsilon::E(rayOrig), numeric_limits<float>::infinity(),
+						timeSample);
+
+				//--------------------------------------------------------------
+				// Render the received light from the path
+				//--------------------------------------------------------------
+
+				const float NdotL = Dot(bsdf.hitPoint.shadeN, sampledDir);
+				pathTracer.RenderEyePath(state.device, state.scene,
+						state.eyeSampler, pathInfo, eyeRay, Spectrum(NdotL),
+						state.eyeSampleResults);
+			}
 			break;
 		}
 		default:
@@ -300,7 +297,6 @@ void BakeCPURenderThread::RenderEyeSample(const BakeMapInfo &mapInfo, PathTracer
 	if (bsdf.IsAlbedoEndPoint())
 		sampleResult.albedo = bsdf.Albedo();
 
-	sampleResult.alpha = 1.f;
 	sampleResult.depth = 0.f;
 	sampleResult.position = bsdf.hitPoint.p;
 	sampleResult.geometryNormal = bsdf.hitPoint.geometryN;
@@ -512,7 +508,8 @@ void BakeCPURenderThread::RenderFunc() {
 			// Save the rendered map
 			Properties props;
 			props << Property("index")(mapInfo.imagePipelineIndex);
-			engine->mapFilm->Output(mapInfo.fileName, FilmOutputs::RGB_IMAGEPIPELINE,
+			engine->mapFilm->Output(mapInfo.fileName,
+					engine->mapFilm->HasChannel(Film::ALPHA) ? FilmOutputs::RGBA_IMAGEPIPELINE : FilmOutputs::RGB_IMAGEPIPELINE,
 					&props);
 		}
 

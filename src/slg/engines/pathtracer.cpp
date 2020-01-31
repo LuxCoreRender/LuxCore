@@ -347,7 +347,8 @@ void PathTracer::GenerateEyeRay(const Camera *camera, const Film *film, Ray &eye
 //------------------------------------------------------------------------------
 
 void PathTracer::RenderEyePath(IntersectionDevice *device,
-		const Scene *scene, Sampler *sampler, EyePathInfo &pathInfo, Ray &eyeRay,
+		const Scene *scene, Sampler *sampler, EyePathInfo &pathInfo,
+		Ray &eyeRay,  const luxrays::Spectrum &eyeTroughput,
 		vector<SampleResult> &sampleResults) const {
 	// To keep track of the number of rays traced
 	const double deviceRayCount = device->GetTotalRaysCount();
@@ -360,7 +361,7 @@ void PathTracer::RenderEyePath(IntersectionDevice *device,
 	bool photonGICausticCacheUsed = false;
 	bool photonGICacheEnabledOnLastHit = false;
 	bool albedoToDo = true;
-	Spectrum pathThroughput(1.f);
+	Spectrum pathThroughput(eyeTroughput);
 	BSDF bsdf;
 	for (;;) {
 		sampleResult.firstPathVertex = (pathInfo.depth.depth == 0);
@@ -616,7 +617,7 @@ void PathTracer::RenderEyeSample(IntersectionDevice *device,
 	Ray eyeRay;
 	GenerateEyeRay(scene->camera, film, eyeRay, pathInfo.volume, sampler, sampleResults[0]);
 
-	RenderEyePath(device, scene, sampler, pathInfo, eyeRay, sampleResults);
+	RenderEyePath(device, scene, sampler, pathInfo, eyeRay, Spectrum(1.f), sampleResults);
 }
 
 //------------------------------------------------------------------------------

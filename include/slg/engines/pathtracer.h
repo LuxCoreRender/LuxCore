@@ -102,7 +102,8 @@ public:
 
 	void RenderEyePath(luxrays::IntersectionDevice *device,
 			const Scene *scene, Sampler *sampler, EyePathInfo &pathInfo,
-			luxrays::Ray &eyeRay, std::vector<SampleResult> &sampleResults) const;
+			luxrays::Ray &eyeRay, const luxrays::Spectrum &eyeTroughput,
+			std::vector<SampleResult> &sampleResults) const;
 	void RenderEyeSample(luxrays::IntersectionDevice *device,
 			const Scene *scene, const Film *film, Sampler *sampler,
 			std::vector<SampleResult> &sampleResults) const;

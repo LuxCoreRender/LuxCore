@@ -118,7 +118,7 @@ protected:
 	FilmSampleSplatter *sampleSplatter;
 	PathTracer pathTracer;
 	SamplerSharedData *lightSamplerSharedData;
-	
+
 	Film *mapFilm;
 	std::vector<const SceneObject *> currentSceneObjsToBake;
 	std::vector<float> currentSceneObjsToBakeArea;
