@@ -55,7 +55,9 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
-static atomic<u_int> defaultMaterilaIDIndex(0);
+namespace slg {
+atomic<u_int> defaultMaterialIDIndex(0);
+}
 
 void Scene::ParseMaterials(const Properties &props) {
 	vector<string> matKeys = props.GetAllUniqueSubNames("scene.materials");
@@ -93,7 +95,7 @@ void Scene::ParseMaterials(const Properties &props) {
 		}
 
 		// In order to have harlequin colors with MATERIAL_ID output
-		const u_int index = defaultMaterilaIDIndex++;
+		const u_int index = defaultMaterialIDIndex++;
 		const u_int matID = ((u_int)(RadicalInverse(index + 1, 2) * 255.f + .5f)) |
 				(((u_int)(RadicalInverse(index + 1, 3) * 255.f + .5f)) << 8) |
 				(((u_int)(RadicalInverse(index + 1, 5) * 255.f + .5f)) << 16);

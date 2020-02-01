@@ -73,6 +73,7 @@
 ''Beta1 released''
 
 * BAKECPU now correctly includes the dot product of shading normal and light direction in light maps
+* Fixed the generation of material/object/volume default random ID (issue #296)
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.

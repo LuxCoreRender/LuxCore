@@ -23,6 +23,10 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
+namespace slg {
+atomic<u_int> defaultObjectIDIndex(0);
+}
+
 void Scene::ParseObjects(const Properties &props) {
 	vector<string> objKeys = props.GetAllUniqueSubNames("scene.objects");
 	if (objKeys.size() == 0) {
@@ -53,9 +57,10 @@ void Scene::ParseObjects(const Properties &props) {
 		}
 
 		// In order to have harlequin colors with OBJECT_ID output
-		const u_int objID = ((u_int)(RadicalInverse(objDefs.GetSize() + 1, 2) * 255.f + .5f)) |
-				(((u_int)(RadicalInverse(objDefs.GetSize() + 1, 3) * 255.f + .5f)) << 8) |
-				(((u_int)(RadicalInverse(objDefs.GetSize() + 1, 5) * 255.f + .5f)) << 16);
+		const u_int index = defaultObjectIDIndex++;
+		const u_int objID = ((u_int)(RadicalInverse(index + 1, 2) * 255.f + .5f)) |
+				(((u_int)(RadicalInverse(index + 1, 3) * 255.f + .5f)) << 8) |
+				(((u_int)(RadicalInverse(index + 1, 5) * 255.f + .5f)) << 16);
 		SceneObject *obj = CreateObject(objID, objName, props);
 		objDefs.DefineSceneObject(obj);
 
