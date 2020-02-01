@@ -661,6 +661,212 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 			break;
 		}
 		//----------------------------------------------------------------------
+		// DENSITYGRID_TEX
+		//----------------------------------------------------------------------
+		case DENSITYGRID_TEX: {
+			switch (evalType) {
+				case EVAL_FLOAT: {
+					const float eval = DensityGridTexture_ConstEvaluateFloat(hitPoint,
+							tex->densityGrid.nx, tex->densityGrid.ny, tex->densityGrid.nz,
+							tex->densityGrid.imageMapIndex, &tex->densityGrid.mapping
+							IMAGEMAPS_PARAM);
+					EvalStack_Push(eval);
+					break;
+				}
+				case EVAL_SPECTRUM: {
+					const float3 eval = DensityGridTexture_ConstEvaluateSpectrum(hitPoint,
+							tex->densityGrid.nx, tex->densityGrid.ny, tex->densityGrid.nz,
+							tex->densityGrid.imageMapIndex, &tex->densityGrid.mapping
+							IMAGEMAPS_PARAM);
+					EvalStack_Push3(eval);
+					break;
+				}
+				case EVAL_BUMP_GENERIC_OFFSET_U:
+					Texture_EvalOpGenericBumpOffsetU(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP_GENERIC_OFFSET_V:
+					Texture_EvalOpGenericBumpOffsetV(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP:
+					Texture_EvalOpGenericBump(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				default:
+					// Something wrong here
+					break;
+			}
+			break;
+		}
+		//----------------------------------------------------------------------
+		// ABS_TEX
+		//----------------------------------------------------------------------
+		case ABS_TEX: {
+			switch (evalType) {
+				case EVAL_FLOAT: {
+					float tex1;
+					EvalStack_Pop(tex1);
+
+					const float eval = AbsTexture_ConstEvaluateFloat(tex1);
+					EvalStack_Push(eval);
+					break;
+				}
+				case EVAL_SPECTRUM: {
+					float3 tex1;
+					EvalStack_Pop3(tex1);
+
+					const float3 eval = AbsTexture_ConstEvaluateSpectrum(tex1);
+					EvalStack_Push3(eval);
+					break;
+				}
+				case EVAL_BUMP_GENERIC_OFFSET_U:
+					Texture_EvalOpGenericBumpOffsetU(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP_GENERIC_OFFSET_V:
+					Texture_EvalOpGenericBumpOffsetV(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP:
+					Texture_EvalOpGenericBump(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				default:
+					// Something wrong here
+					break;
+			}
+			break;
+		}
+		//----------------------------------------------------------------------
+		// CLAMP_TEX
+		//----------------------------------------------------------------------
+		case CLAMP_TEX: {
+			switch (evalType) {
+				case EVAL_FLOAT: {
+					float tex1;
+					EvalStack_Pop(tex1);
+
+					const float eval = ClampTexture_ConstEvaluateFloat(tex1,
+							tex->clampTex.minVal, tex->clampTex.maxVal);
+					EvalStack_Push(eval);
+					break;
+				}
+				case EVAL_SPECTRUM: {
+					float3 tex1;
+					EvalStack_Pop3(tex1);
+
+					const float3 eval = ClampTexture_ConstEvaluateSpectrum(tex1,
+							tex->clampTex.minVal, tex->clampTex.maxVal);
+					EvalStack_Push3(eval);
+					break;
+				}
+				case EVAL_BUMP_GENERIC_OFFSET_U:
+					Texture_EvalOpGenericBumpOffsetU(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP_GENERIC_OFFSET_V:
+					Texture_EvalOpGenericBumpOffsetV(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP:
+					Texture_EvalOpGenericBump(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				default:
+					// Something wrong here
+					break;
+			}
+			break;
+		}
+		//----------------------------------------------------------------------
+		// BILERP_TEX
+		//----------------------------------------------------------------------
+		case BILERP_TEX: {
+			switch (evalType) {
+				case EVAL_FLOAT: {
+					float tex00, tex01, tex10, tex11;
+					EvalStack_Pop(tex11);
+					EvalStack_Pop(tex10);
+					EvalStack_Pop(tex01);
+					EvalStack_Pop(tex00);
+					
+
+					const float eval = BilerpTexture_ConstEvaluateFloat(hitPoint,
+							tex00, tex01, tex10, tex11);
+					EvalStack_Push(eval);
+					break;
+				}
+				case EVAL_SPECTRUM: {
+					float3 tex00, tex01, tex10, tex11;
+					EvalStack_Pop3(tex11);
+					EvalStack_Pop3(tex10);
+					EvalStack_Pop3(tex01);
+					EvalStack_Pop3(tex00);
+
+					const float3 eval = BilerpTexture_ConstEvaluateSpectrum(hitPoint,
+							tex00, tex01, tex10, tex11);
+					EvalStack_Push3(eval);
+					break;
+				}
+				case EVAL_BUMP_GENERIC_OFFSET_U:
+					Texture_EvalOpGenericBumpOffsetU(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP_GENERIC_OFFSET_V:
+					Texture_EvalOpGenericBumpOffsetV(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP:
+					Texture_EvalOpGenericBump(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				default:
+					// Something wrong here
+					break;
+			}
+			break;
+		}
+		//----------------------------------------------------------------------
+		// COLORDEPTH_TEX
+		//----------------------------------------------------------------------
+		case COLORDEPTH_TEX: {
+			switch (evalType) {
+				case EVAL_FLOAT: {
+					float tex1;
+					EvalStack_Pop(tex1);
+
+					const float eval = ColorDepthTexture_ConstEvaluateFloat(tex->colorDepthTex.dVal, tex1);
+					EvalStack_Push(eval);
+					break;
+				}
+				case EVAL_SPECTRUM: {
+					float3 tex1;
+					EvalStack_Pop3(tex1);
+
+					const float3 eval = ColorDepthTexture_ConstEvaluateSpectrum(tex->colorDepthTex.dVal, tex1);
+					EvalStack_Push3(eval);
+					break;
+				}
+				case EVAL_BUMP_GENERIC_OFFSET_U:
+					Texture_EvalOpGenericBumpOffsetU(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP_GENERIC_OFFSET_V:
+					Texture_EvalOpGenericBumpOffsetV(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP:
+					Texture_EvalOpGenericBump(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				default:
+					// Something wrong here
+					break;
+			}
+			break;
+		}
+		//----------------------------------------------------------------------
 		// CHECKERBOARD2D
 		//----------------------------------------------------------------------
 		case CHECKERBOARD2D: {

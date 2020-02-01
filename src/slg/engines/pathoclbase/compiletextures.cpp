@@ -228,12 +228,11 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 	u_int evalOpStackSize = 0;
 
 	switch (tex->type) {
+		//----------------------------------------------------------------------
+		// Constant textures without sub-nodes
+		//----------------------------------------------------------------------
 		case slg::ocl::CONST_FLOAT:
 		case slg::ocl::CONST_FLOAT3:
-		case slg::ocl::IMAGEMAP:
-		case slg::ocl::HITPOINTCOLOR:
-		case slg::ocl::HITPOINTALPHA:
-		case slg::ocl::HITPOINTGREY:
 		case slg::ocl::BLACKBODY_TEX:
 		case slg::ocl::IRREGULARDATA_TEX: {
 			switch (opType) {
@@ -247,10 +246,37 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 					evalOpStackSize += 3;
 					break;
 				default:
-					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(): " + ToString(tex->type));
+					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(" + ToString(tex->type) + "): " + ToString(opType));
 			}
 			break;
 		}
+		//----------------------------------------------------------------------
+		// Not constant textures without sub-nodes
+		//----------------------------------------------------------------------
+		case slg::ocl::IMAGEMAP:
+		case slg::ocl::HITPOINTCOLOR:
+		case slg::ocl::HITPOINTALPHA:
+		case slg::ocl::HITPOINTGREY:
+		case slg::ocl::DENSITYGRID_TEX: {
+			switch (opType) {
+				case slg::ocl::TextureEvalOpType::EVAL_FLOAT:
+					evalOpStackSize += 1;
+					break;
+				case slg::ocl::TextureEvalOpType::EVAL_SPECTRUM:
+					evalOpStackSize += 3;
+					break;
+				case slg::ocl::TextureEvalOpType::EVAL_BUMP: {
+					evalOpStackSize += CompileTextureOpsGenericBumpMap(texIndex);
+					break;
+				}
+				default:
+					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(" + ToString(tex->type) + "): " + ToString(opType));
+			}
+			break;
+		}
+		//----------------------------------------------------------------------
+		// Not constant textures with sub-nodes
+		//----------------------------------------------------------------------
 		case slg::ocl::SCALE_TEX: {
 			switch (opType) {
 				case slg::ocl::TextureEvalOpType::EVAL_FLOAT:
@@ -268,7 +294,7 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 					break;
 				}
 				default:
-					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(): " + ToString(tex->type));
+					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(" + ToString(tex->type) + "): " + ToString(opType));
 			}
 			break;
 		}
@@ -284,7 +310,7 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 					break;
 				}
 				default:
-					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(): " + ToString(tex->type));
+					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(" + ToString(tex->type) + "): " + ToString(opType));
 			}
 			break;
 		}
@@ -300,7 +326,7 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 					break;
 				}
 				default:
-					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(): " + ToString(tex->type));
+					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(" + ToString(tex->type) + "): " + ToString(opType));
 			}
 			break;
 		}
@@ -324,7 +350,7 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 					break;
 				}
 				default:
-					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(): " + ToString(tex->type));
+					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(" + ToString(tex->type) + "): " + ToString(opType));
 			}
 			break;
 		}
@@ -345,7 +371,7 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 					break;
 				}
 				default:
-					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(): " + ToString(tex->type));
+					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(" + ToString(tex->type) + "): " + ToString(opType));
 			}
 			break;
 		}
@@ -366,7 +392,74 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 					break;
 				}
 				default:
-					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(): " + ToString(tex->type));
+					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(" + ToString(tex->type) + "): " + ToString(opType));
+			}
+			break;
+		}
+		case slg::ocl::ABS_TEX: {
+			switch (opType) {
+				case slg::ocl::TextureEvalOpType::EVAL_FLOAT:
+				case slg::ocl::TextureEvalOpType::EVAL_SPECTRUM: {
+					evalOpStackSize += CompileTextureOps(tex->absTex.texIndex, opType);
+					break;
+				}
+				case slg::ocl::TextureEvalOpType::EVAL_BUMP: {
+					evalOpStackSize += CompileTextureOpsGenericBumpMap(texIndex);
+					break;
+				}
+				default:
+					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(" + ToString(tex->type) + "): " + ToString(opType));
+			}
+			break;
+		}
+		case slg::ocl::CLAMP_TEX: {
+			switch (opType) {
+				case slg::ocl::TextureEvalOpType::EVAL_FLOAT:
+				case slg::ocl::TextureEvalOpType::EVAL_SPECTRUM: {
+					evalOpStackSize += CompileTextureOps(tex->clampTex.texIndex, opType);
+					break;
+				}
+				case slg::ocl::TextureEvalOpType::EVAL_BUMP: {
+					evalOpStackSize += CompileTextureOpsGenericBumpMap(texIndex);
+					break;
+				}
+				default:
+					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(" + ToString(tex->type) + "): " + ToString(opType));
+			}
+			break;
+		}
+		case slg::ocl::BILERP_TEX: {
+			switch (opType) {
+				case slg::ocl::TextureEvalOpType::EVAL_FLOAT:
+				case slg::ocl::TextureEvalOpType::EVAL_SPECTRUM: {
+					evalOpStackSize += CompileTextureOps(tex->bilerpTex.t00Index, opType);
+					evalOpStackSize += CompileTextureOps(tex->bilerpTex.t01Index, opType);
+					evalOpStackSize += CompileTextureOps(tex->bilerpTex.t10Index, opType);
+					evalOpStackSize += CompileTextureOps(tex->bilerpTex.t11Index, opType);
+					break;
+				}
+				case slg::ocl::TextureEvalOpType::EVAL_BUMP: {
+					evalOpStackSize += CompileTextureOpsGenericBumpMap(texIndex);
+					break;
+				}
+				default:
+					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(" + ToString(tex->type) + "): " + ToString(opType));
+			}
+			break;
+		}
+		case slg::ocl::COLORDEPTH_TEX: {
+			switch (opType) {
+				case slg::ocl::TextureEvalOpType::EVAL_FLOAT:
+				case slg::ocl::TextureEvalOpType::EVAL_SPECTRUM: {
+					evalOpStackSize += CompileTextureOps(tex->colorDepthTex.ktIndex, opType);
+					break;
+				}
+				case slg::ocl::TextureEvalOpType::EVAL_BUMP: {
+					evalOpStackSize += CompileTextureOpsGenericBumpMap(texIndex);
+					break;
+				}
+				default:
+					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(" + ToString(tex->type) + "): " + ToString(opType));
 			}
 			break;
 		}
@@ -383,7 +476,7 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 					break;
 				}
 				default:
-					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(): " + ToString(tex->type));
+					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(" + ToString(tex->type) + "): " + ToString(opType));
 			}
 			break;
 		}
@@ -399,7 +492,7 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 						evalOpStackSize += CompileTextureOps(tex->normalMap.texIndex, slg::ocl::TextureEvalOpType::EVAL_SPECTRUM);
 					break;
 				default:
-					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(): " + ToString(tex->type));
+					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(" + ToString(tex->type) + "): " + ToString(opType));
 			}
 			break;
 		}
@@ -476,7 +569,7 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 					}
 					break;
 				default:
-					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(): " + ToString(tex->type));
+					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(" + ToString(tex->type) + "): " + ToString(opType));
 			}
 			break;
 		}

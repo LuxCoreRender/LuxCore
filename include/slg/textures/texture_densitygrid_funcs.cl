@@ -22,8 +22,6 @@
 // DensityGrid texture
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_ENABLE_TEX_DENSITYGRID)
-
 OPENCL_FORCE_INLINE float3 DensityGridTexture_D(
 		__global const ImageMap *imageMap,
 		int x, int y, int z,
@@ -145,5 +143,3 @@ OPENCL_FORCE_INLINE float DensityGridTexture_ConstEvaluateFloat(__global const H
 			imageMapIndex, mapping
 			IMAGEMAPS_PARAM));
 }
-
-#endif

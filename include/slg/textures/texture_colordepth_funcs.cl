@@ -22,16 +22,10 @@
 // ColorDepth texture
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_ENABLE_TEX_COLORDEPTH)
-
-OPENCL_FORCE_INLINE float ColorDepthTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
-		const float d, const float kt) {
+OPENCL_FORCE_INLINE float ColorDepthTexture_ConstEvaluateFloat(const float d, const float kt) {
 	return log(clamp(kt, 1e-9f, 1.f)) / d;
 }
 
-OPENCL_FORCE_INLINE float3 ColorDepthTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
-		const float d, const float3 kt) {
+OPENCL_FORCE_INLINE float3 ColorDepthTexture_ConstEvaluateSpectrum(const float d, const float3 kt) {
 	return log(clamp(kt, 1e-9f, 1.f)) / d;
 }
-
-#endif
