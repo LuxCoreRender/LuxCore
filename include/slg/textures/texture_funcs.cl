@@ -862,31 +862,23 @@ OPENCL_FORCE_INLINE float BandTexture_ConstEvaluateFloat(__global const HitPoint
 // Divide texture
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_ENABLE_TEX_DIVIDE)
-
-OPENCL_FORCE_NOT_INLINE float DivideTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
-		const float tex1, const float tex2) {
+OPENCL_FORCE_INLINE float DivideTexture_ConstEvaluateFloat(const float tex1, const float tex2) {
 	if (tex2 == 0.f)
 		return 0.f;
 	return tex1 / tex2;
 }
 
-OPENCL_FORCE_NOT_INLINE float3 DivideTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
-		const float3 tex1, const float3 tex2) {
+OPENCL_FORCE_INLINE float3 DivideTexture_ConstEvaluateSpectrum(const float3 tex1, const float3 tex2) {
 	if (Spectrum_IsBlack(tex2))
 		return BLACK;
 	return tex1 / tex2;
 }
 
-#endif
-
 //------------------------------------------------------------------------------
 // Remap texture
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_ENABLE_TEX_REMAP)
-
-OPENCL_FORCE_NOT_INLINE float RemapTexture_Remap(const float value,
+OPENCL_FORCE_INLINE float RemapTexture_Remap(const float value,
 		const float sourceMin, const float sourceMax,
 		const float targetMin, const float targetMax) {
 	if (sourceMin == sourceMax)
@@ -898,7 +890,7 @@ OPENCL_FORCE_NOT_INLINE float RemapTexture_Remap(const float value,
 	       + targetMin;
 }
 
-OPENCL_FORCE_NOT_INLINE float RemapTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
+OPENCL_FORCE_INLINE float RemapTexture_ConstEvaluateFloat(
 		const float value, const float sourceMin, const float sourceMax,
 		const float targetMin, const float targetMax) {
 	const float clampedValue = clamp(value, sourceMin, sourceMax);
@@ -906,7 +898,7 @@ OPENCL_FORCE_NOT_INLINE float RemapTexture_ConstEvaluateFloat(__global const Hit
 	return clamp(result, targetMin, targetMax);
 }
 
-OPENCL_FORCE_NOT_INLINE float3 RemapTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
+OPENCL_FORCE_INLINE float3 RemapTexture_ConstEvaluateSpectrum(
 		const float3 value, const float sourceMin, const float sourceMax,
 		const float targetMin, const float targetMax) {
 	const float3 clampedValue = clamp(value, sourceMin, sourceMax);
@@ -916,8 +908,6 @@ OPENCL_FORCE_NOT_INLINE float3 RemapTexture_ConstEvaluateSpectrum(__global const
 	result.z = RemapTexture_Remap(clampedValue.z, sourceMin, sourceMax, targetMin, targetMax);
 	return clamp(result, targetMin, targetMax);
 }
-
-#endif
 
 //------------------------------------------------------------------------------
 // ObjectID texture

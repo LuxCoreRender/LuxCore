@@ -463,6 +463,62 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 			}
 			break;
 		}
+		case slg::ocl::HSV_TEX: {
+			switch (opType) {
+				case slg::ocl::TextureEvalOpType::EVAL_FLOAT:
+				case slg::ocl::TextureEvalOpType::EVAL_SPECTRUM: {
+					evalOpStackSize += CompileTextureOps(tex->hsvTex.texIndex, opType);
+					evalOpStackSize += CompileTextureOps(tex->hsvTex.hueTexIndex, slg::ocl::TextureEvalOpType::EVAL_FLOAT);
+					evalOpStackSize += CompileTextureOps(tex->hsvTex.satTexIndex, slg::ocl::TextureEvalOpType::EVAL_FLOAT);
+					evalOpStackSize += CompileTextureOps(tex->hsvTex.valTexIndex, slg::ocl::TextureEvalOpType::EVAL_FLOAT);
+					break;
+				}
+				case slg::ocl::TextureEvalOpType::EVAL_BUMP: {
+					evalOpStackSize += CompileTextureOpsGenericBumpMap(texIndex);
+					break;
+				}
+				default:
+					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(" + ToString(tex->type) + "): " + ToString(opType));
+			}
+			break;
+		}
+		case slg::ocl::DIVIDE_TEX: {
+			switch (opType) {
+				case slg::ocl::TextureEvalOpType::EVAL_FLOAT:
+				case slg::ocl::TextureEvalOpType::EVAL_SPECTRUM: {
+					evalOpStackSize += CompileTextureOps(tex->divideTex.tex1Index, opType);
+					evalOpStackSize += CompileTextureOps(tex->divideTex.tex2Index, opType);
+					break;
+				}
+				case slg::ocl::TextureEvalOpType::EVAL_BUMP: {
+					evalOpStackSize += CompileTextureOpsGenericBumpMap(texIndex);
+					break;
+				}
+				default:
+					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(" + ToString(tex->type) + "): " + ToString(opType));
+			}
+			break;
+		}
+		case slg::ocl::REMAP_TEX: {
+			switch (opType) {
+				case slg::ocl::TextureEvalOpType::EVAL_FLOAT:
+				case slg::ocl::TextureEvalOpType::EVAL_SPECTRUM: {
+					evalOpStackSize += CompileTextureOps(tex->remapTex.valueTexIndex, opType);
+					evalOpStackSize += CompileTextureOps(tex->remapTex.sourceMinTexIndex, slg::ocl::TextureEvalOpType::EVAL_FLOAT);
+					evalOpStackSize += CompileTextureOps(tex->remapTex.sourceMaxTexIndex, slg::ocl::TextureEvalOpType::EVAL_FLOAT);
+					evalOpStackSize += CompileTextureOps(tex->remapTex.targetMinTexIndex, slg::ocl::TextureEvalOpType::EVAL_FLOAT);
+					evalOpStackSize += CompileTextureOps(tex->remapTex.targetMaxTexIndex, slg::ocl::TextureEvalOpType::EVAL_FLOAT);
+					break;
+				}
+				case slg::ocl::TextureEvalOpType::EVAL_BUMP: {
+					evalOpStackSize += CompileTextureOpsGenericBumpMap(texIndex);
+					break;
+				}
+				default:
+					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(" + ToString(tex->type) + "): " + ToString(opType));
+			}
+			break;
+		}
 		case slg::ocl::CHECKERBOARD2D: {
 			switch (opType) {
 				case slg::ocl::TextureEvalOpType::EVAL_FLOAT:
