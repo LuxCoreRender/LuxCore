@@ -234,7 +234,10 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 		case slg::ocl::CONST_FLOAT:
 		case slg::ocl::CONST_FLOAT3:
 		case slg::ocl::BLACKBODY_TEX:
-		case slg::ocl::IRREGULARDATA_TEX: {
+		case slg::ocl::IRREGULARDATA_TEX:
+		case slg::ocl::OBJECTID_TEX:
+		case slg::ocl::OBJECTID_COLOR_TEX:
+		case slg::ocl::OBJECTID_NORMALIZED_TEX: {
 			switch (opType) {
 				case slg::ocl::TextureEvalOpType::EVAL_FLOAT:
 					evalOpStackSize += 1;

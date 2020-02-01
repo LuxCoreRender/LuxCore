@@ -1005,6 +1005,84 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 			break;
 		}
 		//----------------------------------------------------------------------
+		// OBJECTID_TEX
+		//----------------------------------------------------------------------
+		case OBJECTID_TEX: {
+			switch (evalType) {
+				case EVAL_FLOAT: {
+					const float eval = ObjectIDTexture_ConstEvaluateFloat(tex);
+					EvalStack_Push(eval);
+					break;
+				}
+				case EVAL_SPECTRUM: {
+					const float3 eval = ObjectIDTexture_ConstEvaluateSpectrum(tex);
+					EvalStack_Push3(eval);
+					break;
+				}
+				case EVAL_BUMP: {
+					const float3 shadeN = ConstTexture_Bump(hitPoint);
+					EvalStack_Push3(shadeN);
+					break;
+				}
+				default:
+					// Something wrong here
+					break;
+			}
+			break;
+		}
+		//----------------------------------------------------------------------
+		// OBJECTID_COLOR_TEX
+		//----------------------------------------------------------------------
+		case OBJECTID_COLOR_TEX: {
+			switch (evalType) {
+				case EVAL_FLOAT: {
+					const float eval = ObjectIDColorTexture_ConstEvaluateFloat(tex);
+					EvalStack_Push(eval);
+					break;
+				}
+				case EVAL_SPECTRUM: {
+					const float3 eval = ObjectIDColorTexture_ConstEvaluateSpectrum(tex);
+					EvalStack_Push3(eval);
+					break;
+				}
+				case EVAL_BUMP: {
+					const float3 shadeN = ConstTexture_Bump(hitPoint);
+					EvalStack_Push3(shadeN);
+					break;
+				}
+				default:
+					// Something wrong here
+					break;
+			}
+			break;
+		}
+		//----------------------------------------------------------------------
+		// OBJECTID_NORMALIZED_TEX
+		//----------------------------------------------------------------------
+		case OBJECTID_NORMALIZED_TEX: {
+			switch (evalType) {
+				case EVAL_FLOAT: {
+					const float eval = ObjectIDNormalizedTexture_ConstEvaluateFloat(tex);
+					EvalStack_Push(eval);
+					break;
+				}
+				case EVAL_SPECTRUM: {
+					const float3 eval = ObjectIDNormalizedTexture_ConstEvaluateSpectrum(tex);
+					EvalStack_Push3(eval);
+					break;
+				}
+				case EVAL_BUMP: {
+					const float3 shadeN = ConstTexture_Bump(hitPoint);
+					EvalStack_Push3(shadeN);
+					break;
+				}
+				default:
+					// Something wrong here
+					break;
+			}
+			break;
+		}
+		//----------------------------------------------------------------------
 		// CHECKERBOARD2D
 		//----------------------------------------------------------------------
 		case CHECKERBOARD2D: {

@@ -913,26 +913,20 @@ OPENCL_FORCE_INLINE float3 RemapTexture_ConstEvaluateSpectrum(
 // ObjectID texture
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_ENABLE_TEX_OBJECTID)
-
 OPENCL_FORCE_INLINE float ObjectIDTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint) {
 	return (float)hitPoint->objectID;
 }
 
 OPENCL_FORCE_INLINE float3 ObjectIDTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint) {
-	const unsigned int id = hitPoint->objectID;
+	const uint id = hitPoint->objectID;
 	return (float3)(id, id, id);
 }
-
-#endif
 
 //------------------------------------------------------------------------------
 // ObjectIDColor texture
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_ENABLE_TEX_OBJECTID_COLOR)
-
-OPENCL_FORCE_NOT_INLINE float3 ObjectIDColorTexture_IDToSpectrum(const unsigned int id) {
+OPENCL_FORCE_NOT_INLINE float3 ObjectIDColorTexture_IDToSpectrum(const uint id) {
 	return (float3)((id & 0x0000ffu) * ( 1.f / 255.f),
 	                ((id & 0x00ff00u) >> 8) * ( 1.f / 255.f),
 	                ((id & 0xff0000u) >> 16) * ( 1.f / 255.f));
@@ -946,13 +940,9 @@ OPENCL_FORCE_NOT_INLINE float3 ObjectIDColorTexture_ConstEvaluateSpectrum(__glob
 	return ObjectIDColorTexture_IDToSpectrum(hitPoint->objectID);
 }
 
-#endif
-
 //------------------------------------------------------------------------------
 // ObjectIDNormalized texture
 //------------------------------------------------------------------------------
-
-#if defined(PARAM_ENABLE_TEX_OBJECTID_NORMALIZED)
 
 OPENCL_FORCE_INLINE float ObjectIDNormalizedTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint) {
 	return ((float)hitPoint->objectID) * (1.f / 0xffffffffu);
@@ -962,8 +952,6 @@ OPENCL_FORCE_INLINE float3 ObjectIDNormalizedTexture_ConstEvaluateSpectrum(__glo
 	const float normalized = ((float)hitPoint->objectID) * (1.f / 0xffffffffu);
 	return (float3)(normalized, normalized, normalized);
 }
-
-#endif
 
 //------------------------------------------------------------------------------
 // DotProduct texture
