@@ -18,19 +18,14 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef TEXTURE_STACK_SIZE
-#define TEXTURE_STACK_SIZE 16
-#endif
-
 //------------------------------------------------------------------------------
 // Blender blend texture
 //------------------------------------------------------------------------------
  
-#if defined(PARAM_ENABLE_BLENDER_BLEND)
- 
 OPENCL_FORCE_NOT_INLINE float BlenderBlendTexture_Evaluate(__global const HitPoint *hitPoint,
 		const ProgressionType type, const bool direction,
- 		const float contrast, const float bright, __global const TextureMapping3D *mapping) {
+ 		const float contrast, const float bright,
+		__global const TextureMapping3D *mapping) {
 	const float3 P = TextureMapping3D_Map(mapping, hitPoint, NULL);
  
 	float result = 0.f;
@@ -89,13 +84,9 @@ OPENCL_FORCE_NOT_INLINE float3 BlenderBlendTexture_ConstEvaluateSpectrum(__globa
 	return BlenderBlendTexture_Evaluate(hitPoint, type, direction, contrast, bright, mapping);
 }
 
-#endif
-
 //------------------------------------------------------------------------------
 // Blender clouds texture
 //------------------------------------------------------------------------------
-
-#if defined(PARAM_ENABLE_BLENDER_CLOUDS)
 
 OPENCL_FORCE_NOT_INLINE float BlenderCloudsTexture_Evaluate(__global const HitPoint *hitPoint,
 		const BlenderNoiseBasis noisebasis, const float noisesize, const int noisedepth,
@@ -124,14 +115,10 @@ OPENCL_FORCE_NOT_INLINE float3 BlenderCloudsTexture_ConstEvaluateSpectrum(__glob
 			contrast, bright, hard, mapping);
 }
 
-#endif
-
 //------------------------------------------------------------------------------
 // Blender distorted noise texture
 //------------------------------------------------------------------------------
             
-#if defined(PARAM_ENABLE_BLENDER_DISTORTED_NOISE)
-
 OPENCL_FORCE_NOT_INLINE float BlenderDistortedNoiseTexture_Evaluate(__global const HitPoint *hitPoint,
 		const BlenderNoiseBasis noisedistortion, const BlenderNoiseBasis noisebasis, const float distortion, const float noisesize,
 		const float contrast, const float bright, __global const TextureMapping3D *mapping) {
@@ -164,8 +151,6 @@ OPENCL_FORCE_NOT_INLINE float3 BlenderDistortedNoiseTexture_ConstEvaluateSpectru
 	return BlenderDistortedNoiseTexture_Evaluate(hitPoint, noisedistortion, noisebasis, distortion, noisesize,
 			contrast, bright, mapping);
 }
-
-#endif
 
 //------------------------------------------------------------------------------
 // Blender magic texture

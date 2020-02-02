@@ -1527,6 +1527,127 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 			break;
 		}
 		//----------------------------------------------------------------------
+		// BLENDER_BLEND
+		//----------------------------------------------------------------------
+		case BLENDER_BLEND: {
+			switch (evalType) {
+				case EVAL_FLOAT: {
+					const float eval = BlenderBlendTexture_ConstEvaluateFloat(hitPoint,
+							tex->blenderBlend.type, tex->blenderBlend.direction,
+							tex->blenderBlend.contrast, tex->blenderBlend.bright,
+							&tex->blenderBlend.mapping);
+					EvalStack_Push(eval);
+					break;
+				}
+				case EVAL_SPECTRUM: {
+					const float3 eval = BlenderBlendTexture_ConstEvaluateSpectrum(hitPoint,
+							tex->blenderBlend.type, tex->blenderBlend.direction,
+							tex->blenderBlend.contrast, tex->blenderBlend.bright,
+							&tex->blenderBlend.mapping);
+					EvalStack_Push3(eval);
+					break;
+				}
+				case EVAL_BUMP_GENERIC_OFFSET_U:
+					Texture_EvalOpGenericBumpOffsetU(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP_GENERIC_OFFSET_V:
+					Texture_EvalOpGenericBumpOffsetV(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP:
+					Texture_EvalOpGenericBump(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				default:
+					// Something wrong here
+					break;
+			}
+			break;
+		}
+		//----------------------------------------------------------------------
+		// BLENDER_CLOUDS
+		//----------------------------------------------------------------------
+		case BLENDER_CLOUDS: {
+			switch (evalType) {
+				case EVAL_FLOAT: {
+					const float eval = BlenderCloudsTexture_ConstEvaluateFloat(hitPoint,
+							tex->blenderClouds.noisebasis, tex->blenderClouds.noisesize,
+							tex->blenderClouds.noisedepth, tex->blenderClouds.contrast,
+							tex->blenderClouds.bright, tex->blenderClouds.hard,
+							&tex->blenderBlend.mapping);
+					EvalStack_Push(eval);
+					break;
+				}
+				case EVAL_SPECTRUM: {
+					const float3 eval = BlenderCloudsTexture_ConstEvaluateSpectrum(hitPoint,
+							tex->blenderClouds.noisebasis, tex->blenderClouds.noisesize,
+							tex->blenderClouds.noisedepth, tex->blenderClouds.contrast,
+							tex->blenderClouds.bright, tex->blenderClouds.hard,
+							&tex->blenderBlend.mapping);
+					EvalStack_Push3(eval);
+					break;
+				}
+				case EVAL_BUMP_GENERIC_OFFSET_U:
+					Texture_EvalOpGenericBumpOffsetU(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP_GENERIC_OFFSET_V:
+					Texture_EvalOpGenericBumpOffsetV(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP:
+					Texture_EvalOpGenericBump(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				default:
+					// Something wrong here
+					break;
+			}
+			break;
+		}
+		//----------------------------------------------------------------------
+		// BLENDER_DISTORTED_NOISE
+		//----------------------------------------------------------------------
+		case BLENDER_DISTORTED_NOISE: {
+			switch (evalType) {
+				case EVAL_FLOAT: {
+					const float eval = BlenderDistortedNoiseTexture_ConstEvaluateFloat(hitPoint,
+							tex->blenderDistortedNoise.noisedistortion, tex->blenderDistortedNoise.noisebasis,
+							tex->blenderDistortedNoise.distortion, tex->blenderDistortedNoise.noisesize,
+							tex->blenderDistortedNoise.contrast, tex->blenderDistortedNoise.bright,
+							&tex->blenderBlend.mapping);
+					EvalStack_Push(eval);
+					break;
+				}
+				case EVAL_SPECTRUM: {
+					const float3 eval = BlenderDistortedNoiseTexture_ConstEvaluateSpectrum(hitPoint,
+							tex->blenderDistortedNoise.noisedistortion, tex->blenderDistortedNoise.noisebasis,
+							tex->blenderDistortedNoise.distortion, tex->blenderDistortedNoise.noisesize,
+							tex->blenderDistortedNoise.contrast, tex->blenderDistortedNoise.bright,
+							&tex->blenderBlend.mapping);
+					EvalStack_Push3(eval);
+					break;
+				}
+				case EVAL_BUMP_GENERIC_OFFSET_U:
+					Texture_EvalOpGenericBumpOffsetU(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP_GENERIC_OFFSET_V:
+					Texture_EvalOpGenericBumpOffsetV(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP:
+					Texture_EvalOpGenericBump(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				default:
+					// Something wrong here
+					break;
+			}
+			break;
+		}
+		//----------------------------------------------------------------------
 		// CHECKERBOARD2D
 		//----------------------------------------------------------------------
 		case CHECKERBOARD2D: {
@@ -1536,7 +1657,8 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 					EvalStack_Pop(tex2);
 					EvalStack_Pop(tex1);
 
-					const float eval = CheckerBoard2DTexture_ConstEvaluateFloat(hitPoint, tex1, tex2, &tex->checkerBoard2D.mapping);
+					const float eval = CheckerBoard2DTexture_ConstEvaluateFloat(hitPoint,
+							tex1, tex2, &tex->checkerBoard2D.mapping);
 					EvalStack_Push(eval);
 					break;
 				}
@@ -1545,7 +1667,8 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 					EvalStack_Pop3(tex2);
 					EvalStack_Pop3(tex1);
 
-					const float3 eval = CheckerBoard2DTexture_ConstEvaluateSpectrum(hitPoint, tex1, tex2, &tex->checkerBoard2D.mapping);
+					const float3 eval = CheckerBoard2DTexture_ConstEvaluateSpectrum(hitPoint,
+							tex1, tex2, &tex->checkerBoard2D.mapping);
 					EvalStack_Push3(eval);
 					break;
 				}
@@ -1583,7 +1706,8 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 
 					// Compute localPoint
 					float3 localShadeN;
-					const float3 localPoint = TextureMapping3D_Map(&tex->triplanarTex.mapping, hitPoint, &localShadeN);
+					const float3 localPoint = TextureMapping3D_Map(&tex->triplanarTex.mapping,
+							hitPoint, &localShadeN);
 
 					// Compute the 3 weights
 					float weightsX = Sqr(Sqr(localShadeN.x));

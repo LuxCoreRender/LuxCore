@@ -262,7 +262,10 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 		case slg::ocl::HITPOINTGREY:
 		case slg::ocl::DENSITYGRID_TEX:
 		case slg::ocl::SHADING_NORMAL_TEX:
-		case slg::ocl::POSITION_TEX: {
+		case slg::ocl::POSITION_TEX:
+		case slg::ocl::BLENDER_BLEND:
+		case slg::ocl::BLENDER_CLOUDS:
+		case slg::ocl::BLENDER_DISTORTED_NOISE: {
 			switch (opType) {
 				case slg::ocl::TextureEvalOpType::EVAL_FLOAT:
 					evalOpStackSize += 1;

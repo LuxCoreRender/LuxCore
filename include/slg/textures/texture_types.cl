@@ -201,8 +201,8 @@ typedef enum {
 typedef struct {
 	TextureMapping3D mapping;
 	ProgressionType type;
-	bool direction;
-	float bright, contrast;
+	int direction;
+	float contrast, bright;
 } BlenderBlendTexParam;
 
 typedef struct {
@@ -211,7 +211,7 @@ typedef struct {
 	float noisesize;
 	int noisedepth;
 	float bright, contrast;
-	bool hard;
+	int hard;
 } BlenderCloudsTexParam;
 
 typedef struct {
@@ -242,7 +242,7 @@ typedef struct {
 	float noisesize, turbulence;
 	int noisedepth;
 	float bright, contrast;
-	bool hard;
+	int hard;
 } BlenderMarbleTexParam;
 
 typedef enum {
@@ -279,7 +279,7 @@ typedef struct {
 	float noisesize;
 	float turbulence;
 	float bright, contrast;
-	bool hard;
+	int hard;
 } BlenderStucciTexParam;
 
 typedef enum {
