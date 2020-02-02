@@ -428,7 +428,7 @@ typedef struct {
 
 typedef struct {
 	unsigned int texIndex;
-	unsigned int channel;
+	unsigned int channelIndex;
 } SplitFloat3TexParam;
 
 typedef struct {

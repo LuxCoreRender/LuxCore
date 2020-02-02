@@ -957,89 +957,71 @@ OPENCL_FORCE_INLINE float3 ObjectIDNormalizedTexture_ConstEvaluateSpectrum(__glo
 // DotProduct texture
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_ENABLE_TEX_DOT_PRODUCT)
-
-OPENCL_FORCE_INLINE float DotProductTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
-		const float3 tex1, const float3 tex2) {
+OPENCL_FORCE_INLINE float DotProductTexture_ConstEvaluateFloat(const float3 tex1,
+		const float3 tex2) {
 	return dot(tex1, tex2);
 }
 
-OPENCL_FORCE_INLINE float3 DotProductTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
-		const float3 tex1, const float3 tex2) {
+OPENCL_FORCE_INLINE float3 DotProductTexture_ConstEvaluateSpectrum(const float3 tex1,
+		const float3 tex2) {
 	const float result = dot(tex1, tex2);
 	return (float3)(result, result, result);
 }
-
-#endif
 
 //------------------------------------------------------------------------------
 // Greater Than texture
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_ENABLE_TEX_GREATER_THAN)
-
-OPENCL_FORCE_INLINE float GreaterThanTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
-		const float tex1, const float tex2) {
+OPENCL_FORCE_INLINE float GreaterThanTexture_ConstEvaluateFloat(const float tex1,
+		const float tex2) {
 	return (tex1 > tex2) ? 1.f : 0.f;
 }
 
-OPENCL_FORCE_INLINE float3 GreaterThanTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
-		const float tex1, const float tex2) {
+OPENCL_FORCE_INLINE float3 GreaterThanTexture_ConstEvaluateSpectrum(const float tex1,
+		const float tex2) {
 	const float result = (tex1 > tex2) ? 1.f : 0.f;
 	return (float3)(result, result, result);
 }
-
-#endif
 
 //------------------------------------------------------------------------------
 // Less Than texture
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_ENABLE_TEX_LESS_THAN)
-
-OPENCL_FORCE_INLINE float LessThanTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
-		const float tex1, const float tex2) {
+OPENCL_FORCE_INLINE float LessThanTexture_ConstEvaluateFloat(const float tex1,
+		const float tex2) {
 	return (tex1 < tex2) ? 1.f : 0.f;
 }
 
-OPENCL_FORCE_INLINE float3 LessThanTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
-		const float tex1, const float tex2) {
+OPENCL_FORCE_INLINE float3 LessThanTexture_ConstEvaluateSpectrum(const float tex1,
+		const float tex2) {
 	const float result = (tex1 < tex2) ? 1.f : 0.f;
 	return (float3)(result, result, result);
 }
-
-#endif
 
 //------------------------------------------------------------------------------
 // Power texture
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_ENABLE_TEX_POWER)
-
-OPENCL_FORCE_NOT_INLINE float PowerTexture_SafePow(const float base, const float exponent) {
+OPENCL_FORCE_INLINE float PowerTexture_SafePow(const float base, const float exponent) {
 	if (base < 0.f && exponent != ((int)exponent))
 		return 0.f;
 	return pow(base, exponent);
 }
 
-OPENCL_FORCE_NOT_INLINE float PowerTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
-		const float base, const float exponent) {
+OPENCL_FORCE_INLINE float PowerTexture_ConstEvaluateFloat(const float base,
+		const float exponent) {
 	return PowerTexture_SafePow(base, exponent);
 }
 
-OPENCL_FORCE_NOT_INLINE float3 PowerTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
-		const float base, const float exponent) {
+OPENCL_FORCE_INLINE float3 PowerTexture_ConstEvaluateSpectrum(const float base,
+		const float exponent) {
 	const float result = PowerTexture_SafePow(base, exponent);
 	return (float3)(result, result, result);
 }
 
-#endif
-
 //------------------------------------------------------------------------------
 // Shading Normal texture
 //------------------------------------------------------------------------------
-
-#if defined(PARAM_ENABLE_TEX_SHADING_NORMAL)
 
 OPENCL_FORCE_INLINE float ShadingNormalTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint) {
 	// This method doesn't really make sense for a vector - just return the first element
@@ -1050,13 +1032,9 @@ OPENCL_FORCE_INLINE float3 ShadingNormalTexture_ConstEvaluateSpectrum(__global c
 	return (float3)(hitPoint->shadeN.x, hitPoint->shadeN.y, hitPoint->shadeN.z);
 }
 
-#endif
-
 //------------------------------------------------------------------------------
 // Position texture
 //------------------------------------------------------------------------------
-
-#if defined(PARAM_ENABLE_TEX_POSITION)
 
 OPENCL_FORCE_INLINE float PositionTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint) {
 	// This method doesn't really make sense for a vector - just return the first element
@@ -1067,79 +1045,64 @@ OPENCL_FORCE_INLINE float3 PositionTexture_ConstEvaluateSpectrum(__global const 
 	return (float3)(hitPoint->p.x, hitPoint->p.y, hitPoint->p.z);
 }
 
-#endif
-
 //------------------------------------------------------------------------------
 // Split float3 texture
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_ENABLE_TEX_SPLIT_FLOAT3)
-
-OPENCL_FORCE_INLINE float SplitFloat3Texture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
-		const float3 tex, const uint channel) {
-	switch (channel)
-	{
-	case 0:
-		return tex.x;
-	case 1:
-		return tex.y;
-	case 2:
-		return tex.z;
-	default:
-		return 0.f;
+OPENCL_FORCE_INLINE float SplitFloat3Texture_ConstEvaluateFloat(const float3 tex,
+		const uint channel) {
+	switch (channel) {
+		case 0:
+			return tex.x;
+		case 1:
+			return tex.y;
+		case 2:
+			return tex.z;
+		default:
+			return 0.f;
 	}
 }
 
-OPENCL_FORCE_INLINE float3 SplitFloat3Texture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
-		const float3 tex, const uint channel) {
+OPENCL_FORCE_INLINE float3 SplitFloat3Texture_ConstEvaluateSpectrum(const float3 tex,
+		const uint channel) {
 	float result;
-	switch (channel)
-	{
-	case 0:
-		result = tex.x;
-		break;
-	case 1:
-		result = tex.y;
-		break;
-	case 2:
-		result = tex.z;
-		break;
-	default:
-		result = 0.f;
-		break;
+	switch (channel) {
+		case 0:
+			result = tex.x;
+			break;
+		case 1:
+			result = tex.y;
+			break;
+		case 2:
+			result = tex.z;
+			break;
+		default:
+			result = 0.f;
+			break;
 	}
-	return (float3)(result, result, result);
-}
 
-#endif
+	return (float3) (result, result, result);
+}
 
 //------------------------------------------------------------------------------
 // Make float3 texture
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_ENABLE_TEX_MAKE_FLOAT3)
-
-OPENCL_FORCE_INLINE float MakeFloat3Texture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
-		const float tex1, const float tex2, const float tex3) {
+OPENCL_FORCE_INLINE float MakeFloat3Texture_ConstEvaluateFloat(const float tex1,
+		const float tex2, const float tex3) {
 	return Spectrum_Y((float3)(tex1, tex2, tex3));
 }
 
-OPENCL_FORCE_INLINE float3 MakeFloat3Texture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
-		const float tex1, const float tex2, const float tex3) {
+OPENCL_FORCE_INLINE float3 MakeFloat3Texture_ConstEvaluateSpectrum(const float tex1,
+		const float tex2, const float tex3) {
 	return (float3)(tex1, tex2, tex3);
 }
-
-#endif
 
 //------------------------------------------------------------------------------
 // Rounding texture
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_ENABLE_TEX_ROUNDING)
-
-OPENCL_FORCE_NOT_INLINE float RoundingTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
-                                                                 const float tex1,
-                                                                 const float tex2) {
+OPENCL_FORCE_INLINE float RoundingTexture_ConstEvaluateFloat(const float tex1, const float tex2) {
     if(tex1 == tex2 || tex2 == 0) {
         return tex1;
     } else {
@@ -1150,24 +1113,16 @@ OPENCL_FORCE_NOT_INLINE float RoundingTexture_ConstEvaluateFloat(__global const 
     }
 }
 
-OPENCL_FORCE_INLINE float3 RoundingTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
-                                                                const float tex1,
-                                                                const float tex2) {
-    const float result = RoundingTexture_ConstEvaluateFloat(hitPoint, tex1, tex2);
+OPENCL_FORCE_INLINE float3 RoundingTexture_ConstEvaluateSpectrum(const float tex1, const float tex2) {
+    const float result = RoundingTexture_ConstEvaluateFloat(tex1, tex2);
     return (float3)(result, result, result);
 }
-
-#endif
 
 //------------------------------------------------------------------------------
 // Modulo texture
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_ENABLE_TEX_MODULO)
-
-OPENCL_FORCE_NOT_INLINE float ModuloTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
-                                                               const float tex1,
-                                                               const float tex2) {
+OPENCL_FORCE_INLINE float ModuloTexture_ConstEvaluateFloat(const float tex1, const float tex2) {
     if(tex2 == 0) {
         return 0.f;
     }
@@ -1175,39 +1130,27 @@ OPENCL_FORCE_NOT_INLINE float ModuloTexture_ConstEvaluateFloat(__global const Hi
     return fmod(tex1, tex2);
 }
 
-OPENCL_FORCE_INLINE float3 ModuloTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
-                                                               const float tex1,
-                                                               const float tex2) {
-    const float result = ModuloTexture_ConstEvaluateFloat(hitPoint, tex1, tex2);
+OPENCL_FORCE_INLINE float3 ModuloTexture_ConstEvaluateSpectrum(const float tex1, const float tex2) {
+    const float result = ModuloTexture_ConstEvaluateFloat(tex1, tex2);
     return (float3)(result, result, result);
 }
-
-#endif
 
 //------------------------------------------------------------------------------
 // Brightness/Contrast texture
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_ENABLE_TEX_BRIGHT_CONTRAST)
-
-OPENCL_FORCE_INLINE float BrightContrastTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
-																   const float tex,
-																   const float brightnessTex,
-																   const float contrastTex) {
+OPENCL_FORCE_INLINE float BrightContrastTexture_ConstEvaluateFloat(const float tex,
+		const float brightnessTex, const float contrastTex) {
 	const float a = 1.f + contrastTex;
 	const float b = brightnessTex - contrastTex * 0.5f;
 
 	return clamp(tex * a + b, 0.f, INFINITY);
 }
 
-OPENCL_FORCE_INLINE float3 BrightContrastTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
-																	   const float3 tex,
-																	   const float brightnessTex,
-																	   const float contrastTex) {
+OPENCL_FORCE_INLINE float3 BrightContrastTexture_ConstEvaluateSpectrum(const float3 tex,
+		const float brightnessTex, const float contrastTex) {
     const float a = 1.f + contrastTex;
 	const float b = brightnessTex - contrastTex * 0.5f;
 
 	return clamp(tex * a + b, 0.f, INFINITY);
 }
-
-#endif
