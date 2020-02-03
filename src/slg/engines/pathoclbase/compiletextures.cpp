@@ -238,7 +238,13 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 		case slg::ocl::IRREGULARDATA_TEX:
 		case slg::ocl::OBJECTID_TEX:
 		case slg::ocl::OBJECTID_COLOR_TEX:
-		case slg::ocl::OBJECTID_NORMALIZED_TEX: {
+		case slg::ocl::OBJECTID_NORMALIZED_TEX:
+		case slg::ocl::CLOUD_TEX:
+		case slg::ocl::FBM_TEX:
+		case slg::ocl::MARBLE:
+		case slg::ocl::WINDY:
+		case slg::ocl::WRINKLED:
+		case slg::ocl::UV_TEX: {
 			switch (opType) {
 				case slg::ocl::TextureEvalOpType::EVAL_FLOAT:
 					evalOpStackSize += 1;
@@ -688,23 +694,6 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 			}
 			break;
 		}
-		case slg::ocl::CHECKERBOARD2D: {
-			switch (opType) {
-				case slg::ocl::TextureEvalOpType::EVAL_FLOAT:
-				case slg::ocl::TextureEvalOpType::EVAL_SPECTRUM: {
-					evalOpStackSize += CompileTextureOps(tex->checkerBoard2D.tex1Index, opType);
-					evalOpStackSize += CompileTextureOps(tex->checkerBoard2D.tex2Index, opType);
-					break;
-				}
-				case slg::ocl::TextureEvalOpType::EVAL_BUMP: {
-					evalOpStackSize += CompileTextureOpsGenericBumpMap(texIndex);
-					break;
-				}
-				default:
-					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(" + ToString(tex->type) + "): " + ToString(opType));
-			}
-			break;
-		}
 		case slg::ocl::NORMALMAP_TEX: {
 			switch (opType) {
 				case slg::ocl::TextureEvalOpType::EVAL_FLOAT:
@@ -793,6 +782,91 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 						evalOpStackSize += CompileTextureOpsGenericBumpMap(texIndex);
 					}
 					break;
+				default:
+					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(" + ToString(tex->type) + "): " + ToString(opType));
+			}
+			break;
+		}
+		case slg::ocl::CHECKERBOARD2D: {
+			switch (opType) {
+				case slg::ocl::TextureEvalOpType::EVAL_FLOAT:
+				case slg::ocl::TextureEvalOpType::EVAL_SPECTRUM: {
+					evalOpStackSize += CompileTextureOps(tex->checkerBoard2D.tex1Index, opType);
+					evalOpStackSize += CompileTextureOps(tex->checkerBoard2D.tex2Index, opType);
+					break;
+				}
+				case slg::ocl::TextureEvalOpType::EVAL_BUMP: {
+					evalOpStackSize += CompileTextureOpsGenericBumpMap(texIndex);
+					break;
+				}
+				default:
+					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(" + ToString(tex->type) + "): " + ToString(opType));
+			}
+			break;
+		}
+		case slg::ocl::CHECKERBOARD3D: {
+			switch (opType) {
+				case slg::ocl::TextureEvalOpType::EVAL_FLOAT:
+				case slg::ocl::TextureEvalOpType::EVAL_SPECTRUM: {
+					evalOpStackSize += CompileTextureOps(tex->checkerBoard3D.tex1Index, opType);
+					evalOpStackSize += CompileTextureOps(tex->checkerBoard3D.tex2Index, opType);
+					break;
+				}
+				case slg::ocl::TextureEvalOpType::EVAL_BUMP: {
+					evalOpStackSize += CompileTextureOpsGenericBumpMap(texIndex);
+					break;
+				}
+				default:
+					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(" + ToString(tex->type) + "): " + ToString(opType));
+			}
+			break;
+		}
+		case slg::ocl::DOTS: {
+			switch (opType) {
+				case slg::ocl::TextureEvalOpType::EVAL_FLOAT:
+				case slg::ocl::TextureEvalOpType::EVAL_SPECTRUM: {
+					evalOpStackSize += CompileTextureOps(tex->dots.insideIndex, opType);
+					evalOpStackSize += CompileTextureOps(tex->dots.outsideIndex, opType);
+					break;
+				}
+				case slg::ocl::TextureEvalOpType::EVAL_BUMP: {
+					evalOpStackSize += CompileTextureOpsGenericBumpMap(texIndex);
+					break;
+				}
+				default:
+					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(" + ToString(tex->type) + "): " + ToString(opType));
+			}
+			break;
+		}
+		case slg::ocl::BRICK: {
+			switch (opType) {
+				case slg::ocl::TextureEvalOpType::EVAL_FLOAT:
+				case slg::ocl::TextureEvalOpType::EVAL_SPECTRUM: {
+					evalOpStackSize += CompileTextureOps(tex->brick.tex1Index, opType);
+					evalOpStackSize += CompileTextureOps(tex->brick.tex2Index, opType);
+					evalOpStackSize += CompileTextureOps(tex->brick.tex3Index, opType);
+					break;
+				}
+				case slg::ocl::TextureEvalOpType::EVAL_BUMP: {
+					evalOpStackSize += CompileTextureOpsGenericBumpMap(texIndex);
+					break;
+				}
+				default:
+					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(" + ToString(tex->type) + "): " + ToString(opType));
+			}
+			break;
+		}
+		case slg::ocl::BAND_TEX: {
+			switch (opType) {
+				case slg::ocl::TextureEvalOpType::EVAL_FLOAT:
+				case slg::ocl::TextureEvalOpType::EVAL_SPECTRUM: {
+					evalOpStackSize += CompileTextureOps(tex->band.amountTexIndex, slg::ocl::TextureEvalOpType::EVAL_FLOAT);
+					break;
+				}
+				case slg::ocl::TextureEvalOpType::EVAL_BUMP: {
+					evalOpStackSize += CompileTextureOpsGenericBumpMap(texIndex);
+					break;
+				}
 				default:
 					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(" + ToString(tex->type) + "): " + ToString(opType));
 			}

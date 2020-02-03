@@ -1990,6 +1990,428 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 			break;
 		}
 		//----------------------------------------------------------------------
+		// CHECKERBOARD3D
+		//----------------------------------------------------------------------
+		case CHECKERBOARD3D: {
+			switch (evalType) {
+				case EVAL_FLOAT: {
+					float tex1, tex2;
+					EvalStack_Pop(tex2);
+					EvalStack_Pop(tex1);
+
+					const float eval = CheckerBoard3DTexture_ConstEvaluateFloat(hitPoint,
+							tex1, tex2, &tex->checkerBoard3D.mapping);
+					EvalStack_Push(eval);
+					break;
+				}
+				case EVAL_SPECTRUM: {
+					float3 tex1, tex2;
+					EvalStack_Pop3(tex2);
+					EvalStack_Pop3(tex1);
+
+					const float3 eval = CheckerBoard3DTexture_ConstEvaluateSpectrum(hitPoint,
+							tex1, tex2, &tex->checkerBoard3D.mapping);
+					EvalStack_Push3(eval);
+					break;
+				}
+				case EVAL_BUMP_GENERIC_OFFSET_U:
+					Texture_EvalOpGenericBumpOffsetU(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP_GENERIC_OFFSET_V:
+					Texture_EvalOpGenericBumpOffsetV(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP:
+					Texture_EvalOpGenericBump(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				default:
+					// Something wrong here
+					break;
+			}
+			break;
+		}
+		//----------------------------------------------------------------------
+		// CLOUD_TEX
+		//----------------------------------------------------------------------
+		case CLOUD_TEX: {
+			switch (evalType) {
+				case EVAL_FLOAT: {
+					const float eval = CloudTexture_ConstEvaluateFloat(hitPoint,
+							tex->cloud.radius, tex->cloud.numspheres,
+							tex->cloud.spheresize, tex->cloud.sharpness,
+							tex->cloud.basefadedistance, tex->cloud.baseflatness,
+							tex->cloud.variability, tex->cloud.omega,
+							tex->cloud.noisescale, tex->cloud.noiseoffset,
+							tex->cloud.turbulence, tex->cloud.octaves,
+							&tex->cloud.mapping);
+					EvalStack_Push(eval);
+					break;
+				}
+				case EVAL_SPECTRUM: {
+					const float3 eval = CloudTexture_ConstEvaluateSpectrum(hitPoint,
+							tex->cloud.radius, tex->cloud.numspheres,
+							tex->cloud.spheresize, tex->cloud.sharpness,
+							tex->cloud.basefadedistance, tex->cloud.baseflatness,
+							tex->cloud.variability, tex->cloud.omega,
+							tex->cloud.noisescale, tex->cloud.noiseoffset,
+							tex->cloud.turbulence, tex->cloud.octaves,
+							&tex->cloud.mapping);
+					EvalStack_Push3(eval);
+					break;
+				}
+				case EVAL_BUMP_GENERIC_OFFSET_U:
+					Texture_EvalOpGenericBumpOffsetU(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP_GENERIC_OFFSET_V:
+					Texture_EvalOpGenericBumpOffsetV(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP:
+					Texture_EvalOpGenericBump(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				default:
+					// Something wrong here
+					break;
+			}
+			break;
+		}
+		//----------------------------------------------------------------------
+		// FBM_TEX
+		//----------------------------------------------------------------------
+		case FBM_TEX: {
+			switch (evalType) {
+				case EVAL_FLOAT: {
+					const float eval = FBMTexture_ConstEvaluateFloat(hitPoint,
+							tex->fbm.omega, tex->fbm.octaves,
+							&tex->fbm.mapping);
+					EvalStack_Push(eval);
+					break;
+				}
+				case EVAL_SPECTRUM: {
+					const float3 eval = FBMTexture_ConstEvaluateSpectrum(hitPoint,
+							tex->fbm.omega, tex->fbm.octaves,
+							&tex->fbm.mapping);
+					EvalStack_Push3(eval);
+					break;
+				}
+				case EVAL_BUMP_GENERIC_OFFSET_U:
+					Texture_EvalOpGenericBumpOffsetU(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP_GENERIC_OFFSET_V:
+					Texture_EvalOpGenericBumpOffsetV(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP:
+					Texture_EvalOpGenericBump(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				default:
+					// Something wrong here
+					break;
+			}
+			break;
+		}
+		//----------------------------------------------------------------------
+		// MARBLE
+		//----------------------------------------------------------------------
+		case MARBLE: {
+			switch (evalType) {
+				case EVAL_FLOAT: {
+					const float eval = MarbleTexture_ConstEvaluateFloat(hitPoint,
+							tex->marble.scale, tex->marble.omega,
+							tex->marble.octaves, tex->marble.variation,
+							&tex->marble.mapping);
+					EvalStack_Push(eval);
+					break;
+				}
+				case EVAL_SPECTRUM: {
+					const float3 eval = MarbleTexture_ConstEvaluateSpectrum(hitPoint,
+							tex->marble.scale, tex->marble.omega,
+							tex->marble.octaves, tex->marble.variation,
+							&tex->marble.mapping);
+					EvalStack_Push3(eval);
+					break;
+				}
+				case EVAL_BUMP_GENERIC_OFFSET_U:
+					Texture_EvalOpGenericBumpOffsetU(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP_GENERIC_OFFSET_V:
+					Texture_EvalOpGenericBumpOffsetV(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP:
+					Texture_EvalOpGenericBump(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				default:
+					// Something wrong here
+					break;
+			}
+			break;
+		}
+		//----------------------------------------------------------------------
+		// DOTS
+		//----------------------------------------------------------------------
+		case DOTS: {
+			switch (evalType) {
+				case EVAL_FLOAT: {
+					float tex1, tex2;
+					EvalStack_Pop(tex2);
+					EvalStack_Pop(tex1);
+
+					const float eval = DotsTexture_ConstEvaluateFloat(hitPoint,
+							tex1, tex2, &tex->checkerBoard2D.mapping);
+					EvalStack_Push(eval);
+					break;
+				}
+				case EVAL_SPECTRUM: {
+					float3 tex1, tex2;
+					EvalStack_Pop3(tex2);
+					EvalStack_Pop3(tex1);
+
+					const float3 eval = DotsTexture_ConstEvaluateSpectrum(hitPoint,
+							tex1, tex2, &tex->checkerBoard2D.mapping);
+					EvalStack_Push3(eval);
+					break;
+				}
+				case EVAL_BUMP_GENERIC_OFFSET_U:
+					Texture_EvalOpGenericBumpOffsetU(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP_GENERIC_OFFSET_V:
+					Texture_EvalOpGenericBumpOffsetV(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP:
+					Texture_EvalOpGenericBump(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				default:
+					// Something wrong here
+					break;
+			}
+			break;
+		}
+		//----------------------------------------------------------------------
+		// BRICK
+		//----------------------------------------------------------------------
+		case BRICK: {
+			switch (evalType) {
+				case EVAL_FLOAT: {
+					float tex1, tex2, tex3;
+					EvalStack_Pop(tex3);
+					EvalStack_Pop(tex2);
+					EvalStack_Pop(tex1);
+
+					const float eval = BrickTexture_ConstEvaluateFloat(hitPoint,
+							tex1, tex2, tex3,
+							tex->brick.bond,
+							tex->brick.brickwidth, tex->brick.brickheight,
+							tex->brick.brickdepth, tex->brick.mortarsize,
+							(float3)(tex->brick.offsetx, tex->brick.offsety, tex->brick.offsetz),
+							tex->brick.run , tex->brick.mortarwidth,
+							tex->brick.mortarheight, tex->brick.mortardepth,
+							tex->brick.proportion, tex->brick.invproportion,
+							&tex->brick.mapping);
+					EvalStack_Push(eval);
+					break;
+				}
+				case EVAL_SPECTRUM: {
+					float3 tex1, tex2, tex3;
+					EvalStack_Pop3(tex3);
+					EvalStack_Pop3(tex2);
+					EvalStack_Pop3(tex1);
+
+					const float3 eval = BrickTexture_ConstEvaluateSpectrum(hitPoint,
+							tex1, tex2, tex3,
+							tex->brick.bond,
+							tex->brick.brickwidth, tex->brick.brickheight,
+							tex->brick.brickdepth, tex->brick.mortarsize,
+							(float3)(tex->brick.offsetx, tex->brick.offsety, tex->brick.offsetz),
+							tex->brick.run , tex->brick.mortarwidth,
+							tex->brick.mortarheight, tex->brick.mortardepth,
+							tex->brick.proportion, tex->brick.invproportion,
+							&tex->brick.mapping);
+					EvalStack_Push3(eval);
+					break;
+				}
+				case EVAL_BUMP_GENERIC_OFFSET_U:
+					Texture_EvalOpGenericBumpOffsetU(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP_GENERIC_OFFSET_V:
+					Texture_EvalOpGenericBumpOffsetV(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP:
+					Texture_EvalOpGenericBump(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				default:
+					// Something wrong here
+					break;
+			}
+			break;
+		}
+		//----------------------------------------------------------------------
+		// WINDY
+		//----------------------------------------------------------------------
+		case WINDY: {
+			switch (evalType) {
+				case EVAL_FLOAT: {
+					const float eval = WindyTexture_ConstEvaluateFloat(hitPoint,
+							&tex->windy.mapping);
+					EvalStack_Push(eval);
+					break;
+				}
+				case EVAL_SPECTRUM: {
+					const float3 eval = WindyTexture_ConstEvaluateSpectrum(hitPoint,
+							&tex->windy.mapping);
+					EvalStack_Push3(eval);
+					break;
+				}
+				case EVAL_BUMP_GENERIC_OFFSET_U:
+					Texture_EvalOpGenericBumpOffsetU(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP_GENERIC_OFFSET_V:
+					Texture_EvalOpGenericBumpOffsetV(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP:
+					Texture_EvalOpGenericBump(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				default:
+					// Something wrong here
+					break;
+			}
+			break;
+		}
+		//----------------------------------------------------------------------
+		// WRINKLED
+		//----------------------------------------------------------------------
+		case WRINKLED: {
+			switch (evalType) {
+				case EVAL_FLOAT: {
+					const float eval = WrinkledTexture_ConstEvaluateFloat(hitPoint,
+							tex->wrinkled.omega, tex->wrinkled.octaves,
+							&tex->wrinkled.mapping);
+					EvalStack_Push(eval);
+					break;
+				}
+				case EVAL_SPECTRUM: {
+					const float3 eval = WrinkledTexture_ConstEvaluateSpectrum(hitPoint,
+							tex->wrinkled.omega, tex->wrinkled.octaves,
+							&tex->wrinkled.mapping);
+					EvalStack_Push3(eval);
+					break;
+				}
+				case EVAL_BUMP_GENERIC_OFFSET_U:
+					Texture_EvalOpGenericBumpOffsetU(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP_GENERIC_OFFSET_V:
+					Texture_EvalOpGenericBumpOffsetV(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP:
+					Texture_EvalOpGenericBump(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				default:
+					// Something wrong here
+					break;
+			}
+			break;
+		}
+		//----------------------------------------------------------------------
+		// UV_TEX
+		//----------------------------------------------------------------------
+		case UV_TEX: {
+			switch (evalType) {
+				case EVAL_FLOAT: {
+					const float eval = UVTexture_ConstEvaluateFloat(hitPoint,
+							&tex->uvTex.mapping);
+					EvalStack_Push(eval);
+					break;
+				}
+				case EVAL_SPECTRUM: {
+					const float3 eval = UVTexture_ConstEvaluateSpectrum(hitPoint,
+							&tex->uvTex.mapping);
+					EvalStack_Push3(eval);
+					break;
+				}
+				case EVAL_BUMP_GENERIC_OFFSET_U:
+					Texture_EvalOpGenericBumpOffsetU(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP_GENERIC_OFFSET_V:
+					Texture_EvalOpGenericBumpOffsetV(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP:
+					Texture_EvalOpGenericBump(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				default:
+					// Something wrong here
+					break;
+			}
+			break;
+		}
+		//----------------------------------------------------------------------
+		// BAND_TEX
+		//----------------------------------------------------------------------
+		case BAND_TEX: {
+			switch (evalType) {
+				case EVAL_FLOAT: {
+					float tex1;
+					EvalStack_Pop(tex1);
+
+					const float eval = BandTexture_ConstEvaluateFloat(hitPoint,
+							tex->band.interpType, tex->band.size,
+							tex->band.offsets, tex->band.values,
+							tex1);
+					EvalStack_Push(eval);
+					break;
+				}
+				case EVAL_SPECTRUM: {
+					float tex1;
+					EvalStack_Pop(tex1);
+
+					const float3 eval = BandTexture_ConstEvaluateSpectrum(hitPoint,
+							tex->band.interpType, tex->band.size,
+							tex->band.offsets, tex->band.values,
+							tex1);
+					EvalStack_Push3(eval);
+					break;
+				}
+				case EVAL_BUMP_GENERIC_OFFSET_U:
+					Texture_EvalOpGenericBumpOffsetU(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP_GENERIC_OFFSET_V:
+					Texture_EvalOpGenericBumpOffsetV(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP:
+					Texture_EvalOpGenericBump(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				default:
+					// Something wrong here
+					break;
+			}
+			break;
+		}
+		//----------------------------------------------------------------------
 		// For the very special case of Triplanar texture evaluation
 		//
 		// EVAL_TRIPLANAR_STEP_1, EVAL_TRIPLANAR_STEP_2, EVAL_TRIPLANAR_STEP_3
