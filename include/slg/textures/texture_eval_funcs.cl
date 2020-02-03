@@ -2591,6 +2591,58 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 			break;
 		}
 		//----------------------------------------------------------------------
+		// FRESNELCOLOR_TEX
+		//----------------------------------------------------------------------
+		case FRESNELCOLOR_TEX: {
+			switch (evalType) {
+				case EVAL_FLOAT: {
+					const float eval = FresnelColorTexture_ConstEvaluateFloat();
+					EvalStack_Push(eval);
+					break;
+				}
+				case EVAL_SPECTRUM: {
+					const float3 eval = FresnelColorTexture_ConstEvaluateSpectrum();
+					EvalStack_Push3(eval);
+					break;
+				}
+				case EVAL_BUMP: {
+					const float3 shadeN = ConstTexture_Bump(hitPoint);
+					EvalStack_Push3(shadeN);
+					break;
+				}
+				default:
+					// Something wrong here
+					break;
+			}
+			break;
+		}
+		//----------------------------------------------------------------------
+		// FRESNELCONST_TEX
+		//----------------------------------------------------------------------
+		case FRESNELCONST_TEX: {
+			switch (evalType) {
+				case EVAL_FLOAT: {
+					const float eval = FresnelColorTexture_ConstEvaluateFloat();
+					EvalStack_Push(eval);
+					break;
+				}
+				case EVAL_SPECTRUM: {
+					const float3 eval = FresnelColorTexture_ConstEvaluateSpectrum();
+					EvalStack_Push3(eval);
+					break;
+				}
+				case EVAL_BUMP: {
+					const float3 shadeN = ConstTexture_Bump(hitPoint);
+					EvalStack_Push3(shadeN);
+					break;
+				}
+				default:
+					// Something wrong here
+					break;
+			}
+			break;
+		}
+		//----------------------------------------------------------------------
 		default:
 			// Something wrong here
 			break;
