@@ -110,29 +110,20 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 		ssParams << " -D __APPLE_CL__";
 	}
 #else
-        if (intersectionDevice->GetDeviceDesc()->IsAMDPlatform())
-            ssParams << " -D LUXCORE_AMD_OPENCL";
-        else if (intersectionDevice->GetDeviceDesc()->IsNVIDIAPlatform())
-            ssParams << " -D LUXCORE_NVIDIA_OPENCL";
-        else
-            ssParams << " -D LUXCORE_GENERIC_OPENCL";
+	if (intersectionDevice->GetDeviceDesc()->IsAMDPlatform())
+		ssParams << " -D LUXCORE_AMD_OPENCL";
+	else if (intersectionDevice->GetDeviceDesc()->IsNVIDIAPlatform())
+		ssParams << " -D LUXCORE_NVIDIA_OPENCL";
+	else
+		ssParams << " -D LUXCORE_GENERIC_OPENCL";
 #endif
 
 	//--------------------------------------------------------------------------
 
-	// This is a workaround to NVIDIA long compilation time
-	string forceInlineDirective;
-	if (intersectionDevice->GetDeviceDesc()->IsNVIDIAPlatform()) {
-		//SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] NVIDIA platform: using inline workaround");
-		forceInlineDirective =
-				"#define OPENCL_FORCE_NOT_INLINE __attribute__((noinline))\n"
-				"#define OPENCL_FORCE_INLINE __attribute__((always_inline))\n";
-	} else {
-		//SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Not NVIDIA platform: not using inline workaround");
-		forceInlineDirective =
-				"#define OPENCL_FORCE_NOT_INLINE\n"
-				"#define OPENCL_FORCE_INLINE\n";
-	}
+	// This is a workaround to  long compilation time
+	string forceInlineDirective =
+			"#define OPENCL_FORCE_NOT_INLINE __attribute__((noinline))\n"
+			"#define OPENCL_FORCE_INLINE __attribute__((always_inline))\n";
 
 	//--------------------------------------------------------------------------
 
