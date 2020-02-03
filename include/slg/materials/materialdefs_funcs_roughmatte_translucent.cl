@@ -22,8 +22,6 @@
 // MatteTranslucent material
 //------------------------------------------------------------------------------
 
-#if defined (PARAM_ENABLE_MAT_ROUGHMATTETRANSLUCENT)
-
 OPENCL_FORCE_INLINE BSDFEvent RoughMatteTranslucentMaterial_GetEventTypes() {
 	return DIFFUSE | REFLECT | TRANSMIT;
 }
@@ -160,5 +158,3 @@ OPENCL_FORCE_NOT_INLINE float3 RoughMatteTranslucentMaterial_Sample(
 		return kt * (coef / (1.f - threshold));
 	}
 }
-
-#endif

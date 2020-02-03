@@ -22,8 +22,6 @@
 // Matte material
 //------------------------------------------------------------------------------
 
-#if defined (PARAM_ENABLE_MAT_MATTE)
-
 OPENCL_FORCE_INLINE BSDFEvent MatteMaterial_GetEventTypes() {
 	return DIFFUSE | REFLECT;
 }
@@ -32,7 +30,7 @@ OPENCL_FORCE_INLINE float3 MatteMaterial_Albedo(const float3 kdVal) {
 	return Spectrum_Clamp(kdVal);
 }
 
-OPENCL_FORCE_INLINE float3 MatteMaterial_Evaluate(
+OPENCL_FORCE_NOT_INLINE float3 MatteMaterial_Evaluate(
 		__global const HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,
 		const float3 kdVal) {
@@ -44,7 +42,7 @@ OPENCL_FORCE_INLINE float3 MatteMaterial_Evaluate(
 	return Spectrum_Clamp(kdVal) * fabs(lightDir.z * M_1_PI_F);
 }
 
-OPENCL_FORCE_INLINE float3 MatteMaterial_Sample(__global const HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
+OPENCL_FORCE_NOT_INLINE float3 MatteMaterial_Sample(__global const HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1, 
 		const float passThroughEvent,
 		float *pdfW, BSDFEvent *event,
@@ -61,19 +59,15 @@ OPENCL_FORCE_INLINE float3 MatteMaterial_Sample(__global const HitPoint *hitPoin
 	return Spectrum_Clamp(kdVal);
 }
 
-#endif
-
 //------------------------------------------------------------------------------
 // Rough matte material
 //------------------------------------------------------------------------------
 
-#if defined (PARAM_ENABLE_MAT_ROUGHMATTE)
-
-BSDFEvent RoughMatteMaterial_GetEventTypes() {
+OPENCL_FORCE_INLINE BSDFEvent RoughMatteMaterial_GetEventTypes() {
 	return DIFFUSE | REFLECT;
 }
 
-bool RoughMatteMaterial_IsDelta() {
+OPENCL_FORCE_INLINE bool RoughMatteMaterial_IsDelta() {
 	return false;
 }
 
@@ -81,7 +75,7 @@ OPENCL_FORCE_INLINE float3 RoughMatteMaterial_Albedo(const float3 kdVal) {
 	return Spectrum_Clamp(kdVal);
 }
 
-float3 RoughMatteMaterial_Evaluate(
+OPENCL_FORCE_NOT_INLINE float3 RoughMatteMaterial_Evaluate(
 		__global const HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,
 		const float s, const float3 kdVal) {
@@ -105,7 +99,7 @@ float3 RoughMatteMaterial_Evaluate(
 		(A + B * maxcos * sinthetai * sinthetao / fmax(fabs(CosTheta(lightDir)), fabs(CosTheta(eyeDir))));
 }
 
-float3 RoughMatteMaterial_Sample(
+OPENCL_FORCE_NOT_INLINE float3 RoughMatteMaterial_Sample(
 		__global const HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1, 
 		const float passThroughEvent,
@@ -136,5 +130,3 @@ float3 RoughMatteMaterial_Sample(
 	return Spectrum_Clamp(kdVal) *
 		(A + B * maxcos * sinthetai * sinthetao / fmax(fabs(CosTheta(*sampledDir)), fabs(CosTheta(fixedDir))));
 }
-
-#endif

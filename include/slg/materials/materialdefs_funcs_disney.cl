@@ -22,8 +22,6 @@
 // Disney BRDF material
 //------------------------------------------------------------------------------
 
-#if defined (PARAM_ENABLE_MAT_DISNEY)
-
 OPENCL_FORCE_INLINE BSDFEvent DisneyMaterial_GetEventTypes() {
 	return GLOSSY | REFLECT;
 }
@@ -132,7 +130,7 @@ OPENCL_FORCE_INLINE float DisneyMaterial_ClearcoatPdf(const float clearcoatGloss
 	return Dr * NdotH / (4.0f * dot(wo, wh));
 }
 
-OPENCL_FORCE_INLINE float DisneyMaterial_DisneyPdf(const float roughness, const float metallic,
+OPENCL_FORCE_NOT_INLINE float DisneyMaterial_DisneyPdf(const float roughness, const float metallic,
 		const float clearcoat, const float clearcoatGloss, const float anisotropic,
 		const float3 localLightDir, const float3 localEyeDir) {
 	if (CosTheta(localLightDir) * CosTheta(localEyeDir) <= 0.0f)
@@ -231,7 +229,7 @@ OPENCL_FORCE_INLINE float3 DisneyMaterial_DisneySheen(const float3 color,
 	return clamp(FH * sheen * Csheen, 0.f, 1.f);
 }
 
-OPENCL_FORCE_INLINE float3 DisneyMaterial_Evaluate(
+OPENCL_FORCE_NOT_INLINE float3 DisneyMaterial_Evaluate(
 		__global const HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,
 		const float3 colorVal, const float subsurfaceVal, const float roughnessVal,
@@ -337,7 +335,7 @@ OPENCL_FORCE_INLINE float3 DisneyMaterial_DisneyClearcoatSample(const float clea
 	return normalize(2.0f * dot(wh, wo) * wh - wo);
 }
 
-OPENCL_FORCE_INLINE float3 DisneyMaterial_Sample(__global const HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
+OPENCL_FORCE_NOT_INLINE float3 DisneyMaterial_Sample(__global const HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1, 
 		const float passThroughEvent,
 		float *pdfW, BSDFEvent *event,
@@ -383,5 +381,3 @@ OPENCL_FORCE_INLINE float3 DisneyMaterial_Sample(__global const HitPoint *hitPoi
 
 	return f / *pdfW;
 }
-
-#endif

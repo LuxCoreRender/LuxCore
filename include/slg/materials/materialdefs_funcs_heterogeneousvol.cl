@@ -100,8 +100,6 @@ OPENCL_FORCE_INLINE float3 SchlickScatter_Sample(
 // HeterogeneousVol material
 //------------------------------------------------------------------------------
 
-#if defined (PARAM_ENABLE_MAT_HETEROGENEOUS_VOL)
-
 OPENCL_FORCE_INLINE BSDFEvent HeterogeneousVolMaterial_GetEventTypes() {
 	return DIFFUSE | REFLECT;
 }
@@ -135,5 +133,3 @@ OPENCL_FORCE_NOT_INLINE float3 HeterogeneousVolMaterial_Sample(
 			pdfW, event,
 			clamp(sigmaSTexVal, 0.f, INFINITY), clamp(sigmaATexVal, 0.f, INFINITY), gTexVal);
 }
-
-#endif

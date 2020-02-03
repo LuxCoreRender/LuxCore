@@ -22,8 +22,6 @@
 // Mirror material
 //------------------------------------------------------------------------------
 
-#if defined (PARAM_ENABLE_MAT_MIRROR)
-
 OPENCL_FORCE_INLINE BSDFEvent MirrorMaterial_GetEventTypes() {
 	return SPECULAR | REFLECT;
 }
@@ -52,5 +50,3 @@ OPENCL_FORCE_INLINE float3 MirrorMaterial_Sample(
 
 	return Spectrum_Clamp(krVal);
 }
-
-#endif

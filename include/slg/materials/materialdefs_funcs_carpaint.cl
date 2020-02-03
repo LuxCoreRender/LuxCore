@@ -24,8 +24,6 @@
 // LuxRender carpaint material porting.
 //------------------------------------------------------------------------------
 
-#if defined (PARAM_ENABLE_MAT_CARPAINT)
-
 OPENCL_FORCE_INLINE BSDFEvent CarPaintMaterial_GetEventTypes() {
 	return GLOSSY | REFLECT;
 }
@@ -290,5 +288,3 @@ OPENCL_FORCE_NOT_INLINE float3 CarPaintMaterial_Sample(
 	*pdfW = pdf / n;
 	return result / *pdfW;
 }
-
-#endif

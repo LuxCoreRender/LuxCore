@@ -22,8 +22,6 @@
 // HomogeneousVol material
 //------------------------------------------------------------------------------
 
-#if defined (PARAM_ENABLE_MAT_HOMOGENEOUS_VOL)
-
 OPENCL_FORCE_INLINE BSDFEvent HomogeneousVolMaterial_GetEventTypes() {
 	return DIFFUSE | REFLECT;
 }
@@ -57,5 +55,3 @@ OPENCL_FORCE_NOT_INLINE float3 HomogeneousVolMaterial_Sample(
 			pdfW, event,
 			clamp(sigmaSTexVal, 0.f, INFINITY), clamp(sigmaATexVal, 0.f, INFINITY), gTexVal);
 }
-
-#endif

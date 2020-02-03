@@ -22,8 +22,6 @@
 // Velvet material
 //------------------------------------------------------------------------------
 
-#if defined (PARAM_ENABLE_MAT_VELVET)
-
 OPENCL_FORCE_INLINE BSDFEvent VelvetMaterial_GetEventTypes() {
 	return DIFFUSE | REFLECT;
 }
@@ -101,5 +99,3 @@ OPENCL_FORCE_NOT_INLINE float3 VelvetMaterial_Sample(
 
 	return kd * (p / *pdfW);
 }
-
-#endif

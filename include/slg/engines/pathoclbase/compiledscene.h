@@ -48,8 +48,6 @@ public:
 	void Recompile(const EditActionList &editActions);
 	void RecompilePhotonGI() { CompilePhotonGI(); }
 
-	bool IsMaterialCompiled(const MaterialType type) const;
-
 	std::string GetTexturesEvaluationSourceCode() const;
 	std::string GetMaterialsEvaluationSourceCode() const;
 
@@ -102,7 +100,6 @@ public:
 	float elvcRadius2, elvcNormalCosAngle;
 	
 	// Compiled Materials (and Volumes)
-	boost::unordered_set<MaterialType> usedMaterialTypes;
 	std::vector<slg::ocl::Material> mats;
 	u_int defaultWorldVolumeIndex;
 
@@ -134,11 +131,6 @@ public:
 		wasPhotonGICompiled;
 
 private:
-	// There is no AddEnabledTextureCode() version because all textures not already
-	// included by default have source code dynamically generated (because they
-	// reference always other textures)
-	void AddEnabledMaterialCode();
-
 	void AddToImageMapMem(slg::ocl::ImageMap &im, void *data, const size_t memSize);
 
 	void CompileCamera();

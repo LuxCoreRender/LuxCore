@@ -29,11 +29,7 @@
 //------------------------------------------------------------------------------
 
 OPENCL_FORCE_INLINE bool Material_IsDynamic(__global const Material *material) {
-#if defined (PARAM_ENABLE_MAT_MIX) || defined (PARAM_ENABLE_MAT_GLOSSYCOATING)
 		return (material->type == MIX) || (material->type == GLOSSYCOATING);
-#else
-		return false;
-#endif
 }
 
 //------------------------------------------------------------------------------

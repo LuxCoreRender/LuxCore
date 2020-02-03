@@ -22,8 +22,6 @@
 // RoughGlass material
 //------------------------------------------------------------------------------
 
-#if defined (PARAM_ENABLE_MAT_ROUGHGLASS)
-
 OPENCL_FORCE_INLINE BSDFEvent RoughGlassMaterial_GetEventTypes() {
 	return GLOSSY | REFLECT | TRANSMIT;
 }
@@ -33,9 +31,7 @@ OPENCL_FORCE_NOT_INLINE float3 RoughGlassMaterial_Evaluate(
 		BSDFEvent *event, float *directPdfW,
 		const float3 ktVal, const float3 krVal,
 		const float nuVal,
-#if defined(PARAM_ENABLE_MAT_ROUGHGLASS_ANISOTROPIC)
 		const float nvVal,
-#endif
 		const float nc, const float nt
 		) {
 	const float3 kt = Spectrum_Clamp(ktVal);
@@ -49,16 +45,11 @@ OPENCL_FORCE_NOT_INLINE float3 RoughGlassMaterial_Evaluate(
 	const float ntc = nt / nc;
 
 	const float u = clamp(nuVal, 1e-9f, 1.f);
-#if defined(PARAM_ENABLE_MAT_ROUGHGLASS_ANISOTROPIC)
 	const float v = clamp(nvVal, 1e-9f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
 	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : u2 > 0.f ? (v2 / u2 - 1.f) : 0.f;
 	const float roughness = u * v;
-#else
-	const float anisotropy = 0.f;
-	const float roughness = u * u;
-#endif
 
 	const float threshold = isKrBlack ? 1.f : (isKtBlack ? 0.f : .5f);
 	if (localLightDir.z * localEyeDir.z < 0.f) {
@@ -137,9 +128,7 @@ OPENCL_FORCE_NOT_INLINE float3 RoughGlassMaterial_Sample(
 		float *pdfW, BSDFEvent *event,
 		const float3 ktVal, const float3 krVal,
 		const float nuVal,
-#if defined(PARAM_ENABLE_MAT_ROUGHGLASS_ANISOTROPIC)
 		const float nvVal,
-#endif
 		const float nc, const float nt
 		) {
 	if (fabs(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
@@ -154,16 +143,11 @@ OPENCL_FORCE_NOT_INLINE float3 RoughGlassMaterial_Sample(
 		return BLACK;
 
 	const float u = clamp(nuVal, 1e-9f, 1.f);
-#if defined(PARAM_ENABLE_MAT_ROUGHGLASS_ANISOTROPIC)
 	const float v = clamp(nvVal, 1e-9f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
 	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : u2 > 0.f ? (v2 / u2 - 1.f) : 0.f;
 	const float roughness = u * v;
-#else
-	const float anisotropy = 0.f;
-	const float roughness = u * u;
-#endif
 
 	float3 wh;
 	float d, specPdf;
@@ -252,5 +236,3 @@ OPENCL_FORCE_NOT_INLINE float3 RoughGlassMaterial_Sample(
 
 	return result;
 }
-
-#endif

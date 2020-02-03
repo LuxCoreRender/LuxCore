@@ -24,8 +24,6 @@
 // ClearVol hasn't scattering so none of the below functions is really used.
 //------------------------------------------------------------------------------
 
-#if defined (PARAM_ENABLE_MAT_CLEAR_VOL)
-
 OPENCL_FORCE_INLINE BSDFEvent ClearVolMaterial_GetEventTypes() {
 	return DIFFUSE | REFLECT;
 }
@@ -43,5 +41,3 @@ OPENCL_FORCE_INLINE float3 ClearVolMaterial_Sample(
 		float *pdfW, BSDFEvent *event) {
 	return BLACK;
 }
-
-#endif

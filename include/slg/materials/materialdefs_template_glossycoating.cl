@@ -103,26 +103,21 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>
 		*event |= GLOSSY | REFLECT;
 
 		float3 ks = <<CS_KS_TEXTURE>>;
-#if defined(PARAM_ENABLE_MAT_GLOSSYCOATING_INDEX)
+
 		const float i = <<CS_INDEX_TEXTURE>>;
 		if (i > 0.f) {
 			const float ti = (i - 1.f) / (i + 1.f);
 			ks *= ti * ti;
 		}
-#endif
+
 		ks = Spectrum_Clamp(ks);
 
 		const float u = clamp(<<CS_NU_TEXTURE>>, 1e-9f, 1.f);
-#if defined(PARAM_ENABLE_MAT_GLOSSYCOATING_ANISOTROPIC)
 		const float v = clamp(<<CS_NV_TEXTURE>>, 1e-9f, 1.f);
 		const float u2 = u * u;
 		const float v2 = v * v;
 		const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : u2 > 0.f ? (v2 / u2 - 1.f) : 0.f;
 		const float roughness = u * v;
-#else
-		const float anisotropy = 0.f;
-		const float roughness = u * u;
-#endif
 
 		if (directPdfW) {
 			const float wCoating = SchlickBSDF_CoatingWeight(ks, fixedDir);
@@ -132,26 +127,18 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>
 				wCoating * SchlickBSDF_CoatingPdf(roughness, anisotropy, fixedDir, sampledDir);
 		}
 
-#if defined(PARAM_ENABLE_MAT_GLOSSYCOATING_ABSORPTION)
 		// Absorption
 		const float cosi = fabs(sampledDir.z);
 		const float coso = fabs(fixedDir.z);
 
 		const float3 alpha = Spectrum_Clamp(<<CS_KA_TEXTURE>>);
 		const float3 absorption = CoatingAbsorption(cosi, coso, alpha, <<CS_DEPTH_TEXTURE>>);
-#else
-		const float3 absorption = WHITE;
-#endif
 
 		// Coating fresnel factor
 		const float3 H = normalize(fixedDir + sampledDir);
 		const float3 S = FresnelSchlick_Evaluate(ks, fabs(dot(sampledDir, H)));
 
-#if defined(PARAM_ENABLE_MAT_GLOSSYCOATING_MULTIBOUNCE)
 		const int multibounce = <<CS_MB_FLAG>>;
-#else
-		const int multibounce = 0;
-#endif
 		const float3 coatingF = SchlickBSDF_CoatingF(ks, roughness, anisotropy, multibounce,
 				fixedDir, sampledDir);
 
@@ -177,13 +164,13 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>
 		*event |= GLOSSY | TRANSMIT;
 
 		float3 ks = <<CS_KS_TEXTURE>>;
-#if defined(PARAM_ENABLE_MAT_GLOSSYCOATING_INDEX)
+
 		const float i = <<CS_INDEX_TEXTURE>>;
 		if (i > 0.f) {
 			const float ti = (i - 1.f) / (i + 1.f);
 			ks *= ti * ti;
 		}
-#endif
+
 		ks = Spectrum_Clamp(ks);
 
 		if (directPdfW) {
@@ -194,16 +181,12 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>
 			*directPdfW *= wBase;
 		}
 
-#if defined(PARAM_ENABLE_MAT_GLOSSYCOATING_ABSORPTION)
 		// Absorption
 		const float cosi = fabs(sampledDir.z);
 		const float coso = fabs(fixedDir.z);
 
 		const float3 alpha = Spectrum_Clamp(<<CS_KA_TEXTURE>>);
 		const float3 absorption = CoatingAbsorption(cosi, coso, alpha, <<CS_DEPTH_TEXTURE>>);
-#else
-		const float3 absorption = WHITE;
-#endif
 
 		// Coating fresnel factor
 		const float3 H = normalize((float3)(sampledDir.x + fixedDir.x, sampledDir.y + fixedDir.y,
@@ -227,13 +210,12 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>
 		return BLACK;
 
 	float3 ks = <<CS_KS_TEXTURE>>;
-#if defined(PARAM_ENABLE_MAT_GLOSSYCOATING_INDEX)
 	const float i = <<CS_INDEX_TEXTURE>>;
 	if (i > 0.f) {
 		const float ti = (i - 1.f) / (i + 1.f);
 		ks *= ti * ti;
 	}
-#endif
+
 	ks = Spectrum_Clamp(ks);
 
 	// Coating is used only on the front face
@@ -241,22 +223,13 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>
 	const float wBase = 1.f - wCoating;
 
 	const float u = clamp(<<CS_NU_TEXTURE>>, 1e-9f, 1.f);
-#if defined(PARAM_ENABLE_MAT_GLOSSYCOATING_ANISOTROPIC)
 	const float v = clamp(<<CS_NU_TEXTURE>>, 1e-9f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
 	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : u2 > 0.f ? (v2 / u2 - 1.f) : 0.f;
 	const float roughness = u * v;
-#else
-	const float anisotropy = 0.f;
-	const float roughness = u * u;
-#endif
 
-#if defined(PARAM_ENABLE_MAT_GLOSSYCOATING_MULTIBOUNCE)
 	const int multibounce = <<CS_MB_FLAG>>;
-#else
-	const int multibounce = 0;
-#endif
 
 	float basePdf, coatingPdf;
 	float3 baseF, coatingF;
@@ -308,16 +281,12 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>
 		*event = GLOSSY | REFLECT;
 	}
 
-#if defined(PARAM_ENABLE_MAT_GLOSSYCOATING_ABSORPTION)
 	// Absorption
 	const float cosi = fabs((*sampledDir).z);
 	const float coso = fabs(fixedDir.z);
 
 	const float3 alpha = Spectrum_Clamp(<<CS_KA_TEXTURE>>);
 	const float3 absorption = CoatingAbsorption(cosi, coso, alpha, <<CS_DEPTH_TEXTURE>>);
-#else
-	const float3 absorption = WHITE;
-#endif
 
 	// Note: this is the same side test used by matte translucent material and
 	// it is different from the CPU test because HitPoint::dpdu and HitPoint::dpdv

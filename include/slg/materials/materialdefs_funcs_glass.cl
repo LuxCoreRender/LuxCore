@@ -22,8 +22,6 @@
 // Glass material
 //------------------------------------------------------------------------------
 
-#if defined (PARAM_ENABLE_MAT_GLASS)
-
 OPENCL_FORCE_INLINE BSDFEvent GlassMaterial_GetEventTypes() {
 	return SPECULAR | REFLECT | TRANSMIT;
 }
@@ -223,5 +221,3 @@ OPENCL_FORCE_NOT_INLINE float3 GlassMaterial_Sample(
 
 	return result / *pdfW;
 }
-
-#endif

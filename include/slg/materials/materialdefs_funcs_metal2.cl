@@ -24,8 +24,6 @@
 // LuxRender Metal2 material porting.
 //------------------------------------------------------------------------------
 
-#if defined (PARAM_ENABLE_MAT_METAL2)
-
 OPENCL_FORCE_INLINE void Metal2Material_GetNK(__global const Material* restrict material, __global const HitPoint *hitPoint,
 		float3 *n, float3 *k
 		TEXTURES_PARAM_DECL) {
@@ -62,21 +60,14 @@ OPENCL_FORCE_NOT_INLINE float3 Metal2Material_Evaluate(
 		__global const HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,
 		const float uVal,
-#if defined(PARAM_ENABLE_MAT_METAL2_ANISOTROPIC)
 		const float vVal,
-#endif
 		const float3 nVal, const float3 kVal) {
 	const float u = clamp(uVal, 1e-9f, 1.f);
-#if defined(PARAM_ENABLE_MAT_METAL2_ANISOTROPIC)
 	const float v = clamp(vVal, 1e-9f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
 	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : u2 > 0.f ? (v2 / u2 - 1.f) : 0.f;
 	const float roughness = u * v;
-#else
-	const float anisotropy = 0.f;
-	const float roughness = u * u;
-#endif
 
 	const float3 wh = normalize(lightDir + eyeDir);
 	const float cosWH = dot(lightDir, wh);
@@ -99,24 +90,17 @@ OPENCL_FORCE_NOT_INLINE float3 Metal2Material_Sample(
 		const float passThroughEvent,
 		float *pdfW, BSDFEvent *event,
 		const float uVal,
-#if defined(PARAM_ENABLE_MAT_METAL2_ANISOTROPIC)
 		const float vVal,
-#endif
 		const float3 nVal, const float3 kVal) {
 	if (fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 		return BLACK;
 
 	const float u = clamp(uVal, 1e-9f, 1.f);
-#if defined(PARAM_ENABLE_MAT_METAL2_ANISOTROPIC)
 	const float v = clamp(vVal, 1e-9f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
 	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : u2 > 0.f ? (v2 / u2 - 1.f) : 0.f;
 	const float roughness = u * v;
-#else
-	const float anisotropy = 0.f;
-	const float roughness = u * u;
-#endif
 
 	float3 wh;
 	float d, specPdf;
@@ -148,5 +132,3 @@ OPENCL_FORCE_NOT_INLINE float3 Metal2Material_Sample(
 
 	return factor * F;
 }
-
-#endif

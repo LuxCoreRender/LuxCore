@@ -57,72 +57,8 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
-static bool IsTexConstant(const Texture *tex) {
-	return (dynamic_cast<const ConstFloatTexture *>(tex)) ||
-			(dynamic_cast<const ConstFloat3Texture *>(tex));
-}
-
 static bool IsMaterialDynamic(const slg::ocl::Material *material) {
 		return (material->type == slg::ocl::MIX) || (material->type == slg::ocl::GLOSSYCOATING);
-}
-
-static float GetTexConstantFloatValue(const Texture *tex) {
-	// Check if a texture is constant and return the value
-	const ConstFloatTexture *cft = dynamic_cast<const ConstFloatTexture *>(tex);
-	if (cft)
-		return cft->GetValue();
-	const ConstFloat3Texture *cf3t = dynamic_cast<const ConstFloat3Texture *>(tex);
-	if (cf3t)
-		return cf3t->GetColor().Y();
-
-	return numeric_limits<float>::infinity();
-}
-
-void CompiledScene::AddEnabledMaterialCode() {
-	// Optionally include the code for the specified materials in order to reduce
-	// the number of OpenCL kernel compilation that may be required
-
-	if (enabledCode.count(Material::MaterialType2String(MATTE))) usedMaterialTypes.insert(MATTE);
-	if (enabledCode.count(Material::MaterialType2String(MIRROR))) usedMaterialTypes.insert(MIRROR);
-	if (enabledCode.count(Material::MaterialType2String(GLASS))) usedMaterialTypes.insert(GLASS);
-	if (enabledCode.count(Material::MaterialType2String(ARCHGLASS))) usedMaterialTypes.insert(ARCHGLASS);
-	if (enabledCode.count(Material::MaterialType2String(MIX))) usedMaterialTypes.insert(MIX);
-	if (enabledCode.count(Material::MaterialType2String(NULLMAT))) usedMaterialTypes.insert(NULLMAT);
-	if (enabledCode.count(Material::MaterialType2String(MATTETRANSLUCENT))) usedMaterialTypes.insert(MATTETRANSLUCENT);
-	if (enabledCode.count(Material::MaterialType2String(GLOSSY2))) usedMaterialTypes.insert(GLOSSY2);
-	if (enabledCode.count(Material::MaterialType2String(METAL2))) usedMaterialTypes.insert(METAL2);
-	if (enabledCode.count(Material::MaterialType2String(ROUGHGLASS))) usedMaterialTypes.insert(ROUGHGLASS);
-	if (enabledCode.count(Material::MaterialType2String(VELVET))) usedMaterialTypes.insert(VELVET);
-	if (enabledCode.count(Material::MaterialType2String(CLOTH))) usedMaterialTypes.insert(CLOTH);
-	if (enabledCode.count(Material::MaterialType2String(CARPAINT))) usedMaterialTypes.insert(CARPAINT);
-	if (enabledCode.count(Material::MaterialType2String(ROUGHMATTE))) usedMaterialTypes.insert(ROUGHMATTE);
-	if (enabledCode.count(Material::MaterialType2String(ROUGHMATTETRANSLUCENT))) usedMaterialTypes.insert(ROUGHMATTETRANSLUCENT);
-	if (enabledCode.count(Material::MaterialType2String(GLOSSYTRANSLUCENT))) usedMaterialTypes.insert(GLOSSYTRANSLUCENT);
-	if (enabledCode.count(Material::MaterialType2String(GLOSSYCOATING))) usedMaterialTypes.insert(GLOSSYCOATING);
-	if (enabledCode.count(Material::MaterialType2String(DISNEY))) usedMaterialTypes.insert(DISNEY);
-	// Volumes
-	if (enabledCode.count(Material::MaterialType2String(HOMOGENEOUS_VOL))) usedMaterialTypes.insert(HOMOGENEOUS_VOL);
-	if (enabledCode.count(Material::MaterialType2String(CLEAR_VOL))) usedMaterialTypes.insert(CLEAR_VOL);
-	if (enabledCode.count(Material::MaterialType2String(HETEROGENEOUS_VOL))) usedMaterialTypes.insert(HETEROGENEOUS_VOL);
-	// The following types are used (in PATHOCL CompiledScene class) only to
-	// recognize the usage of some specific material option
-	if (enabledCode.count(Material::MaterialType2String(GLOSSY2_ANISOTROPIC))) usedMaterialTypes.insert(GLOSSY2_ANISOTROPIC);
-	if (enabledCode.count(Material::MaterialType2String(GLOSSY2_ABSORPTION))) usedMaterialTypes.insert(GLOSSY2_ABSORPTION);
-	if (enabledCode.count(Material::MaterialType2String(GLOSSY2_INDEX))) usedMaterialTypes.insert(GLOSSY2_INDEX);
-	if (enabledCode.count(Material::MaterialType2String(GLOSSY2_MULTIBOUNCE))) usedMaterialTypes.insert(GLOSSY2_MULTIBOUNCE);
-
-	if (enabledCode.count(Material::MaterialType2String(GLOSSYTRANSLUCENT_ANISOTROPIC))) usedMaterialTypes.insert(GLOSSYTRANSLUCENT_ANISOTROPIC);
-	if (enabledCode.count(Material::MaterialType2String(GLOSSYTRANSLUCENT_ABSORPTION))) usedMaterialTypes.insert(GLOSSYTRANSLUCENT_ABSORPTION);
-	if (enabledCode.count(Material::MaterialType2String(GLOSSYTRANSLUCENT_INDEX))) usedMaterialTypes.insert(GLOSSYTRANSLUCENT_INDEX);
-	if (enabledCode.count(Material::MaterialType2String(GLOSSYTRANSLUCENT_MULTIBOUNCE))) usedMaterialTypes.insert(GLOSSYTRANSLUCENT_MULTIBOUNCE);
-
-	if (enabledCode.count(Material::MaterialType2String(GLOSSYCOATING_ANISOTROPIC))) usedMaterialTypes.insert(GLOSSYCOATING_ANISOTROPIC);
-	if (enabledCode.count(Material::MaterialType2String(GLOSSYCOATING_ABSORPTION))) usedMaterialTypes.insert(GLOSSYCOATING_ABSORPTION);
-	if (enabledCode.count(Material::MaterialType2String(GLOSSYCOATING_INDEX))) usedMaterialTypes.insert(GLOSSYCOATING_INDEX);
-	if (enabledCode.count(Material::MaterialType2String(GLOSSYCOATING_MULTIBOUNCE))) usedMaterialTypes.insert(GLOSSYCOATING_MULTIBOUNCE);
-
-	if (enabledCode.count(Material::MaterialType2String(METAL2_ANISOTROPIC))) usedMaterialTypes.insert(METAL2_ANISOTROPIC);
-	if (enabledCode.count(Material::MaterialType2String(ROUGHGLASS_ANISOTROPIC))) usedMaterialTypes.insert(ROUGHGLASS_ANISOTROPIC);
 }
 
 void CompiledScene::CompileMaterials() {
@@ -138,9 +74,6 @@ void CompiledScene::CompileMaterials() {
 	//--------------------------------------------------------------------------
 
 	const double tStart = WallClockTime();
-
-	usedMaterialTypes.clear();
-	AddEnabledMaterialCode();
 
 	mats.resize(materialsCount);
 
@@ -202,7 +135,6 @@ void CompiledScene::CompileMaterials() {
 		mat->isPhotonGIEnabled = m->IsPhotonGIEnabled();
 
 		// Material specific parameters
-		usedMaterialTypes.insert(m->GetType());
 		switch (m->GetType()) {
 			case MATTE: {
 				const MatteMaterial *mm = static_cast<const MatteMaterial *>(m);
@@ -303,28 +235,14 @@ void CompiledScene::CompileMaterials() {
 				const Texture *nvTex = g2m->GetNv();
 				mat->glossy2.nuTexIndex = scene->texDefs.GetTextureIndex(nuTex);
 				mat->glossy2.nvTexIndex = scene->texDefs.GetTextureIndex(nvTex);
-				// Check if it an anisotropic material
-				if (IsTexConstant(nuTex) && IsTexConstant(nvTex) &&
-						(GetTexConstantFloatValue(nuTex) != GetTexConstantFloatValue(nvTex)))
-					usedMaterialTypes.insert(GLOSSY2_ANISOTROPIC);
 
 				const Texture *depthTex = g2m->GetDepth();
 				mat->glossy2.kaTexIndex = scene->texDefs.GetTextureIndex(g2m->GetKa());
 				mat->glossy2.depthTexIndex = scene->texDefs.GetTextureIndex(depthTex);
-				// Check if depth is just 0.0
-				if (IsTexConstant(depthTex) && (GetTexConstantFloatValue(depthTex) > 0.f))
-					usedMaterialTypes.insert(GLOSSY2_ABSORPTION);
 
 				const Texture *indexTex = g2m->GetIndex();
 				mat->glossy2.indexTexIndex = scene->texDefs.GetTextureIndex(indexTex);
-				// Check if index is just 0.0
-				if (IsTexConstant(indexTex) && (GetTexConstantFloatValue(indexTex) > 0.f))
-					usedMaterialTypes.insert(GLOSSY2_INDEX);
-
 				mat->glossy2.multibounce = g2m->IsMultibounce() ? 1 : 0;
-				// Check if multibounce is enabled
-				if (g2m->IsMultibounce())
-					usedMaterialTypes.insert(GLOSSY2_MULTIBOUNCE);
 				break;
 			}
 			case METAL2: {
@@ -348,10 +266,6 @@ void CompiledScene::CompileMaterials() {
 				const Texture *nvTex = m2m->GetNv();
 				mat->metal2.nuTexIndex = scene->texDefs.GetTextureIndex(nuTex);
 				mat->metal2.nvTexIndex = scene->texDefs.GetTextureIndex(nvTex);
-				// Check if it an anisotropic material
-				if (IsTexConstant(nuTex) && IsTexConstant(nvTex) &&
-						(GetTexConstantFloatValue(nuTex) != GetTexConstantFloatValue(nvTex)))
-					usedMaterialTypes.insert(METAL2_ANISOTROPIC);
 				break;
 			}
 			case ROUGHGLASS: {
@@ -373,10 +287,6 @@ void CompiledScene::CompileMaterials() {
 				const Texture *nvTex = rgm->GetNv();
 				mat->roughglass.nuTexIndex = scene->texDefs.GetTextureIndex(nuTex);
 				mat->roughglass.nvTexIndex = scene->texDefs.GetTextureIndex(nvTex);
-				// Check if it an anisotropic material
-				if (IsTexConstant(nuTex) && IsTexConstant(nvTex) &&
-						(GetTexConstantFloatValue(nuTex) != GetTexConstantFloatValue(nvTex)))
-					usedMaterialTypes.insert(ROUGHGLASS_ANISOTROPIC);
 				break;
 			}
 			case VELVET: {
@@ -438,36 +348,19 @@ void CompiledScene::CompileMaterials() {
 				const Texture *nvbfTex = gtm->GetNv_bf();
 				mat->glossytranslucent.nubfTexIndex = scene->texDefs.GetTextureIndex(nubfTex);
 				mat->glossytranslucent.nvbfTexIndex = scene->texDefs.GetTextureIndex(nvbfTex);
-				// Check if it an anisotropic material
-				if ((IsTexConstant(nuTex) && IsTexConstant(nvTex) &&
-						(GetTexConstantFloatValue(nuTex) != GetTexConstantFloatValue(nvTex))) ||
-						(IsTexConstant(nubfTex) && IsTexConstant(nvbfTex) &&
-						(GetTexConstantFloatValue(nubfTex) != GetTexConstantFloatValue(nvbfTex))))
-					usedMaterialTypes.insert(GLOSSYTRANSLUCENT_ANISOTROPIC);
 
 				const Texture *depthTex = gtm->GetDepth();
 				mat->glossytranslucent.kaTexIndex = scene->texDefs.GetTextureIndex(gtm->GetKa());
 				mat->glossytranslucent.depthTexIndex = scene->texDefs.GetTextureIndex(depthTex);
-				const Texture *depthbfTex = gtm->GetDepth_bf();
 				mat->glossytranslucent.kabfTexIndex = scene->texDefs.GetTextureIndex(gtm->GetKa_bf());
 				mat->glossytranslucent.depthbfTexIndex = scene->texDefs.GetTextureIndex(depthTex);
-				// Check if depth is just 0.0
-				if ((IsTexConstant(depthTex) && (GetTexConstantFloatValue(depthTex) > 0.f)) || (IsTexConstant(depthbfTex) && (GetTexConstantFloatValue(depthbfTex) > 0.f)))
-					usedMaterialTypes.insert(GLOSSYTRANSLUCENT_ABSORPTION);
 
 				const Texture *indexTex = gtm->GetIndex();
 				mat->glossytranslucent.indexTexIndex = scene->texDefs.GetTextureIndex(indexTex);
-				const Texture *indexbfTex = gtm->GetIndex_bf();
 				mat->glossytranslucent.indexbfTexIndex = scene->texDefs.GetTextureIndex(indexTex);
-				// Check if index is just 0.0
-				if ((IsTexConstant(indexTex) && (GetTexConstantFloatValue(indexTex) > 0.f)) || (IsTexConstant(indexbfTex) && GetTexConstantFloatValue(indexbfTex)))
-					usedMaterialTypes.insert(GLOSSYTRANSLUCENT_INDEX);
 
 				mat->glossytranslucent.multibounce = gtm->IsMultibounce() ? 1 : 0;
 				mat->glossytranslucent.multibouncebf = gtm->IsMultibounce_bf() ? 1 : 0;
-				// Check if multibounce is enabled
-				if (gtm->IsMultibounce() || gtm->IsMultibounce_bf())
-					usedMaterialTypes.insert(GLOSSYTRANSLUCENT_MULTIBOUNCE);
 				break;
 			}
 			case GLOSSYCOATING: {
@@ -481,28 +374,14 @@ void CompiledScene::CompileMaterials() {
 				const Texture *nvTex = gcm->GetNv();
 				mat->glossycoating.nuTexIndex = scene->texDefs.GetTextureIndex(nuTex);
 				mat->glossycoating.nvTexIndex = scene->texDefs.GetTextureIndex(nvTex);
-				// Check if it an anisotropic material
-				if (IsTexConstant(nuTex) && IsTexConstant(nvTex) &&
-						(GetTexConstantFloatValue(nuTex) != GetTexConstantFloatValue(nvTex)))
-					usedMaterialTypes.insert(GLOSSYCOATING_ANISOTROPIC);
 
 				const Texture *depthTex = gcm->GetDepth();
 				mat->glossycoating.kaTexIndex = scene->texDefs.GetTextureIndex(gcm->GetKa());
 				mat->glossycoating.depthTexIndex = scene->texDefs.GetTextureIndex(depthTex);
-				// Check if depth is just 0.0
-				if (IsTexConstant(depthTex) && (GetTexConstantFloatValue(depthTex) > 0.f))
-					usedMaterialTypes.insert(GLOSSYCOATING_ABSORPTION);
 
 				const Texture *indexTex = gcm->GetIndex();
 				mat->glossycoating.indexTexIndex = scene->texDefs.GetTextureIndex(indexTex);
-				// Check if index is just 0.0
-				if (IsTexConstant(indexTex) && (GetTexConstantFloatValue(indexTex) > 0.f))
-					usedMaterialTypes.insert(GLOSSYCOATING_INDEX);
-
 				mat->glossycoating.multibounce = gcm->IsMultibounce() ? 1 : 0;
-				// Check if multibounce is enabled
-				if (gcm->IsMultibounce())
-					usedMaterialTypes.insert(GLOSSYCOATING_MULTIBOUNCE);
 				break;
 			}
 			case DISNEY: {

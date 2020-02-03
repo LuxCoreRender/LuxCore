@@ -24,8 +24,6 @@
 // LuxRender Glossy2 material porting.
 //------------------------------------------------------------------------------
 
-#if defined (PARAM_ENABLE_MAT_GLOSSY2)
-
 OPENCL_FORCE_INLINE BSDFEvent Glossy2Material_GetEventTypes() {
 	return GLOSSY | REFLECT;
 }
@@ -37,20 +35,12 @@ OPENCL_FORCE_INLINE float3 Glossy2Material_Albedo(const float3 kdVal) {
 OPENCL_FORCE_NOT_INLINE float3 Glossy2Material_Evaluate(
 		__global const HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,
-#if defined(PARAM_ENABLE_MAT_GLOSSY2_INDEX)
 		const float i,
-#endif
 		const float nuVal,
-#if defined(PARAM_ENABLE_MAT_GLOSSY2_ANISOTROPIC)
 		const float nvVal,
-#endif
-#if defined(PARAM_ENABLE_MAT_GLOSSY2_ABSORPTION)
 		const float3 kaVal,
 		const float d,
-#endif
-#if defined(PARAM_ENABLE_MAT_GLOSSY2_MULTIBOUNCE)
 		const int multibounceVal,
-#endif
 		const float3 kdVal, const float3 ksVal) {
 	const float3 fixedDir = eyeDir;
 	const float3 sampledDir = lightDir;
@@ -70,25 +60,18 @@ OPENCL_FORCE_NOT_INLINE float3 Glossy2Material_Evaluate(
 	*event = GLOSSY | REFLECT;
 
 	float3 ks = ksVal;
-#if defined(PARAM_ENABLE_MAT_GLOSSY2_INDEX)
 	if (i > 0.f) {
 		const float ti = (i - 1.f) / (i + 1.f);
 		ks *= ti * ti;
 	}
-#endif
 	ks = Spectrum_Clamp(ks);
 
 	const float u = clamp(nuVal, 1e-9f, 1.f);
-#if defined(PARAM_ENABLE_MAT_GLOSSY2_ANISOTROPIC)
 	const float v = clamp(nvVal, 1e-9f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
 	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : u2 > 0.f ? (v2 / u2 - 1.f) : 0.f;
 	const float roughness = u * v;
-#else
-	const float anisotropy = 0.f;
-	const float roughness = u * u;
-#endif
 
 	if (directPdfW) {
 		const float wCoating = SchlickBSDF_CoatingWeight(ks, fixedDir);
@@ -98,27 +81,18 @@ OPENCL_FORCE_NOT_INLINE float3 Glossy2Material_Evaluate(
 			wCoating * SchlickBSDF_CoatingPdf(roughness, anisotropy, fixedDir, sampledDir);
 	}
 
-#if defined(PARAM_ENABLE_MAT_GLOSSY2_ABSORPTION)
 	// Absorption
 	const float cosi = fabs(sampledDir.z);
 	const float coso = fabs(fixedDir.z);
 
 	const float3 alpha = Spectrum_Clamp(kaVal);
 	const float3 absorption = CoatingAbsorption(cosi, coso, alpha, d);
-#else
-	const float3 absorption = WHITE;
-#endif
 
 	// Coating fresnel factor
 	const float3 H = normalize(fixedDir + sampledDir);
 	const float3 S = FresnelSchlick_Evaluate(ks, fabs(dot(sampledDir, H)));
 
-#if defined(PARAM_ENABLE_MAT_GLOSSY2_MULTIBOUNCE)
-	const int multibounce = multibounceVal;
-#else
-	const int multibounce = 0;
-#endif
-	const float3 coatingF = SchlickBSDF_CoatingF(ks, roughness, anisotropy, multibounce,
+	const float3 coatingF = SchlickBSDF_CoatingF(ks, roughness, anisotropy, multibounceVal,
 			fixedDir, sampledDir);
 
 	// Blend in base layer Schlick style
@@ -132,20 +106,12 @@ OPENCL_FORCE_NOT_INLINE float3 Glossy2Material_Sample(
 		const float u0, const float u1,
 		const float passThroughEvent,
 		float *pdfW, BSDFEvent *event,
-#if defined(PARAM_ENABLE_MAT_GLOSSY2_INDEX)
 		const float i,
-#endif
 		const float nuVal,
-#if defined(PARAM_ENABLE_MAT_GLOSSY2_ANISOTROPIC)
 		const float nvVal,
-#endif
-#if defined(PARAM_ENABLE_MAT_GLOSSY2_ABSORPTION)
 		const float3 kaVal,
 		const float d,
-#endif
-#if defined(PARAM_ENABLE_MAT_GLOSSY2_MULTIBOUNCE)
 		const int multibounceVal,
-#endif
 		const float3 kdVal, const float3 ksVal) {
 	if (fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 		return BLACK;
@@ -160,35 +126,22 @@ OPENCL_FORCE_NOT_INLINE float3 Glossy2Material_Sample(
 	}
 
 	float3 ks = ksVal;
-#if defined(PARAM_ENABLE_MAT_GLOSSY2_INDEX)
 	if (i > 0.f) {
 		const float ti = (i - 1.f) / (i + 1.f);
 		ks *= ti * ti;
 	}
-#endif
 	ks = Spectrum_Clamp(ks);
 
 	const float u = clamp(nuVal, 1e-9f, 1.f);
-#if defined(PARAM_ENABLE_MAT_GLOSSY2_ANISOTROPIC)
 	const float v = clamp(nvVal, 1e-9f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
 	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : u2 > 0.f ? (v2 / u2 - 1.f) : 0.f;
 	const float roughness = u * v;
-#else
-	const float anisotropy = 0.f;
-	const float roughness = u * u;
-#endif
 
 	// Coating is used only on the front face
 	const float wCoating = SchlickBSDF_CoatingWeight(ks, fixedDir);
 	const float wBase = 1.f - wCoating;
-
-#if defined(PARAM_ENABLE_MAT_GLOSSY2_MULTIBOUNCE)
-	const int multibounce = multibounceVal;
-#else
-	const int multibounce = 0;
-#endif
 
 	float basePdf, coatingPdf;
 	float3 baseF, coatingF;
@@ -205,13 +158,13 @@ OPENCL_FORCE_NOT_INLINE float3 Glossy2Material_Sample(
 		baseF *= basePdf;
 
 		// Evaluate coating BSDF (Schlick BSDF)
-		coatingF = SchlickBSDF_CoatingF(ks, roughness, anisotropy, multibounce,
+		coatingF = SchlickBSDF_CoatingF(ks, roughness, anisotropy, multibounceVal,
 				fixedDir, *sampledDir);
 		coatingPdf = SchlickBSDF_CoatingPdf(roughness, anisotropy, fixedDir, *sampledDir);
 	} else {
 		// Sample coating BSDF (Schlick BSDF)
 		coatingF = SchlickBSDF_CoatingSampleF(ks, roughness, anisotropy,
-				multibounce, fixedDir, sampledDir, u0, u1, &coatingPdf);
+				multibounceVal, fixedDir, sampledDir, u0, u1, &coatingPdf);
 		if (Spectrum_IsBlack(coatingF))
 			return BLACK;
 
@@ -230,16 +183,12 @@ OPENCL_FORCE_NOT_INLINE float3 Glossy2Material_Sample(
 
 	*pdfW = coatingPdf * wCoating + basePdf * wBase;
 
-#if defined(PARAM_ENABLE_MAT_GLOSSY2_ABSORPTION)
 	// Absorption
 	const float cosi = fabs((*sampledDir).z);
 	const float coso = fabs(fixedDir.z);
 
 	const float3 alpha = Spectrum_Clamp(kaVal);
 	const float3 absorption = CoatingAbsorption(cosi, coso, alpha, d);
-#else
-	const float3 absorption = WHITE;
-#endif
 
 	// Coating fresnel factor
 	const float3 H = normalize(fixedDir + *sampledDir);
@@ -250,5 +199,3 @@ OPENCL_FORCE_NOT_INLINE float3 Glossy2Material_Sample(
 
 	return (coatingF + absorption * (WHITE - S) * baseF) / *pdfW;
 }
-
-#endif

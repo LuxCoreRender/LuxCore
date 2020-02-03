@@ -44,8 +44,6 @@ public:
 	PathOCLBaseRenderEngine(const RenderConfig *cfg, const bool supportsNativeThreads);
 	virtual ~PathOCLBaseRenderEngine();
 
-	virtual bool IsMaterialCompiled(const MaterialType type) const;
-
 	virtual bool HasDone() const;
 	virtual void WaitForDone() const;
 

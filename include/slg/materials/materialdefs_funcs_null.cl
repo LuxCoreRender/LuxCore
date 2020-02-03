@@ -22,8 +22,6 @@
 // NULL material
 //------------------------------------------------------------------------------
 
-#if defined (PARAM_ENABLE_MAT_NULL)
-
 OPENCL_FORCE_INLINE BSDFEvent NullMaterial_GetEventTypes() {
 	return SPECULAR | TRANSMIT;
 }
@@ -71,5 +69,3 @@ OPENCL_FORCE_INLINE float3 NullMaterial_Sample(
 	*event = SPECULAR | TRANSMIT;
 	return WHITE;
 }
-
-#endif

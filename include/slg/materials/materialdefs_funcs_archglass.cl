@@ -50,8 +50,6 @@ OPENCL_FORCE_INLINE float ExtractInteriorIors(__global const HitPoint *hitPoint,
 // ArchGlass material
 //------------------------------------------------------------------------------
 
-#if defined (PARAM_ENABLE_MAT_ARCHGLASS)
-
 OPENCL_FORCE_INLINE BSDFEvent ArchGlassMaterial_GetEventTypes() {
 	return SPECULAR | REFLECT | TRANSMIT;
 }
@@ -226,5 +224,3 @@ OPENCL_FORCE_NOT_INLINE float3 ArchGlassMaterial_Sample(
 
 	return result / *pdfW;
 }
-
-#endif
