@@ -108,10 +108,6 @@ bool CompiledScene::IsMaterialCompiled(const MaterialType type) const {
 	return (usedMaterialTypes.find(type) != usedMaterialTypes.end());
 }
 
-bool CompiledScene::IsTextureCompiled(const TextureType type) const {
-	return (usedTextureTypes.find(type) != usedTextureTypes.end());
-}
-
 string CompiledScene::ToOCLString(const slg::ocl::Spectrum &v) {
 	return "(float3)(" + ToString(v.c[0]) + ", " + ToString(v.c[1]) + ", " + ToString(v.c[2]) + ")";
 }

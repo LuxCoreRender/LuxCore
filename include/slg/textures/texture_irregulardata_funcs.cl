@@ -22,16 +22,10 @@
 // IrregularData texture
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_ENABLE_TEX_IRREGULARDATA)
-
-OPENCL_FORCE_INLINE float IrregularDataTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
-		const float3 rgb) {
+OPENCL_FORCE_INLINE float IrregularDataTexture_ConstEvaluateFloat(const float3 rgb) {
 	return Spectrum_Y(rgb);
 }
 
-OPENCL_FORCE_INLINE float3 IrregularDataTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
-		const float3 rgb) {
+OPENCL_FORCE_INLINE float3 IrregularDataTexture_ConstEvaluateSpectrum(const float3 rgb) {
 	return rgb;
 }
-
-#endif

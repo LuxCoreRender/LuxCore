@@ -31,9 +31,7 @@ OPENCL_FORCE_INLINE void HitPoint_Init(__global HitPoint *hitPoint, const bool t
 	VSTORE3F(pnt, &hitPoint->p.x);
 	VSTORE3F(fixedDir, &hitPoint->fixedDir.x);
 
-#if defined(PARAM_ENABLE_TEX_OBJECTID) || defined(PARAM_ENABLE_TEX_OBJECTID_COLOR) || defined(PARAM_ENABLE_TEX_OBJECTID_NORMALIZED)
 	hitPoint->objectID = sceneObjs[meshIndex].objectID;
-#endif
 
 	// Interpolate face normal
 	const float3 geometryN = ExtMesh_GetGeometryNormal(&hitPoint->localToWorld, meshIndex, triIndex EXTMESH_PARAM);
@@ -82,9 +80,7 @@ OPENCL_FORCE_INLINE void HitPoint_InitDefault(__global HitPoint *hitPoint) {
 	VSTORE3F((float3)(0.f, 0.f, 0.f), &hitPoint->p.x);
 	VSTORE3F((float3)(0.f, 0.f, 0.f), &hitPoint->fixedDir.x);
 
-#if defined(PARAM_ENABLE_TEX_OBJECTID) || defined(PARAM_ENABLE_TEX_OBJECTID_COLOR) || defined(PARAM_ENABLE_TEX_OBJECTID_NORMALIZED)
 	hitPoint->objectID = 0;
-#endif
 	
 	VSTORE3F((float3)(0.f, 0.f, 0.f),  &hitPoint->geometryN.x);
 	VSTORE3F((float3)(0.f, 0.f, 0.f),  &hitPoint->interpolatedN.x);

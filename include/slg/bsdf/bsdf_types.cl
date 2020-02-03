@@ -34,9 +34,6 @@ typedef enum {
 
 typedef int BSDFEvent;
 
-// This is defined only under OpenCL because of variable size structures
-#if defined(SLG_OPENCL_KERNEL)
-
 typedef struct {
 	HitPoint hitPoint;
 
@@ -47,5 +44,3 @@ typedef struct {
 
 	int isVolume;
 } BSDF;
-
-#endif

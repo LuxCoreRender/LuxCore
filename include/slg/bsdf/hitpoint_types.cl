@@ -18,9 +18,6 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-// This is defined only under OpenCL because of variable size structures
-#if defined(SLG_OPENCL_KERNEL)
-
 typedef struct {
 	// The incoming direction. It is the eyeDir when fromLight = false and
 	// lightDir when fromLight = true
@@ -52,11 +49,7 @@ typedef struct {
 	// so I use HitPoint to carry texture index information
 	unsigned int interiorIorTexIndex, exteriorIorTexIndex;
 
-#if defined(PARAM_ENABLE_TEX_OBJECTID) || defined(PARAM_ENABLE_TEX_OBJECTID_COLOR) || defined(PARAM_ENABLE_TEX_OBJECTID_NORMALIZED)
 	unsigned int objectID;
-#endif
 
 	int intoObject, throughShadowTransparency;
 } HitPoint;
-
-#endif

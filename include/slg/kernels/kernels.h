@@ -94,6 +94,7 @@ extern std::string KernelSource_texture_fresnelconst_funcs;
 extern std::string KernelSource_texture_hsv_funcs;
 extern std::string KernelSource_texture_irregulardata_funcs;
 extern std::string KernelSource_texture_funcs;
+extern std::string KernelSource_texture_eval_funcs;
 extern std::string KernelSource_sampleresult_types;
 extern std::string KernelSource_pathdepthinfo_types;
 extern std::string KernelSource_pathdepthinfo_funcs;
@@ -122,7 +123,6 @@ extern std::string KernelSource_pgic_funcs;
 extern std::string KernelSource_pathtracer_types;
 
 // This is string is preprocessed in CompiledScene class
-extern std::string KernelSource_texture_template_triplanar;
 extern std::string KernelSource_materialdefs_template_glossycoating;
 extern std::string KernelSource_materialdefs_template_mix;
 

@@ -43,14 +43,6 @@
 //  PARAM_ENABLE_MAT_CLEAR_VOL
 /// etc.
 
-// To enable single texture support
-//  PARAM_ENABLE_TEX_CONST_FLOAT
-//  PARAM_ENABLE_TEX_CONST_FLOAT3
-//  PARAM_ENABLE_TEX_CONST_FLOAT4
-//  PARAM_ENABLE_TEX_IMAGEMAP
-//  PARAM_ENABLE_TEX_SCALE
-//  etc.
-
 /*void MangleMemory(__global unsigned char *ptr, const size_t size) {
 	Seed seed;
 	Rnd_Init(7 + get_global_id(0), &seed);
@@ -488,6 +480,9 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 		KERNEL_ARGS_INFINITELIGHTS \
 		, __global const Material* restrict mats \
 		, __global const Texture* restrict texs \
+		, __global const TextureEvalOp* restrict texEvalOps \
+		, __global float *texEvalStacks \
+		, const uint maxTextureEvalStackSize \
 		, __global const SceneObject* restrict sceneObjs \
 		, __global const ExtMesh* restrict meshDescs \
 		, __global const Point* restrict vertices \

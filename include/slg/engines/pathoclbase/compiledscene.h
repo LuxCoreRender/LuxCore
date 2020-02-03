@@ -49,9 +49,6 @@ public:
 	void RecompilePhotonGI() { CompilePhotonGI(); }
 
 	bool IsMaterialCompiled(const MaterialType type) const;
-	bool IsTextureCompiled(const TextureType type) const;
-
-	bool HasBumpMaps() const;
 
 	std::string GetTexturesEvaluationSourceCode() const;
 	std::string GetMaterialsEvaluationSourceCode() const;
@@ -110,8 +107,10 @@ public:
 	u_int defaultWorldVolumeIndex;
 
 	// Compiled Textures
-	boost::unordered_set<TextureType> usedTextureTypes;
 	std::vector<slg::ocl::Texture> texs;
+	std::vector<slg::ocl::TextureEvalOp> texEvalOps;
+	// Expressed in float
+	u_int maxTextureEvalStackSize;
 
 	// Compiled ImageMaps
 	std::vector<slg::ocl::ImageMap> imageMapDescs;
@@ -148,6 +147,9 @@ private:
 	void CompileMaterials();
 	void CompileTextureMapping2D(slg::ocl::TextureMapping2D *mapping, const TextureMapping2D *m);
 	void CompileTextureMapping3D(slg::ocl::TextureMapping3D *mapping, const TextureMapping3D *m);
+	u_int CompileTextureOpsGenericBumpMap(const u_int texIndex);
+	u_int CompileTextureOps(const u_int texIndex, const slg::ocl::TextureEvalOpType opType);
+	void CompileTextureOps();
 	void CompileTextures();
 	void CompileImageMaps();
 	void CompileLights();
@@ -164,7 +166,6 @@ private:
 
 	u_int maxMemPageSize;
 	boost::unordered_set<std::string> enabledCode;
-	bool useTransparency;
 }; 
 
 }

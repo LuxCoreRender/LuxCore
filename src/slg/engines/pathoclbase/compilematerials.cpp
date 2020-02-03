@@ -143,7 +143,6 @@ void CompiledScene::CompileMaterials() {
 	AddEnabledMaterialCode();
 
 	mats.resize(materialsCount);
-	useTransparency = false;
 
 	for (u_int i = 0; i < materialsCount; ++i) {
 		const Material *m = scene->matDefs.GetMaterial(i);
@@ -158,14 +157,12 @@ void CompiledScene::CompileMaterials() {
 		const Texture *frontTranspTex = m->GetFrontTransparencyTexture();
 		if (frontTranspTex) {
 			mat->frontTranspTexIndex = scene->texDefs.GetTextureIndex(frontTranspTex);
-			useTransparency = true;
 		} else
 			mat->frontTranspTexIndex = NULL_INDEX;
 
 		const Texture *backTranspTex = m->GetBackTransparencyTexture();
 		if (backTranspTex) {
 			mat->backTranspTexIndex = scene->texDefs.GetTextureIndex(backTranspTex);
-			useTransparency = true;
 		} else
 			mat->backTranspTexIndex = NULL_INDEX;
 
