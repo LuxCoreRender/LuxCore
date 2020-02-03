@@ -1575,7 +1575,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 							tex->blenderClouds.noisebasis, tex->blenderClouds.noisesize,
 							tex->blenderClouds.noisedepth, tex->blenderClouds.contrast,
 							tex->blenderClouds.bright, tex->blenderClouds.hard,
-							&tex->blenderBlend.mapping);
+							&tex->blenderClouds.mapping);
 					EvalStack_Push(eval);
 					break;
 				}
@@ -1584,7 +1584,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 							tex->blenderClouds.noisebasis, tex->blenderClouds.noisesize,
 							tex->blenderClouds.noisedepth, tex->blenderClouds.contrast,
 							tex->blenderClouds.bright, tex->blenderClouds.hard,
-							&tex->blenderBlend.mapping);
+							&tex->blenderClouds.mapping);
 					EvalStack_Push3(eval);
 					break;
 				}
@@ -1616,7 +1616,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 							tex->blenderDistortedNoise.noisedistortion, tex->blenderDistortedNoise.noisebasis,
 							tex->blenderDistortedNoise.distortion, tex->blenderDistortedNoise.noisesize,
 							tex->blenderDistortedNoise.contrast, tex->blenderDistortedNoise.bright,
-							&tex->blenderBlend.mapping);
+							&tex->blenderDistortedNoise.mapping);
 					EvalStack_Push(eval);
 					break;
 				}
@@ -1625,7 +1625,306 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 							tex->blenderDistortedNoise.noisedistortion, tex->blenderDistortedNoise.noisebasis,
 							tex->blenderDistortedNoise.distortion, tex->blenderDistortedNoise.noisesize,
 							tex->blenderDistortedNoise.contrast, tex->blenderDistortedNoise.bright,
-							&tex->blenderBlend.mapping);
+							&tex->blenderDistortedNoise.mapping);
+					EvalStack_Push3(eval);
+					break;
+				}
+				case EVAL_BUMP_GENERIC_OFFSET_U:
+					Texture_EvalOpGenericBumpOffsetU(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP_GENERIC_OFFSET_V:
+					Texture_EvalOpGenericBumpOffsetV(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP:
+					Texture_EvalOpGenericBump(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				default:
+					// Something wrong here
+					break;
+			}
+			break;
+		}
+		//----------------------------------------------------------------------
+		// BLENDER_MAGIC
+		//----------------------------------------------------------------------
+		case BLENDER_MAGIC: {
+			switch (evalType) {
+				case EVAL_FLOAT: {
+					const float eval = BlenderMagicTexture_ConstEvaluateFloat(hitPoint,
+							tex->blenderMagic.noisedepth, tex->blenderMagic.turbulence,
+							tex->blenderMagic.contrast, tex->blenderMagic.bright,
+							&tex->blenderMagic.mapping);
+					EvalStack_Push(eval);
+					break;
+				}
+				case EVAL_SPECTRUM: {
+					const float3 eval = BlenderMagicTexture_ConstEvaluateSpectrum(hitPoint,
+							tex->blenderMagic.noisedepth, tex->blenderMagic.turbulence,
+							tex->blenderMagic.contrast, tex->blenderMagic.bright,
+							&tex->blenderMagic.mapping);
+					EvalStack_Push3(eval);
+					break;
+				}
+				case EVAL_BUMP_GENERIC_OFFSET_U:
+					Texture_EvalOpGenericBumpOffsetU(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP_GENERIC_OFFSET_V:
+					Texture_EvalOpGenericBumpOffsetV(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP:
+					Texture_EvalOpGenericBump(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				default:
+					// Something wrong here
+					break;
+			}
+			break;
+		}
+		//----------------------------------------------------------------------
+		// BLENDER_MARBLE
+		//----------------------------------------------------------------------
+		case BLENDER_MARBLE: {
+			switch (evalType) {
+				case EVAL_FLOAT: {
+					const float eval = BlenderMarbleTexture_ConstEvaluateFloat(hitPoint,
+							tex->blenderMarble.type, tex->blenderMarble.noisebasis,
+							tex->blenderMarble.noisebasis2, tex->blenderMarble.noisesize,
+							tex->blenderMarble.turbulence, tex->blenderMarble.noisedepth,
+							tex->blenderMarble.contrast, tex->blenderMarble.bright,
+							tex->blenderMarble.hard,
+							&tex->blenderMagic.mapping);
+					EvalStack_Push(eval);
+					break;
+				}
+				case EVAL_SPECTRUM: {
+					const float3 eval = BlenderMarbleTexture_ConstEvaluateSpectrum(hitPoint,
+							tex->blenderMarble.type, tex->blenderMarble.noisebasis,
+							tex->blenderMarble.noisebasis2, tex->blenderMarble.noisesize,
+							tex->blenderMarble.turbulence, tex->blenderMarble.noisedepth,
+							tex->blenderMarble.contrast, tex->blenderMarble.bright,
+							tex->blenderMarble.hard,
+							&tex->blenderMagic.mapping);
+					EvalStack_Push3(eval);
+					break;
+				}
+				case EVAL_BUMP_GENERIC_OFFSET_U:
+					Texture_EvalOpGenericBumpOffsetU(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP_GENERIC_OFFSET_V:
+					Texture_EvalOpGenericBumpOffsetV(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP:
+					Texture_EvalOpGenericBump(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				default:
+					// Something wrong here
+					break;
+			}
+			break;
+		}
+		//----------------------------------------------------------------------
+		// BLENDER_MUSGRAVE
+		//----------------------------------------------------------------------
+		case BLENDER_MUSGRAVE: {
+			switch (evalType) {
+				case EVAL_FLOAT: {
+					const float eval = BlenderMusgraveTexture_ConstEvaluateFloat(hitPoint,
+							tex->blenderMusgrave.type, tex->blenderMusgrave.noisebasis,
+							tex->blenderMusgrave.dimension, tex->blenderMusgrave.intensity,
+							tex->blenderMusgrave.lacunarity, tex->blenderMusgrave.offset,
+							tex->blenderMusgrave.gain, tex->blenderMusgrave.octaves,
+							tex->blenderMusgrave.noisesize, tex->blenderMusgrave.contrast,
+							tex->blenderMusgrave.bright,
+							&tex->blenderMusgrave.mapping);
+					EvalStack_Push(eval);
+					break;
+				}
+				case EVAL_SPECTRUM: {
+					const float3 eval = BlenderMusgraveTexture_ConstEvaluateSpectrum(hitPoint,
+							tex->blenderMusgrave.type, tex->blenderMusgrave.noisebasis,
+							tex->blenderMusgrave.dimension, tex->blenderMusgrave.intensity,
+							tex->blenderMusgrave.lacunarity, tex->blenderMusgrave.offset,
+							tex->blenderMusgrave.gain, tex->blenderMusgrave.octaves,
+							tex->blenderMusgrave.noisesize, tex->blenderMusgrave.contrast,
+							tex->blenderMusgrave.bright,
+							&tex->blenderMusgrave.mapping);
+					EvalStack_Push3(eval);
+					break;
+				}
+				case EVAL_BUMP_GENERIC_OFFSET_U:
+					Texture_EvalOpGenericBumpOffsetU(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP_GENERIC_OFFSET_V:
+					Texture_EvalOpGenericBumpOffsetV(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP:
+					Texture_EvalOpGenericBump(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				default:
+					// Something wrong here
+					break;
+			}
+			break;
+		}
+		//----------------------------------------------------------------------
+		// BLENDER_NOISE
+		//----------------------------------------------------------------------
+		case BLENDER_NOISE: {
+			switch (evalType) {
+				case EVAL_FLOAT: {
+					const float eval = BlenderNoiseTexture_ConstEvaluateFloat(hitPoint,
+							tex->blenderNoise.noisedepth, tex->blenderNoise.bright,
+							tex->blenderNoise.contrast);
+					EvalStack_Push(eval);
+					break;
+				}
+				case EVAL_SPECTRUM: {
+					const float3 eval = BlenderNoiseTexture_ConstEvaluateFloat(hitPoint,
+							tex->blenderNoise.noisedepth, tex->blenderNoise.bright,
+							tex->blenderNoise.contrast);
+					EvalStack_Push3(eval);
+					break;
+				}
+				case EVAL_BUMP_GENERIC_OFFSET_U:
+					Texture_EvalOpGenericBumpOffsetU(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP_GENERIC_OFFSET_V:
+					Texture_EvalOpGenericBumpOffsetV(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP:
+					Texture_EvalOpGenericBump(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				default:
+					// Something wrong here
+					break;
+			}
+			break;
+		}
+		//----------------------------------------------------------------------
+		// BLENDER_STUCCI
+		//----------------------------------------------------------------------
+		case BLENDER_STUCCI: {
+			switch (evalType) {
+				case EVAL_FLOAT: {
+					const float eval = BlenderStucciTexture_ConstEvaluateFloat(hitPoint,
+							tex->blenderStucci.type, tex->blenderStucci.noisebasis,
+							tex->blenderStucci.noisesize, tex->blenderStucci.turbulence,
+							tex->blenderStucci.contrast, tex->blenderStucci.bright,
+							tex->blenderStucci.hard,
+							&tex->blenderStucci.mapping);
+					EvalStack_Push(eval);
+					break;
+				}
+				case EVAL_SPECTRUM: {
+					const float3 eval = BlenderStucciTexture_ConstEvaluateSpectrum(hitPoint,
+							tex->blenderStucci.type, tex->blenderStucci.noisebasis,
+							tex->blenderStucci.noisesize, tex->blenderStucci.turbulence,
+							tex->blenderStucci.contrast, tex->blenderStucci.bright,
+							tex->blenderStucci.hard,
+							&tex->blenderStucci.mapping);
+					EvalStack_Push3(eval);
+					break;
+				}
+				case EVAL_BUMP_GENERIC_OFFSET_U:
+					Texture_EvalOpGenericBumpOffsetU(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP_GENERIC_OFFSET_V:
+					Texture_EvalOpGenericBumpOffsetV(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP:
+					Texture_EvalOpGenericBump(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				default:
+					// Something wrong here
+					break;
+			}
+			break;
+		}
+		//----------------------------------------------------------------------
+		// BLENDER_WOOD
+		//----------------------------------------------------------------------
+		case BLENDER_WOOD: {
+			switch (evalType) {
+				case EVAL_FLOAT: {
+					const float eval = BlenderWoodTexture_ConstEvaluateFloat(hitPoint,
+							tex->blenderWood.type, tex->blenderWood.noisebasis2,
+							tex->blenderWood.noisebasis, tex->blenderWood.noisesize,
+							tex->blenderWood.turbulence, tex->blenderWood.contrast,
+							tex->blenderWood.bright, tex->blenderWood.hard,
+							&tex->blenderWood.mapping);
+					EvalStack_Push(eval);
+					break;
+				}
+				case EVAL_SPECTRUM: {
+					const float3 eval = BlenderWoodTexture_ConstEvaluateSpectrum(hitPoint,
+							tex->blenderWood.type, tex->blenderWood.noisebasis2,
+							tex->blenderWood.noisebasis, tex->blenderWood.noisesize,
+							tex->blenderWood.turbulence, tex->blenderWood.contrast,
+							tex->blenderWood.bright, tex->blenderWood.hard,
+							&tex->blenderWood.mapping);
+					EvalStack_Push3(eval);
+					break;
+				}
+				case EVAL_BUMP_GENERIC_OFFSET_U:
+					Texture_EvalOpGenericBumpOffsetU(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP_GENERIC_OFFSET_V:
+					Texture_EvalOpGenericBumpOffsetV(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP:
+					Texture_EvalOpGenericBump(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				default:
+					// Something wrong here
+					break;
+			}
+			break;
+		}
+		//----------------------------------------------------------------------
+		// BLENDER_VORONOI
+		//----------------------------------------------------------------------
+		case BLENDER_VORONOI: {
+			switch (evalType) {
+				case EVAL_FLOAT: {
+					const float eval = BlenderVoronoiTexture_ConstEvaluateFloat(hitPoint,
+							tex->blenderVoronoi.distancemetric, tex->blenderVoronoi.feature_weight1,
+							tex->blenderVoronoi.feature_weight2, tex->blenderVoronoi.feature_weight3,
+							tex->blenderVoronoi.feature_weight4, tex->blenderVoronoi.noisesize,
+							tex->blenderVoronoi.intensity, tex->blenderVoronoi.exponent,
+							tex->blenderVoronoi.contrast, tex->blenderVoronoi.bright,
+							&tex->blenderWood.mapping);
+					EvalStack_Push(eval);
+					break;
+				}
+				case EVAL_SPECTRUM: {
+					const float3 eval = BlenderVoronoiTexture_ConstEvaluateSpectrum(hitPoint,
+							tex->blenderVoronoi.distancemetric, tex->blenderVoronoi.feature_weight1,
+							tex->blenderVoronoi.feature_weight2, tex->blenderVoronoi.feature_weight3,
+							tex->blenderVoronoi.feature_weight4, tex->blenderVoronoi.noisesize,
+							tex->blenderVoronoi.intensity, tex->blenderVoronoi.exponent,
+							tex->blenderVoronoi.contrast, tex->blenderVoronoi.bright,
+							&tex->blenderWood.mapping);
 					EvalStack_Push3(eval);
 					break;
 				}

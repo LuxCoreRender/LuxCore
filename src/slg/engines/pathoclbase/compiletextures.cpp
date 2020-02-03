@@ -265,7 +265,14 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 		case slg::ocl::POSITION_TEX:
 		case slg::ocl::BLENDER_BLEND:
 		case slg::ocl::BLENDER_CLOUDS:
-		case slg::ocl::BLENDER_DISTORTED_NOISE: {
+		case slg::ocl::BLENDER_DISTORTED_NOISE:
+		case slg::ocl::BLENDER_MAGIC:
+		case slg::ocl::BLENDER_MARBLE:
+		case slg::ocl::BLENDER_MUSGRAVE:
+		case slg::ocl::BLENDER_NOISE:
+		case slg::ocl::BLENDER_STUCCI:
+		case slg::ocl::BLENDER_WOOD:
+		case slg::ocl::BLENDER_VORONOI: {
 			switch (opType) {
 				case slg::ocl::TextureEvalOpType::EVAL_FLOAT:
 					evalOpStackSize += 1;
