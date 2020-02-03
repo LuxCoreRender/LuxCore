@@ -331,7 +331,7 @@ OPENCL_FORCE_INLINE float3 CloudTexture_Turbulence(const float3 p, const float n
 	return turbulence;
 }
 
-OPENCL_FORCE_INLINE float CloudTexture_CloudShape(const float3 p, const float baseFadeDistance, const float3 sphereCentre, const uint numSpheres, const float radius) {
+OPENCL_FORCE_NOT_INLINE float CloudTexture_CloudShape(const float3 p, const float baseFadeDistance, const float3 sphereCentre, const uint numSpheres, const float radius) {
 /*	if (numSpheres > 0) {
 		if (SphereFunction(p, numSpheres))		//shows cumulus spheres
 			return 1.f;
@@ -477,7 +477,7 @@ OPENCL_FORCE_NOT_INLINE float3 MarbleTexture_ConstEvaluateSpectrum(__global cons
 // Dots texture
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_INLINE bool DotsTexture_Evaluate(__global const HitPoint *hitPoint, __global const TextureMapping2D *mapping) {
+OPENCL_FORCE_NOT_INLINE bool DotsTexture_Evaluate(__global const HitPoint *hitPoint, __global const TextureMapping2D *mapping) {
 	const float2 uv = TextureMapping2D_Map(mapping, hitPoint);
 
 	const int sCell = Floor2Int(uv.s0 + .5f);
@@ -751,14 +751,14 @@ OPENCL_FORCE_INLINE float3 WrinkledTexture_ConstEvaluateSpectrum(__global const 
 // UV texture
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_NOT_INLINE float UVTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
+OPENCL_FORCE_INLINE float UVTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
 		__global const TextureMapping2D *mapping) {
 	const float2 uv = TextureMapping2D_Map(mapping, hitPoint);
 
 	return Spectrum_Y((float3)(uv.s0 - Floor2Int(uv.s0), uv.s1 - Floor2Int(uv.s1), 0.f));
 }
 
-OPENCL_FORCE_NOT_INLINE float3 UVTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
+OPENCL_FORCE_INLINE float3 UVTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
 		__global const TextureMapping2D *mapping) {
 	const float2 uv = TextureMapping2D_Map(mapping, hitPoint);
 
@@ -886,17 +886,17 @@ OPENCL_FORCE_INLINE float3 ObjectIDTexture_ConstEvaluateSpectrum(__global const 
 // ObjectIDColor texture
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_NOT_INLINE float3 ObjectIDColorTexture_IDToSpectrum(const uint id) {
+OPENCL_FORCE_INLINE float3 ObjectIDColorTexture_IDToSpectrum(const uint id) {
 	return (float3)((id & 0x0000ffu) * ( 1.f / 255.f),
 	                ((id & 0x00ff00u) >> 8) * ( 1.f / 255.f),
 	                ((id & 0xff0000u) >> 16) * ( 1.f / 255.f));
 }
 
-OPENCL_FORCE_NOT_INLINE float ObjectIDColorTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint) {
+OPENCL_FORCE_INLINE float ObjectIDColorTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint) {
 	return Spectrum_Y(ObjectIDColorTexture_IDToSpectrum(hitPoint->objectID));
 }
 
-OPENCL_FORCE_NOT_INLINE float3 ObjectIDColorTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint) {
+OPENCL_FORCE_INLINE float3 ObjectIDColorTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint) {
 	return ObjectIDColorTexture_IDToSpectrum(hitPoint->objectID);
 }
 

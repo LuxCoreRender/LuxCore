@@ -71,7 +71,7 @@ OPENCL_FORCE_INLINE float3 ConstTexture_Bump(__global const HitPoint *hitPoint) 
 // ImageMapTexture
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_NOT_INLINE float3 ImageMapTexture_Bump(__global const Texture* restrict tex,
+OPENCL_FORCE_INLINE float3 ImageMapTexture_Bump(__global const Texture* restrict tex,
 		__global const HitPoint *hitPoint
 		IMAGEMAPS_PARAM_DECL) {
 	float2 du, dv;

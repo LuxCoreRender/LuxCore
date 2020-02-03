@@ -109,7 +109,7 @@ OPENCL_FORCE_INLINE float3 HsvTexture_HsvToRgb(const float3 hsv) {
 
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_INLINE float3 HsvTexture_ApplyTransformation(const float3 colorHitpoint,
+OPENCL_FORCE_NOT_INLINE float3 HsvTexture_ApplyTransformation(const float3 colorHitpoint,
 		const float hueHitpoint, const float satHitpoint,
 		const float valHitpoint) {
 
@@ -128,13 +128,13 @@ OPENCL_FORCE_INLINE float3 HsvTexture_ApplyTransformation(const float3 colorHitp
 	return Spectrum_Clamp(HsvTexture_HsvToRgb(hsv));
 }
 
-OPENCL_FORCE_NOT_INLINE float HsvTexture_ConstEvaluateFloat(const float3 colorHitpoint,
+OPENCL_FORCE_INLINE float HsvTexture_ConstEvaluateFloat(const float3 colorHitpoint,
 		const float hueHitpoint, const float satHitpoint,
 		const float valHitpoint) {
 	return Spectrum_Y(HsvTexture_ApplyTransformation(colorHitpoint, hueHitpoint, satHitpoint, valHitpoint));
 }
 
-OPENCL_FORCE_NOT_INLINE float3 HsvTexture_ConstEvaluateSpectrum(const float3 colorHitpoint,
+OPENCL_FORCE_INLINE float3 HsvTexture_ConstEvaluateSpectrum(const float3 colorHitpoint,
 		const float hueHitpoint, const float satHitpoint,
 		const float valHitpoint) {
 	return HsvTexture_ApplyTransformation(colorHitpoint, hueHitpoint, satHitpoint, valHitpoint);

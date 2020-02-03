@@ -207,7 +207,7 @@ OPENCL_FORCE_INLINE float grad(int hash, float x, float y, float z) {
 }
 
 /* instead of adding another permutation array, just use hash table defined above */
-OPENCL_FORCE_INLINE float newPerlin(float x, float y, float z)
+OPENCL_FORCE_NOT_INLINE float newPerlin(float x, float y, float z)
 {
 	int A, AA, AB, B, BA, BB;
 	float u=floor(x), v=floor(y), w=floor(z);
@@ -231,7 +231,7 @@ OPENCL_FORCE_INLINE float newPerlin(float x, float y, float z)
 }
 
 /* for use with BLI_gNoise()/BLI_gTurbulence(), returns unsigned improved perlin noise */
-OPENCL_FORCE_INLINE float newPerlinU(float x, float y, float z) {
+OPENCL_FORCE_NOT_INLINE float newPerlinU(float x, float y, float z) {
 	return (0.5f+0.5f*newPerlin(x, y, z));
 }
 
@@ -239,7 +239,7 @@ OPENCL_FORCE_INLINE float newPerlinU(float x, float y, float z) {
 /* END OF IMPROVED PERLIN */
 /**************************/
 
-OPENCL_FORCE_INLINE float orgBlenderNoise(float x, float y, float z) {
+OPENCL_FORCE_NOT_INLINE float orgBlenderNoise(float x, float y, float z) {
 	float cn1, cn2, cn3, cn4, cn5, cn6, i;
 	float ox, oy, oz, jx, jy, jz;
 	float n= 0.5f;
@@ -300,7 +300,7 @@ OPENCL_FORCE_INLINE float orgBlenderNoise(float x, float y, float z) {
 }
 
 /* as orgBlenderNoise(), returning signed noise */
-OPENCL_FORCE_INLINE float orgBlenderNoiseS(float x, float y, float z) {
+OPENCL_FORCE_NOT_INLINE float orgBlenderNoiseS(float x, float y, float z) {
 	return (2.f*orgBlenderNoise(x, y, z)-1.f);
 }
 
@@ -842,7 +842,7 @@ __constant float g[512+2][3]= {
         r0 = t - (int)t; \
         r1 = r0 - 1.;
 
-OPENCL_FORCE_INLINE float noise3_perlin(float vec[3]) {
+OPENCL_FORCE_NOT_INLINE float noise3_perlin(float vec[3]) {
 	int bx0, bx1, by0, by1, bz0, bz1, b00, b10, b01, b11;
 	float rx0, rx1, ry0, ry1, rz0, rz1, q0, q1, q2, sx, sy, sz, a, b, c, d, t, u, v;
 	int i, j;
@@ -905,7 +905,7 @@ OPENCL_FORCE_INLINE float noise3_perlin(float vec[3]) {
 	return 1.5f * lerp(sz, c, d); /* interpolate in z */
 }
 
-OPENCL_FORCE_INLINE float turbulence_perlin(float *point, float lofreq, float hifreq) {
+OPENCL_FORCE_NOT_INLINE float turbulence_perlin(float *point, float lofreq, float hifreq) {
 	float freq, t, p[3];
 
 	p[0] = point[0] + 123.456f;
@@ -923,7 +923,7 @@ OPENCL_FORCE_INLINE float turbulence_perlin(float *point, float lofreq, float hi
 }
 
 /* for use with BLI_gNoise/gTurbulence, returns signed noise */
-OPENCL_FORCE_INLINE float orgPerlinNoise(float x, float y, float z) {
+OPENCL_FORCE_NOT_INLINE float orgPerlinNoise(float x, float y, float z) {
 	float v[3];
 
 	v[0] = x;
@@ -933,7 +933,7 @@ OPENCL_FORCE_INLINE float orgPerlinNoise(float x, float y, float z) {
 }
 
 /* for use with BLI_gNoise/gTurbulence, returns unsigned noise */
-OPENCL_FORCE_INLINE float orgPerlinNoiseU(float x, float y, float z) {
+OPENCL_FORCE_NOT_INLINE float orgPerlinNoiseU(float x, float y, float z) {
 	float v[3];
 
 	v[0] = x;
@@ -943,7 +943,7 @@ OPENCL_FORCE_INLINE float orgPerlinNoiseU(float x, float y, float z) {
 }
 
 /* *************** CALL AS: *************** */
-OPENCL_FORCE_INLINE float BLI_hnoisep(float noisesize, float x, float y, float z) {
+OPENCL_FORCE_NOT_INLINE float BLI_hnoisep(float noisesize, float x, float y, float z) {
 	float vec[3];
 
 	vec[0]= x/noisesize;
@@ -953,7 +953,7 @@ OPENCL_FORCE_INLINE float BLI_hnoisep(float noisesize, float x, float y, float z
 	return noise3_perlin(vec);
 }
 
-OPENCL_FORCE_INLINE float turbulencep(float noisesize, float x, float y, float z, int nr) {
+OPENCL_FORCE_NOT_INLINE float turbulencep(float noisesize, float x, float y, float z, int nr) {
 	float vec[3];
 
 	vec[0]= x/noisesize;
