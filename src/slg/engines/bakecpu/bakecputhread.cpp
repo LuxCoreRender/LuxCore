@@ -265,8 +265,7 @@ void BakeCPURenderThread::RenderEyeSample(const BakeMapInfo &mapInfo, PathTracer
 				const Vector localSampledDir = UniformSampleHemisphere(u1, u2);
 				const Vector sampledDir = bsdf.GetFrame().ToWorld(localSampledDir);
 
-				pathInfo.lastBSDFPdfW = UniformHemispherePdf(u1, u2);
-				pathInfo.lastBSDFEvent = DIFFUSE | REFLECT;
+				pathInfo.AddVertex(bsdf, DIFFUSE | REFLECT, UniformHemispherePdf(u1, u2), pathTracer.hybridBackForwardGlossinessThreshold);
 
 				// Ray origin
 				const Point rayOrig = bsdf.GetRayOrigin(sampledDir);
