@@ -22,14 +22,6 @@
 // Mirror material
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_INLINE BSDFEvent MirrorMaterial_GetEventTypes() {
-	return SPECULAR | REFLECT;
-}
-
-OPENCL_FORCE_INLINE bool MirrorMaterial_IsDelta() {
-	return true;
-}
-
 OPENCL_FORCE_INLINE float3 MirrorMaterial_Evaluate(
 		__global const HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,

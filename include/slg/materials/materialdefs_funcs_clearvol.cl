@@ -24,10 +24,6 @@
 // ClearVol hasn't scattering so none of the below functions is really used.
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_INLINE BSDFEvent ClearVolMaterial_GetEventTypes() {
-	return DIFFUSE | REFLECT;
-}
-
 OPENCL_FORCE_INLINE float3 ClearVolMaterial_Evaluate(
 		__global const HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW) {

@@ -40,12 +40,7 @@ OPENCL_FORCE_INLINE BSDFEvent Material_GetEventTypes(const uint matIndex
 		MATERIALS_PARAM_DECL) {
 	__global const Material *material = &mats[matIndex];
 
-	if (Material_IsDynamic(material))
-		return Material_GetEventTypesWithDynamic(matIndex
-			MATERIALS_PARAM);
-	else
-		return Material_GetEventTypesWithoutDynamic(material
-			MATERIALS_PARAM);
+	return material->eventTypes;
 }
 
 //------------------------------------------------------------------------------
@@ -56,12 +51,7 @@ OPENCL_FORCE_INLINE bool Material_IsDelta(const uint matIndex
 		MATERIALS_PARAM_DECL) {
 	__global const Material *material = &mats[matIndex];
 
-	if (Material_IsDynamic(material))
-		return Material_IsDeltaWithDynamic(matIndex
-			MATERIALS_PARAM);
-	else
-		return Material_IsDeltaWithoutDynamic(material
-			MATERIALS_PARAM);
+	return material->isDelta;
 }
 
 //------------------------------------------------------------------------------

@@ -134,6 +134,10 @@ void CompiledScene::CompileMaterials() {
 		mat->isShadowCatcherOnlyInfiniteLights = m->IsShadowCatcherOnlyInfiniteLights();
 		mat->isPhotonGIEnabled = m->IsPhotonGIEnabled();
 
+		// Bake Material::GetEventTypes() and Material::IsDelta()
+		mat->eventTypes = m->GetEventTypes();
+		mat->isDelta = m->IsDelta();
+
 		// Material specific parameters
 		switch (m->GetType()) {
 			case MATTE: {
@@ -584,16 +588,6 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 				break;
 		}
 	}
-
-	// Generate the code for generic Material_GetEventTypesWithDynamic())
-	AddMaterialSourceSwitch(source, mats, "GetEventTypesWithDynamic", "GetEventTypes", "BSDFEvent", "NONE",
-			"const uint index MATERIALS_PARAM_DECL",
-			"mat MATERIALS_PARAM");
-
-	// Generate the code for generic Material_IsDeltaWithDynamic()
-	AddMaterialSourceSwitch(source, mats, "IsDeltaWithDynamic", "IsDelta", "bool", "true",
-			"const uint index MATERIALS_PARAM_DECL",
-			"mat MATERIALS_PARAM");
 
 	// Generate the code for generic Material_AlbedoWithDynamic()
 	AddMaterialSourceSwitch(source, mats, "AlbedoWithDynamic", "Albedo", "float3", "BLACK",

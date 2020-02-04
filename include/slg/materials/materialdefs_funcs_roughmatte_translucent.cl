@@ -22,10 +22,6 @@
 // MatteTranslucent material
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_INLINE BSDFEvent RoughMatteTranslucentMaterial_GetEventTypes() {
-	return DIFFUSE | REFLECT | TRANSMIT;
-}
-
 OPENCL_FORCE_INLINE float3 RoughMatteTranslucentMaterial_Albedo(const float3 krVal, const float3 ktVal) {
 	const float3 r = Spectrum_Clamp(krVal);
 	const float3 t = Spectrum_Clamp(ktVal) * 

@@ -50,14 +50,6 @@ OPENCL_FORCE_INLINE float ExtractInteriorIors(__global const HitPoint *hitPoint,
 // ArchGlass material
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_INLINE BSDFEvent ArchGlassMaterial_GetEventTypes() {
-	return SPECULAR | REFLECT | TRANSMIT;
-}
-
-OPENCL_FORCE_INLINE bool ArchGlassMaterial_IsDelta() {
-	return true;
-}
-
 OPENCL_FORCE_NOT_INLINE float3 ArchGlassMaterial_EvalSpecularReflection(__global const HitPoint *hitPoint,
 		const float3 localFixedDir, const float3 kr,
 		const float nc, const float nt,

@@ -24,10 +24,6 @@
 // LuxRender Glossy2 material porting.
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_INLINE BSDFEvent Glossy2Material_GetEventTypes() {
-	return GLOSSY | REFLECT;
-}
-
 OPENCL_FORCE_INLINE float3 Glossy2Material_Albedo(const float3 kdVal) {
 	return Spectrum_Clamp(kdVal);
 }

@@ -24,10 +24,6 @@
 // LuxRender GlossyTranslucent material porting.
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_INLINE BSDFEvent GlossyTranslucentMaterial_GetEventTypes() {
-	return GLOSSY | DIFFUSE | REFLECT | TRANSMIT;
-}
-
 OPENCL_FORCE_INLINE float3 GlossyTranslucentMaterial_Albedo(const float3 kdVal) {
 	return Spectrum_Clamp(kdVal);
 }

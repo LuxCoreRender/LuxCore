@@ -22,10 +22,6 @@
 // HomogeneousVol material
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_INLINE BSDFEvent HomogeneousVolMaterial_GetEventTypes() {
-	return DIFFUSE | REFLECT;
-}
-
 OPENCL_FORCE_INLINE float3 HomogeneousVolMaterial_Albedo(const float3 sigmaSTexVal,
 		const float3 sigmaATexVal) {
 	return SchlickScatter_Albedo(clamp(sigmaSTexVal, 0.f, INFINITY),

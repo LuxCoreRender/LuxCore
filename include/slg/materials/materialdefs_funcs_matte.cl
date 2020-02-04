@@ -22,10 +22,6 @@
 // Matte material
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_INLINE BSDFEvent MatteMaterial_GetEventTypes() {
-	return DIFFUSE | REFLECT;
-}
-
 OPENCL_FORCE_INLINE float3 MatteMaterial_Albedo(const float3 kdVal) {
 	return Spectrum_Clamp(kdVal);
 }
@@ -62,14 +58,6 @@ OPENCL_FORCE_NOT_INLINE float3 MatteMaterial_Sample(__global const HitPoint *hit
 //------------------------------------------------------------------------------
 // Rough matte material
 //------------------------------------------------------------------------------
-
-OPENCL_FORCE_INLINE BSDFEvent RoughMatteMaterial_GetEventTypes() {
-	return DIFFUSE | REFLECT;
-}
-
-OPENCL_FORCE_INLINE bool RoughMatteMaterial_IsDelta() {
-	return false;
-}
 
 OPENCL_FORCE_INLINE float3 RoughMatteMaterial_Albedo(const float3 kdVal) {
 	return Spectrum_Clamp(kdVal);

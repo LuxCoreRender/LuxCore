@@ -22,14 +22,6 @@
 // NULL material
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_INLINE BSDFEvent NullMaterial_GetEventTypes() {
-	return SPECULAR | TRANSMIT;
-}
-
-OPENCL_FORCE_INLINE bool NullMaterial_IsDelta() {
-	return true;
-}
-
 OPENCL_FORCE_NOT_INLINE float3 NullMaterial_GetPassThroughTransparency(__global const Material *material,
 		__global const HitPoint *hitPoint, const float3 localFixedDir,
 		const float passThroughEvent, const bool backTracing

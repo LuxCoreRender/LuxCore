@@ -22,10 +22,6 @@
 // Velvet material
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_INLINE BSDFEvent VelvetMaterial_GetEventTypes() {
-	return DIFFUSE | REFLECT;
-}
-
 OPENCL_FORCE_INLINE float3 VelvetMaterial_Albedo(const float3 kdVal) {
 	return Spectrum_Clamp(kdVal);
 }

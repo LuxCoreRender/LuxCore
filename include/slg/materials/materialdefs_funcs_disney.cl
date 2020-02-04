@@ -22,10 +22,6 @@
 // Disney BRDF material
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_INLINE BSDFEvent DisneyMaterial_GetEventTypes() {
-	return GLOSSY | REFLECT;
-}
-
 OPENCL_FORCE_INLINE float3 DisneyMaterial_Albedo(const float3 baseColorVal) {
 	return Spectrum_Clamp(baseColorVal);
 }

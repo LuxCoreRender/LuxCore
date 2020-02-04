@@ -288,6 +288,11 @@ typedef struct {
 	float glossiness, avgPassThroughTransparency;
 	int isShadowCatcher, isShadowCatcherOnlyInfiniteLights, isPhotonGIEnabled;
 
+	// The result of calling Material::GetEventTypes()
+	BSDFEvent eventTypes;
+	// The result of calling Material::IsDelta()
+	int isDelta; 
+	
 	union {
 		MatteParam matte;
 		RoughMatteParam roughmatte;

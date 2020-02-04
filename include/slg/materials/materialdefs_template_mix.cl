@@ -35,24 +35,6 @@
 //  <<CS_FACTOR_TEXTURE>>
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_NOT_INLINE BSDFEvent Material_Index<<CS_MIX_MATERIAL_INDEX>>_GetEventTypes(__global const Material *material
-		MATERIALS_PARAM_DECL) {
-	return
-			<<CS_MAT_A_PREFIX>>_GetEventTypes<<CS_MAT_A_POSTFIX>>(&mats[<<CS_MAT_A_MATERIAL_INDEX>>]
-				MATERIALS_PARAM) |
-			<<CS_MAT_B_PREFIX>>_GetEventTypes<<CS_MAT_B_POSTFIX>>(&mats[<<CS_MAT_B_MATERIAL_INDEX>>]
-				MATERIALS_PARAM);
-}
-
-OPENCL_FORCE_NOT_INLINE bool Material_Index<<CS_MIX_MATERIAL_INDEX>>_IsDelta(__global const Material *material
-		MATERIALS_PARAM_DECL) {
-	return
-			<<CS_MAT_A_PREFIX>>_IsDelta<<CS_MAT_A_POSTFIX>>(&mats[<<CS_MAT_A_MATERIAL_INDEX>>]
-				MATERIALS_PARAM) &&
-			<<CS_MAT_B_PREFIX>>_IsDelta<<CS_MAT_B_POSTFIX>>(&mats[<<CS_MAT_B_MATERIAL_INDEX>>]
-				MATERIALS_PARAM);
-}
-
 OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_GetPassThroughTransparency(__global const Material *material,
 		__global const HitPoint *hitPoint, const float3 localFixedDir,
 		const float passThroughEvent, const bool backTracing
@@ -118,7 +100,7 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Evaluate(
 	// Evaluate material A
 	//--------------------------------------------------------------------------
 
-	BSDFEvent eventMatA = <<CS_MAT_A_PREFIX>>_GetEventTypes<<CS_MAT_A_POSTFIX>>(&mats[<<CS_MAT_A_MATERIAL_INDEX>>]
+	BSDFEvent eventMatA = Material_GetEventTypes(&mats[<<CS_MAT_A_MATERIAL_INDEX>>]
 			MATERIALS_PARAM);
 	if ((weight1 > 0.f) &&
 			((!isTransmitEval && (eventMatA & REFLECT)) ||
@@ -142,7 +124,7 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Evaluate(
 	// Evaluate material B
 	//--------------------------------------------------------------------------
 	
-	BSDFEvent eventMatB = <<CS_MAT_B_PREFIX>>_GetEventTypes<<CS_MAT_B_POSTFIX>>(&mats[<<CS_MAT_B_MATERIAL_INDEX>>]
+	BSDFEvent eventMatB = Material_GetEventTypes(&mats[<<CS_MAT_B_MATERIAL_INDEX>>]
 			MATERIALS_PARAM);
 	if ((weight2 > 0.f) &&
 			((!isTransmitEval && (eventMatB & REFLECT)) ||
@@ -215,9 +197,9 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Sample(__
 	const float isTransmitEval = (signbit(fixedDirSecond.z) != signbit(sampledDirSecond.z));
 
 	BSDFEvent eventSecond =  sampleMatA ?
-		<<CS_MAT_B_PREFIX>>_GetEventTypes<<CS_MAT_B_POSTFIX>>(&mats[<<CS_MAT_B_MATERIAL_INDEX>>]
+		Material_GetEventTypes(&mats[<<CS_MAT_B_MATERIAL_INDEX>>]
 			MATERIALS_PARAM) :
-		<<CS_MAT_A_PREFIX>>_GetEventTypes<<CS_MAT_A_POSTFIX>>(&mats[<<CS_MAT_A_MATERIAL_INDEX>>]
+		Material_GetEventTypes(&mats[<<CS_MAT_A_MATERIAL_INDEX>>]
 			MATERIALS_PARAM);
 
 	if ((!isTransmitEval && (eventSecond & REFLECT)) ||

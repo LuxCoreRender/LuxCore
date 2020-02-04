@@ -22,10 +22,6 @@
 // Cloth material
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_NOT_INLINE BSDFEvent ClothMaterial_GetEventTypes() {
-	return GLOSSY | REFLECT;
-}
-
 __constant WeaveConfig ClothWeaves[] = {
     // DenimWeave
     {

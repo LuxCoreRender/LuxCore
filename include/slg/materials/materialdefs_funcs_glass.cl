@@ -22,14 +22,6 @@
 // Glass material
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_INLINE BSDFEvent GlassMaterial_GetEventTypes() {
-	return SPECULAR | REFLECT | TRANSMIT;
-}
-
-OPENCL_FORCE_INLINE bool GlassMaterial_IsDelta() {
-	return true;
-}
-
 OPENCL_FORCE_INLINE float3 GlassMaterial_Evaluate(
 		__global const HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,

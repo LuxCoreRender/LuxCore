@@ -38,19 +38,6 @@
 //  <<CS_MB_FLAG>>
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_NOT_INLINE BSDFEvent Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_GetEventTypes(__global const Material* restrict material
-		MATERIALS_PARAM_DECL) {
-	return
-			<<CS_MAT_BASE_PREFIX>>_GetEventTypes<<CS_MAT_BASE_POSTFIX>>(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>]
-				MATERIALS_PARAM) |
-			GLOSSY | REFLECT;
-}
-
-OPENCL_FORCE_NOT_INLINE bool Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_IsDelta(__global const Material* restrict material
-		MATERIALS_PARAM_DECL) {
-	return false;
-}
-
 OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_GetPassThroughTransparency(__global const Material* restrict material,
 		__global const HitPoint *hitPoint, const float3 localFixedDir, const float passThroughEvent, const bool backTracing
 		MATERIALS_PARAM_DECL) {

@@ -24,10 +24,6 @@
 // LuxRender carpaint material porting.
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_INLINE BSDFEvent CarPaintMaterial_GetEventTypes() {
-	return GLOSSY | REFLECT;
-}
-
 OPENCL_FORCE_INLINE float3 CarPaintMaterial_Albedo(const float3 kdVal) {
 	return Spectrum_Clamp(kdVal);
 }

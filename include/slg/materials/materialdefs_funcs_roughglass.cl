@@ -22,10 +22,6 @@
 // RoughGlass material
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_INLINE BSDFEvent RoughGlassMaterial_GetEventTypes() {
-	return GLOSSY | REFLECT | TRANSMIT;
-}
-
 OPENCL_FORCE_NOT_INLINE float3 RoughGlassMaterial_Evaluate(
 		__global const HitPoint *hitPoint, const float3 localLightDir, const float3 localEyeDir,
 		BSDFEvent *event, float *directPdfW,
