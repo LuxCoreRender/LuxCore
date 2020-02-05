@@ -276,6 +276,7 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_disney.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_glass.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_glossy2.cl
+	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_glossycoating.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_glossytranslucent.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_heterogeneousvol.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_homogeneousvol.cl
@@ -283,6 +284,7 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_matte_translucent.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_metal2.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_mirror.cl
+	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_mix.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_null.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_roughglass.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_roughmatte_translucent.cl
@@ -291,6 +293,7 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_template_glossycoating.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_template_mix.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/material_main_withoutdynamic.cl
+	${LuxRays_SOURCE_DIR}/include/slg/materials/material_eval_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/material_main.cl
 	${LuxRays_SOURCE_DIR}/include/slg/scene/scene_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/scene/scene_funcs.cl
@@ -637,6 +640,7 @@ set(SLG_KERNEL_SRCS
 	${generated_kernels_dir}/materialdefs_funcs_disney_kernel.cpp
 	${generated_kernels_dir}/materialdefs_funcs_glass_kernel.cpp
 	${generated_kernels_dir}/materialdefs_funcs_glossy2_kernel.cpp
+	${generated_kernels_dir}/materialdefs_funcs_glossycoating_kernel.cpp
 	${generated_kernels_dir}/materialdefs_funcs_glossytranslucent_kernel.cpp
 	${generated_kernels_dir}/materialdefs_funcs_heterogeneousvol_kernel.cpp
 	${generated_kernels_dir}/materialdefs_funcs_homogeneousvol_kernel.cpp
@@ -644,6 +648,7 @@ set(SLG_KERNEL_SRCS
 	${generated_kernels_dir}/materialdefs_funcs_matte_translucent_kernel.cpp
 	${generated_kernels_dir}/materialdefs_funcs_metal2_kernel.cpp
 	${generated_kernels_dir}/materialdefs_funcs_mirror_kernel.cpp
+	${generated_kernels_dir}/materialdefs_funcs_mix_kernel.cpp
 	${generated_kernels_dir}/materialdefs_funcs_null_kernel.cpp
 	${generated_kernels_dir}/materialdefs_funcs_roughglass_kernel.cpp
 	${generated_kernels_dir}/materialdefs_funcs_roughmatte_translucent_kernel.cpp
@@ -651,6 +656,7 @@ set(SLG_KERNEL_SRCS
 	${generated_kernels_dir}/materialdefs_template_glossycoating_kernel.cpp
 	${generated_kernels_dir}/materialdefs_template_mix_kernel.cpp
 	${generated_kernels_dir}/material_main_withoutdynamic_kernel.cpp
+	${generated_kernels_dir}/material_eval_funcs_kernel.cpp
 	${generated_kernels_dir}/material_main_kernel.cpp
 	${generated_kernels_dir}/texture_types_kernel.cpp
 	${generated_kernels_dir}/texture_funcs_kernel.cpp

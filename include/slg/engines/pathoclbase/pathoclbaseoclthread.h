@@ -184,6 +184,8 @@ protected:
 
 	// Scene buffers
 	cl::Buffer *materialsBuff;
+	cl::Buffer *materialEvalOpsBuff;
+	cl::Buffer *materialEvalStackBuff;
 	cl::Buffer *texturesBuff;
 	cl::Buffer *textureEvalOpsBuff;
 	cl::Buffer *textureEvalStackBuff;

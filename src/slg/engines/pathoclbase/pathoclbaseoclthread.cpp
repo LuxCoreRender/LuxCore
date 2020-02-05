@@ -58,6 +58,8 @@ PathOCLBaseOCLRenderThread::PathOCLBaseOCLRenderThread(const u_int index,
 
 	// Scene buffers
 	materialsBuff = nullptr;
+	materialEvalOpsBuff = nullptr;
+	materialEvalStackBuff = nullptr;
 	texturesBuff = nullptr;
 	textureEvalOpsBuff = nullptr;
 	textureEvalStackBuff = nullptr;
@@ -184,6 +186,8 @@ void PathOCLBaseOCLRenderThread::Stop() {
 
 	// Scene buffers
 	FreeOCLBuffer(&materialsBuff);
+	FreeOCLBuffer(&materialEvalOpsBuff);
+	FreeOCLBuffer(&materialEvalStackBuff);
 	FreeOCLBuffer(&texturesBuff);
 	FreeOCLBuffer(&textureEvalOpsBuff);
 	FreeOCLBuffer(&textureEvalStackBuff);

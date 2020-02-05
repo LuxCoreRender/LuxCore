@@ -37,7 +37,6 @@ typedef enum {
 	EVAL_BUMP_TRIPLANAR_STEP_1,
 	EVAL_BUMP_TRIPLANAR_STEP_2,
 	EVAL_BUMP_TRIPLANAR_STEP_3
-
 } TextureEvalOpType;
 
 typedef struct {

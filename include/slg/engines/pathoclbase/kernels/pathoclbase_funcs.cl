@@ -459,6 +459,9 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 		/* Scene parameters */ \
 		KERNEL_ARGS_INFINITELIGHTS \
 		, __global const Material* restrict mats \
+		, __global const MaterialEvalOp* restrict matEvalOps \
+		, __global float *matEvalStacks \
+		, const uint maxMaterialEvalStackSize \
 		, __global const Texture* restrict texs \
 		, __global const TextureEvalOp* restrict texEvalOps \
 		, __global float *texEvalStacks \

@@ -126,6 +126,15 @@ void PathOCLBaseOCLRenderThread::InitMaterials() {
 	const size_t materialsCount = renderEngine->compiledScene->mats.size();
 	AllocOCLBufferRO(&materialsBuff, &renderEngine->compiledScene->mats[0],
 			sizeof(slg::ocl::Material) * materialsCount, "Materials");
+
+	AllocOCLBufferRO(&materialEvalOpsBuff, &renderEngine->compiledScene->matEvalOps[0],
+			sizeof(slg::ocl::MaterialEvalOp) * renderEngine->compiledScene->matEvalOps.size(), "Material evaluation ops");
+
+	const u_int taskCount = renderEngine->taskCount;
+	AllocOCLBufferRW(&materialEvalStackBuff, 
+			sizeof(float) * renderEngine->compiledScene->maxMaterialEvalStackSize *
+			taskCount, "Material evaluation stacks");
+
 }
 
 void PathOCLBaseOCLRenderThread::InitSceneObjects() {

@@ -18,6 +18,24 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+
+//------------------------------------------------------------------------------
+// Material evaluation op
+//------------------------------------------------------------------------------
+
+typedef enum {
+	EVAL_ALBEDO,
+} MaterialEvalOpType;
+
+typedef struct {
+	unsigned int matIndex;
+	MaterialEvalOpType evalType;
+} MaterialEvalOp;
+
+//------------------------------------------------------------------------------
+// Materials
+//------------------------------------------------------------------------------
+
 typedef enum {
 	MATTE, MIRROR, GLASS, ARCHGLASS, MIX, NULLMAT, MATTETRANSLUCENT,
 	GLOSSY2, METAL2, ROUGHGLASS, VELVET, CLOTH, CARPAINT, ROUGHMATTE,
@@ -292,7 +310,9 @@ typedef struct {
 	BSDFEvent eventTypes;
 	// The result of calling Material::IsDelta()
 	int isDelta; 
-	
+
+	unsigned int evalAlbedoOpStartIndex, evalAlbedoOpLength;
+
 	union {
 		MatteParam matte;
 		RoughMatteParam roughmatte;
@@ -323,7 +343,17 @@ typedef struct {
 
 #if defined(SLG_OPENCL_KERNEL)
 
-#define MATERIALS_PARAM_DECL , __global const Material* restrict mats TEXTURES_PARAM_DECL SCENE_PARAM_DECL
-#define MATERIALS_PARAM , mats TEXTURES_PARAM SCENE_PARAM
+#define MATERIALS_PARAM_DECL \
+	, __global const Material* restrict mats \
+	, __global const MaterialEvalOp* restrict matEvalOps \
+	, __global float *matEvalStacks \
+	, const uint maxMaterialEvalStackSize \
+	TEXTURES_PARAM_DECL SCENE_PARAM_DECL
+#define MATERIALS_PARAM \
+	, mats \
+	, matEvalOps \
+	, matEvalStacks \
+	, maxMaterialEvalStackSize \
+	TEXTURES_PARAM SCENE_PARAM
 
 #endif

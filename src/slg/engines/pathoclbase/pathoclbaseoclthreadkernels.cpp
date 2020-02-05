@@ -225,6 +225,7 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_materialdefs_funcs_disney <<
 			slg::ocl::KernelSource_materialdefs_funcs_glass <<
 			slg::ocl::KernelSource_materialdefs_funcs_glossy2 <<
+			slg::ocl::KernelSource_materialdefs_funcs_glossycoating <<
 			slg::ocl::KernelSource_materialdefs_funcs_glossytranslucent <<
 			slg::ocl::KernelSource_materialdefs_funcs_heterogeneousvol <<
 			slg::ocl::KernelSource_materialdefs_funcs_homogeneousvol <<
@@ -232,11 +233,13 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_materialdefs_funcs_matte_translucent <<
 			slg::ocl::KernelSource_materialdefs_funcs_metal2 <<
 			slg::ocl::KernelSource_materialdefs_funcs_mirror <<
+			slg::ocl::KernelSource_materialdefs_funcs_mix <<
 			slg::ocl::KernelSource_materialdefs_funcs_null <<
 			slg::ocl::KernelSource_materialdefs_funcs_roughglass <<
 			slg::ocl::KernelSource_materialdefs_funcs_roughmatte_translucent <<
 			slg::ocl::KernelSource_materialdefs_funcs_velvet <<
-			slg::ocl::KernelSource_material_main_withoutdynamic;
+			slg::ocl::KernelSource_material_main_withoutdynamic <<
+			slg::ocl::KernelSource_material_eval_funcs;
 
 	// Generate the code to evaluate the materials
 	ssKernel <<
@@ -430,6 +433,9 @@ void PathOCLBaseOCLRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePa
 	advancePathsKernel->setArg(argIndex++, cscene->worldBSphere.center.z);
 	advancePathsKernel->setArg(argIndex++, cscene->worldBSphere.rad);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), materialsBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), materialEvalOpsBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), materialEvalStackBuff);
+	advancePathsKernel->setArg(argIndex++, cscene->maxMaterialEvalStackSize);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), texturesBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), textureEvalOpsBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), textureEvalStackBuff);

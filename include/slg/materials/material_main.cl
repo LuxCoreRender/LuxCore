@@ -25,25 +25,6 @@
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-// Material_IsDynamic
-//------------------------------------------------------------------------------
-
-OPENCL_FORCE_INLINE bool Material_IsDynamic(__global const Material *material) {
-		return (material->type == MIX) || (material->type == GLOSSYCOATING);
-}
-
-//------------------------------------------------------------------------------
-// Material_GetEventTypes
-//------------------------------------------------------------------------------
-
-OPENCL_FORCE_INLINE BSDFEvent Material_GetEventTypes(const uint matIndex
-		MATERIALS_PARAM_DECL) {
-	__global const Material *material = &mats[matIndex];
-
-	return material->eventTypes;
-}
-
-//------------------------------------------------------------------------------
 // Material_IsDelta
 //------------------------------------------------------------------------------
 
@@ -61,14 +42,47 @@ OPENCL_FORCE_INLINE bool Material_IsDelta(const uint matIndex
 OPENCL_FORCE_INLINE float3 Material_Albedo(const uint matIndex,
 		__global const HitPoint *hitPoint
 		MATERIALS_PARAM_DECL) {
-	__global const Material *material = &mats[matIndex];
+#if defined(DEBUG_PRINTF_MATERIAL_EVAL)
+	printf("===============================================================\n");
+	printf("Material_Albedo()\n");
+	printf("===============================================================\n");
+#endif
 
-	if (Material_IsDynamic(material))
-		return Material_AlbedoWithDynamic(matIndex, hitPoint
-			MATERIALS_PARAM);
-	else
-		return Material_AlbedoWithoutDynamic(material, hitPoint
-			MATERIALS_PARAM);
+	__global const Material* restrict startMat = &mats[matIndex];
+	const size_t gid = get_global_id(0);
+	__global float *evalStack = &matEvalStacks[gid * maxMaterialEvalStackSize];
+
+	const uint evalOpStartIndex = startMat->evalAlbedoOpStartIndex;
+	const uint evalOpLength = startMat->evalAlbedoOpLength;
+
+#if defined(DEBUG_PRINTF_MATERIAL_EVAL)
+	printf("matIndex=%d evalOpStartIndex=%d evalOpLength=%d\n", matIndex, evalOpStartIndex, evalOpLength);
+#endif
+
+	uint evalStackOffsetVal = 0;
+	uint *evalStackOffset = &evalStackOffsetVal; // Used by macros
+	for (uint i = 0; i < evalOpLength; ++i) {
+#if defined(DEBUG_PRINTF_MATERIAL_EVAL)
+		printf("EvalOp: #%d\n", i);
+#endif
+
+		__global const MaterialEvalOp* restrict evalOp = &matEvalOps[evalOpStartIndex + i];
+
+		Material_EvalOp(evalOp, evalStack, &evalStackOffsetVal, hitPoint MATERIALS_PARAM);
+	}
+#if defined(DEBUG_PRINTF_MATERIAL_EVAL)
+	printf("evalStackOffset=#%d\n", evalStackOffsetVal);
+#endif
+	
+	float3 result;
+	EvalStack_PopFloat3(result);
+
+
+#if defined(DEBUG_PRINTF_MATERIAL_EVAL)
+	printf("Result=(%f, %f, %f)\n", result.s0, result.s1, result.s2);
+#endif
+
+	return result;
 }
 
 //------------------------------------------------------------------------------

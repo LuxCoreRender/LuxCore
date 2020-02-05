@@ -101,6 +101,9 @@ public:
 	
 	// Compiled Materials (and Volumes)
 	std::vector<slg::ocl::Material> mats;
+	std::vector<slg::ocl::MaterialEvalOp> matEvalOps;
+	// Expressed in float
+	u_int maxMaterialEvalStackSize;
 	u_int defaultWorldVolumeIndex;
 
 	// Compiled Textures
@@ -136,6 +139,8 @@ private:
 	void CompileCamera();
 	void CompileSceneObjects();
 	void CompileGeometry();
+	u_int CompileMaterialOps(const u_int matIndex, const slg::ocl::MaterialEvalOpType opType);
+	void CompileMaterialOps();
 	void CompileMaterials();
 	void CompileTextureMapping2D(slg::ocl::TextureMapping2D *mapping, const TextureMapping2D *m);
 	void CompileTextureMapping3D(slg::ocl::TextureMapping3D *mapping, const TextureMapping3D *m);

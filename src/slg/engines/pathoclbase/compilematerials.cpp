@@ -61,6 +61,104 @@ static bool IsMaterialDynamic(const slg::ocl::Material *material) {
 		return (material->type == slg::ocl::MIX) || (material->type == slg::ocl::GLOSSYCOATING);
 }
 
+u_int CompiledScene::CompileMaterialOps(const u_int matIndex,
+		const slg::ocl::MaterialEvalOpType opType) {
+	// Translate materials to material evaluate ops
+
+	slg::ocl::Material *mat = &mats[matIndex];
+	u_int evalOpStackSize = 0;
+
+	switch (mat->type) {
+		//----------------------------------------------------------------------
+		// Materials without sub-nodes
+		//----------------------------------------------------------------------
+		case MATTE:
+		case MIRROR:
+		case GLASS:
+		case ARCHGLASS:
+		case NULLMAT:
+		case MATTETRANSLUCENT:
+		case GLOSSY2:
+		case METAL2:
+		case ROUGHGLASS:
+		case VELVET:
+		case CLOTH:
+		case CARPAINT:
+		case ROUGHMATTE:
+		case ROUGHMATTETRANSLUCENT:
+		case GLOSSYTRANSLUCENT:
+		case DISNEY:
+		case HOMOGENEOUS_VOL:
+		case CLEAR_VOL:
+		case HETEROGENEOUS_VOL:
+			switch (opType) {
+				case slg::ocl::EVAL_ALBEDO:
+					evalOpStackSize += 3;
+					break;
+				default:
+					throw runtime_error("Unknown eval. type in CompiledScene::CompileMaterialOps(" + ToString(mat->type) + "): " + ToString(opType));
+			}
+			break;
+		//----------------------------------------------------------------------
+		// Materials with sub-nodes
+		//----------------------------------------------------------------------
+		case MIX:
+			switch (opType) {
+				case slg::ocl::EVAL_ALBEDO:
+					evalOpStackSize += CompileMaterialOps(mat->mix.matAIndex, slg::ocl::EVAL_ALBEDO);
+					evalOpStackSize += CompileMaterialOps(mat->mix.matBIndex, slg::ocl::EVAL_ALBEDO);
+					break;
+				default:
+					throw runtime_error("Unknown eval. type in CompiledScene::CompileMaterialOps(" + ToString(mat->type) + "): " + ToString(opType));
+			}
+			break;
+		case GLOSSYCOATING:	
+			switch (opType) {
+				case slg::ocl::EVAL_ALBEDO:
+					evalOpStackSize += CompileMaterialOps(mat->glossycoating.matBaseIndex, slg::ocl::EVAL_ALBEDO);
+					break;
+				default:
+					throw runtime_error("Unknown eval. type in CompiledScene::CompileMaterialOps(" + ToString(mat->type) + "): " + ToString(opType));
+			}
+			break;
+		default:
+			throw runtime_error("Unknown material in CompiledScene::CompileMaterialOps(" + ToString(opType) + "): " + ToString(mat->type));
+	}
+
+	slg::ocl::MaterialEvalOp op;
+
+	op.matIndex = matIndex;
+	op.evalType = opType;
+
+	matEvalOps.push_back(op);
+
+	return evalOpStackSize;
+}
+
+void CompiledScene::CompileMaterialOps() {
+	// Translate materials to material evaluate ops
+
+	matEvalOps.clear();
+	maxMaterialEvalStackSize = 0;
+
+	for (u_int i = 0; i < mats.size(); ++i) {
+		slg::ocl::Material *mat = &mats[i];
+
+		//----------------------------------------------------------------------
+		// EVAL_ALBEDO
+		//----------------------------------------------------------------------
+		
+		mat->evalAlbedoOpStartIndex = matEvalOps.size();
+		const u_int evalOpsStackSizeFloat = CompileMaterialOps(i, slg::ocl::MaterialEvalOpType::EVAL_ALBEDO);
+		mat->evalAlbedoOpLength = matEvalOps.size() - mat->evalAlbedoOpStartIndex;
+
+		maxMaterialEvalStackSize = Max(maxMaterialEvalStackSize, evalOpsStackSizeFloat);
+	}
+
+	SLG_LOG("Material evaluation ops count: " << matEvalOps.size());
+	SLG_LOG("Material evaluation max. stack size: " << maxMaterialEvalStackSize);
+}
+
 void CompiledScene::CompileMaterials() {
 	wasMaterialsCompiled = true;
 
@@ -459,8 +557,15 @@ void CompiledScene::CompileMaterials() {
 	}
 
 	//--------------------------------------------------------------------------
+	// Material evaluation ops
+	//--------------------------------------------------------------------------
+
+	CompileMaterialOps();
+
+	//--------------------------------------------------------------------------
 	// Default scene volume
 	//--------------------------------------------------------------------------
+
 	defaultWorldVolumeIndex = scene->defaultWorldVolume ?
 		scene->matDefs.GetMaterialIndex(scene->defaultWorldVolume) : NULL_INDEX;
 
@@ -588,12 +693,6 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 				break;
 		}
 	}
-
-	// Generate the code for generic Material_AlbedoWithDynamic()
-	AddMaterialSourceSwitch(source, mats, "AlbedoWithDynamic", "Albedo", "float3", "BLACK",
-			"const uint index, "
-				"__global const HitPoint *hitPoint MATERIALS_PARAM_DECL",
-			"mat, hitPoint MATERIALS_PARAM");
 
 	// Generate the code for generic Material_EvaluateWithDynamic()
 	AddMaterialSourceSwitch(source, mats, "EvaluateWithDynamic", "Evaluate", "float3", "BLACK",
