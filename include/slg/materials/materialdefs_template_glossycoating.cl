@@ -45,14 +45,6 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>
 			hitPoint, localFixedDir, passThroughEvent, backTracing MATERIALS_PARAM);
 }
 
-OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Albedo(__global const Material* restrict material,
-		__global const HitPoint *hitPoint
-		MATERIALS_PARAM_DECL) {
-	return <<CS_MAT_BASE_PREFIX>>_Albedo<<CS_MAT_BASE_POSTFIX>>(
-			&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>], hitPoint
-			MATERIALS_PARAM);
-}
-
 OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Evaluate(__global const Material* restrict material,
 		__global const HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW
@@ -337,26 +329,4 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>
 		return <<CS_MAT_BASE_PREFIX>>_GetEmittedRadiance<<CS_MAT_BASE_POSTFIX>>(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
 				   hitPoint, oneOverPrimitiveArea
 				   MATERIALS_PARAM);
-}
-
-OPENCL_FORCE_NOT_INLINE uint Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_GetInteriorVolume(__global const Material* restrict material,
-		__global const HitPoint *hitPoint, const float passThroughEvent
-		MATERIALS_PARAM_DECL) {
-		if (material->interiorVolumeIndex != NULL_INDEX)
-			return material->interiorVolumeIndex;
-		else
-			return <<CS_MAT_BASE_PREFIX>>_GetInteriorVolume<<CS_MAT_BASE_POSTFIX>>(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
-				hitPoint, passThroughEvent
-				MATERIALS_PARAM);
-}
-
-OPENCL_FORCE_NOT_INLINE uint Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_GetExteriorVolume(__global const Material* restrict material,
-		__global const HitPoint *hitPoint, const float passThroughEvent
-		MATERIALS_PARAM_DECL) {
-		if (material->exteriorVolumeIndex != NULL_INDEX)
-			return material->exteriorVolumeIndex;
-		else
-			return <<CS_MAT_BASE_PREFIX>>_GetExteriorVolume<<CS_MAT_BASE_POSTFIX>>(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
-					hitPoint, passThroughEvent
-					MATERIALS_PARAM);
 }

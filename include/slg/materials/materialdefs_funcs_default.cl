@@ -62,19 +62,3 @@ OPENCL_FORCE_INLINE float3 DefaultMaterial_GetEmittedRadiance(__global const Mat
 		clamp(Texture_GetSpectrumValue(emitTexIndex, hitPoint
 				TEXTURES_PARAM), BLACK, INFINITY);
 }
-
-//------------------------------------------------------------------------------
-// DefaultMaterial_GetInteriorVolume
-//------------------------------------------------------------------------------
-
-OPENCL_FORCE_INLINE uint DefaultMaterial_GetInteriorVolume(__global const Material *material) {
-	return material->interiorVolumeIndex;
-}
-
-//------------------------------------------------------------------------------
-// DefaultMaterial_GetExteriorVolume
-//------------------------------------------------------------------------------
-
-OPENCL_FORCE_INLINE uint DefaultMaterial_GetExteriorVolume(__global const Material *material) {
-	return material->exteriorVolumeIndex;
-}

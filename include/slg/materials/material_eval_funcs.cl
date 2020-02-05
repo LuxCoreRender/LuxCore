@@ -71,6 +71,22 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					EvalStack_PushFloat3(albedo);
 					break;
 				}
+				case EVAL_GET_INTERIOR_VOLUME: {
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+
+					const uint volIndex = mat->interiorVolumeIndex;
+					EvalStack_PushUInt(volIndex);
+					break;
+				}
+				case EVAL_GET_EXTERIOR_VOLUME: {
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+
+					const uint volIndex = mat->exteriorVolumeIndex;
+					EvalStack_PushUInt(volIndex);
+					break;
+				}
 				default:
 					// Something wrong here
 					break;
@@ -88,6 +104,22 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					EvalStack_PushFloat3(albedo);
 					break;
 				}
+				case EVAL_GET_INTERIOR_VOLUME: {
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+
+					const uint volIndex = mat->interiorVolumeIndex;
+					EvalStack_PushUInt(volIndex);
+					break;
+				}
+				case EVAL_GET_EXTERIOR_VOLUME: {
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+
+					const uint volIndex = mat->exteriorVolumeIndex;
+					EvalStack_PushUInt(volIndex);
+					break;
+				}
 				default:
 					// Something wrong here
 					break;
@@ -101,6 +133,22 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 				case EVAL_ALBEDO: {
 					const float3 albedo = Glossy2Material_Albedo(Texture_GetSpectrumValue(mat->glossy2.kdTexIndex, hitPoint TEXTURES_PARAM));
 					EvalStack_PushFloat3(albedo);
+					break;
+				}
+				case EVAL_GET_INTERIOR_VOLUME: {
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+
+					const uint volIndex = mat->interiorVolumeIndex;
+					EvalStack_PushUInt(volIndex);
+					break;
+				}
+				case EVAL_GET_EXTERIOR_VOLUME: {
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+
+					const uint volIndex = mat->exteriorVolumeIndex;
+					EvalStack_PushUInt(volIndex);
 					break;
 				}
 				default:
@@ -123,6 +171,22 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					EvalStack_PushFloat3(albedo);
 					break;
 				}
+				case EVAL_GET_INTERIOR_VOLUME: {
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+
+					const uint volIndex = mat->interiorVolumeIndex;
+					EvalStack_PushUInt(volIndex);
+					break;
+				}
+				case EVAL_GET_EXTERIOR_VOLUME: {
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+
+					const uint volIndex = mat->exteriorVolumeIndex;
+					EvalStack_PushUInt(volIndex);
+					break;
+				}
 				default:
 					// Something wrong here
 					break;
@@ -136,6 +200,22 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 				case EVAL_ALBEDO: {
 					const float3 albedo = VelvetMaterial_Albedo(Texture_GetSpectrumValue(mat->velvet.kdTexIndex, hitPoint TEXTURES_PARAM));
 					EvalStack_PushFloat3(albedo);
+					break;
+				}
+				case EVAL_GET_INTERIOR_VOLUME: {
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+
+					const uint volIndex = mat->interiorVolumeIndex;
+					EvalStack_PushUInt(volIndex);
+					break;
+				}
+				case EVAL_GET_EXTERIOR_VOLUME: {
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+
+					const uint volIndex = mat->exteriorVolumeIndex;
+					EvalStack_PushUInt(volIndex);
 					break;
 				}
 				default:
@@ -160,6 +240,22 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					EvalStack_PushFloat3(albedo);
 					break;
 				}
+				case EVAL_GET_INTERIOR_VOLUME: {
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+
+					const uint volIndex = mat->interiorVolumeIndex;
+					EvalStack_PushUInt(volIndex);
+					break;
+				}
+				case EVAL_GET_EXTERIOR_VOLUME: {
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+
+					const uint volIndex = mat->exteriorVolumeIndex;
+					EvalStack_PushUInt(volIndex);
+					break;
+				}
 				default:
 					// Something wrong here
 					break;
@@ -175,6 +271,22 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					EvalStack_PushFloat3(albedo);
 					break;
 				}
+				case EVAL_GET_INTERIOR_VOLUME: {
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+
+					const uint volIndex = mat->interiorVolumeIndex;
+					EvalStack_PushUInt(volIndex);
+					break;
+				}
+				case EVAL_GET_EXTERIOR_VOLUME: {
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+
+					const uint volIndex = mat->exteriorVolumeIndex;
+					EvalStack_PushUInt(volIndex);
+					break;
+				}
 				default:
 					// Something wrong here
 					break;
@@ -188,6 +300,22 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 				case EVAL_ALBEDO: {
 					const float3 albedo = RoughMatteMaterial_Albedo(Texture_GetSpectrumValue(mat->roughmatte.kdTexIndex, hitPoint TEXTURES_PARAM));
 					EvalStack_PushFloat3(albedo);
+					break;
+				}
+				case EVAL_GET_INTERIOR_VOLUME: {
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+
+					const uint volIndex = mat->interiorVolumeIndex;
+					EvalStack_PushUInt(volIndex);
+					break;
+				}
+				case EVAL_GET_EXTERIOR_VOLUME: {
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+
+					const uint volIndex = mat->exteriorVolumeIndex;
+					EvalStack_PushUInt(volIndex);
 					break;
 				}
 				default:
@@ -207,6 +335,22 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					EvalStack_PushFloat3(albedo);
 					break;
 				}
+				case EVAL_GET_INTERIOR_VOLUME: {
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+
+					const uint volIndex = mat->interiorVolumeIndex;
+					EvalStack_PushUInt(volIndex);
+					break;
+				}
+				case EVAL_GET_EXTERIOR_VOLUME: {
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+
+					const uint volIndex = mat->exteriorVolumeIndex;
+					EvalStack_PushUInt(volIndex);
+					break;
+				}
 				default:
 					// Something wrong here
 					break;
@@ -220,6 +364,22 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 				case EVAL_ALBEDO: {
 					const float3 albedo = GlossyTranslucentMaterial_Albedo(Texture_GetSpectrumValue(mat->glossytranslucent.kdTexIndex, hitPoint TEXTURES_PARAM));
 					EvalStack_PushFloat3(albedo);
+					break;
+				}
+				case EVAL_GET_INTERIOR_VOLUME: {
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+
+					const uint volIndex = mat->interiorVolumeIndex;
+					EvalStack_PushUInt(volIndex);
+					break;
+				}
+				case EVAL_GET_EXTERIOR_VOLUME: {
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+
+					const uint volIndex = mat->exteriorVolumeIndex;
+					EvalStack_PushUInt(volIndex);
 					break;
 				}
 				default:
@@ -237,6 +397,22 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					EvalStack_PushFloat3(albedo);
 					break;
 				}
+				case EVAL_GET_INTERIOR_VOLUME: {
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+
+					const uint volIndex = mat->interiorVolumeIndex;
+					EvalStack_PushUInt(volIndex);
+					break;
+				}
+				case EVAL_GET_EXTERIOR_VOLUME: {
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+
+					const uint volIndex = mat->exteriorVolumeIndex;
+					EvalStack_PushUInt(volIndex);
+					break;
+				}
 				default:
 					// Something wrong here
 					break;
@@ -250,6 +426,22 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 				case EVAL_ALBEDO: {
 					const float3 albedo = BLACK;
 					EvalStack_PushFloat3(albedo);
+					break;
+				}
+				case EVAL_GET_INTERIOR_VOLUME: {
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+
+					const uint volIndex = mat->interiorVolumeIndex;
+					EvalStack_PushUInt(volIndex);
+					break;
+				}
+				case EVAL_GET_EXTERIOR_VOLUME: {
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+
+					const uint volIndex = mat->exteriorVolumeIndex;
+					EvalStack_PushUInt(volIndex);
 					break;
 				}
 				default:
@@ -272,6 +464,91 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					EvalStack_PushFloat3(albedo);
 					break;
 				}
+				case EVAL_GET_VOLUME_MIX_SETUP1: {
+						float passThroughEvent;
+						EvalStack_PopFloat(passThroughEvent);
+
+						const float factor = Texture_GetFloatValue(mat->mix.mixFactorTexIndex, hitPoint TEXTURES_PARAM);
+						const float weight2 = clamp(factor, 0.f, 1.f);
+						const float weight1 = 1.f - weight2;
+
+						const float passThroughEvent1 = passThroughEvent / weight1;
+
+						EvalStack_PushFloat(passThroughEvent);
+						EvalStack_PushFloat(factor);
+						EvalStack_PushFloat(passThroughEvent1);
+						break;
+				}
+				case EVAL_GET_VOLUME_MIX_SETUP2: {
+						uint volIndex1;
+						EvalStack_PopUInt(volIndex1);
+
+						float factor;
+						EvalStack_PopFloat(factor);
+						const float weight2 = clamp(factor, 0.f, 1.f);
+						const float weight1 = 1.f - weight2;
+
+						float passThroughEvent;
+						EvalStack_PopFloat(passThroughEvent);
+
+						const float passThroughEvent2 = (passThroughEvent - weight1) / weight2;
+						
+						EvalStack_PushFloat(passThroughEvent);
+						EvalStack_PushFloat(factor);
+						EvalStack_PushUInt(volIndex1);
+						EvalStack_PushFloat(passThroughEvent2);
+						break;
+				}
+				case EVAL_GET_INTERIOR_VOLUME: {
+					const uint volIndex = mat->interiorVolumeIndex;
+					if (volIndex != NULL_INDEX) {
+						float passThroughEvent;
+						EvalStack_PopFloat(passThroughEvent);
+						
+						EvalStack_PushUInt(volIndex);
+					} else {
+						uint volIndex1, volIndex2;
+						EvalStack_PopUInt(volIndex2);
+						EvalStack_PopUInt(volIndex1);
+
+						float factor;
+						EvalStack_PopFloat(factor);
+						const float weight2 = clamp(factor, 0.f, 1.f);
+						const float weight1 = 1.f - weight2;
+
+						float passThroughEvent;
+						EvalStack_PopFloat(passThroughEvent);
+
+						const uint volIndex = (passThroughEvent < weight1) ? volIndex1 : volIndex2;
+						EvalStack_PushUInt(volIndex);
+					}
+					break;
+				}
+				case EVAL_GET_EXTERIOR_VOLUME: {
+					const uint volIndex = mat->exteriorVolumeIndex;
+					if (volIndex != NULL_INDEX) {
+						float passThroughEvent;
+						EvalStack_PopFloat(passThroughEvent);
+						
+						EvalStack_PushUInt(volIndex);
+					} else {
+						uint volIndex1, volIndex2;
+						EvalStack_PopUInt(volIndex2);
+						EvalStack_PopUInt(volIndex1);
+
+						float factor;
+						EvalStack_PopFloat(factor);
+						const float weight2 = clamp(factor, 0.f, 1.f);
+						const float weight1 = 1.f - weight2;
+
+						float passThroughEvent;
+						EvalStack_PopFloat(passThroughEvent);
+
+						const uint volIndex = (passThroughEvent < weight1) ? volIndex1 : volIndex2;
+						EvalStack_PushUInt(volIndex);
+					}
+					break;
+				}
 				default:
 					// Something wrong here
 					break;
@@ -290,6 +567,30 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					EvalStack_PushFloat3(albedo);
 					break;
 				}
+				case EVAL_GET_INTERIOR_VOLUME: {
+					const uint volIndex = mat->interiorVolumeIndex;
+					if (volIndex != NULL_INDEX) {
+						float passThroughEvent;
+						EvalStack_PopFloat(passThroughEvent);
+
+						EvalStack_PushUInt(volIndex);
+					}
+					// Else nothing to do because there is already the matBase volume
+					// index on the stack
+					break;
+				}
+				case EVAL_GET_EXTERIOR_VOLUME: {
+					const uint volIndex = mat->exteriorVolumeIndex;
+					if (volIndex != NULL_INDEX) {
+						float passThroughEvent;
+						EvalStack_PopFloat(passThroughEvent);
+
+						EvalStack_PushUInt(volIndex);
+					}
+					// Else nothing to do because there is already the matBase volume
+					// index on the stack
+					break;
+				}
 				default:
 					// Something wrong here
 					break;
@@ -303,6 +604,22 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 				case EVAL_ALBEDO: {		
 					const float3 albedo = WHITE;
 					EvalStack_PushFloat3(albedo);
+					break;
+				}
+				case EVAL_GET_INTERIOR_VOLUME: {
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+
+					const uint volIndex = mat->interiorVolumeIndex;
+					EvalStack_PushUInt(volIndex);
+					break;
+				}
+				case EVAL_GET_EXTERIOR_VOLUME: {
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+
+					const uint volIndex = mat->exteriorVolumeIndex;
+					EvalStack_PushUInt(volIndex);
 					break;
 				}
 				default:
@@ -320,6 +637,22 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					EvalStack_PushFloat3(albedo);
 					break;
 				}
+				case EVAL_GET_INTERIOR_VOLUME: {
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+
+					const uint volIndex = mat->interiorVolumeIndex;
+					EvalStack_PushUInt(volIndex);
+					break;
+				}
+				case EVAL_GET_EXTERIOR_VOLUME: {
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+
+					const uint volIndex = mat->exteriorVolumeIndex;
+					EvalStack_PushUInt(volIndex);
+					break;
+				}
 				default:
 					// Something wrong here
 					break;
@@ -333,6 +666,22 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 				case EVAL_ALBEDO: {		
 					const float3 albedo = WHITE;
 					EvalStack_PushFloat3(albedo);
+					break;
+				}
+				case EVAL_GET_INTERIOR_VOLUME: {
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+
+					const uint volIndex = mat->interiorVolumeIndex;
+					EvalStack_PushUInt(volIndex);
+					break;
+				}
+				case EVAL_GET_EXTERIOR_VOLUME: {
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+
+					const uint volIndex = mat->exteriorVolumeIndex;
+					EvalStack_PushUInt(volIndex);
 					break;
 				}
 				default:
@@ -350,6 +699,22 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					EvalStack_PushFloat3(albedo);
 					break;
 				}
+				case EVAL_GET_INTERIOR_VOLUME: {
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+
+					const uint volIndex = mat->interiorVolumeIndex;
+					EvalStack_PushUInt(volIndex);
+					break;
+				}
+				case EVAL_GET_EXTERIOR_VOLUME: {
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+
+					const uint volIndex = mat->exteriorVolumeIndex;
+					EvalStack_PushUInt(volIndex);
+					break;
+				}
 				default:
 					// Something wrong here
 					break;
@@ -363,6 +728,22 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 				case EVAL_ALBEDO: {		
 					const float3 albedo = WHITE;
 					EvalStack_PushFloat3(albedo);
+					break;
+				}
+				case EVAL_GET_INTERIOR_VOLUME: {
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+
+					const uint volIndex = mat->interiorVolumeIndex;
+					EvalStack_PushUInt(volIndex);
+					break;
+				}
+				case EVAL_GET_EXTERIOR_VOLUME: {
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+
+					const uint volIndex = mat->exteriorVolumeIndex;
+					EvalStack_PushUInt(volIndex);
 					break;
 				}
 				default:
@@ -382,6 +763,22 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					EvalStack_PushFloat3(albedo);
 					break;
 				}
+				case EVAL_GET_INTERIOR_VOLUME: {
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+
+					const uint volIndex = mat->interiorVolumeIndex;
+					EvalStack_PushUInt(volIndex);
+					break;
+				}
+				case EVAL_GET_EXTERIOR_VOLUME: {
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+
+					const uint volIndex = mat->exteriorVolumeIndex;
+					EvalStack_PushUInt(volIndex);
+					break;
+				}
 				default:
 					// Something wrong here
 					break;
@@ -397,6 +794,22 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 							Texture_GetSpectrumValue(mat->volume.heterogenous.sigmaSTexIndex, hitPoint TEXTURES_PARAM),
 							Texture_GetSpectrumValue(mat->volume.heterogenous.sigmaATexIndex, hitPoint TEXTURES_PARAM));
 					EvalStack_PushFloat3(albedo);
+					break;
+				}
+				case EVAL_GET_INTERIOR_VOLUME: {
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+
+					const uint volIndex = mat->interiorVolumeIndex;
+					EvalStack_PushUInt(volIndex);
+					break;
+				}
+				case EVAL_GET_EXTERIOR_VOLUME: {
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+
+					const uint volIndex = mat->exteriorVolumeIndex;
+					EvalStack_PushUInt(volIndex);
 					break;
 				}
 				default:

@@ -25,6 +25,11 @@
 
 typedef enum {
 	EVAL_ALBEDO,
+	EVAL_GET_INTERIOR_VOLUME,
+	EVAL_GET_EXTERIOR_VOLUME,
+	// For the very special case of Mix material
+	EVAL_GET_VOLUME_MIX_SETUP1,
+	EVAL_GET_VOLUME_MIX_SETUP2
 } MaterialEvalOpType;
 
 typedef struct {
@@ -311,7 +316,10 @@ typedef struct {
 	// The result of calling Material::IsDelta()
 	int isDelta; 
 
+	// Material eval. ops start index and length 
 	unsigned int evalAlbedoOpStartIndex, evalAlbedoOpLength;
+	unsigned int evalGetInteriorVolumeOpStartIndex, evalGetInteriorVolumeOpLength;
+	unsigned int evalGetExteriorVolumeOpStartIndex, evalGetExteriorVolumeOpLength;
 
 	union {
 		MatteParam matte;

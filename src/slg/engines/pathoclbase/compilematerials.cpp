@@ -95,6 +95,14 @@ u_int CompiledScene::CompileMaterialOps(const u_int matIndex,
 				case slg::ocl::EVAL_ALBEDO:
 					evalOpStackSize += 3;
 					break;
+				case slg::ocl::EVAL_GET_INTERIOR_VOLUME:
+					// 1 x parameter and 1 x result
+					evalOpStackSize += 1;
+					break;
+				case slg::ocl::EVAL_GET_EXTERIOR_VOLUME:
+					// 1 x parameter and 1 x result
+					evalOpStackSize += 1;
+					break;
 				default:
 					throw runtime_error("Unknown eval. type in CompiledScene::CompileMaterialOps(" + ToString(mat->type) + "): " + ToString(opType));
 			}
@@ -108,6 +116,34 @@ u_int CompiledScene::CompileMaterialOps(const u_int matIndex,
 					evalOpStackSize += CompileMaterialOps(mat->mix.matAIndex, slg::ocl::EVAL_ALBEDO);
 					evalOpStackSize += CompileMaterialOps(mat->mix.matBIndex, slg::ocl::EVAL_ALBEDO);
 					break;
+				case slg::ocl::EVAL_GET_VOLUME_MIX_SETUP1:
+					evalOpStackSize += 3;
+					break;
+				case slg::ocl::EVAL_GET_VOLUME_MIX_SETUP2:
+					evalOpStackSize += 4;
+					break;
+				case slg::ocl::EVAL_GET_INTERIOR_VOLUME:
+					if (mat->interiorVolumeIndex == NULL_INDEX) {
+						evalOpStackSize += CompileMaterialOps(matIndex, slg::ocl::EVAL_GET_VOLUME_MIX_SETUP1);
+						evalOpStackSize += CompileMaterialOps(mat->mix.matAIndex, slg::ocl::EVAL_GET_INTERIOR_VOLUME);
+						evalOpStackSize += CompileMaterialOps(matIndex, slg::ocl::EVAL_GET_VOLUME_MIX_SETUP2);
+						evalOpStackSize += CompileMaterialOps(mat->mix.matBIndex, slg::ocl::EVAL_GET_INTERIOR_VOLUME);
+					}
+
+					// 1 x parameter and 1 x result
+					evalOpStackSize += 1;	
+					break;
+				case slg::ocl::EVAL_GET_EXTERIOR_VOLUME:
+					if (mat->exteriorVolumeIndex == NULL_INDEX) {
+						evalOpStackSize += CompileMaterialOps(matIndex, slg::ocl::EVAL_GET_VOLUME_MIX_SETUP1);
+						evalOpStackSize += CompileMaterialOps(mat->mix.matAIndex, slg::ocl::EVAL_GET_EXTERIOR_VOLUME);
+						evalOpStackSize += CompileMaterialOps(matIndex, slg::ocl::EVAL_GET_VOLUME_MIX_SETUP2);
+						evalOpStackSize += CompileMaterialOps(mat->mix.matBIndex, slg::ocl::EVAL_GET_EXTERIOR_VOLUME);
+					}
+
+					// 1 x parameter and 1 x result
+					evalOpStackSize += 1;	
+					break;
 				default:
 					throw runtime_error("Unknown eval. type in CompiledScene::CompileMaterialOps(" + ToString(mat->type) + "): " + ToString(opType));
 			}
@@ -116,6 +152,20 @@ u_int CompiledScene::CompileMaterialOps(const u_int matIndex,
 			switch (opType) {
 				case slg::ocl::EVAL_ALBEDO:
 					evalOpStackSize += CompileMaterialOps(mat->glossycoating.matBaseIndex, slg::ocl::EVAL_ALBEDO);
+					break;
+				case slg::ocl::EVAL_GET_INTERIOR_VOLUME:
+					if (mat->interiorVolumeIndex == NULL_INDEX)
+						evalOpStackSize += CompileMaterialOps(mat->glossycoating.matBaseIndex, slg::ocl::EVAL_GET_INTERIOR_VOLUME);
+
+					// 1 x parameter and 1 x result
+					evalOpStackSize += 1;					
+					break;
+				case slg::ocl::EVAL_GET_EXTERIOR_VOLUME:
+					if (mat->exteriorVolumeIndex == NULL_INDEX)
+						evalOpStackSize += CompileMaterialOps(mat->glossycoating.matBaseIndex, slg::ocl::EVAL_GET_EXTERIOR_VOLUME);
+
+					// 1 x parameter and 1 x result
+					evalOpStackSize += 1;
 					break;
 				default:
 					throw runtime_error("Unknown eval. type in CompiledScene::CompileMaterialOps(" + ToString(mat->type) + "): " + ToString(opType));
@@ -149,10 +199,30 @@ void CompiledScene::CompileMaterialOps() {
 		//----------------------------------------------------------------------
 		
 		mat->evalAlbedoOpStartIndex = matEvalOps.size();
-		const u_int evalOpsStackSizeFloat = CompileMaterialOps(i, slg::ocl::MaterialEvalOpType::EVAL_ALBEDO);
+		const u_int evalAlbedoOpsStackSizeFloat = CompileMaterialOps(i, slg::ocl::MaterialEvalOpType::EVAL_ALBEDO);
 		mat->evalAlbedoOpLength = matEvalOps.size() - mat->evalAlbedoOpStartIndex;
 
-		maxMaterialEvalStackSize = Max(maxMaterialEvalStackSize, evalOpsStackSizeFloat);
+		maxMaterialEvalStackSize = Max(maxMaterialEvalStackSize, evalAlbedoOpsStackSizeFloat);
+
+		//----------------------------------------------------------------------
+		// EVAL_GET_INTERIOR_VOLUME
+		//----------------------------------------------------------------------
+		
+		mat->evalGetInteriorVolumeOpStartIndex = matEvalOps.size();
+		const u_int evalGetInteriorVolumeOpsStackSizeFloat = CompileMaterialOps(i, slg::ocl::MaterialEvalOpType::EVAL_GET_INTERIOR_VOLUME);
+		mat->evalGetInteriorVolumeOpLength = matEvalOps.size() - mat->evalGetInteriorVolumeOpStartIndex;
+
+		maxMaterialEvalStackSize = Max(maxMaterialEvalStackSize, evalGetInteriorVolumeOpsStackSizeFloat);
+
+		//----------------------------------------------------------------------
+		// EVAL_GET_EXTERIOR_VOLUME
+		//----------------------------------------------------------------------
+		
+		mat->evalGetExteriorVolumeOpStartIndex = matEvalOps.size();
+		const u_int evalGetExteriorVolumeOpsStackSizeFloat = CompileMaterialOps(i, slg::ocl::MaterialEvalOpType::EVAL_GET_EXTERIOR_VOLUME);
+		mat->evalGetExteriorVolumeOpLength = matEvalOps.size() - mat->evalGetExteriorVolumeOpStartIndex;
+
+		maxMaterialEvalStackSize = Max(maxMaterialEvalStackSize, evalGetExteriorVolumeOpsStackSizeFloat);
 	}
 
 	SLG_LOG("Material evaluation ops count: " << matEvalOps.size());
@@ -725,14 +795,6 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 	AddMaterialSourceSwitch(source, mats, "GetEmittedRadianceWithDynamic", "GetEmittedRadiance", "float3", "BLACK",
 			"const uint index, __global const HitPoint *hitPoint, const float oneOverPrimitiveArea MATERIALS_PARAM_DECL",
 			"mat, hitPoint, oneOverPrimitiveArea MATERIALS_PARAM");
-
-	// Generate the code for generic Material_GetInteriorVolumeWithDynamic() and Material_GetExteriorVolumeWithDynamic()
-	AddMaterialSourceSwitch(source, mats, "GetInteriorVolumeWithDynamic", "GetInteriorVolume", "uint", "NULL_INDEX",
-			"const uint index, __global const HitPoint *hitPoint, const float passThroughEvent MATERIALS_PARAM_DECL",
-			"mat, hitPoint, passThroughEvent MATERIALS_PARAM");
-	AddMaterialSourceSwitch(source, mats, "GetExteriorVolumeWithDynamic", "GetExteriorVolume", "uint", "NULL_INDEX",
-			"const uint index, __global const HitPoint *hitPoint, const float passThroughEvent MATERIALS_PARAM_DECL",
-			"mat, hitPoint, passThroughEvent MATERIALS_PARAM");
 
 	return source.str();
 }

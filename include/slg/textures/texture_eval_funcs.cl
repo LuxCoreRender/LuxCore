@@ -34,9 +34,9 @@
 #define EvalStack_PopFloat(a) { *evalStackOffset = *evalStackOffset - 1; a = evalStack[*evalStackOffset]; }
 #define EvalStack_PopFloat2(a) { EvalStack_PopFloat(a.s1); EvalStack_PopFloat(a.s0); }
 #define EvalStack_PopFloat3(a) { EvalStack_PopFloat(a.s2); EvalStack_PopFloat(a.s1); EvalStack_PopFloat(a.s0); }
-#define EvalStack_Read(x) (evalStack[(*evalStackOffset) + x])
-#define EvalStack_Read2(x) ((float2)(evalStack[(*evalStackOffset) + x], evalStack[(*evalStackOffset) + x + 1]))
-#define EvalStack_Read3(x) ((float3)(evalStack[(*evalStackOffset) + x], evalStack[(*evalStackOffset) + x + 1], evalStack[(*evalStackOffset) + x + 2]))
+#define EvalStack_ReadFloat(x) (evalStack[(*evalStackOffset) + x])
+#define EvalStack_ReadFloat2(x) ((float2)(evalStack[(*evalStackOffset) + x], evalStack[(*evalStackOffset) + x + 1]))
+#define EvalStack_ReadFloat3(x) ((float3)(evalStack[(*evalStackOffset) + x], evalStack[(*evalStackOffset) + x + 1], evalStack[(*evalStackOffset) + x + 2]))
 
 OPENCL_FORCE_NOT_INLINE void Texture_EvalOpGenericBumpOffsetU(
 		__global float *evalStack,
@@ -72,9 +72,9 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOpGenericBumpOffsetV(
 		__global const HitPoint *hitPoint,
 		const float sampleDistance) {
 	// -1 is for result of EVAL_BUMP_GENERIC_OFFSET_U
-	const float3 origP = EvalStack_Read3(-8 - 1);
-	const float3 origShadeN = EvalStack_Read3(-5 - 1);
-	const float2 origUV = EvalStack_Read2(-2 - 1);
+	const float3 origP = EvalStack_ReadFloat3(-8 - 1);
+	const float3 origShadeN = EvalStack_ReadFloat3(-5 - 1);
+	const float2 origUV = EvalStack_ReadFloat2(-2 - 1);
 
 	// Update HitPoint
 	__global HitPoint *hitPointTmp = (__global HitPoint *)hitPoint;
@@ -2460,7 +2460,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 					// Read localPoint
 					//
 					// Note: -3 is there to skip the result of EVAL_TRIPLANAR_STEP_1
-					const float3 localPoint = EvalStack_Read3(-3 - 3);
+					const float3 localPoint = EvalStack_ReadFloat3(-3 - 3);
 
 					// Update HitPoint
 					__global HitPoint *hitPointTmp = (__global HitPoint *)hitPoint;
@@ -2473,7 +2473,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 					// Read localPoint
 					//
 					// Note: -6 is there to skip the result of EVAL_TRIPLANAR_STEP_1 and EVAL_TRIPLANAR_STEP_2
-					const float3 localPoint = EvalStack_Read3(-3 - 6);
+					const float3 localPoint = EvalStack_ReadFloat3(-3 - 6);
 
 					// Update HitPoint
 					__global HitPoint *hitPointTmp = (__global HitPoint *)hitPoint;
@@ -2530,7 +2530,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 					// Read original hit point
 					//
 					// Note: -1 is there to skip the result of EVAL_BUMP_TRIPLANAR_STEP_1
-					const float3 p = EvalStack_Read3(-1 - 3);
+					const float3 p = EvalStack_ReadFloat3(-1 - 3);
 
 					// Update HitPoint
 					__global HitPoint *hitPointTmp = (__global HitPoint *)hitPoint;
@@ -2543,7 +2543,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 					// Read original hit point
 					//
 					// Note: -2 is there to skip the result of EVAL_BUMP_TRIPLANAR_STEP_2
-					const float3 p = EvalStack_Read3(-2 - 3);
+					const float3 p = EvalStack_ReadFloat3(-2 - 3);
 
 					// Update HitPoint
 					__global HitPoint *hitPointTmp = (__global HitPoint *)hitPoint;
