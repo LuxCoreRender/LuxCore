@@ -213,7 +213,8 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_texture_irregulardata_funcs <<
 			slg::ocl::KernelSource_texture_funcs <<
 			slg::ocl::KernelSource_texture_bump_funcs <<
-			slg::ocl::KernelSource_texture_eval_funcs;
+			slg::ocl::KernelSource_texture_eval_funcs1 <<
+			slg::ocl::KernelSource_texture_eval_funcs2;
 
 	ssKernel <<
 			slg::ocl::KernelSource_materialdefs_funcs_generic <<

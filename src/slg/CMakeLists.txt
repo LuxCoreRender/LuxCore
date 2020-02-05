@@ -302,7 +302,8 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/textures/mapping/mapping_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_eval_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_eval_funcs1.cl
+	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_eval_funcs2.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_blender_noise_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_blender_noise_funcs2.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_blender_funcs.cl
@@ -660,7 +661,8 @@ set(SLG_KERNEL_SRCS
 	${generated_kernels_dir}/material_main_kernel.cpp
 	${generated_kernels_dir}/texture_types_kernel.cpp
 	${generated_kernels_dir}/texture_funcs_kernel.cpp
-	${generated_kernels_dir}/texture_eval_funcs_kernel.cpp
+	${generated_kernels_dir}/texture_eval_funcs1_kernel.cpp
+	${generated_kernels_dir}/texture_eval_funcs2_kernel.cpp
 	${generated_kernels_dir}/texture_blender_noise_funcs_kernel.cpp
 	${generated_kernels_dir}/texture_blender_noise_funcs2_kernel.cpp
 	${generated_kernels_dir}/texture_blender_funcs_kernel.cpp
