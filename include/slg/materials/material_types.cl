@@ -27,9 +27,12 @@ typedef enum {
 	EVAL_ALBEDO,
 	EVAL_GET_INTERIOR_VOLUME,
 	EVAL_GET_EXTERIOR_VOLUME,
+	EVAL_GET_EMITTED_RADIANCE,
 	// For the very special case of Mix material
 	EVAL_GET_VOLUME_MIX_SETUP1,
-	EVAL_GET_VOLUME_MIX_SETUP2
+	EVAL_GET_VOLUME_MIX_SETUP2,
+	EVAL_GET_EMITTED_RADIANCE_MIX_SETUP1,
+	EVAL_GET_EMITTED_RADIANCE_MIX_SETUP2
 } MaterialEvalOpType;
 
 typedef struct {
@@ -320,6 +323,7 @@ typedef struct {
 	unsigned int evalAlbedoOpStartIndex, evalAlbedoOpLength;
 	unsigned int evalGetInteriorVolumeOpStartIndex, evalGetInteriorVolumeOpLength;
 	unsigned int evalGetExteriorVolumeOpStartIndex, evalGetExteriorVolumeOpLength;
+	unsigned int evalGetEmittedRadianceOpStartIndex, evalGetEmittedRadianceOpLength;
 
 	union {
 		MatteParam matte;

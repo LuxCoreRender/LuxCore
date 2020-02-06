@@ -426,14 +426,3 @@ OPENCL_FORCE_NOT_INLINE float3 Material_GetPassThroughTransparencyWithoutDynamic
 			return DefaultMaterial_GetPassThroughTransparency(material, hitPoint, localFixedDir, passThroughEvent, backTracing TEXTURES_PARAM);
 	}
 }
-
-//------------------------------------------------------------------------------
-// Material_GetEmittedRadianceWithoutDynamic
-//------------------------------------------------------------------------------
-
-OPENCL_FORCE_NOT_INLINE float3 Material_GetEmittedRadianceWithoutDynamic(__global const Material* restrict material,
-		__global const HitPoint *hitPoint, const float oneOverPrimitiveArea
-		MATERIALS_PARAM_DECL) {
-	return DefaultMaterial_GetEmittedRadiance(material, hitPoint, oneOverPrimitiveArea
-		TEXTURES_PARAM);
-}

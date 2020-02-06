@@ -157,15 +157,47 @@ OPENCL_FORCE_INLINE float3 Material_GetPassThroughTransparency(const uint matInd
 OPENCL_FORCE_INLINE float3 Material_GetEmittedRadiance(const uint matIndex,
 		__global const HitPoint *hitPoint, const float oneOverPrimitiveArea
 		MATERIALS_PARAM_DECL) {
-	__global const Material *material = &mats[matIndex];
+#if defined(DEBUG_PRINTF_MATERIAL_EVAL)
+	printf("===============================================================\n");
+	printf("Material_GetEmittedRadiance()\n");
+	printf("===============================================================\n");
+#endif
+
+	__global const Material* restrict startMat = &mats[matIndex];
+	const size_t gid = get_global_id(0);
+	__global float *evalStack = &matEvalStacks[gid * maxMaterialEvalStackSize];
+
+	const uint evalOpStartIndex = startMat->evalGetEmittedRadianceOpStartIndex;
+	const uint evalOpLength = startMat->evalGetEmittedRadianceOpLength;
+
+#if defined(DEBUG_PRINTF_MATERIAL_EVAL)
+	printf("matIndex=%d evalOpStartIndex=%d evalOpLength=%d\n", matIndex, evalOpStartIndex, evalOpLength);
+#endif
+
+	uint evalStackOffsetVal = 0;
+	uint *evalStackOffset = &evalStackOffsetVal; // Used by macros
+	// Evaluation parameters
+	EvalStack_PushFloat(oneOverPrimitiveArea);
+
+	for (uint i = 0; i < evalOpLength; ++i) {
+#if defined(DEBUG_PRINTF_MATERIAL_EVAL)
+		printf("EvalOp: #%d evalStackOffset=%d\n", i, evalStackOffsetVal);
+#endif
+
+		__global const MaterialEvalOp* restrict evalOp = &matEvalOps[evalOpStartIndex + i];
+
+		Material_EvalOp(evalOp, evalStack, &evalStackOffsetVal, hitPoint MATERIALS_PARAM);
+	}
+#if defined(DEBUG_PRINTF_MATERIAL_EVAL)
+	printf("evalStackOffset=#%d\n", evalStackOffsetVal);
+#endif
 
 	float3 result;
-	if (Material_IsDynamic(material))
-		result = Material_GetEmittedRadianceWithDynamic(matIndex, hitPoint, oneOverPrimitiveArea
-			MATERIALS_PARAM);
-	else
-		result = Material_GetEmittedRadianceWithoutDynamic(material, hitPoint, oneOverPrimitiveArea
-			MATERIALS_PARAM);
+	EvalStack_PopFloat3(result);
+
+#if defined(DEBUG_PRINTF_MATERIAL_EVAL)
+	printf("Result=(%f, %f, %f)\n", result.s0, result.s1, result.s2);
+#endif
 
 	return result;
 }

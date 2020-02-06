@@ -319,14 +319,3 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>
 	
 	return result;
 }
-
-OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_GetEmittedRadiance(__global const Material* restrict material,
-		__global const HitPoint *hitPoint, const float oneOverPrimitiveArea
-		MATERIALS_PARAM_DECL) {
-	if (material->emitTexIndex != NULL_INDEX)
-		return Material_GetEmittedRadianceWithoutDynamic(material, hitPoint, oneOverPrimitiveArea MATERIALS_PARAM);
-	else
-		return <<CS_MAT_BASE_PREFIX>>_GetEmittedRadiance<<CS_MAT_BASE_POSTFIX>>(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
-				   hitPoint, oneOverPrimitiveArea
-				   MATERIALS_PARAM);
-}

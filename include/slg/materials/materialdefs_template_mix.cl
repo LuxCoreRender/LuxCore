@@ -209,27 +209,3 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_Sample(__
 
 	return result / *pdfW;
 }
-
-OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_MIX_MATERIAL_INDEX>>_GetEmittedRadiance(__global const Material *material,
-		__global const HitPoint *hitPoint, const float oneOverPrimitiveArea
-		MATERIALS_PARAM_DECL) {
-	if (material->emitTexIndex != NULL_INDEX)
-		return Material_GetEmittedRadianceWithoutDynamic(material, hitPoint, oneOverPrimitiveArea MATERIALS_PARAM);
-	else {
-		float3 result = BLACK;
-		const float factor = <<CS_FACTOR_TEXTURE>>;
-		const float weight2 = clamp(factor, 0.f, 1.f);
-		const float weight1 = 1.f - weight2;
-
-		if (weight1 > 0.f)
-		   result += weight1 * <<CS_MAT_A_PREFIX>>_GetEmittedRadiance<<CS_MAT_A_POSTFIX>>(&mats[<<CS_MAT_A_MATERIAL_INDEX>>],
-				   hitPoint, oneOverPrimitiveArea
-				   MATERIALS_PARAM);
-		if (weight2 > 0.f)
-		   result += weight2 * <<CS_MAT_B_PREFIX>>_GetEmittedRadiance<<CS_MAT_B_POSTFIX>>(&mats[<<CS_MAT_B_MATERIAL_INDEX>>],
-				   hitPoint, oneOverPrimitiveArea
-				   MATERIALS_PARAM);
-
-		return result;
-	}
-}

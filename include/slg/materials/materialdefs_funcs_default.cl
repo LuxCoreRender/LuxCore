@@ -23,6 +23,22 @@
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
+// DefaultMaterial_GetInteriorVolume
+//------------------------------------------------------------------------------
+
+OPENCL_FORCE_INLINE uint DefaultMaterial_GetInteriorVolume(__global const Material *material) {
+	return material->interiorVolumeIndex;
+}
+
+//------------------------------------------------------------------------------
+// DefaultMaterial_GetExteriorVolume
+//------------------------------------------------------------------------------
+
+OPENCL_FORCE_INLINE uint DefaultMaterial_GetExteriorVolume(__global const Material *material) {
+	return material->exteriorVolumeIndex;
+}
+
+//------------------------------------------------------------------------------
 // DefaultMaterial_GetPassThroughTransparency
 //------------------------------------------------------------------------------
 

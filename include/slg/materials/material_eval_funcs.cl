@@ -75,7 +75,7 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					float passThroughEvent;
 					EvalStack_PopFloat(passThroughEvent);
 
-					const uint volIndex = mat->interiorVolumeIndex;
+					const uint volIndex = DefaultMaterial_GetInteriorVolume(mat);
 					EvalStack_PushUInt(volIndex);
 					break;
 				}
@@ -83,8 +83,16 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					float passThroughEvent;
 					EvalStack_PopFloat(passThroughEvent);
 
-					const uint volIndex = mat->exteriorVolumeIndex;
+					const uint volIndex = DefaultMaterial_GetExteriorVolume(mat);
 					EvalStack_PushUInt(volIndex);
+					break;
+				}
+				case EVAL_GET_EMITTED_RADIANCE: {
+					float oneOverPrimitiveArea;
+					EvalStack_PopFloat(oneOverPrimitiveArea);
+
+					const float3 emittedRadiance = DefaultMaterial_GetEmittedRadiance(mat, hitPoint, oneOverPrimitiveArea TEXTURES_PARAM);
+					EvalStack_PushFloat3(emittedRadiance);
 					break;
 				}
 				default:
@@ -108,7 +116,7 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					float passThroughEvent;
 					EvalStack_PopFloat(passThroughEvent);
 
-					const uint volIndex = mat->interiorVolumeIndex;
+					const uint volIndex = DefaultMaterial_GetInteriorVolume(mat);
 					EvalStack_PushUInt(volIndex);
 					break;
 				}
@@ -116,8 +124,16 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					float passThroughEvent;
 					EvalStack_PopFloat(passThroughEvent);
 
-					const uint volIndex = mat->exteriorVolumeIndex;
+					const uint volIndex = DefaultMaterial_GetExteriorVolume(mat);
 					EvalStack_PushUInt(volIndex);
+					break;
+				}
+				case EVAL_GET_EMITTED_RADIANCE: {
+					float oneOverPrimitiveArea;
+					EvalStack_PopFloat(oneOverPrimitiveArea);
+
+					const float3 emittedRadiance = DefaultMaterial_GetEmittedRadiance(mat, hitPoint, oneOverPrimitiveArea TEXTURES_PARAM);
+					EvalStack_PushFloat3(emittedRadiance);
 					break;
 				}
 				default:
@@ -139,7 +155,7 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					float passThroughEvent;
 					EvalStack_PopFloat(passThroughEvent);
 
-					const uint volIndex = mat->interiorVolumeIndex;
+					const uint volIndex = DefaultMaterial_GetInteriorVolume(mat);
 					EvalStack_PushUInt(volIndex);
 					break;
 				}
@@ -147,8 +163,16 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					float passThroughEvent;
 					EvalStack_PopFloat(passThroughEvent);
 
-					const uint volIndex = mat->exteriorVolumeIndex;
+					const uint volIndex = DefaultMaterial_GetExteriorVolume(mat);
 					EvalStack_PushUInt(volIndex);
+					break;
+				}
+				case EVAL_GET_EMITTED_RADIANCE: {
+					float oneOverPrimitiveArea;
+					EvalStack_PopFloat(oneOverPrimitiveArea);
+
+					const float3 emittedRadiance = DefaultMaterial_GetEmittedRadiance(mat, hitPoint, oneOverPrimitiveArea TEXTURES_PARAM);
+					EvalStack_PushFloat3(emittedRadiance);
 					break;
 				}
 				default:
@@ -175,7 +199,7 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					float passThroughEvent;
 					EvalStack_PopFloat(passThroughEvent);
 
-					const uint volIndex = mat->interiorVolumeIndex;
+					const uint volIndex = DefaultMaterial_GetInteriorVolume(mat);
 					EvalStack_PushUInt(volIndex);
 					break;
 				}
@@ -183,8 +207,16 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					float passThroughEvent;
 					EvalStack_PopFloat(passThroughEvent);
 
-					const uint volIndex = mat->exteriorVolumeIndex;
+					const uint volIndex = DefaultMaterial_GetExteriorVolume(mat);
 					EvalStack_PushUInt(volIndex);
+					break;
+				}
+				case EVAL_GET_EMITTED_RADIANCE: {
+					float oneOverPrimitiveArea;
+					EvalStack_PopFloat(oneOverPrimitiveArea);
+
+					const float3 emittedRadiance = DefaultMaterial_GetEmittedRadiance(mat, hitPoint, oneOverPrimitiveArea TEXTURES_PARAM);
+					EvalStack_PushFloat3(emittedRadiance);
 					break;
 				}
 				default:
@@ -206,7 +238,7 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					float passThroughEvent;
 					EvalStack_PopFloat(passThroughEvent);
 
-					const uint volIndex = mat->interiorVolumeIndex;
+					const uint volIndex = DefaultMaterial_GetInteriorVolume(mat);
 					EvalStack_PushUInt(volIndex);
 					break;
 				}
@@ -214,8 +246,16 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					float passThroughEvent;
 					EvalStack_PopFloat(passThroughEvent);
 
-					const uint volIndex = mat->exteriorVolumeIndex;
+					const uint volIndex = DefaultMaterial_GetExteriorVolume(mat);
 					EvalStack_PushUInt(volIndex);
+					break;
+				}
+				case EVAL_GET_EMITTED_RADIANCE: {
+					float oneOverPrimitiveArea;
+					EvalStack_PopFloat(oneOverPrimitiveArea);
+
+					const float3 emittedRadiance = DefaultMaterial_GetEmittedRadiance(mat, hitPoint, oneOverPrimitiveArea TEXTURES_PARAM);
+					EvalStack_PushFloat3(emittedRadiance);
 					break;
 				}
 				default:
@@ -244,7 +284,7 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					float passThroughEvent;
 					EvalStack_PopFloat(passThroughEvent);
 
-					const uint volIndex = mat->interiorVolumeIndex;
+					const uint volIndex = DefaultMaterial_GetInteriorVolume(mat);
 					EvalStack_PushUInt(volIndex);
 					break;
 				}
@@ -252,8 +292,16 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					float passThroughEvent;
 					EvalStack_PopFloat(passThroughEvent);
 
-					const uint volIndex = mat->exteriorVolumeIndex;
+					const uint volIndex = DefaultMaterial_GetExteriorVolume(mat);
 					EvalStack_PushUInt(volIndex);
+					break;
+				}
+				case EVAL_GET_EMITTED_RADIANCE: {
+					float oneOverPrimitiveArea;
+					EvalStack_PopFloat(oneOverPrimitiveArea);
+
+					const float3 emittedRadiance = DefaultMaterial_GetEmittedRadiance(mat, hitPoint, oneOverPrimitiveArea TEXTURES_PARAM);
+					EvalStack_PushFloat3(emittedRadiance);
 					break;
 				}
 				default:
@@ -275,7 +323,7 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					float passThroughEvent;
 					EvalStack_PopFloat(passThroughEvent);
 
-					const uint volIndex = mat->interiorVolumeIndex;
+					const uint volIndex = DefaultMaterial_GetInteriorVolume(mat);
 					EvalStack_PushUInt(volIndex);
 					break;
 				}
@@ -283,8 +331,16 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					float passThroughEvent;
 					EvalStack_PopFloat(passThroughEvent);
 
-					const uint volIndex = mat->exteriorVolumeIndex;
+					const uint volIndex = DefaultMaterial_GetExteriorVolume(mat);
 					EvalStack_PushUInt(volIndex);
+					break;
+				}
+				case EVAL_GET_EMITTED_RADIANCE: {
+					float oneOverPrimitiveArea;
+					EvalStack_PopFloat(oneOverPrimitiveArea);
+
+					const float3 emittedRadiance = DefaultMaterial_GetEmittedRadiance(mat, hitPoint, oneOverPrimitiveArea TEXTURES_PARAM);
+					EvalStack_PushFloat3(emittedRadiance);
 					break;
 				}
 				default:
@@ -306,7 +362,7 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					float passThroughEvent;
 					EvalStack_PopFloat(passThroughEvent);
 
-					const uint volIndex = mat->interiorVolumeIndex;
+					const uint volIndex = DefaultMaterial_GetInteriorVolume(mat);
 					EvalStack_PushUInt(volIndex);
 					break;
 				}
@@ -314,8 +370,16 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					float passThroughEvent;
 					EvalStack_PopFloat(passThroughEvent);
 
-					const uint volIndex = mat->exteriorVolumeIndex;
+					const uint volIndex = DefaultMaterial_GetExteriorVolume(mat);
 					EvalStack_PushUInt(volIndex);
+					break;
+				}
+				case EVAL_GET_EMITTED_RADIANCE: {
+					float oneOverPrimitiveArea;
+					EvalStack_PopFloat(oneOverPrimitiveArea);
+
+					const float3 emittedRadiance = DefaultMaterial_GetEmittedRadiance(mat, hitPoint, oneOverPrimitiveArea TEXTURES_PARAM);
+					EvalStack_PushFloat3(emittedRadiance);
 					break;
 				}
 				default:
@@ -339,7 +403,7 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					float passThroughEvent;
 					EvalStack_PopFloat(passThroughEvent);
 
-					const uint volIndex = mat->interiorVolumeIndex;
+					const uint volIndex = DefaultMaterial_GetInteriorVolume(mat);
 					EvalStack_PushUInt(volIndex);
 					break;
 				}
@@ -347,8 +411,16 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					float passThroughEvent;
 					EvalStack_PopFloat(passThroughEvent);
 
-					const uint volIndex = mat->exteriorVolumeIndex;
+					const uint volIndex = DefaultMaterial_GetExteriorVolume(mat);
 					EvalStack_PushUInt(volIndex);
+					break;
+				}
+				case EVAL_GET_EMITTED_RADIANCE: {
+					float oneOverPrimitiveArea;
+					EvalStack_PopFloat(oneOverPrimitiveArea);
+
+					const float3 emittedRadiance = DefaultMaterial_GetEmittedRadiance(mat, hitPoint, oneOverPrimitiveArea TEXTURES_PARAM);
+					EvalStack_PushFloat3(emittedRadiance);
 					break;
 				}
 				default:
@@ -370,7 +442,7 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					float passThroughEvent;
 					EvalStack_PopFloat(passThroughEvent);
 
-					const uint volIndex = mat->interiorVolumeIndex;
+					const uint volIndex = DefaultMaterial_GetInteriorVolume(mat);
 					EvalStack_PushUInt(volIndex);
 					break;
 				}
@@ -378,8 +450,16 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					float passThroughEvent;
 					EvalStack_PopFloat(passThroughEvent);
 
-					const uint volIndex = mat->exteriorVolumeIndex;
+					const uint volIndex = DefaultMaterial_GetExteriorVolume(mat);
 					EvalStack_PushUInt(volIndex);
+					break;
+				}
+				case EVAL_GET_EMITTED_RADIANCE: {
+					float oneOverPrimitiveArea;
+					EvalStack_PopFloat(oneOverPrimitiveArea);
+
+					const float3 emittedRadiance = DefaultMaterial_GetEmittedRadiance(mat, hitPoint, oneOverPrimitiveArea TEXTURES_PARAM);
+					EvalStack_PushFloat3(emittedRadiance);
 					break;
 				}
 				default:
@@ -401,7 +481,7 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					float passThroughEvent;
 					EvalStack_PopFloat(passThroughEvent);
 
-					const uint volIndex = mat->interiorVolumeIndex;
+					const uint volIndex = DefaultMaterial_GetInteriorVolume(mat);
 					EvalStack_PushUInt(volIndex);
 					break;
 				}
@@ -409,8 +489,16 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					float passThroughEvent;
 					EvalStack_PopFloat(passThroughEvent);
 
-					const uint volIndex = mat->exteriorVolumeIndex;
+					const uint volIndex = DefaultMaterial_GetExteriorVolume(mat);
 					EvalStack_PushUInt(volIndex);
+					break;
+				}
+				case EVAL_GET_EMITTED_RADIANCE: {
+					float oneOverPrimitiveArea;
+					EvalStack_PopFloat(oneOverPrimitiveArea);
+
+					const float3 emittedRadiance = DefaultMaterial_GetEmittedRadiance(mat, hitPoint, oneOverPrimitiveArea TEXTURES_PARAM);
+					EvalStack_PushFloat3(emittedRadiance);
 					break;
 				}
 				default:
@@ -432,7 +520,7 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					float passThroughEvent;
 					EvalStack_PopFloat(passThroughEvent);
 
-					const uint volIndex = mat->interiorVolumeIndex;
+					const uint volIndex = DefaultMaterial_GetInteriorVolume(mat);
 					EvalStack_PushUInt(volIndex);
 					break;
 				}
@@ -440,8 +528,16 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					float passThroughEvent;
 					EvalStack_PopFloat(passThroughEvent);
 
-					const uint volIndex = mat->exteriorVolumeIndex;
+					const uint volIndex = DefaultMaterial_GetExteriorVolume(mat);
 					EvalStack_PushUInt(volIndex);
+					break;
+				}
+				case EVAL_GET_EMITTED_RADIANCE: {
+					float oneOverPrimitiveArea;
+					EvalStack_PopFloat(oneOverPrimitiveArea);
+
+					const float3 emittedRadiance = DefaultMaterial_GetEmittedRadiance(mat, hitPoint, oneOverPrimitiveArea TEXTURES_PARAM);
+					EvalStack_PushFloat3(emittedRadiance);
 					break;
 				}
 				default:
@@ -465,39 +561,39 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					break;
 				}
 				case EVAL_GET_VOLUME_MIX_SETUP1: {
-						float passThroughEvent;
-						EvalStack_PopFloat(passThroughEvent);
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
 
-						const float factor = Texture_GetFloatValue(mat->mix.mixFactorTexIndex, hitPoint TEXTURES_PARAM);
-						const float weight2 = clamp(factor, 0.f, 1.f);
-						const float weight1 = 1.f - weight2;
+					const float factor = Texture_GetFloatValue(mat->mix.mixFactorTexIndex, hitPoint TEXTURES_PARAM);
+					const float weight2 = clamp(factor, 0.f, 1.f);
+					const float weight1 = 1.f - weight2;
 
-						const float passThroughEvent1 = passThroughEvent / weight1;
+					const float passThroughEvent1 = passThroughEvent / weight1;
 
-						EvalStack_PushFloat(passThroughEvent);
-						EvalStack_PushFloat(factor);
-						EvalStack_PushFloat(passThroughEvent1);
-						break;
+					EvalStack_PushFloat(passThroughEvent);
+					EvalStack_PushFloat(factor);
+					EvalStack_PushFloat(passThroughEvent1);
+					break;
 				}
 				case EVAL_GET_VOLUME_MIX_SETUP2: {
-						uint volIndex1;
-						EvalStack_PopUInt(volIndex1);
+					uint volIndex1;
+					EvalStack_PopUInt(volIndex1);
 
-						float factor;
-						EvalStack_PopFloat(factor);
-						const float weight2 = clamp(factor, 0.f, 1.f);
-						const float weight1 = 1.f - weight2;
+					float factor;
+					EvalStack_PopFloat(factor);
+					const float weight2 = clamp(factor, 0.f, 1.f);
+					const float weight1 = 1.f - weight2;
 
-						float passThroughEvent;
-						EvalStack_PopFloat(passThroughEvent);
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
 
-						const float passThroughEvent2 = (passThroughEvent - weight1) / weight2;
-						
-						EvalStack_PushFloat(passThroughEvent);
-						EvalStack_PushFloat(factor);
-						EvalStack_PushUInt(volIndex1);
-						EvalStack_PushFloat(passThroughEvent2);
-						break;
+					const float passThroughEvent2 = (passThroughEvent - weight1) / weight2;
+
+					EvalStack_PushFloat(passThroughEvent);
+					EvalStack_PushFloat(factor);
+					EvalStack_PushUInt(volIndex1);
+					EvalStack_PushFloat(passThroughEvent2);
+					break;
 				}
 				case EVAL_GET_INTERIOR_VOLUME: {
 					const uint volIndex = mat->interiorVolumeIndex;
@@ -547,6 +643,57 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 						const uint volIndex = (passThroughEvent < weight1) ? volIndex1 : volIndex2;
 						EvalStack_PushUInt(volIndex);
 					}
+					break;
+				}
+				case EVAL_GET_EMITTED_RADIANCE_MIX_SETUP1: {
+					float oneOverPrimitiveArea;
+					EvalStack_PopFloat(oneOverPrimitiveArea);
+
+					// To setup the following EVAL_GET_EMITTED_RADIANCE evaluation of first sub-nodes
+					EvalStack_PushFloat(oneOverPrimitiveArea);
+					EvalStack_PushFloat(oneOverPrimitiveArea);
+					break;
+				}
+				case EVAL_GET_EMITTED_RADIANCE_MIX_SETUP2: {
+					float3 emit1;
+					EvalStack_PopFloat3(emit1);
+
+					float oneOverPrimitiveArea;
+					EvalStack_PopFloat(oneOverPrimitiveArea);
+
+					// To setup the following EVAL_GET_EMITTED_RADIANCE evaluation of second sub-nodes
+					EvalStack_PushFloat(oneOverPrimitiveArea);
+					EvalStack_PushFloat3(emit1);
+					EvalStack_PushFloat(oneOverPrimitiveArea);
+					break;
+				}
+				case EVAL_GET_EMITTED_RADIANCE: {
+					float3 emittedRadiance;
+					if (mat->emitTexIndex != NULL_INDEX) {
+						float oneOverPrimitiveArea;
+						EvalStack_PopFloat(oneOverPrimitiveArea);
+
+						emittedRadiance = DefaultMaterial_GetEmittedRadiance(mat, hitPoint, oneOverPrimitiveArea TEXTURES_PARAM);
+					} else {
+						float3 emit1, emit2;
+						EvalStack_PopFloat3(emit2);
+						EvalStack_PopFloat3(emit1);
+
+						float oneOverPrimitiveArea;
+						EvalStack_PopFloat(oneOverPrimitiveArea);
+						
+						const float factor = Texture_GetFloatValue(mat->mix.mixFactorTexIndex, hitPoint TEXTURES_PARAM);
+						const float weight2 = clamp(factor, 0.f, 1.f);
+						const float weight1 = 1.f - weight2;
+
+						emittedRadiance = BLACK;
+						if (weight1 > 0.f)
+							emittedRadiance += weight1 * emit1;
+						 if (weight2 > 0.f)
+							emittedRadiance += weight2 * emit2;
+					}
+
+					EvalStack_PushFloat3(emittedRadiance);
 					break;
 				}
 				default:
@@ -591,6 +738,19 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					// index on the stack
 					break;
 				}
+				case EVAL_GET_EMITTED_RADIANCE: {
+					if (mat->emitTexIndex != NULL_INDEX) {
+						float oneOverPrimitiveArea;
+						EvalStack_PopFloat(oneOverPrimitiveArea);
+
+						const float3 emittedRadiance = DefaultMaterial_GetEmittedRadiance(mat, hitPoint, oneOverPrimitiveArea TEXTURES_PARAM);
+						
+						EvalStack_PushFloat3(emittedRadiance);
+					}
+					// Else nothing to do because there is already the matBase emitted
+					// radiance on the stack					
+					break;
+				}
 				default:
 					// Something wrong here
 					break;
@@ -610,7 +770,7 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					float passThroughEvent;
 					EvalStack_PopFloat(passThroughEvent);
 
-					const uint volIndex = mat->interiorVolumeIndex;
+					const uint volIndex = DefaultMaterial_GetInteriorVolume(mat);
 					EvalStack_PushUInt(volIndex);
 					break;
 				}
@@ -618,8 +778,16 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					float passThroughEvent;
 					EvalStack_PopFloat(passThroughEvent);
 
-					const uint volIndex = mat->exteriorVolumeIndex;
+					const uint volIndex = DefaultMaterial_GetExteriorVolume(mat);
 					EvalStack_PushUInt(volIndex);
+					break;
+				}
+				case EVAL_GET_EMITTED_RADIANCE: {
+					float oneOverPrimitiveArea;
+					EvalStack_PopFloat(oneOverPrimitiveArea);
+
+					const float3 emittedRadiance = DefaultMaterial_GetEmittedRadiance(mat, hitPoint, oneOverPrimitiveArea TEXTURES_PARAM);
+					EvalStack_PushFloat3(emittedRadiance);
 					break;
 				}
 				default:
@@ -641,7 +809,7 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					float passThroughEvent;
 					EvalStack_PopFloat(passThroughEvent);
 
-					const uint volIndex = mat->interiorVolumeIndex;
+					const uint volIndex = DefaultMaterial_GetInteriorVolume(mat);
 					EvalStack_PushUInt(volIndex);
 					break;
 				}
@@ -649,8 +817,16 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					float passThroughEvent;
 					EvalStack_PopFloat(passThroughEvent);
 
-					const uint volIndex = mat->exteriorVolumeIndex;
+					const uint volIndex = DefaultMaterial_GetExteriorVolume(mat);
 					EvalStack_PushUInt(volIndex);
+					break;
+				}
+				case EVAL_GET_EMITTED_RADIANCE: {
+					float oneOverPrimitiveArea;
+					EvalStack_PopFloat(oneOverPrimitiveArea);
+
+					const float3 emittedRadiance = DefaultMaterial_GetEmittedRadiance(mat, hitPoint, oneOverPrimitiveArea TEXTURES_PARAM);
+					EvalStack_PushFloat3(emittedRadiance);
 					break;
 				}
 				default:
@@ -672,7 +848,7 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					float passThroughEvent;
 					EvalStack_PopFloat(passThroughEvent);
 
-					const uint volIndex = mat->interiorVolumeIndex;
+					const uint volIndex = DefaultMaterial_GetInteriorVolume(mat);
 					EvalStack_PushUInt(volIndex);
 					break;
 				}
@@ -680,8 +856,16 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					float passThroughEvent;
 					EvalStack_PopFloat(passThroughEvent);
 
-					const uint volIndex = mat->exteriorVolumeIndex;
+					const uint volIndex = DefaultMaterial_GetExteriorVolume(mat);
 					EvalStack_PushUInt(volIndex);
+					break;
+				}
+				case EVAL_GET_EMITTED_RADIANCE: {
+					float oneOverPrimitiveArea;
+					EvalStack_PopFloat(oneOverPrimitiveArea);
+
+					const float3 emittedRadiance = DefaultMaterial_GetEmittedRadiance(mat, hitPoint, oneOverPrimitiveArea TEXTURES_PARAM);
+					EvalStack_PushFloat3(emittedRadiance);
 					break;
 				}
 				default:
@@ -703,7 +887,7 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					float passThroughEvent;
 					EvalStack_PopFloat(passThroughEvent);
 
-					const uint volIndex = mat->interiorVolumeIndex;
+					const uint volIndex = DefaultMaterial_GetInteriorVolume(mat);
 					EvalStack_PushUInt(volIndex);
 					break;
 				}
@@ -711,8 +895,16 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					float passThroughEvent;
 					EvalStack_PopFloat(passThroughEvent);
 
-					const uint volIndex = mat->exteriorVolumeIndex;
+					const uint volIndex = DefaultMaterial_GetExteriorVolume(mat);
 					EvalStack_PushUInt(volIndex);
+					break;
+				}
+				case EVAL_GET_EMITTED_RADIANCE: {
+					float oneOverPrimitiveArea;
+					EvalStack_PopFloat(oneOverPrimitiveArea);
+
+					const float3 emittedRadiance = DefaultMaterial_GetEmittedRadiance(mat, hitPoint, oneOverPrimitiveArea TEXTURES_PARAM);
+					EvalStack_PushFloat3(emittedRadiance);
 					break;
 				}
 				default:
@@ -734,7 +926,7 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					float passThroughEvent;
 					EvalStack_PopFloat(passThroughEvent);
 
-					const uint volIndex = mat->interiorVolumeIndex;
+					const uint volIndex = DefaultMaterial_GetInteriorVolume(mat);
 					EvalStack_PushUInt(volIndex);
 					break;
 				}
@@ -742,8 +934,16 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					float passThroughEvent;
 					EvalStack_PopFloat(passThroughEvent);
 
-					const uint volIndex = mat->exteriorVolumeIndex;
+					const uint volIndex = DefaultMaterial_GetExteriorVolume(mat);
 					EvalStack_PushUInt(volIndex);
+					break;
+				}
+				case EVAL_GET_EMITTED_RADIANCE: {
+					float oneOverPrimitiveArea;
+					EvalStack_PopFloat(oneOverPrimitiveArea);
+
+					const float3 emittedRadiance = DefaultMaterial_GetEmittedRadiance(mat, hitPoint, oneOverPrimitiveArea TEXTURES_PARAM);
+					EvalStack_PushFloat3(emittedRadiance);
 					break;
 				}
 				default:
@@ -767,7 +967,7 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					float passThroughEvent;
 					EvalStack_PopFloat(passThroughEvent);
 
-					const uint volIndex = mat->interiorVolumeIndex;
+					const uint volIndex = DefaultMaterial_GetInteriorVolume(mat);
 					EvalStack_PushUInt(volIndex);
 					break;
 				}
@@ -775,8 +975,16 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					float passThroughEvent;
 					EvalStack_PopFloat(passThroughEvent);
 
-					const uint volIndex = mat->exteriorVolumeIndex;
+					const uint volIndex = DefaultMaterial_GetExteriorVolume(mat);
 					EvalStack_PushUInt(volIndex);
+					break;
+				}
+				case EVAL_GET_EMITTED_RADIANCE: {
+					float oneOverPrimitiveArea;
+					EvalStack_PopFloat(oneOverPrimitiveArea);
+
+					const float3 emittedRadiance = DefaultMaterial_GetEmittedRadiance(mat, hitPoint, oneOverPrimitiveArea TEXTURES_PARAM);
+					EvalStack_PushFloat3(emittedRadiance);
 					break;
 				}
 				default:
@@ -800,7 +1008,7 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					float passThroughEvent;
 					EvalStack_PopFloat(passThroughEvent);
 
-					const uint volIndex = mat->interiorVolumeIndex;
+					const uint volIndex = DefaultMaterial_GetInteriorVolume(mat);
 					EvalStack_PushUInt(volIndex);
 					break;
 				}
@@ -808,8 +1016,16 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					float passThroughEvent;
 					EvalStack_PopFloat(passThroughEvent);
 
-					const uint volIndex = mat->exteriorVolumeIndex;
+					const uint volIndex = DefaultMaterial_GetExteriorVolume(mat);
 					EvalStack_PushUInt(volIndex);
+					break;
+				}
+				case EVAL_GET_EMITTED_RADIANCE: {
+					float oneOverPrimitiveArea;
+					EvalStack_PopFloat(oneOverPrimitiveArea);
+
+					const float3 emittedRadiance = DefaultMaterial_GetEmittedRadiance(mat, hitPoint, oneOverPrimitiveArea TEXTURES_PARAM);
+					EvalStack_PushFloat3(emittedRadiance);
 					break;
 				}
 				default:
