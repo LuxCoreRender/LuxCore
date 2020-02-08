@@ -18,6 +18,61 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-OPENCL_FORCE_INLINE float3 GlossyCoatingMaterial_Albedo(const float3 albedo) {
-	return albedo;
+OPENCL_FORCE_INLINE void GlossyCoatingMaterial_Albedo(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		TEXTURES_PARAM_DECL) {
+	float3 albedo1;
+	EvalStack_PopFloat3(albedo1);
+
+	const float3 albedo = albedo;
+	EvalStack_PushFloat3(albedo);
+}
+
+OPENCL_FORCE_INLINE void GlossyCoatingMaterial_GetInteriorVolume(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		TEXTURES_PARAM_DECL) {
+	const uint volIndex = material->interiorVolumeIndex;
+	if (volIndex != NULL_INDEX) {
+		float passThroughEvent;
+		EvalStack_PopFloat(passThroughEvent);
+
+		EvalStack_PushUInt(volIndex);
+	}
+	// Else nothing to do because there is already the matBase volume
+	// index on the stack
+}
+
+OPENCL_FORCE_INLINE void GlossyCoatingMaterial_GetExteriorVolume(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		TEXTURES_PARAM_DECL) {
+	const uint volIndex = material->exteriorVolumeIndex;
+	if (volIndex != NULL_INDEX) {
+		float passThroughEvent;
+		EvalStack_PopFloat(passThroughEvent);
+
+		EvalStack_PushUInt(volIndex);
+	}
+	// Else nothing to do because there is already the matBase volume
+	// index on the stack
+}
+
+OPENCL_FORCE_INLINE void GlossyCoatingMaterial_GetPassThroughTransparency(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		TEXTURES_PARAM_DECL) {
+	// Nothing to do there is already the matBase pass trough
+	// transparency on the stack
+}
+
+OPENCL_FORCE_INLINE void GlossyCoatingMaterial_GetEmittedRadiance(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		TEXTURES_PARAM_DECL) {
+	if (material->emitTexIndex != NULL_INDEX)
+		DefaultMaterial_GetEmittedRadiance(material, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+	// Else nothing to do because there is already the matBase emitted
+	// radiance on the stack	
 }

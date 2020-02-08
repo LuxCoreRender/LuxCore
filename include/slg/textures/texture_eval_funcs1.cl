@@ -25,19 +25,6 @@
 // Texture evaluation functions
 //------------------------------------------------------------------------------
 
-#define EvalStack_PushUInt(a) { ((__global uint *)evalStack)[*evalStackOffset] = a; *evalStackOffset = *evalStackOffset + 1; }
-#define EvalStack_PopUInt(a) { *evalStackOffset = *evalStackOffset - 1; a = ((__global uint *)evalStack)[*evalStackOffset]; }
-
-#define EvalStack_PushFloat(a) { evalStack[*evalStackOffset] = a; *evalStackOffset = *evalStackOffset + 1; }
-#define EvalStack_PushFloat2(a) { EvalStack_PushFloat(a.s0); EvalStack_PushFloat(a.s1); }
-#define EvalStack_PushFloat3(a) { EvalStack_PushFloat(a.s0); EvalStack_PushFloat(a.s1); EvalStack_PushFloat(a.s2); }
-#define EvalStack_PopFloat(a) { *evalStackOffset = *evalStackOffset - 1; a = evalStack[*evalStackOffset]; }
-#define EvalStack_PopFloat2(a) { EvalStack_PopFloat(a.s1); EvalStack_PopFloat(a.s0); }
-#define EvalStack_PopFloat3(a) { EvalStack_PopFloat(a.s2); EvalStack_PopFloat(a.s1); EvalStack_PopFloat(a.s0); }
-#define EvalStack_ReadFloat(x) (evalStack[(*evalStackOffset) + x])
-#define EvalStack_ReadFloat2(x) ((float2)(evalStack[(*evalStackOffset) + x], evalStack[(*evalStackOffset) + x + 1]))
-#define EvalStack_ReadFloat3(x) ((float3)(evalStack[(*evalStackOffset) + x], evalStack[(*evalStackOffset) + x + 1], evalStack[(*evalStackOffset) + x + 2]))
-
 OPENCL_FORCE_NOT_INLINE void Texture_EvalOpGenericBumpOffsetU(
 		__global float *evalStack,
 		uint *evalStackOffset,

@@ -44,8 +44,6 @@ OPENCL_FORCE_INLINE bool Material_IsDynamic(__global const Material *mat) {
 // Material evaluation functions
 //------------------------------------------------------------------------------
 
-// All EvalStack_* macros are defined in texture_eval_funcs.cl
-
 OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 		__global const MaterialEvalOp* restrict evalOp,
 		__global float *evalStack,
@@ -66,51 +64,21 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 		//----------------------------------------------------------------------
 		case MATTE:
 			switch (evalType) {
-				case EVAL_ALBEDO: {
-					const float3 albedo = Texture_GetSpectrumValue(mat->matte.kdTexIndex,
-							hitPoint TEXTURES_PARAM);
-					EvalStack_PushFloat3(albedo);
+				case EVAL_ALBEDO:
+					MatteMaterial_Albedo(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_INTERIOR_VOLUME: {
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-
-					const uint volIndex = DefaultMaterial_GetInteriorVolume(mat);
-					EvalStack_PushUInt(volIndex);
+				case EVAL_GET_INTERIOR_VOLUME:
+					MatteMaterial_GetInteriorVolume(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_EXTERIOR_VOLUME: {
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-
-					const uint volIndex = DefaultMaterial_GetExteriorVolume(mat);
-					EvalStack_PushUInt(volIndex);
+				case EVAL_GET_EXTERIOR_VOLUME:
+					MatteMaterial_GetExteriorVolume(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_EMITTED_RADIANCE: {
-					float oneOverPrimitiveArea;
-					EvalStack_PopFloat(oneOverPrimitiveArea);
-
-					const float3 emittedRadiance = DefaultMaterial_GetEmittedRadiance(mat,
-							hitPoint, oneOverPrimitiveArea TEXTURES_PARAM);
-					EvalStack_PushFloat3(emittedRadiance);
+				case EVAL_GET_EMITTED_RADIANCE:
+					MatteMaterial_GetEmittedRadiance(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_PASS_TROUGH_TRANSPARENCY: {
-					bool backTracing;
-					EvalStack_PopUInt(backTracing);
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-					float3 localFixedDir;
-					EvalStack_PopFloat3(localFixedDir);
-
-					const float3 transp = DefaultMaterial_GetPassThroughTransparency(mat,
-							hitPoint, localFixedDir, passThroughEvent, backTracing
-							TEXTURES_PARAM);
-					EvalStack_PushFloat3(transp);
+				case EVAL_GET_PASS_TROUGH_TRANSPARENCY:
+					MatteMaterial_GetPassThroughTransparency(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
 				default:
 					// Something wrong here
 					break;
@@ -121,52 +89,21 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 		//----------------------------------------------------------------------
 		case MATTETRANSLUCENT:
 			switch (evalType) {
-				case EVAL_ALBEDO: {
-					const float3 albedo = MatteTranslucentMaterial_Albedo(
-							Texture_GetSpectrumValue(mat->matteTranslucent.krTexIndex,hitPoint TEXTURES_PARAM),
-							Texture_GetSpectrumValue(mat->matteTranslucent.ktTexIndex, hitPoint TEXTURES_PARAM));
-					EvalStack_PushFloat3(albedo);
+				case EVAL_ALBEDO:
+					MatteTranslucentMaterial_Albedo(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_INTERIOR_VOLUME: {
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-
-					const uint volIndex = DefaultMaterial_GetInteriorVolume(mat);
-					EvalStack_PushUInt(volIndex);
+				case EVAL_GET_INTERIOR_VOLUME:
+					MatteTranslucentMaterial_GetInteriorVolume(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_EXTERIOR_VOLUME: {
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-
-					const uint volIndex = DefaultMaterial_GetExteriorVolume(mat);
-					EvalStack_PushUInt(volIndex);
+				case EVAL_GET_EXTERIOR_VOLUME:
+					MatteTranslucentMaterial_GetExteriorVolume(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_EMITTED_RADIANCE: {
-					float oneOverPrimitiveArea;
-					EvalStack_PopFloat(oneOverPrimitiveArea);
-
-					const float3 emittedRadiance = DefaultMaterial_GetEmittedRadiance(mat,
-							hitPoint, oneOverPrimitiveArea TEXTURES_PARAM);
-					EvalStack_PushFloat3(emittedRadiance);
+				case EVAL_GET_EMITTED_RADIANCE:
+					MatteTranslucentMaterial_GetEmittedRadiance(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_PASS_TROUGH_TRANSPARENCY: {
-					bool backTracing;
-					EvalStack_PopUInt(backTracing);
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-					float3 localFixedDir;
-					EvalStack_PopFloat3(localFixedDir);
-
-					const float3 transp = DefaultMaterial_GetPassThroughTransparency(mat,
-							hitPoint, localFixedDir, passThroughEvent, backTracing
-							TEXTURES_PARAM);
-					EvalStack_PushFloat3(transp);
+				case EVAL_GET_PASS_TROUGH_TRANSPARENCY:
+					MatteTranslucentMaterial_GetPassThroughTransparency(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
 				default:
 					// Something wrong here
 					break;
@@ -177,107 +114,46 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 		//----------------------------------------------------------------------
 		case GLOSSY2:
 			switch (evalType) {
-				case EVAL_ALBEDO: {
-					const float3 albedo = Glossy2Material_Albedo(Texture_GetSpectrumValue(mat->glossy2.kdTexIndex, hitPoint TEXTURES_PARAM));
-					EvalStack_PushFloat3(albedo);
+				case EVAL_ALBEDO:
+					Glossy2Material_Albedo(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_INTERIOR_VOLUME: {
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-
-					const uint volIndex = DefaultMaterial_GetInteriorVolume(mat);
-					EvalStack_PushUInt(volIndex);
+				case EVAL_GET_INTERIOR_VOLUME:
+					Glossy2Material_GetInteriorVolume(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_EXTERIOR_VOLUME: {
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-
-					const uint volIndex = DefaultMaterial_GetExteriorVolume(mat);
-					EvalStack_PushUInt(volIndex);
+				case EVAL_GET_EXTERIOR_VOLUME:
+					Glossy2Material_GetExteriorVolume(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_EMITTED_RADIANCE: {
-					float oneOverPrimitiveArea;
-					EvalStack_PopFloat(oneOverPrimitiveArea);
-
-					const float3 emittedRadiance = DefaultMaterial_GetEmittedRadiance(mat, hitPoint, oneOverPrimitiveArea TEXTURES_PARAM);
-					EvalStack_PushFloat3(emittedRadiance);
+				case EVAL_GET_EMITTED_RADIANCE:
+					Glossy2Material_GetEmittedRadiance(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_PASS_TROUGH_TRANSPARENCY: {
-					bool backTracing;
-					EvalStack_PopUInt(backTracing);
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-					float3 localFixedDir;
-					EvalStack_PopFloat3(localFixedDir);
-
-					const float3 transp = DefaultMaterial_GetPassThroughTransparency(mat,
-							hitPoint, localFixedDir, passThroughEvent, backTracing
-							TEXTURES_PARAM);
-					EvalStack_PushFloat3(transp);
+				case EVAL_GET_PASS_TROUGH_TRANSPARENCY:
+					Glossy2Material_GetPassThroughTransparency(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
 				default:
 					// Something wrong here
 					break;
 			}
 			break;			
 		//----------------------------------------------------------------------
-		// GLOSSY2
+		// METAL2
 		//----------------------------------------------------------------------
 		case METAL2:
 			switch (evalType) {
-				case EVAL_ALBEDO: {
-					float3 n, k;
-					Metal2Material_GetNK(mat, hitPoint,
-							&n, &k
-							TEXTURES_PARAM);
-
-					const float3 albedo = Metal2Material_Albedo(n, k);
-					EvalStack_PushFloat3(albedo);
+				case EVAL_ALBEDO:
+					Metal2Material_Albedo(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_INTERIOR_VOLUME: {
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-
-					const uint volIndex = DefaultMaterial_GetInteriorVolume(mat);
-					EvalStack_PushUInt(volIndex);
+				case EVAL_GET_INTERIOR_VOLUME:
+					Metal2Material_GetInteriorVolume(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_EXTERIOR_VOLUME: {
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-
-					const uint volIndex = DefaultMaterial_GetExteriorVolume(mat);
-					EvalStack_PushUInt(volIndex);
+				case EVAL_GET_EXTERIOR_VOLUME:
+					Metal2Material_GetExteriorVolume(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_EMITTED_RADIANCE: {
-					float oneOverPrimitiveArea;
-					EvalStack_PopFloat(oneOverPrimitiveArea);
-
-					const float3 emittedRadiance = DefaultMaterial_GetEmittedRadiance(mat, hitPoint, oneOverPrimitiveArea TEXTURES_PARAM);
-					EvalStack_PushFloat3(emittedRadiance);
+				case EVAL_GET_EMITTED_RADIANCE:
+					Metal2Material_GetEmittedRadiance(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_PASS_TROUGH_TRANSPARENCY: {
-					bool backTracing;
-					EvalStack_PopUInt(backTracing);
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-					float3 localFixedDir;
-					EvalStack_PopFloat3(localFixedDir);
-
-					const float3 transp = DefaultMaterial_GetPassThroughTransparency(mat,
-							hitPoint, localFixedDir, passThroughEvent, backTracing
-							TEXTURES_PARAM);
-					EvalStack_PushFloat3(transp);
+				case EVAL_GET_PASS_TROUGH_TRANSPARENCY:
+					Metal2Material_GetPassThroughTransparency(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
 				default:
 					// Something wrong here
 					break;
@@ -288,49 +164,21 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 		//----------------------------------------------------------------------
 		case VELVET:
 			switch (evalType) {
-				case EVAL_ALBEDO: {
-					const float3 albedo = VelvetMaterial_Albedo(Texture_GetSpectrumValue(mat->velvet.kdTexIndex, hitPoint TEXTURES_PARAM));
-					EvalStack_PushFloat3(albedo);
+				case EVAL_ALBEDO:
+					VelvetMaterial_Albedo(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_INTERIOR_VOLUME: {
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-
-					const uint volIndex = DefaultMaterial_GetInteriorVolume(mat);
-					EvalStack_PushUInt(volIndex);
+				case EVAL_GET_INTERIOR_VOLUME:
+					VelvetMaterial_GetInteriorVolume(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_EXTERIOR_VOLUME: {
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-
-					const uint volIndex = DefaultMaterial_GetExteriorVolume(mat);
-					EvalStack_PushUInt(volIndex);
+				case EVAL_GET_EXTERIOR_VOLUME:
+					VelvetMaterial_GetExteriorVolume(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_EMITTED_RADIANCE: {
-					float oneOverPrimitiveArea;
-					EvalStack_PopFloat(oneOverPrimitiveArea);
-
-					const float3 emittedRadiance = DefaultMaterial_GetEmittedRadiance(mat, hitPoint, oneOverPrimitiveArea TEXTURES_PARAM);
-					EvalStack_PushFloat3(emittedRadiance);
+				case EVAL_GET_EMITTED_RADIANCE:
+					VelvetMaterial_GetEmittedRadiance(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_PASS_TROUGH_TRANSPARENCY: {
-					bool backTracing;
-					EvalStack_PopUInt(backTracing);
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-					float3 localFixedDir;
-					EvalStack_PopFloat3(localFixedDir);
-
-					const float3 transp = DefaultMaterial_GetPassThroughTransparency(mat,
-							hitPoint, localFixedDir, passThroughEvent, backTracing
-							TEXTURES_PARAM);
-					EvalStack_PushFloat3(transp);
+				case EVAL_GET_PASS_TROUGH_TRANSPARENCY:
+					VelvetMaterial_GetPassThroughTransparency(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
 				default:
 					// Something wrong here
 					break;
@@ -341,56 +189,21 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 		//----------------------------------------------------------------------
 		case CLOTH:
 			switch (evalType) {
-				case EVAL_ALBEDO: {
-					const float3 albedo = ClothMaterial_Albedo(
-							hitPoint->uv[0].u, hitPoint->uv[0].v,
-							mat->cloth.Preset,
-							mat->cloth.Repeat_U,
-							mat->cloth.Repeat_V,
-							mat->cloth.specularNormalization,
-							Texture_GetSpectrumValue(mat->cloth.Warp_KdIndex, hitPoint TEXTURES_PARAM),
-							Texture_GetSpectrumValue(mat->cloth.Weft_KdIndex, hitPoint TEXTURES_PARAM));
-					EvalStack_PushFloat3(albedo);
+				case EVAL_ALBEDO:
+					ClothMaterial_Albedo(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_INTERIOR_VOLUME: {
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-
-					const uint volIndex = DefaultMaterial_GetInteriorVolume(mat);
-					EvalStack_PushUInt(volIndex);
+				case EVAL_GET_INTERIOR_VOLUME:
+					ClothMaterial_GetInteriorVolume(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_EXTERIOR_VOLUME: {
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-
-					const uint volIndex = DefaultMaterial_GetExteriorVolume(mat);
-					EvalStack_PushUInt(volIndex);
+				case EVAL_GET_EXTERIOR_VOLUME:
+					ClothMaterial_GetExteriorVolume(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_EMITTED_RADIANCE: {
-					float oneOverPrimitiveArea;
-					EvalStack_PopFloat(oneOverPrimitiveArea);
-
-					const float3 emittedRadiance = DefaultMaterial_GetEmittedRadiance(mat, hitPoint, oneOverPrimitiveArea TEXTURES_PARAM);
-					EvalStack_PushFloat3(emittedRadiance);
+				case EVAL_GET_EMITTED_RADIANCE:
+					ClothMaterial_GetEmittedRadiance(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_PASS_TROUGH_TRANSPARENCY: {
-					bool backTracing;
-					EvalStack_PopUInt(backTracing);
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-					float3 localFixedDir;
-					EvalStack_PopFloat3(localFixedDir);
-
-					const float3 transp = DefaultMaterial_GetPassThroughTransparency(mat,
-							hitPoint, localFixedDir, passThroughEvent, backTracing
-							TEXTURES_PARAM);
-					EvalStack_PushFloat3(transp);
+				case EVAL_GET_PASS_TROUGH_TRANSPARENCY:
+					ClothMaterial_GetPassThroughTransparency(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
 				default:
 					// Something wrong here
 					break;
@@ -401,49 +214,21 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 		//----------------------------------------------------------------------
 		case CARPAINT:
 			switch (evalType) {
-				case EVAL_ALBEDO: {
-					const float3 albedo = CarPaintMaterial_Albedo(Texture_GetSpectrumValue(mat->carpaint.KdTexIndex, hitPoint TEXTURES_PARAM));
-					EvalStack_PushFloat3(albedo);
+				case EVAL_ALBEDO:
+					CarPaintMaterial_Albedo(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_INTERIOR_VOLUME: {
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-
-					const uint volIndex = DefaultMaterial_GetInteriorVolume(mat);
-					EvalStack_PushUInt(volIndex);
+				case EVAL_GET_INTERIOR_VOLUME:
+					CarPaintMaterial_GetInteriorVolume(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_EXTERIOR_VOLUME: {
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-
-					const uint volIndex = DefaultMaterial_GetExteriorVolume(mat);
-					EvalStack_PushUInt(volIndex);
+				case EVAL_GET_EXTERIOR_VOLUME:
+					CarPaintMaterial_GetExteriorVolume(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_EMITTED_RADIANCE: {
-					float oneOverPrimitiveArea;
-					EvalStack_PopFloat(oneOverPrimitiveArea);
-
-					const float3 emittedRadiance = DefaultMaterial_GetEmittedRadiance(mat, hitPoint, oneOverPrimitiveArea TEXTURES_PARAM);
-					EvalStack_PushFloat3(emittedRadiance);
+				case EVAL_GET_EMITTED_RADIANCE:
+					CarPaintMaterial_GetEmittedRadiance(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_PASS_TROUGH_TRANSPARENCY: {
-					bool backTracing;
-					EvalStack_PopUInt(backTracing);
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-					float3 localFixedDir;
-					EvalStack_PopFloat3(localFixedDir);
-
-					const float3 transp = DefaultMaterial_GetPassThroughTransparency(mat,
-							hitPoint, localFixedDir, passThroughEvent, backTracing
-							TEXTURES_PARAM);
-					EvalStack_PushFloat3(transp);
+				case EVAL_GET_PASS_TROUGH_TRANSPARENCY:
+					CarPaintMaterial_GetPassThroughTransparency(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
 				default:
 					// Something wrong here
 					break;
@@ -454,49 +239,21 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 		//----------------------------------------------------------------------
 		case ROUGHMATTE:
 			switch (evalType) {
-				case EVAL_ALBEDO: {
-					const float3 albedo = RoughMatteMaterial_Albedo(Texture_GetSpectrumValue(mat->roughmatte.kdTexIndex, hitPoint TEXTURES_PARAM));
-					EvalStack_PushFloat3(albedo);
+				case EVAL_ALBEDO:
+					RoughMatteMaterial_Albedo(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_INTERIOR_VOLUME: {
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-
-					const uint volIndex = DefaultMaterial_GetInteriorVolume(mat);
-					EvalStack_PushUInt(volIndex);
+				case EVAL_GET_INTERIOR_VOLUME:
+					RoughMatteMaterial_GetInteriorVolume(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_EXTERIOR_VOLUME: {
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-
-					const uint volIndex = DefaultMaterial_GetExteriorVolume(mat);
-					EvalStack_PushUInt(volIndex);
+				case EVAL_GET_EXTERIOR_VOLUME:
+					RoughMatteMaterial_GetExteriorVolume(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_EMITTED_RADIANCE: {
-					float oneOverPrimitiveArea;
-					EvalStack_PopFloat(oneOverPrimitiveArea);
-
-					const float3 emittedRadiance = DefaultMaterial_GetEmittedRadiance(mat, hitPoint, oneOverPrimitiveArea TEXTURES_PARAM);
-					EvalStack_PushFloat3(emittedRadiance);
+				case EVAL_GET_EMITTED_RADIANCE:
+					RoughMatteMaterial_GetEmittedRadiance(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_PASS_TROUGH_TRANSPARENCY: {
-					bool backTracing;
-					EvalStack_PopUInt(backTracing);
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-					float3 localFixedDir;
-					EvalStack_PopFloat3(localFixedDir);
-
-					const float3 transp = DefaultMaterial_GetPassThroughTransparency(mat,
-							hitPoint, localFixedDir, passThroughEvent, backTracing
-							TEXTURES_PARAM);
-					EvalStack_PushFloat3(transp);
+				case EVAL_GET_PASS_TROUGH_TRANSPARENCY:
+					RoughMatteMaterial_GetPassThroughTransparency(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
 				default:
 					// Something wrong here
 					break;
@@ -507,51 +264,21 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 		//----------------------------------------------------------------------
 		case ROUGHMATTETRANSLUCENT:
 			switch (evalType) {
-				case EVAL_ALBEDO: {
-					const float3 albedo = RoughMatteTranslucentMaterial_Albedo(
-							Texture_GetSpectrumValue(mat->roughmatteTranslucent.krTexIndex, hitPoint TEXTURES_PARAM),
-							Texture_GetSpectrumValue(mat->roughmatteTranslucent.ktTexIndex, hitPoint TEXTURES_PARAM));
-					EvalStack_PushFloat3(albedo);
+				case EVAL_ALBEDO:
+					RoughMatteTranslucentMaterial_Albedo(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_INTERIOR_VOLUME: {
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-
-					const uint volIndex = DefaultMaterial_GetInteriorVolume(mat);
-					EvalStack_PushUInt(volIndex);
+				case EVAL_GET_INTERIOR_VOLUME:
+					RoughMatteTranslucentMaterial_GetInteriorVolume(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_EXTERIOR_VOLUME: {
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-
-					const uint volIndex = DefaultMaterial_GetExteriorVolume(mat);
-					EvalStack_PushUInt(volIndex);
+				case EVAL_GET_EXTERIOR_VOLUME:
+					RoughMatteTranslucentMaterial_GetExteriorVolume(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_EMITTED_RADIANCE: {
-					float oneOverPrimitiveArea;
-					EvalStack_PopFloat(oneOverPrimitiveArea);
-
-					const float3 emittedRadiance = DefaultMaterial_GetEmittedRadiance(mat, hitPoint, oneOverPrimitiveArea TEXTURES_PARAM);
-					EvalStack_PushFloat3(emittedRadiance);
+				case EVAL_GET_EMITTED_RADIANCE:
+					RoughMatteTranslucentMaterial_GetEmittedRadiance(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_PASS_TROUGH_TRANSPARENCY: {
-					bool backTracing;
-					EvalStack_PopUInt(backTracing);
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-					float3 localFixedDir;
-					EvalStack_PopFloat3(localFixedDir);
-
-					const float3 transp = DefaultMaterial_GetPassThroughTransparency(mat,
-							hitPoint, localFixedDir, passThroughEvent, backTracing
-							TEXTURES_PARAM);
-					EvalStack_PushFloat3(transp);
+				case EVAL_GET_PASS_TROUGH_TRANSPARENCY:
+					RoughMatteTranslucentMaterial_GetPassThroughTransparency(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
 				default:
 					// Something wrong here
 					break;
@@ -562,49 +289,21 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 		//----------------------------------------------------------------------
 		case GLOSSYTRANSLUCENT:
 			switch (evalType) {
-				case EVAL_ALBEDO: {
-					const float3 albedo = GlossyTranslucentMaterial_Albedo(Texture_GetSpectrumValue(mat->glossytranslucent.kdTexIndex, hitPoint TEXTURES_PARAM));
-					EvalStack_PushFloat3(albedo);
+				case EVAL_ALBEDO:
+					GlossyTranslucentMaterial_Albedo(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_INTERIOR_VOLUME: {
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-
-					const uint volIndex = DefaultMaterial_GetInteriorVolume(mat);
-					EvalStack_PushUInt(volIndex);
+				case EVAL_GET_INTERIOR_VOLUME:
+					GlossyTranslucentMaterial_GetInteriorVolume(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_EXTERIOR_VOLUME: {
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-
-					const uint volIndex = DefaultMaterial_GetExteriorVolume(mat);
-					EvalStack_PushUInt(volIndex);
+				case EVAL_GET_EXTERIOR_VOLUME:
+					GlossyTranslucentMaterial_GetExteriorVolume(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_EMITTED_RADIANCE: {
-					float oneOverPrimitiveArea;
-					EvalStack_PopFloat(oneOverPrimitiveArea);
-
-					const float3 emittedRadiance = DefaultMaterial_GetEmittedRadiance(mat, hitPoint, oneOverPrimitiveArea TEXTURES_PARAM);
-					EvalStack_PushFloat3(emittedRadiance);
+				case EVAL_GET_EMITTED_RADIANCE:
+					GlossyTranslucentMaterial_GetEmittedRadiance(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_PASS_TROUGH_TRANSPARENCY: {
-					bool backTracing;
-					EvalStack_PopUInt(backTracing);
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-					float3 localFixedDir;
-					EvalStack_PopFloat3(localFixedDir);
-
-					const float3 transp = DefaultMaterial_GetPassThroughTransparency(mat,
-							hitPoint, localFixedDir, passThroughEvent, backTracing
-							TEXTURES_PARAM);
-					EvalStack_PushFloat3(transp);
+				case EVAL_GET_PASS_TROUGH_TRANSPARENCY:
+					GlossyTranslucentMaterial_GetPassThroughTransparency(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
 				default:
 					// Something wrong here
 					break;
@@ -615,49 +314,21 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 		//----------------------------------------------------------------------
 		case DISNEY:
 			switch (evalType) {
-				case EVAL_ALBEDO: {
-					const float3 albedo = DisneyMaterial_Albedo(Texture_GetSpectrumValue(mat->disney.baseColorTexIndex, hitPoint TEXTURES_PARAM));
-					EvalStack_PushFloat3(albedo);
+				case EVAL_ALBEDO:
+					DisneyMaterial_Albedo(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_INTERIOR_VOLUME: {
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-
-					const uint volIndex = DefaultMaterial_GetInteriorVolume(mat);
-					EvalStack_PushUInt(volIndex);
+				case EVAL_GET_INTERIOR_VOLUME:
+					DisneyMaterial_GetInteriorVolume(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_EXTERIOR_VOLUME: {
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-
-					const uint volIndex = DefaultMaterial_GetExteriorVolume(mat);
-					EvalStack_PushUInt(volIndex);
+				case EVAL_GET_EXTERIOR_VOLUME:
+					DisneyMaterial_GetExteriorVolume(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_EMITTED_RADIANCE: {
-					float oneOverPrimitiveArea;
-					EvalStack_PopFloat(oneOverPrimitiveArea);
-
-					const float3 emittedRadiance = DefaultMaterial_GetEmittedRadiance(mat, hitPoint, oneOverPrimitiveArea TEXTURES_PARAM);
-					EvalStack_PushFloat3(emittedRadiance);
+				case EVAL_GET_EMITTED_RADIANCE:
+					DisneyMaterial_GetEmittedRadiance(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_PASS_TROUGH_TRANSPARENCY: {
-					bool backTracing;
-					EvalStack_PopUInt(backTracing);
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-					float3 localFixedDir;
-					EvalStack_PopFloat3(localFixedDir);
-
-					const float3 transp = DefaultMaterial_GetPassThroughTransparency(mat,
-							hitPoint, localFixedDir, passThroughEvent, backTracing
-							TEXTURES_PARAM);
-					EvalStack_PushFloat3(transp);
+				case EVAL_GET_PASS_TROUGH_TRANSPARENCY:
+					DisneyMaterial_GetPassThroughTransparency(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
 				default:
 					// Something wrong here
 					break;
@@ -668,49 +339,21 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 		//----------------------------------------------------------------------
 		case NULLMAT:
 			switch (evalType) {
-				case EVAL_ALBEDO: {
-					const float3 albedo = BLACK;
-					EvalStack_PushFloat3(albedo);
+				case EVAL_ALBEDO:
+					NullMaterial_Albedo(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_INTERIOR_VOLUME: {
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-
-					const uint volIndex = DefaultMaterial_GetInteriorVolume(mat);
-					EvalStack_PushUInt(volIndex);
+				case EVAL_GET_INTERIOR_VOLUME:
+					NullMaterial_GetInteriorVolume(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_EXTERIOR_VOLUME: {
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-
-					const uint volIndex = DefaultMaterial_GetExteriorVolume(mat);
-					EvalStack_PushUInt(volIndex);
+				case EVAL_GET_EXTERIOR_VOLUME:
+					NullMaterial_GetExteriorVolume(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_EMITTED_RADIANCE: {
-					float oneOverPrimitiveArea;
-					EvalStack_PopFloat(oneOverPrimitiveArea);
-
-					const float3 emittedRadiance = DefaultMaterial_GetEmittedRadiance(mat, hitPoint, oneOverPrimitiveArea TEXTURES_PARAM);
-					EvalStack_PushFloat3(emittedRadiance);
+				case EVAL_GET_EMITTED_RADIANCE:
+					NullMaterial_GetEmittedRadiance(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_PASS_TROUGH_TRANSPARENCY: {
-					bool backTracing;
-					EvalStack_PopUInt(backTracing);
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-					float3 localFixedDir;
-					EvalStack_PopFloat3(localFixedDir);
-
-					const float3 transp = NullMaterial_GetPassThroughTransparency(mat,
-							hitPoint, localFixedDir, passThroughEvent, backTracing
-							TEXTURES_PARAM);
-					EvalStack_PushFloat3(transp);
+				case EVAL_GET_PASS_TROUGH_TRANSPARENCY:
+					NullMaterial_GetPassThroughTransparency(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
 				default:
 					// Something wrong here
 					break;
@@ -721,246 +364,39 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 		//----------------------------------------------------------------------
 		case MIX:
 			switch (evalType) {
-				case EVAL_ALBEDO: {
-					float3 albedo1, albedo2;
-					EvalStack_PopFloat3(albedo2);
-					EvalStack_PopFloat3(albedo1);
-					
-					const float3 albedo = MixMaterial_Albedo(Texture_GetFloatValue(mat->mix.mixFactorTexIndex, hitPoint TEXTURES_PARAM),
-							albedo1, albedo2);
-					EvalStack_PushFloat3(albedo);
+				case EVAL_ALBEDO:
+					MixMaterial_Albedo(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_VOLUME_MIX_SETUP1: {
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-
-					const float factor = Texture_GetFloatValue(mat->mix.mixFactorTexIndex, hitPoint TEXTURES_PARAM);
-					const float weight2 = clamp(factor, 0.f, 1.f);
-					const float weight1 = 1.f - weight2;
-
-					const float passThroughEvent1 = passThroughEvent / weight1;
-
-					EvalStack_PushFloat(passThroughEvent);
-					EvalStack_PushFloat(factor);
-					EvalStack_PushFloat(passThroughEvent1);
+				case EVAL_GET_VOLUME_MIX_SETUP1:
+					MixMaterial_GetVolumeSetUp1(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_VOLUME_MIX_SETUP2: {
-					uint volIndex1;
-					EvalStack_PopUInt(volIndex1);
-
-					float factor;
-					EvalStack_PopFloat(factor);
-					const float weight2 = clamp(factor, 0.f, 1.f);
-					const float weight1 = 1.f - weight2;
-
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-
-					const float passThroughEvent2 = (passThroughEvent - weight1) / weight2;
-
-					EvalStack_PushFloat(passThroughEvent);
-					EvalStack_PushFloat(factor);
-					EvalStack_PushUInt(volIndex1);
-					EvalStack_PushFloat(passThroughEvent2);
+				case EVAL_GET_VOLUME_MIX_SETUP2:
+					MixMaterial_GetVolumeSetUp2(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_INTERIOR_VOLUME: {
-					const uint volIndex = mat->interiorVolumeIndex;
-					if (volIndex != NULL_INDEX) {
-						float passThroughEvent;
-						EvalStack_PopFloat(passThroughEvent);
-						
-						EvalStack_PushUInt(volIndex);
-					} else {
-						uint volIndex1, volIndex2;
-						EvalStack_PopUInt(volIndex2);
-						EvalStack_PopUInt(volIndex1);
-
-						float factor;
-						EvalStack_PopFloat(factor);
-						const float weight2 = clamp(factor, 0.f, 1.f);
-						const float weight1 = 1.f - weight2;
-
-						float passThroughEvent;
-						EvalStack_PopFloat(passThroughEvent);
-
-						const uint volIndex = (passThroughEvent < weight1) ? volIndex1 : volIndex2;
-						EvalStack_PushUInt(volIndex);
-					}
+				case EVAL_GET_INTERIOR_VOLUME:
+					MixMaterial_GetInteriorVolume(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_EXTERIOR_VOLUME: {
-					const uint volIndex = mat->exteriorVolumeIndex;
-					if (volIndex != NULL_INDEX) {
-						float passThroughEvent;
-						EvalStack_PopFloat(passThroughEvent);
-						
-						EvalStack_PushUInt(volIndex);
-					} else {
-						uint volIndex1, volIndex2;
-						EvalStack_PopUInt(volIndex2);
-						EvalStack_PopUInt(volIndex1);
-
-						float factor;
-						EvalStack_PopFloat(factor);
-						const float weight2 = clamp(factor, 0.f, 1.f);
-						const float weight1 = 1.f - weight2;
-
-						float passThroughEvent;
-						EvalStack_PopFloat(passThroughEvent);
-
-						const uint volIndex = (passThroughEvent < weight1) ? volIndex1 : volIndex2;
-						EvalStack_PushUInt(volIndex);
-					}
+				case EVAL_GET_EXTERIOR_VOLUME:
+					MixMaterial_GetExteriorVolume(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_EMITTED_RADIANCE_MIX_SETUP1: {
-					float oneOverPrimitiveArea;
-					EvalStack_PopFloat(oneOverPrimitiveArea);
-
-					EvalStack_PushFloat(oneOverPrimitiveArea);
-					// To setup the following EVAL_GET_EMITTED_RADIANCE evaluation of first sub-nodes
-					EvalStack_PushFloat(oneOverPrimitiveArea);
+				case EVAL_GET_EMITTED_RADIANCE_MIX_SETUP1:
+					MixMaterial_GetEmittedRadianceSetUp1(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_EMITTED_RADIANCE_MIX_SETUP2: {
-					float3 emit1;
-					EvalStack_PopFloat3(emit1);
-
-					float oneOverPrimitiveArea;
-					EvalStack_PopFloat(oneOverPrimitiveArea);
-
-					EvalStack_PushFloat(oneOverPrimitiveArea);
-					EvalStack_PushFloat3(emit1);
-					// To setup the following EVAL_GET_EMITTED_RADIANCE evaluation of second sub-nodes
-					EvalStack_PushFloat(oneOverPrimitiveArea);
+				case EVAL_GET_EMITTED_RADIANCE_MIX_SETUP2:
+					MixMaterial_GetEmittedRadianceSetUp2(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_EMITTED_RADIANCE: {
-					float3 emittedRadiance;
-					if (mat->emitTexIndex != NULL_INDEX) {
-						float oneOverPrimitiveArea;
-						EvalStack_PopFloat(oneOverPrimitiveArea);
-
-						emittedRadiance = DefaultMaterial_GetEmittedRadiance(mat, hitPoint, oneOverPrimitiveArea TEXTURES_PARAM);
-					} else {
-						float3 emit1, emit2;
-						EvalStack_PopFloat3(emit2);
-						EvalStack_PopFloat3(emit1);
-
-						float oneOverPrimitiveArea;
-						EvalStack_PopFloat(oneOverPrimitiveArea);
-						
-						const float factor = Texture_GetFloatValue(mat->mix.mixFactorTexIndex, hitPoint TEXTURES_PARAM);
-						const float weight2 = clamp(factor, 0.f, 1.f);
-						const float weight1 = 1.f - weight2;
-
-						emittedRadiance = BLACK;
-						if (weight1 > 0.f)
-							emittedRadiance += weight1 * emit1;
-						 if (weight2 > 0.f)
-							emittedRadiance += weight2 * emit2;
-					}
-
-					EvalStack_PushFloat3(emittedRadiance);
+				case EVAL_GET_EMITTED_RADIANCE:
+					MixMaterial_GetEmittedRadiance(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_PASS_TROUGH_TRANSPARENCY_MIX_SETUP1: {
-					bool backTracing;
-					EvalStack_PopUInt(backTracing);
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-					float3 localFixedDir;
-					EvalStack_PopFloat3(localFixedDir);
-
-					// Save the parameters
-					EvalStack_PushFloat3(localFixedDir);
-					EvalStack_PushFloat(passThroughEvent);
-					EvalStack_PushUInt(backTracing);
-
-					const float factor = Texture_GetFloatValue(mat->mix.mixFactorTexIndex, hitPoint TEXTURES_PARAM);
-					const float weight2 = clamp(factor, 0.f, 1.f);
-					const float weight1 = 1.f - weight2;
-
-					const float passThroughEvent1 = passThroughEvent / weight1;
-
-					EvalStack_PushFloat(factor);
-
-					// To setup the following EVAL_GET_PASS_TROUGH_TRANSPARENCY evaluation of first sub-nodes
-					EvalStack_PushFloat3(localFixedDir);
-					EvalStack_PushFloat(passThroughEvent1);
-					EvalStack_PushUInt(backTracing);
+				case EVAL_GET_PASS_TROUGH_TRANSPARENCY_MIX_SETUP1:
+					MixMaterial_GetPassThroughTransparencySetUp1(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_PASS_TROUGH_TRANSPARENCY_MIX_SETUP2: {
-					float3 transp1;
-					EvalStack_PopFloat3(transp1);
-
-					float factor;
-					EvalStack_PopFloat(factor);
-
-					bool backTracing;
-					EvalStack_PopUInt(backTracing);
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-					float3 localFixedDir;
-					EvalStack_PopFloat3(localFixedDir);
-
-					const float weight2 = clamp(factor, 0.f, 1.f);
-					const float weight1 = 1.f - weight2;
-
-					const float passThroughEvent2 = (passThroughEvent - weight1) / weight2;
-
-					// Save the parameters
-					EvalStack_PushFloat3(localFixedDir);
-					EvalStack_PushFloat(passThroughEvent);
-					EvalStack_PushUInt(backTracing);
-					
-					EvalStack_PushFloat(factor);
-
-					EvalStack_PushFloat3(transp1);
-
-					// To setup the following EVAL_GET_PASS_TROUGH_TRANSPARENCY evaluation of second sub-nodes
-					EvalStack_PushFloat3(localFixedDir);
-					EvalStack_PushFloat(passThroughEvent2);
-					EvalStack_PushUInt(backTracing);
+				case EVAL_GET_PASS_TROUGH_TRANSPARENCY_MIX_SETUP2:
+					MixMaterial_GetPassThroughTransparencySetUp2(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_PASS_TROUGH_TRANSPARENCY: {
-					float3 transp1, transp2;
-					EvalStack_PopFloat3(transp2);
-					EvalStack_PopFloat3(transp1);
-
-					float factor;
-					EvalStack_PopFloat(factor);
-
-					bool backTracing;
-					EvalStack_PopUInt(backTracing);
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-					float3 localFixedDir;
-					EvalStack_PopFloat3(localFixedDir);
-					
-					const uint transpTexIndex = (hitPoint->intoObject != backTracing) ?
-						mat->frontTranspTexIndex : mat->backTranspTexIndex;
-
-					float3 transp;
-					if (transpTexIndex != NULL_INDEX) {
-						transp = DefaultMaterial_GetPassThroughTransparency(mat,
-								hitPoint, localFixedDir, passThroughEvent, backTracing
-								TEXTURES_PARAM);
-					} else {
-						const float weight2 = clamp(factor, 0.f, 1.f);
-						const float weight1 = 1.f - weight2;
-
-						transp = (passThroughEvent < weight1) ? transp1 : transp2;
-					}
-					
-					EvalStack_PushFloat3(transp);
+				case EVAL_GET_PASS_TROUGH_TRANSPARENCY:
+					MixMaterial_GetPassThroughTransparency(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
 				default:
 					// Something wrong here
 					break;
@@ -971,56 +407,21 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 		//----------------------------------------------------------------------
 		case GLOSSYCOATING:
 			switch (evalType) {
-				case EVAL_ALBEDO: {
-					float3 albedo1;
-					EvalStack_PopFloat3(albedo1);
-					
-					const float3 albedo = GlossyCoatingMaterial_Albedo(albedo1);
-					EvalStack_PushFloat3(albedo);
+				case EVAL_ALBEDO:
+					GlossyCoatingMaterial_Albedo(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_INTERIOR_VOLUME: {
-					const uint volIndex = mat->interiorVolumeIndex;
-					if (volIndex != NULL_INDEX) {
-						float passThroughEvent;
-						EvalStack_PopFloat(passThroughEvent);
-
-						EvalStack_PushUInt(volIndex);
-					}
-					// Else nothing to do because there is already the matBase volume
-					// index on the stack
+				case EVAL_GET_INTERIOR_VOLUME:
+					GlossyCoatingMaterial_GetInteriorVolume(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_EXTERIOR_VOLUME: {
-					const uint volIndex = mat->exteriorVolumeIndex;
-					if (volIndex != NULL_INDEX) {
-						float passThroughEvent;
-						EvalStack_PopFloat(passThroughEvent);
-
-						EvalStack_PushUInt(volIndex);
-					}
-					// Else nothing to do because there is already the matBase volume
-					// index on the stack
+				case EVAL_GET_EXTERIOR_VOLUME:
+					GlossyCoatingMaterial_GetExteriorVolume(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_EMITTED_RADIANCE: {
-					if (mat->emitTexIndex != NULL_INDEX) {
-						float oneOverPrimitiveArea;
-						EvalStack_PopFloat(oneOverPrimitiveArea);
-
-						const float3 emittedRadiance = DefaultMaterial_GetEmittedRadiance(mat, hitPoint, oneOverPrimitiveArea TEXTURES_PARAM);
-						
-						EvalStack_PushFloat3(emittedRadiance);
-					}
-					// Else nothing to do because there is already the matBase emitted
-					// radiance on the stack					
+				case EVAL_GET_EMITTED_RADIANCE:
+					GlossyCoatingMaterial_GetEmittedRadiance(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_PASS_TROUGH_TRANSPARENCY: {
-					// Nothing to do there is already the matBase pass trough
-					// transparency on the stack		
+				case EVAL_GET_PASS_TROUGH_TRANSPARENCY:
+					GlossyCoatingMaterial_GetPassThroughTransparency(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
 				default:
 					// Something wrong here
 					break;
@@ -1031,49 +432,21 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 		//----------------------------------------------------------------------
 		case MIRROR:
 			switch (evalType) {
-				case EVAL_ALBEDO: {		
-					const float3 albedo = WHITE;
-					EvalStack_PushFloat3(albedo);
+				case EVAL_ALBEDO:
+					MirrorMaterial_Albedo(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_INTERIOR_VOLUME: {
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-
-					const uint volIndex = DefaultMaterial_GetInteriorVolume(mat);
-					EvalStack_PushUInt(volIndex);
+				case EVAL_GET_INTERIOR_VOLUME:
+					MirrorMaterial_GetInteriorVolume(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_EXTERIOR_VOLUME: {
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-
-					const uint volIndex = DefaultMaterial_GetExteriorVolume(mat);
-					EvalStack_PushUInt(volIndex);
+				case EVAL_GET_EXTERIOR_VOLUME:
+					MirrorMaterial_GetExteriorVolume(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_EMITTED_RADIANCE: {
-					float oneOverPrimitiveArea;
-					EvalStack_PopFloat(oneOverPrimitiveArea);
-
-					const float3 emittedRadiance = DefaultMaterial_GetEmittedRadiance(mat, hitPoint, oneOverPrimitiveArea TEXTURES_PARAM);
-					EvalStack_PushFloat3(emittedRadiance);
+				case EVAL_GET_EMITTED_RADIANCE:
+					MirrorMaterial_GetEmittedRadiance(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_PASS_TROUGH_TRANSPARENCY: {
-					bool backTracing;
-					EvalStack_PopUInt(backTracing);
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-					float3 localFixedDir;
-					EvalStack_PopFloat3(localFixedDir);
-
-					const float3 transp = DefaultMaterial_GetPassThroughTransparency(mat,
-							hitPoint, localFixedDir, passThroughEvent, backTracing
-							TEXTURES_PARAM);
-					EvalStack_PushFloat3(transp);
+				case EVAL_GET_PASS_TROUGH_TRANSPARENCY:
+					MirrorMaterial_GetPassThroughTransparency(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
 				default:
 					// Something wrong here
 					break;
@@ -1084,49 +457,21 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 		//----------------------------------------------------------------------
 		case GLASS:
 			switch (evalType) {
-				case EVAL_ALBEDO: {		
-					const float3 albedo = WHITE;
-					EvalStack_PushFloat3(albedo);
+				case EVAL_ALBEDO:
+					GlassMaterial_Albedo(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_INTERIOR_VOLUME: {
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-
-					const uint volIndex = DefaultMaterial_GetInteriorVolume(mat);
-					EvalStack_PushUInt(volIndex);
+				case EVAL_GET_INTERIOR_VOLUME:
+					GlassMaterial_GetInteriorVolume(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_EXTERIOR_VOLUME: {
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-
-					const uint volIndex = DefaultMaterial_GetExteriorVolume(mat);
-					EvalStack_PushUInt(volIndex);
+				case EVAL_GET_EXTERIOR_VOLUME:
+					GlassMaterial_GetExteriorVolume(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_EMITTED_RADIANCE: {
-					float oneOverPrimitiveArea;
-					EvalStack_PopFloat(oneOverPrimitiveArea);
-
-					const float3 emittedRadiance = DefaultMaterial_GetEmittedRadiance(mat, hitPoint, oneOverPrimitiveArea TEXTURES_PARAM);
-					EvalStack_PushFloat3(emittedRadiance);
+				case EVAL_GET_EMITTED_RADIANCE:
+					GlassMaterial_GetEmittedRadiance(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_PASS_TROUGH_TRANSPARENCY: {
-					bool backTracing;
-					EvalStack_PopUInt(backTracing);
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-					float3 localFixedDir;
-					EvalStack_PopFloat3(localFixedDir);
-
-					const float3 transp = DefaultMaterial_GetPassThroughTransparency(mat,
-							hitPoint, localFixedDir, passThroughEvent, backTracing
-							TEXTURES_PARAM);
-					EvalStack_PushFloat3(transp);
+				case EVAL_GET_PASS_TROUGH_TRANSPARENCY:
+					GlassMaterial_GetPassThroughTransparency(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
 				default:
 					// Something wrong here
 					break;
@@ -1137,49 +482,21 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 		//----------------------------------------------------------------------
 		case ARCHGLASS:
 			switch (evalType) {
-				case EVAL_ALBEDO: {		
-					const float3 albedo = WHITE;
-					EvalStack_PushFloat3(albedo);
+				case EVAL_ALBEDO:
+					ArchGlassMaterial_Albedo(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_INTERIOR_VOLUME: {
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-
-					const uint volIndex = DefaultMaterial_GetInteriorVolume(mat);
-					EvalStack_PushUInt(volIndex);
+				case EVAL_GET_INTERIOR_VOLUME:
+					ArchGlassMaterial_GetInteriorVolume(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_EXTERIOR_VOLUME: {
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-
-					const uint volIndex = DefaultMaterial_GetExteriorVolume(mat);
-					EvalStack_PushUInt(volIndex);
+				case EVAL_GET_EXTERIOR_VOLUME:
+					ArchGlassMaterial_GetExteriorVolume(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_EMITTED_RADIANCE: {
-					float oneOverPrimitiveArea;
-					EvalStack_PopFloat(oneOverPrimitiveArea);
-
-					const float3 emittedRadiance = DefaultMaterial_GetEmittedRadiance(mat, hitPoint, oneOverPrimitiveArea TEXTURES_PARAM);
-					EvalStack_PushFloat3(emittedRadiance);
+				case EVAL_GET_EMITTED_RADIANCE:
+					ArchGlassMaterial_GetEmittedRadiance(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_PASS_TROUGH_TRANSPARENCY: {
-					bool backTracing;
-					EvalStack_PopUInt(backTracing);
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-					float3 localFixedDir;
-					EvalStack_PopFloat3(localFixedDir);
-
-					const float3 transp = ArchGlassMaterial_GetPassThroughTransparency(mat,
-							hitPoint, localFixedDir, passThroughEvent, backTracing
-							TEXTURES_PARAM);
-					EvalStack_PushFloat3(transp);
+				case EVAL_GET_PASS_TROUGH_TRANSPARENCY:
+					ArchGlassMaterial_GetPassThroughTransparency(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
 				default:
 					// Something wrong here
 					break;
@@ -1190,49 +507,21 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 		//----------------------------------------------------------------------
 		case ROUGHGLASS:
 			switch (evalType) {
-				case EVAL_ALBEDO: {		
-					const float3 albedo = WHITE;
-					EvalStack_PushFloat3(albedo);
+				case EVAL_ALBEDO:
+					RoughGlassMaterial_Albedo(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_INTERIOR_VOLUME: {
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-
-					const uint volIndex = DefaultMaterial_GetInteriorVolume(mat);
-					EvalStack_PushUInt(volIndex);
+				case EVAL_GET_INTERIOR_VOLUME:
+					RoughGlassMaterial_GetInteriorVolume(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_EXTERIOR_VOLUME: {
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-
-					const uint volIndex = DefaultMaterial_GetExteriorVolume(mat);
-					EvalStack_PushUInt(volIndex);
+				case EVAL_GET_EXTERIOR_VOLUME:
+					RoughGlassMaterial_GetExteriorVolume(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_EMITTED_RADIANCE: {
-					float oneOverPrimitiveArea;
-					EvalStack_PopFloat(oneOverPrimitiveArea);
-
-					const float3 emittedRadiance = DefaultMaterial_GetEmittedRadiance(mat, hitPoint, oneOverPrimitiveArea TEXTURES_PARAM);
-					EvalStack_PushFloat3(emittedRadiance);
+				case EVAL_GET_EMITTED_RADIANCE:
+					RoughGlassMaterial_GetEmittedRadiance(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_PASS_TROUGH_TRANSPARENCY: {
-					bool backTracing;
-					EvalStack_PopUInt(backTracing);
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-					float3 localFixedDir;
-					EvalStack_PopFloat3(localFixedDir);
-
-					const float3 transp = DefaultMaterial_GetPassThroughTransparency(mat,
-							hitPoint, localFixedDir, passThroughEvent, backTracing
-							TEXTURES_PARAM);
-					EvalStack_PushFloat3(transp);
+				case EVAL_GET_PASS_TROUGH_TRANSPARENCY:
+					RoughGlassMaterial_GetPassThroughTransparency(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
 				default:
 					// Something wrong here
 					break;
@@ -1243,49 +532,21 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 		//----------------------------------------------------------------------
 		case CLEAR_VOL:
 			switch (evalType) {
-				case EVAL_ALBEDO: {		
-					const float3 albedo = WHITE;
-					EvalStack_PushFloat3(albedo);
+				case EVAL_ALBEDO:
+					ClearVolMaterial_Albedo(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_INTERIOR_VOLUME: {
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-
-					const uint volIndex = DefaultMaterial_GetInteriorVolume(mat);
-					EvalStack_PushUInt(volIndex);
+				case EVAL_GET_INTERIOR_VOLUME:
+					ClearVolMaterial_GetInteriorVolume(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_EXTERIOR_VOLUME: {
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-
-					const uint volIndex = DefaultMaterial_GetExteriorVolume(mat);
-					EvalStack_PushUInt(volIndex);
+				case EVAL_GET_EXTERIOR_VOLUME:
+					ClearVolMaterial_GetExteriorVolume(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_EMITTED_RADIANCE: {
-					float oneOverPrimitiveArea;
-					EvalStack_PopFloat(oneOverPrimitiveArea);
-
-					const float3 emittedRadiance = DefaultMaterial_GetEmittedRadiance(mat, hitPoint, oneOverPrimitiveArea TEXTURES_PARAM);
-					EvalStack_PushFloat3(emittedRadiance);
+				case EVAL_GET_EMITTED_RADIANCE:
+					ClearVolMaterial_GetEmittedRadiance(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_PASS_TROUGH_TRANSPARENCY: {
-					bool backTracing;
-					EvalStack_PopUInt(backTracing);
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-					float3 localFixedDir;
-					EvalStack_PopFloat3(localFixedDir);
-
-					const float3 transp = DefaultMaterial_GetPassThroughTransparency(mat,
-							hitPoint, localFixedDir, passThroughEvent, backTracing
-							TEXTURES_PARAM);
-					EvalStack_PushFloat3(transp);
+				case EVAL_GET_PASS_TROUGH_TRANSPARENCY:
+					ClearVolMaterial_GetPassThroughTransparency(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
 				default:
 					// Something wrong here
 					break;
@@ -1296,51 +557,21 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 		//----------------------------------------------------------------------
 		case HOMOGENEOUS_VOL:
 			switch (evalType) {
-				case EVAL_ALBEDO: {
-					const float3 albedo = HomogeneousVolMaterial_Albedo(
-							Texture_GetSpectrumValue(mat->volume.homogenous.sigmaSTexIndex, hitPoint TEXTURES_PARAM),
-							Texture_GetSpectrumValue(mat->volume.homogenous.sigmaATexIndex, hitPoint TEXTURES_PARAM));
-					EvalStack_PushFloat3(albedo);
+				case EVAL_ALBEDO:
+					HomogeneousVolMaterial_Albedo(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_INTERIOR_VOLUME: {
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-
-					const uint volIndex = DefaultMaterial_GetInteriorVolume(mat);
-					EvalStack_PushUInt(volIndex);
+				case EVAL_GET_INTERIOR_VOLUME:
+					HomogeneousVolMaterial_GetInteriorVolume(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_EXTERIOR_VOLUME: {
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-
-					const uint volIndex = DefaultMaterial_GetExteriorVolume(mat);
-					EvalStack_PushUInt(volIndex);
+				case EVAL_GET_EXTERIOR_VOLUME:
+					HomogeneousVolMaterial_GetExteriorVolume(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_EMITTED_RADIANCE: {
-					float oneOverPrimitiveArea;
-					EvalStack_PopFloat(oneOverPrimitiveArea);
-
-					const float3 emittedRadiance = DefaultMaterial_GetEmittedRadiance(mat, hitPoint, oneOverPrimitiveArea TEXTURES_PARAM);
-					EvalStack_PushFloat3(emittedRadiance);
+				case EVAL_GET_EMITTED_RADIANCE:
+					HomogeneousVolMaterial_GetEmittedRadiance(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_PASS_TROUGH_TRANSPARENCY: {
-					bool backTracing;
-					EvalStack_PopUInt(backTracing);
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-					float3 localFixedDir;
-					EvalStack_PopFloat3(localFixedDir);
-
-					const float3 transp = DefaultMaterial_GetPassThroughTransparency(mat,
-							hitPoint, localFixedDir, passThroughEvent, backTracing
-							TEXTURES_PARAM);
-					EvalStack_PushFloat3(transp);
+				case EVAL_GET_PASS_TROUGH_TRANSPARENCY:
+					HomogeneousVolMaterial_GetPassThroughTransparency(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
 				default:
 					// Something wrong here
 					break;
@@ -1351,51 +582,21 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 		//----------------------------------------------------------------------
 		case HETEROGENEOUS_VOL:
 			switch (evalType) {
-				case EVAL_ALBEDO: {
-					const float3 albedo = HeterogeneousVolMaterial_Albedo(
-							Texture_GetSpectrumValue(mat->volume.heterogenous.sigmaSTexIndex, hitPoint TEXTURES_PARAM),
-							Texture_GetSpectrumValue(mat->volume.heterogenous.sigmaATexIndex, hitPoint TEXTURES_PARAM));
-					EvalStack_PushFloat3(albedo);
+				case EVAL_ALBEDO:
+					HeterogeneousVolMaterial_Albedo(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_INTERIOR_VOLUME: {
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-
-					const uint volIndex = DefaultMaterial_GetInteriorVolume(mat);
-					EvalStack_PushUInt(volIndex);
+				case EVAL_GET_INTERIOR_VOLUME:
+					HeterogeneousVolMaterial_GetInteriorVolume(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_EXTERIOR_VOLUME: {
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-
-					const uint volIndex = DefaultMaterial_GetExteriorVolume(mat);
-					EvalStack_PushUInt(volIndex);
+				case EVAL_GET_EXTERIOR_VOLUME:
+					HeterogeneousVolMaterial_GetExteriorVolume(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_EMITTED_RADIANCE: {
-					float oneOverPrimitiveArea;
-					EvalStack_PopFloat(oneOverPrimitiveArea);
-
-					const float3 emittedRadiance = DefaultMaterial_GetEmittedRadiance(mat, hitPoint, oneOverPrimitiveArea TEXTURES_PARAM);
-					EvalStack_PushFloat3(emittedRadiance);
+				case EVAL_GET_EMITTED_RADIANCE:
+					HeterogeneousVolMaterial_GetEmittedRadiance(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
-				case EVAL_GET_PASS_TROUGH_TRANSPARENCY: {
-					bool backTracing;
-					EvalStack_PopUInt(backTracing);
-					float passThroughEvent;
-					EvalStack_PopFloat(passThroughEvent);
-					float3 localFixedDir;
-					EvalStack_PopFloat3(localFixedDir);
-
-					const float3 transp = DefaultMaterial_GetPassThroughTransparency(mat,
-							hitPoint, localFixedDir, passThroughEvent, backTracing
-							TEXTURES_PARAM);
-					EvalStack_PushFloat3(transp);
+				case EVAL_GET_PASS_TROUGH_TRANSPARENCY:
+					HeterogeneousVolMaterial_GetPassThroughTransparency(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
-				}
 				default:
 					// Something wrong here
 					break;

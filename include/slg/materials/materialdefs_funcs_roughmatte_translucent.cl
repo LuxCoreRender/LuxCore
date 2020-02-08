@@ -22,13 +22,46 @@
 // MatteTranslucent material
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_INLINE float3 RoughMatteTranslucentMaterial_Albedo(const float3 krVal, const float3 ktVal) {
-	const float3 r = Spectrum_Clamp(krVal);
-	const float3 t = Spectrum_Clamp(ktVal) * 
+OPENCL_FORCE_INLINE void RoughMatteTranslucentMaterial_Albedo(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		TEXTURES_PARAM_DECL) {
+	const float3 r = Spectrum_Clamp(Texture_GetSpectrumValue(material->roughmatteTranslucent.krTexIndex, hitPoint TEXTURES_PARAM));
+	const float3 t = Spectrum_Clamp(Texture_GetSpectrumValue(material->roughmatteTranslucent.ktTexIndex, hitPoint TEXTURES_PARAM)) * 
 		// Energy conservation
 		(1.f - r);
-	
-	return r + t;
+
+    const float3 albedo = r + t;
+
+	EvalStack_PushFloat3(albedo);
+}
+
+OPENCL_FORCE_INLINE void RoughMatteTranslucentMaterial_GetInteriorVolume(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		TEXTURES_PARAM_DECL) {
+	DefaultMaterial_GetInteriorVolume(material, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+}
+
+OPENCL_FORCE_INLINE void RoughMatteTranslucentMaterial_GetExteriorVolume(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		TEXTURES_PARAM_DECL) {
+	DefaultMaterial_GetExteriorVolume(material, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+}
+
+OPENCL_FORCE_INLINE void RoughMatteTranslucentMaterial_GetPassThroughTransparency(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		TEXTURES_PARAM_DECL) {
+	DefaultMaterial_GetPassThroughTransparency(material, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+}
+
+OPENCL_FORCE_INLINE void RoughMatteTranslucentMaterial_GetEmittedRadiance(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		TEXTURES_PARAM_DECL) {
+	DefaultMaterial_GetEmittedRadiance(material, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 }
 
 OPENCL_FORCE_NOT_INLINE float3 RoughMatteTranslucentMaterial_Evaluate(

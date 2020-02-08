@@ -45,11 +45,46 @@ OPENCL_FORCE_INLINE void Metal2Material_GetNK(__global const Material* restrict 
 	}
 }
 
-OPENCL_FORCE_INLINE float3 Metal2Material_Albedo(const float3 nVal, const float3 kVal) {
-	const float3 F = FresnelGeneral_Evaluate(nVal, kVal, 1.f);
-	Spectrum_Clamp(F);
+OPENCL_FORCE_INLINE void Metal2Material_Albedo(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		TEXTURES_PARAM_DECL) {
+	float3 n, k;
+	Metal2Material_GetNK(material, hitPoint,
+			&n, &k
+			TEXTURES_PARAM);
 
-	return F;
+	const float3 albedo = Spectrum_Clamp(FresnelGeneral_Evaluate(n, k, 1.f));
+
+	EvalStack_PushFloat3(albedo);
+}
+
+OPENCL_FORCE_INLINE void Metal2Material_GetInteriorVolume(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		TEXTURES_PARAM_DECL) {
+	DefaultMaterial_GetInteriorVolume(material, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+}
+
+OPENCL_FORCE_INLINE void Metal2Material_GetExteriorVolume(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		TEXTURES_PARAM_DECL) {
+	DefaultMaterial_GetExteriorVolume(material, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+}
+
+OPENCL_FORCE_INLINE void Metal2Material_GetPassThroughTransparency(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		TEXTURES_PARAM_DECL) {
+	DefaultMaterial_GetPassThroughTransparency(material, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+}
+
+OPENCL_FORCE_INLINE void Metal2Material_GetEmittedRadiance(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		TEXTURES_PARAM_DECL) {
+	DefaultMaterial_GetEmittedRadiance(material, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 }
 
 OPENCL_FORCE_NOT_INLINE float3 Metal2Material_Evaluate(

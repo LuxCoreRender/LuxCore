@@ -195,6 +195,7 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_elvc_types <<
 			slg::ocl::KernelSource_pgic_types <<
 			// OpenCL SLG Funcs
+			slg::ocl::KernelSource_evalstack_funcs <<
 			slg::ocl::KernelSource_mapping_funcs <<
 			slg::ocl::KernelSource_imagemap_funcs <<
 			slg::ocl::KernelSource_texture_noise_funcs <<

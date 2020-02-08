@@ -100,6 +100,7 @@ extern std::string KernelSource_texture_funcs;
 extern std::string KernelSource_texture_eval_funcs1;
 extern std::string KernelSource_texture_eval_funcs2;
 extern std::string KernelSource_sampleresult_types;
+extern std::string KernelSource_evalstack_funcs;
 extern std::string KernelSource_pathdepthinfo_types;
 extern std::string KernelSource_pathdepthinfo_funcs;
 extern std::string KernelSource_pathvolumeinfo_types;

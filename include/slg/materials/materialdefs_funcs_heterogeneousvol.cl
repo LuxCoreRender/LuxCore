@@ -100,10 +100,46 @@ OPENCL_FORCE_INLINE float3 SchlickScatter_Sample(
 // HeterogeneousVol material
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_INLINE float3 HeterogeneousVolMaterial_Albedo(const float3 sigmaSTexVal,
-		const float3 sigmaATexVal) {
-	return SchlickScatter_Albedo(clamp(sigmaSTexVal, 0.f, INFINITY),
-			clamp(sigmaATexVal, 0.f, INFINITY));
+OPENCL_FORCE_INLINE void HeterogeneousVolMaterial_Albedo(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		TEXTURES_PARAM_DECL) {
+	const float3 sigmaS = Texture_GetSpectrumValue(material->volume.heterogenous.sigmaSTexIndex, hitPoint TEXTURES_PARAM);
+	const float3 sigmaA = Texture_GetSpectrumValue(material->volume.heterogenous.sigmaATexIndex, hitPoint TEXTURES_PARAM);
+
+    const float3 albedo = SchlickScatter_Albedo(
+			clamp(sigmaS, 0.f, INFINITY),
+			clamp(sigmaA, 0.f, INFINITY));
+
+	EvalStack_PushFloat3(albedo);
+}
+
+OPENCL_FORCE_INLINE void HeterogeneousVolMaterial_GetInteriorVolume(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		TEXTURES_PARAM_DECL) {
+	DefaultMaterial_GetInteriorVolume(material, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+}
+
+OPENCL_FORCE_INLINE void HeterogeneousVolMaterial_GetExteriorVolume(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		TEXTURES_PARAM_DECL) {
+	DefaultMaterial_GetExteriorVolume(material, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+}
+
+OPENCL_FORCE_INLINE void HeterogeneousVolMaterial_GetPassThroughTransparency(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		TEXTURES_PARAM_DECL) {
+	DefaultMaterial_GetPassThroughTransparency(material, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+}
+
+OPENCL_FORCE_INLINE void HeterogeneousVolMaterial_GetEmittedRadiance(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		TEXTURES_PARAM_DECL) {
+	DefaultMaterial_GetEmittedRadiance(material, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 }
 
 OPENCL_FORCE_NOT_INLINE float3 HeterogeneousVolMaterial_Evaluate(

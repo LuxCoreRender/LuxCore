@@ -22,13 +22,44 @@
 // NULL material
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_NOT_INLINE float3 NullMaterial_GetPassThroughTransparency(__global const Material *material,
-		__global const HitPoint *hitPoint, const float3 localFixedDir,
-		const float passThroughEvent, const bool backTracing
+OPENCL_FORCE_INLINE void NullMaterial_Albedo(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
 		TEXTURES_PARAM_DECL) {
+	const float3 albedo = BLACK;
+
+	EvalStack_PushFloat3(albedo);
+}
+
+OPENCL_FORCE_INLINE void NullMaterial_GetInteriorVolume(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		TEXTURES_PARAM_DECL) {
+	DefaultMaterial_GetInteriorVolume(material, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+}
+
+OPENCL_FORCE_INLINE void NullMaterial_GetExteriorVolume(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		TEXTURES_PARAM_DECL) {
+	DefaultMaterial_GetExteriorVolume(material, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+}
+
+OPENCL_FORCE_INLINE void NullMaterial_GetPassThroughTransparency(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		TEXTURES_PARAM_DECL) {
+	bool backTracing;
+	EvalStack_PopUInt(backTracing);
+	float passThroughEvent;
+	EvalStack_PopFloat(passThroughEvent);
+	float3 localFixedDir;
+	EvalStack_PopFloat3(localFixedDir);
+
 	const uint transpTexIndex = (hitPoint->intoObject != backTracing) ?
 		material->frontTranspTexIndex : material->backTranspTexIndex;
 
+	float3 transp;
 	if (transpTexIndex != NULL_INDEX) {
 		const float3 blendColor = clamp(
 			Texture_GetSpectrumValue(transpTexIndex, hitPoint
@@ -37,11 +68,20 @@ OPENCL_FORCE_NOT_INLINE float3 NullMaterial_GetPassThroughTransparency(__global 
 
 		if (Spectrum_IsBlack(blendColor)) {
 			// It doesn't make any sense to have a solid NULL material
-			return .0001f;
+			transp = .0001f;
 		} else
-			return blendColor;
+			transp = blendColor;
 	} else
-		return WHITE;
+		transp = WHITE;
+	
+	EvalStack_PushFloat3(transp);
+}
+
+OPENCL_FORCE_INLINE void NullMaterial_GetEmittedRadiance(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		TEXTURES_PARAM_DECL) {
+	DefaultMaterial_GetEmittedRadiance(material, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 }
 
 OPENCL_FORCE_INLINE float3 NullMaterial_Evaluate(

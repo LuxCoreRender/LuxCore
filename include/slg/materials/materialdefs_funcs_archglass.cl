@@ -98,10 +98,40 @@ OPENCL_FORCE_NOT_INLINE float3 ArchGlassMaterial_EvalSpecularTransmission(__glob
 	return (1.f - result) * kt;
 }
 
-OPENCL_FORCE_NOT_INLINE float3 ArchGlassMaterial_GetPassThroughTransparency(__global const Material *material,
-		__global const HitPoint *hitPoint, const float3 localFixedDir,
-		const float passThroughEvent, const bool backTracing
+OPENCL_FORCE_INLINE void ArchGlassMaterial_Albedo(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
 		TEXTURES_PARAM_DECL) {
+    const float3 albedo = WHITE;
+
+	EvalStack_PushFloat3(albedo);
+}
+
+OPENCL_FORCE_INLINE void ArchGlassMaterial_GetInteriorVolume(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		TEXTURES_PARAM_DECL) {
+	DefaultMaterial_GetInteriorVolume(material, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+}
+
+OPENCL_FORCE_INLINE void ArchGlassMaterial_GetExteriorVolume(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		TEXTURES_PARAM_DECL) {
+	DefaultMaterial_GetExteriorVolume(material, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+}
+
+OPENCL_FORCE_INLINE void ArchGlassMaterial_GetPassThroughTransparency(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		TEXTURES_PARAM_DECL) {
+	bool backTracing;
+	EvalStack_PopUInt(backTracing);
+	float passThroughEvent;
+	EvalStack_PopFloat(passThroughEvent);
+	float3 localFixedDir;
+	EvalStack_PopFloat3(localFixedDir);
+
 	const float3 kt = Spectrum_Clamp(Texture_GetSpectrumValue(material->archglass.ktTexIndex, hitPoint
 		TEXTURES_PARAM));
 	const float3 kr = Spectrum_Clamp(Texture_GetSpectrumValue(material->archglass.krTexIndex, hitPoint
@@ -123,32 +153,41 @@ OPENCL_FORCE_NOT_INLINE float3 ArchGlassMaterial_GetPassThroughTransparency(__gl
 			kr, nc, nt, &reflLocalSampledDir);
 
 	// Decide to transmit or reflect
-	float threshold;
+	float3 transp;
 	if (!Spectrum_IsBlack(refl)) {
 		if (!Spectrum_IsBlack(trans)) {
 			// Importance sampling
 			const float reflFilter = Spectrum_Filter(refl);
 			const float transFilter = Spectrum_Filter(trans);
-			threshold = transFilter / (reflFilter + transFilter);
+			const float threshold = transFilter / (reflFilter + transFilter);
 			
 			if (passThroughEvent < threshold) {
 				// Transmit
-				return trans / threshold;
+				transp = trans / threshold;
 			} else {
 				// Reflect
-				return BLACK;
+				transp = BLACK;
 			}
 		} else
-			return BLACK;
+			transp = BLACK;
 	} else {
 		if (!Spectrum_IsBlack(trans)) {
 			// Transmit
 
 			// threshold = 1 so I avoid the / threshold
-			return trans;
+			transp = trans;
 		} else
-			return BLACK;
+			transp = BLACK;
 	}
+
+	EvalStack_PushFloat3(transp);
+}
+
+OPENCL_FORCE_INLINE void ArchGlassMaterial_GetEmittedRadiance(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		TEXTURES_PARAM_DECL) {
+	DefaultMaterial_GetEmittedRadiance(material, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 }
 
 OPENCL_FORCE_INLINE float3 ArchGlassMaterial_Evaluate(

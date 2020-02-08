@@ -522,21 +522,55 @@ OPENCL_FORCE_NOT_INLINE float EvalSpecular(__constant WeaveConfig *Weave, __cons
 	return EvalIntegrand(Weave, yarn, uv, umax, &om_i, &om_r);
 }
 
-OPENCL_FORCE_NOT_INLINE float3 ClothMaterial_Albedo(const float u, const float v,
-		const ClothPreset Preset, const float Repeat_U, const float Repeat_V,
-		const float s, const float3 Warp_Kd, const float3 Weft_Kd) {
-	__constant WeaveConfig *Weave = &ClothWeaves[Preset];
+//------------------------------------------------------------------------------
+
+OPENCL_FORCE_INLINE void ClothMaterial_Albedo(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		TEXTURES_PARAM_DECL) {
+	__constant WeaveConfig *Weave = &ClothWeaves[material->cloth.Preset];
 
 	float2 uv;
-	float umax, scale = s;
-	__constant Yarn *yarn = GetYarn(Preset, Weave, Repeat_U, Repeat_V,
-            u, v, &uv, &umax, &scale);
+	float umax, scale = material->cloth.specularNormalization;
+	__constant Yarn *yarn = GetYarn(material->cloth.Preset, Weave,
+			material->cloth.Repeat_U, material->cloth.Repeat_V,
+            hitPoint->uv[0].u, hitPoint->uv[0].v, &uv, &umax, &scale);
 	
-	const float3 kd = (yarn->yarn_type == WARP) ? Warp_Kd : Weft_Kd;
+	const float3 kd = (yarn->yarn_type == WARP) ?
+		Texture_GetSpectrumValue(material->cloth.Warp_KdIndex, hitPoint TEXTURES_PARAM) :
+		Texture_GetSpectrumValue(material->cloth.Weft_KdIndex, hitPoint TEXTURES_PARAM);
 
-    const float3 kdVal = Spectrum_Clamp(kd);
+    const float3 albedo = Spectrum_Clamp(kd);
 
-	return Spectrum_Clamp(kdVal);
+	EvalStack_PushFloat3(albedo);
+}
+
+OPENCL_FORCE_INLINE void ClothMaterial_GetInteriorVolume(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		TEXTURES_PARAM_DECL) {
+	DefaultMaterial_GetInteriorVolume(material, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+}
+
+OPENCL_FORCE_INLINE void ClothMaterial_GetExteriorVolume(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		TEXTURES_PARAM_DECL) {
+	DefaultMaterial_GetExteriorVolume(material, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+}
+
+OPENCL_FORCE_INLINE void ClothMaterial_GetPassThroughTransparency(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		TEXTURES_PARAM_DECL) {
+	DefaultMaterial_GetPassThroughTransparency(material, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+}
+
+OPENCL_FORCE_INLINE void ClothMaterial_GetEmittedRadiance(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		TEXTURES_PARAM_DECL) {
+	DefaultMaterial_GetEmittedRadiance(material, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 }
 
 OPENCL_FORCE_NOT_INLINE float3 ClothMaterial_Evaluate(
