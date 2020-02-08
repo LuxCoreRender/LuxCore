@@ -67,7 +67,8 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 		case MATTE:
 			switch (evalType) {
 				case EVAL_ALBEDO: {
-					const float3 albedo = Texture_GetSpectrumValue(mat->matte.kdTexIndex, hitPoint TEXTURES_PARAM);
+					const float3 albedo = Texture_GetSpectrumValue(mat->matte.kdTexIndex,
+							hitPoint TEXTURES_PARAM);
 					EvalStack_PushFloat3(albedo);
 					break;
 				}
@@ -91,8 +92,23 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					float oneOverPrimitiveArea;
 					EvalStack_PopFloat(oneOverPrimitiveArea);
 
-					const float3 emittedRadiance = DefaultMaterial_GetEmittedRadiance(mat, hitPoint, oneOverPrimitiveArea TEXTURES_PARAM);
+					const float3 emittedRadiance = DefaultMaterial_GetEmittedRadiance(mat,
+							hitPoint, oneOverPrimitiveArea TEXTURES_PARAM);
 					EvalStack_PushFloat3(emittedRadiance);
+					break;
+				}
+				case EVAL_GET_PASS_TROUGH_TRANSPARENCY: {
+					bool backTracing;
+					EvalStack_PopUInt(backTracing);
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+					float3 localFixedDir;
+					EvalStack_PopFloat3(localFixedDir);
+
+					const float3 transp = DefaultMaterial_GetPassThroughTransparency(mat,
+							hitPoint, localFixedDir, passThroughEvent, backTracing
+							TEXTURES_PARAM);
+					EvalStack_PushFloat3(transp);
 					break;
 				}
 				default:
@@ -107,7 +123,7 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 			switch (evalType) {
 				case EVAL_ALBEDO: {
 					const float3 albedo = MatteTranslucentMaterial_Albedo(
-							Texture_GetSpectrumValue(mat->matteTranslucent.krTexIndex, hitPoint TEXTURES_PARAM),
+							Texture_GetSpectrumValue(mat->matteTranslucent.krTexIndex,hitPoint TEXTURES_PARAM),
 							Texture_GetSpectrumValue(mat->matteTranslucent.ktTexIndex, hitPoint TEXTURES_PARAM));
 					EvalStack_PushFloat3(albedo);
 					break;
@@ -132,8 +148,23 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					float oneOverPrimitiveArea;
 					EvalStack_PopFloat(oneOverPrimitiveArea);
 
-					const float3 emittedRadiance = DefaultMaterial_GetEmittedRadiance(mat, hitPoint, oneOverPrimitiveArea TEXTURES_PARAM);
+					const float3 emittedRadiance = DefaultMaterial_GetEmittedRadiance(mat,
+							hitPoint, oneOverPrimitiveArea TEXTURES_PARAM);
 					EvalStack_PushFloat3(emittedRadiance);
+					break;
+				}
+				case EVAL_GET_PASS_TROUGH_TRANSPARENCY: {
+					bool backTracing;
+					EvalStack_PopUInt(backTracing);
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+					float3 localFixedDir;
+					EvalStack_PopFloat3(localFixedDir);
+
+					const float3 transp = DefaultMaterial_GetPassThroughTransparency(mat,
+							hitPoint, localFixedDir, passThroughEvent, backTracing
+							TEXTURES_PARAM);
+					EvalStack_PushFloat3(transp);
 					break;
 				}
 				default:
@@ -173,6 +204,20 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 
 					const float3 emittedRadiance = DefaultMaterial_GetEmittedRadiance(mat, hitPoint, oneOverPrimitiveArea TEXTURES_PARAM);
 					EvalStack_PushFloat3(emittedRadiance);
+					break;
+				}
+				case EVAL_GET_PASS_TROUGH_TRANSPARENCY: {
+					bool backTracing;
+					EvalStack_PopUInt(backTracing);
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+					float3 localFixedDir;
+					EvalStack_PopFloat3(localFixedDir);
+
+					const float3 transp = DefaultMaterial_GetPassThroughTransparency(mat,
+							hitPoint, localFixedDir, passThroughEvent, backTracing
+							TEXTURES_PARAM);
+					EvalStack_PushFloat3(transp);
 					break;
 				}
 				default:
@@ -219,6 +264,20 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					EvalStack_PushFloat3(emittedRadiance);
 					break;
 				}
+				case EVAL_GET_PASS_TROUGH_TRANSPARENCY: {
+					bool backTracing;
+					EvalStack_PopUInt(backTracing);
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+					float3 localFixedDir;
+					EvalStack_PopFloat3(localFixedDir);
+
+					const float3 transp = DefaultMaterial_GetPassThroughTransparency(mat,
+							hitPoint, localFixedDir, passThroughEvent, backTracing
+							TEXTURES_PARAM);
+					EvalStack_PushFloat3(transp);
+					break;
+				}
 				default:
 					// Something wrong here
 					break;
@@ -256,6 +315,20 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 
 					const float3 emittedRadiance = DefaultMaterial_GetEmittedRadiance(mat, hitPoint, oneOverPrimitiveArea TEXTURES_PARAM);
 					EvalStack_PushFloat3(emittedRadiance);
+					break;
+				}
+				case EVAL_GET_PASS_TROUGH_TRANSPARENCY: {
+					bool backTracing;
+					EvalStack_PopUInt(backTracing);
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+					float3 localFixedDir;
+					EvalStack_PopFloat3(localFixedDir);
+
+					const float3 transp = DefaultMaterial_GetPassThroughTransparency(mat,
+							hitPoint, localFixedDir, passThroughEvent, backTracing
+							TEXTURES_PARAM);
+					EvalStack_PushFloat3(transp);
 					break;
 				}
 				default:
@@ -304,6 +377,20 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					EvalStack_PushFloat3(emittedRadiance);
 					break;
 				}
+				case EVAL_GET_PASS_TROUGH_TRANSPARENCY: {
+					bool backTracing;
+					EvalStack_PopUInt(backTracing);
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+					float3 localFixedDir;
+					EvalStack_PopFloat3(localFixedDir);
+
+					const float3 transp = DefaultMaterial_GetPassThroughTransparency(mat,
+							hitPoint, localFixedDir, passThroughEvent, backTracing
+							TEXTURES_PARAM);
+					EvalStack_PushFloat3(transp);
+					break;
+				}
 				default:
 					// Something wrong here
 					break;
@@ -343,6 +430,20 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					EvalStack_PushFloat3(emittedRadiance);
 					break;
 				}
+				case EVAL_GET_PASS_TROUGH_TRANSPARENCY: {
+					bool backTracing;
+					EvalStack_PopUInt(backTracing);
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+					float3 localFixedDir;
+					EvalStack_PopFloat3(localFixedDir);
+
+					const float3 transp = DefaultMaterial_GetPassThroughTransparency(mat,
+							hitPoint, localFixedDir, passThroughEvent, backTracing
+							TEXTURES_PARAM);
+					EvalStack_PushFloat3(transp);
+					break;
+				}
 				default:
 					// Something wrong here
 					break;
@@ -380,6 +481,20 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 
 					const float3 emittedRadiance = DefaultMaterial_GetEmittedRadiance(mat, hitPoint, oneOverPrimitiveArea TEXTURES_PARAM);
 					EvalStack_PushFloat3(emittedRadiance);
+					break;
+				}
+				case EVAL_GET_PASS_TROUGH_TRANSPARENCY: {
+					bool backTracing;
+					EvalStack_PopUInt(backTracing);
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+					float3 localFixedDir;
+					EvalStack_PopFloat3(localFixedDir);
+
+					const float3 transp = DefaultMaterial_GetPassThroughTransparency(mat,
+							hitPoint, localFixedDir, passThroughEvent, backTracing
+							TEXTURES_PARAM);
+					EvalStack_PushFloat3(transp);
 					break;
 				}
 				default:
@@ -423,6 +538,20 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					EvalStack_PushFloat3(emittedRadiance);
 					break;
 				}
+				case EVAL_GET_PASS_TROUGH_TRANSPARENCY: {
+					bool backTracing;
+					EvalStack_PopUInt(backTracing);
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+					float3 localFixedDir;
+					EvalStack_PopFloat3(localFixedDir);
+
+					const float3 transp = DefaultMaterial_GetPassThroughTransparency(mat,
+							hitPoint, localFixedDir, passThroughEvent, backTracing
+							TEXTURES_PARAM);
+					EvalStack_PushFloat3(transp);
+					break;
+				}
 				default:
 					// Something wrong here
 					break;
@@ -460,6 +589,20 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 
 					const float3 emittedRadiance = DefaultMaterial_GetEmittedRadiance(mat, hitPoint, oneOverPrimitiveArea TEXTURES_PARAM);
 					EvalStack_PushFloat3(emittedRadiance);
+					break;
+				}
+				case EVAL_GET_PASS_TROUGH_TRANSPARENCY: {
+					bool backTracing;
+					EvalStack_PopUInt(backTracing);
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+					float3 localFixedDir;
+					EvalStack_PopFloat3(localFixedDir);
+
+					const float3 transp = DefaultMaterial_GetPassThroughTransparency(mat,
+							hitPoint, localFixedDir, passThroughEvent, backTracing
+							TEXTURES_PARAM);
+					EvalStack_PushFloat3(transp);
 					break;
 				}
 				default:
@@ -501,6 +644,20 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					EvalStack_PushFloat3(emittedRadiance);
 					break;
 				}
+				case EVAL_GET_PASS_TROUGH_TRANSPARENCY: {
+					bool backTracing;
+					EvalStack_PopUInt(backTracing);
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+					float3 localFixedDir;
+					EvalStack_PopFloat3(localFixedDir);
+
+					const float3 transp = DefaultMaterial_GetPassThroughTransparency(mat,
+							hitPoint, localFixedDir, passThroughEvent, backTracing
+							TEXTURES_PARAM);
+					EvalStack_PushFloat3(transp);
+					break;
+				}
 				default:
 					// Something wrong here
 					break;
@@ -538,6 +695,20 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 
 					const float3 emittedRadiance = DefaultMaterial_GetEmittedRadiance(mat, hitPoint, oneOverPrimitiveArea TEXTURES_PARAM);
 					EvalStack_PushFloat3(emittedRadiance);
+					break;
+				}
+				case EVAL_GET_PASS_TROUGH_TRANSPARENCY: {
+					bool backTracing;
+					EvalStack_PopUInt(backTracing);
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+					float3 localFixedDir;
+					EvalStack_PopFloat3(localFixedDir);
+
+					const float3 transp = NullMaterial_GetPassThroughTransparency(mat,
+							hitPoint, localFixedDir, passThroughEvent, backTracing
+							TEXTURES_PARAM);
+					EvalStack_PushFloat3(transp);
 					break;
 				}
 				default:
@@ -649,8 +820,8 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					float oneOverPrimitiveArea;
 					EvalStack_PopFloat(oneOverPrimitiveArea);
 
-					// To setup the following EVAL_GET_EMITTED_RADIANCE evaluation of first sub-nodes
 					EvalStack_PushFloat(oneOverPrimitiveArea);
+					// To setup the following EVAL_GET_EMITTED_RADIANCE evaluation of first sub-nodes
 					EvalStack_PushFloat(oneOverPrimitiveArea);
 					break;
 				}
@@ -661,9 +832,9 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					float oneOverPrimitiveArea;
 					EvalStack_PopFloat(oneOverPrimitiveArea);
 
-					// To setup the following EVAL_GET_EMITTED_RADIANCE evaluation of second sub-nodes
 					EvalStack_PushFloat(oneOverPrimitiveArea);
 					EvalStack_PushFloat3(emit1);
+					// To setup the following EVAL_GET_EMITTED_RADIANCE evaluation of second sub-nodes
 					EvalStack_PushFloat(oneOverPrimitiveArea);
 					break;
 				}
@@ -694,6 +865,100 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					}
 
 					EvalStack_PushFloat3(emittedRadiance);
+					break;
+				}
+				case EVAL_GET_PASS_TROUGH_TRANSPARENCY_MIX_SETUP1: {
+					bool backTracing;
+					EvalStack_PopUInt(backTracing);
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+					float3 localFixedDir;
+					EvalStack_PopFloat3(localFixedDir);
+
+					// Save the parameters
+					EvalStack_PushFloat3(localFixedDir);
+					EvalStack_PushFloat(passThroughEvent);
+					EvalStack_PushUInt(backTracing);
+
+					const float factor = Texture_GetFloatValue(mat->mix.mixFactorTexIndex, hitPoint TEXTURES_PARAM);
+					const float weight2 = clamp(factor, 0.f, 1.f);
+					const float weight1 = 1.f - weight2;
+
+					const float passThroughEvent1 = passThroughEvent / weight1;
+
+					EvalStack_PushFloat(factor);
+
+					// To setup the following EVAL_GET_PASS_TROUGH_TRANSPARENCY evaluation of first sub-nodes
+					EvalStack_PushFloat3(localFixedDir);
+					EvalStack_PushFloat(passThroughEvent1);
+					EvalStack_PushUInt(backTracing);
+					break;
+				}
+				case EVAL_GET_PASS_TROUGH_TRANSPARENCY_MIX_SETUP2: {
+					float3 transp1;
+					EvalStack_PopFloat3(transp1);
+
+					float factor;
+					EvalStack_PopFloat(factor);
+
+					bool backTracing;
+					EvalStack_PopUInt(backTracing);
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+					float3 localFixedDir;
+					EvalStack_PopFloat3(localFixedDir);
+
+					const float weight2 = clamp(factor, 0.f, 1.f);
+					const float weight1 = 1.f - weight2;
+
+					const float passThroughEvent2 = (passThroughEvent - weight1) / weight2;
+
+					// Save the parameters
+					EvalStack_PushFloat3(localFixedDir);
+					EvalStack_PushFloat(passThroughEvent);
+					EvalStack_PushUInt(backTracing);
+					
+					EvalStack_PushFloat(factor);
+
+					EvalStack_PushFloat3(transp1);
+
+					// To setup the following EVAL_GET_PASS_TROUGH_TRANSPARENCY evaluation of second sub-nodes
+					EvalStack_PushFloat3(localFixedDir);
+					EvalStack_PushFloat(passThroughEvent2);
+					EvalStack_PushUInt(backTracing);
+					break;
+				}
+				case EVAL_GET_PASS_TROUGH_TRANSPARENCY: {
+					float3 transp1, transp2;
+					EvalStack_PopFloat3(transp2);
+					EvalStack_PopFloat3(transp1);
+
+					float factor;
+					EvalStack_PopFloat(factor);
+
+					bool backTracing;
+					EvalStack_PopUInt(backTracing);
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+					float3 localFixedDir;
+					EvalStack_PopFloat3(localFixedDir);
+					
+					const uint transpTexIndex = (hitPoint->intoObject != backTracing) ?
+						mat->frontTranspTexIndex : mat->backTranspTexIndex;
+
+					float3 transp;
+					if (transpTexIndex != NULL_INDEX) {
+						transp = DefaultMaterial_GetPassThroughTransparency(mat,
+								hitPoint, localFixedDir, passThroughEvent, backTracing
+								TEXTURES_PARAM);
+					} else {
+						const float weight2 = clamp(factor, 0.f, 1.f);
+						const float weight1 = 1.f - weight2;
+
+						transp = (passThroughEvent < weight1) ? transp1 : transp2;
+					}
+					
+					EvalStack_PushFloat3(transp);
 					break;
 				}
 				default:
@@ -751,6 +1016,11 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					// radiance on the stack					
 					break;
 				}
+				case EVAL_GET_PASS_TROUGH_TRANSPARENCY: {
+					// Nothing to do there is already the matBase pass trough
+					// transparency on the stack		
+					break;
+				}
 				default:
 					// Something wrong here
 					break;
@@ -788,6 +1058,20 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 
 					const float3 emittedRadiance = DefaultMaterial_GetEmittedRadiance(mat, hitPoint, oneOverPrimitiveArea TEXTURES_PARAM);
 					EvalStack_PushFloat3(emittedRadiance);
+					break;
+				}
+				case EVAL_GET_PASS_TROUGH_TRANSPARENCY: {
+					bool backTracing;
+					EvalStack_PopUInt(backTracing);
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+					float3 localFixedDir;
+					EvalStack_PopFloat3(localFixedDir);
+
+					const float3 transp = DefaultMaterial_GetPassThroughTransparency(mat,
+							hitPoint, localFixedDir, passThroughEvent, backTracing
+							TEXTURES_PARAM);
+					EvalStack_PushFloat3(transp);
 					break;
 				}
 				default:
@@ -829,6 +1113,20 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					EvalStack_PushFloat3(emittedRadiance);
 					break;
 				}
+				case EVAL_GET_PASS_TROUGH_TRANSPARENCY: {
+					bool backTracing;
+					EvalStack_PopUInt(backTracing);
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+					float3 localFixedDir;
+					EvalStack_PopFloat3(localFixedDir);
+
+					const float3 transp = DefaultMaterial_GetPassThroughTransparency(mat,
+							hitPoint, localFixedDir, passThroughEvent, backTracing
+							TEXTURES_PARAM);
+					EvalStack_PushFloat3(transp);
+					break;
+				}
 				default:
 					// Something wrong here
 					break;
@@ -866,6 +1164,20 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 
 					const float3 emittedRadiance = DefaultMaterial_GetEmittedRadiance(mat, hitPoint, oneOverPrimitiveArea TEXTURES_PARAM);
 					EvalStack_PushFloat3(emittedRadiance);
+					break;
+				}
+				case EVAL_GET_PASS_TROUGH_TRANSPARENCY: {
+					bool backTracing;
+					EvalStack_PopUInt(backTracing);
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+					float3 localFixedDir;
+					EvalStack_PopFloat3(localFixedDir);
+
+					const float3 transp = ArchGlassMaterial_GetPassThroughTransparency(mat,
+							hitPoint, localFixedDir, passThroughEvent, backTracing
+							TEXTURES_PARAM);
+					EvalStack_PushFloat3(transp);
 					break;
 				}
 				default:
@@ -907,6 +1219,20 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					EvalStack_PushFloat3(emittedRadiance);
 					break;
 				}
+				case EVAL_GET_PASS_TROUGH_TRANSPARENCY: {
+					bool backTracing;
+					EvalStack_PopUInt(backTracing);
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+					float3 localFixedDir;
+					EvalStack_PopFloat3(localFixedDir);
+
+					const float3 transp = DefaultMaterial_GetPassThroughTransparency(mat,
+							hitPoint, localFixedDir, passThroughEvent, backTracing
+							TEXTURES_PARAM);
+					EvalStack_PushFloat3(transp);
+					break;
+				}
 				default:
 					// Something wrong here
 					break;
@@ -944,6 +1270,20 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 
 					const float3 emittedRadiance = DefaultMaterial_GetEmittedRadiance(mat, hitPoint, oneOverPrimitiveArea TEXTURES_PARAM);
 					EvalStack_PushFloat3(emittedRadiance);
+					break;
+				}
+				case EVAL_GET_PASS_TROUGH_TRANSPARENCY: {
+					bool backTracing;
+					EvalStack_PopUInt(backTracing);
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+					float3 localFixedDir;
+					EvalStack_PopFloat3(localFixedDir);
+
+					const float3 transp = DefaultMaterial_GetPassThroughTransparency(mat,
+							hitPoint, localFixedDir, passThroughEvent, backTracing
+							TEXTURES_PARAM);
+					EvalStack_PushFloat3(transp);
 					break;
 				}
 				default:
@@ -987,6 +1327,20 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					EvalStack_PushFloat3(emittedRadiance);
 					break;
 				}
+				case EVAL_GET_PASS_TROUGH_TRANSPARENCY: {
+					bool backTracing;
+					EvalStack_PopUInt(backTracing);
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+					float3 localFixedDir;
+					EvalStack_PopFloat3(localFixedDir);
+
+					const float3 transp = DefaultMaterial_GetPassThroughTransparency(mat,
+							hitPoint, localFixedDir, passThroughEvent, backTracing
+							TEXTURES_PARAM);
+					EvalStack_PushFloat3(transp);
+					break;
+				}
 				default:
 					// Something wrong here
 					break;
@@ -1026,6 +1380,20 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 
 					const float3 emittedRadiance = DefaultMaterial_GetEmittedRadiance(mat, hitPoint, oneOverPrimitiveArea TEXTURES_PARAM);
 					EvalStack_PushFloat3(emittedRadiance);
+					break;
+				}
+				case EVAL_GET_PASS_TROUGH_TRANSPARENCY: {
+					bool backTracing;
+					EvalStack_PopUInt(backTracing);
+					float passThroughEvent;
+					EvalStack_PopFloat(passThroughEvent);
+					float3 localFixedDir;
+					EvalStack_PopFloat3(localFixedDir);
+
+					const float3 transp = DefaultMaterial_GetPassThroughTransparency(mat,
+							hitPoint, localFixedDir, passThroughEvent, backTracing
+							TEXTURES_PARAM);
+					EvalStack_PushFloat3(transp);
 					break;
 				}
 				default:

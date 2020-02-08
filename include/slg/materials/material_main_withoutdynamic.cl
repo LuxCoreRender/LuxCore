@@ -409,20 +409,3 @@ OPENCL_FORCE_NOT_INLINE float3 Material_SampleWithoutDynamic(__global const Mate
 			return BLACK;
 	}
 }
-
-//------------------------------------------------------------------------------
-// Material_GetPassThroughTransparencyWithoutDynamic
-//------------------------------------------------------------------------------
-
-OPENCL_FORCE_NOT_INLINE float3 Material_GetPassThroughTransparencyWithoutDynamic(__global const Material* restrict material, __global const HitPoint *hitPoint,
-		const float3 localFixedDir, const float passThroughEvent, const bool backTracing
-		MATERIALS_PARAM_DECL) {
-	switch (material->type) {
-		case ARCHGLASS:
-			return ArchGlassMaterial_GetPassThroughTransparency(material, hitPoint, localFixedDir, passThroughEvent, backTracing TEXTURES_PARAM);
-		case NULLMAT:
-			return NullMaterial_GetPassThroughTransparency(material, hitPoint, localFixedDir, passThroughEvent, backTracing TEXTURES_PARAM);
-		default:
-			return DefaultMaterial_GetPassThroughTransparency(material, hitPoint, localFixedDir, passThroughEvent, backTracing TEXTURES_PARAM);
-	}
-}

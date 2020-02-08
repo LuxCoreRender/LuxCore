@@ -38,13 +38,6 @@
 //  <<CS_MB_FLAG>>
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_GetPassThroughTransparency(__global const Material* restrict material,
-		__global const HitPoint *hitPoint, const float3 localFixedDir, const float passThroughEvent, const bool backTracing
-		MATERIALS_PARAM_DECL) {
-	return <<CS_MAT_BASE_PREFIX>>_GetPassThroughTransparency<<CS_MAT_BASE_POSTFIX>>(&mats[<<CS_MAT_BASE_MATERIAL_INDEX>>],
-			hitPoint, localFixedDir, passThroughEvent, backTracing MATERIALS_PARAM);
-}
-
 OPENCL_FORCE_NOT_INLINE float3 Material_Index<<CS_GLOSSYCOATING_MATERIAL_INDEX>>_Evaluate(__global const Material* restrict material,
 		__global const HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW

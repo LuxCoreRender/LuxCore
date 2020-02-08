@@ -12,9 +12,17 @@ scene.textures.tex.texture2 = 1.0 1.0 1.0
 #scene.textures.tex.texture2 = 0.75 0.75 0.75
 scene.textures.tex.mapping.uvscale = 32 -32
 ################################################################################
-scene.materials.shell.type = matte
-scene.materials.shell.kd = 0.7 0.0 0.0
-scene.materials.shell.transparency = tex
+scene.materials.mat1.type = null
+scene.materials.mat2.type = matte
+scene.materials.mat2.kd = 0.7 0.0 0.0
+scene.materials.shell.type = mix
+scene.materials.shell.material1 = mat1
+scene.materials.shell.material2 = mat2
+scene.materials.shell.amount = tex
+##
+#scene.materials.shell.type = matte
+#scene.materials.shell.kd = 0.7 0.0 0.0
+#scene.materials.shell.transparency = tex
 ##
 #scene.materials.shell.type = null
 #scene.materials.shell.transparency = tex

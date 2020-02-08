@@ -39,7 +39,7 @@ OPENCL_FORCE_INLINE bool Material_IsDelta(const uint matIndex
 // Material_Albedo
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_INLINE float3 Material_Albedo(const uint matIndex,
+OPENCL_FORCE_NOT_INLINE float3 Material_Albedo(const uint matIndex,
 		__global const HitPoint *hitPoint
 		MATERIALS_PARAM_DECL) {
 #if defined(DEBUG_PRINTF_MATERIAL_EVAL)
@@ -138,23 +138,58 @@ OPENCL_FORCE_INLINE float3 Material_GetPassThroughTransparency(const uint matInd
 		__global const HitPoint *hitPoint,
 		const float3 localFixedDir, const float passThroughEvent, const bool backTracing
 		MATERIALS_PARAM_DECL) {
-	__global const Material *material = &mats[matIndex];
+#if defined(DEBUG_PRINTF_MATERIAL_EVAL)
+	printf("===============================================================\n");
+	printf("Material_GetPassThroughTransparency()\n");
+	printf("===============================================================\n");
+#endif
 
-	if (Material_IsDynamic(material))
-		return Material_GetPassThroughTransparencyWithDynamic(matIndex, hitPoint,
-			localFixedDir, passThroughEvent, backTracing
-			MATERIALS_PARAM);
-	else
-		return Material_GetPassThroughTransparencyWithoutDynamic(material, hitPoint,
-			localFixedDir, passThroughEvent, backTracing
-			MATERIALS_PARAM);
+	__global const Material* restrict startMat = &mats[matIndex];
+	const size_t gid = get_global_id(0);
+	__global float *evalStack = &matEvalStacks[gid * maxMaterialEvalStackSize];
+
+	const uint evalOpStartIndex = startMat->evalGetPassThroughTransparencyOpStartIndex;
+	const uint evalOpLength = startMat->evalGetPassThroughTransparencyOpLength;
+
+#if defined(DEBUG_PRINTF_MATERIAL_EVAL)
+	printf("matIndex=%d evalOpStartIndex=%d evalOpLength=%d\n", matIndex, evalOpStartIndex, evalOpLength);
+#endif
+
+	uint evalStackOffsetVal = 0;
+	uint *evalStackOffset = &evalStackOffsetVal; // Used by macros
+	// Evaluation parameters
+	EvalStack_PushFloat3(localFixedDir);
+	EvalStack_PushFloat(passThroughEvent);
+	EvalStack_PushUInt(backTracing);
+
+	for (uint i = 0; i < evalOpLength; ++i) {
+#if defined(DEBUG_PRINTF_MATERIAL_EVAL)
+		printf("EvalOp: #%d evalStackOffset=%d\n", i, evalStackOffsetVal);
+#endif
+
+		__global const MaterialEvalOp* restrict evalOp = &matEvalOps[evalOpStartIndex + i];
+
+		Material_EvalOp(evalOp, evalStack, &evalStackOffsetVal, hitPoint MATERIALS_PARAM);
+	}
+#if defined(DEBUG_PRINTF_MATERIAL_EVAL)
+	printf("evalStackOffset=#%d\n", evalStackOffsetVal);
+#endif
+	
+	float3 result;
+	EvalStack_PopFloat3(result);
+
+#if defined(DEBUG_PRINTF_MATERIAL_EVAL)
+	printf("Result=(%f, %f, %f)\n", result.s0, result.s1, result.s2);
+#endif
+
+	return result;
 }
 
 //------------------------------------------------------------------------------
 // Material_GetEmittedRadiance
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_INLINE float3 Material_GetEmittedRadiance(const uint matIndex,
+OPENCL_FORCE_NOT_INLINE float3 Material_GetEmittedRadiance(const uint matIndex,
 		__global const HitPoint *hitPoint, const float oneOverPrimitiveArea
 		MATERIALS_PARAM_DECL) {
 #if defined(DEBUG_PRINTF_MATERIAL_EVAL)
@@ -217,7 +252,7 @@ OPENCL_FORCE_INLINE float Material_GetEmittedCosThetaMax(const uint matIndex
 // Material_GetInteriorVolume
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_INLINE uint Material_GetInteriorVolume(const uint matIndex,
+OPENCL_FORCE_NOT_INLINE uint Material_GetInteriorVolume(const uint matIndex,
 		__global const HitPoint *hitPoint,
 		const float passThroughEvent
 		MATERIALS_PARAM_DECL) {
@@ -270,7 +305,7 @@ OPENCL_FORCE_INLINE uint Material_GetInteriorVolume(const uint matIndex,
 // Material_GetExteriorVolume
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_INLINE uint Material_GetExteriorVolume(const uint matIndex,
+OPENCL_FORCE_NOT_INLINE uint Material_GetExteriorVolume(const uint matIndex,
 		__global const HitPoint *hitPoint,
 		const float passThroughEvent
 		MATERIALS_PARAM_DECL) {

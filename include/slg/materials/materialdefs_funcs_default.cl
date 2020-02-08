@@ -51,8 +51,7 @@ OPENCL_FORCE_INLINE float3 DefaultMaterial_GetPassThroughTransparency(__global c
 
 	if (transpTexIndex != NULL_INDEX) {
 		const float weight = clamp(
-				Texture_GetFloatValue(transpTexIndex, hitPoint
-					TEXTURES_PARAM),
+				Texture_GetFloatValue(transpTexIndex, hitPoint TEXTURES_PARAM),
 				0.f, 1.f);
 
 		return (passThroughEvent > weight) ? WHITE : BLACK;

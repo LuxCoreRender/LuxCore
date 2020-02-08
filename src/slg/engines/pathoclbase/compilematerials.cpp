@@ -104,8 +104,12 @@ u_int CompiledScene::CompileMaterialOps(const u_int matIndex,
 					evalOpStackSize += 1;
 					break;
 				case slg::ocl::EVAL_GET_EMITTED_RADIANCE:
-					// 1 x parameter and 3 x result
+					// 1 x parameter and 3 x results
 					evalOpStackSize += 3;
+					break;
+				case slg::ocl::EVAL_GET_PASS_TROUGH_TRANSPARENCY:
+					// 5 x parameters and 3 x results
+					evalOpStackSize += 5;
 					break;
 				default:
 					throw runtime_error("Unknown eval. type in CompiledScene::CompileMaterialOps(" + ToString(mat->type) + "): " + ToString(opType));
@@ -149,12 +153,12 @@ u_int CompiledScene::CompileMaterialOps(const u_int matIndex,
 					evalOpStackSize += 1;	
 					break;
 				case slg::ocl::EVAL_GET_EMITTED_RADIANCE_MIX_SETUP1:
-					// 1 x parameter and 2 x result
-					evalOpStackSize += 1 + 1;
+					// 1 x parameter and 2 x results
+					evalOpStackSize += 2;
 					break;
 				case slg::ocl::EVAL_GET_EMITTED_RADIANCE_MIX_SETUP2:
-					// 1 x parameter and 3 x result
-					evalOpStackSize += 1 + 3 + 1;
+					// 1 x parameter and 5 x results
+					evalOpStackSize += 5;
 					break;
 				case slg::ocl::EVAL_GET_EMITTED_RADIANCE:
 					if (mat->emitTexIndex == NULL_INDEX) {
@@ -166,6 +170,23 @@ u_int CompiledScene::CompileMaterialOps(const u_int matIndex,
 
 					// 1 x parameter and 3 x result
 					evalOpStackSize += 3;
+					break;
+				case slg::ocl::EVAL_GET_PASS_TROUGH_TRANSPARENCY_MIX_SETUP1:
+					// 5 x parameters and 3 x results
+					evalOpStackSize += 5;
+					break;
+				case slg::ocl::EVAL_GET_PASS_TROUGH_TRANSPARENCY_MIX_SETUP2:
+					// 5 x parameters and 3 x results
+					evalOpStackSize += 5;
+					break;
+				case slg::ocl::EVAL_GET_PASS_TROUGH_TRANSPARENCY:
+					evalOpStackSize += CompileMaterialOps(matIndex, slg::ocl::EVAL_GET_PASS_TROUGH_TRANSPARENCY_MIX_SETUP1);
+					evalOpStackSize += CompileMaterialOps(mat->mix.matAIndex, slg::ocl::EVAL_GET_PASS_TROUGH_TRANSPARENCY);
+					evalOpStackSize += CompileMaterialOps(matIndex, slg::ocl::EVAL_GET_PASS_TROUGH_TRANSPARENCY_MIX_SETUP2);
+					evalOpStackSize += CompileMaterialOps(mat->mix.matBIndex, slg::ocl::EVAL_GET_PASS_TROUGH_TRANSPARENCY);
+
+					// 5 x parameter and 3 x result
+					evalOpStackSize += 5;
 					break;
 				default:
 					throw runtime_error("Unknown eval. type in CompiledScene::CompileMaterialOps(" + ToString(mat->type) + "): " + ToString(opType));
@@ -194,8 +215,14 @@ u_int CompiledScene::CompileMaterialOps(const u_int matIndex,
 					if (mat->emitTexIndex == NULL_INDEX)
 						evalOpStackSize += CompileMaterialOps(mat->glossycoating.matBaseIndex, slg::ocl::EVAL_GET_EMITTED_RADIANCE);
 
-					// 1 x parameter and 3 x result
+					// 1 x parameter and 3 x results
 					evalOpStackSize += 3;
+					break;
+				case slg::ocl::EVAL_GET_PASS_TROUGH_TRANSPARENCY:
+					evalOpStackSize += CompileMaterialOps(mat->glossycoating.matBaseIndex, slg::ocl::EVAL_GET_PASS_TROUGH_TRANSPARENCY);
+
+					// 5 x parameters and 3 x results
+					evalOpStackSize += 5;
 					break;
 				default:
 					throw runtime_error("Unknown eval. type in CompiledScene::CompileMaterialOps(" + ToString(mat->type) + "): " + ToString(opType));
@@ -229,7 +256,8 @@ void CompiledScene::CompileMaterialOps() {
 		//----------------------------------------------------------------------
 		
 		mat->evalAlbedoOpStartIndex = matEvalOps.size();
-		const u_int evalAlbedoOpsStackSizeFloat = CompileMaterialOps(i, slg::ocl::MaterialEvalOpType::EVAL_ALBEDO);
+		const u_int evalAlbedoOpsStackSizeFloat = CompileMaterialOps(i,
+				slg::ocl::MaterialEvalOpType::EVAL_ALBEDO);
 		mat->evalAlbedoOpLength = matEvalOps.size() - mat->evalAlbedoOpStartIndex;
 
 		maxMaterialEvalStackSize = Max(maxMaterialEvalStackSize, evalAlbedoOpsStackSizeFloat);
@@ -239,7 +267,8 @@ void CompiledScene::CompileMaterialOps() {
 		//----------------------------------------------------------------------
 		
 		mat->evalGetInteriorVolumeOpStartIndex = matEvalOps.size();
-		const u_int evalGetInteriorVolumeOpsStackSizeFloat = CompileMaterialOps(i, slg::ocl::MaterialEvalOpType::EVAL_GET_INTERIOR_VOLUME);
+		const u_int evalGetInteriorVolumeOpsStackSizeFloat = CompileMaterialOps(i,
+				slg::ocl::MaterialEvalOpType::EVAL_GET_INTERIOR_VOLUME);
 		mat->evalGetInteriorVolumeOpLength = matEvalOps.size() - mat->evalGetInteriorVolumeOpStartIndex;
 
 		maxMaterialEvalStackSize = Max(maxMaterialEvalStackSize, evalGetInteriorVolumeOpsStackSizeFloat);
@@ -249,7 +278,8 @@ void CompiledScene::CompileMaterialOps() {
 		//----------------------------------------------------------------------
 		
 		mat->evalGetExteriorVolumeOpStartIndex = matEvalOps.size();
-		const u_int evalGetExteriorVolumeOpsStackSizeFloat = CompileMaterialOps(i, slg::ocl::MaterialEvalOpType::EVAL_GET_EXTERIOR_VOLUME);
+		const u_int evalGetExteriorVolumeOpsStackSizeFloat = CompileMaterialOps(i,
+				slg::ocl::MaterialEvalOpType::EVAL_GET_EXTERIOR_VOLUME);
 		mat->evalGetExteriorVolumeOpLength = matEvalOps.size() - mat->evalGetExteriorVolumeOpStartIndex;
 
 		maxMaterialEvalStackSize = Max(maxMaterialEvalStackSize, evalGetExteriorVolumeOpsStackSizeFloat);
@@ -259,10 +289,22 @@ void CompiledScene::CompileMaterialOps() {
 		//----------------------------------------------------------------------
 		
 		mat->evalGetEmittedRadianceOpStartIndex = matEvalOps.size();
-		const u_int evalGetEmittedRadianceOpsStackSizeFloat = CompileMaterialOps(i, slg::ocl::MaterialEvalOpType::EVAL_GET_EMITTED_RADIANCE);
+		const u_int evalGetEmittedRadianceOpsStackSizeFloat = CompileMaterialOps(i,
+				slg::ocl::MaterialEvalOpType::EVAL_GET_EMITTED_RADIANCE);
 		mat->evalGetEmittedRadianceOpLength = matEvalOps.size() - mat->evalGetEmittedRadianceOpStartIndex;
 
 		maxMaterialEvalStackSize = Max(maxMaterialEvalStackSize, evalGetEmittedRadianceOpsStackSizeFloat);
+
+		//----------------------------------------------------------------------
+		// EVAL_GET_PASS_TROUGH_TRANSPARENCY
+		//----------------------------------------------------------------------
+		
+		mat->evalGetPassThroughTransparencyOpStartIndex = matEvalOps.size();
+		const u_int evalGetPassThroughTransparencyOpsStackSizeFloat = CompileMaterialOps(i,
+				slg::ocl::MaterialEvalOpType::EVAL_GET_PASS_TROUGH_TRANSPARENCY);
+		mat->evalGetPassThroughTransparencyOpLength = matEvalOps.size() - mat->evalGetPassThroughTransparencyOpStartIndex;
+
+		maxMaterialEvalStackSize = Max(maxMaterialEvalStackSize, evalGetPassThroughTransparencyOpsStackSizeFloat);
 	}
 
 	SLG_LOG("Material evaluation ops count: " << matEvalOps.size());
@@ -824,12 +866,6 @@ string CompiledScene::GetMaterialsEvaluationSourceCode() const {
 			"mat, hitPoint, fixedDir, sampledDir, u0, u1,\n"
 				"\t\t\tpassThroughEvent,\n"
 				"\t\t\tpdfW, event MATERIALS_PARAM");
-
-	// Generate the code for generic GetPassThroughTransparencyWithDynamic()
-	AddMaterialSourceSwitch(source, mats, "GetPassThroughTransparencyWithDynamic", "GetPassThroughTransparency", "float3", "BLACK",
-			"const uint index, __global const HitPoint *hitPoint, "
-				"const float3 localFixedDir, const float passThroughEvent, const bool backTracing MATERIALS_PARAM_DECL",
-			"mat, hitPoint, localFixedDir, passThroughEvent, backTracing MATERIALS_PARAM");
 
 	return source.str();
 }
