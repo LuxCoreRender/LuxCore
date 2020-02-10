@@ -64,6 +64,7 @@ void BakeCPURenderThread::InitBakeWork(const BakeMapInfo &mapInfo) {
 	engine->mapFilm->CopyDynamicSettings(*engine->film);
 	// Copy the halt conditions too
 	engine->mapFilm->CopyHaltSettings(*engine->film);
+	engine->mapFilm->SetThreadCount(engine->renderThreads.size());
 	engine->mapFilm->Init();
 
 	// Build the list of object to bake and each mesh area
@@ -416,6 +417,7 @@ void BakeCPURenderThread::RenderFunc() {
 
 		eyeSampler = engine->renderConfig->AllocSampler(rndGen, engine->mapFilm,
 				engine->sampleSplatter, engine->samplerSharedData, samplerAdditionalProps);
+		eyeSampler->SetThreadIndex(threadIndex);
 		// Below, I need 7 additional samples
 		eyeSampler->RequestSamples(PIXEL_NORMALIZED_ONLY, pathTracer.eyeSampleSize + 7);
 
@@ -429,6 +431,7 @@ void BakeCPURenderThread::RenderFunc() {
 
 			lightSampler = Sampler::FromProperties(props, rndGen, engine->mapFilm, nullptr,
 					engine->lightSamplerSharedData);
+			lightSampler->SetThreadIndex(threadIndex);
 
 			lightSampler->RequestSamples(SCREEN_NORMALIZED_ONLY, pathTracer.lightSampleSize);
 		}

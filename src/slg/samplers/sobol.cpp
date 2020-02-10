@@ -217,7 +217,7 @@ void SobolSampler::NextSample(const vector<SampleResult> &sampleResults) {
 			default:
 				throw runtime_error("Unknown sample type in SobolSampler::NextSample(): " + ToString(sampleType));
 		}
-		film->AddSampleCount(pixelNormalizedCount, screenNormalizedCount);
+		film->AddSampleCount(threadIndex, pixelNormalizedCount, screenNormalizedCount);
 
 		AtomicAddSamplesToFilm(sampleResults);
 	}

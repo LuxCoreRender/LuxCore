@@ -233,6 +233,13 @@ void Film::CopyHaltSettings(const Film &film) {
 	}
 }
 
+void Film::SetThreadCount(const u_int threadCount) {
+	if (initialized)
+		throw runtime_error("The thread count of a Film can not be initialized after Film::Init()");
+
+	samplesCounts.Init(threadCount);
+}
+
 void Film::Init() {
 	if (initialized)
 		throw runtime_error("A Film can not be initialized multiple times");
@@ -259,16 +266,25 @@ void Film::Init() {
 	Resize(width, height);
 }
 
-void Film::SetSampleCount(const double RADIANCE_PER_PIXEL_NORMALIZED_count,
+void Film::SetSampleCount(const double totalSampleCount,
+		const double RADIANCE_PER_PIXEL_NORMALIZED_count,
 		const double RADIANCE_PER_SCREEN_NORMALIZED_count) {
-	statsTotalSampleCount = Max(RADIANCE_PER_PIXEL_NORMALIZED_count, RADIANCE_PER_SCREEN_NORMALIZED_count);
-	RADIANCE_PER_PIXEL_NORMALIZED_SampleCount = RADIANCE_PER_PIXEL_NORMALIZED_count;
-	RADIANCE_PER_SCREEN_NORMALIZED_SampleCount = RADIANCE_PER_SCREEN_NORMALIZED_count;
-	
+	samplesCounts.SetSampleCount(totalSampleCount,
+			RADIANCE_PER_PIXEL_NORMALIZED_count,
+			RADIANCE_PER_SCREEN_NORMALIZED_count);
+
 	// Check the if Film denoiser warmup is done
 	if (filmDenoiser.IsEnabled() && !filmDenoiser.HasReferenceFilm() &&
 			!filmDenoiser.IsWarmUpDone())
 		filmDenoiser.CheckIfWarmUpDone();
+}
+
+void Film::AddSampleCount(const u_int threadIndex,
+		const double RADIANCE_PER_PIXEL_NORMALIZED_count,
+		const double RADIANCE_PER_SCREEN_NORMALIZED_count) {
+	samplesCounts.AddSampleCount(threadIndex,
+			RADIANCE_PER_PIXEL_NORMALIZED_count,
+			RADIANCE_PER_SCREEN_NORMALIZED_count);
 }
 
 void Film::Resize(const u_int w, const u_int h) {
@@ -486,9 +502,7 @@ void Film::Resize(const u_int w, const u_int h) {
 	filmDenoiser.Reset();
 
 	// Initialize the statistics
-	statsTotalSampleCount = 0.0;
-	RADIANCE_PER_PIXEL_NORMALIZED_SampleCount = 0.0;
-	RADIANCE_PER_SCREEN_NORMALIZED_SampleCount = 0.0;
+	samplesCounts.Clear();
 	statsConvergence = 0.0;
 	statsStartSampleTime = WallClockTime();
 }
@@ -568,9 +582,7 @@ void Film::Clear() {
 
 	// denoiser is not cleared otherwise the collected data would be lost
 
-	statsTotalSampleCount = 0.0;
-	RADIANCE_PER_PIXEL_NORMALIZED_SampleCount = 0.0;
-	RADIANCE_PER_SCREEN_NORMALIZED_SampleCount = 0.0;
+	samplesCounts.Clear();
 	// statsConvergence is not cleared otherwise the result of the halt test
 	// would be lost
 }
@@ -582,9 +594,7 @@ void Film::Reset() {
 
 	// convTest has to be reset explicitly
 
-	statsTotalSampleCount = 0.0;
-	RADIANCE_PER_PIXEL_NORMALIZED_SampleCount = 0.0;
-	RADIANCE_PER_SCREEN_NORMALIZED_SampleCount = 0.0;
+	samplesCounts.Clear();
 	statsConvergence = 0.0;
 	statsStartSampleTime = WallClockTime();
 }
@@ -611,10 +621,12 @@ void Film::AddFilm(const Film &film,
 		const u_int srcOffsetX, const u_int srcOffsetY,
 		const u_int srcWidth, const u_int srcHeight,
 		const u_int dstOffsetX, const u_int dstOffsetY) {
-	statsTotalSampleCount += film.statsTotalSampleCount;
+	const double additional_SampleCount = film.samplesCounts.GetSampleCount();
+	double additional_RADIANCE_PER_PIXEL_NORMALIZED_SampleCount = 0;
+	double additional_RADIANCE_PER_SCREEN_NORMALIZED_SampleCount = 0;
 
 	if (HasChannel(RADIANCE_PER_PIXEL_NORMALIZED) && film.HasChannel(RADIANCE_PER_PIXEL_NORMALIZED)) {
-		RADIANCE_PER_PIXEL_NORMALIZED_SampleCount += film.RADIANCE_PER_PIXEL_NORMALIZED_SampleCount;
+		additional_RADIANCE_PER_PIXEL_NORMALIZED_SampleCount = film.samplesCounts.GetSampleCount_RADIANCE_PER_PIXEL_NORMALIZED();
 
 		for (u_int i = 0; i < Min(radianceGroupCount, film.radianceGroupCount); ++i) {
 			for (u_int y = 0; y < srcHeight; ++y) {
@@ -627,7 +639,7 @@ void Film::AddFilm(const Film &film,
 	}
 
 	if (HasChannel(RADIANCE_PER_SCREEN_NORMALIZED) && film.HasChannel(RADIANCE_PER_SCREEN_NORMALIZED)) {
-		RADIANCE_PER_SCREEN_NORMALIZED_SampleCount += film.RADIANCE_PER_SCREEN_NORMALIZED_SampleCount;
+		additional_RADIANCE_PER_SCREEN_NORMALIZED_SampleCount = film.samplesCounts.GetSampleCount_RADIANCE_PER_SCREEN_NORMALIZED();
 
 		for (u_int i = 0; i < Min(radianceGroupCount, film.radianceGroupCount); ++i) {
 			for (u_int y = 0; y < srcHeight; ++y) {
@@ -638,6 +650,10 @@ void Film::AddFilm(const Film &film,
 			}
 		}
 	}
+	
+	samplesCounts.AddSampleCount(additional_SampleCount,
+			additional_RADIANCE_PER_PIXEL_NORMALIZED_SampleCount,
+			additional_RADIANCE_PER_SCREEN_NORMALIZED_SampleCount);
 
 	if (HasChannel(ALPHA) && film.HasChannel(ALPHA)) {
 		for (u_int y = 0; y < srcHeight; ++y) {

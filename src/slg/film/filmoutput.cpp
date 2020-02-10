@@ -505,6 +505,8 @@ void Film::Output(const string &fileName,const FilmOutputs::FilmOutputType type,
 		ImageSpec spec(width, height, (channelCount == 1) ? 3 : channelCount, TypeDesc::FLOAT);
 		buffer.reset(spec);
 	
+		const double RADIANCE_PER_SCREEN_NORMALIZED_SampleCount = samplesCounts.GetSampleCount_RADIANCE_PER_SCREEN_NORMALIZED();
+		
 		for (ImageBuf::ConstIterator<float> it(buffer); !it.done(); ++it) {
 			u_int x = it.x();
 			u_int y = it.y();
@@ -517,7 +519,8 @@ void Film::Output(const string &fileName,const FilmOutputs::FilmOutputType type,
 			switch (type) {
 				case FilmOutputs::RGB: {
 					// Accumulate all light groups			
-					GetPixelFromMergedSampleBuffers(0, x, y, pixel);
+					GetPixelFromMergedSampleBuffers(0, RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
+							x, y, pixel);
 					break;
 				}
 				case FilmOutputs::RGB_IMAGEPIPELINE: {
@@ -526,7 +529,8 @@ void Film::Output(const string &fileName,const FilmOutputs::FilmOutputType type,
 				}
 				case FilmOutputs::RGBA: {
 					// Accumulate all light groups
-					GetPixelFromMergedSampleBuffers(0, x, y, pixel);
+					GetPixelFromMergedSampleBuffers(0, RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
+							x, y, pixel);
 					channel_ALPHA->GetWeightedPixel(x, y, &pixel[3]);
 					break;
 				}
@@ -736,8 +740,12 @@ template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, f
 
 	switch (type) {
 		case FilmOutputs::RGB: {
+			const double RADIANCE_PER_SCREEN_NORMALIZED_SampleCount = samplesCounts.GetSampleCount_RADIANCE_PER_SCREEN_NORMALIZED();
+
 			for (u_int i = 0; i < pixelCount; ++i)
-				GetPixelFromMergedSampleBuffers(0, i, &buffer[i * 3]);
+				GetPixelFromMergedSampleBuffers(0,
+						RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
+						i, &buffer[i * 3]);
 			break;
 		}
 		case FilmOutputs::RGB_IMAGEPIPELINE:
@@ -747,9 +755,13 @@ template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, f
 			copy(channel_IMAGEPIPELINEs[index]->GetPixels(), channel_IMAGEPIPELINEs[index]->GetPixels() + pixelCount * 3, buffer);
 			break;
 		case FilmOutputs::RGBA: {
+			const double RADIANCE_PER_SCREEN_NORMALIZED_SampleCount = samplesCounts.GetSampleCount_RADIANCE_PER_SCREEN_NORMALIZED();
+
 			for (u_int i = 0; i < pixelCount; ++i) {
 				const u_int offset = i * 4;
-				GetPixelFromMergedSampleBuffers(0, i, &buffer[offset]);
+				GetPixelFromMergedSampleBuffers(0,
+						RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
+						i, &buffer[offset]);
 				channel_ALPHA->GetWeightedPixel(i, &buffer[offset + 3]);
 			}
 			break;

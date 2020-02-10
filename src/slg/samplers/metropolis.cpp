@@ -213,7 +213,7 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 			default:
 				throw runtime_error("Unknown sample type in MetropolisSampler::NextSample(): " + ToString(sampleType));
 		}
-		film->AddSampleCount(pixelNormalizedCount, screenNormalizedCount);
+		film->AddSampleCount(threadIndex, pixelNormalizedCount, screenNormalizedCount);
 	}
 
 	// Calculate the sample result luminance

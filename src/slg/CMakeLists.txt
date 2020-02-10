@@ -720,6 +720,7 @@ set(SLG_FILM_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/film/filmoutput.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filmoutputs.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filmparse.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filmsamplescounts.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filmsamplesplatter.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filmserialize.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filmproperties.cpp

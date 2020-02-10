@@ -280,6 +280,7 @@ void Film::MergeSampleBuffersOCL(const u_int imagePipelineIndex) {
 	}
 
 	if (HasChannel(RADIANCE_PER_SCREEN_NORMALIZED)) {
+		const double RADIANCE_PER_SCREEN_NORMALIZED_SampleCount = samplesCounts.GetSampleCount_RADIANCE_PER_SCREEN_NORMALIZED();
 		const float factor = (RADIANCE_PER_SCREEN_NORMALIZED_SampleCount > 0) ? (pixelCount / RADIANCE_PER_SCREEN_NORMALIZED_SampleCount) : 1.f;
 
 		for (u_int i = 0; i < radianceGroupCount; ++i) {

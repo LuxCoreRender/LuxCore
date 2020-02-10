@@ -163,7 +163,7 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl() {
 				double totalCount = 0.0;
 				for (size_t i = 0; i < taskCount; ++i)
 					totalCount += gpuTaskStats[i].sampleCount;
-				threadFilms[0]->film->SetSampleCount(totalCount, 0.0);
+				threadFilms[0]->film->SetSampleCount(totalCount, totalCount, 0.0);
 
 				//SLG_LOG("[DEBUG] film transfered");
 			}

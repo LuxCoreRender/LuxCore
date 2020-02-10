@@ -168,7 +168,7 @@ void RandomSampler::NextSample(const vector<SampleResult> &sampleResults) {
 			default:
 				throw runtime_error("Unknown sample type in RandomSampler::NextSample(): " + ToString(sampleType));
 		}
-		film->AddSampleCount(pixelNormalizedCount, screenNormalizedCount);
+		film->AddSampleCount(threadIndex, pixelNormalizedCount, screenNormalizedCount);
 
 		AtomicAddSamplesToFilm(sampleResults);
 	}

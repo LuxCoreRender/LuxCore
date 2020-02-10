@@ -73,9 +73,11 @@ public:
 	Sampler(luxrays::RandomGenerator *rnd, Film *flm,
 			const FilmSampleSplatter *flmSplatter,
 			const bool imgSamplesEnable) : NamedObject("sampler"), 
-			rndGen(rnd), film(flm), filmSplatter(flmSplatter),
+			threadIndex(0), rndGen(rnd), film(flm), filmSplatter(flmSplatter),
 			imageSamplesEnable(imgSamplesEnable) { }
 	virtual ~Sampler() { }
+
+	virtual void SetThreadIndex(const u_int index) { threadIndex = index; }
 
 	virtual SamplerType GetType() const = 0;
 	virtual std::string GetTag() const = 0;
@@ -110,6 +112,7 @@ protected:
 
 	void AtomicAddSamplesToFilm(const std::vector<SampleResult> &sampleResults, const float weight = 1.f) const;
 
+	u_int threadIndex;
 	luxrays::RandomGenerator *rndGen;
 	Film *film;
 	const FilmSampleSplatter *filmSplatter;
