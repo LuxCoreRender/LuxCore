@@ -67,7 +67,6 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 	// Compile kernels
 	//--------------------------------------------------------------------------
 
-	CompiledScene *cscene = renderEngine->compiledScene;
 	cl::Context &oclContext = intersectionDevice->GetOpenCLContext();
 	cl::Device &oclDevice = intersectionDevice->GetOpenCLDevice();
 
@@ -240,15 +239,7 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_materialdefs_funcs_roughglass <<
 			slg::ocl::KernelSource_materialdefs_funcs_roughmatte_translucent <<
 			slg::ocl::KernelSource_materialdefs_funcs_velvet <<
-			slg::ocl::KernelSource_material_main_withoutdynamic <<
-			slg::ocl::KernelSource_material_eval_funcs;
-
-	// Generate the code to evaluate the materials
-	ssKernel <<
-			// This is the dynamic generated code (aka "WithDynamic")
-			"#line 2 \"Material evaluation code form CompiledScene::GetMaterialsEvaluationSourceCode()\"\n" <<
-			cscene->GetMaterialsEvaluationSourceCode() <<
-			"\n" <<
+			slg::ocl::KernelSource_material_eval_funcs <<
 			slg::ocl::KernelSource_material_main;
 
 	ssKernel <<

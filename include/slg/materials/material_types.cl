@@ -29,6 +29,8 @@ typedef enum {
 	EVAL_GET_EXTERIOR_VOLUME,
 	EVAL_GET_EMITTED_RADIANCE,
 	EVAL_GET_PASS_TROUGH_TRANSPARENCY,
+	EVAL_EVALUATE,
+	EVAL_SAMPLE,
 	// For the very special case of Mix material
 	EVAL_GET_VOLUME_MIX_SETUP1,
 	EVAL_GET_VOLUME_MIX_SETUP2,
@@ -328,6 +330,8 @@ typedef struct {
 	unsigned int evalGetExteriorVolumeOpStartIndex, evalGetExteriorVolumeOpLength;
 	unsigned int evalGetEmittedRadianceOpStartIndex, evalGetEmittedRadianceOpLength;
 	unsigned int evalGetPassThroughTransparencyOpStartIndex, evalGetPassThroughTransparencyOpLength;
+	unsigned int evalEvaluateOpStartIndex, evalEvaluateOpLength;
+	unsigned int evalSampleOpStartIndex, evalSampleOpLength;
 
 	union {
 		MatteParam matte;
@@ -371,5 +375,27 @@ typedef struct {
 	, matEvalStacks \
 	, maxMaterialEvalStackSize \
 	TEXTURES_PARAM SCENE_PARAM
+
+#define MATERIAL_EVALUATE_RETURN_BLACK { \
+		const float3 result = BLACK; \
+		EvalStack_PushFloat3(result); \
+		const BSDFEvent event = NONE; \
+		EvalStack_PushBSDFEvent(event); \
+		const float directPdfW = 0.f; \
+		EvalStack_PushFloat(directPdfW); \
+		return; \
+	}
+
+#define MATERIAL_SAMPLE_RETURN_BLACK { \
+		const float3 result = BLACK; \
+		EvalStack_PushFloat3(result); \
+		const float3 sampledDir = 0.f; \
+		EvalStack_PushFloat3(sampledDir); \
+		const BSDFEvent event = NONE; \
+		EvalStack_PushBSDFEvent(event); \
+		const float pdfW = 0.f; \
+		EvalStack_PushFloat(pdfW); \
+		return; \
+	}
 
 #endif

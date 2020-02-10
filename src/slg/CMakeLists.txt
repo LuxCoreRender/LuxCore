@@ -290,9 +290,6 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_roughmatte_translucent.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_velvet.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_disney.cl
-	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_template_glossycoating.cl
-	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_template_mix.cl
-	${LuxRays_SOURCE_DIR}/include/slg/materials/material_main_withoutdynamic.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/material_eval_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/material_main.cl
 	${LuxRays_SOURCE_DIR}/include/slg/scene/scene_types.cl
@@ -655,9 +652,6 @@ set(SLG_KERNEL_SRCS
 	${generated_kernels_dir}/materialdefs_funcs_roughglass_kernel.cpp
 	${generated_kernels_dir}/materialdefs_funcs_roughmatte_translucent_kernel.cpp
 	${generated_kernels_dir}/materialdefs_funcs_velvet_kernel.cpp
-	${generated_kernels_dir}/materialdefs_template_glossycoating_kernel.cpp
-	${generated_kernels_dir}/materialdefs_template_mix_kernel.cpp
-	${generated_kernels_dir}/material_main_withoutdynamic_kernel.cpp
 	${generated_kernels_dir}/material_eval_funcs_kernel.cpp
 	${generated_kernels_dir}/material_main_kernel.cpp
 	${generated_kernels_dir}/texture_types_kernel.cpp

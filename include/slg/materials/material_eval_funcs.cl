@@ -33,14 +33,6 @@ OPENCL_FORCE_INLINE BSDFEvent Material_GetEventTypes(const uint matIndex
 }
 
 //------------------------------------------------------------------------------
-// Material_IsDynamic
-//------------------------------------------------------------------------------
-
-OPENCL_FORCE_INLINE bool Material_IsDynamic(__global const Material *mat) {
-		return (mat->type == MIX) || (mat->type == GLOSSYCOATING);
-}
-
-//------------------------------------------------------------------------------
 // Material evaluation functions
 //------------------------------------------------------------------------------
 
@@ -79,6 +71,12 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 				case EVAL_GET_PASS_TROUGH_TRANSPARENCY:
 					MatteMaterial_GetPassThroughTransparency(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
+				case EVAL_EVALUATE:
+					MatteMaterial_Evaluate(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+					break;
+				case EVAL_SAMPLE:
+					MatteMaterial_Sample(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+					break;
 				default:
 					// Something wrong here
 					break;
@@ -104,6 +102,12 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 				case EVAL_GET_PASS_TROUGH_TRANSPARENCY:
 					MatteTranslucentMaterial_GetPassThroughTransparency(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
+				case EVAL_EVALUATE:
+					MatteTranslucentMaterial_Evaluate(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+					break;
+				case EVAL_SAMPLE:
+					MatteTranslucentMaterial_Sample(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+					break;
 				default:
 					// Something wrong here
 					break;
@@ -128,6 +132,12 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					break;
 				case EVAL_GET_PASS_TROUGH_TRANSPARENCY:
 					Glossy2Material_GetPassThroughTransparency(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+					break;
+				case EVAL_EVALUATE:
+					Glossy2Material_Evaluate(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+					break;
+				case EVAL_SAMPLE:
+					Glossy2Material_Sample(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
 				default:
 					// Something wrong here

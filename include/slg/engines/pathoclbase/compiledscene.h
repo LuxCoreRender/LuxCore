@@ -48,9 +48,6 @@ public:
 	void Recompile(const EditActionList &editActions);
 	void RecompilePhotonGI() { CompilePhotonGI(); }
 
-	std::string GetTexturesEvaluationSourceCode() const;
-	std::string GetMaterialsEvaluationSourceCode() const;
-
 	static void CompileFilm(const Film &film, slg::ocl::Film &oclFilm);
 
 	static float *CompileDistribution1D(const luxrays::Distribution1D *dist, u_int *size);

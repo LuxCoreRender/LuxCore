@@ -88,53 +88,138 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Albedo(const uint matIndex,
 // Material_Evaluate
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_INLINE float3 Material_Evaluate(const uint matIndex,
+OPENCL_FORCE_NOT_INLINE float3 Material_Evaluate(const uint matIndex,
 		__global const HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW
 		MATERIALS_PARAM_DECL) {
-	__global const Material *material = &mats[matIndex];
+#if defined(DEBUG_PRINTF_MATERIAL_EVAL)
+	printf("===============================================================\n");
+	printf("Material_Evaluate()\n");
+	printf("===============================================================\n");
+#endif
 
-	if (Material_IsDynamic(material))
-		return Material_EvaluateWithDynamic(matIndex, hitPoint,
-			lightDir, eyeDir,
-			event, directPdfW
-			MATERIALS_PARAM);
-	else
-		return Material_EvaluateWithoutDynamic(material, hitPoint,
-			lightDir, eyeDir,
-			event, directPdfW
-			MATERIALS_PARAM);
+	__global const Material* restrict startMat = &mats[matIndex];
+	const size_t gid = get_global_id(0);
+	__global float *evalStack = &matEvalStacks[gid * maxMaterialEvalStackSize];
+
+	const uint evalOpStartIndex = startMat->evalEvaluateOpStartIndex;
+	const uint evalOpLength = startMat->evalEvaluateOpLength;
+
+#if defined(DEBUG_PRINTF_MATERIAL_EVAL)
+	printf("matIndex=%d evalOpStartIndex=%d evalOpLength=%d\n", matIndex, evalOpStartIndex, evalOpLength);
+#endif
+
+	uint evalStackOffsetVal = 0;
+	uint *evalStackOffset = &evalStackOffsetVal; // Used by macros
+	// Evaluation parameters
+	EvalStack_PushFloat3(lightDir);
+	EvalStack_PushFloat3(eyeDir);
+
+	for (uint i = 0; i < evalOpLength; ++i) {
+#if defined(DEBUG_PRINTF_MATERIAL_EVAL)
+		printf("EvalOp: #%d evalStackOffset=%d\n", i, evalStackOffsetVal);
+#endif
+
+		__global const MaterialEvalOp* restrict evalOp = &matEvalOps[evalOpStartIndex + i];
+
+		Material_EvalOp(evalOp, evalStack, &evalStackOffsetVal, hitPoint MATERIALS_PARAM);
+	}
+#if defined(DEBUG_PRINTF_MATERIAL_EVAL)
+	printf("evalStackOffset=#%d\n", evalStackOffsetVal);
+#endif
+	
+	float pdfResult;
+	EvalStack_PopFloat(pdfResult);
+	BSDFEvent eventResult;
+	EvalStack_PopBSDFEvent(eventResult);
+	float3 result;
+	EvalStack_PopFloat3(result);
+
+#if defined(DEBUG_PRINTF_MATERIAL_EVAL)
+	printf("Result=(%f, %f, %f) %d %f\n", result.s0, result.s1, result.s2, eventResult, pdfResult);
+#endif
+
+	*event = eventResult;
+	if (directPdfW)
+		*directPdfW = pdfResult;
+
+	return result;
 }
 
 //------------------------------------------------------------------------------
 // Material_Sample
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_INLINE float3 Material_Sample(const uint matIndex, __global const HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float3 Material_Sample(const uint matIndex, __global const HitPoint *hitPoint,
 		const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1,
 		const float passThroughEvent,
 		float *pdfW, BSDFEvent *event
 		MATERIALS_PARAM_DECL) {
-	__global const Material *material = &mats[matIndex];
+#if defined(DEBUG_PRINTF_MATERIAL_EVAL)
+	printf("===============================================================\n");
+	printf("Material_Sample()\n");
+	printf("===============================================================\n");
+#endif
 
-	if (Material_IsDynamic(material))
-		return Material_SampleWithDynamic(matIndex, hitPoint, fixedDir, sampledDir, u0, u1,
-				passThroughEvent,
-				pdfW, event
-				MATERIALS_PARAM);
-	else
-		return Material_SampleWithoutDynamic(material, hitPoint, fixedDir, sampledDir, u0, u1,
-				passThroughEvent,
-				pdfW, event
-				MATERIALS_PARAM);
+	__global const Material* restrict startMat = &mats[matIndex];
+	const size_t gid = get_global_id(0);
+	__global float *evalStack = &matEvalStacks[gid * maxMaterialEvalStackSize];
+
+	const uint evalOpStartIndex = startMat->evalSampleOpStartIndex;
+	const uint evalOpLength = startMat->evalSampleOpLength;
+
+#if defined(DEBUG_PRINTF_MATERIAL_EVAL)
+	printf("matIndex=%d evalOpStartIndex=%d evalOpLength=%d\n", matIndex, evalOpStartIndex, evalOpLength);
+#endif
+
+	uint evalStackOffsetVal = 0;
+	uint *evalStackOffset = &evalStackOffsetVal; // Used by macros
+	// Evaluation parameters
+	EvalStack_PushFloat3(fixedDir);
+	EvalStack_PushFloat(u0);
+	EvalStack_PushFloat(u1);
+	EvalStack_PushFloat(passThroughEvent);
+
+	for (uint i = 0; i < evalOpLength; ++i) {
+#if defined(DEBUG_PRINTF_MATERIAL_EVAL)
+		printf("EvalOp: #%d evalStackOffset=%d\n", i, evalStackOffsetVal);
+#endif
+
+		__global const MaterialEvalOp* restrict evalOp = &matEvalOps[evalOpStartIndex + i];
+
+		Material_EvalOp(evalOp, evalStack, &evalStackOffsetVal, hitPoint MATERIALS_PARAM);
+	}
+#if defined(DEBUG_PRINTF_MATERIAL_EVAL)
+	printf("evalStackOffset=#%d\n", evalStackOffsetVal);
+#endif
+	
+	BSDFEvent eventResult;
+	EvalStack_PopBSDFEvent(eventResult);
+	float pdfResult;
+	EvalStack_PopFloat(pdfResult);
+	float3 result, sampledDirResult;
+	EvalStack_PopFloat3(sampledDirResult);
+	EvalStack_PopFloat3(result);
+
+#if defined(DEBUG_PRINTF_MATERIAL_EVAL)
+	printf("Result=(%f, %f, %f) (%f, %f, %f) %f %d\n", result.s0, result.s1, result.s2,
+			sampledDirResult.s0, sampledDirResult.s1, sampledDirResult.s2, pdfResult, eventResult);
+#endif
+
+	*sampledDir = sampledDirResult;
+	if (pdfW)
+		*pdfW = pdfResult;
+	*event = eventResult;
+
+	return result;
 }
 
 //------------------------------------------------------------------------------
 // Material_GetPassThroughTransparency
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_INLINE float3 Material_GetPassThroughTransparency(const uint matIndex,
+OPENCL_FORCE_NOT_INLINE float3 Material_GetPassThroughTransparency(const uint matIndex,
 		__global const HitPoint *hitPoint,
 		const float3 localFixedDir, const float passThroughEvent, const bool backTracing
 		MATERIALS_PARAM_DECL) {

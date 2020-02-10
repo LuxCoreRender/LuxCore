@@ -75,7 +75,6 @@ extern std::string KernelSource_materialdefs_funcs_null;
 extern std::string KernelSource_materialdefs_funcs_roughglass;
 extern std::string KernelSource_materialdefs_funcs_roughmatte_translucent;
 extern std::string KernelSource_materialdefs_funcs_velvet;
-extern std::string KernelSource_material_main_withoutdynamic;
 extern std::string KernelSource_material_eval_funcs;
 extern std::string KernelSource_material_main;
 extern std::string KernelSource_sampleresult_funcs;
@@ -126,10 +125,6 @@ extern std::string KernelSource_hitpoint_funcs;
 extern std::string KernelSource_pgic_types;
 extern std::string KernelSource_pgic_funcs;
 extern std::string KernelSource_pathtracer_types;
-
-// This is string is preprocessed in CompiledScene class
-extern std::string KernelSource_materialdefs_template_glossycoating;
-extern std::string KernelSource_materialdefs_template_mix;
 
 // Film and image pipeline kernels
 extern std::string KernelSource_film_mergesamplebuffer_funcs;

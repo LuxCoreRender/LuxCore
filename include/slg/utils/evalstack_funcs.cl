@@ -18,7 +18,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-// MAcros used mostly for Texture and Material evluations
+// Macros used mostly for Texture and Material evluations
 
 #define EvalStack_PushUInt(a) { ((__global uint *)evalStack)[*evalStackOffset] = a; *evalStackOffset = *evalStackOffset + 1; }
 #define EvalStack_PopUInt(a) { *evalStackOffset = *evalStackOffset - 1; a = ((__global uint *)evalStack)[*evalStackOffset]; }
@@ -32,3 +32,6 @@
 #define EvalStack_ReadFloat(x) (evalStack[(*evalStackOffset) + x])
 #define EvalStack_ReadFloat2(x) ((float2)(evalStack[(*evalStackOffset) + x], evalStack[(*evalStackOffset) + x + 1]))
 #define EvalStack_ReadFloat3(x) ((float3)(evalStack[(*evalStackOffset) + x], evalStack[(*evalStackOffset) + x + 1], evalStack[(*evalStackOffset) + x + 2]))
+
+#define EvalStack_PushBSDFEvent(a) { ((__global BSDFEvent *)evalStack)[*evalStackOffset] = a; *evalStackOffset = *evalStackOffset + 1; }
+#define EvalStack_PopBSDFEvent(a) { *evalStackOffset = *evalStackOffset - 1; a = ((__global BSDFEvent *)evalStack)[*evalStackOffset]; }

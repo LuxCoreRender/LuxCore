@@ -57,10 +57,6 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
-static bool IsMaterialDynamic(const slg::ocl::Material *material) {
-		return (material->type == slg::ocl::MIX) || (material->type == slg::ocl::GLOSSYCOATING);
-}
-
 u_int CompiledScene::CompileMaterialOps(const u_int matIndex,
 		const slg::ocl::MaterialEvalOpType opType) {
 	// Translate materials to material evaluate ops
@@ -110,6 +106,14 @@ u_int CompiledScene::CompileMaterialOps(const u_int matIndex,
 				case slg::ocl::EVAL_GET_PASS_TROUGH_TRANSPARENCY:
 					// 5 x parameters and 3 x results
 					evalOpStackSize += 5;
+					break;
+				case slg::ocl::EVAL_EVALUATE:
+					// 6 x parameters and 5 x results
+					evalOpStackSize += 6;
+					break;
+				case slg::ocl::EVAL_SAMPLE:
+					// 6 x parameters and 8 x results
+					evalOpStackSize += 8;
 					break;
 				default:
 					throw runtime_error("Unknown eval. type in CompiledScene::CompileMaterialOps(" + ToString(mat->type) + "): " + ToString(opType));
@@ -188,6 +192,12 @@ u_int CompiledScene::CompileMaterialOps(const u_int matIndex,
 					// 5 x parameter and 3 x result
 					evalOpStackSize += 5;
 					break;
+				case slg::ocl::EVAL_EVALUATE:
+					// TODO
+					//break;
+				case slg::ocl::EVAL_SAMPLE:
+					// TODO
+					//break;
 				default:
 					throw runtime_error("Unknown eval. type in CompiledScene::CompileMaterialOps(" + ToString(mat->type) + "): " + ToString(opType));
 			}
@@ -224,6 +234,12 @@ u_int CompiledScene::CompileMaterialOps(const u_int matIndex,
 					// 5 x parameters and 3 x results
 					evalOpStackSize += 5;
 					break;
+				case slg::ocl::EVAL_EVALUATE:
+					// TODO
+					//break;
+				case slg::ocl::EVAL_SAMPLE:
+					// TODO
+					//break;
 				default:
 					throw runtime_error("Unknown eval. type in CompiledScene::CompileMaterialOps(" + ToString(mat->type) + "): " + ToString(opType));
 			}
@@ -305,6 +321,28 @@ void CompiledScene::CompileMaterialOps() {
 		mat->evalGetPassThroughTransparencyOpLength = matEvalOps.size() - mat->evalGetPassThroughTransparencyOpStartIndex;
 
 		maxMaterialEvalStackSize = Max(maxMaterialEvalStackSize, evalGetPassThroughTransparencyOpsStackSizeFloat);
+
+		//----------------------------------------------------------------------
+		// EVAL_EVALUATE
+		//----------------------------------------------------------------------
+		
+		mat->evalEvaluateOpStartIndex = matEvalOps.size();
+		const u_int evalEvaluateOpsStackSizeFloat = CompileMaterialOps(i,
+				slg::ocl::MaterialEvalOpType::EVAL_EVALUATE);
+		mat->evalEvaluateOpLength = matEvalOps.size() - mat->evalEvaluateOpStartIndex;
+
+		maxMaterialEvalStackSize = Max(maxMaterialEvalStackSize, evalEvaluateOpsStackSizeFloat);
+
+		//----------------------------------------------------------------------
+		// EVAL_SAMPLE
+		//----------------------------------------------------------------------
+		
+		mat->evalSampleOpStartIndex = matEvalOps.size();
+		const u_int evalSampleOpsStackSizeFloat = CompileMaterialOps(i,
+				slg::ocl::MaterialEvalOpType::EVAL_SAMPLE);
+		mat->evalSampleOpLength = matEvalOps.size() - mat->evalSampleOpStartIndex;
+
+		maxMaterialEvalStackSize = Max(maxMaterialEvalStackSize, evalSampleOpsStackSizeFloat);
 	}
 
 	SLG_LOG("Material evaluation ops count: " << matEvalOps.size());
@@ -723,151 +761,6 @@ void CompiledScene::CompileMaterials() {
 
 	const double tEnd = WallClockTime();
 	SLG_LOG("Material compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
-}
-
-//------------------------------------------------------------------------------
-// Dynamic OpenCL code generation for material evaluation
-//------------------------------------------------------------------------------
-
-static string AddTextureSourceCall(const vector<slg::ocl::Texture> &texs,
-		const string &type, const string &index) {
-	return "Texture_Get" + type + "Value(" + index + ", hitPoint TEXTURES_PARAM)";
-}
-
-static void AddMaterialSourceSwitch(stringstream &source, const vector<slg::ocl::Material> &mats,
-		const string &funcName, const string &calledFuncName,
-		const string &returnType, const string &defaultReturnValue,
-		const string &args,  const string &params, const bool hasReturn = true) {
-	source << "OPENCL_FORCE_NOT_INLINE " << returnType << " Material_" << funcName << "(" << args << ") { \n"
-			"\t__global const Material *mat = &mats[index];\n"
-			"\tswitch (index) {\n";
-	for (u_int i = 0; i < mats.size(); ++i) {
-		if (IsMaterialDynamic(&mats[i])) {
-			source << "\t\tcase " << i << ":\n";
-			source << "\t\t\t" <<
-					(hasReturn ? "return " : "") <<
-					"Material_Index" << i << "_" << calledFuncName << "(" << params << ");\n";
-			if (!hasReturn)
-				source << "\t\t\tbreak;\n";
-		}
-	}
-
-	if (hasReturn) {
-		source << "\t\tdefault:\n"
-				"\t\t\treturn " << defaultReturnValue<< ";\n";
-	}
-
-	source <<
-			"\t}\n"
-			"}\n";
-}
-
-string CompiledScene::GetMaterialsEvaluationSourceCode() const {
-	// Generate the source code for each material that reference other materials
-	// and constant materials
-	stringstream source;
-
-	const u_int materialsCount = mats.size();
-	for (u_int i = 0; i < materialsCount; ++i) {
-		const slg::ocl::Material *mat = &mats[i];
-
-		switch (mat->type) {
-			case slg::ocl::MATTE:
-			case slg::ocl::ROUGHMATTE:
-			case slg::ocl::ARCHGLASS:
-			case slg::ocl::CARPAINT:
-			case slg::ocl::CLOTH:
-			case slg::ocl::GLASS:
-			case slg::ocl::GLOSSY2:
-			case slg::ocl::MATTETRANSLUCENT:
-			case slg::ocl::ROUGHMATTETRANSLUCENT:
-			case slg::ocl::METAL2:
-			case slg::ocl::MIRROR:
-			case slg::ocl::NULLMAT:
-			case slg::ocl::ROUGHGLASS:
-			case slg::ocl::VELVET:
-			case slg::ocl::GLOSSYTRANSLUCENT:
-			case slg::ocl::DISNEY:
-			case slg::ocl::CLEAR_VOL:
-			case slg::ocl::HOMOGENEOUS_VOL:
-			case slg::ocl::HETEROGENEOUS_VOL:
-				break;
-			case slg::ocl::MIX: {
-				// MIX material uses a template .cl file
-				string mixSrc = slg::ocl::KernelSource_materialdefs_template_mix;
-				boost::replace_all(mixSrc, "<<CS_MIX_MATERIAL_INDEX>>", ToString(i));
-
-				boost::replace_all(mixSrc, "<<CS_MAT_A_MATERIAL_INDEX>>", ToString(mat->mix.matAIndex));
-				const bool isDynamicMatA = IsMaterialDynamic(&mats[mat->mix.matAIndex]);
-				boost::replace_all(mixSrc, "<<CS_MAT_A_PREFIX>>", isDynamicMatA ?
-					("Material_Index" + ToString(mat->mix.matAIndex)) : "Material");
-				boost::replace_all(mixSrc, "<<CS_MAT_A_POSTFIX>>", isDynamicMatA ?
-					"" : "WithoutDynamic");
-
-				boost::replace_all(mixSrc, "<<CS_MAT_B_MATERIAL_INDEX>>", ToString(mat->mix.matBIndex));
-				const bool isDynamicMatB = IsMaterialDynamic(&mats[mat->mix.matBIndex]);
-				boost::replace_all(mixSrc, "<<CS_MAT_B_PREFIX>>", isDynamicMatB ?
-					("Material_Index" + ToString(mat->mix.matBIndex)) : "Material");
-				boost::replace_all(mixSrc, "<<CS_MAT_B_POSTFIX>>", isDynamicMatB ?
-					"" : "WithoutDynamic");
-
-				boost::replace_all(mixSrc, "<<CS_FACTOR_TEXTURE>>", AddTextureSourceCall(texs, "Float", "material->mix.mixFactorTexIndex"));
-				source << mixSrc;
-				break;
-			}
-			case slg::ocl::GLOSSYCOATING: {
-				// GLOSSYCOATING material uses a template .cl file
-				string glossyCoatingSrc = slg::ocl::KernelSource_materialdefs_template_glossycoating;
-				boost::replace_all(glossyCoatingSrc, "<<CS_GLOSSYCOATING_MATERIAL_INDEX>>", ToString(i));
-
-				boost::replace_all(glossyCoatingSrc, "<<CS_MAT_BASE_MATERIAL_INDEX>>", ToString(mat->glossycoating.matBaseIndex));
-				const bool isDynamicMatBase = IsMaterialDynamic(&mats[mat->glossycoating.matBaseIndex]);
-				boost::replace_all(glossyCoatingSrc, "<<CS_MAT_BASE_PREFIX>>", isDynamicMatBase ?
-					("Material_Index" + ToString(mat->glossycoating.matBaseIndex)) : "Material");
-				boost::replace_all(glossyCoatingSrc, "<<CS_MAT_BASE_POSTFIX>>", isDynamicMatBase ?
-					"" : "WithoutDynamic");
-
-				boost::replace_all(glossyCoatingSrc, "<<CS_KS_TEXTURE>>", AddTextureSourceCall(texs, "Spectrum", "material->glossycoating.ksTexIndex"));
-				boost::replace_all(glossyCoatingSrc, "<<CS_NU_TEXTURE>>", AddTextureSourceCall(texs, "Float", "material->glossycoating.nuTexIndex"));
-				boost::replace_all(glossyCoatingSrc, "<<CS_NV_TEXTURE>>", AddTextureSourceCall(texs, "Float", "material->glossycoating.nvTexIndex"));
-				boost::replace_all(glossyCoatingSrc, "<<CS_KA_TEXTURE>>", AddTextureSourceCall(texs, "Spectrum", "material->glossycoating.kaTexIndex"));
-				boost::replace_all(glossyCoatingSrc, "<<CS_DEPTH_TEXTURE>>", AddTextureSourceCall(texs, "Float", "material->glossycoating.depthTexIndex"));
-				boost::replace_all(glossyCoatingSrc, "<<CS_INDEX_TEXTURE>>", AddTextureSourceCall(texs, "Float", "material->glossycoating.indexTexIndex"));
-				if (mat->glossycoating.multibounce)
-					boost::replace_all(glossyCoatingSrc, "<<CS_MB_FLAG>>", "true");
-				else
-					boost::replace_all(glossyCoatingSrc, "<<CS_MB_FLAG>>", "false");
-				source << glossyCoatingSrc;
-				break;
-			}
-			default:
-				throw runtime_error("Unknown material in CompiledScene::GetMaterialsEvaluationSourceCode(): " + boost::lexical_cast<string>(mat->type));
-				break;
-		}
-	}
-
-	// Generate the code for generic Material_EvaluateWithDynamic()
-	AddMaterialSourceSwitch(source, mats, "EvaluateWithDynamic", "Evaluate", "float3", "BLACK",
-			"const uint index, "
-				"__global const HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir, "
-				"BSDFEvent *event, float *directPdfW "
-				"MATERIALS_PARAM_DECL",
-			"mat, hitPoint, lightDir, eyeDir, event, directPdfW MATERIALS_PARAM");
-
-	// Generate the code for generic Material_SampleWithDynamic()
-	AddMaterialSourceSwitch(source, mats, "SampleWithDynamic", "Sample", "float3", "BLACK",
-			"const uint index, "
-				"__global const HitPoint *hitPoint, "
-				"const float3 fixedDir, float3 *sampledDir, "
-				"const float u0, const float u1,\n"
-				"const float passThroughEvent,\n"
-				"\tfloat *pdfW, BSDFEvent *event "
-				"MATERIALS_PARAM_DECL",
-			"mat, hitPoint, fixedDir, sampledDir, u0, u1,\n"
-				"\t\t\tpassThroughEvent,\n"
-				"\t\t\tpdfW, event MATERIALS_PARAM");
-
-	return source.str();
 }
 
 #endif

@@ -60,33 +60,55 @@ OPENCL_FORCE_INLINE void MatteMaterial_GetEmittedRadiance(__global const Materia
 	DefaultMaterial_GetEmittedRadiance(material, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 }
 
-OPENCL_FORCE_NOT_INLINE float3 MatteMaterial_Evaluate(
-		__global const HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
-		BSDFEvent *event, float *directPdfW,
-		const float3 kdVal) {
-	if (directPdfW)
-		*directPdfW = fabs(lightDir.z * M_1_PI_F);
+OPENCL_FORCE_NOT_INLINE void MatteMaterial_Evaluate(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		TEXTURES_PARAM_DECL) {
+	float3 lightDir, eyeDir;
+	EvalStack_PopFloat3(eyeDir);
+	EvalStack_PopFloat3(lightDir);
 
-	*event = DIFFUSE | REFLECT;
+	const float3 kdVal = Texture_GetSpectrumValue(material->matte.kdTexIndex, hitPoint TEXTURES_PARAM);
+	const float3 result = Spectrum_Clamp(kdVal) * fabs(lightDir.z * M_1_PI_F);
 
-	return Spectrum_Clamp(kdVal) * fabs(lightDir.z * M_1_PI_F);
+	const BSDFEvent event = DIFFUSE | REFLECT;
+
+	const float directPdfW = fabs(lightDir.z * M_1_PI_F);
+
+	EvalStack_PushFloat3(result);
+	EvalStack_PushBSDFEvent(event);
+	EvalStack_PushFloat(directPdfW);
 }
 
-OPENCL_FORCE_NOT_INLINE float3 MatteMaterial_Sample(__global const HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
-		const float u0, const float u1, 
-		const float passThroughEvent,
-		float *pdfW, BSDFEvent *event,
-		const float3 kdVal) {
-	if (fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
-		return BLACK;
+OPENCL_FORCE_NOT_INLINE void MatteMaterial_Sample(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		TEXTURES_PARAM_DECL) {
+	float u0, u1, passThroughEvent;
+	EvalStack_PopFloat(passThroughEvent);
+	EvalStack_PopFloat(u1);
+	EvalStack_PopFloat(u0);
+	float3 fixedDir;
+	EvalStack_PopFloat3(fixedDir);
 
-	*sampledDir = (signbit(fixedDir.z) ? -1.f : 1.f) * CosineSampleHemisphereWithPdf(u0, u1, pdfW);
-	if (fabs(CosTheta(*sampledDir)) < DEFAULT_COS_EPSILON_STATIC)
-		return BLACK;
+	if (fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC) {
+		MATERIAL_SAMPLE_RETURN_BLACK;
+	}
 
-	*event = DIFFUSE | REFLECT;
+	float pdfW;
+	const float3 sampledDir = (signbit(fixedDir.z) ? -1.f : 1.f) * CosineSampleHemisphereWithPdf(u0, u1, &pdfW);
+	if (fabs(CosTheta(sampledDir)) < DEFAULT_COS_EPSILON_STATIC)
+		MATERIAL_SAMPLE_RETURN_BLACK
+	
+	const float3 kdVal = Texture_GetSpectrumValue(material->matte.kdTexIndex, hitPoint TEXTURES_PARAM);
+	const float3 result = Spectrum_Clamp(kdVal);
 
-	return Spectrum_Clamp(kdVal);
+	const BSDFEvent event = DIFFUSE | REFLECT;
+
+	EvalStack_PushFloat3(result);
+	EvalStack_PushFloat3(sampledDir);
+	EvalStack_PushFloat(pdfW);
+	EvalStack_PushBSDFEvent(event);
 }
 
 //------------------------------------------------------------------------------
