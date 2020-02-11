@@ -55,6 +55,7 @@
 
 * Improved light map sampling in BAKECPU
 * Added the support for transparencies and shadowcatcher to BAKECPU
+* Fixed and optimized the execution on CPU with high thread count (24+)
 
 ### Fixed Bugs
 
