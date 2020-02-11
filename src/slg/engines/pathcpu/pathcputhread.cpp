@@ -53,6 +53,7 @@ void PathCPURenderThread::RenderFunc() {
 
 	eyeSampler = engine->renderConfig->AllocSampler(rndGen, engine->film,
 			nullptr, engine->samplerSharedData, Properties());
+	eyeSampler->SetThreadIndex(threadIndex);
 	eyeSampler->RequestSamples(PIXEL_NORMALIZED_ONLY, pathTracer.eyeSampleSize);
 
 	if (pathTracer.hybridBackForwardEnable) {
@@ -66,6 +67,7 @@ void PathCPURenderThread::RenderFunc() {
 		lightSampler = Sampler::FromProperties(props, rndGen, engine->film, nullptr,
 				engine->lightSamplerSharedData);
 		
+		lightSampler->SetThreadIndex(threadIndex);
 		lightSampler->RequestSamples(SCREEN_NORMALIZED_ONLY, pathTracer.lightSampleSize);
 	}
 

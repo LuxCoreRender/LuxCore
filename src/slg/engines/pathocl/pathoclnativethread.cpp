@@ -65,6 +65,7 @@ void PathOCLNativeRenderThread::Start() {
 		threadFilm->CopyDynamicSettings(*(engine->film));
 		// I'm not removing the pipeline and disabling the film denoiser
 		// in order to support BCD denoiser.
+		threadFilm->SetThreadCount(engine->renderNativeThreads.size());
 		threadFilm->Init();
 	}
 
@@ -102,6 +103,7 @@ void PathOCLNativeRenderThread::RenderThreadImpl() {
 
 	eyeSampler = engine->renderConfig->AllocSampler(rndGen, film,
 			nullptr, engine->eyeSamplerSharedData, Properties());
+	eyeSampler->SetThreadIndex(threadIndex);
 	eyeSampler->RequestSamples(PIXEL_NORMALIZED_ONLY, pathTracer.eyeSampleSize);
 
 	if (pathTracer.hybridBackForwardEnable) {
@@ -114,7 +116,7 @@ void PathOCLNativeRenderThread::RenderThreadImpl() {
 
 		lightSampler = Sampler::FromProperties(props, rndGen, film, nullptr,
 				engine->lightSamplerSharedData);
-		
+		lightSampler->SetThreadIndex(threadIndex);
 		lightSampler->RequestSamples(SCREEN_NORMALIZED_ONLY, pathTracer.lightSampleSize);
 	}
 	

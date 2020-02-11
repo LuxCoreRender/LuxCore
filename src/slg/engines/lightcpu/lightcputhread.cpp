@@ -48,6 +48,7 @@ void LightCPURenderThread::RenderFunc() {
 			engine->sampleSplatter, engine->samplerSharedData,
 			// Disable image plane meaning for samples 0 and 1
 			Properties() << Property("sampler.metropolis.imagemutationrate.enable")(false));
+	sampler->SetThreadIndex(threadIndex);
 	sampler->RequestSamples(SCREEN_NORMALIZED_ONLY, pathTracer.lightSampleSize);
 
 	VarianceClamping varianceClamping(pathTracer.sqrtVarianceClampMaxValue);
