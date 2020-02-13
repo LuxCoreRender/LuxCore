@@ -37,7 +37,8 @@ Material::Material(const Texture *frontTransp, const Texture *backTransp,
 		NamedObject("material"),
 		matID(0), lightID(0),
 		directLightSamplingType(DLS_AUTO), emittedImportance(1.f),
-		emittedGain(1.f), emittedPower(0.f), emittedEfficency(0.f), emittedPowerNormalize(true),
+		emittedGain(1.f), emittedPower(0.f), emittedEfficency(0.f),
+		emittedPowerNormalize(true), emittedGainNormalize(false),
 		frontTransparencyTex(frontTransp), backTransparencyTex(backTransp),
 		emittedTex(emitted), bumpTex(bump), bumpSampleDistance(.001f),
 		emissionMap(nullptr), emissionFunc(nullptr),
@@ -155,11 +156,13 @@ Spectrum Material::EvaluateTotal(const HitPoint &hitPoint) const {
 
 void Material::UpdateEmittedFactor() {
 	if (emittedTex) {
-		const float normalizeFactor = emittedPowerNormalize ? (1.f / Max(emittedTex->Y(), 0.f)) : 1.f;
+		const float normalizePowerFactor = emittedPowerNormalize ? (1.f / Max(emittedTex->Y(), 0.f)) : 1.f;
 
-		emittedFactor = emittedGain * (emittedPower * emittedEfficency  * normalizeFactor);
+		emittedFactor = emittedGain * (emittedPower * emittedEfficency  * normalizePowerFactor);
 		if (emittedFactor.Black() || emittedFactor.IsInf() || emittedFactor.IsNaN()) {
-			emittedFactor = emittedGain;
+			const float normalizeGainFactor = emittedGainNormalize ? (1.f / Max(emittedTex->Y(), 0.f)) : 1.f;
+
+			emittedFactor = emittedGain * normalizeGainFactor;
 			usePrimitiveArea = false;
 		} else {
 			if (emittedTheta == 0.f) {
@@ -171,7 +174,9 @@ void Material::UpdateEmittedFactor() {
 			usePrimitiveArea = true;
 		}
 	} else {
-		emittedFactor = emittedGain;
+		const float normalizeGainFactor = emittedGainNormalize ? (1.f / Max(emittedTex->Y(), 0.f)) : 1.f;
+
+		emittedFactor = emittedGain * normalizeGainFactor;
 		usePrimitiveArea = false;
 	}
 }

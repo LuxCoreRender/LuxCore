@@ -79,6 +79,8 @@ public:
 	float GetEmittedPower() const { return emittedPower; }
 	void SetEmittedPowerNormalize(const bool v) { emittedPowerNormalize = v; }
 	bool IsEmittedPowerNormalize() { return emittedPowerNormalize; }
+	void SetEmittedGainNormalize(const bool v) { emittedGainNormalize = v; }
+	bool IsEmittedGainNormalize() { return emittedGainNormalize; }
 	void SetEmittedEfficency(const float v) { emittedEfficency = v; UpdateEmittedFactor(); }
 	float GetEmittedEfficency() const { return emittedEfficency; }
 	const luxrays::Spectrum &GetEmittedFactor() const { return emittedFactor; }
@@ -225,7 +227,7 @@ protected:
 	float emittedImportance;
 	luxrays::Spectrum emittedGain, emittedFactor;
 	float emittedPower, emittedEfficency, emittedTheta, emittedCosThetaMax;
-	bool emittedPowerNormalize;
+	bool emittedPowerNormalize, emittedGainNormalize;
 
 	const Texture *frontTransparencyTex;
 	const Texture *backTransparencyTex;
