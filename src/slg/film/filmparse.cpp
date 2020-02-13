@@ -622,7 +622,8 @@ ImagePipeline *Film::CreateImagePipeline(const Properties &props, const string &
 				imagePipeline->AddPlugin(new WhiteBalance(temperature));
 			} else if (type == "BAKEMAP_MARGIN") {
 				const u_int marginPixels = Max(props.Get(Property(prefix + ".margin")(2)).Get<int>(), 1);
-				imagePipeline->AddPlugin(new BakeMapMarginPlugin(marginPixels));
+				const float samplesThreshold = Max(props.Get(Property(prefix + ".samplesthreshold")(0.f)).Get<float>(), 0.f);
+				imagePipeline->AddPlugin(new BakeMapMarginPlugin(marginPixels, samplesThreshold));
 			} else
 				throw runtime_error("Unknown image pipeline plugin type: " + type);
 		}

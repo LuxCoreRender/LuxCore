@@ -36,7 +36,7 @@ namespace slg {
 
 class BakeMapMarginPlugin : public ImagePipelinePlugin {
 public:
-	BakeMapMarginPlugin(const u_int marginPixels);
+	BakeMapMarginPlugin(const u_int marginPixels, const float samplesThreshold);
 	virtual ~BakeMapMarginPlugin() { }
 
 	virtual ImagePipelinePlugin *Copy() const;
@@ -46,6 +46,7 @@ public:
 	friend class boost::serialization::access;
 
 	u_int marginPixels;
+	float samplesThreshold;
 
 private:
 	// Used by Copy() and serialization
@@ -54,12 +55,13 @@ private:
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImagePipelinePlugin);
 		ar & marginPixels;
+		ar & samplesThreshold;
 	}
 };
 
 }
 
-BOOST_CLASS_VERSION(slg::BakeMapMarginPlugin, 1)
+BOOST_CLASS_VERSION(slg::BakeMapMarginPlugin, 2)
 
 BOOST_CLASS_EXPORT_KEY(slg::BakeMapMarginPlugin)
 

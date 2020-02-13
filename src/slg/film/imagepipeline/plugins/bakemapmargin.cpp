@@ -33,11 +33,12 @@ using namespace slg;
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::BakeMapMarginPlugin)
 
-BakeMapMarginPlugin::BakeMapMarginPlugin(const u_int pixels) : marginPixels(pixels) {
+BakeMapMarginPlugin::BakeMapMarginPlugin(const u_int pixels, const float threshold) :
+		marginPixels(pixels), samplesThreshold(threshold) {
 }
 
 ImagePipelinePlugin *BakeMapMarginPlugin::Copy() const {
-	return new BakeMapMarginPlugin(marginPixels);
+	return new BakeMapMarginPlugin(marginPixels, samplesThreshold);
 }
 
 void BakeMapMarginPlugin::Apply(Film &film, const u_int index) {
@@ -56,7 +57,7 @@ void BakeMapMarginPlugin::Apply(Film &film, const u_int index) {
 	for (int y = 0; y < height; ++y) {
 		for (int x = 0; x < width; ++x) {
 			const u_int pixelIndex = x + y * width;
-			srcPixelsMask[pixelIndex] = film.HasSamples(hasPN, hasSN, pixelIndex);
+			srcPixelsMask[pixelIndex] = film.HasThresholdSamples(hasPN, hasSN, pixelIndex, samplesThreshold);
 		}
 	}
 
@@ -94,7 +95,7 @@ void BakeMapMarginPlugin::Apply(Film &film, const u_int index) {
 						dstPixelsMask[pixelIndex] = false;
 					else {
 						c /= count;
-						tmpPixels[pixelIndex] = Spectrum(1.f,0.f,0.f);
+						tmpPixels[pixelIndex] = c;
 						dstPixelsMask[pixelIndex] = true;
 					}
 				} else {

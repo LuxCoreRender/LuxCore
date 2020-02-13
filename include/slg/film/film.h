@@ -348,10 +348,10 @@ public:
 				index, c);
 	}
 	
-	bool HasSamples(const bool has_RADIANCE_PER_PIXEL_NORMALIZEDs, const bool has_RADIANCE_PER_SCREEN_NORMALIZEDs,
-			const u_int index) const {
+	bool HasThresholdSamples(const bool has_RADIANCE_PER_PIXEL_NORMALIZEDs, const bool has_RADIANCE_PER_SCREEN_NORMALIZEDs,
+			const u_int index, const float threshold) const {
 		for (u_int i = 0; i < radianceGroupCount; ++i) {
-			if (has_RADIANCE_PER_PIXEL_NORMALIZEDs && channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->GetPixel(index)[3] > 0.f)
+			if (has_RADIANCE_PER_PIXEL_NORMALIZEDs && channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->GetPixel(index)[3] > threshold)
 				return true;
 
 			if (has_RADIANCE_PER_SCREEN_NORMALIZEDs) {
@@ -365,10 +365,21 @@ public:
 		return false;
 	}
 		
+	bool HasThresholdSamples(const bool has_RADIANCE_PER_PIXEL_NORMALIZEDs, const bool has_RADIANCE_PER_SCREEN_NORMALIZEDs,
+		const u_int x, const u_int y, const float threshold) const {
+		return HasSamples(has_RADIANCE_PER_PIXEL_NORMALIZEDs, has_RADIANCE_PER_SCREEN_NORMALIZEDs, x + y * width, threshold);
+	}
+	
+	bool HasSamples(const bool has_RADIANCE_PER_PIXEL_NORMALIZEDs, const bool has_RADIANCE_PER_SCREEN_NORMALIZEDs,
+			const u_int index) const {
+		return HasThresholdSamples(has_RADIANCE_PER_PIXEL_NORMALIZEDs, has_RADIANCE_PER_SCREEN_NORMALIZEDs, index, 0.f);
+	}
+		
 	bool HasSamples(const bool has_RADIANCE_PER_PIXEL_NORMALIZEDs, const bool has_RADIANCE_PER_SCREEN_NORMALIZEDs,
 		const u_int x, const u_int y) const {
-		return HasSamples(has_RADIANCE_PER_PIXEL_NORMALIZEDs, has_RADIANCE_PER_SCREEN_NORMALIZEDs, x + y * width);
+		return HasThresholdSamples(has_RADIANCE_PER_PIXEL_NORMALIZEDs, has_RADIANCE_PER_SCREEN_NORMALIZEDs, x + y * width, 0.f);
 	}
+
 
 	std::vector<GenericFrameBuffer<4, 1, float> *> channel_RADIANCE_PER_PIXEL_NORMALIZEDs;
 	std::vector<GenericFrameBuffer<3, 0, float> *> channel_RADIANCE_PER_SCREEN_NORMALIZEDs;
