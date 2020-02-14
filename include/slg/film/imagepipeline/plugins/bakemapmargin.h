@@ -48,6 +48,10 @@ public:
 	u_int marginPixels;
 	float samplesThreshold;
 
+	static void Apply(Film &film, const u_int index,
+		const u_int marginPixels, const float samplesThreshold,
+		const bool applyAlpha);
+
 private:
 	// Used by Copy() and serialization
 	BakeMapMarginPlugin() { }

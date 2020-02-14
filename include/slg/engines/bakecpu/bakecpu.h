@@ -112,6 +112,8 @@ protected:
 
 	u_int minMapAutoSize, maxMapAutoSize;
 	bool powerOf2AutoSize, skipExistingMapFiles;
+	u_int marginPixels;
+	float marginSamplesThreshold;
 	std::vector<BakeMapInfo> mapInfos;
 
 	PhotonGICache *photonGICache;

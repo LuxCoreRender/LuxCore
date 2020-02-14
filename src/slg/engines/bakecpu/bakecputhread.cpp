@@ -19,6 +19,7 @@
 #include "slg/engines/bakecpu/bakecpu.h"
 #include "slg/volumes/volume.h"
 #include "slg/utils/varianceclamping.h"
+#include "slg/film/imagepipeline/plugins/bakemapmargin.h"
 
 using namespace std;
 using namespace luxrays;
@@ -507,12 +508,20 @@ void BakeCPURenderThread::RenderFunc() {
 		engine->threadsSyncBarrier->wait();
 
 		if ((threadIndex == 0) && !boost::this_thread::interruption_requested()) {
+			// Execute the image pipeline
+			engine->mapFilm->ExecuteImagePipeline(mapInfo.imagePipelineIndex);
+
+			// Apply margin options
+			if (engine->marginPixels > 0)
+				BakeMapMarginPlugin::Apply(*engine->mapFilm, mapInfo.imagePipelineIndex,
+						engine->marginPixels, engine->marginSamplesThreshold, true);
+
 			// Save the rendered map
 			Properties props;
 			props << Property("index")(mapInfo.imagePipelineIndex);
 			engine->mapFilm->Output(mapInfo.fileName,
 					engine->mapFilm->HasChannel(Film::ALPHA) ? FilmOutputs::RGBA_IMAGEPIPELINE : FilmOutputs::RGB_IMAGEPIPELINE,
-					&props);
+					&props, false);			
 		}
 
 		engine->threadsSyncBarrier->wait();

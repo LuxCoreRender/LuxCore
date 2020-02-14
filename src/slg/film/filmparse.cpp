@@ -621,7 +621,7 @@ ImagePipeline *Film::CreateImagePipeline(const Properties &props, const string &
 				const float temperature = Clamp(props.Get(Property(prefix + ".temperature")(6500.f)).Get<float>(),1000.f, 40000.f);
 				imagePipeline->AddPlugin(new WhiteBalance(temperature));
 			} else if (type == "BAKEMAP_MARGIN") {
-				const u_int marginPixels = Max(props.Get(Property(prefix + ".margin")(2)).Get<int>(), 1);
+				const u_int marginPixels = Max(props.Get(Property(prefix + ".margin")(2)).Get<u_int>(), 1u);
 				const float samplesThreshold = Max(props.Get(Property(prefix + ".samplesthreshold")(0.f)).Get<float>(), 0.f);
 				imagePipeline->AddPlugin(new BakeMapMarginPlugin(marginPixels, samplesThreshold));
 			} else
