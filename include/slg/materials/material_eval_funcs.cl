@@ -164,6 +164,12 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 				case EVAL_GET_PASS_TROUGH_TRANSPARENCY:
 					Metal2Material_GetPassThroughTransparency(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
+				case EVAL_EVALUATE:
+					Metal2Material_Evaluate(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+					break;
+				case EVAL_SAMPLE:
+					Metal2Material_Sample(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+					break;
 				default:
 					// Something wrong here
 					break;
@@ -188,6 +194,12 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					break;
 				case EVAL_GET_PASS_TROUGH_TRANSPARENCY:
 					VelvetMaterial_GetPassThroughTransparency(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+					break;
+				case EVAL_EVALUATE:
+					VelvetMaterial_Evaluate(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+					break;
+				case EVAL_SAMPLE:
+					VelvetMaterial_Sample(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
 				default:
 					// Something wrong here
@@ -214,6 +226,12 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 				case EVAL_GET_PASS_TROUGH_TRANSPARENCY:
 					ClothMaterial_GetPassThroughTransparency(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
+				case EVAL_EVALUATE:
+					ClothMaterial_Evaluate(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+					break;
+				case EVAL_SAMPLE:
+					ClothMaterial_Sample(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+					break;
 				default:
 					// Something wrong here
 					break;
@@ -238,6 +256,12 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					break;
 				case EVAL_GET_PASS_TROUGH_TRANSPARENCY:
 					CarPaintMaterial_GetPassThroughTransparency(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+					break;
+				case EVAL_EVALUATE:
+					CarPaintMaterial_Evaluate(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+					break;
+				case EVAL_SAMPLE:
+					CarPaintMaterial_Sample(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
 				default:
 					// Something wrong here

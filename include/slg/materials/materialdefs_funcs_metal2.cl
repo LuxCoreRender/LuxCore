@@ -87,12 +87,17 @@ OPENCL_FORCE_INLINE void Metal2Material_GetEmittedRadiance(__global const Materi
 	DefaultMaterial_GetEmittedRadiance(material, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 }
 
-OPENCL_FORCE_NOT_INLINE float3 Metal2Material_Evaluate(
-		__global const HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
-		BSDFEvent *event, float *directPdfW,
-		const float uVal,
-		const float vVal,
-		const float3 nVal, const float3 kVal) {
+OPENCL_FORCE_NOT_INLINE void Metal2Material_Evaluate(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		TEXTURES_PARAM_DECL) {
+	float3 lightDir, eyeDir;
+	EvalStack_PopFloat3(eyeDir);
+	EvalStack_PopFloat3(lightDir);
+
+	const float uVal = Texture_GetFloatValue(material->metal2.nuTexIndex, hitPoint TEXTURES_PARAM);
+	const float vVal = Texture_GetFloatValue(material->metal2.nvTexIndex, hitPoint TEXTURES_PARAM);
+
 	const float u = clamp(uVal, 1e-9f, 1.f);
 	const float v = clamp(vVal, 1e-9f, 1.f);
 	const float u2 = u * u;
@@ -103,28 +108,43 @@ OPENCL_FORCE_NOT_INLINE float3 Metal2Material_Evaluate(
 	const float3 wh = normalize(lightDir + eyeDir);
 	const float cosWH = dot(lightDir, wh);
 
-	if (directPdfW)
-		*directPdfW = SchlickDistribution_Pdf(roughness, wh, anisotropy) / (4.f * cosWH);
+	const float directPdfW = SchlickDistribution_Pdf(roughness, wh, anisotropy) / (4.f * cosWH);
+
+	float3 nVal, kVal;
+	Metal2Material_GetNK(material, hitPoint,
+			&nVal, &kVal
+			TEXTURES_PARAM);
 
 	const float3 F = FresnelGeneral_Evaluate(nVal, kVal, cosWH);
 	Spectrum_Clamp(F);
 
 	const float G = SchlickDistribution_G(roughness, lightDir, eyeDir);
 
-	*event = GLOSSY | REFLECT;
-	return (SchlickDistribution_D(roughness, wh, anisotropy) * G / (4.f * fabs(eyeDir.z))) * F;
+	const BSDFEvent event = GLOSSY | REFLECT;
+	const float3 result = (SchlickDistribution_D(roughness, wh, anisotropy) * G / (4.f * fabs(eyeDir.z))) * F;
+	
+	EvalStack_PushFloat3(result);
+	EvalStack_PushBSDFEvent(event);
+	EvalStack_PushFloat(directPdfW);
 }
 
-OPENCL_FORCE_NOT_INLINE float3 Metal2Material_Sample(
-		__global const HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
-		const float u0, const float u1,
-		const float passThroughEvent,
-		float *pdfW, BSDFEvent *event,
-		const float uVal,
-		const float vVal,
-		const float3 nVal, const float3 kVal) {
-	if (fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
-		return BLACK;
+OPENCL_FORCE_NOT_INLINE void Metal2Material_Sample(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		TEXTURES_PARAM_DECL) {
+	float u0, u1, passThroughEvent;
+	EvalStack_PopFloat(passThroughEvent);
+	EvalStack_PopFloat(u1);
+	EvalStack_PopFloat(u0);
+	float3 fixedDir;
+	EvalStack_PopFloat3(fixedDir);
+
+	if (fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC) {
+		MATERIAL_SAMPLE_RETURN_BLACK;
+	}
+
+	const float uVal = Texture_GetFloatValue(material->metal2.nuTexIndex, hitPoint TEXTURES_PARAM);
+	const float vVal = Texture_GetFloatValue(material->metal2.nvTexIndex, hitPoint TEXTURES_PARAM);
 
 	const float u = clamp(uVal, 1e-9f, 1.f);
 	const float v = clamp(vVal, 1e-9f, 1.f);
@@ -137,19 +157,26 @@ OPENCL_FORCE_NOT_INLINE float3 Metal2Material_Sample(
 	float d, specPdf;
 	SchlickDistribution_SampleH(roughness, anisotropy, u0, u1, &wh, &d, &specPdf);
 	const float cosWH = dot(fixedDir, wh);
-	*sampledDir = 2.f * cosWH * wh - fixedDir;
+	const float3 sampledDir = 2.f * cosWH * wh - fixedDir;
 
 	const float coso = fabs(fixedDir.z);
-	const float cosi = fabs((*sampledDir).z);
-	if ((cosi < DEFAULT_COS_EPSILON_STATIC) || (fixedDir.z * (*sampledDir).z < 0.f))
-		return BLACK;
+	const float cosi = fabs(sampledDir.z);
+	if ((cosi < DEFAULT_COS_EPSILON_STATIC) || (fixedDir.z * sampledDir.z < 0.f)) {
+		MATERIAL_SAMPLE_RETURN_BLACK;
+	}
 
-	*pdfW = specPdf / (4.f * fabs(cosWH));
-	if (*pdfW <= 0.f)
-		return BLACK;
+	const float pdfW = specPdf / (4.f * fabs(cosWH));
+	if (pdfW <= 0.f) {
+		MATERIAL_SAMPLE_RETURN_BLACK;
+	}
 
-	const float G = SchlickDistribution_G(roughness, fixedDir, *sampledDir);
-	
+	const float G = SchlickDistribution_G(roughness, fixedDir, sampledDir);
+
+	float3 nVal, kVal;
+	Metal2Material_GetNK(material, hitPoint,
+			&nVal, &kVal
+			TEXTURES_PARAM);
+
 	const float3 F = FresnelGeneral_Evaluate(nVal, kVal, cosWH);
 	Spectrum_Clamp(F);
 
@@ -159,7 +186,12 @@ OPENCL_FORCE_NOT_INLINE float3 Metal2Material_Sample(
 	//else
 	//	factor /= cosi;
 
-	*event = GLOSSY | REFLECT;
+	const BSDFEvent event = GLOSSY | REFLECT;
 
-	return factor * F;
+	const float3 result = factor * F;
+
+	EvalStack_PushFloat3(result);
+	EvalStack_PushFloat3(sampledDir);
+	EvalStack_PushFloat(pdfW);
+	EvalStack_PushBSDFEvent(event);
 }
