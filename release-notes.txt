@@ -75,6 +75,7 @@
 
 * BAKECPU now correctly includes the dot product of shading normal and light direction in light maps
 * Fixed the generation of material/object/volume default random ID (issue #296)
+* Fixed bump mapping when using a transformation with negative scale on Z (issue #300)
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.

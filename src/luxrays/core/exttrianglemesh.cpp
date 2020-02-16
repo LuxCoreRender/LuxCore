@@ -252,9 +252,14 @@ void ExtTriangleMesh::ApplyTransform(const Transform &trans) {
 	appliedTrans = appliedTrans * trans;
 
 	if (normals) {
+		const bool swapsHandedness = trans.SwapsHandedness();
+
 		for (u_int i = 0; i < vertCount; ++i) {
 			normals[i] *= trans;
 			normals[i] = Normalize(normals[i]);
+			// Flip the normal if required
+			if (swapsHandedness)
+				normals[i] = -normals[i];
 		}
 	}
 
