@@ -61,16 +61,27 @@ OPENCL_FORCE_INLINE void ClearVolMaterial_GetEmittedRadiance(__global const Mate
 	DefaultMaterial_GetEmittedRadiance(material, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 }
 
-OPENCL_FORCE_INLINE float3 ClearVolMaterial_Evaluate(
-		__global const HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
-		BSDFEvent *event, float *directPdfW) {
-	return BLACK;
+OPENCL_FORCE_NOT_INLINE void ClearVolMaterial_Evaluate(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		TEXTURES_PARAM_DECL) {
+	float3 lightDir, eyeDir;
+	EvalStack_PopFloat3(eyeDir);
+	EvalStack_PopFloat3(lightDir);
+
+	MATERIAL_EVALUATE_RETURN_BLACK;
 }
 
-OPENCL_FORCE_INLINE float3 ClearVolMaterial_Sample(
-		__global const HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
-		const float u0, const float u1, 
-		const float passThroughEvent,
-		float *pdfW, BSDFEvent *event) {
-	return BLACK;
+OPENCL_FORCE_NOT_INLINE void ClearVolMaterial_Sample(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		TEXTURES_PARAM_DECL) {
+	float u0, u1, passThroughEvent;
+	EvalStack_PopFloat(passThroughEvent);
+	EvalStack_PopFloat(u1);
+	EvalStack_PopFloat(u0);
+	float3 fixedDir;
+	EvalStack_PopFloat3(fixedDir);
+
+	MATERIAL_SAMPLE_RETURN_BLACK;
 }

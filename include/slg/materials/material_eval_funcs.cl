@@ -511,6 +511,12 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 				case EVAL_GET_PASS_TROUGH_TRANSPARENCY:
 					MirrorMaterial_GetPassThroughTransparency(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
+				case EVAL_EVALUATE:
+					MirrorMaterial_Evaluate(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+					break;
+				case EVAL_SAMPLE:
+					MirrorMaterial_Sample(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+					break;
 				default:
 					// Something wrong here
 					break;
@@ -535,6 +541,12 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					break;
 				case EVAL_GET_PASS_TROUGH_TRANSPARENCY:
 					GlassMaterial_GetPassThroughTransparency(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+					break;
+				case EVAL_EVALUATE:
+					GlassMaterial_Evaluate(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+					break;
+				case EVAL_SAMPLE:
+					GlassMaterial_Sample(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
 				default:
 					// Something wrong here
@@ -561,6 +573,12 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 				case EVAL_GET_PASS_TROUGH_TRANSPARENCY:
 					ArchGlassMaterial_GetPassThroughTransparency(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
+				case EVAL_EVALUATE:
+					ArchGlassMaterial_Evaluate(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+					break;
+				case EVAL_SAMPLE:
+					ArchGlassMaterial_Sample(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+					break;
 				default:
 					// Something wrong here
 					break;
@@ -585,6 +603,12 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					break;
 				case EVAL_GET_PASS_TROUGH_TRANSPARENCY:
 					RoughGlassMaterial_GetPassThroughTransparency(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+					break;
+				case EVAL_EVALUATE:
+					RoughGlassMaterial_Evaluate(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+					break;
+				case EVAL_SAMPLE:
+					RoughGlassMaterial_Sample(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
 				default:
 					// Something wrong here
@@ -611,6 +635,12 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 				case EVAL_GET_PASS_TROUGH_TRANSPARENCY:
 					ClearVolMaterial_GetPassThroughTransparency(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
+				case EVAL_EVALUATE:
+					ClearVolMaterial_Evaluate(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+					break;
+				case EVAL_SAMPLE:
+					ClearVolMaterial_Sample(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+					break;
 				default:
 					// Something wrong here
 					break;
@@ -636,6 +666,12 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 				case EVAL_GET_PASS_TROUGH_TRANSPARENCY:
 					HomogeneousVolMaterial_GetPassThroughTransparency(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
+				case EVAL_EVALUATE:
+					HomogeneousVolMaterial_Evaluate(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+					break;
+				case EVAL_SAMPLE:
+					HomogeneousVolMaterial_Sample(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+					break;
 				default:
 					// Something wrong here
 					break;
@@ -660,6 +696,12 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					break;
 				case EVAL_GET_PASS_TROUGH_TRANSPARENCY:
 					HeterogeneousVolMaterial_GetPassThroughTransparency(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+					break;
+				case EVAL_EVALUATE:
+					HeterogeneousVolMaterial_Evaluate(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+					break;
+				case EVAL_SAMPLE:
+					HeterogeneousVolMaterial_Sample(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
 				default:
 					// Something wrong here

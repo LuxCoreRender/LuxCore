@@ -64,26 +64,57 @@ OPENCL_FORCE_INLINE void HomogeneousVolMaterial_GetEmittedRadiance(__global cons
 	DefaultMaterial_GetEmittedRadiance(material, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 }
 
-OPENCL_FORCE_NOT_INLINE float3 HomogeneousVolMaterial_Evaluate(
-		__global const HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
-		BSDFEvent *event, float *directPdfW,
-		const float3 sigmaSTexVal, const float3 sigmaATexVal, const float3 gTexVal) {
-	return SchlickScatter_Evaluate(
+OPENCL_FORCE_NOT_INLINE void HomogeneousVolMaterial_Evaluate(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		TEXTURES_PARAM_DECL) {
+	float3 lightDir, eyeDir;
+	EvalStack_PopFloat3(eyeDir);
+	EvalStack_PopFloat3(lightDir);
+
+	const float3 sigmaSTexVal = Texture_GetSpectrumValue(material->volume.homogenous.sigmaSTexIndex, hitPoint TEXTURES_PARAM);
+	const float3 sigmaATexVal = Texture_GetSpectrumValue(material->volume.homogenous.sigmaATexIndex, hitPoint TEXTURES_PARAM);
+	const float3 gTexVal = Texture_GetSpectrumValue(material->volume.homogenous.gTexIndex, hitPoint TEXTURES_PARAM);
+
+	BSDFEvent event;
+	float directPdfW;
+	const float3 result = SchlickScatter_Evaluate(
 			hitPoint, eyeDir, lightDir,
-			event, directPdfW,
+			&event, &directPdfW,
 			clamp(sigmaSTexVal, 0.f, INFINITY), clamp(sigmaATexVal, 0.f, INFINITY), gTexVal);
+
+	EvalStack_PushFloat3(result);
+	EvalStack_PushBSDFEvent(event);
+	EvalStack_PushFloat(directPdfW);
 }
 
-OPENCL_FORCE_NOT_INLINE float3 HomogeneousVolMaterial_Sample(
-		__global const HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
-		const float u0, const float u1, 
-		const float passThroughEvent,
-		float *pdfW, BSDFEvent *event,
-		const float3 sigmaSTexVal, const float3 sigmaATexVal, const float3 gTexVal) {
-	return SchlickScatter_Sample(
-			hitPoint, fixedDir, sampledDir,
+OPENCL_FORCE_NOT_INLINE void HomogeneousVolMaterial_Sample(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		TEXTURES_PARAM_DECL) {
+	float u0, u1, passThroughEvent;
+	EvalStack_PopFloat(passThroughEvent);
+	EvalStack_PopFloat(u1);
+	EvalStack_PopFloat(u0);
+	float3 fixedDir;
+	EvalStack_PopFloat3(fixedDir);
+
+	const float3 sigmaSTexVal = Texture_GetSpectrumValue(material->volume.homogenous.sigmaSTexIndex, hitPoint TEXTURES_PARAM);
+	const float3 sigmaATexVal = Texture_GetSpectrumValue(material->volume.homogenous.sigmaATexIndex, hitPoint TEXTURES_PARAM);
+	const float3 gTexVal = Texture_GetSpectrumValue(material->volume.homogenous.gTexIndex, hitPoint TEXTURES_PARAM);
+
+	float3 sampledDir;
+	float pdfW;
+	BSDFEvent event;
+	const float3 result = SchlickScatter_Sample(
+			hitPoint, fixedDir, &sampledDir,
 			u0, u1, 
 			passThroughEvent,
-			pdfW, event,
+			&pdfW, &event,
 			clamp(sigmaSTexVal, 0.f, INFINITY), clamp(sigmaATexVal, 0.f, INFINITY), gTexVal);
+
+	EvalStack_PushFloat3(result);
+	EvalStack_PushFloat3(sampledDir);
+	EvalStack_PushFloat(pdfW);
+	EvalStack_PushBSDFEvent(event);
 }
