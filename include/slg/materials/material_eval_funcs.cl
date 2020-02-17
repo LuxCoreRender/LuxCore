@@ -288,6 +288,12 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 				case EVAL_GET_PASS_TROUGH_TRANSPARENCY:
 					RoughMatteMaterial_GetPassThroughTransparency(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
+				case EVAL_EVALUATE:
+					RoughMatteMaterial_Evaluate(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+					break;
+				case EVAL_SAMPLE:
+					RoughMatteMaterial_Sample(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+					break;
 				default:
 					// Something wrong here
 					break;
@@ -312,6 +318,12 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					break;
 				case EVAL_GET_PASS_TROUGH_TRANSPARENCY:
 					RoughMatteTranslucentMaterial_GetPassThroughTransparency(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+					break;
+				case EVAL_EVALUATE:
+					RoughMatteTranslucentMaterial_Evaluate(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+					break;
+				case EVAL_SAMPLE:
+					RoughMatteTranslucentMaterial_Sample(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
 				default:
 					// Something wrong here
@@ -338,6 +350,12 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 				case EVAL_GET_PASS_TROUGH_TRANSPARENCY:
 					GlossyTranslucentMaterial_GetPassThroughTransparency(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
+				case EVAL_EVALUATE:
+					GlossyTranslucentMaterial_Evaluate(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+					break;
+				case EVAL_SAMPLE:
+					GlossyTranslucentMaterial_Sample(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+					break;
 				default:
 					// Something wrong here
 					break;
@@ -363,6 +381,12 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 				case EVAL_GET_PASS_TROUGH_TRANSPARENCY:
 					DisneyMaterial_GetPassThroughTransparency(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
+				case EVAL_EVALUATE:
+					DisneyMaterial_Evaluate(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+					break;
+				case EVAL_SAMPLE:
+					DisneyMaterial_Sample(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+					break;
 				default:
 					// Something wrong here
 					break;
@@ -387,6 +411,12 @@ OPENCL_FORCE_NOT_INLINE void Material_EvalOp(
 					break;
 				case EVAL_GET_PASS_TROUGH_TRANSPARENCY:
 					NullMaterial_GetPassThroughTransparency(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+					break;
+				case EVAL_EVALUATE:
+					NullMaterial_Evaluate(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+					break;
+				case EVAL_SAMPLE:
+					NullMaterial_Sample(mat, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
 					break;
 				default:
 					// Something wrong here
