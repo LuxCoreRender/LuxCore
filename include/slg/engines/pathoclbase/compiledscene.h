@@ -136,7 +136,10 @@ private:
 	void CompileCamera();
 	void CompileSceneObjects();
 	void CompileGeometry();
-	u_int CompileMaterialOps(const u_int matIndex, const slg::ocl::MaterialEvalOpType opType);
+	u_int CompileMaterialConditionalOps(const u_int matIndex, const u_int matAIndex, const u_int matBIndex,
+			const slg::ocl::MaterialEvalOpType opType, std::vector<slg::ocl::MaterialEvalOp> &evalOps) const;
+	u_int CompileMaterialOps(const u_int matIndex, const slg::ocl::MaterialEvalOpType opType,
+			std::vector<slg::ocl::MaterialEvalOp> &evalOps) const;
 	void CompileMaterialOps();
 	void CompileMaterials();
 	void CompileTextureMapping2D(slg::ocl::TextureMapping2D *mapping, const TextureMapping2D *m);

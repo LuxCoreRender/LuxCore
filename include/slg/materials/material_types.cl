@@ -31,18 +31,27 @@ typedef enum {
 	EVAL_GET_PASS_TROUGH_TRANSPARENCY,
 	EVAL_EVALUATE,
 	EVAL_SAMPLE,
+	EVAL_CONDITIONAL_GOTO,
+	EVAL_UNCONDITIONAL_GOTO,
 	// For the very special case of Mix material
 	EVAL_GET_VOLUME_MIX_SETUP1,
 	EVAL_GET_VOLUME_MIX_SETUP2,
 	EVAL_GET_EMITTED_RADIANCE_MIX_SETUP1,
 	EVAL_GET_EMITTED_RADIANCE_MIX_SETUP2,
 	EVAL_GET_PASS_TROUGH_TRANSPARENCY_MIX_SETUP1,
-	EVAL_GET_PASS_TROUGH_TRANSPARENCY_MIX_SETUP2
+	EVAL_GET_PASS_TROUGH_TRANSPARENCY_MIX_SETUP2,
+	EVAL_EVALUATE_MIX_SETUP1,
+	EVAL_EVALUATE_MIX_SETUP2,
+	EVAL_SAMPLE_MIX_SETUP1,
+	EVAL_SAMPLE_MIX_SETUP2,
 } MaterialEvalOpType;
 
 typedef struct {
 	unsigned int matIndex;
 	MaterialEvalOpType evalType;
+	union {
+		unsigned int opsCount;
+	} opData;
 } MaterialEvalOp;
 
 //------------------------------------------------------------------------------

@@ -29,7 +29,7 @@
 OPENCL_FORCE_INLINE void DefaultMaterial_GetInteriorVolume(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
-		TEXTURES_PARAM_DECL) {
+		MATERIALS_PARAM_DECL) {
 	float passThroughEvent;
 	EvalStack_PopFloat(passThroughEvent);
 
@@ -45,7 +45,7 @@ OPENCL_FORCE_INLINE void DefaultMaterial_GetInteriorVolume(__global const Materi
 OPENCL_FORCE_INLINE void DefaultMaterial_GetExteriorVolume(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
-		TEXTURES_PARAM_DECL) {
+		MATERIALS_PARAM_DECL) {
 	float passThroughEvent;
 	EvalStack_PopFloat(passThroughEvent);
 
@@ -61,7 +61,7 @@ OPENCL_FORCE_INLINE void DefaultMaterial_GetExteriorVolume(__global const Materi
 OPENCL_FORCE_INLINE void DefaultMaterial_GetPassThroughTransparency(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
-		TEXTURES_PARAM_DECL) {
+		MATERIALS_PARAM_DECL) {
 	bool backTracing;
 	EvalStack_PopUInt(backTracing);
 	float passThroughEvent;
@@ -92,7 +92,7 @@ OPENCL_FORCE_INLINE void DefaultMaterial_GetPassThroughTransparency(__global con
 OPENCL_FORCE_INLINE void DefaultMaterial_GetEmittedRadiance(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
-		TEXTURES_PARAM_DECL) {
+		MATERIALS_PARAM_DECL) {
 	float oneOverPrimitiveArea;
 	EvalStack_PopFloat(oneOverPrimitiveArea);
 

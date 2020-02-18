@@ -25,7 +25,7 @@
 OPENCL_FORCE_INLINE void MatteTranslucentMaterial_Albedo(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
-		TEXTURES_PARAM_DECL) {
+		MATERIALS_PARAM_DECL) {
 	const float3 r = Spectrum_Clamp(Texture_GetSpectrumValue(material->matteTranslucent.krTexIndex,hitPoint TEXTURES_PARAM));
 	const float3 t = Spectrum_Clamp(Texture_GetSpectrumValue(material->matteTranslucent.ktTexIndex, hitPoint TEXTURES_PARAM)) * 
 		// Energy conservation
@@ -39,35 +39,35 @@ OPENCL_FORCE_INLINE void MatteTranslucentMaterial_Albedo(__global const Material
 OPENCL_FORCE_INLINE void MatteTranslucentMaterial_GetInteriorVolume(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
-		TEXTURES_PARAM_DECL) {
-	DefaultMaterial_GetInteriorVolume(material, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+		MATERIALS_PARAM_DECL) {
+	DefaultMaterial_GetInteriorVolume(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
 }
 
 OPENCL_FORCE_INLINE void MatteTranslucentMaterial_GetExteriorVolume(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
-		TEXTURES_PARAM_DECL) {
-	DefaultMaterial_GetExteriorVolume(material, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+		MATERIALS_PARAM_DECL) {
+	DefaultMaterial_GetExteriorVolume(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
 }
 
 OPENCL_FORCE_INLINE void MatteTranslucentMaterial_GetPassThroughTransparency(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
-		TEXTURES_PARAM_DECL) {
-	DefaultMaterial_GetPassThroughTransparency(material, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+		MATERIALS_PARAM_DECL) {
+	DefaultMaterial_GetPassThroughTransparency(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
 }
 
 OPENCL_FORCE_INLINE void MatteTranslucentMaterial_GetEmittedRadiance(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
-		TEXTURES_PARAM_DECL) {
-	DefaultMaterial_GetEmittedRadiance(material, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+		MATERIALS_PARAM_DECL) {
+	DefaultMaterial_GetEmittedRadiance(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
 }
 
 OPENCL_FORCE_NOT_INLINE void MatteTranslucentMaterial_Evaluate(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
-		TEXTURES_PARAM_DECL) {
+		MATERIALS_PARAM_DECL) {
 	float3 lightDir, eyeDir;
 	EvalStack_PopFloat3(eyeDir);
 	EvalStack_PopFloat3(lightDir);
@@ -118,7 +118,7 @@ OPENCL_FORCE_NOT_INLINE void MatteTranslucentMaterial_Evaluate(__global const Ma
 OPENCL_FORCE_NOT_INLINE void MatteTranslucentMaterial_Sample(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
-		TEXTURES_PARAM_DECL) {
+		MATERIALS_PARAM_DECL) {
 	float u0, u1, passThroughEvent;
 	EvalStack_PopFloat(passThroughEvent);
 	EvalStack_PopFloat(u1);

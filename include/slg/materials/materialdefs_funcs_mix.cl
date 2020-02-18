@@ -21,7 +21,7 @@
 OPENCL_FORCE_INLINE void MixMaterial_Albedo(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
-		TEXTURES_PARAM_DECL) {
+		MATERIALS_PARAM_DECL) {
 	float3 albedo1, albedo2;
 	EvalStack_PopFloat3(albedo2);
 	EvalStack_PopFloat3(albedo1);
@@ -38,7 +38,7 @@ OPENCL_FORCE_INLINE void MixMaterial_Albedo(__global const Material* restrict ma
 OPENCL_FORCE_INLINE void MixMaterial_GetVolumeSetUp1(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
-		TEXTURES_PARAM_DECL) {
+		MATERIALS_PARAM_DECL) {
 	float passThroughEvent;
 	EvalStack_PopFloat(passThroughEvent);
 
@@ -56,7 +56,7 @@ OPENCL_FORCE_INLINE void MixMaterial_GetVolumeSetUp1(__global const Material* re
 OPENCL_FORCE_INLINE void MixMaterial_GetVolumeSetUp2(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
-		TEXTURES_PARAM_DECL) {
+		MATERIALS_PARAM_DECL) {
 	uint volIndex1;
 	EvalStack_PopUInt(volIndex1);
 
@@ -79,7 +79,7 @@ OPENCL_FORCE_INLINE void MixMaterial_GetVolumeSetUp2(__global const Material* re
 OPENCL_FORCE_INLINE void MixMaterial_GetInteriorVolume(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
-		TEXTURES_PARAM_DECL) {
+		MATERIALS_PARAM_DECL) {
 	const uint volIndex = material->interiorVolumeIndex;
 	if (volIndex != NULL_INDEX) {
 		float passThroughEvent;
@@ -107,7 +107,7 @@ OPENCL_FORCE_INLINE void MixMaterial_GetInteriorVolume(__global const Material* 
 OPENCL_FORCE_INLINE void MixMaterial_GetExteriorVolume(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
-		TEXTURES_PARAM_DECL) {
+		MATERIALS_PARAM_DECL) {
 	const uint volIndex = material->exteriorVolumeIndex;
 	if (volIndex != NULL_INDEX) {
 		float passThroughEvent;
@@ -135,7 +135,7 @@ OPENCL_FORCE_INLINE void MixMaterial_GetExteriorVolume(__global const Material* 
 OPENCL_FORCE_INLINE void MixMaterial_GetPassThroughTransparencySetUp1(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
-		TEXTURES_PARAM_DECL) {
+		MATERIALS_PARAM_DECL) {
 	bool backTracing;
 	EvalStack_PopUInt(backTracing);
 	float passThroughEvent;
@@ -165,7 +165,7 @@ OPENCL_FORCE_INLINE void MixMaterial_GetPassThroughTransparencySetUp1(__global c
 OPENCL_FORCE_INLINE void MixMaterial_GetPassThroughTransparencySetUp2(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
-		TEXTURES_PARAM_DECL) {
+		MATERIALS_PARAM_DECL) {
 	float3 transp1;
 	EvalStack_PopFloat3(transp1);
 
@@ -202,7 +202,7 @@ OPENCL_FORCE_INLINE void MixMaterial_GetPassThroughTransparencySetUp2(__global c
 OPENCL_FORCE_INLINE void MixMaterial_GetPassThroughTransparency(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
-		TEXTURES_PARAM_DECL) {
+		MATERIALS_PARAM_DECL) {
 	float3 transp1, transp2;
 	EvalStack_PopFloat3(transp2);
 	EvalStack_PopFloat3(transp1);
@@ -240,7 +240,7 @@ OPENCL_FORCE_INLINE void MixMaterial_GetPassThroughTransparency(__global const M
 OPENCL_FORCE_INLINE void MixMaterial_GetEmittedRadianceSetUp1(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
-		TEXTURES_PARAM_DECL) {
+		MATERIALS_PARAM_DECL) {
 	float oneOverPrimitiveArea;
 	EvalStack_PopFloat(oneOverPrimitiveArea);
 
@@ -252,7 +252,7 @@ OPENCL_FORCE_INLINE void MixMaterial_GetEmittedRadianceSetUp1(__global const Mat
 OPENCL_FORCE_INLINE void MixMaterial_GetEmittedRadianceSetUp2(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
-		TEXTURES_PARAM_DECL) {
+		MATERIALS_PARAM_DECL) {
 	float3 emit1;
 	EvalStack_PopFloat3(emit1);
 
@@ -268,10 +268,10 @@ OPENCL_FORCE_INLINE void MixMaterial_GetEmittedRadianceSetUp2(__global const Mat
 OPENCL_FORCE_INLINE void MixMaterial_GetEmittedRadiance(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
-		TEXTURES_PARAM_DECL) {
+		MATERIALS_PARAM_DECL) {
 	float3 emittedRadiance;
 	if (material->emitTexIndex != NULL_INDEX)
-		 DefaultMaterial_GetEmittedRadiance(material, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+		 DefaultMaterial_GetEmittedRadiance(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
 	else {
 		float3 emit1, emit2;
 		EvalStack_PopFloat3(emit2);
@@ -292,4 +292,316 @@ OPENCL_FORCE_INLINE void MixMaterial_GetEmittedRadiance(__global const Material*
 
 		EvalStack_PushFloat3(emittedRadiance);
 	}
+}
+
+//------------------------------------------------------------------------------
+// Material evaluate
+//------------------------------------------------------------------------------
+
+OPENCL_FORCE_NOT_INLINE void MixMaterial_EvaluateSetUp1(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	float3 lightDir, eyeDir;
+	EvalStack_PopFloat3(eyeDir);
+	EvalStack_PopFloat3(lightDir);
+
+	// Save the parameters
+	EvalStack_PushFloat3(lightDir);
+	EvalStack_PushFloat3(eyeDir);
+
+	// To setup the following EVAL_EVALUATE evaluation of first sub-nodes
+	EvalStack_PushFloat3(lightDir);
+	EvalStack_PushFloat3(eyeDir);
+}
+
+OPENCL_FORCE_NOT_INLINE void MixMaterial_EvaluateSetUp2(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	// Pop the result of the first evaluation
+	float directPdfWMatA;
+	BSDFEvent eventMatA;
+	float3 resultMatA;
+	EvalStack_PopFloat(directPdfWMatA);
+	EvalStack_PopBSDFEvent(eventMatA);
+	EvalStack_PopFloat3(resultMatA);
+
+	// Pop the saved parameters
+	float3 lightDir, eyeDir;
+	EvalStack_PopFloat3(eyeDir);
+	EvalStack_PopFloat3(lightDir);
+
+	// Save the parameters
+	EvalStack_PushFloat3(eyeDir);
+	EvalStack_PushFloat3(lightDir);
+
+	// Save the result of the first evaluation
+	EvalStack_PushFloat3(resultMatA);
+	EvalStack_PushBSDFEvent(eventMatA);
+	EvalStack_PushFloat(directPdfWMatA);
+
+	// To setup the following EVAL_EVALUATE evaluation of second sub-nodes
+	EvalStack_PushFloat3(lightDir);
+	EvalStack_PushFloat3(eyeDir);
+}
+
+OPENCL_FORCE_NOT_INLINE void MixMaterial_Evaluate(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	// Pop the result of the second evaluation
+	float directPdfWMatB;
+	BSDFEvent eventMatB;
+	float3 resultMatB;
+	EvalStack_PopFloat(directPdfWMatB);
+	EvalStack_PopBSDFEvent(eventMatB);
+	EvalStack_PopFloat3(resultMatB);
+
+	// Pop the result of the first evaluation
+	float directPdfWMatA;
+	BSDFEvent eventMatA;
+	float3 resultMatA;
+	EvalStack_PopFloat(directPdfWMatA);
+	EvalStack_PopBSDFEvent(eventMatA);
+	EvalStack_PopFloat3(resultMatA);
+
+	// Pop the saved parameters
+	float3 lightDir, eyeDir;
+	EvalStack_PopFloat3(eyeDir);
+	EvalStack_PopFloat3(lightDir);
+
+	float3 result = BLACK;
+	float directPdfW = 0.f;
+	
+	// This test is usually done by BSDF_Evaluate() and must be repeated in
+	// material referencing other materials
+	const float isTransmitEval = (signbit(lightDir.z) != signbit(eyeDir.z));
+
+	const float factor = Texture_GetFloatValue(material->mix.mixFactorTexIndex, hitPoint TEXTURES_PARAM);
+	const float weight2 = clamp(factor, 0.f, 1.f);
+	const float weight1 = 1.f - weight2;
+
+	//--------------------------------------------------------------------------
+	// Evaluate material A
+	//--------------------------------------------------------------------------
+
+	const BSDFEvent eventTypesMatA = mats[material->mix.matAIndex].eventTypes;
+	if ((weight1 > 0.f) &&
+			((!isTransmitEval && (eventTypesMatA & REFLECT)) ||
+			(isTransmitEval && (eventTypesMatA & TRANSMIT))) &&
+			!Spectrum_IsBlack(resultMatA)) {
+		result += weight1 * resultMatA;
+		directPdfW += weight1 * directPdfWMatA;
+	}
+
+	//--------------------------------------------------------------------------
+	// Evaluate material B
+	//--------------------------------------------------------------------------
+
+	const BSDFEvent eventTypesMatB = mats[material->mix.matBIndex].eventTypes;
+	if ((weight2 > 0.f) &&
+			((!isTransmitEval && (eventTypesMatB & REFLECT)) ||
+			(isTransmitEval && (eventTypesMatB & TRANSMIT))) &&
+			!Spectrum_IsBlack(resultMatB)) {
+		result += weight2 * resultMatB;
+		directPdfW += weight2 * directPdfWMatB;
+	}
+
+	const BSDFEvent event = eventMatA | eventMatB;
+	
+	EvalStack_PushFloat3(result);
+	EvalStack_PushBSDFEvent(event);
+	EvalStack_PushFloat(directPdfW);
+}
+
+//------------------------------------------------------------------------------
+// Material sample
+//------------------------------------------------------------------------------
+
+OPENCL_FORCE_NOT_INLINE void MixMaterial_SampleSetUp1(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	float u0, u1, passThroughEvent;
+	EvalStack_PopFloat(passThroughEvent);
+	EvalStack_PopFloat(u1);
+	EvalStack_PopFloat(u0);
+	float3 fixedDir;
+	EvalStack_PopFloat3(fixedDir);
+
+	// Save the parameters
+	EvalStack_PushFloat3(fixedDir);
+	EvalStack_PushFloat(u0);
+	EvalStack_PushFloat(u1);
+	EvalStack_PushFloat(passThroughEvent);
+
+	const float factor = Texture_GetFloatValue(material->mix.mixFactorTexIndex, hitPoint TEXTURES_PARAM);
+	const float weight2 = clamp(factor, 0.f, 1.f);
+	const float weight1 = 1.f - weight2;
+
+	const bool sampleMatA = (passThroughEvent < weight1);
+	const float passThroughEventFirst = sampleMatA ? (passThroughEvent / weight1) : (passThroughEvent - weight1) / weight2;
+
+	// Save factor
+	EvalStack_PushFloat(factor);
+	// Save sampleMatA
+	EvalStack_PushInt(sampleMatA);
+
+	// To setup the following EVAL_SAMPLE evaluation of first sub-nodes
+	EvalStack_PushFloat3(fixedDir);
+	EvalStack_PushFloat(u0);
+	EvalStack_PushFloat(u1);
+	EvalStack_PushFloat(passThroughEventFirst);
+
+	// To setup the following EVAL_CONDITIONAL_GOTO evaluation
+	EvalStack_PushInt(!sampleMatA);
+}
+
+OPENCL_FORCE_NOT_INLINE void MixMaterial_SampleSetUp2(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	// Pop the result of the first evaluation
+	float3 resultFirst, sampledDirFirst;
+	float pdfWFirst;
+	BSDFEvent eventFirst;
+	EvalStack_PopBSDFEvent(eventFirst);
+	EvalStack_PopFloat(pdfWFirst);
+	EvalStack_PopFloat3(sampledDirFirst);
+	EvalStack_PopFloat3(resultFirst);
+	
+	// Pop sampleMatA
+	bool sampleMatA;
+	EvalStack_PopInt(sampleMatA);
+	// Pop factor
+	float factor;
+	EvalStack_PopFloat(factor);
+
+	// Pop parameters
+	float u0, u1, passThroughEvent;
+	EvalStack_PopFloat(passThroughEvent);
+	EvalStack_PopFloat(u1);
+	EvalStack_PopFloat(u0);
+	float3 fixedDir;
+	EvalStack_PopFloat3(fixedDir);
+
+	// Save the parameters
+	EvalStack_PushFloat3(fixedDir);
+	EvalStack_PushFloat(u0);
+	EvalStack_PushFloat(u1);
+	EvalStack_PushFloat(passThroughEvent);
+
+	// Save factor
+	EvalStack_PushFloat(factor);
+	// Save sampleMatA
+	EvalStack_PushInt(sampleMatA);
+	
+	// Save the result of the first evaluation
+	EvalStack_PushFloat3(resultFirst);
+	EvalStack_PushFloat3(sampledDirFirst);
+	EvalStack_PushFloat(pdfWFirst);
+	EvalStack_PushBSDFEvent(eventFirst);
+
+	// To setup the following EVAL_EVALUATE evaluation of second sub-nodes
+	if (Spectrum_IsBlack(resultFirst)) {
+		// In this case, sampledDirFirst is not initialized so I have to put
+		// there some meaningful value
+		sampledDirFirst = fixedDir;
+	}
+	EvalStack_PushFloat3(sampledDirFirst);
+	EvalStack_PushFloat3(fixedDir);
+
+	// To setup the first EVAL_CONDITIONAL_GOTO evaluation
+	EvalStack_PushInt(sampleMatA);
+}
+
+OPENCL_FORCE_NOT_INLINE void MixMaterial_Sample(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	// Pop the result of the second evaluation
+	float3 resultSecond;
+	BSDFEvent eventSecond;
+	float directPdfWSecond;
+	EvalStack_PopFloat(directPdfWSecond);
+	EvalStack_PopBSDFEvent(eventSecond);
+	EvalStack_PopFloat3(resultSecond);
+
+	// Pop the result of the first evaluation
+	float3 resultFirst, sampledDirFirst;
+	float pdfWFirst;
+	BSDFEvent eventFirst;
+	EvalStack_PopBSDFEvent(eventFirst);
+	EvalStack_PopFloat(pdfWFirst);
+	EvalStack_PopFloat3(sampledDirFirst);
+	EvalStack_PopFloat3(resultFirst);
+	
+	// Pop sampleMatA
+	bool sampleMatA;
+	EvalStack_PopInt(sampleMatA);
+	// Pop factor
+	float factor;
+	EvalStack_PopInt(factor);
+
+	// Pop parameters
+	float u0, u1, passThroughEvent;
+	EvalStack_PopFloat(passThroughEvent);
+	EvalStack_PopFloat(u1);
+	EvalStack_PopFloat(u0);
+	float3 fixedDir;
+	EvalStack_PopFloat3(fixedDir);
+
+	//--------------------------------------------------------------------------
+	
+	float3 result = resultFirst;
+	if (Spectrum_IsBlack(result)) {
+		MATERIAL_SAMPLE_RETURN_BLACK;
+	}
+
+	const float3 sampledDir = sampledDirFirst;
+	
+	const float weight2 = clamp(factor, 0.f, 1.f);
+	const float weight1 = 1.f - weight2;
+	const float weightFirst = sampleMatA ? weight1 : weight2;
+	const float weightSecond = sampleMatA ? weight2 : weight1;
+
+	float pdfW = weightFirst * pdfWFirst;
+
+	BSDFEvent event = eventFirst;
+
+	if (eventFirst & SPECULAR) {
+		EvalStack_PushFloat3(result);
+		EvalStack_PushFloat3(sampledDir);
+		EvalStack_PushFloat(pdfW);
+		EvalStack_PushBSDFEvent(event);
+
+		return;
+	}
+	
+	result *= pdfW;
+
+	const float3 fixedDirSecond = fixedDir;
+	const float3 sampledDirSecond = sampledDir;
+
+	// This test is usually done by BSDF_Evaluate() and must be repeated in
+	// material referencing other materials
+	const float isTransmitEval = (signbit(fixedDirSecond.z) != signbit(sampledDirSecond.z));
+
+	const BSDFEvent eventTypesSecond = mats[sampleMatA ? material->mix.matAIndex : material->mix.matBIndex].eventTypes;
+	if (((!isTransmitEval && (eventTypesSecond & REFLECT)) ||
+			(isTransmitEval && (eventTypesSecond & TRANSMIT))) &&
+			!Spectrum_IsBlack(resultSecond)) {
+		result += weightSecond * resultSecond;
+		pdfW += weightSecond * directPdfWSecond;
+	}
+
+	result /= pdfW;
+
+	//--------------------------------------------------------------------------
+
+	EvalStack_PushFloat3(result);
+	EvalStack_PushFloat3(sampledDir);
+	EvalStack_PushFloat(pdfW);
+	EvalStack_PushBSDFEvent(event);
 }

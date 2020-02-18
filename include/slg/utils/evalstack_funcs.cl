@@ -20,6 +20,10 @@
 
 // Macros used mostly for Texture and Material evluations
 
+
+#define EvalStack_PushInt(a) { ((__global int *)evalStack)[*evalStackOffset] = a; *evalStackOffset = *evalStackOffset + 1; }
+#define EvalStack_PopInt(a) { *evalStackOffset = *evalStackOffset - 1; a = ((__global int *)evalStack)[*evalStackOffset]; }
+
 #define EvalStack_PushUInt(a) { ((__global uint *)evalStack)[*evalStackOffset] = a; *evalStackOffset = *evalStackOffset + 1; }
 #define EvalStack_PopUInt(a) { *evalStackOffset = *evalStackOffset - 1; a = ((__global uint *)evalStack)[*evalStackOffset]; }
 

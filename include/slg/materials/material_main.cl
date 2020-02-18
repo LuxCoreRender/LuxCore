@@ -20,9 +20,18 @@
 
 //------------------------------------------------------------------------------
 // Main material functions
-//
-// This is a glue between dynamic generated code and static.
 //------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+// Material_GetEventTypes
+//------------------------------------------------------------------------------
+
+OPENCL_FORCE_INLINE BSDFEvent Material_GetEventTypes(const uint matIndex
+		MATERIALS_PARAM_DECL) {
+	__global const Material *material = &mats[matIndex];
+
+	return material->eventTypes;
+}
 
 //------------------------------------------------------------------------------
 // Material_IsDelta
@@ -68,7 +77,7 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Albedo(const uint matIndex,
 
 		__global const MaterialEvalOp* restrict evalOp = &matEvalOps[evalOpStartIndex + i];
 
-		Material_EvalOp(evalOp, evalStack, &evalStackOffsetVal, hitPoint MATERIALS_PARAM);
+		i += Material_EvalOp(evalOp, evalStack, &evalStackOffsetVal, hitPoint MATERIALS_PARAM);
 	}
 #if defined(DEBUG_PRINTF_MATERIAL_EVAL)
 	printf("evalStackOffset=#%d\n", evalStackOffsetVal);
@@ -122,7 +131,7 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Evaluate(const uint matIndex,
 
 		__global const MaterialEvalOp* restrict evalOp = &matEvalOps[evalOpStartIndex + i];
 
-		Material_EvalOp(evalOp, evalStack, &evalStackOffsetVal, hitPoint MATERIALS_PARAM);
+		i += Material_EvalOp(evalOp, evalStack, &evalStackOffsetVal, hitPoint MATERIALS_PARAM);
 	}
 #if defined(DEBUG_PRINTF_MATERIAL_EVAL)
 	printf("evalStackOffset=#%d\n", evalStackOffsetVal);
@@ -188,7 +197,7 @@ OPENCL_FORCE_NOT_INLINE float3 Material_Sample(const uint matIndex, __global con
 
 		__global const MaterialEvalOp* restrict evalOp = &matEvalOps[evalOpStartIndex + i];
 
-		Material_EvalOp(evalOp, evalStack, &evalStackOffsetVal, hitPoint MATERIALS_PARAM);
+		i += Material_EvalOp(evalOp, evalStack, &evalStackOffsetVal, hitPoint MATERIALS_PARAM);
 	}
 #if defined(DEBUG_PRINTF_MATERIAL_EVAL)
 	printf("evalStackOffset=#%d\n", evalStackOffsetVal);
@@ -254,7 +263,7 @@ OPENCL_FORCE_NOT_INLINE float3 Material_GetPassThroughTransparency(const uint ma
 
 		__global const MaterialEvalOp* restrict evalOp = &matEvalOps[evalOpStartIndex + i];
 
-		Material_EvalOp(evalOp, evalStack, &evalStackOffsetVal, hitPoint MATERIALS_PARAM);
+		i += Material_EvalOp(evalOp, evalStack, &evalStackOffsetVal, hitPoint MATERIALS_PARAM);
 	}
 #if defined(DEBUG_PRINTF_MATERIAL_EVAL)
 	printf("evalStackOffset=#%d\n", evalStackOffsetVal);
@@ -306,7 +315,7 @@ OPENCL_FORCE_NOT_INLINE float3 Material_GetEmittedRadiance(const uint matIndex,
 
 		__global const MaterialEvalOp* restrict evalOp = &matEvalOps[evalOpStartIndex + i];
 
-		Material_EvalOp(evalOp, evalStack, &evalStackOffsetVal, hitPoint MATERIALS_PARAM);
+		i += Material_EvalOp(evalOp, evalStack, &evalStackOffsetVal, hitPoint MATERIALS_PARAM);
 	}
 #if defined(DEBUG_PRINTF_MATERIAL_EVAL)
 	printf("evalStackOffset=#%d\n", evalStackOffsetVal);
@@ -370,7 +379,7 @@ OPENCL_FORCE_NOT_INLINE uint Material_GetInteriorVolume(const uint matIndex,
 
 		__global const MaterialEvalOp* restrict evalOp = &matEvalOps[evalOpStartIndex + i];
 
-		Material_EvalOp(evalOp, evalStack, &evalStackOffsetVal, hitPoint MATERIALS_PARAM);
+		i += Material_EvalOp(evalOp, evalStack, &evalStackOffsetVal, hitPoint MATERIALS_PARAM);
 	}
 #if defined(DEBUG_PRINTF_MATERIAL_EVAL)
 	printf("evalStackOffset=#%d\n", evalStackOffsetVal);
@@ -423,7 +432,7 @@ OPENCL_FORCE_NOT_INLINE uint Material_GetExteriorVolume(const uint matIndex,
 
 		__global const MaterialEvalOp* restrict evalOp = &matEvalOps[evalOpStartIndex + i];
 
-		Material_EvalOp(evalOp, evalStack, &evalStackOffsetVal, hitPoint MATERIALS_PARAM);
+		i += Material_EvalOp(evalOp, evalStack, &evalStackOffsetVal, hitPoint MATERIALS_PARAM);
 	}
 #if defined(DEBUG_PRINTF_MATERIAL_EVAL)
 	printf("evalStackOffset=#%d\n", evalStackOffsetVal);

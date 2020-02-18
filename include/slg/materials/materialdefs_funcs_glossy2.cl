@@ -27,7 +27,7 @@
 OPENCL_FORCE_INLINE void Glossy2Material_Albedo(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
-		TEXTURES_PARAM_DECL) {
+		MATERIALS_PARAM_DECL) {
 	const float3 albedo = Spectrum_Clamp(Texture_GetSpectrumValue(material->glossy2.kdTexIndex,
 			hitPoint TEXTURES_PARAM));
 
@@ -37,35 +37,35 @@ OPENCL_FORCE_INLINE void Glossy2Material_Albedo(__global const Material* restric
 OPENCL_FORCE_INLINE void Glossy2Material_GetInteriorVolume(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
-		TEXTURES_PARAM_DECL) {
-	DefaultMaterial_GetInteriorVolume(material, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+		MATERIALS_PARAM_DECL) {
+	DefaultMaterial_GetInteriorVolume(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
 }
 
 OPENCL_FORCE_INLINE void Glossy2Material_GetExteriorVolume(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
-		TEXTURES_PARAM_DECL) {
-	DefaultMaterial_GetExteriorVolume(material, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+		MATERIALS_PARAM_DECL) {
+	DefaultMaterial_GetExteriorVolume(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
 }
 
 OPENCL_FORCE_INLINE void Glossy2Material_GetPassThroughTransparency(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
-		TEXTURES_PARAM_DECL) {
-	DefaultMaterial_GetPassThroughTransparency(material, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+		MATERIALS_PARAM_DECL) {
+	DefaultMaterial_GetPassThroughTransparency(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
 }
 
 OPENCL_FORCE_INLINE void Glossy2Material_GetEmittedRadiance(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
-		TEXTURES_PARAM_DECL) {
-	DefaultMaterial_GetEmittedRadiance(material, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+		MATERIALS_PARAM_DECL) {
+	DefaultMaterial_GetEmittedRadiance(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
 }
 
 OPENCL_FORCE_NOT_INLINE void Glossy2Material_Evaluate(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
-		TEXTURES_PARAM_DECL) {
+		MATERIALS_PARAM_DECL) {
 	float3 lightDir, eyeDir;
 	EvalStack_PopFloat3(eyeDir);
 	EvalStack_PopFloat3(lightDir);
@@ -147,7 +147,7 @@ OPENCL_FORCE_NOT_INLINE void Glossy2Material_Evaluate(__global const Material* r
 OPENCL_FORCE_NOT_INLINE void Glossy2Material_Sample(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
-		TEXTURES_PARAM_DECL) {
+		MATERIALS_PARAM_DECL) {
 	float u0, u1, passThroughEvent;
 	EvalStack_PopFloat(passThroughEvent);
 	EvalStack_PopFloat(u1);

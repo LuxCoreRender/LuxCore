@@ -26,7 +26,7 @@
 
 OPENCL_FORCE_INLINE void Metal2Material_GetNK(__global const Material* restrict material, __global const HitPoint *hitPoint,
 		float3 *n, float3 *k
-		TEXTURES_PARAM_DECL) {
+		MATERIALS_PARAM_DECL) {
 	const uint fresnelTexIndex = material->metal2.fresnelTexIndex;
 	if (fresnelTexIndex != NULL_INDEX) {
 		__global const Texture* restrict fresnelTex = &texs[fresnelTexIndex];
@@ -48,11 +48,11 @@ OPENCL_FORCE_INLINE void Metal2Material_GetNK(__global const Material* restrict 
 OPENCL_FORCE_INLINE void Metal2Material_Albedo(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
-		TEXTURES_PARAM_DECL) {
+		MATERIALS_PARAM_DECL) {
 	float3 n, k;
 	Metal2Material_GetNK(material, hitPoint,
 			&n, &k
-			TEXTURES_PARAM);
+			MATERIALS_PARAM);
 
 	const float3 albedo = Spectrum_Clamp(FresnelGeneral_Evaluate(n, k, 1.f));
 
@@ -62,35 +62,35 @@ OPENCL_FORCE_INLINE void Metal2Material_Albedo(__global const Material* restrict
 OPENCL_FORCE_INLINE void Metal2Material_GetInteriorVolume(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
-		TEXTURES_PARAM_DECL) {
-	DefaultMaterial_GetInteriorVolume(material, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+		MATERIALS_PARAM_DECL) {
+	DefaultMaterial_GetInteriorVolume(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
 }
 
 OPENCL_FORCE_INLINE void Metal2Material_GetExteriorVolume(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
-		TEXTURES_PARAM_DECL) {
-	DefaultMaterial_GetExteriorVolume(material, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+		MATERIALS_PARAM_DECL) {
+	DefaultMaterial_GetExteriorVolume(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
 }
 
 OPENCL_FORCE_INLINE void Metal2Material_GetPassThroughTransparency(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
-		TEXTURES_PARAM_DECL) {
-	DefaultMaterial_GetPassThroughTransparency(material, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+		MATERIALS_PARAM_DECL) {
+	DefaultMaterial_GetPassThroughTransparency(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
 }
 
 OPENCL_FORCE_INLINE void Metal2Material_GetEmittedRadiance(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
-		TEXTURES_PARAM_DECL) {
-	DefaultMaterial_GetEmittedRadiance(material, hitPoint, evalStack, evalStackOffset TEXTURES_PARAM);
+		MATERIALS_PARAM_DECL) {
+	DefaultMaterial_GetEmittedRadiance(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
 }
 
 OPENCL_FORCE_NOT_INLINE void Metal2Material_Evaluate(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
-		TEXTURES_PARAM_DECL) {
+		MATERIALS_PARAM_DECL) {
 	float3 lightDir, eyeDir;
 	EvalStack_PopFloat3(eyeDir);
 	EvalStack_PopFloat3(lightDir);
@@ -113,7 +113,7 @@ OPENCL_FORCE_NOT_INLINE void Metal2Material_Evaluate(__global const Material* re
 	float3 nVal, kVal;
 	Metal2Material_GetNK(material, hitPoint,
 			&nVal, &kVal
-			TEXTURES_PARAM);
+			MATERIALS_PARAM);
 
 	const float3 F = FresnelGeneral_Evaluate(nVal, kVal, cosWH);
 	Spectrum_Clamp(F);
@@ -131,7 +131,7 @@ OPENCL_FORCE_NOT_INLINE void Metal2Material_Evaluate(__global const Material* re
 OPENCL_FORCE_NOT_INLINE void Metal2Material_Sample(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
-		TEXTURES_PARAM_DECL) {
+		MATERIALS_PARAM_DECL) {
 	float u0, u1, passThroughEvent;
 	EvalStack_PopFloat(passThroughEvent);
 	EvalStack_PopFloat(u1);
@@ -175,7 +175,7 @@ OPENCL_FORCE_NOT_INLINE void Metal2Material_Sample(__global const Material* rest
 	float3 nVal, kVal;
 	Metal2Material_GetNK(material, hitPoint,
 			&nVal, &kVal
-			TEXTURES_PARAM);
+			MATERIALS_PARAM);
 
 	const float3 F = FresnelGeneral_Evaluate(nVal, kVal, cosWH);
 	Spectrum_Clamp(F);
