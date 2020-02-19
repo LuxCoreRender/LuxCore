@@ -113,6 +113,45 @@ OPENCL_FORCE_NOT_INLINE void MatteMaterial_Sample(__global const Material* restr
 }
 
 //------------------------------------------------------------------------------
+// Material specific EvalOp
+//------------------------------------------------------------------------------
+
+OPENCL_FORCE_NOT_INLINE void MatteMaterial_EvalOp(
+		__global const Material* restrict material,
+		const MaterialEvalOpType evalType,
+		__global float *evalStack,
+		uint *evalStackOffset,
+		__global const HitPoint *hitPoint
+		MATERIALS_PARAM_DECL) {
+	switch (evalType) {
+		case EVAL_ALBEDO:
+			MatteMaterial_Albedo(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_INTERIOR_VOLUME:
+			MatteMaterial_GetInteriorVolume(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_EXTERIOR_VOLUME:
+			MatteMaterial_GetExteriorVolume(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_EMITTED_RADIANCE:
+			MatteMaterial_GetEmittedRadiance(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_PASS_TROUGH_TRANSPARENCY:
+			MatteMaterial_GetPassThroughTransparency(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_EVALUATE:
+			MatteMaterial_Evaluate(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_SAMPLE:
+			MatteMaterial_Sample(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		default:
+			// Something wrong here
+			break;
+	}
+}
+
+//------------------------------------------------------------------------------
 // Rough matte material
 //------------------------------------------------------------------------------
 
@@ -233,4 +272,42 @@ OPENCL_FORCE_NOT_INLINE void RoughMatteMaterial_Sample(__global const Material* 
 	EvalStack_PushFloat3(sampledDir);
 	EvalStack_PushFloat(pdfW);
 	EvalStack_PushBSDFEvent(event);
+}
+//------------------------------------------------------------------------------
+// Material specific EvalOp
+//------------------------------------------------------------------------------
+
+OPENCL_FORCE_NOT_INLINE void RoughMatteMaterial_EvalOp(
+		__global const Material* restrict material,
+		const MaterialEvalOpType evalType,
+		__global float *evalStack,
+		uint *evalStackOffset,
+		__global const HitPoint *hitPoint
+		MATERIALS_PARAM_DECL) {
+	switch (evalType) {
+		case EVAL_ALBEDO:
+			RoughMatteMaterial_Albedo(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_INTERIOR_VOLUME:
+			RoughMatteMaterial_GetInteriorVolume(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_EXTERIOR_VOLUME:
+			RoughMatteMaterial_GetExteriorVolume(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_EMITTED_RADIANCE:
+			RoughMatteMaterial_GetEmittedRadiance(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_PASS_TROUGH_TRANSPARENCY:
+			RoughMatteMaterial_GetPassThroughTransparency(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_EVALUATE:
+			RoughMatteMaterial_Evaluate(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_SAMPLE:
+			RoughMatteMaterial_Sample(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		default:
+			// Something wrong here
+			break;
+	}
 }

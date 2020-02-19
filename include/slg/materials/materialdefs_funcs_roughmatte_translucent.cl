@@ -216,3 +216,42 @@ OPENCL_FORCE_NOT_INLINE void RoughMatteTranslucentMaterial_Sample(__global const
 	EvalStack_PushFloat(pdfW);
 	EvalStack_PushBSDFEvent(event);
 }
+
+//------------------------------------------------------------------------------
+// Material specific EvalOp
+//------------------------------------------------------------------------------
+
+OPENCL_FORCE_NOT_INLINE void RoughMatteTranslucentMaterial_EvalOp(
+		__global const Material* restrict material,
+		const MaterialEvalOpType evalType,
+		__global float *evalStack,
+		uint *evalStackOffset,
+		__global const HitPoint *hitPoint
+		MATERIALS_PARAM_DECL) {
+	switch (evalType) {
+		case EVAL_ALBEDO:
+			RoughMatteTranslucentMaterial_Albedo(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_INTERIOR_VOLUME:
+			RoughMatteTranslucentMaterial_GetInteriorVolume(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_EXTERIOR_VOLUME:
+			RoughMatteTranslucentMaterial_GetExteriorVolume(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_EMITTED_RADIANCE:
+			RoughMatteTranslucentMaterial_GetEmittedRadiance(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_PASS_TROUGH_TRANSPARENCY:
+			RoughMatteTranslucentMaterial_GetPassThroughTransparency(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_EVALUATE:
+			RoughMatteTranslucentMaterial_Evaluate(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_SAMPLE:
+			RoughMatteTranslucentMaterial_Sample(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		default:
+			// Something wrong here
+			break;
+	}
+}

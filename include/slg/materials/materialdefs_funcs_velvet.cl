@@ -157,3 +157,42 @@ OPENCL_FORCE_NOT_INLINE void VelvetMaterial_Sample(__global const Material* rest
 	EvalStack_PushFloat(pdfW);
 	EvalStack_PushBSDFEvent(event);
 }
+
+//------------------------------------------------------------------------------
+// Material specific EvalOp
+//------------------------------------------------------------------------------
+
+OPENCL_FORCE_NOT_INLINE void VelvetMaterial_EvalOp(
+		__global const Material* restrict material,
+		const MaterialEvalOpType evalType,
+		__global float *evalStack,
+		uint *evalStackOffset,
+		__global const HitPoint *hitPoint
+		MATERIALS_PARAM_DECL) {
+	switch (evalType) {
+		case EVAL_ALBEDO:
+			VelvetMaterial_Albedo(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_INTERIOR_VOLUME:
+			VelvetMaterial_GetInteriorVolume(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_EXTERIOR_VOLUME:
+			VelvetMaterial_GetExteriorVolume(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_EMITTED_RADIANCE:
+			VelvetMaterial_GetEmittedRadiance(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_PASS_TROUGH_TRANSPARENCY:
+			VelvetMaterial_GetPassThroughTransparency(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_EVALUATE:
+			VelvetMaterial_Evaluate(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_SAMPLE:
+			VelvetMaterial_Sample(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		default:
+			// Something wrong here
+			break;
+	}
+}

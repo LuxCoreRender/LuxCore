@@ -300,3 +300,42 @@ OPENCL_FORCE_NOT_INLINE void RoughGlassMaterial_Sample(__global const Material* 
 	EvalStack_PushFloat(pdfW);
 	EvalStack_PushBSDFEvent(event);
 }
+
+//------------------------------------------------------------------------------
+// Material specific EvalOp
+//------------------------------------------------------------------------------
+
+OPENCL_FORCE_NOT_INLINE void RoughGlassMaterial_EvalOp(
+		__global const Material* restrict material,
+		const MaterialEvalOpType evalType,
+		__global float *evalStack,
+		uint *evalStackOffset,
+		__global const HitPoint *hitPoint
+		MATERIALS_PARAM_DECL) {
+	switch (evalType) {
+		case EVAL_ALBEDO:
+			RoughGlassMaterial_Albedo(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_INTERIOR_VOLUME:
+			RoughGlassMaterial_GetInteriorVolume(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_EXTERIOR_VOLUME:
+			RoughGlassMaterial_GetExteriorVolume(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_EMITTED_RADIANCE:
+			RoughGlassMaterial_GetEmittedRadiance(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_PASS_TROUGH_TRANSPARENCY:
+			RoughGlassMaterial_GetPassThroughTransparency(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_EVALUATE:
+			RoughGlassMaterial_Evaluate(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_SAMPLE:
+			RoughGlassMaterial_Sample(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		default:
+			// Something wrong here
+			break;
+	}
+}

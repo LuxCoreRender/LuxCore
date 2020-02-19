@@ -605,3 +605,72 @@ OPENCL_FORCE_NOT_INLINE void MixMaterial_Sample(__global const Material* restric
 	EvalStack_PushFloat(pdfW);
 	EvalStack_PushBSDFEvent(event);
 }
+
+//------------------------------------------------------------------------------
+// Material specific EvalOp
+//------------------------------------------------------------------------------
+
+OPENCL_FORCE_NOT_INLINE void MixMaterial_EvalOp(
+		__global const Material* restrict material,
+		const MaterialEvalOpType evalType,
+		__global float *evalStack,
+		uint *evalStackOffset,
+		__global const HitPoint *hitPoint
+		MATERIALS_PARAM_DECL) {
+	switch (evalType) {
+		case EVAL_ALBEDO:
+			MixMaterial_Albedo(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_VOLUME_MIX_SETUP1:
+			MixMaterial_GetVolumeSetUp1(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_VOLUME_MIX_SETUP2:
+			MixMaterial_GetVolumeSetUp2(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_INTERIOR_VOLUME:
+			MixMaterial_GetInteriorVolume(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_EXTERIOR_VOLUME:
+			MixMaterial_GetExteriorVolume(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_EMITTED_RADIANCE_MIX_SETUP1:
+			MixMaterial_GetEmittedRadianceSetUp1(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_EMITTED_RADIANCE_MIX_SETUP2:
+			MixMaterial_GetEmittedRadianceSetUp2(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_EMITTED_RADIANCE:
+			MixMaterial_GetEmittedRadiance(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_PASS_TROUGH_TRANSPARENCY_MIX_SETUP1:
+			MixMaterial_GetPassThroughTransparencySetUp1(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_PASS_TROUGH_TRANSPARENCY_MIX_SETUP2:
+			MixMaterial_GetPassThroughTransparencySetUp2(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_PASS_TROUGH_TRANSPARENCY:
+			MixMaterial_GetPassThroughTransparency(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_EVALUATE_MIX_SETUP1:
+			MixMaterial_EvaluateSetUp1(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_EVALUATE_MIX_SETUP2:
+			MixMaterial_EvaluateSetUp2(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_EVALUATE:
+			MixMaterial_Evaluate(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_SAMPLE_MIX_SETUP1:
+			MixMaterial_SampleSetUp1(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_SAMPLE_MIX_SETUP2:
+			MixMaterial_SampleSetUp2(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_SAMPLE:
+			MixMaterial_Sample(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		default:
+			// Something wrong here
+			break;
+	}
+}

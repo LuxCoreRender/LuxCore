@@ -239,8 +239,8 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_materialdefs_funcs_roughglass <<
 			slg::ocl::KernelSource_materialdefs_funcs_roughmatte_translucent <<
 			slg::ocl::KernelSource_materialdefs_funcs_velvet <<
-			slg::ocl::KernelSource_material_eval_funcs <<
-			slg::ocl::KernelSource_material_main;
+			slg::ocl::KernelSource_material_funcs_evalops <<
+			slg::ocl::KernelSource_material_funcs;
 
 	ssKernel <<
 			slg::ocl::KernelSource_pathdepthinfo_types <<
