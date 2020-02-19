@@ -7,15 +7,27 @@ git clone --branch master https://github.com/LuxCoreRender/WindowsCompile .\Wind
 mklink /J Luxcore %SYSTEM_DEFAULTWORKINGDIRECTORY%
 
 pip install --upgrade pip
-pip install --upgrade setuptools
-pip install --upgrade pywin32
+
+:: setuptools 45.x has issues when packaged with PyInstaller, see:
+:: https://github.com/pypa/setuptools/issues/1963
+:: Next PyInstaller version will fix
+pip install --upgrade "setuptools<45.0.0"
+
+:: pywin32 v. 225 and newer cause error in PyInstaller exe:
+:: [11676] Failed to execute script pyi_rth_win32comgenpy
+:: Under investigation, reverting to v. 224 for the moment
+pip install --upgrade pywin32==224
+
 pip install wheel
 pip install pyinstaller
 
 :: pyluxcoretool will use same numpy version used to build LuxCore
 pip install numpy==1.15.4
 
-pip install PySide2
+:: pyside2-uic produces wrong code for ui from version 5.14, causing:
+:: AttributeError: 'PySide2.QtWidgets.QAction' object has no attribute 'activated'
+:: Reverting to 5.13.2 for the moment
+pip install PySide2==5.13.2 shiboken2==5.13.2
 
 .\WindowsCompile\support\bin\wget.exe https://github.com/GPUOpen-LibrariesAndSDKs/OCL-SDK/files/1406216/lightOCLSDK.zip
 .\WindowsCompile\support\bin\7z.exe x -oWindowsCompile\OCL_SDK_Light lightOCLSDK.zip
