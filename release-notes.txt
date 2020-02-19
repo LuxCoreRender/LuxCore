@@ -77,6 +77,10 @@
 * Fixed the generation of material/object/volume default random ID (issue #296)
 * Fixed bump mapping when using a transformation with negative scale on Z (issue #300)
 
+''Beta2 released''
+
+* Fixed a bug in pyluxcoretools ui code causing a runtime error with PySide2 5.14.x
+
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
 

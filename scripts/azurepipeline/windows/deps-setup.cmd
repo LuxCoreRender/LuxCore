@@ -24,10 +24,7 @@ pip install pyinstaller
 :: pyluxcoretool will use same numpy version used to build LuxCore
 pip install numpy==1.15.4
 
-:: pyside2-uic produces wrong code for ui from version 5.14, causing:
-:: AttributeError: 'PySide2.QtWidgets.QAction' object has no attribute 'activated'
-:: Reverting to 5.13.2 for the moment
-pip install PySide2==5.13.2 shiboken2==5.13.2
+pip install PySide2
 
 .\WindowsCompile\support\bin\wget.exe https://github.com/GPUOpen-LibrariesAndSDKs/OCL-SDK/files/1406216/lightOCLSDK.zip
 .\WindowsCompile\support\bin\7z.exe x -oWindowsCompile\OCL_SDK_Light lightOCLSDK.zip
