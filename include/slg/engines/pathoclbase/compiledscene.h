@@ -136,8 +136,14 @@ private:
 	void CompileCamera();
 	void CompileSceneObjects();
 	void CompileGeometry();
-	u_int CompileMaterialConditionalOps(const u_int matIndex, const u_int matAIndex, const u_int matBIndex,
-			const slg::ocl::MaterialEvalOpType opType, std::vector<slg::ocl::MaterialEvalOp> &evalOps) const;
+	u_int CompileMaterialConditionalOps(const u_int matIndex,
+		const std::vector<slg::ocl::MaterialEvalOp> &evalOpsA, const u_int evalOpStackSizeA,
+		const std::vector<slg::ocl::MaterialEvalOp> &evalOpsB, const u_int evalOpStackSizeB,
+		std::vector<slg::ocl::MaterialEvalOp> &evalOps) const;
+	u_int CompileMaterialConditionalOps(const u_int matIndex,
+			const u_int matAIndex, const slg::ocl::MaterialEvalOpType opTypeA,
+			const u_int matBIndex, const slg::ocl::MaterialEvalOpType opTypeB,
+			std::vector<slg::ocl::MaterialEvalOp> &evalOps) const;
 	u_int CompileMaterialOps(const u_int matIndex, const slg::ocl::MaterialEvalOpType opType,
 			std::vector<slg::ocl::MaterialEvalOp> &evalOps) const;
 	void CompileMaterialOps();

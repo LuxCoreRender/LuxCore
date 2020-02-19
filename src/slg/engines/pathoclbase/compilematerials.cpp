@@ -58,45 +58,55 @@ using namespace luxrays;
 using namespace slg;
 
 u_int CompiledScene::CompileMaterialConditionalOps(const u_int matIndex,
-		const u_int matAIndex, const u_int matBIndex,
-		const slg::ocl::MaterialEvalOpType opType,
+		const vector<slg::ocl::MaterialEvalOp> &evalOpsA, const u_int evalOpStackSizeA,
+		const vector<slg::ocl::MaterialEvalOp> &evalOpsB, const u_int evalOpStackSizeB,
 		vector<slg::ocl::MaterialEvalOp> &evalOps) const {
 	u_int evalOpStackSize = 0;
 	
-	// Compile opType of material A
-	vector<slg::ocl::MaterialEvalOp> evalOpsSampleA;
-	const u_int evalOpStackSizeSampleA = CompileMaterialOps(matAIndex, opType,
-			evalOpsSampleA);
-
-	// Compile opType of material B
-	vector<slg::ocl::MaterialEvalOp> evalOpsSampleB;
-	const u_int evalOpStackSizeSampleB = CompileMaterialOps(matBIndex, opType,
-			evalOpsSampleB);
-
 	// Add the conditional goto
 	slg::ocl::MaterialEvalOp opGotoA;
 	opGotoA.matIndex = matIndex;
 	opGotoA.evalType = slg::ocl::EVAL_CONDITIONAL_GOTO;
 	// The +1 is for the unconditional goto
-	opGotoA.opData.opsCount = evalOpsSampleA.size() + 1;
+	opGotoA.opData.opsCount = evalOpsA.size() + 1;
 	evalOps.push_back(opGotoA);
 
 	// Add compiled Ops of material A
-	evalOps.insert(evalOps.end(), evalOpsSampleA.begin(), evalOpsSampleA.end());
-	evalOpStackSize += evalOpStackSizeSampleA;
+	evalOps.insert(evalOps.end(), evalOpsA.begin(), evalOpsA.end());
+	evalOpStackSize += evalOpStackSizeA;
 
 	// Add the unconditional goto
 	slg::ocl::MaterialEvalOp opGotoB;
 	opGotoB.matIndex = matIndex;
 	opGotoB.evalType = slg::ocl::EVAL_UNCONDITIONAL_GOTO;
-	opGotoB.opData.opsCount = evalOpsSampleB.size();
+	opGotoB.opData.opsCount = evalOpsB.size();
 	evalOps.push_back(opGotoB);
 
 	// Add compiled Ops of material B
-	evalOps.insert(evalOps.end(), evalOpsSampleB.begin(), evalOpsSampleB.end());
-	evalOpStackSize += evalOpStackSizeSampleB;
+	evalOps.insert(evalOps.end(), evalOpsB.begin(), evalOpsB.end());
+	evalOpStackSize += evalOpStackSizeB;
 
 	return evalOpStackSize;
+}
+
+u_int CompiledScene::CompileMaterialConditionalOps(const u_int matIndex,
+		const u_int matAIndex, const slg::ocl::MaterialEvalOpType opTypeA,
+		const u_int matBIndex, const slg::ocl::MaterialEvalOpType opTypeB,
+		vector<slg::ocl::MaterialEvalOp> &evalOps) const {
+	// Compile opType of material A
+	vector<slg::ocl::MaterialEvalOp> evalOpsA;
+	const u_int evalOpStackSizeA = CompileMaterialOps(matAIndex, opTypeA,
+			evalOpsA);
+
+	// Compile opType of material B
+	vector<slg::ocl::MaterialEvalOp> evalOpsB;
+	const u_int evalOpStackSizeB = CompileMaterialOps(matBIndex, opTypeB,
+			evalOpsB);
+
+	return CompileMaterialConditionalOps(matIndex,
+			evalOpsA, evalOpStackSizeA,
+			evalOpsB, evalOpStackSizeB,
+			evalOps);
 }
 
 u_int CompiledScene::CompileMaterialOps(const u_int matIndex,
@@ -106,6 +116,7 @@ u_int CompiledScene::CompileMaterialOps(const u_int matIndex,
 
 	const slg::ocl::Material *mat = &mats[matIndex];
 	u_int evalOpStackSize = 0;
+	bool addDefaultOp = true;
 
 	switch (mat->type) {
 		//----------------------------------------------------------------------
@@ -259,9 +270,15 @@ u_int CompiledScene::CompileMaterialOps(const u_int matIndex,
 					break;
 				case slg::ocl::EVAL_SAMPLE: {
 					evalOpStackSize += CompileMaterialOps(matIndex, slg::ocl::EVAL_SAMPLE_MIX_SETUP1, evalOps);
-					evalOpStackSize += CompileMaterialConditionalOps(matIndex, mat->mix.matAIndex, mat->mix.matBIndex, slg::ocl::EVAL_SAMPLE, evalOps);
+					evalOpStackSize += CompileMaterialConditionalOps(matIndex,
+							mat->mix.matAIndex, slg::ocl::EVAL_SAMPLE,
+							mat->mix.matBIndex, slg::ocl::EVAL_SAMPLE,
+							evalOps);
 					evalOpStackSize += CompileMaterialOps(matIndex, slg::ocl::EVAL_SAMPLE_MIX_SETUP2, evalOps);
-					evalOpStackSize += CompileMaterialConditionalOps(matIndex, mat->mix.matAIndex, mat->mix.matBIndex, slg::ocl::EVAL_EVALUATE, evalOps);
+					evalOpStackSize += CompileMaterialConditionalOps(matIndex,
+							mat->mix.matAIndex, slg::ocl::EVAL_EVALUATE,
+							mat->mix.matBIndex, slg::ocl::EVAL_EVALUATE,
+							evalOps);
 					break;
 				}
 				default:
@@ -300,12 +317,45 @@ u_int CompiledScene::CompileMaterialOps(const u_int matIndex,
 					// 5 x parameters and 3 x results
 					evalOpStackSize += 5;
 					break;
+				case slg::ocl::EVAL_EVALUATE_GLOSSYCOATING_SETUP:
+					// 6 x parameters and 12 x results
+					evalOpStackSize += 12;
+					break;
 				case slg::ocl::EVAL_EVALUATE:
-					// TODO
-					//break;
-				case slg::ocl::EVAL_SAMPLE:
-					// TODO
-					//break;
+					evalOpStackSize += CompileMaterialOps(matIndex, slg::ocl::EVAL_EVALUATE_GLOSSYCOATING_SETUP, evalOps);
+					evalOpStackSize += CompileMaterialOps(mat->glossycoating.matBaseIndex, slg::ocl::EVAL_EVALUATE, evalOps);
+					break;
+				case slg::ocl::EVAL_SAMPLE_GLOSSYCOATING_SETUP:
+					// 6 x parameters and 26 x results
+					evalOpStackSize += 26;
+					break;
+				case slg::ocl::EVAL_SAMPLE_GLOSSYCOATING_CLOSE_SAMPLE_BASE:
+					// 26 x parameters and 8 x results
+					evalOpStackSize += 8;
+					break;
+				case slg::ocl::EVAL_SAMPLE_GLOSSYCOATING_CLOSE_EVALUATE_BASE:
+					// 26 x parameters and 8 x results
+					evalOpStackSize += 8;
+					break;
+				case slg::ocl::EVAL_SAMPLE: {
+					evalOpStackSize += CompileMaterialOps(matIndex, slg::ocl::EVAL_SAMPLE_GLOSSYCOATING_SETUP, evalOps);
+					
+					vector<slg::ocl::MaterialEvalOp> evalOpsSampleBase;
+					u_int evalOpStackSizeSampleBase = CompileMaterialOps(mat->glossycoating.matBaseIndex, slg::ocl::EVAL_SAMPLE, evalOpsSampleBase);
+					evalOpStackSizeSampleBase += CompileMaterialOps(matIndex, slg::ocl::EVAL_SAMPLE_GLOSSYCOATING_CLOSE_SAMPLE_BASE, evalOpsSampleBase);
+
+					vector<slg::ocl::MaterialEvalOp> evalOpsEvaluateBase;
+					u_int evalOpStackSizeEvaluateBase = CompileMaterialOps(mat->glossycoating.matBaseIndex, slg::ocl::EVAL_EVALUATE, evalOpsEvaluateBase);
+					evalOpStackSizeEvaluateBase += CompileMaterialOps(matIndex, slg::ocl::EVAL_SAMPLE_GLOSSYCOATING_CLOSE_EVALUATE_BASE, evalOpsEvaluateBase);
+							
+					evalOpStackSize += CompileMaterialConditionalOps(matIndex,
+							evalOpsSampleBase, evalOpStackSizeSampleBase,
+							evalOpsEvaluateBase, evalOpStackSizeEvaluateBase,
+							evalOps);
+					
+					addDefaultOp = false;
+					break;
+				}
 				default:
 					throw runtime_error("Unknown eval. type in CompiledScene::CompileMaterialOps(" + ToString(mat->type) + "): " + ToString(opType));
 			}
@@ -314,12 +364,14 @@ u_int CompiledScene::CompileMaterialOps(const u_int matIndex,
 			throw runtime_error("Unknown material in CompiledScene::CompileMaterialOps(" + ToString(opType) + "): " + ToString(mat->type));
 	}
 
-	slg::ocl::MaterialEvalOp op;
+	if (addDefaultOp) {
+		slg::ocl::MaterialEvalOp op;
 
-	op.matIndex = matIndex;
-	op.evalType = opType;
+		op.matIndex = matIndex;
+		op.evalType = opType;
 
-	evalOps.push_back(op);
+		evalOps.push_back(op);
+	}
 
 	return evalOpStackSize;
 }

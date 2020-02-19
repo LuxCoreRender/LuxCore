@@ -518,6 +518,21 @@ OPENCL_FORCE_NOT_INLINE uint Material_EvalOp(
 				case EVAL_GET_PASS_TROUGH_TRANSPARENCY:
 					GlossyCoatingMaterial_GetPassThroughTransparency(mat, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
 					break;
+				case EVAL_EVALUATE_GLOSSYCOATING_SETUP:
+					GlossyCoatingMaterial_EvaluateSetUp(mat, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+					break;
+				case EVAL_EVALUATE:
+					GlossyCoatingMaterial_Evaluate(mat, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+					break;
+				case EVAL_SAMPLE_GLOSSYCOATING_SETUP:
+					GlossyCoatingMaterial_SampleSetUp(mat, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+					break;
+				case EVAL_SAMPLE_GLOSSYCOATING_CLOSE_SAMPLE_BASE:
+					GlossyCoatingMaterial_SampleMatBaseSample(mat, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+					break;
+				case EVAL_SAMPLE_GLOSSYCOATING_CLOSE_EVALUATE_BASE:
+					GlossyCoatingMaterial_SampleMatBaseEvaluate(mat, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+					break;
 				default:
 					// Something wrong here
 					break;
