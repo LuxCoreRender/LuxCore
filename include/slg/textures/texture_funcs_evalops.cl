@@ -18,7 +18,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-// NOTE: Keep in mid this file must be less than 64 Kbytes because
+// NOTE: Keep in mind this file must be less than 64 Kbytes because
 // VisulStudio C++ limit of 64 kbytes per file sources
 
 //#define DEBUG_PRINTF_KERNEL_NAME 1
