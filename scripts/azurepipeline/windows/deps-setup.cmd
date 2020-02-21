@@ -13,11 +13,6 @@ pip install --upgrade pip
 :: Next PyInstaller version will fix
 pip install --upgrade "setuptools<45.0.0"
 
-:: pywin32 v. 225 and newer cause error in PyInstaller exe:
-:: [11676] Failed to execute script pyi_rth_win32comgenpy
-:: Under investigation, reverting to v. 224 for the moment
-pip install --upgrade pywin32==224
-
 pip install wheel
 pip install pyinstaller
 
