@@ -338,72 +338,15 @@ OPENCL_FORCE_NOT_INLINE void GlossyCoatingMaterial_SampleSetUp(__global const Ma
 	}
 }
 
-OPENCL_FORCE_NOT_INLINE void GlossyCoatingMaterial_SampleMatBaseSample(__global const Material* restrict material,
+OPENCL_FORCE_NOT_INLINE void GlossyCoatingMaterial_Sample(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
-		__global float *evalStack, uint *evalStackOffset
+		__global float *evalStack, uint *evalStackOffset,
+		const float wBase, const float wCoating,
+		const float3 baseF, const float basePdf,
+		const float3 coatingF, const float coatingPdf,
+		const float3 fixedDir, const float3 sampledDir,
+		const BSDFEvent event,	const float3 ks
 		MATERIALS_PARAM_DECL) {
-	// Pop the result of the base material sample
-	float3 resultMatBase, sampledDirMatBase;
-	float pdfWMatBase;
-	BSDFEvent eventMatBase;
-	EvalStack_PopBSDFEvent(eventMatBase);
-	EvalStack_PopFloat(pdfWMatBase);
-	EvalStack_PopFloat3(sampledDirMatBase);
-	EvalStack_PopFloat3(resultMatBase);
-
-	// Pop wCoating
-	float wCoating;
-	EvalStack_PopFloat(wCoating);
-	const float wBase = 1.f - wCoating;
-
-	// Pop roughness and anisotropy
-	float roughness, anisotropy;
-	EvalStack_PopFloat(anisotropy);
-	EvalStack_PopFloat(roughness);
-
-	// Pop ks
-	float3 ks;
-	EvalStack_PopFloat3(ks);
-
-	// Pop parameters
-	float u0, u1, passThroughEvent;
-	EvalStack_PopFloat(passThroughEvent);
-	EvalStack_PopFloat(u1);
-	EvalStack_PopFloat(u0);
-	float3 fixedDir;
-	EvalStack_PopFloat3(fixedDir);
-
-	//--------------------------------------------------------------------------
-	
-	if (Spectrum_IsBlack(resultMatBase)) {
-		MATERIAL_SAMPLE_RETURN_BLACK;
-	}
-
-	const float3 baseF = resultMatBase * pdfWMatBase;
-	const float basePdf = pdfWMatBase;
-	const float3 sampledDir = sampledDirMatBase;
-	BSDFEvent event = pdfWMatBase;
-
-	// Don't add the coating scattering if the base sampled
-	// component is specular
-	float3 coatingF;
-	float coatingPdf;
-	if (!(event & SPECULAR)) {
-		coatingF = SchlickBSDF_CoatingF(ks, roughness, anisotropy,
-				material->glossycoating.multibounce, fixedDir, sampledDir);
-		coatingPdf = SchlickBSDF_CoatingPdf(roughness, anisotropy, fixedDir, sampledDir);
-	} else {
-		coatingF = BLACK;
-		coatingPdf = 0.f;
-	}
-
-	//--------------------------------------------------------------------------
-	// The following code is repeated between
-	// GlossyCoatingMaterial_SampleMatBaseSample() and
-	// GlossyCoatingMaterial_SampleMatBaseEvaluate()
-	// TODO: cleanup
-	//--------------------------------------------------------------------------
-
 	// Absorption
 	const float cosi = fabs(sampledDir.z);
 	const float coso = fabs(fixedDir.z);
@@ -463,12 +406,80 @@ OPENCL_FORCE_NOT_INLINE void GlossyCoatingMaterial_SampleMatBaseSample(__global 
 	const float pdfW = coatingPdf * wCoating + basePdf * wBase;
 	result /= pdfW;
 
-	//--------------------------------------------------------------------------
-
 	EvalStack_PushFloat3(result);
 	EvalStack_PushFloat3(sampledDir);
 	EvalStack_PushFloat(pdfW);
 	EvalStack_PushBSDFEvent(event);
+}
+
+OPENCL_FORCE_NOT_INLINE void GlossyCoatingMaterial_SampleMatBaseSample(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	// Pop the result of the base material sample
+	float3 resultMatBase, sampledDirMatBase;
+	float pdfWMatBase;
+	BSDFEvent eventMatBase;
+	EvalStack_PopBSDFEvent(eventMatBase);
+	EvalStack_PopFloat(pdfWMatBase);
+	EvalStack_PopFloat3(sampledDirMatBase);
+	EvalStack_PopFloat3(resultMatBase);
+
+	// Pop wCoating
+	float wCoating;
+	EvalStack_PopFloat(wCoating);
+	const float wBase = 1.f - wCoating;
+
+	// Pop roughness and anisotropy
+	float roughness, anisotropy;
+	EvalStack_PopFloat(anisotropy);
+	EvalStack_PopFloat(roughness);
+
+	// Pop ks
+	float3 ks;
+	EvalStack_PopFloat3(ks);
+
+	// Pop parameters
+	float u0, u1, passThroughEvent;
+	EvalStack_PopFloat(passThroughEvent);
+	EvalStack_PopFloat(u1);
+	EvalStack_PopFloat(u0);
+	float3 fixedDir;
+	EvalStack_PopFloat3(fixedDir);
+
+	//--------------------------------------------------------------------------
+	
+	if (Spectrum_IsBlack(resultMatBase)) {
+		MATERIAL_SAMPLE_RETURN_BLACK;
+	}
+
+	const float3 baseF = resultMatBase * pdfWMatBase;
+	const float basePdf = pdfWMatBase;
+	const float3 sampledDir = sampledDirMatBase;
+	const BSDFEvent event = pdfWMatBase;
+
+	// Don't add the coating scattering if the base sampled
+	// component is specular
+	float3 coatingF;
+	float coatingPdf;
+	if (!(event & SPECULAR)) {
+		coatingF = SchlickBSDF_CoatingF(ks, roughness, anisotropy,
+				material->glossycoating.multibounce, fixedDir, sampledDir);
+		coatingPdf = SchlickBSDF_CoatingPdf(roughness, anisotropy, fixedDir, sampledDir);
+	} else {
+		coatingF = BLACK;
+		coatingPdf = 0.f;
+	}
+
+	//--------------------------------------------------------------------------
+
+	GlossyCoatingMaterial_Sample(material, hitPoint, evalStack, evalStackOffset,
+		wBase, wCoating,
+		baseF, basePdf,
+		coatingF, coatingPdf,
+		fixedDir, sampledDir,
+		event, ks
+		MATERIALS_PARAM);
 }
 
 OPENCL_FORCE_NOT_INLINE void GlossyCoatingMaterial_SampleMatBaseEvaluate(__global const Material* restrict material,
@@ -533,77 +544,14 @@ OPENCL_FORCE_NOT_INLINE void GlossyCoatingMaterial_SampleMatBaseEvaluate(__globa
 	const BSDFEvent event = GLOSSY | REFLECT;
 
 	//--------------------------------------------------------------------------
-	// The following code is repeated between
-	// GlossyCoatingMaterial_SampleMatBaseSample() and
-	// GlossyCoatingMaterial_SampleMatBaseEvaluate()
-	// TODO: cleanup
-	//--------------------------------------------------------------------------
-
-	// Absorption
-	const float cosi = fabs(sampledDir.z);
-	const float coso = fabs(fixedDir.z);
-
-	const float3 alpha = Spectrum_Clamp(Texture_GetSpectrumValue(material->glossycoating.kaTexIndex, hitPoint TEXTURES_PARAM));
-	const float d = Texture_GetFloatValue(material->glossycoating.depthTexIndex, hitPoint TEXTURES_PARAM);
-	const float3 absorption = CoatingAbsorption(cosi, coso, alpha, d);
-
-	// Note: this is the same side test used by matte translucent material and
-	// it is different from the CPU test because HitPoint::dpdu and HitPoint::dpdv
-	// are not available here without bump mapping.
-	const float sideTest = CosTheta(fixedDir) * CosTheta(sampledDir);
-	float3 result;
-	if (sideTest > DEFAULT_COS_EPSILON_STATIC) {
-		// Reflection
-
-		if (!(fixedDir.z > 0.f)) {
-			// Back face reflection: no coating
-			result = baseF;
-		} else {
-			// Front face reflection: coating+base
-
-			// Coating fresnel factor
-			const float3 H = normalize(fixedDir + sampledDir);
-			const float3 S = FresnelSchlick_Evaluate(ks, fabs(dot(sampledDir, H)));
-
-			// blend in base layer Schlick style
-			// coatingF already takes fresnel factor S into account
-			result = (coatingF + absorption * (WHITE - S) * baseF);
-		}
-	} else if (sideTest < -DEFAULT_COS_EPSILON_STATIC) {
-		// Transmission
-		// Coating fresnel factor
-		float3 H = (float3)((sampledDir).x + fixedDir.x, (sampledDir).y + fixedDir.y,
-			(sampledDir).z - fixedDir.z);
-		const float HLength = dot(H, H);
-		
-		float3 S;
-		// I have to handle the case when HLength is 0.0 (or nearly 0.f) in
-		// order to avoid NaN
-		if (HLength < DEFAULT_EPSILON_STATIC)
-			S = 0.f;
-		else {
-			// Normalize
-			H *= 1.f / HLength;
-			S = FresnelSchlick_Evaluate(ks, fabs(dot(fixedDir, H)));
-		}
-
-		// Filter base layer, the square root is just a heuristic
-		// so that a sheet coated on both faces gets a filtering factor
-		// of 1-S like a reflection
-		result = absorption * Spectrum_Sqrt(WHITE - S) * baseF;
-	} else {
-		MATERIAL_SAMPLE_RETURN_BLACK;
-	}
 	
-	const float pdfW = coatingPdf * wCoating + basePdf * wBase;
-	result /= pdfW;
-
-	//--------------------------------------------------------------------------
-
-	EvalStack_PushFloat3(result);
-	EvalStack_PushFloat3(sampledDir);
-	EvalStack_PushFloat(pdfW);
-	EvalStack_PushBSDFEvent(event);
+	GlossyCoatingMaterial_Sample(material, hitPoint, evalStack, evalStackOffset,
+		wBase, wCoating,
+		baseF, basePdf,
+		coatingF, coatingPdf,
+		fixedDir, sampledDir,
+		event, ks
+		MATERIALS_PARAM);
 }
 
 //------------------------------------------------------------------------------
