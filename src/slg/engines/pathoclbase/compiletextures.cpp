@@ -239,12 +239,6 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 		case slg::ocl::OBJECTID_TEX:
 		case slg::ocl::OBJECTID_COLOR_TEX:
 		case slg::ocl::OBJECTID_NORMALIZED_TEX:
-		case slg::ocl::CLOUD_TEX:
-		case slg::ocl::FBM_TEX:
-		case slg::ocl::MARBLE:
-		case slg::ocl::WINDY:
-		case slg::ocl::WRINKLED:
-		case slg::ocl::UV_TEX:
 		case slg::ocl::FRESNELCOLOR_TEX:
 		case slg::ocl::FRESNELCONST_TEX: {
 			switch (opType) {
@@ -268,6 +262,12 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 		case slg::ocl::HITPOINTCOLOR:
 		case slg::ocl::HITPOINTALPHA:
 		case slg::ocl::HITPOINTGREY:
+		case slg::ocl::CLOUD_TEX:
+		case slg::ocl::FBM_TEX:
+		case slg::ocl::MARBLE:
+		case slg::ocl::WINDY:
+		case slg::ocl::WRINKLED:
+		case slg::ocl::UV_TEX:
 		case slg::ocl::DENSITYGRID_TEX:
 		case slg::ocl::SHADING_NORMAL_TEX:
 		case slg::ocl::POSITION_TEX:

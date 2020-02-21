@@ -21,7 +21,6 @@
 // NOTE: Keep in mid this file must be less than 64 Kbytes because
 // VisulStudio C++ limit of 64 kbytes per file sources
 
-
 //#define DEBUG_PRINTF_KERNEL_NAME 1
 //#define DEBUG_PRINTF_TEXTURE_EVAL 1
 
@@ -522,18 +521,11 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 					EvalStack_PushFloat3(eval);
 					break;
 				}
-				case EVAL_BUMP_GENERIC_OFFSET_U:
-					Texture_EvalOpGenericBumpOffsetU(evalStack, evalStackOffset,
-							hitPoint, sampleDistance);
+				case EVAL_BUMP: {
+					const float3 shadeN = ConstTexture_Bump(hitPoint);
+					EvalStack_PushFloat3(shadeN);
 					break;
-				case EVAL_BUMP_GENERIC_OFFSET_V:
-					Texture_EvalOpGenericBumpOffsetV(evalStack, evalStackOffset,
-							hitPoint, sampleDistance);
-					break;
-				case EVAL_BUMP:
-					Texture_EvalOpGenericBump(evalStack, evalStackOffset,
-							hitPoint, sampleDistance);
-					break;
+				}
 				default:
 					// Something wrong here
 					break;
@@ -555,18 +547,11 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 					EvalStack_PushFloat3(eval);
 					break;
 				}
-				case EVAL_BUMP_GENERIC_OFFSET_U:
-					Texture_EvalOpGenericBumpOffsetU(evalStack, evalStackOffset,
-							hitPoint, sampleDistance);
+				case EVAL_BUMP: {
+					const float3 shadeN = ConstTexture_Bump(hitPoint);
+					EvalStack_PushFloat3(shadeN);
 					break;
-				case EVAL_BUMP_GENERIC_OFFSET_V:
-					Texture_EvalOpGenericBumpOffsetV(evalStack, evalStackOffset,
-							hitPoint, sampleDistance);
-					break;
-				case EVAL_BUMP:
-					Texture_EvalOpGenericBump(evalStack, evalStackOffset,
-							hitPoint, sampleDistance);
-					break;
+				}
 				default:
 					// Something wrong here
 					break;
@@ -1921,7 +1906,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 			break;
 		}
 		//----------------------------------------------------------------------
-		// FRESNELCOLOR_TEX
+		// TRIPLANAR_TEX
 		//----------------------------------------------------------------------
 		case TRIPLANAR_TEX:
 			TriplanarTexture_EvalOp(texture, evalType, evalStack, evalStackOffset,
