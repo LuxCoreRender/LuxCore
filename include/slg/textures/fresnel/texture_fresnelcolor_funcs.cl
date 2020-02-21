@@ -50,17 +50,13 @@ OPENCL_FORCE_INLINE float3 FresnelApproxK3(const float3 Fr) {
 // FresnelColor texture
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_ENABLE_TEX_FRESNELCOLOR)
-
 // The following functions are never really used as Metal material has special
 // code to evaluate Fresnel texture
 
-OPENCL_FORCE_INLINE float FresnelColorTexture_ConstEvaluateFloat(__global const Texture *tex) {
+OPENCL_FORCE_INLINE float FresnelColorTexture_ConstEvaluateFloat() {
 	return 0.f;
 }
 
-OPENCL_FORCE_INLINE float3 FresnelColorTexture_ConstEvaluateSpectrum(__global const Texture *tex) {
+OPENCL_FORCE_INLINE float3 FresnelColorTexture_ConstEvaluateSpectrum() {
 	return 0.f;
 }
-
-#endif

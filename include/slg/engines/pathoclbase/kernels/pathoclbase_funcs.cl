@@ -23,34 +23,6 @@
 //  PARAM_RAY_EPSILON_MAX
 //  PARAM_USE_PIXEL_ATOMICS
 
-// To enable single material support
-//  PARAM_ENABLE_MAT_MATTE
-//  PARAM_ENABLE_MAT_MIRROR
-//  PARAM_ENABLE_MAT_GLASS
-//  PARAM_ENABLE_MAT_ARCHGLASS
-//  PARAM_ENABLE_MAT_MIX
-//  PARAM_ENABLE_MAT_NULL
-//  PARAM_ENABLE_MAT_MATTETRANSLUCENT
-//  PARAM_ENABLE_MAT_ROUGHMATTETRANSLUCENT
-//  PARAM_ENABLE_MAT_GLOSSY2
-//  PARAM_ENABLE_MAT_METAL2
-//  PARAM_ENABLE_MAT_ROUGHGLASS
-//  PARAM_ENABLE_MAT_CLOTH
-//  PARAM_ENABLE_MAT_CARPAINT
-//  PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT
-//  PARAM_ENABLE_MAT_GLOSSYCOATING
-//  PARAM_ENABLE_MAT_DISNEY
-//  PARAM_ENABLE_MAT_CLEAR_VOL
-/// etc.
-
-// To enable single texture support
-//  PARAM_ENABLE_TEX_CONST_FLOAT
-//  PARAM_ENABLE_TEX_CONST_FLOAT3
-//  PARAM_ENABLE_TEX_CONST_FLOAT4
-//  PARAM_ENABLE_TEX_IMAGEMAP
-//  PARAM_ENABLE_TEX_SCALE
-//  etc.
-
 /*void MangleMemory(__global unsigned char *ptr, const size_t size) {
 	Seed seed;
 	Rnd_Init(7 + get_global_id(0), &seed);
@@ -487,7 +459,13 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 		/* Scene parameters */ \
 		KERNEL_ARGS_INFINITELIGHTS \
 		, __global const Material* restrict mats \
+		, __global const MaterialEvalOp* restrict matEvalOps \
+		, __global float *matEvalStacks \
+		, const uint maxMaterialEvalStackSize \
 		, __global const Texture* restrict texs \
+		, __global const TextureEvalOp* restrict texEvalOps \
+		, __global float *texEvalStacks \
+		, const uint maxTextureEvalStackSize \
 		, __global const SceneObject* restrict sceneObjs \
 		, __global const ExtMesh* restrict meshDescs \
 		, __global const Point* restrict vertices \

@@ -42,7 +42,7 @@ OCLRenderEngine::OCLRenderEngine(const RenderConfig *rcfg,
 	// 0 means use the value suggested by the OpenCL driver
 	const u_int forceCPUWorkSize = cfg.Get(GetDefaultProps().Get("opencl.cpu.workgroup.size")).Get<u_int>();
 	// 0 means use the value suggested by the OpenCL driver
-	// Note: I'm using 64 because some driver (i.e. NVIDIA) suggests a value and than
+	// Note: I'm using 32 because some driver (i.e. NVIDIA) suggests a value and than
 	// throws a clEnqueueNDRangeKernel(CL_OUT_OF_RESOURCES)
 	const u_int forceGPUWorkSize = cfg.Get(GetDefaultProps().Get("opencl.gpu.workgroup.size")).Get<u_int>();
 
@@ -131,7 +131,7 @@ const Properties &OCLRenderEngine::GetDefaultProps() {
 #else
 			Property("opencl.cpu.workgroup.size")(0) <<
 #endif
-			Property("opencl.gpu.workgroup.size")(64) <<
+			Property("opencl.gpu.workgroup.size")(32) <<
 			Property("opencl.devices.select")("") <<
 			Property("opencl.native.threads.count")(boost::thread::hardware_concurrency());
 

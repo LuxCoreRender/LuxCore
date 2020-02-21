@@ -22,16 +22,10 @@
 // Abs texture
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_ENABLE_TEX_ABS)
-
-OPENCL_FORCE_INLINE float AbsTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
-		const float v) {
+OPENCL_FORCE_INLINE float AbsTexture_ConstEvaluateFloat(const float v) {
 	return fabs(v);
 }
 
-OPENCL_FORCE_INLINE float3 AbsTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
-		const float3 v) {
+OPENCL_FORCE_INLINE float3 AbsTexture_ConstEvaluateSpectrum(const float3 v) {
 	return fabs(v);
 }
-
-#endif

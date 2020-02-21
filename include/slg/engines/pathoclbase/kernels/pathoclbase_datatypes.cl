@@ -89,9 +89,6 @@ typedef struct {
 	unsigned int lightID;
 } DirectLightIlluminateInfo;
 
-// This is defined only under OpenCL because of variable size structures
-#if defined(SLG_OPENCL_KERNEL)
-
 // The state used to keep track of the rendered path
 typedef struct {
 	PathState state;
@@ -119,7 +116,7 @@ typedef struct {
 
 	DirectLightResult directLightResult;
 
-	// The shadow transparency lag used by Scene_Intersect()
+	// The shadow transparency flag used by Scene_Intersect()
 	int throughShadowTransparency;
 } GPUTaskDirectLight;
 
@@ -138,8 +135,6 @@ typedef struct {
 	// This is used by DirectLight_BSDFSampling()
 	PathDepthInfo tmpPathDepthInfo;
 } GPUTask;
-
-#endif
 
 typedef struct {
 	unsigned int sampleCount;

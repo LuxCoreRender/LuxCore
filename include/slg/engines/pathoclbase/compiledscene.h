@@ -48,14 +48,6 @@ public:
 	void Recompile(const EditActionList &editActions);
 	void RecompilePhotonGI() { CompilePhotonGI(); }
 
-	bool IsMaterialCompiled(const MaterialType type) const;
-	bool IsTextureCompiled(const TextureType type) const;
-
-	bool HasBumpMaps() const;
-
-	std::string GetTexturesEvaluationSourceCode() const;
-	std::string GetMaterialsEvaluationSourceCode() const;
-
 	static void CompileFilm(const Film &film, slg::ocl::Film &oclFilm);
 
 	static float *CompileDistribution1D(const luxrays::Distribution1D *dist, u_int *size);
@@ -105,13 +97,17 @@ public:
 	float elvcRadius2, elvcNormalCosAngle;
 	
 	// Compiled Materials (and Volumes)
-	boost::unordered_set<MaterialType> usedMaterialTypes;
 	std::vector<slg::ocl::Material> mats;
+	std::vector<slg::ocl::MaterialEvalOp> matEvalOps;
+	// Expressed in float
+	u_int maxMaterialEvalStackSize;
 	u_int defaultWorldVolumeIndex;
 
 	// Compiled Textures
-	boost::unordered_set<TextureType> usedTextureTypes;
 	std::vector<slg::ocl::Texture> texs;
+	std::vector<slg::ocl::TextureEvalOp> texEvalOps;
+	// Expressed in float
+	u_int maxTextureEvalStackSize;
 
 	// Compiled ImageMaps
 	std::vector<slg::ocl::ImageMap> imageMapDescs;
@@ -135,19 +131,28 @@ public:
 		wasPhotonGICompiled;
 
 private:
-	// There is no AddEnabledTextureCode() version because all textures not already
-	// included by default have source code dynamically generated (because they
-	// reference always other textures)
-	void AddEnabledMaterialCode();
-
 	void AddToImageMapMem(slg::ocl::ImageMap &im, void *data, const size_t memSize);
 
 	void CompileCamera();
 	void CompileSceneObjects();
 	void CompileGeometry();
+	u_int CompileMaterialConditionalOps(const u_int matIndex,
+		const std::vector<slg::ocl::MaterialEvalOp> &evalOpsA, const u_int evalOpStackSizeA,
+		const std::vector<slg::ocl::MaterialEvalOp> &evalOpsB, const u_int evalOpStackSizeB,
+		std::vector<slg::ocl::MaterialEvalOp> &evalOps) const;
+	u_int CompileMaterialConditionalOps(const u_int matIndex,
+			const u_int matAIndex, const slg::ocl::MaterialEvalOpType opTypeA,
+			const u_int matBIndex, const slg::ocl::MaterialEvalOpType opTypeB,
+			std::vector<slg::ocl::MaterialEvalOp> &evalOps) const;
+	u_int CompileMaterialOps(const u_int matIndex, const slg::ocl::MaterialEvalOpType opType,
+			std::vector<slg::ocl::MaterialEvalOp> &evalOps) const;
+	void CompileMaterialOps();
 	void CompileMaterials();
 	void CompileTextureMapping2D(slg::ocl::TextureMapping2D *mapping, const TextureMapping2D *m);
 	void CompileTextureMapping3D(slg::ocl::TextureMapping3D *mapping, const TextureMapping3D *m);
+	u_int CompileTextureOpsGenericBumpMap(const u_int texIndex);
+	u_int CompileTextureOps(const u_int texIndex, const slg::ocl::TextureEvalOpType opType);
+	void CompileTextureOps();
 	void CompileTextures();
 	void CompileImageMaps();
 	void CompileLights();
@@ -164,7 +169,6 @@ private:
 
 	u_int maxMemPageSize;
 	boost::unordered_set<std::string> enabledCode;
-	bool useTransparency;
 }; 
 
 }

@@ -22,14 +22,41 @@
 // Disney BRDF material
 //------------------------------------------------------------------------------
 
-#if defined (PARAM_ENABLE_MAT_DISNEY)
+OPENCL_FORCE_INLINE void DisneyMaterial_Albedo(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+    const float3 albedo = Spectrum_Clamp(Texture_GetSpectrumValue(material->disney.baseColorTexIndex, hitPoint TEXTURES_PARAM));
 
-OPENCL_FORCE_INLINE BSDFEvent DisneyMaterial_GetEventTypes() {
-	return GLOSSY | REFLECT;
+	EvalStack_PushFloat3(albedo);
 }
 
-OPENCL_FORCE_INLINE float3 DisneyMaterial_Albedo(const float3 baseColorVal) {
-	return Spectrum_Clamp(baseColorVal);
+OPENCL_FORCE_INLINE void DisneyMaterial_GetInteriorVolume(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	DefaultMaterial_GetInteriorVolume(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+}
+
+OPENCL_FORCE_INLINE void DisneyMaterial_GetExteriorVolume(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	DefaultMaterial_GetExteriorVolume(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+}
+
+OPENCL_FORCE_INLINE void DisneyMaterial_GetPassThroughTransparency(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	DefaultMaterial_GetPassThroughTransparency(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+}
+
+OPENCL_FORCE_INLINE void DisneyMaterial_GetEmittedRadiance(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	DefaultMaterial_GetEmittedRadiance(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
 }
 
 //------------------------------------------------------------------------------
@@ -132,7 +159,7 @@ OPENCL_FORCE_INLINE float DisneyMaterial_ClearcoatPdf(const float clearcoatGloss
 	return Dr * NdotH / (4.0f * dot(wo, wh));
 }
 
-OPENCL_FORCE_INLINE float DisneyMaterial_DisneyPdf(const float roughness, const float metallic,
+OPENCL_FORCE_NOT_INLINE float DisneyMaterial_DisneyPdf(const float roughness, const float metallic,
 		const float clearcoat, const float clearcoatGloss, const float anisotropic,
 		const float3 localLightDir, const float3 localEyeDir) {
 	if (CosTheta(localLightDir) * CosTheta(localEyeDir) <= 0.0f)
@@ -231,7 +258,7 @@ OPENCL_FORCE_INLINE float3 DisneyMaterial_DisneySheen(const float3 color,
 	return clamp(FH * sheen * Csheen, 0.f, 1.f);
 }
 
-OPENCL_FORCE_INLINE float3 DisneyMaterial_Evaluate(
+OPENCL_FORCE_NOT_INLINE float3 DisneyMaterial_EvaluateImpl(
 		__global const HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
 		BSDFEvent *event, float *directPdfW,
 		const float3 colorVal, const float subsurfaceVal, const float roughnessVal,
@@ -285,8 +312,41 @@ OPENCL_FORCE_INLINE float3 DisneyMaterial_Evaluate(
 	*event = GLOSSY | REFLECT;
 
 	const float3 f = (Lerp3(subsurface, diffuseEval, subsurfaceEval) + sheenEval) * (1.0f - metallic) + glossyEval;
-
+	
 	return f * fabs(NdotL);
+}
+
+OPENCL_FORCE_NOT_INLINE void DisneyMaterial_Evaluate(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	float3 lightDir, eyeDir;
+	EvalStack_PopFloat3(eyeDir);
+	EvalStack_PopFloat3(lightDir);
+
+	BSDFEvent event;
+	float directPdfW;
+	const float3 result = DisneyMaterial_EvaluateImpl(hitPoint, lightDir, eyeDir,
+		&event, &directPdfW,
+		Texture_GetSpectrumValue(material->disney.baseColorTexIndex, hitPoint TEXTURES_PARAM),
+		Texture_GetFloatValue(material->disney.subsurfaceTexIndex, hitPoint TEXTURES_PARAM),
+		Texture_GetFloatValue(material->disney.roughnessTexIndex, hitPoint TEXTURES_PARAM),
+		Texture_GetFloatValue(material->disney.metallicTexIndex, hitPoint TEXTURES_PARAM),
+		Texture_GetFloatValue(material->disney.specularTexIndex, hitPoint TEXTURES_PARAM),
+		Texture_GetFloatValue(material->disney.specularTintTexIndex, hitPoint TEXTURES_PARAM),
+		Texture_GetFloatValue(material->disney.clearcoatTexIndex, hitPoint TEXTURES_PARAM),
+		Texture_GetFloatValue(material->disney.clearcoatGlossTexIndex, hitPoint TEXTURES_PARAM),
+		Texture_GetFloatValue(material->disney.anisotropicTexIndex, hitPoint TEXTURES_PARAM),
+		Texture_GetFloatValue(material->disney.sheenTexIndex, hitPoint TEXTURES_PARAM),
+		Texture_GetFloatValue(material->disney.sheenTintTexIndex, hitPoint TEXTURES_PARAM));
+
+	if (Spectrum_IsBlack(result)) {
+		MATERIAL_EVALUATE_RETURN_BLACK;
+	}
+
+	EvalStack_PushFloat3(result);
+	EvalStack_PushBSDFEvent(event);
+	EvalStack_PushFloat(directPdfW);
 }
 
 //------------------------------------------------------------------------------
@@ -337,14 +397,29 @@ OPENCL_FORCE_INLINE float3 DisneyMaterial_DisneyClearcoatSample(const float clea
 	return normalize(2.0f * dot(wh, wo) * wh - wo);
 }
 
-OPENCL_FORCE_INLINE float3 DisneyMaterial_Sample(__global const HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
-		const float u0, const float u1, 
-		const float passThroughEvent,
-		float *pdfW, BSDFEvent *event,
-		const float3 colorVal, const float subsurfaceVal, const float roughnessVal,
-		const float metallicVal, const float specularVal, const float specularTintVal,
-		const float clearcoatVal, const float clearcoatGlossVal, const float anisotropicGlossVal,
-		const float sheenVal, const float sheenTintVal) {
+OPENCL_FORCE_NOT_INLINE void DisneyMaterial_Sample(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	float u0, u1, passThroughEvent;
+	EvalStack_PopFloat(passThroughEvent);
+	EvalStack_PopFloat(u1);
+	EvalStack_PopFloat(u0);
+	float3 fixedDir;
+	EvalStack_PopFloat3(fixedDir);
+
+	const float3 colorVal = Texture_GetSpectrumValue(material->disney.baseColorTexIndex, hitPoint TEXTURES_PARAM);
+	const float subsurfaceVal = Texture_GetFloatValue(material->disney.subsurfaceTexIndex, hitPoint TEXTURES_PARAM);
+	const float roughnessVal = Texture_GetFloatValue(material->disney.roughnessTexIndex, hitPoint TEXTURES_PARAM);
+	const float metallicVal = Texture_GetFloatValue(material->disney.metallicTexIndex, hitPoint TEXTURES_PARAM);
+	const float specularVal = Texture_GetFloatValue(material->disney.specularTexIndex, hitPoint TEXTURES_PARAM);
+	const float specularTintVal = Texture_GetFloatValue(material->disney.specularTintTexIndex, hitPoint TEXTURES_PARAM);
+	const float clearcoatVal = Texture_GetFloatValue(material->disney.clearcoatTexIndex, hitPoint TEXTURES_PARAM);
+	const float clearcoatGlossVal = Texture_GetFloatValue(material->disney.clearcoatGlossTexIndex, hitPoint TEXTURES_PARAM);
+	const float anisotropicGlossVal = Texture_GetFloatValue(material->disney.anisotropicTexIndex, hitPoint TEXTURES_PARAM);
+	const float sheenVal = Texture_GetFloatValue(material->disney.sheenTexIndex, hitPoint TEXTURES_PARAM);
+	const float sheenTintVal = Texture_GetFloatValue(material->disney.sheenTintTexIndex, hitPoint TEXTURES_PARAM);
+
 	const float roughness = clamp(roughnessVal, 0.0f, 1.0f);
 	const float metallic = clamp(metallicVal, 0.0f, 1.0f);
 	const float clearcoat = clamp(clearcoatVal, 0.0f, 1.0f);
@@ -357,31 +432,74 @@ OPENCL_FORCE_INLINE float3 DisneyMaterial_Sample(__global const HitPoint *hitPoi
 	DisneyMaterial_ComputeRatio(metallic, clearcoat,
 			&ratioGlossy, &ratioDiffuse, &ratioClearcoat);
 
+	float3 sampledDir;
 	if (passThroughEvent <= ratioGlossy)
-		*sampledDir = DisneyMaterial_DisneyMetallicSample(anisotropicGloss, roughness, wo, u0, u1);
+		sampledDir = DisneyMaterial_DisneyMetallicSample(anisotropicGloss, roughness, wo, u0, u1);
 	else if (passThroughEvent > ratioGlossy &&  passThroughEvent <= ratioGlossy + ratioClearcoat)
-		*sampledDir = DisneyMaterial_DisneyClearcoatSample(clearcoatGloss, wo, u0, u1);
+		sampledDir = DisneyMaterial_DisneyClearcoatSample(clearcoatGloss, wo, u0, u1);
 	else if (passThroughEvent > ratioGlossy + ratioClearcoat && passThroughEvent <= ratioGlossy + ratioClearcoat + ratioDiffuse)
-		*sampledDir = DisneyMaterial_DisneyDiffuseSample(wo, u0, u1);
-	else
-		return BLACK;
+		sampledDir = DisneyMaterial_DisneyDiffuseSample(wo, u0, u1);
+	else {
+		MATERIAL_SAMPLE_RETURN_BLACK;
+	}
 	
-	*event = GLOSSY | REFLECT;
-
-	const float3 localLightDir = *sampledDir;
+	const float3 localLightDir = sampledDir;
 	const float3 localEyeDir = fixedDir;
 
-	*pdfW = DisneyMaterial_DisneyPdf(roughnessVal, metallicVal, clearcoatVal, clearcoatGlossVal, anisotropicGlossVal,
+	const float pdfW = DisneyMaterial_DisneyPdf(roughnessVal, metallicVal, clearcoatVal, clearcoatGlossVal, anisotropicGlossVal,
 			localLightDir, localEyeDir);
+	if (pdfW < 0.0001f) {
+		MATERIAL_SAMPLE_RETURN_BLACK;
+	}
 
-	if (*pdfW < 0.0001f)
-		return BLACK;
-
-	const float3 f = DisneyMaterial_Evaluate(hitPoint, localLightDir, localEyeDir, event, NULL,
+	BSDFEvent event;
+	const float3 f = DisneyMaterial_EvaluateImpl(hitPoint, localLightDir, localEyeDir, &event, NULL,
 			colorVal, subsurfaceVal, roughnessVal, metallicVal, specularVal, specularTintVal,
 			clearcoatVal, clearcoatGlossVal, anisotropicGlossVal, sheenVal, sheenTintVal);
 
-	return f / *pdfW;
+	const float3 result = f / pdfW;
+
+	EvalStack_PushFloat3(result);
+	EvalStack_PushFloat3(sampledDir);
+	EvalStack_PushFloat(pdfW);
+	EvalStack_PushBSDFEvent(event);
 }
 
-#endif
+//------------------------------------------------------------------------------
+// Material specific EvalOp
+//------------------------------------------------------------------------------
+
+OPENCL_FORCE_NOT_INLINE void DisneyMaterial_EvalOp(
+		__global const Material* restrict material,
+		const MaterialEvalOpType evalType,
+		__global float *evalStack,
+		uint *evalStackOffset,
+		__global const HitPoint *hitPoint
+		MATERIALS_PARAM_DECL) {
+	switch (evalType) {
+		case EVAL_ALBEDO:
+			DisneyMaterial_Albedo(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_INTERIOR_VOLUME:
+			DisneyMaterial_GetInteriorVolume(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_EXTERIOR_VOLUME:
+			DisneyMaterial_GetExteriorVolume(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_EMITTED_RADIANCE:
+			DisneyMaterial_GetEmittedRadiance(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_PASS_TROUGH_TRANSPARENCY:
+			DisneyMaterial_GetPassThroughTransparency(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_EVALUATE:
+			DisneyMaterial_Evaluate(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_SAMPLE:
+			DisneyMaterial_Sample(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		default:
+			// Something wrong here
+			break;
+	}
+}

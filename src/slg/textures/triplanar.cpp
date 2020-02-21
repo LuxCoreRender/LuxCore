@@ -73,7 +73,7 @@ Normal TriplanarTexture::Bump(const HitPoint &hitPoint, const float sampleDistan
 		HitPoint hitPointTmp = hitPoint;
 		Normal dhdx;
 
-		// Note I should update not only hitPointTmp.p but also hitPointTmp.shadeN
+		// Note: I should update not only hitPointTmp.p but also hitPointTmp.shadeN
 		// however I can't because  I don't know dndv/dndu so this is nearly an hack.
 
 		hitPointTmp.p.x = origP.x + sampleDistance;

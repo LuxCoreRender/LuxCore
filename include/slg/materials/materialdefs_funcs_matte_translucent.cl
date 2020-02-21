@@ -22,27 +22,58 @@
 // MatteTranslucent material
 //------------------------------------------------------------------------------
 
-#if defined (PARAM_ENABLE_MAT_MATTETRANSLUCENT)
-
-OPENCL_FORCE_INLINE BSDFEvent MatteTranslucentMaterial_GetEventTypes() {
-	return DIFFUSE | REFLECT | TRANSMIT;
-}
-
-OPENCL_FORCE_INLINE float3 MatteTranslucentMaterial_Albedo(const float3 krVal, const float3 ktVal) {
-	const float3 r = Spectrum_Clamp(krVal);
-	const float3 t = Spectrum_Clamp(ktVal) * 
+OPENCL_FORCE_INLINE void MatteTranslucentMaterial_Albedo(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	const float3 r = Spectrum_Clamp(Texture_GetSpectrumValue(material->matteTranslucent.krTexIndex,hitPoint TEXTURES_PARAM));
+	const float3 t = Spectrum_Clamp(Texture_GetSpectrumValue(material->matteTranslucent.ktTexIndex, hitPoint TEXTURES_PARAM)) * 
 		// Energy conservation
 		(1.f - r);
 	
-	return r + t;
+	const float3 albedo = r + t;
+	
+	EvalStack_PushFloat3(albedo);
 }
 
-OPENCL_FORCE_NOT_INLINE float3 MatteTranslucentMaterial_Evaluate(
-		__global const HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
-		BSDFEvent *event, float *directPdfW,
-		const float3 krVal, const float3 ktVal) {
-	const float3 r = Spectrum_Clamp(krVal);
-	const float3 t = Spectrum_Clamp(ktVal) * 
+OPENCL_FORCE_INLINE void MatteTranslucentMaterial_GetInteriorVolume(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	DefaultMaterial_GetInteriorVolume(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+}
+
+OPENCL_FORCE_INLINE void MatteTranslucentMaterial_GetExteriorVolume(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	DefaultMaterial_GetExteriorVolume(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+}
+
+OPENCL_FORCE_INLINE void MatteTranslucentMaterial_GetPassThroughTransparency(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	DefaultMaterial_GetPassThroughTransparency(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+}
+
+OPENCL_FORCE_INLINE void MatteTranslucentMaterial_GetEmittedRadiance(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	DefaultMaterial_GetEmittedRadiance(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+}
+
+OPENCL_FORCE_NOT_INLINE void MatteTranslucentMaterial_Evaluate(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	float3 lightDir, eyeDir;
+	EvalStack_PopFloat3(eyeDir);
+	EvalStack_PopFloat3(lightDir);
+
+	const float3 r = Spectrum_Clamp(Texture_GetSpectrumValue(material->matteTranslucent.krTexIndex, hitPoint TEXTURES_PARAM));
+	const float3 t = Spectrum_Clamp(Texture_GetSpectrumValue(material->matteTranslucent.ktTexIndex, hitPoint TEXTURES_PARAM)) * 
 		// Energy conservation
 		(1.f - r);
 
@@ -60,49 +91,61 @@ OPENCL_FORCE_NOT_INLINE float3 MatteTranslucentMaterial_Evaluate(
 		if (!isKtBlack)
 			threshold = 0.f;
 		else {
-			if (directPdfW)
-				*directPdfW = 0.f;
-			return BLACK;
+			MATERIAL_EVALUATE_RETURN_BLACK;
 		}
 	}
 
 	const bool relfected = (CosTheta(lightDir) * CosTheta(eyeDir) > 0.f);
 	const float weight = (lightDir.z * eyeDir.z > 0.f) ? threshold : (1.f - threshold);
 
-	if (directPdfW)
-		*directPdfW = weight * fabs(lightDir.z * M_1_PI_F);
+	const float directPdfW = weight * fabs(lightDir.z * M_1_PI_F);
 
+	BSDFEvent event;
+	float3 result;
 	if (lightDir.z * eyeDir.z > 0.f) {
-		*event = DIFFUSE | REFLECT;
-		return r * fabs(lightDir.z * M_1_PI_F);
+		event = DIFFUSE | REFLECT;
+		result = r * fabs(lightDir.z * M_1_PI_F);
 	} else {
-		*event = DIFFUSE | TRANSMIT;
-		return t * fabs(lightDir.z * M_1_PI_F);
+		event = DIFFUSE | TRANSMIT;
+		result = t * fabs(lightDir.z * M_1_PI_F);
 	}
+	
+	EvalStack_PushFloat3(result);
+	EvalStack_PushBSDFEvent(event);
+	EvalStack_PushFloat(directPdfW);
 }
 
-OPENCL_FORCE_NOT_INLINE float3 MatteTranslucentMaterial_Sample(
-		__global const HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
-		const float u0, const float u1,
-		const float passThroughEvent,
-		float *pdfW, BSDFEvent *event,
-		const float3 krVal, const float3 ktVal) {
-	if (fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
-		return BLACK;
+OPENCL_FORCE_NOT_INLINE void MatteTranslucentMaterial_Sample(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	float u0, u1, passThroughEvent;
+	EvalStack_PopFloat(passThroughEvent);
+	EvalStack_PopFloat(u1);
+	EvalStack_PopFloat(u0);
+	float3 fixedDir;
+	EvalStack_PopFloat3(fixedDir);
 
-	*sampledDir = CosineSampleHemisphereWithPdf(u0, u1, pdfW);
-	if (fabs(CosTheta(*sampledDir)) < DEFAULT_COS_EPSILON_STATIC)
-		return BLACK;
+	if (fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC) {
+		MATERIAL_SAMPLE_RETURN_BLACK;
+	}
 
-	const float3 kr = Spectrum_Clamp(krVal);
-	const float3 kt = Spectrum_Clamp(ktVal) * 
+	float pdfW;
+	float3 sampledDir = CosineSampleHemisphereWithPdf(u0, u1, &pdfW);
+	if (fabs(CosTheta(sampledDir)) < DEFAULT_COS_EPSILON_STATIC) {
+		MATERIAL_SAMPLE_RETURN_BLACK;
+	}
+
+	const float3 kr = Spectrum_Clamp(Texture_GetSpectrumValue(material->matteTranslucent.krTexIndex, hitPoint TEXTURES_PARAM));
+	const float3 kt = Spectrum_Clamp(Texture_GetSpectrumValue(material->matteTranslucent.ktTexIndex, hitPoint TEXTURES_PARAM)) * 
 		// Energy conservation
 		(1.f - kr);
 
 	const bool isKtBlack = Spectrum_IsBlack(kt);
 	const bool isKrBlack = Spectrum_IsBlack(kr);
-	if (isKtBlack && isKrBlack)
-		return BLACK;
+	if (isKtBlack && isKrBlack) {
+		MATERIAL_SAMPLE_RETURN_BLACK;
+	}
 
 	// Decide to transmit or reflect
 	float threshold;
@@ -114,23 +157,68 @@ OPENCL_FORCE_NOT_INLINE float3 MatteTranslucentMaterial_Sample(
 	} else {
 		if (!isKtBlack)
 			threshold = 0.f;
-		else
-			return BLACK;
+		else {
+			MATERIAL_SAMPLE_RETURN_BLACK;
+		}
 	}
 
+	float3 result;
+	BSDFEvent event;
 	if (passThroughEvent < threshold) {
-		*sampledDir *= (signbit(fixedDir.z) ? -1.f : 1.f);
-		*event = DIFFUSE | REFLECT;
-		*pdfW *= threshold;
+		sampledDir *= (signbit(fixedDir.z) ? -1.f : 1.f);
+		event = DIFFUSE | REFLECT;
+		pdfW *= threshold;
 
-		return kr / threshold;
+		result = kr / threshold;
 	} else {
-		*sampledDir *= -(signbit(fixedDir.z) ? -1.f : 1.f);
-		*event = DIFFUSE | TRANSMIT;
-		*pdfW *= (1.f - threshold);
+		sampledDir *= -(signbit(fixedDir.z) ? -1.f : 1.f);
+		event = DIFFUSE | TRANSMIT;
+		pdfW *= (1.f - threshold);
 
-		return kt / (1.f - threshold);
+		result = kt / (1.f - threshold);
 	}
+	
+	EvalStack_PushFloat3(result);
+	EvalStack_PushFloat3(sampledDir);
+	EvalStack_PushFloat(pdfW);
+	EvalStack_PushBSDFEvent(event);
 }
 
-#endif
+//------------------------------------------------------------------------------
+// Material specific EvalOp
+//------------------------------------------------------------------------------
+
+OPENCL_FORCE_NOT_INLINE void MatteTranslucentMaterial_EvalOp(
+		__global const Material* restrict material,
+		const MaterialEvalOpType evalType,
+		__global float *evalStack,
+		uint *evalStackOffset,
+		__global const HitPoint *hitPoint
+		MATERIALS_PARAM_DECL) {
+	switch (evalType) {
+		case EVAL_ALBEDO:
+			MatteTranslucentMaterial_Albedo(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_INTERIOR_VOLUME:
+			MatteTranslucentMaterial_GetInteriorVolume(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_EXTERIOR_VOLUME:
+			MatteTranslucentMaterial_GetExteriorVolume(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_EMITTED_RADIANCE:
+			MatteTranslucentMaterial_GetEmittedRadiance(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_PASS_TROUGH_TRANSPARENCY:
+			MatteTranslucentMaterial_GetPassThroughTransparency(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_EVALUATE:
+			MatteTranslucentMaterial_Evaluate(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_SAMPLE:
+			MatteTranslucentMaterial_Sample(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		default:
+			// Something wrong here
+			break;
+	}
+}

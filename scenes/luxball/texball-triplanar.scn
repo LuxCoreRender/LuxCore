@@ -1,5 +1,7 @@
 scene.camera.lookat = 0.5 -1.4 1.7 0.0 0.0 0.4
 #scene.camera.screenwindow = 0.5 1.0 0.0 1.0
+#scene.camera.lookat.orig = 0.157588303 -0.441247225 0.80972904
+#scene.camera.lookat.target = -0.342411667 0.958752155 -0.490269899
 ################################################################################
 scene.textures.tex1.type = checkerboard2d
 scene.textures.tex1.texture1 = 0.7 0.0 0.0

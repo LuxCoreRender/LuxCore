@@ -22,16 +22,10 @@
 // BlackBody texture
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_ENABLE_TEX_BLACKBODY)
-
-OPENCL_FORCE_INLINE float BlackBodyTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
-		const float3 rgb) {
+OPENCL_FORCE_INLINE float BlackBodyTexture_ConstEvaluateFloat(const float3 rgb) {
 	return Spectrum_Y(rgb);
 }
 
-OPENCL_FORCE_INLINE float3 BlackBodyTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
-		const float3 rgb) {
+OPENCL_FORCE_INLINE float3 BlackBodyTexture_ConstEvaluateSpectrum(const float3 rgb) {
 	return rgb;
 }
-
-#endif

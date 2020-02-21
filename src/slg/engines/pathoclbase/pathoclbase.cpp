@@ -319,10 +319,6 @@ void PathOCLBaseRenderEngine::EndSceneEditLockLess(const EditActionList &editAct
 		renderNativeThreads[i]->EndSceneEdit(editActions);
 }
 
-bool PathOCLBaseRenderEngine::IsMaterialCompiled(const MaterialType type) const {
-	return (compiledScene == NULL) ? false : compiledScene->IsMaterialCompiled(type);
-}
-
 bool PathOCLBaseRenderEngine::HasDone() const {
 	for (size_t i = 0; i < renderOCLThreads.size(); ++i) {
 		if (!renderOCLThreads[i]->HasDone())

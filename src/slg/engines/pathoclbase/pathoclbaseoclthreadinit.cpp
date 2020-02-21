@@ -42,83 +42,6 @@ using namespace slg;
 // PathOCLBaseOCLRenderThread initialization methods
 //------------------------------------------------------------------------------
 
-size_t PathOCLBaseOCLRenderThread::GetOpenCLHitPointSize() const {
-	// HitPoint memory size
-	size_t hitPointSize = sizeof(Vector) +
-			sizeof(Point) +
-			3 * sizeof(Normal) +
-			EXTMESH_MAX_DATA_COUNT * sizeof(UV) +
-			sizeof(Transform);
-	hitPointSize += EXTMESH_MAX_DATA_COUNT * sizeof(Spectrum);
-	hitPointSize += EXTMESH_MAX_DATA_COUNT * sizeof(float);
-	// passThroughEvent
-	hitPointSize += sizeof(float);
-	// Fields dpdu, dpdv, dndu, dndv
-	hitPointSize += 2 * sizeof(Vector) + 2 * sizeof(Normal);
-	// Volume fields
-	hitPointSize += 2 * sizeof(u_int) + 2 * sizeof(u_int);
-	// Object ID
-	if (renderEngine->compiledScene->IsTextureCompiled(OBJECTID_TEX) ||
-			renderEngine->compiledScene->IsTextureCompiled(OBJECTID_COLOR_TEX) ||
-			renderEngine->compiledScene->IsTextureCompiled(OBJECTID_NORMALIZED_TEX))
-		hitPointSize += sizeof(u_int);
-	// intoObject
-	hitPointSize += sizeof(int);
-	// throughShadowTransparency
-	hitPointSize += sizeof(int);
-
-	return hitPointSize;
-}
-
-size_t PathOCLBaseOCLRenderThread::GetOpenCLBSDFSize() const {
-	// Add BSDF memory size
-	size_t bsdfSize = GetOpenCLHitPointSize();
-	// Add BSDF.materialIndex memory size
-	bsdfSize += sizeof(u_int);
-	// Add BSDF.sceneObjectIndex memory size
-	bsdfSize += sizeof(u_int);
-	// Add BSDF.triangleLightSourceIndex memory size
-	bsdfSize += sizeof(u_int);
-	// Add BSDF.Frame memory size
-	bsdfSize += sizeof(slg::ocl::Frame);
-	// Add BSDF.isVolume memory size
-	bsdfSize += sizeof(int);
-
-	return bsdfSize;
-}
-
-size_t PathOCLBaseOCLRenderThread::GetEyePathInfoSize() const {
-	// Add PathDepthInfo memory size
-	size_t eyePathInfoSize = sizeof(slg::ocl::PathDepthInfo);
-	// Add PathVolumeInfo memory size
-	eyePathInfoSize += sizeof(slg::ocl::PathVolumeInfo);
-
-	// Add isPassThroughPath memory size
-	eyePathInfoSize += sizeof(int);
-
-	// Add lastBSDFEvent memory size
-	eyePathInfoSize += sizeof(slg::ocl::BSDFEvent);
-	// Add lastBSDFPdfW memory size
-	eyePathInfoSize += sizeof(float);
-	// Add lastGlossiness memory size
-	eyePathInfoSize += sizeof(float);
-	// Add lastShadeN memory size
-	eyePathInfoSize += sizeof(slg::ocl::Normal);
-	// Add lastFromVolume memory size
-	eyePathInfoSize += sizeof(int);
-
-	// Add isNearlyCaustic memory size
-	eyePathInfoSize += sizeof(int);
-	// Add isNearlyS memory size
-	eyePathInfoSize += sizeof(int);
-	// Add isNearlySD memory size
-	eyePathInfoSize += sizeof(int);
-	// Add isNearlySDS memory size
-	eyePathInfoSize += sizeof(int);
-
-	return eyePathInfoSize;
-}
-
 void PathOCLBaseOCLRenderThread::AllocOCLBuffer(const cl_mem_flags clFlags, cl::Buffer **buff,
 		void *src, const size_t size, const string &desc) {
 	intersectionDevice->AllocBuffer(clFlags, buff, src, size, desc);
@@ -203,6 +126,15 @@ void PathOCLBaseOCLRenderThread::InitMaterials() {
 	const size_t materialsCount = renderEngine->compiledScene->mats.size();
 	AllocOCLBufferRO(&materialsBuff, &renderEngine->compiledScene->mats[0],
 			sizeof(slg::ocl::Material) * materialsCount, "Materials");
+
+	AllocOCLBufferRO(&materialEvalOpsBuff, &renderEngine->compiledScene->matEvalOps[0],
+			sizeof(slg::ocl::MaterialEvalOp) * renderEngine->compiledScene->matEvalOps.size(), "Material evaluation ops");
+
+	const u_int taskCount = renderEngine->taskCount;
+	AllocOCLBufferRW(&materialEvalStackBuff, 
+			sizeof(float) * renderEngine->compiledScene->maxMaterialEvalStackSize *
+			taskCount, "Material evaluation stacks");
+
 }
 
 void PathOCLBaseOCLRenderThread::InitSceneObjects() {
@@ -215,6 +147,14 @@ void PathOCLBaseOCLRenderThread::InitTextures() {
 	const size_t texturesCount = renderEngine->compiledScene->texs.size();
 	AllocOCLBufferRO(&texturesBuff, &renderEngine->compiledScene->texs[0],
 			sizeof(slg::ocl::Texture) * texturesCount, "Textures");
+
+	AllocOCLBufferRO(&textureEvalOpsBuff, &renderEngine->compiledScene->texEvalOps[0],
+			sizeof(slg::ocl::TextureEvalOp) * renderEngine->compiledScene->texEvalOps.size(), "Texture evaluation ops");
+
+	const u_int taskCount = renderEngine->taskCount;
+	AllocOCLBufferRW(&textureEvalStackBuff, 
+			sizeof(float) * renderEngine->compiledScene->maxTextureEvalStackSize *
+			taskCount, "Texture evaluation stacks");
 }
 
 void PathOCLBaseOCLRenderThread::InitLights() {
@@ -320,72 +260,30 @@ void PathOCLBaseOCLRenderThread::InitImageMaps() {
 
 void PathOCLBaseOCLRenderThread::InitGPUTaskBuffer() {
 	const u_int taskCount = renderEngine->taskCount;
-	const size_t openCLBSDFSize = GetOpenCLBSDFSize();
 
 	//--------------------------------------------------------------------------
 	// Allocate tasksConfigBuff
 	//--------------------------------------------------------------------------
 
-	AllocOCLBufferRO(&taskConfigBuff, &renderEngine->taskConfig, sizeof(slg::ocl::pathoclbase::GPUTaskConfiguration), "GPUTask");
+	AllocOCLBufferRO(&taskConfigBuff, &renderEngine->taskConfig, sizeof(slg::ocl::pathoclbase::GPUTaskConfiguration), "GPUTaskConfiguration");
 
 	//--------------------------------------------------------------------------
 	// Allocate tasksBuff
 	//--------------------------------------------------------------------------
-	
-	// Add Seed memory size
-	size_t gpuTaskSize = sizeof(slg::ocl::Seed);
 
-	// Add temporary storage space
-	
-	// Add tmpBsdf memory size
-	gpuTaskSize += openCLBSDFSize;
-
-	// Add tmpHitPoint memory size
-	gpuTaskSize += GetOpenCLHitPointSize();
-
-	// Add tmpPathDepthInfo memory size
-	gpuTaskSize += sizeof(slg::ocl::PathDepthInfo);
-
-	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Size of a GPUTask: " << gpuTaskSize << "bytes");
-	AllocOCLBufferRW(&tasksBuff, gpuTaskSize * taskCount, "GPUTask");
+	AllocOCLBufferRW(&tasksBuff, sizeof(slg::ocl::pathoclbase::GPUTask) * taskCount, "GPUTask");
 
 	//--------------------------------------------------------------------------
 	// Allocate tasksDirectLightBuff
 	//--------------------------------------------------------------------------
 
-	size_t gpuDirectLightTaskSize = 
-			sizeof(slg::ocl::pathoclbase::DirectLightIlluminateInfo) + 
-			sizeof(int) + // directLightResult
-			sizeof(int);  // throughShadowTransparency
-
-	// Add seedPassThroughEvent memory size
-	gpuDirectLightTaskSize += sizeof(ocl::Seed);
-
-	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Size of a GPUTask DirectLight: " << gpuDirectLightTaskSize << "bytes");
-	AllocOCLBufferRW(&tasksDirectLightBuff, gpuDirectLightTaskSize * taskCount, "GPUTaskDirectLight");
+	AllocOCLBufferRW(&tasksDirectLightBuff, sizeof(slg::ocl::pathoclbase::GPUTaskDirectLight) * taskCount, "GPUTaskDirectLight");
 
 	//--------------------------------------------------------------------------
 	// Allocate tasksStateBuff
 	//--------------------------------------------------------------------------
 
-	size_t gpuTaskStateSize =
-			sizeof(int) + // state
-			sizeof(slg::ocl::PathDepthInfo) + // depthInfo
-			sizeof(Spectrum) + // throughput
-			sizeof(int) + // albedoToDo
-			sizeof(int) + // photonGICacheEnabledOnLastHit
-			sizeof(int) + // photonGICausticCacheUsed
-			sizeof(int) + // photonGIShowIndirectPathMixUsed
-			sizeof(int);  // throughShadowTransparency
-
-	// Add seedPassThroughEvent memory size
-	gpuTaskStateSize += sizeof(ocl::Seed);
-
-	// Add BSDF memory size
-	gpuTaskStateSize += openCLBSDFSize;
-
-	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Size of a GPUTask State: " << gpuTaskStateSize << "bytes");
-	AllocOCLBufferRW(&tasksStateBuff, gpuTaskStateSize * taskCount, "GPUTaskState");
+	AllocOCLBufferRW(&tasksStateBuff, sizeof(slg::ocl::pathoclbase::GPUTaskState) * taskCount, "GPUTaskState");
 }
 
 void PathOCLBaseOCLRenderThread::InitSamplerSharedDataBuffer() {
@@ -674,7 +572,7 @@ void PathOCLBaseOCLRenderThread::InitRender() {
 	// Allocate volume info buffers if required
 	//--------------------------------------------------------------------------
 
-	AllocOCLBufferRW(&eyePathInfosBuff, GetEyePathInfoSize() * taskCount, "PathInfo");
+	AllocOCLBufferRW(&eyePathInfosBuff, sizeof(slg::ocl::EyePathInfo) * taskCount, "PathInfo");
 
 	//--------------------------------------------------------------------------
 	// Allocate volume info buffers if required

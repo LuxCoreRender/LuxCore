@@ -67,7 +67,6 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 	// Compile kernels
 	//--------------------------------------------------------------------------
 
-	CompiledScene *cscene = renderEngine->compiledScene;
 	cl::Context &oclContext = intersectionDevice->GetOpenCLContext();
 	cl::Device &oclDevice = intersectionDevice->GetOpenCLDevice();
 
@@ -98,216 +97,6 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 		ssParams << " -D PARAM_USE_PIXEL_ATOMICS";
 
 	//--------------------------------------------------------------------------
-	// Textures
-	//--------------------------------------------------------------------------
-
-	if (cscene->IsTextureCompiled(CONST_FLOAT))
-		ssParams << " -D PARAM_ENABLE_TEX_CONST_FLOAT";
-	if (cscene->IsTextureCompiled(CONST_FLOAT3))
-		ssParams << " -D PARAM_ENABLE_TEX_CONST_FLOAT3";
-	if (cscene->IsTextureCompiled(IMAGEMAP))
-		ssParams << " -D PARAM_ENABLE_TEX_IMAGEMAP";
-	if (cscene->IsTextureCompiled(SCALE_TEX))
-		ssParams << " -D PARAM_ENABLE_TEX_SCALE";
-	if (cscene->IsTextureCompiled(FRESNEL_APPROX_N))
-		ssParams << " -D PARAM_ENABLE_FRESNEL_APPROX_N";
-	if (cscene->IsTextureCompiled(FRESNEL_APPROX_K))
-		ssParams << " -D PARAM_ENABLE_FRESNEL_APPROX_K";
-	if (cscene->IsTextureCompiled(CHECKERBOARD2D))
-		ssParams << " -D PARAM_ENABLE_CHECKERBOARD2D";
-	if (cscene->IsTextureCompiled(CHECKERBOARD3D))
-		ssParams << " -D PARAM_ENABLE_CHECKERBOARD3D";
-	if (cscene->IsTextureCompiled(MIX_TEX))
-		ssParams << " -D PARAM_ENABLE_TEX_MIX";
-	if (cscene->IsTextureCompiled(CLOUD_TEX))
-		ssParams << " -D PARAM_ENABLE_CLOUD_TEX";
-	if (cscene->IsTextureCompiled(FBM_TEX))
-		ssParams << " -D PARAM_ENABLE_FBM_TEX";
-	if (cscene->IsTextureCompiled(MARBLE))
-		ssParams << " -D PARAM_ENABLE_MARBLE";
-	if (cscene->IsTextureCompiled(DOTS))
-		ssParams << " -D PARAM_ENABLE_DOTS";
-	if (cscene->IsTextureCompiled(BRICK))
-		ssParams << " -D PARAM_ENABLE_BRICK";
-	if (cscene->IsTextureCompiled(ADD_TEX))
-		ssParams << " -D PARAM_ENABLE_TEX_ADD";
-	if (cscene->IsTextureCompiled(SUBTRACT_TEX))
-		ssParams << " -D PARAM_ENABLE_TEX_SUBTRACT";
-	if (cscene->IsTextureCompiled(WINDY))
-		ssParams << " -D PARAM_ENABLE_WINDY";
-	if (cscene->IsTextureCompiled(WRINKLED))
-		ssParams << " -D PARAM_ENABLE_WRINKLED";
-	if (cscene->IsTextureCompiled(BLENDER_BLEND))
-		ssParams << " -D PARAM_ENABLE_BLENDER_BLEND";
- 	if (cscene->IsTextureCompiled(BLENDER_CLOUDS))
- 		ssParams << " -D PARAM_ENABLE_BLENDER_CLOUDS";
-	if (cscene->IsTextureCompiled(BLENDER_DISTORTED_NOISE))
-		ssParams << " -D PARAM_ENABLE_BLENDER_DISTORTED_NOISE";
-	if (cscene->IsTextureCompiled(BLENDER_MAGIC))
-		ssParams << " -D PARAM_ENABLE_BLENDER_MAGIC";
-	if (cscene->IsTextureCompiled(BLENDER_MARBLE))
-		ssParams << " -D PARAM_ENABLE_BLENDER_MARBLE";
-	if (cscene->IsTextureCompiled(BLENDER_MUSGRAVE))
-		ssParams << " -D PARAM_ENABLE_BLENDER_MUSGRAVE";
-	if (cscene->IsTextureCompiled(BLENDER_NOISE))
-		ssParams << " -D PARAM_ENABLE_BLENDER_NOISE";
-	if (cscene->IsTextureCompiled(BLENDER_STUCCI))
-		ssParams << " -D PARAM_ENABLE_BLENDER_STUCCI";
- 	if (cscene->IsTextureCompiled(BLENDER_WOOD))
- 		ssParams << " -D PARAM_ENABLE_BLENDER_WOOD";
-	if (cscene->IsTextureCompiled(BLENDER_VORONOI))
-		ssParams << " -D PARAM_ENABLE_BLENDER_VORONOI";
-    if (cscene->IsTextureCompiled(UV_TEX))
-        ssParams << " -D PARAM_ENABLE_TEX_UV";
-	if (cscene->IsTextureCompiled(BAND_TEX))
-		ssParams << " -D PARAM_ENABLE_TEX_BAND";
-	if (cscene->IsTextureCompiled(HITPOINTCOLOR))
-		ssParams << " -D PARAM_ENABLE_TEX_HITPOINTCOLOR";
-	if (cscene->IsTextureCompiled(HITPOINTALPHA))
-		ssParams << " -D PARAM_ENABLE_TEX_HITPOINTALPHA";
-	if (cscene->IsTextureCompiled(HITPOINTGREY))
-		ssParams << " -D PARAM_ENABLE_TEX_HITPOINTGREY";
-	if (cscene->IsTextureCompiled(NORMALMAP_TEX))
-		ssParams << " -D PARAM_ENABLE_TEX_NORMALMAP";
-	if (cscene->IsTextureCompiled(BLACKBODY_TEX))
-		ssParams << " -D PARAM_ENABLE_TEX_BLACKBODY";
-	if (cscene->IsTextureCompiled(IRREGULARDATA_TEX))
-		ssParams << " -D PARAM_ENABLE_TEX_IRREGULARDATA";
-	if (cscene->IsTextureCompiled(DENSITYGRID_TEX))
-		ssParams << " -D PARAM_ENABLE_TEX_DENSITYGRID";
-	if (cscene->IsTextureCompiled(FRESNELCOLOR_TEX))
-		ssParams << " -D PARAM_ENABLE_TEX_FRESNELCOLOR";
-	if (cscene->IsTextureCompiled(FRESNELCONST_TEX))
-		ssParams << " -D PARAM_ENABLE_TEX_FRESNELCONST";
-	if (cscene->IsTextureCompiled(ABS_TEX))
-		ssParams << " -D PARAM_ENABLE_TEX_ABS";
-	if (cscene->IsTextureCompiled(CLAMP_TEX))
-		ssParams << " -D PARAM_ENABLE_TEX_CLAMP";
-	if (cscene->IsTextureCompiled(BILERP_TEX))
-		ssParams << " -D PARAM_ENABLE_TEX_BILERP";
-	if (cscene->IsTextureCompiled(COLORDEPTH_TEX))
-		ssParams << " -D PARAM_ENABLE_TEX_COLORDEPTH";
-	if (cscene->IsTextureCompiled(HSV_TEX))
-		ssParams << " -D PARAM_ENABLE_TEX_HSV";
-	if (cscene->IsTextureCompiled(DIVIDE_TEX))
-		ssParams << " -D PARAM_ENABLE_TEX_DIVIDE";
-	if (cscene->IsTextureCompiled(REMAP_TEX))
-		ssParams << " -D PARAM_ENABLE_TEX_REMAP";
-	if (cscene->IsTextureCompiled(OBJECTID_TEX))
-		ssParams << " -D PARAM_ENABLE_TEX_OBJECTID";
-	if (cscene->IsTextureCompiled(OBJECTID_COLOR_TEX))
-		ssParams << " -D PARAM_ENABLE_TEX_OBJECTID_COLOR";
-	if (cscene->IsTextureCompiled(OBJECTID_NORMALIZED_TEX))
-		ssParams << " -D PARAM_ENABLE_TEX_OBJECTID_NORMALIZED";
-	if (cscene->IsTextureCompiled(DOT_PRODUCT_TEX))
-		ssParams << " -D PARAM_ENABLE_TEX_DOT_PRODUCT";
-	if (cscene->IsTextureCompiled(GREATER_THAN_TEX))
-		ssParams << " -D PARAM_ENABLE_TEX_GREATER_THAN";
-	if (cscene->IsTextureCompiled(LESS_THAN_TEX))
-		ssParams << " -D PARAM_ENABLE_TEX_LESS_THAN";
-	if (cscene->IsTextureCompiled(POWER_TEX))
-		ssParams << " -D PARAM_ENABLE_TEX_POWER";
-	if (cscene->IsTextureCompiled(SHADING_NORMAL_TEX))
-		ssParams << " -D PARAM_ENABLE_TEX_SHADING_NORMAL";
-	if (cscene->IsTextureCompiled(POSITION_TEX))
-		ssParams << " -D PARAM_ENABLE_TEX_POSITION";
-	if (cscene->IsTextureCompiled(SPLIT_FLOAT3))
-		ssParams << " -D PARAM_ENABLE_TEX_SPLIT_FLOAT3";
-	if (cscene->IsTextureCompiled(MAKE_FLOAT3))
-		ssParams << " -D PARAM_ENABLE_TEX_MAKE_FLOAT3";
-    if (cscene->IsTextureCompiled(ROUNDING_TEX))
-        ssParams << " -D PARAM_ENABLE_TEX_ROUNDING";
-	if (cscene->IsTextureCompiled(MODULO_TEX))
-		ssParams << " -D PARAM_ENABLE_TEX_MODULO";
-	if (cscene->IsTextureCompiled(BRIGHT_CONTRAST_TEX))
-		ssParams << " -D PARAM_ENABLE_TEX_BRIGHT_CONTRAST";
-	if (cscene->IsTextureCompiled(TRIPLANAR_TEX))
-		ssParams << " -D PARAM_ENABLE_TEX_TRIPLANAR";
-
-	//--------------------------------------------------------------------------
-	// Materials
-	//--------------------------------------------------------------------------
-
-	if (cscene->IsMaterialCompiled(MATTE))
-		ssParams << " -D PARAM_ENABLE_MAT_MATTE";
-	if (cscene->IsMaterialCompiled(ROUGHMATTE))
-		ssParams << " -D PARAM_ENABLE_MAT_ROUGHMATTE";
-	if (cscene->IsMaterialCompiled(VELVET))
-		ssParams << " -D PARAM_ENABLE_MAT_VELVET";
-	if (cscene->IsMaterialCompiled(MIRROR))
-		ssParams << " -D PARAM_ENABLE_MAT_MIRROR";
-	if (cscene->IsMaterialCompiled(GLASS))
-		ssParams << " -D PARAM_ENABLE_MAT_GLASS";
-	if (cscene->IsMaterialCompiled(ARCHGLASS))
-		ssParams << " -D PARAM_ENABLE_MAT_ARCHGLASS";
-	if (cscene->IsMaterialCompiled(MIX))
-		ssParams << " -D PARAM_ENABLE_MAT_MIX";
-	if (cscene->IsMaterialCompiled(NULLMAT))
-		ssParams << " -D PARAM_ENABLE_MAT_NULL";
-	if (cscene->IsMaterialCompiled(MATTETRANSLUCENT))
-		ssParams << " -D PARAM_ENABLE_MAT_MATTETRANSLUCENT";
-	if (cscene->IsMaterialCompiled(ROUGHMATTETRANSLUCENT))
-		ssParams << " -D PARAM_ENABLE_MAT_ROUGHMATTETRANSLUCENT";
-	if (cscene->IsMaterialCompiled(GLOSSY2)) {
-		ssParams << " -D PARAM_ENABLE_MAT_GLOSSY2";
-
-		if (cscene->IsMaterialCompiled(GLOSSY2_ANISOTROPIC))
-			ssParams << " -D PARAM_ENABLE_MAT_GLOSSY2_ANISOTROPIC";
-		if (cscene->IsMaterialCompiled(GLOSSY2_ABSORPTION))
-			ssParams << " -D PARAM_ENABLE_MAT_GLOSSY2_ABSORPTION";
-		if (cscene->IsMaterialCompiled(GLOSSY2_INDEX))
-			ssParams << " -D PARAM_ENABLE_MAT_GLOSSY2_INDEX";
-		if (cscene->IsMaterialCompiled(GLOSSY2_MULTIBOUNCE))
-			ssParams << " -D PARAM_ENABLE_MAT_GLOSSY2_MULTIBOUNCE";
-	}
-	if (cscene->IsMaterialCompiled(METAL2)) {
-		ssParams << " -D PARAM_ENABLE_MAT_METAL2";
-		if (cscene->IsMaterialCompiled(METAL2_ANISOTROPIC))
-			ssParams << " -D PARAM_ENABLE_MAT_METAL2_ANISOTROPIC";
-	}
-	if (cscene->IsMaterialCompiled(ROUGHGLASS)) {
-		ssParams << " -D PARAM_ENABLE_MAT_ROUGHGLASS";
-		if (cscene->IsMaterialCompiled(ROUGHGLASS_ANISOTROPIC))
-			ssParams << " -D PARAM_ENABLE_MAT_ROUGHGLASS_ANISOTROPIC";
-	}
-	if (cscene->IsMaterialCompiled(CLOTH))
-		ssParams << " -D PARAM_ENABLE_MAT_CLOTH";
-	if (cscene->IsMaterialCompiled(CARPAINT))
-		ssParams << " -D PARAM_ENABLE_MAT_CARPAINT";
-	if (cscene->IsMaterialCompiled(CLEAR_VOL))
-		ssParams << " -D PARAM_ENABLE_MAT_CLEAR_VOL";
-	if (cscene->IsMaterialCompiled(HOMOGENEOUS_VOL))
-		ssParams << " -D PARAM_ENABLE_MAT_HOMOGENEOUS_VOL";
-	if (cscene->IsMaterialCompiled(HETEROGENEOUS_VOL))
-		ssParams << " -D PARAM_ENABLE_MAT_HETEROGENEOUS_VOL";
-	if (cscene->IsMaterialCompiled(GLOSSYTRANSLUCENT)) {
-		ssParams << " -D PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT";
-
-		if (cscene->IsMaterialCompiled(GLOSSYTRANSLUCENT_ANISOTROPIC))
-			ssParams << " -D PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_ANISOTROPIC";
-		if (cscene->IsMaterialCompiled(GLOSSYTRANSLUCENT_ABSORPTION))
-			ssParams << " -D PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_ABSORPTION";
-		if (cscene->IsMaterialCompiled(GLOSSYTRANSLUCENT_INDEX))
-			ssParams << " -D PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_INDEX";
-		if (cscene->IsMaterialCompiled(GLOSSYTRANSLUCENT_MULTIBOUNCE))
-			ssParams << " -D PARAM_ENABLE_MAT_GLOSSYTRANSLUCENT_MULTIBOUNCE";
-	}
-	if (cscene->IsMaterialCompiled(GLOSSYCOATING)) {
-		ssParams << " -D PARAM_ENABLE_MAT_GLOSSYCOATING";
-
-		if (cscene->IsMaterialCompiled(GLOSSYCOATING_ANISOTROPIC))
-			ssParams << " -D PARAM_ENABLE_MAT_GLOSSYCOATING_ANISOTROPIC";
-		if (cscene->IsMaterialCompiled(GLOSSYCOATING_ABSORPTION))
-			ssParams << " -D PARAM_ENABLE_MAT_GLOSSYCOATING_ABSORPTION";
-		if (cscene->IsMaterialCompiled(GLOSSYCOATING_INDEX))
-			ssParams << " -D PARAM_ENABLE_MAT_GLOSSYCOATING_INDEX";
-		if (cscene->IsMaterialCompiled(GLOSSYCOATING_MULTIBOUNCE))
-			ssParams << " -D PARAM_ENABLE_MAT_GLOSSYCOATING_MULTIBOUNCE";
-	}
-	if (cscene->IsMaterialCompiled(DISNEY))
-		ssParams << " -D PARAM_ENABLE_MAT_DISNEY";
-
-	//--------------------------------------------------------------------------
 
 	// Check the OpenCL vendor and use some specific compiler options
 
@@ -320,29 +109,20 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 		ssParams << " -D __APPLE_CL__";
 	}
 #else
-        if (intersectionDevice->GetDeviceDesc()->IsAMDPlatform())
-            ssParams << " -D LUXCORE_AMD_OPENCL";
-        else if (intersectionDevice->GetDeviceDesc()->IsNVIDIAPlatform())
-            ssParams << " -D LUXCORE_NVIDIA_OPENCL";
-        else
-            ssParams << " -D LUXCORE_GENERIC_OPENCL";
+	if (intersectionDevice->GetDeviceDesc()->IsAMDPlatform())
+		ssParams << " -D LUXCORE_AMD_OPENCL";
+	else if (intersectionDevice->GetDeviceDesc()->IsNVIDIAPlatform())
+		ssParams << " -D LUXCORE_NVIDIA_OPENCL";
+	else
+		ssParams << " -D LUXCORE_GENERIC_OPENCL";
 #endif
 
 	//--------------------------------------------------------------------------
 
-	// This is a workaround to NVIDIA long compilation time
-	string forceInlineDirective;
-	if (intersectionDevice->GetDeviceDesc()->IsNVIDIAPlatform()) {
-		//SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] NVIDIA platform: using inline workaround");
-		forceInlineDirective =
-				"#define OPENCL_FORCE_NOT_INLINE __attribute__((noinline))\n"
-				"#define OPENCL_FORCE_INLINE __attribute__((always_inline))\n";
-	} else {
-		//SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Not NVIDIA platform: not using inline workaround");
-		forceInlineDirective =
-				"#define OPENCL_FORCE_NOT_INLINE\n"
-				"#define OPENCL_FORCE_INLINE\n";
-	}
+	// This is a workaround to  long compilation time
+	string forceInlineDirective =
+			"#define OPENCL_FORCE_NOT_INLINE __attribute__((noinline))\n"
+			"#define OPENCL_FORCE_INLINE __attribute__((always_inline))\n";
 
 	//--------------------------------------------------------------------------
 
@@ -414,6 +194,7 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_elvc_types <<
 			slg::ocl::KernelSource_pgic_types <<
 			// OpenCL SLG Funcs
+			slg::ocl::KernelSource_evalstack_funcs <<
 			slg::ocl::KernelSource_mapping_funcs <<
 			slg::ocl::KernelSource_imagemap_funcs <<
 			slg::ocl::KernelSource_texture_noise_funcs <<
@@ -430,13 +211,10 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_texture_fresnelconst_funcs <<
 			slg::ocl::KernelSource_texture_hsv_funcs <<
 			slg::ocl::KernelSource_texture_irregulardata_funcs <<
-			slg::ocl::KernelSource_texture_funcs;
-
-	// Generate the code to evaluate the textures
-	ssKernel <<
-			"#line 2 \"Texture evaluation code form CompiledScene::GetTexturesEvaluationSourceCode()\"\n" <<
-			cscene->GetTexturesEvaluationSourceCode() <<
-			"\n";
+			slg::ocl::KernelSource_texture_funcs <<
+			slg::ocl::KernelSource_texture_bump_funcs <<
+			slg::ocl::KernelSource_texture_eval_funcs1 <<
+			slg::ocl::KernelSource_texture_eval_funcs2;
 
 	ssKernel <<
 			slg::ocl::KernelSource_materialdefs_funcs_generic <<
@@ -448,6 +226,7 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_materialdefs_funcs_disney <<
 			slg::ocl::KernelSource_materialdefs_funcs_glass <<
 			slg::ocl::KernelSource_materialdefs_funcs_glossy2 <<
+			slg::ocl::KernelSource_materialdefs_funcs_glossycoating <<
 			slg::ocl::KernelSource_materialdefs_funcs_glossytranslucent <<
 			slg::ocl::KernelSource_materialdefs_funcs_heterogeneousvol <<
 			slg::ocl::KernelSource_materialdefs_funcs_homogeneousvol <<
@@ -455,19 +234,13 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_materialdefs_funcs_matte_translucent <<
 			slg::ocl::KernelSource_materialdefs_funcs_metal2 <<
 			slg::ocl::KernelSource_materialdefs_funcs_mirror <<
+			slg::ocl::KernelSource_materialdefs_funcs_mix <<
 			slg::ocl::KernelSource_materialdefs_funcs_null <<
 			slg::ocl::KernelSource_materialdefs_funcs_roughglass <<
 			slg::ocl::KernelSource_materialdefs_funcs_roughmatte_translucent <<
 			slg::ocl::KernelSource_materialdefs_funcs_velvet <<
-			slg::ocl::KernelSource_material_main_withoutdynamic;
-
-	// Generate the code to evaluate the materials
-	ssKernel <<
-			// This is the dynamic generated code (aka "WithDynamic")
-			"#line 2 \"Material evaluation code form CompiledScene::GetMaterialsEvaluationSourceCode()\"\n" <<
-			cscene->GetMaterialsEvaluationSourceCode() <<
-			"\n" <<
-			slg::ocl::KernelSource_material_main;
+			slg::ocl::KernelSource_material_funcs_evalops <<
+			slg::ocl::KernelSource_material_funcs;
 
 	ssKernel <<
 			slg::ocl::KernelSource_pathdepthinfo_types <<
@@ -559,26 +332,37 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 
 	// AdvancePaths kernel (Micro-Kernels)
 
+	size_t workGroupSize;
 	CompileKernel(program, &advancePathsKernel_MK_RT_NEXT_VERTEX, &advancePathsWorkGroupSize,
 			"AdvancePaths_MK_RT_NEXT_VERTEX");
-	CompileKernel(program, &advancePathsKernel_MK_HIT_NOTHING, &advancePathsWorkGroupSize,
+	CompileKernel(program, &advancePathsKernel_MK_HIT_NOTHING, &workGroupSize,
 			"AdvancePaths_MK_HIT_NOTHING");
-	CompileKernel(program, &advancePathsKernel_MK_HIT_OBJECT, &advancePathsWorkGroupSize,
+	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
+	CompileKernel(program, &advancePathsKernel_MK_HIT_OBJECT, &workGroupSize,
 			"AdvancePaths_MK_HIT_OBJECT");
-	CompileKernel(program, &advancePathsKernel_MK_RT_DL, &advancePathsWorkGroupSize,
+	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
+	CompileKernel(program, &advancePathsKernel_MK_RT_DL, &workGroupSize,
 			"AdvancePaths_MK_RT_DL");
-	CompileKernel(program, &advancePathsKernel_MK_DL_ILLUMINATE, &advancePathsWorkGroupSize,
+	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
+	CompileKernel(program, &advancePathsKernel_MK_DL_ILLUMINATE, &workGroupSize,
 			"AdvancePaths_MK_DL_ILLUMINATE");
-	CompileKernel(program, &advancePathsKernel_MK_DL_SAMPLE_BSDF, &advancePathsWorkGroupSize,
+	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
+	CompileKernel(program, &advancePathsKernel_MK_DL_SAMPLE_BSDF, &workGroupSize,
 			"AdvancePaths_MK_DL_SAMPLE_BSDF");
-	CompileKernel(program, &advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY, &advancePathsWorkGroupSize,
+	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
+	CompileKernel(program, &advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY, &workGroupSize,
 			"AdvancePaths_MK_GENERATE_NEXT_VERTEX_RAY");
-	CompileKernel(program, &advancePathsKernel_MK_SPLAT_SAMPLE, &advancePathsWorkGroupSize,
+	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
+	CompileKernel(program, &advancePathsKernel_MK_SPLAT_SAMPLE, &workGroupSize,
 			"AdvancePaths_MK_SPLAT_SAMPLE");
-	CompileKernel(program, &advancePathsKernel_MK_NEXT_SAMPLE, &advancePathsWorkGroupSize,
+	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
+	CompileKernel(program, &advancePathsKernel_MK_NEXT_SAMPLE, &workGroupSize,
 			"AdvancePaths_MK_NEXT_SAMPLE");
-	CompileKernel(program, &advancePathsKernel_MK_GENERATE_CAMERA_RAY, &advancePathsWorkGroupSize,
+	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
+	CompileKernel(program, &advancePathsKernel_MK_GENERATE_CAMERA_RAY, &workGroupSize,
 			"AdvancePaths_MK_GENERATE_CAMERA_RAY");
+	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
+	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] AdvancePaths_MK_* workgroup size: " << advancePathsWorkGroupSize);
 
 	const double tEnd = WallClockTime();
 	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
@@ -642,7 +426,13 @@ void PathOCLBaseOCLRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePa
 	advancePathsKernel->setArg(argIndex++, cscene->worldBSphere.center.z);
 	advancePathsKernel->setArg(argIndex++, cscene->worldBSphere.rad);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), materialsBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), materialEvalOpsBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), materialEvalStackBuff);
+	advancePathsKernel->setArg(argIndex++, cscene->maxMaterialEvalStackSize);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), texturesBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), textureEvalOpsBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), textureEvalStackBuff);
+	advancePathsKernel->setArg(argIndex++, cscene->maxTextureEvalStackSize);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), scnObjsBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), meshDescsBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), vertsBuff);
