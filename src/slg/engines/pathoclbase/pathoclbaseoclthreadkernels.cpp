@@ -197,6 +197,7 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_evalstack_funcs <<
 			slg::ocl::KernelSource_mapping_funcs <<
 			slg::ocl::KernelSource_imagemap_funcs <<
+			slg::ocl::KernelSource_texture_bump_funcs <<
 			slg::ocl::KernelSource_texture_noise_funcs <<
 			slg::ocl::KernelSource_texture_blender_noise_funcs <<
 			slg::ocl::KernelSource_texture_blender_noise_funcs2 <<
@@ -204,6 +205,7 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_texture_abs_funcs <<
 			slg::ocl::KernelSource_texture_bilerp_funcs <<
 			slg::ocl::KernelSource_texture_blackbody_funcs <<
+			slg::ocl::KernelSource_texture_brick_funcs <<
 			slg::ocl::KernelSource_texture_clamp_funcs <<
 			slg::ocl::KernelSource_texture_colordepth_funcs <<
 			slg::ocl::KernelSource_texture_densitygrid_funcs <<
@@ -211,10 +213,10 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_texture_fresnelconst_funcs <<
 			slg::ocl::KernelSource_texture_hsv_funcs <<
 			slg::ocl::KernelSource_texture_irregulardata_funcs <<
-			slg::ocl::KernelSource_texture_funcs <<
-			slg::ocl::KernelSource_texture_bump_funcs <<
-			slg::ocl::KernelSource_texture_eval_funcs1 <<
-			slg::ocl::KernelSource_texture_eval_funcs2;
+			slg::ocl::KernelSource_texture_triplanar_funcs <<
+			slg::ocl::KernelSource_texture_others_funcs <<
+			slg::ocl::KernelSource_texture_funcs_evalops <<
+			slg::ocl::KernelSource_texture_funcs;
 
 	ssKernel <<
 			slg::ocl::KernelSource_materialdefs_funcs_generic <<

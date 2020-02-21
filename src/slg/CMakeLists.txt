@@ -299,8 +299,7 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/textures/mapping/mapping_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_eval_funcs1.cl
-	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_eval_funcs2.cl
+	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_funcs_evalops.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_blender_noise_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_blender_noise_funcs2.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_blender_funcs.cl
@@ -309,11 +308,14 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_abs_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_bilerp_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_blackbody_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_brick_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_clamp_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_colordepth_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_densitygrid_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_hsv_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_irregulardata_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_others_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_triplanar_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/fresnel/texture_fresnelcolor_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/fresnel/texture_fresnelconst_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/utils/evalstack_funcs.cl
@@ -656,8 +658,7 @@ set(SLG_KERNEL_SRCS
 	${generated_kernels_dir}/material_funcs_kernel.cpp
 	${generated_kernels_dir}/texture_types_kernel.cpp
 	${generated_kernels_dir}/texture_funcs_kernel.cpp
-	${generated_kernels_dir}/texture_eval_funcs1_kernel.cpp
-	${generated_kernels_dir}/texture_eval_funcs2_kernel.cpp
+	${generated_kernels_dir}/texture_funcs_evalops_kernel.cpp
 	${generated_kernels_dir}/texture_blender_noise_funcs_kernel.cpp
 	${generated_kernels_dir}/texture_blender_noise_funcs2_kernel.cpp
 	${generated_kernels_dir}/texture_blender_funcs_kernel.cpp
@@ -666,6 +667,7 @@ set(SLG_KERNEL_SRCS
 	${generated_kernels_dir}/texture_abs_funcs_kernel.cpp
 	${generated_kernels_dir}/texture_bilerp_funcs_kernel.cpp
 	${generated_kernels_dir}/texture_blackbody_funcs_kernel.cpp
+	${generated_kernels_dir}/texture_brick_funcs_kernel.cpp
 	${generated_kernels_dir}/texture_clamp_funcs_kernel.cpp
 	${generated_kernels_dir}/texture_colordepth_funcs_kernel.cpp
 	${generated_kernels_dir}/texture_densitygrid_funcs_kernel.cpp
@@ -673,6 +675,8 @@ set(SLG_KERNEL_SRCS
 	${generated_kernels_dir}/texture_fresnelconst_funcs_kernel.cpp
 	${generated_kernels_dir}/texture_hsv_funcs_kernel.cpp
 	${generated_kernels_dir}/texture_irregulardata_funcs_kernel.cpp
+	${generated_kernels_dir}/texture_others_funcs_kernel.cpp
+	${generated_kernels_dir}/texture_triplanar_funcs_kernel.cpp
 	${generated_kernels_dir}/evalstack_funcs_kernel.cpp
 	${generated_kernels_dir}/pathdepthinfo_types_kernel.cpp
 	${generated_kernels_dir}/pathdepthinfo_funcs_kernel.cpp
