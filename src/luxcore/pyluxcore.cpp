@@ -133,6 +133,14 @@ static boost::python::list GetOpenCLDeviceList() {
 	return l;
 }
 
+static void LuxCore_KernelCacheFill1() {
+	KernelCacheFill(luxrays::Properties());
+}
+
+static void LuxCore_KernelCacheFill2(const luxrays::Properties &config) {
+	KernelCacheFill(config);
+}
+
 //------------------------------------------------------------------------------
 // Glue for Property class
 //------------------------------------------------------------------------------
@@ -1721,6 +1729,9 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 	def("ClearFileNameResolverPaths", &ClearFileNameResolverPaths);
 	def("AddFileNameResolverPath", &AddFileNameResolverPath);
 	def("GetFileNameResolverPaths", &GetFileNameResolverPaths);
+	
+	def("KernelCacheFill", &LuxCore_KernelCacheFill1);
+	def("KernelCacheFill", &LuxCore_KernelCacheFill2);
 	
 	//--------------------------------------------------------------------------
 	// Property class
