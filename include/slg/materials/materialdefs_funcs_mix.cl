@@ -542,7 +542,7 @@ OPENCL_FORCE_NOT_INLINE void MixMaterial_Sample(__global const Material* restric
 	EvalStack_PopInt(sampleMatA);
 	// Pop factor
 	float factor;
-	EvalStack_PopInt(factor);
+	EvalStack_PopFloat(factor);
 
 	// Pop parameters
 	float u0, u1, passThroughEvent;
