@@ -81,6 +81,7 @@
 
 ''Beta2 released''
 
+* Fixed a bug in pyluxcoretools ui code causing a runtime error with PySide2 5.14.x
 * Volume .photongi.enable property is now parsed/exported and supported
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
