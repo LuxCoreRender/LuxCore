@@ -150,5 +150,7 @@ Volume *Scene::CreateVolume(const u_int defaultVolID, const string &volName, con
 	vol->SetVolumeLightID(props.Get(Property(propName + ".emission.id")(0u)).Get<u_int>());
 	vol->SetPriority(props.Get(Property(propName + ".priority")(0)).Get<int>());
 
+	vol->SetPhotonGIEnabled(props.Get(Property(propName + ".photongi.enable")(false)).Get<bool>());
+
 	return vol;
 }

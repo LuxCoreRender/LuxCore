@@ -57,6 +57,8 @@
 * Added the support for transparencies and shadowcatcher to BAKECPU
 * Fixed and optimized the execution on CPU with high thread count (24+)
 
+''Beta2 released''
+
 ### Fixed Bugs
 
 * Fixed triangle lights back face emission when using an IES or image map profile
@@ -76,6 +78,10 @@
 * BAKECPU now correctly includes the dot product of shading normal and light direction in light maps
 * Fixed the generation of material/object/volume default random ID (issue #296)
 * Fixed bump mapping when using a transformation with negative scale on Z (issue #300)
+
+''Beta2 released''
+
+* Volume .photongi.enable property is now parsed/exported and supported
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.

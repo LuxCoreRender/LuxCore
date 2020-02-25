@@ -40,6 +40,8 @@ Properties Volume::ToProperties() const {
 		props.Set(Property("scene.volumes." + name + ".emission.id")(volumeLightID));
 	}
 	props.Set(Property("scene.volumes." + name + ".id")(matID));
+	
+	props.Set(Property("scene.volumes." + name + ".photongi.enable")(isPhotonGIEnabled));
 
 	return props;
 }
