@@ -59,15 +59,9 @@ Spectrum ConstantInfiniteLight::GetRadiance(const Scene &scene,
 			return Spectrum();
 
 		if (directPdfA) {
-			if (bsdf) {
-				const Distribution2D *cacheDist = visibilityMapCache->GetVisibilityMap(*bsdf);
-				if (cacheDist) {
-					const float cacheDistPdf = cacheDist->Pdf(u, v);
-
-					*directPdfA = cacheDistPdf * latLongMappingPdf;
-				} else
-					*directPdfA = 0.f;
-			} else
+			if (bsdf)
+				*directPdfA =  visibilityMapCache->Pdf(*bsdf, u, v) * latLongMappingPdf;
+			else
 				*directPdfA = 0.f;
 		}
 
@@ -123,13 +117,8 @@ Spectrum ConstantInfiniteLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 	if (visibilityMapCache && visibilityMapCache->IsCacheEnabled(bsdf)) {
 		float uv[2];
 		float distPdf;
-		
-		const Distribution2D *cacheDist = visibilityMapCache->GetVisibilityMap(bsdf);
-		if (cacheDist)
-			cacheDist->SampleContinuous(u0, u1, uv, &distPdf);
-		else
-			return Spectrum();
 
+		visibilityMapCache->Sample(bsdf, u0, u1, uv, &distPdf);
 		if (distPdf == 0.f)
 			return Spectrum();
 
@@ -190,7 +179,18 @@ void ConstantInfiniteLight::UpdateVisibilityMap(const Scene *scene, const bool u
 		return;
 
 	if (useVisibilityMapCache) {
-		visibilityMapCache = new EnvLightVisibilityCache(scene, this, nullptr, visibilityMapCacheParams);		
+		// Build a luminance map of the constantinfinite ... not exactly smart, TODO optimize
+		unique_ptr<ImageMap> luminanceMapImage(ImageMap::AllocImageMap<float>(1.f, 1,
+				EnvLightVisibilityCache::defaultLuminanceMapWidth, EnvLightVisibilityCache::defaultLuminanceMapHeight,
+				ImageMapStorage::REPEAT));
+
+		float *pixels = (float *)luminanceMapImage->GetStorage()->GetPixelsData();
+		for (u_int y = 0; y < EnvLightVisibilityCache::defaultLuminanceMapHeight; ++y) {
+			for (u_int x = 0; x < EnvLightVisibilityCache::defaultLuminanceMapWidth; ++x)
+				pixels[x + y * EnvLightVisibilityCache::defaultLuminanceMapWidth] = 1.f;
+		}
+
+		visibilityMapCache = new EnvLightVisibilityCache(scene, this, luminanceMapImage.get(), visibilityMapCacheParams);		
 		visibilityMapCache->Build();
 	}
 }

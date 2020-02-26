@@ -407,6 +407,15 @@ u_int Distribution1D::SampleDiscrete(float u, float *pdf, float *du) const {
 	return offset;
 }
 
+float Distribution1D::Pdf(float u, float *du) const {
+	const u_int offset = Offset(u);
+
+	if (du)
+		*du = u * count - cdf[offset];
+	
+	return func[offset];
+}
+
 //------------------------------------------------------------------------------
 // Distribution2D
 //------------------------------------------------------------------------------
@@ -442,10 +451,11 @@ void Distribution2D::SampleContinuous(float u0, float u1, float uv[2],
 	*pdf = pdfs[0] * pdfs[1];
 }
 
-void Distribution2D::SampleDiscrete(float u0, float u1, u_int uv[2], float *pdf) const {
+void Distribution2D::SampleDiscrete(float u0, float u1, u_int uv[2], float *pdf,
+		float *du0, float *du1) const {
 	float pdfs[2];
-	uv[1] = pMarginal->SampleDiscrete(u1, &pdfs[1]);
-	uv[0] = pConditionalV[uv[1]]->SampleDiscrete(u0, &pdfs[0]);
+	uv[1] = pMarginal->SampleDiscrete(u1, &pdfs[1], du1);
+	uv[0] = pConditionalV[uv[1]]->SampleDiscrete(u0, &pdfs[0], du0);
 
 	*pdf = pdfs[0] * pdfs[1];
 }

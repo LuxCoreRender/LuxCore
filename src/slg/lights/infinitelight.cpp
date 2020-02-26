@@ -103,13 +103,7 @@ Spectrum InfiniteLight::GetRadiance(const Scene &scene,
 		if (!bsdf)
 			*directPdfA = 0.f;
 		else if (visibilityMapCache && visibilityMapCache->IsCacheEnabled(*bsdf)) {
-			const Distribution2D *cacheDist = visibilityMapCache->GetVisibilityMap(*bsdf);
-			if (cacheDist) {
-				const float cacheDistPdf = cacheDist->Pdf(u, v);
-
-				*directPdfA = cacheDistPdf * latLongMappingPdf;
-			} else
-				*directPdfA = 0.f;
+			*directPdfA =  visibilityMapCache->Pdf(*bsdf, u, v) * latLongMappingPdf;
 		} else
 			*directPdfA = distPdf * latLongMappingPdf;
 	}
@@ -176,13 +170,9 @@ Spectrum InfiniteLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 		float *emissionPdfW, float *cosThetaAtLight) const {
 	float uv[2];
 	float distPdf;	
-	if (visibilityMapCache && visibilityMapCache->IsCacheEnabled(bsdf)) {
-		const Distribution2D *cacheDist = visibilityMapCache->GetVisibilityMap(bsdf);
-		if (cacheDist)
-			cacheDist->SampleContinuous(u0, u1, uv, &distPdf);
-		else
-			return Spectrum();
-	} else
+	if (visibilityMapCache && visibilityMapCache->IsCacheEnabled(bsdf))
+		visibilityMapCache->Sample(bsdf, u0, u1, uv, &distPdf);
+	else
 		imageMapDistribution->SampleContinuous(u0, u1, uv, &distPdf);
 	if (distPdf == 0.f)
 		return Spectrum();
@@ -238,9 +228,8 @@ void InfiniteLight::UpdateVisibilityMap(const Scene *scene, const bool useRTMode
 	if (useVisibilityMapCache) {
 		// Scale the infinitelight image map to the requested size
 		unique_ptr<ImageMap> luminanceMapImage(imageMap->Copy());
-		// Scale the image
-		luminanceMapImage.reset(ImageMap::Resample(luminanceMapImage.get(), 1,
-				visibilityMapCacheParams.map.width, visibilityMapCacheParams.map.height));
+		// Select the image luminance
+		luminanceMapImage->SelectChannel(ImageMapStorage::WEIGHTED_MEAN);
 
 		visibilityMapCache = new EnvLightVisibilityCache(scene, this,
 				luminanceMapImage.get(), visibilityMapCacheParams);		

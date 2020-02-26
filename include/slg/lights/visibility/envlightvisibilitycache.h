@@ -143,9 +143,9 @@ private:
 
 struct ELVCParams {
 	ELVCParams() {
-		map.width = 128;
-		map.height = 64;
-		map.sampleCount = 16;
+		map.tileWidth = 32;
+		map.tileHeight = 16;
+		map.tileSampleCount = 64;
 		map.sampleUpperHemisphereOnly = false;
 
 		visibility.maxSampleCount = 1024 * 1024;
@@ -159,8 +159,8 @@ struct ELVCParams {
 	}
 
 	struct {
-		u_int width, height;
-		u_int sampleCount;
+		u_int tileWidth, tileHeight;
+		u_int tileSampleCount;
 
 		bool sampleUpperHemisphereOnly;
 	} map;
@@ -180,9 +180,9 @@ struct ELVCParams {
 	
 protected:
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
-		ar & map.width;
-		ar & map.height;
-		ar & map.sampleCount;
+		ar & map.tileWidth;
+		ar & map.tileHeight;
+		ar & map.tileSampleCount;
 		ar & map.sampleUpperHemisphereOnly;
 
 		ar & visibility.maxSampleCount;
@@ -211,18 +211,25 @@ public:
 
 	void Build();
 
-	const luxrays::Distribution2D *GetVisibilityMap(const BSDF &bsdf) const;
+	void Sample(const BSDF &bsdf, const float u0, const float u1,
+			float uv[2], float *pdf) const;
+	float Pdf(const BSDF &bsdf, const float u, const float v) const;
 
 	static ELVCParams Properties2Params(const std::string &prefix, const luxrays::Properties props);
 	static luxrays::Properties Params2Props(const std::string &prefix, const ELVCParams &params);
 
+	static const u_int defaultLuminanceMapWidth, defaultLuminanceMapHeight;
+	
 	friend class ELVCSceneVisibility;
 
 private:
 	float EvaluateBestRadius();
 	void TraceVisibilityParticles();
-	void BuildCacheEntry(const u_int entryIndex);
+	void BuildCacheEntry(const u_int entryIndex, const ImageMap *luminanceMapImageScaled);
 	void BuildCacheEntries();
+	void BuildTileDistributions();
+
+	const luxrays::Distribution2D *GetVisibilityMap(const BSDF &bsdf) const;
 
 	void LoadPersistentCache(const std::string &fileName);
 	void SavePersistentCache(const std::string &fileName);
@@ -239,13 +246,15 @@ private:
 	// Used during the rendering phase
 	std::vector<ELVCacheEntry> cacheEntries;
 	ELVCBvh *cacheEntriesBVH;
+	u_int tilesXCount, tilesYCount;
+	std::vector<luxrays::Distribution2D *> tileDistributions;
 };
 
 }
 
 BOOST_CLASS_VERSION(slg::ELVCacheEntry, 1)
 BOOST_CLASS_VERSION(slg::ELVCBvh, 1)
-BOOST_CLASS_VERSION(slg::ELVCParams, 2)
+BOOST_CLASS_VERSION(slg::ELVCParams, 3)
 
 BOOST_CLASS_EXPORT_KEY(slg::ELVCacheEntry)
 BOOST_CLASS_EXPORT_KEY(slg::ELVCBvh)

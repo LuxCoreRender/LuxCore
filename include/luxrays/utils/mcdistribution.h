@@ -102,7 +102,7 @@ public:
 	 *
 	 * @return The x value of the sample (i.e. the x in f(x)).
 	 */ 
-	float SampleContinuous(float u, float *pdf, u_int *off = NULL) const;
+	float SampleContinuous(float u, float *pdf, u_int *off = nullptr) const;
 
 	/**
 	 * Samples an interval from this distribution.
@@ -116,7 +116,7 @@ public:
 	 *
 	 * @return The index of the sampled interval.
 	 */ 
-	u_int SampleDiscrete(float u, float *pdf, float *du = NULL) const;
+	u_int SampleDiscrete(float u, float *pdf, float *du = nullptr) const;
 	/**
 	 * The pdf associated to a given interval
 	 * 
@@ -132,7 +132,8 @@ public:
 	 *
 	 * @return The pdf so that int(u=0..1, pdf(u)*du) = 1
 	 */
-	float Pdf(float u) const { return func[Offset(u)]; }
+	float Pdf(float u, float *du = nullptr) const;
+
 	float Average() const { return funcInt; }
 	u_int Offset(float u) const {
 		return Min(count - 1, Floor2UInt(u * count));
@@ -180,12 +181,22 @@ public:
 
 	void SampleContinuous(float u0, float u1, float uv[2],
 		float *pdf) const;
-	void SampleDiscrete(float u0, float u1, u_int uv[2], float *pdf) const;
+	void SampleDiscrete(float u0, float u1, u_int uv[2], float *pdf,
+			float *du0 = nullptr, float *du1 = nullptr) const;
 
-	float Pdf(float u, float v) const {
-		return pConditionalV[pMarginal->Offset(v)]->Pdf(u) *
-			pMarginal->Pdf(v);
+	float Pdf(float u, float v,
+			float *du = nullptr, float *dv = nullptr,
+			u_int *offsetU = nullptr, u_int *offsetV = nullptr) const {
+		const u_int ov = pMarginal->Offset(v);
+		if (offsetV)
+			*offsetV = ov;
+		if (offsetU)
+			*offsetU = pConditionalV[ov]->Offset(u);
+
+		return pConditionalV[ov]->Pdf(u, du) *
+			pMarginal->Pdf(v, dv);
 	}
+
 	float Average() const { return pMarginal->Average(); }
 
 	const u_int GetWidth() const { return pConditionalV[0]->GetCount(); }

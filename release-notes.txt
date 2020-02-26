@@ -5,6 +5,7 @@
 * New OpenCL code to evaluate textures and materials. It doesn't require kernel re-compilation anymore.
 * LuxCoreUI "Fill kernel cache" menu option now pre-compile all possible GPU kernels.
 * LuxCore API KernelCacheFill() is now available for Python
+* New 2-levels Env. Light Visibility Cache (ELVC)
 
 ### Fixed Bugs
 
