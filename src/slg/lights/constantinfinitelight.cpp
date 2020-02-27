@@ -179,18 +179,10 @@ void ConstantInfiniteLight::UpdateVisibilityMap(const Scene *scene, const bool u
 		return;
 
 	if (useVisibilityMapCache) {
-		// Build a luminance map of the constantinfinite ... not exactly smart, TODO optimize
-		unique_ptr<ImageMap> luminanceMapImage(ImageMap::AllocImageMap<float>(1.f, 1,
-				EnvLightVisibilityCache::defaultLuminanceMapWidth, EnvLightVisibilityCache::defaultLuminanceMapHeight,
-				ImageMapStorage::REPEAT));
-
-		float *pixels = (float *)luminanceMapImage->GetStorage()->GetPixelsData();
-		for (u_int y = 0; y < EnvLightVisibilityCache::defaultLuminanceMapHeight; ++y) {
-			for (u_int x = 0; x < EnvLightVisibilityCache::defaultLuminanceMapWidth; ++x)
-				pixels[x + y * EnvLightVisibilityCache::defaultLuminanceMapWidth] = 1.f;
-		}
-
-		visibilityMapCache = new EnvLightVisibilityCache(scene, this, luminanceMapImage.get(), visibilityMapCacheParams);		
+		visibilityMapCache = new EnvLightVisibilityCache(scene, this,
+				EnvLightVisibilityCache::defaultLuminanceMapWidth,
+				EnvLightVisibilityCache::defaultLuminanceMapHeight,
+				visibilityMapCacheParams);		
 		visibilityMapCache->Build();
 	}
 }

@@ -31,12 +31,12 @@ scene.lights.__WORLD_BACKGROUND_LIGHT__.gamma = 1
 scene.lights.__WORLD_BACKGROUND_LIGHT__.storage = "float"
 ##
 scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.enable = 1
-scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.map.width = 256
-scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.map.height = 128
-scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.map.samplecount = 1
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.map.width = 256
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.map.height = 128
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.map.samplecount = 1
 scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.map.tilewidth = 32
 scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.map.tileheight = 16
-scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.map.tilesamplecount = 64
+scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.map.tilesamplecount = 48
 scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.map.sampleupperhemisphereonly = 0
 #scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.visibility.maxsamplecount = 1048576
 #scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.visibility.maxdepth = 4

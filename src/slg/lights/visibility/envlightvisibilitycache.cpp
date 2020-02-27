@@ -111,6 +111,15 @@ EnvLightVisibilityCache::EnvLightVisibilityCache(const Scene *scn, const EnvLigh
 		scene(scn), envLight(envl), luminanceMapImage(li), params(p),
 		cacheEntriesBVH(nullptr) {
 	assert (luminanceMapImage);
+
+	mapWidth = luminanceMapImage->GetWidth();
+	mapHeight = luminanceMapImage->GetHeight();
+}
+
+EnvLightVisibilityCache::EnvLightVisibilityCache(const Scene *scn, const EnvLightSource *envl,
+		const u_int width, const u_int height, const ELVCParams &p) :
+		scene(scn), envLight(envl), luminanceMapImage(nullptr), params(p),
+		cacheEntriesBVH(nullptr), mapWidth(width), mapHeight(height) {
 }
 
 EnvLightVisibilityCache::~EnvLightVisibilityCache() {
@@ -300,14 +309,14 @@ void EnvLightVisibilityCache::BuildCacheEntry(const u_int entryIndex, const Imag
 		if (latLongMappingPdf == 0.f)
 			continue;
 
-		const float s = u * luminanceMapImage->GetWidth() - .5f;
-		const float t = v * luminanceMapImage->GetHeight() - .5f;
+		const float s = u * mapWidth - .5f;
+		const float t = v * mapHeight - .5f;
 
 		const int s0 = Floor2Int(s);
 		const int t0 = Floor2Int(t);
 
-		const u_int x = static_cast<u_int>(Mod<int>(s0, luminanceMapImage->GetWidth()));
-		const u_int y = static_cast<u_int>(Mod<int>(t0, luminanceMapImage->GetHeight()));
+		const u_int x = static_cast<u_int>(Mod<int>(s0, mapWidth));
+		const u_int y = static_cast<u_int>(Mod<int>(t0, mapHeight));
 
 		const u_int tileX = x / params.map.tileWidth;
 		const u_int tileY = y / params.map.tileHeight;
@@ -401,7 +410,7 @@ void EnvLightVisibilityCache::BuildCacheEntry(const u_int entryIndex, const Imag
 		visibilityMap[i] = normalizedVisVal;
 	}
 
-	if (luminanceMapImage) {
+	if (luminanceMapImageScaled) {
 		const ImageMapStorage *luminanceMapStorageScaled = luminanceMapImageScaled->GetStorage();
 
 		// For some debug, save the map to a file
@@ -464,15 +473,6 @@ void EnvLightVisibilityCache::BuildCacheEntry(const u_int entryIndex, const Imag
 		SLG_LOG("Map " << entryIndex << " Max=" << maxVal << " Min=" << minVal);
 	}*/
 
-	// Avoid to have cells with too low probability (i.e. to avoid fireflies)
-	/*for (u_int y = 0; y < tilesYCount; ++y) {
-		for (u_int x = 0; x < tilesXCount; ++x) {
-			const u_int pixelIndex = x + y * tilesXCount;
-			if (visibilityMap[pixelIndex] > 0.f)
-				visibilityMap[pixelIndex] = Max(visibilityMap[pixelIndex], 0.05f);
-		}
-	}*/
-
 	cacheEntry.visibilityMap = new Distribution2D(&visibilityMap[0], tilesXCount, tilesYCount);
 	
 	//const double t3 = WallClockTime();
@@ -483,11 +483,13 @@ void EnvLightVisibilityCache::BuildCacheEntries() {
 	SLG_LOG("EnvLightVisibilityCache building cache entries: " << visibilityParticles.size());
 
 	// Scale the luminance image map to the requested size
-	unique_ptr<ImageMap> luminanceMapImageScaled(luminanceMapImage->Copy());
-	// Scale the image
-	luminanceMapImageScaled.reset(ImageMap::Resample(luminanceMapImageScaled.get(), 1,
-			tilesXCount, tilesYCount));
-	
+	unique_ptr<ImageMap> luminanceMapImageScaled(nullptr);
+	if (luminanceMapImage) {
+		// Scale the image
+		luminanceMapImageScaled.reset(ImageMap::Resample(luminanceMapImage, 1,
+				tilesXCount, tilesYCount));
+	}
+
 	const double startTime = WallClockTime();
 	double lastPrintTime = WallClockTime();
 	atomic<u_int> counter(0);
@@ -529,13 +531,13 @@ void EnvLightVisibilityCache::BuildCacheEntries() {
 //--------------------------------------------------------------------------
 
 void EnvLightVisibilityCache::BuildTileDistributions() {
+	assert (luminanceMapImage);
+
 	const u_int tilesCount = tilesXCount * tilesYCount;
 	
 	SLG_LOG("EnvLightVisibilityCache building tile maps: " << tilesCount << " (" << tilesXCount << " x " << tilesYCount << ")");
 	
 	tileDistributions.resize(tilesCount, nullptr);
-	const u_int mapWidth = luminanceMapImage->GetWidth();
-	const u_int mapHeight = luminanceMapImage->GetHeight();
 	#pragma omp parallel for
 	for (
 			// Visual C++ 2013 supports only OpenMP 2.5
@@ -553,12 +555,9 @@ void EnvLightVisibilityCache::BuildTileDistributions() {
 				const u_int mapX = tileX * params.map.tileWidth + x;
 				const u_int mapY = tileY * params.map.tileHeight + y;
 				
-				if ((mapX < mapWidth) && (mapY < mapHeight)) {
-					// The Max() is there to avoid to have cells with too
-					// low probability (i.e. to avoid fireflies)
-					//tileLuminance[index] = Max(luminanceMapImage->GetStorage()->GetFloat(mapX, mapY), 0.05f);
+				if ((mapX < mapWidth) && (mapY < mapHeight))
 					tileLuminance[index] = luminanceMapImage->GetStorage()->GetFloat(mapX, mapY);
-				} else
+				else
 					tileLuminance[index] = 0.f;
 			}
 		}
@@ -640,8 +639,8 @@ void EnvLightVisibilityCache::Build() {
 		// The file doesn't exist so I have to go trough normal pre-processing
 	}
 
-	tilesXCount = Ceil2UInt(luminanceMapImage->GetWidth() / (float)params.map.tileWidth);
-	tilesYCount = Ceil2UInt(luminanceMapImage->GetHeight() / (float)params.map.tileHeight);
+	tilesXCount = Ceil2UInt(mapWidth / (float)params.map.tileWidth);
+	tilesYCount = Ceil2UInt(mapHeight / (float)params.map.tileHeight);
 
 	//--------------------------------------------------------------------------
 	// Evaluate best radius if required
@@ -679,8 +678,13 @@ void EnvLightVisibilityCache::Build() {
 		SLG_LOG("EnvLightVisibilityCache building cache entries BVH");
 		cacheEntriesBVH = new ELVCBvh(&cacheEntries, params.visibility.lookUpRadius,
 				params.visibility.lookUpNormalAngle);
-		
-		BuildTileDistributions();
+
+		if (luminanceMapImage)
+			BuildTileDistributions();
+		else {
+			tileDistributions.resize(0);
+			tileDistributions.shrink_to_fit();
+		}
 	} else
 		SLG_LOG("WARNING: EnvLightVisibilityCache has an empty cache");
 
@@ -724,17 +728,24 @@ void EnvLightVisibilityCache::Sample(const BSDF &bsdf,
 		cacheDist->SampleDiscrete(u0, u1, cacheDistXY, &cacheDistPdf, &du0, &du1);
 
 		if (cacheDistPdf > 0.f) {
-			const Distribution2D *tileDistribution = tileDistributions[cacheDistXY[0] + cacheDistXY[1] * tilesXCount];
+			if (tileDistributions.size() > 0) {
+				const Distribution2D *tileDistribution = tileDistributions[cacheDistXY[0] + cacheDistXY[1] * tilesXCount];
 
-			float tileXY[2];
-			float tileDistPdf;
-			tileDistribution->SampleContinuous(du0, du1, tileXY, &tileDistPdf);
+				float tileXY[2];
+				float tileDistPdf;
+				tileDistribution->SampleContinuous(du0, du1, tileXY, &tileDistPdf);
 
-			if (tileDistPdf > 0.f) {
-				uv[0] = (cacheDistXY[0] + tileXY[0]) / tilesXCount;
-				uv[1] = (cacheDistXY[1] + tileXY[1]) / tilesYCount;
+				if (tileDistPdf > 0.f) {
+					uv[0] = (cacheDistXY[0] + tileXY[0]) / tilesXCount;
+					uv[1] = (cacheDistXY[1] + tileXY[1]) / tilesYCount;
 
-				*pdf = cacheDistPdf * tileDistPdf * (tilesXCount * tilesYCount);
+					*pdf = cacheDistPdf * tileDistPdf * (tilesXCount * tilesYCount);
+				}
+			} else {
+				uv[0] = (cacheDistXY[0] + du0) / tilesXCount;
+				uv[1] = (cacheDistXY[1] + du1) / tilesYCount;
+
+				*pdf = cacheDistPdf * (tilesXCount * tilesYCount);
 			}
 		}
 	}
@@ -755,10 +766,13 @@ float EnvLightVisibilityCache::Pdf(const BSDF &bsdf, const float u, const float 
 		const float cacheDistPdf = cacheDist->Pdf(u, v, &du, &dv, &offsetU, &offsetV);
 
 		if (cacheDistPdf > 0.f) {
-			const Distribution2D *tileDistribution = tileDistributions[offsetU + offsetV * tilesXCount];
-			const float tileDistPdf = tileDistribution->Pdf(du, dv);
+			if (tileDistributions.size() > 0) {
+				const Distribution2D *tileDistribution = tileDistributions[offsetU + offsetV * tilesXCount];
+				const float tileDistPdf = tileDistribution->Pdf(du, dv);
 
-			pdf = cacheDistPdf * tileDistPdf;
+				pdf = cacheDistPdf * tileDistPdf;
+			} else
+				pdf = cacheDistPdf;
 		}
 	}
 
@@ -774,7 +788,7 @@ ELVCParams EnvLightVisibilityCache::Properties2Params(const string &prefix, cons
 
 	params.map.tileWidth = Max(1u, props.Get(Property(prefix + ".visibilitymapcache.map.tilewidth")(32)).Get<u_int>());
 	params.map.tileHeight = Max(1u, props.Get(Property(prefix + ".visibilitymapcache.map.tileheight")(16)).Get<u_int>());
-	params.map.tileSampleCount = Max(1u, props.Get(Property(prefix + ".visibilitymapcache.map.tilesamplecount")(64)).Get<u_int>());
+	params.map.tileSampleCount = Max(1u, props.Get(Property(prefix + ".visibilitymapcache.map.tilesamplecount")(48)).Get<u_int>());
 	params.map.sampleUpperHemisphereOnly = props.Get(Property(prefix + ".visibilitymapcache.map.sampleupperhemisphereonly")(false)).Get<bool>();
 
 	params.visibility.maxSampleCount = Max(1u, props.Get(Property(prefix + ".visibilitymapcache.visibility.maxsamplecount")(1024 * 1024)).Get<u_int>());
@@ -821,6 +835,9 @@ void EnvLightVisibilityCache::LoadPersistentCache(const std::string &fileName) {
 
 	SerializationInputFile sif(fileName);
 
+	sif.GetArchive() >> mapWidth;
+	sif.GetArchive() >> mapHeight;
+
 	sif.GetArchive() >> params;
 
 	sif.GetArchive() >> cacheEntries;
@@ -828,7 +845,10 @@ void EnvLightVisibilityCache::LoadPersistentCache(const std::string &fileName) {
 
 	visibilityParticles.clear();
 	visibilityParticles.shrink_to_fit();
-	
+
+	tilesXCount = Ceil2UInt(mapWidth/ (float)params.map.tileWidth);
+	tilesYCount = Ceil2UInt(mapHeight / (float)params.map.tileHeight);
+
 	if (!sif.IsGood())
 		throw runtime_error("Error while loading EnvLightVisibility persistent cache: " + fileName);
 }
@@ -839,6 +859,9 @@ void EnvLightVisibilityCache::SavePersistentCache(const std::string &fileName) {
 	SafeSave safeSave(fileName);
 	{
 		SerializationOutputFile sof(params.persistent.safeSave ? safeSave.GetSaveFileName() : fileName);
+
+		sof.GetArchive() << mapWidth;
+		sof.GetArchive() << mapHeight;
 
 		sof.GetArchive() << params;
 

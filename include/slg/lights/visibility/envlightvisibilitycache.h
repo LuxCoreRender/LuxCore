@@ -203,6 +203,8 @@ public:
 	EnvLightVisibilityCache(const Scene *scene, const EnvLightSource *envLight,
 			ImageMap *luminanceMapImage,
 			const ELVCParams &params);
+	EnvLightVisibilityCache(const Scene *scene, const EnvLightSource *envLight,
+			const u_int mapWidth, const u_int mapHeight, const ELVCParams &params);
 	virtual ~EnvLightVisibilityCache();
 
 	bool IsCacheEnabled(const BSDF &bsdf) const;
@@ -246,6 +248,7 @@ private:
 	// Used during the rendering phase
 	std::vector<ELVCacheEntry> cacheEntries;
 	ELVCBvh *cacheEntriesBVH;
+	u_int mapWidth, mapHeight;
 	u_int tilesXCount, tilesYCount;
 	std::vector<luxrays::Distribution2D *> tileDistributions;
 };
