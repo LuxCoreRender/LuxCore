@@ -103,7 +103,7 @@ OPENCL_FORCE_INLINE void TilePathSampler_SplatSample(
 	if (sample->pass < taskConfig->renderEngine.rtpathocl.previewResolutionReductionStep) {
 		// I have to copy the current pixel to fill the assigned square
 		for (uint y = 0; y < taskConfig->renderEngine.rtpathocl.previewResolutionReduction; ++y) {
-			for (uint x = 0; x < taskConfig->renderEngine.rtpathocl.resolutionReduction; ++x) {
+			for (uint x = 0; x < taskConfig->renderEngine.rtpathocl.previewResolutionReduction; ++x) {
 				// The sample weight is very low so this value is rapidly replaced
 				// during normal rendering
 				const uint px = sampleResult->pixelX + x;
