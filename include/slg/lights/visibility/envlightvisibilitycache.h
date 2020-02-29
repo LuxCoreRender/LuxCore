@@ -142,10 +142,15 @@ private:
 };
 
 struct ELVCParams {
+	typedef enum {
+		LOW, MEDIUM, HIGH
+	} QualityType;
+	
 	ELVCParams() {
-		map.tileWidth = 32;
-		map.tileHeight = 16;
-		map.tileSampleCount = 64;
+		map.quality = MEDIUM;
+		map.tileWidth = 0;
+		map.tileHeight = 0;
+		map.tileSampleCount = 0;
 		map.sampleUpperHemisphereOnly = false;
 
 		visibility.maxSampleCount = 1024 * 1024;
@@ -159,6 +164,7 @@ struct ELVCParams {
 	}
 
 	struct {
+		QualityType quality;
 		u_int tileWidth, tileHeight;
 		u_int tileSampleCount;
 
@@ -180,6 +186,7 @@ struct ELVCParams {
 	
 protected:
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & map.quality;
 		ar & map.tileWidth;
 		ar & map.tileHeight;
 		ar & map.tileSampleCount;
@@ -225,6 +232,8 @@ public:
 	friend class ELVCSceneVisibility;
 
 private:
+	void ParamsEvaluation();
+
 	float EvaluateBestRadius();
 	void TraceVisibilityParticles();
 	void BuildCacheEntry(const u_int entryIndex, const ImageMap *luminanceMapImageScaled);
