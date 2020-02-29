@@ -160,14 +160,14 @@ OPENCL_FORCE_INLINE bool TilePathSampler_Init(
 		pixelX = subPixelX * taskConfig->renderEngine.rtpathocl.previewResolutionReduction;
 		pixelY = subPixelY * taskConfig->renderEngine.rtpathocl.previewResolutionReduction;
 	} else {
-		const uint samplesPerRow = filmWidth / taskConfig->renderEngine.rtpathocl.previewResolutionReduction;
+		const uint samplesPerRow = filmWidth / taskConfig->renderEngine.rtpathocl.resolutionReduction;
 		const uint subPixelX = gid % samplesPerRow;
 		const uint subPixelY = gid / samplesPerRow;
 
-		pixelX = subPixelX * taskConfig->renderEngine.rtpathocl.previewResolutionReduction;
-		pixelY = subPixelY * taskConfig->renderEngine.rtpathocl.previewResolutionReduction;
+		pixelX = subPixelX * taskConfig->renderEngine.rtpathocl.resolutionReduction;
+		pixelY = subPixelY * taskConfig->renderEngine.rtpathocl.resolutionReduction;
 
-		const uint pixelsCount = taskConfig->renderEngine.rtpathocl.previewResolutionReduction;
+		const uint pixelsCount = taskConfig->renderEngine.rtpathocl.resolutionReduction;
 		const uint pixelsCount2 = pixelsCount * pixelsCount;
 
 		// Rendering according a Morton curve
