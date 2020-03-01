@@ -59,6 +59,8 @@
 
 ''Beta2 released''
 
+* OUTPUT_SWITCHER image pipeline plugin now supports MATERIAL_ID_COLOR, ALBEDO, AVG_SHADING_NORMAL and USER_IMPORTANCE too
+
 ### Fixed Bugs
 
 * Fixed triangle lights back face emission when using an IES or image map profile
