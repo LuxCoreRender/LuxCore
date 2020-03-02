@@ -38,7 +38,7 @@ namespace slg {
 
 class IntelOIDN : public ImagePipelinePlugin {
 public:
-	IntelOIDN(const int m);
+	IntelOIDN(const int oidnMemLimit, const float sharpness);
 
 	virtual ImagePipelinePlugin *Copy() const;
 
@@ -60,7 +60,7 @@ private:
 	u_int iTileCount;
 	u_int jTileCount;
 	int oidnMemLimit; //needs to be signed int for OIDN call
-
+	float sharpness;
 };
 
 }

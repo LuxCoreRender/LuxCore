@@ -31,8 +31,9 @@ using namespace slg;
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::IntelOIDN)
 
-IntelOIDN::IntelOIDN(const int m) {
+IntelOIDN::IntelOIDN(const int m, const float s) {
 	oidnMemLimit = m;
+	sharpness = s;
 }
 
 IntelOIDN::IntelOIDN() {
@@ -40,7 +41,7 @@ IntelOIDN::IntelOIDN() {
 }
 
 ImagePipelinePlugin *IntelOIDN::Copy() const {
-	return new IntelOIDN(oidnMemLimit);
+	return new IntelOIDN(oidnMemLimit, sharpness);
 }
 
 void IntelOIDN::Apply(Film &film, const u_int index) {
@@ -98,9 +99,9 @@ void IntelOIDN::Apply(Film &film, const u_int index) {
     SLG_LOG("IntelOIDNPlugin copying output buffer");
     for (u_int i = 0; i < pixelCount; ++i) {
         const u_int i3 = i * 3;
-        pixels[i].c[0] = outputBuffer[i3];
-        pixels[i].c[1] = outputBuffer[i3 + 1];
-        pixels[i].c[2] = outputBuffer[i3 + 2];
+        pixels[i].c[0] = Lerp(sharpness, outputBuffer[i3], pixels[i].c[0]);
+        pixels[i].c[1] = Lerp(sharpness, outputBuffer[i3 + 1], pixels[i].c[1]);
+        pixels[i].c[2] = Lerp(sharpness, outputBuffer[i3 + 2], pixels[i].c[2]);
 	}
 
 	SLG_LOG("IntelOIDNPlugin single execution took a total of " << (boost::format("%.1f") % (WallClockTime() - SuperStartTime)) << "secs");

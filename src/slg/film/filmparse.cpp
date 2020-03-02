@@ -616,9 +616,10 @@ ImagePipeline *Film::CreateImagePipeline(const Properties &props, const string &
 				imagePipeline->AddPlugin(new PatternsPlugin(type));
 			} else if (type == "INTEL_OIDN") {
 				const int oidnMemLimit = props.Get(Property(prefix + ".oidnmemory")(6000)).Get<int>();
-				imagePipeline->AddPlugin(new IntelOIDN(oidnMemLimit));
+				const float sharpness = Clamp(props.Get(Property(prefix + ".sharpness")(.1f)).Get<float>(), 0.f, 1.f);
+				imagePipeline->AddPlugin(new IntelOIDN(oidnMemLimit, sharpness));
 			} else if (type == "WHITE_BALANCE") {
-				const float temperature = Clamp(props.Get(Property(prefix + ".temperature")(6500.f)).Get<float>(),1000.f, 40000.f);
+				const float temperature = Clamp(props.Get(Property(prefix + ".temperature")(6500.f)).Get<float>(), 1000.f, 40000.f);
 				imagePipeline->AddPlugin(new WhiteBalance(temperature));
 			} else if (type == "BAKEMAP_MARGIN") {
 				const u_int marginPixels = Max(props.Get(Property(prefix + ".margin")(2)).Get<u_int>(), 1u);
