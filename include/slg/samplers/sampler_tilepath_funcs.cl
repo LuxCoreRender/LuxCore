@@ -103,7 +103,7 @@ OPENCL_FORCE_INLINE void TilePathSampler_SplatSample(
 	if (sample->pass < taskConfig->renderEngine.rtpathocl.previewResolutionReductionStep) {
 		// I have to copy the current pixel to fill the assigned square
 		for (uint y = 0; y < taskConfig->renderEngine.rtpathocl.previewResolutionReduction; ++y) {
-			for (uint x = 0; x < taskConfig->renderEngine.rtpathocl.resolutionReduction; ++x) {
+			for (uint x = 0; x < taskConfig->renderEngine.rtpathocl.previewResolutionReduction; ++x) {
 				// The sample weight is very low so this value is rapidly replaced
 				// during normal rendering
 				const uint px = sampleResult->pixelX + x;
@@ -160,14 +160,14 @@ OPENCL_FORCE_INLINE bool TilePathSampler_Init(
 		pixelX = subPixelX * taskConfig->renderEngine.rtpathocl.previewResolutionReduction;
 		pixelY = subPixelY * taskConfig->renderEngine.rtpathocl.previewResolutionReduction;
 	} else {
-		const uint samplesPerRow = filmWidth / taskConfig->renderEngine.rtpathocl.previewResolutionReduction;
+		const uint samplesPerRow = filmWidth / taskConfig->renderEngine.rtpathocl.resolutionReduction;
 		const uint subPixelX = gid % samplesPerRow;
 		const uint subPixelY = gid / samplesPerRow;
 
-		pixelX = subPixelX * taskConfig->renderEngine.rtpathocl.previewResolutionReduction;
-		pixelY = subPixelY * taskConfig->renderEngine.rtpathocl.previewResolutionReduction;
+		pixelX = subPixelX * taskConfig->renderEngine.rtpathocl.resolutionReduction;
+		pixelY = subPixelY * taskConfig->renderEngine.rtpathocl.resolutionReduction;
 
-		const uint pixelsCount = taskConfig->renderEngine.rtpathocl.previewResolutionReduction;
+		const uint pixelsCount = taskConfig->renderEngine.rtpathocl.resolutionReduction;
 		const uint pixelsCount2 = pixelsCount * pixelsCount;
 
 		// Rendering according a Morton curve
