@@ -186,16 +186,7 @@ public:
 
 	float Pdf(float u, float v,
 			float *du = nullptr, float *dv = nullptr,
-			u_int *offsetU = nullptr, u_int *offsetV = nullptr) const {
-		const u_int ov = pMarginal->Offset(v);
-		if (offsetV)
-			*offsetV = ov;
-		if (offsetU)
-			*offsetU = pConditionalV[ov]->Offset(u);
-
-		return pConditionalV[ov]->Pdf(u, du) *
-			pMarginal->Pdf(v, dv);
-	}
+			u_int *offsetU = nullptr, u_int *offsetV = nullptr) const;
 
 	float Average() const { return pMarginal->Average(); }
 

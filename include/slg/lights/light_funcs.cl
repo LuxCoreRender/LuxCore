@@ -65,15 +65,9 @@ OPENCL_FORCE_NOT_INLINE float3 ConstantInfiniteLight_GetRadiance(__global const 
 		if (latLongMappingPdf == 0.f)
 			return BLACK;
 
-		if (bsdf) {
-			__global const float *cacheDist = EnvLightVisibilityCache_GetVisibilityMap(bsdf LIGHTS_PARAM);
-			if (cacheDist) {
-				const float cacheDistPdf = Distribution2D_Pdf(cacheDist, u, v);
-
-				*directPdfA = cacheDistPdf * latLongMappingPdf;
-			} else
-				*directPdfA = 0.f;
-		} else
+		if (bsdf)
+			*directPdfA = EnvLightVisibilityCache_Pdf(bsdf, u, v LIGHTS_PARAM) * latLongMappingPdf;
+		else
 			*directPdfA = 0.f;
 	} else
 		*directPdfA = bsdf ? UniformSpherePdf() : 0.f;
@@ -95,12 +89,7 @@ OPENCL_FORCE_NOT_INLINE float3 ConstantInfiniteLight_Illuminate(__global const L
 		float2 sampleUV;
 		float distPdf;
 
-		__global const float *cacheDist = EnvLightVisibilityCache_GetVisibilityMap(bsdf LIGHTS_PARAM);
-		if (cacheDist)
-			Distribution2D_SampleContinuous(cacheDist, u0, u1, &sampleUV, &distPdf);
-		else
-			return BLACK;
-
+		EnvLightVisibilityCache_Sample(bsdf, u0, u1, &sampleUV, &distPdf LIGHTS_PARAM);
 		if (distPdf == 0.f)
 			return BLACK;
 
@@ -159,14 +148,7 @@ OPENCL_FORCE_NOT_INLINE float3 InfiniteLight_GetRadiance(__global const LightSou
 		*directPdfA = 0.f;
 	else if (infiniteLight->notIntersectable.infinite.useVisibilityMapCache &&
 			EnvLightVisibilityCache_IsCacheEnabled(bsdf MATERIALS_PARAM)) {
-		__global const float *cacheDist = EnvLightVisibilityCache_GetVisibilityMap(bsdf LIGHTS_PARAM);
-
-		if (cacheDist) {
-			const float cacheDistPdf = Distribution2D_Pdf(cacheDist, u, v);
-
-			*directPdfA = cacheDistPdf * latLongMappingPdf;
-		} else
-			*directPdfA = 0.f;
+		*directPdfA = EnvLightVisibilityCache_Pdf(bsdf, u, v LIGHTS_PARAM) * latLongMappingPdf;
 	} else {
 		__global const float *infiniteLightDist = &envLightDistribution[infiniteLight->notIntersectable.infinite.distributionOffset];
 
@@ -187,20 +169,19 @@ OPENCL_FORCE_NOT_INLINE float3 InfiniteLight_Illuminate(__global const LightSour
 		__global const BSDF *bsdf, const float time, const float u0, const float u1,
 		__global Ray *shadowRay, float *directPdfW
 		LIGHTS_PARAM_DECL) {
-	__global const float *infiniteLightDistribution;
-	if (infiniteLight->notIntersectable.infinite.useVisibilityMapCache &&
-			EnvLightVisibilityCache_IsCacheEnabled(bsdf MATERIALS_PARAM)) {
-		infiniteLightDistribution = EnvLightVisibilityCache_GetVisibilityMap(bsdf LIGHTS_PARAM);
-		if (!infiniteLightDistribution)
-			return BLACK;
-	} else
-		infiniteLightDistribution = &envLightDistribution[infiniteLight->notIntersectable.infinite.distributionOffset];
-
 	float2 sampleUV;
 	float distPdf;
-	Distribution2D_SampleContinuous(infiniteLightDistribution, u0, u1, &sampleUV, &distPdf);
+	if (infiniteLight->notIntersectable.infinite.useVisibilityMapCache &&
+			EnvLightVisibilityCache_IsCacheEnabled(bsdf MATERIALS_PARAM)) {
+		EnvLightVisibilityCache_Sample(bsdf, u0, u1, &sampleUV, &distPdf LIGHTS_PARAM);
+	} else {
+		__global const float *infiniteLightDistribution = &envLightDistribution[infiniteLight->notIntersectable.infinite.distributionOffset];
+
+		Distribution2D_SampleContinuous(infiniteLightDistribution, u0, u1, &sampleUV, &distPdf);
+	}
+
 	if (distPdf == 0.f)
-			return BLACK;
+		return BLACK;
 
 	float3 localDir;
 	float latLongMappingPdf;
@@ -252,23 +233,23 @@ OPENCL_FORCE_INLINE float RiCosBetween(const float3 w1, const float3 w2) {
 	return clamp(dot(w1, w2), -1.f, 1.f);
 }
 
-OPENCL_FORCE_INLINE float3 SkyLight2_ComputeSkyRadiance(__global const LightSource *skyLight2, const float3 w) {
-	const float3 absoluteSunDir = VLOAD3F(&skyLight2->notIntersectable.sky2.absoluteSunDir.x);
+OPENCL_FORCE_INLINE float3 Sky2Light_ComputeSkyRadiance(__global const LightSource *sky2Light, const float3 w) {
+	const float3 absoluteSunDir = VLOAD3F(&sky2Light->notIntersectable.sky2.absoluteSunDir.x);
 	const float cosG = RiCosBetween(w, absoluteSunDir);
 	const float cosG2 = cosG * cosG;
 	const float gamma = acos(cosG);
 	const float cosT = fmax(0.f, CosTheta(w));
 
-	const float3 aTerm = VLOAD3F(skyLight2->notIntersectable.sky2.aTerm.c);
-	const float3 bTerm = VLOAD3F(skyLight2->notIntersectable.sky2.bTerm.c);
-	const float3 cTerm = VLOAD3F(skyLight2->notIntersectable.sky2.cTerm.c);
-	const float3 dTerm = VLOAD3F(skyLight2->notIntersectable.sky2.dTerm.c);
-	const float3 eTerm = VLOAD3F(skyLight2->notIntersectable.sky2.eTerm.c);
-	const float3 fTerm = VLOAD3F(skyLight2->notIntersectable.sky2.fTerm.c);
-	const float3 gTerm = VLOAD3F(skyLight2->notIntersectable.sky2.gTerm.c);
-	const float3 hTerm = VLOAD3F(skyLight2->notIntersectable.sky2.hTerm.c);
-	const float3 iTerm = VLOAD3F(skyLight2->notIntersectable.sky2.iTerm.c);
-	const float3 radianceTerm = VLOAD3F(skyLight2->notIntersectable.sky2.radianceTerm.c);
+	const float3 aTerm = VLOAD3F(sky2Light->notIntersectable.sky2.aTerm.c);
+	const float3 bTerm = VLOAD3F(sky2Light->notIntersectable.sky2.bTerm.c);
+	const float3 cTerm = VLOAD3F(sky2Light->notIntersectable.sky2.cTerm.c);
+	const float3 dTerm = VLOAD3F(sky2Light->notIntersectable.sky2.dTerm.c);
+	const float3 eTerm = VLOAD3F(sky2Light->notIntersectable.sky2.eTerm.c);
+	const float3 fTerm = VLOAD3F(sky2Light->notIntersectable.sky2.fTerm.c);
+	const float3 gTerm = VLOAD3F(sky2Light->notIntersectable.sky2.gTerm.c);
+	const float3 hTerm = VLOAD3F(sky2Light->notIntersectable.sky2.hTerm.c);
+	const float3 iTerm = VLOAD3F(sky2Light->notIntersectable.sky2.iTerm.c);
+	const float3 radianceTerm = VLOAD3F(sky2Light->notIntersectable.sky2.radianceTerm.c);
 	
 	const float3 expTerm = dTerm * Spectrum_Exp(eTerm * gamma);
 	const float3 rayleighTerm = fTerm * cosG2;
@@ -281,16 +262,16 @@ OPENCL_FORCE_INLINE float3 SkyLight2_ComputeSkyRadiance(__global const LightSour
 		(cTerm + expTerm + rayleighTerm + mieTerm + zenithTerm) * radianceTerm;
 }
 
-OPENCL_FORCE_INLINE float3 SkyLight2_ComputeRadiance(__global const LightSource *skyLight2, const float3 w) {
-	if (skyLight2->notIntersectable.sky2.hasGround &&
-			(dot(w, VLOAD3F(&skyLight2->notIntersectable.sky2.absoluteUpDir.x)) < 0.f)) {
+OPENCL_FORCE_INLINE float3 Sky2Light_ComputeRadiance(__global const LightSource *sky2Light, const float3 w) {
+	if (sky2Light->notIntersectable.sky2.hasGround &&
+			(dot(w, VLOAD3F(&sky2Light->notIntersectable.sky2.absoluteUpDir.x)) < 0.f)) {
 		// Lower hemisphere
-		return VLOAD3F(skyLight2->notIntersectable.sky2.scaledGroundColor.c);
+		return VLOAD3F(sky2Light->notIntersectable.sky2.scaledGroundColor.c);
 	} else
-		return VLOAD3F(skyLight2->notIntersectable.gain.c) * SkyLight2_ComputeSkyRadiance(skyLight2, w);
+		return VLOAD3F(sky2Light->notIntersectable.gain.c) * Sky2Light_ComputeSkyRadiance(sky2Light, w);
 }
 
-OPENCL_FORCE_NOT_INLINE float3 SkyLight2_GetRadiance(__global const LightSource *skyLight2,
+OPENCL_FORCE_NOT_INLINE float3 Sky2Light_GetRadiance(__global const LightSource *sky2Light,
 		__global const BSDF *bsdf, const float3 dir, float *directPdfA
 		LIGHTS_PARAM_DECL) {
 	const float3 w = -dir;
@@ -301,43 +282,36 @@ OPENCL_FORCE_NOT_INLINE float3 SkyLight2_GetRadiance(__global const LightSource 
 
 	if (!bsdf)
 		*directPdfA = 0.f;
-	else /*if (skyLight2->notIntersectable.sky2.useVisibilityMapCache &&
+	else if (sky2Light->notIntersectable.sky2.useVisibilityMapCache &&
 			EnvLightVisibilityCache_IsCacheEnabled(bsdf MATERIALS_PARAM)) {
-		__global const float *cacheDist = EnvLightVisibilityCache_GetVisibilityMap(bsdf LIGHTS_PARAM);
-		if (cacheDist) {
-			const float cacheDistPdf = Distribution2D_Pdf(cacheDist, u, v);
-
-			*directPdfA = cacheDistPdf * latLongMappingPdf;
-		} else
-			*directPdfA = 0.f;
-	} else */{
-		__global const float *skyLightDist = &envLightDistribution[skyLight2->notIntersectable.sky2.distributionOffset];
+		*directPdfA = EnvLightVisibilityCache_Pdf(bsdf, u, v LIGHTS_PARAM) * latLongMappingPdf;
+	} else {
+		__global const float *skyLightDist = &envLightDistribution[sky2Light->notIntersectable.sky2.distributionOffset];
 
 		const float distPdf = Distribution2D_Pdf(skyLightDist, u, v);
 		*directPdfA = distPdf * latLongMappingPdf;
 	}
 
-	return SkyLight2_ComputeRadiance(skyLight2, w);
+	return Sky2Light_ComputeRadiance(sky2Light, w);
 }
 
-OPENCL_FORCE_NOT_INLINE float3 SkyLight2_Illuminate(__global const LightSource *skyLight2,
+OPENCL_FORCE_NOT_INLINE float3 Sky2Light_Illuminate(__global const LightSource *sky2Light,
 		const float worldCenterX, const float worldCenterY, const float worldCenterZ,
 		const float sceneRadius,
 		__global const BSDF *bsdf, const float time, const float u0, const float u1,
 		__global Ray *shadowRay, float *directPdfW
 		LIGHTS_PARAM_DECL) {
-	__global const float *skyLightDistribution;
-	if (skyLight2->notIntersectable.sky2.useVisibilityMapCache &&
-			EnvLightVisibilityCache_IsCacheEnabled(bsdf MATERIALS_PARAM)) {
-		skyLightDistribution = EnvLightVisibilityCache_GetVisibilityMap(bsdf LIGHTS_PARAM);
-		if (!skyLightDistribution)
-			return BLACK;
-	} else
-		skyLightDistribution = &envLightDistribution[skyLight2->notIntersectable.sky2.distributionOffset];
-
 	float2 sampleUV;
 	float distPdf;
-	Distribution2D_SampleContinuous(skyLightDistribution, u0, u1, &sampleUV, &distPdf);
+	if (sky2Light->notIntersectable.sky2.useVisibilityMapCache &&
+			EnvLightVisibilityCache_IsCacheEnabled(bsdf MATERIALS_PARAM)) {
+		EnvLightVisibilityCache_Sample(bsdf, u0, u1, &sampleUV, &distPdf LIGHTS_PARAM);
+	} else {
+		__global const float *skyLightDistribution = &envLightDistribution[sky2Light->notIntersectable.sky2.distributionOffset];
+
+		Distribution2D_SampleContinuous(skyLightDistribution, u0, u1, &sampleUV, &distPdf);
+	}
+
 	if (distPdf == 0.f)
 			return BLACK;
 
@@ -370,7 +344,7 @@ OPENCL_FORCE_NOT_INLINE float3 SkyLight2_Illuminate(__global const LightSource *
 	const float3 shadowRayOrig = BSDF_GetRayOrigin(bsdf, shadowRayDir);
 	Ray_Init4(shadowRay, shadowRayOrig, shadowRayDir, 0.f, shadowRayDistance, time);
 
-	return SkyLight2_ComputeRadiance(skyLight2, shadowRayDir);
+	return Sky2Light_ComputeRadiance(sky2Light, shadowRayDir);
 }
 
 //------------------------------------------------------------------------------
@@ -977,7 +951,7 @@ OPENCL_FORCE_NOT_INLINE float3 EnvLight_GetRadiance(__global const LightSource *
 					dir, directPdfA
 					LIGHTS_PARAM);
 		case TYPE_IL_SKY2:
-			return SkyLight2_GetRadiance(light,
+			return Sky2Light_GetRadiance(light,
 					bsdf,
 					dir, directPdfA
 					LIGHTS_PARAM);
@@ -1029,7 +1003,7 @@ OPENCL_FORCE_NOT_INLINE float3 Light_Illuminate(
 					shadowRay, directPdfW
 					LIGHTS_PARAM);
 		case TYPE_IL_SKY2:
-			return SkyLight2_Illuminate(
+			return Sky2Light_Illuminate(
 					light,
 					worldCenterX, worldCenterY, worldCenterZ, envRadius,
 					bsdf, time, u0, u1,

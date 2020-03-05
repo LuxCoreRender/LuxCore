@@ -459,3 +459,16 @@ void Distribution2D::SampleDiscrete(float u0, float u1, u_int uv[2], float *pdf,
 
 	*pdf = pdfs[0] * pdfs[1];
 }
+
+float Distribution2D::Pdf(float u, float v,
+		float *du, float *dv,
+		u_int *offsetU, u_int *offsetV) const {
+	const u_int ov = pMarginal->Offset(v);
+	if (offsetV)
+		*offsetV = ov;
+	if (offsetU)
+		*offsetU = pConditionalV[ov]->Offset(u);
+
+	return pConditionalV[ov]->Pdf(u, du) *
+		pMarginal->Pdf(v, dv);
+}

@@ -217,6 +217,12 @@ public:
 	bool IsCacheEnabled(const BSDF &bsdf) const;
 	const ELVCParams &GetParams() const { return params; }
 	const ELVCBvh *GetBVH() const { return cacheEntriesBVH; }
+	const u_int GetXTileCount() const { return tilesXCount; }
+	const u_int GetYTileCount() const { return tilesYCount; }
+	bool HasTileDistributions() const { return (tileDistributions.size() > 0);}
+	const luxrays::Distribution2D *GetTileDistribution(const u_int index) const {
+		return tileDistributions[index];
+	}
 
 	void Build();
 

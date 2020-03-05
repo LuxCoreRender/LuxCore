@@ -131,7 +131,7 @@ void EnvLightVisibilityCache::ParamsEvaluation() {
 				// with 1024x512 HDR image and 64x32 tiles.
 				params.map.tileWidth = Max(1u, mapWidth / (1024u / 64u));
 				params.map.tileHeight = Max(1u, mapHeight / (512u / 32u));
-				params.map.tileSampleCount = 2;
+				params.map.tileSampleCount = 8;
 				break;
 			}
 			case ELVCParams::MEDIUM: {
@@ -139,7 +139,7 @@ void EnvLightVisibilityCache::ParamsEvaluation() {
 				// with 1024x512 HDR image and 32x16 tiles.
 				params.map.tileWidth = Max(1u, mapWidth / (1024u / 32u));
 				params.map.tileHeight = Max(1u, mapHeight / (512u / 16u));
-				params.map.tileSampleCount = 4;
+				params.map.tileSampleCount = 16;
 				break;
 			}
 			case ELVCParams::HIGH: {
@@ -147,7 +147,7 @@ void EnvLightVisibilityCache::ParamsEvaluation() {
 				// with 1024x512 HDR image and 16x8 tiles.
 				params.map.tileWidth = Max(1u, mapWidth / (1024u / 16u));
 				params.map.tileHeight = Max(1u, mapHeight / (512u / 8u));
-				params.map.tileSampleCount = 6;
+				params.map.tileSampleCount = 32;
 				break;
 			}
 			default:
@@ -196,7 +196,7 @@ float EnvLightVisibilityCache::EvaluateBestRadius() {
 	SLG_LOG("EnvLightVisibilityCache evaluating best radius");
 
 	// The percentage of image plane to cover with the radius
-	const float imagePlaneRadius = .05f;
+	const float imagePlaneRadius = .075f;
 
 	// The old default radius: 15cm
 	const float defaultRadius = .15f;

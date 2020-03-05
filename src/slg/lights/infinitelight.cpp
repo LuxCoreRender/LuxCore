@@ -103,7 +103,7 @@ Spectrum InfiniteLight::GetRadiance(const Scene &scene,
 		if (!bsdf)
 			*directPdfA = 0.f;
 		else if (visibilityMapCache && visibilityMapCache->IsCacheEnabled(*bsdf)) {
-			*directPdfA =  visibilityMapCache->Pdf(*bsdf, u, v) * latLongMappingPdf;
+			*directPdfA = visibilityMapCache->Pdf(*bsdf, u, v) * latLongMappingPdf;
 		} else
 			*directPdfA = distPdf * latLongMappingPdf;
 	}

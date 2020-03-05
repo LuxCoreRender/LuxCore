@@ -220,7 +220,8 @@ OPENCL_FORCE_INLINE float Distribution1D_SampleContinuous(__global const float* 
 	return (offset + du) / count;
 }
 
-OPENCL_FORCE_INLINE uint Distribution1D_SampleDiscrete(__global const float *distribution1D, const float u, float *pdf) {
+OPENCL_FORCE_INLINE uint Distribution1D_SampleDiscreteExt(__global const float *distribution1D,
+		const float u, float *pdf, float *du) {
 	const uint count = as_uint(distribution1D[0]);
 	__global const float* restrict func = &distribution1D[1];
 	__global const float* restrict cdf = &distribution1D[1 + count];
@@ -238,10 +239,20 @@ OPENCL_FORCE_INLINE uint Distribution1D_SampleDiscrete(__global const float *dis
 	__global const float* restrict ptr = std_upper_bound(cdf, cdf + count + 1, u);
 	const uint offset = ptr - cdf - 1;
 
+	// Compute offset along CDF segment
+	if (du)
+		*du = (u - cdf[offset]) /
+			(cdf[offset + 1] - cdf[offset]);
+
 	// Compute PDF for sampled offset
 	*pdf = func[offset] / count;
 
 	return offset;
+}
+
+OPENCL_FORCE_INLINE uint Distribution1D_SampleDiscrete(__global const float *distribution1D,
+		const float u, float *pdf) {
+	return Distribution1D_SampleDiscreteExt(distribution1D, u, pdf, NULL);
 }
 
 OPENCL_FORCE_INLINE uint Distribution1D_Offset(__global const float* restrict distribution1D, const float u) {
@@ -257,11 +268,18 @@ OPENCL_FORCE_INLINE float Distribution1D_Pdf_UINT(__global const float* restrict
 	return func[offset] / count;
 }
 
-OPENCL_FORCE_INLINE float Distribution1D_Pdf_FLOAT(__global const float* restrict distribution1D, const float u) {
+OPENCL_FORCE_INLINE float Distribution1D_Pdf_FLOAT(__global const float* restrict distribution1D,
+		const float u, float *du) {
 	const uint count = as_uint(distribution1D[0]);
 	__global const float* restrict func = &distribution1D[1];
+	__global const float* restrict cdf = &distribution1D[1 + count];
+	
+	const uint offset = Distribution1D_Offset(distribution1D, u);
 
-	return func[Distribution1D_Offset(distribution1D, u)];
+	if (du)
+		*du = u * count - cdf[offset];
+	
+	return func[offset];
 }
 
 //------------------------------------------------------------------------------
@@ -289,7 +307,10 @@ OPENCL_FORCE_INLINE void Distribution2D_SampleContinuous(__global const float* r
 	*pdf = pdf0 * pdf1;
 }
 
-OPENCL_FORCE_INLINE float Distribution2D_Pdf(__global const float* restrict distribution2D, const float u0, const float u1) {
+OPENCL_FORCE_INLINE float Distribution2D_PdfExt(__global const float* restrict distribution2D,
+		const float u, const float v,
+		float *du, float *dv,
+		uint *offsetU, uint *offsetV) {
 	const uint width = as_uint(distribution2D[0]);
 	const uint height = as_uint(distribution2D[1]);
 	__global const float* restrict marginal = &distribution2D[2];
@@ -298,8 +319,38 @@ OPENCL_FORCE_INLINE float Distribution2D_Pdf(__global const float* restrict dist
 	// size of Distribution1D: size of counts + size of func + size of cdf
 	const uint conditionalSize = 1 + width + width + 1;
 
-	const uint index = Distribution1D_Offset(marginal, u1);
+	const uint index = Distribution1D_Offset(marginal, v);
 	__global const float *conditional = &distribution2D[2 + marginalSize + index * conditionalSize];
 
-	return Distribution1D_Pdf_FLOAT(conditional, u0) * Distribution1D_Pdf_FLOAT(marginal, u1);
+	if (offsetV)
+		*offsetV = index;
+	if (offsetU)
+		*offsetU = Distribution1D_Offset(conditional, u);
+	
+	return Distribution1D_Pdf_FLOAT(conditional, u, du) * Distribution1D_Pdf_FLOAT(marginal, v, dv);
+}
+
+OPENCL_FORCE_INLINE float Distribution2D_Pdf(__global const float* restrict distribution2D,
+		const float u, const float v) {
+	return Distribution2D_PdfExt(distribution2D, u, v, NULL, NULL, NULL, NULL);
+}
+
+OPENCL_FORCE_INLINE void Distribution2D_SampleDiscrete(__global const float* restrict distribution2D,
+		float u0, float u1, uint uv[2], float *pdf,
+		float *du0, float *du1) {
+	const uint width = as_uint(distribution2D[0]);
+	const uint height = as_uint(distribution2D[1]);
+	__global const float* restrict marginal = &distribution2D[2];
+	// size of Distribution1D: size of counts + size of func + size of cdf
+	const uint marginalSize = 1 + height + height + 1;
+	// size of Distribution1D: size of counts + size of func + size of cdf
+	const uint conditionalSize = 1 + width + width + 1;
+
+	float pdfs[2];
+	uv[1] = Distribution1D_SampleDiscreteExt(marginal, u1, &pdfs[1], du1);
+	__global const float *conditional = &distribution2D[2 + marginalSize + uv[1] * conditionalSize];
+
+	uv[0] = Distribution1D_SampleDiscreteExt(conditional, u0, &pdfs[0], du0);
+
+	*pdf = pdfs[0] * pdfs[1];
 }

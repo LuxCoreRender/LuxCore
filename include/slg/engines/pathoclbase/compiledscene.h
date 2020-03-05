@@ -92,9 +92,11 @@ public:
 	float dlscRadius2, dlscNormalCosAngle;
 	// EnvLightVisibilityCache related data
 	std::vector<slg::ocl::ELVCacheEntry> elvcAllEntries;
-	std::vector<float> elvcDistributions; 
+	std::vector<float> elvcDistributions;
+	std::vector<u_int> elvcTileDistributionOffsets; 
 	std::vector<slg::ocl::IndexBVHArrayNode> elvcBVHArrayNode;
 	float elvcRadius2, elvcNormalCosAngle;
+	u_int elvcTilesXCount, elvcTilesYCount;
 	
 	// Compiled Materials (and Volumes)
 	std::vector<slg::ocl::Material> mats;

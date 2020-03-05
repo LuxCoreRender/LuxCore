@@ -201,6 +201,7 @@ protected:
 	cl::Buffer *dlscBVHNodesBuff;
 	cl::Buffer *elvcAllEntriesBuff;
 	cl::Buffer *elvcDistributionsBuff;
+	cl::Buffer *elvcTileDistributionOffsetsBuff;
 	cl::Buffer *elvcBVHNodesBuff;
 	cl::Buffer *envLightDistributionsBuff;
 	cl::Buffer *vertsBuff;

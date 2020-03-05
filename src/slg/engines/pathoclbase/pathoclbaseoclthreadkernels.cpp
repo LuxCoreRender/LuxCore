@@ -462,9 +462,12 @@ void PathOCLBaseOCLRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePa
 	advancePathsKernel->setArg(argIndex++, cscene->dlscNormalCosAngle);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), elvcAllEntriesBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), elvcDistributionsBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), elvcTileDistributionOffsetsBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), elvcBVHNodesBuff);
 	advancePathsKernel->setArg(argIndex++, cscene->elvcRadius2);
 	advancePathsKernel->setArg(argIndex++, cscene->elvcNormalCosAngle);
+	advancePathsKernel->setArg(argIndex++, cscene->elvcTilesXCount);
+	advancePathsKernel->setArg(argIndex++, cscene->elvcTilesYCount);
 
 	// Images
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), imageMapDescsBuff);

@@ -201,11 +201,17 @@ void PathOCLBaseOCLRenderThread::InitLights() {
 			cscene->elvcAllEntries.size() * sizeof(slg::ocl::ELVCacheEntry), "ELVC all entries");
 		AllocOCLBufferRO(&elvcDistributionsBuff, &cscene->elvcDistributions[0],
 			cscene->elvcDistributions.size() * sizeof(float), "ELVC distributions table");
+		if (cscene->elvcTileDistributionOffsets.size() > 0) {
+			AllocOCLBufferRO(&elvcTileDistributionOffsetsBuff, &cscene->elvcTileDistributionOffsets[0],
+					cscene->elvcTileDistributionOffsets.size() * sizeof(u_int), "ELVC tile distribution offsets table");
+		} else
+			FreeOCLBuffer(&elvcTileDistributionOffsetsBuff);
 		AllocOCLBufferRO(&elvcBVHNodesBuff, &cscene->elvcBVHArrayNode[0],
 			cscene->elvcBVHArrayNode.size() * sizeof(slg::ocl::IndexBVHArrayNode), "ELVC BVH nodes");
 	} else {
 		FreeOCLBuffer(&elvcAllEntriesBuff);
 		FreeOCLBuffer(&elvcDistributionsBuff);
+		FreeOCLBuffer(&elvcTileDistributionOffsetsBuff);
 		FreeOCLBuffer(&elvcBVHNodesBuff);
 	}
 }

@@ -492,9 +492,12 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 		, const float dlscNormalCosAngle \
 		, __global const ELVCacheEntry* restrict elvcAllEntries \
 		, __global const float* restrict elvcDistributions \
+		, __global const uint* restrict elvcTileDistributionOffsets \
 		, __global const IndexBVHArrayNode* restrict elvcBVHNodes \
 		, const float elvcRadius2 \
 		, const float elvcNormalCosAngle \
+		, const uint elvcTilesXCount \
+		, const uint elvcTilesYCount \
 		/* Images */ \
 		KERNEL_ARGS_IMAGEMAPS_PAGES \
 		KERNEL_ARGS_PHOTONGI
