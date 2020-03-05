@@ -125,33 +125,24 @@ EnvLightVisibilityCache::EnvLightVisibilityCache(const Scene *scn, const EnvLigh
 void EnvLightVisibilityCache::ParamsEvaluation() {
 	if ((params.map.tileWidth == 0) || (params.map.tileHeight == 0) ||
 			(params.map.tileSampleCount == 0)) {
-		switch (params.map.quality) {
-			case ELVCParams::LOW: {
-				// Automatically set the tile size like if we were rendering
-				// with 1024x512 HDR image and 64x32 tiles.
-				params.map.tileWidth = Max(1u, mapWidth / (1024u / 64u));
-				params.map.tileHeight = Max(1u, mapHeight / (512u / 32u));
-				params.map.tileSampleCount = 8;
-				break;
-			}
-			case ELVCParams::MEDIUM: {
-				// Automatically set the tile size like if we were rendering
-				// with 1024x512 HDR image and 32x16 tiles.
-				params.map.tileWidth = Max(1u, mapWidth / (1024u / 32u));
-				params.map.tileHeight = Max(1u, mapHeight / (512u / 16u));
-				params.map.tileSampleCount = 16;
-				break;
-			}
-			case ELVCParams::HIGH: {
-				// Automatically set the tile size like if we were rendering
-				// with 1024x512 HDR image and 16x8 tiles.
-				params.map.tileWidth = Max(1u, mapWidth / (1024u / 16u));
-				params.map.tileHeight = Max(1u, mapHeight / (512u / 8u));
-				params.map.tileSampleCount = 32;
-				break;
-			}
-			default:
-				throw runtime_error("Unknown quality type in EnvLightVisibilityCache::ParamsEvaluation(): " + ToString(params.map.quality));
+		if (params.map.quality < .33f) {
+			// Automatically set the tile size like if we were rendering
+			// with 1024x512 HDR image and 64x32 tiles.
+			params.map.tileWidth = Max(1u, mapWidth / (1024u / 64u));
+			params.map.tileHeight = Max(1u, mapHeight / (512u / 32u));
+			params.map.tileSampleCount = Lerp(params.map.quality / .33f, 4.f, 12.f);
+		} else if (params.map.quality < .66f) {
+			// Automatically set the tile size like if we were rendering
+			// with 1024x512 HDR image and 32x16 tiles.
+			params.map.tileWidth = Max(1u, mapWidth / (1024u / 32u));
+			params.map.tileHeight = Max(1u, mapHeight / (512u / 16u));
+			params.map.tileSampleCount = Lerp((params.map.quality - .33f) / .33f, 12.f, 22.f);
+		} else {
+			// Automatically set the tile size like if we were rendering
+			// with 1024x512 HDR image and 16x8 tiles.
+			params.map.tileWidth = Max(1u, mapWidth / (1024u / 16u));
+			params.map.tileHeight = Max(1u, mapHeight / (512u / 8u));
+			params.map.tileSampleCount = Lerp((params.map.quality - .66f) / .33f, 22.f, 32.f);
 		}
 	}
 
@@ -826,16 +817,7 @@ float EnvLightVisibilityCache::Pdf(const BSDF &bsdf, const float u, const float 
 ELVCParams EnvLightVisibilityCache::Properties2Params(const string &prefix, const Properties props) {
 	ELVCParams params;
 
-	const string mapQualityStr = props.Get(Property(prefix + ".visibilitymapcache.map.quality")("medium")).Get<string>();
-	if (mapQualityStr == "low")
-		params.map.quality = ELVCParams::LOW;
-	else if (mapQualityStr == "medium")
-		params.map.quality = ELVCParams::MEDIUM;
-	else if (mapQualityStr == "high")
-		params.map.quality = ELVCParams::HIGH;
-	else
-		throw runtime_error("Unknown ELVCParams quality in EnvLightVisibilityCache::Properties2Params(): " + mapQualityStr);
-		
+	params.map.quality = Clamp(props.Get(Property(prefix + ".visibilitymapcache.map.quality")(.5f)).Get<float>(), 0.f, 1.f);
 	params.map.tileWidth = props.Get(Property(prefix + ".visibilitymapcache.map.tilewidth")(0)).Get<u_int>();
 	params.map.tileHeight = props.Get(Property(prefix + ".visibilitymapcache.map.tileheight")(0)).Get<u_int>();
 	params.map.tileSampleCount = Max(1u, props.Get(Property(prefix + ".visibilitymapcache.map.tilesamplecount")(0)).Get<u_int>());
@@ -859,22 +841,9 @@ ELVCParams EnvLightVisibilityCache::Properties2Params(const string &prefix, cons
 
 Properties EnvLightVisibilityCache::Params2Props(const string &prefix, const ELVCParams &params) {
 	Properties props;
-	
-	switch (params.map.quality) {
-		case ELVCParams::LOW:
-			props << Property(prefix + ".visibilitymapcache.map.quality")("low");
-			break;
-		case ELVCParams::MEDIUM:
-			props << Property(prefix + ".visibilitymapcache.map.quality")("medium");
-			break;
-		case ELVCParams::HIGH:
-			props << Property(prefix + ".visibilitymapcache.map.quality")("high");
-			break;
-		default:
-			throw runtime_error("Unknown ELVCParams quality in EnvLightVisibilityCache::Params2Props(): " + ToString(params.map.quality));
-	}
 
 	props <<
+			Property(prefix + ".visibilitymapcache.map.quality")(params.map.quality) <<
 			Property(prefix + ".visibilitymapcache.map.tilewidth")(params.map.tileWidth) <<
 			Property(prefix + ".visibilitymapcache.map.tileheight")(params.map.tileHeight) <<
 			Property(prefix + ".visibilitymapcache.map.tilesamplecount")(params.map.tileSampleCount) <<

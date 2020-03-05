@@ -142,12 +142,8 @@ private:
 };
 
 struct ELVCParams {
-	typedef enum {
-		LOW, MEDIUM, HIGH
-	} QualityType;
-	
 	ELVCParams() {
-		map.quality = MEDIUM;
+		map.quality = 0.5;
 		map.tileWidth = 0;
 		map.tileHeight = 0;
 		map.tileSampleCount = 0;
@@ -164,7 +160,7 @@ struct ELVCParams {
 	}
 
 	struct {
-		QualityType quality;
+		float quality; // A value between 0.0 and 1.0
 		u_int tileWidth, tileHeight;
 		u_int tileSampleCount;
 
@@ -272,7 +268,7 @@ private:
 
 BOOST_CLASS_VERSION(slg::ELVCacheEntry, 1)
 BOOST_CLASS_VERSION(slg::ELVCBvh, 1)
-BOOST_CLASS_VERSION(slg::ELVCParams, 3)
+BOOST_CLASS_VERSION(slg::ELVCParams, 4)
 
 BOOST_CLASS_EXPORT_KEY(slg::ELVCacheEntry)
 BOOST_CLASS_EXPORT_KEY(slg::ELVCBvh)

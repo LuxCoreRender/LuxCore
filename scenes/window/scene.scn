@@ -32,11 +32,11 @@ scene.lights.__WORLD_BACKGROUND_LIGHT__.storage = "float"
 ##
 scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.enable = 1
 # Old parameters
-scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.map.width = 256
-scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.map.height = 128
-scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.map.samplecount = 4
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.map.width = 256
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.map.height = 128
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.map.samplecount = 4
 # New one
-scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.map.quality = medium
+scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.map.quality = 0.5
 #scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.map.tilewidth = 32
 #scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.map.tileheight = 16
 #scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.map.tilesamplecount = 8
