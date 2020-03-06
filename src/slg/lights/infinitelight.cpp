@@ -184,7 +184,7 @@ Spectrum InfiniteLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 		return Spectrum();
 
 	const Vector shadowRayDir = Normalize(lightToWorld * localDir);
-
+	
 	const Point worldCenter = scene.dataSet->GetBSphere().center;
 	const float envRadius = GetEnvRadius(scene);
 

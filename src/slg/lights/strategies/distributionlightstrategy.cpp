@@ -36,7 +36,7 @@ LightSource *DistributionLightStrategy::SampleLights(const float u,
 
 float DistributionLightStrategy::SampleLightPdf(const LightSource *light,
 		const Point &p, const Normal &n, const bool isVolume) const {
-	return lightsDistribution->Pdf(light->lightSceneIndex);
+	return lightsDistribution->PdfDiscrete(light->lightSceneIndex);
 }
 
 LightSource *DistributionLightStrategy::SampleLights(const float u,

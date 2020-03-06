@@ -18,6 +18,7 @@
 
 #include <limits>
 
+#include "luxrays/core/epsilon.h"
 #include "luxrays/core/randomgen.h"
 #include "luxrays/utils/mc.h"
 #include "luxrays/utils/mcdistribution.h"
@@ -374,8 +375,17 @@ float Distribution1D::SampleContinuous(float u, float *pdf, u_int *off) const {
 	if (off)
 		*off = offset;
 
-	// Return $x \in [0,1)$ corresponding to sample
-	return (offset + du) * invCount;
+	// Return x in [0,1) corresponding to sample
+	//
+	// Note: if du is very near to 1 than offset + du = offset + 1 and this
+	// causes a lot of problems because the Pdf((offset + du) * invCount) will be
+	// different from the Pdf returned here.
+	// So I use this Min() as work around.
+	const float result = Min((offset + du) * invCount, MachineEpsilon::PreviousFloat(((offset + 1) * invCount)));
+	
+	assert (*pdf == Pdf(result));
+
+	return result;
 }
 
 u_int Distribution1D::SampleDiscrete(float u, float *pdf, float *du) const {

@@ -218,6 +218,18 @@ OPENCL_FORCE_INLINE float Distribution1D_SampleContinuous(__global const float* 
 		*off = offset;
 
 	return (offset + du) / count;
+	
+	// Return x in [0,1) corresponding to sample
+	//
+	// Note: if du is very near to 1 than offset + du = offset + 1 and this
+	// causes a lot of problems because the Pdf((offset + du) * invCount) will be
+	// different from the Pdf returned here.
+	// So I use this Min() as work around.
+	const float result = fmin((offset + du) / count, MachineEpsilon_PreviousFloat(((offset + 1) / count)));
+	
+	assert (*pdf == Pdf(result));
+
+	return result;
 }
 
 OPENCL_FORCE_INLINE uint Distribution1D_SampleDiscreteExt(__global const float *distribution1D,
@@ -261,14 +273,14 @@ OPENCL_FORCE_INLINE uint Distribution1D_Offset(__global const float* restrict di
 	return min(count - 1, Floor2UInt(u * count));
 }
 
-OPENCL_FORCE_INLINE float Distribution1D_Pdf_UINT(__global const float* restrict distribution1D, const uint offset) {
+OPENCL_FORCE_INLINE float Distribution1D_PdfDiscrete(__global const float* restrict distribution1D, const uint offset) {
 	const uint count = as_uint(distribution1D[0]);
 	__global const float* restrict func = &distribution1D[1];
 
 	return func[offset] / count;
 }
 
-OPENCL_FORCE_INLINE float Distribution1D_Pdf_FLOAT(__global const float* restrict distribution1D,
+OPENCL_FORCE_INLINE float Distribution1D_Pdf(__global const float* restrict distribution1D,
 		const float u, float *du) {
 	const uint count = as_uint(distribution1D[0]);
 	__global const float* restrict func = &distribution1D[1];
@@ -327,7 +339,7 @@ OPENCL_FORCE_INLINE float Distribution2D_PdfExt(__global const float* restrict d
 	if (offsetU)
 		*offsetU = Distribution1D_Offset(conditional, u);
 	
-	return Distribution1D_Pdf_FLOAT(conditional, u, du) * Distribution1D_Pdf_FLOAT(marginal, v, dv);
+	return Distribution1D_Pdf(conditional, u, du) * Distribution1D_Pdf(marginal, v, dv);
 }
 
 OPENCL_FORCE_INLINE float Distribution2D_Pdf(__global const float* restrict distribution2D,

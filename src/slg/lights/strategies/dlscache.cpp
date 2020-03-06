@@ -74,7 +74,7 @@ float LightStrategyDLSCache::SampleLightPdf(const LightSource *light,
 		const Distribution1D *lightsDistribution = DLSCache.GetLightDistribution(p, n, isVolume);
 
 		if (lightsDistribution)
-			return lightsDistribution->Pdf(light->lightSceneIndex);
+			return lightsDistribution->PdfDiscrete(light->lightSceneIndex);
 		else
 			return distributionStrategy.SampleLightPdf(light, p, n, isVolume);
 	} else

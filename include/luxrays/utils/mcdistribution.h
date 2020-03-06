@@ -124,7 +124,7 @@ public:
 	 *
 	 * @return The pdf so that sum(i=0..n-1, pdf(i)) = 1
 	 */
-	float Pdf(u_int offset) const { return func[offset] * invCount; }
+	float PdfDiscrete(u_int offset) const { return func[offset] * invCount; }
 	/**
 	 * The pdf associated to a given point
 	 * 
