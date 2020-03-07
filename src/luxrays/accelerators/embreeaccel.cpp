@@ -254,7 +254,7 @@ bool EmbreeAccel::Intersect(const Ray *ray, RayHit *hit) const {
 			// A safety check in case of not enough numerical precision. Embree
 			// can return some intersection out of [mint, maxt] range for
 			// some extremely large floating point number.
-			(embreeRayHit.ray.tfar >= ray->mint)) {
+			(embreeRayHit.ray.tfar >= ray->mint) && (embreeRayHit.ray.tfar <= ray->maxt)) {
 		hit->meshIndex = (embreeRayHit.hit.instID[0] == RTC_INVALID_GEOMETRY_ID) ? embreeRayHit.hit.geomID : embreeRayHit.hit.instID[0];
 		hit->triangleIndex = embreeRayHit.hit.primID;
 
