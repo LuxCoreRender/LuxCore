@@ -61,6 +61,8 @@
 
 * OUTPUT_SWITCHER image pipeline plugin now supports MATERIAL_ID_COLOR, ALBEDO, AVG_SHADING_NORMAL and USER_IMPORTANCE too
 
+''RC1 released''
+
 ### Fixed Bugs
 
 * Fixed triangle lights back face emission when using an IES or image map profile
@@ -86,6 +88,10 @@
 * Fixed a bug in pyluxcoretools ui code causing a runtime error with PySide2 5.14.x
 * Volume .photongi.enable property is now parsed/exported and supported
 * Fixed a problem in RTPATHOCL preview phase (issue #305)
+
+''RC1 released''
+
+* Fixed a numerical precision problem on some very large scene (issue #308)
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
