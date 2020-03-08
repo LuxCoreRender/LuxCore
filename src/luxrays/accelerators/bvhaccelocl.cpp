@@ -41,10 +41,10 @@ namespace luxrays {
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
-class OpenCLBVHKernels : public OpenCLKernels {
+class OpenCLBVHKernel : public OpenCLKernel {
 public:
-	OpenCLBVHKernels(OpenCLIntersectionDevice *dev, const u_int kernelCount, const BVHAccel *bvh) :
-		OpenCLKernels(dev, kernelCount) {
+	OpenCLBVHKernel(OpenCLIntersectionDevice *dev, const BVHAccel *bvh) :
+		OpenCLKernel(dev) {
 		const Context *deviceContext = device->GetContext();
 		const string &deviceName(device->GetName());
 		cl::Context &oclContext = device->GetOpenCLContext();
@@ -216,24 +216,22 @@ public:
 			throw err;
 		}
 
-		// Setup kernels
-		for (u_int i = 0; i < kernelCount; ++i) {
-			kernels[i] = new cl::Kernel(program, "Accelerator_Intersect_RayBuffer");
+		// Setup the kernel
+		kernel = new cl::Kernel(program, "Accelerator_Intersect_RayBuffer");
 
-			if (device->GetDeviceDesc()->GetForceWorkGroupSize() > 0)
-				workGroupSize = device->GetDeviceDesc()->GetForceWorkGroupSize();
-			else {
-				kernels[i]->getWorkGroupInfo<size_t>(oclDevice,
-					CL_KERNEL_WORK_GROUP_SIZE, &workGroupSize);
-				//LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
-				//	"] BVH kernel work group size: " << workGroupSize);
-			}
-
-			// Set arguments
-			SetIntersectionKernelArgs(*(kernels[i]), 3);
+		if (device->GetDeviceDesc()->GetForceWorkGroupSize() > 0)
+			workGroupSize = device->GetDeviceDesc()->GetForceWorkGroupSize();
+		else {
+			kernel->getWorkGroupInfo<size_t>(oclDevice,
+				CL_KERNEL_WORK_GROUP_SIZE, &workGroupSize);
+			//LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
+			//	"] BVH kernel work group size: " << workGroupSize);
 		}
+
+		// Set arguments
+		SetIntersectionKernelArgs(*kernel, 3);
 	}
-	virtual ~OpenCLBVHKernels() {
+	virtual ~OpenCLBVHKernel() {
 		for (u_int i = 0; i < vertsBuffs.size(); ++i)
 			device->FreeBuffer(&vertsBuffs[i]);
 		for (u_int i = 0; i < nodeBuffs.size(); ++i)
@@ -241,7 +239,7 @@ public:
 	}
 
 	virtual void Update(const DataSet *newDataSet) { assert(false); }
-	virtual void EnqueueRayBuffer(cl::CommandQueue &oclQueue, const u_int kernelIndex,
+	virtual void EnqueueRayBuffer(cl::CommandQueue &oclQueue,
 		cl::Buffer &rBuff, cl::Buffer &hBuff, const u_int rayCount,
 		const VECTOR_CLASS<cl::Event> *events, cl::Event *event);
 
@@ -252,20 +250,20 @@ public:
 	vector<cl::Buffer *> nodeBuffs;
 };
 
-void OpenCLBVHKernels::EnqueueRayBuffer(cl::CommandQueue &oclQueue, const u_int kernelIndex,
+void OpenCLBVHKernel::EnqueueRayBuffer(cl::CommandQueue &oclQueue,
 		cl::Buffer &rBuff, cl::Buffer &hBuff, const u_int rayCount,
 		const VECTOR_CLASS<cl::Event> *events, cl::Event *event) {
-	kernels[kernelIndex]->setArg(0, rBuff);
-	kernels[kernelIndex]->setArg(1, hBuff);
-	kernels[kernelIndex]->setArg(2, rayCount);
+	kernel->setArg(0, rBuff);
+	kernel->setArg(1, hBuff);
+	kernel->setArg(2, rayCount);
 
 	const u_int globalRange = RoundUp<u_int>(rayCount, workGroupSize);
-	oclQueue.enqueueNDRangeKernel(*kernels[kernelIndex], cl::NullRange,
+	oclQueue.enqueueNDRangeKernel(*kernel, cl::NullRange,
 		cl::NDRange(globalRange), cl::NDRange(workGroupSize), events,
 		event);
 }
 
-u_int OpenCLBVHKernels::SetIntersectionKernelArgs(cl::Kernel &kernel, const u_int index) {
+u_int OpenCLBVHKernel::SetIntersectionKernelArgs(cl::Kernel &kernel, const u_int index) {
 	u_int argIndex = index;
 	for (u_int i = 0; i < vertsBuffs.size(); ++i)
 		kernel.setArg(argIndex++, *vertsBuffs[i]);
@@ -275,16 +273,14 @@ u_int OpenCLBVHKernels::SetIntersectionKernelArgs(cl::Kernel &kernel, const u_in
 	return argIndex;
 }
 
-OpenCLKernels *BVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device,
-		const u_int kernelCount) const {
-	// Setup kernels
-	return new OpenCLBVHKernels(device, kernelCount, this);
+OpenCLKernel *BVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *device) const {
+	// Setup the kernel
+	return new OpenCLBVHKernel(device, this);
 }
 
 #else
 
-OpenCLKernels *BVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device,
-		const u_int kernelCount) const {
+OpenCLKernel *BVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *device) const {
 	return NULL;
 }
 

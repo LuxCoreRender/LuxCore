@@ -36,7 +36,7 @@ OpenCLIntersectionDevice::OpenCLIntersectionDevice(
 		OpenCLDeviceDescription *desc,
 		const size_t index) :
 		HardwareIntersectionDevice(context, desc->type, index),
-		deviceDesc(desc), oclQueue(nullptr), kernels(nullptr) {
+		deviceDesc(desc), oclQueue(nullptr), kernel(nullptr) {
 	deviceName = (desc->GetName() + " Intersect").c_str();
 
 	// Check if OpenCL 1.1 is available
@@ -67,7 +67,7 @@ void OpenCLIntersectionDevice::SetDataSet(DataSet *newDataSet) {
 }
 
 void OpenCLIntersectionDevice::Update() {
-	kernels->Update(dataSet);
+	kernel->Update(dataSet);
 }
 
 void OpenCLIntersectionDevice::Start() {
@@ -77,15 +77,15 @@ void OpenCLIntersectionDevice::Start() {
 	cl::Context &oclContext = deviceDesc->GetOCLContext();
 	oclQueue = new cl::CommandQueue(oclContext, deviceDesc->GetOCLDevice());
 
-	// Compile all required kernels
-	kernels = accel->NewOpenCLKernels(this, 1);
+	// Compile required kernel
+	kernel = accel->NewOpenCLKernel(this);
 }
 
 void OpenCLIntersectionDevice::Stop() {
 	IntersectionDevice::Stop();
 
-	delete kernels;
-	kernels = nullptr;
+	delete kernel;
+	kernel = nullptr;
 
 	delete oclQueue;
 }

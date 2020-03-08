@@ -36,8 +36,7 @@ public:
 	virtual ~MBVHAccel();
 
 	virtual AcceleratorType GetType() const { return ACCEL_MBVH; }
-	virtual OpenCLKernels *NewOpenCLKernels(OpenCLIntersectionDevice *device,
-		const u_int kernelCount) const;
+	virtual OpenCLKernel *NewOpenCLKernel(OpenCLIntersectionDevice *device) const;
 	virtual void Init(const std::deque<const Mesh *> &meshes,
 		const u_longlong totalVertexCount,
 		const u_longlong totalTriangleCount);
@@ -48,7 +47,7 @@ public:
 	virtual bool Intersect(const Ray *ray, RayHit *hit) const;
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-	friend class OpenCLMBVHKernels;
+	friend class OpenCLMBVHKernel;
 #endif
 
 private:

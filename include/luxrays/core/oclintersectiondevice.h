@@ -33,20 +33,18 @@ namespace luxrays {
 // OpenCL devices
 //------------------------------------------------------------------------------
 
-class OpenCLKernels {
+class OpenCLKernel {
 public:
-	OpenCLKernels(OpenCLIntersectionDevice *dev, const u_int count) :
+	OpenCLKernel(OpenCLIntersectionDevice *dev) :
 		device(dev), stackSize(24) {
-		kernels.resize(count, NULL);
+		kernel = nullptr;
 	}
-	virtual ~OpenCLKernels() {
-		BOOST_FOREACH(cl::Kernel *kernel, kernels) {
-			delete kernel;
-		}
+	virtual ~OpenCLKernel() {
+		delete kernel;
 	}
 
 	virtual void Update(const DataSet *newDataSet) = 0;
-	virtual void EnqueueRayBuffer(cl::CommandQueue &oclQueue, const u_int kernelIndex,
+	virtual void EnqueueRayBuffer(cl::CommandQueue &oclQueue,
 		cl::Buffer &rBuff, cl::Buffer &hBuff, const unsigned int rayCount,
 		const VECTOR_CLASS<cl::Event> *events, cl::Event *event) = 0;
 
@@ -59,7 +57,7 @@ protected:
 	std::string intersectionKernelSource;
 
 	OpenCLIntersectionDevice *device;
-	std::vector<cl::Kernel *> kernels;
+	cl::Kernel *kernel;
 	size_t workGroupSize;
 	size_t stackSize;
 };
@@ -92,14 +90,14 @@ public:
 		const unsigned int rayCount,
 		const VECTOR_CLASS<cl::Event> *events, cl::Event *event) {
 		// Enqueue the intersection kernel
-		kernels->EnqueueRayBuffer(*oclQueue, 0, rBuff, hBuff, rayCount, events, event);
+		kernel->EnqueueRayBuffer(*oclQueue, rBuff, hBuff, rayCount, events, event);
 		statsTotalDataParallelRayCount += rayCount;
 	}
 
 	// To compile the this device intersection kernel inside application kernel
-	const std::string &GetIntersectionKernelSource() { return kernels->GetIntersectionKernelSource(); }
-	u_int SetIntersectionKernelArgs(cl::Kernel &kernel, const u_int argIndex) {
-		return kernels->SetIntersectionKernelArgs(kernel, argIndex);
+	const std::string &GetIntersectionKernelSource() { return kernel->GetIntersectionKernelSource(); }
+	u_int SetIntersectionKernelArgs(cl::Kernel &oclKernel, const u_int argIndex) {
+		return kernel->SetIntersectionKernelArgs(oclKernel, argIndex);
 	}
 
 	//--------------------------------------------------------------------------
@@ -124,7 +122,7 @@ private:
 
 	cl::CommandQueue *oclQueue;
 
-	OpenCLKernels *kernels;
+	OpenCLKernel *kernel;
 };
 
 }
