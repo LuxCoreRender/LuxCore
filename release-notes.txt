@@ -7,6 +7,7 @@
 * LuxCore API KernelCacheFill() is now available for Python
 * New 2-levels Env. Light Visibility Cache (ELVC)
 * Added the support for a new ".sharpness" (default value 0.1, range [0.0, 1.0]) Intel OIDN parameter to blend original and denoised output
+* Removed LuxRays support for virtual devices and hybrid rendering (old LuxRender GPU doing ray intersections and CPU everything else)
 
 ### Fixed Bugs
 

@@ -74,8 +74,6 @@ PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg,
 			intersectionDevices.push_back(devs[i]);
 
 			OpenCLIntersectionDevice *oclIntersectionDevice = (OpenCLIntersectionDevice *)(devs[i]);
-			// Disable the support for hybrid rendering in order to not waste resources
-			oclIntersectionDevice->SetDataParallelSupport(false);
 
 			// Check if OpenCL 1.1 is available
 			SLG_LOG("  Device OpenCL version: " << oclIntersectionDevice->GetDeviceDesc()->GetOpenCLVersion());
@@ -93,12 +91,8 @@ PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg,
 
 	SLG_LOG("Native devices used: " << nativeRenderThreadCount);
 	for (size_t i = 0; i < devs.size(); ++i) {
-		if (devs[i]->GetType() & DEVICE_TYPE_NATIVE_THREAD) {
+		if (devs[i]->GetType() & DEVICE_TYPE_NATIVE_THREAD)
 			intersectionDevices.push_back(devs[i]);
-
-			// Disable the support for hybrid rendering in order to not waste resources
-			devs[i]->SetDataParallelSupport(false);
-		}
 	}
 	
 	//--------------------------------------------------------------------------

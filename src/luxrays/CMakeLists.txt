@@ -183,7 +183,6 @@ set(LUXRAYS_SRCS
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/geometry/transform.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/idevices/openclidevice.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/idevices/nativeidevice.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/idevices/virtualidevice.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/utils/mc.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/utils/ocl.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/utils/safesave.cpp

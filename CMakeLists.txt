@@ -179,7 +179,6 @@ if(NOT APPLE OR OSX_BUILD_DEMOS)
 
 	if (NOT WIN32 OR NOT BUILD_LUXCORE_DLL)
 		# Internal tests can not be compiled on WIN32 with DLL enabled
-		add_subdirectory(tests/benchsimple)
 		add_subdirectory(tests/luxcoreimplserializationdemo)
 	endif()
 endif()

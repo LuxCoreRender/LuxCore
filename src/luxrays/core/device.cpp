@@ -101,8 +101,6 @@ std::string DeviceDescription::GetDeviceType(const DeviceType type)
 			return "OPENCL_GPU";
 		case DEVICE_TYPE_OPENCL_UNKNOWN:
 			return "OPENCL_UNKNOWN";
-		case DEVICE_TYPE_VIRTUAL:
-			return "VIRTUAL";
 		default:
 			return "UNKNOWN";
 	}
@@ -125,6 +123,10 @@ Device::~Device() {
 void Device::Start() {
 	assert (!started);
 	started = true;
+}
+
+void Device::Interrupt() {
+	assert (started);
 }
 
 void Device::Stop() {
@@ -254,11 +256,12 @@ cl::Context &OpenCLDeviceDescription::GetOCLContext() const {
 
 IntersectionDevice::IntersectionDevice(const Context *context,
 	const DeviceType type, const size_t index) :
-	Device(context, type, index), dataSet(NULL), queueCount(1), bufferCount(3),
-	dataParallelSupport(true) {
+	Device(context, type, index), dataSet(NULL) {
 }
 
 IntersectionDevice::~IntersectionDevice() {
+	if (started)
+		Stop();
 }
 
 void IntersectionDevice::SetDataSet(DataSet *newDataSet) {
@@ -275,15 +278,6 @@ void IntersectionDevice::Start() {
 	statsStartTime = WallClockTime();
 	statsTotalSerialRayCount = 0.0;
 	statsTotalDataParallelRayCount = 0.0;
-	statsDeviceIdleTime = 0.0;
-	statsDeviceTotalTime = 0.0;
-}
-
-void IntersectionDevice::SetQueueCount(const u_int count) {
-	assert (!started);
-	assert (count >= 1);
-
-	queueCount = count;
 }
 
 }

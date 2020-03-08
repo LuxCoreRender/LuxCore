@@ -96,9 +96,6 @@ void Film::CreateOCLContext() {
 		oclIntersectionDevice = (OpenCLIntersectionDevice *)devs[0];
 		SLG_LOG("Film OpenCL Device used: " << oclIntersectionDevice->GetName());
 
-		// Disable the support for hybrid rendering
-		oclIntersectionDevice->SetDataParallelSupport(false);
-
 		// Check if OpenCL 1.1 is available
 		SLG_LOG("  Device OpenCL version: " << oclIntersectionDevice->GetDeviceDesc()->GetOpenCLVersion());
 		if (!oclIntersectionDevice->GetDeviceDesc()->IsOpenCL_1_1()) {

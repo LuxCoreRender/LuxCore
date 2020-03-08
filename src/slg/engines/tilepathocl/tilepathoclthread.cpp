@@ -75,6 +75,7 @@ void TilePathOCLRenderThread::UpdateSamplerData(const TileWork &tileWork) {
 				buffer[i].rng1 = rndGen.floatValue();
 			}
 
+			// TODO: remove the forced synchronization (the CL_TRUE)
 			oclQueue.enqueueWriteBuffer(*samplesBuff, CL_TRUE, 0,
 					sizeof(slg::ocl::TilePathSample) * buffer.size(), &buffer[0]);
 			break;
@@ -97,6 +98,7 @@ void TilePathOCLRenderThread::UpdateSamplerData(const TileWork &tileWork) {
 	sharedData.tilePass =  tileWork.passToRender;
 	sharedData.aaSamples =  engine->aaSamples;
 
+	// TODO: remove the forced synchronization (the CL_TRUE)
 	oclQueue.enqueueWriteBuffer(*samplerSharedDataBuff, CL_TRUE, 0, sizeof(slg::ocl::TilePathSamplerSharedData), &sharedData);
 }
 
@@ -138,7 +140,6 @@ void TilePathOCLRenderThread::RenderTileWork(const TileWork &tileWork,
 	const u_int worstCaseIterationCount = (engine->pathTracer.maxPathDepth.depth == 1) ? 2 : (engine->pathTracer.maxPathDepth.depth * 2 - 1);
 	for (u_int i = 0; i < worstCaseIterationCount; ++i) {
 		// Trace rays
-
 		intersectionDevice->EnqueueTraceRayBuffer(*raysBuff,
 				*(hitsBuff), engine->taskCount, NULL, NULL);
 

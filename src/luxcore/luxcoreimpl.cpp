@@ -22,7 +22,6 @@
 #include <boost/thread/mutex.hpp>
 
 #include "luxrays/core/intersectiondevice.h"
-#include "luxrays/core/virtualdevice.h"
 #include "luxrays/utils/fileext.h"
 #include "luxrays/utils/serializationutils.h"
 #include "luxrays/utils/safesave.h"
@@ -1095,21 +1094,10 @@ void RenderSessionImpl::UpdateStats() {
 	// Intersection devices statistics
 	const vector<IntersectionDevice *> &idevices = renderSession->renderEngine->GetIntersectionDevices();
 
-	// Replace all virtual devices with real
-	vector<IntersectionDevice *> realDevices;
-	for (size_t i = 0; i < idevices.size(); ++i) {
-		VirtualIntersectionDevice *vdev = dynamic_cast<VirtualIntersectionDevice *>(idevices[i]);
-		if (vdev) {
-			const vector<IntersectionDevice *> &realDevs = vdev->GetRealDevices();
-			realDevices.insert(realDevices.end(), realDevs.begin(), realDevs.end());
-		} else
-			realDevices.push_back(idevices[i]);
-	}
-
 	boost::unordered_map<string, unsigned int> devCounters;
 	Property devicesNames("stats.renderengine.devices");
 	double totalPerf = 0.0;
-	BOOST_FOREACH(IntersectionDevice *dev, realDevices) {
+	BOOST_FOREACH(IntersectionDevice *dev, idevices) {
 		const string &devName = dev->GetName();
 
 		// Append a device index for the case where the same device is used multiple times

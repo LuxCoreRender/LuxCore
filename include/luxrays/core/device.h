@@ -37,12 +37,10 @@ typedef enum {
 	DEVICE_TYPE_OPENCL_CPU = 1 << 2,
 	DEVICE_TYPE_OPENCL_GPU = 1 << 3,
 	DEVICE_TYPE_OPENCL_UNKNOWN = 1 << 4,
-	DEVICE_TYPE_VIRTUAL = 1 << 5,
 	DEVICE_TYPE_OPENCL_ALL = DEVICE_TYPE_OPENCL_DEFAULT |
 		DEVICE_TYPE_OPENCL_CPU | DEVICE_TYPE_OPENCL_GPU |
 		DEVICE_TYPE_OPENCL_UNKNOWN,
-	DEVICE_TYPE_ALL = DEVICE_TYPE_NATIVE_THREAD | DEVICE_TYPE_OPENCL_ALL |
-		DEVICE_TYPE_VIRTUAL
+	DEVICE_TYPE_ALL = DEVICE_TYPE_NATIVE_THREAD | DEVICE_TYPE_OPENCL_ALL
 } DeviceType;
 
 class DeviceDescription {
@@ -82,15 +80,13 @@ public:
 	void FreeMemory(size_t s) const { usedMemory -= s; }
 
 	friend class Context;
-	friend class VirtualM2OHardwareIntersectionDevice;
-	friend class VirtualM2MHardwareIntersectionDevice;
 
 protected:
 	Device(const Context *context, const DeviceType type, const size_t index);
 	virtual ~Device();
 
 	virtual void Start();
-	virtual void Interrupt() = 0;
+	virtual void Interrupt();
 	virtual void Stop();
 
 	const Context *deviceContext;

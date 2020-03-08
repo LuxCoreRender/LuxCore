@@ -28,7 +28,6 @@
 #else
 #include "luxrays/core/oclintersectiondevice.h"
 #endif
-#include "luxrays/core/virtualdevice.h"
 
 using namespace luxrays;
 
@@ -213,16 +212,4 @@ std::vector<IntersectionDevice *> Context::AddIntersectionDevices(std::vector<De
 		idevices.push_back(newDevices[i]);
 
 	return newDevices;
-}
-
-std::vector<IntersectionDevice *> Context::AddVirtualIntersectionDevice(
-	std::vector<DeviceDescription *> &deviceDescs) {
-	assert (!started);
-	assert (deviceDescs.size() > 0);
-
-	std::vector<IntersectionDevice *> realDevices = CreateIntersectionDevices(deviceDescs, idevices.size());
-	VirtualIntersectionDevice *virtualDevice = new VirtualIntersectionDevice(realDevices, idevices.size());
-	idevices.push_back(virtualDevice);
-
-	return realDevices;
 }

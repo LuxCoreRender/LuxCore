@@ -115,11 +115,6 @@ CPURenderEngine::CPURenderEngine(const RenderConfig *cfg) : RenderEngine(cfg) {
 	selectedDeviceDescs.resize(renderThreadCount, devDescs[0]);
 	intersectionDevices = ctx->AddIntersectionDevices(selectedDeviceDescs);
 
-	for (size_t i = 0; i < intersectionDevices.size(); ++i) {
-		// Disable the support for hybrid rendering in order to not waste resources
-		intersectionDevices[i]->SetDataParallelSupport(false);
-	}
-
 	//--------------------------------------------------------------------------
 	// Setup render threads array
 	//--------------------------------------------------------------------------
