@@ -24,7 +24,7 @@
 
 #include <boost/unordered_map.hpp>
 
-#include "luxrays/core/oclintersectiondevice.h"
+#include "luxrays/idevices/oclidevice.h"
 #include "slg/imagemap/imagemap.h"
 #include "slg/core/sdl.h"
 

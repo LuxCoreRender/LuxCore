@@ -16,57 +16,32 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_PREMULTIPLY_PLUGIN_H
-#define	_SLG_PREMULTIPLY_PLUGIN_H
+#include "luxrays/idevices/nativethreadidevice.h"
 
-#include <vector>
-#include <memory>
-#include <typeinfo> 
-
-#include "luxrays/luxrays.h"
-#include "luxrays/core/color/color.h"
-#include "luxrays/idevices/oclidevice.h"
-#include "luxrays/utils/serializationutils.h"
-#include "slg/film/imagepipeline/imagepipeline.h"
-
-namespace slg {
-
-class Film;
+using namespace luxrays;
 
 //------------------------------------------------------------------------------
-// Premultiply correction plugin
+// Native thread IntersectionDevice
 //------------------------------------------------------------------------------
 
-class PremultiplyAlphaPlugin : public ImagePipelinePlugin {
-public:
-	PremultiplyAlphaPlugin();
-	virtual ~PremultiplyAlphaPlugin();
+NativeThreadIntersectionDevice::NativeThreadIntersectionDevice(
+	const Context *context, const size_t devIndex) :
+	HardwareIntersectionDevice(context, DEVICE_TYPE_NATIVE_THREAD, devIndex) {
 
-	virtual ImagePipelinePlugin *Copy() const;
-
-	virtual void Apply(Film &film, const u_int index);
-
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	virtual bool CanUseOpenCL() const { return true; }
-	virtual void ApplyOCL(Film &film, const u_int index);
-#endif
-
-	friend class boost::serialization::access;
-
-private:
-	template<class Archive> void serialize(Archive &ar, const u_int version) {
-		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImagePipelinePlugin);
-	}
-
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	cl::Kernel *applyKernel;
-#endif
-};
-
+	deviceName = std::string("NativeIntersect");
 }
 
-BOOST_CLASS_VERSION(slg::PremultiplyAlphaPlugin, 1)
+NativeThreadIntersectionDevice::~NativeThreadIntersectionDevice() {
+}
 
-BOOST_CLASS_EXPORT_KEY(slg::PremultiplyAlphaPlugin)
+void NativeThreadIntersectionDevice::SetDataSet(DataSet *newDataSet) {
+	IntersectionDevice::SetDataSet(newDataSet);
 
-#endif	/*  _SLG_PREMULTIPLY_PLUGIN_H */
+	if (dataSet) {
+		const AcceleratorType accelType = dataSet->GetAcceleratorType();
+		if (accelType != ACCEL_AUTO)
+			accel = dataSet->GetAccelerator(accelType);
+		else
+			accel = dataSet->GetAccelerator(ACCEL_EMBREE);
+	}
+}

@@ -16,8 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _LUXRAYS_OPENCL_DEVICE_H
-#define	_LUXRAYS_OPENCL_DEVICE_H
+#ifndef _LUXRAYS_OCLDEVICE_H
+#define	_LUXRAYS_OCLDEVICE_H
 
 #include "luxrays/core/device.h"
 #include "luxrays/utils/oclerror.h"
@@ -134,5 +134,5 @@ private:
 
 #endif
 
-#endif	/* _LUXRAYS_OPENCL_DEVICE_H */
+#endif	/* _LUXRAYS_OCLDEVICE_H */
 

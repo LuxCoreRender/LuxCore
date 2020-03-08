@@ -20,7 +20,7 @@
 
 #include <boost/foreach.hpp>
 
-#include "luxrays/core/oclintersectiondevice.h"
+#include "luxrays/idevices/oclidevice.h"
 #include "luxrays/core/context.h"
 #include "luxrays/utils/ocl.h"
 #include "luxrays/utils/atomic.h"

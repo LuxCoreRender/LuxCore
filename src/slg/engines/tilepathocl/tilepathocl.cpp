@@ -20,7 +20,7 @@
 
 #include <boost/format.hpp>
 
-#include "luxrays/core/oclintersectiondevice.h"
+#include "luxrays/idevices/oclidevice.h"
 
 #include "slg/slg.h"
 #include "slg/engines/tilepathocl/tilepathocl.h"

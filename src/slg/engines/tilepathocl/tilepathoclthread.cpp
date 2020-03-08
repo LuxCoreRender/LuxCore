@@ -18,7 +18,7 @@
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
-#include "luxrays/core/oclintersectiondevice.h"
+#include "luxrays/idevices/oclidevice.h"
 
 #include "slg/slg.h"
 #include "slg/kernels/kernels.h"

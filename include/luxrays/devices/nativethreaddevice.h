@@ -16,32 +16,38 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "luxrays/core/intersectiondevice.h"
+#ifndef _LUXRAYS_NATIVETHREADDEVICE_H
+#define	_LUXRAYS_NATIVETHREADDEVICE_H
 
-using namespace luxrays;
+#include <string>
+#include <cstdlib>
+
+#include <boost/thread/thread.hpp>
+
+#include "luxrays/luxrays.h"
+#include "luxrays/core/dataset.h"
+#include "luxrays/core/context.h"
+#include "luxrays/core/device.h"
+#include "luxrays/utils/utils.h"
+
+namespace luxrays {
 
 //------------------------------------------------------------------------------
-// Native thread IntersectionDevice
+// Native thread devices
 //------------------------------------------------------------------------------
 
-NativeThreadIntersectionDevice::NativeThreadIntersectionDevice(
-	const Context *context, const size_t devIndex) :
-	HardwareIntersectionDevice(context, DEVICE_TYPE_NATIVE_THREAD, devIndex) {
+class NativeThreadDeviceDescription : public DeviceDescription {
+public:
+	NativeThreadDeviceDescription(const std::string deviceName) :
+		DeviceDescription(deviceName, DEVICE_TYPE_NATIVE_THREAD) { }
 
-	deviceName = std::string("NativeIntersect");
+	friend class Context;
+
+protected:
+	static void AddDeviceDescs(std::vector<DeviceDescription *> &descriptions);
+};
+
 }
 
-NativeThreadIntersectionDevice::~NativeThreadIntersectionDevice() {
-}
-
-void NativeThreadIntersectionDevice::SetDataSet(DataSet *newDataSet) {
-	IntersectionDevice::SetDataSet(newDataSet);
-
-	if (dataSet) {
-		const AcceleratorType accelType = dataSet->GetAcceleratorType();
-		if (accelType != ACCEL_AUTO)
-			accel = dataSet->GetAccelerator(accelType);
-		else
-			accel = dataSet->GetAccelerator(ACCEL_EMBREE);
-	}
-}
+#endif	/* _LUXRAYS_DEVICE_H */
+_LUXRAYS_NATIVETHREADDEVICE_H

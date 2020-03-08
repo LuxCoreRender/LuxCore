@@ -16,14 +16,14 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _LUXRAYS_OPENCL_INTERSECTIONDEVICE_H
-#define	_LUXRAYS_OPENCL_INTERSECTIONDEVICE_H
+#ifndef _LUXRAYS_OCLIDEVICE_H
+#define	_LUXRAYS_OCLIDEVICE_H
 
 #include <deque>
 #include <boost/foreach.hpp>
 
 #include "luxrays/core/intersectiondevice.h"
-#include "luxrays/core/ocldevice.h"
+#include "luxrays/devices/ocldevice.h"
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
@@ -129,5 +129,5 @@ private:
 
 #endif
 
-#endif	/* _LUXRAYS_OPENCL_INTERSECTIONDEVICE_H */
+#endif	/* _LUXRAYS_OCLIDEVICE_H */
 

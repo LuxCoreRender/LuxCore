@@ -16,57 +16,38 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_PREMULTIPLY_PLUGIN_H
-#define	_SLG_PREMULTIPLY_PLUGIN_H
+#include "luxrays/core/intersectiondevice.h"
 
-#include <vector>
-#include <memory>
-#include <typeinfo> 
-
-#include "luxrays/luxrays.h"
-#include "luxrays/core/color/color.h"
-#include "luxrays/idevices/oclidevice.h"
-#include "luxrays/utils/serializationutils.h"
-#include "slg/film/imagepipeline/imagepipeline.h"
-
-namespace slg {
-
-class Film;
+namespace luxrays {
 
 //------------------------------------------------------------------------------
-// Premultiply correction plugin
+// IntersectionDevice
 //------------------------------------------------------------------------------
 
-class PremultiplyAlphaPlugin : public ImagePipelinePlugin {
-public:
-	PremultiplyAlphaPlugin();
-	virtual ~PremultiplyAlphaPlugin();
-
-	virtual ImagePipelinePlugin *Copy() const;
-
-	virtual void Apply(Film &film, const u_int index);
-
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	virtual bool CanUseOpenCL() const { return true; }
-	virtual void ApplyOCL(Film &film, const u_int index);
-#endif
-
-	friend class boost::serialization::access;
-
-private:
-	template<class Archive> void serialize(Archive &ar, const u_int version) {
-		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImagePipelinePlugin);
-	}
-
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	cl::Kernel *applyKernel;
-#endif
-};
-
+IntersectionDevice::IntersectionDevice(const Context *context,
+	const DeviceType type, const size_t index) :
+	Device(context, type, index), dataSet(NULL) {
 }
 
-BOOST_CLASS_VERSION(slg::PremultiplyAlphaPlugin, 1)
+IntersectionDevice::~IntersectionDevice() {
+	if (started)
+		Stop();
+}
 
-BOOST_CLASS_EXPORT_KEY(slg::PremultiplyAlphaPlugin)
+void IntersectionDevice::SetDataSet(DataSet *newDataSet) {
+	assert (!started);
 
-#endif	/*  _SLG_PREMULTIPLY_PLUGIN_H */
+	dataSet = newDataSet;
+}
+
+void IntersectionDevice::Start() {
+	assert (dataSet != NULL);
+
+	Device::Start();
+
+	statsStartTime = WallClockTime();
+	statsTotalSerialRayCount = 0.0;
+	statsTotalDataParallelRayCount = 0.0;
+}
+
+}

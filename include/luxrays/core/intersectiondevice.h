@@ -82,20 +82,6 @@ protected:
 	virtual ~HardwareIntersectionDevice() { }
 };
 
-//------------------------------------------------------------------------------
-// Native thread devices
-//------------------------------------------------------------------------------
-
-class NativeThreadIntersectionDevice : public HardwareIntersectionDevice {
-public:
-	NativeThreadIntersectionDevice(const Context *context, const size_t devIndex);
-	virtual ~NativeThreadIntersectionDevice();
-
-	virtual void SetDataSet(DataSet *newDataSet);
-
-	friend class Context;
-};
-
 }
 
 #endif	/* _LUXRAYS_INTERSECTIONDEVICE_H */

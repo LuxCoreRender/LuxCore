@@ -38,7 +38,7 @@
 
 #include "luxrays/core/intersectiondevice.h"
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-#include "luxrays/core/ocldevice.h"
+#include "luxrays/devices/ocldevice.h"
 #endif
 
 using namespace std;

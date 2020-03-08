@@ -16,7 +16,6 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "luxrays/core/oclintersectiondevice.h"
 #include "luxcore/cfg.h"
 
 #include "slg/film/film.h"

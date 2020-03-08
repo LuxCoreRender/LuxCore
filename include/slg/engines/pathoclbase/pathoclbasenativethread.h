@@ -23,7 +23,7 @@
 
 #include <boost/thread/thread.hpp>
 
-#include "luxrays/core/intersectiondevice.h"
+#include "luxrays/idevices/nativethreadidevice.h"
 #include "slg/slg.h"
 
 namespace slg {

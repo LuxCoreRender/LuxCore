@@ -16,57 +16,28 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_PREMULTIPLY_PLUGIN_H
-#define	_SLG_PREMULTIPLY_PLUGIN_H
-
-#include <vector>
-#include <memory>
-#include <typeinfo> 
+#ifndef _LUXRAYS_NATIVETHREADIDEVICE_H
+#define	_LUXRAYS_NATIVETHREADIDEVICE_H
 
 #include "luxrays/luxrays.h"
-#include "luxrays/core/color/color.h"
-#include "luxrays/idevices/oclidevice.h"
-#include "luxrays/utils/serializationutils.h"
-#include "slg/film/imagepipeline/imagepipeline.h"
+#include "luxrays/core/intersectiondevice.h"
 
-namespace slg {
-
-class Film;
+namespace luxrays {
 
 //------------------------------------------------------------------------------
-// Premultiply correction plugin
+// Native thread devices
 //------------------------------------------------------------------------------
 
-class PremultiplyAlphaPlugin : public ImagePipelinePlugin {
+class NativeThreadIntersectionDevice : public HardwareIntersectionDevice {
 public:
-	PremultiplyAlphaPlugin();
-	virtual ~PremultiplyAlphaPlugin();
+	NativeThreadIntersectionDevice(const Context *context, const size_t devIndex);
+	virtual ~NativeThreadIntersectionDevice();
 
-	virtual ImagePipelinePlugin *Copy() const;
+	virtual void SetDataSet(DataSet *newDataSet);
 
-	virtual void Apply(Film &film, const u_int index);
-
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	virtual bool CanUseOpenCL() const { return true; }
-	virtual void ApplyOCL(Film &film, const u_int index);
-#endif
-
-	friend class boost::serialization::access;
-
-private:
-	template<class Archive> void serialize(Archive &ar, const u_int version) {
-		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImagePipelinePlugin);
-	}
-
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	cl::Kernel *applyKernel;
-#endif
+	friend class Context;
 };
 
 }
 
-BOOST_CLASS_VERSION(slg::PremultiplyAlphaPlugin, 1)
-
-BOOST_CLASS_EXPORT_KEY(slg::PremultiplyAlphaPlugin)
-
-#endif	/*  _SLG_PREMULTIPLY_PLUGIN_H */
+#endif	/* _LUXRAYS_NATIVETHREADIDEVICE_H */

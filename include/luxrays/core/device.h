@@ -100,21 +100,6 @@ protected:
 	mutable size_t usedMemory;
 };
 
-//------------------------------------------------------------------------------
-// Native thread devices
-//------------------------------------------------------------------------------
-
-class NativeThreadDeviceDescription : public DeviceDescription {
-public:
-	NativeThreadDeviceDescription(const std::string deviceName) :
-		DeviceDescription(deviceName, DEVICE_TYPE_NATIVE_THREAD) { }
-
-	friend class Context;
-
-protected:
-	static void AddDeviceDescs(std::vector<DeviceDescription *> &descriptions);
-};
-
 }
 
 #endif	/* _LUXRAYS_DEVICE_H */

@@ -31,7 +31,7 @@
 #include <boost/lexical_cast.hpp>
 
 #include "luxrays/core/geometry/transform.h"
-#include "luxrays/core/oclintersectiondevice.h"
+#include "luxrays/idevices/oclidevice.h"
 
 #include "slg/slg.h"
 #include "slg/engines/pathocl/pathocl.h"
