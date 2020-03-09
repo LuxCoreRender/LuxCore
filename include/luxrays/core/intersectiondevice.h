@@ -37,13 +37,13 @@ public:
 		const double statsTotalRayTime = WallClockTime() - statsStartTime;
 		return (statsTotalRayTime == 0.0) ?	1.0 : ((statsTotalSerialRayCount + statsTotalDataParallelRayCount) / statsTotalRayTime);
 	}
-	virtual double GetSerialPerformance() const {
+	virtual u_longlong GetSerialPerformance() const {
 		const double statsTotalRayTime = WallClockTime() - statsStartTime;
-		return (statsTotalRayTime == 0.0) ?	1.0 : (statsTotalSerialRayCount / statsTotalRayTime);
+		return (statsTotalRayTime == 0.0) ?	1 : (statsTotalSerialRayCount / statsTotalRayTime);
 	}
-	virtual double GetDataParallelPerformance() const {
+	virtual u_longlong GetDataParallelPerformance() const {
 		const double statsTotalRayTime = WallClockTime() - statsStartTime;
-		return (statsTotalRayTime == 0.0) ?	1.0 : (statsTotalDataParallelRayCount / statsTotalRayTime);
+		return (statsTotalRayTime == 0.0) ?	1 : (statsTotalDataParallelRayCount / statsTotalRayTime);
 	}
 	virtual void ResetPerformaceStats() {
 		statsStartTime = WallClockTime();
@@ -56,7 +56,7 @@ public:
 	//--------------------------------------------------------------------------
 
 	virtual bool TraceRay(const Ray *ray, RayHit *rayHit) {
-		statsTotalSerialRayCount += 1.0;
+		statsTotalSerialRayCount += 1;
 		return accel->Intersect(ray, rayHit);
 	}
 
@@ -71,7 +71,8 @@ protected:
 
 	DataSet *dataSet;
 	const Accelerator *accel;
-	mutable double statsStartTime, statsTotalSerialRayCount, statsTotalDataParallelRayCount;
+	double statsStartTime;
+	u_longlong statsTotalSerialRayCount, statsTotalDataParallelRayCount;
 };
 
 }

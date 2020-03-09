@@ -94,8 +94,8 @@ public:
 
 	virtual size_t GetMaxMemory() const { return 0; }
 	size_t GetUsedMemory() const { return usedMemory; }
-	void AllocMemory(size_t s) const { usedMemory += s; }
-	void FreeMemory(size_t s) const { usedMemory -= s; }
+	void AllocMemory(size_t s) { usedMemory += s; }
+	void FreeMemory(size_t s) { usedMemory -= s; }
 
 	friend class Context;
 
@@ -116,7 +116,7 @@ protected:
 
 	bool started;
 
-	mutable size_t usedMemory;
+	size_t usedMemory;
 };
 
 }
