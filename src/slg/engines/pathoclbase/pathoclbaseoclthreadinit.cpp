@@ -24,7 +24,7 @@
 #include "luxcore/cfg.h"
 #include "luxrays/core/geometry/transform.h"
 #include "luxrays/utils/ocl.h"
-#include "luxrays/idevices/oclidevice.h"
+#include "luxrays/devices/ocldevice.h"
 #include "luxrays/kernels/kernels.h"
 
 #include "slg/slg.h"

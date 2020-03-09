@@ -24,9 +24,7 @@ namespace luxrays {
 // IntersectionDevice
 //------------------------------------------------------------------------------
 
-IntersectionDevice::IntersectionDevice(const Context *context,
-	const DeviceType type, const size_t index) :
-	Device(context, type, index), dataSet(NULL) {
+IntersectionDevice::IntersectionDevice() : dataSet(NULL) {
 }
 
 IntersectionDevice::~IntersectionDevice() {

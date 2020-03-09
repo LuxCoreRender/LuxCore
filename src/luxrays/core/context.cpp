@@ -23,10 +23,10 @@
 #include <stdexcept>
 
 #include "luxrays/core/context.h"
-#include "luxrays/devices/nativethreaddevice.h"
-#include "luxrays/idevices/nativethreadidevice.h"
+#include "luxrays/devices/nativedevice.h"
+#include "luxrays/devices/nativedevice.h"
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-#include "luxrays/idevices/oclidevice.h"
+#include "luxrays/devices/ocldevice.h"
 #include "luxrays/kernels/kernels.h"
 #endif
 
@@ -39,7 +39,7 @@ Context::Context(LuxRaysDebugHandler handler, const Properties &config) : cfg(co
 	verbose = cfg.Get(Property("context.verbose")(true)).Get<bool>();
 
 	// Get the list of devices available on the platform
-	NativeThreadDeviceDescription::AddDeviceDescs(deviceDescriptions);
+	NativeDeviceDescription::AddDeviceDescs(deviceDescriptions);
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	// Platform info
@@ -184,9 +184,9 @@ std::vector<IntersectionDevice *> Context::CreateIntersectionDevices(
 
 		const DeviceType deviceType = deviceDesc[i]->GetType();
 		IntersectionDevice *device;
-		if (deviceType == DEVICE_TYPE_NATIVE_THREAD) {
+		if (deviceType == DEVICE_TYPE_NATIVE) {
 			// Nathive thread devices
-			device = new NativeThreadIntersectionDevice(this, indexOffset + i);
+			device = new NativeDevice(this, indexOffset + i);
 		}
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 		else if (deviceType & DEVICE_TYPE_OPENCL_ALL) {

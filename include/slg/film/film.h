@@ -31,7 +31,7 @@
 #include <boost/thread/mutex.hpp>
 #include <bcd/core/SamplesAccumulator.h>
 
-#include "luxrays/idevices/oclidevice.h"
+#include "luxrays/devices/ocldevice.h"
 #include "luxrays/utils/oclcache.h"
 #include "luxrays/utils/properties.h"
 #include "luxrays/utils/serializationutils.h"

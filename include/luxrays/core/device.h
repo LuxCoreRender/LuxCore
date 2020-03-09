@@ -31,8 +31,12 @@
 
 namespace luxrays {
 
+//------------------------------------------------------------------------------
+// DeviceDescription
+//------------------------------------------------------------------------------
+
 typedef enum {
-	DEVICE_TYPE_NATIVE_THREAD = 1 << 0,
+	DEVICE_TYPE_NATIVE = 1 << 0,
 	DEVICE_TYPE_OPENCL_DEFAULT = 1 << 1,
 	DEVICE_TYPE_OPENCL_CPU = 1 << 2,
 	DEVICE_TYPE_OPENCL_GPU = 1 << 3,
@@ -40,7 +44,7 @@ typedef enum {
 	DEVICE_TYPE_OPENCL_ALL = DEVICE_TYPE_OPENCL_DEFAULT |
 		DEVICE_TYPE_OPENCL_CPU | DEVICE_TYPE_OPENCL_GPU |
 		DEVICE_TYPE_OPENCL_UNKNOWN,
-	DEVICE_TYPE_ALL = DEVICE_TYPE_NATIVE_THREAD | DEVICE_TYPE_OPENCL_ALL
+	DEVICE_TYPE_ALL = DEVICE_TYPE_NATIVE | DEVICE_TYPE_OPENCL_ALL
 } DeviceType;
 
 class DeviceDescription {
@@ -66,6 +70,20 @@ protected:
 	DeviceType type;
 };
 
+//------------------------------------------------------------------------------
+// Device
+//------------------------------------------------------------------------------
+
+/*
+ * The inheritance scheme used here:
+ *
+ *            | =>            IntersectionDevice             => | NativeDevice
+ *            |
+ *  Device => | => HardwareDevice => | => IntersectionDevice => | OpenCLDevice
+ *            |
+ *            | => HardwareDevice => | => IntersectionDevice => | CudaDevice
+ */
+
 class Device {
 public:
 	const std::string &GetName() const { return deviceName; }
@@ -82,6 +100,7 @@ public:
 	friend class Context;
 
 protected:
+	Device() { }
 	Device(const Context *context, const DeviceType type, const size_t index);
 	virtual ~Device();
 

@@ -16,25 +16,33 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "luxrays/idevices/nativethreadidevice.h"
+#include "luxrays/devices/nativedevice.h"
 
-using namespace luxrays;
+namespace luxrays {
+
+//------------------------------------------------------------------------------
+// Native Device Description
+//------------------------------------------------------------------------------
+
+void NativeDeviceDescription::AddDeviceDescs(std::vector<DeviceDescription *> &descriptions) {
+	descriptions.push_back(new NativeDeviceDescription("NativeThread"));
+}
 
 //------------------------------------------------------------------------------
 // Native thread IntersectionDevice
 //------------------------------------------------------------------------------
 
-NativeThreadIntersectionDevice::NativeThreadIntersectionDevice(
+NativeDevice::NativeDevice(
 	const Context *context, const size_t devIndex) :
-	HardwareIntersectionDevice(context, DEVICE_TYPE_NATIVE_THREAD, devIndex) {
+	Device(context, DEVICE_TYPE_NATIVE, devIndex) {
 
 	deviceName = std::string("NativeIntersect");
 }
 
-NativeThreadIntersectionDevice::~NativeThreadIntersectionDevice() {
+NativeDevice::~NativeDevice() {
 }
 
-void NativeThreadIntersectionDevice::SetDataSet(DataSet *newDataSet) {
+void NativeDevice::SetDataSet(DataSet *newDataSet) {
 	IntersectionDevice::SetDataSet(newDataSet);
 
 	if (dataSet) {
@@ -44,4 +52,6 @@ void NativeThreadIntersectionDevice::SetDataSet(DataSet *newDataSet) {
 		else
 			accel = dataSet->GetAccelerator(ACCEL_EMBREE);
 	}
+}
+
 }

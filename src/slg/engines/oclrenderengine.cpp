@@ -100,7 +100,7 @@ OCLRenderEngine::OCLRenderEngine(const RenderConfig *rcfg,
 		//----------------------------------------------------------------------
 
 		vector<DeviceDescription *> nativeDescs = ctx->GetAvailableDeviceDescriptions();
-		DeviceDescription::Filter(DEVICE_TYPE_NATIVE_THREAD, nativeDescs);
+		DeviceDescription::Filter(DEVICE_TYPE_NATIVE, nativeDescs);
 		nativeDescs.resize(1);
 
 		nativeRenderThreadCount = cfg.Get(GetDefaultProps().Get("opencl.native.threads.count")).Get<u_int>();

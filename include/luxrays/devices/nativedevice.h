@@ -27,19 +27,19 @@
 #include "luxrays/luxrays.h"
 #include "luxrays/core/dataset.h"
 #include "luxrays/core/context.h"
-#include "luxrays/core/device.h"
+#include "luxrays/core/intersectiondevice.h"
 #include "luxrays/utils/utils.h"
 
 namespace luxrays {
 
 //------------------------------------------------------------------------------
-// Native thread devices
+// NativeDeviceDescription
 //------------------------------------------------------------------------------
 
-class NativeThreadDeviceDescription : public DeviceDescription {
+class NativeDeviceDescription : public DeviceDescription {
 public:
-	NativeThreadDeviceDescription(const std::string deviceName) :
-		DeviceDescription(deviceName, DEVICE_TYPE_NATIVE_THREAD) { }
+	NativeDeviceDescription(const std::string deviceName) :
+		DeviceDescription(deviceName, DEVICE_TYPE_NATIVE) { }
 
 	friend class Context;
 
@@ -47,7 +47,20 @@ protected:
 	static void AddDeviceDescs(std::vector<DeviceDescription *> &descriptions);
 };
 
+//------------------------------------------------------------------------------
+// NativeDevice
+//------------------------------------------------------------------------------
+
+class NativeDevice : public IntersectionDevice {
+public:
+	NativeDevice(const Context *context, const size_t devIndex);
+	virtual ~NativeDevice();
+
+	virtual void SetDataSet(DataSet *newDataSet);
+
+	friend class Context;
+};
+
 }
 
-#endif	/* _LUXRAYS_DEVICE_H */
-_LUXRAYS_NATIVETHREADDEVICE_H
+#endif	/* _LUXRAYS_NATIVETHREADDEVICE_H */

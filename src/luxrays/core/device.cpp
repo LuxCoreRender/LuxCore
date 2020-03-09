@@ -24,13 +24,12 @@ namespace luxrays {
 // DeviceDescription
 //------------------------------------------------------------------------------
 
-void DeviceDescription::FilterOne(std::vector<DeviceDescription *> &deviceDescriptions)
-{
+void DeviceDescription::FilterOne(std::vector<DeviceDescription *> &deviceDescriptions) {
 	int gpuIndex = -1;
 	int cpuIndex = -1;
 	for (size_t i = 0; i < deviceDescriptions.size(); ++i) {
 		if ((cpuIndex == -1) && (deviceDescriptions[i]->GetType() &
-			DEVICE_TYPE_NATIVE_THREAD))
+			DEVICE_TYPE_NATIVE))
 			cpuIndex = (int)i;
 		else if ((gpuIndex == -1) && (deviceDescriptions[i]->GetType() &
 			DEVICE_TYPE_OPENCL_GPU)) {
@@ -52,8 +51,7 @@ void DeviceDescription::FilterOne(std::vector<DeviceDescription *> &deviceDescri
 }
 
 void DeviceDescription::Filter(const DeviceType type,
-	std::vector<DeviceDescription *> &deviceDescriptions)
-{
+	std::vector<DeviceDescription *> &deviceDescriptions) {
 	if (type == DEVICE_TYPE_ALL)
 		return;
 	size_t i = 0;
@@ -66,12 +64,11 @@ void DeviceDescription::Filter(const DeviceType type,
 	}
 }
 
-std::string DeviceDescription::GetDeviceType(const DeviceType type)
-{
+std::string DeviceDescription::GetDeviceType(const DeviceType type) {
 	switch (type) {
 		case DEVICE_TYPE_ALL:
 			return "ALL";
-		case DEVICE_TYPE_NATIVE_THREAD:
+		case DEVICE_TYPE_NATIVE:
 			return "NATIVE_THREAD";
 		case DEVICE_TYPE_OPENCL_ALL:
 			return "OPENCL_ALL";
@@ -100,6 +97,8 @@ Device::Device(const Context *context, const DeviceType type, const size_t index
 }
 
 Device::~Device() {
+	if (usedMemory != 0)
+		LR_LOG(deviceContext, "WARNING: there is a memory leak in LuxRays device " << GetName() << ": " << ToString(usedMemory) << "bytes");
 }
 
 void Device::Start() {

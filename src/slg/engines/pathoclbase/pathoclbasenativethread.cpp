@@ -31,7 +31,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 PathOCLBaseNativeRenderThread::PathOCLBaseNativeRenderThread(const u_int index,
-		NativeThreadIntersectionDevice *device, PathOCLBaseRenderEngine *re) {
+		NativeDevice *device, PathOCLBaseRenderEngine *re) {
 	threadIndex = index;
 	intersectionDevice = device;
 	renderEngine = re;

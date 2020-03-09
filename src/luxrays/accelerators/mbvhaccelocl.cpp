@@ -30,9 +30,9 @@
 #include "luxrays/utils/utils.h"
 #include "luxrays/core/context.h"
 #include "luxrays/core/exttrianglemesh.h"
-#include "luxrays/idevices/nativethreadidevice.h"
+#include "luxrays/devices/nativedevice.h"
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-#include "luxrays/idevices/oclidevice.h"
+#include "luxrays/devices/ocldevice.h"
 #include "luxrays/kernels/kernels.h"
 #endif
 

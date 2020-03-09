@@ -22,7 +22,7 @@
 #include <cmath>
 #include <string>
 
-#include "luxrays/idevices/oclidevice.h"
+#include "luxrays/devices/ocldevice.h"
 #include "luxrays/utils/serializationutils.h"
 #include "slg/film/imagepipeline/plugins/tonemaps/tonemap.h"
 

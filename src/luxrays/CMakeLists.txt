@@ -182,10 +182,8 @@ set(LUXRAYS_SRCS
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/geometry/motionsystem.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/geometry/quaternion.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/geometry/transform.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/devices/nativethreaddevice.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/devices/nativedevice.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/devices/ocldevice.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/idevices/oclidevice.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/idevices/nativethreadidevice.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/utils/mc.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/utils/ocl.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/utils/safesave.cpp

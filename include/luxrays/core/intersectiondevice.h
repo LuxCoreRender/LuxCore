@@ -24,7 +24,7 @@
 
 namespace luxrays {
 
-class IntersectionDevice : public Device {
+class IntersectionDevice : virtual public Device {
 public:
 	const Accelerator *GetAccelerator() const { return accel; }
 
@@ -63,7 +63,7 @@ public:
 	friend class Context;
 
 protected:
-	IntersectionDevice(const Context *context, const DeviceType type, const size_t index);
+	IntersectionDevice();
 	virtual ~IntersectionDevice();
 
 	virtual void SetDataSet(DataSet *newDataSet);
@@ -72,14 +72,6 @@ protected:
 	DataSet *dataSet;
 	const Accelerator *accel;
 	mutable double statsStartTime, statsTotalSerialRayCount, statsTotalDataParallelRayCount;
-};
-
-class HardwareIntersectionDevice : public IntersectionDevice {
-protected:
-	HardwareIntersectionDevice(const Context *context,
-		const DeviceType type, const size_t index) :
-		IntersectionDevice(context, type, index) { }
-	virtual ~HardwareIntersectionDevice() { }
 };
 
 }
