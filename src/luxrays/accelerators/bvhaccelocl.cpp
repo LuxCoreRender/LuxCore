@@ -28,7 +28,7 @@
 #include "luxrays/accelerators/bvhaccel.h"
 #include "luxrays/utils/utils.h"
 #include "luxrays/core/context.h"
-#include "luxrays/devices/nativedevice.h"
+#include "luxrays/devices/nativeintersectiondevice.h"
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 #include "luxrays/devices/ocldevice.h"
 #include "luxrays/kernels/kernels.h"

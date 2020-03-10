@@ -53,7 +53,7 @@ PathOCLBaseOCLRenderThread *TilePathOCLRenderEngine::CreateOCLThread(const u_int
 }
 
 PathOCLBaseNativeRenderThread *TilePathOCLRenderEngine::CreateNativeThread(const u_int index,
-			luxrays::NativeDevice *device) {
+			luxrays::NativeIntersectionDevice *device) {
 	return new TilePathNativeRenderThread(index, device, this);
 }
 

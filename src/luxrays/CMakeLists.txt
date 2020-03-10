@@ -172,6 +172,7 @@ set(LUXRAYS_SRCS
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/epsilon.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/exttrianglemesh.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/exttrianglemeshfile.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/core/hardwaredevice.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/intersectiondevice.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/namedobject.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/namedobjectvector.cpp
@@ -182,7 +183,7 @@ set(LUXRAYS_SRCS
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/geometry/motionsystem.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/geometry/quaternion.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/geometry/transform.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/devices/nativedevice.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/devices/nativeintersectiondevice.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/devices/ocldevice.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/utils/mc.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/utils/ocl.cpp

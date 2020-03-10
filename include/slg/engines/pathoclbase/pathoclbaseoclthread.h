@@ -131,12 +131,6 @@ protected:
 	virtual void RenderThreadImpl() = 0;
 	virtual void GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight, u_int *filmSubRegion) = 0;
 
-	void AllocOCLBuffer(const cl_mem_flags clFlags, cl::Buffer **buff,
-			void *src, const size_t size, const std::string &desc);
-	void AllocOCLBufferRO(cl::Buffer **buff, void *src, const size_t size, const std::string &desc);
-	void AllocOCLBufferRW(cl::Buffer **buff, const size_t size, const std::string &desc);
-	void FreeOCLBuffer(cl::Buffer **buff);
-
 	virtual void StartRenderThread();
 	virtual void StopRenderThread();
 

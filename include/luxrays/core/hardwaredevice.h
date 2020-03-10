@@ -16,51 +16,59 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _LUXRAYS_NATIVETHREADDEVICE_H
-#define	_LUXRAYS_NATIVETHREADDEVICE_H
+#ifndef _LUXRAYS_HARDWAREDEVICE_H
+#define	_LUXRAYS_HARDWAREDEVICE_H
 
-#include <string>
-#include <cstdlib>
-
-#include <boost/thread/thread.hpp>
-
-#include "luxrays/luxrays.h"
-#include "luxrays/core/dataset.h"
-#include "luxrays/core/context.h"
-#include "luxrays/core/intersectiondevice.h"
-#include "luxrays/utils/utils.h"
+#include "luxrays/core/device.h"
+#include "luxrays/utils/ocl.h"
 
 namespace luxrays {
 
 //------------------------------------------------------------------------------
-// NativeDeviceDescription
+// HardwareDeviceBuffer
 //------------------------------------------------------------------------------
 
-class NativeDeviceDescription : public DeviceDescription {
+class HardwareDeviceBuffer {
 public:
-	NativeDeviceDescription(const std::string deviceName) :
-		DeviceDescription(deviceName, DEVICE_TYPE_NATIVE) { }
+	virtual ~HardwareDeviceBuffer() { }
 
-	friend class Context;
+	virtual bool IsNull() const = 0;
 
 protected:
-	static void AddDeviceDescs(std::vector<DeviceDescription *> &descriptions);
+	HardwareDeviceBuffer() { }
 };
 
 //------------------------------------------------------------------------------
-// NativeDevice
+// HardwareDevice
 //------------------------------------------------------------------------------
 
-class NativeDevice : public IntersectionDevice {
+class HardwareDevice : virtual public Device {
 public:
-	NativeDevice(const Context *context, const size_t devIndex);
-	virtual ~NativeDevice();
+	//--------------------------------------------------------------------------
+	// Kernels handling of hardware (aka GPU) only applications
+	//--------------------------------------------------------------------------
 
-	virtual void SetDataSet(DataSet *newDataSet);
+	//--------------------------------------------------------------------------
+	// Memory management for hardware (aka GPU) only applications
+	//--------------------------------------------------------------------------
 
-	friend class Context;
+	virtual size_t GetMaxMemory() const { return 0; }
+	size_t GetUsedMemory() const { return usedMemory; }
+
+	virtual void AllocBufferRO(HardwareDeviceBuffer **buff, void *src, const size_t size, const std::string &desc = "") = 0;
+	virtual void AllocBufferRW(HardwareDeviceBuffer **buff, void *src, const size_t size, const std::string &desc = "") = 0;
+	virtual void FreeBuffer(HardwareDeviceBuffer **buff) = 0;
+
+protected:
+	HardwareDevice();
+	virtual ~HardwareDevice();
+
+	void AllocMemory(const size_t s) { usedMemory += s; }
+	void FreeMemory(const size_t s) { usedMemory -= s; }
+
+	size_t usedMemory;
 };
 
 }
 
-#endif	/* _LUXRAYS_NATIVETHREADDEVICE_H */
+#endif	/* _LUXRAYS_INTERSECTIONDEVICE_H */

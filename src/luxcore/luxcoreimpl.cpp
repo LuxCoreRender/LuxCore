@@ -1110,8 +1110,15 @@ void RenderSessionImpl::UpdateStats() {
 		stats.Set(Property(prefix + ".performance.total")(dev->GetTotalPerformance()));
 		stats.Set(Property(prefix + ".performance.serial")(dev->GetSerialPerformance()));
 		stats.Set(Property(prefix + ".performance.dataparallel")(dev->GetDataParallelPerformance()));
-		stats.Set(Property(prefix + ".memory.total")((u_longlong)dev->GetMaxMemory()));
-		stats.Set(Property(prefix + ".memory.used")((u_longlong)dev->GetUsedMemory()));
+
+		const HardwareDevice *hardDev = dynamic_cast<const HardwareDevice *>(dev);
+		if (hardDev) {
+			stats.Set(Property(prefix + ".memory.total")((u_longlong)hardDev->GetMaxMemory()));
+			stats.Set(Property(prefix + ".memory.used")((u_longlong)hardDev->GetUsedMemory()));
+		} else {
+			stats.Set(Property(prefix + ".memory.total")(0ull));
+			stats.Set(Property(prefix + ".memory.used")(0ull));			
+		}
 	}
 	stats.Set(devicesNames);
 	stats.Set(Property("stats.renderengine.performance.total")(totalPerf));

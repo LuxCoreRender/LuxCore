@@ -19,6 +19,7 @@
 #ifndef _LUXRAYS_OCLDEVICE_H
 #define	_LUXRAYS_OCLDEVICE_H
 
+#include "luxrays/core/hardwaredevice.h"
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/utils/oclerror.h"
 
@@ -27,10 +28,8 @@
 namespace luxrays {
 
 //------------------------------------------------------------------------------
-// OpenCL devices
+// OpenCLDeviceDescription
 //------------------------------------------------------------------------------
-
-class OpenCLIntersectionDevice;
 
 class OpenCLDeviceDescription : public DeviceDescription {
 public:
@@ -61,7 +60,7 @@ public:
 	}
 
 	u_int GetForceWorkGroupSize() const { return forceWorkGroupSize; }
-	void SetForceWorkGroupSize(const u_int size) const { forceWorkGroupSize = size; }
+	void SetForceWorkGroupSize(const u_int size) { forceWorkGroupSize = size; }
 
 	bool HasImageSupport() const { return oclDevice.getInfo<CL_DEVICE_IMAGE_SUPPORT>() != 0 ; }
 	size_t GetImage2DMaxWidth() const { return oclDevice.getInfo<CL_DEVICE_IMAGE2D_MAX_WIDTH>(); }
@@ -69,15 +68,15 @@ public:
 
 	bool HasOCLContext() const { return (oclContext != NULL); }
 	bool HasOGLInterop() const { return enableOpenGLInterop; }
-	void EnableOGLInterop() const {
+	void EnableOGLInterop() {
 		if (!oclContext || enableOpenGLInterop)
 			enableOpenGLInterop = true;
 		else
 			throw std::runtime_error("It is not possible to enable OpenGL interoperability when the OpenCL context has already been created");
 	}
 
-	cl::Context &GetOCLContext() const;
-	cl::Device &GetOCLDevice() const { return oclDevice; }
+	cl::Context &GetOCLContext();
+	cl::Device &GetOCLDevice() { return oclDevice; }
 
 	std::string GetOpenCLVersion() const { return oclDevice.getInfo<CL_DEVICE_VERSION>(); }
 
@@ -124,14 +123,35 @@ protected:
 	size_t deviceIndex;
 
 private:
-	mutable cl::Device oclDevice;
-	mutable cl::Context *oclContext;
-	mutable bool enableOpenGLInterop;
-	mutable u_int forceWorkGroupSize;
+	cl::Device oclDevice;
+	cl::Context *oclContext;
+	bool enableOpenGLInterop;
+	u_int forceWorkGroupSize;
 };
 
 //------------------------------------------------------------------------------
-// OpenCL devices
+// OpenCLDeviceBuffer
+//------------------------------------------------------------------------------
+
+class OpenCLDeviceBuffer : public HardwareDeviceBuffer {
+public:
+	OpenCLDeviceBuffer() : oclBuff(nullptr) { }
+	virtual ~OpenCLDeviceBuffer() {
+		delete oclBuff;
+	}
+
+	bool IsNull() const { 
+		return (oclBuff == nullptr);
+	}
+
+	friend class OpenCLIntersectionDevice;
+
+protected:
+	cl::Buffer *oclBuff;
+};
+
+//------------------------------------------------------------------------------
+// OpenCLIntersectionDevice
 //------------------------------------------------------------------------------
 
 class OpenCLKernel {
@@ -163,7 +183,7 @@ protected:
 	size_t stackSize;
 };
 
-class OpenCLIntersectionDevice : public IntersectionDevice {
+class OpenCLIntersectionDevice : public IntersectionDevice, public HardwareDevice {
 public:
 	OpenCLIntersectionDevice(const Context *context,
 		OpenCLDeviceDescription *desc, const size_t devIndex);
@@ -173,12 +193,6 @@ public:
 	virtual void Start();
 	virtual void Stop();
 
-	// OpenCL Device specific methods
-	OpenCLDeviceDescription *GetDeviceDesc() const { return deviceDesc; }
-	virtual size_t GetMaxMemory() const {
-		return deviceDesc->GetMaxMemory();
-	}
-
 	//--------------------------------------------------------------------------
 	// Interface for GPU only applications
 	//--------------------------------------------------------------------------
@@ -187,7 +201,7 @@ public:
 	cl::Device &GetOpenCLDevice() { return deviceDesc->GetOCLDevice(); }
 	cl::CommandQueue &GetOpenCLQueue() { return *oclQueue; }
 
-	void EnqueueTraceRayBuffer(cl::Buffer &rBuff,  cl::Buffer &hBuff,
+	void EnqueueTraceRayBuffer(cl::Buffer &rBuff, cl::Buffer &hBuff,
 		const unsigned int rayCount,
 		const VECTOR_CLASS<cl::Event> *events, cl::Event *event) {
 		// Enqueue the intersection kernel
@@ -201,16 +215,38 @@ public:
 		return kernel->SetIntersectionKernelArgs(oclKernel, argIndex);
 	}
 
+	// A temporary method until when the new interface is complete
+	void SetKernelArg(cl::Kernel *kernel, const u_int index, const HardwareDeviceBuffer *buff) {
+		if (buff) {
+			const OpenCLDeviceBuffer *oclDeviceBuff = dynamic_cast<const OpenCLDeviceBuffer *>(buff);
+
+			kernel->setArg(index, sizeof(cl::Buffer), oclDeviceBuff->oclBuff);
+		} else
+			kernel->setArg(index, sizeof(cl::Buffer), nullptr);
+			
+	}
+	
 	//--------------------------------------------------------------------------
-	// Memory allocation for GPU only applications
+	// Memory management for hardware (aka GPU) only applications
 	//--------------------------------------------------------------------------
 
-	void AllocBuffer(const cl_mem_flags clFlags, cl::Buffer **buff,
-			void *src, const size_t size, const std::string &desc = "");
+	virtual size_t GetMaxMemory() const {
+		return deviceDesc->GetMaxMemory();
+	}
+
+	virtual void AllocBufferRO(HardwareDeviceBuffer **buff, void *src, const size_t size, const std::string &desc = "");
+	virtual void AllocBufferRW(HardwareDeviceBuffer **buff, void *src, const size_t size, const std::string &desc = "");
+	virtual void FreeBuffer(HardwareDeviceBuffer **buff);
+
+	//--------------------------------------------------------------------------
+	// OpenCL Device specific methods
+	//--------------------------------------------------------------------------
+
+	OpenCLDeviceDescription *GetDeviceDesc() const { return deviceDesc; }
+
+	// Temporary methods until when the new interface is complete
 	void AllocBufferRO(cl::Buffer **buff, void *src, const size_t size, const std::string &desc = "");
-	void AllocBufferRO(cl::Buffer **buff, const size_t size, const std::string &desc = "");
 	void AllocBufferRW(cl::Buffer **buff, void *src, const size_t size, const std::string &desc = "");
-	void AllocBufferRW(cl::Buffer **buff, const size_t size, const std::string &desc = "");
 	void FreeBuffer(cl::Buffer **buff);
 
 	friend class Context;
@@ -219,6 +255,9 @@ protected:
 	virtual void Update();
 
 private:
+	void AllocBuffer(const cl_mem_flags clFlags, cl::Buffer **buff,
+			void *src, const size_t size, const std::string &desc = "");
+
 	OpenCLDeviceDescription *deviceDesc;
 
 	cl::CommandQueue *oclQueue;

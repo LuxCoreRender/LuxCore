@@ -77,11 +77,15 @@ protected:
 /*
  * The inheritance scheme used here:
  *
- *            | =>            IntersectionDevice             => | NativeDevice
- *            |
- *  Device => | => HardwareDevice => | => IntersectionDevice => | OpenCLDevice
- *            |
- *            | => HardwareDevice => | => IntersectionDevice => | CudaDevice
+ *  Device => | =>            IntersectionDevice             => | => NativeIntersectionDevice
+ *  
+ *            | =>   HardwareDevice   => | =>  OpenCLDevice  => |
+ *  Device => |                                                 | => OpenCLIntersectionDevice
+ *            | =>            IntersectionDevice             => |
+ *
+ *            | =>   HardwareDevice   => | =>   CudaDevice   => |
+ *  Device => |                                                 | => CudaIntersectionDevice
+ *            | =>            IntersectionDevice             => |
  */
 
 class Device {
@@ -91,11 +95,6 @@ public:
 	const DeviceType GetType() const { return deviceType; }
 
 	virtual bool IsRunning() const { return started; };
-
-	virtual size_t GetMaxMemory() const { return 0; }
-	size_t GetUsedMemory() const { return usedMemory; }
-	void AllocMemory(size_t s) { usedMemory += s; }
-	void FreeMemory(size_t s) { usedMemory -= s; }
 
 	friend class Context;
 
@@ -115,8 +114,6 @@ protected:
 	std::string deviceName;
 
 	bool started;
-
-	size_t usedMemory;
 };
 
 }

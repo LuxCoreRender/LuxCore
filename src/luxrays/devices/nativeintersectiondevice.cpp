@@ -16,7 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "luxrays/devices/nativedevice.h"
+#include "luxrays/devices/nativeintersectiondevice.h"
 
 namespace luxrays {
 
@@ -24,25 +24,25 @@ namespace luxrays {
 // Native Device Description
 //------------------------------------------------------------------------------
 
-void NativeDeviceDescription::AddDeviceDescs(std::vector<DeviceDescription *> &descriptions) {
-	descriptions.push_back(new NativeDeviceDescription("NativeThread"));
+void NativeIntersectionDeviceDescription::AddDeviceDescs(std::vector<DeviceDescription *> &descriptions) {
+	descriptions.push_back(new NativeIntersectionDeviceDescription("Native"));
 }
 
 //------------------------------------------------------------------------------
 // Native thread IntersectionDevice
 //------------------------------------------------------------------------------
 
-NativeDevice::NativeDevice(
+NativeIntersectionDevice::NativeIntersectionDevice(
 	const Context *context, const size_t devIndex) :
 	Device(context, DEVICE_TYPE_NATIVE, devIndex) {
 
 	deviceName = std::string("NativeIntersect");
 }
 
-NativeDevice::~NativeDevice() {
+NativeIntersectionDevice::~NativeIntersectionDevice() {
 }
 
-void NativeDevice::SetDataSet(DataSet *newDataSet) {
+void NativeIntersectionDevice::SetDataSet(DataSet *newDataSet) {
 	IntersectionDevice::SetDataSet(newDataSet);
 
 	if (dataSet) {

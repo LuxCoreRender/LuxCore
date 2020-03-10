@@ -74,7 +74,7 @@ PathOCLBaseOCLRenderThread *PathOCLRenderEngine::CreateOCLThread(const u_int ind
 }
 
 PathOCLBaseNativeRenderThread *PathOCLRenderEngine::CreateNativeThread(const u_int index,
-			luxrays::NativeDevice *device) {
+			luxrays::NativeIntersectionDevice *device) {
 	return new PathOCLNativeRenderThread(index, device, this);
 }
 

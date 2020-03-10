@@ -89,7 +89,7 @@ void OpenCLDeviceDescription::AddDeviceDescs(const cl::Platform &oclPlatform,
 	}
 }
 
-cl::Context &OpenCLDeviceDescription::GetOCLContext() const {
+cl::Context &OpenCLDeviceDescription::GetOCLContext() {
 	if (!oclContext) {
 		// Allocate a context with the selected device
 		VECTOR_CLASS<cl::Device> devices;
@@ -198,7 +198,7 @@ void OpenCLIntersectionDevice::Stop() {
 }
 
 //------------------------------------------------------------------------------
-// Memory allocation for GPU only applications
+// Memory management for hardware (aka GPU) only applications
 //------------------------------------------------------------------------------
 
 void OpenCLIntersectionDevice::AllocBuffer(const cl_mem_flags clFlags, cl::Buffer **buff,
@@ -220,7 +220,7 @@ void OpenCLIntersectionDevice::AllocBuffer(const cl_mem_flags clFlags, cl::Buffe
 			delete *buff;
 		}
 
-		*buff = NULL;
+		*buff = nullptr;
 
 		return;
 	}
@@ -257,19 +257,11 @@ void OpenCLIntersectionDevice::AllocBuffer(const cl_mem_flags clFlags, cl::Buffe
 }
 
 void OpenCLIntersectionDevice::AllocBufferRO(cl::Buffer **buff, void *src, const size_t size, const std::string &desc) {
-	AllocBuffer(CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, buff, src, size, desc);
-}
-
-void OpenCLIntersectionDevice::AllocBufferRO(cl::Buffer **buff, const size_t size, const std::string &desc) {
-	AllocBuffer(CL_MEM_READ_ONLY, buff, NULL, size, desc);
+	AllocBuffer(src ? (CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR) : CL_MEM_READ_WRITE, buff, src, size, desc);
 }
 
 void OpenCLIntersectionDevice::AllocBufferRW(cl::Buffer **buff, void *src, const size_t size, const std::string &desc) {
-	AllocBuffer(CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, buff, src, size, desc);
-}
-
-void OpenCLIntersectionDevice::AllocBufferRW(cl::Buffer **buff, const size_t size, const std::string &desc) {
-	AllocBuffer(CL_MEM_READ_WRITE, buff, NULL, size, desc);
+	AllocBuffer(src ? (CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR) : CL_MEM_READ_WRITE, buff, src, size, desc);
 }
 
 void OpenCLIntersectionDevice::FreeBuffer(cl::Buffer **buff) {
@@ -277,7 +269,39 @@ void OpenCLIntersectionDevice::FreeBuffer(cl::Buffer **buff) {
 
 		FreeMemory((*buff)->getInfo<CL_MEM_SIZE>());
 		delete *buff;
-		*buff = NULL;
+		*buff = nullptr;
+	}
+}
+
+void OpenCLIntersectionDevice::AllocBufferRO(HardwareDeviceBuffer **buff, void *src, const size_t size, const std::string &desc) {
+	if (!(*buff))
+		*buff = new OpenCLDeviceBuffer();
+
+	OpenCLDeviceBuffer *oclDeviceBuff = dynamic_cast<OpenCLDeviceBuffer *>(*buff);
+	assert (oclDeviceBuff);
+	
+	AllocBuffer(src ? (CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR) : CL_MEM_READ_WRITE, &(oclDeviceBuff->oclBuff), src, size, desc);
+}
+
+void OpenCLIntersectionDevice::AllocBufferRW(HardwareDeviceBuffer **buff, void *src, const size_t size, const std::string &desc) {
+	if (!(*buff))
+		*buff = new OpenCLDeviceBuffer();
+
+	OpenCLDeviceBuffer *oclDeviceBuff = dynamic_cast<OpenCLDeviceBuffer *>(*buff);
+	assert (oclDeviceBuff);
+
+	AllocBuffer(src ? (CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR) : CL_MEM_READ_WRITE, &(oclDeviceBuff->oclBuff), src, size, desc);
+}
+
+void OpenCLIntersectionDevice::FreeBuffer(HardwareDeviceBuffer **buff) {
+	if (*buff && !(*buff)->IsNull()) {
+		OpenCLDeviceBuffer *oclDeviceBuff = dynamic_cast<OpenCLDeviceBuffer *>(*buff);
+		assert (oclDeviceBuff);
+
+		FreeMemory(oclDeviceBuff->oclBuff->getInfo<CL_MEM_SIZE>());
+
+		delete *buff;
+		*buff = nullptr;
 	}
 }
 

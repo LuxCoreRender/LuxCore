@@ -93,12 +93,9 @@ Device::Device(const Context *context, const DeviceType type, const size_t index
 	deviceContext(context), deviceType(type) {
 	deviceIndex = index;
 	started = false;
-	usedMemory = 0;
 }
 
 Device::~Device() {
-	if (usedMemory != 0)
-		LR_LOG(deviceContext, "WARNING: there is a memory leak in LuxRays device " << GetName() << ": " << ToString(usedMemory) << "bytes");
 }
 
 void Device::Start() {

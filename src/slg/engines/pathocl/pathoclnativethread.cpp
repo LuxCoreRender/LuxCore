@@ -40,7 +40,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 PathOCLNativeRenderThread::PathOCLNativeRenderThread(const u_int index,
-		NativeDevice *device, PathOCLRenderEngine *re) :
+		NativeIntersectionDevice *device, PathOCLRenderEngine *re) :
 		PathOCLBaseNativeRenderThread(index, device, re) {
 	threadFilm = NULL;
 }

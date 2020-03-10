@@ -227,7 +227,7 @@ void GaussianBlur3x3FilterPlugin::ApplyOCL(Film &film, const u_int index) {
 
 		// Allocate OpenCL buffers
 		film.ctx->SetVerbose(true);
-		oclIntersectionDevice->AllocBufferRW(&oclTmpBuffer, width * height * sizeof(Spectrum), "GaussianBlur3x3");
+		oclIntersectionDevice->AllocBufferRW(&oclTmpBuffer, nullptr, width * height * sizeof(Spectrum), "GaussianBlur3x3");
 		film.ctx->SetVerbose(false);
 
 		// Compile sources

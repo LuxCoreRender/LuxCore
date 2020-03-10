@@ -30,7 +30,7 @@
 #include "luxrays/utils/utils.h"
 #include "luxrays/core/context.h"
 #include "luxrays/core/exttrianglemesh.h"
-#include "luxrays/devices/nativedevice.h"
+#include "luxrays/devices/nativeintersectiondevice.h"
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 #include "luxrays/devices/ocldevice.h"
 #include "luxrays/kernels/kernels.h"
@@ -172,26 +172,18 @@ public:
 			}
 			
 			// Allocate the motion system buffer
-			LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
-				"] Leaf motion systems buffer size: " <<
-				(sizeof(luxrays::ocl::MotionSystem) * motionSystems.size() / 1024) <<
-				"Kbytes");
-			uniqueLeafsMotionSystemBuff = new cl::Buffer(oclContext,
-				CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-				sizeof(luxrays::ocl::MotionSystem) * motionSystems.size(),
-				(void *)&(motionSystems[0]));
-			device->AllocMemory(uniqueLeafsMotionSystemBuff->getInfo<CL_MEM_SIZE>());
+			device->AllocBufferRO(&uniqueLeafsMotionSystemBuff, &motionSystems[0],
+					sizeof(luxrays::ocl::MotionSystem) * motionSystems.size(),
+					"MBVH leaf motion systems buffer");
 
 			// Allocate the InterpolatedTransform buffer
 			LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
 				"] Leaf interpolated transforms buffer size: " <<
 				(sizeof(luxrays::ocl::InterpolatedTransform) * interpolatedTransforms.size() / 1024) <<
 				"Kbytes");
-			uniqueLeafsInterpolatedTransformBuff = new cl::Buffer(oclContext,
-				CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-				sizeof(luxrays::ocl::InterpolatedTransform) * interpolatedTransforms.size(),
-				(void *)&(interpolatedTransforms[0]));
-			device->AllocMemory(uniqueLeafsInterpolatedTransformBuff->getInfo<CL_MEM_SIZE>());
+			device->AllocBufferRO(&uniqueLeafsInterpolatedTransformBuff, &interpolatedTransforms[0],
+					sizeof(luxrays::ocl::InterpolatedTransform) * interpolatedTransforms.size(),
+					"MBVH leaf interpolated transforms buffer");
 		}
 
 		//----------------------------------------------------------------------

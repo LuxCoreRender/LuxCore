@@ -149,7 +149,7 @@ void Film::AllocateOCLBuffers() {
 			HasChannel(RADIANCE_PER_PIXEL_NORMALIZED) ? channel_RADIANCE_PER_PIXEL_NORMALIZEDs[0]->GetSize() : 0,
 			HasChannel(RADIANCE_PER_SCREEN_NORMALIZED) ? channel_RADIANCE_PER_SCREEN_NORMALIZEDs[0]->GetSize() : 0);
 	if (mergeBufferSize > 0)
-		oclIntersectionDevice->AllocBufferRO(&ocl_mergeBuffer, mergeBufferSize, "Merge");
+		oclIntersectionDevice->AllocBufferRO(&ocl_mergeBuffer, nullptr, mergeBufferSize, "Merge");
 
 	ctx->SetVerbose(false);
 }

@@ -16,62 +16,21 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_AUTOLINEAR_TONEMAP_H
-#define	_SLG_AUTOLINEAR_TONEMAP_H
+#include "luxrays/core/hardwaredevice.h"
 
-#include <cmath>
-#include <string>
-
-#include "luxrays/devices/ocldevice.h"
-#include "luxrays/utils/serializationutils.h"
-#include "slg/film/imagepipeline/plugins/tonemaps/tonemap.h"
-
-namespace slg {
+namespace luxrays {
 
 //------------------------------------------------------------------------------
-// Auto-linear tone mapping
+// HardwareDevice
 //------------------------------------------------------------------------------
 
-class AutoLinearToneMap : public ToneMap {
-public:
-	AutoLinearToneMap();
-	virtual ~AutoLinearToneMap();
-
-	virtual ToneMapType GetType() const { return TONEMAP_AUTOLINEAR; }
-
-	virtual ToneMap *Copy() const {
-		return new AutoLinearToneMap();
-	}
-
-	virtual void Apply(Film &film, const u_int index);
-
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	virtual bool CanUseOpenCL() const { return true; }
-	virtual void ApplyOCL(Film &film, const u_int index);
-#endif
-
-	static float CalcLinearToneMapScale(const Film &film, const u_int index, const float Y);
-	
-	friend class boost::serialization::access;
-
-private:
-	template<class Archive> void serialize(Archive &ar, const u_int version) {
-		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ToneMap);
-	}
-
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	luxrays::HardwareDeviceBuffer *oclAccumBuffer;
-
-	cl::Kernel *opRGBValuesReduceKernel;
-	cl::Kernel *opRGBValueAccumulateKernel;
-	cl::Kernel *applyKernel;
-#endif
-};
-
+HardwareDevice::HardwareDevice() {
+	usedMemory = 0;
 }
 
-BOOST_CLASS_VERSION(slg::AutoLinearToneMap, 1)
+HardwareDevice::~HardwareDevice() {
+	if (usedMemory != 0)
+		LR_LOG(deviceContext, "WARNING: there is a memory leak in LuxRays HardwareDevice " << GetName() << ": " << ToString(usedMemory) << "bytes");
+}
 
-BOOST_CLASS_EXPORT_KEY(slg::AutoLinearToneMap)
-
-#endif	/* _SLG_AUTOLINEAR_TONEMAP_H */
+}

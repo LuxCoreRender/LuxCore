@@ -23,8 +23,8 @@
 #include <stdexcept>
 
 #include "luxrays/core/context.h"
-#include "luxrays/devices/nativedevice.h"
-#include "luxrays/devices/nativedevice.h"
+#include "luxrays/devices/nativeintersectiondevice.h"
+#include "luxrays/devices/nativeintersectiondevice.h"
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 #include "luxrays/devices/ocldevice.h"
 #include "luxrays/kernels/kernels.h"
@@ -39,7 +39,7 @@ Context::Context(LuxRaysDebugHandler handler, const Properties &config) : cfg(co
 	verbose = cfg.Get(Property("context.verbose")(true)).Get<bool>();
 
 	// Get the list of devices available on the platform
-	NativeDeviceDescription::AddDeviceDescs(deviceDescriptions);
+	NativeIntersectionDeviceDescription::AddDeviceDescs(deviceDescriptions);
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	// Platform info
@@ -186,7 +186,7 @@ std::vector<IntersectionDevice *> Context::CreateIntersectionDevices(
 		IntersectionDevice *device;
 		if (deviceType == DEVICE_TYPE_NATIVE) {
 			// Nathive thread devices
-			device = new NativeDevice(this, indexOffset + i);
+			device = new NativeIntersectionDevice(this, indexOffset + i);
 		}
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 		else if (deviceType & DEVICE_TYPE_OPENCL_ALL) {

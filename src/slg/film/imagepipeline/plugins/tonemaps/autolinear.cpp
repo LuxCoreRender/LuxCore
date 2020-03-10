@@ -37,12 +37,11 @@ BOOST_CLASS_EXPORT_IMPLEMENT(slg::AutoLinearToneMap)
 
 AutoLinearToneMap::AutoLinearToneMap() {
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-	oclIntersectionDevice = NULL;
-	oclAccumBuffer = NULL;
+	oclAccumBuffer = nullptr;
 
-	opRGBValuesReduceKernel = NULL;
-	opRGBValueAccumulateKernel = NULL;
-	applyKernel = NULL;
+	opRGBValuesReduceKernel = nullptr;
+	opRGBValueAccumulateKernel = nullptr;
+	applyKernel = nullptr;
 #endif
 }
 
@@ -119,9 +118,8 @@ void AutoLinearToneMap::ApplyOCL(Film &film, const u_int index) {
 
 	if (!applyKernel) {
 		// Allocate buffers
-		oclIntersectionDevice = film.oclIntersectionDevice;
 		film.ctx->SetVerbose(true);
-		oclIntersectionDevice->AllocBufferRW(&oclAccumBuffer, (workSize / 64) * sizeof(float) * 3, "Accumulation");
+		film.oclIntersectionDevice->AllocBufferRW(&oclAccumBuffer, nullptr, (workSize / 64) * sizeof(float) * 3, "Accumulation");
 		film.ctx->SetVerbose(false);
 
 		// Compile sources
@@ -151,11 +149,11 @@ void AutoLinearToneMap::ApplyOCL(Film &film, const u_int index) {
 		opRGBValuesReduceKernel->setArg(argIndex++, film.GetWidth());
 		opRGBValuesReduceKernel->setArg(argIndex++, film.GetHeight());
 		opRGBValuesReduceKernel->setArg(argIndex++, *(film.ocl_IMAGEPIPELINE));
-		opRGBValuesReduceKernel->setArg(argIndex++, *oclAccumBuffer);
+		film.oclIntersectionDevice->SetKernelArg(opRGBValuesReduceKernel, argIndex++, oclAccumBuffer);
 
 		argIndex = 0;
 		opRGBValueAccumulateKernel->setArg(argIndex++, workSize / 64);
-		opRGBValueAccumulateKernel->setArg(argIndex++, *oclAccumBuffer);
+		film.oclIntersectionDevice->SetKernelArg(opRGBValueAccumulateKernel, argIndex++, oclAccumBuffer);
 
 		argIndex = 0;
 		applyKernel->setArg(argIndex++, film.GetWidth());
@@ -163,7 +161,7 @@ void AutoLinearToneMap::ApplyOCL(Film &film, const u_int index) {
 		applyKernel->setArg(argIndex++, *(film.ocl_IMAGEPIPELINE));
 		const float gamma = GetGammaCorrectionValue(film, index);
 		applyKernel->setArg(argIndex++, gamma);
-		applyKernel->setArg(argIndex++, *oclAccumBuffer);
+		film.oclIntersectionDevice->SetKernelArg(applyKernel, argIndex++, oclAccumBuffer);
 
 		const double tEnd = WallClockTime();
 		SLG_LOG("[AutoLinearToneMap] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");

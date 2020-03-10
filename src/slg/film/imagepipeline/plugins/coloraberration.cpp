@@ -156,7 +156,7 @@ void ColorAberrationPlugin::ApplyOCL(Film &film, const u_int index) {
 
 		// Allocate OpenCL buffers
 		film.ctx->SetVerbose(true);
-		oclIntersectionDevice->AllocBufferRW(&oclTmpBuffer, width * height * sizeof(Spectrum), "ColorAberration");
+		oclIntersectionDevice->AllocBufferRW(&oclTmpBuffer, nullptr, width * height * sizeof(Spectrum), "ColorAberration");
 		film.ctx->SetVerbose(false);
 
 		// Compile sources

@@ -257,7 +257,7 @@ void PathOCLBaseRenderEngine::StartLockLess() {
 	for (size_t i = 0; i < nativeRenderThreadCount; ++i) {
 		if (!renderNativeThreads[i]) {
 			renderNativeThreads[i] = CreateNativeThread(i,
-					(NativeDevice *)(intersectionDevices[i + oclRenderThreadCount]));
+					(NativeIntersectionDevice *)(intersectionDevices[i + oclRenderThreadCount]));
 		}
 	}
 

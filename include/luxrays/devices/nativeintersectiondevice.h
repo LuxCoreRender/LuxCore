@@ -16,62 +16,51 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_AUTOLINEAR_TONEMAP_H
-#define	_SLG_AUTOLINEAR_TONEMAP_H
+#ifndef _LUXRAYS_NATIVETHREADDEVICE_H
+#define	_LUXRAYS_NATIVETHREADDEVICE_H
 
-#include <cmath>
 #include <string>
+#include <cstdlib>
 
-#include "luxrays/devices/ocldevice.h"
-#include "luxrays/utils/serializationutils.h"
-#include "slg/film/imagepipeline/plugins/tonemaps/tonemap.h"
+#include <boost/thread/thread.hpp>
 
-namespace slg {
+#include "luxrays/luxrays.h"
+#include "luxrays/core/dataset.h"
+#include "luxrays/core/context.h"
+#include "luxrays/core/intersectiondevice.h"
+#include "luxrays/utils/utils.h"
+
+namespace luxrays {
 
 //------------------------------------------------------------------------------
-// Auto-linear tone mapping
+// NativeIntersectionDeviceDescription
 //------------------------------------------------------------------------------
 
-class AutoLinearToneMap : public ToneMap {
+class NativeIntersectionDeviceDescription : public DeviceDescription {
 public:
-	AutoLinearToneMap();
-	virtual ~AutoLinearToneMap();
+	NativeIntersectionDeviceDescription(const std::string deviceName) :
+		DeviceDescription(deviceName, DEVICE_TYPE_NATIVE) { }
 
-	virtual ToneMapType GetType() const { return TONEMAP_AUTOLINEAR; }
+	friend class Context;
 
-	virtual ToneMap *Copy() const {
-		return new AutoLinearToneMap();
-	}
+protected:
+	static void AddDeviceDescs(std::vector<DeviceDescription *> &descriptions);
+};
 
-	virtual void Apply(Film &film, const u_int index);
+//------------------------------------------------------------------------------
+// NativeDevice
+//------------------------------------------------------------------------------
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	virtual bool CanUseOpenCL() const { return true; }
-	virtual void ApplyOCL(Film &film, const u_int index);
-#endif
+class NativeIntersectionDevice : public IntersectionDevice {
+public:
+	NativeIntersectionDevice(const Context *context, const size_t devIndex);
+	virtual ~NativeIntersectionDevice();
 
-	static float CalcLinearToneMapScale(const Film &film, const u_int index, const float Y);
-	
-	friend class boost::serialization::access;
+	virtual void SetDataSet(DataSet *newDataSet);
 
-private:
-	template<class Archive> void serialize(Archive &ar, const u_int version) {
-		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ToneMap);
-	}
-
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	luxrays::HardwareDeviceBuffer *oclAccumBuffer;
-
-	cl::Kernel *opRGBValuesReduceKernel;
-	cl::Kernel *opRGBValueAccumulateKernel;
-	cl::Kernel *applyKernel;
-#endif
+	friend class Context;
 };
 
 }
 
-BOOST_CLASS_VERSION(slg::AutoLinearToneMap, 1)
-
-BOOST_CLASS_EXPORT_KEY(slg::AutoLinearToneMap)
-
-#endif	/* _SLG_AUTOLINEAR_TONEMAP_H */
+#endif	/* _LUXRAYS_NATIVETHREADDEVICE_H */

@@ -47,17 +47,17 @@ namespace ocl {
 /*
  * The inheritance scheme used here:
  *
- *         | => TriangleMesh => |
- * Mesh => |                    |=> ExtTriangleMesh
- *         | =>      ExtMesh => |
+ *         | =>    TriangleMesh      => |
+ * Mesh => |                            | => ExtTriangleMesh
+ *         | =>       ExtMesh        => |
  *
  *         | => InstanceTriangleMesh => |
- * Mesh => |                            |=> ExtInstanceTriangleMesh
- *         | =>              ExtMesh => |
+ * Mesh => |                            | => ExtInstanceTriangleMesh
+ *         | =>       ExtMesh        => |
  *
- *         | => MotionTriangleMesh => |
- * Mesh => |                          |=> ExtMotionTriangleMesh
- *         | =>            ExtMesh => |
+ *         | => MotionTriangleMesh   => |
+ * Mesh => |                            | => ExtMotionTriangleMesh
+ *         | =>       ExtMesh        => |
  */
 
 class ExtMesh : virtual public Mesh, public NamedObject {

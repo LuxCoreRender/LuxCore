@@ -212,7 +212,7 @@ Properties luxcore::GetOpenCLDeviceDescs() {
 
 	// Add all device information to the list
 	for (size_t i = 0; i < deviceDescriptions.size(); ++i) {
-		const OpenCLDeviceDescription *desc = (OpenCLDeviceDescription *)deviceDescriptions[i];
+		OpenCLDeviceDescription *desc = (OpenCLDeviceDescription *)deviceDescriptions[i];
 
 		cl::Platform platform = desc->GetOCLDevice().getInfo<CL_DEVICE_PLATFORM>();
         const string platformName = platform.getInfo<CL_PLATFORM_VENDOR>();
