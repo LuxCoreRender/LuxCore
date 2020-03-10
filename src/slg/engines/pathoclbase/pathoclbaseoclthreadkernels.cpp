@@ -119,8 +119,8 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 
 	//--------------------------------------------------------------------------
 
-	// This is a workaround to  long compilation time
-	string forceInlineDirective =
+	// This is a workaround to long compilation time
+	const string forceInlineDirective =
 			"#define OPENCL_FORCE_NOT_INLINE __attribute__((noinline))\n"
 			"#define OPENCL_FORCE_INLINE __attribute__((always_inline))\n";
 

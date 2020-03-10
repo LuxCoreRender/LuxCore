@@ -62,9 +62,9 @@ private:
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	luxrays::HardwareDeviceBuffer *oclAccumBuffer;
 
-	cl::Kernel *opRGBValuesReduceKernel;
-	cl::Kernel *opRGBValueAccumulateKernel;
-	cl::Kernel *applyKernel;
+	luxrays::HardwareDeviceKernel *opRGBValuesReduceKernel;
+	luxrays::HardwareDeviceKernel *opRGBValueAccumulateKernel;
+	luxrays::HardwareDeviceKernel *applyKernel;
 #endif
 };
 

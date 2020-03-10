@@ -28,6 +28,8 @@
 
 #include "luxrays/devices/ocldevice.h"
 
+using namespace std;
+
 namespace luxrays {
 
 //------------------------------------------------------------------------------
@@ -152,9 +154,12 @@ OpenCLIntersectionDevice::OpenCLIntersectionDevice(
 		// print a warning instead of throwing an exception
 		LR_LOG(deviceContext, "WARNING: OpenCL version 1.1 or better is required. Device " + deviceName + " may not work.");
 	}
+	
+	kernelCache = new oclKernelPersistentCache("LUXRAYS_" LUXRAYS_VERSION_MAJOR "." LUXRAYS_VERSION_MINOR);
 }
 
 OpenCLIntersectionDevice::~OpenCLIntersectionDevice() {
+	delete kernelCache;
 }
 
 void OpenCLIntersectionDevice::SetDataSet(DataSet *newDataSet) {
@@ -195,6 +200,109 @@ void OpenCLIntersectionDevice::Stop() {
 	kernel = nullptr;
 
 	delete oclQueue;
+}
+
+//------------------------------------------------------------------------------
+// Kernels handling for hardware (aka GPU) only applications
+//------------------------------------------------------------------------------
+
+void OpenCLIntersectionDevice::CompileProgram(HardwareDeviceProgram **program,
+		const std::string &programParameters, const std::string &programSource,	
+		const std::string &programName) {
+	cl::Context &oclContext = GetOpenCLContext();
+	cl::Device &oclDevice = GetOpenCLDevice();
+
+	LR_LOG(deviceContext, "[" << programName << "] Defined symbols: " << programParameters);
+	LR_LOG(deviceContext, "[" << programName << "] Compiling kernels ");
+
+	// This is a workaround to long compilation time
+	const string forceInlineDirective =
+			"#define OPENCL_FORCE_NOT_INLINE __attribute__((noinline))\n"
+			"#define OPENCL_FORCE_INLINE __attribute__((always_inline))\n";
+
+	bool cached;
+	cl::STRING_CLASS error;
+	cl::Program *oclProgram = kernelCache->Compile(oclContext, oclDevice,
+			programParameters, forceInlineDirective + programSource,
+			&cached, &error);
+	if (!program) {
+		LR_LOG(deviceContext, "[" << programName << "] program compilation error" << endl << error);
+
+		throw runtime_error(programName + " program compilation error");
+	}
+
+	if (cached) {
+		LR_LOG(deviceContext, "[" << programName << "] Program cached");
+	} else {
+		LR_LOG(deviceContext, "[" << programName << "] Program not cached");
+	}
+
+	if (!*program)
+		*program = new OpenCLDeviceProgram();
+	
+	OpenCLDeviceProgram *oclDeviceProgram = dynamic_cast<OpenCLDeviceProgram *>(*program);
+	assert (oclDeviceProgram);
+
+	oclDeviceProgram->Set(oclProgram);
+}
+
+void OpenCLIntersectionDevice::GetKernel(HardwareDeviceProgram *program,
+		HardwareDeviceKernel **kernel, const string &kernelName) {
+	if (!*kernel)
+		*kernel = new OpenCLDeviceKernel();
+	
+	OpenCLDeviceKernel *oclDeviceKernel = dynamic_cast<OpenCLDeviceKernel *>(*kernel);
+	assert (oclDeviceKernel);
+
+	OpenCLDeviceProgram *oclDeviceProgram = dynamic_cast<OpenCLDeviceProgram *>(program);
+	assert (oclDeviceProgram);
+
+	oclDeviceKernel->Set(new cl::Kernel(*(oclDeviceProgram->Get()), kernelName.c_str()));
+}
+
+void OpenCLIntersectionDevice::SetKernelArg(HardwareDeviceKernel *kernel,
+		const u_int index, const size_t size, const void *arg) {
+	assert (!kernel->IsNull());
+
+	OpenCLDeviceKernel *oclDeviceKernel = dynamic_cast<OpenCLDeviceKernel *>(kernel);
+	assert (oclDeviceKernel);
+
+	oclDeviceKernel->oclKernel->setArg(index, size, arg);
+}
+
+void OpenCLIntersectionDevice::SetKernelArgBuffer(HardwareDeviceKernel *kernel,
+		const u_int index, const HardwareDeviceBuffer *buff) {
+	assert (!kernel->IsNull());
+
+	OpenCLDeviceKernel *oclDeviceKernel = dynamic_cast<OpenCLDeviceKernel *>(kernel);
+	assert (oclDeviceKernel);
+
+	const OpenCLDeviceBuffer *oclDeviceBuff = dynamic_cast<const OpenCLDeviceBuffer *>(buff);
+	if (oclDeviceBuff)
+		oclDeviceKernel->oclKernel->setArg(index, *(oclDeviceBuff->oclBuff));
+	else
+		oclDeviceKernel->oclKernel->setArg(index, nullptr);
+}
+
+static cl::NDRange ConvertHardwareRange(const HardwareDeviceRange &range) {
+	if (range.dimensions == 1)
+		return cl::NDRange(range.sizes[0]);
+	else if (range.dimensions == 2)
+		return cl::NDRange(range.sizes[0], range.sizes[1]);
+	else
+		return cl::NDRange(range.sizes[0], range.sizes[1], range.sizes[2]);
+	
+}
+void OpenCLIntersectionDevice::EnqueueKernel(HardwareDeviceKernel *kernel,
+			const HardwareDeviceRange &workGroupSize,
+			const HardwareDeviceRange &globalSize) {
+	OpenCLDeviceKernel *oclDeviceKernel = dynamic_cast<OpenCLDeviceKernel *>(kernel);
+	assert (oclDeviceKernel);
+
+	GetOpenCLQueue().enqueueNDRangeKernel(*oclDeviceKernel->oclKernel,
+			cl::NullRange,
+			ConvertHardwareRange(workGroupSize),
+			ConvertHardwareRange(globalSize));
 }
 
 //------------------------------------------------------------------------------
@@ -257,7 +365,7 @@ void OpenCLIntersectionDevice::AllocBuffer(const cl_mem_flags clFlags, cl::Buffe
 }
 
 void OpenCLIntersectionDevice::AllocBufferRO(cl::Buffer **buff, void *src, const size_t size, const std::string &desc) {
-	AllocBuffer(src ? (CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR) : CL_MEM_READ_WRITE, buff, src, size, desc);
+	AllocBuffer(src ? (CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR) : CL_MEM_READ_ONLY, buff, src, size, desc);
 }
 
 void OpenCLIntersectionDevice::AllocBufferRW(cl::Buffer **buff, void *src, const size_t size, const std::string &desc) {
@@ -274,17 +382,17 @@ void OpenCLIntersectionDevice::FreeBuffer(cl::Buffer **buff) {
 }
 
 void OpenCLIntersectionDevice::AllocBufferRO(HardwareDeviceBuffer **buff, void *src, const size_t size, const std::string &desc) {
-	if (!(*buff))
+	if (!*buff)
 		*buff = new OpenCLDeviceBuffer();
 
 	OpenCLDeviceBuffer *oclDeviceBuff = dynamic_cast<OpenCLDeviceBuffer *>(*buff);
 	assert (oclDeviceBuff);
 	
-	AllocBuffer(src ? (CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR) : CL_MEM_READ_WRITE, &(oclDeviceBuff->oclBuff), src, size, desc);
+	AllocBuffer(src ? (CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR) : CL_MEM_READ_ONLY, &(oclDeviceBuff->oclBuff), src, size, desc);
 }
 
 void OpenCLIntersectionDevice::AllocBufferRW(HardwareDeviceBuffer **buff, void *src, const size_t size, const std::string &desc) {
-	if (!(*buff))
+	if (!*buff)
 		*buff = new OpenCLDeviceBuffer();
 
 	OpenCLDeviceBuffer *oclDeviceBuff = dynamic_cast<OpenCLDeviceBuffer *>(*buff);

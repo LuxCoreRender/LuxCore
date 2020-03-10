@@ -22,6 +22,7 @@
 #include "luxrays/core/hardwaredevice.h"
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/utils/oclerror.h"
+#include "luxrays/utils/oclcache.h"
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
@@ -130,6 +131,62 @@ private:
 };
 
 //------------------------------------------------------------------------------
+// OpenCLDeviceKernel
+//------------------------------------------------------------------------------
+
+class OpenCLDeviceKernel : public HardwareDeviceKernel {
+public:
+	OpenCLDeviceKernel() : oclKernel(nullptr) { }
+	virtual ~OpenCLDeviceKernel() {
+		delete oclKernel;
+	}
+
+	bool IsNull() const { 
+		return (oclKernel == nullptr);
+	}
+
+	friend class OpenCLIntersectionDevice;
+
+protected:
+	void Set(cl::Kernel *kernel) {
+		delete oclKernel;
+		oclKernel = kernel;
+	}
+
+	cl::Kernel *Get() { return oclKernel; }
+
+private:
+	cl::Kernel *oclKernel;
+};
+
+//------------------------------------------------------------------------------
+// OpenCLDeviceProgram
+//------------------------------------------------------------------------------
+
+class OpenCLDeviceProgram : public HardwareDeviceProgram {
+public:
+	OpenCLDeviceProgram() : oclProgram(nullptr) { }
+	virtual ~OpenCLDeviceProgram() { }
+
+	bool IsNull() const { 
+		return (oclProgram == nullptr);
+	}
+
+	friend class OpenCLIntersectionDevice;
+
+protected:
+	void Set(cl::Program *p) {
+		delete oclProgram;
+		oclProgram = p;
+	}
+
+	cl::Program *Get() { return oclProgram; }
+
+private:
+	cl::Program *oclProgram;
+};
+
+//------------------------------------------------------------------------------
 // OpenCLDeviceBuffer
 //------------------------------------------------------------------------------
 
@@ -147,6 +204,14 @@ public:
 	friend class OpenCLIntersectionDevice;
 
 protected:
+	void Set(cl::Buffer *p) {
+		delete oclBuff;
+		oclBuff = p;
+	}
+
+	cl::Buffer *Get() { return oclBuff; }
+
+private:
 	cl::Buffer *oclBuff;
 };
 
@@ -194,6 +259,40 @@ public:
 	virtual void Stop();
 
 	//--------------------------------------------------------------------------
+	// Kernels handling for hardware (aka GPU) only applications
+	//--------------------------------------------------------------------------
+
+	virtual void CompileProgram(HardwareDeviceProgram **program,
+			const std::string &programParameters, const std::string &programSource,
+			const std::string &programName);
+
+	virtual void GetKernel(HardwareDeviceProgram *program,
+			HardwareDeviceKernel **kernel,
+			const std::string &kernelName);
+	virtual void SetKernelArg(HardwareDeviceKernel *kernel,
+			const u_int index, const size_t size, const void *arg);
+
+	virtual void EnqueueKernel(HardwareDeviceKernel *kernel,
+			const HardwareDeviceRange &workGroupSize,
+			const HardwareDeviceRange &globalSize);
+
+	//--------------------------------------------------------------------------
+	// Memory management for hardware (aka GPU) only applications
+	//--------------------------------------------------------------------------
+
+	virtual size_t GetMaxMemory() const {
+		return deviceDesc->GetMaxMemory();
+	}
+
+	virtual void AllocBufferRO(HardwareDeviceBuffer **buff, void *src, const size_t size, const std::string &desc = "");
+	virtual void AllocBufferRW(HardwareDeviceBuffer **buff, void *src, const size_t size, const std::string &desc = "");
+	virtual void FreeBuffer(HardwareDeviceBuffer **buff);
+
+	//--------------------------------------------------------------------------
+	// OpenCL Device specific methods
+	//--------------------------------------------------------------------------
+
+	//--------------------------------------------------------------------------
 	// Interface for GPU only applications
 	//--------------------------------------------------------------------------
 
@@ -216,30 +315,15 @@ public:
 	}
 
 	// A temporary method until when the new interface is complete
-	void SetKernelArg(cl::Kernel *kernel, const u_int index, const HardwareDeviceBuffer *buff) {
-		if (buff) {
-			const OpenCLDeviceBuffer *oclDeviceBuff = dynamic_cast<const OpenCLDeviceBuffer *>(buff);
+	void SetKernelArg(HardwareDeviceKernel *kernel, const u_int index, cl::Buffer *oclBuff) {
+		assert (!kernel->IsNull());
 
-			kernel->setArg(index, sizeof(cl::Buffer), oclDeviceBuff->oclBuff);
-		} else
-			kernel->setArg(index, sizeof(cl::Buffer), nullptr);
-			
-	}
-	
-	//--------------------------------------------------------------------------
-	// Memory management for hardware (aka GPU) only applications
-	//--------------------------------------------------------------------------
+		OpenCLDeviceKernel *oclDeviceKernel = dynamic_cast<OpenCLDeviceKernel *>(kernel);
+		assert (oclDeviceKernel);
 
-	virtual size_t GetMaxMemory() const {
-		return deviceDesc->GetMaxMemory();
+		oclDeviceKernel->oclKernel->setArg(index, sizeof(cl::Buffer), oclBuff);
 	}
 
-	virtual void AllocBufferRO(HardwareDeviceBuffer **buff, void *src, const size_t size, const std::string &desc = "");
-	virtual void AllocBufferRW(HardwareDeviceBuffer **buff, void *src, const size_t size, const std::string &desc = "");
-	virtual void FreeBuffer(HardwareDeviceBuffer **buff);
-
-	//--------------------------------------------------------------------------
-	// OpenCL Device specific methods
 	//--------------------------------------------------------------------------
 
 	OpenCLDeviceDescription *GetDeviceDesc() const { return deviceDesc; }
@@ -253,6 +337,8 @@ public:
 
 protected:
 	virtual void Update();
+	virtual void SetKernelArgBuffer(HardwareDeviceKernel *kernel,
+		const u_int index, const HardwareDeviceBuffer *buff);
 
 private:
 	void AllocBuffer(const cl_mem_flags clFlags, cl::Buffer **buff,
@@ -262,6 +348,7 @@ private:
 
 	cl::CommandQueue *oclQueue;
 
+	luxrays::oclKernelCache *kernelCache;
 	OpenCLKernel *kernel;
 };
 

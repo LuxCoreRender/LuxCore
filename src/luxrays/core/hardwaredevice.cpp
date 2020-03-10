@@ -33,4 +33,9 @@ HardwareDevice::~HardwareDevice() {
 		LR_LOG(deviceContext, "WARNING: there is a memory leak in LuxRays HardwareDevice " << GetName() << ": " << ToString(usedMemory) << "bytes");
 }
 
+template <>
+void HardwareDevice::SetKernelArg<HardwareDeviceBufferPtr>(HardwareDeviceKernel *kernel, const u_int index, const HardwareDeviceBufferPtr &buff) {
+	SetKernelArgBuffer(kernel, index, buff);
+}
+
 }
