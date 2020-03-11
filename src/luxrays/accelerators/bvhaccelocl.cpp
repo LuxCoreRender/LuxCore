@@ -30,7 +30,7 @@
 #include "luxrays/core/context.h"
 #include "luxrays/devices/nativeintersectiondevice.h"
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-#include "luxrays/devices/ocldevice.h"
+#include "luxrays/devices/oclintersectiondevice.h"
 #include "luxrays/kernels/kernels.h"
 #endif
 

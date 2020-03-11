@@ -18,6 +18,9 @@
 
 #include "luxcore/cfg.h"
 
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+#include "luxrays/devices/oclintersectiondevice.h"
+#endif
 #include "slg/film/film.h"
 #include "slg/kernels/kernels.h"
 

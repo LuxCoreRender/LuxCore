@@ -185,6 +185,7 @@ set(LUXRAYS_SRCS
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/geometry/transform.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/devices/nativeintersectiondevice.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/devices/ocldevice.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/devices/oclintersectiondevice.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/utils/mc.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/utils/ocl.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/utils/safesave.cpp

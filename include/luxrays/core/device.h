@@ -97,6 +97,7 @@ public:
 	virtual bool IsRunning() const { return started; };
 
 	friend class Context;
+	friend class OpenCLIntersectionDevice;
 
 protected:
 	Device() { }

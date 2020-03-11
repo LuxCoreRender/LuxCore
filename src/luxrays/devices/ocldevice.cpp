@@ -137,15 +137,15 @@ cl::Context &OpenCLDeviceDescription::GetOCLContext() {
 }
 
 //------------------------------------------------------------------------------
-// OpenCL IntersectionDevice
+// OpenCLDevice
 //------------------------------------------------------------------------------
 
-OpenCLIntersectionDevice::OpenCLIntersectionDevice(
+OpenCLDevice::OpenCLDevice(
 		const Context *context,
 		OpenCLDeviceDescription *desc,
 		const size_t devIndex) :
-		Device(context, desc->type, devIndex),
-		deviceDesc(desc), oclQueue(nullptr), kernel(nullptr) {
+		Device(context, desc->GetType(), devIndex),
+		deviceDesc(desc), oclQueue(nullptr) {
 	deviceName = (desc->GetName() + " Intersect").c_str();
 
 	// Check if OpenCL 1.1 is available
@@ -158,46 +158,20 @@ OpenCLIntersectionDevice::OpenCLIntersectionDevice(
 	kernelCache = new oclKernelPersistentCache("LUXRAYS_" LUXRAYS_VERSION_MAJOR "." LUXRAYS_VERSION_MINOR);
 }
 
-OpenCLIntersectionDevice::~OpenCLIntersectionDevice() {
+OpenCLDevice::~OpenCLDevice() {
 	delete kernelCache;
 }
 
-void OpenCLIntersectionDevice::SetDataSet(DataSet *newDataSet) {
-	IntersectionDevice::SetDataSet(newDataSet);
-
-	if (dataSet) {
-		const AcceleratorType accelType = dataSet->GetAcceleratorType();
-		if (accelType != ACCEL_AUTO) {
-			accel = dataSet->GetAccelerator(accelType);
-		} else {
-			if (dataSet->RequiresInstanceSupport() || dataSet->RequiresMotionBlurSupport())
-				accel = dataSet->GetAccelerator(ACCEL_MBVH);
-			else
-				accel = dataSet->GetAccelerator(ACCEL_BVH);
-		}
-	}
-}
-
-void OpenCLIntersectionDevice::Update() {
-	kernel->Update(dataSet);
-}
-
-void OpenCLIntersectionDevice::Start() {
-	IntersectionDevice::Start();
+void OpenCLDevice::Start() {
+	HardwareDevice::Start();
 
 	// Create the OpenCL queue
 	cl::Context &oclContext = deviceDesc->GetOCLContext();
 	oclQueue = new cl::CommandQueue(oclContext, deviceDesc->GetOCLDevice());
-
-	// Compile required kernel
-	kernel = accel->NewOpenCLKernel(this);
 }
 
-void OpenCLIntersectionDevice::Stop() {
-	IntersectionDevice::Stop();
-
-	delete kernel;
-	kernel = nullptr;
+void OpenCLDevice::Stop() {
+	HardwareDevice::Stop();
 
 	delete oclQueue;
 }
@@ -206,11 +180,11 @@ void OpenCLIntersectionDevice::Stop() {
 // Kernels handling for hardware (aka GPU) only applications
 //------------------------------------------------------------------------------
 
-void OpenCLIntersectionDevice::CompileProgram(HardwareDeviceProgram **program,
+void OpenCLDevice::CompileProgram(HardwareDeviceProgram **program,
 		const std::string &programParameters, const std::string &programSource,	
 		const std::string &programName) {
-	cl::Context &oclContext = GetOpenCLContext();
-	cl::Device &oclDevice = GetOpenCLDevice();
+	cl::Context &oclContext = deviceDesc->GetOCLContext();
+	cl::Device &oclDevice = deviceDesc->GetOCLDevice();
 
 	LR_LOG(deviceContext, "[" << programName << "] Defined symbols: " << programParameters);
 	LR_LOG(deviceContext, "[" << programName << "] Compiling kernels ");
@@ -246,7 +220,7 @@ void OpenCLIntersectionDevice::CompileProgram(HardwareDeviceProgram **program,
 	oclDeviceProgram->Set(oclProgram);
 }
 
-void OpenCLIntersectionDevice::GetKernel(HardwareDeviceProgram *program,
+void OpenCLDevice::GetKernel(HardwareDeviceProgram *program,
 		HardwareDeviceKernel **kernel, const string &kernelName) {
 	if (!*kernel)
 		*kernel = new OpenCLDeviceKernel();
@@ -260,7 +234,7 @@ void OpenCLIntersectionDevice::GetKernel(HardwareDeviceProgram *program,
 	oclDeviceKernel->Set(new cl::Kernel(*(oclDeviceProgram->Get()), kernelName.c_str()));
 }
 
-void OpenCLIntersectionDevice::SetKernelArg(HardwareDeviceKernel *kernel,
+void OpenCLDevice::SetKernelArg(HardwareDeviceKernel *kernel,
 		const u_int index, const size_t size, const void *arg) {
 	assert (!kernel->IsNull());
 
@@ -270,7 +244,7 @@ void OpenCLIntersectionDevice::SetKernelArg(HardwareDeviceKernel *kernel,
 	oclDeviceKernel->oclKernel->setArg(index, size, arg);
 }
 
-void OpenCLIntersectionDevice::SetKernelArgBuffer(HardwareDeviceKernel *kernel,
+void OpenCLDevice::SetKernelArgBuffer(HardwareDeviceKernel *kernel,
 		const u_int index, const HardwareDeviceBuffer *buff) {
 	assert (!kernel->IsNull());
 
@@ -293,13 +267,13 @@ static cl::NDRange ConvertHardwareRange(const HardwareDeviceRange &range) {
 		return cl::NDRange(range.sizes[0], range.sizes[1], range.sizes[2]);
 	
 }
-void OpenCLIntersectionDevice::EnqueueKernel(HardwareDeviceKernel *kernel,
+void OpenCLDevice::EnqueueKernel(HardwareDeviceKernel *kernel,
 			const HardwareDeviceRange &workGroupSize,
 			const HardwareDeviceRange &globalSize) {
 	OpenCLDeviceKernel *oclDeviceKernel = dynamic_cast<OpenCLDeviceKernel *>(kernel);
 	assert (oclDeviceKernel);
 
-	GetOpenCLQueue().enqueueNDRangeKernel(*oclDeviceKernel->oclKernel,
+	oclQueue->enqueueNDRangeKernel(*oclDeviceKernel->oclKernel,
 			cl::NullRange,
 			ConvertHardwareRange(workGroupSize),
 			ConvertHardwareRange(globalSize));
@@ -309,15 +283,15 @@ void OpenCLIntersectionDevice::EnqueueKernel(HardwareDeviceKernel *kernel,
 // Memory management for hardware (aka GPU) only applications
 //------------------------------------------------------------------------------
 
-void OpenCLIntersectionDevice::AllocBuffer(const cl_mem_flags clFlags, cl::Buffer **buff,
+void OpenCLDevice::AllocBuffer(const cl_mem_flags clFlags, cl::Buffer **buff,
 		void *src, const size_t size, const std::string &desc) {
 	// Check if the buffer is too big
-	if (GetDeviceDesc()->GetMaxMemoryAllocSize() < size) {
+	if (deviceDesc->GetMaxMemoryAllocSize() < size) {
 		// This is now only a WARNING and not an ERROR because NVIDIA reported
 		// CL_DEVICE_MAX_MEM_ALLOC_SIZE is lower than the real limit.
 		LR_LOG(deviceContext, "WARNING: the " << desc << " buffer is too big for " << GetName() <<
 				" device (i.e. CL_DEVICE_MAX_MEM_ALLOC_SIZE=" <<
-				GetDeviceDesc()->GetMaxMemoryAllocSize() << ")");
+				deviceDesc->GetMaxMemoryAllocSize() << ")");
 	}
 
 	// Handle the case of an empty buffer
@@ -340,48 +314,31 @@ void OpenCLIntersectionDevice::AllocBuffer(const cl_mem_flags clFlags, cl::Buffe
 			// I can reuse the buffer; just update the content
 
 			//LR_LOG(deviceContext, "[Device " << GetName() << "] " << desc << " buffer updated for size: " << (size / 1024) << "Kbytes");
-			if (src) {
-				cl::CommandQueue &oclQueue = GetOpenCLQueue();
-				oclQueue.enqueueWriteBuffer(**buff, CL_FALSE, 0, size, src);
-			}
+			if (src)
+				oclQueue->enqueueWriteBuffer(**buff, CL_FALSE, 0, size, src);
 
 			return;
 		} else {
 			// Free the buffer
-			FreeBuffer(buff);
+
+			FreeMemory((*buff)->getInfo<CL_MEM_SIZE>());
+			delete *buff;
+			*buff = nullptr;
 		}
 	}
-
-	cl::Context &oclContext = GetOpenCLContext();
 
 	if (desc != "")
 		LR_LOG(deviceContext, "[Device " << GetName() << "] " << desc <<
 				" buffer size: " << ToMemString(size));
 
+	cl::Context &oclContext = deviceDesc->GetOCLContext();
 	*buff = new cl::Buffer(oclContext,
 			clFlags,
 			size, src);
 	AllocMemory((*buff)->getInfo<CL_MEM_SIZE>());
 }
 
-void OpenCLIntersectionDevice::AllocBufferRO(cl::Buffer **buff, void *src, const size_t size, const std::string &desc) {
-	AllocBuffer(src ? (CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR) : CL_MEM_READ_ONLY, buff, src, size, desc);
-}
-
-void OpenCLIntersectionDevice::AllocBufferRW(cl::Buffer **buff, void *src, const size_t size, const std::string &desc) {
-	AllocBuffer(src ? (CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR) : CL_MEM_READ_WRITE, buff, src, size, desc);
-}
-
-void OpenCLIntersectionDevice::FreeBuffer(cl::Buffer **buff) {
-	if (*buff) {
-
-		FreeMemory((*buff)->getInfo<CL_MEM_SIZE>());
-		delete *buff;
-		*buff = nullptr;
-	}
-}
-
-void OpenCLIntersectionDevice::AllocBufferRO(HardwareDeviceBuffer **buff, void *src, const size_t size, const std::string &desc) {
+void OpenCLDevice::AllocBufferRO(HardwareDeviceBuffer **buff, void *src, const size_t size, const std::string &desc) {
 	if (!*buff)
 		*buff = new OpenCLDeviceBuffer();
 
@@ -391,7 +348,7 @@ void OpenCLIntersectionDevice::AllocBufferRO(HardwareDeviceBuffer **buff, void *
 	AllocBuffer(src ? (CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR) : CL_MEM_READ_ONLY, &(oclDeviceBuff->oclBuff), src, size, desc);
 }
 
-void OpenCLIntersectionDevice::AllocBufferRW(HardwareDeviceBuffer **buff, void *src, const size_t size, const std::string &desc) {
+void OpenCLDevice::AllocBufferRW(HardwareDeviceBuffer **buff, void *src, const size_t size, const std::string &desc) {
 	if (!*buff)
 		*buff = new OpenCLDeviceBuffer();
 
@@ -401,7 +358,7 @@ void OpenCLIntersectionDevice::AllocBufferRW(HardwareDeviceBuffer **buff, void *
 	AllocBuffer(src ? (CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR) : CL_MEM_READ_WRITE, &(oclDeviceBuff->oclBuff), src, size, desc);
 }
 
-void OpenCLIntersectionDevice::FreeBuffer(HardwareDeviceBuffer **buff) {
+void OpenCLDevice::FreeBuffer(HardwareDeviceBuffer **buff) {
 	if (*buff && !(*buff)->IsNull()) {
 		OpenCLDeviceBuffer *oclDeviceBuff = dynamic_cast<OpenCLDeviceBuffer *>(*buff);
 		assert (oclDeviceBuff);

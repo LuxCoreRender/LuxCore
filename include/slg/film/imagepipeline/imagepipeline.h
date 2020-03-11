@@ -27,7 +27,7 @@
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/color/color.h"
-#include "luxrays/utils/ocl.h"
+#include "luxrays/devices/oclintersectiondevice.h"
 #include "luxrays/utils/serializationutils.h"
 #include "slg/film/imagepipeline/radiancechannelscale.h"
 

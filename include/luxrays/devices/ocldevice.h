@@ -113,7 +113,7 @@ public:
 	}
 
 	friend class Context;
-	friend class OpenCLIntersectionDevice;
+	friend class OpenCLDevice;
 
 protected:
 	static std::string GetDeviceType(const cl_uint type);
@@ -145,7 +145,7 @@ public:
 		return (oclKernel == nullptr);
 	}
 
-	friend class OpenCLIntersectionDevice;
+	friend class OpenCLDevice;
 
 protected:
 	void Set(cl::Kernel *kernel) {
@@ -172,7 +172,7 @@ public:
 		return (oclProgram == nullptr);
 	}
 
-	friend class OpenCLIntersectionDevice;
+	friend class OpenCLDevice;
 
 protected:
 	void Set(cl::Program *p) {
@@ -201,7 +201,7 @@ public:
 		return (oclBuff == nullptr);
 	}
 
-	friend class OpenCLIntersectionDevice;
+	friend class OpenCLDevice;
 
 protected:
 	void Set(cl::Buffer *p) {
@@ -216,45 +216,15 @@ private:
 };
 
 //------------------------------------------------------------------------------
-// OpenCLIntersectionDevice
+// OpenCLDevice
 //------------------------------------------------------------------------------
 
-class OpenCLKernel {
+class OpenCLDevice : public HardwareDevice {
 public:
-	OpenCLKernel(OpenCLIntersectionDevice *dev) :
-		device(dev), stackSize(24) {
-		kernel = nullptr;
-	}
-	virtual ~OpenCLKernel() {
-		delete kernel;
-	}
-
-	virtual void Update(const DataSet *newDataSet) = 0;
-	virtual void EnqueueRayBuffer(cl::CommandQueue &oclQueue,
-		cl::Buffer &rBuff, cl::Buffer &hBuff, const unsigned int rayCount,
-		const VECTOR_CLASS<cl::Event> *events, cl::Event *event) = 0;
-
-	const std::string &GetIntersectionKernelSource() { return intersectionKernelSource; }
-	virtual u_int SetIntersectionKernelArgs(cl::Kernel &kernel, const u_int argIndex) { return 0; }
-
-	void SetMaxStackSize(const size_t s) { stackSize = s; }
-
-protected:
-	std::string intersectionKernelSource;
-
-	OpenCLIntersectionDevice *device;
-	cl::Kernel *kernel;
-	size_t workGroupSize;
-	size_t stackSize;
-};
-
-class OpenCLIntersectionDevice : public IntersectionDevice, public HardwareDevice {
-public:
-	OpenCLIntersectionDevice(const Context *context,
+	OpenCLDevice(const Context *context,
 		OpenCLDeviceDescription *desc, const size_t devIndex);
-	virtual ~OpenCLIntersectionDevice();
+	virtual ~OpenCLDevice();
 
-	virtual void SetDataSet(DataSet *newDataSet);
 	virtual void Start();
 	virtual void Stop();
 
@@ -276,6 +246,16 @@ public:
 			const HardwareDeviceRange &workGroupSize,
 			const HardwareDeviceRange &globalSize);
 
+	// A temporary method until when the new interface is complete
+	void SetKernelArg(HardwareDeviceKernel *kernel, const u_int index, cl::Buffer *oclBuff) {
+		assert (!kernel->IsNull());
+
+		OpenCLDeviceKernel *oclDeviceKernel = dynamic_cast<OpenCLDeviceKernel *>(kernel);
+		assert (oclDeviceKernel);
+
+		oclDeviceKernel->oclKernel->setArg(index, sizeof(cl::Buffer), oclBuff);
+	}
+
 	//--------------------------------------------------------------------------
 	// Memory management for hardware (aka GPU) only applications
 	//--------------------------------------------------------------------------
@@ -288,59 +268,12 @@ public:
 	virtual void AllocBufferRW(HardwareDeviceBuffer **buff, void *src, const size_t size, const std::string &desc = "");
 	virtual void FreeBuffer(HardwareDeviceBuffer **buff);
 
-	//--------------------------------------------------------------------------
-	// OpenCL Device specific methods
-	//--------------------------------------------------------------------------
-
-	//--------------------------------------------------------------------------
-	// Interface for GPU only applications
-	//--------------------------------------------------------------------------
-
-	cl::Context &GetOpenCLContext() { return deviceDesc->GetOCLContext(); }
-	cl::Device &GetOpenCLDevice() { return deviceDesc->GetOCLDevice(); }
-	cl::CommandQueue &GetOpenCLQueue() { return *oclQueue; }
-
-	void EnqueueTraceRayBuffer(cl::Buffer &rBuff, cl::Buffer &hBuff,
-		const unsigned int rayCount,
-		const VECTOR_CLASS<cl::Event> *events, cl::Event *event) {
-		// Enqueue the intersection kernel
-		kernel->EnqueueRayBuffer(*oclQueue, rBuff, hBuff, rayCount, events, event);
-		statsTotalDataParallelRayCount += rayCount;
-	}
-
-	// To compile the this device intersection kernel inside application kernel
-	const std::string &GetIntersectionKernelSource() { return kernel->GetIntersectionKernelSource(); }
-	u_int SetIntersectionKernelArgs(cl::Kernel &oclKernel, const u_int argIndex) {
-		return kernel->SetIntersectionKernelArgs(oclKernel, argIndex);
-	}
-
-	// A temporary method until when the new interface is complete
-	void SetKernelArg(HardwareDeviceKernel *kernel, const u_int index, cl::Buffer *oclBuff) {
-		assert (!kernel->IsNull());
-
-		OpenCLDeviceKernel *oclDeviceKernel = dynamic_cast<OpenCLDeviceKernel *>(kernel);
-		assert (oclDeviceKernel);
-
-		oclDeviceKernel->oclKernel->setArg(index, sizeof(cl::Buffer), oclBuff);
-	}
-
-	//--------------------------------------------------------------------------
-
-	OpenCLDeviceDescription *GetDeviceDesc() const { return deviceDesc; }
-
-	// Temporary methods until when the new interface is complete
-	void AllocBufferRO(cl::Buffer **buff, void *src, const size_t size, const std::string &desc = "");
-	void AllocBufferRW(cl::Buffer **buff, void *src, const size_t size, const std::string &desc = "");
-	void FreeBuffer(cl::Buffer **buff);
-
 	friend class Context;
 
 protected:
-	virtual void Update();
 	virtual void SetKernelArgBuffer(HardwareDeviceKernel *kernel,
 		const u_int index, const HardwareDeviceBuffer *buff);
 
-private:
 	void AllocBuffer(const cl_mem_flags clFlags, cl::Buffer **buff,
 			void *src, const size_t size, const std::string &desc = "");
 
@@ -349,7 +282,6 @@ private:
 	cl::CommandQueue *oclQueue;
 
 	luxrays::oclKernelCache *kernelCache;
-	OpenCLKernel *kernel;
 };
 
 }
