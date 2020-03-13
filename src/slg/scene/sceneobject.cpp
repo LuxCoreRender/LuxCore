@@ -92,23 +92,39 @@ Properties SceneObject::ToProperties(const ExtMeshCache &extMeshCache,
 			break;
 	}
 
-	if (combinedBakeMap) {
-		props.Set(combinedBakeMap->ToProperties("scene.objects." + name + ".bake.combined", useRealFileName));
-		props.Set(Property("scene.objects." + name + ".bake.combined.uvindex")(combinedBakeMapUVIndex));
+	if (bakeMap) {
+		switch (bakeMapType) {
+			case COMBINED:
+				props.Set(bakeMap->ToProperties("scene.objects." + name + ".bake.combined", useRealFileName));
+				props.Set(Property("scene.objects." + name + ".bake.combined.uvindex")(bakeMapUVIndex));
+				break;
+			case LIGHTMAP:
+				props.Set(bakeMap->ToProperties("scene.objects." + name + ".bake.lightmap", useRealFileName));
+				props.Set(Property("scene.objects." + name + ".bake.lightmap.uvindex")(bakeMapUVIndex));
+				break;
+			default:
+				throw runtime_error("Unknown bake map type in SceneObject::ToProperties(): " + ToString(bakeMapType));
+		}
 	}
 
 	return props;
 }
 
-Spectrum SceneObject::GetCombinedBakeMapValue(const UV &uv) const {
-	assert (combinedBakeMap);
+void SceneObject::SetBakeMap(const ImageMap *map, const BakeMapType type, const u_int uvIndex) {
+	bakeMap = map;
+	bakeMapType = type;
+	bakeMapUVIndex = uvIndex;
+}
 
-	return combinedBakeMap->GetSpectrum(uv);
+Spectrum SceneObject::GetBakeMapValue(const UV &uv) const {
+	assert (bakeMap);
+
+	return bakeMap->GetSpectrum(uv);
 }
 
 void SceneObject::AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
-	if (combinedBakeMap)
-		referencedImgMaps.insert(combinedBakeMap);
+	if (bakeMap)
+		referencedImgMaps.insert(bakeMap);
 }
 
 void SceneObject::AddReferencedMaterials(boost::unordered_set<const Material *> &referencedMats) const {

@@ -63,6 +63,8 @@
 
 ''RC1 released''
 
+* Added the support for baked light maps rendering
+
 ### Fixed Bugs
 
 * Fixed triangle lights back face emission when using an IES or image map profile
@@ -92,6 +94,7 @@
 ''RC1 released''
 
 * Fixed a numerical precision problem on some very large scene (issue #308)
+* Fixed weights of direct and indirect light maps in BAKECPU
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.

@@ -194,7 +194,7 @@ PathTracer::DirectLightResult PathTracer::DirectLightSampling(
 								!shadowBsdf.hitPoint.throughShadowTransparency;
 
 							const float weight = misEnabled ? PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
-							const Spectrum incomingRadiance = (useBSDFEVal ? bsdfEval : Dot(shadowRay.d, bsdf.hitPoint.shadeN)) *
+							const Spectrum incomingRadiance = (useBSDFEVal ? bsdfEval : (Dot(shadowRay.d, bsdf.hitPoint.shadeN) * INV_PI)) *
 									(weight * factor) * connectionThroughput * lightRadiance;
 
 							sampleResult->AddDirectLight(light->GetID(), event, pathThroughput, incomingRadiance, 1.f);
@@ -434,8 +434,11 @@ void PathTracer::RenderEyePath(IntersectionDevice *device,
 		// Check if it is a baked material
 		//----------------------------------------------------------------------
 
-		if (bsdf.HasCombinedBakeMap()) {
-			sampleResult.radiance[0] += pathThroughput * bsdf.GetCombinedBakeMapValue();
+		if (bsdf.HasBakeMap(COMBINED)) {
+			sampleResult.radiance[0] += pathThroughput * bsdf.GetBakeMapValue();
+			break;
+		} else if (bsdf.HasBakeMap(LIGHTMAP)) {
+			sampleResult.radiance[0] += pathThroughput * bsdf.Albedo() * bsdf.GetBakeMapValue();
 			break;
 		}
 

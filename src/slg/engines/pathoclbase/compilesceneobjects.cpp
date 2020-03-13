@@ -42,13 +42,23 @@ void CompiledScene::CompileSceneObjects() {
 		const Material *m = scnObj->GetMaterial();
 		oclScnObj.materialIndex = scene->matDefs.GetMaterialIndex(m);
 
-		const ImageMap *combinedBakeMap = scnObj->GetCombinedBakeMap();
-		if (combinedBakeMap) {
-			oclScnObj.combinedBakeMapIndex = scene->imgMapCache.GetImageMapIndex(combinedBakeMap);
-			oclScnObj.combinedBakeMapUVIndex = scnObj->GetCombinedBakeMapUVIndex();
+		const ImageMap *bakeMap = scnObj->GetBakeMap();
+		if (bakeMap) {
+			oclScnObj.bakeMapIndex = scene->imgMapCache.GetImageMapIndex(bakeMap);
+			switch (scnObj->GetBakeMapType()) {
+				case COMBINED:
+					oclScnObj.bakeMapType = slg::ocl::COMBINED;
+					break;
+				case LIGHTMAP:
+					oclScnObj.bakeMapType = slg::ocl::LIGHTMAP;
+					break;
+				default:
+					throw runtime_error("Unknown bake map type in CompiledScene::CompileSceneObjects(): " + ToString(scnObj->GetBakeMapType()));
+			}
+			oclScnObj.bakeMapUVIndex = scnObj->GetBakeMapUVIndex();
 		} else {
-			oclScnObj.combinedBakeMapIndex = NULL_INDEX;
-			oclScnObj.combinedBakeMapUVIndex = NULL_INDEX;
+			oclScnObj.bakeMapIndex = NULL_INDEX;
+			oclScnObj.bakeMapUVIndex = NULL_INDEX;
 		}
 
 		oclScnObj.cameraInvisible = scnObj->IsCameraInvisible();

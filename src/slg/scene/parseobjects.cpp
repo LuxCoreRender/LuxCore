@@ -183,13 +183,24 @@ SceneObject *Scene::CreateObject(const u_int defaultObjID, const string &objName
 		ImageMap *imgMap = ImageMap::FromProperties(props, propName + ".bake.combined");
 
 		// Add the image map to the cache
-		const string name ="LUXCORE_BAKEMAP_" + propName;
+		const string name ="LUXCORE_BAKEMAP_COMBINED_" + propName;
 		imgMap->SetName(name);
 		imgMapCache.DefineImageMap(imgMap);
 
 		const u_int uvIndex = Clamp(props.Get(Property(propName + ".bake.combined.uvindex")(0)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
 
-		scnObj->SetCombinedBakeMap(imgMap, uvIndex);
+		scnObj->SetBakeMap(imgMap, COMBINED, uvIndex);
+	} else if (props.IsDefined(propName + ".bake.lightmap.file")) {
+		ImageMap *imgMap = ImageMap::FromProperties(props, propName + ".bake.lightmap");
+
+		// Add the image map to the cache
+		const string name ="LUXCORE_BAKEMAP_LIGHTMAP_" + propName;
+		imgMap->SetName(name);
+		imgMapCache.DefineImageMap(imgMap);
+
+		const u_int uvIndex = Clamp(props.Get(Property(propName + ".bake.lightmap.uvindex")(0)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
+
+		scnObj->SetBakeMap(imgMap, LIGHTMAP, uvIndex);
 	}
 
 	return scnObj;
