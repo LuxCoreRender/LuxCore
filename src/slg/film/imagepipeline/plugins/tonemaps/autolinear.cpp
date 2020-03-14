@@ -128,24 +128,24 @@ void AutoLinearToneMap::ApplyOCL(Film &film, const u_int index) {
 		// Compile sources
 		const double tStart = WallClockTime();
 
-		{
-			HardwareDeviceProgram *program = nullptr;
-			hardwareDevice->CompileProgram(&program,
-					"-D LUXRAYS_OPENCL_KERNEL -D SLG_OPENCL_KERNEL",
-					luxrays::ocl::KernelSource_luxrays_types +
-					luxrays::ocl::KernelSource_color_types +
-					luxrays::ocl::KernelSource_color_funcs +
-					slg::ocl::KernelSource_tonemap_autolinear_funcs +
-					slg::ocl::KernelSource_tonemap_reduce_funcs,
-					"AutoLinearToneMap");
+		HardwareDeviceProgram *program = nullptr;
+		hardwareDevice->CompileProgram(&program,
+				"-D LUXRAYS_OPENCL_KERNEL -D SLG_OPENCL_KERNEL",
+				luxrays::ocl::KernelSource_luxrays_types +
+				luxrays::ocl::KernelSource_color_types +
+				luxrays::ocl::KernelSource_color_funcs +
+				slg::ocl::KernelSource_tonemap_autolinear_funcs +
+				slg::ocl::KernelSource_tonemap_reduce_funcs,
+				"AutoLinearToneMap");
 
-			SLG_LOG("[AutoLinearToneMap] Compiling OpRGBValuesReduce Kernel");
-			hardwareDevice->GetKernel(program, &opRGBValuesReduceKernel, "OpRGBValuesReduce");
-			SLG_LOG("[AutoLinearToneMap] Compiling OpRGBValueAccumulate Kernel");
-			hardwareDevice->GetKernel(program, &opRGBValueAccumulateKernel, "OpRGBValueAccumulate");
-			SLG_LOG("[AutoLinearToneMap] Compiling AutoLinearToneMap_Apply Kernel");
-			hardwareDevice->GetKernel(program, &applyKernel, "AutoLinearToneMap_Apply");
-		}
+		SLG_LOG("[AutoLinearToneMap] Compiling OpRGBValuesReduce Kernel");
+		hardwareDevice->GetKernel(program, &opRGBValuesReduceKernel, "OpRGBValuesReduce");
+		SLG_LOG("[AutoLinearToneMap] Compiling OpRGBValueAccumulate Kernel");
+		hardwareDevice->GetKernel(program, &opRGBValueAccumulateKernel, "OpRGBValueAccumulate");
+		SLG_LOG("[AutoLinearToneMap] Compiling AutoLinearToneMap_Apply Kernel");
+		hardwareDevice->GetKernel(program, &applyKernel, "AutoLinearToneMap_Apply");
+
+		delete program;
 
 		// Set kernel arguments
 		u_int argIndex = 0;

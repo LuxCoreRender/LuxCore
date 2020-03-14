@@ -22,6 +22,7 @@
 #include <cmath>
 #include <string>
 
+#include "luxrays/core/hardwaredevice.h"
 #include "luxrays/utils/serializationutils.h"
 #include "slg/film/imagepipeline/plugins/tonemaps/tonemap.h"
 
@@ -61,7 +62,7 @@ private:
 	}
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-	cl::Kernel *applyKernel;
+	luxrays::HardwareDeviceKernel *applyKernel;
 #endif
 };
 

@@ -84,30 +84,35 @@ void LinearToneMap::Apply(Film &film, const u_int index) {
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 void LinearToneMap::ApplyOCL(Film &film, const u_int index) {
+	HardwareDevice *hardwareDevice = film.oclIntersectionDevice;
+
 	if (!applyKernel) {
 		// Compile sources
 		const double tStart = WallClockTime();
 
-		cl::Program *program = ImagePipelinePlugin::CompileProgram(film, "",
-				slg::ocl::KernelSource_tonemap_linear_funcs, "LinearToneMap");
+		HardwareDeviceProgram *program = nullptr;
+		hardwareDevice->CompileProgram(&program,
+				"",
+				slg::ocl::KernelSource_tonemap_linear_funcs,
+				"LinearToneMap");
 
-		SLG_LOG("[LinearToneMap] Compiling LinearToneMap_Apply Kernel");
-		applyKernel = new cl::Kernel(*program, "LinearToneMap_Apply");
+		SLG_LOG("[AutoLinearToneMap] Compiling LinearToneMap_Apply Kernel");
+		hardwareDevice->GetKernel(program, &applyKernel, "LinearToneMap_Apply");
 
 		delete program;
-
+		
 		// Set kernel arguments
 		u_int argIndex = 0;
-		applyKernel->setArg(argIndex++, film.GetWidth());
-		applyKernel->setArg(argIndex++, film.GetHeight());
-		applyKernel->setArg(argIndex++, *(film.ocl_IMAGEPIPELINE));
-		applyKernel->setArg(argIndex++, scale);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.GetWidth());
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.GetHeight());
+		film.oclIntersectionDevice->SetKernelArg(applyKernel, argIndex++, film.ocl_IMAGEPIPELINE);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, scale);
 
 		const double tEnd = WallClockTime();
 		SLG_LOG("[LinearToneMap] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
 	}
 
-	film.oclIntersectionDevice->GetOpenCLQueue().enqueueNDRangeKernel(*applyKernel,
-			cl::NullRange, cl::NDRange(RoundUp(film.GetWidth() * film.GetHeight(), 256u)), cl::NDRange(256));
+	hardwareDevice->EnqueueKernel(applyKernel, HardwareDeviceRange(RoundUp(film.GetWidth() * film.GetHeight(), 256u)),
+			HardwareDeviceRange(256));
 }
 #endif
