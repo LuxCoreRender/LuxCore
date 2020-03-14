@@ -206,10 +206,10 @@ void FileSaverRenderEngine::ExportSceneGLTF(const RenderConfig *renderConfig,
 		// Add vertex UVs
 
 		u_int vertexUVsAccessorIndex = NULL_INDEX;
-		if (scnObj->HasCombinedBakeMap() && triMesh->HasUVs(scnObj->GetCombinedBakeMapUVIndex())) {
+		if (scnObj->HasBakeMap(COMBINED) && triMesh->HasUVs(scnObj->GetBakeMapUVIndex())) {
 			const size_t encodedVertexUVsSize = sizeof(UV) * triMesh->GetTotalVertexCount();
 			const string encodedVertexUVs = Base64Encode(
-					(const char *)(triMesh->GetAllUVs()[scnObj->GetCombinedBakeMapUVIndex()]),
+					(const char *)(triMesh->GetAllUVs()[scnObj->GetBakeMapUVIndex()]),
 					encodedVertexUVsSize);
 
 			j["buffers"].push_back(json::object({
@@ -230,7 +230,7 @@ void FileSaverRenderEngine::ExportSceneGLTF(const RenderConfig *renderConfig,
 
 			UV minUV(numeric_limits<float>::infinity(), numeric_limits<float>::infinity());
 			UV maxUV(-numeric_limits<float>::infinity(), -numeric_limits<float>::infinity());
-			UV *uv = triMesh->GetAllUVs()[scnObj->GetCombinedBakeMapUVIndex()];
+			UV *uv = triMesh->GetAllUVs()[scnObj->GetBakeMapUVIndex()];
 			for (u_int uvIndex = 0; uvIndex < triMesh->GetTotalVertexCount(); ++uvIndex) {
 				minUV.u = Min(minUV.u, uv[uvIndex].u);
 				minUV.v = Min(minUV.v, uv[uvIndex].v);
@@ -316,10 +316,10 @@ void FileSaverRenderEngine::ExportSceneGLTF(const RenderConfig *renderConfig,
 
 		// 0 is the default material for not baked object
 		u_int materialIndex = 0;
-		if (scnObj->HasCombinedBakeMap() && triMesh->HasUVs(scnObj->GetCombinedBakeMapUVIndex())) {
+		if (scnObj->HasBakeMap(COMBINED) && triMesh->HasUVs(scnObj->GetBakeMapUVIndex())) {
 			// Write the image to file
 
-			const ImageMap *imgMap = scnObj->GetCombinedBakeMap();
+			const ImageMap *imgMap = scnObj->GetBakeMap();
 			const string imgMapFileName = (dirPath / imgMap->GetName()).generic_string() + ".png";
 			SDL_LOG("  Saving image map: " << imgMapFileName << " (channels: " << imgMap->GetChannelCount() << ")");
 			imgMap->WriteImage(imgMapFileName);

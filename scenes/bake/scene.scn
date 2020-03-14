@@ -24,9 +24,9 @@ scene.lights.139858846954504.efficency = 17
 scene.lights.139858846954504.position = 0 0 0
 scene.lights.139858846954504.radius = 0.300000012
 ##
-scene.lights.envlight.type = "constantinfinite"
-scene.lights.envlight.color = 0.7 0.7 0.7
-scene.lights.envlight.gain = 0.5 0.5 0.5
+#scene.lights.envlight.type = "constantinfinite"
+#scene.lights.envlight.color = 0.7 0.7 0.7
+#scene.lights.envlight.gain = 0.5 0.5 0.5
 ##
 scene.textures.139857989714440Color.type = "checkerboard2d"
 scene.textures.139857989714440Color.texture1 = "0.7 0.7 0.7"
@@ -74,7 +74,7 @@ scene.materials.__CLAY__.shadowcatcher.onlyinfinitelights = 0
 scene.materials.__CLAY__.photongi.enable = 1
 ##
 scene.materials.mat_cube1139858847948808.type = "matte"
-scene.materials.mat_cube1139858847948808.kd = "0.7 0.7 0.7"
+scene.materials.mat_cube1139858847948808.kd = "0.7 0.0 0.0"
 scene.materials.mat_cube1139858847948808.transparency.shadow = 0 0 0
 scene.materials.mat_cube1139858847948808.id = 6728256
 scene.materials.mat_cube1139858847948808.emission.gain = 1 1 1
@@ -106,13 +106,13 @@ scene.materials.mat_plane139857991252616.emission.directlightsampling.type = "AU
 scene.materials.mat_plane139857991252616.visibility.indirect.diffuse.enable = 1
 scene.materials.mat_plane139857991252616.visibility.indirect.glossy.enable = 1
 scene.materials.mat_plane139857991252616.visibility.indirect.specular.enable = 1
-scene.materials.mat_plane139857991252616.shadowcatcher.enable = 1
-scene.materials.mat_plane139857991252616.shadowcatcher.onlyinfinitelights = 0
+#scene.materials.mat_plane139857991252616.shadowcatcher.enable = 1
+#scene.materials.mat_plane139857991252616.shadowcatcher.onlyinfinitelights = 0
 scene.materials.mat_plane139857991252616.photongi.enable = 1
 ##
 scene.materials.mat_cube2139857990867336.type = "matte"
 scene.materials.mat_cube2139857990867336.kd = "139857990544904Color"
-scene.materials.mat_cube2139857990867336.transparency = 139857990544904Color_Transp
+#scene.materials.mat_cube2139857990867336.transparency = 139857990544904Color_Transp
 scene.materials.mat_cube2139857990867336.transparency.shadow = 0 0 0
 scene.materials.mat_cube2139857990867336.id = 13398304
 scene.materials.mat_cube2139857990867336.emission.gain = 1 1 1

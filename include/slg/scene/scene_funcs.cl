@@ -137,8 +137,8 @@ OPENCL_FORCE_NOT_INLINE bool Scene_Intersect(
 			// It is a transparent material, continue to trace the ray
 			ray->mint = rayHit->t + MachineEpsilon_E(rayHit->t);
 
-			// A safety check
-			if (ray->mint >= ray->maxt)
+			// A safety check in case of not enough numerical precision
+			if ((ray->mint == rayHit->t) || (ray->mint >= ray->maxt))
 				return false;
 			else
 				return true;

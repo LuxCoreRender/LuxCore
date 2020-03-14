@@ -597,8 +597,8 @@ bool Scene::Intersect(IntersectionDevice *device,
 				ray->mint = rayHit->t + MachineEpsilon::E(rayHit->t);
 				ray->maxt = originalMaxT;
 
-				// A safety check
-				if (ray->mint >= ray->maxt)
+				// A safety check in case of not enough numerical precision
+				if ((ray->mint == rayHit->t) || (ray->mint >= ray->maxt))
 					return false;
 			} else
 				return true;

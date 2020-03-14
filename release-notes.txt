@@ -9,6 +9,7 @@
 * Added the support for a new ".sharpness" (default value 0.1, range [0.0, 1.0]) Intel OIDN parameter to blend original and denoised output
 * Removed LuxRays support for virtual devices and hybrid rendering (old LuxRender GPU doing ray intersections and CPU everything else)
 
+
 ### Fixed Bugs
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
@@ -24,4 +25,5 @@ of release notes.
 * Variance clamping is not applied to AOVs
 
 **Note for Windows users:** you have to install the [Microsoft Visual C++ Redistributable
-for Visual Studio 2017](https://aka.ms/vs/15/release/vc_redist.x64.exe).
+for Visual Studio 2017](https://aka.ms/vs/15/release/vc_redist.x64.exe) and
+[Intel C++ redistributable](https://software.intel.com/sites/default/files/managed/59/aa/ww_icl_redist_msi_2018.3.210.zip).

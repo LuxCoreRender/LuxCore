@@ -344,17 +344,19 @@ OPENCL_FORCE_INLINE float3 BSDF_ShadowCatcherSample(__global const BSDF *bsdf,
 // BAke related functions
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_INLINE bool BSDF_HasCombinedBakeMap(__global const BSDF *bsdf
+OPENCL_FORCE_INLINE bool BSDF_HasBakeMap(__global const BSDF *bsdf, const BakeMapType type
 		MATERIALS_PARAM_DECL) {
-	return (bsdf->sceneObjectIndex != NULL_INDEX) && sceneObjs[bsdf->sceneObjectIndex].combinedBakeMapIndex != NULL_INDEX;
+	return (bsdf->sceneObjectIndex != NULL_INDEX) &&
+			(sceneObjs[bsdf->sceneObjectIndex].bakeMapIndex != NULL_INDEX) &&
+			(sceneObjs[bsdf->sceneObjectIndex].bakeMapType == type);
 }
 
-OPENCL_FORCE_INLINE float3 BSDF_GetCombinedBakeMapValue(__global const BSDF *bsdf
+OPENCL_FORCE_INLINE float3 BSDF_GetBakeMapValue(__global const BSDF *bsdf
 		MATERIALS_PARAM_DECL) {
-	const uint mapIndex = sceneObjs[bsdf->sceneObjectIndex].combinedBakeMapIndex;
+	const uint mapIndex = sceneObjs[bsdf->sceneObjectIndex].bakeMapIndex;
 	__global const ImageMap *imageMap = &imageMapDescs[mapIndex];
 
-	const uint uvIndex = sceneObjs[bsdf->sceneObjectIndex].combinedBakeMapUVIndex;
+	const uint uvIndex = sceneObjs[bsdf->sceneObjectIndex].bakeMapUVIndex;
 	const float2 uv = VLOAD2F(&bsdf->hitPoint.uv[uvIndex].u);
 
 	return ImageMap_GetSpectrum(

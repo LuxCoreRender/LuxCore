@@ -259,8 +259,16 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 	// Check if it is a baked material
 	//----------------------------------------------------------------------
 
-	if (BSDF_HasCombinedBakeMap(bsdf MATERIALS_PARAM)) {
-		const float3 radiance = VLOAD3F(&taskState->throughput.c[0]) * BSDF_GetCombinedBakeMapValue(bsdf MATERIALS_PARAM);
+	if (BSDF_HasBakeMap(bsdf, COMBINED MATERIALS_PARAM)) {
+		const float3 radiance = VLOAD3F(&taskState->throughput.c[0]) * BSDF_GetBakeMapValue(bsdf MATERIALS_PARAM);
+		VADD3F(sampleResult->radiancePerPixelNormalized[0].c, radiance);
+
+		taskState->state = MK_SPLAT_SAMPLE;
+		return;
+	} else if (BSDF_HasBakeMap(bsdf, LIGHTMAP MATERIALS_PARAM)) {
+		const float3 radiance = VLOAD3F(&taskState->throughput.c[0]) *
+				BSDF_Albedo(bsdf MATERIALS_PARAM) *
+				BSDF_GetBakeMapValue(bsdf MATERIALS_PARAM);
 		VADD3F(sampleResult->radiancePerPixelNormalized[0].c, radiance);
 
 		taskState->state = MK_SPLAT_SAMPLE;

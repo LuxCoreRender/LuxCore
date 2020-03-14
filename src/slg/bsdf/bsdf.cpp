@@ -170,12 +170,12 @@ Spectrum BSDF::EvaluateTotal() const {
 	return material->EvaluateTotal(hitPoint);
 }
 
-bool BSDF::HasCombinedBakeMap() const {
-	return sceneObject && sceneObject->HasCombinedBakeMap();
+bool BSDF::HasBakeMap(const BakeMapType type) const {
+	return sceneObject && sceneObject->HasBakeMap(type);
 }
 
-Spectrum BSDF::GetCombinedBakeMapValue() const {
-	return sceneObject->GetCombinedBakeMapValue(hitPoint.uv[sceneObject->GetCombinedBakeMapUVIndex()]);
+Spectrum BSDF::GetBakeMapValue() const {
+	return sceneObject->GetBakeMapValue(hitPoint.uv[sceneObject->GetBakeMapUVIndex()]);
 }
 
 //------------------------------------------------------------------------------

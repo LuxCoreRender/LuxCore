@@ -27,9 +27,10 @@
 #include "slg/lights/trianglelight.h"
 #include "slg/materials/material.h"
 #include "slg/volumes/volume.h"
-#include "slg/utils/pathvolumeinfo.h"
 #include "slg/bsdf/bsdfevents.h"
 #include "slg/bsdf/hitpoint.h"
+#include "slg/scene/sceneobject.h"
+#include "slg/utils/pathvolumeinfo.h"
 
 namespace slg {
 
@@ -39,7 +40,6 @@ namespace ocl {
 }
 
 class Scene;
-class SceneObject;
 
 class BSDF {
 public:
@@ -145,8 +145,8 @@ public:
 		}
 	}
 
-	bool HasCombinedBakeMap() const;
-	luxrays::Spectrum GetCombinedBakeMapValue() const;
+	bool HasBakeMap(const BakeMapType type) const;
+	luxrays::Spectrum GetBakeMapValue() const;
 
 	HitPoint hitPoint;
 

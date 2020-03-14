@@ -18,12 +18,18 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+typedef enum {
+	COMBINED,
+	LIGHTMAP
+} BakeMapType;
+
 typedef struct {
 	unsigned int objectID;
 	unsigned int materialIndex;
 
-	unsigned int combinedBakeMapIndex;
-	unsigned int  combinedBakeMapUVIndex;
+	unsigned int bakeMapIndex;
+	BakeMapType bakeMapType;
+	unsigned int  bakeMapUVIndex;
 
 	int cameraInvisible;
 } SceneObject;

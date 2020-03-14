@@ -36,11 +36,16 @@ namespace ocl {
 // SceneObject
 //------------------------------------------------------------------------------
 
+typedef enum {
+	COMBINED,
+	LIGHTMAP
+} BakeMapType;
+
 class SceneObject : public luxrays::NamedObject {
 public:
 	SceneObject(luxrays::ExtMesh *m, const Material *mt, const u_int id,
 			const bool invisib) : NamedObject("obj"), mesh(m), mat(mt), objID(id),
-			combinedBakeMap(nullptr), cameraInvisible(invisib) { }
+			bakeMap(nullptr), cameraInvisible(invisib) { }
 	virtual ~SceneObject() { }
 
 	const luxrays::ExtMesh *GetExtMesh() const { return mesh; }
@@ -51,14 +56,12 @@ public:
 
 	void SetMaterial(const Material *newMat) { mat = newMat; }
 
-	bool HasCombinedBakeMap() const { return combinedBakeMap != nullptr; }
-	void SetCombinedBakeMap(const ImageMap *map, const u_int uvIndex) {
-		combinedBakeMap = map;
-		combinedBakeMapUVIndex = uvIndex;
-	}
-	const ImageMap *GetCombinedBakeMap() const { return combinedBakeMap; }
-	u_int GetCombinedBakeMapUVIndex() const { return combinedBakeMapUVIndex; }
-	luxrays::Spectrum GetCombinedBakeMapValue(const luxrays::UV &uv) const;
+	bool HasBakeMap(const BakeMapType type) const { return (bakeMap != nullptr) && (bakeMapType == type); }
+	BakeMapType GetBakeMapType() const { return bakeMapType; }
+	void SetBakeMap(const ImageMap *map, const BakeMapType type, const u_int uvIndex);
+	const ImageMap *GetBakeMap() const { return bakeMap; }
+	u_int GetBakeMapUVIndex() const { return bakeMapUVIndex; }
+	luxrays::Spectrum GetBakeMapValue(const luxrays::UV &uv) const;
 
 	void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const;
 	void AddReferencedMaterials(boost::unordered_set<const Material *> &referencedMats) const;
@@ -78,9 +81,10 @@ private:
 	luxrays::ExtMesh *mesh;
 	const Material *mat;
 	const u_int objID;
-	
-	const ImageMap *combinedBakeMap;
-	u_int combinedBakeMapUVIndex;
+
+	const ImageMap *bakeMap;
+	BakeMapType bakeMapType;
+	u_int bakeMapUVIndex;
 
 	bool cameraInvisible;
 };

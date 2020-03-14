@@ -35,11 +35,6 @@ namespace slg {
 // Render baking PU render engine
 //------------------------------------------------------------------------------
 
-typedef enum {
-	COMBINED,
-	LIGHTMAP
-} BakeMapType;
-
 typedef struct {
 	BakeMapType type;
 	std::string fileName;
