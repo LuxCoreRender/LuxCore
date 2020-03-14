@@ -129,6 +129,8 @@ public:
 	virtual void EnqueueKernel(HardwareDeviceKernel *kernel,
 			const HardwareDeviceRange &workGroupSize,
 			const HardwareDeviceRange &globalSize) = 0;
+	virtual void FlushQueue() = 0;
+	virtual void FinishQueue() = 0;
 
 	//--------------------------------------------------------------------------
 	// Memory management for hardware (aka GPU) only applications

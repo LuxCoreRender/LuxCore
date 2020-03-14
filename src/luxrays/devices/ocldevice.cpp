@@ -199,7 +199,7 @@ void OpenCLDevice::CompileProgram(HardwareDeviceProgram **program,
 	cl::Program *oclProgram = kernelCache->Compile(oclContext, oclDevice,
 			programParameters, forceInlineDirective + programSource,
 			&cached, &error);
-	if (!program) {
+	if (!oclProgram) {
 		LR_LOG(deviceContext, "[" << programName << "] program compilation error" << endl << error);
 
 		throw runtime_error(programName + " program compilation error");
@@ -277,6 +277,14 @@ void OpenCLDevice::EnqueueKernel(HardwareDeviceKernel *kernel,
 			cl::NullRange,
 			ConvertHardwareRange(workGroupSize),
 			ConvertHardwareRange(globalSize));
+}
+
+void OpenCLDevice::FlushQueue() {
+	oclQueue->flush();
+}
+
+void OpenCLDevice::FinishQueue() {
+	oclQueue->finish();
 }
 
 //------------------------------------------------------------------------------

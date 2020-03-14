@@ -247,6 +247,8 @@ public:
 	virtual void EnqueueKernel(HardwareDeviceKernel *kernel,
 			const HardwareDeviceRange &workGroupSize,
 			const HardwareDeviceRange &globalSize);
+	virtual void FlushQueue();
+	virtual void FinishQueue();
 
 	// A temporary method until when the new interface is complete
 	void SetKernelArg(HardwareDeviceKernel *kernel, const u_int index, cl::Buffer *oclBuff) {

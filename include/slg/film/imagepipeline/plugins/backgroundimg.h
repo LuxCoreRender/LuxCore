@@ -68,12 +68,11 @@ private:
 	ImageMap *filmImageMap;
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-	// Used inside the object destructor to free buffers
-	luxrays::OpenCLIntersectionDevice *oclIntersectionDevice;
-	cl::Buffer *oclFilmImageMapDesc;
-	cl::Buffer *oclFilmImageMap;
+	luxrays::HardwareDevice *hardwareDevice;
+	luxrays::HardwareDeviceBuffer *oclFilmImageMapDesc;
+	luxrays::HardwareDeviceBuffer *oclFilmImageMap;
 
-	cl::Kernel *applyKernel;
+	luxrays::HardwareDeviceKernel *applyKernel;
 #endif
 };
 

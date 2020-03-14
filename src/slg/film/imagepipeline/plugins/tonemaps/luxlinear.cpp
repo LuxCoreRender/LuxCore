@@ -102,6 +102,8 @@ void LuxLinearToneMap::ApplyOCL(Film &film, const u_int index) {
 	HardwareDevice *hardwareDevice = film.oclIntersectionDevice;
 
 	if (!applyKernel) {
+		film.ctx->SetVerbose(true);
+
 		// Compile sources
 		const double tStart = WallClockTime();
 
@@ -127,6 +129,8 @@ void LuxLinearToneMap::ApplyOCL(Film &film, const u_int index) {
 
 		const double tEnd = WallClockTime();
 		SLG_LOG("[LuxLinearToneMap] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
+
+		film.ctx->SetVerbose(false);
 	}
 
 	hardwareDevice->EnqueueKernel(applyKernel, HardwareDeviceRange(RoundUp(film.GetWidth() * film.GetHeight(), 256u)),

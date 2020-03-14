@@ -131,12 +131,12 @@ void Reinhard02ToneMap::ApplyOCL(Film &film, const u_int index) {
 	const u_int workSize = RoundUp((pixelCount + 1) / 2, 64u);
 
 	if (!applyKernel) {
+		film.ctx->SetVerbose(true);
+
 		hardwareDevice = film.oclIntersectionDevice;
 
 		// Allocate buffers
-		film.ctx->SetVerbose(true);
 		hardwareDevice->AllocBufferRW(&oclAccumBuffer, nullptr, (workSize / 64) * sizeof(float) * 3, "Accumulation");
-		film.ctx->SetVerbose(false);
 
 		// Compile sources
 		const double tStart = WallClockTime();
@@ -184,6 +184,8 @@ void Reinhard02ToneMap::ApplyOCL(Film &film, const u_int index) {
 
 		const double tEnd = WallClockTime();
 		SLG_LOG("[Reinhard02ToneMap] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
+
+		film.ctx->SetVerbose(false);
 	}
 
 	hardwareDevice->EnqueueKernel(opRGBValuesReduceKernel, HardwareDeviceRange(workSize),
