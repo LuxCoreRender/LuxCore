@@ -44,7 +44,7 @@ OPENCL_FORCE_INLINE float SchlickDistribution_SchlickA(const float3 H, const flo
 	return 1.f;
 }
 
-OPENCL_FORCE_INLINE float SchlickDistribution_D(const float roughness, const float3 wh, const float anisotropy) {
+OPENCL_FORCE_NOT_INLINE float SchlickDistribution_D(const float roughness, const float3 wh, const float anisotropy) {
 	const float cosTheta = fabs(wh.z);
 	return SchlickDistribution_SchlickZ(roughness, cosTheta) * SchlickDistribution_SchlickA(wh, anisotropy) * M_1_PI_F;
 }
@@ -53,7 +53,7 @@ OPENCL_FORCE_INLINE float SchlickDistribution_SchlickG(const float roughness, co
 	return costheta / (costheta * (1.f - roughness) + roughness);
 }
 
-OPENCL_FORCE_INLINE float SchlickDistribution_G(const float roughness, const float3 fixedDir, const float3 sampledDir) {
+OPENCL_FORCE_NOT_INLINE float SchlickDistribution_G(const float roughness, const float3 fixedDir, const float3 sampledDir) {
 	return SchlickDistribution_SchlickG(roughness, fabs(fixedDir.z)) *
 			SchlickDistribution_SchlickG(roughness, fabs(sampledDir.z));
 }
@@ -62,7 +62,7 @@ OPENCL_FORCE_INLINE float GetPhi(const float a, const float b) {
 	return M_PI_F * .5f * sqrt(a * b / (1.f - a * (1.f - b)));
 }
 
-OPENCL_FORCE_INLINE void SchlickDistribution_SampleH(const float roughness, const float anisotropy,
+OPENCL_FORCE_NOT_INLINE void SchlickDistribution_SampleH(const float roughness, const float anisotropy,
 		const float u0, const float u1, float3 *wh, float *d, float *pdf) {
 	float u1x4 = u1 * 4.f;
 	const float cos2Theta = u0 / (roughness * (1.f - u0) + u0);
@@ -91,7 +91,7 @@ OPENCL_FORCE_INLINE void SchlickDistribution_SampleH(const float roughness, cons
 	*pdf = *d;
 }
 
-OPENCL_FORCE_INLINE float SchlickDistribution_Pdf(const float roughness, const float3 wh,
+OPENCL_FORCE_NOT_INLINE float SchlickDistribution_Pdf(const float roughness, const float3 wh,
 		const float anisotropy) {
 	return SchlickDistribution_D(roughness, wh, anisotropy);
 }
@@ -111,7 +111,7 @@ OPENCL_FORCE_INLINE float3 CoatingAbsorption(const float cosi, const float coso,
 		return WHITE;
 }
 
-OPENCL_FORCE_INLINE float SchlickBSDF_CoatingWeight(const float3 ks, const float3 fixedDir) {
+OPENCL_FORCE_NOT_INLINE float SchlickBSDF_CoatingWeight(const float3 ks, const float3 fixedDir) {
 	// Approximate H by using reflection direction for wi
 	const float u = fabs(fixedDir.z);
 	const float3 S = FresnelSchlick_Evaluate(ks, u);
@@ -120,7 +120,7 @@ OPENCL_FORCE_INLINE float SchlickBSDF_CoatingWeight(const float3 ks, const float
 	return .5f * (1.f + Spectrum_Filter(S));
 }
 
-OPENCL_FORCE_INLINE float3 SchlickBSDF_CoatingF(const float3 ks, const float roughness,
+OPENCL_FORCE_NOT_INLINE float3 SchlickBSDF_CoatingF(const float3 ks, const float roughness,
 		const float anisotropy, const int multibounce, const float3 fixedDir,
 		const float3 sampledDir) {
 	const float coso = fabs(fixedDir.z);
@@ -143,7 +143,7 @@ OPENCL_FORCE_INLINE float3 SchlickBSDF_CoatingF(const float3 ks, const float rou
 	return factor * S;
 }
 
-OPENCL_FORCE_INLINE float3 SchlickBSDF_CoatingSampleF(const float3 ks,
+OPENCL_FORCE_NOT_INLINE float3 SchlickBSDF_CoatingSampleF(const float3 ks,
 		const float roughness, const float anisotropy, const int multibounce,
 		const float3 fixedDir, float3 *sampledDir,
 		float u0, float u1, float *pdf) {
@@ -174,7 +174,7 @@ OPENCL_FORCE_INLINE float3 SchlickBSDF_CoatingSampleF(const float3 ks,
 	return S;
 }
 
-OPENCL_FORCE_INLINE float SchlickBSDF_CoatingPdf(const float roughness, const float anisotropy,
+OPENCL_FORCE_NOT_INLINE float SchlickBSDF_CoatingPdf(const float roughness, const float anisotropy,
 		const float3 fixedDir, const float3 sampledDir) {
 	const float3 wh = normalize(fixedDir + sampledDir);
 	return SchlickDistribution_Pdf(roughness, wh, anisotropy) / (4.f * fabs(dot(fixedDir, wh)));
@@ -199,7 +199,7 @@ OPENCL_FORCE_INLINE float3 FrFull(const float cosi, const float3 cost, const flo
 	return (Rparl2 + Rperp2) * .5f;
 }
 
-OPENCL_FORCE_INLINE float3 FresnelGeneral_Evaluate(const float3 eta, const float3 k, const float cosi) {
+OPENCL_FORCE_NOT_INLINE float3 FresnelGeneral_Evaluate(const float3 eta, const float3 k, const float cosi) {
 	float3 sint2 = fmax(0.f, 1.f - cosi * cosi);
 	if (cosi > 0.f)
 		sint2 /= eta * eta;
@@ -218,7 +218,7 @@ OPENCL_FORCE_INLINE float3 FresnelGeneral_Evaluate(const float3 eta, const float
 	}
 }
 
-OPENCL_FORCE_INLINE float FresnelCauchy_Evaluate(const float eta, const float cosi) {
+OPENCL_FORCE_NOT_INLINE float FresnelCauchy_Evaluate(const float eta, const float cosi) {
 	// Compute indices of refraction for dielectric
 	const bool entering = (cosi > 0.f);
 

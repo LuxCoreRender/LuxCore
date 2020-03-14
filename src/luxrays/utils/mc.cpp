@@ -18,6 +18,7 @@
 
 #include <limits>
 
+#include "luxrays/core/epsilon.h"
 #include "luxrays/core/randomgen.h"
 #include "luxrays/utils/mc.h"
 #include "luxrays/utils/mcdistribution.h"
@@ -374,8 +375,17 @@ float Distribution1D::SampleContinuous(float u, float *pdf, u_int *off) const {
 	if (off)
 		*off = offset;
 
-	// Return $x \in [0,1)$ corresponding to sample
-	return (offset + du) * invCount;
+	// Return x in [0,1) corresponding to sample
+	//
+	// Note: if du is very near to 1 than offset + du = offset + 1 and this
+	// causes a lot of problems because the Pdf((offset + du) * invCount) will be
+	// different from the Pdf returned here.
+	// So I use this Min() as work around.
+	const float result = Min((offset + du) * invCount, MachineEpsilon::PreviousFloat(((offset + 1) * invCount)));
+	
+	assert (*pdf == Pdf(result));
+
+	return result;
 }
 
 u_int Distribution1D::SampleDiscrete(float u, float *pdf, float *du) const {
@@ -405,6 +415,15 @@ u_int Distribution1D::SampleDiscrete(float u, float *pdf, float *du) const {
 	*pdf = func[offset] * invCount;
 
 	return offset;
+}
+
+float Distribution1D::Pdf(float u, float *du) const {
+	const u_int offset = Offset(u);
+
+	if (du)
+		*du = u * count - cdf[offset];
+	
+	return func[offset];
 }
 
 //------------------------------------------------------------------------------
@@ -442,10 +461,24 @@ void Distribution2D::SampleContinuous(float u0, float u1, float uv[2],
 	*pdf = pdfs[0] * pdfs[1];
 }
 
-void Distribution2D::SampleDiscrete(float u0, float u1, u_int uv[2], float *pdf) const {
+void Distribution2D::SampleDiscrete(float u0, float u1, u_int uv[2], float *pdf,
+		float *du0, float *du1) const {
 	float pdfs[2];
-	uv[1] = pMarginal->SampleDiscrete(u1, &pdfs[1]);
-	uv[0] = pConditionalV[uv[1]]->SampleDiscrete(u0, &pdfs[0]);
+	uv[1] = pMarginal->SampleDiscrete(u1, &pdfs[1], du1);
+	uv[0] = pConditionalV[uv[1]]->SampleDiscrete(u0, &pdfs[0], du0);
 
 	*pdf = pdfs[0] * pdfs[1];
+}
+
+float Distribution2D::Pdf(float u, float v,
+		float *du, float *dv,
+		u_int *offsetU, u_int *offsetV) const {
+	const u_int ov = pMarginal->Offset(v);
+	if (offsetV)
+		*offsetV = ov;
+	if (offsetU)
+		*offsetU = pConditionalV[ov]->Offset(u);
+
+	return pConditionalV[ov]->Pdf(u, du) *
+		pMarginal->Pdf(v, dv);
 }

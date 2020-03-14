@@ -77,11 +77,11 @@ OPENCL_FORCE_INLINE float LightStrategy_SampleLightPdf(
 		);
 
 		if (lightsDistributionOffset != NULL_INDEX)
-			return Distribution1D_Pdf_UINT(&dlscDistributions[lightsDistributionOffset], lightIndex);
+			return Distribution1D_PdfDiscrete(&dlscDistributions[lightsDistributionOffset], lightIndex);
 		else
-			return Distribution1D_Pdf_UINT(lightsDistribution1D, lightIndex);
+			return Distribution1D_PdfDiscrete(lightsDistribution1D, lightIndex);
 	} else
 #endif
 		// All other strategies
-		return Distribution1D_Pdf_UINT(lightsDistribution1D, lightIndex);
+		return Distribution1D_PdfDiscrete(lightsDistribution1D, lightIndex);
 }

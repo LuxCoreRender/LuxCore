@@ -23,7 +23,7 @@
 #include "luxrays/core/geometry/transform.h"
 #include "luxrays/core/randomgen.h"
 #include "luxrays/utils/ocl.h"
-#include "luxrays/core/oclintersectiondevice.h"
+#include "luxrays/devices/ocldevice.h"
 #include "luxrays/kernels/kernels.h"
 
 #include "slg/slg.h"
@@ -40,7 +40,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 PathOCLNativeRenderThread::PathOCLNativeRenderThread(const u_int index,
-		NativeThreadIntersectionDevice *device, PathOCLRenderEngine *re) :
+		NativeDevice *device, PathOCLRenderEngine *re) :
 		PathOCLBaseNativeRenderThread(index, device, re) {
 	threadFilm = NULL;
 }

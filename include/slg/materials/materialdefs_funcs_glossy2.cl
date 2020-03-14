@@ -24,200 +24,218 @@
 // LuxRender Glossy2 material porting.
 //------------------------------------------------------------------------------
 
-#if defined (PARAM_ENABLE_MAT_GLOSSY2)
+OPENCL_FORCE_INLINE void Glossy2Material_Albedo(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	const float3 albedo = Spectrum_Clamp(Texture_GetSpectrumValue(material->glossy2.kdTexIndex,
+			hitPoint TEXTURES_PARAM));
 
-OPENCL_FORCE_INLINE BSDFEvent Glossy2Material_GetEventTypes() {
-	return GLOSSY | REFLECT;
+	EvalStack_PushFloat3(albedo);
 }
 
-OPENCL_FORCE_INLINE float3 Glossy2Material_Albedo(const float3 kdVal) {
-	return Spectrum_Clamp(kdVal);
+OPENCL_FORCE_INLINE void Glossy2Material_GetInteriorVolume(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	DefaultMaterial_GetInteriorVolume(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
 }
 
-OPENCL_FORCE_NOT_INLINE float3 Glossy2Material_Evaluate(
-		__global const HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
-		BSDFEvent *event, float *directPdfW,
-#if defined(PARAM_ENABLE_MAT_GLOSSY2_INDEX)
-		const float i,
-#endif
-		const float nuVal,
-#if defined(PARAM_ENABLE_MAT_GLOSSY2_ANISOTROPIC)
-		const float nvVal,
-#endif
-#if defined(PARAM_ENABLE_MAT_GLOSSY2_ABSORPTION)
-		const float3 kaVal,
-		const float d,
-#endif
-#if defined(PARAM_ENABLE_MAT_GLOSSY2_MULTIBOUNCE)
-		const int multibounceVal,
-#endif
-		const float3 kdVal, const float3 ksVal) {
+OPENCL_FORCE_INLINE void Glossy2Material_GetExteriorVolume(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	DefaultMaterial_GetExteriorVolume(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+}
+
+OPENCL_FORCE_INLINE void Glossy2Material_GetPassThroughTransparency(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	DefaultMaterial_GetPassThroughTransparency(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+}
+
+OPENCL_FORCE_INLINE void Glossy2Material_GetEmittedRadiance(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	DefaultMaterial_GetEmittedRadiance(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+}
+
+OPENCL_FORCE_NOT_INLINE void Glossy2Material_Evaluate(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	float3 lightDir, eyeDir;
+	EvalStack_PopFloat3(eyeDir);
+	EvalStack_PopFloat3(lightDir);
+
 	const float3 fixedDir = eyeDir;
 	const float3 sampledDir = lightDir;
+
+	const float3 kdVal = Texture_GetSpectrumValue(material->glossy2.kdTexIndex, hitPoint TEXTURES_PARAM);
 
 	const float3 baseF = Spectrum_Clamp(kdVal) * M_1_PI_F * fabs(lightDir.z);
 	if (eyeDir.z <= 0.f) {
 		// Back face: no coating
 
-		if (directPdfW)
-			*directPdfW = fabs(sampledDir.z * M_1_PI_F);
+		const float directPdfW = fabs(sampledDir.z * M_1_PI_F);
+		const BSDFEvent event = DIFFUSE | REFLECT;
+		const float3 result = baseF;
 
-		*event = DIFFUSE | REFLECT;
-		return baseF;
+		EvalStack_PushFloat3(result);
+		EvalStack_PushBSDFEvent(event);
+		EvalStack_PushFloat(directPdfW);
+
+		return;
 	}
 
 	// Front face: coating+base
-	*event = GLOSSY | REFLECT;
+	const BSDFEvent event = GLOSSY | REFLECT;
 
+	const float3 ksVal = Texture_GetSpectrumValue(material->glossy2.ksTexIndex, hitPoint TEXTURES_PARAM);
 	float3 ks = ksVal;
-#if defined(PARAM_ENABLE_MAT_GLOSSY2_INDEX)
+	const float i = Texture_GetFloatValue(material->glossy2.indexTexIndex, hitPoint TEXTURES_PARAM);
 	if (i > 0.f) {
 		const float ti = (i - 1.f) / (i + 1.f);
 		ks *= ti * ti;
 	}
-#endif
 	ks = Spectrum_Clamp(ks);
 
+	const float nuVal = Texture_GetFloatValue(material->glossy2.nuTexIndex, hitPoint TEXTURES_PARAM);
+	const float nvVal = Texture_GetFloatValue(material->glossy2.nvTexIndex, hitPoint TEXTURES_PARAM);
+
 	const float u = clamp(nuVal, 1e-9f, 1.f);
-#if defined(PARAM_ENABLE_MAT_GLOSSY2_ANISOTROPIC)
 	const float v = clamp(nvVal, 1e-9f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
 	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : u2 > 0.f ? (v2 / u2 - 1.f) : 0.f;
 	const float roughness = u * v;
-#else
-	const float anisotropy = 0.f;
-	const float roughness = u * u;
-#endif
 
-	if (directPdfW) {
-		const float wCoating = SchlickBSDF_CoatingWeight(ks, fixedDir);
-		const float wBase = 1.f - wCoating;
+	// Direct pdf
+	const float wCoating = SchlickBSDF_CoatingWeight(ks, fixedDir);
+	const float wBase = 1.f - wCoating;
+	const float directPdfW = wBase * fabs(sampledDir.z * M_1_PI_F) +
+		wCoating * SchlickBSDF_CoatingPdf(roughness, anisotropy, fixedDir, sampledDir);
 
-		*directPdfW = wBase * fabs(sampledDir.z * M_1_PI_F) +
-			wCoating * SchlickBSDF_CoatingPdf(roughness, anisotropy, fixedDir, sampledDir);
-	}
-
-#if defined(PARAM_ENABLE_MAT_GLOSSY2_ABSORPTION)
 	// Absorption
 	const float cosi = fabs(sampledDir.z);
 	const float coso = fabs(fixedDir.z);
 
+	const float3 kaVal = Texture_GetSpectrumValue(material->glossy2.kaTexIndex, hitPoint TEXTURES_PARAM);
 	const float3 alpha = Spectrum_Clamp(kaVal);
+	const float d = Texture_GetFloatValue(material->glossy2.depthTexIndex, hitPoint TEXTURES_PARAM);
 	const float3 absorption = CoatingAbsorption(cosi, coso, alpha, d);
-#else
-	const float3 absorption = WHITE;
-#endif
 
 	// Coating fresnel factor
 	const float3 H = normalize(fixedDir + sampledDir);
 	const float3 S = FresnelSchlick_Evaluate(ks, fabs(dot(sampledDir, H)));
 
-#if defined(PARAM_ENABLE_MAT_GLOSSY2_MULTIBOUNCE)
-	const int multibounce = multibounceVal;
-#else
-	const int multibounce = 0;
-#endif
-	const float3 coatingF = SchlickBSDF_CoatingF(ks, roughness, anisotropy, multibounce,
+	const float3 coatingF = SchlickBSDF_CoatingF(ks, roughness, anisotropy, material->glossy2.multibounce,
 			fixedDir, sampledDir);
 
 	// Blend in base layer Schlick style
 	// assumes coating bxdf takes fresnel factor S into account
 
-	return coatingF + absorption * (WHITE - S) * baseF;
+	const float3 result = coatingF + absorption * (WHITE - S) * baseF;
+
+	EvalStack_PushFloat3(result);
+	EvalStack_PushBSDFEvent(event);
+	EvalStack_PushFloat(directPdfW);
 }
 
-OPENCL_FORCE_NOT_INLINE float3 Glossy2Material_Sample(
-		__global const HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
-		const float u0, const float u1,
-		const float passThroughEvent,
-		float *pdfW, BSDFEvent *event,
-#if defined(PARAM_ENABLE_MAT_GLOSSY2_INDEX)
-		const float i,
-#endif
-		const float nuVal,
-#if defined(PARAM_ENABLE_MAT_GLOSSY2_ANISOTROPIC)
-		const float nvVal,
-#endif
-#if defined(PARAM_ENABLE_MAT_GLOSSY2_ABSORPTION)
-		const float3 kaVal,
-		const float d,
-#endif
-#if defined(PARAM_ENABLE_MAT_GLOSSY2_MULTIBOUNCE)
-		const int multibounceVal,
-#endif
-		const float3 kdVal, const float3 ksVal) {
-	if (fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
-		return BLACK;
+OPENCL_FORCE_NOT_INLINE void Glossy2Material_Sample(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	float u0, u1, passThroughEvent;
+	EvalStack_PopFloat(passThroughEvent);
+	EvalStack_PopFloat(u1);
+	EvalStack_PopFloat(u0);
+	float3 fixedDir;
+	EvalStack_PopFloat3(fixedDir);
+
+	if (fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC) {
+		MATERIAL_SAMPLE_RETURN_BLACK;
+	}
+
+	const float3 kdVal = Texture_GetSpectrumValue(material->glossy2.kdTexIndex, hitPoint TEXTURES_PARAM);
 
 	if (fixedDir.z <= 0.f) {
 		// Back Face
-		*sampledDir = -1.f * CosineSampleHemisphereWithPdf(u0, u1, pdfW);
-		if (fabs(CosTheta(*sampledDir)) < DEFAULT_COS_EPSILON_STATIC)
-			return BLACK;
-		*event = DIFFUSE | REFLECT;
-		return Spectrum_Clamp(kdVal);
+		float pdfW;
+		const float3 sampledDir = -1.f * CosineSampleHemisphereWithPdf(u0, u1, &pdfW);
+		if (fabs(CosTheta(sampledDir)) < DEFAULT_COS_EPSILON_STATIC) {
+			MATERIAL_SAMPLE_RETURN_BLACK;
+		}
+		
+		const BSDFEvent event = DIFFUSE | REFLECT;
+		const float3 result = Spectrum_Clamp(kdVal);
+		
+		EvalStack_PushFloat3(result);
+		EvalStack_PushFloat3(sampledDir);
+		EvalStack_PushFloat(pdfW);
+		EvalStack_PushBSDFEvent(event);
+
+		return;
 	}
 
+	const float3 ksVal = Texture_GetSpectrumValue(material->glossy2.ksTexIndex, hitPoint TEXTURES_PARAM);
 	float3 ks = ksVal;
-#if defined(PARAM_ENABLE_MAT_GLOSSY2_INDEX)
+	const float i = Texture_GetFloatValue(material->glossy2.indexTexIndex, hitPoint TEXTURES_PARAM);
 	if (i > 0.f) {
 		const float ti = (i - 1.f) / (i + 1.f);
 		ks *= ti * ti;
 	}
-#endif
 	ks = Spectrum_Clamp(ks);
 
+	const float nuVal = Texture_GetFloatValue(material->glossy2.nuTexIndex, hitPoint TEXTURES_PARAM);
+	const float nvVal = Texture_GetFloatValue(material->glossy2.nvTexIndex, hitPoint TEXTURES_PARAM);
+
 	const float u = clamp(nuVal, 1e-9f, 1.f);
-#if defined(PARAM_ENABLE_MAT_GLOSSY2_ANISOTROPIC)
 	const float v = clamp(nvVal, 1e-9f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
 	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : u2 > 0.f ? (v2 / u2 - 1.f) : 0.f;
 	const float roughness = u * v;
-#else
-	const float anisotropy = 0.f;
-	const float roughness = u * u;
-#endif
 
 	// Coating is used only on the front face
 	const float wCoating = SchlickBSDF_CoatingWeight(ks, fixedDir);
 	const float wBase = 1.f - wCoating;
 
-#if defined(PARAM_ENABLE_MAT_GLOSSY2_MULTIBOUNCE)
-	const int multibounce = multibounceVal;
-#else
-	const int multibounce = 0;
-#endif
-
+	float3 sampledDir;
 	float basePdf, coatingPdf;
 	float3 baseF, coatingF;
 	if (passThroughEvent < wBase) {
 		// Sample base BSDF (Matte BSDF)
 		baseF = Spectrum_Clamp(kdVal);
-		if (Spectrum_IsBlack(baseF))
-			return BLACK;
+		if (Spectrum_IsBlack(baseF)) {
+			MATERIAL_SAMPLE_RETURN_BLACK;
+		}
 		
-		*sampledDir = (signbit(fixedDir.z) ? -1.f : 1.f) * CosineSampleHemisphereWithPdf(u0, u1, &basePdf);
-		if (fabs(CosTheta(*sampledDir)) < DEFAULT_COS_EPSILON_STATIC)
-			return BLACK;
+		sampledDir = (signbit(fixedDir.z) ? -1.f : 1.f) * CosineSampleHemisphereWithPdf(u0, u1, &basePdf);
+		if (fabs(CosTheta(sampledDir)) < DEFAULT_COS_EPSILON_STATIC) {
+			MATERIAL_SAMPLE_RETURN_BLACK;
+		}
 
 		baseF *= basePdf;
 
 		// Evaluate coating BSDF (Schlick BSDF)
-		coatingF = SchlickBSDF_CoatingF(ks, roughness, anisotropy, multibounce,
-				fixedDir, *sampledDir);
-		coatingPdf = SchlickBSDF_CoatingPdf(roughness, anisotropy, fixedDir, *sampledDir);
+		coatingF = SchlickBSDF_CoatingF(ks, roughness, anisotropy, material->glossy2.multibounce,
+				fixedDir, sampledDir);
+		coatingPdf = SchlickBSDF_CoatingPdf(roughness, anisotropy, fixedDir, sampledDir);
 	} else {
 		// Sample coating BSDF (Schlick BSDF)
 		coatingF = SchlickBSDF_CoatingSampleF(ks, roughness, anisotropy,
-				multibounce, fixedDir, sampledDir, u0, u1, &coatingPdf);
-		if (Spectrum_IsBlack(coatingF))
-			return BLACK;
+				material->glossy2.multibounce, fixedDir, &sampledDir, u0, u1, &coatingPdf);
+		if (Spectrum_IsBlack(coatingF)) {
+			MATERIAL_SAMPLE_RETURN_BLACK;
+		}
 
-		const float absCosSampledDir = fabs(CosTheta(*sampledDir));
-		if (absCosSampledDir < DEFAULT_COS_EPSILON_STATIC)
-			return BLACK;
+		const float absCosSampledDir = fabs(CosTheta(sampledDir));
+		if (absCosSampledDir < DEFAULT_COS_EPSILON_STATIC) {
+			MATERIAL_SAMPLE_RETURN_BLACK;
+		}
 
 		coatingF *= coatingPdf;
 
@@ -226,29 +244,69 @@ OPENCL_FORCE_NOT_INLINE float3 Glossy2Material_Sample(
 		baseF = Spectrum_Clamp(kdVal) * basePdf;
 	}
 
-	*event = GLOSSY | REFLECT;
+	const BSDFEvent event = GLOSSY | REFLECT;
 
-	*pdfW = coatingPdf * wCoating + basePdf * wBase;
+	const float pdfW = coatingPdf * wCoating + basePdf * wBase;
 
-#if defined(PARAM_ENABLE_MAT_GLOSSY2_ABSORPTION)
 	// Absorption
-	const float cosi = fabs((*sampledDir).z);
+	const float cosi = fabs(sampledDir.z);
 	const float coso = fabs(fixedDir.z);
 
+	const float3 kaVal = Texture_GetSpectrumValue(material->glossy2.kaTexIndex, hitPoint TEXTURES_PARAM);
 	const float3 alpha = Spectrum_Clamp(kaVal);
+	const float d = Texture_GetFloatValue(material->glossy2.depthTexIndex, hitPoint TEXTURES_PARAM);
 	const float3 absorption = CoatingAbsorption(cosi, coso, alpha, d);
-#else
-	const float3 absorption = WHITE;
-#endif
 
 	// Coating fresnel factor
-	const float3 H = normalize(fixedDir + *sampledDir);
-	const float3 S = FresnelSchlick_Evaluate(ks, fabs(dot(*sampledDir, H)));
+	const float3 H = normalize(fixedDir + sampledDir);
+	const float3 S = FresnelSchlick_Evaluate(ks, fabs(dot(sampledDir, H)));
 
 	// Blend in base layer Schlick style
 	// coatingF already takes fresnel factor S into account
 
-	return (coatingF + absorption * (WHITE - S) * baseF) / *pdfW;
+	const float3 result = (coatingF + absorption * (WHITE - S) * baseF) / pdfW;
+
+	EvalStack_PushFloat3(result);
+	EvalStack_PushFloat3(sampledDir);
+	EvalStack_PushFloat(pdfW);
+	EvalStack_PushBSDFEvent(event);
 }
 
-#endif
+//------------------------------------------------------------------------------
+// Material specific EvalOp
+//------------------------------------------------------------------------------
+
+OPENCL_FORCE_NOT_INLINE void Glossy2Material_EvalOp(
+		__global const Material* restrict material,
+		const MaterialEvalOpType evalType,
+		__global float *evalStack,
+		uint *evalStackOffset,
+		__global const HitPoint *hitPoint
+		MATERIALS_PARAM_DECL) {
+	switch (evalType) {
+		case EVAL_ALBEDO:
+			Glossy2Material_Albedo(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_INTERIOR_VOLUME:
+			Glossy2Material_GetInteriorVolume(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_EXTERIOR_VOLUME:
+			Glossy2Material_GetExteriorVolume(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_EMITTED_RADIANCE:
+			Glossy2Material_GetEmittedRadiance(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_PASS_TROUGH_TRANSPARENCY:
+			Glossy2Material_GetPassThroughTransparency(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_EVALUATE:
+			Glossy2Material_Evaluate(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_SAMPLE:
+			Glossy2Material_Sample(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		default:
+			// Something wrong here
+			break;
+	}
+}

@@ -21,7 +21,7 @@ scene.textures.tex.texture1 = scaled_bumpmap
 scene.textures.tex.texture2 = scaled_bumpmap
 scene.textures.tex.texture3 = scaled_bumpmap
 scene.textures.tex.uvindex = 0
-scene.textures.tex.uvlessbumpmap = 1
+scene.textures.tex.uvlessbumpmap.enable = 1
 scene.textures.tex.mapping.type = localmapping3d
 ################################################################################
 scene.materials.shell.type = matte
@@ -45,13 +45,13 @@ scene.objects.room.material = whitematte
 #scene.objects.room.bake.combined.file = room-bake.exr
 #scene.objects.room.bake.combined.gamma = 1.0
 ##
-scene.objects.luxshell.ply = scenes/luxball/luxball-shell.ply
-scene.objects.luxshell.material = shell
-scene.objects.luxshell.appliedtransformation = 0.941364586 -0.329231501 -0.0737521648 0 0.201132208 0.723118901 -0.660791099 0 0.270884842 0.607211411 0.746937573 0 0 0 0 1
-##
-#scene.objects.luxshell.ply = scenes/luxball/ellipse.ply
+#scene.objects.luxshell.ply = scenes/luxball/luxball-shell.ply
 #scene.objects.luxshell.material = shell
-#scene.objects.luxshell.appliedtransformation = 0.38976717 0 0 0 0 0.38976717 0 0 0 0 0.0637503564 0 0 0 0.400000006 1
+#scene.objects.luxshell.appliedtransformation = 0.941364586 -0.329231501 -0.0737521648 0 0.201132208 0.723118901 -0.660791099 0 0.270884842 0.607211411 0.746937573 0 0 0 0 1
+##
+scene.objects.luxshell.ply = scenes/luxball/ellipse.ply
+scene.objects.luxshell.material = shell
+scene.objects.luxshell.appliedtransformation = 0.38976717 0 0 0 0 0.38976717 0 0 0 0 0.0637503564 0 0 0 0.400000006 1
 ##
 #scene.objects.luxinner.ply = scenes/luxball/luxball-inner.ply
 #scene.objects.luxinner.material = whitematte

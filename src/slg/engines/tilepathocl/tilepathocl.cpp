@@ -20,7 +20,7 @@
 
 #include <boost/format.hpp>
 
-#include "luxrays/core/oclintersectiondevice.h"
+#include "luxrays/devices/ocldevice.h"
 
 #include "slg/slg.h"
 #include "slg/engines/tilepathocl/tilepathocl.h"
@@ -53,7 +53,7 @@ PathOCLBaseOCLRenderThread *TilePathOCLRenderEngine::CreateOCLThread(const u_int
 }
 
 PathOCLBaseNativeRenderThread *TilePathOCLRenderEngine::CreateNativeThread(const u_int index,
-			luxrays::NativeThreadIntersectionDevice *device) {
+			luxrays::NativeDevice *device) {
 	return new TilePathNativeRenderThread(index, device, this);
 }
 

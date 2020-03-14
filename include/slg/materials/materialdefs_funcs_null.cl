@@ -22,23 +22,44 @@
 // NULL material
 //------------------------------------------------------------------------------
 
-#if defined (PARAM_ENABLE_MAT_NULL)
+OPENCL_FORCE_INLINE void NullMaterial_Albedo(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	const float3 albedo = BLACK;
 
-OPENCL_FORCE_INLINE BSDFEvent NullMaterial_GetEventTypes() {
-	return SPECULAR | TRANSMIT;
+	EvalStack_PushFloat3(albedo);
 }
 
-OPENCL_FORCE_INLINE bool NullMaterial_IsDelta() {
-	return true;
+OPENCL_FORCE_INLINE void NullMaterial_GetInteriorVolume(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	DefaultMaterial_GetInteriorVolume(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
 }
 
-OPENCL_FORCE_NOT_INLINE float3 NullMaterial_GetPassThroughTransparency(__global const Material *material,
-		__global const HitPoint *hitPoint, const float3 localFixedDir,
-		const float passThroughEvent, const bool backTracing
-		TEXTURES_PARAM_DECL) {
+OPENCL_FORCE_INLINE void NullMaterial_GetExteriorVolume(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	DefaultMaterial_GetExteriorVolume(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+}
+
+OPENCL_FORCE_INLINE void NullMaterial_GetPassThroughTransparency(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	bool backTracing;
+	EvalStack_PopUInt(backTracing);
+	float passThroughEvent;
+	EvalStack_PopFloat(passThroughEvent);
+	float3 localFixedDir;
+	EvalStack_PopFloat3(localFixedDir);
+
 	const uint transpTexIndex = (hitPoint->intoObject != backTracing) ?
 		material->frontTranspTexIndex : material->backTranspTexIndex;
 
+	float3 transp;
 	if (transpTexIndex != NULL_INDEX) {
 		const float3 blendColor = clamp(
 			Texture_GetSpectrumValue(transpTexIndex, hitPoint
@@ -47,29 +68,91 @@ OPENCL_FORCE_NOT_INLINE float3 NullMaterial_GetPassThroughTransparency(__global 
 
 		if (Spectrum_IsBlack(blendColor)) {
 			// It doesn't make any sense to have a solid NULL material
-			return .0001f;
+			transp = .0001f;
 		} else
-			return blendColor;
+			transp = blendColor;
 	} else
-		return WHITE;
+		transp = WHITE;
+	
+	EvalStack_PushFloat3(transp);
 }
 
-OPENCL_FORCE_INLINE float3 NullMaterial_Evaluate(
-		__global const HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
-		BSDFEvent *event, float *directPdfW) {
-	return BLACK;
+OPENCL_FORCE_INLINE void NullMaterial_GetEmittedRadiance(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	DefaultMaterial_GetEmittedRadiance(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
 }
 
-OPENCL_FORCE_INLINE float3 NullMaterial_Sample(
-		__global const HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
-		const float u0, const float u1,
-		const float passThroughEvent,
-		float *pdfW, BSDFEvent *event) {
-	*sampledDir = -fixedDir;
+OPENCL_FORCE_NOT_INLINE void NullMaterial_Evaluate(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	float3 lightDir, eyeDir;
+	EvalStack_PopFloat3(eyeDir);
+	EvalStack_PopFloat3(lightDir);
 
-	*pdfW = 1.f;
-	*event = SPECULAR | TRANSMIT;
-	return WHITE;
+	MATERIAL_EVALUATE_RETURN_BLACK;
 }
 
-#endif
+OPENCL_FORCE_NOT_INLINE void NullMaterial_Sample(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	float u0, u1, passThroughEvent;
+	EvalStack_PopFloat(passThroughEvent);
+	EvalStack_PopFloat(u1);
+	EvalStack_PopFloat(u0);
+	float3 fixedDir;
+	EvalStack_PopFloat3(fixedDir);
+
+	const float3 sampledDir = -fixedDir;
+
+	const float pdfW = 1.f;
+	const BSDFEvent event = SPECULAR | TRANSMIT;
+	const float3 result = WHITE;
+
+	EvalStack_PushFloat3(result);
+	EvalStack_PushFloat3(sampledDir);
+	EvalStack_PushFloat(pdfW);
+	EvalStack_PushBSDFEvent(event);
+}
+
+//------------------------------------------------------------------------------
+// Material specific EvalOp
+//------------------------------------------------------------------------------
+
+OPENCL_FORCE_NOT_INLINE void NullMaterial_EvalOp(
+		__global const Material* restrict material,
+		const MaterialEvalOpType evalType,
+		__global float *evalStack,
+		uint *evalStackOffset,
+		__global const HitPoint *hitPoint
+		MATERIALS_PARAM_DECL) {
+	switch (evalType) {
+		case EVAL_ALBEDO:
+			NullMaterial_Albedo(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_INTERIOR_VOLUME:
+			NullMaterial_GetInteriorVolume(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_EXTERIOR_VOLUME:
+			NullMaterial_GetExteriorVolume(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_EMITTED_RADIANCE:
+			NullMaterial_GetEmittedRadiance(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_PASS_TROUGH_TRANSPARENCY:
+			NullMaterial_GetPassThroughTransparency(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_EVALUATE:
+			NullMaterial_Evaluate(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_SAMPLE:
+			NullMaterial_Sample(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		default:
+			// Something wrong here
+			break;
+	}
+}

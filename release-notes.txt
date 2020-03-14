@@ -1,100 +1,16 @@
-### Release v2.3
+### Release v2.4
 
 ### New Features
 
-* LuxCoreUI now shows eye and light pass counters if light tracing is enabled
-* FILESAVER now expands inline exported constant texture values
-* PhotonGI caustic scene re-factored to work with Vertex Merging (i.e. SPPM in this case)
-* It is now possible to use light tracing for normal caustics and PhotonGI cache for SDS paths
-* Added the support for shadow rays transparency for path tracers (aka hybrid glass, issue #233)
-* Added the support for Basu and Owen's low discrepancy triangle light sampling (pull request #246)
-* Added an option to normalize BlackBody texture output
-* Pointiness shape is now able to handle duplicate/similar vertices like if they were the same
-* Added the support for Subdivison shape (base don OpenSubdiv)
-* Added the support for Displacement shape
-* Added the support for vector displacement to Displacement shape
-* New image pipeline plugin: White balance
-* Using/Not using bump/normal mapping doesn't require OpenCL compilation anymore (removed PARAM_HAS_BUMPMAPS conditional OpenCL compilation)
-* Large rework of internal light interface. Fixed several instance/motion blur and lights related problems. Triangle light motion blur now works as expected in OpenCL.
-* Large rework of internal mesh interface. Improved the performance of instanced and motion blur meshes.
-* Changed object and material ID for background to 0 (from 0xffffffff)
-* Added the support for screen space subdivision limit to SubdivShape
-* Using/Not using any type of transparency doesn't require OpenCL compilation anymore (removed PARAM_HAS_PASSTHROUGH conditional OpenCL compilation)
-* Added an Harlequin shape (mostly to debug meshes)
-* Added a Simplify shape (to decimate the number of triangles in a mesh with the smaller possible error)
-* Reduced the default number of OpenCL threads from 512k to 256k (to save about 150MB of GPU RAM at 1-2% performance cost)
-* Changing max. path and/or Russian Roulette parameters doesn't require OpenCL compilation anymore (removed PARAM_MAX_PATH_DEPTH, PARAM_MAX_PATH_DEPTH_DIFFUSE, PARAM_MAX_PATH_DEPTH_GLOSSY, PARAM_MAX_PATH_DEPTH_SPECULAR, PARAM_RR_DEPTH and PARAM_RR_CAPPARAM_HAS_BUMPMAPS conditional OpenCL compilation)
-* Added the support the definition of meshes with multiple UVs, Colors and Alphas (issue #134)
-* Added the BAKECPU engine (LuxCore API only)
-* Added the glTF v2.0 FILESAVER support (LuxCore API only)
-* Changing hybrid backward/forward path tracing settings doesn't require OpenCL compilation anymore (removed PARAM_HYBRID_BACKFORWARD and PARAM_HYBRID_BACKFORWARD_GLOSSINESSTHRESHOLD conditional OpenCL compilation)
-* Changing PhotonGI settings doesn't require OpenCL compilation anymore (removed PARAM_PGIC_ENABLED, PARAM_PGIC_INDIRECT_ENABLED, PARAM_PGIC_CAUSTIC_ENABLED, etc.)
-* Changing force black background flag doesn't require OpenCL compilation anymore (removed PARAM_FORCE_BLACK_BACKGROUND)
-* Changing variance clamping settings doesn't require OpenCL compilation anymore (removed PARAM_SQRT_VARIANCE_CLAMP_MAX_VALUE)
-* Changing LIGHT_WORLD_RADIUS_SCALE doesn't require OpenCL compilation anymore (removed PARAM_RADIUS)
-* Removed HitPoint struct variable size related to PARAM_ENABLE_TEX_HITPOINTCOLOR, PARAM_ENABLE_TEX_HITPOINTGREY, PARAM_ENABLE_TEX_HITPOINTALPHA and PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR to avoid OpenCL re-compilation
-* Enabling/disabling volumes doesn't require OpenCL compilation anymore (removed PARAM_HAS_VOLUMES and SCENE_DEFAULT_VOLUME_INDEX)
-* Added the support for triplanar mapping
-* Enabling/disabling camera clipping and/or OculusRift barrel doesn't require OpenCL compilation anymore (removed PARAM_CAMERA_ENABLE_CLIPPING_PLANE and PARAM_CAMERA_ENABLE_OCULUSRIFT_BARREL)
-* Changing any pixel filter related parameter doesn't require OpenCL compilation anymore (removed all PARAM_IMAGE_FILTER_*)
-* Disney material now accepts values > 1.0 for sheen parameter
-* Changing camera type doesn't require OpenCL compilation anymore (removed PARAM_CAMERA_TYPE)
-* Changing any image map related settings doesn't require OpenCL compilation anymore (removed all PARAM_HAS_IMAGEMAPS_*)
-* Added the support for UV-less bump mapping with triplanar mapping
-* Changing the number of light groups used doesn't require OpenCL compilation anymore (removed PARAM_FILM_RADIANCE_GROUP_*)
-* Reduced (again) the default number of OpenCL threads from 256k to 128k
-* Added the support for .normalizebycolor emission property
-* Using a GPU memory block larger than CL_DEVICE_MAX_MEM_ALLOC_SIZE now triggers only a warning. Some driver/hardware (i.e. NVIDIA) is able to allocate larger blocks.
-* Enabling/disabling BCD denoiser doesn't require OpenCL compilation anymore (removed PARAM_FILM_DENOISER)
-* Changing RTPATHOCL rendering parameters doesn't require OpenCL compilation anymore (removed PARAM_RTPATHOCL_*)
-* Rework of OpenCL samplers code to not require OpenCL compilation anymore when changing sampler (removed PARAM_SAMPLER_*)
-* Changing AOVs used doesn't require OpenCL compilation anymore (removed PARAM_FILM_CHANNELS_*)
-* Adding/Removing a new light source type doesn't require OpenCL compilation anymore (removed PARAM_HAS_*LIGHT)
+* New OpenCL code to evaluate textures and materials. It doesn't require kernel re-compilation anymore.
+* LuxCoreUI "Fill kernel cache" menu option now pre-compile all possible GPU kernels.
+* LuxCore API KernelCacheFill() is now available for Python
+* New 2-levels Env. Light Visibility Cache (ELVC)
+* Added the support for a new ".sharpness" (default value 0.1, range [0.0, 1.0]) Intel OIDN parameter to blend original and denoised output
+* Removed LuxRays support for virtual devices and hybrid rendering (old LuxRender GPU doing ray intersections and CPU everything else)
 
-''Beta1 released''
-
-* Improved light map sampling in BAKECPU
-* Added the support for transparencies and shadowcatcher to BAKECPU
-* Fixed and optimized the execution on CPU with high thread count (24+)
-
-''Beta2 released''
-
-* OUTPUT_SWITCHER image pipeline plugin now supports MATERIAL_ID_COLOR, ALBEDO, AVG_SHADING_NORMAL and USER_IMPORTANCE too
-
-''RC1 released''
-
-* Added the support for baked light maps rendering
 
 ### Fixed Bugs
-
-* Fixed triangle lights back face emission when using an IES or image map profile
-* Fixed OpenCL code for rotate triangle light when using IES or image map profile (BlendLuxCore iusse #310)
-* Fixed light tracing when using orthographic camera
-* Fixed a light intensity problem with OpenCL rendering when using a mix of materials with emission
-* Fixed the support for wrap mode in image maps loaded from files
-* Fixed a brightness problem when rendering large images with Metropolis sampler
-* Fixed a brightness problem when rendering caustics with PhotonGI caustic cache
-* Fixed a bug in Mix material OpenCL code when mixing transparent and not transparent materials
-* Fixed a crash when rendering an empty scene with OpenCL and EnvLightVisibilityCache
-* Fixed a problem with mesh light sources when deleting an object with LuxCore API (issue #290)
-* Fixed a bug when evaluating complex tree of bump mapping nodes (issue #198)
-
-''Beta1 released''
-
-* BAKECPU now correctly includes the dot product of shading normal and light direction in light maps
-* Fixed the generation of material/object/volume default random ID (issue #296)
-* Fixed bump mapping when using a transformation with negative scale on Z (issue #300)
-
-''Beta2 released''
-
-* Fixed a bug in pyluxcoretools ui code causing a runtime error with PySide2 5.14.x
-* Volume .photongi.enable property is now parsed/exported and supported
-* Fixed a problem in RTPATHOCL preview phase (issue #305)
-
-''RC1 released''
-
-* Fixed a numerical precision problem on some very large scene (issue #308)
-* Fixed weights of direct and indirect light maps in BAKECPU
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
@@ -109,4 +25,5 @@ of release notes.
 * Variance clamping is not applied to AOVs
 
 **Note for Windows users:** you have to install the [Microsoft Visual C++ Redistributable
-for Visual Studio 2017](https://aka.ms/vs/15/release/vc_redist.x64.exe).
+for Visual Studio 2017](https://aka.ms/vs/15/release/vc_redist.x64.exe) and
+[Intel C++ redistributable](https://software.intel.com/sites/default/files/managed/59/aa/ww_icl_redist_msi_2018.3.210.zip).

@@ -49,74 +49,80 @@ void LuxCoreApp::MenuRendering() {
 		}
 	}
 
-	ImGui::Separator();
+	if (session) {
+		ImGui::Separator();
 
-	if (session && ImGui::MenuItem("Export")) {
-		nfdchar_t *outPath = NULL;
-		nfdresult_t result = NFD_SaveDialog(NULL, NULL, &outPath);
+		if (ImGui::MenuItem("Export")) {
+			nfdchar_t *outPath = NULL;
+			nfdresult_t result = NFD_SaveDialog(NULL, NULL, &outPath);
 
-		if (result == NFD_OKAY) {
-			LA_LOG("Export current scene to directory in text format: " << outPath);
+			if (result == NFD_OKAY) {
+				LA_LOG("Export current scene to directory in text format: " << outPath);
 
-			boost::filesystem::path dir(outPath);
-			boost::filesystem::create_directories(dir);
+				boost::filesystem::path dir(outPath);
+				boost::filesystem::create_directories(dir);
 
-			// Save the current render engine
-			const string renderEngine = config->GetProperty("renderengine.type").Get<string>();
+				// Save the current render engine
+				const string renderEngine = config->GetProperty("renderengine.type").Get<string>();
 
-			// Set the render engine to FILESAVER
-			RenderConfigParse(Properties() <<
-					Property("renderengine.type")("FILESAVER") <<
-					Property("filesaver.format")("TXT") <<
-					Property("filesaver.directory")(outPath) <<
-					Property("filesaver.renderengine.type")(renderEngine));
+				// Set the render engine to FILESAVER
+				RenderConfigParse(Properties() <<
+						Property("renderengine.type")("FILESAVER") <<
+						Property("filesaver.format")("TXT") <<
+						Property("filesaver.directory")(outPath) <<
+						Property("filesaver.renderengine.type")(renderEngine));
 
-			// Restore the render engine setting
-			RenderConfigParse(Properties() <<
-					Property("renderengine.type")(renderEngine));
+				// Restore the render engine setting
+				RenderConfigParse(Properties() <<
+						Property("renderengine.type")(renderEngine));
+			}
 		}
-	}
 
-	if (session && ImGui::MenuItem("Export (binary)")) {
-		nfdchar_t *fileName = NULL;
-		nfdresult_t result = NFD_SaveDialog("bcf", NULL, &fileName);
+		if (ImGui::MenuItem("Export (binary)")) {
+			nfdchar_t *fileName = NULL;
+			nfdresult_t result = NFD_SaveDialog("bcf", NULL, &fileName);
 
-		if (result == NFD_OKAY) {
-			LA_LOG("Export current scene to file in binary format: " << fileName);
-			config->Save(fileName);
+			if (result == NFD_OKAY) {
+				LA_LOG("Export current scene to file in binary format: " << fileName);
+				config->Save(fileName);
+			}
 		}
-	}
 
-	if (session && ImGui::MenuItem("Export (glTF)")) {
-		nfdchar_t *fileName = NULL;
-		nfdresult_t result = NFD_SaveDialog("gltf", NULL, &fileName);
+		if (ImGui::MenuItem("Export (glTF)")) {
+			nfdchar_t *fileName = NULL;
+			nfdresult_t result = NFD_SaveDialog("gltf", NULL, &fileName);
 
-		if (result == NFD_OKAY) {
-			LA_LOG("Export current scene to file in glTF format: " << fileName);
-			config->ExportGLTF(fileName);
+			if (result == NFD_OKAY) {
+				LA_LOG("Export current scene to file in glTF format: " << fileName);
+				config->ExportGLTF(fileName);
+			}
 		}
 	}
 	
-	ImGui::Separator();
+	if (session) {
+		ImGui::Separator();
 
-	if (session && ImGui::MenuItem("Bake all objects"))
-		BakeAllSceneObjects();
+		if (ImGui::MenuItem("Bake all objects"))
+			BakeAllSceneObjects();
+	}
 
-	ImGui::Separator();
+	if (session) {
+		ImGui::Separator();
 
-	if (session && ImGui::MenuItem("Save rendering")) {
-		nfdchar_t *fileName = NULL;
-		nfdresult_t result = NFD_SaveDialog("rsm", NULL, &fileName);
+		if (ImGui::MenuItem("Save rendering")) {
+			nfdchar_t *fileName = NULL;
+			nfdresult_t result = NFD_SaveDialog("rsm", NULL, &fileName);
 
-		if (result == NFD_OKAY) {
-			// Pause the current rendering
-			session->Pause();
+			if (result == NFD_OKAY) {
+				// Pause the current rendering
+				session->Pause();
 
-			// Save the session
-			session->SaveResumeFile(string(fileName));
+				// Save the session
+				session->SaveResumeFile(string(fileName));
 
-			// Resume the current rendering
-			session->Resume();
+				// Resume the current rendering
+				session->Resume();
+			}
 		}
 	}
 
@@ -146,7 +152,7 @@ void LuxCoreApp::MenuRendering() {
 		if (ImGui::MenuItem("Cancel"))
 			DeleteRendering();
 
-		if (session && ImGui::MenuItem("Restart", "Space bar")) {
+		if (ImGui::MenuItem("Restart", "Space bar")) {
 			// Restart rendering
 			session->Stop();
 			session->Start();

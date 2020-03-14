@@ -118,20 +118,6 @@ public:
 	 */
 	std::vector<IntersectionDevice *> AddIntersectionDevices(std::vector<DeviceDescription *> &deviceDescs);
 
-	/*!
-	 * \brief Create a Virtual IntersectionDevice within the Context.
-	 *
-	 * Create an Virtual IntersectionDevice. This kind of device is
-	 * useful when you have multiple threads producing work for multiple GPUs. All
-	 * the routing of the work to the least busy GPU is handled by LuxRays.
-	 *
-	 * \param deviceDescs is a DeviceDescription vector of the devices used by virtual devices.
-	 *
-	 * \return the vector of all real IntersectionDevice created from deviceDescs. They are
-	 * deleted once the virtual device is deleted.
-	 */
-	std::vector<IntersectionDevice *> AddVirtualIntersectionDevice(std::vector<DeviceDescription *> &deviceDescs);
-
 	//--------------------------------------------------------------------------
 	// Methods dedicated to DataSet definition
 	//--------------------------------------------------------------------------

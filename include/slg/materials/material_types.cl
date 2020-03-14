@@ -18,6 +18,51 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+
+//------------------------------------------------------------------------------
+// Material evaluation op
+//------------------------------------------------------------------------------
+
+typedef enum {
+	EVAL_ALBEDO,
+	EVAL_GET_INTERIOR_VOLUME,
+	EVAL_GET_EXTERIOR_VOLUME,
+	EVAL_GET_EMITTED_RADIANCE,
+	EVAL_GET_PASS_TROUGH_TRANSPARENCY,
+	EVAL_EVALUATE,
+	EVAL_SAMPLE,
+	EVAL_CONDITIONAL_GOTO,
+	EVAL_UNCONDITIONAL_GOTO,
+	// For the very special case of Mix material
+	EVAL_GET_VOLUME_MIX_SETUP1,
+	EVAL_GET_VOLUME_MIX_SETUP2,
+	EVAL_GET_EMITTED_RADIANCE_MIX_SETUP1,
+	EVAL_GET_EMITTED_RADIANCE_MIX_SETUP2,
+	EVAL_GET_PASS_TROUGH_TRANSPARENCY_MIX_SETUP1,
+	EVAL_GET_PASS_TROUGH_TRANSPARENCY_MIX_SETUP2,
+	EVAL_EVALUATE_MIX_SETUP1,
+	EVAL_EVALUATE_MIX_SETUP2,
+	EVAL_SAMPLE_MIX_SETUP1,
+	EVAL_SAMPLE_MIX_SETUP2,
+	// For the very special case of GlossyCoating material
+	EVAL_EVALUATE_GLOSSYCOATING_SETUP,
+	EVAL_SAMPLE_GLOSSYCOATING_SETUP,
+	EVAL_SAMPLE_GLOSSYCOATING_CLOSE_SAMPLE_BASE,
+	EVAL_SAMPLE_GLOSSYCOATING_CLOSE_EVALUATE_BASE
+} MaterialEvalOpType;
+
+typedef struct {
+	unsigned int matIndex;
+	MaterialEvalOpType evalType;
+	union {
+		unsigned int opsCount;
+	} opData;
+} MaterialEvalOp;
+
+//------------------------------------------------------------------------------
+// Materials
+//------------------------------------------------------------------------------
+
 typedef enum {
 	MATTE, MIRROR, GLASS, ARCHGLASS, MIX, NULLMAT, MATTETRANSLUCENT,
 	GLOSSY2, METAL2, ROUGHGLASS, VELVET, CLOTH, CARPAINT, ROUGHMATTE,
@@ -288,6 +333,20 @@ typedef struct {
 	float glossiness, avgPassThroughTransparency;
 	int isShadowCatcher, isShadowCatcherOnlyInfiniteLights, isPhotonGIEnabled;
 
+	// The result of calling Material::GetEventTypes()
+	BSDFEvent eventTypes;
+	// The result of calling Material::IsDelta()
+	int isDelta; 
+
+	// Material eval. ops start index and length 
+	unsigned int evalAlbedoOpStartIndex, evalAlbedoOpLength;
+	unsigned int evalGetInteriorVolumeOpStartIndex, evalGetInteriorVolumeOpLength;
+	unsigned int evalGetExteriorVolumeOpStartIndex, evalGetExteriorVolumeOpLength;
+	unsigned int evalGetEmittedRadianceOpStartIndex, evalGetEmittedRadianceOpLength;
+	unsigned int evalGetPassThroughTransparencyOpStartIndex, evalGetPassThroughTransparencyOpLength;
+	unsigned int evalEvaluateOpStartIndex, evalEvaluateOpLength;
+	unsigned int evalSampleOpStartIndex, evalSampleOpLength;
+
 	union {
 		MatteParam matte;
 		RoughMatteParam roughmatte;
@@ -318,7 +377,39 @@ typedef struct {
 
 #if defined(SLG_OPENCL_KERNEL)
 
-#define MATERIALS_PARAM_DECL , __global const Material* restrict mats TEXTURES_PARAM_DECL SCENE_PARAM_DECL
-#define MATERIALS_PARAM , mats TEXTURES_PARAM SCENE_PARAM
+#define MATERIALS_PARAM_DECL \
+	, __global const Material* restrict mats \
+	, __global const MaterialEvalOp* restrict matEvalOps \
+	, __global float *matEvalStacks \
+	, const uint maxMaterialEvalStackSize \
+	TEXTURES_PARAM_DECL SCENE_PARAM_DECL
+#define MATERIALS_PARAM \
+	, mats \
+	, matEvalOps \
+	, matEvalStacks \
+	, maxMaterialEvalStackSize \
+	TEXTURES_PARAM SCENE_PARAM
+
+#define MATERIAL_EVALUATE_RETURN_BLACK { \
+		const float3 result = BLACK; \
+		EvalStack_PushFloat3(result); \
+		const BSDFEvent event = NONE; \
+		EvalStack_PushBSDFEvent(event); \
+		const float directPdfW = 0.f; \
+		EvalStack_PushFloat(directPdfW); \
+		return; \
+	}
+
+#define MATERIAL_SAMPLE_RETURN_BLACK { \
+		const float3 result = BLACK; \
+		EvalStack_PushFloat3(result); \
+		const float3 sampledDir = 0.f; \
+		EvalStack_PushFloat3(sampledDir); \
+		const BSDFEvent event = NONE; \
+		EvalStack_PushBSDFEvent(event); \
+		const float pdfW = 0.f; \
+		EvalStack_PushFloat(pdfW); \
+		return; \
+	}
 
 #endif

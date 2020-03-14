@@ -65,7 +65,7 @@ OPENCL_FORCE_INLINE float dist_Minkovsky(float x, float y, float z, float e) {
 
 /* Not 'pure' Worley, but the results are virtually the same.
 	 Returns distances in da and point coords in pa */
-OPENCL_FORCE_INLINE void voronoi(float x, float y, float z, float* da, float* pa, float me, DistanceMetric dtype) {
+OPENCL_FORCE_NOT_INLINE void voronoi(float x, float y, float z, float* da, float* pa, float me, DistanceMetric dtype) {
 	int xx, yy, zz, xi, yi, zi;
 	float xd, yd, zd, d, p0, p1, p2;
 
@@ -135,38 +135,38 @@ OPENCL_FORCE_INLINE void voronoi(float x, float y, float z, float* da, float* pa
 }
 
 /* returns different feature points for use in BLI_gNoise() */
-OPENCL_FORCE_INLINE float voronoi_F1(float x, float y, float z) {
+OPENCL_FORCE_NOT_INLINE float voronoi_F1(float x, float y, float z) {
 	float da[4], pa[12];
 	voronoi(x, y, z, da, pa, 1.f, ACTUAL_DISTANCE);
 	return da[0];
 }
 
-OPENCL_FORCE_INLINE float voronoi_F2(float x, float y, float z) {
+OPENCL_FORCE_NOT_INLINE float voronoi_F2(float x, float y, float z) {
 	float da[4], pa[12];
 	voronoi(x, y, z, da, pa, 1.f, ACTUAL_DISTANCE);
 	return da[1];
 }
 
-OPENCL_FORCE_INLINE float voronoi_F3(float x, float y, float z) {
+OPENCL_FORCE_NOT_INLINE float voronoi_F3(float x, float y, float z) {
 	float da[4], pa[12];
 	voronoi(x, y, z, da, pa, 1.f, ACTUAL_DISTANCE);
 	return da[2];
 }
 
-OPENCL_FORCE_INLINE float voronoi_F4(float x, float y, float z) {
+OPENCL_FORCE_NOT_INLINE float voronoi_F4(float x, float y, float z) {
 	float da[4], pa[12];
 	voronoi(x, y, z, da, pa, 1.f, ACTUAL_DISTANCE);
 	return da[3];
 }
 
-OPENCL_FORCE_INLINE float voronoi_F1F2(float x, float y, float z) {
+OPENCL_FORCE_NOT_INLINE float voronoi_F1F2(float x, float y, float z) {
 	float da[4], pa[12];
 	voronoi(x, y, z, da, pa, 1.f, ACTUAL_DISTANCE);
 	return (da[1]-da[0]);
 }
 
 /* Crackle type pattern, just a scale/clamp of F2-F1 */
-OPENCL_FORCE_INLINE float voronoi_Cr(float x, float y, float z) {
+OPENCL_FORCE_NOT_INLINE float voronoi_Cr(float x, float y, float z) {
 	float t = 10.f*voronoi_F1F2(x, y, z);
 	if (t>1.f) return 1.f;
 	return t;
@@ -174,38 +174,38 @@ OPENCL_FORCE_INLINE float voronoi_Cr(float x, float y, float z) {
 
 /* Signed version of all 6 of the above, just 2x-1, not really correct though (range is potentially (0, sqrt(6)).
    Used in the musgrave functions */
-OPENCL_FORCE_INLINE float voronoi_F1S(float x, float y, float z) {
+OPENCL_FORCE_NOT_INLINE float voronoi_F1S(float x, float y, float z) {
 	float da[4], pa[12];
 	voronoi(x, y, z, da, pa, 1.f, ACTUAL_DISTANCE);
 	return (2.f*da[0]-1.f);
 }
 
-OPENCL_FORCE_INLINE float voronoi_F2S(float x, float y, float z) {
+OPENCL_FORCE_NOT_INLINE float voronoi_F2S(float x, float y, float z) {
 	float da[4], pa[12];
 	voronoi(x, y, z, da, pa, 1.f, ACTUAL_DISTANCE);
 	return (2.f*da[1]-1.f);
 }
 
-OPENCL_FORCE_INLINE float voronoi_F3S(float x, float y, float z) {
+OPENCL_FORCE_NOT_INLINE float voronoi_F3S(float x, float y, float z) {
 	float da[4], pa[12];
 	voronoi(x, y, z, da, pa, 1.f, ACTUAL_DISTANCE);
 	return (2.f*da[2]-1.f);
 }
 
-OPENCL_FORCE_INLINE float voronoi_F4S(float x, float y, float z) {
+OPENCL_FORCE_NOT_INLINE float voronoi_F4S(float x, float y, float z) {
 	float da[4], pa[12];
 	voronoi(x, y, z, da, pa, 1.f, ACTUAL_DISTANCE);
 	return (2.f*da[3]-1.f);
 }
 
-OPENCL_FORCE_INLINE float voronoi_F1F2S(float x, float y, float z) {
+OPENCL_FORCE_NOT_INLINE float voronoi_F1F2S(float x, float y, float z) {
 	float da[4], pa[12];
 	voronoi(x, y, z, da, pa, 1.f, ACTUAL_DISTANCE);
 	return (2.f*(da[1]-da[0])-1.f);
 }
 
 /* Crackle type pattern, just a scale/clamp of F2-F1 */
-OPENCL_FORCE_INLINE float voronoi_CrS(float x, float y, float z) {
+OPENCL_FORCE_NOT_INLINE float voronoi_CrS(float x, float y, float z) {
 	float t = 10.f*voronoi_F1F2(x, y, z);
 	if (t>1.f) return 1.f;
 	return (2.f*t-1.f);
@@ -249,7 +249,7 @@ OPENCL_FORCE_INLINE void cellNoiseV(float x, float y, float z, float *ca) {
 /* end cellnoise */
 /*****************/
 
-OPENCL_FORCE_INLINE float noisefuncS(BlenderNoiseBasis noisebasis, float x, float y, float z) {
+OPENCL_FORCE_NOT_INLINE float noisefuncS(BlenderNoiseBasis noisebasis, float x, float y, float z) {
 	float result;
 	switch (noisebasis) {
 		case ORIGINAL_PERLIN:

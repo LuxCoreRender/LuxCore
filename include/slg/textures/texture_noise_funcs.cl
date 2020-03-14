@@ -68,7 +68,7 @@ OPENCL_FORCE_INLINE float NoiseWeight(float t) {
 	return 6.f * t4 * t - 15.f * t4 + 10.f * t3;
 }
 
-OPENCL_FORCE_INLINE float Noise(float x, float y, float z) {
+OPENCL_FORCE_NOT_INLINE float Noise(float x, float y, float z) {
 	// Compute noise cell coordinates and offsets
 	int ix = Floor2Int(x);
 	int iy = Floor2Int(y);

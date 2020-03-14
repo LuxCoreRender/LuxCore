@@ -24,11 +24,9 @@
 // LuxRender Metal2 material porting.
 //------------------------------------------------------------------------------
 
-#if defined (PARAM_ENABLE_MAT_METAL2)
-
 OPENCL_FORCE_INLINE void Metal2Material_GetNK(__global const Material* restrict material, __global const HitPoint *hitPoint,
 		float3 *n, float3 *k
-		TEXTURES_PARAM_DECL) {
+		MATERIALS_PARAM_DECL) {
 	const uint fresnelTexIndex = material->metal2.fresnelTexIndex;
 	if (fresnelTexIndex != NULL_INDEX) {
 		__global const Texture* restrict fresnelTex = &texs[fresnelTexIndex];
@@ -47,94 +45,138 @@ OPENCL_FORCE_INLINE void Metal2Material_GetNK(__global const Material* restrict 
 	}
 }
 
-OPENCL_FORCE_INLINE BSDFEvent Metal2Material_GetEventTypes() {
-	return GLOSSY | REFLECT;
+OPENCL_FORCE_INLINE void Metal2Material_Albedo(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	float3 n, k;
+	Metal2Material_GetNK(material, hitPoint,
+			&n, &k
+			MATERIALS_PARAM);
+
+	const float3 albedo = Spectrum_Clamp(FresnelGeneral_Evaluate(n, k, 1.f));
+
+	EvalStack_PushFloat3(albedo);
 }
 
-OPENCL_FORCE_INLINE float3 Metal2Material_Albedo(const float3 nVal, const float3 kVal) {
-	const float3 F = FresnelGeneral_Evaluate(nVal, kVal, 1.f);
-	Spectrum_Clamp(F);
-
-	return F;
+OPENCL_FORCE_INLINE void Metal2Material_GetInteriorVolume(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	DefaultMaterial_GetInteriorVolume(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
 }
 
-OPENCL_FORCE_NOT_INLINE float3 Metal2Material_Evaluate(
-		__global const HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
-		BSDFEvent *event, float *directPdfW,
-		const float uVal,
-#if defined(PARAM_ENABLE_MAT_METAL2_ANISOTROPIC)
-		const float vVal,
-#endif
-		const float3 nVal, const float3 kVal) {
+OPENCL_FORCE_INLINE void Metal2Material_GetExteriorVolume(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	DefaultMaterial_GetExteriorVolume(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+}
+
+OPENCL_FORCE_INLINE void Metal2Material_GetPassThroughTransparency(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	DefaultMaterial_GetPassThroughTransparency(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+}
+
+OPENCL_FORCE_INLINE void Metal2Material_GetEmittedRadiance(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	DefaultMaterial_GetEmittedRadiance(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+}
+
+OPENCL_FORCE_NOT_INLINE void Metal2Material_Evaluate(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	float3 lightDir, eyeDir;
+	EvalStack_PopFloat3(eyeDir);
+	EvalStack_PopFloat3(lightDir);
+
+	const float uVal = Texture_GetFloatValue(material->metal2.nuTexIndex, hitPoint TEXTURES_PARAM);
+	const float vVal = Texture_GetFloatValue(material->metal2.nvTexIndex, hitPoint TEXTURES_PARAM);
+
 	const float u = clamp(uVal, 1e-9f, 1.f);
-#if defined(PARAM_ENABLE_MAT_METAL2_ANISOTROPIC)
 	const float v = clamp(vVal, 1e-9f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
 	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : u2 > 0.f ? (v2 / u2 - 1.f) : 0.f;
 	const float roughness = u * v;
-#else
-	const float anisotropy = 0.f;
-	const float roughness = u * u;
-#endif
 
 	const float3 wh = normalize(lightDir + eyeDir);
 	const float cosWH = dot(lightDir, wh);
 
-	if (directPdfW)
-		*directPdfW = SchlickDistribution_Pdf(roughness, wh, anisotropy) / (4.f * cosWH);
+	const float directPdfW = SchlickDistribution_Pdf(roughness, wh, anisotropy) / (4.f * cosWH);
+
+	float3 nVal, kVal;
+	Metal2Material_GetNK(material, hitPoint,
+			&nVal, &kVal
+			MATERIALS_PARAM);
 
 	const float3 F = FresnelGeneral_Evaluate(nVal, kVal, cosWH);
 	Spectrum_Clamp(F);
 
 	const float G = SchlickDistribution_G(roughness, lightDir, eyeDir);
 
-	*event = GLOSSY | REFLECT;
-	return (SchlickDistribution_D(roughness, wh, anisotropy) * G / (4.f * fabs(eyeDir.z))) * F;
+	const BSDFEvent event = GLOSSY | REFLECT;
+	const float3 result = (SchlickDistribution_D(roughness, wh, anisotropy) * G / (4.f * fabs(eyeDir.z))) * F;
+	
+	EvalStack_PushFloat3(result);
+	EvalStack_PushBSDFEvent(event);
+	EvalStack_PushFloat(directPdfW);
 }
 
-OPENCL_FORCE_NOT_INLINE float3 Metal2Material_Sample(
-		__global const HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
-		const float u0, const float u1,
-		const float passThroughEvent,
-		float *pdfW, BSDFEvent *event,
-		const float uVal,
-#if defined(PARAM_ENABLE_MAT_METAL2_ANISOTROPIC)
-		const float vVal,
-#endif
-		const float3 nVal, const float3 kVal) {
-	if (fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
-		return BLACK;
+OPENCL_FORCE_NOT_INLINE void Metal2Material_Sample(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	float u0, u1, passThroughEvent;
+	EvalStack_PopFloat(passThroughEvent);
+	EvalStack_PopFloat(u1);
+	EvalStack_PopFloat(u0);
+	float3 fixedDir;
+	EvalStack_PopFloat3(fixedDir);
+
+	if (fabs(fixedDir.z) < DEFAULT_COS_EPSILON_STATIC) {
+		MATERIAL_SAMPLE_RETURN_BLACK;
+	}
+
+	const float uVal = Texture_GetFloatValue(material->metal2.nuTexIndex, hitPoint TEXTURES_PARAM);
+	const float vVal = Texture_GetFloatValue(material->metal2.nvTexIndex, hitPoint TEXTURES_PARAM);
 
 	const float u = clamp(uVal, 1e-9f, 1.f);
-#if defined(PARAM_ENABLE_MAT_METAL2_ANISOTROPIC)
 	const float v = clamp(vVal, 1e-9f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
 	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : u2 > 0.f ? (v2 / u2 - 1.f) : 0.f;
 	const float roughness = u * v;
-#else
-	const float anisotropy = 0.f;
-	const float roughness = u * u;
-#endif
 
 	float3 wh;
 	float d, specPdf;
 	SchlickDistribution_SampleH(roughness, anisotropy, u0, u1, &wh, &d, &specPdf);
 	const float cosWH = dot(fixedDir, wh);
-	*sampledDir = 2.f * cosWH * wh - fixedDir;
+	const float3 sampledDir = 2.f * cosWH * wh - fixedDir;
 
 	const float coso = fabs(fixedDir.z);
-	const float cosi = fabs((*sampledDir).z);
-	if ((cosi < DEFAULT_COS_EPSILON_STATIC) || (fixedDir.z * (*sampledDir).z < 0.f))
-		return BLACK;
+	const float cosi = fabs(sampledDir.z);
+	if ((cosi < DEFAULT_COS_EPSILON_STATIC) || (fixedDir.z * sampledDir.z < 0.f)) {
+		MATERIAL_SAMPLE_RETURN_BLACK;
+	}
 
-	*pdfW = specPdf / (4.f * fabs(cosWH));
-	if (*pdfW <= 0.f)
-		return BLACK;
+	const float pdfW = specPdf / (4.f * fabs(cosWH));
+	if (pdfW <= 0.f) {
+		MATERIAL_SAMPLE_RETURN_BLACK;
+	}
 
-	const float G = SchlickDistribution_G(roughness, fixedDir, *sampledDir);
-	
+	const float G = SchlickDistribution_G(roughness, fixedDir, sampledDir);
+
+	float3 nVal, kVal;
+	Metal2Material_GetNK(material, hitPoint,
+			&nVal, &kVal
+			MATERIALS_PARAM);
+
 	const float3 F = FresnelGeneral_Evaluate(nVal, kVal, cosWH);
 	Spectrum_Clamp(F);
 
@@ -144,9 +186,51 @@ OPENCL_FORCE_NOT_INLINE float3 Metal2Material_Sample(
 	//else
 	//	factor /= cosi;
 
-	*event = GLOSSY | REFLECT;
+	const BSDFEvent event = GLOSSY | REFLECT;
 
-	return factor * F;
+	const float3 result = factor * F;
+
+	EvalStack_PushFloat3(result);
+	EvalStack_PushFloat3(sampledDir);
+	EvalStack_PushFloat(pdfW);
+	EvalStack_PushBSDFEvent(event);
 }
 
-#endif
+//------------------------------------------------------------------------------
+// Material specific EvalOp
+//------------------------------------------------------------------------------
+
+OPENCL_FORCE_NOT_INLINE void Metal2Material_EvalOp(
+		__global const Material* restrict material,
+		const MaterialEvalOpType evalType,
+		__global float *evalStack,
+		uint *evalStackOffset,
+		__global const HitPoint *hitPoint
+		MATERIALS_PARAM_DECL) {
+	switch (evalType) {
+		case EVAL_ALBEDO:
+			Metal2Material_Albedo(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_INTERIOR_VOLUME:
+			Metal2Material_GetInteriorVolume(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_EXTERIOR_VOLUME:
+			Metal2Material_GetExteriorVolume(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_EMITTED_RADIANCE:
+			Metal2Material_GetEmittedRadiance(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_PASS_TROUGH_TRANSPARENCY:
+			Metal2Material_GetPassThroughTransparency(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_EVALUATE:
+			Metal2Material_Evaluate(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_SAMPLE:
+			Metal2Material_Sample(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		default:
+			// Something wrong here
+			break;
+	}
+}

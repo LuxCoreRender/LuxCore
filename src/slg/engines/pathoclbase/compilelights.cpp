@@ -176,6 +176,8 @@ void CompiledScene::CompileELVC(const EnvLightVisibilityCache *visibilityMapCach
 
 		elvcDistributions.clear();
 		elvcDistributions.shrink_to_fit();
+		elvcTileDistributionOffsets.clear();
+		elvcTileDistributionOffsets.shrink_to_fit();
 
 		elvcBVHArrayNode.clear();
 		elvcBVHArrayNode.shrink_to_fit();
@@ -229,8 +231,38 @@ void CompiledScene::CompileELVC(const EnvLightVisibilityCache *visibilityMapCach
 	elvcBVHArrayNode.resize(nNodes);
 	copy(&nodes[0], &nodes[0] + nNodes, elvcBVHArrayNode.begin());
 	
+	// Compile the tile distributions
+	elvcTilesXCount = visibilityMapCache->GetXTileCount();
+	elvcTilesYCount = visibilityMapCache->GetYTileCount();
+
+	if (visibilityMapCache->HasTileDistributions()) {
+		const u_int totalTileCount = elvcTilesXCount * elvcTilesYCount;
+		elvcTileDistributionOffsets.resize(totalTileCount);
+
+		for (u_int i = 0; i < totalTileCount; ++i) {
+			const Distribution2D *tileDist = visibilityMapCache->GetTileDistribution(i);
+
+			// Compile the tile Distribution2D
+			const u_int size = elvcDistributions.size();
+			elvcTileDistributionOffsets[i] = size;
+
+			u_int distributionSize;
+			float *dist = CompileDistribution2D(tileDist, &distributionSize);
+
+			const u_int distributionSize4 = distributionSize / sizeof(float);
+			elvcDistributions.resize(size + distributionSize4);
+
+			copy(dist, dist + distributionSize4,
+					&elvcDistributions[size]);
+
+			delete[] dist;		
+		}
+	} else
+		elvcTileDistributionOffsets.clear();
+	
 	elvcAllEntries.shrink_to_fit();
 	elvcDistributions.shrink_to_fit();
+	elvcTileDistributionOffsets.shrink_to_fit();
 	elvcBVHArrayNode.shrink_to_fit();
 }
 

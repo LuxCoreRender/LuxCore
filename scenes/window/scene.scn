@@ -25,22 +25,22 @@ scene.lights.__WORLD_BACKGROUND_LIGHT__.type = "infinite"
 scene.lights.__WORLD_BACKGROUND_LIGHT__.transformation = -0.760065794 0.649846137 0 0 0.649846137 0.760065794 0 0 0 0 1 0 0 0 0 1
 scene.lights.__WORLD_BACKGROUND_LIGHT__.file = "imagemap-00000.exr"
 scene.lights.__WORLD_BACKGROUND_LIGHT__.gain = 1 1 1
-scene.lights.__WORLD_BACKGROUND_LIGHT__.file = "dot.png"
-scene.lights.__WORLD_BACKGROUND_LIGHT__.gain = 50 50 50
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.file = "dot.png"
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.gain = 50 50 50
 scene.lights.__WORLD_BACKGROUND_LIGHT__.gamma = 1
 scene.lights.__WORLD_BACKGROUND_LIGHT__.storage = "float"
 ##
-#scene.lights.__WORLD_BACKGROUND_LIGHT__.sampleupperhemisphereonly = 0
-scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymap.enable = 0
-#scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymap.width = 512
-#scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymap.height = 256
-#scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymap.samples = 1000000
-#scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymap.maxdepth = 4
-##
 scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.enable = 1
+# Old parameters
 #scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.map.width = 256
 #scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.map.height = 128
-#scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.map.samplecount = 1
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.map.samplecount = 4
+# New one
+scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.map.quality = 0.5
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.map.tilewidth = 32
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.map.tileheight = 16
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.map.tilesamplecount = 8
+#
 #scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.map.sampleupperhemisphereonly = 0
 #scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.visibility.maxsamplecount = 1048576
 #scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.visibility.maxdepth = 4
@@ -105,15 +105,15 @@ scene.materials.mat_air.volume.interior = vol_air
 #scene.objects.Mesh_vol.material = "mat_air"
 #scene.objects.Mesh_vol.ply = "vol.ply"
 ##
-#scene.objects.Mesh_Cube__002_140711461551112000.material = "Surface_red_140711461558792"
-#scene.objects.Mesh_Cube__002_140711461551112000.ply = "mesh-00000.ply"
-#scene.objects.Mesh_Cube__002_140711461551112000.camerainvisible = 0
-#scene.objects.Mesh_Cube__002_140711461551112000.appliedtransformation = 0.163554579 -0.108640909 0 0 0.108640909 0.163554579 0 0 0 0 0.513781071 0 -1.75999212 0.526465237 -0.71268481 1
-#scene.objects.Mesh_Cube__001_140711461549576000.material = "Surface_green_140711461557256"
-#scene.objects.Mesh_Cube__001_140711461549576000.ply = "mesh-00001.ply"
-#scene.objects.Mesh_Cube__001_140711461549576000.camerainvisible = 0
-#scene.objects.Mesh_Cube__001_140711461549576000.appliedtransformation = 0.19634904 0 0 0 0 0.19634904 0 0 0 0 0.19634904 0 -2.08510065 0 -0.883812368 1
-#scene.objects.Mesh_Cube_140711461548040000.material = "Surface_walls_140711461941256"
-#scene.objects.Mesh_Cube_140711461548040000.ply = "mesh-00002.ply"
-#scene.objects.Mesh_Cube_140711461548040000.camerainvisible = 0
-#scene.objects.Mesh_Cube_140711461548040000.appliedtransformation = 1 0 0 0 0 1 0 0 0 0 1 0 0.0221524592 0.0114382636 0.0196612813 1
+scene.objects.Mesh_Cube__002_140711461551112000.material = "Surface_red_140711461558792"
+scene.objects.Mesh_Cube__002_140711461551112000.ply = "mesh-00000.ply"
+scene.objects.Mesh_Cube__002_140711461551112000.camerainvisible = 0
+scene.objects.Mesh_Cube__002_140711461551112000.appliedtransformation = 0.163554579 -0.108640909 0 0 0.108640909 0.163554579 0 0 0 0 0.513781071 0 -1.75999212 0.526465237 -0.71268481 1
+scene.objects.Mesh_Cube__001_140711461549576000.material = "Surface_green_140711461557256"
+scene.objects.Mesh_Cube__001_140711461549576000.ply = "mesh-00001.ply"
+scene.objects.Mesh_Cube__001_140711461549576000.camerainvisible = 0
+scene.objects.Mesh_Cube__001_140711461549576000.appliedtransformation = 0.19634904 0 0 0 0 0.19634904 0 0 0 0 0.19634904 0 -2.08510065 0 -0.883812368 1
+scene.objects.Mesh_Cube_140711461548040000.material = "Surface_walls_140711461941256"
+scene.objects.Mesh_Cube_140711461548040000.ply = "mesh-00002.ply"
+scene.objects.Mesh_Cube_140711461548040000.camerainvisible = 0
+scene.objects.Mesh_Cube_140711461548040000.appliedtransformation = 1 0 0 0 0 1 0 0 0 0 1 0 0.0221524592 0.0114382636 0.0196612813 1

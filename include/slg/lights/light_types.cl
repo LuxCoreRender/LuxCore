@@ -178,8 +178,10 @@ typedef struct {
 	const float dlscRadius2, const float dlscNormalCosAngle, \
 	__global const ELVCacheEntry* restrict elvcAllEntries, \
 	__global const float* restrict elvcDistributions, \
+	__global const uint* restrict elvcTileDistributionOffsets, \
 	__global const IndexBVHArrayNode* restrict elvcBVHNodes, \
-	const float elvcRadius2, const float elvcNormalCosAngle \
+	const float elvcRadius2, const float elvcNormalCosAngle, \
+	const uint elvcTilesXCount, const uint elvcTilesYCount \
 	MATERIALS_PARAM_DECL
 #define LIGHTS_PARAM , lights, \
 	envLightIndices, \
@@ -194,9 +196,12 @@ typedef struct {
 	dlscNormalCosAngle, \
 	elvcAllEntries, \
 	elvcDistributions, \
+	elvcTileDistributionOffsets, \
 	elvcBVHNodes, \
 	elvcRadius2, \
-	elvcNormalCosAngle \
+	elvcNormalCosAngle, \
+	elvcTilesXCount, \
+	elvcTilesXCount \
 	MATERIALS_PARAM
 
 #endif

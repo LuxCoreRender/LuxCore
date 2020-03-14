@@ -31,7 +31,7 @@
 #include <boost/lexical_cast.hpp>
 
 #include "luxrays/core/geometry/transform.h"
-#include "luxrays/core/oclintersectiondevice.h"
+#include "luxrays/devices/ocldevice.h"
 
 #include "slg/slg.h"
 #include "slg/engines/pathocl/pathocl.h"
@@ -74,7 +74,7 @@ PathOCLBaseOCLRenderThread *PathOCLRenderEngine::CreateOCLThread(const u_int ind
 }
 
 PathOCLBaseNativeRenderThread *PathOCLRenderEngine::CreateNativeThread(const u_int index,
-			luxrays::NativeThreadIntersectionDevice *device) {
+			luxrays::NativeDevice *device) {
 	return new PathOCLNativeRenderThread(index, device, this);
 }
 

@@ -55,7 +55,7 @@ protected:
 
 class TilePathNativeRenderThread : public PathOCLBaseNativeRenderThread {
 public:
-	TilePathNativeRenderThread(const u_int index, luxrays::NativeThreadIntersectionDevice *device,
+	TilePathNativeRenderThread(const u_int index, luxrays::NativeDevice *device,
 			TilePathOCLRenderEngine *re);
 	virtual ~TilePathNativeRenderThread();
 
@@ -116,7 +116,7 @@ protected:
 	virtual PathOCLBaseOCLRenderThread *CreateOCLThread(const u_int index,
 		luxrays::OpenCLIntersectionDevice *device);
 	virtual PathOCLBaseNativeRenderThread *CreateNativeThread(const u_int index,
-			luxrays::NativeThreadIntersectionDevice *device);
+			luxrays::NativeDevice *device);
 
 	virtual void StartLockLess();
 	virtual void StopLockLess();

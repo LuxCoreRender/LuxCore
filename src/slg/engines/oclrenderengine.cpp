@@ -20,7 +20,7 @@
 
 #include "luxrays/core/intersectiondevice.h"
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-#include "luxrays/core/ocldevice.h"
+#include "luxrays/devices/ocldevice.h"
 #endif
 
 using namespace std;
@@ -42,7 +42,7 @@ OCLRenderEngine::OCLRenderEngine(const RenderConfig *rcfg,
 	// 0 means use the value suggested by the OpenCL driver
 	const u_int forceCPUWorkSize = cfg.Get(GetDefaultProps().Get("opencl.cpu.workgroup.size")).Get<u_int>();
 	// 0 means use the value suggested by the OpenCL driver
-	// Note: I'm using 64 because some driver (i.e. NVIDIA) suggests a value and than
+	// Note: I'm using 32 because some driver (i.e. NVIDIA) suggests a value and than
 	// throws a clEnqueueNDRangeKernel(CL_OUT_OF_RESOURCES)
 	const u_int forceGPUWorkSize = cfg.Get(GetDefaultProps().Get("opencl.gpu.workgroup.size")).Get<u_int>();
 
@@ -100,7 +100,7 @@ OCLRenderEngine::OCLRenderEngine(const RenderConfig *rcfg,
 		//----------------------------------------------------------------------
 
 		vector<DeviceDescription *> nativeDescs = ctx->GetAvailableDeviceDescriptions();
-		DeviceDescription::Filter(DEVICE_TYPE_NATIVE_THREAD, nativeDescs);
+		DeviceDescription::Filter(DEVICE_TYPE_NATIVE, nativeDescs);
 		nativeDescs.resize(1);
 
 		nativeRenderThreadCount = cfg.Get(GetDefaultProps().Get("opencl.native.threads.count")).Get<u_int>();
@@ -131,7 +131,7 @@ const Properties &OCLRenderEngine::GetDefaultProps() {
 #else
 			Property("opencl.cpu.workgroup.size")(0) <<
 #endif
-			Property("opencl.gpu.workgroup.size")(64) <<
+			Property("opencl.gpu.workgroup.size")(32) <<
 			Property("opencl.devices.select")("") <<
 			Property("opencl.native.threads.count")(boost::thread::hardware_concurrency());
 

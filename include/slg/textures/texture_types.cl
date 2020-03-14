@@ -18,6 +18,36 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+//------------------------------------------------------------------------------
+// Texture evaluation op
+//------------------------------------------------------------------------------
+
+typedef enum {
+	EVAL_FLOAT,
+	EVAL_SPECTRUM,
+	EVAL_BUMP,
+	// For the very special case of Triplanar texture
+	EVAL_TRIPLANAR_STEP_1,
+	EVAL_TRIPLANAR_STEP_2,
+	EVAL_TRIPLANAR_STEP_3,
+	// For evaluting generic bump mapping
+	EVAL_BUMP_GENERIC_OFFSET_U,
+	EVAL_BUMP_GENERIC_OFFSET_V,
+	// For the very special case of Triplanar texture
+	EVAL_BUMP_TRIPLANAR_STEP_1,
+	EVAL_BUMP_TRIPLANAR_STEP_2,
+	EVAL_BUMP_TRIPLANAR_STEP_3
+} TextureEvalOpType;
+
+typedef struct {
+	unsigned int texIndex;
+	TextureEvalOpType evalType;
+} TextureEvalOp;
+
+//------------------------------------------------------------------------------
+// Textures
+//------------------------------------------------------------------------------
+
 #define DUDV_VALUE 0.001f
 
 typedef enum {
@@ -30,7 +60,7 @@ typedef enum {
     POSITION_TEX, SPLIT_FLOAT3, MAKE_FLOAT3, BRIGHT_CONTRAST_TEX, TRIPLANAR_TEX, // 38 textures
 	// Procedural textures		
 	BLENDER_BLEND, BLENDER_CLOUDS, BLENDER_DISTORTED_NOISE, BLENDER_MAGIC, BLENDER_MARBLE,
-	BLENDER_MUSGRAVE, BLENDER_NOISE, BLENDER_STUCCI, BLENDER_WOOD,  BLENDER_VORONOI,
+	BLENDER_MUSGRAVE, BLENDER_NOISE, BLENDER_STUCCI, BLENDER_WOOD, BLENDER_VORONOI,
 	CHECKERBOARD2D, CHECKERBOARD3D, CLOUD_TEX, FBM_TEX,
 	MARBLE, DOTS, BRICK, WINDY, WRINKLED, UV_TEX, BAND_TEX, // 56 textures
 	// Fresnel textures
@@ -170,8 +200,8 @@ typedef enum {
 typedef struct {
 	TextureMapping3D mapping;
 	ProgressionType type;
-	bool direction;
-	float bright, contrast;
+	int direction;
+	float contrast, bright;
 } BlenderBlendTexParam;
 
 typedef struct {
@@ -180,7 +210,7 @@ typedef struct {
 	float noisesize;
 	int noisedepth;
 	float bright, contrast;
-	bool hard;
+	int hard;
 } BlenderCloudsTexParam;
 
 typedef struct {
@@ -211,7 +241,7 @@ typedef struct {
 	float noisesize, turbulence;
 	int noisedepth;
 	float bright, contrast;
-	bool hard;
+	int hard;
 } BlenderMarbleTexParam;
 
 typedef enum {
@@ -248,7 +278,7 @@ typedef struct {
 	float noisesize;
 	float turbulence;
 	float bright, contrast;
-	bool hard;
+	int hard;
 } BlenderStucciTexParam;
 
 typedef enum {
@@ -315,7 +345,7 @@ typedef struct {
 
 typedef struct {
 	unsigned int dataIndex;
-	unsigned int channel;
+	unsigned int channelIndex;
 } HitPointGreyTexParam;
 
 typedef struct {
@@ -397,7 +427,7 @@ typedef struct {
 
 typedef struct {
 	unsigned int texIndex;
-	unsigned int channel;
+	unsigned int channelIndex;
 } SplitFloat3TexParam;
 
 typedef struct {
@@ -417,6 +447,11 @@ typedef struct {
 
 typedef struct {
 	TextureType type;
+
+	unsigned int evalFloatOpStartIndex, evalFloatOpLength;
+	unsigned int evalSpectrumOpStartIndex, evalSpectrumOpLength;
+	unsigned int evalBumpOpStartIndex, evalBumpOpLength;
+
 	union {
 		BlenderBlendTexParam blenderBlend;
  		BlenderCloudsTexParam blenderClouds;
@@ -483,7 +518,17 @@ typedef struct {
 
 #if defined(SLG_OPENCL_KERNEL)
 
-#define TEXTURES_PARAM_DECL , __global const Texture* restrict texs IMAGEMAPS_PARAM_DECL
-#define TEXTURES_PARAM , texs IMAGEMAPS_PARAM
+#define TEXTURES_PARAM_DECL \
+	, __global const Texture* restrict texs \
+	, __global const TextureEvalOp* restrict texEvalOps \
+	, __global float *texEvalStacks \
+	, const uint maxTextureEvalStackSize \
+	IMAGEMAPS_PARAM_DECL
+#define TEXTURES_PARAM \
+	, texs \
+	, texEvalOps \
+	, texEvalStacks \
+	, maxTextureEvalStackSize \
+	IMAGEMAPS_PARAM
 
 #endif

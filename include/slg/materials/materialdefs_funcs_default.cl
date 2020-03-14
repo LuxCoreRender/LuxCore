@@ -23,66 +23,87 @@
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-// DefaultMatteMaterial_IsDelta
-//------------------------------------------------------------------------------
-
-OPENCL_FORCE_INLINE bool DefaultMaterial_IsDelta() {
-	return false;
-}
-
-//------------------------------------------------------------------------------
-// DefaultMaterial_GetPassThroughTransparency
-//------------------------------------------------------------------------------
-
-OPENCL_FORCE_INLINE float3 DefaultMaterial_GetPassThroughTransparency(__global const Material *material,
-		__global const HitPoint *hitPoint, const float3 localFixedDir,
-		const float passThroughEvent, const bool backTracing
-		TEXTURES_PARAM_DECL) {
-	const uint transpTexIndex = (hitPoint->intoObject != backTracing) ?
-		material->frontTranspTexIndex : material->backTranspTexIndex;
-
-	if (transpTexIndex != NULL_INDEX) {
-		const float weight = clamp(
-				Texture_GetFloatValue(transpTexIndex, hitPoint
-					TEXTURES_PARAM),
-				0.f, 1.f);
-
-		return (passThroughEvent > weight) ? WHITE : BLACK;
-	} else
-		return BLACK;
-}
-
-//------------------------------------------------------------------------------
-// DefaultMaterial_GetEmittedRadiance
-//------------------------------------------------------------------------------
-
-OPENCL_FORCE_INLINE float3 DefaultMaterial_GetEmittedRadiance(__global const Material *material,
-		__global const HitPoint *hitPoint, const float oneOverPrimitiveArea
-		TEXTURES_PARAM_DECL) {
-	const uint emitTexIndex = material->emitTexIndex;
-	if (emitTexIndex == NULL_INDEX)
-		return BLACK;
-
-	return
-		VLOAD3F(hitPoint->color[0].c) *
-		VLOAD3F(material->emittedFactor.c) *
-		(material->usePrimitiveArea ? oneOverPrimitiveArea : 1.f) *
-		clamp(Texture_GetSpectrumValue(emitTexIndex, hitPoint
-				TEXTURES_PARAM), BLACK, INFINITY);
-}
-
-//------------------------------------------------------------------------------
 // DefaultMaterial_GetInteriorVolume
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_INLINE uint DefaultMaterial_GetInteriorVolume(__global const Material *material) {
-	return material->interiorVolumeIndex;
+OPENCL_FORCE_INLINE void DefaultMaterial_GetInteriorVolume(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	float passThroughEvent;
+	EvalStack_PopFloat(passThroughEvent);
+
+	const uint volIndex = material->interiorVolumeIndex;
+
+	EvalStack_PushUInt(volIndex);
 }
 
 //------------------------------------------------------------------------------
 // DefaultMaterial_GetExteriorVolume
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_INLINE uint DefaultMaterial_GetExteriorVolume(__global const Material *material) {
-	return material->exteriorVolumeIndex;
+OPENCL_FORCE_INLINE void DefaultMaterial_GetExteriorVolume(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	float passThroughEvent;
+	EvalStack_PopFloat(passThroughEvent);
+
+	const uint volIndex = material->exteriorVolumeIndex;
+
+	EvalStack_PushUInt(volIndex);
+}
+
+//------------------------------------------------------------------------------
+// DefaultMaterial_GetPassThroughTransparency
+//------------------------------------------------------------------------------
+
+OPENCL_FORCE_INLINE void DefaultMaterial_GetPassThroughTransparency(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	bool backTracing;
+	EvalStack_PopUInt(backTracing);
+	float passThroughEvent;
+	EvalStack_PopFloat(passThroughEvent);
+	float3 localFixedDir;
+	EvalStack_PopFloat3(localFixedDir);
+
+	const uint transpTexIndex = (hitPoint->intoObject != backTracing) ?
+		material->frontTranspTexIndex : material->backTranspTexIndex;
+
+	float3 transp;
+	if (transpTexIndex != NULL_INDEX) {
+		const float weight = clamp(
+				Texture_GetFloatValue(transpTexIndex, hitPoint TEXTURES_PARAM),
+				0.f, 1.f);
+
+		transp = (passThroughEvent > weight) ? WHITE : BLACK;
+	} else
+		transp = BLACK;
+	
+	EvalStack_PushFloat3(transp);
+}
+
+//------------------------------------------------------------------------------
+// DefaultMaterial_GetEmittedRadiance
+//------------------------------------------------------------------------------
+
+OPENCL_FORCE_INLINE void DefaultMaterial_GetEmittedRadiance(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	float oneOverPrimitiveArea;
+	EvalStack_PopFloat(oneOverPrimitiveArea);
+
+	const uint emitTexIndex = material->emitTexIndex;
+	const float3 emittedRadiance = (emitTexIndex == NULL_INDEX) ?
+		BLACK :
+		(VLOAD3F(hitPoint->color[0].c) *
+		VLOAD3F(material->emittedFactor.c) *
+		(material->usePrimitiveArea ? oneOverPrimitiveArea : 1.f) *
+		clamp(Texture_GetSpectrumValue(emitTexIndex, hitPoint
+				TEXTURES_PARAM), BLACK, INFINITY));
+
+	EvalStack_PushFloat3(emittedRadiance);
 }

@@ -23,7 +23,7 @@
 
 #include "luxrays/core/geometry/transform.h"
 #include "luxrays/utils/ocl.h"
-#include "luxrays/core/oclintersectiondevice.h"
+#include "luxrays/devices/ocldevice.h"
 #include "luxrays/kernels/kernels.h"
 
 #include "luxcore/cfg.h"
@@ -58,7 +58,11 @@ PathOCLBaseOCLRenderThread::PathOCLBaseOCLRenderThread(const u_int index,
 
 	// Scene buffers
 	materialsBuff = nullptr;
+	materialEvalOpsBuff = nullptr;
+	materialEvalStackBuff = nullptr;
 	texturesBuff = nullptr;
+	textureEvalOpsBuff = nullptr;
+	textureEvalStackBuff = nullptr;
 	meshDescsBuff = nullptr;
 	scnObjsBuff = nullptr;
 	lightsBuff = nullptr;
@@ -70,6 +74,7 @@ PathOCLBaseOCLRenderThread::PathOCLBaseOCLRenderThread(const u_int index,
 	dlscBVHNodesBuff = nullptr;
 	elvcAllEntriesBuff = nullptr;
 	elvcDistributionsBuff = nullptr;
+	elvcTileDistributionOffsetsBuff = nullptr;
 	elvcBVHNodesBuff = nullptr;
 	envLightDistributionsBuff = nullptr;
 	vertsBuff = nullptr;
@@ -182,7 +187,11 @@ void PathOCLBaseOCLRenderThread::Stop() {
 
 	// Scene buffers
 	FreeOCLBuffer(&materialsBuff);
+	FreeOCLBuffer(&materialEvalOpsBuff);
+	FreeOCLBuffer(&materialEvalStackBuff);
 	FreeOCLBuffer(&texturesBuff);
+	FreeOCLBuffer(&textureEvalOpsBuff);
+	FreeOCLBuffer(&textureEvalStackBuff);
 	FreeOCLBuffer(&meshDescsBuff);
 	FreeOCLBuffer(&scnObjsBuff);
 	FreeOCLBuffer(&normalsBuff);
@@ -202,6 +211,7 @@ void PathOCLBaseOCLRenderThread::Stop() {
 	FreeOCLBuffer(&dlscBVHNodesBuff);
 	FreeOCLBuffer(&elvcAllEntriesBuff);
 	FreeOCLBuffer(&elvcDistributionsBuff);
+	FreeOCLBuffer(&elvcTileDistributionOffsetsBuff);
 	FreeOCLBuffer(&elvcBVHNodesBuff);
 	FreeOCLBuffer(&envLightDistributionsBuff);
 	FreeOCLBuffer(&cameraBuff);

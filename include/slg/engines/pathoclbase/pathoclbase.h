@@ -21,7 +21,7 @@
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
-#include "luxrays/core/intersectiondevice.h"
+#include "luxrays/devices/nativedevice.h"
 #include "luxrays/utils/ocl.h"
 
 #include "slg/slg.h"
@@ -44,8 +44,6 @@ public:
 	PathOCLBaseRenderEngine(const RenderConfig *cfg, const bool supportsNativeThreads);
 	virtual ~PathOCLBaseRenderEngine();
 
-	virtual bool IsMaterialCompiled(const MaterialType type) const;
-
 	virtual bool HasDone() const;
 	virtual void WaitForDone() const;
 
@@ -61,7 +59,7 @@ protected:
 	virtual PathOCLBaseOCLRenderThread *CreateOCLThread(const u_int index,
 			luxrays::OpenCLIntersectionDevice *device) = 0;
 	virtual PathOCLBaseNativeRenderThread *CreateNativeThread(const u_int index,
-			luxrays::NativeThreadIntersectionDevice *device) {
+			luxrays::NativeDevice *device) {
 		throw std::runtime_error("Internal error, called PathOCLBaseRenderEngine::CreateNativeThread()");
 	}
 

@@ -57,72 +57,414 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
-static bool IsTexConstant(const Texture *tex) {
-	return (dynamic_cast<const ConstFloatTexture *>(tex)) ||
-			(dynamic_cast<const ConstFloat3Texture *>(tex));
+u_int CompiledScene::CompileMaterialConditionalOps(const u_int matIndex,
+		const vector<slg::ocl::MaterialEvalOp> &evalOpsA, const u_int evalOpStackSizeA,
+		const vector<slg::ocl::MaterialEvalOp> &evalOpsB, const u_int evalOpStackSizeB,
+		vector<slg::ocl::MaterialEvalOp> &evalOps) const {
+	u_int evalOpStackSize = 0;
+	
+	// Add the conditional goto
+	slg::ocl::MaterialEvalOp opGotoA;
+	opGotoA.matIndex = matIndex;
+	opGotoA.evalType = slg::ocl::EVAL_CONDITIONAL_GOTO;
+	// The +1 is for the unconditional goto
+	opGotoA.opData.opsCount = evalOpsA.size() + 1;
+	evalOps.push_back(opGotoA);
+
+	// Add compiled Ops of material A
+	evalOps.insert(evalOps.end(), evalOpsA.begin(), evalOpsA.end());
+	evalOpStackSize += evalOpStackSizeA;
+
+	// Add the unconditional goto
+	slg::ocl::MaterialEvalOp opGotoB;
+	opGotoB.matIndex = matIndex;
+	opGotoB.evalType = slg::ocl::EVAL_UNCONDITIONAL_GOTO;
+	opGotoB.opData.opsCount = evalOpsB.size();
+	evalOps.push_back(opGotoB);
+
+	// Add compiled Ops of material B
+	evalOps.insert(evalOps.end(), evalOpsB.begin(), evalOpsB.end());
+	evalOpStackSize += evalOpStackSizeB;
+
+	return evalOpStackSize;
 }
 
-static bool IsMaterialDynamic(const slg::ocl::Material *material) {
-		return (material->type == slg::ocl::MIX) || (material->type == slg::ocl::GLOSSYCOATING);
+u_int CompiledScene::CompileMaterialConditionalOps(const u_int matIndex,
+		const u_int matAIndex, const slg::ocl::MaterialEvalOpType opTypeA,
+		const u_int matBIndex, const slg::ocl::MaterialEvalOpType opTypeB,
+		vector<slg::ocl::MaterialEvalOp> &evalOps) const {
+	// Compile opType of material A
+	vector<slg::ocl::MaterialEvalOp> evalOpsA;
+	const u_int evalOpStackSizeA = CompileMaterialOps(matAIndex, opTypeA,
+			evalOpsA);
+
+	// Compile opType of material B
+	vector<slg::ocl::MaterialEvalOp> evalOpsB;
+	const u_int evalOpStackSizeB = CompileMaterialOps(matBIndex, opTypeB,
+			evalOpsB);
+
+	return CompileMaterialConditionalOps(matIndex,
+			evalOpsA, evalOpStackSizeA,
+			evalOpsB, evalOpStackSizeB,
+			evalOps);
 }
 
-static float GetTexConstantFloatValue(const Texture *tex) {
-	// Check if a texture is constant and return the value
-	const ConstFloatTexture *cft = dynamic_cast<const ConstFloatTexture *>(tex);
-	if (cft)
-		return cft->GetValue();
-	const ConstFloat3Texture *cf3t = dynamic_cast<const ConstFloat3Texture *>(tex);
-	if (cf3t)
-		return cf3t->GetColor().Y();
+u_int CompiledScene::CompileMaterialOps(const u_int matIndex,
+		const slg::ocl::MaterialEvalOpType opType,
+		vector<slg::ocl::MaterialEvalOp> &evalOps) const {
+	// Translate materials to material evaluate ops
 
-	return numeric_limits<float>::infinity();
+	const slg::ocl::Material *mat = &mats[matIndex];
+	u_int evalOpStackSize = 0;
+	bool addDefaultOp = true;
+
+	switch (mat->type) {
+		//----------------------------------------------------------------------
+		// Materials without sub-nodes
+		//----------------------------------------------------------------------
+		case MATTE:
+		case MIRROR:
+		case GLASS:
+		case ARCHGLASS:
+		case NULLMAT:
+		case MATTETRANSLUCENT:
+		case GLOSSY2:
+		case METAL2:
+		case ROUGHGLASS:
+		case VELVET:
+		case CLOTH:
+		case CARPAINT:
+		case ROUGHMATTE:
+		case ROUGHMATTETRANSLUCENT:
+		case GLOSSYTRANSLUCENT:
+		case DISNEY:
+		case HOMOGENEOUS_VOL:
+		case CLEAR_VOL:
+		case HETEROGENEOUS_VOL:
+			switch (opType) {
+				case slg::ocl::EVAL_ALBEDO:
+					evalOpStackSize += 3;
+					break;
+				case slg::ocl::EVAL_GET_INTERIOR_VOLUME:
+					// 1 x parameter and 1 x result
+					evalOpStackSize += 1;
+					break;
+				case slg::ocl::EVAL_GET_EXTERIOR_VOLUME:
+					// 1 x parameter and 1 x result
+					evalOpStackSize += 1;
+					break;
+				case slg::ocl::EVAL_GET_EMITTED_RADIANCE:
+					// 1 x parameter and 3 x results
+					evalOpStackSize += 3;
+					break;
+				case slg::ocl::EVAL_GET_PASS_TROUGH_TRANSPARENCY:
+					// 5 x parameters and 3 x results
+					evalOpStackSize += 5;
+					break;
+				case slg::ocl::EVAL_EVALUATE:
+					// 6 x parameters and 5 x results
+					evalOpStackSize += 6;
+					break;
+				case slg::ocl::EVAL_SAMPLE:
+					// 6 x parameters and 8 x results
+					evalOpStackSize += 8;
+					break;
+				default:
+					throw runtime_error("Unknown eval. type in CompiledScene::CompileMaterialOps(" + ToString(mat->type) + "): " + ToString(opType));
+			}
+			break;
+		//----------------------------------------------------------------------
+		// Materials with sub-nodes
+		//----------------------------------------------------------------------
+		case MIX:
+			switch (opType) {
+				case slg::ocl::EVAL_ALBEDO:
+					evalOpStackSize += CompileMaterialOps(mat->mix.matAIndex, slg::ocl::EVAL_ALBEDO, evalOps);
+					evalOpStackSize += CompileMaterialOps(mat->mix.matBIndex, slg::ocl::EVAL_ALBEDO, evalOps);
+					break;
+				case slg::ocl::EVAL_GET_VOLUME_MIX_SETUP1:
+					evalOpStackSize += 3;
+					break;
+				case slg::ocl::EVAL_GET_VOLUME_MIX_SETUP2:
+					evalOpStackSize += 4;
+					break;
+				case slg::ocl::EVAL_GET_INTERIOR_VOLUME:
+					if (mat->interiorVolumeIndex == NULL_INDEX) {
+						evalOpStackSize += CompileMaterialOps(matIndex, slg::ocl::EVAL_GET_VOLUME_MIX_SETUP1, evalOps);
+						evalOpStackSize += CompileMaterialOps(mat->mix.matAIndex, slg::ocl::EVAL_GET_INTERIOR_VOLUME, evalOps);
+						evalOpStackSize += CompileMaterialOps(matIndex, slg::ocl::EVAL_GET_VOLUME_MIX_SETUP2, evalOps);
+						evalOpStackSize += CompileMaterialOps(mat->mix.matBIndex, slg::ocl::EVAL_GET_INTERIOR_VOLUME, evalOps);
+					}
+
+					// 1 x parameter and 1 x result
+					evalOpStackSize += 1;	
+					break;
+				case slg::ocl::EVAL_GET_EXTERIOR_VOLUME:
+					if (mat->exteriorVolumeIndex == NULL_INDEX) {
+						evalOpStackSize += CompileMaterialOps(matIndex, slg::ocl::EVAL_GET_VOLUME_MIX_SETUP1, evalOps);
+						evalOpStackSize += CompileMaterialOps(mat->mix.matAIndex, slg::ocl::EVAL_GET_EXTERIOR_VOLUME, evalOps);
+						evalOpStackSize += CompileMaterialOps(matIndex, slg::ocl::EVAL_GET_VOLUME_MIX_SETUP2, evalOps);
+						evalOpStackSize += CompileMaterialOps(mat->mix.matBIndex, slg::ocl::EVAL_GET_EXTERIOR_VOLUME, evalOps);
+					}
+
+					// 1 x parameter and 1 x result
+					evalOpStackSize += 1;	
+					break;
+				case slg::ocl::EVAL_GET_EMITTED_RADIANCE_MIX_SETUP1:
+					// 1 x parameter and 2 x results
+					evalOpStackSize += 2;
+					break;
+				case slg::ocl::EVAL_GET_EMITTED_RADIANCE_MIX_SETUP2:
+					// 1 x parameter and 5 x results
+					evalOpStackSize += 5;
+					break;
+				case slg::ocl::EVAL_GET_EMITTED_RADIANCE:
+					if (mat->emitTexIndex == NULL_INDEX) {
+						evalOpStackSize += CompileMaterialOps(matIndex, slg::ocl::EVAL_GET_EMITTED_RADIANCE_MIX_SETUP1, evalOps);
+						evalOpStackSize += CompileMaterialOps(mat->mix.matAIndex, slg::ocl::EVAL_GET_EMITTED_RADIANCE, evalOps);
+						evalOpStackSize += CompileMaterialOps(matIndex, slg::ocl::EVAL_GET_EMITTED_RADIANCE_MIX_SETUP2, evalOps);
+						evalOpStackSize += CompileMaterialOps(mat->mix.matBIndex, slg::ocl::EVAL_GET_EMITTED_RADIANCE, evalOps);
+					}
+
+					// 1 x parameter and 3 x result
+					evalOpStackSize += 3;
+					break;
+				case slg::ocl::EVAL_GET_PASS_TROUGH_TRANSPARENCY_MIX_SETUP1:
+					// 5 x parameters and 3 x results
+					evalOpStackSize += 5;
+					break;
+				case slg::ocl::EVAL_GET_PASS_TROUGH_TRANSPARENCY_MIX_SETUP2:
+					// 5 x parameters and 3 x results
+					evalOpStackSize += 5;
+					break;
+				case slg::ocl::EVAL_GET_PASS_TROUGH_TRANSPARENCY:
+					evalOpStackSize += CompileMaterialOps(matIndex, slg::ocl::EVAL_GET_PASS_TROUGH_TRANSPARENCY_MIX_SETUP1, evalOps);
+					evalOpStackSize += CompileMaterialOps(mat->mix.matAIndex, slg::ocl::EVAL_GET_PASS_TROUGH_TRANSPARENCY, evalOps);
+					evalOpStackSize += CompileMaterialOps(matIndex, slg::ocl::EVAL_GET_PASS_TROUGH_TRANSPARENCY_MIX_SETUP2, evalOps);
+					evalOpStackSize += CompileMaterialOps(mat->mix.matBIndex, slg::ocl::EVAL_GET_PASS_TROUGH_TRANSPARENCY, evalOps);
+
+					// 5 x parameter and 3 x result
+					evalOpStackSize += 5;
+					break;
+				case slg::ocl::EVAL_EVALUATE_MIX_SETUP1:
+					// 6 x parameters and 12 x results
+					evalOpStackSize += 12;
+					break;
+				case slg::ocl::EVAL_EVALUATE_MIX_SETUP2:
+					// 12 x parameters and 17 x results
+					evalOpStackSize += 17;
+					break;
+				case slg::ocl::EVAL_EVALUATE:
+					evalOpStackSize += CompileMaterialOps(matIndex, slg::ocl::EVAL_EVALUATE_MIX_SETUP1, evalOps);
+					evalOpStackSize += CompileMaterialOps(mat->mix.matAIndex, slg::ocl::EVAL_EVALUATE, evalOps);
+					evalOpStackSize += CompileMaterialOps(matIndex, slg::ocl::EVAL_EVALUATE_MIX_SETUP2, evalOps);
+					evalOpStackSize += CompileMaterialOps(mat->mix.matBIndex, slg::ocl::EVAL_EVALUATE, evalOps);
+					break;
+				case slg::ocl::EVAL_SAMPLE_MIX_SETUP1:
+					// 6 x parameters and 16 x results
+					evalOpStackSize += 16;
+					break;
+				case slg::ocl::EVAL_SAMPLE_MIX_SETUP2:
+					// 16 x parameters and 24 x results
+					evalOpStackSize += 24;
+					break;
+				case slg::ocl::EVAL_SAMPLE: {
+					evalOpStackSize += CompileMaterialOps(matIndex, slg::ocl::EVAL_SAMPLE_MIX_SETUP1, evalOps);
+					evalOpStackSize += CompileMaterialConditionalOps(matIndex,
+							mat->mix.matAIndex, slg::ocl::EVAL_SAMPLE,
+							mat->mix.matBIndex, slg::ocl::EVAL_SAMPLE,
+							evalOps);
+					evalOpStackSize += CompileMaterialOps(matIndex, slg::ocl::EVAL_SAMPLE_MIX_SETUP2, evalOps);
+					evalOpStackSize += CompileMaterialConditionalOps(matIndex,
+							mat->mix.matAIndex, slg::ocl::EVAL_EVALUATE,
+							mat->mix.matBIndex, slg::ocl::EVAL_EVALUATE,
+							evalOps);
+					break;
+				}
+				default:
+					throw runtime_error("Unknown eval. type in CompiledScene::CompileMaterialOps(" + ToString(mat->type) + "): " + ToString(opType));
+			}
+			break;
+		case GLOSSYCOATING:	
+			switch (opType) {
+				case slg::ocl::EVAL_ALBEDO:
+					evalOpStackSize += CompileMaterialOps(mat->glossycoating.matBaseIndex, slg::ocl::EVAL_ALBEDO, evalOps);
+					break;
+				case slg::ocl::EVAL_GET_INTERIOR_VOLUME:
+					if (mat->interiorVolumeIndex == NULL_INDEX)
+						evalOpStackSize += CompileMaterialOps(mat->glossycoating.matBaseIndex, slg::ocl::EVAL_GET_INTERIOR_VOLUME, evalOps);
+
+					// 1 x parameter and 1 x result
+					evalOpStackSize += 1;					
+					break;
+				case slg::ocl::EVAL_GET_EXTERIOR_VOLUME:
+					if (mat->exteriorVolumeIndex == NULL_INDEX)
+						evalOpStackSize += CompileMaterialOps(mat->glossycoating.matBaseIndex, slg::ocl::EVAL_GET_EXTERIOR_VOLUME, evalOps);
+
+					// 1 x parameter and 1 x result
+					evalOpStackSize += 1;
+					break;
+				case slg::ocl::EVAL_GET_EMITTED_RADIANCE:
+					if (mat->emitTexIndex == NULL_INDEX)
+						evalOpStackSize += CompileMaterialOps(mat->glossycoating.matBaseIndex, slg::ocl::EVAL_GET_EMITTED_RADIANCE, evalOps);
+
+					// 1 x parameter and 3 x results
+					evalOpStackSize += 3;
+					break;
+				case slg::ocl::EVAL_GET_PASS_TROUGH_TRANSPARENCY:
+					evalOpStackSize += CompileMaterialOps(mat->glossycoating.matBaseIndex, slg::ocl::EVAL_GET_PASS_TROUGH_TRANSPARENCY, evalOps);
+
+					// 5 x parameters and 3 x results
+					evalOpStackSize += 5;
+					break;
+				case slg::ocl::EVAL_EVALUATE_GLOSSYCOATING_SETUP:
+					// 6 x parameters and 12 x results
+					evalOpStackSize += 12;
+					break;
+				case slg::ocl::EVAL_EVALUATE:
+					evalOpStackSize += CompileMaterialOps(matIndex, slg::ocl::EVAL_EVALUATE_GLOSSYCOATING_SETUP, evalOps);
+					evalOpStackSize += CompileMaterialOps(mat->glossycoating.matBaseIndex, slg::ocl::EVAL_EVALUATE, evalOps);
+					break;
+				case slg::ocl::EVAL_SAMPLE_GLOSSYCOATING_SETUP:
+					// 6 x parameters and 26 x results
+					evalOpStackSize += 26;
+					break;
+				case slg::ocl::EVAL_SAMPLE_GLOSSYCOATING_CLOSE_SAMPLE_BASE:
+					// 26 x parameters and 8 x results
+					evalOpStackSize += 8;
+					break;
+				case slg::ocl::EVAL_SAMPLE_GLOSSYCOATING_CLOSE_EVALUATE_BASE:
+					// 26 x parameters and 8 x results
+					evalOpStackSize += 8;
+					break;
+				case slg::ocl::EVAL_SAMPLE: {
+					evalOpStackSize += CompileMaterialOps(matIndex, slg::ocl::EVAL_SAMPLE_GLOSSYCOATING_SETUP, evalOps);
+					
+					vector<slg::ocl::MaterialEvalOp> evalOpsSampleBase;
+					u_int evalOpStackSizeSampleBase = CompileMaterialOps(mat->glossycoating.matBaseIndex, slg::ocl::EVAL_SAMPLE, evalOpsSampleBase);
+					evalOpStackSizeSampleBase += CompileMaterialOps(matIndex, slg::ocl::EVAL_SAMPLE_GLOSSYCOATING_CLOSE_SAMPLE_BASE, evalOpsSampleBase);
+
+					vector<slg::ocl::MaterialEvalOp> evalOpsEvaluateBase;
+					u_int evalOpStackSizeEvaluateBase = CompileMaterialOps(mat->glossycoating.matBaseIndex, slg::ocl::EVAL_EVALUATE, evalOpsEvaluateBase);
+					evalOpStackSizeEvaluateBase += CompileMaterialOps(matIndex, slg::ocl::EVAL_SAMPLE_GLOSSYCOATING_CLOSE_EVALUATE_BASE, evalOpsEvaluateBase);
+							
+					evalOpStackSize += CompileMaterialConditionalOps(matIndex,
+							evalOpsSampleBase, evalOpStackSizeSampleBase,
+							evalOpsEvaluateBase, evalOpStackSizeEvaluateBase,
+							evalOps);
+					
+					addDefaultOp = false;
+					break;
+				}
+				default:
+					throw runtime_error("Unknown eval. type in CompiledScene::CompileMaterialOps(" + ToString(mat->type) + "): " + ToString(opType));
+			}
+			break;
+		default:
+			throw runtime_error("Unknown material in CompiledScene::CompileMaterialOps(" + ToString(opType) + "): " + ToString(mat->type));
+	}
+
+	if (addDefaultOp) {
+		slg::ocl::MaterialEvalOp op;
+
+		op.matIndex = matIndex;
+		op.evalType = opType;
+
+		evalOps.push_back(op);
+	}
+
+	return evalOpStackSize;
 }
 
-void CompiledScene::AddEnabledMaterialCode() {
-	// Optionally include the code for the specified materials in order to reduce
-	// the number of OpenCL kernel compilation that may be required
+void CompiledScene::CompileMaterialOps() {
+	// Translate materials to material evaluate ops
 
-	if (enabledCode.count(Material::MaterialType2String(MATTE))) usedMaterialTypes.insert(MATTE);
-	if (enabledCode.count(Material::MaterialType2String(MIRROR))) usedMaterialTypes.insert(MIRROR);
-	if (enabledCode.count(Material::MaterialType2String(GLASS))) usedMaterialTypes.insert(GLASS);
-	if (enabledCode.count(Material::MaterialType2String(ARCHGLASS))) usedMaterialTypes.insert(ARCHGLASS);
-	if (enabledCode.count(Material::MaterialType2String(MIX))) usedMaterialTypes.insert(MIX);
-	if (enabledCode.count(Material::MaterialType2String(NULLMAT))) usedMaterialTypes.insert(NULLMAT);
-	if (enabledCode.count(Material::MaterialType2String(MATTETRANSLUCENT))) usedMaterialTypes.insert(MATTETRANSLUCENT);
-	if (enabledCode.count(Material::MaterialType2String(GLOSSY2))) usedMaterialTypes.insert(GLOSSY2);
-	if (enabledCode.count(Material::MaterialType2String(METAL2))) usedMaterialTypes.insert(METAL2);
-	if (enabledCode.count(Material::MaterialType2String(ROUGHGLASS))) usedMaterialTypes.insert(ROUGHGLASS);
-	if (enabledCode.count(Material::MaterialType2String(VELVET))) usedMaterialTypes.insert(VELVET);
-	if (enabledCode.count(Material::MaterialType2String(CLOTH))) usedMaterialTypes.insert(CLOTH);
-	if (enabledCode.count(Material::MaterialType2String(CARPAINT))) usedMaterialTypes.insert(CARPAINT);
-	if (enabledCode.count(Material::MaterialType2String(ROUGHMATTE))) usedMaterialTypes.insert(ROUGHMATTE);
-	if (enabledCode.count(Material::MaterialType2String(ROUGHMATTETRANSLUCENT))) usedMaterialTypes.insert(ROUGHMATTETRANSLUCENT);
-	if (enabledCode.count(Material::MaterialType2String(GLOSSYTRANSLUCENT))) usedMaterialTypes.insert(GLOSSYTRANSLUCENT);
-	if (enabledCode.count(Material::MaterialType2String(GLOSSYCOATING))) usedMaterialTypes.insert(GLOSSYCOATING);
-	if (enabledCode.count(Material::MaterialType2String(DISNEY))) usedMaterialTypes.insert(DISNEY);
-	// Volumes
-	if (enabledCode.count(Material::MaterialType2String(HOMOGENEOUS_VOL))) usedMaterialTypes.insert(HOMOGENEOUS_VOL);
-	if (enabledCode.count(Material::MaterialType2String(CLEAR_VOL))) usedMaterialTypes.insert(CLEAR_VOL);
-	if (enabledCode.count(Material::MaterialType2String(HETEROGENEOUS_VOL))) usedMaterialTypes.insert(HETEROGENEOUS_VOL);
-	// The following types are used (in PATHOCL CompiledScene class) only to
-	// recognize the usage of some specific material option
-	if (enabledCode.count(Material::MaterialType2String(GLOSSY2_ANISOTROPIC))) usedMaterialTypes.insert(GLOSSY2_ANISOTROPIC);
-	if (enabledCode.count(Material::MaterialType2String(GLOSSY2_ABSORPTION))) usedMaterialTypes.insert(GLOSSY2_ABSORPTION);
-	if (enabledCode.count(Material::MaterialType2String(GLOSSY2_INDEX))) usedMaterialTypes.insert(GLOSSY2_INDEX);
-	if (enabledCode.count(Material::MaterialType2String(GLOSSY2_MULTIBOUNCE))) usedMaterialTypes.insert(GLOSSY2_MULTIBOUNCE);
+	matEvalOps.clear();
+	maxMaterialEvalStackSize = 0;
 
-	if (enabledCode.count(Material::MaterialType2String(GLOSSYTRANSLUCENT_ANISOTROPIC))) usedMaterialTypes.insert(GLOSSYTRANSLUCENT_ANISOTROPIC);
-	if (enabledCode.count(Material::MaterialType2String(GLOSSYTRANSLUCENT_ABSORPTION))) usedMaterialTypes.insert(GLOSSYTRANSLUCENT_ABSORPTION);
-	if (enabledCode.count(Material::MaterialType2String(GLOSSYTRANSLUCENT_INDEX))) usedMaterialTypes.insert(GLOSSYTRANSLUCENT_INDEX);
-	if (enabledCode.count(Material::MaterialType2String(GLOSSYTRANSLUCENT_MULTIBOUNCE))) usedMaterialTypes.insert(GLOSSYTRANSLUCENT_MULTIBOUNCE);
+	for (u_int i = 0; i < mats.size(); ++i) {
+		slg::ocl::Material *mat = &mats[i];
 
-	if (enabledCode.count(Material::MaterialType2String(GLOSSYCOATING_ANISOTROPIC))) usedMaterialTypes.insert(GLOSSYCOATING_ANISOTROPIC);
-	if (enabledCode.count(Material::MaterialType2String(GLOSSYCOATING_ABSORPTION))) usedMaterialTypes.insert(GLOSSYCOATING_ABSORPTION);
-	if (enabledCode.count(Material::MaterialType2String(GLOSSYCOATING_INDEX))) usedMaterialTypes.insert(GLOSSYCOATING_INDEX);
-	if (enabledCode.count(Material::MaterialType2String(GLOSSYCOATING_MULTIBOUNCE))) usedMaterialTypes.insert(GLOSSYCOATING_MULTIBOUNCE);
+		//----------------------------------------------------------------------
+		// EVAL_ALBEDO
+		//----------------------------------------------------------------------
+		
+		mat->evalAlbedoOpStartIndex = matEvalOps.size();
+		const u_int evalAlbedoOpsStackSizeFloat = CompileMaterialOps(i,
+				slg::ocl::MaterialEvalOpType::EVAL_ALBEDO, matEvalOps);
+		mat->evalAlbedoOpLength = matEvalOps.size() - mat->evalAlbedoOpStartIndex;
 
-	if (enabledCode.count(Material::MaterialType2String(METAL2_ANISOTROPIC))) usedMaterialTypes.insert(METAL2_ANISOTROPIC);
-	if (enabledCode.count(Material::MaterialType2String(ROUGHGLASS_ANISOTROPIC))) usedMaterialTypes.insert(ROUGHGLASS_ANISOTROPIC);
+		maxMaterialEvalStackSize = Max(maxMaterialEvalStackSize, evalAlbedoOpsStackSizeFloat);
+
+		//----------------------------------------------------------------------
+		// EVAL_GET_INTERIOR_VOLUME
+		//----------------------------------------------------------------------
+		
+		mat->evalGetInteriorVolumeOpStartIndex = matEvalOps.size();
+		const u_int evalGetInteriorVolumeOpsStackSizeFloat = CompileMaterialOps(i,
+				slg::ocl::MaterialEvalOpType::EVAL_GET_INTERIOR_VOLUME, matEvalOps);
+		mat->evalGetInteriorVolumeOpLength = matEvalOps.size() - mat->evalGetInteriorVolumeOpStartIndex;
+
+		maxMaterialEvalStackSize = Max(maxMaterialEvalStackSize, evalGetInteriorVolumeOpsStackSizeFloat);
+
+		//----------------------------------------------------------------------
+		// EVAL_GET_EXTERIOR_VOLUME
+		//----------------------------------------------------------------------
+		
+		mat->evalGetExteriorVolumeOpStartIndex = matEvalOps.size();
+		const u_int evalGetExteriorVolumeOpsStackSizeFloat = CompileMaterialOps(i,
+				slg::ocl::MaterialEvalOpType::EVAL_GET_EXTERIOR_VOLUME, matEvalOps);
+		mat->evalGetExteriorVolumeOpLength = matEvalOps.size() - mat->evalGetExteriorVolumeOpStartIndex;
+
+		maxMaterialEvalStackSize = Max(maxMaterialEvalStackSize, evalGetExteriorVolumeOpsStackSizeFloat);
+
+		//----------------------------------------------------------------------
+		// EVAL_GET_EMITTED_RADIANCE
+		//----------------------------------------------------------------------
+		
+		mat->evalGetEmittedRadianceOpStartIndex = matEvalOps.size();
+		const u_int evalGetEmittedRadianceOpsStackSizeFloat = CompileMaterialOps(i,
+				slg::ocl::MaterialEvalOpType::EVAL_GET_EMITTED_RADIANCE, matEvalOps);
+		mat->evalGetEmittedRadianceOpLength = matEvalOps.size() - mat->evalGetEmittedRadianceOpStartIndex;
+
+		maxMaterialEvalStackSize = Max(maxMaterialEvalStackSize, evalGetEmittedRadianceOpsStackSizeFloat);
+
+		//----------------------------------------------------------------------
+		// EVAL_GET_PASS_TROUGH_TRANSPARENCY
+		//----------------------------------------------------------------------
+		
+		mat->evalGetPassThroughTransparencyOpStartIndex = matEvalOps.size();
+		const u_int evalGetPassThroughTransparencyOpsStackSizeFloat = CompileMaterialOps(i,
+				slg::ocl::MaterialEvalOpType::EVAL_GET_PASS_TROUGH_TRANSPARENCY, matEvalOps);
+		mat->evalGetPassThroughTransparencyOpLength = matEvalOps.size() - mat->evalGetPassThroughTransparencyOpStartIndex;
+
+		maxMaterialEvalStackSize = Max(maxMaterialEvalStackSize, evalGetPassThroughTransparencyOpsStackSizeFloat);
+
+		//----------------------------------------------------------------------
+		// EVAL_EVALUATE
+		//----------------------------------------------------------------------
+		
+		mat->evalEvaluateOpStartIndex = matEvalOps.size();
+		const u_int evalEvaluateOpsStackSizeFloat = CompileMaterialOps(i,
+				slg::ocl::MaterialEvalOpType::EVAL_EVALUATE, matEvalOps);
+		mat->evalEvaluateOpLength = matEvalOps.size() - mat->evalEvaluateOpStartIndex;
+
+		maxMaterialEvalStackSize = Max(maxMaterialEvalStackSize, evalEvaluateOpsStackSizeFloat);
+
+		//----------------------------------------------------------------------
+		// EVAL_SAMPLE
+		//----------------------------------------------------------------------
+		
+		mat->evalSampleOpStartIndex = matEvalOps.size();
+		const u_int evalSampleOpsStackSizeFloat = CompileMaterialOps(i,
+				slg::ocl::MaterialEvalOpType::EVAL_SAMPLE, matEvalOps);
+		mat->evalSampleOpLength = matEvalOps.size() - mat->evalSampleOpStartIndex;
+
+		maxMaterialEvalStackSize = Max(maxMaterialEvalStackSize, evalSampleOpsStackSizeFloat);
+	}
+
+	SLG_LOG("Material evaluation ops count: " << matEvalOps.size());
+	SLG_LOG("Material evaluation max. stack size: " << maxMaterialEvalStackSize);
 }
 
 void CompiledScene::CompileMaterials() {
@@ -139,11 +481,7 @@ void CompiledScene::CompileMaterials() {
 
 	const double tStart = WallClockTime();
 
-	usedMaterialTypes.clear();
-	AddEnabledMaterialCode();
-
 	mats.resize(materialsCount);
-	useTransparency = false;
 
 	for (u_int i = 0; i < materialsCount; ++i) {
 		const Material *m = scene->matDefs.GetMaterial(i);
@@ -158,14 +496,12 @@ void CompiledScene::CompileMaterials() {
 		const Texture *frontTranspTex = m->GetFrontTransparencyTexture();
 		if (frontTranspTex) {
 			mat->frontTranspTexIndex = scene->texDefs.GetTextureIndex(frontTranspTex);
-			useTransparency = true;
 		} else
 			mat->frontTranspTexIndex = NULL_INDEX;
 
 		const Texture *backTranspTex = m->GetBackTransparencyTexture();
 		if (backTranspTex) {
 			mat->backTranspTexIndex = scene->texDefs.GetTextureIndex(backTranspTex);
-			useTransparency = true;
 		} else
 			mat->backTranspTexIndex = NULL_INDEX;
 
@@ -204,8 +540,11 @@ void CompiledScene::CompileMaterials() {
 		mat->isShadowCatcherOnlyInfiniteLights = m->IsShadowCatcherOnlyInfiniteLights();
 		mat->isPhotonGIEnabled = m->IsPhotonGIEnabled();
 
+		// Bake Material::GetEventTypes() and Material::IsDelta()
+		mat->eventTypes = m->GetEventTypes();
+		mat->isDelta = m->IsDelta();
+
 		// Material specific parameters
-		usedMaterialTypes.insert(m->GetType());
 		switch (m->GetType()) {
 			case MATTE: {
 				const MatteMaterial *mm = static_cast<const MatteMaterial *>(m);
@@ -306,28 +645,14 @@ void CompiledScene::CompileMaterials() {
 				const Texture *nvTex = g2m->GetNv();
 				mat->glossy2.nuTexIndex = scene->texDefs.GetTextureIndex(nuTex);
 				mat->glossy2.nvTexIndex = scene->texDefs.GetTextureIndex(nvTex);
-				// Check if it an anisotropic material
-				if (IsTexConstant(nuTex) && IsTexConstant(nvTex) &&
-						(GetTexConstantFloatValue(nuTex) != GetTexConstantFloatValue(nvTex)))
-					usedMaterialTypes.insert(GLOSSY2_ANISOTROPIC);
 
 				const Texture *depthTex = g2m->GetDepth();
 				mat->glossy2.kaTexIndex = scene->texDefs.GetTextureIndex(g2m->GetKa());
 				mat->glossy2.depthTexIndex = scene->texDefs.GetTextureIndex(depthTex);
-				// Check if depth is just 0.0
-				if (IsTexConstant(depthTex) && (GetTexConstantFloatValue(depthTex) > 0.f))
-					usedMaterialTypes.insert(GLOSSY2_ABSORPTION);
 
 				const Texture *indexTex = g2m->GetIndex();
 				mat->glossy2.indexTexIndex = scene->texDefs.GetTextureIndex(indexTex);
-				// Check if index is just 0.0
-				if (IsTexConstant(indexTex) && (GetTexConstantFloatValue(indexTex) > 0.f))
-					usedMaterialTypes.insert(GLOSSY2_INDEX);
-
 				mat->glossy2.multibounce = g2m->IsMultibounce() ? 1 : 0;
-				// Check if multibounce is enabled
-				if (g2m->IsMultibounce())
-					usedMaterialTypes.insert(GLOSSY2_MULTIBOUNCE);
 				break;
 			}
 			case METAL2: {
@@ -351,10 +676,6 @@ void CompiledScene::CompileMaterials() {
 				const Texture *nvTex = m2m->GetNv();
 				mat->metal2.nuTexIndex = scene->texDefs.GetTextureIndex(nuTex);
 				mat->metal2.nvTexIndex = scene->texDefs.GetTextureIndex(nvTex);
-				// Check if it an anisotropic material
-				if (IsTexConstant(nuTex) && IsTexConstant(nvTex) &&
-						(GetTexConstantFloatValue(nuTex) != GetTexConstantFloatValue(nvTex)))
-					usedMaterialTypes.insert(METAL2_ANISOTROPIC);
 				break;
 			}
 			case ROUGHGLASS: {
@@ -376,10 +697,6 @@ void CompiledScene::CompileMaterials() {
 				const Texture *nvTex = rgm->GetNv();
 				mat->roughglass.nuTexIndex = scene->texDefs.GetTextureIndex(nuTex);
 				mat->roughglass.nvTexIndex = scene->texDefs.GetTextureIndex(nvTex);
-				// Check if it an anisotropic material
-				if (IsTexConstant(nuTex) && IsTexConstant(nvTex) &&
-						(GetTexConstantFloatValue(nuTex) != GetTexConstantFloatValue(nvTex)))
-					usedMaterialTypes.insert(ROUGHGLASS_ANISOTROPIC);
 				break;
 			}
 			case VELVET: {
@@ -441,36 +758,19 @@ void CompiledScene::CompileMaterials() {
 				const Texture *nvbfTex = gtm->GetNv_bf();
 				mat->glossytranslucent.nubfTexIndex = scene->texDefs.GetTextureIndex(nubfTex);
 				mat->glossytranslucent.nvbfTexIndex = scene->texDefs.GetTextureIndex(nvbfTex);
-				// Check if it an anisotropic material
-				if ((IsTexConstant(nuTex) && IsTexConstant(nvTex) &&
-						(GetTexConstantFloatValue(nuTex) != GetTexConstantFloatValue(nvTex))) ||
-						(IsTexConstant(nubfTex) && IsTexConstant(nvbfTex) &&
-						(GetTexConstantFloatValue(nubfTex) != GetTexConstantFloatValue(nvbfTex))))
-					usedMaterialTypes.insert(GLOSSYTRANSLUCENT_ANISOTROPIC);
 
 				const Texture *depthTex = gtm->GetDepth();
 				mat->glossytranslucent.kaTexIndex = scene->texDefs.GetTextureIndex(gtm->GetKa());
 				mat->glossytranslucent.depthTexIndex = scene->texDefs.GetTextureIndex(depthTex);
-				const Texture *depthbfTex = gtm->GetDepth_bf();
 				mat->glossytranslucent.kabfTexIndex = scene->texDefs.GetTextureIndex(gtm->GetKa_bf());
 				mat->glossytranslucent.depthbfTexIndex = scene->texDefs.GetTextureIndex(depthTex);
-				// Check if depth is just 0.0
-				if ((IsTexConstant(depthTex) && (GetTexConstantFloatValue(depthTex) > 0.f)) || (IsTexConstant(depthbfTex) && (GetTexConstantFloatValue(depthbfTex) > 0.f)))
-					usedMaterialTypes.insert(GLOSSYTRANSLUCENT_ABSORPTION);
 
 				const Texture *indexTex = gtm->GetIndex();
 				mat->glossytranslucent.indexTexIndex = scene->texDefs.GetTextureIndex(indexTex);
-				const Texture *indexbfTex = gtm->GetIndex_bf();
 				mat->glossytranslucent.indexbfTexIndex = scene->texDefs.GetTextureIndex(indexTex);
-				// Check if index is just 0.0
-				if ((IsTexConstant(indexTex) && (GetTexConstantFloatValue(indexTex) > 0.f)) || (IsTexConstant(indexbfTex) && GetTexConstantFloatValue(indexbfTex)))
-					usedMaterialTypes.insert(GLOSSYTRANSLUCENT_INDEX);
 
 				mat->glossytranslucent.multibounce = gtm->IsMultibounce() ? 1 : 0;
 				mat->glossytranslucent.multibouncebf = gtm->IsMultibounce_bf() ? 1 : 0;
-				// Check if multibounce is enabled
-				if (gtm->IsMultibounce() || gtm->IsMultibounce_bf())
-					usedMaterialTypes.insert(GLOSSYTRANSLUCENT_MULTIBOUNCE);
 				break;
 			}
 			case GLOSSYCOATING: {
@@ -484,28 +784,14 @@ void CompiledScene::CompileMaterials() {
 				const Texture *nvTex = gcm->GetNv();
 				mat->glossycoating.nuTexIndex = scene->texDefs.GetTextureIndex(nuTex);
 				mat->glossycoating.nvTexIndex = scene->texDefs.GetTextureIndex(nvTex);
-				// Check if it an anisotropic material
-				if (IsTexConstant(nuTex) && IsTexConstant(nvTex) &&
-						(GetTexConstantFloatValue(nuTex) != GetTexConstantFloatValue(nvTex)))
-					usedMaterialTypes.insert(GLOSSYCOATING_ANISOTROPIC);
 
 				const Texture *depthTex = gcm->GetDepth();
 				mat->glossycoating.kaTexIndex = scene->texDefs.GetTextureIndex(gcm->GetKa());
 				mat->glossycoating.depthTexIndex = scene->texDefs.GetTextureIndex(depthTex);
-				// Check if depth is just 0.0
-				if (IsTexConstant(depthTex) && (GetTexConstantFloatValue(depthTex) > 0.f))
-					usedMaterialTypes.insert(GLOSSYCOATING_ABSORPTION);
 
 				const Texture *indexTex = gcm->GetIndex();
 				mat->glossycoating.indexTexIndex = scene->texDefs.GetTextureIndex(indexTex);
-				// Check if index is just 0.0
-				if (IsTexConstant(indexTex) && (GetTexConstantFloatValue(indexTex) > 0.f))
-					usedMaterialTypes.insert(GLOSSYCOATING_INDEX);
-
 				mat->glossycoating.multibounce = gcm->IsMultibounce() ? 1 : 0;
-				// Check if multibounce is enabled
-				if (gcm->IsMultibounce())
-					usedMaterialTypes.insert(GLOSSYCOATING_MULTIBOUNCE);
 				break;
 			}
 			case DISNEY: {
@@ -579,193 +865,20 @@ void CompiledScene::CompileMaterials() {
 	}
 
 	//--------------------------------------------------------------------------
+	// Material evaluation ops
+	//--------------------------------------------------------------------------
+
+	CompileMaterialOps();
+
+	//--------------------------------------------------------------------------
 	// Default scene volume
 	//--------------------------------------------------------------------------
+
 	defaultWorldVolumeIndex = scene->defaultWorldVolume ?
 		scene->matDefs.GetMaterialIndex(scene->defaultWorldVolume) : NULL_INDEX;
 
 	const double tEnd = WallClockTime();
 	SLG_LOG("Material compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
-}
-
-//------------------------------------------------------------------------------
-// Dynamic OpenCL code generation for material evaluation
-//------------------------------------------------------------------------------
-
-static string AddTextureSourceCall(const vector<slg::ocl::Texture> &texs,
-		const string &type, const string &index) {
-	return "Texture_Get" + type + "Value(" + index + ", hitPoint TEXTURES_PARAM)";
-}
-
-static void AddMaterialSourceSwitch(stringstream &source, const vector<slg::ocl::Material> &mats,
-		const string &funcName, const string &calledFuncName,
-		const string &returnType, const string &defaultReturnValue,
-		const string &args,  const string &params, const bool hasReturn = true) {
-	source << "OPENCL_FORCE_NOT_INLINE " << returnType << " Material_" << funcName << "(" << args << ") { \n"
-			"\t__global const Material *mat = &mats[index];\n"
-			"\tswitch (index) {\n";
-	for (u_int i = 0; i < mats.size(); ++i) {
-		if (IsMaterialDynamic(&mats[i])) {
-			source << "\t\tcase " << i << ":\n";
-			source << "\t\t\t" <<
-					(hasReturn ? "return " : "") <<
-					"Material_Index" << i << "_" << calledFuncName << "(" << params << ");\n";
-			if (!hasReturn)
-				source << "\t\t\tbreak;\n";
-		}
-	}
-
-	if (hasReturn) {
-		source << "\t\tdefault:\n"
-				"\t\t\treturn " << defaultReturnValue<< ";\n";
-	}
-
-	source <<
-			"\t}\n"
-			"}\n";
-}
-
-string CompiledScene::GetMaterialsEvaluationSourceCode() const {
-	// Generate the source code for each material that reference other materials
-	// and constant materials
-	stringstream source;
-
-	const u_int materialsCount = mats.size();
-	for (u_int i = 0; i < materialsCount; ++i) {
-		const slg::ocl::Material *mat = &mats[i];
-
-		switch (mat->type) {
-			case slg::ocl::MATTE:
-			case slg::ocl::ROUGHMATTE:
-			case slg::ocl::ARCHGLASS:
-			case slg::ocl::CARPAINT:
-			case slg::ocl::CLOTH:
-			case slg::ocl::GLASS:
-			case slg::ocl::GLOSSY2:
-			case slg::ocl::MATTETRANSLUCENT:
-			case slg::ocl::ROUGHMATTETRANSLUCENT:
-			case slg::ocl::METAL2:
-			case slg::ocl::MIRROR:
-			case slg::ocl::NULLMAT:
-			case slg::ocl::ROUGHGLASS:
-			case slg::ocl::VELVET:
-			case slg::ocl::GLOSSYTRANSLUCENT:
-			case slg::ocl::DISNEY:
-			case slg::ocl::CLEAR_VOL:
-			case slg::ocl::HOMOGENEOUS_VOL:
-			case slg::ocl::HETEROGENEOUS_VOL:
-				break;
-			case slg::ocl::MIX: {
-				// MIX material uses a template .cl file
-				string mixSrc = slg::ocl::KernelSource_materialdefs_template_mix;
-				boost::replace_all(mixSrc, "<<CS_MIX_MATERIAL_INDEX>>", ToString(i));
-
-				boost::replace_all(mixSrc, "<<CS_MAT_A_MATERIAL_INDEX>>", ToString(mat->mix.matAIndex));
-				const bool isDynamicMatA = IsMaterialDynamic(&mats[mat->mix.matAIndex]);
-				boost::replace_all(mixSrc, "<<CS_MAT_A_PREFIX>>", isDynamicMatA ?
-					("Material_Index" + ToString(mat->mix.matAIndex)) : "Material");
-				boost::replace_all(mixSrc, "<<CS_MAT_A_POSTFIX>>", isDynamicMatA ?
-					"" : "WithoutDynamic");
-
-				boost::replace_all(mixSrc, "<<CS_MAT_B_MATERIAL_INDEX>>", ToString(mat->mix.matBIndex));
-				const bool isDynamicMatB = IsMaterialDynamic(&mats[mat->mix.matBIndex]);
-				boost::replace_all(mixSrc, "<<CS_MAT_B_PREFIX>>", isDynamicMatB ?
-					("Material_Index" + ToString(mat->mix.matBIndex)) : "Material");
-				boost::replace_all(mixSrc, "<<CS_MAT_B_POSTFIX>>", isDynamicMatB ?
-					"" : "WithoutDynamic");
-
-				boost::replace_all(mixSrc, "<<CS_FACTOR_TEXTURE>>", AddTextureSourceCall(texs, "Float", "material->mix.mixFactorTexIndex"));
-				source << mixSrc;
-				break;
-			}
-			case slg::ocl::GLOSSYCOATING: {
-				// GLOSSYCOATING material uses a template .cl file
-				string glossyCoatingSrc = slg::ocl::KernelSource_materialdefs_template_glossycoating;
-				boost::replace_all(glossyCoatingSrc, "<<CS_GLOSSYCOATING_MATERIAL_INDEX>>", ToString(i));
-
-				boost::replace_all(glossyCoatingSrc, "<<CS_MAT_BASE_MATERIAL_INDEX>>", ToString(mat->glossycoating.matBaseIndex));
-				const bool isDynamicMatBase = IsMaterialDynamic(&mats[mat->glossycoating.matBaseIndex]);
-				boost::replace_all(glossyCoatingSrc, "<<CS_MAT_BASE_PREFIX>>", isDynamicMatBase ?
-					("Material_Index" + ToString(mat->glossycoating.matBaseIndex)) : "Material");
-				boost::replace_all(glossyCoatingSrc, "<<CS_MAT_BASE_POSTFIX>>", isDynamicMatBase ?
-					"" : "WithoutDynamic");
-
-				boost::replace_all(glossyCoatingSrc, "<<CS_KS_TEXTURE>>", AddTextureSourceCall(texs, "Spectrum", "material->glossycoating.ksTexIndex"));
-				boost::replace_all(glossyCoatingSrc, "<<CS_NU_TEXTURE>>", AddTextureSourceCall(texs, "Float", "material->glossycoating.nuTexIndex"));
-				boost::replace_all(glossyCoatingSrc, "<<CS_NV_TEXTURE>>", AddTextureSourceCall(texs, "Float", "material->glossycoating.nvTexIndex"));
-				boost::replace_all(glossyCoatingSrc, "<<CS_KA_TEXTURE>>", AddTextureSourceCall(texs, "Spectrum", "material->glossycoating.kaTexIndex"));
-				boost::replace_all(glossyCoatingSrc, "<<CS_DEPTH_TEXTURE>>", AddTextureSourceCall(texs, "Float", "material->glossycoating.depthTexIndex"));
-				boost::replace_all(glossyCoatingSrc, "<<CS_INDEX_TEXTURE>>", AddTextureSourceCall(texs, "Float", "material->glossycoating.indexTexIndex"));
-				if (mat->glossycoating.multibounce)
-					boost::replace_all(glossyCoatingSrc, "<<CS_MB_FLAG>>", "true");
-				else
-					boost::replace_all(glossyCoatingSrc, "<<CS_MB_FLAG>>", "false");
-				source << glossyCoatingSrc;
-				break;
-			}
-			default:
-				throw runtime_error("Unknown material in CompiledScene::GetMaterialsEvaluationSourceCode(): " + boost::lexical_cast<string>(mat->type));
-				break;
-		}
-	}
-
-	// Generate the code for generic Material_GetEventTypesWithDynamic())
-	AddMaterialSourceSwitch(source, mats, "GetEventTypesWithDynamic", "GetEventTypes", "BSDFEvent", "NONE",
-			"const uint index MATERIALS_PARAM_DECL",
-			"mat MATERIALS_PARAM");
-
-	// Generate the code for generic Material_IsDeltaWithDynamic()
-	AddMaterialSourceSwitch(source, mats, "IsDeltaWithDynamic", "IsDelta", "bool", "true",
-			"const uint index MATERIALS_PARAM_DECL",
-			"mat MATERIALS_PARAM");
-
-	// Generate the code for generic Material_AlbedoWithDynamic()
-	AddMaterialSourceSwitch(source, mats, "AlbedoWithDynamic", "Albedo", "float3", "BLACK",
-			"const uint index, "
-				"__global const HitPoint *hitPoint MATERIALS_PARAM_DECL",
-			"mat, hitPoint MATERIALS_PARAM");
-
-	// Generate the code for generic Material_EvaluateWithDynamic()
-	AddMaterialSourceSwitch(source, mats, "EvaluateWithDynamic", "Evaluate", "float3", "BLACK",
-			"const uint index, "
-				"__global const HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir, "
-				"BSDFEvent *event, float *directPdfW "
-				"MATERIALS_PARAM_DECL",
-			"mat, hitPoint, lightDir, eyeDir, event, directPdfW MATERIALS_PARAM");
-
-	// Generate the code for generic Material_SampleWithDynamic()
-	AddMaterialSourceSwitch(source, mats, "SampleWithDynamic", "Sample", "float3", "BLACK",
-			"const uint index, "
-				"__global const HitPoint *hitPoint, "
-				"const float3 fixedDir, float3 *sampledDir, "
-				"const float u0, const float u1,\n"
-				"const float passThroughEvent,\n"
-				"\tfloat *pdfW, BSDFEvent *event "
-				"MATERIALS_PARAM_DECL",
-			"mat, hitPoint, fixedDir, sampledDir, u0, u1,\n"
-				"\t\t\tpassThroughEvent,\n"
-				"\t\t\tpdfW, event MATERIALS_PARAM");
-
-	// Generate the code for generic GetPassThroughTransparencyWithDynamic()
-	AddMaterialSourceSwitch(source, mats, "GetPassThroughTransparencyWithDynamic", "GetPassThroughTransparency", "float3", "BLACK",
-			"const uint index, __global const HitPoint *hitPoint, "
-				"const float3 localFixedDir, const float passThroughEvent, const bool backTracing MATERIALS_PARAM_DECL",
-			"mat, hitPoint, localFixedDir, passThroughEvent, backTracing MATERIALS_PARAM");
-
-	// Generate the code for generic Material_GetEmittedRadianceWithDynamic()
-	AddMaterialSourceSwitch(source, mats, "GetEmittedRadianceWithDynamic", "GetEmittedRadiance", "float3", "BLACK",
-			"const uint index, __global const HitPoint *hitPoint, const float oneOverPrimitiveArea MATERIALS_PARAM_DECL",
-			"mat, hitPoint, oneOverPrimitiveArea MATERIALS_PARAM");
-
-	// Generate the code for generic Material_GetInteriorVolumeWithDynamic() and Material_GetExteriorVolumeWithDynamic()
-	AddMaterialSourceSwitch(source, mats, "GetInteriorVolumeWithDynamic", "GetInteriorVolume", "uint", "NULL_INDEX",
-			"const uint index, __global const HitPoint *hitPoint, const float passThroughEvent MATERIALS_PARAM_DECL",
-			"mat, hitPoint, passThroughEvent MATERIALS_PARAM");
-	AddMaterialSourceSwitch(source, mats, "GetExteriorVolumeWithDynamic", "GetExteriorVolume", "uint", "NULL_INDEX",
-			"const uint index, __global const HitPoint *hitPoint, const float passThroughEvent MATERIALS_PARAM_DECL",
-			"mat, hitPoint, passThroughEvent MATERIALS_PARAM");
-
-	return source.str();
 }
 
 #endif

@@ -57,6 +57,7 @@
  * \brief The LuxRays core classes are defined within this namespace.
  */
 namespace luxrays {
+
 // OpenCL data types
 namespace ocl {
 #include "luxrays/luxrays_types.cl"
@@ -72,16 +73,13 @@ class Matrix4x4;
 class Normal;
 class Point;
 class Ray;
-class RayBuffer;
-class RayBufferQueue;
-class RayBufferQueueO2O;
 class RayHit;
 class RGBColor;
 class Triangle;
 class TriangleMesh;
 class UV;
 class Vector;
-class VirtualIntersectionDevice;
+
 }
 
 #endif	/* _LUXRAYS_H */

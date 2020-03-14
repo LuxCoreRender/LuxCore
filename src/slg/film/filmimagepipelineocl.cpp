@@ -16,7 +16,6 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "luxrays/core/oclintersectiondevice.h"
 #include "luxcore/cfg.h"
 
 #include "slg/film/film.h"
@@ -95,9 +94,6 @@ void Film::CreateOCLContext() {
 		vector<IntersectionDevice *> devs = ctx->AddIntersectionDevices(selectedDeviceDescs);
 		oclIntersectionDevice = (OpenCLIntersectionDevice *)devs[0];
 		SLG_LOG("Film OpenCL Device used: " << oclIntersectionDevice->GetName());
-
-		// Disable the support for hybrid rendering
-		oclIntersectionDevice->SetDataParallelSupport(false);
 
 		// Check if OpenCL 1.1 is available
 		SLG_LOG("  Device OpenCL version: " << oclIntersectionDevice->GetDeviceDesc()->GetOpenCLVersion());

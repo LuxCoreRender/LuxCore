@@ -32,7 +32,7 @@
 #include <boost/lexical_cast.hpp>
 
 #include "luxrays/core/geometry/transform.h"
-#include "luxrays/core/oclintersectiondevice.h"
+#include "luxrays/devices/ocldevice.h"
 
 #include "slg/slg.h"
 #include "slg/engines/pathoclbase/pathoclbase.h"
@@ -74,8 +74,6 @@ PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg,
 			intersectionDevices.push_back(devs[i]);
 
 			OpenCLIntersectionDevice *oclIntersectionDevice = (OpenCLIntersectionDevice *)(devs[i]);
-			// Disable the support for hybrid rendering in order to not waste resources
-			oclIntersectionDevice->SetDataParallelSupport(false);
 
 			// Check if OpenCL 1.1 is available
 			SLG_LOG("  Device OpenCL version: " << oclIntersectionDevice->GetDeviceDesc()->GetOpenCLVersion());
@@ -93,12 +91,8 @@ PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg,
 
 	SLG_LOG("Native devices used: " << nativeRenderThreadCount);
 	for (size_t i = 0; i < devs.size(); ++i) {
-		if (devs[i]->GetType() & DEVICE_TYPE_NATIVE_THREAD) {
+		if (devs[i]->GetType() & DEVICE_TYPE_NATIVE)
 			intersectionDevices.push_back(devs[i]);
-
-			// Disable the support for hybrid rendering in order to not waste resources
-			devs[i]->SetDataParallelSupport(false);
-		}
 	}
 	
 	//--------------------------------------------------------------------------
@@ -263,7 +257,7 @@ void PathOCLBaseRenderEngine::StartLockLess() {
 	for (size_t i = 0; i < nativeRenderThreadCount; ++i) {
 		if (!renderNativeThreads[i]) {
 			renderNativeThreads[i] = CreateNativeThread(i,
-					(NativeThreadIntersectionDevice *)(intersectionDevices[i + oclRenderThreadCount]));
+					(NativeDevice *)(intersectionDevices[i + oclRenderThreadCount]));
 		}
 	}
 
@@ -317,10 +311,6 @@ void PathOCLBaseRenderEngine::EndSceneEditLockLess(const EditActionList &editAct
 		renderOCLThreads[i]->EndSceneEdit(editActions);
 	for (size_t i = 0; i < renderNativeThreads.size(); ++i)
 		renderNativeThreads[i]->EndSceneEdit(editActions);
-}
-
-bool PathOCLBaseRenderEngine::IsMaterialCompiled(const MaterialType type) const {
-	return (compiledScene == NULL) ? false : compiledScene->IsMaterialCompiled(type);
 }
 
 bool PathOCLBaseRenderEngine::HasDone() const {

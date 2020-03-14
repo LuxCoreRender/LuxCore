@@ -22,22 +22,41 @@
 // Glass material
 //------------------------------------------------------------------------------
 
-#if defined (PARAM_ENABLE_MAT_GLASS)
+OPENCL_FORCE_INLINE void GlassMaterial_Albedo(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+    const float3 albedo = WHITE;
 
-OPENCL_FORCE_INLINE BSDFEvent GlassMaterial_GetEventTypes() {
-	return SPECULAR | REFLECT | TRANSMIT;
+	EvalStack_PushFloat3(albedo);
 }
 
-OPENCL_FORCE_INLINE bool GlassMaterial_IsDelta() {
-	return true;
+OPENCL_FORCE_INLINE void GlassMaterial_GetInteriorVolume(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	DefaultMaterial_GetInteriorVolume(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
 }
 
-OPENCL_FORCE_INLINE float3 GlassMaterial_Evaluate(
-		__global const HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
-		BSDFEvent *event, float *directPdfW,
-		const float3 ktTexVal, const float3 krTexVal,
-		const float3 nc, const float3 nt, const float cauchyC) {
-	return BLACK;
+OPENCL_FORCE_INLINE void GlassMaterial_GetExteriorVolume(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	DefaultMaterial_GetExteriorVolume(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+}
+
+OPENCL_FORCE_INLINE void GlassMaterial_GetPassThroughTransparency(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	DefaultMaterial_GetPassThroughTransparency(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+}
+
+OPENCL_FORCE_INLINE void GlassMaterial_GetEmittedRadiance(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	DefaultMaterial_GetEmittedRadiance(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
 }
 
 OPENCL_FORCE_INLINE float3 GlassMaterial_WaveLength2RGB(const float waveLength) {
@@ -106,12 +125,12 @@ OPENCL_FORCE_INLINE float GlassMaterial_WaveLength2IOR(const float waveLength, c
 OPENCL_FORCE_INLINE float3 GlassMaterial_EvalSpecularReflection(__global const HitPoint *hitPoint,
 		const float3 localFixedDir, const float3 kr,
 		const float nc, const float nt,
-		float3 *localSampledDir) {
+		float3 *sampledDir) {
 	if (Spectrum_IsBlack(kr))
 		return BLACK;
 
 	const float costheta = CosTheta(localFixedDir);
-	*localSampledDir = (float3)(-localFixedDir.x, -localFixedDir.y, localFixedDir.z);
+	*sampledDir = (float3)(-localFixedDir.x, -localFixedDir.y, localFixedDir.z);
 
 	const float ntc = nt / nc;
 	return kr * FresnelCauchy_Evaluate(ntc, costheta);
@@ -120,7 +139,7 @@ OPENCL_FORCE_INLINE float3 GlassMaterial_EvalSpecularReflection(__global const H
 OPENCL_FORCE_INLINE float3 GlassMaterial_EvalSpecularTransmission(__global const HitPoint *hitPoint,
 		const float3 localFixedDir, const float u0,
 		const float3 kt, const float nc, const float nt, const float cauchyC,
-		float3 *localSampledDir) {
+		float3 *sampledDir) {
 	if (Spectrum_IsBlack(kt))
 		return BLACK;
 
@@ -152,35 +171,57 @@ OPENCL_FORCE_INLINE float3 GlassMaterial_EvalSpecularTransmission(__global const
 		return BLACK;
 
 	const float cost = sqrt(fmax(0.f, 1.f - sint2)) * (entering ? -1.f : 1.f);
-	*localSampledDir = (float3)(-eta * localFixedDir.x, -eta * localFixedDir.y, cost);
+	*sampledDir = (float3)(-eta * localFixedDir.x, -eta * localFixedDir.y, cost);
 
 	float ce;
 //	if (!hitPoint.fromLight)
 		ce = (1.f - FresnelCauchy_Evaluate(ntc, cost)) * eta2;
 //	else {
-//		const float absCosSampledDir = fabsf(CosTheta(*localSampledDir));
+//		const float absCosSampledDir = fabsf(CosTheta(*sampledDir));
 //		ce = (1.f - FresnelTexture::CauchyEvaluate(ntc, costheta)) * fabsf(localFixedDir.z / absCosSampledDir);
 //	}
 
 	return lkt * ce;
 }
 
-OPENCL_FORCE_NOT_INLINE float3 GlassMaterial_Sample(
-		__global const HitPoint *hitPoint, const float3 localFixedDir, float3 *localSampledDir,
-		const float u0, const float u1,
-		const float passThroughEvent,
-		float *pdfW, BSDFEvent *event,
-		const float3 ktTexVal, const float3 krTexVal,
-		const float nc, const float nt, const float cauchyC) {
+OPENCL_FORCE_NOT_INLINE void GlassMaterial_Evaluate(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	float3 lightDir, eyeDir;
+	EvalStack_PopFloat3(eyeDir);
+	EvalStack_PopFloat3(lightDir);
+
+	MATERIAL_EVALUATE_RETURN_BLACK;
+}
+
+OPENCL_FORCE_NOT_INLINE void GlassMaterial_Sample(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	float u0, u1, passThroughEvent;
+	EvalStack_PopFloat(passThroughEvent);
+	EvalStack_PopFloat(u1);
+	EvalStack_PopFloat(u0);
+	float3 fixedDir;
+	EvalStack_PopFloat3(fixedDir);
+
+	const float3 ktTexVal = Texture_GetSpectrumValue(material->glass.ktTexIndex, hitPoint TEXTURES_PARAM);
+	const float3 krTexVal = Texture_GetSpectrumValue(material->glass.krTexIndex, hitPoint TEXTURES_PARAM);
 	const float3 kt = Spectrum_Clamp(ktTexVal);
 	const float3 kr = Spectrum_Clamp(krTexVal);
 
+	const float nc = ExtractExteriorIors(hitPoint, material->glass.exteriorIorTexIndex TEXTURES_PARAM);
+	const float nt = ExtractInteriorIors(hitPoint, material->glass.interiorIorTexIndex TEXTURES_PARAM);
+
+	const float cauchyC = (material->glass.cauchyCTex != NULL_INDEX) ? Texture_GetFloatValue(material->glass.cauchyCTex, hitPoint TEXTURES_PARAM) : -1.f;
+
 	float3 transLocalSampledDir; 
-	const float3 trans = GlassMaterial_EvalSpecularTransmission(hitPoint, localFixedDir, u0,
+	const float3 trans = GlassMaterial_EvalSpecularTransmission(hitPoint, fixedDir, u0,
 			kt, nc, nt, cauchyC, &transLocalSampledDir);
 	
 	float3 reflLocalSampledDir;
-	const float3 refl = GlassMaterial_EvalSpecularReflection(hitPoint, localFixedDir,
+	const float3 refl = GlassMaterial_EvalSpecularReflection(hitPoint, fixedDir,
 			kr, nc, nt, &reflLocalSampledDir);
 
 	// Decide to transmit or reflect
@@ -196,32 +237,78 @@ OPENCL_FORCE_NOT_INLINE float3 GlassMaterial_Sample(
 	} else {
 		if (!Spectrum_IsBlack(trans))
 			threshold = 1.f;
-		else
-			return BLACK;
+		else {
+			MATERIAL_SAMPLE_RETURN_BLACK;
+		}
 	}
 
+	float3 sampledDir;
+	BSDFEvent event;
+	float pdfW;
 	float3 result;
 	if (passThroughEvent < threshold) {
 		// Transmit
 
-		*localSampledDir = transLocalSampledDir;
+		sampledDir = transLocalSampledDir;
 
-		*event = SPECULAR | TRANSMIT;
-		*pdfW = threshold;
+		event = SPECULAR | TRANSMIT;
+		pdfW = threshold;
 	
 		result = trans;
 	} else {
 		// Reflect
 
-		*localSampledDir = reflLocalSampledDir;
+		sampledDir = reflLocalSampledDir;
 
-		*event = SPECULAR | REFLECT;
-		*pdfW = 1.f - threshold;
+		event = SPECULAR | REFLECT;
+		pdfW = 1.f - threshold;
 		
 		result = refl;
 	}
 
-	return result / *pdfW;
+	result /= pdfW;
+
+	EvalStack_PushFloat3(result);
+	EvalStack_PushFloat3(sampledDir);
+	EvalStack_PushFloat(pdfW);
+	EvalStack_PushBSDFEvent(event);
 }
 
-#endif
+//------------------------------------------------------------------------------
+// Material specific EvalOp
+//------------------------------------------------------------------------------
+
+OPENCL_FORCE_NOT_INLINE void GlassMaterial_EvalOp(
+		__global const Material* restrict material,
+		const MaterialEvalOpType evalType,
+		__global float *evalStack,
+		uint *evalStackOffset,
+		__global const HitPoint *hitPoint
+		MATERIALS_PARAM_DECL) {
+	switch (evalType) {
+		case EVAL_ALBEDO:
+			GlassMaterial_Albedo(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_INTERIOR_VOLUME:
+			GlassMaterial_GetInteriorVolume(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_EXTERIOR_VOLUME:
+			GlassMaterial_GetExteriorVolume(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_EMITTED_RADIANCE:
+			GlassMaterial_GetEmittedRadiance(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_PASS_TROUGH_TRANSPARENCY:
+			GlassMaterial_GetPassThroughTransparency(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_EVALUATE:
+			GlassMaterial_Evaluate(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_SAMPLE:
+			GlassMaterial_Sample(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		default:
+			// Something wrong here
+			break;
+	}
+}

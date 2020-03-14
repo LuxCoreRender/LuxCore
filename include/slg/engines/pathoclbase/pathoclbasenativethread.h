@@ -23,7 +23,7 @@
 
 #include <boost/thread/thread.hpp>
 
-#include "luxrays/core/intersectiondevice.h"
+#include "luxrays/devices/nativedevice.h"
 #include "slg/slg.h"
 
 namespace slg {
@@ -36,7 +36,7 @@ class PathOCLBaseRenderEngine;
 
 class PathOCLBaseNativeRenderThread {
 public:
-	PathOCLBaseNativeRenderThread(const u_int index, luxrays::NativeThreadIntersectionDevice *device,
+	PathOCLBaseNativeRenderThread(const u_int index, luxrays::NativeDevice *device,
 			PathOCLBaseRenderEngine *re);
 	virtual ~PathOCLBaseNativeRenderThread();
 
@@ -61,7 +61,7 @@ protected:
 
 	u_int threadIndex;
 	PathOCLBaseRenderEngine *renderEngine;
-	luxrays::NativeThreadIntersectionDevice *intersectionDevice;
+	luxrays::NativeDevice *intersectionDevice;
 
 	boost::thread *renderThread;
 

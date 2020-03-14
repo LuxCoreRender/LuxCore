@@ -33,7 +33,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 TilePathNativeRenderThread::TilePathNativeRenderThread(const u_int index,
-	NativeThreadIntersectionDevice *device, TilePathOCLRenderEngine *re) : 
+	NativeDevice *device, TilePathOCLRenderEngine *re) : 
 	PathOCLBaseNativeRenderThread(index, device, re) {
 	tileFilm = NULL;
 }

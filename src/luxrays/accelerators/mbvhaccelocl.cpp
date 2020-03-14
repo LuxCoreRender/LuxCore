@@ -30,10 +30,9 @@
 #include "luxrays/utils/utils.h"
 #include "luxrays/core/context.h"
 #include "luxrays/core/exttrianglemesh.h"
-#ifdef LUXRAYS_DISABLE_OPENCL
-#include "luxrays/core/intersectiondevice.h"
-#else
-#include "luxrays/core/oclintersectiondevice.h"
+#include "luxrays/devices/nativedevice.h"
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+#include "luxrays/devices/ocldevice.h"
 #include "luxrays/kernels/kernels.h"
 #endif
 
@@ -43,10 +42,10 @@ namespace luxrays {
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
-class OpenCLMBVHKernels : public OpenCLKernels {
+class OpenCLMBVHKernel : public OpenCLKernel {
 public:
-	OpenCLMBVHKernels(OpenCLIntersectionDevice *dev, const u_int kernelCount, const MBVHAccel *ac) :
-			OpenCLKernels(dev, kernelCount), mbvh(ac),
+	OpenCLMBVHKernel(OpenCLIntersectionDevice *dev, const MBVHAccel *ac) :
+			OpenCLKernel(dev), mbvh(ac),
 			uniqueLeafsTransformBuff(NULL), uniqueLeafsMotionSystemBuff(NULL),
 			uniqueLeafsInterpolatedTransformBuff(NULL) {
 		const Context *deviceContext = device->GetContext();
@@ -264,25 +263,23 @@ public:
 			throw err;
 		}
 
-		// Setup kernels
-		for (u_int i = 0; i < kernelCount; ++i) {
-			kernels[i] = new cl::Kernel(program, "Accelerator_Intersect_RayBuffer");
+		// Setup the kernel
+		kernel = new cl::Kernel(program, "Accelerator_Intersect_RayBuffer");
 
-			if (device->GetDeviceDesc()->GetForceWorkGroupSize() > 0)
-				workGroupSize = device->GetDeviceDesc()->GetForceWorkGroupSize();
-			else {
-				kernels[i]->getWorkGroupInfo<size_t>(oclDevice,
-					CL_KERNEL_WORK_GROUP_SIZE, &workGroupSize);
-				//LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
-				//	"] MBVH kernel work group size: " << workGroupSize);
-			}
-
-			// Set arguments
-			SetIntersectionKernelArgs(*(kernels[i]), 3);
+		if (device->GetDeviceDesc()->GetForceWorkGroupSize() > 0)
+			workGroupSize = device->GetDeviceDesc()->GetForceWorkGroupSize();
+		else {
+			kernel->getWorkGroupInfo<size_t>(oclDevice,
+				CL_KERNEL_WORK_GROUP_SIZE, &workGroupSize);
+			//LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
+			//	"] MBVH kernel work group size: " << workGroupSize);
 		}
+
+		// Set arguments
+		SetIntersectionKernelArgs(*kernel, 3);
 	}
 
-	virtual ~OpenCLMBVHKernels() {
+	virtual ~OpenCLMBVHKernel() {
 		for (u_int i = 0; i < vertsBuffs.size(); ++i)
 			device->FreeBuffer(&vertsBuffs[i]);
 		for (u_int i = 0; i < nodeBuffs.size(); ++i)
@@ -294,7 +291,7 @@ public:
 
 	void UpdateBVHNodes();
 	virtual void Update(const DataSet *newDataSet);
-	virtual void EnqueueRayBuffer(cl::CommandQueue &oclQueue, const u_int kernelIndex,
+	virtual void EnqueueRayBuffer(cl::CommandQueue &oclQueue,
 		cl::Buffer &rBuff, cl::Buffer &hBuff, const u_int rayCount,
 		const VECTOR_CLASS<cl::Event> *events, cl::Event *event);
 
@@ -313,7 +310,7 @@ public:
 	vector<std::vector<u_int> > vertOffsetPerLeafMesh;
 };
 
-void OpenCLMBVHKernels::UpdateBVHNodes() {
+void OpenCLMBVHKernel::UpdateBVHNodes() {
 	// Free old buffers
 	for (u_int i = 0; i < nodeBuffs.size(); ++i)
 		device->FreeBuffer(&nodeBuffs[i]);
@@ -447,16 +444,15 @@ void OpenCLMBVHKernels::UpdateBVHNodes() {
 	}
 }
 
-void OpenCLMBVHKernels::Update(const DataSet *newDataSet) {
+void OpenCLMBVHKernel::Update(const DataSet *newDataSet) {
 	if (!mbvh->nRootNodes)
 		return;
 
 	// The root BVH nodes are changed. Update the BVH node buffers.
 	UpdateBVHNodes();
 
-	// I have to update kernels arguments changed inside UpdateBVHNodes()
-	for (u_int i = 0; i < kernels.size(); ++i)
-		SetIntersectionKernelArgs(*(kernels[i]), 3);
+	// I have to update kernel arguments changed inside UpdateBVHNodes()
+	SetIntersectionKernelArgs(*kernel, 3);
 
 	const Context *deviceContext = device->GetContext();
 	const std::string &deviceName = device->GetName();
@@ -474,20 +470,20 @@ void OpenCLMBVHKernels::Update(const DataSet *newDataSet) {
 	device->GetOpenCLQueue().finish();
 }
 
-void OpenCLMBVHKernels::EnqueueRayBuffer(cl::CommandQueue &oclQueue, const u_int kernelIndex,
+void OpenCLMBVHKernel::EnqueueRayBuffer(cl::CommandQueue &oclQueue,
 		cl::Buffer &rBuff, cl::Buffer &hBuff, const u_int rayCount,
 		const VECTOR_CLASS<cl::Event> *events, cl::Event *event) {
-	kernels[kernelIndex]->setArg(0, rBuff);
-	kernels[kernelIndex]->setArg(1, hBuff);
-	kernels[kernelIndex]->setArg(2, rayCount);
+	kernel->setArg(0, rBuff);
+	kernel->setArg(1, hBuff);
+	kernel->setArg(2, rayCount);
 
 	const u_int globalRange = RoundUp<u_int>(rayCount, workGroupSize);
-	oclQueue.enqueueNDRangeKernel(*kernels[kernelIndex], cl::NullRange,
+	oclQueue.enqueueNDRangeKernel(*kernel, cl::NullRange,
 		cl::NDRange(globalRange), cl::NDRange(workGroupSize), events,
 		event);
 }
 
-u_int OpenCLMBVHKernels::SetIntersectionKernelArgs(cl::Kernel &kernel, const u_int index) {
+u_int OpenCLMBVHKernel::SetIntersectionKernelArgs(cl::Kernel &kernel, const u_int index) {
 	u_int argIndex = index;
 	if (uniqueLeafsTransformBuff)
 		kernel.setArg(argIndex++, *uniqueLeafsTransformBuff);
@@ -503,16 +499,14 @@ u_int OpenCLMBVHKernels::SetIntersectionKernelArgs(cl::Kernel &kernel, const u_i
 	return argIndex;
 }
 
-OpenCLKernels *MBVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device,
-		const u_int kernelCount) const {
-	// Setup kernels
-	return new OpenCLMBVHKernels(device, kernelCount, this);
+OpenCLKernel *MBVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *device) const {
+	// Setup the kernel
+	return new OpenCLMBVHKernel(device, this);
 }
 
 #else
 
-OpenCLKernels *MBVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device,
-		const u_int kernelCount) const {
+OpenCLKernel *MBVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *device) const {
 	return NULL;
 }
 

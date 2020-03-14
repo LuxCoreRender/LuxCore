@@ -23,12 +23,12 @@
 #include <stdexcept>
 
 #include "luxrays/core/context.h"
-#ifdef LUXRAYS_DISABLE_OPENCL
-#include "luxrays/core/intersectiondevice.h"
-#else
-#include "luxrays/core/oclintersectiondevice.h"
+#include "luxrays/devices/nativedevice.h"
+#include "luxrays/devices/nativedevice.h"
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+#include "luxrays/devices/ocldevice.h"
+#include "luxrays/kernels/kernels.h"
 #endif
-#include "luxrays/core/virtualdevice.h"
 
 using namespace luxrays;
 
@@ -39,7 +39,7 @@ Context::Context(LuxRaysDebugHandler handler, const Properties &config) : cfg(co
 	verbose = cfg.Get(Property("context.verbose")(true)).Get<bool>();
 
 	// Get the list of devices available on the platform
-	NativeThreadDeviceDescription::AddDeviceDescs(deviceDescriptions);
+	NativeDeviceDescription::AddDeviceDescs(deviceDescriptions);
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	// Platform info
@@ -184,9 +184,9 @@ std::vector<IntersectionDevice *> Context::CreateIntersectionDevices(
 
 		const DeviceType deviceType = deviceDesc[i]->GetType();
 		IntersectionDevice *device;
-		if (deviceType == DEVICE_TYPE_NATIVE_THREAD) {
+		if (deviceType == DEVICE_TYPE_NATIVE) {
 			// Nathive thread devices
-			device = new NativeThreadIntersectionDevice(this, indexOffset + i);
+			device = new NativeDevice(this, indexOffset + i);
 		}
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 		else if (deviceType & DEVICE_TYPE_OPENCL_ALL) {
@@ -213,16 +213,4 @@ std::vector<IntersectionDevice *> Context::AddIntersectionDevices(std::vector<De
 		idevices.push_back(newDevices[i]);
 
 	return newDevices;
-}
-
-std::vector<IntersectionDevice *> Context::AddVirtualIntersectionDevice(
-	std::vector<DeviceDescription *> &deviceDescs) {
-	assert (!started);
-	assert (deviceDescs.size() > 0);
-
-	std::vector<IntersectionDevice *> realDevices = CreateIntersectionDevices(deviceDescs, idevices.size());
-	VirtualIntersectionDevice *virtualDevice = new VirtualIntersectionDevice(realDevices, idevices.size());
-	idevices.push_back(virtualDevice);
-
-	return realDevices;
 }

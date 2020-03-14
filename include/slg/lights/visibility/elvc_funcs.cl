@@ -84,3 +84,76 @@ OPENCL_FORCE_INLINE __global const float* restrict EnvLightVisibilityCache_GetVi
 
 	return (cacheEntry && (cacheEntry->distributionOffset != NULL_INDEX)) ? &elvcDistributions[cacheEntry->distributionOffset] : NULL;
 }
+
+//------------------------------------------------------------------------------
+// Sample
+//------------------------------------------------------------------------------
+
+OPENCL_FORCE_NOT_INLINE void EnvLightVisibilityCache_Sample(__global const BSDF *bsdf,
+		const float u0, const float u1, float2 *uv, float *pdf
+		LIGHTS_PARAM_DECL) {
+	*pdf = 0.f;
+
+	__global const float* restrict cacheDist = EnvLightVisibilityCache_GetVisibilityMap(bsdf LIGHTS_PARAM);
+
+	if (cacheDist) {
+		uint cacheDistXY[2];
+		float cacheDistPdf, du0, du1;
+		Distribution2D_SampleDiscrete(cacheDist, u0, u1, cacheDistXY, &cacheDistPdf, &du0, &du1);
+
+		if (cacheDistPdf > 0.f) {
+			if (elvcTileDistributionOffsets) {
+				const uint tileDistributionOffset = elvcTileDistributionOffsets[cacheDistXY[0] + cacheDistXY[1] * elvcTilesXCount];
+				__global const float* restrict tileDistribution = &elvcDistributions[tileDistributionOffset];
+
+				float2 tileXY;
+				float tileDistPdf;
+				Distribution2D_SampleContinuous(tileDistribution, du0, du1, &tileXY, &tileDistPdf);
+
+				if (tileDistPdf > 0.f) {
+					(*uv).s0 = (cacheDistXY[0] + tileXY.s0) / elvcTilesXCount;
+					(*uv).s1 = (cacheDistXY[1] + tileXY.s1) / elvcTilesYCount;
+
+					*pdf = cacheDistPdf * tileDistPdf * (elvcTilesXCount * elvcTilesYCount);
+				}
+			} else {
+				(*uv).s0 = (cacheDistXY[0] + du0) / elvcTilesXCount;
+				(*uv).s1 = (cacheDistXY[1] + du1) / elvcTilesYCount;
+
+				*pdf = cacheDistPdf * (elvcTilesXCount * elvcTilesYCount);
+			}
+		}
+	}
+}
+
+//------------------------------------------------------------------------------
+// Pdf
+//------------------------------------------------------------------------------
+
+float EnvLightVisibilityCache_Pdf(__global const BSDF *bsdf,
+		const float u, const float v
+		LIGHTS_PARAM_DECL) {
+	float pdf = 0.f;
+
+	__global const float* restrict cacheDist = EnvLightVisibilityCache_GetVisibilityMap(bsdf LIGHTS_PARAM);
+
+	if (cacheDist) {
+		uint offsetU, offsetV;
+		float du, dv;
+		const float cacheDistPdf = Distribution2D_PdfExt(cacheDist, u, v, &du, &dv, &offsetU, &offsetV);
+
+		if (cacheDistPdf > 0.f) {
+			if (elvcTileDistributionOffsets) {
+				const uint tileDistributionOffset = elvcTileDistributionOffsets[offsetU + offsetV * elvcTilesXCount];
+				__global const float* restrict tileDistribution = &elvcDistributions[tileDistributionOffset];
+
+				const float tileDistPdf = Distribution2D_Pdf(tileDistribution, du, dv);
+
+				pdf = cacheDistPdf * tileDistPdf;
+			} else
+				pdf = cacheDistPdf;
+		}
+	}
+
+	return pdf;
+}
