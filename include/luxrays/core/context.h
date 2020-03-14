@@ -164,7 +164,7 @@ private:
 	DataSet *currentDataSet;
 	std::vector<DeviceDescription *> deviceDescriptions;
 
-	// All intersection devices (including virtual)
+	// All intersection devices
 	std::vector<IntersectionDevice *> idevices;
 
 	bool started, verbose;

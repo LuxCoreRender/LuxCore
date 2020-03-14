@@ -166,7 +166,9 @@ private:
 class OpenCLDeviceProgram : public HardwareDeviceProgram {
 public:
 	OpenCLDeviceProgram() : oclProgram(nullptr) { }
-	virtual ~OpenCLDeviceProgram() { }
+	virtual ~OpenCLDeviceProgram() {
+		delete oclProgram;
+	}
 
 	bool IsNull() const { 
 		return (oclProgram == nullptr);

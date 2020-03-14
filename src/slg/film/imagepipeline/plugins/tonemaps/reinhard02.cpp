@@ -68,7 +68,8 @@ Reinhard02ToneMap::~Reinhard02ToneMap() {
 	delete opRGBValueAccumulateKernel;
 	delete applyKernel;
 
-	delete oclAccumBuffer;
+	if (hardwareDevice)
+		hardwareDevice->FreeBuffer(&oclAccumBuffer);
 #endif
 }
 
@@ -126,11 +127,12 @@ void Reinhard02ToneMap::Apply(Film &film, const u_int index) {
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 void Reinhard02ToneMap::ApplyOCL(Film &film, const u_int index) {
-	HardwareDevice *hardwareDevice = film.oclIntersectionDevice;
 	const u_int pixelCount = film.GetWidth() * film.GetHeight();
 	const u_int workSize = RoundUp((pixelCount + 1) / 2, 64u);
 
 	if (!applyKernel) {
+		hardwareDevice = film.oclIntersectionDevice;
+
 		// Allocate buffers
 		film.ctx->SetVerbose(true);
 		hardwareDevice->AllocBufferRW(&oclAccumBuffer, nullptr, (workSize / 64) * sizeof(float) * 3, "Accumulation");

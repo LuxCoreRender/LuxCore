@@ -37,6 +37,7 @@ BOOST_CLASS_EXPORT_IMPLEMENT(slg::AutoLinearToneMap)
 
 AutoLinearToneMap::AutoLinearToneMap() {
 #if !defined(LUXRAYS_DISABLE_OPENCL)
+	hardwareDevice = nullptr;
 	oclAccumBuffer = nullptr;
 
 	opRGBValuesReduceKernel = nullptr;
@@ -51,7 +52,8 @@ AutoLinearToneMap::~AutoLinearToneMap() {
 	delete opRGBValueAccumulateKernel;
 	delete applyKernel;
 
-	delete oclAccumBuffer;
+	if (hardwareDevice)
+		hardwareDevice->FreeBuffer(&oclAccumBuffer);
 #endif
 }
 
@@ -114,11 +116,11 @@ void AutoLinearToneMap::Apply(Film &film, const u_int index) {
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
 void AutoLinearToneMap::ApplyOCL(Film &film, const u_int index) {
-	HardwareDevice *hardwareDevice = film.oclIntersectionDevice;
 	const u_int pixelCount = film.GetWidth() * film.GetHeight();
 	const u_int workSize = RoundUp((pixelCount + 1) / 2, 64u);
 
 	if (!applyKernel) {
+		hardwareDevice = film.oclIntersectionDevice;
 
 		// Allocate buffers
 		film.ctx->SetVerbose(true);
