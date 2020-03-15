@@ -244,6 +244,7 @@ float CameraResponsePlugin::ApplyCrf(float point, const vector<float> &from, con
 //------------------------------------------------------------------------------
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
+
 void CameraResponsePlugin::ApplyOCL(Film &film, const u_int index) {
 	if (!applyKernel) {
 		film.ctx->SetVerbose(true);
@@ -317,6 +318,7 @@ void CameraResponsePlugin::ApplyOCL(Film &film, const u_int index) {
 	hardwareDevice->EnqueueKernel(applyKernel, HardwareDeviceRange(RoundUp(film.GetWidth() * film.GetHeight(), 256u)),
 			HardwareDeviceRange(256));
 }
+
 #endif
 
 //------------------------------------------------------------------------------

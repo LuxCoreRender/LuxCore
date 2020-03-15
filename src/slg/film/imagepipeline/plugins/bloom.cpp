@@ -265,6 +265,7 @@ void BloomFilterPlugin::Apply(Film &film, const u_int index) {
 //------------------------------------------------------------------------------
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
+
 void BloomFilterPlugin::ApplyOCL(Film &film, const u_int index) {
 	const u_int width = film.GetWidth();
 	const u_int height = film.GetHeight();
@@ -302,8 +303,8 @@ void BloomFilterPlugin::ApplyOCL(Film &film, const u_int index) {
 
 		// Set kernel arguments
 		u_int argIndex = 0;
-		hardwareDevice->SetKernelArg(bloomFilterXKernel, argIndex++, film.GetWidth());
-		hardwareDevice->SetKernelArg(bloomFilterXKernel, argIndex++, film.GetHeight());
+		hardwareDevice->SetKernelArg(bloomFilterXKernel, argIndex++, width);
+		hardwareDevice->SetKernelArg(bloomFilterXKernel, argIndex++, height);
 		film.oclIntersectionDevice->SetKernelArg(bloomFilterXKernel, argIndex++, film.ocl_IMAGEPIPELINE);
 		hardwareDevice->SetKernelArg(bloomFilterXKernel, argIndex++, oclBloomBuffer);
 		hardwareDevice->SetKernelArg(bloomFilterXKernel, argIndex++, oclBloomBufferTmp);
@@ -319,8 +320,8 @@ void BloomFilterPlugin::ApplyOCL(Film &film, const u_int index) {
 
 		// Set kernel arguments
 		argIndex = 0;
-		hardwareDevice->SetKernelArg(bloomFilterYKernel, argIndex++, film.GetWidth());
-		hardwareDevice->SetKernelArg(bloomFilterYKernel, argIndex++, film.GetHeight());
+		hardwareDevice->SetKernelArg(bloomFilterYKernel, argIndex++, width);
+		hardwareDevice->SetKernelArg(bloomFilterYKernel, argIndex++, height);
 		film.oclIntersectionDevice->SetKernelArg(bloomFilterYKernel, argIndex++, film.ocl_IMAGEPIPELINE);
 		hardwareDevice->SetKernelArg(bloomFilterYKernel, argIndex++, oclBloomBuffer);
 		hardwareDevice->SetKernelArg(bloomFilterYKernel, argIndex++, oclBloomBufferTmp);
@@ -336,8 +337,8 @@ void BloomFilterPlugin::ApplyOCL(Film &film, const u_int index) {
 
 		// Set kernel arguments
 		argIndex = 0;
-		hardwareDevice->SetKernelArg(bloomFilterMergeKernel, argIndex++, film.GetWidth());
-		hardwareDevice->SetKernelArg(bloomFilterMergeKernel, argIndex++, film.GetHeight());
+		hardwareDevice->SetKernelArg(bloomFilterMergeKernel, argIndex++, width);
+		hardwareDevice->SetKernelArg(bloomFilterMergeKernel, argIndex++, height);
 		film.oclIntersectionDevice->SetKernelArg(bloomFilterMergeKernel, argIndex++, film.ocl_IMAGEPIPELINE);
 		hardwareDevice->SetKernelArg(bloomFilterMergeKernel, argIndex++, oclBloomBuffer);
 		hardwareDevice->SetKernelArg(bloomFilterMergeKernel, argIndex++, weight);
@@ -352,11 +353,12 @@ void BloomFilterPlugin::ApplyOCL(Film &film, const u_int index) {
 		film.ctx->SetVerbose(false);
 	}
 
-	hardwareDevice->EnqueueKernel(bloomFilterXKernel, HardwareDeviceRange(RoundUp(film.GetWidth() * film.GetHeight(), 256u)),
+	hardwareDevice->EnqueueKernel(bloomFilterXKernel, HardwareDeviceRange(RoundUp(width * height, 256u)),
 			HardwareDeviceRange(256));
-	hardwareDevice->EnqueueKernel(bloomFilterYKernel, HardwareDeviceRange(RoundUp(film.GetWidth() * film.GetHeight(), 256u)),
+	hardwareDevice->EnqueueKernel(bloomFilterYKernel, HardwareDeviceRange(RoundUp(width * height, 256u)),
 			HardwareDeviceRange(256));
-	hardwareDevice->EnqueueKernel(bloomFilterMergeKernel, HardwareDeviceRange(RoundUp(film.GetWidth() * film.GetHeight(), 256u)),
+	hardwareDevice->EnqueueKernel(bloomFilterMergeKernel, HardwareDeviceRange(RoundUp(width * height, 256u)),
 			HardwareDeviceRange(256));
 }
+
 #endif

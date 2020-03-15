@@ -142,6 +142,7 @@ void BackgroundImgPlugin::Apply(Film &film, const u_int index) {
 //------------------------------------------------------------------------------
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
+
 void BackgroundImgPlugin::ApplyOCL(Film &film, const u_int index) {
 	if (!film.HasChannel(Film::ALPHA)) {
 		// I can not work without alpha channel
@@ -217,4 +218,5 @@ void BackgroundImgPlugin::ApplyOCL(Film &film, const u_int index) {
 	hardwareDevice->EnqueueKernel(applyKernel, HardwareDeviceRange(RoundUp(film.GetWidth() * film.GetHeight(), 256u)),
 			HardwareDeviceRange(256));
 }
+
 #endif
