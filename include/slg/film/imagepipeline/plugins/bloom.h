@@ -23,8 +23,8 @@
 #include <memory>
 #include <typeinfo> 
 
-#include "luxrays/luxrays.h"
 #include "luxrays/core/color/color.h"
+#include "luxrays/core/hardwaredevice.h"
 #include "luxrays/devices/ocldevice.h"
 #include "luxrays/utils/serializationutils.h"
 #include "slg/film/imagepipeline/imagepipeline.h"
@@ -79,14 +79,14 @@ private:
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	// Used inside the object destructor to free buffers
-	luxrays::OpenCLIntersectionDevice *oclIntersectionDevice;
-	cl::Buffer *oclBloomBuffer;
-	cl::Buffer *oclBloomBufferTmp;
-	cl::Buffer *oclBloomFilter;
+	luxrays::HardwareDevice *hardwareDevice;
+	luxrays::HardwareDeviceBuffer *oclBloomBuffer;
+	luxrays::HardwareDeviceBuffer *oclBloomBufferTmp;
+	luxrays::HardwareDeviceBuffer *oclBloomFilter;
 
-	cl::Kernel *bloomFilterXKernel;
-	cl::Kernel *bloomFilterYKernel;
-	cl::Kernel *bloomFilterMergeKernel;
+	luxrays::HardwareDeviceKernel *bloomFilterXKernel;
+	luxrays::HardwareDeviceKernel *bloomFilterYKernel;
+	luxrays::HardwareDeviceKernel *bloomFilterMergeKernel;
 #endif
 };
 

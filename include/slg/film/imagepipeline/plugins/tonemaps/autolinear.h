@@ -60,6 +60,7 @@ private:
 	}
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
+	// Used inside the object destructor to free buffers
 	luxrays::HardwareDevice *hardwareDevice;
 	luxrays::HardwareDeviceBuffer *oclAccumBuffer;
 
