@@ -67,10 +67,11 @@ private:
 	std::vector<float> gammaTable;
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-	// Used inside the object destructor to free oclGammaTable
-	luxrays::OpenCLIntersectionDevice *oclIntersectionDevice;
-	cl::Buffer *oclGammaTable;
-	cl::Kernel *applyKernel;
+	// Used inside the object destructor to free buffers
+	luxrays::HardwareDevice *hardwareDevice;
+	luxrays::HardwareDeviceBuffer *oclGammaTable;
+
+	luxrays::HardwareDeviceKernel *applyKernel;
 #endif
 };
 

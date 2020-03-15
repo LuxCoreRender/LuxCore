@@ -45,9 +45,9 @@ GammaCorrectionPlugin::GammaCorrectionPlugin(const float g, const u_int tableSiz
 		gammaTable[i] = powf(Clamp(x, 0.f, 1.f), 1.f / g);
 	
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-	oclIntersectionDevice = NULL;
-	oclGammaTable = NULL;
-	applyKernel = NULL;
+	hardwareDevice = nullptr;
+	oclGammaTable = nullptr;
+	applyKernel = nullptr;
 #endif
 }
 
@@ -55,8 +55,8 @@ GammaCorrectionPlugin::~GammaCorrectionPlugin() {
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	delete applyKernel;
 
-	if (oclIntersectionDevice)
-		oclIntersectionDevice->FreeBuffer(&oclGammaTable);
+	if (hardwareDevice)
+		hardwareDevice->FreeBuffer(&oclGammaTable);
 #endif
 }
 
@@ -104,41 +104,47 @@ void GammaCorrectionPlugin::Apply(Film &film, const u_int index) {
 //------------------------------------------------------------------------------
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
+
 void GammaCorrectionPlugin::ApplyOCL(Film &film, const u_int index) {
 	if (!applyKernel) {
-		oclIntersectionDevice = film.oclIntersectionDevice;
 		film.ctx->SetVerbose(true);
-		oclIntersectionDevice->AllocBufferRO(&oclGammaTable, &gammaTable[0], gammaTable.size() * sizeof(float), "Gamma table");
-		film.ctx->SetVerbose(false);
+
+		hardwareDevice = film.oclIntersectionDevice;
+
+		// Allocate buffers
+		hardwareDevice->AllocBufferRO(&oclGammaTable, &gammaTable[0], gammaTable.size() * sizeof(float), "Gamma table");
 
 		// Compile sources
 		const double tStart = WallClockTime();
 
-		cl::Program *program = ImagePipelinePlugin::CompileProgram(
-				film,
+		HardwareDeviceProgram *program = nullptr;
+		hardwareDevice->CompileProgram(&program,
 				"-D LUXRAYS_OPENCL_KERNEL -D SLG_OPENCL_KERNEL",
 				luxrays::ocl::KernelSource_utils_funcs +
 				slg::ocl::KernelSource_plugin_gammacorrection_funcs,
 				"GammaCorrectionPlugin");
 
 		SLG_LOG("[GammaCorrectionPlugin] Compiling GammaCorrectionPlugin_Apply Kernel");
-		applyKernel = new cl::Kernel(*program, "GammaCorrectionPlugin_Apply");
+		hardwareDevice->GetKernel(program, &applyKernel, "GammaCorrectionPlugin_Apply");
 
 		delete program;
 
 		// Set kernel arguments
 		u_int argIndex = 0;
-		applyKernel->setArg(argIndex++, film.GetWidth());
-		applyKernel->setArg(argIndex++, film.GetHeight());
-		applyKernel->setArg(argIndex++, *(film.ocl_IMAGEPIPELINE));
-		applyKernel->setArg(argIndex++, *oclGammaTable);
-		applyKernel->setArg(argIndex++, (u_int)gammaTable.size());
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.GetWidth());
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.GetHeight());
+		film.oclIntersectionDevice->SetKernelArg(applyKernel, argIndex++, film.ocl_IMAGEPIPELINE);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, oclGammaTable);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, (u_int)gammaTable.size());
 
 		const double tEnd = WallClockTime();
 		SLG_LOG("[GammaCorrectionPlugin] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
+
+		film.ctx->SetVerbose(false);
 	}
 
-	oclIntersectionDevice->GetOpenCLQueue().enqueueNDRangeKernel(*applyKernel,
-			cl::NullRange, cl::NDRange(RoundUp(film.GetWidth() * film.GetHeight(), 256u)), cl::NDRange(256));
+	hardwareDevice->EnqueueKernel(applyKernel, HardwareDeviceRange(RoundUp(film.GetWidth() * film.GetHeight(), 256u)),
+			HardwareDeviceRange(256));
 }
+
 #endif
