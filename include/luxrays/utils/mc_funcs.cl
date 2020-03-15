@@ -226,8 +226,6 @@ OPENCL_FORCE_INLINE float Distribution1D_SampleContinuous(__global const float* 
 	// different from the Pdf returned here.
 	// So I use this Min() as work around.
 	const float result = fmin((offset + du) / count, MachineEpsilon_PreviousFloat(((offset + 1) / count)));
-	
-	assert (*pdf == Pdf(result));
 
 	return result;
 }
