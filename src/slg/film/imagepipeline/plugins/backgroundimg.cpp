@@ -165,9 +165,9 @@ void BackgroundImgPlugin::ApplyOCL(Film &film, const u_int index) {
 		imgMapDesc.storageType = (slg::ocl::ImageMapStorageType)filmImageMap->GetStorage()->GetStorageType();
 
 		// Allocate OpenCL buffers
-		hardwareDevice->AllocBufferRW(&oclFilmImageMapDesc, &imgMapDesc, sizeof(slg::ocl::ImageMap),
+		hardwareDevice->AllocBufferRO(&oclFilmImageMapDesc, &imgMapDesc, sizeof(slg::ocl::ImageMap),
 						"BackgroundImg image map description");
-		hardwareDevice->AllocBufferRW(&oclFilmImageMap, filmImageMap->GetStorage()->GetPixelsData(),
+		hardwareDevice->AllocBufferRO(&oclFilmImageMap, filmImageMap->GetStorage()->GetPixelsData(),
 						filmImageMap->GetStorage()->GetMemorySize(), "BackgroundImg image map");
 
 		// Compile sources

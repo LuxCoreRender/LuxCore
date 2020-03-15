@@ -282,7 +282,7 @@ void BloomFilterPlugin::ApplyOCL(Film &film, const u_int index) {
 		// Allocate OpenCL buffers
 		hardwareDevice->AllocBufferRW(&oclBloomBuffer, nullptr, bloomBufferSize * sizeof(Spectrum), "Bloom buffer");
 		hardwareDevice->AllocBufferRW(&oclBloomBufferTmp, nullptr, bloomBufferSize * sizeof(Spectrum), "Bloom temporary buffer");
-		hardwareDevice->AllocBufferRW(&oclBloomFilter, bloomFilter, bloomFilterSize * sizeof(float), "Bloom filter table");
+		hardwareDevice->AllocBufferRO(&oclBloomFilter, bloomFilter, bloomFilterSize * sizeof(float), "Bloom filter table");
 
 		// Compile sources
 		const double tStart = WallClockTime();
@@ -348,6 +348,8 @@ void BloomFilterPlugin::ApplyOCL(Film &film, const u_int index) {
 
 		const double tEnd = WallClockTime();
 		SLG_LOG("[BloomFilterPlugin] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
+
+		film.ctx->SetVerbose(false);
 	}
 
 	hardwareDevice->EnqueueKernel(bloomFilterXKernel, HardwareDeviceRange(RoundUp(film.GetWidth() * film.GetHeight(), 256u)),
