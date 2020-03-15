@@ -40,11 +40,12 @@ Reinhard02ToneMap::Reinhard02ToneMap() {
 	burn = 3.75f;
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-	oclAccumBuffer = NULL;
+	hardwareDevice = nullptr;
+	oclAccumBuffer = nullptr;
 
-	opRGBValuesReduceKernel = NULL;
-	opRGBValueAccumulateKernel = NULL;
-	applyKernel = NULL;
+	opRGBValuesReduceKernel = nullptr;
+	opRGBValueAccumulateKernel = nullptr;
+	applyKernel = nullptr;
 #endif
 }
 
@@ -54,11 +55,12 @@ Reinhard02ToneMap::Reinhard02ToneMap(const float preS, const float postS, const 
 	burn = b;
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-	oclAccumBuffer = NULL;
+	hardwareDevice = nullptr;
+	oclAccumBuffer = nullptr;
 
-	opRGBValuesReduceKernel = NULL;
-	opRGBValueAccumulateKernel = NULL;
-	applyKernel = NULL;
+	opRGBValuesReduceKernel = nullptr;
+	opRGBValueAccumulateKernel = nullptr;
+	applyKernel = nullptr;
 #endif
 }
 
