@@ -37,7 +37,7 @@ BOOST_CLASS_EXPORT_IMPLEMENT(slg::VignettingPlugin)
 
 VignettingPlugin::VignettingPlugin(const float s) : scale(s) {
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-	applyKernel = NULL;
+	applyKernel = nullptr;
 #endif
 }
 
@@ -100,34 +100,42 @@ void VignettingPlugin::Apply(Film &film, const u_int index) {
 //------------------------------------------------------------------------------
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
+
 void VignettingPlugin::ApplyOCL(Film &film, const u_int index) {
+	HardwareDevice *hardwareDevice = film.oclIntersectionDevice;
+	
 	if (!applyKernel) {
+		film.ctx->SetVerbose(true);
+
 		// Compile sources
 		const double tStart = WallClockTime();
 
-		cl::Program *program = ImagePipelinePlugin::CompileProgram(
-				film,
+		HardwareDeviceProgram *program = nullptr;
+		hardwareDevice->CompileProgram(&program,
 				"-D LUXRAYS_OPENCL_KERNEL -D SLG_OPENCL_KERNEL",
 				slg::ocl::KernelSource_plugin_vignetting_funcs,
 				"VignettingPlugin");
 
 		SLG_LOG("[VignettingPlugin] Compiling VignettingPlugin_Apply Kernel");
-		applyKernel = new cl::Kernel(*program, "VignettingPlugin_Apply");
+		hardwareDevice->GetKernel(program, &applyKernel, "VignettingPlugin_Apply");
 
 		delete program;
 
 		// Set kernel arguments
 		u_int argIndex = 0;
-		applyKernel->setArg(argIndex++, film.GetWidth());
-		applyKernel->setArg(argIndex++, film.GetHeight());
-		applyKernel->setArg(argIndex++, *(film.ocl_IMAGEPIPELINE));
-		applyKernel->setArg(argIndex++, scale);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.GetWidth());
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.GetHeight());
+		film.oclIntersectionDevice->SetKernelArg(applyKernel, argIndex++, film.ocl_IMAGEPIPELINE);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, scale);
 
 		const double tEnd = WallClockTime();
 		SLG_LOG("[VignettingPlugin] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
+
+		film.ctx->SetVerbose(false);
 	}
 
-	film.oclIntersectionDevice->GetOpenCLQueue().enqueueNDRangeKernel(*applyKernel,
-			cl::NullRange, cl::NDRange(RoundUp(film.GetWidth() * film.GetHeight(), 256u)), cl::NDRange(256));
+	hardwareDevice->EnqueueKernel(applyKernel, HardwareDeviceRange(RoundUp(film.GetWidth() * film.GetHeight(), 256u)),
+			HardwareDeviceRange(256));
 }
+
 #endif
