@@ -11,10 +11,11 @@
 variables:
 - group: BuildPipelinesGroup
 
-#trigger:
-#  branches:
-#    include:
-#    - '*'
+trigger:
+  branches:
+    include:
+    - '*'
+
 
 jobs:
 - job: DetectBuildType
