@@ -23,9 +23,8 @@
 #include <memory>
 #include <typeinfo> 
 
-#include "luxrays/luxrays.h"
 #include "luxrays/core/color/color.h"
-#include "luxrays/devices/ocldevice.h"
+#include "luxrays/core/hardwaredevice.h"
 #include "luxrays/utils/serializationutils.h"
 #include "slg/film/imagepipeline/imagepipeline.h"
 
@@ -59,7 +58,7 @@ private:
 	}
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-	cl::Kernel *applyKernel;
+	luxrays::HardwareDeviceKernel *applyKernel;
 #endif
 };
 
