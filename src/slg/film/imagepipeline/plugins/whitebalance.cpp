@@ -95,33 +95,42 @@ void WhiteBalance::Apply(Film &film, const u_int index) {
 //------------------------------------------------------------------------------
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
+
 void WhiteBalance::ApplyOCL(Film &film, const u_int index) {
+	HardwareDevice *hardwareDevice = film.oclIntersectionDevice;
+
 	if (!applyKernel) {
 		// Compile sources
 		const double tStart = WallClockTime();
 
-		cl::Program *program = ImagePipelinePlugin::CompileProgram(film, "",
-				slg::ocl::KernelSource_plugin_whitebalance_funcs, "WhiteBalance");
+		HardwareDeviceProgram *program = nullptr;
+		hardwareDevice->CompileProgram(&program,
+				"-D LUXRAYS_OPENCL_KERNEL -D SLG_OPENCL_KERNEL",
+				slg::ocl::KernelSource_plugin_whitebalance_funcs,
+				"WhiteBalance");
 
 		SLG_LOG("[WhiteBalance] Compiling WhiteBalance_Apply Kernel");
-		applyKernel = new cl::Kernel(*program, "WhiteBalance_Apply");
+		hardwareDevice->GetKernel(program, &applyKernel, "WhiteBalance_Apply");
 
 		delete program;
 
 		// Set kernel arguments
 		u_int argIndex = 0;
-		applyKernel->setArg(argIndex++, film.GetWidth());
-		applyKernel->setArg(argIndex++, film.GetHeight());
-		applyKernel->setArg(argIndex++, *(film.ocl_IMAGEPIPELINE));
-		applyKernel->setArg(argIndex++, whitePoint.c[0]);
-		applyKernel->setArg(argIndex++, whitePoint.c[1]);
-		applyKernel->setArg(argIndex++, whitePoint.c[2]);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.GetWidth());
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.GetHeight());
+		film.oclIntersectionDevice->SetKernelArg(applyKernel, argIndex++, film.ocl_IMAGEPIPELINE);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, whitePoint.c[0]);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, whitePoint.c[1]);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, whitePoint.c[2]);
 
 		const double tEnd = WallClockTime();
 		SLG_LOG("[WhiteBalance] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
+
+		film.ctx->SetVerbose(false);
 	}
 
-	film.oclIntersectionDevice->GetOpenCLQueue().enqueueNDRangeKernel(*applyKernel,
-			cl::NullRange, cl::NDRange(RoundUp(film.GetWidth() * film.GetHeight(), 256u)), cl::NDRange(256));
+	hardwareDevice->EnqueueKernel(applyKernel, HardwareDeviceRange(RoundUp(film.GetWidth() * film.GetHeight(), 256u)),
+			HardwareDeviceRange(256));
 }
+
 #endif

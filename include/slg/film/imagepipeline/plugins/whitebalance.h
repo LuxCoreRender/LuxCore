@@ -21,15 +21,15 @@
 
 #include <boost/format.hpp>
 
-#include "luxrays/luxrays.h"
 #include "luxrays/core/color/color.h"
+#include "luxrays/core/hardwaredevice.h"
 #include "slg/film/film.h"
 #include "slg/film/imagepipeline/imagepipeline.h"
-
 
 //------------------------------------------------------------------------------
 // White balance filter using Piccante library
 //------------------------------------------------------------------------------
+
 namespace slg {
 
 class WhiteBalance : public ImagePipelinePlugin {
@@ -62,7 +62,7 @@ private:
 	}
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-	cl::Kernel *applyKernel;
+	luxrays::HardwareDeviceKernel *applyKernel;
 #endif
 };
 
