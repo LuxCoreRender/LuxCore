@@ -38,13 +38,13 @@ ObjectIDMaskFilterPlugin::ObjectIDMaskFilterPlugin(const u_int id) {
 	objectID = id;
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-	applyKernel = NULL;
+	applyKernel = nullptr;
 #endif
 }
 
 ObjectIDMaskFilterPlugin::ObjectIDMaskFilterPlugin() {
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-	applyKernel = NULL;
+	applyKernel = nullptr;
 #endif
 }
 
@@ -97,18 +97,23 @@ void ObjectIDMaskFilterPlugin::Apply(Film &film, const u_int index) {
 //------------------------------------------------------------------------------
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
+
 void ObjectIDMaskFilterPlugin::ApplyOCL(Film &film, const u_int index) {
 	if (!film.HasChannel(Film::OBJECT_ID)) {
 		// I can not work without OBJECT_ID channel
 		return;
 	}
 
+	HardwareDevice *hardwareDevice = film.oclIntersectionDevice;
+
 	if (!applyKernel) {
+		film.ctx->SetVerbose(true);
+		
 		// Compile sources
 		const double tStart = WallClockTime();
 
-		cl::Program *program = ImagePipelinePlugin::CompileProgram(
-				film,
+		HardwareDeviceProgram *program = nullptr;
+		hardwareDevice->CompileProgram(&program,
 				"-D LUXRAYS_OPENCL_KERNEL -D SLG_OPENCL_KERNEL",
 				slg::ocl::KernelSource_plugin_objectidmask_funcs,
 				"ObjectIDMaskFilterPlugin");
@@ -118,15 +123,15 @@ void ObjectIDMaskFilterPlugin::ApplyOCL(Film &film, const u_int index) {
 		//----------------------------------------------------------------------
 
 		SLG_LOG("[ObjectIDMaskFilterPlugin] Compiling ObjectIDMaskFilterPlugin_Apply Kernel");
-		applyKernel = new cl::Kernel(*program, "ObjectIDMaskFilterPlugin_Apply");
+		hardwareDevice->GetKernel(program, &applyKernel, "ObjectIDMaskFilterPlugin_Apply");
 
 		// Set kernel arguments
 		u_int argIndex = 0;
-		applyKernel->setArg(argIndex++, film.GetWidth());
-		applyKernel->setArg(argIndex++, film.GetHeight());
-		applyKernel->setArg(argIndex++, *(film.ocl_IMAGEPIPELINE));
-		applyKernel->setArg(argIndex++, *(film.ocl_OBJECT_ID));
-		applyKernel->setArg(argIndex++, objectID);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.GetWidth());
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.GetHeight());
+		film.oclIntersectionDevice->SetKernelArg(applyKernel, argIndex++, film.ocl_IMAGEPIPELINE);
+		film.oclIntersectionDevice->SetKernelArg(applyKernel, argIndex++, film.ocl_OBJECT_ID);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, objectID);
 
 		//----------------------------------------------------------------------
 
@@ -134,9 +139,12 @@ void ObjectIDMaskFilterPlugin::ApplyOCL(Film &film, const u_int index) {
 
 		const double tEnd = WallClockTime();
 		SLG_LOG("[ObjectIDMaskFilterPlugin] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
+
+		film.ctx->SetVerbose(false);
 	}
-	
-	film.oclIntersectionDevice->GetOpenCLQueue().enqueueNDRangeKernel(*applyKernel,
-			cl::NullRange, cl::NDRange(RoundUp(film.GetWidth() * film.GetHeight(), 256u)), cl::NDRange(256));
+
+	hardwareDevice->EnqueueKernel(applyKernel, HardwareDeviceRange(RoundUp(film.GetWidth() * film.GetHeight(), 256u)),
+			HardwareDeviceRange(256));
 }
+
 #endif
