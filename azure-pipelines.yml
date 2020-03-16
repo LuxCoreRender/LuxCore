@@ -13,7 +13,8 @@ variables:
 
 #trigger:
 #  branches:
-#    include: ['*']
+#    include:
+#    - '*'
 
 jobs:
 - job: DetectBuildType
