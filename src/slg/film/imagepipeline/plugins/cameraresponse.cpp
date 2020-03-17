@@ -249,7 +249,7 @@ void CameraResponsePlugin::ApplyOCL(Film &film, const u_int index) {
 	if (!applyKernel) {
 		film.ctx->SetVerbose(true);
 
-		hardwareDevice = film.oclIntersectionDevice;
+		hardwareDevice = film.hardwareDevice;
 
 		// Allocate OpenCL buffers
 		hardwareDevice->AllocBufferRO(&oclRedI, &redI[0], redI.size() * sizeof(float), "Camera response redI");
@@ -292,7 +292,7 @@ void CameraResponsePlugin::ApplyOCL(Film &film, const u_int index) {
 		u_int argIndex = 0;
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.GetWidth());
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.GetHeight());
-		film.oclIntersectionDevice->SetKernelArg(applyKernel, argIndex++, film.ocl_IMAGEPIPELINE);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.ocl_IMAGEPIPELINE);
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, oclRedI);
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, oclRedB);
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, (u_int)redI.size());

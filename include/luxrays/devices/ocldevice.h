@@ -211,6 +211,7 @@ protected:
 		oclBuff = p;
 	}
 
+	const cl::Buffer *Get() const { return oclBuff; }
 	cl::Buffer *Get() { return oclBuff; }
 
 private:
@@ -247,18 +248,12 @@ public:
 	virtual void EnqueueKernel(HardwareDeviceKernel *kernel,
 			const HardwareDeviceRange &workGroupSize,
 			const HardwareDeviceRange &globalSize);
+	virtual void EnqueueReadBuffer(const HardwareDeviceBuffer *buff,
+			const bool blocking, const size_t size, void *ptr);
+	virtual void EnqueueWriteBuffer(const HardwareDeviceBuffer *buff,
+			const bool blocking, const size_t size, const void *ptr);
 	virtual void FlushQueue();
 	virtual void FinishQueue();
-
-	// A temporary method until when the new interface is complete
-	void SetKernelArg(HardwareDeviceKernel *kernel, const u_int index, cl::Buffer *oclBuff) {
-		assert (!kernel->IsNull());
-
-		OpenCLDeviceKernel *oclDeviceKernel = dynamic_cast<OpenCLDeviceKernel *>(kernel);
-		assert (oclDeviceKernel);
-
-		oclDeviceKernel->oclKernel->setArg(index, sizeof(cl::Buffer), oclBuff);
-	}
 
 	//--------------------------------------------------------------------------
 	// Memory management for hardware (aka GPU) only applications

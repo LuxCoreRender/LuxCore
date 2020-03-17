@@ -279,6 +279,24 @@ void OpenCLDevice::EnqueueKernel(HardwareDeviceKernel *kernel,
 			ConvertHardwareRange(globalSize));
 }
 
+void OpenCLDevice::EnqueueReadBuffer(const HardwareDeviceBuffer *buff,
+		const bool blocking, const size_t size, void *ptr) {
+	const OpenCLDeviceBuffer *oclDeviceBuff = dynamic_cast<const OpenCLDeviceBuffer *>(buff);
+	assert (oclDeviceBuff);
+	assert (oclDeviceBuff->Get());
+
+	oclQueue->enqueueReadBuffer(*(oclDeviceBuff->Get()), 0, blocking, size, ptr);
+}
+
+void OpenCLDevice::EnqueueWriteBuffer(const HardwareDeviceBuffer *buff,
+		const bool blocking, const size_t size, const void *ptr) {
+	const OpenCLDeviceBuffer *oclDeviceBuff = dynamic_cast<const OpenCLDeviceBuffer *>(buff);
+	assert (oclDeviceBuff);
+	assert (oclDeviceBuff->Get());
+
+	oclQueue->enqueueWriteBuffer(*(oclDeviceBuff->Get()), 0, blocking, size, ptr);
+}
+
 void OpenCLDevice::FlushQueue() {
 	oclQueue->flush();
 }

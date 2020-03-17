@@ -97,7 +97,7 @@ void WhiteBalance::Apply(Film &film, const u_int index) {
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
 void WhiteBalance::ApplyOCL(Film &film, const u_int index) {
-	HardwareDevice *hardwareDevice = film.oclIntersectionDevice;
+	HardwareDevice *hardwareDevice = film.hardwareDevice;
 
 	if (!applyKernel) {
 		// Compile sources
@@ -118,7 +118,7 @@ void WhiteBalance::ApplyOCL(Film &film, const u_int index) {
 		u_int argIndex = 0;
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.GetWidth());
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.GetHeight());
-		film.oclIntersectionDevice->SetKernelArg(applyKernel, argIndex++, film.ocl_IMAGEPIPELINE);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.ocl_IMAGEPIPELINE);
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, whitePoint.c[0]);
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, whitePoint.c[1]);
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, whitePoint.c[2]);

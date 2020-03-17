@@ -104,7 +104,7 @@ void ObjectIDMaskFilterPlugin::ApplyOCL(Film &film, const u_int index) {
 		return;
 	}
 
-	HardwareDevice *hardwareDevice = film.oclIntersectionDevice;
+	HardwareDevice *hardwareDevice = film.hardwareDevice;
 
 	if (!applyKernel) {
 		film.ctx->SetVerbose(true);
@@ -129,8 +129,8 @@ void ObjectIDMaskFilterPlugin::ApplyOCL(Film &film, const u_int index) {
 		u_int argIndex = 0;
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.GetWidth());
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.GetHeight());
-		film.oclIntersectionDevice->SetKernelArg(applyKernel, argIndex++, film.ocl_IMAGEPIPELINE);
-		film.oclIntersectionDevice->SetKernelArg(applyKernel, argIndex++, film.ocl_OBJECT_ID);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.ocl_IMAGEPIPELINE);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.ocl_OBJECT_ID);
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, objectID);
 
 		//----------------------------------------------------------------------

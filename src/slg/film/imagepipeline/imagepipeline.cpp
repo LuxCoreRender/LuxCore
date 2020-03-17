@@ -33,44 +33,6 @@ using namespace slg;
 // ImagePipelinePlugin
 //------------------------------------------------------------------------------
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-cl::Program *ImagePipelinePlugin::CompileProgram(Film &film, const string &kernelsParameters,
-		const string &kernelSource, const string &name) {
-	cl::Context &oclContext = film.oclIntersectionDevice->GetOpenCLContext();
-	cl::Device &oclDevice = film.oclIntersectionDevice->GetOpenCLDevice();
-
-	SLG_LOG("[" << name << "] Defined symbols: " << kernelsParameters);
-	SLG_LOG("[" << name << "] Compiling kernels ");
-
-	// ImagePipelinePlugin kernels are simple enough to be compiled without
-	// problems and the workaround required for NVIDIA OpenCL compiler can
-	// be avoided
-	
-	const string forceInlineDirective =
-		"#define OPENCL_FORCE_NOT_INLINE\n"
-		"#define OPENCL_FORCE_INLINE\n";
-
-	bool cached;
-	cl::STRING_CLASS error;
-	cl::Program *program = film.kernelCache->Compile(oclContext, oclDevice,
-			kernelsParameters, forceInlineDirective + kernelSource,
-			&cached, &error);
-	if (!program) {
-		SLG_LOG("[" << name << "] kernel compilation error" << endl << error);
-
-		throw runtime_error(name + " kernel compilation error");
-	}
-
-	if (cached) {
-		SLG_LOG("[" << name << "] Kernels cached");
-	} else {
-		SLG_LOG("[" << name << "] Kernels not cached");
-	}
-
-	return program;
-}
-#endif
-
 float ImagePipelinePlugin::GetGammaCorrectionValue(const Film &film, const u_int index) {
 	float gamma = 1.f;
 	const ImagePipeline *ip = film.GetImagePipeline(index);
@@ -170,7 +132,7 @@ void ImagePipeline::Apply(Film &film, const u_int index) {
 	BOOST_FOREACH(ImagePipelinePlugin *plugin, pipeline) {
 		//const double p1 = WallClockTime();
 
-		const bool useOpenCLApply = film.oclEnable && film.oclIntersectionDevice &&
+		const bool useOpenCLApply = film.oclEnable && film.hardwareDevice &&
 				plugin->CanUseOpenCL();
 
 		if (useOpenCLApply) {
@@ -186,7 +148,7 @@ void ImagePipeline::Apply(Film &film, const u_int index) {
 				// Transfer the buffer from OpenCL device ram
 				//SLG_LOG("Transferring IMAGEPIPELINE buffer from OpenCL device");
 				film.ReadOCLBuffer_IMAGEPIPELINE(index);
-				film.oclIntersectionDevice->GetOpenCLQueue().finish();
+				film.hardwareDevice->FinishQueue();
 			} else {
 				// The buffer is already in CPU ram
 			}
@@ -204,11 +166,11 @@ void ImagePipeline::Apply(Film &film, const u_int index) {
 		//SLG_LOG("ImagePipeline plugin time: " << int((p2 - p1) * 1000.0) << "ms");
 	}
 
-	if (film.oclEnable && film.oclIntersectionDevice && canUseOpenCL) {
+	if (film.oclEnable && film.hardwareDevice && canUseOpenCL) {
 		if (!imageInCPURam)
 			film.ReadOCLBuffer_IMAGEPIPELINE(index);
 
-		film.oclIntersectionDevice->GetOpenCLQueue().finish();
+		film.hardwareDevice->FinishQueue();
 	}
 #else
 	BOOST_FOREACH(ImagePipelinePlugin *plugin, pipeline) {

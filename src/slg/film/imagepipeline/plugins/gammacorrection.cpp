@@ -109,7 +109,7 @@ void GammaCorrectionPlugin::ApplyOCL(Film &film, const u_int index) {
 	if (!applyKernel) {
 		film.ctx->SetVerbose(true);
 
-		hardwareDevice = film.oclIntersectionDevice;
+		hardwareDevice = film.hardwareDevice;
 
 		// Allocate buffers
 		hardwareDevice->AllocBufferRO(&oclGammaTable, &gammaTable[0], gammaTable.size() * sizeof(float), "Gamma table");
@@ -133,7 +133,7 @@ void GammaCorrectionPlugin::ApplyOCL(Film &film, const u_int index) {
 		u_int argIndex = 0;
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.GetWidth());
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.GetHeight());
-		film.oclIntersectionDevice->SetKernelArg(applyKernel, argIndex++, film.ocl_IMAGEPIPELINE);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.ocl_IMAGEPIPELINE);
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, oclGammaTable);
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, (u_int)gammaTable.size());
 

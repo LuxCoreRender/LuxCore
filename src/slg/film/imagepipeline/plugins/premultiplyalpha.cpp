@@ -100,7 +100,7 @@ void PremultiplyAlphaPlugin::ApplyOCL(Film &film, const u_int index) {
 		return;
 	}
 
-	HardwareDevice *hardwareDevice = film.oclIntersectionDevice;
+	HardwareDevice *hardwareDevice = film.hardwareDevice;
 
 	if (!applyKernel) {
 		film.ctx->SetVerbose(true);
@@ -124,8 +124,8 @@ void PremultiplyAlphaPlugin::ApplyOCL(Film &film, const u_int index) {
 		u_int argIndex = 0;
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.GetWidth());
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.GetHeight());
-		film.oclIntersectionDevice->SetKernelArg(applyKernel, argIndex++, film.ocl_IMAGEPIPELINE);
-		film.oclIntersectionDevice->SetKernelArg(applyKernel, argIndex++, film.ocl_ALPHA);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.ocl_IMAGEPIPELINE);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.ocl_ALPHA);
 
 		const double tEnd = WallClockTime();
 		SLG_LOG("[PremultiplyAlphaPlugin] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");

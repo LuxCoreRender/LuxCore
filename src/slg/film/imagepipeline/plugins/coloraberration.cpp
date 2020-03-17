@@ -155,7 +155,7 @@ void ColorAberrationPlugin::ApplyOCL(Film &film, const u_int index) {
 	if (!applyKernel) {
 		film.ctx->SetVerbose(true);
 
-		hardwareDevice = film.oclIntersectionDevice;
+		hardwareDevice = film.hardwareDevice;
 
 		// Allocate OpenCL buffers
 		hardwareDevice->AllocBufferRW(&oclTmpBuffer, nullptr, width * height * sizeof(Spectrum), "ColorAberration");
@@ -182,7 +182,7 @@ void ColorAberrationPlugin::ApplyOCL(Film &film, const u_int index) {
 		u_int argIndex = 0;
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, width);
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, height);
-		film.oclIntersectionDevice->SetKernelArg(applyKernel, argIndex++, film.ocl_IMAGEPIPELINE);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.ocl_IMAGEPIPELINE);
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, oclTmpBuffer);
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, amount);
 
@@ -197,7 +197,7 @@ void ColorAberrationPlugin::ApplyOCL(Film &film, const u_int index) {
 		argIndex = 0;
 		hardwareDevice->SetKernelArg(copyKernel, argIndex++, width);
 		hardwareDevice->SetKernelArg(copyKernel, argIndex++, height);
-		film.oclIntersectionDevice->SetKernelArg(copyKernel, argIndex++, film.ocl_IMAGEPIPELINE);
+		hardwareDevice->SetKernelArg(copyKernel, argIndex++, film.ocl_IMAGEPIPELINE);
 		hardwareDevice->SetKernelArg(copyKernel, argIndex++, oclTmpBuffer);
 
 		//----------------------------------------------------------------------

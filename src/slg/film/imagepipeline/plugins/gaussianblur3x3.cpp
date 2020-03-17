@@ -226,7 +226,7 @@ void GaussianBlur3x3FilterPlugin::ApplyOCL(Film &film, const u_int index) {
 	if (!filterXKernel) {
 		film.ctx->SetVerbose(true);
 
-		hardwareDevice = film.oclIntersectionDevice;
+		hardwareDevice = film.hardwareDevice;
 
 		// Allocate OpenCL buffers
 		hardwareDevice->AllocBufferRW(&oclTmpBuffer, nullptr, width * height * sizeof(Spectrum), "GaussianBlur3x3");
@@ -252,7 +252,7 @@ void GaussianBlur3x3FilterPlugin::ApplyOCL(Film &film, const u_int index) {
 		u_int argIndex = 0;
 		hardwareDevice->SetKernelArg(filterXKernel, argIndex++, film.GetWidth());
 		hardwareDevice->SetKernelArg(filterXKernel, argIndex++, film.GetHeight());
-		film.oclIntersectionDevice->SetKernelArg(filterXKernel, argIndex++, film.ocl_IMAGEPIPELINE);
+		hardwareDevice->SetKernelArg(filterXKernel, argIndex++, film.ocl_IMAGEPIPELINE);
 		hardwareDevice->SetKernelArg(filterXKernel, argIndex++, oclTmpBuffer);
 		hardwareDevice->SetKernelArg(filterXKernel, argIndex++, weight);
 
@@ -268,7 +268,7 @@ void GaussianBlur3x3FilterPlugin::ApplyOCL(Film &film, const u_int index) {
 		hardwareDevice->SetKernelArg(filterYKernel, argIndex++, film.GetWidth());
 		hardwareDevice->SetKernelArg(filterYKernel, argIndex++, film.GetHeight());
 		hardwareDevice->SetKernelArg(filterYKernel, argIndex++, oclTmpBuffer);
-		film.oclIntersectionDevice->SetKernelArg(filterYKernel, argIndex++, film.ocl_IMAGEPIPELINE);
+		hardwareDevice->SetKernelArg(filterYKernel, argIndex++, film.ocl_IMAGEPIPELINE);
 		hardwareDevice->SetKernelArg(filterYKernel, argIndex++, weight);
 
 		//----------------------------------------------------------------------

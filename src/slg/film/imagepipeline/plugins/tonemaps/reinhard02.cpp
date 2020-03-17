@@ -135,7 +135,7 @@ void Reinhard02ToneMap::ApplyOCL(Film &film, const u_int index) {
 	if (!applyKernel) {
 		film.ctx->SetVerbose(true);
 
-		hardwareDevice = film.oclIntersectionDevice;
+		hardwareDevice = film.hardwareDevice;
 
 		// Allocate buffers
 		hardwareDevice->AllocBufferRW(&oclAccumBuffer, nullptr, (workSize / 64) * sizeof(float) * 3, "Accumulation");
@@ -166,7 +166,7 @@ void Reinhard02ToneMap::ApplyOCL(Film &film, const u_int index) {
 		u_int argIndex = 0;
 		hardwareDevice->SetKernelArg(opRGBValuesReduceKernel, argIndex++, film.GetWidth());
 		hardwareDevice->SetKernelArg(opRGBValuesReduceKernel, argIndex++, film.GetHeight());
-		film.oclIntersectionDevice->SetKernelArg(opRGBValuesReduceKernel, argIndex++, film.ocl_IMAGEPIPELINE);
+		hardwareDevice->SetKernelArg(opRGBValuesReduceKernel, argIndex++, film.ocl_IMAGEPIPELINE);
 		hardwareDevice->SetKernelArg(opRGBValuesReduceKernel, argIndex++, oclAccumBuffer);
 
 		argIndex = 0;
@@ -176,7 +176,7 @@ void Reinhard02ToneMap::ApplyOCL(Film &film, const u_int index) {
 		argIndex = 0;
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.GetWidth());
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.GetHeight());
-		film.oclIntersectionDevice->SetKernelArg(applyKernel, argIndex++, film.ocl_IMAGEPIPELINE);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.ocl_IMAGEPIPELINE);
 		const float gamma = GetGammaCorrectionValue(film, index);
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, gamma);
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, preScale);

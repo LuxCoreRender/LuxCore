@@ -31,8 +31,7 @@
 #include <boost/thread/mutex.hpp>
 #include <bcd/core/SamplesAccumulator.h>
 
-#include "luxrays/devices/ocldevice.h"
-#include "luxrays/utils/oclcache.h"
+#include "luxrays/core/hardwaredevice.h"
 #include "luxrays/utils/properties.h"
 #include "luxrays/utils/serializationutils.h"
 #include "slg/slg.h"
@@ -422,21 +421,18 @@ public:
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	luxrays::Context *ctx;
 	luxrays::DataSet *dataSet;
-	luxrays::OpenCLDeviceDescription *selectedDeviceDesc;
-	luxrays::OpenCLIntersectionDevice *oclIntersectionDevice;
+	luxrays::HardwareDevice *hardwareDevice;
 
-	luxrays::oclKernelCache *kernelCache;
-
-	cl::Buffer *ocl_IMAGEPIPELINE;
-	cl::Buffer *ocl_ALPHA;
-	cl::Buffer *ocl_OBJECT_ID;
+	luxrays::HardwareDeviceBuffer *ocl_IMAGEPIPELINE;
+	luxrays::HardwareDeviceBuffer *ocl_ALPHA;
+	luxrays::HardwareDeviceBuffer *ocl_OBJECT_ID;
 	
-	cl::Buffer *ocl_mergeBuffer;
+	luxrays::HardwareDeviceBuffer *ocl_mergeBuffer;
 	
-	cl::Kernel *mergeInitializeKernel;
-	cl::Kernel *mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel;
-	cl::Kernel *mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel;
-	cl::Kernel *mergeFinalizeKernel;
+	luxrays::HardwareDeviceKernel *mergeInitializeKernel;
+	luxrays::HardwareDeviceKernel *mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel;
+	luxrays::HardwareDeviceKernel *mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel;
+	luxrays::HardwareDeviceKernel *mergeFinalizeKernel;
 #endif
 
 	static Film *LoadSerialized(const std::string &fileName);

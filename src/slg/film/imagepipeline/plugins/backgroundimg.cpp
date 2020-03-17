@@ -155,7 +155,7 @@ void BackgroundImgPlugin::ApplyOCL(Film &film, const u_int index) {
 	if (!applyKernel) {
 		film.ctx->SetVerbose(true);
 
-		hardwareDevice = film.oclIntersectionDevice;
+		hardwareDevice = film.hardwareDevice;
 
 		slg::ocl::ImageMap imgMapDesc;
 		imgMapDesc.channelCount = filmImageMap->GetChannelCount();
@@ -197,8 +197,8 @@ void BackgroundImgPlugin::ApplyOCL(Film &film, const u_int index) {
 		u_int argIndex = 0;
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.GetWidth());
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.GetHeight());
-		film.oclIntersectionDevice->SetKernelArg(applyKernel, argIndex++, film.ocl_IMAGEPIPELINE);
-		film.oclIntersectionDevice->SetKernelArg(applyKernel, argIndex++, film.ocl_ALPHA);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.ocl_IMAGEPIPELINE);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.ocl_ALPHA);
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, oclFilmImageMapDesc);
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, oclFilmImageMap);
 

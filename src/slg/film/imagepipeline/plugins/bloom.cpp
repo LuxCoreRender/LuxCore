@@ -278,7 +278,7 @@ void BloomFilterPlugin::ApplyOCL(Film &film, const u_int index) {
 	if (!bloomFilterXKernel) {
 		film.ctx->SetVerbose(true);
 
-		hardwareDevice = film.oclIntersectionDevice;
+		hardwareDevice = film.hardwareDevice;
 
 		// Allocate OpenCL buffers
 		hardwareDevice->AllocBufferRW(&oclBloomBuffer, nullptr, bloomBufferSize * sizeof(Spectrum), "Bloom buffer");
@@ -305,7 +305,7 @@ void BloomFilterPlugin::ApplyOCL(Film &film, const u_int index) {
 		u_int argIndex = 0;
 		hardwareDevice->SetKernelArg(bloomFilterXKernel, argIndex++, width);
 		hardwareDevice->SetKernelArg(bloomFilterXKernel, argIndex++, height);
-		film.oclIntersectionDevice->SetKernelArg(bloomFilterXKernel, argIndex++, film.ocl_IMAGEPIPELINE);
+		hardwareDevice->SetKernelArg(bloomFilterXKernel, argIndex++, film.ocl_IMAGEPIPELINE);
 		hardwareDevice->SetKernelArg(bloomFilterXKernel, argIndex++, oclBloomBuffer);
 		hardwareDevice->SetKernelArg(bloomFilterXKernel, argIndex++, oclBloomBufferTmp);
 		hardwareDevice->SetKernelArg(bloomFilterXKernel, argIndex++, oclBloomFilter);
@@ -322,7 +322,7 @@ void BloomFilterPlugin::ApplyOCL(Film &film, const u_int index) {
 		argIndex = 0;
 		hardwareDevice->SetKernelArg(bloomFilterYKernel, argIndex++, width);
 		hardwareDevice->SetKernelArg(bloomFilterYKernel, argIndex++, height);
-		film.oclIntersectionDevice->SetKernelArg(bloomFilterYKernel, argIndex++, film.ocl_IMAGEPIPELINE);
+		hardwareDevice->SetKernelArg(bloomFilterYKernel, argIndex++, film.ocl_IMAGEPIPELINE);
 		hardwareDevice->SetKernelArg(bloomFilterYKernel, argIndex++, oclBloomBuffer);
 		hardwareDevice->SetKernelArg(bloomFilterYKernel, argIndex++, oclBloomBufferTmp);
 		hardwareDevice->SetKernelArg(bloomFilterYKernel, argIndex++, oclBloomFilter);
@@ -339,7 +339,7 @@ void BloomFilterPlugin::ApplyOCL(Film &film, const u_int index) {
 		argIndex = 0;
 		hardwareDevice->SetKernelArg(bloomFilterMergeKernel, argIndex++, width);
 		hardwareDevice->SetKernelArg(bloomFilterMergeKernel, argIndex++, height);
-		film.oclIntersectionDevice->SetKernelArg(bloomFilterMergeKernel, argIndex++, film.ocl_IMAGEPIPELINE);
+		hardwareDevice->SetKernelArg(bloomFilterMergeKernel, argIndex++, film.ocl_IMAGEPIPELINE);
 		hardwareDevice->SetKernelArg(bloomFilterMergeKernel, argIndex++, oclBloomBuffer);
 		hardwareDevice->SetKernelArg(bloomFilterMergeKernel, argIndex++, weight);
 

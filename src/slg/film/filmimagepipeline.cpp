@@ -176,7 +176,7 @@ void Film::ExecuteImagePipelineImpl(const u_int index) {
 	if (oclEnable && !ctx) {
 		CreateOCLContext();
 
-		if (oclIntersectionDevice) {
+		if (hardwareDevice) {
 			AllocateOCLBuffers();
 			CompileOCLKernels();
 		}
@@ -186,7 +186,7 @@ void Film::ExecuteImagePipelineImpl(const u_int index) {
 	// Merge all buffers
 	//const double t1 = WallClockTime();
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-	if (oclEnable && oclIntersectionDevice)
+	if (oclEnable && hardwareDevice)
 		MergeSampleBuffersOCL(index);
 	else
 		MergeSampleBuffers(index);
@@ -200,7 +200,7 @@ void Film::ExecuteImagePipelineImpl(const u_int index) {
 	//const double p1 = WallClockTime();
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	// Transfer all buffers to OpenCL device memory
-	if (oclEnable && oclIntersectionDevice && imagePipelines[index]->CanUseOpenCL())
+	if (oclEnable && hardwareDevice && imagePipelines[index]->CanUseOpenCL())
 		WriteAllOCLBuffers();
 #endif
 
