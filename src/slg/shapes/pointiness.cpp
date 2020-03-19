@@ -68,7 +68,7 @@ bool PointinessShape::IsSameVertex(const ExtTriangleMesh *srcMesh,
 	return true;
 }
 
-PointinessShape::PointinessShape(ExtTriangleMesh *srcMesh) {
+PointinessShape::PointinessShape(ExtTriangleMesh *srcMesh, const u_int destAOVIndex) {
 	SDL_LOG("Pointiness shape " << srcMesh->GetName());
 
 	const double startTime = WallClockTime();
@@ -182,8 +182,15 @@ PointinessShape::PointinessShape(ExtTriangleMesh *srcMesh) {
 		}
 	}
 
-	// Make a copy of the original mesh and overwrite vertex color informations
-	mesh = srcMesh->Copy(NULL, NULL, NULL, NULL, NULL, curvature);
+	if (destAOVIndex == NULL_INDEX) {
+		// Make a copy of the original mesh and overwrite vertex color informations
+		mesh = srcMesh->Copy(NULL, NULL, NULL, NULL, NULL, curvature);
+	} else {
+		mesh = srcMesh->Copy();
+
+		assert (destAOVIndex < EXTMESH_MAX_DATA_COUNT);
+		mesh->SetVertexAOV(destAOVIndex, curvature);
+	}
 
 	const double endTime = WallClockTime();
 	SDL_LOG("Pointiness time: " << (boost::format("%.3f") % (endTime - startTime)) << "secs");

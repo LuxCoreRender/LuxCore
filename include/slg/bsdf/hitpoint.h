@@ -117,6 +117,20 @@ typedef struct {
 		else
 			return 1.f;
 	}
+
+	const float GetVertexAOV(const u_int dataIndex) const {
+		if (mesh) {
+			return mesh->InterpolateTriVertexAOV(triangleIndex, triangleBariCoord1, triangleBariCoord2, dataIndex);
+		} else
+			return 0.f;
+	}
+
+	const float GetTriAOV(const u_int dataIndex) const {
+		if (mesh)
+			return mesh->GetTriAOV(triangleIndex, dataIndex);
+		else
+			return 0.f;
+	}
 } HitPoint;
 
 }

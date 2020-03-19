@@ -51,6 +51,7 @@
 #include "slg/textures/fresnel/fresnelpreset.h"
 #include "slg/textures/fresnel/fresnelsopra.h"
 #include "slg/textures/fresnel/fresneltexture.h"
+#include "slg/textures/hitpoint/hitpointaov.h"
 #include "slg/textures/hitpoint/hitpointcolor.h"
 #include "slg/textures/hitpoint/position.h"
 #include "slg/textures/hitpoint/shadingnormal.h"
@@ -422,6 +423,14 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		tex = new HitPointGreyTexture(dataIndex,
 				((channel != 0) && (channel != 1) && (channel != 2)) ?
 					numeric_limits<u_int>::max() : static_cast<u_int>(channel));
+	} else if (texType == "hitpointvertexaov") {
+		const u_int dataIndex = Clamp(props.Get(Property(propName + ".dataindex")(0u)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
+
+		tex = new HitPointVertexAOVTexture(dataIndex);
+	} else if (texType == "hitpointtriangleaov") {
+		const u_int dataIndex = Clamp(props.Get(Property(propName + ".dataindex")(0u)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
+
+		tex = new HitPointTriangleAOVTexture(dataIndex);
 	} else if (texType == "cloud") {
 		const float radius = props.Get(Property(propName + ".radius")(.5f)).Get<float>();
 		const float noisescale = props.Get(Property(propName + ".noisescale")(.5f)).Get<float>();

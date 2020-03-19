@@ -179,8 +179,10 @@ ExtTriangleMesh *Scene::CreateShape(const string &shapeName, const Properties &p
 		const string sourceMeshName = props.Get(Property(propName + ".source")("")).Get<string>();
 		if (!extMeshCache.IsExtMeshDefined(sourceMeshName))
 			throw runtime_error("Unknown shape name in a pointiness shape: " + shapeName);
+
+		const u_int aovIndex = props.Get(Property(propName + ".aovindex")(NULL_INDEX)).Get<u_int>();
 		
-		shape = new PointinessShape((ExtTriangleMesh *)extMeshCache.GetExtMesh(sourceMeshName));
+		shape = new PointinessShape((ExtTriangleMesh *)extMeshCache.GetExtMesh(sourceMeshName), aovIndex);
 	} else if (shapeType == "strands") {
 		const string fileName = SLG_FileNameResolver.ResolveFile(props.Get(Property(propName + ".file")("strands.hair")).Get<string>());
 

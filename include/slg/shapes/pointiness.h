@@ -27,7 +27,8 @@ namespace slg {
 
 class PointinessShape : public Shape {
 public:
-	PointinessShape(luxrays::ExtTriangleMesh *srcMesh);
+	// destAOVIndex = NULL_INDEX means use the alpha channel
+	PointinessShape(luxrays::ExtTriangleMesh *srcMesh, const u_int destAOVIndex);
 	virtual ~PointinessShape();
 
 	virtual ShapeType GetType() const { return POINTINESS; }

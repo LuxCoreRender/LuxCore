@@ -3,7 +3,10 @@ scene.camera.lookat.target = 0.0 0.0 0.4
 #scene.camera.lensradius = 0.015
 #scene.camera.focaldistance = 3.0
 ################################################################################
-scene.textures.curvature_orig.type = hitpointalpha
+#scene.textures.curvature_orig.type = hitpointalpha
+##
+scene.textures.curvature_orig.type = hitpointvertexaov
+scene.textures.curvature_orig.dataindex = 0
 ##
 # Work only on convex side
 #scene.textures.curvature.type = clamp
@@ -54,6 +57,7 @@ scene.shapes.luxtext.ply = scenes/luxball/luxball-text.ply
 scene.shapes.luxshellply.type = mesh
 scene.shapes.luxshellply.ply = scenes/luxball/luxball-shell.ply
 scene.shapes.luxshell.type = pointiness
+scene.shapes.luxshell.aovindex = 0
 scene.shapes.luxshell.source = luxshellply
 scene.shapes.luxshell.clamp = none
 scene.shapes.blacktext.type = mesh
