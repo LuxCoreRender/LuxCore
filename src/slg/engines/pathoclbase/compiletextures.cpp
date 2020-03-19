@@ -1998,7 +1998,6 @@ void CompiledScene::CompileTextures() {
 				tex->triplanarTex.tex2Index = scene->texDefs.GetTextureIndex(t2);
 				const Texture *t3 = trit->GetTexture3();
 				tex->triplanarTex.tex3Index = scene->texDefs.GetTextureIndex(t3);
-				tex->triplanarTex.uvIndex = trit->GetUVIndex();
 				tex->triplanarTex.enableUVlessBumpMap = trit->IsUVlessBumpMap();
 				break;
 			}

@@ -43,18 +43,14 @@ OPENCL_FORCE_INLINE void HitPoint_Init(__global HitPoint *hitPoint, const bool t
 
 	hitPoint->intoObject = (dot(-fixedDir, geometryN) < 0.f);
 
-	for (uint i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
-		// Interpolate UV coordinates
-		const float2 uv = ExtMesh_GetInterpolateUV(meshIndex, triIndex, b1, b2, i EXTMESH_PARAM);
-		VSTORE2F(uv, &hitPoint->uv[i].u);
+	// Interpolate UV coordinates
+	const float2 defaultUV = ExtMesh_GetInterpolateUV(meshIndex, triIndex, b1, b2, 0 EXTMESH_PARAM);
+	VSTORE2F(defaultUV, &hitPoint->defaultUV.u);
 
-		// Interpolate color
-		const float3 color = ExtMesh_GetInterpolateColor(meshIndex, triIndex, b1, b2, i EXTMESH_PARAM);
-		VSTORE3F(color, &hitPoint->color[i].c[0]);
-
-		// Interpolate alpha
-		hitPoint->alpha[i] = ExtMesh_GetInterpolateAlpha(meshIndex, triIndex, b1, b2, i EXTMESH_PARAM);
-	}
+	hitPoint->meshIndex = meshIndex;
+	hitPoint->triangleIndex = triIndex;
+	hitPoint->triangleBariCoord1 = b1;
+	hitPoint->triangleBariCoord2 = b2;
 
 	// Compute geometry differentials
 	float3 dndu, dndv, dpdu, dpdv;
@@ -74,6 +70,8 @@ OPENCL_FORCE_INLINE void HitPoint_Init(__global HitPoint *hitPoint, const bool t
 
 // Initialize all fields
 OPENCL_FORCE_INLINE void HitPoint_InitDefault(__global HitPoint *hitPoint) {
+	hitPoint->meshIndex = NULL_INDEX;
+
 	hitPoint->throughShadowTransparency = false;
 	hitPoint->passThroughEvent = 0.f;
 
@@ -88,11 +86,7 @@ OPENCL_FORCE_INLINE void HitPoint_InitDefault(__global HitPoint *hitPoint) {
 
 	hitPoint->intoObject = true;
 
-	for (uint i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
-		VSTORE2F((float2)(0.f, 0.f), &hitPoint->uv[i].u);
-		VSTORE3F(WHITE, &hitPoint->color[i].c[0]);
-		hitPoint->alpha[i] = 1.f;
-	}
+	VSTORE2F((float2)(0.f, 0.f), &hitPoint->defaultUV.u);
 	
 	VSTORE3F((float3)(0.f, 0.f, 0.f), &hitPoint->dpdu.x);
 	VSTORE3F((float3)(0.f, 0.f, 0.f), &hitPoint->dpdv.x);
@@ -121,4 +115,33 @@ OPENCL_FORCE_INLINE float3 HitPoint_GetInterpolatedN(__global const HitPoint *hi
 
 OPENCL_FORCE_INLINE float3 HitPoint_GetShadeN(__global const HitPoint *hitPoint) {
 	return (hitPoint->intoObject ? 1.f : -1.f) * VLOAD3F(&hitPoint->shadeN.x);
+}
+
+OPENCL_FORCE_INLINE float2 HitPoint_GetUV(__global const HitPoint *hitPoint, const uint dataIndex EXTMESH_PARAM_DECL) {
+	const uint meshIndex = hitPoint->meshIndex;
+
+	if (meshIndex != NULL_INDEX) {
+		return (dataIndex == 0) ?
+			VLOAD2F(&hitPoint->defaultUV.u) :
+			ExtMesh_GetInterpolateUV(meshIndex, hitPoint->triangleIndex, hitPoint->triangleBariCoord1, hitPoint->triangleBariCoord2, dataIndex EXTMESH_PARAM);
+	} else
+		return (float2)(0.f, 0.f);
+}
+
+OPENCL_FORCE_INLINE float3 HitPoint_GetColor(__global const HitPoint *hitPoint, const uint dataIndex EXTMESH_PARAM_DECL) {
+	const uint meshIndex = hitPoint->meshIndex;
+
+	if (meshIndex != NULL_INDEX)
+		return ExtMesh_GetInterpolateColor(meshIndex, hitPoint->triangleIndex, hitPoint->triangleBariCoord1, hitPoint->triangleBariCoord2, dataIndex EXTMESH_PARAM);
+	else
+		return WHITE;
+}	
+
+OPENCL_FORCE_INLINE float HitPoint_GetAlpha(__global const HitPoint *hitPoint, const uint dataIndex EXTMESH_PARAM_DECL) {
+	const uint meshIndex = hitPoint->meshIndex;
+
+	if (meshIndex != NULL_INDEX)
+		return ExtMesh_GetInterpolateAlpha(meshIndex, hitPoint->triangleIndex, hitPoint->triangleBariCoord1, hitPoint->triangleBariCoord2, dataIndex EXTMESH_PARAM);
+	else
+		return 1.f;
 }

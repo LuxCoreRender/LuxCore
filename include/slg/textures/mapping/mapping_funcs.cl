@@ -22,10 +22,13 @@
 // 2D mapping
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_INLINE float2 UVMapping2D_Map(__global const TextureMapping2D *mapping, __global const HitPoint *hitPoint) {
+OPENCL_FORCE_INLINE float2 UVMapping2D_Map(__global const TextureMapping2D *mapping,
+		__global const HitPoint *hitPoint TEXTURES_PARAM_DECL) {
+	const float2 uv = HitPoint_GetUV(hitPoint, mapping->dataIndex EXTMESH_PARAM);
+
 	// Scale
-	const float uScaled = hitPoint->uv[mapping->dataIndex].u * mapping->uvMapping2D.uScale;
-	const float vScaled = hitPoint->uv[mapping->dataIndex].v * mapping->uvMapping2D.vScale;
+	const float uScaled = uv.s0 * mapping->uvMapping2D.uScale;
+	const float vScaled = uv.s1 * mapping->uvMapping2D.vScale;
 
 	// Rotate
 	const float sinTheta = mapping->uvMapping2D.sinTheta;
@@ -40,7 +43,8 @@ OPENCL_FORCE_INLINE float2 UVMapping2D_Map(__global const TextureMapping2D *mapp
 	return (float2)(uTranslated, vTranslated);
 }
 
-OPENCL_FORCE_INLINE float2 UVMapping2D_MapDuv(__global const TextureMapping2D *mapping, __global const HitPoint *hitPoint, float2 *ds, float2 *dt) {
+OPENCL_FORCE_INLINE float2 UVMapping2D_MapDuv(__global const TextureMapping2D *mapping,
+		__global const HitPoint *hitPoint, float2 *ds, float2 *dt TEXTURES_PARAM_DECL) {
 	const float signUScale = mapping->uvMapping2D.uScale > 0 ? 1.f : -1.f;
 	const float signVScale = mapping->uvMapping2D.vScale > 0 ? 1.f : -1.f;
 	const float sinTheta = mapping->uvMapping2D.sinTheta;
@@ -49,22 +53,24 @@ OPENCL_FORCE_INLINE float2 UVMapping2D_MapDuv(__global const TextureMapping2D *m
 	(*ds).xy = (float2)(signUScale * cosTheta, signUScale * sinTheta);
 	(*dt).xy = (float2)(-signVScale * sinTheta, signVScale * cosTheta);
 	
-	return UVMapping2D_Map(mapping, hitPoint);
+	return UVMapping2D_Map(mapping, hitPoint TEXTURES_PARAM);
 }
 
-OPENCL_FORCE_NOT_INLINE float2 TextureMapping2D_Map(__global const TextureMapping2D *mapping, __global const HitPoint *hitPoint) {
+OPENCL_FORCE_NOT_INLINE float2 TextureMapping2D_Map(__global const TextureMapping2D *mapping,
+		__global const HitPoint *hitPoint TEXTURES_PARAM_DECL) {
 	switch (mapping->type) {
 		case UVMAPPING2D:
-			return UVMapping2D_Map(mapping, hitPoint);
+			return UVMapping2D_Map(mapping, hitPoint TEXTURES_PARAM);
 		default:
 			return 0.f;
 	}
 }
 
-OPENCL_FORCE_NOT_INLINE float2 TextureMapping2D_MapDuv(__global const TextureMapping2D *mapping, __global const HitPoint *hitPoint, float2 *ds, float2 *dt) {
+OPENCL_FORCE_NOT_INLINE float2 TextureMapping2D_MapDuv(__global const TextureMapping2D *mapping,
+		__global const HitPoint *hitPoint, float2 *ds, float2 *dt TEXTURES_PARAM_DECL) {
 	switch (mapping->type) {
 		case UVMAPPING2D:
-			return UVMapping2D_MapDuv(mapping, hitPoint, ds, dt);
+			return UVMapping2D_MapDuv(mapping, hitPoint, ds, dt TEXTURES_PARAM);
 		default:
 			return 0.f;
 	}
@@ -75,11 +81,11 @@ OPENCL_FORCE_NOT_INLINE float2 TextureMapping2D_MapDuv(__global const TextureMap
 //------------------------------------------------------------------------------
 
 OPENCL_FORCE_INLINE float3 UVMapping3D_Map(__global const TextureMapping3D *mapping,
-		__global const HitPoint *hitPoint, float3 *shadeN) {
+		__global const HitPoint *hitPoint, float3 *shadeN TEXTURES_PARAM_DECL) {
 	if (shadeN)
 		*shadeN = normalize(Transform_ApplyNormal(&mapping->worldToLocal, VLOAD3F(&hitPoint->shadeN.x)));
 
-	const float2 uv = VLOAD2F(&hitPoint->uv[mapping->uvMapping3D.dataIndex].u);
+	const float2 uv = HitPoint_GetUV(hitPoint, mapping->uvMapping3D.dataIndex EXTMESH_PARAM);
 	return Transform_ApplyPoint(&mapping->worldToLocal, (float3)(uv.xy, 0.f));
 }
 
@@ -118,10 +124,10 @@ OPENCL_FORCE_INLINE float3 LocalMapping3D_Map(__global const TextureMapping3D *m
 //------------------------------------------------------------------------------
 
 OPENCL_FORCE_NOT_INLINE float3 TextureMapping3D_Map(__global const TextureMapping3D *mapping,
-		__global const HitPoint *hitPoint, float3 *shadeN) {
+		__global const HitPoint *hitPoint, float3 *shadeN TEXTURES_PARAM_DECL) {
 	switch (mapping->type) {
 		case UVMAPPING3D:
-			return UVMapping3D_Map(mapping, hitPoint, shadeN);
+			return UVMapping3D_Map(mapping, hitPoint, shadeN TEXTURES_PARAM);
 		case GLOBALMAPPING3D:
 			return GlobalMapping3D_Map(mapping, hitPoint, shadeN);
 		case LOCALMAPPING3D:

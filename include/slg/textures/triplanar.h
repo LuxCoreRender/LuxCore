@@ -31,7 +31,7 @@ class TriplanarTexture : public Texture {
 public:
 	TriplanarTexture(const TextureMapping3D *mp, const Texture *t1, const Texture *t2, 
     const Texture *t3, const u_int index, const bool uvlessBumpMap) :
-    mapping(mp), texX(t1), texY(t2), texZ(t3), uvIndex(index),
+    mapping(mp), texX(t1), texY(t2), texZ(t3),
 	enableUVlessBumpMap(uvlessBumpMap) {}
 
 	virtual ~TriplanarTexture() {}
@@ -79,7 +79,6 @@ public:
 	const Texture *GetTexture1() const { return texX; }
 	const Texture *GetTexture2() const { return texY; }
     const Texture *GetTexture3() const { return texZ; }
-	const u_int GetUVIndex() const { return uvIndex; }
 	const bool IsUVlessBumpMap() const { return enableUVlessBumpMap; }
 
 
@@ -90,8 +89,6 @@ private:
 	const Texture *texX;
 	const Texture *texY;
     const Texture *texZ;
-
-	const u_int uvIndex;
 
 	const bool enableUVlessBumpMap;
 };

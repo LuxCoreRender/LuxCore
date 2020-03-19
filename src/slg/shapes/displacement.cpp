@@ -51,6 +51,8 @@ DisplacementShape::DisplacementShape(luxrays::ExtTriangleMesh *srcMesh, const Te
 	vector<Normal> dndu(vertCount);
 	vector<Normal> dndv(vertCount);
 
+	vector<u_int> triangleIndex(vertCount);
+
 	// Go trough the faces and save the information
 	vector<bool> doneVerts(vertCount, false);
 	const u_int triCount = srcMesh->GetTotalTriangleCount();
@@ -68,6 +70,8 @@ DisplacementShape::DisplacementShape(luxrays::ExtTriangleMesh *srcMesh, const Te
 				srcMesh->GetDifferentials(Transform::TRANS_IDENTITY, i, shadeN, 0,
 						&dpdu[vertIndex], &dpdv[vertIndex],
 						&dndu[vertIndex], &dndv[vertIndex]);
+
+				triangleIndex[vertIndex] = i;
 
 				doneVerts[vertIndex] = true;
 			}
@@ -94,10 +98,21 @@ DisplacementShape::DisplacementShape(luxrays::ExtTriangleMesh *srcMesh, const Te
 		hitPoint.interpolatedN = hitPoint.geometryN;
 		hitPoint.shadeN = hitPoint.interpolatedN;
 
-		for (u_int j = 0; j < EXTMESH_MAX_DATA_COUNT; ++j) {
-			hitPoint.uv[j] = srcMesh->HasUVs(j) ? srcMesh->GetUV(i, j) : UV(0.f, 0.f);
-			hitPoint.color[j] =  srcMesh->HasColors(j) ? srcMesh->GetColor(i, j) : Spectrum(1.f);
-			hitPoint.alpha[j] = srcMesh->HasAlphas(j) ? srcMesh->GetAlpha(i, j) : 1.f;
+		hitPoint.defaultUV = srcMesh->HasUVs(0) ? srcMesh->GetUV(i, 0) : UV(0.f, 0.f);
+		hitPoint.mesh = srcMesh;
+		hitPoint.triangleIndex = triangleIndex[i];
+		if (i == tris[hitPoint.triangleIndex].v[0]) {
+			// First vertex of the triangle
+			hitPoint.triangleBariCoord1 = 0.f;
+			hitPoint.triangleBariCoord2 = 0.f;
+		} else if (i == tris[hitPoint.triangleIndex].v[1]) {
+			// Second vertex of the triangle
+			hitPoint.triangleBariCoord1 = 1.f;
+			hitPoint.triangleBariCoord2 = 0.f;
+		} else {
+			// Last vertex of the triangle
+			hitPoint.triangleBariCoord1 = 0.f;
+			hitPoint.triangleBariCoord2 = 1.f;
 		}
 
 		hitPoint.dpdu = dpdu[i];

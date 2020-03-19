@@ -25,7 +25,6 @@ scene.textures.tex.type = triplanar
 scene.textures.tex.texture1 = tex1
 scene.textures.tex.texture2 = tex2
 scene.textures.tex.texture3 = tex3
-scene.textures.tex.uvindex = 0
 scene.textures.tex.mapping.type = localmapping3d
 ################################################################################
 scene.materials.shell.type = matte

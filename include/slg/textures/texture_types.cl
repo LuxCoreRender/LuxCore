@@ -441,7 +441,6 @@ typedef struct {
 typedef struct {
 	TextureMapping3D mapping;
 	unsigned int tex1Index, tex2Index, tex3Index;
-	unsigned int uvIndex;
 	int enableUVlessBumpMap;
 } TriplanarTexParam;
 
@@ -523,12 +522,12 @@ typedef struct {
 	, __global const TextureEvalOp* restrict texEvalOps \
 	, __global float *texEvalStacks \
 	, const uint maxTextureEvalStackSize \
-	IMAGEMAPS_PARAM_DECL
+	IMAGEMAPS_PARAM_DECL SCENE_PARAM_DECL
 #define TEXTURES_PARAM \
 	, texs \
 	, texEvalOps \
 	, texEvalStacks \
 	, maxTextureEvalStackSize \
-	IMAGEMAPS_PARAM
+	IMAGEMAPS_PARAM SCENE_PARAM
 
 #endif

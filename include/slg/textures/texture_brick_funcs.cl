@@ -127,9 +127,10 @@ OPENCL_FORCE_NOT_INLINE bool BrickTexture_Evaluate(__global const HitPoint *hitP
 		const float run, const float mortarwidth,
 		const float mortarheight, const float mortardepth,
 		const float proportion, const float invproportion,
-		__global const TextureMapping3D *mapping) {
+		__global const TextureMapping3D *mapping
+		TEXTURES_PARAM_DECL) {
 #define BRICK_EPSILON 1e-3f
-	const float3 P = TextureMapping3D_Map(mapping, hitPoint, NULL);
+	const float3 P = TextureMapping3D_Map(mapping, hitPoint, NULL TEXTURES_PARAM);
 
 	const float offs = BRICK_EPSILON + mortarsize;
 	float3 bP = P + (float3)(offs, offs, offs);
@@ -187,7 +188,7 @@ OPENCL_FORCE_NOT_INLINE float BrickTexture_ConstEvaluateFloat(__global const Hit
 		const float run, const float mortarwidth,
 		const float mortarheight, const float mortardepth,
 		const float proportion, const float invproportion,
-		__global const TextureMapping3D *mapping) {
+		__global const TextureMapping3D *mapping TEXTURES_PARAM_DECL) {
 	return BrickTexture_Evaluate(hitPoint,
 			bond,
 			brickwidth, brickheight,
@@ -196,7 +197,8 @@ OPENCL_FORCE_NOT_INLINE float BrickTexture_ConstEvaluateFloat(__global const Hit
 			run, mortarwidth,
 			mortarheight, mortardepth,
 			proportion, invproportion,
-			mapping) ? (value1 * value3) : value2;
+			mapping
+			TEXTURES_PARAM) ? (value1 * value3) : value2;
 }
 
 OPENCL_FORCE_NOT_INLINE float3 BrickTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
@@ -208,7 +210,8 @@ OPENCL_FORCE_NOT_INLINE float3 BrickTexture_ConstEvaluateSpectrum(__global const
 		const float run, const float mortarwidth,
 		const float mortarheight, const float mortardepth,
 		const float proportion, const float invproportion,
-		__global const TextureMapping3D *mapping) {
+		__global const TextureMapping3D *mapping
+		TEXTURES_PARAM_DECL) {
 	return BrickTexture_Evaluate(hitPoint,
 			bond,
 			brickwidth, brickheight,
@@ -217,7 +220,8 @@ OPENCL_FORCE_NOT_INLINE float3 BrickTexture_ConstEvaluateSpectrum(__global const
 			run, mortarwidth,
 			mortarheight, mortardepth,
 			proportion, invproportion,
-			mapping) ? (value1 * value3) : value2;
+			mapping
+			TEXTURES_PARAM) ? (value1 * value3) : value2;
 }
 
 OPENCL_FORCE_NOT_INLINE void BrickTexture_EvalOp(
@@ -244,7 +248,8 @@ OPENCL_FORCE_NOT_INLINE void BrickTexture_EvalOp(
 					texture->brick.run , texture->brick.mortarwidth,
 					texture->brick.mortarheight, texture->brick.mortardepth,
 					texture->brick.proportion, texture->brick.invproportion,
-					&texture->brick.mapping);
+					&texture->brick.mapping
+					TEXTURES_PARAM);
 			EvalStack_PushFloat(eval);
 			break;
 		}
@@ -263,7 +268,8 @@ OPENCL_FORCE_NOT_INLINE void BrickTexture_EvalOp(
 					texture->brick.run , texture->brick.mortarwidth,
 					texture->brick.mortarheight, texture->brick.mortardepth,
 					texture->brick.proportion, texture->brick.invproportion,
-					&texture->brick.mapping);
+					&texture->brick.mapping
+					TEXTURES_PARAM);
 			EvalStack_PushFloat3(eval);
 			break;
 		}

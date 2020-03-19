@@ -24,7 +24,7 @@
 
 OPENCL_FORCE_INLINE float BilerpTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
 		const float v00, const float v01, const float v10, const float v11) {
-	float2 uv = VLOAD2F(&hitPoint->uv[0].u);
+	float2 uv = VLOAD2F(&hitPoint->defaultUV.u);
 	uv.x -= Floor2Int(uv.x);
 	uv.y -= Floor2Int(uv.y);
 
@@ -33,7 +33,7 @@ OPENCL_FORCE_INLINE float BilerpTexture_ConstEvaluateFloat(__global const HitPoi
 
 OPENCL_FORCE_INLINE float3 BilerpTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
 		const float3 v00, const float3 v01, const float3 v10, const float3 v11) {
-	float2 uv = VLOAD2F(&hitPoint->uv[0].u);
+	float2 uv = VLOAD2F(&hitPoint->defaultUV.u);
 	uv.x -= Floor2Int(uv.x);
 	uv.y -= Floor2Int(uv.y);
 

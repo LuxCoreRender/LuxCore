@@ -47,16 +47,16 @@ Spectrum TriplanarTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
     weights[2] = weights[2] / sum;
 
 	HitPoint hitPointTmp = hitPoint;
-	hitPointTmp.uv[uvIndex].u = localPoint.y;
-	hitPointTmp.uv[uvIndex].v = localPoint.z;
+	hitPointTmp.defaultUV.u = localPoint.y;
+	hitPointTmp.defaultUV.v = localPoint.z;
 	Spectrum result = texX->GetSpectrumValue(hitPointTmp) * weights[0];
 
-	hitPointTmp.uv[uvIndex].u = localPoint.x;
-	hitPointTmp.uv[uvIndex].v = localPoint.z;
+	hitPointTmp.defaultUV.u = localPoint.x;
+	hitPointTmp.defaultUV.v = localPoint.z;
 	result += texY->GetSpectrumValue(hitPointTmp) * weights[1];
 
-	hitPointTmp.uv[uvIndex].u = localPoint.x;
-	hitPointTmp.uv[uvIndex].v = localPoint.y;
+	hitPointTmp.defaultUV.u = localPoint.x;
+	hitPointTmp.defaultUV.v = localPoint.y;
 	result += texZ->GetSpectrumValue(hitPointTmp) * weights[2];
 
 	return result;
@@ -110,7 +110,6 @@ Properties TriplanarTexture::ToProperties(const ImageMapCache &imgMapCache, cons
 	props.Set(Property("scene.textures." + name + ".texture1")(texX->GetSDLValue()));
 	props.Set(Property("scene.textures." + name + ".texture2")(texY->GetSDLValue()));
     props.Set(Property("scene.textures." + name + ".texture3")(texZ->GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".uvindex")(uvIndex));
 	props.Set(Property("scene.textures." + name + ".uvlessbumpmap.enable")(enableUVlessBumpMap));
     props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 

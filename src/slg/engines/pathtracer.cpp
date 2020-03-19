@@ -426,7 +426,7 @@ void PathTracer::RenderEyePath(IntersectionDevice *device,
 			sampleResult.shadingNormal = bsdf.hitPoint.shadeN;
 			sampleResult.materialID = bsdf.GetMaterialID();
 			sampleResult.objectID = bsdf.GetObjectID();
-			sampleResult.uv = bsdf.hitPoint.uv[0];
+			sampleResult.uv = bsdf.hitPoint.GetUV(0);
 		}
 		sampleResult.lastPathVertex = pathInfo.depth.IsLastPathVertex(maxPathDepth, bsdf.GetEventTypes());
 

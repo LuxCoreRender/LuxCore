@@ -117,9 +117,10 @@ void BakeCPURenderThread::InitBakeWork(const BakeMapInfo &mapInfo) {
 
 void BakeCPURenderThread::SetSampleResultXY(const BakeMapInfo &mapInfo,
 		const HitPoint &hitPoint, const Film &film, SampleResult &sampleResult) const {
+	const UV uv = hitPoint.GetUV(mapInfo.uvindex);
 	const UV filmUV(
-			hitPoint.uv[mapInfo.uvindex].u - floorf(hitPoint.uv[mapInfo.uvindex].u),
-			1.f - (hitPoint.uv[mapInfo.uvindex].v - floorf(hitPoint.uv[mapInfo.uvindex].v)));
+			uv.u - floorf(uv.u),
+			1.f - (uv.v - floorf(uv.v)));
 
 	const float filmX = filmUV.u * film.GetWidth() - .5f;
 	const float filmY = filmUV.v * film.GetHeight() - .5f;
@@ -305,7 +306,7 @@ void BakeCPURenderThread::RenderEyeSample(const BakeMapInfo &mapInfo, PathTracer
 	sampleResult.shadingNormal = bsdf.hitPoint.shadeN;
 	sampleResult.materialID = bsdf.GetMaterialID();
 	sampleResult.objectID = bsdf.GetObjectID();
-	sampleResult.uv = bsdf.hitPoint.uv[0];
+	sampleResult.uv = bsdf.hitPoint.GetUV(0);
 }
 
 void BakeCPURenderThread::RenderConnectToEyeCallBack(const BakeMapInfo &mapInfo, 

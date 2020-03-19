@@ -534,7 +534,7 @@ OPENCL_FORCE_INLINE void ClothMaterial_Albedo(__global const Material* restrict 
 	float umax, scale = material->cloth.specularNormalization;
 	__constant Yarn *yarn = GetYarn(material->cloth.Preset, Weave,
 			material->cloth.Repeat_U, material->cloth.Repeat_V,
-            hitPoint->uv[0].u, hitPoint->uv[0].v, &uv, &umax, &scale);
+            hitPoint->defaultUV.u, hitPoint->defaultUV.v, &uv, &umax, &scale);
 	
 	const float3 kd = (yarn->yarn_type == WARP) ?
 		Texture_GetSpectrumValue(material->cloth.Warp_KdIndex, hitPoint TEXTURES_PARAM) :
@@ -593,7 +593,7 @@ OPENCL_FORCE_NOT_INLINE void ClothMaterial_Evaluate(__global const Material* res
 	const float Repeat_U = material->cloth.Repeat_U;
 	const float Repeat_V = material->cloth.Repeat_V;
 	__constant Yarn *yarn = GetYarn(Preset, Weave, Repeat_U, Repeat_V,
-            hitPoint->uv[0].u, hitPoint->uv[0].v, &uv, &umax, &scale);
+            hitPoint->defaultUV.u, hitPoint->defaultUV.v, &uv, &umax, &scale);
     
     scale = scale * EvalSpecular(Weave, yarn, uv, umax, lightDir, eyeDir);
 	
@@ -645,7 +645,7 @@ OPENCL_FORCE_NOT_INLINE void ClothMaterial_Sample(__global const Material* restr
 	const float Repeat_U = material->cloth.Repeat_U;
 	const float Repeat_V = material->cloth.Repeat_V;
 	__constant Yarn *yarn = GetYarn(Preset, Weave, Repeat_U, Repeat_V,
-            hitPoint->uv[0].u, hitPoint->uv[0].v, &uv, &umax, &scale);
+            hitPoint->defaultUV.u, hitPoint->defaultUV.v, &uv, &umax, &scale);
 
 //	if (!hitPoint.fromLight)
 	    scale = scale * EvalSpecular(Weave, yarn, uv, umax, fixedDir, sampledDir);

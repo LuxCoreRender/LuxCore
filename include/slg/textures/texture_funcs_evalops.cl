@@ -1,4 +1,4 @@
-#line 2 "texture_eval_funcs.cl"
+#line 2 "texture_funcs_evalops.cl"
 
 /***************************************************************************
  * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
@@ -101,17 +101,17 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		case IMAGEMAP: {
 			switch (evalType) {
 				case EVAL_FLOAT: {
-					const float eval = ImageMapTexture_ConstEvaluateFloat(texture, hitPoint IMAGEMAPS_PARAM);
+					const float eval = ImageMapTexture_ConstEvaluateFloat(texture, hitPoint TEXTURES_PARAM);
 					EvalStack_PushFloat(eval);
 					break;
 				}
 				case EVAL_SPECTRUM: {
-					const float3 eval = ImageMapTexture_ConstEvaluateSpectrum(texture, hitPoint IMAGEMAPS_PARAM);
+					const float3 eval = ImageMapTexture_ConstEvaluateSpectrum(texture, hitPoint TEXTURES_PARAM);
 					EvalStack_PushFloat3(eval);
 					break;
 				}
 				case EVAL_BUMP: {
-					const float3 shadeN = ImageMapTexture_Bump(texture, hitPoint IMAGEMAPS_PARAM);
+					const float3 shadeN = ImageMapTexture_Bump(texture, hitPoint TEXTURES_PARAM);
 					EvalStack_PushFloat3(shadeN);
 					break;
 				}
@@ -379,13 +379,15 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 			switch (evalType) {
 				case EVAL_FLOAT: {
 					const float eval = HitPointColorTexture_ConstEvaluateFloat(hitPoint,
-							texture->hitPointColor.dataIndex);
+							texture->hitPointColor.dataIndex
+							TEXTURES_PARAM);
 					EvalStack_PushFloat(eval);
 					break;
 				}
 				case EVAL_SPECTRUM: {
 					const float3 eval = HitPointColorTexture_ConstEvaluateSpectrum(hitPoint,
-							texture->hitPointColor.dataIndex);
+							texture->hitPointColor.dataIndex
+							TEXTURES_PARAM);
 					EvalStack_PushFloat3(eval);
 					break;
 				}
@@ -414,13 +416,15 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 			switch (evalType) {
 				case EVAL_FLOAT: {
 					const float eval = HitPointAlphaTexture_ConstEvaluateFloat(hitPoint,
-							texture->hitPointAlpha.dataIndex);
+							texture->hitPointAlpha.dataIndex
+							TEXTURES_PARAM);
 					EvalStack_PushFloat(eval);
 					break;
 				}
 				case EVAL_SPECTRUM: {
 					const float3 eval = HitPointAlphaTexture_ConstEvaluateSpectrum(hitPoint,
-							texture->hitPointAlpha.dataIndex);
+							texture->hitPointAlpha.dataIndex
+							TEXTURES_PARAM);
 					EvalStack_PushFloat3(eval);
 					break;
 				}
@@ -449,13 +453,15 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 			switch (evalType) {
 				case EVAL_FLOAT: {
 					const float eval = HitPointGreyTexture_ConstEvaluateFloat(hitPoint,
-							texture->hitPointGrey.dataIndex, texture->hitPointGrey.channelIndex);
+							texture->hitPointGrey.dataIndex, texture->hitPointGrey.channelIndex
+							TEXTURES_PARAM);
 					EvalStack_PushFloat(eval);
 					break;
 				}
 				case EVAL_SPECTRUM: {
 					const float3 eval = HitPointGreyTexture_ConstEvaluateSpectrum(hitPoint,
-							texture->hitPointGrey.dataIndex, texture->hitPointGrey.channelIndex);
+							texture->hitPointGrey.dataIndex, texture->hitPointGrey.channelIndex
+							TEXTURES_PARAM);
 					EvalStack_PushFloat3(eval);
 					break;
 				}
@@ -567,7 +573,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 					const float eval = DensityGridTexture_ConstEvaluateFloat(hitPoint,
 							texture->densityGrid.nx, texture->densityGrid.ny, texture->densityGrid.nz,
 							texture->densityGrid.imageMapIndex, &texture->densityGrid.mapping
-							IMAGEMAPS_PARAM);
+							TEXTURES_PARAM);
 					EvalStack_PushFloat(eval);
 					break;
 				}
@@ -575,7 +581,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 					const float3 eval = DensityGridTexture_ConstEvaluateSpectrum(hitPoint,
 							texture->densityGrid.nx, texture->densityGrid.ny, texture->densityGrid.nz,
 							texture->densityGrid.imageMapIndex, &texture->densityGrid.mapping
-							IMAGEMAPS_PARAM);
+							TEXTURES_PARAM);
 					EvalStack_PushFloat3(eval);
 					break;
 				}
@@ -1505,7 +1511,8 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 					EvalStack_PopFloat(tex1);
 
 					const float eval = CheckerBoard2DTexture_ConstEvaluateFloat(hitPoint,
-							tex1, tex2, &texture->checkerBoard2D.mapping);
+							tex1, tex2, &texture->checkerBoard2D.mapping
+							TEXTURES_PARAM);
 					EvalStack_PushFloat(eval);
 					break;
 				}
@@ -1515,7 +1522,8 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 					EvalStack_PopFloat3(tex1);
 
 					const float3 eval = CheckerBoard2DTexture_ConstEvaluateSpectrum(hitPoint,
-							tex1, tex2, &texture->checkerBoard2D.mapping);
+							tex1, tex2, &texture->checkerBoard2D.mapping
+							TEXTURES_PARAM);
 					EvalStack_PushFloat3(eval);
 					break;
 				}
@@ -1548,7 +1556,8 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 					EvalStack_PopFloat(tex1);
 
 					const float eval = CheckerBoard3DTexture_ConstEvaluateFloat(hitPoint,
-							tex1, tex2, &texture->checkerBoard3D.mapping);
+							tex1, tex2, &texture->checkerBoard3D.mapping
+							TEXTURES_PARAM);
 					EvalStack_PushFloat(eval);
 					break;
 				}
@@ -1558,7 +1567,8 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 					EvalStack_PopFloat3(tex1);
 
 					const float3 eval = CheckerBoard3DTexture_ConstEvaluateSpectrum(hitPoint,
-							tex1, tex2, &texture->checkerBoard3D.mapping);
+							tex1, tex2, &texture->checkerBoard3D.mapping
+							TEXTURES_PARAM);
 					EvalStack_PushFloat3(eval);
 					break;
 				}
@@ -1593,7 +1603,8 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 							texture->cloud.variability, texture->cloud.omega,
 							texture->cloud.noisescale, texture->cloud.noiseoffset,
 							texture->cloud.turbulence, texture->cloud.octaves,
-							&texture->cloud.mapping);
+							&texture->cloud.mapping
+							TEXTURES_PARAM);
 					EvalStack_PushFloat(eval);
 					break;
 				}
@@ -1605,7 +1616,8 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 							texture->cloud.variability, texture->cloud.omega,
 							texture->cloud.noisescale, texture->cloud.noiseoffset,
 							texture->cloud.turbulence, texture->cloud.octaves,
-							&texture->cloud.mapping);
+							&texture->cloud.mapping
+							TEXTURES_PARAM);
 					EvalStack_PushFloat3(eval);
 					break;
 				}
@@ -1635,14 +1647,16 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 				case EVAL_FLOAT: {
 					const float eval = FBMTexture_ConstEvaluateFloat(hitPoint,
 							texture->fbm.omega, texture->fbm.octaves,
-							&texture->fbm.mapping);
+							&texture->fbm.mapping
+							TEXTURES_PARAM);
 					EvalStack_PushFloat(eval);
 					break;
 				}
 				case EVAL_SPECTRUM: {
 					const float3 eval = FBMTexture_ConstEvaluateSpectrum(hitPoint,
 							texture->fbm.omega, texture->fbm.octaves,
-							&texture->fbm.mapping);
+							&texture->fbm.mapping
+							TEXTURES_PARAM);
 					EvalStack_PushFloat3(eval);
 					break;
 				}
@@ -1673,7 +1687,8 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 					const float eval = MarbleTexture_ConstEvaluateFloat(hitPoint,
 							texture->marble.scale, texture->marble.omega,
 							texture->marble.octaves, texture->marble.variation,
-							&texture->marble.mapping);
+							&texture->marble.mapping
+							TEXTURES_PARAM);
 					EvalStack_PushFloat(eval);
 					break;
 				}
@@ -1681,7 +1696,8 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 					const float3 eval = MarbleTexture_ConstEvaluateSpectrum(hitPoint,
 							texture->marble.scale, texture->marble.omega,
 							texture->marble.octaves, texture->marble.variation,
-							&texture->marble.mapping);
+							&texture->marble.mapping
+							TEXTURES_PARAM);
 					EvalStack_PushFloat3(eval);
 					break;
 				}
@@ -1714,7 +1730,8 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 					EvalStack_PopFloat(tex1);
 
 					const float eval = DotsTexture_ConstEvaluateFloat(hitPoint,
-							tex1, tex2, &texture->checkerBoard2D.mapping);
+							tex1, tex2, &texture->checkerBoard2D.mapping
+							TEXTURES_PARAM);
 					EvalStack_PushFloat(eval);
 					break;
 				}
@@ -1724,7 +1741,8 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 					EvalStack_PopFloat3(tex1);
 
 					const float3 eval = DotsTexture_ConstEvaluateSpectrum(hitPoint,
-							tex1, tex2, &texture->checkerBoard2D.mapping);
+							tex1, tex2, &texture->checkerBoard2D.mapping
+							TEXTURES_PARAM);
 					EvalStack_PushFloat3(eval);
 					break;
 				}
@@ -1760,13 +1778,15 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 			switch (evalType) {
 				case EVAL_FLOAT: {
 					const float eval = WindyTexture_ConstEvaluateFloat(hitPoint,
-							&texture->windy.mapping);
+							&texture->windy.mapping
+							TEXTURES_PARAM);
 					EvalStack_PushFloat(eval);
 					break;
 				}
 				case EVAL_SPECTRUM: {
 					const float3 eval = WindyTexture_ConstEvaluateSpectrum(hitPoint,
-							&texture->windy.mapping);
+							&texture->windy.mapping
+							TEXTURES_PARAM);
 					EvalStack_PushFloat3(eval);
 					break;
 				}
@@ -1796,14 +1816,16 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 				case EVAL_FLOAT: {
 					const float eval = WrinkledTexture_ConstEvaluateFloat(hitPoint,
 							texture->wrinkled.omega, texture->wrinkled.octaves,
-							&texture->wrinkled.mapping);
+							&texture->wrinkled.mapping
+							TEXTURES_PARAM);
 					EvalStack_PushFloat(eval);
 					break;
 				}
 				case EVAL_SPECTRUM: {
 					const float3 eval = WrinkledTexture_ConstEvaluateSpectrum(hitPoint,
 							texture->wrinkled.omega, texture->wrinkled.octaves,
-							&texture->wrinkled.mapping);
+							&texture->wrinkled.mapping
+							TEXTURES_PARAM);
 					EvalStack_PushFloat3(eval);
 					break;
 				}
@@ -1832,13 +1854,15 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 			switch (evalType) {
 				case EVAL_FLOAT: {
 					const float eval = UVTexture_ConstEvaluateFloat(hitPoint,
-							&texture->uvTex.mapping);
+							&texture->uvTex.mapping
+							TEXTURES_PARAM);
 					EvalStack_PushFloat(eval);
 					break;
 				}
 				case EVAL_SPECTRUM: {
 					const float3 eval = UVTexture_ConstEvaluateSpectrum(hitPoint,
-							&texture->uvTex.mapping);
+							&texture->uvTex.mapping
+							TEXTURES_PARAM);
 					EvalStack_PushFloat3(eval);
 					break;
 				}

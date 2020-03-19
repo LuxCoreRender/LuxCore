@@ -40,14 +40,13 @@ OPENCL_FORCE_NOT_INLINE void TriplanarTexture_EvalOp(
 	switch (evalType) {
 		case EVAL_TRIPLANAR_STEP_1: {
 			// Save original UV
-			const uint uvIndex = texture->triplanarTex.uvIndex;
-			EvalStack_PushFloat(hitPoint->uv[uvIndex].u);
-			EvalStack_PushFloat(hitPoint->uv[uvIndex].v);
+			EvalStack_PushFloat(hitPoint->defaultUV.u);
+			EvalStack_PushFloat(hitPoint->defaultUV.v);
 
 			// Compute localPoint
 			float3 localShadeN;
 			const float3 localPoint = TextureMapping3D_Map(&texture->triplanarTex.mapping,
-					hitPoint, &localShadeN);
+					hitPoint, &localShadeN TEXTURES_PARAM);
 
 			// Compute the 3 weights
 			float weightsX = Sqr(Sqr(localShadeN.x));
@@ -68,8 +67,8 @@ OPENCL_FORCE_NOT_INLINE void TriplanarTexture_EvalOp(
 
 			// Update HitPoint
 			__global HitPoint *hitPointTmp = (__global HitPoint *)hitPoint;
-			hitPointTmp->uv[uvIndex].u = localPoint.y;
-			hitPointTmp->uv[uvIndex].v = localPoint.z;
+			hitPointTmp->defaultUV.u = localPoint.y;
+			hitPointTmp->defaultUV.v = localPoint.z;
 			break;
 		}
 		case EVAL_TRIPLANAR_STEP_2: {
@@ -80,9 +79,8 @@ OPENCL_FORCE_NOT_INLINE void TriplanarTexture_EvalOp(
 
 			// Update HitPoint
 			__global HitPoint *hitPointTmp = (__global HitPoint *)hitPoint;
-			const uint uvIndex = texture->triplanarTex.uvIndex;
-			hitPointTmp->uv[uvIndex].u = localPoint.x;
-			hitPointTmp->uv[uvIndex].v = localPoint.z;
+			hitPointTmp->defaultUV.u = localPoint.x;
+			hitPointTmp->defaultUV.v = localPoint.z;
 			break;
 		}
 		case EVAL_TRIPLANAR_STEP_3: {
@@ -93,9 +91,8 @@ OPENCL_FORCE_NOT_INLINE void TriplanarTexture_EvalOp(
 
 			// Update HitPoint
 			__global HitPoint *hitPointTmp = (__global HitPoint *)hitPoint;
-			const uint uvIndex = texture->triplanarTex.uvIndex;
-			hitPointTmp->uv[uvIndex].u = localPoint.x;
-			hitPointTmp->uv[uvIndex].v = localPoint.y;
+			hitPointTmp->defaultUV.u = localPoint.x;
+			hitPointTmp->defaultUV.v = localPoint.y;
 			break;
 		}
 		case EVAL_FLOAT:
@@ -117,10 +114,9 @@ OPENCL_FORCE_NOT_INLINE void TriplanarTexture_EvalOp(
 			EvalStack_PopFloat(weightX);
 
 			// Restore original UV
-			const uint uvIndex = texture->triplanarTex.uvIndex;
 			__global HitPoint *hitPointTmp = (__global HitPoint *)hitPoint;
-			EvalStack_PopFloat(hitPointTmp->uv[uvIndex].v);
-			EvalStack_PopFloat(hitPointTmp->uv[uvIndex].u);
+			EvalStack_PopFloat(hitPointTmp->defaultUV.v);
+			EvalStack_PopFloat(hitPointTmp->defaultUV.u);
 
 			const float3 result = tex1 * weightX + tex2 * weightY + tex3 * weightZ;
 			if (evalType == EVAL_FLOAT) {

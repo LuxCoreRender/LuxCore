@@ -52,7 +52,7 @@ public:
 	virtual TextureMapping2DType GetType() const = 0;
 
 	virtual luxrays::UV Map(const HitPoint &hitPoint) const {
-		return Map(hitPoint.uv[dataIndex]);
+		return Map(hitPoint.GetUV(dataIndex));
 	}
 	// Directly used only in InfiniteLight and ImageMapTexture
 	virtual luxrays::UV Map(const luxrays::UV &uv) const = 0;
