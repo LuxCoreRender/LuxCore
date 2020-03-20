@@ -30,7 +30,7 @@ if(SANITIZERS)
 endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
-set(FREEIMAGE_FIND_REQUIRED, TRUE)
+set(FREEIMAGE_FIND_REQUIRED TRUE)
 find_package(FreeImage)
 
 add_library(pdiff lpyramid.cpp rgba_image.cpp metric.cpp)
