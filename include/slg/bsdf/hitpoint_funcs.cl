@@ -145,3 +145,21 @@ OPENCL_FORCE_INLINE float HitPoint_GetAlpha(__global const HitPoint *hitPoint, c
 	else
 		return 1.f;
 }
+
+OPENCL_FORCE_INLINE float HitPoint_GetVertexAOV(__global const HitPoint *hitPoint, const uint dataIndex EXTMESH_PARAM_DECL) {
+	const uint meshIndex = hitPoint->meshIndex;
+
+	if (meshIndex != NULL_INDEX)
+		return ExtMesh_GetInterpolateVertexAOV(meshIndex, hitPoint->triangleIndex, hitPoint->triangleBariCoord1, hitPoint->triangleBariCoord2, dataIndex EXTMESH_PARAM);
+	else
+		return 0.f;
+}
+
+OPENCL_FORCE_INLINE float HitPoint_GetTriAOV(__global const HitPoint *hitPoint, const uint dataIndex EXTMESH_PARAM_DECL) {
+	const uint meshIndex = hitPoint->meshIndex;
+
+	if (meshIndex != NULL_INDEX)
+		return ExtMesh_GetTriAOV(meshIndex, hitPoint->triangleIndex, dataIndex EXTMESH_PARAM);
+	else
+		return 0.f;
+}

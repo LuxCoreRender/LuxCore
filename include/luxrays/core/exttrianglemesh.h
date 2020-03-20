@@ -142,6 +142,8 @@ public:
 	UV *GetUVs(const u_int dataIndex) const { return uvs[dataIndex]; }
 	Spectrum *GetColors(const u_int dataIndex) const { return cols[dataIndex]; }
 	float *GetAlphas(const u_int dataIndex) const { return alphas[dataIndex]; }
+	float *GetVertexAOVs(const u_int dataIndex) const { return vertAOV[dataIndex]; }
+	float *GetTriAOVs(const u_int dataIndex) const { return triAOV[dataIndex]; }
 
 	const std::array<UV *, EXTMESH_MAX_DATA_COUNT> &GetAllUVs() const { return uvs; }
 	const std::array<Spectrum *, EXTMESH_MAX_DATA_COUNT> &GetAllColors() const { return cols; }

@@ -295,6 +295,7 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/scene/scene_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/scene/scene_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/scene/sceneobject_types.cl
+	${LuxRays_SOURCE_DIR}/include/slg/textures/hitpoint/texture_hitpoint_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/mapping/mapping_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/mapping/mapping_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_types.cl
@@ -674,6 +675,7 @@ set(SLG_KERNEL_SRCS
 	${generated_kernels_dir}/texture_densitygrid_funcs_kernel.cpp
 	${generated_kernels_dir}/texture_fresnelcolor_funcs_kernel.cpp
 	${generated_kernels_dir}/texture_fresnelconst_funcs_kernel.cpp
+	${generated_kernels_dir}/texture_hitpoint_funcs_kernel.cpp
 	${generated_kernels_dir}/texture_hsv_funcs_kernel.cpp
 	${generated_kernels_dir}/texture_irregulardata_funcs_kernel.cpp
 	${generated_kernels_dir}/texture_others_funcs_kernel.cpp

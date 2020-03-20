@@ -48,6 +48,7 @@
 #include "slg/textures/fresnel/fresnelpreset.h"
 #include "slg/textures/fresnel/fresnelsopra.h"
 #include "slg/textures/fresnel/fresneltexture.h"
+#include "slg/textures/hitpoint/hitpointaov.h"
 #include "slg/textures/hitpoint/hitpointcolor.h"
 #include "slg/textures/hitpoint/position.h"
 #include "slg/textures/hitpoint/shadingnormal.h"
@@ -262,6 +263,8 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 		case slg::ocl::HITPOINTCOLOR:
 		case slg::ocl::HITPOINTALPHA:
 		case slg::ocl::HITPOINTGREY:
+		case slg::ocl::HITPOINTVERTEXAOV:
+		case slg::ocl::HITPOINTTRIANGLEAOV:
 		case slg::ocl::CLOUD_TEX:
 		case slg::ocl::FBM_TEX:
 		case slg::ocl::MARBLE:
@@ -1759,6 +1762,20 @@ void CompiledScene::CompileTextures() {
 				tex->type = slg::ocl::HITPOINTGREY;
 				tex->hitPointGrey.dataIndex = hpg->GetDataIndex();
 				tex->hitPointGrey.channelIndex = hpg->GetChannel();
+				break;
+			}
+			case HITPOINTVERTEXAOV: {
+				const HitPointVertexAOVTexture *hpv = static_cast<const HitPointVertexAOVTexture *>(t);
+
+				tex->type = slg::ocl::HITPOINTVERTEXAOV;
+				tex->hitPointVertexAOV.dataIndex = hpv->GetDataIndex();
+				break;
+			}
+			case HITPOINTTRIANGLEAOV: {
+				const HitPointTriangleAOVTexture *hpt = static_cast<const HitPointTriangleAOVTexture *>(t);
+
+				tex->type = slg::ocl::HITPOINTTRIANGLEAOV;
+				tex->hitPointTriangleAOV.dataIndex = hpt->GetDataIndex();
 				break;
 			}
             case NORMALMAP_TEX: {

@@ -43,6 +43,10 @@ typedef struct {
 	unsigned int colsOffset[EXTMESH_MAX_DATA_COUNT];
 	unsigned int alphasOffset[EXTMESH_MAX_DATA_COUNT];
 
+	 // Vertex and Triangle AOV
+	unsigned int vertexAOVOffset[EXTMESH_MAX_DATA_COUNT];
+	unsigned int triAOVOffset[EXTMESH_MAX_DATA_COUNT];
+
 	// Triangle information
 	unsigned int trisOffset;
 
@@ -64,6 +68,8 @@ typedef struct {
 		__global const UV* restrict vertUVs, \
 		__global const Spectrum* restrict vertCols, \
 		__global const float* restrict vertAlphas, \
+		__global const float* restrict vertexAOVs, \
+		__global const float* restrict triAOVs, \
 		__global const Triangle* restrict triangles, \
 		__global const InterpolatedTransform* restrict interpolatedTransforms
 #define EXTMESH_PARAM , \
@@ -74,6 +80,8 @@ typedef struct {
 		vertUVs, \
 		vertCols, \
 		vertAlphas, \
+		vertexAOVs, \
+		triAOVs, \
 		triangles, \
 		interpolatedTransforms
 

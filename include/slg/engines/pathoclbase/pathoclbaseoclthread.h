@@ -210,6 +210,8 @@ protected:
 	cl::Buffer *uvsBuff;
 	cl::Buffer *colsBuff;
 	cl::Buffer *alphasBuff;
+	cl::Buffer *vertexAOVBuff;
+	cl::Buffer *triAOVBuff;
 	cl::Buffer *trianglesBuff;
 	cl::Buffer *interpolatedTransformsBuff;
 	cl::Buffer *cameraBuff;

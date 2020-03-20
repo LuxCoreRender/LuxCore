@@ -212,6 +212,7 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_texture_densitygrid_funcs <<
 			slg::ocl::KernelSource_texture_fresnelcolor_funcs <<
 			slg::ocl::KernelSource_texture_fresnelconst_funcs <<
+			slg::ocl::KernelSource_texture_hitpoint_funcs <<
 			slg::ocl::KernelSource_texture_hsv_funcs <<
 			slg::ocl::KernelSource_texture_irregulardata_funcs <<
 			slg::ocl::KernelSource_texture_triplanar_funcs <<
@@ -443,6 +444,8 @@ void PathOCLBaseOCLRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePa
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), uvsBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), colsBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), alphasBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), vertexAOVBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), triAOVBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), trianglesBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), interpolatedTransformsBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), cameraBuff);

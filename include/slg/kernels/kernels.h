@@ -94,6 +94,7 @@ extern std::string KernelSource_texture_colordepth_funcs;
 extern std::string KernelSource_texture_densitygrid_funcs;
 extern std::string KernelSource_texture_fresnelcolor_funcs;
 extern std::string KernelSource_texture_fresnelconst_funcs;
+extern std::string KernelSource_texture_hitpoint_funcs;
 extern std::string KernelSource_texture_hsv_funcs;
 extern std::string KernelSource_texture_irregulardata_funcs;
 extern std::string KernelSource_texture_others_funcs;

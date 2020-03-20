@@ -50,6 +50,8 @@ void CompiledScene::CompileGeometry() {
 	uvs.resize(0);
 	cols.resize(0);
 	alphas.resize(0);
+	vertexAOVs.resize(0);
+	triAOVs.resize(0);
 	tris.resize(0);
 	interpolatedTransforms.resize(0);
 	meshDescs.resize(0);
@@ -68,6 +70,8 @@ void CompiledScene::CompileGeometry() {
 	u_int uvsOffset = 0;
 	u_int colsOffset = 0;
 	u_int alphasOffset = 0;
+	u_int vertexAOVOffset = 0;
+	u_int triAOVOffset = 0;
 
 	auto InitMeshDesc = [&](slg::ocl::ExtMesh &dstMeshDesc, const ExtMesh &srcMesh) { 
         dstMeshDesc.vertsOffset = vertsOffset;
@@ -103,6 +107,18 @@ void CompiledScene::CompileGeometry() {
 				alphasOffset += srcMesh.GetTotalVertexCount();
 			} else
 				dstMeshDesc.alphasOffset[dataIndex] = NULL_INDEX;
+
+			if (srcMesh.HasVertexAOV(dataIndex)) {
+				dstMeshDesc.vertexAOVOffset[dataIndex] = vertexAOVOffset;
+				vertexAOVOffset += srcMesh.GetTotalVertexCount();
+			} else
+				dstMeshDesc.vertexAOVOffset[dataIndex] = NULL_INDEX;
+
+			if (srcMesh.HasTriAOV(dataIndex)) {
+				dstMeshDesc.triAOVOffset[dataIndex] = triAOVOffset;
+				triAOVOffset += srcMesh.GetTotalTriangleCount();
+			} else
+				dstMeshDesc.triAOVOffset[dataIndex] = NULL_INDEX;
 		}
     };
 
@@ -249,6 +265,24 @@ void CompiledScene::CompileGeometry() {
 				if (baseMesh->HasAlphas(dataIndex)) {
 					const float *a = baseMesh->GetAlphas(dataIndex);
 					alphas.insert(alphas.end(), a, a + baseMesh->GetTotalVertexCount());
+				}
+
+				//--------------------------------------------------------------
+				// Compile vertex AOVs
+				//--------------------------------------------------------------
+
+				if (baseMesh->HasVertexAOV(dataIndex)) {
+					const float *v = baseMesh->GetVertexAOVs(dataIndex);
+					vertexAOVs.insert(vertexAOVs.end(), v, v + baseMesh->GetTotalVertexCount());
+				}
+
+				//--------------------------------------------------------------
+				// Compile triangle AOVs
+				//--------------------------------------------------------------
+
+				if (baseMesh->HasTriAOV(dataIndex)) {
+					const float *t = baseMesh->GetTriAOVs(dataIndex);
+					triAOVs.insert(triAOVs.end(), t, t + baseMesh->GetTotalTriangleCount());
 				}
 			}
 

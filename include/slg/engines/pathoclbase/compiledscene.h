@@ -65,6 +65,8 @@ public:
 	std::vector<luxrays::UV> uvs;
 	std::vector<luxrays::Spectrum> cols;
 	std::vector<float> alphas;
+	std::vector<float> vertexAOVs;
+	std::vector<float> triAOVs;
 	std::vector<luxrays::Triangle> tris;
 	std::vector<luxrays::ocl::InterpolatedTransform> interpolatedTransforms;
 	std::vector<luxrays::ocl::ExtMesh> meshDescs;

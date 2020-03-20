@@ -375,114 +375,38 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		//----------------------------------------------------------------------
 		// HITPOINTCOLOR
 		//----------------------------------------------------------------------
-		case HITPOINTCOLOR: {
-			switch (evalType) {
-				case EVAL_FLOAT: {
-					const float eval = HitPointColorTexture_ConstEvaluateFloat(hitPoint,
-							texture->hitPointColor.dataIndex
-							TEXTURES_PARAM);
-					EvalStack_PushFloat(eval);
-					break;
-				}
-				case EVAL_SPECTRUM: {
-					const float3 eval = HitPointColorTexture_ConstEvaluateSpectrum(hitPoint,
-							texture->hitPointColor.dataIndex
-							TEXTURES_PARAM);
-					EvalStack_PushFloat3(eval);
-					break;
-				}
-				case EVAL_BUMP_GENERIC_OFFSET_U:
-					Texture_EvalOpGenericBumpOffsetU(evalStack, evalStackOffset,
-							hitPoint, sampleDistance);
-					break;
-				case EVAL_BUMP_GENERIC_OFFSET_V:
-					Texture_EvalOpGenericBumpOffsetV(evalStack, evalStackOffset,
-							hitPoint, sampleDistance);
-					break;
-				case EVAL_BUMP:
-					Texture_EvalOpGenericBump(evalStack, evalStackOffset,
-							hitPoint, sampleDistance);
-					break;
-				default:
-					// Something wrong here
-					break;
-			}
+		case HITPOINTCOLOR:
+			HitPointColorTexture_EvalOp(texture, evalType, evalStack, evalStackOffset,
+					hitPoint, sampleDistance TEXTURES_PARAM);
 			break;
-		}
 		//----------------------------------------------------------------------
 		// HITPOINTALPHA
 		//----------------------------------------------------------------------
-		case HITPOINTALPHA: {
-			switch (evalType) {
-				case EVAL_FLOAT: {
-					const float eval = HitPointAlphaTexture_ConstEvaluateFloat(hitPoint,
-							texture->hitPointAlpha.dataIndex
-							TEXTURES_PARAM);
-					EvalStack_PushFloat(eval);
-					break;
-				}
-				case EVAL_SPECTRUM: {
-					const float3 eval = HitPointAlphaTexture_ConstEvaluateSpectrum(hitPoint,
-							texture->hitPointAlpha.dataIndex
-							TEXTURES_PARAM);
-					EvalStack_PushFloat3(eval);
-					break;
-				}
-				case EVAL_BUMP_GENERIC_OFFSET_U:
-					Texture_EvalOpGenericBumpOffsetU(evalStack, evalStackOffset,
-							hitPoint, sampleDistance);
-					break;
-				case EVAL_BUMP_GENERIC_OFFSET_V:
-					Texture_EvalOpGenericBumpOffsetV(evalStack, evalStackOffset,
-							hitPoint, sampleDistance);
-					break;
-				case EVAL_BUMP:
-					Texture_EvalOpGenericBump(evalStack, evalStackOffset,
-							hitPoint, sampleDistance);
-					break;
-				default:
-					// Something wrong here
-					break;
-			}
+		case HITPOINTALPHA:
+			HitPointAlphaTexture_EvalOp(texture, evalType, evalStack, evalStackOffset,
+					hitPoint, sampleDistance TEXTURES_PARAM);
 			break;
-		}
 		//----------------------------------------------------------------------
 		// HITPOINTGREY
 		//----------------------------------------------------------------------
-		case HITPOINTGREY: {
-			switch (evalType) {
-				case EVAL_FLOAT: {
-					const float eval = HitPointGreyTexture_ConstEvaluateFloat(hitPoint,
-							texture->hitPointGrey.dataIndex, texture->hitPointGrey.channelIndex
-							TEXTURES_PARAM);
-					EvalStack_PushFloat(eval);
-					break;
-				}
-				case EVAL_SPECTRUM: {
-					const float3 eval = HitPointGreyTexture_ConstEvaluateSpectrum(hitPoint,
-							texture->hitPointGrey.dataIndex, texture->hitPointGrey.channelIndex
-							TEXTURES_PARAM);
-					EvalStack_PushFloat3(eval);
-					break;
-				}
-				case EVAL_BUMP_GENERIC_OFFSET_U:
-					Texture_EvalOpGenericBumpOffsetU(evalStack, evalStackOffset,
-							hitPoint, sampleDistance);
-					break;
-				case EVAL_BUMP_GENERIC_OFFSET_V:
-					Texture_EvalOpGenericBumpOffsetV(evalStack, evalStackOffset,
-							hitPoint, sampleDistance);
-					break;
-				case EVAL_BUMP:
-					Texture_EvalOpGenericBump(evalStack, evalStackOffset,
-							hitPoint, sampleDistance);
-					break;
-				default:
-					// Something wrong here
-					break;
-			}
+		case HITPOINTGREY:
+			HitPointGreyTexture_EvalOp(texture, evalType, evalStack, evalStackOffset,
+					hitPoint, sampleDistance TEXTURES_PARAM);
 			break;
-		}
+		//----------------------------------------------------------------------
+		// HITPOINTVERTEXAOV
+		//----------------------------------------------------------------------
+		case HITPOINTVERTEXAOV:
+			HitPointVertexAOVTexture_EvalOp(texture, evalType, evalStack, evalStackOffset,
+					hitPoint, sampleDistance TEXTURES_PARAM);
+			break;
+		//----------------------------------------------------------------------
+		// HITPOINTTRIANGLEAOV
+		//----------------------------------------------------------------------
+		case HITPOINTTRIANGLEAOV:
+			HitPointTriangleAOVTexture_EvalOp(texture, evalType, evalStack, evalStackOffset,
+					hitPoint, sampleDistance TEXTURES_PARAM);
+			break;
 		//----------------------------------------------------------------------
 		// NORMALMAP_TEX
 		//----------------------------------------------------------------------

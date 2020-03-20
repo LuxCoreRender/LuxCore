@@ -83,6 +83,8 @@ PathOCLBaseOCLRenderThread::PathOCLBaseOCLRenderThread(const u_int index,
 	uvsBuff = nullptr;
 	colsBuff = nullptr;
 	alphasBuff = nullptr;
+	vertexAOVBuff = nullptr;
+	triAOVBuff = nullptr;
 	trianglesBuff = nullptr;
 	interpolatedTransformsBuff = nullptr;
 	cameraBuff = nullptr;
@@ -199,6 +201,8 @@ void PathOCLBaseOCLRenderThread::Stop() {
 	FreeOCLBuffer(&uvsBuff);
 	FreeOCLBuffer(&colsBuff);
 	FreeOCLBuffer(&alphasBuff);
+	FreeOCLBuffer(&vertexAOVBuff);
+	FreeOCLBuffer(&triAOVBuff);
 	FreeOCLBuffer(&trianglesBuff);
 	FreeOCLBuffer(&interpolatedTransformsBuff);
 	FreeOCLBuffer(&vertsBuff);
