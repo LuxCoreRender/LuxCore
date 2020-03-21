@@ -132,6 +132,12 @@ public:
 		const luxrays::Transform &trans);
 	void DefineMesh(const std::string &motMeshName, const std::string &meshName,
 		const luxrays::MotionSystem &ms);
+
+	void SetMeshVertexAOV(const std::string &meshName,
+		const unsigned int index, float *data);
+	void SetMeshTriangleAOV(const std::string &meshName,
+		const unsigned int index, float *data);
+
 	// Strands shape
 	void DefineStrands(const std::string &shapeName, const luxrays::cyHairFile &strandsFile,
 		const StrendsShape::TessellationType tesselType,

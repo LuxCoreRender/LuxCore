@@ -169,6 +169,10 @@ public:
 		std::array<float *, LC_MESH_MAX_DATA_COUNT> *uv,
 		std::array<float *, LC_MESH_MAX_DATA_COUNT> *cols,
 		std::array<float *, LC_MESH_MAX_DATA_COUNT> *alphas);
+	void SetMeshVertexAOV(const std::string &meshName,
+		const unsigned int index, float *data);
+	void SetMeshTriangleAOV(const std::string &meshName,
+		const unsigned int index, float *data);
 
 	void SaveMesh(const std::string &meshName, const std::string &fileName);
 	void DefineStrands(const std::string &shapeName, const luxrays::cyHairFile &strandsFile,

@@ -222,6 +222,18 @@ static void CreateBox(Scene *scene, const string &objName, const string &meshNam
 			// Define the object with 2 x UV sets
 			scene->DefineMeshExt(meshName, 24, 12, (float *)p, (unsigned int *)vi, NULL, &uvs, NULL, NULL);
 		}
+
+		/*
+		// To test vertex AOV
+		float *vertexAOV = new float[8];
+		fill(vertexAOV, vertexAOV + 8, 1.f);
+		scene->SetMeshVertexAOV(meshName, 0, vertexAOV);
+
+		// To test triangle AOV
+		float *triangleAOV = new float[6];
+		fill(triangleAOV, triangleAOV + 6, 1.f);
+		scene->SetMeshTriangleAOV(meshName, 0, triangleAOV);
+		*/
 	}
 
 	// Add the object to the scene

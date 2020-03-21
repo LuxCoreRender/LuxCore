@@ -807,7 +807,7 @@ public:
 	/*!
 	 * \brief This is a special version of Scene::DefineMesh() used to define
 	 * meshes with multiple set of UVs, Colors and/or Alphas.
-	 * NOTE: the array of UVs, Colors and ALphas pointers can be freed after the
+	 * NOTE: the array of UVs, Colors and Alphas pointers can be freed after the
 	 * call however freeing of memory for the vertices, triangle indices, etc.
 	 * depends on the setting of SetDeleteMeshData().
 	 *
@@ -832,6 +832,32 @@ public:
 		std::array<float *, LC_MESH_MAX_DATA_COUNT> *uvs,
 		std::array<float *, LC_MESH_MAX_DATA_COUNT> *cols,
 		std::array<float *, LC_MESH_MAX_DATA_COUNT> *alphas) = 0;
+	/*!
+	 * \brief Set a mesh geometry vertex AOV (i.e. generic data associated to
+	 * vertices and used by textures and more).
+	 * NOTE: the array can be freed after the
+	 * call however freeing of memory for the vertices, triangle indices, etc.
+	 * depends on the setting of SetDeleteMeshData().
+	 *
+	 * \param meshName is the name of the defined mesh.
+	 * \param index of AOV to set.
+	 * \param data to use for the AOV.
+	 */
+	virtual void SetMeshVertexAOV(const std::string &meshName,
+			const unsigned int index, float *data) = 0;
+	/*!
+	 * \brief Set a mesh geometry triangle AOV (i.e. generic data associated to
+	 * triangles and used by textures and more).
+	 * NOTE: the array can be freed after the
+	 * call however freeing of memory for the vertices, triangle indices, etc.
+	 * depends on the setting of SetDeleteMeshData().
+	 *
+	 * \param meshName is the name of the defined mesh.
+	 * \param index of AOV to set.
+	 * \param data to use for the AOV.
+	 */
+	virtual void SetMeshTriangleAOV(const std::string &meshName,
+			const unsigned int index, float *data) = 0;
 	/*!
 	 * \brief Save a previously defined mesh to file system in PLY or BPY format.
 	 *

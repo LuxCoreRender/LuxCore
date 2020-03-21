@@ -1133,15 +1133,15 @@ static void Scene_DefineMeshExt1(luxcore::detail::SceneImpl *scene, const string
 	// Translate all colors
 	array<luxrays::Spectrum *, LC_MESH_MAX_DATA_COUNT> colors;
 	fill(colors.begin(), colors.end(), nullptr);
-	if (!uv.is_none()) {
-		extract<boost::python::list> getColorsArray(uv);
+	if (!cols.is_none()) {
+		extract<boost::python::list> getColorsArray(cols);
 
 		if (getColorsArray.check()) {
 			const boost::python::list &colorsArray = getColorsArray();
 			const boost::python::ssize_t colorsArraySize = luxrays::Min<boost::python::ssize_t>(len(colorsArray), LC_MESH_MAX_DATA_COUNT);
 
 			for (boost::python::ssize_t j= 0; j < colorsArraySize; ++j) {
-				extract<boost::python::list> getColorsList(uv);
+				extract<boost::python::list> getColorsList(cols);
 
 				if (getColorsList.check()) {
 					const boost::python::list &l = getColorsList();
@@ -1162,12 +1162,12 @@ static void Scene_DefineMeshExt1(luxcore::detail::SceneImpl *scene, const string
 						}
 					}
 				} else {
-					const string objType = extract<string>((uv.attr("__class__")).attr("__name__"));
+					const string objType = extract<string>((cols.attr("__class__")).attr("__name__"));
 					throw runtime_error("Wrong data type for the list of colors of method Scene.DefineMeshExt(): " + objType);
 				}
 			}
 		} else {
-			const string objType = extract<string>((uv.attr("__class__")).attr("__name__"));
+			const string objType = extract<string>((cols.attr("__class__")).attr("__name__"));
 			throw runtime_error("Wrong data type for the list of colors of method Scene.DefineMeshExt(): " + objType);
 		}
 	}
@@ -1175,18 +1175,18 @@ static void Scene_DefineMeshExt1(luxcore::detail::SceneImpl *scene, const string
 	// Translate all alphas
 	array<float *, LC_MESH_MAX_DATA_COUNT> as;
 	fill(as.begin(), as.end(), nullptr);
-	if (!uv.is_none()) {
-		extract<boost::python::list> getColorsArray(uv);
+	if (!alphas.is_none()) {
+		extract<boost::python::list> getColorsArray(alphas);
 
 		if (getColorsArray.check()) {
 			const boost::python::list &asArray = getColorsArray();
 			const boost::python::ssize_t asArraySize = luxrays::Min<boost::python::ssize_t>(len(asArray), LC_MESH_MAX_DATA_COUNT);
 
 			for (boost::python::ssize_t j= 0; j < asArraySize; ++j) {
-				extract<boost::python::list> getColorsList(uv);
+				extract<boost::python::list> getAlphasList(alphas);
 
-				if (getColorsList.check()) {
-					const boost::python::list &l = getColorsList();
+				if (getAlphasList.check()) {
+					const boost::python::list &l = getAlphasList();
 					
 					if (!l.is_none()) {
 						const boost::python::ssize_t size = len(l);
@@ -1196,12 +1196,12 @@ static void Scene_DefineMeshExt1(luxcore::detail::SceneImpl *scene, const string
 							as[j][i] = extract<float>(l[i]);
 					}
 				} else {
-					const string objType = extract<string>((uv.attr("__class__")).attr("__name__"));
+					const string objType = extract<string>((alphas.attr("__class__")).attr("__name__"));
 					throw runtime_error("Wrong data type for the list of alphas of method Scene.DefineMeshExt(): " + objType);
 				}
 			}
 		} else {
-			const string objType = extract<string>((uv.attr("__class__")).attr("__name__"));
+			const string objType = extract<string>((alphas.attr("__class__")).attr("__name__"));
 			throw runtime_error("Wrong data type for the list of alphas of method Scene.DefineMeshExt(): " + objType);
 		}
 	}
@@ -1224,6 +1224,28 @@ static void Scene_DefineMeshExt2(luxcore::detail::SceneImpl *scene, const string
 		const boost::python::object &n, const boost::python::object &uv,
 		const boost::python::object &cols, const boost::python::object &alphas) {
 	Scene_DefineMeshExt1(scene, meshName, p, vi, n, uv, cols, alphas, boost::python::object());
+}
+
+static void Scene_SetMeshVertexAOV(luxcore::detail::SceneImpl *scene, const string &meshName,
+		const u_int index, const boost::python::object &data) {
+	vector<float> v;
+	GetArray<float>(data, v);
+	
+	float *vcpy = new float[v.size()];
+	copy(v.begin(), v.end(), vcpy);
+
+	scene->SetMeshVertexAOV(meshName, index, vcpy);
+}
+
+static void Scene_SetMeshTriangleAOV(luxcore::detail::SceneImpl *scene, const string &meshName,
+		const u_int index, const boost::python::object &data) {
+	vector<float> t;
+	GetArray<float>(data, t);
+	
+	float *tcpy = new float[t.size()];
+	copy(t.begin(), t.end(), tcpy);
+
+	scene->SetMeshTriangleAOV(meshName, index, tcpy);
 }
 
 static void Scene_SetMeshAppliedTransformation(luxcore::detail::SceneImpl *scene,
@@ -1952,6 +1974,8 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("DefineMesh", &Scene_DefineMesh2)
 		.def("DefineMeshExt", &Scene_DefineMeshExt1)
 		.def("DefineMeshExt", &Scene_DefineMeshExt2)
+		.def("SetMeshVertexAOV", &Scene_SetMeshVertexAOV)
+		.def("SetMeshTriangleAOV", &Scene_SetMeshTriangleAOV)
 		.def("SetMeshAppliedTransformation", &Scene_SetMeshAppliedTransformation)
 		.def("SaveMesh", &luxcore::detail::SceneImpl::SaveMesh)
 		.def("DefineBlenderMesh", &blender::Scene_DefineBlenderMesh1)
