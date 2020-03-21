@@ -5,11 +5,19 @@ List of python packages required to run the tests and demos:
 
 - Pillow (to install "pip install pillow" (Linux) or "easy_install pillow" (Windows))
 
-Compile perceptualdiff:
+Compile perceptualdiff on Linux:
 
 cd deps/perceptualdiff-master
 cmake .
 make
+
+Compile perceptualdiff on Windows:
+
+cd deps/perceptualdiff-master
+cmake -G "Visual Studio 15 2017" -T v141,host=x64 -A x64 -D FREEIMAGE_ROOT=..\..\..\WindowsCompileDeps .
+set CL=/DFREEIMAGE_LIB
+msbuild /toolsversion:15.0 /p:Configuration=Release /p:Platform=x64 perceptualdiff.sln
+copy Release\perceptualdiff.exe .
 
 Unit tests
 ==========
