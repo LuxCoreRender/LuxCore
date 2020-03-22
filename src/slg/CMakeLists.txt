@@ -298,6 +298,9 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/textures/hitpoint/texture_hitpoint_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/mapping/mapping_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/mapping/mapping_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/textures/math/texture_abs_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/textures/math/texture_clamp_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/textures/math/texture_random_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_funcs_evalops.cl
@@ -306,11 +309,9 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_blender_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_bump_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_noise_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_abs_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_bilerp_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_blackbody_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_brick_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_clamp_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_colordepth_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_densitygrid_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_hsv_funcs.cl
@@ -548,6 +549,7 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/textures/math/mixtex.cpp
     ${LuxRays_SOURCE_DIR}/src/slg/textures/math/modulo.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/math/power.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/math/random.cpp
     ${LuxRays_SOURCE_DIR}/src/slg/textures/math/remap.cpp
     ${LuxRays_SOURCE_DIR}/src/slg/textures/math/rounding.cpp  
 	${LuxRays_SOURCE_DIR}/src/slg/textures/math/scale.cpp
@@ -679,6 +681,7 @@ set(SLG_KERNEL_SRCS
 	${generated_kernels_dir}/texture_hsv_funcs_kernel.cpp
 	${generated_kernels_dir}/texture_irregulardata_funcs_kernel.cpp
 	${generated_kernels_dir}/texture_others_funcs_kernel.cpp
+	${generated_kernels_dir}/texture_random_funcs_kernel.cpp
 	${generated_kernels_dir}/texture_triplanar_funcs_kernel.cpp
 	${generated_kernels_dir}/evalstack_funcs_kernel.cpp
 	${generated_kernels_dir}/pathdepthinfo_types_kernel.cpp

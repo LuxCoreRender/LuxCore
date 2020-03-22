@@ -217,6 +217,7 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_texture_irregulardata_funcs <<
 			slg::ocl::KernelSource_texture_triplanar_funcs <<
 			slg::ocl::KernelSource_texture_others_funcs <<
+			slg::ocl::KernelSource_texture_random_funcs <<
 			slg::ocl::KernelSource_texture_funcs_evalops <<
 			slg::ocl::KernelSource_texture_funcs;
 

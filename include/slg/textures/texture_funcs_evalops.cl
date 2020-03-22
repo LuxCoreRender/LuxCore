@@ -530,83 +530,17 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		//----------------------------------------------------------------------
 		// ABS_TEX
 		//----------------------------------------------------------------------
-		case ABS_TEX: {
-			switch (evalType) {
-				case EVAL_FLOAT: {
-					float tex1;
-					EvalStack_PopFloat(tex1);
-
-					const float eval = AbsTexture_ConstEvaluateFloat(tex1);
-					EvalStack_PushFloat(eval);
-					break;
-				}
-				case EVAL_SPECTRUM: {
-					float3 tex1;
-					EvalStack_PopFloat3(tex1);
-
-					const float3 eval = AbsTexture_ConstEvaluateSpectrum(tex1);
-					EvalStack_PushFloat3(eval);
-					break;
-				}
-				case EVAL_BUMP_GENERIC_OFFSET_U:
-					Texture_EvalOpGenericBumpOffsetU(evalStack, evalStackOffset,
-							hitPoint, sampleDistance);
-					break;
-				case EVAL_BUMP_GENERIC_OFFSET_V:
-					Texture_EvalOpGenericBumpOffsetV(evalStack, evalStackOffset,
-							hitPoint, sampleDistance);
-					break;
-				case EVAL_BUMP:
-					Texture_EvalOpGenericBump(evalStack, evalStackOffset,
-							hitPoint, sampleDistance);
-					break;
-				default:
-					// Something wrong here
-					break;
-			}
+		case ABS_TEX:
+			AbsTexture_EvalOp(texture, evalType, evalStack, evalStackOffset,
+					hitPoint, sampleDistance TEXTURES_PARAM);
 			break;
-		}
 		//----------------------------------------------------------------------
 		// CLAMP_TEX
 		//----------------------------------------------------------------------
-		case CLAMP_TEX: {
-			switch (evalType) {
-				case EVAL_FLOAT: {
-					float tex1;
-					EvalStack_PopFloat(tex1);
-
-					const float eval = ClampTexture_ConstEvaluateFloat(tex1,
-							texture->clampTex.minVal, texture->clampTex.maxVal);
-					EvalStack_PushFloat(eval);
-					break;
-				}
-				case EVAL_SPECTRUM: {
-					float3 tex1;
-					EvalStack_PopFloat3(tex1);
-
-					const float3 eval = ClampTexture_ConstEvaluateSpectrum(tex1,
-							texture->clampTex.minVal, texture->clampTex.maxVal);
-					EvalStack_PushFloat3(eval);
-					break;
-				}
-				case EVAL_BUMP_GENERIC_OFFSET_U:
-					Texture_EvalOpGenericBumpOffsetU(evalStack, evalStackOffset,
-							hitPoint, sampleDistance);
-					break;
-				case EVAL_BUMP_GENERIC_OFFSET_V:
-					Texture_EvalOpGenericBumpOffsetV(evalStack, evalStackOffset,
-							hitPoint, sampleDistance);
-					break;
-				case EVAL_BUMP:
-					Texture_EvalOpGenericBump(evalStack, evalStackOffset,
-							hitPoint, sampleDistance);
-					break;
-				default:
-					// Something wrong here
-					break;
-			}
+		case CLAMP_TEX:
+			ClampTexture_EvalOp(texture, evalType, evalStack, evalStackOffset,
+					hitPoint, sampleDistance TEXTURES_PARAM);
 			break;
-		}
 		//----------------------------------------------------------------------
 		// BILERP_TEX
 		//----------------------------------------------------------------------
@@ -1912,6 +1846,13 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 			}
 			break;
 		}
+		//----------------------------------------------------------------------
+		// RANDOM_TEX
+		//----------------------------------------------------------------------
+		case RANDOM_TEX:
+			RandomTexture_EvalOp(texture, evalType, evalStack, evalStackOffset,
+					hitPoint, sampleDistance TEXTURES_PARAM);
+			break;
 		//----------------------------------------------------------------------
 		default:
 			// Something wrong here

@@ -1,5 +1,3 @@
-#line 2 "texture_clamp_funcs.cl"
-
 /***************************************************************************
  * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
@@ -18,16 +16,35 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "luxrays/core/randomgen.h"
+#include "slg/textures/math/random.h"
+
+using namespace std;
+using namespace luxrays;
+using namespace slg;
+
 //------------------------------------------------------------------------------
-// Clamp texture
+// Random texture
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_INLINE float ClampTexture_ConstEvaluateFloat(const float v,
-		const float minVal, const float maxVal) {
-	return clamp(v, minVal, maxVal);
+float RandomTexture::GetFloatValue(const HitPoint &hitPoint) const {
+	const u_int seed = (int)tex->GetFloatValue(hitPoint);
+
+	TauswortheRandomGenerator rnd(seed);
+
+	return rnd.floatValue();
 }
 
-OPENCL_FORCE_INLINE float3 ClampTexture_ConstEvaluateSpectrum(const float3 v,
-		const float minVal, const float maxVal) {
-	return clamp(v, minVal, maxVal);
+Spectrum RandomTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
+	return Spectrum(GetFloatValue(hitPoint));
+}
+
+Properties RandomTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	Properties props;
+
+	const string name = GetName();
+	props.Set(Property("scene.textures." + name + ".type")("random"));
+	props.Set(Property("scene.textures." + name + ".texture")(tex->GetSDLValue()));
+
+	return props;
 }

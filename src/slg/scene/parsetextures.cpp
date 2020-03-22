@@ -69,6 +69,7 @@
 #include "slg/textures/math/mix.h"
 #include "slg/textures/math/modulo.h"
 #include "slg/textures/math/power.h"
+#include "slg/textures/math/random.h"
 #include "slg/textures/math/remap.h"
 #include "slg/textures/math/rounding.h"
 #include "slg/textures/math/scale.h"
@@ -594,6 +595,9 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const bool enableUVlessBumpMap = props.Get(Property(propName + ".uvlessbumpmap.enable")(true)).Get<bool>();
 		tex = new TriplanarTexture(CreateTextureMapping3D(propName + ".mapping", props),
 				t1, t2, t3, dataIndex, enableUVlessBumpMap);
+    } else if (texType == "random") {
+		const Texture *texture = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
+		tex = new RandomTexture(texture);
 	} else
 		throw runtime_error("Unknown texture type: " + texType);
 

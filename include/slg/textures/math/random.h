@@ -1,5 +1,3 @@
-#line 2 "texture_abs_funcs.cl"
-
 /***************************************************************************
  * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
@@ -18,14 +16,50 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#ifndef _SLG_RANDOMTEX_H
+#define	_SLG_RANDOMTEX_H
+
+#include "slg/textures/texture.h"
+
+namespace slg {
+
 //------------------------------------------------------------------------------
-// Abs texture
+// Random texture
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_INLINE float AbsTexture_ConstEvaluateFloat(const float v) {
-	return fabs(v);
+class RandomTexture : public Texture {
+public:
+	RandomTexture(const Texture *t) : tex(t) { }
+	virtual ~RandomTexture() { }
+
+	virtual TextureType GetType() const { return RANDOM_TEX; }
+	virtual float GetFloatValue(const HitPoint &hitPoint) const;
+	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
+	virtual float Y() const { return luxrays::Spectrum(.5f).Y(); }
+	virtual float Filter() const { return .5f; }
+
+	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
+		Texture::AddReferencedTextures(referencedTexs);
+
+		tex->AddReferencedTextures(referencedTexs);
+	}
+	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
+		tex->AddReferencedImageMaps(referencedImgMaps);
+	}
+
+	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
+		if (tex == oldTex)
+			tex = newTex;
+	}
+
+	const Texture *GetTexture() const { return tex; }
+
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
+
+private:
+	const Texture *tex;
+};
+
 }
 
-OPENCL_FORCE_INLINE float3 AbsTexture_ConstEvaluateSpectrum(const float3 v) {
-	return fabs(v);
-}
+#endif	/* _SLG_RANDOMTEX_H */

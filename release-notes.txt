@@ -13,6 +13,7 @@
 * New hitpointvertexaov nad hitpointtriangleaov textures
 * Pointiness shape can now assign curvature values to vertex AOV with .aovindex property (a 4294967296 value will force the use of alpha channel instead, defualt value for compatibility with the past)
 * LuxCore API has now SetMeshVertexAOV() and SetMeshTriangleAOV() methods to set geometry vertex and triangle AOV
+* Added the support for new Random texture
 
 ### Fixed Bugs
 
