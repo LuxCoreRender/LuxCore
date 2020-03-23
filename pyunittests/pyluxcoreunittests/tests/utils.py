@@ -149,10 +149,11 @@ def CompareImage(a, b):
 		return False, count, new
 	else:
 		return True, 0, None
-	
+
+diffexe = os.path.realpath("../deps/perceptualdiff-master/perceptualdiff")
 def CompareImageFiles(testCase, resultImageName, refImageName):
 	if os.path.isfile(refImageName):
-		sameImage = (subprocess.call("../deps/perceptualdiff-master/perceptualdiff --down-sample 2 \'" + resultImageName + "\' \'" + refImageName + "\'", shell=True) == 0)
+		sameImage = (subprocess.call(diffexe + " " + resultImageName + " " + refImageName + " --down-sample 2", shell=True) == 0)
 
 		if not sameImage:
 			# Read the result image
