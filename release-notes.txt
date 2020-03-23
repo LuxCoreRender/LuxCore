@@ -15,6 +15,7 @@
 * LuxCore API has now SetMeshVertexAOV() and SetMeshTriangleAOV() methods to set geometry vertex and triangle AOV
 * Added the support for new Random texture
 * Added the support for the new IslandAOV shape
+* Accelerated duplicate vertex detection in pointiness shape (from 6.7 seconds to 0.016 seconds on a 100k vertex mesh)
 
 ### Fixed Bugs
 
