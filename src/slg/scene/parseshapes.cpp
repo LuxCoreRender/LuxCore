@@ -35,6 +35,7 @@
 #include "slg/shapes/displacement.h"
 #include "slg/shapes/harlequinshape.h"
 #include "slg/shapes/simplify.h"
+#include "slg/shapes/islandaovshape.h"
 
 using namespace std;
 using namespace luxrays;
@@ -328,6 +329,14 @@ ExtTriangleMesh *Scene::CreateShape(const string &shapeName, const Properties &p
 		
 		shape = new SimplifyShape(camera, (ExtTriangleMesh *)extMeshCache.GetExtMesh(sourceMeshName),
 				target, edgeScreenSize, preserveBorder);
+	} else if (shapeType == "islandaov") {
+		const string sourceMeshName = props.Get(Property(propName + ".source")("")).Get<string>();
+		if (!extMeshCache.IsExtMeshDefined(sourceMeshName))
+			throw runtime_error("Unknown shape name in a islandaov shape: " + shapeName);
+
+		const u_int dataIndex = Clamp(props.Get(Property(propName + ".dataindex")(0u)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
+		
+		shape = new IslandAOVShape((ExtTriangleMesh *)extMeshCache.GetExtMesh(sourceMeshName), dataIndex);
 	} else
 		throw runtime_error("Unknown shape type: " + shapeType);
 
