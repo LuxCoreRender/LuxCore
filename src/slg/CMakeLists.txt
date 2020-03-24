@@ -503,6 +503,7 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/shapes/islandaovshape.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/shapes/meshshape.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/shapes/pointiness.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/shapes/randomtriangleaovshape.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/shapes/shape.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/shapes/simplify.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/shapes/strands.cpp

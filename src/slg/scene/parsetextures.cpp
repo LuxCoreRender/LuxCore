@@ -597,7 +597,8 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 				t1, t2, t3, dataIndex, enableUVlessBumpMap);
     } else if (texType == "random") {
 		const Texture *texture = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
-		tex = new RandomTexture(texture);
+		const u_int seedOffset = props.Get(Property(propName + ".seed")(0u)).Get<u_int>();
+		tex = new RandomTexture(texture, seedOffset);
 	} else
 		throw runtime_error("Unknown texture type: " + texType);
 

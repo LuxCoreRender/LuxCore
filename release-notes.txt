@@ -15,6 +15,7 @@
 * LuxCore API has now SetMeshVertexAOV() and SetMeshTriangleAOV() methods to set geometry vertex and triangle AOV
 * Added the support for new Random texture
 * Added the support for the new IslandAOV shape
+* Added the support for RandomTriangleAOV shape
 
 ### Fixed Bugs
 

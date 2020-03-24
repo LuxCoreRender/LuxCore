@@ -36,6 +36,7 @@
 #include "slg/shapes/harlequinshape.h"
 #include "slg/shapes/simplify.h"
 #include "slg/shapes/islandaovshape.h"
+#include "slg/shapes/randomtriangleaovshape.h"
 
 using namespace std;
 using namespace luxrays;
@@ -337,7 +338,18 @@ ExtTriangleMesh *Scene::CreateShape(const string &shapeName, const Properties &p
 		const u_int dataIndex = Clamp(props.Get(Property(propName + ".dataindex")(0u)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
 		
 		shape = new IslandAOVShape((ExtTriangleMesh *)extMeshCache.GetExtMesh(sourceMeshName), dataIndex);
+	} else if (shapeType == "randomtriangleaov") {
+		const string sourceMeshName = props.Get(Property(propName + ".source")("")).Get<string>();
+		if (!extMeshCache.IsExtMeshDefined(sourceMeshName))
+			throw runtime_error("Unknown shape name in a randomtriangleaov shape: " + shapeName);
+
+		const u_int srcDataIndex = Clamp(props.Get(Property(propName + ".srcdataindex")(0u)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
+		const u_int dstDataIndex = Clamp(props.Get(Property(propName + ".dstdataindex")(0u)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
+		
+		shape = new RandomTriangleAOVShape((ExtTriangleMesh *)extMeshCache.GetExtMesh(sourceMeshName),
+				srcDataIndex, dstDataIndex);
 	} else
+		
 		throw runtime_error("Unknown shape type: " + shapeType);
 
 	ExtTriangleMesh *mesh = shape->Refine(this);

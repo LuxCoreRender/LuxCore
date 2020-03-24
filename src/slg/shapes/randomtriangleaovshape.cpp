@@ -16,36 +16,55 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <unordered_map>
+
+#include <boost/format.hpp>
+#include <boost/pending/disjoint_sets.hpp>
+
 #include "luxrays/core/randomgen.h"
-#include "slg/textures/math/random.h"
+#include "luxrays/core/exttrianglemesh.h"
+#include "slg/shapes/randomtriangleaovshape.h"
+#include "slg/scene/scene.h"
 
 using namespace std;
 using namespace luxrays;
 using namespace slg;
 
-//------------------------------------------------------------------------------
-// Random texture
-//------------------------------------------------------------------------------
+RandomTriangleAOVShape::RandomTriangleAOVShape(luxrays::ExtTriangleMesh *srcMesh,
+		const u_int srcDataIndex, const u_int dstDataIndex) {
+	SDL_LOG("RandomTriangleAOV shape " << srcMesh->GetName());
 
-float RandomTexture::GetFloatValue(const HitPoint &hitPoint) const {
-	const u_int seed = (int)tex->GetFloatValue(hitPoint);
+	if (!srcMesh->HasTriAOV(srcDataIndex)) {
+		SDL_LOG("RandomTriangleAOV shape has no triangle AOV: " << srcDataIndex);
+		mesh = srcMesh->Copy();
+		return;
+	}
+	
+	const double startTime = WallClockTime();
 
-	TauswortheRandomGenerator rnd(seed + seedOffset);
+	const u_int triCount = srcMesh->GetTotalTriangleCount();
+	float *dstTriAOV = new float[triCount];
+	for (u_int i = 0; i < triCount; ++i) {
+		// Use here the same algorithm used in RandomTexture
+		const u_int seed = (int)srcMesh->GetTriAOV(i, srcDataIndex);
 
-	return rnd.floatValue();
+		TauswortheRandomGenerator rnd(seed);
+
+		dstTriAOV[i] = rnd.floatValue();
+	}
+	
+	mesh = srcMesh->Copy();
+	mesh->SetTriAOV(dstDataIndex, &dstTriAOV[0]);
+
+	const double endTime = WallClockTime();
+	SDL_LOG("RandomTriangleAOV time: " << (boost::format("%.3f") % (endTime - startTime)) << "secs");
 }
 
-Spectrum RandomTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
-	return Spectrum(GetFloatValue(hitPoint));
+RandomTriangleAOVShape::~RandomTriangleAOVShape() {
+	if (!refined)
+		delete mesh;
 }
 
-Properties RandomTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
-	Properties props;
-
-	const string name = GetName();
-	props.Set(Property("scene.textures." + name + ".type")("random"));
-	props.Set(Property("scene.textures." + name + ".texture")(tex->GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".seed")(seedOffset));
-
-	return props;
+ExtTriangleMesh *RandomTriangleAOVShape::RefineImpl(const Scene *scene) {
+	return mesh;
 }

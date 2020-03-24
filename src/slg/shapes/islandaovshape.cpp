@@ -46,12 +46,14 @@ IslandAOVShape::IslandAOVShape(luxrays::ExtTriangleMesh *srcMesh, const u_int da
 	const u_int vertexCount = srcMesh->GetTotalVertexCount();
 	const u_int triCount = srcMesh->GetTotalTriangleCount();
 	const Triangle *tris = srcMesh->GetTriangles();
-
+	SDL_LOG("IslandAOV shape vertex count: " << vertexCount);
+	SDL_LOG("IslandAOV shape triangle count: " << triCount);
 
 	// Built a mapping to have all very near vertices 
 	vector<u_int> uniqueVertices(vertexCount);
 	vector<bool> uniqueVerticesDone(vertexCount, false);
 	u_int uniqueVertCount = 0;
+	double lastPrintTime = WallClockTime();
 	for (u_int i = 0; i < vertexCount; ++i) {
 		if (uniqueVerticesDone[i])
 			continue;
@@ -71,6 +73,12 @@ IslandAOVShape::IslandAOVShape(luxrays::ExtTriangleMesh *srcMesh, const u_int da
 				uniqueVertices[j] = i;
 				uniqueVerticesDone[j] = true;
 			}
+		}
+
+		const double now = WallClockTime();
+		if (now - lastPrintTime > 2.0) {
+			SLG_LOG("IslandAOV finding unique vertices: " << i << "/" << vertexCount);
+			lastPrintTime = now;
 		}
 	}
 	SDL_LOG("IslandAOV shape has " << uniqueVertCount << " unique vertices over " << vertexCount);
@@ -126,6 +134,8 @@ IslandAOVShape::IslandAOVShape(luxrays::ExtTriangleMesh *srcMesh, const u_int da
 		
 		triAOV[i] = islandIndex;
 	}
+	
+	SDL_LOG("IslandAOV shape island count: " << islandCount);
 
 	mesh = srcMesh->Copy();
 	mesh->SetTriAOV(dataIndex, &triAOV[0]);

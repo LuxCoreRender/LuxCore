@@ -29,7 +29,7 @@ namespace slg {
 
 class RandomTexture : public Texture {
 public:
-	RandomTexture(const Texture *t) : tex(t) { }
+	RandomTexture(const Texture *t, const u_int o) : tex(t), seedOffset(o) { }
 	virtual ~RandomTexture() { }
 
 	virtual TextureType GetType() const { return RANDOM_TEX; }
@@ -58,6 +58,7 @@ public:
 
 private:
 	const Texture *tex;
+	const u_int seedOffset;
 };
 
 }
