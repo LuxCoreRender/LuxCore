@@ -29,16 +29,7 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
-bool IslandAOVShape::IsSameVertex(const ExtTriangleMesh *srcMesh,
-		const u_int vertex1Index, const u_int vertex2Index) const {
-	if (DistanceSquared(srcMesh->GetVertex(Transform::TRANS_IDENTITY, vertex1Index),
-			srcMesh->GetVertex(Transform::TRANS_IDENTITY, vertex2Index)) > DEFAULT_EPSILON_STATIC)
-		return false;
-
-	return true;
-}
-
-IslandAOVShape::IslandAOVShape(luxrays::ExtTriangleMesh *srcMesh, const u_int dataIndex) {
+IslandAOVShape::IslandAOVShape(ExtTriangleMesh *srcMesh, const u_int dataIndex) {
 	SDL_LOG("IslandAOV shape " << srcMesh->GetName());
 
 	const double startTime = WallClockTime();
@@ -49,38 +40,18 @@ IslandAOVShape::IslandAOVShape(luxrays::ExtTriangleMesh *srcMesh, const u_int da
 	SDL_LOG("IslandAOV shape vertex count: " << vertexCount);
 	SDL_LOG("IslandAOV shape triangle count: " << triCount);
 
-	// Built a mapping to have all very near vertices 
-	vector<u_int> uniqueVertices(vertexCount);
-	vector<bool> uniqueVerticesDone(vertexCount, false);
-	u_int uniqueVertCount = 0;
-	double lastPrintTime = WallClockTime();
-	for (u_int i = 0; i < vertexCount; ++i) {
-		if (uniqueVerticesDone[i])
-			continue;
+	// Built a mapping to have all very near vertices
+	auto compareVerts = [](const TriangleMesh &mesh, const u_int vertIndex1, const u_int vertIndex2) {
+		const ExtTriangleMesh *triMesh = dynamic_cast<const ExtTriangleMesh *>(&mesh);
+		assert (triMesh);
 
-		// The current one is an unique vertex
-		uniqueVertices[i] = i;
-		++uniqueVertCount;
+		const Point v1 = triMesh->GetVertex(Transform::TRANS_IDENTITY, vertIndex1);
+		const Point v2 = triMesh->GetVertex(Transform::TRANS_IDENTITY, vertIndex2);
 
-		#pragma omp parallel for
-		for (
-				// Visual C++ 2013 supports only OpenMP 2.5
-#if _OPENMP >= 200805
-				unsigned
-#endif
-				int j = i + 1; j < vertexCount; ++j) {
-			if (IsSameVertex(srcMesh, i, j)) {
-				uniqueVertices[j] = i;
-				uniqueVerticesDone[j] = true;
-			}
-		}
-
-		const double now = WallClockTime();
-		if (now - lastPrintTime > 2.0) {
-			SLG_LOG("IslandAOV finding unique vertices: " << i << "/" << vertexCount);
-			lastPrintTime = now;
-		}
-	}
+		return (DistanceSquared(v1, v2) < DEFAULT_EPSILON_STATIC);
+	};
+	vector<u_int> uniqueVertices;
+	const u_int uniqueVertCount = srcMesh->GetUniqueVerticesMapping(uniqueVertices, compareVerts);
 	SDL_LOG("IslandAOV shape has " << uniqueVertCount << " unique vertices over " << vertexCount);
 
 	vector<u_int> triangleIndices(triCount);

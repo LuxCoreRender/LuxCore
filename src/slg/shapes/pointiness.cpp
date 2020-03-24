@@ -78,61 +78,19 @@ PointinessShape::PointinessShape(ExtTriangleMesh *srcMesh, const u_int destAOVIn
 	const Point *originalVertices = srcMesh->GetVertices();
 
 	// Find duplicate vertices
+	auto compareVerts = [](const TriangleMesh &mesh, const u_int vertIndex1, const u_int vertIndex2) {
+		const ExtTriangleMesh *triMesh = dynamic_cast<const ExtTriangleMesh *>(&mesh);
+		assert (triMesh);
 
-	vector<int> sortedVertIndices(originalVertCount);
-	for (int i = 0; i < originalVertCount; ++i) {
-		sortedVertIndices[i] = i;
-	}
-	VertexAverageComparator compare(originalVertices);
-	std::sort(sortedVertIndices.begin(), sortedVertIndices.end(), compare);
-
-	// This array stores index of the original vertex for the given vertex index.
-	vector<int> uniqueVertices(originalVertCount);
-	u_int uniqueVertCount = 0;
-
-	for (int sortedVertIndex = 0; sortedVertIndex < originalVertCount; ++sortedVertIndex) {
-		const int vertIndex = sortedVertIndices[sortedVertIndex];
-		const Point vertex = srcMesh->GetVertex(Transform::TRANS_IDENTITY, vertIndex);
-		bool isDuplicate = false;
-
-		for (int otherSortedVertIndex = sortedVertIndex + 1; otherSortedVertIndex < originalVertCount;
-				++otherSortedVertIndex) {
-			const int otherVertIndex = sortedVertIndices[otherSortedVertIndex];
-			const Point otherVertex = srcMesh->GetVertex(Transform::TRANS_IDENTITY, otherVertIndex);
-
-			if ((otherVertex.x + otherVertex.y + otherVertex.z)
-				- (vertex.x + vertex.y + vertex.z) > 3 * FLT_EPSILON) {
-				// We are too far away now, we wouldn't have a duplicate.
-				break;
-			}
-
-			if ((srcMesh->HasNormals() && (Dot(srcMesh->GetShadeNormal(Transform::TRANS_IDENTITY, vertIndex),
-					srcMesh->GetShadeNormal(Transform::TRANS_IDENTITY, otherVertIndex)) > 1.f - DEFAULT_EPSILON_STATIC))
-					&& DistanceSquared(vertex, otherVertex) < FLT_EPSILON) {
-				isDuplicate = true;
-				uniqueVertices[vertIndex] = otherVertIndex;
-				break;
-			}
-		}
-
-		if (!isDuplicate) {
-			uniqueVertices[vertIndex] = vertIndex;
-			++uniqueVertCount;
-		}
-	}
-
-	sortedVertIndices.resize(0);
-	sortedVertIndices.shrink_to_fit();
-
-	// Make sure we always points to the very first orig vertex.
-	for (int i = 0; i < originalVertCount; ++i) {
-		int origIndex = uniqueVertices[i];
-		while (origIndex != uniqueVertices[origIndex]) {
-			origIndex = uniqueVertices[origIndex];
-		}
-		uniqueVertices[i] = origIndex;
-	}
-	
+		return (DistanceSquared(
+					triMesh->GetVertex(Transform::TRANS_IDENTITY, vertIndex1),
+					triMesh->GetVertex(Transform::TRANS_IDENTITY, vertIndex2)) < DEFAULT_EPSILON_STATIC) &&
+				(triMesh->HasNormals() && Dot(
+					triMesh->GetShadeNormal(Transform::TRANS_IDENTITY, vertIndex1),
+					triMesh->GetShadeNormal(Transform::TRANS_IDENTITY, vertIndex2)));
+	};
+	vector<u_int> uniqueVertices;
+	const u_int uniqueVertCount = srcMesh->GetUniqueVerticesMapping(uniqueVertices, compareVerts);
 	SDL_LOG("Pointiness shape has " << uniqueVertCount << " unique vertices over " << originalVertCount);
 
 	const Triangle *tris = srcMesh->GetTriangles();
