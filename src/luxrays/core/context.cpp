@@ -219,7 +219,9 @@ vector<IntersectionDevice *> Context::AddIntersectionDevices(vector<DeviceDescri
 	vector<IntersectionDevice *> newDevices = CreateIntersectionDevices(deviceDesc, idevices.size());
 	for (size_t i = 0; i < newDevices.size(); ++i) {
 		idevices.push_back(newDevices[i]);
-		devices.push_back(newDevices[i]);
+
+		Device *dev = newDevices[i]; // Required by some old GCC version;
+		devices.push_back(dev);
 	}
 
 	return newDevices;
@@ -264,7 +266,9 @@ vector<HardwareDevice *> Context::AddHardwareDevices(vector<DeviceDescription *>
 	vector<HardwareDevice *> newDevices = CreateHardwareDevices(deviceDesc, hdevices.size());
 	for (size_t i = 0; i < newDevices.size(); ++i) {
 		hdevices.push_back(newDevices[i]);
-		devices.push_back(newDevices[i]);
+
+		Device *dev = newDevices[i]; // Required by some old GCC version;
+		devices.push_back(dev);
 	}
 
 	return newDevices;
