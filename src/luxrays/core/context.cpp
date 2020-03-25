@@ -25,10 +25,11 @@
 #include "luxrays/core/context.h"
 #include "luxrays/devices/nativeintersectiondevice.h"
 #if !defined(LUXRAYS_DISABLE_OPENCL)
+#include "luxrays/devices/ocldevice.h"
 #include "luxrays/devices/oclintersectiondevice.h"
-#include "luxrays/kernels/kernels.h"
 #endif
 
+using namespace std;
 using namespace luxrays;
 
 Context::Context(LuxRaysDebugHandler handler, const Properties &config) : cfg(config) {
@@ -68,7 +69,7 @@ Context::Context(LuxRaysDebugHandler handler, const Properties &config) : cfg(co
 			LR_LOG(this, "No OpenCL platform available");
 	} else {
 		if ((platforms.size() == 0) || (openclPlatformIndex >= (int)platforms.size()))
-			throw std::runtime_error("Unable to find an appropriate OpenCL platform");
+			throw runtime_error("Unable to find an appropriate OpenCL platform");
 		else {
 			OpenCLDeviceDescription::AddDeviceDescs(
 				platforms[openclPlatformIndex],
@@ -104,8 +105,8 @@ Context::~Context() {
 	if (started)
 		Stop();
 
-	for (size_t i = 0; i < idevices.size(); ++i)
-		delete idevices[i];
+	for (size_t i = 0; i < devices.size(); ++i)
+		delete devices[i];
 	for (size_t i = 0; i < deviceDescriptions.size(); ++i)
 		delete deviceDescriptions[i];
 }
@@ -138,8 +139,8 @@ void Context::UpdateDataSet() {
 void Context::Start() {
 	assert (!started);
 
-	for (size_t i = 0; i < idevices.size(); ++i)
-		idevices[i]->Start();
+	for (size_t i = 0; i < devices.size(); ++i)
+		devices[i]->Start();
 
 	started = true;
 }
@@ -147,8 +148,8 @@ void Context::Start() {
 void Context::Interrupt() {
 	assert (started);
 
-	for (size_t i = 0; i < idevices.size(); ++i)
-		idevices[i]->Interrupt();
+	for (size_t i = 0; i < devices.size(); ++i)
+		devices[i]->Interrupt();
 }
 
 void Context::Stop() {
@@ -156,27 +157,35 @@ void Context::Stop() {
 
 	Interrupt();
 
-	for (size_t i = 0; i < idevices.size(); ++i)
-		idevices[i]->Stop();
+	for (size_t i = 0; i < devices.size(); ++i)
+		devices[i]->Stop();
 
 	started = false;
 }
 
-const std::vector<DeviceDescription *> &Context::GetAvailableDeviceDescriptions() const {
+const vector<DeviceDescription *> &Context::GetAvailableDeviceDescriptions() const {
 	return deviceDescriptions;
 }
 
-const std::vector<IntersectionDevice *> &Context::GetIntersectionDevices() const {
+const vector<IntersectionDevice *> &Context::GetIntersectionDevices() const {
 	return idevices;
 }
 
-std::vector<IntersectionDevice *> Context::CreateIntersectionDevices(
-	std::vector<DeviceDescription *> &deviceDesc, const size_t indexOffset) {
+const vector<HardwareDevice *> &Context::GetHardwareDevices() const {
+	return hdevices;
+}
+
+const vector<Device *> &Context::GetDevices() const {
+	return devices;
+}
+
+vector<IntersectionDevice *> Context::CreateIntersectionDevices(
+	vector<DeviceDescription *> &deviceDesc, const size_t indexOffset) {
 	assert (!started);
 
 	LR_LOG(this, "Creating " << deviceDesc.size() << " intersection device(s)");
 
-	std::vector<IntersectionDevice *> newDevices;
+	vector<IntersectionDevice *> newDevices;
 	for (size_t i = 0; i < deviceDesc.size(); ++i) {
 		LR_LOG(this, "Allocating intersection device " << i << ": " << deviceDesc[i]->GetName() <<
 				" (Type = " << DeviceDescription::GetDeviceType(deviceDesc[i]->GetType()) << ")");
@@ -196,7 +205,7 @@ std::vector<IntersectionDevice *> Context::CreateIntersectionDevices(
 		}
 #endif
 		else
-			throw std::runtime_error("Unknown device type in Context::CreateIntersectionDevices(): " + ToString(deviceType));
+			throw runtime_error("Unknown device type in Context::CreateIntersectionDevices(): " + ToString(deviceType));
 
 		newDevices.push_back(device);
 	}
@@ -204,12 +213,59 @@ std::vector<IntersectionDevice *> Context::CreateIntersectionDevices(
 	return newDevices;
 }
 
-std::vector<IntersectionDevice *> Context::AddIntersectionDevices(std::vector<DeviceDescription *> &deviceDesc) {
+vector<IntersectionDevice *> Context::AddIntersectionDevices(vector<DeviceDescription *> &deviceDesc) {
 	assert (!started);
 
-	std::vector<IntersectionDevice *> newDevices = CreateIntersectionDevices(deviceDesc, idevices.size());
-	for (size_t i = 0; i < newDevices.size(); ++i)
+	vector<IntersectionDevice *> newDevices = CreateIntersectionDevices(deviceDesc, idevices.size());
+	for (size_t i = 0; i < newDevices.size(); ++i) {
 		idevices.push_back(newDevices[i]);
+		devices.push_back(newDevices[i]);
+	}
+
+	return newDevices;
+}
+
+vector<HardwareDevice *> Context::CreateHardwareDevices(
+	vector<DeviceDescription *> &deviceDesc, const size_t indexOffset) {
+	assert (!started);
+
+	LR_LOG(this, "Creating " << deviceDesc.size() << " hardware device(s)");
+
+	vector<HardwareDevice *> newDevices;
+	for (size_t i = 0; i < deviceDesc.size(); ++i) {
+		LR_LOG(this, "Allocating hardware device " << i << ": " << deviceDesc[i]->GetName() <<
+				" (Type = " << DeviceDescription::GetDeviceType(deviceDesc[i]->GetType()) << ")");
+
+		const DeviceType deviceType = deviceDesc[i]->GetType();
+		HardwareDevice *device;
+		if (deviceType == DEVICE_TYPE_NATIVE) {
+			throw runtime_error("Native devices are not supported as hardware devices in Context::CreateHardwareDevices()");
+		}
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+		else if (deviceType & DEVICE_TYPE_OPENCL_ALL) {
+			// OpenCL devices
+			OpenCLDeviceDescription *oclDeviceDesc = (OpenCLDeviceDescription *)deviceDesc[i];
+
+			device = new OpenCLDevice(this, oclDeviceDesc, indexOffset + i);
+		}
+#endif
+		else
+			throw runtime_error("Unknown device type in Context::CreateHardwareDevices(): " + ToString(deviceType));
+
+		newDevices.push_back(device);
+	}
+
+	return newDevices;
+}
+
+vector<HardwareDevice *> Context::AddHardwareDevices(vector<DeviceDescription *> &deviceDesc) {
+	assert (!started);
+
+	vector<HardwareDevice *> newDevices = CreateHardwareDevices(deviceDesc, hdevices.size());
+	for (size_t i = 0; i < newDevices.size(); ++i) {
+		hdevices.push_back(newDevices[i]);
+		devices.push_back(newDevices[i]);
+	}
 
 	return newDevices;
 }

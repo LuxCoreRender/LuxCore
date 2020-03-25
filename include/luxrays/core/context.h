@@ -49,10 +49,6 @@ typedef void (*LuxRaysDebugHandler)(const char *msg);
 
 #define LR_LOG(c, a) { if (c->HasDebugHandler() && c->IsVerbose()) { std::stringstream _LR_LOG_LOCAL_SS; _LR_LOG_LOCAL_SS << a; c->PrintDebugMsg(_LR_LOG_LOCAL_SS.str().c_str()); } }
 
-class DeviceDescription;
-class OpenCLDeviceDescription;
-class OpenCLIntersectionDevice;
-
 /*!
  * \brief Interface to all main LuxRays functions.
  *
@@ -103,11 +99,25 @@ public:
 	const std::vector<DeviceDescription *> &GetAvailableDeviceDescriptions() const;
 
 	/*!
-	 * \brief Return a list of all intersection device created within the Context.
+	 * \brief Return a list of all intersection devices created within the Context.
 	 *
 	 * \return the vector of all IntersectionDevice in the Context.
 	 */
 	const std::vector<IntersectionDevice *> &GetIntersectionDevices() const;
+
+	/*!
+	 * \brief Return a list of all hardware devices created within the Context.
+	 *
+	 * \return the vector of all HardwareDevice in the Context.
+	 */
+	const std::vector<HardwareDevice *> &GetHardwareDevices() const;
+
+	/*!
+	 * \brief Return a list of all devices created within the Context.
+	 *
+	 * \return the vector of all Device in the Context.
+	 */
+	const std::vector<Device *> &GetDevices() const;
 
 	/*!
 	 * \brief Create an IntersectionDevice within the Context.
@@ -117,6 +127,15 @@ public:
 	 * \return the vector of all IntersectionDevice created.
 	 */
 	std::vector<IntersectionDevice *> AddIntersectionDevices(std::vector<DeviceDescription *> &deviceDescs);
+
+	/*!
+	 * \brief Create an HardwareDevice within the Context.
+	 *
+	 * \param deviceDesc is a DeviceDescription vector of the devices to create
+	 *
+	 * \return the vector of all HardwareDevice created.
+	 */
+	std::vector<HardwareDevice *> AddHardwareDevices(std::vector<DeviceDescription *> &deviceDescs);
 
 	//--------------------------------------------------------------------------
 	// Methods dedicated to DataSet definition
@@ -156,6 +175,8 @@ public:
 private:
 	std::vector<IntersectionDevice *> CreateIntersectionDevices(
 		std::vector<DeviceDescription *> &deviceDesc, const size_t indexOffset);
+	std::vector<HardwareDevice *> CreateHardwareDevices(
+		std::vector<DeviceDescription *> &deviceDesc, const size_t indexOffset);
 
 	const Properties cfg;
 
@@ -166,6 +187,10 @@ private:
 
 	// All intersection devices
 	std::vector<IntersectionDevice *> idevices;
+	// All hardware devices
+	std::vector<HardwareDevice *> hdevices;
+	// All devices (idevices + hdevices)
+	std::vector<Device *> devices;
 
 	bool started, verbose;
 };
