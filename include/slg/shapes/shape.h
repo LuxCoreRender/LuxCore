@@ -39,7 +39,9 @@ public:
 		SUBDIV,
 		DISPLACEMENT,
 		HARLEQUIN,
-		SIMPLIFY
+		SIMPLIFY,
+		ISLANDAOV,
+		RANDOMTRIANGLEAOV
 	} ShapeType;
 
 	Shape() : refined(false) { }

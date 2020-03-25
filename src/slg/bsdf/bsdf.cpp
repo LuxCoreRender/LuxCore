@@ -130,15 +130,16 @@ void BSDF::Init(const bool fixedFromLight, const bool throughShadowTransparency,
 
 	triangleLightSource = NULL;
 
-	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
-		hitPoint.uv[i] = UV(0.f, 0.f);
-		hitPoint.color[i] = Spectrum(1.f);
-		hitPoint.alpha[i] = 1.f;
-	}
-		
+	hitPoint.defaultUV = UV(0.f, 0.f);
+
 	CoordinateSystem(Vector(hitPoint.shadeN), &hitPoint.dpdu, &hitPoint.dpdv);
 	hitPoint.dndu = Normal();
 	hitPoint.dndv = Normal();
+
+	hitPoint.mesh = nullptr;
+	hitPoint.triangleIndex = NULL_INDEX;
+	hitPoint.triangleBariCoord1 = 0.f;
+	hitPoint.triangleBariCoord2 = 0.f;
 
 	hitPoint.objectID = NULL_INDEX;
 
@@ -175,7 +176,7 @@ bool BSDF::HasBakeMap(const BakeMapType type) const {
 }
 
 Spectrum BSDF::GetBakeMapValue() const {
-	return sceneObject->GetBakeMapValue(hitPoint.uv[sceneObject->GetBakeMapUVIndex()]);
+	return sceneObject->GetBakeMapValue(hitPoint.GetUV(sceneObject->GetBakeMapUVIndex()));
 }
 
 //------------------------------------------------------------------------------

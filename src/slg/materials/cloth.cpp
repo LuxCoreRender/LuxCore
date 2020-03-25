@@ -537,7 +537,8 @@ float ClothMaterial::EvalSpecular(const slg::ocl::Yarn *yarn,const UV &uv, float
 Spectrum ClothMaterial::Albedo(const HitPoint &hitPoint) const {
 	UV uv;
 	float umax, scale = specularNormalization;
-	const slg::ocl::Yarn *yarn = GetYarn(hitPoint.uv[0].u, hitPoint.uv[0].v, &uv, &umax, &scale);
+	const UV hitPountUV = hitPoint.GetUV(0);
+	const slg::ocl::Yarn *yarn = GetYarn(hitPountUV.u, hitPountUV.v, &uv, &umax, &scale);
 	
 	const Texture *kd = yarn->yarn_type == slg::ocl::WARP ? Warp_Kd :  Weft_Kd;
 
@@ -557,7 +558,8 @@ Spectrum ClothMaterial::Evaluate(const HitPoint &hitPoint,
 
 	UV uv;
 	float umax, scale = specularNormalization;
-	const slg::ocl::Yarn *yarn = GetYarn(hitPoint.uv[0].u, hitPoint.uv[0].v, &uv, &umax, &scale);
+	const UV hitPountUV = hitPoint.GetUV(0);
+	const slg::ocl::Yarn *yarn = GetYarn(hitPountUV.u, hitPountUV.v, &uv, &umax, &scale);
 	
 	scale = scale * EvalSpecular(yarn, uv, umax, localLightDir, localEyeDir);
 	
@@ -582,7 +584,8 @@ Spectrum ClothMaterial::Sample(const HitPoint &hitPoint,
 	
 	UV uv;
 	float umax, scale = specularNormalization;
-	const slg::ocl::Yarn *yarn = GetYarn(hitPoint.uv[0].u, hitPoint.uv[0].v, &uv, &umax, &scale);
+	const UV hitPountUV = hitPoint.GetUV(0);
+	const slg::ocl::Yarn *yarn = GetYarn(hitPountUV.u, hitPountUV.v, &uv, &umax, &scale);
 	
 	if (!hitPoint.fromLight)
 	    scale = scale * EvalSpecular(yarn, uv, umax, localFixedDir, *localSampledDir);

@@ -1,5 +1,3 @@
-#line 2 "texture_abs_funcs.cl"
-
 /***************************************************************************
  * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
@@ -18,14 +16,28 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-//------------------------------------------------------------------------------
-// Abs texture
-//------------------------------------------------------------------------------
+#ifndef _SLG_ISLANDAOVSHAPE_H
+#define	_SLG_ISLANDAOVSHAPE_H
 
-OPENCL_FORCE_INLINE float AbsTexture_ConstEvaluateFloat(const float v) {
-	return fabs(v);
+#include <string>
+
+#include "slg/shapes/shape.h"
+
+namespace slg {
+
+class IslandAOVShape : public Shape {
+public:
+	IslandAOVShape(luxrays::ExtTriangleMesh *srcMesh, const u_int dataIndex);
+	virtual ~IslandAOVShape();
+
+	virtual ShapeType GetType() const { return ISLANDAOV; }
+
+protected:
+	virtual luxrays::ExtTriangleMesh *RefineImpl(const Scene *scene);
+
+	luxrays::ExtTriangleMesh *mesh;
+};
+
 }
 
-OPENCL_FORCE_INLINE float3 AbsTexture_ConstEvaluateSpectrum(const float3 v) {
-	return fabs(v);
-}
+#endif	/* _SLG_ISLANDAOVSHAPE_H */

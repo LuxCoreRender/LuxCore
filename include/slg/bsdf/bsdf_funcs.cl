@@ -127,11 +127,7 @@ OPENCL_FORCE_NOT_INLINE void BSDF_InitVolume(
 
 	bsdf->triangleLightSourceIndex = NULL_INDEX;
 
-	for (uint i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
-		VSTORE2F((float2)(0.f, 0.f), &bsdf->hitPoint.uv[i].u);
-		VSTORE3F(WHITE, bsdf->hitPoint.color[i].c);
-		bsdf->hitPoint.alpha[i] = 1.f;
-	}
+	VSTORE2F((float2)(0.f, 0.f), &bsdf->hitPoint.defaultUV.u);
 
 	float3 dpdu, dpdv;
 	CoordinateSystem(geometryN, &dpdu, &dpdv);
@@ -139,6 +135,11 @@ OPENCL_FORCE_NOT_INLINE void BSDF_InitVolume(
 	VSTORE3F(dpdv, &bsdf->hitPoint.dpdv.x);
 	VSTORE3F((float3)(0.f, 0.f, 0.f), &bsdf->hitPoint.dndu.x);
 	VSTORE3F((float3)(0.f, 0.f, 0.f), &bsdf->hitPoint.dndv.x);
+
+	bsdf->hitPoint.meshIndex = NULL_INDEX;
+	bsdf->hitPoint.triangleIndex = NULL_INDEX;
+	bsdf->hitPoint.triangleBariCoord1 = 0.f;
+	bsdf->hitPoint.triangleBariCoord2 = 0.f;
 
 	bsdf->hitPoint.objectID = NULL_INDEX;
 
@@ -357,7 +358,7 @@ OPENCL_FORCE_INLINE float3 BSDF_GetBakeMapValue(__global const BSDF *bsdf
 	__global const ImageMap *imageMap = &imageMapDescs[mapIndex];
 
 	const uint uvIndex = sceneObjs[bsdf->sceneObjectIndex].bakeMapUVIndex;
-	const float2 uv = VLOAD2F(&bsdf->hitPoint.uv[uvIndex].u);
+	const float2 uv = HitPoint_GetUV(&bsdf->hitPoint, uvIndex EXTMESH_PARAM);
 
 	return ImageMap_GetSpectrum(
 			imageMap,

@@ -382,13 +382,13 @@ typedef struct {
 	, __global const MaterialEvalOp* restrict matEvalOps \
 	, __global float *matEvalStacks \
 	, const uint maxMaterialEvalStackSize \
-	TEXTURES_PARAM_DECL SCENE_PARAM_DECL
+	TEXTURES_PARAM_DECL
 #define MATERIALS_PARAM \
 	, mats \
 	, matEvalOps \
 	, matEvalStacks \
 	, maxMaterialEvalStackSize \
-	TEXTURES_PARAM SCENE_PARAM
+	TEXTURES_PARAM
 
 #define MATERIAL_EVALUATE_RETURN_BLACK { \
 		const float3 result = BLACK; \

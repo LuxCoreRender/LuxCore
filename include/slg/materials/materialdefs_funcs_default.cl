@@ -99,8 +99,7 @@ OPENCL_FORCE_INLINE void DefaultMaterial_GetEmittedRadiance(__global const Mater
 	const uint emitTexIndex = material->emitTexIndex;
 	const float3 emittedRadiance = (emitTexIndex == NULL_INDEX) ?
 		BLACK :
-		(VLOAD3F(hitPoint->color[0].c) *
-		VLOAD3F(material->emittedFactor.c) *
+		(VLOAD3F(material->emittedFactor.c) *
 		(material->usePrimitiveArea ? oneOverPrimitiveArea : 1.f) *
 		clamp(Texture_GetSpectrumValue(emitTexIndex, hitPoint
 				TEXTURES_PARAM), BLACK, INFINITY));

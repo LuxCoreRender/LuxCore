@@ -252,7 +252,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 		sampleResult->materialID = BSDF_GetMaterialID(bsdf
 				MATERIALS_PARAM);
 		sampleResult->objectID = BSDF_GetObjectID(bsdf, sceneObjs);
-		sampleResult->uv = bsdf->hitPoint.uv[0];
+		sampleResult->uv = bsdf->hitPoint.defaultUV;
 	}
 
 	//----------------------------------------------------------------------

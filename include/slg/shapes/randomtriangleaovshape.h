@@ -1,5 +1,3 @@
-#line 2 "texture_clamp_funcs.cl"
-
 /***************************************************************************
  * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
@@ -18,16 +16,29 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-//------------------------------------------------------------------------------
-// Clamp texture
-//------------------------------------------------------------------------------
+#ifndef _SLG_RANDOMTRIANGLEAOVSHAPE_H
+#define	_SLG_RANDOMTRIANGLEAOVSHAPE_H
 
-OPENCL_FORCE_INLINE float ClampTexture_ConstEvaluateFloat(const float v,
-		const float minVal, const float maxVal) {
-	return clamp(v, minVal, maxVal);
+#include <string>
+
+#include "slg/shapes/shape.h"
+
+namespace slg {
+
+class RandomTriangleAOVShape : public Shape {
+public:
+	RandomTriangleAOVShape(luxrays::ExtTriangleMesh *srcMesh,
+			const u_int srcDataIndex, const u_int dstDataIndex);
+	virtual ~RandomTriangleAOVShape();
+
+	virtual ShapeType GetType() const { return RANDOMTRIANGLEAOV; }
+
+protected:
+	virtual luxrays::ExtTriangleMesh *RefineImpl(const Scene *scene);
+
+	luxrays::ExtTriangleMesh *mesh;
+};
+
 }
 
-OPENCL_FORCE_INLINE float3 ClampTexture_ConstEvaluateSpectrum(const float3 v,
-		const float minVal, const float maxVal) {
-	return clamp(v, minVal, maxVal);
-}
+#endif	/* _SLG_RANDOMTRIANGLEAOVSHAPE_H */

@@ -86,6 +86,18 @@ void PathOCLBaseOCLRenderThread::InitGeometry() {
 	else
 		intersectionDevice->FreeBuffer(&alphasBuff);
 
+	if (cscene->vertexAOVs.size() > 0)
+		intersectionDevice->AllocBufferRO(&vertexAOVBuff, &cscene->vertexAOVs[0],
+			sizeof(float) * cscene->vertexAOVs.size(), "Vertex AOVs");
+	else
+		intersectionDevice->FreeBuffer(&vertexAOVBuff);
+
+	if (cscene->triAOVs.size() > 0)
+		intersectionDevice->AllocBufferRO(&triAOVBuff, &cscene->triAOVs[0],
+			sizeof(float) * cscene->triAOVs.size(), "Triangle AOVs");
+	else
+		intersectionDevice->FreeBuffer(&triAOVBuff);
+
 	intersectionDevice->AllocBufferRO(&triNormalsBuff, &cscene->triNormals[0],
 				sizeof(Normal) * cscene->triNormals.size(), "Triangle normals");
 

@@ -550,6 +550,16 @@ void SceneImpl::DefineMeshExt(const std::string &meshName,
 			&slgUVs, &slgCols, &slgAlphas);
 }
 
+void SceneImpl::SetMeshVertexAOV(const string &meshName,
+		const unsigned int index, float *data) {
+	scene->SetMeshVertexAOV(meshName, index, data);
+}
+
+void SceneImpl::SetMeshTriangleAOV(const string &meshName,
+		const unsigned int index, float *data) {
+	scene->SetMeshTriangleAOV(meshName, index, data);
+}
+
 void SceneImpl::SaveMesh(const string &meshName, const string &fileName) {
 	const ExtMesh *mesh = scene->extMeshCache.GetExtMesh(meshName);
 	mesh->Save(fileName);

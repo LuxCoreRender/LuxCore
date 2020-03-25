@@ -20,7 +20,6 @@ scene.textures.tex.type = triplanar
 scene.textures.tex.texture1 = scaled_bumpmap
 scene.textures.tex.texture2 = scaled_bumpmap
 scene.textures.tex.texture3 = scaled_bumpmap
-scene.textures.tex.uvindex = 0
 scene.textures.tex.uvlessbumpmap.enable = 1
 scene.textures.tex.mapping.type = localmapping3d
 ################################################################################

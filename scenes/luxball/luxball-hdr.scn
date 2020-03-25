@@ -6,16 +6,30 @@ scene.camera.focaldistance = 2.0
 scene.camera.autofocus.enable = 1
 #scene.camera.screenwindow = -1 0 -1 1
 ################################################################################
+#scene.textures.postex.type = position
+#scene.textures.scaletex.type = scale
+#scene.textures.scaletex.texture1 = postex
+#scene.textures.scaletex.texture2 = 50.0
+#scene.textures.rndtex.type = random
+#scene.textures.rndtex.texture = scaletex
+################################################################################
 scene.materials.shell.type = mirror
 scene.materials.shell.kr = 0.75 0.75 0.75
 scene.materials.shell.id = 255
+##
+#scene.materials.shell.type = matte
+#scene.materials.shell.kd = rndtex
+##
 #scene.materials.shell.type = matte
 #scene.materials.shell.kd = 0.75 0.75 0.75
+##
 #scene.materials.whitematte.type = matte
 #scene.materials.whitematte.kd = 0.05 0.05 0.05
 #scene.materials.whitematte.shadowcatcher.enable = 1
+##
 scene.materials.whitematte.type = matte
 scene.materials.whitematte.kd = 0.75 0.75 0.75
+##
 scene.materials.luxtext.type = matte
 scene.materials.luxtext.kd = 0.0 0.0 0.75
 scene.materials.blacktext.type = matte

@@ -116,6 +116,10 @@ public:
 
 	virtual void ApplyTransform(const Transform &trans);
 
+	u_int GetUniqueVerticesMapping(std::vector<u_int> &uniqueVertices,
+			bool (*CompareVertices)(const TriangleMesh &mesh,
+				const u_int vertIndex1, const u_int vertIndex2)) const;
+
 	static Point *AllocVerticesBuffer(const u_int meshVertCount) {
 		// Embree requires a float padding field at the end
 		float *buffer = new float[3 * meshVertCount + 1];

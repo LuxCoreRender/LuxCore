@@ -88,6 +88,11 @@ OPENCL_FORCE_INLINE float Triangle_InterpolateAlpha(const float a0, const float 
 	return b0 * a0 + b1 * a1 + b2 * a2;
 }
 
+OPENCL_FORCE_INLINE float Triangle_InterpolateVertexAOV(const float v0, const float v1, const float v2,
+		const float b0, const float b1, const float b2) {
+	return b0 * v0 + b1 * v1 + b2 * v2;
+}
+
 OPENCL_FORCE_INLINE void Triangle_Intersect(
 		const float3 rayOrig,
 		const float3 rayDir,

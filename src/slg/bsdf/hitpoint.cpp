@@ -31,7 +31,7 @@ using namespace std;
 // Note: This is also _not_ initializing volume related information.
 
 void HitPoint::Init(const bool fixedFromLight, const bool throughShadowTransp,
-		const Scene &scene, const u_int meshIndex, const u_int triangleIndex,
+		const Scene &scene, const u_int meshIndex, const u_int triIndex,
 		const Point &pnt, const Vector &dir,
 		const float b1, const float b2,
 		const float passThroughEvnt) {
@@ -46,8 +46,11 @@ void HitPoint::Init(const bool fixedFromLight, const bool throughShadowTransp,
 	const SceneObject *sceneObject = scene.objDefs.GetSceneObject(meshIndex);
 	objectID = sceneObject->GetID();
 	
-	// Get the triangle
-	const ExtMesh *mesh = sceneObject->GetExtMesh();
+	// Mesh information
+	mesh = sceneObject->GetExtMesh();
+	triangleIndex = triIndex;
+	triangleBariCoord1 = b1;
+	triangleBariCoord2 = b2;
 
 	// Interpolate face normal
 	geometryN = mesh->GetGeometryNormal(localToWorld, triangleIndex);
@@ -55,16 +58,8 @@ void HitPoint::Init(const bool fixedFromLight, const bool throughShadowTransp,
 	shadeN = interpolatedN;
 	intoObject = (Dot(-fixedDir, geometryN) < 0.f);
 
-	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
-		// Interpolate UV coordinates
-		uv[i] = mesh->InterpolateTriUV(triangleIndex, b1, b2, i);
-
-		// Interpolate color
-		color[i] = mesh->InterpolateTriColor(triangleIndex, b1, b2, i);
-
-		// Interpolate alpha
-		alpha[i] = mesh->InterpolateTriAlpha(triangleIndex, b1, b2, i);
-	}
+	// Interpolate UV coordinates
+	defaultUV = mesh->InterpolateTriUV(triangleIndex, b1, b2, 0);
 
 	// Compute geometry differentials (always with the first set of UVs)
 	mesh->GetDifferentials(localToWorld,
@@ -79,11 +74,8 @@ void HitPoint::Init(const bool fixedFromLight, const bool throughShadowTransp,
 
 // Initialize all fields (i.e. the one missing a default constructor)
 void HitPoint::Init() {
-	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
-		color[i] = Spectrum(1.f);
-		alpha[i] = 1.f;
-	}
-	
+	mesh = nullptr;
+
 	passThroughEvent = 0.f;
 	interiorVolume = nullptr;
 	exteriorVolume = nullptr;

@@ -70,7 +70,7 @@ UV UVMapping2D::MapDuv(const HitPoint &hitPoint, UV *ds, UV *dt) const {
 	*ds = UV(signUScale * cosTheta, signUScale * sinTheta);
 	*dt = UV(-signVScale * sinTheta, signVScale * cosTheta);
 
-	return Map(hitPoint.uv[dataIndex]);
+	return Map(hitPoint.GetUV(dataIndex));
 }
 
 Properties UVMapping2D::ToProperties(const std::string &name) const {
@@ -90,7 +90,8 @@ Point UVMapping3D::Map(const HitPoint &hitPoint, Normal *shadeN) const {
 	if (shadeN)
 		*shadeN = Normalize(worldToLocal * hitPoint.shadeN);
 
-	return worldToLocal * Point(hitPoint.uv[dataIndex].u, hitPoint.uv[dataIndex].v, 0.f);
+	const UV uv = hitPoint.GetUV(dataIndex);
+	return worldToLocal * Point(uv.u, uv.v, 0.f);
 }
 
 Properties UVMapping3D::ToProperties(const std::string &name) const {

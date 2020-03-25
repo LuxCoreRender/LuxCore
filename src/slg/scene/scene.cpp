@@ -221,6 +221,16 @@ void Scene::DefineMeshExt(const string &shapeName,
 	DefineMesh(mesh);
 }
 
+void Scene::SetMeshVertexAOV(const string &meshName,
+		const unsigned int index, float *data) {
+	extMeshCache.SetMeshVertexAOV(meshName, index, data);
+}
+
+void Scene::SetMeshTriangleAOV(const string &meshName,
+		const unsigned int index, float *data) {
+	extMeshCache.SetMeshTriangleAOV(meshName, index, data);
+}
+
 void Scene::DefineMesh(const string &instMeshName, const string &meshName,
 		const Transform &trans) {
 	ExtMesh *mesh = extMeshCache.GetExtMesh(meshName);

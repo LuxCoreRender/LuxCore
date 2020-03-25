@@ -411,6 +411,10 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 		, __global const Spectrum* restrict vertCols
 #define KERNEL_ARGS_ALPHAS_BUFFER \
 		, __global const float* restrict vertAlphas
+#define KERNEL_ARGS_VERTEXAOVS_BUFFER \
+		, __global const float* restrict vertexAOVs
+#define KERNEL_ARGS_TRIAOVS_BUFFER \
+		, __global const float* restrict triAOVs
 
 #define KERNEL_ARGS_ENVLIGHTS \
 		, __global const uint* restrict envLightIndices \
@@ -474,6 +478,8 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 		KERNEL_ARGS_UVS_BUFFER \
 		KERNEL_ARGS_COLS_BUFFER \
 		KERNEL_ARGS_ALPHAS_BUFFER \
+		KERNEL_ARGS_VERTEXAOVS_BUFFER \
+		KERNEL_ARGS_TRIAOVS_BUFFER \
 		, __global const Triangle* restrict triangles \
 		, __global const InterpolatedTransform* restrict interpolatedTransforms \
 		, __global const Camera* restrict camera \

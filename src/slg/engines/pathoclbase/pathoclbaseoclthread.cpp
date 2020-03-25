@@ -83,6 +83,8 @@ PathOCLBaseOCLRenderThread::PathOCLBaseOCLRenderThread(const u_int index,
 	uvsBuff = nullptr;
 	colsBuff = nullptr;
 	alphasBuff = nullptr;
+	vertexAOVBuff = nullptr;
+	triAOVBuff = nullptr;
 	trianglesBuff = nullptr;
 	interpolatedTransformsBuff = nullptr;
 	cameraBuff = nullptr;
@@ -199,6 +201,7 @@ void PathOCLBaseOCLRenderThread::Stop() {
 	intersectionDevice->FreeBuffer(&uvsBuff);
 	intersectionDevice->FreeBuffer(&colsBuff);
 	intersectionDevice->FreeBuffer(&alphasBuff);
+	intersectionDevice->FreeBuffer(&triAOVBuff);
 	intersectionDevice->FreeBuffer(&trianglesBuff);
 	intersectionDevice->FreeBuffer(&interpolatedTransformsBuff);
 	intersectionDevice->FreeBuffer(&vertsBuff);
@@ -218,6 +221,7 @@ void PathOCLBaseOCLRenderThread::Stop() {
 	intersectionDevice->FreeBuffer(&lightIndexOffsetByMeshIndexBuff);
 	intersectionDevice->FreeBuffer(&lightIndexByTriIndexBuff);
 	intersectionDevice->FreeBuffer(&imageMapDescsBuff);
+
 	for (u_int i = 0; i < imageMapsBuff.size(); ++i)
 		intersectionDevice->FreeBuffer(&imageMapsBuff[i]);
 	imageMapsBuff.resize(0);

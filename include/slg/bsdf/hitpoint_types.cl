@@ -27,13 +27,16 @@ typedef struct {
 	Normal interpolatedN;
 	Normal shadeN;
 
-	UV uv[EXTMESH_MAX_DATA_COUNT];
-	Spectrum color[EXTMESH_MAX_DATA_COUNT];
-	float alpha[EXTMESH_MAX_DATA_COUNT];
+	UV defaultUV;
 
 	// Note: dpdu and dpdv are orthogonal to shading normal (i.e not geometry normal)
 	Vector dpdu, dpdv;
 	Normal dndu, dndv;
+
+	// Mesh information
+	unsigned int meshIndex;
+	unsigned int triangleIndex;
+	float triangleBariCoord1, triangleBariCoord2;
 
 	// passThroughEvent can be stored here in a path state even before of
 	// BSDF initialization (while tracing the next path vertex ray)

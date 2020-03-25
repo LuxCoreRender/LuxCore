@@ -48,6 +48,7 @@
 #include "slg/textures/fresnel/fresnelpreset.h"
 #include "slg/textures/fresnel/fresnelsopra.h"
 #include "slg/textures/fresnel/fresneltexture.h"
+#include "slg/textures/hitpoint/hitpointaov.h"
 #include "slg/textures/hitpoint/hitpointcolor.h"
 #include "slg/textures/hitpoint/position.h"
 #include "slg/textures/hitpoint/shadingnormal.h"
@@ -65,6 +66,7 @@
 #include "slg/textures/math/mix.h"
 #include "slg/textures/math/modulo.h"
 #include "slg/textures/math/power.h"
+#include "slg/textures/math/random.h"
 #include "slg/textures/math/remap.h"
 #include "slg/textures/math/rounding.h"
 #include "slg/textures/math/scale.h"
@@ -262,6 +264,8 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 		case slg::ocl::HITPOINTCOLOR:
 		case slg::ocl::HITPOINTALPHA:
 		case slg::ocl::HITPOINTGREY:
+		case slg::ocl::HITPOINTVERTEXAOV:
+		case slg::ocl::HITPOINTTRIANGLEAOV:
 		case slg::ocl::CLOUD_TEX:
 		case slg::ocl::FBM_TEX:
 		case slg::ocl::MARBLE:
@@ -863,6 +867,22 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 				case slg::ocl::TextureEvalOpType::EVAL_FLOAT:
 				case slg::ocl::TextureEvalOpType::EVAL_SPECTRUM: {
 					evalOpStackSize += CompileTextureOps(tex->band.amountTexIndex, slg::ocl::TextureEvalOpType::EVAL_FLOAT);
+					break;
+				}
+				case slg::ocl::TextureEvalOpType::EVAL_BUMP: {
+					evalOpStackSize += CompileTextureOpsGenericBumpMap(texIndex);
+					break;
+				}
+				default:
+					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(" + ToString(tex->type) + "): " + ToString(opType));
+			}
+			break;
+		}
+		case slg::ocl::RANDOM_TEX: {
+			switch (opType) {
+				case slg::ocl::TextureEvalOpType::EVAL_FLOAT:
+				case slg::ocl::TextureEvalOpType::EVAL_SPECTRUM: {
+					evalOpStackSize += CompileTextureOps(tex->randomTex.texIndex, slg::ocl::TextureEvalOpType::EVAL_FLOAT);
 					break;
 				}
 				case slg::ocl::TextureEvalOpType::EVAL_BUMP: {
@@ -1761,6 +1781,20 @@ void CompiledScene::CompileTextures() {
 				tex->hitPointGrey.channelIndex = hpg->GetChannel();
 				break;
 			}
+			case HITPOINTVERTEXAOV: {
+				const HitPointVertexAOVTexture *hpv = static_cast<const HitPointVertexAOVTexture *>(t);
+
+				tex->type = slg::ocl::HITPOINTVERTEXAOV;
+				tex->hitPointVertexAOV.dataIndex = hpv->GetDataIndex();
+				break;
+			}
+			case HITPOINTTRIANGLEAOV: {
+				const HitPointTriangleAOVTexture *hpt = static_cast<const HitPointTriangleAOVTexture *>(t);
+
+				tex->type = slg::ocl::HITPOINTTRIANGLEAOV;
+				tex->hitPointTriangleAOV.dataIndex = hpt->GetDataIndex();
+				break;
+			}
             case NORMALMAP_TEX: {
                 const NormalMapTexture *nmt = static_cast<const NormalMapTexture *>(t);
 
@@ -1998,8 +2032,15 @@ void CompiledScene::CompileTextures() {
 				tex->triplanarTex.tex2Index = scene->texDefs.GetTextureIndex(t2);
 				const Texture *t3 = trit->GetTexture3();
 				tex->triplanarTex.tex3Index = scene->texDefs.GetTextureIndex(t3);
-				tex->triplanarTex.uvIndex = trit->GetUVIndex();
 				tex->triplanarTex.enableUVlessBumpMap = trit->IsUVlessBumpMap();
+				break;
+			}
+			case RANDOM_TEX: {
+				const RandomTexture *rt = static_cast<const RandomTexture *>(t);
+
+				tex->type = slg::ocl::RANDOM_TEX;
+				const Texture *t1 = rt->GetTexture();
+				tex->randomTex.texIndex = scene->texDefs.GetTextureIndex(t1);
 				break;
 			}
 			default:

@@ -126,6 +126,8 @@ ExtTriangleMesh::ExtTriangleMesh(const u_int meshVertCount, const u_int meshTriC
 	fill(uvs.begin(), uvs.end(), nullptr);
 	fill(cols.begin(), cols.end(), nullptr);
 	fill(alphas.begin(), alphas.end(), nullptr);
+	fill(vertAOV.begin(), vertAOV.end(), nullptr);
+	fill(triAOV.begin(), triAOV.end(), nullptr);
 
 	array<UV *, EXTMESH_MAX_DATA_COUNT> meshUVs;
 	fill(meshUVs.begin(), meshUVs.end(), nullptr);
@@ -154,6 +156,8 @@ ExtTriangleMesh::ExtTriangleMesh(const u_int meshVertCount, const u_int meshTriC
 	fill(uvs.begin(), uvs.end(), nullptr);
 	fill(cols.begin(), cols.end(), nullptr);
 	fill(alphas.begin(), alphas.end(), nullptr);
+	fill(vertAOV.begin(), vertAOV.end(), nullptr);
+	fill(triAOV.begin(), triAOV.end(), nullptr);
 
 	Init(meshNormals, meshUVs, meshCols, meshAlphas);
 }
@@ -207,6 +211,10 @@ void ExtTriangleMesh::Delete() {
 		delete[] c;
 	for (float *a : alphas)
 		delete[] a;
+	for (float *v : vertAOV)
+		delete[] v;
+	for (float *t : triAOV)
+		delete[] t;
 }
 
 Normal *ExtTriangleMesh::ComputeNormals() {
@@ -266,6 +274,20 @@ void ExtTriangleMesh::ApplyTransform(const Transform &trans) {
 	Preprocess();
 }
 
+void ExtTriangleMesh::CopyAOV(ExtMesh *destMesh) const {
+	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
+		if (HasVertexAOV(i)) {
+			float *v = new float[vertCount];
+			copy(&vertAOV[i][0], &vertAOV[i][0] + vertCount, v);
+		}
+
+		if (HasTriAOV(i)) {
+			float *t = new float[triCount];
+			copy(&triAOV[i][0], &triAOV[i][0] + triCount, t);
+		}
+	}
+}
+
 ExtTriangleMesh *ExtTriangleMesh::CopyExt(Point *meshVertices, Triangle *meshTris, Normal *meshNormals,
 		array<UV *, EXTMESH_MAX_DATA_COUNT> *meshUVs,
 		array<Spectrum *, EXTMESH_MAX_DATA_COUNT> *meshCols,
@@ -313,6 +335,9 @@ ExtTriangleMesh *ExtTriangleMesh::CopyExt(Point *meshVertices, Triangle *meshTri
 
 	ExtTriangleMesh *m = new ExtTriangleMesh(vertCount, triCount, vs, ts, ns, &us, &cs, &as);
 	m->appliedTrans = appliedTrans;
+	
+	// Copy AOV too
+	CopyAOV(m);
 
 	return m;
 }
@@ -358,6 +383,8 @@ ExtTriangleMesh *ExtTriangleMesh::Merge(const vector<const ExtTriangleMesh *> &m
 	array<UV *, EXTMESH_MAX_DATA_COUNT> meshUVs;
 	array<Spectrum *, EXTMESH_MAX_DATA_COUNT> meshCols;
 	array<float *, EXTMESH_MAX_DATA_COUNT> meshAlphas;
+	array<float *, EXTMESH_MAX_DATA_COUNT> meshVertAOV;
+	array<float *, EXTMESH_MAX_DATA_COUNT> meshTriAOV;
 
 	if (meshes[0]->HasNormals())
 		meshNormals = new Normal[totalVertexCount];
@@ -377,6 +404,16 @@ ExtTriangleMesh *ExtTriangleMesh::Merge(const vector<const ExtTriangleMesh *> &m
 			meshAlphas[i] = new float[totalVertexCount];
 		else
 			meshAlphas[i] = nullptr;
+
+		if (meshes[0]->HasVertexAOV(i))
+			meshVertAOV[i] = new float[totalVertexCount];
+		else
+			meshVertAOV[i] = nullptr;
+
+		if (meshes[0]->HasTriAOV(i))
+			meshTriAOV[i] = new float[totalTriangleCount];
+		else
+			meshTriAOV[i] = nullptr;
 	}
 	
 	u_int vIndex = 0;
@@ -434,6 +471,22 @@ ExtTriangleMesh *ExtTriangleMesh::Merge(const vector<const ExtTriangleMesh *> &m
 				for (u_int i = 0; i < mesh->GetTotalVertexCount(); ++i)
 					meshAlphas[dataIndex][i + vIndex] = mesh->GetAlpha(i, dataIndex);
 			}
+
+			// Copy the mesh vertex AOV
+			if (meshes[0]->HasVertexAOV(dataIndex) != mesh->HasVertexAOV(dataIndex))
+				throw runtime_error("Error in ExtTriangleMesh::Merge(): trying to merge meshes with different type of vertex AOV definitions");
+			if (meshes[0]->HasVertexAOV(dataIndex)) {
+				for (u_int i = 0; i < mesh->GetTotalVertexCount(); ++i)
+					meshVertAOV[dataIndex][i + vIndex] = mesh->GetVertexAOV(i, dataIndex);
+			}
+
+			// Copy the mesh triangle AOV
+			if (meshes[0]->HasTriAOV(dataIndex) != mesh->HasTriAOV(dataIndex))
+				throw runtime_error("Error in ExtTriangleMesh::Merge(): trying to merge meshes with different type of triangle AOV definitions");
+			if (meshes[0]->HasTriAOV(dataIndex)) {
+				for (u_int i = 0; i < mesh->GetTotalTriangleCount(); ++i)
+					meshTriAOV[dataIndex][i + vIndex] = mesh->GetTriAOV(i, dataIndex);
+			}
 		}
 
 		// Translate mesh indices
@@ -450,8 +503,14 @@ ExtTriangleMesh *ExtTriangleMesh::Merge(const vector<const ExtTriangleMesh *> &m
 		vIndex += mesh->GetTotalVertexCount();
 	}
 
-	return new ExtTriangleMesh(totalVertexCount, totalTriangleCount,
+	ExtTriangleMesh *newMesh = new ExtTriangleMesh(totalVertexCount, totalTriangleCount,
 			meshVertices, meshTris, meshNormals, &meshUVs, &meshCols, &meshAlphas);
+	for (u_int dataIndex = 0; dataIndex < EXTMESH_MAX_DATA_COUNT; dataIndex++) {
+		newMesh->SetVertexAOV(dataIndex, meshVertAOV[dataIndex]);
+		newMesh->SetTriAOV(dataIndex, meshTriAOV[dataIndex]);
+	}
+
+	return newMesh;
 }
 
 // For some reason, LoadSerialized() and SaveSerialized() must be in the same

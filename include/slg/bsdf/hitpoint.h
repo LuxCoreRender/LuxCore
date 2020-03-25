@@ -52,14 +52,18 @@ typedef struct {
 	luxrays::Normal interpolatedN;
 	luxrays::Normal shadeN;
 
-	luxrays::UV uv[EXTMESH_MAX_DATA_COUNT];
-	luxrays::Spectrum color[EXTMESH_MAX_DATA_COUNT];
-	float alpha[EXTMESH_MAX_DATA_COUNT];
+	// The "main" UV coordinate of the hit point (from UV set 0)
+	luxrays::UV defaultUV;
 
 	// Note: dpdu and dpdv are orthogonal to shading normal (i.e not geometry normal)
 	luxrays::Vector dpdu, dpdv;
 	luxrays::Normal dndu, dndv;
 
+	// Mesh information
+	const luxrays::ExtMesh *mesh;
+	u_int triangleIndex;
+	float triangleBariCoord1, triangleBariCoord2;
+	
 	float passThroughEvent;
 	// Transformation from local object to world reference frame
 	luxrays::Transform localToWorld;
@@ -90,6 +94,43 @@ typedef struct {
 	luxrays::Normal GetLandingGeometryN() const { return (intoObject ? 1.f : -1.f) * geometryN; }
 	luxrays::Normal GetLandingInterpolatedN() const { return (intoObject ? 1.f : -1.f) * interpolatedN; }
 	luxrays::Normal GetLandingShadeN() const { return (intoObject ? 1.f : -1.f) * shadeN; }
+
+	const luxrays::UV GetUV(const u_int dataIndex) const {
+		if (mesh) {
+			return (dataIndex == 0) ?
+				defaultUV :
+				mesh->InterpolateTriUV(triangleIndex, triangleBariCoord1, triangleBariCoord2, dataIndex);
+		} else
+			return luxrays::UV();
+	}
+
+	const luxrays::Spectrum GetColor(const u_int dataIndex) const {
+		if (mesh)
+			return mesh->InterpolateTriColor(triangleIndex, triangleBariCoord1, triangleBariCoord2, dataIndex);
+		else
+			return luxrays::Spectrum(1.f);
+	}	
+
+	const float GetAlpha(const u_int dataIndex) const {
+		if (mesh)
+			return mesh->InterpolateTriAlpha(triangleIndex, triangleBariCoord1, triangleBariCoord2, dataIndex);
+		else
+			return 1.f;
+	}
+
+	const float GetVertexAOV(const u_int dataIndex) const {
+		if (mesh) {
+			return mesh->InterpolateTriVertexAOV(triangleIndex, triangleBariCoord1, triangleBariCoord2, dataIndex);
+		} else
+			return 0.f;
+	}
+
+	const float GetTriAOV(const u_int dataIndex) const {
+		if (mesh)
+			return mesh->GetTriAOV(triangleIndex, dataIndex);
+		else
+			return 0.f;
+	}
 } HitPoint;
 
 }

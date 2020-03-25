@@ -57,12 +57,13 @@ typedef enum {
 	ABS_TEX, CLAMP_TEX, BILERP_TEX, COLORDEPTH_TEX, HSV_TEX, DIVIDE_TEX, REMAP_TEX,
 	OBJECTID_TEX, OBJECTID_COLOR_TEX, OBJECTID_NORMALIZED_TEX, DOT_PRODUCT_TEX,
 	POWER_TEX, LESS_THAN_TEX, GREATER_THAN_TEX, ROUNDING_TEX, MODULO_TEX, SHADING_NORMAL_TEX,
-    POSITION_TEX, SPLIT_FLOAT3, MAKE_FLOAT3, BRIGHT_CONTRAST_TEX, TRIPLANAR_TEX, // 38 textures
-	// Procedural textures		
+    POSITION_TEX, SPLIT_FLOAT3, MAKE_FLOAT3, BRIGHT_CONTRAST_TEX, HITPOINTVERTEXAOV,
+	HITPOINTTRIANGLEAOV, TRIPLANAR_TEX, RANDOM_TEX, // 41 textures
+	// Procedural textures
 	BLENDER_BLEND, BLENDER_CLOUDS, BLENDER_DISTORTED_NOISE, BLENDER_MAGIC, BLENDER_MARBLE,
-	BLENDER_MUSGRAVE, BLENDER_NOISE, BLENDER_STUCCI, BLENDER_WOOD, BLENDER_VORONOI,
+	BLENDER_MUSGRAVE, BLENDER_NOISE, BLENDER_STUCCI, BLENDER_WOOD,  BLENDER_VORONOI,
 	CHECKERBOARD2D, CHECKERBOARD3D, CLOUD_TEX, FBM_TEX,
-	MARBLE, DOTS, BRICK, WINDY, WRINKLED, UV_TEX, BAND_TEX, // 56 textures
+	MARBLE, DOTS, BRICK, WINDY, WRINKLED, UV_TEX, BAND_TEX, // 59 textures
 	// Fresnel textures
 	FRESNELCOLOR_TEX, FRESNELCONST_TEX
 } TextureType;
@@ -349,6 +350,14 @@ typedef struct {
 } HitPointGreyTexParam;
 
 typedef struct {
+	unsigned int dataIndex;
+} HitPointVertexAOVTexParam;
+
+typedef struct {
+	unsigned int dataIndex;
+} HitPointTriangleAOVTexParam;
+
+typedef struct {
 	unsigned int texIndex;
 	float scale;
 } NormalMapTexParam;
@@ -441,9 +450,12 @@ typedef struct {
 typedef struct {
 	TextureMapping3D mapping;
 	unsigned int tex1Index, tex2Index, tex3Index;
-	unsigned int uvIndex;
 	int enableUVlessBumpMap;
 } TriplanarTexParam;
+
+typedef struct {
+	unsigned int texIndex;
+} RandomTexParam;
 
 typedef struct {
 	TextureType type;
@@ -486,6 +498,8 @@ typedef struct {
 		HitPointColorTexParam hitPointColor;
 		HitPointColorTexParam hitPointAlpha;
 		HitPointGreyTexParam hitPointGrey;
+		HitPointVertexAOVTexParam hitPointVertexAOV;
+		HitPointTriangleAOVTexParam hitPointTriangleAOV;
 		NormalMapTexParam normalMap;
 		BlackBodyParam blackBody;
 		IrregularDataParam irregularData;
@@ -509,6 +523,7 @@ typedef struct {
 		ModuloTexParam moduloTex;
 		BrightContrastTexParam brightContrastTex;
 		TriplanarTexParam triplanarTex;
+		RandomTexParam randomTex;
 	};
 } Texture;
 
@@ -523,12 +538,12 @@ typedef struct {
 	, __global const TextureEvalOp* restrict texEvalOps \
 	, __global float *texEvalStacks \
 	, const uint maxTextureEvalStackSize \
-	IMAGEMAPS_PARAM_DECL
+	IMAGEMAPS_PARAM_DECL SCENE_PARAM_DECL
 #define TEXTURES_PARAM \
 	, texs \
 	, texEvalOps \
 	, texEvalStacks \
 	, maxTextureEvalStackSize \
-	IMAGEMAPS_PARAM
+	IMAGEMAPS_PARAM SCENE_PARAM
 
 #endif

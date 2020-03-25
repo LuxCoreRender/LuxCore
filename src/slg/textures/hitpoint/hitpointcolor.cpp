@@ -27,11 +27,11 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 float HitPointColorTexture::GetFloatValue(const HitPoint &hitPoint) const {
-	return hitPoint.color[dataIndex].Y();
+	return hitPoint.GetColor(dataIndex).Y();
 }
 
 Spectrum HitPointColorTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
-	return hitPoint.color[dataIndex];
+	return hitPoint.GetColor(dataIndex);
 }
 
 Properties HitPointColorTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
@@ -49,11 +49,11 @@ Properties HitPointColorTexture::ToProperties(const ImageMapCache &imgMapCache, 
 //------------------------------------------------------------------------------
 
 float HitPointAlphaTexture::GetFloatValue(const HitPoint &hitPoint) const {
-	return hitPoint.alpha[dataIndex];
+	return hitPoint.GetAlpha(dataIndex);
 }
 
 Spectrum HitPointAlphaTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
-	return Spectrum(hitPoint.alpha[dataIndex]);
+	return Spectrum(hitPoint.GetAlpha(dataIndex));
 }
 
 Properties HitPointAlphaTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
@@ -71,11 +71,15 @@ Properties HitPointAlphaTexture::ToProperties(const ImageMapCache &imgMapCache, 
 //------------------------------------------------------------------------------
 
 float HitPointGreyTexture::GetFloatValue(const HitPoint &hitPoint) const {
-	return (channel > 2) ? hitPoint.color[dataIndex].Y() : hitPoint.color[dataIndex].c[channel];
+	const Spectrum color = hitPoint.GetColor(dataIndex);
+
+	return (channel > 2) ? color.Y() : color.c[channel];
 }
 
 Spectrum HitPointGreyTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
-	const float v = (channel > 2) ? hitPoint.color[dataIndex].Y() : hitPoint.color[dataIndex].c[channel];
+	const Spectrum color = hitPoint.GetColor(dataIndex);
+	const float v = (channel > 2) ? color.Y() : color.c[channel];
+
 	return Spectrum(v);
 }
 

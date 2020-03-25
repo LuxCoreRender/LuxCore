@@ -195,6 +195,7 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_pgic_types <<
 			// OpenCL SLG Funcs
 			slg::ocl::KernelSource_evalstack_funcs <<
+			slg::ocl::KernelSource_hitpoint_funcs << // Required by mapping funcs
 			slg::ocl::KernelSource_mapping_funcs <<
 			slg::ocl::KernelSource_imagemap_funcs <<
 			slg::ocl::KernelSource_texture_bump_funcs <<
@@ -211,10 +212,12 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_texture_densitygrid_funcs <<
 			slg::ocl::KernelSource_texture_fresnelcolor_funcs <<
 			slg::ocl::KernelSource_texture_fresnelconst_funcs <<
+			slg::ocl::KernelSource_texture_hitpoint_funcs <<
 			slg::ocl::KernelSource_texture_hsv_funcs <<
 			slg::ocl::KernelSource_texture_irregulardata_funcs <<
 			slg::ocl::KernelSource_texture_triplanar_funcs <<
 			slg::ocl::KernelSource_texture_others_funcs <<
+			slg::ocl::KernelSource_texture_random_funcs <<
 			slg::ocl::KernelSource_texture_funcs_evalops <<
 			slg::ocl::KernelSource_texture_funcs;
 
@@ -253,7 +256,6 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_pathoclbase_datatypes;
 
 	ssKernel <<
-			slg::ocl::KernelSource_hitpoint_funcs <<
 			slg::ocl::KernelSource_bsdfutils_funcs << // Must be before volumeinfo_funcs
 			slg::ocl::KernelSource_volume_funcs <<
 			slg::ocl::KernelSource_pathdepthinfo_funcs <<
@@ -443,6 +445,8 @@ void PathOCLBaseOCLRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePa
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), uvsBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), colsBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), alphasBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), vertexAOVBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), triAOVBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), trianglesBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), interpolatedTransformsBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), cameraBuff);

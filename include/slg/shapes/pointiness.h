@@ -27,16 +27,14 @@ namespace slg {
 
 class PointinessShape : public Shape {
 public:
-	PointinessShape(luxrays::ExtTriangleMesh *srcMesh);
+	// destAOVIndex = NULL_INDEX means use the alpha channel
+	PointinessShape(luxrays::ExtTriangleMesh *srcMesh, const u_int destAOVIndex);
 	virtual ~PointinessShape();
 
 	virtual ShapeType GetType() const { return POINTINESS; }
 
 protected:
 	virtual luxrays::ExtTriangleMesh *RefineImpl(const Scene *scene);
-	
-	bool IsSameVertex(const luxrays::ExtTriangleMesh *srcMesh,
-			const u_int vertex1Index, const u_int vertex2Index) const;
 
 	luxrays::ExtTriangleMesh *mesh;
 };

@@ -130,6 +130,43 @@ OPENCL_FORCE_INLINE float ExtMesh_GetInterpolateAlpha(
 	return a;
 }
 
+OPENCL_FORCE_INLINE float ExtMesh_GetInterpolateVertexAOV(
+		const uint meshIndex, const uint triangleIndex,
+		const float b1, const float b2, const uint dataIndex
+		EXTMESH_PARAM_DECL) {
+	__global const ExtMesh* restrict meshDesc = &meshDescs[meshIndex];
+	
+	float v = 0.f;
+	if (meshDesc->vertexAOVOffset[dataIndex] != NULL_INDEX) {
+		__global const float* restrict vs = &vertexAOVs[meshDesc->vertexAOVOffset[dataIndex]];
+		__global const Triangle* restrict tri = &triangles[meshDesc->trisOffset + triangleIndex];
+		const float v0 = vs[tri->v[0]];
+		const float v1 = vs[tri->v[1]];
+		const float v2 = vs[tri->v[2]];
+
+		const float b0 = 1.f - b1 - b2;
+		v =  Triangle_InterpolateVertexAOV(v0, v1, v2, b0, b1, b2);
+	}
+
+	return v;
+}
+
+OPENCL_FORCE_INLINE float ExtMesh_GetTriAOV(
+		const uint meshIndex, const uint triangleIndex,
+		const uint dataIndex
+		EXTMESH_PARAM_DECL) {
+	__global const ExtMesh* restrict meshDesc = &meshDescs[meshIndex];
+	
+	float t = 0.f;
+	if (meshDesc->triAOVOffset[dataIndex] != NULL_INDEX) {
+		__global const float* restrict ts = &triAOVs[meshDesc->triAOVOffset[dataIndex]];
+		
+		t = ts[triangleIndex];
+	}
+
+	return t;
+}
+
 OPENCL_FORCE_INLINE void ExtMesh_GetDifferentials(
 		__global const Transform* restrict localToWorld,
 		const uint meshIndex,

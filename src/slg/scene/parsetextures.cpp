@@ -51,6 +51,7 @@
 #include "slg/textures/fresnel/fresnelpreset.h"
 #include "slg/textures/fresnel/fresnelsopra.h"
 #include "slg/textures/fresnel/fresneltexture.h"
+#include "slg/textures/hitpoint/hitpointaov.h"
 #include "slg/textures/hitpoint/hitpointcolor.h"
 #include "slg/textures/hitpoint/position.h"
 #include "slg/textures/hitpoint/shadingnormal.h"
@@ -68,6 +69,7 @@
 #include "slg/textures/math/mix.h"
 #include "slg/textures/math/modulo.h"
 #include "slg/textures/math/power.h"
+#include "slg/textures/math/random.h"
 #include "slg/textures/math/remap.h"
 #include "slg/textures/math/rounding.h"
 #include "slg/textures/math/scale.h"
@@ -422,6 +424,14 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		tex = new HitPointGreyTexture(dataIndex,
 				((channel != 0) && (channel != 1) && (channel != 2)) ?
 					numeric_limits<u_int>::max() : static_cast<u_int>(channel));
+	} else if (texType == "hitpointvertexaov") {
+		const u_int dataIndex = Clamp(props.Get(Property(propName + ".dataindex")(0u)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
+
+		tex = new HitPointVertexAOVTexture(dataIndex);
+	} else if (texType == "hitpointtriangleaov") {
+		const u_int dataIndex = Clamp(props.Get(Property(propName + ".dataindex")(0u)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
+
+		tex = new HitPointTriangleAOVTexture(dataIndex);
 	} else if (texType == "cloud") {
 		const float radius = props.Get(Property(propName + ".radius")(.5f)).Get<float>();
 		const float noisescale = props.Get(Property(propName + ".noisescale")(.5f)).Get<float>();
@@ -585,6 +595,10 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const bool enableUVlessBumpMap = props.Get(Property(propName + ".uvlessbumpmap.enable")(true)).Get<bool>();
 		tex = new TriplanarTexture(CreateTextureMapping3D(propName + ".mapping", props),
 				t1, t2, t3, dataIndex, enableUVlessBumpMap);
+    } else if (texType == "random") {
+		const Texture *texture = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
+		const u_int seedOffset = props.Get(Property(propName + ".seed")(0u)).Get<u_int>();
+		tex = new RandomTexture(texture, seedOffset);
 	} else
 		throw runtime_error("Unknown texture type: " + texType);
 
