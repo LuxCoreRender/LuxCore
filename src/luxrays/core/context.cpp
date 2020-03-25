@@ -23,6 +23,8 @@
 #include <stdexcept>
 
 #include "luxrays/core/context.h"
+#include "luxrays/core/device.h"
+#include "luxrays/core/hardwaredevice.h"
 #include "luxrays/devices/nativeintersectiondevice.h"
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 #include "luxrays/devices/ocldevice.h"
@@ -219,9 +221,7 @@ vector<IntersectionDevice *> Context::AddIntersectionDevices(vector<DeviceDescri
 	vector<IntersectionDevice *> newDevices = CreateIntersectionDevices(deviceDesc, idevices.size());
 	for (size_t i = 0; i < newDevices.size(); ++i) {
 		idevices.push_back(newDevices[i]);
-
-		Device *dev = newDevices[i]; // Required by some old GCC version;
-		devices.push_back(dev);
+		devices.push_back(newDevices[i]);
 	}
 
 	return newDevices;
@@ -266,9 +266,7 @@ vector<HardwareDevice *> Context::AddHardwareDevices(vector<DeviceDescription *>
 	vector<HardwareDevice *> newDevices = CreateHardwareDevices(deviceDesc, hdevices.size());
 	for (size_t i = 0; i < newDevices.size(); ++i) {
 		hdevices.push_back(newDevices[i]);
-
-		Device *dev = newDevices[i]; // Required by some old GCC version;
-		devices.push_back(dev);
+		devices.push_back(newDevices[i]);
 	}
 
 	return newDevices;
