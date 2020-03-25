@@ -89,7 +89,7 @@ void Film::CreateOCLContext() {
 		// Allocate the device
 		vector<luxrays::DeviceDescription *> selectedDeviceDescs;
 		selectedDeviceDescs.push_back(selectedDeviceDesc);
-		vector<IntersectionDevice *> devs = ctx->AddHardwareDevices(selectedDeviceDescs);
+		vector<HardwareDevice *> devs = ctx->AddHardwareDevices(selectedDeviceDescs);
 		hardwareDevice = dynamic_cast<HardwareDevice *>(devs[0]);
 		assert (hardwareDevice);
 		SLG_LOG("Film OpenCL Device used: " << hardwareDevice->GetName());
