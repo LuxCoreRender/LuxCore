@@ -50,6 +50,7 @@ protected:
 
 private:
 	CUdevice cudaDevice;
+	CUcontext cudaContext;
 };
 
 }

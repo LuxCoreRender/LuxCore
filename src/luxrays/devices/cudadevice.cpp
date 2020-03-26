@@ -33,9 +33,12 @@ CUDADeviceDescription::CUDADeviceDescription(CUdevice dev, const size_t devIndex
 	char buff[128];
     CHECK_CUDA_ERROR(cuDeviceGetName(buff, 128, cudaDevice));
 	name = string(buff);
+	
+	CHECK_CUDA_ERROR(cuDevicePrimaryCtxRetain(&cudaContext, cudaDevice));
 }
 
 CUDADeviceDescription::~CUDADeviceDescription() {
+	CHECK_CUDA_ERROR(cuDevicePrimaryCtxRelease(cudaDevice));
 }
 
 int CUDADeviceDescription::GetComputeUnits() const {
