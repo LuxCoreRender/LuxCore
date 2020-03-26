@@ -18,13 +18,14 @@
 
 #include "luxrays/core/device.h"
 
-namespace luxrays {
+using namespace std;
+using namespace luxrays;
 
 //------------------------------------------------------------------------------
 // DeviceDescription
 //------------------------------------------------------------------------------
 
-void DeviceDescription::FilterOne(std::vector<DeviceDescription *> &deviceDescriptions) {
+void DeviceDescription::FilterOne(vector<DeviceDescription *> &deviceDescriptions) {
 	int gpuIndex = -1;
 	int cpuIndex = -1;
 	for (size_t i = 0; i < deviceDescriptions.size(); ++i) {
@@ -39,11 +40,11 @@ void DeviceDescription::FilterOne(std::vector<DeviceDescription *> &deviceDescri
 	}
 
 	if (gpuIndex != -1) {
-		std::vector<DeviceDescription *> selectedDev;
+		vector<DeviceDescription *> selectedDev;
 		selectedDev.push_back(deviceDescriptions[gpuIndex]);
 		deviceDescriptions = selectedDev;
 	} else if (gpuIndex != -1) {
-		std::vector<DeviceDescription *> selectedDev;
+		vector<DeviceDescription *> selectedDev;
 		selectedDev.push_back(deviceDescriptions[cpuIndex]);
 		deviceDescriptions = selectedDev;
 	} else
@@ -51,7 +52,7 @@ void DeviceDescription::FilterOne(std::vector<DeviceDescription *> &deviceDescri
 }
 
 void DeviceDescription::Filter(const DeviceType type,
-	std::vector<DeviceDescription *> &deviceDescriptions) {
+	vector<DeviceDescription *> &deviceDescriptions) {
 	if (type == DEVICE_TYPE_ALL)
 		return;
 	size_t i = 0;
@@ -64,7 +65,7 @@ void DeviceDescription::Filter(const DeviceType type,
 	}
 }
 
-std::string DeviceDescription::GetDeviceType(const DeviceType type) {
+string DeviceDescription::GetDeviceType(const DeviceType type) {
 	switch (type) {
 		case DEVICE_TYPE_ALL:
 			return "ALL";
@@ -80,8 +81,10 @@ std::string DeviceDescription::GetDeviceType(const DeviceType type) {
 			return "OPENCL_GPU";
 		case DEVICE_TYPE_OPENCL_UNKNOWN:
 			return "OPENCL_UNKNOWN";
+		case DEVICE_TYPE_CUDA_GPU:
+			return "CUDA_GPU";
 		default:
-			return "UNKNOWN";
+			throw runtime_error("Unknown device type in DeviceDescription::GetDeviceType(): " + ToString(type));
 	}
 }
 
@@ -110,6 +113,4 @@ void Device::Interrupt() {
 void Device::Stop() {
 	assert (started);
 	started = false;
-}
-
 }

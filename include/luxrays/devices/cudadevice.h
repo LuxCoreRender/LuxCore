@@ -16,75 +16,44 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _LUXRAYS_H
-#define	_LUXRAYS_H
+#ifndef _LUXRAYS_CUDADEVICE_H
+#define	_LUXRAYS_CUDADEVICE_H
 
-#include <boost/version.hpp>
+#include "luxrays/core/hardwaredevice.h"
+#include "luxrays/core/intersectiondevice.h"
+#include "luxrays/utils/cuda.h"
 
-#include "luxrays/cfg.h"
-#include "luxrays/utils/utils.h"
+#if defined(LUXRAYS_ENABLE_CUDA)
 
-//------------------------------------------------------------------------------
-// Configure unicode support (requires Boost version 1.50 or better)
-
-#if (BOOST_VERSION / 100000 >= 1) && (BOOST_VERSION / 100 % 1000 >= 50)
-#define ENABLE_UNICODE_SUPPORT 1
-#else
-#undef ENABLE_UNICODE_SUPPORT
-#endif
-
-//------------------------------------------------------------------------------
-
-#if defined(ENABLE_UNICODE_SUPPORT)
-#include <boost/locale.hpp>
-#include <boost/filesystem/fstream.hpp>
-
-#define BOOST_IFSTREAM boost::filesystem::ifstream
-#define BOOST_OFSTREAM boost::filesystem::ofstream
-
-#else
-
-#define BOOST_IFSTREAM std::ifstream
-#define BOOST_OFSTREAM std::ofstream
-
-#endif
-
-//------------------------------------------------------------------------------
-
-/*!
- * \namespace luxrays
- *
- * \brief The LuxRays core classes are defined within this namespace.
- */
 namespace luxrays {
 
-// OpenCL data types
-namespace ocl {
-#include "luxrays/luxrays_types.cl"
-}
+//------------------------------------------------------------------------------
+// CUDADeviceDescription
+//------------------------------------------------------------------------------
 
-class Accelerator;
-class BBox;
-class Context;
-class DataSet;
-class Device;
-class DeviceDescription;
-class HardwareDevice;
-class IntersectionDevice;
-class Mesh;
-class Matrix4x4;
-class Normal;
-class Point;
-class Ray;
-class RayHit;
-class RGBColor;
-class Triangle;
-class TriangleMesh;
-class UV;
-class Vector;
+class CUDADeviceDescription : public DeviceDescription {
+public:
+	CUDADeviceDescription(CUdevice cudaDevice, const size_t devIndex);
+	virtual ~CUDADeviceDescription();
 
-extern void Init();
+	virtual int GetComputeUnits() const;
+	virtual u_int GetNativeVectorWidthFloat() const;
+	virtual size_t GetMaxMemory() const;
+	virtual size_t GetMaxMemoryAllocSize() const;
+
+	friend class Context;
+
+protected:
+	static void AddDeviceDescs(std::vector<DeviceDescription *> &descriptions);
+
+	size_t deviceIndex;
+
+private:
+	CUdevice cudaDevice;
+};
 
 }
 
-#endif	/* _LUXRAYS_H */
+#endif
+
+#endif	/* _LUXRAYS_CUDADEVICE_H */

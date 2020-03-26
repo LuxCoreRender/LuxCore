@@ -16,29 +16,35 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include <openvdb/openvdb.h>
+#ifndef _LUXRAYS_CUDA_H
+#define	_LUXRAYS_CUDA_H
 
-#include <OpenImageIO/imageio.h>
+#if defined(LUXRAYS_ENABLE_CUDA)
 
-#include "luxrays/luxrays.h"
-#include "slg/slg.h"
-#include "slg/utils/filenameresolver.h"
+#include <cuda.h>
 
-using namespace std;
-using namespace luxrays;
-using namespace slg;
+namespace luxrays {
 
-namespace slg {
-FileNameResolver SLG_FileNameResolver;
+#define CHECK_CUDA_ERROR(err) CheckCudaError(err, __FILE__, __LINE__)
+
+inline void CheckCudaError(const CUresult err, const char *file, const int line) {
+  if (err != CUDA_SUCCESS) {
+	  const char *errorNameStr;
+	  if (cuGetErrorName(err, &errorNameStr) != CUDA_SUCCESS)
+		  errorNameStr = "cuGetErrorName(ERROR)";
+
+	  const char *errorStr;
+	  if (cuGetErrorString(err, &errorStr) != CUDA_SUCCESS)
+		  errorStr = "cuGetErrorString(ERROR)";
+
+	  throw std::runtime_error("CUDA driver API error " + std::string(errorNameStr) + " "
+			  "(code: " + ToString(err) + ", file:" + std::string(file) + ", line: " + ToString(line) + ")"
+			  ": " + std::string(errorStr) + "\n");
+	}
 }
 
-void slg::Init() {
-	luxrays::Init();
-
-	openvdb::initialize();
-	
-	// Workaround to a bug: https://github.com/OpenImageIO/oiio/issues/1795
-	OIIO::attribute ("threads", 1);
-	
-	SLG_FileNameResolver.Clear();
 }
+
+#endif
+
+#endif	/* _LUXRAYS_CUDA_H */

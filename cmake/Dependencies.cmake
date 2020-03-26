@@ -96,7 +96,7 @@ find_package(OpenGL)
 
 if (OPENGL_FOUND)
 	include_directories(BEFORE SYSTEM ${OPENGL_INCLUDE_PATH})
-endif()
+endif ()
 
 # OpenCL
 set(OPENCL_ROOT                "${OPENCL_SEARCH_PATH}")
@@ -104,7 +104,18 @@ find_package(OpenCL)
 
 if (OPENCL_FOUND)
 	include_directories(BEFORE SYSTEM ${OPENCL_INCLUDE_DIR} ${OPENCL_C_INCLUDE_DIR})
-        ADD_DEFINITIONS(-DCL_TARGET_OPENCL_VERSION=120)
+    ADD_DEFINITIONS(-DCL_TARGET_OPENCL_VERSION=120)
+endif ()
+
+# CUDA
+find_package(CUDA)
+
+if (CUDA_FOUND)
+	include_directories(BEFORE SYSTEM ${CUDA_INCLUDE_DIRS})
+
+	# Construct path to CUDA driver API lib (not provided by FindCUDA)
+	get_filename_component(CUDADRIVER_LIBRARIES_DIR ${CUDA_cudart_static_LIBRARY} DIRECTORY)
+	find_library(CUDADRIVER_LIBRARIES NAMES cuda HINTS ${CUDADRIVER_LIBRARIES_DIR})
 endif ()
 
 # Intel Embree

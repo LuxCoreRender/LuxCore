@@ -16,75 +16,24 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _LUXRAYS_H
-#define	_LUXRAYS_H
-
-#include <boost/version.hpp>
-
-#include "luxrays/cfg.h"
-#include "luxrays/utils/utils.h"
-
-//------------------------------------------------------------------------------
-// Configure unicode support (requires Boost version 1.50 or better)
-
-#if (BOOST_VERSION / 100000 >= 1) && (BOOST_VERSION / 100 % 1000 >= 50)
-#define ENABLE_UNICODE_SUPPORT 1
-#else
-#undef ENABLE_UNICODE_SUPPORT
+#include "luxrays/luxrays.h"
+#if defined(LUXRAYS_ENABLE_CUDA)
+#include "luxrays/utils/cuda.h"
 #endif
 
-//------------------------------------------------------------------------------
-
-#if defined(ENABLE_UNICODE_SUPPORT)
-#include <boost/locale.hpp>
-#include <boost/filesystem/fstream.hpp>
-
-#define BOOST_IFSTREAM boost::filesystem::ifstream
-#define BOOST_OFSTREAM boost::filesystem::ofstream
-
-#else
-
-#define BOOST_IFSTREAM std::ifstream
-#define BOOST_OFSTREAM std::ofstream
-
-#endif
+using namespace std;
+using namespace luxrays;
 
 //------------------------------------------------------------------------------
+// Init()
+//------------------------------------------------------------------------------
 
-/*!
- * \namespace luxrays
- *
- * \brief The LuxRays core classes are defined within this namespace.
- */
 namespace luxrays {
 
-// OpenCL data types
-namespace ocl {
-#include "luxrays/luxrays_types.cl"
+void Init() {
+#if defined(LUXRAYS_ENABLE_CUDA)
+	CHECK_CUDA_ERROR(cuInit(0));
+#endif	
 }
 
-class Accelerator;
-class BBox;
-class Context;
-class DataSet;
-class Device;
-class DeviceDescription;
-class HardwareDevice;
-class IntersectionDevice;
-class Mesh;
-class Matrix4x4;
-class Normal;
-class Point;
-class Ray;
-class RayHit;
-class RGBColor;
-class Triangle;
-class TriangleMesh;
-class UV;
-class Vector;
-
-extern void Init();
-
 }
-
-#endif	/* _LUXRAYS_H */
