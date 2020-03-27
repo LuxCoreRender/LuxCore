@@ -41,7 +41,10 @@ public:
 	virtual size_t GetMaxMemory() const;
 	virtual size_t GetMaxMemoryAllocSize() const;
 
+	CUdevice GetCUDADevice() { return cudaDevice; }
+
 	friend class Context;
+	friend class CUDADevice;
 
 protected:
 	static void AddDeviceDescs(std::vector<DeviceDescription *> &descriptions);
@@ -50,6 +53,87 @@ protected:
 
 private:
 	CUdevice cudaDevice;
+};
+
+//------------------------------------------------------------------------------
+// CUDADeviceBuffer
+//------------------------------------------------------------------------------
+
+class CUDADeviceBuffer : public HardwareDeviceBuffer {
+public:
+	CUDADeviceBuffer() : cudaBuff(0) { }
+	virtual ~CUDADeviceBuffer() {
+	}
+
+	bool IsNull() const { 
+		return (cudaBuff == 0);
+	}
+
+	friend class CUDADevice;
+
+private:
+	CUdeviceptr cudaBuff;
+};
+
+//------------------------------------------------------------------------------
+// CUDADevice
+//------------------------------------------------------------------------------
+
+class CUDADevice : public HardwareDevice {
+public:
+	CUDADevice(const Context *context,
+		CUDADeviceDescription *desc, const size_t devIndex);
+	virtual ~CUDADevice();
+
+	virtual void Start();
+	virtual void Stop();
+
+	//--------------------------------------------------------------------------
+	// Kernels handling for hardware (aka GPU) only applications
+	//--------------------------------------------------------------------------
+
+	virtual void CompileProgram(HardwareDeviceProgram **program,
+			const std::string &programParameters, const std::string &programSource,
+			const std::string &programName);
+
+	virtual void GetKernel(HardwareDeviceProgram *program,
+			HardwareDeviceKernel **kernel,
+			const std::string &kernelName);
+	virtual void SetKernelArg(HardwareDeviceKernel *kernel,
+			const u_int index, const size_t size, const void *arg);
+
+	virtual void EnqueueKernel(HardwareDeviceKernel *kernel,
+			const HardwareDeviceRange &workGroupSize,
+			const HardwareDeviceRange &globalSize);
+	virtual void EnqueueReadBuffer(const HardwareDeviceBuffer *buff,
+			const bool blocking, const size_t size, void *ptr);
+	virtual void EnqueueWriteBuffer(const HardwareDeviceBuffer *buff,
+			const bool blocking, const size_t size, const void *ptr);
+	virtual void FlushQueue();
+	virtual void FinishQueue();
+
+	//--------------------------------------------------------------------------
+	// Memory management for hardware (aka GPU) only applications
+	//--------------------------------------------------------------------------
+
+	virtual size_t GetMaxMemory() const {
+		return deviceDesc->GetMaxMemory();
+	}
+
+	virtual void AllocBufferRO(HardwareDeviceBuffer **buff, void *src, const size_t size, const std::string &desc = "");
+	virtual void AllocBufferRW(HardwareDeviceBuffer **buff, void *src, const size_t size, const std::string &desc = "");
+	virtual void FreeBuffer(HardwareDeviceBuffer **buff);
+
+	friend class Context;
+
+protected:
+	virtual void SetKernelArgBuffer(HardwareDeviceKernel *kernel,
+		const u_int index, const HardwareDeviceBuffer *buff);
+
+	void AllocBuffer(CUdeviceptr *buff,
+			void *src, const size_t size, const std::string &desc = "");
+
+	CUDADeviceDescription *deviceDesc;
 	CUcontext cudaContext;
 };
 

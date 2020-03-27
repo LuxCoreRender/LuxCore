@@ -33,8 +33,6 @@ CUDADeviceDescription::CUDADeviceDescription(CUdevice dev, const size_t devIndex
 	char buff[128];
     CHECK_CUDA_ERROR(cuDeviceGetName(buff, 128, cudaDevice));
 	name = string(buff);
-	
-	CHECK_CUDA_ERROR(cuDevicePrimaryCtxRetain(&cudaContext, cudaDevice));
 }
 
 CUDADeviceDescription::~CUDADeviceDescription() {
@@ -107,6 +105,174 @@ void CUDADeviceDescription::AddDeviceDescs(vector<DeviceDescription *> &descript
 		CUDADeviceDescription *desc = new CUDADeviceDescription(device, i);
 
 		descriptions.push_back(desc);
+	}
+}
+
+
+//------------------------------------------------------------------------------
+// CUDADevice
+//------------------------------------------------------------------------------
+
+CUDADevice::CUDADevice(
+		const Context *context,
+		CUDADeviceDescription *desc,
+		const size_t devIndex) :
+		Device(context, desc->GetType(), devIndex),
+		deviceDesc(desc) {
+	deviceName = (desc->GetName() + " Intersect").c_str();
+}
+
+CUDADevice::~CUDADevice() {
+}
+
+void CUDADevice::Start() {
+	HardwareDevice::Start();
+
+	CHECK_CUDA_ERROR(cuCtxCreate(&cudaContext, CU_CTX_SCHED_YIELD, deviceDesc->GetCUDADevice()));
+}
+
+void CUDADevice::Stop() {
+	CHECK_CUDA_ERROR(cuCtxDestroy(cudaContext));
+
+	HardwareDevice::Stop();
+}
+
+//------------------------------------------------------------------------------
+// Kernels handling for hardware (aka GPU) only applications
+//------------------------------------------------------------------------------
+
+void CUDADevice::CompileProgram(HardwareDeviceProgram **program,
+		const std::string &programParameters, const std::string &programSource,	
+		const std::string &programName) {
+	throw runtime_error("TODO CompileProgram");
+}
+
+void CUDADevice::GetKernel(HardwareDeviceProgram *program,
+		HardwareDeviceKernel **kernel, const string &kernelName) {
+	throw runtime_error("TODO GetKernel");
+}
+
+void CUDADevice::SetKernelArg(HardwareDeviceKernel *kernel,
+		const u_int index, const size_t size, const void *arg) {
+	throw runtime_error("TODO SetKernelArg");
+}
+
+void CUDADevice::SetKernelArgBuffer(HardwareDeviceKernel *kernel,
+		const u_int index, const HardwareDeviceBuffer *buff) {
+	throw runtime_error("TODO SetKernelArgBuffer");
+}
+
+void CUDADevice::EnqueueKernel(HardwareDeviceKernel *kernel,
+			const HardwareDeviceRange &workGroupSize,
+			const HardwareDeviceRange &globalSize) {
+	throw runtime_error("TODO EnqueueKernel");
+}
+
+void CUDADevice::EnqueueReadBuffer(const HardwareDeviceBuffer *buff,
+		const bool blocking, const size_t size, void *ptr) {
+	throw runtime_error("TODO EnqueueReadBuffer");
+}
+
+void CUDADevice::EnqueueWriteBuffer(const HardwareDeviceBuffer *buff,
+		const bool blocking, const size_t size, const void *ptr) {
+	throw runtime_error("TODO EnqueueWriteBuffer");
+}
+
+void CUDADevice::FlushQueue() {
+	throw runtime_error("TODO FlushQueue");
+}
+
+void CUDADevice::FinishQueue() {
+	throw runtime_error("TODO FinishQueue");
+}
+
+//------------------------------------------------------------------------------
+// Memory management for hardware (aka GPU) only applications
+//------------------------------------------------------------------------------
+
+void CUDADevice::AllocBuffer(CUdeviceptr *buff,
+		void *src, const size_t size, const std::string &desc) {
+	// Handle the case of an empty buffer
+	if (!size) {
+		if (*buff) {
+			// Free the buffer
+			size_t cudaSize;
+			CHECK_CUDA_ERROR(cuMemGetAddressRange(0, &cudaSize, *buff));
+			FreeMemory(cudaSize);
+
+			CHECK_CUDA_ERROR(cuMemFree(*buff));
+		}
+
+		*buff = 0;
+
+		return;
+	}
+
+	if (*buff) {
+		// Check the size of the already allocated buffer
+
+		size_t cudaSize;
+		CHECK_CUDA_ERROR(cuMemGetAddressRange(0, &cudaSize, *buff));
+
+		if (size == cudaSize) {
+			// I can reuse the buffer; just update the content
+
+			//LR_LOG(deviceContext, "[Device " << GetName() << "] " << desc << " buffer updated for size: " << (size / 1024) << "Kbytes");
+			if (src) {
+				CHECK_CUDA_ERROR(cuMemcpyHtoDAsync(*buff, src, size, 0));
+			}
+
+			return;
+		} else {
+			// Free the buffer
+			size_t cudaSize;
+			CHECK_CUDA_ERROR(cuMemGetAddressRange(0, &cudaSize, *buff));
+			FreeMemory(cudaSize);
+
+			CHECK_CUDA_ERROR(cuMemFree(*buff));
+			*buff = 0;
+		}
+	}
+
+	if (desc != "")
+		LR_LOG(deviceContext, "[Device " << GetName() << "] " << desc <<
+				" buffer size: " << ToMemString(size));
+
+	CHECK_CUDA_ERROR(cuMemAlloc(buff, size));
+	if (src) {
+		CHECK_CUDA_ERROR(cuMemcpyHtoDAsync(*buff, src, size, 0));
+	}
+	
+	AllocMemory(size);
+}
+
+void CUDADevice::AllocBufferRO(HardwareDeviceBuffer **buff, void *src, const size_t size, const std::string &desc) {
+	AllocBufferRW(buff, src, size, desc);
+}
+
+void CUDADevice::AllocBufferRW(HardwareDeviceBuffer **buff, void *src, const size_t size, const std::string &desc) {
+	if (!*buff)
+		*buff = new CUDADeviceBuffer();
+
+	CUDADeviceBuffer *cudaDeviceBuff = dynamic_cast<CUDADeviceBuffer *>(*buff);
+	assert (cudaDeviceBuff);
+
+	AllocBuffer(&(cudaDeviceBuff->cudaBuff), src, size, desc);
+}
+
+void CUDADevice::FreeBuffer(HardwareDeviceBuffer **buff) {
+	if (*buff && !(*buff)->IsNull()) {
+		CUDADeviceBuffer *cudaDeviceBuff = dynamic_cast<CUDADeviceBuffer *>(*buff);
+		assert (cudaDeviceBuff);
+
+		size_t cudaSize;
+		CHECK_CUDA_ERROR(cuMemGetAddressRange(0, &cudaSize, cudaDeviceBuff->cudaBuff));
+		FreeMemory(cudaSize);
+
+		CHECK_CUDA_ERROR(cuMemFree(cudaDeviceBuff->cudaBuff));
+
+		delete *buff;
+		*buff = nullptr;
 	}
 }
 

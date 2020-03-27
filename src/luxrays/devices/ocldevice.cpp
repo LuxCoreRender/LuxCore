@@ -267,6 +267,7 @@ static cl::NDRange ConvertHardwareRange(const HardwareDeviceRange &range) {
 		return cl::NDRange(range.sizes[0], range.sizes[1], range.sizes[2]);
 	
 }
+
 void OpenCLDevice::EnqueueKernel(HardwareDeviceKernel *kernel,
 			const HardwareDeviceRange &workGroupSize,
 			const HardwareDeviceRange &globalSize) {

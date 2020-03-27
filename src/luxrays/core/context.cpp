@@ -282,6 +282,14 @@ vector<HardwareDevice *> Context::CreateHardwareDevices(
 			device = new OpenCLDevice(this, oclDeviceDesc, indexOffset + i);
 		}
 #endif
+#if defined(LUXRAYS_ENABLE_CUDA)
+		else if (deviceType & DEVICE_TYPE_CUDA_ALL) {
+			// CUDA devices
+			CUDADeviceDescription *cudaDeviceDesc = (CUDADeviceDescription *)deviceDesc[i];
+
+			device = new CUDADevice(this, cudaDeviceDesc, indexOffset + i);
+		}
+#endif
 		else
 			throw runtime_error("Unknown device type in Context::CreateHardwareDevices(): " + ToString(deviceType));
 

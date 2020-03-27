@@ -65,7 +65,7 @@ void Film::CreateOCLContext() {
 	vector<DeviceDescription *> descs = ctx->GetAvailableDeviceDescriptions();
 	DeviceDescription::Filter(DEVICE_TYPE_ALL_HARDWARE, descs);
 
-	OpenCLDeviceDescription *selectedDeviceDesc = nullptr;
+	DeviceDescription *selectedDeviceDesc = nullptr;
 	if (oclEnable) {
 		if ((oclDeviceIndex >= 0) && (oclDeviceIndex < (int)descs.size())) {
 			// I have to use specific device
@@ -75,9 +75,15 @@ void Film::CreateOCLContext() {
 			for (size_t i = 0; i < descs.size(); ++i) {
 				OpenCLDeviceDescription *desc = (OpenCLDeviceDescription *)descs[i];
 
-				if (desc->GetType() == DEVICE_TYPE_OPENCL_GPU) {
+				if (desc->GetType() == DEVICE_TYPE_CUDA_GPU) {
 					selectedDeviceDesc = desc;
 					break;
+
+				}
+				if (desc->GetType() == DEVICE_TYPE_OPENCL_GPU) {
+					selectedDeviceDesc = desc;
+					// I continue to scan other devices to check if there is a
+					// CUDA one. CUDA is preferred over OpenCL if available.
 				}
 			}
 		} else {
@@ -94,12 +100,15 @@ void Film::CreateOCLContext() {
 		assert (hardwareDevice);
 		SLG_LOG("Film OpenCL Device used: " << hardwareDevice->GetName());
 
-		// Check if OpenCL 1.1 is available
-		SLG_LOG("  Device OpenCL version: " << selectedDeviceDesc->GetOpenCLVersion());
-		if (!selectedDeviceDesc->IsOpenCL_1_1()) {
-			// NVIDIA drivers report OpenCL 1.0 even if they are 1.1 so I just
-			// print a warning instead of throwing an exception
-			SLG_LOG("WARNING: OpenCL version 1.1 or better is required. Device " + hardwareDevice->GetName() + " may not work.");
+		OpenCLDeviceDescription *oclDesc = dynamic_cast<OpenCLDeviceDescription *>(selectedDeviceDesc);
+		if (oclDesc) {
+			// Check if OpenCL 1.1 is available
+			SLG_LOG("  Device OpenCL version: " << oclDesc->GetOpenCLVersion());
+			if (!oclDesc->IsOpenCL_1_1()) {
+				// NVIDIA drivers report OpenCL 1.0 even if they are 1.1 so I just
+				// print a warning instead of throwing an exception
+				SLG_LOG("WARNING: OpenCL version 1.1 or better is required. Device " + hardwareDevice->GetName() + " may not work.");
+			}
 		}
 
 		// Just an empty data set
