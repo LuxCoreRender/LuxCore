@@ -22,7 +22,7 @@
 // Film_MergeBufferInitialize 
 //------------------------------------------------------------------------------
 
-__kernel __attribute__((work_group_size_hint(256, 1, 1))) void Film_MergeBufferInitialize(
+__kernel void Film_MergeBufferInitialize(
 		const uint filmWidth, const uint filmHeight,
 		__global float *channel_IMAGEPIPELINE) {
 	const size_t gid = get_global_id(0);
@@ -40,7 +40,7 @@ __kernel __attribute__((work_group_size_hint(256, 1, 1))) void Film_MergeBufferI
 // Film_MergeRADIANCE_PER_PIXEL_NORMALIZED 
 //------------------------------------------------------------------------------
 
-__kernel __attribute__((work_group_size_hint(256, 1, 1))) void Film_MergeRADIANCE_PER_PIXEL_NORMALIZED(
+__kernel void Film_MergeRADIANCE_PER_PIXEL_NORMALIZED(
 		const uint filmWidth, const uint filmHeight,
 		__global float *channel_IMAGEPIPELINE,
 		__global float *mergeBuffer,
@@ -81,7 +81,7 @@ __kernel __attribute__((work_group_size_hint(256, 1, 1))) void Film_MergeRADIANC
 // Film_MergeRADIANCE_PER_SCREEN_NORMALIZED 
 //------------------------------------------------------------------------------
 
-__kernel __attribute__((work_group_size_hint(256, 1, 1))) void Film_MergeRADIANCE_PER_SCREEN_NORMALIZED(
+__kernel void Film_MergeRADIANCE_PER_SCREEN_NORMALIZED(
 		const uint filmWidth, const uint filmHeight,
 		__global float *channel_IMAGEPIPELINE,
 		__global float *mergeBuffer,
@@ -115,7 +115,7 @@ __kernel __attribute__((work_group_size_hint(256, 1, 1))) void Film_MergeRADIANC
 // Film_MergeBufferfinalize 
 //------------------------------------------------------------------------------
 
-__kernel __attribute__((work_group_size_hint(256, 1, 1))) void Film_MergeBufferFinalize(
+__kernel void Film_MergeBufferFinalize(
 		const uint filmWidth, const uint filmHeight,
 		__global float *channel_IMAGEPIPELINE) {
 	const size_t gid = get_global_id(0);

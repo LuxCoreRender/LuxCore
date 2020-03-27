@@ -19,6 +19,7 @@
 #if defined(LUXRAYS_ENABLE_CUDA)
 
 #include "luxrays/devices/cudadevice.h"
+#include "luxrays/kernels/kernels.h"
 
 using namespace std;
 using namespace luxrays;
@@ -144,12 +145,58 @@ void CUDADevice::Stop() {
 void CUDADevice::CompileProgram(HardwareDeviceProgram **program,
 		const std::string &programParameters, const std::string &programSource,	
 		const std::string &programName) {
-	throw runtime_error("TODO CompileProgram");
+	LR_LOG(deviceContext, "[" << programName << "] Defined symbols: " << programParameters);
+	LR_LOG(deviceContext, "[" << programName << "] Compiling kernels");
+
+	const string cudaProgramSource = luxrays::ocl::KernelSource_cudadevice_oclemul + programSource;
+	nvrtcProgram prog;
+	CHECK_NVRTC_ERROR(nvrtcCreateProgram(&prog, cudaProgramSource.c_str(), programName.c_str(), 0, nullptr, nullptr));
+	
+	const nvrtcResult compilationResult = nvrtcCompileProgram(prog, 0, nullptr);
+	if (compilationResult != NVRTC_SUCCESS) {
+		size_t logSize;
+		CHECK_NVRTC_ERROR(nvrtcGetProgramLogSize(prog, &logSize));
+		unique_ptr<char> log(new char[logSize]);
+		CHECK_NVRTC_ERROR(nvrtcGetProgramLog(prog, log.get()));
+
+		LR_LOG(deviceContext, "[" << programName << "] program compilation error" << endl << log.get());
+
+		throw runtime_error(programName + " program compilation error");
+	}
+
+	if (!*program)
+		*program = new CUDADeviceProgram();
+	
+	CUDADeviceProgram *cudaDeviceProgram = dynamic_cast<CUDADeviceProgram *>(*program);
+	assert (cudaDeviceProgram);
+
+	// Obtain PTX from the program.
+	size_t ptxSize;
+	CHECK_NVRTC_ERROR(nvrtcGetPTXSize(prog, &ptxSize));
+	char *ptx = new char[ptxSize];
+	CHECK_NVRTC_ERROR(nvrtcGetPTX(prog, ptx));
+
+	CUmodule module;
+	CHECK_CUDA_ERROR(cuModuleLoadDataEx(&module, ptx, 0, 0, 0));
+
+	cudaDeviceProgram->Set(prog, module);
 }
 
 void CUDADevice::GetKernel(HardwareDeviceProgram *program,
 		HardwareDeviceKernel **kernel, const string &kernelName) {
-	throw runtime_error("TODO GetKernel");
+	if (!*kernel)
+		*kernel = new CUDADeviceKernel();
+
+	CUDADeviceKernel *cudaDeviceKernel = dynamic_cast<CUDADeviceKernel *>(*kernel);
+	assert (oclDeviceKernel);
+
+	CUDADeviceProgram *cudaDeviceProgram = dynamic_cast<CUDADeviceProgram *>(program);
+	assert (cudaDeviceProgram);
+
+	CUfunction function;
+	CHECK_CUDA_ERROR(cuModuleGetFunction(&function, cudaDeviceProgram->GetModule(), kernelName.c_str()));
+	
+	cudaDeviceKernel->Set(function);
 }
 
 void CUDADevice::SetKernelArg(HardwareDeviceKernel *kernel,

@@ -1,4 +1,4 @@
-#line 2 "plugin_objectidmask_funcs.cl"
+#line 2 "cudadevice_oclemul.cl"
 
 /***************************************************************************
  * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
@@ -18,26 +18,24 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-//------------------------------------------------------------------------------
-// ObjectIDMaskFilterPlugin_Apply
-//------------------------------------------------------------------------------
 
-__kernel void ObjectIDMaskFilterPlugin_Apply(
-		const uint filmWidth, const uint filmHeight,
-		__global float *channel_IMAGEPIPELINE,
-		__global uint *channel_OBJECT_ID,
-		const uint objectID) {
-	const size_t gid = get_global_id(0);
-	if (gid >= filmWidth * filmHeight)
-		return;
 
-	// Check if the pixel has received any sample
-	const uint maskValue = !isinf(channel_IMAGEPIPELINE[gid * 3]);
-	const uint objectIDValue = channel_OBJECT_ID[gid];
-	const float value = (maskValue && (objectIDValue == objectID)) ? 1.f : 0.f;
+#define __kernel extern "C" __global__
+#define __global
 
-	__global float *pixel = &channel_IMAGEPIPELINE[gid * 3];
-	pixel[0] = value;
-	pixel[1] = value;
-	pixel[2] = value;
+#define uint unsigned int
+
+#define INFINITY __int_as_float(0x7f800000)
+
+__device__ inline size_t get_global_id(const uint dimIndex) {
+	switch (dimIndex) {
+		case 0:
+			return blockIdx.x;
+		case 1:
+			return blockIdx.y;
+		case 2:
+			return blockIdx.z;
+		default:
+			return 0;
+	}
 }

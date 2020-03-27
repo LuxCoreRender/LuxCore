@@ -22,7 +22,7 @@
 // BloomFilterPlugin_FilterX
 //------------------------------------------------------------------------------
 
-__kernel __attribute__((work_group_size_hint(256, 1, 1))) void BloomFilterPlugin_FilterX(
+__kernel void BloomFilterPlugin_FilterX(
 		const uint filmWidth, const uint filmHeight,
 		__global float *channel_IMAGEPIPELINE,
 		__global float *bloomBuffer,
@@ -78,7 +78,7 @@ __kernel __attribute__((work_group_size_hint(256, 1, 1))) void BloomFilterPlugin
 // BloomFilterPlugin_FilterY
 //------------------------------------------------------------------------------
 
-__kernel __attribute__((work_group_size_hint(256, 1, 1))) void BloomFilterPlugin_FilterY(
+__kernel void BloomFilterPlugin_FilterY(
 		const uint filmWidth, const uint filmHeight,
 		__global float *channel_IMAGEPIPELINE,
 		__global float *bloomBuffer,
@@ -134,7 +134,7 @@ __kernel __attribute__((work_group_size_hint(256, 1, 1))) void BloomFilterPlugin
 // BloomFilterPlugin_Merge
 //------------------------------------------------------------------------------
 
-__kernel __attribute__((work_group_size_hint(256, 1, 1))) void BloomFilterPlugin_Merge(
+__kernel void BloomFilterPlugin_Merge(
 		const uint filmWidth, const uint filmHeight,
 		__global float *channel_IMAGEPIPELINE,
 		__global float *bloomBuffer,

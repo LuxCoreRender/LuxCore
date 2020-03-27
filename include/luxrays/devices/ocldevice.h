@@ -205,15 +205,6 @@ public:
 
 	friend class OpenCLDevice;
 
-protected:
-	void Set(cl::Buffer *p) {
-		delete oclBuff;
-		oclBuff = p;
-	}
-
-	const cl::Buffer *Get() const { return oclBuff; }
-	cl::Buffer *Get() { return oclBuff; }
-
 private:
 	cl::Buffer *oclBuff;
 };

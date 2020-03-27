@@ -42,7 +42,7 @@ float3 ColorAberrationPlugin_BilinearSampleImage(
 	return c;
 }
 
-__kernel __attribute__((work_group_size_hint(256, 1, 1))) void ColorAberrationPlugin_Apply(
+__kernel void ColorAberrationPlugin_Apply(
 		const uint filmWidth, const uint filmHeight,
 		__global float *channel_IMAGEPIPELINE,
 		__global float *tmpBuffer,

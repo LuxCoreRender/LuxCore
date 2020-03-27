@@ -56,6 +56,72 @@ private:
 };
 
 //------------------------------------------------------------------------------
+// CUDADeviceKernel
+//------------------------------------------------------------------------------
+
+class CUDADeviceKernel : public HardwareDeviceKernel {
+public:
+	CUDADeviceKernel() : cudaKernel(nullptr) { }
+	virtual ~CUDADeviceKernel() {
+	}
+
+	bool IsNull() const { 
+		return (cudaKernel == nullptr);
+	}
+
+	friend class CUDADevice;
+
+protected:
+	void Set(CUfunction kernel) {
+		cudaKernel = kernel;
+	}
+
+	CUfunction Get() { return cudaKernel; }
+
+private:
+	CUfunction cudaKernel;
+};
+
+//------------------------------------------------------------------------------
+// CUDADeviceProgram
+//------------------------------------------------------------------------------
+
+class CUDADeviceProgram : public HardwareDeviceProgram {
+public:
+	CUDADeviceProgram() : cudaProgram(nullptr), cudaModule(nullptr) { }
+	virtual ~CUDADeviceProgram() {
+		if (cudaProgram) {
+			CHECK_NVRTC_ERROR(nvrtcDestroyProgram(&cudaProgram));
+		}
+		// TODO: I'm never unloading any loaded module for the moment (i.e. not
+		// calling cuModuleUnload())
+	}
+
+	bool IsNull() const { 
+		return (cudaProgram == nullptr);
+	}
+
+	friend class CUDADevice;
+
+protected:
+	void Set(nvrtcProgram p, CUmodule m) {
+		if (cudaProgram) {
+			CHECK_NVRTC_ERROR(nvrtcDestroyProgram(&cudaProgram));
+		}
+
+		cudaProgram = p;
+		cudaModule = m;
+	}
+
+	nvrtcProgram GetProgram() { return cudaProgram; }
+	CUmodule GetModule() { return cudaModule; }
+
+private:
+	nvrtcProgram cudaProgram;
+	CUmodule cudaModule;
+};
+
+//------------------------------------------------------------------------------
 // CUDADeviceBuffer
 //------------------------------------------------------------------------------
 

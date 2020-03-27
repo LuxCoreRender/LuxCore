@@ -24,7 +24,10 @@
 namespace luxrays { namespace ocl {
 
 extern std::string KernelSource_luxrays_types;
-	
+
+// CUDADevice OpenCL emulation
+extern std::string KernelSource_cudadevice_oclemul;
+
 // Intersection kernels
 extern std::string KernelSource_bvhbuild_types;
 extern std::string KernelSource_bvh;

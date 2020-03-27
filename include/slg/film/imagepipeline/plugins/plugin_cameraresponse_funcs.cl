@@ -79,7 +79,7 @@ float3 Map(__global const float *redI, __global const float *redB, const uint re
 	return result;
 }
 
-__kernel __attribute__((work_group_size_hint(256, 1, 1))) void CameraResponsePlugin_Apply(
+__kernel void CameraResponsePlugin_Apply(
 		const uint filmWidth, const uint filmHeight,
 		__global float *channel_IMAGEPIPELINE,
 		__global const float *redI, __global const float *redB, const uint redSize

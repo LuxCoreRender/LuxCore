@@ -286,7 +286,7 @@ void OpenCLDevice::EnqueueReadBuffer(const HardwareDeviceBuffer *buff,
 	assert (oclDeviceBuff);
 	assert (oclDeviceBuff->Get());
 
-	oclQueue->enqueueReadBuffer(*(oclDeviceBuff->Get()), 0, blocking, size, ptr);
+	oclQueue->enqueueReadBuffer(*(oclDeviceBuff->oclBuff), 0, blocking, size, ptr);
 }
 
 void OpenCLDevice::EnqueueWriteBuffer(const HardwareDeviceBuffer *buff,
@@ -295,7 +295,7 @@ void OpenCLDevice::EnqueueWriteBuffer(const HardwareDeviceBuffer *buff,
 	assert (oclDeviceBuff);
 	assert (oclDeviceBuff->Get());
 
-	oclQueue->enqueueWriteBuffer(*(oclDeviceBuff->Get()), 0, blocking, size, ptr);
+	oclQueue->enqueueWriteBuffer(*(oclDeviceBuff->oclBuff), 0, blocking, size, ptr);
 }
 
 void OpenCLDevice::FlushQueue() {

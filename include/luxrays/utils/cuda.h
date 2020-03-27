@@ -22,12 +22,13 @@
 #if defined(LUXRAYS_ENABLE_CUDA)
 
 #include <cuda.h>
+#include <nvrtc.h>
 
 namespace luxrays {
 
-#define CHECK_CUDA_ERROR(err) CheckCudaError(err, __FILE__, __LINE__)
+#define CHECK_CUDA_ERROR(err) CheckCUDAError(err, __FILE__, __LINE__)
 
-inline void CheckCudaError(const CUresult err, const char *file, const int line) {
+inline void CheckCUDAError(const CUresult err, const char *file, const int line) {
   if (err != CUDA_SUCCESS) {
 	  const char *errorNameStr;
 	  if (cuGetErrorName(err, &errorNameStr) != CUDA_SUCCESS)
@@ -40,6 +41,16 @@ inline void CheckCudaError(const CUresult err, const char *file, const int line)
 	  throw std::runtime_error("CUDA driver API error " + std::string(errorNameStr) + " "
 			  "(code: " + ToString(err) + ", file:" + std::string(file) + ", line: " + ToString(line) + ")"
 			  ": " + std::string(errorStr) + "\n");
+	}
+}
+
+#define CHECK_NVRTC_ERROR(err) CheckNVRTCError(err, __FILE__, __LINE__)
+
+inline void CheckNVRTCError(const nvrtcResult err, const char *file, const int line) {
+  if (err != NVRTC_SUCCESS) {
+	  throw std::runtime_error("CUDA NVRTC error "
+			  "(code: " + ToString(err) + ", file:" + std::string(file) + ", line: " + ToString(line) + ")"
+			  ": " + std::string(nvrtcGetErrorString(err)) + "\n");
 	}
 }
 

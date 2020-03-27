@@ -28,7 +28,7 @@ float Radiance2PixelFloat(__global float *gammaTable, const uint tableSize,
 	return gammaTable[index];
 }
 
-__kernel __attribute__((work_group_size_hint(256, 1, 1))) void GammaCorrectionPlugin_Apply(
+__kernel void GammaCorrectionPlugin_Apply(
 		const uint filmWidth, const uint filmHeight,
 		__global float *channel_IMAGEPIPELINE,
 		__global float *gammaTable,

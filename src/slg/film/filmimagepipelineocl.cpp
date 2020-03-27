@@ -58,8 +58,8 @@ void Film::CreateOCLContext() {
 	// Create LuxRays context
 	ctx = new Context(LuxRays_DebugHandler ? LuxRays_DebugHandler : NullDebugHandler,
 			Properties() <<
-			Property("context.opencl.platform.index")(oclPlatformIndex) <<
-			Property("context.verbose")(false));
+			Property("context.opencl.platform.index")(oclPlatformIndex) /*<<
+			Property("context.verbose")(false)*/);
 
 	// Select OpenCL device
 	vector<DeviceDescription *> descs = ctx->GetAvailableDeviceDescriptions();
@@ -141,7 +141,7 @@ void Film::DeleteOCLContext() {
 }
 
 void Film::AllocateOCLBuffers() {
-	ctx->SetVerbose(true);
+//	ctx->SetVerbose(true);
 
 	hardwareDevice->AllocBufferRW(&ocl_IMAGEPIPELINE, channel_IMAGEPIPELINEs[0]->GetPixels(), channel_IMAGEPIPELINEs[0]->GetSize(), "IMAGEPIPELINE");
 	if (HasChannel(ALPHA))
@@ -154,7 +154,7 @@ void Film::AllocateOCLBuffers() {
 	if (mergeBufferSize > 0)
 		hardwareDevice->AllocBufferRO(&ocl_mergeBuffer, nullptr, mergeBufferSize, "Merge");
 
-	ctx->SetVerbose(false);
+//	ctx->SetVerbose(false);
 }
 
 void Film::CompileOCLKernels() {

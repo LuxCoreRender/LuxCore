@@ -62,7 +62,7 @@ void GaussianBlur3x3FilterPlugin_ApplyBlurFilterXR1(
 	VSTORE3F(aRightK  * a + bRightK * b, &dst[(filmWidth - 1) * 3]);
 }
 
-__kernel __attribute__((work_group_size_hint(256, 1, 1))) void GaussianBlur3x3FilterPlugin_FilterX(
+__kernel void GaussianBlur3x3FilterPlugin_FilterX(
 		const uint filmWidth, const uint filmHeight,
 		__global const float *src,
 		__global float *dst,
@@ -126,7 +126,7 @@ void GaussianBlur3x3FilterPlugin_ApplyBlurFilterYR1(
 	VSTORE3F(aRightK  * a + bRightK * b, &dst[(filmHeight - 1) * filmWidth * 3]);
 }
 
-__kernel __attribute__((work_group_size_hint(256, 1, 1))) void GaussianBlur3x3FilterPlugin_FilterY(
+__kernel void GaussianBlur3x3FilterPlugin_FilterY(
 		const uint filmWidth, const uint filmHeight,
 		__global const float *src,
 		__global float *dst,

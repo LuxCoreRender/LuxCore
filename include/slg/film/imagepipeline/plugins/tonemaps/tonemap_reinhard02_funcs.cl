@@ -22,7 +22,7 @@
 // Reinhard02ToneMap_Apply
 //------------------------------------------------------------------------------
 
-__kernel __attribute__((work_group_size_hint(256, 1, 1))) void Reinhard02ToneMap_Apply(
+__kernel void Reinhard02ToneMap_Apply(
 		const uint filmWidth, const uint filmHeight,
 		__global float *channel_IMAGEPIPELINE,
 		const float gamma,
