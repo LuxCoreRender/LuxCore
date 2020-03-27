@@ -48,6 +48,7 @@
 #include "slg/materials/roughmattetranslucent.h"
 #include "slg/materials/velvet.h"
 #include "slg/materials/disney.h"
+#include "slg/materials/twosided.h"
 
 #include "slg/utils/filenameresolver.h"
 
@@ -457,6 +458,19 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 
 		mat = new DisneyMaterial(frontTransparencyTex, backTransparencyTex, emissionTex, bumpTex, baseColor, subsurface, roughness, metallic,
 			specular, specularTint, clearcoat, clearcoatGloss, anisotropic, sheen, sheenTint);
+	} else if (matType == "twosided") {
+		const Material *frontMat = matDefs.GetMaterial(props.Get(Property(propName + ".frontmaterial")("front")).Get<string>());
+		const Material *backMat = matDefs.GetMaterial(props.Get(Property(propName + ".backmaterial")("back")).Get<string>());
+
+		TwoSidedMaterial *twoSided = new TwoSidedMaterial(frontTransparencyTex, backTransparencyTex, emissionTex, bumpTex, frontMat, backMat);
+
+		// Check if there is a loop in Two-sided material definition
+		// (Note: this can not really happen at the moment because forward
+		// declarations are not supported)
+		if (twoSided->IsReferencing(twoSided))
+			throw runtime_error("There is a loop in Two-sided material definition: " + matName);
+
+		mat = twoSided;
 	} else
 		throw runtime_error("Unknown material type: " + matType);
 
