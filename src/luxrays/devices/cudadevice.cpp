@@ -133,8 +133,14 @@ void CUDADevice::Start() {
 }
 
 void CUDADevice::Stop() {
-	CHECK_CUDA_ERROR(cuCtxDestroy(cudaContext));
+	// Free all loaded modules
+	for (auto &m : loadedModules) {
+		CHECK_CUDA_ERROR(cuModuleUnload(m));
+	}
+	loadedModules.clear();
 
+	CHECK_CUDA_ERROR(cuCtxDestroy(cudaContext));
+		
 	HardwareDevice::Stop();
 }
 
@@ -180,6 +186,8 @@ void CUDADevice::CompileProgram(HardwareDeviceProgram **program,
 	CHECK_CUDA_ERROR(cuModuleLoadDataEx(&module, ptx, 0, 0, 0));
 
 	cudaDeviceProgram->Set(prog, module);
+	
+	loadedModules.push_back(module);
 }
 
 void CUDADevice::GetKernel(HardwareDeviceProgram *program,

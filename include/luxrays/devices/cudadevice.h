@@ -93,8 +93,7 @@ public:
 		if (cudaProgram) {
 			CHECK_NVRTC_ERROR(nvrtcDestroyProgram(&cudaProgram));
 		}
-		// TODO: I'm never unloading any loaded module for the moment (i.e. not
-		// calling cuModuleUnload())
+		// Module is unloaded by the device at the Stop()
 	}
 
 	bool IsNull() const { 
@@ -201,6 +200,7 @@ protected:
 
 	CUDADeviceDescription *deviceDesc;
 	CUcontext cudaContext;
+	std::vector<CUmodule> loadedModules;
 };
 
 }
