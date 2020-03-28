@@ -168,8 +168,8 @@ public:
 			const u_int index, const size_t size, const void *arg);
 
 	virtual void EnqueueKernel(HardwareDeviceKernel *kernel,
-			const HardwareDeviceRange &workGroupSize,
-			const HardwareDeviceRange &globalSize);
+			const HardwareDeviceRange &globalSize,
+			const HardwareDeviceRange &workGroupSize);
 	virtual void EnqueueReadBuffer(const HardwareDeviceBuffer *buff,
 			const bool blocking, const size_t size, void *ptr);
 	virtual void EnqueueWriteBuffer(const HardwareDeviceBuffer *buff,

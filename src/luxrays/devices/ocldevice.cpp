@@ -236,6 +236,7 @@ void OpenCLDevice::GetKernel(HardwareDeviceProgram *program,
 
 void OpenCLDevice::SetKernelArg(HardwareDeviceKernel *kernel,
 		const u_int index, const size_t size, const void *arg) {
+	assert (kernel);
 	assert (!kernel->IsNull());
 
 	OpenCLDeviceKernel *oclDeviceKernel = dynamic_cast<OpenCLDeviceKernel *>(kernel);
@@ -246,6 +247,7 @@ void OpenCLDevice::SetKernelArg(HardwareDeviceKernel *kernel,
 
 void OpenCLDevice::SetKernelArgBuffer(HardwareDeviceKernel *kernel,
 		const u_int index, const HardwareDeviceBuffer *buff) {
+	assert (kernel);
 	assert (!kernel->IsNull());
 
 	OpenCLDeviceKernel *oclDeviceKernel = dynamic_cast<OpenCLDeviceKernel *>(kernel);
@@ -265,23 +267,28 @@ static cl::NDRange ConvertHardwareRange(const HardwareDeviceRange &range) {
 		return cl::NDRange(range.sizes[0], range.sizes[1]);
 	else
 		return cl::NDRange(range.sizes[0], range.sizes[1], range.sizes[2]);
-	
 }
 
 void OpenCLDevice::EnqueueKernel(HardwareDeviceKernel *kernel,
-			const HardwareDeviceRange &workGroupSize,
-			const HardwareDeviceRange &globalSize) {
+			const HardwareDeviceRange &globalSize,
+			const HardwareDeviceRange &workGroupSize) {
+	assert (kernel);
+	assert (!kernel->IsNull());
+
 	OpenCLDeviceKernel *oclDeviceKernel = dynamic_cast<OpenCLDeviceKernel *>(kernel);
 	assert (oclDeviceKernel);
 
 	oclQueue->enqueueNDRangeKernel(*oclDeviceKernel->oclKernel,
 			cl::NullRange,
-			ConvertHardwareRange(workGroupSize),
-			ConvertHardwareRange(globalSize));
+			ConvertHardwareRange(globalSize),
+			ConvertHardwareRange(workGroupSize));
 }
 
 void OpenCLDevice::EnqueueReadBuffer(const HardwareDeviceBuffer *buff,
 		const bool blocking, const size_t size, void *ptr) {
+	assert (buff);
+	assert (!buff->IsNull());
+
 	const OpenCLDeviceBuffer *oclDeviceBuff = dynamic_cast<const OpenCLDeviceBuffer *>(buff);
 	assert (oclDeviceBuff);
 	assert (oclDeviceBuff->Get());
@@ -291,6 +298,9 @@ void OpenCLDevice::EnqueueReadBuffer(const HardwareDeviceBuffer *buff,
 
 void OpenCLDevice::EnqueueWriteBuffer(const HardwareDeviceBuffer *buff,
 		const bool blocking, const size_t size, const void *ptr) {
+	assert (buff);
+	assert (!buff->IsNull());
+
 	const OpenCLDeviceBuffer *oclDeviceBuff = dynamic_cast<const OpenCLDeviceBuffer *>(buff);
 	assert (oclDeviceBuff);
 	assert (oclDeviceBuff->Get());

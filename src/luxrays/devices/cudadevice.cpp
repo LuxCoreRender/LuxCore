@@ -210,6 +210,7 @@ void CUDADevice::GetKernel(HardwareDeviceProgram *program,
 void CUDADevice::SetKernelArg(HardwareDeviceKernel *kernel,
 		const u_int index, const size_t size, const void *arg) {
 	assert (kernel);
+	assert (!kernel->IsNull());
 
 	CUDADeviceKernel *cudaDeviceKernel = dynamic_cast<CUDADeviceKernel *>(kernel);
 	assert (cudaDeviceKernel);
@@ -234,6 +235,7 @@ void CUDADevice::SetKernelArg(HardwareDeviceKernel *kernel,
 void CUDADevice::SetKernelArgBuffer(HardwareDeviceKernel *kernel,
 		const u_int index, const HardwareDeviceBuffer *buff) {
 	assert (kernel);
+	assert (!kernel->IsNull());
 
 	if (buff) {
 		const CUDADeviceBuffer *cudaDeviceBuff = dynamic_cast<const CUDADeviceBuffer *>(buff);
@@ -244,14 +246,67 @@ void CUDADevice::SetKernelArgBuffer(HardwareDeviceKernel *kernel,
 		SetKernelArg(kernel, index, sizeof(CUdeviceptr), nullptr);
 }
 
+static void ConvertHardwareRange(const u_int globalSize, const u_int workGroupSize,
+		u_int &block, u_int &thread) {
+	if (workGroupSize == 0) {
+		block = globalSize / 32;
+		thread = 32;
+	} else {
+		block = globalSize / workGroupSize;
+		thread = workGroupSize;
+	}
+}
+
+static void ConvertHardwareRange(const HardwareDeviceRange &globalSize,
+		const HardwareDeviceRange &workGroupSize,
+		u_int &blockX, u_int &blockY, u_int &blockZ,
+		u_int &threadX, u_int &threadY, u_int &threadZ) {
+	if (globalSize.dimensions == 1) {
+		ConvertHardwareRange(globalSize.sizes[0], workGroupSize.sizes[0], blockX, threadX);
+		blockY = 1;
+		threadY = 1;
+		blockZ = 1;
+		threadZ = 1;
+	} else if (globalSize.dimensions == 2) {
+		ConvertHardwareRange(globalSize.sizes[0], workGroupSize.sizes[0], blockX, threadX);
+		ConvertHardwareRange(globalSize.sizes[1], workGroupSize.sizes[1], blockY, threadY);
+		blockZ = 1;
+		threadZ = 1;
+	} else {
+		ConvertHardwareRange(globalSize.sizes[0], workGroupSize.sizes[0], blockX, threadX);
+		ConvertHardwareRange(globalSize.sizes[1], workGroupSize.sizes[1], blockY, threadY);
+		ConvertHardwareRange(globalSize.sizes[2], workGroupSize.sizes[2], blockZ, threadZ);
+	}
+}
+
 void CUDADevice::EnqueueKernel(HardwareDeviceKernel *kernel,
-			const HardwareDeviceRange &workGroupSize,
-			const HardwareDeviceRange &globalSize) {
-	throw runtime_error("TODO EnqueueKernel");
+			const HardwareDeviceRange &globalSize,
+			const HardwareDeviceRange &workGroupSize) {
+	assert (kernel);
+	assert (!kernel->IsNull());
+
+	CUDADeviceKernel *cudaDeviceKernel = dynamic_cast<CUDADeviceKernel *>(kernel);
+	assert (cudaDeviceKernel);
+
+	u_int blockX, blockY, blockZ;
+	u_int threadX, threadY, threadZ;
+	ConvertHardwareRange(globalSize, workGroupSize,
+			blockX, blockY, blockZ,
+			threadX, threadY, threadZ);
+
+	CHECK_CUDA_ERROR(cuLaunchKernel(cudaDeviceKernel->cudaKernel,
+			blockX, blockY, blockZ,  // blocks
+			threadX, threadY, threadZ,  // threads
+			0, 0,
+			&cudaDeviceKernel->args[0],
+			nullptr));
 }
 
 void CUDADevice::EnqueueReadBuffer(const HardwareDeviceBuffer *buff,
 		const bool blocking, const size_t size, void *ptr) {
+	assert (buff);
+	assert (!buff->IsNull());
+
 	const CUDADeviceBuffer *cudaDeviceBuff = dynamic_cast<const CUDADeviceBuffer *>(buff);
 	assert (cudaDeviceBuff);
 
@@ -264,6 +319,9 @@ void CUDADevice::EnqueueReadBuffer(const HardwareDeviceBuffer *buff,
 
 void CUDADevice::EnqueueWriteBuffer(const HardwareDeviceBuffer *buff,
 		const bool blocking, const size_t size, const void *ptr) {
+	assert (buff);
+	assert (!buff->IsNull());
+
 	const CUDADeviceBuffer *cudaDeviceBuff = dynamic_cast<const CUDADeviceBuffer *>(buff);
 	assert (cudaDeviceBuff);
 
@@ -275,11 +333,10 @@ void CUDADevice::EnqueueWriteBuffer(const HardwareDeviceBuffer *buff,
 }
 
 void CUDADevice::FlushQueue() {
-	throw runtime_error("TODO FlushQueue");
 }
 
 void CUDADevice::FinishQueue() {
-	throw runtime_error("TODO FinishQueue");
+	cuStreamSynchronize(0);
 }
 
 //------------------------------------------------------------------------------

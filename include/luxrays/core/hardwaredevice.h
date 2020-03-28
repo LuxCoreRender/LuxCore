@@ -127,8 +127,8 @@ public:
 	}
 	
 	virtual void EnqueueKernel(HardwareDeviceKernel *kernel,
-			const HardwareDeviceRange &workGroupSize,
-			const HardwareDeviceRange &globalSize) = 0;
+			const HardwareDeviceRange &globalSize,
+			const HardwareDeviceRange &workGroupSize) = 0;
 	virtual void EnqueueReadBuffer(const HardwareDeviceBuffer *buff,
 			const bool blocking, const size_t size, void *ptr) = 0;
 	virtual void EnqueueWriteBuffer(const HardwareDeviceBuffer *buff,
