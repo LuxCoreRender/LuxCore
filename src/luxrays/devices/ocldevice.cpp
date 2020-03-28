@@ -27,6 +27,7 @@
 #endif
 
 #include "luxrays/devices/ocldevice.h"
+#include "luxrays/kernels/kernels.h"
 
 using namespace std;
 
@@ -36,7 +37,7 @@ namespace luxrays {
 // OpenCL Device Description
 //------------------------------------------------------------------------------
 
-std::string OpenCLDeviceDescription::GetDeviceType(const cl_uint type) {
+string OpenCLDeviceDescription::GetDeviceType(const cl_uint type) {
 	switch (type) {
 		case CL_DEVICE_TYPE_ALL:
 			return "TYPE_ALL";
@@ -68,7 +69,7 @@ DeviceType OpenCLDeviceDescription::GetOCLDeviceType(const cl_device_type type)
 }
 
 void OpenCLDeviceDescription::AddDeviceDescs(const cl::Platform &oclPlatform,
-	const DeviceType filter, std::vector<DeviceDescription *> &descriptions)
+	const DeviceType filter, vector<DeviceDescription *> &descriptions)
 {
 	// Get the list of devices available on the platform
 	VECTOR_CLASS<cl::Device> oclDevices;
@@ -82,7 +83,7 @@ void OpenCLDeviceDescription::AddDeviceDescs(const cl::Platform &oclPlatform,
 			/*if (dev_type == DEVICE_TYPE_OPENCL_CPU)
 			{
 				cl_device_partition_property_ext props[4] = { CL_DEVICE_PARTITION_BY_COUNTS_EXT, 1, 0, 0 };
-				std::vector<cl::Device> subDevices;
+				vector<cl::Device> subDevices;
 				oclDevices[i].createSubDevices(props, &subDevices);
 				descriptions.push_back(new OpenCLDeviceDescription(subDevices[0], i));
 			} else*/
@@ -181,23 +182,22 @@ void OpenCLDevice::Stop() {
 //------------------------------------------------------------------------------
 
 void OpenCLDevice::CompileProgram(HardwareDeviceProgram **program,
-		const std::string &programParameters, const std::string &programSource,	
-		const std::string &programName) {
+		const string &programParameters, const string &programSource,	
+		const string &programName) {
 	cl::Context &oclContext = deviceDesc->GetOCLContext();
 	cl::Device &oclDevice = deviceDesc->GetOCLDevice();
 
 	LR_LOG(deviceContext, "[" << programName << "] Defined symbols: " << programParameters);
 	LR_LOG(deviceContext, "[" << programName << "] Compiling kernels ");
 
-	// This is a workaround to long compilation time
-	const string forceInlineDirective =
-			"#define OPENCL_FORCE_NOT_INLINE __attribute__((noinline))\n"
-			"#define OPENCL_FORCE_INLINE __attribute__((always_inline))\n";
+	const string oclProgramSource =
+		luxrays::ocl::KernelSource_ocldevice_funcs +
+		programSource;
 
 	bool cached;
 	cl::STRING_CLASS error;
 	cl::Program *oclProgram = kernelCache->Compile(oclContext, oclDevice,
-			programParameters, forceInlineDirective + programSource,
+			programParameters, oclProgramSource,
 			&cached, &error);
 	if (!oclProgram) {
 		LR_LOG(deviceContext, "[" << programName << "] program compilation error" << endl << error);
@@ -321,7 +321,7 @@ void OpenCLDevice::FinishQueue() {
 //------------------------------------------------------------------------------
 
 void OpenCLDevice::AllocBuffer(const cl_mem_flags clFlags, cl::Buffer **buff,
-		void *src, const size_t size, const std::string &desc) {
+		void *src, const size_t size, const string &desc) {
 	// Check if the buffer is too big
 	if (deviceDesc->GetMaxMemoryAllocSize() < size) {
 		// This is now only a WARNING and not an ERROR because NVIDIA reported
@@ -375,7 +375,7 @@ void OpenCLDevice::AllocBuffer(const cl_mem_flags clFlags, cl::Buffer **buff,
 	AllocMemory((*buff)->getInfo<CL_MEM_SIZE>());
 }
 
-void OpenCLDevice::AllocBufferRO(HardwareDeviceBuffer **buff, void *src, const size_t size, const std::string &desc) {
+void OpenCLDevice::AllocBufferRO(HardwareDeviceBuffer **buff, void *src, const size_t size, const string &desc) {
 	if (!*buff)
 		*buff = new OpenCLDeviceBuffer();
 
@@ -385,7 +385,7 @@ void OpenCLDevice::AllocBufferRO(HardwareDeviceBuffer **buff, void *src, const s
 	AllocBuffer(src ? (CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR) : CL_MEM_READ_ONLY, &(oclDeviceBuff->oclBuff), src, size, desc);
 }
 
-void OpenCLDevice::AllocBufferRW(HardwareDeviceBuffer **buff, void *src, const size_t size, const std::string &desc) {
+void OpenCLDevice::AllocBufferRW(HardwareDeviceBuffer **buff, void *src, const size_t size, const string &desc) {
 	if (!*buff)
 		*buff = new OpenCLDeviceBuffer();
 

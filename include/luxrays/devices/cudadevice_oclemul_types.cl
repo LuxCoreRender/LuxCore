@@ -1,4 +1,4 @@
-#line 2 "cudadevice_oclemul.cl"
+#line 2 "cudadevice_oclemul_types.cl"
 
 /***************************************************************************
  * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
@@ -18,24 +18,15 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-
-
 #define __kernel extern "C" __global__
 #define __global
 
-#define uint unsigned int
+// This is a workaround to long compilation time
+#define OPENCL_FORCE_NOT_INLINE __device__ __noinline__
+#define OPENCL_FORCE_INLINE __device__ __forceinline__
+
+typedef unsigned int uint;
+typedef unsigned short ushort;
 
 #define INFINITY __int_as_float(0x7f800000)
-
-__device__ inline size_t get_global_id(const uint dimIndex) {
-	switch (dimIndex) {
-		case 0:
-			return blockIdx.x;
-		case 1:
-			return blockIdx.y;
-		case 2:
-			return blockIdx.z;
-		default:
-			return 0;
-	}
-}
+#define M_PI_F 3.141592654f

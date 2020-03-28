@@ -1,4 +1,4 @@
-#line 2 "plugin_gammacorrection_funcs.cl"
+#line 2 "cudadevice_oclemul_funcs.cl"
 
 /***************************************************************************
  * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
@@ -18,31 +18,23 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-//------------------------------------------------------------------------------
-// GammaCorrectionPlugin_Apply
-//------------------------------------------------------------------------------
-
-OPENCL_FORCE_INLINE float Radiance2PixelFloat(__global float *gammaTable, const uint tableSize,
-		const float x) {
-	const int index = clamp(Floor2UInt(tableSize * clamp(x, 0.f, 1.f)), 0u, tableSize - 1u);
-	return gammaTable[index];
+__device__ __forceinline__ size_t get_global_id(const uint dimIndex) {
+	switch (dimIndex) {
+		case 0:
+			return blockIdx.x * blockDim.x + threadIdx.x;
+		case 1:
+			return blockIdx.y * blockDim.y + threadIdx.y;
+		case 2:
+			return blockIdx.z * blockDim.z + threadIdx.z;
+		default:
+			return 0;
+	}
 }
 
-__kernel void GammaCorrectionPlugin_Apply(
-		const uint filmWidth, const uint filmHeight,
-		__global float *channel_IMAGEPIPELINE,
-		__global float *gammaTable,
-		const uint tableSize) {
-	const size_t gid = get_global_id(0);
-	if (gid >= filmWidth * filmHeight)
-		return;
+__device__ __forceinline__ float mix(const float x, const float y, const float a) {
+	return x + (y - x) * a;
+}
 
-	// Check if the pixel has received any sample
-	if (!isinf(channel_IMAGEPIPELINE[gid * 3])) {
-		__global float *pixel = &channel_IMAGEPIPELINE[gid * 3];
-
-		pixel[0] = Radiance2PixelFloat(gammaTable, tableSize, pixel[0]);
-		pixel[1] = Radiance2PixelFloat(gammaTable, tableSize, pixel[1]);
-		pixel[2] = Radiance2PixelFloat(gammaTable, tableSize, pixel[2]);
-	}
+__device__ __forceinline__ float3 mix(const float3 x, const float3 y, const float a) {
+	return x + (y - x) * a;
 }

@@ -128,7 +128,10 @@ set(LUXRAYS_KERNELS
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/triangle_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/uv_types.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/utils_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/luxrays/devices/cudadevice_oclemul.cl
+	${LuxRays_SOURCE_DIR}/include/luxrays/devices/cudadevice_math.cl
+	${LuxRays_SOURCE_DIR}/include/luxrays/devices/cudadevice_oclemul_types.cl
+	${LuxRays_SOURCE_DIR}/include/luxrays/devices/cudadevice_oclemul_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/luxrays/devices/ocldevice_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/atomic_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/mc_funcs.cl
 )
@@ -206,7 +209,10 @@ PreprocessOCLKernels(${generated_kernels_dir} luxrays ${LUXRAYS_KERNELS})
 
 set(LUXRAYS_SRCS_KERNELS
 	${generated_kernels_dir}/luxrays_types_kernel.cpp
-	${generated_kernels_dir}/cudadevice_oclemul_kernel.cpp
+	${generated_kernels_dir}/cudadevice_math_kernel.cpp
+	${generated_kernels_dir}/cudadevice_oclemul_types_kernel.cpp
+	${generated_kernels_dir}/cudadevice_oclemul_funcs_kernel.cpp
+	${generated_kernels_dir}/ocldevice_funcs_kernel.cpp
 	${generated_kernels_dir}/bvhbuild_types_kernel.cpp
 	${generated_kernels_dir}/bvh_kernel.cpp
 	${generated_kernels_dir}/mbvh_kernel.cpp

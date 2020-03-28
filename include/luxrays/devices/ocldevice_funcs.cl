@@ -1,4 +1,4 @@
-#line 2 "plugin_gammacorrection_funcs.cl"
+#line 2 "ocldevice_funcs.cl"
 
 /***************************************************************************
  * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
@@ -18,31 +18,9 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-//------------------------------------------------------------------------------
-// GammaCorrectionPlugin_Apply
-//------------------------------------------------------------------------------
+// This is a workaround to long compilation time
+#define OPENCL_FORCE_NOT_INLINE __attribute__((noinline))
+#define OPENCL_FORCE_INLINE __attribute__((always_inline))
 
-OPENCL_FORCE_INLINE float Radiance2PixelFloat(__global float *gammaTable, const uint tableSize,
-		const float x) {
-	const int index = clamp(Floor2UInt(tableSize * clamp(x, 0.f, 1.f)), 0u, tableSize - 1u);
-	return gammaTable[index];
-}
-
-__kernel void GammaCorrectionPlugin_Apply(
-		const uint filmWidth, const uint filmHeight,
-		__global float *channel_IMAGEPIPELINE,
-		__global float *gammaTable,
-		const uint tableSize) {
-	const size_t gid = get_global_id(0);
-	if (gid >= filmWidth * filmHeight)
-		return;
-
-	// Check if the pixel has received any sample
-	if (!isinf(channel_IMAGEPIPELINE[gid * 3])) {
-		__global float *pixel = &channel_IMAGEPIPELINE[gid * 3];
-
-		pixel[0] = Radiance2PixelFloat(gammaTable, tableSize, pixel[0]);
-		pixel[1] = Radiance2PixelFloat(gammaTable, tableSize, pixel[1]);
-		pixel[2] = Radiance2PixelFloat(gammaTable, tableSize, pixel[2]);
-	}
-}
+#define make_float2 (float2)
+#define make_float3 (float3)

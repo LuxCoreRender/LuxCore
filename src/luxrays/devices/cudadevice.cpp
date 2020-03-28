@@ -154,7 +154,11 @@ void CUDADevice::CompileProgram(HardwareDeviceProgram **program,
 	LR_LOG(deviceContext, "[" << programName << "] Defined symbols: " << programParameters);
 	LR_LOG(deviceContext, "[" << programName << "] Compiling kernels");
 
-	const string cudaProgramSource = luxrays::ocl::KernelSource_cudadevice_oclemul + programSource;
+	const string cudaProgramSource =
+		luxrays::ocl::KernelSource_cudadevice_oclemul_types +
+		luxrays::ocl::KernelSource_cudadevice_math +
+		luxrays::ocl::KernelSource_cudadevice_oclemul_funcs +
+		programSource;
 	nvrtcProgram prog;
 	CHECK_NVRTC_ERROR(nvrtcCreateProgram(&prog, cudaProgramSource.c_str(), programName.c_str(), 0, nullptr, nullptr));
 	
