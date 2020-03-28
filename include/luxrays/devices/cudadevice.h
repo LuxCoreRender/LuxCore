@@ -51,7 +51,6 @@ protected:
 
 	size_t deviceIndex;
 
-private:
 	CUdevice cudaDevice;
 };
 
@@ -63,6 +62,8 @@ class CUDADeviceKernel : public HardwareDeviceKernel {
 public:
 	CUDADeviceKernel() : cudaKernel(nullptr) { }
 	virtual ~CUDADeviceKernel() {
+		for (auto p : args)
+			delete [] (char *)p;
 	}
 
 	bool IsNull() const { 
@@ -78,8 +79,8 @@ protected:
 
 	CUfunction Get() { return cudaKernel; }
 
-private:
 	CUfunction cudaKernel;
+	std::vector<void *> args;
 };
 
 //------------------------------------------------------------------------------
@@ -115,7 +116,6 @@ protected:
 	nvrtcProgram GetProgram() { return cudaProgram; }
 	CUmodule GetModule() { return cudaModule; }
 
-private:
 	nvrtcProgram cudaProgram;
 	CUmodule cudaModule;
 };
@@ -136,7 +136,7 @@ public:
 
 	friend class CUDADevice;
 
-private:
+protected:
 	CUdeviceptr cudaBuff;
 };
 

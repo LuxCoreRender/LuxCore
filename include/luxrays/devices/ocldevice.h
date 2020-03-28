@@ -123,7 +123,6 @@ protected:
 
 	size_t deviceIndex;
 
-private:
 	cl::Device oclDevice;
 	cl::Context *oclContext;
 	bool enableOpenGLInterop;
@@ -155,7 +154,6 @@ protected:
 
 	cl::Kernel *Get() { return oclKernel; }
 
-private:
 	cl::Kernel *oclKernel;
 };
 
@@ -184,7 +182,6 @@ protected:
 
 	cl::Program *Get() { return oclProgram; }
 
-private:
 	cl::Program *oclProgram;
 };
 
@@ -205,7 +202,6 @@ public:
 
 	friend class OpenCLDevice;
 
-private:
 	cl::Buffer *oclBuff;
 };
 

@@ -196,7 +196,7 @@ void CUDADevice::GetKernel(HardwareDeviceProgram *program,
 		*kernel = new CUDADeviceKernel();
 
 	CUDADeviceKernel *cudaDeviceKernel = dynamic_cast<CUDADeviceKernel *>(*kernel);
-	assert (oclDeviceKernel);
+	assert (cudaDeviceKernel);
 
 	CUDADeviceProgram *cudaDeviceProgram = dynamic_cast<CUDADeviceProgram *>(program);
 	assert (cudaDeviceProgram);
@@ -209,12 +209,39 @@ void CUDADevice::GetKernel(HardwareDeviceProgram *program,
 
 void CUDADevice::SetKernelArg(HardwareDeviceKernel *kernel,
 		const u_int index, const size_t size, const void *arg) {
-	throw runtime_error("TODO SetKernelArg");
+	assert (kernel);
+
+	CUDADeviceKernel *cudaDeviceKernel = dynamic_cast<CUDADeviceKernel *>(kernel);
+	assert (cudaDeviceKernel);
+
+	if (index >= cudaDeviceKernel->args.size())
+		cudaDeviceKernel->args.resize(index + 1, nullptr);
+
+	void *argCpy;
+	if (arg) {
+		// Copy the argument
+		argCpy = new char[size];
+		memcpy(argCpy, arg, size);
+	} else {
+		CUdeviceptr p = 0;
+		argCpy = new char[sizeof(CUdeviceptr)];
+		memcpy(argCpy, &p, sizeof(CUdeviceptr));
+	}
+
+	cudaDeviceKernel->args[index] = argCpy;
 }
 
 void CUDADevice::SetKernelArgBuffer(HardwareDeviceKernel *kernel,
 		const u_int index, const HardwareDeviceBuffer *buff) {
-	throw runtime_error("TODO SetKernelArgBuffer");
+	assert (kernel);
+
+	if (buff) {
+		const CUDADeviceBuffer *cudaDeviceBuff = dynamic_cast<const CUDADeviceBuffer *>(buff);
+		assert (cudaDeviceBuff);
+
+		SetKernelArg(kernel, index, sizeof(CUdeviceptr), &cudaDeviceBuff->cudaBuff);
+	} else
+		SetKernelArg(kernel, index, sizeof(CUdeviceptr), nullptr);
 }
 
 void CUDADevice::EnqueueKernel(HardwareDeviceKernel *kernel,
