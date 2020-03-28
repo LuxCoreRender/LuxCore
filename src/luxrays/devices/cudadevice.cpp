@@ -252,12 +252,26 @@ void CUDADevice::EnqueueKernel(HardwareDeviceKernel *kernel,
 
 void CUDADevice::EnqueueReadBuffer(const HardwareDeviceBuffer *buff,
 		const bool blocking, const size_t size, void *ptr) {
-	throw runtime_error("TODO EnqueueReadBuffer");
+	const CUDADeviceBuffer *cudaDeviceBuff = dynamic_cast<const CUDADeviceBuffer *>(buff);
+	assert (cudaDeviceBuff);
+
+	if (blocking) {
+		CHECK_CUDA_ERROR(cuMemcpyDtoH(ptr, cudaDeviceBuff->cudaBuff, size));
+	} else {
+		CHECK_CUDA_ERROR(cuMemcpyDtoHAsync(ptr, cudaDeviceBuff->cudaBuff, size, 0));
+	}
 }
 
 void CUDADevice::EnqueueWriteBuffer(const HardwareDeviceBuffer *buff,
 		const bool blocking, const size_t size, const void *ptr) {
-	throw runtime_error("TODO EnqueueWriteBuffer");
+	const CUDADeviceBuffer *cudaDeviceBuff = dynamic_cast<const CUDADeviceBuffer *>(buff);
+	assert (cudaDeviceBuff);
+
+	if (blocking) {
+		CHECK_CUDA_ERROR(cuMemcpyHtoD(cudaDeviceBuff->cudaBuff, ptr, size));
+	} else {
+		CHECK_CUDA_ERROR(cuMemcpyHtoDAsync(cudaDeviceBuff->cudaBuff, ptr, size, 0));
+	}
 }
 
 void CUDADevice::FlushQueue() {
