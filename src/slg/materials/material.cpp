@@ -311,6 +311,7 @@ string Material::MaterialType2String(const MaterialType type) {
 		case GLOSSYTRANSLUCENT: return "GLOSSYTRANSLUCENT";
 		case GLOSSYCOATING: return "GLOSSYCOATING";
 		case DISNEY: return "DISNEY";
+		case TWOSIDED: return "TWOSIDED";
 
 		// Volumes
 		case HOMOGENEOUS_VOL: return "HOMOGENEOUS_VOL";
