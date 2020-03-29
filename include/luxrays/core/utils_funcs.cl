@@ -107,7 +107,7 @@ OPENCL_FORCE_INLINE float SinPhi(const float3 w) {
 }
 
 OPENCL_FORCE_INLINE float3 SphericalDirection(float sintheta, float costheta, float phi) {
-	return make_float3(sintheta * cos(phi), sintheta * sin(phi), costheta);
+	return MAKE_FLOAT3(sintheta * cos(phi), sintheta * sin(phi), costheta);
 }
 
 OPENCL_FORCE_INLINE float3 SphericalDirectionWithFrame(float sintheta, float costheta, float phi,

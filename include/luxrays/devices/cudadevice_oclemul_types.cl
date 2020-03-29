@@ -20,6 +20,7 @@
 
 #define __kernel extern "C" __global__
 #define __global
+#define __local __shared__
 
 // This is a workaround to long compilation time
 #define OPENCL_FORCE_NOT_INLINE __device__ __noinline__

@@ -19,8 +19,8 @@
  ***************************************************************************/
 
 #if defined(SLG_OPENCL_KERNEL)
-#define BLACK ((float3)(0.f, 0.f, 0.f))
-#define WHITE ((float3)(1.f, 1.f, 1.f))
+#define BLACK MAKE_FLOAT3(0.f, 0.f, 0.f)
+#define WHITE MAKE_FLOAT3(1.f, 1.f, 1.f)
 #define ZERO BLACK
 #endif
 

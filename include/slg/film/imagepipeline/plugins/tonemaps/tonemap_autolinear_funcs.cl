@@ -48,13 +48,13 @@ __kernel void AutoLinearToneMap_Apply(
 // REDUCE_OP & ACCUM_OP (used by tonemap_reduce_funcs.cl)
 //------------------------------------------------------------------------------
 
-float3 REDUCE_OP(const float3 a, const float3 b) {
+OPENCL_FORCE_INLINE float3 REDUCE_OP(const float3 a, const float3 b) {
 	if (Spectrum_IsNanOrInf(b))
 		return a;
 	else
 		return a + b;
 }
 
-float3 ACCUM_OP(const float3 a, const float3 b) {
+OPENCL_FORCE_INLINE float3 ACCUM_OP(const float3 a, const float3 b) {
 	return a + b;
 }

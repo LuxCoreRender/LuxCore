@@ -22,5 +22,10 @@
 #define OPENCL_FORCE_NOT_INLINE __attribute__((noinline))
 #define OPENCL_FORCE_INLINE __attribute__((always_inline))
 
-#define make_float2 (float2)
-#define make_float3 (float3)
+//------------------------------------------------------------------------------
+// MAKE_FLOATn()
+//------------------------------------------------------------------------------
+
+#define MAKE_FLOAT2(x, y) ((float2)(x, y))
+#define MAKE_FLOAT3(x, y, z) ((float3)(x, y, z))
+#define MAKE_FLOAT4(x, y, z, w) ((float4)(x, y, z, w))
