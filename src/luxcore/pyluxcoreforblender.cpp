@@ -180,8 +180,8 @@ static Transform ExtractTransformation(const boost::python::object &transformati
 
 	extract<boost::python::list> getTransformationList(transformation);
 	if (getTransformationList.check()) {
-		const boost::python::list &lst = getTransformationList();
-		const boost::python::ssize_t size = len(lst);
+		const boost::python::list &l = getTransformationList();
+		const boost::python::ssize_t size = len(l);
 		if (size != 16) {
 			const string objType = extract<string>((transformation.attr("__class__")).attr("__name__"));
 			throw runtime_error("Wrong number of elements for the list of transformation values: " + objType);
@@ -191,7 +191,7 @@ static Transform ExtractTransformation(const boost::python::object &transformati
 		boost::python::ssize_t index = 0;
 		for (u_int j = 0; j < 4; ++j)
 			for (u_int i = 0; i < 4; ++i)
-				mat.m[i][j] = extract<float>(lst[index++]);
+				mat.m[i][j] = extract<float>(l[index++]);
 
 		return Transform(mat);
 	}
@@ -671,14 +671,14 @@ boost::python::tuple GetOpenVDBGridInfo(const string &filePathStr, const string 
 //------------------------------------------------------------------------------
 
 static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const string &name,
-		const size_t loopTriCount, const size_t loopTriPtr,
-		const size_t loopPtr,
-		const size_t vertPtr,
-		const size_t polyPtr,
-		const boost::python::object &loopUVsPtrList,
-		const boost::python::object &loopColsPtrList,
-		const short matIndex,
-		const luxrays::Transform *trans) {
+	const size_t loopTriCount, const size_t loopTriPtr,
+	const size_t loopPtr,
+	const size_t vertPtr,
+	const size_t polyPtr,
+	const boost::python::object &loopUVsPtrList,
+	const boost::python::object &loopColsPtrList,
+	const short matIndex,
+	const luxrays::Transform *trans) {
 
 	const MLoopTri *loopTris = reinterpret_cast<const MLoopTri *>(loopTriPtr);
 	const MLoop *loops = reinterpret_cast<const MLoop *>(loopPtr);
@@ -718,8 +718,8 @@ static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const str
 	vector<const MLoopCol *> loopColsList;
 	vector<Point> tmpMeshVerts;
 	vector<Normal> tmpMeshNorms;
-	vector <vector<UV>> tmpMeshUVs;
-	vector <vector<Spectrum>> tmpMeshCols;
+	vector <vector<UV> > tmpMeshUVs;
+	vector <vector<Spectrum> >tmpMeshCols;
 	vector<Triangle> tmpMeshTris;
 
 	for (u_int i = 0; i < loopUVsCount; ++i) {
@@ -765,28 +765,28 @@ static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const str
 				if (alreadyDefined) {
 					const u_int mappedIndex = vertexMap[index];
 					
-					for (u_int i = 0; i < loopUVsList.size() && alreadyDefined; ++i) {
-						const MLoopUV *loopUVs = loopUVsList[i];
+					for (u_int l = 0; l < loopUVsList.size(); ++l) {
+						const MLoopUV * loopUVs = loopUVsList[l];
 
 						if (loopUVs) {
 							const MLoopUV &loopUV = loopUVs[tri];
 							// Check if the already defined vertex has the right UV coordinates
-							if ((loopUV.uv[0] != tmpMeshUVs[i][mappedIndex].u) ||
-								(loopUV.uv[1] != tmpMeshUVs[i][mappedIndex].v)) {
+							if ((loopUV.uv[0] != tmpMeshUVs[l][mappedIndex].u) ||
+								(loopUV.uv[1] != tmpMeshUVs[l][mappedIndex].v)) {
 								// I have to create a new vertex
 								alreadyDefined = false;
 							}
 						}
 					}
-					for (u_int i = 0; i < loopColsList.size() && alreadyDefined; ++i) {
-						const MLoopCol *loopCols = loopColsList[i];
+					for (u_int l = 0; l < loopColsList.size(); ++l) {
+						const MLoopCol * loopCols = loopColsList[l];
 
 						if (loopCols) {
 							const MLoopCol &loopCol = loopCols[tri];
 							// Check if the already defined vertex has the right color
-							if (((loopCol.r * rgbScale) != tmpMeshCols[i][mappedIndex].c[0]) ||
-								((loopCol.g * rgbScale) != tmpMeshCols[i][mappedIndex].c[1]) ||
-								((loopCol.b * rgbScale) != tmpMeshCols[i][mappedIndex].c[2])) {
+							if (((loopCol.r * rgbScale) != tmpMeshCols[l][mappedIndex].c[0]) ||
+								((loopCol.g * rgbScale) != tmpMeshCols[l][mappedIndex].c[1]) ||
+								((loopCol.b * rgbScale) != tmpMeshCols[l][mappedIndex].c[2])) {
 								// I have to create a new vertex
 								alreadyDefined = false;
 							}
@@ -806,21 +806,20 @@ static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const str
 						vertex.no[0] * normalScale,
 						vertex.no[1] * normalScale,
 						vertex.no[2] * normalScale)));
-					
 					// Add the UV
-					for (u_int i = 0; i < loopUVsList.size(); ++i) {
-						const MLoopUV *loopUVs = loopUVsList[i];
+					for (u_int l = 0; l < loopUVsList.size(); ++l) {
+						const MLoopUV * loopUVs = loopUVsList[l];
 						if (loopUVs) {
 							const MLoopUV &loopUV = loopUVs[tri];
-							tmpMeshUVs[i].push_back(UV(loopUV.uv));
+							tmpMeshUVs[l].push_back(UV(loopUV.uv));
 						}
 					}
 					// Add the color
-					for (u_int i = 0; i < loopColsList.size(); ++i) {
-						const MLoopCol *loopCols = loopColsList[i];
+					for (u_int l = 0; l < loopColsList.size(); ++l) {
+						const MLoopCol * loopCols = loopColsList[l];
 						if (loopCols) {
 							const MLoopCol &loopCol = loopCols[tri];
-							tmpMeshCols[i].push_back(Spectrum(
+							tmpMeshCols[l].push_back(Spectrum(
 								loopCol.r * rgbScale,
 								loopCol.g * rgbScale,
 								loopCol.b * rgbScale));
@@ -832,8 +831,9 @@ static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const str
 					vertIndices[i] = vertIndex;
 				}
 			}
-		} else {
-			// Flat shaded, use the Blender face normal
+		}
+		else {
+			// Flat shaded, use the Blender face normalW
 			const MVert &v0 = verts[loops[loopTri.tri[0]].v];
 			const MVert &v1 = verts[loops[loopTri.tri[1]].v];
 			const MVert &v2 = verts[loops[loopTri.tri[2]].v];
@@ -852,80 +852,32 @@ static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const str
 			for (u_int i = 0; i < 3; ++i) {
 				const u_int tri = loopTri.tri[i];
 				const u_int index = loops[tri].v;
+				const MVert &vertex = verts[index];
 
-				// Check if it has been already defined
-
-				bool alreadyDefined = (vertexMap.find(index) != vertexMap.end());
-				if (alreadyDefined) {
-					const u_int mappedIndex = vertexMap[index];
-
-					// In order to have flat shading, we need to duplicate vertices with differing normals
-					if (faceNormal != tmpMeshNorms[mappedIndex])
-						alreadyDefined = false;
-					
-					for (u_int i = 0; i < loopUVsList.size() && alreadyDefined; ++i) {
-						const MLoopUV * loopUVs = loopUVsList[i];
-
-						if (loopUVs) {
-							const MLoopUV &loopUV = loopUVs[tri];
-							// Check if the already defined vertex has the right UV coordinates
-							if ((loopUV.uv[0] != tmpMeshUVs[i][mappedIndex].u) ||
-								(loopUV.uv[1] != tmpMeshUVs[i][mappedIndex].v)) {
-								// I have to create a new vertex
-								alreadyDefined = false;
-							}
-						}
-					}
-					for (u_int i = 0; i < loopColsList.size() && alreadyDefined; ++i) {
-						const MLoopCol * loopCols = loopColsList[i];
-
-						if (loopCols) {
-							const MLoopCol &loopCol = loopCols[tri];
-							// Check if the already defined vertex has the right color
-							if (((loopCol.r * rgbScale) != tmpMeshCols[i][mappedIndex].c[0]) ||
-								((loopCol.g * rgbScale) != tmpMeshCols[i][mappedIndex].c[1]) ||
-								((loopCol.b * rgbScale) != tmpMeshCols[i][mappedIndex].c[2])) {
-								// I have to create a new vertex
-								alreadyDefined = false;
-							}
-						}
+				// Add the vertex
+				tmpMeshVerts.emplace_back(Point(vertex.co));
+				// Add the normal
+				tmpMeshNorms.push_back(faceNormal);
+				// Add the UV
+				for (u_int l = 0; l < loopUVsList.size(); ++l) {
+					const MLoopUV * loopUVs = loopUVsList[l];
+					if (loopUVs) {
+						const MLoopUV &loopUV = loopUVs[tri];
+						tmpMeshUVs[l].push_back(UV(loopUV.uv));
 					}
 				}
-
-				if (alreadyDefined)
-					vertIndices[i] = vertexMap[index];
-				else {
-					const MVert &vertex = verts[index];
-
-					// Add the vertex
-					tmpMeshVerts.emplace_back(Point(vertex.co));
-					// Add the normal (same for all vertices of this face, to have flat shading)
-					tmpMeshNorms.push_back(faceNormal);
-
-					// Add the UV
-					for (u_int i = 0; i < loopUVsList.size(); ++i) {
-						const MLoopUV * loopUVs = loopUVsList[i];
-						if (loopUVs) {
-							const MLoopUV &loopUV = loopUVs[tri];
-							tmpMeshUVs[i].push_back(UV(loopUV.uv));
-						}
+				// Add the color
+				for (u_int l = 0; l < loopColsList.size(); ++l) {
+					const MLoopCol * loopCols = loopColsList[l];
+					if (loopCols) {
+						const MLoopCol &loopCol = loopCols[tri];
+						tmpMeshCols[l].push_back(Spectrum(
+							loopCol.r * rgbScale,
+							loopCol.g * rgbScale,
+							loopCol.b * rgbScale));
 					}
-					// Add the color
-					for (u_int i = 0; i < loopColsList.size(); ++i) {
-						const MLoopCol * loopCols = loopColsList[i];
-						if (loopCols) {
-							const MLoopCol &loopCol = loopCols[tri];
-							tmpMeshCols[i].push_back(Spectrum(
-								loopCol.r * rgbScale,
-								loopCol.g * rgbScale,
-								loopCol.b * rgbScale));
-						}
-					}
-					// Add the vertex mapping
-					const u_int vertIndex = vertFreeIndex++;
-					vertexMap[index] = vertIndex;
-					vertIndices[i] = vertIndex;
 				}
+				vertIndices[i] = vertFreeIndex++;
 			}
 		}
 
@@ -952,18 +904,18 @@ static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const str
 	fill(meshUVs.begin(), meshUVs.end(), nullptr);
 	fill(meshCols.begin(), meshCols.end(), nullptr);
 	
-	for (u_int i = 0; i < loopUVsList.size(); ++i) {
-		const MLoopUV * loopUVs = loopUVsList[i];
+	for (u_int l = 0; l < loopUVsList.size(); ++l) {
+		const MLoopUV * loopUVs = loopUVsList[l];
 		if (loopUVs) {
-			meshUVs[i] = new UV[tmpMeshVerts.size()];
-			copy(tmpMeshUVs[i].begin(), tmpMeshUVs[i].end(), meshUVs[i]);
+			meshUVs[l] = new UV[tmpMeshVerts.size()];
+			copy(tmpMeshUVs[l].begin(), tmpMeshUVs[l].end(), meshUVs[l]);
 		}
 	}
-	for (u_int i = 0; i < loopColsList.size(); ++i) {
-		const MLoopCol * loopCols = loopColsList[i];
+	for (u_int l = 0; l < loopColsList.size(); ++l) {
+		const MLoopCol * loopCols = loopColsList[l];
 		if (loopCols) {
-			meshCols[i] = new Spectrum[tmpMeshVerts.size()];
-			copy(tmpMeshCols[i].begin(), tmpMeshCols[i].end(), meshCols[i]);
+			meshCols[l] = new Spectrum[tmpMeshVerts.size()];
+			copy(tmpMeshCols[l].begin(), tmpMeshCols[l].end(), meshCols[l]);
 		}
 	}
 
