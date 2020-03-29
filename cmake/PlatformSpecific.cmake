@@ -160,9 +160,9 @@ IF(APPLE)
 	EXECUTE_PROCESS(COMMAND uname -r OUTPUT_VARIABLE MAC_SYS) # check for actual system-version
 
 	SET(CMAKE_OSX_DEPLOYMENT_TARGET 10.13) # Minimum OS requirements for LuxCore
-    
+
     IF(${MAC_SYS} MATCHES 18)
-		SET(OSX_SYSTEM 10.14)
+		SET(OSX_SYSTEM 10.15)
 	ELSEIF(${MAC_SYS} MATCHES 17)
 		SET(OSX_SYSTEM 10.14)
 	ELSEIF(${MAC_SYS} MATCHES 16)
@@ -179,16 +179,16 @@ IF(APPLE)
 	ENDIF()
 
 	SET(CMAKE_XCODE_ATTRIBUTE_ARCHS $(NATIVE_ARCH_ACTUAL))
-    
-    
+
+
     SET(AZURE 1) # Set 0 when compiled locally and not on azure
-    
+
     IF(AZURE)
 	   SET(CMAKE_OSX_SYSROOT /Applications/Xcode_10.1.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX${OSX_SYSTEM}.sdk)
     ELSE()
        SET(CMAKE_OSX_SYSROOT /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX${OSX_SYSTEM}.sdk)
     ENDIF()
-    
+
     SET(CMAKE_XCODE_ATTRIBUTE_SDKROOT macosx) # to silence sdk not found warning, just overrides CMAKE_OSX_SYSROOT, gets latest available
 
 	# set a precedence of sdk path over all other default search pathes
@@ -218,12 +218,12 @@ IF(APPLE)
   SET(CMAKE_CXX_STANDARD 11)
   SET(CMAKE_CXX_EXTENSIONS OFF)
   SET(CMAKE_CXX_STANDARD_REQUIRED ON)
-  
+
   SET(OSX_FLAGS_RELEASE "-ftree-vectorize -msse -msse2 -msse3 -mssse3 -DNDEBUG -O3") # additional RELEASE flags
 
   SET(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} ${OSX_FLAGS_RELEASE}")
   SET(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${OSX_FLAGS_RELEASE}")
-  
+
   SET(CMAKE_EXE_LINKER_FLAGS "-Wl,-unexported_symbols_list -Wl,\"${CMAKE_SOURCE_DIR}/cmake/exportmaps/unexported_symbols.map\"")
   SET(CMAKE_MODULE_LINKER_FLAGS "-Wl,-unexported_symbols_list -Wl,\"${CMAKE_SOURCE_DIR}/cmake/exportmaps/unexported_symbols.map\"")
 
@@ -239,7 +239,7 @@ IF(APPLE)
   MESSAGE(STATUS "CMAKE_XCODE_ATTRIBUTE_ARCHS: " ${CMAKE_XCODE_ATTRIBUTE_ARCHS})
   MESSAGE(STATUS "OSX SDK SETTING : " ${CMAKE_XCODE_ATTRIBUTE_SDKROOT}${OSX_SYSTEM})
   MESSAGE(STATUS "XCODE_VERSION : " ${XCODE_VERS_BUILDNR})
-  
+
   IF(${CMAKE_GENERATOR} MATCHES "Xcode")
 		MESSAGE(STATUS "BUILD_TYPE : Please set in Xcode ALL_BUILD target to aimed type")
   ELSE()
