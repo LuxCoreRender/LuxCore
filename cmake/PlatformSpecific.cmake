@@ -153,6 +153,8 @@ ENDIF(MSVC)
 
 IF(APPLE)
 
+  SET(AZURE 1) # Set 0 when compiled locally and not on azure
+  
   CMAKE_MINIMUM_REQUIRED(VERSION 3.12) # Required for FindBoost 1.67.0
 
 	########## OS and hardware detection ###########
@@ -162,7 +164,11 @@ IF(APPLE)
 	SET(CMAKE_OSX_DEPLOYMENT_TARGET 10.13) # Minimum OS requirements for LuxCore
 
     IF(${MAC_SYS} MATCHES 18)
-		SET(OSX_SYSTEM 10.15)
+        IF(AZURE)
+            SET(OSX_SYSTEM 10.14)
+        ELSE()
+            SET(OSX_SYSTEM 10.15)
+        ENDIF()
 	ELSEIF(${MAC_SYS} MATCHES 17)
 		SET(OSX_SYSTEM 10.14)
 	ELSEIF(${MAC_SYS} MATCHES 16)
@@ -179,9 +185,6 @@ IF(APPLE)
 	ENDIF()
 
 	SET(CMAKE_XCODE_ATTRIBUTE_ARCHS $(NATIVE_ARCH_ACTUAL))
-
-
-    SET(AZURE 1) # Set 0 when compiled locally and not on azure
 
     IF(AZURE)
 	   SET(CMAKE_OSX_SYSROOT /Applications/Xcode_10.1.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX${OSX_SYSTEM}.sdk)
