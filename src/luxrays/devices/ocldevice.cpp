@@ -190,6 +190,8 @@ void OpenCLDevice::CompileProgram(HardwareDeviceProgram **program,
 	LR_LOG(deviceContext, "[" << programName << "] Defined symbols: " << programParameters);
 	LR_LOG(deviceContext, "[" << programName << "] Compiling kernels ");
 
+	const string oclProgramParameters = "-D LUXRAYS_OPENCL_DEVICE " +
+		programParameters;
 	const string oclProgramSource =
 		luxrays::ocl::KernelSource_ocldevice_funcs +
 		programSource;
@@ -197,7 +199,7 @@ void OpenCLDevice::CompileProgram(HardwareDeviceProgram **program,
 	bool cached;
 	cl::STRING_CLASS error;
 	cl::Program *oclProgram = kernelCache->Compile(oclContext, oclDevice,
-			programParameters, oclProgramSource,
+			oclProgramParameters, oclProgramSource,
 			&cached, &error);
 	if (!oclProgram) {
 		LR_LOG(deviceContext, "[" << programName << "] program compilation error" << endl << error);

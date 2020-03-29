@@ -18,6 +18,8 @@
 
 #if defined(LUXRAYS_ENABLE_CUDA)
 
+#include <boost/regex.hpp>
+
 #include "luxrays/devices/cudadevice.h"
 #include "luxrays/kernels/kernels.h"
 
@@ -154,6 +156,9 @@ void CUDADevice::CompileProgram(HardwareDeviceProgram **program,
 	LR_LOG(deviceContext, "[" << programName << "] Defined symbols: " << programParameters);
 	LR_LOG(deviceContext, "[" << programName << "] Compiling kernels");
 
+	const string cudaProgramParameters = "-D LUXRAYS_CUDA_DEVICE " +
+		programParameters;
+
 	const string cudaProgramSource =
 		luxrays::ocl::KernelSource_cudadevice_oclemul_types +
 		luxrays::ocl::KernelSource_cudadevice_math +
@@ -161,8 +166,20 @@ void CUDADevice::CompileProgram(HardwareDeviceProgram **program,
 		programSource;
 	nvrtcProgram prog;
 	CHECK_NVRTC_ERROR(nvrtcCreateProgram(&prog, cudaProgramSource.c_str(), programName.c_str(), 0, nullptr, nullptr));
-	
-	const nvrtcResult compilationResult = nvrtcCompileProgram(prog, 0, nullptr);
+
+	boost::regex paramsRE("\\-D\\s+\\w+\\s*=\\s*[+-\\w\\d]+|\\-D\\s+\\w+");
+	boost::sregex_token_iterator paramsIter(cudaProgramParameters.begin(), cudaProgramParameters.end(), paramsRE);
+	boost::sregex_token_iterator paramsEnd;
+	vector<string> cudaOptsStr;
+	vector<const char *> cudaOpts;
+	while (paramsIter != paramsEnd) {
+		cudaOptsStr.push_back(*paramsIter++);
+		cudaOpts.push_back(cudaOptsStr.back().c_str());
+	}
+
+	const nvrtcResult compilationResult = nvrtcCompileProgram(prog,
+			cudaOpts.size(),
+			(cudaOpts.size() > 0) ? &cudaOpts[0] : nullptr);
 	if (compilationResult != NVRTC_SUCCESS) {
 		size_t logSize;
 		CHECK_NVRTC_ERROR(nvrtcGetProgramLogSize(prog, &logSize));
