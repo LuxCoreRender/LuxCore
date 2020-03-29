@@ -677,6 +677,7 @@ static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const str
 		const size_t polyPtr,
 		const boost::python::object &loopUVsPtrList,
 		const boost::python::object &loopColsPtrList,
+		const boost::python::object &loopTriCustomNormals,
 		const short matIndex,
 		const luxrays::Transform *trans) {
 
@@ -713,6 +714,30 @@ static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const str
     if (loopColsCount > EXTMESH_MAX_DATA_COUNT) {
         throw runtime_error("Too many Vertex Color Maps in list for method Scene.DefineMesh()");
     }
+
+	// Custom normals
+	vector<Normal> customNormals;
+	const bool hasCustomNormals = !loopTriCustomNormals.is_none();
+	if (hasCustomNormals) {
+		extract<boost::python::list> getCustomNormalsList(loopTriCustomNormals);
+
+		if (!getCustomNormalsList.check()) {
+			const string objType = extract<string>((loopUVsPtrList.attr("__class__")).attr("__name__"));
+			throw runtime_error("Wrong data type for the list of custom normals of method Scene.DefineMesh(): " + objType);
+		}
+
+		const boost::python::list &loopTriCustomNormalsList = getCustomNormalsList();
+		const boost::python::ssize_t loopCustomNormalsCount = len(loopTriCustomNormalsList);
+
+		cout << "custom normal count is " << loopCustomNormalsCount / 3 << endl;
+
+		for (int i = 0; i < loopCustomNormalsCount; i += 3) {
+			const float x = extract<float>(loopTriCustomNormalsList[i]);
+			const float y = extract<float>(loopTriCustomNormalsList[i + 1]);
+			const float z = extract<float>(loopTriCustomNormalsList[i + 2]);
+			customNormals.emplace_back(Normal(x, y, z));
+		}
+	}
 
 	vector<const MLoopUV *> loopUVsList;
 	vector<const MLoopCol *> loopColsList;
@@ -753,7 +778,7 @@ static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const str
 
 		u_int vertIndices[3];
 
-		if (poly.flag & ME_SMOOTH) {
+		if ((poly.flag & ME_SMOOTH) || hasCustomNormals) {
 			// Smooth shaded, use the Blender vertex normal
 			for (u_int i = 0; i < 3; ++i) {
 				const u_int tri = loopTri.tri[i];
@@ -764,29 +789,32 @@ static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const str
 				bool alreadyDefined = (vertexMap.find(index) != vertexMap.end());
 				if (alreadyDefined) {
 					const u_int mappedIndex = vertexMap[index];
+
+					if (hasCustomNormals && (customNormals[index] != tmpMeshNorms[mappedIndex]))
+						alreadyDefined = false;
 					
-					for (u_int i = 0; i < loopUVsList.size() && alreadyDefined; ++i) {
-						const MLoopUV *loopUVs = loopUVsList[i];
+					for (u_int uvLayerIndex = 0; uvLayerIndex < loopUVsList.size() && alreadyDefined; ++uvLayerIndex) {
+						const MLoopUV *loopUVs = loopUVsList[uvLayerIndex];
 
 						if (loopUVs) {
 							const MLoopUV &loopUV = loopUVs[tri];
 							// Check if the already defined vertex has the right UV coordinates
-							if ((loopUV.uv[0] != tmpMeshUVs[i][mappedIndex].u) ||
-								(loopUV.uv[1] != tmpMeshUVs[i][mappedIndex].v)) {
+							if ((loopUV.uv[0] != tmpMeshUVs[uvLayerIndex][mappedIndex].u) ||
+								(loopUV.uv[1] != tmpMeshUVs[uvLayerIndex][mappedIndex].v)) {
 								// I have to create a new vertex
 								alreadyDefined = false;
 							}
 						}
 					}
-					for (u_int i = 0; i < loopColsList.size() && alreadyDefined; ++i) {
-						const MLoopCol *loopCols = loopColsList[i];
+					for (u_int colLayerIndex = 0; colLayerIndex < loopColsList.size() && alreadyDefined; ++colLayerIndex) {
+						const MLoopCol *loopCols = loopColsList[colLayerIndex];
 
 						if (loopCols) {
 							const MLoopCol &loopCol = loopCols[tri];
 							// Check if the already defined vertex has the right color
-							if (((loopCol.r * rgbScale) != tmpMeshCols[i][mappedIndex].c[0]) ||
-								((loopCol.g * rgbScale) != tmpMeshCols[i][mappedIndex].c[1]) ||
-								((loopCol.b * rgbScale) != tmpMeshCols[i][mappedIndex].c[2])) {
+							if (((loopCol.r * rgbScale) != tmpMeshCols[colLayerIndex][mappedIndex].c[0]) ||
+								((loopCol.g * rgbScale) != tmpMeshCols[colLayerIndex][mappedIndex].c[1]) ||
+								((loopCol.b * rgbScale) != tmpMeshCols[colLayerIndex][mappedIndex].c[2])) {
 								// I have to create a new vertex
 								alreadyDefined = false;
 							}
@@ -801,26 +829,31 @@ static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const str
 
 					// Add the vertex
 					tmpMeshVerts.emplace_back(Point(vertex.co));
+
 					// Add the normal
-					tmpMeshNorms.push_back(Normalize(Normal(
-						vertex.no[0] * normalScale,
-						vertex.no[1] * normalScale,
-						vertex.no[2] * normalScale)));
+					if (hasCustomNormals) {
+						tmpMeshNorms.push_back(customNormals[index]);
+					} else {
+						tmpMeshNorms.push_back(Normalize(Normal(
+							vertex.no[0] * normalScale,
+							vertex.no[1] * normalScale,
+							vertex.no[2] * normalScale)));
+					}
 					
 					// Add the UV
-					for (u_int i = 0; i < loopUVsList.size(); ++i) {
-						const MLoopUV *loopUVs = loopUVsList[i];
+					for (u_int uvLayerIndex = 0; uvLayerIndex < loopUVsList.size(); ++uvLayerIndex) {
+						const MLoopUV *loopUVs = loopUVsList[uvLayerIndex];
 						if (loopUVs) {
 							const MLoopUV &loopUV = loopUVs[tri];
-							tmpMeshUVs[i].push_back(UV(loopUV.uv));
+							tmpMeshUVs[uvLayerIndex].push_back(UV(loopUV.uv));
 						}
 					}
 					// Add the color
-					for (u_int i = 0; i < loopColsList.size(); ++i) {
-						const MLoopCol *loopCols = loopColsList[i];
+					for (u_int colLayerIndex = 0; colLayerIndex < loopColsList.size(); ++colLayerIndex) {
+						const MLoopCol *loopCols = loopColsList[colLayerIndex];
 						if (loopCols) {
 							const MLoopCol &loopCol = loopCols[tri];
-							tmpMeshCols[i].push_back(Spectrum(
+							tmpMeshCols[colLayerIndex].push_back(Spectrum(
 								loopCol.r * rgbScale,
 								loopCol.g * rgbScale,
 								loopCol.b * rgbScale));
@@ -863,28 +896,28 @@ static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const str
 					if (faceNormal != tmpMeshNorms[mappedIndex])
 						alreadyDefined = false;
 					
-					for (u_int i = 0; i < loopUVsList.size() && alreadyDefined; ++i) {
-						const MLoopUV * loopUVs = loopUVsList[i];
+					for (u_int uvLayerIndex = 0; uvLayerIndex < loopUVsList.size() && alreadyDefined; ++uvLayerIndex) {
+						const MLoopUV * loopUVs = loopUVsList[uvLayerIndex];
 
 						if (loopUVs) {
 							const MLoopUV &loopUV = loopUVs[tri];
 							// Check if the already defined vertex has the right UV coordinates
-							if ((loopUV.uv[0] != tmpMeshUVs[i][mappedIndex].u) ||
-								(loopUV.uv[1] != tmpMeshUVs[i][mappedIndex].v)) {
+							if ((loopUV.uv[0] != tmpMeshUVs[uvLayerIndex][mappedIndex].u) ||
+								(loopUV.uv[1] != tmpMeshUVs[uvLayerIndex][mappedIndex].v)) {
 								// I have to create a new vertex
 								alreadyDefined = false;
 							}
 						}
 					}
-					for (u_int i = 0; i < loopColsList.size() && alreadyDefined; ++i) {
-						const MLoopCol * loopCols = loopColsList[i];
+					for (u_int colLayerIndex = 0; colLayerIndex < loopColsList.size() && alreadyDefined; ++colLayerIndex) {
+						const MLoopCol * loopCols = loopColsList[colLayerIndex];
 
 						if (loopCols) {
 							const MLoopCol &loopCol = loopCols[tri];
 							// Check if the already defined vertex has the right color
-							if (((loopCol.r * rgbScale) != tmpMeshCols[i][mappedIndex].c[0]) ||
-								((loopCol.g * rgbScale) != tmpMeshCols[i][mappedIndex].c[1]) ||
-								((loopCol.b * rgbScale) != tmpMeshCols[i][mappedIndex].c[2])) {
+							if (((loopCol.r * rgbScale) != tmpMeshCols[colLayerIndex][mappedIndex].c[0]) ||
+								((loopCol.g * rgbScale) != tmpMeshCols[colLayerIndex][mappedIndex].c[1]) ||
+								((loopCol.b * rgbScale) != tmpMeshCols[colLayerIndex][mappedIndex].c[2])) {
 								// I have to create a new vertex
 								alreadyDefined = false;
 							}
@@ -903,19 +936,19 @@ static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const str
 					tmpMeshNorms.push_back(faceNormal);
 
 					// Add the UV
-					for (u_int i = 0; i < loopUVsList.size(); ++i) {
-						const MLoopUV * loopUVs = loopUVsList[i];
+					for (u_int uvLayerIndex = 0; uvLayerIndex < loopUVsList.size(); ++uvLayerIndex) {
+						const MLoopUV * loopUVs = loopUVsList[uvLayerIndex];
 						if (loopUVs) {
 							const MLoopUV &loopUV = loopUVs[tri];
-							tmpMeshUVs[i].push_back(UV(loopUV.uv));
+							tmpMeshUVs[uvLayerIndex].push_back(UV(loopUV.uv));
 						}
 					}
 					// Add the color
-					for (u_int i = 0; i < loopColsList.size(); ++i) {
-						const MLoopCol * loopCols = loopColsList[i];
+					for (u_int colLayerIndex = 0; colLayerIndex < loopColsList.size(); ++colLayerIndex) {
+						const MLoopCol * loopCols = loopColsList[colLayerIndex];
 						if (loopCols) {
 							const MLoopCol &loopCol = loopCols[tri];
-							tmpMeshCols[i].push_back(Spectrum(
+							tmpMeshCols[colLayerIndex].push_back(Spectrum(
 								loopCol.r * rgbScale,
 								loopCol.g * rgbScale,
 								loopCol.b * rgbScale));
@@ -931,6 +964,44 @@ static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const str
 
 		tmpMeshTris.emplace_back(Triangle(vertIndices[0], vertIndices[1], vertIndices[2]));
 	}
+
+	cout << "tris: " << tmpMeshTris.size() << "\n";
+	cout << "verts: " << tmpMeshVerts.size() << "\n";
+	cout << "norms: " << tmpMeshNorms.size() << "\n";
+	
+	// Debug: Visualize normals
+	
+	// const int vertCount = tmpMeshVerts.size();
+	// int vertIndex = vertCount;
+	// for (int i = 0; i < vertCount; ++i) {
+	// 	const Point &vert = tmpMeshVerts[i];
+	// 	const Normal norm = tmpMeshNorms[i];
+		
+	// 	const float length = 0.01f;
+	// 	const float width = 0.001f;
+		
+	// 	const Normal normScaled = norm * length;
+		
+	// 	Point p0(vert);
+	// 	Point p1(vert.x + normScaled.x, vert.y + normScaled.y, vert.z + normScaled.z);
+	// 	Point p2(p1.x + width, p1.y, p1.z);
+	// 	Point p3(p0.x + width, p0.y, p0.z);
+		
+	// 	tmpMeshVerts.push_back(p0);
+	// 	tmpMeshVerts.push_back(p1);
+	// 	tmpMeshVerts.push_back(p2);
+	// 	tmpMeshVerts.push_back(p3);
+		
+	// 	tmpMeshTris.emplace_back(Triangle(vertIndex, vertIndex + 1, vertIndex + 2));
+	// 	tmpMeshTris.emplace_back(Triangle(vertIndex, vertIndex + 2, vertIndex + 3));
+	// 	vertIndex += 4;
+		
+	// 	// bogus
+	// 	tmpMeshNorms.push_back(norm);
+	// 	tmpMeshNorms.push_back(norm);
+	// 	tmpMeshNorms.push_back(norm);
+	// 	tmpMeshNorms.push_back(norm);
+	// }
 
 	// Check if there wasn't any triangles with matIndex
 	if (tmpMeshTris.size() == 0)
@@ -988,6 +1059,7 @@ boost::python::list Scene_DefineBlenderMesh1(luxcore::detail::SceneImpl *scene, 
 	const size_t polyPtr,
 	const boost::python::object &loopUVsPtrList,
 	const boost::python::object &loopColsPtrList,
+	const boost::python::object &loopTriCustomNormals,
 	const u_int materialCount,
 	const boost::python::object &transformation) {
 	
@@ -1005,7 +1077,9 @@ boost::python::list Scene_DefineBlenderMesh1(luxcore::detail::SceneImpl *scene, 
 
 		if (Scene_DefineBlenderMesh(scene, meshName, loopTriCount, loopTriPtr,
 			loopPtr, vertPtr, polyPtr,
-			loopUVsPtrList, loopColsPtrList, matIndex,
+			loopUVsPtrList, loopColsPtrList, 
+			loopTriCustomNormals,
+			matIndex,
 			hasTransformation ? &trans : NULL)) {
 			boost::python::list meshInfo;
 			meshInfo.append(meshName);
@@ -1024,10 +1098,11 @@ boost::python::list Scene_DefineBlenderMesh2(luxcore::detail::SceneImpl *scene, 
 	const size_t polyPtr,
 	const boost::python::object &loopUVsPtrList,
 	const boost::python::object &loopColsPtrList,
+	const boost::python::object &loopTriCustomNormals,
 	const u_int materialCount) {
 	return Scene_DefineBlenderMesh1(scene, name, loopTriCount, loopTriPtr,
-		loopPtr, vertPtr, polyPtr, loopUVsPtrList, loopColsPtrList, materialCount,
-		boost::python::object());
+		loopPtr, vertPtr, polyPtr, loopUVsPtrList, loopColsPtrList, 
+		loopTriCustomNormals, materialCount, boost::python::object());
 }
 
 //------------------------------------------------------------------------------
