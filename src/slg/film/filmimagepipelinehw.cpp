@@ -67,11 +67,11 @@ void Film::CreateHWContext() {
 	if (hwEnable) {
 		if ((hwDeviceIndex >= 0) && (hwDeviceIndex < (int)descs.size())) {
 			// I have to use specific device
-			selectedDeviceDesc = (OpenCLDeviceDescription *)descs[hwDeviceIndex];
+			selectedDeviceDesc = descs[hwDeviceIndex];
 		} else if (descs.size() > 0) {
 			// Look for a GPU to use
 			for (size_t i = 0; i < descs.size(); ++i) {
-				OpenCLDeviceDescription *desc = (OpenCLDeviceDescription *)descs[i];
+				DeviceDescription *desc = descs[i];
 
 				if (desc->GetType() == DEVICE_TYPE_CUDA_GPU) {
 					selectedDeviceDesc = desc;
@@ -98,6 +98,7 @@ void Film::CreateHWContext() {
 		assert (hardwareDevice);
 		SLG_LOG("Film hardware device used: " << hardwareDevice->GetName() << " (Type: " << DeviceDescription::GetDeviceType(hardwareDevice->GetType()) << ")");
 
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 		OpenCLDeviceDescription *oclDesc = dynamic_cast<OpenCLDeviceDescription *>(selectedDeviceDesc);
 		if (oclDesc) {
 			// Check if OpenCL 1.1 is available
@@ -108,6 +109,7 @@ void Film::CreateHWContext() {
 				SLG_LOG("WARNING: OpenCL version 1.1 or better is required. Device " + hardwareDevice->GetName() + " may not work.");
 			}
 		}
+#endif
 
 		// Just an empty data set
 		dataSet = new DataSet(ctx);
@@ -231,23 +233,23 @@ void Film::CompileHWKernels() {
 
 void Film::WriteAllHWBuffers() {
 	if (HasChannel(ALPHA))
-		hardwareDevice->EnqueueWriteBuffer(hw_ALPHA, CL_FALSE,
+		hardwareDevice->EnqueueWriteBuffer(hw_ALPHA, false,
 				channel_ALPHA->GetSize(),
 				channel_ALPHA->GetPixels());
 	if (HasChannel(OBJECT_ID))
-		hardwareDevice->EnqueueWriteBuffer(hw_OBJECT_ID, CL_FALSE,
+		hardwareDevice->EnqueueWriteBuffer(hw_OBJECT_ID, false,
 				channel_OBJECT_ID->GetSize(),
 				channel_OBJECT_ID->GetPixels());
 }
 
 void Film::ReadHWBuffer_IMAGEPIPELINE(const u_int index) {
-	hardwareDevice->EnqueueReadBuffer(hw_IMAGEPIPELINE, CL_FALSE,
+	hardwareDevice->EnqueueReadBuffer(hw_IMAGEPIPELINE, false,
 			channel_IMAGEPIPELINEs[index]->GetSize(),
 			channel_IMAGEPIPELINEs[index]->GetPixels());
 }
 
 void Film::WriteHWBuffer_IMAGEPIPELINE(const u_int index) {
-	hardwareDevice->EnqueueWriteBuffer(hw_IMAGEPIPELINE, CL_FALSE,
+	hardwareDevice->EnqueueWriteBuffer(hw_IMAGEPIPELINE, false,
 			channel_IMAGEPIPELINEs[index]->GetSize(),
 			channel_IMAGEPIPELINEs[index]->GetPixels());
 }
@@ -256,7 +258,7 @@ void Film::MergeSampleBuffersHW(const u_int imagePipelineIndex) {
 	const ImagePipeline *ip = (imagePipelineIndex < imagePipelines.size()) ? imagePipelines[imagePipelineIndex] : nullptr;
 
 	// Transfer IMAGEPIPELINEs[index]
-	hardwareDevice->EnqueueWriteBuffer(hw_IMAGEPIPELINE, CL_FALSE,
+	hardwareDevice->EnqueueWriteBuffer(hw_IMAGEPIPELINE, false,
 			channel_IMAGEPIPELINEs[imagePipelineIndex]->GetSize(),
 			channel_IMAGEPIPELINEs[imagePipelineIndex]->GetPixels());
 
@@ -268,7 +270,7 @@ void Film::MergeSampleBuffersHW(const u_int imagePipelineIndex) {
 		for (u_int i = 0; i < radianceGroupCount; ++i) {
 			if (!ip || ip->radianceChannelScales[i].enabled) {
 				// Transfer RADIANCE_PER_PIXEL_NORMALIZEDs[i]
-				hardwareDevice->EnqueueWriteBuffer(hw_mergeBuffer, CL_FALSE,
+				hardwareDevice->EnqueueWriteBuffer(hw_mergeBuffer, false,
 						channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->GetSize(),
 						channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->GetPixels());
 
@@ -291,7 +293,7 @@ void Film::MergeSampleBuffersHW(const u_int imagePipelineIndex) {
 		for (u_int i = 0; i < radianceGroupCount; ++i) {
 			if (!ip || ip->radianceChannelScales[i].enabled) {
 				// Transfer RADIANCE_PER_SCREEN_NORMALIZEDs[i]
-				hardwareDevice->EnqueueWriteBuffer(hw_mergeBuffer, CL_FALSE,
+				hardwareDevice->EnqueueWriteBuffer(hw_mergeBuffer, false,
 						channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->GetSize(),
 						channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->GetPixels());
 
@@ -312,7 +314,7 @@ void Film::MergeSampleBuffersHW(const u_int imagePipelineIndex) {
 			HardwareDeviceRange(RoundUp(pixelCount, 256u)), HardwareDeviceRange(256));
 
 	// Transfer back the results
-	hardwareDevice->EnqueueReadBuffer(hw_IMAGEPIPELINE, CL_FALSE,
+	hardwareDevice->EnqueueReadBuffer(hw_IMAGEPIPELINE, false,
 			channel_IMAGEPIPELINEs[imagePipelineIndex]->GetSize(),
 			channel_IMAGEPIPELINEs[imagePipelineIndex]->GetPixels());
 

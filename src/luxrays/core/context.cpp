@@ -23,6 +23,7 @@
 #include <stdexcept>
 
 #include "luxrays/core/context.h"
+#include "luxrays/core/hardwaredevice.h"
 #include "luxrays/devices/nativeintersectiondevice.h"
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 #include "luxrays/devices/ocldevice.h"
