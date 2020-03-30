@@ -46,6 +46,7 @@
 #include "luxcore/luxcore.h"
 #include "luxcore/luxcoreimpl.h"
 #include "luxcore/pyluxcore/pyluxcoreforblender.h"
+#include "luxcore/pyluxcore/blender_types.h"
 #include "luxrays/utils/utils.h"
 
 using namespace std;
@@ -59,73 +60,25 @@ namespace luxcore {
 namespace blender {
 
 //------------------------------------------------------------------------------
-// Blender definitions and structures
+// Blender struct access functions
 //------------------------------------------------------------------------------
 
-static const int ME_SMOOTH = 1;
+static int CustomData_get_active_layer_index(const CustomData *data, int type)
+{
+	const int layer_index = data->typemap[type];
+	return (layer_index != -1) ? layer_index + data->layers[layer_index].active : -1;
+}
 
-typedef struct MLoopTri {
-	unsigned int tri[3];
-	unsigned int poly;
-} MLoopTri;
+static void *CustomData_get_layer(const CustomData *data, int type)
+{
+	/* get the layer index of the active layer of type */
+	int layer_index = CustomData_get_active_layer_index(data, type);
+	if (layer_index == -1) {
+		return nullptr;
+	}
 
-typedef struct MLoopUV {
-	float uv[2];
-	int flag;
-} MLoopUV;
-
-typedef struct MLoopCol {
-	unsigned char r, g, b, a;
-} MLoopCol;
-
-typedef struct MLoop {
-	/** Vertex index. */
-	unsigned int v;
-	/** Edge index. */
-	unsigned int e;
-} MLoop;
-
-typedef struct MPoly {
-	/* offset into loop array and number of loops in the face */
-	int loopstart;
-	int totloop;
-	short mat_nr;
-	char flag, _pad;
-} MPoly;
-
-struct MVert {
-	float co[3];
-	short no[3];
-	char flag, bweight;
-};
-
-struct RenderPass {
-	struct RenderPass *next, *prev;
-	int channels;
-	char name[64];
-	char chan_id[8];
-	float *rect;  // The only thing we are interested in
-	int rectx, recty;
-
-	char fullname[64];
-	char view[64];
-	int view_id;
-
-	int pad;
-};
-
-// from blender/source/blender/python/mathutils/mathutils_Matrix.h
-typedef struct {
-	// The following is expanded form of the macro BASE_MATH_MEMBERS(matrix)
-	PyObject_VAR_HEAD float *matrix;  // The only thing we are interested in
-	PyObject *cb_user;
-	unsigned char cb_type;
-	unsigned char cb_subtype;
-	unsigned char flag;
-
-	unsigned short num_col;
-	unsigned short num_row;
-} MatrixObject;
+	return data->layers[layer_index].data;
+}
 
 //------------------------------------------------------------------------------
 // Utility functions
@@ -677,7 +630,7 @@ static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const str
 		const size_t polyPtr,
 		const boost::python::object &loopUVsPtrList,
 		const boost::python::object &loopColsPtrList,
-		const boost::python::object &loopTriCustomNormals,
+		const size_t meshPtr,
 		const short matIndex,
 		const luxrays::Transform *trans) {
 
@@ -715,27 +668,17 @@ static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const str
         throw runtime_error("Too many Vertex Color Maps in list for method Scene.DefineMesh()");
     }
 
-	// Custom normals
 	vector<Normal> customNormals;
-	const bool hasCustomNormals = !loopTriCustomNormals.is_none();
-	if (hasCustomNormals) {
-		extract<boost::python::list> getCustomNormalsList(loopTriCustomNormals);
-
-		if (!getCustomNormalsList.check()) {
-			const string objType = extract<string>((loopUVsPtrList.attr("__class__")).attr("__name__"));
-			throw runtime_error("Wrong data type for the list of custom normals of method Scene.DefineMesh(): " + objType);
-		}
-
-		const boost::python::list &loopTriCustomNormalsList = getCustomNormalsList();
-		const boost::python::ssize_t loopCustomNormalsCount = len(loopTriCustomNormalsList);
-
-		cout << "custom normal count is " << loopCustomNormalsCount / 3 << endl;
-
-		for (int i = 0; i < loopCustomNormalsCount; i += 3) {
-			const float x = extract<float>(loopTriCustomNormalsList[i]);
-			const float y = extract<float>(loopTriCustomNormalsList[i + 1]);
-			const float z = extract<float>(loopTriCustomNormalsList[i + 2]);
-			customNormals.emplace_back(Normal(x, y, z));
+	bool hasCustomNormals = false;
+	{
+		const Mesh *mesh = reinterpret_cast<const Mesh*>(meshPtr);
+		const float(*loop_normals)[3] = static_cast<const float(*)[3]>(CustomData_get_layer(&mesh->ldata, CD_NORMAL));
+		
+		if (loop_normals) {
+			hasCustomNormals = true;
+			for (u_int i = 0; i < mesh->totloop; ++i) {
+				customNormals.push_back(Normal(loop_normals[i][0], loop_normals[i][1], loop_normals[i][2]));
+			}
 		}
 	}
 
@@ -743,8 +686,8 @@ static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const str
 	vector<const MLoopCol *> loopColsList;
 	vector<Point> tmpMeshVerts;
 	vector<Normal> tmpMeshNorms;
-	vector <vector<UV>> tmpMeshUVs;
-	vector <vector<Spectrum>> tmpMeshCols;
+	vector<vector<UV>> tmpMeshUVs;
+	vector<vector<Spectrum>> tmpMeshCols;
 	vector<Triangle> tmpMeshTris;
 
 	for (u_int i = 0; i < loopUVsCount; ++i) {
@@ -790,7 +733,7 @@ static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const str
 				if (alreadyDefined) {
 					const u_int mappedIndex = vertexMap[index];
 
-					if (hasCustomNormals && (customNormals[index] != tmpMeshNorms[mappedIndex]))
+					if (hasCustomNormals && (customNormals[tri] != tmpMeshNorms[mappedIndex]))
 						alreadyDefined = false;
 					
 					for (u_int uvLayerIndex = 0; uvLayerIndex < loopUVsList.size() && alreadyDefined; ++uvLayerIndex) {
@@ -832,7 +775,7 @@ static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const str
 
 					// Add the normal
 					if (hasCustomNormals) {
-						tmpMeshNorms.push_back(customNormals[index]);
+						tmpMeshNorms.push_back(customNormals[tri]);
 					} else {
 						tmpMeshNorms.push_back(Normalize(Normal(
 							vertex.no[0] * normalScale,
@@ -965,44 +908,6 @@ static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const str
 		tmpMeshTris.emplace_back(Triangle(vertIndices[0], vertIndices[1], vertIndices[2]));
 	}
 
-	cout << "tris: " << tmpMeshTris.size() << "\n";
-	cout << "verts: " << tmpMeshVerts.size() << "\n";
-	cout << "norms: " << tmpMeshNorms.size() << "\n";
-	
-	// Debug: Visualize normals
-	
-	// const int vertCount = tmpMeshVerts.size();
-	// int vertIndex = vertCount;
-	// for (int i = 0; i < vertCount; ++i) {
-	// 	const Point &vert = tmpMeshVerts[i];
-	// 	const Normal norm = tmpMeshNorms[i];
-		
-	// 	const float length = 0.01f;
-	// 	const float width = 0.001f;
-		
-	// 	const Normal normScaled = norm * length;
-		
-	// 	Point p0(vert);
-	// 	Point p1(vert.x + normScaled.x, vert.y + normScaled.y, vert.z + normScaled.z);
-	// 	Point p2(p1.x + width, p1.y, p1.z);
-	// 	Point p3(p0.x + width, p0.y, p0.z);
-		
-	// 	tmpMeshVerts.push_back(p0);
-	// 	tmpMeshVerts.push_back(p1);
-	// 	tmpMeshVerts.push_back(p2);
-	// 	tmpMeshVerts.push_back(p3);
-		
-	// 	tmpMeshTris.emplace_back(Triangle(vertIndex, vertIndex + 1, vertIndex + 2));
-	// 	tmpMeshTris.emplace_back(Triangle(vertIndex, vertIndex + 2, vertIndex + 3));
-	// 	vertIndex += 4;
-		
-	// 	// bogus
-	// 	tmpMeshNorms.push_back(norm);
-	// 	tmpMeshNorms.push_back(norm);
-	// 	tmpMeshNorms.push_back(norm);
-	// 	tmpMeshNorms.push_back(norm);
-	// }
-
 	// Check if there wasn't any triangles with matIndex
 	if (tmpMeshTris.size() == 0)
 		return false;
@@ -1059,7 +964,7 @@ boost::python::list Scene_DefineBlenderMesh1(luxcore::detail::SceneImpl *scene, 
 	const size_t polyPtr,
 	const boost::python::object &loopUVsPtrList,
 	const boost::python::object &loopColsPtrList,
-	const boost::python::object &loopTriCustomNormals,
+	const size_t meshPtr,
 	const u_int materialCount,
 	const boost::python::object &transformation) {
 	
@@ -1078,7 +983,7 @@ boost::python::list Scene_DefineBlenderMesh1(luxcore::detail::SceneImpl *scene, 
 		if (Scene_DefineBlenderMesh(scene, meshName, loopTriCount, loopTriPtr,
 			loopPtr, vertPtr, polyPtr,
 			loopUVsPtrList, loopColsPtrList, 
-			loopTriCustomNormals,
+			meshPtr,
 			matIndex,
 			hasTransformation ? &trans : NULL)) {
 			boost::python::list meshInfo;
@@ -1098,11 +1003,11 @@ boost::python::list Scene_DefineBlenderMesh2(luxcore::detail::SceneImpl *scene, 
 	const size_t polyPtr,
 	const boost::python::object &loopUVsPtrList,
 	const boost::python::object &loopColsPtrList,
-	const boost::python::object &loopTriCustomNormals,
+	const size_t meshPtr,
 	const u_int materialCount) {
 	return Scene_DefineBlenderMesh1(scene, name, loopTriCount, loopTriPtr,
 		loopPtr, vertPtr, polyPtr, loopUVsPtrList, loopColsPtrList, 
-		loopTriCustomNormals, materialCount, boost::python::object());
+		meshPtr, materialCount, boost::python::object());
 }
 
 //------------------------------------------------------------------------------
