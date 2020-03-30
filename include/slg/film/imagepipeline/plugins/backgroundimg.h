@@ -25,7 +25,7 @@
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/color/color.h"
-#include "luxrays/devices/ocldevice.h"
+#include "luxrays/core/device.h"
 #include "luxrays/utils/serializationutils.h"
 #include "slg/film/imagepipeline/imagepipeline.h"
 #include "slg/imagemap/imagemap.h"
@@ -45,10 +45,8 @@ public:
 
 	virtual void Apply(Film &film, const u_int index);
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	virtual bool CanUseOpenCL() const { return true; }
-	virtual void ApplyOCL(Film &film, const u_int index);
-#endif
+	virtual bool CanUseHW() const { return true; }
+	virtual void ApplyHW(Film &film, const u_int index);
 
 	friend class boost::serialization::access;
 
@@ -67,14 +65,12 @@ private:
 	ImageMap *imgMap;
 	ImageMap *filmImageMap;
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	// Used inside the object destructor to free buffers
 	luxrays::HardwareDevice *hardwareDevice;
-	luxrays::HardwareDeviceBuffer *oclFilmImageMapDesc;
-	luxrays::HardwareDeviceBuffer *oclFilmImageMap;
+	luxrays::HardwareDeviceBuffer *hwFilmImageMapDesc;
+	luxrays::HardwareDeviceBuffer *hwFilmImageMap;
 
 	luxrays::HardwareDeviceKernel *applyKernel;
-#endif
 };
 
 }

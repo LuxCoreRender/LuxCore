@@ -18,6 +18,8 @@
 
 #include "luxcore/cfg.h"
 
+#include "luxrays/devices/ocldevice.h"
+
 #include "slg/film/film.h"
 #include "slg/kernels/kernels.h"
 
@@ -26,50 +28,46 @@ using namespace luxrays;
 using namespace slg;
 
 //------------------------------------------------------------------------------
-// Film OpenCL related code
+// Film HardwareDevice related code
 //------------------------------------------------------------------------------
 
-void Film::SetUpOCL() {
-	oclEnable = true;
-	oclPlatformIndex = -1;
-	oclDeviceIndex = -1;
+void Film::SetUpHW() {
+	hwEnable = true;
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
+	hwDeviceIndex = -1;
+
 	ctx = nullptr;
 	dataSet = nullptr;
 	hardwareDevice = nullptr;
 
-	ocl_IMAGEPIPELINE = nullptr;
-	ocl_ALPHA = nullptr;
-	ocl_OBJECT_ID = nullptr;
-	ocl_mergeBuffer = nullptr;
+	hw_IMAGEPIPELINE = nullptr;
+	hw_ALPHA = nullptr;
+	hw_OBJECT_ID = nullptr;
+	hw_mergeBuffer = nullptr;
 
 	mergeInitializeKernel = nullptr;
 	mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel = nullptr;
 	mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel = nullptr;
 	mergeFinalizeKernel = nullptr;
-#endif
 }
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-void Film::CreateOCLContext() {
-	SLG_LOG("Film OpenCL image pipeline");
+void Film::CreateHWContext() {
+	SLG_LOG("Film hardware image pipeline");
 
 	// Create LuxRays context
 	ctx = new Context(LuxRays_DebugHandler ? LuxRays_DebugHandler : NullDebugHandler,
 			Properties() <<
-			Property("context.opencl.platform.index")(oclPlatformIndex) /*<<
-			Property("context.verbose")(false)*/);
+			Property("context.verbose")(false));
 
 	// Select OpenCL device
 	vector<DeviceDescription *> descs = ctx->GetAvailableDeviceDescriptions();
 	DeviceDescription::Filter(DEVICE_TYPE_ALL_HARDWARE, descs);
 
 	DeviceDescription *selectedDeviceDesc = nullptr;
-	if (oclEnable) {
-		if ((oclDeviceIndex >= 0) && (oclDeviceIndex < (int)descs.size())) {
+	if (hwEnable) {
+		if ((hwDeviceIndex >= 0) && (hwDeviceIndex < (int)descs.size())) {
 			// I have to use specific device
-			selectedDeviceDesc = (OpenCLDeviceDescription *)descs[oclDeviceIndex];
+			selectedDeviceDesc = (OpenCLDeviceDescription *)descs[hwDeviceIndex];
 		} else if (descs.size() > 0) {
 			// Look for a GPU to use
 			for (size_t i = 0; i < descs.size(); ++i) {
@@ -87,7 +85,7 @@ void Film::CreateOCLContext() {
 				}
 			}
 		} else {
-			// No OpenCL device available
+			// No hardware device device available
 		}
 	}
 
@@ -98,7 +96,7 @@ void Film::CreateOCLContext() {
 		vector<HardwareDevice *> devs = ctx->AddHardwareDevices(selectedDeviceDescs);
 		hardwareDevice = dynamic_cast<HardwareDevice *>(devs[0]);
 		assert (hardwareDevice);
-		SLG_LOG("Film OpenCL Device used: " << hardwareDevice->GetName());
+		SLG_LOG("Film hardware device used: " << hardwareDevice->GetName() << " (Type: " << DeviceDescription::GetDeviceType(hardwareDevice->GetType()) << ")");
 
 		OpenCLDeviceDescription *oclDesc = dynamic_cast<OpenCLDeviceDescription *>(selectedDeviceDesc);
 		if (oclDesc) {
@@ -119,10 +117,10 @@ void Film::CreateOCLContext() {
 	}
 }
 
-void Film::DeleteOCLContext() {
+void Film::DeleteHWContext() {
 	if (hardwareDevice) {
 		const size_t size = hardwareDevice->GetUsedMemory();
-		SLG_LOG("[" << hardwareDevice->GetName() << "] Memory used for OpenCL image pipeline: " <<
+		SLG_LOG("[" << hardwareDevice->GetName() << "] Memory used for hardware image pipeline: " <<
 				(size < 10000 ? size : (size / 1024)) << (size < 10000 ? "bytes" : "Kbytes"));
 
 		delete mergeInitializeKernel;
@@ -130,34 +128,34 @@ void Film::DeleteOCLContext() {
 		delete mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel;
 		delete mergeFinalizeKernel;
 
-		hardwareDevice->FreeBuffer(&ocl_IMAGEPIPELINE);
-		hardwareDevice->FreeBuffer(&ocl_ALPHA);
-		hardwareDevice->FreeBuffer(&ocl_OBJECT_ID);
-		hardwareDevice->FreeBuffer(&ocl_mergeBuffer);
+		hardwareDevice->FreeBuffer(&hw_IMAGEPIPELINE);
+		hardwareDevice->FreeBuffer(&hw_ALPHA);
+		hardwareDevice->FreeBuffer(&hw_OBJECT_ID);
+		hardwareDevice->FreeBuffer(&hw_mergeBuffer);
 	}
 
 	delete ctx;
 	delete dataSet;
 }
 
-void Film::AllocateOCLBuffers() {
-//	ctx->SetVerbose(true);
+void Film::AllocateHWBuffers() {
+	ctx->SetVerbose(true);
 
-	hardwareDevice->AllocBufferRW(&ocl_IMAGEPIPELINE, channel_IMAGEPIPELINEs[0]->GetPixels(), channel_IMAGEPIPELINEs[0]->GetSize(), "IMAGEPIPELINE");
+	hardwareDevice->AllocBufferRW(&hw_IMAGEPIPELINE, channel_IMAGEPIPELINEs[0]->GetPixels(), channel_IMAGEPIPELINEs[0]->GetSize(), "IMAGEPIPELINE");
 	if (HasChannel(ALPHA))
-		hardwareDevice->AllocBufferRO(&ocl_ALPHA, channel_ALPHA->GetPixels(), channel_ALPHA->GetSize(), "ALPHA");
+		hardwareDevice->AllocBufferRO(&hw_ALPHA, channel_ALPHA->GetPixels(), channel_ALPHA->GetSize(), "ALPHA");
 	if (HasChannel(OBJECT_ID))
-		hardwareDevice->AllocBufferRO(&ocl_OBJECT_ID, channel_OBJECT_ID->GetPixels(), channel_OBJECT_ID->GetSize(), "OBJECT_ID");
+		hardwareDevice->AllocBufferRO(&hw_OBJECT_ID, channel_OBJECT_ID->GetPixels(), channel_OBJECT_ID->GetSize(), "OBJECT_ID");
 	const size_t mergeBufferSize = Max(
 			HasChannel(RADIANCE_PER_PIXEL_NORMALIZED) ? channel_RADIANCE_PER_PIXEL_NORMALIZEDs[0]->GetSize() : 0,
 			HasChannel(RADIANCE_PER_SCREEN_NORMALIZED) ? channel_RADIANCE_PER_SCREEN_NORMALIZEDs[0]->GetSize() : 0);
 	if (mergeBufferSize > 0)
-		hardwareDevice->AllocBufferRO(&ocl_mergeBuffer, nullptr, mergeBufferSize, "Merge");
+		hardwareDevice->AllocBufferRO(&hw_mergeBuffer, nullptr, mergeBufferSize, "Merge");
 
-//	ctx->SetVerbose(false);
+	ctx->SetVerbose(false);
 }
 
-void Film::CompileOCLKernels() {
+void Film::CompileHWKernels() {
 	// Compile MergeSampleBuffersOCL() kernels
 	const double tStart = WallClockTime();
 
@@ -178,7 +176,7 @@ void Film::CompileOCLKernels() {
 	u_int argIndex = 0;
 	hardwareDevice->SetKernelArg(mergeInitializeKernel, argIndex++, width);
 	hardwareDevice->SetKernelArg(mergeInitializeKernel, argIndex++, height);
-	hardwareDevice->SetKernelArg(mergeInitializeKernel, argIndex++, ocl_IMAGEPIPELINE);
+	hardwareDevice->SetKernelArg(mergeInitializeKernel, argIndex++, hw_IMAGEPIPELINE);
 
 	//--------------------------------------------------------------------------
 	// Film_MergeRADIANCE_PER_PIXEL_NORMALIZED kernel
@@ -191,8 +189,8 @@ void Film::CompileOCLKernels() {
 	argIndex = 0;
 	hardwareDevice->SetKernelArg(mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel, argIndex++, width);
 	hardwareDevice->SetKernelArg(mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel, argIndex++, height);
-	hardwareDevice->SetKernelArg(mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel, argIndex++, ocl_IMAGEPIPELINE);
-	hardwareDevice->SetKernelArg(mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel, argIndex++, ocl_mergeBuffer);
+	hardwareDevice->SetKernelArg(mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel, argIndex++, hw_IMAGEPIPELINE);
+	hardwareDevice->SetKernelArg(mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel, argIndex++, hw_mergeBuffer);
 	// Scale RGB arguments are set at runtime
 
 	//--------------------------------------------------------------------------
@@ -206,8 +204,8 @@ void Film::CompileOCLKernels() {
 	argIndex = 0;
 	hardwareDevice->SetKernelArg(mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel, argIndex++, width);
 	hardwareDevice->SetKernelArg(mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel, argIndex++, height);
-	hardwareDevice->SetKernelArg(mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel, argIndex++, ocl_IMAGEPIPELINE);
-	hardwareDevice->SetKernelArg(mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel, argIndex++, ocl_mergeBuffer);
+	hardwareDevice->SetKernelArg(mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel, argIndex++, hw_IMAGEPIPELINE);
+	hardwareDevice->SetKernelArg(mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel, argIndex++, hw_mergeBuffer);
 	// Scale RGB arguments are set at runtime
 
 	//--------------------------------------------------------------------------
@@ -221,7 +219,7 @@ void Film::CompileOCLKernels() {
 	argIndex = 0;
 	hardwareDevice->SetKernelArg(mergeFinalizeKernel, argIndex++, width);
 	hardwareDevice->SetKernelArg(mergeFinalizeKernel, argIndex++, height);
-	hardwareDevice->SetKernelArg(mergeFinalizeKernel, argIndex++, ocl_IMAGEPIPELINE);
+	hardwareDevice->SetKernelArg(mergeFinalizeKernel, argIndex++, hw_IMAGEPIPELINE);
 
 	//--------------------------------------------------------------------------
 
@@ -231,34 +229,34 @@ void Film::CompileOCLKernels() {
 	SLG_LOG("[MergeSampleBuffersOCL] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
 }
 
-void Film::WriteAllOCLBuffers() {
+void Film::WriteAllHWBuffers() {
 	if (HasChannel(ALPHA))
-		hardwareDevice->EnqueueWriteBuffer(ocl_ALPHA, CL_FALSE,
+		hardwareDevice->EnqueueWriteBuffer(hw_ALPHA, CL_FALSE,
 				channel_ALPHA->GetSize(),
 				channel_ALPHA->GetPixels());
 	if (HasChannel(OBJECT_ID))
-		hardwareDevice->EnqueueWriteBuffer(ocl_OBJECT_ID, CL_FALSE,
+		hardwareDevice->EnqueueWriteBuffer(hw_OBJECT_ID, CL_FALSE,
 				channel_OBJECT_ID->GetSize(),
 				channel_OBJECT_ID->GetPixels());
 }
 
-void Film::ReadOCLBuffer_IMAGEPIPELINE(const u_int index) {
-	hardwareDevice->EnqueueReadBuffer(ocl_IMAGEPIPELINE, CL_FALSE,
+void Film::ReadHWBuffer_IMAGEPIPELINE(const u_int index) {
+	hardwareDevice->EnqueueReadBuffer(hw_IMAGEPIPELINE, CL_FALSE,
 			channel_IMAGEPIPELINEs[index]->GetSize(),
 			channel_IMAGEPIPELINEs[index]->GetPixels());
 }
 
-void Film::WriteOCLBuffer_IMAGEPIPELINE(const u_int index) {
-	hardwareDevice->EnqueueWriteBuffer(ocl_IMAGEPIPELINE, CL_FALSE,
+void Film::WriteHWBuffer_IMAGEPIPELINE(const u_int index) {
+	hardwareDevice->EnqueueWriteBuffer(hw_IMAGEPIPELINE, CL_FALSE,
 			channel_IMAGEPIPELINEs[index]->GetSize(),
 			channel_IMAGEPIPELINEs[index]->GetPixels());
 }
 
-void Film::MergeSampleBuffersOCL(const u_int imagePipelineIndex) {
+void Film::MergeSampleBuffersHW(const u_int imagePipelineIndex) {
 	const ImagePipeline *ip = (imagePipelineIndex < imagePipelines.size()) ? imagePipelines[imagePipelineIndex] : nullptr;
 
 	// Transfer IMAGEPIPELINEs[index]
-	hardwareDevice->EnqueueWriteBuffer(ocl_IMAGEPIPELINE, CL_FALSE,
+	hardwareDevice->EnqueueWriteBuffer(hw_IMAGEPIPELINE, CL_FALSE,
 			channel_IMAGEPIPELINEs[imagePipelineIndex]->GetSize(),
 			channel_IMAGEPIPELINEs[imagePipelineIndex]->GetPixels());
 
@@ -270,7 +268,7 @@ void Film::MergeSampleBuffersOCL(const u_int imagePipelineIndex) {
 		for (u_int i = 0; i < radianceGroupCount; ++i) {
 			if (!ip || ip->radianceChannelScales[i].enabled) {
 				// Transfer RADIANCE_PER_PIXEL_NORMALIZEDs[i]
-				hardwareDevice->EnqueueWriteBuffer(ocl_mergeBuffer, CL_FALSE,
+				hardwareDevice->EnqueueWriteBuffer(hw_mergeBuffer, CL_FALSE,
 						channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->GetSize(),
 						channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->GetPixels());
 
@@ -293,7 +291,7 @@ void Film::MergeSampleBuffersOCL(const u_int imagePipelineIndex) {
 		for (u_int i = 0; i < radianceGroupCount; ++i) {
 			if (!ip || ip->radianceChannelScales[i].enabled) {
 				// Transfer RADIANCE_PER_SCREEN_NORMALIZEDs[i]
-				hardwareDevice->EnqueueWriteBuffer(ocl_mergeBuffer, CL_FALSE,
+				hardwareDevice->EnqueueWriteBuffer(hw_mergeBuffer, CL_FALSE,
 						channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->GetSize(),
 						channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->GetPixels());
 
@@ -314,11 +312,9 @@ void Film::MergeSampleBuffersOCL(const u_int imagePipelineIndex) {
 			HardwareDeviceRange(RoundUp(pixelCount, 256u)), HardwareDeviceRange(256));
 
 	// Transfer back the results
-	hardwareDevice->EnqueueReadBuffer(ocl_IMAGEPIPELINE, CL_FALSE,
+	hardwareDevice->EnqueueReadBuffer(hw_IMAGEPIPELINE, CL_FALSE,
 			channel_IMAGEPIPELINEs[imagePipelineIndex]->GetSize(),
 			channel_IMAGEPIPELINEs[imagePipelineIndex]->GetPixels());
 
 	hardwareDevice->FinishQueue();
 }
-
-#endif

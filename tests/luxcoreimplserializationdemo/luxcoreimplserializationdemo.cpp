@@ -86,7 +86,7 @@ static void TestFilmSerialization() {
 	SLG_LOG("Create a film");
 
 	Film film(512, 512);
-	film.oclEnable = false;
+	film.hwEnable = false;
 	film.AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
 	film.AddChannel(Film::IMAGEPIPELINE);
 
@@ -118,7 +118,7 @@ static void TestFilmSerialization() {
 	// Read the film
 	SLG_LOG("Read the film");
 	unique_ptr<Film> filmCopy(Film::LoadSerialized("film.flm"));
-	filmCopy->oclEnable = false;
+	filmCopy->hwEnable = false;
 	
 	filmCopy->ExecuteImagePipeline(0);
 	filmCopy->Output("film-copy.png", FilmOutputs::RGB_IMAGEPIPELINE);

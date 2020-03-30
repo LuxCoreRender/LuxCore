@@ -25,7 +25,6 @@
 
 #include "luxrays/core/color/color.h"
 #include "luxrays/core/hardwaredevice.h"
-#include "luxrays/devices/ocldevice.h"
 #include "luxrays/utils/serializationutils.h"
 #include "slg/film/imagepipeline/imagepipeline.h"
 
@@ -44,10 +43,8 @@ public:
 
 	virtual void Apply(Film &film, const u_int index);
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	virtual bool CanUseOpenCL() const { return true; }
-	virtual void ApplyOCL(Film &film, const u_int index);
-#endif
+	virtual bool CanUseHW() const { return true; }
+	virtual void ApplyHW(Film &film, const u_int index);
 
 	float radius, weight;
 
@@ -77,17 +74,15 @@ private:
 
 	u_int bloomWidth;
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	// Used inside the object destructor to free buffers
 	luxrays::HardwareDevice *hardwareDevice;
-	luxrays::HardwareDeviceBuffer *oclBloomBuffer;
-	luxrays::HardwareDeviceBuffer *oclBloomBufferTmp;
-	luxrays::HardwareDeviceBuffer *oclBloomFilter;
+	luxrays::HardwareDeviceBuffer *hwBloomBuffer;
+	luxrays::HardwareDeviceBuffer *hwBloomBufferTmp;
+	luxrays::HardwareDeviceBuffer *hwBloomFilter;
 
 	luxrays::HardwareDeviceKernel *bloomFilterXKernel;
 	luxrays::HardwareDeviceKernel *bloomFilterYKernel;
 	luxrays::HardwareDeviceKernel *bloomFilterMergeKernel;
-#endif
 };
 
 }

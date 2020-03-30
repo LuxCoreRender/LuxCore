@@ -45,10 +45,8 @@ public:
 
 	virtual void Apply(Film &film, const u_int index);
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	virtual bool CanUseOpenCL() const { return true; }
-	virtual void ApplyOCL(Film &film, const u_int index);
-#endif
+	virtual bool CanUseHW() const { return true; }
+	virtual void ApplyHW(Film &film, const u_int index);
 
 	static float CalcLinearToneMapScale(const Film &film, const u_int index, const float Y);
 	
@@ -59,15 +57,13 @@ private:
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ToneMap);
 	}
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	// Used inside the object destructor to free buffers
 	luxrays::HardwareDevice *hardwareDevice;
-	luxrays::HardwareDeviceBuffer *oclAccumBuffer;
+	luxrays::HardwareDeviceBuffer *hwAccumBuffer;
 
 	luxrays::HardwareDeviceKernel *opRGBValuesReduceKernel;
 	luxrays::HardwareDeviceKernel *opRGBValueAccumulateKernel;
 	luxrays::HardwareDeviceKernel *applyKernel;
-#endif
 };
 
 }

@@ -22,6 +22,7 @@
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
 #include "luxrays/devices/nativeintersectiondevice.h"
+#include "luxrays/devices/oclintersectiondevice.h"
 #include "luxrays/utils/ocl.h"
 
 #include "slg/slg.h"

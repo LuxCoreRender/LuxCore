@@ -36,15 +36,11 @@ using namespace slg;
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::PremultiplyAlphaPlugin)
 
 PremultiplyAlphaPlugin::PremultiplyAlphaPlugin() {
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	applyKernel = nullptr;
-#endif
 }
 
 PremultiplyAlphaPlugin::~PremultiplyAlphaPlugin() {
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	delete applyKernel;
-#endif
 }
 
 ImagePipelinePlugin *PremultiplyAlphaPlugin::Copy() const {
@@ -92,9 +88,7 @@ void PremultiplyAlphaPlugin::Apply(Film &film, const u_int index) {
 // OpenCL version
 //------------------------------------------------------------------------------
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-
-void PremultiplyAlphaPlugin::ApplyOCL(Film &film, const u_int index) {
+void PremultiplyAlphaPlugin::ApplyHW(Film &film, const u_int index) {
 	if (!film.HasChannel(Film::ALPHA)) {
 		// I can not work without alpha channel
 		return;
@@ -124,8 +118,8 @@ void PremultiplyAlphaPlugin::ApplyOCL(Film &film, const u_int index) {
 		u_int argIndex = 0;
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.GetWidth());
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.GetHeight());
-		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.ocl_IMAGEPIPELINE);
-		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.ocl_ALPHA);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.hw_IMAGEPIPELINE);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.hw_ALPHA);
 
 		const double tEnd = WallClockTime();
 		SLG_LOG("[PremultiplyAlphaPlugin] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
@@ -136,5 +130,3 @@ void PremultiplyAlphaPlugin::ApplyOCL(Film &film, const u_int index) {
 	hardwareDevice->EnqueueKernel(applyKernel, HardwareDeviceRange(RoundUp(film.GetWidth() * film.GetHeight(), 256u)),
 			HardwareDeviceRange(256));
 }
-
-#endif

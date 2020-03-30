@@ -43,10 +43,8 @@ public:
 
 	virtual void Apply(Film &film, const u_int index);
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	virtual bool CanUseOpenCL() const { return true; }
-	virtual void ApplyOCL(Film &film, const u_int index);
-#endif
+	virtual bool CanUseHW() const { return true; }
+	virtual void ApplyHW(Film &film, const u_int index);
 
 	template<class T> static void ApplyBlurFilter(const u_int width, const u_int height,
 			T *src, T *tmpBuffer,
@@ -77,14 +75,12 @@ private:
 	luxrays::Spectrum *tmpBuffer;
 	size_t tmpBufferSize;
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	// Used inside the object destructor to free buffers
 	luxrays::HardwareDevice *hardwareDevice;
-	luxrays::HardwareDeviceBuffer *oclTmpBuffer;
+	luxrays::HardwareDeviceBuffer *hwTmpBuffer;
 
 	luxrays::HardwareDeviceKernel *filterXKernel;
 	luxrays::HardwareDeviceKernel *filterYKernel;
-#endif
 };
 
 }

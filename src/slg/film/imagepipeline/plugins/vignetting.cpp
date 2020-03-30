@@ -36,15 +36,11 @@ using namespace slg;
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::VignettingPlugin)
 
 VignettingPlugin::VignettingPlugin(const float s) : scale(s) {
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	applyKernel = nullptr;
-#endif
 }
 
 VignettingPlugin::~VignettingPlugin() {
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	delete applyKernel;
-#endif
 }
 
 ImagePipelinePlugin *VignettingPlugin::Copy() const {
@@ -99,9 +95,7 @@ void VignettingPlugin::Apply(Film &film, const u_int index) {
 // OpenCL version
 //------------------------------------------------------------------------------
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-
-void VignettingPlugin::ApplyOCL(Film &film, const u_int index) {
+void VignettingPlugin::ApplyHW(Film &film, const u_int index) {
 	HardwareDevice *hardwareDevice = film.hardwareDevice;
 	
 	if (!applyKernel) {
@@ -125,7 +119,7 @@ void VignettingPlugin::ApplyOCL(Film &film, const u_int index) {
 		u_int argIndex = 0;
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.GetWidth());
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.GetHeight());
-		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.ocl_IMAGEPIPELINE);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.hw_IMAGEPIPELINE);
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, scale);
 
 		const double tEnd = WallClockTime();
@@ -137,5 +131,3 @@ void VignettingPlugin::ApplyOCL(Film &film, const u_int index) {
 	hardwareDevice->EnqueueKernel(applyKernel, HardwareDeviceRange(RoundUp(film.GetWidth() * film.GetHeight(), 256u)),
 			HardwareDeviceRange(256));
 }
-
-#endif
