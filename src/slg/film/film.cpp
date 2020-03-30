@@ -83,7 +83,7 @@ Film::Film() : filmDenoiser(this) {
 	imagePipelineThread = nullptr;
 
 	// Initialize variables to nullptr
-	SetUpOCL();
+	SetUpHW();
 }
 
 Film::Film(const u_int w, const u_int h, const u_int *sr) : filmDenoiser(this) {
@@ -157,7 +157,7 @@ Film::Film(const u_int w, const u_int h, const u_int *sr) : filmDenoiser(this) {
 	imagePipelineThread = nullptr;
 
 	// Initialize variables to nullptr
-	SetUpOCL();
+	SetUpHW();
 }
 
 Film::~Film() {
@@ -170,11 +170,9 @@ Film::~Film() {
 	BOOST_FOREACH(ImagePipeline *ip, imagePipelines)
 		delete ip;
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	// I have to delete the OCL context after the image pipeline because it
 	// can be used by plugins
-	DeleteOCLContext();
-#endif
+	DeleteHWContext();
 
 	delete convTest;
 	delete noiseEstimation;

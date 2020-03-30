@@ -135,46 +135,40 @@ CameraResponsePlugin::CameraResponsePlugin(const string &name) {
 	AdjustGamma(greenI, greenB, 1.f / sourceGamma);
 	AdjustGamma(blueI, blueB, 1.f / sourceGamma);
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	hardwareDevice = nullptr;
-	oclRedI = nullptr;
-	oclRedB = nullptr;
-	oclGreenI = nullptr;
-	oclGreenB = nullptr;
-	oclBlueI = nullptr;
-	oclBlueB = nullptr;
+	hwRedI = nullptr;
+	hwRedB = nullptr;
+	hwGreenI = nullptr;
+	hwGreenB = nullptr;
+	hwBlueI = nullptr;
+	hwBlueB = nullptr;
 
 	applyKernel = nullptr;
-#endif
 }
 
 CameraResponsePlugin::~CameraResponsePlugin() {
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	delete applyKernel;
 
 	if (hardwareDevice) {
-		hardwareDevice->FreeBuffer(&oclRedI);
-		hardwareDevice->FreeBuffer(&oclRedB);
-		hardwareDevice->FreeBuffer(&oclGreenI);
-		hardwareDevice->FreeBuffer(&oclGreenB);
-		hardwareDevice->FreeBuffer(&oclBlueI);
-		hardwareDevice->FreeBuffer(&oclBlueB);
+		hardwareDevice->FreeBuffer(&hwRedI);
+		hardwareDevice->FreeBuffer(&hwRedB);
+		hardwareDevice->FreeBuffer(&hwGreenI);
+		hardwareDevice->FreeBuffer(&hwGreenB);
+		hardwareDevice->FreeBuffer(&hwBlueI);
+		hardwareDevice->FreeBuffer(&hwBlueB);
 	}
-#endif
 }
 
 CameraResponsePlugin::CameraResponsePlugin() {
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	hardwareDevice = nullptr;
-	oclRedI = nullptr;
-	oclRedB = nullptr;
-	oclGreenI = nullptr;
-	oclGreenB = nullptr;
-	oclBlueI = nullptr;
-	oclBlueB = nullptr;
+	hwRedI = nullptr;
+	hwRedB = nullptr;
+	hwGreenI = nullptr;
+	hwGreenB = nullptr;
+	hwBlueI = nullptr;
+	hwBlueB = nullptr;
 
 	applyKernel = nullptr;
-#endif
 }
 
 ImagePipelinePlugin *CameraResponsePlugin::Copy() const {
@@ -243,22 +237,20 @@ float CameraResponsePlugin::ApplyCrf(float point, const vector<float> &from, con
 // OpenCL version
 //------------------------------------------------------------------------------
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-
-void CameraResponsePlugin::ApplyOCL(Film &film, const u_int index) {
+void CameraResponsePlugin::ApplyHW(Film &film, const u_int index) {
 	if (!applyKernel) {
 		film.ctx->SetVerbose(true);
 
 		hardwareDevice = film.hardwareDevice;
 
 		// Allocate OpenCL buffers
-		hardwareDevice->AllocBufferRO(&oclRedI, &redI[0], redI.size() * sizeof(float), "Camera response redI");
-		hardwareDevice->AllocBufferRO(&oclRedB, &redB[0], redB.size() * sizeof(float), "Camera response redB");
+		hardwareDevice->AllocBufferRO(&hwRedI, &redI[0], redI.size() * sizeof(float), "Camera response redI");
+		hardwareDevice->AllocBufferRO(&hwRedB, &redB[0], redB.size() * sizeof(float), "Camera response redB");
 		if (color) {
-			hardwareDevice->AllocBufferRO(&oclGreenI, &greenI[0], greenI.size() * sizeof(float), "Camera response greenI");
-			hardwareDevice->AllocBufferRO(&oclGreenB, &greenB[0], greenB.size() * sizeof(float), "Camera response greenB");
-			hardwareDevice->AllocBufferRO(&oclBlueI, &blueI[0], blueI.size() * sizeof(float), "Camera response blueI");
-			hardwareDevice->AllocBufferRO(&oclBlueB, &blueB[0], blueB.size() * sizeof(float), "Camera response blueB");
+			hardwareDevice->AllocBufferRO(&hwGreenI, &greenI[0], greenI.size() * sizeof(float), "Camera response greenI");
+			hardwareDevice->AllocBufferRO(&hwGreenB, &greenB[0], greenB.size() * sizeof(float), "Camera response greenB");
+			hardwareDevice->AllocBufferRO(&hwBlueI, &blueI[0], blueI.size() * sizeof(float), "Camera response blueI");
+			hardwareDevice->AllocBufferRO(&hwBlueB, &blueB[0], blueB.size() * sizeof(float), "Camera response blueB");
 		}
 
 		// Compile sources
@@ -292,16 +284,16 @@ void CameraResponsePlugin::ApplyOCL(Film &film, const u_int index) {
 		u_int argIndex = 0;
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.GetWidth());
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.GetHeight());
-		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.ocl_IMAGEPIPELINE);
-		hardwareDevice->SetKernelArg(applyKernel, argIndex++, oclRedI);
-		hardwareDevice->SetKernelArg(applyKernel, argIndex++, oclRedB);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.hw_IMAGEPIPELINE);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, hwRedI);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, hwRedB);
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, (u_int)redI.size());
 		if (color) {
-			hardwareDevice->SetKernelArg(applyKernel, argIndex++, oclGreenI);
-			hardwareDevice->SetKernelArg(applyKernel, argIndex++, oclGreenB);
+			hardwareDevice->SetKernelArg(applyKernel, argIndex++, hwGreenI);
+			hardwareDevice->SetKernelArg(applyKernel, argIndex++, hwGreenB);
 			hardwareDevice->SetKernelArg(applyKernel, argIndex++, (u_int)greenI.size());
-			hardwareDevice->SetKernelArg(applyKernel, argIndex++, oclBlueI);
-			hardwareDevice->SetKernelArg(applyKernel, argIndex++, oclBlueB);
+			hardwareDevice->SetKernelArg(applyKernel, argIndex++, hwBlueI);
+			hardwareDevice->SetKernelArg(applyKernel, argIndex++, hwBlueB);
 			hardwareDevice->SetKernelArg(applyKernel, argIndex++, (u_int)blueI.size());			
 		}
 
@@ -318,8 +310,6 @@ void CameraResponsePlugin::ApplyOCL(Film &film, const u_int index) {
 	hardwareDevice->EnqueueKernel(applyKernel, HardwareDeviceRange(RoundUp(film.GetWidth() * film.GetHeight(), 256u)),
 			HardwareDeviceRange(256));
 }
-
-#endif
 
 //------------------------------------------------------------------------------
 // Camera response definition

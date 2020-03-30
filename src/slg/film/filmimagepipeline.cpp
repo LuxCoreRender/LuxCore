@@ -25,6 +25,7 @@
 
 #include "slg/film/film.h"
 #include "slg/film/imagepipeline/radiancechannelscale.h"
+#include "luxrays/utils/oclerror.h"
 
 using namespace std;
 using namespace luxrays;
@@ -171,38 +172,32 @@ void Film::ExecuteImagePipelineImpl(const u_int index) {
 		return;
 	}
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	// Initialize OpenCL device
-	if (oclEnable && !ctx) {
-		CreateOCLContext();
+	if (hwEnable && !ctx) {
+		CreateHWContext();
 
 		if (hardwareDevice) {
-			AllocateOCLBuffers();
-			CompileOCLKernels();
+			AllocateHWBuffers();
+			CompileHWKernels();
 		}
 	}
-#endif
 
 	// Merge all buffers
 	//const double t1 = WallClockTime();
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	if (oclEnable && hardwareDevice)
-		MergeSampleBuffersOCL(index);
+	if (hwEnable && hardwareDevice)
+		MergeSampleBuffersHW(index);
 	else
 		MergeSampleBuffers(index);
-#else
-	MergeSampleBuffers(index);
-#endif
+
 	//const double t2 = WallClockTime();
 	//SLG_LOG("MergeSampleBuffers time: " << int((t2 - t1) * 1000.0) << "ms");
 
 	// Apply the image pipeline
 	//const double p1 = WallClockTime();
-#if !defined(LUXRAYS_DISABLE_OPENCL)
+
 	// Transfer all buffers to OpenCL device memory
-	if (oclEnable && hardwareDevice && imagePipelines[index]->CanUseOpenCL())
-		WriteAllOCLBuffers();
-#endif
+	if (hwEnable && hardwareDevice && imagePipelines[index]->CanUseHW())
+		WriteAllHWBuffers();
 
 	imagePipelines[index]->Apply(*this, index);
 	//const double p2 = WallClockTime();

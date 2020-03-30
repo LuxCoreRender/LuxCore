@@ -676,7 +676,7 @@ static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const str
 		
 		if (loop_normals) {
 			hasCustomNormals = true;
-			for (u_int i = 0; i < mesh->totloop; ++i) {
+			for (u_int i = 0; i < (u_int)mesh->totloop; ++i) {
 				customNormals.push_back(Normal(loop_normals[i][0], loop_normals[i][1], loop_normals[i][2]));
 			}
 		}

@@ -42,10 +42,8 @@ public:
 
 	virtual void Apply(Film &film, const u_int index);
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	virtual bool CanUseOpenCL() const { return true; }
-	virtual void ApplyOCL(Film &film, const u_int index);
-#endif
+	virtual bool CanUseHW() const { return true; }
+	virtual void ApplyHW(Film &film, const u_int index);
 
 	friend class boost::serialization::access;
 
@@ -78,18 +76,16 @@ private:
 	std::vector<float> blueB; // measured intensity
 	bool color;
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	// Used inside the object destructor to free buffers
 	luxrays::HardwareDevice *hardwareDevice;
-	luxrays::HardwareDeviceBuffer *oclRedI;
-	luxrays::HardwareDeviceBuffer *oclRedB;
-	luxrays::HardwareDeviceBuffer *oclGreenI;
-	luxrays::HardwareDeviceBuffer *oclGreenB;
-	luxrays::HardwareDeviceBuffer *oclBlueI;
-	luxrays::HardwareDeviceBuffer *oclBlueB;
+	luxrays::HardwareDeviceBuffer *hwRedI;
+	luxrays::HardwareDeviceBuffer *hwRedB;
+	luxrays::HardwareDeviceBuffer *hwGreenI;
+	luxrays::HardwareDeviceBuffer *hwGreenB;
+	luxrays::HardwareDeviceBuffer *hwBlueI;
+	luxrays::HardwareDeviceBuffer *hwBlueB;
 
 	luxrays::HardwareDeviceKernel *applyKernel;
-#endif
 };
 
 }

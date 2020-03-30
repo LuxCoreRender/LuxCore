@@ -16,64 +16,24 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_GAMMACORRECTION_PLUGIN_H
-#define	_SLG_GAMMACORRECTION_PLUGIN_H
+#include "luxrays/luxrays.h"
+#if defined(LUXRAYS_ENABLE_CUDA)
+#include "luxrays/utils/cuda.h"
+#endif
 
-#include <vector>
-#include <memory>
-#include <typeinfo> 
-
-#include "luxrays/core/color/color.h"
-#include "luxrays/core/hardwaredevice.h"
-#include "luxrays/utils/serializationutils.h"
-#include "slg/film/imagepipeline/imagepipeline.h"
-
-namespace slg {
-
-class Film;
+using namespace std;
+using namespace luxrays;
 
 //------------------------------------------------------------------------------
-// Gamma correction plugin
+// Init()
 //------------------------------------------------------------------------------
 
-class GammaCorrectionPlugin : public ImagePipelinePlugin {
-public:
-	GammaCorrectionPlugin(const float gamma = 2.2f, const u_int tableSize = 16384);
-	virtual ~GammaCorrectionPlugin();
+namespace luxrays {
 
-	virtual ImagePipelinePlugin *Copy() const;
-
-	virtual void Apply(Film &film, const u_int index);
-
-	virtual bool CanUseHW() const { return true; }
-	virtual void ApplyHW(Film &film, const u_int index);
-
-	float gamma;
-
-	friend class boost::serialization::access;
-
-private:
-	template<class Archive> void serialize(Archive &ar, const u_int version) {
-		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImagePipelinePlugin);
-		ar & gamma;
-		ar & gammaTable;
-	}
-
-	float Radiance2PixelFloat(const float x) const;
-
-	std::vector<float> gammaTable;
-
-	// Used inside the object destructor to free buffers
-	luxrays::HardwareDevice *hardwareDevice;
-	luxrays::HardwareDeviceBuffer *hwGammaTable;
-
-	luxrays::HardwareDeviceKernel *applyKernel;
-};
-
+void Init() {
+#if defined(LUXRAYS_ENABLE_CUDA)
+	CHECK_CUDA_ERROR(cuInit(0));
+#endif	
 }
 
-BOOST_CLASS_VERSION(slg::GammaCorrectionPlugin, 1)
-
-BOOST_CLASS_EXPORT_KEY(slg::GammaCorrectionPlugin)
-
-#endif	/*  _SLG_GAMMACORRECTION_PLUGIN_H */
+}

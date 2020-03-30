@@ -37,35 +37,29 @@ BOOST_CLASS_EXPORT_IMPLEMENT(slg::GaussianBlur3x3FilterPlugin)
 
 GaussianBlur3x3FilterPlugin::GaussianBlur3x3FilterPlugin(const float w) : weight(w),
 		tmpBuffer(nullptr), tmpBufferSize(0) {
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	hardwareDevice = nullptr;
-	oclTmpBuffer = nullptr;
+	hwTmpBuffer = nullptr;
 
 	filterXKernel = nullptr;
 	filterYKernel = nullptr;
-#endif
 }
 
 GaussianBlur3x3FilterPlugin::GaussianBlur3x3FilterPlugin() : tmpBuffer(nullptr) {
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	hardwareDevice = nullptr;
-	oclTmpBuffer = nullptr;
+	hwTmpBuffer = nullptr;
 
 	filterXKernel = nullptr;
 	filterYKernel = nullptr;
-#endif
 }
 
 GaussianBlur3x3FilterPlugin::~GaussianBlur3x3FilterPlugin() {
 	delete[] tmpBuffer;
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	delete filterXKernel;
 	delete filterYKernel;
 
 	if (hardwareDevice)
-		hardwareDevice->FreeBuffer(&oclTmpBuffer);
-#endif
+		hardwareDevice->FreeBuffer(&hwTmpBuffer);
 }
 
 ImagePipelinePlugin *GaussianBlur3x3FilterPlugin::Copy() const {
@@ -217,9 +211,7 @@ void GaussianBlur3x3FilterPlugin::Apply(Film &film, const u_int index) {
 // OpenCL version
 //------------------------------------------------------------------------------
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-
-void GaussianBlur3x3FilterPlugin::ApplyOCL(Film &film, const u_int index) {
+void GaussianBlur3x3FilterPlugin::ApplyHW(Film &film, const u_int index) {
 	const u_int width = film.GetWidth();
 	const u_int height = film.GetHeight();
 
@@ -229,7 +221,7 @@ void GaussianBlur3x3FilterPlugin::ApplyOCL(Film &film, const u_int index) {
 		hardwareDevice = film.hardwareDevice;
 
 		// Allocate OpenCL buffers
-		hardwareDevice->AllocBufferRW(&oclTmpBuffer, nullptr, width * height * sizeof(Spectrum), "GaussianBlur3x3");
+		hardwareDevice->AllocBufferRW(&hwTmpBuffer, nullptr, width * height * sizeof(Spectrum), "GaussianBlur3x3");
 
 		// Compile sources
 		const double tStart = WallClockTime();
@@ -252,8 +244,8 @@ void GaussianBlur3x3FilterPlugin::ApplyOCL(Film &film, const u_int index) {
 		u_int argIndex = 0;
 		hardwareDevice->SetKernelArg(filterXKernel, argIndex++, film.GetWidth());
 		hardwareDevice->SetKernelArg(filterXKernel, argIndex++, film.GetHeight());
-		hardwareDevice->SetKernelArg(filterXKernel, argIndex++, film.ocl_IMAGEPIPELINE);
-		hardwareDevice->SetKernelArg(filterXKernel, argIndex++, oclTmpBuffer);
+		hardwareDevice->SetKernelArg(filterXKernel, argIndex++, film.hw_IMAGEPIPELINE);
+		hardwareDevice->SetKernelArg(filterXKernel, argIndex++, hwTmpBuffer);
 		hardwareDevice->SetKernelArg(filterXKernel, argIndex++, weight);
 
 		//----------------------------------------------------------------------
@@ -267,8 +259,8 @@ void GaussianBlur3x3FilterPlugin::ApplyOCL(Film &film, const u_int index) {
 		argIndex = 0;
 		hardwareDevice->SetKernelArg(filterYKernel, argIndex++, film.GetWidth());
 		hardwareDevice->SetKernelArg(filterYKernel, argIndex++, film.GetHeight());
-		hardwareDevice->SetKernelArg(filterYKernel, argIndex++, oclTmpBuffer);
-		hardwareDevice->SetKernelArg(filterYKernel, argIndex++, film.ocl_IMAGEPIPELINE);
+		hardwareDevice->SetKernelArg(filterYKernel, argIndex++, hwTmpBuffer);
+		hardwareDevice->SetKernelArg(filterYKernel, argIndex++, film.hw_IMAGEPIPELINE);
 		hardwareDevice->SetKernelArg(filterYKernel, argIndex++, weight);
 
 		//----------------------------------------------------------------------
@@ -288,5 +280,3 @@ void GaussianBlur3x3FilterPlugin::ApplyOCL(Film &film, const u_int index) {
 			HardwareDeviceRange(256));
 	}
 }
-
-#endif

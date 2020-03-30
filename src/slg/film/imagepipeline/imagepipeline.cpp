@@ -89,7 +89,7 @@ float ImagePipelinePlugin::GetBCDWarmUpSPP(const Film &film) {
 //------------------------------------------------------------------------------
 
 ImagePipeline::ImagePipeline() {
-	canUseOpenCL = false;
+	canUseHW = false;
 }
 
 ImagePipeline::~ImagePipeline() {
@@ -121,25 +121,24 @@ ImagePipeline *ImagePipeline::Copy() const {
 void ImagePipeline::AddPlugin(ImagePipelinePlugin *plugin) {
 	pipeline.push_back(plugin);
 
-	canUseOpenCL |= plugin->CanUseOpenCL();
+	canUseHW |= plugin->CanUseHW();
 }
 
 void ImagePipeline::Apply(Film &film, const u_int index) {
 	//const double t1 = WallClockTime();
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	bool imageInCPURam = true;
 	BOOST_FOREACH(ImagePipelinePlugin *plugin, pipeline) {
 		//const double p1 = WallClockTime();
 
-		const bool useOpenCLApply = film.oclEnable && film.hardwareDevice &&
-				plugin->CanUseOpenCL();
+		const bool useHWApply = film.hwEnable && film.hardwareDevice &&
+				plugin->CanUseHW();
 
-		if (useOpenCLApply) {
+		if (useHWApply) {
 			if (imageInCPURam) {
 				// Transfer the buffer to OpenCL device ram
 				//SLG_LOG("Transferring IMAGEPIPELINE buffer to OpenCL device");
-				film.WriteOCLBuffer_IMAGEPIPELINE(index);
+				film.WriteHWBuffer_IMAGEPIPELINE(index);
 			} else {
 				// The buffer is already in the OpenCL device ram
 			}
@@ -147,15 +146,15 @@ void ImagePipeline::Apply(Film &film, const u_int index) {
 			if (!imageInCPURam) {
 				// Transfer the buffer from OpenCL device ram
 				//SLG_LOG("Transferring IMAGEPIPELINE buffer from OpenCL device");
-				film.ReadOCLBuffer_IMAGEPIPELINE(index);
+				film.ReadHWBuffer_IMAGEPIPELINE(index);
 				film.hardwareDevice->FinishQueue();
 			} else {
 				// The buffer is already in CPU ram
 			}
 		}
 
-		if (useOpenCLApply) {
-			plugin->ApplyOCL(film, index);
+		if (useHWApply) {
+			plugin->ApplyHW(film, index);
 			imageInCPURam = false;
 		} else {
 			plugin->Apply(film, index);
@@ -166,22 +165,12 @@ void ImagePipeline::Apply(Film &film, const u_int index) {
 		//SLG_LOG("ImagePipeline plugin time: " << int((p2 - p1) * 1000.0) << "ms");
 	}
 
-	if (film.oclEnable && film.hardwareDevice && canUseOpenCL) {
+	if (film.hwEnable && film.hardwareDevice && canUseHW) {
 		if (!imageInCPURam)
-			film.ReadOCLBuffer_IMAGEPIPELINE(index);
+			film.ReadHWBuffer_IMAGEPIPELINE(index);
 
 		film.hardwareDevice->FinishQueue();
 	}
-#else
-	BOOST_FOREACH(ImagePipelinePlugin *plugin, pipeline) {
-		//const double p1 = WallClockTime();
-
-		plugin->Apply(film, index);
-		
-		//const double p2 = WallClockTime();
-		//SLG_LOG("ImagePipeline plugin time: " << int((p2 - p1) * 1000.0) << "ms");
-	}
-#endif
 
 	//const double t2 = WallClockTime();
 	//SLG_LOG("ImagePipeline time: " << int((t2 - t1) * 1000.0) << "ms");

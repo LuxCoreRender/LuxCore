@@ -27,7 +27,7 @@
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/color/color.h"
-#include "luxrays/devices/oclintersectiondevice.h"
+#include "luxrays/core/hardwaredevice.h"
 #include "luxrays/utils/serializationutils.h"
 #include "slg/film/imagepipeline/radiancechannelscale.h"
 
@@ -46,18 +46,13 @@ public:
 
 	void SetRadianceChannelScale(const u_int index, const RadianceChannelScale &scale);
 
-	virtual bool CanUseOpenCL() const { return false; }
+	virtual bool CanUseHW() const { return false; }
 	virtual ImagePipelinePlugin *Copy() const = 0;
 
 	virtual void Apply(Film &film, const u_int index) = 0;
-	virtual void ApplyOCL(Film &film, const u_int index) {
-		throw std::runtime_error("Internal error in ImagePipelinePlugin::ApplyOCL()");
+	virtual void ApplyHW(Film &film, const u_int index) {
+		throw std::runtime_error("Internal error in ImagePipelinePlugin::ApplyHW()");
 	};
-
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	static cl::Program *CompileProgram(Film &film, const std::string &kernelsParameters,
-		const std::string &kernelSource, const std::string &name);
-#endif
 
 	static float GetGammaCorrectionValue(const Film &film, const u_int index);
 	static u_int GetBCDPipelineIndex(const Film &film);
@@ -82,7 +77,7 @@ public:
 	void SetRadianceGroupCount(const u_int radianceGroupCount);
 	void SetRadianceChannelScale(const u_int index, const RadianceChannelScale &scale);
 	
-	bool CanUseOpenCL() const { return canUseOpenCL; }
+	bool CanUseHW() const { return canUseHW; }
 
 	const std::vector<ImagePipelinePlugin *> &GetPlugins() const { return pipeline; }
 	// An utility method
@@ -102,14 +97,14 @@ private:
 
 	std::vector<ImagePipelinePlugin *> pipeline;
 
-	bool canUseOpenCL;
+	bool canUseHW;
 };
 
 }
 
 BOOST_SERIALIZATION_ASSUME_ABSTRACT(slg::ImagePipelinePlugin)
 
-BOOST_CLASS_VERSION(slg::ImagePipeline, 2)
+BOOST_CLASS_VERSION(slg::ImagePipeline, 3)
 		
 BOOST_CLASS_EXPORT_KEY(slg::ImagePipeline)
 

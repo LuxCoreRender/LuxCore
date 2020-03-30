@@ -68,9 +68,9 @@ float3 Map(__global const float *redI, __global const float *redB, const uint re
 	float3 result;
 
 #if defined(PARAM_CAMERARESPONSE_COLOR)
-	result.s0 = ApplyCrf(rgb.s0, redI, redB, redSize);
-	result.s1 = ApplyCrf(rgb.s1, greenI, greenB, greenSize);
-	result.s2 = ApplyCrf(rgb.s2, blueI, blueB, blueSize);
+	result.x = ApplyCrf(rgb.x, redI, redB, redSize);
+	result.y = ApplyCrf(rgb.y, greenI, greenB, greenSize);
+	result.z = ApplyCrf(rgb.z, blueI, blueB, blueSize);
 #else
 	const float y = Spectrum_Y(rgb);
 	result = ApplyCrf(y, redI, redB, redSize);
@@ -79,7 +79,7 @@ float3 Map(__global const float *redI, __global const float *redB, const uint re
 	return result;
 }
 
-__kernel __attribute__((work_group_size_hint(256, 1, 1))) void CameraResponsePlugin_Apply(
+__kernel void CameraResponsePlugin_Apply(
 		const uint filmWidth, const uint filmHeight,
 		__global float *channel_IMAGEPIPELINE,
 		__global const float *redI, __global const float *redB, const uint redSize
@@ -95,7 +95,7 @@ __kernel __attribute__((work_group_size_hint(256, 1, 1))) void CameraResponsePlu
 	// Check if the pixel has received any sample
 	if (!isinf(channel_IMAGEPIPELINE[gid * 3])) {
 		__global float *pixel = &channel_IMAGEPIPELINE[gid * 3];
-		const float3 pixelValue = (float3)(pixel[0], pixel[1], pixel[2]);
+		const float3 pixelValue = MAKE_FLOAT3(pixel[0], pixel[1], pixel[2]);
 		
 		const float3 newPixelValue = Map(
 				redI, redB, redSize
@@ -105,8 +105,8 @@ __kernel __attribute__((work_group_size_hint(256, 1, 1))) void CameraResponsePlu
 #endif
 				, pixelValue);
 
-		pixel[0] = newPixelValue.s0;
-		pixel[1] = newPixelValue.s1;
-		pixel[2] = newPixelValue.s2;
+		pixel[0] = newPixelValue.x;
+		pixel[1] = newPixelValue.y;
+		pixel[2] = newPixelValue.z;
 	}
 }

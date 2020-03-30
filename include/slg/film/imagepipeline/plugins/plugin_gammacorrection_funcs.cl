@@ -22,13 +22,13 @@
 // GammaCorrectionPlugin_Apply
 //------------------------------------------------------------------------------
 
-float Radiance2PixelFloat(__global float *gammaTable, const uint tableSize,
+OPENCL_FORCE_INLINE float Radiance2PixelFloat(__global float *gammaTable, const uint tableSize,
 		const float x) {
 	const int index = clamp(Floor2UInt(tableSize * clamp(x, 0.f, 1.f)), 0u, tableSize - 1u);
 	return gammaTable[index];
 }
 
-__kernel __attribute__((work_group_size_hint(256, 1, 1))) void GammaCorrectionPlugin_Apply(
+__kernel void GammaCorrectionPlugin_Apply(
 		const uint filmWidth, const uint filmHeight,
 		__global float *channel_IMAGEPIPELINE,
 		__global float *gammaTable,

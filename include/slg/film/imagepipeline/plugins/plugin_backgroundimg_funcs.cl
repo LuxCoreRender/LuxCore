@@ -22,7 +22,7 @@
 // BackgroundImgPlugin_Apply
 //------------------------------------------------------------------------------
 
-__kernel __attribute__((work_group_size_hint(256, 1, 1))) void BackgroundImgPlugin_Apply(
+__kernel void BackgroundImgPlugin_Apply(
 		const uint filmWidth, const uint filmHeight,
 		__global float *channel_IMAGEPIPELINE,
 		__global float *channel_ALPHA,
@@ -48,8 +48,8 @@ __kernel __attribute__((work_group_size_hint(256, 1, 1))) void BackgroundImgPlug
 		const float alpha = alphaPixel[0] / alphaPixel[1];
 
 		__global float *pixel = &channel_IMAGEPIPELINE[gid * 3];
-		pixel[0] = mix(backgroundPixel.s0, pixel[0], alpha);
-		pixel[1] = mix(backgroundPixel.s1, pixel[1], alpha);
-		pixel[2] = mix(backgroundPixel.s2, pixel[2], alpha);
+		pixel[0] = mix(backgroundPixel.x, pixel[0], alpha);
+		pixel[1] = mix(backgroundPixel.y, pixel[1], alpha);
+		pixel[2] = mix(backgroundPixel.z, pixel[2], alpha);
 	}
 }

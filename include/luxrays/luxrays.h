@@ -83,6 +83,8 @@ class TriangleMesh;
 class UV;
 class Vector;
 
+extern void Init();
+
 }
 
 #endif	/* _LUXRAYS_H */

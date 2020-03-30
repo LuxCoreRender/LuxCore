@@ -365,7 +365,7 @@ OPENCL_FORCE_NOT_INLINE void Film_AddSample(
 // Film_Clear Kernel
 //------------------------------------------------------------------------------
 
-__kernel __attribute__((work_group_size_hint(64, 1, 1))) void Film_Clear(
+__kernel void Film_Clear(
 	const int dummy // This dummy variable is required by KERNEL_ARGS_FILM macro
 	KERNEL_ARGS_FILM) {
 	const size_t gid = get_global_id(0);

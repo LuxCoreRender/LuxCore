@@ -16,55 +16,46 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_VIGNETTING_PLUGIN_H
-#define	_SLG_VIGNETTING_PLUGIN_H
+#ifndef _LUXRAYS_CUDA_H
+#define	_LUXRAYS_CUDA_H
 
-#include <vector>
-#include <memory>
-#include <typeinfo> 
+#if defined(LUXRAYS_ENABLE_CUDA)
 
-#include "luxrays/core/color/color.h"
-#include "luxrays/core/hardwaredevice.h"
-#include "luxrays/utils/serializationutils.h"
-#include "slg/film/imagepipeline/imagepipeline.h"
+#include <cuda.h>
+#include <nvrtc.h>
 
-namespace slg {
+namespace luxrays {
 
-class Film;
+#define CHECK_CUDA_ERROR(err) CheckCUDAError(err, __FILE__, __LINE__)
 
-//------------------------------------------------------------------------------
-// Vignetting plugin
-//------------------------------------------------------------------------------
+inline void CheckCUDAError(const CUresult err, const char *file, const int line) {
+  if (err != CUDA_SUCCESS) {
+	  const char *errorNameStr;
+	  if (cuGetErrorName(err, &errorNameStr) != CUDA_SUCCESS)
+		  errorNameStr = "cuGetErrorName(ERROR)";
 
-class VignettingPlugin : public ImagePipelinePlugin {
-public:
-	VignettingPlugin(const float scale = .4f);
-	virtual ~VignettingPlugin();
+	  const char *errorStr;
+	  if (cuGetErrorString(err, &errorStr) != CUDA_SUCCESS)
+		  errorStr = "cuGetErrorString(ERROR)";
 
-	virtual ImagePipelinePlugin *Copy() const;
-
-	virtual void Apply(Film &film, const u_int index);
-
-	virtual bool CanUseHW() const { return true; }
-	virtual void ApplyHW(Film &film, const u_int index);
-
-	float scale;
-
-	friend class boost::serialization::access;
-
-private:
-	template<class Archive> void serialize(Archive &ar, const u_int version) {
-		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImagePipelinePlugin);
-		ar & scale;
+	  throw std::runtime_error("CUDA driver API error " + std::string(errorNameStr) + " "
+			  "(code: " + ToString(err) + ", file:" + std::string(file) + ", line: " + ToString(line) + ")"
+			  ": " + std::string(errorStr) + "\n");
 	}
+}
 
-	luxrays::HardwareDeviceKernel *applyKernel;
-};
+#define CHECK_NVRTC_ERROR(err) CheckNVRTCError(err, __FILE__, __LINE__)
+
+inline void CheckNVRTCError(const nvrtcResult err, const char *file, const int line) {
+  if (err != NVRTC_SUCCESS) {
+	  throw std::runtime_error("CUDA NVRTC error "
+			  "(code: " + ToString(err) + ", file:" + std::string(file) + ", line: " + ToString(line) + ")"
+			  ": " + std::string(nvrtcGetErrorString(err)) + "\n");
+	}
+}
 
 }
 
-BOOST_CLASS_VERSION(slg::VignettingPlugin, 1)
+#endif
 
-BOOST_CLASS_EXPORT_KEY(slg::VignettingPlugin)
-
-#endif	/*  _SLG_VIGNETTING_PLUGIN_H */
+#endif	/* _LUXRAYS_CUDA_H */

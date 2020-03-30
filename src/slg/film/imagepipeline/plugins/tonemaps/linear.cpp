@@ -36,23 +36,17 @@ BOOST_CLASS_EXPORT_IMPLEMENT(slg::LinearToneMap)
 LinearToneMap::LinearToneMap() {
 	scale = 1.f;
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	applyKernel = NULL;
-#endif
 }
 
 LinearToneMap::LinearToneMap(const float s) {
 	scale = s;
 	
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	applyKernel = NULL;
-#endif
 }
 
 LinearToneMap::~LinearToneMap() {
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	delete applyKernel;
-#endif
 }
 
 //------------------------------------------------------------------------------
@@ -82,8 +76,7 @@ void LinearToneMap::Apply(Film &film, const u_int index) {
 // OpenCL version
 //------------------------------------------------------------------------------
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-void LinearToneMap::ApplyOCL(Film &film, const u_int index) {
+void LinearToneMap::ApplyHW(Film &film, const u_int index) {
 	HardwareDevice *hardwareDevice = film.hardwareDevice;
 
 	if (!applyKernel) {
@@ -94,7 +87,7 @@ void LinearToneMap::ApplyOCL(Film &film, const u_int index) {
 
 		HardwareDeviceProgram *program = nullptr;
 		hardwareDevice->CompileProgram(&program,
-				"",
+				"-D LUXRAYS_OPENCL_KERNEL -D SLG_OPENCL_KERNEL",
 				slg::ocl::KernelSource_tonemap_linear_funcs,
 				"LinearToneMap");
 
@@ -107,7 +100,7 @@ void LinearToneMap::ApplyOCL(Film &film, const u_int index) {
 		u_int argIndex = 0;
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.GetWidth());
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.GetHeight());
-		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.ocl_IMAGEPIPELINE);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.hw_IMAGEPIPELINE);
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, scale);
 
 		const double tEnd = WallClockTime();
@@ -119,4 +112,3 @@ void LinearToneMap::ApplyOCL(Film &film, const u_int index) {
 	hardwareDevice->EnqueueKernel(applyKernel, HardwareDeviceRange(RoundUp(film.GetWidth() * film.GetHeight(), 256u)),
 			HardwareDeviceRange(256));
 }
-#endif

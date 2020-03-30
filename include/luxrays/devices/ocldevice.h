@@ -119,11 +119,10 @@ protected:
 	static std::string GetDeviceType(const cl_uint type);
 	static DeviceType GetOCLDeviceType(const cl_device_type type);
 	static void AddDeviceDescs(const cl::Platform &oclPlatform, const DeviceType filter,
-		std::vector<DeviceDescription *> &descriptions);
+			std::vector<DeviceDescription *> &descriptions);
 
 	size_t deviceIndex;
 
-private:
 	cl::Device oclDevice;
 	cl::Context *oclContext;
 	bool enableOpenGLInterop;
@@ -155,7 +154,6 @@ protected:
 
 	cl::Kernel *Get() { return oclKernel; }
 
-private:
 	cl::Kernel *oclKernel;
 };
 
@@ -184,7 +182,6 @@ protected:
 
 	cl::Program *Get() { return oclProgram; }
 
-private:
 	cl::Program *oclProgram;
 };
 
@@ -205,16 +202,6 @@ public:
 
 	friend class OpenCLDevice;
 
-protected:
-	void Set(cl::Buffer *p) {
-		delete oclBuff;
-		oclBuff = p;
-	}
-
-	const cl::Buffer *Get() const { return oclBuff; }
-	cl::Buffer *Get() { return oclBuff; }
-
-private:
 	cl::Buffer *oclBuff;
 };
 
@@ -246,8 +233,8 @@ public:
 			const u_int index, const size_t size, const void *arg);
 
 	virtual void EnqueueKernel(HardwareDeviceKernel *kernel,
-			const HardwareDeviceRange &workGroupSize,
-			const HardwareDeviceRange &globalSize);
+			const HardwareDeviceRange &globalSize,
+			const HardwareDeviceRange &workGroupSize);
 	virtual void EnqueueReadBuffer(const HardwareDeviceBuffer *buff,
 			const bool blocking, const size_t size, void *ptr);
 	virtual void EnqueueWriteBuffer(const HardwareDeviceBuffer *buff,
@@ -288,4 +275,3 @@ protected:
 #endif
 
 #endif	/* _LUXRAYS_OCLDEVICE_H */
-

@@ -1,3 +1,5 @@
+#line 2 "cudadevice_oclemul_types.cl"
+
 /***************************************************************************
  * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
@@ -16,55 +18,18 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_VIGNETTING_PLUGIN_H
-#define	_SLG_VIGNETTING_PLUGIN_H
+#define __kernel extern "C" __global__
+#define __global
+#define __local __shared__
+#define restrict __restrict__
 
-#include <vector>
-#include <memory>
-#include <typeinfo> 
+// This is a workaround to long compilation time
+#define OPENCL_FORCE_NOT_INLINE __noinline__
+#define OPENCL_FORCE_INLINE __forceinline__
 
-#include "luxrays/core/color/color.h"
-#include "luxrays/core/hardwaredevice.h"
-#include "luxrays/utils/serializationutils.h"
-#include "slg/film/imagepipeline/imagepipeline.h"
+typedef unsigned char uchar;
+typedef unsigned short ushort;
+typedef unsigned int uint;
 
-namespace slg {
-
-class Film;
-
-//------------------------------------------------------------------------------
-// Vignetting plugin
-//------------------------------------------------------------------------------
-
-class VignettingPlugin : public ImagePipelinePlugin {
-public:
-	VignettingPlugin(const float scale = .4f);
-	virtual ~VignettingPlugin();
-
-	virtual ImagePipelinePlugin *Copy() const;
-
-	virtual void Apply(Film &film, const u_int index);
-
-	virtual bool CanUseHW() const { return true; }
-	virtual void ApplyHW(Film &film, const u_int index);
-
-	float scale;
-
-	friend class boost::serialization::access;
-
-private:
-	template<class Archive> void serialize(Archive &ar, const u_int version) {
-		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImagePipelinePlugin);
-		ar & scale;
-	}
-
-	luxrays::HardwareDeviceKernel *applyKernel;
-};
-
-}
-
-BOOST_CLASS_VERSION(slg::VignettingPlugin, 1)
-
-BOOST_CLASS_EXPORT_KEY(slg::VignettingPlugin)
-
-#endif	/*  _SLG_VIGNETTING_PLUGIN_H */
+#define INFINITY __int_as_float(0x7f800000)
+#define M_PI_F 3.141592654f

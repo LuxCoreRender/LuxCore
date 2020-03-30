@@ -50,7 +50,7 @@ template<class Archive> void ImagePipeline::serialize(Archive &ar, const u_int v
 	ar & radianceChannelScales;
 
 	ar & pipeline;
-	ar & canUseOpenCL;
+	ar & canUseHW;
 }
 
 namespace slg {

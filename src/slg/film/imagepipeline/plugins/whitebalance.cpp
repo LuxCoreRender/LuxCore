@@ -32,28 +32,20 @@ using namespace slg;
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::WhiteBalance)
 
 WhiteBalance::WhiteBalance(): whitePoint(TemperatureToWhitePoint(6500.f)) {
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	applyKernel = nullptr;
-#endif
 }
 
 WhiteBalance::WhiteBalance(const float temperature):
 		whitePoint(TemperatureToWhitePoint(temperature)) {
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	applyKernel = nullptr;
-#endif
 }
 
 WhiteBalance::WhiteBalance(const Spectrum &wht_pt): whitePoint(wht_pt) {
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	applyKernel = nullptr;
-#endif
 }
 
 WhiteBalance::~WhiteBalance() {
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	delete applyKernel;
-#endif
 }
 
 ImagePipelinePlugin *WhiteBalance::Copy() const {
@@ -94,9 +86,7 @@ void WhiteBalance::Apply(Film &film, const u_int index) {
 // OpenCL version
 //------------------------------------------------------------------------------
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-
-void WhiteBalance::ApplyOCL(Film &film, const u_int index) {
+void WhiteBalance::ApplyHW(Film &film, const u_int index) {
 	HardwareDevice *hardwareDevice = film.hardwareDevice;
 
 	if (!applyKernel) {
@@ -118,7 +108,7 @@ void WhiteBalance::ApplyOCL(Film &film, const u_int index) {
 		u_int argIndex = 0;
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.GetWidth());
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.GetHeight());
-		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.ocl_IMAGEPIPELINE);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.hw_IMAGEPIPELINE);
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, whitePoint.c[0]);
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, whitePoint.c[1]);
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, whitePoint.c[2]);
@@ -132,5 +122,3 @@ void WhiteBalance::ApplyOCL(Film &film, const u_int index) {
 	hardwareDevice->EnqueueKernel(applyKernel, HardwareDeviceRange(RoundUp(film.GetWidth() * film.GetHeight(), 256u)),
 			HardwareDeviceRange(256));
 }
-
-#endif
