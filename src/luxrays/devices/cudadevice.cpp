@@ -172,6 +172,10 @@ void CUDADevice::CompileProgram(HardwareDeviceProgram **program,
 	boost::sregex_token_iterator paramsEnd;
 	vector<string> cudaOptsStr;
 	vector<const char *> cudaOpts;
+
+	cudaOptsStr.push_back("--device-as-default-execution-space");
+	cudaOpts.push_back(cudaOptsStr.back().c_str());
+
 	while (paramsIter != paramsEnd) {
 		cudaOptsStr.push_back(*paramsIter++);
 		cudaOpts.push_back(cudaOptsStr.back().c_str());

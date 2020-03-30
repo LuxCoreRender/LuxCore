@@ -21,13 +21,15 @@
 #define __kernel extern "C" __global__
 #define __global
 #define __local __shared__
+#define restrict __restrict__
 
 // This is a workaround to long compilation time
-#define OPENCL_FORCE_NOT_INLINE __device__ __noinline__
-#define OPENCL_FORCE_INLINE __device__ __forceinline__
+#define OPENCL_FORCE_NOT_INLINE __noinline__
+#define OPENCL_FORCE_INLINE __forceinline__
 
-typedef unsigned int uint;
+typedef unsigned char uchar;
 typedef unsigned short ushort;
+typedef unsigned int uint;
 
 #define INFINITY __int_as_float(0x7f800000)
 #define M_PI_F 3.141592654f
