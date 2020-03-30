@@ -293,7 +293,7 @@ void OpenCLDevice::EnqueueReadBuffer(const HardwareDeviceBuffer *buff,
 
 	const OpenCLDeviceBuffer *oclDeviceBuff = dynamic_cast<const OpenCLDeviceBuffer *>(buff);
 	assert (oclDeviceBuff);
-	assert (oclDeviceBuff->Get());
+	assert (!oclDeviceBuff->IsNull());
 
 	oclQueue->enqueueReadBuffer(*(oclDeviceBuff->oclBuff), 0, blocking, size, ptr);
 }
@@ -305,7 +305,7 @@ void OpenCLDevice::EnqueueWriteBuffer(const HardwareDeviceBuffer *buff,
 
 	const OpenCLDeviceBuffer *oclDeviceBuff = dynamic_cast<const OpenCLDeviceBuffer *>(buff);
 	assert (oclDeviceBuff);
-	assert (oclDeviceBuff->Get());
+	assert (!oclDeviceBuff->IsNull());
 
 	oclQueue->enqueueWriteBuffer(*(oclDeviceBuff->oclBuff), 0, blocking, size, ptr);
 }
