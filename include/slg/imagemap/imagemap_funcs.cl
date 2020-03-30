@@ -156,11 +156,11 @@ OPENCL_FORCE_INLINE float3 ImageMap_GetTexel_SpectrumValue(
 			switch (channelCount) {
 				case 1: {
 					const float a = ((__global const uchar *)pixels)[index] * (1.f / 255.f);
-					return MAKE_FLOAT3(a, a, a);
+					return TO_FLOAT3(a);
 				}
 				case 2: {
 					const uchar a = ((__global const uchar *)pixels)[index * 2] * (1.f / 255.f);
-					return MAKE_FLOAT3(a, a, a);
+					return TO_FLOAT3(a);
 				}
 				case 3: {
 					__global const uchar *rgb = &((__global const uchar *)pixels)[index * 3];
@@ -178,11 +178,11 @@ OPENCL_FORCE_INLINE float3 ImageMap_GetTexel_SpectrumValue(
 			switch (channelCount) {
 				case 1: {
 					const float a = vload_half(index, (__global const half *)pixels);
-					return MAKE_FLOAT3(a, a, a);
+					return TO_FLOAT3(a);
 				}
 				case 2: {
 					const float a = vload_half(index * 2, (__global const half *)pixels);
-					return MAKE_FLOAT3(a, a, a);
+					return TO_FLOAT3(a);
 				}
 				case 3: {
 					return MAKE_FLOAT3(
@@ -204,11 +204,11 @@ OPENCL_FORCE_INLINE float3 ImageMap_GetTexel_SpectrumValue(
 			switch (channelCount) {
 				case 1: {
 					const float a = ((__global const float *)pixels)[index];
-					return MAKE_FLOAT3(a, a, a);
+					return TO_FLOAT3(a);
 				}
 				case 2: {
 					const float a = ((__global const float *)pixels)[index * 2];
-					return MAKE_FLOAT3(a, a, a);
+					return TO_FLOAT3(a);
 				}
 				case 3: {
 					__global const float *rgb = &((__global const float *)pixels)[index * 3];

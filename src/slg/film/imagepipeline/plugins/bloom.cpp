@@ -20,6 +20,7 @@
 #include <boost/foreach.hpp>
 #include <boost/regex.hpp>
 
+#include "luxrays/kernels/kernels.h"
 #include "slg/kernels/kernels.h"
 #include "slg/film/film.h"
 #include "slg/film/imagepipeline/plugins/bloom.h"
@@ -291,6 +292,7 @@ void BloomFilterPlugin::ApplyOCL(Film &film, const u_int index) {
 		HardwareDeviceProgram *program = nullptr;
 		hardwareDevice->CompileProgram(&program,
 				"-D LUXRAYS_OPENCL_KERNEL -D SLG_OPENCL_KERNEL",
+				luxrays::ocl::KernelSource_color_types +
 				slg::ocl::KernelSource_plugin_bloom_funcs,
 				"BloomFilterPlugin");
 

@@ -122,6 +122,18 @@ __forceinline__ void barrier(const uint flag) {
 #define MAKE_FLOAT3(x, y, z) make_float3(x, y, z)
 #define MAKE_FLOAT4(x, y, z, w) make_float4(x, y, z, w)
 
+__forceinline__ float2 TO_FLOAT2(const float x) {
+	return make_float2(x, x);
+}
+
+__forceinline__ float3 TO_FLOAT3(const float x) {
+	return make_float3(x, x, x);
+}
+
+__forceinline__ float4 TO_FLOAT4(const float x) {
+	return make_float4(x, x, x, x);
+}
+
 //------------------------------------------------------------------------------
 // vload_half()
 //------------------------------------------------------------------------------
@@ -144,15 +156,15 @@ __forceinline__ float vload_half(const size_t offset, const half *p) {
 // vloadn()
 //------------------------------------------------------------------------------
 
-__forceinline__ float2 vload2(const size_t offset, const float  *p) {
+__forceinline__ float2 vload2(const size_t offset, const float *p) {
 	return make_float2(p[offset], p[offset + 1]);
 }
 
-__forceinline__ float3 vload3(const size_t offset, const float  *p) {
+__forceinline__ float3 vload3(const size_t offset, const float *p) {
 	return make_float3(p[offset], p[offset + 1], p[offset + 2]);
 }
 
-__forceinline__ float4 vload4(const size_t offset, const float  *p) {
+__forceinline__ float4 vload4(const size_t offset, const float *p) {
 	return make_float4(p[offset], p[offset + 1], p[offset + 2], p[offset + 3]);
 }
 
