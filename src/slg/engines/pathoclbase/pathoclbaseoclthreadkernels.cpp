@@ -119,13 +119,6 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 
 	//--------------------------------------------------------------------------
 
-	// This is a workaround to long compilation time
-	const string forceInlineDirective =
-			"#define OPENCL_FORCE_NOT_INLINE __attribute__((noinline))\n"
-			"#define OPENCL_FORCE_INLINE __attribute__((always_inline))\n";
-
-	//--------------------------------------------------------------------------
-
 	const double tStart = WallClockTime();
 
 	kernelsParameters = ssParams.str();
@@ -136,7 +129,7 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 	// Compile sources
 	stringstream ssKernel;
 	ssKernel <<
-			forceInlineDirective <<
+			luxrays::ocl::KernelSource_ocldevice_funcs +
 			// OpenCL LuxRays Types
 			luxrays::ocl::KernelSource_luxrays_types <<
 			luxrays::ocl::KernelSource_randomgen_types <<
