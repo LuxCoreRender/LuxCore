@@ -125,9 +125,13 @@ Film *Film::FromProperties(const Properties &cfg) {
 			film->RemoveChannel(Film::ALPHA);
 	}
 
-	film->oclEnable = cfg.Get(Property("film.opencl.enable")(true)).Get<bool>();
-	film->oclPlatformIndex = cfg.Get(Property("film.opencl.platform")(-1)).Get<int>();
-	film->oclDeviceIndex = cfg.Get(Property("film.opencl.device")(-1)).Get<int>();
+	film->hwEnable = cfg.Get(Property("film.hw.enable")(
+			cfg.Get(Property("film.opencl.enable")(true)).Get<bool>()
+			)).Get<bool>();
+	film->hwDeviceIndex = cfg.Get(Property("film.hw.device")(
+			// For compatibility with the past
+			cfg.Get(Property("film.opencl.device")(-1)).Get<int>()
+			)).Get<int>();
 
 	//--------------------------------------------------------------------------
 	// Add the default image pipeline

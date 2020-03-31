@@ -39,9 +39,7 @@ LuxLinearToneMap::LuxLinearToneMap() {
 	exposure = 1.f / 1000.f;
 	fstop = 2.8f;
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	applyKernel = NULL;
-#endif
 }
 
 LuxLinearToneMap::LuxLinearToneMap(const float s, const float e, const float f) {
@@ -49,15 +47,11 @@ LuxLinearToneMap::LuxLinearToneMap(const float s, const float e, const float f) 
 	exposure = e;
 	fstop = f;
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	applyKernel = NULL;
-#endif
 }
 
 LuxLinearToneMap::~LuxLinearToneMap() {
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	delete applyKernel;
-#endif
 }
 
 float LuxLinearToneMap::GetScale(const float gamma) const {
@@ -97,8 +91,7 @@ void LuxLinearToneMap::Apply(Film &film, const u_int index) {
 // OpenCL version
 //------------------------------------------------------------------------------
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-void LuxLinearToneMap::ApplyOCL(Film &film, const u_int index) {
+void LuxLinearToneMap::ApplyHW(Film &film, const u_int index) {
 	HardwareDevice *hardwareDevice = film.hardwareDevice;
 
 	if (!applyKernel) {
@@ -109,7 +102,7 @@ void LuxLinearToneMap::ApplyOCL(Film &film, const u_int index) {
 
 		HardwareDeviceProgram *program = nullptr;
 		hardwareDevice->CompileProgram(&program,
-				"",
+				"-D LUXRAYS_OPENCL_KERNEL -D SLG_OPENCL_KERNEL",
 				slg::ocl::KernelSource_tonemap_luxlinear_funcs,
 				"LuxLinearToneMap");
 
@@ -122,7 +115,7 @@ void LuxLinearToneMap::ApplyOCL(Film &film, const u_int index) {
 		u_int argIndex = 0;
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.GetWidth());
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.GetHeight());
-		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.ocl_IMAGEPIPELINE);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.hw_IMAGEPIPELINE);
 		const float gamma = GetGammaCorrectionValue(film, index);
 		const float scale = GetScale(gamma);
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, scale);
@@ -136,4 +129,3 @@ void LuxLinearToneMap::ApplyOCL(Film &film, const u_int index) {
 	hardwareDevice->EnqueueKernel(applyKernel, HardwareDeviceRange(RoundUp(film.GetWidth() * film.GetHeight(), 256u)),
 			HardwareDeviceRange(256));
 }
-#endif

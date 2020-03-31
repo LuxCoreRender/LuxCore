@@ -1,3 +1,5 @@
+#line 2 "ocldevice_funcs.cl"
+
 /***************************************************************************
  * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
@@ -16,64 +18,18 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_GAMMACORRECTION_PLUGIN_H
-#define	_SLG_GAMMACORRECTION_PLUGIN_H
-
-#include <vector>
-#include <memory>
-#include <typeinfo> 
-
-#include "luxrays/core/color/color.h"
-#include "luxrays/core/hardwaredevice.h"
-#include "luxrays/utils/serializationutils.h"
-#include "slg/film/imagepipeline/imagepipeline.h"
-
-namespace slg {
-
-class Film;
+// This is a workaround to long compilation time
+#define OPENCL_FORCE_NOT_INLINE __attribute__((noinline))
+#define OPENCL_FORCE_INLINE __attribute__((always_inline))
 
 //------------------------------------------------------------------------------
-// Gamma correction plugin
+// MAKE_FLOATn()
 //------------------------------------------------------------------------------
 
-class GammaCorrectionPlugin : public ImagePipelinePlugin {
-public:
-	GammaCorrectionPlugin(const float gamma = 2.2f, const u_int tableSize = 16384);
-	virtual ~GammaCorrectionPlugin();
+#define MAKE_FLOAT2(x, y) ((float2)(x, y))
+#define MAKE_FLOAT3(x, y, z) ((float3)(x, y, z))
+#define MAKE_FLOAT4(x, y, z, w) ((float4)(x, y, z, w))
 
-	virtual ImagePipelinePlugin *Copy() const;
-
-	virtual void Apply(Film &film, const u_int index);
-
-	virtual bool CanUseHW() const { return true; }
-	virtual void ApplyHW(Film &film, const u_int index);
-
-	float gamma;
-
-	friend class boost::serialization::access;
-
-private:
-	template<class Archive> void serialize(Archive &ar, const u_int version) {
-		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImagePipelinePlugin);
-		ar & gamma;
-		ar & gammaTable;
-	}
-
-	float Radiance2PixelFloat(const float x) const;
-
-	std::vector<float> gammaTable;
-
-	// Used inside the object destructor to free buffers
-	luxrays::HardwareDevice *hardwareDevice;
-	luxrays::HardwareDeviceBuffer *hwGammaTable;
-
-	luxrays::HardwareDeviceKernel *applyKernel;
-};
-
-}
-
-BOOST_CLASS_VERSION(slg::GammaCorrectionPlugin, 1)
-
-BOOST_CLASS_EXPORT_KEY(slg::GammaCorrectionPlugin)
-
-#endif	/*  _SLG_GAMMACORRECTION_PLUGIN_H */
+#define TO_FLOAT2(x) ((float2)x)
+#define TO_FLOAT3(x) ((float3)x)
+#define TO_FLOAT4(x) ((float4)x)

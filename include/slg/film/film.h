@@ -309,11 +309,9 @@ public:
 		const SampleResult &sampleResult, const float weight);
 	void AtomicAddSampleResultData(const u_int x, const u_int y,
 		const SampleResult &sampleResult);
-	
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	void ReadOCLBuffer_IMAGEPIPELINE(const u_int index);
-	void WriteOCLBuffer_IMAGEPIPELINE(const u_int index);
-#endif
+
+	void ReadHWBuffer_IMAGEPIPELINE(const u_int index);
+	void WriteHWBuffer_IMAGEPIPELINE(const u_int index);
 
 	void GetPixelFromMergedSampleBuffers(const FilmChannelType channels,
 		const std::vector<RadianceChannelScale> *radianceChannelScales,
@@ -413,27 +411,24 @@ public:
 	GenericFrameBuffer<1, 0, float> *channel_NOISE;
 	GenericFrameBuffer<1, 0, float> *channel_USER_IMPORTANCE;
 
-	// (Optional) OpenCL context
-	bool oclEnable;
-	int oclPlatformIndex;
-	int oclDeviceIndex;
+	// (Optional) LuxRays HardwareDevice context
+	bool hwEnable;
+	int hwDeviceIndex;
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	luxrays::Context *ctx;
 	luxrays::DataSet *dataSet;
 	luxrays::HardwareDevice *hardwareDevice;
 
-	luxrays::HardwareDeviceBuffer *ocl_IMAGEPIPELINE;
-	luxrays::HardwareDeviceBuffer *ocl_ALPHA;
-	luxrays::HardwareDeviceBuffer *ocl_OBJECT_ID;
+	luxrays::HardwareDeviceBuffer *hw_IMAGEPIPELINE;
+	luxrays::HardwareDeviceBuffer *hw_ALPHA;
+	luxrays::HardwareDeviceBuffer *hw_OBJECT_ID;
 	
-	luxrays::HardwareDeviceBuffer *ocl_mergeBuffer;
+	luxrays::HardwareDeviceBuffer *hw_mergeBuffer;
 	
 	luxrays::HardwareDeviceKernel *mergeInitializeKernel;
 	luxrays::HardwareDeviceKernel *mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel;
 	luxrays::HardwareDeviceKernel *mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel;
 	luxrays::HardwareDeviceKernel *mergeFinalizeKernel;
-#endif
 
 	static Film *LoadSerialized(const std::string &fileName);
 	static void SaveSerialized(const std::string &fileName, const Film *film);
@@ -470,15 +465,13 @@ private:
 			const std::string &imagePipelinePrefix);
 	void ParseImagePipelines(const luxrays::Properties &props);
 
-	void SetUpOCL();
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	void CreateOCLContext();
-	void DeleteOCLContext();
-	void AllocateOCLBuffers();
-	void CompileOCLKernels();
-	void WriteAllOCLBuffers();
-	void MergeSampleBuffersOCL(const u_int imagePipelineIndex);
-#endif
+	void SetUpHW();
+	void CreateHWContext();
+	void DeleteHWContext();
+	void AllocateHWBuffers();
+	void CompileHWKernels();
+	void WriteAllHWBuffers();
+	void MergeSampleBuffersHW(const u_int imagePipelineIndex);
 
 	void ExecuteImagePipelineThreadImpl(const u_int index);
 	void ExecuteImagePipelineImpl(const u_int index);

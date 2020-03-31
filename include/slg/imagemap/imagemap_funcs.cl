@@ -85,11 +85,11 @@ OPENCL_FORCE_INLINE float ImageMap_GetTexel_FloatValue(
 				}
 				case 3: {
 					__global const uchar *rgb = &((__global const uchar *)pixels)[index * 3];
-					return Spectrum_Y((float3)(rgb[0] * (1.f / 255.f), rgb[1] * (1.f / 255.f), rgb[2] * (1.f / 255.f)));
+					return Spectrum_Y(MAKE_FLOAT3(rgb[0] * (1.f / 255.f), rgb[1] * (1.f / 255.f), rgb[2] * (1.f / 255.f)));
 				}
 				case 4: {
 					__global const uchar *rgba = &((__global const uchar *)pixels)[index * 4];
-					return Spectrum_Y((float3)(rgba[0] * (1.f / 255.f), rgba[1] * (1.f / 255.f), rgba[2] * (1.f / 255.f)));
+					return Spectrum_Y(MAKE_FLOAT3(rgba[0] * (1.f / 255.f), rgba[1] * (1.f / 255.f), rgba[2] * (1.f / 255.f)));
 				}
 				default:
 					return 0.f;
@@ -104,13 +104,13 @@ OPENCL_FORCE_INLINE float ImageMap_GetTexel_FloatValue(
 					return vload_half(index * 2, (__global const half *)pixels);
 				}
 				case 3: {
-					return Spectrum_Y((float3)(
+					return Spectrum_Y(MAKE_FLOAT3(
 							vload_half(index * 3, (__global const half *)pixels),
 							vload_half(index * 3 + 1, (__global const half *)pixels),
 							vload_half(index * 3 + 2, (__global const half *)pixels)));
 				}
 				case 4: {
-					return Spectrum_Y((float3)(
+					return Spectrum_Y(MAKE_FLOAT3(
 							vload_half(index * 4, (__global const half *)pixels),
 							vload_half(index * 4 + 1, (__global const half *)pixels),
 							vload_half(index * 4 + 2, (__global const half *)pixels)));
@@ -131,11 +131,11 @@ OPENCL_FORCE_INLINE float ImageMap_GetTexel_FloatValue(
 				}
 				case 3: {
 					__global const float *rgb = &((__global const float *)pixels)[index * 3];
-					return Spectrum_Y((float3)(rgb[0], rgb[1], rgb[2]));
+					return Spectrum_Y(MAKE_FLOAT3(rgb[0], rgb[1], rgb[2]));
 				}
 				case 4: {
 					__global const float *rgba = &((__global const float *)pixels)[index * 4];
-					return Spectrum_Y((float3)(rgba[0], rgba[1], rgba[2]));
+					return Spectrum_Y(MAKE_FLOAT3(rgba[0], rgba[1], rgba[2]));
 				}
 				default:
 					return 0.f;
@@ -155,73 +155,75 @@ OPENCL_FORCE_INLINE float3 ImageMap_GetTexel_SpectrumValue(
 		case BYTE: {
 			switch (channelCount) {
 				case 1: {
-					const uchar a = ((__global const uchar *)pixels)[index];
-					return a * (1.f / 255.f);
+					const float a = ((__global const uchar *)pixels)[index] * (1.f / 255.f);
+					return TO_FLOAT3(a);
 				}
 				case 2: {
 					const uchar a = ((__global const uchar *)pixels)[index * 2] * (1.f / 255.f);
-					return a;
+					return TO_FLOAT3(a);
 				}
 				case 3: {
 					__global const uchar *rgb = &((__global const uchar *)pixels)[index * 3];
-					return (float3)(rgb[0] * (1.f / 255.f), rgb[1] * (1.f / 255.f), rgb[2] * (1.f / 255.f));
+					return MAKE_FLOAT3(rgb[0] * (1.f / 255.f), rgb[1] * (1.f / 255.f), rgb[2] * (1.f / 255.f));
 				}
 				case 4: {
 					__global const uchar *rgba = &((__global const uchar *)pixels)[index * 4];
-					return (float3)(rgba[0] * (1.f / 255.f), rgba[1] * (1.f / 255.f), rgba[2] * (1.f / 255.f));
+					return MAKE_FLOAT3(rgba[0] * (1.f / 255.f), rgba[1] * (1.f / 255.f), rgba[2] * (1.f / 255.f));
 				}
 				default:
-					return 0.f;
+					return BLACK;
 			}
 		}
 		case HALF: {
 			switch (channelCount) {
 				case 1: {
-					return vload_half(index, (__global const half *)pixels);
+					const float a = vload_half(index, (__global const half *)pixels);
+					return TO_FLOAT3(a);
 				}
 				case 2: {
-					return vload_half(index * 2, (__global const half *)pixels);
+					const float a = vload_half(index * 2, (__global const half *)pixels);
+					return TO_FLOAT3(a);
 				}
 				case 3: {
-					return (float3)(
+					return MAKE_FLOAT3(
 							vload_half(index * 3, (__global const half *)pixels),
 							vload_half(index * 3 + 1, (__global const half *)pixels),
 							vload_half(index * 3 + 2, (__global const half *)pixels));
 				}
 				case 4: {
-					return (float3)(
+					return MAKE_FLOAT3(
 							vload_half(index * 4, (__global const half *)pixels),
 							vload_half(index * 4 + 1, (__global const half *)pixels),
 							vload_half(index * 4 + 2, (__global const half *)pixels));
 				}
 				default:
-					return 0.f;
+					return BLACK;
 			}
 		}
 		case FLOAT: {
 			switch (channelCount) {
 				case 1: {
 					const float a = ((__global const float *)pixels)[index];
-					return a;
+					return TO_FLOAT3(a);
 				}
 				case 2: {
 					const float a = ((__global const float *)pixels)[index * 2];
-					return a;
+					return TO_FLOAT3(a);
 				}
 				case 3: {
 					__global const float *rgb = &((__global const float *)pixels)[index * 3];
-					return (float3)(rgb[0], rgb[1], rgb[2]);
+					return MAKE_FLOAT3(rgb[0], rgb[1], rgb[2]);
 				}
 				case 4: {
 					__global const float *rgba = &((__global const float *)pixels)[index * 4];
-					return (float3)(rgba[0], rgba[1], rgba[2]);
+					return MAKE_FLOAT3(rgba[0], rgba[1], rgba[2]);
 				}
 				default:
-					return 0.f;
+					return BLACK;
 			}
 		}
 		default:
-			return 0.f;
+			return BLACK;
 	}
 }
 
@@ -307,7 +309,7 @@ OPENCL_FORCE_INLINE float3 ImageMap_GetTexel_Spectrum(
 			v = clamp(t, 0, (int)height - 1);
 			break;
 		default:
-			return 0.f;
+			return BLACK;
 	}
 
 	const uint index = v * width + u;

@@ -36,25 +36,21 @@ using namespace slg;
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::AutoLinearToneMap)
 
 AutoLinearToneMap::AutoLinearToneMap() {
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	hardwareDevice = nullptr;
-	oclAccumBuffer = nullptr;
+	hwAccumBuffer = nullptr;
 
 	opRGBValuesReduceKernel = nullptr;
 	opRGBValueAccumulateKernel = nullptr;
 	applyKernel = nullptr;
-#endif
 }
 
 AutoLinearToneMap::~AutoLinearToneMap() {
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	delete opRGBValuesReduceKernel;
 	delete opRGBValueAccumulateKernel;
 	delete applyKernel;
 
 	if (hardwareDevice)
-		hardwareDevice->FreeBuffer(&oclAccumBuffer);
-#endif
+		hardwareDevice->FreeBuffer(&hwAccumBuffer);
 }
 
 float AutoLinearToneMap::CalcLinearToneMapScale(const Film &film, const u_int index, const float Y) {
@@ -113,9 +109,7 @@ void AutoLinearToneMap::Apply(Film &film, const u_int index) {
 // OpenCL version
 //------------------------------------------------------------------------------
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-
-void AutoLinearToneMap::ApplyOCL(Film &film, const u_int index) {
+void AutoLinearToneMap::ApplyHW(Film &film, const u_int index) {
 	const u_int pixelCount = film.GetWidth() * film.GetHeight();
 	const u_int workSize = RoundUp((pixelCount + 1) / 2, 64u);
 
@@ -125,7 +119,7 @@ void AutoLinearToneMap::ApplyOCL(Film &film, const u_int index) {
 		hardwareDevice = film.hardwareDevice;
 
 		// Allocate buffers
-		hardwareDevice->AllocBufferRW(&oclAccumBuffer, nullptr, (workSize / 64) * sizeof(float) * 3, "Accumulation");
+		hardwareDevice->AllocBufferRW(&hwAccumBuffer, nullptr, (workSize / 64) * sizeof(float) * 3, "Accumulation");
 
 		// Compile sources
 		const double tStart = WallClockTime();
@@ -153,20 +147,20 @@ void AutoLinearToneMap::ApplyOCL(Film &film, const u_int index) {
 		u_int argIndex = 0;
 		hardwareDevice->SetKernelArg(opRGBValuesReduceKernel, argIndex++, film.GetWidth());
 		hardwareDevice->SetKernelArg(opRGBValuesReduceKernel, argIndex++, film.GetHeight());
-		hardwareDevice->SetKernelArg(opRGBValuesReduceKernel, argIndex++, film.ocl_IMAGEPIPELINE);
-		hardwareDevice->SetKernelArg(opRGBValuesReduceKernel, argIndex++, oclAccumBuffer);
+		hardwareDevice->SetKernelArg(opRGBValuesReduceKernel, argIndex++, film.hw_IMAGEPIPELINE);
+		hardwareDevice->SetKernelArg(opRGBValuesReduceKernel, argIndex++, hwAccumBuffer);
 
 		argIndex = 0;
 		hardwareDevice->SetKernelArg(opRGBValueAccumulateKernel, argIndex++, workSize / 64);
-		hardwareDevice->SetKernelArg(opRGBValueAccumulateKernel, argIndex++, oclAccumBuffer);
+		hardwareDevice->SetKernelArg(opRGBValueAccumulateKernel, argIndex++, hwAccumBuffer);
 
 		argIndex = 0;
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.GetWidth());
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.GetHeight());
-		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.ocl_IMAGEPIPELINE);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.hw_IMAGEPIPELINE);
 		const float gamma = GetGammaCorrectionValue(film, index);
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, gamma);
-		hardwareDevice->SetKernelArg(applyKernel, argIndex++, oclAccumBuffer);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, hwAccumBuffer);
 
 		const double tEnd = WallClockTime();
 		SLG_LOG("[AutoLinearToneMap] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
@@ -181,5 +175,3 @@ void AutoLinearToneMap::ApplyOCL(Film &film, const u_int index) {
 	hardwareDevice->EnqueueKernel(applyKernel, HardwareDeviceRange(RoundUp(pixelCount, 256u)),
 			HardwareDeviceRange(256));
 }
-
-#endif

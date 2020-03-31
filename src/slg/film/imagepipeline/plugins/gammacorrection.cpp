@@ -44,20 +44,16 @@ GammaCorrectionPlugin::GammaCorrectionPlugin(const float g, const u_int tableSiz
 	for (u_int i = 0; i < tableSize; ++i, x += dx)
 		gammaTable[i] = powf(Clamp(x, 0.f, 1.f), 1.f / g);
 	
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	hardwareDevice = nullptr;
-	oclGammaTable = nullptr;
+	hwGammaTable = nullptr;
 	applyKernel = nullptr;
-#endif
 }
 
 GammaCorrectionPlugin::~GammaCorrectionPlugin() {
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	delete applyKernel;
 
 	if (hardwareDevice)
-		hardwareDevice->FreeBuffer(&oclGammaTable);
-#endif
+		hardwareDevice->FreeBuffer(&hwGammaTable);
 }
 
 ImagePipelinePlugin *GammaCorrectionPlugin::Copy() const {
@@ -103,16 +99,14 @@ void GammaCorrectionPlugin::Apply(Film &film, const u_int index) {
 // OpenCL version
 //------------------------------------------------------------------------------
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-
-void GammaCorrectionPlugin::ApplyOCL(Film &film, const u_int index) {
+void GammaCorrectionPlugin::ApplyHW(Film &film, const u_int index) {
 	if (!applyKernel) {
 		film.ctx->SetVerbose(true);
 
 		hardwareDevice = film.hardwareDevice;
 
 		// Allocate buffers
-		hardwareDevice->AllocBufferRO(&oclGammaTable, &gammaTable[0], gammaTable.size() * sizeof(float), "Gamma table");
+		hardwareDevice->AllocBufferRO(&hwGammaTable, &gammaTable[0], gammaTable.size() * sizeof(float), "Gamma table");
 
 		// Compile sources
 		const double tStart = WallClockTime();
@@ -133,8 +127,8 @@ void GammaCorrectionPlugin::ApplyOCL(Film &film, const u_int index) {
 		u_int argIndex = 0;
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.GetWidth());
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.GetHeight());
-		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.ocl_IMAGEPIPELINE);
-		hardwareDevice->SetKernelArg(applyKernel, argIndex++, oclGammaTable);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.hw_IMAGEPIPELINE);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, hwGammaTable);
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, (u_int)gammaTable.size());
 
 		const double tEnd = WallClockTime();
@@ -146,5 +140,3 @@ void GammaCorrectionPlugin::ApplyOCL(Film &film, const u_int index) {
 	hardwareDevice->EnqueueKernel(applyKernel, HardwareDeviceRange(RoundUp(film.GetWidth() * film.GetHeight(), 256u)),
 			HardwareDeviceRange(256));
 }
-
-#endif

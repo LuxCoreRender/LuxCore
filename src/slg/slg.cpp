@@ -20,6 +20,7 @@
 
 #include <OpenImageIO/imageio.h>
 
+#include "luxrays/luxrays.h"
 #include "slg/slg.h"
 #include "slg/utils/filenameresolver.h"
 
@@ -32,6 +33,8 @@ FileNameResolver SLG_FileNameResolver;
 }
 
 void slg::Init() {
+	luxrays::Init();
+
 	openvdb::initialize();
 	
 	// Workaround to a bug: https://github.com/OpenImageIO/oiio/issues/1795

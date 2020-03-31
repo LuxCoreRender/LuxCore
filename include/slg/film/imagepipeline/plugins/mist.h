@@ -25,7 +25,6 @@
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/color/color.h"
-#include "luxrays/devices/ocldevice.h"
 #include "luxrays/utils/serializationutils.h"
 #include "slg/film/imagepipeline/imagepipeline.h"
 

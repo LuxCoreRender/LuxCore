@@ -372,7 +372,7 @@ void Accelerator_Intersect(
 #endif
 }
 
-__kernel __attribute__((work_group_size_hint(64, 1, 1))) void Accelerator_Intersect_RayBuffer(
+__kernel void Accelerator_Intersect_RayBuffer(
 		__global const Ray* restrict rays,
 		__global RayHit *rayHits,
 		const uint rayCount

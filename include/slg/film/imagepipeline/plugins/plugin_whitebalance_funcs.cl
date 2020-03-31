@@ -22,7 +22,7 @@
 // WhiteBalance_Apply
 //------------------------------------------------------------------------------
 
-__kernel __attribute__((work_group_size_hint(256, 1, 1))) void WhiteBalance_Apply(
+__kernel void WhiteBalance_Apply(
 		const uint filmWidth, const uint filmHeight,
 		__global float *channel_IMAGEPIPELINE,
 		const float whitePointR, const float whitePointG, const float whitePointB) {

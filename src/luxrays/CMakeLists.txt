@@ -128,6 +128,10 @@ set(LUXRAYS_KERNELS
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/triangle_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/uv_types.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/utils_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/luxrays/devices/cudadevice_math.cl
+	${LuxRays_SOURCE_DIR}/include/luxrays/devices/cudadevice_oclemul_types.cl
+	${LuxRays_SOURCE_DIR}/include/luxrays/devices/cudadevice_oclemul_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/luxrays/devices/ocldevice_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/atomic_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/utils/mc_funcs.cl
 )
@@ -173,6 +177,7 @@ set(LUXRAYS_SRCS
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/exttrianglemesh.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/exttrianglemeshfile.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/hardwaredevice.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/core/init.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/intersectiondevice.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/namedobject.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/namedobjectvector.cpp
@@ -183,6 +188,7 @@ set(LUXRAYS_SRCS
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/geometry/motionsystem.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/geometry/quaternion.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/geometry/transform.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/devices/cudadevice.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/devices/nativeintersectiondevice.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/devices/ocldevice.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/devices/oclintersectiondevice.cpp
@@ -203,6 +209,10 @@ PreprocessOCLKernels(${generated_kernels_dir} luxrays ${LUXRAYS_KERNELS})
 
 set(LUXRAYS_SRCS_KERNELS
 	${generated_kernels_dir}/luxrays_types_kernel.cpp
+	${generated_kernels_dir}/cudadevice_math_kernel.cpp
+	${generated_kernels_dir}/cudadevice_oclemul_types_kernel.cpp
+	${generated_kernels_dir}/cudadevice_oclemul_funcs_kernel.cpp
+	${generated_kernels_dir}/ocldevice_funcs_kernel.cpp
 	${generated_kernels_dir}/bvhbuild_types_kernel.cpp
 	${generated_kernels_dir}/bvh_kernel.cpp
 	${generated_kernels_dir}/mbvh_kernel.cpp
@@ -265,6 +275,10 @@ IF (NOT LUXRAYS_DISABLE_OPENCL)
 	TARGET_LINK_LIBRARIES(luxrays ${OPENGL_gl_LIBRARY})
 	TARGET_LINK_LIBRARIES(luxrays ${OPENCL_LIBRARIES})
 ENDIF(NOT LUXRAYS_DISABLE_OPENCL)
+
+IF (LUXRAYS_ENABLE_CUDA)
+	TARGET_LINK_LIBRARIES(luxrays ${CUDA_ALL_LIBRARIES})
+ENDIF(LUXRAYS_ENABLE_CUDA)
 
 ################################################################################
 #

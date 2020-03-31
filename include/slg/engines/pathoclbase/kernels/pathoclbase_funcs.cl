@@ -528,7 +528,7 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 // Init Kernels
 //------------------------------------------------------------------------------
 
-__kernel __attribute__((work_group_size_hint(64, 1, 1))) void InitSeed(__global GPUTask *tasks,
+__kernel void InitSeed(__global GPUTask *tasks,
 		const uint seedBase) {
 	const size_t gid = get_global_id(0);
 
@@ -542,7 +542,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void InitSeed(__global 
 	task->seed = seed;
 }
 
-__kernel __attribute__((work_group_size_hint(64, 1, 1))) void Init(
+__kernel void Init(
 		__constant const GPUTaskConfiguration* restrict taskConfig,
 		__global GPUTask *tasks,
 		__global GPUTaskDirectLight *tasksDirectLight,

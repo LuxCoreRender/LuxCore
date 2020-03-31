@@ -102,7 +102,7 @@ void Tile::InitTileFilm(const Film &film, Film **tileFilm) {
 	(*tileFilm)->SetImagePipelines(imagePipeline.release());
 
 	// Disable OpenCL
-	(*tileFilm)->oclEnable = false;
+	(*tileFilm)->hwEnable = false;
 	
 	// Disable denoiser statistics collection
 	(*tileFilm)->GetDenoiser().SetEnabled(false);

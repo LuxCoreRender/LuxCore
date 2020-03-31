@@ -57,6 +57,10 @@ if (LUXRAYS_DISABLE_OPENCL)
 	ADD_DEFINITIONS("-DLUXRAYS_DISABLE_OPENCL")
 endif()
 
+if (LUXRAYS_ENABLE_CUDA)
+	ADD_DEFINITIONS("-DLUXRAYS_ENABLE_CUDA")
+endif()
+
 
 ################################################################################
 #

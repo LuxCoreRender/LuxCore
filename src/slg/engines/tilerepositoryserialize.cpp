@@ -65,11 +65,11 @@ template<class Archive> void Tile::load(Archive &ar, const u_int version) {
 
 	ar & allPassFilm;
 	// Disable OpenCL
-	allPassFilm->oclEnable = false;
+	allPassFilm->hwEnable = false;
 
 	ar & evenPassFilm;
 	// Disable OpenCL
-	evenPassFilm->oclEnable = false;
+	evenPassFilm->hwEnable = false;
 
 	ar & allPassFilmTotalYValue;
 	ar & hasEnoughWarmUpSample;

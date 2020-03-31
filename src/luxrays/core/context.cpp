@@ -23,16 +23,22 @@
 #include <stdexcept>
 
 #include "luxrays/core/context.h"
-#include "luxrays/core/device.h"
 #include "luxrays/core/hardwaredevice.h"
 #include "luxrays/devices/nativeintersectiondevice.h"
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 #include "luxrays/devices/ocldevice.h"
 #include "luxrays/devices/oclintersectiondevice.h"
 #endif
+#if defined(LUXRAYS_ENABLE_CUDA)
+#include "luxrays/devices/cudadevice.h"
+#endif
 
 using namespace std;
 using namespace luxrays;
+
+//------------------------------------------------------------------------------
+// Context
+//------------------------------------------------------------------------------
 
 Context::Context(LuxRaysDebugHandler handler, const Properties &config) : cfg(config) {
 	debugHandler = handler;
@@ -41,9 +47,19 @@ Context::Context(LuxRaysDebugHandler handler, const Properties &config) : cfg(co
 	verbose = cfg.Get(Property("context.verbose")(true)).Get<bool>();
 
 	// Get the list of devices available on the platform
+	
+	//--------------------------------------------------------------------------
+	// Add all native devices
+	//--------------------------------------------------------------------------
+
 	NativeIntersectionDeviceDescription::AddDeviceDescs(deviceDescriptions);
 
+	
 #if !defined(LUXRAYS_DISABLE_OPENCL)
+	//--------------------------------------------------------------------------
+	// Add all OpenCL devices
+	//--------------------------------------------------------------------------
+
 	// Platform info
 	VECTOR_CLASS<cl::Platform> platforms;
 	try {
@@ -78,6 +94,22 @@ Context::Context(LuxRaysDebugHandler handler, const Properties &config) : cfg(co
 				DEVICE_TYPE_OPENCL_ALL, deviceDescriptions);
 		}
 	}
+#endif
+
+#if defined(LUXRAYS_ENABLE_CUDA)
+	//--------------------------------------------------------------------------
+	// Add all CUDA devices
+	//--------------------------------------------------------------------------
+
+	int driverVersion;
+	CHECK_CUDA_ERROR(cuDriverGetVersion(&driverVersion));
+	LR_LOG(this, "CUDA driver version: " << (driverVersion / 1000) << "." << (driverVersion % 1000));
+
+	int devCount;
+	CHECK_CUDA_ERROR(cuDeviceGetCount(&devCount));
+	LR_LOG(this, "CUDA device count: " << devCount);
+
+	CUDADeviceDescription::AddDeviceDescs(deviceDescriptions);
 #endif
 
 	// Print device info
@@ -249,6 +281,14 @@ vector<HardwareDevice *> Context::CreateHardwareDevices(
 			OpenCLDeviceDescription *oclDeviceDesc = (OpenCLDeviceDescription *)deviceDesc[i];
 
 			device = new OpenCLDevice(this, oclDeviceDesc, indexOffset + i);
+		}
+#endif
+#if defined(LUXRAYS_ENABLE_CUDA)
+		else if (deviceType & DEVICE_TYPE_CUDA_ALL) {
+			// CUDA devices
+			CUDADeviceDescription *cudaDeviceDesc = (CUDADeviceDescription *)deviceDesc[i];
+
+			device = new CUDADevice(this, cudaDeviceDesc, indexOffset + i);
 		}
 #endif
 		else

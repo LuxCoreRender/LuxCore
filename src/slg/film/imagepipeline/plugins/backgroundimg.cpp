@@ -39,36 +39,30 @@ BackgroundImgPlugin::BackgroundImgPlugin(ImageMap *map) {
 	imgMap = map;
 	filmImageMap = nullptr;
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	hardwareDevice = nullptr;
-	oclFilmImageMapDesc = nullptr;
-	oclFilmImageMap = nullptr;
+	hwFilmImageMapDesc = nullptr;
+	hwFilmImageMap = nullptr;
 
 	applyKernel = nullptr;
-#endif
 }
 
 BackgroundImgPlugin::BackgroundImgPlugin() {
 	filmImageMap = nullptr;
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	hardwareDevice = nullptr;
-	oclFilmImageMapDesc = nullptr;
-	oclFilmImageMap = nullptr;
+	hwFilmImageMapDesc = nullptr;
+	hwFilmImageMap = nullptr;
 
 	applyKernel = nullptr;
-#endif
 }
 
 BackgroundImgPlugin::~BackgroundImgPlugin() {
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	delete applyKernel;
 
 	if (hardwareDevice) {
-		hardwareDevice->FreeBuffer(&oclFilmImageMapDesc);
-		hardwareDevice->FreeBuffer(&oclFilmImageMap);
+		hardwareDevice->FreeBuffer(&hwFilmImageMapDesc);
+		hardwareDevice->FreeBuffer(&hwFilmImageMap);
 	}
-#endif
 
 	delete imgMap;
 	delete filmImageMap;
@@ -141,9 +135,7 @@ void BackgroundImgPlugin::Apply(Film &film, const u_int index) {
 // OpenCL version
 //------------------------------------------------------------------------------
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-
-void BackgroundImgPlugin::ApplyOCL(Film &film, const u_int index) {
+void BackgroundImgPlugin::ApplyHW(Film &film, const u_int index) {
 	if (!film.HasChannel(Film::ALPHA)) {
 		// I can not work without alpha channel
 		return;
@@ -166,9 +158,9 @@ void BackgroundImgPlugin::ApplyOCL(Film &film, const u_int index) {
 		imgMapDesc.storageType = (slg::ocl::ImageMapStorageType)filmImageMap->GetStorage()->GetStorageType();
 
 		// Allocate OpenCL buffers
-		hardwareDevice->AllocBufferRO(&oclFilmImageMapDesc, &imgMapDesc, sizeof(slg::ocl::ImageMap),
+		hardwareDevice->AllocBufferRO(&hwFilmImageMapDesc, &imgMapDesc, sizeof(slg::ocl::ImageMap),
 						"BackgroundImg image map description");
-		hardwareDevice->AllocBufferRO(&oclFilmImageMap, filmImageMap->GetStorage()->GetPixelsData(),
+		hardwareDevice->AllocBufferRO(&hwFilmImageMap, filmImageMap->GetStorage()->GetPixelsData(),
 						filmImageMap->GetStorage()->GetMemorySize(), "BackgroundImg image map");
 
 		// Compile sources
@@ -197,10 +189,10 @@ void BackgroundImgPlugin::ApplyOCL(Film &film, const u_int index) {
 		u_int argIndex = 0;
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.GetWidth());
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.GetHeight());
-		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.ocl_IMAGEPIPELINE);
-		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.ocl_ALPHA);
-		hardwareDevice->SetKernelArg(applyKernel, argIndex++, oclFilmImageMapDesc);
-		hardwareDevice->SetKernelArg(applyKernel, argIndex++, oclFilmImageMap);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.hw_IMAGEPIPELINE);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.hw_ALPHA);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, hwFilmImageMapDesc);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, hwFilmImageMap);
 
 		//----------------------------------------------------------------------
 
@@ -218,5 +210,3 @@ void BackgroundImgPlugin::ApplyOCL(Film &film, const u_int index) {
 	hardwareDevice->EnqueueKernel(applyKernel, HardwareDeviceRange(RoundUp(film.GetWidth() * film.GetHeight(), 256u)),
 			HardwareDeviceRange(256));
 }
-
-#endif

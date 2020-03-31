@@ -37,21 +37,15 @@ BOOST_CLASS_EXPORT_IMPLEMENT(slg::ObjectIDMaskFilterPlugin)
 ObjectIDMaskFilterPlugin::ObjectIDMaskFilterPlugin(const u_int id) {
 	objectID = id;
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	applyKernel = nullptr;
-#endif
 }
 
 ObjectIDMaskFilterPlugin::ObjectIDMaskFilterPlugin() {
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	applyKernel = nullptr;
-#endif
 }
 
 ObjectIDMaskFilterPlugin::~ObjectIDMaskFilterPlugin() {
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	delete applyKernel;
-#endif
 }
 
 ImagePipelinePlugin *ObjectIDMaskFilterPlugin::Copy() const {
@@ -96,9 +90,7 @@ void ObjectIDMaskFilterPlugin::Apply(Film &film, const u_int index) {
 // OpenCL version
 //------------------------------------------------------------------------------
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-
-void ObjectIDMaskFilterPlugin::ApplyOCL(Film &film, const u_int index) {
+void ObjectIDMaskFilterPlugin::ApplyHW(Film &film, const u_int index) {
 	if (!film.HasChannel(Film::OBJECT_ID)) {
 		// I can not work without OBJECT_ID channel
 		return;
@@ -129,8 +121,8 @@ void ObjectIDMaskFilterPlugin::ApplyOCL(Film &film, const u_int index) {
 		u_int argIndex = 0;
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.GetWidth());
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.GetHeight());
-		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.ocl_IMAGEPIPELINE);
-		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.ocl_OBJECT_ID);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.hw_IMAGEPIPELINE);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.hw_OBJECT_ID);
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, objectID);
 
 		//----------------------------------------------------------------------
@@ -146,5 +138,3 @@ void ObjectIDMaskFilterPlugin::ApplyOCL(Film &film, const u_int index) {
 	hardwareDevice->EnqueueKernel(applyKernel, HardwareDeviceRange(RoundUp(film.GetWidth() * film.GetHeight(), 256u)),
 			HardwareDeviceRange(256));
 }
-
-#endif

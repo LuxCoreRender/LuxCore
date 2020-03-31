@@ -31,7 +31,7 @@
 // To: MK_HIT_NOTHING or MK_HIT_OBJECT or MK_RT_NEXT_VERTEX
 //------------------------------------------------------------------------------
 
-__kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT_NEXT_VERTEX(
+__kernel void AdvancePaths_MK_RT_NEXT_VERTEX(
 		KERNEL_ARGS
 		) {
 	const size_t gid = get_global_id(0);
@@ -111,7 +111,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 // To: MK_SPLAT_SAMPLE
 //------------------------------------------------------------------------------
 
-__kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HIT_NOTHING(
+__kernel void AdvancePaths_MK_HIT_NOTHING(
 		KERNEL_ARGS
 		) {
 	const size_t gid = get_global_id(0);
@@ -198,7 +198,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 // To: MK_DL_ILLUMINATE or MK_SPLAT_SAMPLE
 //------------------------------------------------------------------------------
 
-__kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HIT_OBJECT(
+__kernel void AdvancePaths_MK_HIT_OBJECT(
 		KERNEL_ARGS
 		) {
 	const size_t gid = get_global_id(0);
@@ -435,7 +435,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 // To: MK_SPLAT_SAMPLE or MK_GENERATE_NEXT_VERTEX_RAY
 //------------------------------------------------------------------------------
 
-__kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT_DL(
+__kernel void AdvancePaths_MK_RT_DL(
 		KERNEL_ARGS
 		) {
 	const size_t gid = get_global_id(0);
@@ -547,7 +547,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_RT
 // To: MK_DL_SAMPLE_BSDF or MK_GENERATE_NEXT_VERTEX_RAY
 //------------------------------------------------------------------------------
 
-__kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL_ILLUMINATE(
+__kernel void AdvancePaths_MK_DL_ILLUMINATE(
 		KERNEL_ARGS
 		) {
 	const size_t gid = get_global_id(0);
@@ -628,7 +628,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 // To: MK_GENERATE_NEXT_VERTEX_RAY or MK_RT_DL or MK_SPLAT_SAMPLE
 //------------------------------------------------------------------------------
 
-__kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL_SAMPLE_BSDF(
+__kernel void AdvancePaths_MK_DL_SAMPLE_BSDF(
 		KERNEL_ARGS
 		) {
 	const size_t gid = get_global_id(0);
@@ -708,7 +708,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_DL
 // To: MK_SPLAT_SAMPLE or MK_RT_NEXT_VERTEX
 //------------------------------------------------------------------------------
 
-__kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GENERATE_NEXT_VERTEX_RAY(
+__kernel void AdvancePaths_MK_GENERATE_NEXT_VERTEX_RAY(
 		KERNEL_ARGS
 		) {
 	const size_t gid = get_global_id(0);
@@ -856,7 +856,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GE
 // To: MK_NEXT_SAMPLE
 //------------------------------------------------------------------------------
 
-__kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_SPLAT_SAMPLE(
+__kernel void AdvancePaths_MK_SPLAT_SAMPLE(
 		KERNEL_ARGS
 		) {
 	const size_t gid = get_global_id(0);
@@ -953,7 +953,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_SP
 // To: MK_GENERATE_CAMERA_RAY
 //------------------------------------------------------------------------------
 
-__kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_NEXT_SAMPLE(
+__kernel void AdvancePaths_MK_NEXT_SAMPLE(
 		KERNEL_ARGS
 		) {
 	const size_t gid = get_global_id(0);
@@ -1015,7 +1015,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_NE
 // To: MK_RT_NEXT_VERTEX
 //------------------------------------------------------------------------------
 
-__kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_GENERATE_CAMERA_RAY(
+__kernel void AdvancePaths_MK_GENERATE_CAMERA_RAY(
 		KERNEL_ARGS
 		) {
 	// Generate a new path and camera ray only it is not TILEPATHOCL: path regeneration
