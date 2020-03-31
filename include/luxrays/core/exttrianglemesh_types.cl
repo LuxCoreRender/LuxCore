@@ -22,10 +22,12 @@
 
 typedef struct {
 	Transform appliedTrans;
+	int appliedTransSwapsHandedness;
 } TriangleMeshParam;
 
 typedef struct {
 	Transform trans;
+	int transSwapsHandedness;
 } TriangleInstanceMeshParam;
 
 typedef struct {

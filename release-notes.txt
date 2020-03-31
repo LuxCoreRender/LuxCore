@@ -21,6 +21,8 @@
 
 ### Fixed Bugs
 
+* Fixed a rendering difference when using/not using geometry negative scale transformations (issue #309)
+
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
 

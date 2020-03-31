@@ -152,6 +152,7 @@ protected:
 	// The transformation that was applied to the vertices
 	// (needed e.g. for LocalMapping3D evaluation)
 	Transform appliedTrans;
+	bool appliedTransSwapsHandedness;
 
 	mutable BBox cachedBBox;
 	mutable bool cachedBBoxValid;
@@ -174,6 +175,8 @@ private:
 		ar & triCount;
 		for (u_int i = 0; i < triCount; ++i)
 			ar & tris[i];
+
+		ar & appliedTrans;
 	}
 
 	template<class Archive>	void load(Archive &ar, const unsigned int version) {
@@ -188,6 +191,8 @@ private:
 		tris = new Triangle[triCount];
 		for (u_int i = 0; i < triCount; ++i)
 			ar & tris[i];
+
+		ar & appliedTrans;
 
 		Preprocess();
 	}
@@ -244,6 +249,7 @@ public:
 
 	virtual void ApplyTransform(const Transform &t) {
 		trans = trans * t;
+		transSwapsHandedness = t.SwapsHandedness();
 		cachedBBoxValid = false;
 
 		// Invalidate the cached result
@@ -253,6 +259,7 @@ public:
 	const Transform &GetTransformation() const { return trans; }
 	void SetTransformation(const Transform &t) {
 		trans = t;
+		transSwapsHandedness = t.SwapsHandedness();
 		cachedBBoxValid = false;
 
 		// Invalidate the cached result
@@ -269,6 +276,7 @@ protected:
 	}
 
 	Transform trans;
+	bool transSwapsHandedness;
 	TriangleMesh *mesh;
 
 	mutable float cachedArea;
@@ -279,12 +287,14 @@ private:
 	template<class Archive> void save(Archive &ar, const unsigned int version) const {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(Mesh);
 		ar & trans;
+		ar & transSwapsHandedness;
 		ar & mesh;
 	}
 
 	template<class Archive>	void load(Archive &ar, const unsigned int version) {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(Mesh);
 		ar & trans;
+		ar & transSwapsHandedness;
 		ar & mesh;
 
 		cachedArea = -1.f;
@@ -385,8 +395,8 @@ private:
 BOOST_CLASS_TRACKING(luxrays::Mesh, boost::serialization::track_always)
 BOOST_SERIALIZATION_ASSUME_ABSTRACT(luxrays::Mesh)
 
-BOOST_CLASS_VERSION(luxrays::TriangleMesh, 1)
-BOOST_CLASS_VERSION(luxrays::InstanceTriangleMesh, 1)
+BOOST_CLASS_VERSION(luxrays::TriangleMesh, 2)
+BOOST_CLASS_VERSION(luxrays::InstanceTriangleMesh, 2)
 BOOST_CLASS_VERSION(luxrays::MotionTriangleMesh, 1)
 
 BOOST_CLASS_EXPORT_KEY(luxrays::TriangleMesh)

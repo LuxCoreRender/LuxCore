@@ -45,6 +45,8 @@ TriangleMesh::TriangleMesh(const u_int meshVertCount,
 	assert (meshVertices != NULL);
 	assert (meshTris != NULL);
 
+	appliedTransSwapsHandedness = false;
+
 	// Check if the buffer has been really allocated with AllocVerticesBuffer() or not.
 	const float *vertBuff = (float *)meshVertices;
 	if (vertBuff[3 * meshVertCount] != 1234.1234f)
@@ -81,6 +83,9 @@ BBox TriangleMesh::GetBBox() const {
 }
 
 void TriangleMesh::ApplyTransform(const Transform &trans) {
+	appliedTrans = appliedTrans * trans;
+	appliedTransSwapsHandedness = appliedTrans.SwapsHandedness();
+
 	for (u_int i = 0; i < vertCount; ++i)
 		vertices[i] *= trans;
 
@@ -224,6 +229,7 @@ InstanceTriangleMesh::InstanceTriangleMesh(TriangleMesh *m, const Transform &t) 
 	assert (m != NULL);
 	
 	trans = t;
+	transSwapsHandedness = t.SwapsHandedness();
 	mesh = m;
 
 	// The mesh area is compute on demand and cached

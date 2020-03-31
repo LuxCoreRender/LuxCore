@@ -27,10 +27,24 @@ OPENCL_FORCE_INLINE float3 ExtMesh_GetGeometryNormal(
 
 	float3 geometryN = VLOAD3F(&tn[triangleIndex].x);
 
-	// geometryN is already in world coordinates for TYPE_EXT_TRIANGLE
-	if (meshDesc->type != TYPE_EXT_TRIANGLE) {
-		// Transform to global coordinates
-		geometryN = normalize(Transform_ApplyNormal(localToWorld, geometryN));
+	switch (meshDesc->type) {
+		case TYPE_EXT_TRIANGLE: {
+			// geometryN is already in world coordinates for TYPE_EXT_TRIANGLE
+			// and
+			// pre-computed geometry normals already factor appliedTransSwapsHandedness
+			break;
+		}
+		case TYPE_EXT_TRIANGLE_INSTANCE: {
+			// Transform to global coordinates
+			geometryN = (meshDesc->instance.transSwapsHandedness ? -1.f : 1.f) * normalize(Transform_ApplyNormal(localToWorld, geometryN));
+			break;
+		}
+		case TYPE_EXT_TRIANGLE_MOTION: {
+			const bool swapsHandedness = Transform_SwapsHandedness(localToWorld); 
+			// Transform to global coordinates
+			geometryN = (swapsHandedness ? -1.f : 1.f) * normalize(Transform_ApplyNormal(localToWorld, geometryN));
+			break;
+		}
 	}
 
 	return geometryN;
@@ -55,10 +69,23 @@ OPENCL_FORCE_INLINE float3 ExtMesh_GetInterpolateNormal(
 		const float b0 = 1.f - b1 - b2;
 		interpolatedN =  Triangle_InterpolateNormal(n0, n1, n2, b0, b1, b2);
 
-		// interpolatedN is already in world coordinates for TYPE_EXT_TRIANGLE
-		if (meshDesc->type != TYPE_EXT_TRIANGLE) {
-			// Transform to global coordinates
-			interpolatedN = normalize(Transform_ApplyNormal(localToWorld, interpolatedN));
+		switch (meshDesc->type) {
+			case TYPE_EXT_TRIANGLE: {
+				// interpolatedN is already in world coordinates for TYPE_EXT_TRIANGLE
+				interpolatedN = (meshDesc->triangle.appliedTransSwapsHandedness ? -1.f : 1.f) * interpolatedN;
+				break;
+			}
+			case TYPE_EXT_TRIANGLE_INSTANCE: {
+				// Transform to global coordinates
+				interpolatedN = (meshDesc->instance.transSwapsHandedness ? -1.f : 1.f) * normalize(Transform_ApplyNormal(localToWorld, interpolatedN));
+				break;
+			}
+			case TYPE_EXT_TRIANGLE_MOTION: {
+				const bool swapsHandedness = Transform_SwapsHandedness(localToWorld); 
+				// Transform to global coordinates
+				interpolatedN = (swapsHandedness ? -1.f : 1.f) * normalize(Transform_ApplyNormal(localToWorld, interpolatedN));
+				break;
+			}
 		}
 	} else
 		interpolatedN = ExtMesh_GetGeometryNormal(localToWorld, meshIndex, triangleIndex EXTMESH_PARAM);

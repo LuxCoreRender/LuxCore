@@ -153,6 +153,7 @@ void CompiledScene::CompileGeometry() {
 				currentMeshDesc.type = slg::ocl::TYPE_EXT_TRIANGLE_INSTANCE;
 				memcpy(&currentMeshDesc.instance.trans.m, &imesh->GetTransformation().m, sizeof(float[4][4]));
 				memcpy(&currentMeshDesc.instance.trans.mInv, &imesh->GetTransformation().mInv, sizeof(float[4][4]));
+				currentMeshDesc.instance.transSwapsHandedness = imesh->GetTransformation().SwapsHandedness();
 				break;
 			}
 			case TYPE_EXT_TRIANGLE_MOTION: {
@@ -214,6 +215,7 @@ void CompiledScene::CompileGeometry() {
 				baseMesh->GetLocal2World(0.f, t);
 				memcpy(&currentMeshDesc.triangle.appliedTrans.m, &t.m, sizeof(float[4][4]));
 				memcpy(&currentMeshDesc.triangle.appliedTrans.mInv, &t.mInv, sizeof(float[4][4]));
+				currentMeshDesc.triangle.appliedTransSwapsHandedness = t.SwapsHandedness();
 
 				isExistingInstance = false;
 				break;
