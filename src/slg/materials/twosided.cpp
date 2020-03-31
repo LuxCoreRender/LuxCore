@@ -102,9 +102,7 @@ void TwoSidedMaterial::UpdateAvgPassThroughTransparency() {
 	if (frontTransparencyTex || backTransparencyTex)
 		Material::UpdateAvgPassThroughTransparency();
 	else {
-		// Can't really compute a true result here
-		avgPassThroughTransparency = 0.5f * frontMat->GetAvgPassThroughTransparency() +
-				0.5f * backMat->GetAvgPassThroughTransparency();
+		avgPassThroughTransparency = frontMat->GetAvgPassThroughTransparency();
 	}
 }
 
@@ -129,10 +127,7 @@ float TwoSidedMaterial::GetEmittedRadianceY(const float oneOverPrimitiveArea) co
 	if (emittedTex)
 		return Material::GetEmittedRadianceY(oneOverPrimitiveArea);
 	else
-		// Can't really compute a true result here
-		return luxrays::Lerp(0.5f, 
-							 frontMat->GetEmittedRadianceY(oneOverPrimitiveArea), 
-							 backMat->GetEmittedRadianceY(oneOverPrimitiveArea));
+		return frontMat->GetEmittedRadianceY(oneOverPrimitiveArea);
 }
 
 Spectrum TwoSidedMaterial::GetEmittedRadiance(const HitPoint &hitPoint, const float oneOverPrimitiveArea) const {
@@ -224,7 +219,6 @@ void TwoSidedMaterial::Pdf(const HitPoint &hitPoint,
 	const Vector &localFixedDir = hitPoint.fromLight ? localLightDir : localEyeDir;
 	const Vector &localSampledDir = hitPoint.fromLight ? localEyeDir : localLightDir;
 
-	// TODO not sure if this makes sense
 	if (directPdfW) {
 		if (localFixedDir.z < 0.f) {
 			backMat->Pdf(hitPoint, localLightDir, localEyeDir, directPdfW, nullptr);
