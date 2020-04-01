@@ -29,6 +29,7 @@
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/trim.hpp>
+#include <boost/lexical_cast.hpp>
 #include <boost/regex.hpp>
 #include <boost/archive/iterators/base64_from_binary.hpp>
 #include <boost/archive/iterators/binary_from_base64.hpp>

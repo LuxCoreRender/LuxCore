@@ -35,9 +35,6 @@ namespace slg {
 // Explicit instantiations for portable archives
 template void ImagePipelinePlugin::serialize(LuxOutputArchive &ar, const u_int version);
 template void ImagePipelinePlugin::serialize(LuxInputArchive &ar, const u_int version);
-// Explicit instantiations for polymorphic archives
-template void ImagePipelinePlugin::serialize(boost::archive::polymorphic_oarchive &ar, const u_int version);
-template void ImagePipelinePlugin::serialize(boost::archive::polymorphic_iarchive &ar, const u_int version);
 }
 
 //------------------------------------------------------------------------------
@@ -57,7 +54,4 @@ namespace slg {
 // Explicit instantiations for portable archives
 template void ImagePipeline::serialize(LuxOutputArchive &ar, const u_int version);
 template void ImagePipeline::serialize(LuxInputArchive &ar, const u_int version);
-// Explicit instantiations for polymorphic archives
-template void ImagePipeline::serialize(boost::archive::polymorphic_oarchive &ar, const u_int version);
-template void ImagePipeline::serialize(boost::archive::polymorphic_iarchive &ar, const u_int version);
 }

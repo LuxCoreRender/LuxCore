@@ -47,7 +47,4 @@ namespace slg {
 // Explicit instantiations for portable archives
 template void LightCPURenderState::serialize(LuxOutputArchive &ar, const u_int version);
 template void LightCPURenderState::serialize(LuxInputArchive &ar, const u_int version);
-// Explicit instantiations for polymorphic archives
-template void LightCPURenderState::serialize(boost::archive::polymorphic_oarchive &ar, const u_int version);
-template void LightCPURenderState::serialize(boost::archive::polymorphic_iarchive &ar, const u_int version);
 }
