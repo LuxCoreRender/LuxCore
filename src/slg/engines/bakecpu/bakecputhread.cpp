@@ -422,7 +422,7 @@ void BakeCPURenderThread::RenderFunc() {
 				engine->sampleSplatter, engine->samplerSharedData, samplerAdditionalProps);
 		eyeSampler->SetThreadIndex(threadIndex);
 		// Below, I need 7 additional samples
-		eyeSampler->RequestSamples(PIXEL_NORMALIZED_ONLY, pathTracer.eyeSampleSize + 7);
+		eyeSampler->RequestSamples(PIXEL_NORMALIZED_ONLY, pathTracer.eyeSampleSize + 8);
 
 		if (pathTracer.hybridBackForwardEnable) {
 			// Light path sampler is always Metropolis

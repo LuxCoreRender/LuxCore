@@ -19,6 +19,11 @@
 * Accelerated duplicate vertex detection in pointiness shape (from 6.7 seconds to 0.016 seconds on a 100k vertex mesh)
 * LuxRays API reworked to support generic hardware devices (now OpenCL, potentially CUDA, Vulkan, Metal, etc.)
 
+''v2.3 released''
+
+* Fixed an out of bound access in BAKECPU
+* Fixed a problem when using path.forceblackbackground.enable and env. lights
+
 ### Fixed Bugs
 
 * Fixed a rendering difference when using/not using geometry negative scale transformations (issue #309)
