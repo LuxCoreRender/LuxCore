@@ -65,11 +65,6 @@
 
 * Added the support for baked light maps rendering
 
-''v2.3 released''
-
-* Fixed an out of bound access in BAKECPU
-* Fixed a problem when using path.forceblackbackground.enable and env. lights
-
 ### Fixed Bugs
 
 * Fixed triangle lights back face emission when using an IES or image map profile
@@ -100,6 +95,11 @@
 
 * Fixed a numerical precision problem on some very large scene (issue #308)
 * Fixed weights of direct and indirect light maps in BAKECPU
+
+''v2.3 released''
+
+* Fixed an out of bound access in BAKECPU
+* Fixed a problem when using path.forceblackbackground.enable and env. lights
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
