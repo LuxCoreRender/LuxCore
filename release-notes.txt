@@ -22,9 +22,6 @@
 ### Fixed Bugs
 
 * Fixed a rendering difference when using/not using geometry negative scale transformations (issue #309)
-
-''v2.3 released''
-
 * Fixed an out of bound access in BAKECPU
 * Fixed a problem when using path.forceblackbackground.enable and env. lights
 
