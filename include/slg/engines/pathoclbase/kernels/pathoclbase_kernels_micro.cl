@@ -149,7 +149,7 @@ __kernel __attribute__((work_group_size_hint(64, 1, 1))) void AdvancePaths_MK_HI
 	bool checkDirectLightHit = true;
 	
 	checkDirectLightHit = checkDirectLightHit &&
-			(!taskConfig->pathTracer.forceBlackBackground || !pathInfo->isPassThroughPath);
+			(!(taskConfig->pathTracer.forceBlackBackground && sampleResult->firstPathVertex) || !pathInfo->isPassThroughPath);
 
 	checkDirectLightHit = checkDirectLightHit &&
 			// Avoid to render caustic path if hybridBackForwardEnable
