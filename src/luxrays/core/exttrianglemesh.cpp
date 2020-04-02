@@ -257,17 +257,10 @@ Normal *ExtTriangleMesh::ComputeNormals() {
 void ExtTriangleMesh::ApplyTransform(const Transform &trans) {
 	TriangleMesh::ApplyTransform(trans);
 
-	appliedTrans = appliedTrans * trans;
-
 	if (normals) {
-		const bool swapsHandedness = trans.SwapsHandedness();
-
 		for (u_int i = 0; i < vertCount; ++i) {
 			normals[i] *= trans;
 			normals[i] = Normalize(normals[i]);
-			// Flip the normal if required
-			if (swapsHandedness)
-				normals[i] = -normals[i];
 		}
 	}
 
@@ -334,7 +327,7 @@ ExtTriangleMesh *ExtTriangleMesh::CopyExt(Point *meshVertices, Triangle *meshTri
 	}
 
 	ExtTriangleMesh *m = new ExtTriangleMesh(vertCount, triCount, vs, ts, ns, &us, &cs, &as);
-	m->appliedTrans = appliedTrans;
+	m->SetLocal2World(appliedTrans);
 	
 	// Copy AOV too
 	CopyAOV(m);

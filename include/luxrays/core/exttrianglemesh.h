@@ -162,13 +162,14 @@ public:
 	virtual bool HasTriAOV(const u_int dataIndex) const { return triAOV[dataIndex] != nullptr; }
 
 	virtual Normal GetGeometryNormal(const luxrays::Transform &local2World, const u_int triIndex) const {
+		// Pre-computed geometry normals already factor appliedTransSwapsHandedness
 		return triNormals[triIndex];
 	}
 	virtual Normal GetShadeNormal(const luxrays::Transform &local2World, const u_int triIndex, const u_int vertIndex) const {
-		return normals[tris[triIndex].v[vertIndex]];
+		return (appliedTransSwapsHandedness ? -1.f : 1.f) * normals[tris[triIndex].v[vertIndex]];
 	}
 	virtual Normal GetShadeNormal(const luxrays::Transform &local2World, const u_int vertIndex) const {
-		return normals[vertIndex];
+		return (appliedTransSwapsHandedness ? -1.f : 1.f) * normals[vertIndex];
 	}
 
 	virtual UV GetUV(const u_int vertIndex, const u_int dataIndex) const { return uvs[dataIndex][vertIndex]; }
@@ -184,6 +185,7 @@ public:
 	}
 	void SetLocal2World(const luxrays::Transform &t) {
 		appliedTrans = t;
+		appliedTransSwapsHandedness = appliedTrans.SwapsHandedness();
 	}
 
 	virtual void ApplyTransform(const Transform &trans);
@@ -194,7 +196,7 @@ public:
 			return GetGeometryNormal(local2World, triIndex);
 		const Triangle &tri = tris[triIndex];
 		const float b0 = 1.f - b1 - b2;
-		return Normalize(b0 * normals[tri.v[0]] + b1 * normals[tri.v[1]] + b2 * normals[tri.v[2]]);
+		return (appliedTransSwapsHandedness ? -1.f : 1.f) * Normalize(b0 * normals[tri.v[0]] + b1 * normals[tri.v[1]] + b2 * normals[tri.v[2]]);
 	}
 
 	virtual UV InterpolateTriUV(const u_int triIndex, const float b1, const float b2,
@@ -403,13 +405,13 @@ public:
 	virtual bool HasTriAOV(const u_int dataIndex) const { return static_cast<ExtTriangleMesh *>(mesh)->HasTriAOV(dataIndex); }
 
 	virtual Normal GetGeometryNormal(const luxrays::Transform &local2World, const u_int triIndex) const {
-		return Normalize(local2World * static_cast<ExtTriangleMesh *>(mesh)->GetGeometryNormal(Transform::TRANS_IDENTITY, triIndex));
+		return (transSwapsHandedness ? -1.f : 1.f) * Normalize(local2World * static_cast<ExtTriangleMesh *>(mesh)->GetGeometryNormal(Transform::TRANS_IDENTITY, triIndex));
 	}
 	virtual Normal GetShadeNormal(const luxrays::Transform &local2World, const u_int triIndex, const u_int vertIndex) const {
-		return Normalize(local2World * static_cast<ExtTriangleMesh *>(mesh)->GetShadeNormal(Transform::TRANS_IDENTITY, triIndex, vertIndex));
+		return (transSwapsHandedness ? -1.f : 1.f) * Normalize(local2World * static_cast<ExtTriangleMesh *>(mesh)->GetShadeNormal(Transform::TRANS_IDENTITY, triIndex, vertIndex));
 	}
 	virtual Normal GetShadeNormal(const luxrays::Transform &local2World, const u_int vertIndex) const {
-		return Normalize(local2World * static_cast<ExtTriangleMesh *>(mesh)->GetShadeNormal(Transform::TRANS_IDENTITY, vertIndex));
+		return (transSwapsHandedness ? -1.f : 1.f) * Normalize(local2World * static_cast<ExtTriangleMesh *>(mesh)->GetShadeNormal(Transform::TRANS_IDENTITY, vertIndex));
 	}
 	virtual UV GetUV(const unsigned vertIndex, const u_int dataIndex) const {
 		return static_cast<ExtTriangleMesh *>(mesh)->GetUV(vertIndex, dataIndex);
@@ -441,7 +443,7 @@ public:
 
 	virtual Normal InterpolateTriNormal(const luxrays::Transform &local2World,
 			const u_int triIndex, const float b1, const float b2) const {
-		return Normalize(trans * static_cast<ExtTriangleMesh *>(mesh)->InterpolateTriNormal(
+		return (transSwapsHandedness ? -1.f : 1.f) * Normalize(trans * static_cast<ExtTriangleMesh *>(mesh)->InterpolateTriNormal(
 				Transform::TRANS_IDENTITY, triIndex, b1, b2));
 	}
 
@@ -513,13 +515,16 @@ public:
 	virtual bool HasTriAOV(const u_int dataIndex) const { return static_cast<ExtTriangleMesh *>(mesh)->HasTriAOV(dataIndex); }
 
 	virtual Normal GetGeometryNormal(const luxrays::Transform &local2World, const u_int triIndex) const {
-		return Normalize(local2World * static_cast<ExtTriangleMesh *>(mesh)->GetGeometryNormal(local2World, triIndex));
+		const bool transSwapsHandedness = local2World.SwapsHandedness();
+		return (transSwapsHandedness ? -1.f : 1.f) * Normalize(local2World * static_cast<ExtTriangleMesh *>(mesh)->GetGeometryNormal(local2World, triIndex));
 	}
 	virtual Normal GetShadeNormal(const luxrays::Transform &local2World, const u_int triIndex, const u_int vertIndex) const {
-		return Normalize(local2World * static_cast<ExtTriangleMesh *>(mesh)->GetShadeNormal(local2World, triIndex, vertIndex));
+		const bool transSwapsHandedness = local2World.SwapsHandedness();
+		return (transSwapsHandedness ? -1.f : 1.f) * Normalize(local2World * static_cast<ExtTriangleMesh *>(mesh)->GetShadeNormal(local2World, triIndex, vertIndex));
 	}
 	virtual Normal GetShadeNormal(const luxrays::Transform &local2World, const u_int vertIndex) const {
-		return Normalize(local2World * static_cast<ExtTriangleMesh *>(mesh)->GetShadeNormal(local2World, vertIndex));
+		const bool transSwapsHandedness = local2World.SwapsHandedness();
+		return (transSwapsHandedness ? -1.f : 1.f) * Normalize(local2World * static_cast<ExtTriangleMesh *>(mesh)->GetShadeNormal(local2World, vertIndex));
 	}
 	virtual UV GetUV(const unsigned vertIndex, const u_int dataIndex) const {
 		return static_cast<ExtTriangleMesh *>(mesh)->GetUV(vertIndex, dataIndex);
@@ -549,7 +554,8 @@ public:
 
 	virtual Normal InterpolateTriNormal(const luxrays::Transform &local2World,
 			const u_int triIndex, const float b1, const float b2) const {
-		return Normalize(local2World * static_cast<ExtTriangleMesh *>(mesh)->InterpolateTriNormal(
+		const bool transSwapsHandedness = local2World.SwapsHandedness();
+		return (transSwapsHandedness ? -1.f : 1.f) * Normalize(local2World * static_cast<ExtTriangleMesh *>(mesh)->InterpolateTriNormal(
 				local2World, triIndex, b1, b2));
 	}
 

@@ -19,6 +19,7 @@
 #include <stdexcept>
 #include <boost/foreach.hpp>
 #include <boost/regex.hpp>
+#include <boost/lexical_cast.hpp>
 
 #include "luxrays/kernels/kernels.h"
 #include "slg/kernels/kernels.h"

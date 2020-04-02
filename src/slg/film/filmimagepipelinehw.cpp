@@ -158,6 +158,8 @@ void Film::AllocateHWBuffers() {
 }
 
 void Film::CompileHWKernels() {
+	ctx->SetVerbose(true);
+
 	// Compile MergeSampleBuffersOCL() kernels
 	const double tStart = WallClockTime();
 
@@ -229,6 +231,8 @@ void Film::CompileHWKernels() {
 
 	const double tEnd = WallClockTime();
 	SLG_LOG("[MergeSampleBuffersOCL] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
+	
+	ctx->SetVerbose(false);
 }
 
 void Film::WriteAllHWBuffers() {

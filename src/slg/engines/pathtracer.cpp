@@ -146,7 +146,16 @@ PathTracer::DirectLightResult PathTracer::DirectLightSampling(
 
 				BSDFEvent event;
 				float bsdfPdfW;
-				Spectrum bsdfEval = bsdf.Evaluate(shadowRay.d, &event, &bsdfPdfW);
+				Spectrum bsdfEval;
+				
+				if (useBSDFEVal)
+					bsdfEval = bsdf.Evaluate(shadowRay.d, &event, &bsdfPdfW);
+				else {
+					// This is used by BAKECPU and must be aligned with its BSDF sampling
+					bsdfEval = Spectrum(Dot(shadowRay.d, bsdf.hitPoint.shadeN) * INV_PI);
+					bsdfPdfW = INV_TWOPI;
+					event = DIFFUSE | REFLECT;
+				}
 				assert (!bsdfEval.IsNaN() && !bsdfEval.IsInf());
 
 				if (!bsdfEval.Black() &&
@@ -194,8 +203,7 @@ PathTracer::DirectLightResult PathTracer::DirectLightSampling(
 								!shadowBsdf.hitPoint.throughShadowTransparency;
 
 							const float weight = misEnabled ? PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
-							const Spectrum incomingRadiance = (useBSDFEVal ? bsdfEval : (Dot(shadowRay.d, bsdf.hitPoint.shadeN) * INV_PI)) *
-									(weight * factor) * connectionThroughput * lightRadiance;
+							const Spectrum incomingRadiance = bsdfEval * (weight * factor) * connectionThroughput * lightRadiance;
 
 							sampleResult->AddDirectLight(light->GetID(), event, pathThroughput, incomingRadiance, 1.f);
 
@@ -387,7 +395,7 @@ void PathTracer::RenderEyePath(IntersectionDevice *device,
 
 		if (!hit) {
 			// Nothing was hit, look for env. lights
-			if ((!forceBlackBackground || !pathInfo.isPassThroughPath) && checkDirectLightHit) {
+			if ((!(forceBlackBackground && sampleResult.firstPathVertex) || !pathInfo.isPassThroughPath) && checkDirectLightHit) {
 				DirectHitInfiniteLight(scene, pathInfo, pathThroughput,
 						eyeRay, sampleResult.firstPathVertex ? nullptr : &bsdf,
 						&sampleResult);

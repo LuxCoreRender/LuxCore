@@ -149,7 +149,7 @@ __kernel void AdvancePaths_MK_HIT_NOTHING(
 	bool checkDirectLightHit = true;
 	
 	checkDirectLightHit = checkDirectLightHit &&
-			(!taskConfig->pathTracer.forceBlackBackground || !pathInfo->isPassThroughPath);
+			(!(taskConfig->pathTracer.forceBlackBackground && sampleResult->firstPathVertex) || !pathInfo->isPassThroughPath);
 
 	checkDirectLightHit = checkDirectLightHit &&
 			// Avoid to render caustic path if hybridBackForwardEnable

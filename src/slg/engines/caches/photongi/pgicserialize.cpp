@@ -121,7 +121,4 @@ namespace slg {
 // Explicit instantiations for portable archives
 template void PhotonGICache::serialize(LuxOutputArchive &ar, const u_int version);
 template void PhotonGICache::serialize(LuxInputArchive &ar, const u_int version);
-// Explicit instantiations for polymorphic archives
-template void PhotonGICache::serialize(boost::archive::polymorphic_oarchive &ar, const u_int version);
-template void PhotonGICache::serialize(boost::archive::polymorphic_iarchive &ar, const u_int version);
 }

@@ -343,7 +343,4 @@ namespace slg {
 // Explicit instantiations for portable archives
 template void SamplesAccumulator::save(LuxOutputArchive &ar, const u_int version) const;
 template void SamplesAccumulator::load(LuxInputArchive &ar, const u_int version);
-// The following 2 lines shouldn't be required but they are with GCC 5
-template void SamplesAccumulator::save(boost::archive::polymorphic_oarchive &ar, const u_int version) const;
-template void SamplesAccumulator::load(boost::archive::polymorphic_iarchive &ar, const u_int version);
 }

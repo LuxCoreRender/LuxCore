@@ -216,7 +216,4 @@ namespace slg {
 // Explicit instantiations for portable archives
 template void FilmNoiseEstimation::serialize(LuxOutputArchive &ar, const u_int version);
 template void FilmNoiseEstimation::serialize(LuxInputArchive &ar, const u_int version);
-// The following 2 lines shouldn't be required but they are with GCC 5
-template void FilmNoiseEstimation::serialize(boost::archive::polymorphic_oarchive &ar, const u_int version);
-template void FilmNoiseEstimation::serialize(boost::archive::polymorphic_iarchive &ar, const u_int version);
 }

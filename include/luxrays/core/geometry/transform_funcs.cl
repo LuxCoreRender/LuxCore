@@ -46,3 +46,13 @@ OPENCL_FORCE_INLINE float3 Transform_InvApplyVector(__global const Transform* re
 OPENCL_FORCE_INLINE float3 Transform_InvApplyNormal(__global const Transform* restrict trans, const float3 normal) {
 	return Matrix4x4_ApplyNormal(&trans->m, normal);
 }
+
+OPENCL_FORCE_INLINE bool Transform_SwapsHandedness(__global const Transform* restrict trans) {
+	const float det = ((trans->m.m[0][0] *
+		(trans->m.m[1][1] * trans->m.m[2][2] - trans->m.m[1][2] * trans->m.m[2][1])) -
+		(trans->m.m[0][1] *
+		(trans->m.m[1][0] * trans->m.m[2][2] - trans->m.m[1][2] * trans->m.m[2][0])) +
+		(trans->m.m[0][2] *
+		(trans->m.m[1][0] * trans->m.m[2][1] - trans->m.m[1][1] * trans->m.m[2][0])));
+	return det < 0.f;
+}

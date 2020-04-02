@@ -22,6 +22,10 @@
 // Do not use for Unix(s), it makes some symbol local.
 #define BOOST_PYTHON_STATIC_LIB
 #define BOOST_NUMPY_STATIC_LIB
+// MSVC 2017 has snprintf, but Python headers still define it the old way, causing
+// error C2039: '_snprintf': is not a member of 'std'
+// The problem started with Boost 1.72.0
+#define HAVE_SNPRINTF
 #endif
 
 // The maximum number of arguments of a function being wrapped
