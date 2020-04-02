@@ -46,7 +46,8 @@ public:
 	// I'm storing totalLuminance and sampleCount on shared variables
 	// in order to have far more accurate estimation in the image mean intensity
 	// computation
-	float totalLuminance, sampleCount;
+	float totalLuminance;
+	u_int sampleCount, noBlackSampleCount;
 };
 
 //------------------------------------------------------------------------------

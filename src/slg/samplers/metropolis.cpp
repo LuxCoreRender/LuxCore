@@ -22,6 +22,7 @@
 #include "luxrays/utils/atomic.h"
 #include "slg/samplers/sampler.h"
 #include "slg/samplers/metropolis.h"
+#include "luxcore/luxcore.h"
 
 using namespace std;
 using namespace luxrays;
@@ -33,7 +34,8 @@ using namespace slg;
 
 MetropolisSamplerSharedData::MetropolisSamplerSharedData() : SamplerSharedData() {
 	totalLuminance = 0.;
-	sampleCount = 0.;
+	sampleCount = 0;
+	noBlackSampleCount = 0;
 }
 
 SamplerSharedData *MetropolisSamplerSharedData::FromProperties(const Properties &cfg,
@@ -242,15 +244,17 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 
 	if (cooldown && isLargeMutation) {
 		AtomicAdd(&sharedData->totalLuminance, newLuminance);
-		AtomicAdd(&sharedData->sampleCount, 1.f);
+		AtomicInc(&sharedData->sampleCount);
+		if (newLuminance > 0.f)
+			AtomicInc(&sharedData->noBlackSampleCount);
 	}
 
 	const float invMeanIntensity = (sharedData->totalLuminance > 0.) ?
 		static_cast<float>(sharedData->sampleCount / sharedData->totalLuminance) : 1.f;
 
-	// Define the probability of large mutations. It is 50% if we are still
+	// Define the probability of large mutations. It is 100% if we are still
 	// inside the cooldown phase.
-	const float currentLargeMutationProbability = (cooldown) ? .5f : largeMutationProbability;
+	const float currentLargeMutationProbability = cooldown ? 1.f : largeMutationProbability;
 
 	// Calculate accept probability from old and new image sample
 	float accProb;
@@ -339,7 +343,12 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 		// Note: I have to use a cap for pixelCount or the accumulated luminance
 		// will overflow the floating point 32bit variable
 		const u_int pixelCount = film ? Min(4u * film->GetWidth() * film->GetHeight(), 768u * 768u) : 8192;
-		if (sharedData->sampleCount > pixelCount) {
+		if ((sharedData->noBlackSampleCount > pixelCount) || (sharedData->sampleCount > 50000000)) {
+			if (sharedData->sampleCount > 50000000) {
+				LC_LOG("Metropolis sampler had only " << sharedData->noBlackSampleCount <<
+						" not black samples over a total of " << sharedData->sampleCount <<
+						" samples. The rendering may be inaccurate because how hard is to estimate the average image intensity.");
+			}
 			cooldown = false;
 			isLargeMutation = (rndGen->floatValue() < currentLargeMutationProbability);
 		} else
