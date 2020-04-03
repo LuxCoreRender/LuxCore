@@ -33,9 +33,9 @@ void SampleResult::Init(const u_int channelTypes, const u_int radianceGroupCount
 	if ((channels & Film::RADIANCE_PER_PIXEL_NORMALIZED) && (channels & Film::RADIANCE_PER_SCREEN_NORMALIZED))
 		throw runtime_error("RADIANCE_PER_PIXEL_NORMALIZED and RADIANCE_PER_SCREEN_NORMALIZED, both used in SampleResult");
 	else if ((channels & Film::RADIANCE_PER_PIXEL_NORMALIZED) || (channels & Film::RADIANCE_PER_SCREEN_NORMALIZED))
-		radiance.resize(radianceGroupCount);
+		radiance.Resize(radianceGroupCount);
 	else
-		radiance.resize(0);
+		radiance.Resize(0);
 
 	firstPathVertexEvent = NONE;
 	firstPathVertex = true;
@@ -46,7 +46,7 @@ void SampleResult::Init(const u_int channelTypes, const u_int radianceGroupCount
 
 Spectrum SampleResult::GetSpectrum(const vector<RadianceChannelScale> &radianceChannelScales) const {
 	Spectrum s = 0.f;
-	for (u_int i = 0; i < radiance.size(); ++i)
+	for (u_int i = 0; i < radiance.Size(); ++i)
 		s += radianceChannelScales[i].Scale(radiance[i]);
 	
 	return s;
@@ -104,12 +104,12 @@ void SampleResult::AddDirectLight(const u_int lightID, const BSDFEvent bsdfEvent
 }
 
 void SampleResult::ClampRadiance(const float minRadiance, const float maxRadiance) {
-	for (u_int i = 0; i < radiance.size(); ++i)
+	for (u_int i = 0; i < radiance.Size(); ++i)
 		radiance[i] = radiance[i].ScaledClamp(minRadiance, maxRadiance);
 }
 
 bool SampleResult::IsValid() const {
-	for (u_int i = 0; i < radiance.size(); ++i)
+	for (u_int i = 0; i < radiance.Size(); ++i)
 		if (radiance[i].IsNaN() || radiance[i].IsInf() || radiance[i].IsNeg())
 			return false;
 

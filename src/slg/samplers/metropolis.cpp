@@ -226,7 +226,7 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 	float newLuminance = 0.f;
 	for (vector<SampleResult>::const_iterator sr = sampleResults.begin(); sr != sampleResults.end(); ++sr) {
 		if (sr->HasChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED)) {
-			for (u_int i = 0; i < sr->radiance.size(); ++i) {
+			for (u_int i = 0; i < sr->radiance.Size(); ++i) {
 				const float luminance = sr->radiance[i].Y();
 				assert (!isnan(luminance) && !isinf(luminance) && (luminance >= 0.f));
 
@@ -236,7 +236,7 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 		}
 
 		if (sr->HasChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED)) {
-			for (u_int i = 0; i < sr->radiance.size(); ++i) {
+			for (u_int i = 0; i < sr->radiance.Size(); ++i) {
 				const float luminance = sr->radiance[i].Y();
 				assert (!isnan(luminance) && !isinf(luminance) && (luminance >= 0.f));
 

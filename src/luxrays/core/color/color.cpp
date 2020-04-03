@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include "luxrays/core/color/color.h"
+#include "luxrays/core/color/spectrumgroup.h"
 #include "luxrays/core/geometry/matrix3x3.h"
 #include "luxrays/core/color/spectrumwavelengths.h"
 #include "luxrays/core/color/swcspectrum.h"
@@ -25,6 +26,7 @@
 using namespace luxrays;
 
 BOOST_CLASS_EXPORT_IMPLEMENT(luxrays::Spectrum)
+BOOST_CLASS_EXPORT_IMPLEMENT(luxrays::SpectrumGroup)
 
 XYZColor::XYZColor(const SpectrumWavelengths &sw, const SWCSpectrum &s) {
 	if (sw.single) {

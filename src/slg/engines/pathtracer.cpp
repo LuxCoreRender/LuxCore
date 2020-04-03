@@ -93,7 +93,7 @@ void PathTracer::ResetEyeSampleResults(vector<SampleResult> &sampleResults) {
 
 	// Set to 0.0 all result colors
 	sampleResult.emission = Spectrum();
-	for (u_int i = 0; i < sampleResult.radiance.size(); ++i)
+	for (u_int i = 0; i < sampleResult.radiance.Size(); ++i)
 		sampleResult.radiance[i] = Spectrum();
 	sampleResult.directDiffuse = Spectrum();
 	sampleResult.directGlossy = Spectrum();
