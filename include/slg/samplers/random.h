@@ -41,6 +41,8 @@ public:
 	RandomSamplerSharedData(Film *engineFilm);
 	virtual ~RandomSamplerSharedData() { }
 
+	virtual void Reset();
+
 	u_int GetNewPixelIndex();
 	
 	static SamplerSharedData *FromProperties(const luxrays::Properties &cfg,

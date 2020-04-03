@@ -41,7 +41,12 @@ RTPathCPUSamplerSharedData::RTPathCPUSamplerSharedData(Film *film) :
 }
 
 void RTPathCPUSamplerSharedData::Reset(Film *film) {
-	const u_int *subRegion = film->GetSubRegion();
+	engineFilm = film;
+	Reset();	
+}
+
+void RTPathCPUSamplerSharedData::Reset() {
+	const u_int *subRegion = engineFilm->GetSubRegion();
 
 	// Check if something has changed
 	if ((filmSubRegion[0] != subRegion[0]) || (filmSubRegion[1] != subRegion[1]) ||

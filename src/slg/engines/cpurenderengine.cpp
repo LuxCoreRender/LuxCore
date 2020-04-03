@@ -227,6 +227,10 @@ void CPUNoTileRenderEngine::StopLockLess() {
 	samplerSharedData = NULL;
 }
 
+void CPUNoTileRenderEngine::EndSceneEditLockLess(const EditActionList &editActions) {
+	samplerSharedData->Reset();
+}
+
 void CPUNoTileRenderEngine::UpdateFilmLockLess() {
 }
 

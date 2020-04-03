@@ -81,6 +81,7 @@ protected:
 	virtual void InitFilm();
 	virtual void StartLockLess();
 	virtual void StopLockLess();
+	virtual void EndSceneEditLockLess(const EditActionList &editActions);
 
 	PhotonGICache *photonGICache;
 	PathTracer pathTracer;

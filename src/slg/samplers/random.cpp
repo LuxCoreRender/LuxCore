@@ -33,6 +33,10 @@ using namespace slg;
 RandomSamplerSharedData::RandomSamplerSharedData(Film *engineFlm) {
 	engineFilm = engineFlm;
 
+	Reset();
+}
+
+void RandomSamplerSharedData::Reset() {
 	if (engineFilm) {
 		const u_int *subRegion = engineFilm->GetSubRegion();
 		filmRegionPixelCount = (subRegion[1] - subRegion[0] + 1) * (subRegion[3] - subRegion[2] + 1);

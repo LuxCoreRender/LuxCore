@@ -156,6 +156,13 @@ void PathCPURenderEngine::StopLockLess() {
 	photonGICache = nullptr;
 }
 
+void PathCPURenderEngine::EndSceneEditLockLess(const EditActionList &editActions) {
+	if (lightSamplerSharedData)
+		lightSamplerSharedData->Reset();
+
+	CPURenderEngine::EndSceneEditLockLess(editActions);
+}
+
 //------------------------------------------------------------------------------
 // Static methods used by RenderEngineRegistry
 //------------------------------------------------------------------------------

@@ -33,14 +33,18 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 MetropolisSamplerSharedData::MetropolisSamplerSharedData() : SamplerSharedData() {
-	totalLuminance = 0.;
-	sampleCount = 0;
-	noBlackSampleCount = 0;
+	Reset();
 }
 
 SamplerSharedData *MetropolisSamplerSharedData::FromProperties(const Properties &cfg,
 		RandomGenerator *rndGen, Film *film) {
 	return new MetropolisSamplerSharedData();
+}
+
+void MetropolisSamplerSharedData::Reset() {
+	totalLuminance = 0.;
+	sampleCount = 0;
+	noBlackSampleCount = 0;
 }
 
 //------------------------------------------------------------------------------
@@ -349,6 +353,9 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 						" not black samples over a total of " << sharedData->sampleCount <<
 						" samples. The rendering may be inaccurate because how hard is to estimate the average image intensity.");
 			}
+
+			//printf("Cool down: false\n");
+
 			cooldown = false;
 			isLargeMutation = (rndGen->floatValue() < currentLargeMutationProbability);
 		} else

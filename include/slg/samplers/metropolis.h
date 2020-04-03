@@ -40,6 +40,8 @@ public:
 	MetropolisSamplerSharedData();
 	virtual ~MetropolisSamplerSharedData() { }
 
+	virtual void Reset();
+
 	static SamplerSharedData *FromProperties(const luxrays::Properties &cfg,
 			luxrays::RandomGenerator *rndGen, Film *film);
 
