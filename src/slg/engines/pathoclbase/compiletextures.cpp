@@ -550,8 +550,8 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 			switch (opType) {
 				case slg::ocl::TextureEvalOpType::EVAL_FLOAT:
 				case slg::ocl::TextureEvalOpType::EVAL_SPECTRUM: {
-					evalOpStackSize += CompileTextureOps(tex->dotProductTex.tex1Index, opType);
-					evalOpStackSize += CompileTextureOps(tex->dotProductTex.tex2Index, opType);
+					evalOpStackSize += CompileTextureOps(tex->dotProductTex.tex1Index, slg::ocl::TextureEvalOpType::EVAL_SPECTRUM);
+					evalOpStackSize += CompileTextureOps(tex->dotProductTex.tex2Index, slg::ocl::TextureEvalOpType::EVAL_SPECTRUM);
 					break;
 				}
 				case slg::ocl::TextureEvalOpType::EVAL_BUMP: {

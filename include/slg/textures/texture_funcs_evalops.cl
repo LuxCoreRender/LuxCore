@@ -850,9 +850,9 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		case DOT_PRODUCT_TEX: {
 			switch (evalType) {
 				case EVAL_FLOAT: {
-					float tex1, tex2;
-					EvalStack_PopFloat(tex2);
-					EvalStack_PopFloat(tex1);
+					float3 tex1, tex2;
+					EvalStack_PopFloat3(tex2);
+					EvalStack_PopFloat3(tex1);
 
 					const float eval = DotProductTexture_ConstEvaluateFloat(tex1, tex2);
 					EvalStack_PushFloat(eval);
@@ -1093,36 +1093,10 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		//----------------------------------------------------------------------
 		// SHADING_NORMAL_TEX
 		//----------------------------------------------------------------------
-		case SHADING_NORMAL_TEX: {
-			switch (evalType) {
-				case EVAL_FLOAT: {
-					const float eval = ShadingNormalTexture_ConstEvaluateFloat(hitPoint);
-					EvalStack_PushFloat(eval);
-					break;
-				}
-				case EVAL_SPECTRUM: {
-					const float3 eval = ShadingNormalTexture_ConstEvaluateSpectrum(hitPoint);
-					EvalStack_PushFloat3(eval);
-					break;
-				}
-				case EVAL_BUMP_GENERIC_OFFSET_U:
-					Texture_EvalOpGenericBumpOffsetU(evalStack, evalStackOffset,
-							hitPoint, sampleDistance);
-					break;
-				case EVAL_BUMP_GENERIC_OFFSET_V:
-					Texture_EvalOpGenericBumpOffsetV(evalStack, evalStackOffset,
-							hitPoint, sampleDistance);
-					break;
-				case EVAL_BUMP:
-					Texture_EvalOpGenericBump(evalStack, evalStackOffset,
-							hitPoint, sampleDistance);
-					break;
-				default:
-					// Something wrong here
-					break;
-			}
+		case SHADING_NORMAL_TEX:
+			ShadingNormalTexture_EvalOp(texture, evalType, evalStack, evalStackOffset,
+					hitPoint, sampleDistance TEXTURES_PARAM);
 			break;
-		}
 		//----------------------------------------------------------------------
 		// POSITION_TEX
 		//----------------------------------------------------------------------

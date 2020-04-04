@@ -723,19 +723,6 @@ OPENCL_FORCE_INLINE float3 PowerTexture_ConstEvaluateSpectrum(const float base,
 }
 
 //------------------------------------------------------------------------------
-// Shading Normal texture
-//------------------------------------------------------------------------------
-
-OPENCL_FORCE_INLINE float ShadingNormalTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint) {
-	// This method doesn't really make sense for a vector - just return the first element
-	return hitPoint->shadeN.x;
-}
-
-OPENCL_FORCE_INLINE float3 ShadingNormalTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint) {
-	return (float3)(hitPoint->shadeN.x, hitPoint->shadeN.y, hitPoint->shadeN.z);
-}
-
-//------------------------------------------------------------------------------
 // Position texture
 //------------------------------------------------------------------------------
 
