@@ -497,7 +497,6 @@ void PathTracer::RenderEyePath(IntersectionDevice *device,
 				// Check if the cache is enabled for this material
 				if (isPhotonGIEnabled) {
 					// TODO: add support for AOVs (possible ?)
-					// TODO: support for radiance groups (possible ?)
 
 					if (photonGICache->IsCausticEnabled() && (!hybridBackForwardEnable || pathInfo.depth.depth != 0)) {
 						const SpectrumGroup causticRadiance = photonGICache->ConnectWithCausticPaths(bsdf);

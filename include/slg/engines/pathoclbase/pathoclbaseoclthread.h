@@ -214,6 +214,7 @@ protected:
 	cl::Buffer *imageMapDescsBuff;
 	std::vector<cl::Buffer *> imageMapsBuff;
 	cl::Buffer *pgicRadiancePhotonsBuff;
+	cl::Buffer *pgicRadiancePhotonsValuesBuff;
 	cl::Buffer *pgicRadiancePhotonsBVHNodesBuff;
 	cl::Buffer *pgicCausticPhotonsBuff;
 	cl::Buffer *pgicCausticPhotonsBVHNodesBuff;

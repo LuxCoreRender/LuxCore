@@ -439,6 +439,8 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 
 #define KERNEL_ARGS_PHOTONGI \
 		, __global const RadiancePhoton* restrict pgicRadiancePhotons \
+		, uint pgicLightGroupCounts \
+		, __global const Spectrum* restrict pgicRadiancePhotonsValues \
 		, __global const IndexBVHArrayNode* restrict pgicRadiancePhotonsBVHNodes \
 		, __global const Photon* restrict pgicCausticPhotons \
 		, __global const IndexBVHArrayNode* restrict pgicCausticPhotonsBVHNodes

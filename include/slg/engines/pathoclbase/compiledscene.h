@@ -121,6 +121,8 @@ public:
 
 	// PhotonGI indirect cache
 	std::vector<slg::ocl::RadiancePhoton> pgicRadiancePhotons;
+	u_int pgicLightGroupCounts;
+	std::vector<slg::ocl::Spectrum> pgicRadiancePhotonsValues;
 	std::vector<slg::ocl::IndexBVHArrayNode> pgicRadiancePhotonsBVHArrayNode;
 	// PhotonGI caustic cache
 	std::vector<slg::ocl::Photon> pgicCausticPhotons;
