@@ -45,7 +45,7 @@ void Film::AddSampleResultColor(const u_int x, const u_int y,
 	filmDenoiser.AddSample(x, y, sampleResult, weight);
 
 	if ((channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size() > 0) && sampleResult.HasChannel(RADIANCE_PER_PIXEL_NORMALIZED)) {
-		for (u_int i = 0; i < Min(sampleResult.radiance.Size(), channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size()); ++i) {
+		for (u_int i = 0; i < Min<u_int>(sampleResult.radiance.Size(), channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size()); ++i) {
 			if (sampleResult.radiance[i].IsNaN() || sampleResult.radiance[i].IsInf())
 				continue;
 
@@ -55,7 +55,7 @@ void Film::AddSampleResultColor(const u_int x, const u_int y,
 
 	// Faster than HasChannel(channel_RADIANCE_PER_SCREEN_NORMALIZED)
 	if ((channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size() > 0) && sampleResult.HasChannel(RADIANCE_PER_SCREEN_NORMALIZED)) {
-		for (u_int i = 0; i < Min(sampleResult.radiance.Size(), channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size()); ++i) {
+		for (u_int i = 0; i < Min<u_int>(sampleResult.radiance.Size(), channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size()); ++i) {
 			if (sampleResult.radiance[i].IsNaN() || sampleResult.radiance[i].IsInf())
 				continue;
 
@@ -109,7 +109,7 @@ void Film::AddSampleResultColor(const u_int x, const u_int y,
 
 					if (sampleResult.materialID == byMaterialIDs[index]) {
 						// Merge all radiance groups
-						for (u_int i = 0; i < Min(sampleResult.radiance.Size(), channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size()); ++i) {
+						for (u_int i = 0; i < Min<u_int>(sampleResult.radiance.Size(), channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size()); ++i) {
 							if (sampleResult.radiance[i].IsNaN() || sampleResult.radiance[i].IsInf())
 								continue;
 
@@ -151,7 +151,7 @@ void Film::AddSampleResultColor(const u_int x, const u_int y,
 
 					if (sampleResult.objectID == byObjectIDs[index]) {
 						// Merge all radiance groups
-						for (u_int i = 0; i < Min(sampleResult.radiance.Size(), channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size()); ++i) {
+						for (u_int i = 0; i < Min<u_int>(sampleResult.radiance.Size(), channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size()); ++i) {
 							if (sampleResult.radiance[i].IsNaN() || sampleResult.radiance[i].IsInf())
 								continue;
 
@@ -248,7 +248,7 @@ void Film::AtomicAddSampleResultColor(const u_int x, const u_int y,
 	filmDenoiser.AddSample(x, y, sampleResult, weight);
 
 	if ((channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size() > 0) && sampleResult.HasChannel(RADIANCE_PER_PIXEL_NORMALIZED)) {
-		for (u_int i = 0; i < Min(sampleResult.radiance.Size(), channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size()); ++i) {
+		for (u_int i = 0; i < Min<u_int>(sampleResult.radiance.Size(), channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size()); ++i) {
 			if (sampleResult.radiance[i].IsNaN() || sampleResult.radiance[i].IsInf())
 				continue;
 
@@ -258,7 +258,7 @@ void Film::AtomicAddSampleResultColor(const u_int x, const u_int y,
 
 	// Faster than HasChannel(channel_RADIANCE_PER_SCREEN_NORMALIZED)
 	if ((channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size() > 0) && sampleResult.HasChannel(RADIANCE_PER_SCREEN_NORMALIZED)) {
-		for (u_int i = 0; i < Min(sampleResult.radiance.Size(), channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size()); ++i) {
+		for (u_int i = 0; i < Min<u_int>(sampleResult.radiance.Size(), channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size()); ++i) {
 			if (sampleResult.radiance[i].IsNaN() || sampleResult.radiance[i].IsInf())
 				continue;
 
@@ -312,7 +312,7 @@ void Film::AtomicAddSampleResultColor(const u_int x, const u_int y,
 
 					if (sampleResult.materialID == byMaterialIDs[index]) {
 						// Merge all radiance groups
-						for (u_int i = 0; i < Min(sampleResult.radiance.Size(), channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size()); ++i) {
+						for (u_int i = 0; i < Min<u_int>(sampleResult.radiance.Size(), channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size()); ++i) {
 							if (sampleResult.radiance[i].IsNaN() || sampleResult.radiance[i].IsInf())
 								continue;
 
@@ -354,7 +354,7 @@ void Film::AtomicAddSampleResultColor(const u_int x, const u_int y,
 
 					if (sampleResult.objectID == byObjectIDs[index]) {
 						// Merge all radiance groups
-						for (u_int i = 0; i < Min(sampleResult.radiance.Size(), channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size()); ++i) {
+						for (u_int i = 0; i < Min<u_int>(sampleResult.radiance.Size(), channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size()); ++i) {
 							if (sampleResult.radiance[i].IsNaN() || sampleResult.radiance[i].IsInf())
 								continue;
 

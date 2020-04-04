@@ -44,7 +44,7 @@ PGICPhotonBvh::PGICPhotonBvh(const vector<Photon> *entries, const u_int count,
 PGICPhotonBvh::~PGICPhotonBvh() {
 }
 
-Spectrum PGICPhotonBvh::ConnectCacheEntry(const Photon &photon, const BSDF &bsdf) const {
+SpectrumGroup PGICPhotonBvh::ConnectCacheEntry(const Photon &photon, const BSDF &bsdf) const {
 	BSDFEvent event;
 	Spectrum bsdfEval = bsdf.Evaluate(-photon.d, &event, nullptr, nullptr);
 	// bsdf.Evaluate() multiplies the result by AbsDot(bsdf.hitPoint.shadeN, -photon->d)
@@ -53,16 +53,19 @@ Spectrum PGICPhotonBvh::ConnectCacheEntry(const Photon &photon, const BSDF &bsdf
 	if (!bsdf.IsVolume())
 		bsdfEval /= AbsDot(bsdf.hitPoint.shadeN, -photon.d);
 
-	return photon.alpha * bsdfEval;
+	SpectrumGroup result;
+	result.Add(photon.lightID, photon.alpha * bsdfEval);
+
+	return result;
 }
 
-Spectrum PGICPhotonBvh::ConnectAllNearEntries(const BSDF &bsdf) const {
+SpectrumGroup PGICPhotonBvh::ConnectAllNearEntries(const BSDF &bsdf) const {
 	const Point &p = bsdf.hitPoint.p;
 	// Flip the normal if required
 	const Normal n = (bsdf.hitPoint.intoObject ? 1.f: -1.f) * bsdf.hitPoint.geometryN;
 	const bool isVolume = bsdf.IsVolume();
 
-	Spectrum result;
+	SpectrumGroup result;
 
 	u_int currentNode = 0; // Root Node
 	const u_int stopNode = IndexBVHNodeData_GetSkipIndex(arrayNodes[0].nodeData); // Non-existent

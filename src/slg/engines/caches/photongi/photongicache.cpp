@@ -133,7 +133,7 @@ void PhotonGICache::TracePhotons(const u_int seedBase, const u_int photonTracedC
 		for (auto const &p : renderThreads[i]->indirectPhotons) {
 			PGICVisibilityParticle &vp = visibilityParticles[p.visibilityParticelIndex];
 
-			vp.alphaAccumulated += p.alpha;
+			vp.alphaAccumulated.Add(p.lightID, p.alpha);
 		}
 		indirectPhotonStored += renderThreads[i]->indirectPhotons.size();
 
@@ -177,8 +177,8 @@ void PhotonGICache::TracePhotons(const bool indirectEnabled, const bool causticE
 
 		const u_int photonTracedStep = 2000000;
 		u_int photonTracedCount = 0;
-		vector<Spectrum> lastAlpha(visibilityParticles.size());
-		vector<Spectrum> currentAlpha(visibilityParticles.size());
+		vector<SpectrumGroup> lastAlpha(visibilityParticles.size());
+		vector<SpectrumGroup> currentAlpha(visibilityParticles.size());
 		while (photonTracedCount < params.photon.maxTracedCount) {
 			//------------------------------------------------------------------
 			// Trace additional photons
@@ -205,7 +205,7 @@ void PhotonGICache::TracePhotons(const bool indirectEnabled, const bool causticE
 				// Filter outgoing radiance
 
 				if (params.indirect.filterRadiusScale > 0.f) {
-					vector<Spectrum> filteredCurrentAlpha(visibilityParticles.size());
+					vector<SpectrumGroup> filteredCurrentAlpha(visibilityParticles.size());
 					FilterVisibilityParticlesRadiance(currentAlpha, filteredCurrentAlpha);
 
 					currentAlpha = filteredCurrentAlpha;
@@ -215,7 +215,7 @@ void PhotonGICache::TracePhotons(const bool indirectEnabled, const bool causticE
 
 				float Y = 0.f;
 				for (u_int i = 0; i < visibilityParticles.size(); ++i)
-					Y += currentAlpha[i].Y();
+					Y += currentAlpha[i].Sum().Y();
 				Y /= visibilityParticles.size();
 
 				const float alphaScale = (Y > 0.f) ? (1.25f / Y * powf(118.f / 255.f, 2.2f)) : 1.f;
@@ -227,9 +227,14 @@ void PhotonGICache::TracePhotons(const bool indirectEnabled, const bool causticE
 				float maxError = 0.f;
 				for (u_int i = 0; i < visibilityParticles.size(); ++i) {
 					if (!currentAlpha[i].Black()) {
-						const float currentError =  (currentAlpha[i] - lastAlpha[i]).Abs().Max();
+						SpectrumGroup alpha = currentAlpha[i];
+						alpha -= lastAlpha[i];
 
-						maxError = Max(maxError, currentError);
+						for (u_int j = 0; j < alpha.Size(); ++j) {
+							const float currentError = alpha[j].Abs().Max();
+
+							maxError = Max(maxError, currentError);
+						}
 					}
 
 					// Update last alpha cache entries
@@ -279,8 +284,8 @@ void PhotonGICache::TracePhotons(const bool indirectEnabled, const bool causticE
 	causticPhotons.shrink_to_fit();
 }
 
-void PhotonGICache::FilterVisibilityParticlesRadiance(const vector<Spectrum> &radianceValues,
-			vector<Spectrum> &filteredRadianceValues) const {
+void PhotonGICache::FilterVisibilityParticlesRadiance(const vector<SpectrumGroup> &radianceValues,
+			vector<SpectrumGroup> &filteredRadianceValues) const {
 	const float lookUpRadius2 = Sqr(params.indirect.filterRadiusScale * params.indirect.lookUpRadius);
 	const float lookUpCosNormalAngle = cosf(Radians(params.indirect.lookUpNormalAngle));
 
@@ -302,11 +307,11 @@ void PhotonGICache::FilterVisibilityParticlesRadiance(const vector<Spectrum> &ra
 				lookUpRadius2, lookUpCosNormalAngle);
 
 		if (nearParticleIndices.size() > 0) {
-			Spectrum &v = filteredRadianceValues[index];
+			SpectrumGroup &filtered = filteredRadianceValues[index];
 			for (auto nearIndex : nearParticleIndices)
-				v += radianceValues[nearIndex];
+				filtered += radianceValues[nearIndex];
 
-			v /= nearParticleIndices.size();
+			filtered /= nearParticleIndices.size();
 		} 
 	}
 }
@@ -316,7 +321,7 @@ void PhotonGICache::CreateRadiancePhotons() {
 	// Compute the outgoing radiance for each visibility entry
 	//--------------------------------------------------------------------------
 
-	vector<Spectrum> outgoingRadianceValues(visibilityParticles.size());
+	vector<SpectrumGroup> outgoingRadianceValues(visibilityParticles.size());
 
 	for (u_int index = 0 ; index < visibilityParticles.size(); ++index) {
 		const PGICVisibilityParticle &vp = visibilityParticles[index];
@@ -332,7 +337,7 @@ void PhotonGICache::CreateRadiancePhotons() {
 	if (params.indirect.filterRadiusScale > 0.f) {
 		SLG_LOG("PhotonGI filtering radiance photons");
 
-		vector<Spectrum> filteredOutgoingRadianceValues(visibilityParticles.size());
+		vector<SpectrumGroup> filteredOutgoingRadianceValues(visibilityParticles.size());
 		FilterVisibilityParticlesRadiance(outgoingRadianceValues, filteredOutgoingRadianceValues);
 
 		outgoingRadianceValues = filteredOutgoingRadianceValues;
@@ -507,38 +512,39 @@ void PhotonGICache::Preprocess(const u_int threadCnt) {
 		SavePersistentCache(params.persistent.fileName);
 }
 
-Spectrum PhotonGICache::GetIndirectRadiance(const BSDF &bsdf) const {
+const SpectrumGroup *PhotonGICache::GetIndirectRadiance(const BSDF &bsdf) const {
 	assert (IsPhotonGIEnabled(bsdf));
 
-	Spectrum result;
 	if (radiancePhotonsBVH) {
 		// Flip the normal if required
 		const Normal n = (bsdf.hitPoint.intoObject ? 1.f: -1.f) * bsdf.hitPoint.geometryN;
 		const RadiancePhoton *radiancePhoton = radiancePhotonsBVH->GetNearestEntry(bsdf.hitPoint.p, n, bsdf.IsVolume());
 
 		if (radiancePhoton) {
-			result = radiancePhoton->outgoingRadiance;
+			const SpectrumGroup *result = &radiancePhoton->outgoingRadiance;
 
-			assert (result.IsValid());
+			assert (result->IsValid());
 			assert (DistanceSquared(radiancePhoton->p, bsdf.hitPoint.p) < radiancePhotonsBVH->GetEntryRadius());
 			assert (bsdf.IsVolume() == radiancePhoton->isVolume);
 			assert (radiancePhoton->isVolume || (Dot(radiancePhoton->n, n) > radiancePhotonsBVH->GetEntryNormalCosAngle()));
+
+			return result;
 		}
 	}
 	
-	return result;
+	return nullptr;
 }
 
-Spectrum PhotonGICache::ConnectWithCausticPaths(const BSDF &bsdf) const {
+SpectrumGroup PhotonGICache::ConnectWithCausticPaths(const BSDF &bsdf) const {
 	assert (IsPhotonGIEnabled(bsdf));
 
-	Spectrum result;
+	SpectrumGroup result;
 	if (causticPhotonsBVH) {
 		result = causticPhotonsBVH->ConnectAllNearEntries(bsdf);
 
 		assert (result.IsValid());
 	}
-	
+
 	return result;
 }
 

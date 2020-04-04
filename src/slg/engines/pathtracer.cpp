@@ -468,12 +468,15 @@ void PathTracer::RenderEyePath(IntersectionDevice *device,
 
 			// Check if one of the debug modes is enabled
 			if (photonGICache->GetDebugType() == PhotonGIDebugType::PGIC_DEBUG_SHOWINDIRECT) {
-				if (isPhotonGIEnabled)
-					sampleResult.radiance[0] += photonGICache->GetIndirectRadiance(bsdf);
+				if (isPhotonGIEnabled) {
+					const SpectrumGroup *group = photonGICache->GetIndirectRadiance(bsdf);
+					if (group)
+						sampleResult.radiance += *group;
+				}
 				break;
 			} else if (photonGICache->GetDebugType() == PhotonGIDebugType::PGIC_DEBUG_SHOWCAUSTIC) {
 				if (isPhotonGIEnabled)
-					sampleResult.radiance[0] += photonGICache->ConnectWithCausticPaths(bsdf);
+					sampleResult.radiance += photonGICache->ConnectWithCausticPaths(bsdf);
 					break;
 			} else if (photonGICache->GetDebugType() == PhotonGIDebugType::PGIC_DEBUG_SHOWINDIRECTPATHMIX) {
 				// Check if the cache is enabled for this material
@@ -497,10 +500,10 @@ void PathTracer::RenderEyePath(IntersectionDevice *device,
 					// TODO: support for radiance groups (possible ?)
 
 					if (photonGICache->IsCausticEnabled() && (!hybridBackForwardEnable || pathInfo.depth.depth != 0)) {
-						const Spectrum causticRadiance = photonGICache->ConnectWithCausticPaths(bsdf);
+						const SpectrumGroup causticRadiance = photonGICache->ConnectWithCausticPaths(bsdf);
 
 						if (!causticRadiance.Black()) {
-							sampleResult.radiance[0] += pathThroughput * causticRadiance;
+							sampleResult.radiance.AddWeighted(pathThroughput, causticRadiance);
 							photonGICausticCacheUsed = true;
 						}
 					}
@@ -511,7 +514,9 @@ void PathTracer::RenderEyePath(IntersectionDevice *device,
 								// I hope to not introduce strange sample correlations
 								// by using passThrough here
 								passThrough))) {
-						sampleResult.radiance[0] += pathThroughput * photonGICache->GetIndirectRadiance(bsdf);
+						const SpectrumGroup *group = photonGICache->GetIndirectRadiance(bsdf);
+						if (group)
+							sampleResult.radiance.AddWeighted(pathThroughput, *group);
 						// I can terminate the path, all done
 						break;
 					}

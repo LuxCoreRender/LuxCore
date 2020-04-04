@@ -25,6 +25,7 @@
 #include <boost/thread/barrier.hpp>
 #include <boost/function.hpp>
 
+#include "luxrays/core/color/spectrumgroup.h"
 #include "luxrays/utils/properties.h"
 #include "luxrays/utils/utils.h"
 #include "luxrays/utils/serializationutils.h"
@@ -75,20 +76,23 @@ struct PGICVisibilityParticle : GenericPhoton {
 			hitsCount(0) {
 	}
 
-	luxrays::Spectrum ComputeRadiance(const float radius2, const float photonTraced) const {
+	luxrays::SpectrumGroup ComputeRadiance(const float radius2, const float photonTraced) const {
 		if (hitsCount > 0) {
 			// The estimated area covered by the entry (if I have enough hits)
 			const float area = (hitsCount < 16) ?  (radius2 * M_PI) :
 				(luxrays::Sqr(2.f * hitsAccumulatedDistance / hitsCount) * M_PI);
 
-			return (bsdfEvaluateTotal * INV_PI) * alphaAccumulated / (photonTraced * area);
+			luxrays::SpectrumGroup result = alphaAccumulated;
+			result *= (bsdfEvaluateTotal * INV_PI) / (photonTraced * area);
+
+			return result;
 		} else
-			return luxrays::Spectrum();
+			return luxrays::SpectrumGroup();
 	}
 
 	luxrays::Normal n;
 	luxrays::Spectrum bsdfEvaluateTotal;
-	luxrays::Spectrum alphaAccumulated;
+	luxrays::SpectrumGroup alphaAccumulated;
 
 	// The following counters are used to estimate the surface covered by
 	// this entry.
@@ -112,13 +116,14 @@ protected:
 };
 
 struct Photon : GenericPhoton {
-	Photon(const luxrays::Point &pt, const luxrays::Vector &dir,
+	Photon(const luxrays::Point &pt, const luxrays::Vector &dir, const u_int id,
 		const luxrays::Spectrum &a, const luxrays::Normal &n, const bool isVol) :
 			GenericPhoton(pt, isVol), d(dir),
-			alpha(a), landingSurfaceNormal(n) {
+			lightID(id), alpha(a), landingSurfaceNormal(n) {
 	}
 
 	luxrays::Vector d;
+	u_int lightID;
 	luxrays::Spectrum alpha;
 	luxrays::Normal landingSurfaceNormal;
 
@@ -131,6 +136,7 @@ protected:
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(GenericPhoton);
 		ar & d;
+		ar & lightID;
 		ar & alpha;
 		ar & landingSurfaceNormal;
 	}
@@ -138,12 +144,12 @@ protected:
 
 struct RadiancePhoton : GenericPhoton {
 	RadiancePhoton(const luxrays::Point &pt, const luxrays::Normal &nm,
-		const luxrays::Spectrum &rad, const bool isVol) :
+		const luxrays::SpectrumGroup &rad, const bool isVol) :
 				GenericPhoton(pt, isVol), n(nm), outgoingRadiance(rad) {
 	}
 
 	luxrays::Normal n;
-	luxrays::Spectrum outgoingRadiance;
+	luxrays::SpectrumGroup outgoingRadiance;
 
 	friend class boost::serialization::access;
 	
@@ -281,8 +287,8 @@ public:
 		return Update(threadIndex, filmSPP, noCallback);
 	}
 
-	luxrays::Spectrum GetIndirectRadiance(const BSDF &bsdf) const;
-	luxrays::Spectrum ConnectWithCausticPaths(const BSDF &bsdf) const;
+	const luxrays::SpectrumGroup *GetIndirectRadiance(const BSDF &bsdf) const;
+	luxrays::SpectrumGroup ConnectWithCausticPaths(const BSDF &bsdf) const;
 	
 	const std::vector<RadiancePhoton> &GetRadiancePhotons() const { return radiancePhotons; }
 	const PGICRadiancePhotonBvh *GetRadiancePhotonsBVH() const { return radiancePhotonsBVH; }
@@ -320,8 +326,8 @@ private:
 		boost::atomic<u_int> &globalIndirectSize,
 		boost::atomic<u_int> &globalCausticSize);
 	void TracePhotons(const bool indirectEnabled, const bool causticEnabled);
-	void FilterVisibilityParticlesRadiance(const std::vector<luxrays::Spectrum> &radianceValues,
-			std::vector<luxrays::Spectrum> &filteredRadianceValues) const;
+	void FilterVisibilityParticlesRadiance(const std::vector<luxrays::SpectrumGroup> &radianceValues,
+			std::vector<luxrays::SpectrumGroup> &filteredRadianceValues) const;
 	void CreateRadiancePhotons();
 
 	void LoadPersistentCache(const std::string &fileName);
@@ -354,9 +360,9 @@ private:
 }
 
 BOOST_CLASS_VERSION(slg::GenericPhoton, 1)
-BOOST_CLASS_VERSION(slg::PGICVisibilityParticle, 1)
-BOOST_CLASS_VERSION(slg::Photon, 1)
-BOOST_CLASS_VERSION(slg::RadiancePhoton, 1)
+BOOST_CLASS_VERSION(slg::PGICVisibilityParticle, 2)
+BOOST_CLASS_VERSION(slg::Photon, 2)
+BOOST_CLASS_VERSION(slg::RadiancePhoton, 2)
 BOOST_CLASS_VERSION(slg::PhotonGICacheParams, 6)
 BOOST_CLASS_VERSION(slg::PhotonGICache, 3)
 

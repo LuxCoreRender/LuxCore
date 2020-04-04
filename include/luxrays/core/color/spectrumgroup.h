@@ -29,19 +29,206 @@ namespace luxrays {
 
 class SpectrumGroup {
 public:
-	SpectrumGroup(const size_t groupsCount = 0) : group(groupsCount) {
+	SpectrumGroup(const u_int groupsCount = 0) : group(groupsCount) {
 	}
 	virtual ~SpectrumGroup() { }
 
-	size_t Size() const { return group.size(); }
-	void Resize(const size_t s) { group.resize(s); }
-	void Shrink(const size_t s) { group.shrink_to_fit(); }
+	u_int Size() const { return group.size(); }
+	void Resize(const u_int s) { group.resize(s); }
+	void Shrink(const u_int s) { group.shrink_to_fit(); }
+
+	Spectrum Sum() const {
+		Spectrum sum;
+
+		for (auto const &s : group)
+			sum += s;
+		
+		return sum;
+	}
+	
+	SpectrumGroup &Add(const u_int i, const Spectrum &s) {
+		// Auto expand the group if required
+		if (i >= group.size())
+			group.resize(i + 1);
+
+		group[i] += s;
+
+		return *this;
+	}
+
+	SpectrumGroup &AddWeighted(const float a, const SpectrumGroup &s2) {
+		// Auto expand the group if required
+		if (s2.group.size() > group.size())
+			group.resize(s2.group.size());
+		
+		for (u_int i = 0; i < s2.group.size(); ++i)
+			group[i] += a * s2.group[i];
+
+		return *this;
+	}
+
+	SpectrumGroup &AddWeighted(const Spectrum &a, const SpectrumGroup &s2) {
+		// Auto expand the group if required
+		if (s2.group.size() > group.size())
+			group.resize(s2.group.size());
+		
+		for (u_int i = 0; i < s2.group.size(); ++i)
+			group[i] += a * s2.group[i];
+
+		return *this;
+	}
+
+	bool Black() const {
+		for (auto const &s : group)
+			if (!s.Black())
+				return false;
+		
+		return true;
+	}
+
+	bool IsNaN() const {
+		for (auto const &s : group)
+			if (s.IsNaN())
+				return true;
+		
+		return false;
+	}
+	bool IsInf() const {
+		for (auto const &s : group)
+			if (s.IsInf())
+				return true;
+		
+		return false;
+	}
+	bool IsNeg() const {
+		for (auto const &s : group)
+			if (s.IsNeg())
+				return true;
+		
+		return false;
+	}
+	bool IsValid() const {
+		return !IsNaN() && !IsInf() && !IsNeg();
+	}
 
 	const Spectrum &operator[](int i) const { return group[i]; }
 	Spectrum &operator[](int i) { return group[i]; }
 
-	friend class boost::serialization::access;
+	//--------------------------------------------------------------------------
+	// With SpectrumGroup operators
+	//--------------------------------------------------------------------------
 
+	SpectrumGroup &operator+=(const SpectrumGroup &s2) {
+		// Auto expand the group if required
+		if (s2.group.size() > group.size())
+			group.resize(s2.group.size());
+
+		for (u_int i = 0; i < s2.group.size(); ++i)
+			group[i] += s2.group[i];
+
+		return *this;
+	}
+	
+	SpectrumGroup &operator-=(const SpectrumGroup &s2) {
+		// Auto expand the group if required
+		if (s2.group.size() > group.size())
+			group.resize(s2.group.size());
+
+		for (u_int i = 0; i < s2.group.size(); ++i)
+			group[i] -= s2.group[i];
+
+		return *this;
+	}
+
+	SpectrumGroup &operator*=(const SpectrumGroup &s2) {
+		// Auto expand the group if required
+		if (s2.group.size() > group.size())
+			group.resize(s2.group.size());
+
+		for (u_int i = 0; i < s2.group.size(); ++i)
+			group[i] *= s2.group[i];
+
+		return *this;
+	}
+	
+	SpectrumGroup &operator/=(const SpectrumGroup &s2) {
+		// Auto expand the group if required
+		if (s2.group.size() > group.size())
+			group.resize(s2.group.size());
+
+		for (u_int i = 0; i < s2.group.size(); ++i)
+			group[i] /= s2.group[i];
+
+		return *this;
+	}
+
+	//--------------------------------------------------------------------------
+	// With Spectrum operators
+	//--------------------------------------------------------------------------
+
+	SpectrumGroup &operator+=(const Spectrum &s) {
+		for (u_int i = 0; i < group.size(); ++i)
+			group[i] += s;
+
+		return *this;
+	}
+
+	SpectrumGroup &operator-=(const Spectrum &s) {
+		for (u_int i = 0; i < group.size(); ++i)
+			group[i] -= s;
+
+		return *this;
+	}
+
+	SpectrumGroup &operator*=(const Spectrum &s) {
+		for (u_int i = 0; i < group.size(); ++i)
+			group[i] *= s;
+
+		return *this;
+	}
+
+	SpectrumGroup &operator/=(const Spectrum &s) {
+		for (u_int i = 0; i < group.size(); ++i)
+			group[i] /= s;
+
+		return *this;
+	}
+
+	//--------------------------------------------------------------------------
+	// With float operators
+	//--------------------------------------------------------------------------
+
+	SpectrumGroup &operator+=(const float a) {
+		for (u_int i = 0; i < group.size(); ++i)
+			group[i] += a;
+
+		return *this;
+	}
+
+	SpectrumGroup &operator-=(const float a) {
+		const float factor = 1.f/ a;
+		for (u_int i = 0; i < group.size(); ++i)
+			group[i] -= factor;
+
+		return *this;
+	}
+
+	SpectrumGroup &operator*=(const float a) {
+		for (u_int i = 0; i < group.size(); ++i)
+			group[i] *= a;
+
+		return *this;
+	}
+
+	SpectrumGroup &operator/=(const float a) {
+		const float factor = 1.f/ a;
+		for (u_int i = 0; i < group.size(); ++i)
+			group[i] *= factor;
+
+		return *this;
+	}
+	
+	friend class boost::serialization::access;
 	
 private:
 	std::vector<Spectrum> group;

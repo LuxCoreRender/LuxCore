@@ -93,7 +93,8 @@ void CompiledScene::CompilePhotonGI() {
 
 				ASSIGN_VECTOR(oclRadiancePhoton.p, radiancePhoton.p);
 				ASSIGN_NORMAL(oclRadiancePhoton.n, radiancePhoton.n);
-				ASSIGN_SPECTRUM(oclRadiancePhoton.outgoingRadiance, radiancePhoton.outgoingRadiance);
+				const Spectrum outgoingRadiance = radiancePhoton.outgoingRadiance.Sum();
+				ASSIGN_SPECTRUM(oclRadiancePhoton.outgoingRadiance, outgoingRadiance);
 				oclRadiancePhoton.isVolume = radiancePhoton.isVolume;
 			}
 
