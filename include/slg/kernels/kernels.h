@@ -74,6 +74,7 @@ extern std::string KernelSource_materialdefs_funcs_mix;
 extern std::string KernelSource_materialdefs_funcs_null;
 extern std::string KernelSource_materialdefs_funcs_roughglass;
 extern std::string KernelSource_materialdefs_funcs_roughmatte_translucent;
+extern std::string KernelSource_materialdefs_funcs_twosided;
 extern std::string KernelSource_materialdefs_funcs_velvet;
 extern std::string KernelSource_material_funcs_evalops;
 extern std::string KernelSource_material_funcs;

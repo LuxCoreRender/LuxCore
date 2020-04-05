@@ -236,6 +236,7 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_materialdefs_funcs_null <<
 			slg::ocl::KernelSource_materialdefs_funcs_roughglass <<
 			slg::ocl::KernelSource_materialdefs_funcs_roughmatte_translucent <<
+			slg::ocl::KernelSource_materialdefs_funcs_twosided <<
 			slg::ocl::KernelSource_materialdefs_funcs_velvet <<
 			slg::ocl::KernelSource_material_funcs_evalops <<
 			slg::ocl::KernelSource_material_funcs;

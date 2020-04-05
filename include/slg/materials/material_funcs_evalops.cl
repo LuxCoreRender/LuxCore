@@ -174,6 +174,12 @@ OPENCL_FORCE_NOT_INLINE uint Material_EvalOp(
 			RoughGlassMaterial_EvalOp(material, evalType, evalStack, evalStackOffset, hitPoint MATERIALS_PARAM);
 			break;
 		//----------------------------------------------------------------------
+		// TWOSIDED
+		//----------------------------------------------------------------------
+		case TWOSIDED:
+			TwoSidedMaterial_EvalOp(material, evalType, evalStack, evalStackOffset, hitPoint MATERIALS_PARAM);
+			break;
+		//----------------------------------------------------------------------
 		// CLEAR_VOL
 		//----------------------------------------------------------------------
 		case CLEAR_VOL:

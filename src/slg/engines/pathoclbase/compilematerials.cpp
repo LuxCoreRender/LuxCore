@@ -46,6 +46,7 @@
 #include "slg/materials/roughglass.h"
 #include "slg/materials/roughmatte.h"
 #include "slg/materials/roughmattetranslucent.h"
+#include "slg/materials/twosided.h"
 #include "slg/materials/velvet.h"
 
 #include "slg/volumes/clear.h"
@@ -138,6 +139,7 @@ u_int CompiledScene::CompileMaterialOps(const u_int matIndex,
 		case ROUGHMATTETRANSLUCENT:
 		case GLOSSYTRANSLUCENT:
 		case DISNEY:
+		case TWOSIDED:  // TODO I probably need to move down to Materials with sub-nodes
 		case HOMOGENEOUS_VOL:
 		case CLEAR_VOL:
 		case HETEROGENEOUS_VOL:
@@ -809,6 +811,14 @@ void CompiledScene::CompileMaterials() {
 				mat->disney.anisotropicTexIndex = scene->texDefs.GetTextureIndex(dm->GetAnisotropic());
 				mat->disney.sheenTexIndex = scene->texDefs.GetTextureIndex(dm->GetSheen());
 				mat->disney.sheenTintTexIndex = scene->texDefs.GetTextureIndex(dm->GetSheenTint());
+				break;
+			}
+			case TWOSIDED: {
+				const TwoSidedMaterial *tsm = static_cast<const TwoSidedMaterial *>(m);
+
+				mat->type = slg::ocl::TWOSIDED;
+				mat->twosided.frontMatIndex = scene->matDefs.GetMaterialIndex(tsm->GetFrontMaterial());
+				mat->twosided.backMatIndex = scene->matDefs.GetMaterialIndex(tsm->GetBackMaterial());
 				break;
 			}
 			//------------------------------------------------------------------

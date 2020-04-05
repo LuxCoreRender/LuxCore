@@ -67,6 +67,7 @@ typedef enum {
 	MATTE, MIRROR, GLASS, ARCHGLASS, MIX, NULLMAT, MATTETRANSLUCENT,
 	GLOSSY2, METAL2, ROUGHGLASS, VELVET, CLOTH, CARPAINT, ROUGHMATTE,
 	ROUGHMATTETRANSLUCENT, GLOSSYTRANSLUCENT, GLOSSYCOATING, DISNEY,
+	TWOSIDED,
 			
 	// Volumes
 	HOMOGENEOUS_VOL, CLEAR_VOL, HETEROGENEOUS_VOL
@@ -282,6 +283,11 @@ typedef struct {
 } DisneyParam;
 
 typedef struct {
+	unsigned int frontMatIndex;
+	unsigned int backMatIndex;
+} TwoSidedParam;
+
+typedef struct {
 	unsigned int sigmaATexIndex;
 } ClearVolumeParam;
 
@@ -367,6 +373,7 @@ typedef struct {
 		GlossyTranslucentParam glossytranslucent;
 		GlossyCoatingParam glossycoating;
 		DisneyParam disney;
+		TwoSidedParam twosided;
 		VolumeParam volume;
 	};
 } Material;
