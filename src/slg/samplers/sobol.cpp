@@ -31,17 +31,20 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 SobolSamplerSharedData::SobolSamplerSharedData(const u_int seed, Film *engineFlm) : SamplerSharedData() {
-	Init(seed, engineFlm);
+	engineFilm = engineFlm;
+	seedBase = seed;
+	
+	Reset();
 }
 
 SobolSamplerSharedData::SobolSamplerSharedData(RandomGenerator *rndGen, Film *engineFlm) : SamplerSharedData() {
-	Init(rndGen->uintValue() % (0xFFFFFFFFu - 1u) + 1u, engineFlm);
+	engineFilm = engineFlm;
+	seedBase = rndGen->uintValue() % (0xFFFFFFFFu - 1u) + 1u;
+
+	Reset();
 }
 
-void SobolSamplerSharedData::Init(const u_int seed, Film *engineFlm) {
-	engineFilm = engineFlm;
-	seedBase = seed;
-
+void SobolSamplerSharedData::Reset() {
 	if (engineFilm) {
 		const u_int *subRegion = engineFilm->GetSubRegion();
 		filmRegionPixelCount = (subRegion[1] - subRegion[0] + 1) * (subRegion[3] - subRegion[2] + 1);

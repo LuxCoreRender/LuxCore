@@ -129,12 +129,13 @@ OPENCL_FORCE_INLINE __global const RadiancePhoton* restrict RadiancePhotonsBVH_G
 	return nearestEntry;
 }
 
-OPENCL_FORCE_INLINE float3 PhotonGICache_GetIndirectRadiance(__global const BSDF *bsdf,
+OPENCL_FORCE_INLINE __global const Spectrum* restrict PhotonGICache_GetIndirectRadiance(__global const BSDF *bsdf,
 		__global const RadiancePhoton* restrict pgicRadiancePhotons,
+		const uint pgicLightGroupCounts, __global const Spectrum* restrict pgicRadiancePhotonsValues,
 		__global const IndexBVHArrayNode* restrict pgicRadiancePhotonsBVHNodes,
 		const float pgicIndirectLookUpRadius2, const float pgicIndirectLookUpNormalCosAngle) {
 	if (!pgicRadiancePhotons)
-		return BLACK;
+		return NULL;
 
 	const float3 p = VLOAD3F(&bsdf->hitPoint.p.x);
 	const float3 n = (bsdf->hitPoint.intoObject ? 1.f: -1.f) * VLOAD3F(&bsdf->hitPoint.geometryN.x);
@@ -146,9 +147,9 @@ OPENCL_FORCE_INLINE float3 PhotonGICache_GetIndirectRadiance(__global const BSDF
 			);
 
 	if (radiancePhoton)
-		return VLOAD3F(&radiancePhoton->outgoingRadiance.c[0]);
+		return &pgicRadiancePhotonsValues[radiancePhoton->outgoingRadianceIndex];
 	else
-		return BLACK;
+		return NULL;
 }
 
 //------------------------------------------------------------------------------
@@ -170,14 +171,14 @@ OPENCL_FORCE_INLINE float3 PGICPhotonBvh_ConnectCacheEntry(__global const Photon
 	return VLOAD3F(photon->alpha.c) * bsdfEval;
 }
 
-OPENCL_FORCE_INLINE float3 PGICPhotonBvh_ConnectAllNearEntries(__global const BSDF *bsdf,
+OPENCL_FORCE_INLINE bool PGICPhotonBvh_ConnectAllNearEntries(__global const BSDF *bsdf,
 		__global const Photon* restrict pgicCausticPhotons,
 		__global const IndexBVHArrayNode* restrict pgicCausticPhotonsBVHNodes,
 		const uint pgicCausticPhotonTracedCount,
-		const float pgicCausticLookUpRadius2, const float pgicCausticLookUpNormalCosAngle
+		const float pgicCausticLookUpRadius2, const float pgicCausticLookUpNormalCosAngle,
+		const float3 scale,
+		__global Spectrum *radiance
 		MATERIALS_PARAM_DECL) {
-	float3 result = BLACK;
-
 	const float3 p = VLOAD3F(&bsdf->hitPoint.p.x);
 	// Flip the normal if required
 	const float3 n = (bsdf->hitPoint.intoObject ? 1.f: -1.f) * VLOAD3F(&bsdf->hitPoint.geometryN.x);
@@ -186,6 +187,9 @@ OPENCL_FORCE_INLINE float3 PGICPhotonBvh_ConnectAllNearEntries(__global const BS
 	uint currentNode = 0; // Root Node
 	const uint stopNode = IndexBVHNodeData_GetSkipIndex(pgicCausticPhotonsBVHNodes[0].nodeData); // Non-existent
 
+	const float factor = 1.f / (pgicCausticPhotonTracedCount * M_PI_F * pgicCausticLookUpRadius2);
+
+	bool isEmpty = true;
 	while (currentNode < stopNode) {
 		__global const IndexBVHArrayNode* restrict node = &pgicCausticPhotonsBVHNodes[currentNode];
 
@@ -203,7 +207,9 @@ OPENCL_FORCE_INLINE float3 PGICPhotonBvh_ConnectAllNearEntries(__global const BS
 						(dot(n, VLOAD3F(&entry->landingSurfaceNormal.x)) > pgicCausticLookUpNormalCosAngle))
 						)
 				) {
-				result += PGICPhotonBvh_ConnectCacheEntry(entry, bsdf MATERIALS_PARAM);
+				const float3 alpha = PGICPhotonBvh_ConnectCacheEntry(entry, bsdf MATERIALS_PARAM) * factor;
+				VADD3F(radiance[entry->lightID].c, alpha * scale);
+				isEmpty = false;
 			}
 
 			++currentNode;
@@ -221,20 +227,22 @@ OPENCL_FORCE_INLINE float3 PGICPhotonBvh_ConnectAllNearEntries(__global const BS
 		}
 	}
 
-	result /= pgicCausticPhotonTracedCount * M_PI_F * pgicCausticLookUpRadius2;
-
-	return result;
+	return isEmpty;
 }
 
-OPENCL_FORCE_NOT_INLINE float3 PhotonGICache_ConnectWithCausticPaths(__global const BSDF *bsdf,
+OPENCL_FORCE_NOT_INLINE bool PhotonGICache_ConnectWithCausticPaths(__global const BSDF *bsdf,
 		__global const Photon* restrict pgicCausticPhotons,
 		__global const IndexBVHArrayNode* restrict pgicCausticPhotonsBVHNodes,
 		const uint pgicCausticPhotonTracedCount,
-		const float pgicCausticLookUpRadius2, const float pgicCausticLookUpNormalCosAngle
+		const float pgicCausticLookUpRadius2, const float pgicCausticLookUpNormalCosAngle,
+		const float3 scale,
+		__global Spectrum *radiance
 		MATERIALS_PARAM_DECL) {
 
 	return pgicCausticPhotons ?
 		PGICPhotonBvh_ConnectAllNearEntries(bsdf, pgicCausticPhotons, pgicCausticPhotonsBVHNodes,
-			pgicCausticPhotonTracedCount, pgicCausticLookUpRadius2, pgicCausticLookUpNormalCosAngle MATERIALS_PARAM) :
-		BLACK;
+			pgicCausticPhotonTracedCount, pgicCausticLookUpRadius2, pgicCausticLookUpNormalCosAngle,
+			scale, radiance
+			MATERIALS_PARAM) :
+		true;
 }

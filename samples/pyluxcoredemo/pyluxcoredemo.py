@@ -295,7 +295,7 @@ def ExtractConfiguration():
 	print("Done.")
 
 ################################################################################
-## Extracting Film configuration example
+## Strands render example
 ################################################################################
 
 def BuildPlane(objectName, materialName):

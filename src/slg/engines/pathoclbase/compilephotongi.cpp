@@ -37,6 +37,8 @@ using namespace slg;
 void CompiledScene::CompilePhotonGI() {
 	pgicRadiancePhotons.clear();
 	pgicRadiancePhotons.shrink_to_fit();
+	pgicRadiancePhotonsValues.clear();
+	pgicRadiancePhotonsValues.shrink_to_fit();
 
 	pgicRadiancePhotonsBVHArrayNode.clear();
 	pgicRadiancePhotonsBVHArrayNode.shrink_to_fit();
@@ -87,13 +89,30 @@ void CompiledScene::CompilePhotonGI() {
 		const std::vector<RadiancePhoton> &radiancePhotons = photonGICache->GetRadiancePhotons();
 		if (radiancePhotons.size() > 0) {
 			pgicRadiancePhotons.resize(radiancePhotons.size());
+
+			pgicLightGroupCounts = 1;
+			for (auto const &p : radiancePhotons)
+				pgicLightGroupCounts = Max(pgicLightGroupCounts, p.outgoingRadiance.Size());
+			pgicRadiancePhotonsValues.resize(pgicRadiancePhotons.size() * pgicLightGroupCounts);
+			for (auto &p : pgicRadiancePhotonsValues) {
+				p.c[0] = 0.f;
+				p.c[1] = 0.f;
+				p.c[2] = 0.f;
+			}
+
 			for (u_int i = 0; i < radiancePhotons.size(); ++i) {
 				const RadiancePhoton &radiancePhoton = radiancePhotons[i];
 				slg::ocl::RadiancePhoton &oclRadiancePhoton = pgicRadiancePhotons[i];
 
 				ASSIGN_VECTOR(oclRadiancePhoton.p, radiancePhoton.p);
 				ASSIGN_NORMAL(oclRadiancePhoton.n, radiancePhoton.n);
-				ASSIGN_SPECTRUM(oclRadiancePhoton.outgoingRadiance, radiancePhoton.outgoingRadiance);
+
+				oclRadiancePhoton.outgoingRadianceIndex = i * pgicLightGroupCounts;
+				const SpectrumGroup &outgoingRadiance = radiancePhoton.outgoingRadiance;			
+				for (u_int j = 0; j < outgoingRadiance.Size(); ++j) {
+					ASSIGN_SPECTRUM(pgicRadiancePhotonsValues[i * pgicLightGroupCounts + j], outgoingRadiance[j]);
+				}
+
 				oclRadiancePhoton.isVolume = radiancePhoton.isVolume;
 			}
 
@@ -131,6 +150,7 @@ void CompiledScene::CompilePhotonGI() {
 
 				ASSIGN_VECTOR(oclPhoton.p, photon.p);
 				ASSIGN_VECTOR(oclPhoton.d, photon.d);
+				oclPhoton.lightID = photon.lightID;
 				ASSIGN_SPECTRUM(oclPhoton.alpha, photon.alpha);
 				ASSIGN_NORMAL(oclPhoton.landingSurfaceNormal, photon.landingSurfaceNormal);
 				oclPhoton.isVolume = photon.isVolume;

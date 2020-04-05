@@ -4,7 +4,7 @@
 #
 ###########################################################################
 
-MESSAGE(STATUS "Using OSX Configuration settings")
+#MESSAGE(STATUS "Using OSX Configuration settings")
 
 # Allow for the location of OSX_DEPENDENCY_ROOT to be set from the command line
 IF( NOT OSX_DEPENDENCY_ROOT )
@@ -23,10 +23,9 @@ IF(PY3_INCLUDE)
 SET(PYTHON_LIBRARIES ${PY3_LIB})
 SET(PYTHON_INCLUDE_DIRS ${PY3_INCLUDE})
 SET(PYTHONLIBS_FOUND 1)
-MESSAGE(STATUS "Python3 found !!!!")
+MESSAGE(STATUS "Python3 found")
 ELSE()
-    #SET(PYTHON_INCLUDE_DIRS "/usr/local/Cellar/python/3.7.5/Frameworks/Python.framework/Versions/3.7/include/python3.7m")
-    message(STATUS "Python3 include not found !!!!!")
+    message(STATUS "Python3 include not found !")
 ENDIF()
 
 #Find pyside2-uic so that .ui files rebuild pyside deps
@@ -76,7 +75,7 @@ else()
     #INSTALL(FILES ${OSX_SEARCH_PATH}/lib/libomp.dylib DESTINATION lib)
     #INSTALL(FILES ${OSX_SEARCH_PATH}/lib/libiomp5.dylib DESTINATION lib)
     set(OPENMP_FOUND 1)
-    MESSAGE(STATUS "OpenMP found !!!!")
+    MESSAGE(STATUS "OpenMP found")
 endif()
 
 set(GLEW_SEARCH_PATH          "${OSX_SEARCH_PATH}")

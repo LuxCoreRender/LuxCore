@@ -126,6 +126,7 @@ public:
 protected:
 	static const luxrays::Properties &GetDefaultProps();
 
+	virtual void EndSceneEditLockLess(const EditActionList &editActions);
 	virtual void UpdateFilmLockLess();
 	virtual void UpdateCounters();
 

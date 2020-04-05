@@ -16,7 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include <vector>
+#include "luxrays/core/color/spectrumgroup.h"
 
 #include "slg/bsdf/bsdf.h"
 #include "slg/film/film.h"
@@ -68,7 +68,7 @@ public:
 	// pixelX and pixelY have to be initialized only if !useFilmSplat
 	u_int pixelX, pixelY;
 	float filmX, filmY;
-	std::vector<luxrays::Spectrum> radiance;
+	luxrays::SpectrumGroup radiance;
 
 	float alpha, depth;
 	luxrays::Point position;

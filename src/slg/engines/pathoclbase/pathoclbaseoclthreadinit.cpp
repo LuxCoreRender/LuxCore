@@ -217,10 +217,13 @@ void PathOCLBaseOCLRenderThread::InitPhotonGI() {
 	if (cscene->pgicRadiancePhotons.size() > 0) {
 		intersectionDevice->AllocBufferRO(&pgicRadiancePhotonsBuff, &cscene->pgicRadiancePhotons[0],
 			cscene->pgicRadiancePhotons.size() * sizeof(slg::ocl::RadiancePhoton), "PhotonGI indirect cache all entries");
+		intersectionDevice->AllocBufferRO(&pgicRadiancePhotonsValuesBuff, &cscene->pgicRadiancePhotonsValues[0],
+			cscene->pgicRadiancePhotonsValues.size() * sizeof(slg::ocl::Spectrum), "PhotonGI indirect cache all entry values");
 		intersectionDevice->AllocBufferRO(&pgicRadiancePhotonsBVHNodesBuff, &cscene->pgicRadiancePhotonsBVHArrayNode[0],
 			cscene->pgicRadiancePhotonsBVHArrayNode.size() * sizeof(slg::ocl::IndexBVHArrayNode), "PhotonGI indirect cache BVH nodes");
 	} else {
 		intersectionDevice->FreeBuffer(&pgicRadiancePhotonsBuff);
+		intersectionDevice->FreeBuffer(&pgicRadiancePhotonsValuesBuff);
 		intersectionDevice->FreeBuffer(&pgicRadiancePhotonsBVHNodesBuff);
 	}
 

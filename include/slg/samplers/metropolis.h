@@ -40,13 +40,16 @@ public:
 	MetropolisSamplerSharedData();
 	virtual ~MetropolisSamplerSharedData() { }
 
+	virtual void Reset();
+
 	static SamplerSharedData *FromProperties(const luxrays::Properties &cfg,
 			luxrays::RandomGenerator *rndGen, Film *film);
 
 	// I'm storing totalLuminance and sampleCount on shared variables
 	// in order to have far more accurate estimation in the image mean intensity
 	// computation
-	float totalLuminance, sampleCount;
+	float totalLuminance;
+	u_int sampleCount, noBlackSampleCount;
 };
 
 //------------------------------------------------------------------------------

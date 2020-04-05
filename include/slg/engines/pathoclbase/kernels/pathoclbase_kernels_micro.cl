@@ -314,25 +314,28 @@ __kernel void AdvancePaths_MK_HIT_OBJECT(
 		switch (taskConfig->pathTracer.pgic.debugType) {
 			case PGIC_DEBUG_SHOWINDIRECT: {
 				if (isPhotonGIEnabled) {
-					const float3 radiance = PhotonGICache_GetIndirectRadiance(bsdf,
-							pgicRadiancePhotons, pgicRadiancePhotonsBVHNodes,
+					__global const Spectrum* restrict radiance = PhotonGICache_GetIndirectRadiance(bsdf,
+							pgicRadiancePhotons, pgicLightGroupCounts, pgicRadiancePhotonsValues, pgicRadiancePhotonsBVHNodes,
 							taskConfig->pathTracer.pgic.indirectLookUpRadius * taskConfig->pathTracer.pgic.indirectLookUpRadius,
 							taskConfig->pathTracer.pgic.indirectLookUpNormalCosAngle);
-					VADD3F(sampleResult->radiancePerPixelNormalized[0].c, radiance);
+					if (radiance) {
+						for (uint i = 0; i < pgicLightGroupCounts; ++i)
+							VADD3F(sampleResult->radiancePerPixelNormalized[i].c, VLOAD3F(radiance[i].c));
+					}
 				}
 				taskState->state = MK_SPLAT_SAMPLE;
 				return;
 			}
 			case PGIC_DEBUG_SHOWCAUSTIC: {
 				if (isPhotonGIEnabled) {
-					const float3 radiance = PhotonGICache_ConnectWithCausticPaths(bsdf,
+					PhotonGICache_ConnectWithCausticPaths(bsdf,
 							pgicCausticPhotons, pgicCausticPhotonsBVHNodes,
 							taskConfig->pathTracer.pgic.causticPhotonTracedCount,
 							taskConfig->pathTracer.pgic.causticLookUpRadius * taskConfig->pathTracer.pgic.causticLookUpRadius,
-							taskConfig->pathTracer.pgic.causticLookUpNormalCosAngle
+							taskConfig->pathTracer.pgic.causticLookUpNormalCosAngle,
+							WHITE,
+							&sampleResult->radiancePerPixelNormalized[0]
 							MATERIALS_PARAM);
-
-					VADD3F(sampleResult->radiancePerPixelNormalized[0].c, radiance);
 				}
 				taskState->state = MK_SPLAT_SAMPLE;
 				return;
@@ -370,17 +373,17 @@ __kernel void AdvancePaths_MK_HIT_OBJECT(
 				if (isPhotonGIEnabled) {
 					if (taskConfig->pathTracer.pgic.causticEnabled &&
 							(!taskConfig->pathTracer.hybridBackForward.enabled || (pathInfo->depth.depth != 0))) {
-						const float3 causticRadiance = PhotonGICache_ConnectWithCausticPaths(bsdf,
+						const bool isEmpty = PhotonGICache_ConnectWithCausticPaths(bsdf,
 								pgicCausticPhotons, pgicCausticPhotonsBVHNodes,
 								taskConfig->pathTracer.pgic.causticPhotonTracedCount,
 								taskConfig->pathTracer.pgic.causticLookUpRadius * taskConfig->pathTracer.pgic.causticLookUpRadius,
-								taskConfig->pathTracer.pgic.causticLookUpNormalCosAngle
+								taskConfig->pathTracer.pgic.causticLookUpNormalCosAngle,
+								VLOAD3F(taskState->throughput.c),
+								&sampleResult->radiancePerPixelNormalized[0]
 								MATERIALS_PARAM);
 
-						if (!Spectrum_IsBlack(causticRadiance)) {
-							VADD3F(sampleResult->radiancePerPixelNormalized[0].c, VLOAD3F(taskState->throughput.c) * causticRadiance);			
+						if (!isEmpty)
 							taskState->photonGICausticCacheUsed = true;
-						}
 					}
 
 					if (taskConfig->pathTracer.pgic.indirectEnabled) {
@@ -397,12 +400,15 @@ __kernel void AdvancePaths_MK_HIT_OBJECT(
 									taskConfig->pathTracer.pgic.glossinessUsageThreshold,
 									taskConfig->pathTracer.pgic.indirectUsageThresholdScale,
 									taskConfig->pathTracer.pgic.indirectLookUpRadius))) {
-							const float3 radiance = PhotonGICache_GetIndirectRadiance(bsdf,
-								pgicRadiancePhotons, pgicRadiancePhotonsBVHNodes,
+							__global const Spectrum* restrict radiance = PhotonGICache_GetIndirectRadiance(bsdf,
+								pgicRadiancePhotons, pgicLightGroupCounts, pgicRadiancePhotonsValues, pgicRadiancePhotonsBVHNodes,
 								taskConfig->pathTracer.pgic.indirectLookUpRadius * taskConfig->pathTracer.pgic.indirectLookUpRadius,
 								taskConfig->pathTracer.pgic.indirectLookUpNormalCosAngle);
 
-							VADD3F(sampleResult->radiancePerPixelNormalized[0].c, VLOAD3F(taskState->throughput.c) * radiance);
+							if (radiance) {
+								for (uint i = 0; i < pgicLightGroupCounts; ++i)
+									VADD3F(sampleResult->radiancePerPixelNormalized[i].c, VLOAD3F(taskState->throughput.c) * VLOAD3F(radiance[i].c));
+							}
 
 							// I can terminate the path, all done
 							taskState->state = MK_SPLAT_SAMPLE;

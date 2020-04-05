@@ -222,14 +222,19 @@ IF(APPLE)
   SET(CMAKE_CXX_EXTENSIONS OFF)
   SET(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-  SET(OSX_FLAGS_RELEASE "-ftree-vectorize -msse -msse2 -msse3 -mssse3 -DNDEBUG -O3") # additional RELEASE flags
+  SET(OSX_FLAGS_RELEASE "-ftree-vectorize -msse -msse2 -msse3 -mssse3") # additional RELEASE flags
 
   SET(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} ${OSX_FLAGS_RELEASE}")
   SET(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${OSX_FLAGS_RELEASE}")
-
-  SET(CMAKE_EXE_LINKER_FLAGS "-Wl,-unexported_symbols_list -Wl,\"${CMAKE_SOURCE_DIR}/cmake/exportmaps/unexported_symbols.map\"")
-  SET(CMAKE_MODULE_LINKER_FLAGS "-Wl,-unexported_symbols_list -Wl,\"${CMAKE_SOURCE_DIR}/cmake/exportmaps/unexported_symbols.map\"")
-
+  
+  IF(LUXRAYS_ENABLE_CUDA)
+    SET(CMAKE_EXE_LINKER_FLAGS "-F/Library/Frameworks -Xlinker -framework -Xlinker CUDA -Wl,-unexported_symbols_list -Wl,\"${CMAKE_SOURCE_DIR}/cmake/exportmaps/unexported_symbols.map\"")
+    SET(CMAKE_MODULE_LINKER_FLAGS "-F/Library/Frameworks -Xlinker -framework -Xlinker CUDA -Wl,-unexported_symbols_list -Wl,\"${CMAKE_SOURCE_DIR}/cmake/exportmaps/unexported_symbols.map\"")
+  ELSE()
+    SET(CMAKE_EXE_LINKER_FLAGS "-Wl,-unexported_symbols_list -Wl,\"${CMAKE_SOURCE_DIR}/cmake/exportmaps/unexported_symbols.map\"")
+    SET(CMAKE_MODULE_LINKER_FLAGS "-Wl,-unexported_symbols_list -Wl,\"${CMAKE_SOURCE_DIR}/cmake/exportmaps/unexported_symbols.map\"")
+  ENDIF()
+  
   SET(CMAKE_XCODE_ATTRIBUTE_DEPLOYMENT_POSTPROCESSING YES) # strip symbols in whole project, disabled in pylux target
   SET(CMAKE_XCODE_ATTRIBUTE_DEAD_CODE_STRIPPING YES)
   SET(CMAKE_XCODE_ATTRIBUTE_LLVM_LTO YES)
@@ -237,11 +242,13 @@ IF(APPLE)
   MESSAGE(STATUS "")
   MESSAGE(STATUS "################ GENERATED XCODE PROJECT INFORMATION ################")
   MESSAGE(STATUS "")
-  MESSAGE(STATUS "DETECTED SYSTEM-VERSION: " ${OSX_SYSTEM})
+  MESSAGE(STATUS "DETECTED SYSTEM-VERSION: " ${MAC_SYS})
+  MESSAGE(STATUS "DETECTED MacOS-VERSION: " ${OSX_SYSTEM})
   MESSAGE(STATUS "OSX_DEPLOYMENT_TARGET : " ${CMAKE_OSX_DEPLOYMENT_TARGET})
   MESSAGE(STATUS "CMAKE_XCODE_ATTRIBUTE_ARCHS: " ${CMAKE_XCODE_ATTRIBUTE_ARCHS})
   MESSAGE(STATUS "OSX SDK SETTING : " ${CMAKE_XCODE_ATTRIBUTE_SDKROOT}${OSX_SYSTEM})
   MESSAGE(STATUS "XCODE_VERSION : " ${XCODE_VERS_BUILDNR})
+  MESSAGE(STATUS "")
 
   IF(${CMAKE_GENERATOR} MATCHES "Xcode")
 		MESSAGE(STATUS "BUILD_TYPE : Please set in Xcode ALL_BUILD target to aimed type")

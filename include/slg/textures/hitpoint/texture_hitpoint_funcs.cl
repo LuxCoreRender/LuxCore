@@ -334,3 +334,53 @@ OPENCL_FORCE_NOT_INLINE void HitPointTriangleAOVTexture_EvalOp(
 			break;
 	}
 }
+
+//------------------------------------------------------------------------------
+// Shading Normal texture
+//------------------------------------------------------------------------------
+
+OPENCL_FORCE_INLINE float ShadingNormalTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint) {
+	// This method doesn't really make sense for a vector - just return the first element
+	return hitPoint->shadeN.x;
+}
+
+OPENCL_FORCE_INLINE float3 ShadingNormalTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint) {
+	return (float3)(hitPoint->shadeN.x, hitPoint->shadeN.y, hitPoint->shadeN.z);
+}
+
+OPENCL_FORCE_NOT_INLINE void ShadingNormalTexture_EvalOp(
+		__global const Texture* restrict texture,
+		const TextureEvalOpType evalType,
+		__global float *evalStack,
+		uint *evalStackOffset,
+		__global const HitPoint *hitPoint,
+		const float sampleDistance
+		TEXTURES_PARAM_DECL) {
+	switch (evalType) {
+		case EVAL_FLOAT: {
+			const float eval = ShadingNormalTexture_ConstEvaluateFloat(hitPoint);
+			EvalStack_PushFloat(eval);
+			break;
+		}
+		case EVAL_SPECTRUM: {
+			const float3 eval = ShadingNormalTexture_ConstEvaluateSpectrum(hitPoint);
+			EvalStack_PushFloat3(eval);
+			break;
+		}
+		case EVAL_BUMP_GENERIC_OFFSET_U:
+			Texture_EvalOpGenericBumpOffsetU(evalStack, evalStackOffset,
+					hitPoint, sampleDistance);
+			break;
+		case EVAL_BUMP_GENERIC_OFFSET_V:
+			Texture_EvalOpGenericBumpOffsetV(evalStack, evalStackOffset,
+					hitPoint, sampleDistance);
+			break;
+		case EVAL_BUMP:
+			Texture_EvalOpGenericBump(evalStack, evalStackOffset,
+					hitPoint, sampleDistance);
+			break;
+		default:
+			// Something wrong here
+			break;
+	}
+}

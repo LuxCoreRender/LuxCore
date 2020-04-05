@@ -41,20 +41,20 @@ public:
 	SobolSamplerSharedData(const u_int seed, Film *engineFlm);
 	virtual ~SobolSamplerSharedData() { }
 
-	static SamplerSharedData *FromProperties(const luxrays::Properties &cfg,
-			luxrays::RandomGenerator *rndGen, Film *film);
+	virtual void Reset();
 
 	void GetNewPixelIndex(u_int &index, u_int &seed);
 
 	u_int GetNewPixelPass(const u_int pixelIndex = 0);
+	
+	static SamplerSharedData *FromProperties(const luxrays::Properties &cfg,
+			luxrays::RandomGenerator *rndGen, Film *film);
 
 	Film *engineFilm;
 	u_int seedBase;
 	u_int filmRegionPixelCount;
 
 private:
-	void Init(const u_int seed, Film *engineFlm);
-
 	luxrays::SpinLock spinLock;
 	u_int pixelIndex;
 

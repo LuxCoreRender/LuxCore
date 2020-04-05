@@ -38,7 +38,7 @@ class SpectrumWavelengths;
 class SWCSpectrum;
 
 // Color Declarations
-class  Color {
+class Color {
 public:
 #define COLOR_SAMPLES 3
 
@@ -269,7 +269,7 @@ private:
 };
 
 // RGBColor Declarations
-class  RGBColor : public Color {
+class RGBColor : public Color {
 public:
 	// RGBColor Public Methods
 	RGBColor() { c[0] = 0.f; c[1] = 0.f; c[2] = 0.f; }
@@ -307,7 +307,7 @@ public:
 };
 
 // RGBAColor Declarations
-class  RGBAColor : public Color {
+class RGBAColor : public Color {
 public:
 	// RGBAColor Public Methods
 	RGBAColor() { c[0] = 0.f; c[1] = 0.f; c[2] = 0.f; alpha = 0.f; }
@@ -330,7 +330,7 @@ public:
 };
 
 // XYZColor Declarations
-class  XYZColor : public Color {
+class XYZColor : public Color {
     // Dade - serialization here is required by network rendering
     friend class boost::serialization::access;
 

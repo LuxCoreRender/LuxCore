@@ -101,7 +101,7 @@ void RTPathCPURenderEngine::BeginSceneEditLockLess() {
 
 void RTPathCPURenderEngine::EndSceneEditLockLess(const EditActionList &editActions) {
 	film->Reset();
-	((RTPathCPUSamplerSharedData *)samplerSharedData)->Reset(film);
+	samplerSharedData->Reset();
 
 	// Check if the threads were already suspended for pause
 	if (!pauseMode)

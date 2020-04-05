@@ -477,6 +477,8 @@ void PathOCLBaseOCLRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePa
 
 	// PhotonGI cache
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), pgicRadiancePhotonsBuff);
+	advancePathsKernel->setArg(argIndex++, cscene->pgicLightGroupCounts);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), pgicRadiancePhotonsValuesBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), pgicRadiancePhotonsBVHNodesBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), pgicCausticPhotonsBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), pgicCausticPhotonsBVHNodesBuff);

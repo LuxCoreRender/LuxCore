@@ -184,7 +184,7 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 							if ((pathInfo.depth.depth > 0) && pathInfo.IsSpecularPath() && !causticDone) {
 								// It is a caustic photon
 								newCausticPhotons.push_back(Photon(bsdf.hitPoint.p, nextEventRay.d,
-										lightPathFlux, landingSurfaceNormal, bsdf.IsVolume()));
+										light->GetID(), lightPathFlux, landingSurfaceNormal, bsdf.IsVolume()));
 
 								usefulPath = true;
 							}
@@ -194,7 +194,8 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 
 								// Add outgoingRadiance to each near visible entry 
 								for (auto const &vpIndex : allNearEntryIndices)
-									newIndirectPhotons.push_back(RadiancePhotonEntry(vpIndex, lightPathFlux));
+									newIndirectPhotons.push_back(RadiancePhotonEntry(vpIndex,
+											light->GetID(), lightPathFlux));
 
 								usefulPath = true;
 							}

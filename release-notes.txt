@@ -18,12 +18,15 @@
 * Added the support for RandomTriangleAOV shape
 * Accelerated duplicate vertex detection in pointiness shape (from 6.7 seconds to 0.016 seconds on a 100k vertex mesh)
 * LuxRays API reworked to support generic hardware devices (now OpenCL, potentially CUDA, Vulkan, Metal, etc.)
+* Added the support for light groups to PhotonGI
 
 ### Fixed Bugs
 
 * Fixed a rendering difference when using/not using geometry negative scale transformations (issue #309)
 * Fixed an out of bound access in BAKECPU
 * Fixed a problem when using path.forceblackbackground.enable and env. lights
+* Fixed a problem with scenes with very hard light paths and Metropolis sampler (issue #312)
+* Sampler shared data are now reseted at the end of a scene edit (issue #312)
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.

@@ -51,6 +51,8 @@ public:
 	SamplerSharedData() { }
 	virtual ~SamplerSharedData() { }
 
+	virtual void Reset() = 0;
+
 	static SamplerSharedData *FromProperties(const luxrays::Properties &cfg,
 			luxrays::RandomGenerator *rndGen, Film *film);
 };

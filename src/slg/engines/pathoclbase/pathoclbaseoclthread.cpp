@@ -92,6 +92,7 @@ PathOCLBaseOCLRenderThread::PathOCLBaseOCLRenderThread(const u_int index,
 	lightIndexByTriIndexBuff = nullptr;
 	imageMapDescsBuff = nullptr;
 	pgicRadiancePhotonsBuff = nullptr;
+	pgicRadiancePhotonsValuesBuff = nullptr;
 	pgicRadiancePhotonsBVHNodesBuff = nullptr;
 	pgicCausticPhotonsBuff = nullptr;
 	pgicCausticPhotonsBVHNodesBuff = nullptr;
@@ -226,6 +227,7 @@ void PathOCLBaseOCLRenderThread::Stop() {
 		intersectionDevice->FreeBuffer(&imageMapsBuff[i]);
 	imageMapsBuff.resize(0);
 	intersectionDevice->FreeBuffer(&pgicRadiancePhotonsBuff);
+	intersectionDevice->FreeBuffer(&pgicRadiancePhotonsValuesBuff);
 	intersectionDevice->FreeBuffer(&pgicRadiancePhotonsBVHNodesBuff);
 	intersectionDevice->FreeBuffer(&pgicCausticPhotonsBuff);
 	intersectionDevice->FreeBuffer(&pgicCausticPhotonsBVHNodesBuff);

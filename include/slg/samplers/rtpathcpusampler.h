@@ -47,11 +47,14 @@ public:
 	RTPathCPUSamplerSharedData(Film *flm);
 	virtual ~RTPathCPUSamplerSharedData() { }
 
+	virtual void Reset();
+
 	void Reset(Film *flm);
 
 	static SamplerSharedData *FromProperties(const luxrays::Properties &cfg,
 			luxrays::RandomGenerator *rndGen, Film *film);
 
+	Film *engineFilm;
 	boost::atomic<u_int> step;
 	u_int filmSubRegion[4], filmSubRegionWidth, filmSubRegionHeight;
 	std::vector<PixelCoord> pixelRenderSequence;

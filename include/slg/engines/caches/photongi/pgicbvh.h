@@ -41,12 +41,12 @@ public:
 
 	float GetEntryNormalCosAngle() const { return entryNormalCosAngle; }
 	
-	luxrays::Spectrum ConnectAllNearEntries(const BSDF &bsdf) const;
+	luxrays::SpectrumGroup ConnectAllNearEntries(const BSDF &bsdf) const;
 
 	friend class boost::serialization::access;
 
 private:
-	luxrays::Spectrum ConnectCacheEntry(const Photon &photon, const BSDF &bsdf) const;
+	luxrays::SpectrumGroup ConnectCacheEntry(const Photon &photon, const BSDF &bsdf) const;
 
 	// Used by serialization
 	PGICPhotonBvh() { }
