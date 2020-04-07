@@ -15,7 +15,12 @@ local:
 	*boost*;
 	*TIFF*;
 	*OpenImageIO*;
+	*OpenImageDenoise*;
 	*jpeg*;
 	*jinit*;
+	*Imath*;
+	*Iex*;
+	*IlmThread*;
+	*Imf*;
 };
 

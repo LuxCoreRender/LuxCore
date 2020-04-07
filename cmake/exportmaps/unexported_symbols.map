@@ -1,10 +1,14 @@
 ## The symbols will be treated as if they were marked as __private_extern__
 ## (aka visibility=hidden) and will not be global in the output file
 ## essentially atm for boost::exceptions atm., can be enlarged later
+*png*
 *boost*
-*tiff*
+*TIFF*
 *OpenImageIO*
 *OpenImageDenoise*
-*png*
 *jpeg*
 *jinit*
+*Imath*
+*Iex*
+*IlmThread*
+*Imf*
