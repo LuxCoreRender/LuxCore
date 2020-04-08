@@ -88,9 +88,6 @@ public:
 	virtual bool IsLightSource() const {
 		return (emittedTex != NULL);
 	}
-	virtual bool HasBumpTex() const { 
-		return (bumpTex != NULL);
-	}
 	
 	void SetPhotonGIEnabled(const bool v) { isPhotonGIEnabled = v; }
 	virtual bool IsPhotonGIEnabled() const { return isPhotonGIEnabled; }
