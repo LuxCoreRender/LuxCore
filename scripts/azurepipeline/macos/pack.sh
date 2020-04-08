@@ -26,10 +26,10 @@ install_name_tool -id @executable_path/../Resources/libs/libomp.dylib LuxCore.ap
 #libembree
 
 cp -f $DEPS_SOURCE/lib/libembree3.3.dylib LuxCore.app/Contents/Resources/libs/libembree3.3.dylib
-chmod +w LuxCore.app/Contents/Resources/libs/libembree3.3.dylib
-install_name_tool -id @executable_path/../Resources/libs/libembree3.3.dylib LuxCore.app/Contents/Resources/libs/libembree3.3.dylib
-install_name_tool -change @rpath/libtbb.dylib @executable_path/../Resources/libs/libtbb.dylib LuxCore.app/Contents/Resources/libs/libembree3.3.dylib
-install_name_tool -change @rpath/libtbbmalloc.dylib @executable_path/../Resources/libs/libtbbmalloc.dylib LuxCore.app/Contents/Resources/libs/libembree3.3.dylib
+#chmod +w LuxCore.app/Contents/Resources/libs/libembree3.3.dylib
+#install_name_tool -id @executable_path/../Resources/libs/libembree3.3.dylib LuxCore.app/Contents/Resources/libs/libembree3.3.dylib
+#install_name_tool -change @rpath/libtbb.dylib @executable_path/../Resources/libs/libtbb.dylib LuxCore.app/Contents/Resources/libs/libembree3.3.dylib
+#install_name_tool -change @rpath/libtbbmalloc.dylib @executable_path/../Resources/libs/libtbbmalloc.dylib LuxCore.app/Contents/Resources/libs/libembree3.3.dylib
 
 #libOpenImageDenoise
 
@@ -110,10 +110,10 @@ install_name_tool -id @loader_path/libomp.dylib ./libomp.dylib
 #libembree 
 
 cp -f $DEPS_SOURCE/lib/libembree3.3.dylib ./libembree3.3.dylib
-chmod +w ./libembree3.3.dylib
-install_name_tool -id @loader_path/libembree3.3.dylib ./libembree3.3.dylib
-install_name_tool -change @rpath/libtbb.dylib @loader_path/libtbb.dylib ./libembree3.3.dylib
-install_name_tool -change @rpath/libtbbmalloc.dylib @loader_path/libtbbmalloc.dylib ./libembree3.3.dylib
+#chmod +w ./libembree3.3.dylib
+#install_name_tool -id @loader_path/libembree3.3.dylib ./libembree3.3.dylib
+#install_name_tool -change @rpath/libtbb.dylib @loader_path/libtbb.dylib ./libembree3.3.dylib
+#install_name_tool -change @rpath/libtbbmalloc.dylib @loader_path/libtbbmalloc.dylib ./libembree3.3.dylib
 
 #libtbb
 
