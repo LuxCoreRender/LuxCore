@@ -65,30 +65,35 @@ static void GenerateEyeRay(const Camera *camera, Ray &eyeRay,
 	camera->GenerateRay(time, sampleResult.filmX, sampleResult.filmY,
 			&eyeRay, &volInfo, u0, u1);
 	
-	// Evaluate the camera ray + imagePlaneDeltaX
-
-	Ray eyeRayDeltaX;
-	PathVolumeInfo volInfoDeltaX;
-	camera->GenerateRay(time, sampleResult.filmX + imagePlaneDeltaX, sampleResult.filmY,
-			&eyeRayDeltaX, &volInfoDeltaX, u0, u1);
-	
-	// Evaluate the camera ray + imagePlaneDeltaY
-
-	Ray eyeRayDeltaY;
-	PathVolumeInfo volInfoDeltaY;
-	camera->GenerateRay(time, sampleResult.filmX, sampleResult.filmY + imagePlaneDeltaY,
-			&eyeRayDeltaY, &volInfoDeltaY, u0, u1);
-
 	// I'm lacking the support for true ray differentials in camera object
 	// interface so I resort to this simple method 
-	
-	const float t0 = 0.f;
-	const float t1 = 1.f;
 
-	// Evaluate dpdx
-	dpdx = fabs(Distance(eyeRay(t1), eyeRayDeltaX(t1)) - Distance(eyeRay(t0), eyeRayDeltaX(t0)));
-	// Evaluate dpdy
-	dpdy = fabs(Distance(eyeRay(t1), eyeRayDeltaY(t1)) - Distance(eyeRay(t0), eyeRayDeltaY(t0)));
+	if (camera->GetType() == Camera::ORTHOGRAPHIC) {
+		dpdx = 1.f / imagePlaneDeltaX;
+		dpdy = 1.f / imagePlaneDeltaY;
+	} else {
+		// Evaluate the camera ray + imagePlaneDeltaX
+
+		Ray eyeRayDeltaX;
+		PathVolumeInfo volInfoDeltaX;
+		camera->GenerateRay(time, sampleResult.filmX + imagePlaneDeltaX, sampleResult.filmY,
+				&eyeRayDeltaX, &volInfoDeltaX, u0, u1);
+
+		// Evaluate the camera ray + imagePlaneDeltaY
+
+		Ray eyeRayDeltaY;
+		PathVolumeInfo volInfoDeltaY;
+		camera->GenerateRay(time, sampleResult.filmX, sampleResult.filmY + imagePlaneDeltaY,
+				&eyeRayDeltaY, &volInfoDeltaY, u0, u1);
+
+		const float t0 = 0.f;
+		const float t1 = 1.f;
+
+		// Evaluate dpdx
+		dpdx = fabs(Distance(eyeRay(t1), eyeRayDeltaX(t1)) - Distance(eyeRay(t0), eyeRayDeltaX(t0)));
+		// Evaluate dpdy
+		dpdy = fabs(Distance(eyeRay(t1), eyeRayDeltaY(t1)) - Distance(eyeRay(t0), eyeRayDeltaY(t0)));
+	}
 }
 
 // To work around boost::thread() 10 arguments limit
@@ -254,7 +259,7 @@ float Film2SceneRadius(const Scene *scene,
 		const float imagePlaneRadius, const float defaultRadius,
 		const u_int maxPathDepth, const float timeStart, const float timeEnd,
 		const Film2SceneRadiusValidator *validator) {
-	const size_t renderThreadCount = boost::thread::hardware_concurrency();
+	const size_t renderThreadCount = 1;//boost::thread::hardware_concurrency();
 
 	// Render 16 passes at 256 * 256 resolution
 	const u_int workSize = 16 * 256 * 256 / renderThreadCount;

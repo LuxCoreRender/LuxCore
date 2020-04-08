@@ -1,16 +1,22 @@
+#scene.camera.type = orthographic
+#scene.camera.lookat.orig = 0.6 -1.7 2.3
+#scene.camera.lookat.target = 0.0 0.0 1.3
+#scene.camera.screenwindow = -10 10 -6.0 6.0
+##
+scene.camera.type = "perspective"
+scene.camera.lookat.orig = 0.655805886 -8.07321262 5.66646004
+scene.camera.lookat.target = 0.408145428 -7.35068178 5.02100372
+scene.camera.up = -0.20928663 0.610583842 0.763797402
+scene.camera.screenwindow = -1 1 -0.600000024 0.600000024
+##
 scene.camera.cliphither = 0.00100000005
 scene.camera.clipyon = 1.00000002e+30
 scene.camera.shutteropen = 0
 scene.camera.shutterclose = 1
 scene.camera.autovolume.enable = 1
-scene.camera.lookat.orig = 0.655805886 -8.07321262 5.66646004
-scene.camera.lookat.target = 0.408145428 -7.35068178 5.02100372
-scene.camera.up = -0.20928663 0.610583842 0.763797402
-scene.camera.screenwindow = -1 1 -0.600000024 0.600000024
 scene.camera.lensradius = 0
 scene.camera.focaldistance = 10
 scene.camera.autofocus.enable = 0
-scene.camera.type = "perspective"
 scene.camera.oculusrift.barrelpostpro.enable = 0
 scene.camera.fieldofview = 49.1343422
 ##
@@ -83,6 +89,9 @@ scene.materials.Surface_Material_140403213508616.visibility.indirect.specular.en
 scene.materials.Surface_Material_140403213508616.shadowcatcher.enable = 0
 scene.materials.Surface_Material_140403213508616.shadowcatcher.onlyinfinitelights = 0
 ##
+scene.materials.mat_mirror.type = "mirror"
+scene.materials.mat_mirror.ke = 0.9 0.9 0.9
+##
 #scene.lights.il.type = constantinfinite
 #scene.lights.il.color = 1.0 1.0 1.0
 #scene.lights.il.gain = 0.25 0.25 0.25
@@ -100,3 +109,6 @@ scene.objects.Mesh_dice_highpoly_140402982433800000.material = "Surface_Material
 scene.objects.Mesh_dice_highpoly_140402982433800000.ply = "mesh-00002.ply"
 scene.objects.Mesh_dice_highpoly_140402982433800000.camerainvisible = 0
 scene.objects.Mesh_dice_highpoly_140402982433800000.appliedtransformation = 1.94707184e-07 0 -1 0 0.984943807 -0.172874719 1.91775641e-07 0 -0.172874719 -0.984943807 -3.36599513e-08 0 0 0 0 1
+##
+#scene.objects.mesh_mirror.material = mat_mirror
+#scene.objects.mesh_mirror.ply = "plane.ply"
