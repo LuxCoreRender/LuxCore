@@ -19,6 +19,7 @@
 * Accelerated duplicate vertex detection in pointiness shape (from 6.7 seconds to 0.016 seconds on a 100k vertex mesh)
 * LuxRays API reworked to support generic hardware devices (now OpenCL, potentially CUDA, Vulkan, Metal, etc.)
 * Added the support for light groups to PhotonGI
+* New LuxCore API RenderConfig::HasCachedKernels() method to check if a (long) kernel compilation time is required 
 
 ### Fixed Bugs
 
