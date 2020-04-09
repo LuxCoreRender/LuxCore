@@ -38,6 +38,7 @@ namespace slg {
 // (base class for all types of OCL path tracers)
 //------------------------------------------------------------------------------
 
+class RenderConfig;
 class CompiledScene;
 
 class PathOCLBaseRenderEngine : public OCLRenderEngine {
@@ -47,6 +48,8 @@ public:
 
 	virtual bool HasDone() const;
 	virtual void WaitForDone() const;
+
+	static bool HasCachedKernels(const RenderConfig &renderConfig);
 
 	friend class PathOCLBaseOCLRenderThread;
 
@@ -73,6 +76,9 @@ protected:
 
 	virtual void BeginSceneEditLockLess();
 	virtual void EndSceneEditLockLess(const EditActionList &editActions);
+
+	void SetCachedKernels(const RenderConfig &renderConfig);
+	static std::string GetCachedKernelsHash(const RenderConfig &renderConfig);
 
 	boost::mutex setKernelArgsMutex;
 

@@ -1221,6 +1221,14 @@ public:
 	virtual void ExportGLTF(const std::string &fileName) const = 0;	
 
 	/*!
+	 * \brief Returns false if a (long) kernel compilation time is required at the
+	 * start of the rendering. True otherwise.
+	 *
+	 * \return if a (long) kernel compilation time is not required.
+	 */
+	virtual bool HasCachedKernels() const = 0;
+
+	/*!
 	 * \brief Returns a Properties container with all default values.
 	 *
 	 * \return the default Properties.

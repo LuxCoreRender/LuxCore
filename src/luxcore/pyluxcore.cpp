@@ -2015,6 +2015,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("GetProperties", &luxcore::detail::RenderConfigImpl::GetProperties, return_internal_reference<>())
 		.def("GetProperty", &luxcore::detail::RenderConfigImpl::GetProperty)
 		.def("GetScene", &RenderConfig_GetScene, return_internal_reference<>())
+		.def("HasCachedKernels", &luxcore::detail::RenderConfigImpl::HasCachedKernels)
 		.def("Parse", &luxcore::detail::RenderConfigImpl::Parse)
 		.def("Delete", &luxcore::detail::RenderConfigImpl::Delete)
 		.def("GetFilmSize", &RenderConfig_GetFilmSize)

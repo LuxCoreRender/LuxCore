@@ -351,6 +351,8 @@ void LuxCoreApp::StartRendering(RenderState *startState, Film *startFilm) {
 			Property("film.height")(filmHeight);
 	config->Parse(cfgProps);
 
+	LA_LOG("RenderConfig has cached kernels: " << (config->HasCachedKernels() ? "True" : "False"));
+
 	try {
 		session = RenderSession::Create(config, startState, startFilm);
 

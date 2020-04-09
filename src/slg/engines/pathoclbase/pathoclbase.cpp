@@ -42,6 +42,8 @@
 #include "slg/film/filters/filter.h"
 #include "slg/scene/scene.h"
 
+#include "luxcore/cfg.h"
+
 using namespace luxrays;
 using namespace slg;
 using namespace std;
@@ -166,6 +168,60 @@ void PathOCLBaseRenderEngine::InitFilm() {
 	film->Init();
 }
 
+string PathOCLBaseRenderEngine::GetCachedKernelsHash(const RenderConfig &renderConfig) {
+	const string renderEngineType = renderConfig.GetProperty("renderengine.type").Get<string>();
+
+	const float epsilonMin = renderConfig.GetProperty("scene.epsilon.min").Get<float>();
+	const float epsilonMax = renderConfig.GetProperty("scene.epsilon.max").Get<float>();
+	
+	const bool usePixelAtomics = renderConfig.GetProperty("pathocl.pixelatomics.enable").Get<bool>();
+	
+	const Properties &cfg = renderConfig.cfg;
+	const bool useCPUs = cfg.Get(GetDefaultProps().Get("opencl.cpu.use")).Get<bool>();
+	const bool useGPUs = cfg.Get(GetDefaultProps().Get("opencl.gpu.use")).Get<bool>();
+	const string oclDeviceConfig = cfg.Get(GetDefaultProps().Get("opencl.devices.select")).Get<string>();
+
+	stringstream ssParams;
+	ssParams.precision(6);
+	ssParams << scientific <<
+			renderEngineType << "##" <<
+			epsilonMin << "##" <<
+			epsilonMax << "##" <<
+			usePixelAtomics << "##" <<
+			useCPUs << "##" <<
+			useGPUs << "##" <<
+			oclDeviceConfig;
+
+	const string kernelSource = PathOCLBaseOCLRenderThread::GetKernelSources();
+
+	return oclKernelPersistentCache::HashString(ssParams.str()) + "-" + oclKernelPersistentCache::HashString(kernelSource);
+}
+
+void PathOCLBaseRenderEngine::SetCachedKernels(const RenderConfig &renderConfig) {
+	const string kernelHash = GetCachedKernelsHash(renderConfig);
+
+	const boost::filesystem::path dirPath = oclKernelPersistentCache::GetCacheDir("LUXCORE_" LUXCORE_VERSION_MAJOR "." LUXCORE_VERSION_MINOR);
+	const boost::filesystem::path filePath = dirPath / (kernelHash + ".ck");
+	const string fileName = filePath.generic_string();
+
+	if (!boost::filesystem::exists(filePath)) {
+		// Create an empty file
+		boost::filesystem::create_directories(dirPath);
+		BOOST_OFSTREAM file(fileName.c_str(), ios_base::out | ios_base::binary);
+
+		file.close();
+	}
+}
+
+bool PathOCLBaseRenderEngine::HasCachedKernels(const RenderConfig &renderConfig) {
+	const string kernelHash = GetCachedKernelsHash(renderConfig);
+
+	const boost::filesystem::path dirPath = oclKernelPersistentCache::GetCacheDir("LUXCORE_" LUXCORE_VERSION_MAJOR "." LUXCORE_VERSION_MINOR);
+	const boost::filesystem::path filePath = dirPath / (kernelHash + ".ck");
+
+	return boost::filesystem::exists(filePath);
+}
+
 void PathOCLBaseRenderEngine::StartLockLess() {
 	const Properties &cfg = renderConfig->cfg;
 
@@ -248,6 +304,9 @@ void PathOCLBaseRenderEngine::StartLockLess() {
 
 	for (size_t i = 0; i < renderOCLThreads.size(); ++i)
 		renderOCLThreads[i]->Start();
+
+	// I know kernels has been compiled at this point
+	SetCachedKernels(*renderConfig);
 
 	//--------------------------------------------------------------------------
 	// Start native render threads

@@ -266,6 +266,8 @@ public:
 
 	Scene &GetScene() const;
 
+	bool HasCachedKernels() const;
+
 	void Parse(const luxrays::Properties &props);
 
 	void Delete(const std::string &prefix);

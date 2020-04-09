@@ -85,9 +85,10 @@ public:
 	static std::string HashString(const std::string &ss);
 	static u_int HashBin(const char *s, const size_t size);
 
-private:
-	boost::filesystem::path GetCacheDir(const std::string &applicationName) const;
+	static std::string SanitizeFileName(const std::string &name);
+	static boost::filesystem::path GetCacheDir(const std::string &applicationName);
 
+private:
 	std::string appName;
 };
 

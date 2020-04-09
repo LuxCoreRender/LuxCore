@@ -62,70 +62,36 @@ void PathOCLBaseOCLRenderThread::CompileKernel(cl::Program *program, cl::Kernel 
 	}
 }
 
-void PathOCLBaseOCLRenderThread::InitKernels() {
-	//--------------------------------------------------------------------------
-	// Compile kernels
-	//--------------------------------------------------------------------------
-
-	cl::Context &oclContext = intersectionDevice->GetOpenCLContext();
-	cl::Device &oclDevice = intersectionDevice->GetOpenCLDevice();
-
+string PathOCLBaseOCLRenderThread::GetKernelParamters(
+		OpenCLIntersectionDevice *intersectionDevice,
+		const string renderEngineType,
+		const float epsilonMin, const float epsilonMax,
+		const bool usePixelAtomics) {
 	// Set #define symbols
 	stringstream ssParams;
 	ssParams.precision(6);
 	ssParams << scientific <<
 			" -D LUXRAYS_OPENCL_KERNEL" <<
 			" -D SLG_OPENCL_KERNEL" <<
-			" -D RENDER_ENGINE_" << RenderEngine::RenderEngineType2String(renderEngine->GetType()) <<
-			" -D PARAM_RAY_EPSILON_MIN=" << MachineEpsilon::GetMin() << "f"
-			" -D PARAM_RAY_EPSILON_MAX=" << MachineEpsilon::GetMax() << "f"
+			" -D RENDER_ENGINE_" << renderEngineType <<
+			" -D PARAM_RAY_EPSILON_MIN=" << epsilonMin << "f"
+			" -D PARAM_RAY_EPSILON_MAX=" << epsilonMax << "f"
 			;
 
-	// A safety check
-	switch (intersectionDevice->GetAccelerator()->GetType()) {
-		case ACCEL_BVH:
-			break;
-		case ACCEL_MBVH:
-			break;
-		case ACCEL_EMBREE:
-			throw runtime_error("EMBREE accelerator is not supported in PathOCLBaseRenderThread::InitKernels()");
-		default:
-			throw runtime_error("Unknown accelerator in PathOCLBaseRenderThread::InitKernels()");
-	}
-
-	if (renderEngine->usePixelAtomics)
+	if (usePixelAtomics)
 		ssParams << " -D PARAM_USE_PIXEL_ATOMICS";
 
-	//--------------------------------------------------------------------------
-
-	// Check the OpenCL vendor and use some specific compiler options
-
-#if defined(__APPLE__)
-	// Starting with 10.10 (darwin 14.x.x), opencl mix() function is fixed
-	char darwin_ver[10];
-	size_t len = sizeof(darwin_ver);
-	sysctlbyname("kern.osrelease", &darwin_ver, &len, NULL, 0);
-	if(darwin_ver[0] == '1' && darwin_ver[1] < '4') {
-		ssParams << " -D __APPLE_CL__";
-	}
-#else
 	if (intersectionDevice->GetDeviceDesc()->IsAMDPlatform())
 		ssParams << " -D LUXCORE_AMD_OPENCL";
 	else if (intersectionDevice->GetDeviceDesc()->IsNVIDIAPlatform())
 		ssParams << " -D LUXCORE_NVIDIA_OPENCL";
 	else
 		ssParams << " -D LUXCORE_GENERIC_OPENCL";
-#endif
 
-	//--------------------------------------------------------------------------
+	return ssParams.str();
+}
 
-	const double tStart = WallClockTime();
-
-	kernelsParameters = ssParams.str();
-	// This is a workaround for an Apple OpenCL by Arve Nygard. The double space
-	// causes clBuildProgram() to fail with CL_INVALID_BUILD_OPTIONS on OSX.
-	boost::replace_all(kernelsParameters, "  ", " ");
-
+string PathOCLBaseOCLRenderThread::GetKernelSources() {
 	// Compile sources
 	stringstream ssKernel;
 	ssKernel <<
@@ -276,7 +242,37 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			slg::ocl::KernelSource_pathoclbase_funcs <<
 			slg::ocl::KernelSource_pathoclbase_kernels_micro;
 
-	string kernelSource = ssKernel.str();
+	return ssKernel.str();
+}
+
+void PathOCLBaseOCLRenderThread::InitKernels() {
+	//--------------------------------------------------------------------------
+	// Compile kernels
+	//--------------------------------------------------------------------------
+	
+	const double tStart = WallClockTime();
+	
+	cl::Context &oclContext = intersectionDevice->GetOpenCLContext();
+	cl::Device &oclDevice = intersectionDevice->GetOpenCLDevice();
+
+	// A safety check
+	switch (intersectionDevice->GetAccelerator()->GetType()) {
+		case ACCEL_BVH:
+			break;
+		case ACCEL_MBVH:
+			break;
+		case ACCEL_EMBREE:
+			throw runtime_error("EMBREE accelerator is not supported in PathOCLBaseRenderThread::InitKernels()");
+		default:
+			throw runtime_error("Unknown accelerator in PathOCLBaseRenderThread::InitKernels()");
+	}
+
+	kernelsParameters = GetKernelParamters(intersectionDevice,
+			RenderEngine::RenderEngineType2String(renderEngine->GetType()),
+			MachineEpsilon::GetMin(), MachineEpsilon::GetMax(),
+			renderEngine->usePixelAtomics);
+
+	const string kernelSource = GetKernelSources();
 
 	// Build the kernel source/parameters hash
 	const string newKernelSrcHash = oclKernelPersistentCache::HashString(kernelsParameters) + "-" +

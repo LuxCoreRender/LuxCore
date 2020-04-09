@@ -167,6 +167,13 @@ protected:
 
 	void EnqueueAdvancePathsKernel(cl::CommandQueue &oclQueue);
 
+	static luxrays::oclKernelCache *AllocKernelCache(const std::string &type);
+	static std::string GetKernelParamters(luxrays::OpenCLIntersectionDevice *intersectionDevice,
+			const std::string renderEngineType,
+			const float epsilonMin, const float epsilonMax,
+			const bool usePixelAtomics);
+	static std::string GetKernelSources();
+
 	u_int threadIndex;
 	luxrays::OpenCLIntersectionDevice *intersectionDevice;
 	PathOCLBaseRenderEngine *renderEngine;

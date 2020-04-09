@@ -892,6 +892,10 @@ Scene &RenderConfigImpl::GetScene() const {
 	return *scene;
 }
 
+bool RenderConfigImpl::HasCachedKernels() const {
+	return renderConfig->HasCachedKernels();
+}
+
 void RenderConfigImpl::Parse(const Properties &props) {
 	renderConfig->Parse(props);
 }

@@ -240,7 +240,7 @@ cl::Program *oclKernelVolatileCache::Compile(cl::Context &context, cl::Device& d
 // oclKernelPersistentCache
 //------------------------------------------------------------------------------
 
-static string SanitizeFileName(const string &name) {
+string oclKernelPersistentCache::SanitizeFileName(const string &name) {
 	string sanitizedName(name.size(), '_');
 	
 	for (u_int i = 0; i < sanitizedName.size(); ++i) {
@@ -252,7 +252,7 @@ static string SanitizeFileName(const string &name) {
 	return sanitizedName;
 }
 
-boost::filesystem::path oclKernelPersistentCache::GetCacheDir(const string &applicationName) const {
+boost::filesystem::path oclKernelPersistentCache::GetCacheDir(const string &applicationName) {
 #if defined(__linux__)
 	// boost::filesystem::temp_directory_path() is usually mapped to /tmp and
 	// the content of the directory is often delete at each reboot
