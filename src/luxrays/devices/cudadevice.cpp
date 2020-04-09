@@ -171,6 +171,7 @@ void CUDADevice::CompileProgram(HardwareDeviceProgram **program,
         boost::regex paramsRE("/\\-D\\s+\\w+\\s*=\\s*[+-\\w\\d]+|\\-D\\s+\\w+/");
     #else
         boost::regex paramsRE("\\-D\\s+\\w+\\s*=\\s*[+-\\w\\d]+|\\-D\\s+\\w+");
+    #endif
     
 	boost::sregex_token_iterator paramsIter(cudaProgramParameters.begin(), cudaProgramParameters.end(), paramsRE);
 	boost::sregex_token_iterator paramsEnd;
