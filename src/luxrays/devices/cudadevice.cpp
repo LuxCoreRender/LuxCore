@@ -167,7 +167,11 @@ void CUDADevice::CompileProgram(HardwareDeviceProgram **program,
 	nvrtcProgram prog;
 	CHECK_NVRTC_ERROR(nvrtcCreateProgram(&prog, cudaProgramSource.c_str(), programName.c_str(), 0, nullptr, nullptr));
 
-	boost::regex paramsRE("\\-D\\s+\\w+\\s*=\\s*[+-\\w\\d]+|\\-D\\s+\\w+");
+    #if defined (__APPLE__)
+        boost::regex paramsRE("/\\-D\\s+\\w+\\s*=\\s*[+-\\w\\d]+|\\-D\\s+\\w+/");
+    #else
+        boost::regex paramsRE("\\-D\\s+\\w+\\s*=\\s*[+-\\w\\d]+|\\-D\\s+\\w+");
+    
 	boost::sregex_token_iterator paramsIter(cudaProgramParameters.begin(), cudaProgramParameters.end(), paramsRE);
 	boost::sregex_token_iterator paramsEnd;
 	vector<string> cudaOptsStr;
@@ -175,7 +179,7 @@ void CUDADevice::CompileProgram(HardwareDeviceProgram **program,
 
 	cudaOptsStr.push_back("--device-as-default-execution-space");
 	cudaOpts.push_back(cudaOptsStr.back().c_str());
-
+    
 	while (paramsIter != paramsEnd) {
 		cudaOptsStr.push_back(*paramsIter++);
 		cudaOpts.push_back(cudaOptsStr.back().c_str());
