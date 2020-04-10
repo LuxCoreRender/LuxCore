@@ -318,16 +318,16 @@ u_int CompiledScene::CompileMaterialOps(const u_int matIndex,
 					evalOpStackSize += 5;
 					break;
 				case slg::ocl::EVAL_EVALUATE_GLOSSYCOATING_SETUP:
-					// 6 x parameters and 12 x results
-					evalOpStackSize += 12;
+					// 6 x parameters and 21 x results
+					evalOpStackSize += 21;
 					break;
 				case slg::ocl::EVAL_EVALUATE:
 					evalOpStackSize += CompileMaterialOps(matIndex, slg::ocl::EVAL_EVALUATE_GLOSSYCOATING_SETUP, evalOps);
 					evalOpStackSize += CompileMaterialOps(mat->glossycoating.matBaseIndex, slg::ocl::EVAL_EVALUATE, evalOps);
 					break;
 				case slg::ocl::EVAL_SAMPLE_GLOSSYCOATING_SETUP:
-					// 6 x parameters and 26 x results
-					evalOpStackSize += 26;
+					// 6 x parameters and 35 x results
+					evalOpStackSize += 35;
 					break;
 				case slg::ocl::EVAL_SAMPLE_GLOSSYCOATING_CLOSE_SAMPLE_BASE:
 					// 26 x parameters and 8 x results

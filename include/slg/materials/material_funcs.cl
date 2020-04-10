@@ -23,28 +23,6 @@
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-// Material_GetEventTypes
-//------------------------------------------------------------------------------
-
-OPENCL_FORCE_INLINE BSDFEvent Material_GetEventTypes(const uint matIndex
-		MATERIALS_PARAM_DECL) {
-	__global const Material *material = &mats[matIndex];
-
-	return material->eventTypes;
-}
-
-//------------------------------------------------------------------------------
-// Material_IsDelta
-//------------------------------------------------------------------------------
-
-OPENCL_FORCE_INLINE bool Material_IsDelta(const uint matIndex
-		MATERIALS_PARAM_DECL) {
-	__global const Material *material = &mats[matIndex];
-
-	return material->isDelta;
-}
-
-//------------------------------------------------------------------------------
 // Material_Albedo
 //------------------------------------------------------------------------------
 
@@ -332,17 +310,6 @@ OPENCL_FORCE_NOT_INLINE float3 Material_GetEmittedRadiance(const uint matIndex,
 }
 
 //------------------------------------------------------------------------------
-// Material_GetEmittedCosThetaMax
-//------------------------------------------------------------------------------
-
-OPENCL_FORCE_INLINE float Material_GetEmittedCosThetaMax(const uint matIndex
-		MATERIALS_PARAM_DECL) {
-	__global const Material *material = &mats[matIndex];
-
-	return material->emittedCosThetaMax;
-}
-
-//------------------------------------------------------------------------------
 // Material_GetInteriorVolume
 //------------------------------------------------------------------------------
 
@@ -446,46 +413,4 @@ OPENCL_FORCE_NOT_INLINE uint Material_GetExteriorVolume(const uint matIndex,
 #endif
 
 	return result;
-}
-
-//------------------------------------------------------------------------------
-// Material_Bump
-//------------------------------------------------------------------------------
-
-OPENCL_FORCE_INLINE void Material_Bump(const uint matIndex, __global HitPoint *hitPoint
-	MATERIALS_PARAM_DECL) {
-	const uint bumpTexIndex = mats[matIndex].bumpTexIndex;
-	
-	if (bumpTexIndex != NULL_INDEX) {
-		const float3 shadeN = Texture_Bump(mats[matIndex].bumpTexIndex, hitPoint, mats[matIndex].bumpSampleDistance
-			TEXTURES_PARAM);
-
-		// Update dpdu and dpdv so they are still orthogonal to shadeN
-		float3 dpdu = VLOAD3F(&hitPoint->dpdu.x);
-		float3 dpdv = VLOAD3F(&hitPoint->dpdv.x);
-		dpdu = cross(shadeN, cross(dpdu, shadeN));
-		dpdv = cross(shadeN, cross(dpdv, shadeN));
-		// Update HitPoint structure
-		VSTORE3F(shadeN, &hitPoint->shadeN.x);
-		VSTORE3F(dpdu, &hitPoint->dpdu.x);
-		VSTORE3F(dpdv, &hitPoint->dpdv.x);
-	}
-}
-
-//------------------------------------------------------------------------------
-// Material_GetGlossiness
-//------------------------------------------------------------------------------
-
-OPENCL_FORCE_INLINE float Material_GetGlossiness(const uint matIndex
-		MATERIALS_PARAM_DECL) {
-	return mats[matIndex].glossiness;
-}
-
-//------------------------------------------------------------------------------
-// Material_GetGlossiness
-//------------------------------------------------------------------------------
-
-OPENCL_FORCE_INLINE float Material_IsPhotonGIEnabled(const uint matIndex
-		MATERIALS_PARAM_DECL) {
-	return mats[matIndex].isPhotonGIEnabled;
 }

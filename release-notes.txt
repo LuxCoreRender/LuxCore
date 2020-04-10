@@ -19,7 +19,8 @@
 * Accelerated duplicate vertex detection in pointiness shape (from 6.7 seconds to 0.016 seconds on a 100k vertex mesh)
 * LuxRays API reworked to support generic hardware devices (now OpenCL, potentially CUDA, Vulkan, Metal, etc.)
 * Added the support for light groups to PhotonGI
-* New LuxCore API RenderConfig::HasCachedKernels() method to check if a (long) kernel compilation time is required 
+* New LuxCore API RenderConfig::HasCachedKernels() method to check if a (long) kernel compilation time is required
+* Glossycoating material on GPUs now supports bump mapping exactly like CPU version (issue #307)
 
 ### Fixed Bugs
 
@@ -29,6 +30,8 @@
 * Fixed a problem with scenes with very hard light paths and Metropolis sampler (issue #312)
 * Sampler shared data are now reseted at the end of a scene edit (issue #312)
 * Fixed a problem in automatic cache radius estimation of PhotonGI when using Orthographic camera (issue #324)
+
+Note: due to Glossycoating updated support for bump mapping on GPUs, some old scene using this kind of material/bump map combination may require some fix.
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
