@@ -120,6 +120,7 @@ set(OPENVDB_SRCS
 	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/openvdb.cc	
 	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/io/Archive.cc
 	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/io/Compression.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/io/DelayedLoadMetadata.cc
 	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/io/File.cc
 	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/io/GridDescriptor.cc
 	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/io/Queue.cc
