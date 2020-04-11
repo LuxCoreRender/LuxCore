@@ -200,8 +200,8 @@ public:
 		std::stringstream kernelDefs;
 		kernelDefs << "#define MBVH_VERTS_PAGE_COUNT " << vertsBuffs.size() << "\n"
 				"#define MBVH_NODES_PAGE_COUNT " << nodeBuffs.size() << "\n";
-		if (vertsBuffs.size() > 1) {
-			// MBVH_NODES_PAGE_SIZE is used only if MBVH_VERTS_PAGE_COUNT > 1
+		if (nodeBuffs.size() > 1) {
+			// MBVH_NODES_PAGE_SIZE is used only if MBVH_NODES_PAGE_COUNT > 1
 			// I conditional define this value to avoid kernel recompilation
 			kernelDefs << "#define MBVH_NODES_PAGE_SIZE " << pageNodeCount << "\n";
 		}
@@ -483,10 +483,18 @@ u_int OpenCLMBVHKernel::SetIntersectionKernelArgs(cl::Kernel &kernel, const u_in
 		kernel.setArg(argIndex++, *uniqueLeafsMotionSystemBuff);
 		kernel.setArg(argIndex++, *uniqueLeafsInterpolatedTransformBuff);
 	}
-	for (u_int i = 0; i < vertsBuffs.size(); ++i)
-		kernel.setArg(argIndex++, *vertsBuffs[i]);
-	for (u_int i = 0; i < nodeBuffs.size(); ++i)
-		kernel.setArg(argIndex++, *nodeBuffs[i]);
+	for (u_int i = 0; i < 8; ++i) {
+		if (i >= vertsBuffs.size())
+			kernel.setArg(argIndex++, sizeof(cl::Buffer), nullptr);
+		else
+			kernel.setArg(argIndex++, *vertsBuffs[i]);
+	}
+	for (u_int i = 0; i < 8; ++i) {
+		if (i >= nodeBuffs.size())
+			kernel.setArg(argIndex++, sizeof(cl::Buffer), nullptr);
+		else
+			kernel.setArg(argIndex++, *nodeBuffs[i]);
+	}
 
 	return argIndex;
 }

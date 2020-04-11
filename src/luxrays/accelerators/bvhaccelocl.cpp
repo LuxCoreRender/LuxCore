@@ -172,8 +172,8 @@ public:
 		stringstream kernelDefs;
 		kernelDefs << "#define BVH_VERTS_PAGE_COUNT " << vertsBuffs.size() << "\n"
 				"#define BVH_NODES_PAGE_COUNT " << nodeBuffs.size() <<  "\n";
-		if (vertsBuffs.size() > 1) {
-			// BVH_NODES_PAGE_SIZE is used only if BVH_VERTS_PAGE_COUNT > 1
+		if (nodeBuffs.size() > 1) {
+			// BVH_NODES_PAGE_SIZE is used only if BVH_NODES_PAGE_COUNT > 1
 			// I conditional define this value to avoid kernel recompilation
 			kernelDefs << "#define BVH_NODES_PAGE_SIZE " << maxNodeCount << "\n";
 		}
@@ -264,10 +264,18 @@ void OpenCLBVHKernel::EnqueueRayBuffer(cl::CommandQueue &oclQueue,
 
 u_int OpenCLBVHKernel::SetIntersectionKernelArgs(cl::Kernel &kernel, const u_int index) {
 	u_int argIndex = index;
-	for (u_int i = 0; i < vertsBuffs.size(); ++i)
-		kernel.setArg(argIndex++, *vertsBuffs[i]);
-	for (u_int i = 0; i < nodeBuffs.size(); ++i)
-		kernel.setArg(argIndex++, *nodeBuffs[i]);
+	for (u_int i = 0; i < 8; ++i) {
+		if (i >= vertsBuffs.size())
+			kernel.setArg(argIndex++, sizeof(cl::Buffer), nullptr);
+		else
+			kernel.setArg(argIndex++, *vertsBuffs[i]);
+	}
+	for (u_int i = 0; i < 8; ++i) {
+		if (i >= nodeBuffs.size())
+			kernel.setArg(argIndex++, sizeof(cl::Buffer), nullptr);
+		else
+			kernel.setArg(argIndex++, *nodeBuffs[i]);
+	}
 
 	return argIndex;
 }

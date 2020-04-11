@@ -30,6 +30,7 @@
 * Fixed a problem with scenes with very hard light paths and Metropolis sampler (issue #312)
 * Sampler shared data are now reseted at the end of a scene edit (issue #312)
 * Fixed a problem in automatic cache radius estimation of PhotonGI when using Orthographic camera (issue #324)
+* Fixed an OpenCL compilation error when using large number of objects on some old GPUs
 
 Note: due to Glossycoating updated support for bump mapping on GPUs, some old scene using this kind of material/bump map combination may require some fix.
 
