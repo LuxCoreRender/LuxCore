@@ -185,7 +185,7 @@ echo "Denoise installed"
 
 cd ../..
 
-./scripts/macos/codesign.sh
+./scripts/macos/codesign.sh ./release_OSX/pyluxcore
 
 # Set up correct names for release version and SDK
 if [[ -z "$VERSION_STRING" ]] ; then

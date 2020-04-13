@@ -166,7 +166,9 @@ install_name_tool -change @rpath/libtbbmalloc.dylib @executable_path/libtbbmallo
 
 echo "Denoise installed"
 
-cd ../..
+cd
+
+./scripts/azurepipeline/macos/codesign.sh /release_OSX/pyluxcore
 
 # Set up correct names for release version and SDK
 if [[ -z "$VERSION_STRING" ]] ; then
@@ -259,6 +261,8 @@ cd ..
 echo "Denoise installed"
 
 cd ..
+
+./scripts/azurepipeline/macos/codesign.sh /release_OSX_ocl/pyluxcore
 
 ### creating opencl DMG
 
