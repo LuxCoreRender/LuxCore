@@ -108,7 +108,7 @@ IF(MSVC)
 		list(APPEND MSVC_RELEASE_COMPILER_FLAGS "/arch:SSE2 /openmp")
 	ENDIF(MSVC10)
 
-	IF(MSVC12 OR MSVC14)
+	IF(MSVC_VERSION GREATER_EQUAL 1800)
 		message(STATUS "MSVC Version: " ${MSVC_VERSION} )
 
 		list(APPEND MSVC_RELEASE_COMPILER_FLAGS "/openmp /Qfast_transcendentals /wd\"4244\" /wd\"4756\" /wd\"4267\" /wd\"4056\" /wd\"4305\" /wd\"4800\"")
@@ -116,7 +116,7 @@ IF(MSVC)
 		# Use multiple processors in debug mode, for faster rebuild:
 		AdjustToolFlags(
 				CMAKE_C_FLAGS_DEBUG CMAKE_CXX_FLAGS_DEBUG ADDITIONS "/MP")
-	ENDIF(MSVC12 OR MSVC14)
+	ENDIF(MSVC_VERSION GREATER_EQUAL 1800)
 
 	AdjustToolFlags(
 				CMAKE_C_FLAGS_RELEASE
