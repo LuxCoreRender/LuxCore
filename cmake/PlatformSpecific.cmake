@@ -116,6 +116,10 @@ IF(MSVC)
 		# Use multiple processors in debug mode, for faster rebuild:
 		AdjustToolFlags(
 				CMAKE_C_FLAGS_DEBUG CMAKE_CXX_FLAGS_DEBUG ADDITIONS "/MP")
+		
+		# Enable /bigobj for debug builds to prevent error C1128 when compiling OpenVDB
+		AdjustToolFlags(
+				CMAKE_C_FLAGS_DEBUG CMAKE_CXX_FLAGS_DEBUG ADDITIONS "/bigobj")
 	ENDIF(MSVC_VERSION GREATER_EQUAL 1800)
 
 	AdjustToolFlags(
