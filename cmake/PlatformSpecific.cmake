@@ -153,22 +153,16 @@ ENDIF(MSVC)
 
 IF(APPLE)
 
-  SET(AZURE 1) # Set 0 when compiled locally and not on azure
-  
   CMAKE_MINIMUM_REQUIRED(VERSION 3.12) # Required for FindBoost 1.67.0
 
 	########## OS and hardware detection ###########
 
 	EXECUTE_PROCESS(COMMAND uname -r OUTPUT_VARIABLE MAC_SYS) # check for actual system-version
 
-	SET(CMAKE_OSX_DEPLOYMENT_TARGET 10.13) # Minimum OS requirements for LuxCore
+	SET(CMAKE_OSX_DEPLOYMENT_TARGET 10.9) # Minimum OS requirements for LuxCore
 
-    IF(${MAC_SYS} MATCHES 18)
-        IF(AZURE)
-            SET(OSX_SYSTEM 10.14)
-        ELSE()
-            SET(OSX_SYSTEM 10.15)
-        ENDIF()
+  IF(${MAC_SYS} MATCHES 18)
+    SET(OSX_SYSTEM 10.15)
 	ELSEIF(${MAC_SYS} MATCHES 17)
 		SET(OSX_SYSTEM 10.14)
 	ELSEIF(${MAC_SYS} MATCHES 16)
@@ -186,13 +180,9 @@ IF(APPLE)
 
 	SET(CMAKE_XCODE_ATTRIBUTE_ARCHS $(NATIVE_ARCH_ACTUAL))
 
-    IF(AZURE)
-	   SET(CMAKE_OSX_SYSROOT /Applications/Xcode_10.1.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX${OSX_SYSTEM}.sdk)
-    ELSE()
-       SET(CMAKE_OSX_SYSROOT /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX${OSX_SYSTEM}.sdk)
-    ENDIF()
+  SET(CMAKE_OSX_SYSROOT /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX${OSX_SYSTEM}.sdk)
 
-    SET(CMAKE_XCODE_ATTRIBUTE_SDKROOT macosx) # to silence sdk not found warning, just overrides CMAKE_OSX_SYSROOT, gets latest available
+  SET(CMAKE_XCODE_ATTRIBUTE_SDKROOT macosx) # to silence sdk not found warning, just overrides CMAKE_OSX_SYSROOT, gets latest available
 
 	# set a precedence of sdk path over all other default search pathes
 	SET(CMAKE_FIND_ROOT_PATH ${CMAKE_OSX_SYSROOT})
@@ -226,7 +216,7 @@ IF(APPLE)
 
   SET(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} ${OSX_FLAGS_RELEASE}")
   SET(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${OSX_FLAGS_RELEASE}")
-  
+
   IF(LUXRAYS_ENABLE_CUDA)
     SET(CMAKE_EXE_LINKER_FLAGS "-F/Library/Frameworks -Xlinker -framework -Xlinker CUDA -Wl,-unexported_symbols_list -Wl,\"${CMAKE_SOURCE_DIR}/cmake/exportmaps/unexported_symbols.map\"")
     SET(CMAKE_MODULE_LINKER_FLAGS "-F/Library/Frameworks -Xlinker -framework -Xlinker CUDA -Wl,-unexported_symbols_list -Wl,\"${CMAKE_SOURCE_DIR}/cmake/exportmaps/unexported_symbols.map\"")
@@ -234,7 +224,7 @@ IF(APPLE)
     SET(CMAKE_EXE_LINKER_FLAGS "-Wl,-unexported_symbols_list -Wl,\"${CMAKE_SOURCE_DIR}/cmake/exportmaps/unexported_symbols.map\"")
     SET(CMAKE_MODULE_LINKER_FLAGS "-Wl,-unexported_symbols_list -Wl,\"${CMAKE_SOURCE_DIR}/cmake/exportmaps/unexported_symbols.map\"")
   ENDIF()
-  
+
   SET(CMAKE_XCODE_ATTRIBUTE_DEPLOYMENT_POSTPROCESSING YES) # strip symbols in whole project, disabled in pylux target
   SET(CMAKE_XCODE_ATTRIBUTE_DEAD_CODE_STRIPPING YES)
   SET(CMAKE_XCODE_ATTRIBUTE_LLVM_LTO YES)
@@ -243,7 +233,7 @@ IF(APPLE)
   MESSAGE(STATUS "################ GENERATED XCODE PROJECT INFORMATION ################")
   MESSAGE(STATUS "")
   MESSAGE(STATUS "DETECTED SYSTEM-VERSION: " ${MAC_SYS})
-  MESSAGE(STATUS "DETECTED MacOS-VERSION: " ${OSX_SYSTEM})
+  MESSAGE(STATUS "DETECTED SDK-VERSION: " ${OSX_SYSTEM})
   MESSAGE(STATUS "OSX_DEPLOYMENT_TARGET : " ${CMAKE_OSX_DEPLOYMENT_TARGET})
   MESSAGE(STATUS "CMAKE_XCODE_ATTRIBUTE_ARCHS: " ${CMAKE_XCODE_ATTRIBUTE_ARCHS})
   MESSAGE(STATUS "OSX SDK SETTING : " ${CMAKE_XCODE_ATTRIBUTE_SDKROOT}${OSX_SYSTEM})

@@ -11,6 +11,7 @@ mkdir release_OSX
 echo "Bundeling OpenCL Version"
 
 cp -R macos/mac_bundle/LuxCore.app release_OSX
+mkdir -p release_OSX/LuxCore.app/Contents/MacOS/
 cp build/bin/Release/luxcoreui release_OSX/LuxCore.app/Contents/MacOS
 
 cd release_OSX
@@ -107,7 +108,7 @@ cp -f $DEPS_SOURCE/lib/libomp.dylib ./libomp.dylib
 chmod +w ./libomp.dylib
 install_name_tool -id @loader_path/libomp.dylib ./libomp.dylib
 
-#libembree 
+#libembree
 
 cp -f $DEPS_SOURCE/lib/libembree3.3.dylib ./libembree3.3.dylib
 #chmod +w ./libembree3.3.dylib
@@ -197,23 +198,3 @@ hdiutil create luxcorerender-$VERSION_STRING-mac64$SDK_BUILD.dmg -volname "LuxCo
 #create-dmg --volname "LuxCoreRender-$VERSION_STRING" --format UDBZ --background macos/mac_bundle/back-dmg.jpg --window-size 512 300 --app-drop-link 320 140 --icon-size 64 --text-size 12 --icon LuxCore.app 105 140 --icon pyluxcore 205 140  --volicon macos/mac_bundle/LuxCore.app/Contents/Resources/luxcoreui.icns luxcorerender-$VERSION_STRING-mac64$SDK_BUILD-opencl.dmg release_OSX/
 
 echo "Done !"
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -28,7 +28,8 @@ mkdir release_OSX
 echo "Bundeling OpenCL Version"
 
 cp -R macos/mac_bundle/LuxCore.app release_OSX
-cp build/Release/luxcoreui release_OSX/LuxCore.app/Contents/MacOS
+mkdir -p release_OSX/LuxCore.app/Contents/MacOS/
+cp build/Release/luxcoreui release_OSX/LuxCore.app/Contents/MacOS/luxcoreui
 
 cd release_OSX
 
@@ -91,7 +92,7 @@ echo "LuxCoreUi installed"
 
 ###luxcoreconsole
 
-cp ../build/Release/luxcoreconsole LuxCore.app/Contents/MacOS
+cp ../build/Release/luxcoreconsole LuxCore.app/Contents/MacOS/luxcoreconsole
 
 #luxcoreconsole
 
@@ -109,8 +110,8 @@ echo "LuxCoreConsole installed"
 
 mkdir pyluxcore
 
-cp ../build/lib/Release/pyluxcore.so pyluxcore
-cp ../build/lib/pyluxcoretools.zip pyluxcore
+cp ../build/lib/Release/pyluxcore.so ./pyluxcore/pyluxcore.so
+cp ../build/lib/pyluxcoretools.zip ./pyluxcore/pyluxcoretools.zip
 
 cd pyluxcore
 
@@ -120,7 +121,7 @@ cp -f $DEPS_SOURCE/lib/libomp.dylib ./libomp.dylib
 chmod +w ./libomp.dylib
 install_name_tool -id @loader_path/libomp.dylib ./libomp.dylib
 
-#libembree 
+#libembree
 
 cp -f $DEPS_SOURCE/lib/libembree3.3.dylib ./libembree3.3.dylib
 
