@@ -247,12 +247,12 @@ u_int CompiledScene::CompileMaterialOps(const u_int matIndex,
 					evalOpStackSize += 5;
 					break;
 				case slg::ocl::EVAL_EVALUATE_MIX_SETUP1:
-					// 6 x parameters and 12 x results
-					evalOpStackSize += 12;
+					// 6 x parameters and 21 x results
+					evalOpStackSize += 21;
 					break;
 				case slg::ocl::EVAL_EVALUATE_MIX_SETUP2:
-					// 12 x parameters and 17 x results
-					evalOpStackSize += 17;
+					// 12 x parameters and 26 x results
+					evalOpStackSize += 26;
 					break;
 				case slg::ocl::EVAL_EVALUATE:
 					evalOpStackSize += CompileMaterialOps(matIndex, slg::ocl::EVAL_EVALUATE_MIX_SETUP1, evalOps);
@@ -261,12 +261,12 @@ u_int CompiledScene::CompileMaterialOps(const u_int matIndex,
 					evalOpStackSize += CompileMaterialOps(mat->mix.matBIndex, slg::ocl::EVAL_EVALUATE, evalOps);
 					break;
 				case slg::ocl::EVAL_SAMPLE_MIX_SETUP1:
-					// 6 x parameters and 16 x results
-					evalOpStackSize += 16;
+					// 6 x parameters and 25 x results
+					evalOpStackSize += 25;
 					break;
 				case slg::ocl::EVAL_SAMPLE_MIX_SETUP2:
-					// 16 x parameters and 24 x results
-					evalOpStackSize += 24;
+					// 16 x parameters and 33 x results
+					evalOpStackSize += 33;
 					break;
 				case slg::ocl::EVAL_SAMPLE: {
 					evalOpStackSize += CompileMaterialOps(matIndex, slg::ocl::EVAL_SAMPLE_MIX_SETUP1, evalOps);

@@ -146,9 +146,10 @@ OPENCL_FORCE_NOT_INLINE void GlossyCoatingMaterial_Evaluate(__global const Mater
 	EvalStack_PopFloat3(originalDpdu);
 	EvalStack_PopFloat3(originalShadeN);
 	// Restore original hitPoint
-	VSTORE3F(originalShadeN, &hitPoint->shadeN.x);
-	VSTORE3F(originalDpdu, &hitPoint->dpdu.x);
-	VSTORE3F(originalDpdv, &hitPoint->dpdv.x);
+	__global HitPoint *hitPointTmp = (__global HitPoint *)hitPoint;
+	VSTORE3F(originalShadeN, &hitPointTmp->shadeN.x);
+	VSTORE3F(originalDpdu, &hitPointTmp->dpdu.x);
+	VSTORE3F(originalDpdv, &hitPointTmp->dpdv.x);
 
 	const float3 fixedDir = eyeDir;
 	const float3 sampledDir = lightDir;
@@ -499,9 +500,10 @@ OPENCL_FORCE_NOT_INLINE void GlossyCoatingMaterial_SampleMatBaseSample(__global 
 	EvalStack_PopFloat3(originalDpdu);
 	EvalStack_PopFloat3(originalShadeN);
 	// Restore original hitPoint
-	VSTORE3F(originalShadeN, &hitPoint->shadeN.x);
-	VSTORE3F(originalDpdu, &hitPoint->dpdu.x);
-	VSTORE3F(originalDpdv, &hitPoint->dpdv.x);
+	__global HitPoint *hitPointTmp = (__global HitPoint *)hitPoint;
+	VSTORE3F(originalShadeN, &hitPointTmp->shadeN.x);
+	VSTORE3F(originalDpdu, &hitPointTmp->dpdu.x);
+	VSTORE3F(originalDpdv, &hitPointTmp->dpdv.x);
 
 	// Pop wCoating
 	float wCoating;
@@ -586,9 +588,10 @@ OPENCL_FORCE_NOT_INLINE void GlossyCoatingMaterial_SampleMatBaseEvaluate(__globa
 	EvalStack_PopFloat3(originalDpdu);
 	EvalStack_PopFloat3(originalShadeN);
 	// Restore original hitPoint
-	VSTORE3F(originalShadeN, &hitPoint->shadeN.x);
-	VSTORE3F(originalDpdu, &hitPoint->dpdu.x);
-	VSTORE3F(originalDpdv, &hitPoint->dpdv.x);
+	__global HitPoint *hitPointTmp = (__global HitPoint *)hitPoint;
+	VSTORE3F(originalShadeN, &hitPointTmp->shadeN.x);
+	VSTORE3F(originalDpdu, &hitPointTmp->dpdu.x);
+	VSTORE3F(originalDpdv, &hitPointTmp->dpdv.x);
 
 	// Pop wCoating
 	float wCoating;
