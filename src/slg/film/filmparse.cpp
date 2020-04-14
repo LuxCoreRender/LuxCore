@@ -448,11 +448,8 @@ void Film::ParseRadianceGroupsScale(const Properties &props, const u_int imagePi
 
 void Film::ParseRadianceGroupsScales(const Properties &props) {
 	// Look for the definition of multiple image pipelines
-	vector<string> imagePipelineKeys = props.GetAllUniqueSubNames("film.imagepipelines");
+	vector<string> imagePipelineKeys = props.GetAllUniqueSubNames("film.imagepipelines", true);
 	if (imagePipelineKeys.size() > 0) {
-		// Sort the entries
-		sort(imagePipelineKeys.begin(), imagePipelineKeys.end());
-
 		for (vector<string>::const_iterator imagePipelineKey = imagePipelineKeys.begin(); imagePipelineKey != imagePipelineKeys.end(); ++imagePipelineKey) {
 			// Extract the image pipeline priority name
 			const string imagePipelineNumberStr = Property::ExtractField(*imagePipelineKey, 2);
@@ -488,11 +485,8 @@ ImagePipeline *Film::CreateImagePipeline(const Properties &props, const string &
 	const u_int keyFieldCount = Property::CountFields(imagePipelinePrefix);
 	unique_ptr<ImagePipeline> imagePipeline(new ImagePipeline());
 
-	vector<string> imagePipelineKeys = props.GetAllUniqueSubNames(imagePipelinePrefix);
+	vector<string> imagePipelineKeys = props.GetAllUniqueSubNames(imagePipelinePrefix, true);
 	if (imagePipelineKeys.size() > 0) {
-		// Sort the entries
-		sort(imagePipelineKeys.begin(), imagePipelineKeys.end());
-
 		SDL_LOG("Image pipeline: " << imagePipelinePrefix);
 		for (vector<string>::const_iterator imagePipelineKey = imagePipelineKeys.begin(); imagePipelineKey != imagePipelineKeys.end(); ++imagePipelineKey) {
 			// Extract the plugin priority name
@@ -646,10 +640,11 @@ ImagePipeline *Film::CreateImagePipeline(const Properties &props, const string &
 
 void Film::ParseImagePipelines(const Properties &props) {
 	// Look for the definition of multiple image pipelines
-	vector<string> imagePipelineKeys = props.GetAllUniqueSubNames("film.imagepipelines");
-	if (imagePipelineKeys.size() > 0) {
-		// Sort the entries
-		sort(imagePipelineKeys.begin(), imagePipelineKeys.end());
+	vector<string> imagePipelineKeys = props.GetAllUniqueSubNames("film.imagepipelines", true);
+	if (imagePipelineKeys.size() > 0) {	
+		for(u_int z=0;z<imagePipelineKeys.size();++z) {
+			cout<<z<<"======================="<<imagePipelineKeys[z]<<"\n";
+		}
 
 		for (vector<string>::const_iterator imagePipelineKey = imagePipelineKeys.begin(); imagePipelineKey != imagePipelineKeys.end(); ++imagePipelineKey) {
 			// Extract the image pipeline priority name
