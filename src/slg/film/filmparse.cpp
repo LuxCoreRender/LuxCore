@@ -642,10 +642,6 @@ void Film::ParseImagePipelines(const Properties &props) {
 	// Look for the definition of multiple image pipelines
 	vector<string> imagePipelineKeys = props.GetAllUniqueSubNames("film.imagepipelines", true);
 	if (imagePipelineKeys.size() > 0) {	
-		for(u_int z=0;z<imagePipelineKeys.size();++z) {
-			cout<<z<<"======================="<<imagePipelineKeys[z]<<"\n";
-		}
-
 		for (vector<string>::const_iterator imagePipelineKey = imagePipelineKeys.begin(); imagePipelineKey != imagePipelineKeys.end(); ++imagePipelineKey) {
 			// Extract the image pipeline priority name
 			const string imagePipelineNumberStr = Property::ExtractField(*imagePipelineKey, 2);
