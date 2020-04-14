@@ -166,7 +166,7 @@ install_name_tool -change @rpath/libtbbmalloc.dylib @executable_path/libtbbmallo
 
 echo "Denoise installed"
 
-cd
+cd ../..
 
 ./scripts/azurepipeline/macos/codesign.sh /release_OSX/pyluxcore
 
