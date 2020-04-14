@@ -168,7 +168,7 @@ echo "Denoise installed"
 
 cd ../..
 
-./scripts/azurepipeline/macos/codesign.sh /release_OSX/pyluxcore
+./scripts/azurepipeline/macos/codesign.sh ./release_OSX/pyluxcore
 
 # Set up correct names for release version and SDK
 if [[ -z "$VERSION_STRING" ]] ; then
@@ -202,7 +202,7 @@ echo "Bundeling OpenCL Version"
 
 mkdir release_OSX_ocl
 
-cp -R release_OSX/* release_OSX_ocl
+cp -R ./release_OSX/* release_OSX_ocl
 
 cd release_OSX_ocl
 
@@ -262,7 +262,7 @@ echo "Denoise installed"
 
 cd ..
 
-./scripts/azurepipeline/macos/codesign.sh /release_OSX_ocl/pyluxcore
+./scripts/azurepipeline/macos/codesign.sh ./release_OSX_ocl/pyluxcore
 
 ### creating opencl DMG
 
