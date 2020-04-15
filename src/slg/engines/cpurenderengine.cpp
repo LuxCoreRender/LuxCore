@@ -229,6 +229,8 @@ void CPUNoTileRenderEngine::StopLockLess() {
 
 void CPUNoTileRenderEngine::EndSceneEditLockLess(const EditActionList &editActions) {
 	samplerSharedData->Reset();
+
+	CPURenderEngine::EndSceneEditLockLess(editActions);
 }
 
 void CPUNoTileRenderEngine::UpdateFilmLockLess() {
