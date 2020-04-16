@@ -23,6 +23,10 @@
 #include "luxrays/devices/ocldevice.h"
 #endif
 
+#if defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(WIN64)
+#include <Windows.h>
+#endif
+
 using namespace std;
 using namespace luxrays;
 using namespace slg;
@@ -133,7 +137,13 @@ const Properties &OCLRenderEngine::GetDefaultProps() {
 #endif
 			Property("opencl.gpu.workgroup.size")(32) <<
 			Property("opencl.devices.select")("") <<
+//For Windows version greater than Windows 7,modern way of calculating processor count is used 
+//May not work with Windows version prior to Windows 7
+#if defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(WIN64)
+			Property("opencl.native.threads.count")((int)GetActiveProcessorCount(ALL_PROCESSOR_GROUPS));
+#else
 			Property("opencl.native.threads.count")(boost::thread::hardware_concurrency());
+#endif
 
 	return props;
 }
