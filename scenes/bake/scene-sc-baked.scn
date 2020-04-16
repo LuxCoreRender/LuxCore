@@ -24,9 +24,9 @@ scene.lights.139858846954504.efficency = 17
 scene.lights.139858846954504.position = 0 0 0
 scene.lights.139858846954504.radius = 0.300000012
 ##
-#scene.lights.envlight.type = "constantinfinite"
-#scene.lights.envlight.color = 0.7 0.7 0.7
-#scene.lights.envlight.gain = 0.5 0.5 0.5
+scene.lights.envlight.type = "constantinfinite"
+scene.lights.envlight.color = 0.7 0.7 0.7
+scene.lights.envlight.gain = 0.5 0.5 0.5
 ##
 scene.textures.139857989714440Color.type = "checkerboard2d"
 scene.textures.139857989714440Color.texture1 = "0.7 0.7 0.7"
@@ -92,8 +92,8 @@ scene.materials.mat_cube1139858847948808.shadowcatcher.onlyinfinitelights = 0
 scene.materials.mat_cube1139858847948808.photongi.enable = 1
 ##
 scene.materials.mat_plane139857991252616.type = "matte"
-scene.materials.mat_plane139857991252616.kd = "139857989714440Color"
-#scene.materials.mat_plane139857991252616.kd = 0.7 0.7 0.7
+#scene.materials.mat_plane139857991252616.kd = "139857989714440Color"
+scene.materials.mat_plane139857991252616.kd = 0.7 0.7 0.7
 scene.materials.mat_plane139857991252616.transparency.shadow = 0 0 0
 scene.materials.mat_plane139857991252616.id = 10034367
 scene.materials.mat_plane139857991252616.emission.gain = 1 1 1
@@ -106,13 +106,13 @@ scene.materials.mat_plane139857991252616.emission.directlightsampling.type = "AU
 scene.materials.mat_plane139857991252616.visibility.indirect.diffuse.enable = 1
 scene.materials.mat_plane139857991252616.visibility.indirect.glossy.enable = 1
 scene.materials.mat_plane139857991252616.visibility.indirect.specular.enable = 1
-#scene.materials.mat_plane139857991252616.shadowcatcher.enable = 1
-#scene.materials.mat_plane139857991252616.shadowcatcher.onlyinfinitelights = 0
+scene.materials.mat_plane139857991252616.shadowcatcher.enable = 1
+scene.materials.mat_plane139857991252616.shadowcatcher.onlyinfinitelights = 0
 scene.materials.mat_plane139857991252616.photongi.enable = 1
 ##
 scene.materials.mat_cube2139857990867336.type = "matte"
-scene.materials.mat_cube2139857990867336.kd = "139857990544904Color"
-#scene.materials.mat_cube2139857990867336.transparency = 139857990544904Color_Transp
+#scene.materials.mat_cube2139857990867336.kd = "139857990544904Color"
+scene.materials.mat_cube2139857990867336.transparency = 139857990544904Color_Transp
 scene.materials.mat_cube2139857990867336.transparency.shadow = 0 0 0
 scene.materials.mat_cube2139857990867336.id = 13398304
 scene.materials.mat_cube2139857990867336.emission.gain = 1 1 1
@@ -144,3 +144,24 @@ scene.objects.1398577164380240.ply = "mesh-00002.ply"
 scene.objects.1398577164380240.camerainvisible = 0
 scene.objects.1398577164380240.id = 1529595717
 scene.objects.1398577164380240.appliedtransformation = 0.620871425 -0.152114064 0.094021529 0 0.178825989 0.528129458 -0.326436222 0 3.16523363e-09 0.339706689 0.54959929 0 2.47931361 2.60516739 1 1
+##
+#scene.objects.1398588469529680.bake.combined.file = "1398588469529680.png"
+#scene.objects.1398588469529680.bake.combined.gamma = 1
+#scene.objects.1398588469529680.bake.combined.wrap = clamp
+#scene.objects.1398577149045840.bake.combined.file = "1398577149045840.png"
+#scene.objects.1398577149045840.bake.combined.gamma = 1
+#scene.objects.1398577149045840.bake.combined.wrap = clamp
+#scene.objects.1398577164380240.bake.combined.file = "1398577164380240.png"
+#scene.objects.1398577164380240.bake.combined.gamma = 1
+#scene.objects.1398577164380240.bake.combined.wrap = clamp
+##
+scene.objects.1398588469529680.bake.lightmap.file = "1398588469529680.png"
+scene.objects.1398588469529680.bake.lightmap.gamma = 1
+scene.objects.1398588469529680.bake.lightmap.wrap = clamp
+#scene.objects.1398577149045840.bake.lightmap.file = "1398577149045840.png"
+#scene.objects.1398577149045840.bake.lightmap.gamma = 1
+#scene.objects.1398577149045840.bake.lightmap.wrap = clamp
+scene.objects.1398577164380240.bake.lightmap.file = "1398577164380240.png"
+scene.objects.1398577164380240.bake.lightmap.gamma = 1
+scene.objects.1398577164380240.bake.lightmap.wrap = clamp
+##

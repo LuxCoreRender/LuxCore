@@ -395,7 +395,8 @@ void PathTracer::RenderEyePath(IntersectionDevice *device,
 
 		if (!hit) {
 			// Nothing was hit, look for env. lights
-			if ((!(forceBlackBackground && sampleResult.firstPathVertex) || !pathInfo.isPassThroughPath) && checkDirectLightHit) {
+			if ((!(forceBlackBackground && pathInfo.isPassThroughPath) || !pathInfo.isPassThroughPath) &&
+					checkDirectLightHit) {
 				DirectHitInfiniteLight(scene, pathInfo, pathThroughput,
 						eyeRay, sampleResult.firstPathVertex ? nullptr : &bsdf,
 						&sampleResult);
