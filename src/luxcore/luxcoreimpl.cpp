@@ -1127,7 +1127,7 @@ void RenderSessionImpl::UpdateStats() {
 
 		const HardwareDevice *hardDev = dynamic_cast<const HardwareDevice *>(dev);
 		if (hardDev) {
-			stats.Set(Property(prefix + ".memory.total")((u_longlong)hardDev->GetMaxMemory()));
+			stats.Set(Property(prefix + ".memory.total")((u_longlong)hardDev->GetDeviceDesc()->GetMaxMemory()));
 			stats.Set(Property(prefix + ".memory.used")((u_longlong)hardDev->GetUsedMemory()));
 		} else {
 			stats.Set(Property(prefix + ".memory.total")(0ull));

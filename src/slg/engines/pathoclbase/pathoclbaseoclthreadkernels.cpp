@@ -35,7 +35,7 @@
 #include "slg/samplers/sobol.h"
 
 #if defined(__APPLE__)
-//OSX version detection
+// OSX version detection
 #include <sys/sysctl.h>
 #endif
 
@@ -53,8 +53,9 @@ void PathOCLBaseOCLRenderThread::CompileKernel(cl::Program *program, cl::Kernel 
 	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Compiling " << name << " Kernel");
 	*kernel = new cl::Kernel(*program, name.c_str());
 
-	if (intersectionDevice->GetDeviceDesc()->GetForceWorkGroupSize() > 0)
-		*workgroupSize = intersectionDevice->GetDeviceDesc()->GetForceWorkGroupSize();
+	const OpenCLDeviceDescription *oclDeviceDesc = (const OpenCLDeviceDescription *)intersectionDevice->GetDeviceDesc();
+	if (oclDeviceDesc->GetForceWorkGroupSize() > 0)
+		*workgroupSize = oclDeviceDesc->GetForceWorkGroupSize();
 	else {
 		cl::Device &oclDevice = intersectionDevice->GetOpenCLDevice();
 		(*kernel)->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, workgroupSize);
@@ -81,12 +82,15 @@ string PathOCLBaseOCLRenderThread::GetKernelParamters(
 	if (usePixelAtomics)
 		ssParams << " -D PARAM_USE_PIXEL_ATOMICS";
 
-	if (intersectionDevice->GetDeviceDesc()->IsAMDPlatform())
-		ssParams << " -D LUXCORE_AMD_OPENCL";
-	else if (intersectionDevice->GetDeviceDesc()->IsNVIDIAPlatform())
-		ssParams << " -D LUXCORE_NVIDIA_OPENCL";
-	else
-		ssParams << " -D LUXCORE_GENERIC_OPENCL";
+	const OpenCLDeviceDescription *oclDeviceDesc = dynamic_cast<const OpenCLDeviceDescription *>(intersectionDevice->GetDeviceDesc());
+	if (oclDeviceDesc) {
+		if (oclDeviceDesc->IsAMDPlatform())
+			ssParams << " -D LUXCORE_AMD_OPENCL";
+		else if (oclDeviceDesc->IsNVIDIAPlatform())
+			ssParams << " -D LUXCORE_NVIDIA_OPENCL";
+		else
+			ssParams << " -D LUXCORE_GENERIC_OPENCL";
+	}
 
 	return ssParams.str();
 }
@@ -382,7 +386,7 @@ void PathOCLBaseOCLRenderThread::SetInitKernelArgs(const u_int filmIndex) {
 	initKernel->setArg(argIndex++, sizeof(cl::Buffer), sampleResultsBuff);
 	initKernel->setArg(argIndex++, sizeof(cl::Buffer), eyePathInfosBuff);
 	initKernel->setArg(argIndex++, sizeof(cl::Buffer), pixelFilterBuff);
-	initKernel->setArg(argIndex++, sizeof(cl::Buffer), raysBuff);
+	initKernel->setArg(argIndex++, sizeof(cl::Buffer), ((OpenCLDeviceBuffer *)raysBuff)->oclBuff);
 	initKernel->setArg(argIndex++, sizeof(cl::Buffer), cameraBuff);
 
 	// Film parameters
@@ -407,8 +411,8 @@ void PathOCLBaseOCLRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePa
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), sampleResultsBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), eyePathInfosBuff);
 	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), directLightVolInfosBuff);
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), raysBuff);
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), hitsBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), ((OpenCLDeviceBuffer *)raysBuff)->oclBuff);
+	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), ((OpenCLDeviceBuffer *)hitsBuff)->oclBuff);
 
 	// Film parameters
 	argIndex = threadFilms[filmIndex]->SetFilmKernelArgs(*advancePathsKernel, argIndex);

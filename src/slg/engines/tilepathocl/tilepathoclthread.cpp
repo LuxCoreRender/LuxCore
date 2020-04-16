@@ -140,8 +140,7 @@ void TilePathOCLRenderThread::RenderTileWork(const TileWork &tileWork,
 	const u_int worstCaseIterationCount = (engine->pathTracer.maxPathDepth.depth == 1) ? 2 : (engine->pathTracer.maxPathDepth.depth * 2 - 1);
 	for (u_int i = 0; i < worstCaseIterationCount; ++i) {
 		// Trace rays
-		intersectionDevice->EnqueueTraceRayBuffer(*raysBuff,
-				*(hitsBuff), engine->taskCount, NULL, NULL);
+		intersectionDevice->EnqueueTraceRayBuffer(raysBuff, hitsBuff, engine->taskCount);
 
 		// Advance to next path state
 		EnqueueAdvancePathsKernel(oclQueue);

@@ -150,10 +150,10 @@ SOURCE_GROUP("Source Files\\LuxRays Kernels" FILES ${LUXRAYS_KERNELS})
 
 set(LUXRAYS_SRCS
 	${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/bvhaccel.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/bvhaccelocl.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/bvhaccelhw.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/embreeaccel.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/mbvhaccel.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/mbvhaccelocl.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/mbvhaccelhw.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/bvh/bvhbuild.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/bvh/bvhclassicbuild.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/bvh/bvhembreebuild.cpp
@@ -177,6 +177,7 @@ set(LUXRAYS_SRCS
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/exttrianglemesh.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/exttrianglemeshfile.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/hardwaredevice.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/core/hardwareintersectiondevice.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/init.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/intersectiondevice.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/namedobject.cpp

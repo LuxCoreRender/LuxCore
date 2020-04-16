@@ -145,7 +145,7 @@ OpenCLDevice::OpenCLDevice(
 		const Context *context,
 		OpenCLDeviceDescription *desc,
 		const size_t devIndex) :
-		Device(context, desc->GetType(), devIndex),
+		Device(context, devIndex),
 		deviceDesc(desc), oclQueue(nullptr) {
 	deviceName = (desc->GetName() + " Intersect").c_str();
 
@@ -234,6 +234,20 @@ void OpenCLDevice::GetKernel(HardwareDeviceProgram *program,
 	assert (oclDeviceProgram);
 
 	oclDeviceKernel->Set(new cl::Kernel(*(oclDeviceProgram->Get()), kernelName.c_str()));
+}
+
+u_int OpenCLDevice::GetKernelWorkGroupSize(HardwareDeviceKernel *kernel) {
+	assert (kernel);
+	assert (!kernel->IsNull());
+
+	OpenCLDeviceKernel *oclDeviceKernel = dynamic_cast<OpenCLDeviceKernel *>(kernel);
+	assert (oclDeviceKernel);
+
+	size_t size;
+	oclDeviceKernel->oclKernel->getWorkGroupInfo<size_t>(deviceDesc->GetOCLDevice(),
+				CL_KERNEL_WORK_GROUP_SIZE, &size);
+	
+	return size;
 }
 
 void OpenCLDevice::SetKernelArg(HardwareDeviceKernel *kernel,

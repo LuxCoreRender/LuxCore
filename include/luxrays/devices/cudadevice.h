@@ -154,6 +154,8 @@ public:
 		CUDADeviceDescription *desc, const size_t devIndex);
 	virtual ~CUDADevice();
 
+	virtual const DeviceDescription *GetDeviceDesc() const { return deviceDesc; }
+
 	virtual void Start();
 	virtual void Stop();
 
@@ -168,6 +170,7 @@ public:
 	virtual void GetKernel(HardwareDeviceProgram *program,
 			HardwareDeviceKernel **kernel,
 			const std::string &kernelName);
+	virtual u_int GetKernelWorkGroupSize(HardwareDeviceKernel *kernel);
 	virtual void SetKernelArg(HardwareDeviceKernel *kernel,
 			const u_int index, const size_t size, const void *arg);
 

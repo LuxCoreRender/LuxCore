@@ -227,8 +227,8 @@ protected:
 	cl::Buffer *pgicCausticPhotonsBVHNodesBuff;
 
 	// OpenCL task related buffers
-	cl::Buffer *raysBuff;
-	cl::Buffer *hitsBuff;
+	luxrays::HardwareDeviceBuffer *raysBuff;
+	luxrays::HardwareDeviceBuffer *hitsBuff;
 	cl::Buffer *taskConfigBuff;
 	cl::Buffer *tasksBuff;
 	cl::Buffer *tasksDirectLightBuff;

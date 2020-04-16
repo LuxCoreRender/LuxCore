@@ -114,6 +114,7 @@ public:
 	virtual void GetKernel(HardwareDeviceProgram *program,
 			HardwareDeviceKernel **kernel,
 			const std::string &kernelName) = 0;
+	virtual u_int GetKernelWorkGroupSize(HardwareDeviceKernel *kernel) = 0;
 
 	virtual void SetKernelArg(HardwareDeviceKernel *kernel,
 			const u_int index, const size_t size, const void *arg) = 0;
@@ -140,7 +141,6 @@ public:
 	// Memory management for hardware (aka GPU) only applications
 	//--------------------------------------------------------------------------
 
-	virtual size_t GetMaxMemory() const { return 0; }
 	size_t GetUsedMemory() const { return usedMemory; }
 
 	virtual void AllocBufferRO(HardwareDeviceBuffer **buff, void *src, const size_t size, const std::string &desc = "") = 0;

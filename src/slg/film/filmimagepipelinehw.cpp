@@ -96,7 +96,7 @@ void Film::CreateHWContext() {
 		vector<HardwareDevice *> devs = ctx->AddHardwareDevices(selectedDeviceDescs);
 		hardwareDevice = dynamic_cast<HardwareDevice *>(devs[0]);
 		assert (hardwareDevice);
-		SLG_LOG("Film hardware device used: " << hardwareDevice->GetName() << " (Type: " << DeviceDescription::GetDeviceType(hardwareDevice->GetType()) << ")");
+		SLG_LOG("Film hardware device used: " << hardwareDevice->GetName() << " (Type: " << DeviceDescription::GetDeviceType(hardwareDevice->GetDeviceDesc()->GetType()) << ")");
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 		OpenCLDeviceDescription *oclDesc = dynamic_cast<OpenCLDeviceDescription *>(selectedDeviceDesc);

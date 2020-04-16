@@ -55,7 +55,7 @@ void PathOCLBaseOCLRenderThread::InitFilm() {
 }
 
 void PathOCLBaseOCLRenderThread::InitCamera() {
-	intersectionDevice->AllocBufferRO(&cameraBuff, &renderEngine->compiledScene->camera,
+	intersectionDevice->tmpAllocBufferRO(&cameraBuff, &renderEngine->compiledScene->camera,
 			sizeof(slg::ocl::Camera), "Camera");
 }
 
@@ -63,70 +63,70 @@ void PathOCLBaseOCLRenderThread::InitGeometry() {
 	CompiledScene *cscene = renderEngine->compiledScene;
 
 	if (cscene->normals.size() > 0)
-		intersectionDevice->AllocBufferRO(&normalsBuff, &cscene->normals[0],
+		intersectionDevice->tmpAllocBufferRO(&normalsBuff, &cscene->normals[0],
 				sizeof(Normal) * cscene->normals.size(), "Normals");
 	else
-		intersectionDevice->FreeBuffer(&normalsBuff);
+		intersectionDevice->tmpFreeBuffer(&normalsBuff);
 
 	if (cscene->uvs.size() > 0)
-		intersectionDevice->AllocBufferRO(&uvsBuff, &cscene->uvs[0],
+		intersectionDevice->tmpAllocBufferRO(&uvsBuff, &cscene->uvs[0],
 			sizeof(UV) * cscene->uvs.size(), "UVs");
 	else
-		intersectionDevice->FreeBuffer(&uvsBuff);
+		intersectionDevice->tmpFreeBuffer(&uvsBuff);
 
 	if (cscene->cols.size() > 0)
-		intersectionDevice->AllocBufferRO(&colsBuff, &cscene->cols[0],
+		intersectionDevice->tmpAllocBufferRO(&colsBuff, &cscene->cols[0],
 			sizeof(Spectrum) * cscene->cols.size(), "Colors");
 	else
-		intersectionDevice->FreeBuffer(&colsBuff);
+		intersectionDevice->tmpFreeBuffer(&colsBuff);
 
 	if (cscene->alphas.size() > 0)
-		intersectionDevice->AllocBufferRO(&alphasBuff, &cscene->alphas[0],
+		intersectionDevice->tmpAllocBufferRO(&alphasBuff, &cscene->alphas[0],
 			sizeof(float) * cscene->alphas.size(), "Alphas");
 	else
-		intersectionDevice->FreeBuffer(&alphasBuff);
+		intersectionDevice->tmpFreeBuffer(&alphasBuff);
 
 	if (cscene->vertexAOVs.size() > 0)
-		intersectionDevice->AllocBufferRO(&vertexAOVBuff, &cscene->vertexAOVs[0],
+		intersectionDevice->tmpAllocBufferRO(&vertexAOVBuff, &cscene->vertexAOVs[0],
 			sizeof(float) * cscene->vertexAOVs.size(), "Vertex AOVs");
 	else
-		intersectionDevice->FreeBuffer(&vertexAOVBuff);
+		intersectionDevice->tmpFreeBuffer(&vertexAOVBuff);
 
 	if (cscene->triAOVs.size() > 0)
-		intersectionDevice->AllocBufferRO(&triAOVBuff, &cscene->triAOVs[0],
+		intersectionDevice->tmpAllocBufferRO(&triAOVBuff, &cscene->triAOVs[0],
 			sizeof(float) * cscene->triAOVs.size(), "Triangle AOVs");
 	else
-		intersectionDevice->FreeBuffer(&triAOVBuff);
+		intersectionDevice->tmpFreeBuffer(&triAOVBuff);
 
-	intersectionDevice->AllocBufferRO(&triNormalsBuff, &cscene->triNormals[0],
+	intersectionDevice->tmpAllocBufferRO(&triNormalsBuff, &cscene->triNormals[0],
 				sizeof(Normal) * cscene->triNormals.size(), "Triangle normals");
 
-	intersectionDevice->AllocBufferRO(&vertsBuff, &cscene->verts[0],
+	intersectionDevice->tmpAllocBufferRO(&vertsBuff, &cscene->verts[0],
 		sizeof(Point) * cscene->verts.size(), "Vertices");
 
-	intersectionDevice->AllocBufferRO(&trianglesBuff, &cscene->tris[0],
+	intersectionDevice->tmpAllocBufferRO(&trianglesBuff, &cscene->tris[0],
 		sizeof(Triangle) * cscene->tris.size(), "Triangles");
 
 	if (cscene->interpolatedTransforms.size() > 0) {
-		intersectionDevice->AllocBufferRO(&interpolatedTransformsBuff, &cscene->interpolatedTransforms[0],
+		intersectionDevice->tmpAllocBufferRO(&interpolatedTransformsBuff, &cscene->interpolatedTransforms[0],
 			sizeof(luxrays::ocl::InterpolatedTransform) * cscene->interpolatedTransforms.size(), "Interpolated transformations");
 	} else
-		intersectionDevice->FreeBuffer(&interpolatedTransformsBuff);
+		intersectionDevice->tmpFreeBuffer(&interpolatedTransformsBuff);
 
-	intersectionDevice->AllocBufferRO(&meshDescsBuff, &cscene->meshDescs[0],
+	intersectionDevice->tmpAllocBufferRO(&meshDescsBuff, &cscene->meshDescs[0],
 			sizeof(slg::ocl::ExtMesh) * cscene->meshDescs.size(), "Mesh description");
 }
 
 void PathOCLBaseOCLRenderThread::InitMaterials() {
 	const size_t materialsCount = renderEngine->compiledScene->mats.size();
-	intersectionDevice->AllocBufferRO(&materialsBuff, &renderEngine->compiledScene->mats[0],
+	intersectionDevice->tmpAllocBufferRO(&materialsBuff, &renderEngine->compiledScene->mats[0],
 			sizeof(slg::ocl::Material) * materialsCount, "Materials");
 
-	intersectionDevice->AllocBufferRO(&materialEvalOpsBuff, &renderEngine->compiledScene->matEvalOps[0],
+	intersectionDevice->tmpAllocBufferRO(&materialEvalOpsBuff, &renderEngine->compiledScene->matEvalOps[0],
 			sizeof(slg::ocl::MaterialEvalOp) * renderEngine->compiledScene->matEvalOps.size(), "Material evaluation ops");
 
 	const u_int taskCount = renderEngine->taskCount;
-	intersectionDevice->AllocBufferRW(&materialEvalStackBuff, 
+	intersectionDevice->tmpAllocBufferRW(&materialEvalStackBuff, 
 			nullptr, sizeof(float) * renderEngine->compiledScene->maxMaterialEvalStackSize *
 			taskCount, "Material evaluation stacks");
 
@@ -134,20 +134,20 @@ void PathOCLBaseOCLRenderThread::InitMaterials() {
 
 void PathOCLBaseOCLRenderThread::InitSceneObjects() {
 	const u_int sceneObjsCount = renderEngine->compiledScene->sceneObjs.size();
-	intersectionDevice->AllocBufferRO(&scnObjsBuff, &renderEngine->compiledScene->sceneObjs[0],
+	intersectionDevice->tmpAllocBufferRO(&scnObjsBuff, &renderEngine->compiledScene->sceneObjs[0],
 			sizeof(slg::ocl::SceneObject) * sceneObjsCount, "Scene objects");
 }
 
 void PathOCLBaseOCLRenderThread::InitTextures() {
 	const size_t texturesCount = renderEngine->compiledScene->texs.size();
-	intersectionDevice->AllocBufferRO(&texturesBuff, &renderEngine->compiledScene->texs[0],
+	intersectionDevice->tmpAllocBufferRO(&texturesBuff, &renderEngine->compiledScene->texs[0],
 			sizeof(slg::ocl::Texture) * texturesCount, "Textures");
 
-	intersectionDevice->AllocBufferRO(&textureEvalOpsBuff, &renderEngine->compiledScene->texEvalOps[0],
+	intersectionDevice->tmpAllocBufferRO(&textureEvalOpsBuff, &renderEngine->compiledScene->texEvalOps[0],
 			sizeof(slg::ocl::TextureEvalOp) * renderEngine->compiledScene->texEvalOps.size(), "Texture evaluation ops");
 
 	const u_int taskCount = renderEngine->taskCount;
-	intersectionDevice->AllocBufferRW(&textureEvalStackBuff, 
+	intersectionDevice->tmpAllocBufferRW(&textureEvalStackBuff, 
 			nullptr, sizeof(float) * renderEngine->compiledScene->maxTextureEvalStackSize *
 			taskCount, "Texture evaluation stacks");
 }
@@ -155,59 +155,59 @@ void PathOCLBaseOCLRenderThread::InitTextures() {
 void PathOCLBaseOCLRenderThread::InitLights() {
 	CompiledScene *cscene = renderEngine->compiledScene;
 
-	intersectionDevice->AllocBufferRO(&lightsBuff, &cscene->lightDefs[0],
+	intersectionDevice->tmpAllocBufferRO(&lightsBuff, &cscene->lightDefs[0],
 		sizeof(slg::ocl::LightSource) * cscene->lightDefs.size(), "Lights");
 	if (cscene->envLightIndices.size() > 0) {
-		intersectionDevice->AllocBufferRO(&envLightIndicesBuff, &cscene->envLightIndices[0],
+		intersectionDevice->tmpAllocBufferRO(&envLightIndicesBuff, &cscene->envLightIndices[0],
 				sizeof(u_int) * cscene->envLightIndices.size(), "Env. light indices");
 	} else
-		intersectionDevice->FreeBuffer(&envLightIndicesBuff);
+		intersectionDevice->tmpFreeBuffer(&envLightIndicesBuff);
 
-	intersectionDevice->AllocBufferRO(&lightIndexOffsetByMeshIndexBuff, &cscene->lightIndexOffsetByMeshIndex[0],
+	intersectionDevice->tmpAllocBufferRO(&lightIndexOffsetByMeshIndexBuff, &cscene->lightIndexOffsetByMeshIndex[0],
 		sizeof(u_int) * cscene->lightIndexOffsetByMeshIndex.size(), "Light offsets (Part I)");
-	intersectionDevice->AllocBufferRO(&lightIndexByTriIndexBuff, &cscene->lightIndexByTriIndex[0],
+	intersectionDevice->tmpAllocBufferRO(&lightIndexByTriIndexBuff, &cscene->lightIndexByTriIndex[0],
 		sizeof(u_int) * cscene->lightIndexByTriIndex.size(), "Light offsets (Part II)");
 
 	if (cscene->envLightDistributions.size() > 0) {
-		intersectionDevice->AllocBufferRO(&envLightDistributionsBuff, &cscene->envLightDistributions[0],
+		intersectionDevice->tmpAllocBufferRO(&envLightDistributionsBuff, &cscene->envLightDistributions[0],
 			sizeof(float) * cscene->envLightDistributions.size(), "Env. light distributions");
 	} else
-		intersectionDevice->FreeBuffer(&envLightDistributionsBuff);
+		intersectionDevice->tmpFreeBuffer(&envLightDistributionsBuff);
 
-	intersectionDevice->AllocBufferRO(&lightsDistributionBuff, cscene->lightsDistribution,
+	intersectionDevice->tmpAllocBufferRO(&lightsDistributionBuff, cscene->lightsDistribution,
 		cscene->lightsDistributionSize, "LightsDistribution");
-	intersectionDevice->AllocBufferRO(&infiniteLightSourcesDistributionBuff, cscene->infiniteLightSourcesDistribution,
+	intersectionDevice->tmpAllocBufferRO(&infiniteLightSourcesDistributionBuff, cscene->infiniteLightSourcesDistribution,
 		cscene->infiniteLightSourcesDistributionSize, "InfiniteLightSourcesDistribution");
 	if (cscene->dlscAllEntries.size() > 0) {
-		intersectionDevice->AllocBufferRO(&dlscAllEntriesBuff, &cscene->dlscAllEntries[0],
+		intersectionDevice->tmpAllocBufferRO(&dlscAllEntriesBuff, &cscene->dlscAllEntries[0],
 			cscene->dlscAllEntries.size() * sizeof(slg::ocl::DLSCacheEntry), "DLSC all entries");
-		intersectionDevice->AllocBufferRO(&dlscDistributionsBuff, &cscene->dlscDistributions[0],
+		intersectionDevice->tmpAllocBufferRO(&dlscDistributionsBuff, &cscene->dlscDistributions[0],
 			cscene->dlscDistributions.size() * sizeof(float), "DLSC distributions table");
-		intersectionDevice->AllocBufferRO(&dlscBVHNodesBuff, &cscene->dlscBVHArrayNode[0],
+		intersectionDevice->tmpAllocBufferRO(&dlscBVHNodesBuff, &cscene->dlscBVHArrayNode[0],
 			cscene->dlscBVHArrayNode.size() * sizeof(slg::ocl::IndexBVHArrayNode), "DLSC BVH nodes");
 	} else {
-		intersectionDevice->FreeBuffer(&dlscAllEntriesBuff);
-		intersectionDevice->FreeBuffer(&dlscDistributionsBuff);
-		intersectionDevice->FreeBuffer(&dlscBVHNodesBuff);
+		intersectionDevice->tmpFreeBuffer(&dlscAllEntriesBuff);
+		intersectionDevice->tmpFreeBuffer(&dlscDistributionsBuff);
+		intersectionDevice->tmpFreeBuffer(&dlscBVHNodesBuff);
 	}
 	
 	if (cscene->elvcAllEntries.size() > 0) {
-		intersectionDevice->AllocBufferRO(&elvcAllEntriesBuff, &cscene->elvcAllEntries[0],
+		intersectionDevice->tmpAllocBufferRO(&elvcAllEntriesBuff, &cscene->elvcAllEntries[0],
 			cscene->elvcAllEntries.size() * sizeof(slg::ocl::ELVCacheEntry), "ELVC all entries");
-		intersectionDevice->AllocBufferRO(&elvcDistributionsBuff, &cscene->elvcDistributions[0],
+		intersectionDevice->tmpAllocBufferRO(&elvcDistributionsBuff, &cscene->elvcDistributions[0],
 			cscene->elvcDistributions.size() * sizeof(float), "ELVC distributions table");
 		if (cscene->elvcTileDistributionOffsets.size() > 0) {
-			intersectionDevice->AllocBufferRO(&elvcTileDistributionOffsetsBuff, &cscene->elvcTileDistributionOffsets[0],
+			intersectionDevice->tmpAllocBufferRO(&elvcTileDistributionOffsetsBuff, &cscene->elvcTileDistributionOffsets[0],
 					cscene->elvcTileDistributionOffsets.size() * sizeof(u_int), "ELVC tile distribution offsets table");
 		} else
-			intersectionDevice->FreeBuffer(&elvcTileDistributionOffsetsBuff);
-		intersectionDevice->AllocBufferRO(&elvcBVHNodesBuff, &cscene->elvcBVHArrayNode[0],
+			intersectionDevice->tmpFreeBuffer(&elvcTileDistributionOffsetsBuff);
+		intersectionDevice->tmpAllocBufferRO(&elvcBVHNodesBuff, &cscene->elvcBVHArrayNode[0],
 			cscene->elvcBVHArrayNode.size() * sizeof(slg::ocl::IndexBVHArrayNode), "ELVC BVH nodes");
 	} else {
-		intersectionDevice->FreeBuffer(&elvcAllEntriesBuff);
-		intersectionDevice->FreeBuffer(&elvcDistributionsBuff);
-		intersectionDevice->FreeBuffer(&elvcTileDistributionOffsetsBuff);
-		intersectionDevice->FreeBuffer(&elvcBVHNodesBuff);
+		intersectionDevice->tmpFreeBuffer(&elvcAllEntriesBuff);
+		intersectionDevice->tmpFreeBuffer(&elvcDistributionsBuff);
+		intersectionDevice->tmpFreeBuffer(&elvcTileDistributionOffsetsBuff);
+		intersectionDevice->tmpFreeBuffer(&elvcBVHNodesBuff);
 	}
 }
 
@@ -215,26 +215,26 @@ void PathOCLBaseOCLRenderThread::InitPhotonGI() {
 	CompiledScene *cscene = renderEngine->compiledScene;
 
 	if (cscene->pgicRadiancePhotons.size() > 0) {
-		intersectionDevice->AllocBufferRO(&pgicRadiancePhotonsBuff, &cscene->pgicRadiancePhotons[0],
+		intersectionDevice->tmpAllocBufferRO(&pgicRadiancePhotonsBuff, &cscene->pgicRadiancePhotons[0],
 			cscene->pgicRadiancePhotons.size() * sizeof(slg::ocl::RadiancePhoton), "PhotonGI indirect cache all entries");
-		intersectionDevice->AllocBufferRO(&pgicRadiancePhotonsValuesBuff, &cscene->pgicRadiancePhotonsValues[0],
+		intersectionDevice->tmpAllocBufferRO(&pgicRadiancePhotonsValuesBuff, &cscene->pgicRadiancePhotonsValues[0],
 			cscene->pgicRadiancePhotonsValues.size() * sizeof(slg::ocl::Spectrum), "PhotonGI indirect cache all entry values");
-		intersectionDevice->AllocBufferRO(&pgicRadiancePhotonsBVHNodesBuff, &cscene->pgicRadiancePhotonsBVHArrayNode[0],
+		intersectionDevice->tmpAllocBufferRO(&pgicRadiancePhotonsBVHNodesBuff, &cscene->pgicRadiancePhotonsBVHArrayNode[0],
 			cscene->pgicRadiancePhotonsBVHArrayNode.size() * sizeof(slg::ocl::IndexBVHArrayNode), "PhotonGI indirect cache BVH nodes");
 	} else {
-		intersectionDevice->FreeBuffer(&pgicRadiancePhotonsBuff);
-		intersectionDevice->FreeBuffer(&pgicRadiancePhotonsValuesBuff);
-		intersectionDevice->FreeBuffer(&pgicRadiancePhotonsBVHNodesBuff);
+		intersectionDevice->tmpFreeBuffer(&pgicRadiancePhotonsBuff);
+		intersectionDevice->tmpFreeBuffer(&pgicRadiancePhotonsValuesBuff);
+		intersectionDevice->tmpFreeBuffer(&pgicRadiancePhotonsBVHNodesBuff);
 	}
 
 	if (cscene->pgicCausticPhotons.size() > 0) {
-		intersectionDevice->AllocBufferRO(&pgicCausticPhotonsBuff, &cscene->pgicCausticPhotons[0],
+		intersectionDevice->tmpAllocBufferRO(&pgicCausticPhotonsBuff, &cscene->pgicCausticPhotons[0],
 			cscene->pgicCausticPhotons.size() * sizeof(slg::ocl::Photon), "PhotonGI caustic cache all entries");
-		intersectionDevice->AllocBufferRO(&pgicCausticPhotonsBVHNodesBuff, &cscene->pgicCausticPhotonsBVHArrayNode[0],
+		intersectionDevice->tmpAllocBufferRO(&pgicCausticPhotonsBVHNodesBuff, &cscene->pgicCausticPhotonsBVHArrayNode[0],
 			cscene->pgicCausticPhotonsBVHArrayNode.size() * sizeof(slg::ocl::IndexBVHArrayNode), "PhotonGI caustic cache BVH nodes");
 	} else {
-		intersectionDevice->FreeBuffer(&pgicCausticPhotonsBuff);
-		intersectionDevice->FreeBuffer(&pgicCausticPhotonsBVHNodesBuff);
+		intersectionDevice->tmpFreeBuffer(&pgicCausticPhotonsBuff);
+		intersectionDevice->tmpFreeBuffer(&pgicCausticPhotonsBVHNodesBuff);
 	}
 }
 
@@ -242,22 +242,22 @@ void PathOCLBaseOCLRenderThread::InitImageMaps() {
 	CompiledScene *cscene = renderEngine->compiledScene;
 
 	if (cscene->imageMapDescs.size() > 0) {
-		intersectionDevice->AllocBufferRO(&imageMapDescsBuff, &cscene->imageMapDescs[0],
+		intersectionDevice->tmpAllocBufferRO(&imageMapDescsBuff, &cscene->imageMapDescs[0],
 				sizeof(slg::ocl::ImageMap) * cscene->imageMapDescs.size(), "ImageMap descriptions");
 
 		// Free unused pages
 		for (u_int i = cscene->imageMapMemBlocks.size(); i < imageMapsBuff.size(); ++i)
-			intersectionDevice->FreeBuffer(&imageMapsBuff[i]);
+			intersectionDevice->tmpFreeBuffer(&imageMapsBuff[i]);
 		imageMapsBuff.resize(cscene->imageMapMemBlocks.size(), NULL);
 
 		for (u_int i = 0; i < imageMapsBuff.size(); ++i) {
-			intersectionDevice->AllocBufferRO(&(imageMapsBuff[i]), &(cscene->imageMapMemBlocks[i][0]),
+			intersectionDevice->tmpAllocBufferRO(&(imageMapsBuff[i]), &(cscene->imageMapMemBlocks[i][0]),
 					sizeof(float) * cscene->imageMapMemBlocks[i].size(), "ImageMaps");
 		}
 	} else {
-		intersectionDevice->FreeBuffer(&imageMapDescsBuff);
+		intersectionDevice->tmpFreeBuffer(&imageMapDescsBuff);
 		for (u_int i = 0; i < imageMapsBuff.size(); ++i)
-			intersectionDevice->FreeBuffer(&imageMapsBuff[i]);
+			intersectionDevice->tmpFreeBuffer(&imageMapsBuff[i]);
 		imageMapsBuff.resize(0);
 	}
 }
@@ -269,25 +269,25 @@ void PathOCLBaseOCLRenderThread::InitGPUTaskBuffer() {
 	// Allocate tasksConfigBuff
 	//--------------------------------------------------------------------------
 
-	intersectionDevice->AllocBufferRO(&taskConfigBuff, &renderEngine->taskConfig, sizeof(slg::ocl::pathoclbase::GPUTaskConfiguration), "GPUTaskConfiguration");
+	intersectionDevice->tmpAllocBufferRO(&taskConfigBuff, &renderEngine->taskConfig, sizeof(slg::ocl::pathoclbase::GPUTaskConfiguration), "GPUTaskConfiguration");
 
 	//--------------------------------------------------------------------------
 	// Allocate tasksBuff
 	//--------------------------------------------------------------------------
 
-	intersectionDevice->AllocBufferRW(&tasksBuff, nullptr, sizeof(slg::ocl::pathoclbase::GPUTask) * taskCount, "GPUTask");
+	intersectionDevice->tmpAllocBufferRW(&tasksBuff, nullptr, sizeof(slg::ocl::pathoclbase::GPUTask) * taskCount, "GPUTask");
 
 	//--------------------------------------------------------------------------
 	// Allocate tasksDirectLightBuff
 	//--------------------------------------------------------------------------
 
-	intersectionDevice->AllocBufferRW(&tasksDirectLightBuff, nullptr, sizeof(slg::ocl::pathoclbase::GPUTaskDirectLight) * taskCount, "GPUTaskDirectLight");
+	intersectionDevice->tmpAllocBufferRW(&tasksDirectLightBuff, nullptr, sizeof(slg::ocl::pathoclbase::GPUTaskDirectLight) * taskCount, "GPUTaskDirectLight");
 
 	//--------------------------------------------------------------------------
 	// Allocate tasksStateBuff
 	//--------------------------------------------------------------------------
 
-	intersectionDevice->AllocBufferRW(&tasksStateBuff, nullptr, sizeof(slg::ocl::pathoclbase::GPUTaskState) * taskCount, "GPUTaskState");
+	intersectionDevice->tmpAllocBufferRW(&tasksStateBuff, nullptr, sizeof(slg::ocl::pathoclbase::GPUTaskState) * taskCount, "GPUTaskState");
 }
 
 void PathOCLBaseOCLRenderThread::InitSamplerSharedDataBuffer() {
@@ -325,9 +325,9 @@ void PathOCLBaseOCLRenderThread::InitSamplerSharedDataBuffer() {
 				boost::lexical_cast<string>(renderEngine->oclSampler->type));
 
 	if (size == 0)
-		intersectionDevice->FreeBuffer(&samplerSharedDataBuff);
+		intersectionDevice->tmpFreeBuffer(&samplerSharedDataBuff);
 	else
-		intersectionDevice->AllocBufferRW(&samplerSharedDataBuff, nullptr, size, "SamplerSharedData");
+		intersectionDevice->tmpAllocBufferRW(&samplerSharedDataBuff, nullptr, size, "SamplerSharedData");
 
 	// Initialize the sampler shared data
 	if (renderEngine->oclSampler->type == slg::ocl::RANDOM) {
@@ -426,7 +426,7 @@ void PathOCLBaseOCLRenderThread::InitSamplesBuffer() {
 	}
 
 	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Size of a Sample: " << sampleSize << "bytes");
-	intersectionDevice->AllocBufferRW(&samplesBuff, nullptr, sampleSize * taskCount, "Sample");
+	intersectionDevice->tmpAllocBufferRW(&samplesBuff, nullptr, sampleSize * taskCount, "Sample");
 }
 
 void PathOCLBaseOCLRenderThread::InitSampleResultsBuffer() {
@@ -435,7 +435,7 @@ void PathOCLBaseOCLRenderThread::InitSampleResultsBuffer() {
 	const size_t sampleResultSize = sizeof(slg::ocl::SampleResult);
 
 	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Size of a SampleResult: " << sampleResultSize << "bytes");
-	intersectionDevice->AllocBufferRW(&sampleResultsBuff, nullptr, sampleResultSize * taskCount, "Sample");
+	intersectionDevice->tmpAllocBufferRW(&sampleResultsBuff, nullptr, sampleResultSize * taskCount, "Sample");
 }
 
 void PathOCLBaseOCLRenderThread::InitSampleDataBuffer() {
@@ -459,7 +459,7 @@ void PathOCLBaseOCLRenderThread::InitSampleDataBuffer() {
 
 	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Size of a SampleData: " << uDataSize << "bytes");
 
-	intersectionDevice->AllocBufferRW(&sampleDataBuff, nullptr, uDataSize * taskCount, "SampleData");
+	intersectionDevice->tmpAllocBufferRW(&sampleDataBuff, nullptr, uDataSize * taskCount, "SampleData");
 }
 
 void PathOCLBaseOCLRenderThread::InitRender() {
@@ -546,7 +546,7 @@ void PathOCLBaseOCLRenderThread::InitRender() {
 	// Allocate GPU task statistic buffers
 	//--------------------------------------------------------------------------
 
-	intersectionDevice->AllocBufferRW(&taskStatsBuff, nullptr, sizeof(slg::ocl::pathoclbase::GPUTaskStats) * taskCount, "GPUTask Stats");
+	intersectionDevice->tmpAllocBufferRW(&taskStatsBuff, nullptr, sizeof(slg::ocl::pathoclbase::GPUTaskStats) * taskCount, "GPUTask Stats");
 
 	//--------------------------------------------------------------------------
 	// Allocate sampler shared data buffer
@@ -576,19 +576,19 @@ void PathOCLBaseOCLRenderThread::InitRender() {
 	// Allocate volume info buffers if required
 	//--------------------------------------------------------------------------
 
-	intersectionDevice->AllocBufferRW(&eyePathInfosBuff, nullptr, sizeof(slg::ocl::EyePathInfo) * taskCount, "PathInfo");
+	intersectionDevice->tmpAllocBufferRW(&eyePathInfosBuff, nullptr, sizeof(slg::ocl::EyePathInfo) * taskCount, "PathInfo");
 
 	//--------------------------------------------------------------------------
 	// Allocate volume info buffers if required
 	//--------------------------------------------------------------------------
 
-	intersectionDevice->AllocBufferRW(&directLightVolInfosBuff, nullptr, sizeof(slg::ocl::PathVolumeInfo) * taskCount, "DirectLightVolumeInfo");
+	intersectionDevice->tmpAllocBufferRW(&directLightVolInfosBuff, nullptr, sizeof(slg::ocl::PathVolumeInfo) * taskCount, "DirectLightVolumeInfo");
 
 	//--------------------------------------------------------------------------
 	// Allocate GPU pixel filter distribution
 	//--------------------------------------------------------------------------
 
-	intersectionDevice->AllocBufferRO(&pixelFilterBuff, renderEngine->pixelFilterDistribution,
+	intersectionDevice->tmpAllocBufferRO(&pixelFilterBuff, renderEngine->pixelFilterDistribution,
 			renderEngine->pixelFilterDistributionSize, "Pixel Filter Distribution");
 
 	//--------------------------------------------------------------------------

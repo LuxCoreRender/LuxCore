@@ -228,7 +228,8 @@ vector<IntersectionDevice *> Context::CreateIntersectionDevices(
 		IntersectionDevice *device;
 		if (deviceType == DEVICE_TYPE_NATIVE) {
 			// Nathive thread devices
-			device = new NativeIntersectionDevice(this, indexOffset + i);
+			NativeIntersectionDeviceDescription *nativeDeviceDesc = (NativeIntersectionDeviceDescription *)deviceDesc[i];
+			device = new NativeIntersectionDevice(this, nativeDeviceDesc, indexOffset + i);
 		}
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 		else if (deviceType & DEVICE_TYPE_OPENCL_ALL) {

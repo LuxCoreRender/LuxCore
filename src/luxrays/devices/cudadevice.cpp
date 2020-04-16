@@ -120,7 +120,7 @@ CUDADevice::CUDADevice(
 		const Context *context,
 		CUDADeviceDescription *desc,
 		const size_t devIndex) :
-		Device(context, desc->GetType(), devIndex),
+		Device(context, devIndex),
 		deviceDesc(desc) {
 	deviceName = (desc->GetName() + " Intersect").c_str();
 }
@@ -235,6 +235,13 @@ void CUDADevice::GetKernel(HardwareDeviceProgram *program,
 	CHECK_CUDA_ERROR(cuModuleGetFunction(&function, cudaDeviceProgram->GetModule(), kernelName.c_str()));
 	
 	cudaDeviceKernel->Set(function);
+}
+
+u_int CUDADevice::GetKernelWorkGroupSize(HardwareDeviceKernel *kernel) {
+	assert (kernel);
+	assert (!kernel->IsNull());
+
+	return 32;
 }
 
 void CUDADevice::SetKernelArg(HardwareDeviceKernel *kernel,

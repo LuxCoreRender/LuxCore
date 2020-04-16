@@ -16,57 +16,18 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _LUXRAYS_NATIVETHREADDEVICE_H
-#define	_LUXRAYS_NATIVETHREADDEVICE_H
-
-#include <string>
-#include <cstdlib>
-
-#include <boost/thread/thread.hpp>
-
-#include "luxrays/luxrays.h"
-#include "luxrays/core/dataset.h"
-#include "luxrays/core/context.h"
-#include "luxrays/core/intersectiondevice.h"
-#include "luxrays/utils/utils.h"
+#include "luxrays/core/hardwareintersectiondevice.h"
 
 namespace luxrays {
 
 //------------------------------------------------------------------------------
-// NativeIntersectionDeviceDescription
+// IntersectionDevice
 //------------------------------------------------------------------------------
 
-class NativeIntersectionDeviceDescription : public DeviceDescription {
-public:
-	NativeIntersectionDeviceDescription(const std::string deviceName) :
-		DeviceDescription(deviceName, DEVICE_TYPE_NATIVE) { }
-
-	friend class Context;
-
-protected:
-	static void AddDeviceDescs(std::vector<DeviceDescription *> &descriptions);
-};
-
-//------------------------------------------------------------------------------
-// NativeDevice
-//------------------------------------------------------------------------------
-
-class NativeIntersectionDevice : public IntersectionDevice {
-public:
-	NativeIntersectionDevice(const Context *context,
-			NativeIntersectionDeviceDescription *deviceDesc,
-			const size_t devIndex);
-	virtual ~NativeIntersectionDevice();
-
-	virtual const DeviceDescription *GetDeviceDesc() const { return deviceDesc; }
-
-	virtual void SetDataSet(DataSet *newDataSet);
-
-	friend class Context;
-
-	NativeIntersectionDeviceDescription *deviceDesc;
-};
-
+HardwareIntersectionDevice::HardwareIntersectionDevice() {
 }
 
-#endif	/* _LUXRAYS_NATIVETHREADDEVICE_H */
+HardwareIntersectionDevice::~HardwareIntersectionDevice() {
+}
+
+}
