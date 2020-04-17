@@ -43,7 +43,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 PathOCLBaseOCLRenderThread::PathOCLBaseOCLRenderThread(const u_int index,
-		OpenCLIntersectionDevice *device, PathOCLBaseRenderEngine *re) {
+		HardwareIntersectionDevice *device, PathOCLBaseRenderEngine *re) {
 	threadIndex = index;
 	intersectionDevice = device;
 	renderEngine = re;
@@ -113,17 +113,6 @@ PathOCLBaseOCLRenderThread::PathOCLBaseOCLRenderThread(const u_int index,
 	directLightVolInfosBuff = nullptr;
 	pixelFilterBuff = nullptr;
 
-	// Check the kind of kernel cache to use
-	string type = renderEngine->renderConfig->cfg.Get(Property("opencl.kernelcache")("PERSISTENT")).Get<string>();
-	if (type == "PERSISTENT")
-		kernelCache = new oclKernelPersistentCache("LUXCORE_" LUXCORE_VERSION_MAJOR "." LUXCORE_VERSION_MINOR);
-	else if (type == "VOLATILE")
-		kernelCache = new oclKernelVolatileCache();
-	else if (type == "NONE")
-		kernelCache = new oclKernelDummyCache();
-	else
-		throw runtime_error("Unknown opencl.kernelcache type: " + type);
-	
 	// OpenCL kernels
 	initSeedKernel = nullptr;
 	initKernel = nullptr;
@@ -152,7 +141,6 @@ PathOCLBaseOCLRenderThread::~PathOCLBaseOCLRenderThread() {
 	FreeThreadFilms();
 
 	delete filmClearKernel;
-	delete kernelCache;
 	delete initSeedKernel;
 	delete initKernel;
 	delete advancePathsKernel_MK_RT_NEXT_VERTEX;
@@ -340,10 +328,8 @@ void PathOCLBaseOCLRenderThread::EndSceneEdit(const EditActionList &editActions)
 		// Execute initialization kernels
 		//----------------------------------------------------------------------
 
-		cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
-
 		// Clear the frame buffers
-		ClearThreadFilms(oclQueue);
+		ClearThreadFilms();
 	}
 
 	// Reset statistics in order to be more accurate
@@ -372,13 +358,13 @@ void PathOCLBaseOCLRenderThread::IncThreadFilms() {
 			threadFilmSubRegion);
 }
 
-void PathOCLBaseOCLRenderThread::ClearThreadFilms(cl::CommandQueue &oclQueue) {
+void PathOCLBaseOCLRenderThread::ClearThreadFilms() {
 	// Clear all thread films
 	BOOST_FOREACH(ThreadFilm *threadFilm, threadFilms)
-		threadFilm->ClearFilm(oclQueue, *filmClearKernel, filmClearWorkGroupSize);
+		threadFilm->ClearFilm(intersectionDevice, filmClearKernel, filmClearWorkGroupSize);
 }
 
-void PathOCLBaseOCLRenderThread::TransferThreadFilms(OpenCLIntersectionDevice *intersectionDevice) {
+void PathOCLBaseOCLRenderThread::TransferThreadFilms(HardwareIntersectionDevice *intersectionDevice) {
 	// Clear all thread films
 	BOOST_FOREACH(ThreadFilm *threadFilm, threadFilms)
 		threadFilm->RecvFilm(intersectionDevice);

@@ -34,7 +34,7 @@ class TilePathOCLRenderEngine;
 
 class TilePathOCLRenderThread : public PathOCLBaseOCLRenderThread {
 public:
-	TilePathOCLRenderThread(const u_int index, luxrays::OpenCLIntersectionDevice *device,
+	TilePathOCLRenderThread(const u_int index, luxrays::HardwareIntersectionDevice *device,
 			TilePathOCLRenderEngine *re);
 	virtual ~TilePathOCLRenderThread();
 
@@ -114,7 +114,7 @@ protected:
 	static const luxrays::Properties &GetDefaultProps();
 
 	virtual PathOCLBaseOCLRenderThread *CreateOCLThread(const u_int index,
-		luxrays::OpenCLIntersectionDevice *device);
+		luxrays::HardwareIntersectionDevice *device);
 	virtual PathOCLBaseNativeRenderThread *CreateNativeThread(const u_int index,
 			luxrays::NativeIntersectionDevice *device);
 

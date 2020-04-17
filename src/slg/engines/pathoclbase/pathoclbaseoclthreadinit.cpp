@@ -601,13 +601,11 @@ void PathOCLBaseOCLRenderThread::InitRender() {
 	// Set kernel arguments
 	SetKernelArgs();
 
-	cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
-
 	// Clear all thread films
 	BOOST_FOREACH(ThreadFilm *threadFilm, threadFilms)
-		threadFilm->ClearFilm(oclQueue, *filmClearKernel, filmClearWorkGroupSize);
+		threadFilm->ClearFilm(intersectionDevice, filmClearKernel, filmClearWorkGroupSize);
 
-	oclQueue.finish();
+	intersectionDevice->FinishQueue();
 
 	// Reset statistics in order to be more accurate
 	intersectionDevice->ResetPerformaceStats();

@@ -40,7 +40,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 PathOCLOpenCLRenderThread::PathOCLOpenCLRenderThread(const u_int index,
-		OpenCLIntersectionDevice *device, PathOCLRenderEngine *re) :
+		HardwareIntersectionDevice *device, PathOCLRenderEngine *re) :
 		PathOCLBaseOCLRenderThread(index, device, re) {
 }
 
@@ -80,7 +80,6 @@ static void PGICUpdateCallBack(CompiledScene *compiledScene) {
 void PathOCLOpenCLRenderThread::RenderThreadImpl() {
 	//SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Rendering thread started");
 
-	cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
 	PathOCLRenderEngine *engine = (PathOCLRenderEngine *)renderEngine;
 	const u_int taskCount = engine->taskCount;
 
@@ -91,17 +90,17 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl() {
 
 		// Clear the frame buffer
 		const u_int filmPixelCount = threadFilms[0]->film->GetWidth() * threadFilms[0]->film->GetHeight();
-		oclQueue.enqueueNDRangeKernel(*filmClearKernel, cl::NullRange,
-			cl::NDRange(RoundUp<u_int>(filmPixelCount, filmClearWorkGroupSize)),
-			cl::NDRange(filmClearWorkGroupSize));
+		intersectionDevice->EnqueueKernel(filmClearKernel,
+			HardwareDeviceRange(RoundUp<u_int>(filmPixelCount, filmClearWorkGroupSize)),
+			HardwareDeviceRange(filmClearWorkGroupSize));
 
 		// Initialize random number generator seeds
-		oclQueue.enqueueNDRangeKernel(*initSeedKernel, cl::NullRange,
-				cl::NDRange(engine->taskCount), cl::NDRange(initWorkGroupSize));
+		intersectionDevice->EnqueueKernel(initSeedKernel,
+				HardwareDeviceRange(engine->taskCount), HardwareDeviceRange(initWorkGroupSize));
 
 		// Initialize the tasks buffer
-		oclQueue.enqueueNDRangeKernel(*initKernel, cl::NullRange,
-				cl::NDRange(engine->taskCount), cl::NDRange(initWorkGroupSize));
+		intersectionDevice->EnqueueKernel(initKernel,
+				HardwareDeviceRange(engine->taskCount), HardwareDeviceRange(initWorkGroupSize));
 
 		// Check if I have to load the start film
 		if (engine->hasStartFilm && (threadIndex == 0))
@@ -155,7 +154,7 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl() {
 					sizeof(slg::ocl::pathoclbase::GPUTaskStats) * taskCount,
 					gpuTaskStats);
 
-				oclQueue.finish();
+				intersectionDevice->FinishQueue();
 				
 				// I need to update the film samples count
 				
@@ -184,11 +183,11 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl() {
 				intersectionDevice->EnqueueTraceRayBuffer(raysBuff, hitsBuff, taskCount);
 
 				// Advance to next path state
-				EnqueueAdvancePathsKernel(oclQueue);
+				EnqueueAdvancePathsKernel();
 			}
 			totalIterations += iterations;
 
-			oclQueue.finish();
+			intersectionDevice->FinishQueue();
 			const double timeKernelEnd = WallClockTime();
 			totalKernelTime += timeKernelEnd - timeKernelStart;
 

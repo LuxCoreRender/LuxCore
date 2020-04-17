@@ -254,6 +254,8 @@ public:
 
 		// Set kernel arguments
 		SetIntersectionKernelArgs();
+
+		delete program;
 	}
 
 	virtual ~MBVHKernel() {

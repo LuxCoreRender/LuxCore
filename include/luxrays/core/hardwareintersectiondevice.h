@@ -38,8 +38,8 @@ public:
 	// Data parallel interface: to trace a multiple rays (i.e. on the GPU)
 	//--------------------------------------------------------------------------
 
-	virtual void EnqueueTraceRayBuffer(HardwareDeviceBuffer &rayBuff,
-			HardwareDeviceBuffer &rayHitBuff, const unsigned int rayCount) {
+	virtual void EnqueueTraceRayBuffer(HardwareDeviceBuffer *rayBuff,
+			HardwareDeviceBuffer *rayHitBuff, const unsigned int rayCount) {
 		throw std::runtime_error("Called EnqueueTraceRayBuffer() on a device without parallel support");
 	}
 

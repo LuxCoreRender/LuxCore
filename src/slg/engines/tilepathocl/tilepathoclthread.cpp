@@ -33,7 +33,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 TilePathOCLRenderThread::TilePathOCLRenderThread(const u_int index,
-	OpenCLIntersectionDevice *device, TilePathOCLRenderEngine *re) : 
+	HardwareIntersectionDevice *device, TilePathOCLRenderEngine *re) : 
 	PathOCLBaseOCLRenderThread(index, device, re) {
 }
 
@@ -103,7 +103,6 @@ void TilePathOCLRenderThread::UpdateSamplerData(const TileWork &tileWork) {
 
 void TilePathOCLRenderThread::RenderTileWork(const TileWork &tileWork,
 		const u_int filmIndex) {
-	cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
 	TilePathOCLRenderEngine *engine = (TilePathOCLRenderEngine *)renderEngine;
 
 	threadFilms[filmIndex]->film->Reset();
@@ -111,13 +110,13 @@ void TilePathOCLRenderThread::RenderTileWork(const TileWork &tileWork,
 		threadFilms[filmIndex]->film->GetDenoiser().CopyReferenceFilm(engine->film);
 
 	// Clear the frame buffer
-	threadFilms[filmIndex]->ClearFilm(oclQueue, *filmClearKernel, filmClearWorkGroupSize);
+	threadFilms[filmIndex]->ClearFilm(intersectionDevice, filmClearKernel, filmClearWorkGroupSize);
 
 	// Clear the frame buffer
 	const u_int filmPixelCount = threadFilms[filmIndex]->film->GetWidth() * threadFilms[filmIndex]->film->GetHeight();
-	oclQueue.enqueueNDRangeKernel(*filmClearKernel, cl::NullRange,
-		cl::NDRange(RoundUp<u_int>(filmPixelCount, filmClearWorkGroupSize)),
-		cl::NDRange(filmClearWorkGroupSize));
+	intersectionDevice->EnqueueKernel(filmClearKernel,
+		HardwareDeviceRange(RoundUp<u_int>(filmPixelCount, filmClearWorkGroupSize)),
+		HardwareDeviceRange(filmClearWorkGroupSize));
 
 	// Update all kernel args
 	{
@@ -132,8 +131,8 @@ void TilePathOCLRenderThread::RenderTileWork(const TileWork &tileWork,
 	UpdateSamplerData(tileWork);
 
 	// Initialize the tasks buffer
-	oclQueue.enqueueNDRangeKernel(*initKernel, cl::NullRange,
-			cl::NDRange(engine->taskCount), cl::NDRange(initWorkGroupSize));
+	intersectionDevice->EnqueueKernel(initKernel,
+			HardwareDeviceRange(engine->taskCount), HardwareDeviceRange(initWorkGroupSize));
 
 	// There are 2 rays to trace for each path vertex (the last vertex traces only one ray)
 	const u_int worstCaseIterationCount = (engine->pathTracer.maxPathDepth.depth == 1) ? 2 : (engine->pathTracer.maxPathDepth.depth * 2 - 1);
@@ -142,7 +141,7 @@ void TilePathOCLRenderThread::RenderTileWork(const TileWork &tileWork,
 		intersectionDevice->EnqueueTraceRayBuffer(raysBuff, hitsBuff, engine->taskCount);
 
 		// Advance to next path state
-		EnqueueAdvancePathsKernel(oclQueue);
+		EnqueueAdvancePathsKernel();
 	}
 
 	// Async. transfer of the Film buffers
@@ -166,12 +165,11 @@ void TilePathOCLRenderThread::RenderThreadImpl() {
 		// Initialization
 		//----------------------------------------------------------------------
 
-		cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
 		const u_int taskCount = engine->taskCount;
 
 		// Initialize random number generator seeds
-		oclQueue.enqueueNDRangeKernel(*initSeedKernel, cl::NullRange,
-				cl::NDRange(taskCount), cl::NDRange(initWorkGroupSize));
+		intersectionDevice->EnqueueKernel(initSeedKernel,
+				HardwareDeviceRange(taskCount), HardwareDeviceRange(initWorkGroupSize));
 
 		//----------------------------------------------------------------------
 		// Extract the tile to render
@@ -214,7 +212,7 @@ void TilePathOCLRenderThread::RenderThreadImpl() {
 				sizeof(slg::ocl::pathoclbase::GPUTaskStats) * taskCount,
 				gpuTaskStats);
 
-			oclQueue.finish();
+			intersectionDevice->FinishQueue();
 
 			const double t1 = WallClockTime();
 			const double renderingTime = t1 - t0;

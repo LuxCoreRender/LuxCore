@@ -224,6 +224,8 @@ public:
 			else
 				device.SetKernelArg(kernel, argIndex++, nodeBuffs[i]);
 		}
+
+		delete program;
 	}
 	virtual ~BVHKernel() {
 		for (u_int i = 0; i < vertsBuffs.size(); ++i)

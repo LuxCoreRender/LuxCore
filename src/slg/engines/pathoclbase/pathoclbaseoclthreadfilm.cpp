@@ -359,113 +359,114 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::FreeAllOCLBuffers() {
 	renderThread->intersectionDevice->FreeBuffer(&denoiser_HistoImage_Buff);
 }
 
-u_int PathOCLBaseOCLRenderThread::ThreadFilm::SetFilmKernelArgs(cl::Kernel &kernel,
-		u_int argIndex) const {
+u_int PathOCLBaseOCLRenderThread::ThreadFilm::SetFilmKernelArgs(HardwareIntersectionDevice *intersectionDevice,
+		HardwareDeviceKernel *kernel, u_int argIndex) const {
 	// Film parameters
-	kernel.setArg(argIndex++, film->GetWidth());
-	kernel.setArg(argIndex++, film->GetHeight());
+	
+	intersectionDevice->SetKernelArg(kernel, argIndex++, film->GetWidth());
+	intersectionDevice->SetKernelArg(kernel, argIndex++, film->GetHeight());
 
 	const u_int *filmSubRegion = film->GetSubRegion();
-	kernel.setArg(argIndex++, filmSubRegion[0]);
-	kernel.setArg(argIndex++, filmSubRegion[1]);
-	kernel.setArg(argIndex++, filmSubRegion[2]);
-	kernel.setArg(argIndex++, filmSubRegion[3]);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, filmSubRegion[0]);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, filmSubRegion[1]);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, filmSubRegion[2]);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, filmSubRegion[3]);
 
 	for (u_int i = 0; i < FILM_MAX_RADIANCE_GROUP_COUNT; ++i) {
 		if (i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size())
-			OpenCLDeviceBuffer::tmpSetKernelkArg(kernel, argIndex++, channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i]);
+			intersectionDevice->SetKernelArg(kernel, argIndex++, channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i]);
 		else
-			OpenCLDeviceBuffer::tmpSetKernelkArg(kernel, argIndex++, nullptr);
+			intersectionDevice->SetKernelArg(kernel, argIndex++, nullptr);
 	}
 
-	OpenCLDeviceBuffer::tmpSetKernelkArg(kernel, argIndex++, channel_ALPHA_Buff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(kernel, argIndex++, channel_DEPTH_Buff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(kernel, argIndex++, channel_POSITION_Buff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(kernel, argIndex++, channel_GEOMETRY_NORMAL_Buff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(kernel, argIndex++, channel_SHADING_NORMAL_Buff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(kernel, argIndex++, channel_MATERIAL_ID_Buff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(kernel, argIndex++, channel_DIRECT_DIFFUSE_Buff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(kernel, argIndex++, channel_DIRECT_GLOSSY_Buff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(kernel, argIndex++, channel_EMISSION_Buff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(kernel, argIndex++, channel_INDIRECT_DIFFUSE_Buff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(kernel, argIndex++, channel_INDIRECT_GLOSSY_Buff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(kernel, argIndex++, channel_INDIRECT_SPECULAR_Buff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(kernel, argIndex++, channel_MATERIAL_ID_MASK_Buff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(kernel, argIndex++, channel_DIRECT_SHADOW_MASK_Buff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(kernel, argIndex++, channel_INDIRECT_SHADOW_MASK_Buff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(kernel, argIndex++, channel_UV_Buff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(kernel, argIndex++, channel_RAYCOUNT_Buff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(kernel, argIndex++, channel_BY_MATERIAL_ID_Buff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(kernel, argIndex++, channel_IRRADIANCE_Buff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(kernel, argIndex++, channel_OBJECT_ID_Buff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(kernel, argIndex++, channel_OBJECT_ID_MASK_Buff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(kernel, argIndex++, channel_BY_OBJECT_ID_Buff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(kernel, argIndex++, channel_SAMPLECOUNT_Buff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(kernel, argIndex++, channel_CONVERGENCE_Buff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(kernel, argIndex++, channel_MATERIAL_ID_COLOR_Buff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(kernel, argIndex++, channel_ALBEDO_Buff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(kernel, argIndex++, channel_AVG_SHADING_NORMAL_Buff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(kernel, argIndex++, channel_NOISE_Buff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(kernel, argIndex++, channel_USER_IMPORTANCE_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_ALPHA_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_DEPTH_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_POSITION_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_GEOMETRY_NORMAL_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_SHADING_NORMAL_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_MATERIAL_ID_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_DIRECT_DIFFUSE_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_DIRECT_GLOSSY_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_EMISSION_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_INDIRECT_DIFFUSE_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_INDIRECT_GLOSSY_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_INDIRECT_SPECULAR_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_MATERIAL_ID_MASK_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_DIRECT_SHADOW_MASK_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_INDIRECT_SHADOW_MASK_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_UV_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_RAYCOUNT_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_BY_MATERIAL_ID_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_IRRADIANCE_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_OBJECT_ID_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_OBJECT_ID_MASK_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_BY_OBJECT_ID_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_SAMPLECOUNT_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_CONVERGENCE_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_MATERIAL_ID_COLOR_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_ALBEDO_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_AVG_SHADING_NORMAL_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_NOISE_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_USER_IMPORTANCE_Buff);
 
 	// Film denoiser sample accumulator parameters
 	FilmDenoiser &denoiser = film->GetDenoiser();
 	if (denoiser.IsEnabled()) {
-		kernel.setArg(argIndex++, (int)denoiser.IsWarmUpDone());
-		kernel.setArg(argIndex++, denoiser.GetSampleGamma());
-		kernel.setArg(argIndex++, denoiser.GetSampleMaxValue());
-		kernel.setArg(argIndex++, denoiser.GetSampleScale());
-		kernel.setArg(argIndex++, denoiser.GetHistogramBinsCount());
-		OpenCLDeviceBuffer::tmpSetKernelkArg(kernel, argIndex++, denoiser_NbOfSamplesImage_Buff);
-		OpenCLDeviceBuffer::tmpSetKernelkArg(kernel, argIndex++, denoiser_SquaredWeightSumsImage_Buff);
-		OpenCLDeviceBuffer::tmpSetKernelkArg(kernel, argIndex++, denoiser_MeanImage_Buff);
-		OpenCLDeviceBuffer::tmpSetKernelkArg(kernel, argIndex++, denoiser_CovarImage_Buff);
-		OpenCLDeviceBuffer::tmpSetKernelkArg(kernel, argIndex++, denoiser_HistoImage_Buff);
+		intersectionDevice->SetKernelArg(kernel, argIndex++, (int)denoiser.IsWarmUpDone());
+		intersectionDevice->SetKernelArg(kernel, argIndex++, denoiser.GetSampleGamma());
+		intersectionDevice->SetKernelArg(kernel, argIndex++, denoiser.GetSampleMaxValue());
+		intersectionDevice->SetKernelArg(kernel, argIndex++, denoiser.GetSampleScale());
+		intersectionDevice->SetKernelArg(kernel, argIndex++, denoiser.GetHistogramBinsCount());
+		intersectionDevice->SetKernelArg(kernel, argIndex++, denoiser_NbOfSamplesImage_Buff);
+		intersectionDevice->SetKernelArg(kernel, argIndex++, denoiser_SquaredWeightSumsImage_Buff);
+		intersectionDevice->SetKernelArg(kernel, argIndex++, denoiser_MeanImage_Buff);
+		intersectionDevice->SetKernelArg(kernel, argIndex++, denoiser_CovarImage_Buff);
+		intersectionDevice->SetKernelArg(kernel, argIndex++, denoiser_HistoImage_Buff);
 
 		if (denoiser.IsWarmUpDone()) {
 			const vector<RadianceChannelScale> &scales = denoiser.GetRadianceChannelScales();
 			for (u_int i = 0; i < FILM_MAX_RADIANCE_GROUP_COUNT; ++i) {
 				if (i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size()) {
 					const Spectrum s = scales[i].GetScale();
-					kernel.setArg(argIndex++, s.c[0]);
-					kernel.setArg(argIndex++, s.c[1]);
-					kernel.setArg(argIndex++, s.c[2]);
+					intersectionDevice->SetKernelArg(kernel, argIndex++, s.c[0]);
+					intersectionDevice->SetKernelArg(kernel, argIndex++, s.c[1]);
+					intersectionDevice->SetKernelArg(kernel, argIndex++, s.c[2]);
 				} else {
-					kernel.setArg(argIndex++, 0.f);
-					kernel.setArg(argIndex++, 0.f);
-					kernel.setArg(argIndex++, 0.f);					
+					intersectionDevice->SetKernelArg(kernel, argIndex++, 0.f);
+					intersectionDevice->SetKernelArg(kernel, argIndex++, 0.f);
+					intersectionDevice->SetKernelArg(kernel, argIndex++, 0.f);					
 				}
 			}
 		} else {
 			for (u_int i = 0; i < FILM_MAX_RADIANCE_GROUP_COUNT; ++i) {
-				kernel.setArg(argIndex++, 0.f);
-				kernel.setArg(argIndex++, 0.f);
-				kernel.setArg(argIndex++, 0.f);
+				intersectionDevice->SetKernelArg(kernel, argIndex++, 0.f);
+				intersectionDevice->SetKernelArg(kernel, argIndex++, 0.f);
+				intersectionDevice->SetKernelArg(kernel, argIndex++, 0.f);
 			}
 		}
 	} else {
-		kernel.setArg(argIndex++, 0);
-		kernel.setArg(argIndex++, 0.f);
-		kernel.setArg(argIndex++, 0.f);
-		kernel.setArg(argIndex++, 0.f);
-		kernel.setArg(argIndex++, 0);
-		OpenCLDeviceBuffer::tmpSetKernelkArg(kernel, argIndex++, nullptr);
-		OpenCLDeviceBuffer::tmpSetKernelkArg(kernel, argIndex++, nullptr);
-		OpenCLDeviceBuffer::tmpSetKernelkArg(kernel, argIndex++, nullptr);
-		OpenCLDeviceBuffer::tmpSetKernelkArg(kernel, argIndex++, nullptr);
-		OpenCLDeviceBuffer::tmpSetKernelkArg(kernel, argIndex++, nullptr);
+		intersectionDevice->SetKernelArg(kernel, argIndex++, 0);
+		intersectionDevice->SetKernelArg(kernel, argIndex++, 0.f);
+		intersectionDevice->SetKernelArg(kernel, argIndex++, 0.f);
+		intersectionDevice->SetKernelArg(kernel, argIndex++, 0.f);
+		intersectionDevice->SetKernelArg(kernel, argIndex++, 0);
+		intersectionDevice->SetKernelArg(kernel, argIndex++, nullptr);
+		intersectionDevice->SetKernelArg(kernel, argIndex++, nullptr);
+		intersectionDevice->SetKernelArg(kernel, argIndex++, nullptr);
+		intersectionDevice->SetKernelArg(kernel, argIndex++, nullptr);
+		intersectionDevice->SetKernelArg(kernel, argIndex++, nullptr);
 
 		for (u_int i = 0; i < FILM_MAX_RADIANCE_GROUP_COUNT; ++i) {
-			kernel.setArg(argIndex++, 0.f);
-			kernel.setArg(argIndex++, 0.f);
-			kernel.setArg(argIndex++, 0.f);
+			intersectionDevice->SetKernelArg(kernel, argIndex++, 0.f);
+			intersectionDevice->SetKernelArg(kernel, argIndex++, 0.f);
+			intersectionDevice->SetKernelArg(kernel, argIndex++, 0.f);
 		}
 	}
 
 	return argIndex;
 }
 
-void PathOCLBaseOCLRenderThread::ThreadFilm::RecvFilm(OpenCLIntersectionDevice *intersectionDevice) {
+void PathOCLBaseOCLRenderThread::ThreadFilm::RecvFilm(HardwareIntersectionDevice *intersectionDevice) {
 	// Async. transfer of the Film buffers
 
 	for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size(); ++i) {
@@ -728,7 +729,7 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::RecvFilm(OpenCLIntersectionDevice *
 	}
 }
 
-void PathOCLBaseOCLRenderThread::ThreadFilm::SendFilm(OpenCLIntersectionDevice *intersectionDevice) {
+void PathOCLBaseOCLRenderThread::ThreadFilm::SendFilm(HardwareIntersectionDevice *intersectionDevice) {
 	// Async. transfer of the Film buffers
 
 	for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size(); ++i) {
@@ -996,20 +997,20 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::SendFilm(OpenCLIntersectionDevice *
 	}
 }
 
-void PathOCLBaseOCLRenderThread::ThreadFilm::ClearFilm(cl::CommandQueue &oclQueue,
-		cl::Kernel &filmClearKernel, const size_t filmClearWorkGroupSize) {
+void PathOCLBaseOCLRenderThread::ThreadFilm::ClearFilm(HardwareIntersectionDevice *intersectionDevice,
+		HardwareDeviceKernel *filmClearKernel, const size_t filmClearWorkGroupSize) {
 	// Set kernel arguments
 	
 	// This is the dummy variable required by KERNEL_ARGS_FILM macro
-	filmClearKernel.setArg(0, 0);
+	intersectionDevice->SetKernelArg(filmClearKernel, 0, 0);
 
-	SetFilmKernelArgs(filmClearKernel, 1);
+	SetFilmKernelArgs(intersectionDevice, filmClearKernel, 1);
 	
 	// Clear the film
 	const u_int filmPixelCount = film->GetWidth() * film->GetHeight();
-	oclQueue.enqueueNDRangeKernel(filmClearKernel, cl::NullRange,
-			cl::NDRange(RoundUp<u_int>(filmPixelCount, filmClearWorkGroupSize)),
-			cl::NDRange(filmClearWorkGroupSize));
+	intersectionDevice->EnqueueKernel(filmClearKernel,
+			HardwareDeviceRange(RoundUp<u_int>(filmPixelCount, filmClearWorkGroupSize)),
+			HardwareDeviceRange(filmClearWorkGroupSize));
 }
 
 #endif

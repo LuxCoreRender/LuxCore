@@ -49,7 +49,7 @@ class PathOCLBaseRenderEngine;
 
 class PathOCLBaseOCLRenderThread {
 public:
-	PathOCLBaseOCLRenderThread(const u_int index, luxrays::OpenCLIntersectionDevice *device,
+	PathOCLBaseOCLRenderThread(const u_int index, luxrays::HardwareIntersectionDevice *device,
 			PathOCLBaseRenderEngine *re);
 	virtual ~PathOCLBaseOCLRenderThread();
 
@@ -75,11 +75,12 @@ protected:
 			const u_int threadFilmWidth, const u_int threadFilmHeight,
 			const u_int *threadFilmSubRegion);
 		void FreeAllOCLBuffers();
-		u_int SetFilmKernelArgs(cl::Kernel &filmClearKernel, u_int argIndex) const;
-		void ClearFilm(cl::CommandQueue &oclQueue,
-			cl::Kernel &filmClearKernel, const size_t filmClearWorkGroupSize);
-		void RecvFilm(luxrays::OpenCLIntersectionDevice *intersectionDevice);
-		void SendFilm(luxrays::OpenCLIntersectionDevice *intersectionDevice);
+		u_int SetFilmKernelArgs(luxrays::HardwareIntersectionDevice *intersectionDevice,
+			luxrays::HardwareDeviceKernel *filmClearKernel, u_int argIndex) const;
+		void ClearFilm(luxrays::HardwareIntersectionDevice *intersectionDevice,
+			luxrays::HardwareDeviceKernel *filmClearKernel, const size_t filmClearWorkGroupSize);
+		void RecvFilm(luxrays::HardwareIntersectionDevice *intersectionDevice);
+		void SendFilm(luxrays::HardwareIntersectionDevice *intersectionDevice);
 
 		Film *film;
 
@@ -135,8 +136,8 @@ protected:
 	virtual void StopRenderThread();
 
 	void IncThreadFilms();
-	void ClearThreadFilms(cl::CommandQueue &oclQueue);
-	void TransferThreadFilms(luxrays::OpenCLIntersectionDevice *intersectionDevice);
+	void ClearThreadFilms();
+	void TransferThreadFilms(luxrays::HardwareIntersectionDevice *intersectionDevice);
 	void FreeThreadFilmsOCLBuffers();
 	void FreeThreadFilms();
 
@@ -159,28 +160,31 @@ protected:
 	void InitSampleResultsBuffer();
 
 	void SetInitKernelArgs(const u_int filmIndex);
-	void SetAdvancePathsKernelArgs(cl::Kernel *advancePathsKernel, const u_int filmIndex);
+	void SetAdvancePathsKernelArgs(luxrays::HardwareDeviceKernel *advancePathsKernel, const u_int filmIndex);
 	void SetAllAdvancePathsKernelArgs(const u_int filmIndex);
 	void SetKernelArgs();
 
-	void CompileKernel(cl::Program *program, cl::Kernel **kernel, size_t *workgroupSize, const std::string &name);
+	void CompileKernel(luxrays::HardwareIntersectionDevice *device,
+			luxrays::HardwareDeviceProgram *program,
+			luxrays::HardwareDeviceKernel **kernel,
+			size_t *workGroupSize, const std::string &name);
 
-	void EnqueueAdvancePathsKernel(cl::CommandQueue &oclQueue);
+	void EnqueueAdvancePathsKernel();
 
 	static luxrays::oclKernelCache *AllocKernelCache(const std::string &type);
-	static std::string GetKernelParamters(luxrays::OpenCLIntersectionDevice *intersectionDevice,
+	static std::string GetKernelParamters(luxrays::HardwareIntersectionDevice *intersectionDevice,
 			const std::string renderEngineType,
 			const float epsilonMin, const float epsilonMax,
 			const bool usePixelAtomics);
 	static std::string GetKernelSources();
 
 	u_int threadIndex;
-	luxrays::OpenCLIntersectionDevice *intersectionDevice;
+	luxrays::HardwareIntersectionDevice *intersectionDevice;
 	PathOCLBaseRenderEngine *renderEngine;
 
 	// OpenCL variables
 	std::string kernelSrcHash;
-	cl::Kernel *filmClearKernel;
+	luxrays::HardwareDeviceKernel *filmClearKernel;
 	size_t filmClearWorkGroupSize;
 
 	// Scene buffers
@@ -244,26 +248,25 @@ protected:
 
 	u_int initKernelArgsCount;
 	std::string kernelsParameters;
-	luxrays::oclKernelCache *kernelCache;
 
 	boost::thread *renderThread;
 
 	std::vector<ThreadFilm *> threadFilms;
 
 	// OpenCL kernels
-	cl::Kernel *initSeedKernel;
-	cl::Kernel *initKernel;
+	luxrays::HardwareDeviceKernel *initSeedKernel;
+	luxrays::HardwareDeviceKernel *initKernel;
 	size_t initWorkGroupSize;
-	cl::Kernel *advancePathsKernel_MK_RT_NEXT_VERTEX;
-	cl::Kernel *advancePathsKernel_MK_HIT_NOTHING;
-	cl::Kernel *advancePathsKernel_MK_HIT_OBJECT;
-	cl::Kernel *advancePathsKernel_MK_RT_DL;
-	cl::Kernel *advancePathsKernel_MK_DL_ILLUMINATE;
-	cl::Kernel *advancePathsKernel_MK_DL_SAMPLE_BSDF;
-	cl::Kernel *advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY;
-	cl::Kernel *advancePathsKernel_MK_SPLAT_SAMPLE;
-	cl::Kernel *advancePathsKernel_MK_NEXT_SAMPLE;
-	cl::Kernel *advancePathsKernel_MK_GENERATE_CAMERA_RAY;
+	luxrays::HardwareDeviceKernel *advancePathsKernel_MK_RT_NEXT_VERTEX;
+	luxrays::HardwareDeviceKernel *advancePathsKernel_MK_HIT_NOTHING;
+	luxrays::HardwareDeviceKernel *advancePathsKernel_MK_HIT_OBJECT;
+	luxrays::HardwareDeviceKernel *advancePathsKernel_MK_RT_DL;
+	luxrays::HardwareDeviceKernel *advancePathsKernel_MK_DL_ILLUMINATE;
+	luxrays::HardwareDeviceKernel *advancePathsKernel_MK_DL_SAMPLE_BSDF;
+	luxrays::HardwareDeviceKernel *advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY;
+	luxrays::HardwareDeviceKernel *advancePathsKernel_MK_SPLAT_SAMPLE;
+	luxrays::HardwareDeviceKernel *advancePathsKernel_MK_NEXT_SAMPLE;
+	luxrays::HardwareDeviceKernel *advancePathsKernel_MK_GENERATE_CAMERA_RAY;
 	size_t advancePathsWorkGroupSize;
 
 	slg::ocl::pathoclbase::GPUTaskStats *gpuTaskStats;

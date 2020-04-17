@@ -35,7 +35,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 RTPathOCLRenderThread::RTPathOCLRenderThread(const u_int index,
-	OpenCLIntersectionDevice *device, TilePathOCLRenderEngine *re) : 
+	HardwareIntersectionDevice *device, TilePathOCLRenderEngine *re) : 
 	TilePathOCLRenderThread(index, device, re) {
 }
 
@@ -110,11 +110,10 @@ void RTPathOCLRenderThread::UpdateOCLBuffers(const EditActionList &updateActions
 			updateActions.Has(LIGHT_TYPES_EDIT)) {
 		// Execute initialization kernels. Initialize OpenCL structures.
 		// NOTE: I can only after having compiled and set arguments.
-		cl::CommandQueue &initQueue = intersectionDevice->GetOpenCLQueue();
 		RTPathOCLRenderEngine *engine = (RTPathOCLRenderEngine *)renderEngine;
 
-		initQueue.enqueueNDRangeKernel(*initSeedKernel, cl::NullRange,
-				cl::NDRange(engine->taskCount), cl::NDRange(initWorkGroupSize));
+		intersectionDevice->EnqueueKernel(initSeedKernel,
+				HardwareDeviceRange(engine->taskCount), HardwareDeviceRange(initWorkGroupSize));
 	}
 
 	// Reset statistics in order to be more accurate
@@ -141,11 +140,9 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 		// Execute initialization kernels
 		//----------------------------------------------------------------------
 
-		cl::CommandQueue &initQueue = intersectionDevice->GetOpenCLQueue();
-
 		// Initialize OpenCL structures
-		initQueue.enqueueNDRangeKernel(*initSeedKernel, cl::NullRange,
-				cl::NDRange(taskCount), cl::NDRange(initWorkGroupSize));
+		intersectionDevice->EnqueueKernel(initSeedKernel,
+				HardwareDeviceRange(taskCount), HardwareDeviceRange(initWorkGroupSize));
 
 		//----------------------------------------------------------------------
 		// Rendering loop
@@ -251,7 +248,7 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 				"(" << oclErrorString(err.err()) << ")");
 	}
 
-	intersectionDevice->GetOpenCLQueue().finish();
+	intersectionDevice->FinishQueue();
 
 	threadDone = true;
 }

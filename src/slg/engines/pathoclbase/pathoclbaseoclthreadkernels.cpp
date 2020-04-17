@@ -47,24 +47,24 @@ using namespace slg;
 // PathOCLBaseOCLRenderThread kernels related methods
 //------------------------------------------------------------------------------
 
-void PathOCLBaseOCLRenderThread::CompileKernel(cl::Program *program, cl::Kernel **kernel,
-		size_t *workgroupSize, const string &name) {
+void PathOCLBaseOCLRenderThread::CompileKernel(HardwareIntersectionDevice *device,
+			HardwareDeviceProgram *program,
+			HardwareDeviceKernel **kernel,
+			size_t *workGroupSize, const std::string &name) {
 	delete *kernel;
 	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Compiling " << name << " Kernel");
-	*kernel = new cl::Kernel(*program, name.c_str());
+	device->GetKernel(program, kernel, name.c_str());
 
-	const OpenCLDeviceDescription *oclDeviceDesc = (const OpenCLDeviceDescription *)intersectionDevice->GetDeviceDesc();
-	if (oclDeviceDesc->GetForceWorkGroupSize() > 0)
-		*workgroupSize = oclDeviceDesc->GetForceWorkGroupSize();
+	if (device->GetDeviceDesc()->GetForceWorkGroupSize() > 0)
+		*workGroupSize = device->GetDeviceDesc()->GetForceWorkGroupSize();
 	else {
-		cl::Device &oclDevice = intersectionDevice->GetOpenCLDevice();
-		(*kernel)->getWorkGroupInfo<size_t>(oclDevice, CL_KERNEL_WORK_GROUP_SIZE, workgroupSize);
-		SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] " << name << " workgroup size: " << *workgroupSize);
+		*workGroupSize = device->GetKernelWorkGroupSize(*kernel); 
+		SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] " << name << " workgroup size: " << *workGroupSize);
 	}
 }
 
 string PathOCLBaseOCLRenderThread::GetKernelParamters(
-		OpenCLIntersectionDevice *intersectionDevice,
+		HardwareIntersectionDevice *intersectionDevice,
 		const string renderEngineType,
 		const float epsilonMin, const float epsilonMax,
 		const bool usePixelAtomics) {
@@ -256,9 +256,6 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 	
 	const double tStart = WallClockTime();
 	
-	cl::Context &oclContext = intersectionDevice->GetOpenCLContext();
-	cl::Device &oclDevice = intersectionDevice->GetOpenCLDevice();
-
 	// A safety check
 	switch (intersectionDevice->GetAccelerator()->GetType()) {
 		case ACCEL_BVH:
@@ -301,62 +298,47 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 		kernelFile.close();
 	}
 
-	bool cached;
-	cl::STRING_CLASS error;
-	cl::Program *program = kernelCache->Compile(oclContext, oclDevice,
-			kernelsParameters, kernelSource,
-			&cached, &error);
-
-	if (!program) {
-		SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] PathOCL kernel compilation error" << endl << error);
-
-		throw runtime_error("PathOCLBase kernel compilation error:\n" + error);
-	}
-
-	if (cached) {
-		SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Kernels cached");
-	} else {
-		SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Kernels not cached");
-	}
+	HardwareDeviceProgram *program = nullptr;
+	intersectionDevice->CompileProgram(&program, kernelsParameters, kernelSource, "PathOCL kernel");
 
 	// Film clear kernel
-	CompileKernel(program, &filmClearKernel, &filmClearWorkGroupSize, "Film_Clear");
+	CompileKernel(intersectionDevice, program, &filmClearKernel, &filmClearWorkGroupSize, "Film_Clear");
 
 	// Init kernel
 
-	CompileKernel(program, &initSeedKernel, &initWorkGroupSize, "InitSeed");
-	CompileKernel(program, &initKernel, &initWorkGroupSize, "Init");
+	CompileKernel(intersectionDevice, program, &initSeedKernel, &initWorkGroupSize, "InitSeed");
+	CompileKernel(intersectionDevice, program, &initKernel, &initWorkGroupSize, "Init");
 
 	// AdvancePaths kernel (Micro-Kernels)
 
 	size_t workGroupSize;
-	CompileKernel(program, &advancePathsKernel_MK_RT_NEXT_VERTEX, &advancePathsWorkGroupSize,
+	CompileKernel(intersectionDevice, program, &advancePathsKernel_MK_RT_NEXT_VERTEX, &advancePathsWorkGroupSize,
 			"AdvancePaths_MK_RT_NEXT_VERTEX");
-	CompileKernel(program, &advancePathsKernel_MK_HIT_NOTHING, &workGroupSize,
+	CompileKernel(intersectionDevice, program, &advancePathsKernel_MK_HIT_NOTHING, &workGroupSize,
 			"AdvancePaths_MK_HIT_NOTHING");
 	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
-	CompileKernel(program, &advancePathsKernel_MK_HIT_OBJECT, &workGroupSize,
+	CompileKernel(intersectionDevice, program, &advancePathsKernel_MK_HIT_OBJECT, &workGroupSize,
 			"AdvancePaths_MK_HIT_OBJECT");
 	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
-	CompileKernel(program, &advancePathsKernel_MK_RT_DL, &workGroupSize,
+	CompileKernel(intersectionDevice, program, &advancePathsKernel_MK_RT_DL, &workGroupSize,
 			"AdvancePaths_MK_RT_DL");
 	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
-	CompileKernel(program, &advancePathsKernel_MK_DL_ILLUMINATE, &workGroupSize,
+	CompileKernel(intersectionDevice, program, &advancePathsKernel_MK_DL_ILLUMINATE, &workGroupSize,
 			"AdvancePaths_MK_DL_ILLUMINATE");
 	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
-	CompileKernel(program, &advancePathsKernel_MK_DL_SAMPLE_BSDF, &workGroupSize,
+	CompileKernel(intersectionDevice, program, &advancePathsKernel_MK_DL_SAMPLE_BSDF, &workGroupSize,
 			"AdvancePaths_MK_DL_SAMPLE_BSDF");
 	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
-	CompileKernel(program, &advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY, &workGroupSize,
+	CompileKernel(intersectionDevice, program, &advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY, &workGroupSize,
 			"AdvancePaths_MK_GENERATE_NEXT_VERTEX_RAY");
 	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
-	CompileKernel(program, &advancePathsKernel_MK_SPLAT_SAMPLE, &workGroupSize,
+	CompileKernel(intersectionDevice, program, &advancePathsKernel_MK_SPLAT_SAMPLE, &workGroupSize,
 			"AdvancePaths_MK_SPLAT_SAMPLE");
 	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
-	CompileKernel(program, &advancePathsKernel_MK_NEXT_SAMPLE, &workGroupSize,
+	CompileKernel(intersectionDevice, program, &advancePathsKernel_MK_NEXT_SAMPLE, &workGroupSize,
 			"AdvancePaths_MK_NEXT_SAMPLE");
 	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
-	CompileKernel(program, &advancePathsKernel_MK_GENERATE_CAMERA_RAY, &workGroupSize,
+	CompileKernel(intersectionDevice, program, &advancePathsKernel_MK_GENERATE_CAMERA_RAY, &workGroupSize,
 			"AdvancePaths_MK_GENERATE_CAMERA_RAY");
 	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
 	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] AdvancePaths_MK_* workgroup size: " << advancePathsWorkGroupSize);
@@ -370,118 +352,118 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 void PathOCLBaseOCLRenderThread::SetInitKernelArgs(const u_int filmIndex) {
 	// initSeedKernel kernel
 	u_int argIndex = 0;
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*initSeedKernel, argIndex++, tasksBuff);
-	initSeedKernel->setArg(argIndex++, renderEngine->seedBase + threadIndex * renderEngine->taskCount);
+	intersectionDevice->SetKernelArg(initSeedKernel, argIndex++, tasksBuff);
+	intersectionDevice->SetKernelArg(initSeedKernel, argIndex++, renderEngine->seedBase + threadIndex * renderEngine->taskCount);
 
 	// initKernel kernel
 	argIndex = 0;
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*initKernel, argIndex++, taskConfigBuff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*initKernel, argIndex++, tasksBuff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*initKernel, argIndex++, tasksDirectLightBuff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*initKernel, argIndex++, tasksStateBuff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*initKernel, argIndex++, taskStatsBuff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*initKernel, argIndex++, samplerSharedDataBuff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*initKernel, argIndex++, samplesBuff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*initKernel, argIndex++, sampleDataBuff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*initKernel, argIndex++, sampleResultsBuff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*initKernel, argIndex++, eyePathInfosBuff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*initKernel, argIndex++, pixelFilterBuff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*initKernel, argIndex++, raysBuff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*initKernel, argIndex++, cameraBuff);
+	intersectionDevice->SetKernelArg(initKernel, argIndex++, taskConfigBuff);
+	intersectionDevice->SetKernelArg(initKernel, argIndex++, tasksBuff);
+	intersectionDevice->SetKernelArg(initKernel, argIndex++, tasksDirectLightBuff);
+	intersectionDevice->SetKernelArg(initKernel, argIndex++, tasksStateBuff);
+	intersectionDevice->SetKernelArg(initKernel, argIndex++, taskStatsBuff);
+	intersectionDevice->SetKernelArg(initKernel, argIndex++, samplerSharedDataBuff);
+	intersectionDevice->SetKernelArg(initKernel, argIndex++, samplesBuff);
+	intersectionDevice->SetKernelArg(initKernel, argIndex++, sampleDataBuff);
+	intersectionDevice->SetKernelArg(initKernel, argIndex++, sampleResultsBuff);
+	intersectionDevice->SetKernelArg(initKernel, argIndex++, eyePathInfosBuff);
+	intersectionDevice->SetKernelArg(initKernel, argIndex++, pixelFilterBuff);
+	intersectionDevice->SetKernelArg(initKernel, argIndex++, raysBuff);
+	intersectionDevice->SetKernelArg(initKernel, argIndex++, cameraBuff);
 
 	// Film parameters
-	argIndex = threadFilms[filmIndex]->SetFilmKernelArgs(*initKernel, argIndex);
+	argIndex = threadFilms[filmIndex]->SetFilmKernelArgs(intersectionDevice, initKernel, argIndex);
 
 	initKernelArgsCount = argIndex;
 }
 
-void PathOCLBaseOCLRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePathsKernel, const u_int filmIndex) {
+void PathOCLBaseOCLRenderThread::SetAdvancePathsKernelArgs(HardwareDeviceKernel *advancePathsKernel, const u_int filmIndex) {
 	CompiledScene *cscene = renderEngine->compiledScene;
 
 	u_int argIndex = 0;
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, taskConfigBuff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, tasksBuff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, tasksDirectLightBuff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, tasksStateBuff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, taskStatsBuff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, pixelFilterBuff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, samplerSharedDataBuff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, samplesBuff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, sampleDataBuff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, sampleResultsBuff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, eyePathInfosBuff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, directLightVolInfosBuff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, raysBuff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, hitsBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, taskConfigBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, tasksBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, tasksDirectLightBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, tasksStateBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, taskStatsBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, pixelFilterBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, samplerSharedDataBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, samplesBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, sampleDataBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, sampleResultsBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, eyePathInfosBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, directLightVolInfosBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, raysBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, hitsBuff);
 
 	// Film parameters
-	argIndex = threadFilms[filmIndex]->SetFilmKernelArgs(*advancePathsKernel, argIndex);
+	argIndex = threadFilms[filmIndex]->SetFilmKernelArgs(intersectionDevice, advancePathsKernel, argIndex);
 
 	// Scene parameters
-	advancePathsKernel->setArg(argIndex++, cscene->worldBSphere.center.x);
-	advancePathsKernel->setArg(argIndex++, cscene->worldBSphere.center.y);
-	advancePathsKernel->setArg(argIndex++, cscene->worldBSphere.center.z);
-	advancePathsKernel->setArg(argIndex++, cscene->worldBSphere.rad);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, materialsBuff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, materialEvalOpsBuff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, materialEvalStackBuff);
-	advancePathsKernel->setArg(argIndex++, cscene->maxMaterialEvalStackSize);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, texturesBuff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, textureEvalOpsBuff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, textureEvalStackBuff);
-	advancePathsKernel->setArg(argIndex++, cscene->maxTextureEvalStackSize);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, scnObjsBuff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, meshDescsBuff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, vertsBuff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, normalsBuff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, triNormalsBuff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, uvsBuff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, colsBuff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, alphasBuff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, vertexAOVBuff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, triAOVBuff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, trianglesBuff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, interpolatedTransformsBuff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, cameraBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, cscene->worldBSphere.center.x);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, cscene->worldBSphere.center.y);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, cscene->worldBSphere.center.z);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, cscene->worldBSphere.rad);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, materialsBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, materialEvalOpsBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, materialEvalStackBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, cscene->maxMaterialEvalStackSize);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, texturesBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, textureEvalOpsBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, textureEvalStackBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, cscene->maxTextureEvalStackSize);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, scnObjsBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, meshDescsBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, vertsBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, normalsBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, triNormalsBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, uvsBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, colsBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, alphasBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, vertexAOVBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, triAOVBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, trianglesBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, interpolatedTransformsBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, cameraBuff);
 	// Lights
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, lightsBuff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, envLightIndicesBuff);
-	advancePathsKernel->setArg(argIndex++, (u_int)cscene->envLightIndices.size());
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, lightIndexOffsetByMeshIndexBuff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, lightIndexByTriIndexBuff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, envLightDistributionsBuff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, lightsDistributionBuff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, infiniteLightSourcesDistributionBuff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, dlscAllEntriesBuff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, dlscDistributionsBuff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, dlscBVHNodesBuff);
-	advancePathsKernel->setArg(argIndex++, cscene->dlscRadius2);
-	advancePathsKernel->setArg(argIndex++, cscene->dlscNormalCosAngle);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, elvcAllEntriesBuff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, elvcDistributionsBuff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, elvcTileDistributionOffsetsBuff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, elvcBVHNodesBuff);
-	advancePathsKernel->setArg(argIndex++, cscene->elvcRadius2);
-	advancePathsKernel->setArg(argIndex++, cscene->elvcNormalCosAngle);
-	advancePathsKernel->setArg(argIndex++, cscene->elvcTilesXCount);
-	advancePathsKernel->setArg(argIndex++, cscene->elvcTilesYCount);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, lightsBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, envLightIndicesBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, (u_int)cscene->envLightIndices.size());
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, lightIndexOffsetByMeshIndexBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, lightIndexByTriIndexBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, envLightDistributionsBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, lightsDistributionBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, infiniteLightSourcesDistributionBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, dlscAllEntriesBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, dlscDistributionsBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, dlscBVHNodesBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, cscene->dlscRadius2);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, cscene->dlscNormalCosAngle);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, elvcAllEntriesBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, elvcDistributionsBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, elvcTileDistributionOffsetsBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, elvcBVHNodesBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, cscene->elvcRadius2);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, cscene->elvcNormalCosAngle);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, cscene->elvcTilesXCount);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, cscene->elvcTilesYCount);
 
 	// Images
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, imageMapDescsBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, imageMapDescsBuff);
 	for (u_int i = 0; i < 8; ++i) {
 		if (i < imageMapsBuff.size())
-			OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, imageMapsBuff[i]);
+			intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, imageMapsBuff[i]);
 		else
-			OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, nullptr);
+			intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, nullptr);
 	}
 
 	// PhotonGI cache
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, pgicRadiancePhotonsBuff);
-	advancePathsKernel->setArg(argIndex++, cscene->pgicLightGroupCounts);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, pgicRadiancePhotonsValuesBuff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, pgicRadiancePhotonsBVHNodesBuff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, pgicCausticPhotonsBuff);
-	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, pgicCausticPhotonsBVHNodesBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, pgicRadiancePhotonsBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, cscene->pgicLightGroupCounts);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, pgicRadiancePhotonsValuesBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, pgicRadiancePhotonsBVHNodesBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, pgicCausticPhotonsBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, pgicCausticPhotonsBVHNodesBuff);
 }
 
 void PathOCLBaseOCLRenderThread::SetAllAdvancePathsKernelArgs(const u_int filmIndex) {
@@ -528,30 +510,30 @@ void PathOCLBaseOCLRenderThread::SetKernelArgs() {
 	SetInitKernelArgs(0);
 }
 
-void PathOCLBaseOCLRenderThread::EnqueueAdvancePathsKernel(cl::CommandQueue &oclQueue) {
+void PathOCLBaseOCLRenderThread::EnqueueAdvancePathsKernel() {
 	const u_int taskCount = renderEngine->taskCount;
 
 	// Micro kernels version
-	oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_RT_NEXT_VERTEX, cl::NullRange,
-			cl::NDRange(taskCount), cl::NDRange(advancePathsWorkGroupSize));
-	oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_HIT_NOTHING, cl::NullRange,
-			cl::NDRange(taskCount), cl::NDRange(advancePathsWorkGroupSize));
-	oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_HIT_OBJECT, cl::NullRange,
-			cl::NDRange(taskCount), cl::NDRange(advancePathsWorkGroupSize));
-	oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_RT_DL, cl::NullRange,
-			cl::NDRange(taskCount), cl::NDRange(advancePathsWorkGroupSize));
-	oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_DL_ILLUMINATE, cl::NullRange,
-			cl::NDRange(taskCount), cl::NDRange(advancePathsWorkGroupSize));
-	oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_DL_SAMPLE_BSDF, cl::NullRange,
-			cl::NDRange(taskCount), cl::NDRange(advancePathsWorkGroupSize));
-	oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY, cl::NullRange,
-			cl::NDRange(taskCount), cl::NDRange(advancePathsWorkGroupSize));
-	oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_SPLAT_SAMPLE, cl::NullRange,
-			cl::NDRange(taskCount), cl::NDRange(advancePathsWorkGroupSize));
-	oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_NEXT_SAMPLE, cl::NullRange,
-			cl::NDRange(taskCount), cl::NDRange(advancePathsWorkGroupSize));
-	oclQueue.enqueueNDRangeKernel(*advancePathsKernel_MK_GENERATE_CAMERA_RAY, cl::NullRange,
-			cl::NDRange(taskCount), cl::NDRange(advancePathsWorkGroupSize));
+	intersectionDevice->EnqueueKernel(advancePathsKernel_MK_RT_NEXT_VERTEX,
+			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSize));
+	intersectionDevice->EnqueueKernel(advancePathsKernel_MK_HIT_NOTHING,
+			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSize));
+	intersectionDevice->EnqueueKernel(advancePathsKernel_MK_HIT_OBJECT,
+			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSize));
+	intersectionDevice->EnqueueKernel(advancePathsKernel_MK_RT_DL,
+			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSize));
+	intersectionDevice->EnqueueKernel(advancePathsKernel_MK_DL_ILLUMINATE,
+			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSize));
+	intersectionDevice->EnqueueKernel(advancePathsKernel_MK_DL_SAMPLE_BSDF,
+			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSize));
+	intersectionDevice->EnqueueKernel(advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY,
+			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSize));
+	intersectionDevice->EnqueueKernel(advancePathsKernel_MK_SPLAT_SAMPLE,
+			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSize));
+	intersectionDevice->EnqueueKernel(advancePathsKernel_MK_NEXT_SAMPLE,
+			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSize));
+	intersectionDevice->EnqueueKernel(advancePathsKernel_MK_GENERATE_CAMERA_RAY,
+			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSize));
 }
 
 #endif

@@ -82,26 +82,6 @@ void OpenCLIntersectionDevice::EnqueueTraceRayBuffer(HardwareDeviceBuffer *rayBu
 	statsTotalDataParallelRayCount += rayCount;
 }
 
-//------------------------------------------------------------------------------
-// OpenCL Device specific methods
-//------------------------------------------------------------------------------
-
-void OpenCLIntersectionDevice::tmpAllocBufferRO(cl::Buffer **buff, void *src, const size_t size, const std::string &desc) {
-	AllocBuffer(src ? (CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR) : CL_MEM_READ_ONLY, buff, src, size, desc);
-}
-
-void OpenCLIntersectionDevice::tmpAllocBufferRW(cl::Buffer **buff, void *src, const size_t size, const std::string &desc) {
-	AllocBuffer(src ? (CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR) : CL_MEM_READ_WRITE, buff, src, size, desc);
-}
-
-void OpenCLIntersectionDevice::tmpFreeBuffer(cl::Buffer **buff) {
-	if (*buff) {
-		FreeMemory((*buff)->getInfo<CL_MEM_SIZE>());
-		delete *buff;
-		*buff = nullptr;
-	}
-}
-
 }
 
 #endif

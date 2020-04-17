@@ -48,7 +48,7 @@ TilePathOCLRenderEngine::~TilePathOCLRenderEngine() {
 }
 
 PathOCLBaseOCLRenderThread *TilePathOCLRenderEngine::CreateOCLThread(const u_int index,
-	OpenCLIntersectionDevice *device) {
+	HardwareIntersectionDevice *device) {
 	return new TilePathOCLRenderThread(index, device, this);
 }
 

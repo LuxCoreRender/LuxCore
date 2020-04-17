@@ -52,7 +52,7 @@ void RTPathOCLRenderEngine::InitGPUTaskConfiguration() {
 }
 
 PathOCLBaseOCLRenderThread *RTPathOCLRenderEngine::CreateOCLThread(const u_int index,
-	OpenCLIntersectionDevice *device) {
+	HardwareIntersectionDevice *device) {
 	return new RTPathOCLRenderThread(index, device, this);
 }
 

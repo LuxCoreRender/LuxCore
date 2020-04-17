@@ -38,6 +38,8 @@ public:
 		OpenCLDeviceDescription *desc, const size_t devIndex);
 	virtual ~OpenCLIntersectionDevice();
 
+	virtual bool HasDataParallelSupport() const { return true; }
+
 	virtual void SetDataSet(DataSet *newDataSet);
 	virtual void Start();
 	virtual void Stop();
@@ -49,20 +51,6 @@ public:
 	virtual void EnqueueTraceRayBuffer(HardwareDeviceBuffer *rayBuff,
 			HardwareDeviceBuffer *rayHitBuff,
 			const unsigned int rayCount);
-
-	//--------------------------------------------------------------------------
-	// OpenCL Device specific methods
-	//
-	// Note: temporary methods until when the new interface is complete
-	//--------------------------------------------------------------------------
-
-	cl::Context &GetOpenCLContext() { return deviceDesc->GetOCLContext(); }
-	cl::Device &GetOpenCLDevice() { return deviceDesc->GetOCLDevice(); }
-	cl::CommandQueue &GetOpenCLQueue() { return *oclQueue; }
-
-	void tmpAllocBufferRO(cl::Buffer **buff, void *src, const size_t size, const std::string &desc = "");
-	void tmpAllocBufferRW(cl::Buffer **buff, void *src, const size_t size, const std::string &desc = "");
-	void tmpFreeBuffer(cl::Buffer **buff);
 
 	friend class Context;
 

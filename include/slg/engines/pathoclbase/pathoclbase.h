@@ -61,7 +61,7 @@ public:
 
 protected:
 	virtual PathOCLBaseOCLRenderThread *CreateOCLThread(const u_int index,
-			luxrays::OpenCLIntersectionDevice *device) = 0;
+			luxrays::HardwareIntersectionDevice *device) = 0;
 	virtual PathOCLBaseNativeRenderThread *CreateNativeThread(const u_int index,
 			luxrays::NativeIntersectionDevice *device) {
 		throw std::runtime_error("Internal error, called PathOCLBaseRenderEngine::CreateNativeThread()");

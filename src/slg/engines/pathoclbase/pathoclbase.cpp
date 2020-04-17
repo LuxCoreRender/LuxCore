@@ -298,7 +298,7 @@ void PathOCLBaseRenderEngine::StartLockLess() {
 	for (size_t i = 0; i < oclRenderThreadCount; ++i) {
 		if (!renderOCLThreads[i]) {
 			renderOCLThreads[i] = CreateOCLThread(i,
-					(OpenCLIntersectionDevice *)(intersectionDevices[i]));
+					(HardwareIntersectionDevice *)(intersectionDevices[i]));
 		}
 	}
 

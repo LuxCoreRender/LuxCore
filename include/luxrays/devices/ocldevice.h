@@ -200,21 +200,9 @@ public:
 		return oclBuff->getInfo<CL_MEM_SIZE>();
 	}
 
-	static void tmpSetKernelkArg(cl::Kernel &kernel,
-			const u_int index, const HardwareDeviceBuffer *buff) {
-		if (buff) {
-			if (buff->IsNull())
-				kernel.setArg(index, sizeof(cl::Buffer), nullptr);
-			else
-				kernel.setArg(index, sizeof(cl::Buffer), ((const OpenCLDeviceBuffer *)buff)->oclBuff);
-		} else
-			kernel.setArg(index, sizeof(cl::Buffer), nullptr);
-			
-	}
-
 	friend class OpenCLDevice;
 
-	// TODO: set protected
+protected:
 	cl::Buffer *oclBuff;
 };
 
