@@ -27,6 +27,11 @@ install_name_tool -id @executable_path/../Resources/libs/libomp.dylib LuxCore.ap
 #libembree
 
 cp -f $DEPS_SOURCE/lib/libembree3.3.dylib LuxCore.app/Contents/Resources/libs/libembree3.3.dylib
+chmod +w LuxCore.app/Contents/Resources/libs/libembree3.3.dylib
+install_name_tool -id @executable_path/../Resources/libs/libembree3.3.dylib
+install_name_tool -change @rpath/libtbb.dylib @executable_path/../Resources/libs/libtbb.dylib LuxCore.app/Contents/Resources/libs/libembree3.3.dylib
+install_name_tool -change @rpath/libtbbmalloc.dylib @executable_path/../Resources/libs/libtbbmalloc.dylib LuxCore.app/Contents/Resources/libs/libembree3.3.dylib
+
 
 #libOpenImageDenoise
 
@@ -168,7 +173,7 @@ echo "Denoise installed"
 
 cd ../..
 
-./scripts/macos/codesign.sh
+./scripts/macos/codesign.sh ./release_OSX/pyluxcore
 
 # Set up correct names for release version and SDK
 if [[ -z "$VERSION_STRING" ]] ; then
