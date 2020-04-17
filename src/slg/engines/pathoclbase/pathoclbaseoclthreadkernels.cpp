@@ -370,24 +370,24 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 void PathOCLBaseOCLRenderThread::SetInitKernelArgs(const u_int filmIndex) {
 	// initSeedKernel kernel
 	u_int argIndex = 0;
-	initSeedKernel->setArg(argIndex++, sizeof(cl::Buffer), tasksBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*initSeedKernel, argIndex++, tasksBuff);
 	initSeedKernel->setArg(argIndex++, renderEngine->seedBase + threadIndex * renderEngine->taskCount);
 
 	// initKernel kernel
 	argIndex = 0;
-	initKernel->setArg(argIndex++, sizeof(cl::Buffer), taskConfigBuff);
-	initKernel->setArg(argIndex++, sizeof(cl::Buffer), tasksBuff);
-	initKernel->setArg(argIndex++, sizeof(cl::Buffer), tasksDirectLightBuff);
-	initKernel->setArg(argIndex++, sizeof(cl::Buffer), tasksStateBuff);
-	initKernel->setArg(argIndex++, sizeof(cl::Buffer), taskStatsBuff);
-	initKernel->setArg(argIndex++, sizeof(cl::Buffer), samplerSharedDataBuff);
-	initKernel->setArg(argIndex++, sizeof(cl::Buffer), samplesBuff);
-	initKernel->setArg(argIndex++, sizeof(cl::Buffer), sampleDataBuff);
-	initKernel->setArg(argIndex++, sizeof(cl::Buffer), sampleResultsBuff);
-	initKernel->setArg(argIndex++, sizeof(cl::Buffer), eyePathInfosBuff);
-	initKernel->setArg(argIndex++, sizeof(cl::Buffer), pixelFilterBuff);
-	initKernel->setArg(argIndex++, sizeof(cl::Buffer), ((OpenCLDeviceBuffer *)raysBuff)->oclBuff);
-	initKernel->setArg(argIndex++, sizeof(cl::Buffer), cameraBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*initKernel, argIndex++, taskConfigBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*initKernel, argIndex++, tasksBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*initKernel, argIndex++, tasksDirectLightBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*initKernel, argIndex++, tasksStateBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*initKernel, argIndex++, taskStatsBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*initKernel, argIndex++, samplerSharedDataBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*initKernel, argIndex++, samplesBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*initKernel, argIndex++, sampleDataBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*initKernel, argIndex++, sampleResultsBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*initKernel, argIndex++, eyePathInfosBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*initKernel, argIndex++, pixelFilterBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*initKernel, argIndex++, raysBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*initKernel, argIndex++, cameraBuff);
 
 	// Film parameters
 	argIndex = threadFilms[filmIndex]->SetFilmKernelArgs(*initKernel, argIndex);
@@ -399,20 +399,20 @@ void PathOCLBaseOCLRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePa
 	CompiledScene *cscene = renderEngine->compiledScene;
 
 	u_int argIndex = 0;
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), taskConfigBuff);
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), tasksBuff);
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), tasksDirectLightBuff);
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), tasksStateBuff);
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), taskStatsBuff);
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), pixelFilterBuff);
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), samplerSharedDataBuff);
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), samplesBuff);
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), sampleDataBuff);
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), sampleResultsBuff);
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), eyePathInfosBuff);
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), directLightVolInfosBuff);
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), ((OpenCLDeviceBuffer *)raysBuff)->oclBuff);
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), ((OpenCLDeviceBuffer *)hitsBuff)->oclBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, taskConfigBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, tasksBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, tasksDirectLightBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, tasksStateBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, taskStatsBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, pixelFilterBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, samplerSharedDataBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, samplesBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, sampleDataBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, sampleResultsBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, eyePathInfosBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, directLightVolInfosBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, raysBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, hitsBuff);
 
 	// Film parameters
 	argIndex = threadFilms[filmIndex]->SetFilmKernelArgs(*advancePathsKernel, argIndex);
@@ -422,66 +422,66 @@ void PathOCLBaseOCLRenderThread::SetAdvancePathsKernelArgs(cl::Kernel *advancePa
 	advancePathsKernel->setArg(argIndex++, cscene->worldBSphere.center.y);
 	advancePathsKernel->setArg(argIndex++, cscene->worldBSphere.center.z);
 	advancePathsKernel->setArg(argIndex++, cscene->worldBSphere.rad);
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), materialsBuff);
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), materialEvalOpsBuff);
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), materialEvalStackBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, materialsBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, materialEvalOpsBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, materialEvalStackBuff);
 	advancePathsKernel->setArg(argIndex++, cscene->maxMaterialEvalStackSize);
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), texturesBuff);
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), textureEvalOpsBuff);
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), textureEvalStackBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, texturesBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, textureEvalOpsBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, textureEvalStackBuff);
 	advancePathsKernel->setArg(argIndex++, cscene->maxTextureEvalStackSize);
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), scnObjsBuff);
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), meshDescsBuff);
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), vertsBuff);
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), normalsBuff);
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), triNormalsBuff);
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), uvsBuff);
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), colsBuff);
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), alphasBuff);
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), vertexAOVBuff);
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), triAOVBuff);
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), trianglesBuff);
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), interpolatedTransformsBuff);
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), cameraBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, scnObjsBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, meshDescsBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, vertsBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, normalsBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, triNormalsBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, uvsBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, colsBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, alphasBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, vertexAOVBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, triAOVBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, trianglesBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, interpolatedTransformsBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, cameraBuff);
 	// Lights
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), lightsBuff);
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), envLightIndicesBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, lightsBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, envLightIndicesBuff);
 	advancePathsKernel->setArg(argIndex++, (u_int)cscene->envLightIndices.size());
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), lightIndexOffsetByMeshIndexBuff);
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), lightIndexByTriIndexBuff);
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), envLightDistributionsBuff);
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), lightsDistributionBuff);
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), infiniteLightSourcesDistributionBuff);
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), dlscAllEntriesBuff);
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), dlscDistributionsBuff);
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), dlscBVHNodesBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, lightIndexOffsetByMeshIndexBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, lightIndexByTriIndexBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, envLightDistributionsBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, lightsDistributionBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, infiniteLightSourcesDistributionBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, dlscAllEntriesBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, dlscDistributionsBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, dlscBVHNodesBuff);
 	advancePathsKernel->setArg(argIndex++, cscene->dlscRadius2);
 	advancePathsKernel->setArg(argIndex++, cscene->dlscNormalCosAngle);
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), elvcAllEntriesBuff);
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), elvcDistributionsBuff);
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), elvcTileDistributionOffsetsBuff);
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), elvcBVHNodesBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, elvcAllEntriesBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, elvcDistributionsBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, elvcTileDistributionOffsetsBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, elvcBVHNodesBuff);
 	advancePathsKernel->setArg(argIndex++, cscene->elvcRadius2);
 	advancePathsKernel->setArg(argIndex++, cscene->elvcNormalCosAngle);
 	advancePathsKernel->setArg(argIndex++, cscene->elvcTilesXCount);
 	advancePathsKernel->setArg(argIndex++, cscene->elvcTilesYCount);
 
 	// Images
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), imageMapDescsBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, imageMapDescsBuff);
 	for (u_int i = 0; i < 8; ++i) {
 		if (i < imageMapsBuff.size())
-			advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), imageMapsBuff[i]);
+			OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, imageMapsBuff[i]);
 		else
-			advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), nullptr);
+			OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, nullptr);
 	}
 
 	// PhotonGI cache
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), pgicRadiancePhotonsBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, pgicRadiancePhotonsBuff);
 	advancePathsKernel->setArg(argIndex++, cscene->pgicLightGroupCounts);
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), pgicRadiancePhotonsValuesBuff);
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), pgicRadiancePhotonsBVHNodesBuff);
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), pgicCausticPhotonsBuff);
-	advancePathsKernel->setArg(argIndex++, sizeof(cl::Buffer), pgicCausticPhotonsBVHNodesBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, pgicRadiancePhotonsValuesBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, pgicRadiancePhotonsBVHNodesBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, pgicCausticPhotonsBuff);
+	OpenCLDeviceBuffer::tmpSetKernelkArg(*advancePathsKernel, argIndex++, pgicCausticPhotonsBVHNodesBuff);
 }
 
 void PathOCLBaseOCLRenderThread::SetAllAdvancePathsKernelArgs(const u_int filmIndex) {

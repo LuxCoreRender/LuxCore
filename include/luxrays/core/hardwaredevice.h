@@ -92,6 +92,8 @@ public:
 	virtual ~HardwareDeviceBuffer() { }
 
 	virtual bool IsNull() const = 0;
+	
+	virtual size_t GetSize() const = 0;
 
 protected:
 	HardwareDeviceBuffer() { }

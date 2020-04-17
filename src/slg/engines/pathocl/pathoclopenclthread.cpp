@@ -105,7 +105,7 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl() {
 
 		// Check if I have to load the start film
 		if (engine->hasStartFilm && (threadIndex == 0))
-			threadFilms[0]->SendFilm(oclQueue);
+			threadFilms[0]->SendFilm(intersectionDevice);
 
 		//----------------------------------------------------------------------
 		// Rendering loop
@@ -146,13 +146,12 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl() {
 
 			if (totalTransferTime < totalKernelTime * (1.0 / 100.0)) {
 				// Async. transfer of the Film buffers
-				threadFilms[0]->RecvFilm(oclQueue);
+				threadFilms[0]->RecvFilm(intersectionDevice);
 
 				// Async. transfer of GPU task statistics
-				oclQueue.enqueueReadBuffer(
-					*(taskStatsBuff),
+				intersectionDevice->EnqueueReadBuffer(
+					taskStatsBuff,
 					CL_FALSE,
-					0,
 					sizeof(slg::ocl::pathoclbase::GPUTaskStats) * taskCount,
 					gpuTaskStats);
 
@@ -229,8 +228,8 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl() {
 				"(" << oclErrorString(err.err()) << ")");
 	}
 
-	threadFilms[0]->RecvFilm(oclQueue);
-	oclQueue.finish();
+	threadFilms[0]->RecvFilm(intersectionDevice);
+	intersectionDevice->FinishQueue();
 	
 	threadDone = true;
 

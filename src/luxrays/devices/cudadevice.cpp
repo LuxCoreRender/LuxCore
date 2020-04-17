@@ -455,9 +455,7 @@ void CUDADevice::FreeBuffer(HardwareDeviceBuffer **buff) {
 		CUDADeviceBuffer *cudaDeviceBuff = dynamic_cast<CUDADeviceBuffer *>(*buff);
 		assert (cudaDeviceBuff);
 
-		size_t cudaSize;
-		CHECK_CUDA_ERROR(cuMemGetAddressRange(0, &cudaSize, cudaDeviceBuff->cudaBuff));
-		FreeMemory(cudaSize);
+		FreeMemory(cudaDeviceBuff->GetSize());
 
 		CHECK_CUDA_ERROR(cuMemFree(cudaDeviceBuff->cudaBuff));
 

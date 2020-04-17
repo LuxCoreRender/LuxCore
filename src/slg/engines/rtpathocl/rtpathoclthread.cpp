@@ -154,8 +154,6 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 		bool pendingFilmClear = false;
 		tileWork.Reset();
 		while (!boost::this_thread::interruption_requested()) {
-			cl::CommandQueue &currentQueue = intersectionDevice->GetOpenCLQueue();
-
 			//------------------------------------------------------------------
 			// Render the tile (there is only one tile for each device
 			// in RTPATHOCL)
@@ -171,14 +169,12 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 				RenderTileWork(tileWork, 0);
 
 				// Async. transfer of GPU task statistics
-				currentQueue.enqueueReadBuffer(
-					*(taskStatsBuff),
+				intersectionDevice->EnqueueReadBuffer(
+					taskStatsBuff,
 					CL_FALSE,
-					0,
 					sizeof(slg::ocl::pathoclbase::GPUTaskStats) * taskCount,
 					gpuTaskStats);
-
-				currentQueue.finish();
+				intersectionDevice->FinishQueue();
 
 				//const double t1 = WallClockTime();
 				//SLG_LOG("[RTPathOCLRenderThread::" << threadIndex << "] Tile rendering time: " + ToString((u_int)((t1 - t0) * 1000.0)) + "ms");

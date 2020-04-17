@@ -138,6 +138,15 @@ public:
 		return (cudaBuff == 0);
 	}
 
+	size_t GetSize() const {
+		assert (cudaBuff != 0);
+
+		size_t cudaSize;
+		CHECK_CUDA_ERROR(cuMemGetAddressRange(0, &cudaSize, cudaBuff));
+
+		return cudaSize;
+	}
+
 	friend class CUDADevice;
 
 protected:

@@ -57,8 +57,6 @@ void TilePathOCLRenderThread::UpdateSamplerData(const TileWork &tileWork) {
 		throw runtime_error("Wrong sampler in PathOCLBaseRenderThread::UpdateSamplesBuffer(): " +
 						boost::lexical_cast<string>(engine->oclSampler->type));
 
-	cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
-
 	// Update samplesBuff	
 	switch (engine->GetType()) {
 		case TILEPATHOCL: {
@@ -76,7 +74,7 @@ void TilePathOCLRenderThread::UpdateSamplerData(const TileWork &tileWork) {
 			}
 
 			// TODO: remove the forced synchronization (the CL_TRUE)
-			oclQueue.enqueueWriteBuffer(*samplesBuff, CL_TRUE, 0,
+			intersectionDevice->EnqueueWriteBuffer(samplesBuff, CL_TRUE,
 					sizeof(slg::ocl::TilePathSample) * buffer.size(), &buffer[0]);
 			break;
 		}
@@ -99,7 +97,8 @@ void TilePathOCLRenderThread::UpdateSamplerData(const TileWork &tileWork) {
 	sharedData.aaSamples =  engine->aaSamples;
 
 	// TODO: remove the forced synchronization (the CL_TRUE)
-	oclQueue.enqueueWriteBuffer(*samplerSharedDataBuff, CL_TRUE, 0, sizeof(slg::ocl::TilePathSamplerSharedData), &sharedData);
+	intersectionDevice->EnqueueWriteBuffer(samplerSharedDataBuff, CL_TRUE,
+			sizeof(slg::ocl::TilePathSamplerSharedData), &sharedData);
 }
 
 void TilePathOCLRenderThread::RenderTileWork(const TileWork &tileWork,
@@ -147,7 +146,7 @@ void TilePathOCLRenderThread::RenderTileWork(const TileWork &tileWork,
 	}
 
 	// Async. transfer of the Film buffers
-	threadFilms[filmIndex]->RecvFilm(oclQueue);
+	threadFilms[filmIndex]->RecvFilm(intersectionDevice);
 	threadFilms[filmIndex]->film->AddSampleCount(0,
 			tileWork.GetCoord().width * tileWork.GetCoord().height *
 			engine->aaSamples * engine->aaSamples, 0.0);
@@ -209,10 +208,9 @@ void TilePathOCLRenderThread::RenderThreadImpl() {
 			}
 
 			// Async. transfer of GPU task statistics
-			oclQueue.enqueueReadBuffer(
-				*(taskStatsBuff),
+			intersectionDevice->EnqueueReadBuffer(
+				taskStatsBuff,
 				CL_FALSE,
-				0,
 				sizeof(slg::ocl::pathoclbase::GPUTaskStats) * taskCount,
 				gpuTaskStats);
 
