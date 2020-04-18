@@ -72,6 +72,10 @@ public:
 	bool operator==(const Vector &v) const {
 		return x == v.x && y == v.y && z == v.z;
 	}
+	
+	Vector operator*(const Vector &v) const {
+		return Vector(x * v.x, y * v.y, z * v.z);
+	}
 
 	Vector operator*(float f) const {
 		return Vector(f*x, f*y, f * z);

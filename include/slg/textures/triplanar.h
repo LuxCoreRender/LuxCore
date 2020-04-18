@@ -30,9 +30,9 @@ namespace slg {
 class TriplanarTexture : public Texture {
 public:
 	TriplanarTexture(const TextureMapping3D *mp, const Texture *t1, const Texture *t2, 
-    const Texture *t3, const bool uvlessBumpMap) :
+    const Texture *t3, const bool uvlessBumpMap, const bool inputsAreNormalMaps) :
     mapping(mp), texX(t1), texY(t2), texZ(t3),
-	enableUVlessBumpMap(uvlessBumpMap) {}
+	enableUVlessBumpMap(uvlessBumpMap), inputsAreNormalMaps(inputsAreNormalMaps) {}
 
 	virtual ~TriplanarTexture() {}
 
@@ -91,6 +91,7 @@ private:
     const Texture *texZ;
 
 	const bool enableUVlessBumpMap;
+	const bool inputsAreNormalMaps;
 };
 
 }

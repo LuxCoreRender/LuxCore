@@ -61,8 +61,60 @@ Spectrum TriplanarTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	return result;
 }
 
+Vector BlendNormals(const Vector &n1, const Vector &n2) {
+	// Re-oriented normal mapping from https://blog.selfshadow.com/publications/blending-in-detail/
+	const Vector t = n1 + Vector(0.f, 0.f, 1.f);
+	const Vector u = n2 * Vector(-1.f, -1.f, 1.f);
+	return t * Dot(t, u) / t.z - u;
+}
+
 Normal TriplanarTexture::Bump(const HitPoint &hitPoint, const float sampleDistance) const {
-	if (enableUVlessBumpMap) {
+	if (inputsAreNormalMaps) {
+		// This is mostly a proof-of-concept. 
+		// Before merging into master, this code should be moved to a separate "TriplanarNormalMapTexture"
+		// and support for scaling the three input normalmaps should be added (just multiply with weights[i]).
+		
+		Normal localShadeN;
+		const Point localPoint = mapping->Map(hitPoint, &localShadeN);
+		
+		float weights[3] = {
+			Sqr(Sqr(localShadeN.x)),
+			Sqr(Sqr(localShadeN.y)),
+			Sqr(Sqr(localShadeN.z))
+		};
+		
+		const float sum = weights[0] + weights[1] + weights[2];
+		weights[0] = weights[0] / sum;
+		weights[1] = weights[1] / sum;
+		weights[2] = weights[2] / sum;
+		
+		HitPoint hitPointTmp = hitPoint;
+		hitPointTmp.defaultUV.u = localPoint.y;
+		hitPointTmp.defaultUV.v = localPoint.z;
+		Vector n1 = 2.f * Vector(texX->GetSpectrumValue(hitPointTmp).c) - Vector(1.f, 1.f, 1.f);
+		n1.x *= weights[0];
+		n1.y *= weights[0];
+
+		hitPointTmp.defaultUV.u = localPoint.x;
+		hitPointTmp.defaultUV.v = localPoint.z;
+		Vector n2 = 2.f * Vector(texY->GetSpectrumValue(hitPointTmp).c) - Vector(1.f, 1.f, 1.f);
+		n2.x *= weights[1];
+		n2.y *= weights[1];
+
+		hitPointTmp.defaultUV.u = localPoint.x;
+		hitPointTmp.defaultUV.v = localPoint.y;
+		Vector n3 = 2.f * Vector(texZ->GetSpectrumValue(hitPointTmp).c) - Vector(1.f, 1.f, 1.f);
+		n3.x *= weights[2];
+		n3.y *= weights[2];
+		
+		const Vector n = BlendNormals(n1, BlendNormals(n2, n3));
+
+		// Transform n from tangent to object space
+		Normal shadeN = Normal(Normalize(hitPoint.GetFrame().ToWorld(n)));
+		shadeN *= (Dot(hitPoint.shadeN, shadeN) < 0.f) ? -1.f : 1.f;
+
+		return shadeN;
+	} else if (enableUVlessBumpMap) {
 		// Calculate bump map value at intersection point
 		const float base = GetFloatValue(hitPoint);
 

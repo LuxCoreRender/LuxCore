@@ -592,8 +592,9 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const Texture *t2 = GetTexture(props.Get(Property(propName + ".texture2")(1.f)));
 		const Texture *t3 = GetTexture(props.Get(Property(propName + ".texture3")(1.f)));
 		const bool enableUVlessBumpMap = props.Get(Property(propName + ".uvlessbumpmap.enable")(true)).Get<bool>();
+		const bool inputsAreNormalMaps = props.Get(Property(propName + ".inputsarenormalmaps")(false)).Get<bool>();
 		tex = new TriplanarTexture(CreateTextureMapping3D(propName + ".mapping", props),
-				t1, t2, t3, enableUVlessBumpMap);
+				t1, t2, t3, enableUVlessBumpMap, inputsAreNormalMaps);
     } else if (texType == "random") {
 		const Texture *texture = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
 		const u_int seedOffset = props.Get(Property(propName + ".seed")(0u)).Get<u_int>();
