@@ -511,6 +511,8 @@ boost::python::list GetOpenVDBGridNames(const string &filePathStr) {
 
 boost::python::tuple GetOpenVDBGridInfo(const string &filePathStr, const string &gridName) {
 	boost::python::list bBox;
+	boost::python::list bBox_w;
+	boost::python::list trans_matrix;
 	boost::python::list BlenderMetadata;
 	openvdb::io::File file(filePathStr);
 	
@@ -529,13 +531,38 @@ boost::python::tuple GetOpenVDBGridInfo(const string &filePathStr, const string 
 	const openvdb::Vec3i bbox_min = ovdbGrid->metaValue<openvdb::Vec3i>("file_bbox_min");
 	const openvdb::Vec3i bbox_max = ovdbGrid->metaValue<openvdb::Vec3i>("file_bbox_max");
 
-	bBox.append(bbox_min[0]);
-	bBox.append(bbox_min[1]);
-	bBox.append(bbox_min[2]);
-	
-	bBox.append(bbox_max[0]);
-	bBox.append(bbox_max[1]);
-	bBox.append(bbox_max[2]);
+	const openvdb::math::Transform &transform = ovdbGrid->transform();
+	openvdb::math::Mat4f matrix = transform.baseMap()->getAffineMap()->getMat4();
+
+	for (int col = 0; col < 4; col++) {
+		for (int row = 0; row < 4; row++) {
+			trans_matrix.append(matrix(col, row));
+		}
+	}
+
+	// Read the grid from the file
+	ovdbGrid = file.readGrid(gridName);
+
+	openvdb::CoordBBox coordbbox;
+	ovdbGrid->baseTree().evalLeafBoundingBox(coordbbox);
+	openvdb::BBoxd bbox_world = ovdbGrid->transform().indexToWorld(coordbbox);
+
+	bBox.append(coordbbox.min()[0]);
+	bBox.append(coordbbox.min()[1]);
+	bBox.append(coordbbox.min()[2]);
+
+	bBox.append(coordbbox.max()[0]);
+	bBox.append(coordbbox.max()[1]);
+	bBox.append(coordbbox.max()[2]);
+
+	bBox_w.append(bbox_world.min().x());
+	bBox_w.append(bbox_world.min().y());
+	bBox_w.append(bbox_world.min().z());
+
+	bBox_w.append(bbox_world.max().x());
+	bBox_w.append(bbox_world.max().y());
+	bBox_w.append(bbox_world.max().z());
+
 
 	if (creator == "Blender/Smoke") {
 		boost::python::list min_bbox_list;
@@ -620,7 +647,7 @@ boost::python::tuple GetOpenVDBGridInfo(const string &filePathStr, const string 
 
 	file.close();
 
-	return boost::python::make_tuple(creator, bBox, ovdbGrid->valueType(), BlenderMetadata);
+	return boost::python::make_tuple(creator, bBox, bBox_w, trans_matrix, ovdbGrid->valueType(), BlenderMetadata);
 }
 
 //------------------------------------------------------------------------------

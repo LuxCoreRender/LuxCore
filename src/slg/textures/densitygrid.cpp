@@ -109,7 +109,10 @@ ImageMap *DensityGridTexture::ParseOpenVDB(const string &fileName, const string 
 	openvdb::GridBase::Ptr ovdbGrid = file.readGrid(gridName);
 
 	// Compute the scale factor
-	const openvdb::CoordBBox gridBBox = ovdbGrid->evalActiveVoxelBoundingBox();
+	openvdb::CoordBBox gridBBox;
+	ovdbGrid->baseTree().evalLeafBoundingBox(gridBBox);
+
+	//const openvdb::CoordBBox gridBBox = ovdbGrid->evalActiveVoxelBoundingBox();
 	SDL_LOG("OpenVDB grid bbox: "
 			"[(" << gridBBox.min()[0] << ", " << gridBBox.min()[1] << ", " << gridBBox.min()[2] << "), "
 			"(" << gridBBox.max()[0] << ", " << gridBBox.max()[1] << ", " << gridBBox.max()[2] << ")]");
