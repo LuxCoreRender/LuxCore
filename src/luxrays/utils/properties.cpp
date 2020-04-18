@@ -882,7 +882,7 @@ vector<string> Properties::GetAllNamesRE(const string &regularExpression) const 
 	return namesSubset;
 }
 
-vector<string> Properties::GetAllUniqueSubNames(const string &prefix) const {
+vector<string> Properties::GetAllUniqueSubNames(const string &prefix, const bool sorted) const {
 	const size_t fieldsCount = count(prefix.begin(), prefix.end(), '.') + 2;
 
 	set<string> definedNames;
@@ -897,6 +897,47 @@ vector<string> Properties::GetAllUniqueSubNames(const string &prefix) const {
 				definedNames.insert(s);
 			}
 		}
+	}
+
+	if (sorted) {
+		std::sort(namesSubset.begin(), namesSubset.end(),
+				[](const string &a, const string &b) -> bool{ 
+			// Try to convert a and b to a number
+			int aNumber = 0;
+			bool validA;
+			try {
+				const u_int lastFieldIndex = Property::CountFields(a) - 1;
+				const string lastField = Property::ExtractField(a, lastFieldIndex);
+				aNumber = boost::lexical_cast<int>(lastField);
+				validA = true;
+			} catch(...) {
+				validA = false;
+			}
+
+			int bNumber = 0;
+			bool validB;
+			try {
+				const u_int lastFieldIndex = Property::CountFields(b) - 1;
+				const string lastField = Property::ExtractField(b, lastFieldIndex);
+				bNumber = boost::lexical_cast<int>(lastField);
+				validB = true;
+			} catch(...) {
+				validB = false;
+			}
+
+			// Sort  with numbers natural order when possible
+			if (validA) {
+				if (validB)
+					return aNumber < bNumber;
+				else
+					return true;
+			} else {
+				if (validB)
+					return false;
+				else
+					return a < b;
+			}
+		});
 	}
 
 	return namesSubset;

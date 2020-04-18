@@ -1,5 +1,5 @@
 _mount_dir="$1"
-_entitlements="./scripts/macos/entitlements.plist"
+_entitlements="./scripts/azurepipeline/macos/entitlements.plist"
 
 echo "Codesigning .dylib and .so libraries"
 for f in $(find "${_mount_dir}" -name "*.dylib" -o -name "*.so"); do

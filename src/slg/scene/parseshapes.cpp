@@ -236,11 +236,8 @@ ExtTriangleMesh *Scene::CreateShape(const string &shapeName, const Properties &p
 				solidSideCount, solidCapBottom, solidCapTop,
 				useCameraPosition);
 	} else if (shapeType == "group") {
-		vector<string> shapeNamesKeys = props.GetAllUniqueSubNames(propName);
+		vector<string> shapeNamesKeys = props.GetAllUniqueSubNames(propName, true);
 		if (shapeNamesKeys.size() > 0) {
-			// Sort the entries
-			sort(shapeNamesKeys.begin(), shapeNamesKeys.end());
-
 			vector<const ExtTriangleMesh *> meshes;
 			vector<Transform> trans;
 			for (auto const &shapeNamesKey : shapeNamesKeys) {
