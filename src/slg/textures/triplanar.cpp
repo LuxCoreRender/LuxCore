@@ -16,7 +16,6 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "luxrays/core/epsilon.h"
 #include "slg/textures/triplanar.h"
 
 using namespace std;
