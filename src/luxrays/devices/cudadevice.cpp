@@ -128,6 +128,15 @@ CUDADevice::CUDADevice(
 CUDADevice::~CUDADevice() {
 }
 
+void CUDADevice::PushThreadCurrentDevice() {
+	CHECK_CUDA_ERROR(cuCtxPushCurrent(cudaContext));
+}
+
+void CUDADevice::PopThreadCurrentDevice() {
+	CUcontext newCudaContext;
+	CHECK_CUDA_ERROR(cuCtxPopCurrent(&newCudaContext));
+}
+
 void CUDADevice::Start() {
 	HardwareDevice::Start();
 

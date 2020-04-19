@@ -218,6 +218,9 @@ public:
 
 	virtual const DeviceDescription *GetDeviceDesc() const { return deviceDesc; }
 
+	virtual void PushThreadCurrentDevice() { }
+	virtual void PopThreadCurrentDevice() { }
+
 	virtual void Start();
 	virtual void Stop();
 

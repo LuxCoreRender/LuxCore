@@ -82,7 +82,9 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl() {
 
 	PathOCLRenderEngine *engine = (PathOCLRenderEngine *)renderEngine;
 	const u_int taskCount = engine->taskCount;
-cout<<"#################"<<intersectionDevice->IsRunning()<<"\n";
+
+	intersectionDevice->PushThreadCurrentDevice();
+
 	try {
 		//----------------------------------------------------------------------
 		// Execute initialization kernels
@@ -239,6 +241,8 @@ cout<<"#################"<<intersectionDevice->IsRunning()<<"\n";
 		engine->renderOCLThreads[i]->Interrupt();
 	for (u_int i = 0; i < engine->renderNativeThreads.size(); ++i)
 		engine->renderNativeThreads[i]->Interrupt();
+	
+	intersectionDevice->PopThreadCurrentDevice();
 }
 
 #endif
