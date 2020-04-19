@@ -23,6 +23,7 @@
 
 #include "luxrays/devices/nativeintersectiondevice.h"
 #include "luxrays/devices/oclintersectiondevice.h"
+#include "luxrays/devices/cudaintersectiondevice.h"
 #include "luxrays/utils/ocl.h"
 
 #include "slg/slg.h"

@@ -66,6 +66,18 @@ PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg,
 	vector<IntersectionDevice *> devs = ctx->AddIntersectionDevices(selectedDeviceDescs);
 
 	//--------------------------------------------------------------------------
+	// Add CUDA devices
+	//--------------------------------------------------------------------------
+
+	SLG_LOG("CUDA devices used:");
+	for (size_t i = 0; i < devs.size(); ++i) {
+		if (devs[i]->GetDeviceDesc()->GetType() & DEVICE_TYPE_CUDA_ALL) {
+			SLG_LOG("[" << devs[i]->GetName() << "]");
+			intersectionDevices.push_back(devs[i]);
+		}
+	}
+
+	//--------------------------------------------------------------------------
 	// Add OpenCL devices
 	//--------------------------------------------------------------------------
 

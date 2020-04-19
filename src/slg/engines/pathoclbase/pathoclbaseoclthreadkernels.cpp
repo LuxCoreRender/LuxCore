@@ -99,7 +99,6 @@ string PathOCLBaseOCLRenderThread::GetKernelSources() {
 	// Compile sources
 	stringstream ssKernel;
 	ssKernel <<
-			luxrays::ocl::KernelSource_ocldevice_funcs +
 			// OpenCL LuxRays Types
 			luxrays::ocl::KernelSource_luxrays_types <<
 			luxrays::ocl::KernelSource_randomgen_types <<

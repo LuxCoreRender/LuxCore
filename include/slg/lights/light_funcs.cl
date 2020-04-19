@@ -94,7 +94,7 @@ OPENCL_FORCE_NOT_INLINE float3 ConstantInfiniteLight_Illuminate(__global const L
 			return BLACK;
 
 		float latLongMappingPdf;
-		EnvLightSource_FromLatLongMapping(sampleUV.s0, sampleUV.s1, &shadowRayDir, &latLongMappingPdf);
+		EnvLightSource_FromLatLongMapping(sampleUV.x, sampleUV.y, &shadowRayDir, &latLongMappingPdf);
 		if (latLongMappingPdf == 0.f)
 			return BLACK;
 
@@ -105,7 +105,7 @@ OPENCL_FORCE_NOT_INLINE float3 ConstantInfiniteLight_Illuminate(__global const L
 		*directPdfW = UniformSpherePdf();
 	}
 
-	const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
+	const float3 worldCenter = MAKE_FLOAT3(worldCenterX, worldCenterY, worldCenterZ);
 	const float envRadius = EnvLightSource_GetEnvRadius(sceneRadius);
 
 	const float3 pSurface = BSDF_GetRayOrigin(bsdf, shadowRayDir);
@@ -185,13 +185,13 @@ OPENCL_FORCE_NOT_INLINE float3 InfiniteLight_Illuminate(__global const LightSour
 
 	float3 localDir;
 	float latLongMappingPdf;
-	EnvLightSource_FromLatLongMapping(sampleUV.s0, sampleUV.s1, &localDir, &latLongMappingPdf);
+	EnvLightSource_FromLatLongMapping(sampleUV.x, sampleUV.y, &localDir, &latLongMappingPdf);
 	if (latLongMappingPdf == 0.f)
 		return BLACK;
 
 	const float3 shadowRayDir = normalize(Transform_ApplyVector(&infiniteLight->notIntersectable.light2World, localDir));
 
-	const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
+	const float3 worldCenter = MAKE_FLOAT3(worldCenterX, worldCenterY, worldCenterZ);
 	const float envRadius = EnvLightSource_GetEnvRadius(sceneRadius);
 
 	const float3 pSurface = BSDF_GetRayOrigin(bsdf, worldCenter - VLOAD3F(&bsdf->hitPoint.p.x));
@@ -217,11 +217,11 @@ OPENCL_FORCE_NOT_INLINE float3 InfiniteLight_Illuminate(__global const LightSour
 	// InfiniteLight_GetRadiance is expended here
 	__global const ImageMap *imageMap = &imageMapDescs[infiniteLight->notIntersectable.infinite.imageMapIndex];
 
-	const float2 uv = (float2)(sampleUV.s0, sampleUV.s1);
+	const float2 uv = MAKE_FLOAT2(sampleUV.x, sampleUV.y);
 
 	return VLOAD3F(infiniteLight->notIntersectable.gain.c) * ImageMap_GetSpectrum(
 			imageMap,
-			uv.s0, uv.s1
+			uv.x, uv.y
 			IMAGEMAPS_PARAM);
 }
 
@@ -317,11 +317,11 @@ OPENCL_FORCE_NOT_INLINE float3 Sky2Light_Illuminate(__global const LightSource *
 
 	float3 shadowRayDir;
 	float latLongMappingPdf;
-	EnvLightSource_FromLatLongMapping(sampleUV.s0, sampleUV.s1, &shadowRayDir, &latLongMappingPdf);
+	EnvLightSource_FromLatLongMapping(sampleUV.x, sampleUV.y, &shadowRayDir, &latLongMappingPdf);
 	if (latLongMappingPdf == 0.f)
 		return BLACK;
 
-	const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
+	const float3 worldCenter = MAKE_FLOAT3(worldCenterX, worldCenterY, worldCenterZ);
 	const float envRadius = EnvLightSource_GetEnvRadius(sceneRadius);
 
 	const float3 pSurface = BSDF_GetRayOrigin(bsdf, shadowRayDir);
@@ -386,7 +386,7 @@ OPENCL_FORCE_NOT_INLINE float3 SunLight_Illuminate(__global const LightSource *s
 	if (cosAtLight <= cosThetaMax)
 		return BLACK;
 
-	const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
+	const float3 worldCenter = MAKE_FLOAT3(worldCenterX, worldCenterY, worldCenterZ);
 	const float envRadius = EnvLightSource_GetEnvRadius(sceneRadius);
 	
 	const float3 pSurface = BSDF_GetRayOrigin(bsdf, worldCenter - VLOAD3F(&bsdf->hitPoint.p.x));
@@ -439,10 +439,10 @@ OPENCL_FORCE_NOT_INLINE float3 TriangleLight_GetRadiance(__global const LightSou
 
 		// Retrieve the image map information
 		__global const ImageMap *imageMap = &imageMapDescs[triLight->triangle.imageMapIndex];
-		const float2 uv = (float2)(SphericalPhi(localFromLight) * (1.f / (2.f * M_PI_F)), SphericalTheta(localFromLight) * M_1_PI_F);
+		const float2 uv = MAKE_FLOAT2(SphericalPhi(localFromLight) * (1.f / (2.f * M_PI_F)), SphericalTheta(localFromLight) * M_1_PI_F);
 		emissionColor = ImageMap_GetSpectrum(
 				imageMap,
-				uv.s0, uv.s1
+				uv.x, uv.y
 				IMAGEMAPS_PARAM) / triLight->triangle.avarage;
 	}
 
@@ -532,10 +532,10 @@ OPENCL_FORCE_NOT_INLINE float3 TriangleLight_Illuminate(__global const LightSour
 
 		// Retrieve the image map information
 		__global const ImageMap *imageMap = &imageMapDescs[triLight->triangle.imageMapIndex];
-		const float2 uv = (float2)(SphericalPhi(localFromLight) * (1.f / (2.f * M_PI_F)), SphericalTheta(localFromLight) * M_1_PI_F);
+		const float2 uv = MAKE_FLOAT2(SphericalPhi(localFromLight) * (1.f / (2.f * M_PI_F)), SphericalTheta(localFromLight) * M_1_PI_F);
 		emissionColor = ImageMap_GetSpectrum(
 				imageMap,
-				uv.s0, uv.s1
+				uv.x, uv.y
 				IMAGEMAPS_PARAM) / triLight->triangle.avarage;
 
 		*directPdfW = triLight->triangle.invTriangleArea * shadowRayDistanceSquared ;
@@ -681,10 +681,10 @@ OPENCL_FORCE_NOT_INLINE float3 MapPointLight_Illuminate(__global const LightSour
 
 	const float3 localFromLight = normalize(Transform_InvApplyVector(
 			&mapPointLight->notIntersectable.light2World, -shadowRayDir));
-	const float2 uv = (float2)(SphericalPhi(localFromLight) * (1.f / (2.f * M_PI_F)), SphericalTheta(localFromLight) * M_1_PI_F);
+	const float2 uv = MAKE_FLOAT2(SphericalPhi(localFromLight) * (1.f / (2.f * M_PI_F)), SphericalTheta(localFromLight) * M_1_PI_F);
 	const float3 emissionColor = ImageMap_GetSpectrum(
 			imageMap,
-			uv.s0, uv.s1
+			uv.x, uv.y
 			IMAGEMAPS_PARAM) / (4.f * M_PI_F * mapPointLight->notIntersectable.mapPoint.avarage);
 
 	return VLOAD3F(mapPointLight->notIntersectable.mapPoint.emittedFactor.c) * emissionColor;
@@ -706,10 +706,10 @@ OPENCL_FORCE_NOT_INLINE float3 MapSphereLight_Illuminate(__global const LightSou
 
 	const float3 localFromLight = normalize(Transform_InvApplyVector(
 			&mapSphereLight->notIntersectable.light2World, -VLOAD3F(&shadowRay->d.x)));
-	const float2 uv = (float2)(SphericalPhi(localFromLight) * (1.f / (2.f * M_PI_F)), SphericalTheta(localFromLight) * M_1_PI_F);
+	const float2 uv = MAKE_FLOAT2(SphericalPhi(localFromLight) * (1.f / (2.f * M_PI_F)), SphericalTheta(localFromLight) * M_1_PI_F);
 	const float3 emissionColor = ImageMap_GetSpectrum(
 			imageMap,
-			uv.s0, uv.s1
+			uv.x, uv.y
 			IMAGEMAPS_PARAM) * (1.f / mapSphereLight->notIntersectable.mapSphere.avarage);
 
 	return result * emissionColor;
@@ -828,7 +828,7 @@ OPENCL_FORCE_NOT_INLINE float3 SharpDistantLight_Illuminate(__global const Light
 		__global Ray *shadowRay, float *directPdfW) {
 	const float3 shadowRayDir = -VLOAD3F(&sharpDistantLight->notIntersectable.sharpDistant.absoluteLightDir.x);
 
-	const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
+	const float3 worldCenter = MAKE_FLOAT3(worldCenterX, worldCenterY, worldCenterZ);
 	const float envRadius = EnvLightSource_GetEnvRadius(sceneRadius);
 	
 	const float3 pSurface = BSDF_GetRayOrigin(bsdf, worldCenter - VLOAD3F(&bsdf->hitPoint.p.x));
@@ -863,7 +863,7 @@ OPENCL_FORCE_NOT_INLINE float3 DistantLight_Illuminate(__global const LightSourc
 	const float cosThetaMax = distantLight->notIntersectable.distant.cosThetaMax;
 	const float3 shadowRayDir = -UniformSampleCone(u0, u1, cosThetaMax, x, y, absoluteLightDir);
 
-	const float3 worldCenter = (float3)(worldCenterX, worldCenterY, worldCenterZ);
+	const float3 worldCenter = MAKE_FLOAT3(worldCenterX, worldCenterY, worldCenterZ);
 	const float envRadius = EnvLightSource_GetEnvRadius(sceneRadius);
 	
 	const float3 pSurface = BSDF_GetRayOrigin(bsdf, worldCenter - VLOAD3F(&bsdf->hitPoint.p.x));

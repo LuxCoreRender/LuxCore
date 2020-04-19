@@ -169,7 +169,7 @@ OPENCL_FORCE_NOT_INLINE void SchlickDistribution_SampleH(const float roughness, 
 	if (anisotropy > 0.f)
 		phi += M_PI_F * .5f;
 
-	*wh = (float3)(sinTheta * cos(phi), sinTheta * sin(phi), cosTheta);
+	*wh = MAKE_FLOAT3(sinTheta * cos(phi), sinTheta * sin(phi), cosTheta);
 	*d = SchlickDistribution_SchlickZ(roughness, cosTheta) * SchlickDistribution_SchlickA(*wh, anisotropy) * M_1_PI_F;
 	*pdf = *d;
 }
@@ -283,7 +283,7 @@ OPENCL_FORCE_INLINE float3 FrFull(const float cosi, const float3 cost, const flo
 }
 
 OPENCL_FORCE_NOT_INLINE float3 FresnelGeneral_Evaluate(const float3 eta, const float3 k, const float cosi) {
-	float3 sint2 = fmax(0.f, 1.f - cosi * cosi);
+	float3 sint2 = TO_FLOAT3(fmax(0.f, 1.f - cosi * cosi));
 	if (cosi > 0.f)
 		sint2 /= eta * eta;
 	else

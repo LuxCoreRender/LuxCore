@@ -180,7 +180,10 @@ void CUDADevice::CompileProgram(HardwareDeviceProgram **program,
 
 	cudaOptsStr.push_back("--device-as-default-execution-space");
 	cudaOpts.push_back(cudaOptsStr.back().c_str());
-    
+
+	cudaOptsStr.push_back("--disable-warnings");
+	cudaOpts.push_back(cudaOptsStr.back().c_str());
+
 	while (paramsIter != paramsEnd) {
 		cudaOptsStr.push_back(*paramsIter++);
 		cudaOpts.push_back(cudaOptsStr.back().c_str());

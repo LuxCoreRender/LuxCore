@@ -270,7 +270,7 @@ OPENCL_FORCE_NOT_INLINE void GlossyCoatingMaterial_Evaluate(__global const Mater
 		const float3 absorption = CoatingAbsorption(cosi, coso, alpha, d);
 
 		// Coating fresnel factor
-		const float3 H = normalize((float3) (sampledDir.x + fixedDir.x, sampledDir.y + fixedDir.y,
+		const float3 H = normalize(MAKE_FLOAT3 (sampledDir.x + fixedDir.x, sampledDir.y + fixedDir.y,
 				sampledDir.z - fixedDir.z));
 		const float3 S = FresnelSchlick_Evaluate(ks, fabs(dot(fixedDir, H)));
 
@@ -449,7 +449,7 @@ OPENCL_FORCE_NOT_INLINE void GlossyCoatingMaterial_Sample(__global const Materia
 	} else if (sideTest < -DEFAULT_COS_EPSILON_STATIC) {
 		// Transmission
 		// Coating fresnel factor
-		float3 H = (float3)((sampledDir).x + fixedDir.x, (sampledDir).y + fixedDir.y,
+		float3 H = MAKE_FLOAT3((sampledDir).x + fixedDir.x, (sampledDir).y + fixedDir.y,
 			(sampledDir).z - fixedDir.z);
 		const float HLength = dot(H, H);
 		
@@ -457,7 +457,7 @@ OPENCL_FORCE_NOT_INLINE void GlossyCoatingMaterial_Sample(__global const Materia
 		// I have to handle the case when HLength is 0.0 (or nearly 0.f) in
 		// order to avoid NaN
 		if (HLength < DEFAULT_EPSILON_STATIC)
-			S = 0.f;
+			S = ZERO;
 		else {
 			// Normalize
 			H *= 1.f / HLength;

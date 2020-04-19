@@ -62,7 +62,7 @@ OPENCL_FORCE_INLINE void DisneyMaterial_GetEmittedRadiance(__global const Materi
 //------------------------------------------------------------------------------
 
 OPENCL_FORCE_INLINE float3 DisneyMaterial_CalculateTint(const float3 color) {
-	float luminance = color.s0 * 0.3f + color.s1 * 0.6f + color.s2 * 1.0f;
+	float luminance = color.x * 0.3f + color.y * 0.6f + color.z * 1.0f;
 	return (luminance > 0.0f) ? color * (1.0f / luminance) : WHITE;
 }
 
@@ -353,7 +353,7 @@ OPENCL_FORCE_NOT_INLINE void DisneyMaterial_Evaluate(__global const Material* re
 
 OPENCL_FORCE_INLINE float3 DisneyMaterial_DisneyDiffuseSample(const float3 wo,
 		const float u0, const float u1) {
-	return sign(CosTheta(wo)) * CosineSampleHemisphere(u0, u1);
+	return Sgn(CosTheta(wo)) * CosineSampleHemisphere(u0, u1);
 }
 
 OPENCL_FORCE_INLINE float3 DisneyMaterial_DisneyMetallicSample(const float anisotropic,
@@ -373,10 +373,10 @@ OPENCL_FORCE_INLINE float3 DisneyMaterial_DisneyMetallicSample(const float aniso
 	const float cosTheta = 1.0f / sqrt(1.0f + tanTheta2);
 
 	const float sinTheta = sqrt(fmax(0.0f, 1.0f - cosTheta * cosTheta));
-	float3 wh = (float3)(sinTheta * cosPhi, sinTheta * sinPhi, cosTheta);
+	float3 wh = MAKE_FLOAT3(sinTheta * cosPhi, sinTheta * sinPhi, cosTheta);
 
 	if (CosTheta(wo) * CosTheta(wh) <= 0.0f)
-		wh *= (float3)(-1.f, -1.f, -1.f);
+		wh *= MAKE_FLOAT3(-1.f, -1.f, -1.f);
 
 	return normalize(2.0f * dot(wh, wo) * wh - wo);
 }
@@ -389,10 +389,10 @@ OPENCL_FORCE_INLINE float3 DisneyMaterial_DisneyClearcoatSample(const float clea
 	const float sinTheta = sqrt(fmax(0.0001f, 1.0f - cosTheta * cosTheta));
 	const float phi = 2.0f * M_PI_F * u1;
 
-	float3 wh = (float3)(sinTheta * cos(phi), sinTheta * sin(phi), cosTheta);
+	float3 wh = MAKE_FLOAT3(sinTheta * cos(phi), sinTheta * sin(phi), cosTheta);
 
 	if (CosTheta(wo) * CosTheta(wh) <= 0.0f)
-		wh *= (float3)(-1.f, -1.f, -1.f);
+		wh *= MAKE_FLOAT3(-1.f, -1.f, -1.f);
 
 	return normalize(2.0f * dot(wh, wo) * wh - wo);
 }

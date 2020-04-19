@@ -78,9 +78,9 @@ OPENCL_FORCE_INLINE void Film_AddWeightedPixel2(__global float *dst, __global fl
 }
 
 OPENCL_FORCE_INLINE void Film_AddWeightedPixel4Val(__global float *dst, float3 val, const float weight) {
-	const float r = val.s0;
-	const float g = val.s1;
-	const float b = val.s2;
+	const float r = val.x;
+	const float g = val.y;
+	const float b = val.z;
 
 	if (!isnan(r) && !isinf(r) &&
 			!isnan(g) && !isinf(g) &&
@@ -93,7 +93,7 @@ OPENCL_FORCE_INLINE void Film_AddWeightedPixel4Val(__global float *dst, float3 v
 		AtomicAdd(&dst[3], weight);
 #else
 		float4 p = VLOAD4F(dst);
-		const float4 s = (float4)(r * weight, g * weight, b * weight, weight);
+		const float4 s = MAKE_FLOAT4(r * weight, g * weight, b * weight, weight);
 		p += s;
 		VSTORE4F(p, dst);
 #endif
@@ -118,7 +118,7 @@ OPENCL_FORCE_INLINE void Film_AddWeightedPixel4(__global float *dst, __global fl
 		AtomicAdd(&dst[3], weight);
 #else
 		float4 p = VLOAD4F(dst);
-		const float4 s = (float4)(r * weight, g * weight, b * weight, weight);
+		const float4 s = MAKE_FLOAT4(r * weight, g * weight, b * weight, weight);
 		p += s;
 		VSTORE4F(p, dst);
 #endif
@@ -193,9 +193,9 @@ OPENCL_FORCE_INLINE void Film_AddSampleResultColor(const uint x, const uint y,
 		const uint matID = sampleResult->materialID;
 
 		float3 matIDCol;
-		matIDCol.s0 = (matID & 0x0000ffu) * (1.f / 255.f);
-		matIDCol.s1 = ((matID & 0x00ff00u) >> 8) * (1.f / 255.f);
-		matIDCol.s2 = ((matID & 0xff0000u) >> 16) * (1.f / 255.f);
+		matIDCol.x = (matID & 0x0000ffu) * (1.f / 255.f);
+		matIDCol.y = ((matID & 0x00ff00u) >> 8) * (1.f / 255.f);
+		matIDCol.z = ((matID & 0xff0000u) >> 16) * (1.f / 255.f);
 
 		Film_AddWeightedPixel4Val(&filmMaterialIDColor[index4], matIDCol, weight);
 	}

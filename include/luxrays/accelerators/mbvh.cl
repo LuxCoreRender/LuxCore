@@ -1,4 +1,4 @@
-#line 2 "mbvh_kernel.cl"
+#line 2 "mbvh.cl"
 
 /***************************************************************************
  * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *

@@ -1,5 +1,3 @@
-#line 2 "texture_fresnelconst.cl"
-
 /***************************************************************************
  * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
@@ -18,17 +16,51 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#ifndef _LUXRAYS_CUDAINTERSECTIONDEVICE_H
+#define	_LUXRAYS_CUDAINTERSECTIONDEVICE_H
+
+#include "luxrays/devices/cudadevice.h"
+#include "luxrays/core/hardwareintersectiondevice.h"
+
+#if defined(LUXRAYS_ENABLE_CUDA)
+
+namespace luxrays {
+
 //------------------------------------------------------------------------------
-// FresnelConst texture
+// CUDAIntersectionDevice
 //------------------------------------------------------------------------------
 
-// The following functions are never really used as Metal material has special
-// code to evaluate Fresnel texture
+class CUDAIntersectionDevice : public CUDADevice, public HardwareIntersectionDevice {
+public:
+	CUDAIntersectionDevice(const Context *context,
+		CUDADeviceDescription *desc, const size_t devIndex);
+	virtual ~CUDAIntersectionDevice();
 
-OPENCL_FORCE_INLINE float FresnelConstTexture_ConstEvaluateFloat() {
-	return 0.f;
+	virtual bool HasDataParallelSupport() const { return true; }
+
+	virtual void SetDataSet(DataSet *newDataSet);
+	virtual void Start();
+	virtual void Stop();
+
+	//--------------------------------------------------------------------------
+	// Data parallel interface: to trace a multiple rays (i.e. on the GPU)
+	//--------------------------------------------------------------------------
+
+	virtual void EnqueueTraceRayBuffer(HardwareDeviceBuffer *rayBuff,
+			HardwareDeviceBuffer *rayHitBuff,
+			const unsigned int rayCount);
+
+	friend class Context;
+
+protected:
+	virtual void Update();
+
+	HardwareIntersectionKernel *kernel;
+};
+
 }
 
-OPENCL_FORCE_INLINE float3 FresnelConstTexture_ConstEvaluateSpectrum() {
-	return BLACK;
-}
+#endif
+
+#endif	/* _LUXRAYS_CUDAINTERSECTIONDEVICE_H */
+

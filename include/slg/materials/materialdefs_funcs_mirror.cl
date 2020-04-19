@@ -83,7 +83,7 @@ OPENCL_FORCE_INLINE void MirrorMaterial_Sample(__global const Material* restrict
 
 	const BSDFEvent event = SPECULAR | REFLECT;
 
-	const float3 sampledDir = (float3)(-fixedDir.x, -fixedDir.y, fixedDir.z);
+	const float3 sampledDir = MAKE_FLOAT3(-fixedDir.x, -fixedDir.y, fixedDir.z);
 	const float pdfW = 1.f;
 
 	const float3 krVal = Texture_GetSpectrumValue(material->mirror.krTexIndex, hitPoint TEXTURES_PARAM);

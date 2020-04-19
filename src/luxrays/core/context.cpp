@@ -31,6 +31,7 @@
 #endif
 #if defined(LUXRAYS_ENABLE_CUDA)
 #include "luxrays/devices/cudadevice.h"
+#include "luxrays/devices/cudaintersectiondevice.h"
 #endif
 
 using namespace std;
@@ -237,6 +238,14 @@ vector<IntersectionDevice *> Context::CreateIntersectionDevices(
 			OpenCLDeviceDescription *oclDeviceDesc = (OpenCLDeviceDescription *)deviceDesc[i];
 
 			device = new OpenCLIntersectionDevice(this, oclDeviceDesc, indexOffset + i);
+		}
+#endif
+#if defined(LUXRAYS_ENABLE_CUDA)
+		else if (deviceType & DEVICE_TYPE_CUDA_ALL) {
+			// CUDA devices
+			CUDADeviceDescription *cudaDeviceDesc = (CUDADeviceDescription *)deviceDesc[i];
+
+			device = new CUDAIntersectionDevice(this, cudaDeviceDesc, indexOffset + i);
 		}
 #endif
 		else

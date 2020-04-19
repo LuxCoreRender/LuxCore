@@ -82,7 +82,7 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl() {
 
 	PathOCLRenderEngine *engine = (PathOCLRenderEngine *)renderEngine;
 	const u_int taskCount = engine->taskCount;
-
+cout<<"#################"<<intersectionDevice->IsRunning()<<"\n";
 	try {
 		//----------------------------------------------------------------------
 		// Execute initialization kernels

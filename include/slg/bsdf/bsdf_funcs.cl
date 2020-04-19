@@ -127,14 +127,14 @@ OPENCL_FORCE_NOT_INLINE void BSDF_InitVolume(
 
 	bsdf->triangleLightSourceIndex = NULL_INDEX;
 
-	VSTORE2F((float2)(0.f, 0.f), &bsdf->hitPoint.defaultUV.u);
+	VSTORE2F(MAKE_FLOAT2(0.f, 0.f), &bsdf->hitPoint.defaultUV.u);
 
 	float3 dpdu, dpdv;
 	CoordinateSystem(geometryN, &dpdu, &dpdv);
 	VSTORE3F(dpdu, &bsdf->hitPoint.dpdu.x);
 	VSTORE3F(dpdv, &bsdf->hitPoint.dpdv.x);
-	VSTORE3F((float3)(0.f, 0.f, 0.f), &bsdf->hitPoint.dndu.x);
-	VSTORE3F((float3)(0.f, 0.f, 0.f), &bsdf->hitPoint.dndv.x);
+	VSTORE3F(MAKE_FLOAT3(0.f, 0.f, 0.f), &bsdf->hitPoint.dndu.x);
+	VSTORE3F(MAKE_FLOAT3(0.f, 0.f, 0.f), &bsdf->hitPoint.dndv.x);
 
 	bsdf->hitPoint.meshIndex = NULL_INDEX;
 	bsdf->hitPoint.triangleIndex = NULL_INDEX;
@@ -362,6 +362,6 @@ OPENCL_FORCE_INLINE float3 BSDF_GetBakeMapValue(__global const BSDF *bsdf
 
 	return ImageMap_GetSpectrum(
 			imageMap,
-			uv.s0, uv.s1
+			uv.x, uv.y
 			IMAGEMAPS_PARAM);
 }

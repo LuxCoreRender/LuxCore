@@ -157,7 +157,7 @@ protected:
 // CUDADevice
 //------------------------------------------------------------------------------
 
-class CUDADevice : public HardwareDevice {
+class CUDADevice : virtual public HardwareDevice {
 public:
 	CUDADevice(const Context *context,
 		CUDADeviceDescription *desc, const size_t devIndex);

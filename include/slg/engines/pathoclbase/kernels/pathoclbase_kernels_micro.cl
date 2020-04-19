@@ -355,7 +355,7 @@ __kernel void AdvancePaths_MK_HIT_OBJECT(
 								taskConfig->pathTracer.pgic.glossinessUsageThreshold,
 								taskConfig->pathTracer.pgic.indirectUsageThresholdScale,
 								taskConfig->pathTracer.pgic.indirectLookUpRadius))) {
-						VSTORE3F((float3)(0.f, 0.f, 1.f), sampleResult->radiancePerPixelNormalized[0].c);
+						VSTORE3F(MAKE_FLOAT3(0.f, 0.f, 1.f), sampleResult->radiancePerPixelNormalized[0].c);
 						taskState->photonGIShowIndirectPathMixUsed = true;
 
 						taskState->state = MK_SPLAT_SAMPLE;
@@ -599,7 +599,7 @@ __kernel void AdvancePaths_MK_DL_ILLUMINATE(
 	// It will set eventually to true if the light is visible
 	taskDirectLight->directLightResult = NOT_VISIBLE;
 
-	if (!BSDF_IsDelta(bsdf
+	/*if (!BSDF_IsDelta(bsdf
 			MATERIALS_PARAM) &&
 			DirectLight_Illuminate(
 				bsdf,
@@ -615,11 +615,11 @@ __kernel void AdvancePaths_MK_DL_ILLUMINATE(
 				LIGHTS_PARAM)) {
 		// I have now to evaluate the BSDF
 		taskState->state = MK_DL_SAMPLE_BSDF;
-	} else {
+	} else {*/
 		// No shadow ray to trace, move to the next vertex ray
 		// however, I have to Check if this is the last path vertex
 		taskState->state = (sampleResult->lastPathVertex) ? MK_SPLAT_SAMPLE : MK_GENERATE_NEXT_VERTEX_RAY;
-	}
+	//}
 
 	//--------------------------------------------------------------------------
 
@@ -816,9 +816,9 @@ __kernel void AdvancePaths_MK_GENERATE_NEXT_VERTEX_RAY(
 		if (sampleResult->firstPathVertex) {
 			if (!(BSDF_GetEventTypes(&taskState->bsdf
 						MATERIALS_PARAM) & SPECULAR))
-				VSTORE3F(M_1_PI_F * fabs(dot(
+				VSTORE3F(TO_FLOAT3(M_1_PI_F * fabs(dot(
 						VLOAD3F(&bsdf->hitPoint.shadeN.x),
-						sampledDir)) / rrProb,
+						sampledDir)) / rrProb),
 						sampleResult->irradiancePathThroughput.c);
 			else
 				VSTORE3F(BLACK, sampleResult->irradiancePathThroughput.c);
@@ -909,19 +909,19 @@ __kernel void AdvancePaths_MK_SPLAT_SAMPLE(
 
 	// Initialize Film radiance group scale table
 	float3 filmRadianceGroupScale[FILM_MAX_RADIANCE_GROUP_COUNT];
-	filmRadianceGroupScale[0] = (float3)(filmRadianceGroupScale0_R, filmRadianceGroupScale0_G, filmRadianceGroupScale0_B);
-	filmRadianceGroupScale[1] = (float3)(filmRadianceGroupScale1_R, filmRadianceGroupScale1_G, filmRadianceGroupScale1_B);
-	filmRadianceGroupScale[2] = (float3)(filmRadianceGroupScale2_R, filmRadianceGroupScale2_G, filmRadianceGroupScale2_B);
-	filmRadianceGroupScale[3] = (float3)(filmRadianceGroupScale3_R, filmRadianceGroupScale3_G, filmRadianceGroupScale3_B);
-	filmRadianceGroupScale[4] = (float3)(filmRadianceGroupScale4_R, filmRadianceGroupScale4_G, filmRadianceGroupScale4_B);
-	filmRadianceGroupScale[5] = (float3)(filmRadianceGroupScale5_R, filmRadianceGroupScale5_G, filmRadianceGroupScale5_B);
-	filmRadianceGroupScale[6] = (float3)(filmRadianceGroupScale6_R, filmRadianceGroupScale6_G, filmRadianceGroupScale6_B);
-	filmRadianceGroupScale[7] = (float3)(filmRadianceGroupScale7_R, filmRadianceGroupScale7_G, filmRadianceGroupScale7_B);
+	filmRadianceGroupScale[0] = MAKE_FLOAT3(filmRadianceGroupScale0_R, filmRadianceGroupScale0_G, filmRadianceGroupScale0_B);
+	filmRadianceGroupScale[1] = MAKE_FLOAT3(filmRadianceGroupScale1_R, filmRadianceGroupScale1_G, filmRadianceGroupScale1_B);
+	filmRadianceGroupScale[2] = MAKE_FLOAT3(filmRadianceGroupScale2_R, filmRadianceGroupScale2_G, filmRadianceGroupScale2_B);
+	filmRadianceGroupScale[3] = MAKE_FLOAT3(filmRadianceGroupScale3_R, filmRadianceGroupScale3_G, filmRadianceGroupScale3_B);
+	filmRadianceGroupScale[4] = MAKE_FLOAT3(filmRadianceGroupScale4_R, filmRadianceGroupScale4_G, filmRadianceGroupScale4_B);
+	filmRadianceGroupScale[5] = MAKE_FLOAT3(filmRadianceGroupScale5_R, filmRadianceGroupScale5_G, filmRadianceGroupScale5_B);
+	filmRadianceGroupScale[6] = MAKE_FLOAT3(filmRadianceGroupScale6_R, filmRadianceGroupScale6_G, filmRadianceGroupScale6_B);
+	filmRadianceGroupScale[7] = MAKE_FLOAT3(filmRadianceGroupScale7_R, filmRadianceGroupScale7_G, filmRadianceGroupScale7_B);
 
 	if (taskConfig->pathTracer.pgic.indirectEnabled &&
 			(taskConfig->pathTracer.pgic.debugType == PGIC_DEBUG_SHOWINDIRECTPATHMIX) &&
 			!taskState->photonGIShowIndirectPathMixUsed)
-		VSTORE3F((float3)(1.f, 0.f, 0.f), sampleResult->radiancePerPixelNormalized[0].c);
+		VSTORE3F(MAKE_FLOAT3(1.f, 0.f, 0.f), sampleResult->radiancePerPixelNormalized[0].c);
 
 	//--------------------------------------------------------------------------
 	// Variance clamping
@@ -1079,3 +1079,4 @@ __kernel void AdvancePaths_MK_GENERATE_CAMERA_RAY(
 
 #endif
 }
+

@@ -133,7 +133,7 @@ OPENCL_FORCE_NOT_INLINE bool BrickTexture_Evaluate(__global const HitPoint *hitP
 	const float3 P = TextureMapping3D_Map(mapping, hitPoint, NULL TEXTURES_PARAM);
 
 	const float offs = BRICK_EPSILON + mortarsize;
-	float3 bP = P + (float3)(offs, offs, offs);
+	float3 bP = P + MAKE_FLOAT3(offs, offs, offs);
 
 	// Normalize coordinates according brick dimensions
 	bP.x /= brickwidth;
@@ -244,7 +244,7 @@ OPENCL_FORCE_NOT_INLINE void BrickTexture_EvalOp(
 					texture->brick.bond,
 					texture->brick.brickwidth, texture->brick.brickheight,
 					texture->brick.brickdepth, texture->brick.mortarsize,
-					(float3)(texture->brick.offsetx, texture->brick.offsety, texture->brick.offsetz),
+					MAKE_FLOAT3(texture->brick.offsetx, texture->brick.offsety, texture->brick.offsetz),
 					texture->brick.run , texture->brick.mortarwidth,
 					texture->brick.mortarheight, texture->brick.mortardepth,
 					texture->brick.proportion, texture->brick.invproportion,
@@ -264,7 +264,7 @@ OPENCL_FORCE_NOT_INLINE void BrickTexture_EvalOp(
 					texture->brick.bond,
 					texture->brick.brickwidth, texture->brick.brickheight,
 					texture->brick.brickdepth, texture->brick.mortarsize,
-					(float3)(texture->brick.offsetx, texture->brick.offsety, texture->brick.offsetz),
+					MAKE_FLOAT3(texture->brick.offsetx, texture->brick.offsety, texture->brick.offsetz),
 					texture->brick.run , texture->brick.mortarwidth,
 					texture->brick.mortarheight, texture->brick.mortardepth,
 					texture->brick.proportion, texture->brick.invproportion,

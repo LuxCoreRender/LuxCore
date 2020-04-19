@@ -403,7 +403,7 @@ typedef struct {
 #define MATERIAL_SAMPLE_RETURN_BLACK { \
 		const float3 result = BLACK; \
 		EvalStack_PushFloat3(result); \
-		const float3 sampledDir = 0.f; \
+		const float3 sampledDir = ZERO; \
 		EvalStack_PushFloat3(sampledDir); \
 		const BSDFEvent event = NONE; \
 		EvalStack_PushBSDFEvent(event); \

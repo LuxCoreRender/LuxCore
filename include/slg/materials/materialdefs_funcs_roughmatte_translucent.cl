@@ -115,7 +115,7 @@ OPENCL_FORCE_NOT_INLINE void RoughMatteTranslucentMaterial_Evaluate(__global con
 		maxcos = fmax(0.f, dcos);
 	}
 
-	float3 result = (M_1_PI_F * fabs(lightDir.z) *
+	float3 result = TO_FLOAT3(M_1_PI_F * fabs(lightDir.z) *
 		(A + B * maxcos * sinthetai * sinthetao / fmax(fabs(CosTheta(lightDir)), fabs(CosTheta(eyeDir)))));
 
 	BSDFEvent event;

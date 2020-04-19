@@ -68,7 +68,7 @@ OPENCL_FORCE_INLINE void NullMaterial_GetPassThroughTransparency(__global const 
 
 		if (Spectrum_IsBlack(blendColor)) {
 			// It doesn't make any sense to have a solid NULL material
-			transp = .0001f;
+			transp = TO_FLOAT3(.0001f);
 		} else
 			transp = blendColor;
 	} else
