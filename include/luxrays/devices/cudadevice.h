@@ -22,6 +22,7 @@
 #include "luxrays/core/hardwaredevice.h"
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/utils/cuda.h"
+#include "luxrays/utils/cudacache.h"
 
 #if defined(LUXRAYS_ENABLE_CUDA)
 
@@ -93,34 +94,26 @@ protected:
 
 class CUDADeviceProgram : public HardwareDeviceProgram {
 public:
-	CUDADeviceProgram() : cudaProgram(nullptr), cudaModule(nullptr) { }
+	CUDADeviceProgram() : cudaModule(nullptr) { }
 	virtual ~CUDADeviceProgram() {
-		if (cudaProgram) {
-			CHECK_NVRTC_ERROR(nvrtcDestroyProgram(&cudaProgram));
-		}
 		// Module is unloaded by the device at the Stop()
 	}
 
 	bool IsNull() const { 
-		return (cudaProgram == nullptr);
+		return (cudaModule == nullptr);
 	}
 
 	friend class CUDADevice;
 
 protected:
-	void Set(nvrtcProgram p, CUmodule m) {
-		if (cudaProgram) {
-			CHECK_NVRTC_ERROR(nvrtcDestroyProgram(&cudaProgram));
-		}
+	void Set(CUmodule m) {
+		// Module is unloaded by the device at the Stop()
 
-		cudaProgram = p;
 		cudaModule = m;
 	}
 
-	nvrtcProgram GetProgram() { return cudaProgram; }
 	CUmodule GetModule() { return cudaModule; }
 
-	nvrtcProgram cudaProgram;
 	CUmodule cudaModule;
 };
 
@@ -220,6 +213,8 @@ protected:
 	CUDADeviceDescription *deviceDesc;
 	CUcontext cudaContext;
 	std::vector<CUmodule> loadedModules;
+	
+	luxrays::cudaKernelCache *kernelCache;
 };
 
 }

@@ -202,9 +202,9 @@ void OpenCLDevice::CompileProgram(HardwareDeviceProgram **program,
 			oclProgramParameters, oclProgramSource,
 			&cached, &error);
 	if (!oclProgram) {
-		LR_LOG(deviceContext, "[" << programName << "] program compilation error" << endl << error);
+		LR_LOG(deviceContext, "[" << programName << "] OpenCL program compilation error" << endl << error);
 
-		throw runtime_error(programName + " program compilation error");
+		throw runtime_error(programName + " OpenCL program compilation error");
 	}
 
 	if (cached) {

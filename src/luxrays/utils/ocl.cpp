@@ -262,7 +262,7 @@ boost::filesystem::path oclKernelPersistentCache::GetCacheDir(const string &appl
 	boost::filesystem::path kernelCacheDir= boost::filesystem::temp_directory_path();
 #endif
 
-	return kernelCacheDir / "kernel_cache" / SanitizeFileName(applicationName);
+	return kernelCacheDir / "ocl_kernel_cache" / SanitizeFileName(applicationName);
 }
 
 oclKernelPersistentCache::oclKernelPersistentCache(const string &applicationName) {
