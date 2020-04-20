@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -36,7 +36,7 @@ LightSource *DistributionLightStrategy::SampleLights(const float u,
 
 float DistributionLightStrategy::SampleLightPdf(const LightSource *light,
 		const Point &p, const Normal &n, const bool isVolume) const {
-	return lightsDistribution->Pdf(light->lightSceneIndex);
+	return lightsDistribution->PdfDiscrete(light->lightSceneIndex);
 }
 
 LightSource *DistributionLightStrategy::SampleLights(const float u,
@@ -47,7 +47,7 @@ LightSource *DistributionLightStrategy::SampleLights(const float u,
 	if (*pdf > 0.f)
 		return scene->lightDefs.GetLightSources()[lightIndex];
 	else
-		return NULL;
+		return nullptr;
 }
 
 Properties DistributionLightStrategy::ToProperties() const {

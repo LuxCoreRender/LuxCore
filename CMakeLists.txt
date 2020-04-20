@@ -1,5 +1,5 @@
 ################################################################################
-# Copyright 1998-2018 by authors (see AUTHORS.txt)
+# Copyright 1998-2020 by authors (see AUTHORS.txt)
 #
 #   This file is part of LuxCoreRender.
 #
@@ -92,7 +92,7 @@ INCLUDE(KernelPreprocess)
 SET(LuxRays_INCLUDE_DIR "${LuxRays_SOURCE_DIR}/include")
 include_directories("${LuxRays_INCLUDE_DIR}")
 
-include_directories("${LuxRays_SOURCE_DIR}/deps/eos_portable_archive-v5.1")
+include_directories("${LuxRays_SOURCE_DIR}/deps/json-3.7.3/include")
 
 # Find dependencies
 include(Dependencies)
@@ -108,6 +108,10 @@ endif()
 if (NOT OPENCL_FOUND AND NOT LUXRAYS_DISABLE_OPENCL)
 	MESSAGE(ERROR "--> Could not locate required OpenCL files, disabling OpenCL support - Please check ${OPENCL_SEARCH_PATH}")
 	SET(LUXRAYS_DISABLE_OPENCL 1)
+endif()
+
+if (NOT CUDA_FOUND AND LUXRAYS_ENABLE_CUDA)
+	MESSAGE(FATAL_ERROR "--> Could not locate required CUDA files - Please check ${CUDA_TOOLKIT_ROOT_DIR}")
 endif()
 
 if (NOT OPENGL_FOUND AND NOT LUXRAYS_DISABLE_OPENCL)
@@ -141,11 +145,15 @@ if (LUXRAYS_DISABLE_OPENCL)
 	ADD_DEFINITIONS("-DLUXRAYS_DISABLE_OPENCL")
 endif()
 
+if (LUXRAYS_ENABLE_CUDA)
+	ADD_DEFINITIONS("-DLUXRAYS_ENABLE_CUDA")
+endif()
+
 if (BUILD_LUXCORE_DLL)
 	set(LUXCORE_LIBRARY luxcore)
 	ADD_DEFINITIONS("-DLUXCORE_DLL")
 else()
-	set(LUXCORE_LIBRARY luxcore slg-core slg-film slg-kernels luxrays bcd openvdb ${BLOSC_LIBRARIES} ${EMBREE_LIBRARY} ${OIDN_LIBRARY} ${TBB_LIBRARY} ${TIFF_LIBRARIES} ${TIFF_LIBRARIES} ${OPENEXR_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES})
+	set(LUXCORE_LIBRARY luxcore slg-core slg-film slg-kernels luxrays bcd opensubdiv openvdb ${BLOSC_LIBRARY} ${EMBREE_LIBRARY} ${OIDN_LIBRARY} ${TBB_LIBRARY} ${TIFF_LIBRARIES} ${TIFF_LIBRARIES} ${OPENEXR_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES})
 endif()
 
 ################################################################################
@@ -178,7 +186,6 @@ if(NOT APPLE OR OSX_BUILD_DEMOS)
 
 	if (NOT WIN32 OR NOT BUILD_LUXCORE_DLL)
 		# Internal tests can not be compiled on WIN32 with DLL enabled
-		add_subdirectory(tests/benchsimple)
 		add_subdirectory(tests/luxcoreimplserializationdemo)
 	endif()
 endif()

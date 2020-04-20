@@ -54,18 +54,24 @@ engineProperties = {
 		"""
 		film.width = 150
 		film.height = 100
+		batch.haltspp = 0
+		batch.halttime = 0
 		batch.haltthreshold = 0.075
 		"""),
 	"BIDIRCPU" : pyluxcore.Properties().SetFromString(
 		"""
 		film.width = 150
 		film.height = 100
+		batch.haltspp = 0
+		batch.halttime = 0
 		batch.haltthreshold = 0.075
 		"""),
 	"TILEPATHCPU" : pyluxcore.Properties().SetFromString(
 		"""
 		film.width = 150
 		film.height = 100
+		batch.haltspp = 0
+		batch.halttime = 0
 		batch.haltthreshold = 0.075
 		tilepath.sampling.aa.size = 2
 		"""),
@@ -73,12 +79,16 @@ engineProperties = {
 		"""
 		film.width = 150
 		film.height = 100
+		batch.haltspp = 0
+		batch.halttime = 0
 		batch.haltthreshold = 0.075
 		"""),
 	"TILEPATHOCL" : pyluxcore.Properties().SetFromString(
 		"""
 		film.width = 150
 		film.height = 100
+		batch.haltspp = 0
+		batch.halttime = 0
 		batch.haltthreshold = 0.075
 		tilepath.sampling.aa.size = 2
 		"""),
@@ -139,10 +149,11 @@ def CompareImage(a, b):
 		return False, count, new
 	else:
 		return True, 0, None
-	
+
+diffexe = os.path.realpath("../deps/perceptualdiff-master/perceptualdiff")
 def CompareImageFiles(testCase, resultImageName, refImageName):
 	if os.path.isfile(refImageName):
-		sameImage = (subprocess.call("../deps/perceptualdiff-master/perceptualdiff --down-sample 2 \'" + resultImageName + "\' \'" + refImageName + "\'", shell=True) == 0)
+		sameImage = (subprocess.call(diffexe + " " + resultImageName + " " + refImageName + " --down-sample 2", shell=True) == 0)
 
 		if not sameImage:
 			# Read the result image

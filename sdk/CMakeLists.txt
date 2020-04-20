@@ -1,5 +1,5 @@
 ################################################################################
-# Copyright 1998-2018 by authors (see AUTHORS.txt)
+# Copyright 1998-2020 by authors (see AUTHORS.txt)
 #
 #   This file is part of LuxCoreRender.
 #
@@ -55,6 +55,10 @@ link_directories("${LuxRays_SOURCE_DIR}/lib")
 
 if (LUXRAYS_DISABLE_OPENCL)
 	ADD_DEFINITIONS("-DLUXRAYS_DISABLE_OPENCL")
+endif()
+
+if (LUXRAYS_ENABLE_CUDA)
+	ADD_DEFINITIONS("-DLUXRAYS_ENABLE_CUDA")
 endif()
 
 

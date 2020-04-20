@@ -35,6 +35,8 @@ class TestHalt(unittest.TestCase):
 		props.Set(GetDefaultEngineProperties("PATHCPU"))
 
 		# Replace halt condition
+		props.Delete("batch.haltspp")
+		props.Delete("batch.halttime")
 		props.Delete("batch.haltthreshold")
 		# Run at full speed
 		props.Delete("native.threads.count")

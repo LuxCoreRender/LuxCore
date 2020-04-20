@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -25,7 +25,6 @@
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/color/color.h"
-#include "luxrays/core/oclintersectiondevice.h"
 #include "luxrays/utils/serializationutils.h"
 #include "slg/film/imagepipeline/imagepipeline.h"
 

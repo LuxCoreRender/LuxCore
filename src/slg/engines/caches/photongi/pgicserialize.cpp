@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -16,8 +16,9 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "slg/engines/caches/photongi/photongicache.h"
 #include "luxrays/utils/safesave.h"
+
+#include "slg/engines/caches/photongi/photongicache.h"
 
 using namespace std;
 using namespace luxrays;
@@ -34,10 +35,8 @@ void PhotonGICache::LoadPersistentCache(const std::string &fileName) {
 
 	sif.GetArchive() >> params;
 
-	delete visibilityParticlesKdTree;
-	visibilityParticlesKdTree = nullptr;
-	visibilityParticles.clear();
-	visibilityParticles.shrink_to_fit();
+	sif.GetArchive() >> visibilityParticles;
+	sif.GetArchive() >> visibilityParticlesKdTree;
 
 	sif.GetArchive() >> radiancePhotons;
 	sif.GetArchive() >> radiancePhotonsBVH;
@@ -46,6 +45,7 @@ void PhotonGICache::LoadPersistentCache(const std::string &fileName) {
 	sif.GetArchive() >> causticPhotons;
 	sif.GetArchive() >> causticPhotonsBVH;
 	sif.GetArchive() >> causticPhotonTracedCount;
+	sif.GetArchive() >> causticPhotonPass;
 
 	if (!sif.IsGood())
 		throw runtime_error("Error while loading PhotonGI persistent cache: " + fileName);
@@ -60,6 +60,9 @@ void PhotonGICache::SavePersistentCache(const std::string &fileName) {
 
 		sof.GetArchive() << params;
 
+		sof.GetArchive() << visibilityParticles;
+		sof.GetArchive() << visibilityParticlesKdTree;
+
 		sof.GetArchive() << radiancePhotons;
 		sof.GetArchive() << radiancePhotonsBVH;
 		sof.GetArchive() << indirectPhotonTracedCount;
@@ -67,6 +70,7 @@ void PhotonGICache::SavePersistentCache(const std::string &fileName) {
 		sof.GetArchive() << causticPhotons;
 		sof.GetArchive() << causticPhotonsBVH;
 		sof.GetArchive() << causticPhotonTracedCount;
+		sof.GetArchive() << causticPhotonPass;
 
 		if (!sof.IsGood())
 			throw runtime_error("Error while saving PhotonGI persistent cache: " + fileName);
@@ -94,6 +98,9 @@ BOOST_CLASS_EXPORT_IMPLEMENT(slg::PhotonGICache)
 
 template<class Archive> void PhotonGICache::serialize(Archive &ar, const u_int version) {
 	ar & params;
+	ar & threadCount;
+	ar & lastUpdateSpp;
+	ar & updateSeedBase;
 
 	ar & visibilityParticles;
 	ar & visibilityParticlesKdTree;
@@ -105,13 +112,13 @@ template<class Archive> void PhotonGICache::serialize(Archive &ar, const u_int v
 	ar & causticPhotons;	
 	ar & causticPhotonsBVH;
 	ar & causticPhotonTracedCount;
+	ar & causticPhotonPass;
+
+	threadsSyncBarrier.reset(new boost::barrier(threadCount));
 }
 
 namespace slg {
 // Explicit instantiations for portable archives
 template void PhotonGICache::serialize(LuxOutputArchive &ar, const u_int version);
 template void PhotonGICache::serialize(LuxInputArchive &ar, const u_int version);
-// Explicit instantiations for polymorphic archives
-template void PhotonGICache::serialize(boost::archive::polymorphic_oarchive &ar, const u_int version);
-template void PhotonGICache::serialize(boost::archive::polymorphic_iarchive &ar, const u_int version);
 }

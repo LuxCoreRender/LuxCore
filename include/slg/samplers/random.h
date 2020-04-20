@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -41,6 +41,8 @@ public:
 	RandomSamplerSharedData(Film *engineFilm);
 	virtual ~RandomSamplerSharedData() { }
 
+	virtual void Reset();
+
 	u_int GetNewPixelIndex();
 	
 	static SamplerSharedData *FromProperties(const luxrays::Properties &cfg,
@@ -63,14 +65,14 @@ private:
 class RandomSampler : public Sampler {
 public:
 	RandomSampler(luxrays::RandomGenerator *rnd, Film *flm,
-			const FilmSampleSplatter *flmSplatter,
-			const float adaptiveStrength,
+			const FilmSampleSplatter *flmSplatter, const bool imgSamplesEnable,
+			const float adaptiveStrength, const float adaptiveUserImpWeight,
 			RandomSamplerSharedData *samplerSharedData);
 	virtual ~RandomSampler() { }
 
 	virtual SamplerType GetType() const { return GetObjectType(); }
 	virtual std::string GetTag() const { return GetObjectTag(); }
-	virtual void RequestSamples(const u_int size);
+	virtual void RequestSamples(const SampleType sampleType, const u_int size);
 
 	virtual float GetSample(const u_int index);
 	virtual void NextSample(const std::vector<SampleResult> &sampleResults);
@@ -95,7 +97,7 @@ private:
 	static const luxrays::Properties &GetDefaultProps();
 	
 	RandomSamplerSharedData *sharedData;
-	float adaptiveStrength;
+	float adaptiveStrength, adaptiveUserImportanceWeight;
 
 	float sample0, sample1;
 	u_int pixelIndexBase, pixelIndexOffset;

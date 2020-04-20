@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -29,6 +29,8 @@
 #include "slg/volumes/volume.h"
 #include "slg/bsdf/bsdfevents.h"
 #include "slg/bsdf/hitpoint.h"
+#include "slg/scene/sceneobject.h"
+#include "slg/utils/pathvolumeinfo.h"
 
 namespace slg {
 
@@ -38,7 +40,6 @@ namespace ocl {
 }
 
 class Scene;
-class SceneObject;
 
 class BSDF {
 public:
@@ -46,18 +47,48 @@ public:
 	BSDF() : material(NULL) { };
 
 	// A BSDF initialized from a ray hit
-	BSDF(const bool fixedFromLight, const Scene &scene, const luxrays::Ray &ray,
+	BSDF(const bool fixedFromLight, const bool throughShadowTransparency,
+		const Scene &scene, const luxrays::Ray &ray,
 		const luxrays::RayHit &rayHit, const float passThroughEvent,
 		const PathVolumeInfo *volInfo) {
 		assert (!rayHit.Miss());
-		Init(fixedFromLight, scene, ray, rayHit, passThroughEvent, volInfo);
+		Init(fixedFromLight, throughShadowTransparency, scene,
+				ray, rayHit, passThroughEvent, volInfo);
 	}
+	// A BSDF initialized with a point on a surface
+	BSDF(const Scene &scene,
+		const u_int meshIndex, const u_int triangleIndex,
+		const luxrays::Point &surfacePoint,
+		const float surfacePointBary1, const float surfacePointBary2, 
+		const float time,
+		const float passThroughEvent, const PathVolumeInfo *volInfo) {
+		Init(scene, meshIndex, triangleIndex,
+				surfacePoint, surfacePointBary1, surfacePointBary2,
+				time, passThroughEvent, volInfo);
+	}
+	// A BSDF initialized with a volume scattering point
+	BSDF(const bool fixedFromLight, const bool throughShadowTransparency,
+		const Scene &scene, const luxrays::Ray &ray,
+		const Volume &volume, const float t, const float passThroughEvent) {
+		Init(fixedFromLight, throughShadowTransparency,
+				scene, ray, volume, t, passThroughEvent);
+	}
+
 	// Used when hitting a surface
-	void Init(const bool fixedFromLight, const Scene &scene, const luxrays::Ray &ray,
+	void Init(const bool fixedFromLight, const bool throughShadowTransparency,
+		const Scene &scene, const luxrays::Ray &ray,
 		const luxrays::RayHit &rayHit, const float passThroughEvent,
 		const PathVolumeInfo *volInfo);
+	// Used when have a point of a surface
+	void Init(const Scene &scene,
+		const u_int meshIndex, const u_int triangleIndex,
+		const luxrays::Point &surfacePoint,
+		const float surfacePointBary1, const float surfacePointBary2, 
+		const float time,
+		const float passThroughEvent, const PathVolumeInfo *volInfo);
 	// Used when hitting a volume scatter point
-	void Init(const bool fixedFromLight, const Scene &scene, const luxrays::Ray &ray,
+	void Init(const bool fixedFromLight, const bool throughShadowTransparency,
+		const Scene &scene, const luxrays::Ray &ray,
 		const Volume &volume, const float t, const float passThroughEvent);
 
 	bool IsEmpty() const { return (material == NULL); }
@@ -78,12 +109,13 @@ public:
 	const Volume *GetMaterialInteriorVolume() const { return material->GetInteriorVolume(hitPoint, hitPoint.passThroughEvent); }
 	const Volume *GetMaterialExteriorVolume() const { return material->GetExteriorVolume(hitPoint, hitPoint.passThroughEvent); }
 	float GetGlossiness() const { return material->GetGlossiness(); }
-
+	const SceneObject *GetSceneObject() const { return sceneObject; }
 
 	BSDFEvent GetEventTypes() const { return material->GetEventTypes(); }
 	MaterialType GetMaterialType() const { return material->GetType(); }
 
 	luxrays::Spectrum GetPassThroughTransparency(const bool backTracing) const;
+	const luxrays::Spectrum &GetPassThroughShadowTransparency() const { return material->GetPassThroughShadowTransparency(); }
 	const luxrays::Frame &GetFrame() const { return frame; }
 
 	luxrays::Spectrum Albedo() const;
@@ -92,7 +124,8 @@ public:
 		BSDFEvent *event, float *directPdfW = NULL, float *reversePdfW = NULL) const;
 	luxrays::Spectrum Sample(luxrays::Vector *sampledDir,
 		const float u0, const float u1,
-		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
+		float *pdfW, float *absCosSampledDir,
+		BSDFEvent *event, const BSDFEvent eventHint = NONE) const;
 	luxrays::Spectrum ShadowCatcherSample(Vector *sampledDir,
 		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
 	void Pdf(const luxrays::Vector &sampledDir, float *directPdfW, float *reversePdfW) const;
@@ -100,6 +133,20 @@ public:
 	luxrays::Spectrum GetEmittedRadiance(float *directPdfA = NULL, float *emissionPdfW = NULL) const ;
 
 	const LightSource *GetLightSource() const { return triangleLightSource; }
+	
+	luxrays::Point GetRayOrigin(const luxrays::Vector &sampleDir) const {
+		if (IsVolume())
+			return hitPoint.p;
+		else {
+			// Rise the ray origin along the geometry normal to avoid self intersection
+			const float riseDirection = (Dot(sampleDir, hitPoint.geometryN) > 0.f) ? 1.f : -1.f;
+
+			return hitPoint.p + riseDirection * luxrays::Vector(hitPoint.geometryN * luxrays::MachineEpsilon::E(hitPoint.p));
+		}
+	}
+
+	bool HasBakeMap(const BakeMapType type) const;
+	luxrays::Spectrum GetBakeMapValue() const;
 
 	HitPoint hitPoint;
 

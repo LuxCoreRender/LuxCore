@@ -1,7 +1,7 @@
 #line 2 "texture_fresnelcolor.cl"
 
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -50,17 +50,13 @@ OPENCL_FORCE_INLINE float3 FresnelApproxK3(const float3 Fr) {
 // FresnelColor texture
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_ENABLE_TEX_FRESNELCOLOR)
-
 // The following functions are never really used as Metal material has special
 // code to evaluate Fresnel texture
 
-OPENCL_FORCE_INLINE float FresnelColorTexture_ConstEvaluateFloat(__global const Texture *tex) {
+OPENCL_FORCE_INLINE float FresnelColorTexture_ConstEvaluateFloat() {
 	return 0.f;
 }
 
-OPENCL_FORCE_INLINE float3 FresnelColorTexture_ConstEvaluateSpectrum(__global const Texture *tex) {
+OPENCL_FORCE_INLINE float3 FresnelColorTexture_ConstEvaluateSpectrum() {
 	return 0.f;
 }
-
-#endif

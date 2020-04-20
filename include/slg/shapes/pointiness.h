@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -27,7 +27,8 @@ namespace slg {
 
 class PointinessShape : public Shape {
 public:
-	PointinessShape(luxrays::ExtTriangleMesh *srcMesh);
+	// destAOVIndex = NULL_INDEX means use the alpha channel
+	PointinessShape(luxrays::ExtTriangleMesh *srcMesh, const u_int destAOVIndex);
 	virtual ~PointinessShape();
 
 	virtual ShapeType GetType() const { return POINTINESS; }

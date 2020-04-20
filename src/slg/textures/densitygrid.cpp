@@ -109,17 +109,21 @@ ImageMap *DensityGridTexture::ParseOpenVDB(const string &fileName, const string 
 	openvdb::GridBase::Ptr ovdbGrid = file.readGrid(gridName);
 
 	// Compute the scale factor
-	const openvdb::CoordBBox gridBBox = ovdbGrid->evalActiveVoxelBoundingBox();
+	openvdb::CoordBBox gridBBox;
+	ovdbGrid->baseTree().evalLeafBoundingBox(gridBBox);
+
+	//const openvdb::CoordBBox gridBBox = ovdbGrid->evalActiveVoxelBoundingBox();
 	SDL_LOG("OpenVDB grid bbox: "
 			"[(" << gridBBox.min()[0] << ", " << gridBBox.min()[1] << ", " << gridBBox.min()[2] << "), "
 			"(" << gridBBox.max()[0] << ", " << gridBBox.max()[1] << ", " << gridBBox.max()[2] << ")]");
 	const openvdb::Coord gridBBoxSize = gridBBox.max() - gridBBox.min();
 	SDL_LOG("OpenVDB grid size: (" << gridBBoxSize[0] << ", " << gridBBoxSize[1] << ", " << gridBBoxSize[2] << ")");
 	
-	const openvdb::Vec3f scale(
-			gridBBoxSize[0] / (float)nx,
-			gridBBoxSize[1] / (float)ny,
-			gridBBoxSize[2] / (float)nz);
+	const openvdb::Vec3f scale = openvdb::Vec3f(
+		gridBBoxSize[0] / (float)nx,
+		gridBBoxSize[1] / (float)ny,
+		gridBBoxSize[2] / (float)nz);
+
 
 	SDL_LOG("OpenVDB grid type: " + ovdbGrid->valueType());
 	const u_int channelsCount =
@@ -145,8 +149,7 @@ ImageMap *DensityGridTexture::ParseOpenVDB(const string &fileName, const string 
 			break;
 	}
 
-	ImageMapStorage *imgStorage = imgMap->GetStorage();
-	SDL_LOG("OpenVDB grid type: " + ovdbGrid->valueType());
+	ImageMapStorage *imgStorage = imgMap->GetStorage();	
 
 	if (channelsCount == 3) {
 		// Check if it is the right type of grid

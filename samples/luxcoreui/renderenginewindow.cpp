@@ -47,6 +47,7 @@ RenderEngineWindow::RenderEngineWindow(LuxCoreApp *a) : ObjectEditorWindow(a, "R
 		.Add("TILEPATHOCL", 7)
 #endif
 		.Add("RTPATHCPU", 8)
+		.Add("BAKECPU", 9)
 		.SetDefault("PATHCPU");
 }
 
@@ -643,29 +644,45 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 		int ival;
 
 		if (ImGui::CollapsingHeader("Path Depth", NULL, true, true)) {
-			ival = props.Get("light.maxdepth").Get<int>();
+			ival = props.Get("path.pathdepth.total").Get<int>();
 			if (ImGui::InputInt("Maximum light path recursion depth", &ival)) {
-				props.Set(Property("light.maxdepth")(ival));
+				props.Set(Property("path.pathdepth.total")(ival));
 				modifiedProps = true;
 			}
-			LuxCoreApp::HelpMarker("light.maxdepth");
+			LuxCoreApp::HelpMarker("path.pathdepth.total");
 		}
 
 		if (ImGui::CollapsingHeader("Russian Roulette", NULL, true, true)) {
-			ival = props.Get("light.russianroulette.depth").Get<int>();
+			ival = props.Get("path.russianroulette.depth").Get<int>();
 			if (ImGui::InputInt("Russian Roulette start depth", &ival)) {
-				props.Set(Property("light.russianroulette.depth")(ival));
+				props.Set(Property("path.russianroulette.depth")(ival));
 				modifiedProps = true;
 			}
-			LuxCoreApp::HelpMarker("light.russianroulette.depth");
+			LuxCoreApp::HelpMarker("path.russianroulette.depth");
 
-			fval = props.Get("light.russianroulette.cap").Get<float>();
+			fval = props.Get("path.russianroulette.cap").Get<float>();
 			if (ImGui::SliderFloat("Russian Roulette threshold", &fval, 0.f, 1.f)) {
-				props.Set(Property("light.russianroulette.cap")(fval));
+				props.Set(Property("path.russianroulette.cap")(fval));
 				modifiedProps = true;
 			}
-			LuxCoreApp::HelpMarker("light.russianroulette.cap");
+			LuxCoreApp::HelpMarker("path.russianroulette.cap");
 		}
+
+		ThreadsGUI(props, modifiedProps);
+
+		if (ImGui::Button("Open Sampler editor"))
+			app->samplerWindow.Open();
+		ImGui::SameLine();
+		if (ImGui::Button("Open Pixel Filter editor"))
+			app->pixelFilterWindow.Open();
+	}
+
+	//--------------------------------------------------------------------------
+	// BAKECPU
+	//--------------------------------------------------------------------------
+
+	if (typeIndex == typeTable.GetVal("BAKECPU")) {
+		PathGUI(props, modifiedProps);
 
 		ThreadsGUI(props, modifiedProps);
 

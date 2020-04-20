@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -24,14 +24,23 @@
 namespace luxrays { namespace ocl {
 
 extern std::string KernelSource_luxrays_types;
-	
+
+// OpenCLDevice functrions
+extern std::string KernelSource_ocldevice_funcs;
+
+// CUDADevice OpenCL emulation
+extern std::string KernelSource_cudadevice_oclemul_types;
+extern std::string KernelSource_cudadevice_math;
+extern std::string KernelSource_cudadevice_oclemul_funcs;
+
 // Intersection kernels
 extern std::string KernelSource_bvhbuild_types;
 extern std::string KernelSource_bvh;
 extern std::string KernelSource_mbvh;
 
 extern std::string KernelSource_trianglemesh_types;
-extern std::string KernelSource_trianglemesh_funcs;
+extern std::string KernelSource_exttrianglemesh_types;
+extern std::string KernelSource_exttrianglemesh_funcs;
 extern std::string KernelSource_randomgen_types;
 extern std::string KernelSource_randomgen_funcs;
 extern std::string KernelSource_matrix4x4_types;

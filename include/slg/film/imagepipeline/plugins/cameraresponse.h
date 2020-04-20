@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -23,9 +23,7 @@
 #include <memory>
 #include <typeinfo> 
 
-#include "luxrays/luxrays.h"
-#include "luxrays/core/color/color.h"
-#include "luxrays/core/oclintersectiondevice.h"
+#include "luxrays/core/hardwaredevice.h"
 #include "luxrays/utils/serializationutils.h"
 #include "slg/film/imagepipeline/imagepipeline.h"
 
@@ -44,10 +42,8 @@ public:
 
 	virtual void Apply(Film &film, const u_int index);
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	virtual bool CanUseOpenCL() const { return true; }
-	virtual void ApplyOCL(Film &film, const u_int index);
-#endif
+	virtual bool CanUseHW() const { return true; }
+	virtual void ApplyHW(Film &film, const u_int index);
 
 	friend class boost::serialization::access;
 
@@ -80,18 +76,16 @@ private:
 	std::vector<float> blueB; // measured intensity
 	bool color;
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	// Used inside the object destructor to free buffers
-	luxrays::OpenCLIntersectionDevice *oclIntersectionDevice;
-	cl::Buffer *oclRedI;
-	cl::Buffer *oclRedB;
-	cl::Buffer *oclGreenI;
-	cl::Buffer *oclGreenB;
-	cl::Buffer *oclBlueI;
-	cl::Buffer *oclBlueB;
+	luxrays::HardwareDevice *hardwareDevice;
+	luxrays::HardwareDeviceBuffer *hwRedI;
+	luxrays::HardwareDeviceBuffer *hwRedB;
+	luxrays::HardwareDeviceBuffer *hwGreenI;
+	luxrays::HardwareDeviceBuffer *hwGreenB;
+	luxrays::HardwareDeviceBuffer *hwBlueI;
+	luxrays::HardwareDeviceBuffer *hwBlueB;
 
-	cl::Kernel *applyKernel;
-#endif
+	luxrays::HardwareDeviceKernel *applyKernel;
 };
 
 }

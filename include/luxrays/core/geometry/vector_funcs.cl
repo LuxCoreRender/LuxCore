@@ -1,7 +1,7 @@
 #line 2 "vector_funcs.cl"
 
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -18,16 +18,16 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-float SphericalTheta(const float3 v) {
+OPENCL_FORCE_INLINE float SphericalTheta(const float3 v) {
 	return acos(clamp(v.z, -1.f, 1.f));
 }
 
-float SphericalPhi(const float3 v) {
+OPENCL_FORCE_INLINE float SphericalPhi(const float3 v) {
 	const float p = atan2(v.y, v.x);
 	return (p < 0.f) ? p + 2.f * M_PI_F : p;
 }
 
-void CoordinateSystem(const float3 v1, float3 *v2, float3 *v3) {
+OPENCL_FORCE_INLINE void CoordinateSystem(const float3 v1, float3 *v2, float3 *v3) {
 	if (fabs(v1.x) > fabs(v1.y)) {
 		float invLen = 1.f / sqrt(v1.x * v1.x + v1.z * v1.z);
 		(*v2).x = -v1.z * invLen;

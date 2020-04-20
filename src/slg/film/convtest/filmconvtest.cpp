@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -33,9 +33,9 @@ using namespace slg;
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::FilmConvTest)
 
 FilmConvTest::FilmConvTest(const Film *flm, const float thresholdVal,
-		const u_int warmupVal, const u_int testStepVal, const bool useFilt) :
+		const u_int warmupVal, const u_int testStepVal, const bool useFilt, const u_int idx) :
 		threshold(thresholdVal), warmup(warmupVal),	testStep(testStepVal),
-		useFilter(useFilt), film(flm), referenceImage(NULL) {
+		useFilter(useFilt), imagePipelineIndex(idx), film(flm), referenceImage(NULL) {
 	Reset();
 }
 
@@ -78,16 +78,18 @@ u_int FilmConvTest::Test() {
 	if (IsTestUpdateRequired()) {
 		lastSamplesCount = film->GetTotalSampleCount();
 
+		const u_int index = (imagePipelineIndex <= (film->GetImagePipelineCount() - 1)) ? imagePipelineIndex : 0;
+
 		if (firstTest) {
 			SLG_LOG("Convergence test first pass");
 
 			// Copy the current image
-			referenceImage->Copy(film->channel_IMAGEPIPELINEs[0]);
+			referenceImage->Copy(film->channel_IMAGEPIPELINEs[index]);
 			firstTest = false;
 		} else {
 			// Check the number of pixels over the threshold
 			const float *ref = referenceImage->GetPixels();
-			const float *img = film->channel_IMAGEPIPELINEs[0]->GetPixels();
+			const float *img = film->channel_IMAGEPIPELINEs[index]->GetPixels();
 
 			todoPixelsCount = 0;
 			maxError = 0.f;
@@ -116,7 +118,7 @@ u_int FilmConvTest::Test() {
 
 
 			// Copy the current image
-			referenceImage->Copy(film->channel_IMAGEPIPELINEs[0]);
+			referenceImage->Copy(film->channel_IMAGEPIPELINEs[index]);
 
 			SLG_LOG("Convergence test: ToDo Pixels = " << todoPixelsCount << ", Max. Error = " << maxError << " [" << (256.f * maxError) << "/256]");
 
@@ -145,7 +147,4 @@ namespace slg {
 // Explicit instantiations for portable archives
 template void FilmConvTest::serialize(LuxOutputArchive &ar, const u_int version);
 template void FilmConvTest::serialize(LuxInputArchive &ar, const u_int version);
-// The following 2 lines shouldn't be required but they are with GCC 5
-template void FilmConvTest::serialize(boost::archive::polymorphic_oarchive &ar, const u_int version);
-template void FilmConvTest::serialize(boost::archive::polymorphic_iarchive &ar, const u_int version);
 }

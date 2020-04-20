@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -21,7 +21,8 @@
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
-#include "luxrays/core/intersectiondevice.h"
+#include "luxrays/devices/nativeintersectiondevice.h"
+#include "luxrays/devices/oclintersectiondevice.h"
 #include "luxrays/utils/ocl.h"
 
 #include "slg/slg.h"
@@ -37,17 +38,18 @@ namespace slg {
 // (base class for all types of OCL path tracers)
 //------------------------------------------------------------------------------
 
+class RenderConfig;
+class CompiledScene;
+
 class PathOCLBaseRenderEngine : public OCLRenderEngine {
 public:
 	PathOCLBaseRenderEngine(const RenderConfig *cfg, const bool supportsNativeThreads);
 	virtual ~PathOCLBaseRenderEngine();
 
-	virtual bool IsMaterialCompiled(const MaterialType type) const {
-		return (compiledScene == NULL) ? false : compiledScene->IsMaterialCompiled(type);
-	}
-
 	virtual bool HasDone() const;
 	virtual void WaitForDone() const;
+
+	static bool HasCachedKernels(const RenderConfig &renderConfig);
 
 	friend class PathOCLBaseOCLRenderThread;
 
@@ -61,10 +63,11 @@ protected:
 	virtual PathOCLBaseOCLRenderThread *CreateOCLThread(const u_int index,
 			luxrays::OpenCLIntersectionDevice *device) = 0;
 	virtual PathOCLBaseNativeRenderThread *CreateNativeThread(const u_int index,
-			luxrays::NativeThreadIntersectionDevice *device) {
+			luxrays::NativeIntersectionDevice *device) {
 		throw std::runtime_error("Internal error, called PathOCLBaseRenderEngine::CreateNativeThread()");
 	}
 
+	virtual void InitGPUTaskConfiguration();
 	void InitPixelFilterDistribution();
 
 	virtual void InitFilm();
@@ -74,8 +77,12 @@ protected:
 	virtual void BeginSceneEditLockLess();
 	virtual void EndSceneEditLockLess(const EditActionList &editActions);
 
+	void SetCachedKernels(const RenderConfig &renderConfig);
+	static std::string GetCachedKernelsHash(const RenderConfig &renderConfig);
+
 	boost::mutex setKernelArgsMutex;
 
+	slg::ocl::pathoclbase::GPUTaskConfiguration taskConfig;
 	CompiledScene *compiledScene;
 
 	std::vector<PathOCLBaseOCLRenderThread *> renderOCLThreads;

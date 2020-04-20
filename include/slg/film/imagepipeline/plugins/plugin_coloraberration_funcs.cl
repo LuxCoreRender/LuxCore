@@ -1,7 +1,7 @@
 #line 2 "plugin_vignetting_funcs.cl"
 
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -42,7 +42,7 @@ float3 ColorAberrationPlugin_BilinearSampleImage(
 	return c;
 }
 
-__kernel __attribute__((work_group_size_hint(256, 1, 1))) void ColorAberrationPlugin_Apply(
+__kernel void ColorAberrationPlugin_Apply(
 		const uint filmWidth, const uint filmHeight,
 		__global float *channel_IMAGEPIPELINE,
 		__global float *tmpBuffer,
@@ -66,8 +66,8 @@ __kernel __attribute__((work_group_size_hint(256, 1, 1))) void ColorAberrationPl
 		const float gX =  (.5f + xOffset * (1.f - tOffset * amount)) * filmWidth;
 		const float gY =  (.5f + yOffset * (1.f - tOffset * amount)) * filmHeight;
 
-		const float3 redblue = (float3)(1.f, 0.f, 1.f);
-		const float3 green = (float3)(0.f, 1.f, 0.f);
+		const float3 redblue = MAKE_FLOAT3(1.f, 0.f, 1.f);
+		const float3 green = MAKE_FLOAT3(0.f, 1.f, 0.f);
 
 		__global float *pixel = &channel_IMAGEPIPELINE[gid * 3];
 		float3 newValue = VLOAD3F(pixel);
@@ -85,7 +85,7 @@ __kernel __attribute__((work_group_size_hint(256, 1, 1))) void ColorAberrationPl
 // ColorAberrationPlugin_Copy
 //------------------------------------------------------------------------------
 
-__kernel __attribute__((work_group_size_hint(256, 1, 1))) void ColorAberrationPlugin_Copy(
+__kernel void ColorAberrationPlugin_Copy(
 		const uint filmWidth, const uint filmHeight,
 		__global float *channel_IMAGEPIPELINE,
 		__global float *tmpBuffer) {

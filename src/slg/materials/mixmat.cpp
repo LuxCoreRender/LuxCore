@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -42,16 +42,8 @@ bool MixMaterial::IsLightSourceImpl() const {
 	return (Material::IsLightSource() || matA->IsLightSource() || matB->IsLightSource());
 }
 
-bool MixMaterial::HasBumpTexImpl() const { 
-	return (Material::HasBumpTex() || matA->HasBumpTex() || matB->HasBumpTex());
-}
-
 bool MixMaterial::IsDeltaImpl() const {
 	return (matA->IsDelta() && matB->IsDelta());
-}
-
-bool MixMaterial::IsPassThroughImpl() const {
-	return (matA->IsPassThrough() || matB->IsPassThrough());
 }
 
 void MixMaterial::Preprocess() {
@@ -59,12 +51,20 @@ void MixMaterial::Preprocess() {
 
 	eventTypes = GetEventTypesImpl();
 
-	glossiness = Min(matA->GetGlossiness(), matB->GetGlossiness());
+	if (matA->GetEventTypes() & GLOSSY) {
+		if (matB->GetEventTypes() & GLOSSY)
+			glossiness = Min(matA->GetGlossiness(), matB->GetGlossiness());
+		else
+			glossiness = matA->GetGlossiness();
+	} else {
+		if (matB->GetEventTypes() & GLOSSY)
+			glossiness = matB->GetGlossiness();
+		else
+			glossiness = 0.f;
+	}
 
 	isLightSource = IsLightSourceImpl();
-	hasBumpTex = HasBumpTexImpl();
 	isDelta = IsDeltaImpl();
-	isPassThrough = IsPassThroughImpl();
 }
 
 const Volume *MixMaterial::GetInteriorVolume(const HitPoint &hitPoint,
@@ -97,9 +97,23 @@ const Volume *MixMaterial::GetExteriorVolume(const HitPoint &hitPoint,
 	}
 }
 
+void MixMaterial::UpdateAvgPassThroughTransparency() {
+	if (frontTransparencyTex || backTransparencyTex)
+		Material::UpdateAvgPassThroughTransparency();
+	else {
+		const float avgMix = mixFactor->Filter();
+
+		const float weight2 = Clamp(avgMix, 0.f, 1.f);
+		const float weight1 = 1.f - weight2;
+
+		avgPassThroughTransparency = weight1 * matA->GetAvgPassThroughTransparency() +
+				weight2 * matB->GetAvgPassThroughTransparency();
+	}
+}
+
 Spectrum MixMaterial::GetPassThroughTransparency(const HitPoint &hitPoint,
 		const Vector &localFixedDir, const float passThroughEvent,
-		const float backTracing) const {
+		const bool backTracing) const {
 	if (frontTransparencyTex || backTransparencyTex) {
 		return Material::GetPassThroughTransparency(hitPoint, localFixedDir,
 				passThroughEvent, backTracing);
@@ -218,7 +232,7 @@ Spectrum MixMaterial::Evaluate(const HitPoint &hitPoint,
 Spectrum MixMaterial::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
-	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
+	float *pdfW, BSDFEvent *event, const BSDFEvent eventHint) const {
 	const Frame frame(hitPoint.GetFrame());
 
 	HitPoint hitPointA(hitPoint);
@@ -254,12 +268,14 @@ Spectrum MixMaterial::Sample(const HitPoint &hitPoint,
 
 	// Sample the first material
 	Spectrum result = matFirst->Sample(hitPoint1, fixedDir1, localSampledDir,
-			u0, u1, passThroughEventFirst, pdfW, absCosSampledDir, event);
+			u0, u1, passThroughEventFirst, pdfW, event, eventHint);
 	if (result.Black())
 		return Spectrum();
+
 	*localSampledDir = frame1.ToWorld(*localSampledDir);
 	const Vector sampledDir2 = frame2.ToLocal(*localSampledDir);
 	*localSampledDir = frame.ToLocal(*localSampledDir);
+
 	*pdfW *= weightFirst;
 
 	if ((*event) & SPECULAR)
@@ -377,7 +393,7 @@ Properties MixMaterial::ToProperties(const ImageMapCache &imgMapCache, const boo
 	props.Set(Property("scene.materials." + name + ".type")("mix"));
 	props.Set(Property("scene.materials." + name + ".material1")(matA->GetName()));
 	props.Set(Property("scene.materials." + name + ".material2")(matB->GetName()));
-	props.Set(Property("scene.materials." + name + ".amount")(mixFactor->GetName()));
+	props.Set(Property("scene.materials." + name + ".amount")(mixFactor->GetSDLValue()));
 	props.Set(Material::ToProperties(imgMapCache, useRealFileName));
 
 	return props;

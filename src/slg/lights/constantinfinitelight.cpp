@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -16,9 +16,9 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "slg/bsdf/bsdf.h"
 #include "slg/scene/scene.h"
 #include "slg/lights/constantinfinitelight.h"
-#include "slg/lights/visibility/envlightvisibility.h"
 
 using namespace std;
 using namespace luxrays;
@@ -28,18 +28,16 @@ using namespace slg;
 // ConstantInfiniteLight
 //------------------------------------------------------------------------------
 
-ConstantInfiniteLight::ConstantInfiniteLight() : color(1.f), visibilityDistribution(nullptr),
-		visibilityMapCache(nullptr) {
+ConstantInfiniteLight::ConstantInfiniteLight() : color(1.f), visibilityMapCache(nullptr) {
 }
 
 ConstantInfiniteLight::~ConstantInfiniteLight() {
-	delete visibilityDistribution;
 	delete visibilityMapCache;
 }
 
-void ConstantInfiniteLight::GetPreprocessedData(const luxrays::Distribution2D **visibilityDist) const {
-	if (visibilityDist)
-		*visibilityDist = visibilityDistribution;
+void ConstantInfiniteLight::GetPreprocessedData(const EnvLightVisibilityCache **elvc) const {
+	if (elvc)
+		*elvc = visibilityMapCache;
 }
 
 float ConstantInfiniteLight::GetPower(const Scene &scene) const {
@@ -50,11 +48,10 @@ float ConstantInfiniteLight::GetPower(const Scene &scene) const {
 }
 
 Spectrum ConstantInfiniteLight::GetRadiance(const Scene &scene,
-		const Point &p, const Vector &dir,
-		float *directPdfA,
-		float *emissionPdfW) const {
-	if ((useVisibilityMap && visibilityDistribution) 
-			|| (useVisibilityMapCache && visibilityMapCache)) {
+		const BSDF *bsdf, const Vector &dir, float *directPdfA, float *emissionPdfW) const {
+	const float envRadius = GetEnvRadius(scene);
+
+	if (visibilityMapCache && (!bsdf || visibilityMapCache->IsCacheEnabled(*bsdf))) {
 		const Vector w = -dir;
 		float u, v, latLongMappingPdf;
 		ToLatLongMapping(w, &u, &v, &latLongMappingPdf);
@@ -62,177 +59,107 @@ Spectrum ConstantInfiniteLight::GetRadiance(const Scene &scene,
 			return Spectrum();
 
 		if (directPdfA) {
-			if (useVisibilityMapCache) {
-				const Distribution2D *cacheDist = visibilityMapCache->GetVisibilityMap(p);
-				if (cacheDist) {
-					const float cacheDistPdf = cacheDist->Pdf(u, v);
-
-					*directPdfA = cacheDistPdf * latLongMappingPdf;
-				} else
-					*directPdfA = 0.f;
-			} else {
-				const float distPdf = visibilityDistribution->Pdf(u, v);
-				*directPdfA = distPdf * latLongMappingPdf;
-			}
+			if (bsdf)
+				*directPdfA =  visibilityMapCache->Pdf(*bsdf, u, v) * latLongMappingPdf;
+			else
+				*directPdfA = 0.f;
 		}
 
-		if (emissionPdfW) {
-			const float envRadius = GetEnvRadius(scene);
-			const float distPdf = visibilityDistribution->Pdf(u, v);
-			*emissionPdfW = distPdf * latLongMappingPdf / (M_PI * envRadius * envRadius);
-		}
+		if (emissionPdfW)
+			*emissionPdfW = UniformSpherePdf() / (M_PI * envRadius * envRadius);
 	} else {
 		if (directPdfA)
-			*directPdfA = UniformSpherePdf();
+			*directPdfA = bsdf ? UniformSpherePdf() : 0.f;
 
-		if (emissionPdfW) {
-			const float envRadius = GetEnvRadius(scene);
+		if (emissionPdfW)
 			*emissionPdfW = UniformSpherePdf() / (M_PI * envRadius * envRadius);
-		}
 	}
 
 	return gain * color;
 }
 
 Spectrum ConstantInfiniteLight::Emit(const Scene &scene,
-		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
-		Point *orig, Vector *dir,
-		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
-	if (useVisibilityMap && visibilityDistribution) {
-		const Point worldCenter = scene.dataSet->GetBSphere().center;
-		const float envRadius = GetEnvRadius(scene);
+		const float time, const float u0, const float u1,
+		const float u2, const float u3, const float passThroughEvent,
+		Ray &ray, float &emissionPdfW,
+		float *directPdfA, float *cosThetaAtLight) const {
+	const Point worldCenter = scene.dataSet->GetBSphere().center;
+	const float envRadius = GetEnvRadius(scene);
 
-		// Choose p1 on scene bounding sphere according importance sampling
-		float uv[2];
-		float distPdf;
-		visibilityDistribution->SampleContinuous(u0, u1, uv, &distPdf);
-		if (distPdf == 0.f)
-			return Spectrum();
-		
-		Vector v;
-		float latLongMappingPdf;
-		FromLatLongMapping(uv[0], uv[1], &v, &latLongMappingPdf);
-		if (latLongMappingPdf == 0.f)
-			return Spectrum();
+	// Compute InfiniteLight ray weight
+	emissionPdfW = UniformSpherePdf() / (M_PI * envRadius * envRadius);
 
-		Point p1 = worldCenter + envRadius * v;
+	if (directPdfA)
+		*directPdfA = UniformSpherePdf();
 
-		// Choose p2 on scene bounding sphere
-		Point p2 = worldCenter + envRadius * UniformSampleSphere(u2, u3);
+	// Choose p1 on scene bounding sphere
+	Point p1 = worldCenter + envRadius * UniformSampleSphere(u0, u1);
 
-		// Construct ray between p1 and p2
-		*orig = p1;
-		*dir = Normalize(p2 - p1);
+	// Choose p2 on scene bounding sphere
+	Point p2 = worldCenter + envRadius * UniformSampleSphere(u2, u3);
 
-		// Compute InfiniteLight ray weight
-		*emissionPdfW = distPdf * latLongMappingPdf / (M_PI * envRadius * envRadius);
+	// Construct ray between p1 and p2
+	ray.Update(p1, Normalize(p2 - p1), time);
 
-		if (directPdfA)
-			*directPdfA = distPdf * latLongMappingPdf;
+	if (cosThetaAtLight)
+		*cosThetaAtLight = Dot(Normalize(worldCenter -  p1), ray.d);
 
-		if (cosThetaAtLight)
-			*cosThetaAtLight = Dot(Normalize(worldCenter -  p1), *dir);
-	} else {
-		const Point worldCenter = scene.dataSet->GetBSphere().center;
-		const float envRadius = GetEnvRadius(scene);
-
-		// Choose p1 on scene bounding sphere
-		Point p1 = worldCenter + envRadius * UniformSampleSphere(u0, u1);
-
-		// Choose p2 on scene bounding sphere
-		Point p2 = worldCenter + envRadius * UniformSampleSphere(u2, u3);
-
-		// Construct ray between p1 and p2
-		*orig = p1;
-		*dir = Normalize((p2 - p1));
-
-		// Compute InfiniteLight ray weight
-		*emissionPdfW = UniformSpherePdf() / (M_PI * envRadius * envRadius);
-
-		if (directPdfA)
-			*directPdfA = UniformSpherePdf();
-
-		if (cosThetaAtLight)
-			*cosThetaAtLight = Dot(Normalize(worldCenter -  p1), *dir);
-	}
-
-	return GetRadiance(scene, *orig, *dir);
+	return GetRadiance(scene, nullptr, ray.d);
 }
 
-Spectrum ConstantInfiniteLight::Illuminate(const Scene &scene, const Point &p,
-		const float u0, const float u1, const float passThroughEvent,
-        Vector *dir, float *distance, float *directPdfW,
+Spectrum ConstantInfiniteLight::Illuminate(const Scene &scene, const BSDF &bsdf,
+		const float time, const float u0, const float u1, const float passThroughEvent,
+        Ray &shadowRay, float &directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
-	if ((useVisibilityMap && visibilityDistribution) 
-			|| (useVisibilityMapCache && visibilityMapCache)) {
+	const float envRadius = GetEnvRadius(scene);
+
+	Vector shadowRayDir;
+	if (visibilityMapCache && visibilityMapCache->IsCacheEnabled(bsdf)) {
 		float uv[2];
 		float distPdf;
-		
-		if (useVisibilityMapCache) {
-			const Distribution2D *dist = visibilityMapCache->GetVisibilityMap(p);
-			if (dist)
-				dist->SampleContinuous(u0, u1, uv, &distPdf);
-			else
-				return Spectrum();
-		} else
-			visibilityDistribution->SampleContinuous(u0, u1, uv, &distPdf);
+
+		visibilityMapCache->Sample(bsdf, u0, u1, uv, &distPdf);
 		if (distPdf == 0.f)
 			return Spectrum();
 
 		float latLongMappingPdf;
-		FromLatLongMapping(uv[0], uv[1], dir, &latLongMappingPdf);
+		FromLatLongMapping(uv[0], uv[1], &shadowRayDir, &latLongMappingPdf);
 		if (latLongMappingPdf == 0.f)
 			return Spectrum();
 
-		const Point worldCenter = scene.dataSet->GetBSphere().center;
-		const float envRadius = GetEnvRadius(scene);
-
-		const Vector toCenter(worldCenter - p);
-		const float centerDistance = Dot(toCenter, toCenter);
-		const float approach = Dot(toCenter, *dir);
-		*distance = approach + sqrtf(Max(0.f, envRadius * envRadius -
-			centerDistance + approach * approach));
-
-		const Point emisPoint(p + (*distance) * (*dir));
-		const Normal emisNormal(Normalize(worldCenter - emisPoint));
-
-		const float cosAtLight = Dot(emisNormal, -(*dir));
-		if (cosAtLight < DEFAULT_COS_EPSILON_STATIC)
-			return Spectrum();
-		if (cosThetaAtLight)
-			*cosThetaAtLight = cosAtLight;
-
-		*directPdfW = distPdf * latLongMappingPdf;
+		directPdfW = distPdf * latLongMappingPdf;
 
 		if (emissionPdfW)
 			*emissionPdfW = distPdf * latLongMappingPdf / (M_PI * envRadius * envRadius);
 	} else {
-		*dir = UniformSampleSphere(u0, u1);
+		shadowRayDir = UniformSampleSphere(u0, u1);
 
-		const Point worldCenter = scene.dataSet->GetBSphere().center;
-		const float envRadius = GetEnvRadius(scene);
-
-		const Vector toCenter(worldCenter - p);
-		const float centerDistance = Dot(toCenter, toCenter);
-		const float approach = Dot(toCenter, *dir);
-		*distance = approach + sqrtf(Max(0.f, envRadius * envRadius -
-			centerDistance + approach * approach));
-
-		const Point emisPoint(p + (*distance) * (*dir));
-		const Normal emisNormal(Normalize(worldCenter - emisPoint));
-
-		const float cosAtLight = Dot(emisNormal, -(*dir));
-		if (cosAtLight < DEFAULT_COS_EPSILON_STATIC)
-			return Spectrum();
-		if (cosThetaAtLight)
-			*cosThetaAtLight = cosAtLight;
-
-		*directPdfW = UniformSpherePdf();
+		directPdfW = UniformSpherePdf();
 
 		if (emissionPdfW)
 			*emissionPdfW = UniformSpherePdf() / (M_PI * envRadius * envRadius);
 	}
 
+	const Point worldCenter = scene.dataSet->GetBSphere().center;
+
+	const Point shadowRayOrig = bsdf.GetRayOrigin(shadowRayDir);
+	const Vector toCenter(worldCenter - shadowRayOrig);
+	const float centerDistanceSquared = Dot(toCenter, toCenter);
+	const float approach = Dot(toCenter, shadowRayDir);
+	const float shadowRayDistance = approach + sqrtf(Max(0.f, envRadius * envRadius -
+		centerDistanceSquared + approach * approach));
+
+	const Point emisPoint(shadowRayOrig + shadowRayDistance * shadowRayDir);
+	const Normal emisNormal(Normalize(worldCenter - emisPoint));
+
+	const float cosAtLight = Dot(emisNormal, -shadowRayDir);
+	if (cosAtLight < DEFAULT_COS_EPSILON_STATIC)
+		return Spectrum();
+	if (cosThetaAtLight)
+		*cosThetaAtLight = cosAtLight;
+
+	shadowRay = Ray(shadowRayOrig, shadowRayDir, 0.f, shadowRayDistance, time);
+	
 	return gain * color;
 }
 
@@ -244,24 +171,19 @@ UV ConstantInfiniteLight::GetEnvUV(const luxrays::Vector &dir) const {
 	return uv;
 }
 
-void ConstantInfiniteLight::UpdateVisibilityMap(const Scene *scene) {
-	if (useVisibilityMapCache) {
-		delete visibilityMapCache;
-		visibilityMapCache = nullptr;
+void ConstantInfiniteLight::UpdateVisibilityMap(const Scene *scene, const bool useRTMode) {
+	delete visibilityMapCache;
+	visibilityMapCache = nullptr;
+	
+	if (useRTMode)
+		return;
 
-		visibilityMapCache = new EnvLightVisibilityCache(scene, this, nullptr, visibilityMapCacheParams);		
+	if (useVisibilityMapCache) {
+		visibilityMapCache = new EnvLightVisibilityCache(scene, this,
+				EnvLightVisibilityCache::defaultLuminanceMapWidth,
+				EnvLightVisibilityCache::defaultLuminanceMapHeight,
+				visibilityMapCacheParams);		
 		visibilityMapCache->Build();
-	} else if (useVisibilityMap) {
-		EnvLightVisibility envLightVisibilityMapBuilder(scene, this,
-				NULL, false,
-				visibilityMapWidth, visibilityMapHeight,
-				visibilityMapSamples, visibilityMapMaxDepth);
-		
-		Distribution2D *newDist = envLightVisibilityMapBuilder.Build();
-		if (newDist) {
-			delete visibilityDistribution;
-			visibilityDistribution = newDist;
-		}
 	}
 }
 
@@ -271,11 +193,6 @@ Properties ConstantInfiniteLight::ToProperties(const ImageMapCache &imgMapCache,
 
 	props.Set(Property(prefix + ".type")("constantinfinite"));
 	props.Set(Property(prefix + ".color")(color));
-	props.Set(Property(prefix + ".visibilitymap.enable")(useVisibilityMap));
-	props.Set(Property(prefix + ".visibilitymap.width")(visibilityMapWidth));
-	props.Set(Property(prefix + ".visibilitymap.height")(visibilityMapHeight));
-	props.Set(Property(prefix + ".visibilitymap.samples")(visibilityMapSamples));
-	props.Set(Property(prefix + ".visibilitymap.maxdepth")(visibilityMapMaxDepth));
 
 	props.Set(Property(prefix + ".visibilitymapcache.enable")(useVisibilityMapCache));
 	if (useVisibilityMapCache)

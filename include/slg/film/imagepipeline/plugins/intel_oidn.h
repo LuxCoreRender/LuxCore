@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -38,15 +38,11 @@ namespace slg {
 
 class IntelOIDN : public ImagePipelinePlugin {
 public:
-	IntelOIDN(const u_int n, const u_int o, const u_int t, const bool b);
+	IntelOIDN(const int oidnMemLimit, const float sharpness);
 
 	virtual ImagePipelinePlugin *Copy() const;
 
 	virtual void Apply(Film &film, const u_int index);
-
-	virtual void ApplyTiled(Film & film, const u_int index);
-
-	virtual void ApplySingle(Film &film, const u_int index);
 
 	friend class boost::serialization::access;
 
@@ -56,23 +52,21 @@ private:
 
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImagePipelinePlugin);
-		ar & nTiles;
-		ar & pixelOverlap;
-		ar & pixelThreshold;
-		ar & benchMode;
+		ar & oidnMemLimit;
+		ar & iTileCount;
+		ar & jTileCount;
 	}
 
-	u_int nTiles;
-	u_int pixelOverlap;
-	u_int pixelThreshold;
-	bool benchMode;
-
+	u_int iTileCount;
+	u_int jTileCount;
+	int oidnMemLimit; //needs to be signed int for OIDN call
+	float sharpness;
 };
 
 }
 
 
-BOOST_CLASS_VERSION(slg::IntelOIDN, 2)
+BOOST_CLASS_VERSION(slg::IntelOIDN, 3)
 
 BOOST_CLASS_EXPORT_KEY(slg::IntelOIDN)
 

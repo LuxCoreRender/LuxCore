@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -23,7 +23,7 @@
 
 #include <boost/thread/thread.hpp>
 
-#include "luxrays/core/intersectiondevice.h"
+#include "luxrays/devices/nativeintersectiondevice.h"
 #include "slg/slg.h"
 
 namespace slg {
@@ -36,7 +36,7 @@ class PathOCLBaseRenderEngine;
 
 class PathOCLBaseNativeRenderThread {
 public:
-	PathOCLBaseNativeRenderThread(const u_int index, luxrays::NativeThreadIntersectionDevice *device,
+	PathOCLBaseNativeRenderThread(const u_int index, luxrays::NativeIntersectionDevice *device,
 			PathOCLBaseRenderEngine *re);
 	virtual ~PathOCLBaseNativeRenderThread();
 
@@ -61,7 +61,7 @@ protected:
 
 	u_int threadIndex;
 	PathOCLBaseRenderEngine *renderEngine;
-	luxrays::NativeThreadIntersectionDevice *intersectionDevice;
+	luxrays::NativeIntersectionDevice *intersectionDevice;
 
 	boost::thread *renderThread;
 

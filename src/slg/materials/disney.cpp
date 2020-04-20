@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -51,7 +51,7 @@ DisneyMaterial::DisneyMaterial(
 	Anisotropic(anisotropic),
 	Sheen(sheen),
 	SheenTint(sheenTint) {
-	glossiness = ComputeGlossiness(Roughness);
+	glossiness = Sqr(ComputeGlossiness(Roughness));
 }
 
 Spectrum DisneyMaterial::Albedo(const HitPoint &hitPoint) const {
@@ -70,11 +70,13 @@ Spectrum DisneyMaterial::Evaluate(
 	const float roughness = Clamp(Roughness->GetFloatValue(hitPoint), 0.0f, 1.0f);
 	const float metallic = Clamp(Metallic->GetFloatValue(hitPoint), 0.0f, 1.0f);
 	const float specular = Clamp(Specular->GetFloatValue(hitPoint), 0.0f, 1.0f);
-	const float specularTint = Clamp(Specular->GetFloatValue(hitPoint), 0.0f, 1.0f);
-	const float clearcoat = Clamp(SpecularTint->GetFloatValue(hitPoint), 0.0f, 1.0f);
+	const float specularTint = Clamp(SpecularTint->GetFloatValue(hitPoint), 0.0f, 1.0f);
+	const float clearcoat = Clamp(Clearcoat->GetFloatValue(hitPoint), 0.0f, 1.0f);
 	const float clearcoatGloss = Clamp(ClearcoatGloss->GetFloatValue(hitPoint), 0.0f, 1.0f);
 	const float anisotropicGloss = Clamp(Anisotropic->GetFloatValue(hitPoint), 0.0f, 1.0f);
-	const float sheen = Clamp(Sheen->GetFloatValue(hitPoint), 0.0f, 1.0f);
+	// I allow sheen values > 1.0 to accentuate the effect. The result is still
+	// clamped between 0.0 and 1.0 to not break the energy conservation law.
+	const float sheen = Sheen->GetFloatValue(hitPoint);
 	const float sheenTint = Clamp(SheenTint->GetFloatValue(hitPoint), 0.0f, 1.0f);
 
 	return DisneyEvaluate(color, subsurface, roughness, metallic, specular, specularTint,
@@ -136,7 +138,7 @@ Spectrum DisneyMaterial::DisneyEvaluate(
 			*reversePdfW = pdf;
 	}
 
-	*event = DIFFUSE | GLOSSY | REFLECT;
+	*event = GLOSSY | REFLECT;
 	
 	const Spectrum f = (Lerp(subsurface, diffuseEval, subsurfaceEval) + sheenEval) * (1.0f - metallic) + glossyEval;
 
@@ -166,8 +168,8 @@ Spectrum DisneyMaterial::DisneySubsurface(const Spectrum &color, const float rou
 	return INV_PI * ss * color;
 }
 
-Spectrum DisneyMaterial::DisneyMetallic(const Spectrum &color, const float specular,
-		const float specularTint, const float metallic,
+Spectrum DisneyMaterial::DisneyMetallic(const Spectrum &color,
+		const float specular, const float specularTint, const float metallic,
 		const float anisotropic, const float roughness,
 		const float NdotL, const float NdotV, const float NdotH,
 		const float LdotH, const float VdotH,
@@ -214,29 +216,31 @@ Spectrum DisneyMaterial::DisneySheen(const Spectrum &color, const float sheen,
 	const Spectrum Ctint = CalculateTint(color);
 	const Spectrum Csheen = Lerp(sheenTint, Spectrum(1.0f), Ctint);
 
-	return FH * sheen * Csheen;
+	return (FH * sheen * Csheen).Clamp(0.f, 1.f);
 }
 
 Spectrum DisneyMaterial::Sample(
-	const HitPoint &hitPoint,
-	const Vector &localFixedDir,
-	Vector *localSampledDir,
-	const float u0,
-	const float u1,
-	const float passThroughEvent,
-	float *pdfW,
-	float *absCosSampledDir,
-	BSDFEvent *event) const {
+		const HitPoint &hitPoint,
+		const Vector &localFixedDir,
+		Vector *localSampledDir,
+		const float u0,
+		const float u1,
+		const float passThroughEvent,
+		float *pdfW,
+		BSDFEvent *event,
+		const BSDFEvent eventHint) const {
 	const Spectrum color = BaseColor->GetSpectrumValue(hitPoint).Clamp(0.0f, 1.0f);
 	const float subsurface = Clamp(Subsurface->GetFloatValue(hitPoint), 0.0f, 1.0f);
 	const float roughness = Clamp(Roughness->GetFloatValue(hitPoint), 0.0f, 1.0f);
 	const float metallic = Clamp(Metallic->GetFloatValue(hitPoint), 0.0f, 1.0f);
 	const float specular = Clamp(Specular->GetFloatValue(hitPoint), 0.0f, 1.0f);
-	const float specularTint = Clamp(Specular->GetFloatValue(hitPoint), 0.0f, 1.0f);
-	const float clearcoat = Clamp(SpecularTint->GetFloatValue(hitPoint), 0.0f, 1.0f);
+	const float specularTint = Clamp(SpecularTint->GetFloatValue(hitPoint), 0.0f, 1.0f);
+	const float clearcoat = Clamp(Clearcoat->GetFloatValue(hitPoint), 0.0f, 1.0f);
 	const float clearcoatGloss = Clamp(ClearcoatGloss->GetFloatValue(hitPoint), 0.0f, 1.0f);
 	const float anisotropicGloss = Clamp(Anisotropic->GetFloatValue(hitPoint), 0.0f, 1.0f);
-	const float sheen = Clamp(Sheen->GetFloatValue(hitPoint), 0.0f, 1.0f);
+	// I allow sheen values > 1.0 to accentuate the effect. The result is still
+	// clamped between 0.0 and 1.0 to not break the energy conservation law.
+	const float sheen = Sheen->GetFloatValue(hitPoint);
 	const float sheenTint = Clamp(SheenTint->GetFloatValue(hitPoint), 0.0f, 1.0f);
 
 	const Vector wo = Normalize(localFixedDir);
@@ -244,17 +248,16 @@ Spectrum DisneyMaterial::Sample(
 	float ratioGlossy, ratioDiffuse, ratioClearcoat;
 	ComputeRatio(metallic, clearcoat, ratioGlossy, ratioDiffuse, ratioClearcoat);
 
-	if (passThroughEvent <= ratioGlossy) {
+	if (passThroughEvent <= ratioGlossy)
 		*localSampledDir = DisneyMetallicSample(anisotropicGloss, roughness, wo, u0, u1);
-		*event = GLOSSY | REFLECT;
-	} else if (passThroughEvent > ratioGlossy &&  passThroughEvent <= ratioGlossy + ratioClearcoat) {
+	else if (passThroughEvent > ratioGlossy &&  passThroughEvent <= ratioGlossy + ratioClearcoat)
 		*localSampledDir = DisneyClearcoatSample(clearcoatGloss, wo, u0, u1);
-		*event = GLOSSY | REFLECT;
-	} else if (passThroughEvent > ratioGlossy + ratioClearcoat && passThroughEvent <= ratioGlossy + ratioClearcoat + ratioDiffuse) {
+	else if (passThroughEvent > ratioGlossy + ratioClearcoat && passThroughEvent <= ratioGlossy + ratioClearcoat + ratioDiffuse)
 		*localSampledDir = DisneyDiffuseSample(wo, u0, u1);
-		*event = DIFFUSE | REFLECT;
-	} else
+	else
 		return Spectrum();
+	
+	*event = GLOSSY | REFLECT;
 	
 	const Vector &localLightDir = hitPoint.fromLight ? localFixedDir : *localSampledDir;
 	const Vector &localEyeDir = hitPoint.fromLight ? *localSampledDir : localFixedDir;
@@ -270,8 +273,6 @@ Spectrum DisneyMaterial::Sample(
 			anisotropicGloss, sheen, sheenTint,
 			localLightDir, localEyeDir, event, nullptr, nullptr);
 
-	*absCosSampledDir = fabsf(CosTheta(*localSampledDir));
-	
 	return f / *pdfW;
 }
 
@@ -462,17 +463,17 @@ Properties DisneyMaterial::ToProperties(const ImageMapCache &imgMapCache, const 
 
 	const string name = GetName();
 	props.Set(Property("scene.materials." + name + ".type")("disney"));
-	props.Set(Property("scene.materials." + name + ".basecolor")(BaseColor->GetName()));
-	props.Set(Property("scene.materials." + name + ".subsurface")(Subsurface->GetName()));
-	props.Set(Property("scene.materials." + name + ".roughness")(Roughness->GetName()));
-	props.Set(Property("scene.materials." + name + ".metallic")(Metallic->GetName()));
-	props.Set(Property("scene.materials." + name + ".specular")(Specular->GetName()));
-	props.Set(Property("scene.materials." + name + ".speculartint")(SpecularTint->GetName()));
-	props.Set(Property("scene.materials." + name + ".clearcoat")(Clearcoat->GetName()));
-	props.Set(Property("scene.materials." + name + ".clearcoatgloss")(ClearcoatGloss->GetName()));
-	props.Set(Property("scene.materials." + name + ".anisotropic")(Anisotropic->GetName()));
-	props.Set(Property("scene.materials." + name + ".sheen")(Sheen->GetName()));
-	props.Set(Property("scene.materials." + name + ".sheentint")(SheenTint->GetName()));
+	props.Set(Property("scene.materials." + name + ".basecolor")(BaseColor->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".subsurface")(Subsurface->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".roughness")(Roughness->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".metallic")(Metallic->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".specular")(Specular->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".speculartint")(SpecularTint->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".clearcoat")(Clearcoat->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".clearcoatgloss")(ClearcoatGloss->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".anisotropic")(Anisotropic->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".sheen")(Sheen->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".sheentint")(SheenTint->GetSDLValue()));
 	props.Set(Material::ToProperties(imgMapCache, useRealFileName));
 
 	return props;
@@ -498,7 +499,7 @@ void DisneyMaterial::UpdateTextureReferences(const Texture *oldTex, const Textur
 	if (SheenTint == oldTex) SheenTint = newTex;
 
 	if (updateGlossiness)
-		glossiness = ComputeGlossiness(Roughness);
+		glossiness = Sqr(ComputeGlossiness(Roughness));
 }
 
 void DisneyMaterial::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {

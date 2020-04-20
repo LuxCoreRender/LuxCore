@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -32,44 +32,6 @@ using namespace slg;
 //------------------------------------------------------------------------------
 // ImagePipelinePlugin
 //------------------------------------------------------------------------------
-
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-cl::Program *ImagePipelinePlugin::CompileProgram(Film &film, const string &kernelsParameters,
-		const string &kernelSource, const string &name) {
-	cl::Context &oclContext = film.oclIntersectionDevice->GetOpenCLContext();
-	cl::Device &oclDevice = film.oclIntersectionDevice->GetOpenCLDevice();
-
-	SLG_LOG("[" << name << "] Defined symbols: " << kernelsParameters);
-	SLG_LOG("[" << name << "] Compiling kernels ");
-
-	// ImagePipelinePlugin kernels are simple enough to be compiled without
-	// problems and the workaround required for NVIDIA OpenCL compiler can
-	// be avoided
-	
-	const string forceInlineDirective =
-		"#define OPENCL_FORCE_NOT_INLINE\n"
-		"#define OPENCL_FORCE_INLINE\n";
-
-	bool cached;
-	cl::STRING_CLASS error;
-	cl::Program *program = film.kernelCache->Compile(oclContext, oclDevice,
-			kernelsParameters, forceInlineDirective + kernelSource,
-			&cached, &error);
-	if (!program) {
-		SLG_LOG("[" << name << "] kernel compilation error" << endl << error);
-
-		throw runtime_error(name + " kernel compilation error");
-	}
-
-	if (cached) {
-		SLG_LOG("[" << name << "] Kernels cached");
-	} else {
-		SLG_LOG("[" << name << "] Kernels not cached");
-	}
-
-	return program;
-}
-#endif
 
 float ImagePipelinePlugin::GetGammaCorrectionValue(const Film &film, const u_int index) {
 	float gamma = 1.f;
@@ -127,7 +89,7 @@ float ImagePipelinePlugin::GetBCDWarmUpSPP(const Film &film) {
 //------------------------------------------------------------------------------
 
 ImagePipeline::ImagePipeline() {
-	canUseOpenCL = false;
+	canUseHW = false;
 }
 
 ImagePipeline::~ImagePipeline() {
@@ -159,25 +121,24 @@ ImagePipeline *ImagePipeline::Copy() const {
 void ImagePipeline::AddPlugin(ImagePipelinePlugin *plugin) {
 	pipeline.push_back(plugin);
 
-	canUseOpenCL |= plugin->CanUseOpenCL();
+	canUseHW |= plugin->CanUseHW();
 }
 
 void ImagePipeline::Apply(Film &film, const u_int index) {
 	//const double t1 = WallClockTime();
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	bool imageInCPURam = true;
 	BOOST_FOREACH(ImagePipelinePlugin *plugin, pipeline) {
 		//const double p1 = WallClockTime();
 
-		const bool useOpenCLApply = film.oclEnable && film.oclIntersectionDevice &&
-				plugin->CanUseOpenCL();
+		const bool useHWApply = film.hwEnable && film.hardwareDevice &&
+				plugin->CanUseHW();
 
-		if (useOpenCLApply) {
+		if (useHWApply) {
 			if (imageInCPURam) {
 				// Transfer the buffer to OpenCL device ram
 				//SLG_LOG("Transferring IMAGEPIPELINE buffer to OpenCL device");
-				film.WriteOCLBuffer_IMAGEPIPELINE(index);
+				film.WriteHWBuffer_IMAGEPIPELINE(index);
 			} else {
 				// The buffer is already in the OpenCL device ram
 			}
@@ -185,15 +146,15 @@ void ImagePipeline::Apply(Film &film, const u_int index) {
 			if (!imageInCPURam) {
 				// Transfer the buffer from OpenCL device ram
 				//SLG_LOG("Transferring IMAGEPIPELINE buffer from OpenCL device");
-				film.ReadOCLBuffer_IMAGEPIPELINE(index);
-				film.oclIntersectionDevice->GetOpenCLQueue().finish();
+				film.ReadHWBuffer_IMAGEPIPELINE(index);
+				film.hardwareDevice->FinishQueue();
 			} else {
 				// The buffer is already in CPU ram
 			}
 		}
 
-		if (useOpenCLApply) {
-			plugin->ApplyOCL(film, index);
+		if (useHWApply) {
+			plugin->ApplyHW(film, index);
 			imageInCPURam = false;
 		} else {
 			plugin->Apply(film, index);
@@ -204,22 +165,12 @@ void ImagePipeline::Apply(Film &film, const u_int index) {
 		//SLG_LOG("ImagePipeline plugin time: " << int((p2 - p1) * 1000.0) << "ms");
 	}
 
-	if (film.oclEnable && film.oclIntersectionDevice && canUseOpenCL) {
+	if (film.hwEnable && film.hardwareDevice && canUseHW) {
 		if (!imageInCPURam)
-			film.ReadOCLBuffer_IMAGEPIPELINE(index);
+			film.ReadHWBuffer_IMAGEPIPELINE(index);
 
-		film.oclIntersectionDevice->GetOpenCLQueue().finish();
+		film.hardwareDevice->FinishQueue();
 	}
-#else
-	BOOST_FOREACH(ImagePipelinePlugin *plugin, pipeline) {
-		//const double p1 = WallClockTime();
-
-		plugin->Apply(film, index);
-		
-		//const double p2 = WallClockTime();
-		//SLG_LOG("ImagePipeline plugin time: " << int((p2 - p1) * 1000.0) << "ms");
-	}
-#endif
 
 	//const double t2 = WallClockTime();
 	//SLG_LOG("ImagePipeline time: " << int((t2 - t1) * 1000.0) << "ms");

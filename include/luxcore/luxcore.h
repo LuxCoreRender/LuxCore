@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -40,6 +40,7 @@
 #include <cstddef>
 #include <stdexcept>
 #include <string>
+#include <array>
 
 #include <luxcore/cfg.h>
 #include <luxrays/utils/exportdefs.h>
@@ -59,6 +60,8 @@
  * \brief The LuxCore classes are defined within this namespace.
  */
 namespace luxcore {
+
+#define LC_MESH_MAX_DATA_COUNT 8
 
 CPP_EXPORT CPP_API void (*LuxCore_LogHandler)(const char *msg); // LuxCore Log Handler
 
@@ -95,8 +98,10 @@ CPP_EXPORT CPP_API void ParseLXS(const std::string &fileName, luxrays::Propertie
  * \param config defines how to fill the cache. The supported properties are:
  * kernelcachefill.renderengine.types, kernelcachefill.sampler.types,
  * kernelcachefill.camera.types, kernelcachefill.geometry.types, kernelcachefill.light.types,
- * kernelcachefill.material.types, kernelcachefill.texture.types. They can be used to
- * define the list of types to use, for instance with a
+ * kernelcachefill.material.types, kernelcachefill.texture.types.
+ * However, since v2.4, LuxCoreRender uses only one kernel for each render engine
+ * so kernelcachefill.renderengine.types is now the only one worth using.
+ * They can be used to define the list of types to use, for instance with a
  * Property("kernelcachefill.renderengine.types")("PATHOCL", "TILEPATHOCL", "RTPATHOCL").
  */
 CPP_EXPORT CPP_API void KernelCacheFill(const luxrays::Properties &config, void (*ProgressHandler)(const size_t, const size_t) = NULL);
@@ -200,7 +205,8 @@ public:
 		OUTPUT_MATERIAL_ID_COLOR,
 		OUTPUT_ALBEDO,
 		OUTPUT_AVG_SHADING_NORMAL,
-		OUTPUT_NOISE
+		OUTPUT_NOISE,
+		OUTPUT_USER_IMPORTANCE
 	} FilmOutputType;
 
 	/*!
@@ -238,7 +244,8 @@ public:
 		CHANNEL_MATERIAL_ID_COLOR = 1 << 27,
 		CHANNEL_ALBEDO = 1 << 28,
 		CHANNEL_AVG_SHADING_NORMAL = 1 << 29,
-		CHANNEL_NOISE = 1 << 30
+		CHANNEL_NOISE = 1 << 30,
+		CHANNEL_USER_IMPORTANCE = 1 << 31
 	} FilmChannelType;
 
 	virtual ~Film();
@@ -394,10 +401,29 @@ public:
 	 * \param buffer is the place where the data will be copied.
 	 * \param index of the buffer to use. Usually 0, however, for instance,
 	 * if more than one light group is used, select the group to return.
+	 * \param executeImagePipeline is a flag to enable/disable automatic image
+	 * pipeline execution before to perform the copy.
 	 */
 	template<class T> void GetOutput(const FilmOutputType type, T *buffer, const unsigned int index = 0,
 			const bool executeImagePipeline = true) {
 		throw std::runtime_error("Called Film::GetOutput() with wrong type");
+	}
+	/*!
+	 * \brief Copy the buffer to a Film output channel. Currently, only USER_IMPORTANCE
+	 * output channel can be updated.
+	 *
+	 * \param type is the Film output channel to use. It must be one
+	 * of the enabled channels in RenderConfig. The supported template types are
+	 * float and unsigned int.
+	 * \param buffer is the place where the data will be copied from.
+	 * \param index of the buffer to use. Usually 0, however, for instance,
+	 * if more than one light group is used, select the group to return.
+	 * \param executeImagePipeline is a flag to enable/disable automatic image
+	 * pipeline execution before to perform the copy.
+	 */
+	template<class T> void UpdateOutput(const FilmOutputType type, const T *buffer, const unsigned int index = 0,
+			const bool executeImagePipeline = false) {
+		throw std::runtime_error("Called Film::UpdateOutput() with wrong type");
 	}
 	/*!
 	 * \brief Returns if a film channel is available.
@@ -423,13 +449,34 @@ public:
 	 * of the enabled channels in RenderConfig. The supported template types are
 	 * float and unsigned int.
 	 * \param index of the buffer to use. Usually 0, however, for instance,
-	 * if more than one light group is used, select the group to return.
+	 * if more than one light group is used, it selects the group to return.
+	 * \param executeImagePipeline is a flag to enable/disable automatic image
+	 * pipeline execution before to perform the copy.
 	 *
 	 * \return a pointer to the requested raw buffer.
 	 */
 	template<class T> const T *GetChannel(const FilmChannelType type, const unsigned int index = 0,
 			const bool executeImagePipeline = true) {
 		throw std::runtime_error("Called Film::GetChannel() with wrong type");
+	}
+	/*!
+	 * \brief Returns a pointer to the type of channel requested. The channel is
+	 * not normalized (if it has a weight channel). Currently, only USER_IMPORTANCE
+	 * channel can be updated.
+	 *
+	 * \param type is the Film output channel to return. It must be one
+	 * of the enabled channels in RenderConfig. The supported template types are
+	 * float and unsigned int.
+	 * \param index of the buffer to use. Usually 0, however, for instance,
+	 * if more than one light group is used, it selects the group to return.
+	 * \param executeImagePipeline is a flag to enable/disable automatic image
+	 * pipeline execution before to perform the copy.
+	 *
+	 * \return a pointer to the requested raw buffer.
+	 */
+	template<class T> T *UpdateChannel(const FilmChannelType type, const unsigned int index = 0,
+			const bool executeImagePipeline = true) {
+		throw std::runtime_error("Called Film::UpdateChannel() with wrong type");
 	}
 	/*!
 	 * \brief Sets configuration Properties with new values. This method can be
@@ -479,16 +526,30 @@ protected:
 			const bool executeImagePipeline = true) = 0;
 	virtual void GetOutputUInt(const FilmOutputType type, unsigned int *buffer, const unsigned int index,
 			const bool executeImagePipeline = true) = 0;
+
+	virtual void UpdateOutputFloat(const FilmOutputType type, const float *buffer, const unsigned int index,
+			const bool executeImagePipeline = false) = 0;
+	virtual void UpdateOutputUInt(const FilmOutputType type, const unsigned int *buffer, const unsigned int index,
+			const bool executeImagePipeline = false) = 0;
 	
 	virtual const float *GetChannelFloat(const FilmChannelType type, const unsigned int index,
 			const bool executeImagePipeline = true) = 0;
 	virtual const unsigned int *GetChannelUInt(const FilmChannelType type, const unsigned int index,
+			const bool executeImagePipeline = true) = 0;
+
+	virtual float *UpdateChannelFloat(const FilmChannelType type, const unsigned int index,
+			const bool executeImagePipeline = true) = 0;
+	virtual unsigned int *UpdateChannelUInt(const FilmChannelType type, const unsigned int index,
 			const bool executeImagePipeline = true) = 0;
 };
 
 template<> CPP_API void Film::GetOutput<float>(const FilmOutputType type, float *buffer,
 		const unsigned int index, const bool executeImagePipeline);
 template<> CPP_API void Film::GetOutput<unsigned int>(const FilmOutputType type, unsigned int *buffer,
+		const unsigned int index, const bool executeImagePipeline);
+template<> CPP_API void Film::UpdateOutput<float>(const FilmOutputType type, const float *buffer,
+		const unsigned int index, const bool executeImagePipeline);
+template<> CPP_API void Film::UpdateOutput<unsigned int>(const FilmOutputType type, const unsigned int *buffer,
 		const unsigned int index, const bool executeImagePipeline);
 template<> CPP_API const float *Film::GetChannel<float>(const FilmChannelType type,
 		const unsigned int index, const bool executeImagePipeline);
@@ -741,8 +802,62 @@ public:
 	 */
 	virtual void DefineMesh(const std::string &meshName,
 		const long plyNbVerts, const long plyNbTris,
-		float *p, unsigned int *vi, float *n, float *uv,
-		float *cols, float *alphas) = 0;
+		float *p, unsigned int *vi, float *n,
+		float *uvs,	float *cols, float *alphas) = 0;
+	/*!
+	 * \brief This is a special version of Scene::DefineMesh() used to define
+	 * meshes with multiple set of UVs, Colors and/or Alphas.
+	 * NOTE: the array of UVs, Colors and Alphas pointers can be freed after the
+	 * call however freeing of memory for the vertices, triangle indices, etc.
+	 * depends on the setting of SetDeleteMeshData().
+	 *
+	 * \param meshName is the name of the defined mesh.
+	 * \param plyNbVerts is the number of mesh vertices.
+	 * \param plyNbTris is the number of mesh triangles.
+	 * \param p is a pointer to an array of vertices. Embree accelerator has
+	 * a very special requirement. The 4 bytes after the z-coordinate of the
+	 * last vertex have to be readable memory, thus padding is required.
+	 * \param vi is a pointer to an array of triangles.
+	 * \param n is a pointer to an array of normals. It can be NULL.
+	 * \param uv is a pointer to an array of pointers. It can be NULL. If not, each
+	 * pointer can also be NULL or a pointer to an arrays of UV coordinates.
+	 * \param cols is a pointer to an array of pointers. It can be NULL. If not, each
+	 * pointer can also be NULL or a pointer to an arrays of vertices colors.
+	 * \param alphas is a pointer to an array of pointers. It can be NULL. If not, each
+	 * pointer can also be NULL or a pointer to an arrays of vertices alphas.
+	 */
+	virtual void DefineMeshExt(const std::string &meshName,
+		const long plyNbVerts, const long plyNbTris,
+		float *p, unsigned int *vi, float *n,
+		std::array<float *, LC_MESH_MAX_DATA_COUNT> *uvs,
+		std::array<float *, LC_MESH_MAX_DATA_COUNT> *cols,
+		std::array<float *, LC_MESH_MAX_DATA_COUNT> *alphas) = 0;
+	/*!
+	 * \brief Set a mesh geometry vertex AOV (i.e. generic data associated to
+	 * vertices and used by textures and more).
+	 * NOTE: the array can be freed after the
+	 * call however freeing of memory for the vertices, triangle indices, etc.
+	 * depends on the setting of SetDeleteMeshData().
+	 *
+	 * \param meshName is the name of the defined mesh.
+	 * \param index of AOV to set.
+	 * \param data to use for the AOV.
+	 */
+	virtual void SetMeshVertexAOV(const std::string &meshName,
+			const unsigned int index, float *data) = 0;
+	/*!
+	 * \brief Set a mesh geometry triangle AOV (i.e. generic data associated to
+	 * triangles and used by textures and more).
+	 * NOTE: the array can be freed after the
+	 * call however freeing of memory for the vertices, triangle indices, etc.
+	 * depends on the setting of SetDeleteMeshData().
+	 *
+	 * \param meshName is the name of the defined mesh.
+	 * \param index of AOV to set.
+	 * \param data to use for the AOV.
+	 */
+	virtual void SetMeshTriangleAOV(const std::string &meshName,
+			const unsigned int index, float *data) = 0;
 	/*!
 	 * \brief Save a previously defined mesh to file system in PLY or BPY format.
 	 *
@@ -1085,14 +1200,33 @@ public:
 	/*!
 	 * \brief Save all the scene related information (the LuxCore RenderConfig,
 	 * and Scene) in a file.
+	 * 
+	 * \param fileName of file where to save.
 	 */
 	virtual void Save(const std::string &fileName) const = 0;
 	/*!
 	 * \brief Save all the scene related information (the LuxCore RenderConfig,
 	 * and Scene) in a directory using text format for the SDL. This performs the
 	 * same work of FILESAVER render engine.
+	 * 
+	 * \param dirName of directory where to save.
 	 */
 	virtual void Export(const std::string &dirName) const = 0;
+
+	/*!
+	 * \brief Save all the scene related information in glTF 2.0 format.
+	 * 
+	 * \param fileName of file where to save.
+	 */
+	virtual void ExportGLTF(const std::string &fileName) const = 0;	
+
+	/*!
+	 * \brief Returns false if a (long) kernel compilation time is required at the
+	 * start of the rendering. True otherwise.
+	 *
+	 * \return if a (long) kernel compilation time is not required.
+	 */
+	virtual bool HasCachedKernels() const = 0;
 
 	/*!
 	 * \brief Returns a Properties container with all default values.

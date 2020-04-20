@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -49,7 +49,29 @@
 
 namespace slg {
 
+	// OpenCL data types
+namespace ocl {
+#include "slg/scene/scene_types.cl"
+}
+
 #define TRIANGLE_LIGHT_POSTFIX "__triangle__light__"
+
+typedef enum {
+	// Mandatory setting: one or the other must be used
+	EYE_RAY = 1,
+	LIGHT_RAY = 2,
+
+	// This is used to disable any type of ray switch
+	GENERIC_RAY = 4,
+	// For the very first eye ray
+	CAMERA_RAY = 8,
+	// For rays used for direct light sampling
+	SHADOW_RAY = 16
+} SceneRayTypeType;
+
+typedef int SceneRayType;
+
+class SampleResult;
 
 class Scene {
 public:
@@ -59,11 +81,10 @@ public:
 	Scene(const luxrays::Properties &scnProp, const float imageScale = 1.f);
 	~Scene();
 
-	bool Intersect(luxrays::IntersectionDevice *device,
-		const bool fromLight, const bool cameraRay, PathVolumeInfo *volInfo,
+	bool Intersect(luxrays::IntersectionDevice *device, const SceneRayType rayType, PathVolumeInfo *volInfo,
 		const float passThrough, luxrays::Ray *ray, luxrays::RayHit *rayHit, BSDF *bsdf,
-		luxrays::Spectrum *connectionThroughput, const luxrays::Spectrum *pathThroughput = NULL,
-		SampleResult *sampleResult = NULL, const bool backTracing = false) const;
+		luxrays::Spectrum *connectionThroughput, const luxrays::Spectrum *pathThroughput = nullptr,
+		SampleResult *sampleResult = nullptr, const bool backTracing = false) const;
 
 	void PreprocessCamera(const u_int filmWidth, const u_int filmHeight, const u_int *filmSubRegion);
 	void Preprocess(luxrays::Context *ctx,
@@ -99,12 +120,24 @@ public:
 	void DefineMesh(luxrays::ExtMesh *mesh);
 	void DefineMesh(const std::string &shapeName,
 		const long plyNbVerts, const long plyNbTris,
-		luxrays::Point *p, luxrays::Triangle *vi, luxrays::Normal *n, luxrays::UV *uv,
-		luxrays::Spectrum *cols, float *alphas);
+		luxrays::Point *p, luxrays::Triangle *vi, luxrays::Normal *n,
+		luxrays::UV *uv, luxrays::Spectrum *cols, float *alphas);
+	void DefineMeshExt(const std::string &shapeName,
+		const long plyNbVerts, const long plyNbTris,
+		luxrays::Point *p, luxrays::Triangle *vi, luxrays::Normal *n,
+		std::array<luxrays::UV *, EXTMESH_MAX_DATA_COUNT> *uvs,
+		std::array<luxrays::Spectrum *, EXTMESH_MAX_DATA_COUNT> *cols,
+		std::array<float *, EXTMESH_MAX_DATA_COUNT> *alphas);
 	void DefineMesh(const std::string &instMeshName, const std::string &meshName,
 		const luxrays::Transform &trans);
 	void DefineMesh(const std::string &motMeshName, const std::string &meshName,
 		const luxrays::MotionSystem &ms);
+
+	void SetMeshVertexAOV(const std::string &meshName,
+		const unsigned int index, float *data);
+	void SetMeshTriangleAOV(const std::string &meshName,
+		const unsigned int index, float *data);
+
 	// Strands shape
 	void DefineStrands(const std::string &shapeName, const luxrays::cyHairFile &strandsFile,
 		const StrendsShape::TessellationType tesselType,

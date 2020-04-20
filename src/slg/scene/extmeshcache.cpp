@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -89,6 +89,32 @@ void ExtMeshCache::DefineExtMesh(ExtMesh *mesh) {
 			oldMesh->Delete();
 		delete oldMesh;
 	}
+}
+
+void ExtMeshCache::SetMeshVertexAOV(const string &meshName,
+	const unsigned int index, float *data) {
+	if (!meshes.IsObjDefined(meshName))
+		throw runtime_error("Unknown mesh " + meshName + " while trying to set vertex AOV");
+
+	ExtMesh *mesh = static_cast<ExtMesh *>(meshes.GetObj(meshName));
+	if (mesh->GetType() != TYPE_EXT_TRIANGLE)
+		throw runtime_error("Can not set vertex AOV of mesh " + meshName + " of type " + ToString(mesh->GetType()));
+
+	ExtTriangleMesh *triMesh = static_cast<ExtTriangleMesh *>(mesh);
+	triMesh->SetVertexAOV(index, data);
+}
+
+void ExtMeshCache::SetMeshTriangleAOV(const string &meshName,
+	const unsigned int index, float *data) {
+	if (!meshes.IsObjDefined(meshName))
+		throw runtime_error("Unknown mesh " + meshName + " while trying to set triangle AOV");
+
+	ExtMesh *mesh = static_cast<ExtMesh *>(meshes.GetObj(meshName));
+	if (mesh->GetType() != TYPE_EXT_TRIANGLE)
+		throw runtime_error("Can not set triangle AOV of mesh " + meshName + " of type " + ToString(mesh->GetType()));
+
+	ExtTriangleMesh *triMesh = static_cast<ExtTriangleMesh *>(mesh);
+	triMesh->SetTriAOV(index, data);
 }
 
 void ExtMeshCache::DeleteExtMesh(const string &meshName) {

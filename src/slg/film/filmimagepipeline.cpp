@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -25,6 +25,7 @@
 
 #include "slg/film/film.h"
 #include "slg/film/imagepipeline/radiancechannelscale.h"
+#include "luxrays/utils/oclerror.h"
 
 using namespace std;
 using namespace luxrays;
@@ -98,7 +99,8 @@ void Film::MergeSampleBuffers(const u_int imagePipelineIndex) {
 	}
 
 	if (HasChannel(RADIANCE_PER_SCREEN_NORMALIZED)) {
-		const float factor = (statsTotalSampleCount > 0) ? (pixelCount / statsTotalSampleCount) : 1.f;
+		const double RADIANCE_PER_SCREEN_NORMALIZED_SampleCount = samplesCounts.GetSampleCount_RADIANCE_PER_SCREEN_NORMALIZED();
+		const float factor = (RADIANCE_PER_SCREEN_NORMALIZED_SampleCount > 0) ? (pixelCount / RADIANCE_PER_SCREEN_NORMALIZED_SampleCount) : 1.f;
 
 		for (u_int i = 0; i < radianceGroupCount; ++i) {
 			if (!ip || ip->radianceChannelScales[i].enabled) {
@@ -170,38 +172,32 @@ void Film::ExecuteImagePipelineImpl(const u_int index) {
 		return;
 	}
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	// Initialize OpenCL device
-	if (oclEnable && !ctx) {
-		CreateOCLContext();
+	if (hwEnable && !ctx) {
+		CreateHWContext();
 
-		if (oclIntersectionDevice) {
-			AllocateOCLBuffers();
-			CompileOCLKernels();
+		if (hardwareDevice) {
+			AllocateHWBuffers();
+			CompileHWKernels();
 		}
 	}
-#endif
 
 	// Merge all buffers
 	//const double t1 = WallClockTime();
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	if (oclEnable && oclIntersectionDevice)
-		MergeSampleBuffersOCL(index);
+	if (hwEnable && hardwareDevice)
+		MergeSampleBuffersHW(index);
 	else
 		MergeSampleBuffers(index);
-#else
-	MergeSampleBuffers(index);
-#endif
+
 	//const double t2 = WallClockTime();
 	//SLG_LOG("MergeSampleBuffers time: " << int((t2 - t1) * 1000.0) << "ms");
 
 	// Apply the image pipeline
 	//const double p1 = WallClockTime();
-#if !defined(LUXRAYS_DISABLE_OPENCL)
+
 	// Transfer all buffers to OpenCL device memory
-	if (oclEnable && oclIntersectionDevice && imagePipelines[index]->CanUseOpenCL())
-		WriteAllOCLBuffers();
-#endif
+	if (hwEnable && hardwareDevice && imagePipelines[index]->CanUseHW())
+		WriteAllHWBuffers();
 
 	imagePipelines[index]->Apply(*this, index);
 	//const double p2 = WallClockTime();

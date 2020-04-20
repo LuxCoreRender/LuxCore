@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -35,9 +35,6 @@ namespace slg {
 // Explicit instantiations for portable archives
 template void ImagePipelinePlugin::serialize(LuxOutputArchive &ar, const u_int version);
 template void ImagePipelinePlugin::serialize(LuxInputArchive &ar, const u_int version);
-// Explicit instantiations for polymorphic archives
-template void ImagePipelinePlugin::serialize(boost::archive::polymorphic_oarchive &ar, const u_int version);
-template void ImagePipelinePlugin::serialize(boost::archive::polymorphic_iarchive &ar, const u_int version);
 }
 
 //------------------------------------------------------------------------------
@@ -50,14 +47,11 @@ template<class Archive> void ImagePipeline::serialize(Archive &ar, const u_int v
 	ar & radianceChannelScales;
 
 	ar & pipeline;
-	ar & canUseOpenCL;
+	ar & canUseHW;
 }
 
 namespace slg {
 // Explicit instantiations for portable archives
 template void ImagePipeline::serialize(LuxOutputArchive &ar, const u_int version);
 template void ImagePipeline::serialize(LuxInputArchive &ar, const u_int version);
-// Explicit instantiations for polymorphic archives
-template void ImagePipeline::serialize(boost::archive::polymorphic_oarchive &ar, const u_int version);
-template void ImagePipeline::serialize(boost::archive::polymorphic_iarchive &ar, const u_int version);
 }

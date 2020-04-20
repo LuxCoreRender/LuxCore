@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -19,12 +19,14 @@
 #ifndef _SLG_PATHDEPTHINFO_H
 #define	_SLG_PATHDEPTHINFO_H
 
+#include <ostream>
+
 #include "slg/slg.h"
 #include "slg/bsdf/bsdf.h"
 
 namespace slg {
 
-	// OpenCL data types
+// OpenCL data types
 namespace ocl {
 #include "slg/utils/pathdepthinfo_types.cl"
 }
@@ -41,6 +43,11 @@ public:
 
 	u_int depth, diffuseDepth, glossyDepth, specularDepth;
 };
+
+inline std::ostream &operator<<(std::ostream &os, const PathDepthInfo &pdi) {
+	os << "PathDepthInfo[" << pdi.depth << ", " << pdi.diffuseDepth << ", " << pdi.glossyDepth << ", " << pdi.specularDepth << "]";
+	return os;
+}
 
 }
 

@@ -1,7 +1,7 @@
 #line 2 "mapping_types.cl"
 
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -28,13 +28,14 @@ typedef enum {
 
 typedef struct {
     float sinTheta, cosTheta, uScale, vScale, uDelta, vDelta;
-} UVMappingParam;
+} UVMapping2DParam;
 
 
 typedef struct {
 	TextureMapping2DType type;
+	unsigned int dataIndex;
 	union {
-		UVMappingParam uvMapping2D;
+		UVMapping2DParam uvMapping2D;
 	};
 } TextureMapping2D;
 
@@ -47,11 +48,15 @@ typedef enum {
 } TextureMapping3DType;
 
 typedef struct {
+    unsigned int dataIndex;
+} UVMapping3DParam;
+
+typedef struct {
 	TextureMapping3DType type;
 	Transform worldToLocal;
-	//union {
-		// UVMapping3D has no additional parameters
+	union {
+		UVMapping3DParam uvMapping3D;
 		// GlobalMapping3D has no additional parameters
 		// LocalMapping3D has no additional parameters
-	//};
+	};
 } TextureMapping3D;

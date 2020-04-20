@@ -1,5 +1,5 @@
 ################################################################################
-# Copyright 1998-2018 by authors (see AUTHORS.txt)
+# Copyright 1998-2020 by authors (see AUTHORS.txt)
 #
 #   This file is part of LuxCoreRender.
 #
@@ -29,4 +29,4 @@ set(LUXCORESCENEDEMO_SRCS
 add_executable(luxcorescenedemo ${LUXCORESCENEDEMO_SRCS})
 add_definitions(${VISIBILITY_FLAGS})
 
-TARGET_LINK_LIBRARIES(luxcorescenedemo ${LUXCORE_LIBRARY} ${Boost_LIBRARIES} ${OPENCL_LIBRARIES})
+TARGET_LINK_LIBRARIES(luxcorescenedemo ${LUXCORE_LIBRARY} ${Boost_LIBRARIES} ${OPENCL_LIBRARIES} ${CUDA_ALL_LIBRARIES})

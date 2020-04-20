@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -29,7 +29,7 @@ namespace slg {
 
 class BlackBodyTexture : public Texture {
 public:
-	BlackBodyTexture(const float temp);
+	BlackBodyTexture(const float temp, const bool normalize = false);
 	virtual ~BlackBodyTexture() { }
 
 	virtual TextureType GetType() const { return BLACKBODY_TEX; }
@@ -38,13 +38,13 @@ public:
 	virtual float Y() const { return rgb.Y(); }
 	virtual float Filter() const { return rgb.Filter(); }
 
-	float GetTemperature() const { return temperature; }
 	const luxrays::Spectrum &GetRGB() const { return rgb; }
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
-	float temperature;
+	const float temperature;
+	const bool normalize;
 
 	luxrays::Spectrum rgb;
 };

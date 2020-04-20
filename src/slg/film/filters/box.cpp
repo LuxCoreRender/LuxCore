@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -48,9 +48,12 @@ slg::ocl::Filter *BoxFilter::FromPropertiesOCL(const Properties &cfg) {
 
 	slg::ocl::Filter *oclFilter = new slg::ocl::Filter();
 
-	oclFilter->type = slg::ocl::FILTER_BOX;
-	oclFilter->box.widthX = filterXWidth;
-	oclFilter->box.widthY = filterYWidth;
+//	oclFilter->type = slg::ocl::FILTER_BOX;
+//	oclFilter->box.widthX = filterXWidth;
+//	oclFilter->box.widthY = filterYWidth;
+
+	oclFilter->widthX = filterXWidth;
+	oclFilter->widthY = filterYWidth;
 
 	return oclFilter;
 }

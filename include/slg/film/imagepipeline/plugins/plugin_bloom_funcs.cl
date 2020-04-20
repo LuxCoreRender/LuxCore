@@ -1,7 +1,7 @@
 #line 2 "plugin_bloom_funcs.cl"
 
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -22,7 +22,7 @@
 // BloomFilterPlugin_FilterX
 //------------------------------------------------------------------------------
 
-__kernel __attribute__((work_group_size_hint(256, 1, 1))) void BloomFilterPlugin_FilterX(
+__kernel void BloomFilterPlugin_FilterX(
 		const uint filmWidth, const uint filmHeight,
 		__global float *channel_IMAGEPIPELINE,
 		__global float *bloomBuffer,
@@ -45,7 +45,7 @@ __kernel __attribute__((work_group_size_hint(256, 1, 1))) void BloomFilterPlugin
 
 		float sumWt = 0.f;
 		const uint by = y;
-		float3 pixel = 0.f;
+		float3 pixel = BLACK;
 		for (uint bx = x0; bx <= x1; ++bx) {
 			const uint bloomOffset = bx + by * filmWidth;
 
@@ -59,18 +59,18 @@ __kernel __attribute__((work_group_size_hint(256, 1, 1))) void BloomFilterPlugin
 
 				sumWt += wt;
 				const uint bloomOffset3 = bloomOffset * 3;
-				pixel.s0 += wt * channel_IMAGEPIPELINE[bloomOffset3];
-				pixel.s1 += wt * channel_IMAGEPIPELINE[bloomOffset3 + 1];
-				pixel.s2 += wt * channel_IMAGEPIPELINE[bloomOffset3 + 2];
+				pixel.x += wt * channel_IMAGEPIPELINE[bloomOffset3];
+				pixel.y += wt * channel_IMAGEPIPELINE[bloomOffset3 + 1];
+				pixel.z += wt * channel_IMAGEPIPELINE[bloomOffset3 + 2];
 			}
 		}
 		if (sumWt > 0.f)
 			pixel /= sumWt;
 		
 		__global float *dst = &bloomBufferTmp[(x + y * filmWidth) * 3];
-		dst[0] = pixel.s0;
-		dst[1] = pixel.s1;
-		dst[2] = pixel.s2;
+		dst[0] = pixel.x;
+		dst[1] = pixel.y;
+		dst[2] = pixel.z;
 	}
 }
 
@@ -78,7 +78,7 @@ __kernel __attribute__((work_group_size_hint(256, 1, 1))) void BloomFilterPlugin
 // BloomFilterPlugin_FilterY
 //------------------------------------------------------------------------------
 
-__kernel __attribute__((work_group_size_hint(256, 1, 1))) void BloomFilterPlugin_FilterY(
+__kernel void BloomFilterPlugin_FilterY(
 		const uint filmWidth, const uint filmHeight,
 		__global float *channel_IMAGEPIPELINE,
 		__global float *bloomBuffer,
@@ -100,7 +100,7 @@ __kernel __attribute__((work_group_size_hint(256, 1, 1))) void BloomFilterPlugin
 
 		float sumWt = 0.f;
 		const uint bx = x;
-		float3 pixel = 0.f;
+		float3 pixel = BLACK;
 		for (uint by = y0; by <= y1; ++by) {
 			const uint bloomOffset = bx + by * filmWidth;
 
@@ -114,9 +114,9 @@ __kernel __attribute__((work_group_size_hint(256, 1, 1))) void BloomFilterPlugin
 				const uint bloomOffset = bx + by * filmWidth;
 				sumWt += wt;
 				const uint bloomOffset3 = bloomOffset * 3;
-				pixel.s0 += wt * bloomBufferTmp[bloomOffset3];
-				pixel.s1 += wt * bloomBufferTmp[bloomOffset3 + 1];
-				pixel.s2 += wt * bloomBufferTmp[bloomOffset3 + 2];
+				pixel.x += wt * bloomBufferTmp[bloomOffset3];
+				pixel.y += wt * bloomBufferTmp[bloomOffset3 + 1];
+				pixel.z += wt * bloomBufferTmp[bloomOffset3 + 2];
 			}
 		}
 
@@ -124,9 +124,9 @@ __kernel __attribute__((work_group_size_hint(256, 1, 1))) void BloomFilterPlugin
 			pixel /= sumWt;
 
 		__global float *dst = &bloomBuffer[(x + y * filmWidth) * 3];
-		dst[0] = pixel.s0;
-		dst[1] = pixel.s1;
-		dst[2] = pixel.s2;
+		dst[0] = pixel.x;
+		dst[1] = pixel.y;
+		dst[2] = pixel.z;
 	}
 }
 
@@ -134,7 +134,7 @@ __kernel __attribute__((work_group_size_hint(256, 1, 1))) void BloomFilterPlugin
 // BloomFilterPlugin_Merge
 //------------------------------------------------------------------------------
 
-__kernel __attribute__((work_group_size_hint(256, 1, 1))) void BloomFilterPlugin_Merge(
+__kernel void BloomFilterPlugin_Merge(
 		const uint filmWidth, const uint filmHeight,
 		__global float *channel_IMAGEPIPELINE,
 		__global float *bloomBuffer,

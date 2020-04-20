@@ -1,0 +1,67 @@
+scene.camera.type = "perspective"
+scene.camera.lookat.orig = 7.07851219 -5.91503286 4.2838068
+scene.camera.lookat.target = -5.5917964 4.78458548 0.680793524
+scene.camera.fieldofview = 65
+################################################################################
+scene.lights.l1.type = sphere
+scene.lights.l1.position = 4.0 -2.0 5.0
+scene.lights.l1.radius = 0.5
+scene.lights.l1.gain = 1000 1000 1000
+################################################################################
+scene.textures.vertcol.type = hitpointcolor
+##
+scene.textures.vect_disp.type = imagemap
+scene.textures.vect_disp.file = vector_displacement_ear.exr
+scene.textures.vect_disp.gamma = 1.0
+scene.textures.vect_disp.mapping.type = uvmapping2d
+scene.textures.vect_disp.mapping.uvscale = 8 -4
+################################################################################
+scene.materials.redmat.type = matte
+#scene.materials.redmat.kd = 0.6 0.2 0.2
+#scene.materials.redmat.kd = vect_disp
+scene.materials.redmat.kd = vertcol
+##
+scene.materials.whitematte.type = matte
+scene.materials.whitematte.kd = 0.6 0.6 0.6
+################################################################################
+scene.shapes.sphereply.type = mesh
+scene.shapes.sphereply.ply = sphere.ply
+#scene.shapes.sphereply.ply = plane.ply
+##
+scene.shapes.spheresubdiv.type = subdiv
+scene.shapes.spheresubdiv.source = sphereply
+scene.shapes.spheresubdiv.maxlevel = 4
+##
+scene.shapes.spheredisp.type = displacement
+scene.shapes.spheredisp.source = spheresubdiv
+scene.shapes.spheredisp.offset = 0.0
+scene.shapes.spheredisp.normalsmooth = 1
+scene.shapes.spheredisp.map = vect_disp
+scene.shapes.spheredisp.map.type = vector
+# Mudbox channels order:
+scene.shapes.spheredisp.map.channels = 0 2 1
+# Blender channels order:
+#scene.shapes.spheredisp.map.channels = 2 0 1
+scene.shapes.spheredisp.scale = 2.0
+##
+scene.shapes.spheresimp.type = simplify
+scene.shapes.spheresimp.source = spheredisp
+scene.shapes.spheresimp.target = 0.1
+##
+scene.shapes.sphereharl1.type = harlequin
+scene.shapes.sphereharl1.source = spheredisp
+scene.shapes.sphereharl2.type = harlequin
+scene.shapes.sphereharl2.source = spheresimp
+################################################################################
+scene.objects.back.material = whitematte
+scene.objects.back.ply = scenes/bigmonkey/room.ply
+##
+scene.objects.sphere1.material = redmat
+#scene.objects.sphere1.ply = spheredisp
+scene.objects.sphere1.ply = sphereharl1
+scene.objects.sphere1.transformation = 1 0 0 0  0 1 0 0  0 0 1 0  -1.8 -1.8 0 1
+##
+scene.objects.sphere2.material = redmat
+#scene.objects.sphere2.ply = spheresimp
+scene.objects.sphere2.ply = sphereharl2
+scene.objects.sphere2.transformation = 1 0 0 0  0 1 0 0  0 0 1 0  1.8 1.8 0 1

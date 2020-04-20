@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -111,9 +111,13 @@ void BVHAccel::Init(const deque<const Mesh *> &ms, const u_longlong totVert,
 			const int index = bvListIndex + i;
 			BVHTreeNode *node = &bvNodes[index];
 
+			// This is a fast path because I know Mesh can be only TYPE_TRIANGLE/TYPE_EXT_TRIANGLE
+			// in BVH
 			node->bbox = Union(
-					BBox(mesh->GetVertex(0.f, p[i].v[0]), mesh->GetVertex(0.f, p[i].v[1])),
-					mesh->GetVertex(0.f, p[i].v[2]));
+					BBox(
+						mesh->GetVertex(Transform::TRANS_IDENTITY, p[i].v[0]),
+						mesh->GetVertex(Transform::TRANS_IDENTITY, p[i].v[1])),
+						mesh->GetVertex(Transform::TRANS_IDENTITY, p[i].v[2]));
 			// NOTE - Ratow - Expand bbox a little to make sure rays collide
 			node->bbox.Expand(MachineEpsilon::E(node->bbox));
 			node->triangleLeaf.meshIndex = meshIndex;
@@ -184,10 +188,47 @@ bool BVHAccel::Intersect(const Ray *initialRay, RayHit *rayHit) const {
 		if (BVHNodeData_IsLeaf(nodeData)) {
 			// It is a leaf, check the triangle
 			const Mesh *mesh = meshes[node.triangleLeaf.meshIndex];
-			const Point p0 = mesh->GetVertex(0.f, node.triangleLeaf.v[0]);
-			const Point p1 = mesh->GetVertex(0.f, node.triangleLeaf.v[1]);
-			const Point p2 = mesh->GetVertex(0.f, node.triangleLeaf.v[2]);
 
+			// This is a fast path because I know Mesh can be only TYPE_TRIANGLE/TYPE_EXT_TRIANGLE
+			// in BVH
+			const Point p0 = mesh->GetVertex(Transform::TRANS_IDENTITY, node.triangleLeaf.v[0]);
+			const Point p1 = mesh->GetVertex(Transform::TRANS_IDENTITY, node.triangleLeaf.v[1]);
+			const Point p2 = mesh->GetVertex(Transform::TRANS_IDENTITY, node.triangleLeaf.v[2]);
+			
+			/* Generic implementation with support for all Mesh types
+
+			// 3 fast paths for each case
+			Point p0, p1, p2;
+			switch (mesh->GetType()) {
+				case TYPE_TRIANGLE:
+				case TYPE_EXT_TRIANGLE:
+					// This is a fast path because I know vertices are stored in
+					// absolute coordinates in this case
+					p0 = mesh->GetVertex(Transform::TRANS_IDENTITY, node.triangleLeaf.v[0]);
+					p1 = mesh->GetVertex(Transform::TRANS_IDENTITY, node.triangleLeaf.v[1]);
+					p2 = mesh->GetVertex(Transform::TRANS_IDENTITY, node.triangleLeaf.v[2]);
+					break;
+				case TYPE_TRIANGLE_INSTANCE:
+				case TYPE_EXT_TRIANGLE_INSTANCE: {
+					// This is a fast path because I know I can get the a
+					// Transform reference avoiding a copy
+					const Transform &local2World = ((const InstanceTriangleMesh *)mesh)->GetTransformation();
+					p0 = mesh->GetVertex(local2World, node.triangleLeaf.v[0]);
+					p1 = mesh->GetVertex(local2World, node.triangleLeaf.v[1]);
+					p2 = mesh->GetVertex(local2World, node.triangleLeaf.v[2]);
+					break;
+				}
+				default: {
+					// Generic path
+					Transform local2World;
+					mesh->GetLocal2World(0.f, local2World);
+					p0 = mesh->GetVertex(local2World, node.triangleLeaf.v[0]);
+					p1 = mesh->GetVertex(local2World, node.triangleLeaf.v[1]);
+					p2 = mesh->GetVertex(local2World, node.triangleLeaf.v[2]);
+					break;
+				}
+			}*/
+			
 			if (Triangle::Intersect(ray, p0, p1, p2, &t, &b1, &b2)) {
 				if (t < rayHit->t) {
 					ray.maxt = t;

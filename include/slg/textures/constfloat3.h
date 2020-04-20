@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -33,6 +33,7 @@ public:
 	virtual ~ConstFloat3Texture() { }
 
 	virtual TextureType GetType() const { return CONST_FLOAT3; }
+	virtual std::string GetSDLValue() const;
 	virtual float GetFloatValue(const HitPoint &hitPoint) const { return color.Y(); }
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const { return color; }
 	virtual float Y() const { return color.Y(); }

@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -34,6 +34,7 @@
 #include "slg/textures/blackbody.h"
 #include "slg/textures/blender_texture.h"
 #include "slg/textures/brick.h"
+#include "slg/textures/brightcontrast.h"
 #include "slg/textures/checkerboard.h"
 #include "slg/textures/colordepth.h"
 #include "slg/textures/constfloat.h"
@@ -50,6 +51,7 @@
 #include "slg/textures/fresnel/fresnelpreset.h"
 #include "slg/textures/fresnel/fresnelsopra.h"
 #include "slg/textures/fresnel/fresneltexture.h"
+#include "slg/textures/hitpoint/hitpointaov.h"
 #include "slg/textures/hitpoint/hitpointcolor.h"
 #include "slg/textures/hitpoint/position.h"
 #include "slg/textures/hitpoint/shadingnormal.h"
@@ -65,7 +67,9 @@
 #include "slg/textures/math/greaterthan.h"
 #include "slg/textures/math/lessthan.h"
 #include "slg/textures/math/mix.h"
+#include "slg/textures/math/modulo.h"
 #include "slg/textures/math/power.h"
+#include "slg/textures/math/random.h"
 #include "slg/textures/math/remap.h"
 #include "slg/textures/math/rounding.h"
 #include "slg/textures/math/scale.h"
@@ -78,6 +82,7 @@
 #include "slg/textures/windy.h"
 #include "slg/textures/wrinkled.h"
 #include "slg/textures/uv.h"
+#include "slg/textures/triplanar.h"
 
 using namespace std;
 using namespace luxrays;
@@ -405,14 +410,28 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 
 		tex = new BandTexture(interpType, amtTex, offsets, values);
 	} else if (texType == "hitpointcolor") {
-		tex = new HitPointColorTexture();
+		const u_int dataIndex = Clamp(props.Get(Property(propName + ".dataindex")(0u)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
+
+		tex = new HitPointColorTexture(dataIndex);
 	} else if (texType == "hitpointalpha") {
-		tex = new HitPointAlphaTexture();
+		const u_int dataIndex = Clamp(props.Get(Property(propName + ".dataindex")(0u)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
+
+		tex = new HitPointAlphaTexture(dataIndex);
 	} else if (texType == "hitpointgrey") {
+		const u_int dataIndex = Clamp(props.Get(Property(propName + ".dataindex")(0u)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
 		const int channel = props.Get(Property(propName + ".channel")(-1)).Get<int>();
 
-		tex = new HitPointGreyTexture(((channel != 0) && (channel != 1) && (channel != 2)) ?
-			numeric_limits<u_int>::max() : static_cast<u_int>(channel));
+		tex = new HitPointGreyTexture(dataIndex,
+				((channel != 0) && (channel != 1) && (channel != 2)) ?
+					numeric_limits<u_int>::max() : static_cast<u_int>(channel));
+	} else if (texType == "hitpointvertexaov") {
+		const u_int dataIndex = Clamp(props.Get(Property(propName + ".dataindex")(0u)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
+
+		tex = new HitPointVertexAOVTexture(dataIndex);
+	} else if (texType == "hitpointtriangleaov") {
+		const u_int dataIndex = Clamp(props.Get(Property(propName + ".dataindex")(0u)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
+
+		tex = new HitPointTriangleAOVTexture(dataIndex);
 	} else if (texType == "cloud") {
 		const float radius = props.Get(Property(propName + ".radius")(.5f)).Get<float>();
 		const float noisescale = props.Get(Property(propName + ".noisescale")(.5f)).Get<float>();
@@ -429,8 +448,9 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		tex = new CloudTexture(CreateTextureMapping3D(propName + ".mapping", props), radius, noisescale, turbulence,
 								sharpness, noiseoffset, spheres, octaves, omega, variability, baseflatness, spheresize);
 	} else if (texType == "blackbody") {
-		const float v = props.Get(Property(propName + ".temperature")(6500.f)).Get<float>();
-		tex = new BlackBodyTexture(v);
+		const float temperature = props.Get(Property(propName + ".temperature")(6500.f)).Get<float>();
+		const bool normalize = props.Get(Property(propName + ".normalize")(false)).Get<bool>();
+		tex = new BlackBodyTexture(temperature, normalize);
 	} else if (texType == "irregulardata") {
 		if (!props.IsDefined(propName + ".wavelengths"))
 			throw runtime_error("Missing wavelengths property in irregulardata texture: " + propName);
@@ -558,6 +578,26 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
         const Texture *texture = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
         const Texture *increment = GetTexture(props.Get(Property(propName + ".increment")(0.5f)));
         tex = new RoundingTexture(texture, increment);
+    } else if (texType == "modulo") {
+		const Texture *texture = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
+		const Texture *modulo = GetTexture(props.Get(Property(propName + ".modulo")(0.5f)));
+		tex = new ModuloTexture(texture, modulo);
+	} else if (texType == "brightcontrast") {
+		const Texture *texture = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
+		const Texture *brightnessTex = GetTexture(props.Get(Property(propName + ".brightness")(0.f)));
+		const Texture *contrastTex = GetTexture(props.Get(Property(propName + ".contrast")(0.f)));
+		tex = new BrightContrastTexture(texture, brightnessTex, contrastTex);
+	} else if (texType == "triplanar") {
+		const Texture *t1 = GetTexture(props.Get(Property(propName + ".texture1")(1.f)));
+		const Texture *t2 = GetTexture(props.Get(Property(propName + ".texture2")(1.f)));
+		const Texture *t3 = GetTexture(props.Get(Property(propName + ".texture3")(1.f)));
+		const bool enableUVlessBumpMap = props.Get(Property(propName + ".uvlessbumpmap.enable")(true)).Get<bool>();
+		tex = new TriplanarTexture(CreateTextureMapping3D(propName + ".mapping", props),
+				t1, t2, t3, enableUVlessBumpMap);
+    } else if (texType == "random") {
+		const Texture *texture = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
+		const u_int seedOffset = props.Get(Property(propName + ".seed")(0u)).Get<u_int>();
+		tex = new RandomTexture(texture, seedOffset);
 	} else
 		throw runtime_error("Unknown texture type: " + texType);
 
@@ -600,7 +640,7 @@ const Texture *Scene::GetTexture(const luxrays::Property &prop) {
 			} else
 				throw runtime_error("Wrong number of arguments in the implicit definition of a constant texture: " +
 						boost::lexical_cast<string>(floats.size()));
-		} catch (boost::bad_lexical_cast) {
+		} catch (boost::bad_lexical_cast &) {
 			throw runtime_error("Syntax error in texture name: " + name);
 		}
 	}
@@ -613,10 +653,11 @@ TextureMapping2D *Scene::CreateTextureMapping2D(const string &prefixName, const 
 
 	if (mapType == "uvmapping2d") {
 		const float rotation = props.Get(Property(prefixName + ".rotation")(0.f)).Get<float>();
+		const u_int dataIndex = Clamp(props.Get(Property(prefixName + ".uvindex")(0u)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
 		const UV uvScale = props.Get(Property(prefixName + ".uvscale")(1.f, 1.f)).Get<UV>();
 		const UV uvDelta = props.Get(Property(prefixName + ".uvdelta")(0.f, 0.f)).Get<UV>();
 
-		return new UVMapping2D(rotation, uvScale.u, uvScale.v, uvDelta.u, uvDelta.v);
+		return new UVMapping2D(dataIndex, rotation, uvScale.u, uvScale.v, uvDelta.u, uvDelta.v);
 	} else
 		throw runtime_error("Unknown 2D texture coordinate mapping type: " + mapType);
 }
@@ -625,10 +666,11 @@ TextureMapping3D *Scene::CreateTextureMapping3D(const string &prefixName, const 
 	const string mapType = props.Get(Property(prefixName + ".type")("uvmapping3d")).Get<string>();
 
 	if (mapType == "uvmapping3d") {
+		const u_int dataIndex = Clamp(props.Get(Property(prefixName + ".uvindex")(0u)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
 		const Matrix4x4 mat = props.Get(Property(prefixName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
 		const Transform trans(mat);
 
-		return new UVMapping3D(trans);
+		return new UVMapping3D(dataIndex, trans);
 	} else if (mapType == "globalmapping3d") {
 		const Matrix4x4 mat = props.Get(Property(prefixName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
 		const Transform trans(mat);

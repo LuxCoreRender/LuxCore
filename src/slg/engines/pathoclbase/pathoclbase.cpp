@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -32,7 +32,7 @@
 #include <boost/lexical_cast.hpp>
 
 #include "luxrays/core/geometry/transform.h"
-#include "luxrays/core/oclintersectiondevice.h"
+#include "luxrays/devices/ocldevice.h"
 
 #include "slg/slg.h"
 #include "slg/engines/pathoclbase/pathoclbase.h"
@@ -41,6 +41,8 @@
 #include "slg/renderconfig.h"
 #include "slg/film/filters/filter.h"
 #include "slg/scene/scene.h"
+
+#include "luxcore/cfg.h"
 
 using namespace luxrays;
 using namespace slg;
@@ -74,8 +76,6 @@ PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg,
 			intersectionDevices.push_back(devs[i]);
 
 			OpenCLIntersectionDevice *oclIntersectionDevice = (OpenCLIntersectionDevice *)(devs[i]);
-			// Disable the support for hybrid rendering in order to not waste resources
-			oclIntersectionDevice->SetDataParallelSupport(false);
 
 			// Check if OpenCL 1.1 is available
 			SLG_LOG("  Device OpenCL version: " << oclIntersectionDevice->GetDeviceDesc()->GetOpenCLVersion());
@@ -93,12 +93,8 @@ PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg,
 
 	SLG_LOG("Native devices used: " << nativeRenderThreadCount);
 	for (size_t i = 0; i < devs.size(); ++i) {
-		if (devs[i]->GetType() & DEVICE_TYPE_NATIVE_THREAD) {
+		if (devs[i]->GetType() & DEVICE_TYPE_NATIVE)
 			intersectionDevices.push_back(devs[i]);
-
-			// Disable the support for hybrid rendering in order to not waste resources
-			devs[i]->SetDataParallelSupport(false);
-		}
 	}
 	
 	//--------------------------------------------------------------------------
@@ -132,6 +128,23 @@ PathOCLBaseRenderEngine::~PathOCLBaseRenderEngine() {
 	delete oclPixelFilter;
 }
 
+void PathOCLBaseRenderEngine::InitGPUTaskConfiguration() {
+	// Scene configuration
+	taskConfig.scene.defaultVolumeIndex = compiledScene->defaultWorldVolumeIndex;
+
+	// Sampler configuration
+	taskConfig.sampler = *oclSampler;
+
+	// Path Tracer configuration
+	taskConfig.pathTracer = compiledScene->compiledPathTracer;
+
+	// Pixel filter configuration
+	taskConfig.pixelFilter = *oclPixelFilter;
+
+	// Film configuration
+	CompiledScene::CompileFilm(*film, taskConfig.film);
+}
+
 void PathOCLBaseRenderEngine::InitPixelFilterDistribution() {
 	unique_ptr<Filter> pixelFilter(renderConfig->AllocPixelFilter());
 
@@ -144,8 +157,68 @@ void PathOCLBaseRenderEngine::InitPixelFilterDistribution() {
 
 void PathOCLBaseRenderEngine::InitFilm() {
 	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
+
+	// pathTracer has not yet been initialized
+	const bool hybridBackForwardEnable = renderConfig->cfg.Get(PathTracer::GetDefaultProps().
+			Get("path.hybridbackforward.enable")).Get<bool>();
+	if (hybridBackForwardEnable)
+		film->AddChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
+
 	film->SetRadianceGroupCount(renderConfig->scene->lightDefs.GetLightGroupCount());
 	film->Init();
+}
+
+string PathOCLBaseRenderEngine::GetCachedKernelsHash(const RenderConfig &renderConfig) {
+	const string renderEngineType = renderConfig.GetProperty("renderengine.type").Get<string>();
+
+	const float epsilonMin = renderConfig.GetProperty("scene.epsilon.min").Get<float>();
+	const float epsilonMax = renderConfig.GetProperty("scene.epsilon.max").Get<float>();
+		
+	const Properties &cfg = renderConfig.cfg;
+	const bool usePixelAtomics = cfg.Get(Property("pathocl.pixelatomics.enable")(false)).Get<bool>();
+	const bool useCPUs = cfg.Get(GetDefaultProps().Get("opencl.cpu.use")).Get<bool>();
+	const bool useGPUs = cfg.Get(GetDefaultProps().Get("opencl.gpu.use")).Get<bool>();
+	const string oclDeviceConfig = cfg.Get(GetDefaultProps().Get("opencl.devices.select")).Get<string>();
+
+	stringstream ssParams;
+	ssParams.precision(6);
+	ssParams << scientific <<
+			renderEngineType << "##" <<
+			epsilonMin << "##" <<
+			epsilonMax << "##" <<
+			usePixelAtomics << "##" <<
+			useCPUs << "##" <<
+			useGPUs << "##" <<
+			oclDeviceConfig;
+
+	const string kernelSource = PathOCLBaseOCLRenderThread::GetKernelSources();
+
+	return oclKernelPersistentCache::HashString(ssParams.str()) + "-" + oclKernelPersistentCache::HashString(kernelSource);
+}
+
+void PathOCLBaseRenderEngine::SetCachedKernels(const RenderConfig &renderConfig) {
+	const string kernelHash = GetCachedKernelsHash(renderConfig);
+
+	const boost::filesystem::path dirPath = oclKernelPersistentCache::GetCacheDir("LUXCORE_" LUXCORE_VERSION_MAJOR "." LUXCORE_VERSION_MINOR);
+	const boost::filesystem::path filePath = dirPath / (kernelHash + ".ck");
+	const string fileName = filePath.generic_string();
+
+	if (!boost::filesystem::exists(filePath)) {
+		// Create an empty file
+		boost::filesystem::create_directories(dirPath);
+		BOOST_OFSTREAM file(fileName.c_str(), ios_base::out | ios_base::binary);
+
+		file.close();
+	}
+}
+
+bool PathOCLBaseRenderEngine::HasCachedKernels(const RenderConfig &renderConfig) {
+	const string kernelHash = GetCachedKernelsHash(renderConfig);
+
+	const boost::filesystem::path dirPath = oclKernelPersistentCache::GetCacheDir("LUXCORE_" LUXCORE_VERSION_MAJOR "." LUXCORE_VERSION_MINOR);
+	const boost::filesystem::path filePath = dirPath / (kernelHash + ".ck");
+
+	return boost::filesystem::exists(filePath);
 }
 
 void PathOCLBaseRenderEngine::StartLockLess() {
@@ -196,18 +269,26 @@ void PathOCLBaseRenderEngine::StartLockLess() {
 		
 		// photonGICache will be nullptr if the cache is disabled
 		if (photonGICache)
-			photonGICache->Preprocess();
+			photonGICache->Preprocess(renderNativeThreads.size() + renderOCLThreads.size());
 	}
+
+	pathTracer.SetPhotonGICache(photonGICache);
 
 	//--------------------------------------------------------------------------
 	// Compile the scene
 	//--------------------------------------------------------------------------
 
-	compiledScene = new CompiledScene(renderConfig->scene, photonGICache);
+	compiledScene = new CompiledScene(renderConfig->scene, &pathTracer);
 	compiledScene->SetMaxMemPageSize(maxMemPageSize);
 	compiledScene->EnableCode(cfg.Get(Property("opencl.code.alwaysenabled")("")).Get<string>());
 	compiledScene->Compile();
 
+	//--------------------------------------------------------------------------
+	// Compile the configuration
+	//--------------------------------------------------------------------------
+
+	InitGPUTaskConfiguration();
+	
 	//--------------------------------------------------------------------------
 	// Start OpenCL render threads
 	//--------------------------------------------------------------------------
@@ -223,6 +304,9 @@ void PathOCLBaseRenderEngine::StartLockLess() {
 	for (size_t i = 0; i < renderOCLThreads.size(); ++i)
 		renderOCLThreads[i]->Start();
 
+	// I know kernels has been compiled at this point
+	SetCachedKernels(*renderConfig);
+
 	//--------------------------------------------------------------------------
 	// Start native render threads
 	//--------------------------------------------------------------------------
@@ -231,7 +315,7 @@ void PathOCLBaseRenderEngine::StartLockLess() {
 	for (size_t i = 0; i < nativeRenderThreadCount; ++i) {
 		if (!renderNativeThreads[i]) {
 			renderNativeThreads[i] = CreateNativeThread(i,
-					(NativeThreadIntersectionDevice *)(intersectionDevices[i + oclRenderThreadCount]));
+					(NativeIntersectionDevice *)(intersectionDevices[i + oclRenderThreadCount]));
 		}
 	}
 

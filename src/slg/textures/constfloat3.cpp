@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -25,6 +25,10 @@ using namespace slg;
 //------------------------------------------------------------------------------
 // ConstFloat3 texture
 //------------------------------------------------------------------------------
+
+string ConstFloat3Texture::GetSDLValue() const {
+	return ToString(color.c[0]) + " " + ToString(color.c[1]) + " " + ToString(color.c[2]);
+}
 
 Properties ConstFloat3Texture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	Properties props;

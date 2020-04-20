@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -31,15 +31,10 @@
 #include <boost/thread/mutex.hpp>
 #include <bcd/core/SamplesAccumulator.h>
 
-#include "luxrays/core/geometry/point.h"
-#include "luxrays/core/geometry/normal.h"
-#include "luxrays/core/geometry/uv.h"
-#include "luxrays/core/oclintersectiondevice.h"
-#include "luxrays/utils/oclcache.h"
+#include "luxrays/core/hardwaredevice.h"
 #include "luxrays/utils/properties.h"
 #include "luxrays/utils/serializationutils.h"
 #include "slg/slg.h"
-#include "slg/bsdf/bsdf.h"
 #include "slg/film/imagepipeline/imagepipeline.h"
 #include "slg/film/framebuffer.h"
 #include "slg/film/filmoutputs.h"
@@ -50,6 +45,53 @@
 #include "denoiser/filmdenoiser.h"
 
 namespace slg {
+
+// OpenCL data types
+namespace ocl {
+#include "slg/film/film_types.cl"
+}
+
+//------------------------------------------------------------------------------
+// FilmSamplesCount
+//------------------------------------------------------------------------------
+
+class FilmSamplesCounts {
+public:
+	FilmSamplesCounts();
+	~FilmSamplesCounts();
+
+	void Init(const u_int threadCount);
+	void Clear();
+
+	void SetSampleCount(const double totalSampleCount,
+			const double RADIANCE_PER_PIXEL_NORMALIZED_count,
+			const double RADIANCE_PER_SCREEN_NORMALIZED_count);
+	void AddSampleCount(const double totalSampleCount,
+			const double RADIANCE_PER_PIXEL_NORMALIZED_count,
+			const double RADIANCE_PER_SCREEN_NORMALIZED_count);
+
+	void AddSampleCount(const u_int threadIndex,
+			const double RADIANCE_PER_PIXEL_NORMALIZED_count,
+			const double RADIANCE_PER_SCREEN_NORMALIZED_count);
+
+	double GetSampleCount() const;
+	double GetSampleCount_RADIANCE_PER_PIXEL_NORMALIZED() const;
+	double GetSampleCount_RADIANCE_PER_SCREEN_NORMALIZED() const;
+
+	friend class boost::serialization::access;
+
+private:
+	template<class Archive> void serialize(Archive &ar, const unsigned int version) {
+		ar & threadCount;
+		ar & total_SampleCount;
+		ar & RADIANCE_PER_PIXEL_NORMALIZED_SampleCount;
+		ar & RADIANCE_PER_SCREEN_NORMALIZED_SampleCount;
+	}
+
+	u_int threadCount;
+	std::vector<double> total_SampleCount;
+	std::vector<double> RADIANCE_PER_PIXEL_NORMALIZED_SampleCount, RADIANCE_PER_SCREEN_NORMALIZED_SampleCount;
+};
 
 //------------------------------------------------------------------------------
 // Film
@@ -92,11 +134,14 @@ public:
 		MATERIAL_ID_COLOR = 1 << 27,
 		ALBEDO = 1 << 28,
 		AVG_SHADING_NORMAL = 1 << 29,
-		NOISE = 1 << 30
+		NOISE = 1 << 30,
+		USER_IMPORTANCE = 1 << 31
 	} FilmChannelType;
 
 	Film(const u_int width, const u_int height, const u_int *subRegion = NULL);
 	~Film();
+
+	void SetThreadCount(const u_int threadCount);
 
 	void Init();
 	bool IsInitiliazed() const { return initialized; }
@@ -116,6 +161,7 @@ public:
 	const ImagePipeline *GetImagePipeline(const u_int index) const { return imagePipelines[index]; }
 
 	void CopyDynamicSettings(const Film &film);
+	void CopyHaltSettings(const Film &film);
 
 	//--------------------------------------------------------------------------
 
@@ -159,7 +205,7 @@ public:
 	u_int GetMaskObjectID(const u_int index) const { return maskObjectIDs[index]; }
 	u_int GetByObjectID(const u_int index) const { return byObjectIDs[index]; }
 
-	template<class T> const T *GetChannel(const FilmChannelType type, const u_int index = 0,
+	template<class T> T *GetChannel(const FilmChannelType type, const u_int index = 0,
 			const bool executeImagePipeline = true) {
 		throw std::runtime_error("Called Film::GetChannel() with wrong type");
 	}
@@ -196,7 +242,13 @@ public:
 	u_int GetPixelCount() const { return pixelCount; }
 	const u_int *GetSubRegion() const { return subRegion; }
 	double GetTotalSampleCount() const {
-		return statsTotalSampleCount;
+		return samplesCounts.GetSampleCount();
+	}
+	double GetTotalEyeSampleCount() const {
+		return samplesCounts.GetSampleCount_RADIANCE_PER_PIXEL_NORMALIZED();
+	}
+	double GetTotalLightSampleCount() const {
+		return samplesCounts.GetSampleCount_RADIANCE_PER_SCREEN_NORMALIZED();
 	}
 	double GetTotalTime() const {
 		return luxrays::WallClockTime() - statsStartSampleTime;
@@ -204,6 +256,14 @@ public:
 	double GetAvgSampleSec() {
 		const double t = GetTotalTime();
 		return (t > 0.0) ? (GetTotalSampleCount() / t) : 0.0;
+	}
+	double GetAvgEyeSampleSec() {
+		const double t = GetTotalTime();
+		return (t > 0.0) ? (GetTotalEyeSampleCount() / t) : 0.0;
+	}
+	double GetAvgLightSampleSec() {
+		const double t = GetTotalTime();
+		return (t > 0.0) ? (GetTotalLightSampleCount() / t) : 0.0;
 	}
 
 	//--------------------------------------------------------------------------
@@ -227,10 +287,12 @@ public:
 	// Samples related methods
 	//--------------------------------------------------------------------------
 
-	void SetSampleCount(const double count);
-	void AddSampleCount(const double count) {
-		statsTotalSampleCount += count;
-	}
+	void SetSampleCount(const double totalSampleCount,
+			const double RADIANCE_PER_PIXEL_NORMALIZED_count,
+			const double RADIANCE_PER_SCREEN_NORMALIZED_count);
+	void AddSampleCount(const u_int threadIndex,
+			const double RADIANCE_PER_PIXEL_NORMALIZED_count,
+			const double RADIANCE_PER_SCREEN_NORMALIZED_count);
 
 	// Normal method versions
 	void AddSample(const u_int x, const u_int y,
@@ -247,39 +309,46 @@ public:
 		const SampleResult &sampleResult, const float weight);
 	void AtomicAddSampleResultData(const u_int x, const u_int y,
 		const SampleResult &sampleResult);
-	
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	void ReadOCLBuffer_IMAGEPIPELINE(const u_int index);
-	void WriteOCLBuffer_IMAGEPIPELINE(const u_int index);
-#endif
+
+	void ReadHWBuffer_IMAGEPIPELINE(const u_int index);
+	void WriteHWBuffer_IMAGEPIPELINE(const u_int index);
 
 	void GetPixelFromMergedSampleBuffers(const FilmChannelType channels,
 		const std::vector<RadianceChannelScale> *radianceChannelScales,
+		const double RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
 		const u_int index, float *c) const;
 	void GetPixelFromMergedSampleBuffers(const FilmChannelType channels,
 		const std::vector<RadianceChannelScale> *radianceChannelScales,
+		const double RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
 		const u_int x, const u_int y, float *c) const {
-		GetPixelFromMergedSampleBuffers(channels, radianceChannelScales, x + y * width, c);
+		GetPixelFromMergedSampleBuffers(channels, radianceChannelScales,
+				RADIANCE_PER_SCREEN_NORMALIZED_SampleCount, x + y * width, c);
 	}
-	void GetPixelFromMergedSampleBuffers(const u_int imagePipelineIndex, const u_int x, const u_int y, float *c) const {
+	void GetPixelFromMergedSampleBuffers(const u_int imagePipelineIndex,
+			const double RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
+			const u_int x, const u_int y, float *c) const {
 		const ImagePipeline *ip = (imagePipelineIndex < imagePipelines.size()) ? imagePipelines[imagePipelineIndex] : NULL;
 		const std::vector<RadianceChannelScale> *radianceChannelScales = ip ? &ip->radianceChannelScales : NULL;
 
 		GetPixelFromMergedSampleBuffers((FilmChannelType)(RADIANCE_PER_PIXEL_NORMALIZED | RADIANCE_PER_SCREEN_NORMALIZED),
-				radianceChannelScales, x, y, c);
+				radianceChannelScales, RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
+				x, y, c);
 	}
-	void GetPixelFromMergedSampleBuffers(const u_int imagePipelineIndex, const u_int index, float *c) const {
+	void GetPixelFromMergedSampleBuffers(const u_int imagePipelineIndex,
+			const double RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
+			const u_int index, float *c) const {
 		const ImagePipeline *ip = (imagePipelineIndex < imagePipelines.size()) ? imagePipelines[imagePipelineIndex] : NULL;
 		const std::vector<RadianceChannelScale> *radianceChannelScales = ip ? &ip->radianceChannelScales : NULL;
 
 		GetPixelFromMergedSampleBuffers((FilmChannelType)(RADIANCE_PER_PIXEL_NORMALIZED | RADIANCE_PER_SCREEN_NORMALIZED),
-				radianceChannelScales, index, c);
+				radianceChannelScales, RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
+				index, c);
 	}
 	
-	bool HasSamples(const bool has_RADIANCE_PER_PIXEL_NORMALIZEDs, const bool has_RADIANCE_PER_SCREEN_NORMALIZEDs,
-			const u_int index) const {
+	bool HasThresholdSamples(const bool has_RADIANCE_PER_PIXEL_NORMALIZEDs, const bool has_RADIANCE_PER_SCREEN_NORMALIZEDs,
+			const u_int index, const float threshold) const {
 		for (u_int i = 0; i < radianceGroupCount; ++i) {
-			if (has_RADIANCE_PER_PIXEL_NORMALIZEDs && channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->GetPixel(index)[3] > 0.f)
+			if (has_RADIANCE_PER_PIXEL_NORMALIZEDs && channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->GetPixel(index)[3] > threshold)
 				return true;
 
 			if (has_RADIANCE_PER_SCREEN_NORMALIZEDs) {
@@ -293,10 +362,21 @@ public:
 		return false;
 	}
 		
+	bool HasThresholdSamples(const bool has_RADIANCE_PER_PIXEL_NORMALIZEDs, const bool has_RADIANCE_PER_SCREEN_NORMALIZEDs,
+		const u_int x, const u_int y, const float threshold) const {
+		return HasSamples(has_RADIANCE_PER_PIXEL_NORMALIZEDs, has_RADIANCE_PER_SCREEN_NORMALIZEDs, x + y * width, threshold);
+	}
+	
+	bool HasSamples(const bool has_RADIANCE_PER_PIXEL_NORMALIZEDs, const bool has_RADIANCE_PER_SCREEN_NORMALIZEDs,
+			const u_int index) const {
+		return HasThresholdSamples(has_RADIANCE_PER_PIXEL_NORMALIZEDs, has_RADIANCE_PER_SCREEN_NORMALIZEDs, index, 0.f);
+	}
+		
 	bool HasSamples(const bool has_RADIANCE_PER_PIXEL_NORMALIZEDs, const bool has_RADIANCE_PER_SCREEN_NORMALIZEDs,
 		const u_int x, const u_int y) const {
-		return HasSamples(has_RADIANCE_PER_PIXEL_NORMALIZEDs, has_RADIANCE_PER_SCREEN_NORMALIZEDs, x + y * width);
+		return HasThresholdSamples(has_RADIANCE_PER_PIXEL_NORMALIZEDs, has_RADIANCE_PER_SCREEN_NORMALIZEDs, x + y * width, 0.f);
 	}
+
 
 	std::vector<GenericFrameBuffer<4, 1, float> *> channel_RADIANCE_PER_PIXEL_NORMALIZEDs;
 	std::vector<GenericFrameBuffer<3, 0, float> *> channel_RADIANCE_PER_SCREEN_NORMALIZEDs;
@@ -329,31 +409,26 @@ public:
 	GenericFrameBuffer<4, 1, float> *channel_MATERIAL_ID_COLOR;
 	GenericFrameBuffer<4, 1, float> *channel_ALBEDO;
 	GenericFrameBuffer<1, 0, float> *channel_NOISE;
+	GenericFrameBuffer<1, 0, float> *channel_USER_IMPORTANCE;
 
-	// (Optional) OpenCL context
-	bool oclEnable;
-	int oclPlatformIndex;
-	int oclDeviceIndex;
+	// (Optional) LuxRays HardwareDevice context
+	bool hwEnable;
+	int hwDeviceIndex;
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	luxrays::Context *ctx;
 	luxrays::DataSet *dataSet;
-	luxrays::OpenCLDeviceDescription *selectedDeviceDesc;
-	luxrays::OpenCLIntersectionDevice *oclIntersectionDevice;
+	luxrays::HardwareDevice *hardwareDevice;
 
-	luxrays::oclKernelCache *kernelCache;
-
-	cl::Buffer *ocl_IMAGEPIPELINE;
-	cl::Buffer *ocl_ALPHA;
-	cl::Buffer *ocl_OBJECT_ID;
+	luxrays::HardwareDeviceBuffer *hw_IMAGEPIPELINE;
+	luxrays::HardwareDeviceBuffer *hw_ALPHA;
+	luxrays::HardwareDeviceBuffer *hw_OBJECT_ID;
 	
-	cl::Buffer *ocl_mergeBuffer;
+	luxrays::HardwareDeviceBuffer *hw_mergeBuffer;
 	
-	cl::Kernel *mergeInitializeKernel;
-	cl::Kernel *mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel;
-	cl::Kernel *mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel;
-	cl::Kernel *mergeFinalizeKernel;
-#endif
+	luxrays::HardwareDeviceKernel *mergeInitializeKernel;
+	luxrays::HardwareDeviceKernel *mergeRADIANCE_PER_PIXEL_NORMALIZEDKernel;
+	luxrays::HardwareDeviceKernel *mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel;
+	luxrays::HardwareDeviceKernel *mergeFinalizeKernel;
 
 	static Film *LoadSerialized(const std::string &fileName);
 	static void SaveSerialized(const std::string &fileName, const Film *film);
@@ -390,15 +465,13 @@ private:
 			const std::string &imagePipelinePrefix);
 	void ParseImagePipelines(const luxrays::Properties &props);
 
-	void SetUpOCL();
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	void CreateOCLContext();
-	void DeleteOCLContext();
-	void AllocateOCLBuffers();
-	void CompileOCLKernels();
-	void WriteAllOCLBuffers();
-	void MergeSampleBuffersOCL(const u_int imagePipelineIndex);
-#endif
+	void SetUpHW();
+	void CreateHWContext();
+	void DeleteHWContext();
+	void AllocateHWBuffers();
+	void CompileHWKernels();
+	void WriteAllHWBuffers();
+	void MergeSampleBuffersHW(const u_int imagePipelineIndex);
 
 	void ExecuteImagePipelineThreadImpl(const u_int index);
 	void ExecuteImagePipelineImpl(const u_int index);
@@ -412,7 +485,8 @@ private:
 	// Used to speedup sample splatting, initialized inside Init()
 	bool hasDataChannel, hasComposingChannel;
 
-	double statsTotalSampleCount, statsStartSampleTime, statsConvergence;
+	double statsStartSampleTime, statsConvergence;
+	FilmSamplesCounts samplesCounts;
 
 	std::vector<ImagePipeline *> imagePipelines;
 	boost::thread *imagePipelineThread;
@@ -424,7 +498,7 @@ private:
 	u_int haltSPP;
 	
 	float haltNoiseThreshold;
-	u_int haltNoiseThresholdWarmUp, haltNoiseThresholdTestStep;
+	u_int haltNoiseThresholdWarmUp, haltNoiseThresholdTestStep, haltNoiseThresholdImagePipelineIndex;
 	bool haltNoiseThresholdUseFilter, haltNoiseThresholdStopRendering;
 
 	// Adaptive sampling
@@ -432,6 +506,7 @@ private:
 
 	u_int noiseEstimationWarmUp, noiseEstimationTestStep;
 	u_int noiseEstimationFilterScale;
+	u_int noiseEstimationImagePipelineIndex;
 
 	FilmOutputs filmOutputs;
 
@@ -440,14 +515,14 @@ private:
 	bool initialized;
 };
 
-template<> const float *Film::GetChannel<float>(const FilmChannelType type, const u_int index, const bool executeImagePipeline);
-template<> const u_int *Film::GetChannel<u_int>(const FilmChannelType type, const u_int index, const bool executeImagePipeline);
+template<> float *Film::GetChannel<float>(const FilmChannelType type, const u_int index, const bool executeImagePipeline);
+template<> u_int *Film::GetChannel<u_int>(const FilmChannelType type, const u_int index, const bool executeImagePipeline);
 template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, float *buffer, const u_int index, const bool executeImagePipeline);
 template<> void Film::GetOutput<u_int>(const FilmOutputs::FilmOutputType type, u_int *buffer, const u_int index, const bool executeImagePipeline);
 
 }
 
-BOOST_CLASS_VERSION(slg::Film, 21)
+BOOST_CLASS_VERSION(slg::Film, 25)
 
 BOOST_CLASS_EXPORT_KEY(slg::Film)
 

@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -43,6 +43,7 @@ using luxrays::ocl::Vector;
 #include "slg/lights/light_types.cl"
 }
 
+class BSDF;
 class Scene;
 
 typedef enum {
@@ -72,6 +73,8 @@ public:
 	// If it can be directly intersected by a ray
 	virtual bool IsIntersectable() const { return false; }
 
+	virtual float GetAvgPassThroughTransparency() const { return 1.f; }
+
 	virtual u_int GetID() const = 0;
 	virtual float GetPower(const Scene &scene) const = 0;
 	virtual float GetImportance() const = 0;
@@ -84,14 +87,15 @@ public:
 
 	// Emits particle from the light
 	virtual luxrays::Spectrum Emit(const Scene &scene,
-		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
-		luxrays::Point *pos, luxrays::Vector *dir,
-		float *emissionPdfW, float *directPdfA = NULL, float *cosThetaAtLight = NULL) const = 0;
+		const float time, const float u0, const float u1,
+		const float u2, const float u3, const float passThroughEvent,
+		luxrays::Ray &ray, float &emissionPdfW,
+		float *directPdfA = NULL, float *cosThetaAtLight = NULL) const = 0;
 
-	// Illuminates a luxrays::Point in the scene
-    virtual luxrays::Spectrum Illuminate(const Scene &scene, const luxrays::Point &p,
-		const float u0, const float u1, const float passThroughEvent,
-        luxrays::Vector *dir, float *distance, float *directPdfW,
+	// Illuminates bsdf.hitPoint.p
+    virtual luxrays::Spectrum Illuminate(const Scene &scene, const BSDF &bsdf,
+		const float time, const float u0, const float u1, const float passThroughEvent,
+        luxrays::Ray &shadowRay, float &directPdfW,
 		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const = 0;
 
 	// This can be used at pre-processing stage to check if the point is always in
@@ -121,6 +125,7 @@ public:
 
 	virtual bool IsIntersectable() const { return true; }
 
+	virtual float GetAvgPassThroughTransparency() const { return lightMaterial->GetAvgPassThroughTransparency(); }
 	virtual float GetPower(const Scene &scene) const = 0;
 	virtual u_int GetID() const { return lightMaterial->GetLightID(); }
 	virtual float GetImportance() const { return lightMaterial->GetEmittedImportance(); }
@@ -189,9 +194,6 @@ public:
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
-	// This is used to scale the world radius in sun/sky/infinite lights in order to
-	// avoid problems with objects that are near the borderline of the world bounding sphere
-	static const float LIGHT_WORLD_RADIUS_SCALE;
 	static float GetEnvRadius(const Scene &scene);
 
 protected:
@@ -212,10 +214,11 @@ public:
 	virtual luxrays::UV GetEnvUV(const luxrays::Vector &dir) const {
 		throw std::runtime_error("Internal error: called EnvLightSource::GetEnvUV()");
 	}
-	virtual void UpdateVisibilityMap(const Scene *scene) { }
+	virtual void UpdateVisibilityMap(const Scene *scene, const bool useRTMode) { }
 
+	// Note: bsdf parameter can be NULL if it is a camera ray
 	virtual luxrays::Spectrum GetRadiance(const Scene &scene,
-			const luxrays::Point &p, const luxrays::Vector &dir,
+			const BSDF *bsdf, const luxrays::Vector &dir,
 			float *directPdfA = NULL, float *emissionPdfW = NULL) const = 0;
 
 	static void ToLatLongMapping(const Vector &w, float *s, float *t, float *pdf = NULL);

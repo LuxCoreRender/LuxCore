@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -18,7 +18,7 @@
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
-#include "luxrays/core/oclintersectiondevice.h"
+#include "luxrays/devices/ocldevice.h"
 
 #include "slg/slg.h"
 #include "slg/kernels/kernels.h"
@@ -49,20 +49,6 @@ void RTPathOCLRenderThread::BeginSceneEdit() {
 }
 
 void RTPathOCLRenderThread::EndSceneEdit(const EditActionList &editActions) {
-}
-
-string RTPathOCLRenderThread::AdditionalKernelOptions() {
-	RTPathOCLRenderEngine *engine = (RTPathOCLRenderEngine *)renderEngine;
-
-	stringstream ss;
-	ss.precision(6);
-	ss << scientific <<
-			TilePathOCLRenderThread::AdditionalKernelOptions() <<
-			" -D PARAM_RTPATHOCL_PREVIEW_RESOLUTION_REDUCTION=" << engine->previewResolutionReduction <<
-			" -D PARAM_RTPATHOCL_PREVIEW_RESOLUTION_REDUCTION_STEP=" << engine->previewResolutionReductionStep <<
-			" -D PARAM_RTPATHOCL_RESOLUTION_REDUCTION=" << engine->resolutionReduction;
-
-	return ss.str();
 }
 
 void RTPathOCLRenderThread::UpdateOCLBuffers(const EditActionList &updateActions) {
@@ -104,11 +90,6 @@ void RTPathOCLRenderThread::UpdateOCLBuffers(const EditActionList &updateActions
 		// Update Scene Lights
 		InitLights();
 	}
-
-	// A material types edit can enable/disable PARAM_HAS_PASSTHROUGH parameter
-	// and change the size of the structure allocated
-	if (updateActions.Has(MATERIAL_TYPES_EDIT))
-		AdditionalInit();
 
 	//--------------------------------------------------------------------------
 	// Recompile Kernels if required

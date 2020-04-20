@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -41,6 +41,8 @@ public:
 	friend class TilePathOCLRenderEngine;
 
 protected:
+	void UpdateSamplerData(const TileWork &tileWork);
+
 	virtual void GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight, u_int *filmSubRegion);
 	virtual void RenderThreadImpl();
 	
@@ -53,7 +55,7 @@ protected:
 
 class TilePathNativeRenderThread : public PathOCLBaseNativeRenderThread {
 public:
-	TilePathNativeRenderThread(const u_int index, luxrays::NativeThreadIntersectionDevice *device,
+	TilePathNativeRenderThread(const u_int index, luxrays::NativeIntersectionDevice *device,
 			TilePathOCLRenderEngine *re);
 	virtual ~TilePathNativeRenderThread();
 
@@ -114,7 +116,7 @@ protected:
 	virtual PathOCLBaseOCLRenderThread *CreateOCLThread(const u_int index,
 		luxrays::OpenCLIntersectionDevice *device);
 	virtual PathOCLBaseNativeRenderThread *CreateNativeThread(const u_int index,
-			luxrays::NativeThreadIntersectionDevice *device);
+			luxrays::NativeIntersectionDevice *device);
 
 	virtual void StartLockLess();
 	virtual void StopLockLess();

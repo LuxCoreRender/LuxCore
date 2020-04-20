@@ -1,7 +1,7 @@
 #line 2 "motionsystem_types.cl"
 
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -48,4 +48,7 @@ typedef struct {
 typedef struct {
 	unsigned int interpolatedTransformFirstIndex;
 	unsigned int interpolatedTransformLastIndex;
+
+	unsigned int interpolatedInverseTransformFirstIndex;
+	unsigned int interpolatedInverseTransformLastIndex;
 } MotionSystem;

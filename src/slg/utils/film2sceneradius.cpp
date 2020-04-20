@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -42,8 +42,6 @@ static void GenerateEyeRay(const Camera *camera, Ray &eyeRay,
 		PathVolumeInfo &volInfo, Sampler *sampler, SampleResult &sampleResult,
 		float &dpdx, float &dpdy, const float imagePlaneRadius,
 		const float timeStart, const float timeEnd) {
-	const u_int *subRegion = camera->filmSubRegion;
-
 	// Evaluate the delta x/y over the image plane in pixel
 
 	const float imagePlaneDeltaX = camera->filmWidth * imagePlaneRadius;
@@ -51,8 +49,10 @@ static void GenerateEyeRay(const Camera *camera, Ray &eyeRay,
 
 	// Evaluate the camera ray
 
-	sampleResult.filmX = subRegion[0] + sampler->GetSample(0) * (subRegion[1] - subRegion[0] + 1);
-	sampleResult.filmY = subRegion[2] + sampler->GetSample(1) * (subRegion[3] - subRegion[2] + 1);
+	// I intentionally ignore film sub-region to not have the estimated best
+	// radius affected by border rendering
+	sampleResult.filmX = sampler->GetSample(0) * (camera->filmWidth - 1);
+	sampleResult.filmY = sampler->GetSample(1) * (camera->filmHeight - 1);
 
 	const float timeSample = sampler->GetSample(4);
 	const float time = (timeStart <= timeEnd) ?
@@ -60,35 +60,40 @@ static void GenerateEyeRay(const Camera *camera, Ray &eyeRay,
 		camera->GenerateRayTime(timeSample);
 
 	const float u0 = sampler->GetSample(2);
-	const float u1 = sampler->GetSample(2);
+	const float u1 = sampler->GetSample(3);
 
 	camera->GenerateRay(time, sampleResult.filmX, sampleResult.filmY,
 			&eyeRay, &volInfo, u0, u1);
 	
-	// Evaluate the camera ray + imagePlaneDeltaX
-
-	Ray eyeRayDeltaX;
-	PathVolumeInfo volInfoDeltaX;
-	camera->GenerateRay(time, sampleResult.filmX + imagePlaneDeltaX, sampleResult.filmY,
-			&eyeRayDeltaX, &volInfoDeltaX, u0, u1);
-	
-	// Evaluate the camera ray + imagePlaneDeltaY
-
-	Ray eyeRayDeltaY;
-	PathVolumeInfo volInfoDeltaY;
-	camera->GenerateRay(time, sampleResult.filmX, sampleResult.filmY + imagePlaneDeltaY,
-			&eyeRayDeltaY, &volInfoDeltaY, u0, u1);
-
 	// I'm lacking the support for true ray differentials in camera object
 	// interface so I resort to this simple method 
-	
-	const float t0 = 0.f;
-	const float t1 = 1.f;
 
-	// Evaluate dpdx
-	dpdx = fabs(Distance(eyeRay(t1), eyeRayDeltaX(t1)) - Distance(eyeRay(t0), eyeRayDeltaX(t0)));
-	// Evaluate dpdy
-	dpdy = fabs(Distance(eyeRay(t1), eyeRayDeltaY(t1)) - Distance(eyeRay(t0), eyeRayDeltaY(t0)));
+	if (camera->GetType() == Camera::ORTHOGRAPHIC) {
+		dpdx = 1.f / imagePlaneDeltaX;
+		dpdy = 1.f / imagePlaneDeltaY;
+	} else {
+		// Evaluate the camera ray + imagePlaneDeltaX
+
+		Ray eyeRayDeltaX;
+		PathVolumeInfo volInfoDeltaX;
+		camera->GenerateRay(time, sampleResult.filmX + imagePlaneDeltaX, sampleResult.filmY,
+				&eyeRayDeltaX, &volInfoDeltaX, u0, u1);
+
+		// Evaluate the camera ray + imagePlaneDeltaY
+
+		Ray eyeRayDeltaY;
+		PathVolumeInfo volInfoDeltaY;
+		camera->GenerateRay(time, sampleResult.filmX, sampleResult.filmY + imagePlaneDeltaY,
+				&eyeRayDeltaY, &volInfoDeltaY, u0, u1);
+
+		const float t0 = 0.f;
+		const float t1 = 1.f;
+
+		// Evaluate dpdx
+		dpdx = fabs(Distance(eyeRay(t1), eyeRayDeltaX(t1)) - Distance(eyeRay(t0), eyeRayDeltaX(t0)));
+		// Evaluate dpdy
+		dpdy = fabs(Distance(eyeRay(t1), eyeRayDeltaY(t1)) - Distance(eyeRay(t0), eyeRayDeltaY(t0)));
+	}
 }
 
 // To work around boost::thread() 10 arguments limit
@@ -122,16 +127,16 @@ static void Film2SceneRadiusThread(Film2SceneRadiusThreadParams &params) {
 	// Initialize the sampler
 	RandomGenerator rnd(1 + params.threadIndex);
 	SobolSamplerSharedData sobolSharedData(131, nullptr);
-	SobolSampler sampler(&rnd, NULL, NULL, 0.f, &sobolSharedData);
+	SobolSampler sampler(&rnd, NULL, NULL, true, 0.f, 0.f, &sobolSharedData);
 	
 	// Request the samples
 	const u_int sampleBootSize = 5;
-	const u_int sampleStepSize = 1;
+	const u_int sampleStepSize = 4;
 	const u_int sampleSize = 
 		sampleBootSize + // To generate eye ray
 		params.maxPathDepth * sampleStepSize; // For each path vertex
 
-	sampler.RequestSamples(sampleSize);
+	sampler.RequestSamples(PIXEL_NORMALIZED_ONLY, sampleSize);
 		// Initialize SampleResult 
 	vector<SampleResult> sampleResults(1);
 	SampleResult &sampleResult = sampleResults[0];
@@ -167,7 +172,8 @@ static void Film2SceneRadiusThread(Film2SceneRadiusThreadParams &params) {
 
 			RayHit eyeRayHit;
 			Spectrum connectionThroughput;
-			const bool hit = params.scene->Intersect(NULL, false, sampleResult.firstPathVertex,
+			const bool hit = params.scene->Intersect(nullptr,
+					EYE_RAY | (sampleResult.firstPathVertex ? CAMERA_RAY : GENERIC_RAY),
 					&volInfo, sampler.GetSample(sampleOffset),
 					&eyeRay, &eyeRayHit, &bsdf, &connectionThroughput,
 					&pathThroughput, &sampleResult);
@@ -183,10 +189,6 @@ static void Film2SceneRadiusThread(Film2SceneRadiusThreadParams &params) {
 			// Something was hit
 			//------------------------------------------------------------------
 			
-			// Check if I have to flip the normal
-			const Normal surfaceNormal = ((Dot(bsdf.hitPoint.geometryN, -eyeRay.d) > 0.f) ?
-				1.f : -1.f) * bsdf.hitPoint.geometryN;
-
 			// Update the current path length
 			pathLength += eyeRayHit.t;
 
@@ -213,7 +215,6 @@ static void Film2SceneRadiusThread(Film2SceneRadiusThreadParams &params) {
 						sampler.GetSample(sampleOffset + 1),
 						sampler.GetSample(sampleOffset + 2),
 						&lastPdfW, &cosSampledDir, &lastBSDFEvent);
-			sampleResult.passThroughPath = false;
 
 			assert (!bsdfSample.IsNaN() && !bsdfSample.IsInf());
 			if (bsdfSample.Black())
@@ -242,7 +243,7 @@ static void Film2SceneRadiusThread(Film2SceneRadiusThreadParams &params) {
 			// Update volume information
 			volInfo.Update(lastBSDFEvent, bsdf);
 
-			eyeRay.Update(bsdf.hitPoint.p, surfaceNormal, sampledDir);
+			eyeRay.Update(bsdf.GetRayOrigin(sampledDir), sampledDir);
 		}
 
 		sampler.NextSample(sampleResults);
@@ -258,7 +259,7 @@ float Film2SceneRadius(const Scene *scene,
 		const float imagePlaneRadius, const float defaultRadius,
 		const u_int maxPathDepth, const float timeStart, const float timeEnd,
 		const Film2SceneRadiusValidator *validator) {
-	const size_t renderThreadCount = boost::thread::hardware_concurrency();
+	const size_t renderThreadCount = 1;//boost::thread::hardware_concurrency();
 
 	// Render 16 passes at 256 * 256 resolution
 	const u_int workSize = 16 * 256 * 256 / renderThreadCount;

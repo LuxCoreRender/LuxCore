@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -1052,7 +1052,7 @@ ImageMap *ImageMap::FromProperties(const luxrays::Properties &props, const strin
 		// Read the image map from a file
 		const string fileName = props.Get(Property(prefix + ".file")("image.png")).Get<string>();
 
-		im = new ImageMap(fileName, gamma, storageType);
+		im = new ImageMap(fileName, gamma, storageType, wrapType);
 	} else if (props.IsDefined(prefix + ".blob")) {
 		// Read the image map from embedded data
 		const u_int width = props.Get(Property(prefix + ".blob.width")(512)).Get<u_int>();

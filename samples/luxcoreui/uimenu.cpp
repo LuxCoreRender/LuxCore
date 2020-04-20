@@ -49,57 +49,80 @@ void LuxCoreApp::MenuRendering() {
 		}
 	}
 
-	if (session && ImGui::MenuItem("Export")) {
-		nfdchar_t *outPath = NULL;
-		nfdresult_t result = NFD_SaveDialog(NULL, NULL, &outPath);
+	if (session) {
+		ImGui::Separator();
 
-		if (result == NFD_OKAY) {
-			LA_LOG("Export current scene to directory in text format: " << outPath);
+		if (ImGui::MenuItem("Export")) {
+			nfdchar_t *outPath = NULL;
+			nfdresult_t result = NFD_SaveDialog(NULL, NULL, &outPath);
 
-			boost::filesystem::path dir(outPath);
-			boost::filesystem::create_directories(dir);
+			if (result == NFD_OKAY) {
+				LA_LOG("Export current scene to directory in text format: " << outPath);
 
-			// Save the current render engine
-			const string renderEngine = config->GetProperty("renderengine.type").Get<string>();
+				boost::filesystem::path dir(outPath);
+				boost::filesystem::create_directories(dir);
 
-			// Set the render engine to FILESAVER
-			RenderConfigParse(Properties() <<
-					Property("renderengine.type")("FILESAVER") <<
-					Property("filesaver.format")("TXT") <<
-					Property("filesaver.directory")(outPath) <<
-					Property("filesaver.renderengine.type")(renderEngine));
+				// Save the current render engine
+				const string renderEngine = config->GetProperty("renderengine.type").Get<string>();
 
-			// Restore the render engine setting
-			RenderConfigParse(Properties() <<
-					Property("renderengine.type")(renderEngine));
+				// Set the render engine to FILESAVER
+				RenderConfigParse(Properties() <<
+						Property("renderengine.type")("FILESAVER") <<
+						Property("filesaver.format")("TXT") <<
+						Property("filesaver.directory")(outPath) <<
+						Property("filesaver.renderengine.type")(renderEngine));
+
+				// Restore the render engine setting
+				RenderConfigParse(Properties() <<
+						Property("renderengine.type")(renderEngine));
+			}
+		}
+
+		if (ImGui::MenuItem("Export (binary)")) {
+			nfdchar_t *fileName = NULL;
+			nfdresult_t result = NFD_SaveDialog("bcf", NULL, &fileName);
+
+			if (result == NFD_OKAY) {
+				LA_LOG("Export current scene to file in binary format: " << fileName);
+				config->Save(fileName);
+			}
+		}
+
+		if (ImGui::MenuItem("Export (glTF)")) {
+			nfdchar_t *fileName = NULL;
+			nfdresult_t result = NFD_SaveDialog("gltf", NULL, &fileName);
+
+			if (result == NFD_OKAY) {
+				LA_LOG("Export current scene to file in glTF format: " << fileName);
+				config->ExportGLTF(fileName);
+			}
 		}
 	}
+	
+	if (session) {
+		ImGui::Separator();
 
-	if (session && ImGui::MenuItem("Export (binary)")) {
-		nfdchar_t *fileName = NULL;
-		nfdresult_t result = NFD_SaveDialog("bcf", NULL, &fileName);
-
-		if (result == NFD_OKAY) {
-			LA_LOG("Export current scene to file in binary format: " << fileName);
-			config->Save(fileName);
-		}
+		if (ImGui::MenuItem("Bake all objects"))
+			BakeAllSceneObjects();
 	}
 
-	ImGui::Separator();
+	if (session) {
+		ImGui::Separator();
 
-	if (session && ImGui::MenuItem("Save rendering")) {
-		nfdchar_t *fileName = NULL;
-		nfdresult_t result = NFD_SaveDialog("rsm", NULL, &fileName);
+		if (ImGui::MenuItem("Save rendering")) {
+			nfdchar_t *fileName = NULL;
+			nfdresult_t result = NFD_SaveDialog("rsm", NULL, &fileName);
 
-		if (result == NFD_OKAY) {
-			// Pause the current rendering
-			session->Pause();
+			if (result == NFD_OKAY) {
+				// Pause the current rendering
+				session->Pause();
 
-			// Save the session
-			session->SaveResumeFile(string(fileName));
+				// Save the session
+				session->SaveResumeFile(string(fileName));
 
-			// Resume the current rendering
-			session->Resume();
+				// Resume the current rendering
+				session->Resume();
+			}
 		}
 	}
 
@@ -129,7 +152,7 @@ void LuxCoreApp::MenuRendering() {
 		if (ImGui::MenuItem("Cancel"))
 			DeleteRendering();
 
-		if (session && ImGui::MenuItem("Restart", "Space bar")) {
+		if (ImGui::MenuItem("Restart", "Space bar")) {
 			// Restart rendering
 			session->Stop();
 			session->Start();
@@ -220,6 +243,10 @@ void LuxCoreApp::MenuEngine() {
 #endif
 	if (ImGui::MenuItem("RTPATHCPU", "9", (currentEngineType == "RTPATHCPU"))) {
 		SetRenderingEngineType("RTPATHCPU");
+		CloseAllRenderConfigEditors();
+	}
+	if (ImGui::MenuItem("BAKECPU", "0", (currentEngineType == "BAKECPU"))) {
+		SetRenderingEngineType("BAKECPU");
 		CloseAllRenderConfigEditors();
 	}
 }
@@ -435,12 +462,28 @@ void LuxCoreApp::MenuTool() {
 					Property("film.outputs.LUXCOREUI_OBJECTSELECTION_AOV.type")("OBJECT_ID") <<
 					Property("film.outputs.LUXCOREUI_OBJECTSELECTION_AOV.filename")("dummy.png");
 		}
-		
+
 		RenderConfigParse(props);
 	}
 	if (ImGui::MenuItem("Image view", NULL, (currentTool == TOOL_IMAGE_VIEW))) {
 		currentTool = TOOL_IMAGE_VIEW;
 		RenderConfigParse(Properties() << Property("screen.tool.type")("IMAGE_VIEW"));
+	}
+	if (ImGui::MenuItem("User importance painting", NULL, (currentTool == TOOL_USER_IMPORTANCE_PAINT))) {
+		currentTool = TOOL_USER_IMPORTANCE_PAINT;
+		
+		Properties props;
+		props << Property("screen.tool.type")("USER_IMPORTANCE_PAINT");
+
+		// Check if the session a _USER_IMPORTANCE AOV enabled
+		if(!session->GetFilm().HasOutput(Film::OUTPUT_USER_IMPORTANCE)) {
+			// Enable OBJECT_ID AOV
+			props <<
+					Property("film.outputs.LUXCOREUI_USER_IMPORTANCE_AOV.type")("USER_IMPORTANCE") <<
+					Property("film.outputs.LUXCOREUI_USER_IMPORTANCE_AOV.filename")("dummy.png");
+		}
+
+		RenderConfigParse(props);
 	}
 }
 

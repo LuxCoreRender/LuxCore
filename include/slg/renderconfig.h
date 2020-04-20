@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -33,6 +33,8 @@ public:
 	RenderConfig(const luxrays::Properties &props, Scene *scene = NULL);
 	~RenderConfig();
 
+	bool HasCachedKernels();
+
 	const luxrays::Property GetProperty(const std::string &name) const;
 
 	void Parse(const luxrays::Properties &props);
@@ -46,7 +48,8 @@ public:
 	SamplerSharedData *AllocSamplerSharedData(luxrays::RandomGenerator *rndGen, Film *film) const;
 	Sampler *AllocSampler(luxrays::RandomGenerator *rndGen, Film *film,
 		const FilmSampleSplatter *flmSplatter,
-		SamplerSharedData *sharedData) const;
+		SamplerSharedData *sharedData,
+		const luxrays::Properties &additionalProps) const;
 
 	RenderEngine *AllocRenderEngine() const;
 

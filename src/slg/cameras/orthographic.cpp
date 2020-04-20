@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -60,7 +60,7 @@ void OrthographicCamera::InitCameraTransforms(CameraTransforms *trans) {
 void OrthographicCamera::InitCameraData() {
 	const float xPixelWidth = screenWindow[1] - screenWindow[0];
 	const float yPixelHeight = screenWindow[3] - screenWindow[2];
-	cameraPDF = (filmWidth * filmHeight) / (xPixelWidth * yPixelHeight);
+	cameraPdf = 1.f / (xPixelWidth * yPixelHeight);
 }
 
 void OrthographicCamera::InitRay(Ray *ray, const float filmX, const float filmY) const {
@@ -106,8 +106,8 @@ bool OrthographicCamera::GetSamplePosition(Ray *ray, float *x, float *y) const {
 	ray->UpdateMinMaxWithEpsilon();
 	
 	// Check if we are inside the image plane
-	if ((*x < filmSubRegion[0]) || (*x >= filmSubRegion[1]) ||
-			(*y < filmSubRegion[2]) || (*y >= filmSubRegion[3]))
+	if ((*x < filmSubRegion[0]) || (*x >= filmSubRegion[1] + 1) ||
+			(*y < filmSubRegion[2]) || (*y >= filmSubRegion[3] + 1))
 		return false;
 	else {
 		// World arbitrary clipping plane support
@@ -135,8 +135,13 @@ bool OrthographicCamera::SampleLens(const float time,
 	return true;
 }
 
-float OrthographicCamera::GetPDF(const Vector &eyeDir, const float filmX, const float filmY) const {
-	return cameraPDF;
+void OrthographicCamera::GetPDF(const Ray &eyeRay, const float eyeDistance,
+		const float filmX, const float filmY,
+		float *pdfW, float *fluxToRadianceFactor) const {
+	if (pdfW)
+		*pdfW = cameraPdf;
+	if (fluxToRadianceFactor)
+		*fluxToRadianceFactor = cameraPdf;
 }
 
 Properties OrthographicCamera::ToProperties() const {

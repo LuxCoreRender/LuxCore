@@ -1,7 +1,7 @@
 #line 2 "texture_irregulardata_funcs.cl"
 
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -22,16 +22,10 @@
 // IrregularData texture
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_ENABLE_TEX_IRREGULARDATA)
-
-OPENCL_FORCE_INLINE float IrregularDataTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
-		const float3 rgb) {
+OPENCL_FORCE_INLINE float IrregularDataTexture_ConstEvaluateFloat(const float3 rgb) {
 	return Spectrum_Y(rgb);
 }
 
-OPENCL_FORCE_INLINE float3 IrregularDataTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
-		const float3 rgb) {
+OPENCL_FORCE_INLINE float3 IrregularDataTexture_ConstEvaluateSpectrum(const float3 rgb) {
 	return rgb;
 }
-
-#endif

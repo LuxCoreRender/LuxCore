@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -36,36 +36,30 @@ using namespace slg;
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::GaussianBlur3x3FilterPlugin)
 
 GaussianBlur3x3FilterPlugin::GaussianBlur3x3FilterPlugin(const float w) : weight(w),
-		tmpBuffer(NULL), tmpBufferSize(0) {
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	oclIntersectionDevice = NULL;
-	oclTmpBuffer = NULL;
+		tmpBuffer(nullptr), tmpBufferSize(0) {
+	hardwareDevice = nullptr;
+	hwTmpBuffer = nullptr;
 
-	filterXKernel = NULL;
-	filterYKernel = NULL;
-#endif
+	filterXKernel = nullptr;
+	filterYKernel = nullptr;
 }
 
-GaussianBlur3x3FilterPlugin::GaussianBlur3x3FilterPlugin() : tmpBuffer(NULL) {
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	oclIntersectionDevice = NULL;
-	oclTmpBuffer = NULL;
+GaussianBlur3x3FilterPlugin::GaussianBlur3x3FilterPlugin() : tmpBuffer(nullptr) {
+	hardwareDevice = nullptr;
+	hwTmpBuffer = nullptr;
 
-	filterXKernel = NULL;
-	filterYKernel = NULL;
-#endif
+	filterXKernel = nullptr;
+	filterYKernel = nullptr;
 }
 
 GaussianBlur3x3FilterPlugin::~GaussianBlur3x3FilterPlugin() {
 	delete[] tmpBuffer;
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	delete filterXKernel;
 	delete filterYKernel;
 
-	if (oclIntersectionDevice)
-		oclIntersectionDevice->FreeBuffer(&oclTmpBuffer);
-#endif
+	if (hardwareDevice)
+		hardwareDevice->FreeBuffer(&hwTmpBuffer);
 }
 
 ImagePipelinePlugin *GaussianBlur3x3FilterPlugin::Copy() const {
@@ -217,26 +211,25 @@ void GaussianBlur3x3FilterPlugin::Apply(Film &film, const u_int index) {
 // OpenCL version
 //------------------------------------------------------------------------------
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-void GaussianBlur3x3FilterPlugin::ApplyOCL(Film &film, const u_int index) {
+void GaussianBlur3x3FilterPlugin::ApplyHW(Film &film, const u_int index) {
 	const u_int width = film.GetWidth();
 	const u_int height = film.GetHeight();
 
 	if (!filterXKernel) {
-		oclIntersectionDevice = film.oclIntersectionDevice;
+		film.ctx->SetVerbose(true);
+
+		hardwareDevice = film.hardwareDevice;
 
 		// Allocate OpenCL buffers
-		film.ctx->SetVerbose(true);
-		oclIntersectionDevice->AllocBufferRW(&oclTmpBuffer, width * height * sizeof(Spectrum), "GaussianBlur3x3");
-		film.ctx->SetVerbose(false);
+		hardwareDevice->AllocBufferRW(&hwTmpBuffer, nullptr, width * height * sizeof(Spectrum), "GaussianBlur3x3");
 
 		// Compile sources
 		const double tStart = WallClockTime();
 
-		cl::Program *program = ImagePipelinePlugin::CompileProgram(
-				film,
+		HardwareDeviceProgram *program = nullptr;
+		hardwareDevice->CompileProgram(&program,
 				"-D LUXRAYS_OPENCL_KERNEL -D SLG_OPENCL_KERNEL",
-				slg::ocl::KernelSource_luxrays_types +
+				luxrays::ocl::KernelSource_luxrays_types +
 				slg::ocl::KernelSource_plugin_gaussianblur3x3_funcs,
 				"GaussianBlur3x3FilterPlugin");
 
@@ -245,30 +238,30 @@ void GaussianBlur3x3FilterPlugin::ApplyOCL(Film &film, const u_int index) {
 		//----------------------------------------------------------------------
 
 		SLG_LOG("[GaussianBlur3x3FilterPlugin] Compiling GaussianBlur3x3FilterPlugin_FilterX Kernel");
-		filterXKernel = new cl::Kernel(*program, "GaussianBlur3x3FilterPlugin_FilterX");
+		hardwareDevice->GetKernel(program, &filterXKernel, "GaussianBlur3x3FilterPlugin_FilterX");
 
 		// Set kernel arguments
 		u_int argIndex = 0;
-		filterXKernel->setArg(argIndex++, width);
-		filterXKernel->setArg(argIndex++, height);
-		filterXKernel->setArg(argIndex++, *(film.ocl_IMAGEPIPELINE));
-		filterXKernel->setArg(argIndex++, *oclTmpBuffer);
-		filterXKernel->setArg(argIndex++, weight);
+		hardwareDevice->SetKernelArg(filterXKernel, argIndex++, film.GetWidth());
+		hardwareDevice->SetKernelArg(filterXKernel, argIndex++, film.GetHeight());
+		hardwareDevice->SetKernelArg(filterXKernel, argIndex++, film.hw_IMAGEPIPELINE);
+		hardwareDevice->SetKernelArg(filterXKernel, argIndex++, hwTmpBuffer);
+		hardwareDevice->SetKernelArg(filterXKernel, argIndex++, weight);
 
 		//----------------------------------------------------------------------
 		// GaussianBlur3x3FilterPlugin_FilterY kernel
 		//----------------------------------------------------------------------
 
 		SLG_LOG("[GaussianBlur3x3FilterPlugin] Compiling GaussianBlur3x3FilterPlugin_FilterY Kernel");
-		filterYKernel = new cl::Kernel(*program, "GaussianBlur3x3FilterPlugin_FilterY");
+		hardwareDevice->GetKernel(program, &filterYKernel, "GaussianBlur3x3FilterPlugin_FilterY");
 
 		// Set kernel arguments
 		argIndex = 0;
-		filterYKernel->setArg(argIndex++, width);
-		filterYKernel->setArg(argIndex++, height);
-		filterYKernel->setArg(argIndex++, *oclTmpBuffer);
-		filterYKernel->setArg(argIndex++, *(film.ocl_IMAGEPIPELINE));
-		filterYKernel->setArg(argIndex++, weight);
+		hardwareDevice->SetKernelArg(filterYKernel, argIndex++, film.GetWidth());
+		hardwareDevice->SetKernelArg(filterYKernel, argIndex++, film.GetHeight());
+		hardwareDevice->SetKernelArg(filterYKernel, argIndex++, hwTmpBuffer);
+		hardwareDevice->SetKernelArg(filterYKernel, argIndex++, film.hw_IMAGEPIPELINE);
+		hardwareDevice->SetKernelArg(filterYKernel, argIndex++, weight);
 
 		//----------------------------------------------------------------------
 
@@ -276,13 +269,14 @@ void GaussianBlur3x3FilterPlugin::ApplyOCL(Film &film, const u_int index) {
 
 		const double tEnd = WallClockTime();
 		SLG_LOG("[GaussianBlur3x3FilterPlugin] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
+
+		film.ctx->SetVerbose(false);
 	}
 
 	for (u_int i = 0; i < 3; ++i) {
-		oclIntersectionDevice->GetOpenCLQueue().enqueueNDRangeKernel(*filterXKernel,
-				cl::NullRange, cl::NDRange(RoundUp(height, 256u)), cl::NDRange(256));
-		oclIntersectionDevice->GetOpenCLQueue().enqueueNDRangeKernel(*filterYKernel,
-				cl::NullRange, cl::NDRange(RoundUp(width, 256u)), cl::NDRange(256));
+		hardwareDevice->EnqueueKernel(filterXKernel, HardwareDeviceRange(RoundUp(height, 256u)),
+			HardwareDeviceRange(256));
+		hardwareDevice->EnqueueKernel(filterYKernel, HardwareDeviceRange(RoundUp(width, 256u)),
+			HardwareDeviceRange(256));
 	}
 }
-#endif

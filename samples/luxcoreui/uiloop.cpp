@@ -79,15 +79,17 @@ void LuxCoreApp::RefreshRenderingTexture() {
 	const unsigned int filmHeight = session->GetFilm().GetHeight();
 	const float *pixels = session->GetFilm().GetChannel<float>(Film::CHANNEL_IMAGEPIPELINE, imagePipelineIndex);
 
-	if (currentTool == TOOL_OBJECT_SELECTION) {
-		// Allocate the selectionBuffer if needed
-		if (!selectionBuffer || (selectionFilmWidth != filmWidth) || (selectionFilmHeight != filmHeight)) {
-			delete[] selectionBuffer;
-			selectionFilmWidth = filmWidth;
-			selectionFilmHeight = filmHeight;
-			selectionBuffer = new float[selectionFilmWidth * selectionFilmHeight * 3];
+	if ((currentTool == TOOL_OBJECT_SELECTION) || (currentTool == TOOL_USER_IMPORTANCE_PAINT)) {
+		// Allocate the renderImageBuffer if needed
+		if (!renderImageBuffer || (renderImageWidth != filmWidth) || (renderImageHeight != filmHeight)) {
+			delete[] renderImageBuffer;
+			renderImageWidth = filmWidth;
+			renderImageHeight = filmHeight;
+			renderImageBuffer = new float[renderImageWidth * renderImageHeight * 3];
 		}
+	}
 
+	if (currentTool == TOOL_OBJECT_SELECTION) {
 		// Get the mouse coordinates
 		int frameBufferWidth, frameBufferHeight;
 		glfwGetFramebufferSize(window, &frameBufferWidth, &frameBufferHeight);
@@ -100,31 +102,37 @@ void LuxCoreApp::RefreshRenderingTexture() {
 		const unsigned int *objIDpixels = session->GetFilm().GetChannel<unsigned int>(Film::CHANNEL_OBJECT_ID);
 		// 0xffffffffu is LuxRays NULL_INDEX
 		unsigned int objID = 0xffffffffu;
-		if ((mouseX >= 0) && (mouseX < (int)selectionFilmWidth) &&
-				(mouseY >= 0) && (mouseY < (int)selectionFilmHeight))
-			objID = objIDpixels[mouseX + mouseY * selectionFilmWidth];
+		if ((mouseX >= 0) && (mouseX < (int)renderImageWidth) &&
+				(mouseY >= 0) && (mouseY < (int)renderImageHeight))
+			objID = objIDpixels[mouseX + mouseY * renderImageWidth];
 
 		// 0xffffffffu is LuxRays NULL_INDEX
 		if (objID != 0xffffffffu) {
 			// Blend the current selection over the rendering
 			for (unsigned int y = 0; y < filmHeight; ++y) {
 				for (unsigned int x = 0; x < filmWidth; ++x) {
-					const unsigned int index = x + y * selectionFilmWidth;
+					const unsigned int index = x + y * renderImageWidth;
 					const unsigned int index3 = index * 3;
 
 					if (objIDpixels[index] == objID) {
-						selectionBuffer[index3] = Lerp(.5f, pixels[index3], 1.f);
-						selectionBuffer[index3 + 1] = Lerp(.5f, pixels[index3 + 1], 1.f);
-						selectionBuffer[index3 + 2] = pixels[index3 + 2];						
+						renderImageBuffer[index3] = Lerp(.5f, pixels[index3], 1.f);
+						renderImageBuffer[index3 + 1] = Lerp(.5f, pixels[index3 + 1], 1.f);
+						renderImageBuffer[index3 + 2] = pixels[index3 + 2];						
 					} else {
-						selectionBuffer[index3] = pixels[index3];
-						selectionBuffer[index3 + 1] = pixels[index3 + 1];
-						selectionBuffer[index3 + 2] = pixels[index3 + 2];
+						renderImageBuffer[index3] = pixels[index3];
+						renderImageBuffer[index3 + 1] = pixels[index3 + 1];
+						renderImageBuffer[index3 + 2] = pixels[index3 + 2];
 					}
 				}
 			}
 
-			pixels = selectionBuffer;
+			pixels = renderImageBuffer;
+		}
+	} else if (currentTool == TOOL_USER_IMPORTANCE_PAINT) {
+		if (userImportancePaintWindow.showOverlay) {
+			userImportancePaintWindow.BlendImportanceMap(pixels, renderImageBuffer);
+	
+			pixels = renderImageBuffer;
 		}
 	}
 
@@ -330,12 +338,29 @@ void LuxCoreApp::DrawCaptions() {
 
 	// Bottom screen label
 
-	const string msg = boost::str(boost::format("[Pass %3d][Avg. samples/sec % 3.2fM][Avg. rays/sample %.2f on %.1fK tris]") %
-		stats.Get("stats.renderengine.pass").Get<int>() %
-		(stats.Get("stats.renderengine.total.samplesec").Get<double>() / 1000000.0) %
+	const u_int eyePass = stats.Get("stats.renderengine.pass.eye").Get<u_int>();
+	const u_int lightPass = stats.Get("stats.renderengine.pass.light").Get<u_int>();
+	const string msgPass = ((eyePass > 0) && (lightPass > 0)) ?
+		boost::str(boost::format("[Pass %d (%d+%d)]") %
+			stats.Get("stats.renderengine.pass").Get<u_int>() % eyePass % lightPass) :
+		boost::str(boost::format("[Pass %d]") % stats.Get("stats.renderengine.pass").Get<u_int>());
+
+	const u_int eyeSemplesSec = stats.Get("stats.renderengine.total.samplesec.eye").Get<double>();
+	const u_int lightSemplesSec = stats.Get("stats.renderengine.total.samplesec.light").Get<double>();
+
+	const string msgSemplesSec = ((eyePass > 0) && (lightPass > 0)) ?
+		boost::str(boost::format("[Avg. samples/sec % 3.2fM (%.2fM+%.2fM)]") %
+			(stats.Get("stats.renderengine.total.samplesec").Get<double>() / 1000000.0) %
+			(eyeSemplesSec / 1000000.0) % (lightSemplesSec / 1000000.0)) :
+		boost::str(boost::format("[Avg. samples/sec % 3.2fM]") %
+			(stats.Get("stats.renderengine.total.samplesec").Get<double>() / 1000000.0));
+	
+	const string msgTriSec = boost::str(boost::format("[Avg. rays/sample %.2f on %.1fK tris]") %
 		(stats.Get("stats.renderengine.performance.total").Get<double>() /
 			stats.Get("stats.renderengine.total.samplesec").Get<double>()) %
 		(stats.Get("stats.dataset.trianglecount").Get<double>() / 1000.0));
+	
+	const string msg = msgPass + msgSemplesSec + msgTriSec;
 
 	ImVec2 textSize = ImGui::CalcTextSize(msg.c_str());
 	const ImVec2 windowSize = ImVec2(frameBufferWidth, textSize.y + 9);
@@ -577,6 +602,8 @@ void LuxCoreApp::RunApp(luxcore::RenderState *startState, luxcore::Film *startFi
 		helpWindow.Draw();
 		if (session)
 			statsWindow.Draw();
+		if (session && (currentTool == TOOL_USER_IMPORTANCE_PAINT))
+			userImportancePaintWindow.Draw();
 
 		MainMenuBar();
 

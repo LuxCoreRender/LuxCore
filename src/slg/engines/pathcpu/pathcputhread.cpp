@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -19,6 +19,7 @@
 #include "slg/engines/pathcpu/pathcpu.h"
 #include "slg/volumes/volume.h"
 #include "slg/utils/varianceclamping.h"
+#include "slg/samplers/metropolis.h"
 
 using namespace std;
 using namespace luxrays;
@@ -45,26 +46,43 @@ void PathCPURenderThread::RenderFunc() {
 	// (engine->seedBase + 1) seed is used for sharedRndGen
 	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + 1 + threadIndex);
 
-	// Setup the sampler
-	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, engine->film,
-			NULL, engine->samplerSharedData);
-	sampler->RequestSamples(pathTracer.sampleSize);
-	
+	// Setup the sampler(s)
+
+	Sampler *eyeSampler = nullptr;
+	Sampler *lightSampler = nullptr;
+
+	eyeSampler = engine->renderConfig->AllocSampler(rndGen, engine->film,
+			nullptr, engine->samplerSharedData, Properties());
+	eyeSampler->SetThreadIndex(threadIndex);
+	eyeSampler->RequestSamples(PIXEL_NORMALIZED_ONLY, pathTracer.eyeSampleSize);
+
+	if (pathTracer.hybridBackForwardEnable) {
+		// Light path sampler is always Metropolis
+		Properties props;
+		props <<
+			Property("sampler.type")("METROPOLIS") <<
+			// Disable image plane meaning for samples 0 and 1
+			Property("sampler.imagesamples.enable")(false);
+
+		lightSampler = Sampler::FromProperties(props, rndGen, engine->film, nullptr,
+				engine->lightSamplerSharedData);
+		
+		lightSampler->SetThreadIndex(threadIndex);
+		lightSampler->RequestSamples(SCREEN_NORMALIZED_ONLY, pathTracer.lightSampleSize);
+	}
+
+	// Setup variance clamping
 	VarianceClamping varianceClamping(pathTracer.sqrtVarianceClampMaxValue);
 
-	// Initialize SampleResult
-	vector<SampleResult> sampleResults(1);
-	SampleResult &sampleResult = sampleResults[0];
-	pathTracer.InitSampleResults(engine->film, sampleResults);
+	// Setup PathTracer thread state
+	PathTracerThreadState pathTracerThreadState(device,
+			eyeSampler, lightSampler,
+			engine->renderConfig->scene, engine->film,
+			&varianceClamping);
 
 	//--------------------------------------------------------------------------
 	// Trace paths
 	//--------------------------------------------------------------------------
-
-	// I can not use engine->renderConfig->GetProperty() here because the
-	// RenderConfig properties cache is not thread safe
-	const u_int haltDebug = engine->renderConfig->cfg.Get(Property("batch.haltdebug")(0u)).Get<u_int>() *
-		engine->film->GetWidth() * engine->film->GetHeight();
 
 	for (u_int steps = 0; !boost::this_thread::interruption_requested(); ++steps) {
 		// Check if we are in pause mode
@@ -77,13 +95,7 @@ void PathCPURenderThread::RenderFunc() {
 				break;
 		}
 
-		pathTracer.RenderSample(device, engine->renderConfig->scene, engine->film, sampler, sampleResults);
-
-		// Variance clamping
-		if (varianceClamping.hasClamping())
-			varianceClamping.Clamp(*(engine->film), sampleResult);
-
-		sampler->NextSample(sampleResults);
+		pathTracer.RenderSample(pathTracerThreadState);
 
 #ifdef WIN32
 		// Work around Windows bad scheduling
@@ -91,16 +103,31 @@ void PathCPURenderThread::RenderFunc() {
 #endif
 
 		// Check halt conditions
-		if ((haltDebug > 0u) && (steps >= haltDebug))
-			break;
 		if (engine->film->GetConvergence() == 1.f)
 			break;
+		
+		if (engine->photonGICache) {
+			try {
+				const u_int spp = engine->film->GetTotalEyeSampleCount() / engine->film->GetPixelCount();
+				engine->photonGICache->Update(threadIndex, spp);
+			} catch (boost::thread_interrupted &ti) {
+				// I have been interrupted, I must stop
+				break;
+			}
 		}
+	}
 
-	delete sampler;
+	delete eyeSampler;
+	delete lightSampler;
 	delete rndGen;
 
 	threadDone = true;
+
+	// This is done to interrupt thread pending on barrier wait
+	// inside engine->photonGICache->Update(). This can happen when an
+	// halt condition is satisfied.
+	for (u_int i = 0; i < engine->renderThreads.size(); ++i)
+		engine->renderThreads[i]->Interrupt();
 
 	//SLG_LOG("[PathCPURenderEngine::" << threadIndex << "] Rendering thread halted");
 }

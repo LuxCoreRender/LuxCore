@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -23,14 +23,22 @@
 #include <stdexcept>
 
 #include "luxrays/core/context.h"
-#ifdef LUXRAYS_DISABLE_OPENCL
-#include "luxrays/core/intersectiondevice.h"
-#else
-#include "luxrays/core/oclintersectiondevice.h"
+#include "luxrays/core/hardwaredevice.h"
+#include "luxrays/devices/nativeintersectiondevice.h"
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+#include "luxrays/devices/ocldevice.h"
+#include "luxrays/devices/oclintersectiondevice.h"
 #endif
-#include "luxrays/core/virtualdevice.h"
+#if defined(LUXRAYS_ENABLE_CUDA)
+#include "luxrays/devices/cudadevice.h"
+#endif
 
+using namespace std;
 using namespace luxrays;
+
+//------------------------------------------------------------------------------
+// Context
+//------------------------------------------------------------------------------
 
 Context::Context(LuxRaysDebugHandler handler, const Properties &config) : cfg(config) {
 	debugHandler = handler;
@@ -39,9 +47,19 @@ Context::Context(LuxRaysDebugHandler handler, const Properties &config) : cfg(co
 	verbose = cfg.Get(Property("context.verbose")(true)).Get<bool>();
 
 	// Get the list of devices available on the platform
-	NativeThreadDeviceDescription::AddDeviceDescs(deviceDescriptions);
+	
+	//--------------------------------------------------------------------------
+	// Add all native devices
+	//--------------------------------------------------------------------------
 
+	NativeIntersectionDeviceDescription::AddDeviceDescs(deviceDescriptions);
+
+	
 #if !defined(LUXRAYS_DISABLE_OPENCL)
+	//--------------------------------------------------------------------------
+	// Add all OpenCL devices
+	//--------------------------------------------------------------------------
+
 	// Platform info
 	VECTOR_CLASS<cl::Platform> platforms;
 	try {
@@ -49,8 +67,10 @@ Context::Context(LuxRaysDebugHandler handler, const Properties &config) : cfg(co
 	} catch (cl::Error &err) {
 		// The cl_khr_icd extension throws exceptions if zero platforms are available.
 		// We ignore that error (OpenCL is optional), but throw anything else.
-		if (err.err() != CL_PLATFORM_NOT_FOUND_KHR)
-			throw;
+#if defined(cl_khr_idc)
+        if (err.err() != CL_PLATFORM_NOT_FOUND_KHR)
+            throw;
+#endif
 	}
 	for (size_t i = 0; i < platforms.size(); ++i)
 		LR_LOG(this, "OpenCL Platform " << i << ": " << platforms[i].getInfo<CL_PLATFORM_VENDOR>().c_str());
@@ -67,13 +87,29 @@ Context::Context(LuxRaysDebugHandler handler, const Properties &config) : cfg(co
 			LR_LOG(this, "No OpenCL platform available");
 	} else {
 		if ((platforms.size() == 0) || (openclPlatformIndex >= (int)platforms.size()))
-			throw std::runtime_error("Unable to find an appropriate OpenCL platform");
+			throw runtime_error("Unable to find an appropriate OpenCL platform");
 		else {
 			OpenCLDeviceDescription::AddDeviceDescs(
 				platforms[openclPlatformIndex],
 				DEVICE_TYPE_OPENCL_ALL, deviceDescriptions);
 		}
 	}
+#endif
+
+#if defined(LUXRAYS_ENABLE_CUDA)
+	//--------------------------------------------------------------------------
+	// Add all CUDA devices
+	//--------------------------------------------------------------------------
+
+	int driverVersion;
+	CHECK_CUDA_ERROR(cuDriverGetVersion(&driverVersion));
+	LR_LOG(this, "CUDA driver version: " << (driverVersion / 1000) << "." << (driverVersion % 1000));
+
+	int devCount;
+	CHECK_CUDA_ERROR(cuDeviceGetCount(&devCount));
+	LR_LOG(this, "CUDA device count: " << devCount);
+
+	CUDADeviceDescription::AddDeviceDescs(deviceDescriptions);
 #endif
 
 	// Print device info
@@ -103,8 +139,8 @@ Context::~Context() {
 	if (started)
 		Stop();
 
-	for (size_t i = 0; i < idevices.size(); ++i)
-		delete idevices[i];
+	for (size_t i = 0; i < devices.size(); ++i)
+		delete devices[i];
 	for (size_t i = 0; i < deviceDescriptions.size(); ++i)
 		delete deviceDescriptions[i];
 }
@@ -137,8 +173,8 @@ void Context::UpdateDataSet() {
 void Context::Start() {
 	assert (!started);
 
-	for (size_t i = 0; i < idevices.size(); ++i)
-		idevices[i]->Start();
+	for (size_t i = 0; i < devices.size(); ++i)
+		devices[i]->Start();
 
 	started = true;
 }
@@ -146,8 +182,8 @@ void Context::Start() {
 void Context::Interrupt() {
 	assert (started);
 
-	for (size_t i = 0; i < idevices.size(); ++i)
-		idevices[i]->Interrupt();
+	for (size_t i = 0; i < devices.size(); ++i)
+		devices[i]->Interrupt();
 }
 
 void Context::Stop() {
@@ -155,36 +191,44 @@ void Context::Stop() {
 
 	Interrupt();
 
-	for (size_t i = 0; i < idevices.size(); ++i)
-		idevices[i]->Stop();
+	for (size_t i = 0; i < devices.size(); ++i)
+		devices[i]->Stop();
 
 	started = false;
 }
 
-const std::vector<DeviceDescription *> &Context::GetAvailableDeviceDescriptions() const {
+const vector<DeviceDescription *> &Context::GetAvailableDeviceDescriptions() const {
 	return deviceDescriptions;
 }
 
-const std::vector<IntersectionDevice *> &Context::GetIntersectionDevices() const {
+const vector<IntersectionDevice *> &Context::GetIntersectionDevices() const {
 	return idevices;
 }
 
-std::vector<IntersectionDevice *> Context::CreateIntersectionDevices(
-	std::vector<DeviceDescription *> &deviceDesc, const size_t indexOffset) {
+const vector<HardwareDevice *> &Context::GetHardwareDevices() const {
+	return hdevices;
+}
+
+const vector<Device *> &Context::GetDevices() const {
+	return devices;
+}
+
+vector<IntersectionDevice *> Context::CreateIntersectionDevices(
+	vector<DeviceDescription *> &deviceDesc, const size_t indexOffset) {
 	assert (!started);
 
 	LR_LOG(this, "Creating " << deviceDesc.size() << " intersection device(s)");
 
-	std::vector<IntersectionDevice *> newDevices;
+	vector<IntersectionDevice *> newDevices;
 	for (size_t i = 0; i < deviceDesc.size(); ++i) {
 		LR_LOG(this, "Allocating intersection device " << i << ": " << deviceDesc[i]->GetName() <<
 				" (Type = " << DeviceDescription::GetDeviceType(deviceDesc[i]->GetType()) << ")");
 
 		const DeviceType deviceType = deviceDesc[i]->GetType();
 		IntersectionDevice *device;
-		if (deviceType == DEVICE_TYPE_NATIVE_THREAD) {
+		if (deviceType == DEVICE_TYPE_NATIVE) {
 			// Nathive thread devices
-			device = new NativeThreadIntersectionDevice(this, indexOffset + i);
+			device = new NativeIntersectionDevice(this, indexOffset + i);
 		}
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 		else if (deviceType & DEVICE_TYPE_OPENCL_ALL) {
@@ -195,7 +239,7 @@ std::vector<IntersectionDevice *> Context::CreateIntersectionDevices(
 		}
 #endif
 		else
-			throw std::runtime_error("Unknown device type in Context::CreateIntersectionDevices(): " + ToString(deviceType));
+			throw runtime_error("Unknown device type in Context::CreateIntersectionDevices(): " + ToString(deviceType));
 
 		newDevices.push_back(device);
 	}
@@ -203,24 +247,67 @@ std::vector<IntersectionDevice *> Context::CreateIntersectionDevices(
 	return newDevices;
 }
 
-std::vector<IntersectionDevice *> Context::AddIntersectionDevices(std::vector<DeviceDescription *> &deviceDesc) {
+vector<IntersectionDevice *> Context::AddIntersectionDevices(vector<DeviceDescription *> &deviceDesc) {
 	assert (!started);
 
-	std::vector<IntersectionDevice *> newDevices = CreateIntersectionDevices(deviceDesc, idevices.size());
-	for (size_t i = 0; i < newDevices.size(); ++i)
+	vector<IntersectionDevice *> newDevices = CreateIntersectionDevices(deviceDesc, idevices.size());
+	for (size_t i = 0; i < newDevices.size(); ++i) {
 		idevices.push_back(newDevices[i]);
+		devices.push_back(newDevices[i]);
+	}
 
 	return newDevices;
 }
 
-std::vector<IntersectionDevice *> Context::AddVirtualIntersectionDevice(
-	std::vector<DeviceDescription *> &deviceDescs) {
+vector<HardwareDevice *> Context::CreateHardwareDevices(
+	vector<DeviceDescription *> &deviceDesc, const size_t indexOffset) {
 	assert (!started);
-	assert (deviceDescs.size() > 0);
 
-	std::vector<IntersectionDevice *> realDevices = CreateIntersectionDevices(deviceDescs, idevices.size());
-	VirtualIntersectionDevice *virtualDevice = new VirtualIntersectionDevice(realDevices, idevices.size());
-	idevices.push_back(virtualDevice);
+	LR_LOG(this, "Creating " << deviceDesc.size() << " hardware device(s)");
 
-	return realDevices;
+	vector<HardwareDevice *> newDevices;
+	for (size_t i = 0; i < deviceDesc.size(); ++i) {
+		LR_LOG(this, "Allocating hardware device " << i << ": " << deviceDesc[i]->GetName() <<
+				" (Type = " << DeviceDescription::GetDeviceType(deviceDesc[i]->GetType()) << ")");
+
+		const DeviceType deviceType = deviceDesc[i]->GetType();
+		HardwareDevice *device;
+		if (deviceType == DEVICE_TYPE_NATIVE) {
+			throw runtime_error("Native devices are not supported as hardware devices in Context::CreateHardwareDevices()");
+		}
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+		else if (deviceType & DEVICE_TYPE_OPENCL_ALL) {
+			// OpenCL devices
+			OpenCLDeviceDescription *oclDeviceDesc = (OpenCLDeviceDescription *)deviceDesc[i];
+
+			device = new OpenCLDevice(this, oclDeviceDesc, indexOffset + i);
+		}
+#endif
+#if defined(LUXRAYS_ENABLE_CUDA)
+		else if (deviceType & DEVICE_TYPE_CUDA_ALL) {
+			// CUDA devices
+			CUDADeviceDescription *cudaDeviceDesc = (CUDADeviceDescription *)deviceDesc[i];
+
+			device = new CUDADevice(this, cudaDeviceDesc, indexOffset + i);
+		}
+#endif
+		else
+			throw runtime_error("Unknown device type in Context::CreateHardwareDevices(): " + ToString(deviceType));
+
+		newDevices.push_back(device);
+	}
+
+	return newDevices;
+}
+
+vector<HardwareDevice *> Context::AddHardwareDevices(vector<DeviceDescription *> &deviceDesc) {
+	assert (!started);
+
+	vector<HardwareDevice *> newDevices = CreateHardwareDevices(deviceDesc, hdevices.size());
+	for (size_t i = 0; i < newDevices.size(); ++i) {
+		hdevices.push_back(newDevices[i]);
+		devices.push_back(newDevices[i]);
+	}
+
+	return newDevices;
 }

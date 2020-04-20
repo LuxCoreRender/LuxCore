@@ -1,7 +1,7 @@
 #line 2 "light_types.cl"
 
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -18,6 +18,10 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+// This is used to scale the world radius in sun/sky/infinite lights in order to
+// avoid problems with objects that are near the borderline of the world bounding sphere
+#define LIGHT_WORLD_RADIUS_SCALE 1.05f
+
 typedef enum {
 	TYPE_IL, TYPE_SUN, TYPE_TRIANGLE, TYPE_POINT, TYPE_MAPPOINT,
 	TYPE_SPOT, TYPE_PROJECTION, TYPE_IL_CONSTANT, TYPE_SHARPDISTANT, TYPE_DISTANT,
@@ -28,6 +32,7 @@ typedef enum {
 typedef struct {
 	unsigned int imageMapIndex;
 	unsigned int distributionOffset;
+	int useVisibilityMapCache;
 } InfiniteLightParam;
 
 typedef struct {
@@ -37,6 +42,7 @@ typedef struct {
 	int hasGround, isGroundBlack;
 	Spectrum scaledGroundColor;
 	unsigned int distributionOffset;
+	int useVisibilityMapCache;
 } SkyLight2Param;
 
 typedef struct {
@@ -76,7 +82,7 @@ typedef struct {
 
 typedef struct {
 	Spectrum color;
-	unsigned int distributionOffset;
+	int useVisibilityMapCache;
 } ConstantInfiniteLightParam;
 
 typedef struct {
@@ -130,17 +136,9 @@ typedef struct {
 } NotIntersectableLightSource;
 
 typedef struct {
-	Vector v0, v1, v2;
-	Normal geometryN;
-	Normal n0, n1, n2;
-	UV uv0, uv1, uv2;
-	Spectrum rgb0, rgb1, rgb2;
-	float alpha0, alpha1, alpha2;
 	float invTriangleArea, invMeshArea;
 
-	unsigned int materialIndex;
-	unsigned int lightSceneIndex;
-	unsigned int objectID;
+	unsigned int meshIndex, triangleIndex;
 
 	// Used for image map and/or IES map
 	float avarage;
@@ -168,7 +166,42 @@ typedef struct {
 
 #if defined(SLG_OPENCL_KERNEL)
 
-#define LIGHTS_PARAM_DECL , __global const LightSource* restrict lights, __global const uint* restrict envLightIndices, const uint envLightCount, __global const uint* restrict lightIndexOffsetByMeshIndex, __global const uint* restrict lightIndexByTriIndex, __global const float* restrict envLightDistribution, __global const float* restrict lightsDistribution, __global const float* restrict infiniteLightSourcesDistribution, __global const DLSCacheEntry* restrict dlscAllEntries, __global const uint* restrict dlscDistributionIndexToLightIndex, __global const float* restrict dlscDistributions, __global const IndexBVHArrayNode* restrict dlscBVHNodes, const float dlscRadius2, const float dlscNormalCosAngle MATERIALS_PARAM_DECL
-#define LIGHTS_PARAM , lights, envLightIndices, envLightCount, lightIndexOffsetByMeshIndex, lightIndexByTriIndex, envLightDistribution, lightsDistribution, infiniteLightSourcesDistribution, dlscAllEntries, dlscDistributionIndexToLightIndex, dlscDistributions, dlscBVHNodes, dlscRadius2, dlscNormalCosAngle MATERIALS_PARAM
+#define LIGHTS_PARAM_DECL , __global const LightSource* restrict lights, \
+	__global const uint* restrict envLightIndices, \
+	const uint envLightCount, \
+	__global const float* restrict envLightDistribution, \
+	__global const float* restrict lightsDistribution, \
+	__global const float* restrict infiniteLightSourcesDistribution, \
+	__global const DLSCacheEntry* restrict dlscAllEntries, \
+	__global const float* restrict dlscDistributions, \
+	__global const IndexBVHArrayNode* restrict dlscBVHNodes, \
+	const float dlscRadius2, const float dlscNormalCosAngle, \
+	__global const ELVCacheEntry* restrict elvcAllEntries, \
+	__global const float* restrict elvcDistributions, \
+	__global const uint* restrict elvcTileDistributionOffsets, \
+	__global const IndexBVHArrayNode* restrict elvcBVHNodes, \
+	const float elvcRadius2, const float elvcNormalCosAngle, \
+	const uint elvcTilesXCount, const uint elvcTilesYCount \
+	MATERIALS_PARAM_DECL
+#define LIGHTS_PARAM , lights, \
+	envLightIndices, \
+	envLightCount, \
+	envLightDistribution, \
+	lightsDistribution, \
+	infiniteLightSourcesDistribution, \
+	dlscAllEntries, \
+	dlscDistributions, \
+	dlscBVHNodes, \
+	dlscRadius2, \
+	dlscNormalCosAngle, \
+	elvcAllEntries, \
+	elvcDistributions, \
+	elvcTileDistributionOffsets, \
+	elvcBVHNodes, \
+	elvcRadius2, \
+	elvcNormalCosAngle, \
+	elvcTilesXCount, \
+	elvcTilesXCount \
+	MATERIALS_PARAM
 
 #endif

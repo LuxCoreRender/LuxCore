@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -89,6 +89,7 @@ template<class Archive> void Film::load(Archive &ar, const u_int version) {
 	ar & channel_ALBEDO;
 	ar & channel_AVG_SHADING_NORMAL;
 	ar & channel_NOISE;
+	ar & channel_USER_IMPORTANCE;
 
 	ar & channels;
 	ar & width;
@@ -102,8 +103,10 @@ template<class Archive> void Film::load(Archive &ar, const u_int version) {
 	ar & maskMaterialIDs;
 	ar & byMaterialIDs;
 
-	ar & statsTotalSampleCount;
 	ar & statsStartSampleTime;
+	ar & statsConvergence;
+	ar & statsStartSampleTime;
+	ar & samplesCounts;
 
 	ar & imagePipelines;
 
@@ -125,7 +128,7 @@ template<class Archive> void Film::load(Archive &ar, const u_int version) {
 
 	ar & initialized;
 
-	SetUpOCL();
+	SetUpHW();
 }
 
 template<class Archive> void Film::save(Archive &ar, const u_int version) const {
@@ -164,6 +167,7 @@ template<class Archive> void Film::save(Archive &ar, const u_int version) const 
 	ar & channel_ALBEDO;
 	ar & channel_AVG_SHADING_NORMAL;
 	ar & channel_NOISE;
+	ar & channel_USER_IMPORTANCE;
 
 	ar & channels;
 	ar & width;
@@ -177,8 +181,10 @@ template<class Archive> void Film::save(Archive &ar, const u_int version) const 
 	ar & maskMaterialIDs;
 	ar & byMaterialIDs;
 
-	ar & statsTotalSampleCount;
 	ar & statsStartSampleTime;
+	ar & statsConvergence;
+	ar & statsStartSampleTime;
+	ar & samplesCounts;
 
 	ar & imagePipelines;
 
@@ -205,7 +211,4 @@ namespace slg {
 // Explicit instantiations for portable archives
 template void Film::save(LuxOutputArchive &ar, const u_int version) const;
 template void Film::load(LuxInputArchive &ar, const u_int version);
-// The following 2 lines shouldn't be required but they are with GCC 5
-template void Film::save(boost::archive::polymorphic_oarchive &ar, const u_int version) const;
-template void Film::load(boost::archive::polymorphic_iarchive &ar, const u_int version);
 }

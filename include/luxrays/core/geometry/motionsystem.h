@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -161,6 +161,7 @@ public:
 	}
 
 	Matrix4x4 Sample(const float time) const;
+	Matrix4x4 SampleInverse(const float time) const;
 
 	BBox Bound(BBox ibox, const bool storingGlobal2Local) const;
 
@@ -172,6 +173,7 @@ public:
 
 	std::vector<float> times;
 	std::vector<InterpolatedTransform> interpolatedTransforms;
+	std::vector<InterpolatedTransform> interpolatedInverseTransforms;
 
 private:
 	void Init(const std::vector<float> &t, const std::vector<Transform> &transforms);
@@ -179,6 +181,7 @@ private:
 	template<class Archive> void serialize(Archive &ar, const unsigned int version) {
 		ar & times;
 		ar & interpolatedTransforms;
+		ar & interpolatedInverseTransforms;
 	}
 };
 
@@ -225,7 +228,7 @@ private:
 
 }
 
-BOOST_CLASS_VERSION(luxrays::InterpolatedTransform, 1)
+BOOST_CLASS_VERSION(luxrays::InterpolatedTransform, 2)
 BOOST_CLASS_VERSION(luxrays::InterpolatedTransform::DecomposedTransform, 1)
 BOOST_CLASS_VERSION(luxrays::MotionSystem, 1)
 

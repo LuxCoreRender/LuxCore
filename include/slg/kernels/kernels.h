@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -34,6 +34,7 @@ extern std::string KernelSource_tilepathocl_funcs;
 extern std::string KernelSource_tilepathocl_kernels_common;
 extern std::string KernelSource_tilepathocl_kernels_micro;
 extern std::string KernelSource_sampler_types;
+extern std::string KernelSource_sampler_funcs;
 extern std::string KernelSource_sampler_random_funcs;
 extern std::string KernelSource_sampler_sobol_funcs;
 extern std::string KernelSource_sampler_metropolis_funcs;
@@ -61,6 +62,7 @@ extern std::string KernelSource_materialdefs_funcs_cloth;
 extern std::string KernelSource_materialdefs_funcs_disney;
 extern std::string KernelSource_materialdefs_funcs_glass;
 extern std::string KernelSource_materialdefs_funcs_glossy2;
+extern std::string KernelSource_materialdefs_funcs_glossycoating;
 extern std::string KernelSource_materialdefs_funcs_glossytranslucent;
 extern std::string KernelSource_materialdefs_funcs_heterogeneousvol;
 extern std::string KernelSource_materialdefs_funcs_homogeneousvol;
@@ -68,12 +70,13 @@ extern std::string KernelSource_materialdefs_funcs_matte;
 extern std::string KernelSource_materialdefs_funcs_matte_translucent;
 extern std::string KernelSource_materialdefs_funcs_metal2;
 extern std::string KernelSource_materialdefs_funcs_mirror;
+extern std::string KernelSource_materialdefs_funcs_mix;
 extern std::string KernelSource_materialdefs_funcs_null;
 extern std::string KernelSource_materialdefs_funcs_roughglass;
 extern std::string KernelSource_materialdefs_funcs_roughmatte_translucent;
 extern std::string KernelSource_materialdefs_funcs_velvet;
-extern std::string KernelSource_material_main_withoutdynamic;
-extern std::string KernelSource_material_main;
+extern std::string KernelSource_material_funcs_evalops;
+extern std::string KernelSource_material_funcs;
 extern std::string KernelSource_sampleresult_funcs;
 extern std::string KernelSource_sceneobject_types;
 extern std::string KernelSource_texture_noise_funcs;
@@ -85,46 +88,60 @@ extern std::string KernelSource_texture_types;
 extern std::string KernelSource_texture_abs_funcs;
 extern std::string KernelSource_texture_bilerp_funcs;
 extern std::string KernelSource_texture_blackbody_funcs;
+extern std::string KernelSource_texture_brick_funcs;
 extern std::string KernelSource_texture_clamp_funcs;
 extern std::string KernelSource_texture_colordepth_funcs;
 extern std::string KernelSource_texture_densitygrid_funcs;
 extern std::string KernelSource_texture_fresnelcolor_funcs;
 extern std::string KernelSource_texture_fresnelconst_funcs;
+extern std::string KernelSource_texture_hitpoint_funcs;
 extern std::string KernelSource_texture_hsv_funcs;
 extern std::string KernelSource_texture_irregulardata_funcs;
+extern std::string KernelSource_texture_others_funcs;
+extern std::string KernelSource_texture_random_funcs;
+extern std::string KernelSource_texture_triplanar_funcs;
 extern std::string KernelSource_texture_funcs;
+extern std::string KernelSource_texture_funcs_evalops;
+extern std::string KernelSource_sampleresult_types;
+extern std::string KernelSource_evalstack_funcs;
 extern std::string KernelSource_pathdepthinfo_types;
+extern std::string KernelSource_pathdepthinfo_funcs;
+extern std::string KernelSource_pathvolumeinfo_types;
+extern std::string KernelSource_pathvolumeinfo_funcs;
+extern std::string KernelSource_pathinfo_types;
+extern std::string KernelSource_pathinfo_funcs;
 extern std::string KernelSource_varianceclamping_funcs;
 extern std::string KernelSource_volume_types;
 extern std::string KernelSource_volume_funcs;
-extern std::string KernelSource_volumeinfo_funcs;
 extern std::string KernelSource_light_types;
 extern std::string KernelSource_light_funcs;
 extern std::string KernelSource_lightstrategy_funcs;
 extern std::string KernelSource_dlsc_types;
 extern std::string KernelSource_dlsc_funcs;
+extern std::string KernelSource_elvc_types;
+extern std::string KernelSource_elvc_funcs;
+extern std::string KernelSource_scene_types;
 extern std::string KernelSource_scene_funcs;
 extern std::string KernelSource_mapping_types;
 extern std::string KernelSource_mapping_funcs;
 extern std::string KernelSource_hitpoint_types;
+extern std::string KernelSource_hitpoint_funcs;
 extern std::string KernelSource_pgic_types;
 extern std::string KernelSource_pgic_funcs;
-
-// This is string is preprocessed in CompiledScene class
-extern std::string KernelSource_materialdefs_template_glossycoating;
-extern std::string KernelSource_materialdefs_template_mix;
+extern std::string KernelSource_pathtracer_types;
 
 // Film and image pipeline kernels
 extern std::string KernelSource_film_mergesamplebuffer_funcs;
 extern std::string KernelSource_plugin_backgroundimg_funcs;
 extern std::string KernelSource_plugin_bloom_funcs;
 extern std::string KernelSource_plugin_cameraresponse_funcs;
+extern std::string KernelSource_plugin_coloraberration_funcs;
 extern std::string KernelSource_plugin_gammacorrection_funcs;
 extern std::string KernelSource_plugin_gaussianblur3x3_funcs;
 extern std::string KernelSource_plugin_objectidmask_funcs;
-extern std::string KernelSource_plugin_vignetting_funcs;
-extern std::string KernelSource_plugin_coloraberration_funcs;
 extern std::string KernelSource_plugin_premultiplyalpha_funcs;
+extern std::string KernelSource_plugin_vignetting_funcs;
+extern std::string KernelSource_plugin_whitebalance_funcs;
 extern std::string KernelSource_tonemap_reduce_funcs;
 extern std::string KernelSource_tonemap_autolinear_funcs;
 extern std::string KernelSource_tonemap_linear_funcs;

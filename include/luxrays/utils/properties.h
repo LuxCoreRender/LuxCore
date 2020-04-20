@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -637,10 +637,11 @@ public:
 	 * - test.prop2
 	 *
 	 * \param prefix of the Property names to return.
+	 * \param sorted if the returned vector should be sorted according last field
 	 *
 	 * \return a vector of Property names.
 	 */
-	std::vector<std::string> GetAllUniqueSubNames(const std::string &prefix) const;
+	std::vector<std::string> GetAllUniqueSubNames(const std::string &prefix, const bool sorted = false) const;
 	/*!
 	 * \brief Returns if there are at least a Property starting for specific prefix.
 	 *

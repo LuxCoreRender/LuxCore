@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -33,13 +33,15 @@ public:
 
 	virtual luxrays::BBox GetBBox() const { return ComputeBBox(orig); }
 	virtual const luxrays::Vector GetDir() const { return dir; }
-	virtual luxrays::Matrix4x4 GetRasterToCameraMatrix(const u_int index = 0) const {
-		return camTrans.rasterToCamera.GetMatrix();
+	virtual const luxrays::Transform &GetRasterToCamera(const u_int index = 0) const {
+		return camTrans.rasterToCamera;
 	}
-	virtual luxrays::Matrix4x4 GetCameraToWorldMatrix(const u_int index = 0) const {
-		return camTrans.cameraToWorld.GetMatrix();
+	virtual const luxrays::Transform &GetCameraToWorld(const u_int index = 0) const {
+		return camTrans.cameraToWorld;
 	}
-
+	virtual const luxrays::Transform &GetScreenToWorld(const u_int index = 0) const {
+		return camTrans.screenToWorld;
+	}
 	// Mostly used by GUIs
 	
 	virtual void Translate(const luxrays::Vector &t) {

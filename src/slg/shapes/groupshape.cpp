@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "luxrays/core/exttrianglemesh.h"
 #include "slg/shapes/groupshape.h"
 #include "slg/scene/scene.h"
 
@@ -24,7 +25,7 @@ using namespace luxrays;
 using namespace slg;
 
 GroupShape::GroupShape(const vector<const ExtTriangleMesh *> &ms, const vector<Transform> &ts) :
-			Shape(), meshes(ms), trans(ts) {
+			meshes(ms), trans(ts) {
 }
 
 GroupShape::~GroupShape() {

@@ -1,7 +1,7 @@
 #line 2 "filmdenoiser_funcs.cl"
 
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -17,8 +17,6 @@
  * See the License for the specific language governing permissions and     *
  * limitations under the License.                                          *
  ***************************************************************************/
-
-#if defined(PARAM_FILM_DENOISER)
 
 OPENCL_FORCE_INLINE void SamplesAccumulator_AtomicAdd(__global float *buff,
 		const uint buffWidth, const uint buffHeight, const uint buffDepth,
@@ -127,6 +125,7 @@ OPENCL_FORCE_INLINE void SamplesAccumulator_AddSampleAtomic(
 }
 
 OPENCL_FORCE_INLINE void FilmDenoiser_AddSample(
+		__constant const Film* restrict film,
 		const uint x, const uint y,
 		__global SampleResult *sampleResult,
 		const float weight,
@@ -135,7 +134,7 @@ OPENCL_FORCE_INLINE void FilmDenoiser_AddSample(
 	if (!filmDenoiserWarmUpDone)
 		return;
 
-	const float3 sample = clamp(SampleResult_GetSpectrum(sampleResult, filmRadianceGroupScale) * filmDenoiserSampleScale,
+	const float3 sample = clamp(SampleResult_GetSpectrum(film,sampleResult, filmRadianceGroupScale) * filmDenoiserSampleScale,
 			0.f, filmDenoiserMaxValue);
 	
 	if (!Spectrum_IsNanOrInf(sample)) {
@@ -147,5 +146,3 @@ OPENCL_FORCE_INLINE void FilmDenoiser_AddSample(
 					FILM_DENOISER_PARAM);
 	}
 }
-
-#endif

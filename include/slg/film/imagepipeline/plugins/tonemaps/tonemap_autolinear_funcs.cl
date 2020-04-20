@@ -1,7 +1,7 @@
 #line 2 "tonemap_autolinear_funcs.cl"
 
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -22,7 +22,7 @@
 // AutoLinearToneMap_Apply
 //------------------------------------------------------------------------------
 
-__kernel __attribute__((work_group_size_hint(256, 1, 1))) void AutoLinearToneMap_Apply(
+__kernel void AutoLinearToneMap_Apply(
 		const uint filmWidth, const uint filmHeight,
 		__global float *channel_IMAGEPIPELINE,
 		const float gamma, __global float *totalRGB) {
@@ -48,13 +48,13 @@ __kernel __attribute__((work_group_size_hint(256, 1, 1))) void AutoLinearToneMap
 // REDUCE_OP & ACCUM_OP (used by tonemap_reduce_funcs.cl)
 //------------------------------------------------------------------------------
 
-float3 REDUCE_OP(const float3 a, const float3 b) {
+OPENCL_FORCE_INLINE float3 REDUCE_OP(const float3 a, const float3 b) {
 	if (Spectrum_IsNanOrInf(b))
 		return a;
 	else
 		return a + b;
 }
 
-float3 ACCUM_OP(const float3 a, const float3 b) {
+OPENCL_FORCE_INLINE float3 ACCUM_OP(const float3 a, const float3 b) {
 	return a + b;
 }

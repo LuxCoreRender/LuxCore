@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -23,7 +23,7 @@
 #include "luxrays/core/geometry/transform.h"
 #include "luxrays/core/randomgen.h"
 #include "luxrays/utils/ocl.h"
-#include "luxrays/core/oclintersectiondevice.h"
+#include "luxrays/devices/ocldevice.h"
 #include "luxrays/kernels/kernels.h"
 
 #include "slg/slg.h"
@@ -73,6 +73,10 @@ void PathOCLOpenCLRenderThread::StartRenderThread() {
 	PathOCLBaseOCLRenderThread::StartRenderThread();
 }
 
+static void PGICUpdateCallBack(CompiledScene *compiledScene) {
+	compiledScene->RecompilePhotonGI();
+}
+
 void PathOCLOpenCLRenderThread::RenderThreadImpl() {
 	//SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Rendering thread started");
 
@@ -107,10 +111,6 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl() {
 		// Rendering loop
 		//----------------------------------------------------------------------
 
-		// I can not use engine->renderConfig->GetProperty() here because the
-		// RenderConfig properties cache is not thread safe
-		const u_int haltDebug = engine->renderConfig->cfg.Get(Property("batch.haltdebug")(0u)).Get<u_int>();
-
 		// The film refresh time target
 		const double targetTime = 0.2; // 200ms
 
@@ -119,6 +119,8 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl() {
 
 		double totalTransferTime = 0.0;
 		double totalKernelTime = 0.0;
+
+		const boost::function<void()> pgicUpdateCallBack = boost::bind(PGICUpdateCallBack, engine->compiledScene);
 
 		while (!boost::this_thread::interruption_requested()) {
 			//if (threadIndex == 0)
@@ -161,7 +163,7 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl() {
 				double totalCount = 0.0;
 				for (size_t i = 0; i < taskCount; ++i)
 					totalCount += gpuTaskStats[i].sampleCount;
-				threadFilms[0]->film->SetSampleCount(totalCount);
+				threadFilms[0]->film->SetSampleCount(totalCount, totalCount, 0.0);
 
 				//SLG_LOG("[DEBUG] film transfered");
 			}
@@ -197,20 +199,27 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl() {
 						"kernel time: " << (timeKernelEnd - timeKernelStart) * 1000.0 << "ms "
 						"iterations: " << iterations << " #"<< taskCount << ")");*/
 
-			// Check if I have to adjust the number of kernel enqueued (only
-			// if haltDebug is not enabled)
-			if (haltDebug == 0u) {
-				if (timeKernelEnd - timeKernelStart > targetTime)
-					iterations = Max<u_int>(iterations - 1, 1);
-				else
-					iterations = Min<u_int>(iterations + 1, 128);
-			}
+			// Check if I have to adjust the number of kernel enqueued
+			if (timeKernelEnd - timeKernelStart > targetTime)
+				iterations = Max<u_int>(iterations - 1, 1);
+			else
+				iterations = Min<u_int>(iterations + 1, 128);
 
 			// Check halt conditions
-			if ((haltDebug > 0u) && (totalIterations >= haltDebug))
-				break;
 			if (engine->film->GetConvergence() == 1.f)
 				break;
+
+			if (engine->photonGICache) {
+				try {
+					if (engine->photonGICache->Update(threadIndex, engine->GetTotalEyeSPP(), pgicUpdateCallBack)) {
+						InitPhotonGI();
+						SetKernelArgs();
+					}
+				} catch (boost::thread_interrupted &ti) {
+					// I have been interrupted, I must stop
+					break;
+				}
+			}
 		}
 
 		//SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Rendering thread halted");
@@ -225,6 +234,14 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl() {
 	oclQueue.finish();
 	
 	threadDone = true;
+
+	// This is done to interrupt thread pending on barrier wait
+	// inside engine->photonGICache->Update(). This can happen when an
+	// halt condition is satisfied.
+	for (u_int i = 0; i < engine->renderOCLThreads.size(); ++i)
+		engine->renderOCLThreads[i]->Interrupt();
+	for (u_int i = 0; i < engine->renderNativeThreads.size(); ++i)
+		engine->renderNativeThreads[i]->Interrupt();
 }
 
 #endif

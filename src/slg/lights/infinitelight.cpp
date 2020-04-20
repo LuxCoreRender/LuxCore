@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -18,9 +18,9 @@
 
 #include <memory>
 
-#include "slg/lights/infinitelight.h"
+#include "slg/bsdf/bsdf.h"
 #include "slg/scene/scene.h"
-#include "slg/lights/visibility/envlightvisibility.h"
+#include "slg/lights/infinitelight.h"
 
 using namespace std;
 using namespace luxrays;
@@ -31,11 +31,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 InfiniteLight::InfiniteLight() :
-	imageMap(NULL), sampleUpperHemisphereOnly(false),
-	visibilityMapWidth(512), visibilityMapHeight(256),
-	visibilityMapSamples(1000000), visibilityMapMaxDepth(4),
-	useVisibilityMap(false), imageMapDistribution(nullptr),
-	visibilityMapCache(nullptr) {
+	imageMap(NULL), imageMapDistribution(nullptr), visibilityMapCache(nullptr) {
 }
 
 InfiniteLight::~InfiniteLight() {
@@ -47,6 +43,8 @@ void InfiniteLight::Preprocess() {
 	const ImageMapStorage *imageMapStorage = imageMap->GetStorage();
 
 	vector<float> data(imageMap->GetWidth() * imageMap->GetHeight());
+	//float maxVal = -INFINITY;
+	//float minVal = INFINITY;
 	for (u_int y = 0; y < imageMap->GetHeight(); ++y) {
 		for (u_int x = 0; x < imageMap->GetWidth(); ++x) {
 			const u_int index = x + y * imageMap->GetWidth();
@@ -55,16 +53,23 @@ void InfiniteLight::Preprocess() {
 				data[index] = 0.f;
 			else
 				data[index] = imageMapStorage->GetFloat(index);
+			
+			//maxVal = Max(data[index], maxVal);
+			//minVal = Min(data[index], minVal);
 		}
 	}
+	
+	//SLG_LOG("InfiniteLight luminance  Max=" << maxVal << " Min=" << minVal);
 
 	imageMapDistribution = new Distribution2D(&data[0], imageMap->GetWidth(), imageMap->GetHeight());
 }
 
-void InfiniteLight::GetPreprocessedData(const Distribution2D **imageMapDistributionData) const {
+void InfiniteLight::GetPreprocessedData(const Distribution2D **imageMapDistributionData,
+		const EnvLightVisibilityCache **elvc) const {
 	if (imageMapDistributionData)
 		*imageMapDistributionData = imageMapDistribution;
-	
+	if (elvc)
+		*elvc = visibilityMapCache;
 }
 
 float InfiniteLight::GetPower(const Scene &scene) const {
@@ -84,9 +89,8 @@ UV InfiniteLight::GetEnvUV(const luxrays::Vector &dir) const {
 }
 
 Spectrum InfiniteLight::GetRadiance(const Scene &scene,
-		const Point &p, const Vector &dir,
-		float *directPdfA,
-		float *emissionPdfW) const {
+		const BSDF *bsdf, const Vector &dir,
+		float *directPdfA, float *emissionPdfW) const {
 	const Vector localDir = Normalize(Inverse(lightToWorld) * -dir);
 
 	float u, v, latLongMappingPdf;
@@ -96,14 +100,10 @@ Spectrum InfiniteLight::GetRadiance(const Scene &scene,
 
 	const float distPdf = imageMapDistribution->Pdf(u, v);
 	if (directPdfA) {
-		if (useVisibilityMapCache) {
-			const Distribution2D *cacheDist = visibilityMapCache->GetVisibilityMap(p);
-			if (cacheDist) {
-				const float cacheDistPdf = cacheDist->Pdf(u, v);
-
-				*directPdfA = cacheDistPdf * latLongMappingPdf;
-			} else
-				*directPdfA = 0.f;
+		if (!bsdf)
+			*directPdfA = 0.f;
+		else if (visibilityMapCache && visibilityMapCache->IsCacheEnabled(*bsdf)) {
+			*directPdfA = visibilityMapCache->Pdf(*bsdf, u, v) * latLongMappingPdf;
 		} else
 			*directPdfA = distPdf * latLongMappingPdf;
 	}
@@ -117,9 +117,10 @@ Spectrum InfiniteLight::GetRadiance(const Scene &scene,
 }
 
 Spectrum InfiniteLight::Emit(const Scene &scene,
-		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
-		Point *orig, Vector *dir,
-		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
+		const float time, const float u0, const float u1,
+		const float u2, const float u3, const float passThroughEvent,
+		Ray &ray, float &emissionPdfW,
+		float *directPdfA, float *cosThetaAtLight) const {
 	float uv[2];
 	float distPdf;
 	imageMapDistribution->SampleContinuous(u0, u1, uv, &distPdf);
@@ -146,12 +147,8 @@ Spectrum InfiniteLight::Emit(const Scene &scene,
 	const Point pDisk = worldCenter + envRadius * (d1 * x + d2 * y);
 	const Point rayOrig = pDisk - envRadius * rayDir;
 
-	// Assign ray origin and direction
-	*orig = rayOrig;
-	*dir = rayDir;
-
 	// Compute InfiniteLight ray weight
-	*emissionPdfW = distPdf * latLongMappingPdf / (M_PI * envRadius * envRadius);
+	emissionPdfW = distPdf * latLongMappingPdf / (M_PI * envRadius * envRadius);
 
 	if (directPdfA)
 		*directPdfA = distPdf * latLongMappingPdf;
@@ -162,23 +159,20 @@ Spectrum InfiniteLight::Emit(const Scene &scene,
 	const Spectrum result = gain * imageMap->GetSpectrum(uv);
 	assert (!result.IsNaN() && !result.IsInf() && !result.IsNeg());
 
+	ray.Update(rayOrig, rayDir, time);
+
 	return result;
 }
 
-Spectrum InfiniteLight::Illuminate(const Scene &scene, const Point &p,
-		const float u0, const float u1, const float passThroughEvent,
-        Vector *dir, float *distance, float *directPdfW,
+Spectrum InfiniteLight::Illuminate(const Scene &scene, const BSDF &bsdf,
+		const float time, const float u0, const float u1, const float passThroughEvent,
+        Ray &shadowRay, float &directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
 	float uv[2];
-	float distPdf;
-	
-	if (useVisibilityMapCache) {
-		const Distribution2D *dist = visibilityMapCache->GetVisibilityMap(p);
-		if (dist)
-			dist->SampleContinuous(u0, u1, uv, &distPdf);
-		else
-			return Spectrum();
-	} else
+	float distPdf;	
+	if (visibilityMapCache && visibilityMapCache->IsCacheEnabled(bsdf))
+		visibilityMapCache->Sample(bsdf, u0, u1, uv, &distPdf);
+	else
 		imageMapDistribution->SampleContinuous(u0, u1, uv, &distPdf);
 	if (distPdf == 0.f)
 		return Spectrum();
@@ -189,28 +183,29 @@ Spectrum InfiniteLight::Illuminate(const Scene &scene, const Point &p,
 	if (latLongMappingPdf == 0.f)
 		return Spectrum();
 
-	*dir = Normalize(lightToWorld * localDir);
-
+	const Vector shadowRayDir = Normalize(lightToWorld * localDir);
+	
 	const Point worldCenter = scene.dataSet->GetBSphere().center;
 	const float envRadius = GetEnvRadius(scene);
 
-	const Vector toCenter(worldCenter - p);
-	const float centerDistance2 = Dot(toCenter, toCenter);
-	const float approach = Dot(toCenter, *dir);
-	*distance = approach + sqrtf(Max(0.f, envRadius * envRadius -
-		centerDistance2 + approach * approach));
+	const Point shadowRayOrig = bsdf.GetRayOrigin(shadowRayDir);
+	const Vector toCenter(worldCenter - shadowRayOrig);
+	const float centerDistanceSquared = Dot(toCenter, toCenter);
+	const float approach = Dot(toCenter, shadowRayDir);
+	const float shadowRayDistance = approach + sqrtf(Max(0.f, envRadius * envRadius -
+		centerDistanceSquared + approach * approach));
 
-	const Point emisPoint(p + (*distance) * (*dir));
+	const Point emisPoint(shadowRayOrig + shadowRayDistance * shadowRayDir);
 	const Normal emisNormal(Normalize(worldCenter - emisPoint));
 
-	const float cosAtLight = Dot(emisNormal, -(*dir));
+	const float cosAtLight = Dot(emisNormal, -shadowRayDir);
 	if (cosAtLight < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 	if (cosThetaAtLight)
 		*cosThetaAtLight = cosAtLight;
 
-	*directPdfW = distPdf * latLongMappingPdf;
-	assert (!isnan(*directPdfW) && !isinf(*directPdfW) && (*directPdfW > 0.f));
+	directPdfW = distPdf * latLongMappingPdf;
+	assert (!isnan(directPdfW) && !isinf(directPdfW) && (directPdfW > 0.f));
 
 	if (emissionPdfW)
 		*emissionPdfW = distPdf * latLongMappingPdf / (M_PI * envRadius * envRadius);
@@ -218,42 +213,27 @@ Spectrum InfiniteLight::Illuminate(const Scene &scene, const Point &p,
 	const Spectrum result = gain * imageMap->GetSpectrum(UV(uv[0], uv[1]));
 	assert (!result.IsNaN() && !result.IsInf() && !result.IsNeg());
 
+	shadowRay = Ray(shadowRayOrig, shadowRayDir, 0.f, shadowRayDistance, time);
+
 	return result;
 }
 
-void InfiniteLight::UpdateVisibilityMap(const Scene *scene) {
-	if (useVisibilityMapCache) {
-		delete visibilityMapCache;
-		visibilityMapCache = nullptr;
+void InfiniteLight::UpdateVisibilityMap(const Scene *scene, const bool useRTMode) {
+	delete visibilityMapCache;
+	visibilityMapCache = nullptr;
 
+	if (useRTMode)
+		return;
+
+	if (useVisibilityMapCache) {
 		// Scale the infinitelight image map to the requested size
 		unique_ptr<ImageMap> luminanceMapImage(imageMap->Copy());
-		// Select luminance
+		// Select the image luminance
 		luminanceMapImage->SelectChannel(ImageMapStorage::WEIGHTED_MEAN);
-		// Scale the image
-		luminanceMapImage->Resize(visibilityMapCacheParams.map.width, visibilityMapCacheParams.map.height);
 
 		visibilityMapCache = new EnvLightVisibilityCache(scene, this,
 				luminanceMapImage.get(), visibilityMapCacheParams);		
 		visibilityMapCache->Build();
-	} else if (useVisibilityMap) {
-		// Scale the infinitelight image map to the requested size
-		unique_ptr<ImageMap> luminanceMapImage(imageMap->Copy());
-		// Select luminance
-		luminanceMapImage->SelectChannel(ImageMapStorage::WEIGHTED_MEAN);
-		// Scale the image
-		luminanceMapImage->Resize(visibilityMapWidth, visibilityMapHeight);
-		
-		EnvLightVisibility envLightVisibilityMapBuilder(scene, this,
-				luminanceMapImage.get(), sampleUpperHemisphereOnly,
-				visibilityMapWidth, visibilityMapHeight,
-				visibilityMapSamples, visibilityMapMaxDepth);
-		
-		Distribution2D *newDist = envLightVisibilityMapBuilder.Build();
-		if (newDist) {
-			delete imageMapDistribution;
-			imageMapDistribution = newDist;
-		}
 	}
 }
 
@@ -268,11 +248,6 @@ Properties InfiniteLight::ToProperties(const ImageMapCache &imgMapCache, const b
 	props.Set(imageMap->ToProperties(prefix, false));
 	props.Set(Property(prefix + ".gamma")(1.f));
 	props.Set(Property(prefix + ".sampleupperhemisphereonly")(sampleUpperHemisphereOnly));
-	props.Set(Property(prefix + ".visibilitymap.enable")(useVisibilityMap));
-	props.Set(Property(prefix + ".visibilitymap.width")(visibilityMapWidth));
-	props.Set(Property(prefix + ".visibilitymap.height")(visibilityMapHeight));
-	props.Set(Property(prefix + ".visibilitymap.samples")(visibilityMapSamples));
-	props.Set(Property(prefix + ".visibilitymap.maxdepth")(visibilityMapMaxDepth));
 
 	props.Set(Property(prefix + ".visibilitymapcache.enable")(useVisibilityMapCache));
 	if (useVisibilityMapCache)

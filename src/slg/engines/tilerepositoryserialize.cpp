@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -41,9 +41,6 @@ namespace slg {
 // Explicit instantiations for portable archives
 template void Tile::serialize(LuxOutputArchive &ar, const unsigned int version);
 template void Tile::serialize(LuxInputArchive &ar, const unsigned int version);
-// Explicit instantiations for polymorphic archives
-template void Tile::serialize(boost::archive::polymorphic_oarchive &ar, const u_int version);
-template void Tile::serialize(boost::archive::polymorphic_iarchive &ar, const u_int version);
 }
 
 //------------------------------------------------------------------------------
@@ -65,11 +62,11 @@ template<class Archive> void Tile::load(Archive &ar, const u_int version) {
 
 	ar & allPassFilm;
 	// Disable OpenCL
-	allPassFilm->oclEnable = false;
+	allPassFilm->hwEnable = false;
 
 	ar & evenPassFilm;
 	// Disable OpenCL
-	evenPassFilm->oclEnable = false;
+	evenPassFilm->hwEnable = false;
 
 	ar & allPassFilmTotalYValue;
 	ar & hasEnoughWarmUpSample;
@@ -91,9 +88,6 @@ namespace slg {
 // Explicit instantiations for portable archives
 template void Tile::save(LuxOutputArchive &ar, const u_int version) const;
 template void Tile::load(LuxInputArchive &ar, const u_int version);
-// Explicit instantiations for polymorphic archives
-template void Tile::save(boost::archive::polymorphic_oarchive &ar, const u_int version) const;
-template void Tile::load(boost::archive::polymorphic_iarchive &ar, const u_int version);
 }
 
 //------------------------------------------------------------------------------
@@ -107,7 +101,6 @@ template<class Archive> void TileRepository::load(Archive &ar, const u_int versi
 
 	ar & tileWidth;
 	ar & tileHeight;
-	ar & maxPassCount;
 	ar & convergenceTestThreshold;
 	ar & convergenceTestThresholdReduction;
 	ar & convergenceTestWarmUpSamples;
@@ -144,7 +137,6 @@ template<class Archive> void TileRepository::save(Archive &ar, const u_int versi
 
 	ar & tileWidth;
 	ar & tileHeight;
-	ar & maxPassCount;
 	ar & convergenceTestThreshold;
 	ar & convergenceTestThresholdReduction;
 	ar & convergenceTestWarmUpSamples;
@@ -174,7 +166,4 @@ namespace slg {
 // Explicit instantiations for portable archives
 template void TileRepository::save(LuxOutputArchive &ar, const u_int version) const;
 template void TileRepository::load(LuxInputArchive &ar, const unsigned int version);
-// Explicit instantiations for polymorphic archives
-template void TileRepository::save(boost::archive::polymorphic_oarchive &ar, const u_int version) const;
-template void TileRepository::load(boost::archive::polymorphic_iarchive &ar, const u_int version);
 }

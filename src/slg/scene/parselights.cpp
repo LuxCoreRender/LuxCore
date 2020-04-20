@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -242,11 +242,8 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 		sl->SetIndirectSpecularVisibility(props.Get(Property(propName + ".visibility.indirect.specular.enable")(true)).Get<bool>());
 
 		// Visibility map related options
-		sl->useVisibilityMap = props.Get(Property(propName + ".visibilitymap.enable")(true)).Get<bool>();
-		sl->visibilityMapWidth = props.Get(Property(propName + ".visibilitymap.width")(512)).Get<u_int>();
-		sl->visibilityMapHeight = props.Get(Property(propName + ".visibilitymap.height")(256)).Get<u_int>();
-		sl->visibilityMapSamples = props.Get(Property(propName + ".visibilitymap.samples")(1000000)).Get<u_int>();
-		sl->visibilityMapMaxDepth = Max(props.Get(Property(propName + ".visibilitymap.maxdepth")(4)).Get<u_int>(), 1u);
+		sl->distributionWidth = props.Get(Property(propName + ".distribution.width")(512)).Get<u_int>();
+		sl->distributionHeight = props.Get(Property(propName + ".distribution.height")(256)).Get<u_int>();
 
 		// Visibility map cache related options
 		sl->useVisibilityMapCache = props.Get(Property(propName + ".visibilitymapcache.enable")(false)).Get<bool>();
@@ -274,13 +271,6 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 		il->SetIndirectDiffuseVisibility(props.Get(Property(propName + ".visibility.indirect.diffuse.enable")(true)).Get<bool>());
 		il->SetIndirectGlossyVisibility(props.Get(Property(propName + ".visibility.indirect.glossy.enable")(true)).Get<bool>());
 		il->SetIndirectSpecularVisibility(props.Get(Property(propName + ".visibility.indirect.specular.enable")(true)).Get<bool>());
-
-		// Visibility map related options
-		il->useVisibilityMap = props.Get(Property(propName + ".visibilitymap.enable")(true)).Get<bool>();
-		il->visibilityMapWidth = props.Get(Property(propName + ".visibilitymap.width")(512)).Get<u_int>();
-		il->visibilityMapHeight = props.Get(Property(propName + ".visibilitymap.height")(256)).Get<u_int>();
-		il->visibilityMapSamples = props.Get(Property(propName + ".visibilitymap.samples")(1000000)).Get<u_int>();
-		il->visibilityMapMaxDepth = Max(props.Get(Property(propName + ".visibilitymap.maxdepth")(4)).Get<u_int>(), 1u);
 
 		// Visibility map cache related options
 		il->useVisibilityMapCache = props.Get(Property(propName + ".visibilitymapcache.enable")(false)).Get<bool>();
@@ -312,6 +302,7 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 		pl->localPos = props.Get(Property(propName + ".position")(Point())).Get<Point>();
 		pl->color = props.Get(Property(propName + ".color")(Spectrum(1.f))).Get<Spectrum>();
 		pl->power = Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>());
+		pl->emittedPowerNormalize = props.Get(Property(propName + ".normalizebycolor")(true)).Get<bool>();
 		pl->efficency = Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>());
 
 		lightSource = pl;
@@ -329,6 +320,7 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 		mpl->imageMap = map;
 		mpl->color = props.Get(Property(propName + ".color")(Spectrum(1.f))).Get<Spectrum>();
 		mpl->power = Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>());
+		mpl->emittedPowerNormalize = props.Get(Property(propName + ".normalizebycolor")(true)).Get<bool>();
 		mpl->efficency = Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>());
 
 		lightSource = mpl;
@@ -342,6 +334,7 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 		sl->radius = Max(0.f, props.Get(Property(propName + ".radius")(1.f)).Get<float>());
 		sl->color = props.Get(Property(propName + ".color")(Spectrum(1.f))).Get<Spectrum>();
 		sl->power = Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>());
+		sl->emittedPowerNormalize = props.Get(Property(propName + ".normalizebycolor")(true)).Get<bool>();
 		sl->efficency = Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>());
 
 		lightSource = sl;
@@ -360,6 +353,7 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 		msl->imageMap = map;
 		msl->color = props.Get(Property(propName + ".color")(Spectrum(1.f))).Get<Spectrum>();
 		msl->power = Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>());
+		msl->emittedPowerNormalize = props.Get(Property(propName + ".normalizebycolor")(true)).Get<bool>();
 		msl->efficency = Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>());
 
 		lightSource = msl;
@@ -375,6 +369,7 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 		sl->coneDeltaAngle = Max(0.f, props.Get(Property(propName + ".conedeltaangle")(5.f)).Get<float>());
 		sl->color = props.Get(Property(propName + ".color")(Spectrum(1.f))).Get<Spectrum>();
 		sl->power = Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>());
+		sl->emittedPowerNormalize = props.Get(Property(propName + ".normalizebycolor")(true)).Get<bool>();
 		sl->efficency = Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>());
 
 		lightSource = sl;
@@ -396,6 +391,7 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 		pl->localPos = props.Get(Property(propName + ".position")(Point())).Get<Point>();
 		pl->localTarget = props.Get(Property(propName + ".target")(Point(0.f, 0.f, 1.f))).Get<Point>();
 		pl->power = Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>());
+		pl->emittedPowerNormalize = props.Get(Property(propName + ".normalizebycolor")(true)).Get<bool>();
 		pl->efficency = Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>());
 		pl->imageMap = imgMap;
 		pl->fov = Max(0.f, props.Get(Property(propName + ".fov")(45.f)).Get<float>());
@@ -412,6 +408,7 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 		ll->radius = Max(0.f, props.Get(Property(propName + ".radius")(.01f)).Get<float>());
 		ll->color = props.Get(Property(propName + ".color")(Spectrum(1.f))).Get<Spectrum>();
 		ll->power = Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>());
+		ll->emittedPowerNormalize = props.Get(Property(propName + ".normalizebycolor")(true)).Get<bool>();
 		ll->efficency = Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>());
 
 		lightSource = ll;
@@ -422,13 +419,6 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 		cil->SetIndirectDiffuseVisibility(props.Get(Property(propName + ".visibility.indirect.diffuse.enable")(true)).Get<bool>());
 		cil->SetIndirectGlossyVisibility(props.Get(Property(propName + ".visibility.indirect.glossy.enable")(true)).Get<bool>());
 		cil->SetIndirectSpecularVisibility(props.Get(Property(propName + ".visibility.indirect.specular.enable")(true)).Get<bool>());
-
-		// Visibility map related options
-		cil->useVisibilityMap = props.Get(Property(propName + ".visibilitymap.enable")(true)).Get<bool>();
-		cil->visibilityMapWidth = props.Get(Property(propName + ".visibilitymap.width")(512)).Get<u_int>();
-		cil->visibilityMapHeight = props.Get(Property(propName + ".visibilitymap.height")(256)).Get<u_int>();
-		cil->visibilityMapSamples = props.Get(Property(propName + ".visibilitymap.samples")(1000000)).Get<u_int>();
-		cil->visibilityMapMaxDepth = Max(props.Get(Property(propName + ".visibilitymap.maxdepth")(4)).Get<u_int>(), 1u);
 
 		// Visibility map cache related options
 		cil->useVisibilityMapCache = props.Get(Property(propName + ".visibilitymapcache.enable")(false)).Get<bool>();

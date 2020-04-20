@@ -1,7 +1,7 @@
 #line 2 "texture_bilerp_funcs.cl"
 
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -22,23 +22,21 @@
 // Bilerp texture
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_ENABLE_TEX_BILERP)
-
-OPENCL_FORCE_INLINE float BilerpTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+OPENCL_FORCE_INLINE float BilerpTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
 		const float v00, const float v01, const float v10, const float v11) {
-	float2 uv = VLOAD2F(&hitPoint->uv.u);
+	float2 uv = VLOAD2F(&hitPoint->defaultUV.u);
 	uv.x -= Floor2Int(uv.x);
 	uv.y -= Floor2Int(uv.y);
+
 	return lerp(uv.x, lerp(uv.y, v00, v01), lerp(uv.y, v10, v11));
 }
 
-OPENCL_FORCE_INLINE float3 BilerpTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+OPENCL_FORCE_INLINE float3 BilerpTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
 		const float3 v00, const float3 v01, const float3 v10, const float3 v11) {
-	float2 uv = VLOAD2F(&hitPoint->uv.u);
+	float2 uv = VLOAD2F(&hitPoint->defaultUV.u);
 	uv.x -= Floor2Int(uv.x);
 	uv.y -= Floor2Int(uv.y);
+
 	return lerp(uv.x, lerp(uv.y, v00, v01), lerp(uv.y, v10, v11));
 }
-
-#endif
 

@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -27,6 +27,8 @@ namespace slg {
 // TriangleLight implementation
 //------------------------------------------------------------------------------
 
+class SceneObject;
+	
 class TriangleLight : public IntersectableLightSource {
 public:
 	TriangleLight();
@@ -45,13 +47,14 @@ public:
 	virtual float GetPower(const Scene &scene) const;
 
 	virtual luxrays::Spectrum Emit(const Scene &scene,
-		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
-		luxrays::Point *pos, luxrays::Vector *dir,
-		float *emissionPdfW, float *directPdfA = NULL, float *cosThetaAtLight = NULL) const;
+		const float time, const float u0, const float u1,
+		const float u2, const float u3, const float passThroughEvent,
+		luxrays::Ray &ray, float &emissionPdfW,
+		float *directPdfA = NULL, float *cosThetaAtLight = NULL) const;
 
-	virtual luxrays::Spectrum Illuminate(const Scene &scene, const luxrays::Point &p,
-		const float u0, const float u1, const float passThroughEvent,
-        luxrays::Vector *dir, float *distance, float *directPdfW,
+    virtual luxrays::Spectrum Illuminate(const Scene &scene, const BSDF &bsdf,
+		const float time, const float u0, const float u1, const float passThroughEvent,
+        luxrays::Ray &shadowRay, float &directPdfW,
 		float *emissionPdfW = NULL, float *cosThetaAtLight = NULL) const;
 
 	virtual bool IsAlwaysInShadow(const Scene &scene,
@@ -61,9 +64,9 @@ public:
 			float *directPdfA = NULL,
 			float *emissionPdfW = NULL) const;
 
-	const luxrays::ExtMesh *mesh;
-	u_int triangleIndex;
-	u_int objectID;
+	const SceneObject *sceneObject;
+	// Note: meshIndex is initialized in LightSourceDefinitions::Preprocess()
+	u_int meshIndex, triangleIndex;
 	
 private:
 	float triangleArea, invTriangleArea;

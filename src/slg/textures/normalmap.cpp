@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -55,7 +55,7 @@ Properties NormalMapTexture::ToProperties(const ImageMapCache &imgMapCache, cons
 	
 	const string name = GetName();
 	props.Set(Property("scene.textures." + name + ".type")("normalmap"));
-	props.Set(Property("scene.textures." + name + ".texture")(tex->GetName()));
+	props.Set(Property("scene.textures." + name + ".texture")(tex->GetSDLValue()));
 	props.Set(Property("scene.textures." + name + ".scale")(scale));
 
 	return props;

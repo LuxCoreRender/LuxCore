@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -33,7 +33,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 TilePathNativeRenderThread::TilePathNativeRenderThread(const u_int index,
-	NativeThreadIntersectionDevice *device, TilePathOCLRenderEngine *re) : 
+	NativeIntersectionDevice *device, TilePathOCLRenderEngine *re) : 
 	PathOCLBaseNativeRenderThread(index, device, re) {
 	tileFilm = NULL;
 }
@@ -78,15 +78,15 @@ void TilePathNativeRenderThread::RenderThreadImpl() {
 
 	// Setup the sampler
 	Sampler *genericSampler = engine->renderConfig->AllocSampler(rndGen,
-			engine->film, NULL, NULL);
-	genericSampler->RequestSamples(pathTracer.sampleSize);
+			engine->film, NULL, NULL, Properties());
+	genericSampler->RequestSamples(PIXEL_NORMALIZED_ONLY, pathTracer.eyeSampleSize);
 
 	TilePathSampler *sampler = dynamic_cast<TilePathSampler *>(genericSampler);
 	sampler->SetAASamples(engine->aaSamples);
 
 	// Initialize SampleResult
 	vector<SampleResult> sampleResults(1);
-	pathTracer.InitSampleResults(engine->film, sampleResults);
+	PathTracer::InitEyeSampleResults(engine->film, sampleResults);
 
 	//--------------------------------------------------------------------------
 	// Extract the tile to render
@@ -121,7 +121,7 @@ void TilePathNativeRenderThread::RenderThreadImpl() {
 			for (u_int x = 0; x < tileWork.GetCoord().width && !interruptionRequested; ++x) {
 				for (u_int sampleY = 0; sampleY < engine->aaSamples; ++sampleY) {
 					for (u_int sampleX = 0; sampleX < engine->aaSamples; ++sampleX) {
-						pathTracer.RenderSample(intersectionDevice, engine->renderConfig->scene,
+						pathTracer.RenderEyeSample(intersectionDevice, engine->renderConfig->scene,
 								engine->film, sampler, sampleResults);
 
 						sampler->NextSample(sampleResults);
@@ -135,11 +135,29 @@ void TilePathNativeRenderThread::RenderThreadImpl() {
 #endif
 			}
 		}
+
+		if (engine->photonGICache) {
+			try {
+				const u_int spp = engine->film->GetTotalEyeSampleCount() / engine->film->GetPixelCount();
+				engine->photonGICache->Update(engine->renderOCLThreads.size() + threadIndex, spp);
+			} catch (boost::thread_interrupted &ti) {
+				// I have been interrupted, I must stop
+				break;
+			}
+		}
 	}
 
 	delete rndGen;
 
 	threadDone = true;
+
+	// This is done to interrupt thread pending on barrier wait
+	// inside engine->photonGICache->Update(). This can happen when an
+	// halt condition is satisfied.
+	for (u_int i = 0; i < engine->renderOCLThreads.size(); ++i)
+		engine->renderOCLThreads[i]->Interrupt();
+	for (u_int i = 0; i < engine->renderNativeThreads.size(); ++i)
+		engine->renderNativeThreads[i]->Interrupt();
 
 	//SLG_LOG("[TilePathNativeRenderThread::" << threadIndex << "] Rendering thread halted");
 }

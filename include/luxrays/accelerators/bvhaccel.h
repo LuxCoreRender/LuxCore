@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -36,8 +36,7 @@ public:
 	virtual ~BVHAccel();
 
 	virtual AcceleratorType GetType() const { return ACCEL_BVH; }
-	virtual OpenCLKernels *NewOpenCLKernels(OpenCLIntersectionDevice *device,
-		const u_int kernelCount) const;
+	virtual OpenCLKernel *NewOpenCLKernel(OpenCLIntersectionDevice *device) const;
 	virtual void Init(const std::deque<const Mesh *> &meshes,
 		const u_longlong totalVertexCount,
 		const u_longlong totalTriangleCount);
@@ -48,8 +47,8 @@ public:
 
 	friend class MBVHAccel;
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-	friend class OpenCLBVHKernels;
-	friend class OpenCLMBVHKernels;
+	friend class OpenCLBVHKernel;
+	friend class OpenCLMBVHKernel;
 #endif
 
 private:

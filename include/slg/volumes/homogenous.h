@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -49,7 +49,7 @@ public:
 	virtual luxrays::Spectrum Sample(const HitPoint &hitPoint,
 		const luxrays::Vector &localFixedDir, luxrays::Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
-		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
+		float *pdfW, BSDFEvent *event, const BSDFEvent eventHint) const;
 	virtual void Pdf(const HitPoint &hitPoint,
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const;

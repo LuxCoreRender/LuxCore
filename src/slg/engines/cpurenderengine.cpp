@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -101,23 +101,19 @@ void CPURenderThread::WaitForDone() const {
 //------------------------------------------------------------------------------
 
 CPURenderEngine::CPURenderEngine(const RenderConfig *cfg) : RenderEngine(cfg) {
-	const size_t renderThreadCount =  Max<u_longlong>(1, cfg->cfg.Get(GetDefaultProps().Get("native.threads.count")).Get<u_longlong>());
+	// I have to use u_int because Property::Get<size_t>() is not defined
+	const size_t renderThreadCount =  Max<u_int>(1u, cfg->cfg.Get(GetDefaultProps().Get("native.threads.count")).Get<u_int>());
 
 	//--------------------------------------------------------------------------
 	// Allocate devices
 	//--------------------------------------------------------------------------
 
 	vector<DeviceDescription *>  devDescs = ctx->GetAvailableDeviceDescriptions();
-	DeviceDescription::Filter(DEVICE_TYPE_NATIVE_THREAD, devDescs);
+	DeviceDescription::Filter(DEVICE_TYPE_NATIVE, devDescs);
 	devDescs.resize(1);
 
 	selectedDeviceDescs.resize(renderThreadCount, devDescs[0]);
 	intersectionDevices = ctx->AddIntersectionDevices(selectedDeviceDescs);
-
-	for (size_t i = 0; i < intersectionDevices.size(); ++i) {
-		// Disable the support for hybrid rendering in order to not waste resources
-		intersectionDevices[i]->SetDataParallelSupport(false);
-	}
 
 	//--------------------------------------------------------------------------
 	// Setup render threads array
@@ -229,6 +225,12 @@ void CPUNoTileRenderEngine::StopLockLess() {
 
 	delete samplerSharedData;
 	samplerSharedData = NULL;
+}
+
+void CPUNoTileRenderEngine::EndSceneEditLockLess(const EditActionList &editActions) {
+	samplerSharedData->Reset();
+
+	CPURenderEngine::EndSceneEditLockLess(editActions);
 }
 
 void CPUNoTileRenderEngine::UpdateFilmLockLess() {

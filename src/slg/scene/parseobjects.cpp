@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -22,6 +22,10 @@
 using namespace std;
 using namespace luxrays;
 using namespace slg;
+
+namespace slg {
+atomic<u_int> defaultObjectIDIndex(0);
+}
 
 void Scene::ParseObjects(const Properties &props) {
 	vector<string> objKeys = props.GetAllUniqueSubNames("scene.objects");
@@ -53,9 +57,10 @@ void Scene::ParseObjects(const Properties &props) {
 		}
 
 		// In order to have harlequin colors with OBJECT_ID output
-		const u_int objID = ((u_int)(RadicalInverse(objDefs.GetSize() + 1, 2) * 255.f + .5f)) |
-				(((u_int)(RadicalInverse(objDefs.GetSize() + 1, 3) * 255.f + .5f)) << 8) |
-				(((u_int)(RadicalInverse(objDefs.GetSize() + 1, 5) * 255.f + .5f)) << 16);
+		const u_int index = defaultObjectIDIndex++;
+		const u_int objID = ((u_int)(RadicalInverse(index + 1, 2) * 255.f + .5f)) |
+				(((u_int)(RadicalInverse(index + 1, 3) * 255.f + .5f)) << 8) |
+				(((u_int)(RadicalInverse(index + 1, 5) * 255.f + .5f)) << 16);
 		SceneObject *obj = CreateObject(objID, objName, props);
 		objDefs.DefineSceneObject(obj);
 
@@ -174,9 +179,32 @@ SceneObject *Scene::CreateObject(const u_int defaultObjID, const string &objName
 	SceneObject *scnObj = new SceneObject(mesh, mat, objID, cameraInvisible);
 	scnObj->SetName(objName);
 
+	if (props.IsDefined(propName + ".bake.combined.file")) {
+		ImageMap *imgMap = ImageMap::FromProperties(props, propName + ".bake.combined");
+
+		// Add the image map to the cache
+		const string name ="LUXCORE_BAKEMAP_COMBINED_" + propName;
+		imgMap->SetName(name);
+		imgMapCache.DefineImageMap(imgMap);
+
+		const u_int uvIndex = Clamp(props.Get(Property(propName + ".bake.combined.uvindex")(0)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
+
+		scnObj->SetBakeMap(imgMap, COMBINED, uvIndex);
+	} else if (props.IsDefined(propName + ".bake.lightmap.file")) {
+		ImageMap *imgMap = ImageMap::FromProperties(props, propName + ".bake.lightmap");
+
+		// Add the image map to the cache
+		const string name ="LUXCORE_BAKEMAP_LIGHTMAP_" + propName;
+		imgMap->SetName(name);
+		imgMapCache.DefineImageMap(imgMap);
+
+		const u_int uvIndex = Clamp(props.Get(Property(propName + ".bake.lightmap.uvindex")(0)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
+
+		scnObj->SetBakeMap(imgMap, LIGHTMAP, uvIndex);
+	}
+
 	return scnObj;
 }
-
 
 void Scene::DuplicateObject(const std::string &srcObjName, const std::string &dstObjName,
 		const luxrays::Transform &trans, const u_int dstObjID) {

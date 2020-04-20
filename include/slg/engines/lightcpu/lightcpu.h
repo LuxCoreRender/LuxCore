@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -21,6 +21,7 @@
 
 #include "slg/slg.h"
 #include "slg/engines/cpurenderengine.h"
+#include "slg/engines/pathtracer.h"
 #include "slg/samplers/sampler.h"
 #include "slg/film/film.h"
 #include "slg/film/filmsamplesplatter.h"
@@ -45,20 +46,6 @@ private:
 	virtual boost::thread *AllocRenderThread() { return new boost::thread(&LightCPURenderThread::RenderFunc, this); }
 
 	void RenderFunc();
-
-	void ConnectToEye(const float time, const float u0, const LightSource &light,
-			const BSDF &bsdf, const luxrays::Point &lensPoint, const luxrays::Spectrum &flux,
-			PathVolumeInfo volInfo, std::vector<SampleResult> &sampleResults);
-	void TraceEyePath(const float time, Sampler *sampler,
-			PathVolumeInfo volInfo,	std::vector<SampleResult> &sampleResults);
-
-	SampleResult &AddResult(std::vector<SampleResult> &sampleResults, const bool fromLight) const;
-	
-	// Used to offset Sampler data
-	static const u_int sampleBootSize = 13;
-	static const u_int sampleEyeStepSize = 3;
-	static const u_int sampleLightStepSize = 5;
-
 };
 
 class LightCPURenderEngine : public CPUNoTileRenderEngine {
@@ -80,17 +67,6 @@ public:
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
 	static RenderEngine *FromProperties(const RenderConfig *rcfg);
 
-	// Signed because of the delta parameter
-	int maxPathDepth;
-
-	int rrDepth;
-	float rrImportanceCap;
-
-	// Clamping settings
-	float sqrtVarianceClampMaxValue;
-
-	bool forceBlackBackground;
-
 	friend class LightCPURenderThread;
 
 protected:
@@ -100,13 +76,13 @@ protected:
 	virtual void StartLockLess();
 	virtual void StopLockLess();
 
-private:
 	CPURenderThread *NewRenderThread(const u_int index,
 			luxrays::IntersectionDevice *device) {
 		return new LightCPURenderThread(this, index, device);
 	}
 
 	FilmSampleSplatter *sampleSplatter;
+	PathTracer pathTracer;
 };
 
 }

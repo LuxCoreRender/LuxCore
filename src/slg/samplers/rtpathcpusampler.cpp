@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -41,7 +41,12 @@ RTPathCPUSamplerSharedData::RTPathCPUSamplerSharedData(Film *film) :
 }
 
 void RTPathCPUSamplerSharedData::Reset(Film *film) {
-	const u_int *subRegion = film->GetSubRegion();
+	engineFilm = film;
+	Reset();	
+}
+
+void RTPathCPUSamplerSharedData::Reset() {
+	const u_int *subRegion = engineFilm->GetSubRegion();
 
 	// Check if something has changed
 	if ((filmSubRegion[0] != subRegion[0]) || (filmSubRegion[1] != subRegion[1]) ||
@@ -89,7 +94,7 @@ SamplerSharedData *RTPathCPUSamplerSharedData::FromProperties(const Properties &
 RTPathCPUSampler::RTPathCPUSampler(luxrays::RandomGenerator *rnd, Film *flm,
 			const FilmSampleSplatter *flmSplatter,
 			RTPathCPUSamplerSharedData *samplerSharedData) :
-			Sampler(rnd, flm, flmSplatter), sharedData(samplerSharedData) {
+			Sampler(rnd, flm, flmSplatter, true), sharedData(samplerSharedData) {
 	film = flm;
 	// Disable denoiser statistics collection
 	film->GetDenoiser().SetEnabled(false);
@@ -127,7 +132,7 @@ void RTPathCPUSampler::NextPixel() {
 		if (currentX >= sharedData->filmSubRegionWidth) {
 			// This should be done as atomic operation but it is only for statistics
 			// (adding the effective number of samples rendered, not the pixels count)
-			film->AddSampleCount(sharedData->filmSubRegionWidth / (double)engine->zoomFactor);
+			film->AddSampleCount(threadIndex, sharedData->filmSubRegionWidth / (double)engine->zoomFactor, 0.0);
 			currentX = 0;
 			myStep = sharedData->step.fetch_add(1);
 			currentY = (myStep * engine->zoomFactor) % frameHeight;
@@ -157,7 +162,7 @@ void RTPathCPUSampler::NextPixel() {
 
 			if ((currentY >= sharedData->filmSubRegionHeight) || (linesDone == engine->zoomFactor)) {
 				// This should be done as atomic operation but it is only for statistics
-				film->AddSampleCount(sharedData->filmSubRegionWidth * linesDone);
+				film->AddSampleCount(threadIndex, sharedData->filmSubRegionWidth * linesDone, 0.0);
 
 				myStep = sharedData->step.fetch_add(1);
 				currentY = (myStep * engine->zoomFactor) % frameHeight;
@@ -168,6 +173,8 @@ void RTPathCPUSampler::NextPixel() {
 }
 
 float RTPathCPUSampler::GetSample(const u_int index) {
+	assert (index < requestedSamples);
+
 	float u;
 	switch (index) {
 		case 0: {

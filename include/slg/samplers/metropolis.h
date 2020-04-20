@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -40,13 +40,16 @@ public:
 	MetropolisSamplerSharedData();
 	virtual ~MetropolisSamplerSharedData() { }
 
+	virtual void Reset();
+
 	static SamplerSharedData *FromProperties(const luxrays::Properties &cfg,
 			luxrays::RandomGenerator *rndGen, Film *film);
 
 	// I'm storing totalLuminance and sampleCount on shared variables
 	// in order to have far more accurate estimation in the image mean intensity
 	// computation
-	double totalLuminance, sampleCount;
+	float totalLuminance;
+	u_int sampleCount, noBlackSampleCount;
 };
 
 //------------------------------------------------------------------------------
@@ -60,14 +63,14 @@ typedef enum {
 class MetropolisSampler : public Sampler {
 public:
 	MetropolisSampler(luxrays::RandomGenerator *rnd, Film *film,
-			const FilmSampleSplatter *flmSplatter, const u_int maxRej,
-			const float pLarge, const float imgRange,
+			const FilmSampleSplatter *flmSplatter, const bool imgSamplesEnable,
+			const u_int maxRej, const float pLarge, const float imgRange,
 			MetropolisSamplerSharedData *samplerSharedData);
 	virtual ~MetropolisSampler();
 
 	virtual SamplerType GetType() const { return GetObjectType(); }
 	virtual std::string GetTag() const { return GetObjectTag(); }
-	virtual void RequestSamples(const u_int size);
+	virtual void RequestSamples(const SampleType sampleType, const u_int size);
 
 	virtual float GetSample(const u_int index);
 	virtual void NextSample(const std::vector<SampleResult> &sampleResults);
@@ -77,6 +80,8 @@ public:
 
 	virtual luxrays::Properties ToProperties() const;
 
+	u_int GetLargeMutationCount() const { return largeMutationCount; }
+	
 	//--------------------------------------------------------------------------
 	// Static methods used by SamplerRegistry
 	//--------------------------------------------------------------------------
@@ -97,7 +102,6 @@ private:
 	u_int maxRejects;
 	float largeMutationProbability, imageMutationRange;
 
-	u_int sampleSize;
 	float *samples;
 	u_int *sampleStamps;
 
@@ -116,6 +120,8 @@ private:
 	MetropolisSampleType lastSampleAcceptance;
 	float lastSampleWeight;
 
+	u_int largeMutationCount;
+	
 	bool isLargeMutation, cooldown;
 };
 

@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -28,6 +28,7 @@
 #include "slg/engines/pathoclbase/compiledscene.h"
 #include "slg/engines/caches/photongi/photongicache.h"
 #include "slg/kernels/kernels.h"
+#include "slg/engines/pathtracer.h"
 
 using namespace std;
 using namespace luxrays;
@@ -36,6 +37,8 @@ using namespace slg;
 void CompiledScene::CompilePhotonGI() {
 	pgicRadiancePhotons.clear();
 	pgicRadiancePhotons.shrink_to_fit();
+	pgicRadiancePhotonsValues.clear();
+	pgicRadiancePhotonsValues.shrink_to_fit();
 
 	pgicRadiancePhotonsBVHArrayNode.clear();
 	pgicRadiancePhotonsBVHArrayNode.shrink_to_fit();
@@ -46,31 +49,70 @@ void CompiledScene::CompilePhotonGI() {
 	pgicCausticPhotonsBVHArrayNode.clear();
 	pgicCausticPhotonsBVHArrayNode.shrink_to_fit();
 
+	compiledPathTracer.pgic.indirectEnabled = false;
+	compiledPathTracer.pgic.causticEnabled = false;
+
+	const PhotonGICache *photonGICache = pathTracer->GetPhotonGICache();
 	if (!photonGICache)
 		return;
-	
+
 	wasPhotonGICompiled = true;
-	pgicDebugType = photonGICache->GetDebugType();
-	
+	switch (photonGICache->GetDebugType()) {
+		case PGIC_DEBUG_NONE:
+			compiledPathTracer.pgic.debugType = slg::ocl::PGIC_DEBUG_NONE;
+			break;
+		case PGIC_DEBUG_SHOWINDIRECT:
+			compiledPathTracer.pgic.debugType = slg::ocl::PGIC_DEBUG_SHOWINDIRECT;
+			break;
+		case PGIC_DEBUG_SHOWCAUSTIC:
+			compiledPathTracer.pgic.debugType = slg::ocl::PGIC_DEBUG_SHOWCAUSTIC;
+			break;
+		case PGIC_DEBUG_SHOWINDIRECTPATHMIX:
+			compiledPathTracer.pgic.debugType = slg::ocl::PGIC_DEBUG_SHOWINDIRECTPATHMIX;
+			break;
+		default:
+			throw runtime_error("Unknown PhotonGI debug type in CompiledScene::CompilePhotonGI(): " + boost::lexical_cast<string>(photonGICache->GetDebugType()));
+	}
+
+	compiledPathTracer.pgic.glossinessUsageThreshold = photonGICache->GetParams().glossinessUsageThreshold;
+
 	//--------------------------------------------------------------------------
 	// Indirect cache
 	//--------------------------------------------------------------------------
 
 	if (photonGICache->IsIndirectEnabled()) {
 		SLG_LOG("Compile PhotonGI indirect cache");
+		compiledPathTracer.pgic.indirectEnabled = true;
 
 		// Compile radiance photons
 
 		const std::vector<RadiancePhoton> &radiancePhotons = photonGICache->GetRadiancePhotons();
 		if (radiancePhotons.size() > 0) {
 			pgicRadiancePhotons.resize(radiancePhotons.size());
+
+			pgicLightGroupCounts = 1;
+			for (auto const &p : radiancePhotons)
+				pgicLightGroupCounts = Max(pgicLightGroupCounts, p.outgoingRadiance.Size());
+			pgicRadiancePhotonsValues.resize(pgicRadiancePhotons.size() * pgicLightGroupCounts);
+			for (auto &p : pgicRadiancePhotonsValues) {
+				p.c[0] = 0.f;
+				p.c[1] = 0.f;
+				p.c[2] = 0.f;
+			}
+
 			for (u_int i = 0; i < radiancePhotons.size(); ++i) {
 				const RadiancePhoton &radiancePhoton = radiancePhotons[i];
 				slg::ocl::RadiancePhoton &oclRadiancePhoton = pgicRadiancePhotons[i];
 
 				ASSIGN_VECTOR(oclRadiancePhoton.p, radiancePhoton.p);
 				ASSIGN_NORMAL(oclRadiancePhoton.n, radiancePhoton.n);
-				ASSIGN_SPECTRUM(oclRadiancePhoton.outgoingRadiance, radiancePhoton.outgoingRadiance);
+
+				oclRadiancePhoton.outgoingRadianceIndex = i * pgicLightGroupCounts;
+				const SpectrumGroup &outgoingRadiance = radiancePhoton.outgoingRadiance;			
+				for (u_int j = 0; j < outgoingRadiance.Size(); ++j) {
+					ASSIGN_SPECTRUM(pgicRadiancePhotonsValues[i * pgicLightGroupCounts + j], outgoingRadiance[j]);
+				}
+
 				oclRadiancePhoton.isVolume = radiancePhoton.isVolume;
 			}
 
@@ -83,10 +125,9 @@ void CompiledScene::CompilePhotonGI() {
 			pgicRadiancePhotonsBVHArrayNode.resize(nNodes);
 			copy(&nodes[0], &nodes[0] + nNodes, pgicRadiancePhotonsBVHArrayNode.begin());
 
-			pgicIndirectLookUpRadius = radiancePhotonsBVH->GetEntryRadius();
-			pgicIndirectLookUpNormalCosAngle = radiancePhotonsBVH->GetEntryNormalCosAngle();
-			pgicIndirectGlossinessUsageThreshold = photonGICache->GetParams().indirect.glossinessUsageThreshold;
-			pgicIndirectUsageThresholdScale = photonGICache->GetParams().indirect.usageThresholdScale;
+			compiledPathTracer.pgic.indirectLookUpRadius = radiancePhotonsBVH->GetEntryRadius();
+			compiledPathTracer.pgic.indirectLookUpNormalCosAngle = radiancePhotonsBVH->GetEntryNormalCosAngle();
+			compiledPathTracer.pgic.indirectUsageThresholdScale = photonGICache->GetParams().indirect.usageThresholdScale;
 		}
 	}
 
@@ -96,6 +137,7 @@ void CompiledScene::CompilePhotonGI() {
 
 	if (photonGICache->IsCausticEnabled()) {
 		SLG_LOG("Compile PhotonGI caustic cache");
+		compiledPathTracer.pgic.causticEnabled = true;
 
 		// Compile caustic photons
 
@@ -108,6 +150,7 @@ void CompiledScene::CompilePhotonGI() {
 
 				ASSIGN_VECTOR(oclPhoton.p, photon.p);
 				ASSIGN_VECTOR(oclPhoton.d, photon.d);
+				oclPhoton.lightID = photon.lightID;
 				ASSIGN_SPECTRUM(oclPhoton.alpha, photon.alpha);
 				ASSIGN_NORMAL(oclPhoton.landingSurfaceNormal, photon.landingSurfaceNormal);
 				oclPhoton.isVolume = photon.isVolume;
@@ -122,10 +165,9 @@ void CompiledScene::CompilePhotonGI() {
 			pgicCausticPhotonsBVHArrayNode.resize(nNodes);
 			copy(&nodes[0], &nodes[0] + nNodes, pgicCausticPhotonsBVHArrayNode.begin());
 
-			pgicCausticPhotonTracedCount = photonGICache->GetCausticPhotonTracedCount();
-			pgicCausticLookUpRadius = causticPhotonsBVH->GetEntryRadius();
-			pgicCausticLookUpNormalCosAngle = causticPhotonsBVH->GetEntryNormalCosAngle();
-			pgicCausticLookUpMaxCount = photonGICache->GetParams().caustic.lookUpMaxCount;
+			compiledPathTracer.pgic.causticPhotonTracedCount = photonGICache->GetCausticPhotonTracedCount();
+			compiledPathTracer.pgic.causticLookUpRadius = causticPhotonsBVH->GetEntryRadius();
+			compiledPathTracer.pgic.causticLookUpNormalCosAngle = causticPhotonsBVH->GetEntryNormalCosAngle();
 		}
 	}
 }

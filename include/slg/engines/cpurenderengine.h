@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -126,6 +126,7 @@ public:
 protected:
 	static const luxrays::Properties &GetDefaultProps();
 
+	virtual void EndSceneEditLockLess(const EditActionList &editActions);
 	virtual void UpdateFilmLockLess();
 	virtual void UpdateCounters();
 

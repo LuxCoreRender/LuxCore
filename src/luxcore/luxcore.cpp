@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -22,7 +22,6 @@
 #include <boost/thread/mutex.hpp>
 
 #include "luxrays/core/intersectiondevice.h"
-#include "luxrays/core/virtualdevice.h"
 #include "luxrays/utils/utils.h"
 #include "slg/slg.h"
 #include "slg/engines/tilerepository.h"
@@ -190,6 +189,7 @@ Properties luxcore::GetPlatformDesc() {
 #endif
 
 	props << Property("compile.LUXCORE_DISABLE_EMBREE_BVH_BUILDER")(false);
+	props << Property("compile.LC_MESH_MAX_DATA_COUNT")(LC_MESH_MAX_DATA_COUNT);
 
 	return props;
 }
@@ -212,7 +212,7 @@ Properties luxcore::GetOpenCLDeviceDescs() {
 
 	// Add all device information to the list
 	for (size_t i = 0; i < deviceDescriptions.size(); ++i) {
-		const OpenCLDeviceDescription *desc = (OpenCLDeviceDescription *)deviceDescriptions[i];
+		OpenCLDeviceDescription *desc = (OpenCLDeviceDescription *)deviceDescriptions[i];
 
 		cl::Platform platform = desc->GetOCLDevice().getInfo<CL_DEVICE_PLATFORM>();
         const string platformName = platform.getInfo<CL_PLATFORM_VENDOR>();
@@ -281,6 +281,16 @@ template<> void Film::GetOutput<float>(const FilmOutputType type, float *buffer,
 template<> void Film::GetOutput<unsigned int>(const FilmOutputType type, unsigned int *buffer,
 		const unsigned int index, const bool executeImagePipeline) {
 	GetOutputUInt(type, buffer, index, executeImagePipeline);
+}
+
+template<> void Film::UpdateOutput<float>(const FilmOutputType type, const float *buffer,
+		const unsigned int index, const bool executeImagePipeline) {
+	UpdateOutputFloat(type, buffer, index, executeImagePipeline);
+}
+
+template<> void Film::UpdateOutput<unsigned int>(const FilmOutputType type, const unsigned int *buffer,
+		const unsigned int index, const bool executeImagePipeline) {
+	UpdateOutputUInt(type, buffer, index, executeImagePipeline);
 }
 
 template<> const float *Film::GetChannel<float>(const FilmChannelType type,

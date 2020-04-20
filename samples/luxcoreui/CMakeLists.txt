@@ -1,5 +1,5 @@
 ################################################################################
-# Copyright 1998-2018 by authors (see AUTHORS.txt)
+# Copyright 1998-2020 by authors (see AUTHORS.txt)
 #
 #   This file is part of LuxCoreRender.
 #
@@ -58,7 +58,9 @@ set(LUXCOREUI_SRCS
 	samplerwindow.cpp
 	haltconditionswindow.cpp
 	statswindow.cpp
+	importancewindow.cpp
 	imgui_impl_glfw.cpp
+	bake.cpp
 	resources/luxlogo_bg.cpp
 	deps/imgui-1.46/imgui.cpp
 	deps/imgui-1.46/imgui_demo.cpp
@@ -88,4 +90,5 @@ TARGET_LINK_LIBRARIES(luxcoreui
 	${OPENGL_LIBRARIES}
 	${GTK3_LIBRARIES}
 	${Boost_LIBRARIES}
-	${OPENCL_LIBRARIES})
+	${OPENCL_LIBRARIES}
+	${CUDA_ALL_LIBRARIES})

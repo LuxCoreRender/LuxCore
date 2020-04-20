@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -39,6 +39,8 @@ public:
 	TilePathSamplerSharedData() { }
 	virtual ~TilePathSamplerSharedData() { }
 
+	virtual void Reset() { }
+
 	static SamplerSharedData *FromProperties(const luxrays::Properties &cfg,
 			luxrays::RandomGenerator *rndGen, Film *film);
 
@@ -57,7 +59,7 @@ public:
 
 	virtual SamplerType GetType() const { return GetObjectType(); }
 	virtual std::string GetTag() const { return GetObjectTag(); }
-	virtual void RequestSamples(const u_int size);
+	virtual void RequestSamples(const SampleType sampleType, const u_int size);
 
 	virtual float GetSample(const u_int index);
 	virtual void NextSample(const std::vector<SampleResult> &sampleResults);

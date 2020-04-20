@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -81,29 +81,28 @@ void CompiledScene::CompileCamera() {
 	switch (sceneCamera->GetType()) {
 		case Camera::ORTHOGRAPHIC: {
 			const OrthographicCamera *orthoCamera = (OrthographicCamera *)sceneCamera;
-			cameraType = slg::ocl::ORTHOGRAPHIC;
+			camera.type = slg::ocl::ORTHOGRAPHIC;
 
-			memcpy(camera.base.rasterToCamera.m.m, orthoCamera->GetRasterToCameraMatrix().m, 4 * 4 * sizeof(float));
-			memcpy(camera.base.cameraToWorld.m.m, orthoCamera->GetCameraToWorldMatrix().m, 4 * 4 * sizeof(float));
+			memcpy(camera.base.rasterToCamera.m.m, orthoCamera->GetRasterToCamera().m.m, 4 * 4 * sizeof(float));
+			memcpy(camera.base.cameraToWorld.m.m, orthoCamera->GetCameraToWorld().m.m, 4 * 4 * sizeof(float));
 
 			camera.ortho.projCamera.lensRadius = orthoCamera->lensRadius;
 			camera.ortho.projCamera.focalDistance = orthoCamera->focalDistance;
 
-			enableCameraOculusRiftBarrel = false;
 			if (orthoCamera->enableClippingPlane) {
-				enableCameraClippingPlane = true;
+				camera.ortho.projCamera.enableClippingPlane = true;
 				ASSIGN_VECTOR(camera.ortho.projCamera.clippingPlaneCenter, orthoCamera->clippingPlaneCenter);
 				ASSIGN_VECTOR(camera.ortho.projCamera.clippingPlaneNormal, orthoCamera->clippingPlaneNormal);
 			} else
-				enableCameraClippingPlane = false;
+				camera.ortho.projCamera.enableClippingPlane = false;
 			break;
 		}
 		case Camera::PERSPECTIVE: {
 			const PerspectiveCamera *perspCamera = (PerspectiveCamera *)sceneCamera;
-			cameraType = slg::ocl::PERSPECTIVE;
+			camera.type = slg::ocl::PERSPECTIVE;
 
-			memcpy(camera.base.rasterToCamera.m.m, perspCamera->GetRasterToCameraMatrix().m, 4 * 4 * sizeof(float));
-			memcpy(camera.base.cameraToWorld.m.m, perspCamera->GetCameraToWorldMatrix().m, 4 * 4 * sizeof(float));
+			memcpy(camera.base.rasterToCamera.m.m, perspCamera->GetRasterToCamera().m.m, 4 * 4 * sizeof(float));
+			memcpy(camera.base.cameraToWorld.m.m, perspCamera->GetCameraToWorld().m.m, 4 * 4 * sizeof(float));
 
 			camera.persp.projCamera.lensRadius = perspCamera->lensRadius;
 			camera.persp.projCamera.focalDistance = perspCamera->focalDistance;
@@ -111,47 +110,42 @@ void CompiledScene::CompileCamera() {
 			camera.persp.screenOffsetX = perspCamera->screenOffsetX;
 			camera.persp.screenOffsetY = perspCamera->screenOffsetY;
 
-			enableCameraOculusRiftBarrel = perspCamera->enableOculusRiftBarrel;
+			camera.persp.enableOculusRiftBarrel = perspCamera->enableOculusRiftBarrel;
 			if (perspCamera->enableClippingPlane) {
-				enableCameraClippingPlane = true;
+				camera.persp.projCamera.enableClippingPlane = true;
 				ASSIGN_VECTOR(camera.persp.projCamera.clippingPlaneCenter, perspCamera->clippingPlaneCenter);
 				ASSIGN_VECTOR(camera.persp.projCamera.clippingPlaneNormal, perspCamera->clippingPlaneNormal);
 			} else
-				enableCameraClippingPlane = false;
+				camera.persp.projCamera.enableClippingPlane = false;
 			break;
 		}
 		case Camera::STEREO: {
 			const StereoCamera *stereoCamera = (StereoCamera *)sceneCamera;
-			cameraType = slg::ocl::STEREO;
+			camera.type = slg::ocl::STEREO;
 
 			camera.stereo.perspCamera.projCamera.lensRadius = stereoCamera->lensRadius;
 			camera.stereo.perspCamera.projCamera.focalDistance = stereoCamera->focalDistance;
 
-			memcpy(camera.stereo.leftEyeRasterToCamera.m.m, stereoCamera->GetRasterToCameraMatrix(0).m, 4 * 4 * sizeof(float));
-			memcpy(camera.stereo.leftEyeCameraToWorld.m.m, stereoCamera->GetCameraToWorldMatrix(0).m, 4 * 4 * sizeof(float));
-			memcpy(camera.stereo.rightEyeRasterToCamera.m.m, stereoCamera->GetRasterToCameraMatrix(1).m, 4 * 4 * sizeof(float));
-			memcpy(camera.stereo.rightEyeCameraToWorld.m.m, stereoCamera->GetCameraToWorldMatrix(1).m, 4 * 4 * sizeof(float));
+			memcpy(camera.stereo.leftEyeRasterToCamera.m.m, stereoCamera->GetRasterToCamera(0).m.m, 4 * 4 * sizeof(float));
+			memcpy(camera.stereo.leftEyeCameraToWorld.m.m, stereoCamera->GetCameraToWorld(0).m.m, 4 * 4 * sizeof(float));
+			memcpy(camera.stereo.rightEyeRasterToCamera.m.m, stereoCamera->GetRasterToCamera(1).m.m, 4 * 4 * sizeof(float));
+			memcpy(camera.stereo.rightEyeCameraToWorld.m.m, stereoCamera->GetCameraToWorld(1).m.m, 4 * 4 * sizeof(float));
 
-			enableCameraOculusRiftBarrel = stereoCamera->enableOculusRiftBarrel;
+			camera.stereo.perspCamera.enableOculusRiftBarrel = stereoCamera->enableOculusRiftBarrel;
 			if (stereoCamera->enableClippingPlane) {
-				enableCameraClippingPlane = true;
+				camera.stereo.perspCamera.projCamera.enableClippingPlane = true;
 				ASSIGN_VECTOR(camera.stereo.perspCamera.projCamera.clippingPlaneCenter, stereoCamera->clippingPlaneCenter);
 				ASSIGN_VECTOR(camera.stereo.perspCamera.projCamera.clippingPlaneNormal, stereoCamera->clippingPlaneNormal);
 			} else
-				enableCameraClippingPlane = false;
+				camera.stereo.perspCamera.projCamera.enableClippingPlane = false;
 			break;
 		}
 		case Camera::ENVIRONMENT: {
 			const EnvironmentCamera *envCamera = (EnvironmentCamera *)sceneCamera;
-			cameraType = slg::ocl::ENVIRONMENT;
+			camera.type = slg::ocl::ENVIRONMENT;
 
-			memcpy(camera.base.rasterToCamera.m.m, envCamera->GetRasterToCameraMatrix().m, 4 * 4 * sizeof(float));
-			memcpy(camera.base.cameraToWorld.m.m, envCamera->GetCameraToWorldMatrix().m, 4 * 4 * sizeof(float));
-
-			camera.env.projCamera.lensRadius = envCamera->lensRadius;
-			camera.env.projCamera.focalDistance = envCamera->focalDistance;
-
-			enableCameraClippingPlane = false;
+			memcpy(camera.base.rasterToCamera.m.m, envCamera->GetRasterToCamera().m.m, 4 * 4 * sizeof(float));
+			memcpy(camera.base.cameraToWorld.m.m, envCamera->GetCameraToWorld().m.m, 4 * 4 * sizeof(float));
 			break;			
 		}		
 		default:

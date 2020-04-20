@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "slg/bsdf/bsdf.h"
 #include "slg/lights/distantlight.h"
 #include "slg/scene/scene.h"
 
@@ -81,53 +82,59 @@ float DistantLight::GetPower(const Scene &scene) const {
 }
 
 Spectrum DistantLight::Emit(const Scene &scene,
-		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
-		Point *orig, Vector *dir,
-		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
-	*dir = UniformSampleCone(u0, u1, cosThetaMax, x, y, absoluteLightDir);
+		const float time, const float u0, const float u1,
+		const float u2, const float u3, const float passThroughEvent,
+		Ray &ray, float &emissionPdfW,
+		float *directPdfA, float *cosThetaAtLight) const {
+	const Vector rayDir = UniformSampleCone(u0, u1, cosThetaMax, x, y, absoluteLightDir);
 	const float uniformConePdf = UniformConePdf(cosThetaMax);
 
 	if (cosThetaAtLight)
-		*cosThetaAtLight = Dot(*dir, absoluteLightDir);
+		*cosThetaAtLight = Dot(rayDir, absoluteLightDir);
 
 	const Point worldCenter = scene.dataSet->GetBSphere().center;
 	const float envRadius = GetEnvRadius(scene);
 
 	float d1, d2;
 	ConcentricSampleDisk(u2, u3, &d1, &d2);
-	*orig = worldCenter - envRadius * (absoluteLightDir + d1 * x + d2 * y);
+	const Point rayOrig = worldCenter - envRadius * (absoluteLightDir + d1 * x + d2 * y);
 
-	*emissionPdfW = uniformConePdf / (M_PI * envRadius * envRadius);
+	emissionPdfW = uniformConePdf / (M_PI * envRadius * envRadius);
 
 	if (directPdfA)
 		*directPdfA = uniformConePdf;
 
+	ray.Update(rayOrig, rayDir, time);
+
 	return gain * color;
 }
 
-Spectrum DistantLight::Illuminate(const Scene &scene, const Point &p,
-		const float u0, const float u1, const float passThroughEvent,
-        Vector *dir, float *distance, float *directPdfW,
+Spectrum DistantLight::Illuminate(const Scene &scene, const BSDF &bsdf,
+		const float time, const float u0, const float u1, const float passThroughEvent,
+        Ray &shadowRay, float &directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
-	*dir = -UniformSampleCone(u0, u1, cosThetaMax, x, y, absoluteLightDir);
+	const Vector shadowRayDir = -UniformSampleCone(u0, u1, cosThetaMax, x, y, absoluteLightDir);
 
 	const Point worldCenter = scene.dataSet->GetBSphere().center;
 	const float envRadius = GetEnvRadius(scene);
 
-	const Vector toCenter(worldCenter - p);
-	const float centerDistance = Dot(toCenter, toCenter);
-	const float approach = Dot(toCenter, *dir);
-	*distance = approach + sqrtf(Max(0.f, envRadius * envRadius -
-		centerDistance + approach * approach));
+	const Point shadowRayOrig = bsdf.GetRayOrigin(shadowRayDir);
+	const Vector toCenter(worldCenter - shadowRayOrig);
+	const float centerDistanceSquared = Dot(toCenter, toCenter);
+	const float approach = Dot(toCenter, shadowRayDir);
+	const float shadowRayDistance = approach + sqrtf(Max(0.f, envRadius * envRadius -
+		centerDistanceSquared + approach * approach));
 
 	const float uniformConePdf = UniformConePdf(cosThetaMax);
-	*directPdfW = uniformConePdf;
+	directPdfW = uniformConePdf;
 
 	if (cosThetaAtLight)
-		*cosThetaAtLight = Dot(-absoluteLightDir, *dir);
+		*cosThetaAtLight = Dot(-absoluteLightDir, shadowRayDir);
 
 	if (emissionPdfW)
 		*emissionPdfW =  uniformConePdf / (M_PI * envRadius * envRadius);
+
+	shadowRay = Ray(shadowRayOrig, shadowRayDir, 0.f, shadowRayDistance, time);
 
 	return gain * color;
 }
@@ -139,7 +146,7 @@ Properties DistantLight::ToProperties(const ImageMapCache &imgMapCache, const bo
 	props.Set(Property(prefix + ".type")("distant"));
 	props.Set(Property(prefix + ".color")(color));
 	props.Set(Property(prefix + ".direction")(localLightDir));
-	props.Set(Property(prefix + ".theta")(10.f));
+	props.Set(Property(prefix + ".theta")(theta));
 
 	return props;
 }

@@ -1,7 +1,7 @@
 #line 2 "bsdfutils_funcs.cl"
 
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -18,19 +18,19 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-OPENCL_FORCE_INLINE BSDFEvent BSDF_GetEventTypes(__global BSDF *bsdf
+OPENCL_FORCE_INLINE BSDFEvent BSDF_GetEventTypes(__global const BSDF *bsdf
 		MATERIALS_PARAM_DECL) {
 	return Material_GetEventTypes(bsdf->materialIndex
 			MATERIALS_PARAM);
 }
 
-OPENCL_FORCE_INLINE bool BSDF_IsDelta(__global BSDF *bsdf
+OPENCL_FORCE_INLINE bool BSDF_IsDelta(__global const BSDF *bsdf
 		MATERIALS_PARAM_DECL) {
 	return Material_IsDelta(bsdf->materialIndex
 			MATERIALS_PARAM);
 }
 
-OPENCL_FORCE_INLINE bool BSDF_IsAlbedoEndPoint(__global BSDF *bsdf
+OPENCL_FORCE_INLINE bool BSDF_IsAlbedoEndPoint(__global const BSDF *bsdf
 		MATERIALS_PARAM_DECL) {
 	return !BSDF_IsDelta(bsdf MATERIALS_PARAM) ||
 			// This is a very special case to not have white Albedo AOV if the
@@ -39,36 +39,69 @@ OPENCL_FORCE_INLINE bool BSDF_IsAlbedoEndPoint(__global BSDF *bsdf
 			(mats[bsdf->materialIndex].type != MIRROR);
 }
 
-OPENCL_FORCE_INLINE uint BSDF_GetObjectID(__global BSDF *bsdf, __global const SceneObject* restrict sceneObjs) {
-	return sceneObjs[bsdf->sceneObjectIndex].objectID;
+OPENCL_FORCE_INLINE uint BSDF_GetObjectID(__global const BSDF *bsdf, __global const SceneObject* restrict sceneObjs) {
+	const uint sceneObjectIndex = bsdf->sceneObjectIndex;
+
+	return (sceneObjectIndex != NULL_INDEX) ? sceneObjs[sceneObjectIndex].objectID : NULL_INDEX;
 }
 
-OPENCL_FORCE_INLINE uint BSDF_GetMaterialID(__global BSDF *bsdf
+OPENCL_FORCE_INLINE uint BSDF_GetMaterialID(__global const BSDF *bsdf
 		MATERIALS_PARAM_DECL) {
 	return mats[bsdf->materialIndex].matID;
 }
 
-OPENCL_FORCE_INLINE uint BSDF_GetLightID(__global BSDF *bsdf
+OPENCL_FORCE_INLINE uint BSDF_GetLightID(__global const BSDF *bsdf
 		MATERIALS_PARAM_DECL) {
 	return mats[bsdf->materialIndex].lightID;
 }
 
-#if defined(PARAM_HAS_VOLUMES)
-OPENCL_FORCE_INLINE uint BSDF_GetMaterialInteriorVolume(__global BSDF *bsdf
+OPENCL_FORCE_INLINE uint BSDF_GetMaterialInteriorVolume(__global const BSDF *bsdf
 		MATERIALS_PARAM_DECL) {
-	return Material_GetInteriorVolume(bsdf->materialIndex, &bsdf->hitPoint
-#if defined(PARAM_HAS_PASSTHROUGH)
-			, bsdf->hitPoint.passThroughEvent
-#endif
+	return Material_GetInteriorVolume(bsdf->materialIndex, &bsdf->hitPoint,
+			bsdf->hitPoint.passThroughEvent
 			MATERIALS_PARAM);
 }
 
-OPENCL_FORCE_INLINE uint BSDF_GetMaterialExteriorVolume(__global BSDF *bsdf
+OPENCL_FORCE_INLINE uint BSDF_GetMaterialExteriorVolume(__global const BSDF *bsdf
 		MATERIALS_PARAM_DECL) {
-	return Material_GetExteriorVolume(bsdf->materialIndex, &bsdf->hitPoint
-#if defined(PARAM_HAS_PASSTHROUGH)
-			, bsdf->hitPoint.passThroughEvent
-#endif
+	return Material_GetExteriorVolume(bsdf->materialIndex, &bsdf->hitPoint,
+			bsdf->hitPoint.passThroughEvent
 			MATERIALS_PARAM);
 }
-#endif
+
+OPENCL_FORCE_INLINE float BSDF_GetGlossiness(__global const BSDF *bsdf
+		MATERIALS_PARAM_DECL) {
+	return Material_GetGlossiness(bsdf->materialIndex
+			MATERIALS_PARAM);
+}
+
+OPENCL_FORCE_INLINE float3 BSDF_GetPassThroughShadowTransparency(__global const BSDF *bsdf
+		MATERIALS_PARAM_DECL) {
+	return VLOAD3F(&mats[bsdf->materialIndex].passThroughShadowTransparency.c[0]);
+}
+
+OPENCL_FORCE_INLINE float3 BSDF_GetLandingGeometryN(__global const BSDF *bsdf) {
+	return HitPoint_GetGeometryN(&bsdf->hitPoint);
+}
+
+OPENCL_FORCE_INLINE float3 BSDF_GetLandingInterpolatedN(__global const BSDF *bsdf) {
+	return HitPoint_GetInterpolatedN(&bsdf->hitPoint);
+}
+
+OPENCL_FORCE_INLINE float3 BSDF_GetLandingShadeN(__global const BSDF *bsdf) {
+	return HitPoint_GetShadeN(&bsdf->hitPoint);
+}
+
+OPENCL_FORCE_INLINE float3 BSDF_GetRayOrigin(__global const BSDF *bsdf, const float3 sampleDir) {
+	const float3 p = VLOAD3F(&bsdf->hitPoint.p.x);
+
+	if (bsdf->isVolume)
+		return p;
+	else {
+		// Rise the ray origin along the geometry normal to avoid self intersection
+		const float3 geometryN = VLOAD3F(&bsdf->hitPoint.geometryN.x);
+		const float riseDirection = (dot(sampleDir, geometryN) > 0.f) ? 1.f : -1.f;
+		
+		return p + riseDirection * (geometryN * MachineEpsilon_E_Float3(p));
+	}
+}

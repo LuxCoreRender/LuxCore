@@ -1,7 +1,7 @@
 #line 2 "plugin_premultiplyalpha_funcs.cl"
 
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -22,7 +22,7 @@
 // PremultiplyAlphaPlugin_Apply
 //------------------------------------------------------------------------------
 
-__kernel __attribute__((work_group_size_hint(256, 1, 1))) void PremultiplyAlphaPlugin_Apply(
+__kernel void PremultiplyAlphaPlugin_Apply(
 		const uint filmWidth, const uint filmHeight,
 		__global float *channel_IMAGEPIPELINE,
 		__global float *channel_ALPHA) {

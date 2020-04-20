@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -27,11 +27,11 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 float HitPointColorTexture::GetFloatValue(const HitPoint &hitPoint) const {
-	return hitPoint.color.Y();
+	return hitPoint.GetColor(dataIndex).Y();
 }
 
 Spectrum HitPointColorTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
-	return hitPoint.color;
+	return hitPoint.GetColor(dataIndex);
 }
 
 Properties HitPointColorTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
@@ -39,6 +39,7 @@ Properties HitPointColorTexture::ToProperties(const ImageMapCache &imgMapCache, 
 
 	const string name = GetName();
 	props.Set(Property("scene.textures." + name + ".type")("hitpointcolor"));
+	props.Set(Property("scene.textures." + name + ".dataindex")(dataIndex));
 
 	return props;
 }
@@ -48,11 +49,11 @@ Properties HitPointColorTexture::ToProperties(const ImageMapCache &imgMapCache, 
 //------------------------------------------------------------------------------
 
 float HitPointAlphaTexture::GetFloatValue(const HitPoint &hitPoint) const {
-	return hitPoint.alpha;
+	return hitPoint.GetAlpha(dataIndex);
 }
 
 Spectrum HitPointAlphaTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
-	return Spectrum(hitPoint.alpha);
+	return Spectrum(hitPoint.GetAlpha(dataIndex));
 }
 
 Properties HitPointAlphaTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
@@ -60,6 +61,7 @@ Properties HitPointAlphaTexture::ToProperties(const ImageMapCache &imgMapCache, 
 
 	const string name = GetName();
 	props.Set(Property("scene.textures." + name + ".type")("hitpointalpha"));
+	props.Set(Property("scene.textures." + name + ".dataindex")(dataIndex));
 
 	return props;
 }
@@ -69,11 +71,15 @@ Properties HitPointAlphaTexture::ToProperties(const ImageMapCache &imgMapCache, 
 //------------------------------------------------------------------------------
 
 float HitPointGreyTexture::GetFloatValue(const HitPoint &hitPoint) const {
-	return (channel > 2) ? hitPoint.color.Y() : hitPoint.color.c[channel];
+	const Spectrum color = hitPoint.GetColor(dataIndex);
+
+	return (channel > 2) ? color.Y() : color.c[channel];
 }
 
 Spectrum HitPointGreyTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
-	const float v = (channel > 2) ? hitPoint.color.Y() : hitPoint.color.c[channel];
+	const Spectrum color = hitPoint.GetColor(dataIndex);
+	const float v = (channel > 2) ? color.Y() : color.c[channel];
+
 	return Spectrum(v);
 }
 
@@ -82,6 +88,7 @@ Properties HitPointGreyTexture::ToProperties(const ImageMapCache &imgMapCache, c
 
 	const string name = GetName();
 	props.Set(Property("scene.textures." + name + ".type")("hitpointgrey"));
+	props.Set(Property("scene.textures." + name + ".dataindex")(dataIndex));
 	props.Set(Property("scene.textures." + name + ".channel")(
 		((channel != 0) && (channel != 1) && (channel != 2)) ? -1 : ((int)channel)));
 

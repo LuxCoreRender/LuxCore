@@ -1,7 +1,7 @@
 #line 2 "hitpoint_types.cl"
 
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -18,52 +18,41 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-// This is defined only under OpenCL because of variable size structures
-#if defined(SLG_OPENCL_KERNEL)
-
 typedef struct {
 	// The incoming direction. It is the eyeDir when fromLight = false and
 	// lightDir when fromLight = true
 	Vector fixedDir;
 	Point p;
-	UV uv;
 	Normal geometryN;
+	Normal interpolatedN;
 	Normal shadeN;
-#if defined(PARAM_HAS_BUMPMAPS)
+
+	UV defaultUV;
+
 	// Note: dpdu and dpdv are orthogonal to shading normal (i.e not geometry normal)
 	Vector dpdu, dpdv;
 	Normal dndu, dndv;
-#endif
 
-#if defined(PARAM_ENABLE_TEX_HITPOINTCOLOR) || defined(PARAM_ENABLE_TEX_HITPOINTGREY) || defined(PARAM_TRIANGLE_LIGHT_HAS_VERTEX_COLOR)
-	Spectrum color;
-#endif
-#if defined(PARAM_ENABLE_TEX_HITPOINTALPHA)
-	float alpha;
-#endif
+	// Mesh information
+	unsigned int meshIndex;
+	unsigned int triangleIndex;
+	float triangleBariCoord1, triangleBariCoord2;
 
-#if defined(PARAM_HAS_PASSTHROUGH)
 	// passThroughEvent can be stored here in a path state even before of
 	// BSDF initialization (while tracing the next path vertex ray)
 	float passThroughEvent;
-#endif
 
-	// Transformation from world to local object reference frame
-	Matrix4x4 worldToLocal;
+	// Transformation from local object to world reference frame
+	Transform localToWorld;
 
-#if defined(PARAM_HAS_VOLUMES)
 	// Interior and exterior volume (this includes volume priority system
 	// computation and scene default world volume)
 	unsigned int interiorVolumeIndex, exteriorVolumeIndex;
 	// Material code (i.e. glass, etc.) doesn't have access to materials list
 	// so I use HitPoint to carry texture index information
 	unsigned int interiorIorTexIndex, exteriorIorTexIndex;
-#endif
-	int intoObject;
 
-#if defined(PARAM_ENABLE_TEX_OBJECTID) || defined(PARAM_ENABLE_TEX_OBJECTID_COLOR) || defined(PARAM_ENABLE_TEX_OBJECTID_NORMALIZED)
 	unsigned int objectID;
-#endif
-} HitPoint;
 
-#endif
+	int intoObject, throughShadowTransparency;
+} HitPoint;

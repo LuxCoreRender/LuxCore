@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -31,7 +31,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 PathOCLBaseNativeRenderThread::PathOCLBaseNativeRenderThread(const u_int index,
-		NativeThreadIntersectionDevice *device, PathOCLBaseRenderEngine *re) {
+		NativeIntersectionDevice *device, PathOCLBaseRenderEngine *re) {
 	threadIndex = index;
 	intersectionDevice = device;
 	renderEngine = re;

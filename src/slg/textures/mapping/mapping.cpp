@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -28,8 +28,20 @@ using namespace slg;
 // UVMapping2D
 //------------------------------------------------------------------------------
 
-UVMapping2D::UVMapping2D(const float rot, const float uscale, const float vscale,
-		const float udelta, const float vdelta) : uvRotation(rot), uScale(uscale),
+Properties TextureMapping2D::ToProperties(const std::string &name) const {
+	return Properties() <<
+			Property(name + ".uvindex")(dataIndex);
+}
+
+//------------------------------------------------------------------------------
+// UVMapping2D
+//------------------------------------------------------------------------------
+
+UVMapping2D::UVMapping2D(const u_int index,
+		const float rot, const float uscale, const float vscale,
+		const float udelta, const float vdelta) :
+		TextureMapping2D(index),
+		uvRotation(rot), uScale(uscale),
 		vScale(vscale), uDelta(udelta), vDelta(vdelta) {
 	sinTheta = sinf(Radians(-uvRotation));
 	cosTheta = cosf(Radians(-uvRotation));
@@ -52,33 +64,40 @@ UV UVMapping2D::Map(const UV &uv) const {
 }
 
 UV UVMapping2D::MapDuv(const HitPoint &hitPoint, UV *ds, UV *dt) const {
-	*ds = UV(uScale * cosTheta, uScale * sinTheta);
-	*dt = UV(-vScale * sinTheta, vScale * cosTheta);
+	const float signUScale = Sgn(uScale);
+	const float signVScale = Sgn(vScale);
+	
+	*ds = UV(signUScale * cosTheta, signUScale * sinTheta);
+	*dt = UV(-signVScale * sinTheta, signVScale * cosTheta);
 
-	return Map(hitPoint.uv);
+	return Map(hitPoint.GetUV(dataIndex));
 }
 
 Properties UVMapping2D::ToProperties(const std::string &name) const {
-	Properties props;
-	props.Set(Property(name + ".type")("uvmapping2d"));
-	props.Set(Property(name + ".rotation")(uvRotation));
-	props.Set(Property(name + ".uvscale")(uScale, vScale));
-	props.Set(Property(name + ".uvdelta")(uDelta, vDelta));
-
-	return props;
+	return Properties() <<
+			Property(name + ".type")("uvmapping2d") <<
+			TextureMapping2D::ToProperties(name) <<
+			Property(name + ".rotation")(uvRotation) <<
+			Property(name + ".uvscale")(uScale, vScale) <<
+			Property(name + ".uvdelta")(uDelta, vDelta);
 }
 
 //------------------------------------------------------------------------------
 // UVMapping3D
 //------------------------------------------------------------------------------
 
-Point UVMapping3D::Map(const HitPoint &hitPoint) const {
-	return worldToLocal * Point(hitPoint.uv.u, hitPoint.uv.v, 0.f);
+Point UVMapping3D::Map(const HitPoint &hitPoint, Normal *shadeN) const {
+	if (shadeN)
+		*shadeN = Normalize(worldToLocal * hitPoint.shadeN);
+
+	const UV uv = hitPoint.GetUV(dataIndex);
+	return worldToLocal * Point(uv.u, uv.v, 0.f);
 }
 
 Properties UVMapping3D::ToProperties(const std::string &name) const {
 	Properties props;
 	props.Set(Property(name + ".type")("uvmapping3d"));
+	props.Set(Property(name + ".index")(dataIndex));
 	props.Set(Property(name + ".transformation")(worldToLocal.m));
 
 	return props;
@@ -88,7 +107,10 @@ Properties UVMapping3D::ToProperties(const std::string &name) const {
 // GlobalMapping3D
 //------------------------------------------------------------------------------
 
-Point GlobalMapping3D::Map(const HitPoint &hitPoint) const {
+Point GlobalMapping3D::Map(const HitPoint &hitPoint, Normal *shadeN) const {
+	if (shadeN)
+		*shadeN = Normalize(worldToLocal * hitPoint.shadeN);
+
 	return worldToLocal * hitPoint.p;
 }
 
@@ -104,8 +126,11 @@ Properties GlobalMapping3D::ToProperties(const std::string &name) const {
 // LocalMapping3D
 //------------------------------------------------------------------------------
 
-Point LocalMapping3D::Map(const HitPoint &hitPoint) const {
+Point LocalMapping3D::Map(const HitPoint &hitPoint, Normal *shadeN) const {
 	const Transform w2t = worldToLocal / hitPoint.localToWorld;
+
+	if (shadeN)
+		*shadeN = Normalize(w2t * hitPoint.shadeN);
 
 	return w2t * hitPoint.p;
 }

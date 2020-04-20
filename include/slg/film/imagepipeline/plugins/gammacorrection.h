@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -23,9 +23,8 @@
 #include <memory>
 #include <typeinfo> 
 
-#include "luxrays/luxrays.h"
 #include "luxrays/core/color/color.h"
-#include "luxrays/core/oclintersectiondevice.h"
+#include "luxrays/core/hardwaredevice.h"
 #include "luxrays/utils/serializationutils.h"
 #include "slg/film/imagepipeline/imagepipeline.h"
 
@@ -46,10 +45,8 @@ public:
 
 	virtual void Apply(Film &film, const u_int index);
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	virtual bool CanUseOpenCL() const { return true; }
-	virtual void ApplyOCL(Film &film, const u_int index);
-#endif
+	virtual bool CanUseHW() const { return true; }
+	virtual void ApplyHW(Film &film, const u_int index);
 
 	float gamma;
 
@@ -66,12 +63,11 @@ private:
 
 	std::vector<float> gammaTable;
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	// Used inside the object destructor to free oclGammaTable
-	luxrays::OpenCLIntersectionDevice *oclIntersectionDevice;
-	cl::Buffer *oclGammaTable;
-	cl::Kernel *applyKernel;
-#endif
+	// Used inside the object destructor to free buffers
+	luxrays::HardwareDevice *hardwareDevice;
+	luxrays::HardwareDeviceBuffer *hwGammaTable;
+
+	luxrays::HardwareDeviceKernel *applyKernel;
 };
 
 }

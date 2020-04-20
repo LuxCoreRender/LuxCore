@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -29,7 +29,6 @@
 #include "slg/slg.h"
 #include "slg/engines/oclrenderengine.h"
 #include "slg/engines/pathoclbase/compiledscene.h"
-#include "slg/engines/tilerepository.h"
 
 namespace slg {
 
@@ -114,6 +113,7 @@ protected:
 		cl::Buffer *channel_ALBEDO_Buff;
 		cl::Buffer *channel_AVG_SHADING_NORMAL_Buff;
 		cl::Buffer *channel_NOISE_Buff;
+		cl::Buffer *channel_USER_IMPORTANCE_Buff;
 		
 		// Denoiser sample accumulator buffers
 		cl::Buffer *denoiser_NbOfSamplesImage_Buff;
@@ -127,23 +127,9 @@ protected:
 		PathOCLBaseOCLRenderThread *renderThread;
 	};
 
-	std::string SamplerKernelDefinitions();
-
 	// Implementation specific methods
 	virtual void RenderThreadImpl() = 0;
 	virtual void GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight, u_int *filmSubRegion) = 0;
-
-	virtual void AdditionalInit() { }
-	virtual std::string AdditionalKernelOptions() { return ""; }
-	virtual std::string AdditionalKernelDefinitions() { return ""; }
-	virtual std::string AdditionalKernelSources() { return ""; }
-	virtual void CompileAdditionalKernels(cl::Program *program) { }
-
-	void AllocOCLBuffer(const cl_mem_flags clFlags, cl::Buffer **buff,
-			void *src, const size_t size, const std::string &desc);
-	void AllocOCLBufferRO(cl::Buffer **buff, void *src, const size_t size, const std::string &desc);
-	void AllocOCLBufferRW(cl::Buffer **buff, const size_t size, const std::string &desc);
-	void FreeOCLBuffer(cl::Buffer **buff);
 
 	virtual void StartRenderThread();
 	virtual void StopRenderThread();
@@ -170,9 +156,7 @@ protected:
 	void InitSamplerSharedDataBuffer();
 	void InitSamplesBuffer();
 	void InitSampleDataBuffer();
-
-	// Used only by TILEPATHOCL
-	void UpdateSamplerSharedDataBuffer(const TileWork &tileWork);
+	void InitSampleResultsBuffer();
 
 	void SetInitKernelArgs(const u_int filmIndex);
 	void SetAdvancePathsKernelArgs(cl::Kernel *advancePathsKernel, const u_int filmIndex);
@@ -183,10 +167,12 @@ protected:
 
 	void EnqueueAdvancePathsKernel(cl::CommandQueue &oclQueue);
 
-	// OpenCL structure size
-	size_t GetOpenCLHitPointSize() const;
-	size_t GetOpenCLBSDFSize() const;
-	size_t GetOpenCLSampleResultSize() const;
+	static luxrays::oclKernelCache *AllocKernelCache(const std::string &type);
+	static std::string GetKernelParamters(luxrays::OpenCLIntersectionDevice *intersectionDevice,
+			const std::string renderEngineType,
+			const float epsilonMin, const float epsilonMax,
+			const bool usePixelAtomics);
+	static std::string GetKernelSources();
 
 	u_int threadIndex;
 	luxrays::OpenCLIntersectionDevice *intersectionDevice;
@@ -199,7 +185,11 @@ protected:
 
 	// Scene buffers
 	cl::Buffer *materialsBuff;
+	cl::Buffer *materialEvalOpsBuff;
+	cl::Buffer *materialEvalStackBuff;
 	cl::Buffer *texturesBuff;
+	cl::Buffer *textureEvalOpsBuff;
+	cl::Buffer *textureEvalStackBuff;
 	cl::Buffer *meshIDBuff;
 	cl::Buffer *meshDescsBuff;
 	cl::Buffer *scnObjsBuff;
@@ -208,38 +198,49 @@ protected:
 	cl::Buffer *lightsDistributionBuff;
 	cl::Buffer *infiniteLightSourcesDistributionBuff;
 	cl::Buffer *dlscAllEntriesBuff;
-	cl::Buffer *dlscDistributionIndexToLightIndexBuff;
 	cl::Buffer *dlscDistributionsBuff;
 	cl::Buffer *dlscBVHNodesBuff;
+	cl::Buffer *elvcAllEntriesBuff;
+	cl::Buffer *elvcDistributionsBuff;
+	cl::Buffer *elvcTileDistributionOffsetsBuff;
+	cl::Buffer *elvcBVHNodesBuff;
 	cl::Buffer *envLightDistributionsBuff;
 	cl::Buffer *vertsBuff;
 	cl::Buffer *normalsBuff;
+	cl::Buffer *triNormalsBuff;
 	cl::Buffer *uvsBuff;
 	cl::Buffer *colsBuff;
 	cl::Buffer *alphasBuff;
+	cl::Buffer *vertexAOVBuff;
+	cl::Buffer *triAOVBuff;
 	cl::Buffer *trianglesBuff;
+	cl::Buffer *interpolatedTransformsBuff;
 	cl::Buffer *cameraBuff;
 	cl::Buffer *lightIndexOffsetByMeshIndexBuff;
 	cl::Buffer *lightIndexByTriIndexBuff;
 	cl::Buffer *imageMapDescsBuff;
 	std::vector<cl::Buffer *> imageMapsBuff;
+	cl::Buffer *pgicRadiancePhotonsBuff;
+	cl::Buffer *pgicRadiancePhotonsValuesBuff;
+	cl::Buffer *pgicRadiancePhotonsBVHNodesBuff;
+	cl::Buffer *pgicCausticPhotonsBuff;
+	cl::Buffer *pgicCausticPhotonsBVHNodesBuff;
+
+	// OpenCL task related buffers
 	cl::Buffer *raysBuff;
 	cl::Buffer *hitsBuff;
+	cl::Buffer *taskConfigBuff;
 	cl::Buffer *tasksBuff;
 	cl::Buffer *tasksDirectLightBuff;
 	cl::Buffer *tasksStateBuff;
 	cl::Buffer *samplerSharedDataBuff;
 	cl::Buffer *samplesBuff;
 	cl::Buffer *sampleDataBuff;
+	cl::Buffer *sampleResultsBuff;
 	cl::Buffer *taskStatsBuff;
-	cl::Buffer *pathVolInfosBuff;
+	cl::Buffer *eyePathInfosBuff;
 	cl::Buffer *directLightVolInfosBuff;
 	cl::Buffer *pixelFilterBuff;
-	cl::Buffer *pgicRadiancePhotonsBuff;
-	cl::Buffer *pgicRadiancePhotonsBVHNodesBuff;
-	cl::Buffer *pgicCausticPhotonsBuff;
-	cl::Buffer *pgicCausticPhotonsBVHNodesBuff;
-	cl::Buffer *pgicCausticNearPhotonsBuff;
 
 	u_int initKernelArgsCount;
 	std::string kernelsParameters;
@@ -264,8 +265,6 @@ protected:
 	cl::Kernel *advancePathsKernel_MK_NEXT_SAMPLE;
 	cl::Kernel *advancePathsKernel_MK_GENERATE_CAMERA_RAY;
 	size_t advancePathsWorkGroupSize;
-
-	u_int sampleDimensions;
 
 	slg::ocl::pathoclbase::GPUTaskStats *gpuTaskStats;
 

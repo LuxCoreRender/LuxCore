@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -174,6 +174,35 @@ static int AlphaCB(p_ply_argument argument) {
 	return 1;
 }
 
+// rply vertex callback
+static int VertexAOVCB(p_ply_argument argument) {
+	long userIndex = 0;
+	void *userData = NULL;
+	ply_get_argument_user_data(argument, &userData, &userIndex);
+
+	float *c = *static_cast<float **> (userData);
+
+	long alphaIndex;
+	ply_get_argument_element(argument, NULL, &alphaIndex);
+
+	// Check the type of value used
+	p_ply_property property = NULL;
+	ply_get_argument_property(argument, &property, NULL, NULL);
+	e_ply_type dataType;
+	ply_get_property_info(property, NULL, &dataType, NULL, NULL);
+	if (dataType == PLY_UCHAR) {
+		if (userIndex == 0)
+			c[alphaIndex] =
+				static_cast<float>(ply_get_argument_value(argument) / 255.0);
+	} else {
+		if (userIndex == 0)
+			c[alphaIndex] =
+				static_cast<float>(ply_get_argument_value(argument));		
+	}
+
+	return 1;
+}
+
 // rply face callback
 static int FaceCB(p_ply_argument argument) {
 	void *userData = NULL;
@@ -252,34 +281,56 @@ ExtTriangleMesh *ExtTriangleMesh::LoadPly(const string &fileName) {
 		throw runtime_error(ss.str());
 	}
 
-	// Check if the file includes uv informations
-	UV *uv;
-	const long plyNbUVs = ply_set_read_cb(plyfile, "vertex", "s", UVCB, &uv, 0);
-	ply_set_read_cb(plyfile, "vertex", "t", UVCB, &uv, 1);
-	if ((plyNbUVs > 0) && (plyNbUVs != plyNbVerts)) {
-		stringstream ss;
-		ss << "Wrong count of uvs in '" << fileName << "'";
-		throw runtime_error(ss.str());
-	}
+	// This is our own extension to file PLY format in order to support multiple
+	// UVs, Colors and Alphas for each vertex
 
-	// Check if the file includes color informations
-	Spectrum *cols;
-	const long plyNbColors = ply_set_read_cb(plyfile, "vertex", "red", ColorCB, &cols, 0);
-	ply_set_read_cb(plyfile, "vertex", "green", ColorCB, &cols, 1);
-	ply_set_read_cb(plyfile, "vertex", "blue", ColorCB, &cols, 2);
-	if ((plyNbColors > 0) && (plyNbColors != plyNbVerts)) {
-		stringstream ss;
-		ss << "Wrong count of colors in '" << fileName << "'";
-		throw runtime_error(ss.str());
-	}
+	array<UV *, EXTMESH_MAX_DATA_COUNT> uvs;
+	array<Spectrum *, EXTMESH_MAX_DATA_COUNT> cols;
+	array<float *, EXTMESH_MAX_DATA_COUNT> alphas;
+	array<float *, EXTMESH_MAX_DATA_COUNT> vertexAOVs;
 
-	// Check if the file includes alpha informations
-	float *alphas;
-	const long plyNbAlphas = ply_set_read_cb(plyfile, "vertex", "alpha", AlphaCB, &alphas, 0);
-	if ((plyNbAlphas > 0) && (plyNbAlphas != plyNbVerts)) {
-		stringstream ss;
-		ss << "Wrong count of alphas in '" << fileName << "'";
-		throw runtime_error(ss.str());
+	array<u_int, EXTMESH_MAX_DATA_COUNT> plyNbUVs;
+	array<u_int, EXTMESH_MAX_DATA_COUNT> plyNbColors;
+	array<u_int, EXTMESH_MAX_DATA_COUNT> plyNbAlphas;
+	array<u_int, EXTMESH_MAX_DATA_COUNT> plyNbVertexAOVs;
+	
+	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
+		const string suffix = (i == 0) ? "" : ToString(i);
+
+		// Check if the file includes uv informations
+		plyNbUVs[i] = ply_set_read_cb(plyfile, "vertex", ("s" + suffix).c_str(), UVCB, &uvs[i], 0);
+		ply_set_read_cb(plyfile, "vertex", ("t" + suffix).c_str(), UVCB, &uvs[i], 1);
+		if ((plyNbUVs[i] > 0) && (plyNbUVs[i] != plyNbVerts)) {
+			stringstream ss;
+			ss << "Wrong count of uvs #" << i << " in '" << fileName << "'";
+			throw runtime_error(ss.str());
+		}
+
+		// Check if the file includes color informations
+		plyNbColors[i] = ply_set_read_cb(plyfile, "vertex", ("red" + suffix).c_str(), ColorCB, &cols[i], 0);
+		ply_set_read_cb(plyfile, "vertex", ("green" + suffix).c_str(), ColorCB, &cols[i], 1);
+		ply_set_read_cb(plyfile, "vertex", ("blue" + suffix).c_str(), ColorCB, &cols[i], 2);
+		if ((plyNbColors[i] > 0) && (plyNbColors[i] != plyNbVerts)) {
+			stringstream ss;
+			ss << "Wrong count of colors #" << i << " in '" << fileName << "'";
+			throw runtime_error(ss.str());
+		}
+
+		// Check if the file includes alpha informations
+		plyNbAlphas[i] = ply_set_read_cb(plyfile, "vertex", ("alpha" + suffix).c_str(), AlphaCB, &alphas[i], 0);
+		if ((plyNbAlphas[i] > 0) && (plyNbAlphas[i] != plyNbVerts)) {
+			stringstream ss;
+			ss << "Wrong count of alphas #" << i << " in '" << fileName << "'";
+			throw runtime_error(ss.str());
+		}
+
+		// Check if the file includes vertexAOV informations
+		plyNbVertexAOVs[i] = ply_set_read_cb(plyfile, "vertex", ("aov" + suffix).c_str(), VertexAOVCB, &vertexAOVs[i], 0);
+		if ((plyNbVertexAOVs[i] > 0) && (plyNbVertexAOVs[i] != plyNbVerts)) {
+			stringstream ss;
+			ss << "Wrong count of vertex AOV #" << i << " in '" << fileName << "'";
+			throw runtime_error(ss.str());
+		}
 	}
 
 	p = TriangleMesh::AllocVerticesBuffer(plyNbVerts);
@@ -287,18 +338,28 @@ ExtTriangleMesh *ExtTriangleMesh::LoadPly(const string &fileName) {
 		n = NULL;
 	else
 		n = new Normal[plyNbNormals];
-	if (plyNbUVs == 0)
-		uv = NULL;
-	else
-		uv = new UV[plyNbUVs];
-	if (plyNbColors == 0)
-		cols = NULL;
-	else
-		cols = new Spectrum[plyNbColors];
-	if (plyNbAlphas == 0)
-		alphas = NULL;
-	else
-		alphas = new float[plyNbAlphas];
+	
+	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
+		if (plyNbUVs[i] == 0)
+			uvs[i] = NULL;
+		else
+			uvs[i] = new UV[plyNbUVs[i]];
+
+		if (plyNbColors[i] == 0)
+			cols[i] = NULL;
+		else
+			cols[i] = new Spectrum[plyNbColors[i]];
+
+		if (plyNbAlphas[i] == 0)
+			alphas[i] = NULL;
+		else
+			alphas[i] = new float[plyNbAlphas[i]];
+
+		if (plyNbVertexAOVs[i] == 0)
+			vertexAOVs[i] = NULL;
+		else
+			vertexAOVs[i] = new float[plyNbVertexAOVs[i]];
+	}
 
 	if (!ply_read(plyfile)) {
 		stringstream ss;
@@ -306,20 +367,28 @@ ExtTriangleMesh *ExtTriangleMesh::LoadPly(const string &fileName) {
 
 		delete[] p;
 		delete[] n;
-		delete[] uv;
-		delete[] cols;
-		delete[] alphas;
+		
+		for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
+			delete[] uvs[i];
+			delete[] cols[i];
+			delete[] alphas[i];
+			delete[] vertexAOVs[i];
+		}
 
 		throw runtime_error(ss.str());
 	}
-
+	
 	ply_close(plyfile);
 
 	// Copy triangle indices vector
 	Triangle *tris = TriangleMesh::AllocTrianglesBuffer(vi.size());
 	copy(vi.begin(), vi.end(), tris);
 
-	return new ExtTriangleMesh(plyNbVerts, vi.size(), p, tris, n, uv, cols, alphas);
+	ExtTriangleMesh *mesh = new ExtTriangleMesh(plyNbVerts, vi.size(), p, tris, n, &uvs, &cols, &alphas);
+	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i)
+		mesh->SetVertexAOV(i, vertexAOVs[i]);
+	
+	return mesh;
 }
 
 //------------------------------------------------------------------------------
@@ -369,21 +438,37 @@ void ExtTriangleMesh::SavePly(const string &fileName) const {
 				"property float ny\n"
 				"property float nz\n";
 
-	if (HasUVs())
-		plyFile << "property float s\n"
-				"property float t\n";
+	// This is our own extension to file PLY format in order to support multiple
+	// UVs, Colors, Alphas and Vertex AOVs for each vertex
+	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
+		const string suffix = (i == 0) ? "" : ToString(i);
 
-	if (HasColors())
-		plyFile << "property float red\n"
-				"property float green\n"
-				"property float blue\n";
+		if (HasUVs(i))
+			plyFile << "property float s" << suffix << "\n"
+					"property float t" << suffix << "\n";
 
-	if (HasAlphas())
-		plyFile << "property float alpha\n";
+		if (HasColors(i))
+			plyFile << "property float red" << suffix << "\n"
+					"property float green" << suffix << "\n"
+					"property float blue" << suffix << "\n";
+
+		if (HasAlphas(i))
+			plyFile << "property float alpha" << suffix << "\n";	
+
+		if (HasVertexAOV(i))
+			plyFile << "property float aov" << suffix << "\n";	
+	}
 
 	plyFile << "element face " + boost::lexical_cast<string>(triCount) + "\n"
-				"property list uchar uint vertex_indices\n"
-				"end_header\n";
+				"property list uchar uint vertex_indices\n";
+
+	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
+		if (HasTriAOV(i))
+			plyFile << "element faceaov " + boost::lexical_cast<string>(triCount) + "\n"
+					"property aov\n";
+	}
+
+	plyFile << "end_header\n";
 
 	if (!plyFile.good())
 		throw runtime_error("Unable to write PLY header to: " + fileName);
@@ -393,13 +478,19 @@ void ExtTriangleMesh::SavePly(const string &fileName) const {
 		plyFile.write((char *)&vertices[i], sizeof(Point));
 		if (HasNormals())
 			plyFile.write((char *)&normals[i], sizeof(Normal));
-		if (HasUVs())
-			plyFile.write((char *)&uvs[i], sizeof(UV));
-		if (HasColors())
-			plyFile.write((char *)&cols[i], sizeof(Spectrum));
-		if (HasAlphas())
-			plyFile.write((char *)&alphas[i], sizeof(float));
+
+		for (u_int j = 0; j < EXTMESH_MAX_DATA_COUNT; ++j) {
+			if (HasUVs(j))
+				plyFile.write((char *)&uvs[j][i], sizeof(UV));
+			if (HasColors(j))
+				plyFile.write((char *)&cols[j][i], sizeof(Spectrum));
+			if (HasAlphas(j))
+				plyFile.write((char *)&alphas[j][i], sizeof(float));
+			if (HasVertexAOV(j))
+				plyFile.write((char *)&vertAOV[j][i], sizeof(float));
+		}
 	}
+
 	if (!plyFile.good())
 		throw runtime_error("Unable to write PLY vertex data to: " + fileName);
 
@@ -409,6 +500,14 @@ void ExtTriangleMesh::SavePly(const string &fileName) const {
 		plyFile.write((char *)&len, 1);
 		plyFile.write((char *)&tris[i], sizeof(Triangle));
 	}
+
+	for (u_int j = 0; j < EXTMESH_MAX_DATA_COUNT; ++j) {
+		if (HasTriAOV(j)) {
+			for (u_int i = 0; i < triCount; ++i)
+				plyFile.write((char *)&triAOV[j][i], sizeof(float));
+		}
+	}
+
 	if (!plyFile.good())
 		throw runtime_error("Unable to write PLY face data to: " + fileName);
 

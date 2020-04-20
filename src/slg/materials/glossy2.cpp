@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -133,7 +133,7 @@ Spectrum Glossy2Material::Evaluate(const HitPoint &hitPoint,
 Spectrum Glossy2Material::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
-	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
+	float *pdfW, BSDFEvent *event, const BSDFEvent eventHint) const {
 	if (fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 
@@ -141,12 +141,12 @@ Spectrum Glossy2Material::Sample(const HitPoint &hitPoint,
 		// Back face
 		*localSampledDir = -CosineSampleHemisphere(u0, u1, pdfW);
 
-		*absCosSampledDir = fabsf(localSampledDir->z);
-		if (*absCosSampledDir < DEFAULT_COS_EPSILON_STATIC)
+		const float absCosSampledDir = fabsf(localSampledDir->z);
+		if (absCosSampledDir < DEFAULT_COS_EPSILON_STATIC)
 			return Spectrum();
 		*event = DIFFUSE | REFLECT;
 		if (hitPoint.fromLight)
-			return Kd->GetSpectrumValue(hitPoint) * fabsf(localFixedDir.z / *absCosSampledDir);
+			return Kd->GetSpectrumValue(hitPoint) * fabsf(localFixedDir.z / absCosSampledDir);
 		else
 			return Kd->GetSpectrumValue(hitPoint);
 	}
@@ -177,11 +177,11 @@ Spectrum Glossy2Material::Sample(const HitPoint &hitPoint,
 		// Sample base BSDF (Matte BSDF)
 		*localSampledDir = Sgn(localFixedDir.z) * CosineSampleHemisphere(u0, u1, &basePdf);
 
-		*absCosSampledDir = fabsf(localSampledDir->z);
-		if (*absCosSampledDir < DEFAULT_COS_EPSILON_STATIC)
+		const float absCosSampledDir = fabsf(localSampledDir->z);
+		if (absCosSampledDir < DEFAULT_COS_EPSILON_STATIC)
 			return Spectrum();
 
-		baseF = Kd->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f) * INV_PI * fabsf(hitPoint.fromLight ? localFixedDir.z : *absCosSampledDir);
+		baseF = Kd->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f) * INV_PI * fabsf(hitPoint.fromLight ? localFixedDir.z : absCosSampledDir);
 
 		// Evaluate coating BSDF (Schlick BSDF)
 		coatingF = SchlickBSDF_CoatingF(hitPoint.fromLight, ks, roughness, anisotropy, multibounce, localFixedDir, *localSampledDir);
@@ -193,15 +193,15 @@ Spectrum Glossy2Material::Sample(const HitPoint &hitPoint,
 		if (coatingF.Black())
 			return Spectrum();
 
-		*absCosSampledDir = fabsf(localSampledDir->z);
-		if (*absCosSampledDir < DEFAULT_COS_EPSILON_STATIC)
+		const float absCosSampledDir = fabsf(localSampledDir->z);
+		if (absCosSampledDir < DEFAULT_COS_EPSILON_STATIC)
 			return Spectrum();
 
 		coatingF *= coatingPdf;
 
 		// Evaluate base BSDF (Matte BSDF)
-		basePdf = *absCosSampledDir * INV_PI;
-		baseF = Kd->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f) * INV_PI * fabsf(hitPoint.fromLight ? localFixedDir.z : *absCosSampledDir);
+		basePdf = absCosSampledDir * INV_PI;
+		baseF = Kd->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f) * INV_PI * fabsf(hitPoint.fromLight ? localFixedDir.z : absCosSampledDir);
 	}
 
 	*event = GLOSSY | REFLECT;
@@ -317,13 +317,13 @@ Properties Glossy2Material::ToProperties(const ImageMapCache &imgMapCache, const
 
 	const string name = GetName();
 	props.Set(Property("scene.materials." + name + ".type")("glossy2"));
-	props.Set(Property("scene.materials." + name + ".kd")(Kd->GetName()));
-	props.Set(Property("scene.materials." + name + ".ks")(Ks->GetName()));
-	props.Set(Property("scene.materials." + name + ".uroughness")(nu->GetName()));
-	props.Set(Property("scene.materials." + name + ".vroughness")(nv->GetName()));
-	props.Set(Property("scene.materials." + name + ".ka")(Ka->GetName()));
-	props.Set(Property("scene.materials." + name + ".d")(depth->GetName()));
-	props.Set(Property("scene.materials." + name + ".index")(index->GetName()));
+	props.Set(Property("scene.materials." + name + ".kd")(Kd->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".ks")(Ks->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".uroughness")(nu->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".vroughness")(nv->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".ka")(Ka->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".d")(depth->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".index")(index->GetSDLValue()));
 	props.Set(Property("scene.materials." + name + ".multibounce")(multibounce));
 	props.Set(Material::ToProperties(imgMapCache, useRealFileName));
 

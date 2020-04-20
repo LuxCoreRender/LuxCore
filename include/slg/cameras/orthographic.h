@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -37,7 +37,9 @@ public:
 	virtual bool GetSamplePosition(luxrays::Ray *eyeRay, float *filmX, float *filmY) const;
 	virtual bool SampleLens(const float time, const float u1, const float u2,
 		luxrays::Point *lensPoint) const;
-	virtual float GetPDF(const luxrays::Vector &eyeDir, const float filmX, const float filmY) const;
+	virtual void GetPDF(const luxrays::Ray &eyeRay, const float eyeDistance,
+		const float filmX, const float filmY,
+		float *pdfW, float *fluxToRadianceFactor) const;
 
 	luxrays::Properties ToProperties() const;
 
@@ -46,7 +48,7 @@ private:
 	virtual void InitCameraData();
 	virtual void InitRay(luxrays::Ray *ray, const float filmX, const float filmY) const;
 
-	float cameraPDF;
+	float cameraPdf;
 };
 
 }

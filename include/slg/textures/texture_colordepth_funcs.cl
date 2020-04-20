@@ -1,7 +1,7 @@
 #line 2 "texture_colordepth_funcs.cl"
 
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -22,16 +22,10 @@
 // ColorDepth texture
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_ENABLE_TEX_COLORDEPTH)
-
-OPENCL_FORCE_INLINE float ColorDepthTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
-		const float d, const float kt) {
+OPENCL_FORCE_INLINE float ColorDepthTexture_ConstEvaluateFloat(const float d, const float kt) {
 	return log(clamp(kt, 1e-9f, 1.f)) / d;
 }
 
-OPENCL_FORCE_INLINE float3 ColorDepthTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
-		const float d, const float3 kt) {
+OPENCL_FORCE_INLINE float3 ColorDepthTexture_ConstEvaluateSpectrum(const float d, const float3 kt) {
 	return log(clamp(kt, 1e-9f, 1.f)) / d;
 }
-
-#endif

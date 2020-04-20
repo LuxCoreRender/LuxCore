@@ -1,7 +1,7 @@
 #line 2 "volume_types.cl"
 
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -19,15 +19,5 @@
  ***************************************************************************/
 
 // NOTE: check VolumeParam in material_type.cl for volume definitions
-
-#define OPENCL_PATHVOLUMEINFO_SIZE 8
-
-typedef struct {
-	unsigned int currentVolumeIndex;
-	unsigned int volumeIndexList[OPENCL_PATHVOLUMEINFO_SIZE];
-	unsigned int volumeIndexListSize;
-
-	int scatteredStart;
-} PathVolumeInfo;
 
 typedef Material Volume;

@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -214,9 +214,9 @@ Properties BrickTexture::ToProperties(const ImageMapCache &imgMapCache, const bo
 
 	const string name = GetName();
 	props.Set(Property("scene.textures." + name + ".type")("brick"));
-	props.Set(Property("scene.textures." + name + ".bricktex")(tex1->GetName()));
-	props.Set(Property("scene.textures." + name + ".mortartex")(tex2->GetName()));
-	props.Set(Property("scene.textures." + name + ".brickmodtex")(tex3->GetName()));
+	props.Set(Property("scene.textures." + name + ".bricktex")(tex1->GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".mortartex")(tex2->GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".brickmodtex")(tex3->GetSDLValue()));
 	props.Set(Property("scene.textures." + name + ".brickwidth")(brickwidth));
 	props.Set(Property("scene.textures." + name + ".brickheight")(brickheight));
 	props.Set(Property("scene.textures." + name + ".brickdepth")(brickdepth));

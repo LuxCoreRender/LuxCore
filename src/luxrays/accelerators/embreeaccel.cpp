@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -88,8 +88,10 @@ void EmbreeAccel::ExportMotionTriangleMesh(const RTCScene embreeScene, const Mot
 		Point *vertices = (Point *)rtcSetNewGeometryBuffer(geom, RTC_BUFFER_TYPE_VERTEX, step, RTC_FORMAT_FLOAT3,
 				sizeof(Point), mtm->GetTotalVertexCount());
 
+		Transform local2World;
+		mtm->GetLocal2World(ms.times[step], local2World);
 		for (u_int i = 0; i < mtm->GetTotalVertexCount(); ++i)
-			vertices[i] = mtm->GetVertex(ms.times[step], i);
+			vertices[i] = mtm->GetVertex(local2World, i);
 	}
 
 	// Share the mesh triangles
@@ -248,7 +250,11 @@ bool EmbreeAccel::Intersect(const Ray *ray, RayHit *hit) const {
 	
 	rtcIntersect1(embreeScene, &context, &embreeRayHit);
 
-	if (embreeRayHit.hit.geomID != RTC_INVALID_GEOMETRY_ID) {
+	if ((embreeRayHit.hit.geomID != RTC_INVALID_GEOMETRY_ID) &&
+			// A safety check in case of not enough numerical precision. Embree
+			// can return some intersection out of [mint, maxt] range for
+			// some extremely large floating point number.
+			(embreeRayHit.ray.tfar >= ray->mint) && (embreeRayHit.ray.tfar <= ray->maxt)) {
 		hit->meshIndex = (embreeRayHit.hit.instID[0] == RTC_INVALID_GEOMETRY_ID) ? embreeRayHit.hit.geomID : embreeRayHit.hit.instID[0];
 		hit->triangleIndex = embreeRayHit.hit.primID;
 

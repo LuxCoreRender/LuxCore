@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -322,11 +322,42 @@ void OutputSwitcherPlugin::Apply(Film &film, const u_int index) {
 			}
 			break;
 		}
+		case Film::MATERIAL_ID_COLOR: {
+			for (u_int i = 0; i < pixelCount; ++i) {
+				if (film.HasSamples(hasPN, hasSN, i))
+					film.channel_MATERIAL_ID_COLOR->GetWeightedPixel(i, pixels[i].c);
+			}
+			break;
+		}
+		case Film::ALBEDO: {
+			for (u_int i = 0; i < pixelCount; ++i) {
+				if (film.HasSamples(hasPN, hasSN, i))
+					film.channel_ALBEDO->GetWeightedPixel(i, pixels[i].c);
+			}
+			break;
+		}
+		case Film::AVG_SHADING_NORMAL: {
+			for (u_int i = 0; i < pixelCount; ++i) {
+				if (film.HasSamples(hasPN, hasSN, i))
+					film.channel_AVG_SHADING_NORMAL->GetWeightedPixel(i, pixels[i].c);
+			}
+			break;
+		}
 		case Film::NOISE: {
 			for (u_int i = 0; i < pixelCount; ++i) {
 				if (film.HasSamples(hasPN, hasSN, i)) {
 					float v;
 					film.channel_NOISE->GetWeightedPixel(i, &v);
+					pixels[i] = Spectrum(v);
+				}
+			}
+			break;
+		}
+		case Film::USER_IMPORTANCE: {
+			for (u_int i = 0; i < pixelCount; ++i) {
+				if (film.HasSamples(hasPN, hasSN, i)) {
+					float v;
+					film.channel_USER_IMPORTANCE->GetWeightedPixel(i, &v);
 					pixels[i] = Spectrum(v);
 				}
 			}

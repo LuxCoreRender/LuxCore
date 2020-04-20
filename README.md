@@ -2,6 +2,8 @@
 
 ### LuxCoreRender
 
+![LuxCoreRender alt text](https://luxcorerender.org/wp-content/uploads/2017/12/wallpaper_lux_05_rend1b.jpg)
+
 LuxCoreRender is a physically correct, unbiased rendering engine. It is built on
 physically based equations that model the transportation of light. This allows
 it to accurately capture a wide range of phenomena which most other rendering
@@ -112,7 +114,8 @@ A special thanks goes to:
 - Eigen authors (http://eigen.tuxfamily.org);
 - Yangli Hector Yee, Steven Myint and Jeff Terrace for perceptualdiff (https://github.com/myint/perceptualdiff);
 - Christian Pfligersdorffer for EOS portable archive (http://www.eos.info);
-- Michael Labbe for Native File Dialog (https://github.com/mlabbe/nativefiledialog).
+- Michael Labbe for Native File Dialog (https://github.com/mlabbe/nativefiledialog);
+- Sven Forstmann's quadric mesh simplification code (https://github.com/sp4cerat/Fast-Quadric-Mesh-Simplification).
 
 ### License
 

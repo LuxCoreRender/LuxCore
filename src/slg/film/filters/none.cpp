@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -40,7 +40,10 @@ Filter *NoneFilter::FromProperties(const Properties &cfg) {
 slg::ocl::Filter *NoneFilter::FromPropertiesOCL(const Properties &cfg) {
 	slg::ocl::Filter *oclFilter = new slg::ocl::Filter();
 
-	oclFilter->type = slg::ocl::FILTER_NONE;
+	//oclFilter->type = slg::ocl::FILTER_NONE;
+
+	oclFilter->widthX = .5f;
+	oclFilter->widthY = .5f;
 
 	return oclFilter;
 }

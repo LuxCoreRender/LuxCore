@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -57,16 +57,19 @@ slg::ocl::Filter *MitchellFilter::FromPropertiesOCL(const Properties &cfg) {
 	const float filterXWidth = cfg.Get(Property("film.filter.xwidth")(defaultFilterWidth)).Get<float>();
 	const float filterYWidth = cfg.Get(Property("film.filter.ywidth")(defaultFilterWidth)).Get<float>();
 
-	const float b = cfg.Get(GetDefaultProps().Get("film.filter.mitchell.b")).Get<float>();
-	const float c = cfg.Get(GetDefaultProps().Get("film.filter.mitchell.c")).Get<float>();
+//	const float b = cfg.Get(GetDefaultProps().Get("film.filter.mitchell.b")).Get<float>();
+//	const float c = cfg.Get(GetDefaultProps().Get("film.filter.mitchell.c")).Get<float>();
 
 	slg::ocl::Filter *oclFilter = new slg::ocl::Filter();
 
-	oclFilter->type = slg::ocl::FILTER_MITCHELL;
-	oclFilter->mitchell.widthX = filterXWidth;
-	oclFilter->mitchell.widthY = filterYWidth;
-	oclFilter->mitchell.B = b;
-	oclFilter->mitchell.C = c;
+//	oclFilter->type = slg::ocl::FILTER_MITCHELL;
+//	oclFilter->mitchell.widthX = filterXWidth;
+//	oclFilter->mitchell.widthY = filterYWidth;
+//	oclFilter->mitchell.B = b;
+//	oclFilter->mitchell.C = c;
+
+	oclFilter->widthX = filterXWidth;
+	oclFilter->widthY = filterYWidth;
 
 	return oclFilter;
 }

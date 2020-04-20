@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -36,7 +36,5 @@ ImagePipelinePlugin *NopPlugin::Copy() const {
 void NopPlugin::Apply(Film &film, const u_int index) {
 }
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-void NopPlugin::ApplyOCL(Film &film, const u_int index) {
+void NopPlugin::ApplyHW(Film &film, const u_int index) {
 }
-#endif

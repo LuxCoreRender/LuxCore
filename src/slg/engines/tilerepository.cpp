@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -102,7 +102,7 @@ void Tile::InitTileFilm(const Film &film, Film **tileFilm) {
 	(*tileFilm)->SetImagePipelines(imagePipeline.release());
 
 	// Disable OpenCL
-	(*tileFilm)->oclEnable = false;
+	(*tileFilm)->hwEnable = false;
 	
 	// Disable denoiser statistics collection
 	(*tileFilm)->GetDenoiser().SetEnabled(false);
@@ -168,9 +168,6 @@ void Tile::AddPass(Film &tileFilm, const u_int passRendered) {
 				CheckConvergence();
 			}
 		}
-
-		if ((tileRepository->maxPassCount > 0) && (pass >= tileRepository->maxPassCount))
-			done = true;
 	} else
 		done = true;
 }
@@ -267,7 +264,7 @@ TileWork::TileWork() : tile(nullptr) {
 }
 
 TileWork::TileWork(Tile *t) {
-	Init(tile);
+	Init(t);
 }
 
 void TileWork::Init(Tile *t) {
@@ -296,7 +293,6 @@ TileRepository::TileRepository(const u_int tileW, const u_int tileH) {
 	tileWidth = tileW;
 	tileHeight = tileH;
 
-	maxPassCount = 0;
 	enableMultipassRendering = false;
 	convergenceTestThreshold = 6.f / 256.f;
 	convergenceTestThresholdReduction = 0.f;
@@ -642,7 +638,6 @@ TileRepository *TileRepository::FromProperties(const luxrays::Properties &cfg) {
 	tileHeight = Max(8u, cfg.Get(Property("tile.size.y")(tileHeight)).Get<u_int>());
 	unique_ptr<TileRepository> tileRepository(new TileRepository(tileWidth, tileHeight));
 
-	tileRepository->maxPassCount = cfg.Get(Property("batch.haltdebug")(0)).Get<u_int>();
 	tileRepository->enableMultipassRendering = cfg.Get(GetDefaultProps().Get("tile.multipass.enable")).Get<bool>();
 
 	if (cfg.IsDefined("tile.multipass.convergencetest.threshold"))

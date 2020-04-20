@@ -1,7 +1,7 @@
-#line 2 "scene_types.cl"
+#line 2 "sceneobject_types.cl"
 
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -18,8 +18,18 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+typedef enum {
+	COMBINED,
+	LIGHTMAP
+} BakeMapType;
+
 typedef struct {
 	unsigned int objectID;
 	unsigned int materialIndex;
+
+	unsigned int bakeMapIndex;
+	BakeMapType bakeMapType;
+	unsigned int  bakeMapUVIndex;
+
 	int cameraInvisible;
 } SceneObject;

@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -62,8 +62,8 @@ Properties DotsTexture::ToProperties(const ImageMapCache &imgMapCache, const boo
 
 	const string name = GetName();
 	props.Set(Property("scene.textures." + name + ".type")("dots"));
-	props.Set(Property("scene.textures." + name + ".inside")(insideTex->GetName()));
-	props.Set(Property("scene.textures." + name + ".outside")(outsideTex->GetName()));
+	props.Set(Property("scene.textures." + name + ".inside")(insideTex->GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".outside")(outsideTex->GetSDLValue()));
 	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;

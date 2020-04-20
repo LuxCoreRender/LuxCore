@@ -1,7 +1,7 @@
 #line 2 "dlsc_funcs.cl"
 
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -18,21 +18,16 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-OPENCL_FORCE_INLINE bool DLSCacheEntry_IsDirectLightSamplingDisabled(__global const DLSCacheEntry* restrict cacheEntry) {
-	return (cacheEntry->lightsDistributionOffset == NULL_INDEX);
-}
-
-OPENCL_FORCE_INLINE __global const DLSCacheEntry* restrict DLSCache_GetEntry(
+OPENCL_FORCE_INLINE __global const DLSCacheEntry* restrict DirectLightSamplingCache_GetNearestEntry(
 		__global const DLSCacheEntry* restrict dlscAllEntries,
-		__global const uint* restrict dlscDistributionIndexToLightIndex,
 		__global const float* restrict dlscDistributions,
 		__global const IndexBVHArrayNode* restrict dlscBVHNodes,
 		const float dlscRadius2, const float dlscNormalCosAngle,
-		const float3 p, const float3 n
-#if defined(PARAM_HAS_VOLUMES)
-		, const bool isVolume
-#endif
+		const float3 p, const float3 n, const bool isVolume
 		) {
+	__global const DLSCacheEntry* restrict nearestEntry = NULL;
+	float nearestDistance2 = dlscRadius2;
+
 	uint currentNode = 0; // Root Node
 	const uint stopNode = IndexBVHNodeData_GetSkipIndex(dlscBVHNodes[0].nodeData); // Non-existent
 
@@ -44,18 +39,16 @@ OPENCL_FORCE_INLINE __global const DLSCacheEntry* restrict DLSCache_GetEntry(
 			// It is a leaf, check the entry
 			__global const DLSCacheEntry* restrict entry = &dlscAllEntries[node->entryLeaf.entryIndex];
 
-			if ((DistanceSquared(p, VLOAD3F(&entry->p.x)) <= dlscRadius2) &&
-#if defined(PARAM_HAS_VOLUMES)
+			const float distance2 = DistanceSquared(p, VLOAD3F(&entry->p.x));
+			if ((distance2 < nearestDistance2) &&
 					(isVolume == entry->isVolume) && 
 					(isVolume ||
-#endif
-					(dot(n, VLOAD3F(&entry->n.x)) >= dlscNormalCosAngle)
-#if defined(PARAM_HAS_VOLUMES)
+					(dot(n, VLOAD3F(&entry->n.x)) > dlscNormalCosAngle)
 					)
-#endif
-					) {
-				// I have found a valid entry
-				return entry;
+				) {
+				// I have found a valid nearer entry
+				nearestEntry = entry;
+				nearestDistance2 = distance2;
 			}
 
 			++currentNode;
@@ -73,5 +66,25 @@ OPENCL_FORCE_INLINE __global const DLSCacheEntry* restrict DLSCache_GetEntry(
 		}
 	}
 
-	return NULL;
+	return nearestEntry;
+}
+
+uint DirectLightSamplingCache_GetLightDistribution(
+		__global const DLSCacheEntry* restrict dlscAllEntries,
+		__global const float* restrict dlscDistributions,
+		__global const IndexBVHArrayNode* restrict dlscBVHNodes,
+		const float dlscRadius2, const float dlscNormalCosAngle,
+		const float3 p, const float3 n, const bool isVolume
+		) {
+	__global const DLSCacheEntry* restrict entry = DirectLightSamplingCache_GetNearestEntry(
+			dlscAllEntries,
+			dlscDistributions, dlscBVHNodes,
+			dlscRadius2, dlscNormalCosAngle,
+			p, n, isVolume
+	);
+		
+	if (entry)
+		return entry->lightsDistributionOffset;
+	
+	return NULL_INDEX;
 }

@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -50,6 +50,10 @@ const Volume *GlossyCoatingMaterial::GetExteriorVolume(const HitPoint &hitPoint,
 		return exteriorVolume;
 	else
 		return matBase->GetExteriorVolume(hitPoint, passThroughEvent);
+}
+
+void GlossyCoatingMaterial::UpdateAvgPassThroughTransparency() {
+	avgPassThroughTransparency = matBase->GetAvgPassThroughTransparency();
 }
 
 Spectrum GlossyCoatingMaterial::GetPassThroughTransparency(const HitPoint &hitPoint,
@@ -226,7 +230,7 @@ Spectrum GlossyCoatingMaterial::Evaluate(const HitPoint &hitPoint,
 Spectrum GlossyCoatingMaterial::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
-	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
+	float *pdfW, BSDFEvent *event, const BSDFEvent eventHint) const {
 	if (fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 
@@ -259,7 +263,7 @@ Spectrum GlossyCoatingMaterial::Sample(const HitPoint &hitPoint,
 		const Vector fixedDirBase = frameBase.ToLocal(frame.ToWorld(localFixedDir));
 		// Sample base layer
 		baseF = matBase->Sample(hitPointBase, fixedDirBase, localSampledDir, u0, u1, passThroughEvent / wBase,
-			&basePdf, absCosSampledDir, event);
+			&basePdf, event, eventHint);
 		assert (baseF.IsValid());
 
 		if (baseF.Black())
@@ -289,8 +293,7 @@ Spectrum GlossyCoatingMaterial::Sample(const HitPoint &hitPoint,
 			return Spectrum();
 		assert (IsValid(coatingPdf));
 
-		*absCosSampledDir = fabsf(localSampledDir->z);
-		if (*absCosSampledDir < DEFAULT_COS_EPSILON_STATIC)
+		if (fabsf(CosTheta(*localSampledDir)) < DEFAULT_COS_EPSILON_STATIC)
 			return Spectrum();
 
 		coatingF *= coatingPdf;
@@ -468,7 +471,11 @@ void GlossyCoatingMaterial::UpdateTextureReferences(const Texture *oldTex, const
 		index = newTex;
 
 	// Always update glossiness just in case matBase->GetGlossiness() has changed
-	glossiness = Min(ComputeGlossiness(nu, nv), matBase->GetGlossiness());
+	const float coatGlossiness = ComputeGlossiness(nu, nv);
+	if (matBase->GetEventTypes() & GLOSSY)
+		glossiness = Min(coatGlossiness, matBase->GetGlossiness());
+	else
+		glossiness = coatGlossiness;
 }
 
 Properties GlossyCoatingMaterial::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const  {
@@ -477,12 +484,12 @@ Properties GlossyCoatingMaterial::ToProperties(const ImageMapCache &imgMapCache,
 	const string name = GetName();
 	props.Set(Property("scene.materials." + name + ".type")("glossycoating"));
 	props.Set(Property("scene.materials." + name + ".base")(matBase->GetName()));
-	props.Set(Property("scene.materials." + name + ".ks")(Ks->GetName()));
-	props.Set(Property("scene.materials." + name + ".uroughness")(nu->GetName()));
-	props.Set(Property("scene.materials." + name + ".vroughness")(nv->GetName()));
-	props.Set(Property("scene.materials." + name + ".ka")(Ka->GetName()));
-	props.Set(Property("scene.materials." + name + ".d")(depth->GetName()));
-	props.Set(Property("scene.materials." + name + ".index")(index->GetName()));
+	props.Set(Property("scene.materials." + name + ".ks")(Ks->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".uroughness")(nu->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".vroughness")(nv->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".ka")(Ka->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".d")(depth->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".index")(index->GetSDLValue()));
 	props.Set(Property("scene.materials." + name + ".multibounce")(multibounce));
 	props.Set(Material::ToProperties(imgMapCache, useRealFileName));
 

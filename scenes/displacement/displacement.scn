@@ -1,0 +1,70 @@
+scene.camera.type = "perspective"
+scene.camera.lookat.orig = 8.0 -7.03312111 4.53552628
+scene.camera.lookat.target = -4.0 3.5 0.837888479
+scene.camera.fieldofview = 55
+################################################################################
+scene.lights.l1.type = sphere
+scene.lights.l1.position = 3.0 -1.0 5.0
+scene.lights.l1.radius = 0.5
+scene.lights.l1.gain = 1000 1000 1000
+################################################################################
+scene.textures.vertcol.type = hitpointcolor
+##
+scene.textures.fbmtex.type = fbm
+scene.textures.fbmtex.octaves = 8
+scene.textures.fbmtex.omega = 0.5
+scene.textures.fbmtex.mapping.type = globalmapping3d
+#scene.textures.fbmtex.mapping.transformation = 10.0 0.0 0.0 0.0  0.0 10.0 0.0 0.0  0.0 0.0 10.0 0.0  0.0 0.0 0.0 1.0
+scene.textures.fbmtex.mapping.transformation = 3.0 0.0 0.0 0.0  0.0 3.0 0.0 0.0  0.0 0.0 3.0 0.0  0.0 0.0 0.0 1.0
+##
+scene.textures.checktex.type = checkerboard2d
+scene.textures.checktex.texture1 = 0.0 0.0 0.0
+scene.textures.checktex.texture2 = 1.0 1.0 1.0
+scene.textures.checktex.mapping.type = uvmapping2d
+scene.textures.checktex.mapping.uvscale = 20.0 10.0
+################################################################################
+scene.materials.redmat.type = disney
+scene.materials.redmat.basecolor = vertcol
+#scene.materials.redmat.basecolor = checktex
+scene.materials.redmat.specular = 1.0
+scene.materials.redmat.roughness = 0.2
+scene.materials.redmat.clearcoatgloss = 1.0
+scene.materials.whitematte.type = matte
+scene.materials.whitematte.kd = 0.75 0.75 0.75
+################################################################################
+scene.shapes.sphereply.type = mesh
+scene.shapes.sphereply.ply = sphere.ply
+##
+scene.shapes.spheresubdiv.type = subdiv
+scene.shapes.spheresubdiv.source = sphereply
+scene.shapes.spheresubdiv.maxlevel = 4
+##
+scene.shapes.spheredisp.type = displacement
+scene.shapes.spheredisp.source = spheresubdiv
+scene.shapes.spheredisp.offset = 0.0
+scene.shapes.spheredisp.normalsmooth = 1
+scene.shapes.spheredisp.map = checktex
+scene.shapes.spheredisp.scale = 0.3
+#scene.shapes.spheredisp.map = fbmtex
+#scene.shapes.spheredisp.scale = 0.15
+##
+scene.shapes.spheresimp.type = simplify
+scene.shapes.spheresimp.source = spheredisp
+scene.shapes.spheresimp.errorscale = 20
+##
+scene.shapes.sphere1.type = harlequin
+scene.shapes.sphere1.source = spheredisp
+##
+scene.shapes.sphere2.type = harlequin
+scene.shapes.sphere2.source = spheresimp
+################################################################################
+scene.objects.back.material = whitematte
+scene.objects.back.ply = scenes/bigmonkey/room.ply
+##
+scene.objects.sphere1.material = redmat
+scene.objects.sphere1.ply = sphere1
+scene.objects.sphere1.transformation = 1 0 0 0  0 1 0 0  0 0 1 0  -1.8 -1.8 0 1
+##
+scene.objects.sphere2.material = redmat
+scene.objects.sphere2.ply = sphere2
+scene.objects.sphere2.transformation = 1 0 0 0  0 1 0 0  0 0 1 0  1.8 1.8 0 1

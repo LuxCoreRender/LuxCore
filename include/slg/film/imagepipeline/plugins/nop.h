@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -43,10 +43,8 @@ public:
 
 	virtual void Apply(Film &film, const u_int index);
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	virtual bool CanUseOpenCL() const { return true; }
-	virtual void ApplyOCL(Film &film, const u_int index);
-#endif
+	virtual bool CanUseHW() const { return true; }
+	virtual void ApplyHW(Film &film, const u_int index);
 
 	friend class boost::serialization::access;
 

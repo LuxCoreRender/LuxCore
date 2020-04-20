@@ -1,7 +1,7 @@
 #line 2 "bsdf_types.cl"
 
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -34,9 +34,6 @@ typedef enum {
 
 typedef int BSDFEvent;
 
-// This is defined only under OpenCL because of variable size structures
-#if defined(SLG_OPENCL_KERNEL)
-
 typedef struct {
 	HitPoint hitPoint;
 
@@ -45,9 +42,5 @@ typedef struct {
 
 	Frame frame;
 
-#if defined(PARAM_HAS_VOLUMES)
 	int isVolume;
-#endif
 } BSDF;
-
-#endif

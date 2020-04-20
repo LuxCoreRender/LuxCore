@@ -12,12 +12,26 @@ scene.camera.lookat.target = 1.0 0.0 1.0
 ################################################################################
 #scene.textures.lighttex.type = blackbody
 #scene.textures.lighttex.temperature = 6500
+#scene.textures.lighttex.normalize = 0
+##
 scene.textures.lighttex.type = lampspectrum
 scene.textures.lighttex.name = Daylight
-#scene.textures.red_tex.type = irregulardata
-#scene.textures.red_tex.wavelengths = 580 620 660
-#scene.textures.red_tex.data = 0.0 0.000015 0.0
+##
+scene.textures.red_tex.type = irregulardata
+scene.textures.red_tex.wavelengths = 580 620 660
+scene.textures.red_tex.data = 0.0 0.000015 0.0
 ################################################################################
+#scene.materials.redmat.type = disney
+#scene.materials.redmat.basecolor = 0.7 0.0 0.0
+#scene.materials.redmat.specular = 1.0
+#scene.materials.redmat.roughness = 0.2
+#scene.materials.redmat.clearcoatgloss = 1.0
+##scene.materials.redmat.transparency.shadow = 1 1 1
+##
+#scene.materials.redmat.type = mirror
+#scene.materials.redmat.kr = 0.9 0.9 0.9
+##scene.materials.redmat.transparency.shadow = 1 1 1
+##
 #scene.materials.mat1.type = matte
 #scene.materials.mat1.kd = 0.75 0.0 0.0
 #scene.materials.mat2.type = mirror
@@ -34,15 +48,15 @@ scene.textures.lighttex.name = Daylight
 #scene.materials.redmat.kt = 1.0 0.0 0.0
 #scene.materials.redmat.iorinside = 1.51
 ##
-scene.materials.redmat.type = glossy2
-scene.materials.redmat.kd = 0.0 0.0 0.5
-scene.materials.redmat.ks = 0.5 0.5 0.5
-scene.materials.redmat.uroughness = 0.01
-scene.materials.redmat.vroughness = 0.01
+#scene.materials.redmat.type = glossy2
+#scene.materials.redmat.kd = 0.0 0.0 0.5
+#scene.materials.redmat.ks = 0.5 0.5 0.5
+#scene.materials.redmat.uroughness = 0.01
+#scene.materials.redmat.vroughness = 0.01
 ##
-#scene.materials.redmat.type = matte
+scene.materials.redmat.type = matte
 #scene.materials.redmat.kd = 0.75 0.0 0.0
-##scene.materials.redmat.kd = red_tex
+scene.materials.redmat.kd = red_tex
 ##
 scene.materials.whitematte.type = matte
 scene.materials.whitematte.kd = 0.75 0.75 0.75
@@ -50,6 +64,8 @@ scene.materials.whitematte.kd = 0.75 0.75 0.75
 scene.materials.whitelight.type = matte
 scene.materials.whitelight.emission = lighttex
 scene.materials.whitelight.emission.gain = 0.00015 0.00015 0.00015
+# 1/89159.6s cale for Blackbody normalization
+#scene.materials.whitelight.emission.gain = 0.000011216 0.000011216 0.000011216
 scene.materials.whitelight.kd = 0.0 0.0 0.0
 ################################################################################
 scene.shapes.monkey.type = mesh

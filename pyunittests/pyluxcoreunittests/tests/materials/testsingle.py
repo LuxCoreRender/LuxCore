@@ -23,6 +23,8 @@ import pyluxcore
 from pyluxcoreunittests.tests.utils import *
 from pyluxcoreunittests.tests.imagetest import *
 
+# Note: keep in alphabetical order
+
 ################################################################################
 # ArchGlass material test
 ################################################################################
@@ -58,6 +60,18 @@ class ClothMaterial(ImageTest):
     pass
 
 ClothMaterial = AddTests(ClothMaterial, TestClothMaterial, GetTestCases())
+
+################################################################################
+# Disney material test
+################################################################################
+
+def TestDisneyMaterial(cls, params):
+	StandardSceneTest(cls, params, "simple/mat-disney-area.cfg", "DisneyMaterial")
+
+class DisneyMaterial(ImageTest):
+    pass
+
+DisneyMaterial = AddTests(DisneyMaterial, TestDisneyMaterial, GetTestCases())
 
 ################################################################################
 # Glass material test

@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -92,7 +92,7 @@ Spectrum ArchGlassMaterial::EvalSpecularTransmission(const HitPoint &hitPoint,
 Spectrum ArchGlassMaterial::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
-	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
+	float *pdfW, BSDFEvent *event, const BSDFEvent eventHint) const {
 	const Spectrum kt = Kt->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
 	const Spectrum kr = Kr->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
 
@@ -109,8 +109,8 @@ Spectrum ArchGlassMaterial::Sample(const HitPoint &hitPoint,
 
 	// Decide to transmit or reflect
 	float threshold;
-	if (!refl.Black()) {
-		if (!trans.Black()) {
+	if (!refl.Black() && (eventHint != TRANSMIT)) {
+		if (!trans.Black() && (eventHint != REFLECT)) {
 			// Importance sampling
 			const float reflFilter = refl.Filter();
 			const float transFilter = trans.Filter();
@@ -143,8 +143,6 @@ Spectrum ArchGlassMaterial::Sample(const HitPoint &hitPoint,
 
 		result = refl;
 	}
-
-	*absCosSampledDir = fabsf(CosTheta(*localSampledDir));
 
 	return result / *pdfW;
 }
@@ -223,12 +221,12 @@ Properties ArchGlassMaterial::ToProperties(const ImageMapCache &imgMapCache, con
 
 	const string name = GetName();
 	props.Set(Property("scene.materials." + name + ".type")("archglass"));
-	props.Set(Property("scene.materials." + name + ".kr")(Kr->GetName()));
-	props.Set(Property("scene.materials." + name + ".kt")(Kt->GetName()));
+	props.Set(Property("scene.materials." + name + ".kr")(Kr->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".kt")(Kt->GetSDLValue()));
 	if (exteriorIor)
-		props.Set(Property("scene.materials." + name + ".exteriorior")(exteriorIor->GetName()));
+		props.Set(Property("scene.materials." + name + ".exteriorior")(exteriorIor->GetSDLValue()));
 	if (interiorIor)
-		props.Set(Property("scene.materials." + name + ".interiorior")(interiorIor->GetName()));
+		props.Set(Property("scene.materials." + name + ".interiorior")(interiorIor->GetSDLValue()));
 	props.Set(Material::ToProperties(imgMapCache, useRealFileName));
 
 	return props;

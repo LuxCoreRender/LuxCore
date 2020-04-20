@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -35,8 +35,7 @@ public:
 
 	virtual AcceleratorType GetType() const { return ACCEL_EMBREE; }
 
-	virtual OpenCLKernels *NewOpenCLKernels(OpenCLIntersectionDevice *device,
-		const u_int kernelCount) const { return NULL; }
+	virtual OpenCLKernel *NewOpenCLKernel(OpenCLIntersectionDevice *device) const { return NULL; }
 	virtual bool CanRunOnOpenCLDevice(OpenCLIntersectionDevice *device) const {
 		return false;
 	}

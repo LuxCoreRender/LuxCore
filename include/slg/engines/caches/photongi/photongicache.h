@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -22,7 +22,10 @@
 #include <vector>
 #include <boost/atomic.hpp>
 #include <boost/thread/mutex.hpp>
+#include <boost/thread/barrier.hpp>
+#include <boost/function.hpp>
 
+#include "luxrays/core/color/spectrumgroup.h"
 #include "luxrays/utils/properties.h"
 #include "luxrays/utils/utils.h"
 #include "luxrays/utils/serializationutils.h"
@@ -73,20 +76,23 @@ struct PGICVisibilityParticle : GenericPhoton {
 			hitsCount(0) {
 	}
 
-	luxrays::Spectrum ComputeRadiance(const float radius2, const float photonTraced) const {
+	luxrays::SpectrumGroup ComputeRadiance(const float radius2, const float photonTraced) const {
 		if (hitsCount > 0) {
 			// The estimated area covered by the entry (if I have enough hits)
 			const float area = (hitsCount < 16) ?  (radius2 * M_PI) :
 				(luxrays::Sqr(2.f * hitsAccumulatedDistance / hitsCount) * M_PI);
 
-			return (bsdfEvaluateTotal * INV_PI) * alphaAccumulated / (photonTraced * area);
+			luxrays::SpectrumGroup result = alphaAccumulated;
+			result *= (bsdfEvaluateTotal * INV_PI) / (photonTraced * area);
+
+			return result;
 		} else
-			return luxrays::Spectrum();
+			return luxrays::SpectrumGroup();
 	}
 
 	luxrays::Normal n;
 	luxrays::Spectrum bsdfEvaluateTotal;
-	luxrays::Spectrum alphaAccumulated;
+	luxrays::SpectrumGroup alphaAccumulated;
 
 	// The following counters are used to estimate the surface covered by
 	// this entry.
@@ -110,13 +116,14 @@ protected:
 };
 
 struct Photon : GenericPhoton {
-	Photon(const luxrays::Point &pt, const luxrays::Vector &dir,
+	Photon(const luxrays::Point &pt, const luxrays::Vector &dir, const u_int id,
 		const luxrays::Spectrum &a, const luxrays::Normal &n, const bool isVol) :
 			GenericPhoton(pt, isVol), d(dir),
-			alpha(a), landingSurfaceNormal(n) {
+			lightID(id), alpha(a), landingSurfaceNormal(n) {
 	}
 
 	luxrays::Vector d;
+	u_int lightID;
 	luxrays::Spectrum alpha;
 	luxrays::Normal landingSurfaceNormal;
 
@@ -129,6 +136,7 @@ protected:
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(GenericPhoton);
 		ar & d;
+		ar & lightID;
 		ar & alpha;
 		ar & landingSurfaceNormal;
 	}
@@ -136,12 +144,12 @@ protected:
 
 struct RadiancePhoton : GenericPhoton {
 	RadiancePhoton(const luxrays::Point &pt, const luxrays::Normal &nm,
-		const luxrays::Spectrum &rad, const bool isVol) :
+		const luxrays::SpectrumGroup &rad, const bool isVol) :
 				GenericPhoton(pt, isVol), n(nm), outgoingRadiance(rad) {
 	}
 
 	luxrays::Normal n;
-	luxrays::Spectrum outgoingRadiance;
+	luxrays::SpectrumGroup outgoingRadiance;
 
 	friend class boost::serialization::access;
 	
@@ -154,20 +162,6 @@ protected:
 		ar & n;
 		ar & outgoingRadiance;
 	}
-};
-
-struct NearPhoton {
-    NearPhoton(const u_int index = NULL_INDEX, const float d2 = INFINITY) : photonIndex(index),
-			distance2(d2) {
-	}
-
-    bool operator<(const NearPhoton &p2) const {
-        return (distance2 == p2.distance2) ?
-            (photonIndex < p2.photonIndex) : (distance2 < p2.distance2);
-    }
-
-    u_int photonIndex;
-    float distance2;
 };
 
 //------------------------------------------------------------------------------
@@ -197,20 +191,22 @@ typedef struct {
 		float lookUpRadius, lookUpRadius2, lookUpNormalAngle, lookUpNormalCosAngle;
 	} visibility;
 
+	float glossinessUsageThreshold;
+
 	struct {
 		bool enabled;
 		u_int maxSize;
 		float lookUpRadius, lookUpRadius2, lookUpNormalAngle,
-				glossinessUsageThreshold, usageThresholdScale,
+				usageThresholdScale,
 				filterRadiusScale, haltThreshold;
 	} indirect;
 
 	struct {
 		bool enabled;
 		u_int maxSize;
-		u_int lookUpMaxCount;
 		float lookUpRadius, lookUpRadius2, lookUpNormalAngle,
-				mergeRadiusScale;
+				radiusReduction, minLookUpRadius;
+		u_int updateSpp;
 	} caustic;
 
 	PhotonGIDebugType debugType;
@@ -234,23 +230,25 @@ protected:
 		ar & visibility.lookUpNormalAngle;
 		ar & visibility.lookUpNormalCosAngle;
 
+		ar & glossinessUsageThreshold;
+
 		ar & indirect.enabled;
 		ar & indirect.maxSize;
 		ar & indirect.lookUpRadius;
 		ar & indirect.lookUpRadius2;
 		ar & indirect.lookUpNormalAngle;
-		ar & indirect.glossinessUsageThreshold;
 		ar & indirect.usageThresholdScale;
 		ar & indirect.filterRadiusScale;
 		ar & indirect.haltThreshold;
 
 		ar & caustic.enabled;
 		ar & caustic.maxSize;
-		ar & caustic.lookUpMaxCount;
 		ar & caustic.lookUpRadius;
 		ar & caustic.lookUpRadius2;
 		ar & caustic.lookUpNormalAngle;
-		ar & caustic.mergeRadiusScale;
+		ar & caustic.radiusReduction;
+		ar & caustic.minLookUpRadius;
+		ar & caustic.updateSpp;
 
 		ar & debugType;
 		
@@ -261,6 +259,7 @@ protected:
 
 class PGICSceneVisibility;
 class TracePhotonsThread;
+class EyePathInfo;
 
 class PhotonGICache {
 public:
@@ -275,15 +274,21 @@ public:
 	bool IsPhotonGIEnabled(const BSDF &bsdf) const;
 	float GetIndirectUsageThreshold(const BSDFEvent lastBSDFEvent,
 			const float lastGlossiness, const float u0) const;
-	bool IsDirectLightHitVisible(const bool causticCacheAlreadyUsed,
-			const BSDFEvent lastBSDFEvent, const PathDepthInfo &depthInfo) const;
+	bool IsDirectLightHitVisible(const EyePathInfo &pathInfo,
+		const bool photonGICausticCacheUsed) const;
 	
 	const PhotonGICacheParams &GetParams() const { return params; }
 
-	void Preprocess();
+	void Preprocess(const u_int threadCount);
+	bool Update(const u_int threadIndex, const u_int filmSPP,
+		const boost::function<void()> &threadZeroCallback);
+	bool Update(const u_int threadIndex, const u_int filmSPP) {
+		const boost::function<void()> noCallback;
+		return Update(threadIndex, filmSPP, noCallback);
+	}
 
-	luxrays::Spectrum GetIndirectRadiance(const BSDF &bsdf) const;
-	luxrays::Spectrum GetCausticRadiance(const BSDF &bsdf) const;
+	const luxrays::SpectrumGroup *GetIndirectRadiance(const BSDF &bsdf) const;
+	luxrays::SpectrumGroup ConnectWithCausticPaths(const BSDF &bsdf) const;
 	
 	const std::vector<RadiancePhoton> &GetRadiancePhotons() const { return radiancePhotons; }
 	const PGICRadiancePhotonBvh *GetRadiancePhotonsBVH() const { return radiancePhotonsBVH; }
@@ -314,21 +319,16 @@ private:
 	void EvaluateBestRadiusImpl(const u_int threadIndex, const u_int workSize,
 			float &accumulatedRadiusSize, u_int &radiusSizeCount) const;
 	void TraceVisibilityParticles();
-	void TracePhotons(const u_int photonTracedCount,
+	void TracePhotons(const u_int seedBase, const u_int photonTracedCount,
 		const bool indirectCacheDone, const bool causticCacheDone,
 		boost::atomic<u_int> &globalIndirectPhotonsTraced,
 		boost::atomic<u_int> &globalCausticPhotonsTraced,
 		boost::atomic<u_int> &globalIndirectSize,
 		boost::atomic<u_int> &globalCausticSize);
-	void TracePhotons();
-	void FilterVisibilityParticlesRadiance(const std::vector<luxrays::Spectrum> &radianceValues,
-			std::vector<luxrays::Spectrum> &filteredRadianceValues) const;
+	void TracePhotons(const bool indirectEnabled, const bool causticEnabled);
+	void FilterVisibilityParticlesRadiance(const std::vector<luxrays::SpectrumGroup> &radianceValues,
+			std::vector<luxrays::SpectrumGroup> &filteredRadianceValues) const;
 	void CreateRadiancePhotons();
-	void MergeCausticPhotons();
-	luxrays::Spectrum ProcessCacheEntries(const std::vector<NearPhoton> &entries,
-			const float maxDistance2,
-			const std::vector<Photon> &photons, const u_int photonTracedCount,
-			const BSDF &bsdf) const;
 
 	void LoadPersistentCache(const std::string &fileName);
 	void SavePersistentCache(const std::string &fileName);
@@ -337,6 +337,10 @@ private:
 
 	const Scene *scene;
 	PhotonGICacheParams params;
+
+	u_int threadCount;
+	std::unique_ptr<boost::barrier> threadsSyncBarrier;
+	u_int lastUpdateSpp, updateSeedBase;
 
 	// Visibility map
 	std::vector<PGICVisibilityParticle> visibilityParticles;
@@ -350,21 +354,23 @@ private:
 	// Caustic photon maps
 	std::vector<Photon> causticPhotons;
 	PGICPhotonBvh *causticPhotonsBVH;
-	u_int causticPhotonTracedCount;
+	u_int causticPhotonTracedCount, causticPhotonPass;
 };
 
 }
 
 BOOST_CLASS_VERSION(slg::GenericPhoton, 1)
-BOOST_CLASS_VERSION(slg::PGICVisibilityParticle, 1)
-BOOST_CLASS_VERSION(slg::Photon, 1)
-BOOST_CLASS_VERSION(slg::RadiancePhoton, 1)
-BOOST_CLASS_VERSION(slg::PhotonGICache, 1)
+BOOST_CLASS_VERSION(slg::PGICVisibilityParticle, 2)
+BOOST_CLASS_VERSION(slg::Photon, 2)
+BOOST_CLASS_VERSION(slg::RadiancePhoton, 2)
+BOOST_CLASS_VERSION(slg::PhotonGICacheParams, 6)
+BOOST_CLASS_VERSION(slg::PhotonGICache, 3)
 
 BOOST_CLASS_EXPORT_KEY(slg::GenericPhoton)
 BOOST_CLASS_EXPORT_KEY(slg::PGICVisibilityParticle)
 BOOST_CLASS_EXPORT_KEY(slg::Photon)
 BOOST_CLASS_EXPORT_KEY(slg::RadiancePhoton)
+BOOST_CLASS_EXPORT_KEY(slg::PhotonGICacheParams)
 BOOST_CLASS_EXPORT_KEY(slg::PhotonGICache)
 
 #endif	/* _SLG_PHOTONGICACHE_H */

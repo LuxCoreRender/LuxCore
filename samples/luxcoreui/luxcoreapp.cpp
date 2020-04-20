@@ -45,15 +45,16 @@ LuxCoreApp::LuxCoreApp(luxcore::RenderConfig *renderConfig) :
 #endif
 		pixelFilterWindow(this), renderEngineWindow(this),
 		samplerWindow(this), haltConditionsWindow(this),
-		statsWindow(this), logWindow(this), helpWindow(this) {
+		statsWindow(this), logWindow(this), helpWindow(this),
+		userImportancePaintWindow(this) {
 	config = renderConfig;
 
 	session = NULL;
 	window = NULL;
 
-	selectionBuffer = NULL;
-	selectionFilmWidth = 0xffffffffu;
-	selectionFilmHeight = 0xffffffffu;
+	renderImageBuffer = NULL;
+	renderImageWidth = 0xffffffffu;
+	renderImageHeight = 0xffffffffu;
 			
 	currentTool = TOOL_CAMERA_EDIT;
 
@@ -93,7 +94,7 @@ LuxCoreApp::LuxCoreApp(luxcore::RenderConfig *renderConfig) :
 
 LuxCoreApp::~LuxCoreApp() {
 	currentLogWindow = NULL;
-	delete[] selectionBuffer;
+	delete[] renderImageBuffer;
 
 	delete session;
 	delete config;
@@ -326,18 +327,20 @@ void LuxCoreApp::StartRendering(RenderState *startState, Film *startFilm) {
 		currentTool = TOOL_OBJECT_SELECTION;
 	else if (toolTypeStr == "IMAGE_VIEW")
 		currentTool = TOOL_IMAGE_VIEW;
+	else if (toolTypeStr == "USER_IMPORTANCE_PAINT")
+		currentTool = TOOL_USER_IMPORTANCE_PAINT;
 	else
 		currentTool = TOOL_CAMERA_EDIT;
-
-	// Delete scene.camera.screenwindow so frame buffer resize will
-	// automatically adjust the ratio
-	Properties cameraProps = config->GetScene().ToProperties().GetAllProperties("scene.camera");
-	cameraProps.DeleteAll(cameraProps.GetAllNames("scene.camera.screenwindow"));
-	config->GetScene().Parse(cameraProps);
 
 	unsigned int filmWidth = targetFilmWidth;
 	unsigned int filmHeight = targetFilmHeight;
 	if (currentTool != TOOL_IMAGE_VIEW) {
+		// Delete scene.camera.screenwindow so frame buffer resize will
+		// automatically adjust the ratio
+		Properties cameraProps = config->GetScene().ToProperties().GetAllProperties("scene.camera");
+		cameraProps.DeleteAll(cameraProps.GetAllNames("scene.camera.screenwindow"));
+		config->GetScene().Parse(cameraProps);
+
 		// Adjust the width and height to match the window width and height ratio
 		AdjustFilmResolutionToWindowSize(&filmWidth, &filmHeight);
 	}
@@ -348,6 +351,8 @@ void LuxCoreApp::StartRendering(RenderState *startState, Film *startFilm) {
 			Property("film.height")(filmHeight);
 	config->Parse(cfgProps);
 
+	LA_LOG("RenderConfig has cached kernels: " << (config->HasCachedKernels() ? "True" : "False"));
+
 	try {
 		session = RenderSession::Create(config, startState, startFilm);
 
@@ -355,6 +360,9 @@ void LuxCoreApp::StartRendering(RenderState *startState, Film *startFilm) {
 		session->Start();
 
 		UpdateMoveStep();
+		
+		if (currentTool == TOOL_USER_IMPORTANCE_PAINT)
+			userImportancePaintWindow.Init();
 	} catch(exception &ex) {
 		LA_LOG("RenderSession starting error: " << endl << ex.what());
 

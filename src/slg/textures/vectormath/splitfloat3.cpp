@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -39,7 +39,7 @@ Properties SplitFloat3Texture::ToProperties(const ImageMapCache &imgMapCache, co
 
 	const string name = GetName();
 	props.Set(Property("scene.textures." + name + ".type")("splitfloat3"));
-	props.Set(Property("scene.textures." + name + ".texture")(tex->GetName()));
+	props.Set(Property("scene.textures." + name + ".texture")(tex->GetSDLValue()));
 	props.Set(Property("scene.textures." + name + ".channel")((int)channel));
 
 	return props;

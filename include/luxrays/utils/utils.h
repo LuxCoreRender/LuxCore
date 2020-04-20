@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -74,6 +74,8 @@
 #else
 #error "Unsupported Platform !!!"
 #endif
+
+#include <boost/lexical_cast.hpp>
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846f

@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -37,38 +37,32 @@ BOOST_CLASS_EXPORT_IMPLEMENT(slg::BackgroundImgPlugin)
 
 BackgroundImgPlugin::BackgroundImgPlugin(ImageMap *map) {
 	imgMap = map;
-	filmImageMap = NULL;
+	filmImageMap = nullptr;
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	oclIntersectionDevice = NULL;
-	oclFilmImageMapDesc = NULL;
-	oclFilmImageMap = NULL;
+	hardwareDevice = nullptr;
+	hwFilmImageMapDesc = nullptr;
+	hwFilmImageMap = nullptr;
 
-	applyKernel = NULL;
-#endif
+	applyKernel = nullptr;
 }
 
 BackgroundImgPlugin::BackgroundImgPlugin() {
-	filmImageMap = NULL;
+	filmImageMap = nullptr;
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	oclIntersectionDevice = NULL;
-	oclFilmImageMapDesc = NULL;
-	oclFilmImageMap = NULL;
+	hardwareDevice = nullptr;
+	hwFilmImageMapDesc = nullptr;
+	hwFilmImageMap = nullptr;
 
-	applyKernel = NULL;
-#endif
+	applyKernel = nullptr;
 }
 
 BackgroundImgPlugin::~BackgroundImgPlugin() {
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	delete applyKernel;
 
-	if (oclIntersectionDevice){
-		oclIntersectionDevice->FreeBuffer(&oclFilmImageMapDesc);
-		oclIntersectionDevice->FreeBuffer(&oclFilmImageMap);
+	if (hardwareDevice) {
+		hardwareDevice->FreeBuffer(&hwFilmImageMapDesc);
+		hardwareDevice->FreeBuffer(&hwFilmImageMap);
 	}
-#endif
 
 	delete imgMap;
 	delete filmImageMap;
@@ -86,7 +80,7 @@ void BackgroundImgPlugin::UpdateFilmImageMap(const Film &film) {
 	if ((!filmImageMap) ||
 			(filmImageMap->GetWidth() != width) || (filmImageMap->GetHeight() != height)) {
 		delete filmImageMap;
-		filmImageMap = NULL;
+		filmImageMap = nullptr;
 
 		filmImageMap = imgMap->Copy();
 		filmImageMap->Resize(width, height);
@@ -141,8 +135,7 @@ void BackgroundImgPlugin::Apply(Film &film, const u_int index) {
 // OpenCL version
 //------------------------------------------------------------------------------
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-void BackgroundImgPlugin::ApplyOCL(Film &film, const u_int index) {
+void BackgroundImgPlugin::ApplyHW(Film &film, const u_int index) {
 	if (!film.HasChannel(Film::ALPHA)) {
 		// I can not work without alpha channel
 		return;
@@ -152,7 +145,9 @@ void BackgroundImgPlugin::ApplyOCL(Film &film, const u_int index) {
 	UpdateFilmImageMap(film);
 
 	if (!applyKernel) {
-		oclIntersectionDevice = film.oclIntersectionDevice;
+		film.ctx->SetVerbose(true);
+
+		hardwareDevice = film.hardwareDevice;
 
 		slg::ocl::ImageMap imgMapDesc;
 		imgMapDesc.channelCount = filmImageMap->GetChannelCount();
@@ -163,65 +158,21 @@ void BackgroundImgPlugin::ApplyOCL(Film &film, const u_int index) {
 		imgMapDesc.storageType = (slg::ocl::ImageMapStorageType)filmImageMap->GetStorage()->GetStorageType();
 
 		// Allocate OpenCL buffers
-		film.ctx->SetVerbose(true);
-		oclIntersectionDevice->AllocBufferRO(&oclFilmImageMapDesc, &imgMapDesc, sizeof(slg::ocl::ImageMap), "BackgroundImg image map description");
-		oclIntersectionDevice->AllocBufferRO(&oclFilmImageMap, filmImageMap->GetStorage()->GetPixelsData(),
-				filmImageMap->GetStorage()->GetMemorySize(), "BackgroundImg image map");
-		film.ctx->SetVerbose(false);
+		hardwareDevice->AllocBufferRO(&hwFilmImageMapDesc, &imgMapDesc, sizeof(slg::ocl::ImageMap),
+						"BackgroundImg image map description");
+		hardwareDevice->AllocBufferRO(&hwFilmImageMap, filmImageMap->GetStorage()->GetPixelsData(),
+						filmImageMap->GetStorage()->GetMemorySize(), "BackgroundImg image map");
 
 		// Compile sources
 		const double tStart = WallClockTime();
 
-		// Set #define symbols
-		stringstream ssParams;
-		ssParams.precision(6);
-		ssParams << scientific <<
-				" -D LUXRAYS_OPENCL_KERNEL" <<
-				" -D SLG_OPENCL_KERNEL";
-
-		ssParams << " -D PARAM_HAS_IMAGEMAPS";
-		ssParams << " -D PARAM_IMAGEMAPS_PAGE_0";
-		ssParams << " -D PARAM_IMAGEMAPS_COUNT=1";
-
-		switch (imgMapDesc.storageType) {
-			case slg::ocl::BYTE:
-				ssParams << " -D PARAM_HAS_IMAGEMAPS_BYTE_FORMAT";
-				break;
-			case slg::ocl::HALF:
-				ssParams << " -D PARAM_HAS_IMAGEMAPS_HALF_FORMAT";
-				break;
-			case slg::ocl::FLOAT:
-				ssParams << " -D PARAM_HAS_IMAGEMAPS_FLOAT_FORMAT";
-				break;
-			default:
-				throw runtime_error("Unknown storage type in BackgroundImgPlugin::ApplyOCL(): " + ToString(imgMapDesc.storageType));
-		}
-
-		switch (imgMapDesc.channelCount) {
-			case 1:
-				ssParams << " -D PARAM_HAS_IMAGEMAPS_1xCHANNELS";
-				break;
-			case 2:
-				ssParams << " -D PARAM_HAS_IMAGEMAPS_2xCHANNELS";
-				break;
-			case 3:
-				ssParams << " -D PARAM_HAS_IMAGEMAPS_3xCHANNELS";
-				break;
-			case 4:
-				ssParams << " -D PARAM_HAS_IMAGEMAPS_4xCHANNELS";
-				break;
-			default:
-				throw runtime_error("Unknown channel count in BackgroundImgPlugin::ApplyOCL(): " + ToString(imgMapDesc.channelCount));			
-		}
-
-		ssParams << " -D PARAM_HAS_IMAGEMAPS_WRAP_REPEAT";
-
-		cl::Program *program = ImagePipelinePlugin::CompileProgram(
-				film,
-				ssParams.str(),
-				slg::ocl::KernelSource_utils_funcs +
-				slg::ocl::KernelSource_color_types +
-				slg::ocl::KernelSource_color_funcs +
+		HardwareDeviceProgram *program = nullptr;
+		hardwareDevice->CompileProgram(&program,
+				"-D LUXRAYS_OPENCL_KERNEL -D SLG_OPENCL_KERNEL",
+				luxrays::ocl::KernelSource_luxrays_types +
+				luxrays::ocl::KernelSource_utils_funcs +
+				luxrays::ocl::KernelSource_color_types +
+				luxrays::ocl::KernelSource_color_funcs +
 				slg::ocl::KernelSource_imagemap_types +
 				slg::ocl::KernelSource_imagemap_funcs +
 				slg::ocl::KernelSource_plugin_backgroundimg_funcs,
@@ -232,29 +183,30 @@ void BackgroundImgPlugin::ApplyOCL(Film &film, const u_int index) {
 		//----------------------------------------------------------------------
 
 		SLG_LOG("[BackgroundImgPlugin] Compiling BackgroundImgPlugin_Apply Kernel");
-		applyKernel = new cl::Kernel(*program, "BackgroundImgPlugin_Apply");
+		hardwareDevice->GetKernel(program, &applyKernel, "BackgroundImgPlugin_Apply");
 
 		// Set kernel arguments
 		u_int argIndex = 0;
-		applyKernel->setArg(argIndex++, film.GetWidth());
-		applyKernel->setArg(argIndex++, film.GetHeight());
-		applyKernel->setArg(argIndex++, *(film.ocl_IMAGEPIPELINE));
-		applyKernel->setArg(argIndex++, *(film.ocl_ALPHA));
-		applyKernel->setArg(argIndex++, *oclFilmImageMapDesc);
-		applyKernel->setArg(argIndex++, *oclFilmImageMap);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.GetWidth());
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.GetHeight());
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.hw_IMAGEPIPELINE);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.hw_ALPHA);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, hwFilmImageMapDesc);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, hwFilmImageMap);
 
 		//----------------------------------------------------------------------
 
 		delete program;
 
 		// Because imgMapDesc is a local variable
-		oclIntersectionDevice->GetOpenCLQueue().flush();
+		hardwareDevice->FinishQueue();
 
 		const double tEnd = WallClockTime();
 		SLG_LOG("[BackgroundImgPlugin] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
+		
+		film.ctx->SetVerbose(false);
 	}
-	
-	oclIntersectionDevice->GetOpenCLQueue().enqueueNDRangeKernel(*applyKernel,
-			cl::NullRange, cl::NDRange(RoundUp(film.GetWidth() * film.GetHeight(), 256u)), cl::NDRange(256));
+
+	hardwareDevice->EnqueueKernel(applyKernel, HardwareDeviceRange(RoundUp(film.GetWidth() * film.GetHeight(), 256u)),
+			HardwareDeviceRange(256));
 }
-#endif

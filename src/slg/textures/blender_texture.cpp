@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -116,7 +116,7 @@ Properties BlenderBlendTexture::ToProperties(const ImageMapCache &imgMapCache, c
 			progressiontype = "spherical";
 			break;
 		case TEX_HALO:
-			progressiontype = "quadratic_spherical";
+			progressiontype = "halo";
 			break;
 		case TEX_RAD:
 			progressiontype = "radial";

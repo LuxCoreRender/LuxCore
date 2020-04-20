@@ -1,7 +1,7 @@
 #line 2 "plugin_gaussianblur3x3_funcs.cl"
 
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -35,15 +35,15 @@ void GaussianBlur3x3FilterPlugin_ApplyBlurFilterXR1(
 	float3 c = VLOAD3F(&src[1 * 3]);
 
 	const float leftTotF = bF + cF;
-	const float3 bLeftK = bF / leftTotF;
-	const float3 cLeftK = cF / leftTotF;
+	const float3 bLeftK = TO_FLOAT3(bF / leftTotF);
+	const float3 cLeftK = TO_FLOAT3(cF / leftTotF);
 	VSTORE3F(bLeftK  * b + cLeftK * c, &dst[0 * 3]);
 
     // Main loop
 	const float totF = aF + bF + cF;
-	const float3 aK = aF / totF;
-	const float3 bK = bF / totF;
-	const float3 cK = cF / totF;
+	const float3 aK = TO_FLOAT3(aF / totF);
+	const float3 bK = TO_FLOAT3(bF / totF);
+	const float3 cK = TO_FLOAT3(cF / totF);
 
 	for (uint x = 1; x < filmWidth - 1; ++x) {
 		a = b;
@@ -55,14 +55,14 @@ void GaussianBlur3x3FilterPlugin_ApplyBlurFilterXR1(
 
     // Do right edge
 	const float rightTotF = aF + bF;
-	const float3 aRightK = aF / rightTotF;
-	const float3 bRightK = bF / rightTotF;
+	const float3 aRightK = TO_FLOAT3(aF / rightTotF);
+	const float3 bRightK = TO_FLOAT3(bF / rightTotF);
 	a = b;
 	b = c;
 	VSTORE3F(aRightK  * a + bRightK * b, &dst[(filmWidth - 1) * 3]);
 }
 
-__kernel __attribute__((work_group_size_hint(256, 1, 1))) void GaussianBlur3x3FilterPlugin_FilterX(
+__kernel void GaussianBlur3x3FilterPlugin_FilterX(
 		const uint filmWidth, const uint filmHeight,
 		__global const float *src,
 		__global float *dst,
@@ -97,15 +97,15 @@ void GaussianBlur3x3FilterPlugin_ApplyBlurFilterYR1(
 	float3 c = VLOAD3F(&src[filmWidth * 3]);
 
 	const float leftTotF = bF + cF;
-	const float3 bLeftK = bF / leftTotF;
-	const float3 cLeftK = cF / leftTotF;
+	const float3 bLeftK = TO_FLOAT3(bF / leftTotF);
+	const float3 cLeftK = TO_FLOAT3(cF / leftTotF);
 	VSTORE3F(bLeftK  * b + cLeftK * c, &dst[0 * 3]);
 
     // Main loop
 	const float totF = aF + bF + cF;
-	const float3 aK = aF / totF;
-	const float3 bK = bF / totF;
-	const float3 cK = cF / totF;
+	const float3 aK = TO_FLOAT3(aF / totF);
+	const float3 bK = TO_FLOAT3(bF / totF);
+	const float3 cK = TO_FLOAT3(cF / totF);
 
     for (uint y = 1; y < filmHeight - 1; ++y) {
 		const unsigned index = y * filmWidth;
@@ -119,14 +119,14 @@ void GaussianBlur3x3FilterPlugin_ApplyBlurFilterYR1(
 
     // Do right edge
 	const float rightTotF = aF + bF;
-	const float3 aRightK = aF / rightTotF;
-	const float3 bRightK = bF / rightTotF;
+	const float3 aRightK = TO_FLOAT3(aF / rightTotF);
+	const float3 bRightK = TO_FLOAT3(bF / rightTotF);
 	a = b;
 	b = c;
 	VSTORE3F(aRightK  * a + bRightK * b, &dst[(filmHeight - 1) * filmWidth * 3]);
 }
 
-__kernel __attribute__((work_group_size_hint(256, 1, 1))) void GaussianBlur3x3FilterPlugin_FilterY(
+__kernel void GaussianBlur3x3FilterPlugin_FilterY(
 		const uint filmWidth, const uint filmHeight,
 		__global const float *src,
 		__global float *dst,

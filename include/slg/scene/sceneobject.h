@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -36,11 +36,16 @@ namespace ocl {
 // SceneObject
 //------------------------------------------------------------------------------
 
+typedef enum {
+	COMBINED,
+	LIGHTMAP
+} BakeMapType;
+
 class SceneObject : public luxrays::NamedObject {
 public:
 	SceneObject(luxrays::ExtMesh *m, const Material *mt, const u_int id,
 			const bool invisib) : NamedObject("obj"), mesh(m), mat(mt), objID(id),
-			cameraInvisible(invisib) { }
+			bakeMap(nullptr), cameraInvisible(invisib) { }
 	virtual ~SceneObject() { }
 
 	const luxrays::ExtMesh *GetExtMesh() const { return mesh; }
@@ -50,10 +55,16 @@ public:
 	bool IsCameraInvisible() const { return cameraInvisible; }
 
 	void SetMaterial(const Material *newMat) { mat = newMat; }
-	
-	void AddReferencedMaterials(boost::unordered_set<const Material *> &referencedMats) const {
-		mat->AddReferencedMaterials(referencedMats);
-	}
+
+	bool HasBakeMap(const BakeMapType type) const { return (bakeMap != nullptr) && (bakeMapType == type); }
+	BakeMapType GetBakeMapType() const { return bakeMapType; }
+	void SetBakeMap(const ImageMap *map, const BakeMapType type, const u_int uvIndex);
+	const ImageMap *GetBakeMap() const { return bakeMap; }
+	u_int GetBakeMapUVIndex() const { return bakeMapUVIndex; }
+	luxrays::Spectrum GetBakeMapValue(const luxrays::UV &uv) const;
+
+	void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const;
+	void AddReferencedMaterials(boost::unordered_set<const Material *> &referencedMats) const;
 	void AddReferencedMeshes(boost::unordered_set<const luxrays::ExtMesh *> &referencedMesh) const;
 
 	// Update any reference to oldMat with newMat
@@ -70,6 +81,11 @@ private:
 	luxrays::ExtMesh *mesh;
 	const Material *mat;
 	const u_int objID;
+
+	const ImageMap *bakeMap;
+	BakeMapType bakeMapType;
+	u_int bakeMapUVIndex;
+
 	bool cameraInvisible;
 };
 

@@ -1,5 +1,5 @@
 ################################################################################
-# Copyright 1998-2018 by authors (see AUTHORS.txt)
+# Copyright 1998-2020 by authors (see AUTHORS.txt)
 #
 #   This file is part of LuxCoreRender.
 #
@@ -108,7 +108,7 @@ IF(MSVC)
 		list(APPEND MSVC_RELEASE_COMPILER_FLAGS "/arch:SSE2 /openmp")
 	ENDIF(MSVC10)
 
-	IF(MSVC12 OR MSVC14)
+	IF(MSVC_VERSION GREATER_EQUAL 1800)
 		message(STATUS "MSVC Version: " ${MSVC_VERSION} )
 
 		list(APPEND MSVC_RELEASE_COMPILER_FLAGS "/openmp /Qfast_transcendentals /wd\"4244\" /wd\"4756\" /wd\"4267\" /wd\"4056\" /wd\"4305\" /wd\"4800\"")
@@ -116,7 +116,11 @@ IF(MSVC)
 		# Use multiple processors in debug mode, for faster rebuild:
 		AdjustToolFlags(
 				CMAKE_C_FLAGS_DEBUG CMAKE_CXX_FLAGS_DEBUG ADDITIONS "/MP")
-	ENDIF(MSVC12 OR MSVC14)
+		
+		# Enable /bigobj for debug builds to prevent error C1128 when compiling OpenVDB
+		AdjustToolFlags(
+				CMAKE_C_FLAGS_DEBUG CMAKE_CXX_FLAGS_DEBUG ADDITIONS "/bigobj")
+	ENDIF(MSVC_VERSION GREATER_EQUAL 1800)
 
 	AdjustToolFlags(
 				CMAKE_C_FLAGS_RELEASE
@@ -130,10 +134,19 @@ IF(MSVC)
 	AdjustToolFlags(
 				CMAKE_EXE_LINKER_FLAGS_RELEASE
 				CMAKE_STATIC_LINKER_FLAGS_RELEASE
+                CMAKE_SHARED_LINKER_FLAGS_RELEASE
+                CMAKE_MODULE_LINKER_FLAGS_RELEASE
 				CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO
 				CMAKE_STATIC_LINKER_FLAGS_RELWITHDEBINFO
+                CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO
+                CMAKE_MODULE_LINKER_FLAGS_RELWITHDEBINFO
 			ADDITIONS ${MSVC_RELEASE_LINKER_FLAGS}
 			REMOVALS "/INCREMENTAL(:YES|:NO)?")
+	AdjustToolFlags(
+				CMAKE_STATIC_LINKER_FLAGS_RELEASE
+				CMAKE_STATIC_LINKER_FLAGS_RELWITHDEBINFO
+			REMOVALS "/INCREMENTAL(:YES|:NO)?")
+
 ENDIF(MSVC)
 
 ###########################################################################
@@ -143,18 +156,21 @@ ENDIF(MSVC)
 ###########################################################################
 
 IF(APPLE)
+
   CMAKE_MINIMUM_REQUIRED(VERSION 3.12) # Required for FindBoost 1.67.0
 
 	########## OS and hardware detection ###########
 
 	EXECUTE_PROCESS(COMMAND uname -r OUTPUT_VARIABLE MAC_SYS) # check for actual system-version
 
-	SET(CMAKE_OSX_DEPLOYMENT_TARGET 10.12) # Minimum OS requirements for LuxCore
+	SET(CMAKE_OSX_DEPLOYMENT_TARGET 10.9) # Minimum OS requirements for LuxCore
 
-	IF(${MAC_SYS} MATCHES 17)
-		SET(OSX_SYSTEM 10.13)
+  IF(${MAC_SYS} MATCHES 18)
+    SET(OSX_SYSTEM 10.15)
+	ELSEIF(${MAC_SYS} MATCHES 17)
+		SET(OSX_SYSTEM 10.14)
 	ELSEIF(${MAC_SYS} MATCHES 16)
-		SET(OSX_SYSTEM 10.12)
+		SET(OSX_SYSTEM 10.13)
 	ELSE()
 		SET(OSX_SYSTEM unsupported)
 	ENDIF()
@@ -168,7 +184,8 @@ IF(APPLE)
 
 	SET(CMAKE_XCODE_ATTRIBUTE_ARCHS $(NATIVE_ARCH_ACTUAL))
 
-	SET(CMAKE_OSX_SYSROOT /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX${OSX_SYSTEM}.sdk)
+  SET(CMAKE_OSX_SYSROOT /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX${OSX_SYSTEM}.sdk)
+
   SET(CMAKE_XCODE_ATTRIBUTE_SDKROOT macosx) # to silence sdk not found warning, just overrides CMAKE_OSX_SYSROOT, gets latest available
 
 	# set a precedence of sdk path over all other default search pathes
@@ -191,40 +208,49 @@ IF(APPLE)
 		SET(CMAKE_INSTALL_RPATH "@loader_path")
 
 	#### OSX-flags by jensverwiebe
-	ADD_DEFINITIONS(-Wall -DHAVE_PTHREAD_H) # global compile definitions
+	ADD_DEFINITIONS(-Wno-everything -DHAVE_PTHREAD_H) # global compile definitions
 	ADD_DEFINITIONS(-fvisibility=hidden -fvisibility-inlines-hidden)
 	ADD_DEFINITIONS(-Wno-unused-local-typedef -Wno-unused-variable) # silence boost __attribute__((unused)) bug
 
   SET(CMAKE_CXX_STANDARD 11)
   SET(CMAKE_CXX_EXTENSIONS OFF)
   SET(CMAKE_CXX_STANDARD_REQUIRED ON)
-  SET(OSX_FLAGS_RELEASE "-ftree-vectorize -msse -msse2 -msse3 -mssse3") # only additional flags
+
+  SET(OSX_FLAGS_RELEASE "-ftree-vectorize -msse -msse2 -msse3 -mssse3") # additional RELEASE flags
 
   SET(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} ${OSX_FLAGS_RELEASE}")
-	SET(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${OSX_FLAGS_RELEASE}")
-  SET(CMAKE_EXE_LINKER_FLAGS "-Wl,-unexported_symbols_list -Wl,\"${CMAKE_SOURCE_DIR}/cmake/exportmaps/unexported_symbols.map\"")
-	SET(CMAKE_MODULE_LINKER_FLAGS "-Wl,-unexported_symbols_list -Wl,\"${CMAKE_SOURCE_DIR}/cmake/exportmaps/unexported_symbols.map\"")
+  SET(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${OSX_FLAGS_RELEASE}")
 
-	SET(CMAKE_XCODE_ATTRIBUTE_DEPLOYMENT_POSTPROCESSING YES) # strip symbols in whole project, disabled in pylux target
-	SET(CMAKE_XCODE_ATTRIBUTE_DEAD_CODE_STRIPPING YES)
-	SET(CMAKE_XCODE_ATTRIBUTE_LLVM_LTO YES)
+  IF(LUXRAYS_ENABLE_CUDA)
+    SET(CMAKE_EXE_LINKER_FLAGS "-F/Library/Frameworks -Xlinker -framework -Xlinker CUDA -Wl,-unexported_symbols_list -Wl,\"${CMAKE_SOURCE_DIR}/cmake/exportmaps/unexported_symbols.map\"")
+    SET(CMAKE_MODULE_LINKER_FLAGS "-F/Library/Frameworks -Xlinker -framework -Xlinker CUDA -Wl,-unexported_symbols_list -Wl,\"${CMAKE_SOURCE_DIR}/cmake/exportmaps/unexported_symbols.map\"")
+  ELSE()
+    SET(CMAKE_EXE_LINKER_FLAGS "-Wl,-unexported_symbols_list -Wl,\"${CMAKE_SOURCE_DIR}/cmake/exportmaps/unexported_symbols.map\"")
+    SET(CMAKE_MODULE_LINKER_FLAGS "-Wl,-unexported_symbols_list -Wl,\"${CMAKE_SOURCE_DIR}/cmake/exportmaps/unexported_symbols.map\"")
+  ENDIF()
 
+  SET(CMAKE_XCODE_ATTRIBUTE_DEPLOYMENT_POSTPROCESSING YES) # strip symbols in whole project, disabled in pylux target
+  SET(CMAKE_XCODE_ATTRIBUTE_DEAD_CODE_STRIPPING YES)
+  SET(CMAKE_XCODE_ATTRIBUTE_LLVM_LTO YES)
 
-	MESSAGE(STATUS "")
-	MESSAGE(STATUS "################ GENERATED XCODE PROJECT INFORMATION ################")
-	MESSAGE(STATUS "")
-	MESSAGE(STATUS "DETECTED SYSTEM-VERSION: " ${OSX_SYSTEM})
-	MESSAGE(STATUS "OSX_DEPLOYMENT_TARGET : " ${CMAKE_OSX_DEPLOYMENT_TARGET})
-	MESSAGE(STATUS "CMAKE_XCODE_ATTRIBUTE_ARCHS: " ${CMAKE_XCODE_ATTRIBUTE_ARCHS})
-	MESSAGE(STATUS "OSX SDK SETTING : " ${CMAKE_XCODE_ATTRIBUTE_SDKROOT}${OSX_SYSTEM})
-	MESSAGE(STATUS "XCODE_VERSION : " ${XCODE_VERSION})
-	IF(${CMAKE_GENERATOR} MATCHES "Xcode")
+  MESSAGE(STATUS "")
+  MESSAGE(STATUS "################ GENERATED XCODE PROJECT INFORMATION ################")
+  MESSAGE(STATUS "")
+  MESSAGE(STATUS "DETECTED SYSTEM-VERSION: " ${MAC_SYS})
+  MESSAGE(STATUS "DETECTED SDK-VERSION: " ${OSX_SYSTEM})
+  MESSAGE(STATUS "OSX_DEPLOYMENT_TARGET : " ${CMAKE_OSX_DEPLOYMENT_TARGET})
+  MESSAGE(STATUS "CMAKE_XCODE_ATTRIBUTE_ARCHS: " ${CMAKE_XCODE_ATTRIBUTE_ARCHS})
+  MESSAGE(STATUS "OSX SDK SETTING : " ${CMAKE_XCODE_ATTRIBUTE_SDKROOT}${OSX_SYSTEM})
+  MESSAGE(STATUS "XCODE_VERSION : " ${XCODE_VERS_BUILDNR})
+  MESSAGE(STATUS "")
+
+  IF(${CMAKE_GENERATOR} MATCHES "Xcode")
 		MESSAGE(STATUS "BUILD_TYPE : Please set in Xcode ALL_BUILD target to aimed type")
-	ELSE()
+  ELSE()
 		MESSAGE(STATUS "BUILD_TYPE : " ${CMAKE_BUILD_TYPE} " - compile with: make " )
-	ENDIF()
-	MESSAGE(STATUS "")
-	MESSAGE(STATUS "#####################################################################")
+  ENDIF()
+  MESSAGE(STATUS "")
+  MESSAGE(STATUS "#####################################################################")
 
 ENDIF(APPLE)
 
@@ -247,9 +273,9 @@ IF(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
 ENDIF()
 
 IF(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-	SET(CMAKE_EXE_LINKER_FLAGS -Wl,--version-script='${CMAKE_SOURCE_DIR}/cmake/exportmaps/linux_symbol_exports.map')
-	SET(CMAKE_SHARED_LINKER_FLAGS -Wl,--version-script='${CMAKE_SOURCE_DIR}/cmake/exportmaps/linux_symbol_exports.map')
-	SET(CMAKE_MODULE_LINKER_FLAGS -Wl,--version-script='${CMAKE_SOURCE_DIR}/cmake/exportmaps/linux_symbol_exports.map')
+	SET(CMAKE_EXE_LINKER_FLAGS -Wl,--disable-new-dtags,--version-script='${CMAKE_SOURCE_DIR}/cmake/exportmaps/linux_symbol_exports.map')
+	SET(CMAKE_SHARED_LINKER_FLAGS -Wl,--disable-new-dtags,--version-script='${CMAKE_SOURCE_DIR}/cmake/exportmaps/linux_symbol_exports.map')
+	SET(CMAKE_MODULE_LINKER_FLAGS -Wl,--disable-new-dtags,--version-script='${CMAKE_SOURCE_DIR}/cmake/exportmaps/linux_symbol_exports.map')
 	SET(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 	SET(CMAKE_INSTALL_RPATH "$ORIGIN")
 ENDIF()

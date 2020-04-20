@@ -1,0 +1,70 @@
+scene.camera.lookat.orig = -2.78 -8. 2.73
+scene.camera.lookat.target = -2.78 2. 2.730003
+scene.camera.fieldofview = 39.1463
+#scene.camera.lensradius = 0.5
+#scene.camera.focaldistance = 10.0
+################################################################################
+scene.volumes.vol_glass.type = clear
+#scene.volumes.vol_glass.absorption = 0.5 0.5 0.5
+scene.volumes.vol_glass.absorption =   0 0 0
+scene.volumes.vol_glass.ior = 1.45
+################################################################################
+scene.materials.Khaki.type = matte
+scene.materials.Khaki.kd = 1. 0.824176 0.549451
+scene.materials.HalveRed.type = matte
+scene.materials.HalveRed.kd = 0.70003 0. 0.
+scene.materials.DarkGreen.type = matte
+scene.materials.DarkGreen.kd = 0. 0.4 0.
+##
+#scene.materials.HalveRed.type = glossy2
+#scene.materials.HalveRed.kd = 0.0 0.1 0.0
+#scene.materials.HalveRed.ks = 0.0 0.5 0.0
+#scene.materials.HalveRed.uroughness = 0.075
+#scene.materials.HalveRed.vroughness = 0.075
+#scene.materials.DarkGreen.type = glossy2
+#scene.materials.DarkGreen.kd = 0.1 0.0 0.0
+#scene.materials.DarkGreen.ks = 0.5 0.0 0.0
+#scene.materials.DarkGreen.uroughness = 0.075
+#scene.materials.DarkGreen.vroughness = 0.075
+##
+scene.materials.Light.type = matte
+scene.materials.Light.emission = 800 800 800
+scene.materials.Light.kd = 0.0 0.0 0.0
+##
+scene.materials.glass-left.type = glass
+scene.materials.glass-left.kt = 0.9 0.9 0.9
+scene.materials.glass-left.kr = 0.9 0.9 0.9
+scene.materials.glass-left.volume.interior = vol_glass
+##
+scene.materials.glass-mid.type = archglass
+scene.materials.glass-mid.kt = 0.9 0.9 0.9
+scene.materials.glass-mid.kr = 0.9 0.9 0.9
+scene.materials.glass-mid.volume.interior = vol_glass
+##
+scene.materials.glass-right.type = glass
+scene.materials.glass-right.transparency.shadow = 0.85 0.85 0.85
+#scene.materials.glass-right.transparency.shadow = 1 1 1
+scene.materials.glass-right.kt = 0.9 0.9 0.9
+scene.materials.glass-right.kr = 0.9 0.9 0.9
+scene.materials.glass-right.volume.interior = vol_glass
+################################################################################
+scene.objects.Box.material = Khaki
+scene.objects.Box.ply = scenes/cornell/box.ply
+scene.objects.Khaki.material = Khaki
+scene.objects.Khaki.ply = scenes/cornell/Khaki2.ply
+scene.objects.HalveRed.material = HalveRed
+scene.objects.HalveRed.ply = scenes/cornell/HalveRed.ply
+scene.objects.DarkGreen.material = DarkGreen
+scene.objects.DarkGreen.ply = scenes/cornell/DarkGreen.ply
+scene.objects.Grey.material = Light
+scene.objects.Grey.ply = scenes/cornell/Grey-small.ply
+scene.objects.sphere-left.material = glass-left
+scene.objects.sphere-left.ply = scenes/cornell/sphere-left.ply
+scene.objects.sphere-mid.material = glass-mid
+scene.objects.sphere-mid.ply = scenes/cornell/sphere-mid.ply
+scene.objects.sphere-right.material = glass-right
+scene.objects.sphere-right.ply = scenes/cornell/sphere-right.ply
+################################################################################
+#scene.lights.l1.type = point
+#scene.lights.l1.position = -2.78 2.78 4.9
+#scene.lights.l1.gain = 15.0 15.0 15.0

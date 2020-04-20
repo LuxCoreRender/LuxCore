@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -37,7 +37,7 @@ class Film;
 class FilmNoiseEstimation {
 public:
 	FilmNoiseEstimation(const Film *film, const u_int warmup,
-			const u_int testStep, const u_int filterScale);
+			const u_int testStep, const u_int filterScale, const u_int index);
 	~FilmNoiseEstimation();
 
 	bool IsTestUpdateRequired() const;
@@ -59,6 +59,7 @@ private:
 	u_int warmup;
 	u_int testStep;
 	u_int filterScale;
+	u_int imagePipelineIndex;
 
 	const Film *film;
 

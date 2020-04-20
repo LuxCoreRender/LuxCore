@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -42,19 +42,15 @@
 #include <boost/serialization/set.hpp>
 #include <boost/serialization/vector.hpp>
 
-//#include <boost/archive/binary_iarchive.hpp>
-//#include <boost/archive/binary_oarchive.hpp>
-#include "eos/portable_oarchive.hpp"
-#include "eos/portable_iarchive.hpp"
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
 
 #include "luxrays/luxrays.h"
 
 namespace luxrays {
 
-//typedef boost::archive::binary_oarchive LuxOutputArchive;
-//typedef boost::archive::binary_iarchive LuxInputArchive;
-typedef eos::portable_oarchive LuxOutputArchive;
-typedef eos::portable_iarchive LuxInputArchive;
+typedef boost::archive::binary_oarchive LuxOutputArchive;
+typedef boost::archive::binary_iarchive LuxInputArchive;
 
 class SerializationOutputFile {
 public:

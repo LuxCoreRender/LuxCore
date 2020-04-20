@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -134,6 +134,24 @@ public:
 		return isinf(x) || isinf(y) || isinf(z);
 	}
 
+	//--------------------------------------------------------------------------
+	// Required by OpenSubdiv interface
+	//--------------------------------------------------------------------------
+
+	void Clear(void * = 0) {
+        x = 0.f;
+		y = 0.f;
+		z = 0.f;
+    }
+	
+	void AddWithWeight(Point const &src, float weight) {
+        x += weight * src.x;
+        y += weight * src.y;
+        z += weight * src.z;
+    }
+	
+	//--------------------------------------------------------------------------
+	
 	friend class boost::serialization::access;
 
 	// Point Public Data

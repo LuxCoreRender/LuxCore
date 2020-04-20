@@ -1,7 +1,7 @@
 #line 2 "motionsystem_funcs.cl"
 
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -18,7 +18,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-void InterpolatedTransform_Sample(__global const InterpolatedTransform* restrict interpolatedTransform,
+OPENCL_FORCE_INLINE void InterpolatedTransform_Sample(__global const InterpolatedTransform* restrict interpolatedTransform,
 		const float time, Matrix4x4 *result) {
 	if (!interpolatedTransform->isActive) {
 		*result = interpolatedTransform->start.m;
@@ -97,10 +97,27 @@ void InterpolatedTransform_Sample(__global const InterpolatedTransform* restrict
 		result->m[2][3] = interpolatedTransform->startT.Tz;
 }
 
-void MotionSystem_Sample(__global const MotionSystem* restrict motionSystem, const float time,
-		__global const InterpolatedTransform *interpolatedTransforms, Matrix4x4 *result) {
+OPENCL_FORCE_INLINE void MotionSystem_Sample(__global const MotionSystem* restrict motionSystem, const float time,
+		__global const InterpolatedTransform* restrict interpolatedTransforms, Matrix4x4 *result) {
 	const uint interpolatedTransformFirstIndex = motionSystem->interpolatedTransformFirstIndex;
 	const uint interpolatedTransformLastIndex = motionSystem->interpolatedTransformLastIndex;
+
+	// Pick the right InterpolatedTransform
+	uint index = interpolatedTransformLastIndex;
+	for (uint i = interpolatedTransformFirstIndex; i <= interpolatedTransformLastIndex; ++i) {
+		if (time < interpolatedTransforms[i].endTime) {
+			index = i;
+			break;
+		}
+	}
+
+	InterpolatedTransform_Sample(&interpolatedTransforms[index], time, result);
+}
+
+OPENCL_FORCE_INLINE void MotionSystem_SampleInverse(__global const MotionSystem* restrict motionSystem, const float time,
+		__global const InterpolatedTransform* restrict interpolatedTransforms, Matrix4x4 *result) {
+	const uint interpolatedTransformFirstIndex = motionSystem->interpolatedInverseTransformFirstIndex;
+	const uint interpolatedTransformLastIndex = motionSystem->interpolatedInverseTransformLastIndex;
 
 	// Pick the right InterpolatedTransform
 	uint index = interpolatedTransformLastIndex;

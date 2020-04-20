@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -32,6 +32,7 @@
 #include "slg/engines/filesaver/filesaver.h"
 #include "slg/engines/tilepathcpu/tilepathcpu.h"
 #include "slg/engines/tilepathocl/tilepathocl.h"
+#include "slg/engines/bakecpu/bakecpu.h"
 
 namespace slg {
 
@@ -77,6 +78,7 @@ protected:
 	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(RenderEngineRegistry, TilePathOCLRenderEngine);
 #endif
 	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(RenderEngineRegistry, RTPathCPURenderEngine);
+	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(RenderEngineRegistry, BakeCPURenderEngine);
 	// Just add here any new Engine (don't forget in the .cpp too)
 
 	friend class RenderEngine;

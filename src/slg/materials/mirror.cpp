@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -40,13 +40,12 @@ Spectrum MirrorMaterial::Evaluate(const HitPoint &hitPoint,
 Spectrum MirrorMaterial::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
-	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
+	float *pdfW, BSDFEvent *event, const BSDFEvent eventHint) const {
 	*event = SPECULAR | REFLECT;
 
 	*localSampledDir = Vector(-localFixedDir.x, -localFixedDir.y, localFixedDir.z);
 	*pdfW = 1.f;
 
-	*absCosSampledDir = fabsf(localSampledDir->z);
 	return Kr->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
 }
 
@@ -68,7 +67,7 @@ Properties MirrorMaterial::ToProperties(const ImageMapCache &imgMapCache, const 
 
 	const string name = GetName();
 	props.Set(Property("scene.materials." + name + ".type")("mirror"));
-	props.Set(Property("scene.materials." + name + ".kr")(Kr->GetName()));
+	props.Set(Property("scene.materials." + name + ".kr")(Kr->GetSDLValue()));
 	props.Set(Material::ToProperties(imgMapCache, useRealFileName));
 
 	return props;

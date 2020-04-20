@@ -1,7 +1,7 @@
 #line 2 "bbox_funcs.cl"
 
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -18,7 +18,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-int BBox_IntersectP(const float3 pMin, const float3 pMax,
+OPENCL_FORCE_INLINE int BBox_IntersectP(const float3 pMin, const float3 pMax,
 		const float3 rayOrig, const float3 invRayDir,
 		const float mint, const float maxt) {
 	const float3 l1 = (pMin - rayOrig) * invRayDir;

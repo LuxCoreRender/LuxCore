@@ -1743,18 +1743,25 @@ ri_stmt: ACCELERATOR STRING paramlist
 		*sceneProps <<
 				Property(prefix + ".type")("lampspectrum") <<
 				Property(prefix + ".name")(props.Get(Property("name")("Incandescent2")).Get<string>());
+	} else if (texType == "triplanar") {
+		*sceneProps <<
+				Property(prefix + ".type")("triplanar") <<
+				GetTexture(prefix + ".texture1", Property("tex1")(Spectrum(1.f,0.f,0.f)), props) <<
+				GetTexture(prefix + ".texture2", Property("tex2")(Spectrum(0.f,1.f,0.f)), props) <<
+				GetTexture(prefix + ".texture3", Property("tex3")(Spectrum(0.f,0.f,1.f)), props) <<
+				GetTextureMapping3D(prefix, currentTransform, props);
 	} else
 	//--------------------------------------------------------------------------
 	// Procedural textures
 	//--------------------------------------------------------------------------
 	if (texType == "checkerboard") {
-		const u_int dimesion = props.Get(Property("dimension")(2)).Get<u_int>();
+		const u_int dimension = props.Get(Property("dimension")(2)).Get<u_int>();
 
 		*sceneProps <<
-				Property(prefix + ".type")((dimesion == 2) ? "checkerboard2d" : "checkerboard3d") <<
+				Property(prefix + ".type")((dimension == 2) ? "checkerboard2d" : "checkerboard3d") <<
 				GetTexture(prefix + ".texture1", Property("tex1")(Spectrum(1.f)), props) <<
 				GetTexture(prefix + ".texture2", Property("tex2")(Spectrum(0.f)), props) <<
-				((dimesion == 2) ? GetTextureMapping2D(prefix, props) : GetTextureMapping3D(prefix, currentTransform, props));
+				((dimension == 2) ? GetTextureMapping2D(prefix, props) : GetTextureMapping3D(prefix, currentTransform, props));
 	} else if (texType == "fbm") {
 		*sceneProps <<
 				Property(prefix + ".type")("fbm") <<

@@ -49,21 +49,33 @@ def StandardImageTest(testCase, name, config):
 
 	CheckResult(testCase, image, name)
 
-def StandardSceneTest(cls, params, cfgName, testName):
+def StandardSceneTest(cls, params, cfgName, testName, callerAdditionalProps = pyluxcore.Properties()):
 	engineType = params[0]
 	samplerType = params[1]
 	renderConfigAdditionalProps = params[2]
 
 	# Create the rendering configuration
 	props = pyluxcore.Properties()
-	props.SetFromFile("resources/scenes/" + cfgName)
+	if os.path.isabs(cfgName):
+		props.SetFromFile(cfgName)
+		cfgDir = os.path.dirname(cfgName)
+	else:
+		props.SetFromFile("resources/scenes/" + cfgName)
+		cfgDir = os.path.dirname("resources/scenes/" + cfgName)
+
 	props.Set(renderConfigAdditionalProps)
+	props.Set(callerAdditionalProps)
 	props.Set(LuxCoreTest.customConfigProps)
 
 	# Set the rendering engine
 	props.Set(pyluxcore.Property("renderengine.type", engineType))
 	props.Set(pyluxcore.Property("sampler.type", samplerType))
 
+	# Set the file name resolver paths
+	pyluxcore.ClearFileNameResolverPaths()
+	pyluxcore.AddFileNameResolverPath(cfgDir)
+
+	# Create the RenderConfig
 	config = pyluxcore.RenderConfig(props)
 
 	# Run the rendering

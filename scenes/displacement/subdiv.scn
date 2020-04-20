@@ -1,0 +1,51 @@
+scene.camera.type = "perspective"
+scene.camera.lookat.orig = 7.48113203 -6.50763988 5.34366512
+scene.camera.lookat.target = 0.932512999 -0.400983989 0.891211987
+scene.camera.fieldofview = 45
+################################################################################
+scene.textures.vertcol.type = hitpointcolor
+################################################################################
+scene.materials.mat_light.type = matte
+scene.materials.mat_light.emission = 20. 20. 20.
+scene.materials.mat_light.kd = 0.0 0.0 0.0
+#scene.materials.mat_light2.type = matte
+#scene.materials.mat_light2.emission = light2
+#scene.materials.mat_light2.kd = 0.0 0.0 0.0
+scene.materials.mat_red.type = matte
+scene.materials.mat_red.kd = vertcol
+#scene.materials.mat_red.kd = 0.8 0.0 0.0
+##
+scene.materials.mat_white.type = matte
+scene.materials.mat_white.kd = 0.8 0.8 0.8
+##
+#scene.materials.mat_white.type = glossytranslucent
+#scene.materials.mat_white.kd = 0.1 0.1 0.1
+#scene.materials.mat_white.kt = 1.0 1.0 1.0
+#scene.materials.mat_white.ks = 0.025 0.025 0.025
+################################################################################
+scene.shapes.obj_redply.type = mesh
+scene.shapes.obj_redply.ply = scenes/bump/mat_red.ply
+scene.shapes.obj_redsubdiv.type = subdiv
+scene.shapes.obj_redsubdiv.source = obj_redply
+scene.shapes.obj_redsubdiv.maxlevel = 1
+scene.shapes.obj_redsubdiv.maxedgescreensize = 0.1
+scene.shapes.obj_red.type = harlequin
+scene.shapes.obj_red.source = obj_redsubdiv
+################################################################################
+scene.objects.obj_light.ply = scenes/bump/mat_light.ply
+scene.objects.obj_light.material = mat_light
+#scene.objects.obj_light2.ply = scenes/bump/mat_light2.ply
+#scene.objects.obj_light2.material = mat_light2
+##
+#scene.objects.obj_red.ply = obj_redply
+scene.objects.obj_red.ply = obj_red
+scene.objects.obj_red.material = mat_red
+##
+scene.objects.obj_white.ply = scenes/bump/mat_white.ply
+scene.objects.obj_white.material = mat_white
+################################################################################
+#scene.lights.infinitelight.type = infinite
+#scene.lights.infinitelight.file = scenes/simple-mat/arch.exr
+#scene.lights.infinitelight.gamma = 1.0
+#scene.lights.infinitelight.gain = 1.0 1.0 1.0
+#scene.lights.infinitelight.storage = byte

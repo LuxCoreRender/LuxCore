@@ -1,7 +1,7 @@
 #line 2 "dlsc_types.cl"
 
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -25,7 +25,6 @@ typedef struct {
 	int isVolume;
 	
 	// Cache information
-	unsigned int distributionIndexToLightIndexOffset, distributionIndexToLightIndexSize;
 	unsigned int lightsDistributionOffset;
-	int pad[3]; // To align to float4
+	int pad[2]; // To align to float4
 } DLSCacheEntry;

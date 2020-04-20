@@ -1,7 +1,7 @@
 #line 2 "sampler_random_funcs.cl"
 
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -22,26 +22,56 @@
 // Random Sampler Kernel
 //------------------------------------------------------------------------------
 
-#if (PARAM_SAMPLER_TYPE == 0)
+#define RANDOMSAMPLER_TOTAL_U_SIZE 2
 
-OPENCL_FORCE_INLINE uint SamplerSharedData_GetNewPixelBucketIndex(__global SamplerSharedData *samplerSharedData) {
+OPENCL_FORCE_INLINE float RandomSampler_GetSample(
+		__constant const GPUTaskConfiguration* restrict taskConfig,
+		const uint index
+		SAMPLER_PARAM_DECL) {
+	const size_t gid = get_global_id(0);
+	__global float *samplesData = &samplesDataBuff[gid * RANDOMSAMPLER_TOTAL_U_SIZE];
+
+	switch (index) {
+		case IDX_SCREEN_X:
+			return samplesData[IDX_SCREEN_X];
+		case IDX_SCREEN_Y:
+			return samplesData[IDX_SCREEN_Y];
+		default:
+			return Rnd_FloatValue(seed);
+	}
+}
+
+OPENCL_FORCE_INLINE void RandomSampler_SplatSample(
+		__constant const GPUTaskConfiguration* restrict taskConfig
+		SAMPLER_PARAM_DECL
+		FILM_PARAM_DECL
+		) {
+	const size_t gid = get_global_id(0);
+	__global SampleResult *sampleResult = &sampleResultsBuff[gid];
+
+	Film_AddSample(sampleResult->pixelX, sampleResult->pixelY,
+			sampleResult, 1.f
+			FILM_PARAM);
+}
+
+OPENCL_FORCE_INLINE uint RandomSamplerSharedData_GetNewPixelBucketIndex(__global RandomSamplerSharedData *samplerSharedData) {
 	return atomic_inc(&samplerSharedData->pixelBucketIndex);
 }
 
-OPENCL_FORCE_NOT_INLINE void Sampler_InitNewSample(Seed *seed,
-		__global SamplerSharedData *samplerSharedData,
-		__global Sample *sample, __global float *sampleDataPathBase,
-#if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
+OPENCL_FORCE_INLINE void RandomSampler_InitNewSample(__constant const GPUTaskConfiguration* restrict taskConfig,
 		__global float *filmNoise,
-#endif
+		__global float *filmUserImportance,
 		const uint filmWidth, const uint filmHeight,
 		const uint filmSubRegion0, const uint filmSubRegion1,
-		const uint filmSubRegion2, const uint filmSubRegion3) {
-	const uint filmRegionPixelCount = (filmSubRegion1 - filmSubRegion0 + 1) * (filmSubRegion3 - filmSubRegion2 + 1);
+		const uint filmSubRegion2, const uint filmSubRegion3
+		SAMPLER_PARAM_DECL) {
+	const size_t gid = get_global_id(0);
+	__global RandomSamplerSharedData *samplerSharedData = (__global RandomSamplerSharedData *)samplerSharedDataBuff;
+	__global RandomSample *samples = (__global RandomSample *)samplesBuff;
+	__global RandomSample *sample = &samples[gid];
+	__global float *samplesData = &samplesDataBuff[gid * RANDOMSAMPLER_TOTAL_U_SIZE];
 
-#if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
-	const float adaptiveStrength = samplerSharedData->adaptiveStrength;
-#endif
+	const uint filmRegionPixelCount = (filmSubRegion1 - filmSubRegion0 + 1) * (filmSubRegion3 - filmSubRegion2 + 1);
 
 	// Update pixelIndexOffset
 
@@ -56,7 +86,7 @@ OPENCL_FORCE_NOT_INLINE void Sampler_InitNewSample(Seed *seed,
 			// Ask for a new base
 
 			// Transform the bucket index in a pixel index
-			pixelIndexBase = (SamplerSharedData_GetNewPixelBucketIndex(samplerSharedData) %
+			pixelIndexBase = (RandomSamplerSharedData_GetNewPixelBucketIndex(samplerSharedData) %
 					((filmRegionPixelCount + RANDOM_OCL_WORK_SIZE - 1) / RANDOM_OCL_WORK_SIZE)) * RANDOM_OCL_WORK_SIZE;
 			sample->pixelIndexBase = pixelIndexBase;
 
@@ -76,23 +106,40 @@ OPENCL_FORCE_NOT_INLINE void Sampler_InitNewSample(Seed *seed,
 		const uint pixelX = filmSubRegion0 + (pixelIndex % subRegionWidth);
 		const uint pixelY = filmSubRegion2 + (pixelIndex / subRegionWidth);
 
-#if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
-		if (adaptiveStrength > 0.f) {
-			// Pixels are sampled in accordance with how far from convergence they are
-			// The floor for the pixel importance is given by the adaptiveness strength
-			const float convergence = fmax(filmNoise[pixelX + pixelY * filmWidth], 1.f - adaptiveStrength);
+		if (filmNoise) {
+			const float adaptiveStrength = samplerSharedData->adaptiveStrength;
 
-			if (Rnd_FloatValue(seed) > convergence) {
-				// Skip this pixel and try the next one
-				continue;
+			if (adaptiveStrength > 0.f) {
+				// Pixels are sampled in accordance with how far from convergence they are
+				const float noise = filmNoise[pixelX + pixelY * filmWidth];
+
+				// Factor user driven importance sampling too
+				float threshold;
+				if (filmUserImportance) {
+					const float userImportance = filmUserImportance[pixelX + pixelY * filmWidth];
+
+					// Noise is initialized to INFINITY at start
+					if (isinf(noise))
+						threshold = userImportance;
+					else
+						threshold = (userImportance > 0.f) ? Lerp(samplerSharedData->adaptiveUserImportanceWeight, noise, userImportance) : 0.f;
+				} else
+					threshold = noise;
+
+				// The floor for the pixel importance is given by the adaptiveness strength
+				threshold = fmax(threshold, 1.f - adaptiveStrength);
+
+				if (Rnd_FloatValue(seed) > threshold) {
+					// Skip this pixel and try the next one
+					continue;
+				}
 			}
 		}
-#endif
 
 		// Initialize IDX_SCREEN_X and IDX_SCREEN_Y sample
 
-		sampleDataPathBase[IDX_SCREEN_X] = pixelX + Rnd_FloatValue(seed);
-		sampleDataPathBase[IDX_SCREEN_Y] = pixelY + Rnd_FloatValue(seed);
+		samplesData[IDX_SCREEN_X] = pixelX + Rnd_FloatValue(seed);
+		samplesData[IDX_SCREEN_Y] = pixelY + Rnd_FloatValue(seed);
 		break;
 	}
 
@@ -100,91 +147,48 @@ OPENCL_FORCE_NOT_INLINE void Sampler_InitNewSample(Seed *seed,
 	sample->pixelIndexOffset = pixelIndexOffset;
 }
 
-OPENCL_FORCE_INLINE __global float *Sampler_GetSampleData(__global Sample *sample, __global float *samplesData) {
-	const size_t gid = get_global_id(0);
-	return &samplesData[gid * TOTAL_U_SIZE];
-}
-
-OPENCL_FORCE_INLINE __global float *Sampler_GetSampleDataPathBase(__global Sample *sample, __global float *sampleData) {
-	return sampleData;
-}
-
-OPENCL_FORCE_INLINE __global float *Sampler_GetSampleDataPathVertex(__global Sample *sample,
-		__global float *sampleDataPathBase, const uint depth) {
-	// This is never used in Random sampler
-	//
-	// The depth used here is counted from the first hit point of the path
-	// vertex (so it is effectively depth - 1)
-	return &sampleDataPathBase[IDX_BSDF_OFFSET + depth * VERTEX_SAMPLE_SIZE];
-}
-
-OPENCL_FORCE_INLINE float Sampler_GetSamplePath(Seed *seed, __global Sample *sample,
-		__global float *sampleDataPathBase, const uint index) {
-	switch (index) {
-		case IDX_SCREEN_X:
-			return sampleDataPathBase[IDX_SCREEN_X];
-		case IDX_SCREEN_Y:
-			return sampleDataPathBase[IDX_SCREEN_Y];
-		default:
-			return Rnd_FloatValue(seed);
-	}
-}
-
-OPENCL_FORCE_INLINE float Sampler_GetSamplePathVertex(Seed *seed, __global Sample *sample,
-		__global float *sampleDataPathVertexBase,
-		const uint depth, const uint index) {
-	return Rnd_FloatValue(seed);
-}
-
-OPENCL_FORCE_NOT_INLINE void Sampler_SplatSample(
-		Seed *seed,
-		__global SamplerSharedData *samplerSharedData,
-		__global Sample *sample, __global float *sampleData
-		FILM_PARAM_DECL
-		) {
-	Film_AddSample(sample->result.pixelX, sample->result.pixelY,
-			&sample->result, 1.f
-			FILM_PARAM);
-}
-
-OPENCL_FORCE_NOT_INLINE void Sampler_NextSample(
-		Seed *seed,
-		__global SamplerSharedData *samplerSharedData,
-		__global Sample *sample, __global float *sampleData,
-#if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
+OPENCL_FORCE_INLINE void RandomSampler_NextSample(
+		__constant const GPUTaskConfiguration* restrict taskConfig,
 		__global float *filmNoise,
-#endif
+		__global float *filmUserImportance,
 		const uint filmWidth, const uint filmHeight,
 		const uint filmSubRegion0, const uint filmSubRegion1,
-		const uint filmSubRegion2, const uint filmSubRegion3) {
-	Sampler_InitNewSample(seed, samplerSharedData, sample, sampleData,
-#if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
+		const uint filmSubRegion2, const uint filmSubRegion3
+		SAMPLER_PARAM_DECL) {
+	RandomSampler_InitNewSample(taskConfig,
 			filmNoise,
-#endif
+			filmUserImportance,
 			filmWidth, filmHeight,
-			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3);
+			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3
+			SAMPLER_PARAM);
 }
 
-OPENCL_FORCE_NOT_INLINE bool Sampler_Init(Seed *seed, __global SamplerSharedData *samplerSharedData,
-		__global Sample *sample, __global float *sampleData,
-#if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
+OPENCL_FORCE_INLINE bool RandomSampler_Init(
+		__constant const GPUTaskConfiguration* restrict taskConfig,
 		__global float *filmNoise,
-#endif
+		__global float *filmUserImportance,
 		const uint filmWidth, const uint filmHeight,
 		const uint filmSubRegion0, const uint filmSubRegion1,
-		const uint filmSubRegion2, const uint filmSubRegion3) {
-	if (get_global_id(0) == 0)
+		const uint filmSubRegion2, const uint filmSubRegion3
+		SAMPLER_PARAM_DECL) {
+	const size_t gid = get_global_id(0);
+	__global RandomSamplerSharedData *samplerSharedData = (__global RandomSamplerSharedData *)samplerSharedDataBuff;
+	__global RandomSample *samples = (__global RandomSample *)samplesBuff;
+	__global RandomSample *sample = &samples[gid];
+
+	if (gid == 0) {
+		__global RandomSamplerSharedData *samplerSharedData = (__global RandomSamplerSharedData *)samplerSharedDataBuff;
+
 		samplerSharedData->pixelBucketIndex = 0;
+	}
 	sample->pixelIndexOffset = RANDOM_OCL_WORK_SIZE;
 
-	Sampler_NextSample(seed, samplerSharedData, sample, sampleData,
-#if defined(PARAM_FILM_CHANNELS_HAS_NOISE)
+	RandomSampler_NextSample(taskConfig,
 			filmNoise,
-#endif
+			filmUserImportance,
 			filmWidth, filmHeight,
-			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3);
+			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3
+			SAMPLER_PARAM);
 
 	return true;
 }
-
-#endif

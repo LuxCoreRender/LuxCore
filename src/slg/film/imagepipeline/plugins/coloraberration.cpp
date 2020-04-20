@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -36,26 +36,22 @@ using namespace slg;
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::ColorAberrationPlugin)
 
 ColorAberrationPlugin::ColorAberrationPlugin(const float a) : amount(a),
-		tmpBuffer(NULL), tmpBufferSize(0) {
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	oclIntersectionDevice = NULL;
-	oclTmpBuffer = NULL;
+		tmpBuffer(nullptr), tmpBufferSize(0) {
+	hardwareDevice = nullptr;
+	hwTmpBuffer = nullptr;
 
-	applyKernel = NULL;
-	copyKernel = NULL;
-#endif
+	applyKernel = nullptr;
+	copyKernel = nullptr;
 }
 
 ColorAberrationPlugin::~ColorAberrationPlugin() {
 	delete[] tmpBuffer;
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	delete applyKernel;
 	delete copyKernel;
 
-	if (oclIntersectionDevice)
-		oclIntersectionDevice->FreeBuffer(&oclTmpBuffer);
-#endif
+	if (hardwareDevice)
+		hardwareDevice->FreeBuffer(&hwTmpBuffer);
 }
 
 ImagePipelinePlugin *ColorAberrationPlugin::Copy() const {
@@ -146,27 +142,26 @@ void ColorAberrationPlugin::Apply(Film &film, const u_int index) {
 // OpenCL version
 //------------------------------------------------------------------------------
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-void ColorAberrationPlugin::ApplyOCL(Film &film, const u_int index) {
+void ColorAberrationPlugin::ApplyHW(Film &film, const u_int index) {
 	const u_int width = film.GetWidth();
 	const u_int height = film.GetHeight();
 
 	if (!applyKernel) {
-		oclIntersectionDevice = film.oclIntersectionDevice;
+		film.ctx->SetVerbose(true);
+
+		hardwareDevice = film.hardwareDevice;
 
 		// Allocate OpenCL buffers
-		film.ctx->SetVerbose(true);
-		oclIntersectionDevice->AllocBufferRW(&oclTmpBuffer, width * height * sizeof(Spectrum), "ColorAberration");
-		film.ctx->SetVerbose(false);
+		hardwareDevice->AllocBufferRW(&hwTmpBuffer, nullptr, width * height * sizeof(Spectrum), "ColorAberration");
 
 		// Compile sources
 		const double tStart = WallClockTime();
 
-		cl::Program *program = ImagePipelinePlugin::CompileProgram(
-				film,
+		HardwareDeviceProgram *program = nullptr;
+		hardwareDevice->CompileProgram(&program,
 				"-D LUXRAYS_OPENCL_KERNEL -D SLG_OPENCL_KERNEL",
-				slg::ocl::KernelSource_luxrays_types +
-				slg::ocl::KernelSource_utils_funcs +
+				luxrays::ocl::KernelSource_luxrays_types +
+				luxrays::ocl::KernelSource_utils_funcs +
 				slg::ocl::KernelSource_plugin_coloraberration_funcs,
 				"ColorAberrationPlugin");
 
@@ -175,29 +170,29 @@ void ColorAberrationPlugin::ApplyOCL(Film &film, const u_int index) {
 		//----------------------------------------------------------------------
 
 		SLG_LOG("[ColorAberrationPlugin] Compiling ColorAberrationPlugin_Apply Kernel");
-		applyKernel = new cl::Kernel(*program, "ColorAberrationPlugin_Apply");
+		hardwareDevice->GetKernel(program, &applyKernel, "ColorAberrationPlugin_Apply");
 
 		// Set kernel arguments
 		u_int argIndex = 0;
-		applyKernel->setArg(argIndex++, width);
-		applyKernel->setArg(argIndex++, height);
-		applyKernel->setArg(argIndex++, *(film.ocl_IMAGEPIPELINE));
-		applyKernel->setArg(argIndex++, *oclTmpBuffer);
-		applyKernel->setArg(argIndex++, amount);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, width);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, height);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.hw_IMAGEPIPELINE);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, hwTmpBuffer);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, amount);
 
 		//----------------------------------------------------------------------
 		// ColorAberrationPlugin_Copy kernel
 		//----------------------------------------------------------------------
 
 		SLG_LOG("[ColorAberrationPlugin] Compiling ColorAberrationPlugin_Copy Kernel");
-		copyKernel = new cl::Kernel(*program, "ColorAberrationPlugin_Copy");
+		hardwareDevice->GetKernel(program, &copyKernel, "ColorAberrationPlugin_Copy");
 
 		// Set kernel arguments
 		argIndex = 0;
-		copyKernel->setArg(argIndex++, width);
-		copyKernel->setArg(argIndex++, height);
-		copyKernel->setArg(argIndex++, *(film.ocl_IMAGEPIPELINE));
-		copyKernel->setArg(argIndex++, *oclTmpBuffer);
+		hardwareDevice->SetKernelArg(copyKernel, argIndex++, width);
+		hardwareDevice->SetKernelArg(copyKernel, argIndex++, height);
+		hardwareDevice->SetKernelArg(copyKernel, argIndex++, film.hw_IMAGEPIPELINE);
+		hardwareDevice->SetKernelArg(copyKernel, argIndex++, hwTmpBuffer);
 
 		//----------------------------------------------------------------------
 
@@ -205,11 +200,12 @@ void ColorAberrationPlugin::ApplyOCL(Film &film, const u_int index) {
 
 		const double tEnd = WallClockTime();
 		SLG_LOG("[ColorAberrationPlugin] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
+
+		film.ctx->SetVerbose(false);
 	}
 
-	oclIntersectionDevice->GetOpenCLQueue().enqueueNDRangeKernel(*applyKernel,
-			cl::NullRange, cl::NDRange(RoundUp(width * height, 256u)), cl::NDRange(256));
-	oclIntersectionDevice->GetOpenCLQueue().enqueueNDRangeKernel(*copyKernel,
-			cl::NullRange, cl::NDRange(RoundUp(width * height, 256u)), cl::NDRange(256));
+	hardwareDevice->EnqueueKernel(applyKernel, HardwareDeviceRange(RoundUp(width * height, 256u)),
+			HardwareDeviceRange(256));
+	hardwareDevice->EnqueueKernel(copyKernel, HardwareDeviceRange(RoundUp(width * height, 256u)),
+			HardwareDeviceRange(256));
 }
-#endif

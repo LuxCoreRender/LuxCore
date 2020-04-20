@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -39,8 +39,8 @@ Properties RoundingTexture::ToProperties(const ImageMapCache &imgMapCache, const
 
     const string name = GetName();
     props.Set(Property("scene.textures." + name + ".type")("rounding"));
-    props.Set(Property("scene.textures." + name + ".texture")(texture->GetName()));
-    props.Set(Property("scene.textures." + name + ".increment")(increment->GetName()));
+    props.Set(Property("scene.textures." + name + ".texture")(texture->GetSDLValue()));
+    props.Set(Property("scene.textures." + name + ".increment")(increment->GetSDLValue()));
 
     return props;
 }

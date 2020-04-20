@@ -47,5 +47,7 @@ scene.lights.l1.type = sphere
 #scene.lights.l1.position = -3.0 -5.0 8.79
 scene.lights.l1.position = -3.0 -5.0 5.0
 scene.lights.l1.radius = 0.5
+#scene.lights.l1.color = 20 10 10
 scene.lights.l1.power = 60
+#scene.lights.l1.normalizebycolor = 1
 scene.lights.l1.efficency = 17

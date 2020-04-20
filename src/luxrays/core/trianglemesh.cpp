@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -22,6 +22,7 @@
 #include "luxrays/core/trianglemesh.h"
 #include "luxrays/core/exttrianglemesh.h"
 
+using namespace std;
 using namespace luxrays;
 
 //------------------------------------------------------------------------------
@@ -44,15 +45,26 @@ TriangleMesh::TriangleMesh(const u_int meshVertCount,
 	assert (meshVertices != NULL);
 	assert (meshTris != NULL);
 
+	appliedTransSwapsHandedness = false;
+
 	// Check if the buffer has been really allocated with AllocVerticesBuffer() or not.
 	const float *vertBuff = (float *)meshVertices;
 	if (vertBuff[3 * meshVertCount] != 1234.1234f)
-		throw std::runtime_error("luxrays::TriangleMesh() used with a vertex buffer not allocated with luxrays::TriangleMesh::AllocVerticesBuffer()");
+		throw runtime_error("luxrays::TriangleMesh() used with a vertex buffer not allocated with luxrays::TriangleMesh::AllocVerticesBuffer()");
 
 	vertCount = meshVertCount;
 	triCount = meshTriCount;
 	vertices = meshVertices;
 	tris = meshTris;
+
+	Preprocess();
+}
+
+void TriangleMesh::Preprocess() {
+	// Compute mesh area
+	area = 0.f;
+	for (u_int i = 0; i < triCount; ++i)
+		area += tris[i].Area(vertices);
 
 	cachedBBoxValid = false;
 }
@@ -71,20 +83,23 @@ BBox TriangleMesh::GetBBox() const {
 }
 
 void TriangleMesh::ApplyTransform(const Transform &trans) {
+	appliedTrans = appliedTrans * trans;
+	appliedTransSwapsHandedness = appliedTrans.SwapsHandedness();
+
 	for (u_int i = 0; i < vertCount; ++i)
 		vertices[i] *= trans;
 
-	cachedBBoxValid = false;
+	Preprocess();
 }
 
 TriangleMesh *TriangleMesh::Merge(
-	const std::deque<const Mesh *> &meshes,
+	const deque<const Mesh *> &meshes,
 	TriangleMeshID **preprocessedMeshIDs,
 	TriangleID **preprocessedMeshTriangleIDs) {
 	u_int totalVertexCount = 0;
 	u_int totalTriangleCount = 0;
 
-	for (std::deque<const Mesh *>::const_iterator m = meshes.begin(); m < meshes.end(); m++) {
+	for (deque<const Mesh *>::const_iterator m = meshes.begin(); m < meshes.end(); m++) {
 		totalVertexCount += (*m)->GetTotalVertexCount();
 		totalTriangleCount += (*m)->GetTotalTriangleCount();
 	}
@@ -104,7 +119,7 @@ TriangleMesh *TriangleMesh::Merge(
 	u_int vIndex = 0;
 	u_int iIndex = 0;
 	TriangleMeshID currentID = 0;
-	for (std::deque<const Mesh *>::const_iterator m = meshes.begin(); m < meshes.end(); m++) {
+	for (deque<const Mesh *>::const_iterator m = meshes.begin(); m < meshes.end(); m++) {
 		// Copy the mesh vertices
 		memcpy(&v[vIndex], (*m)->GetVertices(), sizeof(Point) * (*m)->GetTotalVertexCount());
 
@@ -134,6 +149,76 @@ TriangleMesh *TriangleMesh::Merge(
 	return new TriangleMesh(totalVertexCount, totalTriangleCount, v, i);
 }
 
+u_int TriangleMesh::GetUniqueVerticesMapping(vector<u_int> &uniqueVertices,
+			bool (*CompareVertices)(const TriangleMesh &mesh,
+				const u_int vertIndex1, const u_int vertIndex2)) const {
+	const u_int originalVertCount = GetTotalVertexCount();
+
+	// Find duplicate vertices
+
+	vector<u_int> sortedVertIndices(originalVertCount);
+	for (u_int i = 0; i < originalVertCount; ++i)
+		sortedVertIndices[i] = i;
+
+	auto compareVerts = [this](const u_int vert_idx_a, const u_int vert_idx_b) {
+		const Point vert_a = this->GetVertex(Transform::TRANS_IDENTITY, vert_idx_a);
+		const Point vert_b = this->GetVertex(Transform::TRANS_IDENTITY, vert_idx_b);
+		if (vert_a == vert_b) {
+			// Special case for doubles, so we ensure ordering.
+			return vert_idx_a > vert_idx_b;
+		}
+		const float x1 = vert_a.x + vert_a.y + vert_a.z;
+		const float x2 = vert_b.x + vert_b.y + vert_b.z;
+
+		return x1 < x2;
+	};
+	sort(sortedVertIndices.begin(), sortedVertIndices.end(), compareVerts);
+
+	// This array stores index of the original vertex for the given vertex index.
+	uniqueVertices.resize(originalVertCount);
+	u_int uniqueVertCount = 0;
+
+	for (u_int sortedVertIndex = 0; sortedVertIndex < originalVertCount; ++sortedVertIndex) {
+		const int vertIndex = sortedVertIndices[sortedVertIndex];
+		const Point vertex = GetVertex(Transform::TRANS_IDENTITY, vertIndex);
+		bool isDuplicate = false;
+
+		for (u_int otherSortedVertIndex = sortedVertIndex + 1; otherSortedVertIndex < originalVertCount;
+				++otherSortedVertIndex) {
+			const u_int otherVertIndex = sortedVertIndices[otherSortedVertIndex];
+			const Point otherVertex = GetVertex(Transform::TRANS_IDENTITY, otherVertIndex);
+
+			if ((otherVertex.x + otherVertex.y + otherVertex.z)
+				- (vertex.x + vertex.y + vertex.z) > 3 * FLT_EPSILON) {
+				// We are too far away now, we wouldn't have a duplicate.
+				break;
+			}
+
+			if (CompareVertices(*this, vertIndex, otherVertIndex)) {
+				isDuplicate = true;
+				uniqueVertices[vertIndex] = otherVertIndex;
+				break;
+			}
+		}
+
+		if (!isDuplicate) {
+			uniqueVertices[vertIndex] = vertIndex;
+			++uniqueVertCount;
+		}
+	}
+
+	// Make sure we always points to the very first orig vertex.
+	for (u_int i = 0; i < originalVertCount; ++i) {
+		u_int origIndex = uniqueVertices[i];
+		while (origIndex != uniqueVertices[origIndex]) {
+			origIndex = uniqueVertices[origIndex];
+		}
+		uniqueVertices[i] = origIndex;
+	}
+	
+	return uniqueVertCount;
+}
+
 //------------------------------------------------------------------------------
 // InstanceTriangleMesh
 //------------------------------------------------------------------------------
@@ -142,9 +227,13 @@ BOOST_CLASS_EXPORT_IMPLEMENT(luxrays::InstanceTriangleMesh)
 
 InstanceTriangleMesh::InstanceTriangleMesh(TriangleMesh *m, const Transform &t) {
 	assert (m != NULL);
-
+	
 	trans = t;
+	transSwapsHandedness = t.SwapsHandedness();
 	mesh = m;
+
+	// The mesh area is compute on demand and cached
+	cachedArea = -1.f;
 
 	cachedBBoxValid = false;
 }
@@ -170,6 +259,9 @@ MotionTriangleMesh::MotionTriangleMesh(TriangleMesh *m, const MotionSystem &ms) 
 	motionSystem = ms;
 	mesh = m;
 
+	// The mesh area is compute on demand and cached
+	cachedArea = -1.f;
+
 	cachedBBoxValid = false;
 }
 
@@ -184,6 +276,9 @@ BBox MotionTriangleMesh::GetBBox() const {
 
 void MotionTriangleMesh::ApplyTransform(const Transform &trans) {
 	motionSystem.ApplyTransform(trans);
+
+	// Invalidate the cached result
+	cachedArea = -1.f;
 
 	cachedBBoxValid = false;
 }

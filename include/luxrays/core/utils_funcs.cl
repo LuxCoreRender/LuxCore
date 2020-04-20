@@ -1,7 +1,7 @@
 #line 2 "utils_funcs.cl"
 
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -107,7 +107,7 @@ OPENCL_FORCE_INLINE float SinPhi(const float3 w) {
 }
 
 OPENCL_FORCE_INLINE float3 SphericalDirection(float sintheta, float costheta, float phi) {
-	return (float3)(sintheta * cos(phi), sintheta * sin(phi), costheta);
+	return MAKE_FLOAT3(sintheta * cos(phi), sintheta * sin(phi), costheta);
 }
 
 OPENCL_FORCE_INLINE float3 SphericalDirectionWithFrame(float sintheta, float costheta, float phi,

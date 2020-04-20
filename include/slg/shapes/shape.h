@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -21,19 +21,27 @@
 
 #include <vector>
 
-#include "luxrays/core/exttrianglemesh.h"
+namespace luxrays {
+	class ExtTriangleMesh;
+}
 
 namespace slg {
 
 class Scene;
-	
+
 class Shape {
 public:
 	typedef enum {
 		MESH,
 		POINTINESS,
 		STRANDS,
-		GROUP
+		GROUP,
+		SUBDIV,
+		DISPLACEMENT,
+		HARLEQUIN,
+		SIMPLIFY,
+		ISLANDAOV,
+		RANDOMTRIANGLEAOV
 	} ShapeType;
 
 	Shape() : refined(false) { }

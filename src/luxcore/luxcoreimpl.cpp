@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -22,7 +22,6 @@
 #include <boost/thread/mutex.hpp>
 
 #include "luxrays/core/intersectiondevice.h"
-#include "luxrays/core/virtualdevice.h"
 #include "luxrays/utils/fileext.h"
 #include "luxrays/utils/serializationutils.h"
 #include "luxrays/utils/safesave.h"
@@ -215,6 +214,36 @@ void FilmImpl::GetOutputUInt(const FilmOutputType type, unsigned int *buffer,
 				buffer, index, executeImagePipeline);
 }
 
+void FilmImpl::UpdateOutputFloat(const FilmOutputType type, const float *buffer,
+		const unsigned int index, const bool executeImagePipeline) {
+	if (type != OUTPUT_USER_IMPORTANCE)
+		throw runtime_error("Currently, only USER_IMPORTANCE channel can be updated with Film::UpdateOutput<float>()");
+
+	if (renderSession) {
+		boost::unique_lock<boost::mutex> lock(renderSession->renderSession->filmMutex);
+
+		slg::Film *film = renderSession->renderSession->film;
+		const unsigned int pixelsCount = film->GetWidth() * film->GetHeight();
+
+		// Only USER_IMPORTANCE can be updated
+		float *destBuffer = renderSession->renderSession->film->GetChannel<float>(slg::Film::USER_IMPORTANCE,
+				index, executeImagePipeline);
+		copy(buffer, buffer + pixelsCount, destBuffer);
+	} else {
+		const unsigned int pixelsCount = standAloneFilm->GetWidth() * standAloneFilm->GetHeight();
+
+		// Only USER_IMPORTANCE can be updated
+		float *destBuffer = standAloneFilm->GetChannel<float>(slg::Film::USER_IMPORTANCE,
+				index, executeImagePipeline);
+		copy(buffer, buffer + pixelsCount, destBuffer);
+	}
+}
+
+void FilmImpl::UpdateOutputUInt(const FilmOutputType type, const unsigned int *buffer,
+		const unsigned int index, const bool executeImagePipeline) {
+	throw runtime_error("No channel can be updated with Film::UpdateOutput<unsigned int>()");
+}
+
 bool FilmImpl::HasChannel(const FilmChannelType type) const {
 	return GetSLGFilm()->HasChannel((slg::Film::FilmChannelType)type);
 }
@@ -245,6 +274,26 @@ const unsigned int *FilmImpl::GetChannelUInt(const FilmChannelType type,
 	} else
 		return standAloneFilm->GetChannel<unsigned int>((slg::Film::FilmChannelType)type,
 				index, executeImagePipeline);
+}
+
+float *FilmImpl::UpdateChannelFloat(const FilmChannelType type,
+		const unsigned int index, const bool executeImagePipeline) {
+	if (type != CHANNEL_USER_IMPORTANCE)
+		throw runtime_error("Only USER_IMPORTANCE channel can be updated with Film::UpdateChannel<float>()");
+
+	if (renderSession) {
+		boost::unique_lock<boost::mutex> lock(renderSession->renderSession->filmMutex);
+
+		return renderSession->renderSession->film->GetChannel<float>((slg::Film::FilmChannelType)type,
+				index, executeImagePipeline);
+	} else
+		return standAloneFilm->GetChannel<float>((slg::Film::FilmChannelType)type,
+				index, executeImagePipeline);
+}
+
+unsigned int *FilmImpl::UpdateChannelUInt(const FilmChannelType type,
+		const unsigned int index, const bool executeImagePipeline) {
+	throw runtime_error("No channel can be updated with Film::UpdateChannel<unsigned int>()");
 }
 
 void FilmImpl::Parse(const luxrays::Properties &props) {
@@ -452,14 +501,63 @@ void SceneImpl::SetMeshAppliedTransformation(const std::string &meshName,
 
 void SceneImpl::DefineMesh(const std::string &meshName,
 		const long plyNbVerts, const long plyNbTris,
-		float *p, unsigned int *vi, float *n, float *uv,
-		float *cols, float *alphas) {
+		float *p, unsigned int *vi, float *n,
+		float *uvs, float *cols, float *alphas) {
 	// Invalidate the scene properties cache
 	scenePropertiesCache.Clear();
 
 	scene->DefineMesh(meshName, plyNbVerts, plyNbTris, (Point *)p,
-			(Triangle *)vi, (Normal *)n, (UV *)uv,
-			(Spectrum *)cols, alphas);
+			(Triangle *)vi, (Normal *)n,
+			(UV *)uvs, (Spectrum *)cols, alphas);
+}
+
+void SceneImpl::DefineMeshExt(const std::string &meshName,
+		const long plyNbVerts, const long plyNbTris,
+		float *p, unsigned int *vi, float *n,
+		array<float *, LC_MESH_MAX_DATA_COUNT> *uvs,
+		array<float *, LC_MESH_MAX_DATA_COUNT> *cols,
+		array<float *, LC_MESH_MAX_DATA_COUNT> *alphas) {
+	// A safety check
+	static_assert(LC_MESH_MAX_DATA_COUNT == EXTMESH_MAX_DATA_COUNT,
+			"LC_MESH_MAX_DATA_COUNT and EXTMESH_MAX_DATA_COUNT must have the same value");
+
+	// Invalidate the scene properties cache
+	scenePropertiesCache.Clear();
+
+	array<UV *, EXTMESH_MAX_DATA_COUNT> slgUVs;
+	if (uvs) {
+		for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i)
+			slgUVs[i] = (UV *)((*uvs)[i]);
+	} else
+		fill(slgUVs.begin(), slgUVs.end(), nullptr);
+
+	array<Spectrum *, EXTMESH_MAX_DATA_COUNT> slgCols;
+	if (cols) {
+		for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i)
+			slgCols[i] = (Spectrum *)((*cols)[i]);
+	} else
+		fill(slgCols.begin(), slgCols.end(), nullptr);
+
+	array<float *, EXTMESH_MAX_DATA_COUNT> slgAlphas;
+	if (alphas) {
+		for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i)
+			slgAlphas[i] = (*alphas)[i];
+	} else
+		fill(slgAlphas.begin(), slgAlphas.end(), nullptr);
+
+	scene->DefineMeshExt(meshName, plyNbVerts, plyNbTris, (Point *)p,
+			(Triangle *)vi, (Normal *)n,
+			&slgUVs, &slgCols, &slgAlphas);
+}
+
+void SceneImpl::SetMeshVertexAOV(const string &meshName,
+		const unsigned int index, float *data) {
+	scene->SetMeshVertexAOV(meshName, index, data);
+}
+
+void SceneImpl::SetMeshTriangleAOV(const string &meshName,
+		const unsigned int index, float *data) {
+	scene->SetMeshTriangleAOV(meshName, index, data);
 }
 
 void SceneImpl::SaveMesh(const string &meshName, const string &fileName) {
@@ -794,6 +892,10 @@ Scene &RenderConfigImpl::GetScene() const {
 	return *scene;
 }
 
+bool RenderConfigImpl::HasCachedKernels() const {
+	return renderConfig->HasCachedKernels();
+}
+
 void RenderConfigImpl::Parse(const Properties &props) {
 	renderConfig->Parse(props);
 }
@@ -818,6 +920,10 @@ void RenderConfigImpl::Save(const std::string &fileName) const {
 void RenderConfigImpl::Export(const std::string &dirName) const {
 	slg::FileSaverRenderEngine::ExportScene(renderConfig, dirName,
 			renderConfig->GetProperty("renderengine.type").Get<string>());
+}
+
+void RenderConfigImpl::ExportGLTF(const std::string &fileName) const {
+	slg::FileSaverRenderEngine::ExportSceneGLTF(renderConfig, fileName);
 }
 
 const Properties &RenderConfigImpl::GetDefaultProperties() {
@@ -990,29 +1096,22 @@ void RenderSessionImpl::UpdateStats() {
 
 	stats.Set(Property("stats.renderengine.total.raysec")(renderSession->renderEngine->GetTotalRaysSec()));
 	stats.Set(Property("stats.renderengine.total.samplesec")(renderSession->renderEngine->GetTotalSamplesSec()));
+	stats.Set(Property("stats.renderengine.total.samplesec.eye")(renderSession->renderEngine->GetTotalEyeSamplesSec()));
+	stats.Set(Property("stats.renderengine.total.samplesec.light")(renderSession->renderEngine->GetTotalLightSamplesSec()));
 	stats.Set(Property("stats.renderengine.total.samplecount")(renderSession->renderEngine->GetTotalSampleCount()));
 	stats.Set(Property("stats.renderengine.pass")(renderSession->renderEngine->GetPass()));
+	stats.Set(Property("stats.renderengine.pass.eye")(renderSession->renderEngine->GetEyePass()));
+	stats.Set(Property("stats.renderengine.pass.light")(renderSession->renderEngine->GetLightPass()));
 	stats.Set(Property("stats.renderengine.time")(renderSession->renderEngine->GetRenderingTime()));
 	stats.Set(Property("stats.renderengine.convergence")(renderSession->film->GetConvergence()));
 
 	// Intersection devices statistics
 	const vector<IntersectionDevice *> &idevices = renderSession->renderEngine->GetIntersectionDevices();
 
-	// Replace all virtual devices with real
-	vector<IntersectionDevice *> realDevices;
-	for (size_t i = 0; i < idevices.size(); ++i) {
-		VirtualIntersectionDevice *vdev = dynamic_cast<VirtualIntersectionDevice *>(idevices[i]);
-		if (vdev) {
-			const vector<IntersectionDevice *> &realDevs = vdev->GetRealDevices();
-			realDevices.insert(realDevices.end(), realDevs.begin(), realDevs.end());
-		} else
-			realDevices.push_back(idevices[i]);
-	}
-
 	boost::unordered_map<string, unsigned int> devCounters;
 	Property devicesNames("stats.renderengine.devices");
 	double totalPerf = 0.0;
-	BOOST_FOREACH(IntersectionDevice *dev, realDevices) {
+	BOOST_FOREACH(IntersectionDevice *dev, idevices) {
 		const string &devName = dev->GetName();
 
 		// Append a device index for the case where the same device is used multiple times
@@ -1025,8 +1124,15 @@ void RenderSessionImpl::UpdateStats() {
 		stats.Set(Property(prefix + ".performance.total")(dev->GetTotalPerformance()));
 		stats.Set(Property(prefix + ".performance.serial")(dev->GetSerialPerformance()));
 		stats.Set(Property(prefix + ".performance.dataparallel")(dev->GetDataParallelPerformance()));
-		stats.Set(Property(prefix + ".memory.total")((u_longlong)dev->GetMaxMemory()));
-		stats.Set(Property(prefix + ".memory.used")((u_longlong)dev->GetUsedMemory()));
+
+		const HardwareDevice *hardDev = dynamic_cast<const HardwareDevice *>(dev);
+		if (hardDev) {
+			stats.Set(Property(prefix + ".memory.total")((u_longlong)hardDev->GetMaxMemory()));
+			stats.Set(Property(prefix + ".memory.used")((u_longlong)hardDev->GetUsedMemory()));
+		} else {
+			stats.Set(Property(prefix + ".memory.total")(0ull));
+			stats.Set(Property(prefix + ".memory.used")(0ull));			
+		}
 	}
 	stats.Set(devicesNames);
 	stats.Set(Property("stats.renderengine.performance.total")(totalPerf));

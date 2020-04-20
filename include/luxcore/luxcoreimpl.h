@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -75,10 +75,18 @@ public:
 			const unsigned int index, const bool executeImagePipeline);
 	void GetOutputUInt(const FilmOutputType type, unsigned int *buffer,
 			const unsigned int index, const bool executeImagePipeline);
+	void UpdateOutputFloat(const FilmOutputType type, const float *buffer,
+			const unsigned int index, const bool executeImagePipeline);
+	void UpdateOutputUInt(const FilmOutputType type, const unsigned int *buffer,
+			const unsigned int index, const bool executeImagePipeline);
 
 	const float *GetChannelFloat(const FilmChannelType type,
 			const unsigned int index, const bool executeImagePipeline);
 	const unsigned int *GetChannelUInt(const FilmChannelType type,
+			const unsigned int index, const bool executeImagePipeline);
+	float *UpdateChannelFloat(const FilmChannelType type,
+			const unsigned int index, const bool executeImagePipeline);
+	unsigned int *UpdateChannelUInt(const FilmChannelType type,
 			const unsigned int index, const bool executeImagePipeline);
 
 	void Parse(const luxrays::Properties &props);
@@ -153,8 +161,18 @@ public:
 
 	void DefineMesh(const std::string &meshName,
 		const long plyNbVerts, const long plyNbTris,
-		float *p, unsigned int *vi, float *n, float *uv,
-		float *cols, float *alphas);
+		float *p, unsigned int *vi, float *n,
+		float *uvs,	float *cols, float *alphas);
+	void DefineMeshExt(const std::string &meshName,
+		const long plyNbVerts, const long plyNbTris,
+		float *p, unsigned int *vi, float *n,
+		std::array<float *, LC_MESH_MAX_DATA_COUNT> *uv,
+		std::array<float *, LC_MESH_MAX_DATA_COUNT> *cols,
+		std::array<float *, LC_MESH_MAX_DATA_COUNT> *alphas);
+	void SetMeshVertexAOV(const std::string &meshName,
+		const unsigned int index, float *data);
+	void SetMeshTriangleAOV(const std::string &meshName,
+		const unsigned int index, float *data);
 
 	void SaveMesh(const std::string &meshName, const std::string &fileName);
 	void DefineStrands(const std::string &shapeName, const luxrays::cyHairFile &strandsFile,
@@ -248,6 +266,8 @@ public:
 
 	Scene &GetScene() const;
 
+	bool HasCachedKernels() const;
+
 	void Parse(const luxrays::Properties &props);
 
 	void Delete(const std::string &prefix);
@@ -259,6 +279,7 @@ public:
 
 	void Save(const std::string &fileName) const;
 	void Export(const std::string &dirName) const;
+	void ExportGLTF(const std::string &fileName) const;
 
 	static const luxrays::Properties &GetDefaultProperties();
 

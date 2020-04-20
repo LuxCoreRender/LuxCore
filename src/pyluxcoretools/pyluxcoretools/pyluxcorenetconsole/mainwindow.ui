@@ -567,7 +567,7 @@
  <connections>
   <connection>
    <sender>actionQuit</sender>
-   <signal>activated()</signal>
+   <signal>triggered()</signal>
    <receiver>MainWindow</receiver>
    <slot>clickedQuit()</slot>
    <hints>

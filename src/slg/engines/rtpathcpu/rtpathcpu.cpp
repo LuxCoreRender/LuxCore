@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -101,7 +101,7 @@ void RTPathCPURenderEngine::BeginSceneEditLockLess() {
 
 void RTPathCPURenderEngine::EndSceneEditLockLess(const EditActionList &editActions) {
 	film->Reset();
-	((RTPathCPUSamplerSharedData *)samplerSharedData)->Reset(film);
+	samplerSharedData->Reset();
 
 	// Check if the threads were already suspended for pause
 	if (!pauseMode)

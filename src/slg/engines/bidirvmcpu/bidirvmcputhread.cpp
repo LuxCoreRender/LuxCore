@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -56,8 +56,9 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 
 	for (u_int i = 0; i < samplers.size(); ++i) {
 		Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, engine->film,
-				engine->sampleSplatter,	engine->samplerSharedData);
-		sampler->RequestSamples(sampleSize);
+				engine->sampleSplatter,	engine->samplerSharedData, Properties());
+		sampler->SetThreadIndex(threadIndex);
+		sampler->RequestSamples(PIXEL_NORMALIZED_AND_SCREEN_NORMALIZED, sampleSize);
 
 		samplers[i] = sampler;
 	}
@@ -67,9 +68,6 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 	vector<vector<PathVertexVM> > lightPathsVertices(samplers.size());
 	vector<Point> lensPoints(samplers.size());
 	HashGrid hashGrid;
-	// I can not use engine->renderConfig->GetProperty() here because the
-	// RenderConfig properties cache is not thread safe
-	const u_int haltDebug = engine->renderConfig->cfg.Get(Property("batch.haltdebug")(0u)).Get<u_int>();
 
 	for(u_int steps = 0; !boost::this_thread::interruption_requested(); ++steps) {
 		// Check if we are in pause mode
@@ -152,7 +150,8 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 
 			eyeVertex.bsdf.hitPoint.fixedDir = -eyeRay.d;
 			eyeVertex.throughput = Spectrum(1.f);
-			const float cameraPdfW = scene->camera->GetPDF(eyeRay.d, eyeSampleResult.filmX, eyeSampleResult.filmY);
+			float cameraPdfW;
+			scene->camera->GetPDF(eyeRay, 0.f, eyeSampleResult.filmX, eyeSampleResult.filmY, &cameraPdfW, nullptr);
 			eyeVertex.dVCM = MIS(1.f / cameraPdfW);
 			eyeVertex.dVC = 1.f;
 			eyeVertex.dVM = 1.f;
@@ -169,7 +168,8 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 				// not in any other place)
 				RayHit eyeRayHit;
 				Spectrum connectionThroughput, connectEmission;
-				const bool hit = scene->Intersect(device, false, eyeSampleResult.firstPathVertex,
+				const bool hit = scene->Intersect(device,
+						EYE_RAY | (eyeSampleResult.firstPathVertex ? CAMERA_RAY : GENERIC_RAY),
 						&eyeVertex.volInfo, sampler->GetSample(sampleOffset),
 						&eyeRay, &eyeRayHit, &eyeVertex.bsdf,
 						&connectionThroughput, &eyeVertex.throughput, &eyeSampleResult);
@@ -267,8 +267,6 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 		//hashGrid.PrintStatistics();
 
 		// Check halt conditions
-		if ((haltDebug > 0u) && (steps >= haltDebug))
-			break;
 		if (engine->film->GetConvergence() == 1.f)
 			break;
 	}

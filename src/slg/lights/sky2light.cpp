@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -16,10 +16,10 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "slg/bsdf/bsdf.h"
 #include "slg/scene/scene.h"
 #include "slg/lights/sky2light.h"
 #include "slg/lights/data/ArHosekSkyModelData.h"
-#include "slg/lights/visibility/envlightvisibility.h"
 
 using namespace std;
 using namespace luxrays;
@@ -145,10 +145,8 @@ static void ComputeModel(float turbidity, const Spectrum &albedo, float elevatio
 SkyLight2::SkyLight2() : localSunDir(0.f, 0.f, 1.f), turbidity(2.2f),
 		groundAlbedo(0.f, 0.f, 0.f), groundColor(0.f, 0.f, 0.f),
 		hasGround(false), hasGroundAutoScale(true),
-		visibilityMapWidth(512), visibilityMapHeight(256),
-		visibilityMapSamples(1000000), visibilityMapMaxDepth(4),
-		useVisibilityMap(false), skyDistribution(nullptr),
-		visibilityMapCache(nullptr) {
+		distributionWidth(512), distributionHeight(256),
+		skyDistribution(nullptr), visibilityMapCache(nullptr) {
 }
 
 SkyLight2::~SkyLight2() {
@@ -205,21 +203,21 @@ void SkyLight2::Preprocess() {
 
 	isGroundBlack = (hasGround && groundColor.Black());
 	
-	vector<float> data(visibilityMapWidth * visibilityMapHeight);
-	for (u_int y = 0; y < visibilityMapHeight; ++y) {
-		for (u_int x = 0; x < visibilityMapWidth; ++x) {
-			const u_int index = x + y * visibilityMapWidth;
+	vector<float> data(distributionWidth * distributionHeight);
+	for (u_int y = 0; y < distributionHeight; ++y) {
+		for (u_int x = 0; x < distributionWidth; ++x) {
+			const u_int index = x + y * distributionWidth;
 
-			if (isGroundBlack && (y > visibilityMapHeight / 2))
+			if (isGroundBlack && (y > distributionHeight / 2))
 				data[index] = 0.f;
 			else
 				data[index] = ComputeRadiance(UniformSampleSphere(
-						(y + .5f) / visibilityMapHeight,
-						(x + .5f) / visibilityMapWidth)).Y();
+						(y + .5f) / distributionHeight,
+						(x + .5f) / distributionWidth)).Y();
 		}
 	}
 
-	skyDistribution = new Distribution2D(&data[0], visibilityMapWidth, visibilityMapHeight);
+	skyDistribution = new Distribution2D(&data[0], distributionWidth, distributionHeight);
 }
 
 void SkyLight2::GetPreprocessedData(float *absoluteSunDirData, float *absoluteUpDirData,
@@ -227,7 +225,8 @@ void SkyLight2::GetPreprocessedData(float *absoluteSunDirData, float *absoluteUp
 		float *aTermData, float *bTermData, float *cTermData, float *dTermData,
 		float *eTermData, float *fTermData, float *gTermData, float *hTermData,
 		float *iTermData, float *radianceTermData,
-		const Distribution2D **skyDistributionData) const {
+		const Distribution2D **skyDistributionData,
+		const EnvLightVisibilityCache **elvc) const {
 	if (absoluteSunDirData) {
 		absoluteSunDirData[0] = absoluteSunDir.x;
 		absoluteSunDirData[1] = absoluteSunDir.y;
@@ -311,27 +310,28 @@ void SkyLight2::GetPreprocessedData(float *absoluteSunDirData, float *absoluteUp
 	
 	if (skyDistributionData)
 		*skyDistributionData = skyDistribution;
+	if (elvc)
+		*elvc = visibilityMapCache;
 }
 
 float SkyLight2::GetPower(const Scene &scene) const {
 	const float envRadius = GetEnvRadius(scene);
 	
 	float power = 0.f;
-	for (u_int y = 0; y < visibilityMapHeight; ++y) {
-		for (u_int x = 0; x < visibilityMapWidth; ++x)
+	for (u_int y = 0; y < distributionHeight; ++y) {
+		for (u_int x = 0; x < distributionWidth; ++x)
 			power += ComputeRadiance(UniformSampleSphere(
-					(y + .5f) / visibilityMapHeight,
-					(x + .5f) / visibilityMapWidth)).Y();
+					(y + .5f) / distributionHeight,
+					(x + .5f) / distributionWidth)).Y();
 	}
-	power /= visibilityMapWidth * visibilityMapHeight;
+	power /= distributionWidth * distributionHeight;
 
 	return power * (4.f * M_PI * envRadius * envRadius) * 2.f * M_PI;
 }
 
 Spectrum SkyLight2::GetRadiance(const Scene &scene,
-		const Point &p, const Vector &dir,
-		float *directPdfA,
-		float *emissionPdfW) const {
+		const BSDF *bsdf, const Vector &dir,
+		float *directPdfA, float *emissionPdfW) const {
 	const Vector globalDir = -dir;
 	float u, v, latLongMappingPdf;
 	ToLatLongMapping(globalDir, &u, &v, &latLongMappingPdf);
@@ -340,14 +340,10 @@ Spectrum SkyLight2::GetRadiance(const Scene &scene,
 	
 	const float distPdf = skyDistribution->Pdf(u, v);
 	if (directPdfA) {
-		if (useVisibilityMapCache) {
-			const Distribution2D *cacheDist = visibilityMapCache->GetVisibilityMap(p);
-			if (cacheDist) {
-				const float cacheDistPdf = cacheDist->Pdf(u, v);
-
-				*directPdfA = cacheDistPdf * latLongMappingPdf;
-			} else
-				*directPdfA = 0.f;
+		if (!bsdf)
+			*directPdfA = 0.f;
+		else if (visibilityMapCache && visibilityMapCache->IsCacheEnabled(*bsdf)) {
+			*directPdfA =  visibilityMapCache->Pdf(*bsdf, u, v) * latLongMappingPdf;
 		} else
 			*directPdfA = distPdf * latLongMappingPdf;
 	}
@@ -361,9 +357,10 @@ Spectrum SkyLight2::GetRadiance(const Scene &scene,
 }
 
 Spectrum SkyLight2::Emit(const Scene &scene,
-		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
-		Point *orig, Vector *dir,
-		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
+		const float time, const float u0, const float u1,
+		const float u2, const float u3, const float passThroughEvent,
+		Ray &ray, float &emissionPdfW,
+		float *directPdfA, float *cosThetaAtLight) const {
 	float uv[2];
 	float distPdf;
 	skyDistribution->SampleContinuous(u0, u1, uv, &distPdf);
@@ -390,12 +387,8 @@ Spectrum SkyLight2::Emit(const Scene &scene,
 	const Point pDisk = worldCenter + envRadius * (d1 * x + d2 * y);
 	const Point rayOrig = pDisk - envRadius * rayDir;
 
-	// Assign ray origin and direction
-	*orig = rayOrig;
-	*dir = rayDir;
-
 	// Compute InfiniteLight ray weight
-	*emissionPdfW = distPdf * latLongMappingPdf / (M_PI * envRadius * envRadius);
+	emissionPdfW = distPdf * latLongMappingPdf / (M_PI * envRadius * envRadius);
 
 	if (directPdfA)
 		*directPdfA = distPdf * latLongMappingPdf;
@@ -406,57 +399,58 @@ Spectrum SkyLight2::Emit(const Scene &scene,
 	const Spectrum result = ComputeRadiance(-rayDir);
 	assert (!result.IsNaN() && !result.IsInf() && !result.IsNeg());
 
+	ray.Update(rayOrig, rayDir, time);
+
 	return result;
 }
 
-Spectrum SkyLight2::Illuminate(const Scene &scene, const Point &p,
-		const float u0, const float u1, const float passThroughEvent,
-        Vector *dir, float *distance, float *directPdfW,
+Spectrum SkyLight2::Illuminate(const Scene &scene, const BSDF &bsdf,
+		const float time, const float u0, const float u1, const float passThroughEvent,
+        Ray &shadowRay, float &directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
 	float uv[2];
 	float distPdf;
-
-	if (useVisibilityMapCache) {
-		const Distribution2D *dist = visibilityMapCache->GetVisibilityMap(p);
-		if (dist)
-			dist->SampleContinuous(u0, u1, uv, &distPdf);
-		else
-			return Spectrum();
-	} else
+	if (visibilityMapCache && visibilityMapCache->IsCacheEnabled(bsdf))
+		visibilityMapCache->Sample(bsdf, u0, u1, uv, &distPdf);
+	else
 		skyDistribution->SampleContinuous(u0, u1, uv, &distPdf);
 	if (distPdf == 0.f)
 		return Spectrum();
 
+	Vector shadowRayDir;
 	float latLongMappingPdf;
-	FromLatLongMapping(uv[0], uv[1], dir, &latLongMappingPdf);
+	FromLatLongMapping(uv[0], uv[1], &shadowRayDir, &latLongMappingPdf);
 	if (latLongMappingPdf == 0.f)
 		return Spectrum();
 
 	const Point worldCenter = scene.dataSet->GetBSphere().center;
 	const float envRadius = GetEnvRadius(scene);
 
-	const Vector toCenter(worldCenter - p);
-	const float centerDistance2 = Dot(toCenter, toCenter);
-	const float approach = Dot(toCenter, *dir);
-	*distance = approach + sqrtf(Max(0.f, envRadius * envRadius -
-		centerDistance2 + approach * approach));
+	const Point shadowRayOrig = bsdf.GetRayOrigin(shadowRayDir);
+	const Vector toCenter(worldCenter - shadowRayOrig);
+	const float centerDistanceSquared = Dot(toCenter, toCenter);
+	const float approach = Dot(toCenter, shadowRayDir);
+	const float shadowRayDistance = approach + sqrtf(Max(0.f, envRadius * envRadius -
+		centerDistanceSquared + approach * approach));
 
-	const Point emisPoint(p + (*distance) * (*dir));
+	const Point emisPoint(shadowRayOrig + shadowRayDistance * shadowRayDir);
 	const Normal emisNormal(Normalize(worldCenter - emisPoint));
 
-	const float cosAtLight = Dot(emisNormal, -(*dir));
+	const float cosAtLight = Dot(emisNormal, -shadowRayDir);
 	if (cosAtLight < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 	if (cosThetaAtLight)
 		*cosThetaAtLight = cosAtLight;
 
-	*directPdfW = distPdf * latLongMappingPdf;
-	assert (!isnan(*directPdfW) && !isinf(*directPdfW) && (*directPdfW > 0.f));
+	directPdfW = distPdf * latLongMappingPdf;
+	assert (!isnan(directPdfW) && !isinf(directPdfW) && (directPdfW > 0.f));
 	
 	if (emissionPdfW)
 		*emissionPdfW = distPdf * latLongMappingPdf / (M_PI * envRadius * envRadius);
 
-	return ComputeRadiance(*dir);
+	shadowRay = Ray(shadowRayOrig, shadowRayDir, 0.f, shadowRayDistance, time);
+
+	return ComputeRadiance(shadowRayDir);
 }
 
 UV SkyLight2::GetEnvUV(const luxrays::Vector &dir) const {
@@ -467,49 +461,33 @@ UV SkyLight2::GetEnvUV(const luxrays::Vector &dir) const {
 	return uv;
 }
 
-void SkyLight2::UpdateVisibilityMap(const Scene *scene) {
+void SkyLight2::UpdateVisibilityMap(const Scene *scene, const bool useRTMode) {
+	delete visibilityMapCache;
+	visibilityMapCache = nullptr;
+
+	if (useRTMode)
+		return;
+
 	if (useVisibilityMapCache) {
 		delete visibilityMapCache;
 		visibilityMapCache = nullptr;
 
 		// Build a luminance map of the sky
 		unique_ptr<ImageMap> luminanceMapImage(ImageMap::AllocImageMap<float>(1.f, 1,
-				visibilityMapWidth, visibilityMapHeight, ImageMapStorage::REPEAT));
+				EnvLightVisibilityCache::defaultLuminanceMapWidth, EnvLightVisibilityCache::defaultLuminanceMapHeight,
+				ImageMapStorage::REPEAT));
 
 		float *pixels = (float *)luminanceMapImage->GetStorage()->GetPixelsData();
-		for (u_int y = 0; y < visibilityMapHeight; ++y) {
-			for (u_int x = 0; x < visibilityMapWidth; ++x)
-				pixels[x + y * visibilityMapWidth] = ComputeRadiance(UniformSampleSphere(
-						(y + .5f) / visibilityMapHeight,
-						(x + .5f) / visibilityMapWidth)).Y();
+		for (u_int y = 0; y < EnvLightVisibilityCache::defaultLuminanceMapHeight; ++y) {
+			for (u_int x = 0; x < EnvLightVisibilityCache::defaultLuminanceMapWidth; ++x)
+				pixels[x + y * EnvLightVisibilityCache::defaultLuminanceMapWidth] = ComputeRadiance(UniformSampleSphere(
+						(y + .5f) / EnvLightVisibilityCache::defaultLuminanceMapHeight,
+						(x + .5f) / EnvLightVisibilityCache::defaultLuminanceMapWidth)).Y();
 		}
 
 		visibilityMapCache = new EnvLightVisibilityCache(scene, this,
 				luminanceMapImage.get(), visibilityMapCacheParams);		
 		visibilityMapCache->Build();
-	} else if (useVisibilityMap) {
-		// Build a luminance map of the sky
-		unique_ptr<ImageMap> luminanceMapImage(ImageMap::AllocImageMap<float>(1.f, 1,
-				visibilityMapWidth, visibilityMapHeight, ImageMapStorage::REPEAT));
-
-		float *pixels = (float *)luminanceMapImage->GetStorage()->GetPixelsData();
-		for (u_int y = 0; y < visibilityMapHeight; ++y) {
-			for (u_int x = 0; x < visibilityMapWidth; ++x)
-				pixels[x + y * visibilityMapWidth] = ComputeRadiance(UniformSampleSphere(
-						(y + .5f) / visibilityMapHeight,
-						(x + .5f) / visibilityMapWidth)).Y();
-		}
-
-		EnvLightVisibility envLightVisibilityMapBuilder(scene, this,
-				luminanceMapImage.get(), false,
-				visibilityMapWidth, visibilityMapHeight,
-				visibilityMapSamples, visibilityMapMaxDepth);
-		
-		Distribution2D *newDist = envLightVisibilityMapBuilder.Build();
-		if (newDist) {
-			delete skyDistribution;
-			skyDistribution = newDist;
-		}
 	}
 }
 
@@ -524,11 +502,8 @@ Properties SkyLight2::ToProperties(const ImageMapCache &imgMapCache, const bool 
 	props.Set(Property(prefix + ".ground.enable")(hasGround));
 	props.Set(Property(prefix + ".ground.color")(groundColor));
 	props.Set(Property(prefix + ".ground.autoscale")(hasGroundAutoScale));
-	props.Set(Property(prefix + ".visibilitymap.enable")(useVisibilityMap));
-	props.Set(Property(prefix + ".visibilitymap.width")(visibilityMapWidth));
-	props.Set(Property(prefix + ".visibilitymap.height")(visibilityMapHeight));
-	props.Set(Property(prefix + ".visibilitymap.samples")(visibilityMapSamples));
-	props.Set(Property(prefix + ".visibilitymap.maxdepth")(visibilityMapMaxDepth));
+	props.Set(Property(prefix + ".distribution.width")(distributionWidth));
+	props.Set(Property(prefix + ".distribution.height")(distributionHeight));
 
 	props.Set(Property(prefix + ".visibilitymapcache.enable")(useVisibilityMapCache));
 	if (useVisibilityMapCache)

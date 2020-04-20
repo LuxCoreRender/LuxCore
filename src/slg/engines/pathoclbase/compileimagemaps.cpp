@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -32,25 +32,6 @@
 using namespace std;
 using namespace luxrays;
 using namespace slg;
-
-void CompiledScene::AddEnabledImageMapCode() {
-	// ImageMap storage formats
-	if (enabledCode.count("IMAGEMAPS_BYTE_FORMAT")) usedImageMapFormats.insert(ImageMapStorage::BYTE);
-	if (enabledCode.count("IMAGEMAPS_HALF_FORMAT")) usedImageMapFormats.insert(ImageMapStorage::HALF);
-	if (enabledCode.count("IMAGEMAPS_FLOAT_FORMAT")) usedImageMapFormats.insert(ImageMapStorage::FLOAT);
-
-	// ImageMap channels
-	if (enabledCode.count("IMAGEMAPS_1xCHANNELS")) usedImageMapChannels.insert(1);
-	if (enabledCode.count("IMAGEMAPS_2xCHANNELS")) usedImageMapChannels.insert(2);
-	if (enabledCode.count("IMAGEMAPS_3xCHANNELS")) usedImageMapChannels.insert(3);
-	if (enabledCode.count("IMAGEMAPS_4xCHANNELS")) usedImageMapChannels.insert(4);
-
-	// ImageMap wrap mode
-	if (enabledCode.count("IMAGEMAPS_WRAP_REPEAT")) usedImageMapWrapTypes.insert(ImageMapStorage::REPEAT);
-	if (enabledCode.count("IMAGEMAPS_WRAP_BLACK")) usedImageMapWrapTypes.insert(ImageMapStorage::BLACK);
-	if (enabledCode.count("IMAGEMAPS_WRAP_WHITE")) usedImageMapWrapTypes.insert(ImageMapStorage::WHITE);
-	if (enabledCode.count("IMAGEMAPS_WRAP_CLAMP")) usedImageMapWrapTypes.insert(ImageMapStorage::CLAMP);
-}
 
 void CompiledScene::AddToImageMapMem(slg::ocl::ImageMap &im, void *data, const size_t dataSize) {
 	const size_t memSize = RoundUp(dataSize, sizeof(float));
@@ -103,11 +84,6 @@ void CompiledScene::CompileImageMaps() {
 
 	const double tStart = WallClockTime();
 
-	usedImageMapFormats.clear();
-	usedImageMapChannels.clear();
-	usedImageMapWrapTypes.clear();
-	AddEnabledImageMapCode();
-
 	vector<const ImageMap *> ims;
 	scene->imgMapCache.GetImageMaps(ims);
 
@@ -154,10 +130,6 @@ void CompiledScene::CompileImageMaps() {
 		}
 
 		AddToImageMapMem(*imd, im->GetStorage()->GetPixelsData(), im->GetStorage()->GetMemorySize());
-
-		usedImageMapFormats.insert(im->GetStorage()->GetStorageType());
-		usedImageMapChannels.insert(im->GetChannelCount());
-		usedImageMapWrapTypes.insert(im->GetStorage()->wrapType);
 	}
 
 	SLG_LOG("Image maps page(s) count: " << imageMapMemBlocks.size());

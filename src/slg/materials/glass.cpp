@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -146,11 +146,11 @@ Spectrum GlassMaterial::EvalSpecularReflection(const HitPoint &hitPoint,
 	if (kr.Black())
 		return Spectrum();
 
-	const float costheta = CosTheta(localFixedDir);
+	const float cosTheta = CosTheta(localFixedDir);
 	*localSampledDir = Vector(-localFixedDir.x, -localFixedDir.y, localFixedDir.z);
 
 	const float ntc = nt / nc;
-	const Spectrum result = kr * FresnelTexture::CauchyEvaluate(ntc, costheta);
+	const Spectrum result = kr * FresnelTexture::CauchyEvaluate(ntc, cosTheta);
 
 	if (localFilmThickness > 0.f) {
 		// Select the wavelength to sample
@@ -190,8 +190,8 @@ Spectrum GlassMaterial::EvalSpecularTransmission(const HitPoint &hitPoint,
 	}
 
 	const float ntc = lnt / nc;
-	const float costheta = CosTheta(localFixedDir);
-	const bool entering = (costheta > 0.f);
+	const float cosTheta = CosTheta(localFixedDir);
+	const bool entering = (cosTheta > 0.f);
 	const float eta = entering ? (nc / lnt) : ntc;
 	const float eta2 = eta * eta;
 	const float sini2 = SinTheta2(localFixedDir);
@@ -209,7 +209,7 @@ Spectrum GlassMaterial::EvalSpecularTransmission(const HitPoint &hitPoint,
 		ce = (1.f - FresnelTexture::CauchyEvaluate(ntc, cost)) * eta2;
 	else {
 		const float absCosSampledDir = fabsf(CosTheta(*localSampledDir));
-		ce = (1.f - FresnelTexture::CauchyEvaluate(ntc, costheta)) * fabsf(localFixedDir.z / absCosSampledDir);
+		ce = (1.f - FresnelTexture::CauchyEvaluate(ntc, cosTheta)) * fabsf(CosTheta(localFixedDir) / absCosSampledDir);
 	}
 
 	return lkt * ce;
@@ -218,7 +218,7 @@ Spectrum GlassMaterial::EvalSpecularTransmission(const HitPoint &hitPoint,
 Spectrum GlassMaterial::Sample(const HitPoint &hitPoint,
 		const Vector &localFixedDir, Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
-		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
+		float *pdfW, BSDFEvent *event, const BSDFEvent eventHint) const {
 	const Spectrum kr = Kr->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
 	const Spectrum kt = Kt->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
 
@@ -239,8 +239,8 @@ Spectrum GlassMaterial::Sample(const HitPoint &hitPoint,
 
 	// Decide to transmit or reflect
 	float threshold;
-	if (!refl.Black()) {
-		if (!trans.Black()) {
+	if (!refl.Black() && (eventHint != TRANSMIT)) {
+		if (!trans.Black() && (eventHint != REFLECT)) {
 			// Importance sampling
 			const float reflFilter = refl.Filter();
 			const float transFilter = trans.Filter();
@@ -275,8 +275,6 @@ Spectrum GlassMaterial::Sample(const HitPoint &hitPoint,
 		result = refl;
 	}
 	
-	*absCosSampledDir = fabsf(CosTheta(*localSampledDir));
-
 	return result / *pdfW;
 }
 
@@ -326,18 +324,18 @@ Properties GlassMaterial::ToProperties(const ImageMapCache &imgMapCache, const b
 
 	const string name = GetName();
 	props.Set(Property("scene.materials." + name + ".type")("glass"));
-	props.Set(Property("scene.materials." + name + ".kr")(Kr->GetName()));
-	props.Set(Property("scene.materials." + name + ".kt")(Kt->GetName()));
+	props.Set(Property("scene.materials." + name + ".kr")(Kr->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".kt")(Kt->GetSDLValue()));
 	if (exteriorIor)
-		props.Set(Property("scene.materials." + name + ".exteriorior")(exteriorIor->GetName()));
+		props.Set(Property("scene.materials." + name + ".exteriorior")(exteriorIor->GetSDLValue()));
 	if (interiorIor)
-		props.Set(Property("scene.materials." + name + ".interiorior")(interiorIor->GetName()));
+		props.Set(Property("scene.materials." + name + ".interiorior")(interiorIor->GetSDLValue()));
 	if (cauchyC)
-		props.Set(Property("scene.materials." + name + ".cauchyc")(cauchyC->GetName()));
+		props.Set(Property("scene.materials." + name + ".cauchyc")(cauchyC->GetSDLValue()));
 	if (filmThickness)
-		props.Set(Property("scene.materials." + name + ".filmthickness")(filmThickness->GetName()));
+		props.Set(Property("scene.materials." + name + ".filmthickness")(filmThickness->GetSDLValue()));
 	if (filmIor)
-		props.Set(Property("scene.materials." + name + ".filmior")(filmIor->GetName()));
+		props.Set(Property("scene.materials." + name + ".filmior")(filmIor->GetSDLValue()));
 	props.Set(Material::ToProperties(imgMapCache, useRealFileName));
 
 	return props;

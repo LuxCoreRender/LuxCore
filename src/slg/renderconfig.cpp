@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -119,6 +119,20 @@ RenderConfig::~RenderConfig() {
 	// Check if the scene was allocated by me
 	if (allocatedScene)
 		delete scene;
+}
+
+bool RenderConfig::HasCachedKernels() {
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	const string type = cfg.Get(Property("renderengine.type")(PathCPURenderEngine::GetObjectTag())).Get<string>();
+	if ((type == "PATHOCL") ||
+			(type == "RTPATHOCL") ||
+			(type == "TILEPATHOCL")) {
+		return PathOCLBaseRenderEngine::HasCachedKernels(*this);
+	} else
+		return true;
+#else
+	return true;
+#endif
 }
 
 const Property RenderConfig::GetProperty(const string &name) const {
@@ -279,8 +293,11 @@ SamplerSharedData *RenderConfig::AllocSamplerSharedData(RandomGenerator *rndGen,
 }
 
 Sampler *RenderConfig::AllocSampler(RandomGenerator *rndGen, Film *film, const FilmSampleSplatter *flmSplatter,
-		SamplerSharedData *sharedData) const {
-	return Sampler::FromProperties(cfg, rndGen, film, flmSplatter, sharedData);
+		SamplerSharedData *sharedData, const Properties &additionalProps) const {
+	Properties props = cfg;
+	props << additionalProps;
+
+	return Sampler::FromProperties(props, rndGen, film, flmSplatter, sharedData);
 }
 
 RenderEngine *RenderConfig::AllocRenderEngine() const {
@@ -299,7 +316,7 @@ RenderEngine *RenderConfig::AllocRenderEngine() const {
 
 const Properties &RenderConfig::ToProperties() const {
 	if (!propsCache.GetSize())
-			propsCache = ToProperties(cfg);
+		propsCache = ToProperties(cfg);
 
 	return propsCache;
 }
@@ -364,8 +381,6 @@ Properties RenderConfig::ToProperties(const Properties &cfg) {
 
 	props << cfg.Get(Property("screen.tiles.passcount.show")(false));
 	props << cfg.Get(Property("screen.tiles.error.show")(false));
-
-	props << cfg.Get(Property("batch.haltdebug")(0u));
 
 	return props;
 }

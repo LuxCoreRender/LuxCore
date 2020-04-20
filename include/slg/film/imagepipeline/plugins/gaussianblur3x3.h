@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -23,8 +23,8 @@
 #include <memory>
 #include <typeinfo> 
 
-#include "luxrays/luxrays.h"
 #include "luxrays/core/color/color.h"
+#include "luxrays/core/hardwaredevice.h"
 #include "luxrays/utils/serializationutils.h"
 #include "slg/film/imagepipeline/imagepipeline.h"
 
@@ -43,10 +43,8 @@ public:
 
 	virtual void Apply(Film &film, const u_int index);
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	virtual bool CanUseOpenCL() const { return true; }
-	virtual void ApplyOCL(Film &film, const u_int index);
-#endif
+	virtual bool CanUseHW() const { return true; }
+	virtual void ApplyHW(Film &film, const u_int index);
 
 	template<class T> static void ApplyBlurFilter(const u_int width, const u_int height,
 			T *src, T *tmpBuffer,
@@ -77,14 +75,12 @@ private:
 	luxrays::Spectrum *tmpBuffer;
 	size_t tmpBufferSize;
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	// Used inside the object destructor to free buffers
-	luxrays::OpenCLIntersectionDevice *oclIntersectionDevice;
-	cl::Buffer *oclTmpBuffer;
+	luxrays::HardwareDevice *hardwareDevice;
+	luxrays::HardwareDeviceBuffer *hwTmpBuffer;
 
-	cl::Kernel *filterXKernel;
-	cl::Kernel *filterYKernel;
-#endif
+	luxrays::HardwareDeviceKernel *filterXKernel;
+	luxrays::HardwareDeviceKernel *filterYKernel;
 };
 
 }

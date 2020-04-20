@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -37,13 +37,11 @@ public:
 	virtual BSDFEvent GetEventTypes() const { return eventTypes; };
 
 	virtual bool IsLightSource() const { return isLightSource; }
-	virtual bool HasBumpTex() const { return hasBumpTex; }
 	virtual bool IsDelta() const { return isDelta; }
-	virtual bool IsPassThrough() const { return isPassThrough; }
 
 	virtual luxrays::Spectrum GetPassThroughTransparency(const HitPoint &hitPoint,
 		const luxrays::Vector &localFixedDir, const float passThroughEvent,
-		const float backTracing) const;
+		const bool backTracing) const;
 
 	virtual const Volume *GetInteriorVolume(const HitPoint &hitPoint,
 		const float passThroughEvent) const;
@@ -62,7 +60,7 @@ public:
 	virtual luxrays::Spectrum Sample(const HitPoint &hitPoint,
 		const luxrays::Vector &localFixedDir, luxrays::Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
-		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const;
+		float *pdfW, BSDFEvent *event, const BSDFEvent eventHint = NONE) const;
 	void Pdf(const HitPoint &hitPoint,
 		const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const;
@@ -79,13 +77,14 @@ public:
 	const Material *GetMaterialB() const { return matB; }
 	const Texture *GetMixFactor() const { return mixFactor; }
 
+protected:
+	virtual void UpdateAvgPassThroughTransparency();
+
 private:
 	// Used by Preprocess()
 	BSDFEvent GetEventTypesImpl() const;
 	bool IsLightSourceImpl() const;
-	bool HasBumpTexImpl() const;
 	bool IsDeltaImpl() const;
-	bool IsPassThroughImpl() const;
 
 	void Preprocess();
 
@@ -95,7 +94,7 @@ private:
 
 	// Cached values for performance with very large material node trees
 	BSDFEvent eventTypes;
-	bool isLightSource, hasBumpTex, isDelta, isPassThrough;
+	bool isLightSource, isDelta;
 	
 };
 

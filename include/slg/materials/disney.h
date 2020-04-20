@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -20,7 +20,6 @@
 #define	_SLG_DISNEYMAT_H
 
 #include "slg/materials/material.h"
-
 
 namespace slg {
 
@@ -50,7 +49,7 @@ public:
 	);
 
 	virtual MaterialType GetType() const { return DISNEY; }
-	virtual BSDFEvent GetEventTypes() const { return GLOSSY | DIFFUSE | REFLECT; };
+	virtual BSDFEvent GetEventTypes() const { return GLOSSY | REFLECT; };
 
 	virtual luxrays::Spectrum Albedo(
 		const HitPoint &hitPoint
@@ -72,9 +71,9 @@ public:
 		const float u0, 
 		const float u1, 
 		const float passThroughEvent,
-		float *pdfW, 
-		float *absCosSampledDir, 
-		BSDFEvent *event
+		float *pdfW,
+		BSDFEvent *event,
+		const BSDFEvent eventHint = NONE
 	) const;
 
 	virtual void Pdf(

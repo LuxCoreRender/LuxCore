@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -51,6 +51,8 @@ public:
 	SamplerSharedData() { }
 	virtual ~SamplerSharedData() { }
 
+	virtual void Reset() = 0;
+
 	static SamplerSharedData *FromProperties(const luxrays::Properties &cfg,
 			luxrays::RandomGenerator *rndGen, Film *film);
 };
@@ -64,16 +66,24 @@ typedef enum {
 	SAMPLER_TYPE_COUNT
 } SamplerType;
 
+typedef enum {
+	PIXEL_NORMALIZED_ONLY, SCREEN_NORMALIZED_ONLY, PIXEL_NORMALIZED_AND_SCREEN_NORMALIZED
+} SampleType;
+
 class Sampler : public luxrays::NamedObject {
 public:
 	Sampler(luxrays::RandomGenerator *rnd, Film *flm,
-			const FilmSampleSplatter *flmSplatter) : NamedObject("sampler"), 
-			rndGen(rnd), film(flm), filmSplatter(flmSplatter) { }
+			const FilmSampleSplatter *flmSplatter,
+			const bool imgSamplesEnable) : NamedObject("sampler"), 
+			threadIndex(0), rndGen(rnd), film(flm), filmSplatter(flmSplatter),
+			imageSamplesEnable(imgSamplesEnable) { }
 	virtual ~Sampler() { }
+
+	virtual void SetThreadIndex(const u_int index) { threadIndex = index; }
 
 	virtual SamplerType GetType() const = 0;
 	virtual std::string GetTag() const = 0;
-	virtual void RequestSamples(const u_int size) = 0;
+	virtual void RequestSamples(const SampleType sampleType, const u_int size);
 
 	// index 0 and 1 are always image X and image Y
 	virtual float GetSample(const u_int index) = 0;
@@ -104,9 +114,15 @@ protected:
 
 	void AtomicAddSamplesToFilm(const std::vector<SampleResult> &sampleResults, const float weight = 1.f) const;
 
+	u_int threadIndex;
 	luxrays::RandomGenerator *rndGen;
 	Film *film;
 	const FilmSampleSplatter *filmSplatter;
+	
+	SampleType sampleType;
+	u_int requestedSamples;
+	// If samples 0 and 1 should be expressed in pixels
+	bool imageSamplesEnable;
 };
 
 }

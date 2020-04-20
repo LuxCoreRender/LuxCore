@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -38,15 +38,17 @@ Material::Material(const Texture *frontTransp, const Texture *backTransp,
 		matID(0), lightID(0),
 		directLightSamplingType(DLS_AUTO), emittedImportance(1.f),
 		emittedGain(1.f), emittedPower(0.f), emittedEfficency(0.f),
+		emittedPowerNormalize(true), emittedGainNormalize(false),
 		frontTransparencyTex(frontTransp), backTransparencyTex(backTransp),
 		emittedTex(emitted), bumpTex(bump), bumpSampleDistance(.001f),
-		emissionMap(NULL), emissionFunc(NULL),
-		interiorVolume(NULL), exteriorVolume(NULL),
+		emissionMap(nullptr), emissionFunc(nullptr),
+		interiorVolume(nullptr), exteriorVolume(nullptr),
 		glossiness(0.f),
 		isVisibleIndirectDiffuse(true), isVisibleIndirectGlossy(true), isVisibleIndirectSpecular(true),
 		isShadowCatcher(false), isShadowCatcherOnlyInfiniteLights(false), isPhotonGIEnabled(true) {
 	SetEmittedTheta(90.f);
 	UpdateEmittedFactor();
+	UpdateAvgPassThroughTransparency();
 }
 
 Material::~Material() {
@@ -74,7 +76,7 @@ void Material::SetEmissionMap(const ImageMap *map) {
 	if (emissionMap)
 		emissionFunc = new SampleableSphericalFunction(new ImageMapSphericalFunction(emissionMap));
 	else
-		emissionFunc = NULL;
+		emissionFunc = nullptr;
 }
 
 Spectrum Material::GetPassThroughTransparency(const HitPoint &hitPoint,
@@ -141,9 +143,9 @@ Spectrum Material::EvaluateTotal(const HitPoint &hitPoint) const {
 
 		BSDFEvent event;
 		Vector sampledDir;
-		float sampledDirPdf, cosSampledDir;
+		float sampledDirPdf;
 		Spectrum bsdfSample = Sample(hitPoint, fixedDir, &sampledDir,
-					u1, u2,	u3, &sampledDirPdf, &cosSampledDir, &event);
+					u1, u2,	u3, &sampledDirPdf, &event);
 
 		if (!bsdfSample.Black() && (CosTheta(sampledDir) > 0.f))
 				result += bsdfSample * CosTheta(fixedDir) / fixedDirPdf;
@@ -154,9 +156,13 @@ Spectrum Material::EvaluateTotal(const HitPoint &hitPoint) const {
 
 void Material::UpdateEmittedFactor() {
 	if (emittedTex) {
-		emittedFactor = emittedGain * (emittedPower * emittedEfficency / Max(emittedTex->Y(), 0.f));
+		const float normalizePowerFactor = emittedPowerNormalize ? (1.f / Max(emittedTex->Y(), 0.f)) : 1.f;
+
+		emittedFactor = emittedGain * (emittedPower * emittedEfficency  * normalizePowerFactor);
 		if (emittedFactor.Black() || emittedFactor.IsInf() || emittedFactor.IsNaN()) {
-			emittedFactor = emittedGain;
+			const float normalizeGainFactor = emittedGainNormalize ? (1.f / Max(emittedTex->Y(), 0.f)) : 1.f;
+
+			emittedFactor = emittedGain * normalizeGainFactor;
 			usePrimitiveArea = false;
 		} else {
 			if (emittedTheta == 0.f) {
@@ -168,9 +174,15 @@ void Material::UpdateEmittedFactor() {
 			usePrimitiveArea = true;
 		}
 	} else {
-		emittedFactor = emittedGain;
+		const float normalizeGainFactor = emittedGainNormalize ? (1.f / Max(emittedTex->Y(), 0.f)) : 1.f;
+
+		emittedFactor = emittedGain * normalizeGainFactor;
 		usePrimitiveArea = false;
 	}
+}
+
+void Material::UpdateAvgPassThroughTransparency() {
+	avgPassThroughTransparency = frontTransparencyTex ? Clamp(frontTransparencyTex->Filter(), 0.f, 1.f) : 1.f;
 }
 
 Properties Material::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
@@ -178,18 +190,21 @@ Properties Material::ToProperties(const ImageMapCache &imgMapCache, const bool u
 
 	const string name = GetName();
 	if (frontTransparencyTex)
-		props.Set(Property("scene.materials." + name + ".transparency.front")(frontTransparencyTex->GetName()));
+		props.Set(Property("scene.materials." + name + ".transparency.front")(frontTransparencyTex->GetSDLValue()));
 	if (backTransparencyTex)
-		props.Set(Property("scene.materials." + name + ".transparency.back")(backTransparencyTex->GetName()));
+		props.Set(Property("scene.materials." + name + ".transparency.back")(backTransparencyTex->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".transparency.shadow")(passThroughShadowTransparency));
 	props.Set(Property("scene.materials." + name + ".id")(matID));
+
 	props.Set(Property("scene.materials." + name + ".emission.gain")(emittedGain));
 	props.Set(Property("scene.materials." + name + ".emission.power")(emittedPower));
+	props.Set(Property("scene.materials." + name + ".emission.normalizebycolor")(emittedPowerNormalize));
 	props.Set(Property("scene.materials." + name + ".emission.efficency")(emittedEfficency));
 	props.Set(Property("scene.materials." + name + ".emission.theta")(emittedTheta));
 	props.Set(Property("scene.materials." + name + ".emission.id")(lightID));
 	props.Set(Property("scene.materials." + name + ".emission.importance")(emittedImportance));
 	if (emittedTex)
-		props.Set(Property("scene.materials." + name + ".emission")(emittedTex->GetName()));
+		props.Set(Property("scene.materials." + name + ".emission")(emittedTex->GetSDLValue()));
 	if (emissionMap) {
 		const string fileName = useRealFileName ?
 			emissionMap->GetName() : imgMapCache.GetSequenceFileName(emissionMap);
@@ -197,8 +212,22 @@ Properties Material::ToProperties(const ImageMapCache &imgMapCache, const bool u
 		props.Set(emissionMap->ToProperties("scene.materials." + name, false));
 	}
 
+	switch (directLightSamplingType) {
+		case DLS_ENABLED:
+			props.Set(Property("scene.materials." + name + ".emission.directlightsampling.type")("ENABLED"));
+			break;
+		case DLS_DISABLED:
+			props.Set(Property("scene.materials." + name + ".emission.directlightsampling.type")("DISABLED"));
+			break;
+		case DLS_AUTO:
+			props.Set(Property("scene.materials." + name + ".emission.directlightsampling.type")("AUTO"));
+			break;
+		default:
+			throw runtime_error("Unknown MaterialEmissionDLSType in Material::ToProperties(): " + ToString(directLightSamplingType));
+	}
+
 	if (bumpTex)
-		props.Set(Property("scene.materials." + name + ".bumptex")(bumpTex->GetName()));
+		props.Set(Property("scene.materials." + name + ".bumptex")(bumpTex->GetSDLValue()));
 
 	if (interiorVolume)
 		props.Set(Property("scene.materials." + name + ".volume.interior")(interiorVolume->GetName()));
@@ -211,6 +240,8 @@ Properties Material::ToProperties(const ImageMapCache &imgMapCache, const bool u
 
 	props.Set(Property("scene.materials." + name + ".shadowcatcher.enable")(isShadowCatcher));
 	props.Set(Property("scene.materials." + name + ".shadowcatcher.onlyinfinitelights")(isShadowCatcherOnlyInfiniteLights));
+	
+	props.Set(Property("scene.materials." + name + ".photongi.enable")(isPhotonGIEnabled));
 
 	return props;
 }
@@ -248,8 +279,10 @@ void Material::AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &re
 
 // Update any reference to oldTex with newTex
 void Material::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
-	if (frontTransparencyTex == oldTex)
+	if (frontTransparencyTex == oldTex) {
 		frontTransparencyTex = newTex;
+		UpdateAvgPassThroughTransparency();
+	}
 	if (backTransparencyTex == oldTex)
 		backTransparencyTex = newTex;
 	if (emittedTex == oldTex)
@@ -284,25 +317,6 @@ string Material::MaterialType2String(const MaterialType type) {
 		case CLEAR_VOL: return "CLEAR_VOL";
 		case HETEROGENEOUS_VOL: return "HETEROGENEOUS_VOL";
 
-		// The following types are used (in PATHOCL CompiledScene class) only to
-		// recognize the usage of some specific material option
-		case GLOSSY2_ANISOTROPIC: return "GLOSSY2_ANISOTROPIC";
-		case GLOSSY2_ABSORPTION: return "GLOSSY2_ABSORPTION";
-		case GLOSSY2_INDEX: return "GLOSSY2_INDEX";
-		case GLOSSY2_MULTIBOUNCE: return "GLOSSY2_MULTIBOUNCE";
-
-		case GLOSSYTRANSLUCENT_ANISOTROPIC: return "GLOSSYTRANSLUCENT_ANISOTROPIC";
-		case GLOSSYTRANSLUCENT_ABSORPTION: return "GLOSSYTRANSLUCENT_ABSORPTION";
-		case GLOSSYTRANSLUCENT_INDEX: return "GLOSSYTRANSLUCENT_INDEX";
-		case GLOSSYTRANSLUCENT_MULTIBOUNCE: return "GLOSSYTRANSLUCENT_MULTIBOUNCE";
-
-		case GLOSSYCOATING_ANISOTROPIC: return "GLOSSYCOATING_ANISOTROPIC";
-		case GLOSSYCOATING_ABSORPTION: return "GLOSSYCOATING_ABSORPTION";
-		case GLOSSYCOATING_INDEX: return "GLOSSYCOATING_INDEX";
-		case GLOSSYCOATING_MULTIBOUNCE: return "GLOSSYCOATING_MULTIBOUNCE";
-
-		case METAL2_ANISOTROPIC: return "METAL2_ANISOTROPIC";
-		case ROUGHGLASS_ANISOTROPIC: return "ROUGHGLASS_ANISOTROPIC";
 		default:
 			throw runtime_error("Unknown material type in Material::MaterialType2String(): " + ToString(type));
 	}

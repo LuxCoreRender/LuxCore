@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -38,7 +38,7 @@ class SpectrumWavelengths;
 class SWCSpectrum;
 
 // Color Declarations
-class  Color {
+class Color {
 public:
 #define COLOR_SAMPLES 3
 
@@ -269,7 +269,7 @@ private:
 };
 
 // RGBColor Declarations
-class  RGBColor : public Color {
+class RGBColor : public Color {
 public:
 	// RGBColor Public Methods
 	RGBColor() { c[0] = 0.f; c[1] = 0.f; c[2] = 0.f; }
@@ -286,10 +286,28 @@ public:
 		return 0.212671f * c[0] + 0.715160f * c[1] + 0.072169f * c[2];
 	}
 	float Filter() const { return (c[0] + c[1] + c[2]) * (1.f / 3.f); }
+
+	//--------------------------------------------------------------------------
+	// Required by OpenSubdiv interface
+	//--------------------------------------------------------------------------
+
+	void Clear(void * = 0) {
+        c[0] = 0.f;
+		c[1] = 0.f;
+		c[2] = 0.f;
+    }
+	
+	void AddWithWeight(RGBColor const &src, float weight) {
+        c[0] += weight * src.c[0];
+        c[1] += weight * src.c[1];
+        c[2] += weight * src.c[2];
+    }
+
+	//--------------------------------------------------------------------------
 };
 
 // RGBAColor Declarations
-class  RGBAColor : public Color {
+class RGBAColor : public Color {
 public:
 	// RGBAColor Public Methods
 	RGBAColor() { c[0] = 0.f; c[1] = 0.f; c[2] = 0.f; alpha = 0.f; }
@@ -312,7 +330,7 @@ public:
 };
 
 // XYZColor Declarations
-class  XYZColor : public Color {
+class XYZColor : public Color {
     // Dade - serialization here is required by network rendering
     friend class boost::serialization::access;
 

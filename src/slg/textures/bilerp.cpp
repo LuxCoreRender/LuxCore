@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -28,7 +28,7 @@ using namespace slg;
 
 float BilerpTexture::GetFloatValue(const HitPoint &hitPoint) const
 {
-	UV uv = hitPoint.uv;
+	UV uv = hitPoint.GetUV(0);
 	uv.u -= Floor2Int(uv.u);
 	uv.v -= Floor2Int(uv.v);
 	return Lerp(uv.u, Lerp(uv.v, t00->GetFloatValue(hitPoint), t01->GetFloatValue(hitPoint)),
@@ -37,7 +37,7 @@ float BilerpTexture::GetFloatValue(const HitPoint &hitPoint) const
 
 Spectrum BilerpTexture::GetSpectrumValue(const HitPoint &hitPoint) const
 {
-	UV uv = hitPoint.uv;
+	UV uv = hitPoint.GetUV(0);
 	uv.u -= Floor2Int(uv.u);
 	uv.v -= Floor2Int(uv.v);
 	return Lerp(uv.u, Lerp(uv.v, t00->GetSpectrumValue(hitPoint), t01->GetSpectrumValue(hitPoint)),
@@ -50,10 +50,10 @@ Properties BilerpTexture::ToProperties(const ImageMapCache &imgMapCache, const b
 
 	const string name = GetName();
 	props.Set(Property("scene.textures." + name + ".type")("bilerp"));
-	props.Set(Property("scene.textures." + name + ".texture00")(t00->GetName()));
-	props.Set(Property("scene.textures." + name + ".texture01")(t01->GetName()));
-	props.Set(Property("scene.textures." + name + ".texture10")(t10->GetName()));
-	props.Set(Property("scene.textures." + name + ".texture11")(t11->GetName()));
+	props.Set(Property("scene.textures." + name + ".texture00")(t00->GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".texture01")(t01->GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".texture10")(t10->GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".texture11")(t11->GetSDLValue()));
 
 	return props;
 }

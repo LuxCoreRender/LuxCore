@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -47,11 +47,14 @@ public:
 	RTPathCPUSamplerSharedData(Film *flm);
 	virtual ~RTPathCPUSamplerSharedData() { }
 
+	virtual void Reset();
+
 	void Reset(Film *flm);
 
 	static SamplerSharedData *FromProperties(const luxrays::Properties &cfg,
 			luxrays::RandomGenerator *rndGen, Film *film);
 
+	Film *engineFilm;
 	boost::atomic<u_int> step;
 	u_int filmSubRegion[4], filmSubRegionWidth, filmSubRegionHeight;
 	std::vector<PixelCoord> pixelRenderSequence;
@@ -72,7 +75,6 @@ public:
 
 	virtual SamplerType GetType() const { return GetObjectType(); }
 	virtual std::string GetTag() const { return GetObjectTag(); }
-	virtual void RequestSamples(const u_int size) { }
 
 	virtual float GetSample(const u_int index);
 	virtual void NextSample(const std::vector<SampleResult> &sampleResults);

@@ -1,7 +1,7 @@
 #line 2 "pgic_types.cl"
 
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -21,18 +21,19 @@
 typedef struct {
 	Vector p;
 	Normal n;
-	Spectrum outgoingRadiance;
+	unsigned int outgoingRadianceIndex;
 	int isVolume;
 } RadiancePhoton;
 
 typedef struct {
 	Vector p, d;
+	unsigned int lightID;
 	Spectrum alpha;
 	Normal landingSurfaceNormal;
 	int isVolume;
 } Photon;
 
-typedef struct {
-	unsigned int photonIndex;
-	float distance2;
-} NearPhoton;
+typedef enum {
+	PGIC_DEBUG_NONE, PGIC_DEBUG_SHOWINDIRECT, PGIC_DEBUG_SHOWCAUSTIC,
+	PGIC_DEBUG_SHOWINDIRECTPATHMIX
+} PhotonGIDebugType;

@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -95,6 +95,8 @@ Spectrum RoughGlassMaterial::Evaluate(const HitPoint &hitPoint,
 			G / (cosThetaI * lengthSquared)) *
 			kt * (1.f - F);
 
+		*event = GLOSSY | TRANSMIT;
+
 		return result;
 	} else {
 		// Reflect
@@ -123,6 +125,8 @@ Spectrum RoughGlassMaterial::Evaluate(const HitPoint &hitPoint,
 
 		const Spectrum result = (D * G / (4.f * cosThetaI)) * kr * F;
 
+		*event = GLOSSY | REFLECT;
+
 		return result;
 	}
 }
@@ -130,7 +134,7 @@ Spectrum RoughGlassMaterial::Evaluate(const HitPoint &hitPoint,
 Spectrum RoughGlassMaterial::Sample(const HitPoint &hitPoint,
 		const Vector &localFixedDir, Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
-		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
+		float *pdfW, BSDFEvent *event, const BSDFEvent eventHint) const {
 	if (fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 
@@ -198,7 +202,6 @@ Spectrum RoughGlassMaterial::Sample(const HitPoint &hitPoint,
 			return Spectrum();
 
 		const float cosi = fabsf(localSampledDir->z);
-		*absCosSampledDir = cosi;
 
 		const float G = SchlickDistribution_G(roughness, localFixedDir, *localSampledDir);
 		float factor = (d / specPdf) * G * fabsf(cosThetaOH) / threshold;
@@ -222,8 +225,7 @@ Spectrum RoughGlassMaterial::Sample(const HitPoint &hitPoint,
 		*localSampledDir = 2.f * cosThetaOH * wh - localFixedDir;
 
 		const float cosi = fabsf(localSampledDir->z);
-		*absCosSampledDir = cosi;
-		if ((*absCosSampledDir < DEFAULT_COS_EPSILON_STATIC) || (localFixedDir.z * localSampledDir->z < 0.f))
+		if ((cosi < DEFAULT_COS_EPSILON_STATIC) || (localFixedDir.z * localSampledDir->z < 0.f))
 			return Spectrum();
 
 		const float G = SchlickDistribution_G(roughness, localFixedDir, *localSampledDir);
@@ -360,14 +362,14 @@ Properties RoughGlassMaterial::ToProperties(const ImageMapCache &imgMapCache, co
 
 	const string name = GetName();
 	props.Set(Property("scene.materials." + name + ".type")("roughglass"));
-	props.Set(Property("scene.materials." + name + ".kr")(Kr->GetName()));
-	props.Set(Property("scene.materials." + name + ".kt")(Kt->GetName()));
+	props.Set(Property("scene.materials." + name + ".kr")(Kr->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".kt")(Kt->GetSDLValue()));
 	if (exteriorIor)
-		props.Set(Property("scene.materials." + name + ".exteriorior")(exteriorIor->GetName()));
+		props.Set(Property("scene.materials." + name + ".exteriorior")(exteriorIor->GetSDLValue()));
 	if (interiorIor)
-		props.Set(Property("scene.materials." + name + ".interiorior")(interiorIor->GetName()));
-	props.Set(Property("scene.materials." + name + ".uroughness")(nu->GetName()));
-	props.Set(Property("scene.materials." + name + ".vroughness")(nv->GetName()));
+		props.Set(Property("scene.materials." + name + ".interiorior")(interiorIor->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".uroughness")(nu->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".vroughness")(nv->GetSDLValue()));
 	props.Set(Material::ToProperties(imgMapCache, useRealFileName));
 
 	return props;

@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -190,6 +190,8 @@ void MBVHAccel::Init(const deque<const Mesh *> &ms, const u_longlong totalVertex
 		BVHTreeNode *bvhLeaf = &bvhLeafs[i];
 		// Get the bounding box from the mesh so it is in global coordinates
 		bvhLeaf->bbox = meshes[i]->GetBBox();
+		bvhLeaf->bbox.Expand(MachineEpsilon::E(bvhLeaf->bbox));
+
 		bvhLeaf->bvhLeaf.leafIndex = leafsIndex[i];
 		bvhLeaf->bvhLeaf.transformIndex = leafsTransformIndex[i];
 		bvhLeaf->bvhLeaf.motionIndex = leafsMotionSystemIndex[i];

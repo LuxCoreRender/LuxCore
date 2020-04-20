@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -43,13 +43,16 @@ Spectrum NullMaterial::Evaluate(const HitPoint &hitPoint,
 Spectrum NullMaterial::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
-	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
+	float *pdfW, BSDFEvent *event, const BSDFEvent eventHint) const {
 	*localSampledDir = -localFixedDir;
-	*absCosSampledDir = fabsf(CosTheta(*localSampledDir));
 
 	*pdfW = 1.f;
 	*event = SPECULAR | TRANSMIT;
 	return Spectrum(1.f);
+}
+
+void NullMaterial::UpdateAvgPassThroughTransparency() {
+	avgPassThroughTransparency = 1.f;
 }
 
 Spectrum NullMaterial::GetPassThroughTransparency(const HitPoint &hitPoint,

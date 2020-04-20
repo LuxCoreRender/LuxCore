@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -81,9 +81,11 @@ protected:
 	virtual void InitFilm();
 	virtual void StartLockLess();
 	virtual void StopLockLess();
+	virtual void EndSceneEditLockLess(const EditActionList &editActions);
 
 	PhotonGICache *photonGICache;
 	PathTracer pathTracer;
+	SamplerSharedData *lightSamplerSharedData;
 };
 
 }

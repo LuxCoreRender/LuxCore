@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -45,22 +45,13 @@ Spectrum ClearVolume::SigmaS(const HitPoint &hitPoint) const {
 float ClearVolume::Scatter(const Ray &ray, const float u,
 		const bool scatteredStart, Spectrum *connectionThroughput,
 		Spectrum *connectionEmission) const {
-	const HitPoint hitPoint =  {
-		ray.d,
-		ray.o,
-		UV(),
-		Normal(-ray.d),
-		Normal(-ray.d),
-		Spectrum(1.f),
-		Vector(0.f, 0.f, 0.f), Vector(0.f, 0.f, 0.f),
-		Normal(0.f, 0.f, 0.f), Normal(0.f, 0.f, 0.f),
-		1.f,
-		0.f, // It doesn't matter here
-		Transform(),
-		this, this, // It doesn't matter here
-		true, true, // It doesn't matter here
-		0
-	};
+	// Point where to evaluate the volume
+	HitPoint hitPoint;
+	hitPoint.Init();
+	hitPoint.fixedDir = ray.d;
+	hitPoint.p = ray.o;
+	hitPoint.geometryN = hitPoint.interpolatedN = hitPoint.shadeN = Normal(-ray.d);
+	hitPoint.passThroughEvent = u;
 	
 	const float distance = ray.maxt - ray.mint;
 	Spectrum transmittance(1.f);
@@ -94,7 +85,7 @@ Spectrum ClearVolume::Evaluate(const HitPoint &hitPoint,
 Spectrum ClearVolume::Sample(const HitPoint &hitPoint,
 		const Vector &localFixedDir, Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
-		float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
+		float *pdfW, BSDFEvent *event, const BSDFEvent eventHint) const {
 	throw runtime_error("Internal error: called ClearVolume::Sample()");
 }
 
@@ -122,7 +113,7 @@ Properties ClearVolume::ToProperties() const {
 
 	const string name = GetName();
 	props.Set(Property("scene.volumes." + name + ".type")("clear"));
-	props.Set(Property("scene.volumes." + name + ".absorption")(sigmaA->GetName()));
+	props.Set(Property("scene.volumes." + name + ".absorption")(sigmaA->GetSDLValue()));
 	props.Set(Volume::ToProperties());
 
 	return props;

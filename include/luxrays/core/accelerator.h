@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -32,7 +32,7 @@ typedef enum {
 	ACCEL_AUTO, ACCEL_BVH, ACCEL_MBVH, ACCEL_EMBREE
 } AcceleratorType;
 
-class OpenCLKernels;
+class OpenCLKernel;
 class OpenCLIntersectionDevice;
 
 class Accelerator {
@@ -42,8 +42,7 @@ public:
 
 	virtual AcceleratorType GetType() const = 0;
 
-	virtual OpenCLKernels *NewOpenCLKernels(OpenCLIntersectionDevice *device,
-		const u_int kernelCount) const = 0;
+	virtual OpenCLKernel *NewOpenCLKernel(OpenCLIntersectionDevice *device) const = 0;
 	virtual bool CanRunOnOpenCLDevice(OpenCLIntersectionDevice *device) const { return true; }
 
 	virtual void Init(const std::deque<const Mesh *> &meshes, const u_longlong totalVertexCount, const u_longlong totalTriangleCount) = 0;

@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -71,11 +71,11 @@ Properties RemapTexture::ToProperties(const ImageMapCache &imgMapCache, const bo
 
 	const string name = GetName();
 	props.Set(Property("scene.textures." + name + ".type")("remap"));
-	props.Set(Property("scene.textures." + name + ".value")(valueTex->GetName()));
-	props.Set(Property("scene.textures." + name + ".sourcemin")(sourceMinTex->GetName()));
-	props.Set(Property("scene.textures." + name + ".sourcemax")(sourceMaxTex->GetName()));
-	props.Set(Property("scene.textures." + name + ".targetmin")(targetMinTex->GetName()));
-	props.Set(Property("scene.textures." + name + ".targetmax")(targetMaxTex->GetName()));
+	props.Set(Property("scene.textures." + name + ".value")(valueTex->GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".sourcemin")(sourceMinTex->GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".sourcemax")(sourceMaxTex->GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".targetmin")(targetMinTex->GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".targetmax")(targetMaxTex->GetSDLValue()));
 
 	return props;
 }

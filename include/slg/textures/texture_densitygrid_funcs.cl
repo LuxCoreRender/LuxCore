@@ -1,7 +1,7 @@
 #line 2 "texture_densitygrid_funcs.cl"
 
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -22,9 +22,7 @@
 // DensityGrid texture
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_ENABLE_TEX_DENSITYGRID) && defined(PARAM_HAS_IMAGEMAPS)
-
-OPENCL_FORCE_INLINE float3 DensityGridTexture_D(
+OPENCL_FORCE_NOT_INLINE float3 DensityGridTexture_D(
 		__global const ImageMap *imageMap,
 		int x, int y, int z,
 		int nx, int ny, int nz
@@ -39,13 +37,13 @@ OPENCL_FORCE_INLINE float3 DensityGridTexture_D(
 	return ImageMap_GetTexel_SpectrumValue(storageType, pixels, channelCount, index);
 }
 
-OPENCL_FORCE_INLINE float3 DensityGridTexture_ConstEvaluateSpectrum(__global HitPoint *hitPoint,
+OPENCL_FORCE_NOT_INLINE float3 DensityGridTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
 		const int nx, const int ny, const int nz,
 		const uint imageMapIndex, __global const TextureMapping3D *mapping
-		IMAGEMAPS_PARAM_DECL) {
+		TEXTURES_PARAM_DECL) {
 	__global const ImageMap *imageMap = &imageMapDescs[imageMapIndex];
 
-	const float3 P = TextureMapping3D_Map(mapping, hitPoint);
+	const float3 P = TextureMapping3D_Map(mapping, hitPoint, NULL TEXTURES_PARAM);
 
 	float x, y, z;
 	int vx, vy, vz;
@@ -136,14 +134,12 @@ OPENCL_FORCE_INLINE float3 DensityGridTexture_ConstEvaluateSpectrum(__global Hit
 		z);
 }
 
-OPENCL_FORCE_INLINE float DensityGridTexture_ConstEvaluateFloat(__global HitPoint *hitPoint,
+OPENCL_FORCE_INLINE float DensityGridTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
 		const int nx, const int ny, const int nz,
 		const uint imageMapIndex, __global const TextureMapping3D *mapping
-		IMAGEMAPS_PARAM_DECL) {
+		TEXTURES_PARAM_DECL) {
 	return Spectrum_Y(DensityGridTexture_ConstEvaluateSpectrum(hitPoint,
 			nx, ny, nz,
 			imageMapIndex, mapping
-			IMAGEMAPS_PARAM));
+			TEXTURES_PARAM));
 }
-
-#endif

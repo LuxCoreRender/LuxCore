@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -537,7 +537,8 @@ float ClothMaterial::EvalSpecular(const slg::ocl::Yarn *yarn,const UV &uv, float
 Spectrum ClothMaterial::Albedo(const HitPoint &hitPoint) const {
 	UV uv;
 	float umax, scale = specularNormalization;
-	const slg::ocl::Yarn *yarn = GetYarn(hitPoint.uv.u, hitPoint.uv.v, &uv, &umax, &scale);
+	const UV hitPountUV = hitPoint.GetUV(0);
+	const slg::ocl::Yarn *yarn = GetYarn(hitPountUV.u, hitPountUV.v, &uv, &umax, &scale);
 	
 	const Texture *kd = yarn->yarn_type == slg::ocl::WARP ? Warp_Kd :  Weft_Kd;
 
@@ -557,7 +558,8 @@ Spectrum ClothMaterial::Evaluate(const HitPoint &hitPoint,
 
 	UV uv;
 	float umax, scale = specularNormalization;
-	const slg::ocl::Yarn *yarn = GetYarn(hitPoint.uv.u, hitPoint.uv.v, &uv, &umax, &scale);
+	const UV hitPountUV = hitPoint.GetUV(0);
+	const slg::ocl::Yarn *yarn = GetYarn(hitPountUV.u, hitPountUV.v, &uv, &umax, &scale);
 	
 	scale = scale * EvalSpecular(yarn, uv, umax, localLightDir, localEyeDir);
 	
@@ -570,21 +572,20 @@ Spectrum ClothMaterial::Evaluate(const HitPoint &hitPoint,
 Spectrum ClothMaterial::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
-	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
+	float *pdfW, BSDFEvent *event, const BSDFEvent eventHint) const {
 	if (fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 
 	*localSampledDir = Sgn(localFixedDir.z) * CosineSampleHemisphere(u0, u1, pdfW);
-
-	*absCosSampledDir = fabsf(localSampledDir->z);
-	if (*absCosSampledDir < DEFAULT_COS_EPSILON_STATIC)
+	if (fabsf(CosTheta(*localSampledDir)) < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 
 	*event = GLOSSY | REFLECT;
 	
 	UV uv;
 	float umax, scale = specularNormalization;
-	const slg::ocl::Yarn *yarn = GetYarn(hitPoint.uv.u, hitPoint.uv.v, &uv, &umax, &scale);
+	const UV hitPountUV = hitPoint.GetUV(0);
+	const slg::ocl::Yarn *yarn = GetYarn(hitPountUV.u, hitPountUV.v, &uv, &umax, &scale);
 	
 	if (!hitPoint.fromLight)
 	    scale = scale * EvalSpecular(yarn, uv, umax, localFixedDir, *localSampledDir);
@@ -659,10 +660,10 @@ Properties ClothMaterial::ToProperties(const ImageMapCache &imgMapCache, const b
 	    break;
 	}
 
-	props.Set(Property("scene.materials." + name + ".weft_kd")(Weft_Kd->GetName()));
-	props.Set(Property("scene.materials." + name + ".weft_ks")(Weft_Ks->GetName()));
-	props.Set(Property("scene.materials." + name + ".warp_kd")(Warp_Kd->GetName()));
-	props.Set(Property("scene.materials." + name + ".warp_ks")(Warp_Ks->GetName()));
+	props.Set(Property("scene.materials." + name + ".weft_kd")(Weft_Kd->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".weft_ks")(Weft_Ks->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".warp_kd")(Warp_Kd->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".warp_ks")(Warp_Ks->GetSDLValue()));
 	props.Set(Property("scene.materials." + name + ".repeat_u")(Repeat_U));
 	props.Set(Property("scene.materials." + name + ".repeat_v")(Repeat_V));
 	props.Set(Material::ToProperties(imgMapCache, useRealFileName));

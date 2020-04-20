@@ -1,7 +1,7 @@
 #line 2 "trianglemesh_types.cl"
 
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -23,20 +23,3 @@ typedef enum {
 	//TYPE_TRIANGLE, TYPE_TRIANGLE_INSTANCE, TYPE_TRIANGLE_MOTION,
 	TYPE_EXT_TRIANGLE, TYPE_EXT_TRIANGLE_INSTANCE, TYPE_EXT_TRIANGLE_MOTION
 } MeshType;
-
-typedef struct {
-	MeshType type;
-
-	// Vertex information
-	unsigned int vertsOffset;
-	unsigned int normalsOffset;
-	unsigned int uvsOffset;
-	unsigned int colsOffset;
-	unsigned int alphasOffset;
-
-	// Triangle information
-	unsigned int trisOffset;
-
-	// Object space transformation
-	Transform trans;
-} Mesh;

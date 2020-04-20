@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -36,24 +36,21 @@ using namespace slg;
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::AutoLinearToneMap)
 
 AutoLinearToneMap::AutoLinearToneMap() {
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	oclIntersectionDevice = NULL;
-	oclAccumBuffer = NULL;
+	hardwareDevice = nullptr;
+	hwAccumBuffer = nullptr;
 
-	opRGBValuesReduceKernel = NULL;
-	opRGBValueAccumulateKernel = NULL;
-	applyKernel = NULL;
-#endif
+	opRGBValuesReduceKernel = nullptr;
+	opRGBValueAccumulateKernel = nullptr;
+	applyKernel = nullptr;
 }
 
 AutoLinearToneMap::~AutoLinearToneMap() {
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	delete opRGBValuesReduceKernel;
 	delete opRGBValueAccumulateKernel;
 	delete applyKernel;
 
-	delete oclAccumBuffer;
-#endif
+	if (hardwareDevice)
+		hardwareDevice->FreeBuffer(&hwAccumBuffer);
 }
 
 float AutoLinearToneMap::CalcLinearToneMapScale(const Film &film, const u_int index, const float Y) {
@@ -112,69 +109,69 @@ void AutoLinearToneMap::Apply(Film &film, const u_int index) {
 // OpenCL version
 //------------------------------------------------------------------------------
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-void AutoLinearToneMap::ApplyOCL(Film &film, const u_int index) {
+void AutoLinearToneMap::ApplyHW(Film &film, const u_int index) {
 	const u_int pixelCount = film.GetWidth() * film.GetHeight();
 	const u_int workSize = RoundUp((pixelCount + 1) / 2, 64u);
 
 	if (!applyKernel) {
-		// Allocate buffers
-		oclIntersectionDevice = film.oclIntersectionDevice;
 		film.ctx->SetVerbose(true);
-		oclIntersectionDevice->AllocBufferRW(&oclAccumBuffer, (workSize / 64) * sizeof(float) * 3, "Accumulation");
-		film.ctx->SetVerbose(false);
+
+		hardwareDevice = film.hardwareDevice;
+
+		// Allocate buffers
+		hardwareDevice->AllocBufferRW(&hwAccumBuffer, nullptr, (workSize / 64) * sizeof(float) * 3, "Accumulation");
 
 		// Compile sources
 		const double tStart = WallClockTime();
 
-		cl::Program *program = ImagePipelinePlugin::CompileProgram(
-				film,
+		HardwareDeviceProgram *program = nullptr;
+		hardwareDevice->CompileProgram(&program,
 				"-D LUXRAYS_OPENCL_KERNEL -D SLG_OPENCL_KERNEL",
-				slg::ocl::KernelSource_luxrays_types +
-				slg::ocl::KernelSource_color_types +
-				slg::ocl::KernelSource_color_funcs +
+				luxrays::ocl::KernelSource_luxrays_types +
+				luxrays::ocl::KernelSource_color_types +
+				luxrays::ocl::KernelSource_color_funcs +
 				slg::ocl::KernelSource_tonemap_autolinear_funcs +
 				slg::ocl::KernelSource_tonemap_reduce_funcs,
 				"AutoLinearToneMap");
 
 		SLG_LOG("[AutoLinearToneMap] Compiling OpRGBValuesReduce Kernel");
-		opRGBValuesReduceKernel = new cl::Kernel(*program, "OpRGBValuesReduce");
+		hardwareDevice->GetKernel(program, &opRGBValuesReduceKernel, "OpRGBValuesReduce");
 		SLG_LOG("[AutoLinearToneMap] Compiling OpRGBValueAccumulate Kernel");
-		opRGBValueAccumulateKernel = new cl::Kernel(*program, "OpRGBValueAccumulate");
+		hardwareDevice->GetKernel(program, &opRGBValueAccumulateKernel, "OpRGBValueAccumulate");
 		SLG_LOG("[AutoLinearToneMap] Compiling AutoLinearToneMap_Apply Kernel");
-		applyKernel = new cl::Kernel(*program, "AutoLinearToneMap_Apply");
+		hardwareDevice->GetKernel(program, &applyKernel, "AutoLinearToneMap_Apply");
 
 		delete program;
 
 		// Set kernel arguments
 		u_int argIndex = 0;
-		opRGBValuesReduceKernel->setArg(argIndex++, film.GetWidth());
-		opRGBValuesReduceKernel->setArg(argIndex++, film.GetHeight());
-		opRGBValuesReduceKernel->setArg(argIndex++, *(film.ocl_IMAGEPIPELINE));
-		opRGBValuesReduceKernel->setArg(argIndex++, *oclAccumBuffer);
+		hardwareDevice->SetKernelArg(opRGBValuesReduceKernel, argIndex++, film.GetWidth());
+		hardwareDevice->SetKernelArg(opRGBValuesReduceKernel, argIndex++, film.GetHeight());
+		hardwareDevice->SetKernelArg(opRGBValuesReduceKernel, argIndex++, film.hw_IMAGEPIPELINE);
+		hardwareDevice->SetKernelArg(opRGBValuesReduceKernel, argIndex++, hwAccumBuffer);
 
 		argIndex = 0;
-		opRGBValueAccumulateKernel->setArg(argIndex++, workSize / 64);
-		opRGBValueAccumulateKernel->setArg(argIndex++, *oclAccumBuffer);
+		hardwareDevice->SetKernelArg(opRGBValueAccumulateKernel, argIndex++, workSize / 64);
+		hardwareDevice->SetKernelArg(opRGBValueAccumulateKernel, argIndex++, hwAccumBuffer);
 
 		argIndex = 0;
-		applyKernel->setArg(argIndex++, film.GetWidth());
-		applyKernel->setArg(argIndex++, film.GetHeight());
-		applyKernel->setArg(argIndex++, *(film.ocl_IMAGEPIPELINE));
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.GetWidth());
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.GetHeight());
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.hw_IMAGEPIPELINE);
 		const float gamma = GetGammaCorrectionValue(film, index);
-		applyKernel->setArg(argIndex++, gamma);
-		applyKernel->setArg(argIndex++, *oclAccumBuffer);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, gamma);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, hwAccumBuffer);
 
 		const double tEnd = WallClockTime();
 		SLG_LOG("[AutoLinearToneMap] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
+
+		film.ctx->SetVerbose(false);
 	}
 
-	film.oclIntersectionDevice->GetOpenCLQueue().enqueueNDRangeKernel(*opRGBValuesReduceKernel,
-			cl::NullRange, cl::NDRange(workSize), cl::NDRange(64));
-	film.oclIntersectionDevice->GetOpenCLQueue().enqueueNDRangeKernel(*opRGBValueAccumulateKernel,
-			cl::NullRange, cl::NDRange(64), cl::NDRange(64));
-
-	film.oclIntersectionDevice->GetOpenCLQueue().enqueueNDRangeKernel(*applyKernel,
-			cl::NullRange, cl::NDRange(RoundUp(pixelCount, 256u)), cl::NDRange(256));
+	hardwareDevice->EnqueueKernel(opRGBValuesReduceKernel, HardwareDeviceRange(workSize),
+			HardwareDeviceRange(64));
+	hardwareDevice->EnqueueKernel(opRGBValueAccumulateKernel, HardwareDeviceRange(64),
+			HardwareDeviceRange(64));
+	hardwareDevice->EnqueueKernel(applyKernel, HardwareDeviceRange(RoundUp(pixelCount, 256u)),
+			HardwareDeviceRange(256));
 }
-#endif

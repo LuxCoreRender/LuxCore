@@ -1,7 +1,7 @@
 #line 2 "materialdefs_funcs_heterogenousvol.cl"
 
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -17,8 +17,6 @@
  * See the License for the specific language governing permissions and     *
  * limitations under the License.                                          *
  ***************************************************************************/
-
-#if defined(PARAM_HAS_VOLUMES)
 
 OPENCL_FORCE_INLINE float3 SchlickScatter_GetColor(const float3 sigmaS, const float3 sigmaA) {
 	float3 r = sigmaS;
@@ -43,7 +41,7 @@ OPENCL_FORCE_INLINE float3 SchlickScatter_Albedo(const float3 sigmaS, const floa
 }
 
 OPENCL_FORCE_INLINE float3 SchlickScatter_Evaluate(
-		__global HitPoint *hitPoint, const float3 localEyeDir, const float3 localLightDir,
+		__global const HitPoint *hitPoint, const float3 localEyeDir, const float3 localLightDir,
 		BSDFEvent *event, float *directPdfW,
 		const float3 sigmaS, const float3 sigmaA, const float3 g) {
 	const float3 gValue = clamp(g, -1.f, 1.f);
@@ -69,12 +67,10 @@ OPENCL_FORCE_INLINE float3 SchlickScatter_Evaluate(
 }
 
 OPENCL_FORCE_INLINE float3 SchlickScatter_Sample(
-		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
+		__global const HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
 		const float u0, const float u1, 
-#if defined(PARAM_HAS_PASSTHROUGH)
 		const float passThroughEvent,
-#endif
-		float *pdfW, float *cosSampledDir, BSDFEvent *event,
+		float *pdfW, BSDFEvent *event,
 		const float3 sigmaS, const float3 sigmaA, const float3 g) {
 	const float3 gValue = clamp(g, -1.f, 1.f);
 	const float3 k = gValue * (1.55f - .55f * gValue * gValue);
@@ -95,56 +91,147 @@ OPENCL_FORCE_INLINE float3 SchlickScatter_Sample(
 	if (*pdfW <= 0.f)
 		return BLACK;
 
-	*cosSampledDir = fabs((*sampledDir).z);
 	*event = DIFFUSE | REFLECT;
 
 	return SchlickScatter_GetColor(sigmaS, sigmaA);
 }
 
-#endif
-
 //------------------------------------------------------------------------------
 // HeterogeneousVol material
 //------------------------------------------------------------------------------
 
-#if defined (PARAM_ENABLE_MAT_HETEROGENEOUS_VOL)
+OPENCL_FORCE_INLINE void HeterogeneousVolMaterial_Albedo(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	const float3 sigmaS = Texture_GetSpectrumValue(material->volume.heterogenous.sigmaSTexIndex, hitPoint TEXTURES_PARAM);
+	const float3 sigmaA = Texture_GetSpectrumValue(material->volume.heterogenous.sigmaATexIndex, hitPoint TEXTURES_PARAM);
 
-OPENCL_FORCE_INLINE BSDFEvent HeterogeneousVolMaterial_GetEventTypes() {
-	return DIFFUSE | REFLECT;
+    const float3 albedo = SchlickScatter_Albedo(
+			clamp(sigmaS, 0.f, INFINITY),
+			clamp(sigmaA, 0.f, INFINITY));
+
+	EvalStack_PushFloat3(albedo);
 }
 
-OPENCL_FORCE_INLINE float3 HeterogeneousVolMaterial_Albedo(const float3 sigmaSTexVal,
-		const float3 sigmaATexVal) {
-	return SchlickScatter_Albedo(clamp(sigmaSTexVal, 0.f, INFINITY),
-			clamp(sigmaATexVal, 0.f, INFINITY));
+OPENCL_FORCE_INLINE void HeterogeneousVolMaterial_GetInteriorVolume(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	DefaultMaterial_GetInteriorVolume(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
 }
 
-OPENCL_FORCE_NOT_INLINE float3 HeterogeneousVolMaterial_Evaluate(
-		__global HitPoint *hitPoint, const float3 lightDir, const float3 eyeDir,
-		BSDFEvent *event, float *directPdfW,
-		const float3 sigmaSTexVal, const float3 sigmaATexVal, const float3 gTexVal) {
-	return SchlickScatter_Evaluate(
+OPENCL_FORCE_INLINE void HeterogeneousVolMaterial_GetExteriorVolume(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	DefaultMaterial_GetExteriorVolume(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+}
+
+OPENCL_FORCE_INLINE void HeterogeneousVolMaterial_GetPassThroughTransparency(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	DefaultMaterial_GetPassThroughTransparency(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+}
+
+OPENCL_FORCE_INLINE void HeterogeneousVolMaterial_GetEmittedRadiance(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	DefaultMaterial_GetEmittedRadiance(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+}
+
+OPENCL_FORCE_NOT_INLINE void HeterogeneousVolMaterial_Evaluate(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	float3 lightDir, eyeDir;
+	EvalStack_PopFloat3(eyeDir);
+	EvalStack_PopFloat3(lightDir);
+
+	const float3 sigmaSTexVal = Texture_GetSpectrumValue(material->volume.homogenous.sigmaSTexIndex, hitPoint TEXTURES_PARAM);
+	const float3 sigmaATexVal = Texture_GetSpectrumValue(material->volume.homogenous.sigmaATexIndex, hitPoint TEXTURES_PARAM);
+	const float3 gTexVal = Texture_GetSpectrumValue(material->volume.homogenous.gTexIndex, hitPoint TEXTURES_PARAM);
+
+	BSDFEvent event;
+	float directPdfW;
+	const float3 result = SchlickScatter_Evaluate(
 			hitPoint, eyeDir, lightDir,
-			event, directPdfW,
+			&event, &directPdfW,
 			clamp(sigmaSTexVal, 0.f, INFINITY), clamp(sigmaATexVal, 0.f, INFINITY), gTexVal);
+
+	EvalStack_PushFloat3(result);
+	EvalStack_PushBSDFEvent(event);
+	EvalStack_PushFloat(directPdfW);
 }
 
-OPENCL_FORCE_NOT_INLINE float3 HeterogeneousVolMaterial_Sample(
-		__global HitPoint *hitPoint, const float3 fixedDir, float3 *sampledDir,
-		const float u0, const float u1, 
-#if defined(PARAM_HAS_PASSTHROUGH)
-		const float passThroughEvent,
-#endif
-		float *pdfW, float *cosSampledDir, BSDFEvent *event,
-		const float3 sigmaSTexVal, const float3 sigmaATexVal, const float3 gTexVal) {
-	return SchlickScatter_Sample(
-			hitPoint, fixedDir, sampledDir,
+OPENCL_FORCE_NOT_INLINE void HeterogeneousVolMaterial_Sample(__global const Material* restrict material,
+		__global const HitPoint *hitPoint,
+		__global float *evalStack, uint *evalStackOffset
+		MATERIALS_PARAM_DECL) {
+	float u0, u1, passThroughEvent;
+	EvalStack_PopFloat(passThroughEvent);
+	EvalStack_PopFloat(u1);
+	EvalStack_PopFloat(u0);
+	float3 fixedDir;
+	EvalStack_PopFloat3(fixedDir);
+
+	const float3 sigmaSTexVal = Texture_GetSpectrumValue(material->volume.homogenous.sigmaSTexIndex, hitPoint TEXTURES_PARAM);
+	const float3 sigmaATexVal = Texture_GetSpectrumValue(material->volume.homogenous.sigmaATexIndex, hitPoint TEXTURES_PARAM);
+	const float3 gTexVal = Texture_GetSpectrumValue(material->volume.homogenous.gTexIndex, hitPoint TEXTURES_PARAM);
+
+	float3 sampledDir;
+	float pdfW;
+	BSDFEvent event;
+	const float3 result = SchlickScatter_Sample(
+			hitPoint, fixedDir, &sampledDir,
 			u0, u1, 
-#if defined(PARAM_HAS_PASSTHROUGH)
 			passThroughEvent,
-#endif
-			pdfW, cosSampledDir, event,
+			&pdfW, &event,
 			clamp(sigmaSTexVal, 0.f, INFINITY), clamp(sigmaATexVal, 0.f, INFINITY), gTexVal);
+
+	EvalStack_PushFloat3(result);
+	EvalStack_PushFloat3(sampledDir);
+	EvalStack_PushFloat(pdfW);
+	EvalStack_PushBSDFEvent(event);
 }
 
-#endif
+//------------------------------------------------------------------------------
+// Material specific EvalOp
+//------------------------------------------------------------------------------
+
+OPENCL_FORCE_NOT_INLINE void HeterogeneousVolMaterial_EvalOp(
+		__global const Material* restrict material,
+		const MaterialEvalOpType evalType,
+		__global float *evalStack,
+		uint *evalStackOffset,
+		__global const HitPoint *hitPoint
+		MATERIALS_PARAM_DECL) {
+	switch (evalType) {
+		case EVAL_ALBEDO:
+			HeterogeneousVolMaterial_Albedo(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_INTERIOR_VOLUME:
+			HeterogeneousVolMaterial_GetInteriorVolume(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_EXTERIOR_VOLUME:
+			HeterogeneousVolMaterial_GetExteriorVolume(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_EMITTED_RADIANCE:
+			HeterogeneousVolMaterial_GetEmittedRadiance(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_GET_PASS_TROUGH_TRANSPARENCY:
+			HeterogeneousVolMaterial_GetPassThroughTransparency(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_EVALUATE:
+			HeterogeneousVolMaterial_Evaluate(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		case EVAL_SAMPLE:
+			HeterogeneousVolMaterial_Sample(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
+			break;
+		default:
+			// Something wrong here
+			break;
+	}
+}

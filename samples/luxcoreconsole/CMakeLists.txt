@@ -1,5 +1,5 @@
 ################################################################################
-# Copyright 1998-2018 by authors (see AUTHORS.txt)
+# Copyright 1998-2020 by authors (see AUTHORS.txt)
 #
 #   This file is part of LuxCoreRender.
 #
@@ -28,4 +28,4 @@ set(LUXCORECONSOLE_SRCS
 
 add_executable(luxcoreconsole ${LUXCORECONSOLE_SRCS})
 
-TARGET_LINK_LIBRARIES(luxcoreconsole ${LUXCORE_LIBRARY} ${Boost_LIBRARIES} ${OPENCL_LIBRARIES})
+TARGET_LINK_LIBRARIES(luxcoreconsole ${LUXCORE_LIBRARY} ${Boost_LIBRARIES} ${OPENCL_LIBRARIES} ${CUDA_ALL_LIBRARIES})

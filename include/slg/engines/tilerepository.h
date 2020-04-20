@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -155,7 +155,6 @@ public:
 	// rendering has been restarted
 	u_int multipassRenderingIndex;
 
-	u_int maxPassCount;
 	float convergenceTestThreshold, convergenceTestThresholdReduction;
 	u_int convergenceTestWarmUpSamples;
 	VarianceClamping varianceClamping;
@@ -210,7 +209,7 @@ private:
 
 BOOST_CLASS_VERSION(slg::Tile::TileCoord, 1)
 BOOST_CLASS_VERSION(slg::Tile, 4)
-BOOST_CLASS_VERSION(slg::TileRepository, 4)
+BOOST_CLASS_VERSION(slg::TileRepository, 5)
 
 BOOST_CLASS_EXPORT_KEY(slg::Tile::TileCoord)
 BOOST_CLASS_EXPORT_KEY(slg::Tile)

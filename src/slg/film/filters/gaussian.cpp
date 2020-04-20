@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -54,14 +54,17 @@ slg::ocl::Filter *GaussianFilter::FromPropertiesOCL(const Properties &cfg) {
 	const float filterXWidth = cfg.Get(Property("film.filter.xwidth")(defaultFilterWidth)).Get<float>();
 	const float filterYWidth = cfg.Get(Property("film.filter.ywidth")(defaultFilterWidth)).Get<float>();
 
-	const float alpha = cfg.Get(GetDefaultProps().Get("film.filter.gaussian.alpha")).Get<float>();
+//	const float alpha = cfg.Get(GetDefaultProps().Get("film.filter.gaussian.alpha")).Get<float>();
 
 	slg::ocl::Filter *oclFilter = new slg::ocl::Filter();
 
-	oclFilter->type = slg::ocl::FILTER_GAUSSIAN;
-	oclFilter->gaussian.widthX = filterXWidth;
-	oclFilter->gaussian.widthY = filterYWidth;
-	oclFilter->gaussian.alpha = alpha;
+//	oclFilter->type = slg::ocl::FILTER_GAUSSIAN;
+//	oclFilter->gaussian.widthX = filterXWidth;
+//	oclFilter->gaussian.widthY = filterYWidth;
+//	oclFilter->gaussian.alpha = alpha;
+
+	oclFilter->widthX = filterXWidth;
+	oclFilter->widthY = filterYWidth;
 
 	return oclFilter;
 }

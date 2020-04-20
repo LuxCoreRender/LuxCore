@@ -1,7 +1,7 @@
 #line 2 "transform_funcs.cl"
 
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -18,26 +18,41 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-float3 Transform_ApplyPoint(__global const Transform* restrict trans, const float3 point) {
+OPENCL_FORCE_INLINE void Transform_Init(__global Transform *trans) {
+	Matrix4x4_IdentityGlobal(&trans->m);
+	Matrix4x4_IdentityGlobal(&trans->mInv);
+}
+
+OPENCL_FORCE_INLINE float3 Transform_ApplyPoint(__global const Transform* restrict trans, const float3 point) {
 	return Matrix4x4_ApplyPoint(&trans->m, point);
 }
 
-float3 Transform_ApplyVector(__global const Transform* restrict trans, const float3 vector) {
+OPENCL_FORCE_INLINE float3 Transform_ApplyVector(__global const Transform* restrict trans, const float3 vector) {
 	return Matrix4x4_ApplyVector(&trans->m, vector);
 }
 
-float3 Transform_ApplyNormal(__global const Transform* restrict trans, const float3 normal) {
-	return Matrix4x4_ApplyNormal(&trans->m, normal);
+OPENCL_FORCE_INLINE float3 Transform_ApplyNormal(__global const Transform* restrict trans, const float3 normal) {
+	return Matrix4x4_ApplyNormal(&trans->mInv, normal);
 }
 
-float3 Transform_InvApplyPoint(__global const Transform* restrict trans, const float3 point) {
+OPENCL_FORCE_INLINE float3 Transform_InvApplyPoint(__global const Transform* restrict trans, const float3 point) {
 	return Matrix4x4_ApplyPoint(&trans->mInv, point);
 }
 
-float3 Transform_InvApplyVector(__global const Transform* restrict trans, const float3 vector) {
+OPENCL_FORCE_INLINE float3 Transform_InvApplyVector(__global const Transform* restrict trans, const float3 vector) {
 	return Matrix4x4_ApplyVector(&trans->mInv, vector);
 }
 
-float3 Transform_InvApplyNormal(__global const Transform* restrict trans, const float3 normal) {
-	return Matrix4x4_ApplyNormal(&trans->mInv, normal);
+OPENCL_FORCE_INLINE float3 Transform_InvApplyNormal(__global const Transform* restrict trans, const float3 normal) {
+	return Matrix4x4_ApplyNormal(&trans->m, normal);
+}
+
+OPENCL_FORCE_INLINE bool Transform_SwapsHandedness(__global const Transform* restrict trans) {
+	const float det = ((trans->m.m[0][0] *
+		(trans->m.m[1][1] * trans->m.m[2][2] - trans->m.m[1][2] * trans->m.m[2][1])) -
+		(trans->m.m[0][1] *
+		(trans->m.m[1][0] * trans->m.m[2][2] - trans->m.m[1][2] * trans->m.m[2][0])) +
+		(trans->m.m[0][2] *
+		(trans->m.m[1][0] * trans->m.m[2][1] - trans->m.m[1][1] * trans->m.m[2][0])));
+	return det < 0.f;
 }

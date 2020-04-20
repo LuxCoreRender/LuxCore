@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -41,6 +41,14 @@ RTPathOCLRenderEngine::RTPathOCLRenderEngine(const RenderConfig *rcfg) :
 
 RTPathOCLRenderEngine::~RTPathOCLRenderEngine() {
 	delete frameBarrier;
+}
+
+void RTPathOCLRenderEngine::InitGPUTaskConfiguration() {
+	TilePathOCLRenderEngine::InitGPUTaskConfiguration();
+
+	taskConfig.renderEngine.rtpathocl.previewResolutionReduction = previewResolutionReduction;
+	taskConfig.renderEngine.rtpathocl.previewResolutionReductionStep = previewResolutionReductionStep;
+	taskConfig.renderEngine.rtpathocl.resolutionReduction = resolutionReduction;
 }
 
 PathOCLBaseOCLRenderThread *RTPathOCLRenderEngine::CreateOCLThread(const u_int index,

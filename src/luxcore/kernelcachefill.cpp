@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -267,244 +267,40 @@ static void RenderTestScene(const Properties &cfgSetUpProps, const Properties &s
 	LC_LOG("Done.");
 }
 
-//------------------------------------------------------------------------------
-
-template<class T> static void CombinationsImpl(const vector<T> &elems, const u_int size, vector<vector<T> > &result,
-		vector<T> &tmp, const u_int start, const u_int end, const u_int index) {
-	if (index == size) {
-		// Done
-		result.push_back(tmp);
-	} else {
-		for (u_int i = start; i <= end && (end - i + 1 >= size - index); i++) {
-			tmp[index] = elems[i];
-			CombinationsImpl(elems, size, result, tmp, i + 1, end, index + 1);
-		}
-	}
-}
-
-template<class T> static void Combinations(const vector<T> &elems, const u_int size, vector<vector<T> > &result) {
-	vector<T> tmp(size);
-
-	CombinationsImpl(elems, size, result, tmp, 0, elems.size() - 1, 0);
-}
-
-template<class T> static void Combinations(const vector<T> &elems, vector<vector<T> > &result) {
-	for (u_int i = 1; i <= elems.size(); ++i)
-		Combinations(elems, i, result);
-}
-
-template<class T> static void Combinations(const Property prop, vector<vector<T> > &combs) {
-	vector<T> types;
-	for (u_int i = 0; i < prop.GetSize(); ++i)
-		types.push_back(prop.Get<T>(i));
-	Combinations(types, combs);
-}
-
-template<class T> static void PrintCombinationsTest(const vector<vector<T> > &result) {
-	BOOST_FOREACH(const vector<T> &r, result) {
-		BOOST_FOREACH(const T &e, r) {
-			cout << e << " ";
-		}
-		cout << endl;
-	}
-}
-
-/*static void CombinationsTest() {
-	vector<string> elems;
-	elems.push_back("A");
-	elems.push_back("B");
-	elems.push_back("C");
-	elems.push_back("D");
-	elems.push_back("E");
-
-	for (u_int i = 1; i <= elems.size(); ++i) {
-		vector<vector<string> > result;
-		Combinations(elems, i, result);
-		cout << "Result " << i << ":" << endl;
-		PrintCombinationsTest(result);
-	}
-}*/
-
-//------------------------------------------------------------------------------
-
-static Property FilterByEnabledCode(const Property &prop, const boost::unordered_set<string> &enabledCode) {
-	Property newProp(prop.GetName());
-
-	for (u_int i = 0; i < prop.GetSize(); ++i) {
-		const string tag = prop.Get<string>(i);
-
-		if (!enabledCode.count(boost::to_upper_copy<string>(tag)))
-			newProp.Add(tag);
-	}
-
-	return newProp;
-}
-
-static int KernelCacheFillImpl(const Properties &config, const bool doRender, const size_t count,
-		void (*ProgressHandler)(const size_t, const size_t)) {
-	// Extract always enabled code
-	boost::unordered_set<string> enabledCode;
-	const string tags = config.Get(Property("opencl.code.alwaysenabled")("")).Get<string>();
-	boost::split(enabledCode, tags, boost::is_any_of(" \t"));
-
+static void KernelCacheFillImpl(const Properties &config, void (*ProgressHandler)(const size_t, const size_t)) {
 	// Extract the render engines
 	const Property renderEngines = config.Get(Property("kernelcachefill.renderengine.types")("PATHOCL", "TILEPATHOCL", "RTPATHOCL"));
-
-	// Extract the samplers
-	const Property samplers = config.Get(Property("kernelcachefill.sampler.types")("RANDOM", "SOBOL", "METROPOLIS"));
-
-	// Extract the cameras
-	const Property cameras = config.Get(Property("kernelcachefill.camera.types")("orthographic", "perspective"));
-
-	// Extract the scene geometry setup
-	const Property geometrySetUpOptions = config.Get(Property("kernelcachefill.geometry.types")("empty", "test"));
-
-	// Extract the light sources
-	Property defaultLights("kernelcachefill.light.types");
-	defaultLights.Add("infinite").Add("sky").Add("sun").Add("trianglelight").
-			Add("point").Add("mappoint").Add("spot").Add("projection").
-			Add("constantinfinite").Add("sharpdistant").Add("distant").
-			Add("sky2").Add("laser");
-	const Property lights = FilterByEnabledCode(config.Get(defaultLights), enabledCode);
-	vector<vector<string> > lightTypeCombinations;
-	Combinations(lights, lightTypeCombinations);
-
-	// Extract the materials
-	Property defaultMeterials("kernelcachefill.material.types");
-	defaultMeterials.Add("matte").Add("roughmatte").Add("mirror").Add("glass").
-			Add("archglass").Add("null").Add("roughmattetranslucent").Add("glossy2").
-			Add("metal2").Add("roughglass").Add("velvet").
-			Add("cloth").Add("carpaint").Add("glossytranslucent");
-	const Property materials = FilterByEnabledCode(config.Get(defaultMeterials), enabledCode);
-	vector<vector<string> > materialTypeCombinations;
-	Combinations(materials, materialTypeCombinations);
-
-	// Extract the textures
-	/*Property defaultTextures("kernelcachefill.texture.types");
-	defaultTextures.Add("imagemap").Add("constfloat1").Add("constfloat3").
-			Add("fresnelapproxn").Add("fresnelapproxk").Add("checkerboard2d").Add("checkerboard3d").
-			//Add("densitygrid").
-			Add("fbm").Add("marble").Add("blender_blend").Add("blender_clouds").
-			Add("blender_distortednoise").Add("blender_magic").Add("blender_marble").
-			Add("blender_musgrave").
-			//Add("blender_noise").
-			Add("blender_stucci").Add("blender_wood").Add("blender_voronoi").
-			Add("dots").Add("brick").Add("windy").
-			Add("wrinkled").Add("uv").Add("band").
-			Add("hitpointcolor").Add("hitpointalpha").Add("hitpointgrey").
-			Add("cloud").Add("blackbody").
-			//Add("irregulardata").
-			Add("lampspectrum").Add("fresnelabbe").Add("fresnelcolor").
-			Add("fresnelluxpop").Add("fresnelpreset").Add("fresnelsopra").
-			Add("colordepth").Add("bilerp").Add("hsv");
-	const Property textures = FilterByEnabledCode(config.Get(defaultTextures), enabledCode);*/
-	vector<vector<string> > textureTypeCombinations;
-	//Combinations(textures, textureTypeCombinations);
+	const size_t count = renderEngines.GetSize();
 
 	// For each render engine type
-	size_t step = 1;
 	for (u_int renderEngineIndex = 0; renderEngineIndex < renderEngines.GetSize(); ++renderEngineIndex) {
-		Properties cfgProps, scnProps;
 		const string renderEngineType = renderEngines.Get<string>(renderEngineIndex);
-
+		string samplerType;
+		if ((renderEngineType == "TILEPATHOCL") || (renderEngineType == "RTPATHOCL"))
+			samplerType = "TILEPATHSAMPLER";
+		else
+			samplerType = "SOBOL";
+		
+		Properties cfgProps;
 		cfgProps << 
-				config <<
-				Property("renderengine.type")(renderEngineType);
+				Property("renderengine.type")(renderEngineType) <<
+				Property("sampler.type")(samplerType);
 
-		// For each camera type
-		for (u_int cameraIndex = 0; cameraIndex < cameras.GetSize(); ++cameraIndex) {
-			const string cameraType = cameras.Get<string>(cameraIndex);
-
-			scnProps << Property("scene.camera.type")(cameraType); 
-
-			// For each light type
-			for (u_int lightIndex = 0; lightIndex < Max<u_int>(lightTypeCombinations.size(), 1); ++lightIndex) {
-				if (lightTypeCombinations.size() > 0) {
-					const vector<string> &lights = lightTypeCombinations[lightIndex];
-					Property lightProp("kernelcachefill.light.types");
-					BOOST_FOREACH(const string &light, lights)
-						lightProp.Add(light);
-
-					scnProps << lightProp;
-				}
-
-				// For each material type
-				for (u_int materialIndex = 0; materialIndex < Max<u_int>(materialTypeCombinations.size(), 1); ++materialIndex) {
-					if (materialTypeCombinations.size() > 0) {
-						const vector<string> &materials = materialTypeCombinations[materialIndex];
-						Property materialProp("kernelcachefill.material.types");
-						BOOST_FOREACH(const string &material, materials)
-							materialProp.Add(material);
-
-						scnProps << materialProp;
-					}
-
-					// For each texture type
-					for (u_int textureIndex = 0; textureIndex < Max<u_int>(textureTypeCombinations.size(), 1); ++textureIndex) {
-						if (textureTypeCombinations.size() > 0) {
-							const vector<string> &textures = textureTypeCombinations[textureIndex];
-							Property textureProp("kernelcachefill.texture.types");
-							BOOST_FOREACH(const string &texture, textures)
-								textureProp.Add(texture);
-
-							scnProps << textureProp;
-						}
-
-						// For each scene geometry setup
-						for (u_int geometrySetUpIndex = 0; geometrySetUpIndex < geometrySetUpOptions.GetSize(); ++geometrySetUpIndex) {
-							const string geometrySetUp = geometrySetUpOptions.Get<string>(geometrySetUpIndex);
-
-							cfgProps << Property("kernelcachefill.geometry.type")(geometrySetUp);
-
-							// For each render sampler (if applicable)
-							if ((renderEngineType == "PATHOCL") || (renderEngineType == "RTPATHOCL")) {
-								for (u_int samplerIndex = 0; samplerIndex < samplers.GetSize(); ++samplerIndex) {
-									const string samplerType = samplers.Get<string>(samplerIndex);
-
-									cfgProps << Property("sampler.type")(samplerType);
-
-									// Run the rendering
-									if (doRender) {
-										LC_LOG("====================================================================");
-										if (ProgressHandler)
-											ProgressHandler(step, count);
-										LC_LOG("Step: " << step << "/" << count);
-										RenderTestScene(cfgProps, scnProps);
-									}
-
-									++step;
-								}
-							} else {
-								if (doRender) {
-									// Run the rendering
-									LC_LOG("====================================================================");
-									if (ProgressHandler)
-										ProgressHandler(step, count);
-									LC_LOG("Step: " << step << "/" << count);
-									RenderTestScene(cfgProps, scnProps);
-								}
-
-								++step;
-							}
-						}
-					}
-				}
-			}
-		}
+		// Run the rendering
+		LC_LOG("====================================================================");
+		if (ProgressHandler)
+			ProgressHandler(renderEngineIndex, count);
+		LC_LOG("Step: " << renderEngineIndex << "/" << count);
+		RenderTestScene(cfgProps, Properties());
 	}
 
-	if (doRender)
-		LC_LOG("====================================================================");
-
-	return step - 1;
+	LC_LOG("====================================================================");
 }
 
 #endif
 
 void luxcore::KernelCacheFill(const Properties &config, void (*ProgressHandler)(const size_t, const size_t)) {
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-	const size_t count = KernelCacheFillImpl(config, false, 0, NULL);
-
-	KernelCacheFillImpl(config, true, count, ProgressHandler);
+	KernelCacheFillImpl(config, ProgressHandler);
 #endif
 }

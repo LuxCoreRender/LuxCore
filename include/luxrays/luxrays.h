@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -57,6 +57,7 @@
  * \brief The LuxRays core classes are defined within this namespace.
  */
 namespace luxrays {
+
 // OpenCL data types
 namespace ocl {
 #include "luxrays/luxrays_types.cl"
@@ -66,22 +67,24 @@ class Accelerator;
 class BBox;
 class Context;
 class DataSet;
+class Device;
+class DeviceDescription;
+class HardwareDevice;
 class IntersectionDevice;
 class Mesh;
 class Matrix4x4;
 class Normal;
 class Point;
 class Ray;
-class RayBuffer;
-class RayBufferQueue;
-class RayBufferQueueO2O;
 class RayHit;
 class RGBColor;
 class Triangle;
 class TriangleMesh;
 class UV;
 class Vector;
-class VirtualIntersectionDevice;
+
+extern void Init();
+
 }
 
 #endif	/* _LUXRAYS_H */

@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -41,7 +41,7 @@ public:
 
 	Ray(const Point &origin, const Vector &direction) : o(origin),
 		d(direction), maxt(std::numeric_limits<float>::infinity()),
-		time(0.f) {
+		time(0.f), flags(RAY_FLAGS_NONE) {
 		mint = MachineEpsilon::E(origin);
 	}
 
@@ -72,13 +72,9 @@ public:
 		// Keep the same time value
 	}
 
-	void Update(const Point &origin, const Normal &surfaceNormal, const Vector &direction) {
-		// Translate the origin by an epsilon along the normal
-		o = origin + Vector(surfaceNormal) * MachineEpsilon::E(origin);
-		d = direction;
-		mint = MachineEpsilon::E(o);
-		maxt = std::numeric_limits<float>::infinity();
-		// Keep the same time value
+	void Update(const Point &origin, const Vector &direction, const float t) {
+		Update(origin, direction);
+		time = t;
 	}
 
 	// Ray Public Data

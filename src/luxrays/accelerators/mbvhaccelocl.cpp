@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -30,10 +30,9 @@
 #include "luxrays/utils/utils.h"
 #include "luxrays/core/context.h"
 #include "luxrays/core/exttrianglemesh.h"
-#ifdef LUXRAYS_DISABLE_OPENCL
-#include "luxrays/core/intersectiondevice.h"
-#else
-#include "luxrays/core/oclintersectiondevice.h"
+#include "luxrays/devices/nativeintersectiondevice.h"
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+#include "luxrays/devices/oclintersectiondevice.h"
 #include "luxrays/kernels/kernels.h"
 #endif
 
@@ -43,10 +42,10 @@ namespace luxrays {
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
-class OpenCLMBVHKernels : public OpenCLKernels {
+class OpenCLMBVHKernel : public OpenCLKernel {
 public:
-	OpenCLMBVHKernels(OpenCLIntersectionDevice *dev, const u_int kernelCount, const MBVHAccel *ac) :
-			OpenCLKernels(dev, kernelCount), mbvh(ac),
+	OpenCLMBVHKernel(OpenCLIntersectionDevice *dev, const MBVHAccel *ac) :
+			OpenCLKernel(dev), mbvh(ac),
 			uniqueLeafsTransformBuff(NULL), uniqueLeafsMotionSystemBuff(NULL),
 			uniqueLeafsInterpolatedTransformBuff(NULL) {
 		const Context *deviceContext = device->GetContext();
@@ -164,31 +163,27 @@ public:
 					interpolatedTransforms.push_back(*((const luxrays::ocl::InterpolatedTransform *)&it));
 				}
 				oclMotionSystem.interpolatedTransformLastIndex = interpolatedTransforms.size() - 1;
-				
+
+				// I don't need inverse transformations for MBVH traversal
+				oclMotionSystem.interpolatedInverseTransformFirstIndex = NULL_INDEX;
+				oclMotionSystem.interpolatedInverseTransformLastIndex = NULL_INDEX;
+
 				motionSystems.push_back(oclMotionSystem);
 			}
-
+			
 			// Allocate the motion system buffer
-			LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
-				"] Leaf motion systems buffer size: " <<
-				(sizeof(luxrays::ocl::MotionSystem) * motionSystems.size() / 1024) <<
-				"Kbytes");
-			uniqueLeafsMotionSystemBuff = new cl::Buffer(oclContext,
-				CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-				sizeof(luxrays::ocl::MotionSystem) * motionSystems.size(),
-				(void *)&(motionSystems[0]));
-			device->AllocMemory(uniqueLeafsMotionSystemBuff->getInfo<CL_MEM_SIZE>());
+			device->AllocBufferRO(&uniqueLeafsMotionSystemBuff, &motionSystems[0],
+					sizeof(luxrays::ocl::MotionSystem) * motionSystems.size(),
+					"MBVH leaf motion systems buffer");
 
 			// Allocate the InterpolatedTransform buffer
 			LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
 				"] Leaf interpolated transforms buffer size: " <<
 				(sizeof(luxrays::ocl::InterpolatedTransform) * interpolatedTransforms.size() / 1024) <<
 				"Kbytes");
-			uniqueLeafsInterpolatedTransformBuff = new cl::Buffer(oclContext,
-				CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-				sizeof(luxrays::ocl::InterpolatedTransform) * interpolatedTransforms.size(),
-				(void *)&(interpolatedTransforms[0]));
-			device->AllocMemory(uniqueLeafsInterpolatedTransformBuff->getInfo<CL_MEM_SIZE>());
+			device->AllocBufferRO(&uniqueLeafsInterpolatedTransformBuff, &interpolatedTransforms[0],
+					sizeof(luxrays::ocl::InterpolatedTransform) * interpolatedTransforms.size(),
+					"MBVH leaf interpolated transforms buffer");
 		}
 
 		//----------------------------------------------------------------------
@@ -205,8 +200,8 @@ public:
 		std::stringstream kernelDefs;
 		kernelDefs << "#define MBVH_VERTS_PAGE_COUNT " << vertsBuffs.size() << "\n"
 				"#define MBVH_NODES_PAGE_COUNT " << nodeBuffs.size() << "\n";
-		if (vertsBuffs.size() > 1) {
-			// MBVH_NODES_PAGE_SIZE is used only if MBVH_VERTS_PAGE_COUNT > 1
+		if (nodeBuffs.size() > 1) {
+			// MBVH_NODES_PAGE_SIZE is used only if MBVH_NODES_PAGE_COUNT > 1
 			// I conditional define this value to avoid kernel recompilation
 			kernelDefs << "#define MBVH_NODES_PAGE_SIZE " << pageNodeCount << "\n";
 		}
@@ -260,25 +255,23 @@ public:
 			throw err;
 		}
 
-		// Setup kernels
-		for (u_int i = 0; i < kernelCount; ++i) {
-			kernels[i] = new cl::Kernel(program, "Accelerator_Intersect_RayBuffer");
+		// Setup the kernel
+		kernel = new cl::Kernel(program, "Accelerator_Intersect_RayBuffer");
 
-			if (device->GetDeviceDesc()->GetForceWorkGroupSize() > 0)
-				workGroupSize = device->GetDeviceDesc()->GetForceWorkGroupSize();
-			else {
-				kernels[i]->getWorkGroupInfo<size_t>(oclDevice,
-					CL_KERNEL_WORK_GROUP_SIZE, &workGroupSize);
-				//LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
-				//	"] MBVH kernel work group size: " << workGroupSize);
-			}
-
-			// Set arguments
-			SetIntersectionKernelArgs(*(kernels[i]), 3);
+		if (device->GetDeviceDesc()->GetForceWorkGroupSize() > 0)
+			workGroupSize = device->GetDeviceDesc()->GetForceWorkGroupSize();
+		else {
+			kernel->getWorkGroupInfo<size_t>(oclDevice,
+				CL_KERNEL_WORK_GROUP_SIZE, &workGroupSize);
+			//LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
+			//	"] MBVH kernel work group size: " << workGroupSize);
 		}
+
+		// Set arguments
+		SetIntersectionKernelArgs(*kernel, 3);
 	}
 
-	virtual ~OpenCLMBVHKernels() {
+	virtual ~OpenCLMBVHKernel() {
 		for (u_int i = 0; i < vertsBuffs.size(); ++i)
 			device->FreeBuffer(&vertsBuffs[i]);
 		for (u_int i = 0; i < nodeBuffs.size(); ++i)
@@ -290,7 +283,7 @@ public:
 
 	void UpdateBVHNodes();
 	virtual void Update(const DataSet *newDataSet);
-	virtual void EnqueueRayBuffer(cl::CommandQueue &oclQueue, const u_int kernelIndex,
+	virtual void EnqueueRayBuffer(cl::CommandQueue &oclQueue,
 		cl::Buffer &rBuff, cl::Buffer &hBuff, const u_int rayCount,
 		const VECTOR_CLASS<cl::Event> *events, cl::Event *event);
 
@@ -309,7 +302,7 @@ public:
 	vector<std::vector<u_int> > vertOffsetPerLeafMesh;
 };
 
-void OpenCLMBVHKernels::UpdateBVHNodes() {
+void OpenCLMBVHKernel::UpdateBVHNodes() {
 	// Free old buffers
 	for (u_int i = 0; i < nodeBuffs.size(); ++i)
 		device->FreeBuffer(&nodeBuffs[i]);
@@ -443,16 +436,15 @@ void OpenCLMBVHKernels::UpdateBVHNodes() {
 	}
 }
 
-void OpenCLMBVHKernels::Update(const DataSet *newDataSet) {
+void OpenCLMBVHKernel::Update(const DataSet *newDataSet) {
 	if (!mbvh->nRootNodes)
 		return;
 
 	// The root BVH nodes are changed. Update the BVH node buffers.
 	UpdateBVHNodes();
 
-	// I have to update kernels arguments changed inside UpdateBVHNodes()
-	for (u_int i = 0; i < kernels.size(); ++i)
-		SetIntersectionKernelArgs(*(kernels[i]), 3);
+	// I have to update kernel arguments changed inside UpdateBVHNodes()
+	SetIntersectionKernelArgs(*kernel, 3);
 
 	const Context *deviceContext = device->GetContext();
 	const std::string &deviceName = device->GetName();
@@ -470,20 +462,20 @@ void OpenCLMBVHKernels::Update(const DataSet *newDataSet) {
 	device->GetOpenCLQueue().finish();
 }
 
-void OpenCLMBVHKernels::EnqueueRayBuffer(cl::CommandQueue &oclQueue, const u_int kernelIndex,
+void OpenCLMBVHKernel::EnqueueRayBuffer(cl::CommandQueue &oclQueue,
 		cl::Buffer &rBuff, cl::Buffer &hBuff, const u_int rayCount,
 		const VECTOR_CLASS<cl::Event> *events, cl::Event *event) {
-	kernels[kernelIndex]->setArg(0, rBuff);
-	kernels[kernelIndex]->setArg(1, hBuff);
-	kernels[kernelIndex]->setArg(2, rayCount);
+	kernel->setArg(0, rBuff);
+	kernel->setArg(1, hBuff);
+	kernel->setArg(2, rayCount);
 
 	const u_int globalRange = RoundUp<u_int>(rayCount, workGroupSize);
-	oclQueue.enqueueNDRangeKernel(*kernels[kernelIndex], cl::NullRange,
+	oclQueue.enqueueNDRangeKernel(*kernel, cl::NullRange,
 		cl::NDRange(globalRange), cl::NDRange(workGroupSize), events,
 		event);
 }
 
-u_int OpenCLMBVHKernels::SetIntersectionKernelArgs(cl::Kernel &kernel, const u_int index) {
+u_int OpenCLMBVHKernel::SetIntersectionKernelArgs(cl::Kernel &kernel, const u_int index) {
 	u_int argIndex = index;
 	if (uniqueLeafsTransformBuff)
 		kernel.setArg(argIndex++, *uniqueLeafsTransformBuff);
@@ -491,24 +483,30 @@ u_int OpenCLMBVHKernels::SetIntersectionKernelArgs(cl::Kernel &kernel, const u_i
 		kernel.setArg(argIndex++, *uniqueLeafsMotionSystemBuff);
 		kernel.setArg(argIndex++, *uniqueLeafsInterpolatedTransformBuff);
 	}
-	for (u_int i = 0; i < vertsBuffs.size(); ++i)
-		kernel.setArg(argIndex++, *vertsBuffs[i]);
-	for (u_int i = 0; i < nodeBuffs.size(); ++i)
-		kernel.setArg(argIndex++, *nodeBuffs[i]);
+	for (u_int i = 0; i < 8; ++i) {
+		if (i >= vertsBuffs.size())
+			kernel.setArg(argIndex++, sizeof(cl::Buffer), nullptr);
+		else
+			kernel.setArg(argIndex++, *vertsBuffs[i]);
+	}
+	for (u_int i = 0; i < 8; ++i) {
+		if (i >= nodeBuffs.size())
+			kernel.setArg(argIndex++, sizeof(cl::Buffer), nullptr);
+		else
+			kernel.setArg(argIndex++, *nodeBuffs[i]);
+	}
 
 	return argIndex;
 }
 
-OpenCLKernels *MBVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device,
-		const u_int kernelCount) const {
-	// Setup kernels
-	return new OpenCLMBVHKernels(device, kernelCount, this);
+OpenCLKernel *MBVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *device) const {
+	// Setup the kernel
+	return new OpenCLMBVHKernel(device, this);
 }
 
 #else
 
-OpenCLKernels *MBVHAccel::NewOpenCLKernels(OpenCLIntersectionDevice *device,
-		const u_int kernelCount) const {
+OpenCLKernel *MBVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *device) const {
 	return NULL;
 }
 

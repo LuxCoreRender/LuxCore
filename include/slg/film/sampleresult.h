@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -16,14 +16,20 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include <vector>
+#include "luxrays/core/color/spectrumgroup.h"
 
+#include "slg/bsdf/bsdf.h"
 #include "slg/film/film.h"
 
 #ifndef _SLG_SAMPLERESULT_H
 #define	_SLG_SAMPLERESULT_H
 
 namespace slg {
+
+// OpenCL data types
+namespace ocl {
+#include "slg/film/sampleresult_types.cl"
+}
 
 //------------------------------------------------------------------------------
 // SampleResult
@@ -54,7 +60,7 @@ public:
 	void ClampRadiance(const float minRadiance, const float maxRadiance);
 
 	bool IsValid() const;
-	
+
 	static bool IsAllValid(const std::vector<SampleResult> &sampleResults);
 	
 	//--------------------------------------------------------------------------
@@ -62,7 +68,7 @@ public:
 	// pixelX and pixelY have to be initialized only if !useFilmSplat
 	u_int pixelX, pixelY;
 	float filmX, filmY;
-	std::vector<luxrays::Spectrum> radiance;
+	luxrays::SpectrumGroup radiance;
 
 	float alpha, depth;
 	luxrays::Point position;
@@ -85,7 +91,7 @@ public:
 	BSDFEvent firstPathVertexEvent;
 
 	// Used to keep some state of the current sample
-	bool firstPathVertex, lastPathVertex, passThroughPath;
+	bool firstPathVertex, lastPathVertex;
 
 	bool useFilmSplat;
 

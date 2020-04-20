@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -93,6 +93,16 @@ public:
 		return (&u)[i];
 	}
 
+	bool operator==(const UV &p) const {
+		if (u != p.u) return false;
+		if (v != p.v) return false;
+
+		return true;
+	}
+	bool operator!=(const UV &p) const {
+		return !(*this == p);
+	}
+
 	bool IsNaN() const {
 		return isnan(u) || isnan(v);
 	}
@@ -100,6 +110,22 @@ public:
 	bool IsInf() const {
 		return isinf(u) || isinf(v);
 	}
+
+	//--------------------------------------------------------------------------
+	// Required by OpenSubdiv interface
+	//--------------------------------------------------------------------------
+
+	void Clear(void * = 0) {
+        u = 0.f;
+		v = 0.f;
+    }
+	
+	void AddWithWeight(UV const &src, float weight) {
+        u += weight * src.u;
+        v += weight * src.v;
+    }
+
+	//--------------------------------------------------------------------------
 
 	friend class boost::serialization::access;
 

@@ -1,7 +1,7 @@
 #line 2 "ray_funcs.cl"
 
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -18,7 +18,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-void Ray_Init4_Private(Ray *ray, const float3 orig, const float3 dir,
+OPENCL_FORCE_INLINE void Ray_Init4_Private(Ray *ray, const float3 orig, const float3 dir,
 		const float mint, const float maxt, const float time) {
 	ray->o.x = orig.x;
 	ray->o.y = orig.y;
@@ -36,7 +36,7 @@ void Ray_Init4_Private(Ray *ray, const float3 orig, const float3 dir,
 	ray->flags = RAY_FLAGS_NONE;
 }
 
-void Ray_Init3_Private(Ray *ray, const float3 orig, const float3 dir,
+OPENCL_FORCE_INLINE void Ray_Init3_Private(Ray *ray, const float3 orig, const float3 dir,
 		const float maxt, const float time) {
 	ray->o.x = orig.x;
 	ray->o.y = orig.y;
@@ -54,7 +54,7 @@ void Ray_Init3_Private(Ray *ray, const float3 orig, const float3 dir,
 	ray->flags = RAY_FLAGS_NONE;
 }
 
-void Ray_Init2_Private(Ray *ray, const float3 orig, const float3 dir, const float time) {
+OPENCL_FORCE_INLINE void Ray_Init2_Private(Ray *ray, const float3 orig, const float3 dir, const float time) {
 	ray->o.x = orig.x;
 	ray->o.y = orig.y;
 	ray->o.z = orig.z;
@@ -72,7 +72,7 @@ void Ray_Init2_Private(Ray *ray, const float3 orig, const float3 dir, const floa
 }
 
 // Note: Ray_Init4() work like CPU with a call to Ray::UpdateMinMaxWithEpsilon())
-void Ray_Init4(__global Ray *ray, const float3 orig, const float3 dir,
+OPENCL_FORCE_INLINE void Ray_Init4(__global Ray *ray, const float3 orig, const float3 dir,
 		const float mint, const float maxt, const float time) {
 	VSTORE3F(orig, &ray->o.x);
 	VSTORE3F(dir, &ray->d.x);
@@ -85,7 +85,7 @@ void Ray_Init4(__global Ray *ray, const float3 orig, const float3 dir,
 	ray->flags = RAY_FLAGS_NONE;
 }
 
-void Ray_Init3(__global Ray *ray, const float3 orig, const float3 dir,
+OPENCL_FORCE_INLINE void Ray_Init3(__global Ray *ray, const float3 orig, const float3 dir,
 		const float maxt, const float time) {
 	VSTORE3F(orig, &ray->o.x);
 	VSTORE3F(dir, &ray->d.x);
@@ -98,7 +98,7 @@ void Ray_Init3(__global Ray *ray, const float3 orig, const float3 dir,
 	ray->flags = RAY_FLAGS_NONE;
 }
 
-void Ray_Init2(__global Ray *ray, const float3 orig, const float3 dir, const float time) {
+OPENCL_FORCE_INLINE void Ray_Init2(__global Ray *ray, const float3 orig, const float3 dir, const float time) {
 	VSTORE3F(orig, &ray->o.x);
 	VSTORE3F(dir, &ray->d.x);
 
@@ -110,7 +110,7 @@ void Ray_Init2(__global Ray *ray, const float3 orig, const float3 dir, const flo
 	ray->flags = RAY_FLAGS_NONE;
 }
 
-void Ray_ReadAligned4(__global const Ray* restrict ray, float3 *rayOrig, float3 *rayDir,
+OPENCL_FORCE_INLINE void Ray_ReadAligned4(__global const Ray* restrict ray, float3 *rayOrig, float3 *rayDir,
 		float *mint, float *maxt, float *time, uint *flags) {
 	__global float4 *basePtr =(__global float4 *)ray;
 	const float4 data0 = (*basePtr++);
@@ -126,7 +126,7 @@ void Ray_ReadAligned4(__global const Ray* restrict ray, float3 *rayOrig, float3 
 	*flags = ray->flags;
 }
 
-void Ray_ReadAligned4_Private(__global const Ray* restrict ray, Ray *dstRay) {
+OPENCL_FORCE_INLINE void Ray_ReadAligned4_Private(__global const Ray* restrict ray, Ray *dstRay) {
 	__global float4 *basePtr =(__global float4 *)ray;
 	const float4 data0 = (*basePtr++);
 	const float4 data1 = (*basePtr);

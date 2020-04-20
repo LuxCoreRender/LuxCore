@@ -1,0 +1,56 @@
+scene.camera.type = "perspective"
+scene.camera.lookat.orig = 8.34077549 -7.03312111 4.53552628
+scene.camera.lookat.target = -4.52398491 3.39883137 0.837888479
+scene.camera.fieldofview = 55
+################################################################################
+scene.lights.l1.type = sphere
+scene.lights.l1.position = 4.0 -2.0 5.0
+scene.lights.l1.radius = 0.5
+scene.lights.l1.gain = 1000 1000 1000
+################################################################################
+## From: https://3dtextures.me/2019/09/30/fabric-padded-004/
+scene.textures.fabric_col.type = imagemap
+scene.textures.fabric_col.file = Fabric_Padded_004_basecolor.jpg
+scene.textures.fabric_col.gamma = 1.0
+scene.textures.fabric_col.mapping.type = uvmapping2d
+scene.textures.fabric_col.mapping.uvscale = 2.0 1.0
+scene.textures.fabric_disp.type = imagemap
+scene.textures.fabric_disp.file = Fabric_Padded_004_height.png
+scene.textures.fabric_disp.gamma = 1.0
+scene.textures.fabric_disp.mapping.type = uvmapping2d
+scene.textures.fabric_disp.mapping.uvscale = 2.0 1.0
+################################################################################
+scene.materials.redmat.type = matte
+scene.materials.redmat.kd = fabric_col
+scene.materials.whitematte.type = matte
+scene.materials.whitematte.kd = 0.6 0.6 0.6
+################################################################################
+scene.shapes.sphereply.type = mesh
+scene.shapes.sphereply.ply = sphere.ply
+##
+scene.shapes.spheresubdiv.type = subdiv
+scene.shapes.spheresubdiv.source = sphereply
+scene.shapes.spheresubdiv.maxlevel = 5
+scene.shapes.spheresubdiv.maxedgescreensize = 0.02
+##
+scene.shapes.spheredisp.type = displacement
+scene.shapes.spheredisp.source = spheresubdiv
+scene.shapes.spheredisp.offset = 0.0
+scene.shapes.spheredisp.normalsmooth = 1
+scene.shapes.spheredisp.map = fabric_disp
+scene.shapes.spheredisp.scale = 0.15
+##
+#scene.shapes.sphere.type = simplify
+#scene.shapes.sphere.source = spheredisp
+#scene.shapes.sphere.errorscale.surface = 0.00000000001
+################################################################################
+scene.objects.back.material = whitematte
+scene.objects.back.ply = scenes/bigmonkey/room.ply
+##
+scene.objects.red1.material = redmat
+scene.objects.red1.ply = spheredisp
+#scene.objects.red1.transformation = 1 0 0 0  0 1 0 0  0 0 1 0  -1.8 -1.8 0 1
+#
+#scene.objects.red2.material = redmat
+#scene.objects.red2.ply = sphere
+#scene.objects.red2.transformation = 1 0 0 0  0 1 0 0  0 0 1 0  1.8 1.8 0 1

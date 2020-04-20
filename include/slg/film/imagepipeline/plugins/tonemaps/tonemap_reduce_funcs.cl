@@ -1,7 +1,7 @@
 #line 2 "tonemap_reduce_funcs.cl"
 
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -22,7 +22,7 @@
 // Compute the REDUCE_OP of all frame buffer RGB values
 //------------------------------------------------------------------------------
 
-__attribute__((reqd_work_group_size(64, 1, 1))) __kernel void OpRGBValuesReduce(
+__kernel void OpRGBValuesReduce(
 		const uint filmWidth, const uint filmHeight,
 		__global float *channel_IMAGEPIPELINE,
 		__global float *accumBuffer) {
@@ -34,7 +34,7 @@ __attribute__((reqd_work_group_size(64, 1, 1))) __kernel void OpRGBValuesReduce(
 
 	const uint localSize = get_local_size(0);
 	const uint pixelCount = filmWidth * filmHeight;
-	localMemBuffer[tid] = 0.f;
+	localMemBuffer[tid] = ZERO;
 
 	// Read the first pixel
 	const uint stride0 = gid * 2;
@@ -67,25 +67,25 @@ __attribute__((reqd_work_group_size(64, 1, 1))) __kernel void OpRGBValuesReduce(
 	if (tid == 0) {
 		const uint bid = get_group_id(0) * 3;
 
-		accumBuffer[bid] = localMemBuffer[0].s0;
-		accumBuffer[bid + 1] = localMemBuffer[0].s1;
-		accumBuffer[bid + 2] = localMemBuffer[0].s2;
+		accumBuffer[bid] = localMemBuffer[0].x;
+		accumBuffer[bid + 1] = localMemBuffer[0].y;
+		accumBuffer[bid + 2] = localMemBuffer[0].z;
 	}
 }
 
-__attribute__((reqd_work_group_size(64, 1, 1))) __kernel void OpRGBValueAccumulate(
+__kernel void OpRGBValueAccumulate(
 		const uint size,
 		__global float *accumBuffer) {
 	if (get_global_id(0) == 0) {
-		float3 totalRGBValue = 0.f;
+		float3 totalRGBValue = ZERO;
 		for(uint i = 0; i < size; ++i) {
 			const uint index = i * 3;
 			totalRGBValue = ACCUM_OP(totalRGBValue, VLOAD3F(&accumBuffer[index]));
 		}
 
 		// Write the result
-		accumBuffer[0] = totalRGBValue.s0;
-		accumBuffer[1] = totalRGBValue.s1;
-		accumBuffer[2] = totalRGBValue.s2;
+		accumBuffer[0] = totalRGBValue.x;
+		accumBuffer[1] = totalRGBValue.y;
+		accumBuffer[2] = totalRGBValue.z;
 	}
 }

@@ -1,7 +1,7 @@
 #line 2 "texture_fresnelconst.cl"
 
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -22,19 +22,13 @@
 // FresnelConst texture
 //------------------------------------------------------------------------------
 
-#if defined(PARAM_ENABLE_TEX_FRESNELCONST)
-
 // The following functions are never really used as Metal material has special
 // code to evaluate Fresnel texture
 
-OPENCL_FORCE_INLINE float FresnelConstTexture_ConstEvaluateFloat(__global const Texture *tex) {
+OPENCL_FORCE_INLINE float FresnelConstTexture_ConstEvaluateFloat() {
 	return 0.f;
 }
 
-OPENCL_FORCE_INLINE float3 FresnelConstTexture_ConstEvaluateSpectrum(__global const Texture *tex) {
+OPENCL_FORCE_INLINE float3 FresnelConstTexture_ConstEvaluateSpectrum() {
 	return 0.f;
 }
-
-// Note: FresnelConstTexture_Bump() is defined in texture_bump_funcs.cl
-
-#endif

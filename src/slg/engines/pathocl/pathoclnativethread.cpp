@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -23,7 +23,7 @@
 #include "luxrays/core/geometry/transform.h"
 #include "luxrays/core/randomgen.h"
 #include "luxrays/utils/ocl.h"
-#include "luxrays/core/oclintersectiondevice.h"
+#include "luxrays/devices/ocldevice.h"
 #include "luxrays/kernels/kernels.h"
 
 #include "slg/slg.h"
@@ -40,7 +40,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 PathOCLNativeRenderThread::PathOCLNativeRenderThread(const u_int index,
-		NativeThreadIntersectionDevice *device, PathOCLRenderEngine *re) :
+		NativeIntersectionDevice *device, PathOCLRenderEngine *re) :
 		PathOCLBaseNativeRenderThread(index, device, re) {
 	threadFilm = NULL;
 }
@@ -63,11 +63,9 @@ void PathOCLNativeRenderThread::Start() {
 
 		threadFilm = new Film(filmWidth, filmHeight, filmSubRegion);
 		threadFilm->CopyDynamicSettings(*(engine->film));
-		threadFilm->RemoveChannel(Film::IMAGEPIPELINE);
-		threadFilm->SetImagePipelines(NULL);
-		// I collect samples statistics only on the GPUs. This solution is a bit
-		// tricky but is simpler and faster at the same time.
-		threadFilm->GetDenoiser().SetEnabled(false);
+		// I'm not removing the pipeline and disabling the film denoiser
+		// in order to support BCD denoiser.
+		threadFilm->SetThreadCount(engine->renderNativeThreads.size());
 		threadFilm->Init();
 	}
 
@@ -98,28 +96,41 @@ void PathOCLNativeRenderThread::RenderThreadImpl() {
 	// All threads use the film allocated by the first thread
 	Film *film = ((PathOCLNativeRenderThread *)(engine->renderNativeThreads[0]))->threadFilm;
 	
-	// Setup the sampler
-	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, film, NULL,
-			engine->samplerSharedData);
-	sampler->RequestSamples(pathTracer.sampleSize);
+	// Setup the sampler(s)
+
+	Sampler *eyeSampler = nullptr;
+	Sampler *lightSampler = nullptr;
+
+	eyeSampler = engine->renderConfig->AllocSampler(rndGen, film,
+			nullptr, engine->eyeSamplerSharedData, Properties());
+	eyeSampler->SetThreadIndex(threadIndex);
+	eyeSampler->RequestSamples(PIXEL_NORMALIZED_ONLY, pathTracer.eyeSampleSize);
+
+	if (pathTracer.hybridBackForwardEnable) {
+		// Light path sampler is always Metropolis
+		Properties props;
+		props <<
+			Property("sampler.type")("METROPOLIS") <<
+			// Disable image plane meaning for samples 0 and 1
+			Property("sampler.imagesamples.enable")(false);
+
+		lightSampler = Sampler::FromProperties(props, rndGen, film, nullptr,
+				engine->lightSamplerSharedData);
+		lightSampler->SetThreadIndex(threadIndex);
+		lightSampler->RequestSamples(SCREEN_NORMALIZED_ONLY, pathTracer.lightSampleSize);
+	}
 	
 	VarianceClamping varianceClamping(pathTracer.sqrtVarianceClampMaxValue);
 
-	// Initialize SampleResult
-	vector<SampleResult> sampleResults(1);
-	SampleResult &sampleResult = sampleResults[0];
-	pathTracer.InitSampleResults(engine->film, sampleResults);
+	// Setup PathTracer thread state
+	PathTracerThreadState pathTracerThreadState(intersectionDevice,
+			eyeSampler, lightSampler,
+			engine->renderConfig->scene, film,
+			&varianceClamping);
 
 	//--------------------------------------------------------------------------
 	// Trace paths
 	//--------------------------------------------------------------------------
-
-	// I can not use engine->renderConfig->GetProperty() here because the
-	// RenderConfig properties cache is not thread safe
-	const u_int filmWidth = film->GetWidth();
-	const u_int filmHeight = film->GetHeight();
-	const u_int haltDebug = engine->renderConfig->cfg.Get(Property("batch.haltdebug")(0u)).Get<u_int>() *
-		filmWidth * filmHeight;
 
 	for (u_int steps = 0; !boost::this_thread::interruption_requested(); ++steps) {
 		// Check if we are in pause mode
@@ -132,13 +143,7 @@ void PathOCLNativeRenderThread::RenderThreadImpl() {
 				break;
 		}
 
-		pathTracer.RenderSample(intersectionDevice, engine->renderConfig->scene, film, sampler, sampleResults);
-
-		// Variance clamping
-		if (varianceClamping.hasClamping())
-			varianceClamping.Clamp(*film, sampleResult);
-
-		sampler->NextSample(sampleResults);
+		pathTracer.RenderSample(pathTracerThreadState);
 
 #ifdef WIN32
 		// Work around Windows bad scheduling
@@ -146,16 +151,32 @@ void PathOCLNativeRenderThread::RenderThreadImpl() {
 #endif
 
 		// Check halt conditions
-		if ((haltDebug > 0u) && (steps >= haltDebug))
-			break;
 		if (engine->film->GetConvergence() == 1.f)
 			break;
+
+		if (engine->photonGICache) {
+			try {
+				engine->photonGICache->Update(engine->renderOCLThreads.size() + threadIndex, engine->GetTotalEyeSPP());
+			} catch (boost::thread_interrupted &ti) {
+				// I have been interrupted, I must stop
+				break;
+			}
+		}
 	}
 
-	delete sampler;
+	delete eyeSampler;
+	delete lightSampler;
 	delete rndGen;
 
 	threadDone = true;
+
+	// This is done to interrupt thread pending on barrier wait
+	// inside engine->photonGICache->Update(). This can happen when an
+	// halt condition is satisfied.
+	for (u_int i = 0; i < engine->renderOCLThreads.size(); ++i)
+		engine->renderOCLThreads[i]->Interrupt();
+	for (u_int i = 0; i < engine->renderNativeThreads.size(); ++i)
+		engine->renderNativeThreads[i]->Interrupt();
 
 	//SLG_LOG("[PathOCLRenderEngine::" << threadIndex << "] Rendering thread halted");
 }

@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "luxrays/core/exttrianglemesh.h"
 #include "slg/shapes/meshshape.h"
 #include "slg/scene/scene.h"
 
@@ -23,11 +24,11 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
-MeshShape::MeshShape(ExtTriangleMesh *m) : Shape() {
+MeshShape::MeshShape(ExtTriangleMesh *m) {
 	mesh = m;
 }
 
-MeshShape::MeshShape(const string &fileName) : Shape() {
+MeshShape::MeshShape(const string &fileName) {
 	mesh = ExtTriangleMesh::Load(fileName);
 }
 

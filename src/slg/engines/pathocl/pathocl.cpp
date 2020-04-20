@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -31,7 +31,7 @@
 #include <boost/lexical_cast.hpp>
 
 #include "luxrays/core/geometry/transform.h"
-#include "luxrays/core/oclintersectiondevice.h"
+#include "luxrays/devices/ocldevice.h"
 
 #include "slg/slg.h"
 #include "slg/engines/pathocl/pathocl.h"
@@ -58,12 +58,14 @@ using namespace slg;
 
 PathOCLRenderEngine::PathOCLRenderEngine(const RenderConfig *rcfg) :
 		PathOCLBaseRenderEngine(rcfg, true) {
-	samplerSharedData = NULL;
+	eyeSamplerSharedData = nullptr;
+	lightSamplerSharedData = nullptr;
 	hasStartFilm = false;
 }
 
 PathOCLRenderEngine::~PathOCLRenderEngine() {
-	delete samplerSharedData;
+	delete eyeSamplerSharedData;
+	delete lightSamplerSharedData;
 }
 
 PathOCLBaseOCLRenderThread *PathOCLRenderEngine::CreateOCLThread(const u_int index,
@@ -72,7 +74,7 @@ PathOCLBaseOCLRenderThread *PathOCLRenderEngine::CreateOCLThread(const u_int ind
 }
 
 PathOCLBaseNativeRenderThread *PathOCLRenderEngine::CreateNativeThread(const u_int index,
-			luxrays::NativeThreadIntersectionDevice *device) {
+			luxrays::NativeIntersectionDevice *device) {
 	return new PathOCLNativeRenderThread(index, device, this);
 }
 
@@ -125,7 +127,8 @@ void PathOCLRenderEngine::StartLockLess() {
 		
 		// I have to set the scene pointer in photonGICache because it is not
 		// saved by serialization
-		photonGICache->SetScene(renderConfig->scene);
+		if (photonGICache)
+			photonGICache->SetScene(renderConfig->scene);
 
 		delete startRenderState;
 		startRenderState = NULL;
@@ -138,8 +141,12 @@ void PathOCLRenderEngine::StartLockLess() {
 	// Initialize sampler shared data
 	//--------------------------------------------------------------------------
 
-	if (nativeRenderThreadCount > 0)
-		samplerSharedData = renderConfig->AllocSamplerSharedData(&seedBaseGenerator, film);
+	if (nativeRenderThreadCount > 0) {
+		eyeSamplerSharedData = renderConfig->AllocSamplerSharedData(&seedBaseGenerator, film);
+		
+		if (pathTracer.hybridBackForwardEnable)
+			lightSamplerSharedData = MetropolisSamplerSharedData::FromProperties(Properties(), &seedBaseGenerator, film);
+	}
 
 	//--------------------------------------------------------------------------
 
@@ -147,10 +154,6 @@ void PathOCLRenderEngine::StartLockLess() {
 	pathTracer.InitPixelFilterDistribution(pixelFilter);
 
 	PathOCLBaseRenderEngine::StartLockLess();
-
-	// Set pathTracer PhotonGI. photonGICache is eventually initialized
-	// inside PathOCLBaseRenderEngine::StartLockLess()
-	pathTracer.SetPhotonGICache(photonGICache);
 }
 
 void PathOCLRenderEngine::StopLockLess() {
@@ -158,8 +161,10 @@ void PathOCLRenderEngine::StopLockLess() {
 
 	pathTracer.DeletePixelFilterDistribution();
 
-	delete samplerSharedData;
-	samplerSharedData = NULL;
+	delete eyeSamplerSharedData;
+	eyeSamplerSharedData = nullptr;
+	delete lightSamplerSharedData;
+	lightSamplerSharedData = nullptr;
 
 	delete photonGICache;
 	photonGICache = nullptr;
@@ -212,11 +217,7 @@ void PathOCLRenderEngine::UpdateTaskCount() {
 		u_int taskCap = defaultTaskCount;
 		BOOST_FOREACH(DeviceDescription *devDesc, selectedDeviceDescs) {
 			if (devDesc->GetType() & DEVICE_TYPE_OPENCL_ALL) {
-				if (devDesc->GetMaxMemoryAllocSize() >= 512u * 1024u * 1024u)
-					taskCap = Min(taskCap, 512u * 1024u);
-				else if (devDesc->GetMaxMemoryAllocSize() >= 256u * 1024u * 1024u)
-					taskCap = Min(taskCap, 256u * 1024u);
-				else if (devDesc->GetMaxMemoryAllocSize() >= 128u * 1024u * 1024u)
+				if (devDesc->GetMaxMemoryAllocSize() >= 128u * 1024u * 1024u)
 					taskCap = Min(taskCap, 128u * 1024u);
 				else
 					taskCap = Min(taskCap, 64u * 1024u);
@@ -237,6 +238,28 @@ void PathOCLRenderEngine::UpdateTaskCount() {
 	taskCount = RoundUp<u_int>(taskCount, 8192);
 	if(GetType() != RTPATHOCL)
 		SLG_LOG("[PathOCLRenderEngine] OpenCL task count: " << taskCount);
+}
+
+u_int PathOCLRenderEngine::GetTotalEyeSPP() const {
+	u_int spp = 0;
+	for (size_t i = 0; i < renderOCLThreads.size(); ++i) {
+		if (renderOCLThreads[i]) {
+			const PathOCLOpenCLRenderThread *thread = (const PathOCLOpenCLRenderThread *)renderOCLThreads[i];
+			const Film *film = thread->threadFilms[0]->film;
+			spp += film->GetTotalEyeSampleCount() / film->GetPixelCount();
+		}
+	}
+
+	if (renderNativeThreads.size() > 0) {
+		// All threads use the film of the first one
+		if (renderNativeThreads[0]) {
+			const PathOCLNativeRenderThread *thread = (const PathOCLNativeRenderThread *)renderNativeThreads[0];
+			const Film *film = thread->threadFilm;
+			spp += film->GetTotalEyeSampleCount() / film->GetPixelCount();
+		}
+	}
+
+	return spp;
 }
 
 //------------------------------------------------------------------------------

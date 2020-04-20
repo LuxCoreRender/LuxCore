@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -38,7 +38,7 @@
 
 #include "luxrays/core/intersectiondevice.h"
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-#include "luxrays/core/ocldevice.h"
+#include "luxrays/devices/ocldevice.h"
 #endif
 
 using namespace std;
@@ -331,4 +331,5 @@ OBJECTSTATICREGISTRY_REGISTER(RenderEngineRegistry, TilePathCPURenderEngine);
 OBJECTSTATICREGISTRY_REGISTER(RenderEngineRegistry, TilePathOCLRenderEngine);
 #endif
 OBJECTSTATICREGISTRY_REGISTER(RenderEngineRegistry, RTPathCPURenderEngine);
+OBJECTSTATICREGISTRY_REGISTER(RenderEngineRegistry, BakeCPURenderEngine);
 // Just add here any new RenderEngine (don't forget in the .h too)

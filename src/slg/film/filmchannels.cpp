@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -73,6 +73,7 @@ void Film::FreeChannels() {
 	delete channel_ALBEDO;
 	delete channel_AVG_SHADING_NORMAL;
 	delete channel_NOISE;
+	delete channel_USER_IMPORTANCE;
 }
 
 void Film::AddChannel(const FilmChannelType type, const Properties *prop) {
@@ -181,12 +182,14 @@ u_int Film::GetChannelCount(const FilmChannelType type) const {
 			return channel_AVG_SHADING_NORMAL ? 1 : 0;
 		case NOISE:
 			return channel_NOISE ? 1 : 0;
+		case USER_IMPORTANCE:
+			return channel_USER_IMPORTANCE ? 1 : 0;
 		default:
 			throw runtime_error("Unknown FilmChannelType in Film::GetChannelCount(): " + ToString(type));
 	}
 }
 
-template<> const float *Film::GetChannel<float>(const FilmChannelType type,
+template<> float *Film::GetChannel<float>(const FilmChannelType type,
 		const u_int index, const bool executeImagePipeline) {
 	if (!HasChannel(type))
 		throw runtime_error("Film channel not defined in Film::GetChannel<float>(): " + ToString(type));
@@ -254,12 +257,14 @@ template<> const float *Film::GetChannel<float>(const FilmChannelType type,
 			return channel_AVG_SHADING_NORMAL->GetPixels();
 		case NOISE:
 			return channel_NOISE->GetPixels();
+		case USER_IMPORTANCE:
+			return channel_USER_IMPORTANCE->GetPixels();
 		default:
 			throw runtime_error("Unknown FilmChannelType in Film::GetChannel<float>(): " + ToString(type));
 	}
 }
 
-template<> const u_int *Film::GetChannel<u_int>(const FilmChannelType type,
+template<> u_int *Film::GetChannel<u_int>(const FilmChannelType type,
 		const u_int index, const bool executeImagePipeline) {
 	if (!HasChannel(type))
 		throw runtime_error("Film channel not defined in Film::GetChannel<u_int>(): " + ToString(type));
@@ -281,6 +286,7 @@ template<> const u_int *Film::GetChannel<u_int>(const FilmChannelType type,
 
 void Film::GetPixelFromMergedSampleBuffers(const FilmChannelType channels,
 		const std::vector<RadianceChannelScale> *radianceChannelScales,
+		const double RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
 		const u_int index, float *c) const {
 	c[0] = 0.f;
 	c[1] = 0.f;
@@ -304,7 +310,7 @@ void Film::GetPixelFromMergedSampleBuffers(const FilmChannelType channels,
 
 	if (channels & RADIANCE_PER_SCREEN_NORMALIZED) {
 		if (channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size() > 0) {
-			const float factor = (statsTotalSampleCount > 0) ? (pixelCount / statsTotalSampleCount) : 1.f;
+			const float factor = (RADIANCE_PER_SCREEN_NORMALIZED_SampleCount > 0) ? (pixelCount / RADIANCE_PER_SCREEN_NORMALIZED_SampleCount) : 1.f;
 
 			for (u_int i = 0; i < channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size(); ++i) {
 				if (!radianceChannelScales || (*radianceChannelScales)[i].enabled) {
@@ -335,9 +341,10 @@ float Film::GetFilmY(const u_int imagePipelineIndex) const {
 
 	float Y = 0.f;
 	Spectrum pixel;
+	const double samplesCount = samplesCounts.GetSampleCount_RADIANCE_PER_SCREEN_NORMALIZED();
 	for (u_int i = 0; i < pixelCount; ++i) {
 		GetPixelFromMergedSampleBuffers((FilmChannelType)(RADIANCE_PER_PIXEL_NORMALIZED | RADIANCE_PER_SCREEN_NORMALIZED),
-				radianceChannelScales, i, pixel.c);
+				radianceChannelScales, samplesCount, i, pixel.c);
 
 		const float y = pixel.Y();
 		if ((y <= 0.f) || isinf(y))
@@ -362,9 +369,10 @@ float Film::GetFilmMaxValue(const u_int imagePipelineIndex) const {
 
 	float maxValue = 0.f;
 	Spectrum pixel;
+	const double samplesCount = samplesCounts.GetSampleCount_RADIANCE_PER_SCREEN_NORMALIZED();
 	for (u_int i = 0; i < pixelCount; ++i) {
 		GetPixelFromMergedSampleBuffers((FilmChannelType)(RADIANCE_PER_PIXEL_NORMALIZED | RADIANCE_PER_SCREEN_NORMALIZED),
-				radianceChannelScales, i, pixel.c);
+				radianceChannelScales, samplesCount, i, pixel.c);
 
 		const float v = pixel.Max();
 		if (isinf(v))
@@ -442,6 +450,8 @@ Film::FilmChannelType Film::String2FilmChannelType(const std::string &type) {
 		return AVG_SHADING_NORMAL;
 	else if (type == "NOISE")
 		return NOISE;
+	else if (type == "USER_IMPORTANCE")
+		return USER_IMPORTANCE;
 	else
 		throw runtime_error("Unknown film output type in Film::String2FilmChannelType(): " + type);
 }
@@ -508,6 +518,8 @@ const std::string Film::FilmChannelType2String(const Film::FilmChannelType type)
 			return "AVG_SHADING_NORMAL";
 		case Film::NOISE:
 			return "NOISE";
+		case Film::USER_IMPORTANCE:
+			return "USER_IMPORTANCE";
 		default:
 			throw runtime_error("Unknown film output type in Film::FilmChannelType2String(): " + ToString(type));
 	}

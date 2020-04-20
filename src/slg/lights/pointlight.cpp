@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -19,6 +19,7 @@
 #include <math.h>
 
 #include "luxrays/core/epsilon.h"
+#include "slg/bsdf/bsdf.h"
 #include "slg/lights/pointlight.h"
 
 using namespace std;
@@ -29,14 +30,18 @@ using namespace slg;
 // PointLight
 //------------------------------------------------------------------------------
 
-PointLight::PointLight() : localPos(0.f), color(1.f), power(0.f), efficency(0.f) {
+PointLight::PointLight() : localPos(0.f), color(1.f),
+		power(0.f), efficency(0.f),
+		emittedPowerNormalize(true) {
 }
 
 PointLight::~PointLight() {
 }
 
 void PointLight::Preprocess() {
-	emittedFactor = gain * color * (power * efficency / color.Y());
+	const float normalizeFactor = emittedPowerNormalize ? (1.f / Max(color.Y(), 0.f)) : 1.f;
+
+	emittedFactor = gain * color * (power * efficency * normalizeFactor);
 
 	if (emittedFactor.Black() || emittedFactor.IsInf() || emittedFactor.IsNaN())
 		emittedFactor = gain * color;
@@ -70,39 +75,44 @@ float PointLight::GetPower(const Scene &scene) const {
 }
 
 Spectrum PointLight::Emit(const Scene &scene,
-		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
-		Point *orig, Vector *dir,
-		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
-	*orig = absolutePos;
-	*dir = UniformSampleSphere(u0, u1);
-	*emissionPdfW = 1.f / (4.f * M_PI);
+		const float time, const float u0, const float u1,
+		const float u2, const float u3, const float passThroughEvent,
+		Ray &ray, float &emissionPdfW,
+		float *directPdfA, float *cosThetaAtLight) const {
+	const Point rayOrig = absolutePos;
+	const Vector rayDir = UniformSampleSphere(u0, u1);
+	emissionPdfW = 1.f / (4.f * M_PI);
 
 	if (directPdfA)
 		*directPdfA = 1.f;
 	if (cosThetaAtLight)
 		*cosThetaAtLight = 1.f;
 
+	ray.Update(rayOrig, rayDir, time);
+
 	return emittedFactor * (1.f / (4.f * M_PI));
 }
 
-Spectrum PointLight::Illuminate(const Scene &scene, const Point &p,
-		const float u0, const float u1, const float passThroughEvent,
-        Vector *dir, float *distance, float *directPdfW,
+Spectrum PointLight::Illuminate(const Scene &scene, const BSDF &bsdf,
+		const float time, const float u0, const float u1, const float passThroughEvent,
+        Ray &shadowRay, float &directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
-	const Vector toLight(absolutePos - p);
-	const float centerDistanceSquared = toLight.LengthSquared();
-	const float centerDistance = sqrtf(centerDistanceSquared);
+	const Point shadowRayOrig = bsdf.GetRayOrigin(absolutePos - bsdf.hitPoint.p);
+	const Vector toLight(absolutePos - shadowRayOrig);
+	const float shadowRayDistanceSquared = toLight.LengthSquared();
+	const float shadowRayDistance = sqrtf(shadowRayDistanceSquared);
 
-	*distance = centerDistance;
-	*dir = toLight / centerDistance;
+	const Vector shadowRayDir = toLight / shadowRayDistance;
 
 	if (cosThetaAtLight)
 		*cosThetaAtLight = 1.f;
 
-	*directPdfW = centerDistanceSquared;
+	directPdfW = shadowRayDistanceSquared;
 
 	if (emissionPdfW)
 		*emissionPdfW = UniformSpherePdf();
+
+	shadowRay = Ray(shadowRayOrig, shadowRayDir, 0.f, shadowRayDistance, time);
 
 	return emittedFactor * (1.f / (4.f * M_PI));
 }
@@ -114,6 +124,7 @@ Properties PointLight::ToProperties(const ImageMapCache &imgMapCache, const bool
 	props.Set(Property(prefix + ".type")("point"));
 	props.Set(Property(prefix + ".color")(color));
 	props.Set(Property(prefix + ".power")(power));
+	props.Set(Property(prefix + ".normalizebycolor")(emittedPowerNormalize));
 	props.Set(Property(prefix + ".efficency")(efficency));
 	props.Set(Property(prefix + ".position")(localPos));
 

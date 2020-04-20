@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -33,6 +33,10 @@ using namespace slg;
 RandomSamplerSharedData::RandomSamplerSharedData(Film *engineFlm) {
 	engineFilm = engineFlm;
 
+	Reset();
+}
+
+void RandomSamplerSharedData::Reset() {
 	if (engineFilm) {
 		const u_int *subRegion = engineFilm->GetSubRegion();
 		filmRegionPixelCount = (subRegion[1] - subRegion[0] + 1) * (subRegion[3] - subRegion[2] + 1);
@@ -61,11 +65,11 @@ SamplerSharedData *RandomSamplerSharedData::FromProperties(const Properties &cfg
 //------------------------------------------------------------------------------
 
 RandomSampler::RandomSampler(luxrays::RandomGenerator *rnd, Film *flm,
-			const FilmSampleSplatter *flmSplatter,
-			const float adaptiveStr,
+			const FilmSampleSplatter *flmSplatter, const bool imgSamplesEnable,
+			const float adaptiveStr, const float adaptiveUserImpWeight,
 			RandomSamplerSharedData *samplerSharedData) :
-		Sampler(rnd, flm, flmSplatter), sharedData(samplerSharedData),
-		adaptiveStrength(adaptiveStr) {
+		Sampler(rnd, flm, flmSplatter, imgSamplesEnable), sharedData(samplerSharedData),
+		adaptiveStrength(adaptiveStr), adaptiveUserImportanceWeight(adaptiveUserImpWeight) {
 }
 
 void RandomSampler::InitNewSample() {
@@ -82,7 +86,7 @@ void RandomSampler::InitNewSample() {
 		// Initialize sample0 and sample 1
 
 		u_int pixelX, pixelY;
-		if (film) {
+		if (imageSamplesEnable && film) {
 			const u_int *subRegion = film->GetSubRegion();
 
 			const u_int pixelIndex = (pixelIndexBase + pixelIndexOffset) % sharedData->filmRegionPixelCount;
@@ -97,7 +101,23 @@ void RandomSampler::InitNewSample() {
 				// The floor for the pixel importance is given by the adaptiveness strength
 				const float noise = Max(*(film->channel_NOISE->GetPixel(pixelX, pixelY)), 1.f - adaptiveStrength);
 
-				if (rndGen->floatValue() > noise) {
+				// Factor user driven importance sampling too
+				float threshold;
+				if (film->HasChannel(Film::USER_IMPORTANCE)) {
+					const float userImportance = *(film->channel_USER_IMPORTANCE->GetPixel(pixelX, pixelY));
+
+					// Noise is initialized to INFINITY at start
+					if (isinf(noise))
+						threshold = userImportance;
+					else
+						threshold = (userImportance > 0.f) ? Lerp(adaptiveUserImportanceWeight, noise, userImportance) : 0.f;
+				} else
+					threshold = noise;
+
+				// The floor for the pixel importance is given by the adaptiveness strength
+				threshold = Max(threshold, 1.f - adaptiveStrength);
+				
+				if (rndGen->floatValue() > threshold) {
 					// Skip this pixel and try the next one
 					continue;
 				}
@@ -113,12 +133,16 @@ void RandomSampler::InitNewSample() {
 	}
 }
 
-void RandomSampler::RequestSamples(const u_int size) {
+void RandomSampler::RequestSamples(const SampleType smplType, const u_int size) {
+	Sampler::RequestSamples(smplType, size);
+
 	pixelIndexOffset = RANDOM_THREAD_WORK_SIZE;
 	InitNewSample();
 }
 
 float RandomSampler::GetSample(const u_int index) {
+	assert (index < requestedSamples);
+
 	switch (index) {
 		case 0:
 			return sample0;
@@ -131,7 +155,25 @@ float RandomSampler::GetSample(const u_int index) {
 
 void RandomSampler::NextSample(const vector<SampleResult> &sampleResults) {
 	if (film) {
-		film->AddSampleCount(1.0);
+		double pixelNormalizedCount, screenNormalizedCount;
+		switch (sampleType) {
+			case PIXEL_NORMALIZED_ONLY:
+				pixelNormalizedCount = 1.0;
+				screenNormalizedCount = 0.0;
+				break;
+			case SCREEN_NORMALIZED_ONLY:
+				pixelNormalizedCount = 0.0;
+				screenNormalizedCount = 1.0;
+				break;
+			case PIXEL_NORMALIZED_AND_SCREEN_NORMALIZED:
+				pixelNormalizedCount = 1.0;
+				screenNormalizedCount = 1.0;
+				break;
+			default:
+				throw runtime_error("Unknown sample type in RandomSampler::NextSample(): " + ToString(sampleType));
+		}
+		film->AddSampleCount(threadIndex, pixelNormalizedCount, screenNormalizedCount);
+
 		AtomicAddSamplesToFilm(sampleResults);
 	}
 
@@ -140,7 +182,8 @@ void RandomSampler::NextSample(const vector<SampleResult> &sampleResults) {
 
 Properties RandomSampler::ToProperties() const {
 	return Sampler::ToProperties() <<
-			Property("sampler.random.adaptive.strength")(adaptiveStrength);
+			Property("sampler.random.adaptive.strength")(adaptiveStrength) <<
+			Property("sampler.random.adaptive.userimportanceweight")(adaptiveUserImportanceWeight);
 }
 
 //------------------------------------------------------------------------------
@@ -150,14 +193,20 @@ Properties RandomSampler::ToProperties() const {
 Properties RandomSampler::ToProperties(const Properties &cfg) {
 	return Properties() <<
 			cfg.Get(GetDefaultProps().Get("sampler.type")) <<
-			cfg.Get(GetDefaultProps().Get("sampler.random.adaptive.strength"));
+			cfg.Get(GetDefaultProps().Get("sampler.imagesamples.enable")) <<
+			cfg.Get(GetDefaultProps().Get("sampler.random.adaptive.strength")) <<
+			cfg.Get(GetDefaultProps().Get("sampler.random.adaptive.userimportanceweight"));
 }
 
 Sampler *RandomSampler::FromProperties(const Properties &cfg, RandomGenerator *rndGen,
 		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData) {
-	const float str = Clamp(cfg.Get(GetDefaultProps().Get("sampler.random.adaptive.strength")).Get<float>(), 0.f, .95f);
+	const bool imageSamplesEnable = cfg.Get(GetDefaultProps().Get("sampler.imagesamples.enable")).Get<bool>();
 
-	return new RandomSampler(rndGen, film, flmSplatter, str, (RandomSamplerSharedData *)sharedData);
+	const float adaptiveStrength = Clamp(cfg.Get(GetDefaultProps().Get("sampler.random.adaptive.strength")).Get<float>(), 0.f, .95f);
+	const float adaptiveUserImportanceWeight = cfg.Get(GetDefaultProps().Get("sampler.random.adaptive.userimportanceweight")).Get<float>();
+
+	return new RandomSampler(rndGen, film, flmSplatter, imageSamplesEnable,
+			adaptiveStrength, adaptiveUserImportanceWeight, (RandomSamplerSharedData *)sharedData);
 }
 
 slg::ocl::Sampler *RandomSampler::FromPropertiesOCL(const Properties &cfg) {
@@ -165,14 +214,17 @@ slg::ocl::Sampler *RandomSampler::FromPropertiesOCL(const Properties &cfg) {
 
 	oclSampler->type = slg::ocl::RANDOM;
 	oclSampler->random.adaptiveStrength = Clamp(cfg.Get(GetDefaultProps().Get("sampler.random.adaptive.strength")).Get<float>(), 0.f, .95f);
+	oclSampler->random.adaptiveUserImportanceWeight = cfg.Get(GetDefaultProps().Get("sampler.random.adaptive.userimportanceweight")).Get<float>();
 
 	return oclSampler;
 }
 
 Film::FilmChannelType RandomSampler::GetRequiredChannels(const luxrays::Properties &cfg) {
+	const bool imageSamplesEnable = cfg.Get(GetDefaultProps().Get("sampler.imagesamples.enable")).Get<bool>();
+
 	const float str = cfg.Get(GetDefaultProps().Get("sampler.random.adaptive.strength")).Get<float>();
 
-	if (str > 0.f)
+	if (imageSamplesEnable && (str > 0.f))
 		return Film::NOISE;
 	else
 		return Film::NONE;
@@ -182,7 +234,8 @@ const Properties &RandomSampler::GetDefaultProps() {
 	static Properties props = Properties() <<
 			Sampler::GetDefaultProps() <<
 			Property("sampler.type")(GetObjectTag()) <<
-			Property("sampler.random.adaptive.strength")(.95f);
+			Property("sampler.random.adaptive.strength")(.95f) <<
+			Property("sampler.random.adaptive.userimportanceweight")(.75f);
 
 	return props;
 }

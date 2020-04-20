@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -44,13 +44,15 @@ typedef enum {
 
 class TextureMapping2D {
 public:
-	TextureMapping2D() { }
+	TextureMapping2D(const u_int index) : dataIndex(index) { }
 	virtual ~TextureMapping2D() { }
+
+	u_int GetDataIndex() const { return dataIndex; }
 
 	virtual TextureMapping2DType GetType() const = 0;
 
 	virtual luxrays::UV Map(const HitPoint &hitPoint) const {
-		return Map(hitPoint.uv);
+		return Map(hitPoint.GetUV(dataIndex));
 	}
 	// Directly used only in InfiniteLight and ImageMapTexture
 	virtual luxrays::UV Map(const luxrays::UV &uv) const = 0;
@@ -58,7 +60,10 @@ public:
 	virtual luxrays::UV MapDuv(const HitPoint &hitPoint,
 		luxrays::UV *ds, luxrays::UV *dt) const = 0;
 
-	virtual luxrays::Properties ToProperties(const std::string &name) const = 0;
+	virtual luxrays::Properties ToProperties(const std::string &name) const;
+
+protected:
+	const u_int dataIndex;
 };
 
 typedef enum {
@@ -72,7 +77,7 @@ public:
 
 	virtual TextureMapping3DType GetType() const = 0;
 
-	virtual luxrays::Point Map(const HitPoint &hitPoint) const = 0;
+	virtual luxrays::Point Map(const HitPoint &hitPoint, luxrays::Normal *shadeN = nullptr) const = 0;
 
 	virtual luxrays::Properties ToProperties(const std::string &name) const = 0;
 
@@ -85,7 +90,7 @@ public:
 
 class UVMapping2D : public TextureMapping2D {
 public:
-	UVMapping2D(const float rot, const float uscale, const float vscale,
+	UVMapping2D(const u_int dataIndex, const float rot, const float uscale, const float vscale,
 			const float udelta, const float vdelta);
 	virtual ~UVMapping2D() { }
 
@@ -106,14 +111,20 @@ public:
 
 class UVMapping3D : public TextureMapping3D {
 public:
-	UVMapping3D(const luxrays::Transform &w2l) : TextureMapping3D(w2l) { }
+	UVMapping3D(const u_int index, const luxrays::Transform &w2l) :
+		TextureMapping3D(w2l), dataIndex(index) { }
 	virtual ~UVMapping3D() { }
+
+	u_int GetDataIndex() const { return dataIndex; }
 
 	virtual TextureMapping3DType GetType() const { return UVMAPPING3D; }
 
-	virtual luxrays::Point Map(const HitPoint &hitPoint) const;
+	virtual luxrays::Point Map(const HitPoint &hitPoint, luxrays::Normal *shadeN = nullptr) const;
 
 	virtual luxrays::Properties ToProperties(const std::string &name) const;
+
+private:
+	const u_int dataIndex;
 };
 
 //------------------------------------------------------------------------------
@@ -127,7 +138,7 @@ public:
 
 	virtual TextureMapping3DType GetType() const { return GLOBALMAPPING3D; }
 
-	virtual luxrays::Point Map(const HitPoint &hitPoint) const;
+	virtual luxrays::Point Map(const HitPoint &hitPoint, luxrays::Normal *shadeN = nullptr) const;
 
 	virtual luxrays::Properties ToProperties(const std::string &name) const;
 };
@@ -143,7 +154,7 @@ public:
 
 	virtual TextureMapping3DType GetType() const { return LOCALMAPPING3D; }
 
-	virtual luxrays::Point Map(const HitPoint &hitPoint) const;
+	virtual luxrays::Point Map(const HitPoint &hitPoint, luxrays::Normal *shadeN = nullptr) const;
 
 	virtual luxrays::Properties ToProperties(const std::string &name) const;
 };

@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -18,6 +18,7 @@
 
 #include <boost/format.hpp>
 
+#include "slg/bsdf/bsdf.h"
 #include "slg/lights/projectionlight.h"
 
 using namespace std;
@@ -29,7 +30,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 ProjectionLight::ProjectionLight() : color(1.f), power(0.f), efficency(0.f),
-		localPos(), localTarget(0.f, 0.f, 1.f),
+		emittedPowerNormalize(true), localPos(), localTarget(0.f, 0.f, 1.f),
 		fov(45.f), imageMap(NULL) {
 }
 
@@ -78,9 +79,10 @@ void ProjectionLight::Preprocess() {
 	else
 		area = 4.f * opposite * opposite * aspect;
 
-	emittedFactor = gain * color * (power * efficency /
-			(2.f * M_PI * (imageMap ? imageMap->GetSpectrumMeanY() : 1.f) *
-				(1.f - .5f * (1.f - cosTotalWidth))));
+	const float normalizeFactor = emittedPowerNormalize ? (1.f / Max(imageMap ? imageMap->GetSpectrumMeanY() : 1.f, 0.f)) : 1.f;
+
+	emittedFactor = gain * color * (power * efficency * normalizeFactor /
+			(2.f * M_PI *  (1.f - .5f * (1.f - cosTotalWidth))));
 	if (emittedFactor.Black() || emittedFactor.IsInf() || emittedFactor.IsNaN())
 		emittedFactor = gain * color;
 }
@@ -128,16 +130,17 @@ float ProjectionLight::GetPower(const Scene &scene) const {
 }
 
 Spectrum ProjectionLight::Emit(const Scene &scene,
-		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
-		Point *orig, Vector *dir,
-		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
-	*orig = absolutePos;
+		const float time, const float u0, const float u1,
+		const float u2, const float u3, const float passThroughEvent,
+		Ray &ray, float &emissionPdfW,
+		float *directPdfA, float *cosThetaAtLight) const {
+	const Point rayOrig = absolutePos;
 	const Point ps = Inverse(lightProjection) *
 		Point(u0 * (screenX1 - screenX0) + screenX0, u1 * (screenY1 - screenY0) + screenY0, 0.f);
-	*dir = Normalize(alignedLight2World * Vector(ps.x, ps.y, ps.z));
-	const float cos = Dot(*dir, lightNormal);
+	const Vector rayDir = Normalize(alignedLight2World * Vector(ps.x, ps.y, ps.z));
+	const float cos = Dot(rayDir, lightNormal);
 	const float cos2 = cos * cos;
-	*emissionPdfW = 1.f / (area * cos2 * cos);
+	emissionPdfW = 1.f / (area * cos2 * cos);
 
 	if (directPdfA)
 		*directPdfA = 1.f;
@@ -148,29 +151,32 @@ Spectrum ProjectionLight::Emit(const Scene &scene,
 	if (imageMap)
 		c *= imageMap->GetSpectrum(UV(u0, u1));
 
+	ray.Update(rayOrig, rayDir, time);
+
 	return c;
 }
 
-Spectrum ProjectionLight::Illuminate(const Scene &scene, const Point &p,
-		const float u0, const float u1, const float passThroughEvent,
-        Vector *dir, float *distance, float *directPdfW,
+Spectrum ProjectionLight::Illuminate(const Scene &scene, const BSDF &bsdf,
+		const float time, const float u0, const float u1, const float passThroughEvent,
+        Ray &shadowRay, float &directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
-	const Vector toLight(absolutePos - p);
-	const float distanceSquared = toLight.LengthSquared();
-	*distance = sqrtf(distanceSquared);
-	*dir = toLight / *distance;
+	const Point shadowRayOrig = bsdf.GetRayOrigin(absolutePos - bsdf.hitPoint.p);
+	const Vector toLight(absolutePos - shadowRayOrig);
+	const float shadowRayDistanceSquared = toLight.LengthSquared();
+	const float shadowRayDistance = sqrtf(shadowRayDistanceSquared);
+	const Vector shadowRayDir = toLight / shadowRayDistance;
 
 	// Check the side
-	if (Dot(-(*dir), lightNormal) < 0.f)
+	if (Dot(-shadowRayDir, lightNormal) < 0.f)
 		return Spectrum();
 
 	// Check if the point is inside the image plane
-	const Vector localFromLight = Normalize(Inverse(alignedLight2World) * (-(*dir)));
+	const Vector localFromLight = Normalize(Inverse(alignedLight2World) * (-shadowRayDir));
 	const Point p0 = lightProjection * Point(localFromLight.x, localFromLight.y, localFromLight.z);
 	if ((p0.x < screenX0) || (p0.x >= screenX1) || (p0.y < screenY0) || (p0.y >= screenY1))
 		return Spectrum();
 
-	*directPdfW = distanceSquared;
+	directPdfW = shadowRayDistanceSquared;
 
 	if (cosThetaAtLight)
 		*cosThetaAtLight = 1.f;
@@ -184,6 +190,8 @@ Spectrum ProjectionLight::Illuminate(const Scene &scene, const Point &p,
 		const float v = (p0.y - screenY0) / (screenY1 - screenY0);
 		c *= imageMap->GetSpectrum(UV(u, v));
 	}
+
+	shadowRay = Ray(shadowRayOrig, shadowRayDir, 0.f, shadowRayDistance, time);
 
 	return c;
 }
@@ -205,6 +213,7 @@ Properties ProjectionLight::ToProperties(const ImageMapCache &imgMapCache, const
 	props.Set(Property(prefix + ".type")("projection"));
 	props.Set(Property(prefix + ".color")(color));
 	props.Set(Property(prefix + ".power")(power));
+	props.Set(Property(prefix + ".normalizebycolor")(emittedPowerNormalize));
 	props.Set(Property(prefix + ".efficency")(efficency));
 	props.Set(Property(prefix + ".position")(localPos));
 	props.Set(Property(prefix + ".target")(localTarget));

@@ -1,7 +1,7 @@
 #line 2 "texture_types.cl"
 
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -18,6 +18,36 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+//------------------------------------------------------------------------------
+// Texture evaluation op
+//------------------------------------------------------------------------------
+
+typedef enum {
+	EVAL_FLOAT,
+	EVAL_SPECTRUM,
+	EVAL_BUMP,
+	// For the very special case of Triplanar texture
+	EVAL_TRIPLANAR_STEP_1,
+	EVAL_TRIPLANAR_STEP_2,
+	EVAL_TRIPLANAR_STEP_3,
+	// For evaluting generic bump mapping
+	EVAL_BUMP_GENERIC_OFFSET_U,
+	EVAL_BUMP_GENERIC_OFFSET_V,
+	// For the very special case of Triplanar texture
+	EVAL_BUMP_TRIPLANAR_STEP_1,
+	EVAL_BUMP_TRIPLANAR_STEP_2,
+	EVAL_BUMP_TRIPLANAR_STEP_3
+} TextureEvalOpType;
+
+typedef struct {
+	unsigned int texIndex;
+	TextureEvalOpType evalType;
+} TextureEvalOp;
+
+//------------------------------------------------------------------------------
+// Textures
+//------------------------------------------------------------------------------
+
 #define DUDV_VALUE 0.001f
 
 typedef enum {
@@ -26,12 +56,14 @@ typedef enum {
 	HITPOINTGREY, NORMALMAP_TEX, BLACKBODY_TEX, IRREGULARDATA_TEX, DENSITYGRID_TEX,
 	ABS_TEX, CLAMP_TEX, BILERP_TEX, COLORDEPTH_TEX, HSV_TEX, DIVIDE_TEX, REMAP_TEX,
 	OBJECTID_TEX, OBJECTID_COLOR_TEX, OBJECTID_NORMALIZED_TEX, DOT_PRODUCT_TEX,
-	GREATER_THAN_TEX, LESS_THAN_TEX, POWER_TEX, SHADING_NORMAL_TEX, POSITION_TEX,
-	SPLIT_FLOAT3, MAKE_FLOAT3, ROUNDING_TEX,
+	POWER_TEX, LESS_THAN_TEX, GREATER_THAN_TEX, ROUNDING_TEX, MODULO_TEX, SHADING_NORMAL_TEX,
+    POSITION_TEX, SPLIT_FLOAT3, MAKE_FLOAT3, BRIGHT_CONTRAST_TEX, HITPOINTVERTEXAOV,
+	HITPOINTTRIANGLEAOV, TRIPLANAR_TEX, RANDOM_TEX, // 41 textures
 	// Procedural textures
-	BLENDER_BLEND, BLENDER_CLOUDS, BLENDER_DISTORTED_NOISE, BLENDER_MAGIC,
-	BLENDER_MARBLE, BLENDER_MUSGRAVE, BLENDER_NOISE, BLENDER_STUCCI, BLENDER_WOOD, BLENDER_VORONOI,
-	CHECKERBOARD2D, CHECKERBOARD3D, CLOUD_TEX, FBM_TEX, MARBLE, DOTS, BRICK, WINDY, WRINKLED, UV_TEX, BAND_TEX,
+	BLENDER_BLEND, BLENDER_CLOUDS, BLENDER_DISTORTED_NOISE, BLENDER_MAGIC, BLENDER_MARBLE,
+	BLENDER_MUSGRAVE, BLENDER_NOISE, BLENDER_STUCCI, BLENDER_WOOD,  BLENDER_VORONOI,
+	CHECKERBOARD2D, CHECKERBOARD3D, CLOUD_TEX, FBM_TEX,
+	MARBLE, DOTS, BRICK, WINDY, WRINKLED, UV_TEX, BAND_TEX, // 59 textures
 	// Fresnel textures
 	FRESNELCOLOR_TEX, FRESNELCONST_TEX
 } TextureType;
@@ -137,6 +169,11 @@ typedef struct {
 } RoundingTexParam;
 
 typedef struct {
+    unsigned int textureIndex;
+    unsigned int moduloIndex;
+} ModuloTexParam;
+
+typedef struct {
 	TextureMapping3D mapping;
 	int octaves;
 	float omega;
@@ -164,8 +201,8 @@ typedef enum {
 typedef struct {
 	TextureMapping3D mapping;
 	ProgressionType type;
-	bool direction;
-	float bright, contrast;
+	int direction;
+	float contrast, bright;
 } BlenderBlendTexParam;
 
 typedef struct {
@@ -174,7 +211,7 @@ typedef struct {
 	float noisesize;
 	int noisedepth;
 	float bright, contrast;
-	bool hard;
+	int hard;
 } BlenderCloudsTexParam;
 
 typedef struct {
@@ -205,7 +242,7 @@ typedef struct {
 	float noisesize, turbulence;
 	int noisedepth;
 	float bright, contrast;
-	bool hard;
+	int hard;
 } BlenderMarbleTexParam;
 
 typedef enum {
@@ -242,7 +279,7 @@ typedef struct {
 	float noisesize;
 	float turbulence;
 	float bright, contrast;
-	bool hard;
+	int hard;
 } BlenderStucciTexParam;
 
 typedef enum {
@@ -298,9 +335,27 @@ typedef struct {
 	Spectrum values[BAND_TEX_MAX_SIZE];
 } BandTexParam;
 
+
 typedef struct {
-	unsigned int channel;
+	unsigned int dataIndex;
+} HitPointColorTexParam;
+
+typedef struct {
+	unsigned int dataIndex;
+} HitPointAlphaTexParam;
+
+typedef struct {
+	unsigned int dataIndex;
+	unsigned int channelIndex;
 } HitPointGreyTexParam;
+
+typedef struct {
+	unsigned int dataIndex;
+} HitPointVertexAOVTexParam;
+
+typedef struct {
+	unsigned int dataIndex;
+} HitPointTriangleAOVTexParam;
 
 typedef struct {
 	unsigned int texIndex;
@@ -381,7 +436,7 @@ typedef struct {
 
 typedef struct {
 	unsigned int texIndex;
-	unsigned int channel;
+	unsigned int channelIndex;
 } SplitFloat3TexParam;
 
 typedef struct {
@@ -389,7 +444,26 @@ typedef struct {
 } MakeFloat3TexParam;
 
 typedef struct {
+	unsigned int texIndex, brightnessTexIndex, contrastTexIndex;
+} BrightContrastTexParam;
+
+typedef struct {
+	TextureMapping3D mapping;
+	unsigned int tex1Index, tex2Index, tex3Index;
+	int enableUVlessBumpMap;
+} TriplanarTexParam;
+
+typedef struct {
+	unsigned int texIndex;
+} RandomTexParam;
+
+typedef struct {
 	TextureType type;
+
+	unsigned int evalFloatOpStartIndex, evalFloatOpLength;
+	unsigned int evalSpectrumOpStartIndex, evalSpectrumOpLength;
+	unsigned int evalBumpOpStartIndex, evalBumpOpLength;
+
 	union {
 		BlenderBlendTexParam blenderBlend;
  		BlenderCloudsTexParam blenderClouds;
@@ -421,8 +495,12 @@ typedef struct {
 		WrinkledTexParam wrinkled;
 		UVTexParam uvTex;
 		BandTexParam band;
+		HitPointColorTexParam hitPointColor;
+		HitPointColorTexParam hitPointAlpha;
 		HitPointGreyTexParam hitPointGrey;
-        NormalMapTexParam normalMap;
+		HitPointVertexAOVTexParam hitPointVertexAOV;
+		HitPointTriangleAOVTexParam hitPointTriangleAOV;
+		NormalMapTexParam normalMap;
 		BlackBodyParam blackBody;
 		IrregularDataParam irregularData;
 		DensityGridParam densityGrid;
@@ -441,7 +519,11 @@ typedef struct {
 		PowerTexParam powerTex;
 		SplitFloat3TexParam splitFloat3Tex;
 		MakeFloat3TexParam makeFloat3Tex;
-        RoundingTexParam roundingTex;
+		RoundingTexParam roundingTex;
+		ModuloTexParam moduloTex;
+		BrightContrastTexParam brightContrastTex;
+		TriplanarTexParam triplanarTex;
+		RandomTexParam randomTex;
 	};
 } Texture;
 
@@ -451,7 +533,17 @@ typedef struct {
 
 #if defined(SLG_OPENCL_KERNEL)
 
-#define TEXTURES_PARAM_DECL , __global const Texture* restrict texs IMAGEMAPS_PARAM_DECL
-#define TEXTURES_PARAM , texs IMAGEMAPS_PARAM
+#define TEXTURES_PARAM_DECL \
+	, __global const Texture* restrict texs \
+	, __global const TextureEvalOp* restrict texEvalOps \
+	, __global float *texEvalStacks \
+	, const uint maxTextureEvalStackSize \
+	IMAGEMAPS_PARAM_DECL SCENE_PARAM_DECL
+#define TEXTURES_PARAM \
+	, texs \
+	, texEvalOps \
+	, texEvalStacks \
+	, maxTextureEvalStackSize \
+	IMAGEMAPS_PARAM SCENE_PARAM
 
 #endif

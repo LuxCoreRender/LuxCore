@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -92,5 +92,41 @@ Properties SceneObject::ToProperties(const ExtMeshCache &extMeshCache,
 			break;
 	}
 
+	if (bakeMap) {
+		switch (bakeMapType) {
+			case COMBINED:
+				props.Set(bakeMap->ToProperties("scene.objects." + name + ".bake.combined", useRealFileName));
+				props.Set(Property("scene.objects." + name + ".bake.combined.uvindex")(bakeMapUVIndex));
+				break;
+			case LIGHTMAP:
+				props.Set(bakeMap->ToProperties("scene.objects." + name + ".bake.lightmap", useRealFileName));
+				props.Set(Property("scene.objects." + name + ".bake.lightmap.uvindex")(bakeMapUVIndex));
+				break;
+			default:
+				throw runtime_error("Unknown bake map type in SceneObject::ToProperties(): " + ToString(bakeMapType));
+		}
+	}
+
 	return props;
+}
+
+void SceneObject::SetBakeMap(const ImageMap *map, const BakeMapType type, const u_int uvIndex) {
+	bakeMap = map;
+	bakeMapType = type;
+	bakeMapUVIndex = uvIndex;
+}
+
+Spectrum SceneObject::GetBakeMapValue(const UV &uv) const {
+	assert (bakeMap);
+
+	return bakeMap->GetSpectrum(uv);
+}
+
+void SceneObject::AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
+	if (bakeMap)
+		referencedImgMaps.insert(bakeMap);
+}
+
+void SceneObject::AddReferencedMaterials(boost::unordered_set<const Material *> &referencedMats) const {
+	mat->AddReferencedMaterials(referencedMats);
 }

@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -49,9 +49,15 @@
 #include "slg/materials/velvet.h"
 #include "slg/materials/disney.h"
 
+#include "slg/utils/filenameresolver.h"
+
 using namespace std;
 using namespace luxrays;
 using namespace slg;
+
+namespace slg {
+atomic<u_int> defaultMaterialIDIndex(0);
+}
 
 void Scene::ParseMaterials(const Properties &props) {
 	vector<string> matKeys = props.GetAllUniqueSubNames("scene.materials");
@@ -89,9 +95,10 @@ void Scene::ParseMaterials(const Properties &props) {
 		}
 
 		// In order to have harlequin colors with MATERIAL_ID output
-		const u_int matID = ((u_int)(RadicalInverse(matDefs.GetSize() + 1, 2) * 255.f + .5f)) |
-				(((u_int)(RadicalInverse(matDefs.GetSize() + 1, 3) * 255.f + .5f)) << 8) |
-				(((u_int)(RadicalInverse(matDefs.GetSize() + 1, 5) * 255.f + .5f)) << 16);
+		const u_int index = defaultMaterialIDIndex++;
+		const u_int matID = ((u_int)(RadicalInverse(index + 1, 2) * 255.f + .5f)) |
+				(((u_int)(RadicalInverse(index + 1, 3) * 255.f + .5f)) << 8) |
+				(((u_int)(RadicalInverse(index + 1, 5) * 255.f + .5f)) << 16);
 		Material *newMat = CreateMaterial(matID, matName, props);
 
 		if (matDefs.IsMaterialDefined(matName)) {
@@ -164,6 +171,8 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
             Texture *implBumpTex = new NormalMapTexture(normalTex, scale);
 			implBumpTex->SetName(NamedObject::GetUniqueName("Implicit-NormalMapTexture"));
             texDefs.DefineTexture(implBumpTex);
+			
+			bumpTex = implBumpTex;
         }
     }
 
@@ -441,7 +450,6 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 		const bool multibounce = props.Get(Property(propName + ".multibounce")(false)).Get<bool>();
 
 		mat = new GlossyCoatingMaterial(frontTransparencyTex, backTransparencyTex, emissionTex, bumpTex, matBase, ks, nu, nv, ka, d, index, multibounce);
-
 	} else if (matType == "disney") {
 		const Texture *baseColor = GetTexture(props.Get(Property(propName + ".basecolor")(.5f, .5f, .5f)));
 		const Texture *subsurface = GetTexture(props.Get(Property(propName + ".subsurface")(0.f)));
@@ -467,10 +475,14 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 
 	mat->SetEmittedGain(props.Get(Property(propName + ".emission.gain")(Spectrum(1.f))).Get<Spectrum>());
 	mat->SetEmittedPower(Max(0.f, props.Get(Property(propName + ".emission.power")(0.f)).Get<float>()));
+	mat->SetEmittedPowerNormalize(props.Get(Property(propName + ".emission.normalizebycolor")(true)).Get<bool>());
+	mat->SetEmittedGainNormalize(props.Get(Property(propName + ".emission.gain.normalizebycolor")(false)).Get<bool>());
 	mat->SetEmittedEfficency(Max(0.f, props.Get(Property(propName + ".emission.efficency")(0.f)).Get<float>()));
 	mat->SetEmittedTheta(Clamp(props.Get(Property(propName + ".emission.theta")(90.f)).Get<float>(), 0.f, 90.f));
 	mat->SetLightID(props.Get(Property(propName + ".emission.id")(0u)).Get<u_int>());
 	mat->SetEmittedImportance(props.Get(Property(propName + ".emission.importance")(1.f)).Get<float>());
+
+	mat->SetPassThroughShadowTransparency(props.Get(Property(propName + ".transparency.shadow")(Spectrum(0.f))).Get<Spectrum>());
 
 	const string dlsType = props.Get(Property(propName + ".emission.directlightsampling.type")("AUTO")).Get<string>();
 	if (dlsType == "ENABLED")

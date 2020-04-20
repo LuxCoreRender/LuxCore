@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -65,14 +65,12 @@ Spectrum RoughMatteMaterial::Evaluate(const HitPoint &hitPoint,
 Spectrum RoughMatteMaterial::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
-	float *pdfW, float *absCosSampledDir, BSDFEvent *event) const {
+	float *pdfW, BSDFEvent *event, const BSDFEvent eventHint) const {
 	if (fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 
 	*localSampledDir = Sgn(localFixedDir.z) * CosineSampleHemisphere(u0, u1, pdfW);
-
-	*absCosSampledDir = fabsf(localSampledDir->z);
-	if (*absCosSampledDir < DEFAULT_COS_EPSILON_STATIC)
+	if (fabsf(CosTheta(*localSampledDir)) < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 
 	*event = DIFFUSE | REFLECT;
@@ -126,8 +124,8 @@ Properties RoughMatteMaterial::ToProperties(const ImageMapCache &imgMapCache, co
 
 	const string name = GetName();
 	props.Set(Property("scene.materials." + name + ".type")("roughmatte"));
-	props.Set(Property("scene.materials." + name + ".kd")(Kd->GetName()));
-	props.Set(Property("scene.materials." + name + ".sigma")(sigma->GetName()));
+	props.Set(Property("scene.materials." + name + ".kd")(Kd->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".sigma")(sigma->GetSDLValue()));
 	props.Set(Material::ToProperties(imgMapCache, useRealFileName));
 
 	return props;

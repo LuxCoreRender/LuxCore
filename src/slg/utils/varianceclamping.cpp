@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -110,10 +110,11 @@ void VarianceClamping::Clamp(const Film &film, SampleResult &sampleResult) const
 			film.channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->AccumulateWeightedPixel(
 					x, y, &expectedValue[0]);
 		
-		const float factor = (film.GetTotalSampleCount() > 0) ?
-			(1.f / film.GetTotalSampleCount()) :
-			1.f;
-		
+		const double lightSampleCount = film.GetTotalLightSampleCount();
+		const float factor = (float)((lightSampleCount > 0.0) ?
+			(1.0 / lightSampleCount) :
+			1.0);
+
 		expectedValue[0] *= factor;
 		expectedValue[1] *= factor;
 		expectedValue[2] *= factor;

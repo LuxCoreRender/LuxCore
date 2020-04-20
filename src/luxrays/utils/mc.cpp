@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -18,6 +18,7 @@
 
 #include <limits>
 
+#include "luxrays/core/epsilon.h"
 #include "luxrays/core/randomgen.h"
 #include "luxrays/utils/mc.h"
 #include "luxrays/utils/mcdistribution.h"
@@ -69,7 +70,7 @@ void RejectionSampleDisk(const float u1, const float u2, float *x, float *y) {
 
 Vector UniformSampleHemisphere(const float u1, const float u2) {
 	const float z = u1;
-	const float r = sqrtf(Max(0.f, 1.f - z*z));
+	const float r = sqrtf(Max(0.f, 1.f - z * z));
 	const float phi = 2.f * M_PI * u2;
 	const float x = r * cosf(phi);
 	const float y = r * sinf(phi);
@@ -145,6 +146,28 @@ void UniformSampleTriangle(const float u1, const float u2, float *u, float *v) {
 	const float su1 = sqrtf(u1);
 	*u = 1.f - su1;
 	*v = u2 * su1;
+}
+
+void LowDiscrepancySampleTriangle(const float u1, float *u, float *v) {
+	// New implementation from: https://pharr.org/matt/blog/2019/02/27/triangle-sampling-1.html
+	// and: https://pharr.org/matt/blog/2019/03/13/triangle-sampling-1.5.html
+	u_int uf = u1 * (1ull << 32);  // Fixed point
+	float cx = 0.f, cy = 0.f;
+	float w = .5f;
+
+	for (u_int i = 0; i < 16; i++) {
+		u_int uu = uf >> 30;
+		bool flip = (uu & 3) == 0;
+
+		cy += ((uu & 1) == 0) * w;
+		cx += ((uu & 2) == 0) * w;
+
+		w *= flip ? -.5f : .5f;
+		uf <<= 2;
+	}
+
+	*u = cx + w / 3.f;
+	*v = cy + w / 3.f;
 }
 
 float UniformConePdf(const float cosThetaMax) {
@@ -285,19 +308,31 @@ float TriangularSampleDisk(float u1) {
 		1.f - sqrtf((1.f - u1) * .5f), 0.f, 1.f);
 }
 
+}
+
+//------------------------------------------------------------------------------
+
+using namespace std;
+using namespace luxrays;
+
 //------------------------------------------------------------------------------
 // Distribution1D
 //------------------------------------------------------------------------------
 
-Distribution1D::Distribution1D(const float *f, u_int n) {
-	func = new float[n];
-	cdf = new float[n + 1];
+BOOST_CLASS_EXPORT_IMPLEMENT(luxrays::Distribution1D)
+
+Distribution1D::Distribution1D(const float *f, u_int n) : func(n), cdf(n + 1) {
+	func.shrink_to_fit();
+	cdf.shrink_to_fit();
+
 	count = n;
 	invCount = 1.f / count;
-	memcpy(func, f, n * sizeof(float));
+
+	copy(f, f + n, func.begin());
+
 	// funcInt is the sum of all f elements divided by the number
 	// of elements, ie the average value of f over [0;1)
-	ComputeStep1dCDF(func, n, &funcInt, cdf);
+	ComputeStep1dCDF(&func[0], n, &funcInt, &cdf[0]);
 	if (funcInt > 0.f) {
 		const float invFuncInt = 1.f / funcInt;
 		// Normalize func to speed up computations
@@ -307,8 +342,6 @@ Distribution1D::Distribution1D(const float *f, u_int n) {
 }
 
 Distribution1D::~Distribution1D() {
-	delete[] func;
-	delete[] cdf;
 }
 
 float Distribution1D::SampleContinuous(float u, float *pdf, u_int *off) const {
@@ -327,8 +360,8 @@ float Distribution1D::SampleContinuous(float u, float *pdf, u_int *off) const {
 			*off = count - 1;
 		return 1.f;
 	}
-	float *ptr = std::upper_bound(cdf, cdf + count + 1, u);
-	u_int offset = ptr - cdf - 1;
+	const float *ptr = std::upper_bound(&cdf[0], &cdf[0] + count + 1, u);
+	const u_int offset = ptr - &cdf[0] - 1;
 	assert ((offset >= 0) && (offset < count));
 
 	// Compute offset along CDF segment
@@ -342,8 +375,17 @@ float Distribution1D::SampleContinuous(float u, float *pdf, u_int *off) const {
 	if (off)
 		*off = offset;
 
-	// Return $x \in [0,1)$ corresponding to sample
-	return (offset + du) * invCount;
+	// Return x in [0,1) corresponding to sample
+	//
+	// Note: if du is very near to 1 than offset + du = offset + 1 and this
+	// causes a lot of problems because the Pdf((offset + du) * invCount) will be
+	// different from the Pdf returned here.
+	// So I use this Min() as work around.
+	const float result = Min((offset + du) * invCount, MachineEpsilon::PreviousFloat(((offset + 1) * invCount)));
+	
+	assert (*pdf == Pdf(result));
+
+	return result;
 }
 
 u_int Distribution1D::SampleDiscrete(float u, float *pdf, float *du) const {
@@ -360,8 +402,8 @@ u_int Distribution1D::SampleDiscrete(float u, float *pdf, float *du) const {
 		*pdf = func[count - 1] * invCount;
 		return count - 1;
 	}
-	float *ptr = std::upper_bound(cdf, cdf + count + 1, u);
-	u_int offset = ptr - cdf - 1;
+	const float *ptr = std::upper_bound(&cdf[0], &cdf[0] + count + 1, u);
+	const u_int offset = ptr - &cdf[0] - 1;
 	assert ((offset >= 0) && (offset < count));
 
 	// Compute offset along CDF segment
@@ -375,9 +417,20 @@ u_int Distribution1D::SampleDiscrete(float u, float *pdf, float *du) const {
 	return offset;
 }
 
+float Distribution1D::Pdf(float u, float *du) const {
+	const u_int offset = Offset(u);
+
+	if (du)
+		*du = u * count - cdf[offset];
+	
+	return func[offset];
+}
+
 //------------------------------------------------------------------------------
 // Distribution2D
 //------------------------------------------------------------------------------
+
+BOOST_CLASS_EXPORT_IMPLEMENT(luxrays::Distribution2D)
 
 Distribution2D::Distribution2D(const float *data, u_int nu, u_int nv) {
 	pConditionalV.reserve(nv);
@@ -408,12 +461,24 @@ void Distribution2D::SampleContinuous(float u0, float u1, float uv[2],
 	*pdf = pdfs[0] * pdfs[1];
 }
 
-void Distribution2D::SampleDiscrete(float u0, float u1, u_int uv[2], float *pdf) const {
+void Distribution2D::SampleDiscrete(float u0, float u1, u_int uv[2], float *pdf,
+		float *du0, float *du1) const {
 	float pdfs[2];
-	uv[1] = pMarginal->SampleDiscrete(u1, &pdfs[1]);
-	uv[0] = pConditionalV[uv[1]]->SampleDiscrete(u0, &pdfs[0]);
+	uv[1] = pMarginal->SampleDiscrete(u1, &pdfs[1], du1);
+	uv[0] = pConditionalV[uv[1]]->SampleDiscrete(u0, &pdfs[0], du0);
 
 	*pdf = pdfs[0] * pdfs[1];
 }
 
+float Distribution2D::Pdf(float u, float v,
+		float *du, float *dv,
+		u_int *offsetU, u_int *offsetV) const {
+	const u_int ov = pMarginal->Offset(v);
+	if (offsetV)
+		*offsetV = ov;
+	if (offsetU)
+		*offsetU = pConditionalV[ov]->Offset(u);
+
+	return pConditionalV[ov]->Pdf(u, du) *
+		pMarginal->Pdf(v, dv);
 }

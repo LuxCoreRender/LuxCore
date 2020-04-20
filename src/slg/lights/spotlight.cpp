@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "slg/bsdf/bsdf.h"
 #include "slg/lights/spotlight.h"
 
 using namespace std;
@@ -27,7 +28,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 SpotLight::SpotLight() :
-	color(1.f), power(0.f), efficency(0.f),
+	color(1.f), power(0.f), efficency(0.f), emittedPowerNormalize(true),
 	localPos(Point()), localTarget(Point(0.f, 0.f, 1.f)),
 	coneAngle(30.f), coneDeltaAngle(5.f) {
 }
@@ -39,8 +40,10 @@ void SpotLight::Preprocess() {
 	cosTotalWidth = cosf(Radians(coneAngle));
 	cosFalloffStart = cosf(Radians(coneAngle - coneDeltaAngle));
 
-	emittedFactor = gain * color * (power * efficency /
-			(2.f * M_PI * color.Y() * (1.f - .5f * (cosFalloffStart + cosTotalWidth))));
+	const float normalizeFactor = emittedPowerNormalize ? (1.f / Max(color.Y(), 0.f)) : 1.f;
+
+	emittedFactor = gain * color * (power * efficency * normalizeFactor /
+			(2.f * M_PI * (1.f - .5f * (cosFalloffStart + cosTotalWidth))));
 	if (emittedFactor.Black() || emittedFactor.IsInf() || emittedFactor.IsNaN())
 		emittedFactor = gain * color;
 
@@ -99,32 +102,36 @@ static float LocalFalloff(const Vector &w, const float cosTotalWidth, const floa
 }
 
 Spectrum SpotLight::Emit(const Scene &scene,
-		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
-		Point *orig, Vector *dir,
-		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
-	*orig = absolutePos;
+		const float time, const float u0, const float u1,
+		const float u2, const float u3, const float passThroughEvent,
+		Ray &ray, float &emissionPdfW,
+		float *directPdfA, float *cosThetaAtLight) const {
+	const Point &rayOrig = absolutePos;
 	const Vector localFromLight = UniformSampleCone(u0, u1, cosTotalWidth);
-	*dir = Normalize(alignedLight2World * localFromLight);
-	*emissionPdfW = UniformConePdf(cosTotalWidth);
+	const Vector rayDir = Normalize(alignedLight2World * localFromLight);
+	emissionPdfW = UniformConePdf(cosTotalWidth);
 
 	if (directPdfA)
 		*directPdfA = 1.f;
 	if (cosThetaAtLight)
 		*cosThetaAtLight = CosTheta(localFromLight);
 
+	ray.Update(rayOrig, rayDir, time);
+
 	return emittedFactor * (LocalFalloff(localFromLight, cosTotalWidth, cosFalloffStart) / fabsf(CosTheta(localFromLight)));
 }
 
-Spectrum SpotLight::Illuminate(const Scene &scene, const Point &p,
-		const float u0, const float u1, const float passThroughEvent,
-        Vector *dir, float *distance, float *directPdfW,
+Spectrum SpotLight::Illuminate(const Scene &scene, const BSDF &bsdf,
+		const float time, const float u0, const float u1, const float passThroughEvent,
+        Ray &shadowRay, float &directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
-	const Vector toLight(absolutePos - p);
-	const float distanceSquared = toLight.LengthSquared();
-	*distance = sqrtf(distanceSquared);
-	*dir = toLight / *distance;
+	const Point shadowRayOrig = bsdf.GetRayOrigin(absolutePos - bsdf.hitPoint.p);
+	const Vector toLight(absolutePos - shadowRayOrig);
+	const float shadowRayDistanceSquared = toLight.LengthSquared();
+	const float shadowRayDistance = sqrtf(shadowRayDistanceSquared);
+	const Vector shadowRayDir = toLight / shadowRayDistance;
 
-	const Vector localFromLight = Normalize(Inverse(alignedLight2World) * (-(*dir)));
+	const Vector localFromLight = Normalize(Inverse(alignedLight2World) * (-shadowRayDir));
 	const float falloff = LocalFalloff(localFromLight, cosTotalWidth, cosFalloffStart);
 	if (falloff == 0.f)
 		return Spectrum();
@@ -132,10 +139,12 @@ Spectrum SpotLight::Illuminate(const Scene &scene, const Point &p,
 	if (cosThetaAtLight)
 		*cosThetaAtLight = CosTheta(localFromLight);
 
-	*directPdfW = distanceSquared;
+	directPdfW = shadowRayDistanceSquared;
 
 	if (emissionPdfW)
 		*emissionPdfW = UniformConePdf(cosTotalWidth);
+
+	shadowRay = Ray(shadowRayOrig, shadowRayDir, 0.f, shadowRayDistance, time);
 
 	return emittedFactor * (falloff / fabsf(CosTheta(localFromLight)));
 }
@@ -159,6 +168,7 @@ Properties SpotLight::ToProperties(const ImageMapCache &imgMapCache, const bool 
 	props.Set(Property(prefix + ".type")("spot"));
 	props.Set(Property(prefix + ".color")(color));
 	props.Set(Property(prefix + ".power")(power));
+	props.Set(Property(prefix + ".normalizebycolor")(emittedPowerNormalize));
 	props.Set(Property(prefix + ".efficency")(efficency));
 	props.Set(Property(prefix + ".position")(localPos));
 	props.Set(Property(prefix + ".target")(localTarget));

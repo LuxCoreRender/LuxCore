@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -26,28 +26,19 @@ namespace slg {
 
 class DLSCacheEntry;
 
-class DLSCOctree : public IndexOctree<DLSCacheEntry> {
+class DLSCOctree : public IndexOctree<DLSCVisibilityParticle> {
 public:
-	DLSCOctree(const std::vector<DLSCacheEntry> &allEntries, const luxrays::BBox &bbox,
-			const float r, const float normAngle, const u_int md = 24);
+	DLSCOctree(const std::vector<DLSCVisibilityParticle> &allEntries, const luxrays::BBox &bbox,
+			const float radius, const float normAngle, const u_int md = 24);
 	virtual ~DLSCOctree();
 
-	u_int GetEntry(const luxrays::Point &p, const luxrays::Normal &n,
+	u_int GetNearestEntry(const luxrays::Point &p, const luxrays::Normal &n,
 			const bool isVolume) const;
-	void GetAllNearEntries(std::vector<u_int> &entriesIndex,
-			const luxrays::Point &p, const luxrays::Normal &n,
-			const bool isVolume,
-			const float radius) const;
 
 private:
-	u_int GetEntryImpl(const IndexOctreeNode *node, const luxrays::BBox &nodeBBox,
-		const luxrays::Point &p, const luxrays::Normal &n, const bool isVolume) const;
-	void GetAllNearEntriesImpl(std::vector<u_int> &entries,
-			const IndexOctreeNode *node, const luxrays::BBox &nodeBBox,
-			const luxrays::Point &p, const luxrays::Normal &n,
-			const bool isVolume,
-			const luxrays::BBox areaBBox,
-			const float areaRadius2) const;
+	void GetNearestEntryImpl(const IndexOctreeNode *node, const luxrays::BBox &nodeBBox,
+			const luxrays::Point &p, const luxrays::Normal &n, const bool isVolume,
+			u_int &nearestEntryIndex, float &nearestDistance2) const;
 };
 
 }

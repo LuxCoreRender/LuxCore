@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -48,8 +48,8 @@ Properties CheckerBoard2DTexture::ToProperties(const ImageMapCache &imgMapCache,
 
 	const string name = GetName();
 	props.Set(Property("scene.textures." + name + ".type")("checkerboard2d"));
-	props.Set(Property("scene.textures." + name + ".texture1")(tex1->GetName()));
-	props.Set(Property("scene.textures." + name + ".texture2")(tex2->GetName()));
+	props.Set(Property("scene.textures." + name + ".texture1")(tex1->GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".texture2")(tex2->GetSDLValue()));
 	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;
@@ -78,8 +78,8 @@ Properties CheckerBoard3DTexture::ToProperties(const ImageMapCache &imgMapCache,
 
 	const string name = GetName();
 	props.Set(Property("scene.textures." + name + ".type")("checkerboard3d"));
-	props.Set(Property("scene.textures." + name + ".texture1")(tex1->GetName()));
-	props.Set(Property("scene.textures." + name + ".texture2")(tex2->GetName()));
+	props.Set(Property("scene.textures." + name + ".texture1")(tex1->GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".texture2")(tex2->GetSDLValue()));
 	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;

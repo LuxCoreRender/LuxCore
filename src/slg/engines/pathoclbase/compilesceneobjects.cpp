@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -41,7 +41,26 @@ void CompiledScene::CompileSceneObjects() {
 
 		const Material *m = scnObj->GetMaterial();
 		oclScnObj.materialIndex = scene->matDefs.GetMaterialIndex(m);
-		
+
+		const ImageMap *bakeMap = scnObj->GetBakeMap();
+		if (bakeMap) {
+			oclScnObj.bakeMapIndex = scene->imgMapCache.GetImageMapIndex(bakeMap);
+			switch (scnObj->GetBakeMapType()) {
+				case COMBINED:
+					oclScnObj.bakeMapType = slg::ocl::COMBINED;
+					break;
+				case LIGHTMAP:
+					oclScnObj.bakeMapType = slg::ocl::LIGHTMAP;
+					break;
+				default:
+					throw runtime_error("Unknown bake map type in CompiledScene::CompileSceneObjects(): " + ToString(scnObj->GetBakeMapType()));
+			}
+			oclScnObj.bakeMapUVIndex = scnObj->GetBakeMapUVIndex();
+		} else {
+			oclScnObj.bakeMapIndex = NULL_INDEX;
+			oclScnObj.bakeMapUVIndex = NULL_INDEX;
+		}
+
 		oclScnObj.cameraInvisible = scnObj->IsCameraInvisible();
 	}
 }

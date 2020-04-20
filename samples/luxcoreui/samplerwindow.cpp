@@ -83,6 +83,13 @@ bool SamplerWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 			modifiedProps = true;
 		}
 		LuxCoreApp::HelpMarker("sampler.random.adaptive.strength");
+
+		fval = props.Get("sampler.random.adaptive.userimportanceweight").Get<float>();
+		if (ImGui::SliderFloat("User importance weight", &fval, 0.f, 1.f)) {
+			props.Set(Property("sampler.random.adaptive.userimportanceweight")(fval));
+			modifiedProps = true;
+		}
+		LuxCoreApp::HelpMarker("sampler.random.adaptive.userimportanceweight");
 	}
 
 	//--------------------------------------------------------------------------
@@ -96,6 +103,13 @@ bool SamplerWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 			modifiedProps = true;
 		}
 		LuxCoreApp::HelpMarker("sampler.sobol.adaptive.strength");
+
+		fval = props.Get("sampler.sobol.adaptive.userimportanceweight").Get<float>();
+		if (ImGui::SliderFloat("User importance weight", &fval, 0.f, 1.f)) {
+			props.Set(Property("sampler.sobol.adaptive.userimportanceweight")(fval));
+			modifiedProps = true;
+		}
+		LuxCoreApp::HelpMarker("sampler.sobol.adaptive.userimportanceweight");
 	}
 
 	//--------------------------------------------------------------------------

@@ -3,6 +3,7 @@ echo %VERSION_STRING%
 if "%VERSION_STRING%" EQU "" (
     set VERSION_STRING=latest
 )
+echo %VERSION_STRING%
 
 cd ..\WindowsCompile
 
@@ -23,7 +24,7 @@ if "%FINAL%" EQU "TRUE" (
 )
 
 move %DIR% %LUX_LATEST%
-.\support\bin\7za.exe a %LUX_LATEST%.zip %LUX_LATEST%
+.\support\bin\7z.exe a %LUX_LATEST%.zip %LUX_LATEST%
 copy %LUX_LATEST%.zip %BUILD_ARTIFACTSTAGINGDIRECTORY%
 
 @echo ##vso[task.setvariable variable=version_string]%VERSION_STRING%

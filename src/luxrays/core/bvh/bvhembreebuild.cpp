@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -222,12 +222,7 @@ template<u_int CHILDREN_COUNT> static luxrays::ocl::BVHArrayNode *BuildEmbreeBVH
 
 	// Initialize RTCPrimRef vector
 	vector<RTCBuildPrimitive> prims(leafList.size());
-	for (
-			// Visual C++ 2013 supports only OpenMP 2.5
-#if _OPENMP >= 200805
-			unsigned
-#endif
-			int i = 0; i < prims.size(); ++i) {
+	for (u_int i = 0; i < prims.size(); ++i) {
 		RTCBuildPrimitive &prim = prims[i];
 		const BVHTreeNode *node = leafList[i];
 

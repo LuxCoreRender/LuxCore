@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -19,6 +19,7 @@
 #include <math.h>
 
 #include "luxrays/core/epsilon.h"
+#include "slg/bsdf/bsdf.h"
 #include "slg/lights/spherelight.h"
 
 using namespace std;
@@ -68,24 +69,25 @@ bool SphereLight::SphereIntersect(const Ray &ray, float &hitT) const {
 }
 
 Spectrum SphereLight::Emit(const Scene &scene,
-		const float u0, const float u1, const float u2, const float u3, const float passThroughEvent,
-		Point *orig, Vector *dir,
-		float *emissionPdfW, float *directPdfA, float *cosThetaAtLight) const {
+		const float time, const float u0, const float u1,
+		const float u2, const float u3, const float passThroughEvent,
+		Ray &ray, float &emissionPdfW,
+		float *directPdfA, float *cosThetaAtLight) const {
 	const Vector normal = UniformSampleSphere(u0, u1);
-	*orig = absolutePos + radius * normal;
+	const Point rayOrig = absolutePos + radius * normal;
 
 	// Build a local coordinate system
 	Frame localFrame(normal);
 
 	// The direction expressed relative to local coordinate system
-	Vector localDirOut = CosineSampleHemisphere(u2, u3, emissionPdfW);
+	Vector localDirOut = CosineSampleHemisphere(u2, u3, &emissionPdfW);
 	// Cannot really not emit the particle, so just bias it to the correct angle
 	localDirOut.z = Max(localDirOut.z, DEFAULT_COS_EPSILON_STATIC);
 
-	*emissionPdfW *= invArea;
+	emissionPdfW *= invArea;
 
 	// The direction expressed relative to global coordinate system
-	*dir = localFrame.ToWorld(localDirOut);
+	const Vector rayDir = localFrame.ToWorld(localDirOut);
 
 	if (directPdfA)
 		*directPdfA =  invArea;
@@ -93,14 +95,16 @@ Spectrum SphereLight::Emit(const Scene &scene,
 	if (cosThetaAtLight)
 		*cosThetaAtLight = CosTheta(localDirOut);
 
+	ray.Update(rayOrig, rayDir, time);
+
 	return emittedFactor * invArea * CosTheta(localDirOut) * INV_PI;
 }
 
-Spectrum SphereLight::Illuminate(const Scene &scene, const Point &p,
-		const float u0, const float u1, const float passThroughEvent,
-        Vector *dir, float *distance, float *directPdfW,
+Spectrum SphereLight::Illuminate(const Scene &scene, const BSDF &bsdf,
+		const float time, const float u0, const float u1, const float passThroughEvent,
+        Ray &shadowRay, float &directPdfW,
 		float *emissionPdfW, float *cosThetaAtLight) const {
-	const Vector toLight(absolutePos - p);
+	const Vector toLight(absolutePos - bsdf.hitPoint.p);
 	const float centerDistanceSquared = toLight.LengthSquared();
 	const float centerDistance = sqrtf(centerDistanceSquared);
 
@@ -119,27 +123,29 @@ Spectrum SphereLight::Illuminate(const Scene &scene, const Point &p,
 	// Sample sphere uniformly inside subtended cone
 	const float cosThetaMax = sqrtf(Max(0.f, 1.f - radiusSquared / centerDistanceSquared));
 
-	const Point &rayOrig = p;
 	const Vector localRayDir = UniformSampleCone(u0, u1, cosThetaMax);
 
 	if (CosTheta(localRayDir) < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 
-	const Vector rayDir = localFrame.ToWorld(localRayDir);
-	const Ray ray(rayOrig, rayDir);
+	const Vector shadowRayDir = localFrame.ToWorld(localRayDir);
+	const Point shadowRayOrig = bsdf.GetRayOrigin(shadowRayDir);
+	const Ray ray(shadowRayOrig, shadowRayDir);
 
 	// Check the intersection with the sphere
-	if (!SphereIntersect(ray, *distance))
-		*distance = Dot(toLight, rayDir);
-	*dir = rayDir;
+	float shadowRayDistance;
+	if (!SphereIntersect(ray, shadowRayDistance))
+		shadowRayDistance = Dot(toLight, shadowRayDir);
 
 	if (cosThetaAtLight)
 		*cosThetaAtLight = CosTheta(localRayDir);
 
-	*directPdfW = UniformConePdf(cosThetaMax);
+	directPdfW = UniformConePdf(cosThetaMax);
 
 	if (emissionPdfW)
 		*emissionPdfW = invArea * CosTheta(localRayDir) * INV_PI;
+
+	shadowRay = Ray(shadowRayOrig, shadowRayDir, 0.f, shadowRayDistance, time);
 
 	return emittedFactor * invArea * INV_PI;
 }
@@ -149,10 +155,6 @@ Properties SphereLight::ToProperties(const ImageMapCache &imgMapCache, const boo
 	Properties props = PointLight::ToProperties(imgMapCache, useRealFileName);
 
 	props.Set(Property(prefix + ".type")("sphere"));
-	props.Set(Property(prefix + ".color")(color));
-	props.Set(Property(prefix + ".power")(power));
-	props.Set(Property(prefix + ".efficency")(efficency));
-	props.Set(Property(prefix + ".position")(localPos));
 	props.Set(Property(prefix + ".radius")(radius));
 
 	return props;
