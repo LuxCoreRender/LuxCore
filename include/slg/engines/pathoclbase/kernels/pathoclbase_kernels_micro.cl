@@ -599,7 +599,7 @@ __kernel void AdvancePaths_MK_DL_ILLUMINATE(
 	// It will set eventually to true if the light is visible
 	taskDirectLight->directLightResult = NOT_VISIBLE;
 
-	/*if (!BSDF_IsDelta(bsdf
+	if (!BSDF_IsDelta(bsdf
 			MATERIALS_PARAM) &&
 			DirectLight_Illuminate(
 				bsdf,
@@ -615,11 +615,11 @@ __kernel void AdvancePaths_MK_DL_ILLUMINATE(
 				LIGHTS_PARAM)) {
 		// I have now to evaluate the BSDF
 		taskState->state = MK_DL_SAMPLE_BSDF;
-	} else {*/
+	} else {
 		// No shadow ray to trace, move to the next vertex ray
 		// however, I have to Check if this is the last path vertex
 		taskState->state = (sampleResult->lastPathVertex) ? MK_SPLAT_SAMPLE : MK_GENERATE_NEXT_VERTEX_RAY;
-	//}
+	}
 
 	//--------------------------------------------------------------------------
 
