@@ -116,6 +116,7 @@ public:
 
 					device.AllocBufferRO(&vertsBuffs.back(), &tmpVerts[0], sizeof(Point) * tmpVertIndex,
 							"MBVH mesh vertices");
+					device.FinishQueue();
 
 					tmpVertIndex = 0;
 				}
@@ -141,6 +142,7 @@ public:
 			// Allocate the transformation buffer
 			device.AllocBufferRO(&uniqueLeafsTransformBuff, &mats[0], sizeof(luxrays::ocl::Matrix4x4) * mats.size(),
 							"MBVH leaf transformations");
+			device.FinishQueue();
 		}
 
 		if (mbvh.uniqueLeafsMotionSystem.size() > 0) {
@@ -179,6 +181,7 @@ public:
 			device.AllocBufferRO(&uniqueLeafsInterpolatedTransformBuff, &interpolatedTransforms[0],
 					sizeof(luxrays::ocl::InterpolatedTransform) * interpolatedTransforms.size(),
 					"MBVH leaf interpolated transforms buffer");
+			device.FinishQueue();
 		}
 
 		//----------------------------------------------------------------------

@@ -92,10 +92,16 @@ OPENCL_FORCE_INLINE void Film_AddWeightedPixel4Val(__global float *dst, float3 v
 		AtomicAdd(&dst[2], b * weight);
 		AtomicAdd(&dst[3], weight);
 #else
-		float4 p = VLOAD4F(dst);
+		// The following code doesn't work with CUDA
+		/*float4 p = VLOAD4F(dst);
 		const float4 s = MAKE_FLOAT4(r * weight, g * weight, b * weight, weight);
 		p += s;
-		VSTORE4F(p, dst);
+		VSTORE4F(p, dst);*/
+		
+		dst[0] += r * weight;
+		dst[1] += g * weight;
+		dst[2] += b * weight;
+		dst[3] += weight;
 #endif
 	} /*else {
 		printf("NaN/Inf. error: (%f, %f, %f) [%f]\n", r, g, b, weight);
@@ -117,10 +123,16 @@ OPENCL_FORCE_INLINE void Film_AddWeightedPixel4(__global float *dst, __global fl
 		AtomicAdd(&dst[2], b * weight);
 		AtomicAdd(&dst[3], weight);
 #else
-		float4 p = VLOAD4F(dst);
+		// The following code doesn't work with CUDA
+		/*float4 p = VLOAD4F(dst);
 		const float4 s = MAKE_FLOAT4(r * weight, g * weight, b * weight, weight);
 		p += s;
-		VSTORE4F(p, dst);
+		VSTORE4F(p, dst);*/
+		
+		dst[0] += r * weight;
+		dst[1] += g * weight;
+		dst[2] += b * weight;
+		dst[3] += weight;
 #endif
 	} /*else {
 		printf("NaN/Inf. error: (%f, %f, %f) [%f]\n", r, g, b, weight);

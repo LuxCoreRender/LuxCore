@@ -147,7 +147,7 @@ OpenCLDevice::OpenCLDevice(
 		const size_t devIndex) :
 		Device(context, devIndex),
 		deviceDesc(desc), oclQueue(nullptr) {
-	deviceName = (desc->GetName() + " Intersect").c_str();
+	deviceName = (desc->GetName() + " OpenCLIntersect").c_str();
 
 	// Check if OpenCL 1.1 is available
 	if (!desc->IsOpenCL_1_1()) {

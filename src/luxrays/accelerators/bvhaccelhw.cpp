@@ -94,6 +94,7 @@ public:
 
 				device.AllocBufferRO(&vertsBuffs.back(), tmpVerts, sizeof(Point) * pageVertCount,
 							"BVH mesh vertices");
+				device.FinishQueue();
 			} while (vertsCopied < totalVertCount);
 			delete[] tmpVerts;
 
@@ -145,6 +146,7 @@ public:
 
 				device.AllocBufferRO(&nodeBuffs.back(), tmpNodes, sizeof(luxrays::ocl::BVHArrayNode) * pageNodeCount,
 						"BVH nodes");
+				device.FinishQueue();
 
 				nodeIndex += pageNodeCount;
 			} while (nodeIndex < totalNodeCount);

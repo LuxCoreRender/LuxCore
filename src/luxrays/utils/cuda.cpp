@@ -130,10 +130,8 @@ CUmodule cudaKernelPersistentCache::Compile(const string &kernelsParameters,
 	const boost::filesystem::path filePath = dirPath / kernelName;
 	const string fileName = filePath.generic_string();
 	
+	*cached = false;
 	if (!boost::filesystem::exists(filePath)) {
-		if (cached)
-			*cached = false;
-
 		// It isn't available, compile the source
 		char *ptx;
 		size_t ptxSize;
@@ -201,6 +199,8 @@ CUmodule cudaKernelPersistentCache::Compile(const string &kernelsParameters,
 
 				CUmodule module;
 				CHECK_CUDA_ERROR(cuModuleLoadDataEx(&module, &kernelBin[0], 0, 0, 0));
+
+				*cached = true;
 
 				return module;
 			}

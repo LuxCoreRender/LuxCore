@@ -122,7 +122,7 @@ CUDADevice::CUDADevice(
 		const size_t devIndex) :
 		Device(context, devIndex),
 		deviceDesc(desc) {
-	deviceName = (desc->GetName() + " Intersect").c_str();
+	deviceName = (desc->GetName() + " CUDAIntersect").c_str();
 
 	kernelCache = new cudaKernelPersistentCache("LUXRAYS_" LUXRAYS_VERSION_MAJOR "." LUXRAYS_VERSION_MINOR);
 }
@@ -141,12 +141,14 @@ void CUDADevice::PopThreadCurrentDevice() {
 }
 
 void CUDADevice::Start() {
-	HardwareDevice::Start();
-
 	CHECK_CUDA_ERROR(cuCtxCreate(&cudaContext, CU_CTX_SCHED_YIELD, deviceDesc->GetCUDADevice()));
+
+	HardwareDevice::Start();
 }
 
 void CUDADevice::Stop() {
+	HardwareDevice::Stop();
+
 	// Free all loaded modules
 	for (auto &m : loadedModules) {
 		CHECK_CUDA_ERROR(cuModuleUnload(m));
@@ -154,8 +156,6 @@ void CUDADevice::Stop() {
 	loadedModules.clear();
 
 	CHECK_CUDA_ERROR(cuCtxDestroy(cudaContext));
-		
-	HardwareDevice::Stop();
 }
 
 //------------------------------------------------------------------------------

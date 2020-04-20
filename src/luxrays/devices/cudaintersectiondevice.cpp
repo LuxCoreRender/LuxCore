@@ -67,11 +67,10 @@ void CUDAIntersectionDevice::Start() {
 }
 
 void CUDAIntersectionDevice::Stop() {
-	CUDADevice::Stop();
-
 	delete kernel;
 	kernel = nullptr;
 
+	CUDADevice::Stop();
 }
 
 void CUDAIntersectionDevice::EnqueueTraceRayBuffer(HardwareDeviceBuffer *rayBuff,

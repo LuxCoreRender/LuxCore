@@ -67,11 +67,10 @@ void OpenCLIntersectionDevice::Start() {
 }
 
 void OpenCLIntersectionDevice::Stop() {
-	OpenCLDevice::Stop();
-
 	delete kernel;
 	kernel = nullptr;
 
+	OpenCLDevice::Stop();
 }
 
 void OpenCLIntersectionDevice::EnqueueTraceRayBuffer(HardwareDeviceBuffer *rayBuff,
