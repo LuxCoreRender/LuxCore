@@ -401,6 +401,18 @@ __forceinline__ float3 fmin(const float3 x, const float3 y) {
 //------------------------------------------------------------------------------
 
 template<typename T>
+__forceinline__ int as_int(const T v) {
+	union {
+		T src;
+		int dst;
+	} val;
+	
+	val.src = v;
+
+	return val.dst;
+}
+
+template<typename T>
 __forceinline__ uint as_uint(const T v) {
 	union {
 		T src;
