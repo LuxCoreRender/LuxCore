@@ -18,7 +18,7 @@
 
 #include "slg/textures/fresnel/fresneltexture.h"
 #include "slg/materials/glass.h"
-#include "luxrays/core/color/spds/irregular.h"
+#include "luxrays/core/color/spds/regular.h"
 
 using namespace std;
 using namespace luxrays;
@@ -132,23 +132,25 @@ static float WaveLength2IOR(const float waveLength, const float IOR, const float
 // }
 
 static Spectrum CalcFilmColor(float sinTheta, float filmThickness, float filmIOR) {
-	const int NUM_WAVELENGTHS = 34;
-	float waveLengths[NUM_WAVELENGTHS];
+	// 24 seems to do the job. Any less and artifacs begin to appear at thickness around 2000 nm
+	const int NUM_WAVELENGTHS = 24;
+	const float MIN_WAVELENGTH = 380.f;
+	const float MAX_WAVELENGTH = 720.f;
+	const float WAVELENGTH_STEP = (MAX_WAVELENGTH - MIN_WAVELENGTH) / float(NUM_WAVELENGTHS - 1);
+	
 	float intensities[NUM_WAVELENGTHS];
 	
-	const float s = sqrtf(Max(0.f, Sqr(filmIOR) - Sqr(sinTheta)));
+	const float exteriorIOR = 1.f; // TODO get from exterior volume
+	const float s = sqrtf(Max(0.f, Sqr(filmIOR) - Sqr(exteriorIOR) * Sqr(sinTheta)));
 
 	for (int i = 0; i < NUM_WAVELENGTHS; ++i) {
-		const float waveLength = 10.f * float(i) + 380.f;
+		const float waveLength = WAVELENGTH_STEP * float(i) + MIN_WAVELENGTH;
 		
 		const float pd = (4.f * M_PI * filmThickness / waveLength) * s + M_PI;
-		const float cpd = cosf(pd);
-		
-		waveLengths[i] = waveLength;
-		intensities[i] = Sqr(cpd);
+		intensities[i] = Sqr(cosf(pd));
 	}
 
-	IrregularSPD spd(waveLengths, intensities, NUM_WAVELENGTHS);
+	RegularSPD spd(intensities, MIN_WAVELENGTH, MAX_WAVELENGTH, NUM_WAVELENGTHS);
 
 	ColorSystem colorSpace(.63f, .34f, .31f, .595f, .155f, .07f,
 						   1.f / 3.f, 1.f / 3.f, 1.f);
