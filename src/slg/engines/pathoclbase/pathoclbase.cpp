@@ -378,8 +378,11 @@ void PathOCLBaseRenderEngine::BeginSceneEditLockLess() {
 void PathOCLBaseRenderEngine::EndSceneEditLockLess(const EditActionList &editActions) {
 	compiledScene->Recompile(editActions);
 
-	for (size_t i = 0; i < renderOCLThreads.size(); ++i)
+	for (size_t i = 0; i < renderOCLThreads.size(); ++i) {
+		renderOCLThreads[i]->intersectionDevice->PushThreadCurrentDevice();
 		renderOCLThreads[i]->EndSceneEdit(editActions);
+		renderOCLThreads[i]->intersectionDevice->PopThreadCurrentDevice();
+	}
 	for (size_t i = 0; i < renderNativeThreads.size(); ++i)
 		renderNativeThreads[i]->EndSceneEdit(editActions);
 }
