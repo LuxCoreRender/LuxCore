@@ -125,9 +125,19 @@ CUDADevice::CUDADevice(
 	deviceName = (desc->GetName() + " CUDAIntersect").c_str();
 
 	kernelCache = new cudaKernelPersistentCache("LUXRAYS_" LUXRAYS_VERSION_MAJOR "." LUXRAYS_VERSION_MINOR);
+	
+	CHECK_CUDA_ERROR(cuCtxCreate(&cudaContext, CU_CTX_SCHED_YIELD, deviceDesc->GetCUDADevice()));
 }
 
 CUDADevice::~CUDADevice() {
+	// Free all loaded modules
+	for (auto &m : loadedModules) {
+		CHECK_CUDA_ERROR(cuModuleUnload(m));
+	}
+	loadedModules.clear();
+
+	CHECK_CUDA_ERROR(cuCtxDestroy(cudaContext));
+
 	delete kernelCache;
 }
 
@@ -138,24 +148,6 @@ void CUDADevice::PushThreadCurrentDevice() {
 void CUDADevice::PopThreadCurrentDevice() {
 	CUcontext newCudaContext;
 	CHECK_CUDA_ERROR(cuCtxPopCurrent(&newCudaContext));
-}
-
-void CUDADevice::Start() {
-	CHECK_CUDA_ERROR(cuCtxCreate(&cudaContext, CU_CTX_SCHED_YIELD, deviceDesc->GetCUDADevice()));
-
-	HardwareDevice::Start();
-}
-
-void CUDADevice::Stop() {
-	HardwareDevice::Stop();
-
-	// Free all loaded modules
-	for (auto &m : loadedModules) {
-		CHECK_CUDA_ERROR(cuModuleUnload(m));
-	}
-	loadedModules.clear();
-
-	CHECK_CUDA_ERROR(cuCtxDestroy(cudaContext));
 }
 
 //------------------------------------------------------------------------------
@@ -247,6 +239,11 @@ void CUDADevice::SetKernelArg(HardwareDeviceKernel *kernel,
 		CUdeviceptr p = 0;
 		argCpy = new char[sizeof(CUdeviceptr)];
 		memcpy(argCpy, &p, sizeof(CUdeviceptr));
+	}
+
+	if (cudaDeviceKernel->args[index]) {
+		delete[] (char *)cudaDeviceKernel->args[index];
+		cudaDeviceKernel->args[index] = nullptr;
 	}
 
 	cudaDeviceKernel->args[index] = argCpy;
@@ -434,13 +431,15 @@ void CUDADevice::AllocBufferRW(HardwareDeviceBuffer **buff, void *src, const siz
 }
 
 void CUDADevice::FreeBuffer(HardwareDeviceBuffer **buff) {
-	if (*buff && !(*buff)->IsNull()) {
-		CUDADeviceBuffer *cudaDeviceBuff = dynamic_cast<CUDADeviceBuffer *>(*buff);
-		assert (cudaDeviceBuff);
+	if (*buff) {
+		if (!(*buff)->IsNull()) {
+			CUDADeviceBuffer *cudaDeviceBuff = dynamic_cast<CUDADeviceBuffer *>(*buff);
+			assert (cudaDeviceBuff);
 
-		FreeMemory(cudaDeviceBuff->GetSize());
+			FreeMemory(cudaDeviceBuff->GetSize());
 
-		CHECK_CUDA_ERROR(cuMemFree(cudaDeviceBuff->cudaBuff));
+			CHECK_CUDA_ERROR(cuMemFree(cudaDeviceBuff->cudaBuff));
+		}
 
 		delete *buff;
 		*buff = nullptr;

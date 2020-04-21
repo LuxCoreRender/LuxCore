@@ -314,8 +314,11 @@ void PathOCLBaseRenderEngine::StartLockLess() {
 		}
 	}
 
-	for (size_t i = 0; i < renderOCLThreads.size(); ++i)
+	for (size_t i = 0; i < renderOCLThreads.size(); ++i) {
+		renderOCLThreads[i]->intersectionDevice->PushThreadCurrentDevice();
 		renderOCLThreads[i]->Start();
+		renderOCLThreads[i]->intersectionDevice->PopThreadCurrentDevice();
+	}
 
 	// I know kernels has been compiled at this point
 	SetCachedKernels(*renderConfig);
@@ -351,8 +354,11 @@ void PathOCLBaseRenderEngine::StopLockLess() {
             renderNativeThreads[i]->Stop();
     }
 	for (size_t i = 0; i < renderOCLThreads.size(); ++i) {
-        if (renderOCLThreads[i])
+        if (renderOCLThreads[i]) {
+			renderOCLThreads[i]->intersectionDevice->PushThreadCurrentDevice();
             renderOCLThreads[i]->Stop();
+			renderOCLThreads[i]->intersectionDevice->PopThreadCurrentDevice();
+		}
     }
 
 	delete compiledScene;
@@ -371,8 +377,11 @@ void PathOCLBaseRenderEngine::BeginSceneEditLockLess() {
 
 	for (size_t i = 0; i < renderNativeThreads.size(); ++i)
 		renderNativeThreads[i]->BeginSceneEdit();
-	for (size_t i = 0; i < renderOCLThreads.size(); ++i)
+	for (size_t i = 0; i < renderOCLThreads.size(); ++i) {
+		renderOCLThreads[i]->intersectionDevice->PushThreadCurrentDevice();
 		renderOCLThreads[i]->BeginSceneEdit();
+		renderOCLThreads[i]->intersectionDevice->PopThreadCurrentDevice();
+	}
 }
 
 void PathOCLBaseRenderEngine::EndSceneEditLockLess(const EditActionList &editActions) {

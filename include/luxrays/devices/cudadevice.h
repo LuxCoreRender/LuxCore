@@ -161,9 +161,6 @@ public:
 	virtual void PushThreadCurrentDevice();
 	virtual void PopThreadCurrentDevice();
 
-	virtual void Start();
-	virtual void Stop();
-
 	//--------------------------------------------------------------------------
 	// Kernels handling for hardware (aka GPU) only applications
 	//--------------------------------------------------------------------------
