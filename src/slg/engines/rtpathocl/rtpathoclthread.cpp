@@ -130,6 +130,9 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 
 	RTPathOCLRenderEngine *engine = (RTPathOCLRenderEngine *)renderEngine;
 	boost::barrier *frameBarrier = engine->frameBarrier;
+
+	intersectionDevice->PushThreadCurrentDevice();
+
 	// To synchronize the start of all threads
 	frameBarrier->wait();
 
@@ -196,6 +199,8 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 				// It is also done by thread #0 for all threads.
 				for (u_int i = 0; i < engine->renderOCLThreads.size(); ++i) {
 					RTPathOCLRenderThread *thread = (RTPathOCLRenderThread *)(engine->renderOCLThreads[i]);
+					
+					thread->intersectionDevice->PushThreadCurrentDevice();
 
 					if (thread->tileWork.HasWork()) {
 						engine->tileRepository->NextTile(engine->film, engine->filmMutex, thread->tileWork, thread->threadFilms[0]->film);
@@ -203,6 +208,8 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 						// There is only one tile for each device in RTPATHOCL
 						thread->tileWork.Reset();
 					}
+
+					thread->intersectionDevice->PopThreadCurrentDevice();
 				}
 
 				//const double t1 = WallClockTime();
@@ -223,7 +230,9 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 					// Update all threads
 					for (u_int i = 0; i < engine->renderOCLThreads.size(); ++i) {
 						RTPathOCLRenderThread *thread = (RTPathOCLRenderThread *)(engine->renderOCLThreads[i]);
+						thread->intersectionDevice->PushThreadCurrentDevice();
 						thread->UpdateOCLBuffers(engine->updateActions);
+						thread->intersectionDevice->PopThreadCurrentDevice();
 					}
 
 					// Reset updateActions
@@ -251,6 +260,8 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 	intersectionDevice->FinishQueue();
 
 	threadDone = true;
+	
+	intersectionDevice->PopThreadCurrentDevice();
 }
 
 #endif

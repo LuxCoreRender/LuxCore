@@ -22,6 +22,7 @@
 * New LuxCore API RenderConfig::HasCachedKernels() method to check if a (long) kernel compilation time is required
 * Glossycoating material on GPUs now supports bump mapping exactly like CPU version (issue #307)
 * Mix material on GPUs now supports bump mapping exactly like CPU version (issue #307)
+* Added the support for CUDA rendering
 
 ### Fixed Bugs
 
