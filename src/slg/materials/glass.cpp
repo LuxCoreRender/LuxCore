@@ -18,6 +18,7 @@
 
 #include "slg/textures/fresnel/fresneltexture.h"
 #include "slg/materials/glass.h"
+#include "luxrays/core/color/spds/irregular.h"
 
 using namespace std;
 using namespace luxrays;
@@ -118,23 +119,41 @@ static float WaveLength2IOR(const float waveLength, const float IOR, const float
 }
 
 // Original LuxRender code
-/*void PhaseDifference(const SpectrumWavelengths &sw, const Vector &wo,
-	float film, float filmindex, SWCSpectrum *const Pd)
-{
-	const float swo = SinTheta(wo);
-	const float s = sqrtf(max(0.f, filmindex * filmindex - swo * swo));
-	for(int i = 0; i < WAVELENGTH_SAMPLES; ++i) {
-		const float pd = (4.f * M_PI * film / sw.w[i]) * s + M_PI;
-		const float cpd = cosf(pd);
-		Pd->c[i] *= cpd*cpd;
-	}
-}*/
+// void PhaseDifference(const SpectrumWavelengths &sw, const Vector &wo,
+// 	float film, float filmindex, SWCSpectrum *const Pd)
+// {
+// 	const float swo = SinTheta(wo);
+// 	const float s = sqrtf(max(0.f, filmindex * filmindex - /*1.f * 1.f * */ swo * swo));
+// 	for(int i = 0; i < WAVELENGTH_SAMPLES; ++i) {
+// 		const float pd = (4.f * M_PI * film / sw.w[i]) * s + M_PI;
+// 		const float cpd = cosf(pd);
+// 		Pd->c[i] *= cpd*cpd;
+// 	}
+// }
 
-float PhaseDifference(float waveLength, float sintheta, float filmThickness, float filmIOR) {
-	const float s = sqrtf(Max(0.f, Sqr(filmIOR) - Sqr(sintheta)));
-	const float pd = (4.f * M_PI * filmThickness / waveLength) * s + M_PI;
-	const float cpd = cosf(pd);
-	return Sqr(cpd);
+static Spectrum CalcFilmColor(float sinTheta, float filmThickness, float filmIOR) {
+	const int NUM_WAVELENGTHS = 34;
+	float waveLengths[NUM_WAVELENGTHS];
+	float intensities[NUM_WAVELENGTHS];
+	
+	const float s = sqrtf(Max(0.f, Sqr(filmIOR) - Sqr(sinTheta)));
+
+	for (int i = 0; i < NUM_WAVELENGTHS; ++i) {
+		const float waveLength = 10.f * float(i) + 380.f;
+		
+		const float pd = (4.f * M_PI * filmThickness / waveLength) * s + M_PI;
+		const float cpd = cosf(pd);
+		
+		waveLengths[i] = waveLength;
+		intensities[i] = Sqr(cpd);
+	}
+
+	IrregularSPD spd(waveLengths, intensities, NUM_WAVELENGTHS);
+
+	ColorSystem colorSpace(.63f, .34f, .31f, .595f, .155f, .07f,
+						   1.f / 3.f, 1.f / 3.f, 1.f);
+	const RGBColor rgb = colorSpace.ToRGBConstrained(spd.ToNormalizedXYZ());
+	return static_cast<Spectrum>(rgb);
 }
 
 Spectrum GlassMaterial::EvalSpecularReflection(const HitPoint &hitPoint,
@@ -153,15 +172,9 @@ Spectrum GlassMaterial::EvalSpecularReflection(const HitPoint &hitPoint,
 	const Spectrum result = kr * FresnelTexture::CauchyEvaluate(ntc, cosTheta);
 
 	if (localFilmThickness > 0.f) {
-		// Select the wavelength to sample
-		// TODO: can we predict which wavelength is most likely 
-		// to result from this viewing angle, thickness and IOR?
-		// Maybe we could sample the most likely range more often to reduce noise?
+		const float sinTheta = SinTheta(localFixedDir);
+		const Spectrum filmColor = CalcFilmColor(sinTheta, localFilmThickness, localFilmIor);
 		
-		const float waveLength = Lerp(u1, 380.f, 780.f);
-		const float sintheta = SinTheta(localFixedDir);
-		const float factor = PhaseDifference(waveLength, sintheta, localFilmThickness, localFilmIor);
-		const Spectrum filmColor = WaveLength2RGB(waveLength) * factor;
 		return result * filmColor;
 	}
 	return result;
