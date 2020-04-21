@@ -160,6 +160,8 @@ void TilePathOCLRenderThread::RenderThreadImpl() {
 
 	TilePathOCLRenderEngine *engine = (TilePathOCLRenderEngine *)renderEngine;
 
+	intersectionDevice->PushThreadCurrentDevice();
+
 	try {
 		//----------------------------------------------------------------------
 		// Initialization
@@ -263,6 +265,8 @@ void TilePathOCLRenderThread::RenderThreadImpl() {
 		engine->renderOCLThreads[i]->Interrupt();
 	for (u_int i = 0; i < engine->renderNativeThreads.size(); ++i)
 		engine->renderNativeThreads[i]->Interrupt();
+	
+	intersectionDevice->PopThreadCurrentDevice();
 }
 
 #endif
