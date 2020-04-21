@@ -727,7 +727,7 @@ OPENCL_FORCE_INLINE float SpotLight_LocalFalloff(const float3 w, const float cos
 
 	// Compute falloff inside spotlight cone
 	const float delta = (CosTheta(w) - cosTotalWidth) / (cosFalloffStart - cosTotalWidth);
-	return pow(delta, 4);
+	return pow(delta, 4.f);
 }
 
 OPENCL_FORCE_NOT_INLINE float3 SpotLight_Illuminate(__global const LightSource *spotLight,
@@ -988,7 +988,7 @@ OPENCL_FORCE_NOT_INLINE float3 Light_Illuminate(
 		__global Ray *shadowRay, float *directPdfW
 		LIGHTS_PARAM_DECL) {
 	switch (light->type) {
-		/*case TYPE_IL_CONSTANT:
+		case TYPE_IL_CONSTANT:
 			return ConstantInfiniteLight_Illuminate(
 					light,
 					worldCenterX, worldCenterY, worldCenterZ, envRadius,
@@ -1014,7 +1014,7 @@ OPENCL_FORCE_NOT_INLINE float3 Light_Illuminate(
 					light,
 					worldCenterX, worldCenterY, worldCenterZ, envRadius,
 					bsdf, time, u0, u1,
-					shadowRay, directPdfW);*/
+					shadowRay, directPdfW);
 		case TYPE_TRIANGLE:
 			return TriangleLight_Illuminate(
 					light,
@@ -1023,7 +1023,7 @@ OPENCL_FORCE_NOT_INLINE float3 Light_Illuminate(
 					passThroughEvent,
 					shadowRay, directPdfW
 					MATERIALS_PARAM);
-		/*case TYPE_POINT:
+		case TYPE_POINT:
 			return PointLight_Illuminate(
 					light,
 					bsdf, time,
@@ -1072,7 +1072,7 @@ OPENCL_FORCE_NOT_INLINE float3 Light_Illuminate(
 					light,
 					bsdf, time, u0, u1,
 					shadowRay, directPdfW
-					IMAGEMAPS_PARAM);*/
+					IMAGEMAPS_PARAM);
 		default:
 			return BLACK;
 	}
