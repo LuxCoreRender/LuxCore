@@ -16,7 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
+#if defined(LUXRAYS_ENABLE_OPENCL)
 
 #include <cstdio>
 #include <cstdlib>
@@ -56,7 +56,8 @@ PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg,
 		const bool supportsNativeThreads) :	OCLRenderEngine(rcfg, supportsNativeThreads),
 		compiledScene(nullptr), pixelFilterDistribution(nullptr), oclSampler(nullptr),
 		oclPixelFilter(nullptr), photonGICache(nullptr) {
-	additionalKernelOptions = "";
+	additionalOpenCLKernelOptions = "";
+	additionalCUDAKernelOptions = "";
 	writeKernelsToFile = false;
 
 	//--------------------------------------------------------------------------
@@ -66,20 +67,33 @@ PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg,
 	vector<IntersectionDevice *> devs = ctx->AddIntersectionDevices(selectedDeviceDescs);
 
 	//--------------------------------------------------------------------------
+	// Add CUDA devices
+	//--------------------------------------------------------------------------
+
+	SLG_LOG("CUDA devices used:");
+	for (size_t i = 0; i < devs.size(); ++i) {
+		if (devs[i]->GetDeviceDesc()->GetType() & DEVICE_TYPE_CUDA_ALL) {
+			SLG_LOG("[" << devs[i]->GetName() << "]");
+			intersectionDevices.push_back(devs[i]);
+		}
+	}
+
+	//--------------------------------------------------------------------------
 	// Add OpenCL devices
 	//--------------------------------------------------------------------------
 
 	SLG_LOG("OpenCL devices used:");
 	for (size_t i = 0; i < devs.size(); ++i) {
-		if (devs[i]->GetType() & DEVICE_TYPE_OPENCL_ALL) {
+		if (devs[i]->GetDeviceDesc()->GetType() & DEVICE_TYPE_OPENCL_ALL) {
 			SLG_LOG("[" << devs[i]->GetName() << "]");
 			intersectionDevices.push_back(devs[i]);
 
 			OpenCLIntersectionDevice *oclIntersectionDevice = (OpenCLIntersectionDevice *)(devs[i]);
+			OpenCLDeviceDescription *oclDeviceDesc = (OpenCLDeviceDescription *)oclIntersectionDevice->GetDeviceDesc();
 
 			// Check if OpenCL 1.1 is available
-			SLG_LOG("  Device OpenCL version: " << oclIntersectionDevice->GetDeviceDesc()->GetOpenCLVersion());
-			if (!oclIntersectionDevice->GetDeviceDesc()->IsOpenCL_1_1()) {
+			SLG_LOG("  Device OpenCL version: " << oclDeviceDesc->GetOpenCLVersion());
+			if (!oclDeviceDesc->IsOpenCL_1_1()) {
 				// NVIDIA drivers report OpenCL 1.0 even if they are 1.1 so I just
 				// print a warning instead of throwing an exception
 				SLG_LOG("WARNING: OpenCL version 1.1 or better is required. Device " + devs[i]->GetName() + " may not work.");
@@ -93,7 +107,7 @@ PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg,
 
 	SLG_LOG("Native devices used: " << nativeRenderThreadCount);
 	for (size_t i = 0; i < devs.size(); ++i) {
-		if (devs[i]->GetType() & DEVICE_TYPE_NATIVE)
+		if (devs[i]->GetDeviceDesc()->GetType() & DEVICE_TYPE_NATIVE)
 			intersectionDevices.push_back(devs[i]);
 	}
 	
@@ -248,14 +262,20 @@ void PathOCLBaseRenderEngine::StartLockLess() {
 		// Look for the max. page size allowed
 		maxMemPageSize = std::numeric_limits<size_t>::max();
 		for (u_int i = 0; i < intersectionDevices.size(); ++i) {
-			if (intersectionDevices[i]->GetType() & DEVICE_TYPE_OPENCL_ALL)
+			if (intersectionDevices[i]->GetDeviceDesc()->GetType() & DEVICE_TYPE_OPENCL_ALL)
 				maxMemPageSize = Min(maxMemPageSize, ((OpenCLIntersectionDevice *)(intersectionDevices[i]))->GetDeviceDesc()->GetMaxMemoryAllocSize());
 		}
 	}
 	SLG_LOG("[PathOCLBaseRenderEngine] OpenCL max. page memory size: " << maxMemPageSize / 1024 << "Kbytes");
 
-	// Suggested compiler options: -cl-fast-relaxed-math -cl-strict-aliasing -cl-mad-enable
-	additionalKernelOptions = cfg.Get(Property("opencl.kernel.options")("")).Get<string>();
+	// Suggested compiler options: -cl-fast-relaxed-math -cl-mad-enable
+	//
+	// NOTE: I should probably enable -cl-fast-relaxed-math -cl-mad-enable for OpenCL too even
+	// if this is not what I was doing in the past 
+	additionalOpenCLKernelOptions = cfg.Get(Property("opencl.kernel.options")("")).Get<string>();
+	// Suggested compiler options: --use_fast_math
+	additionalCUDAKernelOptions = cfg.Get(Property("cuda.kernel.options")("--use_fast_math")).Get<string>();
+	
 	writeKernelsToFile = cfg.Get(Property("opencl.kernel.writetofile")(false)).Get<bool>();
 
 	//--------------------------------------------------------------------------
@@ -297,12 +317,15 @@ void PathOCLBaseRenderEngine::StartLockLess() {
 	for (size_t i = 0; i < oclRenderThreadCount; ++i) {
 		if (!renderOCLThreads[i]) {
 			renderOCLThreads[i] = CreateOCLThread(i,
-					(OpenCLIntersectionDevice *)(intersectionDevices[i]));
+					(HardwareIntersectionDevice *)(intersectionDevices[i]));
 		}
 	}
 
-	for (size_t i = 0; i < renderOCLThreads.size(); ++i)
+	for (size_t i = 0; i < renderOCLThreads.size(); ++i) {
+		renderOCLThreads[i]->intersectionDevice->PushThreadCurrentDevice();
 		renderOCLThreads[i]->Start();
+		renderOCLThreads[i]->intersectionDevice->PopThreadCurrentDevice();
+	}
 
 	// I know kernels has been compiled at this point
 	SetCachedKernels(*renderConfig);
@@ -338,8 +361,11 @@ void PathOCLBaseRenderEngine::StopLockLess() {
             renderNativeThreads[i]->Stop();
     }
 	for (size_t i = 0; i < renderOCLThreads.size(); ++i) {
-        if (renderOCLThreads[i])
+        if (renderOCLThreads[i]) {
+			renderOCLThreads[i]->intersectionDevice->PushThreadCurrentDevice();
             renderOCLThreads[i]->Stop();
+			renderOCLThreads[i]->intersectionDevice->PopThreadCurrentDevice();
+		}
     }
 
 	delete compiledScene;
@@ -358,15 +384,21 @@ void PathOCLBaseRenderEngine::BeginSceneEditLockLess() {
 
 	for (size_t i = 0; i < renderNativeThreads.size(); ++i)
 		renderNativeThreads[i]->BeginSceneEdit();
-	for (size_t i = 0; i < renderOCLThreads.size(); ++i)
+	for (size_t i = 0; i < renderOCLThreads.size(); ++i) {
+		renderOCLThreads[i]->intersectionDevice->PushThreadCurrentDevice();
 		renderOCLThreads[i]->BeginSceneEdit();
+		renderOCLThreads[i]->intersectionDevice->PopThreadCurrentDevice();
+	}
 }
 
 void PathOCLBaseRenderEngine::EndSceneEditLockLess(const EditActionList &editActions) {
 	compiledScene->Recompile(editActions);
 
-	for (size_t i = 0; i < renderOCLThreads.size(); ++i)
+	for (size_t i = 0; i < renderOCLThreads.size(); ++i) {
+		renderOCLThreads[i]->intersectionDevice->PushThreadCurrentDevice();
 		renderOCLThreads[i]->EndSceneEdit(editActions);
+		renderOCLThreads[i]->intersectionDevice->PopThreadCurrentDevice();
+	}
 	for (size_t i = 0; i < renderNativeThreads.size(); ++i)
 		renderNativeThreads[i]->EndSceneEdit(editActions);
 }

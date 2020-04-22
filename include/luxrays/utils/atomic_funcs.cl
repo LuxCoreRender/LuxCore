@@ -19,6 +19,7 @@
  ***************************************************************************/
 
 OPENCL_FORCE_INLINE void AtomicAdd(__global float *val, const float delta) {
+#if defined(LUXRAYS_OPENCL_DEVICE)
 	union {
 		float f;
 		uint i;
@@ -32,6 +33,11 @@ OPENCL_FORCE_INLINE void AtomicAdd(__global float *val, const float delta) {
 		oldVal.f = *val;
 		newVal.f = oldVal.f + delta;
 	} while (atomic_cmpxchg((__global uint *)val, oldVal.i, newVal.i) != oldVal.i);
+#elif defined (LUXRAYS_CUDA_DEVICE)
+	atomicAdd(val, delta);
+#else
+#error "Error in AtomicAdd() definition"
+#endif
 }
 
 OPENCL_FORCE_INLINE bool AtomicMin(__global float *val, const float val2) {

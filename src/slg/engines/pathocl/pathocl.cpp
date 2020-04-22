@@ -16,7 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
+#if defined(LUXRAYS_ENABLE_OPENCL)
 
 #include <cstdio>
 #include <cstdlib>
@@ -69,7 +69,7 @@ PathOCLRenderEngine::~PathOCLRenderEngine() {
 }
 
 PathOCLBaseOCLRenderThread *PathOCLRenderEngine::CreateOCLThread(const u_int index,
-    OpenCLIntersectionDevice *device) {
+    HardwareIntersectionDevice *device) {
     return new PathOCLOpenCLRenderThread(index, device, this);
 }
 

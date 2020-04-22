@@ -27,8 +27,8 @@ OPENCL_FORCE_INLINE float2 UVMapping2D_Map(__global const TextureMapping2D *mapp
 	const float2 uv = HitPoint_GetUV(hitPoint, mapping->dataIndex EXTMESH_PARAM);
 
 	// Scale
-	const float uScaled = uv.s0 * mapping->uvMapping2D.uScale;
-	const float vScaled = uv.s1 * mapping->uvMapping2D.vScale;
+	const float uScaled = uv.x * mapping->uvMapping2D.uScale;
+	const float vScaled = uv.y * mapping->uvMapping2D.vScale;
 
 	// Rotate
 	const float sinTheta = mapping->uvMapping2D.sinTheta;
@@ -40,7 +40,7 @@ OPENCL_FORCE_INLINE float2 UVMapping2D_Map(__global const TextureMapping2D *mapp
 	const float uTranslated = uRotated + mapping->uvMapping2D.uDelta;
 	const float vTranslated = vRotated + mapping->uvMapping2D.vDelta;
 
-	return (float2)(uTranslated, vTranslated);
+	return MAKE_FLOAT2(uTranslated, vTranslated);
 }
 
 OPENCL_FORCE_INLINE float2 UVMapping2D_MapDuv(__global const TextureMapping2D *mapping,
@@ -50,8 +50,8 @@ OPENCL_FORCE_INLINE float2 UVMapping2D_MapDuv(__global const TextureMapping2D *m
 	const float sinTheta = mapping->uvMapping2D.sinTheta;
 	const float cosTheta = mapping->uvMapping2D.cosTheta;
 	
-	(*ds).xy = (float2)(signUScale * cosTheta, signUScale * sinTheta);
-	(*dt).xy = (float2)(-signVScale * sinTheta, signVScale * cosTheta);
+	*ds = MAKE_FLOAT2(signUScale * cosTheta, signUScale * sinTheta);
+	*dt = MAKE_FLOAT2(-signVScale * sinTheta, signVScale * cosTheta);
 	
 	return UVMapping2D_Map(mapping, hitPoint TEXTURES_PARAM);
 }
@@ -62,7 +62,7 @@ OPENCL_FORCE_NOT_INLINE float2 TextureMapping2D_Map(__global const TextureMappin
 		case UVMAPPING2D:
 			return UVMapping2D_Map(mapping, hitPoint TEXTURES_PARAM);
 		default:
-			return 0.f;
+			return MAKE_FLOAT2(0.f, 0.f);
 	}
 }
 
@@ -72,7 +72,7 @@ OPENCL_FORCE_NOT_INLINE float2 TextureMapping2D_MapDuv(__global const TextureMap
 		case UVMAPPING2D:
 			return UVMapping2D_MapDuv(mapping, hitPoint, ds, dt TEXTURES_PARAM);
 		default:
-			return 0.f;
+			return MAKE_FLOAT2(0.f, 0.f);
 	}
 }
 
@@ -86,7 +86,7 @@ OPENCL_FORCE_INLINE float3 UVMapping3D_Map(__global const TextureMapping3D *mapp
 		*shadeN = normalize(Transform_ApplyNormal(&mapping->worldToLocal, VLOAD3F(&hitPoint->shadeN.x)));
 
 	const float2 uv = HitPoint_GetUV(hitPoint, mapping->uvMapping3D.dataIndex EXTMESH_PARAM);
-	return Transform_ApplyPoint(&mapping->worldToLocal, (float3)(uv.xy, 0.f));
+	return Transform_ApplyPoint(&mapping->worldToLocal, MAKE_FLOAT3(uv.x, uv.y, 0.f));
 }
 
 //------------------------------------------------------------------------------
@@ -133,6 +133,6 @@ OPENCL_FORCE_NOT_INLINE float3 TextureMapping3D_Map(__global const TextureMappin
 		case LOCALMAPPING3D:
 			return LocalMapping3D_Map(mapping, hitPoint, shadeN);
 		default:
-			return 0.f;
+			return BLACK;
 	}
 }

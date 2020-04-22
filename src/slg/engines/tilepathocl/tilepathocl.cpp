@@ -16,7 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
+#if defined(LUXRAYS_ENABLE_OPENCL)
 
 #include <boost/format.hpp>
 
@@ -48,7 +48,7 @@ TilePathOCLRenderEngine::~TilePathOCLRenderEngine() {
 }
 
 PathOCLBaseOCLRenderThread *TilePathOCLRenderEngine::CreateOCLThread(const u_int index,
-	OpenCLIntersectionDevice *device) {
+	HardwareIntersectionDevice *device) {
 	return new TilePathOCLRenderThread(index, device, this);
 }
 

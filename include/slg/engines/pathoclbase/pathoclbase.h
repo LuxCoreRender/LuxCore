@@ -19,10 +19,11 @@
 #ifndef _SLG_PATHOCLBASE_H
 #define	_SLG_PATHOCLBASE_H
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
+#if defined(LUXRAYS_ENABLE_OPENCL)
 
 #include "luxrays/devices/nativeintersectiondevice.h"
 #include "luxrays/devices/oclintersectiondevice.h"
+#include "luxrays/devices/cudaintersectiondevice.h"
 #include "luxrays/utils/ocl.h"
 
 #include "slg/slg.h"
@@ -61,7 +62,7 @@ public:
 
 protected:
 	virtual PathOCLBaseOCLRenderThread *CreateOCLThread(const u_int index,
-			luxrays::OpenCLIntersectionDevice *device) = 0;
+			luxrays::HardwareIntersectionDevice *device) = 0;
 	virtual PathOCLBaseNativeRenderThread *CreateNativeThread(const u_int index,
 			luxrays::NativeIntersectionDevice *device) {
 		throw std::runtime_error("Internal error, called PathOCLBaseRenderEngine::CreateNativeThread()");
@@ -88,7 +89,7 @@ protected:
 	std::vector<PathOCLBaseOCLRenderThread *> renderOCLThreads;
 	std::vector<PathOCLBaseNativeRenderThread *> renderNativeThreads;
 	
-	std::string additionalKernelOptions;
+	std::string additionalOpenCLKernelOptions, additionalCUDAKernelOptions;
 	bool writeKernelsToFile;
 
 	// Pixel filter related variables

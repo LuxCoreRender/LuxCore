@@ -57,8 +57,8 @@ OPENCL_FORCE_NOT_INLINE void Camera_OculusRiftBarrelPostprocess(const float x, c
 OPENCL_FORCE_NOT_INLINE void Camera_ApplyArbitraryClippingPlane(
 		__global const Camera* restrict camera, __global Ray *ray,
 		const float3 clippingPlaneCenter, const float3 clippingPlaneNormal) {
-	const float3 rayOrig = (float3)(ray->o.x, ray->o.y, ray->o.z);
-	const float3 rayDir = (float3)(ray->d.x, ray->d.y, ray->d.z);
+	const float3 rayOrig = MAKE_FLOAT3(ray->o.x, ray->o.y, ray->o.z);
+	const float3 rayDir = MAKE_FLOAT3(ray->d.x, ray->d.y, ray->d.z);
 
 	// Intersect the ray with clipping plane
 	const float denom = dot(clippingPlaneNormal, rayDir);
@@ -117,9 +117,9 @@ OPENCL_FORCE_NOT_INLINE void PerspectiveCamera_GenerateRay(
 	if (camera->persp.enableOculusRiftBarrel) {
 		float ssx, ssy;
 		Camera_OculusRiftBarrelPostprocess(filmX / filmWidth, (filmHeight - filmY - 1.f) / filmHeight, &ssx, &ssy);
-		Pras = (float3) (min(ssx * filmWidth, (float) (filmWidth - 1)), min(ssy * filmHeight, (float) (filmHeight - 1)), 0.f);
+		Pras = MAKE_FLOAT3 (min(ssx * filmWidth, (float) (filmWidth - 1)), min(ssy * filmHeight, (float) (filmHeight - 1)), 0.f);
 	} else
-		Pras = (float3) (filmX, filmHeight - filmY - 1.f, 0.f);
+		Pras = MAKE_FLOAT3 (filmX, filmHeight - filmY - 1.f, 0.f);
 
 	float3 rayOrig = Transform_ApplyPoint(&camera->base.rasterToCamera, Pras);
 	float3 rayDir = rayOrig;
@@ -193,9 +193,9 @@ OPENCL_FORCE_NOT_INLINE void OrthographicCamera_GenerateRay(
 		const float dofSampleX, const float dofSampleY) {
 	PathVolumeInfo_StartVolume(volInfo, camera->base.volumeIndex);
 
-	const float3 Pras = (float3) (filmX, filmHeight - filmY - 1.f, 0.f);
+	const float3 Pras = MAKE_FLOAT3 (filmX, filmHeight - filmY - 1.f, 0.f);
 	float3 rayOrig = Transform_ApplyPoint(&camera->base.rasterToCamera, Pras);
-	float3 rayDir = (float3)(0.f, 0.f, 1.f);
+	float3 rayDir = MAKE_FLOAT3(0.f, 0.f, 1.f);
 
 	const float hither = camera->base.hither;
 
@@ -285,9 +285,9 @@ OPENCL_FORCE_NOT_INLINE void StereoCamera_GenerateRay(
 	if (camera->stereo.perspCamera.enableOculusRiftBarrel) {
 		float ssx, ssy;
 		Camera_OculusRiftBarrelPostprocess(filmX / filmWidth, (filmHeight - filmY - 1.f) / filmHeight, &ssx, &ssy);
-		Pras = (float3) (min(ssx * filmWidth, (float) (filmWidth - 1)), min(ssy * filmHeight, (float) (filmHeight - 1)), 0.f);
+		Pras = MAKE_FLOAT3 (min(ssx * filmWidth, (float) (filmWidth - 1)), min(ssy * filmHeight, (float) (filmHeight - 1)), 0.f);
 	} else
-		Pras = (float3) (filmX, filmHeight - filmY - 1.f, 0.f);
+		Pras = MAKE_FLOAT3 (filmX, filmHeight - filmY - 1.f, 0.f);
 
 	float3 rayOrig = Transform_ApplyPoint(rasterToCamera, Pras);
 	float3 rayDir = rayOrig;
@@ -364,8 +364,8 @@ OPENCL_FORCE_NOT_INLINE void EnvironmentCamera_GenerateRay(
 	const float theta = M_PI_F * (filmHeight - filmY) / filmHeight;
 	const float phi = 2.f * M_PI_F * (filmWidth - filmX) / filmWidth - 0.5 * M_PI_F;
 
-	float3 rayOrig = (float3) (0.f, 0.f, 0.f);
-	float3 rayDir = (float3)(sin(theta)*cos(phi), cos(theta), sin(theta)*sin(phi));
+	float3 rayOrig = MAKE_FLOAT3 (0.f, 0.f, 0.f);
+	float3 rayDir = MAKE_FLOAT3(sin(theta)*cos(phi), cos(theta), sin(theta)*sin(phi));
 	
 	const float maxt = (camera->base.yon - camera->base.hither);
 	const float time = mix(camera->base.shutterOpen, camera->base.shutterClose, timeSample);

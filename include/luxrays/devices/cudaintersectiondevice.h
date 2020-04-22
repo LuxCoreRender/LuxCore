@@ -16,57 +16,51 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _LUXRAYS_NATIVETHREADDEVICE_H
-#define	_LUXRAYS_NATIVETHREADDEVICE_H
+#ifndef _LUXRAYS_CUDAINTERSECTIONDEVICE_H
+#define	_LUXRAYS_CUDAINTERSECTIONDEVICE_H
 
-#include <string>
-#include <cstdlib>
+#include "luxrays/devices/cudadevice.h"
+#include "luxrays/core/hardwareintersectiondevice.h"
 
-#include <boost/thread/thread.hpp>
-
-#include "luxrays/luxrays.h"
-#include "luxrays/core/dataset.h"
-#include "luxrays/core/context.h"
-#include "luxrays/core/intersectiondevice.h"
-#include "luxrays/utils/utils.h"
+#if defined(LUXRAYS_ENABLE_CUDA)
 
 namespace luxrays {
 
 //------------------------------------------------------------------------------
-// NativeIntersectionDeviceDescription
+// CUDAIntersectionDevice
 //------------------------------------------------------------------------------
 
-class NativeIntersectionDeviceDescription : public DeviceDescription {
+class CUDAIntersectionDevice : public CUDADevice, public HardwareIntersectionDevice {
 public:
-	NativeIntersectionDeviceDescription(const std::string deviceName) :
-		DeviceDescription(deviceName, DEVICE_TYPE_NATIVE) { }
+	CUDAIntersectionDevice(const Context *context,
+		CUDADeviceDescription *desc, const size_t devIndex);
+	virtual ~CUDAIntersectionDevice();
+
+	virtual bool HasDataParallelSupport() const { return true; }
+
+	virtual void SetDataSet(DataSet *newDataSet);
+	virtual void Start();
+	virtual void Stop();
+
+	//--------------------------------------------------------------------------
+	// Data parallel interface: to trace a multiple rays (i.e. on the GPU)
+	//--------------------------------------------------------------------------
+
+	virtual void EnqueueTraceRayBuffer(HardwareDeviceBuffer *rayBuff,
+			HardwareDeviceBuffer *rayHitBuff,
+			const unsigned int rayCount);
 
 	friend class Context;
 
 protected:
-	static void AddDeviceDescs(std::vector<DeviceDescription *> &descriptions);
-};
+	virtual void Update();
 
-//------------------------------------------------------------------------------
-// NativeDevice
-//------------------------------------------------------------------------------
-
-class NativeIntersectionDevice : public IntersectionDevice {
-public:
-	NativeIntersectionDevice(const Context *context,
-			NativeIntersectionDeviceDescription *deviceDesc,
-			const size_t devIndex);
-	virtual ~NativeIntersectionDevice();
-
-	virtual const DeviceDescription *GetDeviceDesc() const { return deviceDesc; }
-
-	virtual void SetDataSet(DataSet *newDataSet);
-
-	friend class Context;
-
-	NativeIntersectionDeviceDescription *deviceDesc;
+	HardwareIntersectionKernel *kernel;
 };
 
 }
 
-#endif	/* _LUXRAYS_NATIVETHREADDEVICE_H */
+#endif
+
+#endif	/* _LUXRAYS_CUDAINTERSECTIONDEVICE_H */
+

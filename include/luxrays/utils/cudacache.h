@@ -1,5 +1,3 @@
-#line 2 "cudadevice_oclemul_types.cl"
-
 /***************************************************************************
  * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
@@ -18,21 +16,52 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#define __kernel extern "C" __global__
-#define __global
-#define __local __shared__
-#define __constant
-#define restrict __restrict__
+#ifndef _LUXRAYS_CUDACACHE_H
+#define	_LUXRAYS_CUDACACHE_H
 
-// This is a workaround to long compilation time
-#define OPENCL_FORCE_NOT_INLINE __noinline__
-#define OPENCL_FORCE_INLINE __forceinline__
+#include <string>
+#include <boost/filesystem.hpp>
+#include <boost/unordered_map.hpp>
 
-typedef unsigned char uchar;
-typedef unsigned short ushort;
-typedef unsigned int uint;
-typedef unsigned long ulong;
+#include "luxrays/utils/cuda.h"
 
-#define INFINITY __int_as_float(0x7f800000)
-#define M_PI_F 3.141592654f
-#define M_1_PI_F (1.f / 3.141592654f)
+#if defined(LUXRAYS_ENABLE_CUDA)
+
+namespace luxrays {
+
+class cudaKernelCache {
+public:
+	cudaKernelCache() { }
+	virtual ~cudaKernelCache() { }
+
+	virtual CUmodule Compile(const std::string &kernelsParameters,
+		const std::string &kernelSource, const std::string &programName,
+		bool *cached, std::string *error) = 0;
+
+	static bool ForcedCompile(const std::string &kernelsParameters,
+		const std::string &kernelSource, const std::string &programName,
+		char **ptx, size_t *ptxSize, std::string *error);
+};
+
+// WARNING: this class is not thread safe !
+class cudaKernelPersistentCache : public cudaKernelCache {
+public:
+	cudaKernelPersistentCache(const std::string &applicationName);
+	~cudaKernelPersistentCache();
+
+	virtual CUmodule Compile(const std::string &kernelsParameters,
+		const std::string &kernelSource, const std::string &programName,
+		bool *cached, std::string *error);
+
+	static boost::filesystem::path GetCacheDir(const std::string &applicationName);
+
+private:
+	std::string appName;
+};
+
+}
+
+#endif
+
+#endif	/* _LUXRAYS_CUDACACHE_H */
+

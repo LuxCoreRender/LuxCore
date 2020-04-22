@@ -16,7 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
+#if defined(LUXRAYS_ENABLE_OPENCL)
 
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string/replace.hpp>
@@ -336,8 +336,7 @@ void PathOCLBaseOCLRenderThread::InitSamplerSharedDataBuffer() {
 		rssd.adaptiveStrength = renderEngine->oclSampler->random.adaptiveStrength;
 		rssd.adaptiveUserImportanceWeight = renderEngine->oclSampler->random.adaptiveUserImportanceWeight;
 
-		cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
-		oclQueue.enqueueWriteBuffer(*samplerSharedDataBuff, CL_TRUE, 0, size, &rssd);
+		intersectionDevice->EnqueueWriteBuffer(samplerSharedDataBuff, CL_TRUE, size, &rssd);
 	} else if (renderEngine->oclSampler->type == slg::ocl::SOBOL) {
 		char *buffer = new char[size];
 
@@ -362,8 +361,7 @@ void PathOCLBaseOCLRenderThread::InitSamplerSharedDataBuffer() {
 		SobolSequence::GenerateDirectionVectors(sobolDirections, renderEngine->pathTracer.eyeSampleSize);
 
 		// Write the data
-		cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
-		oclQueue.enqueueWriteBuffer(*samplerSharedDataBuff, CL_TRUE, 0, size, buffer);
+		intersectionDevice->EnqueueWriteBuffer(samplerSharedDataBuff, CL_TRUE, size, buffer);
 		
 		delete[] buffer;
 	} else if (renderEngine->oclSampler->type == slg::ocl::TILEPATHSAMPLER) {
@@ -377,8 +375,7 @@ void PathOCLBaseOCLRenderThread::InitSamplerSharedDataBuffer() {
 				u_int *sobolDirections = (u_int *)(buffer + sizeof(slg::ocl::TilePathSamplerSharedData));
 				SobolSequence::GenerateDirectionVectors(sobolDirections, renderEngine->pathTracer.eyeSampleSize);
 
-				cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
-				oclQueue.enqueueWriteBuffer(*samplerSharedDataBuff, CL_TRUE, 0, size, &buffer[0]);
+				intersectionDevice->EnqueueWriteBuffer(samplerSharedDataBuff, CL_TRUE, size, &buffer[0]);
 				delete [] buffer;
 				break;
 			}
@@ -604,13 +601,11 @@ void PathOCLBaseOCLRenderThread::InitRender() {
 	// Set kernel arguments
 	SetKernelArgs();
 
-	cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
-
 	// Clear all thread films
 	BOOST_FOREACH(ThreadFilm *threadFilm, threadFilms)
-		threadFilm->ClearFilm(oclQueue, *filmClearKernel, filmClearWorkGroupSize);
+		threadFilm->ClearFilm(intersectionDevice, filmClearKernel, filmClearWorkGroupSize);
 
-	oclQueue.finish();
+	intersectionDevice->FinishQueue();
 
 	// Reset statistics in order to be more accurate
 	intersectionDevice->ResetPerformaceStats();

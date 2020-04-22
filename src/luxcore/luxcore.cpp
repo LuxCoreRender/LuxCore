@@ -182,10 +182,18 @@ Properties luxcore::GetPlatformDesc() {
 	static const string luxCoreVersion(LUXCORE_VERSION_MAJOR "." LUXCORE_VERSION_MINOR);
 	props << Property("version.number")(luxCoreVersion);
 
-#if defined(LUXRAYS_DISABLE_OPENCL)
-	props << Property("compile.LUXRAYS_DISABLE_OPENCL")(true);
-#else
+#if defined(LUXRAYS_ENABLE_OPENCL)
 	props << Property("compile.LUXRAYS_DISABLE_OPENCL")(false);
+	props << Property("compile.LUXRAYS_ENABLE_OPENCL")(true);
+#else
+	props << Property("compile.LUXRAYS_DISABLE_OPENCL")(true);
+	props << Property("compile.LUXRAYS_ENABLE_OPENCL")(false);
+#endif
+
+#if defined(LUXRAYS_ENABLE_CUDA)
+	props << Property("compile.LUXRAYS_ENABLE_CUDA")(true);
+#else
+	props << Property("compile.LUXRAYS_ENABLE_CUDA")(false);
 #endif
 
 	props << Property("compile.LUXCORE_DISABLE_EMBREE_BVH_BUILDER")(false);
@@ -199,7 +207,7 @@ Properties luxcore::GetPlatformDesc() {
 //------------------------------------------------------------------------------
 
 Properties luxcore::GetOpenCLDeviceDescs() {
-#if defined(LUXRAYS_DISABLE_OPENCL)
+#if !defined(LUXRAYS_ENABLE_OPENCL)
 	return Properties();
 #else
 	Properties props;

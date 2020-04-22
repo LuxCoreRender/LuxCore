@@ -61,7 +61,7 @@ OPENCL_FORCE_NOT_INLINE float3 ArchGlassMaterial_EvalSpecularReflection(__global
 	if (costheta <= 0.f)
 		return BLACK;
 
-	*sampledDir = (float3)(-localFixedDir.x, -localFixedDir.y, localFixedDir.z);
+	*sampledDir = MAKE_FLOAT3(-localFixedDir.x, -localFixedDir.y, localFixedDir.z);
 
 	const float ntc = nt / nc;
 	return kr * FresnelCauchy_Evaluate(ntc, costheta);
@@ -137,12 +137,12 @@ OPENCL_FORCE_INLINE void ArchGlassMaterial_GetPassThroughTransparency(__global c
 	const float3 kr = Spectrum_Clamp(Texture_GetSpectrumValue(material->archglass.krTexIndex, hitPoint
 		TEXTURES_PARAM));
 
-	const float nc = Spectrum_Filter(ExtractExteriorIors(hitPoint,
+	const float nc = Spectrum_Filter(TO_FLOAT3(ExtractExteriorIors(hitPoint,
 			material->archglass.exteriorIorTexIndex
-			TEXTURES_PARAM));
-	const float nt = Spectrum_Filter(ExtractInteriorIors(hitPoint,
+			TEXTURES_PARAM)));
+	const float nt = Spectrum_Filter(TO_FLOAT3(ExtractInteriorIors(hitPoint,
 			material->archglass.interiorIorTexIndex
-			TEXTURES_PARAM));
+			TEXTURES_PARAM)));
 
 	float3 transLocalSampledDir; 
 	const float3 trans = ArchGlassMaterial_EvalSpecularTransmission(hitPoint, localFixedDir,

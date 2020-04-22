@@ -99,7 +99,7 @@ if (OPENGL_FOUND)
 endif ()
 
 # OpenCL
-if (NOT LUXRAYS_DISABLE_OPENCL)
+if (LUXRAYS_ENABLE_OPENCL)
 	set(OPENCL_ROOT                "${OPENCL_SEARCH_PATH}")
 	find_package(OpenCL)
 

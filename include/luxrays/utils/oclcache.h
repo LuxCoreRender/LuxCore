@@ -23,7 +23,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/unordered_map.hpp>
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
+#if defined(LUXRAYS_ENABLE_OPENCL)
 
 #include "luxrays/utils/ocl.h"
 

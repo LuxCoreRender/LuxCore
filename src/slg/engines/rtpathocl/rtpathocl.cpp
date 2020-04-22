@@ -16,7 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
+#if defined(LUXRAYS_ENABLE_OPENCL)
 
 #include "slg/slg.h"
 #include "slg/engines/rtpathocl/rtpathocl.h"
@@ -52,7 +52,7 @@ void RTPathOCLRenderEngine::InitGPUTaskConfiguration() {
 }
 
 PathOCLBaseOCLRenderThread *RTPathOCLRenderEngine::CreateOCLThread(const u_int index,
-	OpenCLIntersectionDevice *device) {
+	HardwareIntersectionDevice *device) {
 	return new RTPathOCLRenderThread(index, device, this);
 }
 

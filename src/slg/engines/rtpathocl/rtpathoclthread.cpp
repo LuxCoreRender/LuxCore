@@ -16,7 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
+#if defined(LUXRAYS_ENABLE_OPENCL)
 
 #include "luxrays/devices/ocldevice.h"
 
@@ -35,7 +35,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 RTPathOCLRenderThread::RTPathOCLRenderThread(const u_int index,
-	OpenCLIntersectionDevice *device, TilePathOCLRenderEngine *re) : 
+	HardwareIntersectionDevice *device, TilePathOCLRenderEngine *re) : 
 	TilePathOCLRenderThread(index, device, re) {
 }
 
@@ -110,11 +110,10 @@ void RTPathOCLRenderThread::UpdateOCLBuffers(const EditActionList &updateActions
 			updateActions.Has(LIGHT_TYPES_EDIT)) {
 		// Execute initialization kernels. Initialize OpenCL structures.
 		// NOTE: I can only after having compiled and set arguments.
-		cl::CommandQueue &initQueue = intersectionDevice->GetOpenCLQueue();
 		RTPathOCLRenderEngine *engine = (RTPathOCLRenderEngine *)renderEngine;
 
-		initQueue.enqueueNDRangeKernel(*initSeedKernel, cl::NullRange,
-				cl::NDRange(engine->taskCount), cl::NDRange(initWorkGroupSize));
+		intersectionDevice->EnqueueKernel(initSeedKernel,
+				HardwareDeviceRange(engine->taskCount), HardwareDeviceRange(initWorkGroupSize));
 	}
 
 	// Reset statistics in order to be more accurate
@@ -131,6 +130,9 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 
 	RTPathOCLRenderEngine *engine = (RTPathOCLRenderEngine *)renderEngine;
 	boost::barrier *frameBarrier = engine->frameBarrier;
+
+	intersectionDevice->PushThreadCurrentDevice();
+
 	// To synchronize the start of all threads
 	frameBarrier->wait();
 
@@ -141,11 +143,9 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 		// Execute initialization kernels
 		//----------------------------------------------------------------------
 
-		cl::CommandQueue &initQueue = intersectionDevice->GetOpenCLQueue();
-
 		// Initialize OpenCL structures
-		initQueue.enqueueNDRangeKernel(*initSeedKernel, cl::NullRange,
-				cl::NDRange(taskCount), cl::NDRange(initWorkGroupSize));
+		intersectionDevice->EnqueueKernel(initSeedKernel,
+				HardwareDeviceRange(taskCount), HardwareDeviceRange(initWorkGroupSize));
 
 		//----------------------------------------------------------------------
 		// Rendering loop
@@ -154,8 +154,6 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 		bool pendingFilmClear = false;
 		tileWork.Reset();
 		while (!boost::this_thread::interruption_requested()) {
-			cl::CommandQueue &currentQueue = intersectionDevice->GetOpenCLQueue();
-
 			//------------------------------------------------------------------
 			// Render the tile (there is only one tile for each device
 			// in RTPATHOCL)
@@ -171,14 +169,12 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 				RenderTileWork(tileWork, 0);
 
 				// Async. transfer of GPU task statistics
-				currentQueue.enqueueReadBuffer(
-					*(taskStatsBuff),
+				intersectionDevice->EnqueueReadBuffer(
+					taskStatsBuff,
 					CL_FALSE,
-					0,
 					sizeof(slg::ocl::pathoclbase::GPUTaskStats) * taskCount,
 					gpuTaskStats);
-
-				currentQueue.finish();
+				intersectionDevice->FinishQueue();
 
 				//const double t1 = WallClockTime();
 				//SLG_LOG("[RTPathOCLRenderThread::" << threadIndex << "] Tile rendering time: " + ToString((u_int)((t1 - t0) * 1000.0)) + "ms");
@@ -203,6 +199,8 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 				// It is also done by thread #0 for all threads.
 				for (u_int i = 0; i < engine->renderOCLThreads.size(); ++i) {
 					RTPathOCLRenderThread *thread = (RTPathOCLRenderThread *)(engine->renderOCLThreads[i]);
+					
+					thread->intersectionDevice->PushThreadCurrentDevice();
 
 					if (thread->tileWork.HasWork()) {
 						engine->tileRepository->NextTile(engine->film, engine->filmMutex, thread->tileWork, thread->threadFilms[0]->film);
@@ -210,6 +208,8 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 						// There is only one tile for each device in RTPATHOCL
 						thread->tileWork.Reset();
 					}
+
+					thread->intersectionDevice->PopThreadCurrentDevice();
 				}
 
 				//const double t1 = WallClockTime();
@@ -230,7 +230,9 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 					// Update all threads
 					for (u_int i = 0; i < engine->renderOCLThreads.size(); ++i) {
 						RTPathOCLRenderThread *thread = (RTPathOCLRenderThread *)(engine->renderOCLThreads[i]);
+						thread->intersectionDevice->PushThreadCurrentDevice();
 						thread->UpdateOCLBuffers(engine->updateActions);
+						thread->intersectionDevice->PopThreadCurrentDevice();
 					}
 
 					// Reset updateActions
@@ -255,9 +257,11 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 				"(" << oclErrorString(err.err()) << ")");
 	}
 
-	intersectionDevice->GetOpenCLQueue().finish();
+	intersectionDevice->FinishQueue();
 
 	threadDone = true;
+	
+	intersectionDevice->PopThreadCurrentDevice();
 }
 
 #endif

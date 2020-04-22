@@ -24,7 +24,7 @@
 #include "luxrays/utils/oclerror.h"
 #include "luxrays/utils/oclcache.h"
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
+#if defined(LUXRAYS_ENABLE_OPENCL)
 
 namespace luxrays {
 
@@ -39,8 +39,7 @@ public:
 			GetOCLDeviceType(device.getInfo<CL_DEVICE_TYPE>())),
 		deviceIndex(devIndex),
 		oclDevice(device), oclContext(NULL),
-		enableOpenGLInterop(false),
-		forceWorkGroupSize(0) { }
+		enableOpenGLInterop(false) { }
 
 	virtual ~OpenCLDeviceDescription() {
 		delete oclContext;
@@ -59,9 +58,6 @@ public:
 	virtual u_int GetNativeVectorWidthFloat() const {
 		return oclDevice.getInfo<CL_DEVICE_NATIVE_VECTOR_WIDTH_FLOAT>();
 	}
-
-	u_int GetForceWorkGroupSize() const { return forceWorkGroupSize; }
-	void SetForceWorkGroupSize(const u_int size) { forceWorkGroupSize = size; }
 
 	bool HasImageSupport() const { return oclDevice.getInfo<CL_DEVICE_IMAGE_SUPPORT>() != 0 ; }
 	size_t GetImage2DMaxWidth() const { return oclDevice.getInfo<CL_DEVICE_IMAGE2D_MAX_WIDTH>(); }
@@ -126,7 +122,6 @@ protected:
 	cl::Device oclDevice;
 	cl::Context *oclContext;
 	bool enableOpenGLInterop;
-	u_int forceWorkGroupSize;
 };
 
 //------------------------------------------------------------------------------
@@ -200,8 +195,14 @@ public:
 		return (oclBuff == nullptr);
 	}
 
+	size_t GetSize() const {
+		assert (oclBuff);
+		return oclBuff->getInfo<CL_MEM_SIZE>();
+	}
+
 	friend class OpenCLDevice;
 
+protected:
 	cl::Buffer *oclBuff;
 };
 
@@ -209,11 +210,16 @@ public:
 // OpenCLDevice
 //------------------------------------------------------------------------------
 
-class OpenCLDevice : public HardwareDevice {
+class OpenCLDevice : virtual public HardwareDevice {
 public:
 	OpenCLDevice(const Context *context,
 		OpenCLDeviceDescription *desc, const size_t devIndex);
 	virtual ~OpenCLDevice();
+
+	virtual const DeviceDescription *GetDeviceDesc() const { return deviceDesc; }
+
+	virtual void PushThreadCurrentDevice() { }
+	virtual void PopThreadCurrentDevice() { }
 
 	virtual void Start();
 	virtual void Stop();
@@ -229,6 +235,7 @@ public:
 	virtual void GetKernel(HardwareDeviceProgram *program,
 			HardwareDeviceKernel **kernel,
 			const std::string &kernelName);
+	virtual u_int GetKernelWorkGroupSize(HardwareDeviceKernel *kernel);
 	virtual void SetKernelArg(HardwareDeviceKernel *kernel,
 			const u_int index, const size_t size, const void *arg);
 
@@ -245,10 +252,6 @@ public:
 	//--------------------------------------------------------------------------
 	// Memory management for hardware (aka GPU) only applications
 	//--------------------------------------------------------------------------
-
-	virtual size_t GetMaxMemory() const {
-		return deviceDesc->GetMaxMemory();
-	}
 
 	virtual void AllocBufferRO(HardwareDeviceBuffer **buff, void *src, const size_t size, const std::string &desc = "");
 	virtual void AllocBufferRW(HardwareDeviceBuffer **buff, void *src, const size_t size, const std::string &desc = "");

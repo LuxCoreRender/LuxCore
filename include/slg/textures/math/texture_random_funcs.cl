@@ -1,4 +1,4 @@
-#line 2 "texture_abs_funcs.cl"
+#line 2 "texture_random_funcs.cl"
 
 /***************************************************************************
  * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
@@ -50,7 +50,7 @@ OPENCL_FORCE_NOT_INLINE void RandomTexture_EvalOp(
 			float tex1;
 			EvalStack_PopFloat(tex1);
 
-			const float3 eval = RandomTexture_ConstEvaluateFloat(tex1);
+			const float3 eval = TO_FLOAT3(RandomTexture_ConstEvaluateFloat(tex1));
 			EvalStack_PushFloat3(eval);
 			break;
 		}

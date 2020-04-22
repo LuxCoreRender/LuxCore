@@ -20,15 +20,15 @@
 
 // Get the rotation matrix from quaternion
 OPENCL_FORCE_INLINE void Quaternion_ToMatrix(const float4 q, Matrix4x4 *m) {
-	const float xx = q.s1 * q.s1;
-	const float yy = q.s2 * q.s2;
-	const float zz = q.s3 * q.s3;
-	const float xy = q.s1 * q.s2;
-	const float xz = q.s1 * q.s3;
-	const float yz = q.s2 * q.s3;
-	const float xw = q.s1 * q.s0;
-	const float yw = q.s2 * q.s0;
-	const float zw = q.s3 * q.s0;
+	const float xx = q.y * q.y;
+	const float yy = q.z * q.z;
+	const float zz = q.w * q.w;
+	const float xy = q.y * q.z;
+	const float xz = q.y * q.w;
+	const float yz = q.z * q.w;
+	const float xw = q.y * q.x;
+	const float yw = q.z * q.x;
+	const float zw = q.w * q.x;
 
 	m->m[0][0] = 1.f - 2.f * (yy + zz);
 	m->m[1][0] = 2.f * (xy - zw);

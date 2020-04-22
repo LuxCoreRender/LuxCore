@@ -102,7 +102,7 @@ OPENCL_FORCE_INLINE void DefaultMaterial_GetEmittedRadiance(__global const Mater
 		(VLOAD3F(material->emittedFactor.c) *
 		(material->usePrimitiveArea ? oneOverPrimitiveArea : 1.f) *
 		clamp(Texture_GetSpectrumValue(emitTexIndex, hitPoint
-				TEXTURES_PARAM), BLACK, INFINITY));
+				TEXTURES_PARAM), BLACK, MAKE_FLOAT3(INFINITY, INFINITY, INFINITY)));
 
 	EvalStack_PushFloat3(emittedRadiance);
 }

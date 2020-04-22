@@ -92,6 +92,8 @@ public:
 	virtual ~HardwareDeviceBuffer() { }
 
 	virtual bool IsNull() const = 0;
+	
+	virtual size_t GetSize() const = 0;
 
 protected:
 	HardwareDeviceBuffer() { }
@@ -103,6 +105,10 @@ protected:
 
 class HardwareDevice : virtual public Device {
 public:
+	// Set the thread current device
+	virtual void PushThreadCurrentDevice() = 0;
+	virtual void PopThreadCurrentDevice() = 0;
+
 	//--------------------------------------------------------------------------
 	// Kernels handling for hardware (aka GPU) only applications
 	//--------------------------------------------------------------------------
@@ -114,6 +120,7 @@ public:
 	virtual void GetKernel(HardwareDeviceProgram *program,
 			HardwareDeviceKernel **kernel,
 			const std::string &kernelName) = 0;
+	virtual u_int GetKernelWorkGroupSize(HardwareDeviceKernel *kernel) = 0;
 
 	virtual void SetKernelArg(HardwareDeviceKernel *kernel,
 			const u_int index, const size_t size, const void *arg) = 0;
@@ -140,7 +147,6 @@ public:
 	// Memory management for hardware (aka GPU) only applications
 	//--------------------------------------------------------------------------
 
-	virtual size_t GetMaxMemory() const { return 0; }
 	size_t GetUsedMemory() const { return usedMemory; }
 
 	virtual void AllocBufferRO(HardwareDeviceBuffer **buff, void *src, const size_t size, const std::string &desc = "") = 0;

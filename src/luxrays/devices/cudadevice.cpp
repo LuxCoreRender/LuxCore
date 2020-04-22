@@ -120,21 +120,19 @@ CUDADevice::CUDADevice(
 		const Context *context,
 		CUDADeviceDescription *desc,
 		const size_t devIndex) :
-		Device(context, desc->GetType(), devIndex),
+		Device(context, devIndex),
 		deviceDesc(desc) {
-	deviceName = (desc->GetName() + " Intersect").c_str();
+	deviceName = (desc->GetName() + " CUDAIntersect").c_str();
+
+	kernelCache = new cudaKernelPersistentCache("LUXRAYS_" LUXRAYS_VERSION_MAJOR "." LUXRAYS_VERSION_MINOR);
+	
+	CHECK_CUDA_ERROR(cuCtxCreate(&cudaContext, CU_CTX_SCHED_YIELD, deviceDesc->GetCUDADevice()));
+
+	// I prefer cache over shared memory because I pretty much never use shared memory
+	CHECK_CUDA_ERROR(cuCtxSetCacheConfig(CU_FUNC_CACHE_PREFER_L1));
 }
 
 CUDADevice::~CUDADevice() {
-}
-
-void CUDADevice::Start() {
-	HardwareDevice::Start();
-
-	CHECK_CUDA_ERROR(cuCtxCreate(&cudaContext, CU_CTX_SCHED_YIELD, deviceDesc->GetCUDADevice()));
-}
-
-void CUDADevice::Stop() {
 	// Free all loaded modules
 	for (auto &m : loadedModules) {
 		CHECK_CUDA_ERROR(cuModuleUnload(m));
@@ -142,8 +140,17 @@ void CUDADevice::Stop() {
 	loadedModules.clear();
 
 	CHECK_CUDA_ERROR(cuCtxDestroy(cudaContext));
-		
-	HardwareDevice::Stop();
+
+	delete kernelCache;
+}
+
+void CUDADevice::PushThreadCurrentDevice() {
+	CHECK_CUDA_ERROR(cuCtxPushCurrent(cudaContext));
+}
+
+void CUDADevice::PopThreadCurrentDevice() {
+	CUcontext newCudaContext;
+	CHECK_CUDA_ERROR(cuCtxPopCurrent(&newCudaContext));
 }
 
 //------------------------------------------------------------------------------
@@ -151,8 +158,8 @@ void CUDADevice::Stop() {
 //------------------------------------------------------------------------------
 
 void CUDADevice::CompileProgram(HardwareDeviceProgram **program,
-		const std::string &programParameters, const std::string &programSource,	
-		const std::string &programName) {
+		const string &programParameters, const string &programSource,	
+		const string &programName) {
 	LR_LOG(deviceContext, "[" << programName << "] Defined symbols: " << programParameters);
 	LR_LOG(deviceContext, "[" << programName << "] Compiling kernels");
 
@@ -164,58 +171,29 @@ void CUDADevice::CompileProgram(HardwareDeviceProgram **program,
 		luxrays::ocl::KernelSource_cudadevice_math +
 		luxrays::ocl::KernelSource_cudadevice_oclemul_funcs +
 		programSource;
-	nvrtcProgram prog;
-	CHECK_NVRTC_ERROR(nvrtcCreateProgram(&prog, cudaProgramSource.c_str(), programName.c_str(), 0, nullptr, nullptr));
 
-    #if defined (__APPLE__)
-        boost::regex paramsRE("/\\-D\\s+\\w+\\s*=\\s*[+-\\w\\d]+|\\-D\\s+\\w+/");
-    #else
-        boost::regex paramsRE("\\-D\\s+\\w+\\s*=\\s*[+-\\w\\d]+|\\-D\\s+\\w+");
-    #endif
-    
-	boost::sregex_token_iterator paramsIter(cudaProgramParameters.begin(), cudaProgramParameters.end(), paramsRE);
-	boost::sregex_token_iterator paramsEnd;
-	vector<string> cudaOptsStr;
-	vector<const char *> cudaOpts;
-
-	cudaOptsStr.push_back("--device-as-default-execution-space");
-	cudaOpts.push_back(cudaOptsStr.back().c_str());
-    
-	while (paramsIter != paramsEnd) {
-		cudaOptsStr.push_back(*paramsIter++);
-		cudaOpts.push_back(cudaOptsStr.back().c_str());
+	bool cached;
+	string error;
+	CUmodule module = kernelCache->Compile(cudaProgramParameters, cudaProgramSource, programName, &cached, &error);
+	if (!module) {
+		LR_LOG(deviceContext, "[" << programName << "] CUDA program compilation error: " << endl << error);
+		
+		throw runtime_error(programName + " CUDA program compilation error");
 	}
 
-	const nvrtcResult compilationResult = nvrtcCompileProgram(prog,
-			cudaOpts.size(),
-			(cudaOpts.size() > 0) ? &cudaOpts[0] : nullptr);
-	if (compilationResult != NVRTC_SUCCESS) {
-		size_t logSize;
-		CHECK_NVRTC_ERROR(nvrtcGetProgramLogSize(prog, &logSize));
-		unique_ptr<char> log(new char[logSize]);
-		CHECK_NVRTC_ERROR(nvrtcGetProgramLog(prog, log.get()));
-
-		LR_LOG(deviceContext, "[" << programName << "] program compilation error" << endl << log.get());
-
-		throw runtime_error(programName + " program compilation error");
+	if (cached) {
+		LR_LOG(deviceContext, "[" << programName << "] Program cached");
+	} else {
+		LR_LOG(deviceContext, "[" << programName << "] Program not cached");
 	}
-
+	
 	if (!*program)
 		*program = new CUDADeviceProgram();
 	
 	CUDADeviceProgram *cudaDeviceProgram = dynamic_cast<CUDADeviceProgram *>(*program);
 	assert (cudaDeviceProgram);
 
-	// Obtain PTX from the program.
-	size_t ptxSize;
-	CHECK_NVRTC_ERROR(nvrtcGetPTXSize(prog, &ptxSize));
-	char *ptx = new char[ptxSize];
-	CHECK_NVRTC_ERROR(nvrtcGetPTX(prog, ptx));
-
-	CUmodule module;
-	CHECK_CUDA_ERROR(cuModuleLoadDataEx(&module, ptx, 0, 0, 0));
-
-	cudaDeviceProgram->Set(prog, module);
+	cudaDeviceProgram->Set(module);
 	
 	loadedModules.push_back(module);
 }
@@ -235,6 +213,13 @@ void CUDADevice::GetKernel(HardwareDeviceProgram *program,
 	CHECK_CUDA_ERROR(cuModuleGetFunction(&function, cudaDeviceProgram->GetModule(), kernelName.c_str()));
 	
 	cudaDeviceKernel->Set(function);
+}
+
+u_int CUDADevice::GetKernelWorkGroupSize(HardwareDeviceKernel *kernel) {
+	assert (kernel);
+	assert (!kernel->IsNull());
+
+	return 32;
 }
 
 void CUDADevice::SetKernelArg(HardwareDeviceKernel *kernel,
@@ -257,6 +242,11 @@ void CUDADevice::SetKernelArg(HardwareDeviceKernel *kernel,
 		CUdeviceptr p = 0;
 		argCpy = new char[sizeof(CUdeviceptr)];
 		memcpy(argCpy, &p, sizeof(CUdeviceptr));
+	}
+
+	if (cudaDeviceKernel->args[index]) {
+		delete[] (char *)cudaDeviceKernel->args[index];
+		cudaDeviceKernel->args[index] = nullptr;
 	}
 
 	cudaDeviceKernel->args[index] = argCpy;
@@ -374,7 +364,7 @@ void CUDADevice::FinishQueue() {
 //------------------------------------------------------------------------------
 
 void CUDADevice::AllocBuffer(CUdeviceptr *buff,
-		void *src, const size_t size, const std::string &desc) {
+		void *src, const size_t size, const string &desc) {
 	// Handle the case of an empty buffer
 	if (!size) {
 		if (*buff) {
@@ -429,11 +419,11 @@ void CUDADevice::AllocBuffer(CUdeviceptr *buff,
 	AllocMemory(size);
 }
 
-void CUDADevice::AllocBufferRO(HardwareDeviceBuffer **buff, void *src, const size_t size, const std::string &desc) {
+void CUDADevice::AllocBufferRO(HardwareDeviceBuffer **buff, void *src, const size_t size, const string &desc) {
 	AllocBufferRW(buff, src, size, desc);
 }
 
-void CUDADevice::AllocBufferRW(HardwareDeviceBuffer **buff, void *src, const size_t size, const std::string &desc) {
+void CUDADevice::AllocBufferRW(HardwareDeviceBuffer **buff, void *src, const size_t size, const string &desc) {
 	if (!*buff)
 		*buff = new CUDADeviceBuffer();
 
@@ -444,15 +434,15 @@ void CUDADevice::AllocBufferRW(HardwareDeviceBuffer **buff, void *src, const siz
 }
 
 void CUDADevice::FreeBuffer(HardwareDeviceBuffer **buff) {
-	if (*buff && !(*buff)->IsNull()) {
-		CUDADeviceBuffer *cudaDeviceBuff = dynamic_cast<CUDADeviceBuffer *>(*buff);
-		assert (cudaDeviceBuff);
+	if (*buff) {
+		if (!(*buff)->IsNull()) {
+			CUDADeviceBuffer *cudaDeviceBuff = dynamic_cast<CUDADeviceBuffer *>(*buff);
+			assert (cudaDeviceBuff);
 
-		size_t cudaSize;
-		CHECK_CUDA_ERROR(cuMemGetAddressRange(0, &cudaSize, cudaDeviceBuff->cudaBuff));
-		FreeMemory(cudaSize);
+			FreeMemory(cudaDeviceBuff->GetSize());
 
-		CHECK_CUDA_ERROR(cuMemFree(cudaDeviceBuff->cudaBuff));
+			CHECK_CUDA_ERROR(cuMemFree(cudaDeviceBuff->cudaBuff));
+		}
 
 		delete *buff;
 		*buff = nullptr;

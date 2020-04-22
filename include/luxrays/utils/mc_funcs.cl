@@ -65,7 +65,7 @@ OPENCL_FORCE_INLINE float3 CosineSampleHemisphere(const float u0, const float u1
 
 	const float z = sqrt(fmax(0.f, 1.f - x * x - y * y));
 
-	return (float3)(x, y, z);
+	return MAKE_FLOAT3(x, y, z);
 }
 
 OPENCL_FORCE_INLINE float3 CosineSampleHemisphereWithPdf(const float u0, const float u1, float *pdfW) {
@@ -76,7 +76,7 @@ OPENCL_FORCE_INLINE float3 CosineSampleHemisphereWithPdf(const float u0, const f
 
 	*pdfW = z * M_1_PI_F;
 
-	return (float3)(x, y, z);
+	return MAKE_FLOAT3(x, y, z);
 }
 
 OPENCL_FORCE_INLINE float3 UniformSampleHemisphere(const float u1, const float u2) {
@@ -86,7 +86,7 @@ OPENCL_FORCE_INLINE float3 UniformSampleHemisphere(const float u1, const float u
 	const float x = r * cos(phi);
 	const float y = r * sin(phi);
 
-	return (float3)(x, y, z);
+	return MAKE_FLOAT3(x, y, z);
 }
 
 OPENCL_FORCE_INLINE float3 UniformSampleSphere(const float u1, const float u2) {
@@ -96,7 +96,7 @@ OPENCL_FORCE_INLINE float3 UniformSampleSphere(const float u1, const float u2) {
 	const float x = r * cos(phi);
 	const float y = r * sin(phi);
 
-	return (float3)(x, y, z);
+	return MAKE_FLOAT3(x, y, z);
 }
 
 OPENCL_FORCE_INLINE float UniformSpherePdf() {
@@ -109,7 +109,7 @@ OPENCL_FORCE_INLINE float3 UniformSampleConeLocal(const float u0, const float u1
 	const float sintheta = sqrt(u0x * (2.f - u0x));
 	const float phi = u1 * 2.f * M_PI_F;
 
-	return (float3)(cos(phi) * sintheta, sin(phi) * sintheta, costheta);
+	return MAKE_FLOAT3(cos(phi) * sintheta, sin(phi) * sintheta, costheta);
 }
 
 OPENCL_FORCE_INLINE float3 UniformSampleCone(const float u0, const float u1, const float costhetamax,
@@ -123,7 +123,7 @@ OPENCL_FORCE_INLINE float3 UniformSampleCone(const float u0, const float u1, con
 	const float ky = sin(phi) * sintheta;
 	const float kz = costheta;
 
-	return (float3)(kx * x.x + ky * y.x + kz * z.x,
+	return MAKE_FLOAT3(kx * x.x + ky * y.x + kz * z.x,
 			kx * x.y + ky * y.y + kz * z.y,
 			kx * x.z + ky * y.z + kz * z.z);
 }
@@ -308,11 +308,11 @@ OPENCL_FORCE_INLINE void Distribution2D_SampleContinuous(__global const float* r
 
 	float pdf1;
 	uint index;
-	(*uv).s1 = Distribution1D_SampleContinuous(marginal, u1, &pdf1, &index);
+	(*uv).y = Distribution1D_SampleContinuous(marginal, u1, &pdf1, &index);
 
 	float pdf0;
 	__global const float* restrict conditional = &distribution2D[2 + marginalSize + index * conditionalSize];
-	(*uv).s0 = Distribution1D_SampleContinuous(conditional, u0, &pdf0, NULL);
+	(*uv).x = Distribution1D_SampleContinuous(conditional, u0, &pdf0, NULL);
 
 	*pdf = pdf0 * pdf1;
 }

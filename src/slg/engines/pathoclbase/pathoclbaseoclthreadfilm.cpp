@@ -16,7 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
+#if defined(LUXRAYS_ENABLE_OPENCL)
 
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string/replace.hpp>
@@ -359,671 +359,605 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::FreeAllOCLBuffers() {
 	renderThread->intersectionDevice->FreeBuffer(&denoiser_HistoImage_Buff);
 }
 
-u_int PathOCLBaseOCLRenderThread::ThreadFilm::SetFilmKernelArgs(cl::Kernel &kernel,
-		u_int argIndex) const {
+u_int PathOCLBaseOCLRenderThread::ThreadFilm::SetFilmKernelArgs(HardwareIntersectionDevice *intersectionDevice,
+		HardwareDeviceKernel *kernel, u_int argIndex) const {
 	// Film parameters
-	kernel.setArg(argIndex++, film->GetWidth());
-	kernel.setArg(argIndex++, film->GetHeight());
+	
+	intersectionDevice->SetKernelArg(kernel, argIndex++, film->GetWidth());
+	intersectionDevice->SetKernelArg(kernel, argIndex++, film->GetHeight());
 
 	const u_int *filmSubRegion = film->GetSubRegion();
-	kernel.setArg(argIndex++, filmSubRegion[0]);
-	kernel.setArg(argIndex++, filmSubRegion[1]);
-	kernel.setArg(argIndex++, filmSubRegion[2]);
-	kernel.setArg(argIndex++, filmSubRegion[3]);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, filmSubRegion[0]);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, filmSubRegion[1]);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, filmSubRegion[2]);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, filmSubRegion[3]);
 
 	for (u_int i = 0; i < FILM_MAX_RADIANCE_GROUP_COUNT; ++i) {
 		if (i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size())
-			kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i]);
+			intersectionDevice->SetKernelArg(kernel, argIndex++, channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i]);
 		else
-			kernel.setArg(argIndex++, sizeof(cl::Buffer), nullptr);
+			intersectionDevice->SetKernelArg(kernel, argIndex++, nullptr);
 	}
 
-	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_ALPHA_Buff);
-	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_DEPTH_Buff);
-	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_POSITION_Buff);
-	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_GEOMETRY_NORMAL_Buff);
-	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_SHADING_NORMAL_Buff);
-	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_MATERIAL_ID_Buff);
-	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_DIRECT_DIFFUSE_Buff);
-	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_DIRECT_GLOSSY_Buff);
-	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_EMISSION_Buff);
-	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_INDIRECT_DIFFUSE_Buff);
-	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_INDIRECT_GLOSSY_Buff);
-	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_INDIRECT_SPECULAR_Buff);
-	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_MATERIAL_ID_MASK_Buff);
-	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_DIRECT_SHADOW_MASK_Buff);
-	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_INDIRECT_SHADOW_MASK_Buff);
-	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_UV_Buff);
-	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_RAYCOUNT_Buff);
-	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_BY_MATERIAL_ID_Buff);
-	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_IRRADIANCE_Buff);
-	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_OBJECT_ID_Buff);
-	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_OBJECT_ID_MASK_Buff);
-	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_BY_OBJECT_ID_Buff);
-	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_SAMPLECOUNT_Buff);
-	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_CONVERGENCE_Buff);
-	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_MATERIAL_ID_COLOR_Buff);
-	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_ALBEDO_Buff);
-	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_AVG_SHADING_NORMAL_Buff);
-	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_NOISE_Buff);
-	kernel.setArg(argIndex++, sizeof(cl::Buffer), channel_USER_IMPORTANCE_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_ALPHA_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_DEPTH_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_POSITION_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_GEOMETRY_NORMAL_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_SHADING_NORMAL_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_MATERIAL_ID_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_DIRECT_DIFFUSE_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_DIRECT_GLOSSY_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_EMISSION_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_INDIRECT_DIFFUSE_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_INDIRECT_GLOSSY_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_INDIRECT_SPECULAR_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_MATERIAL_ID_MASK_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_DIRECT_SHADOW_MASK_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_INDIRECT_SHADOW_MASK_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_UV_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_RAYCOUNT_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_BY_MATERIAL_ID_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_IRRADIANCE_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_OBJECT_ID_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_OBJECT_ID_MASK_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_BY_OBJECT_ID_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_SAMPLECOUNT_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_CONVERGENCE_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_MATERIAL_ID_COLOR_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_ALBEDO_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_AVG_SHADING_NORMAL_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_NOISE_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_USER_IMPORTANCE_Buff);
 
 	// Film denoiser sample accumulator parameters
 	FilmDenoiser &denoiser = film->GetDenoiser();
 	if (denoiser.IsEnabled()) {
-		kernel.setArg(argIndex++, (int)denoiser.IsWarmUpDone());
-		kernel.setArg(argIndex++, denoiser.GetSampleGamma());
-		kernel.setArg(argIndex++, denoiser.GetSampleMaxValue());
-		kernel.setArg(argIndex++, denoiser.GetSampleScale());
-		kernel.setArg(argIndex++, denoiser.GetHistogramBinsCount());
-		kernel.setArg(argIndex++, sizeof(cl::Buffer), denoiser_NbOfSamplesImage_Buff);
-		kernel.setArg(argIndex++, sizeof(cl::Buffer), denoiser_SquaredWeightSumsImage_Buff);
-		kernel.setArg(argIndex++, sizeof(cl::Buffer), denoiser_MeanImage_Buff);
-		kernel.setArg(argIndex++, sizeof(cl::Buffer), denoiser_CovarImage_Buff);
-		kernel.setArg(argIndex++, sizeof(cl::Buffer), denoiser_HistoImage_Buff);
+		intersectionDevice->SetKernelArg(kernel, argIndex++, (int)denoiser.IsWarmUpDone());
+		intersectionDevice->SetKernelArg(kernel, argIndex++, denoiser.GetSampleGamma());
+		intersectionDevice->SetKernelArg(kernel, argIndex++, denoiser.GetSampleMaxValue());
+		intersectionDevice->SetKernelArg(kernel, argIndex++, denoiser.GetSampleScale());
+		intersectionDevice->SetKernelArg(kernel, argIndex++, denoiser.GetHistogramBinsCount());
+		intersectionDevice->SetKernelArg(kernel, argIndex++, denoiser_NbOfSamplesImage_Buff);
+		intersectionDevice->SetKernelArg(kernel, argIndex++, denoiser_SquaredWeightSumsImage_Buff);
+		intersectionDevice->SetKernelArg(kernel, argIndex++, denoiser_MeanImage_Buff);
+		intersectionDevice->SetKernelArg(kernel, argIndex++, denoiser_CovarImage_Buff);
+		intersectionDevice->SetKernelArg(kernel, argIndex++, denoiser_HistoImage_Buff);
 
 		if (denoiser.IsWarmUpDone()) {
 			const vector<RadianceChannelScale> &scales = denoiser.GetRadianceChannelScales();
 			for (u_int i = 0; i < FILM_MAX_RADIANCE_GROUP_COUNT; ++i) {
 				if (i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size()) {
 					const Spectrum s = scales[i].GetScale();
-					kernel.setArg(argIndex++, s.c[0]);
-					kernel.setArg(argIndex++, s.c[1]);
-					kernel.setArg(argIndex++, s.c[2]);
+					intersectionDevice->SetKernelArg(kernel, argIndex++, s.c[0]);
+					intersectionDevice->SetKernelArg(kernel, argIndex++, s.c[1]);
+					intersectionDevice->SetKernelArg(kernel, argIndex++, s.c[2]);
 				} else {
-					kernel.setArg(argIndex++, 0.f);
-					kernel.setArg(argIndex++, 0.f);
-					kernel.setArg(argIndex++, 0.f);					
+					intersectionDevice->SetKernelArg(kernel, argIndex++, 0.f);
+					intersectionDevice->SetKernelArg(kernel, argIndex++, 0.f);
+					intersectionDevice->SetKernelArg(kernel, argIndex++, 0.f);					
 				}
 			}
 		} else {
 			for (u_int i = 0; i < FILM_MAX_RADIANCE_GROUP_COUNT; ++i) {
-				kernel.setArg(argIndex++, 0.f);
-				kernel.setArg(argIndex++, 0.f);
-				kernel.setArg(argIndex++, 0.f);
+				intersectionDevice->SetKernelArg(kernel, argIndex++, 0.f);
+				intersectionDevice->SetKernelArg(kernel, argIndex++, 0.f);
+				intersectionDevice->SetKernelArg(kernel, argIndex++, 0.f);
 			}
 		}
 	} else {
-		kernel.setArg(argIndex++, 0);
-		kernel.setArg(argIndex++, 0.f);
-		kernel.setArg(argIndex++, 0.f);
-		kernel.setArg(argIndex++, 0.f);
-		kernel.setArg(argIndex++, 0);
-		kernel.setArg(argIndex++, sizeof(cl::Buffer), nullptr);
-		kernel.setArg(argIndex++, sizeof(cl::Buffer), nullptr);
-		kernel.setArg(argIndex++, sizeof(cl::Buffer), nullptr);
-		kernel.setArg(argIndex++, sizeof(cl::Buffer), nullptr);
-		kernel.setArg(argIndex++, sizeof(cl::Buffer), nullptr);
+		intersectionDevice->SetKernelArg(kernel, argIndex++, 0);
+		intersectionDevice->SetKernelArg(kernel, argIndex++, 0.f);
+		intersectionDevice->SetKernelArg(kernel, argIndex++, 0.f);
+		intersectionDevice->SetKernelArg(kernel, argIndex++, 0.f);
+		intersectionDevice->SetKernelArg(kernel, argIndex++, 0);
+		intersectionDevice->SetKernelArg(kernel, argIndex++, nullptr);
+		intersectionDevice->SetKernelArg(kernel, argIndex++, nullptr);
+		intersectionDevice->SetKernelArg(kernel, argIndex++, nullptr);
+		intersectionDevice->SetKernelArg(kernel, argIndex++, nullptr);
+		intersectionDevice->SetKernelArg(kernel, argIndex++, nullptr);
 
 		for (u_int i = 0; i < FILM_MAX_RADIANCE_GROUP_COUNT; ++i) {
-			kernel.setArg(argIndex++, 0.f);
-			kernel.setArg(argIndex++, 0.f);
-			kernel.setArg(argIndex++, 0.f);
+			intersectionDevice->SetKernelArg(kernel, argIndex++, 0.f);
+			intersectionDevice->SetKernelArg(kernel, argIndex++, 0.f);
+			intersectionDevice->SetKernelArg(kernel, argIndex++, 0.f);
 		}
 	}
 
 	return argIndex;
 }
 
-void PathOCLBaseOCLRenderThread::ThreadFilm::RecvFilm(cl::CommandQueue &oclQueue) {
+void PathOCLBaseOCLRenderThread::ThreadFilm::RecvFilm(HardwareIntersectionDevice *intersectionDevice) {
 	// Async. transfer of the Film buffers
 
 	for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size(); ++i) {
 		if (channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i]) {
-			oclQueue.enqueueReadBuffer(
-				*(channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i]),
+			intersectionDevice->EnqueueReadBuffer(
+				channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i],
 				CL_FALSE,
-				0,
-				channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i]->getInfo<CL_MEM_SIZE>(),
+				channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i]->GetSize(),
 				film->channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->GetPixels());
 		}
 	}
 
 	if (channel_ALPHA_Buff) {
-		oclQueue.enqueueReadBuffer(
-			*channel_ALPHA_Buff,
+		intersectionDevice->EnqueueReadBuffer(
+			channel_ALPHA_Buff,
 			CL_FALSE,
-			0,
-			channel_ALPHA_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_ALPHA_Buff->GetSize(),
 			film->channel_ALPHA->GetPixels());
 	}
 	if (channel_DEPTH_Buff) {
-		oclQueue.enqueueReadBuffer(
-			*channel_DEPTH_Buff,
+		intersectionDevice->EnqueueReadBuffer(
+			channel_DEPTH_Buff,
 			CL_FALSE,
-			0,
-			channel_DEPTH_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_DEPTH_Buff->GetSize(),
 			film->channel_DEPTH->GetPixels());
 	}
 	if (channel_POSITION_Buff) {
-		oclQueue.enqueueReadBuffer(
-			*channel_POSITION_Buff,
+		intersectionDevice->EnqueueReadBuffer(
+			channel_POSITION_Buff,
 			CL_FALSE,
-			0,
-			channel_POSITION_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_POSITION_Buff->GetSize(),
 			film->channel_POSITION->GetPixels());
 	}
 	if (channel_GEOMETRY_NORMAL_Buff) {
-		oclQueue.enqueueReadBuffer(
-			*channel_GEOMETRY_NORMAL_Buff,
+		intersectionDevice->EnqueueReadBuffer(
+			channel_GEOMETRY_NORMAL_Buff,
 			CL_FALSE,
-			0,
-			channel_GEOMETRY_NORMAL_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_GEOMETRY_NORMAL_Buff->GetSize(),
 			film->channel_GEOMETRY_NORMAL->GetPixels());
 	}
 	if (channel_SHADING_NORMAL_Buff) {
-		oclQueue.enqueueReadBuffer(
-			*channel_SHADING_NORMAL_Buff,
+		intersectionDevice->EnqueueReadBuffer(
+			channel_SHADING_NORMAL_Buff,
 			CL_FALSE,
-			0,
-			channel_SHADING_NORMAL_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_SHADING_NORMAL_Buff->GetSize(),
 			film->channel_SHADING_NORMAL->GetPixels());
 	}
 	if (channel_MATERIAL_ID_Buff) {
-		oclQueue.enqueueReadBuffer(
-			*channel_MATERIAL_ID_Buff,
+		intersectionDevice->EnqueueReadBuffer(
+			channel_MATERIAL_ID_Buff,
 			CL_FALSE,
-			0,
-			channel_MATERIAL_ID_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_MATERIAL_ID_Buff->GetSize(),
 			film->channel_MATERIAL_ID->GetPixels());
 	}
 	if (channel_DIRECT_DIFFUSE_Buff) {
-		oclQueue.enqueueReadBuffer(
-			*channel_DIRECT_DIFFUSE_Buff,
+		intersectionDevice->EnqueueReadBuffer(
+			channel_DIRECT_DIFFUSE_Buff,
 			CL_FALSE,
-			0,
-			channel_DIRECT_DIFFUSE_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_DIRECT_DIFFUSE_Buff->GetSize(),
 			film->channel_DIRECT_DIFFUSE->GetPixels());
 	}
 	if (channel_MATERIAL_ID_Buff) {
-		oclQueue.enqueueReadBuffer(
-			*channel_MATERIAL_ID_Buff,
+		intersectionDevice->EnqueueReadBuffer(
+			channel_MATERIAL_ID_Buff,
 			CL_FALSE,
-			0,
-			channel_MATERIAL_ID_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_MATERIAL_ID_Buff->GetSize(),
 			film->channel_MATERIAL_ID->GetPixels());
 	}
 	if (channel_DIRECT_GLOSSY_Buff) {
-		oclQueue.enqueueReadBuffer(
-			*channel_DIRECT_GLOSSY_Buff,
+		intersectionDevice->EnqueueReadBuffer(
+			channel_DIRECT_GLOSSY_Buff,
 			CL_FALSE,
-			0,
-			channel_DIRECT_GLOSSY_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_DIRECT_GLOSSY_Buff->GetSize(),
 			film->channel_DIRECT_GLOSSY->GetPixels());
 	}
 	if (channel_EMISSION_Buff) {
-		oclQueue.enqueueReadBuffer(
-			*channel_EMISSION_Buff,
+		intersectionDevice->EnqueueReadBuffer(
+			channel_EMISSION_Buff,
 			CL_FALSE,
-			0,
-			channel_EMISSION_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_EMISSION_Buff->GetSize(),
 			film->channel_EMISSION->GetPixels());
 	}
 	if (channel_INDIRECT_DIFFUSE_Buff) {
-		oclQueue.enqueueReadBuffer(
-			*channel_INDIRECT_DIFFUSE_Buff,
+		intersectionDevice->EnqueueReadBuffer(
+			channel_INDIRECT_DIFFUSE_Buff,
 			CL_FALSE,
-			0,
-			channel_INDIRECT_DIFFUSE_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_INDIRECT_DIFFUSE_Buff->GetSize(),
 			film->channel_INDIRECT_DIFFUSE->GetPixels());
 	}
 	if (channel_INDIRECT_GLOSSY_Buff) {
-		oclQueue.enqueueReadBuffer(
-			*channel_INDIRECT_GLOSSY_Buff,
+		intersectionDevice->EnqueueReadBuffer(
+			channel_INDIRECT_GLOSSY_Buff,
 			CL_FALSE,
-			0,
-			channel_INDIRECT_GLOSSY_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_INDIRECT_GLOSSY_Buff->GetSize(),
 			film->channel_INDIRECT_GLOSSY->GetPixels());
 	}
 	if (channel_INDIRECT_SPECULAR_Buff) {
-		oclQueue.enqueueReadBuffer(
-			*channel_INDIRECT_SPECULAR_Buff,
+		intersectionDevice->EnqueueReadBuffer(
+			channel_INDIRECT_SPECULAR_Buff,
 			CL_FALSE,
-			0,
-			channel_INDIRECT_SPECULAR_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_INDIRECT_SPECULAR_Buff->GetSize(),
 			film->channel_INDIRECT_SPECULAR->GetPixels());
 	}
 	if (channel_MATERIAL_ID_MASK_Buff) {
-		oclQueue.enqueueReadBuffer(
-			*channel_MATERIAL_ID_MASK_Buff,
+		intersectionDevice->EnqueueReadBuffer(
+			channel_MATERIAL_ID_MASK_Buff,
 			CL_FALSE,
-			0,
-			channel_MATERIAL_ID_MASK_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_MATERIAL_ID_MASK_Buff->GetSize(),
 			film->channel_MATERIAL_ID_MASKs[0]->GetPixels());
 	}
 	if (channel_DIRECT_SHADOW_MASK_Buff) {
-		oclQueue.enqueueReadBuffer(
-			*channel_DIRECT_SHADOW_MASK_Buff,
+		intersectionDevice->EnqueueReadBuffer(
+			channel_DIRECT_SHADOW_MASK_Buff,
 			CL_FALSE,
-			0,
-			channel_DIRECT_SHADOW_MASK_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_DIRECT_SHADOW_MASK_Buff->GetSize(),
 			film->channel_DIRECT_SHADOW_MASK->GetPixels());
 	}
 	if (channel_INDIRECT_SHADOW_MASK_Buff) {
-		oclQueue.enqueueReadBuffer(
-			*channel_INDIRECT_SHADOW_MASK_Buff,
+		intersectionDevice->EnqueueReadBuffer(
+			channel_INDIRECT_SHADOW_MASK_Buff,
 			CL_FALSE,
-			0,
-			channel_INDIRECT_SHADOW_MASK_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_INDIRECT_SHADOW_MASK_Buff->GetSize(),
 			film->channel_INDIRECT_SHADOW_MASK->GetPixels());
 	}
 	if (channel_UV_Buff) {
-		oclQueue.enqueueReadBuffer(
-			*channel_UV_Buff,
+		intersectionDevice->EnqueueReadBuffer(
+			channel_UV_Buff,
 			CL_FALSE,
-			0,
-			channel_UV_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_UV_Buff->GetSize(),
 			film->channel_UV->GetPixels());
 	}
 	if (channel_RAYCOUNT_Buff) {
-		oclQueue.enqueueReadBuffer(
-			*channel_RAYCOUNT_Buff,
+		intersectionDevice->EnqueueReadBuffer(
+			channel_RAYCOUNT_Buff,
 			CL_FALSE,
-			0,
-			channel_RAYCOUNT_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_RAYCOUNT_Buff->GetSize(),
 			film->channel_RAYCOUNT->GetPixels());
 	}
 	if (channel_BY_MATERIAL_ID_Buff) {
-		oclQueue.enqueueReadBuffer(
-			*channel_BY_MATERIAL_ID_Buff,
+		intersectionDevice->EnqueueReadBuffer(
+			channel_BY_MATERIAL_ID_Buff,
 			CL_FALSE,
-			0,
-			channel_BY_MATERIAL_ID_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_BY_MATERIAL_ID_Buff->GetSize(),
 			film->channel_BY_MATERIAL_IDs[0]->GetPixels());
 	}
 	if (channel_IRRADIANCE_Buff) {
-		oclQueue.enqueueReadBuffer(
-			*channel_IRRADIANCE_Buff,
+		intersectionDevice->EnqueueReadBuffer(
+			channel_IRRADIANCE_Buff,
 			CL_FALSE,
-			0,
-			channel_IRRADIANCE_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_IRRADIANCE_Buff->GetSize(),
 			film->channel_IRRADIANCE->GetPixels());
 	}
 	if (channel_OBJECT_ID_Buff) {
-		oclQueue.enqueueReadBuffer(
-			*channel_OBJECT_ID_Buff,
+		intersectionDevice->EnqueueReadBuffer(
+			channel_OBJECT_ID_Buff,
 			CL_FALSE,
-			0,
-			channel_OBJECT_ID_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_OBJECT_ID_Buff->GetSize(),
 			film->channel_OBJECT_ID->GetPixels());
 	}
 	if (channel_OBJECT_ID_MASK_Buff) {
-		oclQueue.enqueueReadBuffer(
-			*channel_OBJECT_ID_MASK_Buff,
+		intersectionDevice->EnqueueReadBuffer(
+			channel_OBJECT_ID_MASK_Buff,
 			CL_FALSE,
-			0,
-			channel_OBJECT_ID_MASK_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_OBJECT_ID_MASK_Buff->GetSize(),
 			film->channel_OBJECT_ID_MASKs[0]->GetPixels());
 	}
 	if (channel_BY_OBJECT_ID_Buff) {
-		oclQueue.enqueueReadBuffer(
-			*channel_BY_OBJECT_ID_Buff,
+		intersectionDevice->EnqueueReadBuffer(
+			channel_BY_OBJECT_ID_Buff,
 			CL_FALSE,
-			0,
-			channel_BY_OBJECT_ID_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_BY_OBJECT_ID_Buff->GetSize(),
 			film->channel_BY_OBJECT_IDs[0]->GetPixels());
 	}
 	if (channel_SAMPLECOUNT_Buff) {
-		oclQueue.enqueueReadBuffer(
-			*channel_SAMPLECOUNT_Buff,
+		intersectionDevice->EnqueueReadBuffer(
+			channel_SAMPLECOUNT_Buff,
 			CL_FALSE,
-			0,
-			channel_SAMPLECOUNT_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_SAMPLECOUNT_Buff->GetSize(),
 			film->channel_SAMPLECOUNT->GetPixels());
 	}
 	if (channel_CONVERGENCE_Buff) {
 		// This may look wrong but CONVERGENCE channel is compute by the engine
 		// film convergence test on the CPU so I write instead of read (to
 		// synchronize the content).
-		oclQueue.enqueueWriteBuffer(
-			*channel_CONVERGENCE_Buff,
+		intersectionDevice->EnqueueWriteBuffer(
+			channel_CONVERGENCE_Buff,
 			CL_FALSE,
-			0,
-			channel_CONVERGENCE_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_CONVERGENCE_Buff->GetSize(),
 			engineFilm->channel_CONVERGENCE->GetPixels());
 	}
 	if (channel_MATERIAL_ID_COLOR_Buff) {
-		oclQueue.enqueueReadBuffer(
-			*channel_MATERIAL_ID_COLOR_Buff,
+		intersectionDevice->EnqueueReadBuffer(
+			channel_MATERIAL_ID_COLOR_Buff,
 			CL_FALSE,
-			0,
-			channel_MATERIAL_ID_COLOR_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_MATERIAL_ID_COLOR_Buff->GetSize(),
 			film->channel_MATERIAL_ID_COLOR->GetPixels());
 	}
 	if (channel_ALBEDO_Buff) {
-		oclQueue.enqueueReadBuffer(
-			*channel_ALBEDO_Buff,
+		intersectionDevice->EnqueueReadBuffer(
+			channel_ALBEDO_Buff,
 			CL_FALSE,
-			0,
-			channel_ALBEDO_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_ALBEDO_Buff->GetSize(),
 			film->channel_ALBEDO->GetPixels());
 	}
 	if (channel_AVG_SHADING_NORMAL_Buff) {
-		oclQueue.enqueueReadBuffer(
-			*channel_AVG_SHADING_NORMAL_Buff,
+		intersectionDevice->EnqueueReadBuffer(
+			channel_AVG_SHADING_NORMAL_Buff,
 			CL_FALSE,
-			0,
-			channel_AVG_SHADING_NORMAL_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_AVG_SHADING_NORMAL_Buff->GetSize(),
 			film->channel_AVG_SHADING_NORMAL->GetPixels());
 	}
 	if (channel_NOISE_Buff) {
 		// This may look wrong but NOISE channel is compute by the engine
 		// film noise estimation on the CPU so I write instead of read (to
 		// synchronize the content).
-		oclQueue.enqueueWriteBuffer(
-			*channel_NOISE_Buff,
+		intersectionDevice->EnqueueWriteBuffer(
+			channel_NOISE_Buff,
 			CL_FALSE,
-			0,
-			channel_NOISE_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_NOISE_Buff->GetSize(),
 			engineFilm->channel_NOISE->GetPixels());
 	}
 	if (channel_USER_IMPORTANCE_Buff) {
 		// This may look wrong but USER_IMPORTANCE channel is like NOISE channel
 		// so I write instead of read (to synchronize the content).
-		oclQueue.enqueueWriteBuffer(
-			*channel_USER_IMPORTANCE_Buff,
+		intersectionDevice->EnqueueWriteBuffer(
+			channel_USER_IMPORTANCE_Buff,
 			CL_FALSE,
-			0,
-			channel_USER_IMPORTANCE_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_USER_IMPORTANCE_Buff->GetSize(),
 			engineFilm->channel_USER_IMPORTANCE->GetPixels());
 	}
 
 	// Async. transfer of the Film denoiser sample accumulator buffers
 	FilmDenoiser &denoiser = film->GetDenoiser();
 	if (denoiser.IsEnabled() && denoiser.IsWarmUpDone()) {
-		oclQueue.enqueueReadBuffer(
-			*denoiser_NbOfSamplesImage_Buff,
+		intersectionDevice->EnqueueReadBuffer(
+			denoiser_NbOfSamplesImage_Buff,
 			CL_FALSE,
-			0,
-			denoiser_NbOfSamplesImage_Buff->getInfo<CL_MEM_SIZE>(),
+			denoiser_NbOfSamplesImage_Buff->GetSize(),
 			denoiser.GetNbOfSamplesImage());
-		oclQueue.enqueueReadBuffer(
-			*denoiser_SquaredWeightSumsImage_Buff,
+		intersectionDevice->EnqueueReadBuffer(
+			denoiser_SquaredWeightSumsImage_Buff,
 			CL_FALSE,
-			0,
-			denoiser_SquaredWeightSumsImage_Buff->getInfo<CL_MEM_SIZE>(),
+			denoiser_SquaredWeightSumsImage_Buff->GetSize(),
 			denoiser.GetSquaredWeightSumsImage());
-		oclQueue.enqueueReadBuffer(
-			*denoiser_MeanImage_Buff,
+		intersectionDevice->EnqueueReadBuffer(
+			denoiser_MeanImage_Buff,
 			CL_FALSE,
-			0,
-			denoiser_MeanImage_Buff->getInfo<CL_MEM_SIZE>(),
+			denoiser_MeanImage_Buff->GetSize(),
 			denoiser.GetMeanImage());
-		oclQueue.enqueueReadBuffer(
-			*denoiser_CovarImage_Buff,
+		intersectionDevice->EnqueueReadBuffer(
+			denoiser_CovarImage_Buff,
 			CL_FALSE,
-			0,
-			denoiser_CovarImage_Buff->getInfo<CL_MEM_SIZE>(),
+			denoiser_CovarImage_Buff->GetSize(),
 			denoiser.GetCovarImage());
-		oclQueue.enqueueReadBuffer(
-			*denoiser_HistoImage_Buff,
+		intersectionDevice->EnqueueReadBuffer(
+			denoiser_HistoImage_Buff,
 			CL_FALSE,
-			0,
-			denoiser_HistoImage_Buff->getInfo<CL_MEM_SIZE>(),
+			denoiser_HistoImage_Buff->GetSize(),
 			denoiser.GetHistoImage());
 	}
 }
 
-void PathOCLBaseOCLRenderThread::ThreadFilm::SendFilm(cl::CommandQueue &oclQueue) {
+void PathOCLBaseOCLRenderThread::ThreadFilm::SendFilm(HardwareIntersectionDevice *intersectionDevice) {
 	// Async. transfer of the Film buffers
 
 	for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size(); ++i) {
 		if (channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i]) {
-			oclQueue.enqueueWriteBuffer(
-				*(channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i]),
+			intersectionDevice->EnqueueWriteBuffer(
+				channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i],
 				CL_FALSE,
-				0,
-				channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i]->getInfo<CL_MEM_SIZE>(),
+				channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i]->GetSize(),
 				film->channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->GetPixels());
 		}
 	}
 
 	if (channel_ALPHA_Buff) {
-		oclQueue.enqueueWriteBuffer(
-			*channel_ALPHA_Buff,
+		intersectionDevice->EnqueueWriteBuffer(
+			channel_ALPHA_Buff,
 			CL_FALSE,
-			0,
-			channel_ALPHA_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_ALPHA_Buff->GetSize(),
 			film->channel_ALPHA->GetPixels());
 	}
 	if (channel_DEPTH_Buff) {
-		oclQueue.enqueueWriteBuffer(
-			*channel_DEPTH_Buff,
+		intersectionDevice->EnqueueWriteBuffer(
+			channel_DEPTH_Buff,
 			CL_FALSE,
-			0,
-			channel_DEPTH_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_DEPTH_Buff->GetSize(),
 			film->channel_DEPTH->GetPixels());
 	}
 	if (channel_POSITION_Buff) {
-		oclQueue.enqueueWriteBuffer(
-			*channel_POSITION_Buff,
+		intersectionDevice->EnqueueWriteBuffer(
+			channel_POSITION_Buff,
 			CL_FALSE,
-			0,
-			channel_POSITION_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_POSITION_Buff->GetSize(),
 			film->channel_POSITION->GetPixels());
 	}
 	if (channel_GEOMETRY_NORMAL_Buff) {
-		oclQueue.enqueueWriteBuffer(
-			*channel_GEOMETRY_NORMAL_Buff,
+		intersectionDevice->EnqueueWriteBuffer(
+			channel_GEOMETRY_NORMAL_Buff,
 			CL_FALSE,
-			0,
-			channel_GEOMETRY_NORMAL_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_GEOMETRY_NORMAL_Buff->GetSize(),
 			film->channel_GEOMETRY_NORMAL->GetPixels());
 	}
 	if (channel_SHADING_NORMAL_Buff) {
-		oclQueue.enqueueWriteBuffer(
-			*channel_SHADING_NORMAL_Buff,
+		intersectionDevice->EnqueueWriteBuffer(
+			channel_SHADING_NORMAL_Buff,
 			CL_FALSE,
-			0,
-			channel_SHADING_NORMAL_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_SHADING_NORMAL_Buff->GetSize(),
 			film->channel_SHADING_NORMAL->GetPixels());
 	}
 	if (channel_MATERIAL_ID_Buff) {
-		oclQueue.enqueueWriteBuffer(
-			*channel_MATERIAL_ID_Buff,
+		intersectionDevice->EnqueueWriteBuffer(
+			channel_MATERIAL_ID_Buff,
 			CL_FALSE,
-			0,
-			channel_MATERIAL_ID_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_MATERIAL_ID_Buff->GetSize(),
 			film->channel_MATERIAL_ID->GetPixels());
 	}
 	if (channel_DIRECT_DIFFUSE_Buff) {
-		oclQueue.enqueueWriteBuffer(
-			*channel_DIRECT_DIFFUSE_Buff,
+		intersectionDevice->EnqueueWriteBuffer(
+			channel_DIRECT_DIFFUSE_Buff,
 			CL_FALSE,
-			0,
-			channel_DIRECT_DIFFUSE_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_DIRECT_DIFFUSE_Buff->GetSize(),
 			film->channel_DIRECT_DIFFUSE->GetPixels());
 	}
 	if (channel_MATERIAL_ID_Buff) {
-		oclQueue.enqueueWriteBuffer(
-			*channel_MATERIAL_ID_Buff,
+		intersectionDevice->EnqueueWriteBuffer(
+			channel_MATERIAL_ID_Buff,
 			CL_FALSE,
-			0,
-			channel_MATERIAL_ID_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_MATERIAL_ID_Buff->GetSize(),
 			film->channel_MATERIAL_ID->GetPixels());
 	}
 	if (channel_DIRECT_GLOSSY_Buff) {
-		oclQueue.enqueueWriteBuffer(
-			*channel_DIRECT_GLOSSY_Buff,
+		intersectionDevice->EnqueueWriteBuffer(
+			channel_DIRECT_GLOSSY_Buff,
 			CL_FALSE,
-			0,
-			channel_DIRECT_GLOSSY_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_DIRECT_GLOSSY_Buff->GetSize(),
 			film->channel_DIRECT_GLOSSY->GetPixels());
 	}
 	if (channel_EMISSION_Buff) {
-		oclQueue.enqueueWriteBuffer(
-			*channel_EMISSION_Buff,
+		intersectionDevice->EnqueueWriteBuffer(
+			channel_EMISSION_Buff,
 			CL_FALSE,
-			0,
-			channel_EMISSION_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_EMISSION_Buff->GetSize(),
 			film->channel_EMISSION->GetPixels());
 	}
 	if (channel_INDIRECT_DIFFUSE_Buff) {
-		oclQueue.enqueueWriteBuffer(
-			*channel_INDIRECT_DIFFUSE_Buff,
+		intersectionDevice->EnqueueWriteBuffer(
+			channel_INDIRECT_DIFFUSE_Buff,
 			CL_FALSE,
-			0,
-			channel_INDIRECT_DIFFUSE_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_INDIRECT_DIFFUSE_Buff->GetSize(),
 			film->channel_INDIRECT_DIFFUSE->GetPixels());
 	}
 	if (channel_INDIRECT_GLOSSY_Buff) {
-		oclQueue.enqueueWriteBuffer(
-			*channel_INDIRECT_GLOSSY_Buff,
+		intersectionDevice->EnqueueWriteBuffer(
+			channel_INDIRECT_GLOSSY_Buff,
 			CL_FALSE,
-			0,
-			channel_INDIRECT_GLOSSY_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_INDIRECT_GLOSSY_Buff->GetSize(),
 			film->channel_INDIRECT_GLOSSY->GetPixels());
 	}
 	if (channel_INDIRECT_SPECULAR_Buff) {
-		oclQueue.enqueueWriteBuffer(
-			*channel_INDIRECT_SPECULAR_Buff,
+		intersectionDevice->EnqueueWriteBuffer(
+			channel_INDIRECT_SPECULAR_Buff,
 			CL_FALSE,
-			0,
-			channel_INDIRECT_SPECULAR_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_INDIRECT_SPECULAR_Buff->GetSize(),
 			film->channel_INDIRECT_SPECULAR->GetPixels());
 	}
 	if (channel_MATERIAL_ID_MASK_Buff) {
-		oclQueue.enqueueWriteBuffer(
-			*channel_MATERIAL_ID_MASK_Buff,
+		intersectionDevice->EnqueueWriteBuffer(
+			channel_MATERIAL_ID_MASK_Buff,
 			CL_FALSE,
-			0,
-			channel_MATERIAL_ID_MASK_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_MATERIAL_ID_MASK_Buff->GetSize(),
 			film->channel_MATERIAL_ID_MASKs[0]->GetPixels());
 	}
 	if (channel_DIRECT_SHADOW_MASK_Buff) {
-		oclQueue.enqueueWriteBuffer(
-			*channel_DIRECT_SHADOW_MASK_Buff,
+		intersectionDevice->EnqueueWriteBuffer(
+			channel_DIRECT_SHADOW_MASK_Buff,
 			CL_FALSE,
-			0,
-			channel_DIRECT_SHADOW_MASK_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_DIRECT_SHADOW_MASK_Buff->GetSize(),
 			film->channel_DIRECT_SHADOW_MASK->GetPixels());
 	}
 	if (channel_INDIRECT_SHADOW_MASK_Buff) {
-		oclQueue.enqueueWriteBuffer(
-			*channel_INDIRECT_SHADOW_MASK_Buff,
+		intersectionDevice->EnqueueWriteBuffer(
+			channel_INDIRECT_SHADOW_MASK_Buff,
 			CL_FALSE,
-			0,
-			channel_INDIRECT_SHADOW_MASK_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_INDIRECT_SHADOW_MASK_Buff->GetSize(),
 			film->channel_INDIRECT_SHADOW_MASK->GetPixels());
 	}
 	if (channel_UV_Buff) {
-		oclQueue.enqueueWriteBuffer(
-			*channel_UV_Buff,
+		intersectionDevice->EnqueueWriteBuffer(
+			channel_UV_Buff,
 			CL_FALSE,
-			0,
-			channel_UV_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_UV_Buff->GetSize(),
 			film->channel_UV->GetPixels());
 	}
 	if (channel_RAYCOUNT_Buff) {
-		oclQueue.enqueueWriteBuffer(
-			*channel_RAYCOUNT_Buff,
+		intersectionDevice->EnqueueWriteBuffer(
+			channel_RAYCOUNT_Buff,
 			CL_FALSE,
-			0,
-			channel_RAYCOUNT_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_RAYCOUNT_Buff->GetSize(),
 			film->channel_RAYCOUNT->GetPixels());
 	}
 	if (channel_BY_MATERIAL_ID_Buff) {
-		oclQueue.enqueueWriteBuffer(
-			*channel_BY_MATERIAL_ID_Buff,
+		intersectionDevice->EnqueueWriteBuffer(
+			channel_BY_MATERIAL_ID_Buff,
 			CL_FALSE,
-			0,
-			channel_BY_MATERIAL_ID_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_BY_MATERIAL_ID_Buff->GetSize(),
 			film->channel_BY_MATERIAL_IDs[0]->GetPixels());
 	}
 	if (channel_IRRADIANCE_Buff) {
-		oclQueue.enqueueWriteBuffer(
-			*channel_IRRADIANCE_Buff,
+		intersectionDevice->EnqueueWriteBuffer(
+			channel_IRRADIANCE_Buff,
 			CL_FALSE,
-			0,
-			channel_IRRADIANCE_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_IRRADIANCE_Buff->GetSize(),
 			film->channel_IRRADIANCE->GetPixels());
 	}
 	if (channel_OBJECT_ID_Buff) {
-		oclQueue.enqueueWriteBuffer(
-			*channel_OBJECT_ID_Buff,
+		intersectionDevice->EnqueueWriteBuffer(
+			channel_OBJECT_ID_Buff,
 			CL_FALSE,
-			0,
-			channel_OBJECT_ID_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_OBJECT_ID_Buff->GetSize(),
 			film->channel_OBJECT_ID->GetPixels());
 	}
 	if (channel_OBJECT_ID_MASK_Buff) {
-		oclQueue.enqueueWriteBuffer(
-			*channel_OBJECT_ID_MASK_Buff,
+		intersectionDevice->EnqueueWriteBuffer(
+			channel_OBJECT_ID_MASK_Buff,
 			CL_FALSE,
-			0,
-			channel_OBJECT_ID_MASK_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_OBJECT_ID_MASK_Buff->GetSize(),
 			film->channel_OBJECT_ID_MASKs[0]->GetPixels());
 	}
 	if (channel_BY_OBJECT_ID_Buff) {
-		oclQueue.enqueueWriteBuffer(
-			*channel_BY_OBJECT_ID_Buff,
+		intersectionDevice->EnqueueWriteBuffer(
+			channel_BY_OBJECT_ID_Buff,
 			CL_FALSE,
-			0,
-			channel_BY_OBJECT_ID_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_BY_OBJECT_ID_Buff->GetSize(),
 			film->channel_BY_OBJECT_IDs[0]->GetPixels());
 	}
 	if (channel_SAMPLECOUNT_Buff) {
-		oclQueue.enqueueWriteBuffer(
-			*channel_SAMPLECOUNT_Buff,
+		intersectionDevice->EnqueueWriteBuffer(
+			channel_SAMPLECOUNT_Buff,
 			CL_FALSE,
-			0,
-			channel_SAMPLECOUNT_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_SAMPLECOUNT_Buff->GetSize(),
 			film->channel_SAMPLECOUNT->GetPixels());
 	}
 	if (channel_CONVERGENCE_Buff) {
 		// The CONVERGENCE channel is compute by the engine
 		// film convergence test on the CPU so I write the engine film, not the
 		// thread film.
-		oclQueue.enqueueWriteBuffer(
-			*channel_CONVERGENCE_Buff,
+		intersectionDevice->EnqueueWriteBuffer(
+			channel_CONVERGENCE_Buff,
 			CL_FALSE,
-			0,
-			channel_CONVERGENCE_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_CONVERGENCE_Buff->GetSize(),
 			engineFilm->channel_CONVERGENCE->GetPixels());
 	}
 	if (channel_MATERIAL_ID_COLOR_Buff) {
-		oclQueue.enqueueWriteBuffer(
-			*channel_MATERIAL_ID_COLOR_Buff,
+		intersectionDevice->EnqueueWriteBuffer(
+			channel_MATERIAL_ID_COLOR_Buff,
 			CL_FALSE,
-			0,
-			channel_MATERIAL_ID_COLOR_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_MATERIAL_ID_COLOR_Buff->GetSize(),
 			film->channel_MATERIAL_ID_COLOR->GetPixels());
 	}
 	if (channel_ALBEDO_Buff) {
-		oclQueue.enqueueWriteBuffer(
-			*channel_ALBEDO_Buff,
+		intersectionDevice->EnqueueWriteBuffer(
+			channel_ALBEDO_Buff,
 			CL_FALSE,
-			0,
-			channel_ALBEDO_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_ALBEDO_Buff->GetSize(),
 			film->channel_ALBEDO->GetPixels());
 	}
 	if (channel_AVG_SHADING_NORMAL_Buff) {
-		oclQueue.enqueueWriteBuffer(
-			*channel_AVG_SHADING_NORMAL_Buff,
+		intersectionDevice->EnqueueWriteBuffer(
+			channel_AVG_SHADING_NORMAL_Buff,
 			CL_FALSE,
-			0,
-			channel_AVG_SHADING_NORMAL_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_AVG_SHADING_NORMAL_Buff->GetSize(),
 			film->channel_AVG_SHADING_NORMAL->GetPixels());
 	}
 	if (channel_NOISE_Buff) {
 		// The NOISE channel is compute by the engine
 		// film noise estimation on the CPU so I write the engine film, not the
 		// thread film.
-		oclQueue.enqueueWriteBuffer(
-			*channel_NOISE_Buff,
+		intersectionDevice->EnqueueWriteBuffer(
+			channel_NOISE_Buff,
 			CL_FALSE,
-			0,
-			channel_NOISE_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_NOISE_Buff->GetSize(),
 			engineFilm->channel_NOISE->GetPixels());
 	}
 	if (channel_USER_IMPORTANCE_Buff) {
 		// The USER_IMPORTANCE channel is like NOISE channel
 		// so I write the engine film, not the thread film.
-		oclQueue.enqueueWriteBuffer(
-			*channel_USER_IMPORTANCE_Buff,
+		intersectionDevice->EnqueueWriteBuffer(
+			channel_USER_IMPORTANCE_Buff,
 			CL_FALSE,
-			0,
-			channel_USER_IMPORTANCE_Buff->getInfo<CL_MEM_SIZE>(),
+			channel_USER_IMPORTANCE_Buff->GetSize(),
 			engineFilm->channel_USER_IMPORTANCE->GetPixels());
 	}
 
@@ -1031,57 +965,52 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::SendFilm(cl::CommandQueue &oclQueue
 	FilmDenoiser &denoiser = film->GetDenoiser();
 	if (denoiser.IsEnabled()) {
 		if (denoiser.GetNbOfSamplesImage())
-			oclQueue.enqueueWriteBuffer(
-				*denoiser_NbOfSamplesImage_Buff,
+			intersectionDevice->EnqueueWriteBuffer(
+				denoiser_NbOfSamplesImage_Buff,
 				CL_FALSE,
-				0,
-				denoiser_NbOfSamplesImage_Buff->getInfo<CL_MEM_SIZE>(),
+				denoiser_NbOfSamplesImage_Buff->GetSize(),
 				denoiser.GetNbOfSamplesImage());
 		if (denoiser.GetSquaredWeightSumsImage())
-			oclQueue.enqueueWriteBuffer(
-				*denoiser_SquaredWeightSumsImage_Buff,
+			intersectionDevice->EnqueueWriteBuffer(
+				denoiser_SquaredWeightSumsImage_Buff,
 				CL_FALSE,
-				0,
-				denoiser_SquaredWeightSumsImage_Buff->getInfo<CL_MEM_SIZE>(),
+				denoiser_SquaredWeightSumsImage_Buff->GetSize(),
 				denoiser.GetSquaredWeightSumsImage());
 		if (denoiser.GetMeanImage())
-			oclQueue.enqueueWriteBuffer(
-				*denoiser_MeanImage_Buff,
+			intersectionDevice->EnqueueWriteBuffer(
+				denoiser_MeanImage_Buff,
 				CL_FALSE,
-				0,
-				denoiser_MeanImage_Buff->getInfo<CL_MEM_SIZE>(),
+				denoiser_MeanImage_Buff->GetSize(),
 				denoiser.GetMeanImage());
 		if (denoiser.GetCovarImage())
-			oclQueue.enqueueWriteBuffer(
-				*denoiser_CovarImage_Buff,
+			intersectionDevice->EnqueueWriteBuffer(
+				denoiser_CovarImage_Buff,
 				CL_FALSE,
-				0,
-				denoiser_CovarImage_Buff->getInfo<CL_MEM_SIZE>(),
+				denoiser_CovarImage_Buff->GetSize(),
 				denoiser.GetCovarImage());
 		if (denoiser.GetHistoImage())
-			oclQueue.enqueueWriteBuffer(
-				*denoiser_HistoImage_Buff,
+			intersectionDevice->EnqueueWriteBuffer(
+				denoiser_HistoImage_Buff,
 				CL_FALSE,
-				0,
-				denoiser_HistoImage_Buff->getInfo<CL_MEM_SIZE>(),
+				denoiser_HistoImage_Buff->GetSize(),
 				denoiser.GetHistoImage());
 	}
 }
 
-void PathOCLBaseOCLRenderThread::ThreadFilm::ClearFilm(cl::CommandQueue &oclQueue,
-		cl::Kernel &filmClearKernel, const size_t filmClearWorkGroupSize) {
+void PathOCLBaseOCLRenderThread::ThreadFilm::ClearFilm(HardwareIntersectionDevice *intersectionDevice,
+		HardwareDeviceKernel *filmClearKernel, const size_t filmClearWorkGroupSize) {
 	// Set kernel arguments
 	
 	// This is the dummy variable required by KERNEL_ARGS_FILM macro
-	filmClearKernel.setArg(0, 0);
+	intersectionDevice->SetKernelArg(filmClearKernel, 0, 0);
 
-	SetFilmKernelArgs(filmClearKernel, 1);
+	SetFilmKernelArgs(intersectionDevice, filmClearKernel, 1);
 	
 	// Clear the film
 	const u_int filmPixelCount = film->GetWidth() * film->GetHeight();
-	oclQueue.enqueueNDRangeKernel(filmClearKernel, cl::NullRange,
-			cl::NDRange(RoundUp<u_int>(filmPixelCount, filmClearWorkGroupSize)),
-			cl::NDRange(filmClearWorkGroupSize));
+	intersectionDevice->EnqueueKernel(filmClearKernel,
+			HardwareDeviceRange(RoundUp<u_int>(filmPixelCount, filmClearWorkGroupSize)),
+			HardwareDeviceRange(filmClearWorkGroupSize));
 }
 
 #endif

@@ -24,39 +24,34 @@
 #include <functional>
 #include <algorithm>
 #include <limits>
+
 #include <boost/foreach.hpp>
 
-#include "luxrays/accelerators/mbvhaccel.h"
-#include "luxrays/utils/utils.h"
 #include "luxrays/core/context.h"
 #include "luxrays/core/exttrianglemesh.h"
-#include "luxrays/devices/nativeintersectiondevice.h"
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-#include "luxrays/devices/oclintersectiondevice.h"
+#include "luxrays/core/hardwareintersectiondevice.h"
 #include "luxrays/kernels/kernels.h"
-#endif
+#include "luxrays/accelerators/mbvhaccel.h"
+#include "luxrays/utils/utils.h"
 
 using namespace std;
 
 namespace luxrays {
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-
-class OpenCLMBVHKernel : public OpenCLKernel {
+class MBVHKernel : public HardwareIntersectionKernel {
 public:
-	OpenCLMBVHKernel(OpenCLIntersectionDevice *dev, const MBVHAccel *ac) :
-			OpenCLKernel(dev), mbvh(ac),
-			uniqueLeafsTransformBuff(NULL), uniqueLeafsMotionSystemBuff(NULL),
-			uniqueLeafsInterpolatedTransformBuff(NULL) {
-		const Context *deviceContext = device->GetContext();
-		const std::string &deviceName(device->GetName());
-		cl::Context &oclContext = device->GetOpenCLContext();
-		cl::Device &oclDevice = device->GetOpenCLDevice();
+	MBVHKernel(HardwareIntersectionDevice &dev, const MBVHAccel &acc) :
+			HardwareIntersectionKernel(dev), mbvh(acc),
+			uniqueLeafsTransformBuff(nullptr), uniqueLeafsMotionSystemBuff(nullptr),
+			uniqueLeafsInterpolatedTransformBuff(nullptr),
+			kernel(nullptr) {
+		//const Context *deviceContext = device.GetContext();
+		//const std::string &deviceName(device.GetName());
 
 		u_int pageNodeCount = 0;
-		if (mbvh->nRootNodes) {
+		if (mbvh.nRootNodes) {
 			// Check the max. number of vertices I can store in a single page
-			const size_t maxMemAlloc = device->GetDeviceDesc()->GetMaxMemoryAllocSize();
+			const size_t maxMemAlloc = device.GetDeviceDesc()->GetMaxMemoryAllocSize();
 
 			//------------------------------------------------------------------
 			// Allocate vertex buffers
@@ -64,10 +59,10 @@ public:
 
 			// Check how many pages I have to allocate
 			const size_t maxVertCount = maxMemAlloc / sizeof(Point);
-			vertOffsetPerLeafMesh.resize(mbvh->uniqueLeafs.size());
+			vertOffsetPerLeafMesh.resize(mbvh.uniqueLeafs.size());
 			u_int totalVertCount = 0;
-			for (u_int i = 0; i < mbvh->uniqueLeafs.size(); ++i) {
-				const BVHAccel *leaf = mbvh->uniqueLeafs[i];
+			for (u_int i = 0; i < mbvh.uniqueLeafs.size(); ++i) {
+				const BVHAccel *leaf = mbvh.uniqueLeafs[i];
 
 				for (u_int j = 0; j < leaf->meshes.size(); ++j) {
 					vertOffsetPerLeafMesh[i].push_back(totalVertCount);
@@ -84,11 +79,11 @@ public:
 			u_int currentMeshIndex = 0;
 			u_int currentMeshVertIndex = 0;
 
-			while (currentLeafIndex < mbvh->uniqueLeafs.size()) {
+			while (currentLeafIndex < mbvh.uniqueLeafs.size()) {
 				const u_int tmpLeftVertCount = pageVertCount - tmpVertIndex;
 
 				// Check if there is enough space in the temporary buffer for all vertices
-				const Mesh *currentMesh = mbvh->uniqueLeafs[currentLeafIndex]->meshes[currentMeshIndex];
+				const Mesh *currentMesh = mbvh.uniqueLeafs[currentLeafIndex]->meshes[currentMeshIndex];
 				const u_int toCopy = currentMesh->GetTotalVertexCount() - currentMeshVertIndex;
 				if (tmpLeftVertCount >= toCopy) {
 					// There is enough space for all mesh vertices
@@ -98,7 +93,7 @@ public:
 
 					// Move to the next mesh
 					++currentMeshIndex;
-					if (currentMeshIndex >= mbvh->uniqueLeafs[currentLeafIndex]->meshes.size()) {
+					if (currentMeshIndex >= mbvh.uniqueLeafs[currentLeafIndex]->meshes.size()) {
 						// Move to the next leaf
 						++currentLeafIndex;
 						currentMeshIndex = 0;
@@ -113,14 +108,15 @@ public:
 					currentMeshVertIndex += tmpLeftVertCount;
 				}
 
-				if ((tmpVertIndex >= pageVertCount) || (currentLeafIndex >=  mbvh->uniqueLeafs.size())) {
-					// The temporary buffer is full, send the data to the OpenCL device
-					vertsBuffs.push_back(NULL);
+				if ((tmpVertIndex >= pageVertCount) || (currentLeafIndex >=  mbvh.uniqueLeafs.size())) {
+					// The temporary buffer is full, send the data to the HardwareIntersectionDevice
+					vertsBuffs.push_back(nullptr);
 					if (vertsBuffs.size() > 8)
-						throw std::runtime_error("Too many vertex pages required in OpenCLMBVHKernels()");
+						throw std::runtime_error("Too many vertex pages required in MBVHKernels()");
 
-					device->AllocBufferRO(&vertsBuffs.back(), &tmpVerts[0], sizeof(Point) * tmpVertIndex,
+					device.AllocBufferRO(&vertsBuffs.back(), &tmpVerts[0], sizeof(Point) * tmpVertIndex,
 							"MBVH mesh vertices");
+					device.FinishQueue();
 
 					tmpVertIndex = 0;
 				}
@@ -137,23 +133,24 @@ public:
 		// Allocate leaf transformations
 		//----------------------------------------------------------------------
 
-		if (mbvh->uniqueLeafsTransform.size() > 0) {
+		if (mbvh.uniqueLeafsTransform.size() > 0) {
 			// Transform CPU data structures in OpenCL data structures
 			vector<Matrix4x4> mats;
-			BOOST_FOREACH(const Transform *t, mbvh->uniqueLeafsTransform)
+			BOOST_FOREACH(const Transform *t, mbvh.uniqueLeafsTransform)
 				mats.push_back(t->mInv);
 
 			// Allocate the transformation buffer
-			device->AllocBufferRO(&uniqueLeafsTransformBuff, &mats[0], sizeof(luxrays::ocl::Matrix4x4) * mats.size(),
+			device.AllocBufferRO(&uniqueLeafsTransformBuff, &mats[0], sizeof(luxrays::ocl::Matrix4x4) * mats.size(),
 							"MBVH leaf transformations");
+			device.FinishQueue();
 		}
 
-		if (mbvh->uniqueLeafsMotionSystem.size() > 0) {
+		if (mbvh.uniqueLeafsMotionSystem.size() > 0) {
 			// Transform CPU data structures in OpenCL data structures
 			
 			vector<luxrays::ocl::MotionSystem> motionSystems;
 			vector<luxrays::ocl::InterpolatedTransform> interpolatedTransforms;
-			BOOST_FOREACH(const MotionSystem *ms, mbvh->uniqueLeafsMotionSystem) {
+			BOOST_FOREACH(const MotionSystem *ms, mbvh.uniqueLeafsMotionSystem) {
 				luxrays::ocl::MotionSystem oclMotionSystem;
 
 				oclMotionSystem.interpolatedTransformFirstIndex = interpolatedTransforms.size();
@@ -172,18 +169,19 @@ public:
 			}
 			
 			// Allocate the motion system buffer
-			device->AllocBufferRO(&uniqueLeafsMotionSystemBuff, &motionSystems[0],
+			device.AllocBufferRO(&uniqueLeafsMotionSystemBuff, &motionSystems[0],
 					sizeof(luxrays::ocl::MotionSystem) * motionSystems.size(),
 					"MBVH leaf motion systems buffer");
 
 			// Allocate the InterpolatedTransform buffer
-			LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
-				"] Leaf interpolated transforms buffer size: " <<
-				(sizeof(luxrays::ocl::InterpolatedTransform) * interpolatedTransforms.size() / 1024) <<
-				"Kbytes");
-			device->AllocBufferRO(&uniqueLeafsInterpolatedTransformBuff, &interpolatedTransforms[0],
+			//LR_LOG(deviceContext, "[HardwareIntersectionDevice::" << deviceName <<
+			//	"] Leaf interpolated transforms buffer size: " <<
+			//	(sizeof(luxrays::ocl::InterpolatedTransform) * interpolatedTransforms.size() / 1024) <<
+			//	"Kbytes");
+			device.AllocBufferRO(&uniqueLeafsInterpolatedTransformBuff, &interpolatedTransforms[0],
 					sizeof(luxrays::ocl::InterpolatedTransform) * interpolatedTransforms.size(),
 					"MBVH leaf interpolated transforms buffer");
+			device.FinishQueue();
 		}
 
 		//----------------------------------------------------------------------
@@ -195,7 +193,7 @@ public:
 		opts << " -D LUXRAYS_OPENCL_KERNEL"
 				" -D PARAM_RAY_EPSILON_MIN=" << MachineEpsilon::GetMin() << "f"
 				" -D PARAM_RAY_EPSILON_MAX=" << MachineEpsilon::GetMax() << "f";
-		//LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] MBVH compile options: \n" << opts.str());
+		//LR_LOG(deviceContext, "[HardwareIntersectionDevice::" << deviceName << "] MBVH compile options: \n" << opts.str());
 
 		std::stringstream kernelDefs;
 		kernelDefs << "#define MBVH_VERTS_PAGE_COUNT " << vertsBuffs.size() << "\n"
@@ -213,118 +211,112 @@ public:
 			kernelDefs << "#define MBVH_HAS_TRANSFORMATIONS 1\n";
 		if (uniqueLeafsMotionSystemBuff)
 			kernelDefs << "#define MBVH_HAS_MOTIONSYSTEMS 1\n";
-		//LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] MBVH kernel definitions: \n" << kernelDefs.str());
+		//LR_LOG(deviceContext, "[HardwareIntersectionDevice::" << deviceName << "] MBVH kernel definitions: \n" << kernelDefs.str());
 
-		intersectionKernelSource = kernelDefs.str() +
-				luxrays::ocl::KernelSource_bvhbuild_types +
-				luxrays::ocl::KernelSource_mbvh;
+		stringstream code;
+		code <<
+			kernelDefs.str() <<
+			luxrays::ocl::KernelSource_luxrays_types <<
+			luxrays::ocl::KernelSource_epsilon_types <<
+			luxrays::ocl::KernelSource_epsilon_funcs <<
+			luxrays::ocl::KernelSource_point_types <<
+			luxrays::ocl::KernelSource_vector_types <<
+			luxrays::ocl::KernelSource_matrix4x4_types <<
+			luxrays::ocl::KernelSource_matrix4x4_funcs <<
+			luxrays::ocl::KernelSource_quaternion_types <<
+			luxrays::ocl::KernelSource_quaternion_funcs <<
+			luxrays::ocl::KernelSource_ray_types <<
+			luxrays::ocl::KernelSource_ray_funcs <<
+			luxrays::ocl::KernelSource_bbox_types <<
+			luxrays::ocl::KernelSource_bbox_funcs <<
+			luxrays::ocl::KernelSource_transform_types <<
+			luxrays::ocl::KernelSource_transform_funcs <<
+			luxrays::ocl::KernelSource_motionsystem_types <<
+			luxrays::ocl::KernelSource_motionsystem_funcs <<
+			luxrays::ocl::KernelSource_triangle_types <<
+			luxrays::ocl::KernelSource_triangle_funcs <<
+			luxrays::ocl::KernelSource_bvhbuild_types <<
+			luxrays::ocl::KernelSource_mbvh;
 
-		const std::string code(
-			kernelDefs.str() +
-			luxrays::ocl::KernelSource_luxrays_types +
-			luxrays::ocl::KernelSource_epsilon_types +
-			luxrays::ocl::KernelSource_epsilon_funcs +
-			luxrays::ocl::KernelSource_point_types +
-			luxrays::ocl::KernelSource_vector_types +
-			luxrays::ocl::KernelSource_matrix4x4_types +
-			luxrays::ocl::KernelSource_matrix4x4_funcs +
-			luxrays::ocl::KernelSource_quaternion_types +
-			luxrays::ocl::KernelSource_quaternion_funcs +
-			luxrays::ocl::KernelSource_ray_types +
-			luxrays::ocl::KernelSource_ray_funcs +
-			luxrays::ocl::KernelSource_bbox_types +
-			luxrays::ocl::KernelSource_bbox_funcs +
-			luxrays::ocl::KernelSource_transform_types +
-			luxrays::ocl::KernelSource_transform_funcs +
-			luxrays::ocl::KernelSource_motionsystem_types +
-			luxrays::ocl::KernelSource_motionsystem_funcs +
-			luxrays::ocl::KernelSource_triangle_types +
-			luxrays::ocl::KernelSource_triangle_funcs +
-			luxrays::ocl::KernelSource_bvhbuild_types +
-			luxrays::ocl::KernelSource_mbvh);
-		cl::Program::Sources source(1, std::make_pair(code.c_str(), code.length()));
-		cl::Program program = cl::Program(oclContext, source);
-		try {
-			VECTOR_CLASS<cl::Device> buildDevice;
-			buildDevice.push_back(oclDevice);
-			program.build(buildDevice, opts.str().c_str());
-		} catch (cl::Error &err) {
-			cl::STRING_CLASS strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
-			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] MBVH compilation error:\n" << strError.c_str());
-
-			throw err;
-		}
+		HardwareDeviceProgram *program = nullptr;
+		device.CompileProgram(&program,
+				opts.str(),
+				code.str(),
+				"MBVHKernel");
 
 		// Setup the kernel
-		kernel = new cl::Kernel(program, "Accelerator_Intersect_RayBuffer");
+		device.GetKernel(program, &kernel, "Accelerator_Intersect_RayBuffer");
 
-		if (device->GetDeviceDesc()->GetForceWorkGroupSize() > 0)
-			workGroupSize = device->GetDeviceDesc()->GetForceWorkGroupSize();
+		if (device.GetDeviceDesc()->GetForceWorkGroupSize() > 0)
+			workGroupSize = device.GetDeviceDesc()->GetForceWorkGroupSize();
 		else {
-			kernel->getWorkGroupInfo<size_t>(oclDevice,
-				CL_KERNEL_WORK_GROUP_SIZE, &workGroupSize);
-			//LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
-			//	"] MBVH kernel work group size: " << workGroupSize);
+			workGroupSize = device.GetKernelWorkGroupSize(kernel); 
+			//LR_LOG(deviceContext, "[HardwareIntersectionDevice::" << deviceName <<
+			//	"] BVH kernel work group size: " << workGroupSize);
 		}
 
-		// Set arguments
-		SetIntersectionKernelArgs(*kernel, 3);
+		// Set kernel arguments
+		SetIntersectionKernelArgs();
+
+		delete program;
 	}
 
-	virtual ~OpenCLMBVHKernel() {
+	virtual ~MBVHKernel() {
 		for (u_int i = 0; i < vertsBuffs.size(); ++i)
-			device->FreeBuffer(&vertsBuffs[i]);
+			device.FreeBuffer(&vertsBuffs[i]);
 		for (u_int i = 0; i < nodeBuffs.size(); ++i)
-			device->FreeBuffer(&nodeBuffs[i]);
-		device->FreeBuffer(&uniqueLeafsTransformBuff);
-		device->FreeBuffer(&uniqueLeafsMotionSystemBuff);
-		device->FreeBuffer(&uniqueLeafsInterpolatedTransformBuff);
+			device.FreeBuffer(&nodeBuffs[i]);
+		device.FreeBuffer(&uniqueLeafsTransformBuff);
+		device.FreeBuffer(&uniqueLeafsMotionSystemBuff);
+		device.FreeBuffer(&uniqueLeafsInterpolatedTransformBuff);
 	}
 
 	void UpdateBVHNodes();
 	virtual void Update(const DataSet *newDataSet);
-	virtual void EnqueueRayBuffer(cl::CommandQueue &oclQueue,
-		cl::Buffer &rBuff, cl::Buffer &hBuff, const u_int rayCount,
-		const VECTOR_CLASS<cl::Event> *events, cl::Event *event);
+	virtual void EnqueueTraceRayBuffer(HardwareDeviceBuffer *rayBuff,
+			HardwareDeviceBuffer *rayHitBuff, const unsigned int rayCount);
 
-	virtual u_int SetIntersectionKernelArgs(cl::Kernel &kernel, const u_int argIndex);
+	void SetIntersectionKernelArgs();
 
-	const MBVHAccel *mbvh;
+	const MBVHAccel &mbvh;
 
 	// BVH fields
-	vector<cl::Buffer *> vertsBuffs;
-	vector<cl::Buffer *> nodeBuffs;
-	cl::Buffer *uniqueLeafsTransformBuff;
-	cl::Buffer *uniqueLeafsMotionSystemBuff;
-	cl::Buffer *uniqueLeafsInterpolatedTransformBuff;
+	vector<HardwareDeviceBuffer *> vertsBuffs;
+	vector<HardwareDeviceBuffer *> nodeBuffs;
+	HardwareDeviceBuffer *uniqueLeafsTransformBuff;
+	HardwareDeviceBuffer *uniqueLeafsMotionSystemBuff;
+	HardwareDeviceBuffer *uniqueLeafsInterpolatedTransformBuff;
 
 	// Used to update BVH node buffers
-	vector<std::vector<u_int> > vertOffsetPerLeafMesh;
+	vector<vector<u_int> > vertOffsetPerLeafMesh;
+
+	HardwareDeviceKernel *kernel;
+	u_int workGroupSize;
 };
 
-void OpenCLMBVHKernel::UpdateBVHNodes() {
+void MBVHKernel::UpdateBVHNodes() {
 	// Free old buffers
 	for (u_int i = 0; i < nodeBuffs.size(); ++i)
-		device->FreeBuffer(&nodeBuffs[i]);
+		device.FreeBuffer(&nodeBuffs[i]);
 	nodeBuffs.resize(0);
 	
-	const size_t maxMemAlloc = device->GetDeviceDesc()->GetMaxMemoryAllocSize();
+	const size_t maxMemAlloc = device.GetDeviceDesc()->GetMaxMemoryAllocSize();
 	const size_t maxVertCount = maxMemAlloc / sizeof(Point);
 
 	// Check how many pages I have to allocate
 	const size_t maxNodeCount = maxMemAlloc / sizeof(luxrays::ocl::BVHArrayNode);
 
-	u_int totalNodeCount = mbvh->nRootNodes;
-	for (u_int i = 0; i < mbvh->uniqueLeafs.size(); ++i)
-		totalNodeCount += mbvh->uniqueLeafs[i]->nNodes;
+	u_int totalNodeCount = mbvh.nRootNodes;
+	for (u_int i = 0; i < mbvh.uniqueLeafs.size(); ++i)
+		totalNodeCount += mbvh.uniqueLeafs[i]->nNodes;
 
 	const size_t pageNodeCount = Min<size_t>(totalNodeCount, maxNodeCount);
 
 	// Initialize the node offset vector
-	std::vector<u_int> leafNodeOffset;
-	u_int currentBVHNodeCount = mbvh->nRootNodes;
-	for (u_int i = 0; i < mbvh->uniqueLeafs.size(); ++i) {
-		const BVHAccel *leafBVH = mbvh->uniqueLeafs[i];
+	vector<u_int> leafNodeOffset;
+	u_int currentBVHNodeCount = mbvh.nRootNodes;
+	for (u_int i = 0; i < mbvh.uniqueLeafs.size(); ++i) {
+		const BVHAccel *leafBVH = mbvh.uniqueLeafs[i];
 		leafNodeOffset.push_back(currentBVHNodeCount);
 		currentBVHNodeCount += leafBVH->nNodes;
 	}
@@ -335,12 +327,12 @@ void OpenCLMBVHKernel::UpdateBVHNodes() {
 
 	u_int currentNodeIndex = 0;
 	u_int currentLeafIndex = 0;
-	const luxrays::ocl::BVHArrayNode *currentNodes = mbvh->bvhRootTree;
-	u_int currentNodesCount = mbvh->nRootNodes;
+	const luxrays::ocl::BVHArrayNode *currentNodes = mbvh.bvhRootTree;
+	u_int currentNodesCount = mbvh.nRootNodes;
 
-	while (currentLeafIndex < mbvh->uniqueLeafs.size()) {
+	while (currentLeafIndex < mbvh.uniqueLeafs.size()) {
 		const u_int tmpLeftNodeCount = pageNodeCount - tmpNodeIndex;
-		const bool isRootTree = (currentNodes == mbvh->bvhRootTree);
+		const bool isRootTree = (currentNodes == mbvh.bvhRootTree);
 		const u_int leafIndex = currentLeafIndex;
 
 		// Check if there is enough space in the temporary buffer for all nodes
@@ -361,9 +353,9 @@ void OpenCLMBVHKernel::UpdateBVHNodes() {
 			} else
 				++currentLeafIndex;
 
-			if (currentLeafIndex < mbvh->uniqueLeafs.size()) {
-				currentNodes = mbvh->uniqueLeafs[currentLeafIndex]->bvhTree;
-				currentNodesCount = mbvh->uniqueLeafs[currentLeafIndex]->nNodes;
+			if (currentLeafIndex < mbvh.uniqueLeafs.size()) {
+				currentNodes = mbvh.uniqueLeafs[currentLeafIndex]->bvhTree;
+				currentNodesCount = mbvh.uniqueLeafs[currentLeafIndex]->nNodes;
 				currentNodeIndex = 0;
 			}
 		} else {
@@ -420,96 +412,88 @@ void OpenCLMBVHKernel::UpdateBVHNodes() {
 			}
 		}
 
-		if ((tmpNodeIndex >= pageNodeCount) || (currentLeafIndex >=  mbvh->uniqueLeafs.size())) {
-			// The temporary buffer is full, send the data to the OpenCL device
-			nodeBuffs.push_back(NULL);
+		if ((tmpNodeIndex >= pageNodeCount) || (currentLeafIndex >=  mbvh.uniqueLeafs.size())) {
+			// The temporary buffer is full, send the data to the HardwareIntersectionDevice
+			nodeBuffs.push_back(nullptr);
 			if (nodeBuffs.size() > 8)
-				throw std::runtime_error("Too many BVH node pages required in OpenCLMBVHKernels()");
+				throw runtime_error("Too many BVH node pages required in MBVHKernels()");
 
-			device->AllocBufferRO(&nodeBuffs.back(), &tmpNodes[0], sizeof(luxrays::ocl::BVHArrayNode) * tmpNodeIndex,
+			device.AllocBufferRO(&nodeBuffs.back(), &tmpNodes[0], sizeof(luxrays::ocl::BVHArrayNode) * tmpNodeIndex,
 					"MBVH nodes");
 			// I have to wait for the end of the transfer as tmpNodes is edited and deallocated on exit
-			device->GetOpenCLQueue().finish();
+			device.FinishQueue();
 
 			tmpNodeIndex = 0;
 		}
 	}
 }
 
-void OpenCLMBVHKernel::Update(const DataSet *newDataSet) {
-	if (!mbvh->nRootNodes)
+void MBVHKernel::Update(const DataSet *newDataSet) {
+	if (!mbvh.nRootNodes)
 		return;
 
 	// The root BVH nodes are changed. Update the BVH node buffers.
 	UpdateBVHNodes();
 
 	// I have to update kernel arguments changed inside UpdateBVHNodes()
-	SetIntersectionKernelArgs(*kernel, 3);
+	SetIntersectionKernelArgs();
 
-	const Context *deviceContext = device->GetContext();
-	const std::string &deviceName = device->GetName();
-	LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] Updating DataSet transformations");
+	const Context *deviceContext = device.GetContext();
+	const std::string &deviceName = device.GetName();
+	LR_LOG(deviceContext, "[HardwareIntersectionDevice::" << deviceName << "] Updating DataSet transformations");
 
 	// Transform CPU data structures in OpenCL data structures
 	vector<Matrix4x4> mats;
-	mats.reserve(mbvh->uniqueLeafsTransform.size());
-	BOOST_FOREACH(const Transform *t, mbvh->uniqueLeafsTransform)
+	mats.reserve(mbvh.uniqueLeafsTransform.size());
+	BOOST_FOREACH(const Transform *t, mbvh.uniqueLeafsTransform)
 		mats.push_back(t->mInv);
 
-	device->AllocBufferRO(&uniqueLeafsTransformBuff, &mats[0], sizeof(luxrays::ocl::Matrix4x4) * mats.size(),
+	device.AllocBufferRO(&uniqueLeafsTransformBuff, &mats[0], sizeof(luxrays::ocl::Matrix4x4) * mats.size(),
 		"MBVH leaf transformations");
 	// I have to wait for the end of the transfer as mats is deallocated on exit
-	device->GetOpenCLQueue().finish();
+	device.FinishQueue();
 }
 
-void OpenCLMBVHKernel::EnqueueRayBuffer(cl::CommandQueue &oclQueue,
-		cl::Buffer &rBuff, cl::Buffer &hBuff, const u_int rayCount,
-		const VECTOR_CLASS<cl::Event> *events, cl::Event *event) {
-	kernel->setArg(0, rBuff);
-	kernel->setArg(1, hBuff);
-	kernel->setArg(2, rayCount);
+void MBVHKernel::EnqueueTraceRayBuffer(HardwareDeviceBuffer *rayBuff,
+			HardwareDeviceBuffer *rayHitBuff, const unsigned int rayCount) {
+	device.SetKernelArg(kernel, 0, rayBuff);
+	device.SetKernelArg(kernel, 1, rayHitBuff);
+	device.SetKernelArg(kernel, 2, rayCount);
 
 	const u_int globalRange = RoundUp<u_int>(rayCount, workGroupSize);
-	oclQueue.enqueueNDRangeKernel(*kernel, cl::NullRange,
-		cl::NDRange(globalRange), cl::NDRange(workGroupSize), events,
-		event);
+	device.EnqueueKernel(kernel, HardwareDeviceRange(globalRange),
+			HardwareDeviceRange(workGroupSize));
 }
 
-u_int OpenCLMBVHKernel::SetIntersectionKernelArgs(cl::Kernel &kernel, const u_int index) {
-	u_int argIndex = index;
+void MBVHKernel::SetIntersectionKernelArgs() {
+	u_int argIndex = 3;
 	if (uniqueLeafsTransformBuff)
-		kernel.setArg(argIndex++, *uniqueLeafsTransformBuff);
+		device.SetKernelArg(kernel, argIndex++, uniqueLeafsTransformBuff);
 	if (uniqueLeafsMotionSystemBuff) {
-		kernel.setArg(argIndex++, *uniqueLeafsMotionSystemBuff);
-		kernel.setArg(argIndex++, *uniqueLeafsInterpolatedTransformBuff);
+		device.SetKernelArg(kernel, argIndex++, uniqueLeafsMotionSystemBuff);
+		device.SetKernelArg(kernel, argIndex++, uniqueLeafsInterpolatedTransformBuff);
 	}
 	for (u_int i = 0; i < 8; ++i) {
 		if (i >= vertsBuffs.size())
-			kernel.setArg(argIndex++, sizeof(cl::Buffer), nullptr);
+			device.SetKernelArg(kernel, argIndex++, nullptr);
 		else
-			kernel.setArg(argIndex++, *vertsBuffs[i]);
+			device.SetKernelArg(kernel, argIndex++, vertsBuffs[i]);
 	}
 	for (u_int i = 0; i < 8; ++i) {
 		if (i >= nodeBuffs.size())
-			kernel.setArg(argIndex++, sizeof(cl::Buffer), nullptr);
+			device.SetKernelArg(kernel, argIndex++, nullptr);
 		else
-			kernel.setArg(argIndex++, *nodeBuffs[i]);
+			device.SetKernelArg(kernel, argIndex++, nodeBuffs[i]);
 	}
-
-	return argIndex;
 }
 
-OpenCLKernel *MBVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *device) const {
+bool MBVHAccel::HasDataParallelSupport(const IntersectionDevice &device) const {
+	return device.HasDataParallelSupport();
+}
+
+HardwareIntersectionKernel *MBVHAccel::NewHardwareIntersectionKernel(HardwareIntersectionDevice &device) const {
 	// Setup the kernel
-	return new OpenCLMBVHKernel(device, this);
+	return new MBVHKernel(device, *this);
 }
-
-#else
-
-OpenCLKernel *MBVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *device) const {
-	return NULL;
-}
-
-#endif
 
 }

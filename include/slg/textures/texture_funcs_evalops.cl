@@ -265,7 +265,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 					EvalStack_PopFloat3(tex2);
 					EvalStack_PopFloat3(tex1);
 
-					const float3 eval = MixTexture_ConstEvaluateSpectrum(tex1, tex2, amt);
+					const float3 eval = MixTexture_ConstEvaluateSpectrum(tex1, tex2, MAKE_FLOAT3(amt, amt, amt));
 					EvalStack_PushFloat3(eval);
 					break;
 				}
@@ -634,11 +634,12 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		case HSV_TEX: {
 			switch (evalType) {
 				case EVAL_FLOAT: {
-					float tex1, hueTex, satTex, valTex;
+					float3 tex1;
+					float hueTex, satTex, valTex;
 					EvalStack_PopFloat(valTex);
 					EvalStack_PopFloat(satTex);
 					EvalStack_PopFloat(hueTex);
-					EvalStack_PopFloat(tex1);
+					EvalStack_PopFloat3(tex1);
 					
 
 					const float eval = HsvTexture_ConstEvaluateFloat(tex1, hueTex, satTex, valTex);
@@ -1146,7 +1147,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 				}
 				case EVAL_SPECTRUM: {
 					float3 tex1;
-					EvalStack_PopFloat(tex1);
+					EvalStack_PopFloat3(tex1);
 
 					const float3 eval = SplitFloat3Texture_ConstEvaluateSpectrum(tex1,
 							texture->splitFloat3Tex.channelIndex);

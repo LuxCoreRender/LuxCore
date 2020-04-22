@@ -35,9 +35,11 @@ public:
 
 	virtual AcceleratorType GetType() const { return ACCEL_EMBREE; }
 
-	virtual OpenCLKernel *NewOpenCLKernel(OpenCLIntersectionDevice *device) const { return NULL; }
-	virtual bool CanRunOnOpenCLDevice(OpenCLIntersectionDevice *device) const {
+	virtual bool HasDataParallelSupport(const IntersectionDevice &device) const {
 		return false;
+	}
+	virtual HardwareIntersectionKernel *NewHardwareIntersectionKernel(HardwareIntersectionDevice &device) const {
+		return nullptr;
 	}
 
 	virtual void Init(const std::deque<const Mesh *> &meshes,

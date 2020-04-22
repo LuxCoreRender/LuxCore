@@ -16,55 +16,71 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#if defined(LUXRAYS_ENABLE_OPENCL)
+#if defined(LUXRAYS_ENABLE_CUDA)
 
-#include "slg/engines/pathocl/pathoclrenderstate.h"
-#include "slg/engines/pathocl/pathocl.h"
-#include "slg/engines/caches/photongi/photongicache.h"
+#include "luxrays/devices/cudaintersectiondevice.h"
 
 using namespace std;
-using namespace luxrays;
-using namespace slg;
+
+namespace luxrays {
 
 //------------------------------------------------------------------------------
-// PathOCLRenderState
+// CUDA IntersectionDevice
 //------------------------------------------------------------------------------
 
-BOOST_CLASS_EXPORT_IMPLEMENT(slg::PathOCLRenderState)
-
-PathOCLRenderState::PathOCLRenderState() :
-		RenderState(PathOCLRenderEngine::GetObjectTag()),
-		photonGICache(nullptr), deletePhotonGICachePtr(false) {
+CUDAIntersectionDevice::CUDAIntersectionDevice(
+		const Context *context,
+		CUDADeviceDescription *desc,
+		const size_t devIndex) :
+		Device(context, devIndex), CUDADevice(context, desc, devIndex),
+		HardwareIntersectionDevice(), kernel(nullptr) {
 }
 
-PathOCLRenderState::PathOCLRenderState(const u_int seed, PhotonGICache *pgic) :
-		RenderState(PathOCLRenderEngine::GetObjectTag()),
-		bootStrapSeed(seed), photonGICache(pgic), deletePhotonGICachePtr(false) {
+CUDAIntersectionDevice::~CUDAIntersectionDevice() {
 }
 
-PathOCLRenderState::~PathOCLRenderState() {
-	if (deletePhotonGICachePtr)
-		delete photonGICache;
+void CUDAIntersectionDevice::SetDataSet(DataSet *newDataSet) {
+	IntersectionDevice::SetDataSet(newDataSet);
+
+	if (dataSet) {
+		const AcceleratorType accelType = dataSet->GetAcceleratorType();
+		if (accelType != ACCEL_AUTO) {
+			accel = dataSet->GetAccelerator(accelType);
+		} else {
+			if (dataSet->RequiresInstanceSupport() || dataSet->RequiresMotionBlurSupport())
+				accel = dataSet->GetAccelerator(ACCEL_MBVH);
+			else
+				accel = dataSet->GetAccelerator(ACCEL_BVH);
+		}
+	}
 }
 
-template<class Archive> void PathOCLRenderState::load(Archive &ar, const u_int version) {
-	ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(RenderState);
-	ar & bootStrapSeed;
-	ar & photonGICache;
-
-	deletePhotonGICachePtr = true;
+void CUDAIntersectionDevice::Update() {
+	kernel->Update(dataSet);
 }
 
-template<class Archive> void PathOCLRenderState::save(Archive &ar, const u_int version) const {
-	ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(RenderState);
-	ar & bootStrapSeed;
-	ar & photonGICache;
+void CUDAIntersectionDevice::Start() {
+	CUDADevice::Start();
+
+	// Compile required kernel
+	kernel = accel->NewHardwareIntersectionKernel(*this);
 }
 
-namespace slg {
-// Explicit instantiations for portable archives
-template void PathOCLRenderState::save(LuxOutputArchive &ar, const u_int version) const;
-template void PathOCLRenderState::load(LuxInputArchive &ar, const u_int version);
+void CUDAIntersectionDevice::Stop() {
+	delete kernel;
+	kernel = nullptr;
+
+	CUDADevice::Stop();
+}
+
+void CUDAIntersectionDevice::EnqueueTraceRayBuffer(HardwareDeviceBuffer *rayBuff,
+			HardwareDeviceBuffer *rayHitBuff,
+			const unsigned int rayCount) {
+	// Enqueue the intersection kernel
+	kernel->EnqueueTraceRayBuffer(rayBuff, rayHitBuff, rayCount);
+	statsTotalDataParallelRayCount += rayCount;
+}
+
 }
 
 #endif

@@ -16,57 +16,59 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _LUXRAYS_NATIVETHREADDEVICE_H
-#define	_LUXRAYS_NATIVETHREADDEVICE_H
-
-#include <string>
-#include <cstdlib>
-
-#include <boost/thread/thread.hpp>
+#ifndef _LUXRAYS_HARDWAREINTERSECTIONDEVICE_H
+#define	_LUXRAYS_HARDWAREINTERSECTIONDEVICE_H
 
 #include "luxrays/luxrays.h"
-#include "luxrays/core/dataset.h"
-#include "luxrays/core/context.h"
+#include "luxrays/core/hardwaredevice.h"
 #include "luxrays/core/intersectiondevice.h"
-#include "luxrays/utils/utils.h"
 
 namespace luxrays {
 
 //------------------------------------------------------------------------------
-// NativeIntersectionDeviceDescription
+// HardwareIntersectionDevice
 //------------------------------------------------------------------------------
 
-class NativeIntersectionDeviceDescription : public DeviceDescription {
+class HardwareIntersectionDevice : public IntersectionDevice, virtual public HardwareDevice {
 public:
-	NativeIntersectionDeviceDescription(const std::string deviceName) :
-		DeviceDescription(deviceName, DEVICE_TYPE_NATIVE) { }
+	// Returns true if it support data parallel ray tracing
+	virtual bool HasDataParallelSupport() const { return true; }
+
+	//--------------------------------------------------------------------------
+	// Data parallel interface: to trace a multiple rays (i.e. on the GPU)
+	//--------------------------------------------------------------------------
+
+	virtual void EnqueueTraceRayBuffer(HardwareDeviceBuffer *rayBuff,
+			HardwareDeviceBuffer *rayHitBuff, const unsigned int rayCount) {
+		throw std::runtime_error("Called EnqueueTraceRayBuffer() on a device without parallel support");
+	}
 
 	friend class Context;
 
 protected:
-	static void AddDeviceDescs(std::vector<DeviceDescription *> &descriptions);
+	HardwareIntersectionDevice();
+	virtual ~HardwareIntersectionDevice();
 };
 
 //------------------------------------------------------------------------------
-// NativeDevice
+// HardwareIntersectionKernel
 //------------------------------------------------------------------------------
 
-class NativeIntersectionDevice : public IntersectionDevice {
+class HardwareIntersectionKernel {
 public:
-	NativeIntersectionDevice(const Context *context,
-			NativeIntersectionDeviceDescription *deviceDesc,
-			const size_t devIndex);
-	virtual ~NativeIntersectionDevice();
+	HardwareIntersectionKernel(HardwareIntersectionDevice  &dev) : device(dev) {
+	}
+	virtual ~HardwareIntersectionKernel() {
+	}
 
-	virtual const DeviceDescription *GetDeviceDesc() const { return deviceDesc; }
+	virtual void Update(const DataSet *newDataSet) = 0;
+	virtual void EnqueueTraceRayBuffer(HardwareDeviceBuffer *rayBuff,
+			HardwareDeviceBuffer *rayHitBuff, const unsigned int rayCount) = 0;
 
-	virtual void SetDataSet(DataSet *newDataSet);
-
-	friend class Context;
-
-	NativeIntersectionDeviceDescription *deviceDesc;
+protected:
+	HardwareIntersectionDevice &device;
 };
 
 }
 
-#endif	/* _LUXRAYS_NATIVETHREADDEVICE_H */
+#endif	/* _LUXRAYS_HARDWAREINTERSECTIONDEVICE_H */
