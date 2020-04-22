@@ -26,7 +26,7 @@
 
 #if defined(LUXRAYS_ENABLE_CUDA)
 
-#if defined(LUXRAYS_DISABLE_OPENCL)
+#if !defined(LUXRAYS_ENABLE_OPENCL)
 #error "CUDA support can be enabled only if also OpenCL support is enabled"
 #endif
 

@@ -37,6 +37,11 @@ if(NOT CMAKE_BUILD_TYPE)
 endif(NOT CMAKE_BUILD_TYPE)
 SET(CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE} CACHE STRING "assure config" FORCE) # makes sure type is shown in cmake gui
 
+# For compatibility with the past
+if (LUXRAYS_DISABLE_OPENCL)
+	set(LUXRAYS_ENABLE_OPENCL false)
+endif()
+
 message(STATUS "Building mode: " ${CMAKE_BUILD_TYPE})
 
 set(CMAKE_MODULE_PATH "${LuxRays_SOURCE_DIR}/cmake")
@@ -53,8 +58,8 @@ link_directories("${LuxRays_SOURCE_DIR}/lib")
 #
 ################################################################################
 
-if (LUXRAYS_DISABLE_OPENCL)
-	ADD_DEFINITIONS("-DLUXRAYS_DISABLE_OPENCL")
+if (LUXRAYS_ENABLE_OPENCL)
+	ADD_DEFINITIONS("-DLUXRAYS_ENABLE_OPENCL")
 endif()
 
 if (LUXRAYS_ENABLE_CUDA)
@@ -68,7 +73,7 @@ endif()
 #
 ################################################################################
 
-if (NOT LUXRAYS_DISABLE_OPENCL)
+if (LUXRAYS_ENABLE_OPENCL)
 	set(OPENCL_ROOT "${OPENCL_SEARCH_PATH}")
 	find_package(OpenCL)
 

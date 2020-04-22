@@ -25,7 +25,7 @@
 #include "luxrays/core/context.h"
 #include "luxrays/core/hardwaredevice.h"
 #include "luxrays/devices/nativeintersectiondevice.h"
-#if !defined(LUXRAYS_DISABLE_OPENCL)
+#if defined(LUXRAYS_ENABLE_OPENCL)
 #include "luxrays/devices/ocldevice.h"
 #include "luxrays/devices/oclintersectiondevice.h"
 #endif
@@ -56,7 +56,7 @@ Context::Context(LuxRaysDebugHandler handler, const Properties &config) : cfg(co
 	NativeIntersectionDeviceDescription::AddDeviceDescs(deviceDescriptions);
 
 	
-#if !defined(LUXRAYS_DISABLE_OPENCL)
+#if defined(LUXRAYS_ENABLE_OPENCL)
 	//--------------------------------------------------------------------------
 	// Add all OpenCL devices
 	//--------------------------------------------------------------------------
@@ -161,7 +161,7 @@ void Context::UpdateDataSet() {
 	// Update the data set
 	currentDataSet->UpdateAccelerators();
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
+#if defined(LUXRAYS_ENABLE_OPENCL)
 	// Update all OpenCL devices
 	for (u_int i = 0; i < idevices.size(); ++i) {
 		OpenCLIntersectionDevice *oclDevice = dynamic_cast<OpenCLIntersectionDevice *>(idevices[i]);
@@ -232,7 +232,7 @@ vector<IntersectionDevice *> Context::CreateIntersectionDevices(
 			NativeIntersectionDeviceDescription *nativeDeviceDesc = (NativeIntersectionDeviceDescription *)deviceDesc[i];
 			device = new NativeIntersectionDevice(this, nativeDeviceDesc, indexOffset + i);
 		}
-#if !defined(LUXRAYS_DISABLE_OPENCL)
+#if defined(LUXRAYS_ENABLE_OPENCL)
 		else if (deviceType & DEVICE_TYPE_OPENCL_ALL) {
 			// OpenCL devices
 			OpenCLDeviceDescription *oclDeviceDesc = (OpenCLDeviceDescription *)deviceDesc[i];
@@ -285,7 +285,7 @@ vector<HardwareDevice *> Context::CreateHardwareDevices(
 		if (deviceType == DEVICE_TYPE_NATIVE) {
 			throw runtime_error("Native devices are not supported as hardware devices in Context::CreateHardwareDevices()");
 		}
-#if !defined(LUXRAYS_DISABLE_OPENCL)
+#if defined(LUXRAYS_ENABLE_OPENCL)
 		else if (deviceType & DEVICE_TYPE_OPENCL_ALL) {
 			// OpenCL devices
 			OpenCLDeviceDescription *oclDeviceDesc = (OpenCLDeviceDescription *)deviceDesc[i];

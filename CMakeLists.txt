@@ -105,18 +105,16 @@ if (NOT OPENIMAGEIO_FOUND)
 	MESSAGE(FATAL_ERROR "--> Could not locate required OpenImageIO files - Please check ${OPENIMAGEIO_SEARCH_PATH}")
 endif()
 
-if (NOT OPENCL_FOUND AND NOT LUXRAYS_DISABLE_OPENCL)
-	MESSAGE(ERROR "--> Could not locate required OpenCL files, disabling OpenCL support - Please check ${OPENCL_SEARCH_PATH}")
-	SET(LUXRAYS_DISABLE_OPENCL 1)
+if (NOT OPENCL_FOUND AND LUXRAYS_ENABLE_OPENCL)
+	MESSAGE(FATAL_ERROR "--> Could not locate required OpenCL files, disabling OpenCL support - Please check ${OPENCL_SEARCH_PATH}")
 endif()
 
-if (NOT CUDA_FOUND AND LUXRAYS_ENABLE_CUDA)
-	MESSAGE(FATAL_ERROR "--> Could not locate required CUDA files - Please check ${CUDA_TOOLKIT_ROOT_DIR}")
+if (NOT OPENGL_FOUND AND LUXRAYS_ENABLE_OPENCL)
+	MESSAGE(FATAL_ERROR "--> Could not locate required OpenGL files, disabling OpenCL support, disabling samples build")
 endif()
 
-if (NOT OPENGL_FOUND AND NOT LUXRAYS_DISABLE_OPENCL)
-	MESSAGE(ERROR "--> Could not locate required OpenGL files, disabling OpenCL support, disabling samples build")
-	SET(LUXRAYS_DISABLE_OPENCL 1)
+if ((NOT CUDA_FOUND AND LUXRAYS_ENABLE_CUDA) OR (LUXRAYS_ENABLE_CUDA AND NOT LUXRAYS_ENABLE_OPENCL))
+	MESSAGE(FATAL_ERROR "--> CUDA support requires to enable OpenCL support too")
 endif()
 
 if (NOT EMBREE_FOUND)
@@ -141,8 +139,8 @@ endif()
 #
 ################################################################################
 
-if (LUXRAYS_DISABLE_OPENCL)
-	ADD_DEFINITIONS("-DLUXRAYS_DISABLE_OPENCL")
+if (LUXRAYS_ENABLE_OPENCL)
+	ADD_DEFINITIONS("-DLUXRAYS_ENABLE_OPENCL")
 endif()
 
 if (LUXRAYS_ENABLE_CUDA)

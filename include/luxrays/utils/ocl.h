@@ -24,7 +24,7 @@
 
 #include <string>
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
+#if defined(LUXRAYS_ENABLE_OPENCL)
 
 // To avoid reference to OpenCL 1.2 symbols in cl.hpp file
 #define CL_USE_DEPRECATED_OPENCL_1_1_APIS

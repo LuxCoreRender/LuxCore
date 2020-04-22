@@ -168,7 +168,7 @@ public:
 	void SetVerbose(const bool v) { verbose = v; }
 	bool IsVerbose() const { return verbose; }
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
+#if defined(LUXRAYS_ENABLE_OPENCL)
 	friend class OpenCLIntersectionDevice;
 #endif
 

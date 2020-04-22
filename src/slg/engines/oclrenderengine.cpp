@@ -19,7 +19,7 @@
 #include "slg/engines/oclrenderengine.h"
 
 #include "luxrays/core/intersectiondevice.h"
-#if !defined(LUXRAYS_DISABLE_OPENCL)
+#if defined(LUXRAYS_ENABLE_OPENCL)
 #include "luxrays/devices/ocldevice.h"
 #endif
 
@@ -33,7 +33,7 @@ using namespace slg;
 
 OCLRenderEngine::OCLRenderEngine(const RenderConfig *rcfg,
 		const bool supportsNativeThreads) : RenderEngine(rcfg) {
-#if !defined(LUXRAYS_DISABLE_OPENCL)
+#if defined(LUXRAYS_ENABLE_OPENCL)
 	const Properties &cfg = renderConfig->cfg;
 
 	const bool useCPUs = cfg.Get(GetDefaultProps().Get("opencl.cpu.use")).Get<bool>();
@@ -114,7 +114,7 @@ OCLRenderEngine::OCLRenderEngine(const RenderConfig *rcfg,
 	if (selectedDeviceDescs.size() == 0)
 		throw runtime_error("No hardware device selected or available");
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
+#if defined(LUXRAYS_ENABLE_OPENCL)
 	if (supportsNativeThreads) {
 		//----------------------------------------------------------------------
 		// Get native device descriptions

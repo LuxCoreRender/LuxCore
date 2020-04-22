@@ -25,7 +25,7 @@
 #include "luxrays/utils/exportdefs.h"
 #include "luxrays/utils/ocl.h"
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
+#if defined(LUXRAYS_ENABLE_OPENCL)
 
 namespace luxrays {
 

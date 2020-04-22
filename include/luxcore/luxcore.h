@@ -111,9 +111,12 @@ CPP_EXPORT CPP_API void KernelCacheFill(const luxrays::Properties &config, void 
  * properties currently supported are:
  * - version.number\n
  *		The LuxCore version. As string with "major.minor" version format.
- * - compile.LUXRAYS_DISABLE_OPENCL\n
- *		true or false if the sources has been compiled with LUXRAYS_DISABLE_OPENCL and
+ * - compile.LUXRAYS_ENABLE_OPENCL and compile.LUXRAYS_DISABLE_OPENCL\n
+ *		true or false if the sources has been compiled with LUXRAYS_ENABLE_OPENCL and
  *		OpenCL rendering engines are available or not.
+ * - compile.LUXRAYS_ENABLE_CUDA\n
+ *		true or false if the sources has been compiled with LUXRAYS_ENABLE_CUDA and
+ *		CUDA support is available or not.
  * - compile.LUXCORE_DISABLE_EMBREE_BVH_BUILDER\n
  *		true or false if the sources has been compiled with LUXCORE_DISABLE_EMBREE_BVH_BUILDER and
  *		Embree BVH builder is used for OpenCL or not. This is now always false.
