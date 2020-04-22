@@ -127,6 +127,9 @@ CUDADevice::CUDADevice(
 	kernelCache = new cudaKernelPersistentCache("LUXRAYS_" LUXRAYS_VERSION_MAJOR "." LUXRAYS_VERSION_MINOR);
 	
 	CHECK_CUDA_ERROR(cuCtxCreate(&cudaContext, CU_CTX_SCHED_YIELD, deviceDesc->GetCUDADevice()));
+
+	// I prefer cache over shared memory because I pretty much never use shared memory
+	CHECK_CUDA_ERROR(cuCtxSetCacheConfig(CU_FUNC_CACHE_PREFER_L1));
 }
 
 CUDADevice::~CUDADevice() {

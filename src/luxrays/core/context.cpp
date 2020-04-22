@@ -54,7 +54,6 @@ Context::Context(LuxRaysDebugHandler handler, const Properties &config) : cfg(co
 	//--------------------------------------------------------------------------
 
 	NativeIntersectionDeviceDescription::AddDeviceDescs(deviceDescriptions);
-
 	
 #if defined(LUXRAYS_ENABLE_OPENCL)
 	//--------------------------------------------------------------------------
