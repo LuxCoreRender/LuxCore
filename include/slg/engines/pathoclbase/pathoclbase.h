@@ -89,7 +89,7 @@ protected:
 	std::vector<PathOCLBaseOCLRenderThread *> renderOCLThreads;
 	std::vector<PathOCLBaseNativeRenderThread *> renderNativeThreads;
 	
-	std::string additionalKernelOptions;
+	std::string additionalOpenCLKernelOptions, additionalCUDAKernelOptions;
 	bool writeKernelsToFile;
 
 	// Pixel filter related variables

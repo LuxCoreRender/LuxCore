@@ -274,18 +274,6 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 
 	const string kernelSource = GetKernelSources();
 
-	// Build the kernel source/parameters hash
-	const string newKernelSrcHash = oclKernelPersistentCache::HashString(kernelsParameters) + "-" +
-			oclKernelPersistentCache::HashString(kernelSource);
-	if (newKernelSrcHash == kernelSrcHash) {
-		// There is no need to re-compile the kernel
-		return;
-	} else
-		kernelSrcHash = newKernelSrcHash;
-
-	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Defined symbols: " << kernelsParameters);
-	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Compiling kernels ");
-
 	if (renderEngine->writeKernelsToFile) {
 		// Some debug code to write the OpenCL kernel source to a file
 		const string kernelFileName = "kernel_source_device_" + ToString(threadIndex) + ".cl";
@@ -296,6 +284,27 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 		kernelFile << kernelDefs << endl << endl << kernelSource << endl;
 		kernelFile.close();
 	}
+
+	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Defined symbols: " << kernelsParameters);
+
+	if ((renderEngine->additionalOpenCLKernelOptions.size() > 0) &&
+			(intersectionDevice->GetDeviceDesc()->GetType() & DEVICE_TYPE_OPENCL_ALL))
+		kernelsParameters += " " + renderEngine->additionalOpenCLKernelOptions;
+	if ((renderEngine->additionalCUDAKernelOptions.size() > 0) &&
+			(intersectionDevice->GetDeviceDesc()->GetType() & DEVICE_TYPE_CUDA_ALL))
+		kernelsParameters += " " + renderEngine->additionalCUDAKernelOptions;
+
+	// Build the kernel source/parameters hash
+	const string newKernelSrcHash = oclKernelPersistentCache::HashString(kernelsParameters) + "-" +
+			oclKernelPersistentCache::HashString(kernelSource);
+	if (newKernelSrcHash == kernelSrcHash) {
+		// There is no need to re-compile the kernel
+		return;
+	} else
+		kernelSrcHash = newKernelSrcHash;
+
+	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Compiling options: " << kernelsParameters);
+	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Compiling kernels ");
 
 	HardwareDeviceProgram *program = nullptr;
 	intersectionDevice->CompileProgram(&program, kernelsParameters, kernelSource, "PathOCL kernel");

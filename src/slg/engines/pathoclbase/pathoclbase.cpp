@@ -56,7 +56,8 @@ PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg,
 		const bool supportsNativeThreads) :	OCLRenderEngine(rcfg, supportsNativeThreads),
 		compiledScene(nullptr), pixelFilterDistribution(nullptr), oclSampler(nullptr),
 		oclPixelFilter(nullptr), photonGICache(nullptr) {
-	additionalKernelOptions = "";
+	additionalOpenCLKernelOptions = "";
+	additionalCUDAKernelOptions = "";
 	writeKernelsToFile = false;
 
 	//--------------------------------------------------------------------------
@@ -267,8 +268,14 @@ void PathOCLBaseRenderEngine::StartLockLess() {
 	}
 	SLG_LOG("[PathOCLBaseRenderEngine] OpenCL max. page memory size: " << maxMemPageSize / 1024 << "Kbytes");
 
-	// Suggested compiler options: -cl-fast-relaxed-math -cl-strict-aliasing -cl-mad-enable
-	additionalKernelOptions = cfg.Get(Property("opencl.kernel.options")("")).Get<string>();
+	// Suggested compiler options: -cl-fast-relaxed-math -cl-mad-enable
+	//
+	// NOTE: I should probably enable -cl-fast-relaxed-math -cl-mad-enable for OpenCL too even
+	// if this is not what I was doing in the past 
+	additionalOpenCLKernelOptions = cfg.Get(Property("opencl.kernel.options")("")).Get<string>();
+	// Suggested compiler options: --use_fast_math
+	additionalCUDAKernelOptions = cfg.Get(Property("cuda.kernel.options")("--use_fast_math")).Get<string>();
+	
 	writeKernelsToFile = cfg.Get(Property("opencl.kernel.writetofile")(false)).Get<bool>();
 
 	//--------------------------------------------------------------------------
