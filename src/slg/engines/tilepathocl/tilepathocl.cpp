@@ -145,13 +145,14 @@ void TilePathOCLRenderEngine::StartLockLess() {
 		TilePathOCLRenderEngine::GetDefaultProps() :
 		RTPathOCLRenderEngine::GetDefaultProps();
 
+	useOutOfCoreMemory = cfg.Get(Property("pathocl.outofcore.enable")(false)).Get<bool>();
+
 	// TilePath specific settings
 	aaSamples = (GetType() == TILEPATHOCL) ?
 		Max(1, cfg.Get(defaultProps.Get("tilepath.sampling.aa.size")).Get<int>()) :
 		1;
-	usePixelAtomics = true;
-	maxTilePerDevice = cfg.Get(Property("tilepathocl.devices.maxtiles")(16)).Get<u_int>();
 
+	maxTilePerDevice = cfg.Get(Property("tilepathocl.devices.maxtiles")(16)).Get<u_int>();
 	// pathTracer must be configured here because it is then used
 	// to set tileRepository->varianceClamping, etc.
 	pathTracer.ParseOptions(cfg, defaultProps);
@@ -232,6 +233,9 @@ void TilePathOCLRenderEngine::UpdateCounters() {
 Properties TilePathOCLRenderEngine::ToProperties(const Properties &cfg) {
 	return OCLRenderEngine::ToProperties(cfg) <<
 			cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
+			// Force true
+			Property("pathocl.pixelatomics.enable")(true) <<
+			cfg.Get(GetDefaultProps().Get("pathocl.outofcore.enable")) <<
 			cfg.Get(GetDefaultProps().Get("tilepath.sampling.aa.size")) <<
 			cfg.Get(GetDefaultProps().Get("tilepathocl.devices.maxtiles")) <<
 			PathTracer::ToProperties(cfg) <<
@@ -247,6 +251,9 @@ const Properties &TilePathOCLRenderEngine::GetDefaultProps() {
 	static Properties props = Properties() <<
 			OCLRenderEngine::GetDefaultProps() <<
 			Property("renderengine.type")(GetObjectTag()) <<
+			// Force true
+			Property("pathocl.pixelatomics.enable")(true) <<
+			Property("pathocl.outofcore.enable")(true) <<
 			Property("tilepath.sampling.aa.size")(3) <<
 			Property("tilepathocl.devices.maxtiles")(16) <<
 			PathTracer::GetDefaultProps() <<

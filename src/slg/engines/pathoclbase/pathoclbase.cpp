@@ -121,7 +121,7 @@ PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg,
 	SLG_LOG("Configuring " << nativeRenderThreadCount << " native render threads");
 	renderNativeThreads.resize(nativeRenderThreadCount, NULL);
 
-	usePixelAtomics = false;
+	useOutOfCoreMemory = false;
 }
 
 PathOCLBaseRenderEngine::~PathOCLBaseRenderEngine() {
@@ -277,6 +277,8 @@ void PathOCLBaseRenderEngine::StartLockLess() {
 	additionalCUDAKernelOptions = cfg.Get(Property("cuda.kernel.options")("--use_fast_math")).Get<string>();
 	
 	writeKernelsToFile = cfg.Get(Property("opencl.kernel.writetofile")(false)).Get<bool>();
+
+	useOutOfCoreMemory = cfg.Get(Property("pathocl.outofcore.enable")(false)).Get<bool>();
 
 	//--------------------------------------------------------------------------
 	// Allocate PhotonGICache if enabled

@@ -87,6 +87,13 @@ protected:
 // HardwareDeviceBuffer: a memory region allocated on an hardware device
 //------------------------------------------------------------------------------
 
+typedef enum {
+	BUFFER_TYPE_NONE = 0,
+	BUFFER_TYPE_READ_ONLY = 1 << 0,
+	BUFFER_TYPE_READ_WRITE = 1 << 1,
+	BUFFER_TYPE_OUT_OF_CORE = 1 << 2
+} BufferType;
+
 class HardwareDeviceBuffer {
 public:
 	virtual ~HardwareDeviceBuffer() { }
@@ -149,8 +156,15 @@ public:
 
 	size_t GetUsedMemory() const { return usedMemory; }
 
-	virtual void AllocBufferRO(HardwareDeviceBuffer **buff, void *src, const size_t size, const std::string &desc = "") = 0;
-	virtual void AllocBufferRW(HardwareDeviceBuffer **buff, void *src, const size_t size, const std::string &desc = "") = 0;
+	virtual void AllocBuffer(HardwareDeviceBuffer **buff, const BufferType type,
+			void *src, const size_t size, const std::string &desc = "") = 0;
+	virtual void AllocBufferRO(HardwareDeviceBuffer **buff,
+			void *src, const size_t size, const std::string &desc = "") {
+		AllocBuffer(buff, BUFFER_TYPE_READ_ONLY, src, size, desc);
+	}
+	virtual void AllocBufferRW(HardwareDeviceBuffer **buff, void *src, const size_t size, const std::string &desc = "") {
+		AllocBuffer(buff, BUFFER_TYPE_READ_WRITE, src, size, desc);
+	}
 	virtual void FreeBuffer(HardwareDeviceBuffer **buff) = 0;
 
 protected:

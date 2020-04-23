@@ -132,6 +132,9 @@ Context::Context(LuxRaysDebugHandler handler, const Properties &config) : cfg(co
 
 		LR_LOG(this, "Device " << i << " max allocable memory block size: " <<
 			desc->GetMaxMemoryAllocSize() / (1024 * 1024) << "MBytes");
+
+		LR_LOG(this, "Device " << i << " has out of core memory support: " <<
+			desc->HasOutOfCoreMemorySupport());
 	}
 }
 

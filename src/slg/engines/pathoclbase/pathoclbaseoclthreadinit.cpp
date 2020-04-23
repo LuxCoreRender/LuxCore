@@ -62,54 +62,78 @@ void PathOCLBaseOCLRenderThread::InitCamera() {
 void PathOCLBaseOCLRenderThread::InitGeometry() {
 	CompiledScene *cscene = renderEngine->compiledScene;
 
+	const BufferType memTypeFlags = renderEngine->renderConfig->GetProperty("pathocl.outofcore.enable").Get<bool>() ?
+		((BufferType)(BUFFER_TYPE_READ_ONLY | BUFFER_TYPE_OUT_OF_CORE)) :
+		BUFFER_TYPE_READ_ONLY;
+
 	if (cscene->normals.size() > 0)
-		intersectionDevice->AllocBufferRO(&normalsBuff, &cscene->normals[0],
+		intersectionDevice->AllocBuffer(&normalsBuff,
+				memTypeFlags,
+				&cscene->normals[0],
 				sizeof(Normal) * cscene->normals.size(), "Normals");
 	else
 		intersectionDevice->FreeBuffer(&normalsBuff);
 
 	if (cscene->uvs.size() > 0)
-		intersectionDevice->AllocBufferRO(&uvsBuff, &cscene->uvs[0],
-			sizeof(UV) * cscene->uvs.size(), "UVs");
+		intersectionDevice->AllocBuffer(&uvsBuff,
+				memTypeFlags,
+				&cscene->uvs[0],
+				sizeof(UV) * cscene->uvs.size(), "UVs");
 	else
 		intersectionDevice->FreeBuffer(&uvsBuff);
 
 	if (cscene->cols.size() > 0)
-		intersectionDevice->AllocBufferRO(&colsBuff, &cscene->cols[0],
-			sizeof(Spectrum) * cscene->cols.size(), "Colors");
+		intersectionDevice->AllocBuffer(&colsBuff,
+				memTypeFlags,
+				&cscene->cols[0],
+				sizeof(Spectrum) * cscene->cols.size(), "Colors");
 	else
 		intersectionDevice->FreeBuffer(&colsBuff);
 
 	if (cscene->alphas.size() > 0)
-		intersectionDevice->AllocBufferRO(&alphasBuff, &cscene->alphas[0],
-			sizeof(float) * cscene->alphas.size(), "Alphas");
+		intersectionDevice->AllocBuffer(&alphasBuff,
+				memTypeFlags,
+				&cscene->alphas[0],
+				sizeof(float) * cscene->alphas.size(), "Alphas");
 	else
 		intersectionDevice->FreeBuffer(&alphasBuff);
 
 	if (cscene->vertexAOVs.size() > 0)
-		intersectionDevice->AllocBufferRO(&vertexAOVBuff, &cscene->vertexAOVs[0],
-			sizeof(float) * cscene->vertexAOVs.size(), "Vertex AOVs");
+		intersectionDevice->AllocBuffer(&vertexAOVBuff,
+				memTypeFlags,
+				&cscene->vertexAOVs[0],
+				sizeof(float) * cscene->vertexAOVs.size(), "Vertex AOVs");
 	else
 		intersectionDevice->FreeBuffer(&vertexAOVBuff);
 
 	if (cscene->triAOVs.size() > 0)
-		intersectionDevice->AllocBufferRO(&triAOVBuff, &cscene->triAOVs[0],
-			sizeof(float) * cscene->triAOVs.size(), "Triangle AOVs");
+		intersectionDevice->AllocBuffer(&triAOVBuff,
+				memTypeFlags,
+				&cscene->triAOVs[0],
+				sizeof(float) * cscene->triAOVs.size(), "Triangle AOVs");
 	else
 		intersectionDevice->FreeBuffer(&triAOVBuff);
 
-	intersectionDevice->AllocBufferRO(&triNormalsBuff, &cscene->triNormals[0],
-				sizeof(Normal) * cscene->triNormals.size(), "Triangle normals");
+	intersectionDevice->AllocBuffer(&triNormalsBuff,
+			memTypeFlags,
+			&cscene->triNormals[0],
+			sizeof(Normal) * cscene->triNormals.size(), "Triangle normals");
 
-	intersectionDevice->AllocBufferRO(&vertsBuff, &cscene->verts[0],
-		sizeof(Point) * cscene->verts.size(), "Vertices");
+	intersectionDevice->AllocBuffer(&vertsBuff,
+			memTypeFlags,
+			&cscene->verts[0],
+			sizeof(Point) * cscene->verts.size(), "Vertices");
 
-	intersectionDevice->AllocBufferRO(&trianglesBuff, &cscene->tris[0],
-		sizeof(Triangle) * cscene->tris.size(), "Triangles");
+	intersectionDevice->AllocBuffer(&trianglesBuff,
+			memTypeFlags,
+			&cscene->tris[0],
+			sizeof(Triangle) * cscene->tris.size(), "Triangles");
 
 	if (cscene->interpolatedTransforms.size() > 0) {
-		intersectionDevice->AllocBufferRO(&interpolatedTransformsBuff, &cscene->interpolatedTransforms[0],
-			sizeof(luxrays::ocl::InterpolatedTransform) * cscene->interpolatedTransforms.size(), "Interpolated transformations");
+		intersectionDevice->AllocBuffer(&interpolatedTransformsBuff,
+				memTypeFlags,
+				&cscene->interpolatedTransforms[0],
+				sizeof(luxrays::ocl::InterpolatedTransform) * cscene->interpolatedTransforms.size(), "Interpolated transformations");
 	} else
 		intersectionDevice->FreeBuffer(&interpolatedTransformsBuff);
 
@@ -241,8 +265,14 @@ void PathOCLBaseOCLRenderThread::InitPhotonGI() {
 void PathOCLBaseOCLRenderThread::InitImageMaps() {
 	CompiledScene *cscene = renderEngine->compiledScene;
 
+	const BufferType memTypeFlags = renderEngine->renderConfig->GetProperty("pathocl.outofcore.enable").Get<bool>() ?
+		((BufferType)(BUFFER_TYPE_READ_ONLY | BUFFER_TYPE_OUT_OF_CORE)) :
+		BUFFER_TYPE_READ_ONLY;
+
 	if (cscene->imageMapDescs.size() > 0) {
-		intersectionDevice->AllocBufferRO(&imageMapDescsBuff, &cscene->imageMapDescs[0],
+		intersectionDevice->AllocBuffer(&imageMapDescsBuff,
+				memTypeFlags,
+				&cscene->imageMapDescs[0],
 				sizeof(slg::ocl::ImageMap) * cscene->imageMapDescs.size(), "ImageMap descriptions");
 
 		// Free unused pages
@@ -251,7 +281,9 @@ void PathOCLBaseOCLRenderThread::InitImageMaps() {
 		imageMapsBuff.resize(cscene->imageMapMemBlocks.size(), NULL);
 
 		for (u_int i = 0; i < imageMapsBuff.size(); ++i) {
-			intersectionDevice->AllocBufferRO(&(imageMapsBuff[i]), &(cscene->imageMapMemBlocks[i][0]),
+			intersectionDevice->AllocBuffer(&(imageMapsBuff[i]),
+					memTypeFlags,
+					&(cscene->imageMapMemBlocks[i][0]),
 					sizeof(float) * cscene->imageMapMemBlocks[i].size(), "ImageMaps");
 		}
 	} else {

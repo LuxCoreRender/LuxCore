@@ -45,6 +45,7 @@ public:
 	virtual u_int GetNativeVectorWidthFloat() const;
 	virtual size_t GetMaxMemory() const;
 	virtual size_t GetMaxMemoryAllocSize() const;
+	virtual bool HasOutOfCoreMemorySupport() const;
 
 	CUdevice GetCUDADevice() { return cudaDevice; }
 
@@ -190,12 +191,8 @@ public:
 	// Memory management for hardware (aka GPU) only applications
 	//--------------------------------------------------------------------------
 
-	virtual size_t GetMaxMemory() const {
-		return deviceDesc->GetMaxMemory();
-	}
-
-	virtual void AllocBufferRO(HardwareDeviceBuffer **buff, void *src, const size_t size, const std::string &desc = "");
-	virtual void AllocBufferRW(HardwareDeviceBuffer **buff, void *src, const size_t size, const std::string &desc = "");
+	virtual void AllocBuffer(HardwareDeviceBuffer **buff, const BufferType type,
+		void *src, const size_t size, const std::string &desc = "");
 	virtual void FreeBuffer(HardwareDeviceBuffer **buff);
 
 	friend class Context;

@@ -66,12 +66,13 @@ public:
 	virtual u_int GetNativeVectorWidthFloat() const { return 4; };
 	virtual size_t GetMaxMemory() const { return std::numeric_limits<size_t>::max(); }
 	virtual size_t GetMaxMemoryAllocSize() const { return std::numeric_limits<size_t>::max(); }
+	virtual bool HasOutOfCoreMemorySupport() const { return false; }
 
 	virtual u_int GetForceWorkGroupSize() const { return forceWorkGroupSize; }
 	virtual void SetForceWorkGroupSize(const u_int size) { forceWorkGroupSize = size; }
 
 	static void FilterOne(std::vector<DeviceDescription *> &deviceDescriptions);
-	static void Filter(DeviceType type, std::vector<DeviceDescription *> &deviceDescriptions);
+	static void Filter(const DeviceType type, std::vector<DeviceDescription *> &deviceDescriptions);
 	static std::string GetDeviceType(const DeviceType type);
 
 protected:

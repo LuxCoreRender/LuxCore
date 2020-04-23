@@ -187,11 +187,12 @@ void OpenCLDevice::CompileProgram(HardwareDeviceProgram **program,
 	cl::Context &oclContext = deviceDesc->GetOCLContext();
 	cl::Device &oclDevice = deviceDesc->GetOCLDevice();
 
-	LR_LOG(deviceContext, "[" << programName << "] Defined symbols: " << programParameters);
-	LR_LOG(deviceContext, "[" << programName << "] Compiling kernels ");
-
 	const string oclProgramParameters = "-D LUXRAYS_OPENCL_DEVICE " +
 		programParameters;
+
+	LR_LOG(deviceContext, "[" << programName << "] Compiler options: " << oclProgramParameters);
+	LR_LOG(deviceContext, "[" << programName << "] Compiling kernels ");
+
 	const string oclProgramSource =
 		luxrays::ocl::KernelSource_ocldevice_funcs +
 		programSource;
@@ -391,24 +392,28 @@ void OpenCLDevice::AllocBuffer(const cl_mem_flags clFlags, cl::Buffer **buff,
 	AllocMemory((*buff)->getInfo<CL_MEM_SIZE>());
 }
 
-void OpenCLDevice::AllocBufferRO(HardwareDeviceBuffer **buff, void *src, const size_t size, const string &desc) {
+void OpenCLDevice::AllocBuffer(HardwareDeviceBuffer **buff, const BufferType type,
+		void *src, const size_t size, const string &desc) {
 	if (!*buff)
 		*buff = new OpenCLDeviceBuffer();
 
 	OpenCLDeviceBuffer *oclDeviceBuff = dynamic_cast<OpenCLDeviceBuffer *>(*buff);
 	assert (oclDeviceBuff);
+
+	cl_mem_flags clFlags = BUFFER_TYPE_NONE;
+	if (type & BUFFER_TYPE_READ_ONLY)
+		clFlags |= CL_MEM_READ_ONLY;
+	if (type & BUFFER_TYPE_READ_WRITE)
+		clFlags |= CL_MEM_READ_WRITE;
+	if (src)
+		clFlags |= CL_MEM_COPY_HOST_PTR;
+
+	// Check if I was asked for out of core support
+	if (type & BUFFER_TYPE_OUT_OF_CORE) {
+		LR_LOG(deviceContext, "WARNING: OpenCL devices don't support out of core memory buffers: " << desc);
+	}
 	
-	AllocBuffer(src ? (CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR) : CL_MEM_READ_ONLY, &(oclDeviceBuff->oclBuff), src, size, desc);
-}
-
-void OpenCLDevice::AllocBufferRW(HardwareDeviceBuffer **buff, void *src, const size_t size, const string &desc) {
-	if (!*buff)
-		*buff = new OpenCLDeviceBuffer();
-
-	OpenCLDeviceBuffer *oclDeviceBuff = dynamic_cast<OpenCLDeviceBuffer *>(*buff);
-	assert (oclDeviceBuff);
-
-	AllocBuffer(src ? (CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR) : CL_MEM_READ_WRITE, &(oclDeviceBuff->oclBuff), src, size, desc);
+	AllocBuffer(clFlags, &(oclDeviceBuff->oclBuff), src, size, desc);
 }
 
 void OpenCLDevice::FreeBuffer(HardwareDeviceBuffer **buff) {

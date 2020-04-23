@@ -267,10 +267,11 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			throw runtime_error("Unknown accelerator in PathOCLBaseRenderThread::InitKernels()");
 	}
 
+	const bool usePixelAtomics = renderEngine->renderConfig->GetProperty("pathocl.pixelatomics.enable").Get<bool>();
 	kernelsParameters = GetKernelParamters(intersectionDevice,
 			RenderEngine::RenderEngineType2String(renderEngine->GetType()),
 			MachineEpsilon::GetMin(), MachineEpsilon::GetMax(),
-			renderEngine->usePixelAtomics);
+			usePixelAtomics);
 
 	const string kernelSource = GetKernelSources();
 
@@ -284,8 +285,6 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 		kernelFile << kernelDefs << endl << endl << kernelSource << endl;
 		kernelFile.close();
 	}
-
-	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Defined symbols: " << kernelsParameters);
 
 	if ((renderEngine->additionalOpenCLKernelOptions.size() > 0) &&
 			(intersectionDevice->GetDeviceDesc()->GetType() & DEVICE_TYPE_OPENCL_ALL))
@@ -303,7 +302,6 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 	} else
 		kernelSrcHash = newKernelSrcHash;
 
-	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Compiling options: " << kernelsParameters);
 	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Compiling kernels ");
 
 	HardwareDeviceProgram *program = nullptr;

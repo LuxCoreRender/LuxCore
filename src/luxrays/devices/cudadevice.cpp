@@ -94,7 +94,14 @@ size_t CUDADeviceDescription::GetMaxMemory() const {
 }
 
 size_t CUDADeviceDescription::GetMaxMemoryAllocSize() const {
-	return GetMaxMemory();
+	return numeric_limits<size_t>::max();
+}
+
+bool CUDADeviceDescription::HasOutOfCoreMemorySupport() const {
+	int v;
+	CHECK_CUDA_ERROR(cuDeviceGetAttribute(&v, CU_DEVICE_ATTRIBUTE_UNIFIED_ADDRESSING, cudaDevice));
+
+	return (v == 1);
 }
 
 void CUDADeviceDescription::AddDeviceDescs(vector<DeviceDescription *> &descriptions) {
@@ -160,11 +167,11 @@ void CUDADevice::PopThreadCurrentDevice() {
 void CUDADevice::CompileProgram(HardwareDeviceProgram **program,
 		const string &programParameters, const string &programSource,	
 		const string &programName) {
-	LR_LOG(deviceContext, "[" << programName << "] Defined symbols: " << programParameters);
-	LR_LOG(deviceContext, "[" << programName << "] Compiling kernels");
-
 	const string cudaProgramParameters = "-D LUXRAYS_CUDA_DEVICE " +
 		programParameters;
+
+	LR_LOG(deviceContext, "[" << programName << "] Compiler options: " << cudaProgramParameters);
+	LR_LOG(deviceContext, "[" << programName << "] Compiling kernels");
 
 	const string cudaProgramSource =
 		luxrays::ocl::KernelSource_cudadevice_oclemul_types +
@@ -363,8 +370,16 @@ void CUDADevice::FinishQueue() {
 // Memory management for hardware (aka GPU) only applications
 //------------------------------------------------------------------------------
 
-void CUDADevice::AllocBuffer(CUdeviceptr *buff,
+void CUDADevice::AllocBuffer(HardwareDeviceBuffer **hdBuff, const BufferType type,
 		void *src, const size_t size, const string &desc) {
+	if (!*hdBuff)
+		*hdBuff = new CUDADeviceBuffer();
+
+	CUDADeviceBuffer *cudaDeviceBuff = dynamic_cast<CUDADeviceBuffer *>(*hdBuff);
+	assert (cudaDeviceBuff);
+
+	CUdeviceptr *buff = &cudaDeviceBuff->cudaBuff;
+	
 	// Handle the case of an empty buffer
 	if (!size) {
 		if (*buff) {
@@ -409,28 +424,28 @@ void CUDADevice::AllocBuffer(CUdeviceptr *buff,
 
 	if (desc != "")
 		LR_LOG(deviceContext, "[Device " << GetName() << "] " << desc <<
-				" buffer size: " << ToMemString(size));
+				" buffer size: " << ToMemString(size) << ((type & BUFFER_TYPE_OUT_OF_CORE) ? " (OUT OF CORE)" : ""));
 
-	CHECK_CUDA_ERROR(cuMemAlloc(buff, size));
+	// Check if I was asked for out of core support
+	if ((type & BUFFER_TYPE_OUT_OF_CORE) && !deviceDesc->HasOutOfCoreMemorySupport()) {
+		LR_LOG(deviceContext, "WARNING: CUDA device " << deviceDesc->GetName() << " doesn't support out of core memory buffers: " << desc);
+	}
+	
+	if (type & BUFFER_TYPE_OUT_OF_CORE) {
+		CHECK_CUDA_ERROR(cuMemAllocManaged(buff, size, CU_MEM_ATTACH_GLOBAL));
+
+		if (type & BUFFER_TYPE_READ_ONLY) {
+			CHECK_CUDA_ERROR(cuMemAdvise(*buff, size, CU_MEM_ADVISE_SET_READ_MOSTLY, deviceDesc->cudaDevice));
+		}
+	} else {
+		CHECK_CUDA_ERROR(cuMemAlloc(buff, size));
+	}
+
 	if (src) {
 		CHECK_CUDA_ERROR(cuMemcpyHtoDAsync(*buff, src, size, 0));
 	}
 	
 	AllocMemory(size);
-}
-
-void CUDADevice::AllocBufferRO(HardwareDeviceBuffer **buff, void *src, const size_t size, const string &desc) {
-	AllocBufferRW(buff, src, size, desc);
-}
-
-void CUDADevice::AllocBufferRW(HardwareDeviceBuffer **buff, void *src, const size_t size, const string &desc) {
-	if (!*buff)
-		*buff = new CUDADeviceBuffer();
-
-	CUDADeviceBuffer *cudaDeviceBuff = dynamic_cast<CUDADeviceBuffer *>(*buff);
-	assert (cudaDeviceBuff);
-
-	AllocBuffer(&(cudaDeviceBuff->cudaBuff), src, size, desc);
 }
 
 void CUDADevice::FreeBuffer(HardwareDeviceBuffer **buff) {
