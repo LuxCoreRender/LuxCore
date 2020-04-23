@@ -94,9 +94,9 @@ jobs:
     displayName: Getting required deps
   - template: ./scripts/azurepipeline/windows/windows_jobs.yml
     parameters:
-      build_script: './scripts/azurepipeline/windows/build.cmd /cmake-only /no-ocl'
-      post_script: './scripts/azurepipeline/windows/post-build.cmd /no-ocl'
-      ocl_text: 'OpenCL disabled'
+      build_script: './scripts/azurepipeline/windows/build.cmd /cmake-only /cuda'
+      post_script: './scripts/azurepipeline/windows/post-build.cmd /cuda'
+      ocl_text: 'Cuda enabled'
       minimalargs: '/target:pyluxcore,pyluxcoretools,luxcoreui'
   - template: ./scripts/azurepipeline/windows/windows_jobs.yml
     parameters:
@@ -106,9 +106,9 @@ jobs:
       minimalargs: '/target:pyluxcore,pyluxcoretools,luxcoreui'
   - template: ./scripts/azurepipeline/windows/windows_jobs.yml
     parameters:
-      build_script: './scripts/azurepipeline/windows/build.cmd /cmake-only /cuda'
-      post_script: './scripts/azurepipeline/windows/post-build.cmd'
-      ocl_text: 'Cuda enabled'
+      build_script: './scripts/azurepipeline/windows/build.cmd /cmake-only /no-ocl'
+      post_script: './scripts/azurepipeline/windows/post-build.cmd /no-ocl'
+      ocl_text: 'OpenCL disabled'
       minimalargs: '/target:pyluxcore,pyluxcoretools,luxcoreui'
 #  - script: './scripts/azurepipeline/windows/test.cmd'
 #    displayName: Testing LuxCore
@@ -156,7 +156,7 @@ jobs:
   - template: ./scripts/azurepipeline/windows/windows_jobs.yml
     parameters:
       build_script: './scripts/azurepipeline/windows/build.cmd /cmake-only /cuda /dll'
-      post_script: './scripts/azurepipeline/windows/post-build.cmd'
+      post_script: './scripts/azurepipeline/windows/post-build.cmd /cuda'
       ocl_text: 'Cuda enabled'
   - task: PublishBuildArtifacts@1
     inputs:
