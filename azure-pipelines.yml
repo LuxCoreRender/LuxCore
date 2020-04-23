@@ -104,8 +104,8 @@ jobs:
       post_script: './scripts/azurepipeline/windows/post-build.cmd'
       ocl_text: 'OpenCL enabled'
       minimalargs: '/target:pyluxcore,pyluxcoretools,luxcoreui'
-  - script: './scripts/azurepipeline/windows/test.cmd'
-    displayName: Testing LuxCore
+#  - script: './scripts/azurepipeline/windows/test.cmd'
+#    displayName: Testing LuxCore
   - task: PublishBuildArtifacts@1
     inputs:
       pathtoPublish: '$(Build.ArtifactStagingDirectory)'
@@ -172,8 +172,8 @@ jobs:
     displayName: Install Build Tools
   - script: ./scripts/azurepipeline/macos/build.sh
     displayName: Building LuxCore
-  - script: ./scripts/azurepipeline/macos/test.sh
-    displayName: Testing LuxCore
+#  - script: ./scripts/azurepipeline/macos/test.sh
+#    displayName: Testing LuxCore
   - task: InstallAppleCertificate@2
     inputs:
       certSecureFile: LuxCore.q3de.com.p12
