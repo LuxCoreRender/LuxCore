@@ -29,4 +29,4 @@ copy /Y cl.hpp WindowsCompile\OCL_SDK_Light\include\CL\cl.hpp
 
 .\WindowsCompile\support\bin\wget.exe https://developer.download.nvidia.com/compute/cuda/10.1/Prod/network_installers/cuda_10.1.243_win10_network.exe
 .\WindowsCompile\support\bin\7z.exe x -oCudaTemp cuda_10.1.243_win10_network.exe
-call .\CudaTemp\cuda_10.1.243_win10_network.exe -s nvcc_10.1 cudart_10.1 nvrtc_10.1 nvrtc_dev_10.1
+call .\cuda_10.1.243_win10_network.exe -s nvcc_10.1 cudart_10.1 nvrtc_10.1 nvrtc_dev_10.1
