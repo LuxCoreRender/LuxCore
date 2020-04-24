@@ -34,6 +34,8 @@ call .\cuda_10.1.243_win10_network.exe -s nvcc_10.1 cudart_10.1 nvrtc_10.1 nvrtc
 echo %ProgramFiles%
 set
 echo.
-echo Trying to copy Cuda Toolkit files/1406216/lightOCLSDK
+echo Trying to copy Cuda Toolkit files
 xcopy /y /s /i "%ProgramFiles%\NVIDIA GPU Computing Toolkit\CUDA\v10.1\*.*" .\WindowsCompileDeps\CUDA
-
+cd WindowsCompileDeps\CUDA
+dir
+cd ..
