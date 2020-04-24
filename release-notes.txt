@@ -24,6 +24,8 @@
 * Mix material on GPUs now supports bump mapping exactly like CPU version (issue #307)
 * Added processor group support to enable LuxCoreRender to use more than 64 logical processors on Windows
 * Added the support for CUDA rendering
+* Added the support for out of core CUDA rendering (i.e. to render scenes larger than GPU ram available)
+* GPU rendering now uses 64bit image map pixel indices (i.e. removed the limit of 8 * 4GB of scene image maps)
 
 ### Fixed Bugs
 

@@ -32,7 +32,8 @@ typedef enum {
 typedef struct {
 	ImageMapStorageType storageType;
 	unsigned int channelCount, width, height;
-	unsigned int pageIndex, pixelsIndex;
+	unsigned int pageIndex;
+	unsigned long pixelsIndex;
 	ImageWrapType wrapType;
 } ImageMap;
 

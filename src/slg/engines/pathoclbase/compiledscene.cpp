@@ -34,7 +34,7 @@ using namespace slg;
 CompiledScene::CompiledScene(Scene *scn, const PathTracer *pt) {
 	scene = scn;
 	pathTracer = pt;
-	maxMemPageSize = 0xffffffffu;
+	maxMemPageSize = numeric_limits<size_t>::max();
 
 	lightsDistribution = NULL;
 	infiniteLightSourcesDistribution = NULL;
@@ -50,7 +50,7 @@ CompiledScene::~CompiledScene() {
 }
 
 void CompiledScene::SetMaxMemPageSize(const size_t maxSize) {
-	maxMemPageSize = (u_int)Min<size_t>(maxSize, 0xffffffffu);
+	maxMemPageSize = maxSize;
 }
 
 void CompiledScene::EnableCode(const std::string &tags) {

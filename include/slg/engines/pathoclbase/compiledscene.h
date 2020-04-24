@@ -173,7 +173,7 @@ private:
 	Scene *scene;
 	const PathTracer *pathTracer;
 
-	u_int maxMemPageSize;
+	size_t maxMemPageSize;
 	boost::unordered_set<std::string> enabledCode;
 }; 
 
