@@ -124,69 +124,73 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::Init(Film *engineFlm,
 	if (film->GetRadianceGroupCount() > 8)
 		throw runtime_error("PathOCL supports only up to 8 Radiance Groups");
 
+	const BufferType memTypeFlags = renderThread->intersectionDevice->GetContext()->GetUseOutOfCoreBuffers() ?
+		((BufferType)(BUFFER_TYPE_READ_WRITE | BUFFER_TYPE_OUT_OF_CORE)) :
+		BUFFER_TYPE_READ_WRITE;
+
 	channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.resize(film->GetRadianceGroupCount(), NULL);
 	for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff.size(); ++i) {
-		renderThread->intersectionDevice->AllocBufferRW(&channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i],
+		renderThread->intersectionDevice->AllocBuffer(&channel_RADIANCE_PER_PIXEL_NORMALIZEDs_Buff[i], memTypeFlags,
 				nullptr, sizeof(float[4]) * filmPixelCount, "RADIANCE_PER_PIXEL_NORMALIZEDs[" + ToString(i) + "]");
 	}
 	//--------------------------------------------------------------------------
 	if (film->HasChannel(Film::ALPHA))
-		renderThread->intersectionDevice->AllocBufferRW(&channel_ALPHA_Buff, nullptr, sizeof(float[2]) * filmPixelCount, "ALPHA");
+		renderThread->intersectionDevice->AllocBuffer(&channel_ALPHA_Buff, memTypeFlags, nullptr, sizeof(float[2]) * filmPixelCount, "ALPHA");
 	else
 		renderThread->intersectionDevice->FreeBuffer(&channel_ALPHA_Buff);
 	//--------------------------------------------------------------------------
 	if (film->HasChannel(Film::DEPTH))
-		renderThread->intersectionDevice->AllocBufferRW(&channel_DEPTH_Buff, nullptr, sizeof(float) * filmPixelCount, "DEPTH");
+		renderThread->intersectionDevice->AllocBuffer(&channel_DEPTH_Buff, memTypeFlags, nullptr, sizeof(float) * filmPixelCount, "DEPTH");
 	else
 		renderThread->intersectionDevice->FreeBuffer(&channel_DEPTH_Buff);
 	//--------------------------------------------------------------------------
 	if (film->HasChannel(Film::POSITION))
-		renderThread->intersectionDevice->AllocBufferRW(&channel_POSITION_Buff, nullptr, sizeof(float[3]) * filmPixelCount, "POSITION");
+		renderThread->intersectionDevice->AllocBuffer(&channel_POSITION_Buff, memTypeFlags, nullptr, sizeof(float[3]) * filmPixelCount, "POSITION");
 	else
 		renderThread->intersectionDevice->FreeBuffer(&channel_POSITION_Buff);
 	//--------------------------------------------------------------------------
 	if (film->HasChannel(Film::GEOMETRY_NORMAL))
-		renderThread->intersectionDevice->AllocBufferRW(&channel_GEOMETRY_NORMAL_Buff, nullptr, sizeof(float[3]) * filmPixelCount, "GEOMETRY_NORMAL");
+		renderThread->intersectionDevice->AllocBuffer(&channel_GEOMETRY_NORMAL_Buff, memTypeFlags, nullptr, sizeof(float[3]) * filmPixelCount, "GEOMETRY_NORMAL");
 	else
 		renderThread->intersectionDevice->FreeBuffer(&channel_GEOMETRY_NORMAL_Buff);
 	//--------------------------------------------------------------------------
 	if (film->HasChannel(Film::SHADING_NORMAL))
-		renderThread->intersectionDevice->AllocBufferRW(&channel_SHADING_NORMAL_Buff, nullptr, sizeof(float[3]) * filmPixelCount, "SHADING_NORMAL");
+		renderThread->intersectionDevice->AllocBuffer(&channel_SHADING_NORMAL_Buff, memTypeFlags, nullptr, sizeof(float[3]) * filmPixelCount, "SHADING_NORMAL");
 	else
 		renderThread->intersectionDevice->FreeBuffer(&channel_SHADING_NORMAL_Buff);
 	//--------------------------------------------------------------------------
 	if (film->HasChannel(Film::MATERIAL_ID))
-		renderThread->intersectionDevice->AllocBufferRW(&channel_MATERIAL_ID_Buff, nullptr, sizeof(u_int) * filmPixelCount, "MATERIAL_ID");
+		renderThread->intersectionDevice->AllocBuffer(&channel_MATERIAL_ID_Buff, memTypeFlags, nullptr, sizeof(u_int) * filmPixelCount, "MATERIAL_ID");
 	else
 		renderThread->intersectionDevice->FreeBuffer(&channel_MATERIAL_ID_Buff);
 	//--------------------------------------------------------------------------
 	if (film->HasChannel(Film::DIRECT_DIFFUSE))
-		renderThread->intersectionDevice->AllocBufferRW(&channel_DIRECT_DIFFUSE_Buff, nullptr, sizeof(float[4]) * filmPixelCount, "DIRECT_DIFFUSE");
+		renderThread->intersectionDevice->AllocBuffer(&channel_DIRECT_DIFFUSE_Buff, memTypeFlags, nullptr, sizeof(float[4]) * filmPixelCount, "DIRECT_DIFFUSE");
 	else
 		renderThread->intersectionDevice->FreeBuffer(&channel_DIRECT_DIFFUSE_Buff);
 	//--------------------------------------------------------------------------
 	if (film->HasChannel(Film::DIRECT_GLOSSY))
-		renderThread->intersectionDevice->AllocBufferRW(&channel_DIRECT_GLOSSY_Buff, nullptr, sizeof(float[4]) * filmPixelCount, "DIRECT_GLOSSY");
+		renderThread->intersectionDevice->AllocBuffer(&channel_DIRECT_GLOSSY_Buff, memTypeFlags, nullptr, sizeof(float[4]) * filmPixelCount, "DIRECT_GLOSSY");
 	else
 		renderThread->intersectionDevice->FreeBuffer(&channel_DIRECT_GLOSSY_Buff);
 	//--------------------------------------------------------------------------
 	if (film->HasChannel(Film::EMISSION))
-		renderThread->intersectionDevice->AllocBufferRW(&channel_EMISSION_Buff, nullptr, sizeof(float[4]) * filmPixelCount, "EMISSION");
+		renderThread->intersectionDevice->AllocBuffer(&channel_EMISSION_Buff, memTypeFlags, nullptr, sizeof(float[4]) * filmPixelCount, "EMISSION");
 	else
 		renderThread->intersectionDevice->FreeBuffer(&channel_EMISSION_Buff);
 	//--------------------------------------------------------------------------
 	if (film->HasChannel(Film::INDIRECT_DIFFUSE))
-		renderThread->intersectionDevice->AllocBufferRW(&channel_INDIRECT_DIFFUSE_Buff, nullptr, sizeof(float[4]) * filmPixelCount, "INDIRECT_DIFFUSE");
+		renderThread->intersectionDevice->AllocBuffer(&channel_INDIRECT_DIFFUSE_Buff, memTypeFlags, nullptr, sizeof(float[4]) * filmPixelCount, "INDIRECT_DIFFUSE");
 	else
 		renderThread->intersectionDevice->FreeBuffer(&channel_INDIRECT_DIFFUSE_Buff);
 	//--------------------------------------------------------------------------
 	if (film->HasChannel(Film::INDIRECT_GLOSSY))
-		renderThread->intersectionDevice->AllocBufferRW(&channel_INDIRECT_GLOSSY_Buff, nullptr, sizeof(float[4]) * filmPixelCount, "INDIRECT_GLOSSY");
+		renderThread->intersectionDevice->AllocBuffer(&channel_INDIRECT_GLOSSY_Buff, memTypeFlags, nullptr, sizeof(float[4]) * filmPixelCount, "INDIRECT_GLOSSY");
 	else
 		renderThread->intersectionDevice->FreeBuffer(&channel_INDIRECT_GLOSSY_Buff);
 	//--------------------------------------------------------------------------
 	if (film->HasChannel(Film::INDIRECT_SPECULAR))
-		renderThread->intersectionDevice->AllocBufferRW(&channel_INDIRECT_SPECULAR_Buff, nullptr, sizeof(float[4]) * filmPixelCount, "INDIRECT_SPECULAR");
+		renderThread->intersectionDevice->AllocBuffer(&channel_INDIRECT_SPECULAR_Buff, memTypeFlags, nullptr, sizeof(float[4]) * filmPixelCount, "INDIRECT_SPECULAR");
 	else
 		renderThread->intersectionDevice->FreeBuffer(&channel_INDIRECT_SPECULAR_Buff);
 	//--------------------------------------------------------------------------
@@ -194,28 +198,28 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::Init(Film *engineFlm,
 		if (film->GetChannelCount(Film::MATERIAL_ID_MASK) > 1)
 			throw runtime_error("PathOCL supports only 1 MATERIAL_ID_MASK");
 		else
-			renderThread->intersectionDevice->AllocBufferRW(&channel_MATERIAL_ID_MASK_Buff,
+			renderThread->intersectionDevice->AllocBuffer(&channel_MATERIAL_ID_MASK_Buff, memTypeFlags,
 					nullptr, sizeof(float[2]) * filmPixelCount, "MATERIAL_ID_MASK");
 	} else
 		renderThread->intersectionDevice->FreeBuffer(&channel_MATERIAL_ID_MASK_Buff);
 	//--------------------------------------------------------------------------
 	if (film->HasChannel(Film::DIRECT_SHADOW_MASK))
-		renderThread->intersectionDevice->AllocBufferRW(&channel_DIRECT_SHADOW_MASK_Buff, nullptr, sizeof(float[2]) * filmPixelCount, "DIRECT_SHADOW_MASK");
+		renderThread->intersectionDevice->AllocBuffer(&channel_DIRECT_SHADOW_MASK_Buff, memTypeFlags, nullptr, sizeof(float[2]) * filmPixelCount, "DIRECT_SHADOW_MASK");
 	else
 		renderThread->intersectionDevice->FreeBuffer(&channel_DIRECT_SHADOW_MASK_Buff);
 	//--------------------------------------------------------------------------
 	if (film->HasChannel(Film::INDIRECT_SHADOW_MASK))
-		renderThread->intersectionDevice->AllocBufferRW(&channel_INDIRECT_SHADOW_MASK_Buff, nullptr, sizeof(float[2]) * filmPixelCount, "INDIRECT_SHADOW_MASK");
+		renderThread->intersectionDevice->AllocBuffer(&channel_INDIRECT_SHADOW_MASK_Buff, memTypeFlags, nullptr, sizeof(float[2]) * filmPixelCount, "INDIRECT_SHADOW_MASK");
 	else
 		renderThread->intersectionDevice->FreeBuffer(&channel_INDIRECT_SHADOW_MASK_Buff);
 	//--------------------------------------------------------------------------
 	if (film->HasChannel(Film::UV))
-		renderThread->intersectionDevice->AllocBufferRW(&channel_UV_Buff, nullptr, sizeof(float[2]) * filmPixelCount, "UV");
+		renderThread->intersectionDevice->AllocBuffer(&channel_UV_Buff, memTypeFlags, nullptr, sizeof(float[2]) * filmPixelCount, "UV");
 	else
 		renderThread->intersectionDevice->FreeBuffer(&channel_UV_Buff);
 	//--------------------------------------------------------------------------
 	if (film->HasChannel(Film::RAYCOUNT))
-		renderThread->intersectionDevice->AllocBufferRW(&channel_RAYCOUNT_Buff, nullptr, sizeof(float) * filmPixelCount, "RAYCOUNT");
+		renderThread->intersectionDevice->AllocBuffer(&channel_RAYCOUNT_Buff, memTypeFlags, nullptr, sizeof(float) * filmPixelCount, "RAYCOUNT");
 	else
 		renderThread->intersectionDevice->FreeBuffer(&channel_RAYCOUNT_Buff);
 	//--------------------------------------------------------------------------
@@ -223,18 +227,18 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::Init(Film *engineFlm,
 		if (film->GetChannelCount(Film::BY_MATERIAL_ID) > 1)
 			throw runtime_error("PathOCL supports only 1 BY_MATERIAL_ID");
 		else
-			renderThread->intersectionDevice->AllocBufferRW(&channel_BY_MATERIAL_ID_Buff,
+			renderThread->intersectionDevice->AllocBuffer(&channel_BY_MATERIAL_ID_Buff, memTypeFlags,
 					nullptr, sizeof(float[4]) * filmPixelCount, "BY_MATERIAL_ID");
 	} else
 		renderThread->intersectionDevice->FreeBuffer(&channel_BY_MATERIAL_ID_Buff);
 	//--------------------------------------------------------------------------
 	if (film->HasChannel(Film::IRRADIANCE))
-		renderThread->intersectionDevice->AllocBufferRW(&channel_IRRADIANCE_Buff, nullptr, sizeof(float[4]) * filmPixelCount, "IRRADIANCE");
+		renderThread->intersectionDevice->AllocBuffer(&channel_IRRADIANCE_Buff, memTypeFlags, nullptr, sizeof(float[4]) * filmPixelCount, "IRRADIANCE");
 	else
 		renderThread->intersectionDevice->FreeBuffer(&channel_IRRADIANCE_Buff);
 	//--------------------------------------------------------------------------
 	if (film->HasChannel(Film::OBJECT_ID))
-		renderThread->intersectionDevice->AllocBufferRW(&channel_OBJECT_ID_Buff, nullptr, sizeof(u_int) * filmPixelCount, "OBJECT_ID");
+		renderThread->intersectionDevice->AllocBuffer(&channel_OBJECT_ID_Buff, memTypeFlags, nullptr, sizeof(u_int) * filmPixelCount, "OBJECT_ID");
 	else
 		renderThread->intersectionDevice->FreeBuffer(&channel_OBJECT_ID_Buff);
 	//--------------------------------------------------------------------------
@@ -242,7 +246,7 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::Init(Film *engineFlm,
 		if (film->GetChannelCount(Film::OBJECT_ID_MASK) > 1)
 			throw runtime_error("PathOCL supports only 1 OBJECT_ID_MASK");
 		else
-			renderThread->intersectionDevice->AllocBufferRW(&channel_OBJECT_ID_MASK_Buff,
+			renderThread->intersectionDevice->AllocBuffer(&channel_OBJECT_ID_MASK_Buff, memTypeFlags,
 					nullptr, sizeof(float[2]) * filmPixelCount, "OBJECT_ID_MASK");
 	} else
 		renderThread->intersectionDevice->FreeBuffer(&channel_OBJECT_ID_MASK_Buff);
@@ -251,43 +255,43 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::Init(Film *engineFlm,
 		if (film->GetChannelCount(Film::BY_OBJECT_ID) > 1)
 			throw runtime_error("PathOCL supports only 1 BY_OBJECT_ID");
 		else
-			renderThread->intersectionDevice->AllocBufferRW(&channel_BY_OBJECT_ID_Buff,
+			renderThread->intersectionDevice->AllocBuffer(&channel_BY_OBJECT_ID_Buff, memTypeFlags,
 					nullptr, sizeof(float[4]) * filmPixelCount, "BY_OBJECT_ID");
 	} else
 		renderThread->intersectionDevice->FreeBuffer(&channel_BY_OBJECT_ID_Buff);
 	//--------------------------------------------------------------------------
 	if (film->HasChannel(Film::SAMPLECOUNT))
-		renderThread->intersectionDevice->AllocBufferRW(&channel_SAMPLECOUNT_Buff, nullptr, sizeof(u_int) * filmPixelCount, "SAMPLECOUNT");
+		renderThread->intersectionDevice->AllocBuffer(&channel_SAMPLECOUNT_Buff, memTypeFlags, nullptr, sizeof(u_int) * filmPixelCount, "SAMPLECOUNT");
 	else
 		renderThread->intersectionDevice->FreeBuffer(&channel_SAMPLECOUNT_Buff);
 	//--------------------------------------------------------------------------
 	if (film->HasChannel(Film::CONVERGENCE))
-		renderThread->intersectionDevice->AllocBufferRW(&channel_CONVERGENCE_Buff, nullptr, sizeof(float) * filmPixelCount, "CONVERGENCE");
+		renderThread->intersectionDevice->AllocBuffer(&channel_CONVERGENCE_Buff, memTypeFlags, nullptr, sizeof(float) * filmPixelCount, "CONVERGENCE");
 	else
 		renderThread->intersectionDevice->FreeBuffer(&channel_CONVERGENCE_Buff);
 	//--------------------------------------------------------------------------
 	if (film->HasChannel(Film::MATERIAL_ID_COLOR))
-		renderThread->intersectionDevice->AllocBufferRW(&channel_MATERIAL_ID_COLOR_Buff, nullptr, sizeof(float[4]) * filmPixelCount, "MATERIAL_ID_COLOR");
+		renderThread->intersectionDevice->AllocBuffer(&channel_MATERIAL_ID_COLOR_Buff, memTypeFlags, nullptr, sizeof(float[4]) * filmPixelCount, "MATERIAL_ID_COLOR");
 	else
 		renderThread->intersectionDevice->FreeBuffer(&channel_MATERIAL_ID_COLOR_Buff);
 	//--------------------------------------------------------------------------
 	if (film->HasChannel(Film::ALBEDO))
-		renderThread->intersectionDevice->AllocBufferRW(&channel_ALBEDO_Buff, nullptr, sizeof(float[4]) * filmPixelCount, "ALBEDO");
+		renderThread->intersectionDevice->AllocBuffer(&channel_ALBEDO_Buff, memTypeFlags, nullptr, sizeof(float[4]) * filmPixelCount, "ALBEDO");
 	else
 		renderThread->intersectionDevice->FreeBuffer(&channel_ALBEDO_Buff);
 	//--------------------------------------------------------------------------
 	if (film->HasChannel(Film::AVG_SHADING_NORMAL))
-		renderThread->intersectionDevice->AllocBufferRW(&channel_AVG_SHADING_NORMAL_Buff, nullptr, sizeof(float[4]) * filmPixelCount, "AVG_SHADING_NORMAL");
+		renderThread->intersectionDevice->AllocBuffer(&channel_AVG_SHADING_NORMAL_Buff, memTypeFlags, nullptr, sizeof(float[4]) * filmPixelCount, "AVG_SHADING_NORMAL");
 	else
 		renderThread->intersectionDevice->FreeBuffer(&channel_AVG_SHADING_NORMAL_Buff);
 	//--------------------------------------------------------------------------
 	if (film->HasChannel(Film::NOISE))
-		renderThread->intersectionDevice->AllocBufferRW(&channel_NOISE_Buff, nullptr, sizeof(float) * filmPixelCount, "NOISE");
+		renderThread->intersectionDevice->AllocBuffer(&channel_NOISE_Buff, memTypeFlags, nullptr, sizeof(float) * filmPixelCount, "NOISE");
 	else
 		renderThread->intersectionDevice->FreeBuffer(&channel_NOISE_Buff);
 	//--------------------------------------------------------------------------
 	if (film->HasChannel(Film::USER_IMPORTANCE))
-		renderThread->intersectionDevice->AllocBufferRW(&channel_USER_IMPORTANCE_Buff, nullptr, sizeof(float) * filmPixelCount, "USER_IMPORTANCE");
+		renderThread->intersectionDevice->AllocBuffer(&channel_USER_IMPORTANCE_Buff, memTypeFlags, nullptr, sizeof(float) * filmPixelCount, "USER_IMPORTANCE");
 	else
 		renderThread->intersectionDevice->FreeBuffer(&channel_USER_IMPORTANCE_Buff);
 
@@ -296,15 +300,15 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::Init(Film *engineFlm,
 	//--------------------------------------------------------------------------
 
 	if (film->GetDenoiser().IsEnabled()) {
-		renderThread->intersectionDevice->AllocBufferRW(&denoiser_NbOfSamplesImage_Buff,
+		renderThread->intersectionDevice->AllocBuffer(&denoiser_NbOfSamplesImage_Buff, memTypeFlags,
 				nullptr, sizeof(float) * filmPixelCount, "Denoiser samples count");
-		renderThread->intersectionDevice->AllocBufferRW(&denoiser_SquaredWeightSumsImage_Buff,
+		renderThread->intersectionDevice->AllocBuffer(&denoiser_SquaredWeightSumsImage_Buff, memTypeFlags,
 				nullptr, sizeof(float) * filmPixelCount, "Denoiser squared weight");
-		renderThread->intersectionDevice->AllocBufferRW(&denoiser_MeanImage_Buff,
+		renderThread->intersectionDevice->AllocBuffer(&denoiser_MeanImage_Buff, memTypeFlags,
 				nullptr, sizeof(float[3]) * filmPixelCount, "Denoiser mean image");
-		renderThread->intersectionDevice->AllocBufferRW(&denoiser_CovarImage_Buff,
+		renderThread->intersectionDevice->AllocBuffer(&denoiser_CovarImage_Buff, memTypeFlags,
 				nullptr, sizeof(float[6]) * filmPixelCount, "Denoiser covariance");
-		renderThread->intersectionDevice->AllocBufferRW(&denoiser_HistoImage_Buff,
+		renderThread->intersectionDevice->AllocBuffer(&denoiser_HistoImage_Buff, memTypeFlags,
 				nullptr, film->GetDenoiser().GetHistogramBinsCount() * 3 * sizeof(float) * filmPixelCount,
 				"Denoiser sample histogram");
 	} else {
