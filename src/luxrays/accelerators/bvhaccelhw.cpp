@@ -47,6 +47,10 @@ public:
 			// Check the max. number of vertices I can store in a single page
 			size_t maxMemAlloc = device.GetDeviceDesc()->GetMaxMemoryAllocSize();
 
+			const BufferType memTypeFlags = device.GetContext()->GetUseOutOfCoreBuffers() ?
+				((BufferType)(BUFFER_TYPE_READ_ONLY | BUFFER_TYPE_OUT_OF_CORE)) :
+				BUFFER_TYPE_READ_ONLY;
+			
 			//------------------------------------------------------------------
 			// Allocate vertex buffers
 			//------------------------------------------------------------------
@@ -92,8 +96,9 @@ public:
 				if (vertsBuffs.size() > 8)
 					throw runtime_error("Too many vertex pages required in BVHKernels()");
 
-				device.AllocBufferRO(&vertsBuffs.back(), tmpVerts, sizeof(Point) * pageVertCount,
-							"BVH mesh vertices");
+				device.AllocBuffer(&vertsBuffs.back(), memTypeFlags,
+						tmpVerts, sizeof(Point) * pageVertCount,
+						"BVH mesh vertices");
 				device.FinishQueue();
 			} while (vertsCopied < totalVertCount);
 			delete[] tmpVerts;
@@ -144,7 +149,8 @@ public:
 				if (nodeBuffs.size() > 8)
 					throw runtime_error("Too many node pages required in BVHKernels()");
 
-				device.AllocBufferRO(&nodeBuffs.back(), tmpNodes, sizeof(luxrays::ocl::BVHArrayNode) * pageNodeCount,
+				device.AllocBuffer(&nodeBuffs.back(), memTypeFlags,
+						tmpNodes, sizeof(luxrays::ocl::BVHArrayNode) * pageNodeCount,
 						"BVH nodes");
 				device.FinishQueue();
 

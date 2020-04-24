@@ -48,6 +48,10 @@ public:
 		//const Context *deviceContext = device.GetContext();
 		//const std::string &deviceName(device.GetName());
 
+		const BufferType memTypeFlags = device.GetContext()->GetUseOutOfCoreBuffers() ?
+			((BufferType)(BUFFER_TYPE_READ_ONLY | BUFFER_TYPE_OUT_OF_CORE)) :
+			BUFFER_TYPE_READ_ONLY;
+
 		u_int pageNodeCount = 0;
 		if (mbvh.nRootNodes) {
 			// Check the max. number of vertices I can store in a single page
@@ -114,7 +118,8 @@ public:
 					if (vertsBuffs.size() > 8)
 						throw std::runtime_error("Too many vertex pages required in MBVHKernels()");
 
-					device.AllocBufferRO(&vertsBuffs.back(), &tmpVerts[0], sizeof(Point) * tmpVertIndex,
+					device.AllocBuffer(&vertsBuffs.back(), memTypeFlags,
+							&tmpVerts[0], sizeof(Point) * tmpVertIndex,
 							"MBVH mesh vertices");
 					device.FinishQueue();
 
@@ -140,8 +145,9 @@ public:
 				mats.push_back(t->mInv);
 
 			// Allocate the transformation buffer
-			device.AllocBufferRO(&uniqueLeafsTransformBuff, &mats[0], sizeof(luxrays::ocl::Matrix4x4) * mats.size(),
-							"MBVH leaf transformations");
+			device.AllocBuffer(&uniqueLeafsTransformBuff, memTypeFlags,
+					&mats[0], sizeof(luxrays::ocl::Matrix4x4) * mats.size(),
+					"MBVH leaf transformations");
 			device.FinishQueue();
 		}
 
@@ -169,7 +175,8 @@ public:
 			}
 			
 			// Allocate the motion system buffer
-			device.AllocBufferRO(&uniqueLeafsMotionSystemBuff, &motionSystems[0],
+			device.AllocBuffer(&uniqueLeafsMotionSystemBuff, memTypeFlags,
+					&motionSystems[0],
 					sizeof(luxrays::ocl::MotionSystem) * motionSystems.size(),
 					"MBVH leaf motion systems buffer");
 
@@ -178,7 +185,8 @@ public:
 			//	"] Leaf interpolated transforms buffer size: " <<
 			//	(sizeof(luxrays::ocl::InterpolatedTransform) * interpolatedTransforms.size() / 1024) <<
 			//	"Kbytes");
-			device.AllocBufferRO(&uniqueLeafsInterpolatedTransformBuff, &interpolatedTransforms[0],
+			device.AllocBuffer(&uniqueLeafsInterpolatedTransformBuff,  memTypeFlags,
+					&interpolatedTransforms[0],
 					sizeof(luxrays::ocl::InterpolatedTransform) * interpolatedTransforms.size(),
 					"MBVH leaf interpolated transforms buffer");
 			device.FinishQueue();

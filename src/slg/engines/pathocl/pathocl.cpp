@@ -100,8 +100,6 @@ void PathOCLRenderEngine::StartLockLess() {
 	//--------------------------------------------------------------------------
 	// Initialize rendering parameters
 	//--------------------------------------------------------------------------	
-	
-	useOutOfCoreMemory = cfg.Get(Property("pathocl.outofcore.enable")(false)).Get<bool>();
 
 	const Properties &defaultProps = PathOCLRenderEngine::GetDefaultProps();
 	pathTracer.ParseOptions(cfg, defaultProps);
@@ -274,7 +272,6 @@ Properties PathOCLRenderEngine::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
 			PathTracer::ToProperties(cfg) <<
 			cfg.Get(GetDefaultProps().Get("pathocl.pixelatomics.enable")) <<
-			cfg.Get(GetDefaultProps().Get("pathocl.outofcore.enable")) <<
 			cfg.Get(GetDefaultProps().Get("opencl.task.count")) <<
 			Sampler::ToProperties(cfg) <<
 			PhotonGICache::ToProperties(cfg);
@@ -292,7 +289,6 @@ const Properties &PathOCLRenderEngine::GetDefaultProps() {
 			Property("renderengine.type")(GetObjectTag()) <<
 			PathTracer::GetDefaultProps() <<
 			Property("pathocl.pixelatomics.enable")(false) <<
-			Property("pathocl.outofcore.enable")(false) <<
 			Property("opencl.task.count")("AUTO") <<
 			PhotonGICache::GetDefaultProps();
 

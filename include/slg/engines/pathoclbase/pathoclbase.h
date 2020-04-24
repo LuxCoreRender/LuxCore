@@ -56,7 +56,6 @@ public:
 
 	size_t maxMemPageSize;
 	u_int taskCount;
-	bool useOutOfCoreMemory;
 
 	PathTracer pathTracer;
 

@@ -52,6 +52,9 @@ OCLRenderEngine::OCLRenderEngine(const RenderConfig *rcfg,
 
 	const string oclDeviceConfig = cfg.Get(GetDefaultProps().Get("opencl.devices.select")).Get<string>();
 
+	const bool useOutOfCoreMemory = cfg.Get(Property("opencl.outofcore.enable")(false)).Get<bool>();
+	ctx->SetUseOutOfCoreBuffers(useOutOfCoreMemory);
+
 	//--------------------------------------------------------------------------
 	// Get OpenCL device descriptions
 	//--------------------------------------------------------------------------
@@ -143,7 +146,8 @@ Properties OCLRenderEngine::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("opencl.cpu.workgroup.size")) <<
 			cfg.Get(GetDefaultProps().Get("opencl.gpu.workgroup.size")) <<
 			cfg.Get(GetDefaultProps().Get("opencl.devices.select")) <<
-			cfg.Get(GetDefaultProps().Get("opencl.native.threads.count"));
+			cfg.Get(GetDefaultProps().Get("opencl.native.threads.count")) <<
+			cfg.Get(GetDefaultProps().Get("opencl.outofcore.enable"));
 }
 
 const Properties &OCLRenderEngine::GetDefaultProps() {
@@ -161,10 +165,11 @@ const Properties &OCLRenderEngine::GetDefaultProps() {
 //For Windows version greater than Windows 7,modern way of calculating processor count is used 
 //May not work with Windows version prior to Windows 7
 #if defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(WIN64)
-			Property("opencl.native.threads.count")((int)GetActiveProcessorCount(ALL_PROCESSOR_GROUPS));
+			Property("opencl.native.threads.count")((int)GetActiveProcessorCount(ALL_PROCESSOR_GROUPS)) <<
 #else
-			Property("opencl.native.threads.count")(boost::thread::hardware_concurrency());
+			Property("opencl.native.threads.count")(boost::thread::hardware_concurrency()) <<
 #endif
+			Property("opencl.outofcore.enable")(false);
 
 	return props;
 }

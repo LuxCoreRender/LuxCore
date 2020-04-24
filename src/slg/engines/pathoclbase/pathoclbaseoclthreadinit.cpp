@@ -62,7 +62,7 @@ void PathOCLBaseOCLRenderThread::InitCamera() {
 void PathOCLBaseOCLRenderThread::InitGeometry() {
 	CompiledScene *cscene = renderEngine->compiledScene;
 
-	const BufferType memTypeFlags = renderEngine->renderConfig->GetProperty("pathocl.outofcore.enable").Get<bool>() ?
+	const BufferType memTypeFlags = renderEngine->ctx->GetUseOutOfCoreBuffers() ?
 		((BufferType)(BUFFER_TYPE_READ_ONLY | BUFFER_TYPE_OUT_OF_CORE)) :
 		BUFFER_TYPE_READ_ONLY;
 
@@ -157,8 +157,13 @@ void PathOCLBaseOCLRenderThread::InitMaterials() {
 }
 
 void PathOCLBaseOCLRenderThread::InitSceneObjects() {
+	const BufferType memTypeFlags = renderEngine->ctx->GetUseOutOfCoreBuffers() ?
+		((BufferType)(BUFFER_TYPE_READ_ONLY | BUFFER_TYPE_OUT_OF_CORE)) :
+		BUFFER_TYPE_READ_ONLY;
+
 	const u_int sceneObjsCount = renderEngine->compiledScene->sceneObjs.size();
-	intersectionDevice->AllocBufferRO(&scnObjsBuff, &renderEngine->compiledScene->sceneObjs[0],
+	intersectionDevice->AllocBuffer(&scnObjsBuff, memTypeFlags,
+			&renderEngine->compiledScene->sceneObjs[0],
 			sizeof(slg::ocl::SceneObject) * sceneObjsCount, "Scene objects");
 }
 
@@ -265,13 +270,8 @@ void PathOCLBaseOCLRenderThread::InitPhotonGI() {
 void PathOCLBaseOCLRenderThread::InitImageMaps() {
 	CompiledScene *cscene = renderEngine->compiledScene;
 
-	const BufferType memTypeFlags = renderEngine->renderConfig->GetProperty("pathocl.outofcore.enable").Get<bool>() ?
-		((BufferType)(BUFFER_TYPE_READ_ONLY | BUFFER_TYPE_OUT_OF_CORE)) :
-		BUFFER_TYPE_READ_ONLY;
-
 	if (cscene->imageMapDescs.size() > 0) {
-		intersectionDevice->AllocBuffer(&imageMapDescsBuff,
-				memTypeFlags,
+		intersectionDevice->AllocBufferRO(&imageMapDescsBuff,
 				&cscene->imageMapDescs[0],
 				sizeof(slg::ocl::ImageMap) * cscene->imageMapDescs.size(), "ImageMap descriptions");
 
@@ -279,6 +279,10 @@ void PathOCLBaseOCLRenderThread::InitImageMaps() {
 		for (u_int i = cscene->imageMapMemBlocks.size(); i < imageMapsBuff.size(); ++i)
 			intersectionDevice->FreeBuffer(&imageMapsBuff[i]);
 		imageMapsBuff.resize(cscene->imageMapMemBlocks.size(), NULL);
+
+		const BufferType memTypeFlags = renderEngine->ctx->GetUseOutOfCoreBuffers() ?
+			((BufferType)(BUFFER_TYPE_READ_ONLY | BUFFER_TYPE_OUT_OF_CORE)) :
+			BUFFER_TYPE_READ_ONLY;
 
 		for (u_int i = 0; i < imageMapsBuff.size(); ++i) {
 			intersectionDevice->AllocBuffer(&(imageMapsBuff[i]),

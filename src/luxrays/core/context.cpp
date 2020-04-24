@@ -45,6 +45,7 @@ Context::Context(LuxRaysDebugHandler handler, const Properties &config) : cfg(co
 	debugHandler = handler;
 	currentDataSet = NULL;
 	started = false;
+	useOutOfCoreBuffers = false;
 	verbose = cfg.Get(Property("context.verbose")(true)).Get<bool>();
 
 	// Get the list of devices available on the platform
