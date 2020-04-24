@@ -133,7 +133,7 @@ OPENCL_FORCE_INLINE void SobolSampler_InitNewSample(
 	__global SobolSamplerSharedData *samplerSharedData = (__global SobolSamplerSharedData *)samplerSharedDataBuff;
 	__global SobolSample *samples = (__global SobolSample *)samplesBuff;
 	__global SobolSample *sample = &samples[gid];
-	__global float *samplesData = &samplesDataBuff[gid * RANDOMSAMPLER_TOTAL_U_SIZE];
+	__global float *samplesData = &samplesDataBuff[gid * SOBOLSAMPLER_TOTAL_U_SIZE];
 
 	const uint filmRegionPixelCount = (filmSubRegion1 - filmSubRegion0 + 1) * (filmSubRegion3 - filmSubRegion2 + 1);
 
