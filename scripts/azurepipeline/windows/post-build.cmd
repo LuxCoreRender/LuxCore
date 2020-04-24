@@ -8,7 +8,7 @@ echo %VERSION_STRING%
 cd ..\WindowsCompile
 
 if "%FINAL%" EQU "TRUE" (
-    call create-sdk.bat
+    call create-sdk.bat %1
     if "%1" EQU "/no-ocl" (
         set LUX_LATEST=luxcorerender-%VERSION_STRING%-win64-sdk
     ) else (
@@ -19,7 +19,7 @@ if "%FINAL%" EQU "TRUE" (
         )
     )
 ) else (
-    call create-standalone.bat
+    call create-standalone.bat %1
     if "%1" EQU "/no-ocl" (
         set LUX_LATEST=luxcorerender-%VERSION_STRING%-win64
     ) else (
