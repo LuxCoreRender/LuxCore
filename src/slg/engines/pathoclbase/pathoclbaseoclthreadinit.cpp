@@ -243,12 +243,16 @@ void PathOCLBaseOCLRenderThread::InitLights() {
 void PathOCLBaseOCLRenderThread::InitPhotonGI() {
 	CompiledScene *cscene = renderEngine->compiledScene;
 
+	const BufferType memTypeFlags = renderEngine->ctx->GetUseOutOfCoreBuffers() ?
+		((BufferType)(BUFFER_TYPE_READ_ONLY | BUFFER_TYPE_OUT_OF_CORE)) :
+		BUFFER_TYPE_READ_ONLY;
+
 	if (cscene->pgicRadiancePhotons.size() > 0) {
-		intersectionDevice->AllocBufferRO(&pgicRadiancePhotonsBuff, &cscene->pgicRadiancePhotons[0],
+		intersectionDevice->AllocBuffer(&pgicRadiancePhotonsBuff, memTypeFlags, &cscene->pgicRadiancePhotons[0],
 			cscene->pgicRadiancePhotons.size() * sizeof(slg::ocl::RadiancePhoton), "PhotonGI indirect cache all entries");
-		intersectionDevice->AllocBufferRO(&pgicRadiancePhotonsValuesBuff, &cscene->pgicRadiancePhotonsValues[0],
+		intersectionDevice->AllocBuffer(&pgicRadiancePhotonsValuesBuff, memTypeFlags, &cscene->pgicRadiancePhotonsValues[0],
 			cscene->pgicRadiancePhotonsValues.size() * sizeof(slg::ocl::Spectrum), "PhotonGI indirect cache all entry values");
-		intersectionDevice->AllocBufferRO(&pgicRadiancePhotonsBVHNodesBuff, &cscene->pgicRadiancePhotonsBVHArrayNode[0],
+		intersectionDevice->AllocBuffer(&pgicRadiancePhotonsBVHNodesBuff, memTypeFlags, &cscene->pgicRadiancePhotonsBVHArrayNode[0],
 			cscene->pgicRadiancePhotonsBVHArrayNode.size() * sizeof(slg::ocl::IndexBVHArrayNode), "PhotonGI indirect cache BVH nodes");
 	} else {
 		intersectionDevice->FreeBuffer(&pgicRadiancePhotonsBuff);
@@ -257,9 +261,9 @@ void PathOCLBaseOCLRenderThread::InitPhotonGI() {
 	}
 
 	if (cscene->pgicCausticPhotons.size() > 0) {
-		intersectionDevice->AllocBufferRO(&pgicCausticPhotonsBuff, &cscene->pgicCausticPhotons[0],
+		intersectionDevice->AllocBuffer(&pgicCausticPhotonsBuff, memTypeFlags, &cscene->pgicCausticPhotons[0],
 			cscene->pgicCausticPhotons.size() * sizeof(slg::ocl::Photon), "PhotonGI caustic cache all entries");
-		intersectionDevice->AllocBufferRO(&pgicCausticPhotonsBVHNodesBuff, &cscene->pgicCausticPhotonsBVHArrayNode[0],
+		intersectionDevice->AllocBuffer(&pgicCausticPhotonsBVHNodesBuff, memTypeFlags, &cscene->pgicCausticPhotonsBVHArrayNode[0],
 			cscene->pgicCausticPhotonsBVHArrayNode.size() * sizeof(slg::ocl::IndexBVHArrayNode), "PhotonGI caustic cache BVH nodes");
 	} else {
 		intersectionDevice->FreeBuffer(&pgicCausticPhotonsBuff);
