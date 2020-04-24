@@ -31,7 +31,7 @@ copy /Y cl.hpp WindowsCompile\OCL_SDK_Light\include\CL\cl.hpp
 .\WindowsCompile\support\bin\7z.exe x -oCudaTemp cuda_10.1.243_win10_network.exe
 call .\cuda_10.1.243_win10_network.exe -s nvcc_10.1 cudart_10.1 nvrtc_10.1 nvrtc_dev_10.1
 
-set CUDA_PATH="%ProgramFiles%\NVIDIA GPU Computing Toolkit\CUDA\v10.1"
+set CUDA_PATH="%ProgramFiles%\NVIDIA GPU Computing Toolkit\CUDA\v10.1
 set CUDA_PATH_V10_1=%CUDA_PATH%
 echo "##vso[task.setvariable variable=cuda.path]%CUDA_PATH%"
 echo "##vso[task.setvariable variable=cuda.path.v10.1]%CUDA_PATH_V10_1%"
