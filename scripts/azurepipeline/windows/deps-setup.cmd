@@ -28,10 +28,4 @@ pip install PySide2
 copy /Y cl.hpp WindowsCompile\OCL_SDK_Light\include\CL\cl.hpp
 
 .\WindowsCompile\support\bin\wget.exe https://developer.download.nvidia.com/compute/cuda/10.1/Prod/network_installers/cuda_10.1.243_win10_network.exe
-.\WindowsCompile\support\bin\7z.exe x -oCudaTemp cuda_10.1.243_win10_network.exe
 call .\cuda_10.1.243_win10_network.exe -s nvcc_10.1 cudart_10.1 nvrtc_10.1 nvrtc_dev_10.1
-
-REM set CUDA_PATH="%ProgramFiles%\NVIDIA GPU Computing Toolkit\CUDA\v10.1
-REM set CUDA_PATH_V10_1=%CUDA_PATH%
-REM echo "##vso[task.setvariable variable=cuda.path]%CUDA_PATH%"
-REM echo "##vso[task.setvariable variable=cuda.path.v10.1]%CUDA_PATH_V10_1%"
