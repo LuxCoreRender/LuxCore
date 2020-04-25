@@ -177,8 +177,11 @@ void Context::UpdateDataSet() {
 void Context::Start() {
 	assert (!started);
 
-	for (size_t i = 0; i < devices.size(); ++i)
-		devices[i]->Start();
+	for (auto device : devices) {
+		device->PushThreadCurrentDevice();
+		device->Start();
+		device->PopThreadCurrentDevice();
+	}
 
 	started = true;
 }
@@ -186,8 +189,11 @@ void Context::Start() {
 void Context::Interrupt() {
 	assert (started);
 
-	for (size_t i = 0; i < devices.size(); ++i)
-		devices[i]->Interrupt();
+	for (auto device : devices) {
+		device->PushThreadCurrentDevice();
+		device->Interrupt();
+		device->PopThreadCurrentDevice();
+	}
 }
 
 void Context::Stop() {
@@ -195,8 +201,11 @@ void Context::Stop() {
 
 	Interrupt();
 
-	for (size_t i = 0; i < devices.size(); ++i)
-		devices[i]->Stop();
+	for (auto device : devices) {
+		device->PushThreadCurrentDevice();
+		device->Stop();
+		device->PopThreadCurrentDevice();
+	}
 
 	started = false;
 }

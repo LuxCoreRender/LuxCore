@@ -55,7 +55,7 @@ public:
 protected:
 	static void AddDeviceDescs(std::vector<DeviceDescription *> &descriptions);
 
-	size_t deviceIndex;
+	size_t cudaDeviceIndex;
 
 	CUdevice cudaDevice;
 };

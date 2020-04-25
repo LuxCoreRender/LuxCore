@@ -32,7 +32,7 @@ using namespace luxrays;
 
 CUDADeviceDescription::CUDADeviceDescription(CUdevice dev, const size_t devIndex) :
 		DeviceDescription("CUDAInitializingDevice", DEVICE_TYPE_CUDA_GPU),
-		deviceIndex(devIndex), cudaDevice(dev) {
+		cudaDeviceIndex(devIndex), cudaDevice(dev) {
 	char buff[128];
     CHECK_CUDA_ERROR(cuDeviceGetName(buff, 128, cudaDevice));
 	name = string(buff);
@@ -118,7 +118,6 @@ void CUDADeviceDescription::AddDeviceDescs(vector<DeviceDescription *> &descript
 	}
 }
 
-
 //------------------------------------------------------------------------------
 // CUDADevice
 //------------------------------------------------------------------------------
@@ -132,7 +131,7 @@ CUDADevice::CUDADevice(
 	deviceName = (desc->GetName() + " CUDAIntersect").c_str();
 
 	kernelCache = new cudaKernelPersistentCache("LUXRAYS_" LUXRAYS_VERSION_MAJOR "." LUXRAYS_VERSION_MINOR);
-	
+
 	CHECK_CUDA_ERROR(cuCtxCreate(&cudaContext, CU_CTX_SCHED_YIELD, deviceDesc->GetCUDADevice()));
 
 	// I prefer cache over shared memory because I pretty much never use shared memory

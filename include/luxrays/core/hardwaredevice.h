@@ -112,10 +112,6 @@ protected:
 
 class HardwareDevice : virtual public Device {
 public:
-	// Set the thread current device
-	virtual void PushThreadCurrentDevice() = 0;
-	virtual void PopThreadCurrentDevice() = 0;
-
 	//--------------------------------------------------------------------------
 	// Kernels handling for hardware (aka GPU) only applications
 	//--------------------------------------------------------------------------

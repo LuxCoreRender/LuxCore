@@ -102,7 +102,7 @@ PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg,
 	}
 
 	//--------------------------------------------------------------------------
-	// Add OpenCL devices
+	// Add Native devices
 	//--------------------------------------------------------------------------
 
 	SLG_LOG("Native devices used: " << nativeRenderThreadCount);

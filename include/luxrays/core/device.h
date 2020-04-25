@@ -113,6 +113,10 @@ public:
 
 	virtual bool IsRunning() const { return started; };
 
+	// Set the thread current device
+	virtual void PushThreadCurrentDevice() { }
+	virtual void PopThreadCurrentDevice() { }
+
 	friend class Context;
 	friend class OpenCLIntersectionDevice;
 
