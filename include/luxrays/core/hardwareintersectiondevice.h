@@ -46,6 +46,8 @@ public:
 	friend class Context;
 
 protected:
+	virtual void Update() = 0;
+
 	HardwareIntersectionDevice();
 	virtual ~HardwareIntersectionDevice();
 };

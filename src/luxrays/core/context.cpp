@@ -165,11 +165,11 @@ void Context::UpdateDataSet() {
 	currentDataSet->UpdateAccelerators();
 
 #if defined(LUXRAYS_ENABLE_OPENCL)
-	// Update all OpenCL devices
-	for (u_int i = 0; i < idevices.size(); ++i) {
-		OpenCLIntersectionDevice *oclDevice = dynamic_cast<OpenCLIntersectionDevice *>(idevices[i]);
-		if (oclDevice)
-			oclDevice->Update();
+	// Update all hardware intersection devices
+	for (auto device : idevices) {
+		HardwareIntersectionDevice *hardwareIntersectionDevice = dynamic_cast<HardwareIntersectionDevice *>(device);
+		if (hardwareIntersectionDevice)
+			hardwareIntersectionDevice->Update();
 	}
 #endif
 }
