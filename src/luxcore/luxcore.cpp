@@ -216,18 +216,29 @@ Properties luxcore::GetOpenCLDeviceDescs() {
 	vector<DeviceDescription *> deviceDescriptions = ctx.GetAvailableDeviceDescriptions();
 
 	// Select only OpenCL devices
-	DeviceDescription::Filter(DEVICE_TYPE_OPENCL_ALL, deviceDescriptions);
+	DeviceDescription::Filter((DeviceType)(DEVICE_TYPE_OPENCL_ALL | DEVICE_TYPE_CUDA_ALL), deviceDescriptions);
 
 	// Add all device information to the list
 	for (size_t i = 0; i < deviceDescriptions.size(); ++i) {
-		OpenCLDeviceDescription *desc = (OpenCLDeviceDescription *)deviceDescriptions[i];
+		DeviceDescription *desc = deviceDescriptions[i];
 
-		cl::Platform platform = desc->GetOCLDevice().getInfo<CL_DEVICE_PLATFORM>();
-        const string platformName = platform.getInfo<CL_PLATFORM_VENDOR>();
-		const string platformVersion = platform.getInfo<CL_PLATFORM_VERSION>();
-		const int deviceClock = desc->GetOCLDevice().getInfo<CL_DEVICE_MAX_CLOCK_FREQUENCY>();
-		const unsigned long long deviceLocalMem = desc->GetOCLDevice().getInfo<CL_DEVICE_LOCAL_MEM_SIZE>();
-		const unsigned long long deviceConstMem = desc->GetOCLDevice().getInfo<CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE>();
+		string platformName = "UNKNOWN";
+		string platformVersion = "UNKNOWN";
+		int deviceClock = 0;
+		unsigned long long deviceLocalMem = 0;
+		unsigned long long deviceConstMem = 0;
+		if (desc->GetType() & DEVICE_TYPE_OPENCL_ALL) {
+			OpenCLDeviceDescription *oclDesc = (OpenCLDeviceDescription *)deviceDescriptions[i];
+
+			cl::Platform platform = oclDesc->GetOCLDevice().getInfo<CL_DEVICE_PLATFORM>();
+			platformName = platform.getInfo<CL_PLATFORM_VENDOR>();
+			platformVersion = platform.getInfo<CL_PLATFORM_VERSION>();
+			deviceClock = oclDesc->GetOCLDevice().getInfo<CL_DEVICE_MAX_CLOCK_FREQUENCY>();
+			deviceLocalMem = oclDesc->GetOCLDevice().getInfo<CL_DEVICE_LOCAL_MEM_SIZE>();
+			deviceConstMem = oclDesc->GetOCLDevice().getInfo<CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE>();
+		} else if (desc->GetType() & DEVICE_TYPE_CUDA_ALL) {
+			platformName = "NVIDIA";
+		}
 
 		const string prefix = "opencl.device." + ToString(i);
 		props <<

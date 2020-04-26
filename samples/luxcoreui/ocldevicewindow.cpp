@@ -84,7 +84,7 @@ bool OCLDeviceWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 				const string devType = oclDevDescs.Get(oclDevDescPrefixs[i] + ".type").Get<string>();
 
 				if ((useCPU && (devType == "OPENCL_CPU")) ||
-						(useGPU && (devType == "OPENCL_GPU")))
+						(useGPU && ((devType == "OPENCL_GPU") || (devType == "CUDA_GPU"))))
 					selection.at(i) = '1';
 			}
 
@@ -118,7 +118,7 @@ bool OCLDeviceWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 				for (unsigned int i = 0; i < oclDevDescPrefixs.size(); ++i) {
 					const string devType = oclDevDescs.Get(oclDevDescPrefixs[i] + ".type").Get<string>();
 
-					if (devType == "OPENCL_GPU")
+					if ((devType == "OPENCL_GPU") || (devType == "CUDA_GPU"))
 						selection.at(i) = bval ? '1' : '0';;
 				}
 			}
