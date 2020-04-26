@@ -156,6 +156,7 @@ string PathOCLBaseOCLRenderThread::GetKernelSources() {
 			slg::ocl::KernelSource_elvc_types <<
 			slg::ocl::KernelSource_pgic_types <<
 			// OpenCL SLG Funcs
+			slg::ocl::KernelSource_mortoncurve_funcs <<
 			slg::ocl::KernelSource_evalstack_funcs <<
 			slg::ocl::KernelSource_hitpoint_funcs << // Required by mapping funcs
 			slg::ocl::KernelSource_mapping_funcs <<

@@ -384,7 +384,10 @@ void PathOCLBaseOCLRenderThread::InitSamplerSharedDataBuffer() {
 		slg::ocl::SobolSamplerSharedData *sssd = (slg::ocl::SobolSamplerSharedData *)buffer;
 
 		sssd->seedBase = renderEngine->seedBase;
-		sssd->pixelBucketIndex = 0; // Initialized by OpenCL kernel
+		sssd->bucketIndex = 0;
+		sssd->bucketSize = 1;
+		sssd->tileSize = 32;
+		sssd->superSampling = 16;
 		sssd->adaptiveStrength = renderEngine->oclSampler->sobol.adaptiveStrength;
 		sssd->adaptiveUserImportanceWeight = renderEngine->oclSampler->sobol.adaptiveUserImportanceWeight;
 		sssd->filmRegionPixelCount = filmRegionPixelCount;

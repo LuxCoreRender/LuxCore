@@ -72,7 +72,7 @@ typedef struct {
 #endif
 
 typedef struct {
-	unsigned int pixelIndexBase, pixelIndexOffset, pass, pixelIndexRandomStart;
+	unsigned int bucketIndex, pixelOffset, passOffset, pass, pixelIndexRandomStart;
 
 	Seed rngGeneratorSeed;
 	unsigned int rngPass;
@@ -97,8 +97,9 @@ typedef struct {
 
 typedef struct {
 	unsigned int seedBase;
-	unsigned int pixelBucketIndex;
+	unsigned int bucketIndex;
 	float adaptiveStrength, adaptiveUserImportanceWeight;
+	unsigned int bucketSize, tileSize, superSampling;
 
 	// This is used to compute the size of appended data at the end
 	// of SobolSamplerSharedData
@@ -137,6 +138,7 @@ typedef struct {
 			float adaptiveStrength, adaptiveUserImportanceWeight;
 		} random;
 		struct {
+			unsigned int bucketSize, tileSize, superSampling;
 			float adaptiveStrength, adaptiveUserImportanceWeight;
 		} sobol;
 		struct {
@@ -148,7 +150,6 @@ typedef struct {
 
 #define RANDOM_OCL_WORK_SIZE 16
 
-#define SOBOL_OCL_WORK_SIZE 16
 #define SOBOL_BITS 32
 #define SOBOL_MAX_DIMENSIONS 21201
 
