@@ -229,7 +229,7 @@ public:
 	//--------------------------------------------------------------------------
 
 	virtual void CompileProgram(HardwareDeviceProgram **program,
-			const std::string &programParameters, const std::string &programSource,
+			const std::vector<std::string> &programParameters, const std::string &programSource,
 			const std::string &programName);
 
 	virtual void GetKernel(HardwareDeviceProgram *program,

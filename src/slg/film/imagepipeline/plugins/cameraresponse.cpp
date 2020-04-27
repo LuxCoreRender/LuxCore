@@ -266,9 +266,15 @@ void CameraResponsePlugin::ApplyHW(Film &film, const u_int index) {
 		if (color)
 			ssParams << " -D PARAM_CAMERARESPONSE_COLOR";
 
+		vector<string> opts;
+		opts.push_back("-D LUXRAYS_OPENCL_KERNEL");
+		opts.push_back("-D SLG_OPENCL_KERNEL");
+		if (color)
+			opts.push_back("-D PARAM_CAMERARESPONSE_COLOR");
+
 		HardwareDeviceProgram *program = nullptr;
 		hardwareDevice->CompileProgram(&program,
-				ssParams.str(),
+				opts,
 				luxrays::ocl::KernelSource_color_types +
 				luxrays::ocl::KernelSource_color_funcs +
 				slg::ocl::KernelSource_plugin_cameraresponse_funcs,

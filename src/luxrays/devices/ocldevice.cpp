@@ -182,15 +182,17 @@ void OpenCLDevice::Stop() {
 //------------------------------------------------------------------------------
 
 void OpenCLDevice::CompileProgram(HardwareDeviceProgram **program,
-		const string &programParameters, const string &programSource,	
+		const vector<string> &programParameters, const string &programSource,	
 		const string &programName) {
 	cl::Context &oclContext = deviceDesc->GetOCLContext();
 	cl::Device &oclDevice = deviceDesc->GetOCLDevice();
 
-	const string oclProgramParameters = "-D LUXRAYS_OPENCL_DEVICE " +
-		programParameters;
+	vector <string> oclProgramParameters = programParameters;
+	oclProgramParameters.push_back("-D LUXRAYS_OPENCL_DEVICE");
+	oclProgramParameters.insert(oclProgramParameters.end(),
+			additionalCompileOpts.begin(), additionalCompileOpts.end());
 
-	LR_LOG(deviceContext, "[" << programName << "] Compiler options: " << oclProgramParameters);
+	LR_LOG(deviceContext, "[" << programName << "] Compiler options: " << oclKernelPersistentCache::ToOptsString(oclProgramParameters));
 	LR_LOG(deviceContext, "[" << programName << "] Compiling kernels ");
 
 	const string oclProgramSource =

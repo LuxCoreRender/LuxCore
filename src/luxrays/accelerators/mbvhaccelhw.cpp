@@ -197,11 +197,11 @@ public:
 		//----------------------------------------------------------------------
 
 		// Compile options
-		std::stringstream opts;
-		opts << " -D LUXRAYS_OPENCL_KERNEL"
-				" -D PARAM_RAY_EPSILON_MIN=" << MachineEpsilon::GetMin() << "f"
-				" -D PARAM_RAY_EPSILON_MAX=" << MachineEpsilon::GetMax() << "f";
-		//LR_LOG(deviceContext, "[HardwareIntersectionDevice::" << deviceName << "] MBVH compile options: \n" << opts.str());
+		vector<string> opts;
+		opts.push_back("-D LUXRAYS_OPENCL_KERNEL");
+		opts.push_back("-D PARAM_RAY_EPSILON_MIN=" + ToString(MachineEpsilon::GetMin()) + "f");
+		opts.push_back("-D PARAM_RAY_EPSILON_MAX=" + ToString(MachineEpsilon::GetMax()) + "f");
+		//LR_LOG(deviceContext, "[HardwareIntersectionDevice::" << deviceName << "] BVH compile options: \n" << oclKernelPersistentCache::ToOptsString(opts));
 
 		std::stringstream kernelDefs;
 		kernelDefs << "#define MBVH_VERTS_PAGE_COUNT " << vertsBuffs.size() << "\n"
@@ -248,7 +248,7 @@ public:
 
 		HardwareDeviceProgram *program = nullptr;
 		device.CompileProgram(&program,
-				opts.str(),
+				opts,
 				code.str(),
 				"MBVHKernel");
 
