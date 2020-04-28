@@ -1,5 +1,3 @@
-#line 2 "mortoncurve_funcs.cl"
-
 /***************************************************************************
  * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
@@ -18,6 +16,13 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#ifndef _SLG_MORTONCURVE_H
+#define	_SLG_MORTONCURVE_H
+
+#include "luxrays/utils/utils.h"
+
+namespace slg {
+
 //------------------------------------------------------------------------------
 // Morton related functions
 //------------------------------------------------------------------------------
@@ -26,7 +31,7 @@
 
 // Inverse of Part1By1 - "delete" all odd-indexed bits
 
-OPENCL_FORCE_INLINE uint Compact1By1(uint x) {
+inline u_int Compact1By1(u_int x) {
 	x &= 0x55555555;					// x = -f-e -d-c -b-a -9-8 -7-6 -5-4 -3-2 -1-0
 	x = (x ^ (x >> 1)) & 0x33333333;	// x = --fe --dc --ba --98 --76 --54 --32 --10
 	x = (x ^ (x >> 2)) & 0x0f0f0f0f;	// x = ---- fedc ---- ba98 ---- 7654 ---- 3210
@@ -37,7 +42,7 @@ OPENCL_FORCE_INLINE uint Compact1By1(uint x) {
 
 // Inverse of Part1By2 - "delete" all bits not at positions divisible by 3
 
-OPENCL_FORCE_INLINE uint Compact1By2(uint x) {
+inline u_int Compact1By2(u_int x) {
 	x &= 0x09249249;					// x = ---- 9--8 --7- -6-- 5--4 --3- -2-- 1--0
 	x = (x ^ (x >> 2)) & 0x030c30c3;	// x = ---- --98 ---- 76-- --54 ---- 32-- --10
 	x = (x ^ (x >> 4)) & 0x0300f00f;	// x = ---- --98 ---- ---- 7654 ---- ---- 3210
@@ -46,10 +51,15 @@ OPENCL_FORCE_INLINE uint Compact1By2(uint x) {
 	return x;
 }
 
-OPENCL_FORCE_INLINE uint DecodeMorton2X(const uint code) {
+inline u_int DecodeMorton2X(const u_int code) {
 	return Compact1By1(code >> 0);
 }
 
-OPENCL_FORCE_INLINE uint DecodeMorton2Y(const uint code) {
+inline u_int DecodeMorton2Y(const u_int code) {
 	return Compact1By1(code >> 1);
 }
+
+
+}
+
+#endif	/* _SLG_MORTONCURVE_H */

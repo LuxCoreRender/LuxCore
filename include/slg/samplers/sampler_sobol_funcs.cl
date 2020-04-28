@@ -114,8 +114,8 @@ OPENCL_FORCE_INLINE void SobolSampler_SplatSample(
 }
 
 OPENCL_FORCE_INLINE void SobolSamplerSharedData_GetNewBucket(__global SobolSamplerSharedData *samplerSharedData,
-		const uint bucketCount, uint *bucketIndex, uint *seed) {
-	*bucketIndex = atomic_inc(&samplerSharedData->bucketIndex) % bucketCount;
+		const uint bucketCount, uint *newBucketIndex, uint *seed) {
+	*newBucketIndex = atomic_inc(&samplerSharedData->bucketIndex) % bucketCount;
 
     *seed = (samplerSharedData->seedBase + *bucketIndex) % (0xFFFFFFFFu - 1u) + 1u;
 }

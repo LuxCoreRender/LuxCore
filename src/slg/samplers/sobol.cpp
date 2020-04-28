@@ -21,6 +21,7 @@
 #include "luxrays/core/color/color.h"
 #include "slg/samplers/sampler.h"
 #include "slg/samplers/sobol.h"
+#include "slg/utils/mortoncurve.h"
 
 using namespace std;
 using namespace luxrays;
@@ -56,23 +57,18 @@ void SobolSamplerSharedData::Reset() {
 		passPerPixel.resize(1, SOBOL_STARTOFFSET);
 	}
 
-	pixelIndex = 0;
+	bucketIndex = 0;
 }
 
-void SobolSamplerSharedData::GetNewPixelIndex(u_int &index, u_int &seed) {
-	SpinLocker spinLocker(spinLock);
-	
-	index = pixelIndex;
-	seed = (seedBase + pixelIndex) % (0xFFFFFFFFu - 1u) + 1u;
-	
-	pixelIndex += SOBOL_THREAD_WORK_SIZE;
-	if (pixelIndex >= filmRegionPixelCount)
-		pixelIndex = 0;
+void SobolSamplerSharedData::GetNewBucket(const uint bucketCount,
+		uint *newBucketIndex, uint *seed) {
+	*newBucketIndex = AtomicInc(&bucketIndex) % bucketCount;
+
+	*seed = (seedBase + *newBucketIndex) % (0xFFFFFFFFu - 1u) + 1u;
 }
 
 u_int SobolSamplerSharedData::GetNewPixelPass(const u_int pixelIndex) {
 	// Iterate pass of this pixel
-
 	return AtomicInc(&passPerPixel[pixelIndex]);
 }
 
@@ -102,32 +98,58 @@ SobolSampler::~SobolSampler() {
 }
 
 void SobolSampler::InitNewSample() {
+	const u_int *filmSubRegion = film->GetSubRegion();
+
+	const uint subRegionWidth = filmSubRegion[1] - filmSubRegion[0] + 1;
+	const uint subRegionHeight = filmSubRegion[3] - filmSubRegion[2] + 1;
+
+	const uint tiletWidthCount = (subRegionWidth + tileSize - 1) / tileSize;
+	const uint tileHeightCount = (subRegionHeight + tileSize - 1) / tileSize;
+
+	const uint bucketCount = overlapping * (tiletWidthCount * tileSize * tileHeightCount * tileSize + bucketSize - 1) / bucketSize;
+
+	// Update pixelIndexOffset
+
 	for (;;) {
-		// Update pixelIndexOffset
+		passOffset++;
+		if (passOffset >= superSampling) {
+			pixelOffset++;
+			passOffset = 0;
 
-		pixelIndexOffset++;
-		if ((pixelIndexOffset >= SOBOL_THREAD_WORK_SIZE) ||
-				(pixelIndexBase + pixelIndexOffset >= sharedData->filmRegionPixelCount)) {
-			// Ask for a new base
-			u_int seed;
-			sharedData->GetNewPixelIndex(pixelIndexBase, seed);
-			pixelIndexOffset = 0;
+			if (pixelOffset >= bucketSize) {
+				// Ask for a new bucket
+				u_int bucketSeed;
+				sharedData->GetNewBucket(bucketCount,
+						&bucketIndex, &bucketSeed);
 
-			// Initialize the rng0, rng1 and rngPass generator
-			rngGenerator.init(seed);
+				pixelOffset = 0;
+				passOffset = 0;
+
+				// Initialize the rng0, rng1 and rngPass generator
+				rngGenerator.init(bucketSeed);
+			}
 		}
 
 		// Initialize sample0 and sample 1
 
 		u_int pixelX, pixelY;
 		if (imageSamplesEnable && film) {
-			const u_int *subRegion = film->GetSubRegion();
+			// Transform the bucket index in a pixel coordinate
 
-			const u_int pixelIndex = (pixelIndexBase + pixelIndexOffset) % sharedData->filmRegionPixelCount;
-			const u_int subRegionWidth = subRegion[1] - subRegion[0] + 1;
-			pixelX = subRegion[0] + (pixelIndex % subRegionWidth);
-			pixelY = subRegion[2] + (pixelIndex / subRegionWidth);
-			
+			const uint pixelBucketIndex = (bucketIndex / overlapping) * bucketSize + pixelOffset;
+			const uint mortonCurveOffset = pixelBucketIndex % (tileSize * tileSize);
+			const uint pixelTileIndex = pixelBucketIndex / (tileSize * tileSize);
+
+			const uint subRegionPixelX = (pixelTileIndex % tiletWidthCount) * tileSize + DecodeMorton2X(mortonCurveOffset);
+			const uint subRegionPixelY = (pixelTileIndex / tiletWidthCount) * tileSize + DecodeMorton2Y(mortonCurveOffset);
+			if ((subRegionPixelX >= subRegionWidth) || (subRegionPixelY >= subRegionHeight)) {
+				// Skip the pixels out of the film sub region
+				continue;
+			}
+
+			pixelX = filmSubRegion[0] + subRegionPixelX;
+			pixelY = filmSubRegion[2] + subRegionPixelY;
+
 			// Check if the current pixel is over or under the convergence threshold
 			const Film *film = sharedData->engineFilm;
 			if ((adaptiveStrength > 0.f) && film->HasChannel(Film::NOISE)) {
@@ -162,7 +184,7 @@ void SobolSampler::InitNewSample() {
 				}
 			}
 
-			pass = sharedData->GetNewPixelPass(pixelIndex);
+			pass = sharedData->GetNewPixelPass(subRegionPixelX + subRegionPixelY * subRegionWidth);
 		} else {
 			pixelX = 0;
 			pixelY = 0;
@@ -187,7 +209,9 @@ void SobolSampler::RequestSamples(const SampleType smplType, const u_int size) {
 
 	sobolSequence.RequestSamples(size);
 
-	pixelIndexOffset = SOBOL_THREAD_WORK_SIZE;
+	pixelOffset = bucketSize * bucketSize;
+	passOffset = superSampling;
+
 	InitNewSample();
 }
 

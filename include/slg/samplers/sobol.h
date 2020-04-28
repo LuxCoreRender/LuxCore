@@ -43,8 +43,7 @@ public:
 
 	virtual void Reset();
 
-	void GetNewPixelIndex(u_int &index, u_int &seed);
-
+	void GetNewBucket(const uint bucketCount, uint *bucketIndex, uint *seed);
 	u_int GetNewPixelPass(const u_int pixelIndex = 0);
 	
 	static SamplerSharedData *FromProperties(const luxrays::Properties &cfg,
@@ -55,8 +54,7 @@ public:
 	u_int filmRegionPixelCount;
 
 private:
-	luxrays::SpinLock spinLock;
-	u_int pixelIndex;
+	u_int bucketIndex;
 
 	// Holds the current pass for each pixel when using adaptive sampling
 	std::vector<u_int> passPerPixel;
@@ -70,7 +68,6 @@ private:
 //------------------------------------------------------------------------------
 
 #define SOBOL_STARTOFFSET 32
-#define SOBOL_THREAD_WORK_SIZE 4096
 
 class SobolSampler : public Sampler {
 public:
@@ -113,7 +110,7 @@ private:
 	float adaptiveStrength, adaptiveUserImportanceWeight;
 	u_int bucketSize, tileSize, superSampling, overlapping;
 
-	u_int pixelIndexBase, pixelIndexOffset, pass;
+	u_int bucketIndex, pixelOffset, passOffset, pass;
 	luxrays::TauswortheRandomGenerator rngGenerator;
 
 	float sample0, sample1;
