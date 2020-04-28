@@ -136,9 +136,13 @@ void Reinhard02ToneMap::ApplyHW(Film &film, const u_int index) {
 		// Compile sources
 		const double tStart = WallClockTime();
 
+		vector<string> opts;
+		opts.push_back("-D LUXRAYS_OPENCL_KERNEL");
+		opts.push_back("-D SLG_OPENCL_KERNEL");
+
 		HardwareDeviceProgram *program = nullptr;
 		hardwareDevice->CompileProgram(&program,
-				"-D LUXRAYS_OPENCL_KERNEL -D SLG_OPENCL_KERNEL",
+				opts,
 				luxrays::ocl::KernelSource_luxrays_types +
 				luxrays::ocl::KernelSource_color_types +
 				luxrays::ocl::KernelSource_color_funcs +

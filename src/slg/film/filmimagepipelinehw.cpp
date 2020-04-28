@@ -111,6 +111,26 @@ void Film::CreateHWContext() {
 		}
 #endif
 
+		if (hardwareDevice->GetDeviceDesc()->GetType() & DEVICE_TYPE_CUDA_ALL) {
+			// Suggested compiler options: --use_fast_math
+			vector<string> compileOpts;
+			compileOpts.push_back("--use_fast_math");
+
+			hardwareDevice->SetAdditionalCompileOpts(compileOpts);
+		}
+
+		/*if (hardwareDevice->GetDeviceDesc()->GetType() & DEVICE_TYPE_OPENCL_ALL) {
+			// Suggested compiler options: -cl-fast-relaxed-math -cl-mad-enable
+			//
+			// NOTE: I should probably enable -cl-fast-relaxed-math -cl-mad-enable for OpenCL too even
+			// if this is not what I was doing in the past
+
+			vector<string> compileOpts;
+			compileOpts.push_back("-cl-fast-relaxed-math -cl-mad-enable");
+
+			hardwareDevice->SetAdditionalCompileOpts(compileOpts);
+		}*/
+
 		// Just an empty data set
 		dataSet = new DataSet(ctx);
 		dataSet->Preprocess();
@@ -163,9 +183,13 @@ void Film::CompileHWKernels() {
 	// Compile MergeSampleBuffersOCL() kernels
 	const double tStart = WallClockTime();
 
+	vector<string> opts;
+	opts.push_back("-D LUXRAYS_OPENCL_KERNEL");
+	opts.push_back("-D SLG_OPENCL_KERNEL");
+
 	HardwareDeviceProgram *program = nullptr;
 	hardwareDevice->CompileProgram(&program,
-			"-D LUXRAYS_OPENCL_KERNEL -D SLG_OPENCL_KERNEL",
+			opts,
 			slg::ocl::KernelSource_film_mergesamplebuffer_funcs,
 			"MergeSampleBuffersOCL");
 

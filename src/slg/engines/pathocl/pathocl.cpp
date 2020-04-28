@@ -209,7 +209,7 @@ void PathOCLRenderEngine::UpdateTaskCount() {
 		taskCount = film->GetWidth() * film->GetHeight() / intersectionDevices.size();
 		taskCount = RoundUp<u_int>(taskCount, 8192);
 	} else {
-		const u_int defaultTaskCount = 1024u * 1024u;
+		const u_int defaultTaskCount = 128u * 1024u;
 
 		// Compute the cap to the number of tasks
 		u_int taskCap = defaultTaskCount;

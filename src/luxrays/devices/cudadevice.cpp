@@ -20,6 +20,7 @@
 
 #include <boost/regex.hpp>
 
+#include "luxrays/devices/ocldevice.h"
 #include "luxrays/devices/cudadevice.h"
 #include "luxrays/kernels/kernels.h"
 
@@ -164,12 +165,14 @@ void CUDADevice::PopThreadCurrentDevice() {
 //------------------------------------------------------------------------------
 
 void CUDADevice::CompileProgram(HardwareDeviceProgram **program,
-		const string &programParameters, const string &programSource,	
+		const std::vector<std::string> &programParameters, const string &programSource,	
 		const string &programName) {
-	const string cudaProgramParameters = "-D LUXRAYS_CUDA_DEVICE " +
-		programParameters;
+	vector<string> cudaProgramParameters = programParameters;
+	cudaProgramParameters.push_back("-D LUXRAYS_CUDA_DEVICE");
+	cudaProgramParameters.insert(cudaProgramParameters.end(),
+			additionalCompileOpts.begin(), additionalCompileOpts.end());
 
-	LR_LOG(deviceContext, "[" << programName << "] Compiler options: " << cudaProgramParameters);
+	LR_LOG(deviceContext, "[" << programName << "] Compiler options: " << oclKernelPersistentCache::ToOptsString(cudaProgramParameters));
 	LR_LOG(deviceContext, "[" << programName << "] Compiling kernels");
 
 	const string cudaProgramSource =

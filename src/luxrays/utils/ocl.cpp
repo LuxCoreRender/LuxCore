@@ -146,18 +146,32 @@ string luxrays::oclErrorString(cl_int error) {
 // oclKernelCache
 //------------------------------------------------------------------------------
 
+string oclKernelCache::ToOptsString(const vector<string> &kernelsParameters) {
+	string result;
+	
+	for	(auto const &p : kernelsParameters) {
+		if (result.length() != 0)
+			result += " ";
+		result += p;
+	}
+
+	return result;
+}
+
 cl::Program *oclKernelCache::ForcedCompile(cl::Context &context, cl::Device &device,
-		const string &kernelsParameters, const string &kernelSource,
+		const vector<string> &kernelsParameters, const string &kernelSource,
 		cl::STRING_CLASS *error) {
 	cl::Program *program = NULL;
 
 	try {
+		const string optsStr = ToOptsString(kernelsParameters);
+
 		cl::Program::Sources source(1, make_pair(kernelSource.c_str(), kernelSource.length()));
 		program = new cl::Program(context, source);
 
 		VECTOR_CLASS<cl::Device> buildDevice;
 		buildDevice.push_back(device);
-		program->build(buildDevice, kernelsParameters.c_str());
+		program->build(buildDevice, optsStr.c_str());
 	} catch (cl::Error &err) {
 		string clerr;
 		if (program)
@@ -175,65 +189,6 @@ cl::Program *oclKernelCache::ForcedCompile(cl::Context &context, cl::Device &dev
 	}
 
 	return program;
-}
-
-//------------------------------------------------------------------------------
-// oclKernelVolatileCache
-//------------------------------------------------------------------------------
-
-oclKernelVolatileCache::oclKernelVolatileCache() {
-
-}
-
-oclKernelVolatileCache::~oclKernelVolatileCache() {
-	for (vector<char *>::iterator it = kernels.begin(); it != kernels.end(); it++)
-		delete[] (*it);
-}
-
-cl::Program *oclKernelVolatileCache::Compile(cl::Context &context, cl::Device& device,
-		const string &kernelsParameters, const string &kernelSource,
-		bool *cached, cl::STRING_CLASS *error) {
-	// Check if the kernel is available in the cache
-	boost::unordered_map<string, cl::Program::Binaries>::iterator it = kernelCache.find(kernelsParameters);
-
-	if (it == kernelCache.end()) {
-		// It isn't available, compile the source
-		cl::Program *program = ForcedCompile(
-				context, device, kernelsParameters, kernelSource, error);
-		if (!program)
-			return NULL;
-
-		// Obtain the binaries of the sources
-		VECTOR_CLASS<char *> bins = program->getInfo<CL_PROGRAM_BINARIES>();
-		assert (bins.size() == 1);
-		VECTOR_CLASS<size_t> sizes = program->getInfo<CL_PROGRAM_BINARY_SIZES>();
-		assert (sizes.size() == 1);
-
-		if (sizes[0] > 0) {
-			// Add the kernel to the cache
-			char *bin = new char[sizes[0]];
-			memcpy(bin, bins[0], sizes[0]);
-			kernels.push_back(bin);
-
-			kernelCache[kernelsParameters] = cl::Program::Binaries(1, make_pair(bin, sizes[0]));
-		}
-
-		if (cached)
-			*cached = false;
-
-		return program;
-	} else {
-		// Compile from the binaries
-		VECTOR_CLASS<cl::Device> buildDevice;
-		buildDevice.push_back(device);
-		cl::Program *program = new cl::Program(context, buildDevice, it->second);
-		program->build(buildDevice);
-
-		if (cached)
-			*cached = true;
-
-		return program;
-	}
 }
 
 //------------------------------------------------------------------------------
@@ -304,7 +259,7 @@ u_int oclKernelPersistentCache::HashBin(const char *s, const size_t size) {
 }
 
 cl::Program *oclKernelPersistentCache::Compile(cl::Context &context, cl::Device& device,
-		const string &kernelsParameters, const string &kernelSource,
+		const vector<string> &kernelsParameters, const string &kernelSource,
 		bool *cached, cl::STRING_CLASS *error) {
 	// Check if the kernel is available in the cache
 
@@ -312,7 +267,7 @@ cl::Program *oclKernelPersistentCache::Compile(cl::Context &context, cl::Device&
 	const string platformName = boost::trim_copy(platform.getInfo<CL_PLATFORM_VENDOR>());
 	const string deviceName = boost::trim_copy(device.getInfo<CL_DEVICE_NAME>());
 	const string deviceUnits = ToString(device.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>());
-	const string kernelName = HashString(kernelsParameters) + "-" + HashString(kernelSource) + ".ocl";
+	const string kernelName = HashString(ToOptsString(kernelsParameters)) + "-" + HashString(kernelSource) + ".ocl";
 	const boost::filesystem::path dirPath = GetCacheDir(appName) / SanitizeFileName(platformName) /
 		SanitizeFileName(deviceName) / SanitizeFileName(deviceUnits);
 	const boost::filesystem::path filePath = dirPath / kernelName;

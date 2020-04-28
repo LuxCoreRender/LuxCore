@@ -22,7 +22,6 @@
 #include <fstream>
 #include <string.h>
 
-#include <boost/regex.hpp>
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/lexical_cast.hpp>
@@ -39,32 +38,21 @@ using namespace luxrays;
 // cudaKernelCache
 //------------------------------------------------------------------------------
 
-bool cudaKernelCache::ForcedCompile(const string &kernelsParameters, const string &kernelSource,
+bool cudaKernelCache::ForcedCompile(const vector<string> &kernelsParameters, const string &kernelSource,
 		 const string &programName, char **ptx, size_t *ptxSize, string *error) {
 	nvrtcProgram prog;
 	CHECK_NVRTC_ERROR(nvrtcCreateProgram(&prog, kernelSource.c_str(), programName.c_str(), 0, nullptr, nullptr));
-
-    #if defined (__APPLE__)
-        boost::regex paramsRE("/\\-D\\s+\\w+\\s*=\\s*[+-\\w\\d]+|\\-D\\s+\\w+/");
-    #else
-        boost::regex paramsRE("\\-D\\s+\\w+\\s*=\\s*[+-\\w\\d]+|\\-D\\s+\\w+");
-    #endif
-    
-	boost::sregex_token_iterator paramsIter(kernelsParameters.begin(), kernelsParameters.end(), paramsRE);
-	boost::sregex_token_iterator paramsEnd;
-	vector<string> cudaOptsStr;
+  
 	vector<const char *> cudaOpts;
+	cudaOpts.push_back("--device-as-default-execution-space");
+	cudaOpts.push_back("--disable-warnings");
 
-	cudaOptsStr.push_back("--device-as-default-execution-space");
-	cudaOpts.push_back(cudaOptsStr.back().c_str());
+	for	(auto const &p : kernelsParameters)
+		cudaOpts.push_back(p.c_str());
 
-	cudaOptsStr.push_back("--disable-warnings");
-	cudaOpts.push_back(cudaOptsStr.back().c_str());
-
-	while (paramsIter != paramsEnd) {
-		cudaOptsStr.push_back(*paramsIter++);
-		cudaOpts.push_back(cudaOptsStr.back().c_str());
-	}
+	// For some debug
+	//for (uint i = 0; i < cudaOpts.size(); ++i)
+	//	cout << "Opt #" << i <<" : [" << cudaOpts[i] << "]\n";
 
 	const nvrtcResult compilationResult = nvrtcCompileProgram(prog,
 			cudaOpts.size(),
@@ -117,13 +105,13 @@ cudaKernelPersistentCache::cudaKernelPersistentCache(const string &applicationNa
 cudaKernelPersistentCache::~cudaKernelPersistentCache() {
 }
 
-CUmodule cudaKernelPersistentCache::Compile(const string &kernelsParameters,
+CUmodule cudaKernelPersistentCache::Compile(const vector<string> &kernelsParameters,
 		const string &kernelSource, const string &programName,
 		bool *cached, string *error) {
 	// Check if the kernel is available in the cache
 
 	const string kernelName =
-			oclKernelPersistentCache::HashString(kernelsParameters)
+			oclKernelPersistentCache::HashString(oclKernelPersistentCache::ToOptsString(kernelsParameters))
 			+ "-" +
 			oclKernelPersistentCache::HashString(kernelSource) + ".ptx";
 	const boost::filesystem::path dirPath = GetCacheDir(appName);

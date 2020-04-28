@@ -34,11 +34,11 @@ public:
 	cudaKernelCache() { }
 	virtual ~cudaKernelCache() { }
 
-	virtual CUmodule Compile(const std::string &kernelsParameters,
+	virtual CUmodule Compile(const std::vector<std::string> &kernelsParameters,
 		const std::string &kernelSource, const std::string &programName,
 		bool *cached, std::string *error) = 0;
 
-	static bool ForcedCompile(const std::string &kernelsParameters,
+	static bool ForcedCompile(const std::vector<std::string> &kernelsParameters,
 		const std::string &kernelSource, const std::string &programName,
 		char **ptx, size_t *ptxSize, std::string *error);
 };
@@ -49,7 +49,7 @@ public:
 	cudaKernelPersistentCache(const std::string &applicationName);
 	~cudaKernelPersistentCache();
 
-	virtual CUmodule Compile(const std::string &kernelsParameters,
+	virtual CUmodule Compile(const std::vector<std::string> &kernelsParameters,
 		const std::string &kernelSource, const std::string &programName,
 		bool *cached, std::string *error);
 

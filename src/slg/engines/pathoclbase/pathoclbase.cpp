@@ -56,8 +56,6 @@ PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg,
 		const bool supportsNativeThreads) :	OCLRenderEngine(rcfg, supportsNativeThreads),
 		compiledScene(nullptr), pixelFilterDistribution(nullptr), oclSampler(nullptr),
 		oclPixelFilter(nullptr), photonGICache(nullptr) {
-	additionalOpenCLKernelOptions = "";
-	additionalCUDAKernelOptions = "";
 	writeKernelsToFile = false;
 
 	//--------------------------------------------------------------------------
@@ -75,6 +73,14 @@ PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg,
 		if (devs[i]->GetDeviceDesc()->GetType() & DEVICE_TYPE_CUDA_ALL) {
 			SLG_LOG("[" << devs[i]->GetName() << "]");
 			intersectionDevices.push_back(devs[i]);
+
+			// Suggested compiler options: --use_fast_math
+			HardwareDevice *hwDev = dynamic_cast<HardwareDevice *>(devs[i]);
+
+			vector<string> compileOpts;
+			compileOpts.push_back("--use_fast_math");
+
+			hwDev->SetAdditionalCompileOpts(compileOpts);
 		}
 	}
 
@@ -98,6 +104,17 @@ PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg,
 				// print a warning instead of throwing an exception
 				SLG_LOG("WARNING: OpenCL version 1.1 or better is required. Device " + devs[i]->GetName() + " may not work.");
 			}
+
+			// Suggested compiler options: -cl-fast-relaxed-math -cl-mad-enable
+			//
+			// NOTE: I should probably enable -cl-fast-relaxed-math -cl-mad-enable for OpenCL too even
+			// if this is not what I was doing in the past
+			//HardwareDevice *hwDev = dynamic_cast<HardwareDevice *>(devs[i]);
+			//
+			//vector<string> compileOpts;
+			//compileOpts.push_back("");
+			//
+			//hwDev->SetAdditionalCompileOpts(compileOpts);
 		}
 	}
 
@@ -270,14 +287,6 @@ void PathOCLBaseRenderEngine::StartLockLess() {
 		}
 	}
 	SLG_LOG("[PathOCLBaseRenderEngine] OpenCL max. page memory size: " << maxMemPageSize / 1024 << "Kbytes");
-
-	// Suggested compiler options: -cl-fast-relaxed-math -cl-mad-enable
-	//
-	// NOTE: I should probably enable -cl-fast-relaxed-math -cl-mad-enable for OpenCL too even
-	// if this is not what I was doing in the past 
-	additionalOpenCLKernelOptions = cfg.Get(Property("opencl.kernel.options")("")).Get<string>();
-	// Suggested compiler options: --use_fast_math
-	additionalCUDAKernelOptions = cfg.Get(Property("cuda.kernel.options")("--use_fast_math")).Get<string>();
 	
 	writeKernelsToFile = cfg.Get(Property("opencl.kernel.writetofile")(false)).Get<bool>();
 

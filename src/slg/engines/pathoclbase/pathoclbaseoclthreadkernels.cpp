@@ -63,32 +63,26 @@ void PathOCLBaseOCLRenderThread::CompileKernel(HardwareIntersectionDevice *devic
 	}
 }
 
-string PathOCLBaseOCLRenderThread::GetKernelParamters(
+void PathOCLBaseOCLRenderThread::GetKernelParamters(
+		vector<string> &params,
 		HardwareIntersectionDevice *intersectionDevice,
 		const string renderEngineType,
 		const float epsilonMin, const float epsilonMax) {
-	// Set #define symbols
-	stringstream ssParams;
-	ssParams.precision(6);
-	ssParams << scientific <<
-			" -D LUXRAYS_OPENCL_KERNEL" <<
-			" -D SLG_OPENCL_KERNEL" <<
-			" -D RENDER_ENGINE_" << renderEngineType <<
-			" -D PARAM_RAY_EPSILON_MIN=" << epsilonMin << "f"
-			" -D PARAM_RAY_EPSILON_MAX=" << epsilonMax << "f"
-			;
+	params.push_back("-D LUXRAYS_OPENCL_KERNEL");
+	params.push_back("-D SLG_OPENCL_KERNEL");
+	params.push_back("-D RENDER_ENGINE_" + renderEngineType);
+	params.push_back("-D PARAM_RAY_EPSILON_MIN=" + ToString(epsilonMin) + "f");
+	params.push_back("-D PARAM_RAY_EPSILON_MAX=" + ToString(epsilonMax) + "f");
 
 	const OpenCLDeviceDescription *oclDeviceDesc = dynamic_cast<const OpenCLDeviceDescription *>(intersectionDevice->GetDeviceDesc());
 	if (oclDeviceDesc) {
 		if (oclDeviceDesc->IsAMDPlatform())
-			ssParams << " -D LUXCORE_AMD_OPENCL";
+			params.push_back("-D LUXCORE_AMD_OPENCL");
 		else if (oclDeviceDesc->IsNVIDIAPlatform())
-			ssParams << " -D LUXCORE_NVIDIA_OPENCL";
+			params.push_back("-D LUXCORE_NVIDIA_OPENCL");
 		else
-			ssParams << " -D LUXCORE_GENERIC_OPENCL";
+			params.push_back("-D LUXCORE_GENERIC_OPENCL");
 	}
-
-	return ssParams.str();
 }
 
 string PathOCLBaseOCLRenderThread::GetKernelSources() {
@@ -264,7 +258,8 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			throw runtime_error("Unknown accelerator in PathOCLBaseRenderThread::InitKernels()");
 	}
 
-	kernelsParameters = GetKernelParamters(intersectionDevice,
+	vector<string> kernelsParameters;
+	GetKernelParamters(kernelsParameters, intersectionDevice,
 			RenderEngine::RenderEngineType2String(renderEngine->GetType()),
 			MachineEpsilon::GetMin(), MachineEpsilon::GetMax());
 
@@ -274,7 +269,7 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 		// Some debug code to write the OpenCL kernel source to a file
 		const string kernelFileName = "kernel_source_device_" + ToString(threadIndex) + ".cl";
 		ofstream kernelFile(kernelFileName.c_str());
-		string kernelDefs = kernelsParameters;
+		string kernelDefs = oclKernelPersistentCache::ToOptsString(kernelsParameters);
 		boost::replace_all(kernelDefs, "-D", "\n#define");
 		boost::replace_all(kernelDefs, "=", " ");
 		kernelFile << kernelDefs << endl << endl << kernelSource << endl;
@@ -283,13 +278,14 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 
 	if ((renderEngine->additionalOpenCLKernelOptions.size() > 0) &&
 			(intersectionDevice->GetDeviceDesc()->GetType() & DEVICE_TYPE_OPENCL_ALL))
-		kernelsParameters += " " + renderEngine->additionalOpenCLKernelOptions;
+		kernelsParameters.insert(kernelsParameters.end(), renderEngine->additionalOpenCLKernelOptions.begin(), renderEngine->additionalOpenCLKernelOptions.end());
 	if ((renderEngine->additionalCUDAKernelOptions.size() > 0) &&
 			(intersectionDevice->GetDeviceDesc()->GetType() & DEVICE_TYPE_CUDA_ALL))
-		kernelsParameters += " " + renderEngine->additionalCUDAKernelOptions;
+		kernelsParameters.insert(kernelsParameters.end(), renderEngine->additionalCUDAKernelOptions.begin(), renderEngine->additionalCUDAKernelOptions.end());
 
 	// Build the kernel source/parameters hash
-	const string newKernelSrcHash = oclKernelPersistentCache::HashString(kernelsParameters) + "-" +
+	const string newKernelSrcHash = oclKernelPersistentCache::HashString(oclKernelPersistentCache::ToOptsString(kernelsParameters))
+			+ "-" +
 			oclKernelPersistentCache::HashString(kernelSource);
 	if (newKernelSrcHash == kernelSrcHash) {
 		// There is no need to re-compile the kernel

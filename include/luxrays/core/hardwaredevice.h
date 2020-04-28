@@ -116,8 +116,10 @@ public:
 	// Kernels handling for hardware (aka GPU) only applications
 	//--------------------------------------------------------------------------
 
+	void SetAdditionalCompileOpts(const std::vector<std::string> &opts);
+	
 	virtual void CompileProgram(HardwareDeviceProgram **program,
-			const std::string &programParameters, const std::string &programSource,
+			const std::vector<std::string> &programParameters, const std::string &programSource,
 			const std::string &programName) = 0;
 
 	virtual void GetKernel(HardwareDeviceProgram *program,
@@ -175,6 +177,7 @@ protected:
 	void AllocMemory(const size_t s) { usedMemory += s; }
 	void FreeMemory(const size_t s) { usedMemory -= s; }
 
+	std::vector<std::string> additionalCompileOpts;
 	size_t usedMemory;
 };
 
