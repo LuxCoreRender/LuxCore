@@ -113,7 +113,7 @@ OPENCL_FORCE_INLINE void SobolSampler_SplatSample(
 			FILM_PARAM);
 }
 
-#define overlap 32
+#define overlap 4
 
 OPENCL_FORCE_INLINE void SobolSamplerSharedData_GetNewBucket(__global SobolSamplerSharedData *samplerSharedData,
 		const uint bucketCount, uint *bucketIndex, uint *seed) {
@@ -191,7 +191,7 @@ OPENCL_FORCE_INLINE void SobolSampler_InitNewSample(
 		const uint pixelX = filmSubRegion0 + subRegionPixelX;
 		const uint pixelY = filmSubRegion2 + subRegionPixelY;
 
-		/*if (filmNoise) {
+		if (filmNoise) {
 			const float adaptiveStrength = samplerSharedData->adaptiveStrength;
 
 			if (adaptiveStrength > 0.f) {
@@ -225,7 +225,7 @@ OPENCL_FORCE_INLINE void SobolSampler_InitNewSample(
 					continue;
 				}
 			}
-		}*/
+		}
 
 		//----------------------------------------------------------------------
 		// This code crashes the AMD OpenCL compiler:
