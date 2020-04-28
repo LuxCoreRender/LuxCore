@@ -119,13 +119,17 @@ void Film::CreateHWContext() {
 			hardwareDevice->SetAdditionalCompileOpts(compileOpts);
 		}
 
-		if (hardwareDevice->GetDeviceDesc()->GetType() & DEVICE_TYPE_OPENCL_ALL) {
+		/*if (hardwareDevice->GetDeviceDesc()->GetType() & DEVICE_TYPE_OPENCL_ALL) {
 			// Suggested compiler options: -cl-fast-relaxed-math -cl-mad-enable
+			//
+			// NOTE: I should probably enable -cl-fast-relaxed-math -cl-mad-enable for OpenCL too even
+			// if this is not what I was doing in the past
+
 			vector<string> compileOpts;
 			compileOpts.push_back("-cl-fast-relaxed-math -cl-mad-enable");
 
 			hardwareDevice->SetAdditionalCompileOpts(compileOpts);
-		}
+		}*/
 
 		// Just an empty data set
 		dataSet = new DataSet(ctx);
