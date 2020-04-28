@@ -29,55 +29,53 @@ OPENCL_FORCE_INLINE void Film_SetPixel3(__global float *dst, __global  float *va
 	dst[2] = val[2];
 }
 
-OPENCL_FORCE_INLINE bool Film_MinPixel(__global float *dst, const float val) {
-#if defined(PARAM_USE_PIXEL_ATOMICS)
-	return AtomicMin(&dst[0], val);
-#else
-	if (val < dst[0]) {
-		dst[0] = val;
-		return true;
-	} else
-		return false;
-#endif
+OPENCL_FORCE_INLINE bool Film_MinPixel(const bool usePixelAtomics, __global float *dst, const float val) {
+	if (usePixelAtomics)
+		return AtomicMin(&dst[0], val);
+	else {
+		if (val < dst[0]) {
+			dst[0] = val;
+			return true;
+		} else
+			return false;
+	}
 }
 
-OPENCL_FORCE_INLINE void Film_IncPixelUInt(__global uint *dst) {
-#if defined(PARAM_USE_PIXEL_ATOMICS)
-	atomic_inc(dst);
-#else
-	*dst += 1;
-#endif
+OPENCL_FORCE_INLINE void Film_IncPixelUInt(const bool usePixelAtomics, __global uint *dst) {
+	if (usePixelAtomics)
+		atomic_inc(dst);
+	else
+		*dst += 1;
 }
 
-OPENCL_FORCE_INLINE void Film_AddPixelVal(__global float *dst, const float val) {
-#if defined(PARAM_USE_PIXEL_ATOMICS)
-	AtomicAdd(&dst[0], val);
-#else
-	dst[0] += val;
-#endif
+OPENCL_FORCE_INLINE void Film_AddPixelVal(const bool usePixelAtomics, __global float *dst, const float val) {
+	if (usePixelAtomics)
+		AtomicAdd(&dst[0], val);
+	else
+		dst[0] += val;
 }
 
-OPENCL_FORCE_INLINE void Film_AddWeightedPixel2Val(__global float *dst, const float val, const float weight) {
-#if defined(PARAM_USE_PIXEL_ATOMICS)
-	AtomicAdd(&dst[0], val * weight);
-	AtomicAdd(&dst[1], weight);
-#else
-	dst[0] += val * weight;
-	dst[1] += weight;
-#endif
+OPENCL_FORCE_INLINE void Film_AddWeightedPixel2Val(const bool usePixelAtomics, __global float *dst, const float val, const float weight) {
+	if (usePixelAtomics) {
+		AtomicAdd(&dst[0], val * weight);
+		AtomicAdd(&dst[1], weight);
+	} else {
+		dst[0] += val * weight;
+		dst[1] += weight;
+	}
 }
 
-OPENCL_FORCE_INLINE void Film_AddWeightedPixel2(__global float *dst, __global float *val, const float weight) {
-#if defined(PARAM_USE_PIXEL_ATOMICS)
-	AtomicAdd(&dst[0], val[0] * weight);
-	AtomicAdd(&dst[1], weight);
-#else
-	dst[0] += val[0] * weight;
-	dst[1] += weight;
-#endif
+OPENCL_FORCE_INLINE void Film_AddWeightedPixel2(const bool usePixelAtomics, __global float *dst, __global float *val, const float weight) {
+	if (usePixelAtomics) {
+		AtomicAdd(&dst[0], val[0] * weight);
+		AtomicAdd(&dst[1], weight);
+	} else {
+		dst[0] += val[0] * weight;
+		dst[1] += weight;
+	}
 }
 
-OPENCL_FORCE_INLINE void Film_AddWeightedPixel4Val(__global float *dst, float3 val, const float weight) {
+OPENCL_FORCE_INLINE void Film_AddWeightedPixel4Val(const bool usePixelAtomics, __global float *dst, float3 val, const float weight) {
 	const float r = val.x;
 	const float g = val.y;
 	const float b = val.z;
@@ -86,29 +84,29 @@ OPENCL_FORCE_INLINE void Film_AddWeightedPixel4Val(__global float *dst, float3 v
 			!isnan(g) && !isinf(g) &&
 			!isnan(b) && !isinf(b) &&
 			!isnan(weight) && !isinf(weight)) {
-#if defined(PARAM_USE_PIXEL_ATOMICS)
-		AtomicAdd(&dst[0], r * weight);
-		AtomicAdd(&dst[1], g * weight);
-		AtomicAdd(&dst[2], b * weight);
-		AtomicAdd(&dst[3], weight);
-#else
-		// The following code doesn't work with CUDA
-		/*float4 p = VLOAD4F(dst);
-		const float4 s = MAKE_FLOAT4(r * weight, g * weight, b * weight, weight);
-		p += s;
-		VSTORE4F(p, dst);*/
-		
-		dst[0] += r * weight;
-		dst[1] += g * weight;
-		dst[2] += b * weight;
-		dst[3] += weight;
-#endif
+		if (usePixelAtomics) {
+			AtomicAdd(&dst[0], r * weight);
+			AtomicAdd(&dst[1], g * weight);
+			AtomicAdd(&dst[2], b * weight);
+			AtomicAdd(&dst[3], weight);
+		} else {
+			// The following code doesn't work with CUDA
+			/*float4 p = VLOAD4F(dst);
+			const float4 s = MAKE_FLOAT4(r * weight, g * weight, b * weight, weight);
+			p += s;
+			VSTORE4F(p, dst);*/
+
+			dst[0] += r * weight;
+			dst[1] += g * weight;
+			dst[2] += b * weight;
+			dst[3] += weight;
+		}
 	} /*else {
 		printf("NaN/Inf. error: (%f, %f, %f) [%f]\n", r, g, b, weight);
 	}*/
 }
 
-OPENCL_FORCE_INLINE void Film_AddWeightedPixel4(__global float *dst, __global float *val, const float weight) {
+OPENCL_FORCE_INLINE void Film_AddWeightedPixel4(const bool usePixelAtomics, __global float *dst, __global float *val, const float weight) {
 	const float r = val[0];
 	const float g = val[1];
 	const float b = val[2];
@@ -117,23 +115,23 @@ OPENCL_FORCE_INLINE void Film_AddWeightedPixel4(__global float *dst, __global fl
 			!isnan(g) && !isinf(g) &&
 			!isnan(b) && !isinf(b) &&
 			!isnan(weight) && !isinf(weight)) {
-#if defined(PARAM_USE_PIXEL_ATOMICS)
-		AtomicAdd(&dst[0], r * weight);
-		AtomicAdd(&dst[1], g * weight);
-		AtomicAdd(&dst[2], b * weight);
-		AtomicAdd(&dst[3], weight);
-#else
-		// The following code doesn't work with CUDA
-		/*float4 p = VLOAD4F(dst);
-		const float4 s = MAKE_FLOAT4(r * weight, g * weight, b * weight, weight);
-		p += s;
-		VSTORE4F(p, dst);*/
-		
-		dst[0] += r * weight;
-		dst[1] += g * weight;
-		dst[2] += b * weight;
-		dst[3] += weight;
-#endif
+		if (usePixelAtomics) {
+			AtomicAdd(&dst[0], r * weight);
+			AtomicAdd(&dst[1], g * weight);
+			AtomicAdd(&dst[2], b * weight);
+			AtomicAdd(&dst[3], weight);
+		} else {
+			// The following code doesn't work with CUDA
+			/*float4 p = VLOAD4F(dst);
+			const float4 s = MAKE_FLOAT4(r * weight, g * weight, b * weight, weight);
+			p += s;
+			VSTORE4F(p, dst);*/
+
+			dst[0] += r * weight;
+			dst[1] += g * weight;
+			dst[2] += b * weight;
+			dst[3] += weight;
+		}
 	} /*else {
 		printf("NaN/Inf. error: (%f, %f, %f) [%f]\n", r, g, b, weight);
 	}*/
@@ -142,37 +140,39 @@ OPENCL_FORCE_INLINE void Film_AddWeightedPixel4(__global float *dst, __global fl
 OPENCL_FORCE_INLINE void Film_AddSampleResultColor(const uint x, const uint y,
 		__global SampleResult *sampleResult, const float weight
 		FILM_PARAM_DECL) {
+	const bool usePixelAtomics = film->usePixelAtomics;
+
 	const uint index1 = x + y * filmWidth;
 	const uint index2 = index1 * 2;
 	const uint index4 = index1 * 4;
 
 	for (uint i = 0; i < FILM_MAX_RADIANCE_GROUP_COUNT; ++i) {
 		if (filmRadianceGroup[i])
-			Film_AddWeightedPixel4(&((filmRadianceGroup[i])[index4]), sampleResult->radiancePerPixelNormalized[i].c, weight);
+			Film_AddWeightedPixel4(usePixelAtomics, &((filmRadianceGroup[i])[index4]), sampleResult->radiancePerPixelNormalized[i].c, weight);
 	}
 
 	if (film->hasChannelAlpha)
-		Film_AddWeightedPixel2(&filmAlpha[index2], &sampleResult->alpha, weight);
+		Film_AddWeightedPixel2(usePixelAtomics, &filmAlpha[index2], &sampleResult->alpha, weight);
 	if (film->hasChannelDirectDiffuse)
-		Film_AddWeightedPixel4(&filmDirectDiffuse[index4], sampleResult->directDiffuse.c, weight);
+		Film_AddWeightedPixel4(usePixelAtomics, &filmDirectDiffuse[index4], sampleResult->directDiffuse.c, weight);
 	if (film->hasChannelDirectGlossy)
-		Film_AddWeightedPixel4(&filmDirectGlossy[index4], sampleResult->directGlossy.c, weight);
+		Film_AddWeightedPixel4(usePixelAtomics, &filmDirectGlossy[index4], sampleResult->directGlossy.c, weight);
 	if (film->hasChannelEmission)
-		Film_AddWeightedPixel4(&filmEmission[index4], sampleResult->emission.c, weight);
+		Film_AddWeightedPixel4(usePixelAtomics, &filmEmission[index4], sampleResult->emission.c, weight);
 	if (film->hasChannelIndirectDiffuse)
-		Film_AddWeightedPixel4(&filmIndirectDiffuse[index4], sampleResult->indirectDiffuse.c, weight);
+		Film_AddWeightedPixel4(usePixelAtomics, &filmIndirectDiffuse[index4], sampleResult->indirectDiffuse.c, weight);
 	if (film->hasChannelIndirectGlossy)
-		Film_AddWeightedPixel4(&filmIndirectGlossy[index4], sampleResult->indirectGlossy.c, weight);
+		Film_AddWeightedPixel4(usePixelAtomics, &filmIndirectGlossy[index4], sampleResult->indirectGlossy.c, weight);
 	if (film->hasChannelIndirectSpecular)
-		Film_AddWeightedPixel4(&filmIndirectSpecular[index4], sampleResult->indirectSpecular.c, weight);
+		Film_AddWeightedPixel4(usePixelAtomics, &filmIndirectSpecular[index4], sampleResult->indirectSpecular.c, weight);
 	if (film->hasChannelMaterialIDMask) {
 		const float materialIDMask = (sampleResult->materialID == film->channelMaterialIDMask) ? 1.f : 0.f;
-		Film_AddWeightedPixel2Val(&filmMaterialIDMask[index2], materialIDMask, weight);
+		Film_AddWeightedPixel2Val(usePixelAtomics, &filmMaterialIDMask[index2], materialIDMask, weight);
 	}
 	if (film->hasChannelDirectShadowMask)
-		Film_AddWeightedPixel2(&filmDirectShadowMask[index2], &sampleResult->directShadowMask, weight);
+		Film_AddWeightedPixel2(usePixelAtomics, &filmDirectShadowMask[index2], &sampleResult->directShadowMask, weight);
 	if (film->hasChannelIndirectShadowMask)
-		Film_AddWeightedPixel2(&filmIndirectShadowMask[index2], &sampleResult->indirectShadowMask, weight);
+		Film_AddWeightedPixel2(usePixelAtomics, &filmIndirectShadowMask[index2], &sampleResult->indirectShadowMask, weight);
 	if (film->hasChannelByMaterialID) {
 		float3 byMaterialIDColor = BLACK;
 
@@ -182,13 +182,13 @@ OPENCL_FORCE_INLINE void Film_AddSampleResultColor(const uint x, const uint y,
 					byMaterialIDColor += VLOAD3F(sampleResult->radiancePerPixelNormalized[i].c);
 			}
 		}
-		Film_AddWeightedPixel4Val(&filmByMaterialID[index4], byMaterialIDColor, weight);
+		Film_AddWeightedPixel4Val(usePixelAtomics, &filmByMaterialID[index4], byMaterialIDColor, weight);
 	}
 	if (film->hasChannelIrradiance)
-		Film_AddWeightedPixel4(&filmIrradiance[index4], sampleResult->irradiance.c, weight);
+		Film_AddWeightedPixel4(usePixelAtomics, &filmIrradiance[index4], sampleResult->irradiance.c, weight);
 	if (film->hasChannelObjectIDMask) {
 		const float objectIDMask = (sampleResult->objectID == film->channelObjectIDMask) ? 1.f : 0.f;
-		Film_AddWeightedPixel2Val(&filmObjectIDMask[index2], objectIDMask, weight);
+		Film_AddWeightedPixel2Val(usePixelAtomics, &filmObjectIDMask[index2], objectIDMask, weight);
 	}
 	if (film->hasChannelByObjectID) {
 		float3 byObjectIDColor = BLACK;
@@ -199,7 +199,7 @@ OPENCL_FORCE_INLINE void Film_AddSampleResultColor(const uint x, const uint y,
 					byObjectIDColor += VLOAD3F(sampleResult->radiancePerPixelNormalized[i].c);
 			}
 		}
-		Film_AddWeightedPixel4Val(&filmByObjectID[index4], byObjectIDColor, weight);
+		Film_AddWeightedPixel4Val(usePixelAtomics, &filmByObjectID[index4], byObjectIDColor, weight);
 	}
 	if (film->hasChannelMaterialIDColor) {
 		const uint matID = sampleResult->materialID;
@@ -209,24 +209,26 @@ OPENCL_FORCE_INLINE void Film_AddSampleResultColor(const uint x, const uint y,
 		matIDCol.y = ((matID & 0x00ff00u) >> 8) * (1.f / 255.f);
 		matIDCol.z = ((matID & 0xff0000u) >> 16) * (1.f / 255.f);
 
-		Film_AddWeightedPixel4Val(&filmMaterialIDColor[index4], matIDCol, weight);
+		Film_AddWeightedPixel4Val(usePixelAtomics, &filmMaterialIDColor[index4], matIDCol, weight);
 	}
 	if (film->hasChannelAlbedo)
-		Film_AddWeightedPixel4(&filmAlbedo[index4], sampleResult->albedo.c, weight);
+		Film_AddWeightedPixel4(usePixelAtomics, &filmAlbedo[index4], sampleResult->albedo.c, weight);
 	if (film->hasChannelAvgShadingNormal)
-		Film_AddWeightedPixel4(&filmAvgShadingNormal[index4], &sampleResult->shadingNormal.x, weight);
+		Film_AddWeightedPixel4(usePixelAtomics, &filmAvgShadingNormal[index4], &sampleResult->shadingNormal.x, weight);
 }
 
 OPENCL_FORCE_INLINE void Film_AddSampleResultData(const uint x, const uint y,
 		__global SampleResult *sampleResult
 		FILM_PARAM_DECL) {
+	const bool usePixelAtomics = film->usePixelAtomics;
+
 	const uint index1 = x + y * filmWidth;
 	const uint index2 = index1 * 2;
 	const uint index3 = index1 * 3;
 
 	bool depthWrite = true;
 	if (film->hasChannelDepth)
-		depthWrite = Film_MinPixel(&filmDepth[index1], sampleResult->depth);
+		depthWrite = Film_MinPixel(usePixelAtomics, &filmDepth[index1], sampleResult->depth);
 
 	if (depthWrite) {
 		if (film->hasChannelPosition)
@@ -247,10 +249,10 @@ OPENCL_FORCE_INLINE void Film_AddSampleResultData(const uint x, const uint y,
 	}
 
 	if (film->hasChannelRayCount)
-		Film_AddPixelVal(&filmRayCount[index1], sampleResult->rayCount);
+		Film_AddPixelVal(usePixelAtomics, &filmRayCount[index1], sampleResult->rayCount);
 
 	if (film->hasChannelSampleCount)
-		Film_IncPixelUInt(&filmSampleCount[index1]);
+		Film_IncPixelUInt(usePixelAtomics, &filmSampleCount[index1]);
 }
 
 OPENCL_FORCE_NOT_INLINE void Film_AddSample(

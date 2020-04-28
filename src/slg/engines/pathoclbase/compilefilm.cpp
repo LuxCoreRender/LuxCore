@@ -27,6 +27,7 @@ using namespace slg;
 void CompiledScene::CompileFilm(const Film &film, slg::ocl::Film &oclFilm) {
 	oclFilm.radianceGroupCount = film.GetRadianceGroupCount();
 	oclFilm.bcdDenoiserEnable = film.GetDenoiser().IsEnabled();
+	oclFilm.usePixelAtomics = false;
 
 	// Film channels (AOVs)
 

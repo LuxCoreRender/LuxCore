@@ -174,8 +174,7 @@ protected:
 	static luxrays::oclKernelCache *AllocKernelCache(const std::string &type);
 	static std::string GetKernelParamters(luxrays::HardwareIntersectionDevice *intersectionDevice,
 			const std::string renderEngineType,
-			const float epsilonMin, const float epsilonMax,
-			const bool usePixelAtomics);
+			const float epsilonMin, const float epsilonMax);
 	static std::string GetKernelSources();
 
 	u_int threadIndex;

@@ -21,7 +21,6 @@
 // List of symbols defined at compile time:
 //  PARAM_RAY_EPSILON_MIN
 //  PARAM_RAY_EPSILON_MAX
-//  PARAM_USE_PIXEL_ATOMICS
 
 /*void MangleMemory(__global unsigned char *ptr, const size_t size) {
 	Seed seed;

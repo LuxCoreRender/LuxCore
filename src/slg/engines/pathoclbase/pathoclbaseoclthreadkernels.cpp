@@ -66,8 +66,7 @@ void PathOCLBaseOCLRenderThread::CompileKernel(HardwareIntersectionDevice *devic
 string PathOCLBaseOCLRenderThread::GetKernelParamters(
 		HardwareIntersectionDevice *intersectionDevice,
 		const string renderEngineType,
-		const float epsilonMin, const float epsilonMax,
-		const bool usePixelAtomics) {
+		const float epsilonMin, const float epsilonMax) {
 	// Set #define symbols
 	stringstream ssParams;
 	ssParams.precision(6);
@@ -78,9 +77,6 @@ string PathOCLBaseOCLRenderThread::GetKernelParamters(
 			" -D PARAM_RAY_EPSILON_MIN=" << epsilonMin << "f"
 			" -D PARAM_RAY_EPSILON_MAX=" << epsilonMax << "f"
 			;
-
-	if (usePixelAtomics)
-		ssParams << " -D PARAM_USE_PIXEL_ATOMICS";
 
 	const OpenCLDeviceDescription *oclDeviceDesc = dynamic_cast<const OpenCLDeviceDescription *>(intersectionDevice->GetDeviceDesc());
 	if (oclDeviceDesc) {
@@ -268,11 +264,9 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			throw runtime_error("Unknown accelerator in PathOCLBaseRenderThread::InitKernels()");
 	}
 
-	const bool usePixelAtomics = renderEngine->renderConfig->GetProperty("pathocl.pixelatomics.enable").Get<bool>();
 	kernelsParameters = GetKernelParamters(intersectionDevice,
 			RenderEngine::RenderEngineType2String(renderEngine->GetType()),
-			MachineEpsilon::GetMin(), MachineEpsilon::GetMax(),
-			usePixelAtomics);
+			MachineEpsilon::GetMin(), MachineEpsilon::GetMax());
 
 	const string kernelSource = GetKernelSources();
 

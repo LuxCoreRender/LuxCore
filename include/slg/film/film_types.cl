@@ -24,7 +24,7 @@
 
 typedef struct {
 	unsigned int radianceGroupCount;
-	int bcdDenoiserEnable;
+	int bcdDenoiserEnable, usePixelAtomics;
 	
 	// Film channels (AOVs)
 	int hasChannelAlpha;

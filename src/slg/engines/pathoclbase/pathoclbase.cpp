@@ -155,6 +155,7 @@ void PathOCLBaseRenderEngine::InitGPUTaskConfiguration() {
 
 	// Film configuration
 	CompiledScene::CompileFilm(*film, taskConfig.film);
+	taskConfig.film.usePixelAtomics = renderConfig->GetProperty("pathocl.pixelatomics.enable").Get<bool>();
 }
 
 void PathOCLBaseRenderEngine::InitPixelFilterDistribution() {
