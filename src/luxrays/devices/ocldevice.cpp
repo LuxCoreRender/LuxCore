@@ -273,7 +273,7 @@ void OpenCLDevice::SetKernelArgBuffer(HardwareDeviceKernel *kernel,
 	assert (oclDeviceKernel);
 
 	const OpenCLDeviceBuffer *oclDeviceBuff = dynamic_cast<const OpenCLDeviceBuffer *>(buff);
-	if (oclDeviceBuff)
+	if (oclDeviceBuff &&  oclDeviceBuff->oclBuff)
 		oclDeviceKernel->oclKernel->setArg(index, *(oclDeviceBuff->oclBuff));
 	else
 		oclDeviceKernel->oclKernel->setArg(index, nullptr);
