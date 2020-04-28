@@ -113,8 +113,6 @@ OPENCL_FORCE_INLINE void SobolSampler_SplatSample(
 			FILM_PARAM);
 }
 
-#define overlap 4
-
 OPENCL_FORCE_INLINE void SobolSamplerSharedData_GetNewBucket(__global SobolSamplerSharedData *samplerSharedData,
 		const uint bucketCount, uint *bucketIndex, uint *seed) {
 	*bucketIndex = atomic_inc(&samplerSharedData->bucketIndex) % bucketCount;
@@ -131,14 +129,16 @@ OPENCL_FORCE_INLINE void SobolSampler_InitNewSample(
 		const uint filmSubRegion2, const uint filmSubRegion3
 		SAMPLER_PARAM_DECL) {
 	const size_t gid = get_global_id(0);
+	__constant const Sampler *sampler = &taskConfig->sampler;
 	__global SobolSamplerSharedData *samplerSharedData = (__global SobolSamplerSharedData *)samplerSharedDataBuff;
 	__global SobolSample *samples = (__global SobolSample *)samplesBuff;
 	__global SobolSample *sample = &samples[gid];
 	__global float *samplesData = &samplesDataBuff[gid * SOBOLSAMPLER_TOTAL_U_SIZE];
 
-	const uint bucketSize = samplerSharedData->bucketSize;
-	const uint tileSize = samplerSharedData->tileSize;
-	const uint superSampling = samplerSharedData->superSampling;
+	const uint bucketSize = sampler->sobol.bucketSize;
+	const uint tileSize = sampler->sobol.tileSize;
+	const uint superSampling = sampler->sobol.superSampling;
+	const uint overlapping = sampler->sobol.overlapping;
 	
 	const uint subRegionWidth = filmSubRegion1 - filmSubRegion0 + 1;
 	const uint subRegionHeight = filmSubRegion3 - filmSubRegion2 + 1;
@@ -146,7 +146,7 @@ OPENCL_FORCE_INLINE void SobolSampler_InitNewSample(
 	const uint tiletWidthCount = (subRegionWidth + tileSize - 1) / tileSize;
 	const uint tileHeightCount = (subRegionHeight + tileSize - 1) / tileSize;
 
-	const uint bucketCount = overlap * (tiletWidthCount * tileSize * tileHeightCount * tileSize + bucketSize - 1)/ bucketSize;
+	const uint bucketCount = overlapping * (tiletWidthCount * tileSize * tileHeightCount * tileSize + bucketSize - 1) / bucketSize;
 
 	// Update pixelIndexOffset
 
@@ -177,7 +177,7 @@ OPENCL_FORCE_INLINE void SobolSampler_InitNewSample(
 
 		// Transform the bucket index in a pixel coordinate
 
-		const uint pixelBucketIndex = (bucketIndex / overlap) * bucketSize + pixelOffset;
+		const uint pixelBucketIndex = (bucketIndex / overlapping) * bucketSize + pixelOffset;
 		const uint mortonCurveOffset = pixelBucketIndex % (tileSize * tileSize);
 		const uint pixelTileIndex = pixelBucketIndex / (tileSize * tileSize);
 
@@ -192,7 +192,7 @@ OPENCL_FORCE_INLINE void SobolSampler_InitNewSample(
 		const uint pixelY = filmSubRegion2 + subRegionPixelY;
 
 		if (filmNoise) {
-			const float adaptiveStrength = samplerSharedData->adaptiveStrength;
+			const float adaptiveStrength = sampler->sobol.adaptiveStrength;
 
 			if (adaptiveStrength > 0.f) {
 				// Pixels are sampled in accordance with how far from convergence they are
@@ -207,7 +207,7 @@ OPENCL_FORCE_INLINE void SobolSampler_InitNewSample(
 					if (isinf(noise))
 						threshold = userImportance;
 					else
-						threshold = (userImportance > 0.f) ? Lerp(samplerSharedData->adaptiveUserImportanceWeight, noise, userImportance) : 0.f;
+						threshold = (userImportance > 0.f) ? Lerp(sampler->sobol.adaptiveUserImportanceWeight, noise, userImportance) : 0.f;
 				} else
 					threshold = noise;
 
@@ -296,13 +296,14 @@ OPENCL_FORCE_INLINE bool SobolSampler_Init(__constant const GPUTaskConfiguration
 		const uint filmSubRegion2, const uint filmSubRegion3
 		SAMPLER_PARAM_DECL) {
 	const size_t gid = get_global_id(0);
+	__constant const Sampler *sampler = &taskConfig->sampler;
 	__global SobolSamplerSharedData *samplerSharedData = (__global SobolSamplerSharedData *)samplerSharedDataBuff;
 	__global SobolSample *samples = (__global SobolSample *)samplesBuff;
 	__global SobolSample *sample = &samples[gid];
 
-	const uint bucketSize = samplerSharedData->bucketSize;
+	const uint bucketSize = sampler->sobol.bucketSize;
 	sample->pixelOffset = bucketSize * bucketSize;
-	sample->passOffset = samplerSharedData->superSampling;
+	sample->passOffset = sampler->sobol.superSampling;
 
 	SobolSampler_NextSample(taskConfig,
 			filmNoise,

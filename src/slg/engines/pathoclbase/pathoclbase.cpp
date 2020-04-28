@@ -156,6 +156,10 @@ void PathOCLBaseRenderEngine::InitGPUTaskConfiguration() {
 	// Film configuration
 	CompiledScene::CompileFilm(*film, taskConfig.film);
 	taskConfig.film.usePixelAtomics = renderConfig->GetProperty("pathocl.pixelatomics.enable").Get<bool>();
+	if ((taskConfig.sampler.type == slg::ocl::SOBOL) && (taskConfig.sampler.sobol.overlapping > 1)) {
+		// I need to use atomics in this case
+		taskConfig.film.usePixelAtomics = true;
+	}
 }
 
 void PathOCLBaseRenderEngine::InitPixelFilterDistribution() {

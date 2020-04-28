@@ -77,7 +77,8 @@ public:
 	SobolSampler(luxrays::RandomGenerator *rnd, Film *flm,
 			const FilmSampleSplatter *flmSplatter, const bool imgSamplesEnable,
 			const float adaptiveStr, const float adaptiveUserImpWeight,
-			SobolSamplerSharedData *samplerSharedData);
+			const u_int bucketSize, const u_int tileSize, const u_int superSampling,
+			const u_int overlapping, SobolSamplerSharedData *samplerSharedData);
 	virtual ~SobolSampler();
 
 	virtual SamplerType GetType() const { return GetObjectType(); }
@@ -110,6 +111,7 @@ private:
 	SobolSamplerSharedData *sharedData;
 	SobolSequence sobolSequence;
 	float adaptiveStrength, adaptiveUserImportanceWeight;
+	u_int bucketSize, tileSize, superSampling, overlapping;
 
 	u_int pixelIndexBase, pixelIndexOffset, pass;
 	luxrays::TauswortheRandomGenerator rngGenerator;

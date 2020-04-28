@@ -90,9 +90,12 @@ SamplerSharedData *SobolSamplerSharedData::FromProperties(const Properties &cfg,
 SobolSampler::SobolSampler(RandomGenerator *rnd, Film *flm,
 		const FilmSampleSplatter *flmSplatter, const bool imgSamplesEnable,
 		const float adaptiveStr, const float adaptiveUserImpWeight,
-		SobolSamplerSharedData *samplerSharedData) : Sampler(rnd, flm, flmSplatter, imgSamplesEnable),
+		const u_int bucketSz, const u_int tileSz, const u_int superSmpl,
+		const u_int overlap, SobolSamplerSharedData *samplerSharedData) :
+		Sampler(rnd, flm, flmSplatter, imgSamplesEnable),
 		sharedData(samplerSharedData), sobolSequence(), adaptiveStrength(adaptiveStr),
-		adaptiveUserImportanceWeight(adaptiveUserImpWeight), rngGenerator() {
+		adaptiveUserImportanceWeight(adaptiveUserImpWeight), bucketSize(bucketSz),
+		tileSize(tileSz), superSampling(superSmpl), overlapping(overlap), rngGenerator() {
 }
 
 SobolSampler::~SobolSampler() {
@@ -231,7 +234,11 @@ void SobolSampler::NextSample(const vector<SampleResult> &sampleResults) {
 Properties SobolSampler::ToProperties() const {
 	return Sampler::ToProperties() <<
 			Property("sampler.sobol.adaptive.strength")(adaptiveStrength) <<
-			Property("sampler.sobol.adaptive.userimportanceweight")(adaptiveUserImportanceWeight);
+			Property("sampler.sobol.adaptive.userimportanceweight")(adaptiveUserImportanceWeight) <<
+			Property("sampler.sobol.buketsize")(bucketSize) <<
+			Property("sampler.sobol.tilesize")(tileSize) <<
+			Property("sampler.sobol.supersampling")(superSampling) <<
+			Property("sampler.sobol.overlapping")(overlapping);
 }
 
 //------------------------------------------------------------------------------
@@ -243,7 +250,11 @@ Properties SobolSampler::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("sampler.type")) <<
 			cfg.Get(GetDefaultProps().Get("sampler.imagesamples.enable")) <<
 			cfg.Get(GetDefaultProps().Get("sampler.sobol.adaptive.strength")) <<
-			cfg.Get(GetDefaultProps().Get("sampler.sobol.adaptive.userimportanceweight"));
+			cfg.Get(GetDefaultProps().Get("sampler.sobol.adaptive.userimportanceweight")) <<
+			cfg.Get(GetDefaultProps().Get("sampler.sobol.buketsize")) <<
+			cfg.Get(GetDefaultProps().Get("sampler.sobol.tilesize")) <<
+			cfg.Get(GetDefaultProps().Get("sampler.sobol.supersampling")) <<
+			cfg.Get(GetDefaultProps().Get("sampler.sobol.overlapping"));
 }
 
 Sampler *SobolSampler::FromProperties(const Properties &cfg, RandomGenerator *rndGen,
@@ -252,9 +263,14 @@ Sampler *SobolSampler::FromProperties(const Properties &cfg, RandomGenerator *rn
 
 	const float adaptiveStrength = Clamp(cfg.Get(GetDefaultProps().Get("sampler.sobol.adaptive.strength")).Get<float>(), 0.f, .95f);
 	const float adaptiveUserImportanceWeight = cfg.Get(GetDefaultProps().Get("sampler.sobol.adaptive.userimportanceweight")).Get<float>();
+	const float bucketSize = RoundUpPow2(cfg.Get(GetDefaultProps().Get("sampler.sobol.buketsize")).Get<u_int>());
+	const float tileSize = RoundUpPow2(cfg.Get(GetDefaultProps().Get("sampler.sobol.tilesize")).Get<u_int>());
+	const float superSampling = cfg.Get(GetDefaultProps().Get("sampler.sobol.supersampling")).Get<u_int>();
+	const float overlapping = cfg.Get(GetDefaultProps().Get("sampler.sobol.overlapping")).Get<u_int>();
 
 	return new SobolSampler(rndGen, film, flmSplatter, imageSamplesEnable,
 			adaptiveStrength, adaptiveUserImportanceWeight,
+			bucketSize, tileSize, superSampling, overlapping,
 			(SobolSamplerSharedData *)sharedData);
 }
 
@@ -264,6 +280,10 @@ slg::ocl::Sampler *SobolSampler::FromPropertiesOCL(const Properties &cfg) {
 	oclSampler->type = slg::ocl::SOBOL;
 	oclSampler->sobol.adaptiveStrength = Clamp(cfg.Get(GetDefaultProps().Get("sampler.sobol.adaptive.strength")).Get<float>(), 0.f, .95f);
 	oclSampler->sobol.adaptiveUserImportanceWeight = cfg.Get(GetDefaultProps().Get("sampler.sobol.adaptive.userimportanceweight")).Get<float>();
+	oclSampler->sobol.bucketSize = RoundUpPow2(cfg.Get(GetDefaultProps().Get("sampler.sobol.buketsize")).Get<u_int>());
+	oclSampler->sobol.tileSize = RoundUpPow2(cfg.Get(GetDefaultProps().Get("sampler.sobol.tilesize")).Get<u_int>());
+	oclSampler->sobol.superSampling = cfg.Get(GetDefaultProps().Get("sampler.sobol.supersampling")).Get<u_int>();
+	oclSampler->sobol.overlapping = cfg.Get(GetDefaultProps().Get("sampler.sobol.overlapping")).Get<u_int>();
 
 	return oclSampler;
 }
@@ -284,7 +304,11 @@ const Properties &SobolSampler::GetDefaultProps() {
 			Sampler::GetDefaultProps() <<
 			Property("sampler.type")(GetObjectTag()) <<
 			Property("sampler.sobol.adaptive.strength")(.95f) <<
-			Property("sampler.sobol.adaptive.userimportanceweight")(.75f);
+			Property("sampler.sobol.adaptive.userimportanceweight")(.75f) <<
+			Property("sampler.sobol.buketsize")(16) <<
+			Property("sampler.sobol.tilesize")(16) <<
+			Property("sampler.sobol.supersampling")(1) <<
+			Property("sampler.sobol.overlapping")(1);
 
 	return props;
 }

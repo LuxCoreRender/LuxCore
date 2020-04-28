@@ -54,9 +54,6 @@ typedef struct {
 	unsigned int pixelIndexBase, pixelIndexOffset, pixelIndexRandomStart;
 } RandomSample;
 
-// This is defined only under OpenCL because of variable size structures
-#if defined(SLG_OPENCL_KERNEL)
-
 typedef struct {
 	float totalI;
 
@@ -68,8 +65,6 @@ typedef struct {
 
 	SampleResult currentResult;
 } MetropolisSample;
-
-#endif
 
 typedef struct {
 	unsigned int bucketIndex, pixelOffset, passOffset, pass, pixelIndexRandomStart;
@@ -98,8 +93,6 @@ typedef struct {
 typedef struct {
 	unsigned int seedBase;
 	unsigned int bucketIndex;
-	float adaptiveStrength, adaptiveUserImportanceWeight;
-	unsigned int bucketSize, tileSize, superSampling;
 
 	// This is used to compute the size of appended data at the end
 	// of SobolSamplerSharedData
@@ -138,8 +131,8 @@ typedef struct {
 			float adaptiveStrength, adaptiveUserImportanceWeight;
 		} random;
 		struct {
-			unsigned int bucketSize, tileSize, superSampling;
 			float adaptiveStrength, adaptiveUserImportanceWeight;
+			unsigned int bucketSize, tileSize, superSampling, overlapping;
 		} sobol;
 		struct {
 			float largeMutationProbability, imageMutationRange;
