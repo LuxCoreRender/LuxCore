@@ -31,10 +31,11 @@ typedef enum {
 
 typedef struct {
 	ImageMapStorageType storageType;
+	ImageWrapType wrapType;
 	unsigned int channelCount, width, height;
 	unsigned int pageIndex;
-	unsigned long pixelsIndex;
-	ImageWrapType wrapType;
+	// The following field must be 64bit aligned (for OpenCL)
+	size_t pixelsIndex;
 } ImageMap;
 
 //------------------------------------------------------------------------------
