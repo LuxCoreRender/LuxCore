@@ -2,7 +2,7 @@
 
 # Install deps
 sudo apt-get -qq update
-sudo apt-get install -y libtool-bin cmake flex bison libgtk-3-dev libgl1-mesa-dev python3-numpy ocl-icd-opencl-dev
+sudo apt-get install -y libtool-bin cmake flex bison libgtk-3-dev libgl1-mesa-dev python3-numpy ocl-icd-opencl-dev nvidia-cuda-dev
 
 # Get cl.hpp file
 wget https://www.khronos.org/registry/OpenCL/api/2.1/cl.hpp
@@ -46,5 +46,16 @@ git clone .. LuxCore-opencl$SDK_BUILD
 ./build-64-sse2 LuxCore-opencl$SDK_BUILD 5
 cp target-64-sse2/LuxCore-opencl$SDK_BUILD.tar.bz2 target-64-sse2/luxcorerender-$VERSION_STRING-linux64-opencl$SDK_BUILD.tar.bz2
 mv target-64-sse2/LuxCore-opencl$SDK_BUILD.tar.bz2 $BUILD_ARTIFACTSTAGINGDIRECTORY/luxcorerender-$VERSION_STRING-linux64-opencl$SDK_BUILD.tar.bz2
+
+#==========================================================================
+# Compiling CUDA version"
+#==========================================================================
+
+# Clone LuxCore (this is a bit a waste but LinuxCompile procedure
+# doesn't work with symbolic links)
+git clone .. LuxCore-cuda$SDK_BUILD
+./build-64-sse2 LuxCore-cuda$SDK_BUILD 5
+cp target-64-sse2/LuxCore-cuda$SDK_BUILD.tar.bz2 target-64-sse2/luxcorerender-$VERSION_STRING-linux64-cuda$SDK_BUILD.tar.bz2
+mv target-64-sse2/LuxCore-cuda$SDK_BUILD.tar.bz2 $BUILD_ARTIFACTSTAGINGDIRECTORY/luxcorerender-$VERSION_STRING-linux64-cuda$SDK_BUILD.tar.bz2
 
 cd ..
