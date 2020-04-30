@@ -209,17 +209,17 @@ void PathOCLRenderEngine::UpdateTaskCount() {
 		taskCount = film->GetWidth() * film->GetHeight() / intersectionDevices.size();
 		taskCount = RoundUp<u_int>(taskCount, 8192);
 	} else {
-		const u_int defaultTaskCount = 128u * 1024u;
+		const u_int defaultTaskCount = 512ull * 1024ull;
 
 		// Compute the cap to the number of tasks
 		u_int taskCap = defaultTaskCount;
 		BOOST_FOREACH(DeviceDescription *devDesc, selectedDeviceDescs) {
-			if (devDesc->GetType() & DEVICE_TYPE_OPENCL_ALL) {
-				if (devDesc->GetMaxMemoryAllocSize() >= 128u * 1024u * 1024u)
-					taskCap = Min(taskCap, 128u * 1024u);
-				else
-					taskCap = Min(taskCap, 64u * 1024u);
-			}
+			if (devDesc->GetMaxMemory() <= 8ull* 1024ull * 1024ull * 1024ull) // For 8GB cards
+				taskCap = Min(taskCap, 256u * 1024u);
+			else if (devDesc->GetMaxMemory() <= 4ull * 1024ull * 1024ull * 1024ull) // For 4GB cards
+				taskCap = Min(taskCap, 128u * 1024u);
+			else if (devDesc->GetMaxMemory() <= 2ull * 1024ull * 1024ull * 1024ull) // For 2GB cards
+				taskCap = Min(taskCap, 64u * 1024u);
 		}
 
 		if (cfg.Get(Property("opencl.task.count")(defaultTaskCount)).Get<string>() == "AUTO")
