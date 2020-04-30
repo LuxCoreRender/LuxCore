@@ -43,7 +43,7 @@ public:
 
 	virtual void Reset();
 
-	void GetNewBucket(const uint bucketCount, uint *bucketIndex, uint *seed);
+	void GetNewBucket(const u_int bucketCount, u_int *bucketIndex, u_int *seed);
 	u_int GetNewPixelPass(const u_int pixelIndex = 0);
 	
 	static SamplerSharedData *FromProperties(const luxrays::Properties &cfg,

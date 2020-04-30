@@ -43,7 +43,7 @@ public:
 
 	virtual void Reset();
 
-	void GetNewBucket(const uint bucketCount, uint *newBucketIndex);
+	void GetNewBucket(const u_int bucketCount, u_int *newBucketIndex);
 	
 	static SamplerSharedData *FromProperties(const luxrays::Properties &cfg,
 			luxrays::RandomGenerator *rndGen, Film *film);

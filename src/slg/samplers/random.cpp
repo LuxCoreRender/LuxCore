@@ -47,8 +47,8 @@ void RandomSamplerSharedData::Reset() {
 	bucketIndex = 0;
 }
 
-void RandomSamplerSharedData::GetNewBucket(const uint bucketCount,
-		uint *newBucketIndex) {
+void RandomSamplerSharedData::GetNewBucket(const u_int bucketCount,
+		u_int *newBucketIndex) {
 	*newBucketIndex = AtomicInc(&bucketIndex) % bucketCount;
 }
 
@@ -74,13 +74,13 @@ RandomSampler::RandomSampler(luxrays::RandomGenerator *rnd, Film *flm,
 void RandomSampler::InitNewSample() {
 const u_int *filmSubRegion = film->GetSubRegion();
 
-	const uint subRegionWidth = filmSubRegion[1] - filmSubRegion[0] + 1;
-	const uint subRegionHeight = filmSubRegion[3] - filmSubRegion[2] + 1;
+	const u_int subRegionWidth = filmSubRegion[1] - filmSubRegion[0] + 1;
+	const u_int subRegionHeight = filmSubRegion[3] - filmSubRegion[2] + 1;
 
-	const uint tiletWidthCount = (subRegionWidth + tileSize - 1) / tileSize;
-	const uint tileHeightCount = (subRegionHeight + tileSize - 1) / tileSize;
+	const u_int tiletWidthCount = (subRegionWidth + tileSize - 1) / tileSize;
+	const u_int tileHeightCount = (subRegionHeight + tileSize - 1) / tileSize;
 
-	const uint bucketCount = overlapping * (tiletWidthCount * tileSize * tileHeightCount * tileSize + bucketSize - 1) / bucketSize;
+	const u_int bucketCount = overlapping * (tiletWidthCount * tileSize * tileHeightCount * tileSize + bucketSize - 1) / bucketSize;
 
 	// Update pixelIndexOffset
 
@@ -106,12 +106,12 @@ const u_int *filmSubRegion = film->GetSubRegion();
 		if (imageSamplesEnable && film) {
 			// Transform the bucket index in a pixel coordinate
 
-			const uint pixelBucketIndex = (bucketIndex / overlapping) * bucketSize + pixelOffset;
-			const uint mortonCurveOffset = pixelBucketIndex % (tileSize * tileSize);
-			const uint pixelTileIndex = pixelBucketIndex / (tileSize * tileSize);
+			const u_int pixelBucketIndex = (bucketIndex / overlapping) * bucketSize + pixelOffset;
+			const u_int mortonCurveOffset = pixelBucketIndex % (tileSize * tileSize);
+			const u_int pixelTileIndex = pixelBucketIndex / (tileSize * tileSize);
 
-			const uint subRegionPixelX = (pixelTileIndex % tiletWidthCount) * tileSize + DecodeMorton2X(mortonCurveOffset);
-			const uint subRegionPixelY = (pixelTileIndex / tiletWidthCount) * tileSize + DecodeMorton2Y(mortonCurveOffset);
+			const u_int subRegionPixelX = (pixelTileIndex % tiletWidthCount) * tileSize + DecodeMorton2X(mortonCurveOffset);
+			const u_int subRegionPixelY = (pixelTileIndex / tiletWidthCount) * tileSize + DecodeMorton2Y(mortonCurveOffset);
 			if ((subRegionPixelX >= subRegionWidth) || (subRegionPixelY >= subRegionHeight)) {
 				// Skip the pixels out of the film sub region
 				continue;

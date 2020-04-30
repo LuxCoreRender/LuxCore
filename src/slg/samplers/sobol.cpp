@@ -60,8 +60,8 @@ void SobolSamplerSharedData::Reset() {
 	bucketIndex = 0;
 }
 
-void SobolSamplerSharedData::GetNewBucket(const uint bucketCount,
-		uint *newBucketIndex, uint *seed) {
+void SobolSamplerSharedData::GetNewBucket(const u_int bucketCount,
+		u_int *newBucketIndex, u_int *seed) {
 	*newBucketIndex = AtomicInc(&bucketIndex) % bucketCount;
 
 	*seed = (seedBase + *newBucketIndex) % (0xFFFFFFFFu - 1u) + 1u;
@@ -100,13 +100,13 @@ SobolSampler::~SobolSampler() {
 void SobolSampler::InitNewSample() {
 	const u_int *filmSubRegion = film->GetSubRegion();
 
-	const uint subRegionWidth = filmSubRegion[1] - filmSubRegion[0] + 1;
-	const uint subRegionHeight = filmSubRegion[3] - filmSubRegion[2] + 1;
+	const u_int subRegionWidth = filmSubRegion[1] - filmSubRegion[0] + 1;
+	const u_int subRegionHeight = filmSubRegion[3] - filmSubRegion[2] + 1;
 
-	const uint tiletWidthCount = (subRegionWidth + tileSize - 1) / tileSize;
-	const uint tileHeightCount = (subRegionHeight + tileSize - 1) / tileSize;
+	const u_int tiletWidthCount = (subRegionWidth + tileSize - 1) / tileSize;
+	const u_int tileHeightCount = (subRegionHeight + tileSize - 1) / tileSize;
 
-	const uint bucketCount = overlapping * (tiletWidthCount * tileSize * tileHeightCount * tileSize + bucketSize - 1) / bucketSize;
+	const u_int bucketCount = overlapping * (tiletWidthCount * tileSize * tileHeightCount * tileSize + bucketSize - 1) / bucketSize;
 
 	// Update pixelIndexOffset
 
@@ -136,12 +136,12 @@ void SobolSampler::InitNewSample() {
 		if (imageSamplesEnable && film) {
 			// Transform the bucket index in a pixel coordinate
 
-			const uint pixelBucketIndex = (bucketIndex / overlapping) * bucketSize + pixelOffset;
-			const uint mortonCurveOffset = pixelBucketIndex % (tileSize * tileSize);
-			const uint pixelTileIndex = pixelBucketIndex / (tileSize * tileSize);
+			const u_int pixelBucketIndex = (bucketIndex / overlapping) * bucketSize + pixelOffset;
+			const u_int mortonCurveOffset = pixelBucketIndex % (tileSize * tileSize);
+			const u_int pixelTileIndex = pixelBucketIndex / (tileSize * tileSize);
 
-			const uint subRegionPixelX = (pixelTileIndex % tiletWidthCount) * tileSize + DecodeMorton2X(mortonCurveOffset);
-			const uint subRegionPixelY = (pixelTileIndex / tiletWidthCount) * tileSize + DecodeMorton2Y(mortonCurveOffset);
+			const u_int subRegionPixelX = (pixelTileIndex % tiletWidthCount) * tileSize + DecodeMorton2X(mortonCurveOffset);
+			const u_int subRegionPixelY = (pixelTileIndex / tiletWidthCount) * tileSize + DecodeMorton2Y(mortonCurveOffset);
 			if ((subRegionPixelX >= subRegionWidth) || (subRegionPixelY >= subRegionHeight)) {
 				// Skip the pixels out of the film sub region
 				continue;
