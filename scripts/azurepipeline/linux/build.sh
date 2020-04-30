@@ -5,20 +5,20 @@ sudo apt-get -qq update
 sudo apt-get install -y libtool-bin cmake flex bison libgtk-3-dev libgl1-mesa-dev python3-numpy ocl-icd-opencl-dev
 # Install CUDA 10.1 Update 2 (https://docs.nvidia.com/cuda/archive/10.1/cuda-installation-guide-linux/index.html)
 wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/cuda-repo-ubuntu1804_10.1.243-1_amd64.deb
-wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/cuda-nvcc-10-1_10.1.243-1_amd64.deb
-wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/cuda-cudart-10-1_10.1.243-1_amd64.deb
-wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/cuda-cudart-dev-10-1_10.1.243-1_amd64.deb
-wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/cuda-nvrtc-10-1_10.1.243-1_amd64.deb
-wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/cuda-nvrtc-dev-10-1_10.1.243-1_amd64.deb
+#wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/cuda-nvcc-10-1_10.1.243-1_amd64.deb
+#wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/cuda-cudart-10-1_10.1.243-1_amd64.deb
+#wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/cuda-cudart-dev-10-1_10.1.243-1_amd64.deb
+#wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/cuda-nvrtc-10-1_10.1.243-1_amd64.deb
+#wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/cuda-nvrtc-dev-10-1_10.1.243-1_amd64.deb
 sudo dpkg -i cuda-repo-ubuntu1804_10.1.243-1_amd64.deb
 sudo apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/7fa2af80.pub
 sudo apt-get -q update
-#sudo apt-get install -y nvidia-cuda-toolkit nvidia-cuda-dev
-sudo dpkg -i cuda-nvcc-10-1_10.1.243-1_amd64.deb
-sudo dpkg -i cuda-cudart-10-1_10.1.243-1_amd64.deb
-sudo dpkg -i cuda-cudart-dev-10-1_10.1.243-1_amd64.deb
-sudo dpkg -i cuda-nvrtc-10-1_10.1.243-1_amd64.deb
-sudo dpkg -i cuda-nvrtc-dev-10-1_10.1.243-1_amd64.deb
+sudo apt-get install -y cuda-tools-10-1 cuda-libraries-10-1 cuda-libraries-dev-10-1
+#sudo dpkg -i cuda-nvcc-10-1_10.1.243-1_amd64.deb
+#sudo dpkg -i cuda-cudart-10-1_10.1.243-1_amd64.deb
+#sudo dpkg -i cuda-cudart-dev-10-1_10.1.243-1_amd64.deb
+#sudo dpkg -i cuda-nvrtc-10-1_10.1.243-1_amd64.deb
+#sudo dpkg -i cuda-nvrtc-dev-10-1_10.1.243-1_amd64.deb
 export PATH=/usr/local/cuda-10.1/bin${PATH:+:${PATH}}
 export LD_LIBRARY_PATH=/usr/local/cuda-10.1/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
 
