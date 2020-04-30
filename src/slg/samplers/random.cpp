@@ -211,7 +211,7 @@ Properties RandomSampler::ToProperties() const {
 	return Sampler::ToProperties() <<
 			Property("sampler.random.adaptive.strength")(adaptiveStrength) <<
 			Property("sampler.random.adaptive.userimportanceweight")(adaptiveUserImportanceWeight) <<
-			Property("sampler.random.buketsize")(bucketSize) <<
+			Property("sampler.random.bucketsize")(bucketSize) <<
 			Property("sampler.random.tilesize")(tileSize) <<
 			Property("sampler.random.supersampling")(superSampling) <<
 			Property("sampler.random.overlapping")(overlapping);
@@ -227,7 +227,7 @@ Properties RandomSampler::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("sampler.imagesamples.enable")) <<
 			cfg.Get(GetDefaultProps().Get("sampler.random.adaptive.strength")) <<
 			cfg.Get(GetDefaultProps().Get("sampler.random.adaptive.userimportanceweight")) <<
-			cfg.Get(GetDefaultProps().Get("sampler.random.buketsize")) <<
+			cfg.Get(GetDefaultProps().Get("sampler.random.bucketsize")) <<
 			cfg.Get(GetDefaultProps().Get("sampler.random.tilesize")) <<
 			cfg.Get(GetDefaultProps().Get("sampler.random.supersampling")) <<
 			cfg.Get(GetDefaultProps().Get("sampler.random.overlapping"));
@@ -239,7 +239,7 @@ Sampler *RandomSampler::FromProperties(const Properties &cfg, RandomGenerator *r
 
 	const float adaptiveStrength = Clamp(cfg.Get(GetDefaultProps().Get("sampler.random.adaptive.strength")).Get<float>(), 0.f, .95f);
 	const float adaptiveUserImportanceWeight = cfg.Get(GetDefaultProps().Get("sampler.random.adaptive.userimportanceweight")).Get<float>();
-	const float bucketSize = RoundUpPow2(cfg.Get(GetDefaultProps().Get("sampler.random.buketsize")).Get<u_int>());
+	const float bucketSize = RoundUpPow2(cfg.Get(GetDefaultProps().Get("sampler.random.bucketsize")).Get<u_int>());
 	const float tileSize = RoundUpPow2(cfg.Get(GetDefaultProps().Get("sampler.random.tilesize")).Get<u_int>());
 	const float superSampling = cfg.Get(GetDefaultProps().Get("sampler.random.supersampling")).Get<u_int>();
 	const float overlapping = cfg.Get(GetDefaultProps().Get("sampler.random.overlapping")).Get<u_int>();
@@ -256,7 +256,7 @@ slg::ocl::Sampler *RandomSampler::FromPropertiesOCL(const Properties &cfg) {
 	oclSampler->type = slg::ocl::RANDOM;
 	oclSampler->random.adaptiveStrength = Clamp(cfg.Get(GetDefaultProps().Get("sampler.random.adaptive.strength")).Get<float>(), 0.f, .95f);
 	oclSampler->random.adaptiveUserImportanceWeight = cfg.Get(GetDefaultProps().Get("sampler.random.adaptive.userimportanceweight")).Get<float>();
-	oclSampler->random.bucketSize = RoundUpPow2(cfg.Get(GetDefaultProps().Get("sampler.random.buketsize")).Get<u_int>());
+	oclSampler->random.bucketSize = RoundUpPow2(cfg.Get(GetDefaultProps().Get("sampler.random.bucketsize")).Get<u_int>());
 	oclSampler->random.tileSize = RoundUpPow2(cfg.Get(GetDefaultProps().Get("sampler.random.tilesize")).Get<u_int>());
 	oclSampler->random.superSampling = cfg.Get(GetDefaultProps().Get("sampler.random.supersampling")).Get<u_int>();
 	oclSampler->random.overlapping = cfg.Get(GetDefaultProps().Get("sampler.random.overlapping")).Get<u_int>();
@@ -281,7 +281,7 @@ const Properties &RandomSampler::GetDefaultProps() {
 			Property("sampler.type")(GetObjectTag()) <<
 			Property("sampler.random.adaptive.strength")(.95f) <<
 			Property("sampler.random.adaptive.userimportanceweight")(.75f) <<
-			Property("sampler.random.buketsize")(16) <<
+			Property("sampler.random.bucketsize")(16) <<
 			Property("sampler.random.tilesize")(16) <<
 			Property("sampler.random.supersampling")(1) <<
 			Property("sampler.random.overlapping")(1);
