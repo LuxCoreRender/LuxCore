@@ -8,7 +8,7 @@ wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/
 sudo dpkg -i cuda-repo-ubuntu1804_10.1.243-1_amd64.deb
 sudo apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/7fa2af80.pub
 sudo apt-get -q update
-sudo apt-get install -y nvidia-cuda-dev cuda-nvcc-10-1_10.1.243-1_amd64 cuda-cudart-10-1_10.1.243-1_amd64 cuda-cudart-dev-10-1_10.1.243-1_amd64 cuda-nvrtc cuda-nvrtc-dev-10-1_10.1.243-1_amd64
+sudo apt-get install -y nvidia-cuda-toolkit nvidia-cuda-dev
 export PATH=/usr/local/cuda-10.1/bin${PATH:+:${PATH}}
 export LD_LIBRARY_PATH=/usr/local/cuda-10.1/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
 
