@@ -372,9 +372,7 @@ void PathOCLBaseOCLRenderThread::InitSamplerSharedDataBuffer() {
 	// Initialize the sampler shared data
 	if (renderEngine->oclSampler->type == slg::ocl::RANDOM) {
 		slg::ocl::RandomSamplerSharedData rssd;
-		rssd.pixelBucketIndex = 0; // Initialized by OpenCL kernel
-		rssd.adaptiveStrength = renderEngine->oclSampler->random.adaptiveStrength;
-		rssd.adaptiveUserImportanceWeight = renderEngine->oclSampler->random.adaptiveUserImportanceWeight;
+		rssd.bucketIndex = 0;
 
 		intersectionDevice->EnqueueWriteBuffer(samplerSharedDataBuff, CL_TRUE, size, &rssd);
 	} else if (renderEngine->oclSampler->type == slg::ocl::SOBOL) {

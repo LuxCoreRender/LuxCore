@@ -51,7 +51,7 @@
 //------------------------------------------------------------------------------
 
 typedef struct {
-	unsigned int pixelIndexBase, pixelIndexOffset, pixelIndexRandomStart;
+	unsigned int bucketIndex, pixelOffset, passOffset, pass;
 } RandomSample;
 
 typedef struct {
@@ -67,7 +67,7 @@ typedef struct {
 } MetropolisSample;
 
 typedef struct {
-	unsigned int bucketIndex, pixelOffset, passOffset, pass, pixelIndexRandomStart;
+	unsigned int bucketIndex, pixelOffset, passOffset, pass;
 
 	Seed rngGeneratorSeed;
 	unsigned int rngPass;
@@ -86,8 +86,7 @@ typedef struct {
 //------------------------------------------------------------------------------
 
 typedef struct {
-	unsigned int pixelBucketIndex;
-	float adaptiveStrength, adaptiveUserImportanceWeight;
+	unsigned int bucketIndex;
 } RandomSamplerSharedData;
 
 typedef struct {
@@ -129,6 +128,7 @@ typedef struct {
 	union {
 		struct {
 			float adaptiveStrength, adaptiveUserImportanceWeight;
+			unsigned int bucketSize, tileSize, superSampling, overlapping;
 		} random;
 		struct {
 			float adaptiveStrength, adaptiveUserImportanceWeight;
@@ -140,8 +140,6 @@ typedef struct {
 		} metropolis;
 	};
 } Sampler;
-
-#define RANDOM_OCL_WORK_SIZE 16
 
 #define SOBOL_BITS 32
 #define SOBOL_MAX_DIMENSIONS 21201

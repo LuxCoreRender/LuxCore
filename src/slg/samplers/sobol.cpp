@@ -91,7 +91,7 @@ SobolSampler::SobolSampler(RandomGenerator *rnd, Film *flm,
 		Sampler(rnd, flm, flmSplatter, imgSamplesEnable),
 		sharedData(samplerSharedData), sobolSequence(), adaptiveStrength(adaptiveStr),
 		adaptiveUserImportanceWeight(adaptiveUserImpWeight), bucketSize(bucketSz),
-		tileSize(tileSz), superSampling(superSmpl), overlapping(overlap), rngGenerator() {
+		tileSize(tileSz), superSampling(superSmpl), overlapping(overlap) {
 }
 
 SobolSampler::~SobolSampler() {

@@ -117,7 +117,7 @@ OPENCL_FORCE_INLINE void SobolSamplerSharedData_GetNewBucket(__global SobolSampl
 		const uint bucketCount, uint *newBucketIndex, uint *seed) {
 	*newBucketIndex = atomic_inc(&samplerSharedData->bucketIndex) % bucketCount;
 
-    *seed = (samplerSharedData->seedBase + *bucketIndex) % (0xFFFFFFFFu - 1u) + 1u;
+    *seed = (samplerSharedData->seedBase + *newBucketIndex) % (0xFFFFFFFFu - 1u) + 1u;
 }
 
 OPENCL_FORCE_INLINE void SobolSampler_InitNewSample(
@@ -148,7 +148,7 @@ OPENCL_FORCE_INLINE void SobolSampler_InitNewSample(
 
 	const uint bucketCount = overlapping * (tiletWidthCount * tileSize * tileHeightCount * tileSize + bucketSize - 1) / bucketSize;
 
-	// Update pixelIndexOffset
+	// Pick the pixel to render
 
 	uint bucketIndex = sample->bucketIndex;
 	uint pixelOffset = sample->pixelOffset;
@@ -297,7 +297,6 @@ OPENCL_FORCE_INLINE bool SobolSampler_Init(__constant const GPUTaskConfiguration
 		SAMPLER_PARAM_DECL) {
 	const size_t gid = get_global_id(0);
 	__constant const Sampler *sampler = &taskConfig->sampler;
-	__global SobolSamplerSharedData *samplerSharedData = (__global SobolSamplerSharedData *)samplerSharedDataBuff;
 	__global SobolSample *samples = (__global SobolSample *)samplesBuff;
 	__global SobolSample *sample = &samples[gid];
 
