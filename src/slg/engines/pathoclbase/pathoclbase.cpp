@@ -106,15 +106,12 @@ PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg,
 			}
 
 			// Suggested compiler options: -cl-fast-relaxed-math -cl-mad-enable
-			//
-			// NOTE: I should probably enable -cl-fast-relaxed-math -cl-mad-enable for OpenCL too even
-			// if this is not what I was doing in the past
-			//HardwareDevice *hwDev = dynamic_cast<HardwareDevice *>(devs[i]);
-			//
-			//vector<string> compileOpts;
-			//compileOpts.push_back("");
-			//
-			//hwDev->SetAdditionalCompileOpts(compileOpts);
+			HardwareDevice *hwDev = dynamic_cast<HardwareDevice *>(devs[i]);
+
+			vector<string> compileOpts;
+			compileOpts.push_back("-cl-fast-relaxed-math -cl-mad-enable");
+
+			hwDev->SetAdditionalCompileOpts(compileOpts);
 		}
 	}
 
