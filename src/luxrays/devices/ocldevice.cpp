@@ -273,10 +273,10 @@ void OpenCLDevice::SetKernelArgBuffer(HardwareDeviceKernel *kernel,
 	assert (oclDeviceKernel);
 
 	const OpenCLDeviceBuffer *oclDeviceBuff = dynamic_cast<const OpenCLDeviceBuffer *>(buff);
-	if (oclDeviceBuff &&  oclDeviceBuff->oclBuff)
-		oclDeviceKernel->oclKernel->setArg(index, *(oclDeviceBuff->oclBuff));
+	if (oclDeviceBuff)
+		oclDeviceKernel->oclKernel->setArg(index, sizeof(cl::Buffer), oclDeviceBuff->oclBuff);
 	else
-		oclDeviceKernel->oclKernel->setArg(index, nullptr);
+		oclDeviceKernel->oclKernel->setArg(index, sizeof(cl::Buffer), nullptr);
 }
 
 static cl::NDRange ConvertHardwareRange(const HardwareDeviceRange &range) {
