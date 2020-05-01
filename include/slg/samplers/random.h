@@ -49,7 +49,6 @@ public:
 			luxrays::RandomGenerator *rndGen, Film *film);
 
 	Film *engineFilm;
-	u_int filmRegionPixelCount;
 
 private:
 	u_int bucketIndex;

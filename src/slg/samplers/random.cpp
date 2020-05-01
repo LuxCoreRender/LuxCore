@@ -38,12 +38,6 @@ RandomSamplerSharedData::RandomSamplerSharedData(Film *engineFlm) {
 }
 
 void RandomSamplerSharedData::Reset() {
-	if (engineFilm) {
-		const u_int *subRegion = engineFilm->GetSubRegion();
-		filmRegionPixelCount = (subRegion[1] - subRegion[0] + 1) * (subRegion[3] - subRegion[2] + 1);
-	} else
-		filmRegionPixelCount = 0;
-
 	bucketIndex = 0;
 }
 
@@ -72,15 +66,23 @@ RandomSampler::RandomSampler(luxrays::RandomGenerator *rnd, Film *flm,
 }
 
 void RandomSampler::InitNewSample() {
-const u_int *filmSubRegion = film->GetSubRegion();
+	const bool doImageSamples = (imageSamplesEnable && film);
 
-	const u_int subRegionWidth = filmSubRegion[1] - filmSubRegion[0] + 1;
-	const u_int subRegionHeight = filmSubRegion[3] - filmSubRegion[2] + 1;
+	const u_int *filmSubRegion;
+	u_int subRegionWidth, subRegionHeight, tiletWidthCount, tileHeightCount, bucketCount;
 
-	const u_int tiletWidthCount = (subRegionWidth + tileSize - 1) / tileSize;
-	const u_int tileHeightCount = (subRegionHeight + tileSize - 1) / tileSize;
+	if (doImageSamples) {
+		filmSubRegion = film->GetSubRegion();
 
-	const u_int bucketCount = overlapping * (tiletWidthCount * tileSize * tileHeightCount * tileSize + bucketSize - 1) / bucketSize;
+		subRegionWidth = filmSubRegion[1] - filmSubRegion[0] + 1;
+		subRegionHeight = filmSubRegion[3] - filmSubRegion[2] + 1;
+
+		tiletWidthCount = (subRegionWidth + tileSize - 1) / tileSize;
+		tileHeightCount = (subRegionHeight + tileSize - 1) / tileSize;
+
+		bucketCount = overlapping * (tiletWidthCount * tileSize * tileHeightCount * tileSize + bucketSize - 1) / bucketSize;
+	} else
+		bucketCount = 0xffffffffu;
 
 	// Update pixelIndexOffset
 
@@ -103,7 +105,7 @@ const u_int *filmSubRegion = film->GetSubRegion();
 		// Initialize sample0 and sample 1
 
 		u_int pixelX, pixelY;
-		if (imageSamplesEnable && film) {
+		if (doImageSamples) {
 			// Transform the bucket index in a pixel coordinate
 
 			const u_int pixelBucketIndex = (bucketIndex / overlapping) * bucketSize + pixelOffset;
