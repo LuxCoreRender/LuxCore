@@ -17,7 +17,7 @@
  ***************************************************************************/
 
 #ifndef _SLG_THINFILMCOATING_H
-#define	_SLG_THINFILMCOATING_H
+#define _SLG_THINFILMCOATING_H
 
 #include "luxrays/core/geometry/vector.h"
 #include "luxrays/core/color/color.h"
@@ -28,4 +28,4 @@ extern luxrays::Spectrum CalcFilmColor(const luxrays::Vector &localFixedDir, con
 
 }
 
-#endif	/* _SLG_THINFILMCOATING_H */
+#endif /* _SLG_THINFILMCOATING_H */

@@ -101,4 +101,3 @@ Spectrum slg::CalcFilmColor(const Vector &localFixedDir, const float filmThickne
 	const RGBColor rgb = colorSpace.ToRGBConstrained(normalizedXYZ);
 	return static_cast<Spectrum>(rgb);
 }
-

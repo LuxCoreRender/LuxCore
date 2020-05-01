@@ -122,8 +122,7 @@ Spectrum GlassMaterial::EvalSpecularReflection(const HitPoint &hitPoint,
 		const Vector &localFixedDir, const Spectrum &kr,
 		const float nc, const float nt,
 		Vector *localSampledDir, 
-		const float localFilmThickness, const float localFilmIor,
-		const float u1) {
+		const float localFilmThickness, const float localFilmIor) {
 	if (kr.Black())
 		return Spectrum();
 
@@ -209,7 +208,7 @@ Spectrum GlassMaterial::Sample(const HitPoint &hitPoint,
 	const float localFilmThickness = filmThickness ? filmThickness->GetFloatValue(hitPoint) : 0.f;
 	const float localFilmIor = (localFilmThickness > 0.f && filmIor) ? filmIor->GetFloatValue(hitPoint) : 1.f;
 	const Spectrum refl = EvalSpecularReflection(hitPoint, localFixedDir,
-			kr, nc, nt, &reflLocalSampledDir, localFilmThickness, localFilmIor, u1);
+			kr, nc, nt, &reflLocalSampledDir, localFilmThickness, localFilmIor);
 
 	// Decide to transmit or reflect
 	float threshold;
