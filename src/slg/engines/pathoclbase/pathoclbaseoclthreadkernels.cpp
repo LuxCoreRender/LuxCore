@@ -34,11 +34,6 @@
 #include "slg/engines/pathoclbase/pathoclbase.h"
 #include "slg/samplers/sobol.h"
 
-#if defined(__APPLE__)
-// OSX version detection
-#include <sys/sysctl.h>
-#endif
-
 using namespace std;
 using namespace luxrays;
 using namespace slg;
