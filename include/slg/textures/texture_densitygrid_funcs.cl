@@ -22,7 +22,7 @@
 // DensityGrid texture
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_NOT_INLINE float3 DensityGridTexture_D(
+OPENCL_FORCE_INLINE float3 DensityGridTexture_D(
 		__global const ImageMap *imageMap,
 		int x, int y, int z,
 		int nx, int ny, int nz

@@ -235,7 +235,7 @@ OPENCL_FORCE_INLINE float seeliger(float cos_th1, float cos_th2, float sg_a, flo
 	return al * (.5f * M_1_PI_F) * .5f * c1 * c2 / (c1 + c2);
 }
 
-OPENCL_FORCE_NOT_INLINE void GetYarnUV(__constant WeaveConfig *Weave, __constant Yarn *yarn,
+OPENCL_FORCE_INLINE void GetYarnUV(__constant WeaveConfig *Weave, __constant Yarn *yarn,
         const float Repeat_U, const float Repeat_V,
         const float3 center, const float3 xy, float2 *uv, float *umaxMod) {
 	*umaxMod = Radians(yarn->umax);
@@ -276,7 +276,7 @@ OPENCL_FORCE_NOT_INLINE void GetYarnUV(__constant WeaveConfig *Weave, __constant
 	}
 }
 
-OPENCL_FORCE_NOT_INLINE __constant Yarn *GetYarn(const ClothPreset Preset, __constant WeaveConfig *Weave,
+OPENCL_FORCE_INLINE __constant Yarn *GetYarn(const ClothPreset Preset, __constant WeaveConfig *Weave,
         const float Repeat_U, const float Repeat_V,
         const float u_i, const float v_i,
         float2 *uv, float *umax, float *scale) {
@@ -319,7 +319,7 @@ OPENCL_FORCE_NOT_INLINE __constant Yarn *GetYarn(const ClothPreset Preset, __con
 	return yarn;
 }
 
-OPENCL_FORCE_NOT_INLINE float RadiusOfCurvature(__constant Yarn *yarn, float u, float umaxMod) {
+OPENCL_FORCE_INLINE float RadiusOfCurvature(__constant Yarn *yarn, float u, float umaxMod) {
 	// rhat determines whether the spine is a segment
 	// of an ellipse, a parabole, or a hyperbola.
 	// See Section 5.3.
@@ -350,7 +350,7 @@ OPENCL_FORCE_NOT_INLINE float RadiusOfCurvature(__constant Yarn *yarn, float u, 
 	}
 }
 
-OPENCL_FORCE_NOT_INLINE float EvalFilamentIntegrand(__constant WeaveConfig *Weave, __constant Yarn *yarn, const float3 om_i,
+OPENCL_FORCE_INLINE float EvalFilamentIntegrand(__constant WeaveConfig *Weave, __constant Yarn *yarn, const float3 om_i,
         const float3 om_r, float u, float v, float umaxMod) {
 	// 0 <= ss < 1.0
 	if (Weave->ss < 0.0f || Weave->ss >= 1.0f)
@@ -417,7 +417,7 @@ OPENCL_FORCE_NOT_INLINE float EvalFilamentIntegrand(__constant WeaveConfig *Weav
 	return fs * M_PI_F / Weave->hWidth;
 }
 
-OPENCL_FORCE_NOT_INLINE float EvalStapleIntegrand(__constant WeaveConfig *Weave, __constant Yarn *yarn,
+OPENCL_FORCE_INLINE float EvalStapleIntegrand(__constant WeaveConfig *Weave, __constant Yarn *yarn,
         const float3 om_i, const float3 om_r, float u, float v, float umaxMod) {
 	// w * sin(umax) < l
 	if (yarn->width * sin(umaxMod) >= yarn->length)
@@ -472,7 +472,7 @@ OPENCL_FORCE_NOT_INLINE float EvalStapleIntegrand(__constant WeaveConfig *Weave,
 	return fs * 2.0f * umaxMod / Weave->hWidth;
 }
 
-OPENCL_FORCE_NOT_INLINE float EvalIntegrand(__constant WeaveConfig *Weave, __constant Yarn *yarn,
+OPENCL_FORCE_INLINE float EvalIntegrand(__constant WeaveConfig *Weave, __constant Yarn *yarn,
         const float2 uv, float umaxMod, float3 *om_i, float3 *om_r) {
 	if (yarn->yarn_type == WARP) {
 		if (yarn->psi != 0.0f)
@@ -508,7 +508,7 @@ OPENCL_FORCE_NOT_INLINE float EvalIntegrand(__constant WeaveConfig *Weave, __con
 	}
 }
 
-OPENCL_FORCE_NOT_INLINE float EvalSpecular(__constant WeaveConfig *Weave, __constant Yarn *yarn, const float2 uv,
+OPENCL_FORCE_INLINE float EvalSpecular(__constant WeaveConfig *Weave, __constant Yarn *yarn, const float2 uv,
         float umax, const float3 wo, const float3 wi) {
 	// Get incident and exitant directions.
 	float3 om_i = wi;
@@ -573,7 +573,7 @@ OPENCL_FORCE_INLINE void ClothMaterial_GetEmittedRadiance(__global const Materia
 	DefaultMaterial_GetEmittedRadiance(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
 }
 
-OPENCL_FORCE_NOT_INLINE void ClothMaterial_Evaluate(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void ClothMaterial_Evaluate(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {
@@ -614,7 +614,7 @@ OPENCL_FORCE_NOT_INLINE void ClothMaterial_Evaluate(__global const Material* res
 	EvalStack_PushFloat(directPdfW);
 }
 
-OPENCL_FORCE_NOT_INLINE void ClothMaterial_Sample(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void ClothMaterial_Sample(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {

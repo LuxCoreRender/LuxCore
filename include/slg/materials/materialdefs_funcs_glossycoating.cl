@@ -81,7 +81,7 @@ OPENCL_FORCE_INLINE void GlossyCoatingMaterial_GetEmittedRadiance(__global const
 // Material evaluate
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_NOT_INLINE void GlossyCoatingMaterial_EvaluateSetUp(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void GlossyCoatingMaterial_EvaluateSetUp(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {
@@ -123,7 +123,7 @@ OPENCL_FORCE_NOT_INLINE void GlossyCoatingMaterial_EvaluateSetUp(__global const 
 	EvalStack_PushFloat3(matBaseEyeDir);
 }
 
-OPENCL_FORCE_NOT_INLINE void GlossyCoatingMaterial_Evaluate(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void GlossyCoatingMaterial_Evaluate(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {
@@ -293,7 +293,7 @@ OPENCL_FORCE_NOT_INLINE void GlossyCoatingMaterial_Evaluate(__global const Mater
 // Material sample
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_NOT_INLINE void GlossyCoatingMaterial_SampleSetUp(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void GlossyCoatingMaterial_SampleSetUp(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {
@@ -407,7 +407,7 @@ OPENCL_FORCE_NOT_INLINE void GlossyCoatingMaterial_SampleSetUp(__global const Ma
 	}
 }
 
-OPENCL_FORCE_NOT_INLINE void GlossyCoatingMaterial_Sample(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void GlossyCoatingMaterial_Sample(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset,
 		const float wBase, const float wCoating,
@@ -481,7 +481,7 @@ OPENCL_FORCE_NOT_INLINE void GlossyCoatingMaterial_Sample(__global const Materia
 	EvalStack_PushBSDFEvent(event);
 }
 
-OPENCL_FORCE_NOT_INLINE void GlossyCoatingMaterial_SampleMatBaseSample(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void GlossyCoatingMaterial_SampleMatBaseSample(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {
@@ -562,7 +562,7 @@ OPENCL_FORCE_NOT_INLINE void GlossyCoatingMaterial_SampleMatBaseSample(__global 
 		MATERIALS_PARAM);
 }
 
-OPENCL_FORCE_NOT_INLINE void GlossyCoatingMaterial_SampleMatBaseEvaluate(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void GlossyCoatingMaterial_SampleMatBaseEvaluate(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {

@@ -109,7 +109,7 @@ OPENCL_FORCE_INLINE float3 HsvTexture_HsvToRgb(const float3 hsv) {
 
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_NOT_INLINE float3 HsvTexture_ApplyTransformation(const float3 colorHitpoint,
+OPENCL_FORCE_INLINE float3 HsvTexture_ApplyTransformation(const float3 colorHitpoint,
 		const float hueHitpoint, const float satHitpoint,
 		const float valHitpoint) {
 

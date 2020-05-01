@@ -64,7 +64,7 @@ OPENCL_FORCE_INLINE void HomogeneousVolMaterial_GetEmittedRadiance(__global cons
 	DefaultMaterial_GetEmittedRadiance(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
 }
 
-OPENCL_FORCE_NOT_INLINE void HomogeneousVolMaterial_Evaluate(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void HomogeneousVolMaterial_Evaluate(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {
@@ -88,7 +88,7 @@ OPENCL_FORCE_NOT_INLINE void HomogeneousVolMaterial_Evaluate(__global const Mate
 	EvalStack_PushFloat(directPdfW);
 }
 
-OPENCL_FORCE_NOT_INLINE void HomogeneousVolMaterial_Sample(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void HomogeneousVolMaterial_Sample(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {

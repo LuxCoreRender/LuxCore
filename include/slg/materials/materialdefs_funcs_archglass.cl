@@ -50,7 +50,7 @@ OPENCL_FORCE_INLINE float ExtractInteriorIors(__global const HitPoint *hitPoint,
 // ArchGlass material
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_NOT_INLINE float3 ArchGlassMaterial_EvalSpecularReflection(__global const HitPoint *hitPoint,
+OPENCL_FORCE_INLINE float3 ArchGlassMaterial_EvalSpecularReflection(__global const HitPoint *hitPoint,
 		const float3 localFixedDir, const float3 kr,
 		const float nc, const float nt,
 		float3 *sampledDir) {
@@ -67,7 +67,7 @@ OPENCL_FORCE_NOT_INLINE float3 ArchGlassMaterial_EvalSpecularReflection(__global
 	return kr * FresnelCauchy_Evaluate(ntc, costheta);
 }
 
-OPENCL_FORCE_NOT_INLINE float3 ArchGlassMaterial_EvalSpecularTransmission(__global const HitPoint *hitPoint,
+OPENCL_FORCE_INLINE float3 ArchGlassMaterial_EvalSpecularTransmission(__global const HitPoint *hitPoint,
 		const float3 localFixedDir, const float3 kt,
 		const float nc, const float nt, float3 *sampledDir) {
 	if (Spectrum_IsBlack(kt))
@@ -190,7 +190,7 @@ OPENCL_FORCE_INLINE void ArchGlassMaterial_GetEmittedRadiance(__global const Mat
 	DefaultMaterial_GetEmittedRadiance(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
 }
 
-OPENCL_FORCE_NOT_INLINE void ArchGlassMaterial_Evaluate(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void ArchGlassMaterial_Evaluate(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {
@@ -201,7 +201,7 @@ OPENCL_FORCE_NOT_INLINE void ArchGlassMaterial_Evaluate(__global const Material*
 	MATERIAL_EVALUATE_RETURN_BLACK;
 }
 
-OPENCL_FORCE_NOT_INLINE void ArchGlassMaterial_Sample(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void ArchGlassMaterial_Sample(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {

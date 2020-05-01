@@ -89,7 +89,7 @@ OPENCL_FORCE_INLINE __global const float* restrict EnvLightVisibilityCache_GetVi
 // Sample
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_NOT_INLINE void EnvLightVisibilityCache_Sample(__global const BSDF *bsdf,
+OPENCL_FORCE_INLINE void EnvLightVisibilityCache_Sample(__global const BSDF *bsdf,
 		const float u0, const float u1, float2 *uv, float *pdf
 		LIGHTS_PARAM_DECL) {
 	*pdf = 0.f;

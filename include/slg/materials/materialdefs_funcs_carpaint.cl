@@ -61,7 +61,7 @@ OPENCL_FORCE_INLINE void CarPaintMaterial_GetEmittedRadiance(__global const Mate
 	DefaultMaterial_GetEmittedRadiance(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
 }
 
-OPENCL_FORCE_NOT_INLINE void CarPaintMaterial_Evaluate(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void CarPaintMaterial_Evaluate(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {
@@ -138,7 +138,7 @@ OPENCL_FORCE_NOT_INLINE void CarPaintMaterial_Evaluate(__global const Material* 
 	EvalStack_PushFloat(directPdfW);
 }
 
-OPENCL_FORCE_NOT_INLINE void CarPaintMaterial_Sample(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void CarPaintMaterial_Sample(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {

@@ -18,7 +18,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-OPENCL_FORCE_NOT_INLINE void Camera_OculusRiftBarrelPostprocess(const float x, const float y, float *barrelX, float *barrelY) {
+OPENCL_FORCE_INLINE void Camera_OculusRiftBarrelPostprocess(const float x, const float y, float *barrelX, float *barrelY) {
 	// Express the sample in coordinates relative to the eye center
 	float ex = x * 2.f - 1.f;
 	float ey = y * 2.f - 1.f;
@@ -54,7 +54,7 @@ OPENCL_FORCE_NOT_INLINE void Camera_OculusRiftBarrelPostprocess(const float x, c
 	*barrelY = (ey + 1.f) * .5f;
 }
 
-OPENCL_FORCE_NOT_INLINE void Camera_ApplyArbitraryClippingPlane(
+OPENCL_FORCE_INLINE void Camera_ApplyArbitraryClippingPlane(
 		__global const Camera* restrict camera, __global Ray *ray,
 		const float3 clippingPlaneCenter, const float3 clippingPlaneNormal) {
 	const float3 rayOrig = MAKE_FLOAT3(ray->o.x, ray->o.y, ray->o.z);
@@ -104,7 +104,7 @@ OPENCL_FORCE_NOT_INLINE void Camera_ApplyArbitraryClippingPlane(
 // Perspective camera
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_NOT_INLINE void PerspectiveCamera_GenerateRay(
+OPENCL_FORCE_INLINE void PerspectiveCamera_GenerateRay(
 		__global const Camera* restrict camera,
 		const uint filmWidth, const uint filmHeight,
 		__global Ray *ray,
@@ -184,7 +184,7 @@ OPENCL_FORCE_NOT_INLINE void PerspectiveCamera_GenerateRay(
 // Orthographic camera
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_NOT_INLINE void OrthographicCamera_GenerateRay(
+OPENCL_FORCE_INLINE void OrthographicCamera_GenerateRay(
 		__global const Camera* restrict camera,
 		const uint filmWidth, const uint filmHeight,
 		__global Ray *ray,
@@ -258,7 +258,7 @@ OPENCL_FORCE_NOT_INLINE void OrthographicCamera_GenerateRay(
 // Stereo camera
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_NOT_INLINE void StereoCamera_GenerateRay(
+OPENCL_FORCE_INLINE void StereoCamera_GenerateRay(
 		__global const Camera* restrict camera,
 		const uint origFilmWidth, const uint filmHeight,
 		__global Ray *ray,
@@ -352,7 +352,7 @@ OPENCL_FORCE_NOT_INLINE void StereoCamera_GenerateRay(
 // Environment camera
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_NOT_INLINE void EnvironmentCamera_GenerateRay(
+OPENCL_FORCE_INLINE void EnvironmentCamera_GenerateRay(
 		__global const Camera* restrict camera,
 		const uint filmWidth, const uint filmHeight,
 		__global Ray *ray,
@@ -394,7 +394,7 @@ OPENCL_FORCE_NOT_INLINE void EnvironmentCamera_GenerateRay(
 // Generic function
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_NOT_INLINE void Camera_GenerateRay(
+OPENCL_FORCE_INLINE void Camera_GenerateRay(
 		__global const Camera* restrict camera,
 		const uint filmWidth, const uint filmHeight,
 		__global Ray *ray,

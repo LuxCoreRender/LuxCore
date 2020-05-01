@@ -256,7 +256,7 @@ OPENCL_FORCE_INLINE float3 TriplanarTexture_BumpUVLess(
 // Texture evaluation functions
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_NOT_INLINE void Texture_EvalOpGenericBumpOffsetU(
+OPENCL_FORCE_INLINE void Texture_EvalOpGenericBumpOffsetU(
 		__global float *evalStack,
 		uint *evalStackOffset,
 		__global const HitPoint *hitPoint,
@@ -284,7 +284,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOpGenericBumpOffsetU(
 	VSTORE3F(normalize(origShadeN + uu * dndu), &hitPointTmp->shadeN.x);
 }
 
-OPENCL_FORCE_NOT_INLINE void Texture_EvalOpGenericBumpOffsetV(
+OPENCL_FORCE_INLINE void Texture_EvalOpGenericBumpOffsetV(
 		__global float *evalStack,
 		uint *evalStackOffset,
 		__global const HitPoint *hitPoint,
@@ -306,7 +306,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOpGenericBumpOffsetV(
 	VSTORE3F(normalize(origShadeN + vv * dndv), &hitPointTmp->shadeN.x);
 }
 
-OPENCL_FORCE_NOT_INLINE void Texture_EvalOpGenericBump(
+OPENCL_FORCE_INLINE void Texture_EvalOpGenericBump(
 		__global float *evalStack,
 		uint *evalStackOffset,
 		__global const HitPoint *hitPoint,

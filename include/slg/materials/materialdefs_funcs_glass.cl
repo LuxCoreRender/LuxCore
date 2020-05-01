@@ -184,7 +184,7 @@ OPENCL_FORCE_INLINE float3 GlassMaterial_EvalSpecularTransmission(__global const
 	return lkt * ce;
 }
 
-OPENCL_FORCE_NOT_INLINE void GlassMaterial_Evaluate(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void GlassMaterial_Evaluate(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {
@@ -195,7 +195,7 @@ OPENCL_FORCE_NOT_INLINE void GlassMaterial_Evaluate(__global const Material* res
 	MATERIAL_EVALUATE_RETURN_BLACK;
 }
 
-OPENCL_FORCE_NOT_INLINE void GlassMaterial_Sample(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void GlassMaterial_Sample(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {
