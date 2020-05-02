@@ -150,12 +150,12 @@ const u_int MIN_WAVELENGTH = 380;
 const u_int MAX_WAVELENGTH = 720;
 const u_int WAVELENGTH_STEP = (MAX_WAVELENGTH - MIN_WAVELENGTH) / (NUM_WAVELENGTHS - 1);
 
+const ColorSystem colorSpace(.63f, .34f, .31f, .595f, .155f, .07f, 1.f / 3.f, 1.f / 3.f, 1.f);
+
 Spectrum slg::CalcFilmColor(const Vector &localFixedDir, const float filmThickness, const float filmIOR, const float exteriorIOR) {
 	// Prevent wrong values if the ratio between IOR and thickness is too high
 	if (filmThickness * (filmIOR - .4f) > 2000.f)
 		return Spectrum(.5f);
-	
-	float intensities[NUM_WAVELENGTHS];
 	
 	const float sinTheta = SinTheta(localFixedDir);
 	const float s = sqrtf(Max(0.f, Sqr(filmIOR) - Sqr(exteriorIOR) * Sqr(sinTheta)));
@@ -175,7 +175,6 @@ Spectrum slg::CalcFilmColor(const Vector &localFixedDir, const float filmThickne
 	
 	const XYZColor normalizedXYZ = xyzColor / Y_sum;
 	
-	const ColorSystem colorSpace(.63f, .34f, .31f, .595f, .155f, .07f, 1.f / 3.f, 1.f / 3.f, 1.f);
 	const RGBColor rgb = colorSpace.ToRGBConstrained(normalizedXYZ);
 	return static_cast<Spectrum>(rgb);
 }
