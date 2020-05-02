@@ -21,7 +21,6 @@
 // List of symbols defined at compile time:
 //  PARAM_RAY_EPSILON_MIN
 //  PARAM_RAY_EPSILON_MAX
-//  PARAM_USE_PIXEL_ATOMICS
 
 /*void MangleMemory(__global unsigned char *ptr, const size_t size) {
 	Seed seed;
@@ -35,7 +34,7 @@
 // Init functions
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_NOT_INLINE void InitSampleResult(
+OPENCL_FORCE_INLINE void InitSampleResult(
 		__constant const GPUTaskConfiguration* restrict taskConfig,
 		const uint filmWidth, const uint filmHeight,
 		const uint filmSubRegion0, const uint filmSubRegion1,
@@ -79,7 +78,7 @@ OPENCL_FORCE_NOT_INLINE void InitSampleResult(
 	sampleResult->lastPathVertex = (taskConfig->pathTracer.maxPathDepth.depth == 1);
 }
 
-OPENCL_FORCE_NOT_INLINE void GenerateEyePath(
+OPENCL_FORCE_INLINE void GenerateEyePath(
 		__constant const GPUTaskConfiguration* restrict taskConfig,
 		__global GPUTaskDirectLight *taskDirectLight,
 		__global GPUTaskState *taskState,
@@ -170,7 +169,7 @@ OPENCL_FORCE_INLINE bool CheckDirectHitVisibilityFlags(__global const LightSourc
 	return false;
 }
 
-OPENCL_FORCE_NOT_INLINE void DirectHitInfiniteLight(__constant const Film* restrict film,
+OPENCL_FORCE_INLINE void DirectHitInfiniteLight(__constant const Film* restrict film,
 		__global EyePathInfo *pathInfo, __global const Spectrum* restrict pathThroughput,
 		const __global Ray *ray, __global const BSDF *bsdf, __global SampleResult *sampleResult
 		LIGHTS_PARAM_DECL) {
@@ -214,7 +213,7 @@ OPENCL_FORCE_NOT_INLINE void DirectHitInfiniteLight(__constant const Film* restr
 	}
 }
 
-OPENCL_FORCE_NOT_INLINE void DirectHitFiniteLight(__constant const Film* restrict film,
+OPENCL_FORCE_INLINE void DirectHitFiniteLight(__constant const Film* restrict film,
 		__global EyePathInfo *pathInfo,
 		__global const Spectrum* restrict pathThroughput, const __global Ray *ray,
 		const float distance, __global const BSDF *bsdf,
@@ -269,7 +268,7 @@ OPENCL_FORCE_INLINE float RussianRouletteProb(const float importanceCap, const f
 	return clamp(Spectrum_Filter(color), importanceCap, 1.f);
 }
 
-OPENCL_FORCE_NOT_INLINE bool DirectLight_Illuminate(
+OPENCL_FORCE_INLINE bool DirectLight_Illuminate(
 		__global const BSDF *bsdf,
 		__global Ray *shadowRay,
 		const float worldCenterX,
@@ -326,7 +325,7 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_Illuminate(
 	}
 }
 
-OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
+OPENCL_FORCE_INLINE bool DirectLight_BSDFSampling(
 		__constant const GPUTaskConfiguration* restrict taskConfig,
 		__global DirectLightIlluminateInfo *info,
 		const float time,

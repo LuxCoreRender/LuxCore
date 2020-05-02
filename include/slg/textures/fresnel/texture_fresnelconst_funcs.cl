@@ -30,5 +30,5 @@ OPENCL_FORCE_INLINE float FresnelConstTexture_ConstEvaluateFloat() {
 }
 
 OPENCL_FORCE_INLINE float3 FresnelConstTexture_ConstEvaluateSpectrum() {
-	return 0.f;
+	return BLACK;
 }

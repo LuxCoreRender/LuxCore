@@ -61,7 +61,7 @@ OPENCL_FORCE_INLINE void GlossyTranslucentMaterial_GetEmittedRadiance(__global c
 	DefaultMaterial_GetEmittedRadiance(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
 }
 
-OPENCL_FORCE_NOT_INLINE void GlossyTranslucentMaterial_Evaluate(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void GlossyTranslucentMaterial_Evaluate(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {
@@ -99,7 +99,7 @@ OPENCL_FORCE_NOT_INLINE void GlossyTranslucentMaterial_Evaluate(__global const M
 
 		directPdfW = fabs(sampledDir.z) * (M_1_PI_F * .5f);
 
-		const float3 H = normalize((float3)(lightDir.x + eyeDir.x, lightDir.y + eyeDir.y,
+		const float3 H = normalize(MAKE_FLOAT3(lightDir.x + eyeDir.x, lightDir.y + eyeDir.y,
 			lightDir.z - eyeDir.z));
 		const float u = fabs(dot(lightDir, H));
 		float3 ks = ksVal;
@@ -208,7 +208,7 @@ OPENCL_FORCE_NOT_INLINE void GlossyTranslucentMaterial_Evaluate(__global const M
 	EvalStack_PushFloat(directPdfW);
 }
 
-OPENCL_FORCE_NOT_INLINE void GlossyTranslucentMaterial_Sample(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void GlossyTranslucentMaterial_Sample(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {
@@ -377,7 +377,7 @@ OPENCL_FORCE_NOT_INLINE void GlossyTranslucentMaterial_Sample(__global const Mat
 		const float cosi = fabs(sampledDir.z);
 		const float coso = fabs(fixedDir.z);
 
-		const float3 H = normalize((float3)(sampledDir.x + fixedDir.x, sampledDir.y + fixedDir.y,
+		const float3 H = normalize(MAKE_FLOAT3(sampledDir.x + fixedDir.x, sampledDir.y + fixedDir.y,
 			sampledDir.z - fixedDir.z));
 		const float u = fabs(dot(sampledDir, H));
 		float3 ks = ksVal;

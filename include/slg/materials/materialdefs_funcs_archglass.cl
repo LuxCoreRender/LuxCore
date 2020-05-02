@@ -50,7 +50,7 @@ OPENCL_FORCE_INLINE float ExtractInteriorIors(__global const HitPoint *hitPoint,
 // ArchGlass material
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_NOT_INLINE float3 ArchGlassMaterial_EvalSpecularReflection(__global const HitPoint *hitPoint,
+OPENCL_FORCE_INLINE float3 ArchGlassMaterial_EvalSpecularReflection(__global const HitPoint *hitPoint,
 		const float3 localFixedDir, const float3 kr,
 		const float nc, const float nt,
 		float3 *sampledDir) {
@@ -61,13 +61,13 @@ OPENCL_FORCE_NOT_INLINE float3 ArchGlassMaterial_EvalSpecularReflection(__global
 	if (costheta <= 0.f)
 		return BLACK;
 
-	*sampledDir = (float3)(-localFixedDir.x, -localFixedDir.y, localFixedDir.z);
+	*sampledDir = MAKE_FLOAT3(-localFixedDir.x, -localFixedDir.y, localFixedDir.z);
 
 	const float ntc = nt / nc;
 	return kr * FresnelCauchy_Evaluate(ntc, costheta);
 }
 
-OPENCL_FORCE_NOT_INLINE float3 ArchGlassMaterial_EvalSpecularTransmission(__global const HitPoint *hitPoint,
+OPENCL_FORCE_INLINE float3 ArchGlassMaterial_EvalSpecularTransmission(__global const HitPoint *hitPoint,
 		const float3 localFixedDir, const float3 kt,
 		const float nc, const float nt, float3 *sampledDir) {
 	if (Spectrum_IsBlack(kt))
@@ -137,12 +137,12 @@ OPENCL_FORCE_INLINE void ArchGlassMaterial_GetPassThroughTransparency(__global c
 	const float3 kr = Spectrum_Clamp(Texture_GetSpectrumValue(material->archglass.krTexIndex, hitPoint
 		TEXTURES_PARAM));
 
-	const float nc = Spectrum_Filter(ExtractExteriorIors(hitPoint,
+	const float nc = Spectrum_Filter(TO_FLOAT3(ExtractExteriorIors(hitPoint,
 			material->archglass.exteriorIorTexIndex
-			TEXTURES_PARAM));
-	const float nt = Spectrum_Filter(ExtractInteriorIors(hitPoint,
+			TEXTURES_PARAM)));
+	const float nt = Spectrum_Filter(TO_FLOAT3(ExtractInteriorIors(hitPoint,
 			material->archglass.interiorIorTexIndex
-			TEXTURES_PARAM));
+			TEXTURES_PARAM)));
 
 	float3 transLocalSampledDir; 
 	const float3 trans = ArchGlassMaterial_EvalSpecularTransmission(hitPoint, localFixedDir,
@@ -190,7 +190,7 @@ OPENCL_FORCE_INLINE void ArchGlassMaterial_GetEmittedRadiance(__global const Mat
 	DefaultMaterial_GetEmittedRadiance(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
 }
 
-OPENCL_FORCE_NOT_INLINE void ArchGlassMaterial_Evaluate(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void ArchGlassMaterial_Evaluate(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {
@@ -201,7 +201,7 @@ OPENCL_FORCE_NOT_INLINE void ArchGlassMaterial_Evaluate(__global const Material*
 	MATERIAL_EVALUATE_RETURN_BLACK;
 }
 
-OPENCL_FORCE_NOT_INLINE void ArchGlassMaterial_Sample(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void ArchGlassMaterial_Sample(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {

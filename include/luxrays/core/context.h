@@ -147,6 +147,13 @@ public:
 	void UpdateDataSet();
 
 	//--------------------------------------------------------------------------
+	// Methods dedicated to out of core rendering
+	//--------------------------------------------------------------------------
+
+	bool GetUseOutOfCoreBuffers() const { return useOutOfCoreBuffers; }
+	void SetUseOutOfCoreBuffers(const bool v) { useOutOfCoreBuffers = v; }
+
+	//--------------------------------------------------------------------------
 	// Methods dedicated to Context management (i.e. start/stop, etc.)
 	//--------------------------------------------------------------------------
 
@@ -168,7 +175,7 @@ public:
 	void SetVerbose(const bool v) { verbose = v; }
 	bool IsVerbose() const { return verbose; }
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
+#if defined(LUXRAYS_ENABLE_OPENCL)
 	friend class OpenCLIntersectionDevice;
 #endif
 
@@ -192,7 +199,7 @@ private:
 	// All devices (idevices + hdevices)
 	std::vector<Device *> devices;
 
-	bool started, verbose;
+	bool started, verbose, useOutOfCoreBuffers;
 };
 
 }

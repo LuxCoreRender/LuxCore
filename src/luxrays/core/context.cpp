@@ -25,12 +25,13 @@
 #include "luxrays/core/context.h"
 #include "luxrays/core/hardwaredevice.h"
 #include "luxrays/devices/nativeintersectiondevice.h"
-#if !defined(LUXRAYS_DISABLE_OPENCL)
+#if defined(LUXRAYS_ENABLE_OPENCL)
 #include "luxrays/devices/ocldevice.h"
 #include "luxrays/devices/oclintersectiondevice.h"
 #endif
 #if defined(LUXRAYS_ENABLE_CUDA)
 #include "luxrays/devices/cudadevice.h"
+#include "luxrays/devices/cudaintersectiondevice.h"
 #endif
 
 using namespace std;
@@ -44,6 +45,7 @@ Context::Context(LuxRaysDebugHandler handler, const Properties &config) : cfg(co
 	debugHandler = handler;
 	currentDataSet = NULL;
 	started = false;
+	useOutOfCoreBuffers = false;
 	verbose = cfg.Get(Property("context.verbose")(true)).Get<bool>();
 
 	// Get the list of devices available on the platform
@@ -53,9 +55,8 @@ Context::Context(LuxRaysDebugHandler handler, const Properties &config) : cfg(co
 	//--------------------------------------------------------------------------
 
 	NativeIntersectionDeviceDescription::AddDeviceDescs(deviceDescriptions);
-
 	
-#if !defined(LUXRAYS_DISABLE_OPENCL)
+#if defined(LUXRAYS_ENABLE_OPENCL)
 	//--------------------------------------------------------------------------
 	// Add all OpenCL devices
 	//--------------------------------------------------------------------------
@@ -132,6 +133,9 @@ Context::Context(LuxRaysDebugHandler handler, const Properties &config) : cfg(co
 
 		LR_LOG(this, "Device " << i << " max allocable memory block size: " <<
 			desc->GetMaxMemoryAllocSize() / (1024 * 1024) << "MBytes");
+
+		LR_LOG(this, "Device " << i << " has out of core memory support: " <<
+			desc->HasOutOfCoreMemorySupport());
 	}
 }
 
@@ -160,12 +164,12 @@ void Context::UpdateDataSet() {
 	// Update the data set
 	currentDataSet->UpdateAccelerators();
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	// Update all OpenCL devices
-	for (u_int i = 0; i < idevices.size(); ++i) {
-		OpenCLIntersectionDevice *oclDevice = dynamic_cast<OpenCLIntersectionDevice *>(idevices[i]);
-		if (oclDevice)
-			oclDevice->Update();
+#if defined(LUXRAYS_ENABLE_OPENCL)
+	// Update all hardware intersection devices
+	for (auto device : idevices) {
+		HardwareIntersectionDevice *hardwareIntersectionDevice = dynamic_cast<HardwareIntersectionDevice *>(device);
+		if (hardwareIntersectionDevice)
+			hardwareIntersectionDevice->Update();
 	}
 #endif
 }
@@ -173,8 +177,11 @@ void Context::UpdateDataSet() {
 void Context::Start() {
 	assert (!started);
 
-	for (size_t i = 0; i < devices.size(); ++i)
-		devices[i]->Start();
+	for (auto device : devices) {
+		device->PushThreadCurrentDevice();
+		device->Start();
+		device->PopThreadCurrentDevice();
+	}
 
 	started = true;
 }
@@ -182,8 +189,11 @@ void Context::Start() {
 void Context::Interrupt() {
 	assert (started);
 
-	for (size_t i = 0; i < devices.size(); ++i)
-		devices[i]->Interrupt();
+	for (auto device : devices) {
+		device->PushThreadCurrentDevice();
+		device->Interrupt();
+		device->PopThreadCurrentDevice();
+	}
 }
 
 void Context::Stop() {
@@ -191,8 +201,11 @@ void Context::Stop() {
 
 	Interrupt();
 
-	for (size_t i = 0; i < devices.size(); ++i)
-		devices[i]->Stop();
+	for (auto device : devices) {
+		device->PushThreadCurrentDevice();
+		device->Stop();
+		device->PopThreadCurrentDevice();
+	}
 
 	started = false;
 }
@@ -228,14 +241,23 @@ vector<IntersectionDevice *> Context::CreateIntersectionDevices(
 		IntersectionDevice *device;
 		if (deviceType == DEVICE_TYPE_NATIVE) {
 			// Nathive thread devices
-			device = new NativeIntersectionDevice(this, indexOffset + i);
+			NativeIntersectionDeviceDescription *nativeDeviceDesc = (NativeIntersectionDeviceDescription *)deviceDesc[i];
+			device = new NativeIntersectionDevice(this, nativeDeviceDesc, indexOffset + i);
 		}
-#if !defined(LUXRAYS_DISABLE_OPENCL)
+#if defined(LUXRAYS_ENABLE_OPENCL)
 		else if (deviceType & DEVICE_TYPE_OPENCL_ALL) {
 			// OpenCL devices
 			OpenCLDeviceDescription *oclDeviceDesc = (OpenCLDeviceDescription *)deviceDesc[i];
 
 			device = new OpenCLIntersectionDevice(this, oclDeviceDesc, indexOffset + i);
+		}
+#endif
+#if defined(LUXRAYS_ENABLE_CUDA)
+		else if (deviceType & DEVICE_TYPE_CUDA_ALL) {
+			// CUDA devices
+			CUDADeviceDescription *cudaDeviceDesc = (CUDADeviceDescription *)deviceDesc[i];
+
+			device = new CUDAIntersectionDevice(this, cudaDeviceDesc, indexOffset + i);
 		}
 #endif
 		else
@@ -275,7 +297,7 @@ vector<HardwareDevice *> Context::CreateHardwareDevices(
 		if (deviceType == DEVICE_TYPE_NATIVE) {
 			throw runtime_error("Native devices are not supported as hardware devices in Context::CreateHardwareDevices()");
 		}
-#if !defined(LUXRAYS_DISABLE_OPENCL)
+#if defined(LUXRAYS_ENABLE_OPENCL)
 		else if (deviceType & DEVICE_TYPE_OPENCL_ALL) {
 			// OpenCL devices
 			OpenCLDeviceDescription *oclDeviceDesc = (OpenCLDeviceDescription *)deviceDesc[i];

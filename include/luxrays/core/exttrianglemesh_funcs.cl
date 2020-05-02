@@ -99,7 +99,7 @@ OPENCL_FORCE_INLINE float2 ExtMesh_GetInterpolateUV(
 		EXTMESH_PARAM_DECL) {
 	__global const ExtMesh* restrict meshDesc = &meshDescs[meshIndex];
 	
-	float2 uv = 0.f;
+	float2 uv = MAKE_FLOAT2(0.f, 0.f);
 	if (meshDesc->uvsOffset[dataIndex] != NULL_INDEX) {
 		__global const UV* restrict uvs = &vertUVs[meshDesc->uvsOffset[dataIndex]];
 		__global const Triangle* restrict tri = &triangles[meshDesc->trisOffset + triangleIndex];
@@ -223,16 +223,16 @@ OPENCL_FORCE_INLINE void ExtMesh_GetDifferentials(
 		uv1 = VLOAD2F(&iVertUVs[vi1].u);
 		uv2 = VLOAD2F(&iVertUVs[vi2].u);
 	} else {
-		uv0 = (float2)(.5f, .5f);
-		uv1 = (float2)(.5f, .5f);
-		uv2 = (float2)(.5f, .5f);
+		uv0 = MAKE_FLOAT2(.5f, .5f);
+		uv1 = MAKE_FLOAT2(.5f, .5f);
+		uv2 = MAKE_FLOAT2(.5f, .5f);
 	}
 
 	// Compute deltas for triangle partial derivatives
-	const float du1 = uv0.s0 - uv2.s0;
-	const float du2 = uv1.s0 - uv2.s0;
-	const float dv1 = uv0.s1 - uv2.s1;
-	const float dv2 = uv1.s1 - uv2.s1;
+	const float du1 = uv0.x - uv2.x;
+	const float du2 = uv1.x - uv2.x;
+	const float dv1 = uv0.y - uv2.y;
+	const float dv2 = uv1.y - uv2.y;
 	const float determinant = du1 * dv2 - dv1 * du2;
 
 	if (determinant == 0.f) {

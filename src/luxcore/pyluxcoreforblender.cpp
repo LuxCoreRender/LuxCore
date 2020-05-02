@@ -528,8 +528,8 @@ boost::python::tuple GetOpenVDBGridInfo(const string &filePathStr, const string 
 
 	openvdb::GridBase::Ptr ovdbGrid = file.readGridMetadata(gridName);	
 
-	const openvdb::Vec3i bbox_min = ovdbGrid->metaValue<openvdb::Vec3i>("file_bbox_min");
-	const openvdb::Vec3i bbox_max = ovdbGrid->metaValue<openvdb::Vec3i>("file_bbox_max");
+	//const openvdb::Vec3i bbox_min = ovdbGrid->metaValue<openvdb::Vec3i>("file_bbox_min");
+	//const openvdb::Vec3i bbox_max = ovdbGrid->metaValue<openvdb::Vec3i>("file_bbox_max");
 
 	const openvdb::math::Transform &transform = ovdbGrid->transform();
 	openvdb::math::Mat4f matrix = transform.baseMap()->getAffineMap()->getMat4();

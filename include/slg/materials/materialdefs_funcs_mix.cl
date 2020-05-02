@@ -298,7 +298,7 @@ OPENCL_FORCE_INLINE void MixMaterial_GetEmittedRadiance(__global const Material*
 // Material evaluate
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_NOT_INLINE void MixMaterial_EvaluateSetUp1(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void MixMaterial_EvaluateSetUp1(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {
@@ -340,7 +340,7 @@ OPENCL_FORCE_NOT_INLINE void MixMaterial_EvaluateSetUp1(__global const Material*
 	EvalStack_PushFloat3(matAEyeDir);
 }
 
-OPENCL_FORCE_NOT_INLINE void MixMaterial_EvaluateSetUp2(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void MixMaterial_EvaluateSetUp2(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {
@@ -403,7 +403,7 @@ OPENCL_FORCE_NOT_INLINE void MixMaterial_EvaluateSetUp2(__global const Material*
 	EvalStack_PushFloat3(matBEyeDir);
 }
 
-OPENCL_FORCE_NOT_INLINE void MixMaterial_Evaluate(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void MixMaterial_Evaluate(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {
@@ -487,7 +487,7 @@ OPENCL_FORCE_NOT_INLINE void MixMaterial_Evaluate(__global const Material* restr
 // Material sample
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_NOT_INLINE void MixMaterial_SampleSetUp1(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void MixMaterial_SampleSetUp1(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {
@@ -551,7 +551,7 @@ OPENCL_FORCE_NOT_INLINE void MixMaterial_SampleSetUp1(__global const Material* r
 	EvalStack_PushInt(!sampleMatA);
 }
 
-OPENCL_FORCE_NOT_INLINE void MixMaterial_SampleSetUp2(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void MixMaterial_SampleSetUp2(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {
@@ -644,7 +644,7 @@ OPENCL_FORCE_NOT_INLINE void MixMaterial_SampleSetUp2(__global const Material* r
 	EvalStack_PushInt(sampleMatA);
 }
 
-OPENCL_FORCE_NOT_INLINE void MixMaterial_Sample(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void MixMaterial_Sample(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {

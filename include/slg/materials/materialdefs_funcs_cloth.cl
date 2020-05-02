@@ -235,7 +235,7 @@ OPENCL_FORCE_INLINE float seeliger(float cos_th1, float cos_th2, float sg_a, flo
 	return al * (.5f * M_1_PI_F) * .5f * c1 * c2 / (c1 + c2);
 }
 
-OPENCL_FORCE_NOT_INLINE void GetYarnUV(__constant WeaveConfig *Weave, __constant Yarn *yarn,
+OPENCL_FORCE_INLINE void GetYarnUV(__constant WeaveConfig *Weave, __constant Yarn *yarn,
         const float Repeat_U, const float Repeat_V,
         const float3 center, const float3 xy, float2 *uv, float *umaxMod) {
 	*umaxMod = Radians(yarn->umax);
@@ -268,15 +268,15 @@ OPENCL_FORCE_NOT_INLINE void GetYarnUV(__constant WeaveConfig *Weave, __constant
 	// See Chapter 6.
 	// Rotate pi/2 radians around z axis
 	if (yarn->yarn_type == WARP) {
-		(*uv).s0 = xy.y * 2.f * *umaxMod / yarn->length;
-		(*uv).s1 = xy.x * M_PI_F / yarn->width;
+		(*uv).x = xy.y * 2.f * *umaxMod / yarn->length;
+		(*uv).y = xy.x * M_PI_F / yarn->width;
 	} else {
-		(*uv).s0 = xy.x * 2.f * *umaxMod / yarn->length;
-		(*uv).s1 = -xy.y * M_PI_F / yarn->width;
+		(*uv).x = xy.x * 2.f * *umaxMod / yarn->length;
+		(*uv).y = -xy.y * M_PI_F / yarn->width;
 	}
 }
 
-OPENCL_FORCE_NOT_INLINE __constant Yarn *GetYarn(const ClothPreset Preset, __constant WeaveConfig *Weave,
+OPENCL_FORCE_INLINE __constant Yarn *GetYarn(const ClothPreset Preset, __constant WeaveConfig *Weave,
         const float Repeat_U, const float Repeat_V,
         const float u_i, const float v_i,
         float2 *uv, float *umax, float *scale) {
@@ -293,9 +293,9 @@ OPENCL_FORCE_NOT_INLINE __constant Yarn *GetYarn(const ClothPreset Preset, __con
 	const int yarnID = ClothPatterns[Preset][lx + Weave->tileWidth * ly] - 1;
 	__constant Yarn *yarn = &ClothYarns[Preset][yarnID];
 
-	const float3 center = (float3)((bu + yarn->centerU) * Weave->tileWidth,
+	const float3 center = MAKE_FLOAT3((bu + yarn->centerU) * Weave->tileWidth,
 		(bv + yarn->centerV) * Weave->tileHeight, 0.f);
-	const float3 xy = (float3)((ou - yarn->centerU) * Weave->tileWidth,
+	const float3 xy = MAKE_FLOAT3((ou - yarn->centerU) * Weave->tileWidth,
 		(ov - yarn->centerV) * Weave->tileHeight, 0.f);
 
 	GetYarnUV(Weave, yarn, Repeat_U, Repeat_V, center, xy, uv, umax);
@@ -319,7 +319,7 @@ OPENCL_FORCE_NOT_INLINE __constant Yarn *GetYarn(const ClothPreset Preset, __con
 	return yarn;
 }
 
-OPENCL_FORCE_NOT_INLINE float RadiusOfCurvature(__constant Yarn *yarn, float u, float umaxMod) {
+OPENCL_FORCE_INLINE float RadiusOfCurvature(__constant Yarn *yarn, float u, float umaxMod) {
 	// rhat determines whether the spine is a segment
 	// of an ellipse, a parabole, or a hyperbola.
 	// See Section 5.3.
@@ -350,7 +350,7 @@ OPENCL_FORCE_NOT_INLINE float RadiusOfCurvature(__constant Yarn *yarn, float u, 
 	}
 }
 
-OPENCL_FORCE_NOT_INLINE float EvalFilamentIntegrand(__constant WeaveConfig *Weave, __constant Yarn *yarn, const float3 om_i,
+OPENCL_FORCE_INLINE float EvalFilamentIntegrand(__constant WeaveConfig *Weave, __constant Yarn *yarn, const float3 om_i,
         const float3 om_r, float u, float v, float umaxMod) {
 	// 0 <= ss < 1.0
 	if (Weave->ss < 0.0f || Weave->ss >= 1.0f)
@@ -384,9 +384,9 @@ OPENCL_FORCE_NOT_INLINE float EvalFilamentIntegrand(__constant WeaveConfig *Weav
 	
 	// n is normal to the yarn surface
 	// t is tangent of the fibers.
-	const float3 n = normalize((float3)(sin(v), sin(u_of_v) * cos(v),
+	const float3 n = normalize(MAKE_FLOAT3(sin(v), sin(u_of_v) * cos(v),
 		cos(u_of_v) * cos(v)));
-	const float3 t = normalize((float3)(0.0f, cos(u_of_v), -sin(u_of_v)));
+	const float3 t = normalize(MAKE_FLOAT3(0.0f, cos(u_of_v), -sin(u_of_v)));
 
 	// R is radius of curvature.
 	const float R = RadiusOfCurvature(yarn, fmin(fabs(u_of_v),
@@ -417,7 +417,7 @@ OPENCL_FORCE_NOT_INLINE float EvalFilamentIntegrand(__constant WeaveConfig *Weav
 	return fs * M_PI_F / Weave->hWidth;
 }
 
-OPENCL_FORCE_NOT_INLINE float EvalStapleIntegrand(__constant WeaveConfig *Weave, __constant Yarn *yarn,
+OPENCL_FORCE_INLINE float EvalStapleIntegrand(__constant WeaveConfig *Weave, __constant Yarn *yarn,
         const float3 om_i, const float3 om_r, float u, float v, float umaxMod) {
 	// w * sin(umax) < l
 	if (yarn->width * sin(umaxMod) >= yarn->length)
@@ -447,7 +447,7 @@ OPENCL_FORCE_NOT_INLINE float EvalStapleIntegrand(__constant WeaveConfig *Weave,
 		return 0.f;
 
 	// n is normal to the yarn surface.
-	const float3 n = normalize((float3)(sin(v_of_u), sin(u) * cos(v_of_u),
+	const float3 n = normalize(MAKE_FLOAT3(sin(v_of_u), sin(u) * cos(v_of_u),
 		cos(u) * cos(v_of_u)));
 
 	// R is radius of curvature.
@@ -472,15 +472,15 @@ OPENCL_FORCE_NOT_INLINE float EvalStapleIntegrand(__constant WeaveConfig *Weave,
 	return fs * 2.0f * umaxMod / Weave->hWidth;
 }
 
-OPENCL_FORCE_NOT_INLINE float EvalIntegrand(__constant WeaveConfig *Weave, __constant Yarn *yarn,
+OPENCL_FORCE_INLINE float EvalIntegrand(__constant WeaveConfig *Weave, __constant Yarn *yarn,
         const float2 uv, float umaxMod, float3 *om_i, float3 *om_r) {
 	if (yarn->yarn_type == WARP) {
 		if (yarn->psi != 0.0f)
-			return EvalStapleIntegrand(Weave, yarn, *om_i, *om_r, uv.s0, uv.s1,
+			return EvalStapleIntegrand(Weave, yarn, *om_i, *om_r, uv.x, uv.y,
 				umaxMod) * (Weave->warpArea + Weave->weftArea) /
 				Weave->warpArea;
 		else
-			return EvalFilamentIntegrand(Weave, yarn, *om_i, *om_r, uv.s0, uv.s1,
+			return EvalFilamentIntegrand(Weave, yarn, *om_i, *om_r, uv.x, uv.y,
 				umaxMod) * (Weave->warpArea + Weave->weftArea) /
 				Weave->warpArea;
 	} else {
@@ -498,17 +498,17 @@ OPENCL_FORCE_NOT_INLINE float EvalIntegrand(__constant WeaveConfig *Weave, __con
 		(*om_r).x = -(*om_r).x;
 
 		if (yarn->psi != 0.0f)
-			return EvalStapleIntegrand(Weave, yarn, *om_i, *om_r, uv.s0, uv.s1,
+			return EvalStapleIntegrand(Weave, yarn, *om_i, *om_r, uv.x, uv.y,
 				umaxMod) * (Weave->warpArea + Weave->weftArea) /
 				Weave->weftArea;
 		else
-			return EvalFilamentIntegrand(Weave, yarn, *om_i, *om_r, uv.s0, uv.s1,
+			return EvalFilamentIntegrand(Weave, yarn, *om_i, *om_r, uv.x, uv.y,
 				umaxMod) * (Weave->warpArea + Weave->weftArea) /
 				Weave->weftArea;
 	}
 }
 
-OPENCL_FORCE_NOT_INLINE float EvalSpecular(__constant WeaveConfig *Weave, __constant Yarn *yarn, const float2 uv,
+OPENCL_FORCE_INLINE float EvalSpecular(__constant WeaveConfig *Weave, __constant Yarn *yarn, const float2 uv,
         float umax, const float3 wo, const float3 wi) {
 	// Get incident and exitant directions.
 	float3 om_i = wi;
@@ -573,7 +573,7 @@ OPENCL_FORCE_INLINE void ClothMaterial_GetEmittedRadiance(__global const Materia
 	DefaultMaterial_GetEmittedRadiance(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
 }
 
-OPENCL_FORCE_NOT_INLINE void ClothMaterial_Evaluate(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void ClothMaterial_Evaluate(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {
@@ -614,7 +614,7 @@ OPENCL_FORCE_NOT_INLINE void ClothMaterial_Evaluate(__global const Material* res
 	EvalStack_PushFloat(directPdfW);
 }
 
-OPENCL_FORCE_NOT_INLINE void ClothMaterial_Sample(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void ClothMaterial_Sample(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {

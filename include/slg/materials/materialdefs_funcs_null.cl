@@ -68,7 +68,7 @@ OPENCL_FORCE_INLINE void NullMaterial_GetPassThroughTransparency(__global const 
 
 		if (Spectrum_IsBlack(blendColor)) {
 			// It doesn't make any sense to have a solid NULL material
-			transp = .0001f;
+			transp = TO_FLOAT3(.0001f);
 		} else
 			transp = blendColor;
 	} else
@@ -84,7 +84,7 @@ OPENCL_FORCE_INLINE void NullMaterial_GetEmittedRadiance(__global const Material
 	DefaultMaterial_GetEmittedRadiance(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
 }
 
-OPENCL_FORCE_NOT_INLINE void NullMaterial_Evaluate(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void NullMaterial_Evaluate(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {
@@ -95,7 +95,7 @@ OPENCL_FORCE_NOT_INLINE void NullMaterial_Evaluate(__global const Material* rest
 	MATERIAL_EVALUATE_RETURN_BLACK;
 }
 
-OPENCL_FORCE_NOT_INLINE void NullMaterial_Sample(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void NullMaterial_Sample(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {

@@ -32,8 +32,9 @@ typedef enum {
 	ACCEL_AUTO, ACCEL_BVH, ACCEL_MBVH, ACCEL_EMBREE
 } AcceleratorType;
 
-class OpenCLKernel;
-class OpenCLIntersectionDevice;
+class IntersectionDevice;
+class HardwareIntersectionDevice;
+class HardwareIntersectionKernel;
 
 class Accelerator {
 public:
@@ -42,8 +43,8 @@ public:
 
 	virtual AcceleratorType GetType() const = 0;
 
-	virtual OpenCLKernel *NewOpenCLKernel(OpenCLIntersectionDevice *device) const = 0;
-	virtual bool CanRunOnOpenCLDevice(OpenCLIntersectionDevice *device) const { return true; }
+	virtual bool HasDataParallelSupport(const IntersectionDevice &device) const = 0;
+	virtual HardwareIntersectionKernel *NewHardwareIntersectionKernel(HardwareIntersectionDevice &device) const = 0;
 
 	virtual void Init(const std::deque<const Mesh *> &meshes, const u_longlong totalVertexCount, const u_longlong totalTriangleCount) = 0;
 	virtual bool DoesSupportUpdate() const { return false; }

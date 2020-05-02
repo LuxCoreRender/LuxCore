@@ -32,14 +32,10 @@
 ################################################################################
 
 IF (NOT LUXRAYS_NO_DEFAULT_CONFIG)
-
-  # Disable Boost automatic linking
-  ADD_DEFINITIONS(-DBOOST_ALL_NO_LIB)
-
+	# Disable Boost automatic linking
+	ADD_DEFINITIONS(-DBOOST_ALL_NO_LIB)
 ELSE(NOT LUXRAYS_NO_DEFAULT_CONFIG)
-	
 	MESSAGE(STATUS "LUXRAYS_NO_DEFAULT_CONFIG defined - not using default configuration values.")
-
 ENDIF(NOT LUXRAYS_NO_DEFAULT_CONFIG)
 
 # Setup libraries output directory
@@ -84,3 +80,6 @@ IF (LUXRAYS_CUSTOM_CONFIG)
 	INCLUDE(${LUXRAYS_CUSTOM_CONFIG})
 ENDIF (LUXRAYS_CUSTOM_CONFIG)
 
+IF (NOT DEFINED LUXRAYS_DISABLE_OPENCL AND NOT DEFINED LUXRAYS_ENABLE_OPENCL)
+	set(LUXRAYS_ENABLE_OPENCL true)
+ENDIF()

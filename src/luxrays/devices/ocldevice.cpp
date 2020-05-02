@@ -16,7 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
+#if defined(LUXRAYS_ENABLE_OPENCL)
 
 #if defined (__linux__)
 #include <GL/glx.h>
@@ -145,9 +145,9 @@ OpenCLDevice::OpenCLDevice(
 		const Context *context,
 		OpenCLDeviceDescription *desc,
 		const size_t devIndex) :
-		Device(context, desc->GetType(), devIndex),
+		Device(context, devIndex),
 		deviceDesc(desc), oclQueue(nullptr) {
-	deviceName = (desc->GetName() + " Intersect").c_str();
+	deviceName = (desc->GetName() + " OpenCLIntersect").c_str();
 
 	// Check if OpenCL 1.1 is available
 	if (!desc->IsOpenCL_1_1()) {
@@ -182,16 +182,19 @@ void OpenCLDevice::Stop() {
 //------------------------------------------------------------------------------
 
 void OpenCLDevice::CompileProgram(HardwareDeviceProgram **program,
-		const string &programParameters, const string &programSource,	
+		const vector<string> &programParameters, const string &programSource,	
 		const string &programName) {
 	cl::Context &oclContext = deviceDesc->GetOCLContext();
 	cl::Device &oclDevice = deviceDesc->GetOCLDevice();
 
-	LR_LOG(deviceContext, "[" << programName << "] Defined symbols: " << programParameters);
+	vector <string> oclProgramParameters = programParameters;
+	oclProgramParameters.push_back("-D LUXRAYS_OPENCL_DEVICE");
+	oclProgramParameters.insert(oclProgramParameters.end(),
+			additionalCompileOpts.begin(), additionalCompileOpts.end());
+
+	LR_LOG(deviceContext, "[" << programName << "] Compiler options: " << oclKernelPersistentCache::ToOptsString(oclProgramParameters));
 	LR_LOG(deviceContext, "[" << programName << "] Compiling kernels ");
 
-	const string oclProgramParameters = "-D LUXRAYS_OPENCL_DEVICE " +
-		programParameters;
 	const string oclProgramSource =
 		luxrays::ocl::KernelSource_ocldevice_funcs +
 		programSource;
@@ -202,9 +205,9 @@ void OpenCLDevice::CompileProgram(HardwareDeviceProgram **program,
 			oclProgramParameters, oclProgramSource,
 			&cached, &error);
 	if (!oclProgram) {
-		LR_LOG(deviceContext, "[" << programName << "] program compilation error" << endl << error);
+		LR_LOG(deviceContext, "[" << programName << "] OpenCL program compilation error" << endl << error);
 
-		throw runtime_error(programName + " program compilation error");
+		throw runtime_error(programName + " OpenCL program compilation error");
 	}
 
 	if (cached) {
@@ -236,6 +239,20 @@ void OpenCLDevice::GetKernel(HardwareDeviceProgram *program,
 	oclDeviceKernel->Set(new cl::Kernel(*(oclDeviceProgram->Get()), kernelName.c_str()));
 }
 
+u_int OpenCLDevice::GetKernelWorkGroupSize(HardwareDeviceKernel *kernel) {
+	assert (kernel);
+	assert (!kernel->IsNull());
+
+	OpenCLDeviceKernel *oclDeviceKernel = dynamic_cast<OpenCLDeviceKernel *>(kernel);
+	assert (oclDeviceKernel);
+
+	size_t size;
+	oclDeviceKernel->oclKernel->getWorkGroupInfo<size_t>(deviceDesc->GetOCLDevice(),
+				CL_KERNEL_WORK_GROUP_SIZE, &size);
+	
+	return size;
+}
+
 void OpenCLDevice::SetKernelArg(HardwareDeviceKernel *kernel,
 		const u_int index, const size_t size, const void *arg) {
 	assert (kernel);
@@ -257,9 +274,9 @@ void OpenCLDevice::SetKernelArgBuffer(HardwareDeviceKernel *kernel,
 
 	const OpenCLDeviceBuffer *oclDeviceBuff = dynamic_cast<const OpenCLDeviceBuffer *>(buff);
 	if (oclDeviceBuff)
-		oclDeviceKernel->oclKernel->setArg(index, *(oclDeviceBuff->oclBuff));
+		oclDeviceKernel->oclKernel->setArg(index, sizeof(cl::Buffer), oclDeviceBuff->oclBuff);
 	else
-		oclDeviceKernel->oclKernel->setArg(index, nullptr);
+		oclDeviceKernel->oclKernel->setArg(index, sizeof(cl::Buffer), nullptr);
 }
 
 static cl::NDRange ConvertHardwareRange(const HardwareDeviceRange &range) {
@@ -295,7 +312,7 @@ void OpenCLDevice::EnqueueReadBuffer(const HardwareDeviceBuffer *buff,
 	assert (oclDeviceBuff);
 	assert (!oclDeviceBuff->IsNull());
 
-	oclQueue->enqueueReadBuffer(*(oclDeviceBuff->oclBuff), 0, blocking, size, ptr);
+	oclQueue->enqueueReadBuffer(*(oclDeviceBuff->oclBuff), blocking, 0, size, ptr);
 }
 
 void OpenCLDevice::EnqueueWriteBuffer(const HardwareDeviceBuffer *buff,
@@ -307,7 +324,7 @@ void OpenCLDevice::EnqueueWriteBuffer(const HardwareDeviceBuffer *buff,
 	assert (oclDeviceBuff);
 	assert (!oclDeviceBuff->IsNull());
 
-	oclQueue->enqueueWriteBuffer(*(oclDeviceBuff->oclBuff), 0, blocking, size, ptr);
+	oclQueue->enqueueWriteBuffer(*(oclDeviceBuff->oclBuff), blocking, 0, size, ptr);
 }
 
 void OpenCLDevice::FlushQueue() {
@@ -377,24 +394,28 @@ void OpenCLDevice::AllocBuffer(const cl_mem_flags clFlags, cl::Buffer **buff,
 	AllocMemory((*buff)->getInfo<CL_MEM_SIZE>());
 }
 
-void OpenCLDevice::AllocBufferRO(HardwareDeviceBuffer **buff, void *src, const size_t size, const string &desc) {
+void OpenCLDevice::AllocBuffer(HardwareDeviceBuffer **buff, const BufferType type,
+		void *src, const size_t size, const string &desc) {
 	if (!*buff)
 		*buff = new OpenCLDeviceBuffer();
 
 	OpenCLDeviceBuffer *oclDeviceBuff = dynamic_cast<OpenCLDeviceBuffer *>(*buff);
 	assert (oclDeviceBuff);
+
+	cl_mem_flags clFlags = BUFFER_TYPE_NONE;
+	if (type & BUFFER_TYPE_READ_ONLY)
+		clFlags |= CL_MEM_READ_ONLY;
+	if (type & BUFFER_TYPE_READ_WRITE)
+		clFlags |= CL_MEM_READ_WRITE;
+	if (src)
+		clFlags |= CL_MEM_COPY_HOST_PTR;
+
+	// Check if I was asked for out of core support
+	if (type & BUFFER_TYPE_OUT_OF_CORE) {
+		LR_LOG(deviceContext, "WARNING: OpenCL devices don't support out of core memory buffers: " << desc);
+	}
 	
-	AllocBuffer(src ? (CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR) : CL_MEM_READ_ONLY, &(oclDeviceBuff->oclBuff), src, size, desc);
-}
-
-void OpenCLDevice::AllocBufferRW(HardwareDeviceBuffer **buff, void *src, const size_t size, const string &desc) {
-	if (!*buff)
-		*buff = new OpenCLDeviceBuffer();
-
-	OpenCLDeviceBuffer *oclDeviceBuff = dynamic_cast<OpenCLDeviceBuffer *>(*buff);
-	assert (oclDeviceBuff);
-
-	AllocBuffer(src ? (CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR) : CL_MEM_READ_WRITE, &(oclDeviceBuff->oclBuff), src, size, desc);
+	AllocBuffer(clFlags, &(oclDeviceBuff->oclBuff), src, size, desc);
 }
 
 void OpenCLDevice::FreeBuffer(HardwareDeviceBuffer **buff) {

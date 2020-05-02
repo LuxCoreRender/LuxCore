@@ -41,8 +41,8 @@
 OPENCL_FORCE_INLINE float3 HsvTexture_RgbToHsv(const float3 rgb) {
 	float cmax, cmin, h, s, v, cdelta;
 
-	cmax = fmax(rgb.s0, fmax(rgb.s1, rgb.s2));
-	cmin = fmin(rgb.s0, fmin(rgb.s1, rgb.s2));
+	cmax = fmax(rgb.x, fmax(rgb.y, rgb.z));
+	cmin = fmin(rgb.x, fmin(rgb.y, rgb.z));
 	cdelta = cmax - cmin;
 
 	v = cmax;
@@ -57,16 +57,16 @@ OPENCL_FORCE_INLINE float3 HsvTexture_RgbToHsv(const float3 rgb) {
 	if (s != 0.0f) {
 		float3 c;
 		float icdelta = 1.f / cdelta;
-		c.s0 = (cmax - rgb.s0) * icdelta;
-		c.s1 = (cmax - rgb.s1) * icdelta;
-		c.s2 = (cmax - rgb.s2) * icdelta;
+		c.x = (cmax - rgb.x) * icdelta;
+		c.y = (cmax - rgb.y) * icdelta;
+		c.z = (cmax - rgb.z) * icdelta;
 
-		if (rgb.s0 == cmax)
-			h = c.s2 - c.s1;
-		else if (rgb.s1 == cmax)
-			h = 2.f + c.s0 - c.s2;
+		if (rgb.x == cmax)
+			h = c.z - c.y;
+		else if (rgb.y == cmax)
+			h = 2.f + c.x - c.z;
 		else
-			h = 4.f + c.s1 - c.s0;
+			h = 4.f + c.y - c.x;
 
 		h /= 6.f;
 
@@ -75,15 +75,15 @@ OPENCL_FORCE_INLINE float3 HsvTexture_RgbToHsv(const float3 rgb) {
 	} else
 		h = 0.f;
 
-	return (float3)(h, s, v);
+	return MAKE_FLOAT3(h, s, v);
 }
 
 OPENCL_FORCE_INLINE float3 HsvTexture_HsvToRgb(const float3 hsv) {
 	float i, f, p, q, t, h, s, v;
 
-	h = hsv.s0;
-	s = hsv.s1;
-	v = hsv.s2;
+	h = hsv.x;
+	s = hsv.y;
+	v = hsv.z;
 
 	if (s != 0.f) {
 		if (h == 1.f)
@@ -97,19 +97,19 @@ OPENCL_FORCE_INLINE float3 HsvTexture_HsvToRgb(const float3 hsv) {
 		q = v * (1.f - (s * f));
 		t = v * (1.f - (s * (1.f - f)));
 
-		if (i == 0.f) return (float3)(v, t, p);
-		else if (i == 1.f) return (float3)(q, v, p);
-		else if (i == 2.f) return (float3)(p, v, t);
-		else if (i == 3.f) return (float3)(p, q, v);
-		else if (i == 4.f) return (float3)(t, p, v);
-		else return (float3)(v, p, q);
+		if (i == 0.f) return MAKE_FLOAT3(v, t, p);
+		else if (i == 1.f) return MAKE_FLOAT3(q, v, p);
+		else if (i == 2.f) return MAKE_FLOAT3(p, v, t);
+		else if (i == 3.f) return MAKE_FLOAT3(p, q, v);
+		else if (i == 4.f) return MAKE_FLOAT3(t, p, v);
+		else return MAKE_FLOAT3(v, p, q);
 	} else
-		return (float3)(v, v, v);
+		return TO_FLOAT3(v);
 }
 
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_NOT_INLINE float3 HsvTexture_ApplyTransformation(const float3 colorHitpoint,
+OPENCL_FORCE_INLINE float3 HsvTexture_ApplyTransformation(const float3 colorHitpoint,
 		const float hueHitpoint, const float satHitpoint,
 		const float valHitpoint) {
 
@@ -119,10 +119,10 @@ OPENCL_FORCE_NOT_INLINE float3 HsvTexture_ApplyTransformation(const float3 color
 	float3 hsv = HsvTexture_RgbToHsv(input);
 
 	// Manipulate HSV
-	hsv.s0 += hueHitpoint + .5f;
-	hsv.s0 = fmod(hsv.s0, 1.f);
-	hsv.s1 *= satHitpoint;
-	hsv.s2 *= valHitpoint;
+	hsv.x += hueHitpoint + .5f;
+	hsv.x = fmod(hsv.x, 1.f);
+	hsv.y *= satHitpoint;
+	hsv.z *= valHitpoint;
 
 	// Clamp color to prevent negative values caused by over-saturation
 	return Spectrum_Clamp(HsvTexture_HsvToRgb(hsv));

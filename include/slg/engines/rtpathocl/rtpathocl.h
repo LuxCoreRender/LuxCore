@@ -21,7 +21,7 @@
 
 #include <boost/thread.hpp>
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
+#if defined(LUXRAYS_ENABLE_OPENCL)
 
 #include "slg/engines/tilepathocl/tilepathocl.h"
 
@@ -35,7 +35,7 @@ class RTPathOCLRenderEngine;
 
 class RTPathOCLRenderThread : public TilePathOCLRenderThread {
 public:
-	RTPathOCLRenderThread(const u_int index, luxrays::OpenCLIntersectionDevice *device,
+	RTPathOCLRenderThread(const u_int index, luxrays::HardwareIntersectionDevice *device,
 			TilePathOCLRenderEngine *re);
 	virtual ~RTPathOCLRenderThread();
 
@@ -98,7 +98,7 @@ protected:
 	virtual bool IsRTMode() const { return true; }
 
 	virtual PathOCLBaseOCLRenderThread *CreateOCLThread(const u_int index,
-			luxrays::OpenCLIntersectionDevice *device);
+			luxrays::HardwareIntersectionDevice *device);
 
 	virtual void StartLockLess();
 	virtual void StopLockLess();

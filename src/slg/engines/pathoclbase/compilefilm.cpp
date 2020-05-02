@@ -16,7 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
+#if defined(LUXRAYS_ENABLE_OPENCL)
 
 #include "slg/engines/pathoclbase/compiledscene.h"
 
@@ -27,6 +27,7 @@ using namespace slg;
 void CompiledScene::CompileFilm(const Film &film, slg::ocl::Film &oclFilm) {
 	oclFilm.radianceGroupCount = film.GetRadianceGroupCount();
 	oclFilm.bcdDenoiserEnable = film.GetDenoiser().IsEnabled();
+	oclFilm.usePixelAtomics = false;
 
 	// Film channels (AOVs)
 

@@ -116,8 +116,8 @@ OPENCL_FORCE_INLINE void Ray_ReadAligned4(__global const Ray* restrict ray, floa
 	const float4 data0 = (*basePtr++);
 	const float4 data1 = (*basePtr);
 
-	*rayOrig = (float3)(data0.x, data0.y, data0.z);
-	*rayDir = (float3)(data0.w, data1.x, data1.y);
+	*rayOrig = MAKE_FLOAT3(data0.x, data0.y, data0.z);
+	*rayDir = MAKE_FLOAT3(data0.w, data1.x, data1.y);
 
 	*mint = data1.z;
 	*maxt = data1.w;

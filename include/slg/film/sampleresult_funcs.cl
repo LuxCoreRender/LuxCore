@@ -112,7 +112,7 @@ OPENCL_FORCE_INLINE void SampleResult_AddDirectLight(__constant const Film* rest
 OPENCL_FORCE_INLINE float3 SampleResult_GetSpectrum(__constant const Film* restrict film,
 		__global SampleResult *sampleResult,
 		float3 filmRadianceGroupScale[FILM_MAX_RADIANCE_GROUP_COUNT]) {
-	float3 c = 0.f;
+	float3 c = BLACK;
 	for (uint i = 0; i < film->radianceGroupCount; ++i)
 		c += VLOAD3F(sampleResult->radiancePerPixelNormalized[i].c) * filmRadianceGroupScale[i];
 

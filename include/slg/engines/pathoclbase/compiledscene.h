@@ -19,7 +19,7 @@
 #ifndef _SLG_COMPILEDSESSION_H
 #define	_SLG_COMPILEDSESSION_H
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
+#if defined(LUXRAYS_ENABLE_OPENCL)
 
 #include <boost/unordered_set.hpp>
 
@@ -173,7 +173,7 @@ private:
 	Scene *scene;
 	const PathTracer *pathTracer;
 
-	u_int maxMemPageSize;
+	size_t maxMemPageSize;
 	boost::unordered_set<std::string> enabledCode;
 }; 
 

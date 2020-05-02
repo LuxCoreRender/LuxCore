@@ -22,10 +22,11 @@
 #include "luxrays/core/hardwaredevice.h"
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/utils/cuda.h"
+#include "luxrays/utils/cudacache.h"
 
 #if defined(LUXRAYS_ENABLE_CUDA)
 
-#if defined(LUXRAYS_DISABLE_OPENCL)
+#if !defined(LUXRAYS_ENABLE_OPENCL)
 #error "CUDA support can be enabled only if also OpenCL support is enabled"
 #endif
 
@@ -44,6 +45,7 @@ public:
 	virtual u_int GetNativeVectorWidthFloat() const;
 	virtual size_t GetMaxMemory() const;
 	virtual size_t GetMaxMemoryAllocSize() const;
+	virtual bool HasOutOfCoreMemorySupport() const;
 
 	CUdevice GetCUDADevice() { return cudaDevice; }
 
@@ -53,7 +55,7 @@ public:
 protected:
 	static void AddDeviceDescs(std::vector<DeviceDescription *> &descriptions);
 
-	size_t deviceIndex;
+	size_t cudaDeviceIndex;
 
 	CUdevice cudaDevice;
 };
@@ -93,34 +95,26 @@ protected:
 
 class CUDADeviceProgram : public HardwareDeviceProgram {
 public:
-	CUDADeviceProgram() : cudaProgram(nullptr), cudaModule(nullptr) { }
+	CUDADeviceProgram() : cudaModule(nullptr) { }
 	virtual ~CUDADeviceProgram() {
-		if (cudaProgram) {
-			CHECK_NVRTC_ERROR(nvrtcDestroyProgram(&cudaProgram));
-		}
 		// Module is unloaded by the device at the Stop()
 	}
 
 	bool IsNull() const { 
-		return (cudaProgram == nullptr);
+		return (cudaModule == nullptr);
 	}
 
 	friend class CUDADevice;
 
 protected:
-	void Set(nvrtcProgram p, CUmodule m) {
-		if (cudaProgram) {
-			CHECK_NVRTC_ERROR(nvrtcDestroyProgram(&cudaProgram));
-		}
+	void Set(CUmodule m) {
+		// Module is unloaded by the device at the Stop()
 
-		cudaProgram = p;
 		cudaModule = m;
 	}
 
-	nvrtcProgram GetProgram() { return cudaProgram; }
 	CUmodule GetModule() { return cudaModule; }
 
-	nvrtcProgram cudaProgram;
 	CUmodule cudaModule;
 };
 
@@ -138,6 +132,15 @@ public:
 		return (cudaBuff == 0);
 	}
 
+	size_t GetSize() const {
+		assert (cudaBuff != 0);
+
+		size_t cudaSize;
+		CHECK_CUDA_ERROR(cuMemGetAddressRange(0, &cudaSize, cudaBuff));
+
+		return cudaSize;
+	}
+
 	friend class CUDADevice;
 
 protected:
@@ -148,26 +151,29 @@ protected:
 // CUDADevice
 //------------------------------------------------------------------------------
 
-class CUDADevice : public HardwareDevice {
+class CUDADevice : virtual public HardwareDevice {
 public:
 	CUDADevice(const Context *context,
 		CUDADeviceDescription *desc, const size_t devIndex);
 	virtual ~CUDADevice();
 
-	virtual void Start();
-	virtual void Stop();
+	virtual const DeviceDescription *GetDeviceDesc() const { return deviceDesc; }
+
+	virtual void PushThreadCurrentDevice();
+	virtual void PopThreadCurrentDevice();
 
 	//--------------------------------------------------------------------------
 	// Kernels handling for hardware (aka GPU) only applications
 	//--------------------------------------------------------------------------
 
 	virtual void CompileProgram(HardwareDeviceProgram **program,
-			const std::string &programParameters, const std::string &programSource,
+			const std::vector<std::string> &programParameters, const std::string &programSource,
 			const std::string &programName);
 
 	virtual void GetKernel(HardwareDeviceProgram *program,
 			HardwareDeviceKernel **kernel,
 			const std::string &kernelName);
+	virtual u_int GetKernelWorkGroupSize(HardwareDeviceKernel *kernel);
 	virtual void SetKernelArg(HardwareDeviceKernel *kernel,
 			const u_int index, const size_t size, const void *arg);
 
@@ -185,12 +191,8 @@ public:
 	// Memory management for hardware (aka GPU) only applications
 	//--------------------------------------------------------------------------
 
-	virtual size_t GetMaxMemory() const {
-		return deviceDesc->GetMaxMemory();
-	}
-
-	virtual void AllocBufferRO(HardwareDeviceBuffer **buff, void *src, const size_t size, const std::string &desc = "");
-	virtual void AllocBufferRW(HardwareDeviceBuffer **buff, void *src, const size_t size, const std::string &desc = "");
+	virtual void AllocBuffer(HardwareDeviceBuffer **buff, const BufferType type,
+		void *src, const size_t size, const std::string &desc = "");
 	virtual void FreeBuffer(HardwareDeviceBuffer **buff);
 
 	friend class Context;
@@ -205,6 +207,8 @@ protected:
 	CUDADeviceDescription *deviceDesc;
 	CUcontext cudaContext;
 	std::vector<CUmodule> loadedModules;
+	
+	luxrays::cudaKernelCache *kernelCache;
 };
 
 }

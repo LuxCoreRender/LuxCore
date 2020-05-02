@@ -118,7 +118,7 @@ static boost::python::list GetOpenCLDeviceList() {
 	vector<luxrays::DeviceDescription *> deviceDescriptions = ctx.GetAvailableDeviceDescriptions();
 
 	// Select only OpenCL devices
-	luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_OPENCL_ALL, deviceDescriptions);
+	luxrays::DeviceDescription::Filter((luxrays::DeviceType)(luxrays::DEVICE_TYPE_OPENCL_ALL | luxrays::DEVICE_TYPE_CUDA_ALL), deviceDescriptions);
 
 	// Add all device information to the list
 	boost::python::list l;

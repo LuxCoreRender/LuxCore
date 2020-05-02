@@ -60,7 +60,7 @@ OPENCL_FORCE_INLINE void VelvetMaterial_GetEmittedRadiance(__global const Materi
 	DefaultMaterial_GetEmittedRadiance(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
 }
 
-OPENCL_FORCE_NOT_INLINE void VelvetMaterial_Evaluate(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void VelvetMaterial_Evaluate(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {
@@ -103,7 +103,7 @@ OPENCL_FORCE_NOT_INLINE void VelvetMaterial_Evaluate(__global const Material* re
 	EvalStack_PushFloat(directPdfW);
 }
 
-OPENCL_FORCE_NOT_INLINE void VelvetMaterial_Sample(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void VelvetMaterial_Sample(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {

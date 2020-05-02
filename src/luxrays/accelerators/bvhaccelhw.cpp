@@ -28,48 +28,45 @@
 #include "luxrays/accelerators/bvhaccel.h"
 #include "luxrays/utils/utils.h"
 #include "luxrays/core/context.h"
-#include "luxrays/devices/nativeintersectiondevice.h"
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 #include "luxrays/devices/oclintersectiondevice.h"
 #include "luxrays/kernels/kernels.h"
-#endif
 
 using namespace std;
 
 namespace luxrays {
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-
-class OpenCLBVHKernel : public OpenCLKernel {
+class BVHKernel : public HardwareIntersectionKernel {
 public:
-	OpenCLBVHKernel(OpenCLIntersectionDevice *dev, const BVHAccel *bvh) :
-		OpenCLKernel(dev) {
-		const Context *deviceContext = device->GetContext();
-		const string &deviceName(device->GetName());
-		cl::Context &oclContext = device->GetOpenCLContext();
-		cl::Device &oclDevice = device->GetOpenCLDevice();
+	BVHKernel(HardwareIntersectionDevice &dev, const BVHAccel &bvh) :
+		HardwareIntersectionKernel(dev), kernel(nullptr) {
+		//const Context *deviceContext = device.GetContext();
+		//const string &deviceName(device.GetName());
 
 		size_t maxNodeCount = 0;
-		if (bvh->nNodes) {
+		if (bvh.nNodes) {
 			// Check the max. number of vertices I can store in a single page
-			const size_t maxMemAlloc = device->GetDeviceDesc()->GetMaxMemoryAllocSize();
+			size_t maxMemAlloc = device.GetDeviceDesc()->GetMaxMemoryAllocSize();
 
+			const BufferType memTypeFlags = device.GetContext()->GetUseOutOfCoreBuffers() ?
+				((BufferType)(BUFFER_TYPE_READ_ONLY | BUFFER_TYPE_OUT_OF_CORE)) :
+				BUFFER_TYPE_READ_ONLY;
+			
 			//------------------------------------------------------------------
 			// Allocate vertex buffers
 			//------------------------------------------------------------------
 
 			// Check how many pages I have to allocate
 			const size_t maxVertCount = maxMemAlloc / sizeof(Point);
-			const u_int totalVertCount = bvh->totalVertexCount;
+			const u_int totalVertCount = bvh.totalVertexCount;
 
 			// Allocate the temporary vertex buffer
 			Point *tmpVerts = new Point[Min<size_t>(totalVertCount, maxVertCount)];
-			deque<const Mesh *>::const_iterator mesh = bvh->meshes.begin();
+			deque<const Mesh *>::const_iterator mesh = bvh.meshes.begin();
 
 			u_int vertsCopied = 0;
 			u_int meshVertIndex = 0;
 			vector<u_int> meshVertexOffsets;
-			meshVertexOffsets.reserve(bvh->meshes.size());
+			meshVertexOffsets.reserve(bvh.meshes.size());
 			meshVertexOffsets.push_back(0);
 			do {
 				const u_int leftVertCount = totalVertCount - vertsCopied;
@@ -80,7 +77,7 @@ public:
 				for (u_int i = 0; i < pageVertCount; ++i) {
 					if (meshVertIndex >= meshVertCount) {
 						// Move to the next mesh
-						if (++mesh == bvh->meshes.end())
+						if (++mesh == bvh.meshes.end())
 							break;
 
 						meshVertexOffsets.push_back(vertsCopied);
@@ -95,12 +92,14 @@ public:
 				}
 
 				// Allocate the OpenCL buffer
-				vertsBuffs.push_back(NULL);
+				vertsBuffs.push_back(nullptr);
 				if (vertsBuffs.size() > 8)
-					throw runtime_error("Too many vertex pages required in OpenCLBVHKernels()");
+					throw runtime_error("Too many vertex pages required in BVHKernels()");
 
-				device->AllocBufferRO(&vertsBuffs.back(), tmpVerts, sizeof(Point) * pageVertCount,
-							"BVH mesh vertices");
+				device.AllocBuffer(&vertsBuffs.back(), memTypeFlags,
+						tmpVerts, sizeof(Point) * pageVertCount,
+						"BVH mesh vertices");
+				device.FinishQueue();
 			} while (vertsCopied < totalVertCount);
 			delete[] tmpVerts;
 
@@ -110,10 +109,10 @@ public:
 
 			// Check how many pages I have to allocate
 			maxNodeCount = maxMemAlloc / sizeof(luxrays::ocl::BVHArrayNode);
-			const u_int totalNodeCount = bvh->nNodes;
-			const luxrays::ocl::BVHArrayNode *nodes = bvh->bvhTree;
+			const u_int totalNodeCount = bvh.nNodes;
+			const luxrays::ocl::BVHArrayNode *nodes = bvh.bvhTree;
 			// Allocate a temporary buffer for the copy of the BVH nodes
-			luxrays::ocl::BVHArrayNode *tmpNodes = new luxrays::ocl::BVHArrayNode[Min<size_t>(bvh->nNodes, maxNodeCount)];
+			luxrays::ocl::BVHArrayNode *tmpNodes = new luxrays::ocl::BVHArrayNode[Min<size_t>(bvh.nNodes, maxNodeCount)];
 			u_int nodeIndex = 0;
 
 			do {
@@ -146,12 +145,14 @@ public:
 				}
 
 				// Allocate OpenCL buffer
-				nodeBuffs.push_back(NULL);
+				nodeBuffs.push_back(nullptr);
 				if (nodeBuffs.size() > 8)
-					throw runtime_error("Too many node pages required in OpenCLBVHKernels()");
+					throw runtime_error("Too many node pages required in BVHKernels()");
 
-				device->AllocBufferRO(&nodeBuffs.back(), tmpNodes, sizeof(luxrays::ocl::BVHArrayNode) * pageNodeCount,
+				device.AllocBuffer(&nodeBuffs.back(), memTypeFlags,
+						tmpNodes, sizeof(luxrays::ocl::BVHArrayNode) * pageNodeCount,
 						"BVH nodes");
+				device.FinishQueue();
 
 				nodeIndex += pageNodeCount;
 			} while (nodeIndex < totalNodeCount);
@@ -163,11 +164,11 @@ public:
 		//----------------------------------------------------------------------
 
 		// Compile options
-		stringstream opts;
-		opts << " -D LUXRAYS_OPENCL_KERNEL"
-				" -D PARAM_RAY_EPSILON_MIN=" << MachineEpsilon::GetMin() << "f"
-				" -D PARAM_RAY_EPSILON_MAX=" << MachineEpsilon::GetMax() << "f";
-		//LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] BVH compile options: \n" << opts.str());
+		vector<string> opts;
+		opts.push_back("-D LUXRAYS_OPENCL_KERNEL");
+		opts.push_back("-D PARAM_RAY_EPSILON_MIN=" + ToString(MachineEpsilon::GetMin()) + "f");
+		opts.push_back("-D PARAM_RAY_EPSILON_MAX=" + ToString(MachineEpsilon::GetMax()) + "f");
+		//LR_LOG(deviceContext, "[HardwareIntersectionDevice::" << deviceName << "] BVH compile options: \n" << oclKernelPersistentCache::ToOptsString(opts));
 
 		stringstream kernelDefs;
 		kernelDefs << "#define BVH_VERTS_PAGE_COUNT " << vertsBuffs.size() << "\n"
@@ -181,116 +182,96 @@ public:
 			kernelDefs << "#define BVH_VERTS_PAGE" << i << " 1\n";
 		for (u_int i = 0; i < nodeBuffs.size(); ++i)
 			kernelDefs << "#define BVH_NODES_PAGE" << i << " 1\n";
-		//LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] BVH kernel definitions: \n" << kernelDefs.str());
+		//LR_LOG(deviceContext, "[HardwareIntersectionDevice::" << deviceName << "] BVH kernel definitions: \n" << kernelDefs.str());
 
-		intersectionKernelSource = kernelDefs.str() +
-				luxrays::ocl::KernelSource_bvhbuild_types +
-				luxrays::ocl::KernelSource_bvh;
+		stringstream code;
+		code <<
+			kernelDefs.str() <<
+			luxrays::ocl::KernelSource_luxrays_types <<
+			luxrays::ocl::KernelSource_epsilon_types <<
+			luxrays::ocl::KernelSource_epsilon_funcs <<
+			luxrays::ocl::KernelSource_point_types <<
+			luxrays::ocl::KernelSource_vector_types <<
+			luxrays::ocl::KernelSource_ray_types <<
+			luxrays::ocl::KernelSource_ray_funcs <<
+			luxrays::ocl::KernelSource_bbox_types <<
+			luxrays::ocl::KernelSource_bbox_funcs <<
+			luxrays::ocl::KernelSource_triangle_types <<
+			luxrays::ocl::KernelSource_triangle_funcs <<
+			luxrays::ocl::KernelSource_bvhbuild_types <<
+			luxrays::ocl::KernelSource_bvh;
 		
-		const string code(
-			kernelDefs.str() +
-			luxrays::ocl::KernelSource_luxrays_types +
-			luxrays::ocl::KernelSource_epsilon_types +
-			luxrays::ocl::KernelSource_epsilon_funcs +
-			luxrays::ocl::KernelSource_point_types +
-			luxrays::ocl::KernelSource_vector_types +
-			luxrays::ocl::KernelSource_ray_types +
-			luxrays::ocl::KernelSource_ray_funcs +
-			luxrays::ocl::KernelSource_bbox_types +
-			luxrays::ocl::KernelSource_bbox_funcs +
-			luxrays::ocl::KernelSource_triangle_types +
-			luxrays::ocl::KernelSource_triangle_funcs +
-			luxrays::ocl::KernelSource_bvhbuild_types +
-			luxrays::ocl::KernelSource_bvh);
-		cl::Program::Sources source(1, make_pair(code.c_str(), code.length()));
-		cl::Program program = cl::Program(oclContext, source);
-		try {
-			VECTOR_CLASS<cl::Device> buildDevice;
-			buildDevice.push_back(oclDevice);
-			program.build(buildDevice, opts.str().c_str());
-		} catch (cl::Error &err) {
-			cl::STRING_CLASS strError = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(oclDevice);
-			LR_LOG(deviceContext, "[OpenCL device::" << deviceName << "] BVH compilation error:\n" << strError.c_str());
-
-			throw err;
-		}
+		HardwareDeviceProgram *program = nullptr;
+		device.CompileProgram(&program,
+				opts,
+				code.str(),
+				"BVHKernel");
 
 		// Setup the kernel
-		kernel = new cl::Kernel(program, "Accelerator_Intersect_RayBuffer");
+		device.GetKernel(program, &kernel, "Accelerator_Intersect_RayBuffer");
 
-		if (device->GetDeviceDesc()->GetForceWorkGroupSize() > 0)
-			workGroupSize = device->GetDeviceDesc()->GetForceWorkGroupSize();
+		if (device.GetDeviceDesc()->GetForceWorkGroupSize() > 0)
+			workGroupSize = device.GetDeviceDesc()->GetForceWorkGroupSize();
 		else {
-			kernel->getWorkGroupInfo<size_t>(oclDevice,
-				CL_KERNEL_WORK_GROUP_SIZE, &workGroupSize);
-			//LR_LOG(deviceContext, "[OpenCL device::" << deviceName <<
+			workGroupSize = device.GetKernelWorkGroupSize(kernel); 
+			//LR_LOG(deviceContext, "[HardwareIntersectionDevice::" << deviceName <<
 			//	"] BVH kernel work group size: " << workGroupSize);
 		}
 
-		// Set arguments
-		SetIntersectionKernelArgs(*kernel, 3);
+		// Set kernel arguments
+		u_int argIndex = 3;
+		for (u_int i = 0; i < 8; ++i) {
+			if (i >= vertsBuffs.size())
+				device.SetKernelArg(kernel, argIndex++, nullptr);
+			else
+				device.SetKernelArg(kernel, argIndex++, vertsBuffs[i]);
+		}
+		for (u_int i = 0; i < 8; ++i) {
+			if (i >= nodeBuffs.size())
+				device.SetKernelArg(kernel, argIndex++, nullptr);
+			else
+				device.SetKernelArg(kernel, argIndex++, nodeBuffs[i]);
+		}
+
+		delete program;
 	}
-	virtual ~OpenCLBVHKernel() {
+	virtual ~BVHKernel() {
 		for (u_int i = 0; i < vertsBuffs.size(); ++i)
-			device->FreeBuffer(&vertsBuffs[i]);
+			device.FreeBuffer(&vertsBuffs[i]);
 		for (u_int i = 0; i < nodeBuffs.size(); ++i)
-			device->FreeBuffer(&nodeBuffs[i]);
+			device.FreeBuffer(&nodeBuffs[i]);
 	}
 
 	virtual void Update(const DataSet *newDataSet) { assert(false); }
-	virtual void EnqueueRayBuffer(cl::CommandQueue &oclQueue,
-		cl::Buffer &rBuff, cl::Buffer &hBuff, const u_int rayCount,
-		const VECTOR_CLASS<cl::Event> *events, cl::Event *event);
-
-	virtual u_int SetIntersectionKernelArgs(cl::Kernel &kernel, const u_int argIndex);
+	virtual void EnqueueTraceRayBuffer(HardwareDeviceBuffer *rayBuff,
+			HardwareDeviceBuffer *rayHitBuff, const unsigned int rayCount);
 
 	// BVH fields
-	vector<cl::Buffer *> vertsBuffs;
-	vector<cl::Buffer *> nodeBuffs;
+	vector<HardwareDeviceBuffer *> vertsBuffs;
+	vector<HardwareDeviceBuffer *> nodeBuffs;
+	
+	HardwareDeviceKernel *kernel;
+	u_int workGroupSize;
 };
 
-void OpenCLBVHKernel::EnqueueRayBuffer(cl::CommandQueue &oclQueue,
-		cl::Buffer &rBuff, cl::Buffer &hBuff, const u_int rayCount,
-		const VECTOR_CLASS<cl::Event> *events, cl::Event *event) {
-	kernel->setArg(0, rBuff);
-	kernel->setArg(1, hBuff);
-	kernel->setArg(2, rayCount);
+void BVHKernel::EnqueueTraceRayBuffer(HardwareDeviceBuffer *rayBuff,
+			HardwareDeviceBuffer *rayHitBuff, const unsigned int rayCount) {
+	device.SetKernelArg(kernel, 0, rayBuff);
+	device.SetKernelArg(kernel, 1, rayHitBuff);
+	device.SetKernelArg(kernel, 2, rayCount);
 
 	const u_int globalRange = RoundUp<u_int>(rayCount, workGroupSize);
-	oclQueue.enqueueNDRangeKernel(*kernel, cl::NullRange,
-		cl::NDRange(globalRange), cl::NDRange(workGroupSize), events,
-		event);
+	device.EnqueueKernel(kernel, HardwareDeviceRange(globalRange),
+			HardwareDeviceRange(workGroupSize));
 }
 
-u_int OpenCLBVHKernel::SetIntersectionKernelArgs(cl::Kernel &kernel, const u_int index) {
-	u_int argIndex = index;
-	for (u_int i = 0; i < 8; ++i) {
-		if (i >= vertsBuffs.size())
-			kernel.setArg(argIndex++, sizeof(cl::Buffer), nullptr);
-		else
-			kernel.setArg(argIndex++, *vertsBuffs[i]);
-	}
-	for (u_int i = 0; i < 8; ++i) {
-		if (i >= nodeBuffs.size())
-			kernel.setArg(argIndex++, sizeof(cl::Buffer), nullptr);
-		else
-			kernel.setArg(argIndex++, *nodeBuffs[i]);
-	}
-
-	return argIndex;
+bool BVHAccel::HasDataParallelSupport(const IntersectionDevice &device) const {
+	return device.HasDataParallelSupport();
 }
 
-OpenCLKernel *BVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *device) const {
+HardwareIntersectionKernel *BVHAccel::NewHardwareIntersectionKernel(HardwareIntersectionDevice &device) const {
 	// Setup the kernel
-	return new OpenCLBVHKernel(device, this);
+	return new BVHKernel(device, *this);
 }
-
-#else
-
-OpenCLKernel *BVHAccel::NewOpenCLKernel(OpenCLIntersectionDevice *device) const {
-	return NULL;
-}
-
-#endif
 
 }

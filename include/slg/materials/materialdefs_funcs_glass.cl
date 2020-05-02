@@ -97,10 +97,10 @@ OPENCL_FORCE_INLINE float3 GlassMaterial_WaveLength2RGB(const float waveLength) 
 	else
 		factor = .3f + .7f * (780.f - waveLength) / (780.f - 700.f);
 
-	const float3 result = (float3)(r, g, b) * factor;
+	const float3 result = MAKE_FLOAT3(r, g, b) * factor;
 
 	// To normalize the output
-	const float3 normFactor = (float3)(1.f / .5652729f, 1.f / .36875f, 1.f / .265375f);
+	const float3 normFactor = MAKE_FLOAT3(1.f / .5652729f, 1.f / .36875f, 1.f / .265375f);
 	
 	return result * normFactor;
 }
@@ -130,7 +130,7 @@ OPENCL_FORCE_INLINE float3 GlassMaterial_EvalSpecularReflection(__global const H
 		return BLACK;
 
 	const float costheta = CosTheta(localFixedDir);
-	*sampledDir = (float3)(-localFixedDir.x, -localFixedDir.y, localFixedDir.z);
+	*sampledDir = MAKE_FLOAT3(-localFixedDir.x, -localFixedDir.y, localFixedDir.z);
 
 	const float ntc = nt / nc;
 	return kr * FresnelCauchy_Evaluate(ntc, costheta);
@@ -171,7 +171,7 @@ OPENCL_FORCE_INLINE float3 GlassMaterial_EvalSpecularTransmission(__global const
 		return BLACK;
 
 	const float cost = sqrt(fmax(0.f, 1.f - sint2)) * (entering ? -1.f : 1.f);
-	*sampledDir = (float3)(-eta * localFixedDir.x, -eta * localFixedDir.y, cost);
+	*sampledDir = MAKE_FLOAT3(-eta * localFixedDir.x, -eta * localFixedDir.y, cost);
 
 	float ce;
 //	if (!hitPoint.fromLight)
@@ -184,7 +184,7 @@ OPENCL_FORCE_INLINE float3 GlassMaterial_EvalSpecularTransmission(__global const
 	return lkt * ce;
 }
 
-OPENCL_FORCE_NOT_INLINE void GlassMaterial_Evaluate(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void GlassMaterial_Evaluate(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {
@@ -195,7 +195,7 @@ OPENCL_FORCE_NOT_INLINE void GlassMaterial_Evaluate(__global const Material* res
 	MATERIAL_EVALUATE_RETURN_BLACK;
 }
 
-OPENCL_FORCE_NOT_INLINE void GlassMaterial_Sample(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void GlassMaterial_Sample(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {

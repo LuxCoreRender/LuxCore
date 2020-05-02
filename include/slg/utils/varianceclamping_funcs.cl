@@ -24,9 +24,9 @@ OPENCL_FORCE_INLINE float3 VarianceClamping_GetWeightedFloat4(__global float *sr
 	if (val.w > 0.f) {
 		const float k = 1.f / val.w;
 		
-		return ((float3)(val.x, val.y, val.z)) * k;
+		return (MAKE_FLOAT3(val.x, val.y, val.z)) * k;
 	} else
-		return 0.f;
+		return BLACK;
 }
 
 OPENCL_FORCE_INLINE void VarianceClamping_Clamp(
@@ -39,7 +39,7 @@ OPENCL_FORCE_INLINE void VarianceClamping_Clamp(
 	const uint index1 = x + y * filmWidth;
 	const uint index4 = index1 * 4;
 
-	float3 expectedValue = 0.f;
+	float3 expectedValue = BLACK;
 	for (uint i = 0; i < film->radianceGroupCount; ++i)
 		expectedValue += VarianceClamping_GetWeightedFloat4(&((filmRadianceGroup[i])[index4]));
 

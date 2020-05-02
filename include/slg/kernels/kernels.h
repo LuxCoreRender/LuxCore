@@ -77,6 +77,7 @@ extern std::string KernelSource_materialdefs_funcs_roughmatte_translucent;
 extern std::string KernelSource_materialdefs_funcs_velvet;
 extern std::string KernelSource_material_funcs_evalops;
 extern std::string KernelSource_material_funcs;
+extern std::string KernelSource_mortoncurve_funcs;
 extern std::string KernelSource_sampleresult_funcs;
 extern std::string KernelSource_sceneobject_types;
 extern std::string KernelSource_texture_noise_funcs;

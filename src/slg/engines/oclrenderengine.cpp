@@ -19,8 +19,12 @@
 #include "slg/engines/oclrenderengine.h"
 
 #include "luxrays/core/intersectiondevice.h"
-#if !defined(LUXRAYS_DISABLE_OPENCL)
+#if defined(LUXRAYS_ENABLE_OPENCL)
 #include "luxrays/devices/ocldevice.h"
+#endif
+
+#if defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(WIN64)
+#include <Windows.h>
 #endif
 
 using namespace std;
@@ -33,7 +37,7 @@ using namespace slg;
 
 OCLRenderEngine::OCLRenderEngine(const RenderConfig *rcfg,
 		const bool supportsNativeThreads) : RenderEngine(rcfg) {
-#if !defined(LUXRAYS_DISABLE_OPENCL)
+#if defined(LUXRAYS_ENABLE_OPENCL)
 	const Properties &cfg = renderConfig->cfg;
 
 	const bool useCPUs = cfg.Get(GetDefaultProps().Get("opencl.cpu.use")).Get<bool>();
@@ -48,6 +52,9 @@ OCLRenderEngine::OCLRenderEngine(const RenderConfig *rcfg,
 
 	const string oclDeviceConfig = cfg.Get(GetDefaultProps().Get("opencl.devices.select")).Get<string>();
 
+	const bool useOutOfCoreMemory = cfg.Get(Property("opencl.outofcore.enable")(false)).Get<bool>();
+	ctx->SetUseOutOfCoreBuffers(useOutOfCoreMemory);
+
 	//--------------------------------------------------------------------------
 	// Get OpenCL device descriptions
 	//--------------------------------------------------------------------------
@@ -55,45 +62,66 @@ OCLRenderEngine::OCLRenderEngine(const RenderConfig *rcfg,
 	vector<DeviceDescription *> oclDescs = ctx->GetAvailableDeviceDescriptions();
 	DeviceDescription::Filter(DEVICE_TYPE_OPENCL_ALL, oclDescs);
 
+	vector<DeviceDescription *> cudaDescs = ctx->GetAvailableDeviceDescriptions();
+	DeviceDescription::Filter(DEVICE_TYPE_CUDA_ALL, cudaDescs);
+
+	vector<DeviceDescription *> descs;
+	descs.insert(descs.end(), oclDescs.begin(), oclDescs.end());
+	descs.insert(descs.end(), cudaDescs.begin(), cudaDescs.end());
+
 	// Device info
 	bool haveSelectionString = (oclDeviceConfig.length() > 0);
-	if (haveSelectionString && (oclDeviceConfig.length() != oclDescs.size())) {
+	if (haveSelectionString && (oclDeviceConfig.length() != descs.size())) {
 		stringstream ss;
-		ss << "OpenCL device selection string has the wrong length, must be " <<
-				oclDescs.size() << " instead of " << oclDeviceConfig.length();
+		ss << "Hardware device selection string has the wrong length, must be " <<
+				descs.size() << " instead of " << oclDeviceConfig.length();
 		throw runtime_error(ss.str().c_str());
 	}
 
-	for (size_t i = 0; i < oclDescs.size(); ++i) {
-		OpenCLDeviceDescription *desc = static_cast<OpenCLDeviceDescription *>(oclDescs[i]);
+	bool hasCUDADevice = false;
+	for (size_t i = 0; i < descs.size(); ++i) {
+		DeviceDescription *desc = descs[i];
 
+		bool selected = false;
 		if (haveSelectionString) {
 			if (oclDeviceConfig.at(i) == '1') {
-				if (desc->GetType() & DEVICE_TYPE_OPENCL_GPU)
+				if (desc->GetType() & (DEVICE_TYPE_OPENCL_GPU | DEVICE_TYPE_CUDA_GPU))
 					desc->SetForceWorkGroupSize(forceGPUWorkSize);
 				else if (desc->GetType() & DEVICE_TYPE_OPENCL_CPU)
 					desc->SetForceWorkGroupSize(forceCPUWorkSize);
+
 				selectedDeviceDescs.push_back(desc);
+				selected = true;
 			}
 		} else {
-			if ((useCPUs && desc->GetType() & DEVICE_TYPE_OPENCL_CPU) ||
-					(useGPUs && desc->GetType() & DEVICE_TYPE_OPENCL_GPU)) {
-				if (desc->GetType() & DEVICE_TYPE_OPENCL_GPU)
+			if ((useCPUs && (desc->GetType() & DEVICE_TYPE_OPENCL_CPU)) ||
+					(useGPUs && desc->GetType() & (DEVICE_TYPE_OPENCL_GPU | DEVICE_TYPE_CUDA_GPU))) {
+				if (desc->GetType() & (DEVICE_TYPE_OPENCL_GPU | DEVICE_TYPE_CUDA_GPU))
 					desc->SetForceWorkGroupSize(forceGPUWorkSize);
 				else if (desc->GetType() & DEVICE_TYPE_OPENCL_CPU)
 					desc->SetForceWorkGroupSize(forceCPUWorkSize);
-				selectedDeviceDescs.push_back(oclDescs[i]);
+
+				selectedDeviceDescs.push_back(desc);
+				selected = true;
 			}
 		}
+
+		if (selected && (desc->GetType() & DEVICE_TYPE_CUDA_ALL))
+			hasCUDADevice = true;
+	}
+	
+	if (!haveSelectionString && hasCUDADevice) {
+		// If there is, at least, a CUDA device selected, use only CUDA devices
+		DeviceDescription::Filter(DEVICE_TYPE_CUDA_ALL, selectedDeviceDescs);
 	}
 
 	oclRenderThreadCount = selectedDeviceDescs.size();
 #endif
 
 	if (selectedDeviceDescs.size() == 0)
-		throw runtime_error("No OpenCL device selected or available");
+		throw runtime_error("No hardware device selected or available");
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
+#if defined(LUXRAYS_ENABLE_OPENCL)
 	if (supportsNativeThreads) {
 		//----------------------------------------------------------------------
 		// Get native device descriptions
@@ -118,7 +146,8 @@ Properties OCLRenderEngine::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("opencl.cpu.workgroup.size")) <<
 			cfg.Get(GetDefaultProps().Get("opencl.gpu.workgroup.size")) <<
 			cfg.Get(GetDefaultProps().Get("opencl.devices.select")) <<
-			cfg.Get(GetDefaultProps().Get("opencl.native.threads.count"));
+			cfg.Get(GetDefaultProps().Get("opencl.native.threads.count")) <<
+			cfg.Get(GetDefaultProps().Get("opencl.outofcore.enable"));
 }
 
 const Properties &OCLRenderEngine::GetDefaultProps() {
@@ -133,7 +162,14 @@ const Properties &OCLRenderEngine::GetDefaultProps() {
 #endif
 			Property("opencl.gpu.workgroup.size")(32) <<
 			Property("opencl.devices.select")("") <<
-			Property("opencl.native.threads.count")(boost::thread::hardware_concurrency());
+//For Windows version greater than Windows 7,modern way of calculating processor count is used 
+//May not work with Windows version prior to Windows 7
+#if defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(WIN64)
+			Property("opencl.native.threads.count")((int)GetActiveProcessorCount(ALL_PROCESSOR_GROUPS)) <<
+#else
+			Property("opencl.native.threads.count")(boost::thread::hardware_concurrency()) <<
+#endif
+			Property("opencl.outofcore.enable")(false);
 
 	return props;
 }

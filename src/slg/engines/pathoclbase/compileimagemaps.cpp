@@ -16,7 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
+#if defined(LUXRAYS_ENABLE_OPENCL)
 
 #include <iosfwd>
 #include <limits>
@@ -37,7 +37,7 @@ void CompiledScene::AddToImageMapMem(slg::ocl::ImageMap &im, void *data, const s
 	const size_t memSize = RoundUp(dataSize, sizeof(float));
 
 	if (memSize > maxMemPageSize)
-		throw runtime_error("An data block is too big to fit in a single block of memory");
+		throw runtime_error("An image data block is too big to fit in a single block of memory");
 
 	bool found = false;
 	u_int page;
@@ -65,10 +65,10 @@ void CompiledScene::AddToImageMapMem(slg::ocl::ImageMap &im, void *data, const s
 	const size_t start = imageMapMemBlock.size();
 	const size_t memSizeInFloat = memSize / sizeof(float);
 	imageMapMemBlock.resize(start + memSizeInFloat);
-	memcpy(&imageMapMemBlock[start], data, memSize);
+	memcpy(&imageMapMemBlock[start], data, dataSize);
 
 	im.pageIndex = page;
-	im.pixelsIndex = (u_int)start;
+	im.pixelsIndex = start;
 }
 
 void CompiledScene::CompileImageMaps() {

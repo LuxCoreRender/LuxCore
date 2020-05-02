@@ -61,7 +61,7 @@ OPENCL_FORCE_INLINE void CarPaintMaterial_GetEmittedRadiance(__global const Mate
 	DefaultMaterial_GetEmittedRadiance(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
 }
 
-OPENCL_FORCE_NOT_INLINE void CarPaintMaterial_Evaluate(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void CarPaintMaterial_Evaluate(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {
@@ -70,7 +70,7 @@ OPENCL_FORCE_NOT_INLINE void CarPaintMaterial_Evaluate(__global const Material* 
 	EvalStack_PopFloat3(lightDir);
 
 	float3 H = normalize(lightDir + eyeDir);
-	if (all(H == 0.f)) {
+	if ((H.x == 0.f) && (H.y == 0.f) && (H.z == 0.f)) {
 		MATERIAL_EVALUATE_RETURN_BLACK;
 	}
 	if (H.z < 0.f)
@@ -99,7 +99,7 @@ OPENCL_FORCE_NOT_INLINE void CarPaintMaterial_Evaluate(__global const Material* 
 	{
 		const float rough1 = m1 * m1;
 		const float r1 = Texture_GetFloatValue(material->carpaint.R1TexIndex, hitPoint TEXTURES_PARAM);
-		result += (SchlickDistribution_D(rough1, H, 0.f) * SchlickDistribution_G(rough1, lightDir, eyeDir) / (4.f * coso)) * (ks1 * FresnelSchlick_Evaluate(r1, dot(eyeDir, H)));
+		result += (SchlickDistribution_D(rough1, H, 0.f) * SchlickDistribution_G(rough1, lightDir, eyeDir) / (4.f * coso)) * (ks1 * FresnelSchlick_Evaluate(TO_FLOAT3(r1), dot(eyeDir, H)));
 		pdf += SchlickDistribution_Pdf(rough1, H, 0.f);
 		++n;
 	}
@@ -110,7 +110,7 @@ OPENCL_FORCE_NOT_INLINE void CarPaintMaterial_Evaluate(__global const Material* 
 	{
 		const float rough2 = m2 * m2;
 		const float r2 = Texture_GetFloatValue(material->carpaint.R2TexIndex, hitPoint TEXTURES_PARAM);
-		result += (SchlickDistribution_D(rough2, H, 0.f) * SchlickDistribution_G(rough2, lightDir, eyeDir) / (4.f * coso)) * (ks2 * FresnelSchlick_Evaluate(r2, dot(eyeDir, H)));
+		result += (SchlickDistribution_D(rough2, H, 0.f) * SchlickDistribution_G(rough2, lightDir, eyeDir) / (4.f * coso)) * (ks2 * FresnelSchlick_Evaluate(TO_FLOAT3(r2), dot(eyeDir, H)));
 		pdf += SchlickDistribution_Pdf(rough2, H, 0.f);
 		++n;
 	}
@@ -121,7 +121,7 @@ OPENCL_FORCE_NOT_INLINE void CarPaintMaterial_Evaluate(__global const Material* 
 	{
 		const float rough3 = m3 * m3;
 		const float r3 = Texture_GetFloatValue(material->carpaint.R3TexIndex, hitPoint TEXTURES_PARAM);
-		result += (SchlickDistribution_D(rough3, H, 0.f) * SchlickDistribution_G(rough3, lightDir, eyeDir) / (4.f * coso)) * (ks3 * FresnelSchlick_Evaluate(r3, dot(eyeDir, H)));
+		result += (SchlickDistribution_D(rough3, H, 0.f) * SchlickDistribution_G(rough3, lightDir, eyeDir) / (4.f * coso)) * (ks3 * FresnelSchlick_Evaluate(TO_FLOAT3(r3), dot(eyeDir, H)));
 		pdf += SchlickDistribution_Pdf(rough3, H, 0.f);
 		++n;
 	}
@@ -138,7 +138,7 @@ OPENCL_FORCE_NOT_INLINE void CarPaintMaterial_Evaluate(__global const Material* 
 	EvalStack_PushFloat(directPdfW);
 }
 
-OPENCL_FORCE_NOT_INLINE void CarPaintMaterial_Sample(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void CarPaintMaterial_Sample(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {
@@ -239,7 +239,7 @@ OPENCL_FORCE_NOT_INLINE void CarPaintMaterial_Sample(__global const Material* re
 			MATERIAL_SAMPLE_RETURN_BLACK;
 		}
 
-		result = ks1 * FresnelSchlick_Evaluate(r1, cosWH);
+		result = ks1 * FresnelSchlick_Evaluate(TO_FLOAT3(r1), cosWH);
 
 		const float G = SchlickDistribution_G(rough1, fixedDir, sampledDir);
 		result *= d * G / (4.f * fabs(fixedDir.z));
@@ -264,7 +264,7 @@ OPENCL_FORCE_NOT_INLINE void CarPaintMaterial_Sample(__global const Material* re
 			MATERIAL_SAMPLE_RETURN_BLACK;
 		}
 
-		result = ks2 * FresnelSchlick_Evaluate(r2, cosWH);
+		result = ks2 * FresnelSchlick_Evaluate(TO_FLOAT3(r2), cosWH);
 
 		const float G = SchlickDistribution_G(rough2, fixedDir, sampledDir);
 		result *= d * G / (4.f * fabs(fixedDir.z));
@@ -288,7 +288,7 @@ OPENCL_FORCE_NOT_INLINE void CarPaintMaterial_Sample(__global const Material* re
 			MATERIAL_SAMPLE_RETURN_BLACK;
 		}
 
-		result = ks3 * FresnelSchlick_Evaluate(r3, cosWH);
+		result = ks3 * FresnelSchlick_Evaluate(TO_FLOAT3(r3), cosWH);
 
 		const float G = SchlickDistribution_G(rough3, fixedDir, sampledDir);
 		result *= d * G / (4.f * fabs(fixedDir.z));
@@ -321,7 +321,7 @@ OPENCL_FORCE_NOT_INLINE void CarPaintMaterial_Sample(__global const Material* re
 			result += ks1 * (d1 *
 				SchlickDistribution_G(rough1, fixedDir, sampledDir) /
 				(4.f * fabs(fixedDir.z))) *
-				FresnelSchlick_Evaluate(r1, cosWH);
+				FresnelSchlick_Evaluate(TO_FLOAT3(r1), cosWH);
 			pdf += pdf1;
 		}
 	}
@@ -334,7 +334,7 @@ OPENCL_FORCE_NOT_INLINE void CarPaintMaterial_Sample(__global const Material* re
 			result += ks2 * (d2 *
 				SchlickDistribution_G(rough2, fixedDir, sampledDir) /
 				(4.f * fabs(fixedDir.z))) *
-				FresnelSchlick_Evaluate(r2, cosWH);
+				FresnelSchlick_Evaluate(TO_FLOAT3(r2), cosWH);
 			pdf += pdf2;
 		}
 	}
@@ -347,7 +347,7 @@ OPENCL_FORCE_NOT_INLINE void CarPaintMaterial_Sample(__global const Material* re
 			result += ks3 * (d3 *
 				SchlickDistribution_G(rough3, fixedDir, sampledDir) /
 				(4.f * fabs(fixedDir.z))) *
-				FresnelSchlick_Evaluate(r3, cosWH);
+				FresnelSchlick_Evaluate(TO_FLOAT3(r3), cosWH);
 			pdf += pdf3;
 		}
 	}

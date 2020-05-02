@@ -22,7 +22,7 @@
 // Sampler functions
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_NOT_INLINE float Sampler_GetSample(
+OPENCL_FORCE_INLINE float Sampler_GetSample(
 		__constant const GPUTaskConfiguration* restrict taskConfig,
 		const uint index
 		SAMPLER_PARAM_DECL) {
@@ -41,7 +41,7 @@ OPENCL_FORCE_NOT_INLINE float Sampler_GetSample(
 	}
 }
 
-OPENCL_FORCE_NOT_INLINE void Sampler_SplatSample(
+OPENCL_FORCE_INLINE void Sampler_SplatSample(
 		__constant const GPUTaskConfiguration* restrict taskConfig
 		SAMPLER_PARAM_DECL
 		FILM_PARAM_DECL
@@ -69,7 +69,7 @@ OPENCL_FORCE_NOT_INLINE void Sampler_SplatSample(
 	}
 }
 
-OPENCL_FORCE_NOT_INLINE void Sampler_NextSample(
+OPENCL_FORCE_INLINE void Sampler_NextSample(
 		__constant const GPUTaskConfiguration* restrict taskConfig,
 		__global float *filmNoise,
 		__global float *filmUserImportance,
@@ -116,7 +116,7 @@ OPENCL_FORCE_NOT_INLINE void Sampler_NextSample(
 	}
 }
 
-OPENCL_FORCE_NOT_INLINE bool Sampler_Init(
+OPENCL_FORCE_INLINE bool Sampler_Init(
 		__constant const GPUTaskConfiguration* restrict taskConfig,
 		__global float *filmNoise,
 		__global float *filmUserImportance,
