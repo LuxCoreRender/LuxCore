@@ -141,7 +141,7 @@ void TilePathOCLRenderThread::RenderTileWork(const TileWork &tileWork,
 		intersectionDevice->EnqueueTraceRayBuffer(raysBuff, hitsBuff, engine->taskCount);
 
 		// Advance to next path state
-		EnqueueAdvancePathsKernel();
+		EnqueueAdvancePathsKernel(false);
 	}
 
 	// Async. transfer of the Film buffers

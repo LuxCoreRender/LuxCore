@@ -77,15 +77,13 @@ OPENCL_FORCE_INLINE float SobolSampler_GetSample(
 		__constant const GPUTaskConfiguration* restrict taskConfig,
 		const uint index
 		SAMPLER_PARAM_DECL) {
-	const size_t gid = get_global_id(0);
-
 	switch (index) {
 		case IDX_SCREEN_X: {
-			__global float *samplesData = &samplesDataBuff[gid * SOBOLSAMPLER_TOTAL_U_SIZE];
+			__global float *samplesData = &samplesDataBuff[taskIndex * SOBOLSAMPLER_TOTAL_U_SIZE];
 			return samplesData[IDX_SCREEN_X];
 		}
 		case IDX_SCREEN_Y: {
-			__global float *samplesData = &samplesDataBuff[gid * SOBOLSAMPLER_TOTAL_U_SIZE];
+			__global float *samplesData = &samplesDataBuff[taskIndex * SOBOLSAMPLER_TOTAL_U_SIZE];
 			return samplesData[IDX_SCREEN_Y];
 		}
 		default: {
@@ -93,7 +91,7 @@ OPENCL_FORCE_INLINE float SobolSampler_GetSample(
 			__global const uint* restrict sobolDirections = SobolSampler_GetSobolDirectionsPtr(samplerSharedData);
 
 			__global SobolSample *samples = (__global SobolSample *)samplesBuff;
-			__global SobolSample *sample = &samples[gid];
+			__global SobolSample *sample = &samples[taskIndex];
 
 			return SobolSequence_GetSample(sobolDirections, sample->pass, sample->rngPass, sample->rng0, sample->rng1, index);	
 		}
@@ -105,8 +103,7 @@ OPENCL_FORCE_INLINE void SobolSampler_SplatSample(
 		SAMPLER_PARAM_DECL
 		FILM_PARAM_DECL
 		) {
-	const size_t gid = get_global_id(0);
-	__global SampleResult *sampleResult = &sampleResultsBuff[gid];
+	__global SampleResult *sampleResult = &sampleResultsBuff[taskIndex];
 
 	Film_AddSample(sampleResult->pixelX, sampleResult->pixelY,
 			sampleResult, 1.f
@@ -128,12 +125,11 @@ OPENCL_FORCE_INLINE void SobolSampler_InitNewSample(
 		const uint filmSubRegion0, const uint filmSubRegion1,
 		const uint filmSubRegion2, const uint filmSubRegion3
 		SAMPLER_PARAM_DECL) {
-	const size_t gid = get_global_id(0);
 	__constant const Sampler *sampler = &taskConfig->sampler;
 	__global SobolSamplerSharedData *samplerSharedData = (__global SobolSamplerSharedData *)samplerSharedDataBuff;
 	__global SobolSample *samples = (__global SobolSample *)samplesBuff;
-	__global SobolSample *sample = &samples[gid];
-	__global float *samplesData = &samplesDataBuff[gid * SOBOLSAMPLER_TOTAL_U_SIZE];
+	__global SobolSample *sample = &samples[taskIndex];
+	__global float *samplesData = &samplesDataBuff[taskIndex * SOBOLSAMPLER_TOTAL_U_SIZE];
 
 	const uint bucketSize = sampler->sobol.bucketSize;
 	const uint tileSize = sampler->sobol.tileSize;
@@ -295,10 +291,9 @@ OPENCL_FORCE_INLINE bool SobolSampler_Init(__constant const GPUTaskConfiguration
 		const uint filmSubRegion0, const uint filmSubRegion1,
 		const uint filmSubRegion2, const uint filmSubRegion3
 		SAMPLER_PARAM_DECL) {
-	const size_t gid = get_global_id(0);
 	__constant const Sampler *sampler = &taskConfig->sampler;
 	__global SobolSample *samples = (__global SobolSample *)samplesBuff;
-	__global SobolSample *sample = &samples[gid];
+	__global SobolSample *sample = &samples[taskIndex];
 
 	const uint bucketSize = sampler->sobol.bucketSize;
 	sample->pixelOffset = bucketSize * bucketSize;

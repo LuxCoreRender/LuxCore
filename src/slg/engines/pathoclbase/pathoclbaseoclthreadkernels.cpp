@@ -304,35 +304,77 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 	// AdvancePaths kernel (Micro-Kernels)
 
 	size_t workGroupSize;
+	CompileKernel(intersectionDevice, program, &advancePathsKernel_StateSorter_MK_RT_NEXT_VERTEX, &workGroupSize,
+			"AdvancePaths_StateSorter_MK_RT_NEXT_VERTEX");
 	CompileKernel(intersectionDevice, program, &advancePathsKernel_MK_RT_NEXT_VERTEX, &advancePathsWorkGroupSize,
 			"AdvancePaths_MK_RT_NEXT_VERTEX");
+	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
+
+	CompileKernel(intersectionDevice, program, &advancePathsKernel_StateSorter_MK_HIT_NOTHING, &workGroupSize,
+			"AdvancePaths_StateSorter_MK_HIT_NOTHING");
+	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
 	CompileKernel(intersectionDevice, program, &advancePathsKernel_MK_HIT_NOTHING, &workGroupSize,
 			"AdvancePaths_MK_HIT_NOTHING");
+	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
+
+	CompileKernel(intersectionDevice, program, &advancePathsKernel_StateSorter_MK_HIT_OBJECT, &workGroupSize,
+			"AdvancePaths_StateSorter_MK_HIT_OBJECT");
 	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
 	CompileKernel(intersectionDevice, program, &advancePathsKernel_MK_HIT_OBJECT, &workGroupSize,
 			"AdvancePaths_MK_HIT_OBJECT");
 	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
+
+	CompileKernel(intersectionDevice, program, &advancePathsKernel_StateSorter_MK_RT_DL, &workGroupSize,
+			"AdvancePaths_StateSorter_MK_RT_DL");
+	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
 	CompileKernel(intersectionDevice, program, &advancePathsKernel_MK_RT_DL, &workGroupSize,
 			"AdvancePaths_MK_RT_DL");
+	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
+
+	CompileKernel(intersectionDevice, program, &advancePathsKernel_StateSorter_MK_DL_ILLUMINATE, &workGroupSize,
+			"AdvancePaths_StateSorter_MK_DL_ILLUMINATE");
 	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
 	CompileKernel(intersectionDevice, program, &advancePathsKernel_MK_DL_ILLUMINATE, &workGroupSize,
 			"AdvancePaths_MK_DL_ILLUMINATE");
 	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
+
+	CompileKernel(intersectionDevice, program, &advancePathsKernel_StateSorter_MK_DL_SAMPLE_BSDF, &workGroupSize,
+			"AdvancePaths_StateSorter_MK_DL_SAMPLE_BSDF");
+	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
 	CompileKernel(intersectionDevice, program, &advancePathsKernel_MK_DL_SAMPLE_BSDF, &workGroupSize,
 			"AdvancePaths_MK_DL_SAMPLE_BSDF");
+	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
+
+	CompileKernel(intersectionDevice, program, &advancePathsKernel_StateSorter_MK_GENERATE_NEXT_VERTEX_RAY, &workGroupSize,
+			"AdvancePaths_StateSorter_MK_GENERATE_NEXT_VERTEX_RAY");
 	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
 	CompileKernel(intersectionDevice, program, &advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY, &workGroupSize,
 			"AdvancePaths_MK_GENERATE_NEXT_VERTEX_RAY");
 	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
+
+	CompileKernel(intersectionDevice, program, &advancePathsKernel_StateSorter_MK_SPLAT_SAMPLE, &workGroupSize,
+			"AdvancePaths_StateSorter_MK_SPLAT_SAMPLE");
+	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
 	CompileKernel(intersectionDevice, program, &advancePathsKernel_MK_SPLAT_SAMPLE, &workGroupSize,
 			"AdvancePaths_MK_SPLAT_SAMPLE");
+	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
+
+	CompileKernel(intersectionDevice, program, &advancePathsKernel_StateSorter_MK_NEXT_SAMPLE, &workGroupSize,
+			"AdvancePaths_StateSorter_MK_NEXT_SAMPLE");
 	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
 	CompileKernel(intersectionDevice, program, &advancePathsKernel_MK_NEXT_SAMPLE, &workGroupSize,
 			"AdvancePaths_MK_NEXT_SAMPLE");
 	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
+
+	CompileKernel(intersectionDevice, program, &advancePathsKernel_StateSorter_MK_GENERATE_CAMERA_RAY, &workGroupSize,
+			"AdvancePaths_StateSorter_MK_GENERATE_CAMERA_RAY");
+	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
 	CompileKernel(intersectionDevice, program, &advancePathsKernel_MK_GENERATE_CAMERA_RAY, &workGroupSize,
 			"AdvancePaths_MK_GENERATE_CAMERA_RAY");
 	advancePathsWorkGroupSize = Min(advancePathsWorkGroupSize, workGroupSize);
+
+	// Limit anyway the size to 256 in order to not have problems with state sorting
+	advancePathsWorkGroupSize = Min<size_t>(advancePathsWorkGroupSize, 256);
 	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] AdvancePaths_MK_* workgroup size: " << advancePathsWorkGroupSize);
 
 	const double tEnd = WallClockTime();
@@ -350,6 +392,7 @@ void PathOCLBaseOCLRenderThread::SetInitKernelArgs(const u_int filmIndex) {
 	// initKernel kernel
 	argIndex = 0;
 	intersectionDevice->SetKernelArg(initKernel, argIndex++, taskConfigBuff);
+	intersectionDevice->SetKernelArg(initKernel, argIndex++, gid2TaskBuff);
 	intersectionDevice->SetKernelArg(initKernel, argIndex++, tasksBuff);
 	intersectionDevice->SetKernelArg(initKernel, argIndex++, tasksDirectLightBuff);
 	intersectionDevice->SetKernelArg(initKernel, argIndex++, tasksStateBuff);
@@ -374,6 +417,7 @@ void PathOCLBaseOCLRenderThread::SetAdvancePathsKernelArgs(HardwareDeviceKernel 
 
 	u_int argIndex = 0;
 	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, taskConfigBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, gid2TaskBuff);
 	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, tasksBuff);
 	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, tasksDirectLightBuff);
 	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, tasksStateBuff);
@@ -459,24 +503,53 @@ void PathOCLBaseOCLRenderThread::SetAdvancePathsKernelArgs(HardwareDeviceKernel 
 }
 
 void PathOCLBaseOCLRenderThread::SetAllAdvancePathsKernelArgs(const u_int filmIndex) {
+	if (advancePathsKernel_StateSorter_MK_RT_NEXT_VERTEX)
+		SetAdvancePathsKernelArgs(advancePathsKernel_StateSorter_MK_RT_NEXT_VERTEX, filmIndex);
 	if (advancePathsKernel_MK_RT_NEXT_VERTEX)
 		SetAdvancePathsKernelArgs(advancePathsKernel_MK_RT_NEXT_VERTEX, filmIndex);
+
+	if (advancePathsKernel_StateSorter_MK_HIT_NOTHING)
+		SetAdvancePathsKernelArgs(advancePathsKernel_StateSorter_MK_HIT_NOTHING, filmIndex);
 	if (advancePathsKernel_MK_HIT_NOTHING)
 		SetAdvancePathsKernelArgs(advancePathsKernel_MK_HIT_NOTHING, filmIndex);
+
+	if (advancePathsKernel_StateSorter_MK_HIT_OBJECT)
+		SetAdvancePathsKernelArgs(advancePathsKernel_StateSorter_MK_HIT_OBJECT, filmIndex);
 	if (advancePathsKernel_MK_HIT_OBJECT)
 		SetAdvancePathsKernelArgs(advancePathsKernel_MK_HIT_OBJECT, filmIndex);
+
+	if (advancePathsKernel_StateSorter_MK_RT_DL)
+		SetAdvancePathsKernelArgs(advancePathsKernel_StateSorter_MK_RT_DL, filmIndex);
 	if (advancePathsKernel_MK_RT_DL)
 		SetAdvancePathsKernelArgs(advancePathsKernel_MK_RT_DL, filmIndex);
+
+	if (advancePathsKernel_StateSorter_MK_DL_ILLUMINATE)
+		SetAdvancePathsKernelArgs(advancePathsKernel_StateSorter_MK_DL_ILLUMINATE, filmIndex);
 	if (advancePathsKernel_MK_DL_ILLUMINATE)
 		SetAdvancePathsKernelArgs(advancePathsKernel_MK_DL_ILLUMINATE, filmIndex);
+
+	if (advancePathsKernel_StateSorter_MK_DL_SAMPLE_BSDF)
+		SetAdvancePathsKernelArgs(advancePathsKernel_StateSorter_MK_DL_SAMPLE_BSDF, filmIndex);
 	if (advancePathsKernel_MK_DL_SAMPLE_BSDF)
 		SetAdvancePathsKernelArgs(advancePathsKernel_MK_DL_SAMPLE_BSDF, filmIndex);
+
+	if (advancePathsKernel_StateSorter_MK_GENERATE_NEXT_VERTEX_RAY)
+		SetAdvancePathsKernelArgs(advancePathsKernel_StateSorter_MK_GENERATE_NEXT_VERTEX_RAY, filmIndex);
 	if (advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY)
 		SetAdvancePathsKernelArgs(advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY, filmIndex);
+
+	if (advancePathsKernel_StateSorter_MK_SPLAT_SAMPLE)
+		SetAdvancePathsKernelArgs(advancePathsKernel_StateSorter_MK_SPLAT_SAMPLE, filmIndex);
 	if (advancePathsKernel_MK_SPLAT_SAMPLE)
 		SetAdvancePathsKernelArgs(advancePathsKernel_MK_SPLAT_SAMPLE, filmIndex);
+
+	if (advancePathsKernel_StateSorter_MK_NEXT_SAMPLE)
+		SetAdvancePathsKernelArgs(advancePathsKernel_StateSorter_MK_NEXT_SAMPLE, filmIndex);
 	if (advancePathsKernel_MK_NEXT_SAMPLE)
 		SetAdvancePathsKernelArgs(advancePathsKernel_MK_NEXT_SAMPLE, filmIndex);
+
+	if (advancePathsKernel_StateSorter_MK_GENERATE_CAMERA_RAY)
+		SetAdvancePathsKernelArgs(advancePathsKernel_StateSorter_MK_GENERATE_CAMERA_RAY, filmIndex);
 	if (advancePathsKernel_MK_GENERATE_CAMERA_RAY)
 		SetAdvancePathsKernelArgs(advancePathsKernel_MK_GENERATE_CAMERA_RAY, filmIndex);
 }
@@ -502,28 +575,87 @@ void PathOCLBaseOCLRenderThread::SetKernelArgs() {
 	SetInitKernelArgs(0);
 }
 
-void PathOCLBaseOCLRenderThread::EnqueueAdvancePathsKernel() {
+void PathOCLBaseOCLRenderThread::EnqueueAdvancePathsKernel(const bool enableStateSorting) {
 	const u_int taskCount = renderEngine->taskCount;
 
 	// Micro kernels version
+	if (enableStateSorting &&
+			// A safety check for large workgroup size of Intel OpenCL CPU device
+			(taskCount / (4 * advancePathsWorkGroupSize) > 0))
+		intersectionDevice->EnqueueKernel(advancePathsKernel_StateSorter_MK_RT_NEXT_VERTEX,
+				HardwareDeviceRange(taskCount / (4 * advancePathsWorkGroupSize)), HardwareDeviceRange(advancePathsWorkGroupSize));
 	intersectionDevice->EnqueueKernel(advancePathsKernel_MK_RT_NEXT_VERTEX,
 			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSize));
+
+	if (enableStateSorting &&
+			// A safety check for large workgroup size of Intel OpenCL CPU device
+			(taskCount / (4 * advancePathsWorkGroupSize) > 0))
+		intersectionDevice->EnqueueKernel(advancePathsKernel_StateSorter_MK_HIT_NOTHING,
+				HardwareDeviceRange(taskCount / (4 * advancePathsWorkGroupSize)), HardwareDeviceRange(advancePathsWorkGroupSize));
 	intersectionDevice->EnqueueKernel(advancePathsKernel_MK_HIT_NOTHING,
 			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSize));
+
+	if (enableStateSorting &&
+			// A safety check for large workgroup size of Intel OpenCL CPU device
+			(taskCount / (4 * advancePathsWorkGroupSize) > 0))
+		intersectionDevice->EnqueueKernel(advancePathsKernel_StateSorter_MK_HIT_OBJECT,
+				HardwareDeviceRange(taskCount / (4 * advancePathsWorkGroupSize)), HardwareDeviceRange(advancePathsWorkGroupSize));
 	intersectionDevice->EnqueueKernel(advancePathsKernel_MK_HIT_OBJECT,
 			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSize));
+
+	if (enableStateSorting &&
+			// A safety check for large workgroup size of Intel OpenCL CPU device
+			(taskCount / (4 * advancePathsWorkGroupSize) > 0))
+		intersectionDevice->EnqueueKernel(advancePathsKernel_StateSorter_MK_RT_DL,
+				HardwareDeviceRange(taskCount / (4 * advancePathsWorkGroupSize)), HardwareDeviceRange(advancePathsWorkGroupSize));
 	intersectionDevice->EnqueueKernel(advancePathsKernel_MK_RT_DL,
 			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSize));
+
+	if (enableStateSorting &&
+			// A safety check for large workgroup size of Intel OpenCL CPU device
+			(taskCount / (4 * advancePathsWorkGroupSize) > 0))
+		intersectionDevice->EnqueueKernel(advancePathsKernel_StateSorter_MK_DL_ILLUMINATE,
+				HardwareDeviceRange(taskCount / (4 * advancePathsWorkGroupSize)), HardwareDeviceRange(advancePathsWorkGroupSize));
 	intersectionDevice->EnqueueKernel(advancePathsKernel_MK_DL_ILLUMINATE,
 			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSize));
+
+	if (enableStateSorting &&
+			// A safety check for large workgroup size of Intel OpenCL CPU device
+			(taskCount / (4 * advancePathsWorkGroupSize) > 0))
+		intersectionDevice->EnqueueKernel(advancePathsKernel_StateSorter_MK_DL_SAMPLE_BSDF,
+				HardwareDeviceRange(taskCount / (4 * advancePathsWorkGroupSize)), HardwareDeviceRange(advancePathsWorkGroupSize));
 	intersectionDevice->EnqueueKernel(advancePathsKernel_MK_DL_SAMPLE_BSDF,
 			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSize));
+
+	if (enableStateSorting &&
+			// A safety check for large workgroup size of Intel OpenCL CPU device
+			(taskCount / (4 * advancePathsWorkGroupSize) > 0))
+		intersectionDevice->EnqueueKernel(advancePathsKernel_StateSorter_MK_GENERATE_NEXT_VERTEX_RAY,
+				HardwareDeviceRange(taskCount / (4 * advancePathsWorkGroupSize)), HardwareDeviceRange(advancePathsWorkGroupSize));
 	intersectionDevice->EnqueueKernel(advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY,
 			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSize));
+
+	if (enableStateSorting &&
+			// A safety check for large workgroup size of Intel OpenCL CPU device
+			(taskCount / (4 * advancePathsWorkGroupSize) > 0))
+		intersectionDevice->EnqueueKernel(advancePathsKernel_StateSorter_MK_SPLAT_SAMPLE,
+				HardwareDeviceRange(taskCount / (4 * advancePathsWorkGroupSize)), HardwareDeviceRange(advancePathsWorkGroupSize));
 	intersectionDevice->EnqueueKernel(advancePathsKernel_MK_SPLAT_SAMPLE,
 			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSize));
+
+	if (enableStateSorting &&
+			// A safety check for large workgroup size of Intel OpenCL CPU device
+			(taskCount / (4 * advancePathsWorkGroupSize) > 0))
+		intersectionDevice->EnqueueKernel(advancePathsKernel_StateSorter_MK_NEXT_SAMPLE,
+				HardwareDeviceRange(taskCount / (4 * advancePathsWorkGroupSize)), HardwareDeviceRange(advancePathsWorkGroupSize));
 	intersectionDevice->EnqueueKernel(advancePathsKernel_MK_NEXT_SAMPLE,
 			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSize));
+
+	if (enableStateSorting &&
+			// A safety check for large workgroup size of Intel OpenCL CPU device
+			(taskCount / (4 * advancePathsWorkGroupSize) > 0))
+		intersectionDevice->EnqueueKernel(advancePathsKernel_StateSorter_MK_GENERATE_CAMERA_RAY,
+				HardwareDeviceRange(taskCount / (4 * advancePathsWorkGroupSize)), HardwareDeviceRange(advancePathsWorkGroupSize));
 	intersectionDevice->EnqueueKernel(advancePathsKernel_MK_GENERATE_CAMERA_RAY,
 			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSize));
 }

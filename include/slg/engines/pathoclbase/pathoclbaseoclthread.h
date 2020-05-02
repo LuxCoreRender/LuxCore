@@ -169,7 +169,7 @@ protected:
 			luxrays::HardwareDeviceKernel **kernel,
 			size_t *workGroupSize, const std::string &name);
 
-	void EnqueueAdvancePathsKernel();
+	void EnqueueAdvancePathsKernel(const bool enableStateSorting);
 
 	static luxrays::oclKernelCache *AllocKernelCache(const std::string &type);
 	static void GetKernelParamters(std::vector<std::string> &params,
@@ -234,6 +234,7 @@ protected:
 	luxrays::HardwareDeviceBuffer *raysBuff;
 	luxrays::HardwareDeviceBuffer *hitsBuff;
 	luxrays::HardwareDeviceBuffer *taskConfigBuff;
+	luxrays::HardwareDeviceBuffer *gid2TaskBuff;
 	luxrays::HardwareDeviceBuffer *tasksBuff;
 	luxrays::HardwareDeviceBuffer *tasksDirectLightBuff;
 	luxrays::HardwareDeviceBuffer *tasksStateBuff;
@@ -257,15 +258,25 @@ protected:
 	luxrays::HardwareDeviceKernel *initSeedKernel;
 	luxrays::HardwareDeviceKernel *initKernel;
 	size_t initWorkGroupSize;
+	luxrays::HardwareDeviceKernel *advancePathsKernel_StateSorter_MK_RT_NEXT_VERTEX;
 	luxrays::HardwareDeviceKernel *advancePathsKernel_MK_RT_NEXT_VERTEX;
+	luxrays::HardwareDeviceKernel *advancePathsKernel_StateSorter_MK_HIT_NOTHING;
 	luxrays::HardwareDeviceKernel *advancePathsKernel_MK_HIT_NOTHING;
+	luxrays::HardwareDeviceKernel *advancePathsKernel_StateSorter_MK_HIT_OBJECT;
 	luxrays::HardwareDeviceKernel *advancePathsKernel_MK_HIT_OBJECT;
+	luxrays::HardwareDeviceKernel *advancePathsKernel_StateSorter_MK_RT_DL;
 	luxrays::HardwareDeviceKernel *advancePathsKernel_MK_RT_DL;
+	luxrays::HardwareDeviceKernel *advancePathsKernel_StateSorter_MK_DL_ILLUMINATE;
 	luxrays::HardwareDeviceKernel *advancePathsKernel_MK_DL_ILLUMINATE;
+	luxrays::HardwareDeviceKernel *advancePathsKernel_StateSorter_MK_DL_SAMPLE_BSDF;
 	luxrays::HardwareDeviceKernel *advancePathsKernel_MK_DL_SAMPLE_BSDF;
+	luxrays::HardwareDeviceKernel *advancePathsKernel_StateSorter_MK_GENERATE_NEXT_VERTEX_RAY;
 	luxrays::HardwareDeviceKernel *advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY;
+	luxrays::HardwareDeviceKernel *advancePathsKernel_StateSorter_MK_SPLAT_SAMPLE;
 	luxrays::HardwareDeviceKernel *advancePathsKernel_MK_SPLAT_SAMPLE;
+	luxrays::HardwareDeviceKernel *advancePathsKernel_StateSorter_MK_NEXT_SAMPLE;
 	luxrays::HardwareDeviceKernel *advancePathsKernel_MK_NEXT_SAMPLE;
+	luxrays::HardwareDeviceKernel *advancePathsKernel_StateSorter_MK_GENERATE_CAMERA_RAY;
 	luxrays::HardwareDeviceKernel *advancePathsKernel_MK_GENERATE_CAMERA_RAY;
 	size_t advancePathsWorkGroupSize;
 

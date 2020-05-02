@@ -185,7 +185,7 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl() {
 				intersectionDevice->EnqueueTraceRayBuffer(raysBuff, hitsBuff, taskCount);
 
 				// Advance to next path state
-				EnqueueAdvancePathsKernel();
+				EnqueueAdvancePathsKernel(true);
 			}
 			totalIterations += iterations;
 

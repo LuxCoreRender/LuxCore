@@ -101,6 +101,7 @@ PathOCLBaseOCLRenderThread::PathOCLBaseOCLRenderThread(const u_int index,
 	raysBuff = nullptr;
 	hitsBuff = nullptr;
 	taskConfigBuff = nullptr;
+	gid2TaskBuff = nullptr;
 	tasksBuff = nullptr;
 	tasksDirectLightBuff = nullptr;
 	tasksStateBuff = nullptr;
@@ -116,15 +117,25 @@ PathOCLBaseOCLRenderThread::PathOCLBaseOCLRenderThread(const u_int index,
 	// OpenCL kernels
 	initSeedKernel = nullptr;
 	initKernel = nullptr;
+	advancePathsKernel_StateSorter_MK_RT_NEXT_VERTEX = nullptr;
 	advancePathsKernel_MK_RT_NEXT_VERTEX = nullptr;
+	advancePathsKernel_StateSorter_MK_HIT_NOTHING = nullptr;
 	advancePathsKernel_MK_HIT_NOTHING = nullptr;
+	advancePathsKernel_StateSorter_MK_HIT_OBJECT = nullptr;
 	advancePathsKernel_MK_HIT_OBJECT = nullptr;
+	advancePathsKernel_StateSorter_MK_RT_DL = nullptr;
 	advancePathsKernel_MK_RT_DL = nullptr;
+	advancePathsKernel_StateSorter_MK_DL_ILLUMINATE = nullptr;
 	advancePathsKernel_MK_DL_ILLUMINATE = nullptr;
+	advancePathsKernel_StateSorter_MK_DL_SAMPLE_BSDF = nullptr;
 	advancePathsKernel_MK_DL_SAMPLE_BSDF = nullptr;
+	advancePathsKernel_StateSorter_MK_GENERATE_NEXT_VERTEX_RAY = nullptr;
 	advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY = nullptr;
+	advancePathsKernel_StateSorter_MK_SPLAT_SAMPLE = nullptr;
 	advancePathsKernel_MK_SPLAT_SAMPLE = nullptr;
+	advancePathsKernel_StateSorter_MK_NEXT_SAMPLE = nullptr;
 	advancePathsKernel_MK_NEXT_SAMPLE = nullptr;
+	advancePathsKernel_StateSorter_MK_GENERATE_CAMERA_RAY = nullptr;
 	advancePathsKernel_MK_GENERATE_CAMERA_RAY = nullptr;
 
 	initKernelArgsCount  = 0;
@@ -143,15 +154,25 @@ PathOCLBaseOCLRenderThread::~PathOCLBaseOCLRenderThread() {
 	delete filmClearKernel;
 	delete initSeedKernel;
 	delete initKernel;
+	delete advancePathsKernel_StateSorter_MK_RT_NEXT_VERTEX;
 	delete advancePathsKernel_MK_RT_NEXT_VERTEX;
+	delete advancePathsKernel_StateSorter_MK_HIT_NOTHING;
 	delete advancePathsKernel_MK_HIT_NOTHING;
+	delete advancePathsKernel_StateSorter_MK_HIT_OBJECT;
 	delete advancePathsKernel_MK_HIT_OBJECT;
+	delete advancePathsKernel_StateSorter_MK_RT_DL;
 	delete advancePathsKernel_MK_RT_DL;
+	delete advancePathsKernel_StateSorter_MK_DL_ILLUMINATE;
 	delete advancePathsKernel_MK_DL_ILLUMINATE;
+	delete advancePathsKernel_StateSorter_MK_DL_SAMPLE_BSDF;
 	delete advancePathsKernel_MK_DL_SAMPLE_BSDF;
+	delete advancePathsKernel_StateSorter_MK_GENERATE_NEXT_VERTEX_RAY;
 	delete advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY;
+	delete advancePathsKernel_StateSorter_MK_SPLAT_SAMPLE;
 	delete advancePathsKernel_MK_SPLAT_SAMPLE;
+	delete advancePathsKernel_StateSorter_MK_NEXT_SAMPLE;
 	delete advancePathsKernel_MK_NEXT_SAMPLE;
+	delete advancePathsKernel_StateSorter_MK_GENERATE_CAMERA_RAY;
 	delete advancePathsKernel_MK_GENERATE_CAMERA_RAY;
 
 	delete[] gpuTaskStats;
@@ -224,6 +245,7 @@ void PathOCLBaseOCLRenderThread::Stop() {
 	intersectionDevice->FreeBuffer(&raysBuff);
 	intersectionDevice->FreeBuffer(&hitsBuff);
 	intersectionDevice->FreeBuffer(&taskConfigBuff);
+	intersectionDevice->FreeBuffer(&gid2TaskBuff);
 	intersectionDevice->FreeBuffer(&tasksBuff);
 	intersectionDevice->FreeBuffer(&tasksDirectLightBuff);
 	intersectionDevice->FreeBuffer(&tasksStateBuff);

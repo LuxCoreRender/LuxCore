@@ -312,6 +312,14 @@ void PathOCLBaseOCLRenderThread::InitGPUTaskBuffer() {
 	intersectionDevice->AllocBufferRO(&taskConfigBuff, &renderEngine->taskConfig, sizeof(slg::ocl::pathoclbase::GPUTaskConfiguration), "GPUTaskConfiguration");
 
 	//--------------------------------------------------------------------------
+	// Allocate gid2TaskBuff
+	//--------------------------------------------------------------------------
+
+	// State sorting is used only by PATHOCL
+	if (renderEngine->GetType() == PATHOCL)
+		intersectionDevice->AllocBufferRW(&gid2TaskBuff, nullptr, sizeof(u_int) * taskCount, "GID2TaskIndex");
+
+	//--------------------------------------------------------------------------
 	// Allocate tasksBuff
 	//--------------------------------------------------------------------------
 

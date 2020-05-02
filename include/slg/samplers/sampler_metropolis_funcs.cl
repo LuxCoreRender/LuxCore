@@ -29,11 +29,10 @@ OPENCL_FORCE_INLINE float MetropolisSampler_GetSample(
 		__constant const GPUTaskConfiguration* restrict taskConfig,
 		const uint index
 		SAMPLER_PARAM_DECL) {
-	const size_t gid = get_global_id(0);
 	__global MetropolisSample *samples = (__global MetropolisSample *)samplesBuff;
-	__global MetropolisSample *sample = &samples[gid];
+	__global MetropolisSample *sample = &samples[taskIndex];
 
-	__global float *samplesData = &samplesDataBuff[gid * METROPOLISSAMPLER_TOTAL_U_SIZE] +
+	__global float *samplesData = &samplesDataBuff[taskIndex * METROPOLISSAMPLER_TOTAL_U_SIZE] +
 			sample->proposed * METROPOLISSAMPLER_TOTAL_U_SIZE;
 
 	return samplesData[index];
@@ -108,10 +107,9 @@ OPENCL_FORCE_INLINE void MetropolisSampler_SplatSample(
 		SAMPLER_PARAM_DECL
 		FILM_PARAM_DECL
 		) {
-	const size_t gid = get_global_id(0);
 	__global MetropolisSample *samples = (__global MetropolisSample *)samplesBuff;
-	__global MetropolisSample *sample = &samples[gid];
-	__global SampleResult *sampleResult = &sampleResultsBuff[gid];
+	__global MetropolisSample *sample = &samples[taskIndex];
+	__global SampleResult *sampleResult = &sampleResultsBuff[taskIndex];
 
 	//--------------------------------------------------------------------------
 	// Accept/Reject the sample
@@ -168,7 +166,7 @@ OPENCL_FORCE_INLINE void MetropolisSampler_SplatSample(
 
 		const float rndVal = Rnd_FloatValue(seed);
 
-		/*if (get_global_id(0) == 0)
+		/*if (taskIndex == 0)
 			printf("[%d, %d][%f, %f][%d] Current: (%f, %f, %f) [%f/%f] Proposed: (%f, %f, %f) [%f] accProb: %f <%f>\n",
 					current, proposed,
 					currentI, proposedI,
@@ -180,7 +178,7 @@ OPENCL_FORCE_INLINE void MetropolisSampler_SplatSample(
 		__global SampleResult *contrib;
 		float norm;
 		if ((accProb == 1.f) || (rndVal < accProb)) {
-			/*if (get_global_id(0) == 0)
+			/*if (taskIndex == 0)
 				printf("\t\tACCEPTED ! [%f]\n", currentI);*/
 
 			// Add accumulated contribution of previous reference sample
@@ -194,7 +192,7 @@ OPENCL_FORCE_INLINE void MetropolisSampler_SplatSample(
 
 			consecutiveRejects = 0;
 		} else {
-			/*if (get_global_id(0) == 0)
+			/*if (taskIndex == 0)
 				printf("\t\tREJECTED ! [%f]\n", proposedI);*/
 
 			// Add contribution of new sample before rejecting it
@@ -205,7 +203,7 @@ OPENCL_FORCE_INLINE void MetropolisSampler_SplatSample(
 		}
 
 		if (norm > 0.f) {
-			/*if (get_global_id(0) == 0)
+			/*if (taskIndex == 0)
 				printf("\t\tContrib: (%f, %f, %f) [%f] consecutiveRejects: %d\n",
 						contrib->radiancePerPixelNormalized[0].c[0],
 						contrib->radiancePerPixelNormalized[0].c[1],
@@ -239,21 +237,20 @@ OPENCL_FORCE_INLINE void MetropolisSampler_NextSample(
 		const uint filmSubRegion0, const uint filmSubRegion1,
 		const uint filmSubRegion2, const uint filmSubRegion3
 		SAMPLER_PARAM_DECL) {
-	const size_t gid = get_global_id(0);
 	__global MetropolisSample *samples = (__global MetropolisSample *)samplesBuff;
-	__global MetropolisSample *sample = &samples[gid];
+	__global MetropolisSample *sample = &samples[taskIndex];
 
 	//--------------------------------------------------------------------------
 	// Mutate the sample
 	//--------------------------------------------------------------------------
 
-	__global float *proposedU = &samplesDataBuff[gid * METROPOLISSAMPLER_TOTAL_U_SIZE] +
+	__global float *proposedU = &samplesDataBuff[taskIndex * METROPOLISSAMPLER_TOTAL_U_SIZE] +
 			sample->proposed * METROPOLISSAMPLER_TOTAL_U_SIZE;
 	if (Rnd_FloatValue(seed) < taskConfig->sampler.metropolis.largeMutationProbability) {
 		LargeStep(taskConfig, seed, proposedU);
 		sample->smallMutationCount = 0;
 	} else {
-		__global float *currentU = &samplesDataBuff[gid * METROPOLISSAMPLER_TOTAL_U_SIZE] +
+		__global float *currentU = &samplesDataBuff[taskIndex * METROPOLISSAMPLER_TOTAL_U_SIZE] +
 			sample->current * METROPOLISSAMPLER_TOTAL_U_SIZE;
 
 		SmallStep(taskConfig, seed, currentU, proposedU);
@@ -269,9 +266,8 @@ OPENCL_FORCE_INLINE bool MetropolisSampler_Init(
 		const uint filmSubRegion0, const uint filmSubRegion1,
 		const uint filmSubRegion2, const uint filmSubRegion3
 		SAMPLER_PARAM_DECL) {
-	const size_t gid = get_global_id(0);
 	__global MetropolisSample *samples = (__global MetropolisSample *)samplesBuff;
-	__global MetropolisSample *sample = &samples[gid];
+	__global MetropolisSample *sample = &samples[taskIndex];
 
 	sample->totalI = 0.f;
 	sample->largeMutationCount = 1.f;
@@ -284,7 +280,7 @@ OPENCL_FORCE_INLINE bool MetropolisSampler_Init(
 
 	sample->weight = 0.f;
 
-	__global float *samplesData = &samplesDataBuff[gid * METROPOLISSAMPLER_TOTAL_U_SIZE] +
+	__global float *samplesData = &samplesDataBuff[taskIndex * METROPOLISSAMPLER_TOTAL_U_SIZE] +
 			sample->proposed * METROPOLISSAMPLER_TOTAL_U_SIZE;
 	LargeStep(taskConfig, seed, samplesData);
 

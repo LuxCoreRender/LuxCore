@@ -41,8 +41,7 @@ OPENCL_FORCE_INLINE void InitSampleResult(
 		const uint filmSubRegion2, const uint filmSubRegion3,
 		__global float *pixelFilterDistribution
 		SAMPLER_PARAM_DECL) {
-	const size_t gid = get_global_id(0);
-	__global SampleResult *sampleResult = &sampleResultsBuff[gid];
+	__global SampleResult *sampleResult = &sampleResultsBuff[taskIndex];
 
 	SampleResult_Init(&taskConfig->film, sampleResult);
 
@@ -96,8 +95,7 @@ OPENCL_FORCE_INLINE void GenerateEyePath(
 		const uint tileStartX, const uint tileStartY
 #endif
 		SAMPLER_PARAM_DECL) {
-	const size_t gid = get_global_id(0);
-	__global SampleResult *sampleResult = &sampleResultsBuff[gid];
+	__global SampleResult *sampleResult = &sampleResultsBuff[taskIndex];
 
 	EyePathInfo_Init(pathInfo);
 
@@ -446,6 +444,7 @@ OPENCL_FORCE_INLINE bool DirectLight_BSDFSampling(
 
 #define KERNEL_ARGS \
 		__constant const GPUTaskConfiguration* restrict taskConfig \
+		, __global uint *gid2TaskIndex \
 		, __global GPUTask *tasks \
 		, __global GPUTaskDirectLight *tasksDirectLight \
 		, __global GPUTaskState *tasksState \
@@ -545,6 +544,7 @@ __kernel void InitSeed(__global GPUTask *tasks,
 
 __kernel void Init(
 		__constant const GPUTaskConfiguration* restrict taskConfig,
+		__global uint *gid2TaskIndex,
 		__global GPUTask *tasks,
 		__global GPUTaskDirectLight *tasksDirectLight,
 		__global GPUTaskState *tasksState,
@@ -560,24 +560,26 @@ __kernel void Init(
 		KERNEL_ARGS_FILM
 		) {
 	const size_t gid = get_global_id(0);
+	const uint taskIndex = gid;
+	gid2TaskIndex[gid] = taskIndex;
 
-	__global GPUTaskState *taskState = &tasksState[gid];
+	__global GPUTaskState *taskState = &tasksState[taskIndex];
 
 #if defined(RENDER_ENGINE_TILEPATHOCL) || defined(RENDER_ENGINE_RTPATHOCL)
 	__global TilePathSamplerSharedData *samplerSharedData = (__global TilePathSamplerSharedData *)samplerSharedDataBuff;
 
-	if (gid >= filmWidth * filmHeight * Sqr(samplerSharedData->aaSamples)) {
+	if (taskIndex >= filmWidth * filmHeight * Sqr(samplerSharedData->aaSamples)) {
 		taskState->state = MK_DONE;
 		// Mark the ray like like one to NOT trace
-		rays[gid].flags = RAY_FLAGS_MASKED;
+		rays[taskIndex].flags = RAY_FLAGS_MASKED;
 
 		return;
 	}
 #endif
 
 	// Initialize the task
-	__global GPUTask *task = &tasks[gid];
-	__global GPUTaskDirectLight *taskDirectLight = &tasksDirectLight[gid];
+	__global GPUTask *task = &tasks[taskIndex];
+	__global GPUTaskDirectLight *taskDirectLight = &tasksDirectLight[taskIndex];
 
 	// Read the seed
 	Seed seedValue = task->seed;
@@ -608,8 +610,8 @@ __kernel void Init(
 				filmWidth, filmHeight,
 				filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3,
 				pixelFilterDistribution,
-				&rays[gid],
-				&eyePathInfos[gid]
+				&rays[taskIndex],
+				&eyePathInfos[taskIndex]
 #if defined(RENDER_ENGINE_TILEPATHOCL) || defined(RENDER_ENGINE_RTPATHOCL)
 				, cameraFilmWidth, cameraFilmHeight,
 				tileStartX, tileStartY
@@ -622,12 +624,12 @@ __kernel void Init(
 		taskState->state = MK_GENERATE_CAMERA_RAY;
 #endif
 		// Mark the ray like like one to NOT trace
-		rays[gid].flags = RAY_FLAGS_MASKED;
+		rays[taskIndex].flags = RAY_FLAGS_MASKED;
 	}
 
 	// Save the seed
 	task->seed = seedValue;
 
-	__global GPUTaskStats *taskStat = &taskStats[gid];
+	__global GPUTaskStats *taskStat = &taskStats[taskIndex];
 	taskStat->sampleCount = 0;
 }

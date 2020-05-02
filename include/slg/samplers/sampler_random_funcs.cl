@@ -28,8 +28,7 @@ OPENCL_FORCE_INLINE float RandomSampler_GetSample(
 		__constant const GPUTaskConfiguration* restrict taskConfig,
 		const uint index
 		SAMPLER_PARAM_DECL) {
-	const size_t gid = get_global_id(0);
-	__global float *samplesData = &samplesDataBuff[gid * RANDOMSAMPLER_TOTAL_U_SIZE];
+	__global float *samplesData = &samplesDataBuff[taskIndex * RANDOMSAMPLER_TOTAL_U_SIZE];
 
 	switch (index) {
 		case IDX_SCREEN_X:
@@ -46,8 +45,7 @@ OPENCL_FORCE_INLINE void RandomSampler_SplatSample(
 		SAMPLER_PARAM_DECL
 		FILM_PARAM_DECL
 		) {
-	const size_t gid = get_global_id(0);
-	__global SampleResult *sampleResult = &sampleResultsBuff[gid];
+	__global SampleResult *sampleResult = &sampleResultsBuff[taskIndex];
 
 	Film_AddSample(sampleResult->pixelX, sampleResult->pixelY,
 			sampleResult, 1.f
@@ -66,12 +64,11 @@ OPENCL_FORCE_INLINE void RandomSampler_InitNewSample(__constant const GPUTaskCon
 		const uint filmSubRegion0, const uint filmSubRegion1,
 		const uint filmSubRegion2, const uint filmSubRegion3
 		SAMPLER_PARAM_DECL) {
-	const size_t gid = get_global_id(0);
 	__constant const Sampler *sampler = &taskConfig->sampler;
 	__global RandomSamplerSharedData *samplerSharedData = (__global RandomSamplerSharedData *)samplerSharedDataBuff;
 	__global RandomSample *samples = (__global RandomSample *)samplesBuff;
-	__global RandomSample *sample = &samples[gid];
-	__global float *samplesData = &samplesDataBuff[gid * RANDOMSAMPLER_TOTAL_U_SIZE];
+	__global RandomSample *sample = &samples[taskIndex];
+	__global float *samplesData = &samplesDataBuff[taskIndex * RANDOMSAMPLER_TOTAL_U_SIZE];
 
 	const uint bucketSize = sampler->sobol.bucketSize;
 	const uint tileSize = sampler->sobol.tileSize;
@@ -192,10 +189,9 @@ OPENCL_FORCE_INLINE bool RandomSampler_Init(
 		const uint filmSubRegion0, const uint filmSubRegion1,
 		const uint filmSubRegion2, const uint filmSubRegion3
 		SAMPLER_PARAM_DECL) {
-	const size_t gid = get_global_id(0);
 	__constant const Sampler *sampler = &taskConfig->sampler;
 	__global RandomSample *samples = (__global RandomSample *)samplesBuff;
-	__global RandomSample *sample = &samples[gid];
+	__global RandomSample *sample = &samples[taskIndex];
 
 	const uint bucketSize = sampler->random.bucketSize;
 	sample->pixelOffset = bucketSize * bucketSize;

@@ -21,6 +21,9 @@
 // This is a workaround to long compilation time
 #define OPENCL_FORCE_NOT_INLINE __attribute__((noinline))
 #define OPENCL_FORCE_INLINE __attribute__((always_inline))
+// For fast compilation with Intel OpenCL CPU device (i.e. development, debugging, etc.)
+//#define OPENCL_FORCE_NOT_INLINE __attribute__((noinline))
+//#define OPENCL_FORCE_INLINE __attribute__((noinline))
 
 //------------------------------------------------------------------------------
 // MAKE_FLOATn()

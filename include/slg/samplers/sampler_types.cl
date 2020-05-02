@@ -145,12 +145,14 @@ typedef struct {
 #define SOBOL_MAX_DIMENSIONS 21201
 
 #define SAMPLER_PARAM_DECL \
+		, const uint taskIndex \
 		, Seed *seed \
 		, __global void *samplerSharedDataBuff \
 		, __global void *samplesBuff \
 		, __global float *samplesDataBuff \
 		, __global SampleResult *sampleResultsBuff
 #define SAMPLER_PARAM \
+		, taskIndex \
 		, seed \
 		, samplerSharedDataBuff \
 		, samplesBuff \

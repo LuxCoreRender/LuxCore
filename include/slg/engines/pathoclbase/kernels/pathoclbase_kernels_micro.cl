@@ -24,6 +24,42 @@
 
 //#define DEBUG_PRINTF_KERNEL_NAME 1
 
+OPENCL_FORCE_INLINE void AdvancePaths_StateSorter(__global uint *gid2TaskIndex,
+		__global GPUTaskState *tasksState,
+		const PathState enabledPathState) {
+	const size_t gid = get_global_id(0);
+
+	const uint statesCount = 4 * get_local_size(0);
+
+	const uint loopStart = gid * statesCount;
+	const uint loopEnd = (gid + 1) * statesCount;
+
+	__global uint *enabledState = &gid2TaskIndex[loopStart];
+	__global uint *disabledState = &gid2TaskIndex[loopEnd - 1];
+
+	for (uint i = loopStart; i < loopEnd; ++i) {
+		__global GPUTaskState *taskState = &tasksState[i];
+		const PathState pathState = taskState->state;
+		if (pathState == MK_GENERATE_NEXT_VERTEX_RAY) {
+			// Enabled state
+			*enabledState++ = i;
+		} else {
+			// Disabled state
+			*disabledState-- = i;
+		}
+	}
+}
+
+//------------------------------------------------------------------------------
+// MK_RT_NEXT_VERTEX state sorter
+//------------------------------------------------------------------------------
+
+__kernel void AdvancePaths_StateSorter_MK_RT_NEXT_VERTEX(
+		KERNEL_ARGS
+		) {
+	AdvancePaths_StateSorter(gid2TaskIndex, tasksState, MK_RT_NEXT_VERTEX);
+}
+
 //------------------------------------------------------------------------------
 // Evaluation of the Path finite state machine.
 //
@@ -34,17 +70,17 @@
 __kernel void AdvancePaths_MK_RT_NEXT_VERTEX(
 		KERNEL_ARGS
 		) {
-	const size_t gid = get_global_id(0);
-	__global SampleResult *sampleResult = &sampleResultsBuff[gid];
+	const uint taskIndex = gid2TaskIndex[get_global_id(0)];
+	__global SampleResult *sampleResult = &sampleResultsBuff[taskIndex];
 
 	// This has to be done by the first kernel to run after RT kernel
 	sampleResult->rayCount += 1;
 
 	// Read the path state
-	__global GPUTaskState *taskState = &tasksState[gid];
+	__global GPUTaskState *taskState = &tasksState[taskIndex];
 	PathState pathState = taskState->state;
 #if defined(DEBUG_PRINTF_KERNEL_NAME)
-	if (gid == 0)
+	if (taskIndex == 0)
 		printf("Kernel: AdvancePaths_MK_RT_NEXT_VERTEX(state = %d)\n", pathState);
 	else
 		return;
@@ -56,7 +92,7 @@ __kernel void AdvancePaths_MK_RT_NEXT_VERTEX(
 	// Start of variables setup
 	//--------------------------------------------------------------------------
 	
-	__global EyePathInfo *pathInfo = &eyePathInfos[gid];
+	__global EyePathInfo *pathInfo = &eyePathInfos[taskIndex];
 	__constant const Scene* restrict scene = &taskConfig->scene;
 
 	// Initialize image maps page pointer table
@@ -77,9 +113,9 @@ __kernel void AdvancePaths_MK_RT_NEXT_VERTEX(
 			EYE_RAY | ((pathInfo->depth.depth == 0) ? CAMERA_RAY : GENERIC_RAY),
 			&throughShadowTransparency,
 			&pathInfo->volume,
-			&tasks[gid].tmpHitPoint,
+			&tasks[taskIndex].tmpHitPoint,
 			passThroughEvent,
-			&rays[gid], &rayHits[gid], &taskState->bsdf,
+			&rays[taskIndex], &rayHits[taskIndex], &taskState->bsdf,
 			&connectionThroughput, VLOAD3F(taskState->throughput.c),
 			sampleResult,
 			false
@@ -90,7 +126,7 @@ __kernel void AdvancePaths_MK_RT_NEXT_VERTEX(
 
 	// If continueToTrace, there is nothing to do, just keep the same state
 	if (!continueToTrace) {
-		if (rayHits[gid].meshIndex == NULL_INDEX)
+		if (rayHits[taskIndex].meshIndex == NULL_INDEX)
 			taskState->state = MK_HIT_NOTHING;
 		else {
 			const BSDFEvent eventTypes = BSDF_GetEventTypes(&taskState->bsdf
@@ -105,6 +141,16 @@ __kernel void AdvancePaths_MK_RT_NEXT_VERTEX(
 }
 
 //------------------------------------------------------------------------------
+// MK_HIT_NOTHING state sorter
+//------------------------------------------------------------------------------
+
+__kernel void AdvancePaths_StateSorter_MK_HIT_NOTHING(
+		KERNEL_ARGS
+		) {
+	AdvancePaths_StateSorter(gid2TaskIndex, tasksState, MK_HIT_NOTHING);
+}
+
+//------------------------------------------------------------------------------
 // Evaluation of the Path finite state machine.
 //
 // From: MK_HIT_NOTHING
@@ -114,13 +160,13 @@ __kernel void AdvancePaths_MK_RT_NEXT_VERTEX(
 __kernel void AdvancePaths_MK_HIT_NOTHING(
 		KERNEL_ARGS
 		) {
-	const size_t gid = get_global_id(0);
+	const uint taskIndex = gid2TaskIndex[get_global_id(0)];
 
 	// Read the path state
-	__global GPUTaskState *taskState = &tasksState[gid];
+	__global GPUTaskState *taskState = &tasksState[taskIndex];
 	PathState pathState = taskState->state;
 #if defined(DEBUG_PRINTF_KERNEL_NAME)
-	if (gid == 0)
+	if (taskIndex == 0)
 		printf("Kernel: AdvancePaths_MK_HIT_NOTHING(state = %d)\n", pathState);
 	else
 		return;
@@ -132,10 +178,10 @@ __kernel void AdvancePaths_MK_HIT_NOTHING(
 	// Start of variables setup
 	//--------------------------------------------------------------------------
 
-	__global GPUTaskDirectLight *taskDirectLight = &tasksDirectLight[gid];
-	__global EyePathInfo *pathInfo = &eyePathInfos[gid];
+	__global GPUTaskDirectLight *taskDirectLight = &tasksDirectLight[taskIndex];
+	__global EyePathInfo *pathInfo = &eyePathInfos[taskIndex];
 	__constant const Scene* restrict scene = &taskConfig->scene;
-	__global SampleResult *sampleResult = &sampleResultsBuff[gid];
+	__global SampleResult *sampleResult = &sampleResultsBuff[taskIndex];
 
 	// Initialize image maps page pointer table
 	INIT_IMAGEMAPS_PAGES
@@ -164,7 +210,7 @@ __kernel void AdvancePaths_MK_HIT_NOTHING(
 				&taskConfig->film,
 				pathInfo,
 				&taskState->throughput,
-				&rays[gid],
+				&rays[taskIndex],
 				sampleResult->firstPathVertex ? NULL : &taskState->bsdf,
 				sampleResult
 				LIGHTS_PARAM);
@@ -192,6 +238,16 @@ __kernel void AdvancePaths_MK_HIT_NOTHING(
 }
 
 //------------------------------------------------------------------------------
+// MK_HIT_OBJECT state sorter
+//------------------------------------------------------------------------------
+
+__kernel void AdvancePaths_StateSorter_MK_HIT_OBJECT(
+		KERNEL_ARGS
+		) {
+	AdvancePaths_StateSorter(gid2TaskIndex, tasksState, MK_HIT_OBJECT);
+}
+
+//------------------------------------------------------------------------------
 // Evaluation of the Path finite state machine.
 //
 // From: MK_HIT_OBJECT
@@ -201,13 +257,13 @@ __kernel void AdvancePaths_MK_HIT_NOTHING(
 __kernel void AdvancePaths_MK_HIT_OBJECT(
 		KERNEL_ARGS
 		) {
-	const size_t gid = get_global_id(0);
+	const uint taskIndex = gid2TaskIndex[get_global_id(0)];
 
 	// Read the path state
-	__global GPUTaskState *taskState = &tasksState[gid];
+	__global GPUTaskState *taskState = &tasksState[taskIndex];
 	PathState pathState = taskState->state;
 #if defined(DEBUG_PRINTF_KERNEL_NAME)
-	if (gid == 0)
+	if (taskIndex == 0)
 		printf("Kernel: AdvancePaths_MK_HIT_OBJECT(state = %d)\n", pathState);
 	else
 		return;
@@ -220,10 +276,10 @@ __kernel void AdvancePaths_MK_HIT_OBJECT(
 	//--------------------------------------------------------------------------
 
 	__global BSDF *bsdf = &taskState->bsdf;
-	__global GPUTaskDirectLight *taskDirectLight = &tasksDirectLight[gid];
-	__global EyePathInfo *pathInfo = &eyePathInfos[gid];
+	__global GPUTaskDirectLight *taskDirectLight = &tasksDirectLight[taskIndex];
+	__global EyePathInfo *pathInfo = &eyePathInfos[taskIndex];
 	__constant const Scene* restrict scene = &taskConfig->scene;
-	__global SampleResult *sampleResult = &sampleResultsBuff[gid];
+	__global SampleResult *sampleResult = &sampleResultsBuff[taskIndex];
 	
 
 	// Initialize image maps page pointer table
@@ -245,7 +301,7 @@ __kernel void AdvancePaths_MK_HIT_OBJECT(
 
 	if (pathInfo->depth.depth == 0) {
 		sampleResult->alpha = 1.f;
-		sampleResult->depth = rayHits[gid].t;
+		sampleResult->depth = rayHits[taskIndex].t;
 		sampleResult->position = bsdf->hitPoint.p;
 		sampleResult->geometryNormal = bsdf->hitPoint.geometryN;
 		sampleResult->shadingNormal = bsdf->hitPoint.shadeN;
@@ -295,8 +351,8 @@ __kernel void AdvancePaths_MK_HIT_OBJECT(
 				&taskConfig->film,
 				pathInfo,
 				&taskState->throughput,
-				&rays[gid],
-				rayHits[gid].t,
+				&rays[taskIndex],
+				rayHits[taskIndex].t,
 				bsdf,
 				sampleResult
 				LIGHTS_PARAM);
@@ -346,7 +402,7 @@ __kernel void AdvancePaths_MK_HIT_OBJECT(
 					const float passThroughEvent = Rnd_FloatValue(&seedPassThroughEvent);
 
 					if (taskState->photonGICacheEnabledOnLastHit &&
-							(rayHits[gid].t > PhotonGICache_GetIndirectUsageThreshold(
+							(rayHits[taskIndex].t > PhotonGICache_GetIndirectUsageThreshold(
 								pathInfo->lastBSDFEvent,
 								pathInfo->lastGlossiness,
 								// I hope to not introduce strange sample correlations
@@ -391,7 +447,7 @@ __kernel void AdvancePaths_MK_HIT_OBJECT(
 						const float passThroughEvent = Rnd_FloatValue(&seedPassThroughEvent);
 
 						if (taskState->photonGICacheEnabledOnLastHit &&
-								(rayHits[gid].t > PhotonGICache_GetIndirectUsageThreshold(
+								(rayHits[taskIndex].t > PhotonGICache_GetIndirectUsageThreshold(
 									pathInfo->lastBSDFEvent,
 									pathInfo->lastGlossiness,
 									// I hope to not introduce strange sample correlations
@@ -435,6 +491,16 @@ __kernel void AdvancePaths_MK_HIT_OBJECT(
 }
 
 //------------------------------------------------------------------------------
+// MK_RT_DL state sorter
+//------------------------------------------------------------------------------
+
+__kernel void AdvancePaths_StateSorter_MK_RT_DL(
+		KERNEL_ARGS
+		) {
+	AdvancePaths_StateSorter(gid2TaskIndex, tasksState, MK_RT_DL);
+}
+
+//------------------------------------------------------------------------------
 // Evaluation of the Path finite state machine.
 //
 // From: MK_RT_DL
@@ -444,14 +510,14 @@ __kernel void AdvancePaths_MK_HIT_OBJECT(
 __kernel void AdvancePaths_MK_RT_DL(
 		KERNEL_ARGS
 		) {
-	const size_t gid = get_global_id(0);
+	const uint taskIndex = gid2TaskIndex[get_global_id(0)];
 
 	// Read the path state
-	__global GPUTask *task = &tasks[gid];
-	__global GPUTaskState *taskState = &tasksState[gid];
+	__global GPUTask *task = &tasks[taskIndex];
+	__global GPUTaskState *taskState = &tasksState[taskIndex];
 	PathState pathState = taskState->state;
 #if defined(DEBUG_PRINTF_KERNEL_NAME)
-	if (gid == 0)
+	if (taskIndex == 0)
 		printf("Kernel: AdvancePaths_MK_RT_DL(state = %d)\n", pathState);
 	else
 		return;
@@ -463,9 +529,9 @@ __kernel void AdvancePaths_MK_RT_DL(
 	// Start of variables setup
 	//--------------------------------------------------------------------------
 
-	__global GPUTaskDirectLight *taskDirectLight = &tasksDirectLight[gid];
+	__global GPUTaskDirectLight *taskDirectLight = &tasksDirectLight[taskIndex];
 	__constant const Scene* restrict scene = &taskConfig->scene;
-	__global SampleResult *sampleResult = &sampleResultsBuff[gid];
+	__global SampleResult *sampleResult = &sampleResultsBuff[taskIndex];
 
 	// Initialize image maps page pointer table
 	INIT_IMAGEMAPS_PAGES
@@ -485,10 +551,10 @@ __kernel void AdvancePaths_MK_RT_DL(
 		Scene_Intersect(taskConfig,
 			EYE_RAY | SHADOW_RAY,
 			&throughShadowTransparency,
-			&directLightVolInfos[gid],
+			&directLightVolInfos[taskIndex],
 			&task->tmpHitPoint,
 			passThroughEvent,
-			&rays[gid], &rayHits[gid], &task->tmpBsdf,
+			&rays[taskIndex], &rayHits[taskIndex], &task->tmpBsdf,
 			&connectionThroughput, WHITE,
 			NULL,
 			true
@@ -498,7 +564,7 @@ __kernel void AdvancePaths_MK_RT_DL(
 	VSTORE3F(connectionThroughput * VLOAD3F(taskDirectLight->illumInfo.lightRadiance.c), taskDirectLight->illumInfo.lightRadiance.c);
 	VSTORE3F(connectionThroughput * VLOAD3F(taskDirectLight->illumInfo.lightIrradiance.c), taskDirectLight->illumInfo.lightIrradiance.c);
 
-	const bool rayMiss = (rayHits[gid].meshIndex == NULL_INDEX);
+	const bool rayMiss = (rayHits[taskIndex].meshIndex == NULL_INDEX);
 
 	// If continueToTrace, there is nothing to do, just keep the same state
 	if (!continueToTrace) {
@@ -525,7 +591,7 @@ __kernel void AdvancePaths_MK_RT_DL(
 							MATERIALS_PARAM) & SPECULAR)) {
 					const float3 irradiance = (M_1_PI_F * fabs(dot(
 								VLOAD3F(&bsdf->hitPoint.shadeN.x),
-								VLOAD3F(&rays[gid].d.x)))) *
+								VLOAD3F(&rays[taskIndex].d.x)))) *
 							VLOAD3F(taskDirectLight->illumInfo.lightIrradiance.c);
 					VSTORE3F(irradiance, sampleResult->irradiance.c);
 				}
@@ -547,6 +613,16 @@ __kernel void AdvancePaths_MK_RT_DL(
 }
 
 //------------------------------------------------------------------------------
+// MK_DL_ILLUMINATE state sorter
+//------------------------------------------------------------------------------
+
+__kernel void AdvancePaths_StateSorter_MK_DL_ILLUMINATE(
+		KERNEL_ARGS
+		) {
+	AdvancePaths_StateSorter(gid2TaskIndex, tasksState, MK_DL_ILLUMINATE);
+}
+
+//------------------------------------------------------------------------------
 // Evaluation of the Path finite state machine.
 //
 // From: MK_DL_ILLUMINATE
@@ -556,14 +632,14 @@ __kernel void AdvancePaths_MK_RT_DL(
 __kernel void AdvancePaths_MK_DL_ILLUMINATE(
 		KERNEL_ARGS
 		) {
-	const size_t gid = get_global_id(0);
+	const uint taskIndex = gid2TaskIndex[get_global_id(0)];
 
 	// Read the path state
-	__global GPUTask *task = &tasks[gid];
-	__global GPUTaskState *taskState = &tasksState[gid];
+	__global GPUTask *task = &tasks[taskIndex];
+	__global GPUTaskState *taskState = &tasksState[taskIndex];
 	PathState pathState = taskState->state;
 #if defined(DEBUG_PRINTF_KERNEL_NAME)
-	if (gid == 0)
+	if (taskIndex == 0)
 		printf("Kernel: AdvancePaths_MK_DL_ILLUMINATE(state = %d)\n", pathState);
 	else
 		return;
@@ -575,7 +651,7 @@ __kernel void AdvancePaths_MK_DL_ILLUMINATE(
 	// Start of variables setup
 	//--------------------------------------------------------------------------
 
-	__global EyePathInfo *pathInfo = &eyePathInfos[gid];
+	__global EyePathInfo *pathInfo = &eyePathInfos[taskIndex];
 
 	__global BSDF *bsdf = &taskState->bsdf;
 
@@ -584,9 +660,9 @@ __kernel void AdvancePaths_MK_DL_ILLUMINATE(
 	// This trick is required by SAMPLER_PARAM macro
 	Seed *seed = &seedValue;
 
-	__global GPUTaskDirectLight *taskDirectLight = &tasksDirectLight[gid];
+	__global GPUTaskDirectLight *taskDirectLight = &tasksDirectLight[taskIndex];
 	__constant const Scene* restrict scene = &taskConfig->scene;
-	__global SampleResult *sampleResult = &sampleResultsBuff[gid];
+	__global SampleResult *sampleResult = &sampleResultsBuff[taskIndex];
 	const uint sampleOffset = taskConfig->pathTracer.eyeSampleBootSize + pathInfo->depth.depth * taskConfig->pathTracer.eyeSampleStepSize;
 
 	// Initialize image maps page pointer table
@@ -603,10 +679,10 @@ __kernel void AdvancePaths_MK_DL_ILLUMINATE(
 			MATERIALS_PARAM) &&
 			DirectLight_Illuminate(
 				bsdf,
-				&rays[gid],
+				&rays[taskIndex],
 				worldCenterX, worldCenterY, worldCenterZ, worldRadius,
 				&task->tmpHitPoint,
-				rays[gid].time,
+				rays[taskIndex].time,
 				Sampler_GetSample(taskConfig, sampleOffset + IDX_DIRECTLIGHT_X SAMPLER_PARAM),
 				Sampler_GetSample(taskConfig, sampleOffset + IDX_DIRECTLIGHT_Y SAMPLER_PARAM),
 				Sampler_GetSample(taskConfig, sampleOffset + IDX_DIRECTLIGHT_Z SAMPLER_PARAM),
@@ -628,6 +704,16 @@ __kernel void AdvancePaths_MK_DL_ILLUMINATE(
 }
 
 //------------------------------------------------------------------------------
+// MK_DL_SAMPLE_BSDF state sorter
+//------------------------------------------------------------------------------
+
+__kernel void AdvancePaths_StateSorter_MK_DL_SAMPLE_BSDF(
+		KERNEL_ARGS
+		) {
+	AdvancePaths_StateSorter(gid2TaskIndex, tasksState, MK_DL_SAMPLE_BSDF);
+}
+
+//------------------------------------------------------------------------------
 // Evaluation of the Path finite state machine.
 //
 // From: MK_DL_SAMPLE_BSDF
@@ -637,13 +723,13 @@ __kernel void AdvancePaths_MK_DL_ILLUMINATE(
 __kernel void AdvancePaths_MK_DL_SAMPLE_BSDF(
 		KERNEL_ARGS
 		) {
-	const size_t gid = get_global_id(0);
+	const uint taskIndex = gid2TaskIndex[get_global_id(0)];
 
 	// Read the path state
-	__global GPUTaskState *taskState = &tasksState[gid];
+	__global GPUTaskState *taskState = &tasksState[taskIndex];
 	PathState pathState = taskState->state;
 #if defined(DEBUG_PRINTF_KERNEL_NAME)
-	if (gid == 0)
+	if (taskIndex == 0)
 		printf("Kernel: AdvancePaths_MK_DL_SAMPLE_BSDF(state = %d)\n", pathState);
 	else
 		return;
@@ -655,10 +741,10 @@ __kernel void AdvancePaths_MK_DL_SAMPLE_BSDF(
 	// Start of variables setup
 	//--------------------------------------------------------------------------
 
-	__global GPUTask *task = &tasks[gid];
-	__global EyePathInfo *pathInfo = &eyePathInfos[gid];
+	__global GPUTask *task = &tasks[taskIndex];
+	__global EyePathInfo *pathInfo = &eyePathInfos[taskIndex];
 	__constant const Scene* restrict scene = &taskConfig->scene;
-	__global SampleResult *sampleResult = &sampleResultsBuff[gid];
+	__global SampleResult *sampleResult = &sampleResultsBuff[taskIndex];
 	const uint sampleOffset = taskConfig->pathTracer.eyeSampleBootSize + pathInfo->depth.depth * taskConfig->pathTracer.eyeSampleStepSize;
 
 	// Initialize image maps page pointer table
@@ -670,14 +756,14 @@ __kernel void AdvancePaths_MK_DL_SAMPLE_BSDF(
 
 	if (DirectLight_BSDFSampling(
 			taskConfig,
-			&tasksDirectLight[gid].illumInfo,
-			rays[gid].time, sampleResult->lastPathVertex,
+			&tasksDirectLight[taskIndex].illumInfo,
+			rays[taskIndex].time, sampleResult->lastPathVertex,
 			pathInfo,
 			&task->tmpPathDepthInfo,
 			&taskState->bsdf,
-			VLOAD3F(&rays[gid].d.x)
+			VLOAD3F(&rays[taskIndex].d.x)
 			LIGHTS_PARAM)) {
-		__global GPUTask *task = &tasks[gid];
+		__global GPUTask *task = &tasks[taskIndex];
 		Seed seedValue = task->seed;
 		// This trick is required by SAMPLER_PARAM macro
 		Seed *seed = &seedValue;
@@ -686,17 +772,17 @@ __kernel void AdvancePaths_MK_DL_SAMPLE_BSDF(
 		const float passThroughEvent = Sampler_GetSample(taskConfig, sampleOffset + IDX_DIRECTLIGHT_A SAMPLER_PARAM);
 		Seed seedPassThroughEvent;
 		Rnd_InitFloat(passThroughEvent, &seedPassThroughEvent);
-		tasksDirectLight[gid].seedPassThroughEvent = seedPassThroughEvent;
+		tasksDirectLight[taskIndex].seedPassThroughEvent = seedPassThroughEvent;
 
 		// Save the seed
 		task->seed = seedValue;
 
 		// Initialize the trough a shadow transparency flag used by Scene_Intersect()
-		tasksDirectLight[gid].throughShadowTransparency = false;
+		tasksDirectLight[taskIndex].throughShadowTransparency = false;
 
 		// Make a copy of current PathVolumeInfo for tracing the
 		// shadow ray
-		directLightVolInfos[gid] = pathInfo->volume;
+		directLightVolInfos[taskIndex] = pathInfo->volume;
 
 		// I have to trace the shadow ray
 		taskState->state = MK_RT_DL;
@@ -705,6 +791,16 @@ __kernel void AdvancePaths_MK_DL_SAMPLE_BSDF(
 		// however, I have to check if this is the last path vertex
 		taskState->state = (sampleResult->lastPathVertex) ? MK_SPLAT_SAMPLE : MK_GENERATE_NEXT_VERTEX_RAY;
 	}
+}
+
+//------------------------------------------------------------------------------
+// MK_GENERATE_NEXT_VERTEX_RAY state sorter
+//------------------------------------------------------------------------------
+
+__kernel void AdvancePaths_StateSorter_MK_GENERATE_NEXT_VERTEX_RAY(
+		KERNEL_ARGS
+		) {
+	AdvancePaths_StateSorter(gid2TaskIndex, tasksState, MK_GENERATE_NEXT_VERTEX_RAY);
 }
 
 //------------------------------------------------------------------------------
@@ -717,14 +813,31 @@ __kernel void AdvancePaths_MK_DL_SAMPLE_BSDF(
 __kernel void AdvancePaths_MK_GENERATE_NEXT_VERTEX_RAY(
 		KERNEL_ARGS
 		) {
-	const size_t gid = get_global_id(0);
+	const uint taskIndex = gid2TaskIndex[get_global_id(0)];
+	
+	/*if (taskIndex == 0) {
+		printf("=======================================\n");
+		for(uint i=0;i<32;++i)
+			printf(" %d", tasksState[gid2TaskIndex[i]].state);
+		printf("\n");
+		for(uint i=0;i<32;++i)
+			printf(" %d", tasksState[gid2TaskIndex[i+32]].state);
+		printf("\n");
+		for(uint i=0;i<32;++i)
+			printf(" %d", tasksState[gid2TaskIndex[i+64]].state);
+		printf("\n");
+		for(uint i=0;i<32;++i)
+			printf(" %d", tasksState[gid2TaskIndex[i+96]].state);
+		printf("\n");
+		printf("=======================================\n");
+	}*/
 
 	// Read the path state
-	__global GPUTask *task = &tasks[gid];
-	__global GPUTaskState *taskState = &tasksState[gid];
+	__global GPUTask *task = &tasks[taskIndex];
+	__global GPUTaskState *taskState = &tasksState[taskIndex];
 	PathState pathState = taskState->state;
 #if defined(DEBUG_PRINTF_KERNEL_NAME)
-	if (gid == 0)
+	if (taskIndex == 0)
 		printf("Kernel: AdvancePaths_MK_GENERATE_NEXT_VERTEX_RAY(state = %d)\n", pathState);
 	else
 		return;
@@ -736,7 +849,7 @@ __kernel void AdvancePaths_MK_GENERATE_NEXT_VERTEX_RAY(
 	// Start of variables setup
 	//--------------------------------------------------------------------------
 
-	__global EyePathInfo *pathInfo = &eyePathInfos[gid];
+	__global EyePathInfo *pathInfo = &eyePathInfos[taskIndex];
 	__global BSDF *bsdf = &taskState->bsdf;
 
 	// Read the seed
@@ -745,13 +858,13 @@ __kernel void AdvancePaths_MK_GENERATE_NEXT_VERTEX_RAY(
 	Seed *seed = &seedValue;
 
 	__constant const Scene* restrict scene = &taskConfig->scene;
-	__global SampleResult *sampleResult = &sampleResultsBuff[gid];
+	__global SampleResult *sampleResult = &sampleResultsBuff[taskIndex];
 	const uint sampleOffset = taskConfig->pathTracer.eyeSampleBootSize + pathInfo->depth.depth * taskConfig->pathTracer.eyeSampleStepSize;
 
 	// Initialize image maps page pointer table
 	INIT_IMAGEMAPS_PAGES
 
-	__global Ray *ray = &rays[gid];
+	__global Ray *ray = &rays[taskIndex];
 	
 	//--------------------------------------------------------------------------
 	// End of variables setup
@@ -764,7 +877,7 @@ __kernel void AdvancePaths_MK_GENERATE_NEXT_VERTEX_RAY(
 	float bsdfPdfW;
 	BSDFEvent bsdfEvent;
 
-	if (BSDF_IsShadowCatcher(bsdf MATERIALS_PARAM) && (tasksDirectLight[gid].directLightResult != SHADOWED)) {
+	if (BSDF_IsShadowCatcher(bsdf MATERIALS_PARAM) && (tasksDirectLight[taskIndex].directLightResult != SHADOWED)) {
 		bsdfSample = BSDF_ShadowCatcherSample(bsdf,
 				&sampledDir, &bsdfPdfW, &cosSampledDir, &bsdfEvent
 				MATERIALS_PARAM);
@@ -856,6 +969,16 @@ __kernel void AdvancePaths_MK_GENERATE_NEXT_VERTEX_RAY(
 }
 
 //------------------------------------------------------------------------------
+// MK_SPLAT_SAMPLE state sorter
+//------------------------------------------------------------------------------
+
+__kernel void AdvancePaths_StateSorter_MK_SPLAT_SAMPLE(
+		KERNEL_ARGS
+		) {
+	AdvancePaths_StateSorter(gid2TaskIndex, tasksState, MK_SPLAT_SAMPLE);
+}
+
+//------------------------------------------------------------------------------
 // Evaluation of the Path finite state machine.
 //
 // From: MK_SPLAT_SAMPLE
@@ -865,14 +988,14 @@ __kernel void AdvancePaths_MK_GENERATE_NEXT_VERTEX_RAY(
 __kernel void AdvancePaths_MK_SPLAT_SAMPLE(
 		KERNEL_ARGS
 		) {
-	const size_t gid = get_global_id(0);
+	const uint taskIndex = gid2TaskIndex[get_global_id(0)];
 
 	// Read the path state
-	__global GPUTask *task = &tasks[gid];
-	__global GPUTaskState *taskState = &tasksState[gid];
+	__global GPUTask *task = &tasks[taskIndex];
+	__global GPUTaskState *taskState = &tasksState[taskIndex];
 	PathState pathState = taskState->state;
 #if defined(DEBUG_PRINTF_KERNEL_NAME)
-	if (gid == 0)
+	if (taskIndex == 0)
 		printf("Kernel: AdvancePaths_MK_SPLAT_SAMPLE(state = %d)\n", pathState);
 	else
 		return;
@@ -890,7 +1013,7 @@ __kernel void AdvancePaths_MK_SPLAT_SAMPLE(
 	Seed *seed = &seedValue;
 
 	__constant const Film* restrict film = &taskConfig->film;
-	__global SampleResult *sampleResult = &sampleResultsBuff[gid];
+	__global SampleResult *sampleResult = &sampleResultsBuff[taskIndex];
 
 	//--------------------------------------------------------------------------
 	// End of variables setup
@@ -941,7 +1064,7 @@ __kernel void AdvancePaths_MK_SPLAT_SAMPLE(
 	Sampler_SplatSample(taskConfig
 			SAMPLER_PARAM
 			FILM_PARAM);
-	taskStats[gid].sampleCount += 1;
+	taskStats[taskIndex].sampleCount += 1;
 
 	// Save the state
 	taskState->state = MK_NEXT_SAMPLE;
@@ -950,6 +1073,16 @@ __kernel void AdvancePaths_MK_SPLAT_SAMPLE(
 
 	// Save the seed
 	task->seed = seedValue;
+}
+
+//------------------------------------------------------------------------------
+// MK_SPLAT_SAMPLE state sorter
+//------------------------------------------------------------------------------
+
+__kernel void AdvancePaths_StateSorter_MK_NEXT_SAMPLE(
+		KERNEL_ARGS
+		) {
+	AdvancePaths_StateSorter(gid2TaskIndex, tasksState, MK_NEXT_SAMPLE);
 }
 
 //------------------------------------------------------------------------------
@@ -962,14 +1095,14 @@ __kernel void AdvancePaths_MK_SPLAT_SAMPLE(
 __kernel void AdvancePaths_MK_NEXT_SAMPLE(
 		KERNEL_ARGS
 		) {
-	const size_t gid = get_global_id(0);
+	const uint taskIndex = gid2TaskIndex[get_global_id(0)];
 
 	// Read the path state
-	__global GPUTask *task = &tasks[gid];
-	__global GPUTaskState *taskState = &tasksState[gid];
+	__global GPUTask *task = &tasks[taskIndex];
+	__global GPUTaskState *taskState = &tasksState[taskIndex];
 	PathState pathState = taskState->state;
 #if defined(DEBUG_PRINTF_KERNEL_NAME)
-	if (gid == 0)
+	if (taskIndex == 0)
 		printf("Kernel: AdvancePaths_MK_NEXT_SAMPLE(state = %d)\n", pathState);
 	else
 		return;
@@ -1005,13 +1138,23 @@ __kernel void AdvancePaths_MK_NEXT_SAMPLE(
 #else
 	taskState->state = MK_DONE;
 	// Mark the ray like like one to NOT trace
-	rays[gid].flags = RAY_FLAGS_MASKED;
+	rays[taskIndex].flags = RAY_FLAGS_MASKED;
 #endif
 
 	//--------------------------------------------------------------------------
 
 	// Save the seed
 	task->seed = seedValue;
+}
+
+//------------------------------------------------------------------------------
+// MK_GENERATE_CAMERA_RAY state sorter
+//------------------------------------------------------------------------------
+
+__kernel void AdvancePaths_StateSorter_MK_GENERATE_CAMERA_RAY(
+		KERNEL_ARGS
+		) {
+	AdvancePaths_StateSorter(gid2TaskIndex, tasksState, MK_GENERATE_CAMERA_RAY);
 }
 
 //------------------------------------------------------------------------------
@@ -1027,14 +1170,14 @@ __kernel void AdvancePaths_MK_GENERATE_CAMERA_RAY(
 	// Generate a new path and camera ray only it is not TILEPATHOCL: path regeneration
 	// is not used in this case
 #if !defined(RENDER_ENGINE_TILEPATHOCL) && !defined(RENDER_ENGINE_RTPATHOCL)
-	const size_t gid = get_global_id(0);
+	const uint taskIndex = gid2TaskIndex[get_global_id(0)];
 
 	// Read the path state
-	__global GPUTask *task = &tasks[gid];
-	__global GPUTaskState *taskState = &tasksState[gid];
+	__global GPUTask *task = &tasks[taskIndex];
+	__global GPUTaskState *taskState = &tasksState[taskIndex];
 	PathState pathState = taskState->state;
 #if defined(DEBUG_PRINTF_KERNEL_NAME)
-	if (gid == 0)
+	if (taskIndex == 0)
 		printf("Kernel: AdvancePaths_MK_GENERATE_CAMERA_RAY(state = %d)\n", pathState);
 	else
 		return;
@@ -1051,8 +1194,8 @@ __kernel void AdvancePaths_MK_GENERATE_CAMERA_RAY(
 	// This trick is required by SAMPLER_PARAM macro
 	Seed *seed = &seedValue;
 
-	__global Ray *ray = &rays[gid];
-	__global EyePathInfo *pathInfo = &eyePathInfos[gid];
+	__global Ray *ray = &rays[taskIndex];
+	__global EyePathInfo *pathInfo = &eyePathInfos[taskIndex];
 	
 	//--------------------------------------------------------------------------
 	// End of variables setup
@@ -1062,7 +1205,7 @@ __kernel void AdvancePaths_MK_GENERATE_CAMERA_RAY(
 	PathVolumeInfo_Init(&pathInfo->volume);
 
 	GenerateEyePath(taskConfig,
-			&tasksDirectLight[gid], taskState,
+			&tasksDirectLight[taskIndex], taskState,
 			camera,
 			filmWidth, filmHeight,
 			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3,
