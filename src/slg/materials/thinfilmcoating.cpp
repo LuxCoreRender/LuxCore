@@ -238,7 +238,20 @@ Spectrum slg::CalcFilmColor(const Vector &localFixedDir, const float filmThickne
 // 		yint += CIE_Y[CIE_index];
 // 	}
 	
-// 	printf("static const float Y_sum = %.15ff;\n----\n", yint);
+// 	printf("static const float Y_sum = %.15ff;\n\n", yint);
+	
+// 	printf("ColorSystem:\n");
+// 	printf("XYZToRGB[] = {\n");
+// 	for (int y = 0; y < 3; ++y) {
+// 		printf("\t{\n");
+// 		for (int x = 0; x < 3; ++x) {
+// 			printf("\t\t%.15ff,\n", colorSpace.XYZToRGB[y][x]);
+// 		}
+		
+// 		printf("\t},\n");
+// 	}
+// 	printf("};\n");
+// 	printf("----\n");
 	
 // 	return Spectrum(0.5f, 0.f, 0.f);
 // }

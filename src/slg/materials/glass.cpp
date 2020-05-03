@@ -134,7 +134,6 @@ Spectrum GlassMaterial::EvalSpecularReflection(const HitPoint &hitPoint,
 
 	if (localFilmThickness > 0.f) {
 		const Spectrum filmColor = CalcFilmColor(localFixedDir, localFilmThickness, localFilmIor, nc);
-		
 		return result * filmColor;
 	}
 	return result;

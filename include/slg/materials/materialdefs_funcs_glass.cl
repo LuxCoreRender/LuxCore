@@ -125,7 +125,7 @@ OPENCL_FORCE_INLINE float GlassMaterial_WaveLength2IOR(const float waveLength, c
 OPENCL_FORCE_INLINE float3 GlassMaterial_EvalSpecularReflection(__global const HitPoint *hitPoint,
 		const float3 localFixedDir, const float3 kr,
 		const float nc, const float nt,
-		float3 *sampledDir) {
+		float3 *sampledDir, const float localFilmThickness, const float localFilmIor) {
 	if (Spectrum_IsBlack(kr))
 		return BLACK;
 
@@ -133,7 +133,13 @@ OPENCL_FORCE_INLINE float3 GlassMaterial_EvalSpecularReflection(__global const H
 	*sampledDir = MAKE_FLOAT3(-localFixedDir.x, -localFixedDir.y, localFixedDir.z);
 
 	const float ntc = nt / nc;
-	return kr * FresnelCauchy_Evaluate(ntc, costheta);
+	const float3 result = kr * FresnelCauchy_Evaluate(ntc, costheta);
+	
+	if (localFilmThickness > 0.f) {
+		const float3 filmColor = CalcFilmColor(localFixedDir, localFilmThickness, localFilmIor, nc);
+		return result * filmColor;
+	}
+	return result;
 }
 
 OPENCL_FORCE_INLINE float3 GlassMaterial_EvalSpecularTransmission(__global const HitPoint *hitPoint,
@@ -220,9 +226,14 @@ OPENCL_FORCE_INLINE void GlassMaterial_Sample(__global const Material* restrict 
 	const float3 trans = GlassMaterial_EvalSpecularTransmission(hitPoint, fixedDir, u0,
 			kt, nc, nt, cauchyC, &transLocalSampledDir);
 	
+	const float localFilmThickness = (material->glass.filmThicknessTexIndex != NULL_INDEX) 
+									 ? Texture_GetFloatValue(material->glass.filmThicknessTexIndex, hitPoint TEXTURES_PARAM) : 0.f;
+	const float localFilmIor = (localFilmThickness > 0.f && material->glass.filmIorTexIndex != NULL_INDEX) 
+							   ? Texture_GetFloatValue(material->glass.filmIorTexIndex, hitPoint TEXTURES_PARAM) : 1.f;
+	
 	float3 reflLocalSampledDir;
 	const float3 refl = GlassMaterial_EvalSpecularReflection(hitPoint, fixedDir,
-			kr, nc, nt, &reflLocalSampledDir);
+			kr, nc, nt, &reflLocalSampledDir, localFilmThickness, localFilmIor);
 
 	// Decide to transmit or reflect
 	float threshold;

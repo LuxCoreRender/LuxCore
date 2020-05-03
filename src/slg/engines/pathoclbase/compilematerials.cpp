@@ -586,6 +586,14 @@ void CompiledScene::CompileMaterials() {
 					mat->glass.cauchyCTex = scene->texDefs.GetTextureIndex(gm->GetCauchyC());
 				else
 					mat->glass.cauchyCTex = NULL_INDEX;
+				if (gm->GetFilmThickness())
+					mat->glass.filmThicknessTexIndex = scene->texDefs.GetTextureIndex(gm->GetFilmThickness());
+				else
+					mat->glass.filmThicknessTexIndex = NULL_INDEX;
+				if (gm->GetFilmIOR())
+					mat->glass.filmIorTexIndex = scene->texDefs.GetTextureIndex(gm->GetFilmIOR());
+				else
+					mat->glass.filmIorTexIndex = NULL_INDEX;
 				break;
 			}
 			case ARCHGLASS: {
