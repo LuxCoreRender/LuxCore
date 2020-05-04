@@ -216,9 +216,9 @@ void PathOCLRenderEngine::UpdateTaskCount() {
 		BOOST_FOREACH(DeviceDescription *devDesc, selectedDeviceDescs) {
 			if (devDesc->GetMaxMemory() <= 8ull* 1024ull * 1024ull * 1024ull) // For 8GB cards
 				taskCap = Min(taskCap, 256u * 1024u);
-			else if (devDesc->GetMaxMemory() <= 4ull * 1024ull * 1024ull * 1024ull) // For 4GB cards
+			if (devDesc->GetMaxMemory() <= 4ull * 1024ull * 1024ull * 1024ull) // For 4GB cards
 				taskCap = Min(taskCap, 128u * 1024u);
-			else if (devDesc->GetMaxMemory() <= 2ull * 1024ull * 1024ull * 1024ull) // For 2GB cards
+			if (devDesc->GetMaxMemory() <= 2ull * 1024ull * 1024ull * 1024ull) // For 2GB cards
 				taskCap = Min(taskCap, 64u * 1024u);
 		}
 
