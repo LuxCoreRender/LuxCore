@@ -817,6 +817,14 @@ void CompiledScene::CompileMaterials() {
 				mat->disney.anisotropicTexIndex = scene->texDefs.GetTextureIndex(dm->GetAnisotropic());
 				mat->disney.sheenTexIndex = scene->texDefs.GetTextureIndex(dm->GetSheen());
 				mat->disney.sheenTintTexIndex = scene->texDefs.GetTextureIndex(dm->GetSheenTint());
+				if (dm->GetFilmThickness())
+					mat->disney.filmThicknessTexIndex = scene->texDefs.GetTextureIndex(dm->GetFilmThickness());
+				else
+					mat->disney.filmThicknessTexIndex = NULL_INDEX;
+				if (dm->GetFilmIOR())
+					mat->disney.filmIorTexIndex = scene->texDefs.GetTextureIndex(dm->GetFilmIOR());
+				else
+					mat->disney.filmIorTexIndex = NULL_INDEX;
 				break;
 			}
 			//------------------------------------------------------------------

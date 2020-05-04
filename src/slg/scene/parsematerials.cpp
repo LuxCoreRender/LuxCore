@@ -462,9 +462,17 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 		const Texture *anisotropic = GetTexture(props.Get(Property(propName + ".anisotropic")(0.f)));
 		const Texture *sheen = GetTexture(props.Get(Property(propName + ".sheen")(0.f)));
 		const Texture *sheenTint = GetTexture(props.Get(Property(propName + ".sheentint")(0.f)));
+		
+		const Texture *filmThickness = NULL;
+		if (props.IsDefined(propName + ".filmthickness"))
+			filmThickness = GetTexture(props.Get(Property(propName + ".filmthickness")(0.f)));
+		
+		const Texture *filmIor = NULL;
+		if (props.IsDefined(propName + ".filmior"))
+			filmIor = GetTexture(props.Get(Property(propName + ".filmior")(1.5f)));
 
 		mat = new DisneyMaterial(frontTransparencyTex, backTransparencyTex, emissionTex, bumpTex, baseColor, subsurface, roughness, metallic,
-			specular, specularTint, clearcoat, clearcoatGloss, anisotropic, sheen, sheenTint);
+			specular, specularTint, clearcoat, clearcoatGloss, anisotropic, sheen, sheenTint, filmThickness, filmIor);
 	} else
 		throw runtime_error("Unknown material type: " + matType);
 
