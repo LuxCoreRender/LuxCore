@@ -137,32 +137,11 @@ __constant float CIE_Z_reduced[] = {
 	0.000000000000000f,
 };
 
-// TODO check if this stuff really has to be in __constant memory
-
-__constant float Y_sum = 10.683556556701660f;
-
-// 24 wavelengths seem to do the job. Any less and artifacs begin to appear at thickness around 2000 nm
-// Using 34 now so I can use integers for the wavelengths, and 720 - 380 = 340.
-__constant uint NUM_WAVELENGTHS = 34;
-__constant uint MIN_WAVELENGTH = 380;
-__constant uint MAX_WAVELENGTH = 720;
-__constant uint WAVELENGTH_STEP = 10;  // (MAX_WAVELENGTH - MIN_WAVELENGTH) / (NUM_WAVELENGTHS - 1);
-
 //---------------------------------------------------------------------------------
 // ColorSystem
 //---------------------------------------------------------------------------------
 
-__constant float xRed = 0.63f;
-__constant float yRed = 0.34f;
-__constant float xGreen = 0.31f;
-__constant float yGreen = 0.595f;
-__constant float xBlue = 0.155f;
-__constant float yBlue = 0.07f;
-// __constant float xWhite = 1.f / 3.f;
-// __constant float yWhite = 1.f / 3.f;
-// __constant float luminance = 1.f;
-
-__constant float XYZToRGB[3][3] = {
+__constant float ThinFilmCoating_XYZToRGB[3][3] = {
 	{
 		2.868713378906250f,
 		-1.423546671867371f,
@@ -180,11 +159,11 @@ __constant float XYZToRGB[3][3] = {
 	},
 };
 
-float3 ThinFilmCoating_XYZToRGB(const float3 xyzColor) {
+float3 ThinFilmCoating_ConvertXYZToRGB(const float3 xyzColor) {
 	return MAKE_FLOAT3(
-		XYZToRGB[0][0] * xyzColor.x + XYZToRGB[0][1] * xyzColor.y + XYZToRGB[0][2] * xyzColor.z,
-		XYZToRGB[1][0] * xyzColor.x + XYZToRGB[1][1] * xyzColor.y + XYZToRGB[1][2] * xyzColor.z,
-		XYZToRGB[2][0] * xyzColor.x + XYZToRGB[2][1] * xyzColor.y + XYZToRGB[2][2] * xyzColor.z
+		ThinFilmCoating_XYZToRGB[0][0] * xyzColor.x + ThinFilmCoating_XYZToRGB[0][1] * xyzColor.y + ThinFilmCoating_XYZToRGB[0][2] * xyzColor.z,
+		ThinFilmCoating_XYZToRGB[1][0] * xyzColor.x + ThinFilmCoating_XYZToRGB[1][1] * xyzColor.y + ThinFilmCoating_XYZToRGB[1][2] * xyzColor.z,
+		ThinFilmCoating_XYZToRGB[2][0] * xyzColor.x + ThinFilmCoating_XYZToRGB[2][1] * xyzColor.y + ThinFilmCoating_XYZToRGB[2][2] * xyzColor.z
 	);
 }
 
@@ -193,6 +172,16 @@ bool LowGamut(const float3 color) {
 }
 
 float3 ThinFilmCoating_Constrain(const float3 xyz, const float3 rgb) {
+	const float xRed = 0.63f;
+	const float yRed = 0.34f;
+	const float xGreen = 0.31f;
+	const float yGreen = 0.595f;
+	const float xBlue = 0.155f;
+	const float yBlue = 0.07f;
+	// const float xWhite = 1.f / 3.f;
+	// const float yWhite = 1.f / 3.f;
+	// const float luminance = 1.f;
+	
 	// Is the contribution of one of the primaries negative?
 	if (!LowGamut(rgb)) {
 		return rgb;
@@ -201,7 +190,7 @@ float3 ThinFilmCoating_Constrain(const float3 xyz, const float3 rgb) {
 	// Compute the xyY color coordinates
 	const float YComp = xyz.y;
 	if (!(YComp > 0.f)) {
-		return MAKE_FLOAT3(0.f, 0.f, 0.f);
+		return TO_FLOAT3(0.f);
 	}
 	float xComp = xyz.x / (xyz.x + xyz.y + xyz.z);
 	float yComp = xyz.y / (xyz.x + xyz.y + xyz.z);
@@ -282,7 +271,7 @@ float3 ThinFilmCoating_Constrain(const float3 xyz, const float3 rgb) {
 	);
 
 	// Convert to RGB
-	return ThinFilmCoating_XYZToRGB(disp);
+	return ThinFilmCoating_ConvertXYZToRGB(disp);
 }
 
 //---------------------------------------------------------------------------------
@@ -290,7 +279,14 @@ float3 ThinFilmCoating_Constrain(const float3 xyz, const float3 rgb) {
 float3 CalcFilmColor(const float3 localFixedDir, const float filmThickness, const float filmIOR) {
 	// Prevent wrong values if the ratio between IOR and thickness is too high
 	if (filmThickness * (filmIOR - .4f) > 2000.f)
-		return MAKE_FLOAT3(.5f, .5f, .5f);
+		return TO_FLOAT3(.5f);
+		
+	// 24 wavelengths seem to do the job. Any less and artifacs begin to appear at thickness around 2000 nm
+	// Using 34 now so I can use integers for the wavelengths, and 720 - 380 = 340.
+	const uint NUM_WAVELENGTHS = 34;
+	const uint MIN_WAVELENGTH = 380;
+	const uint MAX_WAVELENGTH = 720;
+	const uint WAVELENGTH_STEP = 10;  // (MAX_WAVELENGTH - MIN_WAVELENGTH) / (NUM_WAVELENGTHS - 1);
 	
 	const float sinTheta = SinTheta(localFixedDir);
 	const float s = sqrt(fmax(0.f, Sqr(filmIOR) - Sqr(sinTheta)));
@@ -308,8 +304,9 @@ float3 CalcFilmColor(const float3 localFixedDir, const float filmThickness, cons
 		xyzColor.z += intensity * CIE_Z_reduced[i];
 	}
 	
+	const float Y_sum = 10.683556556701660f;
 	const float3 normalizedXYZ = xyzColor / Y_sum;
 	
-	float3 rgb = ThinFilmCoating_XYZToRGB(normalizedXYZ);
+	float3 rgb = ThinFilmCoating_ConvertXYZToRGB(normalizedXYZ);
 	return ThinFilmCoating_Constrain(normalizedXYZ, rgb);
 }
