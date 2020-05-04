@@ -203,9 +203,9 @@ Spectrum GlassMaterial::Sample(const HitPoint &hitPoint,
 	const Spectrum trans = EvalSpecularTransmission(hitPoint, localFixedDir, u0,
 			kt, nc, nt, cauchyCValue, &transLocalSampledDir);
 	
-	Vector reflLocalSampledDir;
 	const float localFilmThickness = filmThickness ? filmThickness->GetFloatValue(hitPoint) : 0.f;
 	const float localFilmIor = (localFilmThickness > 0.f && filmIor) ? filmIor->GetFloatValue(hitPoint) : 1.f;
+	Vector reflLocalSampledDir;
 	const Spectrum refl = EvalSpecularReflection(hitPoint, localFixedDir,
 			kr, nc, nt, &reflLocalSampledDir, localFilmThickness, localFilmIor);
 

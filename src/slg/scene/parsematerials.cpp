@@ -242,8 +242,16 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 			interiorIor = GetTexture(props.Get(Property(propName + ".iorinside")(1.f)));
 		} else if (props.IsDefined(propName + ".interiorior"))
 			interiorIor = GetTexture(props.Get(Property(propName + ".interiorior")(1.f)));
+			
+		const Texture *filmThickness = NULL;
+		if (props.IsDefined(propName + ".filmthickness"))
+			filmThickness = GetTexture(props.Get(Property(propName + ".filmthickness")(0.f)));
+		
+		const Texture *filmIor = NULL;
+		if (props.IsDefined(propName + ".filmior"))
+			filmIor = GetTexture(props.Get(Property(propName + ".filmior")(1.5f)));
 
-		mat = new ArchGlassMaterial(frontTransparencyTex, backTransparencyTex, emissionTex, bumpTex, kr, kt, exteriorIor, interiorIor);
+		mat = new ArchGlassMaterial(frontTransparencyTex, backTransparencyTex, emissionTex, bumpTex, kr, kt, exteriorIor, interiorIor, filmThickness, filmIor);
 	} else if (matType == "mix") {
 		const Material *matA = matDefs.GetMaterial(props.Get(Property(propName + ".material1")("mat1")).Get<string>());
 		const Material *matB = matDefs.GetMaterial(props.Get(Property(propName + ".material2")("mat2")).Get<string>());

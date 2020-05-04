@@ -610,6 +610,14 @@ void CompiledScene::CompileMaterials() {
 					mat->archglass.interiorIorTexIndex = scene->texDefs.GetTextureIndex(am->GetInteriorIOR());
 				else
 					mat->archglass.interiorIorTexIndex = NULL_INDEX;
+				if (am->GetFilmThickness())
+					mat->archglass.filmThicknessTexIndex = scene->texDefs.GetTextureIndex(am->GetFilmThickness());
+				else
+					mat->archglass.filmThicknessTexIndex = NULL_INDEX;
+				if (am->GetFilmIOR())
+					mat->archglass.filmIorTexIndex = scene->texDefs.GetTextureIndex(am->GetFilmIOR());
+				else
+					mat->archglass.filmIorTexIndex = NULL_INDEX;
 				break;
 			}
 			case MIX: {
