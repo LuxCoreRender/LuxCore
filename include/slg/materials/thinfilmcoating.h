@@ -24,7 +24,7 @@
 
 namespace slg {
 
-extern luxrays::Spectrum CalcFilmColor(const luxrays::Vector &localFixedDir, const float filmThickness, const float filmIOR, const float exteriorIOR);
+extern luxrays::Spectrum CalcFilmColor(const luxrays::Vector &localFixedDir, const float filmThickness, const float filmIOR);
 
 }
 

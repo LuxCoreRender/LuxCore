@@ -152,13 +152,13 @@ const u_int WAVELENGTH_STEP = (MAX_WAVELENGTH - MIN_WAVELENGTH) / (NUM_WAVELENGT
 
 const ColorSystem colorSpace(.63f, .34f, .31f, .595f, .155f, .07f, 1.f / 3.f, 1.f / 3.f, 1.f);
 
-Spectrum slg::CalcFilmColor(const Vector &localFixedDir, const float filmThickness, const float filmIOR, const float exteriorIOR) {
+Spectrum slg::CalcFilmColor(const Vector &localFixedDir, const float filmThickness, const float filmIOR) {
 	// Prevent wrong values if the ratio between IOR and thickness is too high
 	if (filmThickness * (filmIOR - .4f) > 2000.f)
 		return Spectrum(.5f);
 	
 	const float sinTheta = SinTheta(localFixedDir);
-	const float s = sqrtf(Max(0.f, Sqr(filmIOR) - Sqr(exteriorIOR) * Sqr(sinTheta)));
+	const float s = sqrtf(Max(0.f, Sqr(filmIOR) - Sqr(sinTheta)));
 
 	XYZColor xyzColor(0.f);
 
@@ -193,7 +193,7 @@ Spectrum slg::CalcFilmColor(const Vector &localFixedDir, const float filmThickne
 // }
 
 //---------------------------------------------------------------------------------
-// To precompute the reduced XYZ tables
+// To precompute the reduced XYZ tables and XYZ to RGB conversion matrix for OpenCL
 //---------------------------------------------------------------------------------
 
 // #include "luxrays/core/color/spds/data/xyzbasis.h"

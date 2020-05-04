@@ -133,7 +133,7 @@ Spectrum GlassMaterial::EvalSpecularReflection(const HitPoint &hitPoint,
 	const Spectrum result = kr * FresnelTexture::CauchyEvaluate(ntc, cosTheta);
 
 	if (localFilmThickness > 0.f) {
-		const Spectrum filmColor = CalcFilmColor(localFixedDir, localFilmThickness, localFilmIor, nc);
+		const Spectrum filmColor = CalcFilmColor(localFixedDir, localFilmThickness, localFilmIor);
 		return result * filmColor;
 	}
 	return result;

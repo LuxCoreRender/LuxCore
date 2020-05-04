@@ -136,7 +136,7 @@ OPENCL_FORCE_INLINE float3 GlassMaterial_EvalSpecularReflection(__global const H
 	const float3 result = kr * FresnelCauchy_Evaluate(ntc, costheta);
 	
 	if (localFilmThickness > 0.f) {
-		const float3 filmColor = CalcFilmColor(localFixedDir, localFilmThickness, localFilmIor, nc);
+		const float3 filmColor = CalcFilmColor(localFixedDir, localFilmThickness, localFilmIor);
 		return result * filmColor;
 	}
 	return result;

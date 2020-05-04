@@ -275,10 +275,11 @@ float3 ThinFilmCoating_Constrain(const float3 xyz, const float3 rgb) {
 	}
 
 	// Recompute the XYZ color from the xyY values
-	float3 disp;
-	disp.x = (xComp * YComp) / yComp;
-	disp.y = YComp;
-	disp.z = (1.f - xComp - yComp) * YComp / yComp;
+	float3 disp = MAKE_FLOAT3(
+		(xComp * YComp) / yComp,
+		YComp,
+		(1.f - xComp - yComp) * YComp / yComp
+	);
 
 	// Convert to RGB
 	return ThinFilmCoating_XYZToRGB(disp);
@@ -286,13 +287,13 @@ float3 ThinFilmCoating_Constrain(const float3 xyz, const float3 rgb) {
 
 //---------------------------------------------------------------------------------
 
-float3 CalcFilmColor(const float3 localFixedDir, const float filmThickness, const float filmIOR, const float exteriorIOR) {
+float3 CalcFilmColor(const float3 localFixedDir, const float filmThickness, const float filmIOR) {
 	// Prevent wrong values if the ratio between IOR and thickness is too high
 	if (filmThickness * (filmIOR - .4f) > 2000.f)
 		return MAKE_FLOAT3(.5f, .5f, .5f);
 	
 	const float sinTheta = SinTheta(localFixedDir);
-	const float s = sqrt(fmax(0.f, Sqr(filmIOR) - Sqr(exteriorIOR) * Sqr(sinTheta)));
+	const float s = sqrt(fmax(0.f, Sqr(filmIOR) - Sqr(sinTheta)));
 
 	float3 xyzColor = MAKE_FLOAT3(0.f, 0.f, 0.f);
 
@@ -300,8 +301,7 @@ float3 CalcFilmColor(const float3 localFixedDir, const float filmThickness, cons
 		const uint waveLength = WAVELENGTH_STEP * i + MIN_WAVELENGTH;
 		
 		const float pd = (4.f * M_PI_F * filmThickness / (float)waveLength) * s + M_PI_F;
-		const float cpd = cos(pd);
-		const float intensity = Sqr(cpd);
+		const float intensity = Sqr(cos(pd));
 		
 		xyzColor.x += intensity * CIE_X_reduced[i];
 		xyzColor.y += intensity * CIE_Y_reduced[i];
