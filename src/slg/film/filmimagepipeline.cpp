@@ -182,6 +182,9 @@ void Film::ExecuteImagePipelineImpl(const u_int index) {
 		}
 	}
 
+	if (hwEnable && hardwareDevice)
+		hardwareDevice->PushThreadCurrentDevice();
+
 	// Merge all buffers
 	//const double t1 = WallClockTime();
 	if (hwEnable && hardwareDevice)
@@ -200,6 +203,10 @@ void Film::ExecuteImagePipelineImpl(const u_int index) {
 		WriteAllHWBuffers();
 
 	imagePipelines[index]->Apply(*this, index);
+	
+	if (hwEnable && hardwareDevice)
+		hardwareDevice->PopThreadCurrentDevice();
+
 	//const double p2 = WallClockTime();
 	//SLG_LOG("Image pipeline " << index << " time: " << int((p2 - p1) * 1000.0) << "ms");
 }
