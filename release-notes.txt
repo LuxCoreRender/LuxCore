@@ -27,6 +27,7 @@
 * Added the support for out of core CUDA rendering (i.e. to render scenes larger than GPU ram available)
 * GPU rendering now uses 64bit image map pixel indices (i.e. removed the limit of 8 * 4GB of scene image maps)
 * New cache and out-of-core friendly mode for Random/Sobol samplers
+* Added the support for denoising baked light maps with Intel ODIN 
 
 ### Fixed Bugs
 
