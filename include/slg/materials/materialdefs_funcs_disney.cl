@@ -212,8 +212,7 @@ OPENCL_FORCE_INLINE float3 DisneyMaterial_DisneyMetallic(const float3 color,
 		const float anisotropic, const float roughness,
 		const float NdotL, const float NdotV, const float NdotH,
 		const float LdotH, const float VdotH,
-		const float3 wi, const float3 wo, const float3 H,
-		const float localFilmThickness, const float localFilmIor) {
+		const float3 wi, const float3 wo, const float3 H) {
 	const float3 Ctint = DisneyMaterial_CalculateTint(color);
 
 	const float3 CSpecTint = specular * 0.08f * Lerp3(specularTint, WHITE, Ctint);
@@ -233,13 +232,7 @@ OPENCL_FORCE_INLINE float3 DisneyMaterial_DisneyMetallic(const float3 color,
 
 	const float Gs = Gl * Gv;
 
-	const float3 result = Gs * Fs * Ds;
-	
-	if (localFilmThickness > 0.f) {
-		const float3 filmColor = CalcFilmColor(wo, localFilmThickness, localFilmIor);
-		return result * filmColor;
-	}
-	return result;
+	return Gs * Fs * Ds;
 }
 
 OPENCL_FORCE_INLINE float DisneyMaterial_DisneyClearCoat(const float clearcoat,
@@ -271,7 +264,8 @@ OPENCL_FORCE_INLINE float3 DisneyMaterial_EvaluateImpl(
 		const float3 colorVal, const float subsurfaceVal, const float roughnessVal,
 		const float metallicVal, const float specularVal, const float specularTintVal,
 		const float clearcoatVal, const float clearcoatGlossVal, const float anisotropicGlossVal,
-		const float sheenVal, const float sheenTintVal, const float localFilmThickness, const float localFilmIor) {
+		const float sheenVal, const float sheenTintVal, 
+		const float localFilmAmount, const float localFilmThickness, const float localFilmIor) {
 	const float3 wo = eyeDir; 
 	const float3 wi = lightDir;
 
@@ -305,11 +299,16 @@ OPENCL_FORCE_INLINE float3 DisneyMaterial_EvaluateImpl(
 
 	const float3 subsurfaceEval = DisneyMaterial_DisneySubsurface(color, roughness, NdotL, NdotV, LdotH);
 
-	const float3 glossyEval =
-			DisneyMaterial_DisneyMetallic(color, specular, specularTint, metallic, anisotropicGloss, roughness,
-				NdotL, NdotV, NdotH, LdotH, VdotH, wi, wo, H, localFilmThickness, localFilmIor) +
-			DisneyMaterial_DisneyClearCoat(clearcoat, clearcoatGloss,
-				NdotL, NdotV, NdotH, LdotH);
+	float3 metallicEval = DisneyMaterial_DisneyMetallic(color, specular, specularTint, metallic, anisotropicGloss, roughness,
+														NdotL, NdotV, NdotH, LdotH, VdotH, wi, wo, H);
+	if (localFilmThickness > 0.f) {
+		const float3 metallicWithFilmColor = metallicEval * CalcFilmColor(wo, localFilmThickness, localFilmIor);
+		metallicEval = Lerp3(localFilmAmount, metallicEval, metallicWithFilmColor);
+	}
+	
+	const float3 clearCoatEval = DisneyMaterial_DisneyClearCoat(clearcoat, clearcoatGloss,
+																NdotL, NdotV, NdotH, LdotH);
+	const float3 glossyEval = metallicEval + clearCoatEval;
 
 	const float3 sheenEval = DisneyMaterial_DisneySheen(color, sheen, sheenTint, LdotH);
 
@@ -331,6 +330,8 @@ OPENCL_FORCE_INLINE void DisneyMaterial_Evaluate(__global const Material* restri
 	EvalStack_PopFloat3(eyeDir);
 	EvalStack_PopFloat3(lightDir);
 	
+	const float localFilmAmount = (material->disney.filmAmountTexIndex != NULL_INDEX) 
+								  ? clamp(Texture_GetFloatValue(material->disney.filmAmountTexIndex, hitPoint TEXTURES_PARAM), 0.f, 1.f) : 1.f;
 	const float localFilmThickness = (material->disney.filmThicknessTexIndex != NULL_INDEX) 
 									 ? Texture_GetFloatValue(material->disney.filmThicknessTexIndex, hitPoint TEXTURES_PARAM) : 0.f;
 	const float localFilmIor = (localFilmThickness > 0.f && material->disney.filmIorTexIndex != NULL_INDEX) 
@@ -351,7 +352,7 @@ OPENCL_FORCE_INLINE void DisneyMaterial_Evaluate(__global const Material* restri
 		Texture_GetFloatValue(material->disney.anisotropicTexIndex, hitPoint TEXTURES_PARAM),
 		Texture_GetFloatValue(material->disney.sheenTexIndex, hitPoint TEXTURES_PARAM),
 		Texture_GetFloatValue(material->disney.sheenTintTexIndex, hitPoint TEXTURES_PARAM),
-		localFilmThickness, localFilmIor);
+		localFilmAmount, localFilmThickness, localFilmIor);
 
 	if (Spectrum_IsBlack(result)) {
 		MATERIAL_EVALUATE_RETURN_BLACK;
@@ -465,6 +466,8 @@ OPENCL_FORCE_INLINE void DisneyMaterial_Sample(__global const Material* restrict
 		MATERIAL_SAMPLE_RETURN_BLACK;
 	}
 	
+	const float localFilmAmount = (material->disney.filmAmountTexIndex != NULL_INDEX) 
+								  ? clamp(Texture_GetFloatValue(material->disney.filmAmountTexIndex, hitPoint TEXTURES_PARAM), 0.f, 1.f) : 1.f;
 	const float localFilmThickness = (material->disney.filmThicknessTexIndex != NULL_INDEX) 
 									 ? Texture_GetFloatValue(material->disney.filmThicknessTexIndex, hitPoint TEXTURES_PARAM) : 0.f;
 	const float localFilmIor = (localFilmThickness > 0.f && material->disney.filmIorTexIndex != NULL_INDEX) 
@@ -474,7 +477,7 @@ OPENCL_FORCE_INLINE void DisneyMaterial_Sample(__global const Material* restrict
 	const float3 f = DisneyMaterial_EvaluateImpl(hitPoint, localLightDir, localEyeDir, &event, NULL,
 			colorVal, subsurfaceVal, roughnessVal, metallicVal, specularVal, specularTintVal,
 			clearcoatVal, clearcoatGlossVal, anisotropicGlossVal, sheenVal, sheenTintVal,
-			localFilmThickness, localFilmIor);
+			localFilmAmount, localFilmThickness, localFilmIor);
 
 	const float3 result = f / pdfW;
 

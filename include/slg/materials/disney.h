@@ -46,6 +46,7 @@ public:
 		const Texture *anisotropic,
 		const Texture *sheen,
 		const Texture *sheenTint,
+		const Texture *filmAmount, 
 		const Texture *filmThickness, 
 		const Texture *filmIor
 	);
@@ -109,6 +110,7 @@ public:
 	const Texture *GetAnisotropic() const { return Anisotropic; };
 	const Texture *GetSheen() const { return Sheen; };
 	const Texture *GetSheenTint() const { return SheenTint; };
+	const Texture *GetFilmAmount() const { return filmAmount; }
 	const Texture *GetFilmThickness() const { return filmThickness; }
 	const Texture *GetFilmIOR() const { return filmIor; }
 
@@ -124,6 +126,7 @@ private:
 	const Texture *Anisotropic;
 	const Texture *Sheen;
 	const Texture *SheenTint;
+	const Texture *filmAmount;
 	const Texture *filmThickness;
 	const Texture *filmIor;
 
@@ -149,8 +152,7 @@ private:
 			const float anisotropic, const float roughness,
 			const float NdotL, const float NdotV, const float NdotH,
 			const float LdotH, const float VdotH,
-			const luxrays::Vector &wi, const luxrays::Vector &wo, const luxrays::Vector &H,
-			const float localFilmThickness, const float localFilmIor) const;
+			const luxrays::Vector &wi, const luxrays::Vector &wo, const luxrays::Vector &H) const;
 	float DisneyClearCoat(const float clearcoat, const float clearcoatGloss,
 			const float NdotL, const float NdotV, const float NdotH, const float LdotH) const;
 	luxrays::Spectrum DisneySheen(const luxrays::Spectrum &color, const float sheen,
@@ -160,7 +162,7 @@ private:
 		const float subsurface, const float roughness,
 		const float metallic, const float specular, const float specularTint,
 		const float clearcoat, const float clearcoatGloss, const float anisotropicGloss,
-		const float sheen, const float sheenTint, const float localFilmThickness,
+		const float sheen, const float sheenTint, const float localFilmAmount, const float localFilmThickness,
 		const float localFilmIor, const Vector &localLightDir, const Vector &localEyeDir, 
 		BSDFEvent *event, float *directPdfW, float *reversePdfW) const;
 

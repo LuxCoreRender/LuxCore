@@ -283,6 +283,7 @@ typedef struct {
 	unsigned int anisotropicTexIndex;
 	unsigned int sheenTexIndex;
 	unsigned int sheenTintTexIndex;
+	unsigned int filmAmountTexIndex;
 	unsigned int filmThicknessTexIndex;
 	unsigned int filmIorTexIndex;
 } DisneyParam;
