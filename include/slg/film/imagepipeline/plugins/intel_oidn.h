@@ -38,7 +38,8 @@ namespace slg {
 
 class IntelOIDN : public ImagePipelinePlugin {
 public:
-	IntelOIDN(const int oidnMemLimit, const float sharpness);
+	IntelOIDN(const std::string filterType,
+			const int oidnMemLimit, const float sharpness);
 
 	virtual ImagePipelinePlugin *Copy() const;
 
@@ -57,6 +58,7 @@ private:
 		ar & jTileCount;
 	}
 
+	std::string filterType;
 	u_int iTileCount;
 	u_int jTileCount;
 	int oidnMemLimit; //needs to be signed int for OIDN call

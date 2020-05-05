@@ -31,17 +31,20 @@ using namespace slg;
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::IntelOIDN)
 
-IntelOIDN::IntelOIDN(const int m, const float s) {
+IntelOIDN::IntelOIDN(const string ft, const int m, const float s) {
+	filterType = ft;
 	oidnMemLimit = m;
 	sharpness = s;
 }
 
 IntelOIDN::IntelOIDN() {
+	filterType = "RT";
 	oidnMemLimit = 6000;
+	sharpness = 0.f;
 }
 
 ImagePipelinePlugin *IntelOIDN::Copy() const {
-	return new IntelOIDN(oidnMemLimit, sharpness);
+	return new IntelOIDN(filterType, oidnMemLimit, sharpness);
 }
 
 void IntelOIDN::Apply(Film &film, const u_int index) {
@@ -60,7 +63,7 @@ void IntelOIDN::Apply(Film &film, const u_int index) {
     oidn::DeviceRef device = oidn::newDevice();
     device.commit();
 
-    oidn::FilterRef filter = device.newFilter("RT");
+    oidn::FilterRef filter = device.newFilter(filterType.c_str());
 
     filter.set("hdr", true);
 	filter.set("maxMemoryMB", oidnMemLimit);

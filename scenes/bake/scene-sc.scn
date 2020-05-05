@@ -106,7 +106,7 @@ scene.materials.mat_plane139857991252616.emission.directlightsampling.type = "AU
 scene.materials.mat_plane139857991252616.visibility.indirect.diffuse.enable = 1
 scene.materials.mat_plane139857991252616.visibility.indirect.glossy.enable = 1
 scene.materials.mat_plane139857991252616.visibility.indirect.specular.enable = 1
-scene.materials.mat_plane139857991252616.shadowcatcher.enable = 1
+scene.materials.mat_plane139857991252616.shadowcatcher.enable = 0
 scene.materials.mat_plane139857991252616.shadowcatcher.onlyinfinitelights = 0
 scene.materials.mat_plane139857991252616.photongi.enable = 1
 ##
