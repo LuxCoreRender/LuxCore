@@ -354,7 +354,7 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 			cooldown = false;
 			isLargeMutation = (rndGen->floatValue() < currentLargeMutationProbability);
 		} else
-			isLargeMutation = 1.f;
+			isLargeMutation = true;
 	} else
 		isLargeMutation = (rndGen->floatValue() < currentLargeMutationProbability);
 
