@@ -224,7 +224,12 @@ OPENCL_FORCE_INLINE float3 NormalMapTexture_Bump(
 // TriplanarTexture
 //------------------------------------------------------------------------------
 
+#define __APPLE__=1
+#if defined (__APPLE__)
+OPENCL_FORCE_NOT_INLINE float3 TriplanarTexture_BumpUVLess(
+#else
 OPENCL_FORCE_INLINE float3 TriplanarTexture_BumpUVLess(
+#endif
 		__global const HitPoint *hitPoint,
 		const float sampleDistance,
 		const float evalFloatTexBase,
@@ -256,7 +261,11 @@ OPENCL_FORCE_INLINE float3 TriplanarTexture_BumpUVLess(
 // Texture evaluation functions
 //------------------------------------------------------------------------------
 
+#if defined (__APPLE__)
+OPENCL_FORCE_NOT_INLINE void Texture_EvalOpGenericBumpOffsetU(
+#else
 OPENCL_FORCE_INLINE void Texture_EvalOpGenericBumpOffsetU(
+#endif
 		__global float *evalStack,
 		uint *evalStackOffset,
 		__global const HitPoint *hitPoint,
@@ -284,7 +293,11 @@ OPENCL_FORCE_INLINE void Texture_EvalOpGenericBumpOffsetU(
 	VSTORE3F(normalize(origShadeN + uu * dndu), &hitPointTmp->shadeN.x);
 }
 
+#if defined (__APPLE__)
+OPENCL_FORCE_NOT_INLINE void Texture_EvalOpGenericBumpOffsetV(
+#else
 OPENCL_FORCE_INLINE void Texture_EvalOpGenericBumpOffsetV(
+#endif
 		__global float *evalStack,
 		uint *evalStackOffset,
 		__global const HitPoint *hitPoint,
@@ -306,7 +319,11 @@ OPENCL_FORCE_INLINE void Texture_EvalOpGenericBumpOffsetV(
 	VSTORE3F(normalize(origShadeN + vv * dndv), &hitPointTmp->shadeN.x);
 }
 
+#if defined (__APPLE__)
+OPENCL_FORCE_NOT_INLINE void Texture_EvalOpGenericBump(
+#else
 OPENCL_FORCE_INLINE void Texture_EvalOpGenericBump(
+#endif
 		__global float *evalStack,
 		uint *evalStackOffset,
 		__global const HitPoint *hitPoint,
