@@ -494,7 +494,7 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 			switch (opType) {
 				case slg::ocl::TextureEvalOpType::EVAL_FLOAT:
 				case slg::ocl::TextureEvalOpType::EVAL_SPECTRUM: {
-					evalOpStackSize += CompileTextureOps(tex->hsvTex.texIndex, opType);
+					evalOpStackSize += CompileTextureOps(tex->hsvTex.texIndex, slg::ocl::TextureEvalOpType::EVAL_SPECTRUM);
 					evalOpStackSize += CompileTextureOps(tex->hsvTex.hueTexIndex, slg::ocl::TextureEvalOpType::EVAL_FLOAT);
 					evalOpStackSize += CompileTextureOps(tex->hsvTex.satTexIndex, slg::ocl::TextureEvalOpType::EVAL_FLOAT);
 					evalOpStackSize += CompileTextureOps(tex->hsvTex.valTexIndex, slg::ocl::TextureEvalOpType::EVAL_FLOAT);

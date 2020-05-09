@@ -106,7 +106,7 @@ scene.materials.mat_plane139857991252616.emission.directlightsampling.type = "AU
 scene.materials.mat_plane139857991252616.visibility.indirect.diffuse.enable = 1
 scene.materials.mat_plane139857991252616.visibility.indirect.glossy.enable = 1
 scene.materials.mat_plane139857991252616.visibility.indirect.specular.enable = 1
-scene.materials.mat_plane139857991252616.shadowcatcher.enable = 1
+scene.materials.mat_plane139857991252616.shadowcatcher.enable = 0
 scene.materials.mat_plane139857991252616.shadowcatcher.onlyinfinitelights = 0
 scene.materials.mat_plane139857991252616.photongi.enable = 1
 ##
@@ -145,23 +145,13 @@ scene.objects.1398577164380240.camerainvisible = 0
 scene.objects.1398577164380240.id = 1529595717
 scene.objects.1398577164380240.appliedtransformation = 0.620871425 -0.152114064 0.094021529 0 0.178825989 0.528129458 -0.326436222 0 3.16523363e-09 0.339706689 0.54959929 0 2.47931361 2.60516739 1 1
 ##
-#scene.objects.1398588469529680.bake.combined.file = "1398588469529680.png"
-#scene.objects.1398588469529680.bake.combined.gamma = 1
-#scene.objects.1398588469529680.bake.combined.wrap = clamp
-#scene.objects.1398577149045840.bake.combined.file = "1398577149045840.png"
-#scene.objects.1398577149045840.bake.combined.gamma = 1
-#scene.objects.1398577149045840.bake.combined.wrap = clamp
-#scene.objects.1398577164380240.bake.combined.file = "1398577164380240.png"
-#scene.objects.1398577164380240.bake.combined.gamma = 1
-#scene.objects.1398577164380240.bake.combined.wrap = clamp
-##
-scene.objects.1398588469529680.bake.lightmap.file = "1398588469529680.png"
+scene.objects.1398588469529680.bake.lightmap.file = "1398588469529680.exr"
 scene.objects.1398588469529680.bake.lightmap.gamma = 1
 scene.objects.1398588469529680.bake.lightmap.wrap = clamp
-#scene.objects.1398577149045840.bake.lightmap.file = "1398577149045840.png"
-#scene.objects.1398577149045840.bake.lightmap.gamma = 1
-#scene.objects.1398577149045840.bake.lightmap.wrap = clamp
-scene.objects.1398577164380240.bake.lightmap.file = "1398577164380240.png"
+scene.objects.1398577149045840.bake.lightmap.file = "1398577149045840.exr"
+scene.objects.1398577149045840.bake.lightmap.gamma = 1
+scene.objects.1398577149045840.bake.lightmap.wrap = clamp
+scene.objects.1398577164380240.bake.lightmap.file = "1398577164380240.exr"
 scene.objects.1398577164380240.bake.lightmap.gamma = 1
 scene.objects.1398577164380240.bake.lightmap.wrap = clamp
 ##

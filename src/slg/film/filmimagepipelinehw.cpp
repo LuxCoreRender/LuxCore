@@ -141,6 +141,8 @@ void Film::CreateHWContext() {
 
 void Film::DeleteHWContext() {
 	if (hardwareDevice) {
+		hardwareDevice->PushThreadCurrentDevice();
+
 		const size_t size = hardwareDevice->GetUsedMemory();
 		SLG_LOG("[" << hardwareDevice->GetName() << "] Memory used for hardware image pipeline: " <<
 				(size < 10000 ? size : (size / 1024)) << (size < 10000 ? "bytes" : "Kbytes"));
@@ -154,10 +156,15 @@ void Film::DeleteHWContext() {
 		hardwareDevice->FreeBuffer(&hw_ALPHA);
 		hardwareDevice->FreeBuffer(&hw_OBJECT_ID);
 		hardwareDevice->FreeBuffer(&hw_mergeBuffer);
+
+		hardwareDevice->PopThreadCurrentDevice();		
+		hardwareDevice = nullptr;
 	}
 
 	delete ctx;
+	ctx = nullptr;
 	delete dataSet;
+	dataSet = nullptr;
 }
 
 void Film::AllocateHWBuffers() {

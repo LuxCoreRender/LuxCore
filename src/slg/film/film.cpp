@@ -167,8 +167,16 @@ Film::~Film() {
 		delete imagePipelineThread;
 	}
 
+	// The image pipeline plugin destructor can use the hardware device to free
+	// some memory so I have to set the current context
+	if (hardwareDevice)
+		hardwareDevice->PushThreadCurrentDevice();
+		
 	BOOST_FOREACH(ImagePipeline *ip, imagePipelines)
 		delete ip;
+
+	if (hardwareDevice)
+		hardwareDevice->PopThreadCurrentDevice();
 
 	// I have to delete the OCL context after the image pipeline because it
 	// can be used by plugins

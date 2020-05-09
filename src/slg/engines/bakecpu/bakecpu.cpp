@@ -113,6 +113,8 @@ void BakeCPURenderEngine::InitFilm() {
 	if (hybridBackForwardEnable)
 		film->AddChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
 
+	film->SetRadianceGroupCount(renderConfig->scene->lightDefs.GetLightGroupCount());
+	film->SetThreadCount(renderThreads.size());
 	film->Init();
 }
 

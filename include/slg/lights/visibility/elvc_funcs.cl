@@ -130,7 +130,7 @@ OPENCL_FORCE_INLINE void EnvLightVisibilityCache_Sample(__global const BSDF *bsd
 // Pdf
 //------------------------------------------------------------------------------
 
-float EnvLightVisibilityCache_Pdf(__global const BSDF *bsdf,
+OPENCL_FORCE_INLINE float EnvLightVisibilityCache_Pdf(__global const BSDF *bsdf,
 		const float u, const float v
 		LIGHTS_PARAM_DECL) {
 	float pdf = 0.f;

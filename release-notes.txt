@@ -27,6 +27,8 @@
 * Added the support for out of core CUDA rendering (i.e. to render scenes larger than GPU ram available)
 * GPU rendering now uses 64bit image map pixel indices (i.e. removed the limit of 8 * 4GB of scene image maps)
 * New cache and out-of-core friendly mode for Random/Sobol samplers
+* Added the support for denoising baked light maps with Intel ODIN
+* pyluxcoretools merge now supports saving film AOVs via new --aov-output option
 
 ### Fixed Bugs
 
@@ -38,6 +40,7 @@
 * Fixed a problem in automatic cache radius estimation of PhotonGI when using Orthographic camera (issue #324)
 * Fixed an OpenCL compilation error when using large number of objects on some old GPUs
 * Fixed a problem with BlendLuxCore when parsing more than 9 image pipelines (#336)
+* Fixed a bug causing fireflies when using light tracing for caustics in some case (#329)
 
 Note: due to Glossycoating updated support for bump mapping on GPUs, some old scene using this kind of material/bump map combination may require some fix.
 

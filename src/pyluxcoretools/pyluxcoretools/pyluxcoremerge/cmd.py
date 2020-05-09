@@ -57,13 +57,13 @@ def LuxCoreMerge(argv):
 	filmParser.add_argument("fileFilm",
 							help=".cfg, .flm or .rsm files with a film")
 	filmParser.add_argument("-p", "--pixel-normalized-channel", action = "store_true", default=False,
-							help = "the film will have CHANNEL_RADIANCE_PER_PIXEL_NORMALIZED (required by all render engines)")
+							help = "The film will have CHANNEL_RADIANCE_PER_PIXEL_NORMALIZED (required by all render engines)")
 	filmParser.add_argument("-s", "--screen-normalized-channel", action = "store_true", default=False,
-							help = "the film will have CHANNEL_RADIANCE_PER_SCREEN_NORMALIZED (required by BIDIRCPU and LIGHTCPU render engines)")
+							help = "The film will have CHANNEL_RADIANCE_PER_SCREEN_NORMALIZED (required by BIDIRCPU and LIGHTCPU render engines)")
 	filmParser.add_argument("-r", "--region", metavar=("SRC_OFFSET_X", "SRC_OFFSET_Y",
 							"SRC_WIDTH", "SRC_HEIGHT", "DST_OFFSET_X", "DST_OFFSET_Y"),
 							nargs=6, type=int,
-							help = "define the origin and the size of the region in the source film and the placement in the destination film where the it will be merged")
+							help = "Define the origin and the size of the region in the source film and the placement in the destination film where the it will be merged")
 
 	# Prepare the general options parser
 	generalParser = argparse.ArgumentParser(description="PyLuxCoreMerge", add_help=False)
@@ -74,6 +74,8 @@ def LuxCoreMerge(argv):
 							   help="Save the merge film to a file")
 	generalParser.add_argument("-h", "--help", action = "store_true",
 							   help="Show this help message and exit")
+	generalParser.add_argument("-a", "--aov-output", metavar=("AOV_NAME", "FILE_NAME"), nargs=2,
+							   help="Save the merge film AOV to a file")
 
 	# Parse the general options
 	(generalArgs, filmArgv) = generalParser.parse_known_args(argv)
@@ -86,9 +88,16 @@ def LuxCoreMerge(argv):
 	filmOutput = None
 	if (generalArgs.film_output):
 		filmOutput = generalArgs.film_output[0]
+
 	imageOutput = None
 	if (generalArgs.image_output):
 		imageOutput = generalArgs.image_output[0]
+
+	aovOutputType = None
+	aovOutput = None
+	if (generalArgs.aov_output):
+		aovOutputType = generalArgs.aov_output[0]
+		aovOutput = generalArgs.aov_output[1]
 
 	# Split the arguments based of film files
 	filmsArgv = list(argsutils.ArgvSplitter(filmArgv, [".cfg", ".flm", ".rsm"]))
@@ -132,6 +141,50 @@ def LuxCoreMerge(argv):
 	# Save the RGB_IMAGEPIPELINE if required
 	if (imageOutput):
 		baseFilm.SaveOutput(imageOutput, pyluxcore.FilmOutputType.RGB_IMAGEPIPELINE, pyluxcore.Properties())
+	# Save the AOV if required
+	if (aovOutputType and aovOutput):
+		str2type = {
+			"RGB" : pyluxcore.FilmOutputType.RGB,
+			"RGBA" : pyluxcore.FilmOutputType.RGBA,
+			"RGB_IMAGEPIPELINE" : pyluxcore.FilmOutputType.RGB_IMAGEPIPELINE,
+			"RGBA_IMAGEPIPELINE" : pyluxcore.FilmOutputType.RGBA_IMAGEPIPELINE,
+			"ALPHA" : pyluxcore.FilmOutputType.ALPHA,
+			"DEPTH" : pyluxcore.FilmOutputType.DEPTH,
+			"POSITION" : pyluxcore.FilmOutputType.POSITION,
+			"GEOMETRY_NORMAL" : pyluxcore.FilmOutputType.GEOMETRY_NORMAL,
+			"SHADING_NORMAL" : pyluxcore.FilmOutputType.SHADING_NORMAL,
+			"MATERIAL_ID" : pyluxcore.FilmOutputType.MATERIAL_ID,
+			"DIRECT_DIFFUSE" : pyluxcore.FilmOutputType.DIRECT_DIFFUSE,
+			"DIRECT_GLOSSY" : pyluxcore.FilmOutputType.DIRECT_GLOSSY,
+			"EMISSION" : pyluxcore.FilmOutputType.EMISSION,
+			"INDIRECT_DIFFUSE" : pyluxcore.FilmOutputType.INDIRECT_DIFFUSE,
+			"INDIRECT_GLOSSY" : pyluxcore.FilmOutputType.INDIRECT_GLOSSY,
+			"INDIRECT_SPECULAR" : pyluxcore.FilmOutputType.INDIRECT_SPECULAR,
+			"MATERIAL_ID_MASK" : pyluxcore.FilmOutputType.MATERIAL_ID_MASK,
+			"DIRECT_SHADOW_MASK" : pyluxcore.FilmOutputType.DIRECT_SHADOW_MASK,
+			"INDIRECT_SHADOW_MASK" : pyluxcore.FilmOutputType.INDIRECT_SHADOW_MASK,
+			"RADIANCE_GROUP" : pyluxcore.FilmOutputType.RADIANCE_GROUP,
+			"UV" : pyluxcore.FilmOutputType.UV,
+			"RAYCOUNT" : pyluxcore.FilmOutputType.RAYCOUNT,
+			"BY_MATERIAL_ID" : pyluxcore.FilmOutputType.BY_MATERIAL_ID,
+			"IRRADIANCE" : pyluxcore.FilmOutputType.IRRADIANCE,
+			"OBJECT_ID" : pyluxcore.FilmOutputType.OBJECT_ID,
+			"OBJECT_ID_MASK" : pyluxcore.FilmOutputType.OBJECT_ID_MASK,
+			"BY_OBJECT_ID" : pyluxcore.FilmOutputType.BY_OBJECT_ID,
+			"SAMPLECOUNT" : pyluxcore.FilmOutputType.SAMPLECOUNT,
+			"CONVERGENCE" : pyluxcore.FilmOutputType.CONVERGENCE,
+			"SERIALIZED_FILM" : pyluxcore.FilmOutputType.SERIALIZED_FILM,
+			"MATERIAL_ID_COLOR" : pyluxcore.FilmOutputType.MATERIAL_ID_COLOR,
+			"ALBEDO" : pyluxcore.FilmOutputType.ALBEDO,
+			"AVG_SHADING_NORMAL" : pyluxcore.FilmOutputType.AVG_SHADING_NORMAL,
+			"NOISE" : pyluxcore.FilmOutputType.NOISE,
+			"USER_IMPORTANCE" : pyluxcore.FilmOutputType.USER_IMPORTANCE
+		}
+		if (aovOutputType not in str2type):
+			raise TypeError(aovOutputType + " is an unknown AOV")
+
+		# TODO: add the support for AOV properties
+		baseFilm.SaveOutput(aovOutput, str2type[aovOutputType], pyluxcore.Properties())
 
 	logger.info("Done.")
 
