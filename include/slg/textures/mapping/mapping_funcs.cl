@@ -122,12 +122,12 @@ OPENCL_FORCE_INLINE float3 LocalMapping3D_Map(__global const TextureMapping3D *m
 }
 
 //------------------------------------------------------------------------------
-#define __APPLE__=1
-#if defined (__APPLE__)
-OPENCL_FORCE_NOT_INLINE float3 TextureMapping3D_Map(__global const TextureMapping3D *mapping,
+#if defined(LUXRAYS_OS_APPLE)
+OPENCL_FORCE_NOT_INLINE
 #else
-OPENCL_FORCE_INLINE float3 TextureMapping3D_Map(__global const TextureMapping3D *mapping,
-#endif
+OPENCL_FORCE_INLINE
+#endif 
+    float3 TextureMapping3D_Map(__global const TextureMapping3D *mapping,
 		__global const HitPoint *hitPoint, float3 *shadeN TEXTURES_PARAM_DECL) {
 	switch (mapping->type) {
 		case UVMAPPING3D:
