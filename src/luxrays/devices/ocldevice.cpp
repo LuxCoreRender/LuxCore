@@ -189,6 +189,14 @@ void OpenCLDevice::CompileProgram(HardwareDeviceProgram **program,
 
 	vector <string> oclProgramParameters = programParameters;
 	oclProgramParameters.push_back("-D LUXRAYS_OPENCL_DEVICE");
+#if defined (__APPLE__)
+	oclProgramParameters.push_back("-D LUXRAYS_OS_APPLE");
+#elif defined (WIN32)
+	oclProgramParameters.push_back("-D LUXRAYS_OS_WINDOWS");
+#elif defined (__linux__)
+	oclProgramParameters.push_back("-D LUXRAYS_OS_LINUX");
+#endif
+	
 	oclProgramParameters.insert(oclProgramParameters.end(),
 			additionalCompileOpts.begin(), additionalCompileOpts.end());
 

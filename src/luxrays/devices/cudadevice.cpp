@@ -169,6 +169,14 @@ void CUDADevice::CompileProgram(HardwareDeviceProgram **program,
 		const string &programName) {
 	vector<string> cudaProgramParameters = programParameters;
 	cudaProgramParameters.push_back("-D LUXRAYS_CUDA_DEVICE");
+#if defined (__APPLE__)
+	cudaProgramParameters.push_back("-D LUXRAYS_OS_APPLE");
+#elif defined (WIN32)
+	cudaProgramParameters.push_back("-D LUXRAYS_OS_WINDOWS");
+#elif defined (__linux__)
+	cudaProgramParameters.push_back("-D LUXRAYS_OS_LINUX");
+#endif
+
 	cudaProgramParameters.insert(cudaProgramParameters.end(),
 			additionalCompileOpts.begin(), additionalCompileOpts.end());
 

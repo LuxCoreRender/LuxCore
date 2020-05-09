@@ -348,20 +348,13 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 		// will overflow the floating point 32bit variable
 		const u_int pixelCount = film ? Min(4u * film->GetWidth() * film->GetHeight(), 768u * 768u) : 8192;
 
-		if ((threadIndex == 0) &&
-				((sharedData->noBlackSampleCount > pixelCount) || (sharedData->sampleCount > 50000000))) {
-			if (sharedData->sampleCount > 50000000) {
-				LC_LOG("Metropolis sampler had only " << sharedData->noBlackSampleCount <<
-						" not black samples over a total of " << sharedData->sampleCount <<
-						" samples. The rendering may be inaccurate because how hard is to estimate the average image intensity.");
-			}
-
+		if ((sharedData->noBlackSampleCount > pixelCount) || (sharedData->sampleCount > 50000000)) {
 			//printf("Cool down: false\n");
 
 			cooldown = false;
 			isLargeMutation = (rndGen->floatValue() < currentLargeMutationProbability);
 		} else
-			isLargeMutation = 1.f;
+			isLargeMutation = true;
 	} else
 		isLargeMutation = (rndGen->floatValue() < currentLargeMutationProbability);
 
