@@ -713,6 +713,15 @@ void CompiledScene::CompileMaterials() {
 				const Texture *nvTex = rgm->GetNv();
 				mat->roughglass.nuTexIndex = scene->texDefs.GetTextureIndex(nuTex);
 				mat->roughglass.nvTexIndex = scene->texDefs.GetTextureIndex(nvTex);
+				
+				if (rgm->GetFilmThickness())
+					mat->roughglass.filmThicknessTexIndex = scene->texDefs.GetTextureIndex(rgm->GetFilmThickness());
+				else
+					mat->roughglass.filmThicknessTexIndex = NULL_INDEX;
+				if (rgm->GetFilmIOR())
+					mat->roughglass.filmIorTexIndex = scene->texDefs.GetTextureIndex(rgm->GetFilmIOR());
+				else
+					mat->roughglass.filmIorTexIndex = NULL_INDEX;
 				break;
 			}
 			case VELVET: {

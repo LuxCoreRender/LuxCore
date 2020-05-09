@@ -334,8 +334,16 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 
 		const Texture *nu = GetTexture(props.Get(Property(propName + ".uroughness")(.1f)));
 		const Texture *nv = GetTexture(props.Get(Property(propName + ".vroughness")(.1f)));
+		
+		const Texture *filmThickness = NULL;
+		if (props.IsDefined(propName + ".filmthickness"))
+			filmThickness = GetTexture(props.Get(Property(propName + ".filmthickness")(0.f)));
+		
+		const Texture *filmIor = NULL;
+		if (props.IsDefined(propName + ".filmior"))
+			filmIor = GetTexture(props.Get(Property(propName + ".filmior")(1.5f)));
 
-		mat = new RoughGlassMaterial(frontTransparencyTex, backTransparencyTex, emissionTex, bumpTex, kr, kt, exteriorIor, interiorIor, nu, nv);
+		mat = new RoughGlassMaterial(frontTransparencyTex, backTransparencyTex, emissionTex, bumpTex, kr, kt, exteriorIor, interiorIor, nu, nv, filmThickness, filmIor);
 	} else if (matType == "velvet") {
 		const Texture *kd = GetTexture(props.Get(Property(propName + ".kd")(.5f, .5f, .5f)));
 		const Texture *p1 = GetTexture(props.Get(Property(propName + ".p1")(-2.0f)));

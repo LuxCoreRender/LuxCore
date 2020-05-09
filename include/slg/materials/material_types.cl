@@ -148,6 +148,8 @@ typedef struct {
 	unsigned int exteriorIorTexIndex, interiorIorTexIndex;
 	unsigned int nuTexIndex;
 	unsigned int nvTexIndex;
+	unsigned int filmThicknessTexIndex;
+	unsigned int filmIorTexIndex;
 } RoughGlassParam;
 
 typedef struct {
