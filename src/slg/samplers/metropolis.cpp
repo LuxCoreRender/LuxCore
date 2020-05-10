@@ -42,9 +42,16 @@ SamplerSharedData *MetropolisSamplerSharedData::FromProperties(const Properties 
 }
 
 void MetropolisSamplerSharedData::Reset() {
-	totalLuminance = 0.;
+	totalLuminance = 0.f;
 	sampleCount = 0;
 	noBlackSampleCount = 0;
+
+	lastLuminance = 0.f;
+	lastSampleCount = 0;
+	lastNoBlackSampleCount = 0;
+
+	invLuminance = 1.f;
+	cooldown = true;
 }
 
 //------------------------------------------------------------------------------
@@ -58,7 +65,7 @@ MetropolisSampler::MetropolisSampler(RandomGenerator *rnd, Film *flm,
 		sharedData(samplerSharedData),
 		maxRejects(maxRej),	largeMutationProbability(pLarge), imageMutationRange(imgRange),
 		samples(NULL), sampleStamps(NULL), currentSamples(NULL), currentSampleStamps(NULL),
-		largeMutationCount(0), cooldown(true) {
+		largeMutationCount(0) {
 }
 
 MetropolisSampler::~MetropolisSampler() {
@@ -246,19 +253,18 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 		}
 	}
 
-	if (cooldown && isLargeMutation) {
+	if (sharedData->cooldown && isLargeMutation) {
 		AtomicAdd(&sharedData->totalLuminance, newLuminance);
 		AtomicInc(&sharedData->sampleCount);
 		if (newLuminance > 0.f)
 			AtomicInc(&sharedData->noBlackSampleCount);
 	}
 
-	const float invMeanIntensity = (sharedData->totalLuminance > 0.) ?
-		static_cast<float>(sharedData->sampleCount / sharedData->totalLuminance) : 1.f;
+	const float invMeanIntensity = sharedData->invLuminance;
 
 	// Define the probability of large mutations. It is 100% if we are still
 	// inside the cooldown phase.
-	const float currentLargeMutationProbability = cooldown ? 1.f : largeMutationProbability;
+	const float currentLargeMutationProbability = sharedData->cooldown ? 1.f : largeMutationProbability;
 
 	// Calculate accept probability from old and new image sample
 	float accProb;
@@ -338,24 +344,67 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 		++consecRejects;
 	}
 
+	// Thread 0 check if the cooldown is over
+	if (threadIndex == 0) {
+		// Update shared inv. luminance
+		const float luminance = (sharedData->totalLuminance > 0.f) ?
+			(sharedData->totalLuminance / sharedData->sampleCount) : 1.f;
+		sharedData->invLuminance = 1.f / luminance;
+
+		const u_int warmupMinSampleCount = 1000000;
+		const u_int warmupMinNoBlackSampleCount = warmupMinSampleCount / 100 * 5; // 5%
+
+		const u_int stepMinSampleCount = 1000000;
+		const u_int stepMinNoBlackSampleCount = warmupMinSampleCount / 100 * 5; // 5%
+
+		const float luminanceThreshold = .01f; // 1%
+			
+		/*SLG_LOG("Step: " << sharedData->sampleCount <<  "/" << sharedData->noBlackSampleCount <<
+				" Luminance: " << luminance);*/
+
+		const u_int sampleCount = sharedData->sampleCount;
+		const u_int noBlackSampleCount = sharedData->noBlackSampleCount;
+		const u_int lastSampleCount = sharedData->lastSampleCount;
+		const u_int lastNoBlackSampleCount = sharedData->lastNoBlackSampleCount;
+		const float lastLuminance = sharedData->lastLuminance;
+
+		if (
+			// Warmup period
+			((sampleCount > warmupMinSampleCount) &&
+				(noBlackSampleCount > warmupMinNoBlackSampleCount)) &&
+			// Step period
+			((sampleCount - lastSampleCount > stepMinSampleCount) &&
+				(noBlackSampleCount - lastNoBlackSampleCount > stepMinNoBlackSampleCount))
+			) {
+			// Time to check if I can end the cooldown
+			const float deltaLuminance = fabsf(luminance  - lastLuminance) / luminance;
+
+			SLG_LOG("Metropolis sampler image luminance estimation:  Step[" << sampleCount <<  "/" << noBlackSampleCount <<
+					"] Luminance[" << luminance << "] Delta[" << (deltaLuminance * 100.f) << "%]");
+
+			if (
+				// To avoid any kind of overflow
+				(sampleCount > 0xefffffffu) ||
+				// Check if the delta estimated luminace is small enough
+				((luminance > 0.f) && (deltaLuminance < luminanceThreshold))
+				) {
+				// I can end the cooldown phase
+				SLG_LOG("Metropolis sampler estimated image luminance: " << luminance << " (" << (deltaLuminance * 100.f) << "%)");
+
+				sharedData->cooldown = false;
+			}
+
+			sharedData->lastSampleCount = sampleCount;
+			sharedData->lastNoBlackSampleCount = noBlackSampleCount;
+			sharedData->lastLuminance = luminance;
+		}
+	}
+
 	// Cooldown is used in order to not have problems in the estimation of meanIntensity
 	// when large mutation probability is very small.
-	if (cooldown) {
-		// Check if it is time to end the cooldown (i.e. I have an average of
-		// 1 sample for each pixel).
-		//
-		// Note: I have to use a cap for pixelCount or the accumulated luminance
-		// will overflow the floating point 32bit variable
-		const u_int pixelCount = film ? Min(4u * film->GetWidth() * film->GetHeight(), 768u * 768u) : 8192;
-
-		if ((sharedData->noBlackSampleCount > pixelCount) || (sharedData->sampleCount > 50000000)) {
-			//printf("Cool down: false\n");
-
-			cooldown = false;
-			isLargeMutation = (rndGen->floatValue() < currentLargeMutationProbability);
-		} else
-			isLargeMutation = true;
-	} else
+	if (sharedData->cooldown)
+		isLargeMutation = true;
+	else
 		isLargeMutation = (rndGen->floatValue() < currentLargeMutationProbability);
 
 	if (isLargeMutation) {

@@ -45,11 +45,21 @@ public:
 	static SamplerSharedData *FromProperties(const luxrays::Properties &cfg,
 			luxrays::RandomGenerator *rndGen, Film *film);
 
-	// I'm storing totalLuminance and sampleCount on shared variables
+	// I'm storing totalLuminance, sampleCount and noBlackSampleCount on shared variables
 	// in order to have far more accurate estimation in the image mean intensity
 	// computation
+	
+	// Updated by all threads
 	float totalLuminance;
 	u_int sampleCount, noBlackSampleCount;
+
+	// Updated only by thread 0
+	float lastLuminance;
+	u_int lastSampleCount, lastNoBlackSampleCount;
+
+	// Updated only by thread 0 but read by all threads
+	float invLuminance;
+	bool cooldown;
 };
 
 //------------------------------------------------------------------------------
@@ -122,7 +132,7 @@ private:
 
 	u_int largeMutationCount;
 	
-	bool isLargeMutation, cooldown;
+	bool isLargeMutation;
 };
 
 }
