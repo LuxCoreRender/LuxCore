@@ -254,7 +254,7 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 			}
 		}
 	}
-
+	
 	if (sharedData->cooldown && isLargeMutation) {
 		AtomicAdd(&sharedData->totalLuminance, (double)newLuminance);
 		sharedData->sampleCount++;
@@ -346,21 +346,20 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 		++consecRejects;
 	}
 
-	// Thread 0 check if the cooldown is over
+	const u_longlong warmupMinSampleCount = 1000000;
+	const u_longlong warmupMinNoBlackSampleCount = warmupMinSampleCount / 100 * 5; // 5%
+
+	const u_longlong stepMinSampleCount = 1000000;
+	const u_longlong stepMinNoBlackSampleCount = warmupMinSampleCount / 100 * 5; // 5%
+
+	const double luminanceThreshold = .005; // 0.5%	// Thread 0 check if the cooldown is over
+
 	if (threadIndex == 0) {
 		// Update shared inv. luminance
 		const double luminance = (sharedData->totalLuminance > 0.) ?
 			(sharedData->totalLuminance / sharedData->sampleCount) : 1.;
 		sharedData->invLuminance = (float)(1. / luminance);
-
-		const u_longlong warmupMinSampleCount = 1000000;
-		const u_longlong warmupMinNoBlackSampleCount = warmupMinSampleCount / 100 * 5; // 5%
-
-		const u_longlong stepMinSampleCount = 1000000;
-		const u_longlong stepMinNoBlackSampleCount = warmupMinSampleCount / 100 * 5; // 5%
-
-		const double luminanceThreshold = .005; // 0.5%
-			
+	
 		/*SLG_LOG("Step: " << sharedData->sampleCount <<  "/" << sharedData->noBlackSampleCount <<
 				" Luminance: " << luminance);*/
 
@@ -381,13 +380,13 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 			// Time to check if I can end the cooldown
 			const double deltaLuminance = fabs(luminance  - lastLuminance) / luminance;
 
-			SLG_LOG("Metropolis sampler image luminance estimation:  Step[" << sampleCount <<  "/" << noBlackSampleCount <<
+			SLG_LOG("Metropolis sampler image luminance estimation: Step[" << sampleCount <<  "/" << noBlackSampleCount <<
 					"] Luminance[" << luminance << "] Delta[" << (deltaLuminance * 100.) << "%]");
 
 			if (
 				// To avoid any kind of overflow
 				(sampleCount > 0xefffffffu) ||
-				// Check if the delta estimated luminace is small enough
+				// Check if the delta estimated luminance is small enough
 				((luminance > 0.) && (deltaLuminance < luminanceThreshold))
 				) {
 				// I can end the cooldown phase
@@ -407,7 +406,7 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 	if (sharedData->cooldown) {
 		// For the very first samples just work like a RANDOM sampler. This helps
 		// to avoid some initial firefly.
-		isLargeMutation = (sharedData->noBlackSampleCount < 1000) ? true : (rndGen->floatValue() < .5f);
+		isLargeMutation = (sharedData->noBlackSampleCount < warmupMinNoBlackSampleCount) ? true : (rndGen->floatValue() < .5f);
 	} else
 		isLargeMutation = (rndGen->floatValue() < currentLargeMutationProbability);
 

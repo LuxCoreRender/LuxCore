@@ -29,6 +29,7 @@
 * New cache and out-of-core friendly mode for Random/Sobol samplers
 * Added the support for denoising baked light maps with Intel ODIN
 * pyluxcoretools merge now supports saving film AOVs via new --aov-output option
+* New improved Metropolis sampler warmup period
 
 ### Fixed Bugs
 
