@@ -306,7 +306,7 @@ OPENCL_FORCE_INLINE float3 DisneyMaterial_EvaluateImpl(
 		metallicEval = Lerp3(localFilmAmount, metallicEval, metallicWithFilmColor);
 	}
 	
-	const float3 clearCoatEval = DisneyMaterial_DisneyClearCoat(clearcoat, clearcoatGloss,
+	const float clearCoatEval = DisneyMaterial_DisneyClearCoat(clearcoat, clearcoatGloss,
 																NdotL, NdotV, NdotH, LdotH);
 	const float3 glossyEval = metallicEval + clearCoatEval;
 
