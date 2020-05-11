@@ -359,7 +359,7 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 		const u_longlong stepMinSampleCount = 1000000;
 		const u_longlong stepMinNoBlackSampleCount = warmupMinSampleCount / 100 * 5; // 5%
 
-		const double luminanceThreshold = .01; // 1%
+		const double luminanceThreshold = .005; // 0.5%
 			
 		/*SLG_LOG("Step: " << sharedData->sampleCount <<  "/" << sharedData->noBlackSampleCount <<
 				" Luminance: " << luminance);*/
@@ -404,9 +404,11 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 
 	// Cooldown is used in order to not have problems in the estimation of meanIntensity
 	// when large mutation probability is very small.
-	if (sharedData->cooldown)
-		isLargeMutation = true;
-	else
+	if (sharedData->cooldown) {
+		// For the very first samples just work like a RANDOM sampler. This helps
+		// to avoid some initial firefly.
+		isLargeMutation = (sharedData->noBlackSampleCount < 1000) ? true : (rndGen->floatValue() < .5f);
+	} else
 		isLargeMutation = (rndGen->floatValue() < currentLargeMutationProbability);
 
 	if (isLargeMutation) {
