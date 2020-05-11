@@ -16,6 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <atomic>
+
 #include <boost/lexical_cast.hpp>
 
 #include "luxrays/core/color/color.h"
@@ -254,10 +256,10 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 	}
 
 	if (sharedData->cooldown && isLargeMutation) {
-		AtomicAdd(&sharedData->totalLuminance, newLuminance);
-		AtomicInc(&sharedData->sampleCount);
+		AtomicAdd(&sharedData->totalLuminance, (double)newLuminance);
+		sharedData->sampleCount++;
 		if (newLuminance > 0.f)
-			AtomicInc(&sharedData->noBlackSampleCount);
+			sharedData->noBlackSampleCount++;
 	}
 
 	const float invMeanIntensity = sharedData->invLuminance;
@@ -347,26 +349,26 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 	// Thread 0 check if the cooldown is over
 	if (threadIndex == 0) {
 		// Update shared inv. luminance
-		const float luminance = (sharedData->totalLuminance > 0.f) ?
-			(sharedData->totalLuminance / sharedData->sampleCount) : 1.f;
-		sharedData->invLuminance = 1.f / luminance;
+		const double luminance = (sharedData->totalLuminance > 0.) ?
+			(sharedData->totalLuminance / sharedData->sampleCount) : 1.;
+		sharedData->invLuminance = (float)(1. / luminance);
 
-		const u_int warmupMinSampleCount = 1000000;
-		const u_int warmupMinNoBlackSampleCount = warmupMinSampleCount / 100 * 5; // 5%
+		const u_longlong warmupMinSampleCount = 1000000;
+		const u_longlong warmupMinNoBlackSampleCount = warmupMinSampleCount / 100 * 5; // 5%
 
-		const u_int stepMinSampleCount = 1000000;
-		const u_int stepMinNoBlackSampleCount = warmupMinSampleCount / 100 * 5; // 5%
+		const u_longlong stepMinSampleCount = 1000000;
+		const u_longlong stepMinNoBlackSampleCount = warmupMinSampleCount / 100 * 5; // 5%
 
-		const float luminanceThreshold = .01f; // 1%
+		const double luminanceThreshold = .01; // 1%
 			
 		/*SLG_LOG("Step: " << sharedData->sampleCount <<  "/" << sharedData->noBlackSampleCount <<
 				" Luminance: " << luminance);*/
 
-		const u_int sampleCount = sharedData->sampleCount;
-		const u_int noBlackSampleCount = sharedData->noBlackSampleCount;
-		const u_int lastSampleCount = sharedData->lastSampleCount;
-		const u_int lastNoBlackSampleCount = sharedData->lastNoBlackSampleCount;
-		const float lastLuminance = sharedData->lastLuminance;
+		const u_longlong sampleCount = sharedData->sampleCount;
+		const u_longlong noBlackSampleCount = sharedData->noBlackSampleCount;
+		const u_longlong lastSampleCount = sharedData->lastSampleCount;
+		const u_longlong lastNoBlackSampleCount = sharedData->lastNoBlackSampleCount;
+		const double lastLuminance = sharedData->lastLuminance;
 
 		if (
 			// Warmup period
@@ -377,19 +379,19 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 				(noBlackSampleCount - lastNoBlackSampleCount > stepMinNoBlackSampleCount))
 			) {
 			// Time to check if I can end the cooldown
-			const float deltaLuminance = fabsf(luminance  - lastLuminance) / luminance;
+			const double deltaLuminance = fabs(luminance  - lastLuminance) / luminance;
 
 			SLG_LOG("Metropolis sampler image luminance estimation:  Step[" << sampleCount <<  "/" << noBlackSampleCount <<
-					"] Luminance[" << luminance << "] Delta[" << (deltaLuminance * 100.f) << "%]");
+					"] Luminance[" << luminance << "] Delta[" << (deltaLuminance * 100.) << "%]");
 
 			if (
 				// To avoid any kind of overflow
 				(sampleCount > 0xefffffffu) ||
 				// Check if the delta estimated luminace is small enough
-				((luminance > 0.f) && (deltaLuminance < luminanceThreshold))
+				((luminance > 0.) && (deltaLuminance < luminanceThreshold))
 				) {
 				// I can end the cooldown phase
-				SLG_LOG("Metropolis sampler estimated image luminance: " << luminance << " (" << (deltaLuminance * 100.f) << "%)");
+				SLG_LOG("Metropolis sampler estimated image luminance: " << luminance << " (" << (deltaLuminance * 100.) << "%)");
 
 				sharedData->cooldown = false;
 			}

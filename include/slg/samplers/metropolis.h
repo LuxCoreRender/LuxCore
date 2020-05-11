@@ -21,6 +21,7 @@
 
 #include <string>
 #include <vector>
+#include <atomic>
 
 #include "luxrays/core/randomgen.h"
 #include "slg/slg.h"
@@ -50,8 +51,8 @@ public:
 	// computation
 	
 	// Updated by all threads
-	float totalLuminance;
-	u_int sampleCount, noBlackSampleCount;
+	std::atomic<double> totalLuminance;
+	std::atomic<u_longlong> sampleCount, noBlackSampleCount;
 
 	// Updated only by thread 0
 	float lastLuminance;

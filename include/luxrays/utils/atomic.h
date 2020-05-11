@@ -19,6 +19,8 @@
 #ifndef _LUXRAYS_ATOMIC_H
 #define _LUXRAYS_ATOMIC_H
 
+#include <atomic>
+
 #include <boost/version.hpp>
 #include <boost/interprocess/detail/atomic.hpp>
 #include <boost/atomic.hpp>
@@ -49,6 +51,18 @@ inline float AtomicAdd(float *val, const float delta) {
 			((uint32_t *) val), newVal.i, oldVal.i) != oldVal.i);
 
 	return oldVal.f;
+}
+
+template<class T>
+inline double AtomicAdd(std::atomic<T> *val, const T delta) {
+	T oldVal = val->load();
+	T newVal = oldVal + delta;
+
+	while (!val->compare_exchange_weak(oldVal, newVal)) {
+		newVal = oldVal + delta;
+	}
+
+	return newVal;
 }
 
 inline unsigned int AtomicAdd(unsigned int *val, const unsigned int delta) {
