@@ -45,7 +45,10 @@ public:
 		const Texture *clearcoatGloss,
 		const Texture *anisotropic,
 		const Texture *sheen,
-		const Texture *sheenTint
+		const Texture *sheenTint,
+		const Texture *filmAmount, 
+		const Texture *filmThickness, 
+		const Texture *filmIor
 	);
 
 	virtual MaterialType GetType() const { return DISNEY; }
@@ -107,6 +110,9 @@ public:
 	const Texture *GetAnisotropic() const { return Anisotropic; };
 	const Texture *GetSheen() const { return Sheen; };
 	const Texture *GetSheenTint() const { return SheenTint; };
+	const Texture *GetFilmAmount() const { return filmAmount; }
+	const Texture *GetFilmThickness() const { return filmThickness; }
+	const Texture *GetFilmIOR() const { return filmIor; }
 
 private:
 	const Texture *BaseColor;
@@ -120,6 +126,9 @@ private:
 	const Texture *Anisotropic;
 	const Texture *Sheen;
 	const Texture *SheenTint;
+	const Texture *filmAmount;
+	const Texture *filmThickness;
+	const Texture *filmIor;
 
 	luxrays::Spectrum CalculateTint(const luxrays::Spectrum &color) const;
 
@@ -153,8 +162,9 @@ private:
 		const float subsurface, const float roughness,
 		const float metallic, const float specular, const float specularTint,
 		const float clearcoat, const float clearcoatGloss, const float anisotropicGloss,
-		const float sheen, const float sheenTint, const Vector &localLightDir,
-		const Vector &localEyeDir, BSDFEvent *event, float *directPdfW, float *reversePdfW) const;
+		const float sheen, const float sheenTint, const float localFilmAmount, const float localFilmThickness,
+		const float localFilmIor, const Vector &localLightDir, const Vector &localEyeDir, 
+		BSDFEvent *event, float *directPdfW, float *reversePdfW) const;
 
 	luxrays::Vector DisneyDiffuseSample(const luxrays::Vector &wo, float u0, float u1) const;
 	luxrays::Vector DisneyMetallicSample(const float anisotropic, const float roughness,

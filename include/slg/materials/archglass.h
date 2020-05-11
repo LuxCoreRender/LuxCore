@@ -32,7 +32,8 @@ public:
 	ArchGlassMaterial(const Texture *frontTransp, const Texture *backTransp,
 			const Texture *emitted, const Texture *bump,
 			const Texture *refl, const Texture *trans,
-			const Texture *exteriorIorFact, const Texture *interiorIorFact);
+			const Texture *exteriorIorFact, const Texture *interiorIorFact,
+			const Texture *filmThickness, const Texture *filmIor);
 
 	virtual MaterialType GetType() const { return ARCHGLASS; }
 	virtual BSDFEvent GetEventTypes() const { return SPECULAR | REFLECT | TRANSMIT; };
@@ -67,11 +68,14 @@ public:
 	const Texture *GetKt() const { return Kt; }
 	const Texture *GetExteriorIOR() const { return exteriorIor; }
 	const Texture *GetInteriorIOR() const { return interiorIor; }
+	const Texture *GetFilmThickness() const { return filmThickness; }
+	const Texture *GetFilmIOR() const { return filmIor; }
 
 	static luxrays::Spectrum EvalSpecularReflection(const HitPoint &hitPoint,
 			const luxrays::Vector &localFixedDir,
 			const luxrays::Spectrum &kr, const float nc, const float nt,
-			luxrays::Vector *localSampledDir);
+			luxrays::Vector *localSampledDir,
+			const float localFilmThickness, const float localFilmIor);
 	static luxrays::Spectrum EvalSpecularTransmission(const HitPoint &hitPoint,
 			const luxrays::Vector &localFixedDir, const luxrays::Spectrum &kt,
 			 const float nc, const float nt, luxrays::Vector *localSampledDir);
@@ -81,6 +85,8 @@ private:
 	const Texture *Kt;
 	const Texture *exteriorIor;
 	const Texture *interiorIor;
+	const Texture *filmThickness;
+	const Texture *filmIor;
 };
 
 }

@@ -33,7 +33,8 @@ public:
 			const Texture *emitted, const Texture *bump,
 			const Texture *refl, const Texture *trans,
 			const Texture *exteriorIorFact, const Texture *interiorIorFact,
-			const Texture *u, const Texture *v);
+			const Texture *u, const Texture *v,
+			const Texture *filmThickness, const Texture *filmIor);
 
 	virtual MaterialType GetType() const { return ROUGHGLASS; }
 	virtual BSDFEvent GetEventTypes() const { return GLOSSY | REFLECT | TRANSMIT; };
@@ -61,6 +62,8 @@ public:
 	const Texture *GetInteriorIOR() const { return interiorIor; }
 	const Texture *GetNu() const { return nu; }
 	const Texture *GetNv() const { return nv; }
+	const Texture *GetFilmThickness() const { return filmThickness; }
+	const Texture *GetFilmIOR() const { return filmIor; }
 
 private:
 	const Texture *Kr;
@@ -69,6 +72,8 @@ private:
 	const Texture *interiorIor;
 	const Texture *nu;
 	const Texture *nv;
+	const Texture *filmThickness;
+	const Texture *filmIor;
 };
 
 }

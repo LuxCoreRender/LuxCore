@@ -586,6 +586,14 @@ void CompiledScene::CompileMaterials() {
 					mat->glass.cauchyCTex = scene->texDefs.GetTextureIndex(gm->GetCauchyC());
 				else
 					mat->glass.cauchyCTex = NULL_INDEX;
+				if (gm->GetFilmThickness())
+					mat->glass.filmThicknessTexIndex = scene->texDefs.GetTextureIndex(gm->GetFilmThickness());
+				else
+					mat->glass.filmThicknessTexIndex = NULL_INDEX;
+				if (gm->GetFilmIOR())
+					mat->glass.filmIorTexIndex = scene->texDefs.GetTextureIndex(gm->GetFilmIOR());
+				else
+					mat->glass.filmIorTexIndex = NULL_INDEX;
 				break;
 			}
 			case ARCHGLASS: {
@@ -602,6 +610,14 @@ void CompiledScene::CompileMaterials() {
 					mat->archglass.interiorIorTexIndex = scene->texDefs.GetTextureIndex(am->GetInteriorIOR());
 				else
 					mat->archglass.interiorIorTexIndex = NULL_INDEX;
+				if (am->GetFilmThickness())
+					mat->archglass.filmThicknessTexIndex = scene->texDefs.GetTextureIndex(am->GetFilmThickness());
+				else
+					mat->archglass.filmThicknessTexIndex = NULL_INDEX;
+				if (am->GetFilmIOR())
+					mat->archglass.filmIorTexIndex = scene->texDefs.GetTextureIndex(am->GetFilmIOR());
+				else
+					mat->archglass.filmIorTexIndex = NULL_INDEX;
 				break;
 			}
 			case MIX: {
@@ -697,6 +713,15 @@ void CompiledScene::CompileMaterials() {
 				const Texture *nvTex = rgm->GetNv();
 				mat->roughglass.nuTexIndex = scene->texDefs.GetTextureIndex(nuTex);
 				mat->roughglass.nvTexIndex = scene->texDefs.GetTextureIndex(nvTex);
+				
+				if (rgm->GetFilmThickness())
+					mat->roughglass.filmThicknessTexIndex = scene->texDefs.GetTextureIndex(rgm->GetFilmThickness());
+				else
+					mat->roughglass.filmThicknessTexIndex = NULL_INDEX;
+				if (rgm->GetFilmIOR())
+					mat->roughglass.filmIorTexIndex = scene->texDefs.GetTextureIndex(rgm->GetFilmIOR());
+				else
+					mat->roughglass.filmIorTexIndex = NULL_INDEX;
 				break;
 			}
 			case VELVET: {
@@ -809,6 +834,18 @@ void CompiledScene::CompileMaterials() {
 				mat->disney.anisotropicTexIndex = scene->texDefs.GetTextureIndex(dm->GetAnisotropic());
 				mat->disney.sheenTexIndex = scene->texDefs.GetTextureIndex(dm->GetSheen());
 				mat->disney.sheenTintTexIndex = scene->texDefs.GetTextureIndex(dm->GetSheenTint());
+				if (dm->GetFilmAmount())
+					mat->disney.filmAmountTexIndex = scene->texDefs.GetTextureIndex(dm->GetFilmAmount());
+				else
+					mat->disney.filmAmountTexIndex = NULL_INDEX;
+				if (dm->GetFilmThickness())
+					mat->disney.filmThicknessTexIndex = scene->texDefs.GetTextureIndex(dm->GetFilmThickness());
+				else
+					mat->disney.filmThicknessTexIndex = NULL_INDEX;
+				if (dm->GetFilmIOR())
+					mat->disney.filmIorTexIndex = scene->texDefs.GetTextureIndex(dm->GetFilmIOR());
+				else
+					mat->disney.filmIorTexIndex = NULL_INDEX;
 				break;
 			}
 			//------------------------------------------------------------------
