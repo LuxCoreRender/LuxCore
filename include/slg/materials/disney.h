@@ -110,9 +110,9 @@ public:
 	const Texture *GetAnisotropic() const { return Anisotropic; };
 	const Texture *GetSheen() const { return Sheen; };
 	const Texture *GetSheenTint() const { return SheenTint; };
-	const Texture *GetFilmAmount() const { return filmAmount; } ;
-	const Texture *GetFilmThickness() const { return filmThickness; } ;
-	const Texture *GetFilmIOR() const { return filmIor; } ;
+	const Texture *GetFilmAmount() const { return filmAmount; };
+	const Texture *GetFilmThickness() const { return filmThickness; };
+	const Texture *GetFilmIOR() const { return filmIor; };
 
 private:
 	const Texture *BaseColor;
