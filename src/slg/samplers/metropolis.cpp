@@ -210,6 +210,18 @@ float MetropolisSampler::GetSample(const u_int index) {
 }
 
 void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
+	//--------------------------------------------------------------------------
+	// Some hard coded parameter:
+	//--------------------------------------------------------------------------
+	const u_longlong warmupMinSampleCount = 250000;
+	const u_longlong warmupMinNoBlackSampleCount = warmupMinSampleCount / 100 * 5; // 5%
+
+	const u_longlong stepMinSampleCount = 250000;
+	const u_longlong stepMinNoBlackSampleCount = warmupMinSampleCount / 100 * 5; // 5%
+
+	const double luminanceThreshold = .01; // 1%	// Thread 0 check if the cooldown is over
+	//--------------------------------------------------------------------------
+
 	if (film) {
 		double pixelNormalizedCount, screenNormalizedCount;
 		switch (sampleType) {
@@ -264,9 +276,8 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 
 	const float invMeanIntensity = sharedData->invLuminance;
 
-	// Define the probability of large mutations. It is 100% if we are still
-	// inside the cooldown phase.
-	const float currentLargeMutationProbability = sharedData->cooldown ? 1.f : largeMutationProbability;
+	// Define the probability of large mutations.
+	const float currentLargeMutationProbability = (sharedData->cooldown) ? .5 : largeMutationProbability;
 
 	// Calculate accept probability from old and new image sample
 	float accProb;
@@ -346,14 +357,8 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 		++consecRejects;
 	}
 
-	const u_longlong warmupMinSampleCount = 1000000;
-	const u_longlong warmupMinNoBlackSampleCount = warmupMinSampleCount / 100 * 5; // 5%
-
-	const u_longlong stepMinSampleCount = 1000000;
-	const u_longlong stepMinNoBlackSampleCount = warmupMinSampleCount / 100 * 5; // 5%
-
-	const double luminanceThreshold = .005; // 0.5%	// Thread 0 check if the cooldown is over
-
+	// Cooldown is used in order to not have problems in the estimation of meanIntensity
+	// when large mutation probability is very small.
 	if (threadIndex == 0) {
 		// Update shared inv. luminance
 		const double luminance = (sharedData->totalLuminance > 0.) ?
@@ -401,15 +406,7 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 		}
 	}
 
-	// Cooldown is used in order to not have problems in the estimation of meanIntensity
-	// when large mutation probability is very small.
-	if (sharedData->cooldown) {
-		// For the very first samples just work like a RANDOM sampler. This helps
-		// to avoid some initial firefly.
-		isLargeMutation = (sharedData->noBlackSampleCount < warmupMinNoBlackSampleCount) ? true : (rndGen->floatValue() < .5f);
-	} else
-		isLargeMutation = (rndGen->floatValue() < currentLargeMutationProbability);
-
+	isLargeMutation = (rndGen->floatValue() < currentLargeMutationProbability);
 	if (isLargeMutation) {
 		stamp = 1;
 		fill(sampleStamps, sampleStamps + requestedSamples, 0);
