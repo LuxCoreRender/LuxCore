@@ -53,7 +53,7 @@ OPENCL_FORCE_INLINE float ExtractInteriorIors(__global const HitPoint *hitPoint,
 OPENCL_FORCE_INLINE float3 ArchGlassMaterial_EvalSpecularReflection(__global const HitPoint *hitPoint,
 		const float3 localFixedDir, const float3 kr,
 		const float nc, const float nt,
-		float3 *sampledDir) {
+		float3 *sampledDir, const float localFilmThickness, const float localFilmIor) {
 	if (Spectrum_IsBlack(kr))
 		return BLACK;
 
@@ -64,7 +64,13 @@ OPENCL_FORCE_INLINE float3 ArchGlassMaterial_EvalSpecularReflection(__global con
 	*sampledDir = MAKE_FLOAT3(-localFixedDir.x, -localFixedDir.y, localFixedDir.z);
 
 	const float ntc = nt / nc;
-	return kr * FresnelCauchy_Evaluate(ntc, costheta);
+	const float3 result = kr * FresnelCauchy_Evaluate(ntc, costheta);
+	
+	if (localFilmThickness > 0.f) {
+		const float3 filmColor = CalcFilmColor(localFixedDir, localFilmThickness, localFilmIor);
+		return result * filmColor;
+	}
+	return result;
 }
 
 OPENCL_FORCE_INLINE float3 ArchGlassMaterial_EvalSpecularTransmission(__global const HitPoint *hitPoint,
@@ -147,10 +153,15 @@ OPENCL_FORCE_INLINE void ArchGlassMaterial_GetPassThroughTransparency(__global c
 	float3 transLocalSampledDir; 
 	const float3 trans = ArchGlassMaterial_EvalSpecularTransmission(hitPoint, localFixedDir,
 			kt, nc, nt, &transLocalSampledDir);
+			
+	const float localFilmThickness = (material->archglass.filmThicknessTexIndex != NULL_INDEX) 
+									 ? Texture_GetFloatValue(material->archglass.filmThicknessTexIndex, hitPoint TEXTURES_PARAM) : 0.f;
+	const float localFilmIor = (localFilmThickness > 0.f && material->archglass.filmIorTexIndex != NULL_INDEX) 
+							   ? Texture_GetFloatValue(material->archglass.filmIorTexIndex, hitPoint TEXTURES_PARAM) : 1.f;
 	
 	float3 reflLocalSampledDir;
 	const float3 refl = ArchGlassMaterial_EvalSpecularReflection(hitPoint, localFixedDir,
-			kr, nc, nt, &reflLocalSampledDir);
+			kr, nc, nt, &reflLocalSampledDir, localFilmThickness, localFilmIor);
 
 	// Decide to transmit or reflect
 	float3 transp;
@@ -224,9 +235,13 @@ OPENCL_FORCE_INLINE void ArchGlassMaterial_Sample(__global const Material* restr
 	const float3 trans = ArchGlassMaterial_EvalSpecularTransmission(hitPoint, fixedDir,
 			kt, nc, nt, &transLocalSampledDir);
 	
+	const float localFilmThickness = (material->archglass.filmThicknessTexIndex != NULL_INDEX) 
+									 ? Texture_GetFloatValue(material->archglass.filmThicknessTexIndex, hitPoint TEXTURES_PARAM) : 0.f;
+	const float localFilmIor = (localFilmThickness > 0.f && material->archglass.filmIorTexIndex != NULL_INDEX) 
+							   ? Texture_GetFloatValue(material->archglass.filmIorTexIndex, hitPoint TEXTURES_PARAM) : 1.f;
 	float3 reflLocalSampledDir;
 	const float3 refl = ArchGlassMaterial_EvalSpecularReflection(hitPoint, fixedDir,
-			kr, nc, nt, &reflLocalSampledDir);
+			kr, nc, nt, &reflLocalSampledDir, localFilmThickness, localFilmIor);
 
 	// Decide to transmit or reflect
 	float threshold;

@@ -289,6 +289,7 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_null.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_roughglass.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_roughmatte_translucent.cl
+	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_thinfilmcoating.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_velvet.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_disney.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/material_funcs_evalops.cl
@@ -475,6 +476,7 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/materials/roughglass.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/materials/roughmatte.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/materials/roughmattetranslucent.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/materials/thinfilmcoating.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/materials/velvet.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/samplers/sampler.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/samplers/random.cpp
@@ -661,6 +663,7 @@ set(SLG_KERNEL_SRCS
 	${generated_kernels_dir}/materialdefs_funcs_null_kernel.cpp
 	${generated_kernels_dir}/materialdefs_funcs_roughglass_kernel.cpp
 	${generated_kernels_dir}/materialdefs_funcs_roughmatte_translucent_kernel.cpp
+	${generated_kernels_dir}/materialdefs_funcs_thinfilmcoating_kernel.cpp
 	${generated_kernels_dir}/materialdefs_funcs_velvet_kernel.cpp
 	${generated_kernels_dir}/material_funcs_evalops_kernel.cpp
 	${generated_kernels_dir}/material_funcs_kernel.cpp

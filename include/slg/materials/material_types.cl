@@ -90,6 +90,8 @@ typedef struct {
 	unsigned int ktTexIndex;
 	unsigned int exteriorIorTexIndex, interiorIorTexIndex;
 	unsigned int cauchyCTex;
+	unsigned int filmThicknessTexIndex;
+	unsigned int filmIorTexIndex;
 } GlassParam;
 
 typedef struct {
@@ -101,6 +103,8 @@ typedef struct {
     unsigned int krTexIndex;
 	unsigned int ktTexIndex;
 	unsigned int exteriorIorTexIndex, interiorIorTexIndex;
+	unsigned int filmThicknessTexIndex;
+	unsigned int filmIorTexIndex;
 } ArchGlassParam;
 
 typedef struct {
@@ -144,6 +148,8 @@ typedef struct {
 	unsigned int exteriorIorTexIndex, interiorIorTexIndex;
 	unsigned int nuTexIndex;
 	unsigned int nvTexIndex;
+	unsigned int filmThicknessTexIndex;
+	unsigned int filmIorTexIndex;
 } RoughGlassParam;
 
 typedef struct {
@@ -279,6 +285,9 @@ typedef struct {
 	unsigned int anisotropicTexIndex;
 	unsigned int sheenTexIndex;
 	unsigned int sheenTintTexIndex;
+	unsigned int filmAmountTexIndex;
+	unsigned int filmThicknessTexIndex;
+	unsigned int filmIorTexIndex;
 } DisneyParam;
 
 typedef struct {
