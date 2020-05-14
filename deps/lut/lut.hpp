@@ -24,9 +24,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-// Adapted to C++11 by Dade:
-template< bool Condition, typename T = void >
-using enable_if_t = typename std::enable_if<Condition, T>::type;
+// Adapted to C++11 by Dade
 
 #ifndef OCTOON_IMAGE_LUT_H_
 #define OCTOON_IMAGE_LUT_H_
@@ -42,6 +40,9 @@ namespace octoon
 	{
 		namespace detail
 		{
+			template< bool Condition, typename T = void >
+			using enable_if_t = typename std::enable_if<Condition, T>::type;
+
 			class exception : public std::exception
 			{
 			public:
