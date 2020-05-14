@@ -48,6 +48,7 @@
 #include "slg/film/imagepipeline/plugins/intel_oidn.h"
 #include "slg/film/imagepipeline/plugins/whitebalance.h"
 #include "slg/film/imagepipeline/plugins/bakemapmargin.h"
+#include "slg/film/imagepipeline/plugins/colorlut.h"
 
 using namespace std;
 using namespace luxrays;
@@ -621,6 +622,9 @@ ImagePipeline *Film::CreateImagePipeline(const Properties &props, const string &
 				const u_int marginPixels = Max(props.Get(Property(prefix + ".margin")(2)).Get<u_int>(), 1u);
 				const float samplesThreshold = Max(props.Get(Property(prefix + ".samplesthreshold")(0.f)).Get<float>(), 0.f);
 				imagePipeline->AddPlugin(new BakeMapMarginPlugin(marginPixels, samplesThreshold));
+			} else if (type == "COLOR_LUT") {
+				imagePipeline->AddPlugin(new ColorLUTPlugin(
+					props.Get(Property(prefix + ".file")("lut.cube")).Get<string>()));
 			} else
 				throw runtime_error("Unknown image pipeline plugin type: " + type);
 		}

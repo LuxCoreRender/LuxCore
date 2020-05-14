@@ -31,6 +31,7 @@
 * pyluxcoretools merge now supports saving film AOVs via new --aov-output option
 * New improved Metropolis sampler warmup period
 * Added thin film interference option for many materials
+* Added the support for a new color re-mapping image pipeline plug-in using .cube files (issue #81)
 
 ### Fixed Bugs
 
