@@ -36,7 +36,7 @@ namespace slg {
 
 class ColorLUTPlugin : public ImagePipelinePlugin {
 public:
-	ColorLUTPlugin(const std::string &name);
+	ColorLUTPlugin(const std::string &name, const float strength);
 	virtual ~ColorLUTPlugin();
 
 	virtual ImagePipelinePlugin *Copy() const;
@@ -53,6 +53,7 @@ private:
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImagePipelinePlugin);
 
 		ar & lut.dump();
+		ar & strength;
 	}
 
 	template<class Archive>	void load(Archive &ar, const unsigned int version) {
@@ -62,10 +63,13 @@ private:
 		ar & lutStr;
 		std::istringstream is(lutStr);
 		lut.create(is);
+		
+		ar & strength;
 	}
 	BOOST_SERIALIZATION_SPLIT_MEMBER()
 	
 	octoon::image::detail::basic_lut<float> lut;
+	float strength;
 };
 
 }

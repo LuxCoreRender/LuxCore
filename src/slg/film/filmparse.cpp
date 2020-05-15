@@ -623,8 +623,9 @@ ImagePipeline *Film::CreateImagePipeline(const Properties &props, const string &
 				const float samplesThreshold = Max(props.Get(Property(prefix + ".samplesthreshold")(0.f)).Get<float>(), 0.f);
 				imagePipeline->AddPlugin(new BakeMapMarginPlugin(marginPixels, samplesThreshold));
 			} else if (type == "COLOR_LUT") {
-				imagePipeline->AddPlugin(new ColorLUTPlugin(
-					props.Get(Property(prefix + ".file")("lut.cube")).Get<string>()));
+				const string fileName = props.Get(Property(prefix + ".file")("lut.cube")).Get<string>();
+				const float strength = Clamp(props.Get(Property(prefix + ".strength")(1.f)).Get<float>(), 0.f, 1.f);
+				imagePipeline->AddPlugin(new ColorLUTPlugin(fileName, strength));
 			} else
 				throw runtime_error("Unknown image pipeline plugin type: " + type);
 		}

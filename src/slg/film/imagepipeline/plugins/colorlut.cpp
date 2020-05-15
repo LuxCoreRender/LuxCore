@@ -35,10 +35,11 @@ using namespace slg;
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::ColorLUTPlugin)
 
-ColorLUTPlugin::ColorLUTPlugin(const string &filmName) {
+ColorLUTPlugin::ColorLUTPlugin(const string &filmName, const float str) {
 	const string resolvedFileName = SLG_FileNameResolver.ResolveFile(filmName);
 
 	lut = octoon::image::detail::basic_lut<float>::parse(resolvedFileName);
+	strength = str;
 }
 
 ColorLUTPlugin::~ColorLUTPlugin() {
@@ -78,9 +79,9 @@ void ColorLUTPlugin::Apply(Film &film, const u_int index) {
 		if (film.HasSamples(hasPN, hasSN, i)) {
 			Spectrum color = pixels[i].Clamp(0.f, 1.f);
 			auto transformedColor = lut.lookup(color.c[0], color.c[1], color.c[2]);
-			pixels[i].c[0] = transformedColor[0];
-			pixels[i].c[1] = transformedColor[1];
-			pixels[i].c[2] = transformedColor[2];
+			pixels[i].c[0] = Lerp(strength, color.c[0], transformedColor[0]);
+			pixels[i].c[1] = Lerp(strength, color.c[1], transformedColor[1]);
+			pixels[i].c[2] = Lerp(strength, color.c[2], transformedColor[2]);
 		}
 	}
 }
