@@ -159,7 +159,7 @@ __constant float ThinFilmCoating_XYZToRGB[3][3] = {
 	},
 };
 
-float3 ThinFilmCoating_ConvertXYZToRGB(const float3 xyzColor) {
+OPENCL_FORCE_INLINE float3 ThinFilmCoating_ConvertXYZToRGB(const float3 xyzColor) {
 	return MAKE_FLOAT3(
 		ThinFilmCoating_XYZToRGB[0][0] * xyzColor.x + ThinFilmCoating_XYZToRGB[0][1] * xyzColor.y + ThinFilmCoating_XYZToRGB[0][2] * xyzColor.z,
 		ThinFilmCoating_XYZToRGB[1][0] * xyzColor.x + ThinFilmCoating_XYZToRGB[1][1] * xyzColor.y + ThinFilmCoating_XYZToRGB[1][2] * xyzColor.z,
@@ -167,11 +167,11 @@ float3 ThinFilmCoating_ConvertXYZToRGB(const float3 xyzColor) {
 	);
 }
 
-bool LowGamut(const float3 color) {
+OPENCL_FORCE_INLINE bool LowGamut(const float3 color) {
     return color.x < 0.f || color.y < 0.f || color.z < 0.f;
 }
 
-float3 ThinFilmCoating_Constrain(const float3 xyz, const float3 rgb) {
+OPENCL_FORCE_INLINE float3 ThinFilmCoating_Constrain(const float3 xyz, const float3 rgb) {
 	const float xRed = 0.63f;
 	const float yRed = 0.34f;
 	const float xGreen = 0.31f;
@@ -276,7 +276,7 @@ float3 ThinFilmCoating_Constrain(const float3 xyz, const float3 rgb) {
 
 //---------------------------------------------------------------------------------
 
-float3 CalcFilmColor(const float3 localFixedDir, const float filmThickness, const float filmIOR) {
+OPENCL_FORCE_NOT_INLINE float3 CalcFilmColor(const float3 localFixedDir, const float filmThickness, const float filmIOR) {
 	// Prevent wrong values if the ratio between IOR and thickness is too high
 	if (filmThickness * (filmIOR - .4f) > 2000.f)
 		return TO_FLOAT3(.5f);
