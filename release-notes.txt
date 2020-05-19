@@ -32,6 +32,7 @@
 * New improved Metropolis sampler warmup period
 * Added thin film interference option for many materials
 * Added the support for a new color re-mapping image pipeline plug-in using .cube files (issue #81)
+* LuxCore API now support unicode UTF-8 strings and files
 
 ### Fixed Bugs
 
