@@ -16,6 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <boost/filesystem.hpp>
+
 #include "luxrays/luxrays.h"
 #if defined(LUXRAYS_ENABLE_CUDA)
 #include "luxrays/utils/cuda.h"
@@ -31,6 +33,15 @@ using namespace luxrays;
 namespace luxrays {
 
 void Init() {
+#if defined(WIN32)
+	// Set locale for conversion from UTF-16 to UTF-8 on Windows. LuxRays/LuxCore assume
+	// all file names are UTF-8 encoded. This works fine on Linux/MacOS but
+	// requires a conversion to UTF-16 on Windows.
+
+	boost::filesystem::path::imbue(
+			std::locale(std::locale(), new std::codecvt_utf8_utf16<wchar_t>()));
+#endif
+
 #if defined(LUXRAYS_ENABLE_CUDA)
 	CHECK_CUDA_ERROR(cuInit(0));
 #endif	

@@ -420,7 +420,12 @@ void ExtTriangleMesh::Save(const string &fileName) const {
 }
 
 void ExtTriangleMesh::SavePly(const string &fileName) const {
-	BOOST_OFSTREAM plyFile(fileName.c_str(), ofstream::out | ofstream::binary | ofstream::trunc);
+	// The use of boost::filesystem::path is required for UNICODE support: fileName
+	// is supposed to be UTF-8 encoded.
+	boost::filesystem::ofstream plyFile(boost::filesystem::path(fileName),
+			boost::filesystem::ofstream::out |
+			boost::filesystem::ofstream::binary |
+			boost::filesystem::ofstream::trunc);
 	if(!plyFile.is_open())
 		throw runtime_error("Unable to open: " + fileName);
 

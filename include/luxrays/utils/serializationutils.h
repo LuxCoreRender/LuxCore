@@ -24,6 +24,7 @@
 #include <set>
 #include <vector>
 
+#include <boost/filesystem/fstream.hpp>
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
 #include <boost/archive/basic_archive.hpp>
@@ -64,7 +65,7 @@ public:
 	void Flush();
 
 private:
-	BOOST_OFSTREAM outFile;
+	boost::filesystem::ofstream outFile;
 	boost::iostreams::filtering_ostream outStream;
 	LuxOutputArchive *outArchive;
 };
@@ -79,7 +80,7 @@ public:
 	bool IsGood();
 
 private:
-	BOOST_IFSTREAM inFile;
+	boost::filesystem::ifstream inFile;
 	boost::iostreams::filtering_istream inStream;
 	LuxInputArchive *inArchive;
 };

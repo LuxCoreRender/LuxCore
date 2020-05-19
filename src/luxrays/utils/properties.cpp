@@ -826,11 +826,15 @@ Properties &Properties::SetFromStream(istream &stream) {
 }
 
 Properties &Properties::SetFromFile(const string &fileName) {
-	BOOST_IFSTREAM file(fileName.c_str(), ios::in);
-	if (file.fail())
+	// The use of boost::filesystem::path is required for UNICODE support: fileName
+	// is supposed to be UTF-8 encoded.
+	boost::filesystem::ifstream inFile(boost::filesystem::path(fileName),
+			boost::filesystem::ifstream::in); 
+
+	if (inFile.fail())
 		throw runtime_error("Unable to open properties file: " + fileName);
 
-	return SetFromStream(file);
+	return SetFromStream(inFile);
 }
 
 Properties &Properties::SetFromString(const string &propDefinitions) {
@@ -840,13 +844,17 @@ Properties &Properties::SetFromString(const string &propDefinitions) {
 }
 
 void Properties::Save(const std::string &fileName) {
-	BOOST_OFSTREAM outFile;
-	outFile.exceptions(BOOST_IFSTREAM::failbit | BOOST_IFSTREAM::badbit | BOOST_IFSTREAM::eofbit);
-	outFile.open(fileName.c_str(), BOOST_OFSTREAM::trunc);
+	// The use of boost::filesystem::path is required for UNICODE support: fileName
+	// is supposed to be UTF-8 encoded.
+	boost::filesystem::ofstream outFile(boost::filesystem::path(fileName),
+			boost::filesystem::ofstream::trunc);
 	
 	outFile << ToString();
 	
-	outFile.close();
+	if (outFile.fail())
+		throw runtime_error("Unable to save properties file: " + fileName);
+
+	outFile.close();	
 }
 
 Properties &Properties::Clear() {

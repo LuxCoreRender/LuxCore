@@ -129,7 +129,13 @@ CUmodule cudaKernelPersistentCache::Compile(const vector<string> &kernelsParamet
 		if (ForcedCompile(kernelsParameters, kernelSource, programName, &ptx, &ptxSize, error)) {
 			// Add the kernel to the cache
 			boost::filesystem::create_directories(dirPath);
-			BOOST_OFSTREAM file(fileName.c_str(), ios_base::out | ios_base::binary);
+
+			// The use of boost::filesystem::path is required for UNICODE support: fileName
+			// is supposed to be UTF-8 encoded.
+			boost::filesystem::ofstream file(boost::filesystem::path(fileName),
+					boost::filesystem::ofstream::out |
+					boost::filesystem::ofstream::binary |
+					boost::filesystem::ofstream::trunc);
 
 			// Write the binary hash
 			const u_int hashBin = oclKernelPersistentCache::HashBin(ptx, ptxSize);
@@ -161,7 +167,10 @@ CUmodule cudaKernelPersistentCache::Compile(const vector<string> &kernelsParamet
 
 			vector<char> kernelBin(kernelSize);
 
-			BOOST_IFSTREAM file(fileName.c_str(), ios_base::in | ios_base::binary);
+			// The use of boost::filesystem::path is required for UNICODE support: fileName
+			// is supposed to be UTF-8 encoded.
+			boost::filesystem::ifstream file(boost::filesystem::path(fileName),
+					boost::filesystem::ifstream::in | boost::filesystem::ifstream::binary);
 
 			// Read the binary hash
 			u_int hashBin;

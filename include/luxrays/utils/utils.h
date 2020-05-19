@@ -25,6 +25,7 @@
 #include <cmath>
 #include <limits>
 #include <iomanip>
+#include <codecvt>
 
 #if defined (__linux__)
 #include <pthread.h>
@@ -344,6 +345,20 @@ template <class T> T inline Remap(const T value,
 
 inline bool IsValid(float a) {
 	return !isnan(a) && !isinf(a) && (a >= 0.f);
+}
+
+// Convert between UTF-8 and UTF-16
+inline std::wstring utf8_to_utf16(const std::string &str) {
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t> > converter;
+
+    return converter.from_bytes(str);
+}
+
+// Convert between UTF-16 and UTF-8
+inline std::string utf16_to_utf8(const std::wstring &wstr) {
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t> > converter;
+
+    return converter.to_bytes(wstr);
 }
 
 }

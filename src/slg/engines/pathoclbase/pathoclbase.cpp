@@ -238,7 +238,13 @@ void PathOCLBaseRenderEngine::SetCachedKernels(const RenderConfig &renderConfig)
 	if (!boost::filesystem::exists(filePath)) {
 		// Create an empty file
 		boost::filesystem::create_directories(dirPath);
-		BOOST_OFSTREAM file(fileName.c_str(), ios_base::out | ios_base::binary);
+
+		// The use of boost::filesystem::path is required for UNICODE support: fileName
+		// is supposed to be UTF-8 encoded.
+		boost::filesystem::ofstream file(boost::filesystem::path(fileName),
+				boost::filesystem::ofstream::out |
+				boost::filesystem::ofstream::binary |
+				boost::filesystem::ofstream::trunc);
 
 		file.close();
 	}
