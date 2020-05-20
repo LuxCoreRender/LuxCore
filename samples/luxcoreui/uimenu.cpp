@@ -170,22 +170,9 @@ void LuxCoreApp::MenuRendering() {
 
 		Properties props;
 		/*props <<
-				Property("opencl.devices.select")("010") <<
-				Property("opencl.code.alwaysenabled")(
-					"MATTE MIRROR GLASS ARCHGLASS MATTETRANSLUCENT GLOSSY2 "
-					"METAL2 ROUGHGLASS ROUGHMATTE ROUGHMATTETRANSLUCENT "
-					"GLOSSYTRANSLUCENT "
-					"GLOSSY2_ABSORPTION GLOSSY2_MULTIBOUNCE "
-					"HOMOGENEOUS_VOL CLEAR_VOL "
-					"IMAGEMAPS_BYTE_FORMAT IMAGEMAPS_HALF_FORMAT "
-					"IMAGEMAPS_1xCHANNELS IMAGEMAPS_3xCHANNELS "
-					"HAS_BUMPMAPS "
-					"INFINITE TRIANGLELIGHT") <<
-				Property("kernelcachefill.renderengine.types")("PATHOCL") <<
-				Property("kernelcachefill.sampler.types")("SOBOL") <<
-				Property("kernelcachefill.camera.types")("perspective") <<
-				Property("kernelcachefill.light.types")("infinite", "trianglelight") <<
-				Property("kernelcachefill.texture.types")("checkerboard2d", "checkerboard3d");*/
+				Property("opencl.devices.select")("100") <<
+				Property("scene.epsilon.min")(0.000123f) <<
+				Property("scene.epsilon.max")(0.123f);*/
 		KernelCacheFill(props, KernelCacheFillProgressHandler);
 	}
 

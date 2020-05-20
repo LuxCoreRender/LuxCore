@@ -271,7 +271,7 @@ static void KernelCacheFillImpl(const Properties &config, void (*ProgressHandler
 	// Extract the render engines
 	const Property renderEngines = config.Get(Property("kernelcachefill.renderengine.types")("PATHOCL", "TILEPATHOCL", "RTPATHOCL"));
 	const size_t count = renderEngines.GetSize();
-
+	
 	// For each render engine type
 	for (u_int renderEngineIndex = 0; renderEngineIndex < renderEngines.GetSize(); ++renderEngineIndex) {
 		const string renderEngineType = renderEngines.Get<string>(renderEngineIndex);
@@ -284,7 +284,12 @@ static void KernelCacheFillImpl(const Properties &config, void (*ProgressHandler
 		Properties cfgProps;
 		cfgProps << 
 				Property("renderengine.type")(renderEngineType) <<
-				Property("sampler.type")(samplerType);
+				Property("sampler.type")(samplerType) <<
+				config.Get(Property("scene.epsilon.min")(DEFAULT_EPSILON_MIN)) <<
+				config.Get(Property("scene.epsilon.max")(DEFAULT_EPSILON_MAX));
+		
+		if (config.IsDefined("opencl.devices.select"))
+			cfgProps << config.Get("opencl.devices.select");
 
 		// Run the rendering
 		LC_LOG("====================================================================");

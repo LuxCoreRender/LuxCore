@@ -33,6 +33,7 @@
 * Added thin film interference option for many materials
 * Added the support for a new color re-mapping image pipeline plug-in using .cube files (issue #81)
 * LuxCore API now support unicode UTF-8 strings and files
+* luxcore::KernelCacheFill() now supports opencl.devices.select, scene.epsilon.min and scene.epsilon.max properties (issue #374)
 
 ### Fixed Bugs
 
