@@ -4,6 +4,8 @@ DEPS_SOURCE=`pwd`/macos
 
 ### packing opencl version
 
+rm -rf release_OSX
+
 mkdir release_OSX
 
 ###luxcoreui bundle
@@ -176,7 +178,7 @@ echo "Denoise installed"
 
 cd ../..
 
-./scripts/macos/codesign.sh
+./scripts/macos/codesign.sh ./release_OSX/pyluxcore/
 
 # Set up correct names for release version and SDK
 if [[ -z "$VERSION_STRING" ]] ; then
@@ -193,7 +195,7 @@ fi
 
 echo "Creating OpenCL Version DMG ..."
 
-hdiutil create luxcorerender-$VERSION_STRING-mac64$SDK_BUILD.dmg -volname "LuxCoreRender-$VERSION_STRING" -fs HFS+ -srcfolder release_OSX/
+hdiutil create ./release_OSX/luxcorerender-$VERSION_STRING-mac64$SDK_BUILD.dmg -volname "LuxCoreRender-$VERSION_STRING" -fs HFS+ -srcfolder release_OSX/
 
 #create-dmg --volname "LuxCoreRender-$VERSION_STRING" --format UDBZ --background macos/mac_bundle/back-dmg.jpg --window-size 512 300 --app-drop-link 320 140 --icon-size 64 --text-size 12 --icon LuxCore.app 105 140 --icon pyluxcore 205 140  --volicon macos/mac_bundle/LuxCore.app/Contents/Resources/luxcoreui.icns luxcorerender-$VERSION_STRING-mac64$SDK_BUILD-opencl.dmg release_OSX/
 
