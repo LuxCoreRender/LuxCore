@@ -18,7 +18,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-OPENCL_FORCE_INLINE bool Scene_Intersect(
+OPENCL_FORCE_NOT_INLINE bool Scene_Intersect(
 		__constant const GPUTaskConfiguration* restrict taskConfig,
 		const SceneRayType rayType,
 		int *throughShadowTransparency,

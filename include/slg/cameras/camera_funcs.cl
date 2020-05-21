@@ -394,7 +394,7 @@ OPENCL_FORCE_INLINE void EnvironmentCamera_GenerateRay(
 // Generic function
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_INLINE void Camera_GenerateRay(
+OPENCL_FORCE_NOT_INLINE void Camera_GenerateRay(
 		__global const Camera* restrict camera,
 		const uint filmWidth, const uint filmHeight,
 		__global Ray *ray,

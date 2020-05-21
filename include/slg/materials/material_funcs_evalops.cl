@@ -25,7 +25,7 @@
 // Material evaluation functions
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_INLINE uint Material_EvalOp(
+OPENCL_FORCE_NOT_INLINE uint Material_EvalOp(
 		__global const MaterialEvalOp* restrict evalOp,
 		__global float *evalStack,
 		uint *evalStackOffset,

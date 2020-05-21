@@ -319,7 +319,7 @@ OPENCL_FORCE_INLINE float3 ImageMap_GetTexel_Spectrum(
 	return ImageMap_GetTexel_SpectrumValue(storageType, pixels, channelCount, index);
 }
 
-OPENCL_FORCE_INLINE float ImageMapStorage_GetFloat(__global const ImageMap *imageMap,
+OPENCL_FORCE_NOT_INLINE float ImageMapStorage_GetFloat(__global const ImageMap *imageMap,
 		const uint s0, const uint t0 
 		IMAGEMAPS_PARAM_DECL) {
 	__global const void *pixels = ImageMap_GetPixelsAddress(
@@ -333,7 +333,7 @@ OPENCL_FORCE_INLINE float ImageMapStorage_GetFloat(__global const ImageMap *imag
 	return ImageMap_GetTexel_Float(storageType, pixels, width, height, channelCount, wrapType, s0, t0);	
 }
 
-OPENCL_FORCE_INLINE float3 ImageMapStorage_GetSpectrum(__global const ImageMap *imageMap,
+OPENCL_FORCE_NOT_INLINE float3 ImageMapStorage_GetSpectrum(__global const ImageMap *imageMap,
 		const uint s0, const uint t0
 		IMAGEMAPS_PARAM_DECL) {
 	__global const void *pixels = ImageMap_GetPixelsAddress(
@@ -347,7 +347,7 @@ OPENCL_FORCE_INLINE float3 ImageMapStorage_GetSpectrum(__global const ImageMap *
 	return ImageMap_GetTexel_Spectrum(storageType, pixels, width, height, channelCount, wrapType, s0, t0);	
 }
 
-OPENCL_FORCE_INLINE float ImageMap_GetFloat(__global const ImageMap *imageMap,
+OPENCL_FORCE_NOT_INLINE float ImageMap_GetFloat(__global const ImageMap *imageMap,
 		const float u, const float v
 		IMAGEMAPS_PARAM_DECL) {
 	__global const void *pixels = ImageMap_GetPixelsAddress(
@@ -383,7 +383,7 @@ OPENCL_FORCE_INLINE float ImageMap_GetFloat(__global const ImageMap *imageMap,
 	return (k0 * c0 + k1 *c1 + k2 * c2 + k3 * c3);
 }
 
-OPENCL_FORCE_INLINE float3 ImageMap_GetSpectrum(__global const ImageMap *imageMap,
+OPENCL_FORCE_NOT_INLINE float3 ImageMap_GetSpectrum(__global const ImageMap *imageMap,
 		const float u, const float v
 		IMAGEMAPS_PARAM_DECL) {
 	__global const void *pixels = ImageMap_GetPixelsAddress(
@@ -419,7 +419,7 @@ OPENCL_FORCE_INLINE float3 ImageMap_GetSpectrum(__global const ImageMap *imageMa
 	return (k0 * c0 + k1 *c1 + k2 * c2 + k3 * c3);
 }
 
-OPENCL_FORCE_INLINE float2 ImageMap_GetDuv(__global const ImageMap *imageMap,
+OPENCL_FORCE_NOT_INLINE float2 ImageMap_GetDuv(__global const ImageMap *imageMap,
 		const float u, const float v
 		IMAGEMAPS_PARAM_DECL) {
 	__global const void *pixels = ImageMap_GetPixelsAddress(
