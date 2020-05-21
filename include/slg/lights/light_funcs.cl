@@ -936,7 +936,7 @@ OPENCL_FORCE_INLINE float3 LaserLight_Illuminate(__global const LightSource *las
 // Generic light functions
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_INLINE float3 EnvLight_GetRadiance(__global const LightSource *light,
+OPENCL_FORCE_NOT_INLINE float3 EnvLight_GetRadiance(__global const LightSource *light,
 		__global const BSDF *bsdf, const float3 dir, float *directPdfA
 		LIGHTS_PARAM_DECL) {
 	switch (light->type) {
@@ -975,7 +975,7 @@ OPENCL_FORCE_INLINE float3 IntersectableLight_GetRadiance(__global const LightSo
 			MATERIALS_PARAM);
 }
 
-OPENCL_FORCE_INLINE float3 Light_Illuminate(
+OPENCL_FORCE_NOT_INLINE float3 Light_Illuminate(
 		__global const LightSource *light,
 		__global const BSDF *bsdf,
 		const float time, const float u0, const float u1,

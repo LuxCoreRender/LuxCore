@@ -311,7 +311,7 @@ OPENCL_FORCE_INLINE float HeterogeneousVolume_Scatter(__global const Volume *vol
 // Volume scatter
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_INLINE float Volume_Scatter(__global const Volume *vol,
+OPENCL_FORCE_NOT_INLINE float Volume_Scatter(__global const Volume *vol,
 		__global Ray *ray, const float hitT,
 		const float passThrough,
 		const bool scatteredStart, float3 *connectionThroughput,

@@ -56,7 +56,7 @@ OPENCL_FORCE_INLINE float2 UVMapping2D_MapDuv(__global const TextureMapping2D *m
 	return UVMapping2D_Map(mapping, hitPoint TEXTURES_PARAM);
 }
 
-OPENCL_FORCE_INLINE float2 TextureMapping2D_Map(__global const TextureMapping2D *mapping,
+OPENCL_FORCE_NOT_INLINE float2 TextureMapping2D_Map(__global const TextureMapping2D *mapping,
 		__global const HitPoint *hitPoint TEXTURES_PARAM_DECL) {
 	switch (mapping->type) {
 		case UVMAPPING2D:
@@ -66,7 +66,7 @@ OPENCL_FORCE_INLINE float2 TextureMapping2D_Map(__global const TextureMapping2D 
 	}
 }
 
-OPENCL_FORCE_INLINE float2 TextureMapping2D_MapDuv(__global const TextureMapping2D *mapping,
+OPENCL_FORCE_NOT_INLINE float2 TextureMapping2D_MapDuv(__global const TextureMapping2D *mapping,
 		__global const HitPoint *hitPoint, float2 *ds, float2 *dt TEXTURES_PARAM_DECL) {
 	switch (mapping->type) {
 		case UVMAPPING2D:
@@ -122,12 +122,8 @@ OPENCL_FORCE_INLINE float3 LocalMapping3D_Map(__global const TextureMapping3D *m
 }
 
 //------------------------------------------------------------------------------
-#if defined(LUXRAYS_OS_APPLE)
-OPENCL_FORCE_NOT_INLINE
-#else
-OPENCL_FORCE_INLINE
-#endif 
-    float3 TextureMapping3D_Map(__global const TextureMapping3D *mapping,
+
+OPENCL_FORCE_NOT_INLINE float3 TextureMapping3D_Map(__global const TextureMapping3D *mapping,
 		__global const HitPoint *hitPoint, float3 *shadeN TEXTURES_PARAM_DECL) {
 	switch (mapping->type) {
 		case UVMAPPING3D:
