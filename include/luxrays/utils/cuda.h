@@ -21,8 +21,7 @@
 
 #if defined(LUXRAYS_ENABLE_CUDA)
 
-#include <cuda.h>
-#include <nvrtc.h>
+#include <cuew.h>
 
 namespace luxrays {
 

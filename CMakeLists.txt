@@ -93,6 +93,7 @@ SET(LuxRays_INCLUDE_DIR "${LuxRays_SOURCE_DIR}/include")
 include_directories("${LuxRays_INCLUDE_DIR}")
 
 include_directories("${LuxRays_SOURCE_DIR}/deps/json-3.7.3/include")
+include_directories("${LuxRays_SOURCE_DIR}/deps/cuew/include")
 
 # Find dependencies
 include(Dependencies)

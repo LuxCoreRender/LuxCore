@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <iostream>
 #include <boost/filesystem.hpp>
 
 #include "luxrays/luxrays.h"
@@ -43,8 +44,18 @@ void Init() {
 #endif
 
 #if defined(LUXRAYS_ENABLE_CUDA)
+	if (cuewInit(CUEW_INIT_CUDA) != CUEW_SUCCESS) {
+		std::cout << "ERROR 1\n";
+	}
+	
+	if (cuewInit(CUEW_INIT_NVRTC) != CUEW_SUCCESS) {
+		std::cout << "ERROR 2\n";
+	}
+#endif
+
+#if defined(LUXRAYS_ENABLE_CUDA)
 	CHECK_CUDA_ERROR(cuInit(0));
-#endif	
+#endif
 }
 
 }
