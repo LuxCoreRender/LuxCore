@@ -35,10 +35,10 @@ typedef struct {
 	unsigned int channelCount, width, height;
 	unsigned int pageIndex;
 	// The following field must be 64bit aligned (for OpenCL)
-#if defined (LUXRAYS_OS_APPLE) || defined (__APPLE__)
-    unsigned long pixelsIndex;
+#if defined(SLG_OPENCL_KERNEL)
+	unsigned long pixelsIndex;
 #else
-	size_t pixelsIndex;
+	cl_long pixelsIndex;	
 #endif
 } ImageMap;
 

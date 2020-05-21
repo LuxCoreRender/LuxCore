@@ -255,7 +255,7 @@ OPENCL_FORCE_INLINE void Film_AddSampleResultData(const uint x, const uint y,
 		Film_IncPixelUInt(usePixelAtomics, &filmSampleCount[index1]);
 }
 
-OPENCL_FORCE_INLINE void Film_AddSample(
+OPENCL_FORCE_NOT_INLINE void Film_AddSample(
 		const uint x, const uint y,
 		__global SampleResult *sampleResult, const float weight
 		FILM_PARAM_DECL) {
