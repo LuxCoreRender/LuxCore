@@ -38,7 +38,7 @@ typedef struct {
 #if defined(SLG_OPENCL_KERNEL)
 	unsigned long pixelsIndex;
 #else
-	cl_long pixelsIndex;	
+	cl_ulong pixelsIndex;	
 #endif
 } ImageMap;
 
