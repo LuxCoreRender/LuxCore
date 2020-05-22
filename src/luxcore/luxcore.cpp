@@ -190,11 +190,7 @@ Properties luxcore::GetPlatformDesc() {
 	props << Property("compile.LUXRAYS_ENABLE_OPENCL")(false);
 #endif
 
-#if defined(LUXRAYS_ENABLE_CUDA)
-	props << Property("compile.LUXRAYS_ENABLE_CUDA")(true);
-#else
-	props << Property("compile.LUXRAYS_ENABLE_CUDA")(false);
-#endif
+	props << Property("compile.LUXRAYS_ENABLE_CUDA")(luxrays::isCudaAvilable);
 
 	props << Property("compile.LUXCORE_DISABLE_EMBREE_BVH_BUILDER")(false);
 	props << Property("compile.LC_MESH_MAX_DATA_COUNT")(LC_MESH_MAX_DATA_COUNT);

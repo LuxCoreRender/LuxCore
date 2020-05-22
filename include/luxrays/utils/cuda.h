@@ -19,7 +19,7 @@
 #ifndef _LUXRAYS_CUDA_H
 #define	_LUXRAYS_CUDA_H
 
-#if defined(LUXRAYS_ENABLE_CUDA)
+#if !defined(LUXRAYS_DISABLE_CUDA)
 
 #include <cuew.h>
 

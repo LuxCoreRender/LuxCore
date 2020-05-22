@@ -20,7 +20,7 @@
 #include <boost/filesystem.hpp>
 
 #include "luxrays/luxrays.h"
-#if defined(LUXRAYS_ENABLE_CUDA)
+#if !defined(LUXRAYS_DISABLE_CUDA)
 #include "luxrays/utils/cuda.h"
 #endif
 
@@ -33,6 +33,8 @@ using namespace luxrays;
 
 namespace luxrays {
 
+bool isCudaAvilable = false;
+
 void Init() {
 #if defined(WIN32)
 	// Set locale for conversion from UTF-16 to UTF-8 on Windows. LuxRays/LuxCore assume
@@ -43,18 +45,12 @@ void Init() {
 			std::locale(std::locale(), new std::codecvt_utf8_utf16<wchar_t>()));
 #endif
 
-#if defined(LUXRAYS_ENABLE_CUDA)
-	if (cuewInit(CUEW_INIT_CUDA) != CUEW_SUCCESS) {
-		std::cout << "ERROR 1\n";
-	}
-	
-	if (cuewInit(CUEW_INIT_NVRTC) != CUEW_SUCCESS) {
-		std::cout << "ERROR 2\n";
-	}
-#endif
+#if !defined(LUXRAYS_DISABLE_CUDA)
+	if (cuewInit(CUEW_INIT_CUDA|CUEW_INIT_NVRTC) == CUEW_SUCCESS) {
+		isCudaAvilable = true;
 
-#if defined(LUXRAYS_ENABLE_CUDA)
-	CHECK_CUDA_ERROR(cuInit(0));
+		CHECK_CUDA_ERROR(cuInit(0));
+	}
 #endif
 }
 

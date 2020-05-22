@@ -114,10 +114,6 @@ if (NOT OPENGL_FOUND AND LUXRAYS_ENABLE_OPENCL)
 	MESSAGE(FATAL_ERROR "--> Could not locate required OpenGL files, disabling OpenCL support, disabling samples build")
 endif()
 
-if ((NOT CUDA_FOUND AND LUXRAYS_ENABLE_CUDA) OR (LUXRAYS_ENABLE_CUDA AND NOT LUXRAYS_ENABLE_OPENCL))
-	MESSAGE(FATAL_ERROR "--> CUDA support requires to enable OpenCL support too")
-endif()
-
 if (NOT EMBREE_FOUND)
 	MESSAGE(FATAL_ERROR "--> Could not locate required Intel Embree files - Please check ${EMBREE_SEARCH_PATH}")
 endif()
@@ -142,10 +138,6 @@ endif()
 
 if (LUXRAYS_ENABLE_OPENCL)
 	ADD_DEFINITIONS("-DLUXRAYS_ENABLE_OPENCL")
-endif()
-
-if (LUXRAYS_ENABLE_CUDA)
-	ADD_DEFINITIONS("-DLUXRAYS_ENABLE_CUDA")
 endif()
 
 if (BUILD_LUXCORE_DLL)

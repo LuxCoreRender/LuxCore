@@ -58,6 +58,8 @@ class Vector;
 
 extern void Init();
 
+extern bool isCudaAvilable;
+
 }
 
 #endif	/* _LUXRAYS_H */

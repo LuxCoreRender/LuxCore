@@ -29,7 +29,7 @@
 #include "luxrays/devices/ocldevice.h"
 #include "luxrays/devices/oclintersectiondevice.h"
 #endif
-#if defined(LUXRAYS_ENABLE_CUDA)
+#if !defined(LUXRAYS_DISABLE_CUDA)
 #include "luxrays/devices/cudadevice.h"
 #include "luxrays/devices/cudaintersectiondevice.h"
 #endif
@@ -97,20 +97,28 @@ Context::Context(LuxRaysDebugHandler handler, const Properties &config) : cfg(co
 	}
 #endif
 
-#if defined(LUXRAYS_ENABLE_CUDA)
+#if !defined(LUXRAYS_DISABLE_CUDA)
 	//--------------------------------------------------------------------------
 	// Add all CUDA devices
 	//--------------------------------------------------------------------------
+	
+	LR_LOG(this, "CUDA support: enabled");
 
-	int driverVersion;
-	CHECK_CUDA_ERROR(cuDriverGetVersion(&driverVersion));
-	LR_LOG(this, "CUDA driver version: " << (driverVersion / 1000) << "." << (driverVersion % 1000));
+	if (isCudaAvilable) {
+		LR_LOG(this, "CUDA support: available");
 
-	int devCount;
-	CHECK_CUDA_ERROR(cuDeviceGetCount(&devCount));
-	LR_LOG(this, "CUDA device count: " << devCount);
+		int driverVersion;
+		CHECK_CUDA_ERROR(cuDriverGetVersion(&driverVersion));
+		LR_LOG(this, "CUDA driver version: " << (driverVersion / 1000) << "." << (driverVersion % 1000));
 
-	CUDADeviceDescription::AddDeviceDescs(deviceDescriptions);
+		int devCount;
+		CHECK_CUDA_ERROR(cuDeviceGetCount(&devCount));
+		LR_LOG(this, "CUDA device count: " << devCount);
+
+		CUDADeviceDescription::AddDeviceDescs(deviceDescriptions);
+	}
+#else
+	LR_LOG(this, "CUDA support: disabled");
 #endif
 
 	// Print device info
@@ -252,7 +260,7 @@ vector<IntersectionDevice *> Context::CreateIntersectionDevices(
 			device = new OpenCLIntersectionDevice(this, oclDeviceDesc, indexOffset + i);
 		}
 #endif
-#if defined(LUXRAYS_ENABLE_CUDA)
+#if !defined(LUXRAYS_DISABLE_CUDA)
 		else if (deviceType & DEVICE_TYPE_CUDA_ALL) {
 			// CUDA devices
 			CUDADeviceDescription *cudaDeviceDesc = (CUDADeviceDescription *)deviceDesc[i];
@@ -305,7 +313,7 @@ vector<HardwareDevice *> Context::CreateHardwareDevices(
 			device = new OpenCLDevice(this, oclDeviceDesc, indexOffset + i);
 		}
 #endif
-#if defined(LUXRAYS_ENABLE_CUDA)
+#if !defined(LUXRAYS_DISABLE_CUDA)
 		else if (deviceType & DEVICE_TYPE_CUDA_ALL) {
 			// CUDA devices
 			CUDADeviceDescription *cudaDeviceDesc = (CUDADeviceDescription *)deviceDesc[i];
