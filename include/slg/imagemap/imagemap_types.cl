@@ -38,7 +38,13 @@ typedef struct {
 #if defined(SLG_OPENCL_KERNEL)
 	unsigned long pixelsIndex;
 #else
-	cl_ulong pixelsIndex;	
+#if defined(LUXRAYS_ENABLE_OPENCL)
+	cl_ulong pixelsIndex;
+#else
+	// In this, case cl_ulong is not defined. The type, in this case, doesn't
+	// really matter because this structure is not used at all.
+	unsigned long long pixelsIndex;
+#endif
 #endif
 } ImageMap;
 
