@@ -344,7 +344,7 @@ OPENCL_FORCE_INLINE bool DirectLight_BSDFSampling(
 
 	if (Spectrum_IsBlack(bsdfEval) ||
 			(taskConfig->pathTracer.hybridBackForward.enabled &&
-			EyePathInfo_IsCausticPath(pathInfo, event,
+			EyePathInfo_IsCausticPathWithEvent(pathInfo, event,
 				BSDF_GetGlossiness(bsdf MATERIALS_PARAM),
 				taskConfig->pathTracer.hybridBackForward.glossinessThreshold))
 			)

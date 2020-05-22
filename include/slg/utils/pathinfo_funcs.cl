@@ -108,7 +108,11 @@ OPENCL_FORCE_INLINE void EyePathInfo_AddVertex(__global EyePathInfo *pathInfo,
 	pathInfo->lastGlossiness = glossiness;
 }
 
-OPENCL_FORCE_INLINE bool EyePathInfo_IsCausticPath(__global EyePathInfo *pathInfo,
+OPENCL_FORCE_INLINE bool EyePathInfo_IsCausticPath(__global EyePathInfo *pathInfo) {
+	return pathInfo->isNearlyCaustic && (pathInfo->depth.depth > 1);
+}
+
+OPENCL_FORCE_INLINE bool EyePathInfo_IsCausticPathWithEvent(__global EyePathInfo *pathInfo,
 		const BSDFEvent event, const float glossiness, const float glossinessThreshold) {
 	// Note: the +1 is there for the event passed as method arguments
 	return pathInfo->isNearlyCaustic && (pathInfo->depth.depth + 1 > 1) &&
