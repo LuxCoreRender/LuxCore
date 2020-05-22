@@ -31,6 +31,7 @@
 #include "luxrays/core/namedobject.h"
 #include "luxrays/utils/properties.h"
 #include "luxrays/utils/serializationutils.h"
+#include "luxrays/utils/ocl.h"
 #include "slg/utils/halfserialization.h"
 
 namespace slg {
