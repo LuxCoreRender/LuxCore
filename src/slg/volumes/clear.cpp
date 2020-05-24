@@ -96,13 +96,13 @@ void ClearVolume::Pdf(const HitPoint &hitPoint,
 }
 
 void ClearVolume::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
-	Material::AddReferencedTextures(referencedTexs);
+	Volume::AddReferencedTextures(referencedTexs);
 
 	sigmaA->AddReferencedTextures(referencedTexs);
 }
 
 void ClearVolume::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
-	Material::UpdateTextureReferences(oldTex, newTex);
+	Volume::UpdateTextureReferences(oldTex, newTex);
 
 	if (sigmaA == oldTex)
 		sigmaA = newTex;

@@ -854,7 +854,7 @@ void CompiledScene::CompileMaterials() {
 			case CLEAR_VOL:
 			case HOMOGENEOUS_VOL:
 			case HETEROGENEOUS_VOL: {
-				const Volume *v = static_cast<const ClearVolume *>(m);
+				const Volume *v = static_cast<const Volume *>(m);
 				mat->volume.iorTexIndex = v->GetIORTexture() ?
 					scene->texDefs.GetTextureIndex(v->GetIORTexture()) :
 					NULL_INDEX;
