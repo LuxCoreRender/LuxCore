@@ -42,7 +42,7 @@ LuxCoreApp::LuxCoreApp(luxcore::RenderConfig *renderConfig) :
 		acceleratorWindow(this), epsilonWindow(this),
 		filmChannelsWindow(this), filmOutputsWindow(this),
 		filmRadianceGroupsWindow(this), lightStrategyWindow(this),
-#if defined(LUXRAYS_ENABLE_OPENCL)
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 		oclDeviceWindow(this),
 #endif
 		pixelFilterWindow(this), renderEngineWindow(this),
@@ -149,7 +149,7 @@ void LuxCoreApp::CloseAllRenderConfigEditors() {
 	filmOutputsWindow.Close();
 	filmRadianceGroupsWindow.Close();
 	lightStrategyWindow.Close();
-#if defined(LUXRAYS_ENABLE_OPENCL)
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 	oclDeviceWindow.Close();
 #endif
 	pixelFilterWindow.Close();
@@ -365,13 +365,6 @@ void LuxCoreApp::StartRendering(RenderState *startState, Film *startFilm) {
 		
 		if (currentTool == TOOL_USER_IMPORTANCE_PAINT)
 			userImportancePaintWindow.Init();
-#if defined(LUXRAYS_ENABLE_OPENCL)
-	} catch (cl::Error &err) {
-		LA_LOG("RenderSession starting OpenCL error: " << err.what() << "(" << oclErrorString(err.err()) << ")");
-
-		delete session;
-		session = NULL;
-#endif
 	} catch(exception &ex) {
 		LA_LOG("RenderSession starting error: " << endl << ex.what());
 

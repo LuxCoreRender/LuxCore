@@ -24,7 +24,7 @@
 #include "luxrays/utils/oclerror.h"
 #include "luxrays/utils/oclcache.h"
 
-#if defined(LUXRAYS_ENABLE_OPENCL)
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 
 namespace luxrays {
 

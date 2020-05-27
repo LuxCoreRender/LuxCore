@@ -19,7 +19,7 @@
 #ifndef _SLG_PATHOCL_H
 #define	_SLG_PATHOCL_H
 
-#if defined(LUXRAYS_ENABLE_OPENCL)
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 
 #include "slg/engines/pathoclbase/pathoclbase.h"
 

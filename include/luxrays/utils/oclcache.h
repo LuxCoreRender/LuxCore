@@ -23,7 +23,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/unordered_map.hpp>
 
-#if defined(LUXRAYS_ENABLE_OPENCL)
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 
 #include "luxrays/utils/ocl.h"
 
@@ -34,14 +34,14 @@ public:
 	oclKernelCache() { }
 	virtual ~oclKernelCache() { }
 
-	virtual cl::Program *Compile(cl::Context &context, cl::Device &device,
+	virtual cl_program Compile(cl_context context, cl_device_id device,
 		const std::vector<std::string> &kernelsParameters, const std::string &kernelSource,
-		bool *cached, cl::STRING_CLASS *error) = 0;
+		bool *cached, std::string *errorStr) = 0;
 
 	static std::string ToOptsString(const std::vector<std::string> &kernelsParameters);
-	static cl::Program *ForcedCompile(cl::Context &context, cl::Device &device,
+	static cl_program ForcedCompile(cl_context context, cl_device_id device,
 		const std::vector<std::string> &kernelsParameters, const std::string &kernelSource,
-		cl::STRING_CLASS *error);
+		std::string *errorStr);
 };
 
 class oclKernelDummyCache : public oclKernelCache {
@@ -49,13 +49,13 @@ public:
 	oclKernelDummyCache() { }
 	~oclKernelDummyCache() { }
 
-	cl::Program *Compile(cl::Context &context, cl::Device &device,
+	virtual cl_program Compile(cl_context context, cl_device_id device,
 		const std::vector<std::string> &kernelsParameters, const std::string &kernelSource,
-		bool *cached, cl::STRING_CLASS *error) {
+		bool *cached, std::string *errorStr) {
 		if (cached)
 			*cached = false;
 
-		return ForcedCompile(context, device, kernelsParameters, kernelSource, error);
+		return ForcedCompile(context, device, kernelsParameters, kernelSource, errorStr);
 	}
 };
 
@@ -65,9 +65,9 @@ public:
 	oclKernelPersistentCache(const std::string &applicationName);
 	~oclKernelPersistentCache();
 
-	cl::Program *Compile(cl::Context &context, cl::Device &device,
+	virtual cl_program Compile(cl_context context, cl_device_id device,
 		const std::vector<std::string> &kernelsParameters, const std::string &kernelSource,
-		bool *cached, cl::STRING_CLASS *error);
+		bool *cached, std::string *errorStr);
 
 	static std::string HashString(const std::string &ss);
 	static u_int HashBin(const char *s, const size_t size);

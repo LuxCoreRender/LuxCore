@@ -21,7 +21,7 @@
 
 #include <boost/thread.hpp>
 
-#if defined(LUXRAYS_ENABLE_OPENCL)
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 
 #include "slg/engines/tilepathocl/tilepathocl.h"
 

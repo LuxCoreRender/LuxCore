@@ -54,7 +54,7 @@ typedef enum {
 
 class DeviceDescription {
 public:
-	DeviceDescription(const std::string deviceName,
+	DeviceDescription(const std::string &deviceName,
 		const DeviceType deviceType) :
 		name(deviceName), type(deviceType),
 		forceWorkGroupSize(0) { }

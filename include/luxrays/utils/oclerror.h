@@ -24,14 +24,25 @@
 
 #include "luxrays/utils/exportdefs.h"
 #include "luxrays/utils/ocl.h"
+#include "luxrays/utils/utils.h"
 
-#if defined(LUXRAYS_ENABLE_OPENCL)
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 
 namespace luxrays {
 
 // Same utility function
 
 CPP_EXPORT CPP_API std::string oclErrorString(cl_int error);
+
+#define CHECK_OCL_ERROR(err) CheckOpenCLError(err, __FILE__, __LINE__)
+
+inline void CheckOpenCLError(const cl_int err, const char *file, const int line) {
+  if (err != CL_SUCCESS) {
+	  throw std::runtime_error("OpenCL driver API error "
+			  "(code: " + ToString(err) + ", file:" + std::string(file) + ", line: " + ToString(line) + ")"
+			  ": " + oclErrorString(err) + "\n");
+	}
+}
 
 }
 

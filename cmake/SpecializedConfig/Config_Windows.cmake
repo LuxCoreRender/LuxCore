@@ -26,7 +26,6 @@ IF(MSVC)
     SET(FLEX_EXECUTABLE         "$ENV{LUX_WINDOWS_BUILD_ROOT}/support/bin/win_flex.exe")
     SET(OPENIMAGEIO_INCLUDE_DIR "$ENV{INCLUDE_DIR}/OpenImageIO")
     SET(OPENEXR_ROOT            "$ENV{INCLUDE_DIR}/OpenEXR")
-    #SET(OPENCL_SEARCH_PATH     "$ENV{LUX_WINDOWS_BUILD_ROOT}/include")
     SET(BOOST_SEARCH_PATH       "$ENV{INCLUDE_DIR}/Boost")
     SET(Boost_USE_STATIC_LIBS   ON)
     SET(BOOST_LIBRARYDIR        "$ENV{LIB_DIR}")
@@ -41,7 +40,6 @@ ELSE(MSVC)
 
   SET(FREEIMAGE_SEARCH_PATH     "${LuxRays_SOURCE_DIR}/../FreeImage")
   SET(BOOST_SEARCH_PATH         "${LuxRays_SOURCE_DIR}/../boost")
-  SET(OPENCL_SEARCH_PATH        "${LuxRays_SOURCE_DIR}/../opencl")
 
 ENDIF(MSVC)
 

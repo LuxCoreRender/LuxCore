@@ -280,7 +280,7 @@ void LuxCoreApp::GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int
 				app->IncScreenRefreshInterval();
 				break;
 			}
-#if defined(LUXRAYS_ENABLE_OPENCL)
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 			case GLFW_KEY_1:
 				app->CloseAllRenderConfigEditors();
 				app->SetRenderingEngineType("PATHOCL");
@@ -302,7 +302,7 @@ void LuxCoreApp::GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int
 				app->CloseAllRenderConfigEditors();
 				app->SetRenderingEngineType("BIDIRVMCPU");
 				break;
-#if defined(LUXRAYS_ENABLE_OPENCL)
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 			case GLFW_KEY_6:
 				app->CloseAllRenderConfigEditors();
 				app->SetRenderingEngineType("RTPATHOCL");
@@ -312,7 +312,7 @@ void LuxCoreApp::GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int
 				app->CloseAllRenderConfigEditors();
 				app->SetRenderingEngineType("TILEPATHCPU");
 				break;
-#if defined(LUXRAYS_ENABLE_OPENCL)
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 			case GLFW_KEY_8:
 				app->CloseAllRenderConfigEditors();
 				app->SetRenderingEngineType("TILEPATHOCL");

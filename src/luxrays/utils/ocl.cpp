@@ -16,7 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#if defined(LUXRAYS_ENABLE_OPENCL)
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 
 #include <iostream>
 #include <fstream>
@@ -158,34 +158,37 @@ string oclKernelCache::ToOptsString(const vector<string> &kernelsParameters) {
 	return result;
 }
 
-cl::Program *oclKernelCache::ForcedCompile(cl::Context &context, cl::Device &device,
+cl_program oclKernelCache::ForcedCompile(cl_context context, cl_device_id device,
 		const vector<string> &kernelsParameters, const string &kernelSource,
-		cl::STRING_CLASS *error) {
-	cl::Program *program = NULL;
+		string *errorStr) {
+	const char *kernelSources[1] = { kernelSource.c_str() };
+	const size_t sourceSizes[1] = { kernelSource.length() };
+	cl_int error;
+	cl_program program = clCreateProgramWithSource(context, 1, kernelSources, sourceSizes, &error);
+	CHECK_OCL_ERROR(error);
 
-	try {
-		const string optsStr = ToOptsString(kernelsParameters);
+	const string optsStr = ToOptsString(kernelsParameters);
+	error = clBuildProgram(program, 1, &device, optsStr.c_str(), nullptr, nullptr);
+	if (error != CL_SUCCESS) {
+		if (errorStr) {
+			string logStr;
+			if (program) {
+				size_t valueSize;
+				CHECK_OCL_ERROR(clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, 0, &valueSize, nullptr));
+				char *value = (char *)alloca(valueSize * sizeof(char));
+				CHECK_OCL_ERROR(clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, valueSize, value, nullptr));
 
-		cl::Program::Sources source(1, make_pair(kernelSource.c_str(), kernelSource.length()));
-		program = new cl::Program(context, source);
+				logStr = string(value);
+			} else
+				logStr = "Build info not available";
 
-		VECTOR_CLASS<cl::Device> buildDevice;
-		buildDevice.push_back(device);
-		program->build(buildDevice, optsStr.c_str());
-	} catch (cl::Error &err) {
-		string clerr;
+			*errorStr = "ERROR " + ToString(error) + "[" + oclErrorString(error) + "]:" +
+				"\n" + logStr + "\n";
+		}
+
 		if (program)
-			clerr = program->getBuildInfo<CL_PROGRAM_BUILD_LOG>(device);
-		else
-			clerr = "Build info not available";
-
-		stringstream ss;
-		ss << "ERROR " << err.what() << "[" << oclErrorString(err.err()) << "]:" <<
-				endl << clerr << endl;
-		*error = ss.str();
-
-		delete program;
-		program = NULL;
+			CHECK_OCL_ERROR(clReleaseProgram(program));
+		program = nullptr;
 	}
 
 	return program;
@@ -258,15 +261,30 @@ u_int oclKernelPersistentCache::HashBin(const char *s, const size_t size) {
 	return hash;
 }
 
-cl::Program *oclKernelPersistentCache::Compile(cl::Context &context, cl::Device& device,
+cl_program oclKernelPersistentCache::Compile(cl_context context, cl_device_id device,
 		const vector<string> &kernelsParameters, const string &kernelSource,
-		bool *cached, cl::STRING_CLASS *error) {
-	// Check if the kernel is available in the cache
+		bool *cached, string *errorStr) {
+	// Check if the kernel is available inside the cache
 
-	const cl::Platform platform = device.getInfo<CL_DEVICE_PLATFORM>();
-	const string platformName = boost::trim_copy(platform.getInfo<CL_PLATFORM_VENDOR>());
-	const string deviceName = boost::trim_copy(device.getInfo<CL_DEVICE_NAME>());
-	const string deviceUnits = ToString(device.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>());
+	cl_platform_id platform;
+	CHECK_OCL_ERROR(clGetDeviceInfo(device, CL_DEVICE_PLATFORM, sizeof(cl_platform_id), &platform, nullptr));
+	
+	size_t platformNameSize;
+	CHECK_OCL_ERROR(clGetPlatformInfo(platform, CL_PLATFORM_VENDOR, 0, nullptr, &platformNameSize));
+	char *platformNameChar = (char *)alloca(platformNameSize * sizeof(char));
+	CHECK_OCL_ERROR(clGetPlatformInfo(platform, CL_PLATFORM_VENDOR, platformNameSize, platformNameChar, nullptr));
+	string platformName = boost::trim_copy(string(platformNameChar));
+
+	size_t deviceNameSize;
+	CHECK_OCL_ERROR(clGetDeviceInfo(device, CL_DEVICE_NAME, 0, nullptr, &deviceNameSize));
+	char *deviceNameChar = (char *)alloca(deviceNameSize * sizeof(char));
+	CHECK_OCL_ERROR(clGetDeviceInfo(device, CL_DEVICE_NAME, deviceNameSize, deviceNameChar, nullptr));
+	string deviceName = boost::trim_copy(string(deviceNameChar));
+	
+	cl_uint deviceUnitsUInt;
+	CHECK_OCL_ERROR(clGetDeviceInfo(device, CL_DEVICE_MAX_COMPUTE_UNITS, sizeof(cl_uint), &deviceUnitsUInt, nullptr));
+	string deviceUnits = ToString(deviceUnitsUInt);
+
 	const string kernelName = HashString(ToOptsString(kernelsParameters)) + "-" + HashString(kernelSource) + ".ocl";
 	const boost::filesystem::path dirPath = GetCacheDir(appName) / SanitizeFileName(platformName) /
 		SanitizeFileName(deviceName) / SanitizeFileName(deviceUnits);
@@ -275,19 +293,23 @@ cl::Program *oclKernelPersistentCache::Compile(cl::Context &context, cl::Device&
 	
 	if (!boost::filesystem::exists(filePath)) {
 		// It isn't available, compile the source
-		cl::Program *program = ForcedCompile(
-				context, device, kernelsParameters, kernelSource, error);
+		cl_program program = ForcedCompile(context, device,
+				kernelsParameters, kernelSource, errorStr);
 		if (!program)
-			return NULL;
+			return nullptr;
 
 		// Obtain the binaries of the sources
-		VECTOR_CLASS<char *> bins = program->getInfo<CL_PROGRAM_BINARIES>();
-		assert (bins.size() == 1);
-		VECTOR_CLASS<size_t> sizes = program->getInfo<CL_PROGRAM_BINARY_SIZES>();
-		assert (sizes.size() == 1);
+		size_t binsCount;
+		CHECK_OCL_ERROR(clGetProgramInfo(program, CL_PROGRAM_BINARY_SIZES, 0, nullptr, &binsCount));
+
+		size_t *binsSizes = (size_t *)alloca(binsCount * sizeof(size_t));
+		CHECK_OCL_ERROR(clGetProgramInfo(program, CL_PROGRAM_BINARY_SIZES, binsCount, binsSizes, nullptr));
 
 		// Create the file only if the binaries include something
-		if (sizes[0] > 0) {
+		if (binsSizes[0] > 0) {
+			char *bins = (char *)alloca(binsSizes[0] * sizeof(char));
+			CHECK_OCL_ERROR(clGetProgramInfo(program, CL_PROGRAM_BINARIES, binsSizes[0] * sizeof(char), &bins, nullptr));
+
 			// Add the kernel to the cache
 			boost::filesystem::create_directories(dirPath);
 
@@ -299,10 +321,10 @@ cl::Program *oclKernelPersistentCache::Compile(cl::Context &context, cl::Device&
 					boost::filesystem::ofstream::trunc);
 
 			// Write the binary hash
-			const u_int hashBin = HashBin(bins[0], sizes[0]);
+			const u_int hashBin = HashBin(bins, binsSizes[0]);
 			file.write((char *)&hashBin, sizeof(int));
 
-			file.write(bins[0], sizes[0]);
+			file.write(bins, binsSizes[0]);
 			// Check for errors
 			char buf[512];
 			if (file.fail()) {
@@ -335,6 +357,7 @@ cl::Program *oclKernelPersistentCache::Compile(cl::Context &context, cl::Device&
 			file.read((char *)&hashBin, sizeof(int));
 
 			file.read(&kernelBin[0], kernelSize);
+
 			// Check for errors
 			char buf[512];
 			if (file.fail()) {
@@ -348,14 +371,19 @@ cl::Program *oclKernelPersistentCache::Compile(cl::Context &context, cl::Device&
 			if (hashBin != HashBin(&kernelBin[0], kernelSize)) {
 				// Something wrong in the file, remove the file and retry
 				boost::filesystem::remove(filePath);
-				return Compile(context, device, kernelsParameters, kernelSource, cached, error);
+				return Compile(context, device, kernelsParameters, kernelSource, cached, errorStr);
 			} else {
 				// Compile from the binaries
-				VECTOR_CLASS<cl::Device> buildDevice;
-				buildDevice.push_back(device);
-				cl::Program *program = new cl::Program(context, buildDevice,
-						cl::Program::Binaries(1, make_pair(&kernelBin[0], kernelSize)));
-				program->build(buildDevice);
+				vector<const unsigned char *> bins(1);
+				bins[0] = (unsigned char *)&kernelBin[0];
+				cl_int error;
+				cl_program program = clCreateProgramWithBinary(context, 1, &device, &kernelSize, 
+						&bins[0],
+						nullptr, &error);
+				CHECK_OCL_ERROR(error);
+				
+				error = clBuildProgram(program, 1, &device, nullptr, nullptr, nullptr);
+				CHECK_OCL_ERROR(error);
 
 				if (cached)
 					*cached = true;
@@ -365,7 +393,7 @@ cl::Program *oclKernelPersistentCache::Compile(cl::Context &context, cl::Device&
 		} else {
 			// Something wrong in the file, remove the file and retry
 			boost::filesystem::remove(filePath);
-			return Compile(context, device, kernelsParameters, kernelSource, cached, error);
+			return Compile(context, device, kernelsParameters, kernelSource, cached, errorStr);
 		}
 	}
 }

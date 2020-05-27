@@ -155,11 +155,6 @@ void Film::ExecuteImagePipelineThreadImpl(const u_int index) {
 		ExecuteImagePipelineImpl(index);
 	} catch (boost::thread_interrupted) {
 		SLG_LOG("[ExecuteImagePipelineThreadImpl::" << index << "] Image pipeline thread halted");
-#if defined(LUXRAYS_ENABLE_OPENCL)
-	} catch (cl::Error &err) {
-		SLG_LOG("[ExecuteImagePipelineThreadImpl::" << index << "] Image pipeline thread ERROR: " << err.what() <<
-				"(" << oclErrorString(err.err()) << ")");
-#endif
 	}
 
 	isAsyncImagePipelineRunning = false;

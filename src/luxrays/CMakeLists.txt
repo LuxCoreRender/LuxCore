@@ -202,6 +202,7 @@ set(LUXRAYS_SRCS
 	${LuxRays_SOURCE_DIR}/src/luxrays/utils/ply/rply.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/utils/properties.cpp
 	${LuxRays_SOURCE_DIR}/deps/cuew/src/cuew.cpp
+	${LuxRays_SOURCE_DIR}/deps/clew/src/clew.cpp
 )
 SOURCE_GROUP("Source Files\\LuxRays Library" FILES ${LUXRAYS_SRCS})
 
@@ -274,11 +275,6 @@ if (WIN32)
 # This is needed by Boost 1.67 but is not found automatically
     TARGET_LINK_LIBRARIES(luxrays bcrypt.lib)
 endif(WIN32)
-
-IF (LUXRAYS_ENABLE_OPENCL)
-	TARGET_LINK_LIBRARIES(luxrays ${OPENGL_gl_LIBRARY})
-	TARGET_LINK_LIBRARIES(luxrays ${OPENCL_LIBRARIES})
-ENDIF(LUXRAYS_ENABLE_OPENCL)
 
 TARGET_LINK_LIBRARIES(luxrays ${CMAKE_DL_LIBS})
 

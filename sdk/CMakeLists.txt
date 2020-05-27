@@ -37,11 +37,6 @@ if(NOT CMAKE_BUILD_TYPE)
 endif(NOT CMAKE_BUILD_TYPE)
 SET(CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE} CACHE STRING "assure config" FORCE) # makes sure type is shown in cmake gui
 
-# For compatibility with the past
-if (LUXRAYS_DISABLE_OPENCL)
-	set(LUXRAYS_ENABLE_OPENCL false)
-endif()
-
 message(STATUS "Building mode: " ${CMAKE_BUILD_TYPE})
 
 set(CMAKE_MODULE_PATH "${LuxRays_SOURCE_DIR}/cmake")
@@ -58,32 +53,12 @@ link_directories("${LuxRays_SOURCE_DIR}/lib")
 #
 ################################################################################
 
-if (LUXRAYS_ENABLE_OPENCL)
-	ADD_DEFINITIONS("-DLUXRAYS_ENABLE_OPENCL")
+if (LUXRAYS_DISABLE_OPENCL)
+	ADD_DEFINITIONS("-DLUXRAYS_DISABLE_OPENCL")
 endif()
 
-if (LUXRAYS_ENABLE_CUDA)
-	ADD_DEFINITIONS("-DLUXRAYS_ENABLE_CUDA")
-endif()
-
-
-################################################################################
-#
-# Find OpenCL
-#
-################################################################################
-
-if (LUXRAYS_ENABLE_OPENCL)
-	set(OPENCL_ROOT "${OPENCL_SEARCH_PATH}")
-	find_package(OpenCL)
-
-	if (OPENCL_FOUND)
-		include_directories(BEFORE SYSTEM ${OPENCL_INCLUDE_DIR} ${OPENCL_C_INCLUDE_DIR})
-	endif ()
-
-	if (NOT OPENCL_FOUND)
-		MESSAGE(FATAL_ERROR "--> Could not locate required OpenCL files")
-	endif()
+if (LUXRAYS_DISABLE_CUDA)
+	ADD_DEFINITIONS("-DLUXRAYS_DISABLE_CUDA")
 endif()
 
 

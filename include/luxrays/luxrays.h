@@ -58,6 +58,7 @@ class Vector;
 
 extern void Init();
 
+extern bool isOpenCLAvilable;
 extern bool isCudaAvilable;
 
 }
