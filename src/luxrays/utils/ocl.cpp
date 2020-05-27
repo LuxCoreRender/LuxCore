@@ -307,7 +307,10 @@ cl_program oclKernelPersistentCache::Compile(cl_context context, cl_device_id de
 
 		// Create the file only if the binaries include something
 		if (binsSizes[0] > 0) {
-			char *bins = (char *)alloca(binsSizes[0] * sizeof(char));
+			// Using here alloca() can trigger a stack overflow on Windows for
+			// large kernel binaries
+			unique_ptr<char> bin(new char[binsSizes[0]]);
+			char *bins = bin.get();
 			CHECK_OCL_ERROR(clGetProgramInfo(program, CL_PROGRAM_BINARIES, binsSizes[0] * sizeof(char), &bins, nullptr));
 
 			// Add the kernel to the cache
