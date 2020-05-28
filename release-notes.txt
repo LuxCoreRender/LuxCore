@@ -46,6 +46,7 @@
 * Fixed an OpenCL compilation error when using large number of objects on some old GPUs
 * Fixed a problem with BlendLuxCore when parsing more than 9 image pipelines (#336)
 * Fixed a bug causing fireflies when using light tracing for caustics in some case (#329)
+* Fixed a crash when using RemoveUnusedTextures() with Volumes (issue #377)
 
 Note: due to Glossycoating updated support for bump mapping on GPUs, some old scene using this kind of material/bump map combination may require some fix.
 

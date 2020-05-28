@@ -77,7 +77,7 @@ public:
 	void AddVertex(const BSDF &bsdf, const BSDFEvent event, const float pdfW,
 			const float glossinessThreshold);
 	
-	bool IsCausticPath() const { return isNearlyCaustic; }
+	bool IsCausticPath() const { return isNearlyCaustic && (depth.depth > 1); }
 	bool IsCausticPath(const BSDFEvent event, const float glossiness, const float glossinessThreshold) const;
 
 	bool isPassThroughPath;

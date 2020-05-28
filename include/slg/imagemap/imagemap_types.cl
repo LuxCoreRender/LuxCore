@@ -36,9 +36,23 @@ typedef struct {
 	unsigned int pageIndex;
 	// The following field must be 64bit aligned (for OpenCL)
 #if defined(SLG_OPENCL_KERNEL)
+	// CUDA unsigned long has a 32bit size so we need different definitions
+	// between CUDA and OpenCL
+#if defined(LUXRAYS_CUDA_DEVICE)
+	unsigned long long pixelsIndex;
+#elif defined(LUXRAYS_OPENCL_DEVICE)
 	unsigned long pixelsIndex;
 #else
-	cl_long pixelsIndex;	
+#error "Unsupported device in ImageMap struct"
+#endif
+#else
+#if defined(LUXRAYS_ENABLE_OPENCL)
+	cl_ulong pixelsIndex;
+#else
+	// In this, case cl_ulong is not defined. The type, in this case, doesn't
+	// really matter because this structure is not used at all.
+	unsigned long long pixelsIndex;
+#endif
 #endif
 } ImageMap;
 
