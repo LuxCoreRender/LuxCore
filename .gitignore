@@ -50,7 +50,7 @@ samples/pyluxcoretool/__pycache__
 xcuserdata/
 *.xcworkspace
 *.xccheckout
-
+macos/
 ###########################
 # OS OSX, junk
 .DS_Store
@@ -65,3 +65,4 @@ TAGS
 .dir-locals.el
 build_lux_osx.sh
 pack_lux_osx_2.sh
+MacDistFiles.tar.gz
