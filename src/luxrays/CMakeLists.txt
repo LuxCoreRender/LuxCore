@@ -201,6 +201,8 @@ set(LUXRAYS_SRCS
 	${LuxRays_SOURCE_DIR}/src/luxrays/utils/serializationutils.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/utils/ply/rply.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/utils/properties.cpp
+	${LuxRays_SOURCE_DIR}/deps/cuew/src/cuew.cpp
+	${LuxRays_SOURCE_DIR}/deps/clew/src/clew.cpp
 )
 SOURCE_GROUP("Source Files\\LuxRays Library" FILES ${LUXRAYS_SRCS})
 
@@ -274,14 +276,7 @@ if (WIN32)
     TARGET_LINK_LIBRARIES(luxrays bcrypt.lib)
 endif(WIN32)
 
-IF (LUXRAYS_ENABLE_OPENCL)
-	TARGET_LINK_LIBRARIES(luxrays ${OPENGL_gl_LIBRARY})
-	TARGET_LINK_LIBRARIES(luxrays ${OPENCL_LIBRARIES})
-ENDIF(NOT LUXRAYS_ENABLE_OPENCL)
-
-IF (LUXRAYS_ENABLE_CUDA)
-	TARGET_LINK_LIBRARIES(luxrays ${CUDA_ALL_LIBRARIES})
-ENDIF(LUXRAYS_ENABLE_CUDA)
+TARGET_LINK_LIBRARIES(luxrays ${CMAKE_DL_LIBS})
 
 ################################################################################
 #

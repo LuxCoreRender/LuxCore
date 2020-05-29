@@ -19,7 +19,7 @@
 #ifndef _SLG_PATHOCLBASE_H
 #define	_SLG_PATHOCLBASE_H
 
-#if defined(LUXRAYS_ENABLE_OPENCL)
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 
 #include "luxrays/devices/nativeintersectiondevice.h"
 #include "luxrays/devices/oclintersectiondevice.h"

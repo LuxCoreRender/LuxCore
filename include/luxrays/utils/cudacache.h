@@ -25,7 +25,7 @@
 
 #include "luxrays/utils/cuda.h"
 
-#if defined(LUXRAYS_ENABLE_CUDA)
+#if !defined(LUXRAYS_DISABLE_CUDA)
 
 namespace luxrays {
 

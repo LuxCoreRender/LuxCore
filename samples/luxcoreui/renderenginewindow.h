@@ -41,11 +41,11 @@ private:
 
 	luxrays::Properties GetAllRenderEngineProperties(const luxrays::Properties &cfgProps) const;
 	void PathGUI(luxrays::Properties &props, bool &modifiedProps);
-#if defined(LUXRAYS_ENABLE_OPENCL)
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 	void PathOCLGUI(luxrays::Properties &props, bool &modifiedProps);
 #endif
 	void TilePathGUI(luxrays::Properties &props, bool &modifiedProps);
-#if defined(LUXRAYS_ENABLE_OPENCL)
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 	void TilePathOCLGUI(luxrays::Properties &props, bool &modifiedProps);
 #endif
 	void BiDirGUI(luxrays::Properties &props, bool &modifiedProps);

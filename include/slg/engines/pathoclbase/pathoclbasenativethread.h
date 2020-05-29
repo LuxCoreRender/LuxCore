@@ -19,7 +19,7 @@
 #ifndef _SLG_PATHOCLBASENATIVETHREAD_H
 #define	_SLG_PATHOCLBASENATIVETHREAD_H
 
-#if defined(LUXRAYS_ENABLE_OPENCL)
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 
 #include <boost/thread/thread.hpp>
 

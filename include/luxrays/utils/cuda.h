@@ -19,10 +19,9 @@
 #ifndef _LUXRAYS_CUDA_H
 #define	_LUXRAYS_CUDA_H
 
-#if defined(LUXRAYS_ENABLE_CUDA)
+#if !defined(LUXRAYS_DISABLE_CUDA)
 
-#include <cuda.h>
-#include <nvrtc.h>
+#include <cuew.h>
 
 namespace luxrays {
 

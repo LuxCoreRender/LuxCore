@@ -24,9 +24,9 @@
 #include "luxrays/utils/cuda.h"
 #include "luxrays/utils/cudacache.h"
 
-#if defined(LUXRAYS_ENABLE_CUDA)
+#if !defined(LUXRAYS_DISABLE_CUDA)
 
-#if !defined(LUXRAYS_ENABLE_OPENCL)
+#if defined(LUXRAYS_DISABLE_OPENCL)
 #error "CUDA support can be enabled only if also OpenCL support is enabled"
 #endif
 

@@ -98,7 +98,7 @@ void Film::CreateHWContext() {
 		assert (hardwareDevice);
 		SLG_LOG("Film hardware device used: " << hardwareDevice->GetName() << " (Type: " << DeviceDescription::GetDeviceType(hardwareDevice->GetDeviceDesc()->GetType()) << ")");
 
-#if defined(LUXRAYS_ENABLE_OPENCL)
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 		OpenCLDeviceDescription *oclDesc = dynamic_cast<OpenCLDeviceDescription *>(selectedDeviceDesc);
 		if (oclDesc) {
 			// Check if OpenCL 1.1 is available

@@ -93,6 +93,8 @@ SET(LuxRays_INCLUDE_DIR "${LuxRays_SOURCE_DIR}/include")
 include_directories("${LuxRays_INCLUDE_DIR}")
 
 include_directories("${LuxRays_SOURCE_DIR}/deps/json-3.7.3/include")
+include_directories("${LuxRays_SOURCE_DIR}/deps/cuew/include")
+include_directories("${LuxRays_SOURCE_DIR}/deps/clew/include")
 
 # Find dependencies
 include(Dependencies)
@@ -105,16 +107,8 @@ if (NOT OPENIMAGEIO_FOUND)
 	MESSAGE(FATAL_ERROR "--> Could not locate required OpenImageIO files - Please check ${OPENIMAGEIO_SEARCH_PATH}")
 endif()
 
-if (NOT OPENCL_FOUND AND LUXRAYS_ENABLE_OPENCL)
-	MESSAGE(FATAL_ERROR "--> Could not locate required OpenCL files, disabling OpenCL support - Please check ${OPENCL_SEARCH_PATH}")
-endif()
-
-if (NOT OPENGL_FOUND AND LUXRAYS_ENABLE_OPENCL)
-	MESSAGE(FATAL_ERROR "--> Could not locate required OpenGL files, disabling OpenCL support, disabling samples build")
-endif()
-
-if ((NOT CUDA_FOUND AND LUXRAYS_ENABLE_CUDA) OR (LUXRAYS_ENABLE_CUDA AND NOT LUXRAYS_ENABLE_OPENCL))
-	MESSAGE(FATAL_ERROR "--> CUDA support requires to enable OpenCL support too")
+if (NOT OPENGL_FOUND)
+	MESSAGE(FATAL_ERROR "--> Could not locate required OpenGL file")
 endif()
 
 if (NOT EMBREE_FOUND)
@@ -141,10 +135,6 @@ endif()
 
 if (LUXRAYS_ENABLE_OPENCL)
 	ADD_DEFINITIONS("-DLUXRAYS_ENABLE_OPENCL")
-endif()
-
-if (LUXRAYS_ENABLE_CUDA)
-	ADD_DEFINITIONS("-DLUXRAYS_ENABLE_CUDA")
 endif()
 
 if (BUILD_LUXCORE_DLL)

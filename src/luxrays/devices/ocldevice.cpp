@@ -16,15 +16,9 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#if defined(LUXRAYS_ENABLE_OPENCL)
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 
-#if defined (__linux__)
-#include <GL/glx.h>
-#endif
-
-#if defined(__APPLE__)
-#include <OpenGL/OpenGL.h>
-#endif
+#include <memory>
 
 #include "luxrays/devices/ocldevice.h"
 #include "luxrays/kernels/kernels.h"
@@ -37,23 +31,28 @@ namespace luxrays {
 // OpenCL Device Description
 //------------------------------------------------------------------------------
 
-string OpenCLDeviceDescription::GetDeviceType(const cl_uint type) {
-	switch (type) {
-		case CL_DEVICE_TYPE_ALL:
-			return "TYPE_ALL";
-		case CL_DEVICE_TYPE_DEFAULT:
-			return "TYPE_DEFAULT";
-		case CL_DEVICE_TYPE_CPU:
-			return "TYPE_CPU";
-		case CL_DEVICE_TYPE_GPU:
-			return "TYPE_GPU";
-		default:
-			return "TYPE_UNKNOWN";
-	}
+string OpenCLDeviceDescription::GetOCLPlatformName(const cl_platform_id oclPlatform) {
+	size_t valueSize;
+	CHECK_OCL_ERROR(clGetPlatformInfo(oclPlatform, CL_PLATFORM_NAME, 0, nullptr, &valueSize));
+	char *value = (char *)alloca(valueSize * sizeof(char));
+	CHECK_OCL_ERROR(clGetPlatformInfo(oclPlatform, CL_PLATFORM_NAME, valueSize, value, nullptr));
+
+	return string(value);
 }
 
-DeviceType OpenCLDeviceDescription::GetOCLDeviceType(const cl_device_type type)
-{
+string OpenCLDeviceDescription::GetOCLDeviceName(const cl_device_id oclDevice) {
+	size_t valueSize;
+	CHECK_OCL_ERROR(clGetDeviceInfo(oclDevice, CL_DEVICE_NAME, 0, nullptr, &valueSize));
+	char *value = (char *)alloca(valueSize * sizeof(char));
+	CHECK_OCL_ERROR(clGetDeviceInfo(oclDevice, CL_DEVICE_NAME, valueSize, value, nullptr));
+
+	return string(value);
+}
+
+DeviceType OpenCLDeviceDescription::GetOCLDeviceType(const cl_device_id oclDevice) {
+	cl_device_type type;
+	CHECK_OCL_ERROR(clGetDeviceInfo(oclDevice, CL_DEVICE_TYPE, sizeof(cl_device_type), &type, nullptr));
+
 	switch (type) {
 		case CL_DEVICE_TYPE_ALL:
 			return DEVICE_TYPE_OPENCL_ALL;
@@ -68,73 +67,42 @@ DeviceType OpenCLDeviceDescription::GetOCLDeviceType(const cl_device_type type)
 	}
 }
 
-void OpenCLDeviceDescription::AddDeviceDescs(const cl::Platform &oclPlatform,
-	const DeviceType filter, vector<DeviceDescription *> &descriptions)
-{
+void OpenCLDeviceDescription::GetPlatformsList(std::vector<cl_platform_id> &platformsList) {
+	cl_uint platformsCount;
+	CHECK_OCL_ERROR(clGetPlatformIDs(0, nullptr, &platformsCount));
+	
+	platformsList.resize(platformsCount);
+	CHECK_OCL_ERROR(clGetPlatformIDs(platformsCount, &platformsList[0], nullptr));
+}
+
+void OpenCLDeviceDescription::AddDeviceDescs(const cl_platform_id oclPlatform,
+	const DeviceType filter, vector<DeviceDescription *> &descriptions) {
 	// Get the list of devices available on the platform
-	VECTOR_CLASS<cl::Device> oclDevices;
-	oclPlatform.getDevices(CL_DEVICE_TYPE_ALL, &oclDevices);
+	cl_uint deviceCount;
+	CHECK_OCL_ERROR(clGetDeviceIDs(oclPlatform, CL_DEVICE_TYPE_ALL, 0, nullptr, &deviceCount));
+	
+	cl_device_id *devices = (cl_device_id *)alloca(deviceCount * sizeof(cl_device_id));
+	CHECK_OCL_ERROR(clGetDeviceIDs(oclPlatform, CL_DEVICE_TYPE_ALL, deviceCount, devices, nullptr));
 
 	// Build the descriptions
-	for (size_t i = 0; i < oclDevices.size(); ++i) {
-		DeviceType dev_type = GetOCLDeviceType(oclDevices[i].getInfo<CL_DEVICE_TYPE>());
-		if (filter & dev_type)
-		{
-			/*if (dev_type == DEVICE_TYPE_OPENCL_CPU)
-			{
-				cl_device_partition_property_ext props[4] = { CL_DEVICE_PARTITION_BY_COUNTS_EXT, 1, 0, 0 };
-				vector<cl::Device> subDevices;
-				oclDevices[i].createSubDevices(props, &subDevices);
-				descriptions.push_back(new OpenCLDeviceDescription(subDevices[0], i));
-			} else*/
-				descriptions.push_back(new OpenCLDeviceDescription(oclDevices[i], i));
-		}
+	for (size_t i = 0; i < deviceCount; ++i) {
+		DeviceType devType = GetOCLDeviceType(devices[i]);
+		if (filter & devType)
+			descriptions.push_back(new OpenCLDeviceDescription(devices[i], i));
 	}
 }
 
-cl::Context &OpenCLDeviceDescription::GetOCLContext() {
+cl_context OpenCLDeviceDescription::GetOCLContext() {
 	if (!oclContext) {
 		// Allocate a context with the selected device
-		VECTOR_CLASS<cl::Device> devices;
-		devices.push_back(oclDevice);
-		cl::Platform platform = oclDevice.getInfo<CL_DEVICE_PLATFORM>();
-
-		if (enableOpenGLInterop) {
-#if defined (__APPLE__)
-			CGLContextObj kCGLContext = CGLGetCurrentContext();
-			CGLShareGroupObj kCGLShareGroup = CGLGetShareGroup(kCGLContext);
-			cl_context_properties cps[] = {
-				CL_CONTEXT_PROPERTY_USE_CGL_SHAREGROUP_APPLE, (cl_context_properties)kCGLShareGroup,
-				0
-			};
-#else
-#ifdef WIN32
-			cl_context_properties cps[] = {
-				CL_GL_CONTEXT_KHR, (intptr_t)wglGetCurrentContext(),
-				CL_WGL_HDC_KHR, (intptr_t)wglGetCurrentDC(),
-				CL_CONTEXT_PLATFORM, (cl_context_properties)platform(),
-				0
-			};
-#else
-			cl_context_properties cps[] = {
-				CL_GL_CONTEXT_KHR, (intptr_t)glXGetCurrentContext(),
-				CL_GLX_DISPLAY_KHR, (intptr_t)glXGetCurrentDisplay(),
-				CL_CONTEXT_PLATFORM, (cl_context_properties)platform(),
-				0
-			};
-#endif
-#endif
-			oclContext = new cl::Context(devices, cps);
-		} else {
-			cl_context_properties cps[] = {
-				CL_CONTEXT_PLATFORM, (cl_context_properties)platform(), 0
-			};
-
-			oclContext = new cl::Context(devices, cps);
-		}
+		
+		cl_device_id devices[1] = { oclDevice };
+		cl_int error;
+		oclContext = clCreateContext(nullptr, 1, devices, nullptr, nullptr, &error);
+		CHECK_OCL_ERROR(error);
 	}
 
-	return *oclContext;
+	return oclContext;
 }
 
 //------------------------------------------------------------------------------
@@ -167,14 +135,16 @@ void OpenCLDevice::Start() {
 	HardwareDevice::Start();
 
 	// Create the OpenCL queue
-	cl::Context &oclContext = deviceDesc->GetOCLContext();
-	oclQueue = new cl::CommandQueue(oclContext, deviceDesc->GetOCLDevice());
+	cl_int error;
+	oclQueue = clCreateCommandQueue(deviceDesc->GetOCLContext(), deviceDesc->GetOCLDevice(), 0, &error);
+	CHECK_OCL_ERROR(error);
 }
 
 void OpenCLDevice::Stop() {
 	HardwareDevice::Stop();
 
-	delete oclQueue;
+	if (oclQueue)
+		CHECK_OCL_ERROR(clReleaseCommandQueue(oclQueue));
 }
 
 //------------------------------------------------------------------------------
@@ -184,9 +154,6 @@ void OpenCLDevice::Stop() {
 void OpenCLDevice::CompileProgram(HardwareDeviceProgram **program,
 		const vector<string> &programParameters, const string &programSource,	
 		const string &programName) {
-	cl::Context &oclContext = deviceDesc->GetOCLContext();
-	cl::Device &oclDevice = deviceDesc->GetOCLDevice();
-
 	vector <string> oclProgramParameters = programParameters;
 	oclProgramParameters.push_back("-D LUXRAYS_OPENCL_DEVICE");
 #if defined (__APPLE__)
@@ -208,8 +175,8 @@ void OpenCLDevice::CompileProgram(HardwareDeviceProgram **program,
 		programSource;
 
 	bool cached;
-	cl::STRING_CLASS error;
-	cl::Program *oclProgram = kernelCache->Compile(oclContext, oclDevice,
+	string error;
+	cl_program oclProgram = kernelCache->Compile(deviceDesc->GetOCLContext(), deviceDesc->GetOCLDevice(),
 			oclProgramParameters, oclProgramSource,
 			&cached, &error);
 	if (!oclProgram) {
@@ -244,7 +211,11 @@ void OpenCLDevice::GetKernel(HardwareDeviceProgram *program,
 	OpenCLDeviceProgram *oclDeviceProgram = dynamic_cast<OpenCLDeviceProgram *>(program);
 	assert (oclDeviceProgram);
 
-	oclDeviceKernel->Set(new cl::Kernel(*(oclDeviceProgram->Get()), kernelName.c_str()));
+	cl_int error;
+	cl_kernel k = clCreateKernel(oclDeviceProgram->Get(), kernelName.c_str(), &error);
+	CHECK_OCL_ERROR(error);
+
+	oclDeviceKernel->Set(k);
 }
 
 u_int OpenCLDevice::GetKernelWorkGroupSize(HardwareDeviceKernel *kernel) {
@@ -255,8 +226,8 @@ u_int OpenCLDevice::GetKernelWorkGroupSize(HardwareDeviceKernel *kernel) {
 	assert (oclDeviceKernel);
 
 	size_t size;
-	oclDeviceKernel->oclKernel->getWorkGroupInfo<size_t>(deviceDesc->GetOCLDevice(),
-				CL_KERNEL_WORK_GROUP_SIZE, &size);
+	CHECK_OCL_ERROR(clGetKernelWorkGroupInfo(oclDeviceKernel->oclKernel, deviceDesc->GetOCLDevice(),
+			CL_KERNEL_WORK_GROUP_SIZE, sizeof(size_t), &size, nullptr));
 	
 	return size;
 }
@@ -269,7 +240,7 @@ void OpenCLDevice::SetKernelArg(HardwareDeviceKernel *kernel,
 	OpenCLDeviceKernel *oclDeviceKernel = dynamic_cast<OpenCLDeviceKernel *>(kernel);
 	assert (oclDeviceKernel);
 
-	oclDeviceKernel->oclKernel->setArg(index, size, arg);
+	CHECK_OCL_ERROR(clSetKernelArg(oclDeviceKernel->oclKernel, index, size, arg));
 }
 
 void OpenCLDevice::SetKernelArgBuffer(HardwareDeviceKernel *kernel,
@@ -281,19 +252,21 @@ void OpenCLDevice::SetKernelArgBuffer(HardwareDeviceKernel *kernel,
 	assert (oclDeviceKernel);
 
 	const OpenCLDeviceBuffer *oclDeviceBuff = dynamic_cast<const OpenCLDeviceBuffer *>(buff);
-	if (oclDeviceBuff)
-		oclDeviceKernel->oclKernel->setArg(index, sizeof(cl::Buffer), oclDeviceBuff->oclBuff);
-	else
-		oclDeviceKernel->oclKernel->setArg(index, sizeof(cl::Buffer), nullptr);
+
+	CHECK_OCL_ERROR(clSetKernelArg(oclDeviceKernel->oclKernel, index, sizeof(cl_mem), oclDeviceBuff ? &(oclDeviceBuff->oclBuff) : nullptr));
 }
 
-static cl::NDRange ConvertHardwareRange(const HardwareDeviceRange &range) {
-	if (range.dimensions == 1)
-		return cl::NDRange(range.sizes[0]);
-	else if (range.dimensions == 2)
-		return cl::NDRange(range.sizes[0], range.sizes[1]);
-	else
-		return cl::NDRange(range.sizes[0], range.sizes[1], range.sizes[2]);
+static void ConvertHardwareRange(const HardwareDeviceRange &range, size_t *globalSizeArray) {
+	if (range.dimensions == 1) {
+		globalSizeArray[0] = range.sizes[0];
+	} else if (range.dimensions == 2) {
+		globalSizeArray[0] = range.sizes[0];
+		globalSizeArray[2] = range.sizes[1];
+	} else {
+		globalSizeArray[0] = range.sizes[0];
+		globalSizeArray[2] = range.sizes[1];
+		globalSizeArray[0] = range.sizes[2];
+	}
 }
 
 void OpenCLDevice::EnqueueKernel(HardwareDeviceKernel *kernel,
@@ -305,10 +278,17 @@ void OpenCLDevice::EnqueueKernel(HardwareDeviceKernel *kernel,
 	OpenCLDeviceKernel *oclDeviceKernel = dynamic_cast<OpenCLDeviceKernel *>(kernel);
 	assert (oclDeviceKernel);
 
-	oclQueue->enqueueNDRangeKernel(*oclDeviceKernel->oclKernel,
-			cl::NullRange,
-			ConvertHardwareRange(globalSize),
-			ConvertHardwareRange(workGroupSize));
+	size_t globalSizeArray[3];
+	ConvertHardwareRange(globalSize, globalSizeArray);
+	size_t workGroupSizeArray[3];
+	ConvertHardwareRange(workGroupSize, workGroupSizeArray);
+
+	CHECK_OCL_ERROR(clEnqueueNDRangeKernel(oclQueue, oclDeviceKernel->oclKernel,
+			globalSize.dimensions,
+			nullptr, 
+			globalSizeArray,
+			workGroupSizeArray,
+			0, nullptr, nullptr));
 }
 
 void OpenCLDevice::EnqueueReadBuffer(const HardwareDeviceBuffer *buff,
@@ -320,7 +300,8 @@ void OpenCLDevice::EnqueueReadBuffer(const HardwareDeviceBuffer *buff,
 	assert (oclDeviceBuff);
 	assert (!oclDeviceBuff->IsNull());
 
-	oclQueue->enqueueReadBuffer(*(oclDeviceBuff->oclBuff), blocking, 0, size, ptr);
+	CHECK_OCL_ERROR(clEnqueueReadBuffer(oclQueue, oclDeviceBuff->oclBuff,
+			blocking, 0, size, ptr, 0, nullptr, nullptr));
 }
 
 void OpenCLDevice::EnqueueWriteBuffer(const HardwareDeviceBuffer *buff,
@@ -332,22 +313,23 @@ void OpenCLDevice::EnqueueWriteBuffer(const HardwareDeviceBuffer *buff,
 	assert (oclDeviceBuff);
 	assert (!oclDeviceBuff->IsNull());
 
-	oclQueue->enqueueWriteBuffer(*(oclDeviceBuff->oclBuff), blocking, 0, size, ptr);
+	CHECK_OCL_ERROR(clEnqueueWriteBuffer(oclQueue, oclDeviceBuff->oclBuff,
+			blocking, 0, size, ptr, 0, nullptr, nullptr));
 }
 
 void OpenCLDevice::FlushQueue() {
-	oclQueue->flush();
+	CHECK_OCL_ERROR(clFlush(oclQueue));
 }
 
 void OpenCLDevice::FinishQueue() {
-	oclQueue->finish();
+	CHECK_OCL_ERROR(clFinish(oclQueue));
 }
 
 //------------------------------------------------------------------------------
 // Memory management for hardware (aka GPU) only applications
 //------------------------------------------------------------------------------
 
-void OpenCLDevice::AllocBuffer(const cl_mem_flags clFlags, cl::Buffer **buff,
+void OpenCLDevice::AllocBuffer(const cl_mem_flags clFlags, cl_mem *buff,
 		void *src, const size_t size, const string &desc) {
 	// Check if the buffer is too big
 	if (deviceDesc->GetMaxMemoryAllocSize() < size) {
@@ -362,8 +344,8 @@ void OpenCLDevice::AllocBuffer(const cl_mem_flags clFlags, cl::Buffer **buff,
 	if (!size) {
 		if (*buff) {
 			// Free the buffer
-			FreeMemory((*buff)->getInfo<CL_MEM_SIZE>());
-			delete *buff;
+			FreeMemory(OpenCLDeviceBuffer::GetSize(*buff));
+			CHECK_OCL_ERROR(clReleaseMemObject(*buff));
 		}
 
 		*buff = nullptr;
@@ -374,19 +356,19 @@ void OpenCLDevice::AllocBuffer(const cl_mem_flags clFlags, cl::Buffer **buff,
 	if (*buff) {
 		// Check the size of the already allocated buffer
 
-		if (size == (*buff)->getInfo<CL_MEM_SIZE>()) {
+		if (size == OpenCLDeviceBuffer::GetSize(*buff)) {
 			// I can reuse the buffer; just update the content
 
 			//LR_LOG(deviceContext, "[Device " << GetName() << "] " << desc << " buffer updated for size: " << (size / 1024) << "Kbytes");
 			if (src)
-				oclQueue->enqueueWriteBuffer(**buff, CL_FALSE, 0, size, src);
+				CHECK_OCL_ERROR(clEnqueueWriteBuffer(oclQueue, *buff, CL_FALSE,0, size, src, 0, nullptr, nullptr));
 
 			return;
 		} else {
 			// Free the buffer
 
-			FreeMemory((*buff)->getInfo<CL_MEM_SIZE>());
-			delete *buff;
+			FreeMemory(OpenCLDeviceBuffer::GetSize(*buff));
+			CHECK_OCL_ERROR(clReleaseMemObject(*buff));
 			*buff = nullptr;
 		}
 	}
@@ -395,11 +377,11 @@ void OpenCLDevice::AllocBuffer(const cl_mem_flags clFlags, cl::Buffer **buff,
 		LR_LOG(deviceContext, "[Device " << GetName() << "] " << desc <<
 				" buffer size: " << ToMemString(size));
 
-	cl::Context &oclContext = deviceDesc->GetOCLContext();
-	*buff = new cl::Buffer(oclContext,
-			clFlags,
-			size, src);
-	AllocMemory((*buff)->getInfo<CL_MEM_SIZE>());
+	cl_int error;
+	*buff = clCreateBuffer(deviceDesc->GetOCLContext(), clFlags, size, src, &error);
+	CHECK_OCL_ERROR(error);
+
+	AllocMemory(OpenCLDeviceBuffer::GetSize(*buff));
 }
 
 void OpenCLDevice::AllocBuffer(HardwareDeviceBuffer **buff, const BufferType type,
@@ -431,7 +413,7 @@ void OpenCLDevice::FreeBuffer(HardwareDeviceBuffer **buff) {
 		OpenCLDeviceBuffer *oclDeviceBuff = dynamic_cast<OpenCLDeviceBuffer *>(*buff);
 		assert (oclDeviceBuff);
 
-		FreeMemory(oclDeviceBuff->oclBuff->getInfo<CL_MEM_SIZE>());
+		FreeMemory(oclDeviceBuff->GetSize());
 
 		delete *buff;
 		*buff = nullptr;

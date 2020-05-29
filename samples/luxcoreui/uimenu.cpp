@@ -32,7 +32,7 @@ using namespace luxcore;
 // MenuRendering
 //------------------------------------------------------------------------------
 
-#if defined(LUXRAYS_ENABLE_OPENCL)
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 static void KernelCacheFillProgressHandler(const size_t step, const size_t count) {
 	LA_LOG("KernelCache FillProgressHandler Step: " << step << "/" << count);
 }
@@ -161,7 +161,7 @@ void LuxCoreApp::MenuRendering() {
 		ImGui::Separator();
 	}
 
-#if defined(LUXRAYS_ENABLE_OPENCL)
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 	if (ImGui::MenuItem("Fill kernel cache")) {
 		if (session) {
 			// Stop any current rendering
@@ -190,7 +190,7 @@ void LuxCoreApp::MenuRendering() {
 void LuxCoreApp::MenuEngine() {
 	const string currentEngineType = config->ToProperties().Get("renderengine.type").Get<string>();
 
-#if defined(LUXRAYS_ENABLE_OPENCL)
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 	if (ImGui::MenuItem("PATHOCL", "1", (currentEngineType == "PATHOCL"))) {
 		SetRenderingEngineType("PATHOCL");
 		CloseAllRenderConfigEditors();
@@ -212,7 +212,7 @@ void LuxCoreApp::MenuEngine() {
 		SetRenderingEngineType("BIDIRVMCPU");
 		CloseAllRenderConfigEditors();
 	}
-#if defined(LUXRAYS_ENABLE_OPENCL)
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 	if (ImGui::MenuItem("RTPATHOCL", "6", (currentEngineType == "RTPATHOCL"))) {
 		SetRenderingEngineType("RTPATHOCL");
 		CloseAllRenderConfigEditors();
@@ -222,7 +222,7 @@ void LuxCoreApp::MenuEngine() {
 		SetRenderingEngineType("TILEPATHCPU");
 		CloseAllRenderConfigEditors();
 	}
-#if defined(LUXRAYS_ENABLE_OPENCL)
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 	if (ImGui::MenuItem("TILEPATHOCL", "8", (currentEngineType == "TILEPATHOCL"))) {
 		SetRenderingEngineType("TILEPATHOCL");
 		CloseAllRenderConfigEditors();
@@ -489,7 +489,7 @@ void LuxCoreApp::MenuWindow() {
 			samplerWindow.Toggle();
 		if (ImGui::MenuItem("Pixel Filter editor", NULL, pixelFilterWindow.IsOpen()))
 			pixelFilterWindow.Toggle();
-#if defined(LUXRAYS_ENABLE_OPENCL)
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 		if (ImGui::MenuItem("OpenCL Device editor", NULL, oclDeviceWindow.IsOpen(),
 				boost::ends_with(currentRenderEngineType, "OCL")))
 			oclDeviceWindow.Toggle();

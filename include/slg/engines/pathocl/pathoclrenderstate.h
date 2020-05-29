@@ -19,7 +19,7 @@
 #ifndef _SLG_PATHCPURENDERSTATE_H
 #define	_SLG_PATHCPURENDERSTATE_H
 
-#if defined(LUXRAYS_ENABLE_OPENCL)
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 
 #include "luxrays/utils/serializationutils.h"
 

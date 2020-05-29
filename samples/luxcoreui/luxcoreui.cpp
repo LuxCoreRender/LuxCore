@@ -223,12 +223,6 @@ int main(int argc, char *argv[]) {
 		}
 
 		LA_LOG("Done.");
-
-#if defined(LUXRAYS_ENABLE_OPENCL)
-	} catch (cl::Error &err) {
-		LA_LOG("OpenCL ERROR: " << err.what() << "(" << oclErrorString(err.err()) << ")");
-		return EXIT_FAILURE;
-#endif
 	} catch (runtime_error &err) {
 		LA_LOG("RUNTIME ERROR: " << err.what());
 		return EXIT_FAILURE;

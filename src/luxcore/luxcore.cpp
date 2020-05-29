@@ -182,7 +182,7 @@ Properties luxcore::GetPlatformDesc() {
 	static const string luxCoreVersion(LUXCORE_VERSION_MAJOR "." LUXCORE_VERSION_MINOR);
 	props << Property("version.number")(luxCoreVersion);
 
-#if defined(LUXRAYS_ENABLE_OPENCL)
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 	props << Property("compile.LUXRAYS_DISABLE_OPENCL")(false);
 	props << Property("compile.LUXRAYS_ENABLE_OPENCL")(true);
 #else
@@ -190,9 +190,11 @@ Properties luxcore::GetPlatformDesc() {
 	props << Property("compile.LUXRAYS_ENABLE_OPENCL")(false);
 #endif
 
-#if defined(LUXRAYS_ENABLE_CUDA)
-	props << Property("compile.LUXRAYS_ENABLE_CUDA")(true);
+#if !defined(LUXRAYS_DISABLE_CUDA)
+	props << Property("compile.LUXRAYS_DISABLE_CUDA")(!luxrays::isCudaAvilable);
+	props << Property("compile.LUXRAYS_ENABLE_CUDA")(luxrays::isCudaAvilable);
 #else
+	props << Property("compile.LUXRAYS_DISABLE_CUDA")(true);
 	props << Property("compile.LUXRAYS_ENABLE_CUDA")(false);
 #endif
 
@@ -207,7 +209,7 @@ Properties luxcore::GetPlatformDesc() {
 //------------------------------------------------------------------------------
 
 Properties luxcore::GetOpenCLDeviceDescs() {
-#if !defined(LUXRAYS_ENABLE_OPENCL)
+#if defined(LUXRAYS_DISABLE_OPENCL)
 	return Properties();
 #else
 	Properties props;
@@ -230,12 +232,11 @@ Properties luxcore::GetOpenCLDeviceDescs() {
 		if (desc->GetType() & DEVICE_TYPE_OPENCL_ALL) {
 			OpenCLDeviceDescription *oclDesc = (OpenCLDeviceDescription *)deviceDescriptions[i];
 
-			cl::Platform platform = oclDesc->GetOCLDevice().getInfo<CL_DEVICE_PLATFORM>();
-			platformName = platform.getInfo<CL_PLATFORM_VENDOR>();
-			platformVersion = platform.getInfo<CL_PLATFORM_VERSION>();
-			deviceClock = oclDesc->GetOCLDevice().getInfo<CL_DEVICE_MAX_CLOCK_FREQUENCY>();
-			deviceLocalMem = oclDesc->GetOCLDevice().getInfo<CL_DEVICE_LOCAL_MEM_SIZE>();
-			deviceConstMem = oclDesc->GetOCLDevice().getInfo<CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE>();
+			platformName = oclDesc->GetOpenCLPlatform();
+			platformVersion = oclDesc->GetOpenCLVersion();
+			deviceClock = oclDesc->GetClock();
+			deviceLocalMem = oclDesc->GetLocalMem();
+			deviceConstMem = oclDesc->GetConstMem();
 		} else if (desc->GetType() & DEVICE_TYPE_CUDA_ALL) {
 			platformName = "NVIDIA";
 		}

@@ -16,7 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#if defined(LUXRAYS_ENABLE_OPENCL)
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 
 #include <boost/lexical_cast.hpp>
 
@@ -224,9 +224,6 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl() {
 		//SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Rendering thread halted");
 	} catch (boost::thread_interrupted) {
 		SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Rendering thread halted");
-	} catch (cl::Error &err) {
-		SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Rendering thread ERROR: " << err.what() <<
-				"(" << oclErrorString(err.err()) << ")");
 	}
 
 	threadFilms[0]->RecvFilm(intersectionDevice);

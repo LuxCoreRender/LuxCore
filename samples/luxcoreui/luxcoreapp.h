@@ -141,7 +141,7 @@ private:
 	FilmOutputsWindow filmOutputsWindow;
 	FilmRadianceGroupsWindow filmRadianceGroupsWindow;
 	LightStrategyWindow lightStrategyWindow;
-#if defined(LUXRAYS_ENABLE_OPENCL)
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 	OCLDeviceWindow oclDeviceWindow;
 #endif
 	PixelFilterWindow pixelFilterWindow;

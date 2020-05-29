@@ -19,7 +19,7 @@
 #ifndef _LUXCOREAPP_OCLDEVICEWINDOW_H
 #define	_LUXCOREAPP_OCLDEVICEWINDOW_H
 
-#if defined(LUXRAYS_ENABLE_OPENCL)
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 
 #include "objecteditorwindow.h"
 
