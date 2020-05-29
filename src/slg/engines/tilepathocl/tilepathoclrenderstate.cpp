@@ -16,7 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#if defined(LUXRAYS_ENABLE_OPENCL)
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 
 #include "slg/engines/tilerepository.h"
 #include "slg/engines/tilepathocl/tilepathoclrenderstate.h"

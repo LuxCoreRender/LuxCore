@@ -1142,7 +1142,7 @@ void RenderSessionImpl::UpdateStats() {
 
 	// Some engine specific statistic
 	switch (renderSession->renderEngine->GetType()) {
-#if defined(LUXRAYS_ENABLE_OPENCL)
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 		case slg::RTPATHOCL: {
 			slg::RTPathOCLRenderEngine *engine = (slg::RTPathOCLRenderEngine *)renderSession->renderEngine;
 			stats.Set(Property("stats.rtpathocl.frame.time")(engine->GetFrameTime()));

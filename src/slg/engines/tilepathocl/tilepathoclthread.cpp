@@ -16,7 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#if defined(LUXRAYS_ENABLE_OPENCL)
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 
 #include "luxrays/devices/ocldevice.h"
 
@@ -251,9 +251,6 @@ void TilePathOCLRenderThread::RenderThreadImpl() {
 		//SLG_LOG("[TilePathOCLRenderThread::" << threadIndex << "] Rendering thread halted");
 	} catch (boost::thread_interrupted) {
 		SLG_LOG("[TilePathOCLRenderThread::" << threadIndex << "] Rendering thread halted");
-	} catch (cl::Error &err) {
-		SLG_LOG("[TilePathOCLRenderThread::" << threadIndex << "] Rendering thread ERROR: " << err.what() <<
-				"(" << oclErrorString(err.err()) << ")");
 	}
 
 	threadDone = true;

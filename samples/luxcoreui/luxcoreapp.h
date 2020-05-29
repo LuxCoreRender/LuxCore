@@ -50,6 +50,8 @@ public:
 
 	void RunApp(luxcore::RenderState *startState = NULL, luxcore::Film *startFilm = NULL);
 
+	bool isGPURenderingAvailable() const { return isOpenCLAvailable || isCUDAAvailable; }
+
 	static void LogHandler(const char *msg);
 	static void ColoredLabelText(const ImVec4 &col, const char *label, const char *fmt, ...) IM_PRINTFARGS(3);
 	static void ColoredLabelText(const char *label, const char *fmt, ...) IM_PRINTFARGS(2);
@@ -135,15 +137,15 @@ private:
 	
 	static LogWindow *currentLogWindow;
 
+	bool isOpenCLAvailable, isCUDAAvailable;
+
 	AcceleratorWindow acceleratorWindow;
 	EpsilonWindow epsilonWindow;
 	FilmChannelsWindow filmChannelsWindow;
 	FilmOutputsWindow filmOutputsWindow;
 	FilmRadianceGroupsWindow filmRadianceGroupsWindow;
 	LightStrategyWindow lightStrategyWindow;
-#if defined(LUXRAYS_ENABLE_OPENCL)
 	OCLDeviceWindow oclDeviceWindow;
-#endif
 	PixelFilterWindow pixelFilterWindow;
 	RenderEngineWindow renderEngineWindow;
 	SamplerWindow samplerWindow;

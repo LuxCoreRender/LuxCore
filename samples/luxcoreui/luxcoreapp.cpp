@@ -42,13 +42,17 @@ LuxCoreApp::LuxCoreApp(luxcore::RenderConfig *renderConfig) :
 		acceleratorWindow(this), epsilonWindow(this),
 		filmChannelsWindow(this), filmOutputsWindow(this),
 		filmRadianceGroupsWindow(this), lightStrategyWindow(this),
-#if defined(LUXRAYS_ENABLE_OPENCL)
 		oclDeviceWindow(this),
-#endif
 		pixelFilterWindow(this), renderEngineWindow(this),
 		samplerWindow(this), haltConditionsWindow(this),
 		statsWindow(this), logWindow(this), helpWindow(this),
 		userImportancePaintWindow(this) {
+
+	Properties platformDesc = GetPlatformDesc();
+
+	isOpenCLAvailable = platformDesc.Get(Property("compile.LUXRAYS_ENABLE_OPENCL")(false)).Get<bool>();
+	isCUDAAvailable = platformDesc.Get(Property("compile.LUXRAYS_ENABLE_CUDA")(false)).Get<bool>();
+
 	config = renderConfig;
 
 	session = NULL;
@@ -149,9 +153,7 @@ void LuxCoreApp::CloseAllRenderConfigEditors() {
 	filmOutputsWindow.Close();
 	filmRadianceGroupsWindow.Close();
 	lightStrategyWindow.Close();
-#if defined(LUXRAYS_ENABLE_OPENCL)
 	oclDeviceWindow.Close();
-#endif
 	pixelFilterWindow.Close();
 	renderEngineWindow.Close();
 	samplerWindow.Close();
@@ -365,13 +367,6 @@ void LuxCoreApp::StartRendering(RenderState *startState, Film *startFilm) {
 		
 		if (currentTool == TOOL_USER_IMPORTANCE_PAINT)
 			userImportancePaintWindow.Init();
-#if defined(LUXRAYS_ENABLE_OPENCL)
-	} catch (cl::Error &err) {
-		LA_LOG("RenderSession starting OpenCL error: " << err.what() << "(" << oclErrorString(err.err()) << ")");
-
-		delete session;
-		session = NULL;
-#endif
 	} catch(exception &ex) {
 		LA_LOG("RenderSession starting error: " << endl << ex.what());
 

@@ -31,7 +31,7 @@ using namespace luxcore;
 // KernelCacheFill
 //------------------------------------------------------------------------------
 
-#if defined(LUXRAYS_ENABLE_OPENCL)
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 
 static void CreateBox(Scene *scene, const string &objName, const string &meshName,
 		const string &matName, const bool enableUV, const BBox &bbox) {
@@ -305,7 +305,7 @@ static void KernelCacheFillImpl(const Properties &config, void (*ProgressHandler
 #endif
 
 void luxcore::KernelCacheFill(const Properties &config, void (*ProgressHandler)(const size_t, const size_t)) {
-#if defined(LUXRAYS_ENABLE_OPENCL)
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 	KernelCacheFillImpl(config, ProgressHandler);
 #endif
 }

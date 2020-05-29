@@ -114,7 +114,7 @@ CPP_EXPORT CPP_API void KernelCacheFill(const luxrays::Properties &config, void 
  * - compile.LUXRAYS_ENABLE_OPENCL and compile.LUXRAYS_DISABLE_OPENCL\n
  *		true or false if the sources has been compiled with LUXRAYS_ENABLE_OPENCL and
  *		OpenCL rendering engines are available or not.
- * - compile.LUXRAYS_ENABLE_CUDA\n
+ * - compile.LUXRAYS_ENABLE_CUDA and compile.LUXRAYS_DISABLE_CUDA\n
  *		true or false if the sources has been compiled with LUXRAYS_ENABLE_CUDA and
  *		CUDA support is available or not.
  * - compile.LUXCORE_DISABLE_EMBREE_BVH_BUILDER\n

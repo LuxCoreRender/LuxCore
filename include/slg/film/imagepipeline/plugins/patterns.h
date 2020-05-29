@@ -43,7 +43,7 @@ public:
 
 	virtual void Apply(Film &film, const u_int index);
 
-#if defined(LUXRAYS_ENABLE_OPENCL)
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 	virtual bool CanUseOpenCL() const { return false; }
 #endif
 

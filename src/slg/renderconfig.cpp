@@ -122,7 +122,7 @@ RenderConfig::~RenderConfig() {
 }
 
 bool RenderConfig::HasCachedKernels() {
-#if defined(LUXRAYS_ENABLE_OPENCL)
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 	const string type = cfg.Get(Property("renderengine.type")(PathCPURenderEngine::GetObjectTag())).Get<string>();
 	if ((type == "PATHOCL") ||
 			(type == "RTPATHOCL") ||
@@ -301,7 +301,7 @@ Sampler *RenderConfig::AllocSampler(RandomGenerator *rndGen, Film *film, const F
 }
 
 RenderEngine *RenderConfig::AllocRenderEngine() const {
-#if !defined(LUXRAYS_ENABLE_OPENCL)
+#if defined(LUXRAYS_DISABLE_OPENCL)
 	// This is a specific test for OpenCL-less version in order to print
 	// a more clear error
 	const string type = cfg.Get(Property("renderengine.type")(PathCPURenderEngine::GetObjectTag())).Get<string>();

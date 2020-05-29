@@ -19,7 +19,7 @@
 #ifndef _SLG_COMPILEDSESSION_H
 #define	_SLG_COMPILEDSESSION_H
 
-#if defined(LUXRAYS_ENABLE_OPENCL)
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 
 #include <boost/unordered_set.hpp>
 

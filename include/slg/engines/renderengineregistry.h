@@ -62,7 +62,7 @@ protected:
 
 	//--------------------------------------------------------------------------
 
-#if defined(LUXRAYS_ENABLE_OPENCL)
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(RenderEngineRegistry, PathOCLRenderEngine);
 #endif
 	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(RenderEngineRegistry, LightCPURenderEngine);
@@ -70,11 +70,11 @@ protected:
 	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(RenderEngineRegistry, BiDirCPURenderEngine);
 	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(RenderEngineRegistry, BiDirVMCPURenderEngine);
 	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(RenderEngineRegistry, FileSaverRenderEngine);
-#if defined(LUXRAYS_ENABLE_OPENCL)
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(RenderEngineRegistry, RTPathOCLRenderEngine);
 #endif
 	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(RenderEngineRegistry, TilePathCPURenderEngine);
-#if defined(LUXRAYS_ENABLE_OPENCL)
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(RenderEngineRegistry, TilePathOCLRenderEngine);
 #endif
 	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(RenderEngineRegistry, RTPathCPURenderEngine);

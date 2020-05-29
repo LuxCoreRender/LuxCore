@@ -19,7 +19,7 @@
 #ifndef _SLG_TILEPATHOCL_H
 #define	_SLG_TILEPATHOCL_H
 
-#if defined(LUXRAYS_ENABLE_OPENCL)
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 
 #include "slg/engines/tilepathcpu/tilepathcpu.h"
 #include "slg/engines/pathoclbase/pathoclbase.h"

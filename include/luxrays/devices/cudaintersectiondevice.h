@@ -22,7 +22,7 @@
 #include "luxrays/devices/cudadevice.h"
 #include "luxrays/core/hardwareintersectiondevice.h"
 
-#if defined(LUXRAYS_ENABLE_CUDA)
+#if !defined(LUXRAYS_DISABLE_CUDA)
 
 namespace luxrays {
 
