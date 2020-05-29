@@ -34,6 +34,7 @@
 * Added the support for a new color re-mapping image pipeline plug-in using .cube files (issue #81)
 * LuxCore API now support unicode UTF-8 strings and files
 * luxcore::KernelCacheFill() now supports opencl.devices.select, scene.epsilon.min and scene.epsilon.max properties (issue #374)
+* LuxCoreRender can now be compiled without OpenCL/CUDA SDK and it will load OpenCL/CUDA at run time (one executable can now be used for all types of installations)
 
 ### Fixed Bugs
 
