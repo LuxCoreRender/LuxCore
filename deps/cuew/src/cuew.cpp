@@ -338,7 +338,7 @@ static int cuewCudaInit(void) {
   const char *cuda_paths[] = {"nvcuda.dll", NULL};
 #elif defined(__APPLE__)
   /* Default installation path. */
-  const char *cuda_paths[] = {"/usr/local/cuda/lib/libcuda.dylib", NULL};
+  const char *cuda_paths[] = {"@executable_path/libcuda.dylib", "../Resources/libs/libcuda.dylib", "@loader_path/libcuda.dylib", NULL};
 #else
   const char *cuda_paths[] = {"libcuda.so", "libcuda.so.1", NULL};
 #endif
@@ -631,7 +631,7 @@ static int cuewNvrtcInit(void) {
                                NULL};
 #elif defined(__APPLE__)
   /* Default installation path. */
-  const char *nvrtc_paths[] = {"/usr/local/cuda/lib/libnvrtc.dylib", NULL};
+  const char *nvrtc_paths[] = {"@executable_path/libnvrtc.dylib", "../Resources/libs/libnvrtc.dylib", "@loader_path/libnvrtc.dylib", NULL};
 #else
   const char *nvrtc_paths[] = {"libnvrtc.so",
 #  if defined(__x86_64__) || defined(_M_X64)
