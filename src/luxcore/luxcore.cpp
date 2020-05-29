@@ -183,8 +183,8 @@ Properties luxcore::GetPlatformDesc() {
 	props << Property("version.number")(luxCoreVersion);
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-	props << Property("compile.LUXRAYS_DISABLE_OPENCL")(false);
-	props << Property("compile.LUXRAYS_ENABLE_OPENCL")(true);
+	props << Property("compile.LUXRAYS_DISABLE_OPENCL")(!luxrays::isOpenCLAvilable);
+	props << Property("compile.LUXRAYS_ENABLE_OPENCL")(luxrays::isOpenCLAvilable);
 #else
 	props << Property("compile.LUXRAYS_DISABLE_OPENCL")(true);
 	props << Property("compile.LUXRAYS_ENABLE_OPENCL")(false);

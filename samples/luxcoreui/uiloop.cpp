@@ -591,9 +591,7 @@ void LuxCoreApp::RunApp(luxcore::RenderState *startState, luxcore::Film *startFi
 		filmOutputsWindow.Draw();
 		filmRadianceGroupsWindow.Draw();
 		lightStrategyWindow.Draw();
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 		oclDeviceWindow.Draw();
-#endif
 		pixelFilterWindow.Draw();
 		renderEngineWindow.Draw();
 		samplerWindow.Draw();

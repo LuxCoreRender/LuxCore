@@ -42,13 +42,17 @@ LuxCoreApp::LuxCoreApp(luxcore::RenderConfig *renderConfig) :
 		acceleratorWindow(this), epsilonWindow(this),
 		filmChannelsWindow(this), filmOutputsWindow(this),
 		filmRadianceGroupsWindow(this), lightStrategyWindow(this),
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 		oclDeviceWindow(this),
-#endif
 		pixelFilterWindow(this), renderEngineWindow(this),
 		samplerWindow(this), haltConditionsWindow(this),
 		statsWindow(this), logWindow(this), helpWindow(this),
 		userImportancePaintWindow(this) {
+
+	Properties platformDesc = GetPlatformDesc();
+
+	isOpenCLAvailable = platformDesc.Get(Property("compile.LUXRAYS_ENABLE_OPENCL")(false)).Get<bool>();
+	isCUDAAvailable = platformDesc.Get(Property("compile.LUXRAYS_ENABLE_CUDA")(false)).Get<bool>();
+
 	config = renderConfig;
 
 	session = NULL;
@@ -149,9 +153,7 @@ void LuxCoreApp::CloseAllRenderConfigEditors() {
 	filmOutputsWindow.Close();
 	filmRadianceGroupsWindow.Close();
 	lightStrategyWindow.Close();
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	oclDeviceWindow.Close();
-#endif
 	pixelFilterWindow.Close();
 	renderEngineWindow.Close();
 	samplerWindow.Close();
