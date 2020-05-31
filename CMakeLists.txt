@@ -133,8 +133,12 @@ endif()
 #
 ################################################################################
 
-if (LUXRAYS_ENABLE_OPENCL)
-	ADD_DEFINITIONS("-DLUXRAYS_ENABLE_OPENCL")
+if (LUXRAYS_DISABLE_OPENCL)
+	ADD_DEFINITIONS("-DLUXRAYS_DISABLE_OPENCL")
+endif()
+
+if (LUXRAYS_DISABLE_CUDA)
+	ADD_DEFINITIONS("-DLUXRAYS_DISABLE_CUDA")
 endif()
 
 if (BUILD_LUXCORE_DLL)

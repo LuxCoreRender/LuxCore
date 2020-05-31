@@ -97,21 +97,9 @@ jobs:
       echo "##vso[task.setvariable variable=cuda_path_v10_1]$PROGRAMFILES/NVIDIA GPU Computing Toolkit/CUDA/v10.1"
   - template: ./scripts/azurepipeline/windows/windows_jobs.yml
     parameters:
-      build_script: './scripts/azurepipeline/windows/build.cmd /cmake-only /no-ocl'
-      post_script: './scripts/azurepipeline/windows/post-build.cmd /no-ocl'
-      ocl_text: 'OpenCL disabled'
-      minimalargs: '/target:pyluxcore,pyluxcoretools,luxcoreui'
-  - template: ./scripts/azurepipeline/windows/windows_jobs.yml
-    parameters:
       build_script: './scripts/azurepipeline/windows/build.cmd /cmake-only'
       post_script: './scripts/azurepipeline/windows/post-build.cmd'
-      ocl_text: 'OpenCL enabled'
-      minimalargs: '/target:pyluxcore,pyluxcoretools,luxcoreui'
-  - template: ./scripts/azurepipeline/windows/windows_jobs.yml
-    parameters:
-      build_script: './scripts/azurepipeline/windows/build.cmd /cmake-only /cuda'
-      post_script: './scripts/azurepipeline/windows/post-build.cmd /cuda'
-      ocl_text: 'CUDA enabled'
+      ocl_text: 'Unified executable'
       minimalargs: '/target:pyluxcore,pyluxcoretools,luxcoreui'
 #  - script: './scripts/azurepipeline/windows/test.cmd'
 #    displayName: Testing LuxCore
@@ -147,24 +135,13 @@ jobs:
   - script: ./scripts/azurepipeline/windows/deps-setup.cmd
     displayName: Getting required deps
   - bash: |
-      echo $PROGRAMFILES
       echo "##vso[task.setvariable variable=cuda_path]$PROGRAMFILES/NVIDIA GPU Computing Toolkit/CUDA/v10.1"
       echo "##vso[task.setvariable variable=cuda_path_v10_1]$PROGRAMFILES/NVIDIA GPU Computing Toolkit/CUDA/v10.1"
   - template: ./scripts/azurepipeline/windows/windows_jobs.yml
     parameters:
-      build_script: './scripts/azurepipeline/windows/build.cmd /cmake-only /no-ocl /dll'
-      post_script: './scripts/azurepipeline/windows/post-build.cmd /no-ocl'
-      ocl_text: 'OpenCL disabled'
-  - template: ./scripts/azurepipeline/windows/windows_jobs.yml
-    parameters:
       build_script: './scripts/azurepipeline/windows/build.cmd /cmake-only /dll'
       post_script: './scripts/azurepipeline/windows/post-build.cmd'
-      ocl_text: 'OpenCL enabled'
-  - template: ./scripts/azurepipeline/windows/windows_jobs.yml
-    parameters:
-      build_script: './scripts/azurepipeline/windows/build.cmd /cmake-only /cuda /dll'
-      post_script: './scripts/azurepipeline/windows/post-build.cmd /cuda'
-      ocl_text: 'Cuda enabled'
+      ocl_text: 'Unified executable'
   - task: PublishBuildArtifacts@1
     inputs:
       pathtoPublish: '$(Build.ArtifactStagingDirectory)'

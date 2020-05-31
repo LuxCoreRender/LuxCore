@@ -5,22 +5,17 @@
 block_cipher = None
 
 def binaries_list():
-	tmp = [
+	result = [
 		('../../../WindowsCompile/Build_CMake/LuxCore/lib/Release/pyluxcore.pyd', '.'),
 		('../../../WindowsCompile/Build_CMake/LuxCore/lib/pyluxcoretools.zip', '.'),
 		('../../../WindowsCompileDeps/x64/Release/lib/OpenImageDenoise.dll', '.'),
 		('../../../WindowsCompileDeps/x64/Release/lib/embree3.dll', '.'),
 		('../../../WindowsCompileDeps/x64/Release/lib/tbb.dll', '.'),
 		('../../../WindowsCompileDeps/x64/Release/lib/tbbmalloc.dll', '.'),
-		('../../../WindowsCompileDeps/x64/Release/lib/OpenImageIO.dll', '.')
+		('../../../WindowsCompileDeps/x64/Release/lib/OpenImageIO.dll', '.'),
+		(os.environ['CUDA_PATH']+'/bin/nvrtc64_101_0.dll', '.'),
+		(os.environ['CUDA_PATH']+'/bin/nvrtc-builtins64_101.dll', '.')
 	]
-	if 'CUDA_DLLS' in os.environ:
-		result = tmp + [
-			(os.environ['CUDA_PATH']+'/bin/nvrtc64_101_0.dll', '.'),
-			(os.environ['CUDA_PATH']+'/bin/nvrtc-builtins64_101.dll', '.')
-		]
-	else:
-		result = tmp
 	return result
 
 def pyside_imports():
