@@ -57,13 +57,6 @@ cmake .
 make
 ```
 
-if you have downloaded the SDK without OpenCL support:
-
-```
-cmake -DLUXRAYS_DISABLE_OPENCL=1 .
-make
-```
-
 ### PyLuxCoreTools
 
 PyLuxCoreTools are a set of command line tools available in the LuxCoreRender stand
