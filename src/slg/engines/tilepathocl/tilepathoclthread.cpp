@@ -57,34 +57,6 @@ void TilePathOCLRenderThread::UpdateSamplerData(const TileWork &tileWork) {
 		throw runtime_error("Wrong sampler in PathOCLBaseRenderThread::UpdateSamplesBuffer(): " +
 						boost::lexical_cast<string>(engine->oclSampler->type));
 
-	// Update samplesBuff	
-	switch (engine->GetType()) {
-		case TILEPATHOCL: {
-			const u_int taskCount = renderEngine->taskCount;
-
-			// rngPass, rng0 and rng1 fields
-			vector<slg::ocl::TilePathSample> buffer(taskCount);
-
-			RandomGenerator rndGen(tileWork.GetTileSeed());
-
-			for (u_int i = 0; i < taskCount; ++i) {
-				buffer[i].rngPass = rndGen.uintValue();
-				buffer[i].rng0 = rndGen.floatValue();
-				buffer[i].rng1 = rndGen.floatValue();
-			}
-
-			// TODO: remove the forced synchronization (the CL_TRUE)
-			intersectionDevice->EnqueueWriteBuffer(samplesBuff, CL_TRUE,
-					sizeof(slg::ocl::TilePathSample) * buffer.size(), &buffer[0]);
-			break;
-		}
-		case RTPATHOCL:
-			break;
-		default:
-			throw runtime_error("Unknown render engine in PathOCLBaseRenderThread::UpdateSamplesBuffer(): " +
-					boost::lexical_cast<string>(engine->GetType()));
-	}
-
 	// Update samplerSharedDataBuff
 	slg::ocl::TilePathSamplerSharedData sharedData;
 	sharedData.cameraFilmWidth = engine->film->GetWidth();
@@ -95,6 +67,7 @@ void TilePathOCLRenderThread::UpdateSamplerData(const TileWork &tileWork) {
 	sharedData.tileHeight =  tileWork.GetCoord().height;
 	sharedData.tilePass =  tileWork.passToRender;
 	sharedData.aaSamples =  engine->aaSamples;
+	sharedData.multipassIndexToRender = tileWork.multipassIndexToRender;
 
 	// TODO: remove the forced synchronization (the CL_TRUE)
 	intersectionDevice->EnqueueWriteBuffer(samplerSharedDataBuff, CL_TRUE,

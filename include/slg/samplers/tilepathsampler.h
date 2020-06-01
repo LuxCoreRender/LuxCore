@@ -94,7 +94,6 @@ private:
 	TileWork *tileWork;
 	Film *tileFilm;
 	u_int tileX, tileY, tilePass;
-	luxrays::TauswortheRandomGenerator rngGenerator;
 
 	float sample0, sample1;
 };
