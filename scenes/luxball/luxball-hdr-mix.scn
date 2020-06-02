@@ -4,7 +4,7 @@ scene.camera.focaldistance = 2.0
 ################################################################################
 scene.materials.mat1.type = matte
 scene.materials.mat1.kd = 0.75 0.0 0.0
-scene.materials.mat2.type = metal
+scene.materials.mat2.type = metal2
 scene.materials.mat2.kr = 0.75 0.75 0.75
 scene.materials.mat2.exp = 50
 scene.materials.shell.type = mix

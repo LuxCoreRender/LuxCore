@@ -51,42 +51,17 @@ void TilePathOCLRenderThread::GetThreadFilmSize(u_int *filmWidth, u_int *filmHei
 	filmSubRegion[3] = engine->tileRepository->tileHeight - 1;
 }
 
-void TilePathOCLRenderThread::UpdateSamplerData(const TileWork &tileWork) {
+void TilePathOCLRenderThread::UpdateSamplerData(const TileWork &tileWork, const u_int index) {
 	TilePathOCLRenderEngine *engine = (TilePathOCLRenderEngine *)renderEngine;
 	if (engine->oclSampler->type != slg::ocl::TILEPATHSAMPLER)
 		throw runtime_error("Wrong sampler in PathOCLBaseRenderThread::UpdateSamplesBuffer(): " +
 						boost::lexical_cast<string>(engine->oclSampler->type));
 
-	// Update samplesBuff	
-	switch (engine->GetType()) {
-		case TILEPATHOCL: {
-			const u_int taskCount = renderEngine->taskCount;
-
-			// rngPass, rng0 and rng1 fields
-			vector<slg::ocl::TilePathSample> buffer(taskCount);
-
-			RandomGenerator rndGen(tileWork.GetTileSeed());
-
-			for (u_int i = 0; i < taskCount; ++i) {
-				buffer[i].rngPass = rndGen.uintValue();
-				buffer[i].rng0 = rndGen.floatValue();
-				buffer[i].rng1 = rndGen.floatValue();
-			}
-
-			// TODO: remove the forced synchronization (the CL_TRUE)
-			intersectionDevice->EnqueueWriteBuffer(samplesBuff, CL_TRUE,
-					sizeof(slg::ocl::TilePathSample) * buffer.size(), &buffer[0]);
-			break;
-		}
-		case RTPATHOCL:
-			break;
-		default:
-			throw runtime_error("Unknown render engine in PathOCLBaseRenderThread::UpdateSamplesBuffer(): " +
-					boost::lexical_cast<string>(engine->GetType()));
-	}
-
 	// Update samplerSharedDataBuff
-	slg::ocl::TilePathSamplerSharedData sharedData;
+
+	// To have an asynchronous EnqueueWriteBuffer(), I need to keep a copy of
+	// sharedData around.
+	slg::ocl::TilePathSamplerSharedData &sharedData = samplerDatas[index];
 	sharedData.cameraFilmWidth = engine->film->GetWidth();
 	sharedData.cameraFilmHeight =  engine->film->GetHeight();
 	sharedData.tileStartX =  tileWork.GetCoord().x;
@@ -95,9 +70,9 @@ void TilePathOCLRenderThread::UpdateSamplerData(const TileWork &tileWork) {
 	sharedData.tileHeight =  tileWork.GetCoord().height;
 	sharedData.tilePass =  tileWork.passToRender;
 	sharedData.aaSamples =  engine->aaSamples;
+	sharedData.multipassIndexToRender = tileWork.multipassIndexToRender;
 
-	// TODO: remove the forced synchronization (the CL_TRUE)
-	intersectionDevice->EnqueueWriteBuffer(samplerSharedDataBuff, CL_TRUE,
+	intersectionDevice->EnqueueWriteBuffer(samplerSharedDataBuff, CL_FALSE,
 			sizeof(slg::ocl::TilePathSamplerSharedData), &sharedData);
 }
 
@@ -128,7 +103,7 @@ void TilePathOCLRenderThread::RenderTileWork(const TileWork &tileWork,
 	}
 
 	// Update Sampler shared data
-	UpdateSamplerData(tileWork);
+	UpdateSamplerData(tileWork, filmIndex);
 
 	// Initialize the tasks buffer
 	intersectionDevice->EnqueueKernel(initKernel,
@@ -178,6 +153,7 @@ void TilePathOCLRenderThread::RenderThreadImpl() {
 		//----------------------------------------------------------------------
 
 		vector<TileWork> tileWorks(1);
+		samplerDatas.resize(1);
 		const boost::function<void()> pgicUpdateCallBack = boost::bind(PGICUpdateCallBack, engine->compiledScene);
 		while (!boost::this_thread::interruption_requested()) {
 			// Check if we are in pause mode
@@ -229,6 +205,7 @@ void TilePathOCLRenderThread::RenderThreadImpl() {
 					(intersectionDevice->GetDeviceDesc()->GetType() != DEVICE_TYPE_OPENCL_CPU)) {
 				IncThreadFilms();
 				tileWorks.resize(tileWorks.size() + 1);
+				samplerDatas.resize(samplerDatas.size() + 1);
 
 				SLG_LOG("[TilePathOCLRenderThread::" << threadIndex << "] Increased the number of rendered tiles to: " << tileWorks.size());
 			}

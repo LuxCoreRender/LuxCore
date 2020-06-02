@@ -10,27 +10,9 @@ cd ..\WindowsCompile
 if "%FINAL%" EQU "TRUE" (
     call create-sdk.bat %1
     set LUX_LATEST=luxcorerender-%VERSION_STRING%-win64-sdk
-    REM if "%1" EQU "/no-ocl" (
-        REM set LUX_LATEST=luxcorerender-%VERSION_STRING%-win64-sdk
-    REM ) else (
-        REM if "%1" EQU "/cuda" (
-            REM set LUX_LATEST=luxcorerender-%VERSION_STRING%-win64-cuda-sdk
-        REM ) else (
-            REM set LUX_LATEST=luxcorerender-%VERSION_STRING%-win64-opencl-sdk
-        REM )
-    REM )
 ) else (
     call create-standalone.bat %1
     set LUX_LATEST=luxcorerender-%VERSION_STRING%-win64
-    REM if "%1" EQU "/no-ocl" (
-        REM set LUX_LATEST=luxcorerender-%VERSION_STRING%-win64
-    REM ) else (
-        REM if "%1" EQU "/cuda" (
-            REM set LUX_LATEST=luxcorerender-%VERSION_STRING%-win64-cuda
-        REM ) else (
-            REM set LUX_LATEST=luxcorerender-%VERSION_STRING%-win64-opencl
-        REM )
-    REM )
 )
 
 move %DIR% %LUX_LATEST%

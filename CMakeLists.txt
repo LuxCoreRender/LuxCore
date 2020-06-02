@@ -135,10 +135,19 @@ endif()
 
 if (LUXRAYS_DISABLE_OPENCL)
 	ADD_DEFINITIONS("-DLUXRAYS_DISABLE_OPENCL")
-endif()
-
-if (LUXRAYS_DISABLE_CUDA)
+	# CUDA requires OpenCL support
 	ADD_DEFINITIONS("-DLUXRAYS_DISABLE_CUDA")
+
+	message(STATUS "OpenCL and CUDA support: disabled")
+else()
+	if (LUXRAYS_DISABLE_CUDA)
+		ADD_DEFINITIONS("-DLUXRAYS_DISABLE_CUDA")
+		message(STATUS "OpenCL support: enabled")
+		message(STATUS "CUDA support: disabled")
+	else()
+		message(STATUS "OpenCL support: enabled")
+		message(STATUS "CUDA support: enabled")
+	endif()
 endif()
 
 if (BUILD_LUXCORE_DLL)

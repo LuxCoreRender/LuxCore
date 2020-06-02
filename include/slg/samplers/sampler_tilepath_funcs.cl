@@ -24,6 +24,14 @@
 
 #define TILEPATHSAMPLER_TOTAL_U_SIZE 2
 
+OPENCL_FORCE_INLINE __global const uint* restrict TilePathSampler_GetSobolDirectionsPtr(
+		__global TilePathSamplerSharedData *samplerSharedData) {
+	// Sobol directions array is appended at the end of slg::ocl::TilePathSamplerSharedData
+	return (__global const uint* restrict)(
+			(__global char *)samplerSharedData +
+			sizeof(TilePathSamplerSharedData));
+}
+
 OPENCL_FORCE_INLINE float TilePathSampler_GetSample(
 		__constant const GPUTaskConfiguration* restrict taskConfig,
 		const uint index
@@ -40,7 +48,8 @@ OPENCL_FORCE_INLINE float TilePathSampler_GetSample(
 #if defined(RENDER_ENGINE_RTPATHOCL)
 			return Rnd_FloatValue(seed);
 #else
-			__global const uint* restrict sobolDirections = (__global const uint* restrict)samplerSharedDataBuff;
+			__global TilePathSamplerSharedData *samplerSharedData = (__global TilePathSamplerSharedData *)samplerSharedDataBuff;
+			__global const uint* restrict sobolDirections = TilePathSampler_GetSobolDirectionsPtr(samplerSharedData);
 
 			__global TilePathSample *samples = (__global TilePathSample *)samplesBuff;
 			__global TilePathSample *sample = &samples[gid];
@@ -146,7 +155,7 @@ OPENCL_FORCE_INLINE bool TilePathSampler_Init(
 	if ((pixelX >= samplerSharedData->tileWidth) || (pixelY >= samplerSharedData->tileHeight))
 		return false;
 
-	sample->pass = samplerSharedData->tilePass;
+	sample->pass = samplerSharedData->tilePass + SOBOL_STARTOFFSET;
 
 	samplesData[IDX_SCREEN_X] = pixelX + Rnd_FloatValue(seed);
 	samplesData[IDX_SCREEN_Y] = pixelY + Rnd_FloatValue(seed);
@@ -165,11 +174,20 @@ OPENCL_FORCE_INLINE bool TilePathSampler_Init(
 	if ((pixelX >= samplerSharedData->tileWidth) || (pixelY >= samplerSharedData->tileHeight))
 		return false;
 
-	// Note: sample->rngPass, sample->rng0 and sample->rng1 are initialize by the CPU
+	// Initialize rng0, rng1 and rngPass
+	const uint pixelRngGenSeed = (samplerSharedData->tileStartX + pixelX + (samplerSharedData->tileStartY + pixelY) * samplerSharedData->cameraFilmWidth + 1) *
+			(samplerSharedData->multipassIndexToRender + 1);
+	Seed pixelSeed;
+	Rnd_Init(pixelRngGenSeed, &pixelSeed);
 
-	sample->pass = samplerSharedData->tilePass * aaSamples2 + gid % aaSamples2;
+	sample->rngPass = Rnd_UintValue(&pixelSeed);
+	sample->rng0 = Rnd_FloatValue(&pixelSeed);
+	sample->rng1 = Rnd_FloatValue(&pixelSeed);
 
-	__global const uint* restrict sobolDirections = (__global const uint* restrict)samplerSharedDataBuff;
+	sample->pass = samplerSharedData->tilePass * aaSamples2 + gid % aaSamples2 + SOBOL_STARTOFFSET;
+
+	__global const uint* restrict sobolDirections = TilePathSampler_GetSobolDirectionsPtr(samplerSharedData);
+
 	samplesData[IDX_SCREEN_X] = pixelX + SobolSequence_GetSample(sobolDirections, sample->pass,
 			sample->rngPass, sample->rng0, sample->rng1, IDX_SCREEN_X);
 	samplesData[IDX_SCREEN_Y] = pixelY + SobolSequence_GetSample(sobolDirections, sample->pass,

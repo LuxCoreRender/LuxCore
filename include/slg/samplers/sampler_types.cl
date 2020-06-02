@@ -108,6 +108,7 @@ typedef struct {
 	unsigned int tileStartX, tileStartY;
 	unsigned int tileWidth, tileHeight;
 	unsigned int tilePass, aaSamples;
+	unsigned int multipassIndexToRender;
 
 	// Plus Sobol directions array
 } TilePathSamplerSharedData;
@@ -143,6 +144,7 @@ typedef struct {
 
 #define SOBOL_BITS 32
 #define SOBOL_MAX_DIMENSIONS 21201
+#define SOBOL_STARTOFFSET 32
 
 #define SAMPLER_PARAM_DECL \
 		, Seed *seed \

@@ -67,8 +67,6 @@ private:
 // This sampler is based on Blender Cycles Sobol implementation.
 //------------------------------------------------------------------------------
 
-#define SOBOL_STARTOFFSET 32
-
 class SobolSampler : public Sampler {
 public:
 	SobolSampler(luxrays::RandomGenerator *rnd, Film *flm,

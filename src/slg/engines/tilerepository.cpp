@@ -275,10 +275,6 @@ void TileWork::Init(Tile *t) {
 	passToRender = tile->pass + tile->pendingPasses;
 }
 
-u_int TileWork::GetTileSeed() const {
-	return tile->tileIndex + (multipassIndexToRender << 16) + 1;
-}
-
 void TileWork::AddPass(Film &tileFilm) {		
 	tile->AddPass(tileFilm, passToRender);
 	if (tile->pendingPasses > 0)

@@ -49,21 +49,6 @@ link_directories("${LuxRays_SOURCE_DIR}/lib")
 
 ################################################################################
 #
-# Build options
-#
-################################################################################
-
-if (LUXRAYS_DISABLE_OPENCL)
-	ADD_DEFINITIONS("-DLUXRAYS_DISABLE_OPENCL")
-endif()
-
-if (LUXRAYS_DISABLE_CUDA)
-	ADD_DEFINITIONS("-DLUXRAYS_DISABLE_CUDA")
-endif()
-
-
-################################################################################
-#
 # Find OpenGL
 #
 ################################################################################
