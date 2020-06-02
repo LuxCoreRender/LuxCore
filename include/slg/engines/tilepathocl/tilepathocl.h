@@ -21,6 +21,8 @@
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
+#include <vector>
+
 #include "slg/engines/tilepathcpu/tilepathcpu.h"
 #include "slg/engines/pathoclbase/pathoclbase.h"
 
@@ -41,12 +43,14 @@ public:
 	friend class TilePathOCLRenderEngine;
 
 protected:
-	void UpdateSamplerData(const TileWork &tileWork);
+	void UpdateSamplerData(const TileWork &tileWork, const u_int index);
 
 	virtual void GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight, u_int *filmSubRegion);
 	virtual void RenderThreadImpl();
 	
 	void RenderTileWork(const TileWork &tileWork, const u_int filmIndex);
+
+	std::vector<slg::ocl::TilePathSamplerSharedData> samplerDatas;
 };
 
 //------------------------------------------------------------------------------
