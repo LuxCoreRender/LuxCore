@@ -51,7 +51,8 @@ void TilePathOCLRenderThread::GetThreadFilmSize(u_int *filmWidth, u_int *filmHei
 	filmSubRegion[3] = engine->tileRepository->tileHeight - 1;
 }
 
-void TilePathOCLRenderThread::UpdateSamplerData(const TileWork &tileWork, const u_int index) {
+void TilePathOCLRenderThread::UpdateSamplerData(const TileWork &tileWork,
+		slg::ocl::TilePathSamplerSharedData &sharedData) {
 	TilePathOCLRenderEngine *engine = (TilePathOCLRenderEngine *)renderEngine;
 	if (engine->oclSampler->type != slg::ocl::TILEPATHSAMPLER)
 		throw runtime_error("Wrong sampler in PathOCLBaseRenderThread::UpdateSamplesBuffer(): " +
@@ -61,7 +62,6 @@ void TilePathOCLRenderThread::UpdateSamplerData(const TileWork &tileWork, const 
 
 	// To have an asynchronous EnqueueWriteBuffer(), I need to keep a copy of
 	// sharedData around.
-	slg::ocl::TilePathSamplerSharedData &sharedData = samplerDatas[index];
 	sharedData.cameraFilmWidth = engine->film->GetWidth();
 	sharedData.cameraFilmHeight =  engine->film->GetHeight();
 	sharedData.tileStartX =  tileWork.GetCoord().x;
@@ -77,6 +77,7 @@ void TilePathOCLRenderThread::UpdateSamplerData(const TileWork &tileWork, const 
 }
 
 void TilePathOCLRenderThread::RenderTileWork(const TileWork &tileWork,
+		slg::ocl::TilePathSamplerSharedData &sharedData,
 		const u_int filmIndex) {
 	TilePathOCLRenderEngine *engine = (TilePathOCLRenderEngine *)renderEngine;
 
@@ -103,7 +104,7 @@ void TilePathOCLRenderThread::RenderTileWork(const TileWork &tileWork,
 	}
 
 	// Update Sampler shared data
-	UpdateSamplerData(tileWork, filmIndex);
+	UpdateSamplerData(tileWork, sharedData);
 
 	// Initialize the tasks buffer
 	intersectionDevice->EnqueueKernel(initKernel,
@@ -153,7 +154,7 @@ void TilePathOCLRenderThread::RenderThreadImpl() {
 		//----------------------------------------------------------------------
 
 		vector<TileWork> tileWorks(1);
-		samplerDatas.resize(1);
+		vector<slg::ocl::TilePathSamplerSharedData> samplerDatas(1);
 		const boost::function<void()> pgicUpdateCallBack = boost::bind(PGICUpdateCallBack, engine->compiledScene);
 		while (!boost::this_thread::interruption_requested()) {
 			// Check if we are in pause mode
@@ -176,7 +177,7 @@ void TilePathOCLRenderThread::RenderThreadImpl() {
 					//SLG_LOG("[TilePathOCLRenderThread::" << threadIndex << "] TileWork: " << tileWork);
 
 					// Render the tile
-					RenderTileWork(tileWorks[i], i);
+					RenderTileWork(tileWorks[i], samplerDatas[i], i);
 
 					allTileDone = false;
 				} else

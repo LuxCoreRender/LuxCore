@@ -153,6 +153,7 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 
 		bool pendingFilmClear = false;
 		tileWork.Reset();
+		slg::ocl::TilePathSamplerSharedData samplerData;
 		while (!boost::this_thread::interruption_requested()) {
 			//------------------------------------------------------------------
 			// Render the tile (there is only one tile for each device
@@ -166,7 +167,7 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 				//const double t0 = WallClockTime();
 				//SLG_LOG("[RTPathOCLRenderThread::" << threadIndex << "] TileWork: " << tileWork);
 
-				RenderTileWork(tileWork, 0);
+				RenderTileWork(tileWork, samplerData, 0);
 
 				// Async. transfer of GPU task statistics
 				intersectionDevice->EnqueueReadBuffer(
