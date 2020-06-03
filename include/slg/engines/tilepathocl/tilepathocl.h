@@ -43,14 +43,15 @@ public:
 	friend class TilePathOCLRenderEngine;
 
 protected:
-	void UpdateSamplerData(const TileWork &tileWork, const u_int index);
+	void UpdateSamplerData(const TileWork &tileWork,
+			slg::ocl::TilePathSamplerSharedData &samplerData);
 
 	virtual void GetThreadFilmSize(u_int *filmWidth, u_int *filmHeight, u_int *filmSubRegion);
 	virtual void RenderThreadImpl();
 	
-	void RenderTileWork(const TileWork &tileWork, const u_int filmIndex);
-
-	std::vector<slg::ocl::TilePathSamplerSharedData> samplerDatas;
+	void RenderTileWork(const TileWork &tileWork,
+			slg::ocl::TilePathSamplerSharedData &samplerData,
+			const u_int filmIndex);
 };
 
 //------------------------------------------------------------------------------
