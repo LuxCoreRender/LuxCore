@@ -116,38 +116,44 @@ Spectrum SphereLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 
 	// The point isn't inside the sphere
 
-	// Build a local coordinate system
-	const Vector localZ = toLight / centerDistance;
-	Frame localFrame(localZ);
-
-	// Sample sphere uniformly inside subtended cone
 	const float cosThetaMax = sqrtf(Max(0.f, 1.f - radiusSquared / centerDistanceSquared));
+	if (cosThetaMax > 1.f - DEFAULT_EPSILON_STATIC) {
+		// If the subtended angle is too small, I sample the light source like
+		// if it was a point light source in order to avoiding banding due to
+		// (lack of) numerical precision.
+		return PointLight::Illuminate(scene, bsdf, time, u0, u1, passThroughEvent, shadowRay, directPdfW, emissionPdfW, cosThetaAtLight);
+	} else {
+		// Build a local coordinate system
+		const Vector localZ = toLight / centerDistance;
+		Frame localFrame(localZ);
 
-	const Vector localRayDir = UniformSampleCone(u0, u1, cosThetaMax);
+		// Sample sphere uniformly inside subtended cone
+		const Vector localRayDir = UniformSampleCone(u0, u1, cosThetaMax);
 
-	if (CosTheta(localRayDir) < DEFAULT_COS_EPSILON_STATIC)
-		return Spectrum();
+		if (CosTheta(localRayDir) < DEFAULT_COS_EPSILON_STATIC)
+			return Spectrum();
 
-	const Vector shadowRayDir = localFrame.ToWorld(localRayDir);
-	const Point shadowRayOrig = bsdf.GetRayOrigin(shadowRayDir);
-	const Ray ray(shadowRayOrig, shadowRayDir);
+		const Vector shadowRayDir = localFrame.ToWorld(localRayDir);
+		const Point shadowRayOrig = bsdf.GetRayOrigin(shadowRayDir);
+		const Ray ray(shadowRayOrig, shadowRayDir);
 
-	// Check the intersection with the sphere
-	float shadowRayDistance;
-	if (!SphereIntersect(ray, shadowRayDistance))
-		shadowRayDistance = Dot(toLight, shadowRayDir);
+		// Check the intersection with the sphere
+		float shadowRayDistance;
+		if (!SphereIntersect(ray, shadowRayDistance))
+			shadowRayDistance = Dot(toLight, shadowRayDir);
 
-	if (cosThetaAtLight)
-		*cosThetaAtLight = CosTheta(localRayDir);
+		if (cosThetaAtLight)
+			*cosThetaAtLight = CosTheta(localRayDir);
 
-	directPdfW = UniformConePdf(cosThetaMax);
+		directPdfW = UniformConePdf(cosThetaMax);
 
-	if (emissionPdfW)
-		*emissionPdfW = invArea * CosTheta(localRayDir) * INV_PI;
+		if (emissionPdfW)
+			*emissionPdfW = invArea * CosTheta(localRayDir) * INV_PI;
 
-	shadowRay = Ray(shadowRayOrig, shadowRayDir, 0.f, shadowRayDistance, time);
+		shadowRay = Ray(shadowRayOrig, shadowRayDir, 0.f, shadowRayDistance, time);
 
-	return emittedFactor * invArea * INV_PI;
+		return emittedFactor * invArea * INV_PI;
+	}
 }
 
 Properties SphereLight::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
