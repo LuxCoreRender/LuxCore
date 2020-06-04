@@ -41,12 +41,10 @@ public:
 	OpenCLDeviceDescription(const cl_device_id device, const size_t devIndex) :
 		DeviceDescription(GetOCLDeviceName(device), GetOCLDeviceType(device)),
 		deviceIndex(devIndex),
-		oclDevice(device), oclContext(nullptr) {
+		oclDevice(device) {
 	}
 
 	virtual ~OpenCLDeviceDescription() {
-		if (oclContext)
-			CHECK_OCL_ERROR(clReleaseContext(oclContext));
 	}
 
 	size_t GetDeviceIndex() const { return deviceIndex; }
@@ -96,9 +94,6 @@ public:
 		return v;
 	}
 
-	bool HasOCLContext() const { return (oclContext != nullptr); }
-
-	cl_context GetOCLContext();
 	cl_device_id GetOCLDevice() { return oclDevice; }
 
 	std::string GetOpenCLVersion() const {
@@ -166,7 +161,6 @@ protected:
 	size_t deviceIndex;
 
 	cl_device_id oclDevice;
-	cl_context oclContext;
 };
 
 //------------------------------------------------------------------------------
@@ -337,6 +331,7 @@ protected:
 
 	OpenCLDeviceDescription *deviceDesc;
 
+	cl_context oclContext;
 	cl_command_queue oclQueue;
 
 	luxrays::oclKernelCache *kernelCache;

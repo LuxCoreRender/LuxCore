@@ -92,19 +92,6 @@ void OpenCLDeviceDescription::AddDeviceDescs(const cl_platform_id oclPlatform,
 	}
 }
 
-cl_context OpenCLDeviceDescription::GetOCLContext() {
-	if (!oclContext) {
-		// Allocate a context with the selected device
-		
-		cl_device_id devices[1] = { oclDevice };
-		cl_int error;
-		oclContext = clCreateContext(nullptr, 1, devices, nullptr, nullptr, &error);
-		CHECK_OCL_ERROR(error);
-	}
-
-	return oclContext;
-}
-
 //------------------------------------------------------------------------------
 // OpenCLDevice
 //------------------------------------------------------------------------------
@@ -114,7 +101,7 @@ OpenCLDevice::OpenCLDevice(
 		OpenCLDeviceDescription *desc,
 		const size_t devIndex) :
 		Device(context, devIndex),
-		deviceDesc(desc), oclQueue(nullptr) {
+		deviceDesc(desc), oclContext(nullptr), oclQueue(nullptr) {
 	deviceName = (desc->GetName() + " OpenCLIntersect").c_str();
 
 	// Check if OpenCL 1.1 is available
@@ -124,11 +111,20 @@ OpenCLDevice::OpenCLDevice(
 		LR_LOG(deviceContext, "WARNING: OpenCL version 1.1 or better is required. Device " + deviceName + " may not work.");
 	}
 	
+	// Allocate a context with the selected device	
+	cl_device_id devices[1] = { desc->GetOCLDevice() };
+	cl_int error;
+	oclContext = clCreateContext(nullptr, 1, devices, nullptr, nullptr, &error);
+	CHECK_OCL_ERROR(error);
+
 	kernelCache = new oclKernelPersistentCache("LUXRAYS_" LUXRAYS_VERSION_MAJOR "." LUXRAYS_VERSION_MINOR);
 }
 
 OpenCLDevice::~OpenCLDevice() {
 	delete kernelCache;
+
+	if (oclContext)
+		CHECK_OCL_ERROR(clReleaseContext(oclContext));
 }
 
 void OpenCLDevice::Start() {
@@ -136,7 +132,7 @@ void OpenCLDevice::Start() {
 
 	// Create the OpenCL queue
 	cl_int error;
-	oclQueue = clCreateCommandQueue(deviceDesc->GetOCLContext(), deviceDesc->GetOCLDevice(), 0, &error);
+	oclQueue = clCreateCommandQueue(oclContext, deviceDesc->GetOCLDevice(), 0, &error);
 	CHECK_OCL_ERROR(error);
 }
 
@@ -176,7 +172,7 @@ void OpenCLDevice::CompileProgram(HardwareDeviceProgram **program,
 
 	bool cached;
 	string error;
-	cl_program oclProgram = kernelCache->Compile(deviceDesc->GetOCLContext(), deviceDesc->GetOCLDevice(),
+	cl_program oclProgram = kernelCache->Compile(oclContext, deviceDesc->GetOCLDevice(),
 			oclProgramParameters, oclProgramSource,
 			&cached, &error);
 	if (!oclProgram) {
@@ -378,7 +374,7 @@ void OpenCLDevice::AllocBuffer(const cl_mem_flags clFlags, cl_mem *buff,
 				" buffer size: " << ToMemString(size));
 
 	cl_int error;
-	*buff = clCreateBuffer(deviceDesc->GetOCLContext(), clFlags, size, src, &error);
+	*buff = clCreateBuffer(oclContext, clFlags, size, src, &error);
 	CHECK_OCL_ERROR(error);
 
 	AllocMemory(OpenCLDeviceBuffer::GetSize(*buff));
