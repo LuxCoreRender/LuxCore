@@ -195,11 +195,7 @@ void RTPathOCLRenderEngine::WaitNewFrame() {
 	if (!pauseMode) {
 		// Update the statistics
 		UpdateCounters();
-	} else {
-		
 	}
-	
-	// TODO: PAUSE MODE
 }
 
 //------------------------------------------------------------------------------
