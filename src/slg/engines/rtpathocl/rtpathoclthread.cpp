@@ -25,6 +25,7 @@
 #include "slg/film/imagepipeline/plugins/gammacorrection.h"
 #include "slg/film/imagepipeline/plugins/tonemaps/linear.h"
 #include "slg/engines/rtpathocl/rtpathocl.h"
+#include "slg/engines/rtpathcpu/rtpathcpu.h"
 
 using namespace std;
 using namespace luxrays;
@@ -120,6 +121,23 @@ void RTPathOCLRenderThread::UpdateOCLBuffers(const EditActionList &updateActions
 	intersectionDevice->ResetPerformaceStats();
 }
 
+void RTPathOCLRenderThread::UpdateAllThreadsOCLBuffers() {
+	RTPathOCLRenderEngine *engine = (RTPathOCLRenderEngine *)renderEngine;
+
+	if (engine->updateActions.HasAnyAction()) {
+		// Update all threads
+		for (u_int i = 0; i < engine->renderOCLThreads.size(); ++i) {
+			RTPathOCLRenderThread *thread = (RTPathOCLRenderThread *)(engine->renderOCLThreads[i]);
+			thread->intersectionDevice->PushThreadCurrentDevice();
+			thread->UpdateOCLBuffers(engine->updateActions);
+			thread->intersectionDevice->PopThreadCurrentDevice();
+		}
+
+		// Reset updateActions
+		engine->updateActions.Reset();
+	}
+}
+
 void RTPathOCLRenderThread::RenderThreadImpl() {
 	//SLG_LOG("[RTPathOCLRenderThread::" << threadIndex << "] Rendering thread started");
 
@@ -129,12 +147,19 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 	boost::this_thread::disable_interruption di;
 
 	RTPathOCLRenderEngine *engine = (RTPathOCLRenderEngine *)renderEngine;
+	boost::barrier *syncBarrier = engine->syncBarrier;
 	boost::barrier *frameBarrier = engine->frameBarrier;
 
 	intersectionDevice->PushThreadCurrentDevice();
 
-	// To synchronize the start of all threads
-	frameBarrier->wait();
+	// To synchronize with RTPathOCLRenderEngine::StartLockLess()
+	if (threadIndex == 0)
+		syncBarrier->wait();
+
+	// To synchronize the start of all threads. frameBarrier can be nullptr if
+	// there is only one rendering threads.
+	if (frameBarrier)
+		frameBarrier->wait();
 
 	const u_int taskCount = engine->taskCount;
 
@@ -151,9 +176,11 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 		// Rendering loop
 		//----------------------------------------------------------------------
 
-		bool pendingFilmClear = false;
+		double frameStartTime = WallClockTime();
+		u_int frameCounter = 0;
 		tileWork.Reset();
 		slg::ocl::TilePathSamplerSharedData samplerData;
+
 		while (!boost::this_thread::interruption_requested()) {
 			//------------------------------------------------------------------
 			// Render the tile (there is only one tile for each device
@@ -177,75 +204,86 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 					gpuTaskStats);
 				intersectionDevice->FinishQueue();
 
+				engine->tileRepository->NextTile(engine->film, engine->filmMutex, tileWork, threadFilms[0]->film);
+
+				// There is only one tile for each device in RTPATHOCL
+				tileWork.Reset();
+
 				//const double t1 = WallClockTime();
 				//SLG_LOG("[RTPathOCLRenderThread::" << threadIndex << "] Tile rendering time: " + ToString((u_int)((t1 - t0) * 1000.0)) + "ms");
 			}
 
 			//------------------------------------------------------------------
-			frameBarrier->wait();
+			if (frameBarrier)
+				frameBarrier->wait();
 			//------------------------------------------------------------------
 
 			if (threadIndex == 0) {
-				//const double t0 = WallClockTime();
+				//--------------------------------------------------------------
+				// Update frame time
+				//--------------------------------------------------------------
 
-				if (pendingFilmClear) {
-					boost::unique_lock<boost::mutex> lock(*(engine->filmMutex));
-					engine->film->Reset();
-					pendingFilmClear = false;
+				const double now = WallClockTime();
+				engine->frameTime = now - frameStartTime;
+				frameStartTime = now;
+				
+				//--------------------------------------------------------------
+				// This is a special optimized path fro CAMERA_EDIT actions
+				//--------------------------------------------------------------
+				
+				if (engine->updateActions.HasOnly(CAMERA_EDIT)) {
+					// Update OpenCL buffers if there is only a CAMERA_EDIT. It
+					// is done by thread #0 for all threads.
+					UpdateAllThreadsOCLBuffers();
+					frameCounter = 0;
 				}
 
-				// Now I can splat the tile on the tile repository. It is done now to
-				// not obliterate the CHANNEL_IMAGEPIPELINE while the screen refresh
-				// thread is probably using it to draw the screen.
-				// It is also done by thread #0 for all threads.
-				for (u_int i = 0; i < engine->renderOCLThreads.size(); ++i) {
-					RTPathOCLRenderThread *thread = (RTPathOCLRenderThread *)(engine->renderOCLThreads[i]);
-					
-					thread->intersectionDevice->PushThreadCurrentDevice();
+				//--------------------------------------------------------------
+				// Check if there is a sync. request from the main thread
+				//--------------------------------------------------------------
 
-					if (thread->tileWork.HasWork()) {
-						engine->tileRepository->NextTile(engine->film, engine->filmMutex, thread->tileWork, thread->threadFilms[0]->film);
+				switch (engine->syncType) {
+					case SYNCTYPE_NONE:
+						break;
+					case SYNCTYPE_BEGINFILMEDIT:
+					case SYNCTYPE_STOP:
+						syncBarrier->wait();
+						// The main thread send an interrupt to all render threads
+						syncBarrier->wait();
+						break;
+					case SYNCTYPE_ENDSCENEEDIT:
+						syncBarrier->wait();
 
-						// There is only one tile for each device in RTPATHOCL
-						thread->tileWork.Reset();
-					}
+						// Update OpenCL buffers if there is any edit action. It
+						// is done by thread #0 for all threads.
+						UpdateAllThreadsOCLBuffers();
+						frameCounter = 0;
 
-					thread->intersectionDevice->PopThreadCurrentDevice();
-				}
-
-				//const double t1 = WallClockTime();
-				//SLG_LOG("[RTPathOCLRenderThread::" << threadIndex << "] Tile splatting time: " + ToString((u_int)((t1 - t0) * 1000.0)) + "ms");
-			}
-
-			//------------------------------------------------------------------
-			frameBarrier->wait();
-			//------------------------------------------------------------------
-
-			//------------------------------------------------------------------
-			// Update OpenCL buffers if there is any edit action. It is done by
-			// thread #0 for all threads.
-			//------------------------------------------------------------------
-
-			if (threadIndex == 0) {
-				if (engine->updateActions.HasAnyAction()) {
-					// Update all threads
-					for (u_int i = 0; i < engine->renderOCLThreads.size(); ++i) {
-						RTPathOCLRenderThread *thread = (RTPathOCLRenderThread *)(engine->renderOCLThreads[i]);
-						thread->intersectionDevice->PushThreadCurrentDevice();
-						thread->UpdateOCLBuffers(engine->updateActions);
-						thread->intersectionDevice->PopThreadCurrentDevice();
-					}
-
-					// Reset updateActions
-					engine->updateActions.Reset();
-
-					// Clear the film
-					pendingFilmClear = true;
+						syncBarrier->wait();
+						break;
+					case SYNCTYPE_PAUSEMODE:
+						syncBarrier->wait();
+						// Wait for the main thread to restart me
+						syncBarrier->wait();
+						break;
+					default:
+						throw runtime_error("Unknown sync. type in RTPathOCLRenderThread::RenderThreadImpl(): " + ToString(engine->syncType));
 				}
 			}
 
+			// Re-initialize the tile queue for the next frame
+			engine->tileRepository->Restart(engine->film, frameCounter);
+
+			if (frameCounter == 0) {
+				boost::unique_lock<boost::mutex> lock(*(engine->filmMutex));
+				engine->film->Reset();
+			}
+
+			frameCounter++;
+
 			//------------------------------------------------------------------
-			frameBarrier->wait();
+			if (frameBarrier)
+				frameBarrier->wait();
 			//------------------------------------------------------------------
 
 			// Time to render a new frame

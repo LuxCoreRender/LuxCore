@@ -50,6 +50,7 @@ protected:
 	virtual void RenderThreadImpl();
 
 	void UpdateOCLBuffers(const EditActionList &updateActions);
+	void UpdateAllThreadsOCLBuffers();
 
 	TileWork tileWork;
 };
@@ -57,6 +58,15 @@ protected:
 //------------------------------------------------------------------------------
 // Real-Time path tracing 100% OpenCL render engine
 //------------------------------------------------------------------------------
+
+typedef enum {
+	SYNCTYPE_NONE,
+	SYNCTYPE_STOP,
+	SYNCTYPE_ENDSCENEEDIT,
+	SYNCTYPE_BEGINFILMEDIT,
+	SYNCTYPE_PAUSEMODE
+} RTPathOCLSyncType;
+
 
 class RTPathOCLRenderEngine : public TilePathOCLRenderEngine {
 public:
@@ -67,6 +77,9 @@ public:
 	virtual std::string GetTag() const { return GetObjectTag(); }
 
 	double GetFrameTime() const { return frameTime; }
+
+	virtual void Pause();
+	virtual void Resume();
 
 	virtual void EndSceneEdit(const EditActionList &editActions);
 
@@ -104,11 +117,19 @@ protected:
 	virtual void StopLockLess();
 	virtual void UpdateFilmLockLess();
 
+	void PauseThreads();
+	void ResumeThreads();
+
 	EditActionList updateActions;
 
+	// Used by RTPathOCLRenderEngine code to sync. with render thread 0
+	boost::barrier *syncBarrier;
+	RTPathOCLSyncType syncType;
+
+	// Used by all render threads to sync.
 	boost::barrier *frameBarrier;
-	double frameStartTime, frameTime;
-	u_int frameCounter;
+
+	double frameTime;
 };
 
 }
