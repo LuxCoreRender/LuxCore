@@ -272,14 +272,7 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 			}
 
 			// Re-initialize the tile queue for the next frame
-			engine->tileRepository->Restart(engine->film, frameCounter);
-
-			if (frameCounter == 0) {
-				boost::unique_lock<boost::mutex> lock(*(engine->filmMutex));
-				engine->film->Reset();
-			}
-
-			frameCounter++;
+			engine->tileRepository->Restart(engine->film, frameCounter++);
 
 			//------------------------------------------------------------------
 			if (frameBarrier)

@@ -294,6 +294,7 @@ TileRepository::TileRepository(const u_int tileW, const u_int tileH) {
 	convergenceTestThresholdReduction = 0.f;
 	convergenceTestWarmUpSamples = 32;
 	enableRenderingDonePrint = true;
+	enableFirstPassClear = false;
 
 	done = false;
 	filmTotalYValue = 0.f;
@@ -520,11 +521,20 @@ bool TileRepository::NextTile(Film *film, boost::mutex *filmMutex,
 		// Add the tile also to the global film
 		boost::unique_lock<boost::mutex> lock(*filmMutex);
 
-		film->AddFilm(*tileFilm,
-				0, 0,
-				Min(tileWidth, film->GetWidth() - tile->coord.x),
-				Min(tileHeight, film->GetHeight() - tile->coord.y),
-				tile->coord.x, tile->coord.y);
+		// This allow to avoid to have to clear the film
+		if (enableFirstPassClear && (tileWork.passToRender == 1)) {
+			film->SetFilm(*tileFilm,
+					0, 0,
+					Min(tileWidth, film->GetWidth() - tile->coord.x),
+					Min(tileHeight, film->GetHeight() - tile->coord.y),
+					tile->coord.x, tile->coord.y);
+		} else {
+			film->AddFilm(*tileFilm,
+					0, 0,
+					Min(tileWidth, film->GetWidth() - tile->coord.x),
+					Min(tileHeight, film->GetHeight() - tile->coord.y),
+					tile->coord.x, tile->coord.y);
+		}
 	}
 
 	// For the support of film halt conditions

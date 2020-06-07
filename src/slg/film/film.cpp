@@ -623,7 +623,8 @@ void Film::VarianceClampFilm(const VarianceClamping &varianceClamping,
 	}
 }
 
-void Film::AddFilm(const Film &film,
+template <bool overwrite>
+void Film::AddFilmImpl(const Film &film,
 		const u_int srcOffsetX, const u_int srcOffsetY,
 		const u_int srcWidth, const u_int srcHeight,
 		const u_int dstOffsetX, const u_int dstOffsetY) {
@@ -638,7 +639,10 @@ void Film::AddFilm(const Film &film,
 			for (u_int y = 0; y < srcHeight; ++y) {
 				for (u_int x = 0; x < srcWidth; ++x) {
 					const float *srcPixel = film.channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->GetPixel(srcOffsetX + x, srcOffsetY + y);
-					channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+					if (overwrite)
+						channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+					else
+						channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 				}
 			}
 		}
@@ -651,12 +655,15 @@ void Film::AddFilm(const Film &film,
 			for (u_int y = 0; y < srcHeight; ++y) {
 				for (u_int x = 0; x < srcWidth; ++x) {
 					const float *srcPixel = film.channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->GetPixel(srcOffsetX + x, srcOffsetY + y);
-					channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+					if (overwrite)
+						channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+					else
+						channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 				}
 			}
 		}
 	}
-	
+
 	samplesCounts.AddSampleCount(additional_SampleCount,
 			additional_RADIANCE_PER_PIXEL_NORMALIZED_SampleCount,
 			additional_RADIANCE_PER_SCREEN_NORMALIZED_SampleCount);
@@ -1015,6 +1022,22 @@ void Film::AddFilm(const Film &film,
 		if (!filmDenoiser.IsWarmUpDone())
 			filmDenoiser.CheckIfWarmUpDone();
 	}
+}
+
+void Film::SetFilm(const Film &film,
+	const u_int srcOffsetX, const u_int srcOffsetY,
+	const u_int srcWidth, const u_int srcHeight,
+	const u_int dstOffsetX, const u_int dstOffsetY) {
+	AddFilmImpl<true>(film, srcOffsetX, srcOffsetY,
+			srcWidth, srcHeight, dstOffsetX, dstOffsetY);
+}
+
+void Film::AddFilm(const Film &film,
+	const u_int srcOffsetX, const u_int srcOffsetY,
+	const u_int srcWidth, const u_int srcHeight,
+	const u_int dstOffsetX, const u_int dstOffsetY) {
+	AddFilmImpl<false>(film, srcOffsetX, srcOffsetY,
+			srcWidth, srcHeight, dstOffsetX, dstOffsetY);
 }
 
 void Film::ResetTests() {

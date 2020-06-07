@@ -81,6 +81,7 @@ void RTPathOCLRenderEngine::StartLockLess() {
 	maxTilePerDevice = 1;
 
 	tileRepository->enableRenderingDonePrint = false;
+	tileRepository->enableFirstPassClear = true;
 
 	// To synchronize the start of all threads
 	syncType = SYNCTYPE_NONE;
