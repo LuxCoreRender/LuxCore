@@ -39,6 +39,8 @@ namespace luxrays {
 bool isOpenCLAvilable = false;
 bool isCudaAvilable = false;
 
+std::locale cLocale("C");
+
 void Init() {
 #if defined(WIN32)
 	// Set locale for conversion from UTF-16 to UTF-8 on Windows. LuxRays/LuxCore assume

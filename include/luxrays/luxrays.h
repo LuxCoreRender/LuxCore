@@ -19,6 +19,8 @@
 #ifndef _LUXRAYS_H
 #define	_LUXRAYS_H
 
+#include <locale>
+
 #include <boost/version.hpp>
 
 #include "luxrays/cfg.h"
@@ -60,6 +62,7 @@ extern void Init();
 
 extern bool isOpenCLAvilable;
 extern bool isCudaAvilable;
+extern std::locale cLocale;
 
 }
 

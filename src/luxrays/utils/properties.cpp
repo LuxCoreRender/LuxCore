@@ -834,11 +834,17 @@ Properties &Properties::SetFromFile(const string &fileName) {
 	if (inFile.fail())
 		throw runtime_error("Unable to open properties file: " + fileName);
 
+	// Force to use C locale
+	inFile.imbue(cLocale);
+
 	return SetFromStream(inFile);
 }
 
 Properties &Properties::SetFromString(const string &propDefinitions) {
 	istringstream stream(propDefinitions);
+
+	// Force to use C locale
+	stream.imbue(cLocale);
 
 	return SetFromStream(stream);
 }
@@ -849,6 +855,9 @@ void Properties::Save(const std::string &fileName) {
 	boost::filesystem::ofstream outFile(boost::filesystem::path(fileName),
 			boost::filesystem::ofstream::trunc);
 	
+	// Force to use C locale
+	outFile.imbue(cLocale);
+
 	outFile << ToString();
 	
 	if (outFile.fail())
