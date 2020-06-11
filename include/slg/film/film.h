@@ -176,6 +176,14 @@ public:
 		VarianceClampFilm(varianceClamping, film, 0, 0, width, height, 0, 0);
 	}
 
+	void SetFilm(const Film &film,
+		const u_int srcOffsetX, const u_int srcOffsetY,
+		const u_int srcWidth, const u_int srcHeight,
+		const u_int dstOffsetX, const u_int dstOffsetY);
+	void SetFilm(const Film &film) {
+		SetFilm(film, 0, 0, width, height, 0, 0);
+	}
+
 	void AddFilm(const Film &film,
 		const u_int srcOffsetX, const u_int srcOffsetY,
 		const u_int srcWidth, const u_int srcHeight,
@@ -475,6 +483,12 @@ private:
 
 	void ExecuteImagePipelineThreadImpl(const u_int index);
 	void ExecuteImagePipelineImpl(const u_int index);
+
+	template <bool overwrite>
+	void AddFilmImpl(const Film &film,
+		const u_int srcOffsetX, const u_int srcOffsetY,
+		const u_int srcWidth, const u_int srcHeight,
+		const u_int dstOffsetX, const u_int dstOffsetY);
 
 	std::set<FilmChannelType> channels;
 	u_int width, height, pixelCount, radianceGroupCount;

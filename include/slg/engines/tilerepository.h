@@ -157,7 +157,7 @@ public:
 	float convergenceTestThreshold, convergenceTestThresholdReduction;
 	u_int convergenceTestWarmUpSamples;
 	VarianceClamping varianceClamping;
-	bool enableMultipassRendering, enableRenderingDonePrint;
+	bool enableMultipassRendering, enableRenderingDonePrint, enableFirstPassClear;
 
 	bool done;
 
