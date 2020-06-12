@@ -205,7 +205,10 @@ public:
 	// This one must be called before Init()
 	void RemoveChannel(const FilmChannelType type);
 	// This one must be called before Init()
-	void SetRadianceGroupCount(const u_int count) { radianceGroupCount = count; }
+	void SetRadianceGroupCount(const u_int count) {
+		// I can not have less than 1 radiance group
+		radianceGroupCount = luxrays::Max(count, 1u);
+	}
 
 	u_int GetRadianceGroupCount() const { return radianceGroupCount; }
 	u_int GetMaskMaterialID(const u_int index) const { return maskMaterialIDs[index]; }

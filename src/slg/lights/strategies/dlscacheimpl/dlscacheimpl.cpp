@@ -475,7 +475,10 @@ void DirectLightSamplingCache::Build(const Scene *scn) {
 		SLG_LOG("DirectLightSamplingCache is not built");
 		return;
 	}
-	
+
+	if (scene->lightDefs.GetSize() == 0)
+		return;
+
 	SLG_LOG("Building DirectLightSamplingCache");
 
 	//--------------------------------------------------------------------------
@@ -551,7 +554,7 @@ const Distribution1D *DirectLightSamplingCache::GetLightDistribution(const luxra
 		const luxrays::Normal &n, const bool isVolume) const {
 	if (cacheEntriesBVH) {
 		const DLSCacheEntry *entry = cacheEntriesBVH->GetNearestEntry(p, n, isVolume);
-		
+
 		if (entry)
 			return entry->lightsDistribution;
 	}

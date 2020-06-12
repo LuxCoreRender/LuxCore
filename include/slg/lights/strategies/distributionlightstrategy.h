@@ -51,7 +51,7 @@ public:
 	const luxrays::Distribution1D *GetLightsDistribution() const { return lightsDistribution; }
 	
 protected:
-	DistributionLightStrategy(const LightStrategyType t) : LightStrategy(t), lightsDistribution(NULL) { }
+	DistributionLightStrategy(const LightStrategyType t) : LightStrategy(t), lightsDistribution(nullptr) { }
 
 	luxrays::Distribution1D *lightsDistribution;
 };

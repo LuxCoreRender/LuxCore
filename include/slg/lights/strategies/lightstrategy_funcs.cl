@@ -51,8 +51,13 @@ OPENCL_FORCE_INLINE uint LightStrategy_SampleLights(
 			return Distribution1D_SampleDiscrete(lightsDistribution1D, u, pdf);
 	} else
 #endif
+	{
 		// All other strategies
-		return Distribution1D_SampleDiscrete(lightsDistribution1D, u, pdf);
+		if (lightsDistribution1D)
+			return Distribution1D_SampleDiscrete(lightsDistribution1D, u, pdf);
+		else
+			return NULL_INDEX;
+	}
 }
 
 OPENCL_FORCE_INLINE float LightStrategy_SampleLightPdf(
@@ -82,6 +87,11 @@ OPENCL_FORCE_INLINE float LightStrategy_SampleLightPdf(
 			return Distribution1D_PdfDiscrete(lightsDistribution1D, lightIndex);
 	} else
 #endif
+	{
 		// All other strategies
-		return Distribution1D_PdfDiscrete(lightsDistribution1D, lightIndex);
+		if (lightsDistribution1D)
+			return Distribution1D_PdfDiscrete(lightsDistribution1D, lightIndex);
+		else
+			return NULL_INDEX;
+	}
 }

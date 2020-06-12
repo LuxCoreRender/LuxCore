@@ -139,4 +139,3 @@ scene.lights.l4.target = 2 -2 0
 scene.lights.l4.gain = 100.0 100.0 100.0
 scene.lights.l4.coneangle = 40.0
 scene.lights.l4.conedeltaangle = 20.0
-

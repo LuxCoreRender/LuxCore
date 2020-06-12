@@ -69,45 +69,51 @@ void CompiledScene::CompileDLSC(const LightStrategyDLSCache *dlscLightStrategy) 
 
 	// Compile all cache entries
 	const DLSCBvh *bvh = dlscLightStrategy->GetBVH();
-	const std::vector<DLSCacheEntry> *allEntries = bvh->GetAllEntries();
-	const u_int entriesCount = allEntries->size();
-	
-	dlscAllEntries.resize(entriesCount);
-	dlscDistributions.clear();
-	for (u_int i = 0; i < entriesCount; ++i) {
-		const DLSCacheEntry &entry = (*allEntries)[i];
-		slg::ocl::DLSCacheEntry &oclEntry = dlscAllEntries[i];
+	if (bvh) {
+		const std::vector<DLSCacheEntry> *allEntries = bvh->GetAllEntries();
+		const u_int entriesCount = allEntries->size();
 
-		ASSIGN_VECTOR(oclEntry.p, entry.p);
-		ASSIGN_NORMAL(oclEntry.n, entry.n);
-		
-		oclEntry.isVolume = entry.isVolume;
+		dlscAllEntries.resize(entriesCount);
+		dlscDistributions.clear();
+		for (u_int i = 0; i < entriesCount; ++i) {
+			const DLSCacheEntry &entry = (*allEntries)[i];
+			slg::ocl::DLSCacheEntry &oclEntry = dlscAllEntries[i];
 
-		if (entry.lightsDistribution) {
-			// Compile the light Distribution1D
-			const u_int size = dlscDistributions.size();
-			oclEntry.lightsDistributionOffset = size;
+			ASSIGN_VECTOR(oclEntry.p, entry.p);
+			ASSIGN_NORMAL(oclEntry.n, entry.n);
 
-			u_int distributionSize;
-			float *dist = CompileDistribution1D(entry.lightsDistribution, &distributionSize);
+			oclEntry.isVolume = entry.isVolume;
 
-			const u_int distributionSize4 = distributionSize / sizeof(float);
-			dlscDistributions.resize(size + distributionSize4);
+			if (entry.lightsDistribution) {
+				// Compile the light Distribution1D
+				const u_int size = dlscDistributions.size();
+				oclEntry.lightsDistributionOffset = size;
 
-			copy(dist, dist + distributionSize4,
-					&dlscDistributions[size]);
+				u_int distributionSize;
+				float *dist = CompileDistribution1D(entry.lightsDistribution, &distributionSize);
 
-			delete[] dist;
-		} else
-			oclEntry.lightsDistributionOffset = NULL_INDEX;
+				const u_int distributionSize4 = distributionSize / sizeof(float);
+				dlscDistributions.resize(size + distributionSize4);
 
+				copy(dist, dist + distributionSize4,
+						&dlscDistributions[size]);
+
+				delete[] dist;
+			} else
+				oclEntry.lightsDistributionOffset = NULL_INDEX;
+
+		}
+
+		// Compile the DLSC BVH
+		u_int nNodes;
+		const slg::ocl::IndexBVHArrayNode *nodes = bvh->GetArrayNodes(&nNodes);
+		dlscBVHArrayNode.resize(nNodes);
+		copy(&nodes[0], &nodes[0] + nNodes, dlscBVHArrayNode.begin());
+	} else {
+		dlscAllEntries.clear();
+		dlscDistributions.clear();
+		dlscBVHArrayNode.clear();
 	}
-	
-	// Compile the DLSC BVH
-	u_int nNodes;
-	const slg::ocl::IndexBVHArrayNode *nodes = bvh->GetArrayNodes(&nNodes);
-	dlscBVHArrayNode.resize(nNodes);
-	copy(&nodes[0], &nodes[0] + nNodes, dlscBVHArrayNode.begin());
 
 	dlscAllEntries.shrink_to_fit();
 	dlscDistributions.shrink_to_fit();
@@ -128,16 +134,26 @@ void CompiledScene::CompileLightStrategy() {
 	const DistributionLightStrategy *distributionIllumLightStrategy = dynamic_cast<const DistributionLightStrategy *>(illuminateLightStrategy);
 	if (distributionIllumLightStrategy) {
 		delete[] lightsDistribution;
-		lightsDistribution = CompileDistribution1D(distributionIllumLightStrategy->GetLightsDistribution(),
-				&lightsDistributionSize);
+		lightsDistribution = nullptr;
+		lightsDistributionSize = 0;
+
+		if (distributionIllumLightStrategy->GetLightsDistribution()) {
+			lightsDistribution = CompileDistribution1D(distributionIllumLightStrategy->GetLightsDistribution(),
+					&lightsDistributionSize);
+		}
 	} else {
 		// Check if it is an LightStrategyDLSCache
 		
 		const LightStrategyDLSCache *dlscLightStrategy = dynamic_cast<const LightStrategyDLSCache *>(illuminateLightStrategy);
 		if (dlscLightStrategy) {
 			delete[] lightsDistribution;
-			lightsDistribution = CompileDistribution1D(dlscLightStrategy->GetLightsDistribution(),
-					&lightsDistributionSize);
+			lightsDistribution = nullptr;
+			lightsDistributionSize = 0;
+
+			if (dlscLightStrategy->GetLightsDistribution()) {
+				lightsDistribution = CompileDistribution1D(dlscLightStrategy->GetLightsDistribution(),
+						&lightsDistributionSize);
+			}
 			
 			CompileDLSC(dlscLightStrategy);
 		} else
@@ -148,22 +164,28 @@ void CompiledScene::CompileLightStrategy() {
 	// Compile infiniteLightDistribution
 	//--------------------------------------------------------------------------
 
+	delete[] infiniteLightSourcesDistribution;
+	infiniteLightSourcesDistribution = nullptr;
+	infiniteLightSourcesDistributionSize = 0;
+
 	const LightStrategy *infiniteLightStrategy = scene->lightDefs.GetInfiniteLightStrategy();
 
 	// Check if it is an DistributionLightStrategy
 	const DistributionLightStrategy *distributionInfLightStrategy = dynamic_cast<const DistributionLightStrategy *>(infiniteLightStrategy);
 	if (distributionInfLightStrategy) {
-		delete[] infiniteLightSourcesDistribution;
-		infiniteLightSourcesDistribution = CompileDistribution1D(distributionInfLightStrategy->GetLightsDistribution(),
-				&infiniteLightSourcesDistributionSize);
+		if (distributionInfLightStrategy->GetLightsDistribution()) {
+			infiniteLightSourcesDistribution = CompileDistribution1D(distributionInfLightStrategy->GetLightsDistribution(),
+					&infiniteLightSourcesDistributionSize);
+		}
 	} else {
 		// Check if it is an LightStrategyDLSCache
 		
 		const LightStrategyDLSCache *dlscLightStrategy = dynamic_cast<const LightStrategyDLSCache *>(illuminateLightStrategy);
 		if (dlscLightStrategy) {
-			delete[] infiniteLightSourcesDistribution;
-			infiniteLightSourcesDistribution = CompileDistribution1D(dlscLightStrategy->GetLightsDistribution(),
-					&infiniteLightSourcesDistributionSize);
+			if (dlscLightStrategy->GetLightsDistribution()) {
+				infiniteLightSourcesDistribution = CompileDistribution1D(dlscLightStrategy->GetLightsDistribution(),
+						&infiniteLightSourcesDistributionSize);
+			}
 		} else
 			throw runtime_error("Unsupported infinite light strategy in CompiledScene::CompileLights()");
 	}
@@ -191,74 +213,81 @@ void CompiledScene::CompileELVC(const EnvLightVisibilityCache *visibilityMapCach
 
 	// Compile all cache entries
 	const ELVCBvh *bvh = visibilityMapCache->GetBVH();
-	const std::vector<ELVCacheEntry> *allEntries = bvh->GetAllEntries();
-	const u_int entriesCount = allEntries->size();
-	
-	elvcAllEntries.resize(entriesCount);
-	elvcDistributions.clear();
-	for (u_int i = 0; i < entriesCount; ++i) {
-		const ELVCacheEntry &entry = (*allEntries)[i];
-		slg::ocl::ELVCacheEntry &oclEntry = elvcAllEntries[i];
+	if (bvh) {
+		const std::vector<ELVCacheEntry> *allEntries = bvh->GetAllEntries();
+		const u_int entriesCount = allEntries->size();
 
-		ASSIGN_VECTOR(oclEntry.p, entry.p);
-		ASSIGN_NORMAL(oclEntry.n, entry.n);
-		
-		oclEntry.isVolume = entry.isVolume;
+		elvcAllEntries.resize(entriesCount);
+		elvcDistributions.clear();
+		for (u_int i = 0; i < entriesCount; ++i) {
+			const ELVCacheEntry &entry = (*allEntries)[i];
+			slg::ocl::ELVCacheEntry &oclEntry = elvcAllEntries[i];
 
-		if (!entry.visibilityMap)
-			oclEntry.distributionOffset = NULL_INDEX;
-		else {
-			// Compile the light Distribution2D
-			const u_int size = elvcDistributions.size();
-			oclEntry.distributionOffset = size;
+			ASSIGN_VECTOR(oclEntry.p, entry.p);
+			ASSIGN_NORMAL(oclEntry.n, entry.n);
 
-			u_int distributionSize;
-			float *dist = CompileDistribution2D(entry.visibilityMap, &distributionSize);
+			oclEntry.isVolume = entry.isVolume;
 
-			const u_int distributionSize4 = distributionSize / sizeof(float);
-			elvcDistributions.resize(size + distributionSize4);
+			if (!entry.visibilityMap)
+				oclEntry.distributionOffset = NULL_INDEX;
+			else {
+				// Compile the light Distribution2D
+				const u_int size = elvcDistributions.size();
+				oclEntry.distributionOffset = size;
 
-			copy(dist, dist + distributionSize4,
-					&elvcDistributions[size]);
+				u_int distributionSize;
+				float *dist = CompileDistribution2D(entry.visibilityMap, &distributionSize);
 
-			delete[] dist;
+				const u_int distributionSize4 = distributionSize / sizeof(float);
+				elvcDistributions.resize(size + distributionSize4);
+
+				copy(dist, dist + distributionSize4,
+						&elvcDistributions[size]);
+
+				delete[] dist;
+			}
 		}
-	}
 	
-	// Compile the ELVC BVH
-	u_int nNodes;
-	const slg::ocl::IndexBVHArrayNode *nodes = bvh->GetArrayNodes(&nNodes);
-	elvcBVHArrayNode.resize(nNodes);
-	copy(&nodes[0], &nodes[0] + nNodes, elvcBVHArrayNode.begin());
-	
-	// Compile the tile distributions
-	elvcTilesXCount = visibilityMapCache->GetXTileCount();
-	elvcTilesYCount = visibilityMapCache->GetYTileCount();
+		// Compile the ELVC BVH
+		u_int nNodes;
+		const slg::ocl::IndexBVHArrayNode *nodes = bvh->GetArrayNodes(&nNodes);
+		elvcBVHArrayNode.resize(nNodes);
+		copy(&nodes[0], &nodes[0] + nNodes, elvcBVHArrayNode.begin());
 
-	if (visibilityMapCache->HasTileDistributions()) {
-		const u_int totalTileCount = elvcTilesXCount * elvcTilesYCount;
-		elvcTileDistributionOffsets.resize(totalTileCount);
+		// Compile the tile distributions
+		elvcTilesXCount = visibilityMapCache->GetXTileCount();
+		elvcTilesYCount = visibilityMapCache->GetYTileCount();
 
-		for (u_int i = 0; i < totalTileCount; ++i) {
-			const Distribution2D *tileDist = visibilityMapCache->GetTileDistribution(i);
+		if (visibilityMapCache->HasTileDistributions()) {
+			const u_int totalTileCount = elvcTilesXCount * elvcTilesYCount;
+			elvcTileDistributionOffsets.resize(totalTileCount);
 
-			// Compile the tile Distribution2D
-			const u_int size = elvcDistributions.size();
-			elvcTileDistributionOffsets[i] = size;
+			for (u_int i = 0; i < totalTileCount; ++i) {
+				const Distribution2D *tileDist = visibilityMapCache->GetTileDistribution(i);
 
-			u_int distributionSize;
-			float *dist = CompileDistribution2D(tileDist, &distributionSize);
+				// Compile the tile Distribution2D
+				const u_int size = elvcDistributions.size();
+				elvcTileDistributionOffsets[i] = size;
 
-			const u_int distributionSize4 = distributionSize / sizeof(float);
-			elvcDistributions.resize(size + distributionSize4);
+				u_int distributionSize;
+				float *dist = CompileDistribution2D(tileDist, &distributionSize);
 
-			copy(dist, dist + distributionSize4,
-					&elvcDistributions[size]);
+				const u_int distributionSize4 = distributionSize / sizeof(float);
+				elvcDistributions.resize(size + distributionSize4);
 
-			delete[] dist;		
-		}
-	} else
+				copy(dist, dist + distributionSize4,
+						&elvcDistributions[size]);
+
+				delete[] dist;		
+			}
+		} else
+			elvcTileDistributionOffsets.clear();
+	} else {
+		elvcAllEntries.clear();
+		elvcDistributions.clear();
 		elvcTileDistributionOffsets.clear();
+		elvcBVHArrayNode.clear();
+	}
 	
 	elvcAllEntries.shrink_to_fit();
 	elvcDistributions.shrink_to_fit();
