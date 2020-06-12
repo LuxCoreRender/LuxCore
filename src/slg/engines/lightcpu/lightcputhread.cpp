@@ -16,6 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "luxrays/utils/thread.h"
+
 #include "slg/engines/lightcpu/lightcpu.h"
 
 using namespace std;
@@ -37,6 +39,9 @@ void LightCPURenderThread::RenderFunc() {
 	//--------------------------------------------------------------------------
 	// Initialization
 	//--------------------------------------------------------------------------
+
+	// This is really used only by Windows for 64+ threads support
+	SetThreadGroupAffinity(threadIndex);
 
 	LightCPURenderEngine *engine = (LightCPURenderEngine *)renderEngine;
 	const PathTracer &pathTracer = engine->pathTracer;

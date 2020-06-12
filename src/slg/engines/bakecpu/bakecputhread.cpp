@@ -16,6 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "luxrays/utils/thread.h"
+
 #include "slg/engines/bakecpu/bakecpu.h"
 #include "slg/volumes/volume.h"
 #include "slg/utils/varianceclamping.h"
@@ -373,6 +375,9 @@ void BakeCPURenderThread::RenderSample(const BakeMapInfo &mapInfo, PathTracerThr
 
 void BakeCPURenderThread::RenderFunc() {
 	//SLG_LOG("[BakeCPURenderEngine::" << threadIndex << "] Rendering thread started");
+
+	// This is really used only by Windows for 64+ threads support
+	SetThreadGroupAffinity(threadIndex);
 
 	BakeCPURenderEngine *engine = (BakeCPURenderEngine *)renderEngine;
 	const PathTracer &pathTracer = engine->pathTracer;

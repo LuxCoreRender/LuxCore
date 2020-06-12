@@ -35,6 +35,8 @@
 * LuxCore API now support unicode UTF-8 strings and files
 * luxcore::KernelCacheFill() now supports opencl.devices.select, scene.epsilon.min and scene.epsilon.max properties (issue #374)
 * LuxCoreRender can now be compiled without OpenCL/CUDA SDK and it will load OpenCL/CUDA at run time (one executable can now be used for all types of installations)
+* RTPathOCLRenderEngine::WaitNewFrame() takes is not more synchronous with rendering refresh
+* The use of more than 64 logical processors on Windows is now extended to all render engines
 
 ### Fixed Bugs
 

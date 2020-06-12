@@ -16,14 +16,12 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "luxrays/utils/thread.h"
+
 #include "slg/engines/pathcpu/pathcpu.h"
 #include "slg/volumes/volume.h"
 #include "slg/utils/varianceclamping.h"
 #include "slg/samplers/metropolis.h"
-
-#if defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(WIN64)
-#include <Windows.h>
-#endif
 
 using namespace std;
 using namespace luxrays;
@@ -45,27 +43,12 @@ void PathCPURenderThread::RenderFunc() {
 	// Initialization
 	//--------------------------------------------------------------------------
 
+	// This is really used only by Windows for 64+ threads support
+	SetThreadGroupAffinity(threadIndex);
+
 	PathCPURenderEngine *engine = (PathCPURenderEngine *)renderEngine;
 	const PathTracer &pathTracer = engine->pathTracer;
 
-//Set thread affinity the modern way.May not work for Windows version prior to Windows7
-#if defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined (WIN64)
-	auto totalProcessors = 0U;
-	int processorIndex = threadIndex % GetActiveProcessorCount(ALL_PROCESSOR_GROUPS);
-
-	// Determine which processor group to bind the thread to.
-	for (auto i = 0U; i < GetActiveProcessorGroupCount(); ++i)
-	{
-		totalProcessors += GetActiveProcessorCount(i);
-		if (totalProcessors >= processorIndex)
-		{
-			auto mask = (1ULL << GetActiveProcessorCount(i)) - 1;
-			GROUP_AFFINITY groupAffinity = { mask, static_cast<WORD>(i), { 0, 0, 0 } };
-			SetThreadGroupAffinity(GetCurrentThread(), &groupAffinity, nullptr);
-			break;
-		}
-	}
-#endif
 	// (engine->seedBase + 1) seed is used for sharedRndGen
 	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + 1 + threadIndex);
 

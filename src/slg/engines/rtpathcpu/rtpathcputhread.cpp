@@ -16,6 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "luxrays/utils/thread.h"
+
 #include "slg/slg.h"
 #include "slg/samplers/rtpathcpusampler.h"
 #include "slg/engines/rtpathcpu/rtpathcpu.h"
@@ -48,6 +50,9 @@ void RTPathCPURenderThread::RTRenderFunc() {
 	//--------------------------------------------------------------------------
 	// Initialization
 	//--------------------------------------------------------------------------
+
+	// This is really used only by Windows for 64+ threads support
+	SetThreadGroupAffinity(threadIndex);
 
 	RTPathCPURenderEngine *engine = (RTPathCPURenderEngine *)renderEngine;
 	const PathTracer &pathTracer = engine->pathTracer;
