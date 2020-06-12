@@ -23,6 +23,7 @@
 #include "luxrays/core/geometry/transform.h"
 #include "luxrays/core/randomgen.h"
 #include "luxrays/utils/ocl.h"
+#include "luxrays/utils/thread.h"
 #include "luxrays/devices/ocldevice.h"
 #include "luxrays/kernels/kernels.h"
 
