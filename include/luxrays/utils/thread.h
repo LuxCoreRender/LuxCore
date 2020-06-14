@@ -25,52 +25,9 @@
 
 namespace luxrays {
 
-inline void SetThreadGroupAffinity(const u_int threadIndex) {
-	// Set thread affinity the modern way.May not work for Windows version prior to Windows7
-#if defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined (WIN64)
-	auto totalProcessors = 0U;
-	int processorIndex = threadIndex % GetActiveProcessorCount(ALL_PROCESSOR_GROUPS);
-
-	// Determine which processor group to bind the thread to.
-	for (auto i = 0U; i < GetActiveProcessorGroupCount(); ++i) {
-		totalProcessors += GetActiveProcessorCount(i);
-		if (totalProcessors >= processorIndex) {
-			auto mask = (1ULL << GetActiveProcessorCount(i)) - 1;
-			GROUP_AFFINITY groupAffinity = { mask, static_cast<WORD>(i), { 0, 0, 0 } };
-			SetThreadGroupAffinity(GetCurrentThread(), &groupAffinity, nullptr);
-			break;
-		}
-	}
-#endif
-}
-
-inline bool SetThreadRRPriority(boost::thread *thread, int pri = 0) {
-#if defined (__linux__) || defined (__APPLE__) || defined(__CYGWIN__) || defined(__OpenBSD__) || defined(__FreeBSD__)
-	{
-		const pthread_t tid = (pthread_t)thread->native_handle();
-
-		int policy = SCHED_FIFO;
-		int sysMinPriority = sched_get_priority_min(policy);
-		struct sched_param param;
-		param.sched_priority = sysMinPriority + pri;
-
-		return pthread_setschedparam(tid, policy, &param);
-	}
-#elif defined (WIN32)
-	{
-		const HANDLE tid = (HANDLE)thread->native_handle();
-		if (!SetPriorityClass(tid, HIGH_PRIORITY_CLASS))
-			return false;
-		else
-			return true;
-
-		/*if (!SetThreadPriority(tid, THREAD_PRIORITY_HIGHEST))
-			return false;
-		else
-			return true;*/
-	}
-#endif
-}
+extern size_t GetHardwareThreadCount();
+extern void SetThreadGroupAffinity(const size_t threadIndex);
+extern bool SetThreadRRPriority(boost::thread *thread, int pri = 0);
 
 }
 

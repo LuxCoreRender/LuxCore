@@ -18,6 +18,8 @@
 
 #include <boost/format.hpp>
 
+#include "luxrays/utils/thread.h"
+
 #include "slg/scene/scene.h"
 #include "slg/engines/renderengine.h"
 #include "slg/engines/caches/photongi/photongicache.h"
@@ -285,6 +287,9 @@ void TracePhotonsThread::RenderFunc() {
 	// Initialization
 	//--------------------------------------------------------------------------
 
+	// This is really used only by Windows for 64+ threads support
+	SetThreadGroupAffinity(threadIndex);
+	
 	RandomGenerator rndGen(seedBase + threadIndex);
 
 	sampleBootSize = 7;

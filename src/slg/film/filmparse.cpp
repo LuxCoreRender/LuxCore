@@ -21,6 +21,8 @@
 #include <boost/lexical_cast.hpp>
 
 #include "luxrays/utils/fileext.h"
+#include "luxrays/utils/thread.h"
+
 #include "slg/core/sdl.h"
 #include "slg/film/film.h"
 #include "slg/film/filters/filter.h"
@@ -592,7 +594,7 @@ ImagePipeline *Film::CreateImagePipeline(const Properties &props, const string &
 				const bool applyDenoise = props.Get(Property(prefix + ".applydenoise")(true)).Get<bool>();
 				const float prefilterThresholdStDevFactor = props.Get(Property(prefix + ".spikestddev")(2.f)).Get<float>();
 
-				const int threadCount = (userThreadCount > 0) ? userThreadCount : boost::thread::hardware_concurrency();
+				const int threadCount = (userThreadCount > 0) ? userThreadCount : GetHardwareThreadCount();
 				
 				imagePipeline->AddPlugin(new BCDDenoiserPlugin(
 						warmUpSamplesPerPixel,

@@ -23,7 +23,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string/case_conv.hpp>
 
-namespace slg {
+namespace luxrays {
 
 inline std::string GetFileNameExt(const std::string &fileName) {
 	return boost::algorithm::to_lower_copy(boost::filesystem::path(fileName).extension().string());

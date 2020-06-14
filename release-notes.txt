@@ -38,6 +38,7 @@
 * RTPathOCLRenderEngine::WaitNewFrame() takes is not more synchronous with rendering refresh
 * The use of more than 64 logical processors on Windows is now extended to all render engines
 * It is now possible to render scenes without light sources (!)
+* The use of more than 64 logical processors on Windows is now extended to all pre-processing tasks like caches, etc.
 
 ### Fixed Bugs
 

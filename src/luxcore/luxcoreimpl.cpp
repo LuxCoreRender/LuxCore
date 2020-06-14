@@ -432,7 +432,7 @@ SceneImpl::SceneImpl(const luxrays::Properties &props, const float imageScale) {
 SceneImpl::SceneImpl(const string &fileName, const float imageScale) {
 	camera = new CameraImpl(*this);
 
-	const string ext = slg::GetFileNameExt(fileName);
+	const string ext = luxrays::GetFileNameExt(fileName);
 	if (ext == ".bsc") {
 		// The file is in a binary format
 		scene = slg::Scene::LoadSerialized(fileName);

@@ -21,6 +21,8 @@
 #include <boost/thread.hpp>
 #include <boost/thread/mutex.hpp>
 
+#include "luxrays/utils/thread.h"
+
 #include "slg/core/indexoctree.h"
 #include "slg/scene/scene.h"
 #include "slg/engines/renderengine.h"
@@ -105,6 +107,9 @@ void SceneVisibility<T>::TraceVisibilityThread::RenderFunc() {
 	//--------------------------------------------------------------------------
 	// Initialization
 	//--------------------------------------------------------------------------
+
+	// This is really used only by Windows for 64+ threads support
+	SetThreadGroupAffinity(threadIndex);
 
 	const Scene *scene = sv.scene;
 	const Camera *camera = scene->camera;
@@ -338,7 +343,7 @@ SceneVisibility<T>::~SceneVisibility() {
 
 template <class T>
 void SceneVisibility<T>::Build() {
-	const size_t renderThreadCount = boost::thread::hardware_concurrency();
+	const size_t renderThreadCount = GetHardwareThreadCount();
 	vector<TraceVisibilityThread *> renderThreads(renderThreadCount, nullptr);
 	SLG_LOG("SceneVisibility trace thread count: " << renderThreadCount);
 

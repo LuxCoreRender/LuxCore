@@ -20,6 +20,8 @@
 
 #include <boost/thread.hpp>
 
+#include "luxrays/utils/thread.h"
+
 #include "slg/cameras/camera.h"
 #include "slg/samplers/sobol.h"
 #include "slg/scene/scene.h"
@@ -114,6 +116,9 @@ typedef struct Film2SceneRadiusThreadParams {
 } Film2SceneRadiusThreadParams;
 
 static void Film2SceneRadiusThread(Film2SceneRadiusThreadParams &params) {
+	// This is really used only by Windows for 64+ threads support
+	SetThreadGroupAffinity(params.threadIndex);
+
 	// Hard coded RR parameters
 	const u_int rrDepth = 3;
 	const float rrImportanceCap = .5f;
@@ -261,7 +266,7 @@ float Film2SceneRadius(const Scene *scene,
 		const float imagePlaneRadius, const float defaultRadius,
 		const u_int maxPathDepth, const float timeStart, const float timeEnd,
 		const Film2SceneRadiusValidator *validator) {
-	const size_t renderThreadCount = 1;//boost::thread::hardware_concurrency();
+	const size_t renderThreadCount = GetHardwareThreadCount();
 
 	// Render 16 passes at 256 * 256 resolution
 	const u_int workSize = 16 * 256 * 256 / renderThreadCount;
