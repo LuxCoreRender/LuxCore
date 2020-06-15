@@ -22,6 +22,8 @@
 #if !defined(LUXRAYS_DISABLE_CUDA)
 
 #include <cuew.h>
+#define OPTIX_DONT_INCLUDE_CUDA
+#include <optix_stubs.h>
 
 namespace luxrays {
 

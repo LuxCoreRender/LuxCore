@@ -31,6 +31,8 @@
 #include "luxrays/utils/cudacache.h"
 #include "luxrays/utils/oclcache.h"
 
+#include <optix_function_table_definition.h>
+
 using namespace std;
 using namespace luxrays;
 
