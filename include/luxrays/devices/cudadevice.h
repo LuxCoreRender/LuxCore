@@ -206,6 +206,7 @@ protected:
 
 	CUDADeviceDescription *deviceDesc;
 	CUcontext cudaContext;
+	OptixDeviceContext optixContext;
 	std::vector<CUmodule> loadedModules;
 	
 	luxrays::cudaKernelCache *kernelCache;

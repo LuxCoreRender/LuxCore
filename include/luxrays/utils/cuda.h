@@ -55,6 +55,15 @@ inline void CheckNVRTCError(const nvrtcResult err, const char *file, const int l
 	}
 }
 
+#define CHECK_OPTIX_ERROR(err) CheckOptixError(err, __FILE__, __LINE__)
+
+inline void CheckOptixError(const OptixResult err, const char *file, const int line) {
+  if (err != OPTIX_SUCCESS)
+	  throw std::runtime_error("Optix error "
+			  "(code: " + ToString(err) + ", file:" + std::string(file) + ", line: " + ToString(line) + ")"
+			  ": " + std::string(optixGetErrorName(err)) + "\n");
+}
+
 }
 
 #endif
