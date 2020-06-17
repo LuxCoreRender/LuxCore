@@ -16,46 +16,44 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _LUXRAYS_ACCELERATOR_H
-#define	_LUXRAYS_ACCELERATOR_H
+#include "luxrays/accelerators/optixaccel.h"
+#include "luxrays/utils/utils.h"
+#include "luxrays/core/context.h"
 
-#include <string>
-#include <deque>
-
-#include "luxrays/luxrays.h"
-#include "luxrays/core/geometry/ray.h"
-#include "luxrays/core/trianglemesh.h"
+using namespace std;
 
 namespace luxrays {
 
-typedef enum {
-	ACCEL_AUTO, ACCEL_BVH, ACCEL_MBVH, ACCEL_EMBREE, ACCEL_OPTIX
-} AcceleratorType;
+// OptixAccel Method Definitions
 
-class IntersectionDevice;
-class HardwareIntersectionDevice;
-class HardwareIntersectionKernel;
-
-class Accelerator {
-public:
-	Accelerator() { }
-	virtual ~Accelerator() { }
-
-	virtual AcceleratorType GetType() const = 0;
-
-	virtual bool HasDataParallelSupport(const IntersectionDevice &device) const = 0;
-	virtual HardwareIntersectionKernel *NewHardwareIntersectionKernel(HardwareIntersectionDevice &device) const = 0;
-
-	virtual void Init(const std::deque<const Mesh *> &meshes, const u_longlong totalVertexCount, const u_longlong totalTriangleCount) = 0;
-	virtual bool DoesSupportUpdate() const { return false; }
-	virtual void Update() { throw new std::runtime_error("Internal error in Accelerator::Update()"); }
-
-	virtual bool Intersect(const Ray *ray, RayHit *hit) const = 0;
-
-	static std::string AcceleratorType2String(const AcceleratorType type);
-	static AcceleratorType String2AcceleratorType(const std::string &type);
-};
-
+OptixAccel::OptixAccel(const Context *context) : ctx(context) {
+	initialized = false;
 }
 
-#endif	/* _LUXRAYS_ACCELERATOR_H */
+OptixAccel::~OptixAccel() {
+}
+
+void OptixAccel::Init(const deque<const Mesh *> &ms, const u_longlong totVert,
+		const u_longlong totTri) {
+	assert (!initialized);
+
+	meshes = ms;
+	totalVertexCount = totVert;
+	totalTriangleCount = totTri;
+
+	// Handle the empty DataSet case
+	if (totalTriangleCount == 0) {
+		LR_LOG(ctx, "Empty Optix accelerator");
+		initialized = true;
+
+		return;
+	}
+
+	initialized = true;
+}
+
+bool OptixAccel::Intersect(const Ray *initialRay, RayHit *rayHit) const {
+	return false;
+}
+
+}

@@ -154,6 +154,8 @@ set(LUXRAYS_SRCS
 	${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/embreeaccel.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/mbvhaccel.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/mbvhaccelhw.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/optixaccel.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/optixaccelhw.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/bvh/bvhbuild.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/bvh/bvhclassicbuild.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/bvh/bvhembreebuild.cpp

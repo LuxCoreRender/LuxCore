@@ -29,6 +29,7 @@
 #include "luxrays/accelerators/bvhaccel.h"
 #include "luxrays/accelerators/mbvhaccel.h"
 #include "luxrays/accelerators/embreeaccel.h"
+#include "luxrays/accelerators/optixaccel.h"
 #include "luxrays/core/geometry/bsphere.h"
 
 using namespace luxrays;
@@ -131,6 +132,9 @@ const Accelerator *DataSet::GetAccelerator(const AcceleratorType accelType) {
 				break;
 			case ACCEL_EMBREE:
 				accel = new EmbreeAccel(context);
+				break;
+			case ACCEL_OPTIX:
+				accel = new OptixAccel(context);
 				break;
 			default:
 				throw runtime_error("Unknown AcceleratorType in DataSet::AddAccelerator()");

@@ -239,9 +239,9 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 	//--------------------------------------------------------------------------
 	// Compile kernels
 	//--------------------------------------------------------------------------
-	
+
 	const double tStart = WallClockTime();
-	
+
 	// A safety check
 	switch (intersectionDevice->GetAccelerator()->GetType()) {
 		case ACCEL_BVH:
@@ -249,6 +249,8 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 		case ACCEL_MBVH:
 			break;
 		case ACCEL_EMBREE:
+			throw runtime_error("EMBREE accelerator is not supported in PathOCLBaseRenderThread::InitKernels()");
+		case ACCEL_OPTIX:
 			throw runtime_error("EMBREE accelerator is not supported in PathOCLBaseRenderThread::InitKernels()");
 		default:
 			throw runtime_error("Unknown accelerator in PathOCLBaseRenderThread::InitKernels()");
