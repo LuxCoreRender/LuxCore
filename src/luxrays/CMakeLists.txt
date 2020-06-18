@@ -99,6 +99,7 @@ set(LUXRAYS_KERNELS
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/bvh/bvhbuild_types.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/accelerators/bvh.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/accelerators/mbvh.cl
+	${LuxRays_SOURCE_DIR}/include/luxrays/accelerators/optixaccel.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/exttrianglemesh_types.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/exttrianglemesh_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/randomgen_types.cl
@@ -224,6 +225,7 @@ set(LUXRAYS_SRCS_KERNELS
 	${generated_kernels_dir}/bvhbuild_types_kernel.cpp
 	${generated_kernels_dir}/bvh_kernel.cpp
 	${generated_kernels_dir}/mbvh_kernel.cpp
+	${generated_kernels_dir}/optixaccel_kernel.cpp
 	${generated_kernels_dir}/randomgen_types_kernel.cpp
 	${generated_kernels_dir}/randomgen_funcs_kernel.cpp
 	${generated_kernels_dir}/trianglemesh_types_kernel.cpp

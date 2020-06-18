@@ -145,7 +145,7 @@ public:
 	// CUDADevice specific methods
 	//--------------------------------------------------------------------------
 	
-	CUdeviceptr &GetCudaDevicePointer() { return cudaBuff; }
+	CUdeviceptr &GetCUDADevicePointer() { return cudaBuff; }
 
 	friend class CUDADevice;
 
@@ -205,7 +205,8 @@ public:
 	// CUDADevice specific methods
 	//--------------------------------------------------------------------------
 
-	CUcontext GetCudaContext() { return cudaContext; }
+	CUcontext GetCUDAContext() { return cudaContext; }
+	luxrays::cudaKernelPersistentCache *GetCUDAKernelCache() { return kernelCache; }
 
 	friend class Context;
 
@@ -220,7 +221,7 @@ protected:
 	CUcontext cudaContext;
 	std::vector<CUmodule> loadedModules;
 	
-	luxrays::cudaKernelCache *kernelCache;
+	luxrays::cudaKernelPersistentCache *kernelCache;
 };
 
 }

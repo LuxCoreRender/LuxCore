@@ -1,3 +1,5 @@
+#line 2 "optixaccel.cl"
+
 /***************************************************************************
  * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
@@ -16,35 +18,13 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include <vector>
-
-#include "luxrays/core/hardwaredevice.h"
-
-using namespace std;
-using namespace luxrays;
-
-//------------------------------------------------------------------------------
-// HardwareDevice
-//------------------------------------------------------------------------------
-
-HardwareDevice::HardwareDevice() {
-	usedMemory = 0;
+extern "C" __global__ void __raygen__OptixAccel() {
 }
 
-HardwareDevice::~HardwareDevice() {
-	if (usedMemory != 0)
-		LR_LOG(deviceContext, "WARNING: there is a memory leak in LuxRays HardwareDevice " << GetName() << ": " << ToString(usedMemory) << "bytes");
+
+extern "C" __global__ void __closesthit__OptixAccel() {
 }
 
-void HardwareDevice::SetAdditionalCompileOpts(const vector<string> &opts) {
-	additionalCompileOpts = opts;
+extern "C" __global__ void __miss__OptixAccel() {
 }
 
-const vector<string> &HardwareDevice::GetAdditionalCompileOpts() {
-	return additionalCompileOpts;
-}
-
-template <>
-void HardwareDevice::SetKernelArg<HardwareDeviceBufferPtr>(HardwareDeviceKernel *kernel, const u_int index, const HardwareDeviceBufferPtr &buff) {
-	SetKernelArgBuffer(kernel, index, buff);
-}
