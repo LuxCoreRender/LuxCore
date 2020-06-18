@@ -30,7 +30,9 @@ class OptixKernel : public HardwareIntersectionKernel {
 public:
 	OptixKernel(HardwareIntersectionDevice &dev, const OptixAccel &optixAccel) :
 			HardwareIntersectionKernel(dev), gasOutputBuffer(nullptr),
-			optixModule(nullptr) {
+			optixModule(nullptr), optixRaygenProgGroup(nullptr),
+			optixMissProgGroup(nullptr), optixHitProgGroup(nullptr),
+			optixPipeline(nullptr) {
 		CUDAIntersectionDevice *cudaDevice = dynamic_cast<CUDAIntersectionDevice *>(&dev);
 
 		// Safety checks
@@ -87,7 +89,7 @@ public:
 
 		// Allocate temporary build buffers
 
-		OptixAccelBuildOptions accelOptions;
+		OptixAccelBuildOptions accelOptions = {};
 		accelOptions.buildFlags = OPTIX_BUILD_FLAG_ALLOW_COMPACTION;
 		accelOptions.operation = OPTIX_BUILD_OPERATION_BUILD;
 		accelOptions.motionOptions.numKeys = 0;
@@ -190,12 +192,12 @@ public:
 			LR_LOG(device.GetContext(), "[OptixAccel] Program not cached");
 		}
 
-		OptixModuleCompileOptions moduleCompileOptions;
+		OptixModuleCompileOptions moduleCompileOptions = {};
 		moduleCompileOptions.maxRegisterCount = OPTIX_COMPILE_DEFAULT_MAX_REGISTER_COUNT;
 		moduleCompileOptions.optLevel = OPTIX_COMPILE_OPTIMIZATION_DEFAULT;
 		moduleCompileOptions.debugLevel = OPTIX_COMPILE_DEBUG_LEVEL_LINEINFO;
 
-		OptixPipelineCompileOptions pipelineCompileOptions;
+		OptixPipelineCompileOptions pipelineCompileOptions = {};
 		pipelineCompileOptions.usesMotionBlur = false;
 		pipelineCompileOptions.traversableGraphFlags = OPTIX_TRAVERSABLE_GRAPH_FLAG_ALLOW_SINGLE_GAS;
 		pipelineCompileOptions.numPayloadValues = 0;
@@ -222,12 +224,112 @@ public:
 			LR_LOG(device.GetContext(), "Optix optixModuleCreateFromPTX() error: " << endl << optixErrLog);
 			CHECK_OPTIX_ERROR(optixErr);
 		}
+
+		//------------------------------------------------------------------
+		// Build Optix groups
+		//------------------------------------------------------------------
+
+		OptixProgramGroupOptions programGroupOptions = {};
+
+		// Ray generation
+		
+		OptixProgramGroupDesc raygenProgGroupDesc = {};
+		raygenProgGroupDesc.kind = OPTIX_PROGRAM_GROUP_KIND_RAYGEN;
+		raygenProgGroupDesc.flags = OPTIX_PROGRAM_GROUP_FLAGS_NONE;
+		raygenProgGroupDesc.raygen.module = optixModule;
+		raygenProgGroupDesc.raygen.entryFunctionName = "__raygen__OptixAccel";
+
+		optixErrLogSize = sizeof(optixErrLog);
+		CHECK_OPTIX_ERROR(optixProgramGroupCreate(
+				optixContext,
+				&raygenProgGroupDesc,
+				1,
+				&programGroupOptions,
+				optixErrLog,
+				&optixErrLogSize,
+				&optixRaygenProgGroup));
+
+		// Ray miss
+
+		OptixProgramGroupDesc missProgGroupDesc = {};
+		missProgGroupDesc.kind = OPTIX_PROGRAM_GROUP_KIND_MISS;
+		missProgGroupDesc.flags = OPTIX_PROGRAM_GROUP_FLAGS_NONE;
+		missProgGroupDesc.miss.module = optixModule;
+		missProgGroupDesc.miss.entryFunctionName = "__miss__OptixAccel";
+
+		optixErrLogSize = sizeof(optixErrLog);
+		CHECK_OPTIX_ERROR(optixProgramGroupCreate(
+				optixContext,
+				&missProgGroupDesc,
+				1,
+				&programGroupOptions,
+				optixErrLog,
+				&optixErrLogSize,
+				&optixMissProgGroup));
+
+		// Ray hit
+
+		OptixProgramGroupDesc hitProgGroupDesc = {};
+		hitProgGroupDesc.kind = OPTIX_PROGRAM_GROUP_KIND_HITGROUP;
+		hitProgGroupDesc.flags = OPTIX_PROGRAM_GROUP_FLAGS_NONE;
+		hitProgGroupDesc.hitgroup.moduleCH = optixModule;
+		hitProgGroupDesc.hitgroup.entryFunctionNameCH = "__closesthit__OptixAccel";
+
+		optixErrLogSize = sizeof(optixErrLog);
+		CHECK_OPTIX_ERROR(optixProgramGroupCreate(
+				optixContext,
+				&hitProgGroupDesc,
+				1,
+				&programGroupOptions,
+				optixErrLog,
+				&optixErrLogSize,
+				&optixHitProgGroup));
+		
+		//------------------------------------------------------------------
+		// Build Optix pipeline
+		//------------------------------------------------------------------
+
+		OptixProgramGroup programGroups[] = {
+			optixRaygenProgGroup,
+			optixMissProgGroup,
+			optixHitProgGroup
+		};
+
+		OptixPipelineLinkOptions pipelineLinkOptions = {};
+		pipelineLinkOptions.maxTraceDepth = 1;
+		pipelineLinkOptions.debugLevel = OPTIX_COMPILE_DEBUG_LEVEL_LINEINFO;
+		pipelineLinkOptions.overrideUsesMotionBlur = false;
+
+		optixErrLogSize = sizeof(optixErrLog);
+		CHECK_OPTIX_ERROR(optixPipelineCreate(
+				optixContext,
+				&pipelineCompileOptions,
+				&pipelineLinkOptions,
+				programGroups,
+				sizeof(programGroups) / sizeof(programGroups[0]),
+				optixErrLog,
+				&optixErrLogSize,
+				&optixPipeline));
 	}
 
 	virtual ~OptixKernel() {
 		CUDAIntersectionDevice *cudaDevice = dynamic_cast<CUDAIntersectionDevice *>(&device);
 
-		CHECK_OPTIX_ERROR(optixModuleDestroy(optixModule));
+		if (optixPipeline) {
+			CHECK_OPTIX_ERROR(optixPipelineDestroy(optixPipeline));
+		}
+		if (optixRaygenProgGroup) {
+			CHECK_OPTIX_ERROR(optixProgramGroupDestroy(optixRaygenProgGroup));
+		}
+		if (optixRaygenProgGroup) {
+			CHECK_OPTIX_ERROR(optixProgramGroupDestroy(optixMissProgGroup));
+		}
+		if (optixRaygenProgGroup) {
+			CHECK_OPTIX_ERROR(optixProgramGroupDestroy(optixHitProgGroup));
+		}
+		if (optixModule) {
+			CHECK_OPTIX_ERROR(optixModuleDestroy(optixModule));
+		}
 
 		cudaDevice->FreeBuffer(&gasOutputBuffer);
 	}
@@ -240,6 +342,8 @@ private:
 	HardwareDeviceBuffer *gasOutputBuffer;
 
 	OptixModule optixModule;
+	OptixProgramGroup optixRaygenProgGroup, optixMissProgGroup, optixHitProgGroup;
+	OptixPipeline optixPipeline;
 };
 
 void OptixKernel::EnqueueTraceRayBuffer(HardwareDeviceBuffer *rayBuff,
