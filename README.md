@@ -88,27 +88,27 @@ A special thanks goes to:
 - Sladjan "lom" Ristic for several scenes provided;
 - Riku "rikb" Walve for source patches;
 - David "livuxman" Rodriguez for source patches;
-- Daniel "ZanQdo" Salazar (http://www.3developer.com) for Sala scene and Michael "neo2068" Klemm for SLG2 adaptation;
-- Mourelas Konstantinos "Moure" (http://moure-portfolio.blogspot.com) for Room Scene;
+- [Daniel "ZanQdo" Salazar](http://www.3developer.com) for Sala scene and Michael "neo2068" Klemm for SLG2 adaptation;
+- [Mourelas Konstantinos "Moure"](http://moure-portfolio.blogspot.com) for Room Scene;
 - Diego Nehab for PLY reading/writing library;
-- http://www.hdrlabs.com/sibl/archive.html and http://shtlab.blogspot.com/2009/08/hdri-panoramic-skies-for-free.html for HDR maps;
-- http://chronosphere.home.comcast.net/~chronosphere/radiosity.htm for Cornell Blender scene;
-- FreeImage open source image library. See http://freeimage.sourceforge.net for details (not used anymore);
-- libPNG authors (http://www.libpng.org);
-- zlib authors (http://www.zlib.net);
-- OpenEXR authors (http://www.openexr.com);
-- OpenImageIO authors (http://www.openimageio.org);
-- Tomas Davidovic (http://www.davidovic.cz and http://www.smallvcm.com) for SmallVCM, an endless source of hints;
-- GLFW authors (http://www.glfw.org);
-- ImGUI authors (https://github.com/ocornut/imgui);
-- Cycles authors (https://www.blender.org) for HSV/RGB conversion code;
-- Malik Boughida and Tamy Boubekeur for "Bayesian Collaborative Denoiser for Monte-Carlo Rendering" (https://github.com/superboubek/bcd);
-- OpenVDB authors (http://www.openvdb.org);
-- Eigen authors (http://eigen.tuxfamily.org);
-- Yangli Hector Yee, Steven Myint and Jeff Terrace for perceptualdiff (https://github.com/myint/perceptualdiff);
-- Christian Pfligersdorffer for EOS portable archive (http://www.eos.info);
-- Michael Labbe for Native File Dialog (https://github.com/mlabbe/nativefiledialog);
-- Sven Forstmann's quadric mesh simplification code (https://github.com/sp4cerat/Fast-Quadric-Mesh-Simplification).
+- [HDR Labs sIBL archive](http://www.hdrlabs.com/sibl/archive.html) and
+  [SHT Lab](http://shtlab.blogspot.com/2009/08/hdri-panoramic-skies-for-free.html) for HDR maps;
+- [Chronosphere](http://chronosphere.home.comcast.net/~chronosphere/radiosity.htm) for Cornell Blender scene;
+- [FreeImage](http://freeimage.sourceforge.net) open source image library (not used anymore);
+- [libPNG](http://www.libpng.org) authors;
+- [zlib](http://www.zlib.net) authors;
+- [OpenEXR](http://www.openexr.com) authors;
+- [OpenImageIO](http://www.openimageio.org) authors;
+- [Tomas Davidovic](http://www.davidovic.cz) for [SmallVCM](http://www.smallvcm.com), an endless source of hints;
+- [GLFW](http://www.glfw.org) authors;
+- [ImGUI](https://github.com/ocornut/imgui) authors;
+- [Cycles](https://www.blender.org) authors for HSV/RGB conversion code;
+- [OpenVDB](http://www.openvdb.org) authors;
+- [Eigen](http://eigen.tuxfamily.org) authors;
+- Yangli Hector Yee, Steven Myint and Jeff Terrace for [perceptualdiff](https://github.com/myint/perceptualdiff);
+- Christian Pfligersdorffer for [EOS portable archive](http://www.eos.info);
+- Michael Labbe for [Native File Dialog](https://github.com/mlabbe/nativefiledialog);
+- Sven Forstmann's [quadric mesh simplification code](https://github.com/sp4cerat/Fast-Quadric-Mesh-Simplification).
 
 ### License
 
