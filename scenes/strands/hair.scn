@@ -50,16 +50,25 @@ scene.shapes.hair_shape.file = scenes/strands/straight.hair
 # -D accelerator.type BVH -D accelerator.bvh.builder.type CLASSIC -D accelerator.bvh.treetype 4 => BVH build time: 8493ms and 0.82 samples/sec
 # -D accelerator.type BVH -D accelerator.bvh.builder.type CLASSIC -D accelerator.bvh.treetype 8 => BVH build time: 8172ms and 0.79 samples/sec
 # -D accelerator.type BVH -D accelerator.bvh.builder.type EMBREE => BVH build time: 12759ms and 0.76 samples/sec
+#scene.shapes.hair_shape.tessellation.type = solidadaptive
+#scene.shapes.hair_shape.tessellation.solid.sidecount = 13
+#scene.shapes.hair_shape.tessellation.adaptive.maxdepth = 20
+#scene.shapes.hair_shape.tessellation.adaptive.error = 0.05
 scene.shapes.hair_shape.tessellation.type = solidadaptive
-scene.shapes.hair_shape.tessellation.solid.sidecount = 13
-scene.shapes.hair_shape.tessellation.adaptive.maxdepth = 20
-scene.shapes.hair_shape.tessellation.adaptive.error = 0.05
+scene.shapes.hair_shape.tessellation.solid.sidecount = 15
+scene.shapes.hair_shape.tessellation.adaptive.maxdepth = 24
+scene.shapes.hair_shape.tessellation.adaptive.error = 0.03
+# To avoid instance
+scene.shapes.hair_shape_baked.type = group
+scene.shapes.hair_shape_baked.0.shape = hair_shape
+scene.shapes.hair_shape_baked.0.transformation = 0.008 0.0 0.0 0.0  0.0 0.008 0.0 0.0  0.0 0.0 0.008 0.0  0.0 0.0 0.3 1.0
 ################################################################################
 scene.objects.room.material = whitematte
 scene.objects.room.shape = room
 scene.objects.hair.material = hair_mat
-scene.objects.hair.shape = hair_shape
-scene.objects.hair.transformation = 0.008 0.0 0.0 0.0  0.0 0.008 0.0 0.0  0.0 0.0 0.008 0.0  0.0 0.0 0.3 1.0
+scene.objects.hair.shape = hair_shape_baked
+#scene.objects.hair.shape = hair_shape
+#scene.objects.hair.transformation = 0.008 0.0 0.0 0.0  0.0 0.008 0.0 0.0  0.0 0.0 0.008 0.0  0.0 0.0 0.3 1.0
 scene.objects.blacktext.material = blacktext
 scene.objects.blacktext.shape = blacktext
 ################################################################################
