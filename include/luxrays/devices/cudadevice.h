@@ -208,6 +208,9 @@ public:
 	CUcontext GetCUDAContext() { return cudaContext; }
 	luxrays::cudaKernelPersistentCache *GetCUDAKernelCache() { return kernelCache; }
 
+	std::vector<std::string> AddKernelOpts(const std::vector<std::string> &programParameters);
+	std::string GetKernelSource(const std::string &kernelSource);
+
 	friend class Context;
 
 protected:

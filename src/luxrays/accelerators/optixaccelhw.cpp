@@ -19,12 +19,35 @@
 #include "luxrays/core/context.h"
 #include "luxrays/devices/cudaintersectiondevice.h"
 #include "luxrays/accelerators/optixaccel.h"
-#include "luxrays/utils/utils.h"
 #include "luxrays/kernels/kernels.h"
+#include "luxrays/utils/oclcache.h"
 
 using namespace std;
 
 namespace luxrays {
+
+//------------------------------------------------------------------------------
+// This must match the definition in optixaccel.cl
+
+typedef struct Params {
+	OptixTraversableHandle optixHandle;
+	CUdeviceptr rayBuff;
+	CUdeviceptr rayHitBuff;
+} OptixAccelParams;
+
+typedef struct {
+	unsigned int meshIndex;
+} HitGroupSbtData;
+
+//------------------------------------------------------------------------------
+
+template <typename T>
+struct OptixSbtRecord {
+    alignas(OPTIX_SBT_RECORD_ALIGNMENT) char header[OPTIX_SBT_RECORD_HEADER_SIZE];
+    T data;
+};
+
+typedef OptixSbtRecord<HitGroupSbtData> HitGroupSbtRecord;
 
 class OptixKernel : public HardwareIntersectionKernel {
 public:
@@ -32,7 +55,9 @@ public:
 			HardwareIntersectionKernel(dev), gasOutputBuffer(nullptr),
 			optixModule(nullptr), optixRaygenProgGroup(nullptr),
 			optixMissProgGroup(nullptr), optixHitProgGroup(nullptr),
-			optixPipeline(nullptr) {
+			optixPipeline(nullptr), optixAccelParamsBuff(nullptr),
+			optixRayGenSbtBuff(nullptr), optixMissSbtBuff(nullptr),
+			optixHitSbtBuff(nullptr) {
 		CUDAIntersectionDevice *cudaDevice = dynamic_cast<CUDAIntersectionDevice *>(&dev);
 
 		// Safety checks
@@ -160,27 +185,32 @@ public:
 		// Build Optix module
 		//------------------------------------------------------------------
 
+		// Build compile options
 		vector<string> cudaProgramParameters;
 		cudaProgramParameters.push_back("-D LUXRAYS_OPENCL_KERNEL");
-		cudaProgramParameters.push_back("-D LUXRAYS_CUDA_DEVICE");
-#if defined (__APPLE__)
-		cudaProgramParameters.push_back("-D LUXRAYS_OS_APPLE");
-#elif defined (WIN32)
-		cudaProgramParameters.push_back("-D LUXRAYS_OS_WINDOWS");
-#elif defined (__linux__)
-		cudaProgramParameters.push_back("-D LUXRAYS_OS_LINUX");
-#endif
+		cudaProgramParameters.push_back("-D PARAM_RAY_EPSILON_MIN=" + ToString(MachineEpsilon::GetMin()) + "f");
+		cudaProgramParameters.push_back("-D PARAM_RAY_EPSILON_MAX=" + ToString(MachineEpsilon::GetMax()) + "f");
+		cudaProgramParameters = cudaDevice->AddKernelOpts(cudaProgramParameters);
+		LR_LOG(device.GetContext(), "[OptixAccel] Compiler options: " << oclKernelPersistentCache::ToOptsString(cudaProgramParameters));
 
-		const vector<string> &additionalCompileOpts = cudaDevice->GetAdditionalCompileOpts();
-		cudaProgramParameters.insert(cudaProgramParameters.end(),
-				additionalCompileOpts.begin(), additionalCompileOpts.end());
-
+		// Set kernel source
+		string kernelSource =
+				luxrays::ocl::KernelSource_luxrays_types +
+				luxrays::ocl::KernelSource_epsilon_types +
+				luxrays::ocl::KernelSource_epsilon_funcs +
+				luxrays::ocl::KernelSource_point_types +
+				luxrays::ocl::KernelSource_vector_types +
+				luxrays::ocl::KernelSource_ray_types +
+				luxrays::ocl::KernelSource_ray_funcs +
+				luxrays::ocl::KernelSource_optixaccel;
+		kernelSource = cudaDevice->GetKernelSource(kernelSource);
+		
 		char *ptx;
 		size_t ptxSize;
 		bool cached;
 		string ptxError;
 		if (!cudaDevice->GetCUDAKernelCache()->CompilePTX(cudaProgramParameters,
-				luxrays::ocl::KernelSource_optixaccel, "OptixAccel", &ptx, &ptxSize, &cached, &ptxError)) {
+				kernelSource, "OptixAccel", &ptx, &ptxSize, &cached, &ptxError)) {
 			LR_LOG(device.GetContext(), "[OptixAccel] CUDA program compilation error: " << endl << ptxError);
 
 			throw runtime_error("OptixAccel CUDA program compilation error");
@@ -203,7 +233,7 @@ public:
 		pipelineCompileOptions.numPayloadValues = 0;
 		pipelineCompileOptions.numAttributeValues = 2;
 		pipelineCompileOptions.exceptionFlags = OPTIX_EXCEPTION_FLAG_NONE;
-		pipelineCompileOptions.pipelineLaunchParamsVariableName = nullptr;
+		pipelineCompileOptions.pipelineLaunchParamsVariableName = "optixAccelParams";
 
 		char optixErrLog[4096];
 		size_t optixErrLogSize = sizeof(optixErrLog);
@@ -310,6 +340,44 @@ public:
 				optixErrLog,
 				&optixErrLogSize,
 				&optixPipeline));
+
+		//------------------------------------------------------------------
+		// Allocate Optix kernel parameters and Shader binding table
+		//------------------------------------------------------------------
+
+		optixAccelParams.optixHandle = gasHandle;
+		optixAccelParams.rayBuff = 0;
+		optixAccelParams.rayHitBuff = 0;
+		cudaDevice->AllocBufferRO(&optixAccelParamsBuff, &optixAccelParams, sizeof(OptixAccelParams));
+
+		// Raygen SBT
+		char sbtRayGenBuff[OPTIX_SBT_RECORD_HEADER_SIZE];
+		CHECK_OPTIX_ERROR(optixSbtRecordPackHeader(optixRaygenProgGroup, sbtRayGenBuff));
+		cudaDevice->AllocBufferRW(&optixRayGenSbtBuff, sbtRayGenBuff, OPTIX_SBT_RECORD_HEADER_SIZE);
+
+		// Hit SBT
+
+		HitGroupSbtRecord *hitGroupSbtRecords = new HitGroupSbtRecord[optixAccel.meshes.size()];
+		for (u_int i = 0; i < optixAccel.meshes.size(); ++i) {
+			hitGroupSbtRecords[i].data.meshIndex = i;
+			CHECK_OPTIX_ERROR(optixSbtRecordPackHeader(optixHitProgGroup, &hitGroupSbtRecords[i]));
+		}
+		cudaDevice->AllocBufferRW(&optixHitSbtBuff, hitGroupSbtRecords, sizeof(HitGroupSbtRecord) * optixAccel.meshes.size());
+		delete[] hitGroupSbtRecords;
+
+		// Miss SBT
+		char sbtHitBuff[OPTIX_SBT_RECORD_HEADER_SIZE];
+		CHECK_OPTIX_ERROR(optixSbtRecordPackHeader(optixHitProgGroup, sbtHitBuff));
+		cudaDevice->AllocBufferRW(&optixMissSbtBuff, sbtHitBuff, OPTIX_SBT_RECORD_HEADER_SIZE);
+
+		memset(&optixSbt, 0, sizeof(OptixShaderBindingTable));
+		optixSbt.raygenRecord = ((CUDADeviceBuffer *)optixRayGenSbtBuff)->GetCUDADevicePointer();
+		optixSbt.missRecordBase = ((CUDADeviceBuffer *)optixMissSbtBuff)->GetCUDADevicePointer();
+		optixSbt.missRecordStrideInBytes = OPTIX_SBT_RECORD_HEADER_SIZE;
+		optixSbt.missRecordCount = 1;
+		optixSbt.hitgroupRecordBase = ((CUDADeviceBuffer *)optixHitSbtBuff)->GetCUDADevicePointer();
+		optixSbt.hitgroupRecordStrideInBytes = sizeof(HitGroupSbtRecord);
+		optixSbt.hitgroupRecordCount = optixAccel.meshes.size();
 	}
 
 	virtual ~OptixKernel() {
@@ -332,6 +400,12 @@ public:
 		}
 
 		cudaDevice->FreeBuffer(&gasOutputBuffer);
+
+		cudaDevice->FreeBuffer(&optixAccelParamsBuff);
+
+		cudaDevice->FreeBuffer(&optixRayGenSbtBuff);
+		cudaDevice->FreeBuffer(&optixMissSbtBuff);
+		cudaDevice->FreeBuffer(&optixHitSbtBuff);
 	}
 
 	virtual void Update(const DataSet *newDataSet) { assert(false); }
@@ -344,10 +418,31 @@ private:
 	OptixModule optixModule;
 	OptixProgramGroup optixRaygenProgGroup, optixMissProgGroup, optixHitProgGroup;
 	OptixPipeline optixPipeline;
+
+	OptixAccelParams optixAccelParams;
+	HardwareDeviceBuffer *optixAccelParamsBuff;
+
+	OptixShaderBindingTable optixSbt;
+	HardwareDeviceBuffer *optixRayGenSbtBuff;
+	HardwareDeviceBuffer *optixMissSbtBuff;
+	HardwareDeviceBuffer *optixHitSbtBuff;
 };
 
 void OptixKernel::EnqueueTraceRayBuffer(HardwareDeviceBuffer *rayBuff,
 			HardwareDeviceBuffer *rayHitBuff, const unsigned int rayCount) {
+	CUDAIntersectionDevice *cudaDevice = dynamic_cast<CUDAIntersectionDevice *>(&device);
+	// TODO: optixAccelParams async. copy fix
+	optixAccelParams.rayBuff = ((CUDADeviceBuffer *)rayBuff)->GetCUDADevicePointer();
+	optixAccelParams.rayHitBuff = ((CUDADeviceBuffer *)rayHitBuff)->GetCUDADevicePointer();
+	cudaDevice->EnqueueWriteBuffer(optixAccelParamsBuff, false, sizeof(OptixAccelParams), &optixAccelParams);
+
+	CHECK_OPTIX_ERROR(optixLaunch(
+			optixPipeline,
+			0,
+			((CUDADeviceBuffer *)optixAccelParamsBuff)->GetCUDADevicePointer(),
+			sizeof(OptixAccelParams),
+			&optixSbt,
+			rayCount, 1, 1));
 }
 
 bool OptixAccel::HasDataParallelSupport(const IntersectionDevice &device) const {
