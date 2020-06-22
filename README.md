@@ -34,23 +34,27 @@ or internal LuxCoreRender development, you can safely ignore this library.
 ### LuxCoreUI
 
 This is the most complete example of LuxCore API usage and it is available in
-the samples/luxcoreui directory.
+the [`samples/luxcoreui`](samples/luxcoreui) directory.
 
-To check how it works, just run luxcoreui from the root directory:
+To see how it works, just run `luxcoreui` from the root directory:
 
-`./bin/luxcoreui scenes/cornell/cornell.cfg`
+```
+./bin/luxcoreui scenes/cornell/cornell.cfg
+```
 
 ### LuxCoreConsole
 
 This is a simple example of a command line renderer written using LuxCore API and it is
-available in the samples/luxcoreconsole directory.
-Just run luxcoreconsole from the root directory with:
+available in the [`samples/luxcoreconsole`](samples/luxcoreconsole) directory.
+Just run `luxcoreconsole` from the root directory with:
 
-`./bin/luxcoreconsole -D batch.halttime 10 scenes/cornell/cornell.cfg`
+```
+./bin/luxcoreconsole -D batch.halttime 10 scenes/cornell/cornell.cfg
+```
 
 ### LuxCore API SDK
 
-If you have downloaded the LuxCore API SDK, to compile the examples use:
+If you have downloaded the LuxCore API SDK, you can compile the examples with:
 
 ```
 cmake .
@@ -59,22 +63,28 @@ make
 
 ### PyLuxCoreTools
 
-PyLuxCoreTools are a set of command line tools available in the LuxCoreRender stand
-alone version. They includes network rendering, film merging, command line rendering
-and more.
+PyLuxCoreTools are a set of command line tools available in the LuxCoreRender
+stand-alone version. They includes network rendering, film merging, command line
+rendering and more.
 
-NOTE: pyluxcoretool is a stand-alone, self-containing executable on Windows. On
-Linux instead, you have to install Python and PySide before to run the tools. PySide
-can be usually installed with a:
+NOTE: `pyluxcoretool` is a stand-alone, self-containing executable on Windows. On
+Linux, you have to install Python and PySide before running the tool. PySide
+can be usually installed with:
 
+```
 sudo pip3 install PySide
-(or sudo pip install PySide)
+# or
+sudo pip install PySide
+```
 
-You can avoid to install PySide if you use only the command line tools available in
-pyluxcoretool. You can than run pyluxcoretool with a:
+You can skip installing PySide if you use only the command-line tools available in
+`pyluxcoretool`. You can then run `pyluxcoretool` with:
 
+```
 python3 pyluxcoretools.zip
-(or python pyluxcoretools.zip)
+# or
+python pyluxcoretools.zip
+```
 
 ### Authors
 
