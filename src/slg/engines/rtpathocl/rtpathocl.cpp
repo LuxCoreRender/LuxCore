@@ -171,6 +171,7 @@ void RTPathOCLRenderEngine::EndFilmEdit(Film *flm, boost::mutex *flmMutex) {
 	// Create a tile repository based on the new film
 	InitTileRepository();
 	tileRepository->enableRenderingDonePrint = false;
+	tileRepository->enableFirstPassClear = true;
 
 	// The camera has been updated too
 	EditActionList a;
