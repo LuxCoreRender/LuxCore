@@ -153,6 +153,10 @@ void LuxCoreApp::GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int
 				// For some test with lux-hdr scene
 
 				/*app->session->BeginSceneEdit();
+				app->session->GetRenderConfig().GetScene().DeleteLight("infinitelight");
+				app->session->EndSceneEdit();*/
+
+				/*app->session->BeginSceneEdit();
 				app->session->GetFilm().DeleteAllImagePipelines();
 				app->session->Parse(Properties().SetFromString(
 						"film.imagepipelines.0.0.type = NOP\n"
