@@ -181,6 +181,7 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 		tileWork.Reset();
 		slg::ocl::TilePathSamplerSharedData samplerData;
 
+cout<<"==================A\n";
 		while (!boost::this_thread::interruption_requested()) {
 			//------------------------------------------------------------------
 			// Render the tile (there is only one tile for each device
@@ -242,32 +243,40 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 				// Check if there is a sync. request from the main thread
 				//--------------------------------------------------------------
 
-				switch (engine->syncType) {
-					case SYNCTYPE_NONE:
-						break;
-					case SYNCTYPE_BEGINFILMEDIT:
-					case SYNCTYPE_STOP:
-						syncBarrier->wait();
-						// The main thread send an interrupt to all render threads
-						syncBarrier->wait();
-						break;
-					case SYNCTYPE_ENDSCENEEDIT:
-						syncBarrier->wait();
+				for (;;) {
+					bool requestedStop = false;
+					switch (engine->syncType) {
+						case SYNCTYPE_NONE:
+							break;
+						case SYNCTYPE_BEGINFILMEDIT:
+						case SYNCTYPE_STOP:
+							syncBarrier->wait();
+							// The main thread send an interrupt to all render threads
+							syncBarrier->wait();
+							requestedStop = true;
+							break;
+						case SYNCTYPE_ENDSCENEEDIT:
+							syncBarrier->wait();
 
-						// Update OpenCL buffers if there is any edit action. It
-						// is done by thread #0 for all threads.
-						UpdateAllThreadsOCLBuffers();
-						frameCounter = 0;
+							// Update OpenCL buffers if there is any edit action. It
+							// is done by thread #0 for all threads.
+							UpdateAllThreadsOCLBuffers();
+							frameCounter = 0;
 
-						syncBarrier->wait();
+							syncBarrier->wait();
+							break;
+						default:
+							throw runtime_error("Unknown sync. type in RTPathOCLRenderThread::RenderThreadImpl(): " + ToString(engine->syncType));
+					}
+
+					// Check if we are in pause mode
+					if (engine->pauseMode) {
+						if (requestedStop)
+							break;
+
+						boost::this_thread::sleep(boost::posix_time::millisec(100));
+					} else
 						break;
-					case SYNCTYPE_PAUSEMODE:
-						syncBarrier->wait();
-						// Wait for the main thread to restart me
-						syncBarrier->wait();
-						break;
-					default:
-						throw runtime_error("Unknown sync. type in RTPathOCLRenderThread::RenderThreadImpl(): " + ToString(engine->syncType));
 				}
 			}
 

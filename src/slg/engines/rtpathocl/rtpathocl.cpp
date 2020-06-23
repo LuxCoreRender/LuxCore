@@ -104,28 +104,6 @@ void RTPathOCLRenderEngine::StopLockLess() {
 	TilePathOCLRenderEngine::StopLockLess();
 }
 
-void RTPathOCLRenderEngine::PauseThreads() {
-	syncType = SYNCTYPE_PAUSEMODE;
-	syncBarrier->wait();
-}
-
-void RTPathOCLRenderEngine::ResumeThreads() {
-	syncType = SYNCTYPE_NONE;
-	syncBarrier->wait();
-}
-
-void RTPathOCLRenderEngine::Pause() {
-	TilePathOCLRenderEngine::Pause();
-
-	PauseThreads();
-}
-
-void RTPathOCLRenderEngine::Resume() {
-	TilePathOCLRenderEngine::Resume();
-
-	ResumeThreads();	
-}
-
 void RTPathOCLRenderEngine::EndSceneEdit(const EditActionList &editActions) {
 	TilePathOCLRenderEngine::EndSceneEdit(editActions);
 	updateActions.AddActions(editActions.GetActions());
