@@ -593,10 +593,11 @@ void Film::Clear() {
 	// would be lost
 }
 
-void Film::Reset() {
-	Clear();
+void Film::Reset(const bool onlyCounters) {
+	if (!onlyCounters)
+		Clear();
 
-	// denoiser  has to be reset explicitly
+	// denoiser has to be reset explicitly
 
 	// convTest has to be reset explicitly
 

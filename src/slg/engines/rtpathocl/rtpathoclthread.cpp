@@ -236,6 +236,7 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 					// is done by thread #0 for all threads.
 					UpdateAllThreadsOCLBuffers();
 					frameCounter = 0;
+					engine->film->Reset(true);
 				}
 
 				//--------------------------------------------------------------
@@ -261,6 +262,7 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 							// is done by thread #0 for all threads.
 							UpdateAllThreadsOCLBuffers();
 							frameCounter = 0;
+							engine->film->Reset(true);
 
 							syncBarrier->wait();
 							break;
