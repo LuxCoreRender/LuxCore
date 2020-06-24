@@ -109,6 +109,8 @@ typedef struct ID {
     int us;
     int icon_id;
     int recalc;
+    int recalc_up_to_undo_push;
+    int recalc_after_undo_push;
     unsigned int session_uuid;
     void *properties;
     void *override_library;
@@ -116,6 +118,7 @@ typedef struct ID {
     void *py_instance;
 } ID;
 
+// From blender/source/blender/makesdna/DNA_mesh_types.h
 struct MLoopTri_Store {
     void *array, *array_wip;
     int len;
@@ -150,6 +153,7 @@ typedef struct Mesh_Runtime {
     char _pad[6];
 } Mesh_Runtime;
 
+// From blender/source/blender/makesdna/DNA_customdata_types.h
 // CustomDataType
 static const int CD_NORMAL = 8;
 
@@ -174,7 +178,7 @@ typedef struct CustomData {
      * MUST be >= CD_NUMTYPES, but we cant use a define here.
      * Correct size is ensured in CustomData_update_typemap assert().
      */
-    int typemap[43];
+    int typemap[47];
     int totlayer, maxlayer;
     int totsize;
     void *pool;
