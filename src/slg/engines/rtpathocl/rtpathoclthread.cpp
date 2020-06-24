@@ -181,7 +181,6 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 		tileWork.Reset();
 		slg::ocl::TilePathSamplerSharedData samplerData;
 
-cout<<"==================A\n";
 		while (!boost::this_thread::interruption_requested()) {
 			//------------------------------------------------------------------
 			// Render the tile (there is only one tile for each device
