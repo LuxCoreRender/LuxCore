@@ -719,7 +719,8 @@ static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const str
 			const blender_2_82::Mesh *mesh = reinterpret_cast<const blender_2_82::Mesh*>(meshPtr);
 			loopNormals = static_cast<const float(*)[3]>(CustomData_get_layer(&mesh->ldata, blender_2_82::CD_NORMAL));
 			loopCount = mesh->totloop;
-		} else if (blenderVersionMajor == 2 && blenderVersionMinor == 83 && blenderVersionSub == 0) {
+		} else if (blenderVersionMajor == 2 && blenderVersionMinor == 83) {
+			// Not checking the sub version here, for now we assume that these data structures stay the same across sub releases
 			const blender_2_83::Mesh *mesh = reinterpret_cast<const blender_2_83::Mesh*>(meshPtr);
 			loopNormals = static_cast<const float(*)[3]>(CustomData_get_layer(&mesh->ldata, blender_2_83::CD_NORMAL));
 			loopCount = mesh->totloop;
