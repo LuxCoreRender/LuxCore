@@ -258,6 +258,10 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 						case SYNCTYPE_ENDSCENEEDIT:
 							syncBarrier->wait();
 
+							// Engine thread compile the scene
+
+							syncBarrier->wait();
+
 							// Update OpenCL buffers if there is any edit action. It
 							// is done by thread #0 for all threads.
 							UpdateAllThreadsOCLBuffers();

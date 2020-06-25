@@ -105,7 +105,6 @@ void RTPathOCLRenderEngine::StopLockLess() {
 }
 
 void RTPathOCLRenderEngine::EndSceneEdit(const EditActionList &editActions) {
-	TilePathOCLRenderEngine::EndSceneEdit(editActions);
 	updateActions.AddActions(editActions.GetActions());
 
 	const bool requireSync = editActions.HasAnyAction() && !editActions.HasOnly(CAMERA_EDIT);
@@ -113,10 +112,16 @@ void RTPathOCLRenderEngine::EndSceneEdit(const EditActionList &editActions) {
 	if (requireSync) {
 		syncType = SYNCTYPE_ENDSCENEEDIT;
 		syncBarrier->wait();
+		
+		TilePathOCLRenderEngine::EndSceneEdit(editActions);
+		syncBarrier->wait();
+		
+		// Here, rendering thread 0 will update all OpenCL buffers here
 
 		syncType = SYNCTYPE_NONE;
 		syncBarrier->wait();
-	}
+	} else
+		TilePathOCLRenderEngine::EndSceneEdit(editActions);
 }
 
 // A fast path for film resize
