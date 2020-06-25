@@ -311,7 +311,7 @@ cl_program oclKernelPersistentCache::Compile(cl_context context, cl_device_id de
 			// large kernel binaries
 			unique_ptr<char> bin(new char[binsSizes[0]]);
 			char *bins = bin.get();
-			CHECK_OCL_ERROR(clGetProgramInfo(program, CL_PROGRAM_BINARIES, binsSizes[0] * sizeof(char), &bins, nullptr));
+			CHECK_OCL_ERROR(clGetProgramInfo(program, CL_PROGRAM_BINARIES, sizeof(char *), &bins, nullptr));
 
 			// Add the kernel to the cache
 			boost::filesystem::create_directories(dirPath);
