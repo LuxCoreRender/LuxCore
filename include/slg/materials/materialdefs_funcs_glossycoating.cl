@@ -101,9 +101,9 @@ OPENCL_FORCE_INLINE void GlossyCoatingMaterial_EvaluateSetUp(__global const Mate
 	Material_Bump(material->glossycoating.matBaseIndex, hitPointTmp
 		MATERIALS_PARAM);
 	// Re-read the shadeN modified by Material_Bump()
-	const float3 matBaseShadeN = VLOAD3F(&hitPoint->shadeN.x);
-	const float3 matBaseDpdu = VLOAD3F(&hitPoint->dpdu.x);
-	const float3 matBaseDpdv = VLOAD3F(&hitPoint->dpdv.x);
+	const float3 matBaseShadeN = VLOAD3F(&hitPointTmp->shadeN.x);
+	const float3 matBaseDpdu = VLOAD3F(&hitPointTmp->dpdu.x);
+	const float3 matBaseDpdv = VLOAD3F(&hitPointTmp->dpdv.x);
 
 	// Save the parameters
 	EvalStack_PushFloat3(lightDir);
