@@ -10,7 +10,7 @@
 * Removed LuxRays support for virtual devices and hybrid rendering (old LuxRender GPU doing ray intersections and CPU everything else)
 * Geometry vertex and triangle AOVs (arbitrary data associated to mesh vertices and triangle usable by textures)
 * Removed the support for Triplanar texture .uvindex (side effect of the above new feature)
-* New hitpointvertexaov nad hitpointtriangleaov textures
+* New hitpointvertexaov and hitpointtriangleaov textures
 * Pointiness shape can now assign curvature values to vertex AOV with .aovindex property (a 4294967296 value will force the use of alpha channel instead, default value for compatibility with the past)
 * LuxCore API has now SetMeshVertexAOV() and SetMeshTriangleAOV() methods to set geometry vertex and triangle AOV
 * Added the support for new Random texture
@@ -40,6 +40,8 @@
 * It is now possible to render scenes without light sources (!)
 * The use of more than 64 logical processors on Windows is now extended to all pre-processing tasks like caches, etc.
 
+''Beta1 released''
+
 ### Fixed Bugs
 
 * Fixed a rendering difference when using/not using geometry negative scale transformations (issue #309)
@@ -53,7 +55,9 @@
 * Fixed a bug causing fireflies when using light tracing for caustics in some case (#329)
 * Fixed a crash when using RemoveUnusedTextures() with Volumes (issue #377)
 * Fixed a banding problem when using sphere light sources with very small radius (issue LuxCoreRender/BlendLuxCore#477)
-* Fixed LXS parsing of UV inlined coordinates (#392)
+* Fixed LXS parsing of UV inlined coordinates (issue #392)
+
+''Beta1 released''
 
 Note: due to Glossycoating updated support for bump mapping on GPUs, some old scene using this kind of material/bump map combination may require some fix.
 
@@ -62,7 +66,6 @@ of release notes.
 
 ### Known Problems and limitations
 
-* LuxCore API requires latin locale
 * accelerator.bvh.builder.type = EMBREE_MORTON doesn't work with the latest Embree
 * Python crashes when calling sys.exit()
 * TILEPATHOCL (and RTPATHOCL) count the layers of transparent surfaces as an iteration of the rendering finite state machine so they require to increase the max. path depth to avoid black regions.
