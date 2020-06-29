@@ -34,23 +34,27 @@ or internal LuxCoreRender development, you can safely ignore this library.
 ### LuxCoreUI
 
 This is the most complete example of LuxCore API usage and it is available in
-the samples/luxcoreui directory.
+the [`samples/luxcoreui`](samples/luxcoreui) directory.
 
-To check how it works, just run luxcoreui from the root directory:
+To see how it works, just run `luxcoreui` from the root directory:
 
-`./bin/luxcoreui scenes/cornell/cornell.cfg`
+```
+./bin/luxcoreui scenes/cornell/cornell.cfg
+```
 
 ### LuxCoreConsole
 
 This is a simple example of a command line renderer written using LuxCore API and it is
-available in the samples/luxcoreconsole directory.
-Just run luxcoreconsole from the root directory with:
+available in the [`samples/luxcoreconsole`](samples/luxcoreconsole) directory.
+Just run `luxcoreconsole` from the root directory with:
 
-`./bin/luxcoreconsole -D batch.halttime 10 scenes/cornell/cornell.cfg`
+```
+./bin/luxcoreconsole -D batch.halttime 10 scenes/cornell/cornell.cfg
+```
 
 ### LuxCore API SDK
 
-If you have downloaded the LuxCore API SDK, to compile the examples use:
+If you have downloaded the LuxCore API SDK, you can compile the examples with:
 
 ```
 cmake .
@@ -59,22 +63,28 @@ make
 
 ### PyLuxCoreTools
 
-PyLuxCoreTools are a set of command line tools available in the LuxCoreRender stand
-alone version. They includes network rendering, film merging, command line rendering
-and more.
+PyLuxCoreTools are a set of command line tools available in the LuxCoreRender
+stand-alone version. They includes network rendering, film merging, command line
+rendering and more.
 
-NOTE: pyluxcoretool is a stand-alone, self-containing executable on Windows. On
-Linux instead, you have to install Python and PySide before to run the tools. PySide
-can be usually installed with a:
+NOTE: `pyluxcoretool` is a stand-alone, self-containing executable on Windows. On
+Linux, you have to install Python and PySide before running the tool. PySide
+can be usually installed with:
 
+```
 sudo pip3 install PySide
-(or sudo pip install PySide)
+# or
+sudo pip install PySide
+```
 
-You can avoid to install PySide if you use only the command line tools available in
-pyluxcoretool. You can than run pyluxcoretool with a:
+You can skip installing PySide if you use only the command-line tools available in
+`pyluxcoretool`. You can then run `pyluxcoretool` with:
 
+```
 python3 pyluxcoretools.zip
-(or python pyluxcoretools.zip)
+# or
+python pyluxcoretools.zip
+```
 
 ### Authors
 
@@ -88,27 +98,27 @@ A special thanks goes to:
 - Sladjan "lom" Ristic for several scenes provided;
 - Riku "rikb" Walve for source patches;
 - David "livuxman" Rodriguez for source patches;
-- Daniel "ZanQdo" Salazar (http://www.3developer.com) for Sala scene and Michael "neo2068" Klemm for SLG2 adaptation;
-- Mourelas Konstantinos "Moure" (http://moure-portfolio.blogspot.com) for Room Scene;
+- [Daniel "ZanQdo" Salazar](http://www.3developer.com) for Sala scene and Michael "neo2068" Klemm for SLG2 adaptation;
+- [Mourelas Konstantinos "Moure"](http://moure-portfolio.blogspot.com) for Room Scene;
 - Diego Nehab for PLY reading/writing library;
-- http://www.hdrlabs.com/sibl/archive.html and http://shtlab.blogspot.com/2009/08/hdri-panoramic-skies-for-free.html for HDR maps;
-- http://chronosphere.home.comcast.net/~chronosphere/radiosity.htm for Cornell Blender scene;
-- FreeImage open source image library. See http://freeimage.sourceforge.net for details (not used anymore);
-- libPNG authors (http://www.libpng.org);
-- zlib authors (http://www.zlib.net);
-- OpenEXR authors (http://www.openexr.com);
-- OpenImageIO authors (http://www.openimageio.org);
-- Tomas Davidovic (http://www.davidovic.cz and http://www.smallvcm.com) for SmallVCM, an endless source of hints;
-- GLFW authors (http://www.glfw.org);
-- ImGUI authors (https://github.com/ocornut/imgui);
-- Cycles authors (https://www.blender.org) for HSV/RGB conversion code;
-- Malik Boughida and Tamy Boubekeur for "Bayesian Collaborative Denoiser for Monte-Carlo Rendering" (https://github.com/superboubek/bcd);
-- OpenVDB authors (http://www.openvdb.org);
-- Eigen authors (http://eigen.tuxfamily.org);
-- Yangli Hector Yee, Steven Myint and Jeff Terrace for perceptualdiff (https://github.com/myint/perceptualdiff);
-- Christian Pfligersdorffer for EOS portable archive (http://www.eos.info);
-- Michael Labbe for Native File Dialog (https://github.com/mlabbe/nativefiledialog);
-- Sven Forstmann's quadric mesh simplification code (https://github.com/sp4cerat/Fast-Quadric-Mesh-Simplification).
+- [HDR Labs sIBL archive](http://www.hdrlabs.com/sibl/archive.html) and
+  [SHT Lab](http://shtlab.blogspot.com/2009/08/hdri-panoramic-skies-for-free.html) for HDR maps;
+- [Chronosphere](http://chronosphere.home.comcast.net/~chronosphere/radiosity.htm) for Cornell Blender scene;
+- [FreeImage](http://freeimage.sourceforge.net) open source image library (not used anymore);
+- [libPNG](http://www.libpng.org) authors;
+- [zlib](http://www.zlib.net) authors;
+- [OpenEXR](http://www.openexr.com) authors;
+- [OpenImageIO](http://www.openimageio.org) authors;
+- [Tomas Davidovic](http://www.davidovic.cz) for [SmallVCM](http://www.smallvcm.com), an endless source of hints;
+- [GLFW](http://www.glfw.org) authors;
+- [ImGUI](https://github.com/ocornut/imgui) authors;
+- [Cycles](https://www.blender.org) authors for HSV/RGB conversion code;
+- [OpenVDB](http://www.openvdb.org) authors;
+- [Eigen](http://eigen.tuxfamily.org) authors;
+- Yangli Hector Yee, Steven Myint and Jeff Terrace for [perceptualdiff](https://github.com/myint/perceptualdiff);
+- Christian Pfligersdorffer for [EOS portable archive](http://www.eos.info);
+- Michael Labbe for [Native File Dialog](https://github.com/mlabbe/nativefiledialog);
+- Sven Forstmann's [quadric mesh simplification code](https://github.com/sp4cerat/Fast-Quadric-Mesh-Simplification).
 
 ### License
 

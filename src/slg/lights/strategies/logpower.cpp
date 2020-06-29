@@ -29,6 +29,10 @@ using namespace slg;
 
 void LightStrategyLogPower::Preprocess(const Scene *scn, const LightStrategyTask taskType,
 			const bool useRTMode) {
+	// Delete old lightsDistribution
+	delete lightsDistribution;
+	lightsDistribution = nullptr;
+
 	DistributionLightStrategy::Preprocess(scn, taskType);
 
 	const u_int lightCount = scene->lightDefs.GetSize();
@@ -68,7 +72,6 @@ void LightStrategyLogPower::Preprocess(const Scene *scn, const LightStrategyTask
 	}
 
 	// Build the data to power based light sampling
-	delete lightsDistribution;
 	lightsDistribution = new Distribution1D(&lightPower[0], lightCount);
 }
 

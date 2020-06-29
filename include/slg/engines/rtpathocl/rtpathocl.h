@@ -63,8 +63,7 @@ typedef enum {
 	SYNCTYPE_NONE,
 	SYNCTYPE_STOP,
 	SYNCTYPE_ENDSCENEEDIT,
-	SYNCTYPE_BEGINFILMEDIT,
-	SYNCTYPE_PAUSEMODE
+	SYNCTYPE_BEGINFILMEDIT
 } RTPathOCLSyncType;
 
 
@@ -77,9 +76,6 @@ public:
 	virtual std::string GetTag() const { return GetObjectTag(); }
 
 	double GetFrameTime() const { return frameTime; }
-
-	virtual void Pause();
-	virtual void Resume();
 
 	virtual void EndSceneEdit(const EditActionList &editActions);
 

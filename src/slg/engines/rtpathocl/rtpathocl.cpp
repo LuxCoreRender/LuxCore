@@ -104,30 +104,7 @@ void RTPathOCLRenderEngine::StopLockLess() {
 	TilePathOCLRenderEngine::StopLockLess();
 }
 
-void RTPathOCLRenderEngine::PauseThreads() {
-	syncType = SYNCTYPE_PAUSEMODE;
-	syncBarrier->wait();
-}
-
-void RTPathOCLRenderEngine::ResumeThreads() {
-	syncType = SYNCTYPE_NONE;
-	syncBarrier->wait();
-}
-
-void RTPathOCLRenderEngine::Pause() {
-	TilePathOCLRenderEngine::Pause();
-
-	PauseThreads();
-}
-
-void RTPathOCLRenderEngine::Resume() {
-	TilePathOCLRenderEngine::Resume();
-
-	ResumeThreads();	
-}
-
 void RTPathOCLRenderEngine::EndSceneEdit(const EditActionList &editActions) {
-	TilePathOCLRenderEngine::EndSceneEdit(editActions);
 	updateActions.AddActions(editActions.GetActions());
 
 	const bool requireSync = editActions.HasAnyAction() && !editActions.HasOnly(CAMERA_EDIT);
@@ -135,10 +112,16 @@ void RTPathOCLRenderEngine::EndSceneEdit(const EditActionList &editActions) {
 	if (requireSync) {
 		syncType = SYNCTYPE_ENDSCENEEDIT;
 		syncBarrier->wait();
+		
+		TilePathOCLRenderEngine::EndSceneEdit(editActions);
+		syncBarrier->wait();
+		
+		// Here, rendering thread 0 will update all OpenCL buffers here
 
 		syncType = SYNCTYPE_NONE;
 		syncBarrier->wait();
-	}
+	} else
+		TilePathOCLRenderEngine::EndSceneEdit(editActions);
 }
 
 // A fast path for film resize
@@ -171,6 +154,7 @@ void RTPathOCLRenderEngine::EndFilmEdit(Film *flm, boost::mutex *flmMutex) {
 	// Create a tile repository based on the new film
 	InitTileRepository();
 	tileRepository->enableRenderingDonePrint = false;
+	tileRepository->enableFirstPassClear = true;
 
 	// The camera has been updated too
 	EditActionList a;

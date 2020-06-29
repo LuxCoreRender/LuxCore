@@ -1602,7 +1602,8 @@ ri_stmt: ACCELERATOR STRING paramlist
 
 		if (props.IsDefined("uv")) {
 			Property uvsProps = props.Get("uv");
-			if ((uvsProps.GetSize() == 0) || (uvsProps.GetSize() != pointsProp.GetSize()))
+			if ((uvsProps.GetSize() == 0) || (uvsProps.GetSize() % 2 != 0) ||
+					(uvsProps.GetSize() / 2 != pointsProp.GetSize() / 3))
 				throw runtime_error("Wrong trianglemesh/mesh uv list length: " + objName);
 			// Copy all uvs
 			*sceneProps <<

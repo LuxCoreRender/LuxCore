@@ -593,10 +593,11 @@ void Film::Clear() {
 	// would be lost
 }
 
-void Film::Reset() {
-	Clear();
+void Film::Reset(const bool onlyCounters) {
+	if (!onlyCounters)
+		Clear();
 
-	// denoiser  has to be reset explicitly
+	// denoiser has to be reset explicitly
 
 	// convTest has to be reset explicitly
 
@@ -672,13 +673,16 @@ void Film::AddFilmImpl(const Film &film,
 		for (u_int y = 0; y < srcHeight; ++y) {
 			for (u_int x = 0; x < srcWidth; ++x) {
 				const float *srcPixel = film.channel_ALPHA->GetPixel(srcOffsetX + x, srcOffsetY + y);
-				channel_ALPHA->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				if (overwrite)
+					channel_ALPHA->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				else
+					channel_ALPHA->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 			}
 		}
 	}
 
 	if (HasChannel(POSITION) && film.HasChannel(POSITION)) {
-		if (HasChannel(DEPTH) && film.HasChannel(DEPTH)) {
+		if (HasChannel(DEPTH) && film.HasChannel(DEPTH) && !overwrite) {
 			// Used DEPTH information to merge Films
 			for (u_int y = 0; y < srcHeight; ++y) {
 				for (u_int x = 0; x < srcWidth; ++x) {
@@ -699,7 +703,7 @@ void Film::AddFilmImpl(const Film &film,
 	}
 
 	if (HasChannel(GEOMETRY_NORMAL) && film.HasChannel(GEOMETRY_NORMAL)) {
-		if (HasChannel(DEPTH) && film.HasChannel(DEPTH)) {
+		if (HasChannel(DEPTH) && film.HasChannel(DEPTH) && !overwrite) {
 			// Used DEPTH information to merge Films
 			for (u_int y = 0; y < srcHeight; ++y) {
 				for (u_int x = 0; x < srcWidth; ++x) {
@@ -720,7 +724,7 @@ void Film::AddFilmImpl(const Film &film,
 	}
 
 	if (HasChannel(SHADING_NORMAL) && film.HasChannel(SHADING_NORMAL)) {
-		if (HasChannel(DEPTH) && film.HasChannel(DEPTH)) {
+		if (HasChannel(DEPTH) && film.HasChannel(DEPTH) && !overwrite) {
 			// Used DEPTH information to merge Films
 			for (u_int y = 0; y < srcHeight; ++y) {
 				for (u_int x = 0; x < srcWidth; ++x) {
@@ -741,7 +745,7 @@ void Film::AddFilmImpl(const Film &film,
 	}
 
 	if (HasChannel(MATERIAL_ID) && film.HasChannel(MATERIAL_ID)) {
-		if (HasChannel(DEPTH) && film.HasChannel(DEPTH)) {
+		if (HasChannel(DEPTH) && film.HasChannel(DEPTH) && !overwrite) {
 			// Used DEPTH information to merge Films
 			for (u_int y = 0; y < srcHeight; ++y) {
 				for (u_int x = 0; x < srcWidth; ++x) {
@@ -765,7 +769,10 @@ void Film::AddFilmImpl(const Film &film,
 		for (u_int y = 0; y < srcHeight; ++y) {
 			for (u_int x = 0; x < srcWidth; ++x) {
 				const float *srcPixel = film.channel_DIRECT_DIFFUSE->GetPixel(srcOffsetX + x, srcOffsetY + y);
-				channel_DIRECT_DIFFUSE->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				if (overwrite)
+					channel_DIRECT_DIFFUSE->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				else
+					channel_DIRECT_DIFFUSE->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 			}
 		}
 	}
@@ -774,7 +781,10 @@ void Film::AddFilmImpl(const Film &film,
 		for (u_int y = 0; y < srcHeight; ++y) {
 			for (u_int x = 0; x < srcWidth; ++x) {
 				const float *srcPixel = film.channel_DIRECT_GLOSSY->GetPixel(srcOffsetX + x, srcOffsetY + y);
-				channel_DIRECT_GLOSSY->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				if (overwrite)
+					channel_DIRECT_GLOSSY->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				else
+					channel_DIRECT_GLOSSY->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 			}
 		}
 	}
@@ -783,7 +793,10 @@ void Film::AddFilmImpl(const Film &film,
 		for (u_int y = 0; y < srcHeight; ++y) {
 			for (u_int x = 0; x < srcWidth; ++x) {
 				const float *srcPixel = film.channel_EMISSION->GetPixel(srcOffsetX + x, srcOffsetY + y);
-				channel_EMISSION->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				if (overwrite)
+					channel_EMISSION->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				else
+					channel_EMISSION->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 			}
 		}
 	}
@@ -792,7 +805,10 @@ void Film::AddFilmImpl(const Film &film,
 		for (u_int y = 0; y < srcHeight; ++y) {
 			for (u_int x = 0; x < srcWidth; ++x) {
 				const float *srcPixel = film.channel_INDIRECT_DIFFUSE->GetPixel(srcOffsetX + x, srcOffsetY + y);
-				channel_INDIRECT_DIFFUSE->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				if (overwrite)
+					channel_INDIRECT_DIFFUSE->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				else
+					channel_INDIRECT_DIFFUSE->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 			}
 		}
 	}
@@ -801,7 +817,10 @@ void Film::AddFilmImpl(const Film &film,
 		for (u_int y = 0; y < srcHeight; ++y) {
 			for (u_int x = 0; x < srcWidth; ++x) {
 				const float *srcPixel = film.channel_INDIRECT_GLOSSY->GetPixel(srcOffsetX + x, srcOffsetY + y);
-				channel_INDIRECT_GLOSSY->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				if (overwrite)
+					channel_INDIRECT_GLOSSY->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				else
+					channel_INDIRECT_GLOSSY->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 			}
 		}
 	}
@@ -810,7 +829,10 @@ void Film::AddFilmImpl(const Film &film,
 		for (u_int y = 0; y < srcHeight; ++y) {
 			for (u_int x = 0; x < srcWidth; ++x) {
 				const float *srcPixel = film.channel_INDIRECT_SPECULAR->GetPixel(srcOffsetX + x, srcOffsetY + y);
-				channel_INDIRECT_SPECULAR->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				if (overwrite)
+					channel_INDIRECT_SPECULAR->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				else
+					channel_INDIRECT_SPECULAR->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 			}
 		}
 	}
@@ -822,7 +844,10 @@ void Film::AddFilmImpl(const Film &film,
 					for (u_int y = 0; y < srcHeight; ++y) {
 						for (u_int x = 0; x < srcWidth; ++x) {
 							const float *srcPixel = film.channel_MATERIAL_ID_MASKs[j]->GetPixel(srcOffsetX + x, srcOffsetY + y);
-							channel_MATERIAL_ID_MASKs[i]->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+							if (overwrite)
+								channel_MATERIAL_ID_MASKs[i]->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+							else
+								channel_MATERIAL_ID_MASKs[i]->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 						}
 					}
 				}
@@ -834,7 +859,10 @@ void Film::AddFilmImpl(const Film &film,
 		for (u_int y = 0; y < srcHeight; ++y) {
 			for (u_int x = 0; x < srcWidth; ++x) {
 				const float *srcPixel = film.channel_DIRECT_SHADOW_MASK->GetPixel(srcOffsetX + x, srcOffsetY + y);
-				channel_DIRECT_SHADOW_MASK->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				if (overwrite)
+					channel_DIRECT_SHADOW_MASK->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				else
+					channel_DIRECT_SHADOW_MASK->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 			}
 		}
 	}
@@ -849,7 +877,7 @@ void Film::AddFilmImpl(const Film &film,
 	}
 
 	if (HasChannel(UV) && film.HasChannel(UV)) {
-		if (HasChannel(DEPTH) && film.HasChannel(DEPTH)) {
+		if (HasChannel(DEPTH) && film.HasChannel(DEPTH) && !overwrite) {
 			// Used DEPTH information to merge Films
 			for (u_int y = 0; y < srcHeight; ++y) {
 				for (u_int x = 0; x < srcWidth; ++x) {
@@ -873,7 +901,10 @@ void Film::AddFilmImpl(const Film &film,
 		for (u_int y = 0; y < srcHeight; ++y) {
 			for (u_int x = 0; x < srcWidth; ++x) {
 				const float *srcPixel = film.channel_RAYCOUNT->GetPixel(srcOffsetX + x, srcOffsetY + y);
-				channel_RAYCOUNT->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				if (overwrite)
+					channel_RAYCOUNT->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				else
+					channel_RAYCOUNT->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 			}
 		}
 	}
@@ -885,7 +916,10 @@ void Film::AddFilmImpl(const Film &film,
 					for (u_int y = 0; y < srcHeight; ++y) {
 						for (u_int x = 0; x < srcWidth; ++x) {
 							const float *srcPixel = film.channel_BY_MATERIAL_IDs[j]->GetPixel(srcOffsetX + x, srcOffsetY + y);
-							channel_BY_MATERIAL_IDs[i]->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+							if (overwrite)
+								channel_BY_MATERIAL_IDs[i]->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+							else
+								channel_BY_MATERIAL_IDs[i]->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 						}
 					}
 				}
@@ -897,13 +931,16 @@ void Film::AddFilmImpl(const Film &film,
 		for (u_int y = 0; y < srcHeight; ++y) {
 			for (u_int x = 0; x < srcWidth; ++x) {
 				const float *srcPixel = film.channel_IRRADIANCE->GetPixel(srcOffsetX + x, srcOffsetY + y);
-				channel_IRRADIANCE->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				if (overwrite)
+					channel_IRRADIANCE->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				else
+					channel_IRRADIANCE->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 			}
 		}
 	}
 
 	if (HasChannel(OBJECT_ID) && film.HasChannel(OBJECT_ID)) {
-		if (HasChannel(DEPTH) && film.HasChannel(DEPTH)) {
+		if (HasChannel(DEPTH) && film.HasChannel(DEPTH) && !overwrite) {
 			// Used DEPTH information to merge Films
 			for (u_int y = 0; y < srcHeight; ++y) {
 				for (u_int x = 0; x < srcWidth; ++x) {
@@ -930,7 +967,10 @@ void Film::AddFilmImpl(const Film &film,
 					for (u_int y = 0; y < srcHeight; ++y) {
 						for (u_int x = 0; x < srcWidth; ++x) {
 							const float *srcPixel = film.channel_OBJECT_ID_MASKs[j]->GetPixel(srcOffsetX + x, srcOffsetY + y);
-							channel_OBJECT_ID_MASKs[i]->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+							if (overwrite)
+								channel_OBJECT_ID_MASKs[i]->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+							else
+								channel_OBJECT_ID_MASKs[i]->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 						}
 					}
 				}
@@ -945,7 +985,10 @@ void Film::AddFilmImpl(const Film &film,
 					for (u_int y = 0; y < srcHeight; ++y) {
 						for (u_int x = 0; x < srcWidth; ++x) {
 							const float *srcPixel = film.channel_BY_OBJECT_IDs[j]->GetPixel(srcOffsetX + x, srcOffsetY + y);
-							channel_BY_OBJECT_IDs[i]->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+							if (overwrite)
+								channel_BY_OBJECT_IDs[i]->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+							else
+								channel_BY_OBJECT_IDs[i]->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 						}
 					}
 				}
@@ -957,7 +1000,10 @@ void Film::AddFilmImpl(const Film &film,
 		for (u_int y = 0; y < srcHeight; ++y) {
 			for (u_int x = 0; x < srcWidth; ++x) {
 				const u_int *srcPixel = film.channel_SAMPLECOUNT->GetPixel(srcOffsetX + x, srcOffsetY + y);
-				channel_SAMPLECOUNT->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				if (overwrite)
+					channel_SAMPLECOUNT->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				else
+					channel_SAMPLECOUNT->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 			}
 		}
 	}
@@ -968,7 +1014,10 @@ void Film::AddFilmImpl(const Film &film,
 		for (u_int y = 0; y < srcHeight; ++y) {
 			for (u_int x = 0; x < srcWidth; ++x) {
 				const float *srcPixel = film.channel_MATERIAL_ID_COLOR->GetPixel(srcOffsetX + x, srcOffsetY + y);
-				channel_MATERIAL_ID_COLOR->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				if (overwrite)
+					channel_MATERIAL_ID_COLOR->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				else
+					channel_MATERIAL_ID_COLOR->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 			}
 		}
 	}
@@ -977,7 +1026,10 @@ void Film::AddFilmImpl(const Film &film,
 		for (u_int y = 0; y < srcHeight; ++y) {
 			for (u_int x = 0; x < srcWidth; ++x) {
 				const float *srcPixel = film.channel_ALBEDO->GetPixel(srcOffsetX + x, srcOffsetY + y);
-				channel_ALBEDO->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				if (overwrite)
+					channel_ALBEDO->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				else
+					channel_ALBEDO->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 			}
 		}
 	}
@@ -987,7 +1039,10 @@ void Film::AddFilmImpl(const Film &film,
 		for (u_int y = 0; y < srcHeight; ++y) {
 			for (u_int x = 0; x < srcWidth; ++x) {
 				const float *srcPixel = film.channel_AVG_SHADING_NORMAL->GetPixel(srcOffsetX + x, srcOffsetY + y);
-				channel_AVG_SHADING_NORMAL->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				if (overwrite)
+					channel_AVG_SHADING_NORMAL->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				else
+					channel_AVG_SHADING_NORMAL->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 			}
 		}
 	}
@@ -997,21 +1052,49 @@ void Film::AddFilmImpl(const Film &film,
 		for (u_int y = 0; y < srcHeight; ++y) {
 			for (u_int x = 0; x < srcWidth; ++x) {
 				const float *srcPixel = film.channel_DEPTH->GetPixel(srcOffsetX + x, srcOffsetY + y);
-				channel_DEPTH->MinPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				if (overwrite)
+					channel_DEPTH->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				else
+					channel_DEPTH->MinPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 			}
 		}
 	}
 
-	// NOISE values can not really be added, they will be updated at the next test
+	if (overwrite) {
+		if (HasChannel(NOISE) && film.HasChannel(NOISE)) {
+			for (u_int y = 0; y < srcHeight; ++y) {
+				for (u_int x = 0; x < srcWidth; ++x) {
+					const float *srcPixel = film.channel_NOISE->GetPixel(srcOffsetX + x, srcOffsetY + y);
+					channel_NOISE->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				}
+			}
+		}
+	} else {
+		// NOISE values can not really be added, they will be updated at the next test
+	}
 
-	// USER_IMPORTANCE values can not really be added, I will keep the one in the
-	// current film
+	if (overwrite) {
+		if (HasChannel(USER_IMPORTANCE) && film.HasChannel(USER_IMPORTANCE)) {
+			for (u_int y = 0; y < srcHeight; ++y) {
+				for (u_int x = 0; x < srcWidth; ++x) {
+					const float *srcPixel = film.channel_USER_IMPORTANCE->GetPixel(srcOffsetX + x, srcOffsetY + y);
+					channel_USER_IMPORTANCE->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				}
+			}
+		}
+	} else {
+		// USER_IMPORTANCE values can not really be added, I will keep the one in the
+		// current film
+	}
 
 	//--------------------------------------------------------------------------
 	// Film denoiser related code
 	//--------------------------------------------------------------------------
 
 	if (filmDenoiser.IsEnabled() && !filmDenoiser.HasReferenceFilm()) {
+		if (overwrite)
+			filmDenoiser.Reset();
+
 		// Add denoiser SamplesAccumulator statistics
 		filmDenoiser.AddDenoiser(film.GetDenoiser(),
 				srcOffsetX, srcOffsetY,
