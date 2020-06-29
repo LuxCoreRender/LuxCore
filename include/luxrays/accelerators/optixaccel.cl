@@ -94,6 +94,20 @@ static __forceinline__ __device__ CUdeviceptr optixGetSbtDataPointer()
     return (CUdeviceptr)ptr;
 }
 
+static __forceinline__ __device__ unsigned int optixGetInstanceId()
+{
+    unsigned int u0;
+    asm( "call (%0), _optix_read_instance_id, ();" : "=r"( u0 ) : );
+    return u0;
+}
+
+static __forceinline__ __device__ unsigned int optixGetInstanceIndex()
+{
+    unsigned int u0;
+    asm( "call (%0), _optix_read_instance_idx, ();" : "=r"( u0 ) : );
+    return u0;
+}
+
 //------------------------------------------------------------------------------
 // This must match the definition in optixaccel.cpp
 
@@ -140,29 +154,27 @@ extern "C" __global__ void __closesthit__OptixAccel() {
 	RayHit *rayHitBuff = (RayHit *)optixAccelParams.rayHitBuff;
 	RayHit *rayHit = &rayHitBuff[launchIndex.x];
 
-	rayHit->t = optixGetRayTmax();
-	
-	const float2 barycentrics = optixGetTriangleBarycentrics();
-	rayHit->b1 = barycentrics.x;
-	rayHit->b2 = barycentrics.y;
-
-	HitGroupSbtData *sbtData = (HitGroupSbtData*)optixGetSbtDataPointer();
-	rayHit->meshIndex = sbtData->meshIndex;
-
 	const uint triangleIndex = optixGetPrimitiveIndex();
-	rayHit->triangleIndex = triangleIndex;
-	
+
 	if (triangleIndex == NULL_INDEX) {
 		rayHit->meshIndex = NULL_INDEX;
 		rayHit->triangleIndex = NULL_INDEX;
 	} else {
-		HitGroupSbtData *sbtData = (HitGroupSbtData*)optixGetSbtDataPointer();
-		rayHit->meshIndex = sbtData->meshIndex;
-		rayHit->triangleIndex = triangleIndex;		
+		rayHit->t = optixGetRayTmax();
+
+		const float2 barycentrics = optixGetTriangleBarycentrics();
+		rayHit->b1 = barycentrics.x;
+		rayHit->b2 = barycentrics.y;
+
+//		HitGroupSbtData *sbtData = (HitGroupSbtData*)optixGetSbtDataPointer();
+//		rayHit->meshIndex = sbtData->meshIndex;
+		rayHit->meshIndex = optixGetInstanceIndex();
+		rayHit->triangleIndex = triangleIndex;
 	}
 }
 
 extern "C" __global__ void __miss__OptixAccel() {
+	// TODO: this is never called
 	const uint3 launchIndex = optixGetLaunchIndex();
 
 	RayHit *rayHitBuff = (RayHit *)optixAccelParams.rayHitBuff;
