@@ -85,6 +85,14 @@ public:
 
 		vector<OptixInstance> optixInstances;
 //		vector<OptixAabb> optixBBs;
+		
+		auto uniqueMeshTraversableHandle = map<const Mesh *, OptixTraversableHandle,
+				function<bool(const Mesh *, const Mesh *)>>{
+			[](const Mesh *p0, const Mesh *p1) {
+				return p0 < p1;
+			}
+		};
+
 		for (u_int i = 0; i < optixAccel.meshes.size(); ++i) {
 			const Mesh *mesh = optixAccel.meshes[i];
 			
@@ -128,6 +136,55 @@ public:
 //					optixBB.maxY = bb.pMax.y;
 //					optixBB.maxZ = bb.pMax.z;
 
+					break;
+				}
+				case TYPE_TRIANGLE_INSTANCE:
+				case TYPE_EXT_TRIANGLE_INSTANCE: {
+					const InstanceTriangleMesh *itm = dynamic_cast<const InstanceTriangleMesh *>(mesh);
+
+					// Check if a OptixTraversableHandle has already been created
+					auto it = uniqueMeshTraversableHandle.find(itm->GetTriangleMesh());
+
+					OptixTraversableHandle instancedMeshHandle;
+					if (it == uniqueMeshTraversableHandle.end()) {
+						TriangleMesh *instancedMesh = itm->GetTriangleMesh();
+
+						// Create a new OptixTraversableHandle
+						HardwareDeviceBuffer *outputBuffer = nullptr;
+						BuildTraversable(instancedMesh, instancedMeshHandle, &outputBuffer);
+						optixOutputBuffers.push_back(outputBuffer);
+
+						// Add to the listed of created handles
+						uniqueMeshTraversableHandle[instancedMesh] = instancedMeshHandle;
+					} else
+						instancedMeshHandle = it->second;
+					
+					// Add an instance of this mesh
+
+					optixInstances.resize(optixInstances.size() + 1);
+					OptixInstance &optixInstance = optixInstances[optixInstances.size() - 1];
+					memset(&optixInstance, 0, sizeof(OptixInstance));
+
+					// Set transform matrix
+					Transform local2World;
+					itm->GetLocal2World(0.f, local2World);
+
+					optixInstance.transform[0] = local2World.m.m[0][0];
+					optixInstance.transform[1] = local2World.m.m[0][1];
+					optixInstance.transform[2] = local2World.m.m[0][2];
+					optixInstance.transform[3] = local2World.m.m[0][3];
+					optixInstance.transform[4] = local2World.m.m[1][0];
+					optixInstance.transform[5] = local2World.m.m[1][1];
+					optixInstance.transform[6] = local2World.m.m[1][2];
+					optixInstance.transform[7] = local2World.m.m[1][3];
+					optixInstance.transform[8] = local2World.m.m[2][0];
+					optixInstance.transform[9] = local2World.m.m[2][1];
+					optixInstance.transform[10] = local2World.m.m[2][2];
+					optixInstance.transform[11] = local2World.m.m[2][3];
+
+					optixInstance.instanceId = i;
+					optixInstance.visibilityMask = 1;
+					optixInstance.traversableHandle = instancedMeshHandle;
 					break;
 				}
 				default:

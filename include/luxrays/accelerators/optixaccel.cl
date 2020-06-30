@@ -166,9 +166,10 @@ extern "C" __global__ void __closesthit__OptixAccel() {
 		rayHit->b1 = barycentrics.x;
 		rayHit->b2 = barycentrics.y;
 
+		// TODO: remove Sbt usage ?
 //		HitGroupSbtData *sbtData = (HitGroupSbtData*)optixGetSbtDataPointer();
 //		rayHit->meshIndex = sbtData->meshIndex;
-		rayHit->meshIndex = optixGetInstanceIndex();
+		rayHit->meshIndex = optixGetInstanceId();
 		rayHit->triangleIndex = triangleIndex;
 	}
 }

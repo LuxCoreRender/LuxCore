@@ -66,9 +66,12 @@ void CUDAIntersectionDevice::SetDataSet(DataSet *newDataSet) {
 		if (accelType != ACCEL_AUTO) {
 			accel = dataSet->GetAccelerator(accelType);
 		} else {
-			if (dataSet->RequiresInstanceSupport() || dataSet->RequiresMotionBlurSupport())
-				accel = dataSet->GetAccelerator(ACCEL_MBVH);
-			else {
+			if (dataSet->RequiresInstanceSupport() || dataSet->RequiresMotionBlurSupport()) {
+				if (optixContext)
+					accel = dataSet->GetAccelerator(ACCEL_OPTIX);
+				else
+					accel = dataSet->GetAccelerator(ACCEL_MBVH);
+			} else {
 				if (optixContext)
 					accel = dataSet->GetAccelerator(ACCEL_OPTIX);
 				else
