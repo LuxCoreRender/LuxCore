@@ -638,8 +638,11 @@ void PathOCLBaseOCLRenderThread::InitRender() {
 	SetKernelArgs();
 
 	// Clear all thread films
-	BOOST_FOREACH(ThreadFilm *threadFilm, threadFilms)
+	BOOST_FOREACH(ThreadFilm *threadFilm, threadFilms) {
+		intersectionDevice->PushThreadCurrentDevice();
 		threadFilm->ClearFilm(intersectionDevice, filmClearKernel, filmClearWorkGroupSize);
+		intersectionDevice->PopThreadCurrentDevice();
+	}
 
 	intersectionDevice->FinishQueue();
 

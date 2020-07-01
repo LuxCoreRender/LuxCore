@@ -59,6 +59,8 @@
 
 ''Beta1 released''
 
+* Fixed a bug when using RTPATHOCL with multiple CUDA devices
+
 Note: due to Glossycoating updated support for bump mapping on GPUs, some old scene using this kind of material/bump map combination may require some fix.
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
