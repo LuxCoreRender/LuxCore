@@ -74,7 +74,7 @@ __kernel void AdvancePaths_MK_RT_NEXT_VERTEX(
 
 	int throughShadowTransparency = taskState->throughShadowTransparency;
 	const bool continueToTrace = Scene_Intersect(taskConfig,
-			EYE_RAY | ((pathInfo->depth.depth == 0) ? CAMERA_RAY : GENERIC_RAY),
+			EYE_RAY | ((pathInfo->depth.depth == 0) ? CAMERA_RAY : INDIRECT_RAY),
 			&throughShadowTransparency,
 			&pathInfo->volume,
 			&tasks[gid].tmpHitPoint,

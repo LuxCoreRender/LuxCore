@@ -520,6 +520,7 @@ bool Scene::Intersect(IntersectionDevice *device,
 	const bool fromLight = rayType & LIGHT_RAY;
 	const bool cameraRay = rayType & CAMERA_RAY;
 	const bool shadowRay = rayType & SHADOW_RAY;
+	const bool indirectRay = rayType & INDIRECT_RAY;
 	bool throughShadowTransparency = false;
 
 	// This field can be checked by the calling code even if there was no
@@ -589,7 +590,7 @@ bool Scene::Intersect(IntersectionDevice *device,
 				}
 			}
 
-			if (!continueToTrace && shadowRay) {
+			if (!continueToTrace && (shadowRay || indirectRay)) {
 				const Spectrum &transp = bsdf->GetPassThroughShadowTransparency();
 				
 				if (!transp.Black()) {

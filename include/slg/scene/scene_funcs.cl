@@ -37,6 +37,7 @@ OPENCL_FORCE_NOT_INLINE bool Scene_Intersect(
 	
 	const bool cameraRay = rayType & CAMERA_RAY;
 	const bool shadowRay = rayType & SHADOW_RAY;
+	const bool indirectRay = rayType & INDIRECT_RAY;
 
 	const bool hit = (rayHit->meshIndex != NULL_INDEX);
 
@@ -116,7 +117,7 @@ OPENCL_FORCE_NOT_INLINE bool Scene_Intersect(
 			}
 		}
 
-		if (!continueToTrace && shadowRay) {
+		if (!continueToTrace && (shadowRay || indirectRay)) {
 			const float3 transp = BSDF_GetPassThroughShadowTransparency(bsdf
 				MATERIALS_PARAM);
 

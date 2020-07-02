@@ -379,7 +379,7 @@ void PathTracer::RenderEyePath(IntersectionDevice *device,
 		Spectrum connectionThroughput;
 		const float passThrough = sampler->GetSample(sampleOffset);
 		const bool hit = scene->Intersect(device,
-				EYE_RAY | (sampleResult.firstPathVertex ? CAMERA_RAY : GENERIC_RAY),
+				EYE_RAY | (sampleResult.firstPathVertex ? CAMERA_RAY : INDIRECT_RAY),
 				&pathInfo.volume, passThrough,
 				&eyeRay, &eyeRayHit, &bsdf, &connectionThroughput,
 				&pathThroughput, &sampleResult);
@@ -775,7 +775,7 @@ void PathTracer::RenderLightSample(IntersectionDevice *device,
 			RayHit nextEventRayHit;
 			BSDF bsdf;
 			Spectrum connectionThroughput;
-			const bool hit = scene->Intersect(device, LIGHT_RAY | GENERIC_RAY, &pathInfo.volume, sampler->GetSample(sampleOffset),
+			const bool hit = scene->Intersect(device, LIGHT_RAY | INDIRECT_RAY, &pathInfo.volume, sampler->GetSample(sampleOffset),
 					&nextEventRay, &nextEventRayHit, &bsdf,
 					&connectionThroughput);
 			if (!hit) {
