@@ -569,11 +569,20 @@ void PathTracer::RenderEyePath(IntersectionDevice *device,
 				sampleResult.alpha = 0.f;
 			}
 		} else {
-			bsdfSample = bsdf.Sample(&sampledDir,
-					sampler->GetSample(sampleOffset + 6),
-					sampler->GetSample(sampleOffset + 7),
-					&bsdfPdfW, &cosSampledDir, &bsdfEvent);
-			pathInfo.isPassThroughPath = false;
+			const Spectrum &shadowTransparency = bsdf.GetPassThroughShadowTransparency();
+			if (!sampleResult.firstPathVertex && !shadowTransparency.Black()) {
+				sampledDir = -bsdf.hitPoint.fixedDir;
+				bsdfSample = shadowTransparency;
+				bsdfPdfW = pathInfo.lastBSDFPdfW;
+				cosSampledDir = -1.f;
+				bsdfEvent = pathInfo.lastBSDFEvent;
+			} else {
+				bsdfSample = bsdf.Sample(&sampledDir,
+						sampler->GetSample(sampleOffset + 6),
+						sampler->GetSample(sampleOffset + 7),
+						&bsdfPdfW, &cosSampledDir, &bsdfEvent);
+				pathInfo.isPassThroughPath = false;
+			}
 		}
 
 		assert (!bsdfSample.IsNaN() && !bsdfSample.IsInf() && !bsdfSample.IsNeg());
@@ -816,11 +825,11 @@ void PathTracer::RenderLightSample(IntersectionDevice *device,
 			BSDFEvent bsdfEvent;
 			float cosSampleDir;
 			Spectrum bsdfSample = bsdf.Sample(&sampledDir,
-					sampler->GetSample(sampleOffset + 4),
-					sampler->GetSample(sampleOffset + 5),
+						sampler->GetSample(sampleOffset + 4),
+						sampler->GetSample(sampleOffset + 5),
 					&bsdfPdf, &cosSampleDir, &bsdfEvent);
 			if (bsdfSample.Black())
-				break;	
+				break;
 
 			pathInfo.AddVertex(bsdf, bsdfEvent, hybridBackForwardGlossinessThreshold);
 
