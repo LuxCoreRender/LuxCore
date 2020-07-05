@@ -570,7 +570,7 @@ void PathTracer::RenderEyePath(IntersectionDevice *device,
 			}
 		} else {
 			const Spectrum &shadowTransparency = bsdf.GetPassThroughShadowTransparency();
-			if (!sampleResult.firstPathVertex && !shadowTransparency.Black()) {
+			if (!sampleResult.firstPathVertex && !shadowTransparency.Black() && !pathInfo.IsSpecularPath()) {
 				sampledDir = -bsdf.hitPoint.fixedDir;
 				bsdfSample = shadowTransparency;
 				bsdfPdfW = pathInfo.lastBSDFPdfW;

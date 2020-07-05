@@ -776,7 +776,7 @@ __kernel void AdvancePaths_MK_GENERATE_NEXT_VERTEX_RAY(
 	} else {
 		const float3 shadowTransparency = BSDF_GetPassThroughShadowTransparency(bsdf
 				MATERIALS_PARAM);
-		if (!sampleResult->firstPathVertex && !Spectrum_IsBlack(shadowTransparency)) {
+		if (!sampleResult->firstPathVertex && !Spectrum_IsBlack(shadowTransparency) && !pathInfo->isNearlyS) {
 			sampledDir = -VLOAD3F(&bsdf->hitPoint.fixedDir.x);
 			bsdfSample = shadowTransparency;
 			bsdfPdfW = pathInfo->lastBSDFPdfW;
