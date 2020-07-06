@@ -283,10 +283,10 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 					} else
 						break;
 				}
-			}
 
-			// Re-initialize the tile queue for the next frame
-			engine->tileRepository->Restart(engine->film, frameCounter++);
+				// Re-initialize the tile queue for the next frame
+				engine->tileRepository->Restart(engine->film, frameCounter++);
+			}
 
 			//------------------------------------------------------------------
 			if (frameBarrier)

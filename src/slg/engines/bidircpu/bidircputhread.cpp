@@ -100,7 +100,7 @@ void BiDirCPURenderThread::ConnectVertices(const float time,
 			BSDF bsdfConn;
 			Spectrum connectionThroughput;
 			PathVolumeInfo volInfo = eyeVertex.volInfo; // I need to use a copy here
-			if (!scene->Intersect(device, LIGHT_RAY | GENERIC_RAY, &volInfo, u0, &p2pRay, &p2pRayHit, &bsdfConn,
+			if (!scene->Intersect(device, LIGHT_RAY | INDIRECT_RAY, &volInfo, u0, &p2pRay, &p2pRayHit, &bsdfConn,
 					&connectionThroughput)) {
 				// Nothing was hit, the light path vertex is visible
 
@@ -256,7 +256,7 @@ void BiDirCPURenderThread::DirectLightSampling(const float time,
 					Spectrum connectionThroughput;
 					PathVolumeInfo volInfo = eyeVertex.volInfo; // I need to use a copy here
 					// Check if the light source is visible
-					if (!scene->Intersect(device, EYE_RAY | GENERIC_RAY, &volInfo, u4,
+					if (!scene->Intersect(device, EYE_RAY | SHADOW_RAY, &volInfo, u4,
 							&shadowRay, &shadowRayHit, &shadowBsdf, &connectionThroughput)) {
 						// I'm ignoring volume emission because it is not sampled in
 						// direct light step.
@@ -403,7 +403,7 @@ bool BiDirCPURenderThread::TraceLightPath(const float time,
 
 			RayHit nextEventRayHit;
 			Spectrum connectionThroughput;
-			const bool hit = scene->Intersect(device, LIGHT_RAY | GENERIC_RAY,
+			const bool hit = scene->Intersect(device, LIGHT_RAY | INDIRECT_RAY,
 					&lightVertex.volInfo, sampler->GetSample(sampleOffset),
 					&lightRay, &nextEventRayHit, &lightVertex.bsdf,
 					&connectionThroughput);
@@ -629,7 +629,7 @@ void BiDirCPURenderThread::RenderFunc() {
 				RayHit eyeRayHit;
 				Spectrum connectionThroughput;
 				const bool hit = scene->Intersect(device,
-						EYE_RAY | (eyeSampleResult.firstPathVertex ? CAMERA_RAY : GENERIC_RAY),
+						EYE_RAY | (eyeSampleResult.firstPathVertex ? CAMERA_RAY : INDIRECT_RAY),
 						&eyeVertex.volInfo, sampler->GetSample(sampleOffset),
 						&eyeRay, &eyeRayHit, &eyeVertex.bsdf,
 						&connectionThroughput, &eyeVertex.throughput, &eyeSampleResult);

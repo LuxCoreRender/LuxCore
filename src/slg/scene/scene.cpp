@@ -590,10 +590,10 @@ bool Scene::Intersect(IntersectionDevice *device,
 			}
 
 			if (!continueToTrace && shadowRay) {
-				const Spectrum &transp = bsdf->GetPassThroughShadowTransparency();
+				const Spectrum &shadowTransparency = bsdf->GetPassThroughShadowTransparency();
 				
-				if (!transp.Black()) {
-					*connectionThroughput *= transp;
+				if (!shadowTransparency.Black()) {
+					*connectionThroughput *= shadowTransparency;
 					throughShadowTransparency = true;
 					continueToTrace = true;
 				}

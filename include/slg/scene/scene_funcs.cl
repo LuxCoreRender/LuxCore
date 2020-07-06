@@ -117,11 +117,11 @@ OPENCL_FORCE_NOT_INLINE bool Scene_Intersect(
 		}
 
 		if (!continueToTrace && shadowRay) {
-			const float3 transp = BSDF_GetPassThroughShadowTransparency(bsdf
+			const float3 shadowTransparency = BSDF_GetPassThroughShadowTransparency(bsdf
 				MATERIALS_PARAM);
 
-			if (!Spectrum_IsBlack(transp)) {
-				*connectionThroughput *= transp;
+			if (!Spectrum_IsBlack(shadowTransparency)) {
+				*connectionThroughput *= shadowTransparency;
 				*throughShadowTransparency = true;
 				continueToTrace = true;
 			}

@@ -74,7 +74,7 @@ __kernel void AdvancePaths_MK_RT_NEXT_VERTEX(
 
 	int throughShadowTransparency = taskState->throughShadowTransparency;
 	const bool continueToTrace = Scene_Intersect(taskConfig,
-			EYE_RAY | ((pathInfo->depth.depth == 0) ? CAMERA_RAY : GENERIC_RAY),
+			EYE_RAY | ((pathInfo->depth.depth == 0) ? CAMERA_RAY : INDIRECT_RAY),
 			&throughShadowTransparency,
 			&pathInfo->volume,
 			&tasks[gid].tmpHitPoint,
@@ -774,13 +774,23 @@ __kernel void AdvancePaths_MK_GENERATE_NEXT_VERTEX_RAY(
 			sampleResult->alpha = 0.f;
 		}
 	} else {
-		bsdfSample = BSDF_Sample(bsdf,
-				Sampler_GetSample(taskConfig, sampleOffset + IDX_BSDF_X SAMPLER_PARAM),
-				Sampler_GetSample(taskConfig, sampleOffset + IDX_BSDF_Y SAMPLER_PARAM),
-				&sampledDir, &bsdfPdfW, &cosSampledDir, &bsdfEvent
+		const float3 shadowTransparency = BSDF_GetPassThroughShadowTransparency(bsdf
 				MATERIALS_PARAM);
+		if (!sampleResult->firstPathVertex && !Spectrum_IsBlack(shadowTransparency) && !pathInfo->isNearlyS) {
+			sampledDir = -VLOAD3F(&bsdf->hitPoint.fixedDir.x);
+			bsdfSample = shadowTransparency;
+			bsdfPdfW = pathInfo->lastBSDFPdfW;
+			cosSampledDir = -1.f;
+			bsdfEvent = pathInfo->lastBSDFEvent;
+		} else {
+			bsdfSample = BSDF_Sample(bsdf,
+					Sampler_GetSample(taskConfig, sampleOffset + IDX_BSDF_X SAMPLER_PARAM),
+					Sampler_GetSample(taskConfig, sampleOffset + IDX_BSDF_Y SAMPLER_PARAM),
+					&sampledDir, &bsdfPdfW, &cosSampledDir, &bsdfEvent
+					MATERIALS_PARAM);
 
-		pathInfo->isPassThroughPath = false;
+			pathInfo->isPassThroughPath = false;
+		}
 	}
 
 	if (sampleResult->firstPathVertex)

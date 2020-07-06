@@ -56,6 +56,7 @@ namespace ocl {
 
 #define TRIANGLE_LIGHT_POSTFIX "__triangle__light__"
 
+// Note: keep aligned with the copy in scene_types.cl
 typedef enum {
 	// Mandatory setting: one or the other must be used
 	EYE_RAY = 1,
@@ -66,9 +67,12 @@ typedef enum {
 	// For the very first eye ray
 	CAMERA_RAY = 8,
 	// For rays used for direct light sampling
-	SHADOW_RAY = 16
+	SHADOW_RAY = 16,
+	// For rays used for indirect light sampling
+	INDIRECT_RAY = 32
 } SceneRayTypeType;
 
+// Note: keep aligned with the copy in scene_types.cl
 typedef int SceneRayType;
 
 class SampleResult;
