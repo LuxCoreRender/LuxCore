@@ -117,10 +117,6 @@ typedef struct Params {
 	CUdeviceptr rayHitBuff;
 } OptixAccelParams;
 
-typedef struct {
-	unsigned int meshIndex;
-} HitGroupSbtData;
-
 //------------------------------------------------------------------------------
 
 extern "C" {
@@ -166,16 +162,12 @@ extern "C" __global__ void __closesthit__OptixAccel() {
 		rayHit->b1 = barycentrics.x;
 		rayHit->b2 = barycentrics.y;
 
-		// TODO: remove Sbt usage ?
-//		HitGroupSbtData *sbtData = (HitGroupSbtData*)optixGetSbtDataPointer();
-//		rayHit->meshIndex = sbtData->meshIndex;
 		rayHit->meshIndex = optixGetInstanceId();
 		rayHit->triangleIndex = triangleIndex;
 	}
 }
 
 extern "C" __global__ void __miss__OptixAccel() {
-	// TODO: this is never called
 	const uint3 launchIndex = optixGetLaunchIndex();
 
 	RayHit *rayHitBuff = (RayHit *)optixAccelParams.rayHitBuff;
@@ -184,4 +176,3 @@ extern "C" __global__ void __miss__OptixAccel() {
 	rayHit->meshIndex = NULL_INDEX;
 	rayHit->triangleIndex = NULL_INDEX;
 }
-

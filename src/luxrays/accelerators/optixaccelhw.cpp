@@ -17,11 +17,11 @@
  ***************************************************************************/
 
 #include "luxrays/core/context.h"
+#include "luxrays/core/exttrianglemesh.h"
 #include "luxrays/devices/cudaintersectiondevice.h"
 #include "luxrays/accelerators/optixaccel.h"
 #include "luxrays/kernels/kernels.h"
 #include "luxrays/utils/oclcache.h"
-#include "luxrays/core/exttrianglemesh.h"
 
 using namespace std;
 
@@ -36,19 +36,7 @@ typedef struct Params {
 	CUdeviceptr rayHitBuff;
 } OptixAccelParams;
 
-typedef struct {
-	unsigned int meshIndex;
-} HitGroupSbtData;
-
 //------------------------------------------------------------------------------
-
-template <typename T>
-struct OptixSbtRecord {
-    alignas(OPTIX_SBT_RECORD_ALIGNMENT) char header[OPTIX_SBT_RECORD_HEADER_SIZE];
-    T data;
-};
-
-typedef OptixSbtRecord<HitGroupSbtData> HitGroupSbtRecord;
 
 class OptixKernel : public HardwareIntersectionKernel {
 public:
@@ -488,18 +476,14 @@ public:
 		cudaDevice->AllocBufferRW(&optixRayGenSbtBuff, sbtRayGenBuff, OPTIX_SBT_RECORD_HEADER_SIZE);
 
 		// Hit SBT
-		HitGroupSbtRecord *hitGroupSbtRecords = new HitGroupSbtRecord[optixAccel.meshes.size()];
-		for (u_int i = 0; i < optixAccel.meshes.size(); ++i) {
-			hitGroupSbtRecords[i].data.meshIndex = i;
-			CHECK_OPTIX_ERROR(optixSbtRecordPackHeader(optixHitProgGroup, &hitGroupSbtRecords[i]));
-		}
-		cudaDevice->AllocBufferRW(&optixHitSbtBuff, hitGroupSbtRecords, sizeof(HitGroupSbtRecord) * optixAccel.meshes.size());
-		delete[] hitGroupSbtRecords;
-
-		// Miss SBT
 		char sbtHitBuff[OPTIX_SBT_RECORD_HEADER_SIZE];
 		CHECK_OPTIX_ERROR(optixSbtRecordPackHeader(optixHitProgGroup, sbtHitBuff));
-		cudaDevice->AllocBufferRW(&optixMissSbtBuff, sbtHitBuff, OPTIX_SBT_RECORD_HEADER_SIZE);
+		cudaDevice->AllocBufferRW(&optixHitSbtBuff, sbtHitBuff, OPTIX_SBT_RECORD_HEADER_SIZE);
+
+		// Miss SBT
+		char sbtMissBuff[OPTIX_SBT_RECORD_HEADER_SIZE];
+		CHECK_OPTIX_ERROR(optixSbtRecordPackHeader(optixMissProgGroup, sbtMissBuff));
+		cudaDevice->AllocBufferRW(&optixMissSbtBuff, sbtMissBuff, OPTIX_SBT_RECORD_HEADER_SIZE);
 
 		memset(&optixSbt, 0, sizeof(OptixShaderBindingTable));
 		optixSbt.raygenRecord = ((CUDADeviceBuffer *)optixRayGenSbtBuff)->GetCUDADevicePointer();
@@ -507,8 +491,8 @@ public:
 		optixSbt.missRecordStrideInBytes = OPTIX_SBT_RECORD_HEADER_SIZE;
 		optixSbt.missRecordCount = 1;
 		optixSbt.hitgroupRecordBase = ((CUDADeviceBuffer *)optixHitSbtBuff)->GetCUDADevicePointer();
-		optixSbt.hitgroupRecordStrideInBytes = sizeof(HitGroupSbtRecord);
-		optixSbt.hitgroupRecordCount = optixAccel.meshes.size();
+		optixSbt.hitgroupRecordStrideInBytes = OPTIX_SBT_RECORD_HEADER_SIZE;
+		optixSbt.hitgroupRecordCount = 1;
 
 		// Print some memory statistics
 		
@@ -532,10 +516,7 @@ public:
 		if (optixRaygenProgGroup) {
 			CHECK_OPTIX_ERROR(optixProgramGroupDestroy(optixRaygenProgGroup));
 		}
-		if (optixRaygenProgGroup) {
-			CHECK_OPTIX_ERROR(optixProgramGroupDestroy(optixMissProgGroup));
-		}
-		if (optixRaygenProgGroup) {
+		if (optixHitProgGroup) {
 			CHECK_OPTIX_ERROR(optixProgramGroupDestroy(optixHitProgGroup));
 		}
 		if (optixModule) {
