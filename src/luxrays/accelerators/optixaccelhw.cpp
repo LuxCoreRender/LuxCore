@@ -280,13 +280,12 @@ public:
 		// Allocate  optix instances on device
 		HardwareDeviceBuffer *optixInstancesBuff = nullptr;
 		cudaDevice->AllocBufferRO(&optixInstancesBuff, &optixInstances[0], sizeof(OptixInstance) * optixInstances.size());
-		optixOutputBuffers.push_back(optixInstancesBuff);
+
 		
 		HardwareDeviceBuffer *optixBBsBuff = nullptr;
 		if (usesMotionBlur) {
 			// Allocate optix BBs on device
 			cudaDevice->AllocBufferRO(&optixBBsBuff, &optixBBs[0], sizeof(OptixAabb) * optixBBs.size());
-			optixOutputBuffers.push_back(optixBBsBuff);
 		}
 
 		// Build top level acceleration structure
@@ -306,9 +305,12 @@ public:
 		BuildTraversable(buildInput, topLevelHandle, &topLevelOutputBuffer);
 		optixOutputBuffers.push_back(topLevelOutputBuffer);
 
+		// Free instances buffer
+		cudaDevice->FreeBuffer(&optixInstancesBuff);
+		// Free BBox buffer
+		cudaDevice->FreeBuffer(&optixBBsBuff);
+
 		LR_LOG(device.GetContext(), "Optix total build time: " << int((WallClockTime() - t0) * 1000) << "ms");
-// TODO:
-//		LR_LOG(device.GetContext(), "Total Optix memory usage: " << (gasOutputBuffer->GetSize() / 1024) << "Kbytes");
 
 		//----------------------------------------------------------------------
 		// Build Optix module
@@ -507,6 +509,18 @@ public:
 		optixSbt.hitgroupRecordBase = ((CUDADeviceBuffer *)optixHitSbtBuff)->GetCUDADevicePointer();
 		optixSbt.hitgroupRecordStrideInBytes = sizeof(HitGroupSbtRecord);
 		optixSbt.hitgroupRecordCount = optixAccel.meshes.size();
+
+		// Print some memory statistics
+		
+		size_t memUsed = 0;
+		for (auto const b : optixOutputBuffers)
+			memUsed += b->GetSize();
+		memUsed += optixAccelParamsBuff->GetSize();
+		memUsed += optixRayGenSbtBuff->GetSize();
+		memUsed += optixMissSbtBuff->GetSize();
+		memUsed += optixHitSbtBuff->GetSize();
+
+		LR_LOG(device.GetContext(), "Total Optix memory usage: " << (memUsed / 1024) << "Kbytes");
 	}
 
 	virtual ~OptixKernel() {
