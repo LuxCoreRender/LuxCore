@@ -3,6 +3,7 @@
 DEPS_SOURCE=`pwd`/macos
 
 ### packing opencl version
+rm -rf release_OSX
 
 mkdir release_OSX
 
@@ -65,6 +66,11 @@ install_name_tool -change @rpath/libtiff.5.dylib @executable_path/../Resources/l
 cp -f $DEPS_SOURCE/lib/libtbbmalloc.dylib LuxCore.app/Contents/Resources/libs/libtbbmalloc.dylib
 chmod +w LuxCore.app/Contents/Resources/libs/libtbbmalloc.dylib
 install_name_tool -id @executable_path/../Resources/libs/libtbbmalloc.dylib LuxCore.app/Contents/Resources/libs/libtbbmalloc.dylib
+
+#cuda
+
+cp -f $DEPS_SOURCE/lib/libcuda.dylib LuxCore.app/Contents/Resources/libs/libcuda.dylib
+cp -f $DEPS_SOURCE/lib/libnvrtc.dylib LuxCore.app/Contents/Resources/libs/libnvrtc.dylib
 
 #luxcoreui
 
@@ -146,6 +152,11 @@ install_name_tool -id @loader_path/libOpenImageDenoise.1.2.0.dylib ./libOpenImag
 install_name_tool -change @rpath/libtbb.dylib @loader_path/libtbb.dylib ./libOpenImageDenoise.1.2.0.dylib
 install_name_tool -change @rpath/libtbbmalloc.dylib @loader_path/libtbbmalloc.dylib ./libOpenImageDenoise.1.2.0.dylib
 
+#cuda
+
+cp -f $DEPS_SOURCE/lib/libcuda.dylib ./libcuda.dylib
+cp -f $DEPS_SOURCE/lib/libnvrtc.dylib ./libnvrtc.dylib
+
 #pyluxcore.so
 
 install_name_tool -change @rpath/libomp.dylib @loader_path/libomp.dylib pyluxcore.so
@@ -173,7 +184,7 @@ echo "Denoise installed"
 
 cd ../..
 
-./scripts/macos/codesign.sh ./release_OSX/pyluxcore
+sudo ./scripts/macos/codesign.sh ./release_OSX/pyluxcore
 
 # Set up correct names for release version and SDK
 if [[ -z "$VERSION_STRING" ]] ; then
