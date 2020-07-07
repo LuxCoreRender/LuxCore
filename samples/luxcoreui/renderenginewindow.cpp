@@ -17,6 +17,9 @@
  ***************************************************************************/
 
 #include <iostream>
+#include <vector>
+#include <string>
+#include <cstring>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/thread.hpp>
 
@@ -30,30 +33,38 @@ using namespace luxcore;
 // RenderEngineWindow
 //------------------------------------------------------------------------------
 
-RenderEngineWindow::RenderEngineWindow(LuxCoreApp *a) : ObjectEditorWindow(a, "Render Engine") {
-	if (app->isGPURenderingAvailable())
-		typeTable.Add("PATHOCL", 0);
-
-	typeTable.Add("LIGHTCPU", 1)
-		.Add("PATHCPU", 2)
-		.Add("BIDIRCPU", 3)
-		.Add("BIDIRVMCPU", 4);
-
-	if (app->isGPURenderingAvailable())
-		typeTable.Add("RTPATHOCL", 5);
-
-	typeTable.Add("TILEPATHCPU", 6);
-	
-	if (app->isGPURenderingAvailable())
-		typeTable.Add("TILEPATHOCL", 7);
-
-	typeTable.Add("RTPATHCPU", 8)
-		.Add("BAKECPU", 9)
-		.SetDefault("PATHCPU");
-}
+RenderEngineWindow::RenderEngineWindow(LuxCoreApp *a) : ObjectEditorWindow(a, "Render Engine") {}
 
 void RenderEngineWindow::Open() {
 	ObjectEditorWindow::Open();
+
+	if(strlen(typeTable.GetTagList()) == 0) {
+		vector<string> typeList;
+
+		if (app->isGPURenderingAvailable())
+			typeList.push_back("PATHOCL");
+
+		typeList.push_back("LIGHTCPU");
+		typeList.push_back("PATHCPU");
+		typeList.push_back("BIDIRCPU");
+		typeList.push_back("BIDIRVMCPU");
+
+		if (app->isGPURenderingAvailable())
+			typeList.push_back("RTPATHOCL");
+
+		typeList.push_back("TILEPATHCPU");
+
+		if (app->isGPURenderingAvailable())
+			typeList.push_back("TILEPATHOCL");
+
+		typeList.push_back("RTPATHCPU");
+		typeList.push_back("BAKECPU");
+
+		for (int i = 0; i < typeList.size(); i++)
+			typeTable.Add(typeList[i], i);
+
+		typeTable.SetDefault("PATHCPU");
+	}
 
 	suggestedVerianceClampingValue = 0.f;
 }
@@ -433,7 +444,7 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 	// RTPATHOCL
 	//--------------------------------------------------------------------------
 
-	if (typeIndex == typeTable.GetVal("RTPATHOCL")) {
+	if (currentRenderEngineType == "RTPATHOCL") {
 		TilePathOCLGUI(props, modifiedProps);
 
 		if (ImGui::CollapsingHeader("Sampling", NULL, true, true)) {
@@ -485,7 +496,7 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 	// TILEPATHOCL
 	//--------------------------------------------------------------------------
 
-	if (typeIndex == typeTable.GetVal("TILEPATHOCL")) {
+	if (currentRenderEngineType == "TILEPATHOCL") {
 		TilePathOCLGUI(props, modifiedProps);
 
 		if (ImGui::Button("Open Pixel Filter editor"))
@@ -499,7 +510,7 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 	// TILEPATHCPU
 	//--------------------------------------------------------------------------
 
-	if (typeIndex == typeTable.GetVal("TILEPATHCPU")) {
+	if (currentRenderEngineType == "TILEPATHCPU") {
 		TilePathGUI(props, modifiedProps);
 		ThreadsGUI(props, modifiedProps);
 
@@ -511,7 +522,7 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 	// PATHOCL
 	//--------------------------------------------------------------------------
 
-	if (typeIndex == typeTable.GetVal("PATHOCL")) {
+	if (currentRenderEngineType == "PATHOCL") {
 		PathOCLGUI(props, modifiedProps);
 
 		if (ImGui::Button("Open Sampler editor"))
@@ -528,7 +539,7 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 	// PATHCPU
 	//--------------------------------------------------------------------------
 
-	if (typeIndex == typeTable.GetVal("PATHCPU")) {
+	if (currentRenderEngineType == "PATHCPU") {
 		PathGUI(props, modifiedProps);
 
 		ThreadsGUI(props, modifiedProps);
@@ -544,7 +555,7 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 	// RTPATHCPU
 	//--------------------------------------------------------------------------
 
-	if (typeIndex == typeTable.GetVal("RTPATHCPU")) {
+	if (currentRenderEngineType == "RTPATHCPU") {
 		PathGUI(props, modifiedProps);
 		ThreadsGUI(props, modifiedProps);
 
@@ -569,7 +580,7 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 	// BIDIRCPU
 	//--------------------------------------------------------------------------
 
-	if (typeIndex == typeTable.GetVal("BIDIRCPU")) {
+	if (currentRenderEngineType == "BIDIRCPU") {
 		BiDirGUI(props, modifiedProps);
 
 		if (ImGui::Button("Open Sampler editor"))
@@ -583,7 +594,7 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 	// BIDIRVMCPU
 	//--------------------------------------------------------------------------
 
-	if (typeIndex == typeTable.GetVal("BIDIRVMCPU")) {
+	if (currentRenderEngineType == "BIDIRVMCPU") {
 		BiDirGUI(props, modifiedProps);
 
 		if (ImGui::CollapsingHeader("BiDirVM Options", NULL, true, true)) {
@@ -625,7 +636,7 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 	// LIGHTCPU
 	//--------------------------------------------------------------------------
 
-	if (typeIndex == typeTable.GetVal("LIGHTCPU")) {
+	if (currentRenderEngineType == "LIGHTCPU") {
 		float fval;
 		int ival;
 
@@ -667,7 +678,7 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 	// BAKECPU
 	//--------------------------------------------------------------------------
 
-	if (typeIndex == typeTable.GetVal("BAKECPU")) {
+	if (currentRenderEngineType == "BAKECPU") {
 		PathGUI(props, modifiedProps);
 
 		ThreadsGUI(props, modifiedProps);
