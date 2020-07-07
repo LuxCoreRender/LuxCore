@@ -46,7 +46,7 @@ public:
 			optixMissProgGroup(nullptr), optixHitProgGroup(nullptr),
 			optixPipeline(nullptr), optixAccelParamsBuff(nullptr),
 			optixRayGenSbtBuff(nullptr), optixMissSbtBuff(nullptr),
-			optixHitSbtBuff(nullptr) {
+			optixHitSbtBuff(nullptr), optixEmptyAccelKernel(nullptr) {
 		CUDAIntersectionDevice *cudaDevice = dynamic_cast<CUDAIntersectionDevice *>(&dev);
 
 		// Safety checks
@@ -55,16 +55,58 @@ public:
 		if (!cudaDevice->GetOptixContext())
 			throw runtime_error("No Optix context in OptixKernel::OptixKernel()");
 
-		// TODO
-		// Handle the empty DataSet case
-		// TODO
-
 		const double t0 = WallClockTime();
 
 		LR_LOG(device.GetContext(), "Building Optix accelerator");
 
 		OptixDeviceContext optixContext = cudaDevice->GetOptixContext();
 
+		
+		//----------------------------------------------------------------------
+		// Handle the empty DataSet case
+		//----------------------------------------------------------------------
+		
+		if (optixAccel.meshes.size() == 0) {
+			LR_LOG(device.GetContext(), "Optix accelerator is empty");
+			emptyDataSet = true;
+			
+			// Compile options
+			vector<string> opts;
+			opts.push_back("-D LUXRAYS_OPENCL_KERNEL");
+			opts.push_back("-D PARAM_RAY_EPSILON_MIN=" + ToString(MachineEpsilon::GetMin()) + "f");
+			opts.push_back("-D PARAM_RAY_EPSILON_MAX=" + ToString(MachineEpsilon::GetMax()) + "f");
+
+			stringstream code;
+			code <<
+				luxrays::ocl::KernelSource_luxrays_types <<
+				luxrays::ocl::KernelSource_epsilon_types <<
+				luxrays::ocl::KernelSource_epsilon_funcs <<
+				luxrays::ocl::KernelSource_point_types <<
+				luxrays::ocl::KernelSource_vector_types <<
+				luxrays::ocl::KernelSource_ray_types <<
+				luxrays::ocl::KernelSource_ray_funcs <<
+				luxrays::ocl::KernelSource_optixemptyaccel;
+
+			HardwareDeviceProgram *program = nullptr;
+			device.CompileProgram(&program,
+					opts,
+					code.str(),
+					"OptixEmptyAccelKernel");
+
+			// Setup the kernel
+			device.GetKernel(program, &optixEmptyAccelKernel, "Accelerator_Intersect_RayBuffer");
+
+			if (device.GetDeviceDesc()->GetForceWorkGroupSize() > 0)
+				optixEmptyAccelWorkGroupSize = device.GetDeviceDesc()->GetForceWorkGroupSize();
+			else
+				optixEmptyAccelWorkGroupSize = device.GetKernelWorkGroupSize(optixEmptyAccelKernel); 
+
+			delete program;
+
+			return;
+		} else
+			emptyDataSet = false;
+		
 		//----------------------------------------------------------------------
 		// Build Optix accelerator structure
 		//----------------------------------------------------------------------
@@ -531,6 +573,8 @@ public:
 		cudaDevice->FreeBuffer(&optixRayGenSbtBuff);
 		cudaDevice->FreeBuffer(&optixMissSbtBuff);
 		cudaDevice->FreeBuffer(&optixHitSbtBuff);
+
+		
 	}
 
 	virtual void Update(const DataSet *newDataSet) { assert(false); }
@@ -652,6 +696,7 @@ private:
 			*outputBuffer = bufferTempOutputGasAndCompactedSize;
 	}
 
+	// For normal data set case
 	vector<HardwareDeviceBuffer *> optixOutputBuffers;
 
 	OptixModule optixModule;
@@ -665,23 +710,37 @@ private:
 	HardwareDeviceBuffer *optixRayGenSbtBuff;
 	HardwareDeviceBuffer *optixMissSbtBuff;
 	HardwareDeviceBuffer *optixHitSbtBuff;
+
+	// For the empty dataset case
+	HardwareDeviceKernel *optixEmptyAccelKernel;
+	u_int optixEmptyAccelWorkGroupSize;
+	bool emptyDataSet;
 };
 
 void OptixKernel::EnqueueTraceRayBuffer(HardwareDeviceBuffer *rayBuff,
 			HardwareDeviceBuffer *rayHitBuff, const unsigned int rayCount) {
 	CUDAIntersectionDevice *cudaDevice = dynamic_cast<CUDAIntersectionDevice *>(&device);
-	// TODO: optixAccelParams async. copy fix
-	optixAccelParams.rayBuff = ((CUDADeviceBuffer *)rayBuff)->GetCUDADevicePointer();
-	optixAccelParams.rayHitBuff = ((CUDADeviceBuffer *)rayHitBuff)->GetCUDADevicePointer();
-	cudaDevice->EnqueueWriteBuffer(optixAccelParamsBuff, false, sizeof(OptixAccelParams), &optixAccelParams);
+	if (emptyDataSet) {
+		device.SetKernelArg(optixEmptyAccelKernel, 0, rayHitBuff);
+		device.SetKernelArg(optixEmptyAccelKernel, 1, rayCount);
 
-	CHECK_OPTIX_ERROR(optixLaunch(
-			optixPipeline,
-			0,
-			((CUDADeviceBuffer *)optixAccelParamsBuff)->GetCUDADevicePointer(),
-			sizeof(OptixAccelParams),
-			&optixSbt,
-			rayCount, 1, 1));
+		const u_int globalRange = RoundUp<u_int>(rayCount, optixEmptyAccelWorkGroupSize);
+		device.EnqueueKernel(optixEmptyAccelKernel, HardwareDeviceRange(globalRange),
+				HardwareDeviceRange(optixEmptyAccelWorkGroupSize));
+	} else {
+		// TODO: optixAccelParams async. copy fix
+		optixAccelParams.rayBuff = ((CUDADeviceBuffer *)rayBuff)->GetCUDADevicePointer();
+		optixAccelParams.rayHitBuff = ((CUDADeviceBuffer *)rayHitBuff)->GetCUDADevicePointer();
+		cudaDevice->EnqueueWriteBuffer(optixAccelParamsBuff, false, sizeof(OptixAccelParams), &optixAccelParams);
+
+		CHECK_OPTIX_ERROR(optixLaunch(
+				optixPipeline,
+				0,
+				((CUDADeviceBuffer *)optixAccelParamsBuff)->GetCUDADevicePointer(),
+				sizeof(OptixAccelParams),
+				&optixSbt,
+				rayCount, 1, 1));
+	}
 }
 
 bool OptixAccel::HasDataParallelSupport(const IntersectionDevice &device) const {
