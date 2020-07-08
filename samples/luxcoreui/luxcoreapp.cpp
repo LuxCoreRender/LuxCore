@@ -39,6 +39,10 @@ ImVec4 LuxCoreApp::colLabel = ImVec4(1.f, .5f, 0.f, 1.f);
 //------------------------------------------------------------------------------
 
 LuxCoreApp::LuxCoreApp(luxcore::RenderConfig *renderConfig) :
+		// Note: isOpenCLAvailable and isCUDAAvailable have to be initialized before
+		// ObjectEditorWindow constructors call (it is used by RenderEngineWindow).
+		isOpenCLAvailable(GetPlatformDesc().Get(Property("compile.LUXRAYS_ENABLE_OPENCL")(false)).Get<bool>()),
+		isCUDAAvailable(GetPlatformDesc().Get(Property("compile.LUXRAYS_ENABLE_CUDA")(false)).Get<bool>()),
 		acceleratorWindow(this), epsilonWindow(this),
 		filmChannelsWindow(this), filmOutputsWindow(this),
 		filmRadianceGroupsWindow(this), lightStrategyWindow(this),
@@ -47,12 +51,6 @@ LuxCoreApp::LuxCoreApp(luxcore::RenderConfig *renderConfig) :
 		samplerWindow(this), haltConditionsWindow(this),
 		statsWindow(this), logWindow(this), helpWindow(this),
 		userImportancePaintWindow(this) {
-
-	Properties platformDesc = GetPlatformDesc();
-
-	isOpenCLAvailable = platformDesc.Get(Property("compile.LUXRAYS_ENABLE_OPENCL")(false)).Get<bool>();
-	isCUDAAvailable = platformDesc.Get(Property("compile.LUXRAYS_ENABLE_CUDA")(false)).Get<bool>();
-
 	config = renderConfig;
 
 	session = NULL;
