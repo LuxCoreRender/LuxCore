@@ -33,38 +33,36 @@ using namespace luxcore;
 // RenderEngineWindow
 //------------------------------------------------------------------------------
 
-RenderEngineWindow::RenderEngineWindow(LuxCoreApp *a) : ObjectEditorWindow(a, "Render Engine") {}
+RenderEngineWindow::RenderEngineWindow(LuxCoreApp *a) : ObjectEditorWindow(a, "Render Engine") {
+	vector<string> typeList;
+
+	if (app->isGPURenderingAvailable())
+		typeList.push_back("PATHOCL");
+
+	typeList.push_back("LIGHTCPU");
+	typeList.push_back("PATHCPU");
+	typeList.push_back("BIDIRCPU");
+	typeList.push_back("BIDIRVMCPU");
+
+	if (app->isGPURenderingAvailable())
+		typeList.push_back("RTPATHOCL");
+
+	typeList.push_back("TILEPATHCPU");
+
+	if (app->isGPURenderingAvailable())
+		typeList.push_back("TILEPATHOCL");
+
+	typeList.push_back("RTPATHCPU");
+	typeList.push_back("BAKECPU");
+
+	for (int i = 0; i < typeList.size(); i++)
+		typeTable.Add(typeList[i], i);
+
+	typeTable.SetDefault("PATHCPU");
+}
 
 void RenderEngineWindow::Open() {
 	ObjectEditorWindow::Open();
-
-	if(strlen(typeTable.GetTagList()) == 0) {
-		vector<string> typeList;
-
-		if (app->isGPURenderingAvailable())
-			typeList.push_back("PATHOCL");
-
-		typeList.push_back("LIGHTCPU");
-		typeList.push_back("PATHCPU");
-		typeList.push_back("BIDIRCPU");
-		typeList.push_back("BIDIRVMCPU");
-
-		if (app->isGPURenderingAvailable())
-			typeList.push_back("RTPATHOCL");
-
-		typeList.push_back("TILEPATHCPU");
-
-		if (app->isGPURenderingAvailable())
-			typeList.push_back("TILEPATHOCL");
-
-		typeList.push_back("RTPATHCPU");
-		typeList.push_back("BAKECPU");
-
-		for (int i = 0; i < typeList.size(); i++)
-			typeTable.Add(typeList[i], i);
-
-		typeTable.SetDefault("PATHCPU");
-	}
 
 	suggestedVerianceClampingValue = 0.f;
 }
