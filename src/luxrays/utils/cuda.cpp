@@ -28,6 +28,7 @@
 
 #include "luxrays/luxrays.h"
 #include "luxrays/utils/utils.h"
+#include "luxrays/utils/config.h"
 #include "luxrays/utils/cudacache.h"
 #include "luxrays/utils/oclcache.h"
 
@@ -83,16 +84,7 @@ bool cudaKernelCache::ForcedCompile(const vector<string> &kernelsParameters, con
 //------------------------------------------------------------------------------
 
 boost::filesystem::path cudaKernelPersistentCache::GetCacheDir(const string &applicationName) {
-#if defined(__linux__)
-	// boost::filesystem::temp_directory_path() is usually mapped to /tmp and
-	// the content of the directory is often delete at each reboot
-	boost::filesystem::path kernelCacheDir(getenv("HOME"));
-	kernelCacheDir = kernelCacheDir / ".config" / "luxcorerender.org";
-#else
-	boost::filesystem::path kernelCacheDir= boost::filesystem::temp_directory_path();
-#endif
-
-	return kernelCacheDir / "cuda_kernel_cache" / oclKernelPersistentCache::SanitizeFileName(applicationName);
+	return GetConfigDir() / "cuda_kernel_cache" / SanitizeFileName(applicationName);
 }
 
 cudaKernelPersistentCache::cudaKernelPersistentCache(const string &applicationName) {

@@ -55,7 +55,7 @@ RenderEngineWindow::RenderEngineWindow(LuxCoreApp *a) : ObjectEditorWindow(a, "R
 	typeList.push_back("RTPATHCPU");
 	typeList.push_back("BAKECPU");
 
-	for (int i = 0; i < typeList.size(); i++)
+	for (u_int i = 0; i < typeList.size(); ++i)
 		typeTable.Add(typeList[i], i);
 
 	typeTable.SetDefault("PATHCPU");

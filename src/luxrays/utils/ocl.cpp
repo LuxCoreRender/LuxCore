@@ -30,6 +30,7 @@
 #include "luxrays/utils/utils.h"
 #include "luxrays/utils/oclerror.h"
 #include "luxrays/utils/oclcache.h"
+#include "luxrays/utils/config.h"
 
 using namespace std;
 using namespace luxrays;
@@ -198,29 +199,8 @@ cl_program oclKernelCache::ForcedCompile(cl_context context, cl_device_id device
 // oclKernelPersistentCache
 //------------------------------------------------------------------------------
 
-string oclKernelPersistentCache::SanitizeFileName(const string &name) {
-	string sanitizedName(name.size(), '_');
-	
-	for (u_int i = 0; i < sanitizedName.size(); ++i) {
-		if ((name[i] >= 'A' && name[i] <= 'Z') || (name[i] >= 'a' && name[i] <= 'z') ||
-				(name[i] >= '0' && name[i] <= '9'))
-			sanitizedName[i] = name[i];
-	}
-
-	return sanitizedName;
-}
-
 boost::filesystem::path oclKernelPersistentCache::GetCacheDir(const string &applicationName) {
-#if defined(__linux__)
-	// boost::filesystem::temp_directory_path() is usually mapped to /tmp and
-	// the content of the directory is often delete at each reboot
-	boost::filesystem::path kernelCacheDir(getenv("HOME"));
-	kernelCacheDir = kernelCacheDir / ".config" / "luxcorerender.org";
-#else
-	boost::filesystem::path kernelCacheDir= boost::filesystem::temp_directory_path();
-#endif
-
-	return kernelCacheDir / "ocl_kernel_cache" / SanitizeFileName(applicationName);
+	return GetConfigDir() / "ocl_kernel_cache" / SanitizeFileName(applicationName);
 }
 
 oclKernelPersistentCache::oclKernelPersistentCache(const string &applicationName) {
