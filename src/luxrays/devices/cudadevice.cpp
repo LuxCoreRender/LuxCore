@@ -128,7 +128,8 @@ CUDADevice::CUDADevice(
 		CUDADeviceDescription *desc,
 		const size_t devIndex) :
 		Device(context, devIndex),
-		deviceDesc(desc) {
+		deviceDesc(desc),
+		cudaContext(nullptr) {
 	deviceName = (desc->GetName() + " CUDAIntersect").c_str();
 
 	kernelCache = new cudaKernelPersistentCache("LUXRAYS_" LUXRAYS_VERSION_MAJOR "." LUXRAYS_VERSION_MINOR);
@@ -146,7 +147,9 @@ CUDADevice::~CUDADevice() {
 	}
 	loadedModules.clear();
 
-	CHECK_CUDA_ERROR(cuCtxDestroy(cudaContext));
+	if (cudaContext) {
+		CHECK_CUDA_ERROR(cuCtxDestroy(cudaContext));
+	}
 
 	delete kernelCache;
 }
@@ -164,10 +167,9 @@ void CUDADevice::PopThreadCurrentDevice() {
 // Kernels handling for hardware (aka GPU) only applications
 //------------------------------------------------------------------------------
 
-void CUDADevice::CompileProgram(HardwareDeviceProgram **program,
-		const std::vector<std::string> &programParameters, const string &programSource,	
-		const string &programName) {
+vector<string> CUDADevice::AddKernelOpts(const vector<string> &programParameters) {
 	vector<string> cudaProgramParameters = programParameters;
+
 	cudaProgramParameters.push_back("-D LUXRAYS_CUDA_DEVICE");
 #if defined (__APPLE__)
 	cudaProgramParameters.push_back("-D LUXRAYS_OS_APPLE");
@@ -180,14 +182,26 @@ void CUDADevice::CompileProgram(HardwareDeviceProgram **program,
 	cudaProgramParameters.insert(cudaProgramParameters.end(),
 			additionalCompileOpts.begin(), additionalCompileOpts.end());
 
-	LR_LOG(deviceContext, "[" << programName << "] Compiler options: " << oclKernelPersistentCache::ToOptsString(cudaProgramParameters));
-	LR_LOG(deviceContext, "[" << programName << "] Compiling kernels");
+	return cudaProgramParameters;
+}
 
-	const string cudaProgramSource =
+string CUDADevice::GetKernelSource(const string &kernelSource) {
+	return
 		luxrays::ocl::KernelSource_cudadevice_oclemul_types +
 		luxrays::ocl::KernelSource_cudadevice_math +
 		luxrays::ocl::KernelSource_cudadevice_oclemul_funcs +
-		programSource;
+		kernelSource;
+}
+
+void CUDADevice::CompileProgram(HardwareDeviceProgram **program,
+		const vector<string> &programParameters, const string &programSource,	
+		const string &programName) {
+	vector<string> cudaProgramParameters = AddKernelOpts(programParameters);
+
+	LR_LOG(deviceContext, "[" << programName << "] Compiler options: " << oclKernelPersistentCache::ToOptsString(cudaProgramParameters));
+	LR_LOG(deviceContext, "[" << programName << "] Compiling kernels");
+
+	const string cudaProgramSource = GetKernelSource(programSource);
 
 	bool cached;
 	string error;

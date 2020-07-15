@@ -38,6 +38,7 @@ namespace luxrays {
 
 bool isOpenCLAvilable = false;
 bool isCudaAvilable = false;
+bool isOptixAvilable = false;
 
 std::locale cLocale("C");
 
@@ -62,6 +63,10 @@ void Init() {
 		isCudaAvilable = true;
 
 		CHECK_CUDA_ERROR(cuInit(0));
+
+		// Try to initialize Optix too
+		if (optixInit() == OPTIX_SUCCESS)
+			isOptixAvilable = true;
 	}
 #endif
 }

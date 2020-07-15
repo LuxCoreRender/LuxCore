@@ -62,6 +62,7 @@ extern void Init();
 
 extern bool isOpenCLAvilable;
 extern bool isCudaAvilable;
+extern bool isOptixAvilable;
 extern std::locale cLocale;
 
 }

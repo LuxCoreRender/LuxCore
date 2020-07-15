@@ -32,6 +32,8 @@
 #include "luxrays/utils/cudacache.h"
 #include "luxrays/utils/oclcache.h"
 
+#include <optix_function_table_definition.h>
+
 using namespace std;
 using namespace luxrays;
 
@@ -39,7 +41,7 @@ using namespace luxrays;
 // cudaKernelCache
 //------------------------------------------------------------------------------
 
-bool cudaKernelCache::ForcedCompile(const vector<string> &kernelsParameters, const string &kernelSource,
+bool cudaKernelCache::ForcedCompilePTX(const vector<string> &kernelsParameters, const string &kernelSource,
 		 const string &programName, char **ptx, size_t *ptxSize, string *error) {
 	nvrtcProgram prog;
 	CHECK_NVRTC_ERROR(nvrtcCreateProgram(&prog, kernelSource.c_str(), programName.c_str(), 0, nullptr, nullptr));
@@ -97,9 +99,9 @@ cudaKernelPersistentCache::cudaKernelPersistentCache(const string &applicationNa
 cudaKernelPersistentCache::~cudaKernelPersistentCache() {
 }
 
-CUmodule cudaKernelPersistentCache::Compile(const vector<string> &kernelsParameters,
+bool cudaKernelPersistentCache::CompilePTX(const vector<string> &kernelsParameters,
 		const string &kernelSource, const string &programName,
-		bool *cached, string *error) {
+		char **ptx, size_t *ptxSize, bool *cached, string *error) {
 	// Check if the kernel is available in the cache
 
 	const string kernelName =
@@ -113,12 +115,9 @@ CUmodule cudaKernelPersistentCache::Compile(const vector<string> &kernelsParamet
 	*cached = false;
 	if (!boost::filesystem::exists(filePath)) {
 		// It isn't available, compile the source
-		char *ptx;
-		size_t ptxSize;
-		
 
 		// Create the file only if the binaries include something
-		if (ForcedCompile(kernelsParameters, kernelSource, programName, &ptx, &ptxSize, error)) {
+		if (ForcedCompilePTX(kernelsParameters, kernelSource, programName, ptx, ptxSize, error)) {
 			// Add the kernel to the cache
 			boost::filesystem::create_directories(dirPath);
 
@@ -130,10 +129,10 @@ CUmodule cudaKernelPersistentCache::Compile(const vector<string> &kernelsParamet
 					boost::filesystem::ofstream::trunc);
 
 			// Write the binary hash
-			const u_int hashBin = oclKernelPersistentCache::HashBin(ptx, ptxSize);
+			const u_int hashBin = oclKernelPersistentCache::HashBin(*ptx, *ptxSize);
 			file.write((char *)&hashBin, sizeof(int));
 
-			file.write(ptx, ptxSize);
+			file.write(*ptx, *ptxSize);
 			// Check for errors
 			char buf[512];
 			if (file.fail()) {
@@ -143,21 +142,16 @@ CUmodule cudaKernelPersistentCache::Compile(const vector<string> &kernelsParamet
 
 			file.close();
 
-			CUmodule module;
-			CHECK_CUDA_ERROR(cuModuleLoadDataEx(&module, ptx, 0, 0, 0));
-
-			delete[] ptx;
-
-			return module;
+			return true;
 		} else
-			return nullptr;
+			return false;
 	} else {
 		const size_t fileSize = boost::filesystem::file_size(filePath);
 
 		if (fileSize > 4) {
-			const size_t kernelSize = fileSize - 4;
+			*ptxSize = fileSize - 4;
 
-			vector<char> kernelBin(kernelSize);
+			*ptx = new char[*ptxSize];
 
 			// The use of boost::filesystem::path is required for UNICODE support: fileName
 			// is supposed to be UTF-8 encoded.
@@ -168,7 +162,7 @@ CUmodule cudaKernelPersistentCache::Compile(const vector<string> &kernelsParamet
 			u_int hashBin;
 			file.read((char *)&hashBin, sizeof(int));
 
-			file.read(&kernelBin[0], kernelSize);
+			file.read(*ptx, *ptxSize);
 			// Check for errors
 			char buf[512];
 			if (file.fail()) {
@@ -179,26 +173,37 @@ CUmodule cudaKernelPersistentCache::Compile(const vector<string> &kernelsParamet
 			file.close();
 
 			// Check the binary hash
-			if (hashBin != oclKernelPersistentCache::HashBin(&kernelBin[0], kernelSize)) {
+			if (hashBin != oclKernelPersistentCache::HashBin(*ptx, *ptxSize)) {
 				// Something wrong in the file, remove the file and retry
 				boost::filesystem::remove(filePath);
-				return Compile(kernelsParameters, kernelSource, programName, cached, error);
+				return CompilePTX(kernelsParameters, kernelSource, programName, ptx, ptxSize, cached, error);
 			} else {
-				// Compile from the PTX
-
-				CUmodule module;
-				CHECK_CUDA_ERROR(cuModuleLoadDataEx(&module, &kernelBin[0], 0, 0, 0));
-
 				*cached = true;
 
-				return module;
+				return true;
 			}
 		} else {
 			// Something wrong in the file, remove the file and retry
 			boost::filesystem::remove(filePath);
-			return Compile(kernelsParameters, kernelSource, programName, cached, error);
+			return CompilePTX(kernelsParameters, kernelSource, programName, ptx, ptxSize, cached, error);
 		}
 	}
+}
+
+CUmodule cudaKernelPersistentCache::Compile(const vector<string> &kernelsParameters,
+		const string &kernelSource, const string &programName,
+		bool *cached, string *error) {
+	char *ptx;
+	size_t ptxSize;
+	if (CompilePTX(kernelsParameters, kernelSource, programName, &ptx, &ptxSize, cached, error)) {
+		CUmodule module;
+		CHECK_CUDA_ERROR(cuModuleLoadDataEx(&module, ptx, 0, 0, 0));
+
+		delete[] ptx;
+		
+		return module;
+	} else
+		return nullptr;
 }
 
 #endif

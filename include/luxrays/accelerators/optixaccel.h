@@ -16,46 +16,40 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _LUXRAYS_ACCELERATOR_H
-#define	_LUXRAYS_ACCELERATOR_H
-
-#include <string>
-#include <deque>
+#ifndef _LUXRAYS_OPTIXACCEL_H
+#define	_LUXRAYS_OPTIXACCEL_H
 
 #include "luxrays/luxrays.h"
-#include "luxrays/core/geometry/ray.h"
-#include "luxrays/core/trianglemesh.h"
+#include "luxrays/core/accelerator.h"
 
 namespace luxrays {
 
-typedef enum {
-	ACCEL_AUTO, ACCEL_BVH, ACCEL_MBVH, ACCEL_EMBREE, ACCEL_OPTIX
-} AcceleratorType;
-
-class IntersectionDevice;
-class HardwareIntersectionDevice;
-class HardwareIntersectionKernel;
-
-class Accelerator {
+class OptixAccel : public Accelerator {
 public:
-	Accelerator() { }
-	virtual ~Accelerator() { }
+	OptixAccel(const Context *context);
+	virtual ~OptixAccel();
 
-	virtual AcceleratorType GetType() const = 0;
+	virtual AcceleratorType GetType() const { return ACCEL_OPTIX; }
 
-	virtual bool HasDataParallelSupport(const IntersectionDevice &device) const = 0;
-	virtual HardwareIntersectionKernel *NewHardwareIntersectionKernel(HardwareIntersectionDevice &device) const = 0;
+	virtual bool HasDataParallelSupport(const IntersectionDevice &device) const;
+	virtual HardwareIntersectionKernel *NewHardwareIntersectionKernel(HardwareIntersectionDevice &device) const;
 
-	virtual void Init(const std::deque<const Mesh *> &meshes, const u_longlong totalVertexCount, const u_longlong totalTriangleCount) = 0;
-	virtual bool DoesSupportUpdate() const { return false; }
-	virtual void Update() { throw new std::runtime_error("Internal error in Accelerator::Update()"); }
+	virtual void Init(const std::deque<const Mesh *> &meshes,
+		const u_longlong totalVertexCount,
+		const u_longlong totalTriangleCount);
 
-	virtual bool Intersect(const Ray *ray, RayHit *hit) const = 0;
+	virtual bool Intersect(const Ray *ray, RayHit *hit) const;
 
-	static std::string AcceleratorType2String(const AcceleratorType type);
-	static AcceleratorType String2AcceleratorType(const std::string &type);
+	friend class OptixKernel;
+
+private:
+	const Context *ctx;
+	std::deque<const Mesh *> meshes;
+	u_longlong totalVertexCount, totalTriangleCount;
+
+	bool initialized;
 };
 
 }
 
-#endif	/* _LUXRAYS_ACCELERATOR_H */
+#endif
