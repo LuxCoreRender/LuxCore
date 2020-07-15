@@ -265,8 +265,12 @@ void BVHKernel::EnqueueTraceRayBuffer(HardwareDeviceBuffer *rayBuff,
 			HardwareDeviceRange(workGroupSize));
 }
 
-bool BVHAccel::HasDataParallelSupport(const IntersectionDevice &device) const {
-	return device.HasDataParallelSupport();
+bool BVHAccel::HasNativeSupport(const IntersectionDevice &device) const {
+	return true;
+}
+
+bool BVHAccel::HasHWSupport(const IntersectionDevice &device) const {
+	return device.HasHWSupport();
 }
 
 HardwareIntersectionKernel *BVHAccel::NewHardwareIntersectionKernel(HardwareIntersectionDevice &device) const {

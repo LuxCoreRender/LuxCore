@@ -31,8 +31,8 @@ namespace luxrays {
 
 class HardwareIntersectionDevice : public IntersectionDevice, virtual public HardwareDevice {
 public:
-	// Returns true if it support data parallel ray tracing
-	virtual bool HasDataParallelSupport() const { return true; }
+	// Returns true if it support HardwareDevice ray tracing
+	virtual bool HasHWSupport() const { return true; }
 
 	//--------------------------------------------------------------------------
 	// Data parallel interface: to trace a multiple rays (i.e. on the GPU)

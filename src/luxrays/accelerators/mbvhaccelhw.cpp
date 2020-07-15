@@ -495,8 +495,12 @@ void MBVHKernel::SetIntersectionKernelArgs() {
 	}
 }
 
-bool MBVHAccel::HasDataParallelSupport(const IntersectionDevice &device) const {
-	return device.HasDataParallelSupport();
+bool MBVHAccel::HasNativeSupport(const IntersectionDevice &device) const {
+	return true;
+}
+
+bool MBVHAccel::HasHWSupport(const IntersectionDevice &device) const {
+	return device.HasHWSupport();
 }
 
 HardwareIntersectionKernel *MBVHAccel::NewHardwareIntersectionKernel(HardwareIntersectionDevice &device) const {

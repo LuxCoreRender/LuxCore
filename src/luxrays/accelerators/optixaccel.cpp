@@ -53,7 +53,7 @@ void OptixAccel::Init(const deque<const Mesh *> &ms, const u_longlong totVert,
 }
 
 bool OptixAccel::Intersect(const Ray *initialRay, RayHit *rayHit) const {
-	return false;
+	throw runtime_error("Called OptixAccel::Intersect()");
 }
 
 }

@@ -38,8 +38,6 @@ public:
 		OpenCLDeviceDescription *desc, const size_t devIndex);
 	virtual ~OpenCLIntersectionDevice();
 
-	virtual bool HasDataParallelSupport() const { return true; }
-
 	virtual void SetDataSet(DataSet *newDataSet);
 	virtual void Start();
 	virtual void Stop();

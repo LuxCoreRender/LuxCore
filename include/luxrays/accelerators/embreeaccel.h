@@ -35,7 +35,10 @@ public:
 
 	virtual AcceleratorType GetType() const { return ACCEL_EMBREE; }
 
-	virtual bool HasDataParallelSupport(const IntersectionDevice &device) const {
+	virtual bool HasNativeSupport(const IntersectionDevice &device) const {
+		return true;
+	}
+	virtual bool HasHWSupport(const IntersectionDevice &device) const {
 		return false;
 	}
 	virtual HardwareIntersectionKernel *NewHardwareIntersectionKernel(HardwareIntersectionDevice &device) const {

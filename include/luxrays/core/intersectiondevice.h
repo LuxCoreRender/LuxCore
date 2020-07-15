@@ -30,8 +30,8 @@ namespace luxrays {
 
 class IntersectionDevice : virtual public Device {
 public:
-	// Returns true if it support data parallel ray tracing
-	virtual bool HasDataParallelSupport() const { return false; }
+	// Returns true if it support HardwareDevice ray tracing
+	virtual bool HasHWSupport() const { return false; }
 
 	const Accelerator *GetAccelerator() const { return accel; }
 

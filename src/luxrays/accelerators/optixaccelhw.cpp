@@ -745,8 +745,12 @@ void OptixKernel::EnqueueTraceRayBuffer(HardwareDeviceBuffer *rayBuff,
 	}
 }
 
-bool OptixAccel::HasDataParallelSupport(const IntersectionDevice &device) const {
-	return device.HasDataParallelSupport();
+bool OptixAccel::HasNativeSupport(const IntersectionDevice &device) const {
+	return false;
+}
+
+bool OptixAccel::HasHWSupport(const IntersectionDevice &device) const {
+	return device.HasHWSupport();
 }
 
 HardwareIntersectionKernel *OptixAccel::NewHardwareIntersectionKernel(HardwareIntersectionDevice &device) const {
