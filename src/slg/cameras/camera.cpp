@@ -71,9 +71,7 @@ void Camera::Update(const u_int width, const u_int height, const u_int *subRegio
 }
 
 void Camera::UpdateAuto(const Scene *scene) {
-	// scene->dataSet->GetAccelerator() is there because
-	// FILESAVER engine doesn't initialize any accelerator
-	if (autoVolume && scene->dataSet->GetAccelerator()) {
+	if (autoVolume) {
 		// Trace a ray in the middle of the screen
 		Ray ray;
 		PathVolumeInfo volInfo;
@@ -82,7 +80,7 @@ void Camera::UpdateAuto(const Scene *scene) {
 		// Trace the ray. If there isn't an intersection just use the current
 		// focal distance
 		RayHit rayHit;
-		if (scene->dataSet->GetAccelerator()->Intersect(&ray, &rayHit)) {
+		if (scene->dataSet->GetAccelerator(ACCEL_EMBREE)->Intersect(&ray, &rayHit)) {
 			/* I can not use BSDF::Init() here because Camera::UpdateAuto()
 			 * can be called before light preprocessing
 

@@ -469,13 +469,6 @@ void DirectLightSamplingCache::BuildCacheEntries() {
 void DirectLightSamplingCache::Build(const Scene *scn) {
 	scene = scn;
 
-	// This check is required because FILESAVER engine doesn't
-	// initialize any accelerator
-	if (!scene->dataSet->GetAccelerator()) {
-		SLG_LOG("DirectLightSamplingCache is not built");
-		return;
-	}
-
 	if (scene->lightDefs.GetSize() == 0)
 		return;
 

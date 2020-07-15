@@ -247,11 +247,6 @@ void LightSourceDefinitions::Preprocess(const Scene *scene, const bool useRTMode
 }
 
 void LightSourceDefinitions::UpdateVisibilityMaps(const Scene *scene, const bool useRTMode) {
-	// This check is required because FILESAVER engine doesn't
-	// initialize any accelerator
-	if (!scene->dataSet->GetAccelerator())
-		return;
-
 	// Build visibility maps for Env. lights
 	BOOST_FOREACH(EnvLightSource *envLight, GetEnvLightSources())
 		envLight->UpdateVisibilityMap(scene, useRTMode);

@@ -105,13 +105,10 @@ void DataSet::UpdateBBoxes() {
 	bsphere = bbox.BoundingSphere();
 }
 
-const Accelerator *DataSet::GetAccelerator() {
-	boost::unordered_map<AcceleratorType, Accelerator *>::const_iterator it = accels.begin();
-
-	if (it == accels.end())
-		return NULL;
-	else
-		return it->second;
+bool DataSet::HasAccelerator(const AcceleratorType accelType) const {
+	boost::unordered_map<AcceleratorType, Accelerator *>::const_iterator it = accels.find(accelType);
+	
+	return !(it == accels.end());
 }
 
 const Accelerator *DataSet::GetAccelerator(const AcceleratorType accelType) {

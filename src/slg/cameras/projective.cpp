@@ -51,9 +51,7 @@ ProjectiveCamera::ProjectiveCamera(const CameraType type, const float *sw,
 }
 
 void ProjectiveCamera::UpdateAuto(const Scene *scene) {
-	// scene->dataSet->GetAccelerator() is there because
-	// FILESAVER engine doesn't initialize any accelerator
-	if (autoFocus && scene->dataSet->GetAccelerator()) {
+	if (autoFocus) {
 		// Save lens radius
 		const float lensR = lensRadius;
 
@@ -68,7 +66,7 @@ void ProjectiveCamera::UpdateAuto(const Scene *scene) {
 		// Trace the ray. If there isn't an intersection just use the current
 		// focal distance
 		RayHit rayHit;
-		if (scene->dataSet->GetAccelerator()->Intersect(&ray, &rayHit))
+		if (scene->dataSet->GetAccelerator(ACCEL_EMBREE)->Intersect(&ray, &rayHit))
 			focalDistance = rayHit.t;
 	}
 
