@@ -23,6 +23,8 @@
 
 #include <boost/filesystem.hpp>
 
+#include "luxrays/utils/utils.h"
+
 namespace luxrays {
 	
 extern std::string SanitizeFileName(const std::string &name);
