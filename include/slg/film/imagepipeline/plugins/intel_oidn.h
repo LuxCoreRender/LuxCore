@@ -56,6 +56,7 @@ private:
 		ar & oidnMemLimit;
 		ar & iTileCount;
 		ar & jTileCount;
+		ar & sharpness;
 	}
 
 	std::string filterType;
