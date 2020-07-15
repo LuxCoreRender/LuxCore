@@ -51,6 +51,7 @@
 #include "slg/film/imagepipeline/plugins/whitebalance.h"
 #include "slg/film/imagepipeline/plugins/bakemapmargin.h"
 #include "slg/film/imagepipeline/plugins/colorlut.h"
+#include "slg/film/imagepipeline/plugins/optixdenoiser.h"
 
 using namespace std;
 using namespace luxrays;
@@ -628,6 +629,11 @@ ImagePipeline *Film::CreateImagePipeline(const Properties &props, const string &
 				const string fileName = props.Get(Property(prefix + ".file")("lut.cube")).Get<string>();
 				const float strength = Clamp(props.Get(Property(prefix + ".strength")(1.f)).Get<float>(), 0.f, 1.f);
 				imagePipeline->AddPlugin(new ColorLUTPlugin(fileName, strength));
+#if !defined(LUXRAYS_DISABLE_CUDA)
+			} else if (type == "OPTIX_DENOISER") {
+				const float sharpness = Clamp(props.Get(Property(prefix + ".sharpness")(.1f)).Get<float>(), 0.f, 1.f);
+				imagePipeline->AddPlugin(new OptixDenoiserPlugin(sharpness));
+#endif
 			} else
 				throw runtime_error("Unknown image pipeline plugin type: " + type);
 		}

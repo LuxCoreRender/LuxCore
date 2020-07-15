@@ -16,8 +16,10 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_INTEL_OIDN_H
-#define	_SLG_INTEL_OIDN_H
+#ifndef _SLG_OPTIX_DENOISER_H
+#define	_SLG_OPTIX_DENOISER_H
+
+#if !defined(LUXRAYS_DISABLE_CUDA)
 
 #include <vector>
 
@@ -33,13 +35,12 @@
 namespace slg {
 
 //------------------------------------------------------------------------------
-// Intel Open Image Denoise
+// Optix Denoiser
 //------------------------------------------------------------------------------
 
-class IntelOIDN : public ImagePipelinePlugin {
+class OptixDenoiserPlugin : public ImagePipelinePlugin {
 public:
-	IntelOIDN(const std::string filterType,
-			const int oidnMemLimit, const float sharpness);
+	OptixDenoiserPlugin(const float sharpness);
 
 	virtual ImagePipelinePlugin *Copy() const;
 
@@ -49,28 +50,22 @@ public:
 
 private:
 	// Used by serialization
-	IntelOIDN();
+	OptixDenoiserPlugin();
 
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImagePipelinePlugin);
-		ar & oidnMemLimit;
-		ar & iTileCount;
-		ar & jTileCount;
 		ar & sharpness;
 	}
 
-	std::string filterType;
-	u_int iTileCount;
-	u_int jTileCount;
-	int oidnMemLimit; //needs to be signed int for OIDN call
 	float sharpness;
 };
 
 }
 
+BOOST_CLASS_VERSION(slg::OptixDenoiserPlugin, 1)
 
-BOOST_CLASS_VERSION(slg::IntelOIDN, 3)
+BOOST_CLASS_EXPORT_KEY(slg::OptixDenoiserPlugin)
 
-BOOST_CLASS_EXPORT_KEY(slg::IntelOIDN)
-
-#endif /* _SLG_INTEL_OIDN_H */
+#endif
+	
+#endif /* _SLG_OPTIX_DENOISER_H */
