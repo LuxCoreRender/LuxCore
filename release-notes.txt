@@ -64,6 +64,7 @@
 * Fixed a LuxCoreUI crash when GPU rendering is not available (pull request #406)
 * MacOS OpenCL/CUDA kernel cache directory is now created in user home directory to avoid to be erased when in /tmp
 * Fixed the serialization of Intel OIDN plugin sharpness parameter
+* Film NOISE channel (used for adaptive sampling) is now correctly reseted after a scene edit
 
 Note: due to Glossycoating updated support for bump mapping on GPUs, some old scene using this kind of material/bump map combination may require some fix.
 
