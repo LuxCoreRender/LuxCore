@@ -3,36 +3,10 @@
 ### New Features
 
 * Added the support for Optix/RTX acceleration
+* Added the support for Optix denoiser imagepipeline plugin
 
 ### Fixed Bugs
 
-<<<<<<< HEAD
-=======
-* Fixed a rendering difference when using/not using geometry negative scale transformations (issue #309)
-* Fixed an out of bound access in BAKECPU
-* Fixed a problem when using path.forceblackbackground.enable and env. lights
-* Fixed a problem with scenes with very hard light paths and Metropolis sampler (issue #312)
-* Sampler shared data are now reseted at the end of a scene edit (issue #312)
-* Fixed a problem in automatic cache radius estimation of PhotonGI when using Orthographic camera (issue #324)
-* Fixed an OpenCL compilation error when using large number of objects on some old GPUs
-* Fixed a problem with BlendLuxCore when parsing more than 9 image pipelines (#336)
-* Fixed a bug causing fireflies when using light tracing for caustics in some case (#329)
-* Fixed a crash when using RemoveUnusedTextures() with Volumes (issue #377)
-* Fixed a banding problem when using sphere light sources with very small radius (issue LuxCoreRender/BlendLuxCore#477)
-* Fixed LXS parsing of UV inlined coordinates (issue #392)
-
-''Beta1 released''
-
-* Fixed a bug when using RTPATHOCL with multiple CUDA devices
-* Fixed a bug when using shadow transparency (for Path tracing)
-* Fixed a LuxCoreUI crash when GPU rendering is not available (pull request #406)
-* MacOS OpenCL/CUDA kernel cache directory is now created in user home directory to avoid to be erased when in /tmp
-* Fixed the serialization of Intel OIDN plugin sharpness parameter
-* Film NOISE channel (used for adaptive sampling) is now correctly reseted after a scene edit
-
-Note: due to Glossycoating updated support for bump mapping on GPUs, some old scene using this kind of material/bump map combination may require some fix.
-
->>>>>>> master
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
 
