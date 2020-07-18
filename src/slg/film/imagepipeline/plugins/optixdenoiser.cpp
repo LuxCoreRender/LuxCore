@@ -74,7 +74,7 @@ void OptixDenoiserPlugin::ApplyHW(Film &film, const u_int index) {
 
 		cudaDevice = dynamic_cast<CUDADevice *>(film.hardwareDevice);
 		if (!cudaDevice)
-			throw std::runtime_error("OptixDenoiserPlugin used while imagepipeline hardware execution is a CUDA device");
+			throw std::runtime_error("OptixDenoiserPlugin used while imagepipeline hardware execution isn't on a CUDA device");
 
 		OptixDeviceContext optixContext = cudaDevice->GetOptixContext();
 
