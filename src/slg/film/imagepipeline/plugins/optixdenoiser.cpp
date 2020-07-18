@@ -37,7 +37,7 @@ using namespace slg;
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::OptixDenoiserPlugin)
 
 OptixDenoiserPlugin::OptixDenoiserPlugin(const float s) : cudaDevice(nullptr),
-	denoiserHandle(nullptr), denoiserStateBuff(nullptr), denoiserScratchBuff(nullptr),
+	denoiserHandle(nullptr), denoiserStateScratchBuff(nullptr),
 	denoiserTmpBuff(nullptr), albedoTmpBuff(nullptr), avgShadingNormalTmpBuff(nullptr),
 	bufferSetUpKernel(nullptr) {
 	sharpness = s;
@@ -49,8 +49,7 @@ OptixDenoiserPlugin::~OptixDenoiserPlugin() {
 			CHECK_OPTIX_ERROR(optixDenoiserDestroy(denoiserHandle));
 
 		delete bufferSetUpKernel;
-		cudaDevice->FreeBuffer(&denoiserStateBuff);
-		cudaDevice->FreeBuffer(&denoiserScratchBuff);
+		cudaDevice->FreeBuffer(&denoiserStateScratchBuff);
 		cudaDevice->FreeBuffer(&denoiserTmpBuff);
 		cudaDevice->FreeBuffer(&albedoTmpBuff);
 		cudaDevice->FreeBuffer(&avgShadingNormalTmpBuff);
@@ -88,21 +87,16 @@ void OptixDenoiserPlugin::ApplyHW(Film &film, const u_int index) {
 				options.inputKind = OPTIX_DENOISER_INPUT_RGB_ALBEDO;
 		} else
 			options.inputKind = OPTIX_DENOISER_INPUT_RGB;
-		options.pixelFormat = OPTIX_PIXEL_FORMAT_FLOAT3;
 		CHECK_OPTIX_ERROR(optixDenoiserCreate(optixContext, &options, &denoiserHandle));
 
 		CHECK_OPTIX_ERROR(optixDenoiserSetModel(denoiserHandle, OPTIX_DENOISER_MODEL_KIND_HDR, nullptr, 0));
 
-		OptixDenoiserSizes sizes = {};
 		CHECK_OPTIX_ERROR(optixDenoiserComputeMemoryResources(denoiserHandle,
-				film.GetWidth(), film.GetHeight(), &sizes));
+				film.GetWidth(), film.GetHeight(), &denoiserSizes));
 
-		cudaDevice->AllocBufferRW(&denoiserStateBuff, nullptr,
-				sizes.stateSizeInBytes,
-				"Optix denoiser state buffer");
-		cudaDevice->AllocBufferRW(&denoiserScratchBuff, nullptr,
-				sizes.recommendedScratchSizeInBytes,
-				"Optix denoiser scratch buffer");
+		cudaDevice->AllocBufferRW(&denoiserStateScratchBuff, nullptr,
+				denoiserSizes.stateSizeInBytes + denoiserSizes.withOverlapScratchSizeInBytes,
+				"Optix denoiser state and scratch buffer");
 		cudaDevice->AllocBufferRW(&denoiserTmpBuff, nullptr,
 				3 * sizeof(float) * film.GetWidth() * film.GetHeight(),
 				"Optix denoiser temporary buffer");		
@@ -139,10 +133,10 @@ void OptixDenoiserPlugin::ApplyHW(Film &film, const u_int index) {
 		CHECK_OPTIX_ERROR(optixDenoiserSetup(denoiserHandle,
 				0,
 				film.GetWidth(), film.GetHeight(),
-				((CUDADeviceBuffer *)denoiserStateBuff)->GetCUDADevicePointer(),
-				sizes.stateSizeInBytes,
-				((CUDADeviceBuffer *)denoiserScratchBuff)->GetCUDADevicePointer(),
-				sizes.recommendedScratchSizeInBytes));
+				((CUDADeviceBuffer *)denoiserStateScratchBuff)->GetCUDADevicePointer(),
+				denoiserSizes.stateSizeInBytes,
+				((CUDADeviceBuffer *)denoiserStateScratchBuff)->GetCUDADevicePointer() + denoiserSizes.stateSizeInBytes,
+				denoiserSizes.withOverlapScratchSizeInBytes));
 
 		film.ctx->SetVerbose(false);
 	}
@@ -180,12 +174,12 @@ void OptixDenoiserPlugin::ApplyHW(Film &film, const u_int index) {
 			HardwareDeviceRange(256));
 		
 		if (film.HasChannel(Film::AVG_SHADING_NORMAL)) {
-			inputLayers[1].data = ((CUDADeviceBuffer *)avgShadingNormalTmpBuff)->GetCUDADevicePointer();
-			inputLayers[1].width = film.GetWidth();
-			inputLayers[1].height = film.GetHeight();
-			inputLayers[1].pixelStrideInBytes = 3 * sizeof(float);
-			inputLayers[1].rowStrideInBytes = 3 * sizeof(float) * film.GetWidth();
-			inputLayers[1].format = OPTIX_PIXEL_FORMAT_FLOAT3;
+			inputLayers[2].data = ((CUDADeviceBuffer *)avgShadingNormalTmpBuff)->GetCUDADevicePointer();
+			inputLayers[2].width = film.GetWidth();
+			inputLayers[2].height = film.GetHeight();
+			inputLayers[2].pixelStrideInBytes = 3 * sizeof(float);
+			inputLayers[2].rowStrideInBytes = 3 * sizeof(float) * film.GetWidth();
+			inputLayers[2].format = OPTIX_PIXEL_FORMAT_FLOAT3;
 			layersCount = 3;
 			
 			// Setup albedoTmpBuff
@@ -212,15 +206,15 @@ void OptixDenoiserPlugin::ApplyHW(Film &film, const u_int index) {
 	CHECK_OPTIX_ERROR(optixDenoiserInvoke(denoiserHandle,
 			0,
 			&params,
-			((CUDADeviceBuffer *)denoiserStateBuff)->GetCUDADevicePointer(),
-			denoiserStateBuff->GetSize(),
+			((CUDADeviceBuffer *)denoiserStateScratchBuff)->GetCUDADevicePointer(),
+			denoiserSizes.stateSizeInBytes,
 			inputLayers,
 			layersCount,
 			0,
 			0,
 			outputLayers,
-			((CUDADeviceBuffer *)denoiserScratchBuff)->GetCUDADevicePointer(),
-			denoiserScratchBuff->GetSize()));
+			((CUDADeviceBuffer *)denoiserStateScratchBuff)->GetCUDADevicePointer() + denoiserSizes.stateSizeInBytes,
+			denoiserSizes.withOverlapScratchSizeInBytes));
 	
 	// Copy back the result
 	CHECK_CUDA_ERROR(cuMemcpyDtoDAsync(inputLayers[0].data, outputLayers[0].data, 3 * sizeof(float) * film.GetWidth() * film.GetHeight(), 0));

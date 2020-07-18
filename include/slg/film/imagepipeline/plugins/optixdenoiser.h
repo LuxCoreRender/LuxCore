@@ -67,8 +67,8 @@ private:
 	// Used inside the object destructor to free buffers
 	luxrays::CUDADevice *cudaDevice;
 	OptixDenoiser denoiserHandle;
-	luxrays::HardwareDeviceBuffer *denoiserStateBuff;
-	luxrays::HardwareDeviceBuffer *denoiserScratchBuff;
+	OptixDenoiserSizes denoiserSizes;
+	luxrays::HardwareDeviceBuffer *denoiserStateScratchBuff;
 	luxrays::HardwareDeviceBuffer *denoiserTmpBuff;
 	luxrays::HardwareDeviceBuffer *albedoTmpBuff;
 	luxrays::HardwareDeviceBuffer *avgShadingNormalTmpBuff;

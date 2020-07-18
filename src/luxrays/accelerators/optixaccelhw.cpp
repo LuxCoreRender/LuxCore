@@ -490,7 +490,6 @@ public:
 		OptixPipelineLinkOptions pipelineLinkOptions = {};
 		pipelineLinkOptions.maxTraceDepth = 1;
 		pipelineLinkOptions.debugLevel = OPTIX_COMPILE_DEBUG_LEVEL_LINEINFO;
-		pipelineLinkOptions.overrideUsesMotionBlur = usesMotionBlur;
 
 		optixErrLogSize = sizeof(optixErrLog);
 		CHECK_OPTIX_ERROR(optixPipelineCreate(
