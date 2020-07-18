@@ -40,7 +40,6 @@ CUDADeviceDescription::CUDADeviceDescription(CUdevice dev, const size_t devIndex
 }
 
 CUDADeviceDescription::~CUDADeviceDescription() {
-	CHECK_CUDA_ERROR(cuDevicePrimaryCtxRelease(cudaDevice));
 }
 
 int CUDADeviceDescription::GetComputeUnits() const {
