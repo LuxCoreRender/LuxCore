@@ -60,6 +60,10 @@ void FilmNoiseEstimation::Reset() {
 	if (hasNoiseChannel) {
 		// Resize vectors according to film size. Start at zero
 		errorVector.resize(pixelsCount, 0);
+
+		// The film could have not been yet initialized
+		if (film->channel_NOISE)
+			film->channel_NOISE->Clear(numeric_limits<float>::infinity());
 	}
 
 	lastSamplesCount = 0.0;
