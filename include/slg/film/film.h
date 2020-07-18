@@ -433,6 +433,8 @@ public:
 	luxrays::HardwareDeviceBuffer *hw_IMAGEPIPELINE;
 	luxrays::HardwareDeviceBuffer *hw_ALPHA;
 	luxrays::HardwareDeviceBuffer *hw_OBJECT_ID;
+	luxrays::HardwareDeviceBuffer *hw_ALBEDO;
+	luxrays::HardwareDeviceBuffer *hw_AVG_SHADING_NORMAL;
 	
 	luxrays::HardwareDeviceBuffer *hw_mergeBuffer;
 	

@@ -20,8 +20,10 @@
 
 #include <boost/format.hpp>
 
+#include "luxrays/kernels/kernels.h"
 #include "luxrays/utils/cuda.h"
 
+#include "slg/kernels/kernels.h"
 #include "slg/film/imagepipeline/plugins/optixdenoiser.h"
 
 using namespace std;
@@ -36,7 +38,8 @@ BOOST_CLASS_EXPORT_IMPLEMENT(slg::OptixDenoiserPlugin)
 
 OptixDenoiserPlugin::OptixDenoiserPlugin(const float s) : cudaDevice(nullptr),
 	denoiserHandle(nullptr), denoiserStateBuff(nullptr), denoiserScratchBuff(nullptr),
-	denoiserTmpBuff(nullptr) {
+	denoiserTmpBuff(nullptr), albedoTmpBuff(nullptr), avgShadingNormalTmpBuff(nullptr),
+	bufferSetUpKernel(nullptr) {
 	sharpness = s;
 }
 
@@ -45,9 +48,12 @@ OptixDenoiserPlugin::~OptixDenoiserPlugin() {
 		if (denoiserHandle)
 			CHECK_OPTIX_ERROR(optixDenoiserDestroy(denoiserHandle));
 
+		delete bufferSetUpKernel;
 		cudaDevice->FreeBuffer(&denoiserStateBuff);
 		cudaDevice->FreeBuffer(&denoiserScratchBuff);
 		cudaDevice->FreeBuffer(&denoiserTmpBuff);
+		cudaDevice->FreeBuffer(&albedoTmpBuff);
+		cudaDevice->FreeBuffer(&avgShadingNormalTmpBuff);
 	}
 }
 
@@ -74,7 +80,14 @@ void OptixDenoiserPlugin::ApplyHW(Film &film, const u_int index) {
 		OptixDeviceContext optixContext = cudaDevice->GetOptixContext();
 
 		OptixDenoiserOptions options = {};
-		options.inputKind = OPTIX_DENOISER_INPUT_RGB;
+		// Use ALBEDO and AVG_SHADING_NORMAL AOVs if they are available
+		if (film.HasChannel(Film::ALBEDO)) {
+			if (film.HasChannel(Film::AVG_SHADING_NORMAL))
+				options.inputKind = OPTIX_DENOISER_INPUT_RGB_ALBEDO_NORMAL;
+			else
+				options.inputKind = OPTIX_DENOISER_INPUT_RGB_ALBEDO;
+		} else
+			options.inputKind = OPTIX_DENOISER_INPUT_RGB;
 		options.pixelFormat = OPTIX_PIXEL_FORMAT_FLOAT3;
 		CHECK_OPTIX_ERROR(optixDenoiserCreate(optixContext, &options, &denoiserHandle));
 
@@ -93,6 +106,36 @@ void OptixDenoiserPlugin::ApplyHW(Film &film, const u_int index) {
 		cudaDevice->AllocBufferRW(&denoiserTmpBuff, nullptr,
 				3 * sizeof(float) * film.GetWidth() * film.GetHeight(),
 				"Optix denoiser temporary buffer");		
+		if (film.HasChannel(Film::ALBEDO)) {
+			// Allocate ALBEDO and AVG_SHADING_NORMAL temporary buffers
+
+			cudaDevice->AllocBufferRW(&albedoTmpBuff, nullptr,
+					3 * sizeof(float) * film.GetWidth() * film.GetHeight(),
+					"Optix denoiser albedo temporary buffer");
+			if (film.HasChannel(Film::AVG_SHADING_NORMAL))
+				cudaDevice->AllocBufferRW(&avgShadingNormalTmpBuff, nullptr,
+						3 * sizeof(float) * film.GetWidth() * film.GetHeight(),
+						"Optix denoiser normal temporary buffer");
+			
+			// Compile buffer setup kernel
+
+			vector<string> opts;
+			opts.push_back("-D LUXRAYS_OPENCL_KERNEL");
+			opts.push_back("-D SLG_OPENCL_KERNEL");
+
+			HardwareDeviceProgram *program = nullptr;
+			cudaDevice->CompileProgram(&program,
+					opts,
+					luxrays::ocl::KernelSource_utils_funcs +
+					slg::ocl::KernelSource_plugin_optixdenoiser_funcs,
+					"OptixDenoiserPlugin");
+
+			SLG_LOG("[OptixDenoiserPlugin] Compiling OptixDenoiserPlugin_BufferSetUp Kernel");
+			cudaDevice->GetKernel(program, &bufferSetUpKernel, "OptixDenoiserPlugin_BufferSetUp");
+
+			delete program;
+		}
+
 		CHECK_OPTIX_ERROR(optixDenoiserSetup(denoiserHandle,
 				0,
 				film.GetWidth(), film.GetHeight(),
@@ -106,13 +149,56 @@ void OptixDenoiserPlugin::ApplyHW(Film &film, const u_int index) {
 
 	OptixDenoiserParams params = {};
 
-	OptixImage2D inputLayers[1] = {};
+	OptixImage2D inputLayers[3] = {};
+	u_int layersCount = 1;
 	inputLayers[0].data = ((CUDADeviceBuffer *)film.hw_IMAGEPIPELINE)->GetCUDADevicePointer();
 	inputLayers[0].width = film.GetWidth();
 	inputLayers[0].height = film.GetHeight();
 	inputLayers[0].pixelStrideInBytes = 3 * sizeof(float);
 	inputLayers[0].rowStrideInBytes = 3 * sizeof(float) * film.GetWidth();
 	inputLayers[0].format = OPTIX_PIXEL_FORMAT_FLOAT3;
+	
+	// Use ALBEDO and AVG_SHADING_NORMAL AOVs if they are available
+	
+	if (film.HasChannel(Film::ALBEDO)) {
+		inputLayers[1].data = ((CUDADeviceBuffer *)albedoTmpBuff)->GetCUDADevicePointer();
+		inputLayers[1].width = film.GetWidth();
+		inputLayers[1].height = film.GetHeight();
+		inputLayers[1].pixelStrideInBytes = 3 * sizeof(float);
+		inputLayers[1].rowStrideInBytes = 3 * sizeof(float) * film.GetWidth();
+		inputLayers[1].format = OPTIX_PIXEL_FORMAT_FLOAT3;
+		layersCount = 2;
+
+		// Setup albedoTmpBuff
+		u_int argIndex = 0;
+		film.hardwareDevice->SetKernelArg(bufferSetUpKernel, argIndex++, film.GetWidth());
+		film.hardwareDevice->SetKernelArg(bufferSetUpKernel, argIndex++, film.GetHeight());
+		film.hardwareDevice->SetKernelArg(bufferSetUpKernel, argIndex++, film.hw_ALBEDO);
+		film.hardwareDevice->SetKernelArg(bufferSetUpKernel, argIndex++, albedoTmpBuff);
+		
+		cudaDevice->EnqueueKernel(bufferSetUpKernel, HardwareDeviceRange(RoundUp(film.GetWidth() * film.GetHeight(), 256u)),
+			HardwareDeviceRange(256));
+		
+		if (film.HasChannel(Film::AVG_SHADING_NORMAL)) {
+			inputLayers[1].data = ((CUDADeviceBuffer *)avgShadingNormalTmpBuff)->GetCUDADevicePointer();
+			inputLayers[1].width = film.GetWidth();
+			inputLayers[1].height = film.GetHeight();
+			inputLayers[1].pixelStrideInBytes = 3 * sizeof(float);
+			inputLayers[1].rowStrideInBytes = 3 * sizeof(float) * film.GetWidth();
+			inputLayers[1].format = OPTIX_PIXEL_FORMAT_FLOAT3;
+			layersCount = 3;
+			
+			// Setup albedoTmpBuff
+			u_int argIndex = 0;
+			film.hardwareDevice->SetKernelArg(bufferSetUpKernel, argIndex++, film.GetWidth());
+			film.hardwareDevice->SetKernelArg(bufferSetUpKernel, argIndex++, film.GetHeight());
+			film.hardwareDevice->SetKernelArg(bufferSetUpKernel, argIndex++, film.hw_AVG_SHADING_NORMAL);
+			film.hardwareDevice->SetKernelArg(bufferSetUpKernel, argIndex++, avgShadingNormalTmpBuff);
+
+			cudaDevice->EnqueueKernel(bufferSetUpKernel, HardwareDeviceRange(RoundUp(film.GetWidth() * film.GetHeight(), 256u)),
+				HardwareDeviceRange(256));
+		}
+	}
 	
 	OptixImage2D outputLayers[1] = {};
 	outputLayers[0].data = ((CUDADeviceBuffer *)denoiserTmpBuff)->GetCUDADevicePointer();
@@ -129,7 +215,7 @@ void OptixDenoiserPlugin::ApplyHW(Film &film, const u_int index) {
 			((CUDADeviceBuffer *)denoiserStateBuff)->GetCUDADevicePointer(),
 			denoiserStateBuff->GetSize(),
 			inputLayers,
-			1,
+			layersCount,
 			0,
 			0,
 			outputLayers,

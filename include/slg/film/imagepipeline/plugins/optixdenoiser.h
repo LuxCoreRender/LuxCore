@@ -56,7 +56,7 @@ public:
 	
 	friend class boost::serialization::access;
 
-//private:
+private:
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImagePipelinePlugin);
 		ar & sharpness;
@@ -70,6 +70,10 @@ public:
 	luxrays::HardwareDeviceBuffer *denoiserStateBuff;
 	luxrays::HardwareDeviceBuffer *denoiserScratchBuff;
 	luxrays::HardwareDeviceBuffer *denoiserTmpBuff;
+	luxrays::HardwareDeviceBuffer *albedoTmpBuff;
+	luxrays::HardwareDeviceBuffer *avgShadingNormalTmpBuff;
+
+	luxrays::HardwareDeviceKernel *bufferSetUpKernel;
 };
 
 }

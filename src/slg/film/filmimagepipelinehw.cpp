@@ -43,6 +43,8 @@ void Film::SetUpHW() {
 	hw_IMAGEPIPELINE = nullptr;
 	hw_ALPHA = nullptr;
 	hw_OBJECT_ID = nullptr;
+	hw_ALBEDO = nullptr;
+	hw_AVG_SHADING_NORMAL = nullptr;
 	hw_mergeBuffer = nullptr;
 
 	mergeInitializeKernel = nullptr;
@@ -157,6 +159,8 @@ void Film::DeleteHWContext() {
 		hardwareDevice->FreeBuffer(&hw_IMAGEPIPELINE);
 		hardwareDevice->FreeBuffer(&hw_ALPHA);
 		hardwareDevice->FreeBuffer(&hw_OBJECT_ID);
+		hardwareDevice->FreeBuffer(&hw_ALBEDO);
+		hardwareDevice->FreeBuffer(&hw_AVG_SHADING_NORMAL);
 		hardwareDevice->FreeBuffer(&hw_mergeBuffer);
 
 		hardwareDevice->PopThreadCurrentDevice();
@@ -174,10 +178,16 @@ void Film::AllocateHWBuffers() {
 	hardwareDevice->PushThreadCurrentDevice();
 
 	hardwareDevice->AllocBufferRW(&hw_IMAGEPIPELINE, channel_IMAGEPIPELINEs[0]->GetPixels(), channel_IMAGEPIPELINEs[0]->GetSize(), "IMAGEPIPELINE");
+
 	if (HasChannel(ALPHA))
 		hardwareDevice->AllocBufferRO(&hw_ALPHA, channel_ALPHA->GetPixels(), channel_ALPHA->GetSize(), "ALPHA");
 	if (HasChannel(OBJECT_ID))
 		hardwareDevice->AllocBufferRO(&hw_OBJECT_ID, channel_OBJECT_ID->GetPixels(), channel_OBJECT_ID->GetSize(), "OBJECT_ID");
+	if (HasChannel(ALBEDO))
+		hardwareDevice->AllocBufferRO(&hw_ALBEDO, channel_ALBEDO->GetPixels(), channel_ALBEDO->GetSize(), "ALBEDO");
+	if (HasChannel(AVG_SHADING_NORMAL))
+		hardwareDevice->AllocBufferRO(&hw_AVG_SHADING_NORMAL, channel_AVG_SHADING_NORMAL->GetPixels(), channel_AVG_SHADING_NORMAL->GetSize(), "AVG_SHADING_NORMAL");
+
 	const size_t mergeBufferSize = Max(
 			HasChannel(RADIANCE_PER_PIXEL_NORMALIZED) ? channel_RADIANCE_PER_PIXEL_NORMALIZEDs[0]->GetSize() : 0,
 			HasChannel(RADIANCE_PER_SCREEN_NORMALIZED) ? channel_RADIANCE_PER_SCREEN_NORMALIZEDs[0]->GetSize() : 0);
@@ -283,6 +293,14 @@ void Film::WriteAllHWBuffers() {
 		hardwareDevice->EnqueueWriteBuffer(hw_OBJECT_ID, false,
 				channel_OBJECT_ID->GetSize(),
 				channel_OBJECT_ID->GetPixels());
+	if (HasChannel(ALBEDO))
+		hardwareDevice->EnqueueWriteBuffer(hw_ALBEDO, false,
+				channel_ALBEDO->GetSize(),
+				channel_ALBEDO->GetPixels());
+	if (HasChannel(AVG_SHADING_NORMAL))
+		hardwareDevice->EnqueueWriteBuffer(hw_AVG_SHADING_NORMAL, false,
+				channel_AVG_SHADING_NORMAL->GetSize(),
+				channel_AVG_SHADING_NORMAL->GetPixels());
 }
 
 void Film::ReadHWBuffer_IMAGEPIPELINE(const u_int index) {

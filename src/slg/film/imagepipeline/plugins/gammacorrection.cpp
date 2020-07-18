@@ -20,10 +20,11 @@
 #include <boost/foreach.hpp>
 #include <boost/regex.hpp>
 
+#include "luxrays/kernels/kernels.h"
+
 #include "slg/film/film.h"
 #include "slg/kernels/kernels.h"
 #include "slg/film/imagepipeline/plugins/gammacorrection.h"
-#include "luxrays/kernels/kernels.h"
 
 using namespace std;
 using namespace luxrays;
