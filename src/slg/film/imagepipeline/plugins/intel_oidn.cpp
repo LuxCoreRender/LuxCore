@@ -108,5 +108,5 @@ void IntelOIDN::Apply(Film &film, const u_int index) {
         pixels[i].c[2] = Lerp(sharpness, outputBuffer[i3 + 2], pixels[i].c[2]);
 	}
 
-	SLG_LOG("IntelOIDNPlugin single execution took a total of " << (boost::format("%.1f") % (WallClockTime() - totalStartTime)) << "secs");
+	SLG_LOG("IntelOIDNPlugin single execution took a total of " << (boost::format("%.3f") % (WallClockTime() - totalStartTime)) << "secs");
 }

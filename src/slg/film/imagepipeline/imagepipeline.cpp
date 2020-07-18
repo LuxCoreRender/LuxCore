@@ -134,6 +134,10 @@ void ImagePipeline::Apply(Film &film, const u_int index) {
 		const bool useHWApply = film.hwEnable && film.hardwareDevice &&
 				plugin->CanUseHW();
 
+		// Check if it is a valid imagepipeline
+		if (!useHWApply && !plugin->CanUseNative())
+			throw runtime_error("A imagepipeline plugin can only use hardware device but imagepipeline hardware execution is disabled");
+
 		if (useHWApply) {
 			if (imageInCPURam) {
 				// Transfer the buffer to OpenCL device ram

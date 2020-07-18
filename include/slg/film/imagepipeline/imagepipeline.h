@@ -46,13 +46,14 @@ public:
 
 	void SetRadianceChannelScale(const u_int index, const RadianceChannelScale &scale);
 
+	virtual bool CanUseNative() const { return true; }
 	virtual bool CanUseHW() const { return false; }
 	virtual ImagePipelinePlugin *Copy() const = 0;
 
 	virtual void Apply(Film &film, const u_int index) = 0;
 	virtual void ApplyHW(Film &film, const u_int index) {
 		throw std::runtime_error("Internal error in ImagePipelinePlugin::ApplyHW()");
-	};
+	}
 
 	static float GetGammaCorrectionValue(const Film &film, const u_int index);
 	static u_int GetBCDPipelineIndex(const Film &film);
@@ -78,6 +79,7 @@ public:
 	void SetRadianceChannelScale(const u_int index, const RadianceChannelScale &scale);
 	
 	bool CanUseHW() const { return canUseHW; }
+	void InitHW(Film &film, const u_int index);
 
 	const std::vector<ImagePipelinePlugin *> &GetPlugins() const { return pipeline; }
 	// An utility method

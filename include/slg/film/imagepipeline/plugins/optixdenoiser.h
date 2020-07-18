@@ -29,6 +29,7 @@
 
 #include "luxrays/luxrays.h"
 #include "luxrays/core/color/color.h"
+#include "luxrays/devices/cudadevice.h"
 #include "slg/film/film.h"
 #include "slg/film/imagepipeline/imagepipeline.h"
 
@@ -40,24 +41,35 @@ namespace slg {
 
 class OptixDenoiserPlugin : public ImagePipelinePlugin {
 public:
-	OptixDenoiserPlugin(const float sharpness);
+	OptixDenoiserPlugin(const float sharpness = 0.f);
+	virtual ~OptixDenoiserPlugin();
 
 	virtual ImagePipelinePlugin *Copy() const;
 
-	virtual void Apply(Film &film, const u_int index);
+	virtual bool CanUseNative() const { return false; }
+	virtual bool CanUseHW() const { return true; }
+	virtual void Apply(Film &film, const u_int index) {
+		throw std::runtime_error("Called OptixDenoiserPlugin::Apply()");
+	}
 
+	virtual void ApplyHW(Film &film, const u_int index);
+	
 	friend class boost::serialization::access;
 
-private:
-	// Used by serialization
-	OptixDenoiserPlugin();
-
+//private:
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImagePipelinePlugin);
 		ar & sharpness;
 	}
 
 	float sharpness;
+
+	// Used inside the object destructor to free buffers
+	luxrays::CUDADevice *cudaDevice;
+	OptixDenoiser denoiserHandle;
+	luxrays::HardwareDeviceBuffer *denoiserStateBuff;
+	luxrays::HardwareDeviceBuffer *denoiserScratchBuff;
+	luxrays::HardwareDeviceBuffer *denoiserTmpBuff;
 };
 
 }

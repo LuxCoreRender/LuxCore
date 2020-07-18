@@ -340,7 +340,7 @@ public:
 		// Free BBox buffer
 		cudaDevice->FreeBuffer(&optixBBsBuff);
 
-		LR_LOG(device.GetContext(), "Optix total build time: " << int((WallClockTime() - t0) * 1000) << "ms");
+		LR_LOG(device.GetContext(), "OptixAccel total build time: " << int((WallClockTime() - t0) * 1000) << "ms");
 
 		//----------------------------------------------------------------------
 		// Build Optix module

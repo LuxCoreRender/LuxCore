@@ -40,7 +40,6 @@ CUDADeviceDescription::CUDADeviceDescription(CUdevice dev, const size_t devIndex
 }
 
 CUDADeviceDescription::~CUDADeviceDescription() {
-	CHECK_CUDA_ERROR(cuDevicePrimaryCtxRelease(cudaDevice));
 }
 
 int CUDADeviceDescription::GetComputeUnits() const {
@@ -123,13 +122,19 @@ void CUDADeviceDescription::AddDeviceDescs(vector<DeviceDescription *> &descript
 // CUDADevice
 //------------------------------------------------------------------------------
 
+static void OptixLogCB(u_int level, const char* tag, const char *message, void *cbdata) {
+	const Context *context = (Context *)cbdata;
+	
+	LR_LOG(context, "[Optix][" << level << "][" << tag << "] " << message);
+}
+
 CUDADevice::CUDADevice(
 		const Context *context,
 		CUDADeviceDescription *desc,
 		const size_t devIndex) :
 		Device(context, devIndex),
 		deviceDesc(desc),
-		cudaContext(nullptr) {
+		cudaContext(nullptr), optixContext(nullptr) {
 	deviceName = (desc->GetName() + " CUDAIntersect").c_str();
 
 	kernelCache = new cudaKernelPersistentCache("LUXRAYS_" LUXRAYS_VERSION_MAJOR "." LUXRAYS_VERSION_MINOR);
@@ -138,9 +143,24 @@ CUDADevice::CUDADevice(
 
 	// I prefer cache over shared memory because I pretty much never use shared memory
 	CHECK_CUDA_ERROR(cuCtxSetCacheConfig(CU_FUNC_CACHE_PREFER_L1));
+
+	if (isOptixAvilable) {
+		OptixDeviceContextOptions optixOptions;
+		optixOptions.logCallbackFunction = &OptixLogCB;
+		optixOptions.logCallbackData = (void *)deviceContext;
+		// For normal usage
+		//optixOptions.logCallbackLevel = 1;
+		// For debugging
+		optixOptions.logCallbackLevel = 4;
+		CHECK_OPTIX_ERROR(optixDeviceContextCreate(cudaContext, &optixOptions, &optixContext));		
+	}
 }
 
 CUDADevice::~CUDADevice() {
+	if (optixContext) {
+		CHECK_OPTIX_ERROR(optixDeviceContextDestroy(optixContext));
+	}
+
 	// Free all loaded modules
 	for (auto &m : loadedModules) {
 		CHECK_CUDA_ERROR(cuModuleUnload(m));
@@ -159,8 +179,7 @@ void CUDADevice::PushThreadCurrentDevice() {
 }
 
 void CUDADevice::PopThreadCurrentDevice() {
-	CUcontext newCudaContext;
-	CHECK_CUDA_ERROR(cuCtxPopCurrent(&newCudaContext));
+	CHECK_CUDA_ERROR(cuCtxPopCurrent(nullptr));
 }
 
 //------------------------------------------------------------------------------
@@ -387,7 +406,7 @@ void CUDADevice::FlushQueue() {
 }
 
 void CUDADevice::FinishQueue() {
-	cuStreamSynchronize(0);
+	CHECK_CUDA_ERROR(cuStreamSynchronize(0));
 }
 
 //------------------------------------------------------------------------------

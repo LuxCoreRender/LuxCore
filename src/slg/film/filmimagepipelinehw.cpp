@@ -98,6 +98,8 @@ void Film::CreateHWContext() {
 		assert (hardwareDevice);
 		SLG_LOG("Film hardware device used: " << hardwareDevice->GetName() << " (Type: " << DeviceDescription::GetDeviceType(hardwareDevice->GetDeviceDesc()->GetType()) << ")");
 
+		hardwareDevice->PushThreadCurrentDevice();
+
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 		OpenCLDeviceDescription *oclDesc = dynamic_cast<OpenCLDeviceDescription *>(selectedDeviceDesc);
 		if (oclDesc) {
@@ -119,23 +121,23 @@ void Film::CreateHWContext() {
 			hardwareDevice->SetAdditionalCompileOpts(compileOpts);
 		}
 
-		/*if (hardwareDevice->GetDeviceDesc()->GetType() & DEVICE_TYPE_OPENCL_ALL) {
+		if (hardwareDevice->GetDeviceDesc()->GetType() & DEVICE_TYPE_OPENCL_ALL) {
 			// Suggested compiler options: -cl-fast-relaxed-math -cl-mad-enable
-			//
-			// NOTE: I should probably enable -cl-fast-relaxed-math -cl-mad-enable for OpenCL too even
-			// if this is not what I was doing in the past
 
 			vector<string> compileOpts;
-			compileOpts.push_back("-cl-fast-relaxed-math -cl-mad-enable");
+			compileOpts.push_back("-cl-fast-relaxed-math");
+			compileOpts.push_back("-cl-mad-enable");
 
 			hardwareDevice->SetAdditionalCompileOpts(compileOpts);
-		}*/
+		}
 
 		// Just an empty data set
 		dataSet = new DataSet(ctx);
 		dataSet->Preprocess();
 		ctx->SetDataSet(dataSet);
 		ctx->Start();
+		
+		hardwareDevice->PopThreadCurrentDevice();
 	}
 }
 
@@ -157,7 +159,7 @@ void Film::DeleteHWContext() {
 		hardwareDevice->FreeBuffer(&hw_OBJECT_ID);
 		hardwareDevice->FreeBuffer(&hw_mergeBuffer);
 
-		hardwareDevice->PopThreadCurrentDevice();		
+		hardwareDevice->PopThreadCurrentDevice();
 		hardwareDevice = nullptr;
 	}
 
@@ -169,6 +171,7 @@ void Film::DeleteHWContext() {
 
 void Film::AllocateHWBuffers() {
 	ctx->SetVerbose(true);
+	hardwareDevice->PushThreadCurrentDevice();
 
 	hardwareDevice->AllocBufferRW(&hw_IMAGEPIPELINE, channel_IMAGEPIPELINEs[0]->GetPixels(), channel_IMAGEPIPELINEs[0]->GetSize(), "IMAGEPIPELINE");
 	if (HasChannel(ALPHA))
@@ -181,11 +184,13 @@ void Film::AllocateHWBuffers() {
 	if (mergeBufferSize > 0)
 		hardwareDevice->AllocBufferRO(&hw_mergeBuffer, nullptr, mergeBufferSize, "Merge");
 
+	hardwareDevice->PopThreadCurrentDevice();
 	ctx->SetVerbose(false);
 }
 
 void Film::CompileHWKernels() {
 	ctx->SetVerbose(true);
+	hardwareDevice->PushThreadCurrentDevice();
 
 	// Compile MergeSampleBuffersOCL() kernels
 	const double tStart = WallClockTime();
@@ -262,11 +267,14 @@ void Film::CompileHWKernels() {
 
 	const double tEnd = WallClockTime();
 	SLG_LOG("[MergeSampleBuffersOCL] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
-	
+
+	hardwareDevice->PopThreadCurrentDevice();
 	ctx->SetVerbose(false);
 }
 
 void Film::WriteAllHWBuffers() {
+	// hardwareDevice->Push/PopThreadCurrentDevice() is done by the caller
+
 	if (HasChannel(ALPHA))
 		hardwareDevice->EnqueueWriteBuffer(hw_ALPHA, false,
 				channel_ALPHA->GetSize(),
@@ -278,20 +286,25 @@ void Film::WriteAllHWBuffers() {
 }
 
 void Film::ReadHWBuffer_IMAGEPIPELINE(const u_int index) {
+	// hardwareDevice->Push/PopThreadCurrentDevice() is done by the caller
+
 	hardwareDevice->EnqueueReadBuffer(hw_IMAGEPIPELINE, false,
 			channel_IMAGEPIPELINEs[index]->GetSize(),
 			channel_IMAGEPIPELINEs[index]->GetPixels());
 }
 
 void Film::WriteHWBuffer_IMAGEPIPELINE(const u_int index) {
+	// hardwareDevice->Push/PopThreadCurrentDevice() is done by the caller
+
 	hardwareDevice->EnqueueWriteBuffer(hw_IMAGEPIPELINE, false,
 			channel_IMAGEPIPELINEs[index]->GetSize(),
 			channel_IMAGEPIPELINEs[index]->GetPixels());
 }
 
 void Film::MergeSampleBuffersHW(const u_int imagePipelineIndex) {
-	const ImagePipeline *ip = (imagePipelineIndex < imagePipelines.size()) ? imagePipelines[imagePipelineIndex] : nullptr;
+	// hardwareDevice->Push/PopThreadCurrentDevice() is done by the caller
 
+	const ImagePipeline *ip = (imagePipelineIndex < imagePipelines.size()) ? imagePipelines[imagePipelineIndex] : nullptr;
 	// Transfer IMAGEPIPELINEs[index]
 	hardwareDevice->EnqueueWriteBuffer(hw_IMAGEPIPELINE, false,
 			channel_IMAGEPIPELINEs[imagePipelineIndex]->GetSize(),

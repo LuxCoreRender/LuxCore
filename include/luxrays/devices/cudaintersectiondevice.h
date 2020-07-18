@@ -48,18 +48,11 @@ public:
 			HardwareDeviceBuffer *rayHitBuff,
 			const unsigned int rayCount);
 
-	//--------------------------------------------------------------------------
-	// CUDAIntersectionDevice specific methods
-	//--------------------------------------------------------------------------
-
-	OptixDeviceContext GetOptixContext() { return optixContext; }
-
 	friend class Context;
 
 protected:
 	virtual void Update();
 
-	OptixDeviceContext optixContext;
 	HardwareIntersectionKernel *kernel;
 };
 

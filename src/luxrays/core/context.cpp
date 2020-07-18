@@ -156,6 +156,7 @@ Context::~Context() {
 
 	for (size_t i = 0; i < devices.size(); ++i)
 		delete devices[i];
+
 	for (size_t i = 0; i < deviceDescriptions.size(); ++i)
 		delete deviceDescriptions[i];
 }

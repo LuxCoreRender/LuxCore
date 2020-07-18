@@ -34,63 +34,113 @@ using namespace slg;
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::OptixDenoiserPlugin)
 
-OptixDenoiserPlugin::OptixDenoiserPlugin(const float s) {
+OptixDenoiserPlugin::OptixDenoiserPlugin(const float s) : cudaDevice(nullptr),
+	denoiserHandle(nullptr), denoiserStateBuff(nullptr), denoiserScratchBuff(nullptr),
+	denoiserTmpBuff(nullptr) {
 	sharpness = s;
 }
 
-OptixDenoiserPlugin::OptixDenoiserPlugin() {
-	sharpness = 0.f;
+OptixDenoiserPlugin::~OptixDenoiserPlugin() {
+	if (cudaDevice) {
+		if (denoiserHandle)
+			CHECK_OPTIX_ERROR(optixDenoiserDestroy(denoiserHandle));
+
+		cudaDevice->FreeBuffer(&denoiserStateBuff);
+		cudaDevice->FreeBuffer(&denoiserScratchBuff);
+		cudaDevice->FreeBuffer(&denoiserTmpBuff);
+	}
 }
 
 ImagePipelinePlugin *OptixDenoiserPlugin::Copy() const {
 	return new OptixDenoiserPlugin(sharpness);
 }
 
-void OptixDenoiserPlugin::Apply(Film &film, const u_int index) {
-	const double totalStartTime = WallClockTime();
-	SLG_LOG("[OptixDenoiserPlugin] Applying Optix denoiser");
-    Spectrum *pixels = (Spectrum *)film.channel_IMAGEPIPELINEs[index]->GetPixels();
+void OptixDenoiserPlugin::ApplyHW(Film &film, const u_int index) {
+	//const double startTime = WallClockTime();
+	//SLG_LOG("[OptixDenoiserPlugin] Applying Optix denoiser");
 
-    const u_int width = film.GetWidth();
-    const u_int height = film.GetHeight();
-    const u_int pixelCount = width * height;
+	if (!cudaDevice) {
+		film.ctx->SetVerbose(true);
 
-    vector<float> outputBuffer(3 * pixelCount);
-//    vector<float> albedoBuffer;
-//    vector<float> normalBuffer;
+		if (!isOptixAvilable)
+			throw std::runtime_error("OptixDenoiserPlugin used while Optix is not available");
+		if (!film.hardwareDevice)
+			throw std::runtime_error("OptixDenoiserPlugin used while imagepipeline hardware execution is not enabled");
 
-//    if (film.HasChannel(Film::ALBEDO)) {
-//		albedoBuffer.resize(3 * pixelCount);
-//		for (u_int i = 0; i < pixelCount; ++i)
-//			film.channel_ALBEDO->GetWeightedPixel(i, &albedoBuffer[i * 3]);
-//		
-//        filter.setImage("albedo", &albedoBuffer[0], oidn::Format::Float3, width, height);
-//
-//        // Normals can only be used if albedo is supplied as well
-//        if (film.HasChannel(Film::AVG_SHADING_NORMAL)) {
-//            normalBuffer.resize(3 * pixelCount);
-//            for (u_int i = 0; i < pixelCount; ++i)
-//                film.channel_AVG_SHADING_NORMAL->GetWeightedPixel(i, &normalBuffer[i * 3]);
-//
-//            filter.setImage("normal", &normalBuffer[0], oidn::Format::Float3, width, height);
-//        } else
-//            SLG_LOG("[OptixDenoiserPlugin] Warning: AVG_SHADING_NORMAL AOV not found");
-//    } else
-//		SLG_LOG("[OptixDenoiserPlugin] Warning: ALBEDO AOV not found");
-    
-	const double startTime = WallClockTime();
-	// TODO
-	SLG_LOG("OptixDenoiserPlugin apply took: " << (boost::format("%.1f") % (WallClockTime() - startTime)) << "secs");
+		cudaDevice = dynamic_cast<CUDADevice *>(film.hardwareDevice);
+		if (!cudaDevice)
+			throw std::runtime_error("OptixDenoiserPlugin used while imagepipeline hardware execution is a CUDA device");
 
-    SLG_LOG("OptixDenoiserPlugin copying output buffer");
-    for (u_int i = 0; i < pixelCount; ++i) {
-        const u_int i3 = i * 3;
-        pixels[i].c[0] = Lerp(sharpness, outputBuffer[i3], pixels[i].c[0]);
-        pixels[i].c[1] = Lerp(sharpness, outputBuffer[i3 + 1], pixels[i].c[1]);
-        pixels[i].c[2] = Lerp(sharpness, outputBuffer[i3 + 2], pixels[i].c[2]);
+		OptixDeviceContext optixContext = cudaDevice->GetOptixContext();
+
+		OptixDenoiserOptions options = {};
+		options.inputKind = OPTIX_DENOISER_INPUT_RGB;
+		options.pixelFormat = OPTIX_PIXEL_FORMAT_FLOAT3;
+		CHECK_OPTIX_ERROR(optixDenoiserCreate(optixContext, &options, &denoiserHandle));
+
+		CHECK_OPTIX_ERROR(optixDenoiserSetModel(denoiserHandle, OPTIX_DENOISER_MODEL_KIND_HDR, nullptr, 0));
+
+		OptixDenoiserSizes sizes = {};
+		CHECK_OPTIX_ERROR(optixDenoiserComputeMemoryResources(denoiserHandle,
+				film.GetWidth(), film.GetHeight(), &sizes));
+
+		cudaDevice->AllocBufferRW(&denoiserStateBuff, nullptr,
+				sizes.stateSizeInBytes,
+				"Optix denoiser state buffer");
+		cudaDevice->AllocBufferRW(&denoiserScratchBuff, nullptr,
+				sizes.recommendedScratchSizeInBytes,
+				"Optix denoiser scratch buffer");
+		cudaDevice->AllocBufferRW(&denoiserTmpBuff, nullptr,
+				3 * sizeof(float) * film.GetWidth() * film.GetHeight(),
+				"Optix denoiser temporary buffer");		
+		CHECK_OPTIX_ERROR(optixDenoiserSetup(denoiserHandle,
+				0,
+				film.GetWidth(), film.GetHeight(),
+				((CUDADeviceBuffer *)denoiserStateBuff)->GetCUDADevicePointer(),
+				sizes.stateSizeInBytes,
+				((CUDADeviceBuffer *)denoiserScratchBuff)->GetCUDADevicePointer(),
+				sizes.recommendedScratchSizeInBytes));
+
+		film.ctx->SetVerbose(false);
 	}
 
-	SLG_LOG("OptixDenoiserPlugin execution took a total of " << (boost::format("%.1f") % (WallClockTime() - totalStartTime)) << "secs");
+	OptixDenoiserParams params = {};
+
+	OptixImage2D inputLayers[1] = {};
+	inputLayers[0].data = ((CUDADeviceBuffer *)film.hw_IMAGEPIPELINE)->GetCUDADevicePointer();
+	inputLayers[0].width = film.GetWidth();
+	inputLayers[0].height = film.GetHeight();
+	inputLayers[0].pixelStrideInBytes = 3 * sizeof(float);
+	inputLayers[0].rowStrideInBytes = 3 * sizeof(float) * film.GetWidth();
+	inputLayers[0].format = OPTIX_PIXEL_FORMAT_FLOAT3;
+	
+	OptixImage2D outputLayers[1] = {};
+	outputLayers[0].data = ((CUDADeviceBuffer *)denoiserTmpBuff)->GetCUDADevicePointer();
+	outputLayers[0].width = film.GetWidth();
+	outputLayers[0].height = film.GetHeight();
+	outputLayers[0].pixelStrideInBytes = 3 * sizeof(float);
+	outputLayers[0].rowStrideInBytes = 3 * sizeof(float) * film.GetWidth();
+	outputLayers[0].format = OPTIX_PIXEL_FORMAT_FLOAT3;
+
+	// Run the denoiser
+	CHECK_OPTIX_ERROR(optixDenoiserInvoke(denoiserHandle,
+			0,
+			&params,
+			((CUDADeviceBuffer *)denoiserStateBuff)->GetCUDADevicePointer(),
+			denoiserStateBuff->GetSize(),
+			inputLayers,
+			1,
+			0,
+			0,
+			outputLayers,
+			((CUDADeviceBuffer *)denoiserScratchBuff)->GetCUDADevicePointer(),
+			denoiserScratchBuff->GetSize()));
+	
+	// Copy back the result
+	CHECK_CUDA_ERROR(cuMemcpyDtoDAsync(inputLayers[0].data, outputLayers[0].data, 3 * sizeof(float) * film.GetWidth() * film.GetHeight(), 0));
+
+	//cudaDevice->FinishQueue();
+	//SLG_LOG("OptixDenoiserPlugin execution took a total of " << (boost::format("%.3f") % (WallClockTime() - startTime)) << "secs");
 }
 
 #endif

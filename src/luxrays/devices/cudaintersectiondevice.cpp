@@ -28,34 +28,15 @@ namespace luxrays {
 // CUDA IntersectionDevice
 //------------------------------------------------------------------------------
 
-static void OptixLogCB(u_int level, const char* tag, const char *message, void *cbdata) {
-	const Context *context = (Context *)cbdata;
-	
-	LR_LOG(context, "[Optix][" << level << "][" << tag << "] " << message);
-}
-
 CUDAIntersectionDevice::CUDAIntersectionDevice(
 		const Context *context,
 		CUDADeviceDescription *desc,
 		const size_t devIndex) :
 		Device(context, devIndex), CUDADevice(context, desc, devIndex),
-		HardwareIntersectionDevice(), optixContext(nullptr), kernel(nullptr) {
-	if (isOptixAvilable) {
-		OptixDeviceContextOptions optixOptions;
-		optixOptions.logCallbackFunction = &OptixLogCB;
-		optixOptions.logCallbackData = (void *)deviceContext;
-		// For normal usage
-		//optixOptions.logCallbackLevel = 1;
-		// For debugging
-		optixOptions.logCallbackLevel = 4;
-		CHECK_OPTIX_ERROR(optixDeviceContextCreate(cudaContext, &optixOptions, &optixContext));
-	}
+		HardwareIntersectionDevice(), kernel(nullptr) {
 }
 
 CUDAIntersectionDevice::~CUDAIntersectionDevice() {
-	if (optixContext) {
-		CHECK_OPTIX_ERROR(optixDeviceContextDestroy(optixContext));
-	}
 }
 
 void CUDAIntersectionDevice::SetDataSet(DataSet *newDataSet) {

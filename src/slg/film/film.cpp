@@ -159,7 +159,7 @@ Film::Film(const u_int w, const u_int h, const u_int *sr) : filmDenoiser(this) {
 	// Initialize variables to nullptr
 	SetUpHW();
 }
-
+#include <slg/film/imagepipeline/plugins/optixdenoiser.h>
 Film::~Film() {
 	if (imagePipelineThread) {
 		imagePipelineThread->interrupt();
