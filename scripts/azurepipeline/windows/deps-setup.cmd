@@ -8,10 +8,7 @@ mklink /J Luxcore %SYSTEM_DEFAULTWORKINGDIRECTORY%
 
 pip install --upgrade pip
 
-:: setuptools 45.x has issues when packaged with PyInstaller, see:
-:: https://github.com/pypa/setuptools/issues/1963
-:: Next PyInstaller version will fix
-pip install --upgrade "setuptools<45.0.0"
+pip install --upgrade setuptools
 
 pip install wheel
 pip install pyinstaller
