@@ -1,7 +1,7 @@
 #!/bin/bash
 
-#Fetch Artifacts
-wget https://github.com/LuxCoreRender/MacOSCompileDeps/releases/download/luxcorerender_v2.4beta4/MacDistFiles.tar.gz
+#Fetch BuildDeps
+wget https://github.com/LuxCoreRender/MacOSCompileDeps/releases/download/luxcorerender_v2.4rc1/MacDistFiles.tar.gz
 tar xzf MacDistFiles.tar.gz
 
 # Set Environment Variables
