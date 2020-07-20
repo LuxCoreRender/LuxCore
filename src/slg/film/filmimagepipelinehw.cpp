@@ -21,6 +21,8 @@
 #include "luxrays/devices/ocldevice.h"
 
 #include "slg/film/film.h"
+#include "slg/film/imagepipeline/imagepipeline.h"
+#include "slg/film/imagepipeline/radiancechannelscale.h"
 #include "slg/kernels/kernels.h"
 
 using namespace std;
@@ -177,15 +179,20 @@ void Film::AllocateHWBuffers() {
 	ctx->SetVerbose(true);
 	hardwareDevice->PushThreadCurrentDevice();
 
-	hardwareDevice->AllocBufferRW(&hw_IMAGEPIPELINE, channel_IMAGEPIPELINEs[0]->GetPixels(), channel_IMAGEPIPELINEs[0]->GetSize(), "IMAGEPIPELINE");
+	unordered_set<Film::FilmChannelType> hwChannelsUsed;
+	for (auto const ip : imagePipelines)
+		ip->AddHWChannelsUsed(hwChannelsUsed);
+	
+	if (hwChannelsUsed.count(IMAGEPIPELINE))
+		hardwareDevice->AllocBufferRW(&hw_IMAGEPIPELINE, channel_IMAGEPIPELINEs[0]->GetPixels(), channel_IMAGEPIPELINEs[0]->GetSize(), "IMAGEPIPELINE");
 
-	if (HasChannel(ALPHA))
+	if (HasChannel(ALPHA) && hwChannelsUsed.count(ALPHA))
 		hardwareDevice->AllocBufferRO(&hw_ALPHA, channel_ALPHA->GetPixels(), channel_ALPHA->GetSize(), "ALPHA");
-	if (HasChannel(OBJECT_ID))
+	if (HasChannel(OBJECT_ID) && hwChannelsUsed.count(OBJECT_ID))
 		hardwareDevice->AllocBufferRO(&hw_OBJECT_ID, channel_OBJECT_ID->GetPixels(), channel_OBJECT_ID->GetSize(), "OBJECT_ID");
-	if (HasChannel(ALBEDO))
+	if (HasChannel(ALBEDO) && hwChannelsUsed.count(ALBEDO))
 		hardwareDevice->AllocBufferRO(&hw_ALBEDO, channel_ALBEDO->GetPixels(), channel_ALBEDO->GetSize(), "ALBEDO");
-	if (HasChannel(AVG_SHADING_NORMAL))
+	if (HasChannel(AVG_SHADING_NORMAL) && hwChannelsUsed.count(AVG_SHADING_NORMAL))
 		hardwareDevice->AllocBufferRO(&hw_AVG_SHADING_NORMAL, channel_AVG_SHADING_NORMAL->GetPixels(), channel_AVG_SHADING_NORMAL->GetSize(), "AVG_SHADING_NORMAL");
 
 	const size_t mergeBufferSize = Max(
@@ -285,19 +292,19 @@ void Film::CompileHWKernels() {
 void Film::WriteAllHWBuffers() {
 	// hardwareDevice->Push/PopThreadCurrentDevice() is done by the caller
 
-	if (HasChannel(ALPHA))
+	if (HasChannel(ALPHA) && hw_ALPHA)
 		hardwareDevice->EnqueueWriteBuffer(hw_ALPHA, false,
 				channel_ALPHA->GetSize(),
 				channel_ALPHA->GetPixels());
-	if (HasChannel(OBJECT_ID))
+	if (HasChannel(OBJECT_ID) && hw_OBJECT_ID)
 		hardwareDevice->EnqueueWriteBuffer(hw_OBJECT_ID, false,
 				channel_OBJECT_ID->GetSize(),
 				channel_OBJECT_ID->GetPixels());
-	if (HasChannel(ALBEDO))
+	if (HasChannel(ALBEDO) && hw_ALBEDO)
 		hardwareDevice->EnqueueWriteBuffer(hw_ALBEDO, false,
 				channel_ALBEDO->GetSize(),
 				channel_ALBEDO->GetPixels());
-	if (HasChannel(AVG_SHADING_NORMAL))
+	if (HasChannel(AVG_SHADING_NORMAL) && hw_AVG_SHADING_NORMAL)
 		hardwareDevice->EnqueueWriteBuffer(hw_AVG_SHADING_NORMAL, false,
 				channel_AVG_SHADING_NORMAL->GetSize(),
 				channel_AVG_SHADING_NORMAL->GetPixels());

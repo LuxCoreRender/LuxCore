@@ -21,7 +21,8 @@
 
 #include <vector>
 #include <memory>
-#include <typeinfo> 
+#include <typeinfo>
+#include <unordered_set> 
 
 #include <bcd/core/SamplesAccumulator.h>
 
@@ -30,10 +31,9 @@
 #include "luxrays/core/hardwaredevice.h"
 #include "luxrays/utils/serializationutils.h"
 #include "slg/film/imagepipeline/radiancechannelscale.h"
+#include "slg/film/film.h"
 
 namespace slg {
-
-class Film;
 
 //------------------------------------------------------------------------------
 // ImagePipelinePlugin
@@ -48,6 +48,7 @@ public:
 
 	virtual bool CanUseNative() const { return true; }
 	virtual bool CanUseHW() const { return false; }
+	virtual void AddHWChannelsUsed(std::unordered_set<Film::FilmChannelType> &hwChannelsUsed) const { }
 	virtual ImagePipelinePlugin *Copy() const = 0;
 
 	virtual void Apply(Film &film, const u_int index) = 0;
@@ -79,6 +80,7 @@ public:
 	void SetRadianceChannelScale(const u_int index, const RadianceChannelScale &scale);
 	
 	bool CanUseHW() const { return canUseHW; }
+	virtual void AddHWChannelsUsed(std::unordered_set<Film::FilmChannelType> &hwChannelsUsed) const;
 	void InitHW(Film &film, const u_int index);
 
 	const std::vector<ImagePipelinePlugin *> &GetPlugins() const { return pipeline; }

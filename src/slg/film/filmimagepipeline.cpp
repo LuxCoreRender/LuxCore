@@ -24,6 +24,7 @@
 #include <boost/foreach.hpp>
 
 #include "slg/film/film.h"
+#include "slg/film/imagepipeline/imagepipeline.h"
 #include "slg/film/imagepipeline/radiancechannelscale.h"
 #include "luxrays/utils/oclerror.h"
 

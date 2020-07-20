@@ -97,8 +97,12 @@ void GammaCorrectionPlugin::Apply(Film &film, const u_int index) {
 }
 
 //------------------------------------------------------------------------------
-// OpenCL version
+// HardwareDevice version
 //------------------------------------------------------------------------------
+
+void GammaCorrectionPlugin::AddHWChannelsUsed(unordered_set<Film::FilmChannelType> &hwChannelsUsed) const {
+	hwChannelsUsed.insert(Film::IMAGEPIPELINE);
+}
 
 void GammaCorrectionPlugin::ApplyHW(Film &film, const u_int index) {
 	if (!applyKernel) {

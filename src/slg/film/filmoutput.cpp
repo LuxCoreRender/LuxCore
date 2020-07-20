@@ -32,6 +32,8 @@
 #include "luxrays/utils/fileext.h"
 #include "slg/editaction.h"
 #include "slg/film/film.h"
+#include "slg/film/imagepipeline/imagepipeline.h"
+#include "slg/film/imagepipeline/radiancechannelscale.h"
 #include "slg/film/sampleresult.h"
 
 using namespace std;

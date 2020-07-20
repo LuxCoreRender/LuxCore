@@ -4,6 +4,7 @@
 
 * Added the support for Optix/RTX acceleration
 * Added the support for Optix denoiser imagepipeline plugin
+* GPU imagepipeline now allocated buffers for only the used AOVs by each plugin
 
 ### Fixed Bugs
 

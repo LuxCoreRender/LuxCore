@@ -60,6 +60,16 @@ ImagePipelinePlugin *OptixDenoiserPlugin::Copy() const {
 	return new OptixDenoiserPlugin(sharpness);
 }
 
+void OptixDenoiserPlugin::AddHWChannelsUsed(unordered_set<Film::FilmChannelType> &hwChannelsUsed) const {
+	hwChannelsUsed.insert(Film::IMAGEPIPELINE);
+	hwChannelsUsed.insert(Film::ALBEDO);
+	hwChannelsUsed.insert(Film::AVG_SHADING_NORMAL);
+}
+
+//------------------------------------------------------------------------------
+// CUDADevice version
+//------------------------------------------------------------------------------
+
 void OptixDenoiserPlugin::ApplyHW(Film &film, const u_int index) {
 	//const double startTime = WallClockTime();
 	//SLG_LOG("[OptixDenoiserPlugin] Applying Optix denoiser");

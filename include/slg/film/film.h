@@ -27,6 +27,7 @@
 #include <iostream>
 #include <vector>
 #include <set>
+#include <unordered_set>
 
 #include <boost/thread/mutex.hpp>
 #include <bcd/core/SamplesAccumulator.h>
@@ -35,7 +36,6 @@
 #include "luxrays/utils/properties.h"
 #include "luxrays/utils/serializationutils.h"
 #include "slg/slg.h"
-#include "slg/film/imagepipeline/imagepipeline.h"
 #include "slg/film/framebuffer.h"
 #include "slg/film/filmoutputs.h"
 #include "slg/film/convtest/filmconvtest.h"
@@ -98,6 +98,7 @@ private:
 //------------------------------------------------------------------------------
 
 class SampleResult;
+class ImagePipeline;
 
 class Film {
 public:
@@ -331,30 +332,13 @@ public:
 	void GetPixelFromMergedSampleBuffers(const FilmChannelType channels,
 		const std::vector<RadianceChannelScale> *radianceChannelScales,
 		const double RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
-		const u_int x, const u_int y, float *c) const {
-		GetPixelFromMergedSampleBuffers(channels, radianceChannelScales,
-				RADIANCE_PER_SCREEN_NORMALIZED_SampleCount, x + y * width, c);
-	}
+		const u_int x, const u_int y, float *c) const;
 	void GetPixelFromMergedSampleBuffers(const u_int imagePipelineIndex,
 			const double RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
-			const u_int x, const u_int y, float *c) const {
-		const ImagePipeline *ip = (imagePipelineIndex < imagePipelines.size()) ? imagePipelines[imagePipelineIndex] : NULL;
-		const std::vector<RadianceChannelScale> *radianceChannelScales = ip ? &ip->radianceChannelScales : NULL;
-
-		GetPixelFromMergedSampleBuffers((FilmChannelType)(RADIANCE_PER_PIXEL_NORMALIZED | RADIANCE_PER_SCREEN_NORMALIZED),
-				radianceChannelScales, RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
-				x, y, c);
-	}
+			const u_int x, const u_int y, float *c) const;
 	void GetPixelFromMergedSampleBuffers(const u_int imagePipelineIndex,
 			const double RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
-			const u_int index, float *c) const {
-		const ImagePipeline *ip = (imagePipelineIndex < imagePipelines.size()) ? imagePipelines[imagePipelineIndex] : NULL;
-		const std::vector<RadianceChannelScale> *radianceChannelScales = ip ? &ip->radianceChannelScales : NULL;
-
-		GetPixelFromMergedSampleBuffers((FilmChannelType)(RADIANCE_PER_PIXEL_NORMALIZED | RADIANCE_PER_SCREEN_NORMALIZED),
-				radianceChannelScales, RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
-				index, c);
-	}
+			const u_int index, float *c) const;
 	
 	bool HasThresholdSamples(const bool has_RADIANCE_PER_PIXEL_NORMALIZEDs, const bool has_RADIANCE_PER_SCREEN_NORMALIZEDs,
 			const u_int index, const float threshold) const {

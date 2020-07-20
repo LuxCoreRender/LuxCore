@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include <boost/foreach.hpp>
+#include <unordered_set>
 
 #include "luxrays/utils/serializationutils.h"
 #include "slg/film/imagepipeline/imagepipeline.h"
@@ -106,6 +107,12 @@ void ImagePipeline::SetRadianceChannelScale(const u_int index, const RadianceCha
 
 	radianceChannelScales[index] = scale;
 	radianceChannelScales[index].Init();
+}
+
+void ImagePipeline::AddHWChannelsUsed(unordered_set<Film::FilmChannelType> &hwChannelsUsed) const {
+	BOOST_FOREACH(ImagePipelinePlugin *plugin, pipeline) {
+		plugin->AddHWChannelsUsed(hwChannelsUsed);
+	}
 }
 
 ImagePipeline *ImagePipeline::Copy() const {

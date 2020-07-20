@@ -132,8 +132,13 @@ void BackgroundImgPlugin::Apply(Film &film, const u_int index) {
 }
 
 //------------------------------------------------------------------------------
-// OpenCL version
+// HardwareDevice version
 //------------------------------------------------------------------------------
+
+void BackgroundImgPlugin::AddHWChannelsUsed(unordered_set<Film::FilmChannelType> &hwChannelsUsed) const {
+	hwChannelsUsed.insert(Film::IMAGEPIPELINE);
+	hwChannelsUsed.insert(Film::ALPHA);
+}
 
 void BackgroundImgPlugin::ApplyHW(Film &film, const u_int index) {
 	if (!film.HasChannel(Film::ALPHA)) {
