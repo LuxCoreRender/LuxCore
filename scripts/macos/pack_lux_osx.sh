@@ -36,11 +36,11 @@ install_name_tool -change @rpath/libtbbmalloc.dylib @executable_path/../Resource
 
 #libOpenImageDenoise
 
-cp -f $DEPS_SOURCE/lib/libOpenImageDenoise.1.2.0.dylib LuxCore.app/Contents/Resources/libs/libOpenImageDenoise.1.2.0.dylib
-chmod +w LuxCore.app/Contents/Resources/libs/libOpenImageDenoise.1.2.0.dylib
-install_name_tool -id @executable_path/../Resources/libs/libOpenImageDenoise.1.2.0.dylib LuxCore.app/Contents/Resources/libs/libOpenImageDenoise.1.2.0.dylib
-install_name_tool -change @rpath/libtbb.dylib @executable_path/../Resources/libs/libtbb.dylib LuxCore.app/Contents/Resources/libs/libOpenImageDenoise.1.2.0.dylib
-install_name_tool -change @rpath/libtbbmalloc.dylib @executable_path/../Resources/libs/libtbbmalloc.dylib LuxCore.app/Contents/Resources/libs/libOpenImageDenoise.1.2.0.dylib
+cp -f $DEPS_SOURCE/lib/libOpenImageDenoise.1.2.1.dylib LuxCore.app/Contents/Resources/libs/libOpenImageDenoise.1.2.1.dylib
+chmod +w LuxCore.app/Contents/Resources/libs/libOpenImageDenoise.1.2.1.dylib
+install_name_tool -id @executable_path/../Resources/libs/libOpenImageDenoise.1.2.1.dylib LuxCore.app/Contents/Resources/libs/libOpenImageDenoise.1.2.1.dylib
+install_name_tool -change @rpath/libtbb.dylib @executable_path/../Resources/libs/libtbb.dylib LuxCore.app/Contents/Resources/libs/libOpenImageDenoise.1.2.1.dylib
+install_name_tool -change @rpath/libtbbmalloc.dylib @executable_path/../Resources/libs/libtbbmalloc.dylib LuxCore.app/Contents/Resources/libs/libOpenImageDenoise.1.2.1.dylib
 
 #libtbb
 
@@ -80,7 +80,7 @@ install_name_tool -change @rpath/libtbb.dylib @executable_path/../Resources/libs
 install_name_tool -change @rpath/libOpenImageIO.1.8.dylib @executable_path/../Resources/libs/libOpenImageIO.1.8.dylib LuxCore.app/Contents/MacOS/luxcoreui
 install_name_tool -change @rpath/libtbbmalloc.dylib @executable_path/../Resources/libs/libtbbmalloc.dylib LuxCore.app/Contents/MacOS/luxcoreui
 install_name_tool -change @rpath/libtiff.5.dylib @executable_path/../Resources/libs/libtiff.5.dylib LuxCore.app/Contents/MacOS/luxcoreui
-install_name_tool -change @rpath/libOpenImageDenoise.0.dylib @executable_path/../Resources/libs/libOpenImageDenoise.1.2.0.dylib LuxCore.app/Contents/MacOS/luxcoreui
+install_name_tool -change @rpath/libOpenImageDenoise.0.dylib @executable_path/../Resources/libs/libOpenImageDenoise.1.2.1.dylib LuxCore.app/Contents/MacOS/luxcoreui
 
 echo "LuxCoreUi installed"
 
@@ -96,7 +96,7 @@ install_name_tool -change @rpath/libtbb.dylib @executable_path/../Resources/libs
 install_name_tool -change @rpath/libOpenImageIO.1.8.dylib @executable_path/../Resources/libs/libOpenImageIO.1.8.dylib ./LuxCore.app/Contents/MacOS/luxcoreconsole
 install_name_tool -change @rpath/libtbbmalloc.dylib @executable_path/../Resources/libs/libtbbmalloc.dylib ./LuxCore.app/Contents/MacOS/luxcoreconsole
 install_name_tool -change @rpath/libtiff.5.dylib @executable_path/../Resources/libs/libtiff.5.dylib ./LuxCore.app/Contents/MacOS/luxcoreconsole
-install_name_tool -change @rpath/libOpenImageDenoise.0.dylib @executable_path/../Resources/libs/libOpenImageDenoise.1.2.0.dylib ./LuxCore.app/Contents/MacOS/luxcoreconsole
+install_name_tool -change @rpath/libOpenImageDenoise.0.dylib @executable_path/../Resources/libs/libOpenImageDenoise.1.2.1.dylib ./LuxCore.app/Contents/MacOS/luxcoreconsole
 
 echo "LuxCoreConsole installed"
 
@@ -146,11 +146,11 @@ install_name_tool -id @loader_path/libtbbmalloc.dylib ./libtbbmalloc.dylib
 
 #libOpenImageDenoise
 
-cp -f $DEPS_SOURCE/lib/libOpenImageDenoise.1.2.0.dylib ./libOpenImageDenoise.1.2.0.dylib
-chmod +w ./libOpenImageDenoise.1.2.0.dylib
-install_name_tool -id @loader_path/libOpenImageDenoise.1.2.0.dylib ./libOpenImageDenoise.1.2.0.dylib
-install_name_tool -change @rpath/libtbb.dylib @loader_path/libtbb.dylib ./libOpenImageDenoise.1.2.0.dylib
-install_name_tool -change @rpath/libtbbmalloc.dylib @loader_path/libtbbmalloc.dylib ./libOpenImageDenoise.1.2.0.dylib
+cp -f $DEPS_SOURCE/lib/libOpenImageDenoise.1.2.1.dylib ./libOpenImageDenoise.1.2.1.dylib
+chmod +w ./libOpenImageDenoise.1.2.1.dylib
+install_name_tool -id @loader_path/libOpenImageDenoise.1.2.1.dylib ./libOpenImageDenoise.1.2.1.dylib
+install_name_tool -change @rpath/libtbb.dylib @loader_path/libtbb.dylib ./libOpenImageDenoise.1.2.1.dylib
+install_name_tool -change @rpath/libtbbmalloc.dylib @loader_path/libtbbmalloc.dylib ./libOpenImageDenoise.1.2.1.dylib
 
 #cuda
 
@@ -165,22 +165,22 @@ install_name_tool -change @rpath/libtbb.dylib @loader_path/libtbb.dylib pyluxcor
 install_name_tool -change @rpath/libtiff.5.dylib @loader_path/libtiff.5.dylib pyluxcore.so
 install_name_tool -change @rpath/libOpenImageIO.1.8.dylib @loader_path/libOpenImageIO.1.8.dylib pyluxcore.so
 install_name_tool -change @rpath/libtbbmalloc.dylib @loader_path/libtbbmalloc.dylib pyluxcore.so
-install_name_tool -change @rpath/libOpenImageDenoise.0.dylib @loader_path/libOpenImagedenoise.1.2.0.dylib pyluxcore.so
+install_name_tool -change @rpath/libOpenImageDenoise.0.dylib @loader_path/libOpenImageDenoise.1.2.1.dylib pyluxcore.so
 
 echo "PyLuxCore installed"
 
-### denoise
+### oidnDenoise
 
-#denoise
-cp ../../macos/bin/denoise .
-chmod +w ./denoise
-install_name_tool -id @executable_path/denoise ./denoise
-install_name_tool -change @rpath/libOpenImageDenoise.0.dylib @executable_path/libOpenImageDenoise.1.2.0.dylib denoise
-install_name_tool -change @rpath/libOpenImageDenoise.1.2.0.dylib @executable_path/libOpenImageDenoise.1.2.0.dylib denoise
-install_name_tool -change @rpath/libtbb.dylib @executable_path/libtbb.dylib denoise
-install_name_tool -change @rpath/libtbbmalloc.dylib @executable_path/libtbbmalloc.dylib denoise
+#oidnDenoise
+cp ../../macos/bin/oidnDenoise .
+chmod +w ./oidnDenoise
+install_name_tool -id @executable_path/oidnDenoise ./oidnDenoise
+install_name_tool -change @rpath/libOpenImageDenoise.0.dylib @executable_path/libOpenImageDenoise.1.2.1.dylib oidnDenoise
+install_name_tool -change @rpath/libOpenImageDenoise.1.2.1.dylib @executable_path/libOpenImageDenoise.1.2.1.dylib oidnDenoise
+install_name_tool -change @rpath/libtbb.dylib @executable_path/libtbb.dylib oidnDenoise
+install_name_tool -change @rpath/libtbbmalloc.dylib @executable_path/libtbbmalloc.dylib oidnDenoise
 
-echo "Denoise installed"
+echo "oidnDenoise installed"
 
 cd ../..
 
