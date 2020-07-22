@@ -766,9 +766,24 @@ void Film::Parse(const Properties &props) {
 	if (props.IsDefined("batch.halttime"))
 		haltTime = Max(0.0, props.Get(Property("batch.halttime")(0.0)).Get<double>());
 
-	if (props.IsDefined("batch.haltspp"))
-		haltSPP = Max(0u, props.Get(Property("batch.haltspp")(0u)).Get<u_int>());
-
+	if (props.IsDefined("batch.haltspp")) {
+		const Property &haltProp = props.Get(Property("batch.haltspp")(0u));
+		switch (haltProp.GetSize()) {
+			case 1:
+				haltSPP = haltProp.Get<u_int>();
+				haltSPP_PixelNormalized = 0;
+				haltSPP_ScreenNormalized = 0;
+				break;
+			case 2:
+				haltSPP = 0;
+				haltSPP_PixelNormalized = haltProp.Get<u_int>(0);
+				haltSPP_ScreenNormalized = haltProp.Get<u_int>(1);
+				break;
+			default:
+				throw runtime_error("Wrong number of arguments in batch.haltspp property: " + ToString(haltProp.GetSize()));
+		}
+		
+	}
 
 	//--------------------------------------------------------------------------
 	// Check if there is adaptive sampling

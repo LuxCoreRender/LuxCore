@@ -498,7 +498,7 @@ private:
 	// Halt conditions
 	FilmConvTest *convTest;
 	double haltTime;
-	u_int haltSPP;
+	u_int haltSPP, haltSPP_PixelNormalized, haltSPP_ScreenNormalized;
 	
 	float haltNoiseThreshold;
 	u_int haltNoiseThresholdWarmUp, haltNoiseThresholdTestStep, haltNoiseThresholdImagePipelineIndex;
@@ -525,7 +525,7 @@ template<> void Film::GetOutput<u_int>(const FilmOutputs::FilmOutputType type, u
 
 }
 
-BOOST_CLASS_VERSION(slg::Film, 25)
+BOOST_CLASS_VERSION(slg::Film, 26)
 
 BOOST_CLASS_EXPORT_KEY(slg::Film)
 

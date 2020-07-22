@@ -5,6 +5,7 @@
 * Added the support for Optix/RTX acceleration
 * Added the support for Optix denoiser imagepipeline plugin
 * GPU imagepipeline now allocated buffers for only the used AOVs by each plugin
+* batch.haltspp now supports 2 parameters too in order to have separate halt conditions for eye and light tracing
 
 ### Fixed Bugs
 
