@@ -34,16 +34,18 @@ using namespace slg;
 PerspectiveCamera::PerspectiveCamera(const Point &o, const Point &t,
 		const Vector &u, const float *region) :
 		ProjectiveCamera(PERSPECTIVE, region, o, t, u),
-		screenOffsetX(0.f), screenOffsetY(0.f),
-		fieldOfView(45.f), enableOculusRiftBarrel(false) {
+		screenOffsetX(0.f), screenOffsetY(0.f), fieldOfView(45.f),
+		bokehBlades(0), bokehPower(0), bokehDistribution(DIST_EXPONETIAL),
+		enableOculusRiftBarrel(false) {
 }
 
 PerspectiveCamera::PerspectiveCamera(const CameraType camType,
 		const Point &o, const Point &t,
 		const Vector &u, const float *region) :
 		ProjectiveCamera(camType, region, o, t, u),
-		screenOffsetX(0.f), screenOffsetY(0.f),
-		fieldOfView(45.f), enableOculusRiftBarrel(false) {
+		screenOffsetX(0.f), screenOffsetY(0.f), fieldOfView(45.f),
+		bokehBlades(0), bokehPower(0), bokehDistribution(DIST_EXPONETIAL),
+		enableOculusRiftBarrel(false) {
 }
 
 void PerspectiveCamera::InitCameraTransforms(CameraTransforms *trans) {
@@ -137,15 +139,66 @@ bool PerspectiveCamera::GetSamplePosition(Ray *ray, float *x, float *y) const {
 	}
 }
 
-bool PerspectiveCamera::SampleLens(const float time,
+bool PerspectiveCamera::LocalSampleLens(const float time,
 		const float u1, const float u2,
 		Point *lensp) const {
 	Point lensPoint(0.f, 0.f, 0.f);
 	if (lensRadius > 0.f) {
-		ConcentricSampleDisk(u1, u2, &lensPoint.x, &lensPoint.y);
+		if (bokehBlades < 3)
+			ConcentricSampleDisk(u1, u2, &lensPoint.x, &lensPoint.y);
+		else {
+			// Bokeh support
+			const float halfAngle = M_PI / bokehBlades;
+			const float honeyRadius = cosf(halfAngle);
+
+			const float theta = 2.f * M_PI * u2;
+
+			const u_int sector = Floor2UInt(theta / halfAngle);
+			const float rho = (sector % 2 == 0) ? (theta - sector * halfAngle) :
+					((sector + 1) * halfAngle - theta);
+
+			float r = honeyRadius / cosf(rho);
+			switch (bokehDistribution) {
+				case DIST_UNIFORM:
+					r *= sqrtf(u1);
+					break;
+				case DIST_EXPONETIAL:
+					r *= sqrtf(ExponentialSampleDisk(u1, bokehPower));
+					break;
+				case DIST_INVERSEEXPONETIAL:
+					r *= sqrtf(InverseExponentialSampleDisk(u1, bokehPower));
+					break;
+				case DIST_GAUSSIAN:
+					r *= sqrtf(GaussianSampleDisk(u1));
+					break;
+				case DIST_INVERSEGAUSSIAN:
+					r *= sqrtf(InverseGaussianSampleDisk(u1));
+					break;
+				case DIST_TRIANGULAR:
+					r *= sqrtf(TriangularSampleDisk(u1));
+					break;
+				default:
+					throw runtime_error("Unknown bokeh distribution in PerspectiveCamera::LocalSampleLens(): " + ToString(bokehDistribution));
+			}
+
+			lensPoint.x = r * cosf(theta);
+			lensPoint.y = r * sinf(theta);
+		}
+
 		lensPoint.x *= lensRadius;
 		lensPoint.y *= lensRadius;
 	}
+
+	*lensp = lensPoint;
+
+	return true;
+}
+
+bool PerspectiveCamera::SampleLens(const float time,
+		const float u1, const float u2,
+		Point *lensp) const {
+	Point lensPoint(0.f, 0.f, 0.f);
+	LocalSampleLens(time, u1, u2, &lensPoint);
 
 	if (motionSystem)
 		*lensp = motionSystem->Sample(time) * (camTrans.cameraToWorld * lensPoint);
@@ -184,10 +237,49 @@ Properties PerspectiveCamera::ToProperties() const {
 	props.Set(Property("scene.camera.type")("perspective"));
 	props.Set(Property("scene.camera.oculusrift.barrelpostpro.enable")(enableOculusRiftBarrel));
 	props.Set(Property("scene.camera.fieldofview")(fieldOfView));
+	props.Set(Property("scene.camera.bokeh.blades")(bokehBlades));
+	props.Set(Property("scene.camera.bokeh.power")(bokehPower));
+	props.Set(Property("scene.camera.bokeh.distribution.type")(BokehDistributionType2String(bokehDistribution)));
 
 	return props;
 }
 
+PerspectiveCamera::BokehDistributionType PerspectiveCamera::String2BokehDistributionType(string type) {
+	if (type == "UNIFORM")
+		return DIST_UNIFORM;
+	else if (type == "EXPONETIAL")
+		return DIST_EXPONETIAL;
+	else if (type == "INVERSEEXPONETIAL")
+		return DIST_INVERSEEXPONETIAL;
+	else if (type == "GAUSSIAN")
+		return DIST_GAUSSIAN;
+	else if (type == "INVERSEGAUSSIAN")
+		return DIST_INVERSEGAUSSIAN;
+	else if (type == "TRIANGULAR")
+		return DIST_TRIANGULAR;
+	else
+		throw runtime_error("Unknown bokeh distribution type: " + type);
+}
+
+string PerspectiveCamera::BokehDistributionType2String(const BokehDistributionType type) {
+	switch (type) {
+		case DIST_UNIFORM:
+			return "UNIFORM";
+		case DIST_EXPONETIAL:
+			return "EXPONETIAL";
+		case DIST_INVERSEEXPONETIAL:
+			return "INVERSEEXPONETIAL";
+		case DIST_GAUSSIAN:
+			return "GAUSSIAN";
+		case DIST_INVERSEGAUSSIAN:
+			return "INVERSEGAUSSIAN";
+		case DIST_TRIANGULAR:
+			return "TRIANGULAR";
+		default:
+			throw runtime_error("Unsupported bokeh distribution type in PerspectiveCamera::String2BokehDistributionType(): " + ToString(type));
+	}
+}
+	
 //------------------------------------------------------------------------------
 // Oculus Rift post-processing pixel shader
 //------------------------------------------------------------------------------

@@ -165,10 +165,8 @@ void ProjectiveCamera::GenerateRay(const float  time,
 	// Modify ray for depth of field
 	if ((lensRadius > 0.f) && (focalDistance > 0.f)) {
 		// Sample point on lens
-		float lensU, lensV;
-		ConcentricSampleDisk(u0, u1, &lensU, &lensV);
-		lensU *= lensRadius;
-		lensV *= lensRadius;
+		Point lensPoint;
+		LocalSampleLens(time, u0, u1, &lensPoint);
 
 		// Compute point on plane of focus
 		const float dist = focalDistance - clipHither;
@@ -178,8 +176,8 @@ void ProjectiveCamera::GenerateRay(const float  time,
 		Point Pfocus = (*ray)(ft);
 		// Update ray for effect of lens
 		const float k = dist / focalDistance;
-		ray->o.x += lensU * k;
-		ray->o.y += lensV * k;
+		ray->o.x += lensPoint.x * k;
+		ray->o.y += lensPoint.y * k;
 		ray->d = Pfocus - ray->o;
 	}
 

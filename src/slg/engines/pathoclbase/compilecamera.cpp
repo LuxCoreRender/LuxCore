@@ -117,6 +117,31 @@ void CompiledScene::CompileCamera() {
 				ASSIGN_VECTOR(camera.persp.projCamera.clippingPlaneNormal, perspCamera->clippingPlaneNormal);
 			} else
 				camera.persp.projCamera.enableClippingPlane = false;
+
+			camera.persp.bokehBlades = perspCamera->bokehBlades;
+			camera.persp.bokehPower = perspCamera->bokehPower;
+			switch (perspCamera->bokehDistribution) {
+				case PerspectiveCamera::DIST_UNIFORM:
+					camera.persp.bokehDistribution = slg::ocl::DIST_UNIFORM;
+					break;
+				case PerspectiveCamera::DIST_EXPONETIAL:
+					camera.persp.bokehDistribution = slg::ocl::DIST_EXPONETIAL;
+					break;
+				case PerspectiveCamera::DIST_INVERSEEXPONETIAL:
+					camera.persp.bokehDistribution = slg::ocl::DIST_INVERSEEXPONETIAL;
+					break;
+				case PerspectiveCamera::DIST_GAUSSIAN:
+					camera.persp.bokehDistribution = slg::ocl::DIST_GAUSSIAN;
+					break;
+				case PerspectiveCamera::DIST_INVERSEGAUSSIAN:
+					camera.persp.bokehDistribution = slg::ocl::DIST_INVERSEGAUSSIAN;
+					break;
+				case PerspectiveCamera::DIST_TRIANGULAR:
+					camera.persp.bokehDistribution = slg::ocl::DIST_TRIANGULAR;
+					break;
+				default:
+					throw runtime_error("Unknown bokeh distribution type in CompiledScene::CompileCamera(): " + ToString(perspCamera->bokehDistribution));
+			}
 			break;
 		}
 		case Camera::STEREO: {

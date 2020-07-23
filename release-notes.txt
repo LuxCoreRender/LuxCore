@@ -6,6 +6,7 @@
 * Added the support for Optix denoiser imagepipeline plugin
 * GPU imagepipeline now allocated buffers for only the used AOVs by each plugin
 * batch.haltspp now supports 2 parameters too in order to have separate halt conditions for eye and light tracing
+* Added the support for camera not uniform bokeh (issue #409)
 
 ### Fixed Bugs
 

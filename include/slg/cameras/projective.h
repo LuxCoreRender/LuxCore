@@ -92,6 +92,9 @@ public:
 	virtual void Update(const u_int filmWidth, const u_int filmHeight,
 		const u_int *filmSubRegion);
 
+	virtual bool LocalSampleLens(const float time, const float u1, const float u2,
+		luxrays::Point *lensPoint) const = 0;
+
 	// Rendering methods
 	virtual void GenerateRay(const float time,
 		const float filmX, const float filmY,
