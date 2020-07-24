@@ -33,11 +33,12 @@ using namespace slg;
 
 PathCPURenderEngine::PathCPURenderEngine(const RenderConfig *rcfg) :
 		CPUNoTileRenderEngine(rcfg), photonGICache(nullptr),
-		lightSamplerSharedData(nullptr) {
+		lightSampleSplatter(nullptr), lightSamplerSharedData(nullptr) {
 }
 
 PathCPURenderEngine::~PathCPURenderEngine() {
 	delete photonGICache;
+	delete lightSampleSplatter;
 	delete lightSamplerSharedData;
 }
 
@@ -137,6 +138,11 @@ void PathCPURenderEngine::StartLockLess() {
 		lightSamplerSharedData = MetropolisSamplerSharedData::FromProperties(Properties(), &seedBaseGenerator, film);
 
 	pathTracer.InitPixelFilterDistribution(pixelFilter);
+
+	delete lightSampleSplatter;
+	if (pathTracer.hybridBackForwardEnable)
+		lightSampleSplatter = new FilmSampleSplatter(pixelFilter);
+
 	pathTracer.SetPhotonGICache(photonGICache);
 	
 	//--------------------------------------------------------------------------
@@ -148,6 +154,8 @@ void PathCPURenderEngine::StopLockLess() {
 	CPUNoTileRenderEngine::StopLockLess();
 
 	pathTracer.DeletePixelFilterDistribution();
+	delete lightSampleSplatter;
+	lightSampleSplatter = NULL;
 
 	delete lightSamplerSharedData;
 	lightSamplerSharedData = nullptr;

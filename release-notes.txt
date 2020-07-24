@@ -10,6 +10,8 @@
 
 ### Fixed Bugs
 
+* Added the support for pixel filtering to light tracing (issue #413)
+
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
 

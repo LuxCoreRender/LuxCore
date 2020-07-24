@@ -58,12 +58,14 @@ using namespace slg;
 
 PathOCLRenderEngine::PathOCLRenderEngine(const RenderConfig *rcfg) :
 		PathOCLBaseRenderEngine(rcfg, true) {
+	lightSampleSplatter = nullptr; 
 	eyeSamplerSharedData = nullptr;
 	lightSamplerSharedData = nullptr;
 	hasStartFilm = false;
 }
 
 PathOCLRenderEngine::~PathOCLRenderEngine() {
+	delete lightSampleSplatter;
 	delete eyeSamplerSharedData;
 	delete lightSamplerSharedData;
 }
@@ -151,6 +153,10 @@ void PathOCLRenderEngine::StartLockLess() {
 	// Initialize the PathTracer class
 	pathTracer.InitPixelFilterDistribution(pixelFilter);
 
+	delete lightSampleSplatter;
+	if (pathTracer.hybridBackForwardEnable)
+		lightSampleSplatter = new FilmSampleSplatter(pixelFilter);
+
 	PathOCLBaseRenderEngine::StartLockLess();
 }
 
@@ -158,6 +164,8 @@ void PathOCLRenderEngine::StopLockLess() {
 	PathOCLBaseRenderEngine::StopLockLess();
 
 	pathTracer.DeletePixelFilterDistribution();
+	delete lightSampleSplatter;
+	lightSampleSplatter = NULL;
 
 	delete eyeSamplerSharedData;
 	eyeSamplerSharedData = nullptr;
