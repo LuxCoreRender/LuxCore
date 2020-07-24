@@ -15,6 +15,9 @@ trigger:
   branches:
     include:
     - '*'
+  tags:
+    include:
+    - 'luxcorerender_v*'
 
 
 jobs:
