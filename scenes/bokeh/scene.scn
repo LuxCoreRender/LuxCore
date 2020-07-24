@@ -15,9 +15,20 @@ scene.camera.type = "perspective"
 scene.camera.oculusrift.barrelpostpro.enable = 0
 scene.camera.fieldofview = 90
 ##
-scene.camera.bokeh.blades = 8
-scene.camera.bokeh.power = 0
-scene.camera.bokeh.distribution.type = EXPONENTIAL
+# Number of camera blades (must be > 3 to enable bokeh)
+#scene.camera.bokeh.blades = 6
+# UNIFORM, EXPONENTIAL, INVERSEEXPONENTIAL, GAUSSIAN, INVERSEGAUSSIAN or TRIANGULAR
+#scene.camera.bokeh.distribution.type = EXPONENTIAL
+# Distribution power, 0 or more, affects only EXPONENTIAL and INVERSEEEXPONENTIAL distributions
+#scene.camera.bokeh.power = 0
+# For anamorphic bokeh, the scale vector is normalized (so the length doesn't matter
+#scene.camera.bokeh.scale.x = 1
+#scene.camera.bokeh.scale.y = 1
+##
+scene.camera.bokeh.blades = 64
+scene.camera.bokeh.distribution.type = UNIFORM
+scene.camera.bokeh.scale.x = 1
+scene.camera.bokeh.scale.y = 3
 ##
 scene.lights.__WORLD_BACKGROUND_LIGHT__.gain = 1.99999995e-05 1.99999995e-05 1.99999995e-05
 scene.lights.__WORLD_BACKGROUND_LIGHT__.transformation = 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1

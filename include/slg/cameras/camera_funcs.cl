@@ -149,8 +149,8 @@ OPENCL_FORCE_INLINE float3 PerspectiveCamera_LocalSampleLens(
 					break;
 			}
 
-			lensPoint.x = r * cosf(theta);
-			lensPoint.y = r * sinf(theta);
+			lensPoint.x = r * cosf(theta) * camera->persp.bokehScaleX;
+			lensPoint.y = r * sinf(theta) * camera->persp.bokehScaleY;
 		}
 
 		const float lensRadius = camera->persp.projCamera.lensRadius;

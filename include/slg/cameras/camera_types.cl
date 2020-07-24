@@ -66,6 +66,7 @@ typedef struct {
 
 	unsigned int bokehBlades, bokehPower;
 	BokehDistributionType bokehDistribution;
+	float bokehScaleX, bokehScaleY;
 
 	int enableOculusRiftBarrel;
 } PerspectiveCamera;

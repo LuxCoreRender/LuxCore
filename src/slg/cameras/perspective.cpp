@@ -36,6 +36,7 @@ PerspectiveCamera::PerspectiveCamera(const Point &o, const Point &t,
 		ProjectiveCamera(PERSPECTIVE, region, o, t, u),
 		screenOffsetX(0.f), screenOffsetY(0.f), fieldOfView(45.f),
 		bokehBlades(0), bokehPower(0), bokehDistribution(DIST_EXPONENTIAL),
+		bokehScaleX(1.f), bokehScaleY(1.f),
 		enableOculusRiftBarrel(false) {
 }
 
@@ -45,6 +46,7 @@ PerspectiveCamera::PerspectiveCamera(const CameraType camType,
 		ProjectiveCamera(camType, region, o, t, u),
 		screenOffsetX(0.f), screenOffsetY(0.f), fieldOfView(45.f),
 		bokehBlades(0), bokehPower(0), bokehDistribution(DIST_EXPONENTIAL),
+		bokehScaleX(1.f), bokehScaleY(1.f),
 		enableOculusRiftBarrel(false) {
 }
 
@@ -74,6 +76,10 @@ void PerspectiveCamera::InitCameraData() {
 	const float xPixelWidth = tanAngle * ((screenWindow[1] - screenWindow[0]) / 2.f);
 	const float yPixelHeight = tanAngle * ((screenWindow[3] - screenWindow[2]) / 2.f);
 	pixelArea = xPixelWidth * yPixelHeight;
+
+	const float s = 1.f / sqrtf(Sqr(bokehScaleX) + Sqr(bokehScaleY));
+	bokehScaleX *= s;
+	bokehScaleY *= s;
 }
 
 void PerspectiveCamera::InitRay(Ray *ray, const float filmX, const float filmY) const {
@@ -181,8 +187,8 @@ bool PerspectiveCamera::LocalSampleLens(const float time,
 					throw runtime_error("Unknown bokeh distribution in PerspectiveCamera::LocalSampleLens(): " + ToString(bokehDistribution));
 			}
 
-			lensPoint.x = r * cosf(theta);
-			lensPoint.y = r * sinf(theta);
+			lensPoint.x = r * cosf(theta) * bokehScaleX;
+			lensPoint.y = r * sinf(theta) * bokehScaleY;
 		}
 
 		lensPoint.x *= lensRadius;
@@ -240,6 +246,8 @@ Properties PerspectiveCamera::ToProperties() const {
 	props.Set(Property("scene.camera.bokeh.blades")(bokehBlades));
 	props.Set(Property("scene.camera.bokeh.power")(bokehPower));
 	props.Set(Property("scene.camera.bokeh.distribution.type")(BokehDistributionType2String(bokehDistribution)));
+	props.Set(Property("scene.camera.bokeh.scale.x")(bokehScaleX));
+	props.Set(Property("scene.camera.bokeh.scale.y")(bokehScaleY));
 
 	return props;
 }

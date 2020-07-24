@@ -117,6 +117,8 @@ Camera *Scene::CreateCamera(const Properties &props) {
 			perspCamera->bokehPower = props.Get(Property("scene.camera.bokeh.power")(3u)).Get<u_int>();
 			perspCamera->bokehDistribution = PerspectiveCamera::String2BokehDistributionType(
 					props.Get(Property("scene.camera.bokeh.distribution.type")("UNIFORM")).Get<string>());
+			perspCamera->bokehScaleX = props.Get(Property("scene.camera.bokeh.scale.x")(1.f)).Get<float>();
+			perspCamera->bokehScaleY = props.Get(Property("scene.camera.bokeh.scale.y")(1.f)).Get<float>();
 
 			perspCamera->enableOculusRiftBarrel = props.Get(Property("scene.camera.oculusrift.barrelpostpro.enable")(false)).Get<bool>();
 		} else if (type == "stereo")  {

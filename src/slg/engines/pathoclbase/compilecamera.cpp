@@ -142,6 +142,8 @@ void CompiledScene::CompileCamera() {
 				default:
 					throw runtime_error("Unknown bokeh distribution type in CompiledScene::CompileCamera(): " + ToString(perspCamera->bokehDistribution));
 			}
+			camera.persp.bokehScaleX = perspCamera->bokehScaleX;
+			camera.persp.bokehScaleY = perspCamera->bokehScaleY;
 			break;
 		}
 		case Camera::STEREO: {

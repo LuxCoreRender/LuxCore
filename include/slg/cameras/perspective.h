@@ -64,6 +64,7 @@ public:
 
 	u_int bokehBlades, bokehPower;
 	BokehDistributionType bokehDistribution;
+	float bokehScaleX, bokehScaleY;
 
 	bool enableOculusRiftBarrel;
 
