@@ -35,7 +35,7 @@ PerspectiveCamera::PerspectiveCamera(const Point &o, const Point &t,
 		const Vector &u, const float *region) :
 		ProjectiveCamera(PERSPECTIVE, region, o, t, u),
 		screenOffsetX(0.f), screenOffsetY(0.f), fieldOfView(45.f),
-		bokehBlades(0), bokehPower(0), bokehDistribution(DIST_EXPONETIAL),
+		bokehBlades(0), bokehPower(0), bokehDistribution(DIST_EXPONENTIAL),
 		enableOculusRiftBarrel(false) {
 }
 
@@ -44,7 +44,7 @@ PerspectiveCamera::PerspectiveCamera(const CameraType camType,
 		const Vector &u, const float *region) :
 		ProjectiveCamera(camType, region, o, t, u),
 		screenOffsetX(0.f), screenOffsetY(0.f), fieldOfView(45.f),
-		bokehBlades(0), bokehPower(0), bokehDistribution(DIST_EXPONETIAL),
+		bokehBlades(0), bokehPower(0), bokehDistribution(DIST_EXPONENTIAL),
 		enableOculusRiftBarrel(false) {
 }
 
@@ -162,10 +162,10 @@ bool PerspectiveCamera::LocalSampleLens(const float time,
 				case DIST_UNIFORM:
 					r *= sqrtf(u1);
 					break;
-				case DIST_EXPONETIAL:
+				case DIST_EXPONENTIAL:
 					r *= sqrtf(ExponentialSampleDisk(u1, bokehPower));
 					break;
-				case DIST_INVERSEEXPONETIAL:
+				case DIST_INVERSEEXPONENTIAL:
 					r *= sqrtf(InverseExponentialSampleDisk(u1, bokehPower));
 					break;
 				case DIST_GAUSSIAN:
@@ -247,10 +247,10 @@ Properties PerspectiveCamera::ToProperties() const {
 PerspectiveCamera::BokehDistributionType PerspectiveCamera::String2BokehDistributionType(string type) {
 	if (type == "UNIFORM")
 		return DIST_UNIFORM;
-	else if (type == "EXPONETIAL")
-		return DIST_EXPONETIAL;
-	else if (type == "INVERSEEXPONETIAL")
-		return DIST_INVERSEEXPONETIAL;
+	else if (type == "EXPONENTIAL")
+		return DIST_EXPONENTIAL;
+	else if (type == "INVERSEEXPONENTIAL")
+		return DIST_INVERSEEXPONENTIAL;
 	else if (type == "GAUSSIAN")
 		return DIST_GAUSSIAN;
 	else if (type == "INVERSEGAUSSIAN")
@@ -265,10 +265,10 @@ string PerspectiveCamera::BokehDistributionType2String(const BokehDistributionTy
 	switch (type) {
 		case DIST_UNIFORM:
 			return "UNIFORM";
-		case DIST_EXPONETIAL:
-			return "EXPONETIAL";
-		case DIST_INVERSEEXPONETIAL:
-			return "INVERSEEXPONETIAL";
+		case DIST_EXPONENTIAL:
+			return "EXPONENTIAL";
+		case DIST_INVERSEEXPONENTIAL:
+			return "INVERSEEXPONENTIAL";
 		case DIST_GAUSSIAN:
 			return "GAUSSIAN";
 		case DIST_INVERSEGAUSSIAN:

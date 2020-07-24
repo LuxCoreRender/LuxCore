@@ -17,7 +17,7 @@ scene.camera.fieldofview = 90
 ##
 scene.camera.bokeh.blades = 8
 scene.camera.bokeh.power = 0
-scene.camera.bokeh.distribution.type = EXPONETIAL
+scene.camera.bokeh.distribution.type = EXPONENTIAL
 ##
 scene.lights.__WORLD_BACKGROUND_LIGHT__.gain = 1.99999995e-05 1.99999995e-05 1.99999995e-05
 scene.lights.__WORLD_BACKGROUND_LIGHT__.transformation = 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1

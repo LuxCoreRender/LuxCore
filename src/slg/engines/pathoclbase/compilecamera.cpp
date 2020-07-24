@@ -124,11 +124,11 @@ void CompiledScene::CompileCamera() {
 				case PerspectiveCamera::DIST_UNIFORM:
 					camera.persp.bokehDistribution = slg::ocl::DIST_UNIFORM;
 					break;
-				case PerspectiveCamera::DIST_EXPONETIAL:
-					camera.persp.bokehDistribution = slg::ocl::DIST_EXPONETIAL;
+				case PerspectiveCamera::DIST_EXPONENTIAL:
+					camera.persp.bokehDistribution = slg::ocl::DIST_EXPONENTIAL;
 					break;
-				case PerspectiveCamera::DIST_INVERSEEXPONETIAL:
-					camera.persp.bokehDistribution = slg::ocl::DIST_INVERSEEXPONETIAL;
+				case PerspectiveCamera::DIST_INVERSEEXPONENTIAL:
+					camera.persp.bokehDistribution = slg::ocl::DIST_INVERSEEXPONENTIAL;
 					break;
 				case PerspectiveCamera::DIST_GAUSSIAN:
 					camera.persp.bokehDistribution = slg::ocl::DIST_GAUSSIAN;

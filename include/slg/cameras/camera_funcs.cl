@@ -129,10 +129,10 @@ OPENCL_FORCE_INLINE float3 PerspectiveCamera_LocalSampleLens(
 				case DIST_UNIFORM:
 					r *= sqrtf(u1);
 					break;
-				case DIST_EXPONETIAL:
+				case DIST_EXPONENTIAL:
 					r *= sqrtf(ExponentialSampleDisk(u1, camera->persp.bokehPower));
 					break;
-				case DIST_INVERSEEXPONETIAL:
+				case DIST_INVERSEEXPONENTIAL:
 					r *= sqrtf(InverseExponentialSampleDisk(u1, camera->persp.bokehPower));
 					break;
 				case DIST_GAUSSIAN:
