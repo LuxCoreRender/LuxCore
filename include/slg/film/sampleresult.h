@@ -57,7 +57,14 @@ public:
 		const luxrays::Spectrum &pathThroughput, const luxrays::Spectrum &incomingRadiance,
 		const float lightScale);
 
-	void ClampRadiance(const float minRadiance, const float maxRadiance);
+	void ClampRadiance(const u_int index, const float minRadiance, const float maxRadiance) {
+		radiance[index] = radiance[index].ScaledClamp(minRadiance, maxRadiance);
+	}
+
+	void ClampRadiance(const float minRadiance, const float maxRadiance) {
+		for (u_int i = 0; i < radiance.Size(); ++i)
+			ClampRadiance(i, minRadiance, maxRadiance);
+	}
 
 	bool IsValid() const;
 

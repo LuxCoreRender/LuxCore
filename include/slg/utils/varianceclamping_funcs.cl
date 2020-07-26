@@ -39,14 +39,16 @@ OPENCL_FORCE_INLINE void VarianceClamping_Clamp(
 	const uint index1 = x + y * filmWidth;
 	const uint index4 = index1 * 4;
 
-	float3 expectedValue = BLACK;
-	for (uint i = 0; i < film->radianceGroupCount; ++i)
+	for (uint i = 0; i < film->radianceGroupCount; ++i) {
+		float3 expectedValue = BLACK;
+
 		expectedValue += VarianceClamping_GetWeightedFloat4(&((filmRadianceGroup[i])[index4]));
 
-	// Use the current pixel value as expected value
-	const float minExpectedValue = fmin(expectedValue.x, fmin(expectedValue.y, expectedValue.z));
-	const float maxExpectedValue = fmax(expectedValue.x, fmax(expectedValue.y, expectedValue.z));
-	SampleResult_ClampRadiance(film, sampleResult,
-			fmax(minExpectedValue - sqrtVarianceClampMaxValue, 0.f),
-			maxExpectedValue + sqrtVarianceClampMaxValue);
+		// Use the current pixel value as expected value
+		const float minExpectedValue = fmin(expectedValue.x, fmin(expectedValue.y, expectedValue.z));
+		const float maxExpectedValue = fmax(expectedValue.x, fmax(expectedValue.y, expectedValue.z));
+		SampleResult_ClampRadiance(film, sampleResult, i,
+				fmax(minExpectedValue - sqrtVarianceClampMaxValue, 0.f),
+				maxExpectedValue + sqrtVarianceClampMaxValue);
+	}
 }

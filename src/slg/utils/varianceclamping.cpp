@@ -100,12 +100,23 @@ void VarianceClamping::Clamp(const Film &film, SampleResult &sampleResult) const
 	x = luxrays::Clamp(x, subRegion[0], subRegion[1]);
 	y = luxrays::Clamp(y, subRegion[2], subRegion[3]);
 	
-	float expectedValue[3] = { 0.f, 0.f, 0.f };
 	if (sampleResult.HasChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED)) {
-		for (u_int i = 0; i < film.channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size(); ++i)
-			film.channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->AccumulateWeightedPixel(
-					x, y, &expectedValue[0]);
+		// Apply variance clamping to each radiance group. This help to avoid problems
+		// with extreme clamping settings and multiple light groups
+		for (u_int radianceGroupIndex = 0; radianceGroupIndex < sampleResult.radiance.Size(); ++radianceGroupIndex) {
+			float expectedValue[3];
+			film.channel_RADIANCE_PER_PIXEL_NORMALIZEDs[radianceGroupIndex]->GetWeightedPixel(x, y, &expectedValue[0]);
+
+			// Use the current pixel value as expected value
+			const float minExpectedValue = Min(expectedValue[0], Min(expectedValue[1], expectedValue[2]));
+			const float maxExpectedValue = Max(expectedValue[0], Max(expectedValue[1], expectedValue[2]));
+
+			sampleResult.ClampRadiance(radianceGroupIndex,
+					Max(minExpectedValue - sqrtVarianceClampMaxValue, 0.f),
+					maxExpectedValue + sqrtVarianceClampMaxValue);
+		}
 	} else if (sampleResult.HasChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED)) {
+		float expectedValue[3] = { 0.f, 0.f, 0.f };
 		for (u_int i = 0; i < film.channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size(); ++i)
 			film.channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->AccumulateWeightedPixel(
 					x, y, &expectedValue[0]);
@@ -118,13 +129,13 @@ void VarianceClamping::Clamp(const Film &film, SampleResult &sampleResult) const
 		expectedValue[0] *= factor;
 		expectedValue[1] *= factor;
 		expectedValue[2] *= factor;
+		
+		// Use the current pixel value as expected value
+		const float minExpectedValue = Min(expectedValue[0], Min(expectedValue[1], expectedValue[2]));
+		const float maxExpectedValue = Max(expectedValue[0], Max(expectedValue[1], expectedValue[2]));
+		sampleResult.ClampRadiance(
+				Max(minExpectedValue - sqrtVarianceClampMaxValue, 0.f),
+				maxExpectedValue + sqrtVarianceClampMaxValue);
 	} else
 		throw runtime_error("Unknown sample type in VarianceClamping::Clamp(): " + ToString(sampleResult.GetChannels()));
-
-	// Use the current pixel value as expected value
-	const float minExpectedValue = Min(expectedValue[0], Min(expectedValue[1], expectedValue[2]));
-	const float maxExpectedValue = Max(expectedValue[0], Max(expectedValue[1], expectedValue[2]));
-	sampleResult.ClampRadiance(
-			Max(minExpectedValue - sqrtVarianceClampMaxValue, 0.f),
-			maxExpectedValue + sqrtVarianceClampMaxValue);
 }

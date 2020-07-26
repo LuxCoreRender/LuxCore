@@ -130,12 +130,9 @@ OPENCL_FORCE_INLINE float SampleResult_GetRadianceY(__constant const Film* restr
 }
 
 OPENCL_FORCE_INLINE void SampleResult_ClampRadiance(__constant const Film* restrict film,
-		__global SampleResult *sampleResult,
+		__global SampleResult *sampleResult, const uint index,
 		const float minRadiance, const float maxRadiance) {
-	
-	for (uint i = 0; i < film->radianceGroupCount; ++i) {
-		VSTORE3F(
-				Spectrum_ScaledClamp(VLOAD3F(sampleResult->radiancePerPixelNormalized[i].c), minRadiance, maxRadiance),
-				sampleResult->radiancePerPixelNormalized[i].c);
-	}
+	VSTORE3F(
+			Spectrum_ScaledClamp(VLOAD3F(sampleResult->radiancePerPixelNormalized[index].c), minRadiance, maxRadiance),
+			sampleResult->radiancePerPixelNormalized[index].c);
 }
