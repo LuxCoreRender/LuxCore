@@ -53,16 +53,16 @@ OPENCL_FORCE_INLINE float normsinvf(float p) {
 	const float P_HIGH = 0.97575;
 
 	if ((0 < p )  && (p < P_LOW)) {
-		const double q = sqrt(-2 * log(p));
+		const float q = sqrt(-2 * log(p));
 		return (((((C1 * q + C2) * q + C3) * q + C4) * q + C5) * q + C6) /
 			((((D1 * q + D2) * q + D3) * q + D4) * q + 1);
 	} else if ((P_LOW <= p) && (p <= P_HIGH)) {
-		const double q = p - 0.5;
-		const double r = q * q;
+		const float q = p - 0.5;
+		const float r = q * q;
 		return (((((A1 * r + A2) * r + A3) * r + A4) * r + A5) * r + A6) * q /
 			(((((B1 * r + B2) * r + B3) * r + B4) * r + B5) * r + 1);
 	} else if ((P_HIGH < p) && (p < 1)) {
-                   const double q = sqrt(-2 * log(1 - p));
+                   const float q = sqrt(-2 * log(1 - p));
                    return -(((((C1 * q + C2) * q + C3) * q + C4) * q + C5) * q + C6) /
 			   ((((D1 * q + D2) * q + D3) * q + D4) * q + 1);
 	} else {
