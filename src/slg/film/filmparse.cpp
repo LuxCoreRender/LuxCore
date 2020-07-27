@@ -567,9 +567,17 @@ ImagePipeline *Film::CreateImagePipeline(const Properties &props, const string &
 
 				imagePipeline->AddPlugin(new VignettingPlugin(scale));
 			} else if (type == "COLOR_ABERRATION") {
-				const float scale = Clamp(props.Get(Property(prefix + ".amount")(.005f)).Get<float>(), 0.f, 1.f);
+				const Property &p = props.Get(Property(prefix + ".amount")(.005f));
+				float scaleX, scaleY;
+				if (p.GetSize() == 2) {
+					scaleX = Clamp(p.Get<float>(0), 0.f, 1.f);
+					scaleY = Clamp(p.Get<float>(1), 0.f, 1.f);
+				} else {
+					scaleX = Clamp(p.Get<float>(), 0.f, 1.f);
+					scaleY = scaleX;
+				}
 
-				imagePipeline->AddPlugin(new ColorAberrationPlugin(scale));
+				imagePipeline->AddPlugin(new ColorAberrationPlugin(scaleX, scaleY));
 			} else if (type == "PREMULTIPLY_ALPHA") {
 				imagePipeline->AddPlugin(new PremultiplyAlphaPlugin());
 			} else if (type == "MIST") {

@@ -35,7 +35,8 @@ using namespace slg;
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::ColorAberrationPlugin)
 
-ColorAberrationPlugin::ColorAberrationPlugin(const float a) : amount(a),
+ColorAberrationPlugin::ColorAberrationPlugin(const float ax, const float ay) :
+		amountX(ax), amountY(ay),
 		tmpBuffer(nullptr), tmpBufferSize(0) {
 	hardwareDevice = nullptr;
 	hwTmpBuffer = nullptr;
@@ -55,7 +56,7 @@ ColorAberrationPlugin::~ColorAberrationPlugin() {
 }
 
 ImagePipelinePlugin *ColorAberrationPlugin::Copy() const {
-	return new ColorAberrationPlugin(amount);
+	return new ColorAberrationPlugin(amountX, amountY);
 }
 
 //------------------------------------------------------------------------------
@@ -117,10 +118,10 @@ void ColorAberrationPlugin::Apply(Film &film, const u_int index) {
 				const float yOffset = ny - .5f;
 				const float tOffset = sqrtf(xOffset * xOffset + yOffset * yOffset);
 
-				const float rbX = (.5f + xOffset * (1.f + tOffset * amount)) * width;
-				const float rbY = (.5f + yOffset * (1.f + tOffset * amount)) * height;
-				const float gX =  (.5f + xOffset * (1.f - tOffset * amount)) * width;
-				const float gY =  (.5f + yOffset * (1.f - tOffset * amount)) * height;
+				const float rbX = (.5f + xOffset * (1.f + tOffset * amountX)) * width;
+				const float rbY = (.5f + yOffset * (1.f + tOffset * amountY)) * height;
+				const float gX =  (.5f + xOffset * (1.f - tOffset * amountX)) * width;
+				const float gY =  (.5f + yOffset * (1.f - tOffset * amountY)) * height;
 
 				static const Spectrum redblue(1.f, 0.f, 1.f);
 				static const Spectrum green(0.f, 1.f, 0.f);
@@ -186,7 +187,8 @@ void ColorAberrationPlugin::ApplyHW(Film &film, const u_int index) {
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, height);
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.hw_IMAGEPIPELINE);
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, hwTmpBuffer);
-		hardwareDevice->SetKernelArg(applyKernel, argIndex++, amount);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, amountX);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, amountY);
 
 		//----------------------------------------------------------------------
 		// ColorAberrationPlugin_Copy kernel
