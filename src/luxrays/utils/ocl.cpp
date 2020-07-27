@@ -175,7 +175,7 @@ cl_program oclKernelCache::ForcedCompile(cl_context context, cl_device_id device
 			string logStr;
 			if (program) {
 				size_t valueSize;
-				CHECK_OCL_ERROR(clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, 0, &valueSize, nullptr));
+				CHECK_OCL_ERROR(clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, 0, nullptr, &valueSize));
 				char *value = (char *)alloca(valueSize * sizeof(char));
 				CHECK_OCL_ERROR(clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, valueSize, value, nullptr));
 

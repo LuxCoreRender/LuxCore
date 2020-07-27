@@ -104,19 +104,21 @@ OPENCL_FORCE_INLINE void Camera_ApplyArbitraryClippingPlane(
 // Perspective camera
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_INLINE float3 PerspectiveCamera_LocalSampleLens(
+OPENCL_FORCE_INLINE void PerspectiveCamera_LocalSampleLens(
 		__global const Camera* restrict camera,
-		const float u1, const float u2) {
-	float3 lensPoint = MAKE_FLOAT3(0.f, 0.f, 0.f);
+		const float u1, const float u2,
+		float *lensU, float *lensV) {
+	*lensU = 0.f;
+	*lensV = 0.f;
 
 	if (camera->persp.projCamera.lensRadius > 0.f) {
 		const float bokehBlades = camera->persp.bokehBlades;
 		if (bokehBlades < 3)
-			ConcentricSampleDisk(u1, u2, &lensPoint.x, &lensPoint.y);
+			ConcentricSampleDisk(u1, u2, lensU, lensV);
 		else {
 			// Bokeh support
 			const float halfAngle = M_PI_F / bokehBlades;
-			const float honeyRadius = cosf(halfAngle);
+			const float honeyRadius = cos(halfAngle);
 
 			const float theta = 2.f * M_PI_F * u2;
 
@@ -124,41 +126,39 @@ OPENCL_FORCE_INLINE float3 PerspectiveCamera_LocalSampleLens(
 			const float rho = (sector % 2 == 0) ? (theta - sector * halfAngle) :
 					((sector + 1) * halfAngle - theta);
 
-			float r = honeyRadius / cosf(rho);
+			float r = honeyRadius / cos(rho);
 			switch (camera->persp.bokehDistribution) {
 				case DIST_UNIFORM:
-					r *= sqrtf(u1);
+					r *= sqrt(u1);
 					break;
 				case DIST_EXPONENTIAL:
-					r *= sqrtf(ExponentialSampleDisk(u1, camera->persp.bokehPower));
+					r *= sqrt(ExponentialSampleDisk(u1, camera->persp.bokehPower));
 					break;
 				case DIST_INVERSEEXPONENTIAL:
-					r *= sqrtf(InverseExponentialSampleDisk(u1, camera->persp.bokehPower));
+					r *= sqrt(InverseExponentialSampleDisk(u1, camera->persp.bokehPower));
 					break;
 				case DIST_GAUSSIAN:
-					r *= sqrtf(GaussianSampleDisk(u1));
+					r *= sqrt(GaussianSampleDisk(u1));
 					break;
 				case DIST_INVERSEGAUSSIAN:
-					r *= sqrtf(InverseGaussianSampleDisk(u1));
+					r *= sqrt(InverseGaussianSampleDisk(u1));
 					break;
 				case DIST_TRIANGULAR:
-					r *= sqrtf(TriangularSampleDisk(u1));
+					r *= sqrt(TriangularSampleDisk(u1));
 					break;
 				default:
 					// Something wrong here
 					break;
 			}
 
-			lensPoint.x = r * cosf(theta) * camera->persp.bokehScaleX;
-			lensPoint.y = r * sinf(theta) * camera->persp.bokehScaleY;
+			*lensU = r * cos(theta) * camera->persp.bokehScaleX;
+			*lensV= r * sin(theta) * camera->persp.bokehScaleY;
 		}
 
 		const float lensRadius = camera->persp.projCamera.lensRadius;
-		lensPoint.x *= lensRadius;
-		lensPoint.y *= lensRadius;
+		*lensU *= lensRadius;
+		*lensV *= lensRadius;
 	}
-
-	return lensPoint;
 }
 
 OPENCL_FORCE_INLINE void PerspectiveCamera_GenerateRay(
@@ -174,9 +174,9 @@ OPENCL_FORCE_INLINE void PerspectiveCamera_GenerateRay(
 	if (camera->persp.enableOculusRiftBarrel) {
 		float ssx, ssy;
 		Camera_OculusRiftBarrelPostprocess(filmX / filmWidth, (filmHeight - filmY - 1.f) / filmHeight, &ssx, &ssy);
-		Pras = MAKE_FLOAT3 (min(ssx * filmWidth, (float) (filmWidth - 1)), min(ssy * filmHeight, (float) (filmHeight - 1)), 0.f);
+		Pras = MAKE_FLOAT3(min(ssx * filmWidth, (float) (filmWidth - 1)), min(ssy * filmHeight, (float) (filmHeight - 1)), 0.f);
 	} else
-		Pras = MAKE_FLOAT3 (filmX, filmHeight - filmY - 1.f, 0.f);
+		Pras = MAKE_FLOAT3(filmX, filmHeight - filmY - 1.f, 0.f);
 
 	float3 rayOrig = Transform_ApplyPoint(&camera->base.rasterToCamera, Pras);
 	float3 rayDir = rayOrig;
@@ -187,7 +187,8 @@ OPENCL_FORCE_INLINE void PerspectiveCamera_GenerateRay(
 	const float focalDistance = camera->persp.projCamera.focalDistance;
 	if ((lensRadius > 0.f) && (focalDistance > 0.f)) {
 		// Sample point on lens
-		const float3 lensPoint = PerspectiveCamera_LocalSampleLens(camera, dofSampleX, dofSampleY);
+		float lensU, lensV;
+		PerspectiveCamera_LocalSampleLens(camera, dofSampleX, dofSampleY, &lensU, &lensV);
 
 		// Compute point on plane of focus
 		const float dist = focalDistance - hither;
@@ -197,8 +198,8 @@ OPENCL_FORCE_INLINE void PerspectiveCamera_GenerateRay(
 
 		// Update ray for effect of lens
 		const float k = dist / focalDistance;
-		rayOrig.x += lensPoint.x * k;
-		rayOrig.y += lensPoint.y * k;
+		rayOrig.x += lensU * k;
+		rayOrig.y += lensV * k;
 
 		rayDir = Pfocus - rayOrig;
 	}
@@ -247,7 +248,7 @@ OPENCL_FORCE_INLINE void OrthographicCamera_GenerateRay(
 		const float dofSampleX, const float dofSampleY) {
 	PathVolumeInfo_StartVolume(volInfo, camera->base.volumeIndex);
 
-	const float3 Pras = MAKE_FLOAT3 (filmX, filmHeight - filmY - 1.f, 0.f);
+	const float3 Pras = MAKE_FLOAT3(filmX, filmHeight - filmY - 1.f, 0.f);
 	float3 rayOrig = Transform_ApplyPoint(&camera->base.rasterToCamera, Pras);
 	float3 rayDir = MAKE_FLOAT3(0.f, 0.f, 1.f);
 
@@ -339,9 +340,9 @@ OPENCL_FORCE_INLINE void StereoCamera_GenerateRay(
 	if (camera->stereo.perspCamera.enableOculusRiftBarrel) {
 		float ssx, ssy;
 		Camera_OculusRiftBarrelPostprocess(filmX / filmWidth, (filmHeight - filmY - 1.f) / filmHeight, &ssx, &ssy);
-		Pras = MAKE_FLOAT3 (min(ssx * filmWidth, (float) (filmWidth - 1)), min(ssy * filmHeight, (float) (filmHeight - 1)), 0.f);
+		Pras = MAKE_FLOAT3(min(ssx * filmWidth, (float) (filmWidth - 1)), min(ssy * filmHeight, (float) (filmHeight - 1)), 0.f);
 	} else
-		Pras = MAKE_FLOAT3 (filmX, filmHeight - filmY - 1.f, 0.f);
+		Pras = MAKE_FLOAT3(filmX, filmHeight - filmY - 1.f, 0.f);
 
 	float3 rayOrig = Transform_ApplyPoint(rasterToCamera, Pras);
 	float3 rayDir = rayOrig;
@@ -418,7 +419,7 @@ OPENCL_FORCE_INLINE void EnvironmentCamera_GenerateRay(
 	const float theta = M_PI_F * (filmHeight - filmY) / filmHeight;
 	const float phi = 2.f * M_PI_F * (filmWidth - filmX) / filmWidth - 0.5 * M_PI_F;
 
-	float3 rayOrig = MAKE_FLOAT3 (0.f, 0.f, 0.f);
+	float3 rayOrig = MAKE_FLOAT3(0.f, 0.f, 0.f);
 	float3 rayDir = MAKE_FLOAT3(sin(theta)*cos(phi), cos(theta), sin(theta)*sin(phi));
 	
 	const float maxt = (camera->base.yon - camera->base.hither);
