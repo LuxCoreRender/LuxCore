@@ -51,6 +51,7 @@
 #include "slg/film/imagepipeline/plugins/whitebalance.h"
 #include "slg/film/imagepipeline/plugins/bakemapmargin.h"
 #include "slg/film/imagepipeline/plugins/colorlut.h"
+#include "slg/film/imagepipeline/plugins/optixdenoiser.h"
 
 using namespace std;
 using namespace luxrays;
@@ -628,6 +629,11 @@ ImagePipeline *Film::CreateImagePipeline(const Properties &props, const string &
 				const string fileName = props.Get(Property(prefix + ".file")("lut.cube")).Get<string>();
 				const float strength = Clamp(props.Get(Property(prefix + ".strength")(1.f)).Get<float>(), 0.f, 1.f);
 				imagePipeline->AddPlugin(new ColorLUTPlugin(fileName, strength));
+#if !defined(LUXRAYS_DISABLE_CUDA)
+			} else if (type == "OPTIX_DENOISER") {
+				const float sharpness = Clamp(props.Get(Property(prefix + ".sharpness")(.1f)).Get<float>(), 0.f, 1.f);
+				imagePipeline->AddPlugin(new OptixDenoiserPlugin(sharpness));
+#endif
 			} else
 				throw runtime_error("Unknown image pipeline plugin type: " + type);
 		}
@@ -760,9 +766,24 @@ void Film::Parse(const Properties &props) {
 	if (props.IsDefined("batch.halttime"))
 		haltTime = Max(0.0, props.Get(Property("batch.halttime")(0.0)).Get<double>());
 
-	if (props.IsDefined("batch.haltspp"))
-		haltSPP = Max(0u, props.Get(Property("batch.haltspp")(0u)).Get<u_int>());
-
+	if (props.IsDefined("batch.haltspp")) {
+		const Property &haltProp = props.Get(Property("batch.haltspp")(0u));
+		switch (haltProp.GetSize()) {
+			case 1:
+				haltSPP = haltProp.Get<u_int>();
+				haltSPP_PixelNormalized = 0;
+				haltSPP_ScreenNormalized = 0;
+				break;
+			case 2:
+				haltSPP = 0;
+				haltSPP_PixelNormalized = haltProp.Get<u_int>(0);
+				haltSPP_ScreenNormalized = haltProp.Get<u_int>(1);
+				break;
+			default:
+				throw runtime_error("Wrong number of arguments in batch.haltspp property: " + ToString(haltProp.GetSize()));
+		}
+		
+	}
 
 	//--------------------------------------------------------------------------
 	// Check if there is adaptive sampling

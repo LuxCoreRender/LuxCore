@@ -208,8 +208,12 @@ void GaussianBlur3x3FilterPlugin::Apply(Film &film, const u_int index) {
 }
 
 //------------------------------------------------------------------------------
-// OpenCL version
+// HardwareDevice version
 //------------------------------------------------------------------------------
+
+void GaussianBlur3x3FilterPlugin::AddHWChannelsUsed(unordered_set<Film::FilmChannelType> &hwChannelsUsed) const {
+	hwChannelsUsed.insert(Film::IMAGEPIPELINE);
+}
 
 void GaussianBlur3x3FilterPlugin::ApplyHW(Film &film, const u_int index) {
 	const u_int width = film.GetWidth();

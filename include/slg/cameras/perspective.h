@@ -19,6 +19,8 @@
 #ifndef _SLG_PERSPECTIVE_CAMERA_H
 #define	_SLG_PERSPECTIVE_CAMERA_H
 
+#include <string>
+
 #include "slg/cameras/projective.h"
 
 namespace slg {
@@ -29,12 +31,23 @@ namespace slg {
 
 class PerspectiveCamera : public ProjectiveCamera {
 public:
+	typedef enum {
+		DIST_UNIFORM,
+		DIST_EXPONENTIAL,
+		DIST_INVERSEEXPONENTIAL,
+		DIST_GAUSSIAN,
+		DIST_INVERSEGAUSSIAN,
+		DIST_TRIANGULAR
+	} BokehDistributionType;
+
 	PerspectiveCamera(const luxrays::Point &o, const luxrays::Point &t,
 			const luxrays::Vector &u, const float *screenWindow = NULL);
 	virtual ~PerspectiveCamera() { }
 
 	virtual void ClampRay(luxrays::Ray *ray) const;
 	virtual bool GetSamplePosition(luxrays::Ray *eyeRay, float *filmX, float *filmY) const;
+	virtual bool LocalSampleLens(const float time, const float u1, const float u2,
+		luxrays::Point *lensPoint) const;
 	virtual bool SampleLens(const float time, const float u1, const float u2,
 		luxrays::Point *lensPoint) const;
 	virtual void GetPDF(const luxrays::Ray &eyeRay, const float eyeDistance,
@@ -43,8 +56,16 @@ public:
 
 	virtual luxrays::Properties ToProperties() const;
 
+	static BokehDistributionType String2BokehDistributionType(std::string type);
+	static std::string BokehDistributionType2String(const BokehDistributionType type);
+	
 	float screenOffsetX, screenOffsetY;
 	float fieldOfView;
+
+	u_int bokehBlades, bokehPower;
+	BokehDistributionType bokehDistribution;
+	float bokehScaleX, bokehScaleY;
+
 	bool enableOculusRiftBarrel;
 
 protected:

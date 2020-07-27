@@ -88,8 +88,12 @@ void LuxLinearToneMap::Apply(Film &film, const u_int index) {
 }
 
 //------------------------------------------------------------------------------
-// OpenCL version
+// HardwareDevice version
 //------------------------------------------------------------------------------
+
+void LuxLinearToneMap::AddHWChannelsUsed(unordered_set<Film::FilmChannelType> &hwChannelsUsed) const {
+	hwChannelsUsed.insert(Film::IMAGEPIPELINE);
+}
 
 void LuxLinearToneMap::ApplyHW(Film &film, const u_int index) {
 	HardwareDevice *hardwareDevice = film.hardwareDevice;

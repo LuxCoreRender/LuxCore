@@ -92,8 +92,12 @@ void VignettingPlugin::Apply(Film &film, const u_int index) {
 }
 
 //------------------------------------------------------------------------------
-// OpenCL version
+// HardwareDevice version
 //------------------------------------------------------------------------------
+
+void VignettingPlugin::AddHWChannelsUsed(unordered_set<Film::FilmChannelType> &hwChannelsUsed) const {
+	hwChannelsUsed.insert(Film::IMAGEPIPELINE);
+}
 
 void VignettingPlugin::ApplyHW(Film &film, const u_int index) {
 	HardwareDevice *hardwareDevice = film.hardwareDevice;

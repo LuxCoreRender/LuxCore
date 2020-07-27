@@ -256,8 +256,12 @@ void BloomFilterPlugin::Apply(Film &film, const u_int index) {
 }
 
 //------------------------------------------------------------------------------
-// OpenCL version
+// HardwareDevice version
 //------------------------------------------------------------------------------
+
+void BloomFilterPlugin::AddHWChannelsUsed(unordered_set<Film::FilmChannelType> &hwChannelsUsed) const {
+	hwChannelsUsed.insert(Film::IMAGEPIPELINE);
+}
 
 void BloomFilterPlugin::ApplyHW(Film &film, const u_int index) {
 	const u_int width = film.GetWidth();

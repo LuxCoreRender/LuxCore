@@ -85,8 +85,13 @@ void PremultiplyAlphaPlugin::Apply(Film &film, const u_int index) {
 }
 
 //------------------------------------------------------------------------------
-// OpenCL version
+// HardwareDevice version
 //------------------------------------------------------------------------------
+
+void PremultiplyAlphaPlugin::AddHWChannelsUsed(unordered_set<Film::FilmChannelType> &hwChannelsUsed) const {
+	hwChannelsUsed.insert(Film::IMAGEPIPELINE);
+	hwChannelsUsed.insert(Film::ALPHA);
+}
 
 void PremultiplyAlphaPlugin::ApplyHW(Film &film, const u_int index) {
 	if (!film.HasChannel(Film::ALPHA)) {

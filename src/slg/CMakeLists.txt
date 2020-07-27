@@ -237,6 +237,7 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_gammacorrection_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_gaussianblur3x3_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_objectidmask_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_optixdenoiser_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_premultiplyalpha_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_vignetting_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_whitebalance_funcs.cl
@@ -624,6 +625,7 @@ set(SLG_KERNEL_SRCS
 	${generated_kernels_dir}/plugin_gammacorrection_funcs_kernel.cpp
 	${generated_kernels_dir}/plugin_gaussianblur3x3_funcs_kernel.cpp
 	${generated_kernels_dir}/plugin_objectidmask_funcs_kernel.cpp
+	${generated_kernels_dir}/plugin_optixdenoiser_funcs_kernel.cpp
 	${generated_kernels_dir}/plugin_premultiplyalpha_funcs_kernel.cpp
 	${generated_kernels_dir}/plugin_vignetting_funcs_kernel.cpp
 	${generated_kernels_dir}/plugin_whitebalance_funcs_kernel.cpp
@@ -788,6 +790,7 @@ set(SLG_FILM_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/tonemaps/tonemap.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/intel_oidn.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/whitebalance.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/optixdenoiser.cpp
 )
 SOURCE_GROUP("Source Files\\SLG Film Library" FILES ${SLG_FILM_SRCS})
 

@@ -104,6 +104,63 @@ OPENCL_FORCE_INLINE void Camera_ApplyArbitraryClippingPlane(
 // Perspective camera
 //------------------------------------------------------------------------------
 
+OPENCL_FORCE_INLINE float3 PerspectiveCamera_LocalSampleLens(
+		__global const Camera* restrict camera,
+		const float u1, const float u2) {
+	float3 lensPoint = MAKE_FLOAT3(0.f, 0.f, 0.f);
+
+	if (camera->persp.projCamera.lensRadius > 0.f) {
+		const float bokehBlades = camera->persp.bokehBlades;
+		if (bokehBlades < 3)
+			ConcentricSampleDisk(u1, u2, &lensPoint.x, &lensPoint.y);
+		else {
+			// Bokeh support
+			const float halfAngle = M_PI_F / bokehBlades;
+			const float honeyRadius = cosf(halfAngle);
+
+			const float theta = 2.f * M_PI_F * u2;
+
+			const uint sector = Floor2UInt(theta / halfAngle);
+			const float rho = (sector % 2 == 0) ? (theta - sector * halfAngle) :
+					((sector + 1) * halfAngle - theta);
+
+			float r = honeyRadius / cosf(rho);
+			switch (camera->persp.bokehDistribution) {
+				case DIST_UNIFORM:
+					r *= sqrtf(u1);
+					break;
+				case DIST_EXPONENTIAL:
+					r *= sqrtf(ExponentialSampleDisk(u1, camera->persp.bokehPower));
+					break;
+				case DIST_INVERSEEXPONENTIAL:
+					r *= sqrtf(InverseExponentialSampleDisk(u1, camera->persp.bokehPower));
+					break;
+				case DIST_GAUSSIAN:
+					r *= sqrtf(GaussianSampleDisk(u1));
+					break;
+				case DIST_INVERSEGAUSSIAN:
+					r *= sqrtf(InverseGaussianSampleDisk(u1));
+					break;
+				case DIST_TRIANGULAR:
+					r *= sqrtf(TriangularSampleDisk(u1));
+					break;
+				default:
+					// Something wrong here
+					break;
+			}
+
+			lensPoint.x = r * cosf(theta) * camera->persp.bokehScaleX;
+			lensPoint.y = r * sinf(theta) * camera->persp.bokehScaleY;
+		}
+
+		const float lensRadius = camera->persp.projCamera.lensRadius;
+		lensPoint.x *= lensRadius;
+		lensPoint.y *= lensRadius;
+	}
+
+	return lensPoint;
+}
+
 OPENCL_FORCE_INLINE void PerspectiveCamera_GenerateRay(
 		__global const Camera* restrict camera,
 		const uint filmWidth, const uint filmHeight,
@@ -130,10 +187,7 @@ OPENCL_FORCE_INLINE void PerspectiveCamera_GenerateRay(
 	const float focalDistance = camera->persp.projCamera.focalDistance;
 	if ((lensRadius > 0.f) && (focalDistance > 0.f)) {
 		// Sample point on lens
-		float lensU, lensV;
-		ConcentricSampleDisk(dofSampleX, dofSampleY, &lensU, &lensV);
-		lensU *= lensRadius;
-		lensV *= lensRadius;
+		const float3 lensPoint = PerspectiveCamera_LocalSampleLens(camera, dofSampleX, dofSampleY);
 
 		// Compute point on plane of focus
 		const float dist = focalDistance - hither;
@@ -143,8 +197,8 @@ OPENCL_FORCE_INLINE void PerspectiveCamera_GenerateRay(
 
 		// Update ray for effect of lens
 		const float k = dist / focalDistance;
-		rayOrig.x += lensU * k;
-		rayOrig.y += lensV * k;
+		rayOrig.x += lensPoint.x * k;
+		rayOrig.y += lensPoint.y * k;
 
 		rayDir = Pfocus - rayOrig;
 	}

@@ -70,7 +70,7 @@ void PathCPURenderThread::RenderFunc() {
 			// Disable image plane meaning for samples 0 and 1
 			Property("sampler.imagesamples.enable")(false);
 
-		lightSampler = Sampler::FromProperties(props, rndGen, engine->film, nullptr,
+		lightSampler = Sampler::FromProperties(props, rndGen, engine->film, engine->lightSampleSplatter,
 				engine->lightSamplerSharedData);
 		
 		lightSampler->SetThreadIndex(threadIndex);

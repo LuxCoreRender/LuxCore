@@ -117,6 +117,7 @@ public:
 	//--------------------------------------------------------------------------
 
 	void SetAdditionalCompileOpts(const std::vector<std::string> &opts);
+	const std::vector<std::string> &GetAdditionalCompileOpts();
 	
 	virtual void CompileProgram(HardwareDeviceProgram **program,
 			const std::vector<std::string> &programParameters, const std::string &programSource,

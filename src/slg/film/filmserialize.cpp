@@ -22,6 +22,7 @@
 #include <boost/foreach.hpp>
 
 #include "slg/film/film.h"
+#include "slg/film/imagepipeline/imagepipeline.h"
 
 using namespace std;
 using namespace luxrays;
@@ -114,6 +115,8 @@ template<class Archive> void Film::load(Archive &ar, const u_int version) {
 	ar & noiseEstimation;
 	ar & haltTime;
 	ar & haltSPP;
+	ar & haltSPP_PixelNormalized;
+	ar & haltSPP_ScreenNormalized;
 	ar & haltNoiseThreshold;
 	ar & haltNoiseThresholdWarmUp;
 	ar & haltNoiseThresholdTestStep;
@@ -192,6 +195,8 @@ template<class Archive> void Film::save(Archive &ar, const u_int version) const 
 	ar & noiseEstimation;
 	ar & haltTime;
 	ar & haltSPP;
+	ar & haltSPP_PixelNormalized;
+	ar & haltSPP_ScreenNormalized;
 	ar & haltNoiseThreshold;
 	ar & haltNoiseThresholdWarmUp;
 	ar & haltNoiseThresholdTestStep;

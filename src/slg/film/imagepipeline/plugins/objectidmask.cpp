@@ -87,8 +87,13 @@ void ObjectIDMaskFilterPlugin::Apply(Film &film, const u_int index) {
 }
 
 //------------------------------------------------------------------------------
-// OpenCL version
+// HardwareDevice version
 //------------------------------------------------------------------------------
+
+void ObjectIDMaskFilterPlugin::AddHWChannelsUsed(unordered_set<Film::FilmChannelType> &hwChannelsUsed) const {
+	hwChannelsUsed.insert(Film::IMAGEPIPELINE);
+	hwChannelsUsed.insert(Film::OBJECT_ID);
+}
 
 void ObjectIDMaskFilterPlugin::ApplyHW(Film &film, const u_int index) {
 	if (!film.HasChannel(Film::OBJECT_ID)) {

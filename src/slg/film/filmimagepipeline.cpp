@@ -24,6 +24,7 @@
 #include <boost/foreach.hpp>
 
 #include "slg/film/film.h"
+#include "slg/film/imagepipeline/imagepipeline.h"
 #include "slg/film/imagepipeline/radiancechannelscale.h"
 #include "luxrays/utils/oclerror.h"
 
@@ -170,7 +171,7 @@ void Film::ExecuteImagePipelineImpl(const u_int index) {
 	// Initialize OpenCL device
 	if (hwEnable && !ctx) {
 		CreateHWContext();
-
+	
 		if (hardwareDevice) {
 			AllocateHWBuffers();
 			CompileHWKernels();
@@ -198,7 +199,7 @@ void Film::ExecuteImagePipelineImpl(const u_int index) {
 		WriteAllHWBuffers();
 
 	imagePipelines[index]->Apply(*this, index);
-	
+
 	if (hwEnable && hardwareDevice)
 		hardwareDevice->PopThreadCurrentDevice();
 

@@ -118,8 +118,12 @@ void Reinhard02ToneMap::Apply(Film &film, const u_int index) {
 }
 
 //------------------------------------------------------------------------------
-// OpenCL version
+// HardwareDevice version
 //------------------------------------------------------------------------------
+
+void Reinhard02ToneMap::AddHWChannelsUsed(unordered_set<Film::FilmChannelType> &hwChannelsUsed) const {
+	hwChannelsUsed.insert(Film::IMAGEPIPELINE);
+}
 
 void Reinhard02ToneMap::ApplyHW(Film &film, const u_int index) {
 	const u_int pixelCount = film.GetWidth() * film.GetHeight();

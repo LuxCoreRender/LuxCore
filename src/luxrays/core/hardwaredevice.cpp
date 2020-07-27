@@ -40,6 +40,10 @@ void HardwareDevice::SetAdditionalCompileOpts(const vector<string> &opts) {
 	additionalCompileOpts = opts;
 }
 
+const vector<string> &HardwareDevice::GetAdditionalCompileOpts() {
+	return additionalCompileOpts;
+}
+
 template <>
 void HardwareDevice::SetKernelArg<HardwareDeviceBufferPtr>(HardwareDeviceKernel *kernel, const u_int index, const HardwareDeviceBufferPtr &buff) {
 	SetKernelArgBuffer(kernel, index, buff);

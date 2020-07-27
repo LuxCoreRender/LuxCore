@@ -112,6 +112,12 @@ Context::Context(LuxRaysDebugHandler handler, const Properties &config) : cfg(co
 		CHECK_CUDA_ERROR(cuDeviceGetCount(&devCount));
 		LR_LOG(this, "CUDA device count: " << devCount);
 
+		if (isOptixAvilable) {
+			LR_LOG(this, "Optix support: available");
+		} else {
+			LR_LOG(this, "Optix support: not available");
+		}
+
 		CUDADeviceDescription::AddDeviceDescs(deviceDescriptions);
 	}
 #else
@@ -150,6 +156,7 @@ Context::~Context() {
 
 	for (size_t i = 0; i < devices.size(); ++i)
 		delete devices[i];
+
 	for (size_t i = 0; i < deviceDescriptions.size(); ++i)
 		delete deviceDescriptions[i];
 }

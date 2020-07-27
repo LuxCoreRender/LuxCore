@@ -123,7 +123,7 @@ void PathOCLNativeRenderThread::RenderThreadImpl() {
 			// Disable image plane meaning for samples 0 and 1
 			Property("sampler.imagesamples.enable")(false);
 
-		lightSampler = Sampler::FromProperties(props, rndGen, film, nullptr,
+		lightSampler = Sampler::FromProperties(props, rndGen, film, engine->lightSampleSplatter,
 				engine->lightSamplerSharedData);
 		lightSampler->SetThreadIndex(threadIndex);
 		lightSampler->RequestSamples(SCREEN_NORMALIZED_ONLY, pathTracer.lightSampleSize);

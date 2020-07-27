@@ -103,11 +103,6 @@ void SampleResult::AddDirectLight(const u_int lightID, const BSDFEvent bsdfEvent
 	}
 }
 
-void SampleResult::ClampRadiance(const float minRadiance, const float maxRadiance) {
-	for (u_int i = 0; i < radiance.Size(); ++i)
-		radiance[i] = radiance[i].ScaledClamp(minRadiance, maxRadiance);
-}
-
 bool SampleResult::IsValid() const {
 	for (u_int i = 0; i < radiance.Size(); ++i)
 		if (radiance[i].IsNaN() || radiance[i].IsInf() || radiance[i].IsNeg())

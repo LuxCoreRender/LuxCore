@@ -39,7 +39,9 @@ public:
 
 	virtual AcceleratorType GetType() const { return ACCEL_MBVH; }
 
-	virtual bool HasDataParallelSupport(const IntersectionDevice &device) const;
+	virtual bool HasNativeSupport(const IntersectionDevice &device) const;
+	virtual bool HasHWSupport(const IntersectionDevice &device) const;
+
 	virtual HardwareIntersectionKernel *NewHardwareIntersectionKernel(HardwareIntersectionDevice &device) const;
 
 	virtual void Init(const std::deque<const Mesh *> &meshes,

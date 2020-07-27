@@ -16,8 +16,9 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include <boost/format.hpp>
 #include <math.h>
+
+#include <boost/format.hpp>
 
 #include "slg/film/imagepipeline/plugins/intel_oidn.h"
 
@@ -48,7 +49,7 @@ ImagePipelinePlugin *IntelOIDN::Copy() const {
 }
 
 void IntelOIDN::Apply(Film &film, const u_int index) {
-	const double SuperStartTime = WallClockTime();
+	const double totalStartTime = WallClockTime();
 	SLG_LOG("[IntelOIDNPlugin] Applying single OIDN");
     Spectrum *pixels = (Spectrum *)film.channel_IMAGEPIPELINEs[index]->GetPixels();
 
@@ -107,5 +108,5 @@ void IntelOIDN::Apply(Film &film, const u_int index) {
         pixels[i].c[2] = Lerp(sharpness, outputBuffer[i3 + 2], pixels[i].c[2]);
 	}
 
-	SLG_LOG("IntelOIDNPlugin single execution took a total of " << (boost::format("%.1f") % (WallClockTime() - SuperStartTime)) << "secs");
+	SLG_LOG("IntelOIDNPlugin single execution took a total of " << (boost::format("%.3f") % (WallClockTime() - totalStartTime)) << "secs");
 }

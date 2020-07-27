@@ -33,7 +33,7 @@
 namespace slg {
 
 //------------------------------------------------------------------------------
-//Intel Open Image Denoise
+// Intel Open Image Denoise
 //------------------------------------------------------------------------------
 
 class IntelOIDN : public ImagePipelinePlugin {

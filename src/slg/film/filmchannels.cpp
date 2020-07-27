@@ -24,6 +24,7 @@
 #include <boost/foreach.hpp>
 
 #include "slg/film/film.h"
+#include "slg/film/imagepipeline/imagepipeline.h"
 #include "slg/film/imagepipeline/radiancechannelscale.h"
 
 using namespace std;
@@ -331,6 +332,36 @@ void Film::GetPixelFromMergedSampleBuffers(const FilmChannelType channels,
 			}
 		}
 	}
+}
+
+void Film::GetPixelFromMergedSampleBuffers(const FilmChannelType channels,
+	const std::vector<RadianceChannelScale> *radianceChannelScales,
+	const double RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
+	const u_int x, const u_int y, float *c) const {
+	GetPixelFromMergedSampleBuffers(channels, radianceChannelScales,
+			RADIANCE_PER_SCREEN_NORMALIZED_SampleCount, x + y * width, c);
+}
+
+void Film::GetPixelFromMergedSampleBuffers(const u_int imagePipelineIndex,
+		const double RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
+		const u_int x, const u_int y, float *c) const {
+	const ImagePipeline *ip = (imagePipelineIndex < imagePipelines.size()) ? imagePipelines[imagePipelineIndex] : NULL;
+	const std::vector<RadianceChannelScale> *radianceChannelScales = ip ? &ip->radianceChannelScales : NULL;
+
+	GetPixelFromMergedSampleBuffers((FilmChannelType)(RADIANCE_PER_PIXEL_NORMALIZED | RADIANCE_PER_SCREEN_NORMALIZED),
+			radianceChannelScales, RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
+			x, y, c);
+}
+
+void Film::GetPixelFromMergedSampleBuffers(const u_int imagePipelineIndex,
+		const double RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
+		const u_int index, float *c) const {
+	const ImagePipeline *ip = (imagePipelineIndex < imagePipelines.size()) ? imagePipelines[imagePipelineIndex] : NULL;
+	const std::vector<RadianceChannelScale> *radianceChannelScales = ip ? &ip->radianceChannelScales : NULL;
+
+	GetPixelFromMergedSampleBuffers((FilmChannelType)(RADIANCE_PER_PIXEL_NORMALIZED | RADIANCE_PER_SCREEN_NORMALIZED),
+			radianceChannelScales, RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
+			index, c);
 }
 
 float Film::GetFilmY(const u_int imagePipelineIndex) const {

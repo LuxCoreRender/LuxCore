@@ -113,6 +113,7 @@ protected:
 
 	u_int GetTotalEyeSPP() const;
 	
+	FilmSampleSplatter *lightSampleSplatter;
 	SamplerSharedData *eyeSamplerSharedData;
 	SamplerSharedData *lightSamplerSharedData;
 

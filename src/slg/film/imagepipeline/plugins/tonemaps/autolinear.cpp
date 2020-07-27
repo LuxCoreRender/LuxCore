@@ -106,8 +106,12 @@ void AutoLinearToneMap::Apply(Film &film, const u_int index) {
 }
 
 //------------------------------------------------------------------------------
-// OpenCL version
+// HardwareDevice version
 //------------------------------------------------------------------------------
+
+void AutoLinearToneMap::AddHWChannelsUsed(unordered_set<Film::FilmChannelType> &hwChannelsUsed) const {
+	hwChannelsUsed.insert(Film::IMAGEPIPELINE);
+}
 
 void AutoLinearToneMap::ApplyHW(Film &film, const u_int index) {
 	const u_int pixelCount = film.GetWidth() * film.GetHeight();

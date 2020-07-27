@@ -29,7 +29,7 @@
 namespace luxrays {
 
 typedef enum {
-	ACCEL_AUTO, ACCEL_BVH, ACCEL_MBVH, ACCEL_EMBREE
+	ACCEL_AUTO, ACCEL_BVH, ACCEL_MBVH, ACCEL_EMBREE, ACCEL_OPTIX
 } AcceleratorType;
 
 class IntersectionDevice;
@@ -43,7 +43,9 @@ public:
 
 	virtual AcceleratorType GetType() const = 0;
 
-	virtual bool HasDataParallelSupport(const IntersectionDevice &device) const = 0;
+	virtual bool HasNativeSupport(const IntersectionDevice &device) const = 0;
+	virtual bool HasHWSupport(const IntersectionDevice &device) const = 0;
+
 	virtual HardwareIntersectionKernel *NewHardwareIntersectionKernel(HardwareIntersectionDevice &device) const = 0;
 
 	virtual void Init(const std::deque<const Mesh *> &meshes, const u_longlong totalVertexCount, const u_longlong totalTriangleCount) = 0;

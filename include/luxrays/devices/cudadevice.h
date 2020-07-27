@@ -140,6 +140,12 @@ public:
 
 		return cudaSize;
 	}
+	
+	//--------------------------------------------------------------------------
+	// CUDADevice specific methods
+	//--------------------------------------------------------------------------
+	
+	CUdeviceptr &GetCUDADevicePointer() { return cudaBuff; }
 
 	friend class CUDADevice;
 
@@ -195,6 +201,17 @@ public:
 		void *src, const size_t size, const std::string &desc = "");
 	virtual void FreeBuffer(HardwareDeviceBuffer **buff);
 
+	//--------------------------------------------------------------------------
+	// CUDADevice specific methods
+	//--------------------------------------------------------------------------
+
+	CUcontext GetCUDAContext() { return cudaContext; }
+	luxrays::cudaKernelPersistentCache *GetCUDAKernelCache() { return kernelCache; }
+	OptixDeviceContext GetOptixContext() { return optixContext; }
+
+	std::vector<std::string> AddKernelOpts(const std::vector<std::string> &programParameters);
+	std::string GetKernelSource(const std::string &kernelSource);
+
 	friend class Context;
 
 protected:
@@ -208,7 +225,9 @@ protected:
 	CUcontext cudaContext;
 	std::vector<CUmodule> loadedModules;
 	
-	luxrays::cudaKernelCache *kernelCache;
+	luxrays::cudaKernelPersistentCache *kernelCache;
+	
+	OptixDeviceContext optixContext;
 };
 
 }

@@ -77,6 +77,8 @@ Film::Film() : filmDenoiser(this) {
 	noiseEstimation = nullptr;
 	haltTime = 0.0;
 	haltSPP = 0;
+	haltSPP_PixelNormalized = 0;
+	haltSPP_ScreenNormalized = 0;
 	haltNoiseThreshold = 0.f;
 
 	isAsyncImagePipelineRunning = false;
@@ -138,6 +140,8 @@ Film::Film(const u_int w, const u_int h, const u_int *sr) : filmDenoiser(this) {
 	haltTime = 0.0;
 
 	haltSPP = 0;
+	haltSPP_PixelNormalized = 0;
+	haltSPP_ScreenNormalized = 0;
 
 	// Noise halt threshold related variables
 	haltNoiseThreshold = .02f;
@@ -159,7 +163,7 @@ Film::Film(const u_int w, const u_int h, const u_int *sr) : filmDenoiser(this) {
 	// Initialize variables to nullptr
 	SetUpHW();
 }
-
+#include <slg/film/imagepipeline/plugins/optixdenoiser.h>
 Film::~Film() {
 	if (imagePipelineThread) {
 		imagePipelineThread->interrupt();
@@ -207,6 +211,8 @@ void Film::CopyDynamicSettings(const Film &film) {
 void Film::CopyHaltSettings(const Film &film) {
 	haltTime = film.haltTime;
 	haltSPP = film.haltSPP;
+	haltSPP_PixelNormalized = film.haltSPP_PixelNormalized;
+	haltSPP_ScreenNormalized = film.haltSPP_ScreenNormalized;
 	
 	haltNoiseThreshold = film.haltNoiseThreshold;
 	haltNoiseThresholdWarmUp = film.haltNoiseThresholdWarmUp;
@@ -1144,8 +1150,38 @@ void Film::RunTests() {
 
 	// Check the halt SPP condition with the average samples of
 	// the rendered region
-	const double spp = GetTotalSampleCount() / ((subRegion[1] - subRegion[0] + 1) * (subRegion[3] - subRegion[2] + 1));
-	if ((haltSPP > 0.0) && (spp > haltSPP)) {
+
+	const u_int regionPixelsCount = (subRegion[1] - subRegion[0] + 1) * (subRegion[3] - subRegion[2] + 1);
+	const double spp = GetTotalSampleCount() / regionPixelsCount;
+	const double spp_PixelNormalized = GetTotalEyeSampleCount() / regionPixelsCount;
+	const double spp_ScreenNormalized = GetTotalLightSampleCount() / regionPixelsCount;
+
+	bool haltSPPStop = false;
+
+	// All halt SPP cases
+	if (
+			(haltSPP_PixelNormalized > 0) && (spp_PixelNormalized > haltSPP_PixelNormalized) &&
+			(haltSPP_ScreenNormalized > 0) && (haltSPP_ScreenNormalized > spp_ScreenNormalized)
+		)
+		haltSPPStop = true;
+	if (
+			(haltSPP_PixelNormalized > 0) && (spp_PixelNormalized > haltSPP_PixelNormalized) &&
+			(haltSPP_ScreenNormalized == 0)
+		)
+		haltSPPStop = true;
+	if (
+			(haltSPP_PixelNormalized == 0) &&
+			(haltSPP_ScreenNormalized > 0) && (spp_ScreenNormalized > haltSPP_ScreenNormalized)
+		)
+		haltSPPStop = true;
+	if (
+			(haltSPP_PixelNormalized == 0) &&
+			(haltSPP_ScreenNormalized == 0) &&
+			(haltSPP > 0) && (spp > haltSPP)
+		)
+		haltSPPStop = true;
+		
+	if (haltSPPStop) {
 		SLG_LOG("Samples per pixel 100%, rendering done.");
 		statsConvergence = 1.f;
 
