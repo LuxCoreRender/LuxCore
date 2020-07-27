@@ -109,7 +109,7 @@ void AutoLinearToneMap::Apply(Film &film, const u_int index) {
 // HardwareDevice version
 //------------------------------------------------------------------------------
 
-void AutoLinearToneMap::AddHWChannelsUsed(unordered_set<Film::FilmChannelType> &hwChannelsUsed) const {
+void AutoLinearToneMap::AddHWChannelsUsed(unordered_set<Film::FilmChannelType, hash<int> > &hwChannelsUsed) const {
 	hwChannelsUsed.insert(Film::IMAGEPIPELINE);
 }
 

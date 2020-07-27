@@ -238,7 +238,7 @@ float CameraResponsePlugin::ApplyCrf(float point, const vector<float> &from, con
 // HardwareDevice version
 //------------------------------------------------------------------------------
 
-void CameraResponsePlugin::AddHWChannelsUsed(unordered_set<Film::FilmChannelType> &hwChannelsUsed) const {
+void CameraResponsePlugin::AddHWChannelsUsed(unordered_set<Film::FilmChannelType, hash<int> > &hwChannelsUsed) const {
 	hwChannelsUsed.insert(Film::IMAGEPIPELINE);
 }
 

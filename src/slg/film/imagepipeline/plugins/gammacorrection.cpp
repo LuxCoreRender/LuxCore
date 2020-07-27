@@ -100,7 +100,7 @@ void GammaCorrectionPlugin::Apply(Film &film, const u_int index) {
 // HardwareDevice version
 //------------------------------------------------------------------------------
 
-void GammaCorrectionPlugin::AddHWChannelsUsed(unordered_set<Film::FilmChannelType> &hwChannelsUsed) const {
+void GammaCorrectionPlugin::AddHWChannelsUsed(unordered_set<Film::FilmChannelType, hash<int> > &hwChannelsUsed) const {
 	hwChannelsUsed.insert(Film::IMAGEPIPELINE);
 }
 

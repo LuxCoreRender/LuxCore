@@ -95,7 +95,7 @@ void VignettingPlugin::Apply(Film &film, const u_int index) {
 // HardwareDevice version
 //------------------------------------------------------------------------------
 
-void VignettingPlugin::AddHWChannelsUsed(unordered_set<Film::FilmChannelType> &hwChannelsUsed) const {
+void VignettingPlugin::AddHWChannelsUsed(unordered_set<Film::FilmChannelType, hash<int> > &hwChannelsUsed) const {
 	hwChannelsUsed.insert(Film::IMAGEPIPELINE);
 }
 

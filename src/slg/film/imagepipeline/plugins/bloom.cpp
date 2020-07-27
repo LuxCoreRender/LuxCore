@@ -259,7 +259,7 @@ void BloomFilterPlugin::Apply(Film &film, const u_int index) {
 // HardwareDevice version
 //------------------------------------------------------------------------------
 
-void BloomFilterPlugin::AddHWChannelsUsed(unordered_set<Film::FilmChannelType> &hwChannelsUsed) const {
+void BloomFilterPlugin::AddHWChannelsUsed(unordered_set<Film::FilmChannelType, hash<int> > &hwChannelsUsed) const {
 	hwChannelsUsed.insert(Film::IMAGEPIPELINE);
 }
 

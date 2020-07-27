@@ -86,7 +86,7 @@ void WhiteBalance::Apply(Film &film, const u_int index) {
 // HardwareDevice version
 //------------------------------------------------------------------------------
 
-void WhiteBalance::AddHWChannelsUsed(unordered_set<Film::FilmChannelType> &hwChannelsUsed) const {
+void WhiteBalance::AddHWChannelsUsed(unordered_set<Film::FilmChannelType, hash<int> > &hwChannelsUsed) const {
 	hwChannelsUsed.insert(Film::IMAGEPIPELINE);
 }
 

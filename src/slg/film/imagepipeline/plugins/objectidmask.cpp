@@ -90,7 +90,7 @@ void ObjectIDMaskFilterPlugin::Apply(Film &film, const u_int index) {
 // HardwareDevice version
 //------------------------------------------------------------------------------
 
-void ObjectIDMaskFilterPlugin::AddHWChannelsUsed(unordered_set<Film::FilmChannelType> &hwChannelsUsed) const {
+void ObjectIDMaskFilterPlugin::AddHWChannelsUsed(unordered_set<Film::FilmChannelType, hash<int> > &hwChannelsUsed) const {
 	hwChannelsUsed.insert(Film::IMAGEPIPELINE);
 	hwChannelsUsed.insert(Film::OBJECT_ID);
 }

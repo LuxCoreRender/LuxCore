@@ -109,7 +109,7 @@ void ImagePipeline::SetRadianceChannelScale(const u_int index, const RadianceCha
 	radianceChannelScales[index].Init();
 }
 
-void ImagePipeline::AddHWChannelsUsed(unordered_set<Film::FilmChannelType> &hwChannelsUsed) const {
+void ImagePipeline::AddHWChannelsUsed(unordered_set<Film::FilmChannelType, hash<int> > &hwChannelsUsed) const {
 	BOOST_FOREACH(ImagePipelinePlugin *plugin, pipeline) {
 		plugin->AddHWChannelsUsed(hwChannelsUsed);
 	}

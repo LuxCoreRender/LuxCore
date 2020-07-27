@@ -179,7 +179,7 @@ void Film::AllocateHWBuffers() {
 	ctx->SetVerbose(true);
 	hardwareDevice->PushThreadCurrentDevice();
 
-	unordered_set<Film::FilmChannelType> hwChannelsUsed;
+	unordered_set<Film::FilmChannelType, std::hash<int> > hwChannelsUsed;
 	for (auto const ip : imagePipelines)
 		ip->AddHWChannelsUsed(hwChannelsUsed);
 	
