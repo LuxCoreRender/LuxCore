@@ -26,7 +26,6 @@
 #include <fstream>
 #include <iostream>
 #include <vector>
-#include <set>
 #include <unordered_set>
 
 #include <boost/thread/mutex.hpp>
@@ -479,7 +478,7 @@ private:
 		const u_int srcWidth, const u_int srcHeight,
 		const u_int dstOffsetX, const u_int dstOffsetY);
 
-	std::set<FilmChannelType> channels;
+	std::unordered_set<FilmChannelType, std::hash<int> > channels;
 	u_int width, height, pixelCount, radianceGroupCount;
 	u_int subRegion[4];
 	std::vector<u_int> maskMaterialIDs, byMaterialIDs;
