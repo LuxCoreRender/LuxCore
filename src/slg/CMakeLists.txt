@@ -759,6 +759,7 @@ set(SLG_FILM_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/film/filters/none.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filters/blackmanharris.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filters/box.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filters/catmullrom.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filters/gaussian.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filters/mitchell.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filters/mitchellss.cpp

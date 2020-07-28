@@ -29,6 +29,7 @@
 #include "slg/film/filters/mitchellss.h"
 #include "slg/film/filters/blackmanharris.h"
 #include "slg/film/filters/sinc.h"
+#include "slg/film/filters/catmullrom.h"
 
 namespace slg {
 
@@ -65,6 +66,7 @@ protected:
 	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(FilterRegistry, MitchellSSFilter);
 	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(FilterRegistry, BlackmanHarrisFilter);
 	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(FilterRegistry, SincFilter);
+	OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(FilterRegistry, CatmullRomFilter);
 	// Just add here any new Filter (don't forget in the .cpp too)
 
 	friend class Filter;

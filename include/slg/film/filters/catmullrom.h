@@ -16,90 +16,75 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_FILTER_H
-#define	_SLG_FILTER_H
+#ifndef _SLG_CATMULLROM_FILTER_H
+#define	_SLG_CATMULLROM_FILTER_H
 
-#include "luxrays/core/color/color.h"
-#include "luxrays/utils/utils.h"
-#include "luxrays/utils/mc.h"
-#include "luxrays/utils/mcdistribution.h"
-#include "luxrays/core/namedobject.h"
+#include "luxrays/utils/serializationutils.h"
+#include "slg/film/filters/filter.h"
 
 namespace slg {
 
 //------------------------------------------------------------------------------
-// OpenCL data types
+// CatmullRomFilter
 //------------------------------------------------------------------------------
 
-namespace ocl {
-using luxrays::ocl::Spectrum;
-#include "slg/film/filters/filter_types.cl"
-} 
-
-//------------------------------------------------------------------------------
-// Filters
-//------------------------------------------------------------------------------
-
-typedef enum {
-	FILTER_NONE, FILTER_BOX, FILTER_GAUSSIAN, FILTER_MITCHELL, FILTER_MITCHELL_SS,
-	FILTER_BLACKMANHARRIS, FILTER_SINC, FILTER_CATMULLROM,
-	FILTER_TYPE_COUNT
-} FilterType;
-
-class Filter : public luxrays::NamedObject {
+class CatmullRomFilter : public Filter {
 public:
-	// Filter Interface
-	Filter(const float xw, const float yw) : NamedObject("pixelfilter"),
-			xWidth(xw), yWidth(yw),
-			invXWidth(1.f / xw), invYWidth(1.f / yw) { }
-	virtual ~Filter() { }
+	// CatmullRomFilter Public Methods
+	CatmullRomFilter(const float xw, const float yw) :
+		Filter(xw, yw) {
+	}
+	virtual ~CatmullRomFilter() { }
 
-	virtual FilterType GetType() const = 0;
-	virtual std::string GetTag() const = 0;
-	virtual float Evaluate(const float x, const float y) const = 0;
+	virtual FilterType GetType() const { return GetObjectType(); }
+	virtual std::string GetTag() const { return GetObjectTag(); }
+
+	float Evaluate(const float x, const float y) const {
+		return CatmullRom1D(x) * CatmullRom1D(y);
+	}
 
 	// Transform the current object in Properties
 	virtual luxrays::Properties ToProperties() const;
 
 	//--------------------------------------------------------------------------
-	// Static methods used by ObjectRegistry
+	// Static methods used by FilterRegistry
 	//--------------------------------------------------------------------------
 
-	// Transform the current configuration Properties in a complete list of
-	// object Properties (including all defaults values)
+	static FilterType GetObjectType() { return FILTER_CATMULLROM; }
+	static std::string GetObjectTag() { return "CATMULLROM"; }
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
-	// Allocate a Object based on the cfg definition
 	static Filter *FromProperties(const luxrays::Properties &cfg);
 	static slg::ocl::Filter *FromPropertiesOCL(const luxrays::Properties &cfg);
 
-	static FilterType String2FilterType(const std::string &type);
-	static const std::string FilterType2String(const FilterType type);
-
-	// Filter Public Data
-	float xWidth, yWidth;
-	float invXWidth, invYWidth;
+	float alpha;
 
 	friend class boost::serialization::access;
 
-protected:
+private:
 	static const luxrays::Properties &GetDefaultProps();
 
 	// Used by serialization
-	Filter() { }
+	CatmullRomFilter() { }
 
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
-		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(NamedObject);
-		ar & xWidth;
-		ar & yWidth;
-		ar & invXWidth;
-		ar & invYWidth;
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(Filter);
+	}
+
+	// CatmullRomFilter Utility Functions
+	float CatmullRom1D(float x) const {
+		x = fabsf(x);
+		float x2 = x * x;
+
+		return (x >= 2.f) ? 0.f : ((x < 1.f) ?
+				(3.f * (x * x2) - 5.f * x2 + 2.f) :
+				(-(x * x2) + 5.f * x2 - 8.f * x + 4.f));
 	}
 };
 
 }
 
-BOOST_SERIALIZATION_ASSUME_ABSTRACT(slg::Filter)
+BOOST_CLASS_VERSION(slg::CatmullRomFilter, 1)
 
-BOOST_CLASS_VERSION(slg::Filter, 3)
+BOOST_CLASS_EXPORT_KEY(slg::CatmullRomFilter)
 
-#endif	/* _SLG_FILTER_H */
+#endif	/* _SLG_CATMULLROM_FILTER_H */

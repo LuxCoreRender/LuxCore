@@ -132,4 +132,5 @@ OBJECTSTATICREGISTRY_REGISTER(FilterRegistry, MitchellFilter);
 OBJECTSTATICREGISTRY_REGISTER(FilterRegistry, MitchellSSFilter);
 OBJECTSTATICREGISTRY_REGISTER(FilterRegistry, BlackmanHarrisFilter);
 OBJECTSTATICREGISTRY_REGISTER(FilterRegistry, SincFilter);
+OBJECTSTATICREGISTRY_REGISTER(FilterRegistry, CatmullRomFilter);
 // Just add here any new Filter (don't forget in the .h too)
