@@ -757,11 +757,12 @@ set(SLG_FILM_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/film/filters/filter.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filters/filterdistribution.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filters/none.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filters/blackmanharris.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filters/box.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filters/gaussian.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filters/mitchell.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filters/mitchellss.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/film/filters/blackmanharris.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filters/sinc.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/imagepipeline.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/imagepipelineserialization.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/radiancechannelscale.cpp

@@ -16,90 +16,85 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_FILTER_H
-#define	_SLG_FILTER_H
+#ifndef _SLG_SINC_FILTER_H
+#define	_SLG_SINC_FILTER_H
 
-#include "luxrays/core/color/color.h"
-#include "luxrays/utils/utils.h"
-#include "luxrays/utils/mc.h"
-#include "luxrays/utils/mcdistribution.h"
-#include "luxrays/core/namedobject.h"
+#include "luxrays/utils/serializationutils.h"
+#include "slg/film/filters/filter.h"
 
 namespace slg {
 
 //------------------------------------------------------------------------------
-// OpenCL data types
+// SincFilter
 //------------------------------------------------------------------------------
 
-namespace ocl {
-using luxrays::ocl::Spectrum;
-#include "slg/film/filters/filter_types.cl"
-} 
-
-//------------------------------------------------------------------------------
-// Filters
-//------------------------------------------------------------------------------
-
-typedef enum {
-	FILTER_NONE, FILTER_BOX, FILTER_GAUSSIAN, FILTER_MITCHELL, FILTER_MITCHELL_SS,
-	FILTER_BLACKMANHARRIS, FILTER_SINC,
-	FILTER_TYPE_COUNT
-} FilterType;
-
-class Filter : public luxrays::NamedObject {
+class SincFilter : public Filter {
 public:
-	// Filter Interface
-	Filter(const float xw, const float yw) : NamedObject("pixelfilter"),
-			xWidth(xw), yWidth(yw),
-			invXWidth(1.f / xw), invYWidth(1.f / yw) { }
-	virtual ~Filter() { }
+	// SincFilter Public Methods
+	SincFilter(const float xw, const float yw, const float t) :
+		Filter(xw, yw) {
+		tau = t;
+	}
+	virtual ~SincFilter() { }
 
-	virtual FilterType GetType() const = 0;
-	virtual std::string GetTag() const = 0;
-	virtual float Evaluate(const float x, const float y) const = 0;
+	virtual FilterType GetType() const { return GetObjectType(); }
+	virtual std::string GetTag() const { return GetObjectTag(); }
+
+	float Evaluate(const float x, const float y) const {
+		return Sinc1D(x) * Sinc1D(y);
+	}
 
 	// Transform the current object in Properties
 	virtual luxrays::Properties ToProperties() const;
 
 	//--------------------------------------------------------------------------
-	// Static methods used by ObjectRegistry
+	// Static methods used by FilterRegistry
 	//--------------------------------------------------------------------------
 
-	// Transform the current configuration Properties in a complete list of
-	// object Properties (including all defaults values)
+	static FilterType GetObjectType() { return FILTER_SINC; }
+	static std::string GetObjectTag() { return "SINC"; }
 	static luxrays::Properties ToProperties(const luxrays::Properties &cfg);
-	// Allocate a Object based on the cfg definition
 	static Filter *FromProperties(const luxrays::Properties &cfg);
 	static slg::ocl::Filter *FromPropertiesOCL(const luxrays::Properties &cfg);
 
-	static FilterType String2FilterType(const std::string &type);
-	static const std::string FilterType2String(const FilterType type);
-
-	// Filter Public Data
-	float xWidth, yWidth;
-	float invXWidth, invYWidth;
+	float alpha;
 
 	friend class boost::serialization::access;
 
-protected:
+private:
 	static const luxrays::Properties &GetDefaultProps();
 
 	// Used by serialization
-	Filter() { }
+	SincFilter() { }
 
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
-		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(NamedObject);
-		ar & xWidth;
-		ar & yWidth;
-		ar & invXWidth;
-		ar & invYWidth;
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(Filter);
+		ar & tau;
+	}
+
+	// SincFilter Private Data
+	float tau;
+
+	// SincFilter Utility Functions
+	float Sinc1D(float x) const {
+		x = fabsf(x);
+
+		if (x < 1e-5f)
+			return 1.f;
+		if (x > 1.)
+			return 0.f;
+
+		x *= M_PI;
+		const float sinc = sinf(x * tau) / (x * tau);
+		const float lanczos = sinf(x) / x;
+		return sinc * lanczos;
 	}
 };
 
 }
 
-BOOST_SERIALIZATION_ASSUME_ABSTRACT(slg::Filter)
+BOOST_CLASS_VERSION(slg::SincFilter, 1)
 
-BOOST_CLASS_VERSION(slg::Filter, 3)
+BOOST_CLASS_EXPORT_KEY(slg::SincFilter)
 
-#endif	/* _SLG_FILTER_H */
+#endif	/* _SLG_SINC_FILTER_H */

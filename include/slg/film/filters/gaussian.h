@@ -30,7 +30,7 @@ namespace slg {
 
 class GaussianFilter : public Filter {
 public:
-	// MitchellFilter Public Methods
+	// GaussianFilter Public Methods
 	GaussianFilter(const float xw, const float yw, const float a) :
 		Filter(xw, yw) {
 		alpha = a;

@@ -131,4 +131,5 @@ OBJECTSTATICREGISTRY_REGISTER(FilterRegistry, GaussianFilter);
 OBJECTSTATICREGISTRY_REGISTER(FilterRegistry, MitchellFilter);
 OBJECTSTATICREGISTRY_REGISTER(FilterRegistry, MitchellSSFilter);
 OBJECTSTATICREGISTRY_REGISTER(FilterRegistry, BlackmanHarrisFilter);
+OBJECTSTATICREGISTRY_REGISTER(FilterRegistry, SincFilter);
 // Just add here any new Filter (don't forget in the .h too)
