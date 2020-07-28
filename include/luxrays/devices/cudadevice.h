@@ -38,7 +38,8 @@ namespace luxrays {
 
 class CUDADeviceDescription : public DeviceDescription {
 public:
-	CUDADeviceDescription(CUdevice cudaDevice, const size_t devIndex);
+	CUDADeviceDescription(CUdevice cudaDevice, const size_t devIndex,
+			const bool useOptix);
 	virtual ~CUDADeviceDescription();
 
 	virtual int GetComputeUnits() const;
@@ -53,11 +54,12 @@ public:
 	friend class CUDADevice;
 
 protected:
-	static void AddDeviceDescs(std::vector<DeviceDescription *> &descriptions);
+	static void AddDeviceDescs(std::vector<DeviceDescription *> &descriptions,
+			const bool useOptix);
 
 	size_t cudaDeviceIndex;
-
 	CUdevice cudaDevice;
+	const bool useOptix;
 };
 
 //------------------------------------------------------------------------------

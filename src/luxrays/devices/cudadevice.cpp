@@ -31,9 +31,10 @@ using namespace luxrays;
 // OpenCL Device Description
 //------------------------------------------------------------------------------
 
-CUDADeviceDescription::CUDADeviceDescription(CUdevice dev, const size_t devIndex) :
+CUDADeviceDescription::CUDADeviceDescription(CUdevice dev, const size_t devIndex,
+		const bool useOptx) :
 		DeviceDescription("CUDAInitializingDevice", DEVICE_TYPE_CUDA_GPU),
-		cudaDeviceIndex(devIndex), cudaDevice(dev) {
+		cudaDeviceIndex(devIndex), cudaDevice(dev), useOptix(useOptx) {
 	char buff[128];
     CHECK_CUDA_ERROR(cuDeviceGetName(buff, 128, cudaDevice));
 	name = string(buff);
@@ -104,7 +105,8 @@ bool CUDADeviceDescription::HasOutOfCoreMemorySupport() const {
 	return (v == 1);
 }
 
-void CUDADeviceDescription::AddDeviceDescs(vector<DeviceDescription *> &descriptions) {
+void CUDADeviceDescription::AddDeviceDescs(vector<DeviceDescription *> &descriptions,
+		const bool useOptix) {
 	int devCount;
 	CHECK_CUDA_ERROR(cuDeviceGetCount(&devCount));
 
@@ -112,7 +114,7 @@ void CUDADeviceDescription::AddDeviceDescs(vector<DeviceDescription *> &descript
 		CUdevice device;
 		CHECK_CUDA_ERROR(cuDeviceGet(&device, i));
 
-		CUDADeviceDescription *desc = new CUDADeviceDescription(device, i);
+		CUDADeviceDescription *desc = new CUDADeviceDescription(device, i, useOptix);
 
 		descriptions.push_back(desc);
 	}
@@ -144,7 +146,7 @@ CUDADevice::CUDADevice(
 	// I prefer cache over shared memory because I pretty much never use shared memory
 	CHECK_CUDA_ERROR(cuCtxSetCacheConfig(CU_FUNC_CACHE_PREFER_L1));
 
-	if (isOptixAvilable) {
+	if (isOptixAvilable && desc->useOptix) {
 		OptixDeviceContextOptions optixOptions;
 		optixOptions.logCallbackFunction = &OptixLogCB;
 		optixOptions.logCallbackData = (void *)deviceContext;

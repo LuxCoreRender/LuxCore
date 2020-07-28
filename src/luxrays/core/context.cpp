@@ -118,7 +118,8 @@ Context::Context(LuxRaysDebugHandler handler, const Properties &config) : cfg(co
 			LR_LOG(this, "Optix support: not available");
 		}
 
-		CUDADeviceDescription::AddDeviceDescs(deviceDescriptions);
+		const bool useOptix = cfg.Get(Property("context.cuda.optix.enable")(true)).Get<bool>();
+		CUDADeviceDescription::AddDeviceDescs(deviceDescriptions, useOptix);
 	}
 #else
 	LR_LOG(this, "CUDA support: disabled");
