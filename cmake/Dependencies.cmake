@@ -75,6 +75,8 @@ if (NOT Boost_FOUND)
         else()
                 set(Boost_USE_STATIC_LIBS ON)
         endif()
+        # The following line is necessary with CMake 3.18.0 to find static libs on Windows
+        unset(Boost_LIB_PREFIX)
 		message(STATUS "Re-trying with link static = ${Boost_USE_STATIC_LIBS}")
         find_package(Boost ${Boost_MINIMUM_VERSION} COMPONENTS ${LUXRAYS_BOOST_COMPONENTS})
 endif()
