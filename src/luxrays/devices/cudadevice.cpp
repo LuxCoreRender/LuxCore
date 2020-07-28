@@ -152,7 +152,13 @@ CUDADevice::CUDADevice(
 		//optixOptions.logCallbackLevel = 1;
 		// For debugging
 		optixOptions.logCallbackLevel = 4;
-		CHECK_OPTIX_ERROR(optixDeviceContextCreate(cudaContext, &optixOptions, &optixContext));		
+		
+		const OptixResult result = optixDeviceContextCreate(cudaContext, &optixOptions, &optixContext);
+		if (result != OPTIX_SUCCESS) {
+			LR_LOG(context, "WARNING unable to create Optix context for device " << deviceName << ": " <<
+					std::string(optixGetErrorName(result)) << "(code: " <<  result << ")");
+			optixContext = nullptr;
+		}
 	}
 }
 
