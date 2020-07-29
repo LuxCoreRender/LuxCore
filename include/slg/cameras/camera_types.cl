@@ -50,6 +50,7 @@ typedef struct {
 } ProjectiveCamera;
 
 typedef enum {
+	DIST_NONE,
 	DIST_UNIFORM,
 	DIST_EXPONENTIAL,
 	DIST_INVERSEEXPONENTIAL,

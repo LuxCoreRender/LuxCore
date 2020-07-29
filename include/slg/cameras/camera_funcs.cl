@@ -113,7 +113,7 @@ OPENCL_FORCE_INLINE void PerspectiveCamera_LocalSampleLens(
 
 	if (camera->persp.projCamera.lensRadius > 0.f) {
 		const float bokehBlades = camera->persp.bokehBlades;
-		if (bokehBlades < 3)
+		if ((camera->persp.bokehDistribution == DIST_NONE) || (bokehBlades < 3))
 			ConcentricSampleDisk(u1, u2, lensU, lensV);
 		else {
 			// Bokeh support

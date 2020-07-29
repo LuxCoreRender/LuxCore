@@ -120,7 +120,7 @@ Camera *Scene::CreateCamera(const Properties &props) {
 			perspCamera->bokehPower = props.Get(Property("scene.camera.bokeh.power")(3u)).Get<u_int>();
 
 			perspCamera->bokehDistribution = PerspectiveCamera::String2BokehDistributionType(
-					props.Get(Property("scene.camera.bokeh.distribution.type")("UNIFORM")).Get<string>());
+					props.Get(Property("scene.camera.bokeh.distribution.type")("NONE")).Get<string>());
 			if (perspCamera->bokehDistribution == PerspectiveCamera::DIST_CUSTOM) {
 				const string imgMapName = SLG_FileNameResolver.ResolveFile(
 						props.Get(Property("scene.camera.bokeh.distribution.image")("image.png")).Get<string>());

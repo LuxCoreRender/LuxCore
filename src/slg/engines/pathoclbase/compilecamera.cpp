@@ -121,6 +121,8 @@ void CompiledScene::CompileCamera() {
 			camera.persp.bokehBlades = perspCamera->bokehBlades;
 			camera.persp.bokehPower = perspCamera->bokehPower;
 			switch (perspCamera->bokehDistribution) {
+				case PerspectiveCamera::DIST_NONE:
+					camera.persp.bokehDistribution = slg::ocl::DIST_NONE;
 				case PerspectiveCamera::DIST_UNIFORM:
 					camera.persp.bokehDistribution = slg::ocl::DIST_UNIFORM;
 					break;
