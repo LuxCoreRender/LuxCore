@@ -24,6 +24,8 @@
 #include "luxrays/core/geometry/motionsystem.h"
 #include "luxrays/utils/mc.h"
 
+#include "slg/imagemap/imagemapcache.h"
+
 namespace slg {
 
 //------------------------------------------------------------------------------
@@ -100,7 +102,7 @@ public:
 		const float filmX, const float filmY,
 		float *pdfW, float *fluxToRadianceFactor) const = 0;
 
-	virtual luxrays::Properties ToProperties() const;
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 	virtual void UpdateVolumeReferences(const Volume *oldVol, const Volume *newVol);
 
 	static Camera *AllocCamera(const luxrays::Properties &props);

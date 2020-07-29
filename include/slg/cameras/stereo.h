@@ -50,7 +50,7 @@ public:
 		const float filmX, const float filmY,
 		float *pdfW, float *fluxToRadianceFactor) const;
 
-	virtual luxrays::Properties ToProperties() const;
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 	float horizStereoEyesDistance, horizStereoLensDistance;
 

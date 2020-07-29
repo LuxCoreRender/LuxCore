@@ -7,6 +7,7 @@
 * GPU imagepipeline now allocated buffers for only the used AOVs by each plugin
 * batch.haltspp now supports 2 parameters too in order to have separate halt conditions for eye and light tracing
 * Added the support for camera not uniform and anamorphic bokeh (issue #409)
+* Added the support for camera bokeh with custom distribution
 * Variance clamping is now applied separately to each radiance group (issue #414)
 * Added the support for lateral and longitudinal chromatic aberration (issue #409)
 * Added the support for SINC pixel filter (issue #415)

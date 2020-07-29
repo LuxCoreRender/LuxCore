@@ -36,6 +36,7 @@ PerspectiveCamera::PerspectiveCamera(const Point &o, const Point &t,
 		ProjectiveCamera(PERSPECTIVE, region, o, t, u),
 		screenOffsetX(0.f), screenOffsetY(0.f), fieldOfView(45.f),
 		bokehBlades(0), bokehPower(0), bokehDistribution(DIST_EXPONENTIAL),
+		bokehDistributionImageMap(nullptr), bokehDistributionMap(nullptr),
 		bokehScaleX(1.f), bokehScaleY(1.f),
 		enableOculusRiftBarrel(false) {
 }
@@ -46,8 +47,13 @@ PerspectiveCamera::PerspectiveCamera(const CameraType camType,
 		ProjectiveCamera(camType, region, o, t, u),
 		screenOffsetX(0.f), screenOffsetY(0.f), fieldOfView(45.f),
 		bokehBlades(0), bokehPower(0), bokehDistribution(DIST_EXPONENTIAL),
+		bokehDistributionImageMap(nullptr), bokehDistributionMap(nullptr),
 		bokehScaleX(1.f), bokehScaleY(1.f),
 		enableOculusRiftBarrel(false) {
+}
+
+PerspectiveCamera::~PerspectiveCamera() {
+	delete bokehDistributionMap;
 }
 
 void PerspectiveCamera::InitCameraTransforms(CameraTransforms *trans) {
@@ -77,6 +83,27 @@ void PerspectiveCamera::InitCameraData() {
 	const float yPixelHeight = tanAngle * ((screenWindow[3] - screenWindow[2]) / 2.f);
 	pixelArea = xPixelWidth * yPixelHeight;
 
+	if (bokehDistributionImageMap) {
+		// Initialize bokeh Distribution2D
+
+		delete bokehDistributionMap;
+		bokehDistributionMap = nullptr;
+
+		const u_int distributionWidth = bokehDistributionImageMap->GetWidth();
+		const u_int distributionHeight = bokehDistributionImageMap->GetHeight();
+		vector<float> data(distributionWidth * distributionHeight);
+		for (u_int y = 0; y < distributionHeight; ++y) {
+			for (u_int x = 0; x < distributionWidth; ++x) {
+				const u_int index = x + y * distributionWidth;
+
+				data[index] = bokehDistributionImageMap->GetStorage()->GetFloat(index);
+			}
+		}
+
+		bokehDistributionMap = new Distribution2D(&data[0], distributionWidth, distributionHeight);
+	}
+	
+	// Normalize bokeh scale vector
 	const float s = 1.f / sqrtf(Sqr(bokehScaleX) + Sqr(bokehScaleY));
 	bokehScaleX *= s;
 	bokehScaleY *= s;
@@ -150,45 +177,58 @@ bool PerspectiveCamera::LocalSampleLens(const float time,
 		Point *lensp) const {
 	Point lensPoint(0.f, 0.f, 0.f);
 	if (lensRadius > 0.f) {
-		if (bokehBlades < 3)
+		if ((bokehDistribution == DIST_NONE) || ((bokehDistribution != DIST_CUSTOM) && (bokehBlades < 3)))
 			ConcentricSampleDisk(u1, u2, &lensPoint.x, &lensPoint.y);
 		else {
 			// Bokeh support
-			const float halfAngle = M_PI / bokehBlades;
-			const float honeyRadius = cosf(halfAngle);
 
-			const float theta = 2.f * M_PI * u2;
+			if (bokehDistribution == DIST_CUSTOM) {
+				assert (bokehDistributionMap);
 
-			const u_int sector = Floor2UInt(theta / halfAngle);
-			const float rho = (sector % 2 == 0) ? (theta - sector * halfAngle) :
-					((sector + 1) * halfAngle - theta);
+				float uv[2];
+				float distPdf;
+				bokehDistributionMap->SampleContinuous(u1, u2, uv, &distPdf);
+				if (distPdf > 0.f) {
+					lensPoint.x = uv[0] * bokehScaleX;
+					lensPoint.y = uv[1] * bokehScaleY;
+				}	
+			} else {
+				const float halfAngle = M_PI / bokehBlades;
+				const float honeyRadius = cosf(halfAngle);
 
-			float r = honeyRadius / cosf(rho);
-			switch (bokehDistribution) {
-				case DIST_UNIFORM:
-					r *= sqrtf(u1);
-					break;
-				case DIST_EXPONENTIAL:
-					r *= sqrtf(ExponentialSampleDisk(u1, bokehPower));
-					break;
-				case DIST_INVERSEEXPONENTIAL:
-					r *= sqrtf(InverseExponentialSampleDisk(u1, bokehPower));
-					break;
-				case DIST_GAUSSIAN:
-					r *= sqrtf(GaussianSampleDisk(u1));
-					break;
-				case DIST_INVERSEGAUSSIAN:
-					r *= sqrtf(InverseGaussianSampleDisk(u1));
-					break;
-				case DIST_TRIANGULAR:
-					r *= sqrtf(TriangularSampleDisk(u1));
-					break;
-				default:
-					throw runtime_error("Unknown bokeh distribution in PerspectiveCamera::LocalSampleLens(): " + ToString(bokehDistribution));
+				const float theta = 2.f * M_PI * u2;
+
+				const u_int sector = Floor2UInt(theta / halfAngle);
+				const float rho = (sector % 2 == 0) ? (theta - sector * halfAngle) :
+						((sector + 1) * halfAngle - theta);
+
+				float r = honeyRadius / cosf(rho);
+				switch (bokehDistribution) {
+					case DIST_UNIFORM:
+						r *= sqrtf(u1);
+						break;
+					case DIST_EXPONENTIAL:
+						r *= sqrtf(ExponentialSampleDisk(u1, bokehPower));
+						break;
+					case DIST_INVERSEEXPONENTIAL:
+						r *= sqrtf(InverseExponentialSampleDisk(u1, bokehPower));
+						break;
+					case DIST_GAUSSIAN:
+						r *= sqrtf(GaussianSampleDisk(u1));
+						break;
+					case DIST_INVERSEGAUSSIAN:
+						r *= sqrtf(InverseGaussianSampleDisk(u1));
+						break;
+					case DIST_TRIANGULAR:
+						r *= sqrtf(TriangularSampleDisk(u1));
+						break;
+					default:
+						throw runtime_error("Unknown bokeh distribution in PerspectiveCamera::LocalSampleLens(): " + ToString(bokehDistribution));
+				}
+
+				lensPoint.x = r * cosf(theta) * bokehScaleX;
+				lensPoint.y = r * sinf(theta) * bokehScaleY;
 			}
-
-			lensPoint.x = r * cosf(theta) * bokehScaleX;
-			lensPoint.y = r * sinf(theta) * bokehScaleY;
 		}
 
 		lensPoint.x *= lensRadius;
@@ -237,8 +277,8 @@ void PerspectiveCamera::GetPDF(const Ray &eyeRay, const float eyeDistance,
 	}
 }
 
-Properties PerspectiveCamera::ToProperties() const {
-	Properties props = ProjectiveCamera::ToProperties();
+Properties PerspectiveCamera::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	Properties props = ProjectiveCamera::ToProperties(imgMapCache, useRealFileName);
 
 	props.Set(Property("scene.camera.type")("perspective"));
 	props.Set(Property("scene.camera.oculusrift.barrelpostpro.enable")(enableOculusRiftBarrel));
@@ -246,6 +286,13 @@ Properties PerspectiveCamera::ToProperties() const {
 	props.Set(Property("scene.camera.bokeh.blades")(bokehBlades));
 	props.Set(Property("scene.camera.bokeh.power")(bokehPower));
 	props.Set(Property("scene.camera.bokeh.distribution.type")(BokehDistributionType2String(bokehDistribution)));
+
+	if (bokehDistributionImageMap) {
+		const string fileName = useRealFileName ?
+			bokehDistributionImageMap->GetName() : imgMapCache.GetSequenceFileName(bokehDistributionImageMap);
+		props.Set(Property("scene.camera.bokeh.distribution.image")(fileName));
+	}
+
 	props.Set(Property("scene.camera.bokeh.scale.x")(bokehScaleX));
 	props.Set(Property("scene.camera.bokeh.scale.y")(bokehScaleY));
 
@@ -253,7 +300,9 @@ Properties PerspectiveCamera::ToProperties() const {
 }
 
 PerspectiveCamera::BokehDistributionType PerspectiveCamera::String2BokehDistributionType(string type) {
-	if (type == "UNIFORM")
+	if (type == "NONE")
+		return DIST_NONE;
+	else if (type == "UNIFORM")
 		return DIST_UNIFORM;
 	else if (type == "EXPONENTIAL")
 		return DIST_EXPONENTIAL;
@@ -265,12 +314,16 @@ PerspectiveCamera::BokehDistributionType PerspectiveCamera::String2BokehDistribu
 		return DIST_INVERSEGAUSSIAN;
 	else if (type == "TRIANGULAR")
 		return DIST_TRIANGULAR;
+	else if (type == "CUSTOM")
+		return DIST_CUSTOM;
 	else
 		throw runtime_error("Unknown bokeh distribution type: " + type);
 }
 
 string PerspectiveCamera::BokehDistributionType2String(const BokehDistributionType type) {
 	switch (type) {
+		case DIST_NONE:
+			return "NONE";
 		case DIST_UNIFORM:
 			return "UNIFORM";
 		case DIST_EXPONENTIAL:
@@ -283,6 +336,8 @@ string PerspectiveCamera::BokehDistributionType2String(const BokehDistributionTy
 			return "INVERSEGAUSSIAN";
 		case DIST_TRIANGULAR:
 			return "TRIANGULAR";
+		case DIST_CUSTOM:
+			return "CUSTOM";
 		default:
 			throw runtime_error("Unsupported bokeh distribution type in PerspectiveCamera::String2BokehDistributionType(): " + ToString(type));
 	}

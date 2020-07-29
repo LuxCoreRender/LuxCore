@@ -212,8 +212,8 @@ void ProjectiveCamera::Rotate(const float angle, const luxrays::Vector &axis) {
 		target = orig + newDir;
 }
 
-Properties ProjectiveCamera::ToProperties() const {
-	Properties props = Camera::ToProperties();
+Properties ProjectiveCamera::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	Properties props = Camera::ToProperties(imgMapCache, useRealFileName);
 
 	props.Set(Property("scene.camera.lookat.orig")(orig));
 	props.Set(Property("scene.camera.lookat.target")(target));

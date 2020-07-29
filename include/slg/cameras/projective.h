@@ -101,7 +101,7 @@ public:
 		luxrays::Ray *ray, PathVolumeInfo *volInfo,
 		const float u0, const float u1) const;
 
-	virtual luxrays::Properties ToProperties() const;
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 	// User defined values
 	luxrays::Point orig, target;

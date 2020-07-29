@@ -114,7 +114,7 @@ void Camera::UpdateAuto(const Scene *scene) {
 	}
 }
 
-Properties Camera::ToProperties() const {
+Properties Camera::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	Properties props;
 
 	props.Set(Property("scene.camera.cliphither")(clipHither));

@@ -201,8 +201,8 @@ void EnvironmentCamera::Rotate(const float angle, const luxrays::Vector &axis) {
 		target = orig + newDir;
 }
 
-Properties EnvironmentCamera::ToProperties() const {
-	Properties props = Camera::ToProperties();
+Properties EnvironmentCamera::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	Properties props = Camera::ToProperties(imgMapCache, useRealFileName);
 
 	props.Set(Property("scene.camera.type")("environment"));
 	props.Set(Property("scene.camera.lookat.orig")(orig));

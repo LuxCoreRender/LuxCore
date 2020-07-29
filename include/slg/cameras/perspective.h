@@ -21,6 +21,9 @@
 
 #include <string>
 
+#include "luxrays/utils/mcdistribution.h"
+
+#include "slg/imagemap/imagemap.h"
 #include "slg/cameras/projective.h"
 
 namespace slg {
@@ -32,17 +35,19 @@ namespace slg {
 class PerspectiveCamera : public ProjectiveCamera {
 public:
 	typedef enum {
+		DIST_NONE,
 		DIST_UNIFORM,
 		DIST_EXPONENTIAL,
 		DIST_INVERSEEXPONENTIAL,
 		DIST_GAUSSIAN,
 		DIST_INVERSEGAUSSIAN,
-		DIST_TRIANGULAR
+		DIST_TRIANGULAR,
+		DIST_CUSTOM
 	} BokehDistributionType;
 
 	PerspectiveCamera(const luxrays::Point &o, const luxrays::Point &t,
 			const luxrays::Vector &u, const float *screenWindow = NULL);
-	virtual ~PerspectiveCamera() { }
+	virtual ~PerspectiveCamera();
 
 	virtual void ClampRay(luxrays::Ray *ray) const;
 	virtual bool GetSamplePosition(luxrays::Ray *eyeRay, float *filmX, float *filmY) const;
@@ -54,7 +59,7 @@ public:
 		const float filmX, const float filmY,
 		float *pdfW, float *fluxToRadianceFactor) const;
 
-	virtual luxrays::Properties ToProperties() const;
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 	static BokehDistributionType String2BokehDistributionType(std::string type);
 	static std::string BokehDistributionType2String(const BokehDistributionType type);
@@ -64,6 +69,8 @@ public:
 
 	u_int bokehBlades, bokehPower;
 	BokehDistributionType bokehDistribution;
+	const ImageMap *bokehDistributionImageMap;
+	luxrays::Distribution2D *bokehDistributionMap;
 	float bokehScaleX, bokehScaleY;
 
 	bool enableOculusRiftBarrel;

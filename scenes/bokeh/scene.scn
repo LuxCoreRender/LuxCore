@@ -25,10 +25,16 @@ scene.camera.fieldofview = 90
 #scene.camera.bokeh.scale.x = 1
 #scene.camera.bokeh.scale.y = 1
 ##
-scene.camera.bokeh.blades = 64
-scene.camera.bokeh.distribution.type = UNIFORM
+#scene.camera.bokeh.distribution.type = UNIFORM
+#scene.camera.bokeh.blades = 64
+#scene.camera.bokeh.scale.x = 1
+#scene.camera.bokeh.scale.y = 3
+##
+scene.camera.lensradius = 0.15
+scene.camera.bokeh.distribution.type = CUSTOM
+scene.camera.bokeh.distribution.image = scenes/bokeh/logo.jpg
 scene.camera.bokeh.scale.x = 1
-scene.camera.bokeh.scale.y = 3
+scene.camera.bokeh.scale.y = 1
 ##
 scene.lights.__WORLD_BACKGROUND_LIGHT__.gain = 1.99999995e-05 1.99999995e-05 1.99999995e-05
 scene.lights.__WORLD_BACKGROUND_LIGHT__.transformation = 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1

@@ -85,7 +85,7 @@ Properties Scene::ToProperties(const bool useRealFileName) const {
 
 		// Write the camera information
 		if (camera)
-			props.Set(camera->ToProperties());
+			props.Set(camera->ToProperties(imgMapCache, useRealFileName));
 
 		// Save all not intersectable light sources
 		vector<string> lightNames = lightDefs.GetLightSourceNames();

@@ -43,7 +43,7 @@ public:
 		const float filmX, const float filmY,
 		float *pdfW, float *fluxToRadianceFactor) const;
 
-	luxrays::Properties ToProperties() const;
+	luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
 	virtual void InitCameraTransforms(CameraTransforms *trans);

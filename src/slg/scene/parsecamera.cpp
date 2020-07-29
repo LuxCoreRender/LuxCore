@@ -16,11 +16,14 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <memory>
+
 #include "slg/cameras/environment.h"
 #include "slg/cameras/perspective.h"
 #include "slg/cameras/orthographic.h"
 #include "slg/cameras/stereo.h"
 #include "slg/scene/scene.h"
+#include "slg/utils/filenameresolver.h"
 
 using namespace std;
 using namespace luxrays;
@@ -115,8 +118,20 @@ Camera *Scene::CreateCamera(const Properties &props) {
 
 			perspCamera->bokehBlades = props.Get(Property("scene.camera.bokeh.blades")(0u)).Get<u_int>();
 			perspCamera->bokehPower = props.Get(Property("scene.camera.bokeh.power")(3u)).Get<u_int>();
+
 			perspCamera->bokehDistribution = PerspectiveCamera::String2BokehDistributionType(
 					props.Get(Property("scene.camera.bokeh.distribution.type")("UNIFORM")).Get<string>());
+			if (perspCamera->bokehDistribution == PerspectiveCamera::DIST_CUSTOM) {
+				const string imgMapName = SLG_FileNameResolver.ResolveFile(
+						props.Get(Property("scene.camera.bokeh.distribution.image")("image.png")).Get<string>());
+
+				perspCamera->bokehDistributionImageMap = imgMapCache.GetImageMap(imgMapName, 1.f,
+						ImageMapStorage::DEFAULT, ImageMapStorage::FLOAT);
+				
+				if (perspCamera->bokehDistributionImageMap->GetSpectrumMean() == 0.f)
+					throw runtime_error("Used a black image in camera bokeh distribution: " + imgMapName);
+			}
+
 			perspCamera->bokehScaleX = props.Get(Property("scene.camera.bokeh.scale.x")(1.f)).Get<float>();
 			perspCamera->bokehScaleY = props.Get(Property("scene.camera.bokeh.scale.y")(1.f)).Get<float>();
 
