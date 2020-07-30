@@ -26,7 +26,7 @@ BOOST_CLASS_EXPORT_IMPLEMENT(slg::SincFilter)
 
 Properties SincFilter::ToProperties() const {
 	return Filter::ToProperties() <<
-			Property("film.filter.sinc.tau")(alpha);
+			Property("film.filter.sinc.tau")(tau);
 }
 
 //------------------------------------------------------------------------------

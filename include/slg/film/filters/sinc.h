@@ -57,7 +57,7 @@ public:
 	static Filter *FromProperties(const luxrays::Properties &cfg);
 	static slg::ocl::Filter *FromPropertiesOCL(const luxrays::Properties &cfg);
 
-	float alpha;
+	float tau;
 
 	friend class boost::serialization::access;
 
@@ -71,9 +71,6 @@ private:
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(Filter);
 		ar & tau;
 	}
-
-	// SincFilter Private Data
-	float tau;
 
 	// SincFilter Utility Functions
 	float Sinc1D(float x) const {
