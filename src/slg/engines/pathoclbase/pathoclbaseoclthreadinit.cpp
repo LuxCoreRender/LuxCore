@@ -55,8 +55,15 @@ void PathOCLBaseOCLRenderThread::InitFilm() {
 }
 
 void PathOCLBaseOCLRenderThread::InitCamera() {
-	intersectionDevice->AllocBufferRO(&cameraBuff, &renderEngine->compiledScene->camera,
+	CompiledScene *cscene = renderEngine->compiledScene;
+
+	intersectionDevice->AllocBufferRO(&cameraBuff, &cscene->camera,
 			sizeof(slg::ocl::Camera), "Camera");
+	if (cscene->cameraBokehDistribution)
+		intersectionDevice->AllocBufferRO(&cameraBokehDistributionBuff, cscene->cameraBokehDistribution,
+				cscene->cameraBokehDistributionSize, "CameraBokehDistribution");
+	else
+		intersectionDevice->FreeBuffer(&cameraBokehDistributionBuff);
 }
 
 void PathOCLBaseOCLRenderThread::InitGeometry() {

@@ -88,6 +88,7 @@ PathOCLBaseOCLRenderThread::PathOCLBaseOCLRenderThread(const u_int index,
 	trianglesBuff = nullptr;
 	interpolatedTransformsBuff = nullptr;
 	cameraBuff = nullptr;
+	cameraBokehDistributionBuff = nullptr;
 	lightIndexOffsetByMeshIndexBuff = nullptr;
 	lightIndexByTriIndexBuff = nullptr;
 	imageMapDescsBuff = nullptr;
@@ -207,6 +208,7 @@ void PathOCLBaseOCLRenderThread::Stop() {
 	intersectionDevice->FreeBuffer(&elvcBVHNodesBuff);
 	intersectionDevice->FreeBuffer(&envLightDistributionsBuff);
 	intersectionDevice->FreeBuffer(&cameraBuff);
+	intersectionDevice->FreeBuffer(&cameraBokehDistributionBuff);
 	intersectionDevice->FreeBuffer(&lightIndexOffsetByMeshIndexBuff);
 	intersectionDevice->FreeBuffer(&lightIndexByTriIndexBuff);
 	intersectionDevice->FreeBuffer(&imageMapDescsBuff);

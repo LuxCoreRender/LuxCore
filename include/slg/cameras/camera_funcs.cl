@@ -106,6 +106,7 @@ OPENCL_FORCE_INLINE void Camera_ApplyArbitraryClippingPlane(
 
 OPENCL_FORCE_INLINE void PerspectiveCamera_LocalSampleLens(
 		__global const Camera* restrict camera,
+		__global const float* restrict cameraBokehDistribution,
 		const float u1, const float u2,
 		float *lensU, float *lensV) {
 	*lensU = 0.f;
@@ -113,46 +114,58 @@ OPENCL_FORCE_INLINE void PerspectiveCamera_LocalSampleLens(
 
 	if (camera->persp.projCamera.lensRadius > 0.f) {
 		const float bokehBlades = camera->persp.bokehBlades;
-		if ((camera->persp.bokehDistribution == DIST_NONE) || (bokehBlades < 3))
+		const BokehDistributionType bokehDistribution = camera->persp.bokehDistribution;
+		if ((bokehDistribution == DIST_NONE) || ((bokehDistribution != DIST_CUSTOM) && (bokehBlades < 3)))
 			ConcentricSampleDisk(u1, u2, lensU, lensV);
 		else {
 			// Bokeh support
-			const float halfAngle = M_PI_F / bokehBlades;
-			const float honeyRadius = cos(halfAngle);
+			
+			if (bokehDistribution == DIST_CUSTOM) {
+				float2 sampleUV;
+				float distPdf;
+				Distribution2D_SampleContinuous(cameraBokehDistribution, u1, u2, &sampleUV, &distPdf);
+				if (distPdf > 0.f) {
+					*lensU = sampleUV.x * camera->persp.bokehScaleX;
+					*lensV = sampleUV.y * camera->persp.bokehScaleY;
+				}	
+			} else {
+				const float halfAngle = M_PI_F / bokehBlades;
+				const float honeyRadius = cos(halfAngle);
 
-			const float theta = 2.f * M_PI_F * u2;
+				const float theta = 2.f * M_PI_F * u2;
 
-			const uint sector = Floor2UInt(theta / halfAngle);
-			const float rho = (sector % 2 == 0) ? (theta - sector * halfAngle) :
-					((sector + 1) * halfAngle - theta);
+				const uint sector = Floor2UInt(theta / halfAngle);
+				const float rho = (sector % 2 == 0) ? (theta - sector * halfAngle) :
+						((sector + 1) * halfAngle - theta);
 
-			float r = honeyRadius / cos(rho);
-			switch (camera->persp.bokehDistribution) {
-				case DIST_UNIFORM:
-					r *= sqrt(u1);
-					break;
-				case DIST_EXPONENTIAL:
-					r *= sqrt(ExponentialSampleDisk(u1, camera->persp.bokehPower));
-					break;
-				case DIST_INVERSEEXPONENTIAL:
-					r *= sqrt(InverseExponentialSampleDisk(u1, camera->persp.bokehPower));
-					break;
-				case DIST_GAUSSIAN:
-					r *= sqrt(GaussianSampleDisk(u1));
-					break;
-				case DIST_INVERSEGAUSSIAN:
-					r *= sqrt(InverseGaussianSampleDisk(u1));
-					break;
-				case DIST_TRIANGULAR:
-					r *= sqrt(TriangularSampleDisk(u1));
-					break;
-				default:
-					// Something wrong here
-					break;
+				float r = honeyRadius / cos(rho);
+				switch (camera->persp.bokehDistribution) {
+					case DIST_UNIFORM:
+						r *= sqrt(u1);
+						break;
+					case DIST_EXPONENTIAL:
+						r *= sqrt(ExponentialSampleDisk(u1, camera->persp.bokehPower));
+						break;
+					case DIST_INVERSEEXPONENTIAL:
+						r *= sqrt(InverseExponentialSampleDisk(u1, camera->persp.bokehPower));
+						break;
+					case DIST_GAUSSIAN:
+						r *= sqrt(GaussianSampleDisk(u1));
+						break;
+					case DIST_INVERSEGAUSSIAN:
+						r *= sqrt(InverseGaussianSampleDisk(u1));
+						break;
+					case DIST_TRIANGULAR:
+						r *= sqrt(TriangularSampleDisk(u1));
+						break;
+					default:
+						// Something wrong here
+						break;
+				}
+
+				*lensU = r * cos(theta) * camera->persp.bokehScaleX;
+				*lensV= r * sin(theta) * camera->persp.bokehScaleY;
 			}
-
-			*lensU = r * cos(theta) * camera->persp.bokehScaleX;
-			*lensV= r * sin(theta) * camera->persp.bokehScaleY;
 		}
 
 		const float lensRadius = camera->persp.projCamera.lensRadius;
@@ -163,6 +176,7 @@ OPENCL_FORCE_INLINE void PerspectiveCamera_LocalSampleLens(
 
 OPENCL_FORCE_INLINE void PerspectiveCamera_GenerateRay(
 		__global const Camera* restrict camera,
+		__global const float* restrict cameraBokehDistribution,
 		const uint filmWidth, const uint filmHeight,
 		__global Ray *ray,
 		__global PathVolumeInfo *volInfo,
@@ -188,7 +202,7 @@ OPENCL_FORCE_INLINE void PerspectiveCamera_GenerateRay(
 	if ((lensRadius > 0.f) && (focalDistance > 0.f)) {
 		// Sample point on lens
 		float lensU, lensV;
-		PerspectiveCamera_LocalSampleLens(camera, dofSampleX, dofSampleY, &lensU, &lensV);
+		PerspectiveCamera_LocalSampleLens(camera, cameraBokehDistribution, dofSampleX, dofSampleY, &lensU, &lensV);
 
 		// Compute point on plane of focus
 		const float dist = focalDistance - hither;
@@ -451,6 +465,7 @@ OPENCL_FORCE_INLINE void EnvironmentCamera_GenerateRay(
 
 OPENCL_FORCE_NOT_INLINE void Camera_GenerateRay(
 		__global const Camera* restrict camera,
+		__global const float* restrict cameraBokehDistribution,
 		const uint filmWidth, const uint filmHeight,
 		__global Ray *ray,
 		__global PathVolumeInfo *volInfo,
@@ -458,7 +473,7 @@ OPENCL_FORCE_NOT_INLINE void Camera_GenerateRay(
 		const float dofSampleX, const float dofSampleY) {
 	switch (camera->type) {
 		case PERSPECTIVE:
-			PerspectiveCamera_GenerateRay(camera, filmWidth, filmHeight, ray, volInfo, filmX, filmY, timeSample, dofSampleX, dofSampleY);
+			PerspectiveCamera_GenerateRay(camera, cameraBokehDistribution, filmWidth, filmHeight, ray, volInfo, filmX, filmY, timeSample, dofSampleX, dofSampleY);
 			break;
 		case ORTHOGRAPHIC:
 			OrthographicCamera_GenerateRay(camera, filmWidth, filmHeight, ray, volInfo, filmX, filmY, timeSample, dofSampleX, dofSampleY);

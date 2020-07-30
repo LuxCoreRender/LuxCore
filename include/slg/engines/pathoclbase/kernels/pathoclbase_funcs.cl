@@ -83,6 +83,7 @@ OPENCL_FORCE_INLINE void GenerateEyePath(
 		__global GPUTaskDirectLight *taskDirectLight,
 		__global GPUTaskState *taskState,
 		__global const Camera* restrict camera,
+		__global const float* restrict cameraBokehDistribution,
 		const uint filmWidth, const uint filmHeight,
 		const uint filmSubRegion0, const uint filmSubRegion1,
 		const uint filmSubRegion2, const uint filmSubRegion3,
@@ -115,14 +116,14 @@ OPENCL_FORCE_INLINE void GenerateEyePath(
 	const float dofSampleY = Sampler_GetSample(taskConfig, IDX_DOF_Y SAMPLER_PARAM);
 
 #if defined(RENDER_ENGINE_TILEPATHOCL) || defined(RENDER_ENGINE_RTPATHOCL)
-	Camera_GenerateRay(camera, cameraFilmWidth, cameraFilmHeight,
+	Camera_GenerateRay(camera, cameraBokehDistribution, cameraFilmWidth, cameraFilmHeight,
 			ray,
 			&pathInfo->volume,
 			sampleResult->filmX + tileStartX, sampleResult->filmY + tileStartY,
 			timeSample,
 			dofSampleX, dofSampleY);
 #else
-	Camera_GenerateRay(camera, filmWidth, filmHeight,
+	Camera_GenerateRay(camera, cameraBokehDistribution, filmWidth, filmHeight,
 			ray,
 			&pathInfo->volume,
 			sampleResult->filmX, sampleResult->filmY,
@@ -484,6 +485,7 @@ OPENCL_FORCE_INLINE bool DirectLight_BSDFSampling(
 		, __global const Triangle* restrict triangles \
 		, __global const InterpolatedTransform* restrict interpolatedTransforms \
 		, __global const Camera* restrict camera \
+		, __global const float* restrict cameraBokehDistribution \
 		/* Lights */ \
 		, __global const LightSource* restrict lights \
 		KERNEL_ARGS_ENVLIGHTS \
@@ -556,7 +558,8 @@ __kernel void Init(
 		__global EyePathInfo *eyePathInfos,
 		__global float *pixelFilterDistribution,
 		__global Ray *rays,
-		__global Camera *camera
+		__global Camera *camera,
+		__global const float* restrict cameraBokehDistribution
 		KERNEL_ARGS_FILM
 		) {
 	const size_t gid = get_global_id(0);
@@ -605,6 +608,7 @@ __kernel void Init(
 		GenerateEyePath(taskConfig,
 				taskDirectLight, taskState,
 				camera,
+				cameraBokehDistribution,
 				filmWidth, filmHeight,
 				filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3,
 				pixelFilterDistribution,

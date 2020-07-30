@@ -365,6 +365,7 @@ void PathOCLBaseOCLRenderThread::SetInitKernelArgs(const u_int filmIndex) {
 	intersectionDevice->SetKernelArg(initKernel, argIndex++, pixelFilterBuff);
 	intersectionDevice->SetKernelArg(initKernel, argIndex++, raysBuff);
 	intersectionDevice->SetKernelArg(initKernel, argIndex++, cameraBuff);
+	intersectionDevice->SetKernelArg(initKernel, argIndex++, cameraBokehDistributionBuff);
 
 	// Film parameters
 	argIndex = threadFilms[filmIndex]->SetFilmKernelArgs(intersectionDevice, initKernel, argIndex);
@@ -420,6 +421,7 @@ void PathOCLBaseOCLRenderThread::SetAdvancePathsKernelArgs(HardwareDeviceKernel 
 	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, trianglesBuff);
 	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, interpolatedTransformsBuff);
 	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, cameraBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, cameraBokehDistributionBuff);
 	// Lights
 	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, lightsBuff);
 	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, envLightIndicesBuff);

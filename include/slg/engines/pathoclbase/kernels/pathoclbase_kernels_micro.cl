@@ -1074,6 +1074,7 @@ __kernel void AdvancePaths_MK_GENERATE_CAMERA_RAY(
 	GenerateEyePath(taskConfig,
 			&tasksDirectLight[gid], taskState,
 			camera,
+			cameraBokehDistribution,
 			filmWidth, filmHeight,
 			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3,
 			pixelFilterDistribution,

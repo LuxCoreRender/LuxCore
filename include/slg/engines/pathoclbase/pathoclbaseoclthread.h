@@ -220,6 +220,7 @@ protected:
 	luxrays::HardwareDeviceBuffer *trianglesBuff;
 	luxrays::HardwareDeviceBuffer *interpolatedTransformsBuff;
 	luxrays::HardwareDeviceBuffer *cameraBuff;
+	luxrays::HardwareDeviceBuffer *cameraBokehDistributionBuff;
 	luxrays::HardwareDeviceBuffer *lightIndexOffsetByMeshIndexBuff;
 	luxrays::HardwareDeviceBuffer *lightIndexByTriIndexBuff;
 	luxrays::HardwareDeviceBuffer *imageMapDescsBuff;

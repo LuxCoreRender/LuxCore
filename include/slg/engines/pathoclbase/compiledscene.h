@@ -57,6 +57,8 @@ public:
 
 	// Compiled Camera
 	slg::ocl::Camera camera;
+	float *cameraBokehDistribution;
+	u_int cameraBokehDistributionSize;
 
 	// Compiled Scene Meshes
 	std::vector<luxrays::Point> verts;

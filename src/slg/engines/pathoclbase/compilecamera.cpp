@@ -47,6 +47,9 @@ void CompiledScene::CompileCamera() {
 
 	const Camera *sceneCamera = scene->camera;
 
+	delete[] cameraBokehDistribution;
+	cameraBokehDistribution = nullptr;
+	
 	// Initialize CameraBase
 
 	camera.base.yon = sceneCamera->clipYon;
@@ -141,6 +144,12 @@ void CompiledScene::CompileCamera() {
 				case PerspectiveCamera::DIST_TRIANGULAR:
 					camera.persp.bokehDistribution = slg::ocl::DIST_TRIANGULAR;
 					break;
+				case PerspectiveCamera::DIST_CUSTOM: {
+					camera.persp.bokehDistribution = slg::ocl::DIST_CUSTOM;
+
+					cameraBokehDistribution = CompileDistribution2D(perspCamera->bokehDistributionMap, &cameraBokehDistributionSize);
+					break;
+				}
 				default:
 					throw runtime_error("Unknown bokeh distribution type in CompiledScene::CompileCamera(): " + ToString(perspCamera->bokehDistribution));
 			}
