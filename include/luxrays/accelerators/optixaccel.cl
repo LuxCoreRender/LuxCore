@@ -20,13 +20,13 @@
 
 //------------------------------------------------------------------------------
 
-#if defined( __LP64__ )
+// __LP64__ is defined only on no-Windows platforms
+#if defined(__LP64__) || defined(_WIN64)
 typedef unsigned long long CUdeviceptr;
 #else
-typedef unsigned int CUdeviceptr;
+#error "32bit CUDA plaforms are not supported"
 #endif
 
-typedef unsigned long long OptixTraversableHandle;
 typedef unsigned long long OptixTraversableHandle;
 typedef unsigned int OptixVisibilityMask;
 

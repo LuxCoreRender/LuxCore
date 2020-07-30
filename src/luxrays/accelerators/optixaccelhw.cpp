@@ -729,7 +729,7 @@ void OptixKernel::EnqueueTraceRayBuffer(HardwareDeviceBuffer *rayBuff,
 	} else {
 		// Note: the assumption here is that rayBuff and rayHitBuff are always
 		// the same otherwise I would have to syncronize the EnqueueWriteBuffer().
-		// this is always true at the moment for all render engines.
+		// This is always true at the moment for all render engines.
 		optixAccelParams.rayBuff = ((CUDADeviceBuffer *)rayBuff)->GetCUDADevicePointer();
 		optixAccelParams.rayHitBuff = ((CUDADeviceBuffer *)rayHitBuff)->GetCUDADevicePointer();
 		cudaDevice->EnqueueWriteBuffer(optixAccelParamsBuff, false, sizeof(OptixAccelParams), &optixAccelParams);
