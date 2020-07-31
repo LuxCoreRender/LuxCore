@@ -112,18 +112,15 @@ void RTPathOCLRenderEngine::StopLockLess() {
 
 void RTPathOCLRenderEngine::EndSceneEdit(const EditActionList &editActions) {
 	// Check if I can use the fast camera edit path
-	bool requireSync = true;
 	if (editActions.HasOnly(CAMERA_EDIT) &&
 			(renderConfig->scene->camera->GetType() == Camera::PERSPECTIVE) &&
 			// Camera is not using custom bokeh
 			!(dynamic_cast<PerspectiveCamera *>(renderConfig->scene->camera))->bokehDistributionImageMap &&
 			// Camera was not using custom bokeh
 			!cameraIsUsingCustomBokeh) {
+		TilePathOCLRenderEngine::EndSceneEdit(editActions);
 		useFastCameraEditPath = true;
-		requireSync = false;
-	}
-
-	if (requireSync) {
+	} else {
 		syncType = SYNCTYPE_ENDSCENEEDIT;
 		updateActions.AddActions(editActions.GetActions());
 		syncBarrier->wait();
@@ -137,8 +134,7 @@ void RTPathOCLRenderEngine::EndSceneEdit(const EditActionList &editActions) {
 
 		syncType = SYNCTYPE_NONE;
 		syncBarrier->wait();
-	} else
-		TilePathOCLRenderEngine::EndSceneEdit(editActions);
+	}
 }
 
 // A fast path for film resize
