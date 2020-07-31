@@ -164,7 +164,7 @@ OPENCL_FORCE_INLINE void PerspectiveCamera_LocalSampleLens(
 				}
 
 				*lensU = r * cos(theta) * camera->persp.bokehScaleX;
-				*lensV= r * sin(theta) * camera->persp.bokehScaleY;
+				*lensV = r * sin(theta) * camera->persp.bokehScaleY;
 			}
 		}
 

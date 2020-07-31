@@ -51,6 +51,9 @@ protected:
 
 	void UpdateOCLBuffers(const EditActionList &updateActions);
 	void UpdateAllThreadsOCLBuffers();
+	
+	void UpdateCameraOCLBuffer();
+	void UpdateAllCameraThreadsOCLBuffers();
 
 	TileWork tileWork;
 };
@@ -117,6 +120,7 @@ protected:
 	void ResumeThreads();
 
 	EditActionList updateActions;
+	bool useFastCameraEditPath, cameraIsUsingCustomBokeh;
 
 	// Used by RTPathOCLRenderEngine code to sync. with render thread 0
 	boost::barrier *syncBarrier;

@@ -19,6 +19,7 @@
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
 #include "slg/slg.h"
+#include "slg/cameras/perspective.h"
 #include "slg/engines/rtpathocl/rtpathocl.h"
 
 using namespace std;
@@ -83,6 +84,11 @@ void RTPathOCLRenderEngine::StartLockLess() {
 	tileRepository->enableRenderingDonePrint = false;
 	tileRepository->enableFirstPassClear = true;
 
+	updateActions.Reset();
+	useFastCameraEditPath = false;
+	cameraIsUsingCustomBokeh = (renderConfig->scene->camera->GetType() == Camera::PERSPECTIVE) &&
+			(dynamic_cast<PerspectiveCamera *>(renderConfig->scene->camera))->bokehDistributionImageMap;
+
 	// To synchronize the start of all threads
 	syncType = SYNCTYPE_NONE;
 	syncBarrier->wait();
@@ -105,15 +111,26 @@ void RTPathOCLRenderEngine::StopLockLess() {
 }
 
 void RTPathOCLRenderEngine::EndSceneEdit(const EditActionList &editActions) {
-	updateActions.AddActions(editActions.GetActions());
+	// Check if I can use the fast camera edit path
+	bool requireSync = true;
+	if (editActions.HasOnly(CAMERA_EDIT) &&
+			(renderConfig->scene->camera->GetType() == Camera::PERSPECTIVE) &&
+			// Camera is not using custom bokeh
+			!(dynamic_cast<PerspectiveCamera *>(renderConfig->scene->camera))->bokehDistributionImageMap &&
+			// Camera was not using custom bokeh
+			!cameraIsUsingCustomBokeh) {
+		useFastCameraEditPath = true;
+		requireSync = false;
+	}
 
-	const bool requireSync = editActions.HasAnyAction() && !editActions.HasOnly(CAMERA_EDIT);
-	
 	if (requireSync) {
 		syncType = SYNCTYPE_ENDSCENEEDIT;
+		updateActions.AddActions(editActions.GetActions());
 		syncBarrier->wait();
 		
 		TilePathOCLRenderEngine::EndSceneEdit(editActions);
+		cameraIsUsingCustomBokeh = (renderConfig->scene->camera->GetType() == Camera::PERSPECTIVE) &&
+				(dynamic_cast<PerspectiveCamera *>(renderConfig->scene->camera))->bokehDistributionImageMap;
 		syncBarrier->wait();
 		
 		// Here, rendering thread 0 will update all OpenCL buffers here

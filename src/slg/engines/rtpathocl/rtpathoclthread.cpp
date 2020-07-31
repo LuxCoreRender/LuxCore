@@ -138,6 +138,25 @@ void RTPathOCLRenderThread::UpdateAllThreadsOCLBuffers() {
 	}
 }
 
+void RTPathOCLRenderThread::UpdateCameraOCLBuffer() {
+	RTPathOCLRenderEngine *engine = (RTPathOCLRenderEngine *)renderEngine;
+
+	intersectionDevice->EnqueueWriteBuffer(cameraBuff, false, sizeof(slg::ocl::Camera),
+			&engine->compiledScene->camera);
+}
+
+void RTPathOCLRenderThread::UpdateAllCameraThreadsOCLBuffers() {
+	RTPathOCLRenderEngine *engine = (RTPathOCLRenderEngine *)renderEngine;
+
+	// Update all threads
+	for (u_int i = 0; i < engine->renderOCLThreads.size(); ++i) {
+		RTPathOCLRenderThread *thread = (RTPathOCLRenderThread *)(engine->renderOCLThreads[i]);
+		thread->intersectionDevice->PushThreadCurrentDevice();
+		thread->UpdateCameraOCLBuffer();
+		thread->intersectionDevice->PopThreadCurrentDevice();
+	}
+}
+
 void RTPathOCLRenderThread::RenderThreadImpl() {
 	//SLG_LOG("[RTPathOCLRenderThread::" << threadIndex << "] Rendering thread started");
 
@@ -228,15 +247,18 @@ void RTPathOCLRenderThread::RenderThreadImpl() {
 				frameStartTime = now;
 				
 				//--------------------------------------------------------------
-				// This is a special optimized path fro CAMERA_EDIT actions
+				// This is a special optimized path for CAMERA_EDIT action only
+				// (when custom camera bokeh is not used)
 				//--------------------------------------------------------------
 				
-				if (engine->updateActions.HasOnly(CAMERA_EDIT)) {
-					// Update OpenCL buffers if there is only a CAMERA_EDIT. It
+				if (engine->useFastCameraEditPath) {
+					engine->useFastCameraEditPath = false;
+
+					// Update OpenCL camera buffer if there is only a CAMERA_EDIT. It
 					// is done by thread #0 for all threads.
-					UpdateAllThreadsOCLBuffers();
+					UpdateAllCameraThreadsOCLBuffers();
 					frameCounter = 0;
-					engine->film->Reset(true);
+					engine->film->Reset(true);					
 				}
 
 				//--------------------------------------------------------------
