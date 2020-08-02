@@ -128,12 +128,18 @@ public:
 	virtual void Delete();
 
 	void SetVertexAOV(const u_int dataIndex, float *values) {
-		delete vertAOV[dataIndex];
 		vertAOV[dataIndex] = values;
 	}
+	void DeleteVertexAOV(const u_int dataIndex) {
+		delete[] vertAOV[dataIndex];
+		vertAOV[dataIndex] = nullptr;
+	}
 	void SetTriAOV(const u_int dataIndex, float *values) {
-		delete triAOV[dataIndex];
 		triAOV[dataIndex] = values;
+	}
+	void DeleteTriAOV(const u_int dataIndex) {
+		delete[] triAOV[dataIndex];
+		triAOV[dataIndex] = nullptr;
 	}
 
 	Normal *GetNormals() const { return normals; }

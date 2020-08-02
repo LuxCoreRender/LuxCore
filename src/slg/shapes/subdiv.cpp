@@ -285,27 +285,45 @@ ExtTriangleMesh *SubdivShape::ApplySubdiv(ExtTriangleMesh *srcMesh, const u_int 
 	}
 
 	// UVs
-    Osd::CpuVertexBuffer *uvsBuffer = nullptr;
-	if (srcMesh->HasUVs(0)) {
-        uvsBuffer = BuildBuffer<2>(
-				stencilTable, (const float *)srcMesh->GetUVs(0),
-				vertsCount, totalVertsCount);
+    vector<Osd::CpuVertexBuffer *> uvsBuffers(EXTMESH_MAX_DATA_COUNT, nullptr);
+	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
+		if (srcMesh->HasUVs(i)) {
+			uvsBuffers[i] = BuildBuffer<2>(
+					stencilTable, (const float *)srcMesh->GetUVs(i),
+					vertsCount, totalVertsCount);
+		}
 	}
 
 	// Cols
-    Osd::CpuVertexBuffer *colsBuffer = nullptr;
-	if (srcMesh->HasColors(0)) {
-        colsBuffer = BuildBuffer<3>(
-				stencilTable, (const float *)srcMesh->GetColors(0),
-				vertsCount, totalVertsCount);
+	vector<Osd::CpuVertexBuffer *> colsBuffers(EXTMESH_MAX_DATA_COUNT, nullptr);
+	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
+		if (srcMesh->HasColors(i)) {
+			colsBuffers[i] = BuildBuffer<3>(
+					stencilTable, (const float *)srcMesh->GetColors(i),
+					vertsCount, totalVertsCount);
+		}
 	}
 
 	// Alphas
-    Osd::CpuVertexBuffer *alphasBuffer = nullptr;
+	vector<Osd::CpuVertexBuffer *> alphasBuffers(EXTMESH_MAX_DATA_COUNT, nullptr);
 	if (srcMesh->HasAlphas(0)) {
-        alphasBuffer = BuildBuffer<1>(
-				stencilTable, (const float *)srcMesh->GetAlphas(0),
-				vertsCount, totalVertsCount);
+		for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
+			alphasBuffers[i] = BuildBuffer<1>(
+					stencilTable, (const float *)srcMesh->GetAlphas(i),
+					vertsCount, totalVertsCount);
+		}
+	}
+	
+	// VertAOVs
+	vector<Osd::CpuVertexBuffer *> vertAOVSsBuffers(EXTMESH_MAX_DATA_COUNT, nullptr);
+	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
+		if (srcMesh->HasVertexAOV(i)) {
+			for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
+				vertAOVSsBuffers[i] = BuildBuffer<1>(
+						stencilTable, (const float *)srcMesh->GetVertexAOVs(i),
+						vertsCount, totalVertsCount);
+			}
+		}
 	}
 
 	//--------------------------------------------------------------------------
@@ -356,30 +374,51 @@ ExtTriangleMesh *SubdivShape::ApplySubdiv(ExtTriangleMesh *srcMesh, const u_int 
 	}
 
 	// New UVs
-	UV *newUVs = nullptr;
-	if (srcMesh->HasUVs(0)) {
-		newUVs = new UV[newVertsCount];
+	array<UV *, EXTMESH_MAX_DATA_COUNT> newUVs;
+	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
+		if (srcMesh->HasUVs(i)) {
+			newUVs[i] = new UV[newVertsCount];
 
-		const float *refinedUVs = uvsBuffer->BindCpuBuffer() + 2 * vertsCount;
-		copy(refinedUVs, refinedUVs + 2 * newVertsCount, &newUVs->u);
+			const float *refinedUVs = uvsBuffers[i]->BindCpuBuffer() + 2 * vertsCount;
+			copy(refinedUVs, refinedUVs + 2 * newVertsCount, &newUVs[i]->u);
+		} else
+			newUVs[i] = nullptr;
 	}
 
 	// New colors
-	Spectrum *newCols = nullptr;
-	if (srcMesh->HasColors(0)) {
-		newCols = new Spectrum[newVertsCount];
+	array<Spectrum *, EXTMESH_MAX_DATA_COUNT> newCols;
+	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
+		if (srcMesh->HasColors(0)) {
+			newCols[i] = new Spectrum[newVertsCount];
 
-		const float *refinedCols = colsBuffer->BindCpuBuffer() + 3 * vertsCount;
-		copy(refinedCols, refinedCols + 3 * newVertsCount, &newCols->c[0]);
+			const float *refinedCols = colsBuffers[i]->BindCpuBuffer() + 3 * vertsCount;
+			copy(refinedCols, refinedCols + 3 * newVertsCount, &newCols[i]->c[0]);
+		} else
+			newCols[i] = nullptr;
 	}
 
 	// New alphas
-	float *newAlphas = nullptr;
-	if (srcMesh->HasAlphas(0)) {
-		newAlphas = new float[newVertsCount];
+	array<float *, EXTMESH_MAX_DATA_COUNT> newAlphas;
+	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
+		if (srcMesh->HasAlphas(i)) {
+			newAlphas[i] = new float[newVertsCount];
 
-		const float *refinedAlphas = alphasBuffer->BindCpuBuffer() + 1 * vertsCount;
-		copy(refinedAlphas, refinedAlphas + 1 * newVertsCount, newAlphas);
+			const float *refinedAlphas = alphasBuffers[i]->BindCpuBuffer() + 1 * vertsCount;
+			copy(refinedAlphas, refinedAlphas + 1 * newVertsCount, newAlphas[i]);
+		} else
+			newAlphas[i] = nullptr;
+	}
+
+	// New vertAOVs
+	array<float *, EXTMESH_MAX_DATA_COUNT> newVertAOVs;
+	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
+		if (srcMesh->HasVertexAOV(i)) {
+			newVertAOVs[i] = new float[newVertsCount];
+
+			const float *refinedVertAOVs = alphasBuffers[i]->BindCpuBuffer() + 1 * vertsCount;
+			copy(refinedVertAOVs, refinedVertAOVs + 1 * newVertsCount, newVertAOVs[i]);
+		} else
+			newVertAOVs[i] = nullptr;
 	}
 
 	// Free memory
@@ -388,13 +427,23 @@ ExtTriangleMesh *SubdivShape::ApplySubdiv(ExtTriangleMesh *srcMesh, const u_int 
 	delete patchTable;
     delete vertsBuffer;
 	delete normsBuffer;
-	delete uvsBuffer;
-	delete colsBuffer;
-	delete alphasBuffer;
+	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++)
+		delete uvsBuffers[i];
+	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++)
+		delete colsBuffers[i];
+	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++)
+		delete alphasBuffers[i];
+	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++)
+		delete alphasBuffers[i];
 
 	// Allocate the new mesh
-	return new ExtTriangleMesh(newVertsCount, newTrisCount, newVerts, newTris,
-			newNorms, newUVs, newCols, newAlphas);
+	ExtTriangleMesh *newMesh =  new ExtTriangleMesh(newVertsCount, newTrisCount, newVerts, newTris,
+			newNorms, &newUVs, &newCols, &newAlphas);
+
+	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++)
+		newMesh->SetVertexAOV(i, newVertAOVs[i]);
+
+	return newMesh;
 }
 
 SubdivShape::SubdivShape(const Camera *camera, ExtTriangleMesh *srcMesh,

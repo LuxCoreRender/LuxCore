@@ -14,11 +14,12 @@
 * Added the support for CATMULLROM pixel filter (issue #415)
 * It is now possible to disable Optix (with property context.cuda.optix.enable) even if it is detected and available
 * Any mesh UV map can now be used for displacement (issue #416)
+* Subdiv shape now supports multiple vertex UVs, colors, alphas and AOVs (issue #416)
 
 ### Fixed Bugs
 
 * Added the support for pixel filtering to light tracing (issue #413)
-* Now LuxCore will work even if OpenCL is available but not a valid OpenCL ICD platform has been found (issue #422)
+* Now LuxCore works even if OpenCL is available but not a valid OpenCL ICD platform has been found (issue #422)
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
