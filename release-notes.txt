@@ -18,6 +18,7 @@
 ### Fixed Bugs
 
 * Added the support for pixel filtering to light tracing (issue #413)
+* Now LuxCore will work even if OpenCL is available but not a valid OpenCL ICD platform has been found (issue #422)
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.

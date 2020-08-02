@@ -69,8 +69,14 @@ DeviceType OpenCLDeviceDescription::GetOCLDeviceType(const cl_device_id oclDevic
 
 void OpenCLDeviceDescription::GetPlatformsList(std::vector<cl_platform_id> &platformsList) {
 	cl_uint platformsCount;
-	CHECK_OCL_ERROR(clGetPlatformIDs(0, nullptr, &platformsCount));
-	
+	const cl_int err = clGetPlatformIDs(0, nullptr, &platformsCount);
+	// -1001 is CL_PLATFORM_NOT_FOUND_KHR and it means not a valid OpenCL ICD has been
+	// found so I just return an empty list.
+	if (err == -1001)
+		return;
+	else
+		CHECK_OCL_ERROR(err);
+
 	platformsList.resize(platformsCount);
 	CHECK_OCL_ERROR(clGetPlatformIDs(platformsCount, &platformsList[0], nullptr));
 }
