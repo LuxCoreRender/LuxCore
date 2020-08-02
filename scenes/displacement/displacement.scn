@@ -47,6 +47,7 @@ scene.shapes.spheredisp.map = checktex
 scene.shapes.spheredisp.scale = 0.3
 #scene.shapes.spheredisp.map = fbmtex
 #scene.shapes.spheredisp.scale = 0.15
+scene.shapes.spheredisp.uvindex = 0
 ##
 scene.shapes.spheresimp.type = simplify
 scene.shapes.spheresimp.source = spheredisp

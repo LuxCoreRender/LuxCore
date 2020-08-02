@@ -13,6 +13,7 @@
 * Added the support for SINC pixel filter (issue #415)
 * Added the support for CATMULLROM pixel filter (issue #415)
 * It is now possible to disable Optix (with property context.cuda.optix.enable) even if it is detected and available
+* Any mesh UV map can now be used for displacement (issue #416)
 
 ### Fixed Bugs
 

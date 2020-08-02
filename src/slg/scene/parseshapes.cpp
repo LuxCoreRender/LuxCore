@@ -306,6 +306,7 @@ ExtTriangleMesh *Scene::CreateShape(const string &shapeName, const Properties &p
 
 		params.scale = props.Get(Property(propName + ".scale")(1.f)).Get<float>();
 		params.offset = props.Get(Property(propName + ".offset")(0.f)).Get<float>();
+		params.uvIndex = props.Get(Property(propName + ".uvindex")(0)).Get<u_int>();
 		params.normalSmooth = props.Get(Property(propName + ".normalsmooth")(true)).Get<bool>();
 
 		shape = new DisplacementShape((ExtTriangleMesh *)extMeshCache.GetExtMesh(sourceMeshName),

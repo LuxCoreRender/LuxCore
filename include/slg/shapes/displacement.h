@@ -39,6 +39,7 @@ public:
 		u_int mapChannels[3];
 		float scale;
 		float offset;
+		u_int uvIndex;
 		bool normalSmooth;
 	} Params;
 

@@ -35,7 +35,7 @@ DisplacementShape::DisplacementShape(luxrays::ExtTriangleMesh *srcMesh, const Te
 		srcMesh->ComputeNormals();
 
 	// I need vertex UVs for vector displacement
-	if ((params.mapType == VECTOR_DISPLACEMENT) && !srcMesh->HasUVs(0))
+	if ((params.mapType == VECTOR_DISPLACEMENT) && !srcMesh->HasUVs(params.uvIndex))
 		throw runtime_error("Displacement shape for vector displacement can be used only with mesh having UVs defined");
 
 	const double startTime = WallClockTime();
@@ -98,7 +98,7 @@ DisplacementShape::DisplacementShape(luxrays::ExtTriangleMesh *srcMesh, const Te
 		hitPoint.interpolatedN = hitPoint.geometryN;
 		hitPoint.shadeN = hitPoint.interpolatedN;
 
-		hitPoint.defaultUV = srcMesh->HasUVs(0) ? srcMesh->GetUV(i, 0) : UV(0.f, 0.f);
+		hitPoint.defaultUV = srcMesh->HasUVs(params.uvIndex) ? srcMesh->GetUV(i, params.uvIndex) : UV(0.f, 0.f);
 		hitPoint.mesh = srcMesh;
 		hitPoint.triangleIndex = triangleIndex[i];
 		if (i == tris[hitPoint.triangleIndex].v[0]) {
