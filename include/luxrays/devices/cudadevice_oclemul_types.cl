@@ -31,7 +31,7 @@
 typedef unsigned char uchar;
 typedef unsigned short ushort;
 typedef unsigned int uint;
-typedef unsigned long ulong;
+typedef unsigned long long ulong;
 
 #define INFINITY __int_as_float(0x7f800000)
 #define M_PI_F 3.141592654f

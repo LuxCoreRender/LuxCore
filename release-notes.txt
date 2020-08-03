@@ -20,6 +20,7 @@
 
 * Added the support for pixel filtering to light tracing (issue #413)
 * Now LuxCore works even if OpenCL is available but not a valid OpenCL ICD platform has been found (issue #422)
+* Fixed a problem with cloth material when using CUDA and Windows (issue #417)
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
