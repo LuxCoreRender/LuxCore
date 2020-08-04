@@ -45,7 +45,8 @@ Material::Material(const Texture *frontTransp, const Texture *backTransp,
 		interiorVolume(nullptr), exteriorVolume(nullptr),
 		glossiness(0.f),
 		isVisibleIndirectDiffuse(true), isVisibleIndirectGlossy(true), isVisibleIndirectSpecular(true),
-		isShadowCatcher(false), isShadowCatcherOnlyInfiniteLights(false), isPhotonGIEnabled(true) {
+		isShadowCatcher(false), isShadowCatcherOnlyInfiniteLights(false), isPhotonGIEnabled(true),
+		isHoldout(false) {
 	SetEmittedTheta(90.f);
 	UpdateEmittedFactor();
 	UpdateAvgPassThroughTransparency();
@@ -242,6 +243,7 @@ Properties Material::ToProperties(const ImageMapCache &imgMapCache, const bool u
 	props.Set(Property("scene.materials." + name + ".shadowcatcher.onlyinfinitelights")(isShadowCatcherOnlyInfiniteLights));
 	
 	props.Set(Property("scene.materials." + name + ".photongi.enable")(isPhotonGIEnabled));
+	props.Set(Property("scene.materials." + name + ".holdout.enable")(isHoldout));
 
 	return props;
 }

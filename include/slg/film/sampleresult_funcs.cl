@@ -18,10 +18,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-OPENCL_FORCE_INLINE void SampleResult_Init(__constant const Film* restrict film,
-		__global SampleResult *sampleResult) {
-	// Initialize only Spectrum fields
-
+OPENCL_FORCE_INLINE void SampleResult_ClearRadiance(__global SampleResult *sampleResult) {
 	VSTORE3F(BLACK, sampleResult->radiancePerPixelNormalized[0].c);
 	VSTORE3F(BLACK, sampleResult->radiancePerPixelNormalized[1].c);
 	VSTORE3F(BLACK, sampleResult->radiancePerPixelNormalized[2].c);
@@ -30,6 +27,13 @@ OPENCL_FORCE_INLINE void SampleResult_Init(__constant const Film* restrict film,
 	VSTORE3F(BLACK, sampleResult->radiancePerPixelNormalized[5].c);
 	VSTORE3F(BLACK, sampleResult->radiancePerPixelNormalized[6].c);
 	VSTORE3F(BLACK, sampleResult->radiancePerPixelNormalized[7].c);
+}
+
+OPENCL_FORCE_INLINE void SampleResult_Init(__constant const Film* restrict film,
+		__global SampleResult *sampleResult) {
+	// Initialize only Spectrum fields
+
+	SampleResult_ClearRadiance(sampleResult);
 
 	VSTORE3F(BLACK, sampleResult->directDiffuse.c);
 	VSTORE3F(BLACK, sampleResult->directGlossy.c);

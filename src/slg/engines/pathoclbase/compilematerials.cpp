@@ -539,6 +539,7 @@ void CompiledScene::CompileMaterials() {
 		mat->isShadowCatcher = m->IsShadowCatcher();
 		mat->isShadowCatcherOnlyInfiniteLights = m->IsShadowCatcherOnlyInfiniteLights();
 		mat->isPhotonGIEnabled = m->IsPhotonGIEnabled();
+		mat->isHoldout = m->IsHoldout();
 
 		// Bake Material::GetEventTypes() and Material::IsDelta()
 		mat->eventTypes = m->GetEventTypes();

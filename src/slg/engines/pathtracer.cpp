@@ -415,6 +415,7 @@ void PathTracer::RenderEyePath(IntersectionDevice *device,
 				sampleResult.objectID = 0;
 				sampleResult.uv = UV(numeric_limits<float>::infinity(),
 						numeric_limits<float>::infinity());
+				sampleResult.isHoldout = false;
 			}
 			break;
 		}
@@ -428,7 +429,7 @@ void PathTracer::RenderEyePath(IntersectionDevice *device,
 
 		if (sampleResult.firstPathVertex) {
 			// The alpha value can be changed if the material is a shadow catcher (see below)
-			sampleResult.alpha = 1.f;
+			sampleResult.alpha = bsdf.IsHoldout() ? 0.f : 1.f;
 			sampleResult.depth = eyeRayHit.t;
 			sampleResult.position = bsdf.hitPoint.p;
 			sampleResult.geometryNormal = bsdf.hitPoint.geometryN;
@@ -436,6 +437,7 @@ void PathTracer::RenderEyePath(IntersectionDevice *device,
 			sampleResult.materialID = bsdf.GetMaterialID();
 			sampleResult.objectID = bsdf.GetObjectID();
 			sampleResult.uv = bsdf.hitPoint.GetUV(0);
+			sampleResult.isHoldout = bsdf.IsHoldout();
 		}
 		sampleResult.lastPathVertex = pathInfo.depth.IsLastPathVertex(maxPathDepth, bsdf.GetEventTypes());
 
@@ -623,7 +625,12 @@ void PathTracer::RenderEyePath(IntersectionDevice *device,
 	}
 
 	sampleResult.rayCount += (float)(device->GetTotalRaysCount() - deviceRayCount);
-	
+
+	if (sampleResult.isHoldout) {
+		sampleResult.radiance.Clear();
+		sampleResult.albedo = Spectrum();
+	}
+
 	if (photonGICache && (photonGICache->GetDebugType() == PhotonGIDebugType::PGIC_DEBUG_SHOWINDIRECTPATHMIX) &&
 			!photonGIShowIndirectPathMixUsed)
 		sampleResult.radiance[0] = Spectrum(1.f, 0.f, 0.f);

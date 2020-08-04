@@ -303,6 +303,12 @@ OPENCL_FORCE_INLINE float BSDF_IsPhotonGIEnabled(__global const BSDF *bsdf
 			MATERIALS_PARAM);
 }
 
+OPENCL_FORCE_INLINE bool BSDF_IsHoldout(__global const BSDF *bsdf
+		MATERIALS_PARAM_DECL) {
+	return Material_IsHoldout(bsdf->materialIndex
+			MATERIALS_PARAM);
+}
+
 //------------------------------------------------------------------------------
 // Shadow catcher related functions
 //------------------------------------------------------------------------------
@@ -342,7 +348,7 @@ OPENCL_FORCE_INLINE float3 BSDF_ShadowCatcherSample(__global const BSDF *bsdf,
 }
 
 //------------------------------------------------------------------------------
-// BAke related functions
+// Bake related functions
 //------------------------------------------------------------------------------
 
 OPENCL_FORCE_INLINE bool BSDF_HasBakeMap(__global const BSDF *bsdf, const BakeMapType type

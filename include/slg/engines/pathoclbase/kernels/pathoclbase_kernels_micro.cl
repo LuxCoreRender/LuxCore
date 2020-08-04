@@ -186,6 +186,7 @@ __kernel void AdvancePaths_MK_HIT_NOTHING(
 		sampleResult->objectID = 0;
 		sampleResult->uv.u = INFINITY;
 		sampleResult->uv.v = INFINITY;
+		sampleResult->isHoldout = false;
 	}
 
 	taskState->state = MK_SPLAT_SAMPLE;
@@ -244,7 +245,9 @@ __kernel void AdvancePaths_MK_HIT_OBJECT(
 	}
 
 	if (pathInfo->depth.depth == 0) {
-		sampleResult->alpha = 1.f;
+		const bool isHoldout = BSDF_IsHoldout(bsdf
+				MATERIALS_PARAM);
+		sampleResult->alpha = isHoldout ? 0.f : 1.f;
 		sampleResult->depth = rayHits[gid].t;
 		sampleResult->position = bsdf->hitPoint.p;
 		sampleResult->geometryNormal = bsdf->hitPoint.geometryN;
@@ -253,6 +256,7 @@ __kernel void AdvancePaths_MK_HIT_OBJECT(
 				MATERIALS_PARAM);
 		sampleResult->objectID = BSDF_GetObjectID(bsdf, sceneObjs);
 		sampleResult->uv = bsdf->hitPoint.defaultUV;
+		sampleResult->isHoldout = isHoldout;
 	}
 
 	//----------------------------------------------------------------------
@@ -927,6 +931,11 @@ __kernel void AdvancePaths_MK_SPLAT_SAMPLE(
 	filmRadianceGroupScale[5] = MAKE_FLOAT3(filmRadianceGroupScale5_R, filmRadianceGroupScale5_G, filmRadianceGroupScale5_B);
 	filmRadianceGroupScale[6] = MAKE_FLOAT3(filmRadianceGroupScale6_R, filmRadianceGroupScale6_G, filmRadianceGroupScale6_B);
 	filmRadianceGroupScale[7] = MAKE_FLOAT3(filmRadianceGroupScale7_R, filmRadianceGroupScale7_G, filmRadianceGroupScale7_B);
+
+	if (sampleResult->isHoldout) {
+		SampleResult_ClearRadiance(sampleResult);
+		VSTORE3F(BLACK, sampleResult->albedo.c);
+	}
 
 	if (taskConfig->pathTracer.pgic.indirectEnabled &&
 			(taskConfig->pathTracer.pgic.debugType == PGIC_DEBUG_SHOWINDIRECTPATHMIX) &&

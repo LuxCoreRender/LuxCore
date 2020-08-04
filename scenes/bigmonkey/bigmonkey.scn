@@ -57,6 +57,7 @@ scene.textures.red_tex.data = 0.0 0.000015 0.0
 scene.materials.redmat.type = matte
 #scene.materials.redmat.kd = 0.75 0.0 0.0
 scene.materials.redmat.kd = red_tex
+scene.materials.redmat.holdout.enable = 0
 ##
 scene.materials.whitematte.type = matte
 scene.materials.whitematte.kd = 0.75 0.75 0.75

@@ -96,6 +96,7 @@ public:
 	luxrays::Spectrum albedo;
 
 	BSDFEvent firstPathVertexEvent;
+	bool isHoldout;
 
 	// Used to keep some state of the current sample
 	bool firstPathVertex, lastPathVertex;

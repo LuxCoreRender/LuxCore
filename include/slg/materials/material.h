@@ -108,6 +108,9 @@ public:
 	void SetShadowCatcherOnlyInfiniteLights(const bool enabled) { isShadowCatcherOnlyInfiniteLights = enabled; }
 	bool IsShadowCatcherOnlyInfiniteLights() const { return (isShadowCatcher && isShadowCatcherOnlyInfiniteLights); }
 
+	void SetHoldout(const bool enabled) { isHoldout = enabled; }
+	bool IsHoldout() const { return isHoldout; }
+
     void SetBumpSampleDistance(const float dist) { bumpSampleDistance = dist; }
     float GetBumpSampleDistance() const { return bumpSampleDistance; }
 
@@ -233,7 +236,8 @@ protected:
 
 	float glossiness, avgPassThroughTransparency;
 	bool isVisibleIndirectDiffuse, isVisibleIndirectGlossy, isVisibleIndirectSpecular,
-		usePrimitiveArea, isShadowCatcher, isShadowCatcherOnlyInfiniteLights, isPhotonGIEnabled;
+		usePrimitiveArea, isShadowCatcher, isShadowCatcherOnlyInfiniteLights, isPhotonGIEnabled,
+		isHoldout;
 };
 
 //------------------------------------------------------------------------------

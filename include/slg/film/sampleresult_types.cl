@@ -53,5 +53,7 @@ typedef struct {
 	Spectrum albedo;
 
 	BSDFEvent firstPathVertexEvent;
+	int isHoldout;
+
 	int firstPathVertex, lastPathVertex;
 } SampleResult;

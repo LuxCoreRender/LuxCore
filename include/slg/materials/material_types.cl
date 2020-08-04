@@ -340,7 +340,8 @@ typedef struct {
 	BSDFEvent visibility;
 	unsigned int interiorVolumeIndex, exteriorVolumeIndex;
 	float glossiness, avgPassThroughTransparency;
-	int isShadowCatcher, isShadowCatcherOnlyInfiniteLights, isPhotonGIEnabled;
+	int isShadowCatcher, isShadowCatcherOnlyInfiniteLights, isPhotonGIEnabled,
+			isHoldout;
 
 	// The result of calling Material::GetEventTypes()
 	BSDFEvent eventTypes;

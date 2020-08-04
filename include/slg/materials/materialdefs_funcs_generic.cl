@@ -91,12 +91,21 @@ OPENCL_FORCE_INLINE float Material_GetGlossiness(const uint matIndex
 }
 
 //------------------------------------------------------------------------------
-// Material_GetGlossiness
+// Material_IsPhotonGIEnabled
 //------------------------------------------------------------------------------
 
 OPENCL_FORCE_INLINE float Material_IsPhotonGIEnabled(const uint matIndex
 		MATERIALS_PARAM_DECL) {
 	return mats[matIndex].isPhotonGIEnabled;
+}
+
+//------------------------------------------------------------------------------
+// Material_IsHoldout
+//------------------------------------------------------------------------------
+
+OPENCL_FORCE_INLINE float Material_IsHoldout(const uint matIndex
+		MATERIALS_PARAM_DECL) {
+	return mats[matIndex].isHoldout;
 }
 
 //------------------------------------------------------------------------------
