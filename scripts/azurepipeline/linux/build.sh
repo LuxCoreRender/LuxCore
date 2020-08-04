@@ -2,7 +2,7 @@
 
 # Install deps
 sudo apt-get -qq update
-sudo apt-get install -y libtool-bin cmake flex bison libgtk-3-dev libgl1-mesa-dev python3-numpy ocl-icd-opencl-dev
+sudo apt-get install -y libtool-bin cmake flex bison libgtk-3-dev libgl1-mesa-dev python3-numpy ocl-icd-opencl-dev patchelf
 
 # Install CUDA 10.1 Update 2 (https://docs.nvidia.com/cuda/archive/10.1/cuda-installation-guide-linux/index.html)
 wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/cuda-repo-ubuntu1804_10.1.243-1_amd64.deb
