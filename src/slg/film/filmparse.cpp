@@ -640,7 +640,8 @@ ImagePipeline *Film::CreateImagePipeline(const Properties &props, const string &
 #if !defined(LUXRAYS_DISABLE_CUDA)
 			} else if (type == "OPTIX_DENOISER") {
 				const float sharpness = Clamp(props.Get(Property(prefix + ".sharpness")(.1f)).Get<float>(), 0.f, 1.f);
-				imagePipeline->AddPlugin(new OptixDenoiserPlugin(sharpness));
+				const u_int minSPP = props.Get(Property(prefix + ".minspp")(0)).Get<u_int>();
+				imagePipeline->AddPlugin(new OptixDenoiserPlugin(sharpness, minSPP));
 #endif
 			} else
 				throw runtime_error("Unknown image pipeline plugin type: " + type);

@@ -36,12 +36,13 @@ using namespace slg;
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::OptixDenoiserPlugin)
 
-OptixDenoiserPlugin::OptixDenoiserPlugin(const float s) : cudaDevice(nullptr),
+OptixDenoiserPlugin::OptixDenoiserPlugin(const float s, const u_int minSPP) : cudaDevice(nullptr),
 	denoiserHandle(nullptr), denoiserStateScratchBuff(nullptr),
 	denoiserTmpBuff(nullptr), albedoTmpBuff(nullptr), avgShadingNormalTmpBuff(nullptr),
-	bufferSetUpKernel(nullptr) {
-	sharpness = s;
-}
+	bufferSetUpKernel(nullptr),
+	sharpness(s),
+	minSPP(minSPP) 
+{}
 
 OptixDenoiserPlugin::~OptixDenoiserPlugin() {
 	if (cudaDevice) {
@@ -57,7 +58,7 @@ OptixDenoiserPlugin::~OptixDenoiserPlugin() {
 }
 
 ImagePipelinePlugin *OptixDenoiserPlugin::Copy() const {
-	return new OptixDenoiserPlugin(sharpness);
+	return new OptixDenoiserPlugin(sharpness, minSPP);
 }
 
 void OptixDenoiserPlugin::AddHWChannelsUsed(unordered_set<Film::FilmChannelType, hash<int> > &hwChannelsUsed) const {
@@ -73,6 +74,16 @@ void OptixDenoiserPlugin::AddHWChannelsUsed(unordered_set<Film::FilmChannelType,
 void OptixDenoiserPlugin::ApplyHW(Film &film, const u_int index) {
 	//const double startTime = WallClockTime();
 	//SLG_LOG("[OptixDenoiserPlugin] Applying Optix denoiser");
+	
+	if (minSPP > 0) {
+		const u_int *subRegion = film.GetSubRegion();
+		const u_int regionPixelsCount = (subRegion[1] - subRegion[0] + 1) * (subRegion[3] - subRegion[2] + 1);
+		const double spp = film.GetTotalSampleCount() / regionPixelsCount;
+		
+		if (spp < minSPP) {
+			return;
+		}
+	}
 
 	if (!cudaDevice) {
 		film.ctx->SetVerbose(true);

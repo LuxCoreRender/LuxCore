@@ -41,7 +41,7 @@ namespace slg {
 
 class OptixDenoiserPlugin : public ImagePipelinePlugin {
 public:
-	OptixDenoiserPlugin(const float sharpness = 0.f);
+	OptixDenoiserPlugin(const float sharpness = 0.f, const u_int minSPP = 0);
 	virtual ~OptixDenoiserPlugin();
 
 	virtual ImagePipelinePlugin *Copy() const;
@@ -61,9 +61,11 @@ private:
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImagePipelinePlugin);
 		ar & sharpness;
+		ar & minSPP;
 	}
 
 	float sharpness;
+	u_int minSPP;
 
 	// Used inside the object destructor to free buffers
 	luxrays::CUDADevice *cudaDevice;
@@ -79,7 +81,7 @@ private:
 
 }
 
-BOOST_CLASS_VERSION(slg::OptixDenoiserPlugin, 1)
+BOOST_CLASS_VERSION(slg::OptixDenoiserPlugin, 2)
 
 BOOST_CLASS_EXPORT_KEY(slg::OptixDenoiserPlugin)
 
