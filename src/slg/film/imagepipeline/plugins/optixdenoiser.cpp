@@ -36,13 +36,12 @@ using namespace slg;
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::OptixDenoiserPlugin)
 
-OptixDenoiserPlugin::OptixDenoiserPlugin(const float s, const u_int minSPP) : cudaDevice(nullptr),
+OptixDenoiserPlugin::OptixDenoiserPlugin(const float s, const u_int minSPP) : sharpness(s),
+	minSPP(minSPP), cudaDevice(nullptr),
 	denoiserHandle(nullptr), denoiserStateScratchBuff(nullptr),
 	denoiserTmpBuff(nullptr), albedoTmpBuff(nullptr), avgShadingNormalTmpBuff(nullptr),
-	bufferSetUpKernel(nullptr),
-	sharpness(s),
-	minSPP(minSPP) 
-{}
+	bufferSetUpKernel(nullptr) {
+}
 
 OptixDenoiserPlugin::~OptixDenoiserPlugin() {
 	if (cudaDevice) {
