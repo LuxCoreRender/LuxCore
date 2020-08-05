@@ -27,7 +27,7 @@
 OPENCL_FORCE_INLINE __global const uint* restrict TilePathSampler_GetSobolDirectionsPtr(
 		__global TilePathSamplerSharedData *samplerSharedData) {
 	// Sobol directions array is appended at the end of slg::ocl::TilePathSamplerSharedData
-	return (__global const uint* restrict)(
+	return (__global uint *)(
 			(__global char *)samplerSharedData +
 			sizeof(TilePathSamplerSharedData));
 }
@@ -67,11 +67,12 @@ OPENCL_FORCE_INLINE void TilePathSampler_SplatSample(
 		FILM_PARAM_DECL
 		) {
 	const size_t gid = get_global_id(0);
-	__global TilePathSample *samples = (__global TilePathSample *)samplesBuff;
-	__global TilePathSample *sample = &samples[gid];
 	__global SampleResult *sampleResult = &sampleResultsBuff[gid];
 
 #if defined(RENDER_ENGINE_RTPATHOCL)
+	__global TilePathSample *samples = (__global TilePathSample *)samplesBuff;
+	__global TilePathSample *sample = &samples[gid];
+
 	// Check if I'm in preview phase
 	if (sample->pass < taskConfig->renderEngine.rtpathocl.previewResolutionReductionStep) {
 		// I have to copy the current pixel to fill the assigned square

@@ -43,12 +43,31 @@ using namespace luxrays;
 
 bool cudaKernelCache::ForcedCompilePTX(const vector<string> &kernelsParameters, const string &kernelSource,
 		 const string &programName, char **ptx, size_t *ptxSize, string *error) {
+	if (error)
+		*error = "";
+
 	nvrtcProgram prog;
 	CHECK_NVRTC_ERROR(nvrtcCreateProgram(&prog, kernelSource.c_str(), programName.c_str(), 0, nullptr, nullptr));
   
 	vector<const char *> cudaOpts;
 	cudaOpts.push_back("--device-as-default-execution-space");
-	cudaOpts.push_back("--disable-warnings");
+	//cudaOpts.push_back("--disable-warnings");
+
+	// To display warning numbers
+	cudaOpts.push_back("-Xcudafe");
+	cudaOpts.push_back("--display_error_number");
+	
+	// To suppress warning: warning #550-D: variable "xyz" was set but never used
+	cudaOpts.push_back("-Xcudafe");
+	cudaOpts.push_back("--diag_suppress=550");
+	
+	// To suppress warning: warning #1055-D: types cannot be declared in anonymous unions
+	cudaOpts.push_back("-Xcudafe");
+	cudaOpts.push_back("--diag_suppress=1055");
+
+	// To suppress warning: warning #68-D: integer conversion resulted in a change of sign
+	cudaOpts.push_back("-Xcudafe");
+	cudaOpts.push_back("--diag_suppress=68");
 
 	for	(auto const &p : kernelsParameters)
 		cudaOpts.push_back(p.c_str());
@@ -60,16 +79,16 @@ bool cudaKernelCache::ForcedCompilePTX(const vector<string> &kernelsParameters, 
 	const nvrtcResult compilationResult = nvrtcCompileProgram(prog,
 			cudaOpts.size(),
 			(cudaOpts.size() > 0) ? &cudaOpts[0] : nullptr);
-	if (compilationResult != NVRTC_SUCCESS) {
-		size_t logSize;
-		CHECK_NVRTC_ERROR(nvrtcGetProgramLogSize(prog, &logSize));
-		unique_ptr<char> log(new char[logSize]);
-		CHECK_NVRTC_ERROR(nvrtcGetProgramLog(prog, log.get()));
 
-		*error = string(log.get());
+	size_t logSize;
+	CHECK_NVRTC_ERROR(nvrtcGetProgramLogSize(prog, &logSize));
+	unique_ptr<char> log(new char[logSize]);
+	CHECK_NVRTC_ERROR(nvrtcGetProgramLog(prog, log.get()));
 
+	*error = string(log.get());
+
+	if (compilationResult != NVRTC_SUCCESS)
 		return false;
-	}
 
 	// Obtain PTX from the program.
 	CHECK_NVRTC_ERROR(nvrtcGetPTXSize(prog, ptxSize));
@@ -102,6 +121,9 @@ cudaKernelPersistentCache::~cudaKernelPersistentCache() {
 bool cudaKernelPersistentCache::CompilePTX(const vector<string> &kernelsParameters,
 		const string &kernelSource, const string &programName,
 		char **ptx, size_t *ptxSize, bool *cached, string *error) {
+	if (error)
+		*error = "";
+
 	// Check if the kernel is available in the cache
 
 	const string kernelName =

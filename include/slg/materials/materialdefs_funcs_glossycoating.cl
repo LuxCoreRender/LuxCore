@@ -22,11 +22,7 @@ OPENCL_FORCE_INLINE void GlossyCoatingMaterial_Albedo(__global const Material* r
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {
-	float3 albedo1;
-	EvalStack_PopFloat3(albedo1);
-
-	const float3 albedo = albedo;
-	EvalStack_PushFloat3(albedo);
+	// Albedo value is already on the stack so I have nothing to do (Pop/Push the same value would be a waste of time)
 }
 
 OPENCL_FORCE_INLINE void GlossyCoatingMaterial_GetInteriorVolume(__global const Material* restrict material,

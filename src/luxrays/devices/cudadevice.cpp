@@ -237,6 +237,10 @@ void CUDADevice::CompileProgram(HardwareDeviceProgram **program,
 		LR_LOG(deviceContext, "[" << programName << "] CUDA program compilation error: " << endl << error);
 		
 		throw runtime_error(programName + " CUDA program compilation error");
+	} else {
+		if (error.length() > 0) {
+			LR_LOG(deviceContext, "[" << programName << "] CUDA program compilation warnings: " << endl << error);
+		}
 	}
 
 	if (cached) {

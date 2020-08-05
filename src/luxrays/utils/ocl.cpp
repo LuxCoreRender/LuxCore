@@ -162,6 +162,9 @@ string oclKernelCache::ToOptsString(const vector<string> &kernelsParameters) {
 cl_program oclKernelCache::ForcedCompile(cl_context context, cl_device_id device,
 		const vector<string> &kernelsParameters, const string &kernelSource,
 		string *errorStr) {
+	if (errorStr)
+		*errorStr = "";
+
 	const char *kernelSources[1] = { kernelSource.c_str() };
 	const size_t sourceSizes[1] = { kernelSource.length() };
 	cl_int error;
@@ -244,6 +247,9 @@ u_int oclKernelPersistentCache::HashBin(const char *s, const size_t size) {
 cl_program oclKernelPersistentCache::Compile(cl_context context, cl_device_id device,
 		const vector<string> &kernelsParameters, const string &kernelSource,
 		bool *cached, string *errorStr) {
+	if (errorStr)
+		*errorStr = "";
+
 	// Check if the kernel is available inside the cache
 
 	cl_platform_id platform;

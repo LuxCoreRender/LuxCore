@@ -304,8 +304,7 @@ OPENCL_FORCE_INLINE bool DirectLight_Illuminate(
 	info->pickPdf = lightPickPdf;
 
 	// Illuminate the point
-	float3 lightRayDir;
-	float distance, directPdfW;
+	float directPdfW;
 	const float3 lightRadiance = Light_Illuminate(
 			&lights[lightIndex],
 			bsdf,

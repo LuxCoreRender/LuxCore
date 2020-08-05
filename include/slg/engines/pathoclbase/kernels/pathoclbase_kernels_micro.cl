@@ -132,7 +132,6 @@ __kernel void AdvancePaths_MK_HIT_NOTHING(
 	// Start of variables setup
 	//--------------------------------------------------------------------------
 
-	__global GPUTaskDirectLight *taskDirectLight = &tasksDirectLight[gid];
 	__global EyePathInfo *pathInfo = &eyePathInfos[gid];
 	__constant const Scene* restrict scene = &taskConfig->scene;
 	__global SampleResult *sampleResult = &sampleResultsBuff[gid];
@@ -221,7 +220,6 @@ __kernel void AdvancePaths_MK_HIT_OBJECT(
 	//--------------------------------------------------------------------------
 
 	__global BSDF *bsdf = &taskState->bsdf;
-	__global GPUTaskDirectLight *taskDirectLight = &tasksDirectLight[gid];
 	__global EyePathInfo *pathInfo = &eyePathInfos[gid];
 	__constant const Scene* restrict scene = &taskConfig->scene;
 	__global SampleResult *sampleResult = &sampleResultsBuff[gid];

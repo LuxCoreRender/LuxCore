@@ -981,7 +981,8 @@ OPENCL_FORCE_INLINE float3 IntersectableLight_GetRadiance(__global const LightSo
 			MATERIALS_PARAM);
 }
 
-OPENCL_FORCE_NOT_INLINE float3 Light_Illuminate(
+// Cuda reports large argument size, so overrides noinline attribute anyway
+OPENCL_FORCE_INLINE float3 Light_Illuminate(
 		__global const LightSource *light,
 		__global const BSDF *bsdf,
 		const float time, const float u0, const float u1,

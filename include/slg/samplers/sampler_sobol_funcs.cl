@@ -67,7 +67,7 @@ OPENCL_FORCE_INLINE __global uint *SobolSampler_GetPassesPtr(__global SobolSampl
 
 OPENCL_FORCE_INLINE __global const uint* restrict SobolSampler_GetSobolDirectionsPtr(__global SobolSamplerSharedData *samplerSharedData) {
 	// Sobol directions array is appended at the end of slg::ocl::SobolSamplerSharedData + all pass values
-	return (__global const uint* restrict)(
+	return (__global uint *)(
 			(__global char *)samplerSharedData +
 			sizeof(SobolSamplerSharedData) +
 			sizeof(uint) * samplerSharedData->filmRegionPixelCount);

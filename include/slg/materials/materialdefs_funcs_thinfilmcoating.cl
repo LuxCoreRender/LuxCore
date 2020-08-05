@@ -285,7 +285,7 @@ OPENCL_FORCE_NOT_INLINE float3 CalcFilmColor(const float3 localFixedDir, const f
 	// Using 34 now so I can use integers for the wavelengths, and 720 - 380 = 340.
 	const uint NUM_WAVELENGTHS = 34;
 	const uint MIN_WAVELENGTH = 380;
-	const uint MAX_WAVELENGTH = 720;
+	//const uint MAX_WAVELENGTH = 720;
 	const uint WAVELENGTH_STEP = 10;  // (MAX_WAVELENGTH - MIN_WAVELENGTH) / (NUM_WAVELENGTHS - 1);
 	
 	const float sinTheta = SinTheta(localFixedDir);

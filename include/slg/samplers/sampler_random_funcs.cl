@@ -100,7 +100,6 @@ OPENCL_FORCE_INLINE void RandomSampler_InitNewSample(__constant const GPUTaskCon
 
 			if (pixelOffset >= bucketSize) {
 				// Ask for a new bucket
-				uint bucketSeed;
 				RandomSamplerSharedData_GetNewBucket(samplerSharedData, bucketCount,
 						&bucketIndex);
 
