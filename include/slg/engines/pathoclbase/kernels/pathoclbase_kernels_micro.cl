@@ -799,7 +799,7 @@ __kernel void AdvancePaths_MK_GENERATE_NEXT_VERTEX_RAY(
 		sampleResult->firstPathVertexEvent = bsdfEvent;
 
 	EyePathInfo_AddVertex(pathInfo, bsdf, bsdfEvent, bsdfPdfW,
-			taskConfig->pathTracer.hybridBackForward.enabled ? taskConfig->pathTracer.hybridBackForward.glossinessThreshold : 0.f
+			taskConfig->pathTracer.hybridBackForward.glossinessThreshold
 			MATERIALS_PARAM);
 
 	// Russian Roulette

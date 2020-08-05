@@ -167,7 +167,7 @@ OPENCL_FORCE_INLINE void RoughGlassMaterial_Evaluate(__global const Material* re
 
         event = GLOSSY | REFLECT;
 	}
-	
+
 	EvalStack_PushFloat3(result);
 	EvalStack_PushBSDFEvent(event);
 	EvalStack_PushFloat(directPdfW);

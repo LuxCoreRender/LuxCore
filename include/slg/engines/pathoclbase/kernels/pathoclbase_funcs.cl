@@ -376,7 +376,8 @@ OPENCL_FORCE_INLINE bool DirectLight_BSDFSampling(
 
 	const bool misEnabled = !lastPathVertex &&
 			Light_IsEnvOrIntersectable(light) &&
-			CheckDirectHitVisibilityFlags(light, tmpDepthInfo, event);
+			CheckDirectHitVisibilityFlags(light, tmpDepthInfo, event) &&
+			!bsdf->hitPoint.throughShadowTransparency;
 
 	const float weight = misEnabled ? PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
 
