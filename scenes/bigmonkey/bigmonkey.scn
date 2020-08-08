@@ -20,6 +20,11 @@ scene.textures.lighttex.name = Daylight
 scene.textures.red_tex.type = irregulardata
 scene.textures.red_tex.wavelengths = 580 620 660
 scene.textures.red_tex.data = 0.0 0.000015 0.0
+##
+scene.textures.wireframetex.type = wireframe
+scene.textures.wireframetex.width = 0.01
+scene.textures.wireframetex.border = 1.0 1.0 1.0
+scene.textures.wireframetex.inside = 0.0 0.0 0.0
 ################################################################################
 #scene.materials.redmat.type = disney
 #scene.materials.redmat.basecolor = 0.7 0.0 0.0
@@ -57,6 +62,7 @@ scene.textures.red_tex.data = 0.0 0.000015 0.0
 scene.materials.redmat.type = matte
 #scene.materials.redmat.kd = 0.75 0.0 0.0
 scene.materials.redmat.kd = red_tex
+#scene.materials.redmat.transparency = wireframetex
 scene.materials.redmat.holdout.enable = 0
 ##
 scene.materials.whitematte.type = matte

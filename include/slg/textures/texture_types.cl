@@ -63,7 +63,8 @@ typedef enum {
 	BLENDER_BLEND, BLENDER_CLOUDS, BLENDER_DISTORTED_NOISE, BLENDER_MAGIC, BLENDER_MARBLE,
 	BLENDER_MUSGRAVE, BLENDER_NOISE, BLENDER_STUCCI, BLENDER_WOOD,  BLENDER_VORONOI,
 	CHECKERBOARD2D, CHECKERBOARD3D, CLOUD_TEX, FBM_TEX,
-	MARBLE, DOTS, BRICK, WINDY, WRINKLED, UV_TEX, BAND_TEX, // 59 textures
+	MARBLE, DOTS, BRICK, WINDY, WRINKLED, UV_TEX, BAND_TEX,
+	WIREFRAME_TEX, // 60 textures
 	// Fresnel textures
 	FRESNELCOLOR_TEX, FRESNELCONST_TEX
 } TextureType;
@@ -458,6 +459,11 @@ typedef struct {
 } RandomTexParam;
 
 typedef struct {
+	float width;
+	unsigned int borderTexIndex, insideTexIndex;
+} WireFrameTexParam;
+
+typedef struct {
 	TextureType type;
 
 	unsigned int evalFloatOpStartIndex, evalFloatOpLength;
@@ -524,6 +530,7 @@ typedef struct {
 		BrightContrastTexParam brightContrastTex;
 		TriplanarTexParam triplanarTex;
 		RandomTexParam randomTex;
+		WireFrameTexParam wireFrameTex;
 	};
 } Texture;
 

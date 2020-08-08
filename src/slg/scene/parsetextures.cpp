@@ -80,6 +80,7 @@
 #include "slg/textures/vectormath/makefloat3.h"
 #include "slg/textures/vectormath/splitfloat3.h"
 #include "slg/textures/windy.h"
+#include "slg/textures/wireframe.h"
 #include "slg/textures/wrinkled.h"
 #include "slg/textures/uv.h"
 #include "slg/textures/triplanar.h"
@@ -598,6 +599,13 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const Texture *texture = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
 		const u_int seedOffset = props.Get(Property(propName + ".seed")(0u)).Get<u_int>();
 		tex = new RandomTexture(texture, seedOffset);
+	} else if (texType == "wireframe") {
+		const Texture *bordertTex = GetTexture(props.Get(Property(propName + ".border")(1.f)));
+		const Texture *insideTex = GetTexture(props.Get(Property(propName + ".inside")(0.f)));
+		const float width = props.Get(Property(propName + ".width")(0.f)).Get<float>();
+
+		tex = new WireFrameTexture(CreateTextureMapping2D(propName + ".mapping", props),
+				width, bordertTex, insideTex);
 	} else
 		throw runtime_error("Unknown texture type: " + texType);
 

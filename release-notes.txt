@@ -16,6 +16,7 @@
 * Any mesh UV map can now be used for displacement (issue #416)
 * Subdiv shape now supports multiple vertex UVs, colors, alphas and AOVs (issue #416)
 * Added the support for holdout (issue #423)
+* Added the support for wireframe texture
 
 ### Fixed Bugs
 

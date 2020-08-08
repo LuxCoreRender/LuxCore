@@ -1763,6 +1763,53 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 			break;
 		}
 		//----------------------------------------------------------------------
+		// WIREFRAME_TEX
+		//----------------------------------------------------------------------
+		case WIREFRAME_TEX: {
+			switch (evalType) {
+				case EVAL_FLOAT: {
+					float tex1, tex2;
+					EvalStack_PopFloat(tex2);
+					EvalStack_PopFloat(tex1);
+
+					const float eval = WireFrameTexture_ConstEvaluateFloat(hitPoint,
+							texture->wireFrameTex.width,
+							tex1, tex2
+							TEXTURES_PARAM);
+					EvalStack_PushFloat(eval);
+					break;
+				}
+				case EVAL_SPECTRUM: {
+					float3 tex1, tex2;
+					EvalStack_PopFloat3(tex2);
+					EvalStack_PopFloat3(tex1);
+
+					const float3 eval = WireFrameTexture_ConstEvaluateSpectrum(hitPoint,
+							texture->wireFrameTex.width,
+							tex1, tex2
+							TEXTURES_PARAM);
+					EvalStack_PushFloat3(eval);
+					break;
+				}
+				case EVAL_BUMP_GENERIC_OFFSET_U:
+					Texture_EvalOpGenericBumpOffsetU(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP_GENERIC_OFFSET_V:
+					Texture_EvalOpGenericBumpOffsetV(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP:
+					Texture_EvalOpGenericBump(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				default:
+					// Something wrong here
+					break;
+			}
+			break;
+		}
+		//----------------------------------------------------------------------
 		// TRIPLANAR_TEX
 		//----------------------------------------------------------------------
 		case TRIPLANAR_TEX:

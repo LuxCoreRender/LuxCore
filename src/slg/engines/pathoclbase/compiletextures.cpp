@@ -74,6 +74,7 @@
 #include "slg/textures/normalmap.h"
 #include "slg/textures/object_id.h"
 #include "slg/textures/windy.h"
+#include "slg/textures/wireframe.h"
 #include "slg/textures/wrinkled.h"
 #include "slg/textures/uv.h"
 #include "slg/textures/vectormath/dotproduct.h"
@@ -883,6 +884,23 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 				case slg::ocl::TextureEvalOpType::EVAL_FLOAT:
 				case slg::ocl::TextureEvalOpType::EVAL_SPECTRUM: {
 					evalOpStackSize += CompileTextureOps(tex->randomTex.texIndex, slg::ocl::TextureEvalOpType::EVAL_FLOAT);
+					break;
+				}
+				case slg::ocl::TextureEvalOpType::EVAL_BUMP: {
+					evalOpStackSize += CompileTextureOpsGenericBumpMap(texIndex);
+					break;
+				}
+				default:
+					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(" + ToString(tex->type) + "): " + ToString(opType));
+			}
+			break;
+		}
+		case slg::ocl::WIREFRAME_TEX: {
+			switch (opType) {
+				case slg::ocl::TextureEvalOpType::EVAL_FLOAT:
+				case slg::ocl::TextureEvalOpType::EVAL_SPECTRUM: {
+					evalOpStackSize += CompileTextureOps(tex->wireFrameTex.borderTexIndex, opType);
+					evalOpStackSize += CompileTextureOps(tex->wireFrameTex.insideTexIndex, opType);
 					break;
 				}
 				case slg::ocl::TextureEvalOpType::EVAL_BUMP: {
@@ -2041,6 +2059,18 @@ void CompiledScene::CompileTextures() {
 				tex->type = slg::ocl::RANDOM_TEX;
 				const Texture *t1 = rt->GetTexture();
 				tex->randomTex.texIndex = scene->texDefs.GetTextureIndex(t1);
+				break;
+			}
+			case WIREFRAME_TEX: {
+				const WireFrameTexture *wft = static_cast<const WireFrameTexture *>(t);
+
+				tex->type = slg::ocl::WIREFRAME_TEX;
+				tex->wireFrameTex.width = wft->GetWidth();
+				const Texture *borderTex = wft->GetBorderTex();
+				tex->wireFrameTex.borderTexIndex = scene->texDefs.GetTextureIndex(borderTex);
+
+				const Texture *insideTex = wft->GetInsideTex();
+				tex->wireFrameTex.insideTexIndex = scene->texDefs.GetTextureIndex(insideTex);
 				break;
 			}
 			default:

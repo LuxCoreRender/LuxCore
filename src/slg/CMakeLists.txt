@@ -572,6 +572,7 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/textures/vectormath/makefloat3.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/vectormath/splitfloat3.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/windy.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/wireframe.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/wrinkled.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/filenameresolver.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/film2sceneradius.cpp

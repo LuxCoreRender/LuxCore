@@ -562,6 +562,81 @@ OPENCL_FORCE_INLINE float BandTexture_ConstEvaluateFloat(__global const HitPoint
 }
 
 //------------------------------------------------------------------------------
+// WireFrame texture
+//------------------------------------------------------------------------------
+
+OPENCL_FORCE_INLINE float TriangleHeight(const float a, const float b, const float c) {
+	// Heron's formula for triangle area
+	const float s = (a + b + c) * .5f;
+	const float area = sqrt(s * (s - a) * (s - b) * (s - c));
+
+	// h = (A / a) * 2
+	return (area / a) * 2.f;
+}
+
+OPENCL_FORCE_INLINE bool WireFrameTexture_Evaluate(__global const HitPoint *hitPoint,
+		const float width
+		TEXTURES_PARAM_DECL) {
+	const uint meshIndex = hitPoint->meshIndex;
+	if (meshIndex == NULL_INDEX)
+		return false;
+	
+	__global const ExtMesh* restrict meshDesc = &meshDescs[meshIndex];
+	__global const Point* restrict iVertices = &vertices[meshDesc->vertsOffset];
+	__global const Triangle* restrict iTriangles = &triangles[meshDesc->trisOffset];
+
+	__global const Triangle* restrict tri = &iTriangles[hitPoint->triangleIndex];
+	const uint vi0 = tri->v[0];
+	const uint vi1 = tri->v[1];
+	const uint vi2 = tri->v[2];
+	
+	float3 v0 = VLOAD3F(&iVertices[vi0].x);
+	float3 v1 = VLOAD3F(&iVertices[vi1].x);
+	float3 v2 = VLOAD3F(&iVertices[vi2].x);
+	if (meshDesc->type != TYPE_EXT_TRIANGLE) {
+		// Transform to global coordinates
+		v0 = Transform_ApplyPoint(&hitPoint->localToWorld, v0);
+		v1 = Transform_ApplyPoint(&hitPoint->localToWorld, v1);
+		v2 = Transform_ApplyPoint(&hitPoint->localToWorld, v2);
+	}
+	
+	const float e0 = length(v1 - v0);
+	const float e1 = length(v2 - v1);
+	const float e2 = length(v0 - v2);
+
+	const float3 p = VLOAD3F(&hitPoint->p.x);
+	const float b0 = length(p - v0);
+	const float b1 = length(p - v1);
+	const float b2 = length(p - v2);
+
+	const float dist0 = TriangleHeight(e0, b1, b0);
+	if (dist0 < width)
+		return true;
+
+	const float dist1 = TriangleHeight(e1, b2, b1);
+	if (dist1 < width)
+		return true;
+
+	const float dist2 = TriangleHeight(e2, b0, b2);
+	if (dist2 < width)
+		return true;
+
+	return false;
+}
+
+OPENCL_FORCE_NOT_INLINE float WireFrameTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
+		const float width, const float value1, const float value2
+		TEXTURES_PARAM_DECL) {
+	return WireFrameTexture_Evaluate(hitPoint, width TEXTURES_PARAM) ? value1 : value2;
+}
+
+OPENCL_FORCE_NOT_INLINE float3 WireFrameTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
+		const float width, const float3 value1, const float3 value2
+		TEXTURES_PARAM_DECL) {
+	return WireFrameTexture_Evaluate(hitPoint, width TEXTURES_PARAM) ? value1 : value2;
+}
+
+//------------------------------------------------------------------------------
 // Divide texture
 //------------------------------------------------------------------------------
 
