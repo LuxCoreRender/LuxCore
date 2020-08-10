@@ -504,6 +504,7 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/scene/sceneserialize.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/scene/sceneupdate.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/shapes/displacement.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/shapes/edgedetectoraov.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/shapes/groupshape.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/shapes/harlequinshape.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/shapes/islandaovshape.cpp

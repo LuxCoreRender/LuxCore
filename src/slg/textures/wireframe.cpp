@@ -54,15 +54,15 @@ bool WireFrameTexture::Evaluate(const HitPoint &hitPoint) const {
 	const float b2 = (hitPoint.p - v2).Length();
 
 	const float dist0 = TriangleHeight(e0, b1, b0);
-	if (dist0 < width)
+	if ((dist0 < width) && (!mesh->HasTriAOV(0) || (mesh->GetTriAOV(hitPoint.triangleIndex, 0) != 0.f)))
 		return true;
 
 	const float dist1 = TriangleHeight(e1, b2, b1);
-	if (dist1 < width)
-		return true;
+	if ((dist1 < width) && (!mesh->HasTriAOV(1) || (mesh->GetTriAOV(hitPoint.triangleIndex, 1) != 0.f)))
+			return true;
 
 	const float dist2 = TriangleHeight(e2, b0, b2);
-	if (dist2 < width)
+	if ((dist2 < width) && (!mesh->HasTriAOV(2) || (mesh->GetTriAOV(hitPoint.triangleIndex, 2) != 0.f)))
 		return true;
 
 	return false;

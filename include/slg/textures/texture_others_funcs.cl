@@ -585,7 +585,8 @@ OPENCL_FORCE_INLINE bool WireFrameTexture_Evaluate(__global const HitPoint *hitP
 	__global const Point* restrict iVertices = &vertices[meshDesc->vertsOffset];
 	__global const Triangle* restrict iTriangles = &triangles[meshDesc->trisOffset];
 
-	__global const Triangle* restrict tri = &iTriangles[hitPoint->triangleIndex];
+	const uint triIndex = hitPoint->triangleIndex;
+	__global const Triangle* restrict tri = &iTriangles[triIndex];
 	const uint vi0 = tri->v[0];
 	const uint vi1 = tri->v[1];
 	const uint vi2 = tri->v[2];
@@ -610,15 +611,15 @@ OPENCL_FORCE_INLINE bool WireFrameTexture_Evaluate(__global const HitPoint *hitP
 	const float b2 = length(p - v2);
 
 	const float dist0 = TriangleHeight(e0, b1, b0);
-	if (dist0 < width)
+	if ((dist0 < width) && ((meshDesc->triAOVOffset[0] == NULL_INDEX) || (ExtMesh_GetTriAOV(meshIndex, triIndex, 0 EXTMESH_PARAM) > 0.f)))
 		return true;
 
 	const float dist1 = TriangleHeight(e1, b2, b1);
-	if (dist1 < width)
+	if ((dist1 < width) && ((meshDesc->triAOVOffset[1] == NULL_INDEX) || (ExtMesh_GetTriAOV(meshIndex, triIndex, 1 EXTMESH_PARAM) > 0.f)))
 		return true;
 
 	const float dist2 = TriangleHeight(e2, b0, b2);
-	if (dist2 < width)
+	if ((dist2 < width) && ((meshDesc->triAOVOffset[2] == NULL_INDEX) || (ExtMesh_GetTriAOV(meshIndex, triIndex, 2 EXTMESH_PARAM) > 0.f)))
 		return true;
 
 	return false;
