@@ -73,7 +73,7 @@ EdgeDetectorAOVShape::EdgeDetectorAOVShape(ExtTriangleMesh *srcMesh,
 		const u_int e0v1 = edges[edge0Index].v1;
 		const u_int e1v0 = edges[edge1Index].v0;
 		const u_int e1v1 = edges[edge1Index].v1;
-		
+
 		return
 			// Check if the vertices are near enough
 			((IsSameVertex(e0v0, e1v0) && IsSameVertex(e0v1, e1v1)) ||
@@ -95,10 +95,11 @@ EdgeDetectorAOVShape::EdgeDetectorAOVShape(ExtTriangleMesh *srcMesh,
 				// Check the triangles normals
 				const Normal edge0Normal = srcMesh->GetGeometryNormal(Transform::TRANS_IDENTITY, e0.tri);
 				const Normal edge1Normal = srcMesh->GetGeometryNormal(Transform::TRANS_IDENTITY, e1.tri);
+
 				if (AbsDot(edge0Normal, edge1Normal) < 1.f - DEFAULT_EPSILON_STATIC) {
 					// Mark as detected
-					const Normal edgeNormal = Normalize(edge0Normal + edge0Normal);
-					
+					const Normal edgeNormal = Normalize(edge0Normal + edge1Normal);
+
 					e0.aovValue = acosf(Dot(edge0Normal, edgeNormal));
 					e1.aovValue = acosf(Dot(edge1Normal, edgeNormal));
 					e1.alreadyFound = true;
