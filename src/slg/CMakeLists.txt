@@ -518,6 +518,7 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/slg.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/mapping/mapping.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/band.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/bevel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/bilerp.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/blackbody.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/blender_noiselib.cpp

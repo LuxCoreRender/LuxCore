@@ -16,66 +16,56 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_WIREFRAMETEX_H
-#define	_SLG_WIREFRAMETEX_H
+#ifndef _SLG_BEVELTEX_H
+#define	_SLG_BEVELTEX_H
 
 #include "slg/textures/texture.h"
 
 namespace slg {
 
 //------------------------------------------------------------------------------
-// WireFrame texture
+// Bevel texture
 //------------------------------------------------------------------------------
 
-class WireFrameTexture : public Texture {
+class BevelTexture : public Texture {
 public:
-	WireFrameTexture(const float w,
-			const Texture *borderTx, const Texture *insideTx) :
-		width(w), borderTex(borderTx), insideTex(insideTx) { }
-	virtual ~WireFrameTexture() { }
+	BevelTexture(const Texture *t, const float radius);
+	virtual ~BevelTexture();
 
-	virtual TextureType GetType() const { return WIREFRAME_TEX; }
-	virtual float GetFloatValue(const HitPoint &hitPoint) const;
-	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
-	virtual float Y() const {
-		return (borderTex->Y() + insideTex->Y()) * .5f;
-	}
-	virtual float Filter() const {
-		return (borderTex->Filter() + insideTex->Filter()) * .5f;
-	}
+	virtual TextureType GetType() const { return BEVEL_TEX; }
+	virtual float GetFloatValue(const HitPoint &hitPoint) const { return 0.f; }
+	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const { return luxrays::Spectrum(); }
+	virtual float Y() const { return 0.f; }
+	virtual float Filter() const { return 0.f; }
+
+    virtual luxrays::Normal Bump(const HitPoint &hitPoint, const float sampleDistance) const;
 
 	virtual void AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
 		Texture::AddReferencedTextures(referencedTexs);
 
-		borderTex->AddReferencedTextures(referencedTexs);
-		insideTex->AddReferencedTextures(referencedTexs);
+		if (tex)
+			tex->AddReferencedTextures(referencedTexs);
 	}
 	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
-		borderTex->AddReferencedImageMaps(referencedImgMaps);
-		insideTex->AddReferencedImageMaps(referencedImgMaps);
+		if (tex)
+			tex->AddReferencedImageMaps(referencedImgMaps);
 	}
 
 	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
-		if (borderTex == oldTex)
-			borderTex = newTex;
-		if (insideTex == oldTex)
-			insideTex = newTex;
+		if (tex == oldTex)
+			tex = newTex;
 	}
 
-	float GetWidth() const { return width; }
-	const Texture *GetBorderTex() const { return borderTex; }
-	const Texture *GetInsideTex() const { return insideTex; }
+	const Texture *GetTexture() const { return tex; }
+	const float GetRadius() const { return radius; }
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
-	bool Evaluate(const HitPoint &hitPoint) const;
-
-	const float width;
-	const Texture *borderTex;
-	const Texture *insideTex;
+	const Texture *tex;
+	const float radius;
 };
 
 }
 
-#endif	/* _SLG_WIREFRAMETEX_H */
+#endif	/* _SLG_BEVELTEX_H */

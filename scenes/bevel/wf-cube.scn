@@ -60,7 +60,6 @@ scene.textures.wireframetex2.type = wireframe
 scene.textures.wireframetex2.width = 0.02
 scene.textures.wireframetex2.border = 1.0 1.0 1.0
 scene.textures.wireframetex2.inside = 0.0 0.0 0.0
-scene.textures.wireframetex2.aovindex = 0
 ################################################################################
 scene.materials.cube1_mat.type = "matte"
 scene.materials.cube1_mat.kd = "0.5"

@@ -24,7 +24,7 @@
 namespace slg {
 
 //------------------------------------------------------------------------------
-// NormalMap textures
+// NormalMap texture
 //------------------------------------------------------------------------------
 
 class NormalMapTexture : public Texture {

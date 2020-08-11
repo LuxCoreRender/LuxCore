@@ -26,15 +26,6 @@ using namespace slg;
 // WireFrame texture
 //------------------------------------------------------------------------------
 
-static float TriangleHeight(const float a, const float b, const float c) {
-	// Heron's formula for triangle area
-	const float s = (a + b + c) * .5f;
-	const float area = sqrtf(s * (s - a) * (s - b) * (s - c));
-
-	// h = (A / a) * 2
-	return (area / a) * 2.f;
-}
-
 bool WireFrameTexture::Evaluate(const HitPoint &hitPoint) const {
 	const ExtMesh *mesh = hitPoint.mesh;
 	if (!mesh)
@@ -53,15 +44,15 @@ bool WireFrameTexture::Evaluate(const HitPoint &hitPoint) const {
 	const float b1 = (hitPoint.p - v1).Length();
 	const float b2 = (hitPoint.p - v2).Length();
 
-	const float dist0 = TriangleHeight(e0, b1, b0);
+	const float dist0 = Triangle::GetHeight(e0, b1, b0);
 	if ((dist0 < width) && (!mesh->HasTriAOV(0) || (mesh->GetTriAOV(hitPoint.triangleIndex, 0) != 0.f)))
 		return true;
 
-	const float dist1 = TriangleHeight(e1, b2, b1);
+	const float dist1 = Triangle::GetHeight(e1, b2, b1);
 	if ((dist1 < width) && (!mesh->HasTriAOV(1) || (mesh->GetTriAOV(hitPoint.triangleIndex, 1) != 0.f)))
 			return true;
 
-	const float dist2 = TriangleHeight(e2, b0, b2);
+	const float dist2 = Triangle::GetHeight(e2, b0, b2);
 	if ((dist2 < width) && (!mesh->HasTriAOV(2) || (mesh->GetTriAOV(hitPoint.triangleIndex, 2) != 0.f)))
 		return true;
 
@@ -85,7 +76,6 @@ Properties WireFrameTexture::ToProperties(const ImageMapCache &imgMapCache, cons
 	props.Set(Property("scene.textures." + name + ".type")("wireframe"));
 	props.Set(Property("scene.textures." + name + ".border")(borderTex->GetSDLValue()));
 	props.Set(Property("scene.textures." + name + ".inside")(insideTex->GetSDLValue()));
-	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;
 }

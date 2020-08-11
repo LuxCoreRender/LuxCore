@@ -93,11 +93,14 @@ EdgeDetectorAOVShape::EdgeDetectorAOVShape(ExtTriangleMesh *srcMesh,
 				// It is a candidate
 
 				// Check the triangles normals
-				if (AbsDot(srcMesh->GetGeometryNormal(Transform::TRANS_IDENTITY, e0.tri),
-						srcMesh->GetGeometryNormal(Transform::TRANS_IDENTITY, e1.tri)) < 1.f - DEFAULT_EPSILON_STATIC) {
+				const Normal edge0Normal = srcMesh->GetGeometryNormal(Transform::TRANS_IDENTITY, e0.tri);
+				const Normal edge1Normal = srcMesh->GetGeometryNormal(Transform::TRANS_IDENTITY, e1.tri);
+				if (AbsDot(edge0Normal, edge1Normal) < 1.f - DEFAULT_EPSILON_STATIC) {
 					// Mark as detected
-					e0.aovValue = 1.f;
-					e1.aovValue = 1.f;
+					const Normal edgeNormal = Normalize(edge0Normal + edge0Normal);
+					
+					e0.aovValue = acosf(Dot(edge0Normal, edgeNormal));
+					e1.aovValue = acosf(Dot(edge1Normal, edgeNormal));
 					e1.alreadyFound = true;
 				}
 			}

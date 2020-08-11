@@ -23,7 +23,7 @@ using namespace luxrays;
 using namespace slg;
 
 //------------------------------------------------------------------------------
-// NormalMap textures
+// NormalMap texture
 //------------------------------------------------------------------------------
 
 NormalMapTexture::NormalMapTexture(const Texture *t, const float s) : tex(t), scale(s) {

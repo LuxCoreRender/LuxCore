@@ -167,6 +167,17 @@ public:
 
 		return ((r <= 1.f) && (t <= 1.f) && (r + t <= 1.f));
 	}
+	
+	
+	static float GetHeight(const float a, const float b, const float c) {
+		// Heron's formula for triangle area
+		const float s = (a + b + c) * .5f;
+		const float area = sqrtf(s * (s - a) * (s - b) * (s - c));
+
+		// h = (A / a) * 2
+		return (area / a) * 2.f;
+	}
+
 
 	unsigned int v[3];
 
