@@ -467,11 +467,12 @@ void ExtTriangleMesh::SavePly(const string &fileName) const {
 	plyFile << "element face " + boost::lexical_cast<string>(triCount) + "\n"
 				"property list uchar uint vertex_indices\n";
 
-	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
+	// TODO: add support for reading back TriAOVs
+	/*for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
 		if (HasTriAOV(i))
 			plyFile << "element faceaov " + boost::lexical_cast<string>(triCount) + "\n"
 					"property aov\n";
-	}
+	}*/
 
 	plyFile << "end_header\n";
 
@@ -506,12 +507,12 @@ void ExtTriangleMesh::SavePly(const string &fileName) const {
 		plyFile.write((char *)&tris[i], sizeof(Triangle));
 	}
 
-	for (u_int j = 0; j < EXTMESH_MAX_DATA_COUNT; ++j) {
+	/*for (u_int j = 0; j < EXTMESH_MAX_DATA_COUNT; ++j) {
 		if (HasTriAOV(j)) {
 			for (u_int i = 0; i < triCount; ++i)
 				plyFile.write((char *)&triAOV[j][i], sizeof(float));
 		}
-	}
+	}*/
 
 	if (!plyFile.good())
 		throw runtime_error("Unable to write PLY face data to: " + fileName);
