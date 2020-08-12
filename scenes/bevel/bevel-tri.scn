@@ -19,29 +19,19 @@ scene.camera.bokeh.distribution.type = "NONE"
 scene.camera.bokeh.scale.x = 0.707106829
 scene.camera.bokeh.scale.y = 0.707106829
 ##
-scene.camera.lookat.orig = 3.36148238 -1.48848963 4.42218685
-scene.camera.lookat.target = 2.7136817 -0.827001512 4.04431009
-scene.camera.up = 0 0 1
+#scene.camera.lookat.orig = 3.36148238 -1.48848963 4.42218685
+#scene.camera.lookat.target = 2.7136817 -0.827001512 4.04431009
+#scene.camera.up = 0 0 1
 ##
-#scene.lights.__WORLD_BACKGROUND_LIGHT__.gain = 1.99999995e-05 1.99999995e-05 1.99999995e-05
-#scene.lights.__WORLD_BACKGROUND_LIGHT__.transformation = 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1
-#scene.lights.__WORLD_BACKGROUND_LIGHT__.id = 0
-#scene.lights.__WORLD_BACKGROUND_LIGHT__.visibility.indirect.diffuse.enable = 1
-#scene.lights.__WORLD_BACKGROUND_LIGHT__.visibility.indirect.glossy.enable = 1
-#scene.lights.__WORLD_BACKGROUND_LIGHT__.visibility.indirect.specular.enable = 1
-#scene.lights.__WORLD_BACKGROUND_LIGHT__.type = "sky2"
-#scene.lights.__WORLD_BACKGROUND_LIGHT__.dir = 0 0 1
-#scene.lights.__WORLD_BACKGROUND_LIGHT__.turbidity = 2.20000005
-#scene.lights.__WORLD_BACKGROUND_LIGHT__.groundalbedo = 0.5 0.5 0.5
-#scene.lights.__WORLD_BACKGROUND_LIGHT__.ground.enable = 0
-#scene.lights.__WORLD_BACKGROUND_LIGHT__.ground.color = 0.5 0.5 0.5
-#scene.lights.__WORLD_BACKGROUND_LIGHT__.ground.autoscale = 1
-#scene.lights.__WORLD_BACKGROUND_LIGHT__.distribution.width = 512
-#scene.lights.__WORLD_BACKGROUND_LIGHT__.distribution.height = 256
-#scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.enable = 0
+scene.lights.__WORLD_BACKGROUND_LIGHT__.gain = 1.99999995e-05 1.99999995e-05 1.99999995e-05
+scene.lights.__WORLD_BACKGROUND_LIGHT__.transformation = 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1
+scene.lights.__WORLD_BACKGROUND_LIGHT__.type = "sky2"
+scene.lights.__WORLD_BACKGROUND_LIGHT__.dir = 0 0 1
+scene.lights.__WORLD_BACKGROUND_LIGHT__.turbidity = 2.20000005
 ##
 scene.lights.140062413928968.gain = 1200 1200 1200
 scene.lights.140062413928968.transformation = -0.290864646 0.955171168 -0.0551890582 0 -0.771100819 -0.199883357 0.604524732 0 0.566393197 0.218391195 0.794672251 0 4.07624531 1.00545394 5.903862 1
+#scene.lights.140062413928968.transformation = -0.290864646 0.955171168 -0.0551890582 0 -0.771100819 -0.199883357 0.604524732 0 0.566393197 0.218391195 0.794672251 0 4.07624531 -4.00545394 5.903862 1
 scene.lights.140062413928968.id = 0
 scene.lights.140062413928968.type = "sphere"
 scene.lights.140062413928968.color = 1 1 1
@@ -58,7 +48,7 @@ scene.textures.140062619160584Color.mapping.type = "globalmapping3d"
 scene.textures.140062619160584Color.mapping.transformation = 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1
 #
 scene.textures.beveltex.type = bevel
-scene.textures.beveltex.radius = 0.02
+scene.textures.beveltex.radius = 0.06
 #
 scene.textures.wireframetex.type = wireframe
 scene.textures.wireframetex.width = 0.02
@@ -67,17 +57,31 @@ scene.textures.wireframetex.inside = 0.7 0.7 0.7
 ################################################################################
 scene.materials.cube1_mat.type = "matte"
 scene.materials.cube1_mat.kd = "0.7"
-#
+##
+scene.materials.cube1_mat.type = disney
+scene.materials.cube1_mat.basecolor = 0.5 0.0 0.0
+scene.materials.cube1_mat.specular = 0.5
+scene.materials.cube1_mat.roughness = 0.1
+scene.materials.cube1_mat.clearcoatgloss = 1.0
+#######
 #scene.materials.cube2_mat.type = "matte"
 #scene.materials.cube2_mat.kd = "0.7"
 ##scene.materials.cube2_mat.kd = wireframetex
 #scene.materials.cube2_mat.bumptex = beveltex
 #
-scene.materials.cube2_mat.type = glossy2
-scene.materials.cube2_mat.kd = 0.7 0.0 0.0
-scene.materials.cube2_mat.ks = 0.7 0.7 0.7
-scene.materials.cube2_mat.uroughness = 0.06
-scene.materials.cube2_mat.vroughness = 0.06
+#scene.materials.cube2_mat.type = glossy2
+#scene.materials.cube2_mat.kd = 0.7 0.0 0.0
+#scene.materials.cube2_mat.ks = 0.7 0.7 0.7
+#scene.materials.cube2_mat.uroughness = 0.06
+#scene.materials.cube2_mat.vroughness = 0.06
+##scene.materials.cube2_mat.kd = wireframetex
+#scene.materials.cube2_mat.bumptex = beveltex
+#
+scene.materials.cube2_mat.type = disney
+scene.materials.cube2_mat.basecolor = 0.5 0.0 0.0
+scene.materials.cube2_mat.specular = 0.5
+scene.materials.cube2_mat.roughness = 0.1
+scene.materials.cube2_mat.clearcoatgloss = 1.0
 #scene.materials.cube2_mat.kd = wireframetex
 scene.materials.cube2_mat.bumptex = beveltex
 #
@@ -85,7 +89,8 @@ scene.materials.ground_mat140061226915208.type = "matte"
 scene.materials.ground_mat140061226915208.kd = "140062619160584Color"
 ################################################################################
 scene.shapes.obj_cube1.type = mesh
-scene.shapes.obj_cube1.ply = mesh-00000.ply
+scene.shapes.obj_cube1.ply = tri.ply
+#scene.shapes.obj_cube1.ply = mesh-00000.ply
 ##
 scene.shapes.obj_cube2.type = edgedetectoraov
 scene.shapes.obj_cube2.source = obj_cube1

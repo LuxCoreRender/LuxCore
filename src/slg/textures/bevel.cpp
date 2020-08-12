@@ -61,18 +61,22 @@ Normal BevelTexture::Bump(const HitPoint &hitPoint, const float sampleDistance) 
 	const float dist2 = Triangle::GetHeight(e2len, b0, b2);
 
 	bool hasBevel = false;
+
 	const float theta0 = mesh->HasTriAOV(0) ? mesh->GetTriAOV(hitPoint.triangleIndex, 0) : 0.f;
 	const float theta1 = mesh->HasTriAOV(1) ? mesh->GetTriAOV(hitPoint.triangleIndex, 1) : 0.f;
 	const float theta2 = mesh->HasTriAOV(2) ? mesh->GetTriAOV(hitPoint.triangleIndex, 2) : 0.f;
 
-	Normal edge0Normal;
-	if ((dist0 < radius) && (theta0 != 0.f)) {
-		const Normal normal = mesh->GetGeometryNormal(Transform::TRANS_IDENTITY,
-				hitPoint.triangleIndex);
+	const Normal normal = mesh->GetGeometryNormal(Transform::TRANS_IDENTITY,
+			hitPoint.triangleIndex);
 
+	Normal edge0Normal;
+	float k0 = 0.f;
+	if ((dist0 < radius) && (theta0 != 0.f)) {
 		// Interpolate between the edge normal angle and face normal angle (i.e. 0.0)
-		const float theta = Lerp(dist0 / radius, theta0, 0.f);
+		k0 = dist0 / radius;
+		const float theta = Lerp(k0, theta0, 0.f);
 		const float halfTheta = theta * .5f;
+		k0 = 1.f - k0;
 		
 		// Rotate the normal around the edge by theta using quaternions
 		const Vector w = sinf(halfTheta) * (e0 / e0len);
@@ -83,13 +87,13 @@ Normal BevelTexture::Bump(const HitPoint &hitPoint, const float sampleDistance) 
 	}
 
 	Normal edge1Normal;
+	float k1 = 0.f;
 	if ((dist1 < radius) && (theta1 != 0.f)) {
-		const Normal normal = mesh->GetGeometryNormal(Transform::TRANS_IDENTITY,
-				hitPoint.triangleIndex);
-
 		// Interpolate between the edge normal angle and face normal angle (i.e. 0.0)
-		const float theta = Lerp(dist1 / radius, theta1, 0.f);
+		k1 = dist1 / radius;
+		const float theta = Lerp(k1, theta1, 0.f);
 		const float halfTheta = theta * .5f;
+		k1 = 1.f - k1;
 
 		// Rotate the normal around the edge by theta using quaternions
 		const Vector w = sinf(halfTheta) * (e1 / e1len);
@@ -100,13 +104,13 @@ Normal BevelTexture::Bump(const HitPoint &hitPoint, const float sampleDistance) 
 	}
 	
 	Normal edge2Normal;
+	float k2 = 0.f;
 	if ((dist2 < radius) && (theta2 != 0.f)) {
-		const Normal normal = mesh->GetGeometryNormal(Transform::TRANS_IDENTITY,
-				hitPoint.triangleIndex);
-
 		// Interpolate between the edge normal angle and face normal angle (i.e. 0.0)
-		const float theta = Lerp(dist2 / radius, theta2, 0.f);
+		k2 = dist2 / radius;
+		const float theta = Lerp(k2, theta2, 0.f);
 		const float halfTheta = theta * .5f;
+		k2 = 1.f - k2;
 
 		// Rotate the normal around the edge by theta using quaternions
 		const Vector w = sinf(halfTheta) * (e2 / e2len);
@@ -117,7 +121,7 @@ Normal BevelTexture::Bump(const HitPoint &hitPoint, const float sampleDistance) 
 	}
 
 	if (hasBevel)
-		return Normalize(edge0Normal + edge1Normal + edge2Normal);
+		return Normalize(k0 * edge0Normal + k1 * edge1Normal + k2 * edge2Normal);
 	else
 		return hitPoint.shadeN;
 }
