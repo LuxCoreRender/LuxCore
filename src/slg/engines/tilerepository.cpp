@@ -125,7 +125,7 @@ void Tile::Restart(const u_int startPass) {
 }
 
 void Tile::VarianceClamp(Film &tileFilm) {
-	allPassFilm->VarianceClampFilm(tileRepository->varianceClamping, tileFilm);
+	tileRepository->varianceClamping.ClampFilm(*allPassFilm, tileFilm);
 }
 
 void Tile::AddPass(Film &tileFilm, const u_int passRendered) {

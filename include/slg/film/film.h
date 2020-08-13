@@ -168,14 +168,6 @@ public:
 	float GetFilmY(const u_int imagePipeLineIndex) const;
 	float GetFilmMaxValue(const u_int imagePipeLineIndex) const;
 
-	void VarianceClampFilm(const VarianceClamping &varianceClamping, const Film &film,
-		const u_int srcOffsetX, const u_int srcOffsetY,
-		const u_int srcWidth, const u_int srcHeight,
-		const u_int dstOffsetX, const u_int dstOffsetY);
-	void VarianceClampFilm(const VarianceClamping &varianceClamping, const Film &film) {
-		VarianceClampFilm(varianceClamping, film, 0, 0, width, height, 0, 0);
-	}
-
 	void SetFilm(const Film &film,
 		const u_int srcOffsetX, const u_int srcOffsetY,
 		const u_int srcWidth, const u_int srcHeight,

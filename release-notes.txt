@@ -17,6 +17,7 @@
 * Subdiv shape now supports multiple vertex UVs, colors, alphas and AOVs (issue #416)
 * Added the support for holdout (issue #423)
 * Added the support for wireframe texture
+* Variance clamping is applied applied to DIRECT_DIFFUSE, DIRECT_GLOSSY, EMISSION, INDIRECT_DIFFUSE, INDIRECT_GLOSSY and INDIRECT_SPECULAR AOVs too
 
 ### Fixed Bugs
 
@@ -36,7 +37,6 @@ of release notes.
 * Python crashes when calling sys.exit()
 * TILEPATHOCL (and RTPATHOCL) count the layers of transparent surfaces as an iteration of the rendering finite state machine so they require to increase the max. path depth to avoid black regions.
 * Light emitted by motion blurred triangle lights is approximated using the triangle area of time 0.0 (computing triangle area at runtime would be expansive) so it may be not totally accurate if the motion blur transformation include a scale.
-* Variance clamping is not applied to AOVs
 
 **Note for Windows users:** you have to install the [Microsoft Visual C++ Redistributable
 for Visual Studio 2017](https://aka.ms/vs/15/release/vc_redist.x64.exe) and
