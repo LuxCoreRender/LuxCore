@@ -37,13 +37,13 @@ using namespace luxrays;
 // rply vertex callback
 static int VertexCB(p_ply_argument argument) {
 	long userIndex = 0;
-	void *userData = NULL;
+	void *userData = nullptr;
 	ply_get_argument_user_data(argument, &userData, &userIndex);
 
 	Point *p = *static_cast<Point **> (userData);
 
 	long vertIndex;
-	ply_get_argument_element(argument, NULL, &vertIndex);
+	ply_get_argument_element(argument, nullptr, &vertIndex);
 
 	if (userIndex == 0)
 		p[vertIndex].x =
@@ -61,14 +61,14 @@ static int VertexCB(p_ply_argument argument) {
 // rply normal callback
 static int NormalCB(p_ply_argument argument) {
 	long userIndex = 0;
-	void *userData = NULL;
+	void *userData = nullptr;
 
 	ply_get_argument_user_data(argument, &userData, &userIndex);
 
 	Normal *n = *static_cast<Normal **> (userData);
 
 	long normIndex;
-	ply_get_argument_element(argument, NULL, &normIndex);
+	ply_get_argument_element(argument, nullptr, &normIndex);
 
 	if (userIndex == 0)
 		n[normIndex].x =
@@ -86,13 +86,13 @@ static int NormalCB(p_ply_argument argument) {
 // rply uv callback
 static int UVCB(p_ply_argument argument) {
 	long userIndex = 0;
-	void *userData = NULL;
+	void *userData = nullptr;
 	ply_get_argument_user_data(argument, &userData, &userIndex);
 
 	UV *uv = *static_cast<UV **> (userData);
 
 	long uvIndex;
-	ply_get_argument_element(argument, NULL, &uvIndex);
+	ply_get_argument_element(argument, nullptr, &uvIndex);
 
 	if (userIndex == 0)
 		uv[uvIndex].u =
@@ -107,19 +107,19 @@ static int UVCB(p_ply_argument argument) {
 // rply color callback
 static int ColorCB(p_ply_argument argument) {
 	long userIndex = 0;
-	void *userData = NULL;
+	void *userData = nullptr;
 	ply_get_argument_user_data(argument, &userData, &userIndex);
 
 	float *c = *static_cast<float **> (userData);
 
 	long colIndex;
-	ply_get_argument_element(argument, NULL, &colIndex);
+	ply_get_argument_element(argument, nullptr, &colIndex);
 
 	// Check the type of value used
-	p_ply_property property = NULL;
-	ply_get_argument_property(argument, &property, NULL, NULL);
+	p_ply_property property = nullptr;
+	ply_get_argument_property(argument, &property, nullptr, nullptr);
 	e_ply_type dataType;
-	ply_get_property_info(property, NULL, &dataType, NULL, NULL);
+	ply_get_property_info(property, nullptr, &dataType, nullptr, nullptr);
 	if (dataType == PLY_UCHAR) {
 		if (userIndex == 0)
 			c[colIndex * 3] =
@@ -148,19 +148,19 @@ static int ColorCB(p_ply_argument argument) {
 // rply vertex callback
 static int AlphaCB(p_ply_argument argument) {
 	long userIndex = 0;
-	void *userData = NULL;
+	void *userData = nullptr;
 	ply_get_argument_user_data(argument, &userData, &userIndex);
 
 	float *c = *static_cast<float **> (userData);
 
 	long alphaIndex;
-	ply_get_argument_element(argument, NULL, &alphaIndex);
+	ply_get_argument_element(argument, nullptr, &alphaIndex);
 
 	// Check the type of value used
-	p_ply_property property = NULL;
-	ply_get_argument_property(argument, &property, NULL, NULL);
+	p_ply_property property = nullptr;
+	ply_get_argument_property(argument, &property, nullptr, nullptr);
 	e_ply_type dataType;
-	ply_get_property_info(property, NULL, &dataType, NULL, NULL);
+	ply_get_property_info(property, nullptr, &dataType, nullptr, nullptr);
 	if (dataType == PLY_UCHAR) {
 		if (userIndex == 0)
 			c[alphaIndex] =
@@ -177,19 +177,19 @@ static int AlphaCB(p_ply_argument argument) {
 // rply vertex callback
 static int VertexAOVCB(p_ply_argument argument) {
 	long userIndex = 0;
-	void *userData = NULL;
+	void *userData = nullptr;
 	ply_get_argument_user_data(argument, &userData, &userIndex);
 
 	float *c = *static_cast<float **> (userData);
 
 	long alphaIndex;
-	ply_get_argument_element(argument, NULL, &alphaIndex);
+	ply_get_argument_element(argument, nullptr, &alphaIndex);
 
 	// Check the type of value used
-	p_ply_property property = NULL;
-	ply_get_argument_property(argument, &property, NULL, NULL);
+	p_ply_property property = nullptr;
+	ply_get_argument_property(argument, &property, nullptr, nullptr);
 	e_ply_type dataType;
-	ply_get_property_info(property, NULL, &dataType, NULL, NULL);
+	ply_get_property_info(property, nullptr, &dataType, nullptr, nullptr);
 	if (dataType == PLY_UCHAR) {
 		if (userIndex == 0)
 			c[alphaIndex] =
@@ -205,13 +205,13 @@ static int VertexAOVCB(p_ply_argument argument) {
 
 // rply face callback
 static int FaceCB(p_ply_argument argument) {
-	void *userData = NULL;
-	ply_get_argument_user_data(argument, &userData, NULL);
+	void *userData = nullptr;
+	ply_get_argument_user_data(argument, &userData, nullptr);
 
 	vector<Triangle> *tris = static_cast<vector<Triangle> *> (userData);
 
 	long length, valueIndex;
-	ply_get_argument_property(argument, NULL, &length, &valueIndex);
+	ply_get_argument_property(argument, nullptr, &length, &valueIndex);
 
 	if (length == 3) {
 		if (valueIndex < 0)
@@ -238,8 +238,26 @@ static int FaceCB(p_ply_argument argument) {
 	return 1;
 }
 
+// rply uv callback
+static int TriAOVCB(p_ply_argument argument) {
+	long userIndex = 0;
+	void *userData = nullptr;
+	ply_get_argument_user_data(argument, &userData, &userIndex);
+
+	float *triAOV = *static_cast<float **> (userData);
+
+	long triAOVIndex;
+	ply_get_argument_element(argument, nullptr, &triAOVIndex);
+
+	if (userIndex == 0)
+		triAOV[triAOVIndex] =
+			static_cast<float>(ply_get_argument_value(argument));
+
+	return 1;
+}
+
 ExtTriangleMesh *ExtTriangleMesh::LoadPly(const string &fileName) {
-	p_ply plyfile = ply_open(fileName.c_str(), NULL);
+	p_ply plyfile = ply_open(fileName.c_str(), nullptr);
 	if (!plyfile) {
 		stringstream ss;
 		ss << "Unable to read PLY mesh file '" << fileName << "'";
@@ -268,6 +286,20 @@ ExtTriangleMesh *ExtTriangleMesh::LoadPly(const string &fileName) {
 		stringstream ss;
 		ss << "No faces found in '" << fileName << "'";
 		throw runtime_error(ss.str());
+	}
+
+	// Check if the file includes triaov informations
+	array<float *, EXTMESH_MAX_DATA_COUNT> TriAOVs;
+	array<u_int, EXTMESH_MAX_DATA_COUNT> plyNbTriAOVs;
+	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
+		const string suffix = (i == 0) ? "" : ToString(i);
+
+		plyNbTriAOVs[i] = ply_set_read_cb(plyfile, ("faceaov" + suffix).c_str(), "triaov", TriAOVCB, &TriAOVs[i], 0);
+		if ((plyNbTriAOVs[i] > 0) && (plyNbTriAOVs[i] != plyNbFaces)) {
+			stringstream ss;
+			ss << "Wrong count of triangle AOV #" << i << " in '" << fileName << "'";
+			throw runtime_error(ss.str());
+		}
 	}
 
 	// Check if the file includes normal informations
@@ -325,7 +357,7 @@ ExtTriangleMesh *ExtTriangleMesh::LoadPly(const string &fileName) {
 		}
 
 		// Check if the file includes vertexAOV informations
-		plyNbVertexAOVs[i] = ply_set_read_cb(plyfile, "vertex", ("aov" + suffix).c_str(), VertexAOVCB, &vertexAOVs[i], 0);
+		plyNbVertexAOVs[i] = ply_set_read_cb(plyfile, "vertex", ("vertaov" + suffix).c_str(), VertexAOVCB, &vertexAOVs[i], 0);
 		if ((plyNbVertexAOVs[i] > 0) && (plyNbVertexAOVs[i] != plyNbVerts)) {
 			stringstream ss;
 			ss << "Wrong count of vertex AOV #" << i << " in '" << fileName << "'";
@@ -335,30 +367,35 @@ ExtTriangleMesh *ExtTriangleMesh::LoadPly(const string &fileName) {
 
 	p = TriangleMesh::AllocVerticesBuffer(plyNbVerts);
 	if (plyNbNormals == 0)
-		n = NULL;
+		n = nullptr;
 	else
 		n = new Normal[plyNbNormals];
 	
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
 		if (plyNbUVs[i] == 0)
-			uvs[i] = NULL;
+			uvs[i] = nullptr;
 		else
 			uvs[i] = new UV[plyNbUVs[i]];
 
 		if (plyNbColors[i] == 0)
-			cols[i] = NULL;
+			cols[i] = nullptr;
 		else
 			cols[i] = new Spectrum[plyNbColors[i]];
 
 		if (plyNbAlphas[i] == 0)
-			alphas[i] = NULL;
+			alphas[i] = nullptr;
 		else
 			alphas[i] = new float[plyNbAlphas[i]];
 
 		if (plyNbVertexAOVs[i] == 0)
-			vertexAOVs[i] = NULL;
+			vertexAOVs[i] = nullptr;
 		else
 			vertexAOVs[i] = new float[plyNbVertexAOVs[i]];
+
+		if (plyNbTriAOVs[i] == 0)
+			TriAOVs[i] = nullptr;
+		else
+			TriAOVs[i] = new float[plyNbTriAOVs[i]];
 	}
 
 	if (!ply_read(plyfile)) {
@@ -373,6 +410,7 @@ ExtTriangleMesh *ExtTriangleMesh::LoadPly(const string &fileName) {
 			delete[] cols[i];
 			delete[] alphas[i];
 			delete[] vertexAOVs[i];
+			delete[] TriAOVs[i];
 		}
 
 		throw runtime_error(ss.str());
@@ -385,8 +423,10 @@ ExtTriangleMesh *ExtTriangleMesh::LoadPly(const string &fileName) {
 	copy(vi.begin(), vi.end(), tris);
 
 	ExtTriangleMesh *mesh = new ExtTriangleMesh(plyNbVerts, vi.size(), p, tris, n, &uvs, &cols, &alphas);
-	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i)
+	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
 		mesh->SetVertexAOV(i, vertexAOVs[i]);
+		mesh->SetTriAOV(i, TriAOVs[i]);
+	}
 	
 	return mesh;
 }
@@ -461,18 +501,19 @@ void ExtTriangleMesh::SavePly(const string &fileName) const {
 			plyFile << "property float alpha" << suffix << "\n";	
 
 		if (HasVertexAOV(i))
-			plyFile << "property float aov" << suffix << "\n";	
+			plyFile << "property float vertaov" << suffix << "\n";	
 	}
 
 	plyFile << "element face " + boost::lexical_cast<string>(triCount) + "\n"
 				"property list uchar uint vertex_indices\n";
 
-	// TODO: add support for reading back TriAOVs
-	/*for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
+	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
+		const string suffix = (i == 0) ? "" : ToString(i);
+
 		if (HasTriAOV(i))
-			plyFile << "element faceaov " + boost::lexical_cast<string>(triCount) + "\n"
-					"property aov\n";
-	}*/
+			plyFile << "element faceaov" << suffix << " " + boost::lexical_cast<string>(triCount) + "\n"
+					"property float triaov\n";
+	}
 
 	plyFile << "end_header\n";
 
@@ -507,12 +548,12 @@ void ExtTriangleMesh::SavePly(const string &fileName) const {
 		plyFile.write((char *)&tris[i], sizeof(Triangle));
 	}
 
-	/*for (u_int j = 0; j < EXTMESH_MAX_DATA_COUNT; ++j) {
+	for (u_int j = 0; j < EXTMESH_MAX_DATA_COUNT; ++j) {
 		if (HasTriAOV(j)) {
 			for (u_int i = 0; i < triCount; ++i)
 				plyFile.write((char *)&triAOV[j][i], sizeof(float));
 		}
-	}*/
+	}
 
 	if (!plyFile.good())
 		throw runtime_error("Unable to write PLY face data to: " + fileName);

@@ -25,6 +25,7 @@
 * Fixed a problem with cloth material when using CUDA and Windows (issue #417)
 * Fixed a problem in glossy coating albedo evaluation on GPUs
 * Fixed a difference between CPU and GPU rendering when using a roughglass with a shadow transparency color
+* Fixed the support in .ply files for triangle AOVs
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
