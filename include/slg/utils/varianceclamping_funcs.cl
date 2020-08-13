@@ -18,15 +18,46 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-OPENCL_FORCE_INLINE float3 VarianceClamping_GetWeightedFloat4(__global float *src) {
-	const float4 val = VLOAD4F_Align(src);
+OPENCL_FORCE_INLINE void VarianceClamping_ScaledClamp3(__global float *value, const float low, const float high) {
+	const float maxValue = fmax(value[0], fmax(value[1], value[2]));
 
-	if (val.w > 0.f) {
-		const float k = 1.f / val.w;
-		
-		return (MAKE_FLOAT3(val.x, val.y, val.z)) * k;
+	if (maxValue > 0.f) {
+		if (maxValue > high) {
+			const float scale = high / maxValue;
+
+			value[0] *= scale;
+			value[1] *= scale;
+			value[2] *= scale;
+			return;
+		}
+
+		if (maxValue < low) {
+			const float scale = low / maxValue;
+
+			value[0] *= scale;
+			value[1] *= scale;
+			value[2] *= scale;
+			return;
+		}
+	}
+}
+
+OPENCL_FORCE_INLINE void VarianceClamping_Clamp3(const float sqrtVarianceClampMaxValue,
+		__global const float *expectedValue, __global float *value) {
+	if (expectedValue[3] > 0.f) {
+		// Use the current pixel value as expected value
+		const float invWeight = 1.f / expectedValue[3];
+
+		const float minExpectedValue = fmin(expectedValue[0] * invWeight,
+				fmin(expectedValue[1] * invWeight, expectedValue[2] * invWeight));
+		const float maxExpectedValue = fmax(expectedValue[0] * invWeight,
+				fmax(expectedValue[1] * invWeight, expectedValue[2] * invWeight));
+
+		VarianceClamping_ScaledClamp3(value,
+				fmax(minExpectedValue - sqrtVarianceClampMaxValue, 0.f),
+				maxExpectedValue + sqrtVarianceClampMaxValue);
 	} else
-		return BLACK;
+		VarianceClamping_ScaledClamp3(value, 0.f, sqrtVarianceClampMaxValue);	
 }
 
 OPENCL_FORCE_INLINE void VarianceClamping_Clamp(
@@ -39,16 +70,32 @@ OPENCL_FORCE_INLINE void VarianceClamping_Clamp(
 	const uint index1 = x + y * filmWidth;
 	const uint index4 = index1 * 4;
 
-	for (uint i = 0; i < film->radianceGroupCount; ++i) {
-		float3 expectedValue = BLACK;
+	// Apply variance clamping to each radiance group. This help to avoid problems
+	// with extreme clamping settings and multiple light groups
 
-		expectedValue += VarianceClamping_GetWeightedFloat4(&((filmRadianceGroup[i])[index4]));
-
-		// Use the current pixel value as expected value
-		const float minExpectedValue = fmin(expectedValue.x, fmin(expectedValue.y, expectedValue.z));
-		const float maxExpectedValue = fmax(expectedValue.x, fmax(expectedValue.y, expectedValue.z));
-		SampleResult_ClampRadiance(film, sampleResult, i,
-				fmax(minExpectedValue - sqrtVarianceClampMaxValue, 0.f),
-				maxExpectedValue + sqrtVarianceClampMaxValue);
+	for (uint radianceGroupIndex = 0; radianceGroupIndex < film->radianceGroupCount; ++radianceGroupIndex) {
+		VarianceClamping_Clamp3(sqrtVarianceClampMaxValue,
+				&((filmRadianceGroup[radianceGroupIndex])[index4]),
+				sampleResult->radiancePerPixelNormalized[radianceGroupIndex].c);
 	}
+
+	// Clamp the AOVs too
+
+	if (film->hasChannelDirectDiffuse)
+		VarianceClamping_Clamp3(sqrtVarianceClampMaxValue, &filmDirectDiffuse[index4], sampleResult->directDiffuse.c);
+
+	if (film->hasChannelDirectGlossy)
+		VarianceClamping_Clamp3(sqrtVarianceClampMaxValue, &filmDirectGlossy[index4], sampleResult->directGlossy.c);
+
+	if (film->hasChannelEmission)
+		VarianceClamping_Clamp3(sqrtVarianceClampMaxValue, &filmEmission[index4], sampleResult->emission.c);
+
+	if (film->hasChannelIndirectDiffuse)
+		VarianceClamping_Clamp3(sqrtVarianceClampMaxValue, &filmIndirectDiffuse[index4], sampleResult->indirectDiffuse.c);
+
+	if (film->hasChannelIndirectGlossy)
+		VarianceClamping_Clamp3(sqrtVarianceClampMaxValue, &filmIndirectGlossy[index4], sampleResult->indirectGlossy.c);
+
+	if (film->hasChannelIndirectSpecular)
+		VarianceClamping_Clamp3(sqrtVarianceClampMaxValue, &filmIndirectSpecular[index4], sampleResult->indirectSpecular.c);
 }
