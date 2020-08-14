@@ -22,6 +22,7 @@
 #include "luxrays/utils/thread.h"
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 #include "luxrays/devices/ocldevice.h"
+#include "luxrays/devices/cudadevice.h"
 #endif
 
 
@@ -49,6 +50,7 @@ OCLRenderEngine::OCLRenderEngine(const RenderConfig *rcfg,
 	const u_int forceGPUWorkSize = cfg.Get(GetDefaultProps().Get("opencl.gpu.workgroup.size")).Get<u_int>();
 
 	const string oclDeviceConfig = cfg.Get(GetDefaultProps().Get("opencl.devices.select")).Get<string>();
+	const string cudaOptixDeviceConfig = cfg.Get(GetDefaultProps().Get("cuda.optix.devices.select")).Get<string>();
 
 	const bool useOutOfCoreMemory = cfg.Get(Property("opencl.outofcore.enable")(false)).Get<bool>();
 	ctx->SetUseOutOfCoreBuffers(useOutOfCoreMemory);
@@ -77,6 +79,7 @@ OCLRenderEngine::OCLRenderEngine(const RenderConfig *rcfg,
 	}
 
 	bool hasCUDADevice = false;
+	size_t cudaDeviceCount = 0;
 	for (size_t i = 0; i < descs.size(); ++i) {
 		DeviceDescription *desc = descs[i];
 
@@ -104,13 +107,37 @@ OCLRenderEngine::OCLRenderEngine(const RenderConfig *rcfg,
 			}
 		}
 
-		if (selected && (desc->GetType() & DEVICE_TYPE_CUDA_ALL))
+		if (selected && (desc->GetType() & DEVICE_TYPE_CUDA_ALL)) {
 			hasCUDADevice = true;
+			++cudaDeviceCount;
+		}
 	}
 	
 	if (!haveSelectionString && hasCUDADevice) {
-		// If there is, at least, a CUDA device selected, use only CUDA devices
+		// If there is, at least, a CUDA device available, use only CUDA devices
 		DeviceDescription::Filter(DEVICE_TYPE_CUDA_ALL, selectedDeviceDescs);
+	}
+
+	// Enable/Disable Optix according cuda.optix.devices.select string
+	if ((cudaDeviceCount > 0) && (cudaOptixDeviceConfig.length() > 0)) {
+		size_t cudaDeviceIndex = 0;
+		for (size_t i = 0; i < descs.size(); ++i) {
+			DeviceDescription *desc = descs[i];
+			
+			if (desc->GetType() & DEVICE_TYPE_CUDA_ALL) {
+				CUDADeviceDescription *cudaDesc = dynamic_cast<CUDADeviceDescription *>(desc);
+
+				const char &v = cudaOptixDeviceConfig.at(cudaDeviceIndex++);
+
+				if (v == '1') {
+					cudaDesc->SetCUDAUseOptix(true);
+				} else if (v == '0') {
+					cudaDesc->SetCUDAUseOptix(false);
+				} else if (v == 'A') {
+					// Use the default setting
+				}
+			}
+		}
 	}
 
 	oclRenderThreadCount = selectedDeviceDescs.size();
@@ -145,7 +172,8 @@ Properties OCLRenderEngine::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("opencl.gpu.workgroup.size")) <<
 			cfg.Get(GetDefaultProps().Get("opencl.devices.select")) <<
 			cfg.Get(GetDefaultProps().Get("opencl.native.threads.count")) <<
-			cfg.Get(GetDefaultProps().Get("opencl.outofcore.enable"));
+			cfg.Get(GetDefaultProps().Get("opencl.outofcore.enable")) <<
+			cfg.Get(GetDefaultProps().Get("cuda.optix.devices.select"));
 }
 
 const Properties &OCLRenderEngine::GetDefaultProps() {
@@ -161,7 +189,8 @@ const Properties &OCLRenderEngine::GetDefaultProps() {
 			Property("opencl.gpu.workgroup.size")(32) <<
 			Property("opencl.devices.select")("") <<
 			Property("opencl.native.threads.count")((u_int)GetHardwareThreadCount()) <<
-			Property("opencl.outofcore.enable")(false);
+			Property("opencl.outofcore.enable")(false) <<
+			Property("cuda.optix.devices.select")("");
 
 	return props;
 }

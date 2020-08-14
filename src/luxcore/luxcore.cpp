@@ -256,6 +256,14 @@ Properties luxcore::GetOpenCLDeviceDescs() {
 				Property(prefix + ".maxmemoryallocsize")((unsigned long long)desc->GetMaxMemoryAllocSize()) <<
 				Property(prefix + ".localmemory")((unsigned long long)deviceLocalMem) <<
 				Property(prefix + ".constmemory")((unsigned long long)deviceConstMem);
+		
+		if (desc->GetType() & DEVICE_TYPE_CUDA_ALL) {
+			const CUDADeviceDescription *cudaDesc = dynamic_cast<CUDADeviceDescription *>(desc);
+			
+			props <<
+					Property(prefix + ".cuda.compute.major")(cudaDesc->GetCUDAComputeCapabilityMajor()) <<
+					Property(prefix + ".cuda.compute.minor")(cudaDesc->GetCUDAComputeCapabilityMinor());
+		}
 	}
 
 	return props;

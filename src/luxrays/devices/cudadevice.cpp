@@ -31,23 +31,39 @@ using namespace luxrays;
 // OpenCL Device Description
 //------------------------------------------------------------------------------
 
-CUDADeviceDescription::CUDADeviceDescription(CUdevice dev, const size_t devIndex,
-		const bool useOptx) :
+CUDADeviceDescription::CUDADeviceDescription(CUdevice dev, const size_t devIndex) :
 		DeviceDescription("CUDAInitializingDevice", DEVICE_TYPE_CUDA_GPU),
-		cudaDeviceIndex(devIndex), cudaDevice(dev), useOptix(useOptx) {
+		cudaDeviceIndex(devIndex), cudaDevice(dev) {
 	char buff[128];
     CHECK_CUDA_ERROR(cuDeviceGetName(buff, 128, cudaDevice));
 	name = string(buff);
+	
+	const int major = GetCUDAComputeCapabilityMajor();
+	const int minor = GetCUDAComputeCapabilityMinor();
+	useOptix = (isOptixAvilable && ((major > 7) || ((major == 7) && (minor == 5)))) ? true : false;
 }
 
 CUDADeviceDescription::~CUDADeviceDescription() {
 }
 
-int CUDADeviceDescription::GetComputeUnits() const {
+int CUDADeviceDescription::GetCUDAComputeCapabilityMajor() const {
 	int major;
 	CHECK_CUDA_ERROR(cuDeviceGetAttribute(&major, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR, cudaDevice));
-	int minor;
-	CHECK_CUDA_ERROR(cuDeviceGetAttribute(&minor, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR, cudaDevice));
+
+	return major;
+}
+
+// List of GPUs CUDA compute capability can be found here: https://developer.nvidia.com/cuda-gpus
+int CUDADeviceDescription::GetCUDAComputeCapabilityMinor() const {
+	int major;
+	CHECK_CUDA_ERROR(cuDeviceGetAttribute(&major, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR, cudaDevice));
+
+	return major;
+}
+
+int CUDADeviceDescription::GetComputeUnits() const {
+	const int major = GetCUDAComputeCapabilityMajor();
+	const int minor = GetCUDAComputeCapabilityMinor();
 	
 	typedef struct {
 		int SM;
@@ -105,8 +121,7 @@ bool CUDADeviceDescription::HasOutOfCoreMemorySupport() const {
 	return (v == 1);
 }
 
-void CUDADeviceDescription::AddDeviceDescs(vector<DeviceDescription *> &descriptions,
-		const bool useOptix) {
+void CUDADeviceDescription::AddDeviceDescs(vector<DeviceDescription *> &descriptions) {
 	int devCount;
 	CHECK_CUDA_ERROR(cuDeviceGetCount(&devCount));
 
@@ -114,7 +129,7 @@ void CUDADeviceDescription::AddDeviceDescs(vector<DeviceDescription *> &descript
 		CUdevice device;
 		CHECK_CUDA_ERROR(cuDeviceGet(&device, i));
 
-		CUDADeviceDescription *desc = new CUDADeviceDescription(device, i, useOptix);
+		CUDADeviceDescription *desc = new CUDADeviceDescription(device, i);
 
 		descriptions.push_back(desc);
 	}

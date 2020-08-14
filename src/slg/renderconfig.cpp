@@ -326,7 +326,6 @@ Properties RenderConfig::ToProperties(const Properties &cfg) {
 
 	// LuxRays context
 	props << cfg.Get(Property("context.verbose")(true));
-	props << cfg.Get(Property("context.cuda.optix.enable")(true));
 
 	// Ray intersection accelerators
 	props << cfg.Get(Property("accelerator.type")("AUTO"));

@@ -71,7 +71,8 @@ PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg,
 	SLG_LOG("CUDA devices used:");
 	for (size_t i = 0; i < devs.size(); ++i) {
 		if (devs[i]->GetDeviceDesc()->GetType() & DEVICE_TYPE_CUDA_ALL) {
-			SLG_LOG("[" << devs[i]->GetName() << "]");
+			const CUDADeviceDescription *cudaDesc = dynamic_cast<const CUDADeviceDescription *>(devs[i]->GetDeviceDesc());
+			SLG_LOG("[" << devs[i]->GetName() << " (Optix enabled: " << cudaDesc->GetCUDAUseOptix() << ")]");
 			intersectionDevices.push_back(devs[i]);
 
 			// Suggested compiler options: --use_fast_math

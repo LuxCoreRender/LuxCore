@@ -118,8 +118,7 @@ Context::Context(LuxRaysDebugHandler handler, const Properties &config) : cfg(co
 			LR_LOG(this, "Optix support: not available");
 		}
 
-		const bool useOptix = cfg.Get(Property("context.cuda.optix.enable")(true)).Get<bool>();
-		CUDADeviceDescription::AddDeviceDescs(deviceDescriptions, useOptix);
+		CUDADeviceDescription::AddDeviceDescs(deviceDescriptions);
 	}
 #else
 	LR_LOG(this, "CUDA support: disabled");
@@ -148,6 +147,13 @@ Context::Context(LuxRaysDebugHandler handler, const Properties &config) : cfg(co
 
 		LR_LOG(this, "Device " << i << " has out of core memory support: " <<
 			desc->HasOutOfCoreMemorySupport());
+
+		if (desc->GetType() & DEVICE_TYPE_CUDA_ALL) {
+			const CUDADeviceDescription *cudaDesc = dynamic_cast<CUDADeviceDescription *>(desc);
+
+			LR_LOG(this, "Device " << i << " CUDA compute capability: " <<
+					cudaDesc->GetCUDAComputeCapabilityMajor() << "." << cudaDesc->GetCUDAComputeCapabilityMinor());
+		}
 	}
 }
 
