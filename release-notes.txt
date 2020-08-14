@@ -18,6 +18,7 @@
 * Added the support for holdout (issue #423)
 * Added the support for wireframe texture
 * Variance clamping is applied applied to DIRECT_DIFFUSE, DIRECT_GLOSSY, EMISSION, INDIRECT_DIFFUSE, INDIRECT_GLOSSY and INDIRECT_SPECULAR AOVs too
+* GetPlatformDesc() now returns compile.LUXRAYS_ENABLE_OPTIX property to check if Optix is available
 
 ### Fixed Bugs
 

@@ -117,6 +117,7 @@ CPP_EXPORT CPP_API void KernelCacheFill(const luxrays::Properties &config, void 
  * - compile.LUXRAYS_ENABLE_CUDA and compile.LUXRAYS_DISABLE_CUDA\n
  *		true or false if the sources has been compiled with LUXRAYS_ENABLE_CUDA and
  *		CUDA support is available or not.
+ * - compile.LUXRAYS_ENABLE_OPTIX is true if Optix is available, false otherwise.
  * - compile.LUXCORE_DISABLE_EMBREE_BVH_BUILDER\n
  *		true or false if the sources has been compiled with LUXCORE_DISABLE_EMBREE_BVH_BUILDER and
  *		Embree BVH builder is used for OpenCL or not. This is now always false.

@@ -193,9 +193,11 @@ Properties luxcore::GetPlatformDesc() {
 #if !defined(LUXRAYS_DISABLE_CUDA)
 	props << Property("compile.LUXRAYS_DISABLE_CUDA")(!luxrays::isCudaAvilable);
 	props << Property("compile.LUXRAYS_ENABLE_CUDA")(luxrays::isCudaAvilable);
+	props << Property("compile.LUXRAYS_ENABLE_OPTIX")(luxrays::isOptixAvilable);
 #else
 	props << Property("compile.LUXRAYS_DISABLE_CUDA")(true);
 	props << Property("compile.LUXRAYS_ENABLE_CUDA")(false);
+	props << Property("compile.LUXRAYS_ENABLE_OPTIX")(false);
 #endif
 
 	props << Property("compile.LUXCORE_DISABLE_EMBREE_BVH_BUILDER")(false);
