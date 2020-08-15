@@ -258,7 +258,7 @@ Properties luxcore::GetOpenCLDeviceDescs() {
 				Property(prefix + ".constmemory")((unsigned long long)deviceConstMem);
 		
 		if (desc->GetType() & DEVICE_TYPE_CUDA_ALL) {
-			const CUDADeviceDescription *cudaDesc = dynamic_cast<CUDADeviceDescription *>(desc);
+			const CUDADeviceDescription *cudaDesc = (CUDADeviceDescription *)desc;
 			
 			props <<
 					Property(prefix + ".cuda.compute.major")(cudaDesc->GetCUDAComputeCapabilityMajor()) <<

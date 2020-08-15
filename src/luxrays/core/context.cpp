@@ -149,7 +149,7 @@ Context::Context(LuxRaysDebugHandler handler, const Properties &config) : cfg(co
 			desc->HasOutOfCoreMemorySupport());
 
 		if (desc->GetType() & DEVICE_TYPE_CUDA_ALL) {
-			const CUDADeviceDescription *cudaDesc = dynamic_cast<CUDADeviceDescription *>(desc);
+			const CUDADeviceDescription *cudaDesc = (CUDADeviceDescription *)desc;
 
 			LR_LOG(this, "Device " << i << " CUDA compute capability: " <<
 					cudaDesc->GetCUDAComputeCapabilityMajor() << "." << cudaDesc->GetCUDAComputeCapabilityMinor());

@@ -24,6 +24,7 @@
 #include "slg/film/imagepipeline/imagepipeline.h"
 #include "slg/film/imagepipeline/radiancechannelscale.h"
 #include "slg/kernels/kernels.h"
+#include "luxrays/devices/cudadevice.h"
 
 using namespace std;
 using namespace luxrays;
@@ -94,6 +95,12 @@ void Film::CreateHWContext() {
 	}
 
 	if (selectedDeviceDesc) {
+		// Force the Optix usage also on no-RTX GPUs for Optix denoiser plugin
+		if (selectedDeviceDesc->GetType() == DEVICE_TYPE_CUDA_GPU) {
+			CUDADeviceDescription *cudaDeviceDesc = (CUDADeviceDescription *)selectedDeviceDesc;
+			cudaDeviceDesc->SetCUDAUseOptix(true);
+		}
+
 		// Allocate the device
 		vector<luxrays::DeviceDescription *> selectedDeviceDescs;
 		selectedDeviceDescs.push_back(selectedDeviceDesc);

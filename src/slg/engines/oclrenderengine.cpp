@@ -125,7 +125,7 @@ OCLRenderEngine::OCLRenderEngine(const RenderConfig *rcfg,
 			DeviceDescription *desc = descs[i];
 			
 			if (desc->GetType() & DEVICE_TYPE_CUDA_ALL) {
-				CUDADeviceDescription *cudaDesc = dynamic_cast<CUDADeviceDescription *>(desc);
+				CUDADeviceDescription *cudaDesc = (CUDADeviceDescription *)desc;
 
 				const char &v = cudaOptixDeviceConfig.at(cudaDeviceIndex++);
 
