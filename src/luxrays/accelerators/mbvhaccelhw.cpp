@@ -270,6 +270,8 @@ public:
 	}
 
 	virtual ~MBVHKernel() {
+		delete kernel;
+
 		for (u_int i = 0; i < vertsBuffs.size(); ++i)
 			device.FreeBuffer(&vertsBuffs[i]);
 		for (u_int i = 0; i < nodeBuffs.size(); ++i)

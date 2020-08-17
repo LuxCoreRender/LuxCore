@@ -551,6 +551,8 @@ public:
 	virtual ~OptixKernel() {
 		CUDAIntersectionDevice *cudaDevice = dynamic_cast<CUDAIntersectionDevice *>(&device);
 
+		delete optixEmptyAccelKernel;
+
 		if (optixPipeline) {
 			CHECK_OPTIX_ERROR(optixPipelineDestroy(optixPipeline));
 		}

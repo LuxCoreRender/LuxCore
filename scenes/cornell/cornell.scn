@@ -18,14 +18,20 @@ scene.camera.fieldofview = 39.1463
 scene.materials.Khaki.type = matte
 scene.materials.Khaki.kd = 1. 0.824176 0.549451
 ##
+#scene.materials.Khaki.type = glossy2
+#scene.materials.Khaki.kd = 0.75 0.75 0.75
+#scene.materials.Khaki.ks = 0.5 0.5 0.5
+#scene.materials.Khaki.uroughness = 0.06
+#scene.materials.Khaki.vroughness = 0.06
+############################
 scene.materials.HalveRed.type = matte
 scene.materials.HalveRed.kd = 0.70003 0. 0.
 ##
 #scene.materials.HalveRed.type = glossy2
-#scene.materials.HalveRed.kd = 0.75 0.75 0.75
+#scene.materials.HalveRed.kd = 0.75 0.0 0.0
 #scene.materials.HalveRed.ks = 0.5 0.5 0.5
-#scene.materials.HalveRed.uroughness = 0.21
-#scene.materials.HalveRed.vroughness = 0.21
+#scene.materials.HalveRed.uroughness = 0.06
+#scene.materials.HalveRed.vroughness = 0.06
 ##scene.materials.HalveRed.photongi.enable = 1
 ##
 #scene.materials.HalveRed.type = glossy2
@@ -66,8 +72,8 @@ scene.materials.DarkGreen.kd = 0. 0.4 0.
 #scene.materials.DarkGreen.type = glossy2
 #scene.materials.DarkGreen.kd = 0.0 0.0 0.0
 #scene.materials.DarkGreen.ks = 0.5 0.95 0.5
-#scene.materials.DarkGreen.uroughness = 0.051
-#scene.materials.DarkGreen.vroughness = 0.051
+#scene.materials.DarkGreen.uroughness = 0.06
+#scene.materials.DarkGreen.vroughness = 0.06
 #scene.materials.DarkGreen.photongi.enable = 1
 ##
 scene.materials.Light.type = matte

@@ -606,13 +606,13 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const float width = props.Get(Property(propName + ".width")(0.f)).Get<float>();
 
 		tex = new WireFrameTexture(width, bordertTex, insideTex);
-	} else if (texType == "bevel") {
+	/*} else if (texType == "bevel") {
 		const Texture *bumpTex = props.IsDefined(propName + ".bumptex") ?
 			GetTexture(props.Get(Property(propName + ".bumptex")(1.f))) : nullptr;
 		
 		const float radius = props.Get(Property(propName + ".radius")(.025f)).Get<float>();
 
-		tex = new BevelTexture(bumpTex, radius);
+		tex = new BevelTexture(bumpTex, radius);*/
 	} else
 		throw runtime_error("Unknown texture type: " + texType);
 
