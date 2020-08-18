@@ -101,14 +101,14 @@ slg::ocl::Sampler *Sampler::FromPropertiesOCL(const Properties &cfg) {
 		throw runtime_error("Unknown sampler type in Sampler::FromPropertiesOCL(): " + type);
 }
 
-Film::FilmChannelType Sampler::GetRequiredChannels(const Properties &cfg) {
+void Sampler::AddRequiredChannels(Film::FilmChannels &channels, const luxrays::Properties &cfg) {
 	const string type = cfg.Get(Property("sampler.type")(SobolSampler::GetObjectTag())).Get<string>();
 
-	SamplerRegistry::GetRequiredChannels func;
-	if (SamplerRegistry::STATICTABLE_NAME(GetRequiredChannels).Get(type, func))
-		return func(cfg);
+	SamplerRegistry::AddRequiredChannels func;
+	if (SamplerRegistry::STATICTABLE_NAME(AddRequiredChannels).Get(type, func))
+		return func(channels, cfg);
 	else
-		throw runtime_error("Unknown sampler type in Sampler::GetRequiredChannels(): " + type);
+		throw runtime_error("Unknown sampler type in Sampler::AddRequiredChannels(): " + type);
 }
 
 SamplerType Sampler::String2SamplerType(const string &type) {

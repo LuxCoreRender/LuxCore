@@ -219,6 +219,5 @@ void VarianceClamping::Clamp(const Film &film, SampleResult &sampleResult) const
 		
 		for (u_int radianceGroupIndex = 0; radianceGroupIndex < sampleResult.radiance.Size(); ++radianceGroupIndex)
 			sampleResult.radiance[radianceGroupIndex] = sampleResult.radiance[radianceGroupIndex].ScaledClamp(minRadiance, maxRadiance);
-	} else
-		throw runtime_error("Unknown sample type in VarianceClamping::Clamp(): " + ToString(sampleResult.GetChannels()));
+	}
 }

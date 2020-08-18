@@ -181,6 +181,9 @@ private:
 
 	FilterDistribution *pixelFilterDistribution;
 	const PhotonGICache *photonGICache;	
+
+	static const Film::FilmChannels eyeSampleResultsChannels;
+	static const Film::FilmChannels lightSampleResultsChannels;
 };
 
 }

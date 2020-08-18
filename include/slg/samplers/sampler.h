@@ -104,7 +104,7 @@ public:
 		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData);
 	static slg::ocl::Sampler *FromPropertiesOCL(const luxrays::Properties &cfg);
 
-	static Film::FilmChannelType GetRequiredChannels(const luxrays::Properties &cfg);
+	static void AddRequiredChannels(Film::FilmChannels &channels, const luxrays::Properties &cfg);
 
 	static SamplerType String2SamplerType(const std::string &type);
 	static std::string SamplerType2String(const SamplerType type);

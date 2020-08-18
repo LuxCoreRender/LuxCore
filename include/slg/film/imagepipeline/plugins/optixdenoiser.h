@@ -48,7 +48,7 @@ public:
 
 	virtual bool CanUseNative() const { return false; }
 	virtual bool CanUseHW() const { return true; }
-	virtual void AddHWChannelsUsed(std::unordered_set<Film::FilmChannelType, std::hash<int> > &hwChannelsUsed) const;
+	virtual void AddHWChannelsUsed(Film::FilmChannels &hwChannelsUsed) const;
 	virtual void Apply(Film &film, const u_int index) {
 		throw std::runtime_error("Called OptixDenoiserPlugin::Apply()");
 	}

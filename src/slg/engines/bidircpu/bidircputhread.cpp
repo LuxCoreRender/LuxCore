@@ -31,6 +31,17 @@ using namespace slg;
 // BiDirCPU RenderThread
 //------------------------------------------------------------------------------
 
+const Film::FilmChannels BiDirCPURenderThread::eyeSampleResultsChannels({
+	Film::RADIANCE_PER_PIXEL_NORMALIZED, Film::ALPHA, Film::DEPTH,
+	Film::POSITION, Film::GEOMETRY_NORMAL, Film::SHADING_NORMAL, Film::MATERIAL_ID,
+	Film::UV, Film::OBJECT_ID, Film::SAMPLECOUNT, Film::CONVERGENCE,
+	Film::MATERIAL_ID_COLOR, Film::ALBEDO, Film::AVG_SHADING_NORMAL, Film::NOISE
+});
+
+const Film::FilmChannels BiDirCPURenderThread::lightSampleResultsChannels({
+	Film::RADIANCE_PER_SCREEN_NORMALIZED
+}); 
+
 BiDirCPURenderThread::BiDirCPURenderThread(BiDirCPURenderEngine *engine,
 		const u_int index, IntersectionDevice *device) :
 		CPUNoTileRenderThread(engine, index, device) {
@@ -45,13 +56,7 @@ SampleResult &BiDirCPURenderThread::AddResult(vector<SampleResult> &sampleResult
 	SampleResult &sampleResult = sampleResults[size];
 
 	sampleResult.Init(
-			fromLight ?
-				Film::RADIANCE_PER_SCREEN_NORMALIZED :
-				(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA | Film::DEPTH |
-				Film::POSITION | Film::GEOMETRY_NORMAL | Film::SHADING_NORMAL | Film::MATERIAL_ID |
-				Film::UV | Film::OBJECT_ID | Film::SAMPLECOUNT | Film::CONVERGENCE |
-				Film::MATERIAL_ID_COLOR | Film::ALBEDO | Film::AVG_SHADING_NORMAL |
-				Film::NOISE),
+			fromLight ? &lightSampleResultsChannels : &eyeSampleResultsChannels,
 			engine->film->GetRadianceGroupCount());
 
 	return sampleResult;

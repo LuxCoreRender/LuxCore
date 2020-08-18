@@ -102,41 +102,42 @@ class ImagePipeline;
 class Film {
 public:
 	typedef enum {
-		NONE = 0,
-		RADIANCE_PER_PIXEL_NORMALIZED = 1 << 0,
-		RADIANCE_PER_SCREEN_NORMALIZED = 1 << 1,
-		ALPHA = 1 << 2,
+		RADIANCE_PER_PIXEL_NORMALIZED,
+		RADIANCE_PER_SCREEN_NORMALIZED,
+		ALPHA,
 		// RGB_TONEMAPPED is deprecated and replaced by IMAGEPIPELINE
-		IMAGEPIPELINE = 1 << 3,
-		DEPTH = 1 << 4,
-		POSITION = 1 << 5,
-		GEOMETRY_NORMAL = 1 << 6,
-		SHADING_NORMAL = 1 << 7,
-		MATERIAL_ID = 1 << 8,
-		DIRECT_DIFFUSE = 1 << 9,
-		DIRECT_GLOSSY = 1 << 10,
-		EMISSION = 1 << 11,
-		INDIRECT_DIFFUSE = 1 << 12,
-		INDIRECT_GLOSSY = 1 << 13,
-		INDIRECT_SPECULAR = 1 << 14,
-		MATERIAL_ID_MASK = 1 << 15,
-		DIRECT_SHADOW_MASK = 1 << 16,
-		INDIRECT_SHADOW_MASK = 1 << 17,
-		UV = 1 << 18,
-		RAYCOUNT = 1 << 19,
-		BY_MATERIAL_ID = 1 << 20,
-		IRRADIANCE = 1 << 21,
-		OBJECT_ID = 1 << 22,
-		OBJECT_ID_MASK = 1 << 23,
-		BY_OBJECT_ID = 1 << 24,
-		SAMPLECOUNT = 1 << 25,
-		CONVERGENCE = 1 << 26,
-		MATERIAL_ID_COLOR = 1 << 27,
-		ALBEDO = 1 << 28,
-		AVG_SHADING_NORMAL = 1 << 29,
-		NOISE = 1 << 30,
-		USER_IMPORTANCE = 1 << 31
+		IMAGEPIPELINE,
+		DEPTH,
+		POSITION,
+		GEOMETRY_NORMAL,
+		SHADING_NORMAL,
+		MATERIAL_ID,
+		DIRECT_DIFFUSE,
+		DIRECT_GLOSSY,
+		EMISSION,
+		INDIRECT_DIFFUSE,
+		INDIRECT_GLOSSY,
+		INDIRECT_SPECULAR,
+		MATERIAL_ID_MASK,
+		DIRECT_SHADOW_MASK,
+		INDIRECT_SHADOW_MASK,
+		UV,
+		RAYCOUNT,
+		BY_MATERIAL_ID,
+		IRRADIANCE,
+		OBJECT_ID,
+		OBJECT_ID_MASK,
+		BY_OBJECT_ID,
+		SAMPLECOUNT,
+		CONVERGENCE,
+		MATERIAL_ID_COLOR,
+		ALBEDO,
+		AVG_SHADING_NORMAL,
+		NOISE,
+		USER_IMPORTANCE
 	} FilmChannelType;
+	
+	typedef std::unordered_set<FilmChannelType, std::hash<int> > FilmChannels;
 
 	Film(const u_int width, const u_int height, const u_int *subRegion = NULL);
 	~Film();
@@ -316,11 +317,13 @@ public:
 	void ReadHWBuffer_IMAGEPIPELINE(const u_int index);
 	void WriteHWBuffer_IMAGEPIPELINE(const u_int index);
 
-	void GetPixelFromMergedSampleBuffers(const FilmChannelType channels,
+	void GetPixelFromMergedSampleBuffers(
+		const bool use_RADIANCE_PER_PIXEL_NORMALIZEDs, const bool use_RADIANCE_PER_SCREEN_NORMALIZEDs,
 		const std::vector<RadianceChannelScale> *radianceChannelScales,
 		const double RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
 		const u_int index, float *c) const;
-	void GetPixelFromMergedSampleBuffers(const FilmChannelType channels,
+	void GetPixelFromMergedSampleBuffers(
+		const bool use_RADIANCE_PER_PIXEL_NORMALIZEDs, const bool use_RADIANCE_PER_SCREEN_NORMALIZEDs,
 		const std::vector<RadianceChannelScale> *radianceChannelScales,
 		const double RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
 		const u_int x, const u_int y, float *c) const;
@@ -470,7 +473,7 @@ private:
 		const u_int srcWidth, const u_int srcHeight,
 		const u_int dstOffsetX, const u_int dstOffsetY);
 
-	std::unordered_set<FilmChannelType, std::hash<int> > channels;
+	FilmChannels channels;
 	u_int width, height, pixelCount, radianceGroupCount;
 	u_int subRegion[4];
 	std::vector<u_int> maskMaterialIDs, byMaterialIDs;

@@ -466,8 +466,8 @@ slg::ocl::Sampler *MetropolisSampler::FromPropertiesOCL(const Properties &cfg) {
 	return oclSampler;
 }
 
-Film::FilmChannelType MetropolisSampler::GetRequiredChannels(const luxrays::Properties &cfg) {
-	return Film::NONE;
+void MetropolisSampler::AddRequiredChannels(Film::FilmChannels &channels, const luxrays::Properties &cfg) {
+	// No additional channels required
 }
 
 const Properties &MetropolisSampler::GetDefaultProps() {

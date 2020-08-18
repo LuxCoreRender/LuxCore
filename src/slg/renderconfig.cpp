@@ -283,7 +283,10 @@ Film *RenderConfig::AllocFilm() const {
 	Film *film = Film::FromProperties(cfg);
 
 	// Add the channels required by the Sampler
-	film->AddChannel(Sampler::GetRequiredChannels(cfg));
+	Film::FilmChannels channels;
+	Sampler::AddRequiredChannels(channels, cfg);
+	for (auto const c : channels)
+		film->AddChannel(c);
 
 	return film;
 }

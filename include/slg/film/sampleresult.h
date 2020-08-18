@@ -37,16 +37,15 @@ namespace ocl {
 
 class SampleResult {
 public:
-	SampleResult() : useFilmSplat(true) { }
-	SampleResult(const u_int channelTypes, const u_int radianceGroupCount) {
-		Init(channelTypes, radianceGroupCount);
+	SampleResult() : useFilmSplat(true), channels(nullptr) { }
+	SampleResult(const Film::FilmChannels *channels, const u_int radianceGroupCount) {
+		Init(channels, radianceGroupCount);
 	}
 	~SampleResult() { }
 
-	void Init(const u_int channelTypes, const u_int radianceGroupCount);
+	void Init(const Film::FilmChannels *channels, const u_int radianceGroupCount);
 
-	u_int GetChannels() const { return channels; }
-	bool HasChannel(const Film::FilmChannelType type) const { return (channels & type) != 0; }
+	bool HasChannel(const Film::FilmChannelType type) const { return channels->count(type) > 0; }
 
 	luxrays::Spectrum GetSpectrum(const std::vector<RadianceChannelScale> &radianceChannelScales) const;
 	float GetY(const std::vector<RadianceChannelScale> &radianceChannelScales) const;
@@ -104,7 +103,7 @@ public:
 	bool useFilmSplat;
 
 private:
-	u_int channels;
+	const Film::FilmChannels *channels;
 };
 
 }

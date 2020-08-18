@@ -182,15 +182,17 @@ void BCDDenoiserPlugin::Apply(Film &film, const u_int index, const bool pixelNor
 	const float sampleMaxValue = filmDenoiser.GetSampleMaxValue();
 	SLG_LOG("BCD sample max. value: " << sampleMaxValue);
 	// TODO alpha?
-	Film::FilmChannelType channel = pixelNormalizedSampleAccumulator ?
-		Film::RADIANCE_PER_PIXEL_NORMALIZED : Film::RADIANCE_PER_SCREEN_NORMALIZED;
+	const bool use_RADIANCE_PER_PIXEL_NORMALIZEDs = pixelNormalizedSampleAccumulator;
+	const bool use_RADIANCE_PER_SCREEN_NORMALIZEDs = !pixelNormalizedSampleAccumulator;
 
 	const double RADIANCE_PER_SCREEN_NORMALIZED_SampleCount = film.GetTotalLightSampleCount();
 	
 	for(u_int y = 0; y < height; ++y) {
 		for(u_int x = 0; x < width; ++x) {
 			Spectrum color;
-			film.GetPixelFromMergedSampleBuffers(channel, &filmDenoiser.GetRadianceChannelScales(),
+			film.GetPixelFromMergedSampleBuffers(use_RADIANCE_PER_PIXEL_NORMALIZEDs,
+					use_RADIANCE_PER_SCREEN_NORMALIZEDs,
+					&filmDenoiser.GetRadianceChannelScales(),
 					RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
 					x, y, color.c);
 			

@@ -285,7 +285,8 @@ template<> u_int *Film::GetChannel<u_int>(const FilmChannelType type,
 	}
 }
 
-void Film::GetPixelFromMergedSampleBuffers(const FilmChannelType channels,
+void Film::GetPixelFromMergedSampleBuffers(
+		const bool use_RADIANCE_PER_PIXEL_NORMALIZEDs, const bool use_RADIANCE_PER_SCREEN_NORMALIZEDs,
 		const std::vector<RadianceChannelScale> *radianceChannelScales,
 		const double RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
 		const u_int index, float *c) const {
@@ -293,7 +294,7 @@ void Film::GetPixelFromMergedSampleBuffers(const FilmChannelType channels,
 	c[1] = 0.f;
 	c[2] = 0.f;
 	
-	if (channels & RADIANCE_PER_PIXEL_NORMALIZED) {
+	if (use_RADIANCE_PER_PIXEL_NORMALIZEDs) {
 		for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size(); ++i) {
 			if (!radianceChannelScales || (*radianceChannelScales)[i].enabled) {
 				float v[3];
@@ -309,7 +310,7 @@ void Film::GetPixelFromMergedSampleBuffers(const FilmChannelType channels,
 		}
 	}
 
-	if (channels & RADIANCE_PER_SCREEN_NORMALIZED) {
+	if (use_RADIANCE_PER_SCREEN_NORMALIZEDs) {
 		if (channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size() > 0) {
 			const float factor = (RADIANCE_PER_SCREEN_NORMALIZED_SampleCount > 0) ? (pixelCount / RADIANCE_PER_SCREEN_NORMALIZED_SampleCount) : 1.f;
 
@@ -334,11 +335,13 @@ void Film::GetPixelFromMergedSampleBuffers(const FilmChannelType channels,
 	}
 }
 
-void Film::GetPixelFromMergedSampleBuffers(const FilmChannelType channels,
+void Film::GetPixelFromMergedSampleBuffers(
+		const bool use_RADIANCE_PER_PIXEL_NORMALIZEDs, const bool use_RADIANCE_PER_SCREEN_NORMALIZEDs,
 	const std::vector<RadianceChannelScale> *radianceChannelScales,
 	const double RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
 	const u_int x, const u_int y, float *c) const {
-	GetPixelFromMergedSampleBuffers(channels, radianceChannelScales,
+	GetPixelFromMergedSampleBuffers(use_RADIANCE_PER_PIXEL_NORMALIZEDs,
+			use_RADIANCE_PER_SCREEN_NORMALIZEDs, radianceChannelScales,
 			RADIANCE_PER_SCREEN_NORMALIZED_SampleCount, x + y * width, c);
 }
 
@@ -348,7 +351,7 @@ void Film::GetPixelFromMergedSampleBuffers(const u_int imagePipelineIndex,
 	const ImagePipeline *ip = (imagePipelineIndex < imagePipelines.size()) ? imagePipelines[imagePipelineIndex] : NULL;
 	const std::vector<RadianceChannelScale> *radianceChannelScales = ip ? &ip->radianceChannelScales : NULL;
 
-	GetPixelFromMergedSampleBuffers((FilmChannelType)(RADIANCE_PER_PIXEL_NORMALIZED | RADIANCE_PER_SCREEN_NORMALIZED),
+	GetPixelFromMergedSampleBuffers(true, true,
 			radianceChannelScales, RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
 			x, y, c);
 }
@@ -359,7 +362,7 @@ void Film::GetPixelFromMergedSampleBuffers(const u_int imagePipelineIndex,
 	const ImagePipeline *ip = (imagePipelineIndex < imagePipelines.size()) ? imagePipelines[imagePipelineIndex] : NULL;
 	const std::vector<RadianceChannelScale> *radianceChannelScales = ip ? &ip->radianceChannelScales : NULL;
 
-	GetPixelFromMergedSampleBuffers((FilmChannelType)(RADIANCE_PER_PIXEL_NORMALIZED | RADIANCE_PER_SCREEN_NORMALIZED),
+	GetPixelFromMergedSampleBuffers(true, true,
 			radianceChannelScales, RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
 			index, c);
 }
@@ -374,7 +377,7 @@ float Film::GetFilmY(const u_int imagePipelineIndex) const {
 	Spectrum pixel;
 	const double samplesCount = samplesCounts.GetSampleCount_RADIANCE_PER_SCREEN_NORMALIZED();
 	for (u_int i = 0; i < pixelCount; ++i) {
-		GetPixelFromMergedSampleBuffers((FilmChannelType)(RADIANCE_PER_PIXEL_NORMALIZED | RADIANCE_PER_SCREEN_NORMALIZED),
+		GetPixelFromMergedSampleBuffers(true, true,
 				radianceChannelScales, samplesCount, i, pixel.c);
 
 		const float y = pixel.Y();
@@ -402,7 +405,7 @@ float Film::GetFilmMaxValue(const u_int imagePipelineIndex) const {
 	Spectrum pixel;
 	const double samplesCount = samplesCounts.GetSampleCount_RADIANCE_PER_SCREEN_NORMALIZED();
 	for (u_int i = 0; i < pixelCount; ++i) {
-		GetPixelFromMergedSampleBuffers((FilmChannelType)(RADIANCE_PER_PIXEL_NORMALIZED | RADIANCE_PER_SCREEN_NORMALIZED),
+		GetPixelFromMergedSampleBuffers(true, true,
 				radianceChannelScales, samplesCount, i, pixel.c);
 
 		const float v = pixel.Max();

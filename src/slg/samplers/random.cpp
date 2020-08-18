@@ -266,15 +266,13 @@ slg::ocl::Sampler *RandomSampler::FromPropertiesOCL(const Properties &cfg) {
 	return oclSampler;
 }
 
-Film::FilmChannelType RandomSampler::GetRequiredChannels(const luxrays::Properties &cfg) {
+void RandomSampler::AddRequiredChannels(Film::FilmChannels &channels, const luxrays::Properties &cfg) {
 	const bool imageSamplesEnable = cfg.Get(GetDefaultProps().Get("sampler.imagesamples.enable")).Get<bool>();
 
 	const float str = cfg.Get(GetDefaultProps().Get("sampler.random.adaptive.strength")).Get<float>();
 
 	if (imageSamplesEnable && (str > 0.f))
-		return Film::NOISE;
-	else
-		return Film::NONE;
+		channels.insert(Film::NOISE);
 }
 
 const Properties &RandomSampler::GetDefaultProps() {

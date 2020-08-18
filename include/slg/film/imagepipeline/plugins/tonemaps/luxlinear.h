@@ -47,7 +47,7 @@ public:
 	virtual void Apply(Film &film, const u_int index);
 
 	virtual bool CanUseHW() const { return true; }
-	virtual void AddHWChannelsUsed(std::unordered_set<Film::FilmChannelType, std::hash<int> > &hwChannelsUsed) const;
+	virtual void AddHWChannelsUsed(Film::FilmChannels &hwChannelsUsed) const;
 	virtual void ApplyHW(Film &film, const u_int index);
 
 	float sensitivity, exposure, fstop;

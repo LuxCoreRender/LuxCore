@@ -147,7 +147,10 @@ static void Film2SceneRadiusThread(Film2SceneRadiusThreadParams &params) {
 		// Initialize SampleResult 
 	vector<SampleResult> sampleResults(1);
 	SampleResult &sampleResult = sampleResults[0];
-	sampleResult.Init(Film::RADIANCE_PER_PIXEL_NORMALIZED, 1);
+	const Film::FilmChannels sampleResultsChannels({
+		Film::RADIANCE_PER_PIXEL_NORMALIZED
+	});
+	sampleResult.Init(&sampleResultsChannels, 1);
 
 	// Initialize the max. path depth
 	PathDepthInfo maxPathDepthInfo;

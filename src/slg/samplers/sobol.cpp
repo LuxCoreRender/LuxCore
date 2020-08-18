@@ -318,15 +318,13 @@ slg::ocl::Sampler *SobolSampler::FromPropertiesOCL(const Properties &cfg) {
 	return oclSampler;
 }
 
-Film::FilmChannelType SobolSampler::GetRequiredChannels(const luxrays::Properties &cfg) {
+void SobolSampler::AddRequiredChannels(Film::FilmChannels &channels, const luxrays::Properties &cfg) {
 	const bool imageSamplesEnable = cfg.Get(GetDefaultProps().Get("sampler.imagesamples.enable")).Get<bool>();
 
 	const float str = cfg.Get(GetDefaultProps().Get("sampler.sobol.adaptive.strength")).Get<float>();
 
 	if (imageSamplesEnable && (str > 0.f))
-		return Film::NOISE;
-	else
-		return Film::NONE;
+		channels.insert(Film::NOISE);
 }
 
 const Properties &SobolSampler::GetDefaultProps() {

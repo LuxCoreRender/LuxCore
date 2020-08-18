@@ -284,9 +284,9 @@ void FilmDenoiser::AddSample(const u_int x, const u_int y,
 		return;
 
 	SamplesAccumulator *samplesAccumulator;
-	if (sampleResult.GetChannels() & Film::RADIANCE_PER_PIXEL_NORMALIZED)
+	if (sampleResult.HasChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED))
 		samplesAccumulator = samplesAccumulatorPixelNormalized;
-	else if (sampleResult.GetChannels() & Film::RADIANCE_PER_SCREEN_NORMALIZED)
+	else if (sampleResult.HasChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED))
 		samplesAccumulator = samplesAccumulatorScreenNormalized;
 	else
 		samplesAccumulator = NULL;

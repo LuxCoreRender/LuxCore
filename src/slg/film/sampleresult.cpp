@@ -27,12 +27,12 @@ using namespace slg;
 // SampleResult
 //------------------------------------------------------------------------------
 
-void SampleResult::Init(const u_int channelTypes, const u_int radianceGroupCount) {
-	channels = channelTypes;
+void SampleResult::Init(const Film::FilmChannels *chnls, const u_int radianceGroupCount) {
+	channels = chnls;
 
-	if ((channels & Film::RADIANCE_PER_PIXEL_NORMALIZED) && (channels & Film::RADIANCE_PER_SCREEN_NORMALIZED))
+	if (HasChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED) && HasChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED))
 		throw runtime_error("RADIANCE_PER_PIXEL_NORMALIZED and RADIANCE_PER_SCREEN_NORMALIZED, both used in SampleResult");
-	else if ((channels & Film::RADIANCE_PER_PIXEL_NORMALIZED) || (channels & Film::RADIANCE_PER_SCREEN_NORMALIZED))
+	else if (HasChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED) || HasChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED))
 		radiance.Resize(radianceGroupCount);
 	else
 		radiance.Resize(0);
