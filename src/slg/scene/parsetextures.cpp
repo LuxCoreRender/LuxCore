@@ -41,8 +41,9 @@
 #include "slg/textures/constfloat.h"
 #include "slg/textures/constfloat3.h"
 #include "slg/textures/cloud.h"
-#include "slg/textures/dots.h"
 #include "slg/textures/densitygrid.h"
+#include "slg/textures/distort.h"
+#include "slg/textures/dots.h"
 #include "slg/textures/fbm.h"
 #include "slg/textures/fresnelapprox.h"
 #include "slg/textures/fresnel/fresnelcauchy.h"
@@ -601,11 +602,11 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const u_int seedOffset = props.Get(Property(propName + ".seed")(0u)).Get<u_int>();
 		tex = new RandomTexture(texture, seedOffset);
 	} else if (texType == "wireframe") {
-		const Texture *bordertTex = GetTexture(props.Get(Property(propName + ".border")(1.f)));
+		const Texture *borderTex = GetTexture(props.Get(Property(propName + ".border")(1.f)));
 		const Texture *insideTex = GetTexture(props.Get(Property(propName + ".inside")(0.f)));
 		const float width = props.Get(Property(propName + ".width")(0.f)).Get<float>();
 
-		tex = new WireFrameTexture(width, bordertTex, insideTex);
+		tex = new WireFrameTexture(width, borderTex, insideTex);
 	/*} else if (texType == "bevel") {
 		const Texture *bumpTex = props.IsDefined(propName + ".bumptex") ?
 			GetTexture(props.Get(Property(propName + ".bumptex")(1.f))) : nullptr;
@@ -613,6 +614,12 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const float radius = props.Get(Property(propName + ".radius")(.025f)).Get<float>();
 
 		tex = new BevelTexture(bumpTex, radius);*/
+	} else if (texType == "distort") {
+		const Texture *texture = GetTexture(props.Get(Property(propName + ".texture")(0.f)));
+		const Texture *offset = GetTexture(props.Get(Property(propName + ".offset")(0.f)));
+		const float strength = props.Get(Property(propName + ".strength")(1.f)).Get<float>();
+
+		tex = new DistortTexture(texture, offset, strength);
 	} else
 		throw runtime_error("Unknown texture type: " + texType);
 
