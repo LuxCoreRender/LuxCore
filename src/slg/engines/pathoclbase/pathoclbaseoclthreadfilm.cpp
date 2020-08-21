@@ -57,11 +57,21 @@ PathOCLBaseOCLRenderThread::ThreadFilm::ThreadFilm(PathOCLBaseOCLRenderThread *t
 	channel_SHADING_NORMAL_Buff = NULL;
 	channel_MATERIAL_ID_Buff = NULL;
 	channel_DIRECT_DIFFUSE_Buff = NULL;
+	channel_DIRECT_DIFFUSE_REFLECT_Buff = NULL;
+	channel_DIRECT_DIFFUSE_TRANSMIT_Buff = NULL;
 	channel_DIRECT_GLOSSY_Buff = NULL;
+	channel_DIRECT_GLOSSY_REFLECT_Buff = NULL;
+	channel_DIRECT_GLOSSY_TRANSMIT_Buff = NULL;
 	channel_EMISSION_Buff = NULL;
 	channel_INDIRECT_DIFFUSE_Buff = NULL;
+	channel_INDIRECT_DIFFUSE_REFLECT_Buff = NULL;
+	channel_INDIRECT_DIFFUSE_TRANSMIT_Buff = NULL;
 	channel_INDIRECT_GLOSSY_Buff = NULL;
+	channel_INDIRECT_GLOSSY_REFLECT_Buff = NULL;
+	channel_INDIRECT_GLOSSY_TRANSMIT_Buff = NULL;
 	channel_INDIRECT_SPECULAR_Buff = NULL;
+	channel_INDIRECT_SPECULAR_REFLECT_Buff = NULL;
+	channel_INDIRECT_SPECULAR_TRANSMIT_Buff = NULL;
 	channel_MATERIAL_ID_MASK_Buff = NULL;
 	channel_DIRECT_SHADOW_MASK_Buff = NULL;
 	channel_INDIRECT_SHADOW_MASK_Buff = NULL;
@@ -169,10 +179,30 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::Init(Film *engineFlm,
 	else
 		renderThread->intersectionDevice->FreeBuffer(&channel_DIRECT_DIFFUSE_Buff);
 	//--------------------------------------------------------------------------
+	if (film->HasChannel(Film::DIRECT_DIFFUSE_REFLECT))
+		renderThread->intersectionDevice->AllocBuffer(&channel_DIRECT_DIFFUSE_REFLECT_Buff, memTypeFlags, nullptr, sizeof(float[4]) * filmPixelCount, "DIRECT_DIFFUSE_REFLECT");
+	else
+		renderThread->intersectionDevice->FreeBuffer(&channel_DIRECT_DIFFUSE_REFLECT_Buff);
+	//--------------------------------------------------------------------------
+	if (film->HasChannel(Film::DIRECT_DIFFUSE_TRANSMIT))
+		renderThread->intersectionDevice->AllocBuffer(&channel_DIRECT_DIFFUSE_TRANSMIT_Buff, memTypeFlags, nullptr, sizeof(float[4]) * filmPixelCount, "DIRECT_DIFFUSE_TRANSMIT");
+	else
+		renderThread->intersectionDevice->FreeBuffer(&channel_DIRECT_DIFFUSE_TRANSMIT_Buff);
+	//--------------------------------------------------------------------------
 	if (film->HasChannel(Film::DIRECT_GLOSSY))
 		renderThread->intersectionDevice->AllocBuffer(&channel_DIRECT_GLOSSY_Buff, memTypeFlags, nullptr, sizeof(float[4]) * filmPixelCount, "DIRECT_GLOSSY");
 	else
 		renderThread->intersectionDevice->FreeBuffer(&channel_DIRECT_GLOSSY_Buff);
+	//--------------------------------------------------------------------------
+	if (film->HasChannel(Film::DIRECT_GLOSSY_REFLECT))
+		renderThread->intersectionDevice->AllocBuffer(&channel_DIRECT_GLOSSY_REFLECT_Buff, memTypeFlags, nullptr, sizeof(float[4]) * filmPixelCount, "DIRECT_GLOSSY_REFLECT");
+	else
+		renderThread->intersectionDevice->FreeBuffer(&channel_DIRECT_GLOSSY_REFLECT_Buff);
+	//--------------------------------------------------------------------------
+	if (film->HasChannel(Film::DIRECT_GLOSSY_TRANSMIT))
+		renderThread->intersectionDevice->AllocBuffer(&channel_DIRECT_GLOSSY_TRANSMIT_Buff, memTypeFlags, nullptr, sizeof(float[4]) * filmPixelCount, "DIRECT_GLOSSY_TRANSMIT");
+	else
+		renderThread->intersectionDevice->FreeBuffer(&channel_DIRECT_GLOSSY_TRANSMIT_Buff);
 	//--------------------------------------------------------------------------
 	if (film->HasChannel(Film::EMISSION))
 		renderThread->intersectionDevice->AllocBuffer(&channel_EMISSION_Buff, memTypeFlags, nullptr, sizeof(float[4]) * filmPixelCount, "EMISSION");
@@ -184,15 +214,45 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::Init(Film *engineFlm,
 	else
 		renderThread->intersectionDevice->FreeBuffer(&channel_INDIRECT_DIFFUSE_Buff);
 	//--------------------------------------------------------------------------
+	if (film->HasChannel(Film::INDIRECT_DIFFUSE_REFLECT))
+		renderThread->intersectionDevice->AllocBuffer(&channel_INDIRECT_DIFFUSE_REFLECT_Buff, memTypeFlags, nullptr, sizeof(float[4]) * filmPixelCount, "INDIRECT_DIFFUSE_REFLECT");
+	else
+		renderThread->intersectionDevice->FreeBuffer(&channel_INDIRECT_DIFFUSE_REFLECT_Buff);
+	//--------------------------------------------------------------------------
+	if (film->HasChannel(Film::INDIRECT_DIFFUSE_TRANSMIT))
+		renderThread->intersectionDevice->AllocBuffer(&channel_INDIRECT_DIFFUSE_TRANSMIT_Buff, memTypeFlags, nullptr, sizeof(float[4]) * filmPixelCount, "INDIRECT_DIFFUSE_TRANSMIT");
+	else
+		renderThread->intersectionDevice->FreeBuffer(&channel_INDIRECT_DIFFUSE_TRANSMIT_Buff);
+	//--------------------------------------------------------------------------
 	if (film->HasChannel(Film::INDIRECT_GLOSSY))
 		renderThread->intersectionDevice->AllocBuffer(&channel_INDIRECT_GLOSSY_Buff, memTypeFlags, nullptr, sizeof(float[4]) * filmPixelCount, "INDIRECT_GLOSSY");
 	else
 		renderThread->intersectionDevice->FreeBuffer(&channel_INDIRECT_GLOSSY_Buff);
 	//--------------------------------------------------------------------------
+	if (film->HasChannel(Film::INDIRECT_GLOSSY_REFLECT))
+		renderThread->intersectionDevice->AllocBuffer(&channel_INDIRECT_GLOSSY_REFLECT_Buff, memTypeFlags, nullptr, sizeof(float[4]) * filmPixelCount, "INDIRECT_GLOSSY_REFLECT");
+	else
+		renderThread->intersectionDevice->FreeBuffer(&channel_INDIRECT_GLOSSY_REFLECT_Buff);
+	//--------------------------------------------------------------------------
+	if (film->HasChannel(Film::INDIRECT_GLOSSY_TRANSMIT))
+		renderThread->intersectionDevice->AllocBuffer(&channel_INDIRECT_GLOSSY_TRANSMIT_Buff, memTypeFlags, nullptr, sizeof(float[4]) * filmPixelCount, "INDIRECT_GLOSSY_TRANSMIT");
+	else
+		renderThread->intersectionDevice->FreeBuffer(&channel_INDIRECT_GLOSSY_TRANSMIT_Buff);
+	//--------------------------------------------------------------------------
 	if (film->HasChannel(Film::INDIRECT_SPECULAR))
 		renderThread->intersectionDevice->AllocBuffer(&channel_INDIRECT_SPECULAR_Buff, memTypeFlags, nullptr, sizeof(float[4]) * filmPixelCount, "INDIRECT_SPECULAR");
 	else
 		renderThread->intersectionDevice->FreeBuffer(&channel_INDIRECT_SPECULAR_Buff);
+	//--------------------------------------------------------------------------
+	if (film->HasChannel(Film::INDIRECT_SPECULAR_REFLECT))
+		renderThread->intersectionDevice->AllocBuffer(&channel_INDIRECT_SPECULAR_REFLECT_Buff, memTypeFlags, nullptr, sizeof(float[4]) * filmPixelCount, "INDIRECT_SPECULAR_REFLECT");
+	else
+		renderThread->intersectionDevice->FreeBuffer(&channel_INDIRECT_SPECULAR_REFLECT_Buff);
+	//--------------------------------------------------------------------------
+	if (film->HasChannel(Film::INDIRECT_SPECULAR_TRANSMIT))
+		renderThread->intersectionDevice->AllocBuffer(&channel_INDIRECT_SPECULAR_TRANSMIT_Buff, memTypeFlags, nullptr, sizeof(float[4]) * filmPixelCount, "INDIRECT_SPECULAR_TRANSMIT");
+	else
+		renderThread->intersectionDevice->FreeBuffer(&channel_INDIRECT_SPECULAR_TRANSMIT_Buff);
 	//--------------------------------------------------------------------------
 	if (film->HasChannel(Film::MATERIAL_ID_MASK)) {
 		if (film->GetChannelCount(Film::MATERIAL_ID_MASK) > 1)
@@ -332,11 +392,21 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::FreeAllOCLBuffers() {
 	renderThread->intersectionDevice->FreeBuffer(&channel_SHADING_NORMAL_Buff);
 	renderThread->intersectionDevice->FreeBuffer(&channel_MATERIAL_ID_Buff);
 	renderThread->intersectionDevice->FreeBuffer(&channel_DIRECT_DIFFUSE_Buff);
+	renderThread->intersectionDevice->FreeBuffer(&channel_DIRECT_DIFFUSE_REFLECT_Buff);
+	renderThread->intersectionDevice->FreeBuffer(&channel_DIRECT_DIFFUSE_TRANSMIT_Buff);
 	renderThread->intersectionDevice->FreeBuffer(&channel_DIRECT_GLOSSY_Buff);
+	renderThread->intersectionDevice->FreeBuffer(&channel_DIRECT_GLOSSY_REFLECT_Buff);
+	renderThread->intersectionDevice->FreeBuffer(&channel_DIRECT_GLOSSY_TRANSMIT_Buff);
 	renderThread->intersectionDevice->FreeBuffer(&channel_EMISSION_Buff);
 	renderThread->intersectionDevice->FreeBuffer(&channel_INDIRECT_DIFFUSE_Buff);
+	renderThread->intersectionDevice->FreeBuffer(&channel_INDIRECT_DIFFUSE_REFLECT_Buff);
+	renderThread->intersectionDevice->FreeBuffer(&channel_INDIRECT_DIFFUSE_TRANSMIT_Buff);
 	renderThread->intersectionDevice->FreeBuffer(&channel_INDIRECT_GLOSSY_Buff);
+	renderThread->intersectionDevice->FreeBuffer(&channel_INDIRECT_GLOSSY_REFLECT_Buff);
+	renderThread->intersectionDevice->FreeBuffer(&channel_INDIRECT_GLOSSY_TRANSMIT_Buff);
 	renderThread->intersectionDevice->FreeBuffer(&channel_INDIRECT_SPECULAR_Buff);
+	renderThread->intersectionDevice->FreeBuffer(&channel_INDIRECT_SPECULAR_REFLECT_Buff);
+	renderThread->intersectionDevice->FreeBuffer(&channel_INDIRECT_SPECULAR_TRANSMIT_Buff);
 	renderThread->intersectionDevice->FreeBuffer(&channel_MATERIAL_ID_MASK_Buff);
 	renderThread->intersectionDevice->FreeBuffer(&channel_DIRECT_SHADOW_MASK_Buff);
 	renderThread->intersectionDevice->FreeBuffer(&channel_INDIRECT_SHADOW_MASK_Buff);
@@ -390,11 +460,21 @@ u_int PathOCLBaseOCLRenderThread::ThreadFilm::SetFilmKernelArgs(HardwareIntersec
 	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_SHADING_NORMAL_Buff);
 	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_MATERIAL_ID_Buff);
 	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_DIRECT_DIFFUSE_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_DIRECT_DIFFUSE_REFLECT_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_DIRECT_DIFFUSE_TRANSMIT_Buff);
 	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_DIRECT_GLOSSY_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_DIRECT_GLOSSY_REFLECT_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_DIRECT_GLOSSY_TRANSMIT_Buff);
 	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_EMISSION_Buff);
 	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_INDIRECT_DIFFUSE_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_INDIRECT_DIFFUSE_REFLECT_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_INDIRECT_DIFFUSE_TRANSMIT_Buff);
 	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_INDIRECT_GLOSSY_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_INDIRECT_GLOSSY_REFLECT_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_INDIRECT_GLOSSY_TRANSMIT_Buff);
 	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_INDIRECT_SPECULAR_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_INDIRECT_SPECULAR_REFLECT_Buff);
+	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_INDIRECT_SPECULAR_TRANSMIT_Buff);
 	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_MATERIAL_ID_MASK_Buff);
 	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_DIRECT_SHADOW_MASK_Buff);
 	intersectionDevice->SetKernelArg(kernel, argIndex++, channel_INDIRECT_SHADOW_MASK_Buff);
@@ -532,12 +612,19 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::RecvFilm(HardwareIntersectionDevice
 			channel_DIRECT_DIFFUSE_Buff->GetSize(),
 			film->channel_DIRECT_DIFFUSE->GetPixels());
 	}
-	if (channel_MATERIAL_ID_Buff) {
+	if (channel_DIRECT_DIFFUSE_REFLECT_Buff) {
 		intersectionDevice->EnqueueReadBuffer(
-			channel_MATERIAL_ID_Buff,
+			channel_DIRECT_DIFFUSE_REFLECT_Buff,
 			CL_FALSE,
-			channel_MATERIAL_ID_Buff->GetSize(),
-			film->channel_MATERIAL_ID->GetPixels());
+			channel_DIRECT_DIFFUSE_REFLECT_Buff->GetSize(),
+			film->channel_DIRECT_DIFFUSE_REFLECT->GetPixels());
+	}
+	if (channel_DIRECT_DIFFUSE_TRANSMIT_Buff) {
+		intersectionDevice->EnqueueReadBuffer(
+			channel_DIRECT_DIFFUSE_TRANSMIT_Buff,
+			CL_FALSE,
+			channel_DIRECT_DIFFUSE_TRANSMIT_Buff->GetSize(),
+			film->channel_DIRECT_DIFFUSE_TRANSMIT->GetPixels());
 	}
 	if (channel_DIRECT_GLOSSY_Buff) {
 		intersectionDevice->EnqueueReadBuffer(
@@ -545,6 +632,20 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::RecvFilm(HardwareIntersectionDevice
 			CL_FALSE,
 			channel_DIRECT_GLOSSY_Buff->GetSize(),
 			film->channel_DIRECT_GLOSSY->GetPixels());
+	}
+	if (channel_DIRECT_GLOSSY_REFLECT_Buff) {
+		intersectionDevice->EnqueueReadBuffer(
+			channel_DIRECT_GLOSSY_REFLECT_Buff,
+			CL_FALSE,
+			channel_DIRECT_GLOSSY_REFLECT_Buff->GetSize(),
+			film->channel_DIRECT_GLOSSY_REFLECT->GetPixels());
+	}
+	if (channel_DIRECT_GLOSSY_TRANSMIT_Buff) {
+		intersectionDevice->EnqueueReadBuffer(
+			channel_DIRECT_GLOSSY_TRANSMIT_Buff,
+			CL_FALSE,
+			channel_DIRECT_GLOSSY_TRANSMIT_Buff->GetSize(),
+			film->channel_DIRECT_GLOSSY_TRANSMIT->GetPixels());
 	}
 	if (channel_EMISSION_Buff) {
 		intersectionDevice->EnqueueReadBuffer(
@@ -560,6 +661,20 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::RecvFilm(HardwareIntersectionDevice
 			channel_INDIRECT_DIFFUSE_Buff->GetSize(),
 			film->channel_INDIRECT_DIFFUSE->GetPixels());
 	}
+	if (channel_INDIRECT_DIFFUSE_REFLECT_Buff) {
+		intersectionDevice->EnqueueReadBuffer(
+			channel_INDIRECT_DIFFUSE_REFLECT_Buff,
+			CL_FALSE,
+			channel_INDIRECT_DIFFUSE_REFLECT_Buff->GetSize(),
+			film->channel_INDIRECT_DIFFUSE_REFLECT->GetPixels());
+	}
+	if (channel_INDIRECT_DIFFUSE_TRANSMIT_Buff) {
+		intersectionDevice->EnqueueReadBuffer(
+			channel_INDIRECT_DIFFUSE_TRANSMIT_Buff,
+			CL_FALSE,
+			channel_INDIRECT_DIFFUSE_TRANSMIT_Buff->GetSize(),
+			film->channel_INDIRECT_DIFFUSE_TRANSMIT->GetPixels());
+	}
 	if (channel_INDIRECT_GLOSSY_Buff) {
 		intersectionDevice->EnqueueReadBuffer(
 			channel_INDIRECT_GLOSSY_Buff,
@@ -567,12 +682,40 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::RecvFilm(HardwareIntersectionDevice
 			channel_INDIRECT_GLOSSY_Buff->GetSize(),
 			film->channel_INDIRECT_GLOSSY->GetPixels());
 	}
+	if (channel_INDIRECT_GLOSSY_REFLECT_Buff) {
+		intersectionDevice->EnqueueReadBuffer(
+			channel_INDIRECT_GLOSSY_REFLECT_Buff,
+			CL_FALSE,
+			channel_INDIRECT_GLOSSY_REFLECT_Buff->GetSize(),
+			film->channel_INDIRECT_GLOSSY_REFLECT->GetPixels());
+	}
+	if (channel_INDIRECT_GLOSSY_TRANSMIT_Buff) {
+		intersectionDevice->EnqueueReadBuffer(
+			channel_INDIRECT_GLOSSY_TRANSMIT_Buff,
+			CL_FALSE,
+			channel_INDIRECT_GLOSSY_TRANSMIT_Buff->GetSize(),
+			film->channel_INDIRECT_GLOSSY_TRANSMIT->GetPixels());
+	}
 	if (channel_INDIRECT_SPECULAR_Buff) {
 		intersectionDevice->EnqueueReadBuffer(
 			channel_INDIRECT_SPECULAR_Buff,
 			CL_FALSE,
 			channel_INDIRECT_SPECULAR_Buff->GetSize(),
 			film->channel_INDIRECT_SPECULAR->GetPixels());
+	}
+	if (channel_INDIRECT_SPECULAR_REFLECT_Buff) {
+		intersectionDevice->EnqueueReadBuffer(
+			channel_INDIRECT_SPECULAR_REFLECT_Buff,
+			CL_FALSE,
+			channel_INDIRECT_SPECULAR_REFLECT_Buff->GetSize(),
+			film->channel_INDIRECT_SPECULAR_REFLECT->GetPixels());
+	}
+	if (channel_INDIRECT_SPECULAR_TRANSMIT_Buff) {
+		intersectionDevice->EnqueueReadBuffer(
+			channel_INDIRECT_SPECULAR_TRANSMIT_Buff,
+			CL_FALSE,
+			channel_INDIRECT_SPECULAR_TRANSMIT_Buff->GetSize(),
+			film->channel_INDIRECT_SPECULAR_TRANSMIT->GetPixels());
 	}
 	if (channel_MATERIAL_ID_MASK_Buff) {
 		intersectionDevice->EnqueueReadBuffer(
@@ -795,12 +938,19 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::SendFilm(HardwareIntersectionDevice
 			channel_DIRECT_DIFFUSE_Buff->GetSize(),
 			film->channel_DIRECT_DIFFUSE->GetPixels());
 	}
-	if (channel_MATERIAL_ID_Buff) {
+	if (channel_DIRECT_DIFFUSE_REFLECT_Buff) {
 		intersectionDevice->EnqueueWriteBuffer(
-			channel_MATERIAL_ID_Buff,
+			channel_DIRECT_DIFFUSE_REFLECT_Buff,
 			CL_FALSE,
-			channel_MATERIAL_ID_Buff->GetSize(),
-			film->channel_MATERIAL_ID->GetPixels());
+			channel_DIRECT_DIFFUSE_REFLECT_Buff->GetSize(),
+			film->channel_DIRECT_DIFFUSE_REFLECT->GetPixels());
+	}
+	if (channel_DIRECT_DIFFUSE_TRANSMIT_Buff) {
+		intersectionDevice->EnqueueWriteBuffer(
+			channel_DIRECT_DIFFUSE_TRANSMIT_Buff,
+			CL_FALSE,
+			channel_DIRECT_DIFFUSE_TRANSMIT_Buff->GetSize(),
+			film->channel_DIRECT_DIFFUSE_TRANSMIT->GetPixels());
 	}
 	if (channel_DIRECT_GLOSSY_Buff) {
 		intersectionDevice->EnqueueWriteBuffer(
@@ -808,6 +958,20 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::SendFilm(HardwareIntersectionDevice
 			CL_FALSE,
 			channel_DIRECT_GLOSSY_Buff->GetSize(),
 			film->channel_DIRECT_GLOSSY->GetPixels());
+	}
+	if (channel_DIRECT_GLOSSY_REFLECT_Buff) {
+		intersectionDevice->EnqueueWriteBuffer(
+			channel_DIRECT_GLOSSY_REFLECT_Buff,
+			CL_FALSE,
+			channel_DIRECT_GLOSSY_REFLECT_Buff->GetSize(),
+			film->channel_DIRECT_GLOSSY_REFLECT->GetPixels());
+	}
+	if (channel_DIRECT_GLOSSY_TRANSMIT_Buff) {
+		intersectionDevice->EnqueueWriteBuffer(
+			channel_DIRECT_GLOSSY_TRANSMIT_Buff,
+			CL_FALSE,
+			channel_DIRECT_GLOSSY_TRANSMIT_Buff->GetSize(),
+			film->channel_DIRECT_GLOSSY_TRANSMIT->GetPixels());
 	}
 	if (channel_EMISSION_Buff) {
 		intersectionDevice->EnqueueWriteBuffer(
@@ -823,6 +987,20 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::SendFilm(HardwareIntersectionDevice
 			channel_INDIRECT_DIFFUSE_Buff->GetSize(),
 			film->channel_INDIRECT_DIFFUSE->GetPixels());
 	}
+	if (channel_INDIRECT_DIFFUSE_REFLECT_Buff) {
+		intersectionDevice->EnqueueWriteBuffer(
+			channel_INDIRECT_DIFFUSE_REFLECT_Buff,
+			CL_FALSE,
+			channel_INDIRECT_DIFFUSE_REFLECT_Buff->GetSize(),
+			film->channel_INDIRECT_DIFFUSE_REFLECT->GetPixels());
+	}
+	if (channel_INDIRECT_DIFFUSE_TRANSMIT_Buff) {
+		intersectionDevice->EnqueueWriteBuffer(
+			channel_INDIRECT_DIFFUSE_TRANSMIT_Buff,
+			CL_FALSE,
+			channel_INDIRECT_DIFFUSE_TRANSMIT_Buff->GetSize(),
+			film->channel_INDIRECT_DIFFUSE_TRANSMIT->GetPixels());
+	}
 	if (channel_INDIRECT_GLOSSY_Buff) {
 		intersectionDevice->EnqueueWriteBuffer(
 			channel_INDIRECT_GLOSSY_Buff,
@@ -830,12 +1008,40 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::SendFilm(HardwareIntersectionDevice
 			channel_INDIRECT_GLOSSY_Buff->GetSize(),
 			film->channel_INDIRECT_GLOSSY->GetPixels());
 	}
+	if (channel_INDIRECT_GLOSSY_REFLECT_Buff) {
+		intersectionDevice->EnqueueWriteBuffer(
+			channel_INDIRECT_GLOSSY_REFLECT_Buff,
+			CL_FALSE,
+			channel_INDIRECT_GLOSSY_REFLECT_Buff->GetSize(),
+			film->channel_INDIRECT_GLOSSY_REFLECT->GetPixels());
+	}
+	if (channel_INDIRECT_GLOSSY_TRANSMIT_Buff) {
+		intersectionDevice->EnqueueWriteBuffer(
+			channel_INDIRECT_GLOSSY_TRANSMIT_Buff,
+			CL_FALSE,
+			channel_INDIRECT_GLOSSY_TRANSMIT_Buff->GetSize(),
+			film->channel_INDIRECT_GLOSSY_TRANSMIT->GetPixels());
+	}
 	if (channel_INDIRECT_SPECULAR_Buff) {
 		intersectionDevice->EnqueueWriteBuffer(
 			channel_INDIRECT_SPECULAR_Buff,
 			CL_FALSE,
 			channel_INDIRECT_SPECULAR_Buff->GetSize(),
 			film->channel_INDIRECT_SPECULAR->GetPixels());
+	}
+	if (channel_INDIRECT_SPECULAR_REFLECT_Buff) {
+		intersectionDevice->EnqueueWriteBuffer(
+			channel_INDIRECT_SPECULAR_REFLECT_Buff,
+			CL_FALSE,
+			channel_INDIRECT_SPECULAR_REFLECT_Buff->GetSize(),
+			film->channel_INDIRECT_SPECULAR_REFLECT->GetPixels());
+	}
+	if (channel_INDIRECT_SPECULAR_TRANSMIT_Buff) {
+		intersectionDevice->EnqueueWriteBuffer(
+			channel_INDIRECT_SPECULAR_TRANSMIT_Buff,
+			CL_FALSE,
+			channel_INDIRECT_SPECULAR_TRANSMIT_Buff->GetSize(),
+			film->channel_INDIRECT_SPECULAR_TRANSMIT->GetPixels());
 	}
 	if (channel_MATERIAL_ID_MASK_Buff) {
 		intersectionDevice->EnqueueWriteBuffer(

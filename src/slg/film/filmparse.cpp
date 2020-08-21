@@ -205,6 +205,24 @@ void Film::ParseOutputs(const Properties &props) {
 					throw runtime_error("Direct diffuse image can be saved only in HDR formats: " + outputName);
 				break;
 			}
+			case FilmOutputs::DIRECT_DIFFUSE_REFLECT: {
+				if (hdrImage) {
+					if (!initialized)
+						AddChannel(Film::DIRECT_DIFFUSE);
+					filmOutputs.Add(FilmOutputs::DIRECT_DIFFUSE_REFLECT, fileName);
+				} else
+					throw runtime_error("Direct diffuse reflect image can be saved only in HDR formats: " + outputName);
+				break;
+			}
+			case FilmOutputs::DIRECT_DIFFUSE_TRANSMIT: {
+				if (hdrImage) {
+					if (!initialized)
+						AddChannel(Film::DIRECT_DIFFUSE_TRANSMIT);
+					filmOutputs.Add(FilmOutputs::DIRECT_DIFFUSE_TRANSMIT, fileName);
+				} else
+					throw runtime_error("Direct diffuse transmit image can be saved only in HDR formats: " + outputName);
+				break;
+			}
 			case FilmOutputs::DIRECT_GLOSSY: {
 				if (hdrImage) {
 					if (!initialized)
@@ -212,6 +230,24 @@ void Film::ParseOutputs(const Properties &props) {
 					filmOutputs.Add(FilmOutputs::DIRECT_GLOSSY, fileName);
 				} else
 					throw runtime_error("Direct glossy image can be saved only in HDR formats: " + outputName);
+				break;
+			}
+			case FilmOutputs::DIRECT_GLOSSY_REFLECT: {
+				if (hdrImage) {
+					if (!initialized)
+						AddChannel(Film::DIRECT_GLOSSY_REFLECT);
+					filmOutputs.Add(FilmOutputs::DIRECT_GLOSSY_REFLECT, fileName);
+				} else
+					throw runtime_error("Direct glossy reflect image can be saved only in HDR formats: " + outputName);
+				break;
+			}
+			case FilmOutputs::DIRECT_GLOSSY_TRANSMIT: {
+				if (hdrImage) {
+					if (!initialized)
+						AddChannel(Film::DIRECT_GLOSSY_TRANSMIT);
+					filmOutputs.Add(FilmOutputs::DIRECT_GLOSSY_TRANSMIT, fileName);
+				} else
+					throw runtime_error("Direct glossy transmit image can be saved only in HDR formats: " + outputName);
 				break;
 			}
 			case FilmOutputs::EMISSION: {
@@ -232,6 +268,24 @@ void Film::ParseOutputs(const Properties &props) {
 					throw runtime_error("Indirect diffuse image can be saved only in HDR formats: " + outputName);
 				break;
 			}
+			case FilmOutputs::INDIRECT_DIFFUSE_REFLECT: {
+				if (hdrImage) {
+					if (!initialized)
+						AddChannel(Film::INDIRECT_DIFFUSE_REFLECT);
+					filmOutputs.Add(FilmOutputs::INDIRECT_DIFFUSE_REFLECT, fileName);
+				} else
+					throw runtime_error("Indirect diffuse reflect image can be saved only in HDR formats: " + outputName);
+				break;
+			}
+			case FilmOutputs::INDIRECT_DIFFUSE_TRANSMIT: {
+				if (hdrImage) {
+					if (!initialized)
+						AddChannel(Film::INDIRECT_DIFFUSE_TRANSMIT);
+					filmOutputs.Add(FilmOutputs::INDIRECT_DIFFUSE_TRANSMIT, fileName);
+				} else
+					throw runtime_error("Indirect diffuse transmit image can be saved only in HDR formats: " + outputName);
+				break;
+			}
 			case FilmOutputs::INDIRECT_GLOSSY: {
 				if (hdrImage) {
 					if (!initialized)
@@ -241,6 +295,24 @@ void Film::ParseOutputs(const Properties &props) {
 					throw runtime_error("Indirect glossy image can be saved only in HDR formats: " + outputName);
 				break;
 			}
+			case FilmOutputs::INDIRECT_GLOSSY_REFLECT: {
+				if (hdrImage) {
+					if (!initialized)
+						AddChannel(Film::INDIRECT_GLOSSY_REFLECT);
+					filmOutputs.Add(FilmOutputs::INDIRECT_GLOSSY_REFLECT, fileName);
+				} else
+					throw runtime_error("Indirect glossy reflect image can be saved only in HDR formats: " + outputName);
+				break;
+			}
+			case FilmOutputs::INDIRECT_GLOSSY_TRANSMIT: {
+				if (hdrImage) {
+					if (!initialized)
+						AddChannel(Film::INDIRECT_GLOSSY_TRANSMIT);
+					filmOutputs.Add(FilmOutputs::INDIRECT_GLOSSY_TRANSMIT, fileName);
+				} else
+					throw runtime_error("Indirect glossy transmit image can be saved only in HDR formats: " + outputName);
+				break;
+			}
 			case FilmOutputs::INDIRECT_SPECULAR: {
 				if (hdrImage) {
 					if (!initialized)
@@ -248,6 +320,24 @@ void Film::ParseOutputs(const Properties &props) {
 					filmOutputs.Add(FilmOutputs::INDIRECT_SPECULAR, fileName);
 				} else
 					throw runtime_error("Indirect specular image can be saved only in HDR formats: " + outputName);
+				break;
+			}
+			case FilmOutputs::INDIRECT_SPECULAR_REFLECT: {
+				if (hdrImage) {
+					if (!initialized)
+						AddChannel(Film::INDIRECT_SPECULAR_REFLECT);
+					filmOutputs.Add(FilmOutputs::INDIRECT_SPECULAR_REFLECT, fileName);
+				} else
+					throw runtime_error("Indirect specular reflect image can be saved only in HDR formats: " + outputName);
+				break;
+			}
+			case FilmOutputs::INDIRECT_SPECULAR_TRANSMIT: {
+				if (hdrImage) {
+					if (!initialized)
+						AddChannel(Film::INDIRECT_SPECULAR_TRANSMIT);
+					filmOutputs.Add(FilmOutputs::INDIRECT_SPECULAR_TRANSMIT, fileName);
+				} else
+					throw runtime_error("Indirect specular transmit image can be saved only in HDR formats: " + outputName);
 				break;
 			}
 			case FilmOutputs::MATERIAL_ID_MASK: {

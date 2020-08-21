@@ -83,9 +83,12 @@ public:
 	u_int materialID;
 	// Note: OBJECT_ID_MASK is calculated starting from objectID field
 	u_int objectID;
-	luxrays::Spectrum directDiffuse, directGlossy;
+	luxrays::Spectrum directDiffuseReflect, directDiffuseTransmit;
+	luxrays::Spectrum directGlossyReflect, directGlossyTransmit;
 	luxrays::Spectrum emission;
-	luxrays::Spectrum indirectDiffuse, indirectGlossy, indirectSpecular;
+	luxrays::Spectrum indirectDiffuseReflect, indirectDiffuseTransmit;
+	luxrays::Spectrum indirectGlossyReflect, indirectGlossyTransmit;
+	luxrays::Spectrum indirectSpecularReflect, indirectSpecularTransmit;
 	float directShadowMask, indirectShadowMask;
 	luxrays::UV uv;
 	float rayCount;

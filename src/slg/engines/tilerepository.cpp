@@ -66,33 +66,14 @@ Tile::~Tile() {
 void Tile::InitTileFilm(const Film &film, Film **tileFilm) {
 	(*tileFilm) = new Film(coord.width, coord.height);
 	(*tileFilm)->CopyDynamicSettings(film);
+
 	// Remove all channels but RADIANCE_PER_PIXEL_NORMALIZED and IMAGEPIPELINE
-	(*tileFilm)->RemoveChannel(Film::ALPHA);
-	(*tileFilm)->RemoveChannel(Film::DEPTH);
-	(*tileFilm)->RemoveChannel(Film::POSITION);
-	(*tileFilm)->RemoveChannel(Film::GEOMETRY_NORMAL);
-	(*tileFilm)->RemoveChannel(Film::SHADING_NORMAL);
-	(*tileFilm)->RemoveChannel(Film::MATERIAL_ID);
-	(*tileFilm)->RemoveChannel(Film::DIRECT_GLOSSY);
-	(*tileFilm)->RemoveChannel(Film::EMISSION);
-	(*tileFilm)->RemoveChannel(Film::INDIRECT_DIFFUSE);
-	(*tileFilm)->RemoveChannel(Film::INDIRECT_GLOSSY);
-	(*tileFilm)->RemoveChannel(Film::INDIRECT_SPECULAR);
-	(*tileFilm)->RemoveChannel(Film::MATERIAL_ID_MASK);
-	(*tileFilm)->RemoveChannel(Film::DIRECT_SHADOW_MASK);
-	(*tileFilm)->RemoveChannel(Film::INDIRECT_SHADOW_MASK);
-	(*tileFilm)->RemoveChannel(Film::UV);
-	(*tileFilm)->RemoveChannel(Film::RAYCOUNT);
-	(*tileFilm)->RemoveChannel(Film::BY_MATERIAL_ID);
-	(*tileFilm)->RemoveChannel(Film::IRRADIANCE);
-	(*tileFilm)->RemoveChannel(Film::OBJECT_ID);
-	(*tileFilm)->RemoveChannel(Film::OBJECT_ID_MASK);
-	(*tileFilm)->RemoveChannel(Film::BY_OBJECT_ID);
-	(*tileFilm)->RemoveChannel(Film::SAMPLECOUNT);
-	(*tileFilm)->RemoveChannel(Film::CONVERGENCE);
-	(*tileFilm)->RemoveChannel(Film::MATERIAL_ID_COLOR);
-	(*tileFilm)->RemoveChannel(Film::ALBEDO);
-	(*tileFilm)->RemoveChannel(Film::NOISE);
+	const Film::FilmChannels &channels = (*tileFilm)->GetChannels();
+	
+	for (auto const &c : channels) {
+		if ((c != Film::RADIANCE_PER_PIXEL_NORMALIZED) && (c != Film::IMAGEPIPELINE))
+			(*tileFilm)->RemoveChannel(c);
+	}
 
 	// Build an image pipeline with only an auto-linear tone mapping and
 	// gamma correction.

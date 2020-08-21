@@ -475,7 +475,7 @@ void PathOCLBaseOCLRenderThread::InitSampleResultsBuffer() {
 	const size_t sampleResultSize = sizeof(slg::ocl::SampleResult);
 
 	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Size of a SampleResult: " << sampleResultSize << "bytes");
-	intersectionDevice->AllocBufferRW(&sampleResultsBuff, nullptr, sampleResultSize * taskCount, "Sample");
+	intersectionDevice->AllocBufferRW(&sampleResultsBuff, nullptr, sampleResultSize * taskCount, "SampleResult");
 }
 
 void PathOCLBaseOCLRenderThread::InitSampleDataBuffer() {

@@ -113,11 +113,21 @@ public:
 		SHADING_NORMAL,
 		MATERIAL_ID,
 		DIRECT_DIFFUSE,
+		DIRECT_DIFFUSE_REFLECT,
+		DIRECT_DIFFUSE_TRANSMIT,
 		DIRECT_GLOSSY,
+		DIRECT_GLOSSY_REFLECT,
+		DIRECT_GLOSSY_TRANSMIT,
 		EMISSION,
 		INDIRECT_DIFFUSE,
+		INDIRECT_DIFFUSE_REFLECT,
+		INDIRECT_DIFFUSE_TRANSMIT,
 		INDIRECT_GLOSSY,
+		INDIRECT_GLOSSY_REFLECT,
+		INDIRECT_GLOSSY_TRANSMIT,
 		INDIRECT_SPECULAR,
+		INDIRECT_SPECULAR_REFLECT,
+		INDIRECT_SPECULAR_TRANSMIT,
 		MATERIAL_ID_MASK,
 		DIRECT_SHADOW_MASK,
 		INDIRECT_SHADOW_MASK,
@@ -191,6 +201,7 @@ public:
 
 	bool HasChannel(const FilmChannelType type) const { return channels.count(type) > 0; }
 	u_int GetChannelCount(const FilmChannelType type) const;
+	const FilmChannels &GetChannels() const { return channels; }
 
 	// This one must be called before Init()
 	void AddChannel(const FilmChannelType type,
@@ -378,11 +389,21 @@ public:
 	GenericFrameBuffer<4, 1, float> *channel_AVG_SHADING_NORMAL;
 	GenericFrameBuffer<1, 0, u_int> *channel_MATERIAL_ID;
 	GenericFrameBuffer<4, 1, float> *channel_DIRECT_DIFFUSE;
+	GenericFrameBuffer<4, 1, float> *channel_DIRECT_DIFFUSE_REFLECT;
+	GenericFrameBuffer<4, 1, float> *channel_DIRECT_DIFFUSE_TRANSMIT;
 	GenericFrameBuffer<4, 1, float> *channel_DIRECT_GLOSSY;
+	GenericFrameBuffer<4, 1, float> *channel_DIRECT_GLOSSY_REFLECT;
+	GenericFrameBuffer<4, 1, float> *channel_DIRECT_GLOSSY_TRANSMIT;
 	GenericFrameBuffer<4, 1, float> *channel_EMISSION;
 	GenericFrameBuffer<4, 1, float> *channel_INDIRECT_DIFFUSE;
+	GenericFrameBuffer<4, 1, float> *channel_INDIRECT_DIFFUSE_REFLECT;
+	GenericFrameBuffer<4, 1, float> *channel_INDIRECT_DIFFUSE_TRANSMIT;
 	GenericFrameBuffer<4, 1, float> *channel_INDIRECT_GLOSSY;
+	GenericFrameBuffer<4, 1, float> *channel_INDIRECT_GLOSSY_REFLECT;
+	GenericFrameBuffer<4, 1, float> *channel_INDIRECT_GLOSSY_TRANSMIT;
 	GenericFrameBuffer<4, 1, float> *channel_INDIRECT_SPECULAR;
+	GenericFrameBuffer<4, 1, float> *channel_INDIRECT_SPECULAR_REFLECT;
+	GenericFrameBuffer<4, 1, float> *channel_INDIRECT_SPECULAR_TRANSMIT;
 	std::vector<GenericFrameBuffer<2, 1, float> *> channel_MATERIAL_ID_MASKs;
 	GenericFrameBuffer<2, 1, float> *channel_DIRECT_SHADOW_MASK;
 	GenericFrameBuffer<2, 1, float> *channel_INDIRECT_SHADOW_MASK;
@@ -519,7 +540,7 @@ template<> void Film::GetOutput<u_int>(const FilmOutputs::FilmOutputType type, u
 
 }
 
-BOOST_CLASS_VERSION(slg::Film, 26)
+BOOST_CLASS_VERSION(slg::Film, 27)
 
 BOOST_CLASS_EXPORT_KEY(slg::Film)
 

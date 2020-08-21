@@ -57,11 +57,15 @@ PathTracerThreadState::~PathTracerThreadState() {
 const Film::FilmChannels PathTracer::eyeSampleResultsChannels({
 	Film::RADIANCE_PER_PIXEL_NORMALIZED, Film::ALPHA, Film::DEPTH,
 	Film::POSITION, Film::GEOMETRY_NORMAL, Film::SHADING_NORMAL, Film::MATERIAL_ID,
-	Film::DIRECT_DIFFUSE, Film::DIRECT_GLOSSY, Film::EMISSION, Film::INDIRECT_DIFFUSE,
-	Film::INDIRECT_GLOSSY, Film::INDIRECT_SPECULAR, Film::DIRECT_SHADOW_MASK,
-	Film::INDIRECT_SHADOW_MASK, Film::UV, Film::RAYCOUNT, Film::IRRADIANCE,
-	Film::OBJECT_ID, Film::SAMPLECOUNT, Film::CONVERGENCE, Film::MATERIAL_ID_COLOR,
-	Film::ALBEDO, Film::AVG_SHADING_NORMAL, Film::NOISE
+	Film::DIRECT_DIFFUSE, Film::DIRECT_DIFFUSE_REFLECT, Film::DIRECT_DIFFUSE_TRANSMIT,
+	Film::DIRECT_GLOSSY, Film::DIRECT_GLOSSY_REFLECT, Film::DIRECT_GLOSSY_TRANSMIT,
+	Film::EMISSION,
+	Film::INDIRECT_DIFFUSE, Film::INDIRECT_DIFFUSE_REFLECT, Film::INDIRECT_DIFFUSE_TRANSMIT,
+	Film::INDIRECT_GLOSSY, Film::INDIRECT_GLOSSY_REFLECT, Film::INDIRECT_GLOSSY_TRANSMIT,
+	Film::INDIRECT_SPECULAR, Film::INDIRECT_SPECULAR_REFLECT, Film::INDIRECT_SPECULAR_TRANSMIT,
+	Film::DIRECT_SHADOW_MASK, Film::INDIRECT_SHADOW_MASK, Film::UV, Film::RAYCOUNT,
+	Film::IRRADIANCE, Film::OBJECT_ID, Film::SAMPLECOUNT, Film::CONVERGENCE,
+	Film::MATERIAL_ID_COLOR, Film::ALBEDO, Film::AVG_SHADING_NORMAL, Film::NOISE
 });
 
 const Film::FilmChannels PathTracer::lightSampleResultsChannels({
@@ -102,11 +106,16 @@ void PathTracer::ResetEyeSampleResults(vector<SampleResult> &sampleResults) {
 	sampleResult.emission = Spectrum();
 	for (u_int i = 0; i < sampleResult.radiance.Size(); ++i)
 		sampleResult.radiance[i] = Spectrum();
-	sampleResult.directDiffuse = Spectrum();
-	sampleResult.directGlossy = Spectrum();
-	sampleResult.indirectDiffuse = Spectrum();
-	sampleResult.indirectGlossy = Spectrum();
-	sampleResult.indirectSpecular = Spectrum();
+	sampleResult.directDiffuseReflect = Spectrum();
+	sampleResult.directDiffuseTransmit = Spectrum();
+	sampleResult.directGlossyReflect = Spectrum();
+	sampleResult.directGlossyTransmit = Spectrum();
+	sampleResult.indirectDiffuseReflect = Spectrum();
+	sampleResult.indirectDiffuseTransmit = Spectrum();
+	sampleResult.indirectGlossyReflect = Spectrum();
+	sampleResult.indirectGlossyTransmit = Spectrum();
+	sampleResult.indirectSpecularReflect = Spectrum();
+	sampleResult.indirectSpecularTransmit = Spectrum();
 	sampleResult.directShadowMask = 1.f;
 	sampleResult.indirectShadowMask = 1.f;
 	sampleResult.irradiance = Spectrum();

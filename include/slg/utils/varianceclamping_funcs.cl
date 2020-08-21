@@ -81,21 +81,68 @@ OPENCL_FORCE_INLINE void VarianceClamping_Clamp(
 
 	// Clamp the AOVs too
 
-	if (film->hasChannelDirectDiffuse)
-		VarianceClamping_Clamp3(sqrtVarianceClampMaxValue, &filmDirectDiffuse[index4], sampleResult->directDiffuse.c);
+	// DIRECT_DIFFUSE
 
-	if (film->hasChannelDirectGlossy)
-		VarianceClamping_Clamp3(sqrtVarianceClampMaxValue, &filmDirectGlossy[index4], sampleResult->directGlossy.c);
+	if (film->hasChannelDirectDiffuseReflect)
+		VarianceClamping_Clamp3(sqrtVarianceClampMaxValue, &filmDirectDiffuseReflect[index4], sampleResult->directDiffuseReflect.c);
+	else if (film->hasChannelDirectDiffuse)
+		VarianceClamping_Clamp3(sqrtVarianceClampMaxValue, &filmDirectDiffuse[index4], sampleResult->directDiffuseReflect.c);
+
+	if (film->hasChannelDirectDiffuseTransmit)
+		VarianceClamping_Clamp3(sqrtVarianceClampMaxValue, &filmDirectDiffuseTransmit[index4], sampleResult->directDiffuseTransmit.c);
+	else if (film->hasChannelDirectDiffuse)
+		VarianceClamping_Clamp3(sqrtVarianceClampMaxValue, &filmDirectDiffuse[index4], sampleResult->directDiffuseTransmit.c);
+
+	// DIRECT_GLOSSY
+
+	if (film->hasChannelDirectGlossyReflect)
+		VarianceClamping_Clamp3(sqrtVarianceClampMaxValue, &filmDirectGlossyReflect[index4], sampleResult->directGlossyReflect.c);
+	else if (film->hasChannelDirectGlossy)
+		VarianceClamping_Clamp3(sqrtVarianceClampMaxValue, &filmDirectGlossy[index4], sampleResult->directGlossyReflect.c);
+
+	if (film->hasChannelDirectGlossyTransmit)
+		VarianceClamping_Clamp3(sqrtVarianceClampMaxValue, &filmDirectGlossyTransmit[index4], sampleResult->directGlossyTransmit.c);
+	else if (film->hasChannelDirectGlossy)
+		VarianceClamping_Clamp3(sqrtVarianceClampMaxValue, &filmDirectGlossy[index4], sampleResult->directGlossyTransmit.c);
+
+	// EMISSION
 
 	if (film->hasChannelEmission)
 		VarianceClamping_Clamp3(sqrtVarianceClampMaxValue, &filmEmission[index4], sampleResult->emission.c);
 
-	if (film->hasChannelIndirectDiffuse)
-		VarianceClamping_Clamp3(sqrtVarianceClampMaxValue, &filmIndirectDiffuse[index4], sampleResult->indirectDiffuse.c);
+	// INDIRECT_DIFFUSE
 
-	if (film->hasChannelIndirectGlossy)
-		VarianceClamping_Clamp3(sqrtVarianceClampMaxValue, &filmIndirectGlossy[index4], sampleResult->indirectGlossy.c);
+	if (film->hasChannelIndirectDiffuseReflect)
+		VarianceClamping_Clamp3(sqrtVarianceClampMaxValue, &filmIndirectDiffuseReflect[index4], sampleResult->indirectDiffuseReflect.c);
+	else if (film->hasChannelIndirectDiffuse)
+		VarianceClamping_Clamp3(sqrtVarianceClampMaxValue, &filmIndirectDiffuse[index4], sampleResult->indirectDiffuseReflect.c);
 
-	if (film->hasChannelIndirectSpecular)
-		VarianceClamping_Clamp3(sqrtVarianceClampMaxValue, &filmIndirectSpecular[index4], sampleResult->indirectSpecular.c);
+	if (film->hasChannelIndirectDiffuseTransmit)
+		VarianceClamping_Clamp3(sqrtVarianceClampMaxValue, &filmIndirectDiffuseTransmit[index4], sampleResult->indirectDiffuseTransmit.c);
+	else if (film->hasChannelIndirectDiffuse)
+		VarianceClamping_Clamp3(sqrtVarianceClampMaxValue, &filmIndirectDiffuse[index4], sampleResult->indirectDiffuseTransmit.c);
+
+	// INDIRECT_GLOSSY
+
+	if (film->hasChannelIndirectGlossyReflect)
+		VarianceClamping_Clamp3(sqrtVarianceClampMaxValue, &filmIndirectGlossyReflect[index4], sampleResult->indirectGlossyReflect.c);
+	else if (film->hasChannelIndirectGlossy)
+		VarianceClamping_Clamp3(sqrtVarianceClampMaxValue, &filmIndirectGlossy[index4], sampleResult->indirectGlossyReflect.c);
+
+	if (film->hasChannelIndirectGlossyTransmit)
+		VarianceClamping_Clamp3(sqrtVarianceClampMaxValue, &filmIndirectGlossyTransmit[index4], sampleResult->indirectGlossyTransmit.c);
+	else if (film->hasChannelIndirectGlossy)
+		VarianceClamping_Clamp3(sqrtVarianceClampMaxValue, &filmIndirectGlossy[index4], sampleResult->indirectGlossyTransmit.c);
+
+	// INDIRECT_SPECULAR
+
+	if (film->hasChannelIndirectSpecularReflect)
+		VarianceClamping_Clamp3(sqrtVarianceClampMaxValue, &filmIndirectSpecularReflect[index4], sampleResult->indirectSpecularReflect.c);
+	else if (film->hasChannelIndirectSpecular)
+		VarianceClamping_Clamp3(sqrtVarianceClampMaxValue, &filmIndirectSpecular[index4], sampleResult->indirectSpecularReflect.c);
+
+	if (film->hasChannelIndirectSpecularTransmit)
+		VarianceClamping_Clamp3(sqrtVarianceClampMaxValue, &filmIndirectSpecularTransmit[index4], sampleResult->indirectSpecularTransmit.c);
+	else if (film->hasChannelIndirectSpecular)
+		VarianceClamping_Clamp3(sqrtVarianceClampMaxValue, &filmIndirectSpecular[index4], sampleResult->indirectSpecularTransmit.c);
 }

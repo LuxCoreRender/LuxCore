@@ -153,18 +153,55 @@ OPENCL_FORCE_INLINE void Film_AddSampleResultColor(const uint x, const uint y,
 
 	if (film->hasChannelAlpha)
 		Film_AddWeightedPixel2(usePixelAtomics, &filmAlpha[index2], &sampleResult->alpha, weight);
-	if (film->hasChannelDirectDiffuse)
-		Film_AddWeightedPixel4(usePixelAtomics, &filmDirectDiffuse[index4], sampleResult->directDiffuse.c, weight);
-	if (film->hasChannelDirectGlossy)
-		Film_AddWeightedPixel4(usePixelAtomics, &filmDirectGlossy[index4], sampleResult->directGlossy.c, weight);
+
+	if (film->hasChannelDirectDiffuse) {
+		const float3 c = VLOAD3F(sampleResult->directDiffuseReflect.c) + VLOAD3F(sampleResult->directDiffuseTransmit.c);
+		Film_AddWeightedPixel4Val(usePixelAtomics, &filmDirectDiffuse[index4], c, weight);
+	}
+	if (film->hasChannelDirectDiffuseReflect)
+		Film_AddWeightedPixel4(usePixelAtomics, &filmDirectDiffuseReflect[index4], sampleResult->directDiffuseReflect.c, weight);
+	if (film->hasChannelDirectDiffuseTransmit)
+		Film_AddWeightedPixel4(usePixelAtomics, &filmDirectDiffuseTransmit[index4], sampleResult->directDiffuseTransmit.c, weight);
+
+	if (film->hasChannelDirectGlossy) {
+		const float3 c = VLOAD3F(sampleResult->directGlossyReflect.c) + VLOAD3F(sampleResult->directGlossyTransmit.c);
+		Film_AddWeightedPixel4Val(usePixelAtomics, &filmDirectGlossy[index4], c, weight);
+	}
+	if (film->hasChannelDirectGlossyReflect)
+		Film_AddWeightedPixel4(usePixelAtomics, &filmDirectGlossyReflect[index4], sampleResult->directGlossyReflect.c, weight);
+	if (film->hasChannelDirectGlossyTransmit)
+		Film_AddWeightedPixel4(usePixelAtomics, &filmDirectGlossyTransmit[index4], sampleResult->directGlossyTransmit.c, weight);
+
 	if (film->hasChannelEmission)
 		Film_AddWeightedPixel4(usePixelAtomics, &filmEmission[index4], sampleResult->emission.c, weight);
-	if (film->hasChannelIndirectDiffuse)
-		Film_AddWeightedPixel4(usePixelAtomics, &filmIndirectDiffuse[index4], sampleResult->indirectDiffuse.c, weight);
-	if (film->hasChannelIndirectGlossy)
-		Film_AddWeightedPixel4(usePixelAtomics, &filmIndirectGlossy[index4], sampleResult->indirectGlossy.c, weight);
-	if (film->hasChannelIndirectSpecular)
-		Film_AddWeightedPixel4(usePixelAtomics, &filmIndirectSpecular[index4], sampleResult->indirectSpecular.c, weight);
+
+	if (film->hasChannelIndirectDiffuse) {
+		const float3 c = VLOAD3F(sampleResult->indirectDiffuseReflect.c) + VLOAD3F(sampleResult->indirectDiffuseTransmit.c);
+		Film_AddWeightedPixel4Val(usePixelAtomics, &filmIndirectDiffuse[index4], c, weight);
+	}
+	if (film->hasChannelIndirectDiffuseReflect)
+		Film_AddWeightedPixel4(usePixelAtomics, &filmIndirectDiffuseReflect[index4], sampleResult->indirectDiffuseReflect.c, weight);
+	if (film->hasChannelIndirectDiffuseTransmit)
+		Film_AddWeightedPixel4(usePixelAtomics, &filmIndirectDiffuseTransmit[index4], sampleResult->indirectDiffuseTransmit.c, weight);
+
+	if (film->hasChannelIndirectGlossy) {
+		const float3 c = VLOAD3F(sampleResult->indirectGlossyReflect.c) + VLOAD3F(sampleResult->indirectGlossyTransmit.c);
+		Film_AddWeightedPixel4Val(usePixelAtomics, &filmIndirectGlossy[index4], c, weight);
+	}
+	if (film->hasChannelIndirectGlossyReflect)
+		Film_AddWeightedPixel4(usePixelAtomics, &filmIndirectGlossyReflect[index4], sampleResult->indirectGlossyReflect.c, weight);
+	if (film->hasChannelIndirectGlossyTransmit)
+		Film_AddWeightedPixel4(usePixelAtomics, &filmIndirectGlossyTransmit[index4], sampleResult->indirectGlossyTransmit.c, weight);
+
+	if (film->hasChannelIndirectSpecular) {
+		const float3 c = VLOAD3F(sampleResult->indirectSpecularReflect.c) + VLOAD3F(sampleResult->indirectSpecularTransmit.c);
+		Film_AddWeightedPixel4Val(usePixelAtomics, &filmIndirectSpecular[index4], c, weight);
+	}
+	if (film->hasChannelIndirectSpecularReflect)
+		Film_AddWeightedPixel4(usePixelAtomics, &filmIndirectSpecularReflect[index4], sampleResult->indirectSpecularReflect.c, weight);
+	if (film->hasChannelIndirectSpecularTransmit)
+		Film_AddWeightedPixel4(usePixelAtomics, &filmIndirectSpecularTransmit[index4], sampleResult->indirectSpecularTransmit.c, weight);
+
 	if (film->hasChannelMaterialIDMask) {
 		const float materialIDMask = (sampleResult->materialID == film->channelMaterialIDMask) ? 1.f : 0.f;
 		Film_AddWeightedPixel2Val(usePixelAtomics, &filmMaterialIDMask[index2], materialIDMask, weight);
@@ -255,7 +292,13 @@ OPENCL_FORCE_INLINE void Film_AddSampleResultData(const uint x, const uint y,
 		Film_IncPixelUInt(usePixelAtomics, &filmSampleCount[index1]);
 }
 
-OPENCL_FORCE_NOT_INLINE void Film_AddSample(
+// CUDA want to inline this function due to the large number of arguments
+#if defined (LUXRAYS_CUDA_DEVICE)
+OPENCL_FORCE_INLINE
+#else
+OPENCL_FORCE_NOT_INLINE
+#endif
+void Film_AddSample(
 		const uint x, const uint y,
 		__global SampleResult *sampleResult, const float weight
 		FILM_PARAM_DECL) {
@@ -351,11 +394,21 @@ OPENCL_FORCE_NOT_INLINE void Film_AddSample(
 		, __global float *filmShadingNormal \
 		, __global uint *filmMaterialID \
 		, __global float *filmDirectDiffuse \
+		, __global float *filmDirectDiffuseReflect \
+		, __global float *filmDirectDiffuseTransmit \
 		, __global float *filmDirectGlossy \
+		, __global float *filmDirectGlossyReflect \
+		, __global float *filmDirectGlossyTransmit \
 		, __global float *filmEmission \
 		, __global float *filmIndirectDiffuse \
+		, __global float *filmIndirectDiffuseReflect \
+		, __global float *filmIndirectDiffuseTransmit \
 		, __global float *filmIndirectGlossy \
+		, __global float *filmIndirectGlossyReflect \
+		, __global float *filmIndirectGlossyTransmit \
 		, __global float *filmIndirectSpecular \
+		, __global float *filmIndirectSpecularReflect \
+		, __global float *filmIndirectSpecularTransmit \
 		, __global float *filmMaterialIDMask \
 		, __global float *filmDirectShadowMask \
 		, __global float *filmIndirectShadowMask \

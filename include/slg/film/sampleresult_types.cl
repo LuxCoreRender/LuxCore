@@ -39,12 +39,12 @@ typedef struct {
 	unsigned int materialID;
 	// Note: OBJECT_ID_MASK and BY_OBJECT_ID are calculated starting from objectID field
 	unsigned int objectID;
-	Spectrum directDiffuse;
-	Spectrum directGlossy;
+	Spectrum directDiffuse, directDiffuseReflect, directDiffuseTransmit;
+	Spectrum directGlossy, directGlossyReflect, directGlossyTransmit;
 	Spectrum emission;
-	Spectrum indirectDiffuse;
-	Spectrum indirectGlossy;
-	Spectrum indirectSpecular;
+	Spectrum indirectDiffuse, indirectDiffuseReflect, indirectDiffuseTransmit;
+	Spectrum indirectGlossy, indirectGlossyReflect, indirectGlossyTransmit;
+	Spectrum indirectSpecular, indirectSpecularReflect, indirectSpecularTransmit;
 	float directShadowMask;
 	float indirectShadowMask;
 	UV uv;

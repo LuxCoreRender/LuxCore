@@ -82,11 +82,21 @@ void FilmOutputWindow::RefreshTexture() {
 		case Film::OUTPUT_GEOMETRY_NORMAL:
 		case Film::OUTPUT_SHADING_NORMAL:
 		case Film::OUTPUT_DIRECT_DIFFUSE:
+		case Film::OUTPUT_DIRECT_DIFFUSE_REFLECT:
+		case Film::OUTPUT_DIRECT_DIFFUSE_TRANSMIT:
 		case Film::OUTPUT_DIRECT_GLOSSY:
+		case Film::OUTPUT_DIRECT_GLOSSY_REFLECT:
+		case Film::OUTPUT_DIRECT_GLOSSY_TRANSMIT:
 		case Film::OUTPUT_EMISSION:
 		case Film::OUTPUT_INDIRECT_DIFFUSE:
+		case Film::OUTPUT_INDIRECT_DIFFUSE_REFLECT:
+		case Film::OUTPUT_INDIRECT_DIFFUSE_TRANSMIT:
 		case Film::OUTPUT_INDIRECT_GLOSSY:
+		case Film::OUTPUT_INDIRECT_GLOSSY_REFLECT:
+		case Film::OUTPUT_INDIRECT_GLOSSY_TRANSMIT:
 		case Film::OUTPUT_INDIRECT_SPECULAR:
+		case Film::OUTPUT_INDIRECT_SPECULAR_REFLECT:
+		case Film::OUTPUT_INDIRECT_SPECULAR_TRANSMIT:
 		case Film::OUTPUT_RADIANCE_GROUP:
 		case Film::OUTPUT_BY_MATERIAL_ID:
 		case Film::OUTPUT_IRRADIANCE:
@@ -187,41 +197,54 @@ void FilmOutputWindow::RefreshTexture() {
 //------------------------------------------------------------------------------
 
 FilmOutputsWindow::FilmOutputsWindow(LuxCoreApp *a) : ObjectEditorWindow(a, "Film Outputs") {
+	u_int index = 0;
 	typeTable
-		.Add("RGB", 0)
-		.Add("RGBA", 1)
-		.Add("RGB_IMAGEPIPELINE", 2)
-		.Add("RGBA_IMAGEPIPELINE", 3)
-		.Add("ALPHA", 4)
-		.Add("DEPTH", 5)
-		.Add("POSITION", 6)
-		.Add("GEOMETRY_NORMAL", 7)
-		.Add("SHADING_NORMAL", 8)
-		.Add("MATERIAL_ID", 9)
-		.Add("DIRECT_DIFFUSE", 10)
-		.Add("DIRECT_GLOSSY", 11)
-		.Add("EMISSION", 12)
-		.Add("INDIRECT_DIFFUSE", 13)
-		.Add("INDIRECT_GLOSSY", 14)
-		.Add("INDIRECT_SPECULAR", 15)
-		.Add("MATERIAL_ID_MASK", 16)
-		.Add("DIRECT_SHADOW_MASK", 17)
-		.Add("INDIRECT_SHADOW_MASK", 18)
-		.Add("RADIANCE_GROUP", 19)
-		.Add("UV", 20)
-		.Add("RAYCOUNT", 21)
-		.Add("BY_MATERIAL_ID", 22)
-		.Add("IRRADIANCE", 23)
-		.Add("OBJECT_ID", 24)
-		.Add("OBJECT_ID_MASK", 25)
-		.Add("BY_OBJECT_ID", 26)
-		.Add("SAMPLECOUNT", 27)
-		.Add("CONVERGENCE", 28)
-		//OUTPUT_SERIALIZED_FILM = 29
-		.Add("MATERIAL_ID_COLOR", 30)
-		.Add("ALBEDO", 31)
-		.Add("AVG_SHADING_NORMAL", 32)
-		.Add("NOISE", 33)
+		.Add("RGB", index++)
+		.Add("RGBA", index++)
+		.Add("RGB_IMAGEPIPELINE", index++)
+		.Add("RGBA_IMAGEPIPELINE", index++)
+		.Add("ALPHA", index++)
+		.Add("DEPTH", index++)
+		.Add("POSITION", index++)
+		.Add("GEOMETRY_NORMAL", index++)
+		.Add("SHADING_NORMAL", index++)
+		.Add("MATERIAL_ID", index++)
+		.Add("DIRECT_DIFFUSE", index++)
+		.Add("DIRECT_DIFFUSE_REFLECT", index++)
+		.Add("DIRECT_DIFFUSE_TRANSMIT", index++)
+		.Add("DIRECT_GLOSSY", index++)
+		.Add("DIRECT_GLOSSY_REFLECT", index++)
+		.Add("DIRECT_GLOSSY_TRANSMIT", index++)
+		.Add("EMISSION", index++)
+		.Add("INDIRECT_DIFFUSE", index++)
+		.Add("INDIRECT_DIFFUSE_REFLECT", index++)
+		.Add("INDIRECT_DIFFUSE_TRANSMIT", index++)
+		.Add("INDIRECT_GLOSSY", index++)
+		.Add("INDIRECT_GLOSSY_REFLECT", index++)
+		.Add("INDIRECT_GLOSSY_TRANSMIT", index++)
+		.Add("INDIRECT_SPECULAR", index++)
+		.Add("INDIRECT_SPECULAR_REFLECT", index++)
+		.Add("INDIRECT_SPECULAR_TRANSMIT", index++)
+		.Add("MATERIAL_ID_MASK", index++)
+		.Add("DIRECT_SHADOW_MASK", index++)
+		.Add("INDIRECT_SHADOW_MASK", index++)
+		.Add("RADIANCE_GROUP", index++)
+		.Add("UV", index++)
+		.Add("RAYCOUNT", index++)
+		.Add("BY_MATERIAL_ID", index++)
+		.Add("IRRADIANCE", index++)
+		.Add("OBJECT_ID", index++)
+		.Add("OBJECT_ID_MASK", index++)
+		.Add("BY_OBJECT_ID", index++)
+		.Add("SAMPLECOUNT", index++)
+		.Add("CONVERGENCE", index++);
+	//OUTPUT_SERIALIZED_FILM = 29
+	index++;
+	typeTable
+		.Add("MATERIAL_ID_COLOR", index++)
+		.Add("ALBEDO", index++)
+		.Add("AVG_SHADING_NORMAL", index++)
+		.Add("NOISE", index++)
 		.SetDefault("RGB");
 
 	newType = 0;

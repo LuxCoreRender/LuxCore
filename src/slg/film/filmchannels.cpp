@@ -49,11 +49,21 @@ void Film::FreeChannels() {
 	delete channel_SHADING_NORMAL;
 	delete channel_MATERIAL_ID;
 	delete channel_DIRECT_DIFFUSE;
+	delete channel_DIRECT_DIFFUSE_REFLECT;
+	delete channel_DIRECT_DIFFUSE_TRANSMIT;
 	delete channel_DIRECT_GLOSSY;
+	delete channel_DIRECT_GLOSSY_REFLECT;
+	delete channel_DIRECT_GLOSSY_TRANSMIT;
 	delete channel_EMISSION;
 	delete channel_INDIRECT_DIFFUSE;
+	delete channel_INDIRECT_DIFFUSE_REFLECT;
+	delete channel_INDIRECT_DIFFUSE_TRANSMIT;
 	delete channel_INDIRECT_GLOSSY;
+	delete channel_INDIRECT_GLOSSY_REFLECT;
+	delete channel_INDIRECT_GLOSSY_TRANSMIT;
 	delete channel_INDIRECT_SPECULAR;
+	delete channel_INDIRECT_SPECULAR_REFLECT;
+	delete channel_INDIRECT_SPECULAR_TRANSMIT;
 	for (u_int i = 0; i < channel_MATERIAL_ID_MASKs.size(); ++i)
 		delete channel_MATERIAL_ID_MASKs[i];
 	delete channel_DIRECT_SHADOW_MASK;
@@ -141,16 +151,36 @@ u_int Film::GetChannelCount(const FilmChannelType type) const {
 			return channel_MATERIAL_ID ? 1 : 0;
 		case DIRECT_DIFFUSE:
 			return channel_DIRECT_DIFFUSE ? 1 : 0;
+		case DIRECT_DIFFUSE_REFLECT:
+			return channel_DIRECT_DIFFUSE_REFLECT ? 1 : 0;
+		case DIRECT_DIFFUSE_TRANSMIT:
+			return channel_DIRECT_DIFFUSE_TRANSMIT ? 1 : 0;
 		case DIRECT_GLOSSY:
 			return channel_DIRECT_GLOSSY ? 1 : 0;
+		case DIRECT_GLOSSY_REFLECT:
+			return channel_DIRECT_GLOSSY_REFLECT ? 1 : 0;
+		case DIRECT_GLOSSY_TRANSMIT:
+			return channel_DIRECT_GLOSSY_TRANSMIT ? 1 : 0;
 		case EMISSION:
 			return channel_EMISSION ? 1 : 0;
 		case INDIRECT_DIFFUSE:
 			return channel_INDIRECT_DIFFUSE ? 1 : 0;
+		case INDIRECT_DIFFUSE_REFLECT:
+			return channel_INDIRECT_DIFFUSE_REFLECT ? 1 : 0;
+		case INDIRECT_DIFFUSE_TRANSMIT:
+			return channel_INDIRECT_DIFFUSE_TRANSMIT ? 1 : 0;
 		case INDIRECT_GLOSSY:
 			return channel_INDIRECT_GLOSSY ? 1 : 0;
+		case INDIRECT_GLOSSY_REFLECT:
+			return channel_INDIRECT_GLOSSY_REFLECT ? 1 : 0;
+		case INDIRECT_GLOSSY_TRANSMIT:
+			return channel_INDIRECT_GLOSSY_TRANSMIT ? 1 : 0;
 		case INDIRECT_SPECULAR:
 			return channel_INDIRECT_SPECULAR ? 1 : 0;
+		case INDIRECT_SPECULAR_REFLECT:
+			return channel_INDIRECT_SPECULAR_REFLECT ? 1 : 0;
+		case INDIRECT_SPECULAR_TRANSMIT:
+			return channel_INDIRECT_SPECULAR_TRANSMIT ? 1 : 0;
 		case MATERIAL_ID_MASK:
 			return channel_MATERIAL_ID_MASKs.size();
 		case DIRECT_SHADOW_MASK:
@@ -220,16 +250,36 @@ template<> float *Film::GetChannel<float>(const FilmChannelType type,
 			return channel_SHADING_NORMAL->GetPixels();
 		case DIRECT_DIFFUSE:
 			return channel_DIRECT_DIFFUSE->GetPixels();
+		case DIRECT_DIFFUSE_REFLECT:
+			return channel_DIRECT_DIFFUSE_REFLECT->GetPixels();
+		case DIRECT_DIFFUSE_TRANSMIT:
+			return channel_DIRECT_DIFFUSE_TRANSMIT->GetPixels();
 		case DIRECT_GLOSSY:
 			return channel_DIRECT_GLOSSY->GetPixels();
+		case DIRECT_GLOSSY_REFLECT:
+			return channel_DIRECT_GLOSSY_REFLECT->GetPixels();
+		case DIRECT_GLOSSY_TRANSMIT:
+			return channel_DIRECT_GLOSSY_TRANSMIT->GetPixels();
 		case EMISSION:
 			return channel_EMISSION->GetPixels();
 		case INDIRECT_DIFFUSE:
 			return channel_INDIRECT_DIFFUSE->GetPixels();
+		case INDIRECT_DIFFUSE_REFLECT:
+			return channel_INDIRECT_DIFFUSE_REFLECT->GetPixels();
+		case INDIRECT_DIFFUSE_TRANSMIT:
+			return channel_INDIRECT_DIFFUSE_TRANSMIT->GetPixels();
 		case INDIRECT_GLOSSY:
 			return channel_INDIRECT_GLOSSY->GetPixels();
+		case INDIRECT_GLOSSY_REFLECT:
+			return channel_INDIRECT_GLOSSY_REFLECT->GetPixels();
+		case INDIRECT_GLOSSY_TRANSMIT:
+			return channel_INDIRECT_GLOSSY_TRANSMIT->GetPixels();
 		case INDIRECT_SPECULAR:
 			return channel_INDIRECT_SPECULAR->GetPixels();
+		case INDIRECT_SPECULAR_REFLECT:
+			return channel_INDIRECT_SPECULAR_REFLECT->GetPixels();
+		case INDIRECT_SPECULAR_TRANSMIT:
+			return channel_INDIRECT_SPECULAR_TRANSMIT->GetPixels();
 		case MATERIAL_ID_MASK:
 			return channel_MATERIAL_ID_MASKs[index]->GetPixels();
 		case DIRECT_SHADOW_MASK:
@@ -440,18 +490,36 @@ Film::FilmChannelType Film::String2FilmChannelType(const std::string &type) {
 		return MATERIAL_ID;
 	else if (type == "DIRECT_DIFFUSE")
 		return DIRECT_DIFFUSE;
+	else if (type == "DIRECT_DIFFUSE_REFLECT")
+		return DIRECT_DIFFUSE_REFLECT;
+	else if (type == "DIRECT_DIFFUSE_TRANSMIT")
+		return DIRECT_DIFFUSE_TRANSMIT;
 	else if (type == "DIRECT_GLOSSY")
 		return DIRECT_GLOSSY;
+	else if (type == "DIRECT_GLOSSY_REFLECT")
+		return DIRECT_GLOSSY_REFLECT;
+	else if (type == "DIRECT_GLOSSY_TRANSMIT")
+		return DIRECT_GLOSSY_TRANSMIT;
 	else if (type == "EMISSION")
 		return EMISSION;
 	else if (type == "INDIRECT_DIFFUSE")
 		return INDIRECT_DIFFUSE;
+	else if (type == "INDIRECT_DIFFUSE_REFLECT")
+		return INDIRECT_DIFFUSE_REFLECT;
+	else if (type == "INDIRECT_DIFFUSE_TRANSMIT")
+		return INDIRECT_DIFFUSE_TRANSMIT;
 	else if (type == "INDIRECT_GLOSSY")
 		return INDIRECT_GLOSSY;
+	else if (type == "INDIRECT_GLOSSY_REFLECT")
+		return INDIRECT_GLOSSY_REFLECT;
+	else if (type == "INDIRECT_GLOSSY_TRANSMIT")
+		return INDIRECT_GLOSSY_TRANSMIT;
 	else if (type == "INDIRECT_SPECULAR")
 		return INDIRECT_SPECULAR;
-	else if (type == "INDIRECT_SPECULAR")
-		return INDIRECT_SPECULAR;
+	else if (type == "INDIRECT_SPECULAR_REFLECT")
+		return INDIRECT_SPECULAR_REFLECT;
+	else if (type == "INDIRECT_SPECULAR_TRANSMIT")
+		return INDIRECT_SPECULAR_TRANSMIT;
 	else if (type == "MATERIAL_ID_MASK")
 		return MATERIAL_ID_MASK;
 	else if (type == "DIRECT_SHADOW_MASK")
@@ -510,16 +578,36 @@ const std::string Film::FilmChannelType2String(const Film::FilmChannelType type)
 			return "MATERIAL_ID";
 		case Film::DIRECT_DIFFUSE:
 			return "DIRECT_DIFFUSE";
+		case Film::DIRECT_DIFFUSE_REFLECT:
+			return "DIRECT_DIFFUSE_REFLECT";
+		case Film::DIRECT_DIFFUSE_TRANSMIT:
+			return "DIRECT_DIFFUSE_TRANSMIT";
 		case Film::DIRECT_GLOSSY:
 			return "DIRECT_GLOSSY";
+		case Film::DIRECT_GLOSSY_REFLECT:
+			return "DIRECT_GLOSSY_REFLECT";
+		case Film::DIRECT_GLOSSY_TRANSMIT:
+			return "DIRECT_GLOSSY_TRANSMIT";
 		case Film::EMISSION:
 			return "EMISSION";
 		case Film::INDIRECT_DIFFUSE:
 			return "INDIRECT_DIFFUSE";
+		case Film::INDIRECT_DIFFUSE_REFLECT:
+			return "INDIRECT_DIFFUSE_REFLECT";
+		case Film::INDIRECT_DIFFUSE_TRANSMIT:
+			return "INDIRECT_DIFFUSE_TRANSMIT";
 		case Film::INDIRECT_GLOSSY:
 			return "INDIRECT_GLOSSY";
+		case Film::INDIRECT_GLOSSY_REFLECT:
+			return "INDIRECT_GLOSSY_REFLECT";
+		case Film::INDIRECT_GLOSSY_TRANSMIT:
+			return "INDIRECT_GLOSSY_TRANSMIT";
 		case Film::INDIRECT_SPECULAR:
 			return "INDIRECT_SPECULAR";
+		case Film::INDIRECT_SPECULAR_REFLECT:
+			return "INDIRECT_SPECULAR_REFLECT";
+		case Film::INDIRECT_SPECULAR_TRANSMIT:
+			return "INDIRECT_SPECULAR_TRANSMIT";
 		case Film::MATERIAL_ID_MASK:
 			return "MATERIAL_ID_MASK";
 		case Film::DIRECT_SHADOW_MASK:

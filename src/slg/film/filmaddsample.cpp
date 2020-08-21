@@ -69,28 +69,58 @@ void Film::AddSampleResultColor(const u_int x, const u_int y,
 
 	if (hasComposingChannel) {
 		// Faster than HasChannel(DIRECT_DIFFUSE)
-		if (channel_DIRECT_DIFFUSE && sampleResult.HasChannel(DIRECT_DIFFUSE))
-			channel_DIRECT_DIFFUSE->AddWeightedPixel(x, y, sampleResult.directDiffuse.c, weight);
+		if (channel_DIRECT_DIFFUSE && sampleResult.HasChannel(DIRECT_DIFFUSE)) {
+			const Spectrum c = sampleResult.directDiffuseReflect + sampleResult.directDiffuseTransmit;
+			channel_DIRECT_DIFFUSE->AddWeightedPixel(x, y, c.c, weight);
+		}
+		if (channel_DIRECT_DIFFUSE_REFLECT && sampleResult.HasChannel(DIRECT_DIFFUSE_REFLECT))
+			channel_DIRECT_DIFFUSE_REFLECT->AddWeightedPixel(x, y, sampleResult.directDiffuseReflect.c, weight);
+		if (channel_DIRECT_DIFFUSE_TRANSMIT && sampleResult.HasChannel(DIRECT_DIFFUSE_TRANSMIT))
+			channel_DIRECT_DIFFUSE_TRANSMIT->AddWeightedPixel(x, y, sampleResult.directDiffuseTransmit.c, weight);
 
 		// Faster than HasChannel(DIRECT_GLOSSY)
-		if (channel_DIRECT_GLOSSY && sampleResult.HasChannel(DIRECT_GLOSSY))
-			channel_DIRECT_GLOSSY->AddWeightedPixel(x, y, sampleResult.directGlossy.c, weight);
+		if (channel_DIRECT_GLOSSY && sampleResult.HasChannel(DIRECT_GLOSSY)) {
+			const Spectrum c = sampleResult.directGlossyReflect + sampleResult.directGlossyTransmit;
+			channel_DIRECT_GLOSSY->AddWeightedPixel(x, y, c.c, weight);
+		}
+		if (channel_DIRECT_GLOSSY_REFLECT && sampleResult.HasChannel(DIRECT_GLOSSY_REFLECT))
+			channel_DIRECT_GLOSSY_REFLECT->AddWeightedPixel(x, y, sampleResult.directGlossyReflect.c, weight);
+		if (channel_DIRECT_GLOSSY_TRANSMIT && sampleResult.HasChannel(DIRECT_GLOSSY_TRANSMIT))
+			channel_DIRECT_GLOSSY_TRANSMIT->AddWeightedPixel(x, y, sampleResult.directGlossyTransmit.c, weight);
 
 		// Faster than HasChannel(EMISSION)
 		if (channel_EMISSION && sampleResult.HasChannel(EMISSION))
 			channel_EMISSION->AddWeightedPixel(x, y, sampleResult.emission.c, weight);
 
 		// Faster than HasChannel(INDIRECT_DIFFUSE)
-		if (channel_INDIRECT_DIFFUSE && sampleResult.HasChannel(INDIRECT_DIFFUSE))
-			channel_INDIRECT_DIFFUSE->AddWeightedPixel(x, y, sampleResult.indirectDiffuse.c, weight);
+		if (channel_INDIRECT_DIFFUSE && sampleResult.HasChannel(INDIRECT_DIFFUSE)) {
+			const Spectrum c = sampleResult.indirectDiffuseReflect + sampleResult.indirectDiffuseTransmit;
+			channel_INDIRECT_DIFFUSE->AddWeightedPixel(x, y, c.c, weight);
+		}
+		if (channel_INDIRECT_DIFFUSE_REFLECT && sampleResult.HasChannel(INDIRECT_DIFFUSE_REFLECT))
+			channel_INDIRECT_DIFFUSE_REFLECT->AddWeightedPixel(x, y, sampleResult.indirectDiffuseReflect.c, weight);
+		if (channel_INDIRECT_DIFFUSE_TRANSMIT && sampleResult.HasChannel(INDIRECT_DIFFUSE_TRANSMIT))
+			channel_INDIRECT_DIFFUSE_TRANSMIT->AddWeightedPixel(x, y, sampleResult.indirectDiffuseTransmit.c, weight);
 
 		// Faster than HasChannel(INDIRECT_GLOSSY)
-		if (channel_INDIRECT_GLOSSY && sampleResult.HasChannel(INDIRECT_GLOSSY))
-			channel_INDIRECT_GLOSSY->AddWeightedPixel(x, y, sampleResult.indirectGlossy.c, weight);
+		if (channel_INDIRECT_GLOSSY && sampleResult.HasChannel(INDIRECT_GLOSSY)) {
+			const Spectrum c = sampleResult.indirectGlossyReflect + sampleResult.indirectGlossyTransmit;
+			channel_INDIRECT_GLOSSY->AddWeightedPixel(x, y, c.c, weight);
+		}
+		if (channel_INDIRECT_GLOSSY_REFLECT && sampleResult.HasChannel(INDIRECT_GLOSSY_REFLECT))
+			channel_INDIRECT_GLOSSY_REFLECT->AddWeightedPixel(x, y, sampleResult.indirectGlossyReflect.c, weight);
+		if (channel_INDIRECT_GLOSSY_TRANSMIT && sampleResult.HasChannel(INDIRECT_GLOSSY_TRANSMIT))
+			channel_INDIRECT_GLOSSY_TRANSMIT->AddWeightedPixel(x, y, sampleResult.indirectGlossyTransmit.c, weight);
 
 		// Faster than HasChannel(INDIRECT_SPECULAR)
-		if (channel_INDIRECT_SPECULAR && sampleResult.HasChannel(INDIRECT_SPECULAR))
-			channel_INDIRECT_SPECULAR->AddWeightedPixel(x, y, sampleResult.indirectSpecular.c, weight);
+		if (channel_INDIRECT_SPECULAR && sampleResult.HasChannel(INDIRECT_SPECULAR)) {
+			const Spectrum c = sampleResult.indirectSpecularReflect + sampleResult.indirectSpecularTransmit;
+			channel_INDIRECT_SPECULAR->AddWeightedPixel(x, y, c.c, weight);
+		}
+		if (channel_INDIRECT_SPECULAR_REFLECT && sampleResult.HasChannel(INDIRECT_SPECULAR_REFLECT))
+			channel_INDIRECT_SPECULAR_REFLECT->AddWeightedPixel(x, y, sampleResult.indirectSpecularReflect.c, weight);
+		if (channel_INDIRECT_SPECULAR_TRANSMIT && sampleResult.HasChannel(INDIRECT_SPECULAR_TRANSMIT))
+			channel_INDIRECT_SPECULAR_TRANSMIT->AddWeightedPixel(x, y, sampleResult.indirectSpecularTransmit.c, weight);
 
 		// This is MATERIAL_ID_MASK and BY_MATERIAL_ID
 		if (sampleResult.HasChannel(MATERIAL_ID)) {
@@ -272,28 +302,58 @@ void Film::AtomicAddSampleResultColor(const u_int x, const u_int y,
 
 	if (hasComposingChannel) {
 		// Faster than HasChannel(DIRECT_DIFFUSE)
-		if (channel_DIRECT_DIFFUSE && sampleResult.HasChannel(DIRECT_DIFFUSE))
-			channel_DIRECT_DIFFUSE->AtomicAddWeightedPixel(x, y, sampleResult.directDiffuse.c, weight);
+		if (channel_DIRECT_DIFFUSE && sampleResult.HasChannel(DIRECT_DIFFUSE)) {
+			const Spectrum c = sampleResult.directDiffuseReflect + sampleResult.directDiffuseTransmit;
+			channel_DIRECT_DIFFUSE->AtomicAddWeightedPixel(x, y, c.c, weight);
+		}
+		if (channel_DIRECT_DIFFUSE_REFLECT && sampleResult.HasChannel(DIRECT_DIFFUSE_REFLECT))
+			channel_DIRECT_DIFFUSE_REFLECT->AtomicAddWeightedPixel(x, y, sampleResult.directDiffuseReflect.c, weight);
+		if (channel_DIRECT_DIFFUSE_TRANSMIT && sampleResult.HasChannel(DIRECT_DIFFUSE_TRANSMIT))
+			channel_DIRECT_DIFFUSE_TRANSMIT->AtomicAddWeightedPixel(x, y, sampleResult.directDiffuseTransmit.c, weight);
 
 		// Faster than HasChannel(DIRECT_GLOSSY)
-		if (channel_DIRECT_GLOSSY && sampleResult.HasChannel(DIRECT_GLOSSY))
-			channel_DIRECT_GLOSSY->AtomicAddWeightedPixel(x, y, sampleResult.directGlossy.c, weight);
+		if (channel_DIRECT_GLOSSY && sampleResult.HasChannel(DIRECT_GLOSSY)) {
+			const Spectrum c = sampleResult.directGlossyReflect + sampleResult.directGlossyTransmit;
+			channel_DIRECT_GLOSSY->AtomicAddWeightedPixel(x, y, c.c, weight);
+		}
+		if (channel_DIRECT_GLOSSY_REFLECT && sampleResult.HasChannel(DIRECT_GLOSSY_REFLECT))
+			channel_DIRECT_GLOSSY_REFLECT->AtomicAddWeightedPixel(x, y, sampleResult.directGlossyReflect.c, weight);
+		if (channel_DIRECT_GLOSSY_TRANSMIT && sampleResult.HasChannel(DIRECT_GLOSSY_TRANSMIT))
+			channel_DIRECT_GLOSSY_TRANSMIT->AtomicAddWeightedPixel(x, y, sampleResult.directGlossyTransmit.c, weight);
 
 		// Faster than HasChannel(EMISSION)
 		if (channel_EMISSION && sampleResult.HasChannel(EMISSION))
 			channel_EMISSION->AtomicAddWeightedPixel(x, y, sampleResult.emission.c, weight);
 
 		// Faster than HasChannel(INDIRECT_DIFFUSE)
-		if (channel_INDIRECT_DIFFUSE && sampleResult.HasChannel(INDIRECT_DIFFUSE))
-			channel_INDIRECT_DIFFUSE->AtomicAddWeightedPixel(x, y, sampleResult.indirectDiffuse.c, weight);
+		if (channel_INDIRECT_DIFFUSE && sampleResult.HasChannel(INDIRECT_DIFFUSE)) {
+			const Spectrum c = sampleResult.indirectDiffuseReflect + sampleResult.indirectDiffuseTransmit;
+			channel_INDIRECT_DIFFUSE->AtomicAddWeightedPixel(x, y, c.c, weight);
+		}
+		if (channel_INDIRECT_DIFFUSE_REFLECT && sampleResult.HasChannel(INDIRECT_DIFFUSE_REFLECT))
+			channel_INDIRECT_DIFFUSE_REFLECT->AtomicAddWeightedPixel(x, y, sampleResult.indirectDiffuseReflect.c, weight);
+		if (channel_INDIRECT_DIFFUSE_TRANSMIT && sampleResult.HasChannel(INDIRECT_DIFFUSE_TRANSMIT))
+			channel_INDIRECT_DIFFUSE_TRANSMIT->AtomicAddWeightedPixel(x, y, sampleResult.indirectDiffuseTransmit.c, weight);
 
 		// Faster than HasChannel(INDIRECT_GLOSSY)
-		if (channel_INDIRECT_GLOSSY && sampleResult.HasChannel(INDIRECT_GLOSSY))
-			channel_INDIRECT_GLOSSY->AtomicAddWeightedPixel(x, y, sampleResult.indirectGlossy.c, weight);
+		if (channel_INDIRECT_GLOSSY && sampleResult.HasChannel(INDIRECT_GLOSSY)) {
+			const Spectrum c = sampleResult.indirectGlossyReflect + sampleResult.indirectGlossyTransmit;
+			channel_INDIRECT_GLOSSY->AtomicAddWeightedPixel(x, y, c.c, weight);
+		}
+		if (channel_INDIRECT_GLOSSY_REFLECT && sampleResult.HasChannel(INDIRECT_GLOSSY_REFLECT))
+			channel_INDIRECT_GLOSSY_REFLECT->AtomicAddWeightedPixel(x, y, sampleResult.indirectGlossyReflect.c, weight);
+		if (channel_INDIRECT_GLOSSY_TRANSMIT && sampleResult.HasChannel(INDIRECT_GLOSSY_TRANSMIT))
+			channel_INDIRECT_GLOSSY_TRANSMIT->AtomicAddWeightedPixel(x, y, sampleResult.indirectGlossyTransmit.c, weight);
 
 		// Faster than HasChannel(INDIRECT_SPECULAR)
-		if (channel_INDIRECT_SPECULAR && sampleResult.HasChannel(INDIRECT_SPECULAR))
-			channel_INDIRECT_SPECULAR->AtomicAddWeightedPixel(x, y, sampleResult.indirectSpecular.c, weight);
+		if (channel_INDIRECT_SPECULAR && sampleResult.HasChannel(INDIRECT_SPECULAR)) {
+			const Spectrum c = sampleResult.indirectSpecularReflect + sampleResult.indirectSpecularTransmit;
+			channel_INDIRECT_SPECULAR->AtomicAddWeightedPixel(x, y, c.c, weight);
+		}
+		if (channel_INDIRECT_SPECULAR_REFLECT && sampleResult.HasChannel(INDIRECT_SPECULAR_REFLECT))
+			channel_INDIRECT_SPECULAR_REFLECT->AtomicAddWeightedPixel(x, y, sampleResult.indirectSpecularReflect.c, weight);
+		if (channel_INDIRECT_SPECULAR_TRANSMIT && sampleResult.HasChannel(INDIRECT_SPECULAR_TRANSMIT))
+			channel_INDIRECT_SPECULAR_TRANSMIT->AtomicAddWeightedPixel(x, y, sampleResult.indirectSpecularTransmit.c, weight);
 
 		// This is MATERIAL_ID_MASK and BY_MATERIAL_ID
 		if (sampleResult.HasChannel(MATERIAL_ID)) {
