@@ -447,9 +447,19 @@ void Film::Resize(const u_int w, const u_int h) {
 		channel_INDIRECT_DIFFUSE_REFLECT->Clear();
 		hasComposingChannel = true;
 	}
-	if (HasChannel(INDIRECT_DIFFUSE)) {
-		channel_INDIRECT_DIFFUSE = new GenericFrameBuffer<4, 1, float>(width, height);
-		channel_INDIRECT_DIFFUSE->Clear();
+	if (HasChannel(INDIRECT_DIFFUSE_TRANSMIT)) {
+		channel_INDIRECT_DIFFUSE_TRANSMIT = new GenericFrameBuffer<4, 1, float>(width, height);
+		channel_INDIRECT_DIFFUSE_TRANSMIT->Clear();
+		hasComposingChannel = true;
+	}
+	if (HasChannel(INDIRECT_GLOSSY)) {
+		channel_INDIRECT_GLOSSY = new GenericFrameBuffer<4, 1, float>(width, height);
+		channel_INDIRECT_GLOSSY->Clear();
+		hasComposingChannel = true;
+	}
+	if (HasChannel(INDIRECT_GLOSSY_REFLECT)) {
+		channel_INDIRECT_GLOSSY_REFLECT = new GenericFrameBuffer<4, 1, float>(width, height);
+		channel_INDIRECT_GLOSSY_REFLECT->Clear();
 		hasComposingChannel = true;
 	}
 	if (HasChannel(INDIRECT_GLOSSY_TRANSMIT)) {

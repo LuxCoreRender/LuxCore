@@ -22,7 +22,7 @@
 // Texture_GetFloatValue()
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_NOT_INLINE float Texture_GetFloatValue(const uint texIndex,
+OPENCL_FORCE_NOT_INLINE float Texture_GetFloatValueSlowPath(const uint texIndex,
 		__global const HitPoint *hitPoint
 		TEXTURES_PARAM_DECL) {
 #if defined(DEBUG_PRINTF_TEXTURE_EVAL)
@@ -67,11 +67,33 @@ OPENCL_FORCE_NOT_INLINE float Texture_GetFloatValue(const uint texIndex,
 	return result;
 }
 
+OPENCL_FORCE_INLINE float Texture_GetFloatValue(const uint texIndex,
+		__global const HitPoint *hitPoint
+		TEXTURES_PARAM_DECL) {
+	__global const Texture* restrict tex = &texs[texIndex];
+	switch (tex->type) {
+		//----------------------------------------------------------------------
+		// Fast paths
+		//----------------------------------------------------------------------
+		case CONST_FLOAT:
+			return ConstFloatTexture_ConstEvaluateFloat(tex);
+		case CONST_FLOAT3:
+			return ConstFloat3Texture_ConstEvaluateFloat(tex);
+		case IMAGEMAP:
+			return ImageMapTexture_ConstEvaluateFloat(tex, hitPoint TEXTURES_PARAM);
+		//----------------------------------------------------------------------
+		// Fall back to the slow path
+		//----------------------------------------------------------------------
+		default:
+			return Texture_GetFloatValueSlowPath(texIndex, hitPoint TEXTURES_PARAM);
+	}
+}
+
 //------------------------------------------------------------------------------
 // Texture_GetSpectrumValue()
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_NOT_INLINE float3 Texture_GetSpectrumValue(const uint texIndex,
+OPENCL_FORCE_NOT_INLINE float3 Texture_GetSpectrumValueSlowPath(const uint texIndex,
 		__global const HitPoint *hitPoint
 		TEXTURES_PARAM_DECL) {
 #if defined(DEBUG_PRINTF_TEXTURE_EVAL)
@@ -115,6 +137,28 @@ OPENCL_FORCE_NOT_INLINE float3 Texture_GetSpectrumValue(const uint texIndex,
 #endif
 
 	return result;
+}
+
+OPENCL_FORCE_INLINE float3 Texture_GetSpectrumValue(const uint texIndex,
+		__global const HitPoint *hitPoint
+		TEXTURES_PARAM_DECL) {
+	__global const Texture* restrict tex = &texs[texIndex];
+	switch (tex->type) {
+		//----------------------------------------------------------------------
+		// Fast paths
+		//----------------------------------------------------------------------
+		case CONST_FLOAT:
+			return ConstFloatTexture_ConstEvaluateSpectrum(tex);
+		case CONST_FLOAT3:
+			return ConstFloat3Texture_ConstEvaluateSpectrum(tex);
+		case IMAGEMAP:
+			return ImageMapTexture_ConstEvaluateSpectrum(tex, hitPoint TEXTURES_PARAM);
+		//----------------------------------------------------------------------
+		// Fall back to the slow path
+		//----------------------------------------------------------------------
+		default:
+			return Texture_GetSpectrumValueSlowPath(texIndex, hitPoint TEXTURES_PARAM);
+	}
 }
 
 //------------------------------------------------------------------------------
