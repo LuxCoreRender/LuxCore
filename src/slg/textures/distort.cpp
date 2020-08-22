@@ -27,8 +27,6 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 HitPoint DistortTexture::GetTmpHitPoint(const HitPoint &hitPoint) const {
-	// TODO strength parameter?
-	
 	const Spectrum offsetColor = offset->GetSpectrumValue(hitPoint);
 	const Vector offset = Vector(offsetColor.c[0], offsetColor.c[1], offsetColor.c[2]) * strength;
 	

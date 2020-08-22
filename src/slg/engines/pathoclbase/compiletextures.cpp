@@ -39,6 +39,7 @@
 #include "slg/textures/constfloat3.h"
 #include "slg/textures/cloud.h"
 #include "slg/textures/densitygrid.h"
+#include "slg/textures/distort.h"
 #include "slg/textures/dots.h"
 #include "slg/textures/fbm.h"
 #include "slg/textures/fresnelapprox.h"
@@ -73,14 +74,14 @@
 #include "slg/textures/math/subtract.h"
 #include "slg/textures/normalmap.h"
 #include "slg/textures/object_id.h"
-#include "slg/textures/windy.h"
-#include "slg/textures/wireframe.h"
-#include "slg/textures/wrinkled.h"
+#include "slg/textures/triplanar.h"
 #include "slg/textures/uv.h"
 #include "slg/textures/vectormath/dotproduct.h"
 #include "slg/textures/vectormath/makefloat3.h"
 #include "slg/textures/vectormath/splitfloat3.h"
-#include "slg/textures/triplanar.h"
+#include "slg/textures/windy.h"
+#include "slg/textures/wireframe.h"
+#include "slg/textures/wrinkled.h"
 
 using namespace std;
 using namespace luxrays;
@@ -2071,6 +2072,18 @@ void CompiledScene::CompileTextures() {
 
 				const Texture *insideTex = wft->GetInsideTex();
 				tex->wireFrameTex.insideTexIndex = scene->texDefs.GetTextureIndex(insideTex);
+				break;
+			}
+			case DISTORT_TEX: {
+				const DistortTexture *dt = static_cast<const DistortTexture *>(t);
+
+				tex->type = slg::ocl::DISTORT_TEX;
+				tex->distortTex.strength = dt->GetStrength();
+				const Texture *texture = dt->GetTex();
+				tex->distortTex.texIndex = scene->texDefs.GetTextureIndex(texture);
+
+				const Texture *offsetTex = dt->GetOffset();
+				tex->distortTex.offsetTexIndex = scene->texDefs.GetTextureIndex(offsetTex);
 				break;
 			}
 			default:

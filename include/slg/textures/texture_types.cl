@@ -58,7 +58,7 @@ typedef enum {
 	OBJECTID_TEX, OBJECTID_COLOR_TEX, OBJECTID_NORMALIZED_TEX, DOT_PRODUCT_TEX,
 	POWER_TEX, LESS_THAN_TEX, GREATER_THAN_TEX, ROUNDING_TEX, MODULO_TEX, SHADING_NORMAL_TEX,
     POSITION_TEX, SPLIT_FLOAT3, MAKE_FLOAT3, BRIGHT_CONTRAST_TEX, HITPOINTVERTEXAOV,
-	HITPOINTTRIANGLEAOV, TRIPLANAR_TEX, RANDOM_TEX, // 41 textures
+	HITPOINTTRIANGLEAOV, TRIPLANAR_TEX, RANDOM_TEX, DISTORT_TEX, // 42 textures
 	// Procedural textures
 	BLENDER_BLEND, BLENDER_CLOUDS, BLENDER_DISTORTED_NOISE, BLENDER_MAGIC, BLENDER_MARBLE,
 	BLENDER_MUSGRAVE, BLENDER_NOISE, BLENDER_STUCCI, BLENDER_WOOD,  BLENDER_VORONOI,
@@ -464,6 +464,11 @@ typedef struct {
 } WireFrameTexParam;
 
 typedef struct {
+	float strength;
+	unsigned int texIndex, offsetTexIndex;
+} DistortTexParam;
+
+typedef struct {
 	TextureType type;
 
 	unsigned int evalFloatOpStartIndex, evalFloatOpLength;
@@ -531,6 +536,7 @@ typedef struct {
 		TriplanarTexParam triplanarTex;
 		RandomTexParam randomTex;
 		WireFrameTexParam wireFrameTex;
+		DistortTexParam distortTex;
 	};
 } Texture;
 

@@ -63,6 +63,7 @@ public:
 
 	const Texture *GetTex() const { return tex; }
 	const Texture *GetOffset() const { return offset; }
+	const float GetStrength() const { return strength; }
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
