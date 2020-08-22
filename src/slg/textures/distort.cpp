@@ -26,23 +26,25 @@ using namespace slg;
 // Distort texture
 //------------------------------------------------------------------------------
 
-HitPoint DistortTexture::GetTmpHitPoint(const HitPoint &hitPoint) const {
+void DistortTexture::GetTmpHitPoint(const HitPoint &hitPoint, HitPoint &tmpHitPoint) const {
 	const Spectrum offsetColor = offset->GetSpectrumValue(hitPoint);
 	const Vector offset = Vector(offsetColor.c[0], offsetColor.c[1], offsetColor.c[2]) * strength;
 	
-	HitPoint hitPointTmp = hitPoint;
-	hitPointTmp.p += offset;
-	hitPointTmp.defaultUV.u += offset.x;
-	hitPointTmp.defaultUV.v += offset.y;
-	return hitPointTmp;
-}
-
-float DistortTexture::GetFloatValue(const HitPoint &hitPoint) const {
-	return tex->GetFloatValue(GetTmpHitPoint(hitPoint));
+	tmpHitPoint = hitPoint;
+	tmpHitPoint.p += offset;
+	tmpHitPoint.defaultUV.u += offset.x;
+	tmpHitPoint.defaultUV.v += offset.y;
 }
 
 Spectrum DistortTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
-	return tex->GetSpectrumValue(GetTmpHitPoint(hitPoint));
+	HitPoint tmpHitPoint;
+	GetTmpHitPoint(hitPoint, tmpHitPoint);
+	
+	return tex->GetSpectrumValue(tmpHitPoint);
+}
+
+float DistortTexture::GetFloatValue(const HitPoint &hitPoint) const {
+	return GetSpectrumValue(hitPoint).Y();
 }
 
 Properties DistortTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {

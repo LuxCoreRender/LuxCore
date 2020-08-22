@@ -22,6 +22,7 @@
 * Removed the limit of max. 32 AOV types
 * Added the support for new AOVs (issue #429): DIRECT_DIFFUSE_REFLECT, DIRECT_DIFFUSE_TRANSMIT, DIRECT_GLOSSY_REFLECT, DIRECT_GLOSSY_TRANSMIT, INDIRECT_DIFFUSE_REFLECT, INDIRECT_DIFFUSE_TRANSMIT, INDIRECT_GLOSSY_REFLECT, INDIRECT_GLOSSY_TRANSMIT, INDIRECT_SPECULAR_REFLECT and INDIRECT_SPECULAR_TRANSMIT
 * Added a fast evaluation path in GPU code for constant and image map textures
+* Added the support for Distort texture
 
 ### Fixed Bugs
 

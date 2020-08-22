@@ -1817,6 +1817,13 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 					hitPoint, sampleDistance TEXTURES_PARAM);
 			break;
 		//----------------------------------------------------------------------
+		// DISTORT_TEX
+		//----------------------------------------------------------------------
+		case DISTORT_TEX:
+			DistortTexture_EvalOp(texture, evalType, evalStack, evalStackOffset,
+					hitPoint, sampleDistance TEXTURES_PARAM);
+			break;
+		//----------------------------------------------------------------------
 		// FRESNELCOLOR_TEX
 		//----------------------------------------------------------------------
 		case FRESNELCOLOR_TEX: {

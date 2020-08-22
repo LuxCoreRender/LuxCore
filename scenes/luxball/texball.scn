@@ -20,9 +20,17 @@ scene.textures.hsv.texture = tex
 scene.textures.hsv.hue = 0.5
 scene.textures.hsv.saturation = 1.5
 scene.textures.hsv.value = 1.5
+##
+scene.textures.windytex.type = windy
+scene.textures.windytex.mapping.type = globalmapping3d
+scene.textures.windytex.mapping.transformation = 100.0 0.0 0.0 0.0  0.0 100.0 0.01 0.0  0.0 0.0 100.0 0.0  0.0 0.0 0.0 1.0
+scene.textures.distorttex.type = distort
+scene.textures.distorttex.texture = hsv
+scene.textures.distorttex.offset = windytex
+scene.textures.distorttex.strength = .02
 ################################################################################
 scene.materials.shell.type = matte
-scene.materials.shell.kd = hsv
+scene.materials.shell.kd = distorttex
 scene.materials.whitematte.type = matte
 scene.materials.whitematte.kd = 0.75 0.75 0.75
 scene.materials.luxtext.type = matte

@@ -308,18 +308,19 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_funcs_evalops.cl
+	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_bilerp_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_blackbody_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_blender_noise_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_blender_noise_funcs2.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_blender_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_bump_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_noise_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_bilerp_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_blackbody_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_brick_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_bump_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_colordepth_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_densitygrid_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_distort_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_hsv_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_irregulardata_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_noise_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_others_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_triplanar_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/fresnel/texture_fresnelcolor_funcs.cl
@@ -569,8 +570,8 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/textures/object_id.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/texture.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/texturedefs.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/textures/uv.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/triplanar.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/uv.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/vectormath/dotproduct.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/vectormath/makefloat3.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/vectormath/splitfloat3.cpp
@@ -689,6 +690,7 @@ set(SLG_KERNEL_SRCS
 	${generated_kernels_dir}/texture_clamp_funcs_kernel.cpp
 	${generated_kernels_dir}/texture_colordepth_funcs_kernel.cpp
 	${generated_kernels_dir}/texture_densitygrid_funcs_kernel.cpp
+	${generated_kernels_dir}/texture_distort_funcs_kernel.cpp
 	${generated_kernels_dir}/texture_fresnelcolor_funcs_kernel.cpp
 	${generated_kernels_dir}/texture_fresnelconst_funcs_kernel.cpp
 	${generated_kernels_dir}/texture_hitpoint_funcs_kernel.cpp

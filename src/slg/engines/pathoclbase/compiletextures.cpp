@@ -793,6 +793,33 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 				default:
 					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(" + ToString(tex->type) + "): " + ToString(opType));
 			}
+		}
+		case slg::ocl::DISTORT_TEX: {
+			switch (opType) {
+				case slg::ocl::TextureEvalOpType::EVAL_FLOAT:
+				case slg::ocl::TextureEvalOpType::EVAL_SPECTRUM: {
+					// Eval offset texture 
+					evalOpStackSize += CompileTextureOps(tex->distortTex.offsetTexIndex, slg::ocl::TextureEvalOpType::EVAL_SPECTRUM);
+
+					// EVAL_DISTORT_SETUP
+					slg::ocl::TextureEvalOp opSetUp;
+					opSetUp.texIndex = texIndex;
+					opSetUp.evalType = slg::ocl::TextureEvalOpType::EVAL_DISTORT_SETUP;
+					texEvalOps.push_back(opSetUp);
+					// Save original P and UV
+					evalOpStackSize += 3 + 2;
+
+					// Eval second texture 
+					evalOpStackSize += CompileTextureOps(tex->distortTex.texIndex, opType);
+					break;
+				}
+				case slg::ocl::TextureEvalOpType::EVAL_BUMP:
+					// Use generic bump map evaluation path
+					evalOpStackSize += CompileTextureOpsGenericBumpMap(texIndex);
+					break;
+				default:
+					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(" + ToString(tex->type) + "): " + ToString(opType));
+			}
 			break;
 		}
 		case slg::ocl::CHECKERBOARD2D: {

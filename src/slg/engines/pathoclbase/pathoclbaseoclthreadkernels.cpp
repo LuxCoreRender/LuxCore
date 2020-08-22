@@ -158,6 +158,7 @@ string PathOCLBaseOCLRenderThread::GetKernelSources() {
 			slg::ocl::KernelSource_texture_clamp_funcs <<
 			slg::ocl::KernelSource_texture_colordepth_funcs <<
 			slg::ocl::KernelSource_texture_densitygrid_funcs <<
+			slg::ocl::KernelSource_texture_distort_funcs <<
 			slg::ocl::KernelSource_texture_fresnelcolor_funcs <<
 			slg::ocl::KernelSource_texture_fresnelconst_funcs <<
 			slg::ocl::KernelSource_texture_hitpoint_funcs <<

@@ -68,7 +68,7 @@ public:
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
-	HitPoint GetTmpHitPoint(const HitPoint &hitPoint) const;
+	void GetTmpHitPoint(const HitPoint &hitPoint, HitPoint &tmpHitPoint) const;
 
 	const Texture *tex;
 	const Texture *offset;
