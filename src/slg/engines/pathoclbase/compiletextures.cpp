@@ -798,7 +798,7 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 			switch (opType) {
 				case slg::ocl::TextureEvalOpType::EVAL_FLOAT:
 				case slg::ocl::TextureEvalOpType::EVAL_SPECTRUM: {
-					// Eval offset texture 
+					// Eval offset texture
 					evalOpStackSize += CompileTextureOps(tex->distortTex.offsetTexIndex, slg::ocl::TextureEvalOpType::EVAL_SPECTRUM);
 
 					// EVAL_DISTORT_SETUP
@@ -809,8 +809,8 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 					// Save original P and UV
 					evalOpStackSize += 3 + 2;
 
-					// Eval second texture 
-					evalOpStackSize += CompileTextureOps(tex->distortTex.texIndex, opType);
+					// Eval second texture
+					evalOpStackSize += CompileTextureOps(tex->distortTex.texIndex, slg::ocl::TextureEvalOpType::EVAL_SPECTRUM);
 					break;
 				}
 				case slg::ocl::TextureEvalOpType::EVAL_BUMP:
