@@ -153,9 +153,11 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		
 		const ImageMapStorage::WrapType wrapType = ImageMapStorage::String2WrapType(
 			props.Get(Property(propName + ".wrap")("repeat")).Get<string>());
+		
+		const bool randomizedTiling = props.Get(Property(propName + ".randomizedtiling")(false)).Get<bool>();
 
 		ImageMap *im = imgMapCache.GetImageMap(name, gamma, selectionType, storageType, wrapType);
-		tex = new ImageMapTexture(im, CreateTextureMapping2D(propName + ".mapping", props), gain);
+		tex = new ImageMapTexture(im, CreateTextureMapping2D(propName + ".mapping", props), gain, randomizedTiling);
 	} else if (texType == "constfloat1") {
 		const float v = props.Get(Property(propName + ".value")(1.f)).Get<float>();
 		tex = new ConstFloatTexture(v);

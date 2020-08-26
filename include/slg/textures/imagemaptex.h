@@ -29,8 +29,9 @@ namespace slg {
 
 class ImageMapTexture : public Texture {
 public:
-	ImageMapTexture(const ImageMap *img, const TextureMapping2D *mp, const float g);
-	virtual ~ImageMapTexture() { delete mapping; }
+	ImageMapTexture(const ImageMap *img, const TextureMapping2D *mp, const float g,
+			const bool rt);
+	virtual ~ImageMapTexture();
 
 	virtual TextureType GetType() const { return IMAGEMAP; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
@@ -50,9 +51,16 @@ public:
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
+	luxrays::Spectrum SampleTile(const luxrays::UV &vertex, const luxrays::UV &offset) const;
+
 	const ImageMap *imageMap;
 	const TextureMapping2D *mapping;
 	float gain;
+	bool randomizedTiling;
+
+	// Used for randomized tiling
+	ImageMap *randomizedTilingInvLUT;
+	ImageMap *randomMap;
 };
 
 }
