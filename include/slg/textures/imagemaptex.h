@@ -59,6 +59,8 @@ private:
 	bool randomizedTiling;
 
 	// Used for randomized tiling
+	ImageMap *preprocessedImageMap;
+	ImageMap *randomizedTilingLUT;
 	ImageMap *randomizedTilingInvLUT;
 	ImageMap *randomMap;
 };

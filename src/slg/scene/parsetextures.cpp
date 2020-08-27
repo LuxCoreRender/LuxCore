@@ -157,6 +157,9 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const bool randomizedTiling = props.Get(Property(propName + ".randomizedtiling")(false)).Get<bool>();
 
 		ImageMap *im = imgMapCache.GetImageMap(name, gamma, selectionType, storageType, wrapType);
+		if (randomizedTiling && (im->GetStorage()->wrapType != ImageMapStorage::REPEAT))
+			throw runtime_error("Randomized tiling requires REPAT wrap type in imagemap texture: " + propName);
+
 		tex = new ImageMapTexture(im, CreateTextureMapping2D(propName + ".mapping", props), gain, randomizedTiling);
 	} else if (texType == "constfloat1") {
 		const float v = props.Get(Property(propName + ".value")(1.f)).Get<float>();

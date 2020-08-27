@@ -113,9 +113,7 @@ static inline float C(const float sigma) {
 }
 
 static inline float TruncCDFInv(const float x, const float sigma) {
-    const float cdfInv = .5f + sqrtf(2.f) * sigma * ErfInv((2.f * x - 1.f) / C(sigma));
-
-	return Clamp(cdfInv, 0.f, 1.f);
+    return .5f + sqrtf(2.f) * sigma * ErfInv((2.f * x - 1.f) / C(sigma));
 }
 
 static inline float SoftClipContrast(float x, float W) {
@@ -144,17 +142,18 @@ static inline float SoftClipContrast(float x, float W) {
 ImageMapTexture::ImageMapTexture(const ImageMap *img, const TextureMapping2D *mp,
 		const float g, const bool rt) :
 		imageMap(img), mapping(mp), gain(g), randomizedTiling(rt),
-		randomizedTilingInvLUT(nullptr), randomMap(nullptr) {
+		randomizedTilingLUT(nullptr), randomizedTilingInvLUT(nullptr),
+		randomMap(nullptr) {
 	if (!randomizedTiling)
 		return;
-	
+
 	// Preprocessing work for Histogram-preserving Blending for Randomized Texture Tiling
 	//
 	// From Benedikt Bitterli's "Histogram-preserving Blending for Randomized Texture Tiling"
 	// (http://www.jcgt.org/published/0008/04/02/paper.pdf)
 	// and WebGL demo: https://benedikt-bitterli.me/histogram-tiling
 	
-	vector<float> histogram(RT_HISTOGRAM_SIZE, 0.f);
+	vector<u_int> histogram(RT_HISTOGRAM_SIZE, 0);
 	
 	const u_int width = img->GetWidth();
 	const u_int height = img->GetHeight();
@@ -169,6 +168,7 @@ ImageMapTexture::ImageMapTexture(const ImageMap *img, const TextureMapping2D *mp
 
 		// Fill the histogram
 		const u_int histogramIndex = Min<u_int>(Floor2UInt(ycbcr.c[0] * RT_HISTOGRAM_SIZE), RT_HISTOGRAM_SIZE - 1);
+
 		histogram[histogramIndex]++;
 	}
 
@@ -178,20 +178,24 @@ ImageMapTexture::ImageMapTexture(const ImageMap *img, const TextureMapping2D *mp
 
 	vector<float> lut(RT_HISTOGRAM_SIZE);
 	for (u_int i = 0; i < RT_HISTOGRAM_SIZE; ++i)
-		lut[i] = Clamp(TruncCDFInv(histogram[i] / histogram[RT_HISTOGRAM_SIZE - 1], 1.f / 6.f), 0.f, 1.f);
+		lut[i] = TruncCDFInv(histogram[i] / (float)histogram[RT_HISTOGRAM_SIZE - 1], 1.f / 6.f);
 
-	// TODO: preprocess imageMap
-	
+	randomizedTilingLUT = ImageMap::AllocImageMap<float>(1.f, 1, RT_HISTOGRAM_SIZE, 1, ImageMapStorage::CLAMP);
+	float *randomizedTilingLUTData = (float *)randomizedTilingLUT->GetStorage()->GetPixelsData();
+	for (u_int i = 0; i < RT_HISTOGRAM_SIZE; ++i)
+		randomizedTilingLUTData[i] = Clamp(lut[i], 0.f, 1.f);
+
 	// Initialize randomized tiling LUT
-	randomizedTilingInvLUT = ImageMap::AllocImageMap<float>(1.f, 1, RT_LUT_SIZE, 1, ImageMapStorage::REPEAT);
+	randomizedTilingInvLUT = ImageMap::AllocImageMap<float>(1.f, 1, RT_LUT_SIZE, 1, ImageMapStorage::CLAMP);
 	float *randomizedTilingInvLUTData = (float *)randomizedTilingInvLUT->GetStorage()->GetPixelsData();
+
 	for (u_int i = 0; i < RT_LUT_SIZE; ++i) {
 		const float f = (i + .5f) / RT_LUT_SIZE;
 
 		randomizedTilingInvLUTData[i] = 1.f;
 		for (u_int j = 0; j < RT_HISTOGRAM_SIZE; ++j) {
-			if (f < histogram[j]) {
-				randomizedTilingInvLUTData[i] = j / (RT_HISTOGRAM_SIZE - 1.f);
+			if (f < lut[j]) {
+				randomizedTilingInvLUTData[i] = j / (float)(RT_HISTOGRAM_SIZE - 1);
 				break;
 			}
 		}
@@ -208,6 +212,7 @@ ImageMapTexture::ImageMapTexture(const ImageMap *img, const TextureMapping2D *mp
 
 ImageMapTexture::~ImageMapTexture() {
 	delete mapping;
+	delete randomizedTilingLUT;
 	delete randomizedTilingInvLUT;
 	delete randomMap;
 }
@@ -230,7 +235,11 @@ Spectrum ImageMapTexture::SampleTile(const UV &vertex, const UV &offset) const {
 
 	const UV pos = UV(.25f, .25f) + UV(noise.c[0], noise.c[1]) * .5f + offset;
 
-	return RGBToYCbCr(imageMap->GetSpectrum(pos));
+	Spectrum YCbCr = RGBToYCbCr(imageMap->GetSpectrum(pos));
+	
+	YCbCr.c[0] = randomizedTilingLUT->GetFloat(UV(YCbCr.c[0], .5f));
+
+	return YCbCr;
 }
 
 Spectrum ImageMapTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
@@ -296,7 +305,8 @@ Spectrum ImageMapTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 		Spectrum YCbCr = uvWeights.x * color0 + uvWeights.y * color1 + uvWeights.z * color2;
 
 		YCbCr.c[0] = SoftClipContrast(YCbCr.c[0], uvWeights.x + uvWeights.y + uvWeights.z);
-		//YCbCr.c[0] = randomizedTilingInvLUT->GetFloat(UV(YCbCr.c[0], .5f));
+
+		YCbCr.c[0] = randomizedTilingInvLUT->GetFloat(UV(YCbCr.c[0], .5f));
 
 		value = YCbCrToRGB(YCbCr);
 	} else
@@ -306,6 +316,8 @@ Spectrum ImageMapTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 }
 
 Normal ImageMapTexture::Bump(const HitPoint &hitPoint, const float sampleDistance) const {
+	// TODO: add support for randomizedTiling
+
 	UV dst, du, dv;
 	dst = imageMap->GetDuv(mapping->MapDuv(hitPoint, &du, &dv));
 
