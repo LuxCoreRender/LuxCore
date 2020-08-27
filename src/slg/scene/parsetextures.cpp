@@ -154,7 +154,7 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const ImageMapStorage::WrapType wrapType = ImageMapStorage::String2WrapType(
 			props.Get(Property(propName + ".wrap")("repeat")).Get<string>());
 		
-		const bool randomizedTiling = props.Get(Property(propName + ".randomizedtiling")(false)).Get<bool>();
+		const bool randomizedTiling = props.Get(Property(propName + ".randomizedtiling.enable")(false)).Get<bool>();
 
 		ImageMap *im = imgMapCache.GetImageMap(name, gamma, selectionType, storageType, wrapType);
 		if (randomizedTiling && (im->GetStorage()->wrapType != ImageMapStorage::REPEAT))

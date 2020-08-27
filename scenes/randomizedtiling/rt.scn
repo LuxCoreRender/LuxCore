@@ -3,9 +3,9 @@
 scene.camera.lookat.orig = 2.8718164 -5.47710514 4.63370657
 scene.camera.lookat.target = -0.600622892 1.50124407 -1.6308527
 ################################################################################
-scene.textures.img.file = pattern-11.jpg
+scene.textures.img.file = pattern-3.jpg
 scene.textures.img.gamma = 1.0
-scene.textures.img.randomizedtiling = 1
+scene.textures.img.randomizedtiling.enable = 1
 scene.textures.img.mapping.uvscale = 2 2
 ################################################################################
 scene.materials.mat_light.type = matte

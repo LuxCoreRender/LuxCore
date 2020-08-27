@@ -346,7 +346,7 @@ Properties ImageMapTexture::ToProperties(const ImageMapCache &imgMapCache,
 	props.Set(Property("scene.textures." + name + ".gain")(gain));
 	props.Set(imageMap->ToProperties("scene.textures." + name, false));
 	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
-	props.Set(Property("scene.textures." + name + ".randomizedtiling")(randomizedTiling));
+	props.Set(Property("scene.textures." + name + ".randomizedtiling.enable")(randomizedTiling));
 
 	return props;
 }
