@@ -371,16 +371,16 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const Texture *tex2 = GetTexture(props.Get(Property(propName + ".mortartex")(.2f, .2f, .2f)));
 		const Texture *tex3 = GetTexture(props.Get(Property(propName + ".brickmodtex")(1.f, 1.f, 1.f)));
 
+		const float modulationBias = Clamp(props.Get(Property(propName + ".brickmodbias")(0.f)).Get<float>(), -1.f, 1.f);
 		const string brickbond = props.Get(Property(propName + ".brickbond")("running")).Get<string>();
 		const float brickwidth = props.Get(Property(propName + ".brickwidth")(.3f)).Get<float>();
 		const float brickheight = props.Get(Property(propName + ".brickheight")(.1f)).Get<float>();
 		const float brickdepth = props.Get(Property(propName + ".brickdepth")(.15f)).Get<float>();
 		const float mortarsize = props.Get(Property(propName + ".mortarsize")(.01f)).Get<float>();
 		const float brickrun = props.Get(Property(propName + ".brickrun")(.75f)).Get<float>();
-		const float brickbevel = props.Get(Property(propName + ".brickbevel")(0.f)).Get<float>();
 
 		tex = new BrickTexture(CreateTextureMapping3D(propName + ".mapping", props), tex1, tex2, tex3,
-				brickwidth, brickheight, brickdepth, mortarsize, brickrun, brickbevel, brickbond);
+				brickwidth, brickheight, brickdepth, mortarsize, brickrun, brickbond, modulationBias);
 	} else if (texType == "add") {
 		const Texture *tex1 = GetTexture(props.Get(Property(propName + ".texture1")(1.f)));
 		const Texture *tex2 = GetTexture(props.Get(Property(propName + ".texture2")(1.f)));

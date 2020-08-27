@@ -1205,10 +1205,7 @@ void CompiledScene::CompileTextures() {
 				tex->brick.mortarwidth = bt->GetMortarWidth();
 				tex->brick.mortarheight = bt->GetMortarHeight();
 				tex->brick.mortardepth = bt->GetMortarDepth();
-				tex->brick.bevelwidth = bt->GetBevelWidth();
-				tex->brick.bevelheight = bt->GetBevelHeight();
-				tex->brick.beveldepth = bt->GetBevelDepth();
-				tex->brick.usebevel = bt->GetUseBevel();
+				tex->brick.modulationBias = bt->GetModulationBias();
 				break;
 			}
 			case ADD_TEX: {

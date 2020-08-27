@@ -158,8 +158,7 @@ typedef struct {
 	float brickwidth, brickheight, brickdepth, mortarsize;
 	float proportion, invproportion, run;
 	float mortarwidth, mortarheight, mortardepth;
-	float bevelwidth, bevelheight, beveldepth;
-	int usebevel;
+	float modulationBias;
 } BrickTexParam;
 
 typedef struct {

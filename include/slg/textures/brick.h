@@ -36,7 +36,7 @@ public:
 	BrickTexture(const TextureMapping3D *mp, const Texture *t1,
 			const Texture *t2, const Texture *t3,
 			float brickw, float brickh, float brickd, float mortar,
-			float r, float bev, const std::string &b);
+			float r, const std::string &b, const float modulationBias);
 	virtual ~BrickTexture() { delete mapping; }
 
 	virtual TextureType GetType() const { return BRICK; }
@@ -89,10 +89,7 @@ public:
 	float GetMortarWidth() const { return mortarwidth; }
 	float GetMortarHeight() const { return mortarheight; }
 	float GetMortarDepth() const { return mortardepth; }
-	float GetBevelWidth() const { return bevelwidth; }
-	float GetBevelHeight() const { return bevelheight; }
-	float GetBevelDepth() const { return beveldepth; }
-	bool GetUseBevel() const { return usebevel; }
+	float GetModulationBias() const { return modulationBias; }
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
@@ -102,6 +99,7 @@ private:
 	bool Herringbone(const luxrays::Point &p, luxrays::Point &i) const;
 	bool Running(const luxrays::Point &p, luxrays::Point &i, luxrays::Point &b) const;
 	bool English(const luxrays::Point &p, luxrays::Point &i, luxrays::Point &b) const;
+	float BrickNoise(u_int n) const;
 
 	const TextureMapping3D *mapping;
 	const Texture *tex1, *tex2, *tex3;
@@ -111,12 +109,12 @@ private:
 	float brickwidth, brickheight, brickdepth, mortarsize;
 	float proportion, invproportion, run;
 	float mortarwidth, mortarheight, mortardepth;
-	float bevelwidth, bevelheight, beveldepth;
-	bool usebevel;
 
 	// brickwidth, brickheight, brickdepth are modified by HERRINGBONE
 	// and BASKET brick types. I need to save the initial values here.
 	float initialbrickwidth, initialbrickheight, initialbrickdepth;
+	
+	float modulationBias;
 };
 
 }
