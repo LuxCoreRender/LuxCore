@@ -319,8 +319,6 @@ Spectrum ImageMapTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 }
 
 Normal ImageMapTexture::Bump(const HitPoint &hitPoint, const float sampleDistance) const {
-	// TODO: add support for randomizedTiling
-
 	UV dst, du, dv;
 	dst = imageMap->GetDuv(mapping->MapDuv(hitPoint, &du, &dv));
 
