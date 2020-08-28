@@ -19,6 +19,8 @@
 #ifndef _SLG_IMAGEMAPTEX_H
 #define	_SLG_IMAGEMAPTEX_H
 
+#include <memory>
+
 #include "slg/textures/texture.h"
 
 namespace slg {
@@ -50,6 +52,8 @@ public:
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
+	static std::unique_ptr<ImageMap> randomImageMap;
+
 private:
 	luxrays::Spectrum SampleTile(const luxrays::UV &vertex, const luxrays::UV &offset) const;
 
@@ -62,7 +66,6 @@ private:
 	ImageMap *preprocessedImageMap;
 	ImageMap *randomizedTilingLUT;
 	ImageMap *randomizedTilingInvLUT;
-	ImageMap *randomMap;
 };
 
 }

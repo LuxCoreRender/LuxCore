@@ -26,12 +26,35 @@ using namespace luxrays;
 using namespace slg;
 
 //------------------------------------------------------------------------------
+// Static random image map used by some texture
+//------------------------------------------------------------------------------
+
+static ImageMap *AllocRandomImageMap(const u_int size) {
+	unique_ptr<ImageMap> randomImageMap(ImageMap::AllocImageMap<float>(1.f, 3, size, size, ImageMapStorage::REPEAT));
+
+	// Initialized the random image map
+
+	RandomGenerator rndGen(123);
+	float *randomMapData = (float *)randomImageMap->GetStorage()->GetPixelsData();
+	for (u_int i = 0; i < 3 * size * size; ++i)
+		randomMapData[i] = rndGen.floatValue();
+	
+	return randomImageMap.release();
+}
+
+unique_ptr<ImageMap> ImageMapTexture::randomImageMap(AllocRandomImageMap(512));
+
+//------------------------------------------------------------------------------
 // Histogram-preserving Blending for Randomized Texture Tiling functions
+
+// From Brent Burley's "Histogram-preserving Blending for Randomized
+// Texture Tiling":  http://www.jcgt.org/published/0008/04/02/paper.pdf
+// and
+// Benedikt Bitterli's WebGL demo: https://benedikt-bitterli.me/histogram-tiling
 //------------------------------------------------------------------------------
 
 #define RT_HISTOGRAM_SIZE 256
 #define RT_LUT_SIZE (RT_HISTOGRAM_SIZE * 4)
-#define RT_RANDOM_IMAGE_SIZE 512
 
 static inline Spectrum RGBToYCbCr(const Spectrum &rgb) {
 	// ITU-R BT.601 from https://en.wikipedia.org/wiki/YCbCr
@@ -142,16 +165,11 @@ static inline float SoftClipContrast(float x, float W) {
 ImageMapTexture::ImageMapTexture(const ImageMap *img, const TextureMapping2D *mp,
 		const float g, const bool rt) :
 		imageMap(img), mapping(mp), gain(g), randomizedTiling(rt),
-		randomizedTilingLUT(nullptr), randomizedTilingInvLUT(nullptr),
-		randomMap(nullptr) {
+		randomizedTilingLUT(nullptr), randomizedTilingInvLUT(nullptr) {
 	if (!randomizedTiling)
 		return;
 
 	// Preprocessing work for Histogram-preserving Blending for Randomized Texture Tiling
-	//
-	// From Benedikt Bitterli's "Histogram-preserving Blending for Randomized Texture Tiling"
-	// (http://www.jcgt.org/published/0008/04/02/paper.pdf)
-	// and WebGL demo: https://benedikt-bitterli.me/histogram-tiling
 	
 	vector<u_int> histogram(RT_HISTOGRAM_SIZE, 0);
 	
@@ -200,21 +218,12 @@ ImageMapTexture::ImageMapTexture(const ImageMap *img, const TextureMapping2D *mp
 			}
 		}
 	}
-
-	// Initialized the random image map
-	randomMap = ImageMap::AllocImageMap<float>(1.f, 3, RT_RANDOM_IMAGE_SIZE, RT_RANDOM_IMAGE_SIZE, ImageMapStorage::REPEAT);
-	
-	RandomGenerator rndGen(123);
-	float *randomMapData = (float *)randomMap->GetStorage()->GetPixelsData();
-	for (u_int i = 0; i < 3 * RT_RANDOM_IMAGE_SIZE * RT_RANDOM_IMAGE_SIZE; ++i)
-		randomMapData[i] = rndGen.floatValue();
 }
 
 ImageMapTexture::~ImageMapTexture() {
 	delete mapping;
 	delete randomizedTilingLUT;
 	delete randomizedTilingInvLUT;
-	delete randomMap;
 }
 
 float ImageMapTexture::GetFloatValue(const HitPoint &hitPoint) const {
@@ -231,8 +240,8 @@ float ImageMapTexture::GetFloatValue(const HitPoint &hitPoint) const {
 }
 
 Spectrum ImageMapTexture::SampleTile(const UV &vertex, const UV &offset) const {
-	const Spectrum noise = randomMap->GetSpectrum(vertex / RT_HISTOGRAM_SIZE);
-
+	const UV noiseP(vertex.u / randomImageMap->GetWidth(), vertex.v / randomImageMap->GetHeight());
+	const Spectrum noise = randomImageMap->GetSpectrum(noiseP);
 	const UV pos = UV(.25f, .25f) + UV(noise.c[0], noise.c[1]) * .5f + offset;
 
 	Spectrum YCbCr = RGBToYCbCr(imageMap->GetSpectrum(pos));

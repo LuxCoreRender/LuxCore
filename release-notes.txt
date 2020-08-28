@@ -24,6 +24,7 @@
 * Added a fast evaluation path in GPU code for constant and image map textures
 * Added the support for Distort texture
 * Now individual bricks, in brick texture, have a pseudo-random mix between two colors by default
+* Added the support for Randomized Texture Tiling (#228)
 
 ### Fixed Bugs
 
