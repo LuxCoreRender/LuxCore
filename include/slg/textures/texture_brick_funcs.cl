@@ -186,50 +186,6 @@ OPENCL_FORCE_NOT_INLINE bool BrickTexture_Evaluate(__global const HitPoint *hitP
 #undef BRICK_EPSILON
 }
 
-OPENCL_FORCE_NOT_INLINE float BrickTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
-		const float value1, const float value2, const float value3,
-		const MasonryBond bond,
-		const float brickwidth, const float brickheight,
-		const float brickdepth, const float mortarsize,
-		const float3 offset,
-		const float run, const float mortarwidth,
-		const float mortarheight, const float mortardepth,
-		const float proportion, const float invproportion,
-		const float modulationBias,
-		__global const TextureMapping3D *mapping TEXTURES_PARAM_DECL) {
-	float3 brickIndex;
-	const bool b = BrickTexture_Evaluate(hitPoint,
-			bond,
-			brickwidth, brickheight,
-			brickdepth, mortarsize,
-			offset,
-			run, mortarwidth,
-			mortarheight, mortardepth,
-			proportion, invproportion,
-			&brickIndex,
-			mapping
-			TEXTURES_PARAM);
-	
-	if (b) {
-		// Return brick color
-		if (modulationBias == -1.f) {
-			return value1;
-		} else if (modulationBias == 1.f) {
-			return value3;
-		}
-		
-		const int rownum = brickIndex.y;
-		const int bricknum = brickIndex.x;
-		const float noise = BrickTexture_BrickNoise((rownum << 16) + (bricknum & 0xffff));
-		const float modulation = clamp(noise + modulationBias, 0.f, 1.f);
-		
-		return Lerp(modulation, value1, value3);
-	} else {
-		// Return mortar color
-		return value2;
-	}
-}
-
 OPENCL_FORCE_NOT_INLINE float3 BrickTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint,
 		const float3 value1, const float3 value2, const float3 value3,
 		const MasonryBond bond,
@@ -275,6 +231,24 @@ OPENCL_FORCE_NOT_INLINE float3 BrickTexture_ConstEvaluateSpectrum(__global const
 	}
 }
 
+OPENCL_FORCE_INLINE float BrickTexture_ConstEvaluateFloat(__global const HitPoint *hitPoint,
+		const float3 value1, const float3 value2, const float3 value3,
+		const MasonryBond bond,
+		const float brickwidth, const float brickheight,
+		const float brickdepth, const float mortarsize,
+		const float3 offset,
+		const float run, const float mortarwidth,
+		const float mortarheight, const float mortardepth,
+		const float proportion, const float invproportion,
+		const float modulationBias,
+		__global const TextureMapping3D *mapping TEXTURES_PARAM_DECL) {
+	return Spectrum_Y(BrickTexture_ConstEvaluateSpectrum(
+			hitPoint, value1, value2, value3, bond, brickwidth, brickheight,
+			brickdepth, mortarsize, offset, run, mortarwidth, mortarheight, mortardepth,
+			proportion, invproportion, modulationBias, mapping
+			TEXTURES_PARAM));
+}
+
 OPENCL_FORCE_NOT_INLINE void BrickTexture_EvalOp(
 		__global const Texture* restrict texture,
 		const TextureEvalOpType evalType,
@@ -285,10 +259,10 @@ OPENCL_FORCE_NOT_INLINE void BrickTexture_EvalOp(
 		TEXTURES_PARAM_DECL) {
 	switch (evalType) {
 		case EVAL_FLOAT: {
-			float tex1, tex2, tex3;
-			EvalStack_PopFloat(tex3);
-			EvalStack_PopFloat(tex2);
-			EvalStack_PopFloat(tex1);
+			float3 tex1, tex2, tex3;
+			EvalStack_PopFloat3(tex3);
+			EvalStack_PopFloat3(tex2);
+			EvalStack_PopFloat3(tex1);
 
 			const float eval = BrickTexture_ConstEvaluateFloat(hitPoint,
 					tex1, tex2, tex3,

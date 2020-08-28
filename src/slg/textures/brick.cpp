@@ -94,7 +94,7 @@ bool BrickTexture::Basket(const Point &p, Point &i) const {
 	float bx = p.x - i.x;
 	float by = p.y - i.y;
 	i.x += i.y - 2.f * floorf(0.5f * i.y);
-	const bool split = (i.x - 2.f * floor(0.5f * i.x)) < 1.f;
+	const bool split = (i.x - 2.f * floorf(0.5f * i.x)) < 1.f;
 	if (split) {
 		bx = fmodf(bx, invproportion);
 		i.x = floorf(proportion * p.x) * invproportion;
@@ -234,9 +234,9 @@ Properties BrickTexture::ToProperties(const ImageMapCache &imgMapCache, const bo
 	props.Set(Property("scene.textures." + name + ".mortartex")(tex2->GetSDLValue()));
 	props.Set(Property("scene.textures." + name + ".brickmodtex")(tex3->GetSDLValue()));
 	props.Set(Property("scene.textures." + name + ".brickmodbias")(modulationBias));
-	props.Set(Property("scene.textures." + name + ".brickwidth")(brickwidth));
-	props.Set(Property("scene.textures." + name + ".brickheight")(brickheight));
-	props.Set(Property("scene.textures." + name + ".brickdepth")(brickdepth));
+	props.Set(Property("scene.textures." + name + ".brickwidth")(initialbrickwidth));
+	props.Set(Property("scene.textures." + name + ".brickheight")(initialbrickheight));
+	props.Set(Property("scene.textures." + name + ".brickdepth")(initialbrickdepth));
 	props.Set(Property("scene.textures." + name + ".mortarsize")(mortarsize));
 	props.Set(Property("scene.textures." + name + ".brickrun")(run));
 

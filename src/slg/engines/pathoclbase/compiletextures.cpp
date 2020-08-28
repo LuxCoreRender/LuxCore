@@ -877,9 +877,9 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 			switch (opType) {
 				case slg::ocl::TextureEvalOpType::EVAL_FLOAT:
 				case slg::ocl::TextureEvalOpType::EVAL_SPECTRUM: {
-					evalOpStackSize += CompileTextureOps(tex->brick.tex1Index, opType);
-					evalOpStackSize += CompileTextureOps(tex->brick.tex2Index, opType);
-					evalOpStackSize += CompileTextureOps(tex->brick.tex3Index, opType);
+					evalOpStackSize += CompileTextureOps(tex->brick.tex1Index, slg::ocl::TextureEvalOpType::EVAL_SPECTRUM);
+					evalOpStackSize += CompileTextureOps(tex->brick.tex2Index, slg::ocl::TextureEvalOpType::EVAL_SPECTRUM);
+					evalOpStackSize += CompileTextureOps(tex->brick.tex3Index, slg::ocl::TextureEvalOpType::EVAL_SPECTRUM);
 					break;
 				}
 				case slg::ocl::TextureEvalOpType::EVAL_BUMP: {

@@ -23,6 +23,7 @@
 * Added the support for new AOVs (issue #429): DIRECT_DIFFUSE_REFLECT, DIRECT_DIFFUSE_TRANSMIT, DIRECT_GLOSSY_REFLECT, DIRECT_GLOSSY_TRANSMIT, INDIRECT_DIFFUSE_REFLECT, INDIRECT_DIFFUSE_TRANSMIT, INDIRECT_GLOSSY_REFLECT, INDIRECT_GLOSSY_TRANSMIT, INDIRECT_SPECULAR_REFLECT and INDIRECT_SPECULAR_TRANSMIT
 * Added a fast evaluation path in GPU code for constant and image map textures
 * Added the support for Distort texture
+* Now individual bricks, in brick texture, have a pseudo-random mix between two colors by default
 
 ### Fixed Bugs
 
@@ -33,6 +34,8 @@
 * Fixed a difference between CPU and GPU rendering when using a roughglass with a shadow transparency color
 * Fixed the support in .ply files for triangle AOVs
 * Fixed a memory leak when rendering with OpenCL (noticeable when rendering animations)
+* Fixed text export of brick texture HERRINGBONE and BASKET
+* Fixed scale problem in GPU code for brick texture HERRINGBONE and BASKET (issue #438)
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
