@@ -158,88 +158,7 @@ static inline float SoftClipContrast(float x, float W) {
 	return result;
 }
 
-//------------------------------------------------------------------------------
-// ImageMap texture
-//------------------------------------------------------------------------------
-
-ImageMapTexture::ImageMapTexture(const ImageMap *img, const TextureMapping2D *mp,
-		const float g, const bool rt) :
-		imageMap(img), mapping(mp), gain(g), randomizedTiling(rt),
-		randomizedTilingLUT(nullptr), randomizedTilingInvLUT(nullptr) {
-	if (!randomizedTiling)
-		return;
-
-	// Preprocessing work for Histogram-preserving Blending for Randomized Texture Tiling
-	
-	vector<u_int> histogram(RT_HISTOGRAM_SIZE, 0);
-	
-	const u_int width = img->GetWidth();
-	const u_int height = img->GetHeight();
-	const u_int pixelsCount = width * height;
-
-	for (u_int i = 0; i < pixelsCount; ++i) {
-		// Read the pixel RGB
-		const Spectrum rgb = imageMap->GetStorage()->GetSpectrum(i);
-
-		// RGB to YCbCr color space transformation
-		const Spectrum ycbcr = RGBToYCbCr(rgb);
-
-		// Fill the histogram
-		const u_int histogramIndex = Min<u_int>(Floor2UInt(ycbcr.c[0] * RT_HISTOGRAM_SIZE), RT_HISTOGRAM_SIZE - 1);
-
-		histogram[histogramIndex]++;
-	}
-
-	// Transform the histogram in a CDF
-	for (u_int i = 1; i < RT_HISTOGRAM_SIZE; ++i)
-		histogram[i] += histogram[i - 1];
-
-	vector<float> lut(RT_HISTOGRAM_SIZE);
-	for (u_int i = 0; i < RT_HISTOGRAM_SIZE; ++i)
-		lut[i] = TruncCDFInv(histogram[i] / (float)histogram[RT_HISTOGRAM_SIZE - 1], 1.f / 6.f);
-
-	randomizedTilingLUT = ImageMap::AllocImageMap<float>(1.f, 1, RT_HISTOGRAM_SIZE, 1, ImageMapStorage::CLAMP);
-	float *randomizedTilingLUTData = (float *)randomizedTilingLUT->GetStorage()->GetPixelsData();
-	for (u_int i = 0; i < RT_HISTOGRAM_SIZE; ++i)
-		randomizedTilingLUTData[i] = Clamp(lut[i], 0.f, 1.f);
-
-	// Initialize randomized tiling LUT
-	randomizedTilingInvLUT = ImageMap::AllocImageMap<float>(1.f, 1, RT_LUT_SIZE, 1, ImageMapStorage::CLAMP);
-	float *randomizedTilingInvLUTData = (float *)randomizedTilingInvLUT->GetStorage()->GetPixelsData();
-
-	for (u_int i = 0; i < RT_LUT_SIZE; ++i) {
-		const float f = (i + .5f) / RT_LUT_SIZE;
-
-		randomizedTilingInvLUTData[i] = 1.f;
-		for (u_int j = 0; j < RT_HISTOGRAM_SIZE; ++j) {
-			if (f < lut[j]) {
-				randomizedTilingInvLUTData[i] = j / (float)(RT_HISTOGRAM_SIZE - 1);
-				break;
-			}
-		}
-	}
-}
-
-ImageMapTexture::~ImageMapTexture() {
-	delete mapping;
-	delete randomizedTilingLUT;
-	delete randomizedTilingInvLUT;
-}
-
-float ImageMapTexture::GetFloatValue(const HitPoint &hitPoint) const {
-	const UV mappedUV = mapping->Map(hitPoint);
-
-	float value;
-	if (randomizedTiling) {
-		// TODO
-		value = 0.f;
-	} else
-		value = imageMap->GetFloat(mappedUV);
-
-	return gain * value;
-}
-
-Spectrum ImageMapTexture::SampleTile(const UV &vertex, const UV &offset) const {
+Spectrum ImageMapTexture::SampleTile(const UV &vertex, const UV &offset)  const {
 	const UV noiseP(vertex.u / randomImageMap->GetWidth(), vertex.v / randomImageMap->GetHeight());
 	const Spectrum noise = randomImageMap->GetSpectrum(noiseP);
 	const UV pos = UV(.25f, .25f) + UV(noise.c[0], noise.c[1]) * .5f + offset;
@@ -251,7 +170,7 @@ Spectrum ImageMapTexture::SampleTile(const UV &vertex, const UV &offset) const {
 	return YCbCr;
 }
 
-Spectrum ImageMapTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
+Spectrum ImageMapTexture::RandomizedTilingGetSpectrumValue(const UV &pos) const {
 	static const float triangleSize = .25f;
     static const float a = triangleSize * cosf(M_PI / 3.f);
 	static const float b = triangleSize;
@@ -267,59 +186,134 @@ Spectrum ImageMapTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 		{ -c / det,  a / det }
 	};
 
+	const UV lattice(
+		surfaceToLattice[0][0] * pos.u + surfaceToLattice[0][1] * pos.v,
+		surfaceToLattice[1][0] * pos.u + surfaceToLattice[1][1] * pos.v
+	);
+	const UV cell = UV(floorf(lattice.u), floorf(lattice.v));
+	UV uv = lattice - cell;
+
+	UV v0 = cell;
+	if (uv.u + uv.v >= 1.f) {
+		v0 += UV(1.f, 1.f);
+		uv = UV(1.f, 1.f) - UV(uv.v, uv.u);
+	}
+	UV v1 = cell + UV(1.f, 0.f);
+	UV v2 = cell + UV(0.f, 1.f);
+
+	const UV v0offset(
+		pos.u - (latticeToSurface[0][0] * v0.u + latticeToSurface[0][1] * v0.v),
+		pos.v - (latticeToSurface[1][0] * v0.u + latticeToSurface[1][1] * v0.v)
+	);
+	const UV v1offset(
+		pos.u - (latticeToSurface[0][0] * v1.u + latticeToSurface[0][1] * v1.v),
+		pos.v - (latticeToSurface[1][0] * v1.u + latticeToSurface[1][1] * v1.v)
+	);
+	const UV v2offset(
+		pos.u - (latticeToSurface[0][0] * v2.u + latticeToSurface[0][1] * v2.v),
+		pos.v - (latticeToSurface[1][0] * v2.u + latticeToSurface[1][1] * v2.v)
+	);
+
+	const Spectrum color0 = SampleTile(v0, v0offset);
+	const Spectrum color1 = SampleTile(v1, v1offset);
+	const Spectrum color2 = SampleTile(v2, v2offset);
+
+	Vector uvWeights(1.f - uv.u - uv.v, uv.u, uv.v);
+
+	uvWeights.x = uvWeights.x * uvWeights.x * uvWeights.x;
+	uvWeights.y = uvWeights.y * uvWeights.y * uvWeights.y;
+	uvWeights.z = uvWeights.z * uvWeights.z * uvWeights.z;
+
+	uvWeights /= uvWeights.x + uvWeights.y + uvWeights.z;
+
+	Spectrum YCbCr = uvWeights.x * color0 + uvWeights.y * color1 + uvWeights.z * color2;
+
+	YCbCr.c[0] = SoftClipContrast(YCbCr.c[0], uvWeights.x + uvWeights.y + uvWeights.z);
+
+	YCbCr.c[0] = randomizedTilingInvLUT->GetFloat(UV(YCbCr.c[0], .5f));
+
+	return YCbCrToRGB(YCbCr);
+}
+
+//------------------------------------------------------------------------------
+// ImageMap texture
+//------------------------------------------------------------------------------
+
+ImageMapTexture::ImageMapTexture(const ImageMap *img, const TextureMapping2D *mp,
+		const float g, const bool rt) :
+		imageMap(img), mapping(mp), gain(g), randomizedTiling(rt),
+		randomizedTilingLUT(nullptr), randomizedTilingInvLUT(nullptr) {
+	if (randomizedTiling) {
+		// Preprocessing work for Histogram-preserving Blending for Randomized Texture Tiling
+
+		vector<u_int> histogram(RT_HISTOGRAM_SIZE, 0);
+
+		const u_int width = img->GetWidth();
+		const u_int height = img->GetHeight();
+		const u_int pixelsCount = width * height;
+
+		for (u_int i = 0; i < pixelsCount; ++i) {
+			// Read the pixel RGB
+			const Spectrum rgb = imageMap->GetStorage()->GetSpectrum(i);
+
+			// RGB to YCbCr color space transformation
+			const Spectrum ycbcr = RGBToYCbCr(rgb);
+
+			// Fill the histogram
+			const u_int histogramIndex = Min<u_int>(Floor2UInt(ycbcr.c[0] * RT_HISTOGRAM_SIZE), RT_HISTOGRAM_SIZE - 1);
+
+			histogram[histogramIndex]++;
+		}
+
+		// Transform the histogram in a CDF
+		for (u_int i = 1; i < RT_HISTOGRAM_SIZE; ++i)
+			histogram[i] += histogram[i - 1];
+
+		vector<float> lut(RT_HISTOGRAM_SIZE);
+		for (u_int i = 0; i < RT_HISTOGRAM_SIZE; ++i)
+			lut[i] = TruncCDFInv(histogram[i] / (float)histogram[RT_HISTOGRAM_SIZE - 1], 1.f / 6.f);
+
+		randomizedTilingLUT = ImageMap::AllocImageMap<float>(1.f, 1, RT_HISTOGRAM_SIZE, 1, ImageMapStorage::CLAMP);
+		float *randomizedTilingLUTData = (float *)randomizedTilingLUT->GetStorage()->GetPixelsData();
+		for (u_int i = 0; i < RT_HISTOGRAM_SIZE; ++i)
+			randomizedTilingLUTData[i] = Clamp(lut[i], 0.f, 1.f);
+
+		// Initialize randomized tiling LUT
+		randomizedTilingInvLUT = ImageMap::AllocImageMap<float>(1.f, 1, RT_LUT_SIZE, 1, ImageMapStorage::CLAMP);
+		float *randomizedTilingInvLUTData = (float *)randomizedTilingInvLUT->GetStorage()->GetPixelsData();
+
+		for (u_int i = 0; i < RT_LUT_SIZE; ++i) {
+			const float f = (i + .5f) / RT_LUT_SIZE;
+
+			randomizedTilingInvLUTData[i] = 1.f;
+			for (u_int j = 0; j < RT_HISTOGRAM_SIZE; ++j) {
+				if (f < lut[j]) {
+					randomizedTilingInvLUTData[i] = j / (float)(RT_HISTOGRAM_SIZE - 1);
+					break;
+				}
+			}
+		}
+	}
+}
+
+ImageMapTexture::~ImageMapTexture() {
+	delete mapping;
+	delete randomizedTilingLUT;
+	delete randomizedTilingInvLUT;
+}
+
+float ImageMapTexture::GetFloatValue(const HitPoint &hitPoint) const {
 	const UV pos = mapping->Map(hitPoint);
 
-	Spectrum value;
-	if (randomizedTiling) {
-		const UV lattice(
-			surfaceToLattice[0][0] * pos.u + surfaceToLattice[0][1] * pos.v,
-			surfaceToLattice[1][0] * pos.u + surfaceToLattice[1][1] * pos.v
-		);
-		const UV cell = UV(floorf(lattice.u), floorf(lattice.v));
-		UV uv = lattice - cell;
+	const float value = randomizedTiling ? RandomizedTilingGetSpectrumValue(pos).Y() : imageMap->GetFloat(pos);
 
-		UV v0 = cell;
-		if (uv.u + uv.v >= 1.f) {
-			v0 += UV(1.f, 1.f);
-			uv = UV(1.f, 1.f) - UV(uv.v, uv.u);
-		}
-		UV v1 = cell + UV(1.f, 0.f);
-		UV v2 = cell + UV(0.f, 1.f);
+	return gain * value;
+}
 
-		const UV v0offset(
-			pos.u - (latticeToSurface[0][0] * v0.u + latticeToSurface[0][1] * v0.v),
-			pos.v - (latticeToSurface[1][0] * v0.u + latticeToSurface[1][1] * v0.v)
-		);
-		const UV v1offset(
-			pos.u - (latticeToSurface[0][0] * v1.u + latticeToSurface[0][1] * v1.v),
-			pos.v - (latticeToSurface[1][0] * v1.u + latticeToSurface[1][1] * v1.v)
-		);
-		const UV v2offset(
-			pos.u - (latticeToSurface[0][0] * v2.u + latticeToSurface[0][1] * v2.v),
-			pos.v - (latticeToSurface[1][0] * v2.u + latticeToSurface[1][1] * v2.v)
-		);
-		
-		const Spectrum color0 = SampleTile(v0, v0offset);
-		const Spectrum color1 = SampleTile(v1, v1offset);
-		const Spectrum color2 = SampleTile(v2, v2offset);
+Spectrum ImageMapTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
+	const UV pos = mapping->Map(hitPoint);
 
-		Vector uvWeights(1.f - uv.u - uv.v, uv.u, uv.v);
-
-		uvWeights.x = uvWeights.x * uvWeights.x * uvWeights.x;
-		uvWeights.y = uvWeights.y * uvWeights.y * uvWeights.y;
-		uvWeights.z = uvWeights.z * uvWeights.z * uvWeights.z;
-
-		uvWeights /= uvWeights.x + uvWeights.y + uvWeights.z;
-
-		Spectrum YCbCr = uvWeights.x * color0 + uvWeights.y * color1 + uvWeights.z * color2;
-
-		YCbCr.c[0] = SoftClipContrast(YCbCr.c[0], uvWeights.x + uvWeights.y + uvWeights.z);
-
-		YCbCr.c[0] = randomizedTilingInvLUT->GetFloat(UV(YCbCr.c[0], .5f));
-
-		value = YCbCrToRGB(YCbCr);
-	} else
-		value = imageMap->GetSpectrum(pos);
+	const Spectrum value = randomizedTiling ? RandomizedTilingGetSpectrumValue(pos) : imageMap->GetSpectrum(pos);
 
 	return gain * value;
 }

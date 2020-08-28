@@ -56,6 +56,7 @@ public:
 
 private:
 	luxrays::Spectrum SampleTile(const luxrays::UV &vertex, const luxrays::UV &offset) const;
+	luxrays::Spectrum RandomizedTilingGetSpectrumValue(const luxrays::UV &pos) const;
 
 	const ImageMap *imageMap;
 	const TextureMapping2D *mapping;
