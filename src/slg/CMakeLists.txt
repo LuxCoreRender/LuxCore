@@ -321,6 +321,7 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_hsv_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_irregulardata_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_noise_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_imagemap_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_others_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_triplanar_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/fresnel/texture_fresnelcolor_funcs.cl
@@ -696,6 +697,7 @@ set(SLG_KERNEL_SRCS
 	${generated_kernels_dir}/texture_hitpoint_funcs_kernel.cpp
 	${generated_kernels_dir}/texture_hsv_funcs_kernel.cpp
 	${generated_kernels_dir}/texture_irregulardata_funcs_kernel.cpp
+	${generated_kernels_dir}/texture_imagemap_funcs_kernel.cpp
 	${generated_kernels_dir}/texture_others_funcs_kernel.cpp
 	${generated_kernels_dir}/texture_random_funcs_kernel.cpp
 	${generated_kernels_dir}/texture_triplanar_funcs_kernel.cpp

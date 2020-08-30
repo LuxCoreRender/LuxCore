@@ -99,26 +99,8 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// IMAGEMAP
 		//----------------------------------------------------------------------
 		case IMAGEMAP: {
-			switch (evalType) {
-				case EVAL_FLOAT: {
-					const float eval = ImageMapTexture_ConstEvaluateFloat(texture, hitPoint TEXTURES_PARAM);
-					EvalStack_PushFloat(eval);
-					break;
-				}
-				case EVAL_SPECTRUM: {
-					const float3 eval = ImageMapTexture_ConstEvaluateSpectrum(texture, hitPoint TEXTURES_PARAM);
-					EvalStack_PushFloat3(eval);
-					break;
-				}
-				case EVAL_BUMP: {
-					const float3 shadeN = ImageMapTexture_Bump(texture, hitPoint TEXTURES_PARAM);
-					EvalStack_PushFloat3(shadeN);
-					break;
-				}
-				default:
-					// Something wrong here
-					break;
-			}
+			ImageMapTexture_EvalOp(texture, evalType, evalStack, evalStackOffset,
+					hitPoint, sampleDistance TEXTURES_PARAM);
 			break;
 		}
 		//----------------------------------------------------------------------

@@ -84,6 +84,11 @@ typedef struct {
 	float gain;
 
 	unsigned int imageMapIndex;
+
+	int randomizedTiling;
+	unsigned int randomizedTilingLUTIndex;
+	unsigned int randomizedTilingInvLUTIndex;
+	unsigned int randomImageMapIndex;
 } ImageMapTexParam;
 
 typedef struct {

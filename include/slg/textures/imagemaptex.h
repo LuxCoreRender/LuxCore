@@ -31,10 +31,6 @@ namespace slg {
 
 class ImageMapTexture : public Texture {
 public:
-	ImageMapTexture(const ImageMap *img, const TextureMapping2D *mp, const float g,
-			const bool rt);
-	virtual ~ImageMapTexture();
-
 	virtual TextureType GetType() const { return IMAGEMAP; }
 	virtual float GetFloatValue(const HitPoint &hitPoint) const;
 	virtual luxrays::Spectrum GetSpectrumValue(const HitPoint &hitPoint) const;
@@ -46,25 +42,35 @@ public:
 	const TextureMapping2D *GetTextureMapping() const { return mapping; }
 	const float GetGain() const { return gain; }
 
+	bool HasRandomizedTiling() const { return randomizedTiling; }
+	const ImageMap *GetRandomizedTilingLUT() const { return randomizedTilingLUT; }
+	const ImageMap *GetRandomizedTilingInvLUT() const { return randomizedTilingInvLUT; }
+
 	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
 		referencedImgMaps.insert(imageMap);
 	}
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
+	static ImageMapTexture *AllocImageMapTexture(ImageMapCache &imgMapCache, const ImageMap *img,
+			const TextureMapping2D *mp, const float g, const bool rt);
+
 	static std::unique_ptr<ImageMap> randomImageMap;
 
 private:
+	ImageMapTexture(const ImageMap *img, const TextureMapping2D *mp, const float g,
+			const bool rt);
+	virtual ~ImageMapTexture();
+
 	luxrays::Spectrum SampleTile(const luxrays::UV &vertex, const luxrays::UV &offset) const;
 	luxrays::Spectrum RandomizedTilingGetSpectrumValue(const luxrays::UV &pos) const;
 
 	const ImageMap *imageMap;
 	const TextureMapping2D *mapping;
 	float gain;
-	bool randomizedTiling;
 
 	// Used for randomized tiling
-	ImageMap *preprocessedImageMap;
+	bool randomizedTiling;
 	ImageMap *randomizedTilingLUT;
 	ImageMap *randomizedTilingInvLUT;
 };

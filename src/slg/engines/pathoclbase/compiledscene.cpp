@@ -39,7 +39,7 @@ CompiledScene::CompiledScene(Scene *scn, const PathTracer *pt) {
 	cameraBokehDistribution = nullptr;
 	lightsDistribution = nullptr;
 	infiniteLightSourcesDistribution = nullptr;
-
+	
 	EditActionList editActions;
 	editActions.AddAllAction();
 	Recompile(editActions);

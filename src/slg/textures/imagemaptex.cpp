@@ -139,16 +139,16 @@ static inline float TruncCDFInv(const float x, const float sigma) {
     return .5f + sqrtf(2.f) * sigma * ErfInv((2.f * x - 1.f) / C(sigma));
 }
 
-static inline float SoftClipContrast(float x, float W) {
+static inline float SoftClipContrast(const float x, const float w) {
 	const float u = (x > .5f) ? (1.f - x) : x;
 
 	float result;
-	if (u >= .5f - .25f * W)
-		result = (u - .5f) / W + .5f;
-	else if (W >= 2.f / 3.f)
-		result = 8.f * (1.f / W - 1.f) * Sqr(u / (2.f - W)) + (3.f - 2.f / W) * u / (2.f - W);
-	else if (u >= .5f - .75f * W)
-		result = Sqr((u - (.5f - .75f * W)) / W);
+	if (u >= .5f - .25f * w)
+		result = (u - .5f) / w + .5f;
+	else if (w >= 2.f / 3.f)
+		result = 8.f * (1.f / w - 1.f) * Sqr(u / (2.f - w)) + (3.f - 2.f / w) * u / (2.f - w);
+	else if (u >= .5f - .75f * w)
+		result = Sqr((u - (.5f - .75f * w)) / w);
 	else
 		result = 0.f;
 
@@ -158,7 +158,7 @@ static inline float SoftClipContrast(float x, float W) {
 	return result;
 }
 
-Spectrum ImageMapTexture::SampleTile(const UV &vertex, const UV &offset)  const {
+Spectrum ImageMapTexture::SampleTile(const UV &vertex, const UV &offset) const {
 	const UV noiseP(vertex.u / randomImageMap->GetWidth(), vertex.v / randomImageMap->GetHeight());
 	const Spectrum noise = randomImageMap->GetSpectrum(noiseP);
 	const UV pos = UV(.25f, .25f) + UV(noise.c[0], noise.c[1]) * .5f + offset;
@@ -171,7 +171,7 @@ Spectrum ImageMapTexture::SampleTile(const UV &vertex, const UV &offset)  const 
 }
 
 Spectrum ImageMapTexture::RandomizedTilingGetSpectrumValue(const UV &pos) const {
-	static const float triangleSize = .25f;
+	/*static const float triangleSize = .25f;
     static const float a = triangleSize * cosf(M_PI / 3.f);
 	static const float b = triangleSize;
     static const float c = triangleSize * sinf(M_PI / 3.f);
@@ -181,14 +181,34 @@ Spectrum ImageMapTexture::RandomizedTilingGetSpectrumValue(const UV &pos) const 
 		{ a, b },
 		{ c, d }
 	};
+	cout << "latticeToSurface => " <<
+			latticeToSurface[0][0] << " " <<
+			latticeToSurface[0][1] << " " <<
+			latticeToSurface[1][0] << " " <<
+			latticeToSurface[1][1] << "\n";
 	static const float surfaceToLattice[2][2] = {
 		{  d / det, -b / det },
 		{ -c / det,  a / det }
 	};
+	cout << "surfaceToLattice => " <<
+			surfaceToLattice[0][0] << " " <<
+			surfaceToLattice[0][1] << " " <<
+			surfaceToLattice[1][0] << " " <<
+			surfaceToLattice[1][1] << "\n";*/
+
+	const float latticeToSurface_0_0 = .125f;
+	const float latticeToSurface_0_1 = .25f;
+	const float latticeToSurface_1_0 = .216506f;
+	const float latticeToSurface_1_1 = 0.f;
+
+	const float surfaceToLattice_0_0 = 0.f;
+	const float surfaceToLattice_0_1 = 4.6188f;
+	const float surfaceToLattice_1_0 = 4.f;
+	const float surfaceToLattice_1_1 = -2.3094f;
 
 	const UV lattice(
-		surfaceToLattice[0][0] * pos.u + surfaceToLattice[0][1] * pos.v,
-		surfaceToLattice[1][0] * pos.u + surfaceToLattice[1][1] * pos.v
+		surfaceToLattice_0_0 * pos.u + surfaceToLattice_0_1 * pos.v,
+		surfaceToLattice_1_0 * pos.u + surfaceToLattice_1_1 * pos.v
 	);
 	const UV cell = UV(floorf(lattice.u), floorf(lattice.v));
 	UV uv = lattice - cell;
@@ -202,16 +222,16 @@ Spectrum ImageMapTexture::RandomizedTilingGetSpectrumValue(const UV &pos) const 
 	UV v2 = cell + UV(0.f, 1.f);
 
 	const UV v0offset(
-		pos.u - (latticeToSurface[0][0] * v0.u + latticeToSurface[0][1] * v0.v),
-		pos.v - (latticeToSurface[1][0] * v0.u + latticeToSurface[1][1] * v0.v)
+		pos.u - (latticeToSurface_0_0 * v0.u + latticeToSurface_0_1 * v0.v),
+		pos.v - (latticeToSurface_1_0 * v0.u + latticeToSurface_1_1 * v0.v)
 	);
 	const UV v1offset(
-		pos.u - (latticeToSurface[0][0] * v1.u + latticeToSurface[0][1] * v1.v),
-		pos.v - (latticeToSurface[1][0] * v1.u + latticeToSurface[1][1] * v1.v)
+		pos.u - (latticeToSurface_0_0 * v1.u + latticeToSurface_0_1 * v1.v),
+		pos.v - (latticeToSurface_1_0 * v1.u + latticeToSurface_1_1 * v1.v)
 	);
 	const UV v2offset(
-		pos.u - (latticeToSurface[0][0] * v2.u + latticeToSurface[0][1] * v2.v),
-		pos.v - (latticeToSurface[1][0] * v2.u + latticeToSurface[1][1] * v2.v)
+		pos.u - (latticeToSurface_0_0 * v2.u + latticeToSurface_0_1 * v2.v),
+		pos.v - (latticeToSurface_1_0 * v2.u + latticeToSurface_1_1 * v2.v)
 	);
 
 	const Spectrum color0 = SampleTile(v0, v0offset);
@@ -238,6 +258,19 @@ Spectrum ImageMapTexture::RandomizedTilingGetSpectrumValue(const UV &pos) const 
 //------------------------------------------------------------------------------
 // ImageMap texture
 //------------------------------------------------------------------------------
+
+ImageMapTexture *ImageMapTexture::AllocImageMapTexture(ImageMapCache &imgMapCache,
+		const ImageMap *img, const TextureMapping2D *mp, const float g, const bool rt) {
+	ImageMapTexture *imt = new ImageMapTexture(img, mp, g, rt);
+
+	if (rt) {
+		// I need to add the LUTs to the ImageMapCache
+		imgMapCache.DefineImageMap(imt->randomizedTilingLUT);
+		imgMapCache.DefineImageMap(imt->randomizedTilingInvLUT);
+	}
+
+	return imt;
+}
 
 ImageMapTexture::ImageMapTexture(const ImageMap *img, const TextureMapping2D *mp,
 		const float g, const bool rt) :
@@ -274,12 +307,14 @@ ImageMapTexture::ImageMapTexture(const ImageMap *img, const TextureMapping2D *mp
 			lut[i] = TruncCDFInv(histogram[i] / (float)histogram[RT_HISTOGRAM_SIZE - 1], 1.f / 6.f);
 
 		randomizedTilingLUT = ImageMap::AllocImageMap<float>(1.f, 1, RT_HISTOGRAM_SIZE, 1, ImageMapStorage::CLAMP);
+		randomizedTilingLUT->SetName(this->GetName() + "_#_randomizedTilingLUT");
 		float *randomizedTilingLUTData = (float *)randomizedTilingLUT->GetStorage()->GetPixelsData();
 		for (u_int i = 0; i < RT_HISTOGRAM_SIZE; ++i)
 			randomizedTilingLUTData[i] = Clamp(lut[i], 0.f, 1.f);
 
 		// Initialize randomized tiling LUT
 		randomizedTilingInvLUT = ImageMap::AllocImageMap<float>(1.f, 1, RT_LUT_SIZE, 1, ImageMapStorage::CLAMP);
+		randomizedTilingInvLUT->SetName(this->GetName() + "_#_randomizedTilingInvLUT");
 		float *randomizedTilingInvLUTData = (float *)randomizedTilingInvLUT->GetStorage()->GetPixelsData();
 
 		for (u_int i = 0; i < RT_LUT_SIZE; ++i) {
@@ -298,8 +333,7 @@ ImageMapTexture::ImageMapTexture(const ImageMap *img, const TextureMapping2D *mp
 
 ImageMapTexture::~ImageMapTexture() {
 	delete mapping;
-	delete randomizedTilingLUT;
-	delete randomizedTilingInvLUT;
+	// randomizedTilingLUT and randomizedTilingInvLUT are deleted by ImageMapCache 
 }
 
 float ImageMapTexture::GetFloatValue(const HitPoint &hitPoint) const {

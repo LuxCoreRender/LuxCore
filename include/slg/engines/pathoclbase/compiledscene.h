@@ -140,6 +140,7 @@ public:
 
 private:
 	void AddToImageMapMem(slg::ocl::ImageMap &im, void *data, const size_t memSize);
+	u_int CompileImageMap(const ImageMap *im);
 
 	void CompileCamera();
 	void CompileSceneObjects();

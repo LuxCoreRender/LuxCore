@@ -165,6 +165,7 @@ string PathOCLBaseOCLRenderThread::GetKernelSources() {
 			slg::ocl::KernelSource_texture_hsv_funcs <<
 			slg::ocl::KernelSource_texture_irregulardata_funcs <<
 			slg::ocl::KernelSource_texture_triplanar_funcs <<
+			slg::ocl::KernelSource_texture_imagemap_funcs <<
 			slg::ocl::KernelSource_texture_others_funcs <<
 			slg::ocl::KernelSource_texture_random_funcs <<
 			slg::ocl::KernelSource_texture_funcs_evalops <<

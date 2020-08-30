@@ -47,40 +47,6 @@ OPENCL_FORCE_INLINE float3 ConstFloat3Texture_ConstEvaluateSpectrum(__global con
 // Note: ConstTexture_Bump() is defined in texture_bump_funcs.cl
 
 //------------------------------------------------------------------------------
-// ImageMap texture
-//------------------------------------------------------------------------------
-
-OPENCL_FORCE_INLINE float ImageMapTexture_ConstEvaluateFloat(__global const Texture* restrict tex,
-		__global const HitPoint *hitPoint
-		TEXTURES_PARAM_DECL) {
-	__global const ImageMap *imageMap = &imageMapDescs[tex->imageMapTex.imageMapIndex];
-
-	const float2 mapUV = TextureMapping2D_Map(&tex->imageMapTex.mapping, hitPoint TEXTURES_PARAM);
-
-	return tex->imageMapTex.gain * ImageMap_GetFloat(
-			imageMap,
-			mapUV.x, mapUV.y
-			IMAGEMAPS_PARAM);
-}
-
-OPENCL_FORCE_INLINE float3 ImageMapTexture_ConstEvaluateSpectrum(__global const Texture* restrict tex,
-		__global const HitPoint *hitPoint
-		TEXTURES_PARAM_DECL) {
-	__global const ImageMap *imageMap = &imageMapDescs[tex->imageMapTex.imageMapIndex];
-	__global const float *pixels = (__global const float *)ImageMap_GetPixelsAddress(
-			imageMapBuff, imageMap->pageIndex, imageMap->pixelsIndex);
-
-	const float2 mapUV = TextureMapping2D_Map(&tex->imageMapTex.mapping, hitPoint TEXTURES_PARAM);
-
-	return tex->imageMapTex.gain * ImageMap_GetSpectrum(
-			imageMap,
-			mapUV.x, mapUV.y
-			IMAGEMAPS_PARAM);
-}
-
-// Note: ImageMapTexture_Bump() is defined in texture_bump_funcs.cl
-
-//------------------------------------------------------------------------------
 // Scale texture
 //------------------------------------------------------------------------------
 

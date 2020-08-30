@@ -41,6 +41,7 @@
 #include "slg/scene/scene.h"
 #include "slg/textures/constfloat.h"
 #include "slg/textures/constfloat3.h"
+#include "slg/textures/imagemaptex.h"
 #include "slg/utils/pathinfo.h"
 
 using namespace std;
@@ -70,6 +71,8 @@ void Scene::Init(const float imageScale) {
 
 	editActions.AddAllAction();
 	imgMapCache.SetImageResize(imageScale);
+	// Add random image map to imgMapCache 
+	imgMapCache.DefineImageMap(ImageMapTexture::randomImageMap.get());
 
 	enableParsePrint = false;
 }

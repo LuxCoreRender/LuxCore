@@ -999,8 +999,6 @@ void CompiledScene::CompileTextureOps() {
 }
 
 void CompiledScene::CompileTextures() {
-	wasMaterialsCompiled = true;
-
 	const u_int texturesCount = scene->texDefs.GetSize();
 	SLG_LOG("Compile " << texturesCount << " Textures");
 	//SLG_LOG("  Texture size: " << sizeof(slg::ocl::Texture));
@@ -1040,6 +1038,19 @@ void CompiledScene::CompileTextures() {
 				tex->imageMapTex.gain = imt->GetGain();
 				CompileTextureMapping2D(&tex->imageMapTex.mapping, imt->GetTextureMapping());
 				tex->imageMapTex.imageMapIndex = scene->imgMapCache.GetImageMapIndex(im);
+
+				if (imt->HasRandomizedTiling()) {
+					tex->imageMapTex.randomizedTiling = true;
+
+					tex->imageMapTex.randomizedTilingLUTIndex = scene->imgMapCache.GetImageMapIndex(imt->GetRandomizedTilingLUT());
+					tex->imageMapTex.randomizedTilingInvLUTIndex = scene->imgMapCache.GetImageMapIndex(imt->GetRandomizedTilingInvLUT());
+					tex->imageMapTex.randomImageMapIndex = scene->imgMapCache.GetImageMapIndex(ImageMapTexture::randomImageMap.get());
+				} else {
+					tex->imageMapTex.randomizedTiling = false;
+					tex->imageMapTex.randomizedTilingLUTIndex = NULL_INDEX;
+					tex->imageMapTex.randomizedTilingInvLUTIndex = NULL_INDEX;
+					tex->imageMapTex.randomImageMapIndex = NULL_INDEX;
+				}
 				break;
 			}
 			case SCALE_TEX: {
