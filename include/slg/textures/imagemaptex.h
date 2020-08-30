@@ -46,9 +46,7 @@ public:
 	const ImageMap *GetRandomizedTilingLUT() const { return randomizedTilingLUT; }
 	const ImageMap *GetRandomizedTilingInvLUT() const { return randomizedTilingInvLUT; }
 
-	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
-		referencedImgMaps.insert(imageMap);
-	}
+	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const;
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 

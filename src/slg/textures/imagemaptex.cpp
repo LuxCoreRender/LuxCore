@@ -336,6 +336,14 @@ ImageMapTexture::~ImageMapTexture() {
 	// randomizedTilingLUT and randomizedTilingInvLUT are deleted by ImageMapCache 
 }
 
+void ImageMapTexture::AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const {
+	referencedImgMaps.insert(imageMap);
+	if (randomizedTilingLUT)
+		referencedImgMaps.insert(randomizedTilingLUT);
+	if (randomizedTilingInvLUT)
+		referencedImgMaps.insert(randomizedTilingInvLUT);
+}
+
 float ImageMapTexture::GetFloatValue(const HitPoint &hitPoint) const {
 	const UV pos = mapping->Map(hitPoint);
 
