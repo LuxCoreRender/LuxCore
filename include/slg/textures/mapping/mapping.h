@@ -38,8 +38,12 @@ using namespace luxrays::ocl;
 #include "slg/textures/mapping/mapping_types.cl"
 }
 
+//------------------------------------------------------------------------------
+// TextureMapping2D
+//------------------------------------------------------------------------------
+
 typedef enum {
-	UVMAPPING2D
+	UVMAPPING2D, UVRANDOMMAPPING2D
 } TextureMapping2DType;
 
 class TextureMapping2D {
@@ -51,12 +55,7 @@ public:
 
 	virtual TextureMapping2DType GetType() const = 0;
 
-	virtual luxrays::UV Map(const HitPoint &hitPoint) const {
-		return Map(hitPoint.GetUV(dataIndex));
-	}
-	// Directly used only in InfiniteLight and ImageMapTexture
-	virtual luxrays::UV Map(const luxrays::UV &uv) const = 0;
-
+	virtual luxrays::UV Map(const HitPoint &hitPoint) const = 0;
 	virtual luxrays::UV MapDuv(const HitPoint &hitPoint,
 		luxrays::UV *ds, luxrays::UV *dt) const = 0;
 
@@ -65,6 +64,75 @@ public:
 protected:
 	const u_int dataIndex;
 };
+
+//------------------------------------------------------------------------------
+// UVMapping2D
+//------------------------------------------------------------------------------
+
+class UVMapping2D : public TextureMapping2D {
+public:
+	UVMapping2D(const u_int dataIndex, const float rot, const float uScale, const float vScale,
+			const float uDelta, const float vDelta);
+	virtual ~UVMapping2D() { }
+
+	virtual TextureMapping2DType GetType() const { return UVMAPPING2D; }
+
+	virtual luxrays::UV Map(const HitPoint &hitPoint) const;
+	virtual luxrays::UV MapDuv(const HitPoint &hitPoint, luxrays::UV *ds, luxrays::UV *dt) const;
+
+	virtual luxrays::Properties ToProperties(const std::string &name) const;
+
+	const float uvRotation, uScale, vScale, uDelta, vDelta;
+	const float sinTheta, cosTheta;
+};
+
+//------------------------------------------------------------------------------
+// UVMapping2D
+//------------------------------------------------------------------------------
+
+class UVRandomMapping2D : public TextureMapping2D {
+public:
+	typedef enum {
+		OBJECT_ID, TRIANGLE_AOV
+	} SeedType;
+
+	UVRandomMapping2D(const u_int dataIndex, const SeedType seedType,
+			const u_int triAOVIndex,
+			const float uvRotationMin, const float uvRotationMax,
+			const float uScaleMin, const float uScaleMax,
+			const float vScaleMin, const float vScaleMax,
+			const float uDeltaMin, const float uDeltaMax,
+			const float vDeltaMin, const float vDeltaMax,
+			const bool uniformScale);
+	virtual ~UVRandomMapping2D() { }
+
+	virtual TextureMapping2DType GetType() const { return UVRANDOMMAPPING2D; }
+
+	virtual luxrays::UV Map(const HitPoint &hitPoint) const;
+	virtual luxrays::UV MapDuv(const HitPoint &hitPoint, luxrays::UV *ds, luxrays::UV *dt) const;
+
+	virtual luxrays::Properties ToProperties(const std::string &name) const;
+
+	static SeedType String2SeedType(const std::string &type);
+	static std::string SeedType2String(const SeedType type);
+	
+	const SeedType seedType;
+	const u_int triAOVIndex;
+	const float uvRotationMin, uvRotationMax;
+	const float uScaleMin, uScaleMax;
+	const float vScaleMin, vScaleMax;
+	const float uDeltaMin, uDeltaMax;
+	const float vDeltaMin, vDeltaMax;
+	
+	const bool uniformScale;
+
+private:
+	luxrays::UV Map(const HitPoint &hitPoint, luxrays::UV *ds, luxrays::UV *dt) const;
+};
+
+//------------------------------------------------------------------------------
+// TextureMapping3D
+//------------------------------------------------------------------------------
 
 typedef enum {
 	UVMAPPING3D, GLOBALMAPPING3D, LOCALMAPPING3D
@@ -82,27 +150,6 @@ public:
 	virtual luxrays::Properties ToProperties(const std::string &name) const = 0;
 
 	const luxrays::Transform worldToLocal;
-};
-
-//------------------------------------------------------------------------------
-// UVMapping2D
-//------------------------------------------------------------------------------
-
-class UVMapping2D : public TextureMapping2D {
-public:
-	UVMapping2D(const u_int dataIndex, const float rot, const float uscale, const float vscale,
-			const float udelta, const float vdelta);
-	virtual ~UVMapping2D() { }
-
-	virtual TextureMapping2DType GetType() const { return UVMAPPING2D; }
-
-	virtual luxrays::UV Map(const luxrays::UV &uv) const;
-	virtual luxrays::UV MapDuv(const HitPoint &hitPoint, luxrays::UV *ds, luxrays::UV *dt) const;
-
-	virtual luxrays::Properties ToProperties(const std::string &name) const;
-
-	float uvRotation, uScale, vScale, uDelta, vDelta;
-	float sinTheta, cosTheta;
 };
 
 //------------------------------------------------------------------------------

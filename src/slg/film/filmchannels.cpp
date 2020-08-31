@@ -337,7 +337,7 @@ template<> u_int *Film::GetChannel<u_int>(const FilmChannelType type,
 
 void Film::GetPixelFromMergedSampleBuffers(
 		const bool use_RADIANCE_PER_PIXEL_NORMALIZEDs, const bool use_RADIANCE_PER_SCREEN_NORMALIZEDs,
-		const std::vector<RadianceChannelScale> *radianceChannelScales,
+		const vector<RadianceChannelScale> *radianceChannelScales,
 		const double RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
 		const u_int index, float *c) const {
 	c[0] = 0.f;
@@ -387,7 +387,7 @@ void Film::GetPixelFromMergedSampleBuffers(
 
 void Film::GetPixelFromMergedSampleBuffers(
 		const bool use_RADIANCE_PER_PIXEL_NORMALIZEDs, const bool use_RADIANCE_PER_SCREEN_NORMALIZEDs,
-	const std::vector<RadianceChannelScale> *radianceChannelScales,
+	const vector<RadianceChannelScale> *radianceChannelScales,
 	const double RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
 	const u_int x, const u_int y, float *c) const {
 	GetPixelFromMergedSampleBuffers(use_RADIANCE_PER_PIXEL_NORMALIZEDs,
@@ -399,7 +399,7 @@ void Film::GetPixelFromMergedSampleBuffers(const u_int imagePipelineIndex,
 		const double RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
 		const u_int x, const u_int y, float *c) const {
 	const ImagePipeline *ip = (imagePipelineIndex < imagePipelines.size()) ? imagePipelines[imagePipelineIndex] : NULL;
-	const std::vector<RadianceChannelScale> *radianceChannelScales = ip ? &ip->radianceChannelScales : NULL;
+	const vector<RadianceChannelScale> *radianceChannelScales = ip ? &ip->radianceChannelScales : NULL;
 
 	GetPixelFromMergedSampleBuffers(true, true,
 			radianceChannelScales, RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
@@ -410,7 +410,7 @@ void Film::GetPixelFromMergedSampleBuffers(const u_int imagePipelineIndex,
 		const double RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
 		const u_int index, float *c) const {
 	const ImagePipeline *ip = (imagePipelineIndex < imagePipelines.size()) ? imagePipelines[imagePipelineIndex] : NULL;
-	const std::vector<RadianceChannelScale> *radianceChannelScales = ip ? &ip->radianceChannelScales : NULL;
+	const vector<RadianceChannelScale> *radianceChannelScales = ip ? &ip->radianceChannelScales : NULL;
 
 	GetPixelFromMergedSampleBuffers(true, true,
 			radianceChannelScales, RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
@@ -471,7 +471,7 @@ float Film::GetFilmMaxValue(const u_int imagePipelineIndex) const {
 	return maxValue;
 }
 
-Film::FilmChannelType Film::String2FilmChannelType(const std::string &type) {
+Film::FilmChannelType Film::String2FilmChannelType(const string &type) {
 	if (type == "RADIANCE_PER_PIXEL_NORMALIZED")
 		return RADIANCE_PER_PIXEL_NORMALIZED;
 	else if (type == "RADIANCE_PER_SCREEN_NORMALIZED")
@@ -558,7 +558,7 @@ Film::FilmChannelType Film::String2FilmChannelType(const std::string &type) {
 		throw runtime_error("Unknown film output type in Film::String2FilmChannelType(): " + type);
 }
 
-const std::string Film::FilmChannelType2String(const Film::FilmChannelType type) {
+const string Film::FilmChannelType2String(const Film::FilmChannelType type) {
 	switch (type) {
 		case Film::RADIANCE_PER_PIXEL_NORMALIZED:
 			return "RADIANCE_PER_PIXEL_NORMALIZED";

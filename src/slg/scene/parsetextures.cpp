@@ -681,12 +681,42 @@ TextureMapping2D *Scene::CreateTextureMapping2D(const string &prefixName, const 
 	const string mapType = props.Get(Property(prefixName + ".type")("uvmapping2d")).Get<string>();
 
 	if (mapType == "uvmapping2d") {
-		const float rotation = props.Get(Property(prefixName + ".rotation")(0.f)).Get<float>();
 		const u_int dataIndex = Clamp(props.Get(Property(prefixName + ".uvindex")(0u)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
+
+		const float rotation = props.Get(Property(prefixName + ".rotation")(0.f)).Get<float>();
 		const UV uvScale = props.Get(Property(prefixName + ".uvscale")(1.f, 1.f)).Get<UV>();
 		const UV uvDelta = props.Get(Property(prefixName + ".uvdelta")(0.f, 0.f)).Get<UV>();
 
 		return new UVMapping2D(dataIndex, rotation, uvScale.u, uvScale.v, uvDelta.u, uvDelta.v);
+	} else if (mapType == "uvrandommapping2d") {
+		const u_int dataIndex = Clamp(props.Get(Property(prefixName + ".uvindex")(0u)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
+
+		const UVRandomMapping2D::SeedType seedType = UVRandomMapping2D::String2SeedType(props.Get(Property(prefixName + ".seed.type")("OBJECT_ID")).Get<string>());
+		const u_int triAOVIndex = props.Get(Property(prefixName + ".triangleaov.index")(0u)).Get<u_int>();
+
+		const Property &uvRotatioProp = props.Get(Property(prefixName + ".rotation")(0.f, 0.f));
+		const float uvRotatioMin = uvRotatioProp.Get<float>(0);
+		const float uvRotatioMax = uvRotatioProp.Get<float>(1);
+
+		const Property &uvScaleProp = props.Get(Property(prefixName + ".uvscale")(1.f, 1.f, 1.f, 1.f));
+		const float uScaleMin = uvScaleProp.Get<float>(0);
+		const float uScaleMax = uvScaleProp.Get<float>(1);
+		const float vScaleMin = uvScaleProp.Get<float>(2);
+		const float vScaleMax = uvScaleProp.Get<float>(3);
+		
+		const bool uniformScale = props.Get(Property(prefixName + ".uvscale.uniform")(false)).Get<bool>();
+
+		const Property &uvDeltaProp = props.Get(Property(prefixName + ".uvdelta")(0.f, 0.f, 0.f, 0.f));
+		const float uDeltaMin = uvDeltaProp.Get<float>(0);
+		const float uDeltaMax = uvDeltaProp.Get<float>(1);
+		const float vDeltaMin = uvDeltaProp.Get<float>(2);
+		const float vDeltaMax = uvDeltaProp.Get<float>(3);
+
+		return new UVRandomMapping2D(dataIndex, seedType, triAOVIndex,
+				uvRotatioMin, uvRotatioMax,
+				uScaleMin, uScaleMax, vScaleMin, vScaleMax,
+				uDeltaMin, uDeltaMax, vDeltaMin, vDeltaMax,
+				uniformScale);
 	} else
 		throw runtime_error("Unknown 2D texture coordinate mapping type: " + mapType);
 }
