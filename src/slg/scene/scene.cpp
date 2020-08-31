@@ -367,6 +367,9 @@ void Scene::RemoveUnusedImageMaps() {
 	for (u_int i = 0; i < matDefs.GetSize(); ++i)
 		matDefs.GetMaterial(i)->AddReferencedImageMaps(referencedImgMaps);
 
+	// Avoid to remove random image map from imgMapCache 
+	referencedImgMaps.insert(ImageMapTexture::randomImageMap.get());
+	
 	// Get the list of all defined image maps
 	vector<const ImageMap *> ims;
 	imgMapCache.GetImageMaps(ims);
