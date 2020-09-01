@@ -19,7 +19,80 @@
  ***************************************************************************/
 
 //------------------------------------------------------------------------------
-// 2D mapping
+// UVRandomMapping2D
+//------------------------------------------------------------------------------
+
+OPENCL_FORCE_INLINE float2 UVRandomMapping2D_MapImpl(__global const TextureMapping2D *mapping,
+		__global const HitPoint *hitPoint, float2 *ds, float2 *dt TEXTURES_PARAM_DECL) {
+	// Select random parameters
+	uint seed;
+	switch (mapping->uvRandomMapping2D.seedType) {
+		default:
+		case OBJECT_ID:
+			seed = hitPoint->objectID;
+			break;
+		case TRIANGLE_AOV:
+			seed = (uint)HitPoint_GetTriAOV(hitPoint, mapping->dataIndex EXTMESH_PARAM);;
+			break;
+	}
+
+	Seed rndSeed;
+	Rnd_Init(seed, &rndSeed);
+
+	const float uvRotation = Lerp(Rnd_FloatValue(&rndSeed),
+			mapping->uvRandomMapping2D.uvRotationMin, mapping->uvRandomMapping2D.uvRotationMax);
+	const float uScale = Lerp(Rnd_FloatValue(&rndSeed),
+			mapping->uvRandomMapping2D.uScaleMin, mapping->uvRandomMapping2D.uScaleMax);
+	const float vScale = mapping->uvRandomMapping2D.uniformScale ?
+		uScale :
+		Lerp(Rnd_FloatValue(&rndSeed),
+			mapping->uvRandomMapping2D.vScaleMin, mapping->uvRandomMapping2D.vScaleMax);
+	const float uDelta = Lerp(Rnd_FloatValue(&rndSeed),
+			mapping->uvRandomMapping2D.uDeltaMin, mapping->uvRandomMapping2D.uDeltaMax);
+	const float vDelta = Lerp(Rnd_FloatValue(&rndSeed),
+			mapping->uvRandomMapping2D.vDeltaMin, mapping->uvRandomMapping2D.vDeltaMax);
+
+	// Get the hit point UV
+	const float2 uv = HitPoint_GetUV(hitPoint, mapping->dataIndex EXTMESH_PARAM);
+	
+	// Scale
+	const float uScaled = uv.x * uScale;
+	const float vScaled = uv.y * vScale;
+
+	// Rotate
+	const float rad = Radians(-uvRotation);
+	const float sinTheta = sin(rad);
+	const float cosTheta = cos(rad);
+	const float uRotated = uScaled * cosTheta - vScaled * sinTheta;
+	const float vRotated = vScaled * cosTheta + uScaled * sinTheta;
+
+	// Translate
+	const float uTranslated = uRotated + uDelta;
+	const float vTranslated = vRotated + vDelta;
+	
+	if (ds && dt) {
+		const float signUScale = uScale > 0 ? 1.f : -1.f;;
+		const float signVScale = vScale > 0 ? 1.f : -1.f;
+
+		*ds = MAKE_FLOAT2(signUScale * cosTheta, signUScale * sinTheta);
+		*dt = MAKE_FLOAT2(-signVScale * sinTheta, signVScale * cosTheta);
+	}
+	
+	return MAKE_FLOAT2(uTranslated, vTranslated);
+}
+
+OPENCL_FORCE_INLINE float2 UVRandomMapping2D_Map(__global const TextureMapping2D *mapping,
+		__global const HitPoint *hitPoint TEXTURES_PARAM_DECL) {
+	return  UVRandomMapping2D_MapImpl(mapping, hitPoint, NULL, NULL TEXTURES_PARAM);
+}
+
+OPENCL_FORCE_INLINE float2 UVRandomMapping2D_MapDuv(__global const TextureMapping2D *mapping,
+		__global const HitPoint *hitPoint, float2 *ds, float2 *dt TEXTURES_PARAM_DECL) {
+	return  UVRandomMapping2D_MapImpl(mapping, hitPoint, ds, dt TEXTURES_PARAM);
+}
+
+//------------------------------------------------------------------------------
+// UVMapping2D
 //------------------------------------------------------------------------------
 
 OPENCL_FORCE_INLINE float2 UVMapping2D_Map(__global const TextureMapping2D *mapping,
@@ -56,11 +129,17 @@ OPENCL_FORCE_INLINE float2 UVMapping2D_MapDuv(__global const TextureMapping2D *m
 	return UVMapping2D_Map(mapping, hitPoint TEXTURES_PARAM);
 }
 
+//------------------------------------------------------------------------------
+// TextureMapping2D
+//------------------------------------------------------------------------------
+
 OPENCL_FORCE_NOT_INLINE float2 TextureMapping2D_Map(__global const TextureMapping2D *mapping,
 		__global const HitPoint *hitPoint TEXTURES_PARAM_DECL) {
 	switch (mapping->type) {
 		case UVMAPPING2D:
 			return UVMapping2D_Map(mapping, hitPoint TEXTURES_PARAM);
+		case UVRANDOMMAPPING2D:
+			return UVRandomMapping2D_Map(mapping, hitPoint TEXTURES_PARAM);
 		default:
 			return MAKE_FLOAT2(0.f, 0.f);
 	}
@@ -71,6 +150,8 @@ OPENCL_FORCE_NOT_INLINE float2 TextureMapping2D_MapDuv(__global const TextureMap
 	switch (mapping->type) {
 		case UVMAPPING2D:
 			return UVMapping2D_MapDuv(mapping, hitPoint, ds, dt TEXTURES_PARAM);
+		case UVRANDOMMAPPING2D:
+			return UVRandomMapping2D_MapDuv(mapping, hitPoint, ds, dt TEXTURES_PARAM);
 		default:
 			return MAKE_FLOAT2(0.f, 0.f);
 	}

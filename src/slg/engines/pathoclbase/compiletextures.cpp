@@ -104,6 +104,37 @@ void CompiledScene::CompileTextureMapping2D(slg::ocl::TextureMapping2D *mapping,
 			mapping->uvMapping2D.vDelta = uvm->vDelta;
 			break;
 		}
+		case UVRANDOMMAPPING2D: {
+			mapping->type = slg::ocl::UVRANDOMMAPPING2D;
+
+			const UVRandomMapping2D *uvm = static_cast<const UVRandomMapping2D *>(m);
+			mapping->dataIndex = uvm->GetDataIndex();
+
+			switch (uvm->seedType) {
+				case UVRandomMapping2D::OBJECT_ID:
+					mapping->uvRandomMapping2D.seedType = slg::ocl::UVRandomMappingSeedType::OBJECT_ID;
+					break;
+				case UVRandomMapping2D::TRIANGLE_AOV:
+					mapping->uvRandomMapping2D.seedType = slg::ocl::UVRandomMappingSeedType::TRIANGLE_AOV;
+					break;
+				default:
+					throw runtime_error("Unknown seed type in CompiledScene::CompileTextureMapping2D: " + ToString(uvm->seedType));
+			}
+
+			mapping->uvRandomMapping2D.triAOVIndex = uvm->triAOVIndex;
+			mapping->uvRandomMapping2D.uvRotationMin = uvm->uvRotationMin;
+			mapping->uvRandomMapping2D.uvRotationMax = uvm->uvRotationMax;
+			mapping->uvRandomMapping2D.uScaleMin = uvm->uScaleMin;
+			mapping->uvRandomMapping2D.uScaleMax = uvm->uScaleMax;
+			mapping->uvRandomMapping2D.vScaleMin = uvm->vScaleMin;
+			mapping->uvRandomMapping2D.vScaleMax = uvm->vScaleMax;
+			mapping->uvRandomMapping2D.uDeltaMin = uvm->uDeltaMin;
+			mapping->uvRandomMapping2D.uDeltaMax = uvm->uDeltaMax;
+			mapping->uvRandomMapping2D.vDeltaMin = uvm->vDeltaMin;
+			mapping->uvRandomMapping2D.vDeltaMax = uvm->vDeltaMax;
+			mapping->uvRandomMapping2D.uniformScale = uvm->uniformScale;
+			break;
+		}
 		default:
 			throw runtime_error("Unknown 2D texture mapping in CompiledScene::CompileTextureMapping2D: " + ToString(m->GetType()));
 	}
