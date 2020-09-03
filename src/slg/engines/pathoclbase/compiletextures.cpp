@@ -824,6 +824,7 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 				default:
 					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(" + ToString(tex->type) + "): " + ToString(opType));
 			}
+			break;
 		}
 		case slg::ocl::DISTORT_TEX: {
 			switch (opType) {

@@ -38,6 +38,7 @@
 * Fixed a memory leak when rendering with OpenCL (noticeable when rendering animations)
 * Fixed text export of brick texture HERRINGBONE and BASKET
 * Fixed scale problem in GPU code for brick texture HERRINGBONE and BASKET (issue #438)
+* Fixed a possible crash when using trilinear texture with GPUs
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
