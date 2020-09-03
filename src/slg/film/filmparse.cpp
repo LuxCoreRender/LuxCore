@@ -657,13 +657,14 @@ ImagePipeline *Film::CreateImagePipeline(const Properties &props, const string &
 
 				imagePipeline->AddPlugin(new VignettingPlugin(scale));
 			} else if (type == "COLOR_ABERRATION") {
-				const Property &p = props.Get(Property(prefix + ".amount")(.005f));
+				const Property defaultProp = Property(prefix + ".amount")(.005f);
+				const Property &prop = props.Get(defaultProp);
 				float scaleX, scaleY;
-				if (p.GetSize() == 2) {
-					scaleX = Clamp(p.Get<float>(0), 0.f, 1.f);
-					scaleY = Clamp(p.Get<float>(1), 0.f, 1.f);
+				if (prop.GetSize() == 2) {
+					scaleX = Clamp(prop.Get<float>(0), 0.f, 1.f);
+					scaleY = Clamp(prop.Get<float>(1), 0.f, 1.f);
 				} else {
-					scaleX = Clamp(p.Get<float>(), 0.f, 1.f);
+					scaleX = Clamp(prop.Get<float>(), 0.f, 1.f);
 					scaleY = scaleX;
 				}
 
@@ -866,7 +867,8 @@ void Film::Parse(const Properties &props) {
 		haltTime = Max(0.0, props.Get(Property("batch.halttime")(0.0)).Get<double>());
 
 	if (props.IsDefined("batch.haltspp")) {
-		const Property &haltProp = props.Get(Property("batch.haltspp")(0u));
+		const Property haltDefaultProp = Property("batch.haltspp")(0u);
+		const Property &haltProp = props.Get(haltDefaultProp);
 		switch (haltProp.GetSize()) {
 			case 1:
 				haltSPP = haltProp.Get<u_int>();

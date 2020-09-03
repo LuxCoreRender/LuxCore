@@ -25,6 +25,30 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
+namespace slg {
+
+RandomMappingSeedType String2RandomMappingSeedType(const string &type) {
+	if (type == "object_id")
+		return OBJECT_ID;
+	else if (type == "triangle_aov")
+		return TRIANGLE_AOV;
+	else
+		throw runtime_error("Unknown seed type in String2RandomMappingSeedType(): " + type);
+}
+
+string RandomMappingSeedType2String(const RandomMappingSeedType type) {
+	switch (type) {
+		case OBJECT_ID:
+			return "object_id";
+		case TRIANGLE_AOV:
+			return "triangle_aov";
+		default:
+			throw runtime_error("Unknown seed type in RandomMappingSeedType2String(): " + ToString(type));
+	}
+}
+
+}
+
 //------------------------------------------------------------------------------
 // TextureMapping2D
 //------------------------------------------------------------------------------
@@ -88,7 +112,7 @@ Properties UVMapping2D::ToProperties(const string &name) const {
 // UVRandomMapping2D
 //------------------------------------------------------------------------------
 
-UVRandomMapping2D::UVRandomMapping2D(const u_int index, const SeedType seedTyp,
+UVRandomMapping2D::UVRandomMapping2D(const u_int index, const RandomMappingSeedType seedTyp,
 		const u_int triAOVIdx,
 		const float uvRotationMn, const float uvRotationMx,
 		const float uScaleMn, const float uScaleMx,
@@ -168,32 +192,12 @@ Properties UVRandomMapping2D::ToProperties(const string &name) const {
 	return Properties() <<
 			Property(name + ".type")("uvrandommapping2d") <<
 			TextureMapping2D::ToProperties(name) <<
-			Property(name + ".seed.type")(SeedType2String(seedType)) <<
+			Property(name + ".seed.type")(RandomMappingSeedType2String(seedType)) <<
 			Property(name + ".triangleaov.index")(triAOVIndex) <<
 			Property(name + ".rotation")(uvRotationMin, uvRotationMax) <<
 			Property(name + ".uvscale")(uScaleMin, uScaleMax, vScaleMin, uScaleMax) <<
 			Property(name + ".uvscale.uniform")(uniformScale) <<
 			Property(name + ".uvdelta")(uDeltaMin, uDeltaMax, vDeltaMin, vDeltaMax);
-}
-
-UVRandomMapping2D::SeedType UVRandomMapping2D::String2SeedType(const string &type) {
-	if (type == "object_id")
-		return OBJECT_ID;
-	else if (type == "triangle_aov")
-		return TRIANGLE_AOV;
-	else
-		throw runtime_error("Unknown seed type in UVRandomMapping2D::String2SeedType(): " + type);
-}
-
-string UVRandomMapping2D::SeedType2String(const SeedType type) {
-	switch (type) {
-		case OBJECT_ID:
-			return "object_id";
-		case TRIANGLE_AOV:
-			return "triangle_aov";
-		default:
-			throw runtime_error("Unknown seed type in UVRandomMapping2D::SeedType2String(): " + ToString(type));
-	}
 }
 
 //------------------------------------------------------------------------------
@@ -255,4 +259,95 @@ Properties LocalMapping3D::ToProperties(const string &name) const {
 	props.Set(Property(name + ".transformation")(worldToLocal.m));
 
 	return props;
+}
+
+//------------------------------------------------------------------------------
+// LocalRandomMapping3D
+//------------------------------------------------------------------------------
+
+LocalRandomMapping3D::LocalRandomMapping3D(const luxrays::Transform &w2l, const RandomMappingSeedType seedTyp,
+		const u_int triAOVIdx,
+		const float xRotationMn, const float xRotationMx,
+		const float yRotationMn, const float yRotationMx,
+		const float zRotationMn, const float zRotationMx,
+		const float xScaleMn, const float xScaleMx,
+		const float yScaleMn, const float yScaleMx,
+		const float zScaleMn, const float zScaleMx,
+		const float xTranslateMn, const float xTranslateMx,
+		const float yTranslateMn, const float yTranslateMx,
+		const float zTranslateMn, const float zTranslateMx,
+		const bool uniformScl) :
+			TextureMapping3D(w2l),
+			seedType(seedTyp),
+			triAOVIndex(triAOVIdx),
+			xRotationMin(xRotationMn), xRotationMax(xRotationMx),
+			yRotationMin(yRotationMn), yRotationMax(yRotationMx),
+			zRotationMin(zRotationMn), zRotationMax(zRotationMx),
+			xScaleMin(xScaleMn), xScaleMax(xScaleMx),
+			yScaleMin(yScaleMn), yScaleMax(yScaleMx),
+			zScaleMin(zScaleMn), zScaleMax(zScaleMx),
+			xTranslateMin(xTranslateMn), xTranslateMax(xTranslateMx),
+			yTranslateMin(yTranslateMn), yTranslateMax(yTranslateMx),
+			zTranslateMin(zTranslateMn), zTranslateMax(zTranslateMx),
+			uniformScale(uniformScl) {
+	
+}
+
+Point LocalRandomMapping3D::Map(const HitPoint &hitPoint, Normal *shadeN) const {
+	Transform w2t = worldToLocal / hitPoint.localToWorld;
+
+	if (shadeN)
+		*shadeN = Normalize(w2t * hitPoint.shadeN);
+
+	// Select random parameters
+	u_int seed;
+	switch (seedType) {
+		case OBJECT_ID:
+			seed = hitPoint.objectID;
+			break;
+		case TRIANGLE_AOV:
+			seed = (u_int)hitPoint.GetTriAOV(triAOVIndex);
+			break;
+		default:
+			throw runtime_error("Unknown seed type in LocalRandomMapping3D::Map(): " + ToString(seedType));
+	}
+	
+	TauswortheRandomGenerator rndGen(seed);
+
+	const float xRotation = Lerp(rndGen.floatValue(), xRotationMin, xRotationMax);
+	const float yRotation = Lerp(rndGen.floatValue(), yRotationMin, yRotationMax);
+	const float zRotation = Lerp(rndGen.floatValue(), zRotationMin, zRotationMax);
+	
+	const float xScale = Lerp(rndGen.floatValue(), xScaleMin, xScaleMax);
+	const float yScale = uniformScale ? xScale : Lerp(rndGen.floatValue(), yScaleMin, yScaleMax);
+	const float zScale = uniformScale ? xScale : Lerp(rndGen.floatValue(), zScaleMin, zScaleMax);
+	
+	const float xTranslate = Lerp(rndGen.floatValue(), xTranslateMin, xTranslateMax);
+	const float yTranslate = Lerp(rndGen.floatValue(), yTranslateMin, yTranslateMax);
+	const float zTranslate = Lerp(rndGen.floatValue(), zTranslateMin, zTranslateMax);
+
+	w2t = w2t *
+			Scale(xScale, yScale, zScale) *
+			RotateX(xRotation) * RotateY(yRotation) * RotateZ(zRotation) *
+			Translate(Vector(xTranslate, yTranslate, zTranslate));
+
+	return w2t * hitPoint.p;
+}
+
+Properties LocalRandomMapping3D::ToProperties(const string &name) const {
+	return Properties() <<
+			Property(name + ".type")("localrandommapping3d") <<
+			Property(name + ".transformation")(worldToLocal.m) <<
+			Property(name + ".seed.type")(RandomMappingSeedType2String(seedType)) <<
+			Property(name + ".triangleaov.index")(triAOVIndex) <<
+			Property(name + ".xrotation")(xRotationMin, xRotationMax) <<
+			Property(name + ".yrotation")(yRotationMin, yRotationMax) <<
+			Property(name + ".zrotation")(zRotationMin, zRotationMax) <<
+			Property(name + ".xscale")(xScaleMin, xScaleMax) <<
+			Property(name + ".yscale")(yScaleMin, yScaleMax) <<
+			Property(name + ".zscale")(zScaleMin, zScaleMax) <<
+			Property(name + ".xyzscale.uniform")(uniformScale) <<
+			Property(name + ".xtranslate")(xTranslateMin, xTranslateMax) <<
+			Property(name + ".ytranslate")(yTranslateMin, yTranslateMax) <<
+			Property(name + ".ztranslate")(zTranslateMin, zTranslateMax);
 }

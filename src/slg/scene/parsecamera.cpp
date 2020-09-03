@@ -85,7 +85,8 @@ Camera *Scene::CreateCamera(const Properties &props) {
 			if (props.IsDefined("scene.camera.screenwindow")) {
 				float screenWindow[4];
 
-				const Property &prop = props.Get(Property("scene.camera.screenwindow")(0.f, 1.f, 0.f, 1.f));
+				const Property defaultProp = Property("scene.camera.screenwindow")(0.f, 1.f, 0.f, 1.f);
+				const Property &prop = props.Get(defaultProp);
 				screenWindow[0] = prop.Get<float>(0);
 				screenWindow[1] = prop.Get<float>(1);
 				screenWindow[2] = prop.Get<float>(2);

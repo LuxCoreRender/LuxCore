@@ -300,7 +300,8 @@ ExtTriangleMesh *Scene::CreateShape(const string &shapeName, const Properties &p
 		// So map.channels = 2 0 1
 		//
 		// Mudbox standard: map.channels = 0 2 1
-		const Property propChannels = props.Get(Property(propName + ".map.channels")(2u, 0u, 1u));
+		const Property defaultPropChannels = Property(propName + ".map.channels")(2u, 0u, 1u);
+		const Property propChannels = props.Get(defaultPropChannels);
 		if (propChannels.GetSize() != 3)
 			throw runtime_error("Wrong number of map channel indices in a displacement shape: " + shapeName);
 		params.mapChannels[0] = Min(propChannels.Get<u_int>(0), 2u);

@@ -111,10 +111,10 @@ void CompiledScene::CompileTextureMapping2D(slg::ocl::TextureMapping2D *mapping,
 			mapping->dataIndex = uvm->GetDataIndex();
 
 			switch (uvm->seedType) {
-				case UVRandomMapping2D::OBJECT_ID:
+				case RandomMappingSeedType::OBJECT_ID:
 					mapping->uvRandomMapping2D.seedType = slg::ocl::UVRandomMappingSeedType::OBJECT_ID;
 					break;
-				case UVRandomMapping2D::TRIANGLE_AOV:
+				case RandomMappingSeedType::TRIANGLE_AOV:
 					mapping->uvRandomMapping2D.seedType = slg::ocl::UVRandomMappingSeedType::TRIANGLE_AOV;
 					break;
 				default:

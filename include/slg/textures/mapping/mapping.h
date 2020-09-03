@@ -38,6 +38,13 @@ using namespace luxrays::ocl;
 #include "slg/textures/mapping/mapping_types.cl"
 }
 
+typedef enum {
+	OBJECT_ID, TRIANGLE_AOV
+} RandomMappingSeedType;
+
+extern RandomMappingSeedType String2RandomMappingSeedType(const std::string &type);
+extern std::string RandomMappingSeedType2String(const RandomMappingSeedType type);
+
 //------------------------------------------------------------------------------
 // TextureMapping2D
 //------------------------------------------------------------------------------
@@ -92,11 +99,7 @@ public:
 
 class UVRandomMapping2D : public TextureMapping2D {
 public:
-	typedef enum {
-		OBJECT_ID, TRIANGLE_AOV
-	} SeedType;
-
-	UVRandomMapping2D(const u_int dataIndex, const SeedType seedType,
+	UVRandomMapping2D(const u_int dataIndex, const RandomMappingSeedType seedType,
 			const u_int triAOVIndex,
 			const float uvRotationMin, const float uvRotationMax,
 			const float uScaleMin, const float uScaleMax,
@@ -113,10 +116,7 @@ public:
 
 	virtual luxrays::Properties ToProperties(const std::string &name) const;
 
-	static SeedType String2SeedType(const std::string &type);
-	static std::string SeedType2String(const SeedType type);
-	
-	const SeedType seedType;
+	const RandomMappingSeedType seedType;
 	const u_int triAOVIndex;
 	const float uvRotationMin, uvRotationMax;
 	const float uScaleMin, uScaleMax;
@@ -135,7 +135,7 @@ private:
 //------------------------------------------------------------------------------
 
 typedef enum {
-	UVMAPPING3D, GLOBALMAPPING3D, LOCALMAPPING3D
+	UVMAPPING3D, GLOBALMAPPING3D, LOCALMAPPING3D, LOCALRANDOMMAPPING3D
 } TextureMapping3DType;
 
 class TextureMapping3D {
@@ -204,6 +204,47 @@ public:
 	virtual luxrays::Point Map(const HitPoint &hitPoint, luxrays::Normal *shadeN = nullptr) const;
 
 	virtual luxrays::Properties ToProperties(const std::string &name) const;
+};
+
+//------------------------------------------------------------------------------
+// LocalRandomMapping3D
+//------------------------------------------------------------------------------
+
+class LocalRandomMapping3D : public TextureMapping3D {
+public:
+	LocalRandomMapping3D(const luxrays::Transform &w2l, const RandomMappingSeedType seedType,
+			const u_int triAOVIndex,
+			const float xRotationMin, const float xRotationMax,
+			const float yRotationMin, const float yRotationMax,
+			const float zRotationMin, const float zRotationMax,
+			const float xScaleMin, const float xScaleMax,
+			const float yScaleMin, const float yScaleMax,
+			const float zScaleMin, const float zScaleMax,
+			const float xTranslateMin, const float xTranslateMax,
+			const float yTranslateMin, const float yTranslateMax,
+			const float zTranslateMin, const float zTranslateMax,
+			const bool uniformScale);
+	virtual ~LocalRandomMapping3D() { }
+
+	virtual TextureMapping3DType GetType() const { return LOCALRANDOMMAPPING3D; }
+
+	virtual luxrays::Point Map(const HitPoint &hitPoint, luxrays::Normal *shadeN = nullptr) const;
+
+	virtual luxrays::Properties ToProperties(const std::string &name) const;
+	
+	const RandomMappingSeedType seedType;
+	const u_int triAOVIndex;
+	const float xRotationMin, xRotationMax;
+	const float yRotationMin, yRotationMax;
+	const float zRotationMin, zRotationMax;
+	const float xScaleMin, xScaleMax;
+	const float yScaleMin, yScaleMax;
+	const float zScaleMin, zScaleMax;
+	const float xTranslateMin, xTranslateMax;
+	const float yTranslateMin, yTranslateMax;
+	const float zTranslateMin, zTranslateMax;
+
+	const bool uniformScale;
 };
 
 }
