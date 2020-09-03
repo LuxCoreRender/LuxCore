@@ -26,7 +26,8 @@ not interested in internal LuxCoreRender development.
 ### LuxRays library
 
 LuxRays is the part of LuxCoreRender dedicated to accelerate the ray intersection
-process by using CPUs or GPUs.
+process by using CPUs and/or GPUs. LuxRays provides an device abstraction layer
+over various API like OpenCL, CUDA, CUDA+Optix, etc.
 
 If you don't have any specific interest in the ray/triangle intersection topic
 or internal LuxCoreRender development, you can safely ignore this library.

@@ -26,6 +26,7 @@
 * Now individual bricks, in brick texture, have a pseudo-random mix between two colors by default
 * Added the support for Randomized Texture Tiling (#228)
 * Added the support for UVRandomMapping2D
+* Added the support for LocalRandomMapping3D
 
 ### Fixed Bugs
 
