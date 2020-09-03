@@ -32,7 +32,10 @@ OPENCL_FORCE_INLINE float2 UVRandomMapping2D_MapImpl(__global const TextureMappi
 			seed = hitPoint->objectID;
 			break;
 		case TRIANGLE_AOV:
-			seed = (uint)HitPoint_GetTriAOV(hitPoint, mapping->dataIndex EXTMESH_PARAM);;
+			seed = (uint)HitPoint_GetTriAOV(hitPoint, mapping->dataIndex EXTMESH_PARAM);
+			break;
+		case OBJECT_ID_OFFSET:
+			seed = hitPoint->objectID + mapping->uvRandomMapping2D.objectIDOffset;
 			break;
 	}
 

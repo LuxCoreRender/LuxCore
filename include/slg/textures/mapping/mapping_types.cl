@@ -31,12 +31,15 @@ typedef struct {
 } UVMapping2DParam;
 
 typedef enum {
-	OBJECT_ID, TRIANGLE_AOV
+	OBJECT_ID, TRIANGLE_AOV, OBJECT_ID_OFFSET
 } UVRandomMappingSeedType;
 
 typedef struct {
     UVRandomMappingSeedType seedType;
-	unsigned int triAOVIndex;
+	union {
+		unsigned int triAOVIndex;
+		unsigned int objectIDOffset;
+	};
 	float uvRotationMin, uvRotationMax;
 	float uScaleMin, uScaleMax;
 	float vScaleMin, vScaleMax;

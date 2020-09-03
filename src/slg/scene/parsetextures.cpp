@@ -160,7 +160,7 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		if (randomizedTiling && (im->GetStorage()->wrapType != ImageMapStorage::REPEAT))
 			throw runtime_error("Randomized tiling requires REPAT wrap type in imagemap texture: " + propName);
 
-		tex = ImageMapTexture::AllocImageMapTexture(imgMapCache, im,
+		tex = ImageMapTexture::AllocImageMapTexture(texName, imgMapCache, im,
 				CreateTextureMapping2D(propName + ".mapping", props),
 				gain, randomizedTiling);
 	} else if (texType == "constfloat1") {
@@ -693,6 +693,7 @@ TextureMapping2D *Scene::CreateTextureMapping2D(const string &prefixName, const 
 
 		const RandomMappingSeedType seedType = String2RandomMappingSeedType(props.Get(Property(prefixName + ".seed.type")("object_id")).Get<string>());
 		const u_int triAOVIndex = props.Get(Property(prefixName + ".triangleaov.index")(0u)).Get<u_int>();
+		const u_int objectIDOffset = props.Get(Property(prefixName + ".objectidoffset.value")(0u)).Get<u_int>();
 
 		const Property uvRotationDefaultProp = Property(prefixName + ".rotation")(0.f, 0.f);
 		const Property &uvRotationProp = props.Get(uvRotationDefaultProp);
@@ -715,7 +716,7 @@ TextureMapping2D *Scene::CreateTextureMapping2D(const string &prefixName, const 
 		const float vDeltaMin = uvDeltaProp.Get<float>(2);
 		const float vDeltaMax = uvDeltaProp.Get<float>(3);
 
-		return new UVRandomMapping2D(dataIndex, seedType, triAOVIndex,
+		return new UVRandomMapping2D(dataIndex, seedType, triAOVIndex, objectIDOffset,
 				uvRotationMin, uvRotationMax,
 				uScaleMin, uScaleMax, vScaleMin, vScaleMax,
 				uDeltaMin, uDeltaMax, vDeltaMin, vDeltaMax,
@@ -749,6 +750,7 @@ TextureMapping3D *Scene::CreateTextureMapping3D(const string &prefixName, const 
 
 		const RandomMappingSeedType seedType = String2RandomMappingSeedType(props.Get(Property(prefixName + ".seed.type")("object_id")).Get<string>());
 		const u_int triAOVIndex = props.Get(Property(prefixName + ".triangleaov.index")(0u)).Get<u_int>();
+		const u_int objectIDOffset = props.Get(Property(prefixName + ".objectidoffset.value")(0u)).Get<u_int>();
 
 		const Property xRotationDefaultProp = Property(prefixName + ".xrotation")(0.f, 0.f);
 		const Property yRotationDefaultProp = Property(prefixName + ".yrotation")(0.f, 0.f);
@@ -794,7 +796,7 @@ TextureMapping3D *Scene::CreateTextureMapping3D(const string &prefixName, const 
 		const float zTranslateMin = zTranslateProp.Get<float>(0);
 		const float zTranslateMax = zTranslateProp.Get<float>(1);
 
-		return new LocalRandomMapping3D(trans, seedType, triAOVIndex,
+		return new LocalRandomMapping3D(trans, seedType, triAOVIndex, objectIDOffset,
 				xRotationMin, xRotationMax,
 				yRotationMin, yRotationMax,
 				zRotationMin, zRotationMax,

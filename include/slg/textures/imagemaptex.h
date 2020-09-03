@@ -50,13 +50,15 @@ public:
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
-	static ImageMapTexture *AllocImageMapTexture(ImageMapCache &imgMapCache, const ImageMap *img,
+	static ImageMapTexture *AllocImageMapTexture(const std::string &texName,
+			ImageMapCache &imgMapCache, const ImageMap *img,
 			const TextureMapping2D *mp, const float g, const bool rt);
 
 	static std::unique_ptr<ImageMap> randomImageMap;
 
 private:
-	ImageMapTexture(const ImageMap *img, const TextureMapping2D *mp, const float g,
+	ImageMapTexture(const std::string &texName, const ImageMap *img,
+			const TextureMapping2D *mp, const float g,
 			const bool rt);
 	virtual ~ImageMapTexture();
 

@@ -259,9 +259,10 @@ Spectrum ImageMapTexture::RandomizedTilingGetSpectrumValue(const UV &pos) const 
 // ImageMap texture
 //------------------------------------------------------------------------------
 
-ImageMapTexture *ImageMapTexture::AllocImageMapTexture(ImageMapCache &imgMapCache,
-		const ImageMap *img, const TextureMapping2D *mp, const float g, const bool rt) {
-	ImageMapTexture *imt = new ImageMapTexture(img, mp, g, rt);
+ImageMapTexture *ImageMapTexture::AllocImageMapTexture(const string &texName,
+		ImageMapCache &imgMapCache, const ImageMap *img, const TextureMapping2D *mp,
+		const float g, const bool rt) {
+	ImageMapTexture *imt = new ImageMapTexture(texName, img, mp, g, rt);
 
 	if (rt) {
 		// I need to add the LUTs to the ImageMapCache
@@ -272,10 +273,13 @@ ImageMapTexture *ImageMapTexture::AllocImageMapTexture(ImageMapCache &imgMapCach
 	return imt;
 }
 
-ImageMapTexture::ImageMapTexture(const ImageMap *img, const TextureMapping2D *mp,
+ImageMapTexture::ImageMapTexture(const string &texName,
+		const ImageMap *img, const TextureMapping2D *mp,
 		const float g, const bool rt) :
 		imageMap(img), mapping(mp), gain(g), randomizedTiling(rt),
 		randomizedTilingLUT(nullptr), randomizedTilingInvLUT(nullptr) {
+	SetName(texName);
+
 	if (randomizedTiling) {
 		// Preprocessing work for Histogram-preserving Blending for Randomized Texture Tiling
 

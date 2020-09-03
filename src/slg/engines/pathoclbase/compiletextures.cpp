@@ -116,12 +116,16 @@ void CompiledScene::CompileTextureMapping2D(slg::ocl::TextureMapping2D *mapping,
 					break;
 				case RandomMappingSeedType::TRIANGLE_AOV:
 					mapping->uvRandomMapping2D.seedType = slg::ocl::UVRandomMappingSeedType::TRIANGLE_AOV;
+					mapping->uvRandomMapping2D.triAOVIndex = uvm->triAOVIndex;
+					break;
+				case RandomMappingSeedType::OBJECT_ID_OFFSET:
+					mapping->uvRandomMapping2D.seedType = slg::ocl::UVRandomMappingSeedType::OBJECT_ID_OFFSET;
+					mapping->uvRandomMapping2D.objectIDOffset = uvm->objectIDOffset;
 					break;
 				default:
 					throw runtime_error("Unknown seed type in CompiledScene::CompileTextureMapping2D: " + ToString(uvm->seedType));
 			}
 
-			mapping->uvRandomMapping2D.triAOVIndex = uvm->triAOVIndex;
 			mapping->uvRandomMapping2D.uvRotationMin = uvm->uvRotationMin;
 			mapping->uvRandomMapping2D.uvRotationMax = uvm->uvRotationMax;
 			mapping->uvRandomMapping2D.uScaleMin = uvm->uScaleMin;

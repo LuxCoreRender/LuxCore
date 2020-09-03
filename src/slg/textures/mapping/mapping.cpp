@@ -32,6 +32,8 @@ RandomMappingSeedType String2RandomMappingSeedType(const string &type) {
 		return OBJECT_ID;
 	else if (type == "triangle_aov")
 		return TRIANGLE_AOV;
+	else if (type == "object_id_offset")
+		return OBJECT_ID_OFFSET;
 	else
 		throw runtime_error("Unknown seed type in String2RandomMappingSeedType(): " + type);
 }
@@ -42,6 +44,8 @@ string RandomMappingSeedType2String(const RandomMappingSeedType type) {
 			return "object_id";
 		case TRIANGLE_AOV:
 			return "triangle_aov";
+		case OBJECT_ID_OFFSET:
+			return "object_id_offset";
 		default:
 			throw runtime_error("Unknown seed type in RandomMappingSeedType2String(): " + ToString(type));
 	}
@@ -113,14 +117,15 @@ Properties UVMapping2D::ToProperties(const string &name) const {
 //------------------------------------------------------------------------------
 
 UVRandomMapping2D::UVRandomMapping2D(const u_int index, const RandomMappingSeedType seedTyp,
-		const u_int triAOVIdx,
+		const u_int triAOVIdx, const u_int objectIDOffst,
 		const float uvRotationMn, const float uvRotationMx,
 		const float uScaleMn, const float uScaleMx,
 		const float vScaleMn, const float vScaleMx,
 		const float uDeltaMn, const float uDeltaMx,
 		const float vDeltaMn, const float vDeltaMx,
 		const bool uniformScl) :
-		TextureMapping2D(index), seedType(seedTyp), triAOVIndex(triAOVIdx),
+		TextureMapping2D(index), seedType(seedTyp),
+		triAOVIndex(triAOVIdx), objectIDOffset(objectIDOffst),
 		uvRotationMin(uvRotationMn), uvRotationMax(uvRotationMx),
 		uScaleMin(uScaleMn), uScaleMax(uScaleMx),
 		vScaleMin(vScaleMn), vScaleMax(vScaleMx),
@@ -138,6 +143,9 @@ UV UVRandomMapping2D::Map(const HitPoint &hitPoint, UV *ds, UV *dt) const {
 			break;
 		case TRIANGLE_AOV:
 			seed = (u_int)hitPoint.GetTriAOV(triAOVIndex);
+			break;
+		case OBJECT_ID_OFFSET:
+			seed = hitPoint.objectID + objectIDOffset;
 			break;
 		default:
 			throw runtime_error("Unknown seed type in UVRandomMapping2D::Map(): " + ToString(seedType));
@@ -266,7 +274,7 @@ Properties LocalMapping3D::ToProperties(const string &name) const {
 //------------------------------------------------------------------------------
 
 LocalRandomMapping3D::LocalRandomMapping3D(const luxrays::Transform &w2l, const RandomMappingSeedType seedTyp,
-		const u_int triAOVIdx,
+		const u_int triAOVIdx, const u_int objectIDOffst,
 		const float xRotationMn, const float xRotationMx,
 		const float yRotationMn, const float yRotationMx,
 		const float zRotationMn, const float zRotationMx,
@@ -280,6 +288,7 @@ LocalRandomMapping3D::LocalRandomMapping3D(const luxrays::Transform &w2l, const 
 			TextureMapping3D(w2l),
 			seedType(seedTyp),
 			triAOVIndex(triAOVIdx),
+			objectIDOffset(objectIDOffst),
 			xRotationMin(xRotationMn), xRotationMax(xRotationMx),
 			yRotationMin(yRotationMn), yRotationMax(yRotationMx),
 			zRotationMin(zRotationMn), zRotationMax(zRotationMx),
@@ -307,6 +316,9 @@ Point LocalRandomMapping3D::Map(const HitPoint &hitPoint, Normal *shadeN) const 
 			break;
 		case TRIANGLE_AOV:
 			seed = (u_int)hitPoint.GetTriAOV(triAOVIndex);
+			break;
+		case OBJECT_ID_OFFSET:
+			seed = hitPoint.objectID + objectIDOffset;
 			break;
 		default:
 			throw runtime_error("Unknown seed type in LocalRandomMapping3D::Map(): " + ToString(seedType));

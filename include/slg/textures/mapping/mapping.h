@@ -39,7 +39,7 @@ using namespace luxrays::ocl;
 }
 
 typedef enum {
-	OBJECT_ID, TRIANGLE_AOV
+	OBJECT_ID, TRIANGLE_AOV, OBJECT_ID_OFFSET
 } RandomMappingSeedType;
 
 extern RandomMappingSeedType String2RandomMappingSeedType(const std::string &type);
@@ -94,13 +94,13 @@ public:
 };
 
 //------------------------------------------------------------------------------
-// UVMapping2D
+// UVRandomMapping2D
 //------------------------------------------------------------------------------
 
 class UVRandomMapping2D : public TextureMapping2D {
 public:
 	UVRandomMapping2D(const u_int dataIndex, const RandomMappingSeedType seedType,
-			const u_int triAOVIndex,
+			const u_int triAOVIndex, const u_int objectIDOffset,
 			const float uvRotationMin, const float uvRotationMax,
 			const float uScaleMin, const float uScaleMax,
 			const float vScaleMin, const float vScaleMax,
@@ -118,6 +118,7 @@ public:
 
 	const RandomMappingSeedType seedType;
 	const u_int triAOVIndex;
+	const u_int objectIDOffset;
 	const float uvRotationMin, uvRotationMax;
 	const float uScaleMin, uScaleMax;
 	const float vScaleMin, vScaleMax;
@@ -213,7 +214,7 @@ public:
 class LocalRandomMapping3D : public TextureMapping3D {
 public:
 	LocalRandomMapping3D(const luxrays::Transform &w2l, const RandomMappingSeedType seedType,
-			const u_int triAOVIndex,
+			const u_int triAOVIndex, const u_int objectIDOffset,
 			const float xRotationMin, const float xRotationMax,
 			const float yRotationMin, const float yRotationMax,
 			const float zRotationMin, const float zRotationMax,
@@ -234,6 +235,7 @@ public:
 	
 	const RandomMappingSeedType seedType;
 	const u_int triAOVIndex;
+	const u_int objectIDOffset;
 	const float xRotationMin, xRotationMax;
 	const float yRotationMin, yRotationMax;
 	const float zRotationMin, zRotationMax;
