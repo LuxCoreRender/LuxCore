@@ -297,7 +297,7 @@ void GlossyTranslucentMaterial::Pdf(const HitPoint &hitPoint,
 	const Vector &localSampledDir = hitPoint.fromLight ? localEyeDir : localLightDir;
 
 	if (localFixedDir.z * localSampledDir.z < 0.f) {
-		// Transmition
+		// Transmission
 		if (directPdfW)
 			*directPdfW = fabsf(localSampledDir.z) * (INV_PI * .5f);
 		if (reversePdfW)

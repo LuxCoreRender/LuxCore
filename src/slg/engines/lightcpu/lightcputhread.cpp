@@ -52,7 +52,7 @@ void LightCPURenderThread::RenderFunc() {
 	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, engine->film,
 			engine->sampleSplatter, engine->samplerSharedData,
 			// Disable image plane meaning for samples 0 and 1
-			Properties() << Property("sampler.metropolis.imagemutationrate.enable")(false));
+			Properties() << Property("sampler.imagesamples.enable")(false));
 	sampler->SetThreadIndex(threadIndex);
 	sampler->RequestSamples(SCREEN_NORMALIZED_ONLY, pathTracer.lightSampleSize);
 
