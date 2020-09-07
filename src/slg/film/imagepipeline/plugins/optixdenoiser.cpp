@@ -97,6 +97,8 @@ void OptixDenoiserPlugin::ApplyHW(Film &film, const u_int index) {
 			throw std::runtime_error("OptixDenoiserPlugin used while imagepipeline hardware execution isn't on a CUDA device");
 
 		OptixDeviceContext optixContext = cudaDevice->GetOptixContext();
+		if (!optixContext)
+			throw std::runtime_error("OptixDenoiserPlugin used on device where Optix is not available");
 
 		OptixDenoiserOptions options = {};
 		// Use ALBEDO and AVG_SHADING_NORMAL AOVs if they are available
