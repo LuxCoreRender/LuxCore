@@ -112,14 +112,14 @@ void CompiledScene::CompileTextureMapping2D(slg::ocl::TextureMapping2D *mapping,
 
 			switch (uvm->seedType) {
 				case RandomMappingSeedType::OBJECT_ID:
-					mapping->uvRandomMapping2D.seedType = slg::ocl::UVRandomMappingSeedType::OBJECT_ID;
+					mapping->uvRandomMapping2D.seedType = slg::ocl::RandomMappingSeedType::OBJECT_ID;
 					break;
 				case RandomMappingSeedType::TRIANGLE_AOV:
-					mapping->uvRandomMapping2D.seedType = slg::ocl::UVRandomMappingSeedType::TRIANGLE_AOV;
+					mapping->uvRandomMapping2D.seedType = slg::ocl::RandomMappingSeedType::TRIANGLE_AOV;
 					mapping->uvRandomMapping2D.triAOVIndex = uvm->triAOVIndex;
 					break;
 				case RandomMappingSeedType::OBJECT_ID_OFFSET:
-					mapping->uvRandomMapping2D.seedType = slg::ocl::UVRandomMappingSeedType::OBJECT_ID_OFFSET;
+					mapping->uvRandomMapping2D.seedType = slg::ocl::RandomMappingSeedType::OBJECT_ID_OFFSET;
 					mapping->uvRandomMapping2D.objectIDOffset = uvm->objectIDOffset;
 					break;
 				default:
@@ -170,6 +170,53 @@ void CompiledScene::CompileTextureMapping3D(slg::ocl::TextureMapping3D *mapping,
 			const LocalMapping3D *gm = static_cast<const LocalMapping3D *>(m);
 			memcpy(&mapping->worldToLocal.m, &gm->worldToLocal.m, sizeof(float[4][4]));
 			memcpy(&mapping->worldToLocal.mInv, &gm->worldToLocal.mInv, sizeof(float[4][4]));
+			break;
+		}
+		case LOCALRANDOMMAPPING3D: {
+			mapping->type = slg::ocl::LOCALRANDOMMAPPING3D;
+
+			const LocalRandomMapping3D *gm = static_cast<const LocalRandomMapping3D *>(m);
+			memcpy(&mapping->worldToLocal.m, &gm->worldToLocal.m, sizeof(float[4][4]));
+			memcpy(&mapping->worldToLocal.mInv, &gm->worldToLocal.mInv, sizeof(float[4][4]));
+			
+			switch (gm->seedType) {
+				case RandomMappingSeedType::OBJECT_ID:
+					mapping->localRandomMapping.seedType = slg::ocl::RandomMappingSeedType::OBJECT_ID;
+					break;
+				case RandomMappingSeedType::TRIANGLE_AOV:
+					mapping->localRandomMapping.seedType = slg::ocl::RandomMappingSeedType::TRIANGLE_AOV;
+					mapping->localRandomMapping.triAOVIndex = gm->triAOVIndex;
+					break;
+				case RandomMappingSeedType::OBJECT_ID_OFFSET:
+					mapping->localRandomMapping.seedType = slg::ocl::RandomMappingSeedType::OBJECT_ID_OFFSET;
+					mapping->localRandomMapping.objectIDOffset = gm->objectIDOffset;
+					break;
+				default:
+					throw runtime_error("Unknown seed type in CompiledScene::CompileTextureMapping2D: " + ToString(gm->seedType));
+			}
+
+			mapping->localRandomMapping.xRotationMin = gm->xRotationMin;
+			mapping->localRandomMapping.xRotationMax = gm->xRotationMax;
+			mapping->localRandomMapping.yRotationMin = gm->yRotationMin;
+			mapping->localRandomMapping.yRotationMax = gm->yRotationMax;
+			mapping->localRandomMapping.zRotationMin = gm->zRotationMin;
+			mapping->localRandomMapping.zRotationMax = gm->zRotationMax;
+
+			mapping->localRandomMapping.xScaleMin = gm->xScaleMin;
+			mapping->localRandomMapping.xScaleMax = gm->xScaleMax;
+			mapping->localRandomMapping.yScaleMin = gm->xScaleMin;
+			mapping->localRandomMapping.yScaleMax = gm->xScaleMax;
+			mapping->localRandomMapping.zScaleMin = gm->zScaleMin;
+			mapping->localRandomMapping.zScaleMax = gm->zScaleMax;
+
+			mapping->localRandomMapping.xTranslateMin = gm->xTranslateMin;
+			mapping->localRandomMapping.xTranslateMax = gm->xTranslateMax;
+			mapping->localRandomMapping.yTranslateMin = gm->yTranslateMin;
+			mapping->localRandomMapping.yTranslateMax = gm->yTranslateMax;
+			mapping->localRandomMapping.zTranslateMin = gm->zTranslateMin;
+			mapping->localRandomMapping.zTranslateMax = gm->zTranslateMax;
+
+			mapping->localRandomMapping.uniformScale = gm->uniformScale;
 			break;
 		}
 		default:

@@ -32,10 +32,10 @@ typedef struct {
 
 typedef enum {
 	OBJECT_ID, TRIANGLE_AOV, OBJECT_ID_OFFSET
-} UVRandomMappingSeedType;
+} RandomMappingSeedType;
 
 typedef struct {
-    UVRandomMappingSeedType seedType;
+    RandomMappingSeedType seedType;
 	union {
 		unsigned int triAOVIndex;
 		unsigned int objectIDOffset;
@@ -63,12 +63,31 @@ typedef struct {
 //------------------------------------------------------------------------------
 
 typedef enum {
-	UVMAPPING3D, GLOBALMAPPING3D, LOCALMAPPING3D
+	UVMAPPING3D, GLOBALMAPPING3D, LOCALMAPPING3D, LOCALRANDOMMAPPING3D
 } TextureMapping3DType;
 
 typedef struct {
     unsigned int dataIndex;
 } UVMapping3DParam;
+
+typedef struct {
+	RandomMappingSeedType seedType;
+	union {
+		unsigned int triAOVIndex;
+		unsigned int objectIDOffset;
+	};
+	float xRotationMin, xRotationMax;
+	float yRotationMin, yRotationMax;
+	float zRotationMin, zRotationMax;
+	float xScaleMin, xScaleMax;
+	float yScaleMin, yScaleMax;
+	float zScaleMin, zScaleMax;
+	float xTranslateMin, xTranslateMax;
+	float yTranslateMin, yTranslateMax;
+	float zTranslateMin, zTranslateMax;
+
+	int uniformScale;
+} LocalRandomMapping3DParam;
 
 typedef struct {
 	TextureMapping3DType type;
@@ -77,5 +96,6 @@ typedef struct {
 		UVMapping3DParam uvMapping3D;
 		// GlobalMapping3D has no additional parameters
 		// LocalMapping3D has no additional parameters
+		LocalRandomMapping3DParam localRandomMapping;
 	};
 } TextureMapping3D;

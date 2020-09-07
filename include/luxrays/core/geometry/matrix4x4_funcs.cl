@@ -203,3 +203,174 @@ OPENCL_FORCE_INLINE Matrix4x4 Matrix4x4_Mul(__global const Matrix4x4 *a, __globa
 
 	return r;
 }
+
+OPENCL_FORCE_INLINE Matrix4x4 Matrix4x4_Mul_Private(const Matrix4x4 *a, const Matrix4x4 *b) {
+	Matrix4x4 r;
+	for (int i = 0; i < 4; ++i)
+		for (int j = 0; j < 4; ++j)
+			r.m[i][j] = a->m[i][0] * b->m[0][j] +
+				a->m[i][1] * b->m[1][j] +
+				a->m[i][2] * b->m[2][j] +
+				a->m[i][3] * b->m[3][j];
+
+	return r;
+}
+
+//------------------------------------------------------------------------------
+// Matrix4x4_Translate
+//------------------------------------------------------------------------------
+
+OPENCL_FORCE_INLINE Matrix4x4 Matrix4x4_Translate(const float x, const float y, const float z) {
+	Matrix4x4 m;
+
+	m.m[0][0] = 1.f;
+	m.m[0][1] = 0.f;
+	m.m[0][2] = 0.f;
+	m.m[0][3] = x;
+
+	m.m[1][0] = 0.f;
+	m.m[1][1] = 1.f;
+	m.m[1][2] = 0.f;
+	m.m[1][3] = y;
+
+	m.m[2][0] = 0.f;
+	m.m[2][1] = 0.f;
+	m.m[2][2] = 1.f;
+	m.m[2][3] = z;
+
+	m.m[3][0] = 0.f;
+	m.m[3][1] = 0.f;
+	m.m[3][2] = 0.f;
+	m.m[3][3] = 1.f;
+
+	return m;
+}
+
+//------------------------------------------------------------------------------
+// Matrix4x4_Scale
+//------------------------------------------------------------------------------
+
+OPENCL_FORCE_INLINE Matrix4x4 Matrix4x4_Scale(const float x, const float y, const float z) {
+	Matrix4x4 m;
+
+	m.m[0][0] = x;
+	m.m[0][1] = 0.f;
+	m.m[0][2] = 0.f;
+	m.m[0][3] = 0.f;
+
+	m.m[1][0] = 0.f;
+	m.m[1][1] = y;
+	m.m[1][2] = 0.f;
+	m.m[1][3] = 0.f;
+
+	m.m[2][0] = 0.f;
+	m.m[2][1] = 0.f;
+	m.m[2][2] = z;
+	m.m[2][3] = 0.f;
+
+	m.m[3][0] = 0.f;
+	m.m[3][1] = 0.f;
+	m.m[3][2] = 0.f;
+	m.m[3][3] = 1.f;
+
+	return m;
+}
+
+//------------------------------------------------------------------------------
+// Matrix4x4_RotateX
+//------------------------------------------------------------------------------
+
+OPENCL_FORCE_INLINE Matrix4x4 Matrix4x4_RotateX(const float angle) {
+	const float sa = sin(Radians(angle));
+	const float ca = cos(Radians(angle));
+
+	Matrix4x4 m;
+
+	m.m[0][0] = 1.f;
+	m.m[0][1] = 0.f;
+	m.m[0][2] = 0.f;
+	m.m[0][3] = 0.f;
+
+	m.m[1][0] = 0.f;
+	m.m[1][1] = ca;
+	m.m[1][2] = -sa;
+	m.m[1][3] = 0.f;
+
+	m.m[2][0] = 0.f;
+	m.m[2][1] = sa;
+	m.m[2][2] = ca;
+	m.m[2][3] = 0.f;
+
+	m.m[3][0] = 0.f;
+	m.m[3][1] = 0.f;
+	m.m[3][2] = 0.f;
+	m.m[3][3] = 1.f;
+
+	return m;
+}
+
+//------------------------------------------------------------------------------
+// Matrix4x4_RotateY
+//------------------------------------------------------------------------------
+
+OPENCL_FORCE_INLINE Matrix4x4 Matrix4x4_RotateY(const float angle) {
+	const float sa = sin(Radians(angle));
+	const float ca = cos(Radians(angle));
+
+	Matrix4x4 m;
+
+	m.m[0][0] = ca;
+	m.m[0][1] = 0.f;
+	m.m[0][2] = sa;
+	m.m[0][3] = 0.f;
+
+	m.m[1][0] = 0.f;
+	m.m[1][1] = 1.f;
+	m.m[1][2] = 0.f;
+	m.m[1][3] = 0.f;
+
+	m.m[2][0] = -sa;
+	m.m[2][1] = 0.f;
+	m.m[2][2] = ca;
+	m.m[2][3] = 0.f;
+
+	m.m[3][0] = 0.f;
+	m.m[3][1] = 0.f;
+	m.m[3][2] = 0.f;
+	m.m[3][3] = 1.f;
+
+	return m;
+}
+
+//------------------------------------------------------------------------------
+// Matrix4x4_RotateZ
+//------------------------------------------------------------------------------
+
+OPENCL_FORCE_INLINE Matrix4x4 Matrix4x4_RotateZ(const float angle) {
+	const float sa = sin(Radians(angle));
+	const float ca = cos(Radians(angle));
+
+	Matrix4x4 m;
+
+	m.m[0][0] = ca;
+	m.m[0][1] = -sa;
+	m.m[0][2] = 0.f;
+	m.m[0][3] = 0.f;
+
+	m.m[1][0] = sa;
+	m.m[1][1] = ca;
+	m.m[1][2] = 0.f;
+	m.m[1][3] = 0.f;
+
+	m.m[2][0] = 0.f;
+	m.m[2][1] = 0.f;
+	m.m[2][2] = 1.f;
+	m.m[2][3] = 0.f;
+
+	m.m[3][0] = 0.f;
+	m.m[3][1] = 0.f;
+	m.m[3][2] = 0.f;
+	m.m[3][3] = 1.f;
+
+	return m;
+}

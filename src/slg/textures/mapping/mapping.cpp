@@ -202,6 +202,7 @@ Properties UVRandomMapping2D::ToProperties(const string &name) const {
 			TextureMapping2D::ToProperties(name) <<
 			Property(name + ".seed.type")(RandomMappingSeedType2String(seedType)) <<
 			Property(name + ".triangleaov.index")(triAOVIndex) <<
+			Property(name + ".objectidoffset.value")(objectIDOffset) <<
 			Property(name + ".rotation")(uvRotationMin, uvRotationMax) <<
 			Property(name + ".uvscale")(uScaleMin, uScaleMax, vScaleMin, uScaleMax) <<
 			Property(name + ".uvscale.uniform")(uniformScale) <<
@@ -352,6 +353,7 @@ Properties LocalRandomMapping3D::ToProperties(const string &name) const {
 			Property(name + ".transformation")(worldToLocal.m) <<
 			Property(name + ".seed.type")(RandomMappingSeedType2String(seedType)) <<
 			Property(name + ".triangleaov.index")(triAOVIndex) <<
+			Property(name + ".objectidoffset.value")(objectIDOffset) <<
 			Property(name + ".xrotation")(xRotationMin, xRotationMax) <<
 			Property(name + ".yrotation")(yRotationMin, yRotationMax) <<
 			Property(name + ".zrotation")(zRotationMin, zRotationMax) <<
