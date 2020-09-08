@@ -229,6 +229,7 @@ public:
 			luxrays::ocl::KernelSource_epsilon_funcs <<
 			luxrays::ocl::KernelSource_point_types <<
 			luxrays::ocl::KernelSource_vector_types <<
+			luxrays::ocl::KernelSource_utils_funcs <<
 			luxrays::ocl::KernelSource_matrix4x4_types <<
 			luxrays::ocl::KernelSource_matrix4x4_funcs <<
 			luxrays::ocl::KernelSource_quaternion_types <<
