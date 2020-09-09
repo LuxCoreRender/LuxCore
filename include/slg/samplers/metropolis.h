@@ -76,7 +76,7 @@ public:
 	MetropolisSampler(luxrays::RandomGenerator *rnd, Film *film,
 			const FilmSampleSplatter *flmSplatter, const bool imgSamplesEnable,
 			const u_int maxRej, const float pLarge, const float imgRange,
-			MetropolisSamplerSharedData *samplerSharedData);
+			const bool addOnlyCstcs, MetropolisSamplerSharedData *samplerSharedData);
 	virtual ~MetropolisSampler();
 
 	virtual SamplerType GetType() const { return GetObjectType(); }
@@ -112,6 +112,7 @@ private:
 
 	u_int maxRejects;
 	float largeMutationProbability, imageMutationRange;
+	bool addOnlyCuastics;
 
 	float *samples;
 	u_int *sampleStamps;
@@ -125,7 +126,7 @@ private:
 	double currentLuminance;
 	float *currentSamples;
 	u_int *currentSampleStamps;
-	std::vector<SampleResult> currentSampleResult;
+	std::vector<SampleResult> currentSampleResults;
 
 	// Used, most of the times, when not having a film
 	MetropolisSampleType lastSampleAcceptance;

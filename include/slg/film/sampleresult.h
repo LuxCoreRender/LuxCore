@@ -99,6 +99,8 @@ public:
 
 	BSDFEvent firstPathVertexEvent;
 	bool isHoldout;
+	// isCaustic is used only for RADIANCE_PER_SCREEN_NORMALIZED samples
+	bool isCaustic;
 
 	// Used to keep some state of the current sample
 	bool firstPathVertex, lastPathVertex;

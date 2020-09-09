@@ -112,7 +112,18 @@ public:
 protected:
 	static const luxrays::Properties &GetDefaultProps();
 
-	void AtomicAddSamplesToFilm(const std::vector<SampleResult> &sampleResults, const float weight = 1.f) const;
+	
+	void AtomicAddSampleToFilm(const SampleResult &sampleResult, const float weight = 1.f) const {
+		if (sampleResult.useFilmSplat && filmSplatter)
+			filmSplatter->AtomicSplatSample(*film, sampleResult, weight);
+		else
+			film->AtomicAddSample(sampleResult.pixelX, sampleResult.pixelY, sampleResult, weight);
+	}
+
+	void AtomicAddSamplesToFilm(const std::vector<SampleResult> &sampleResults, const float weight = 1.f) const {
+		for (auto const &sr : sampleResults)
+			AtomicAddSampleToFilm(sr, weight);
+	}
 
 	u_int threadIndex;
 	luxrays::RandomGenerator *rndGen;

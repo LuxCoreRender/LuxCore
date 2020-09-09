@@ -748,6 +748,8 @@ void PathTracer::ConnectToEye(IntersectionDevice *device,
 				assert (sampleResult.pixelY >= subRegion[2]);
 				assert (sampleResult.pixelY <= subRegion[3]);
 
+				sampleResult.isCaustic = pathInfo.IsCausticPath(event, bsdf.GetGlossiness(), hybridBackForwardGlossinessThreshold);
+
 				// Add radiance from the light source
 				sampleResult.radiance[light.GetID()] = connectionThroughput * flux * fluxToRadianceFactor * bsdfEval;
 			}
@@ -823,17 +825,15 @@ void PathTracer::RenderLightSample(IntersectionDevice *device,
 			// Try to connect the light path vertex with the eye
 			//--------------------------------------------------------------
 
-			if (!hybridBackForwardEnable || (pathInfo.depth.depth > 0)) {
-				if (ConnectToEyeCallBack){
-					ConnectToEyeCallBack(bsdf, light->GetID(), lightPathFlux, sampleResults);
-				} else {
-					ConnectToEye(device, scene, film,
-							nextEventRay.time,
-							sampler->GetSample(sampleOffset + 1),
-							sampler->GetSample(sampleOffset + 2),
-							sampler->GetSample(sampleOffset + 3),
-							*light, bsdf, lightPathFlux, pathInfo, sampleResults);
-				}
+			if (ConnectToEyeCallBack){
+				ConnectToEyeCallBack(pathInfo, bsdf, light->GetID(), lightPathFlux, sampleResults);
+			} else {
+				ConnectToEye(device, scene, film,
+						nextEventRay.time,
+						sampler->GetSample(sampleOffset + 1),
+						sampler->GetSample(sampleOffset + 2),
+						sampler->GetSample(sampleOffset + 3),
+						*light, bsdf, lightPathFlux, pathInfo, sampleResults);
 			}
 
 			if (pathInfo.depth.depth == maxPathDepth.depth - 1)
@@ -857,7 +857,12 @@ void PathTracer::RenderLightSample(IntersectionDevice *device,
 			pathInfo.AddVertex(bsdf, bsdfEvent, hybridBackForwardGlossinessThreshold);
 
 			// If it isn't anymore a (nearly) specular path, I can stop
-			if (hybridBackForwardEnable && !pathInfo.IsSpecularPath())
+			if (hybridBackForwardEnable && !pathInfo.IsSpecularPath() &&
+					// This condition is added to "stabilize" Metropolis sampler
+					// used in light tracing part of hybrid rendering. In this case
+					// I render also some not-caustic sample to make an "easy"
+					// computation of the avg. image luminance.
+					(pathInfo.depth.diffuseDepth + pathInfo.depth.glossyDepth > 1))
 				break;
 
 			// Russian Roulette

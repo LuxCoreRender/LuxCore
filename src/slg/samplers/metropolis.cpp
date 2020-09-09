@@ -62,10 +62,11 @@ void MetropolisSamplerSharedData::Reset() {
 
 MetropolisSampler::MetropolisSampler(RandomGenerator *rnd, Film *flm,
 		const FilmSampleSplatter *flmSplatter, const bool imgSamplesEnable,
-		const u_int maxRej, const float pLarge, const float imgRange,
+		const u_int maxRej, const float pLarge, const float imgRange, const bool addOnlyCstcs,
 		MetropolisSamplerSharedData *samplerSharedData) : Sampler(rnd, flm, flmSplatter, imgSamplesEnable),
 		sharedData(samplerSharedData),
 		maxRejects(maxRej),	largeMutationProbability(pLarge), imageMutationRange(imgRange),
+		addOnlyCuastics(addOnlyCstcs),
 		samples(NULL), sampleStamps(NULL), currentSamples(NULL), currentSampleStamps(NULL),
 		largeMutationCount(0) {
 }
@@ -167,7 +168,7 @@ void MetropolisSampler::RequestSamples(const SampleType smplType, const u_int si
 	fill(sampleStamps, sampleStamps + requestedSamples, 0);
 	stamp = 1;
 	currentStamp = 1;
-	currentSampleResult.resize(0);
+	currentSampleResults.resize(0);
 }
 
 float MetropolisSampler::GetSample(const u_int index) {
@@ -312,8 +313,12 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 						currentSampleResult[0].radiance[0].c[2],
 						norm, consecRejects);*/
 
-			if (film)
-				AtomicAddSamplesToFilm(currentSampleResult, norm);
+			if (film) {
+				for (auto const &sr : currentSampleResults) {
+					if (!addOnlyCuastics || (sr.HasChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED) && sr.isCaustic))
+						AtomicAddSampleToFilm(sr, norm);
+				}
+			}
 		}
 
 		lastSampleAcceptance = METRO_ACCEPTED;
@@ -325,7 +330,7 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 		currentLuminance = newLuminance;
 		copy(samples, samples + requestedSamples, currentSamples);
 		copy(sampleStamps, sampleStamps + requestedSamples, currentSampleStamps);
-		currentSampleResult = sampleResults;
+		currentSampleResults = sampleResults;
 
 		consecRejects = 0;
 	} else {
@@ -342,8 +347,12 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 						sampleResults[0].radiance[0].c[2],
 						norm, consecRejects);*/
 
-			if (film)
-				AtomicAddSamplesToFilm(sampleResults, norm);
+			if (film) {
+				for (auto const &sr : sampleResults) {
+					if (!addOnlyCuastics || (sr.HasChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED) && sr.isCaustic))
+						AtomicAddSampleToFilm(sr, norm);
+				}
+			}
 		}
 
 		lastSampleAcceptance = METRO_REJECTED;
@@ -427,7 +436,8 @@ Properties MetropolisSampler::ToProperties() const {
 	return Sampler::ToProperties() <<
 			Property("sampler.metropolis.largesteprate")(largeMutationProbability) <<
 			Property("sampler.metropolis.maxconsecutivereject")(maxRejects) <<
-			Property("sampler.metropolis.imagemutationrate")(imageMutationRange);
+			Property("sampler.metropolis.imagemutationrate")(imageMutationRange) <<
+			Property("sampler.metropolis.addonlycaustics")(addOnlyCuastics);
 }
 
 //------------------------------------------------------------------------------
@@ -440,7 +450,8 @@ Properties MetropolisSampler::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("sampler.imagesamples.enable")) <<
 			cfg.Get(GetDefaultProps().Get("sampler.metropolis.largesteprate")) <<
 			cfg.Get(GetDefaultProps().Get("sampler.metropolis.maxconsecutivereject")) <<
-			cfg.Get(GetDefaultProps().Get("sampler.metropolis.imagemutationrate"));
+			cfg.Get(GetDefaultProps().Get("sampler.metropolis.imagemutationrate")) <<
+			cfg.Get(GetDefaultProps().Get("sampler.metropolis.addonlycaustics"));
 }
 
 Sampler *MetropolisSampler::FromProperties(const Properties &cfg, RandomGenerator *rndGen,
@@ -450,9 +461,11 @@ Sampler *MetropolisSampler::FromProperties(const Properties &cfg, RandomGenerato
 	const float rate = Clamp(cfg.Get(GetDefaultProps().Get("sampler.metropolis.largesteprate")).Get<float>(), 0.f, 1.f);
 	const u_int reject = cfg.Get(GetDefaultProps().Get("sampler.metropolis.maxconsecutivereject")).Get<u_int>();
 	const float mutationRate = Clamp(cfg.Get(GetDefaultProps().Get("sampler.metropolis.imagemutationrate")).Get<float>(), 0.f, 1.f);
+	const bool addOnlyCaustics = cfg.Get(GetDefaultProps().Get("sampler.metropolis.addonlycaustics")).Get<bool>();
 
 	return new MetropolisSampler(rndGen, film, flmSplatter, imageSamplesEnable,
-			reject, rate, mutationRate, (MetropolisSamplerSharedData *)sharedData);
+			reject, rate, mutationRate, addOnlyCaustics,
+			(MetropolisSamplerSharedData *)sharedData);
 }
 
 slg::ocl::Sampler *MetropolisSampler::FromPropertiesOCL(const Properties &cfg) {
@@ -476,7 +489,8 @@ const Properties &MetropolisSampler::GetDefaultProps() {
 			Property("sampler.type")(GetObjectTag()) <<
 			Property("sampler.metropolis.largesteprate")(.4f) <<
 			Property("sampler.metropolis.maxconsecutivereject")(512) <<
-			Property("sampler.metropolis.imagemutationrate")(.1f);
+			Property("sampler.metropolis.imagemutationrate")(.1f) <<
+			Property("sampler.metropolis.addonlycaustics")(false);
 
 	return props;
 }

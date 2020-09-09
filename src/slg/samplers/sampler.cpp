@@ -49,15 +49,6 @@ void Sampler::RequestSamples(const SampleType smplType, const u_int size) {
 	requestedSamples = size;
 }
 
-void Sampler::AtomicAddSamplesToFilm(const vector<SampleResult> &sampleResults, const float weight) const {
-	for (vector<SampleResult>::const_iterator sr = sampleResults.begin(); sr < sampleResults.end(); ++sr) {
-		if (sr->useFilmSplat && filmSplatter)
-			filmSplatter->AtomicSplatSample(*film, *sr, weight);
-		else
-			film->AtomicAddSample(sr->pixelX, sr->pixelY, *sr, weight);
-	}
-}
-
 Properties Sampler::ToProperties() const {
 	return Properties() <<
 			Property("sampler.type")(SamplerType2String(GetType())) <<

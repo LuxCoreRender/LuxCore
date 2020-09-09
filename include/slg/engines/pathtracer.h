@@ -77,7 +77,8 @@ public:
 		ILLUMINATED, SHADOWED, NOT_VISIBLE
 	} DirectLightResult;
 
-	typedef boost::function<void(const BSDF &, const u_int, const luxrays::Spectrum &,
+	typedef boost::function<void(const LightPathInfo &pathInfo,
+			const BSDF &, const u_int, const luxrays::Spectrum &,
 			std::vector<SampleResult> &sampleResults)> ConnectToEyeCallBackType;
 
 	PathTracer();

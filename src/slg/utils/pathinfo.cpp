@@ -144,3 +144,10 @@ void LightPathInfo::AddVertex(const BSDF &bsdf, const BSDFEvent event,
 	// Update last path vertex information
 	lastBSDFEvent = event;
 }
+
+bool LightPathInfo::IsCausticPath(const BSDFEvent event,
+		const float glossiness, const float glossinessThreshold) const {
+	// Note: the +1 is there for the event passed as method arguments
+	return isNearlyS && (depth.depth + 1 > 1) &&
+			!IsNearlySpecular(event, glossiness, glossinessThreshold);
+}

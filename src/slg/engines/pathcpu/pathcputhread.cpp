@@ -68,7 +68,8 @@ void PathCPURenderThread::RenderFunc() {
 		props <<
 			Property("sampler.type")("METROPOLIS") <<
 			// Disable image plane meaning for samples 0 and 1
-			Property("sampler.imagesamples.enable")(false);
+			Property("sampler.imagesamples.enable")(false) <<
+			Property("sampler.metropolis.addonlycaustics")(true);
 
 		lightSampler = Sampler::FromProperties(props, rndGen, engine->film, engine->lightSampleSplatter,
 				engine->lightSamplerSharedData);
