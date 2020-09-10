@@ -349,6 +349,13 @@ Properties FilmOutputs::ToProperties(const Properties &cfg) {
 				props << type << fileName;
 				break;
 			}
+			case CAUSTIC: {
+				if (hdrImage)
+					props << type << fileName;
+				else
+					throw runtime_error("Caustic image can be saved only in HDR formats: " + outputName);
+				break;
+			}
 			default:
 				throw runtime_error("Unknown film output type: " + type.Get<string>());
 		}
@@ -448,6 +455,8 @@ FilmOutputs::FilmOutputType FilmOutputs::String2FilmOutputType(const string &typ
 		return NOISE;
 	else if (type == "USER_IMPORTANCE")
 		return USER_IMPORTANCE;
+	else if (type == "CAUSTIC")
+		return CAUSTIC;
 	else
 		throw runtime_error("Unknown film output type: " + type);
 }
@@ -544,6 +553,8 @@ const string FilmOutputs::FilmOutputType2String(const FilmOutputs::FilmOutputTyp
 			return "NOISE";
 		case USER_IMPORTANCE:
 			return "USER_IMPORTANCE";
+		case CAUSTIC:
+			return "CAUSTIC";
 		default:
 			throw runtime_error("Unknown film output type: " + ToString(type));
 	}

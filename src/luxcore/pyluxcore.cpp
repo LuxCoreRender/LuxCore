@@ -1914,6 +1914,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.value("AVG_SHADING_NORMAL", Film::OUTPUT_AVG_SHADING_NORMAL)
 		.value("NOISE", Film::OUTPUT_NOISE)
 		.value("USER_IMPORTANCE", Film::OUTPUT_USER_IMPORTANCE)
+		.value("CAUSTIC", Film::OUTPUT_CAUSTIC)
 	;
 
     class_<luxcore::detail::FilmImpl>("Film", init<string>())

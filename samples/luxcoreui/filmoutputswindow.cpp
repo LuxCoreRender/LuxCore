@@ -101,7 +101,8 @@ void FilmOutputWindow::RefreshTexture() {
 		case Film::OUTPUT_BY_MATERIAL_ID:
 		case Film::OUTPUT_IRRADIANCE:
 		case Film::OUTPUT_BY_OBJECT_ID:
-		case Film::OUTPUT_AVG_SHADING_NORMAL: {
+		case Film::OUTPUT_AVG_SHADING_NORMAL:
+		case Film::OUTPUT_CAUSTIC: {
 			app->session->GetFilm().GetOutput<float>(type, pixels.get(), index);
 			UpdateStats(pixels.get(), filmWidth, filmHeight);
 			AutoLinearToneMap(pixels.get(), pixels.get(), filmWidth, filmHeight);
@@ -242,6 +243,7 @@ FilmOutputsWindow::FilmOutputsWindow(LuxCoreApp *a) : ObjectEditorWindow(a, "Fil
 		.Add("ALBEDO", 41)
 		.Add("AVG_SHADING_NORMAL", 42)
 		.Add("NOISE", 43)
+		.Add("CAUSTIC", 44)
 		.SetDefault("RGB");
 
 	newType = 0;

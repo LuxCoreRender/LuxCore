@@ -344,6 +344,14 @@ public:
 	void GetPixelFromMergedSampleBuffers(const u_int imagePipelineIndex,
 			const double RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
 			const u_int index, float *c) const;
+	void GetPixelFromMergedSampleBuffers(const u_int imagePipelineIndex,
+			const bool use_RADIANCE_PER_PIXEL_NORMALIZEDs, const bool use_RADIANCE_PER_SCREEN_NORMALIZEDs,
+			const double RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
+			const u_int x, const u_int y, float *c) const;
+	void GetPixelFromMergedSampleBuffers(const u_int imagePipelineIndex,
+			const bool use_RADIANCE_PER_PIXEL_NORMALIZEDs, const bool use_RADIANCE_PER_SCREEN_NORMALIZEDs,
+			const double RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
+			const u_int index, float *c) const;
 	
 	bool HasThresholdSamples(const bool has_RADIANCE_PER_PIXEL_NORMALIZEDs, const bool has_RADIANCE_PER_SCREEN_NORMALIZEDs,
 			const u_int index, const float threshold) const {

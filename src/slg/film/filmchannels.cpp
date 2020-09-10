@@ -417,6 +417,30 @@ void Film::GetPixelFromMergedSampleBuffers(const u_int imagePipelineIndex,
 			index, c);
 }
 
+void Film::GetPixelFromMergedSampleBuffers(const u_int imagePipelineIndex,
+		const bool use_RADIANCE_PER_PIXEL_NORMALIZEDs, const bool use_RADIANCE_PER_SCREEN_NORMALIZEDs,
+		const double RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
+		const u_int x, const u_int y, float *c) const {
+	const ImagePipeline *ip = (imagePipelineIndex < imagePipelines.size()) ? imagePipelines[imagePipelineIndex] : NULL;
+	const vector<RadianceChannelScale> *radianceChannelScales = ip ? &ip->radianceChannelScales : NULL;
+
+	GetPixelFromMergedSampleBuffers(use_RADIANCE_PER_PIXEL_NORMALIZEDs, use_RADIANCE_PER_SCREEN_NORMALIZEDs,
+			radianceChannelScales, RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
+			x, y, c);
+}
+
+void Film::GetPixelFromMergedSampleBuffers(const u_int imagePipelineIndex,
+		const bool use_RADIANCE_PER_PIXEL_NORMALIZEDs, const bool use_RADIANCE_PER_SCREEN_NORMALIZEDs,
+		const double RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
+		const u_int index, float *c) const {
+	const ImagePipeline *ip = (imagePipelineIndex < imagePipelines.size()) ? imagePipelines[imagePipelineIndex] : NULL;
+	const vector<RadianceChannelScale> *radianceChannelScales = ip ? &ip->radianceChannelScales : NULL;
+
+	GetPixelFromMergedSampleBuffers(use_RADIANCE_PER_PIXEL_NORMALIZEDs, use_RADIANCE_PER_SCREEN_NORMALIZEDs,
+			radianceChannelScales, RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
+			index, c);
+}
+
 float Film::GetFilmY(const u_int imagePipelineIndex) const {
 	//const double t1 = WallClockTime();
 

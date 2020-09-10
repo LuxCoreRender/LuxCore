@@ -137,6 +137,8 @@ size_t Film::GetOutputSize(const FilmOutputs::FilmOutputType type) const {
 			return pixelCount;
 		case FilmOutputs::USER_IMPORTANCE:
 			return pixelCount;
+		case FilmOutputs::CAUSTIC:
+			return 3 * pixelCount;
 		default:
 			throw runtime_error("Unknown FilmOutputType in Film::GetOutputSize(): " + ToString(type));
 	}
@@ -234,6 +236,10 @@ bool Film::HasOutput(const FilmOutputs::FilmOutputType type) const {
 			return HasChannel(NOISE);
 		case FilmOutputs::USER_IMPORTANCE:
 			return HasChannel(USER_IMPORTANCE);
+		case FilmOutputs::CAUSTIC:
+			// Caustic has not dedicated channel but is RADIANCE_PER_SCREEN_NORMALIZED
+			// when doing hybrid rendering
+			return HasChannel(RADIANCE_PER_SCREEN_NORMALIZED);
 		default:
 			throw runtime_error("Unknown film output type in Film::HasOutput(): " + ToString(type));
 	}
@@ -528,6 +534,12 @@ void Film::Output(const string &fileName,const FilmOutputs::FilmOutputType type,
 				return;
 			channelCount = 1;
 			break;
+		case FilmOutputs::CAUSTIC:
+			// Caustic has not dedicated channel but is RADIANCE_PER_SCREEN_NORMALIZED
+			// when doing hybrid rendering
+			if (!HasChannel(RADIANCE_PER_SCREEN_NORMALIZED))
+				return;
+			break;
 		default:
 			throw runtime_error("Unknown film output type in Film::Output(): " + ToString(type));
 	}
@@ -798,6 +810,13 @@ void Film::Output(const string &fileName,const FilmOutputs::FilmOutputType type,
 				}
 				case FilmOutputs::USER_IMPORTANCE: {
 					channel_USER_IMPORTANCE->GetWeightedPixel(x, y, pixel);
+					break;
+				}
+				case FilmOutputs::CAUSTIC: {
+					// Accumulate all light groups			
+					GetPixelFromMergedSampleBuffers(0, false, true,
+							RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
+							x, y, pixel);
 					break;
 				}
 				default:
@@ -1100,6 +1119,15 @@ template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, f
 		case FilmOutputs::USER_IMPORTANCE:
 			copy(channel_USER_IMPORTANCE->GetPixels(), channel_USER_IMPORTANCE->GetPixels() + pixelCount, buffer);
 			break;
+		case FilmOutputs::CAUSTIC: {
+			const double RADIANCE_PER_SCREEN_NORMALIZED_SampleCount = samplesCounts.GetSampleCount_RADIANCE_PER_SCREEN_NORMALIZED();
+
+			for (u_int i = 0; i < pixelCount; ++i)
+				GetPixelFromMergedSampleBuffers(0, false, true,
+						RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
+						i, &buffer[i * 3]);
+			break;
+		}
 		default:
 			throw runtime_error("Unknown film output type in Film::GetOutput<float>(): " + ToString(type));
 	}
