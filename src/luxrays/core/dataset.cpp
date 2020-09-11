@@ -20,7 +20,6 @@
 #include <cassert>
 #include <deque>
 #include <sstream>
-#include <boost/lexical_cast.hpp>
 #include <boost/foreach.hpp>
 
 #include "luxrays/core/dataset.h"

@@ -27,7 +27,7 @@
 #define OPTIX_DONT_INCLUDE_CUDA
 #include <optix_stubs.h>
 
-#include "luxrays/utils/utils.h"
+#include "luxrays/utils/strutils.h"
 
 namespace luxrays {
 

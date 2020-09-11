@@ -893,12 +893,12 @@ void CompiledScene::CompileMaterials() {
 						break;
 					}
 					default:
-						throw runtime_error("Unknown volume in CompiledScene::CompileMaterials(): " + boost::lexical_cast<string>(m->GetType()));
+						throw runtime_error("Unknown volume in CompiledScene::CompileMaterials(): " + ToString(m->GetType()));
 				}
 				break;
 			}
 			default:
-				throw runtime_error("Unknown material in CompiledScene::CompileMaterials(): " + boost::lexical_cast<string>(m->GetType()));
+				throw runtime_error("Unknown material in CompiledScene::CompileMaterials(): " + ToString(m->GetType()));
 		}
 	}
 

@@ -469,11 +469,13 @@ void ExtTriangleMesh::SavePly(const string &fileName) const {
 	if(!plyFile.is_open())
 		throw runtime_error("Unable to open: " + fileName);
 
+	plyFile.imbue(cLocale);
+	
 	// Write the PLY header
 	plyFile << "ply\n"
 			"format " + string(ply_storage_mode_list[ply_arch_endian()]) + " 1.0\n"
 			"comment Created by LuxRays v" LUXRAYS_VERSION_MAJOR "." LUXRAYS_VERSION_MINOR "\n"
-			"element vertex " + boost::lexical_cast<string>(vertCount) + "\n"
+			"element vertex " << vertCount << "\n"
 			"property float x\n"
 			"property float y\n"
 			"property float z\n";
@@ -504,14 +506,14 @@ void ExtTriangleMesh::SavePly(const string &fileName) const {
 			plyFile << "property float vertaov" << suffix << "\n";	
 	}
 
-	plyFile << "element face " + boost::lexical_cast<string>(triCount) + "\n"
+	plyFile << "element face " << triCount << "\n"
 				"property list uchar uint vertex_indices\n";
 
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
 		const string suffix = (i == 0) ? "" : ToString(i);
 
 		if (HasTriAOV(i))
-			plyFile << "element faceaov" << suffix << " " + boost::lexical_cast<string>(triCount) + "\n"
+			plyFile << "element faceaov" << suffix << " " << triCount << "\n"
 					"property float triaov\n";
 	}
 

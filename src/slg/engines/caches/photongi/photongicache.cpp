@@ -22,6 +22,7 @@
 #include <boost/filesystem.hpp>
 
 #include "luxrays/utils/thread.h"
+#include "luxrays/utils/strutils.h"
 
 #include "slg/samplers/sobol.h"
 #include "slg/utils/pathdepthinfo.h"

@@ -32,7 +32,7 @@
 #include "luxrays/core/hardwareintersectiondevice.h"
 #include "luxrays/kernels/kernels.h"
 #include "luxrays/accelerators/mbvhaccel.h"
-#include "luxrays/utils/utils.h"
+#include "luxrays/utils/strutils.h"
 
 using namespace std;
 

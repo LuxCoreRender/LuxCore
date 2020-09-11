@@ -308,22 +308,6 @@ template <class T> int SignOf(T x)
 	return (x > 0) - (x < 0);
 }
 
-template <class T> inline std::string ToString(const T &t) {
-	std::ostringstream ss;
-	ss << t;
-	return ss.str();
-}
-
-inline std::string ToString(const float t) {
-	std::ostringstream ss;
-	ss << std::setprecision(std::numeric_limits<float>::digits10 + 1) << t;
-	return ss.str();
-}
-
-inline std::string ToMemString(const size_t size) {
-	return (size < 10000 ? (ToString(size) + "bytes") : (ToString(size / 1024) + "Kbytes"));
-}
-
 inline unsigned int UIntLog2(unsigned int value) {
 	unsigned int l = 0;
 	while (value >>= 1) l++;

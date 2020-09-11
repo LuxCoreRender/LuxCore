@@ -21,6 +21,7 @@
 #include <boost/uuid/uuid_io.hpp>
 
 #include "luxrays/core/namedobject.h"
+#include "luxrays/utils/strutils.h"
 
 using namespace std;
 using namespace luxrays;

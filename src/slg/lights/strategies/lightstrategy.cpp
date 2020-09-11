@@ -75,7 +75,7 @@ string LightStrategy::LightStrategyType2String(const LightStrategyType type) {
 	if (LightStrategyRegistry::STATICTABLE_NAME(GetObjectTag).Get(type, func))
 		return func();
 	else
-		throw runtime_error("Unknown light strategy type in LightStrategy::LightStrategyType2String(): " + boost::lexical_cast<string>(type));
+		throw runtime_error("Unknown light strategy type in LightStrategy::LightStrategyType2String(): " + ToString(type));
 }
 
 const Properties &LightStrategy::GetDefaultProps() {

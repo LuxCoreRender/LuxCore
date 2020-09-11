@@ -115,7 +115,7 @@ string Sampler::SamplerType2String(const SamplerType type) {
 	if (SamplerRegistry::STATICTABLE_NAME(GetObjectTag).Get(type, func))
 		return func();
 	else
-		throw runtime_error("Unknown sampler type in Sampler::SamplerType2String(): " + boost::lexical_cast<string>(type));
+		throw runtime_error("Unknown sampler type in Sampler::SamplerType2String(): " + ToString(type));
 }
 
 const Properties &Sampler::GetDefaultProps() {

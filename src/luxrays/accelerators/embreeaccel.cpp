@@ -27,6 +27,7 @@
 
 #include "luxrays/core/context.h"
 #include "luxrays/accelerators/embreeaccel.h"
+#include "luxrays/utils/strutils.h"
 
 namespace luxrays {
 

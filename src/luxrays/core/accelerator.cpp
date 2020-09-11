@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "luxrays/utils/strutils.h"
 #include "luxrays/core/accelerator.h"
 
 using namespace std;

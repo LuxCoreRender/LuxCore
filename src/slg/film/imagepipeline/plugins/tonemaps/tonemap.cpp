@@ -40,7 +40,7 @@ string slg::ToneMapType2String(const ToneMapType type) {
 		case TONEMAP_LUXLINEAR:
 			return "LUXLINEAR";
 		default:
-			throw runtime_error("Unknown tone mapping type: " + boost::lexical_cast<string>(type));
+			throw runtime_error("Unknown tone mapping type: " + ToString(type));
 	}
 }
 

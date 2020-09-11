@@ -71,7 +71,7 @@ void CompiledScene::CompilePhotonGI() {
 			compiledPathTracer.pgic.debugType = slg::ocl::PGIC_DEBUG_SHOWINDIRECTPATHMIX;
 			break;
 		default:
-			throw runtime_error("Unknown PhotonGI debug type in CompiledScene::CompilePhotonGI(): " + boost::lexical_cast<string>(photonGICache->GetDebugType()));
+			throw runtime_error("Unknown PhotonGI debug type in CompiledScene::CompilePhotonGI(): " + ToString(photonGICache->GetDebugType()));
 	}
 
 	compiledPathTracer.pgic.glossinessUsageThreshold = photonGICache->GetParams().glossinessUsageThreshold;

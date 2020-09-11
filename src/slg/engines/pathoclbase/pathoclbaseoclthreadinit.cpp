@@ -365,11 +365,11 @@ void PathOCLBaseOCLRenderThread::InitSamplerSharedDataBuffer() {
 				break;
 			default:
 				throw runtime_error("Unknown render engine in PathOCLBaseRenderThread::InitSamplerSharedDataBuffer(): " +
-						boost::lexical_cast<string>(renderEngine->GetType()));
+						ToString(renderEngine->GetType()));
 		}
 	} else
 		throw runtime_error("Unknown sampler.type in PathOCLBaseRenderThread::InitSamplerSharedDataBuffer(): " +
-				boost::lexical_cast<string>(renderEngine->oclSampler->type));
+				ToString(renderEngine->oclSampler->type));
 
 	if (size == 0)
 		intersectionDevice->FreeBuffer(&samplerSharedDataBuff);
@@ -426,7 +426,7 @@ void PathOCLBaseOCLRenderThread::InitSamplerSharedDataBuffer() {
 				break;
 			default:
 				throw runtime_error("Unknown render engine in PathOCLBaseRenderThread::InitSamplerSharedDataBuffer(): " +
-						boost::lexical_cast<string>(renderEngine->GetType()));
+						ToString(renderEngine->GetType()));
 		}
 	}
 }
@@ -462,7 +462,7 @@ void PathOCLBaseOCLRenderThread::InitSamplesBuffer() {
 		}
 		default:
 			throw runtime_error("Unknown sampler.type in PathOCLBaseRenderThread::InitSamplesBuffer(): " +
-					boost::lexical_cast<string>(renderEngine->oclSampler->type));
+					ToString(renderEngine->oclSampler->type));
 	}
 
 	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Size of a Sample: " << sampleSize << "bytes");
@@ -495,7 +495,7 @@ void PathOCLBaseOCLRenderThread::InitSampleDataBuffer() {
 		// To store IDX_SCREEN_X and IDX_SCREEN_Y
 		uDataSize = 2 * sizeof(float);
 	} else
-		throw runtime_error("Unknown sampler.type in PathOCLBaseRenderThread::InitSampleDataBuffer(): " + boost::lexical_cast<string>(renderEngine->oclSampler->type));
+		throw runtime_error("Unknown sampler.type in PathOCLBaseRenderThread::InitSampleDataBuffer(): " + ToString(renderEngine->oclSampler->type));
 
 	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Size of a SampleData: " << uDataSize << "bytes");
 

@@ -187,7 +187,7 @@ void CompiledScene::CompileCamera() {
 			break;			
 		}		
 		default:
-			throw runtime_error("Unknown camera type in CompiledScene::CompileCamera(): " + boost::lexical_cast<string>(sceneCamera->GetType()));
+			throw runtime_error("Unknown camera type in CompiledScene::CompileCamera(): " + ToString(sceneCamera->GetType()));
 	}
 }
 

@@ -204,5 +204,21 @@ private:
 
 #define LA_LOG(a) { std::stringstream _LUXCOREUI_LOG_LOCAL_SS; _LUXCOREUI_LOG_LOCAL_SS << a; LuxCoreApp::LogHandler(_LUXCOREUI_LOG_LOCAL_SS.str().c_str()); }
 
+template <class T> inline std::string ToString(const T &t) {
+	std::ostringstream ss;
+
+	ss << t;
+	
+	return ss.str();
+}
+
+inline std::string ToString(const float t) {
+	std::ostringstream ss;
+	
+	ss << std::setprecision(std::numeric_limits<float>::digits10 + 1) << t;
+
+	return ss.str();
+}
+
 #endif	/* _LUXCOREAPP_H */
 

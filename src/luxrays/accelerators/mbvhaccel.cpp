@@ -27,9 +27,9 @@
 #include <boost/foreach.hpp>
 
 #include "luxrays/accelerators/mbvhaccel.h"
-#include "luxrays/utils/utils.h"
 #include "luxrays/core/context.h"
 #include "luxrays/core/exttrianglemesh.h"
+#include "luxrays/utils/strutils.h"
 
 using namespace std;
 

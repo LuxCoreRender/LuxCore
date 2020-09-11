@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "luxrays/utils/strutils.h"
 #include "luxrays/utils/fileext.h"
 #include "luxrays/utils/serializationutils.h"
 #include "slg/film/filmoutputs.h"

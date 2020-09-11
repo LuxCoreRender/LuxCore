@@ -26,10 +26,10 @@
 #include <limits>
 
 #include "luxrays/accelerators/bvhaccel.h"
-#include "luxrays/utils/utils.h"
 #include "luxrays/core/context.h"
 #include "luxrays/devices/oclintersectiondevice.h"
 #include "luxrays/kernels/kernels.h"
+#include "luxrays/utils/strutils.h"
 
 using namespace std;
 

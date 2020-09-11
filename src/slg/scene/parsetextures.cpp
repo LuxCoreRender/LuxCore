@@ -668,7 +668,7 @@ const Texture *Scene::GetTexture(const luxrays::Property &prop) {
 				return tex;
 			} else
 				throw runtime_error("Wrong number of arguments in the implicit definition of a constant texture: " +
-						boost::lexical_cast<string>(floats.size()));
+						ToString(floats.size()));
 		} catch (boost::bad_lexical_cast &) {
 			throw runtime_error("Syntax error in texture name: " + name);
 		}

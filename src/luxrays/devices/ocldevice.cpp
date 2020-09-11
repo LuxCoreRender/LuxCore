@@ -22,6 +22,7 @@
 
 #include "luxrays/devices/ocldevice.h"
 #include "luxrays/kernels/kernels.h"
+#include "luxrays/utils/strutils.h"
 
 using namespace std;
 

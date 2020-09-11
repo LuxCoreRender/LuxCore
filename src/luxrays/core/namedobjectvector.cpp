@@ -18,8 +18,8 @@
 
 #include <sstream>
 #include <boost/foreach.hpp>
-#include <boost/lexical_cast.hpp>
 
+#include "luxrays/utils/strutils.h"
 #include "luxrays/core/namedobjectvector.h"
 
 using namespace std;
@@ -98,7 +98,7 @@ u_int NamedObjectVector::GetIndex(const NamedObject *o) const {
 	Index2ObjType::right_const_iterator it = index2obj.right.find(o);
 
 	if (it == index2obj.right.end())
-		throw runtime_error("Reference to an undefined NamedObject pointer: " + boost::lexical_cast<string>(o));
+		throw runtime_error("Reference to an undefined NamedObject pointer: " + luxrays::ToString(o));
 	else
 		return it->second;
 }
@@ -117,7 +117,7 @@ const std::string &NamedObjectVector::GetName(const NamedObject *o) const {
 	Name2IndexType::right_const_iterator it = name2index.right.find(GetIndex(o));
 
 	if (it == name2index.right.end())
-		throw runtime_error("Reference to an undefined NamedObject: " + boost::lexical_cast<string>(o));
+		throw runtime_error("Reference to an undefined NamedObject: " + luxrays::ToString(o));
 	else
 		return it->second;
 }

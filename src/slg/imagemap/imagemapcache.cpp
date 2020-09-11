@@ -146,7 +146,7 @@ u_int ImageMapCache::GetImageMapIndex(const ImageMap *im) const {
 			return i;
 	}
 
-	throw runtime_error("Unknown image map: " + boost::lexical_cast<string>(im));
+	throw runtime_error("Unknown image map: " + ToString(im));
 }
 
 void ImageMapCache::GetImageMaps(vector<const ImageMap *> &ims) {

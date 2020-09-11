@@ -24,7 +24,6 @@
 
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/algorithm/string/trim.hpp>
-#include <boost/lexical_cast.hpp>
 
 #include "luxrays/luxrays.h"
 #include "luxrays/utils/utils.h"

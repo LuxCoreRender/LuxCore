@@ -56,7 +56,7 @@ void TilePathOCLRenderThread::UpdateSamplerData(const TileWork &tileWork,
 	TilePathOCLRenderEngine *engine = (TilePathOCLRenderEngine *)renderEngine;
 	if (engine->oclSampler->type != slg::ocl::TILEPATHSAMPLER)
 		throw runtime_error("Wrong sampler in PathOCLBaseRenderThread::UpdateSamplesBuffer(): " +
-						boost::lexical_cast<string>(engine->oclSampler->type));
+						ToString(engine->oclSampler->type));
 
 	// Update samplerSharedDataBuff
 

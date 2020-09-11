@@ -16,36 +16,52 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-// NOTE: this file is included in LuxCore so any external dependency must be
-// avoided here
+#ifndef _LUXRAYS_STRUTILS_H
+#define	_LUXRAYS_STRUTILS_H
 
-#ifndef _LUXRAYS_OPENCLERROR_H
-#define	_LUXRAYS_OPENCLERROR_H
+#include <string>
+#include <sstream>
+#include <limits>
 
-#include "luxrays/utils/exportdefs.h"
-#include "luxrays/utils/ocl.h"
-#include "luxrays/utils/strutils.h"
-
-#if !defined(LUXRAYS_DISABLE_OPENCL)
+#include "luxrays/luxrays.h"
 
 namespace luxrays {
 
-// Same utility function
+template <class T> inline std::string ToString(const T &t) {
+	std::ostringstream ss;
 
-CPP_EXPORT CPP_API std::string oclErrorString(cl_int error);
+	ss.imbue(cLocale);
 
-#define CHECK_OCL_ERROR(err) CheckOpenCLError(err, __FILE__, __LINE__)
+	ss << t;
+	
+	return ss.str();
+}
 
-inline void CheckOpenCLError(const cl_int err, const char *file, const int line) {
-  if (err != CL_SUCCESS) {
-	  throw std::runtime_error("OpenCL driver API error "
-			  "(code: " + ToString(err) + ", file:" + std::string(file) + ", line: " + ToString(line) + ")"
-			  ": " + oclErrorString(err) + "\n");
-	}
+inline std::string ToString(const float t) {
+	std::ostringstream ss;
+	
+	ss.imbue(cLocale);
+
+	ss << std::setprecision(std::numeric_limits<float>::digits10 + 1) << t;
+
+	return ss.str();
+}
+
+template <class T> inline T FromString(const std::string &str) {
+	std::istringstream ss(str);
+
+	ss.imbue(cLocale);
+
+	T result;
+	ss >> result;
+	
+	return result;
+}
+
+inline std::string ToMemString(const size_t size) {
+	return (size < 10000 ? (ToString(size) + "bytes") : (ToString(size / 1024) + "Kbytes"));
 }
 
 }
 
-#endif
-
-#endif	/* _LUXRAYS_OPENCLERROR_H */
+#endif	/* _LUXRAYS_STRUTILS_H */

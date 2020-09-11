@@ -16,6 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "luxrays/utils/strutils.h"
+
 #include "slg/film/filters/filter.h"
 #include "slg/film/filters/filterregistry.h"
 
@@ -101,7 +103,7 @@ const string Filter::FilterType2String(const FilterType type) {
 	if (FilterRegistry::STATICTABLE_NAME(GetObjectTag).Get(type, func))
 		return func();
 	else
-		throw runtime_error("Unknown filter type in Filter::FilterType2String(): " + boost::lexical_cast<string>(type));
+		throw runtime_error("Unknown filter type in Filter::FilterType2String(): " + ToString(type));
 }
 
 const Properties &Filter::GetDefaultProps() {
