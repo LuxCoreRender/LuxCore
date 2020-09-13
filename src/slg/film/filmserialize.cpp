@@ -68,6 +68,7 @@ template<class Archive> void Film::load(Archive &ar, const u_int version) {
 	ar & channel_POSITION;
 	ar & channel_GEOMETRY_NORMAL;
 	ar & channel_SHADING_NORMAL;
+	ar & channel_AVG_SHADING_NORMAL;
 	ar & channel_MATERIAL_ID;
 	ar & channel_DIRECT_DIFFUSE;
 	ar & channel_DIRECT_DIFFUSE_REFLECT;
@@ -99,7 +100,6 @@ template<class Archive> void Film::load(Archive &ar, const u_int version) {
 	ar & channel_CONVERGENCE;
 	ar & channel_MATERIAL_ID_COLOR;
 	ar & channel_ALBEDO;
-	ar & channel_AVG_SHADING_NORMAL;
 	ar & channel_NOISE;
 	ar & channel_USER_IMPORTANCE;
 
@@ -158,7 +158,9 @@ template<class Archive> void Film::save(Archive &ar, const u_int version) const 
 	ar & channel_POSITION;
 	ar & channel_GEOMETRY_NORMAL;
 	ar & channel_SHADING_NORMAL;
+	ar & channel_AVG_SHADING_NORMAL;
 	ar & channel_MATERIAL_ID;
+	ar & channel_DIRECT_DIFFUSE;
 	ar & channel_DIRECT_DIFFUSE_REFLECT;
 	ar & channel_DIRECT_DIFFUSE_TRANSMIT;
 	ar & channel_DIRECT_GLOSSY;
@@ -188,7 +190,6 @@ template<class Archive> void Film::save(Archive &ar, const u_int version) const 
 	ar & channel_CONVERGENCE;
 	ar & channel_MATERIAL_ID_COLOR;
 	ar & channel_ALBEDO;
-	ar & channel_AVG_SHADING_NORMAL;
 	ar & channel_NOISE;
 	ar & channel_USER_IMPORTANCE;
 
