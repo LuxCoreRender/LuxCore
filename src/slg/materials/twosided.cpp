@@ -72,11 +72,10 @@ const Volume *TwoSidedMaterial::GetInteriorVolume(const HitPoint &hitPoint,
 	if (interiorVolume)
 		return interiorVolume;
 	else {
-		if (hitPoint.intoObject) {
+		if (hitPoint.intoObject)
 			return frontMat->GetInteriorVolume(hitPoint, passThroughEvent);
-		} else {
+		else
 			return backMat->GetInteriorVolume(hitPoint, passThroughEvent);
-		}
 	}
 }
 
@@ -85,11 +84,10 @@ const Volume *TwoSidedMaterial::GetExteriorVolume(const HitPoint &hitPoint,
 	if (exteriorVolume)
 		return exteriorVolume;
 	else {
-		if (hitPoint.intoObject) {
+		if (hitPoint.intoObject)
 			return frontMat->GetExteriorVolume(hitPoint, passThroughEvent);
-		} else {
+		else
 			return backMat->GetExteriorVolume(hitPoint, passThroughEvent);
-		}
 	}
 }
 
@@ -97,7 +95,8 @@ void TwoSidedMaterial::UpdateAvgPassThroughTransparency() {
 	if (frontTransparencyTex || backTransparencyTex)
 		Material::UpdateAvgPassThroughTransparency();
 	else {
-		avgPassThroughTransparency = frontMat->GetAvgPassThroughTransparency();
+		avgPassThroughTransparency = (frontMat->GetAvgPassThroughTransparency() +
+				backMat->GetAvgPassThroughTransparency()) * .5f;
 	}
 }
 
@@ -121,79 +120,54 @@ Spectrum TwoSidedMaterial::GetPassThroughTransparency(const HitPoint &hitPoint,
 float TwoSidedMaterial::GetEmittedRadianceY(const float oneOverPrimitiveArea) const {
 	if (emittedTex)
 		return Material::GetEmittedRadianceY(oneOverPrimitiveArea);
-	else
-		return frontMat->GetEmittedRadianceY(oneOverPrimitiveArea);
+	else {
+		return frontMat->GetEmittedRadianceY(oneOverPrimitiveArea) +
+				backMat->GetEmittedRadianceY(oneOverPrimitiveArea);
+	}
 }
 
 Spectrum TwoSidedMaterial::GetEmittedRadiance(const HitPoint &hitPoint, const float oneOverPrimitiveArea) const {
 	if (emittedTex)
 		return Material::GetEmittedRadiance(hitPoint, oneOverPrimitiveArea);
 	else {
-		if (hitPoint.intoObject) {
+		if (hitPoint.intoObject)
 			return frontMat->GetEmittedRadiance(hitPoint, oneOverPrimitiveArea);
-		} else {
+		else
 			return backMat->GetEmittedRadiance(hitPoint, oneOverPrimitiveArea);
-		}
 	}
 }
 
+void TwoSidedMaterial::Bump(HitPoint *hitPoint) const {
+    if (hitPoint->intoObject)
+		frontMat->Bump(hitPoint);
+	else
+		backMat->Bump(hitPoint);
+}
+
 Spectrum TwoSidedMaterial::Albedo(const HitPoint &hitPoint) const {
-	if (hitPoint.intoObject) {
+	if (hitPoint.intoObject)
 		return frontMat->Albedo(hitPoint);
-	} else {
+	else
 		return backMat->Albedo(hitPoint);
-	}
 }
 
 Spectrum TwoSidedMaterial::Evaluate(const HitPoint &hitPoint,
 		const Vector &localLightDir, const Vector &localEyeDir, BSDFEvent *event,
 		float *directPdfW, float *reversePdfW) const {
-	if (hitPoint.intoObject) {
-		const Frame frame(hitPoint.GetFrame());
-
-		HitPoint bumpedHitPoint(hitPoint);
-		frontMat->Bump(&bumpedHitPoint);
-		const Frame bumpedFrame(bumpedHitPoint.GetFrame());
-		const Vector bumpedLightDir = bumpedFrame.ToLocal(frame.ToWorld(localLightDir));
-		const Vector bumpedEyeDir = bumpedFrame.ToLocal(frame.ToWorld(localEyeDir));
-
-		return frontMat->Evaluate(bumpedHitPoint, bumpedLightDir, bumpedEyeDir, event, directPdfW, reversePdfW);
-	} else {
-		const Frame frame(hitPoint.GetFrame());
-
-		HitPoint bumpedHitPoint(hitPoint);
-		backMat->Bump(&bumpedHitPoint);
-		const Frame bumpedFrame(bumpedHitPoint.GetFrame());
-		const Vector bumpedLightDir = bumpedFrame.ToLocal(frame.ToWorld(localLightDir));
-		const Vector bumpedEyeDir = bumpedFrame.ToLocal(frame.ToWorld(localEyeDir));
-
-		return backMat->Evaluate(bumpedHitPoint, bumpedLightDir, bumpedEyeDir, event, directPdfW, reversePdfW);
-	}
+	if (hitPoint.intoObject)
+		return frontMat->Evaluate(hitPoint, localLightDir, localEyeDir, event, directPdfW, reversePdfW);
+	else
+		return backMat->Evaluate(hitPoint, localLightDir, localEyeDir, event, directPdfW, reversePdfW);
 }
 
 Spectrum TwoSidedMaterial::Sample(const HitPoint &hitPoint,
 		const Vector &localFixedDir, Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
 		float *pdfW, BSDFEvent *event, const BSDFEvent eventHint) const {
-	if (hitPoint.intoObject) {
-		const Frame frame(hitPoint.GetFrame());
-
-		HitPoint bumpedHitPoint(hitPoint);
-		frontMat->Bump(&bumpedHitPoint);
-		const Frame bumpedFrame(bumpedHitPoint.GetFrame());
-		const Vector bumpedFixedDir = bumpedFrame.ToLocal(frame.ToWorld(localFixedDir));
-
-		return frontMat->Sample(bumpedHitPoint, bumpedFixedDir, localSampledDir, u0, u1, passThroughEvent, pdfW, event, eventHint);
-	} else {
-		const Frame frame(hitPoint.GetFrame());
-
-		HitPoint bumpedHitPoint(hitPoint);
-		backMat->Bump(&bumpedHitPoint);
-		const Frame bumpedFrame(bumpedHitPoint.GetFrame());
-		const Vector bumpedFixedDir = bumpedFrame.ToLocal(frame.ToWorld(localFixedDir));
-
-		return backMat->Sample(bumpedHitPoint, bumpedFixedDir, localSampledDir, u0, u1, passThroughEvent, pdfW, event, eventHint);
-	}
+	if (hitPoint.intoObject)
+		return frontMat->Sample(hitPoint, localFixedDir, localSampledDir, u0, u1, passThroughEvent, pdfW, event, eventHint);
+	else
+		return backMat->Sample(hitPoint, localFixedDir, localSampledDir, u0, u1, passThroughEvent, pdfW, event, eventHint);
 }
 
 void TwoSidedMaterial::Pdf(const HitPoint &hitPoint,

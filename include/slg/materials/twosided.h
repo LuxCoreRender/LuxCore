@@ -37,7 +37,6 @@ public:
 	virtual BSDFEvent GetEventTypes() const { return eventTypes; };
 
 	virtual bool IsLightSource() const { return isLightSource; }
-	virtual bool HasBumpTex() const { return hasBumpTex; }
 	virtual bool IsDelta() const { return isDelta; }
 
 	virtual luxrays::Spectrum GetPassThroughTransparency(const HitPoint  &hitPoint,
@@ -52,6 +51,8 @@ public:
 	virtual float GetEmittedRadianceY(const float oneOverPrimitiveArea) const;
 	virtual luxrays::Spectrum GetEmittedRadiance(const HitPoint &hitPoint,
 		const float oneOverPrimitiveArea) const;
+
+	virtual void Bump(HitPoint *hitPoint) const;
 
 	virtual luxrays::Spectrum Albedo(const HitPoint &hitPoint) const;
 
@@ -84,7 +85,6 @@ private:
 	// Used by Preprocess()
 	BSDFEvent GetEventTypesImpl() const;
 	bool IsLightSourceImpl() const;
-	bool HasBumpTexImpl() const;
 	bool IsDeltaImpl() const;
 
 	void Preprocess();
@@ -94,7 +94,7 @@ private:
 
 	// Cached values for performance with very large material node trees
 	BSDFEvent eventTypes;
-	bool isLightSource, hasBumpTex, isDelta;
+	bool isLightSource, isDelta;
 	
 };
 

@@ -1,0 +1,52 @@
+#scene.camera.lookat = 7.481132 -6.50764 5.343665 0.932513 -0.400984 0.891212
+##
+scene.camera.lookat.orig = 2.8718164 -5.47710514 4.1
+scene.camera.lookat.target = -0.600622892 1.50124407 -1.6308527
+################################################################################
+scene.textures.bumpmap.file = scenes/bump/map2.png
+scene.textures.bumpmap.gamma = 1.0
+scene.textures.bumpmap.mapping.uvscale = 2 2
+#
+scene.textures.scaled_bumpmap.type = scale
+scene.textures.scaled_bumpmap.texture1 = 0.02
+scene.textures.scaled_bumpmap.texture2 = bumpmap
+################################################################################
+scene.materials.mat_light.type = matte
+scene.materials.mat_light.emission = 20. 20. 20.
+scene.materials.mat_light.kd = 0.0 0.0 0.0
+##
+scene.materials.mat_2s_a.type = matte
+scene.materials.mat_2s_a.kd = 0.7 0.3 0.0
+scene.materials.mat_2s_a.bumptex = scaled_bumpmap
+#
+#scene.materials.mat_2s_b.type = mirror
+#scene.materials.mat_2s_b.kr = 0.9 0.9 0.9
+#
+scene.materials.mat_2s_b.type = glossy2
+scene.materials.mat_2s_b.kd = 0.5 0.0 0.0
+scene.materials.mat_2s_b.ks = 0.5 0.5 0.5
+scene.materials.mat_2s_b.uroughness = 0.02
+scene.materials.mat_2s_b.vroughness = 0.02
+#
+scene.materials.mat_2s.type = twosided
+scene.materials.mat_2s.frontmaterial = mat_2s_b
+scene.materials.mat_2s.backmaterial = mat_2s_a
+##
+scene.textures.checktex.type = checkerboard2d
+scene.textures.checktex.texture1 = 1.0 0.0 0.0
+scene.textures.checktex.texture2 = 1.0 1.0 1.0
+scene.textures.checktex.mapping.type = uvmapping2d
+scene.textures.checktex.mapping.uvscale = 10.0 10.0
+#
+scene.materials.mat_white.type = matte
+scene.materials.mat_white.kd = checktex
+################################################################################
+scene.objects.obj_light.ply = scenes/bump/mat_light.ply
+scene.objects.obj_light.material = mat_light
+scene.objects.obj_red.ply = scenes/twosided/twosided.ply
+scene.objects.obj_red.material = mat_2s
+scene.objects.obj_white.ply = scenes/bump/mat_white_multi_uv.ply
+scene.objects.obj_white.material = mat_white
+################################################################################
+scene.lights.infinitelight.type = sky2
+scene.lights.infinitelight.gain = 0.00008 0.00008 0.00008
