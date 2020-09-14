@@ -35,14 +35,20 @@ public:
 	bool hasClamping() const { return (sqrtVarianceClampMaxValue > 0.f); }
 	
 	void Clamp(const Film &film, SampleResult &sampleResult) const;
-	// Used by Film::VarianceClampFilm()
-	void Clamp(const float expectedValue[4], float value[4]) const;
+	void ClampFilm(Film &dstFilm , const Film &srcFilm,
+			const u_int srcOffsetX, const u_int srcOffsetY,
+			const u_int srcWidth, const u_int srcHeight,
+			const u_int dstOffsetX, const u_int dstOffsetY) const;
+	void ClampFilm(Film &dstFilm , const Film &srcFilm) const;
 
 	float sqrtVarianceClampMaxValue;
 
 	friend class boost::serialization::access;	
 	
 private:
+	void Clamp3(const float expectedValue[4], float value[3]) const;
+	void Clamp4(const float expectedValue[4], float value[4]) const;
+
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
 		ar & sqrtVarianceClampMaxValue;
 	}

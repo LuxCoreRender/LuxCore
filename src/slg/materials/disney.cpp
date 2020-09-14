@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include "slg/materials/disney.h"
+#include "slg/materials/thinfilmcoating.h"
 #include "slg/textures/fresnel/fresneltexture.h"
 
 using namespace std;
@@ -38,7 +39,10 @@ DisneyMaterial::DisneyMaterial(
 	const Texture *clearcoatGloss,
 	const Texture *anisotropic,
 	const Texture *sheen,
-	const Texture *sheenTint
+	const Texture *sheenTint,
+	const Texture *filmAmount,
+	const Texture *filmThickness,
+	const Texture *filmIor
 ) : Material(frontTransp, backTransp, emitted, bump), 
 	BaseColor(baseColor), 
 	Subsurface(subsurface),
@@ -50,7 +54,10 @@ DisneyMaterial::DisneyMaterial(
 	ClearcoatGloss(clearcoatGloss),
 	Anisotropic(anisotropic),
 	Sheen(sheen),
-	SheenTint(sheenTint) {
+	SheenTint(sheenTint),
+	filmAmount(filmAmount),
+	filmThickness(filmThickness),
+	filmIor(filmIor) {
 	glossiness = Sqr(ComputeGlossiness(Roughness));
 }
 
@@ -59,12 +66,12 @@ Spectrum DisneyMaterial::Albedo(const HitPoint &hitPoint) const {
 }
 
 Spectrum DisneyMaterial::Evaluate(
-	const HitPoint &hitPoint,
-	const Vector &localLightDir,
-	const Vector &localEyeDir,
-	BSDFEvent *event,
-	float *directPdfW,
-	float *reversePdfW) const  {
+		const HitPoint &hitPoint,
+		const Vector &localLightDir,
+		const Vector &localEyeDir,
+		BSDFEvent *event,
+		float *directPdfW,
+		float *reversePdfW) const  {
 	const Spectrum color = BaseColor->GetSpectrumValue(hitPoint).Clamp(0.0f, 1.0f);
 	const float subsurface = Clamp(Subsurface->GetFloatValue(hitPoint), 0.0f, 1.0f);
 	const float roughness = Clamp(Roughness->GetFloatValue(hitPoint), 0.0f, 1.0f);
@@ -78,29 +85,35 @@ Spectrum DisneyMaterial::Evaluate(
 	// clamped between 0.0 and 1.0 to not break the energy conservation law.
 	const float sheen = Sheen->GetFloatValue(hitPoint);
 	const float sheenTint = Clamp(SheenTint->GetFloatValue(hitPoint), 0.0f, 1.0f);
+	const float localFilmAmount = filmAmount ? Clamp(filmAmount->GetFloatValue(hitPoint), 0.0f, 1.0f) : 1.f;
+	const float localFilmThickness = filmThickness ? filmThickness->GetFloatValue(hitPoint) : 0.f;
+	const float localFilmIor = (localFilmThickness > 0.f && filmIor) ? filmIor->GetFloatValue(hitPoint) : 1.f;
 
 	return DisneyEvaluate(color, subsurface, roughness, metallic, specular, specularTint,
-			clearcoat, clearcoatGloss, anisotropicGloss, sheen, sheenTint,
-			localLightDir, localEyeDir, event, directPdfW, reversePdfW);
+			clearcoat, clearcoatGloss, anisotropicGloss, sheen, sheenTint, localFilmAmount, localFilmThickness, 
+			localFilmIor, localLightDir, localEyeDir, event, directPdfW, reversePdfW);
 }
 
 Spectrum DisneyMaterial::DisneyEvaluate(
-	const Spectrum &color,
-	const float subsurface,
-	const float roughness,
-	const float metallic,
-	const float specular,
-	const float specularTint,
-	const float clearcoat,
-	const float clearcoatGloss,
-	const float anisotropicGloss,
-	const float sheen,
-	const float sheenTint,
-	const Vector &localLightDir,
-	const Vector &localEyeDir,
-	BSDFEvent *event,
-	float *directPdfW,
-	float *reversePdfW) const {
+		const Spectrum &color,
+		const float subsurface,
+		const float roughness,
+		const float metallic,
+		const float specular,
+		const float specularTint,
+		const float clearcoat,
+		const float clearcoatGloss,
+		const float anisotropicGloss,
+		const float sheen,
+		const float sheenTint,
+		const float localFilmAmount,
+		const float localFilmThickness,
+		const float localFilmIor,
+		const Vector &localLightDir,
+		const Vector &localEyeDir,
+		BSDFEvent *event,
+		float *directPdfW,
+		float *reversePdfW) const {
 	const Vector wo = Normalize(localEyeDir); 
 	const Vector wi = Normalize(localLightDir);
 
@@ -120,11 +133,17 @@ Spectrum DisneyMaterial::DisneyEvaluate(
 
 	const Spectrum subsurfaceEval = DisneySubsurface(color, roughness, NdotL, NdotV, LdotH);
 
-	const Spectrum glossyEval =
-		DisneyMetallic(color, specular, specularTint, metallic, anisotropicGloss, roughness,
-			NdotL, NdotV, NdotH, LdotH, VdotH, wi, wo, H) +
-		Spectrum(DisneyClearCoat(clearcoat, clearcoatGloss,
-			NdotL, NdotV, NdotH, LdotH));
+	Spectrum metallicEval = DisneyMetallic(color, specular, specularTint, metallic, anisotropicGloss, roughness,
+										   NdotL, NdotV, NdotH, LdotH, VdotH, wi, wo, H);
+	
+	if (localFilmThickness > 0.f) {
+		const Spectrum metallicWithFilmColor = metallicEval * CalcFilmColor(wo, localFilmThickness, localFilmIor);
+		metallicEval = Lerp(localFilmAmount, metallicEval, metallicWithFilmColor);
+	}
+	
+	const Spectrum clearCoatEval = Spectrum(DisneyClearCoat(clearcoat, clearcoatGloss,
+											NdotL, NdotV, NdotH, LdotH));
+	const Spectrum glossyEval = metallicEval + clearCoatEval;
 
 	const Spectrum sheenEval = DisneySheen(color, sheen, sheenTint, LdotH);
 
@@ -209,8 +228,7 @@ float DisneyMaterial::DisneyClearCoat(const float clearcoat, const float clearco
 }
 
 Spectrum DisneyMaterial::DisneySheen(const Spectrum &color, const float sheen,
-		const float sheenTint,
-		float LdotH) const {
+		const float sheenTint, float LdotH) const {
 	const float FH = Schlick_Weight(LdotH);
 
 	const Spectrum Ctint = CalculateTint(color);
@@ -267,10 +285,14 @@ Spectrum DisneyMaterial::Sample(
 
 	if (*pdfW < 0.0001f)
 		return Spectrum();
+		
+	const float localFilmAmount = filmAmount ? Clamp(filmAmount->GetFloatValue(hitPoint), 0.0f, 1.0f) : 1.f;
+	const float localFilmThickness = filmThickness ? filmThickness->GetFloatValue(hitPoint) : 0.f;
+	const float localFilmIor = (localFilmThickness > 0.f && filmIor) ? filmIor->GetFloatValue(hitPoint) : 1.f;
 
 	const Spectrum f = DisneyEvaluate(color, subsurface, roughness,
 			metallic, specular, specularTint, clearcoat, clearcoatGloss,
-			anisotropicGloss, sheen, sheenTint,
+			anisotropicGloss, sheen, sheenTint, localFilmAmount, localFilmThickness, localFilmIor,
 			localLightDir, localEyeDir, event, nullptr, nullptr);
 
 	return f / *pdfW;
@@ -320,11 +342,11 @@ Vector DisneyMaterial::DisneyClearcoatSample(const float clearcoatGloss,
 }
 
 void DisneyMaterial::Pdf(
-	const HitPoint &hitPoint,
-	const Vector &localLightDir, 
-	const Vector &localEyeDir,
-	float *directPdfW, 
-	float *reversePdfW) const {
+		const HitPoint &hitPoint,
+		const Vector &localLightDir, 
+		const Vector &localEyeDir,
+		float *directPdfW, 
+		float *reversePdfW) const {
 	if (directPdfW || reversePdfW) {
 		const float roughness = Clamp(Roughness->GetFloatValue(hitPoint), 0.0f, 1.0f);
 		const float metallic = Clamp(Metallic->GetFloatValue(hitPoint), 0.0f, 1.0f);
@@ -474,6 +496,12 @@ Properties DisneyMaterial::ToProperties(const ImageMapCache &imgMapCache, const 
 	props.Set(Property("scene.materials." + name + ".anisotropic")(Anisotropic->GetSDLValue()));
 	props.Set(Property("scene.materials." + name + ".sheen")(Sheen->GetSDLValue()));
 	props.Set(Property("scene.materials." + name + ".sheentint")(SheenTint->GetSDLValue()));
+	if (filmAmount)
+		props.Set(Property("scene.materials." + name + ".filmamount")(filmAmount->GetSDLValue()));
+	if (filmThickness)
+		props.Set(Property("scene.materials." + name + ".filmthickness")(filmThickness->GetSDLValue()));
+	if (filmIor)
+		props.Set(Property("scene.materials." + name + ".filmior")(filmIor->GetSDLValue()));
 	props.Set(Material::ToProperties(imgMapCache, useRealFileName));
 
 	return props;
@@ -497,6 +525,9 @@ void DisneyMaterial::UpdateTextureReferences(const Texture *oldTex, const Textur
 	if (Anisotropic == oldTex) Anisotropic = newTex;
 	if (Sheen == oldTex) Sheen = newTex;
 	if (SheenTint == oldTex) SheenTint = newTex;
+	if (filmAmount == oldTex) filmAmount = newTex;
+	if (filmThickness == oldTex) filmThickness = newTex;
+	if (filmIor == oldTex) filmIor = newTex;
 
 	if (updateGlossiness)
 		glossiness = Sqr(ComputeGlossiness(Roughness));
@@ -516,4 +547,10 @@ void DisneyMaterial::AddReferencedTextures(boost::unordered_set<const Texture *>
 	Anisotropic->AddReferencedTextures(referencedTexs);
 	Sheen->AddReferencedTextures(referencedTexs);
 	SheenTint->AddReferencedTextures(referencedTexs);
+	if (filmAmount)
+		filmAmount->AddReferencedTextures(referencedTexs);
+	if (filmThickness)
+		filmThickness->AddReferencedTextures(referencedTexs);
+	if (filmIor)
+		filmIor->AddReferencedTextures(referencedTexs);
 }

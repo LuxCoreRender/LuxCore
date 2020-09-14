@@ -60,6 +60,10 @@ void FilmNoiseEstimation::Reset() {
 	if (hasNoiseChannel) {
 		// Resize vectors according to film size. Start at zero
 		errorVector.resize(pixelsCount, 0);
+
+		// The film could have not been yet initialized
+		if (film->channel_NOISE)
+			film->channel_NOISE->Clear(numeric_limits<float>::infinity());
 	}
 
 	lastSamplesCount = 0.0;
@@ -98,103 +102,117 @@ void FilmNoiseEstimation::Test() {
 		referenceImage->Copy(film->channel_IMAGEPIPELINEs[index]);
 		firstTest = false;
 	} else {
-
-		const float *ref = referenceImage->GetPixels();
-		const float *img = film->channel_IMAGEPIPELINEs[index]->GetPixels();
+		// Check if all pixels has been sampled
 
 		const u_int pixelsCount = film->GetWidth() * film->GetHeight();
-		vector<float> pixelErrorVector(pixelsCount, 0);
+		const bool hasPN = film->HasChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
+		const bool hasSN = film->HasChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED);
 
-		// Calculate difference per pixel between images 
+		bool hasEnoughSamples = true;
 		for (u_int i = 0; i < pixelsCount; ++i) {
-			const float refR = *ref++;
-			const float refG = *ref++;
-			const float refB = *ref++;
-
-			const float imgR = *img++;
-			const float imgG = *img++;
-			const float imgB = *img++;
-
-			const float dr = fabsf(imgR - refR);
-			const float dg = fabsf(imgG - refG);
-			const float db = fabsf(imgB - refB);
-
-			const float imgSum = imgR + imgG + imgB;
-			const float error = (imgSum != 0.f) ?
-				((dr + dg + db) / sqrt(imgR + imgG + imgB)) : 0.f;
-			pixelErrorVector[i] = error;
+			if (!film->HasThresholdSamples(hasPN, hasSN, i, testStep)) {
+				hasEnoughSamples = false;
+				break;
+			}
 		}
 
-		if (filterScale > 0) {
-			// Filter noise channel using a (filterScale+1)*(filterScale+1) window average. 
-			// The window becomes smaller at the borders
+		if (hasEnoughSamples) {
+			const float *ref = referenceImage->GetPixels();
+			const float *img = film->channel_IMAGEPIPELINEs[index]->GetPixels();
 
-			const int height = film->GetHeight();
-			const int width = film->GetWidth();
-			for (int i = 0; i < height; i++) {
-				for (int j = 0; j < width; j++) {
-					float diffAccumulator = 0;
-					const int minHeight = 0 > i - static_cast<int>(filterScale) ? 0 : i - filterScale;
-					const int maxHeight = height < i + static_cast<int>(filterScale) ? height : i + filterScale;
-					const int minWidth = 0 > j - static_cast<int>(filterScale) ? 0 : j - filterScale;
-					const int maxWidth = width < j + static_cast<int>(filterScale) ? width : j + filterScale;
-					for (int r = minHeight; r < maxHeight; r++) {
-						for (int c = minWidth; c < maxWidth; c++) {
-							diffAccumulator += pixelErrorVector[r * width + c];
-						}
-					}
-					const u_int windowSize =  (maxHeight - minHeight) * (maxWidth - minWidth);
-					errorVector[i * width + j] = diffAccumulator / windowSize;
-				}
-			}
+			vector<float> pixelErrorVector(pixelsCount, 0);
 
-			float errorMean = 0;
-			float errorStd = 0;
-			float accumulator = 0;
-
-			// Calculate the error mean after the filtering
-			for (u_int j = 0; j < pixelsCount; ++j) {
-				const float pixelVal = errorVector[j];
-				if (isnan(pixelVal) || isinf(pixelVal))
-					continue;
-
-				accumulator += pixelVal;
-			}
-			errorMean = accumulator / pixelsCount;
-
-			// Calculate the error standard deviation after the filtering
-			accumulator = 0;
-			for (u_int j = 0; j < pixelsCount; ++j) {
-				const float pixelVal = errorVector[j];
-				if (isnan(pixelVal) || isinf(pixelVal))
-					continue;
-				
-				const float delta = pixelVal - errorMean;
-				accumulator += delta * delta;
-			}
-			errorStd = sqrt((1.f / pixelsCount) * accumulator);
-
-			// Remove outliers
-			float errorMax = -numeric_limits<float>::infinity();
-			float errorMin = numeric_limits<float>::infinity();
-			for (u_int j = 0; j < pixelsCount; j++) {
-				// Calculate standard score. Clamp value at 6 standard deviations from mean
-				const float score = Clamp((errorVector[j] - errorMean) / errorStd, -6.f, 6.f);
-				errorVector[j] = score;
-
-				// Find maximum and minimum standard scores
-				errorMax = Max(score, errorMax);
-				errorMin = Min(score, errorMin);
-			}
-
-			// Normalize error values
+			// Calculate difference per pixel between images 
 			for (u_int i = 0; i < pixelsCount; ++i) {
-				// Update NOISE channel
-				const float noise = (errorVector[i] - errorMin) / (errorMax - errorMin);
-				*(film->channel_NOISE->GetPixel(i)) = noise;
+				const float refR = *ref++;
+				const float refG = *ref++;
+				const float refB = *ref++;
+
+				const float imgR = *img++;
+				const float imgG = *img++;
+				const float imgB = *img++;
+
+				const float dr = fabsf(imgR - refR);
+				const float dg = fabsf(imgG - refG);
+				const float db = fabsf(imgB - refB);
+
+				const float imgSum = imgR + imgG + imgB;
+				const float error = (imgSum != 0.f) ?
+					((dr + dg + db) / sqrt(imgR + imgG + imgB)) : 0.f;
+				pixelErrorVector[i] = error;
 			}
-			
-			SLG_LOG("Noise estimation: Error mean = " << errorMean);
+
+			if (filterScale > 0) {
+				// Filter noise channel using a (filterScale+1)*(filterScale+1) window average. 
+				// The window becomes smaller at the borders
+
+				const int height = film->GetHeight();
+				const int width = film->GetWidth();
+				for (int i = 0; i < height; i++) {
+					for (int j = 0; j < width; j++) {
+						float diffAccumulator = 0;
+						const int minHeight = 0 > i - static_cast<int>(filterScale) ? 0 : i - filterScale;
+						const int maxHeight = height < i + static_cast<int>(filterScale) ? height : i + filterScale;
+						const int minWidth = 0 > j - static_cast<int>(filterScale) ? 0 : j - filterScale;
+						const int maxWidth = width < j + static_cast<int>(filterScale) ? width : j + filterScale;
+						for (int r = minHeight; r < maxHeight; r++) {
+							for (int c = minWidth; c < maxWidth; c++) {
+								diffAccumulator += pixelErrorVector[r * width + c];
+							}
+						}
+						const u_int windowSize =  (maxHeight - minHeight) * (maxWidth - minWidth);
+						errorVector[i * width + j] = diffAccumulator / windowSize;
+					}
+				}
+
+				float errorMean = 0;
+				float errorStd = 0;
+				float accumulator = 0;
+
+				// Calculate the error mean after the filtering
+				for (u_int j = 0; j < pixelsCount; ++j) {
+					const float pixelVal = errorVector[j];
+					if (isnan(pixelVal) || isinf(pixelVal))
+						continue;
+
+					accumulator += pixelVal;
+				}
+				errorMean = accumulator / pixelsCount;
+
+				// Calculate the error standard deviation after the filtering
+				accumulator = 0;
+				for (u_int j = 0; j < pixelsCount; ++j) {
+					const float pixelVal = errorVector[j];
+					if (isnan(pixelVal) || isinf(pixelVal))
+						continue;
+
+					const float delta = pixelVal - errorMean;
+					accumulator += delta * delta;
+				}
+				errorStd = sqrt((1.f / pixelsCount) * accumulator);
+
+				// Remove outliers
+				float errorMax = -numeric_limits<float>::infinity();
+				float errorMin = numeric_limits<float>::infinity();
+				for (u_int j = 0; j < pixelsCount; j++) {
+					// Calculate standard score. Clamp value at 6 standard deviations from mean
+					const float score = Clamp((errorVector[j] - errorMean) / errorStd, -6.f, 6.f);
+					errorVector[j] = score;
+
+					// Find maximum and minimum standard scores
+					errorMax = Max(score, errorMax);
+					errorMin = Min(score, errorMin);
+				}
+
+				// Normalize error values
+				for (u_int i = 0; i < pixelsCount; ++i) {
+					// Update NOISE channel
+						const float noise = (errorVector[i] - errorMin) / (errorMax - errorMin);
+						*(film->channel_NOISE->GetPixel(i)) = noise;
+				}
+
+				SLG_LOG("Noise estimation: Error mean = " << errorMean);
+			}
 		}
 
 		// Copy the current image

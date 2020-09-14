@@ -21,6 +21,7 @@
 
 #include <string>
 #include <vector>
+#include <atomic>
 
 #include "luxrays/core/randomgen.h"
 #include "slg/slg.h"
@@ -45,11 +46,21 @@ public:
 	static SamplerSharedData *FromProperties(const luxrays::Properties &cfg,
 			luxrays::RandomGenerator *rndGen, Film *film);
 
-	// I'm storing totalLuminance and sampleCount on shared variables
+	// I'm storing totalLuminance, sampleCount and noBlackSampleCount on shared variables
 	// in order to have far more accurate estimation in the image mean intensity
 	// computation
-	float totalLuminance;
-	u_int sampleCount, noBlackSampleCount;
+	
+	// Updated by all threads
+	std::atomic<double> totalLuminance;
+	std::atomic<u_longlong> sampleCount, noBlackSampleCount;
+
+	// Updated only by thread 0
+	float lastLuminance;
+	u_int lastSampleCount, lastNoBlackSampleCount;
+
+	// Updated only by thread 0 but read by all threads
+	float invLuminance;
+	bool cooldown;
 };
 
 //------------------------------------------------------------------------------
@@ -65,7 +76,7 @@ public:
 	MetropolisSampler(luxrays::RandomGenerator *rnd, Film *film,
 			const FilmSampleSplatter *flmSplatter, const bool imgSamplesEnable,
 			const u_int maxRej, const float pLarge, const float imgRange,
-			MetropolisSamplerSharedData *samplerSharedData);
+			const bool addOnlyCstcs, MetropolisSamplerSharedData *samplerSharedData);
 	virtual ~MetropolisSampler();
 
 	virtual SamplerType GetType() const { return GetObjectType(); }
@@ -92,7 +103,7 @@ public:
 	static Sampler *FromProperties(const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen,
 		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData);
 	static slg::ocl::Sampler *FromPropertiesOCL(const luxrays::Properties &cfg);
-	static Film::FilmChannelType GetRequiredChannels(const luxrays::Properties &cfg);
+	static void AddRequiredChannels(Film::FilmChannels &channels, const luxrays::Properties &cfg);
 
 private:
 	static const luxrays::Properties &GetDefaultProps();
@@ -101,6 +112,7 @@ private:
 
 	u_int maxRejects;
 	float largeMutationProbability, imageMutationRange;
+	bool addOnlyCuastics;
 
 	float *samples;
 	u_int *sampleStamps;
@@ -114,7 +126,7 @@ private:
 	double currentLuminance;
 	float *currentSamples;
 	u_int *currentSampleStamps;
-	std::vector<SampleResult> currentSampleResult;
+	std::vector<SampleResult> currentSampleResults;
 
 	// Used, most of the times, when not having a film
 	MetropolisSampleType lastSampleAcceptance;
@@ -122,7 +134,7 @@ private:
 
 	u_int largeMutationCount;
 	
-	bool isLargeMutation, cooldown;
+	bool isLargeMutation;
 };
 
 }

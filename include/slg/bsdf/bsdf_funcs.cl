@@ -19,7 +19,7 @@
  ***************************************************************************/
 
 // Used when hitting a surface
-OPENCL_FORCE_NOT_INLINE void BSDF_Init(
+OPENCL_FORCE_INLINE void BSDF_Init(
 		__global BSDF *bsdf,
 		const bool throughShadowTransparency,
 		__global Ray *ray,
@@ -93,7 +93,7 @@ OPENCL_FORCE_NOT_INLINE void BSDF_Init(
 }
 
 // Used when hitting a volume scatter point
-OPENCL_FORCE_NOT_INLINE void BSDF_InitVolume(
+OPENCL_FORCE_INLINE void BSDF_InitVolume(
 		__global BSDF *bsdf,
 		const bool throughShadowTransparency,
 		__global const Material* restrict mats,
@@ -127,14 +127,14 @@ OPENCL_FORCE_NOT_INLINE void BSDF_InitVolume(
 
 	bsdf->triangleLightSourceIndex = NULL_INDEX;
 
-	VSTORE2F((float2)(0.f, 0.f), &bsdf->hitPoint.defaultUV.u);
+	VSTORE2F(MAKE_FLOAT2(0.f, 0.f), &bsdf->hitPoint.defaultUV.u);
 
 	float3 dpdu, dpdv;
 	CoordinateSystem(geometryN, &dpdu, &dpdv);
 	VSTORE3F(dpdu, &bsdf->hitPoint.dpdu.x);
 	VSTORE3F(dpdv, &bsdf->hitPoint.dpdv.x);
-	VSTORE3F((float3)(0.f, 0.f, 0.f), &bsdf->hitPoint.dndu.x);
-	VSTORE3F((float3)(0.f, 0.f, 0.f), &bsdf->hitPoint.dndv.x);
+	VSTORE3F(MAKE_FLOAT3(0.f, 0.f, 0.f), &bsdf->hitPoint.dndu.x);
+	VSTORE3F(MAKE_FLOAT3(0.f, 0.f, 0.f), &bsdf->hitPoint.dndv.x);
 
 	bsdf->hitPoint.meshIndex = NULL_INDEX;
 	bsdf->hitPoint.triangleIndex = NULL_INDEX;
@@ -149,7 +149,7 @@ OPENCL_FORCE_NOT_INLINE void BSDF_InitVolume(
 	bsdf->isVolume = true;
 }
 
-OPENCL_FORCE_NOT_INLINE float3 BSDF_Albedo(__global const BSDF *bsdf
+OPENCL_FORCE_INLINE float3 BSDF_Albedo(__global const BSDF *bsdf
 		MATERIALS_PARAM_DECL) {
 	return Material_Albedo(bsdf->materialIndex, &bsdf->hitPoint
 			MATERIALS_PARAM);
@@ -181,7 +181,7 @@ OPENCL_FORCE_INLINE float BSDF_ShadowTerminatorAvoidanceFactor(const float3 Ni, 
 	return -G3 + G2 + G;
 }
 
-OPENCL_FORCE_NOT_INLINE float3 BSDF_Evaluate(__global const BSDF *bsdf,
+OPENCL_FORCE_INLINE float3 BSDF_Evaluate(__global const BSDF *bsdf,
 		const float3 generatedDir, BSDFEvent *event, float *directPdfW
 		MATERIALS_PARAM_DECL) {
 	//const Vector &eyeDir = fromLight ? generatedDir : hitPoint.fixedDir;
@@ -241,7 +241,7 @@ OPENCL_FORCE_NOT_INLINE float3 BSDF_Evaluate(__global const BSDF *bsdf,
 	return result;
 }
 
-OPENCL_FORCE_NOT_INLINE float3 BSDF_Sample(__global const BSDF *bsdf, const float u0, const float u1,
+OPENCL_FORCE_INLINE float3 BSDF_Sample(__global const BSDF *bsdf, const float u0, const float u1,
 		float3 *sampledDir, float *pdfW, float *absCosSampledDir, BSDFEvent *event
 		MATERIALS_PARAM_DECL) {
 	const float3 fixedDir = VLOAD3F(&bsdf->hitPoint.fixedDir.x);
@@ -303,6 +303,12 @@ OPENCL_FORCE_INLINE float BSDF_IsPhotonGIEnabled(__global const BSDF *bsdf
 			MATERIALS_PARAM);
 }
 
+OPENCL_FORCE_INLINE bool BSDF_IsHoldout(__global const BSDF *bsdf
+		MATERIALS_PARAM_DECL) {
+	return Material_IsHoldout(bsdf->materialIndex
+			MATERIALS_PARAM);
+}
+
 //------------------------------------------------------------------------------
 // Shadow catcher related functions
 //------------------------------------------------------------------------------
@@ -342,7 +348,7 @@ OPENCL_FORCE_INLINE float3 BSDF_ShadowCatcherSample(__global const BSDF *bsdf,
 }
 
 //------------------------------------------------------------------------------
-// BAke related functions
+// Bake related functions
 //------------------------------------------------------------------------------
 
 OPENCL_FORCE_INLINE bool BSDF_HasBakeMap(__global const BSDF *bsdf, const BakeMapType type
@@ -362,6 +368,6 @@ OPENCL_FORCE_INLINE float3 BSDF_GetBakeMapValue(__global const BSDF *bsdf
 
 	return ImageMap_GetSpectrum(
 			imageMap,
-			uv.s0, uv.s1
+			uv.x, uv.y
 			IMAGEMAPS_PARAM);
 }

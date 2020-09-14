@@ -40,7 +40,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 PathOCLOpenCLRenderThread::PathOCLOpenCLRenderThread(const u_int index,
-		OpenCLIntersectionDevice *device, PathOCLRenderEngine *re) :
+		HardwareIntersectionDevice *device, PathOCLRenderEngine *re) :
 		PathOCLBaseOCLRenderThread(index, device, re) {
 }
 
@@ -80,9 +80,10 @@ static void PGICUpdateCallBack(CompiledScene *compiledScene) {
 void PathOCLOpenCLRenderThread::RenderThreadImpl() {
 	//SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Rendering thread started");
 
-	cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
 	PathOCLRenderEngine *engine = (PathOCLRenderEngine *)renderEngine;
 	const u_int taskCount = engine->taskCount;
+
+	intersectionDevice->PushThreadCurrentDevice();
 
 	try {
 		//----------------------------------------------------------------------
@@ -91,21 +92,21 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl() {
 
 		// Clear the frame buffer
 		const u_int filmPixelCount = threadFilms[0]->film->GetWidth() * threadFilms[0]->film->GetHeight();
-		oclQueue.enqueueNDRangeKernel(*filmClearKernel, cl::NullRange,
-			cl::NDRange(RoundUp<u_int>(filmPixelCount, filmClearWorkGroupSize)),
-			cl::NDRange(filmClearWorkGroupSize));
+		intersectionDevice->EnqueueKernel(filmClearKernel,
+			HardwareDeviceRange(RoundUp<u_int>(filmPixelCount, filmClearWorkGroupSize)),
+			HardwareDeviceRange(filmClearWorkGroupSize));
 
 		// Initialize random number generator seeds
-		oclQueue.enqueueNDRangeKernel(*initSeedKernel, cl::NullRange,
-				cl::NDRange(engine->taskCount), cl::NDRange(initWorkGroupSize));
+		intersectionDevice->EnqueueKernel(initSeedKernel,
+				HardwareDeviceRange(engine->taskCount), HardwareDeviceRange(initWorkGroupSize));
 
 		// Initialize the tasks buffer
-		oclQueue.enqueueNDRangeKernel(*initKernel, cl::NullRange,
-				cl::NDRange(engine->taskCount), cl::NDRange(initWorkGroupSize));
+		intersectionDevice->EnqueueKernel(initKernel,
+				HardwareDeviceRange(engine->taskCount), HardwareDeviceRange(initWorkGroupSize));
 
 		// Check if I have to load the start film
 		if (engine->hasStartFilm && (threadIndex == 0))
-			threadFilms[0]->SendFilm(oclQueue);
+			threadFilms[0]->SendFilm(intersectionDevice);
 
 		//----------------------------------------------------------------------
 		// Rendering loop
@@ -146,17 +147,16 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl() {
 
 			if (totalTransferTime < totalKernelTime * (1.0 / 100.0)) {
 				// Async. transfer of the Film buffers
-				threadFilms[0]->RecvFilm(oclQueue);
+				threadFilms[0]->RecvFilm(intersectionDevice);
 
 				// Async. transfer of GPU task statistics
-				oclQueue.enqueueReadBuffer(
-					*(taskStatsBuff),
+				intersectionDevice->EnqueueReadBuffer(
+					taskStatsBuff,
 					CL_FALSE,
-					0,
 					sizeof(slg::ocl::pathoclbase::GPUTaskStats) * taskCount,
 					gpuTaskStats);
 
-				oclQueue.finish();
+				intersectionDevice->FinishQueue();
 				
 				// I need to update the film samples count
 				
@@ -182,15 +182,14 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl() {
 
 			for (u_int i = 0; i < iterations; ++i) {
 				// Trace rays
-				intersectionDevice->EnqueueTraceRayBuffer(*raysBuff,
-						*(hitsBuff), taskCount, NULL, NULL);
+				intersectionDevice->EnqueueTraceRayBuffer(raysBuff, hitsBuff, taskCount);
 
 				// Advance to next path state
-				EnqueueAdvancePathsKernel(oclQueue);
+				EnqueueAdvancePathsKernel();
 			}
 			totalIterations += iterations;
 
-			oclQueue.finish();
+			intersectionDevice->FinishQueue();
 			const double timeKernelEnd = WallClockTime();
 			totalKernelTime += timeKernelEnd - timeKernelStart;
 
@@ -225,13 +224,10 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl() {
 		//SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Rendering thread halted");
 	} catch (boost::thread_interrupted) {
 		SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Rendering thread halted");
-	} catch (cl::Error &err) {
-		SLG_LOG("[PathOCLRenderThread::" << threadIndex << "] Rendering thread ERROR: " << err.what() <<
-				"(" << oclErrorString(err.err()) << ")");
 	}
 
-	threadFilms[0]->RecvFilm(oclQueue);
-	oclQueue.finish();
+	threadFilms[0]->RecvFilm(intersectionDevice);
+	intersectionDevice->FinishQueue();
 	
 	threadDone = true;
 
@@ -242,6 +238,8 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl() {
 		engine->renderOCLThreads[i]->Interrupt();
 	for (u_int i = 0; i < engine->renderNativeThreads.size(); ++i)
 		engine->renderNativeThreads[i]->Interrupt();
+	
+	intersectionDevice->PopThreadCurrentDevice();
 }
 
 #endif

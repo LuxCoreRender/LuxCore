@@ -1,44 +1,58 @@
-### Release v2.4
+### Release v2.5
 
 ### New Features
 
-* New OpenCL code to evaluate textures and materials. It doesn't require kernel re-compilation anymore.
-* LuxCoreUI "Fill kernel cache" menu option now pre-compile all possible GPU kernels.
-* LuxCore API KernelCacheFill() is now available for Python
-* New 2-levels Env. Light Visibility Cache (ELVC)
-* Added the support for a new ".sharpness" (default value 0.1, range [0.0, 1.0]) Intel OIDN parameter to blend original and denoised output
-* Removed LuxRays support for virtual devices and hybrid rendering (old LuxRender GPU doing ray intersections and CPU everything else)
-* Geometry vertex and triangle AOV (arbitrary data associated to mesh vertices and triangle usable by textures)
-* Removed the support for Triplanar texture .uvindex (side effect of the above new feature)
-* New hitpointvertexaov nad hitpointtriangleaov textures
-* Pointiness shape can now assign curvature values to vertex AOV with .aovindex property (a 4294967296 value will force the use of alpha channel instead, defualt value for compatibility with the past)
-* LuxCore API has now SetMeshVertexAOV() and SetMeshTriangleAOV() methods to set geometry vertex and triangle AOV
-* Added the support for new Random texture
-* Added the support for the new IslandAOV shape
-* Added the support for RandomTriangleAOV shape
-* Accelerated duplicate vertex detection in pointiness shape (from 6.7 seconds to 0.016 seconds on a 100k vertex mesh)
-* LuxRays API reworked to support generic hardware devices (now OpenCL, potentially CUDA, Vulkan, Metal, etc.)
-* Added the support for light groups to PhotonGI
+* Added the support for Optix/RTX acceleration
+* Added the support for Optix denoiser imagepipeline plugin
+* GPU imagepipeline now allocated buffers for only the used AOVs by each plugin
+* batch.haltspp now supports 2 parameters too in order to have separate halt conditions for eye and light tracing
+* Added the support for camera not uniform and anamorphic bokeh (issue #409)
+* Added the support for camera bokeh with custom distribution
+* Variance clamping is now applied separately to each radiance group (issue #414)
+* Added the support for lateral and longitudinal chromatic aberration (issue #409)
+* Added the support for SINC pixel filter (issue #415)
+* Added the support for CATMULLROM pixel filter (issue #415)
+* It is now possible to disable Optix (with property context.cuda.optix.enable) even if it is detected and available
+* Any mesh UV map can now be used for displacement (issue #416)
+* Subdiv shape now supports multiple vertex UVs, colors, alphas and AOVs (issue #416)
+* Added the support for holdout (issue #423)
+* Added the support for wireframe texture
+* Variance clamping is applied applied to DIRECT_DIFFUSE, DIRECT_GLOSSY, EMISSION, INDIRECT_DIFFUSE, INDIRECT_GLOSSY and INDIRECT_SPECULAR AOVs too
+* GetPlatformDesc() now returns compile.LUXRAYS_ENABLE_OPTIX property to check if Optix is available
+* Removed the limit of max. 32 AOV types
+* Added the support for new AOVs (issue #429): DIRECT_DIFFUSE_REFLECT, DIRECT_DIFFUSE_TRANSMIT, DIRECT_GLOSSY_REFLECT, DIRECT_GLOSSY_TRANSMIT, INDIRECT_DIFFUSE_REFLECT, INDIRECT_DIFFUSE_TRANSMIT, INDIRECT_GLOSSY_REFLECT, INDIRECT_GLOSSY_TRANSMIT, INDIRECT_SPECULAR_REFLECT and INDIRECT_SPECULAR_TRANSMIT
+* Added a fast evaluation path in GPU code for constant and image map textures
+* Added the support for Distort texture
+* Now individual bricks, in brick texture, have a pseudo-random mix between two colors by default
+* Added the support for Randomized Texture Tiling (#228)
+* Added the support for UVRandomMapping2D
+* Added the support for LocalRandomMapping3D
+* Added the support for Caustic AOV when using hybrid rendering
 
 ### Fixed Bugs
 
-* Fixed a rendering difference when using/not using geometry negative scale transformations (issue #309)
-* Fixed an out of bound access in BAKECPU
-* Fixed a problem when using path.forceblackbackground.enable and env. lights
-* Fixed a problem with scenes with very hard light paths and Metropolis sampler (issue #312)
-* Sampler shared data are now reseted at the end of a scene edit (issue #312)
+* Added the support for pixel filtering to light tracing (issue #413)
+* Now LuxCore works even if OpenCL is available but not a valid OpenCL ICD platform has been found (issue #422)
+* Fixed a problem with cloth material when using CUDA and Windows (issue #417)
+* Fixed a problem in glossy coating albedo evaluation on GPUs
+* Fixed a difference between CPU and GPU rendering when using a roughglass with a shadow transparency color
+* Fixed the support in .ply files for triangle AOVs
+* Fixed a memory leak when rendering with OpenCL (noticeable when rendering animations)
+* Fixed text export of brick texture HERRINGBONE and BASKET
+* Fixed scale problem in GPU code for brick texture HERRINGBONE and BASKET (issue #438)
+* Fixed a possible crash when using trilinear texture with GPUs
+* Reworked some condition in hybrid rendering light tracing to solve the problem of flashing caustics (issue #441)
+* Fixed a problem with Blender Translation language preference option and scene export on file
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
 
 ### Known Problems and limitations
 
-* LuxCore API requires latin locale
 * accelerator.bvh.builder.type = EMBREE_MORTON doesn't work with the latest Embree
 * Python crashes when calling sys.exit()
 * TILEPATHOCL (and RTPATHOCL) count the layers of transparent surfaces as an iteration of the rendering finite state machine so they require to increase the max. path depth to avoid black regions.
 * Light emitted by motion blurred triangle lights is approximated using the triangle area of time 0.0 (computing triangle area at runtime would be expansive) so it may be not totally accurate if the motion blur transformation include a scale.
-* Variance clamping is not applied to AOVs
 
 **Note for Windows users:** you have to install the [Microsoft Visual C++ Redistributable
 for Visual Studio 2017](https://aka.ms/vs/15/release/vc_redist.x64.exe) and

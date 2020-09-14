@@ -8,19 +8,11 @@ echo %VERSION_STRING%
 cd ..\WindowsCompile
 
 if "%FINAL%" EQU "TRUE" (
-    call create-sdk.bat
-    if "%1" EQU "/no-ocl" (
-        set LUX_LATEST=luxcorerender-%VERSION_STRING%-win64-sdk
-    ) else (
-        set LUX_LATEST=luxcorerender-%VERSION_STRING%-win64-opencl-sdk
-    )
+    call create-sdk.bat %1
+    set LUX_LATEST=luxcorerender-%VERSION_STRING%-win64-sdk
 ) else (
-    call create-standalone.bat
-    if "%1" EQU "/no-ocl" (
-        set LUX_LATEST=luxcorerender-%VERSION_STRING%-win64
-    ) else (
-        set LUX_LATEST=luxcorerender-%VERSION_STRING%-win64-opencl
-    )
+    call create-standalone.bat %1
+    set LUX_LATEST=luxcorerender-%VERSION_STRING%-win64
 )
 
 move %DIR% %LUX_LATEST%

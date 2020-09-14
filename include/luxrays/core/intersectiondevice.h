@@ -24,8 +24,15 @@
 
 namespace luxrays {
 
+//------------------------------------------------------------------------------
+// IntersectionDevice
+//------------------------------------------------------------------------------
+
 class IntersectionDevice : virtual public Device {
 public:
+	// Returns true if it support HardwareDevice ray tracing
+	virtual bool HasHWSupport() const { return false; }
+
 	const Accelerator *GetAccelerator() const { return accel; }
 
 	//--------------------------------------------------------------------------
@@ -52,7 +59,7 @@ public:
 	}
 
 	//--------------------------------------------------------------------------
-	// Serial interface: to trace a single ray (on the CPU)
+	// Serial interface: to trace a single ray (i.e. on the CPU)
 	//--------------------------------------------------------------------------
 
 	virtual bool TraceRay(const Ray *ray, RayHit *rayHit) {

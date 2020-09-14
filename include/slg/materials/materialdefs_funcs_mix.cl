@@ -298,7 +298,7 @@ OPENCL_FORCE_INLINE void MixMaterial_GetEmittedRadiance(__global const Material*
 // Material evaluate
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_NOT_INLINE void MixMaterial_EvaluateSetUp1(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void MixMaterial_EvaluateSetUp1(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {
@@ -306,16 +306,41 @@ OPENCL_FORCE_NOT_INLINE void MixMaterial_EvaluateSetUp1(__global const Material*
 	EvalStack_PopFloat3(eyeDir);
 	EvalStack_PopFloat3(lightDir);
 
+	// Save current shading normal/dpdu/dpdv and setup the hitPoint with A material bump mapping
+	const float3 originalShadeN = VLOAD3F(&hitPoint->shadeN.x);
+	const float3 originalDpdu = VLOAD3F(&hitPoint->dpdu.x);
+	const float3 originalDpdv = VLOAD3F(&hitPoint->dpdv.x);
+	EvalStack_PushFloat3(originalShadeN);
+	EvalStack_PushFloat3(originalDpdu);
+	EvalStack_PushFloat3(originalDpdv);
+
+	__global HitPoint *hitPointTmp = (__global HitPoint *)hitPoint;
+	Material_Bump(material->mix.matAIndex, hitPointTmp
+		MATERIALS_PARAM);
+	// Re-read the shadeN modified by Material_Bump()
+	const float3 matAShadeN = VLOAD3F(&hitPointTmp->shadeN.x);
+	const float3 matADpdu = VLOAD3F(&hitPointTmp->dpdu.x);
+	const float3 matADpdv = VLOAD3F(&hitPointTmp->dpdv.x);
+
 	// Save the parameters
 	EvalStack_PushFloat3(lightDir);
 	EvalStack_PushFloat3(eyeDir);
+	
+	// Transform lightDir and eyeDir to A material new reference system
+	Frame frameA;
+	Frame_Set_Private(&frameA, matADpdu, matADpdv, matAShadeN);
+	Frame frameOriginal;
+	Frame_Set_Private(&frameOriginal, originalDpdu, originalDpdv, originalShadeN);
+
+	const float3 matALightDir = Frame_ToLocal_Private(&frameA, Frame_ToWorld_Private(&frameOriginal, lightDir));
+	const float3 matAEyeDir = Frame_ToLocal_Private(&frameA, Frame_ToWorld_Private(&frameOriginal, eyeDir));
 
 	// To setup the following EVAL_EVALUATE evaluation of first sub-nodes
-	EvalStack_PushFloat3(lightDir);
-	EvalStack_PushFloat3(eyeDir);
+	EvalStack_PushFloat3(matALightDir);
+	EvalStack_PushFloat3(matAEyeDir);
 }
 
-OPENCL_FORCE_NOT_INLINE void MixMaterial_EvaluateSetUp2(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void MixMaterial_EvaluateSetUp2(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {
@@ -332,6 +357,29 @@ OPENCL_FORCE_NOT_INLINE void MixMaterial_EvaluateSetUp2(__global const Material*
 	EvalStack_PopFloat3(eyeDir);
 	EvalStack_PopFloat3(lightDir);
 
+	// Pop saved original shading normal/dpdu/dpdv
+	float3 originalShadeN, originalDpdu, originalDpdv;
+	EvalStack_PopFloat3(originalDpdv);
+	EvalStack_PopFloat3(originalDpdu);
+	EvalStack_PopFloat3(originalShadeN);
+	// Restore original hitPoint
+	__global HitPoint *hitPointTmp = (__global HitPoint *)hitPoint;
+	VSTORE3F(originalShadeN, &hitPointTmp->shadeN.x);
+	VSTORE3F(originalDpdu, &hitPointTmp->dpdu.x);
+	VSTORE3F(originalDpdv, &hitPointTmp->dpdv.x);
+
+	// Save current shading normal/dpdu/dpdv and setup the hitPoint with A material bump mapping
+	EvalStack_PushFloat3(originalShadeN);
+	EvalStack_PushFloat3(originalDpdu);
+	EvalStack_PushFloat3(originalDpdv);
+
+	Material_Bump(material->mix.matBIndex, hitPointTmp
+		MATERIALS_PARAM);
+	// Re-read the shadeN modified by Material_Bump()
+	const float3 matBShadeN = VLOAD3F(&hitPointTmp->shadeN.x);
+	const float3 matBDpdu = VLOAD3F(&hitPointTmp->dpdu.x);
+	const float3 matBDpdv = VLOAD3F(&hitPointTmp->dpdv.x);
+
 	// Save the parameters
 	EvalStack_PushFloat3(eyeDir);
 	EvalStack_PushFloat3(lightDir);
@@ -340,13 +388,22 @@ OPENCL_FORCE_NOT_INLINE void MixMaterial_EvaluateSetUp2(__global const Material*
 	EvalStack_PushFloat3(resultMatA);
 	EvalStack_PushBSDFEvent(eventMatA);
 	EvalStack_PushFloat(directPdfWMatA);
+	
+	// Transform lightDir and eyeDir to A material new reference system
+	Frame frameB;
+	Frame_Set_Private(&frameB, matBDpdu, matBDpdv, matBShadeN);
+	Frame frameOriginal;
+	Frame_Set_Private(&frameOriginal, originalDpdu, originalDpdv, originalShadeN);
+
+	const float3 matBLightDir = Frame_ToLocal_Private(&frameB, Frame_ToWorld_Private(&frameOriginal, lightDir));
+	const float3 matBEyeDir = Frame_ToLocal_Private(&frameB, Frame_ToWorld_Private(&frameOriginal, eyeDir));
 
 	// To setup the following EVAL_EVALUATE evaluation of second sub-nodes
-	EvalStack_PushFloat3(lightDir);
-	EvalStack_PushFloat3(eyeDir);
+	EvalStack_PushFloat3(matBLightDir);
+	EvalStack_PushFloat3(matBEyeDir);
 }
 
-OPENCL_FORCE_NOT_INLINE void MixMaterial_Evaluate(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void MixMaterial_Evaluate(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {
@@ -370,6 +427,17 @@ OPENCL_FORCE_NOT_INLINE void MixMaterial_Evaluate(__global const Material* restr
 	float3 lightDir, eyeDir;
 	EvalStack_PopFloat3(eyeDir);
 	EvalStack_PopFloat3(lightDir);
+
+	// Pop saved original shading normal/dpdu/dpdv
+	float3 originalShadeN, originalDpdu, originalDpdv;
+	EvalStack_PopFloat3(originalDpdv);
+	EvalStack_PopFloat3(originalDpdu);
+	EvalStack_PopFloat3(originalShadeN);
+	// Restore original hitPoint
+	__global HitPoint *hitPointTmp = (__global HitPoint *)hitPoint;
+	VSTORE3F(originalShadeN, &hitPointTmp->shadeN.x);
+	VSTORE3F(originalDpdu, &hitPointTmp->dpdu.x);
+	VSTORE3F(originalDpdv, &hitPointTmp->dpdv.x);
 
 	float3 result = BLACK;
 	float directPdfW = 0.f;
@@ -419,7 +487,7 @@ OPENCL_FORCE_NOT_INLINE void MixMaterial_Evaluate(__global const Material* restr
 // Material sample
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_NOT_INLINE void MixMaterial_SampleSetUp1(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void MixMaterial_SampleSetUp1(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {
@@ -430,26 +498,51 @@ OPENCL_FORCE_NOT_INLINE void MixMaterial_SampleSetUp1(__global const Material* r
 	float3 fixedDir;
 	EvalStack_PopFloat3(fixedDir);
 
-	// Save the parameters
-	EvalStack_PushFloat3(fixedDir);
-	EvalStack_PushFloat(u0);
-	EvalStack_PushFloat(u1);
-	EvalStack_PushFloat(passThroughEvent);
-
 	const float factor = Texture_GetFloatValue(material->mix.mixFactorTexIndex, hitPoint TEXTURES_PARAM);
 	const float weight2 = clamp(factor, 0.f, 1.f);
 	const float weight1 = 1.f - weight2;
 
 	const bool sampleMatA = (passThroughEvent < weight1);
 	const float passThroughEventFirst = sampleMatA ? (passThroughEvent / weight1) : (passThroughEvent - weight1) / weight2;
+	const uint matIndexFirst = sampleMatA ? material->mix.matAIndex : material->mix.matBIndex;
+
+	// Save current shading normal/dpdu/dpdv and setup the hitPoint with first material bump mapping
+	const float3 originalShadeN = VLOAD3F(&hitPoint->shadeN.x);
+	const float3 originalDpdu = VLOAD3F(&hitPoint->dpdu.x);
+	const float3 originalDpdv = VLOAD3F(&hitPoint->dpdv.x);
+	EvalStack_PushFloat3(originalShadeN);
+	EvalStack_PushFloat3(originalDpdu);
+	EvalStack_PushFloat3(originalDpdv);
+
+	__global HitPoint *hitPointTmp = (__global HitPoint *)hitPoint;
+	Material_Bump(matIndexFirst, hitPointTmp
+		MATERIALS_PARAM);
+	// Re-read the shadeN modified by Material_Bump()
+	const float3 matFirstShadeN = VLOAD3F(&hitPointTmp->shadeN.x);
+	const float3 matFirstDpdu = VLOAD3F(&hitPointTmp->dpdu.x);
+	const float3 matFirstDpdv = VLOAD3F(&hitPointTmp->dpdv.x);
+
+	// Save the parameters
+	EvalStack_PushFloat3(fixedDir);
+	EvalStack_PushFloat(u0);
+	EvalStack_PushFloat(u1);
+	EvalStack_PushFloat(passThroughEvent);
 
 	// Save factor
 	EvalStack_PushFloat(factor);
 	// Save sampleMatA
 	EvalStack_PushInt(sampleMatA);
 
+	// Transform fixedDir to first material new reference system
+	Frame frameFirst;
+	Frame_Set_Private(&frameFirst, matFirstDpdu, matFirstDpdv, matFirstShadeN);
+	Frame frameOriginal;
+	Frame_Set_Private(&frameOriginal, originalDpdu, originalDpdv, originalShadeN);
+
+	const float3 matFirstFixedDir = Frame_ToLocal_Private(&frameFirst, Frame_ToWorld_Private(&frameOriginal, fixedDir));
+
 	// To setup the following EVAL_SAMPLE evaluation of first sub-nodes
-	EvalStack_PushFloat3(fixedDir);
+	EvalStack_PushFloat3(matFirstFixedDir);
 	EvalStack_PushFloat(u0);
 	EvalStack_PushFloat(u1);
 	EvalStack_PushFloat(passThroughEventFirst);
@@ -458,7 +551,7 @@ OPENCL_FORCE_NOT_INLINE void MixMaterial_SampleSetUp1(__global const Material* r
 	EvalStack_PushInt(!sampleMatA);
 }
 
-OPENCL_FORCE_NOT_INLINE void MixMaterial_SampleSetUp2(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void MixMaterial_SampleSetUp2(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {
@@ -470,13 +563,15 @@ OPENCL_FORCE_NOT_INLINE void MixMaterial_SampleSetUp2(__global const Material* r
 	EvalStack_PopFloat(pdfWFirst);
 	EvalStack_PopFloat3(sampledDirFirst);
 	EvalStack_PopFloat3(resultFirst);
-	
+
 	// Pop sampleMatA
 	bool sampleMatA;
 	EvalStack_PopInt(sampleMatA);
 	// Pop factor
 	float factor;
 	EvalStack_PopFloat(factor);
+
+	const uint matIndexSecond = sampleMatA ? material->mix.matBIndex : material->mix.matAIndex;
 
 	// Pop parameters
 	float u0, u1, passThroughEvent;
@@ -485,6 +580,42 @@ OPENCL_FORCE_NOT_INLINE void MixMaterial_SampleSetUp2(__global const Material* r
 	EvalStack_PopFloat(u0);
 	float3 fixedDir;
 	EvalStack_PopFloat3(fixedDir);
+
+	// Pop saved original shading normal/dpdu/dpdv
+	float3 originalShadeN, originalDpdu, originalDpdv;
+	EvalStack_PopFloat3(originalDpdv);
+	EvalStack_PopFloat3(originalDpdu);
+	EvalStack_PopFloat3(originalShadeN);
+
+	// Set the first frame reference ssystem
+	const float3 matFirstShadeN = VLOAD3F(&hitPoint->shadeN.x);
+	const float3 matFirstDpdu = VLOAD3F(&hitPoint->dpdu.x);
+	const float3 matFirstDpdv = VLOAD3F(&hitPoint->dpdv.x);
+	Frame frameFirst;
+	Frame_Set_Private(&frameFirst, matFirstDpdu, matFirstDpdv, matFirstShadeN);
+
+	// Restore original hitPoint
+	__global HitPoint *hitPointTmp = (__global HitPoint *)hitPoint;
+	VSTORE3F(originalShadeN, &hitPointTmp->shadeN.x);
+	VSTORE3F(originalDpdu, &hitPointTmp->dpdu.x);
+	VSTORE3F(originalDpdv, &hitPointTmp->dpdv.x);
+
+	// Transform sampledDirFirst from first frame reference to original Mix material reference
+	Frame frameOriginal;
+	Frame_Set_Private(&frameOriginal, originalDpdu, originalDpdv, originalShadeN);
+	sampledDirFirst = Frame_ToLocal_Private(&frameOriginal, Frame_ToWorld_Private(&frameFirst, sampledDirFirst));
+
+	// Save current shading normal/dpdu/dpdv and setup the hitPoint with first material bump mapping
+	EvalStack_PushFloat3(originalShadeN);
+	EvalStack_PushFloat3(originalDpdu);
+	EvalStack_PushFloat3(originalDpdv);
+
+	Material_Bump(matIndexSecond, hitPointTmp
+		MATERIALS_PARAM);
+	// Re-read the shadeN modified by Material_Bump()
+	const float3 matSecondShadeN = VLOAD3F(&hitPointTmp->shadeN.x);
+	const float3 matSecondDpdu = VLOAD3F(&hitPointTmp->dpdu.x);
+	const float3 matSecondDpdv = VLOAD3F(&hitPointTmp->dpdv.x);
 
 	// Save the parameters
 	EvalStack_PushFloat3(fixedDir);
@@ -496,7 +627,7 @@ OPENCL_FORCE_NOT_INLINE void MixMaterial_SampleSetUp2(__global const Material* r
 	EvalStack_PushFloat(factor);
 	// Save sampleMatA
 	EvalStack_PushInt(sampleMatA);
-	
+
 	// Save the result of the first evaluation
 	EvalStack_PushFloat3(resultFirst);
 	EvalStack_PushFloat3(sampledDirFirst);
@@ -509,14 +640,22 @@ OPENCL_FORCE_NOT_INLINE void MixMaterial_SampleSetUp2(__global const Material* r
 		// there some meaningful value
 		sampledDirFirst = fixedDir;
 	}
-	EvalStack_PushFloat3(sampledDirFirst);
-	EvalStack_PushFloat3(fixedDir);
+	
+	// Transform sampledDirFirst and fixedDir to second material new reference system
+	Frame frameSecond;
+	Frame_Set_Private(&frameSecond, matSecondDpdu, matSecondDpdv, matSecondShadeN);
+
+	const float3 matSecondSampledDir = Frame_ToLocal_Private(&frameSecond, Frame_ToWorld_Private(&frameOriginal, sampledDirFirst));
+	const float3 matSecondFixedDir = Frame_ToLocal_Private(&frameSecond, Frame_ToWorld_Private(&frameOriginal, fixedDir));
+
+	EvalStack_PushFloat3(matSecondSampledDir);
+	EvalStack_PushFloat3(matSecondFixedDir);
 
 	// To setup the first EVAL_CONDITIONAL_GOTO evaluation
 	EvalStack_PushInt(sampleMatA);
 }
 
-OPENCL_FORCE_NOT_INLINE void MixMaterial_Sample(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void MixMaterial_Sample(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {
@@ -551,6 +690,17 @@ OPENCL_FORCE_NOT_INLINE void MixMaterial_Sample(__global const Material* restric
 	EvalStack_PopFloat(u0);
 	float3 fixedDir;
 	EvalStack_PopFloat3(fixedDir);
+	
+	// Pop saved original shading normal/dpdu/dpdv
+	float3 originalShadeN, originalDpdu, originalDpdv;
+	EvalStack_PopFloat3(originalDpdv);
+	EvalStack_PopFloat3(originalDpdu);
+	EvalStack_PopFloat3(originalShadeN);
+	// Restore original hitPoint
+	__global HitPoint *hitPointTmp = (__global HitPoint *)hitPoint;
+	VSTORE3F(originalShadeN, &hitPointTmp->shadeN.x);
+	VSTORE3F(originalDpdu, &hitPointTmp->dpdu.x);
+	VSTORE3F(originalDpdv, &hitPointTmp->dpdv.x);
 
 	//--------------------------------------------------------------------------
 	

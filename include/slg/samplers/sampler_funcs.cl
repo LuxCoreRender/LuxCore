@@ -22,7 +22,7 @@
 // Sampler functions
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_NOT_INLINE float Sampler_GetSample(
+OPENCL_FORCE_INLINE float Sampler_GetSample(
 		__constant const GPUTaskConfiguration* restrict taskConfig,
 		const uint index
 		SAMPLER_PARAM_DECL) {
@@ -41,7 +41,8 @@ OPENCL_FORCE_NOT_INLINE float Sampler_GetSample(
 	}
 }
 
-OPENCL_FORCE_NOT_INLINE void Sampler_SplatSample(
+// Cuda reports large argument size, so overrides noinline attribute anyway
+OPENCL_FORCE_INLINE void Sampler_SplatSample(
 		__constant const GPUTaskConfiguration* restrict taskConfig
 		SAMPLER_PARAM_DECL
 		FILM_PARAM_DECL

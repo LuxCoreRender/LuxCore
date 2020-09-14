@@ -92,13 +92,16 @@ public:
 	virtual void Update(const u_int filmWidth, const u_int filmHeight,
 		const u_int *filmSubRegion);
 
+	virtual bool LocalSampleLens(const float time, const float u1, const float u2,
+		luxrays::Point *lensPoint) const = 0;
+
 	// Rendering methods
 	virtual void GenerateRay(const float time,
 		const float filmX, const float filmY,
 		luxrays::Ray *ray, PathVolumeInfo *volInfo,
 		const float u0, const float u1) const;
 
-	virtual luxrays::Properties ToProperties() const;
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 	// User defined values
 	luxrays::Point orig, target;

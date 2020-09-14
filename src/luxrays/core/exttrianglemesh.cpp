@@ -26,6 +26,7 @@
 #include "luxrays/core/exttrianglemesh.h"
 #include "luxrays/utils/ply/rply.h"
 #include "luxrays/utils/serializationutils.h"
+#include "luxrays/utils/strutils.h"
 
 using namespace std;
 using namespace luxrays;

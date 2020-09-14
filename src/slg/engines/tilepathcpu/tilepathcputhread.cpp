@@ -16,6 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "luxrays/utils/thread.h"
+
 #include "slg/samplers/tilepathsampler.h"
 #include "slg/engines/tilepathcpu/tilepathcpu.h"
 #include "slg/engines/caches/photongi/photongicache.h"
@@ -51,6 +53,9 @@ void TilePathCPURenderThread::RenderFunc() {
 	//--------------------------------------------------------------------------
 	// Initialization
 	//--------------------------------------------------------------------------
+
+	// This is really used only by Windows for 64+ threads support
+	SetThreadGroupAffinity(threadIndex);
 
 	TilePathCPURenderEngine *engine = (TilePathCPURenderEngine *)renderEngine;
 	const PathTracer &pathTracer = engine->pathTracer;

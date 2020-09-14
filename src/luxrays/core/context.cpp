@@ -29,8 +29,9 @@
 #include "luxrays/devices/ocldevice.h"
 #include "luxrays/devices/oclintersectiondevice.h"
 #endif
-#if defined(LUXRAYS_ENABLE_CUDA)
+#if !defined(LUXRAYS_DISABLE_CUDA)
 #include "luxrays/devices/cudadevice.h"
+#include "luxrays/devices/cudaintersectiondevice.h"
 #endif
 
 using namespace std;
@@ -44,6 +45,7 @@ Context::Context(LuxRaysDebugHandler handler, const Properties &config) : cfg(co
 	debugHandler = handler;
 	currentDataSet = NULL;
 	started = false;
+	useOutOfCoreBuffers = false;
 	verbose = cfg.Get(Property("context.verbose")(true)).Get<bool>();
 
 	// Get the list of devices available on the platform
@@ -53,63 +55,73 @@ Context::Context(LuxRaysDebugHandler handler, const Properties &config) : cfg(co
 	//--------------------------------------------------------------------------
 
 	NativeIntersectionDeviceDescription::AddDeviceDescs(deviceDescriptions);
-
 	
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	//--------------------------------------------------------------------------
 	// Add all OpenCL devices
 	//--------------------------------------------------------------------------
 
-	// Platform info
-	VECTOR_CLASS<cl::Platform> platforms;
-	try {
-		cl::Platform::get(&platforms);
-	} catch (cl::Error &err) {
-		// The cl_khr_icd extension throws exceptions if zero platforms are available.
-		// We ignore that error (OpenCL is optional), but throw anything else.
-#if defined(cl_khr_idc)
-        if (err.err() != CL_PLATFORM_NOT_FOUND_KHR)
-            throw;
-#endif
-	}
-	for (size_t i = 0; i < platforms.size(); ++i)
-		LR_LOG(this, "OpenCL Platform " << i << ": " << platforms[i].getInfo<CL_PLATFORM_VENDOR>().c_str());
+	LR_LOG(this, "OpenCL support: enabled");
 
-	const int openclPlatformIndex = cfg.Get(Property("context.opencl.platform.index")(-1)).Get<int>();
-	if (openclPlatformIndex < 0) {
-		if (platforms.size() > 0) {
-			// Just use all the platforms available
-			for (size_t i = 0; i < platforms.size(); ++i)
+	if (isOpenCLAvilable) {
+		vector<cl_platform_id> platforms;
+		OpenCLDeviceDescription::GetPlatformsList(platforms);
+
+		for (size_t i = 0; i < platforms.size(); ++i)
+			LR_LOG(this, "OpenCL Platform " << i << ": " << OpenCLDeviceDescription::GetOCLPlatformName(platforms[i]));
+
+		const int openclPlatformIndex = cfg.Get(Property("context.opencl.platform.index")(-1)).Get<int>();
+		if (openclPlatformIndex < 0) {
+			if (platforms.size() > 0) {
+				// Just use all the platforms available
+				for (size_t i = 0; i < platforms.size(); ++i)
+					OpenCLDeviceDescription::AddDeviceDescs(
+						platforms[i], DEVICE_TYPE_OPENCL_ALL,
+						deviceDescriptions);
+			} else
+				LR_LOG(this, "No OpenCL platform available");
+		} else {
+			if ((platforms.size() == 0) || (openclPlatformIndex >= (int)platforms.size()))
+				throw runtime_error("Unable to find an appropriate OpenCL platform");
+			else {
 				OpenCLDeviceDescription::AddDeviceDescs(
-					platforms[i], DEVICE_TYPE_OPENCL_ALL,
-					deviceDescriptions);
-		} else
-			LR_LOG(this, "No OpenCL platform available");
-	} else {
-		if ((platforms.size() == 0) || (openclPlatformIndex >= (int)platforms.size()))
-			throw runtime_error("Unable to find an appropriate OpenCL platform");
-		else {
-			OpenCLDeviceDescription::AddDeviceDescs(
-				platforms[openclPlatformIndex],
-				DEVICE_TYPE_OPENCL_ALL, deviceDescriptions);
+					platforms[openclPlatformIndex],
+					DEVICE_TYPE_OPENCL_ALL, deviceDescriptions);
+			}
 		}
 	}
+#else
+	LR_LOG(this, "OpenCL support: disabled");
 #endif
 
-#if defined(LUXRAYS_ENABLE_CUDA)
+#if !defined(LUXRAYS_DISABLE_CUDA)
 	//--------------------------------------------------------------------------
 	// Add all CUDA devices
 	//--------------------------------------------------------------------------
+	
+	LR_LOG(this, "CUDA support: enabled");
 
-	int driverVersion;
-	CHECK_CUDA_ERROR(cuDriverGetVersion(&driverVersion));
-	LR_LOG(this, "CUDA driver version: " << (driverVersion / 1000) << "." << (driverVersion % 1000));
+	if (isCudaAvilable) {
+		LR_LOG(this, "CUDA support: available");
 
-	int devCount;
-	CHECK_CUDA_ERROR(cuDeviceGetCount(&devCount));
-	LR_LOG(this, "CUDA device count: " << devCount);
+		int driverVersion;
+		CHECK_CUDA_ERROR(cuDriverGetVersion(&driverVersion));
+		LR_LOG(this, "CUDA driver version: " << (driverVersion / 1000) << "." << (driverVersion % 1000));
 
-	CUDADeviceDescription::AddDeviceDescs(deviceDescriptions);
+		int devCount;
+		CHECK_CUDA_ERROR(cuDeviceGetCount(&devCount));
+		LR_LOG(this, "CUDA device count: " << devCount);
+
+		if (isOptixAvilable) {
+			LR_LOG(this, "Optix support: available");
+		} else {
+			LR_LOG(this, "Optix support: not available");
+		}
+
+		CUDADeviceDescription::AddDeviceDescs(deviceDescriptions);
+	}
+#else
+	LR_LOG(this, "CUDA support: disabled");
 #endif
 
 	// Print device info
@@ -132,6 +144,16 @@ Context::Context(LuxRaysDebugHandler handler, const Properties &config) : cfg(co
 
 		LR_LOG(this, "Device " << i << " max allocable memory block size: " <<
 			desc->GetMaxMemoryAllocSize() / (1024 * 1024) << "MBytes");
+
+		LR_LOG(this, "Device " << i << " has out of core memory support: " <<
+			desc->HasOutOfCoreMemorySupport());
+
+		if (desc->GetType() & DEVICE_TYPE_CUDA_ALL) {
+			const CUDADeviceDescription *cudaDesc = (CUDADeviceDescription *)desc;
+
+			LR_LOG(this, "Device " << i << " CUDA compute capability: " <<
+					cudaDesc->GetCUDAComputeCapabilityMajor() << "." << cudaDesc->GetCUDAComputeCapabilityMinor());
+		}
 	}
 }
 
@@ -141,6 +163,7 @@ Context::~Context() {
 
 	for (size_t i = 0; i < devices.size(); ++i)
 		delete devices[i];
+
 	for (size_t i = 0; i < deviceDescriptions.size(); ++i)
 		delete deviceDescriptions[i];
 }
@@ -161,11 +184,11 @@ void Context::UpdateDataSet() {
 	currentDataSet->UpdateAccelerators();
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-	// Update all OpenCL devices
-	for (u_int i = 0; i < idevices.size(); ++i) {
-		OpenCLIntersectionDevice *oclDevice = dynamic_cast<OpenCLIntersectionDevice *>(idevices[i]);
-		if (oclDevice)
-			oclDevice->Update();
+	// Update all hardware intersection devices
+	for (auto device : idevices) {
+		HardwareIntersectionDevice *hardwareIntersectionDevice = dynamic_cast<HardwareIntersectionDevice *>(device);
+		if (hardwareIntersectionDevice)
+			hardwareIntersectionDevice->Update();
 	}
 #endif
 }
@@ -173,8 +196,11 @@ void Context::UpdateDataSet() {
 void Context::Start() {
 	assert (!started);
 
-	for (size_t i = 0; i < devices.size(); ++i)
-		devices[i]->Start();
+	for (auto device : devices) {
+		device->PushThreadCurrentDevice();
+		device->Start();
+		device->PopThreadCurrentDevice();
+	}
 
 	started = true;
 }
@@ -182,8 +208,11 @@ void Context::Start() {
 void Context::Interrupt() {
 	assert (started);
 
-	for (size_t i = 0; i < devices.size(); ++i)
-		devices[i]->Interrupt();
+	for (auto device : devices) {
+		device->PushThreadCurrentDevice();
+		device->Interrupt();
+		device->PopThreadCurrentDevice();
+	}
 }
 
 void Context::Stop() {
@@ -191,8 +220,11 @@ void Context::Stop() {
 
 	Interrupt();
 
-	for (size_t i = 0; i < devices.size(); ++i)
-		devices[i]->Stop();
+	for (auto device : devices) {
+		device->PushThreadCurrentDevice();
+		device->Stop();
+		device->PopThreadCurrentDevice();
+	}
 
 	started = false;
 }
@@ -228,7 +260,8 @@ vector<IntersectionDevice *> Context::CreateIntersectionDevices(
 		IntersectionDevice *device;
 		if (deviceType == DEVICE_TYPE_NATIVE) {
 			// Nathive thread devices
-			device = new NativeIntersectionDevice(this, indexOffset + i);
+			NativeIntersectionDeviceDescription *nativeDeviceDesc = (NativeIntersectionDeviceDescription *)deviceDesc[i];
+			device = new NativeIntersectionDevice(this, nativeDeviceDesc, indexOffset + i);
 		}
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 		else if (deviceType & DEVICE_TYPE_OPENCL_ALL) {
@@ -236,6 +269,14 @@ vector<IntersectionDevice *> Context::CreateIntersectionDevices(
 			OpenCLDeviceDescription *oclDeviceDesc = (OpenCLDeviceDescription *)deviceDesc[i];
 
 			device = new OpenCLIntersectionDevice(this, oclDeviceDesc, indexOffset + i);
+		}
+#endif
+#if !defined(LUXRAYS_DISABLE_CUDA)
+		else if (deviceType & DEVICE_TYPE_CUDA_ALL) {
+			// CUDA devices
+			CUDADeviceDescription *cudaDeviceDesc = (CUDADeviceDescription *)deviceDesc[i];
+
+			device = new CUDAIntersectionDevice(this, cudaDeviceDesc, indexOffset + i);
 		}
 #endif
 		else
@@ -283,7 +324,7 @@ vector<HardwareDevice *> Context::CreateHardwareDevices(
 			device = new OpenCLDevice(this, oclDeviceDesc, indexOffset + i);
 		}
 #endif
-#if defined(LUXRAYS_ENABLE_CUDA)
+#if !defined(LUXRAYS_DISABLE_CUDA)
 		else if (deviceType & DEVICE_TYPE_CUDA_ALL) {
 			// CUDA devices
 			CUDADeviceDescription *cudaDeviceDesc = (CUDADeviceDescription *)deviceDesc[i];

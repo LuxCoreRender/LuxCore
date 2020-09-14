@@ -22,11 +22,7 @@ OPENCL_FORCE_INLINE void GlossyCoatingMaterial_Albedo(__global const Material* r
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {
-	float3 albedo1;
-	EvalStack_PopFloat3(albedo1);
-
-	const float3 albedo = albedo;
-	EvalStack_PushFloat3(albedo);
+	// Albedo value is already on the stack so I have nothing to do (Pop/Push the same value would be a waste of time)
 }
 
 OPENCL_FORCE_INLINE void GlossyCoatingMaterial_GetInteriorVolume(__global const Material* restrict material,
@@ -81,7 +77,7 @@ OPENCL_FORCE_INLINE void GlossyCoatingMaterial_GetEmittedRadiance(__global const
 // Material evaluate
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_NOT_INLINE void GlossyCoatingMaterial_EvaluateSetUp(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void GlossyCoatingMaterial_EvaluateSetUp(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {
@@ -89,16 +85,41 @@ OPENCL_FORCE_NOT_INLINE void GlossyCoatingMaterial_EvaluateSetUp(__global const 
 	EvalStack_PopFloat3(eyeDir);
 	EvalStack_PopFloat3(lightDir);
 
+	// Save current shading normal/dpdu/dpdv and setup the hitPoint with base material bump mapping
+	const float3 originalShadeN = VLOAD3F(&hitPoint->shadeN.x);
+	const float3 originalDpdu = VLOAD3F(&hitPoint->dpdu.x);
+	const float3 originalDpdv = VLOAD3F(&hitPoint->dpdv.x);
+	EvalStack_PushFloat3(originalShadeN);
+	EvalStack_PushFloat3(originalDpdu);
+	EvalStack_PushFloat3(originalDpdv);
+
+	__global HitPoint *hitPointTmp = (__global HitPoint *)hitPoint;
+	Material_Bump(material->glossycoating.matBaseIndex, hitPointTmp
+		MATERIALS_PARAM);
+	// Re-read the shadeN modified by Material_Bump()
+	const float3 matBaseShadeN = VLOAD3F(&hitPointTmp->shadeN.x);
+	const float3 matBaseDpdu = VLOAD3F(&hitPointTmp->dpdu.x);
+	const float3 matBaseDpdv = VLOAD3F(&hitPointTmp->dpdv.x);
+
 	// Save the parameters
 	EvalStack_PushFloat3(lightDir);
 	EvalStack_PushFloat3(eyeDir);
 
+	// Transform lightDir and eyeDir to base material new reference system
+	Frame frameBase;
+	Frame_Set_Private(&frameBase, matBaseDpdu, matBaseDpdv, matBaseShadeN);
+	Frame frameOriginal;
+	Frame_Set_Private(&frameOriginal, originalDpdu, originalDpdv, originalShadeN);
+
+	const float3 matBaseLightDir = Frame_ToLocal_Private(&frameBase, Frame_ToWorld_Private(&frameOriginal, lightDir));
+	const float3 matBaseEyeDir = Frame_ToLocal_Private(&frameBase, Frame_ToWorld_Private(&frameOriginal, eyeDir));
+	
 	// To setup the following EVAL_EVALUATE evaluation of base material
-	EvalStack_PushFloat3(lightDir);
-	EvalStack_PushFloat3(eyeDir);
+	EvalStack_PushFloat3(matBaseLightDir);
+	EvalStack_PushFloat3(matBaseEyeDir);
 }
 
-OPENCL_FORCE_NOT_INLINE void GlossyCoatingMaterial_Evaluate(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void GlossyCoatingMaterial_Evaluate(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {
@@ -114,6 +135,17 @@ OPENCL_FORCE_NOT_INLINE void GlossyCoatingMaterial_Evaluate(__global const Mater
 	float3 lightDir, eyeDir;
 	EvalStack_PopFloat3(eyeDir);
 	EvalStack_PopFloat3(lightDir);
+	
+	// Pop saved original shading normal/dpdu/dpdv
+	float3 originalShadeN, originalDpdu, originalDpdv;
+	EvalStack_PopFloat3(originalDpdv);
+	EvalStack_PopFloat3(originalDpdu);
+	EvalStack_PopFloat3(originalShadeN);
+	// Restore original hitPoint
+	__global HitPoint *hitPointTmp = (__global HitPoint *)hitPoint;
+	VSTORE3F(originalShadeN, &hitPointTmp->shadeN.x);
+	VSTORE3F(originalDpdu, &hitPointTmp->dpdu.x);
+	VSTORE3F(originalDpdv, &hitPointTmp->dpdv.x);
 
 	const float3 fixedDir = eyeDir;
 	const float3 sampledDir = lightDir;
@@ -234,7 +266,7 @@ OPENCL_FORCE_NOT_INLINE void GlossyCoatingMaterial_Evaluate(__global const Mater
 		const float3 absorption = CoatingAbsorption(cosi, coso, alpha, d);
 
 		// Coating fresnel factor
-		const float3 H = normalize((float3) (sampledDir.x + fixedDir.x, sampledDir.y + fixedDir.y,
+		const float3 H = normalize(MAKE_FLOAT3 (sampledDir.x + fixedDir.x, sampledDir.y + fixedDir.y,
 				sampledDir.z - fixedDir.z));
 		const float3 S = FresnelSchlick_Evaluate(ks, fabs(dot(fixedDir, H)));
 
@@ -257,7 +289,7 @@ OPENCL_FORCE_NOT_INLINE void GlossyCoatingMaterial_Evaluate(__global const Mater
 // Material sample
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_NOT_INLINE void GlossyCoatingMaterial_SampleSetUp(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void GlossyCoatingMaterial_SampleSetUp(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {
@@ -305,11 +337,35 @@ OPENCL_FORCE_NOT_INLINE void GlossyCoatingMaterial_SampleSetUp(__global const Ma
 	// Save wCoating
 	EvalStack_PushFloat(wCoating);
 
+	// Save current shading normal/dpdu/dpdv and setup the hitPoint with base material bump mapping
+	const float3 originalShadeN = VLOAD3F(&hitPoint->shadeN.x);
+	const float3 originalDpdu = VLOAD3F(&hitPoint->dpdu.x);
+	const float3 originalDpdv = VLOAD3F(&hitPoint->dpdv.x);
+	EvalStack_PushFloat3(originalShadeN);
+	EvalStack_PushFloat3(originalDpdu);
+	EvalStack_PushFloat3(originalDpdv);
+
+	__global HitPoint *hitPointTmp = (__global HitPoint *)hitPoint;
+	Material_Bump(material->glossycoating.matBaseIndex, hitPointTmp
+		MATERIALS_PARAM);
+	// Re-read the shadeN modified by Material_Bump()
+	const float3 matBaseShadeN = VLOAD3F(&hitPoint->shadeN.x);
+	const float3 matBaseDpdu = VLOAD3F(&hitPoint->dpdu.x);
+	const float3 matBaseDpdv = VLOAD3F(&hitPoint->dpdv.x);
+
 	if (passThroughEvent < wBase) {
 		// Sample base BSDF
 
+		// Transform fixedDir to base material new reference system
+		Frame frameBase;
+		Frame_Set_Private(&frameBase, matBaseDpdu, matBaseDpdv, matBaseShadeN);
+		Frame frameOriginal;
+		Frame_Set_Private(&frameOriginal, originalDpdu, originalDpdv, originalShadeN);
+
+		const float3 matBaseFixedDir = Frame_ToLocal_Private(&frameBase, Frame_ToWorld_Private(&frameOriginal, fixedDir));
+
 		// To setup the following EVAL_SAMPLE evaluation of base material
-		EvalStack_PushFloat3(fixedDir);
+		EvalStack_PushFloat3(matBaseFixedDir);
 		EvalStack_PushFloat(u0);
 		EvalStack_PushFloat(u1);
 		const float passThroughEventMatBase = passThroughEvent / wBase;
@@ -329,16 +385,25 @@ OPENCL_FORCE_NOT_INLINE void GlossyCoatingMaterial_SampleSetUp(__global const Ma
 		EvalStack_PushFloat(coatingPdf);
 		EvalStack_PushFloat3(sampledDir);
 
+		// Transform lightDir and eyeDir to base material new reference system
+		Frame frameBase;
+		Frame_Set_Private(&frameBase, matBaseDpdu, matBaseDpdv, matBaseShadeN);
+		Frame frameOriginal;
+		Frame_Set_Private(&frameOriginal, originalDpdu, originalDpdv, originalShadeN);
+
+		const float3 matBaseFixedDir = Frame_ToLocal_Private(&frameBase, Frame_ToWorld_Private(&frameOriginal, fixedDir));
+		const float3 matBaseSampleDir = Frame_ToLocal_Private(&frameBase, Frame_ToWorld_Private(&frameOriginal, sampledDir));
+
 		// To setup the following EVAL_EVALUATE evaluation of base material
-		EvalStack_PushFloat3(sampledDir);
-		EvalStack_PushFloat3(fixedDir);
+		EvalStack_PushFloat3(matBaseSampleDir);
+		EvalStack_PushFloat3(matBaseFixedDir);
 
 		// To setup the following EVAL_CONDITIONAL_GOTO evaluation
 		EvalStack_PushInt(true);		
 	}
 }
 
-OPENCL_FORCE_NOT_INLINE void GlossyCoatingMaterial_Sample(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void GlossyCoatingMaterial_Sample(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset,
 		const float wBase, const float wCoating,
@@ -380,7 +445,7 @@ OPENCL_FORCE_NOT_INLINE void GlossyCoatingMaterial_Sample(__global const Materia
 	} else if (sideTest < -DEFAULT_COS_EPSILON_STATIC) {
 		// Transmission
 		// Coating fresnel factor
-		float3 H = (float3)((sampledDir).x + fixedDir.x, (sampledDir).y + fixedDir.y,
+		float3 H = MAKE_FLOAT3((sampledDir).x + fixedDir.x, (sampledDir).y + fixedDir.y,
 			(sampledDir).z - fixedDir.z);
 		const float HLength = dot(H, H);
 		
@@ -388,7 +453,7 @@ OPENCL_FORCE_NOT_INLINE void GlossyCoatingMaterial_Sample(__global const Materia
 		// I have to handle the case when HLength is 0.0 (or nearly 0.f) in
 		// order to avoid NaN
 		if (HLength < DEFAULT_EPSILON_STATIC)
-			S = 0.f;
+			S = ZERO;
 		else {
 			// Normalize
 			H *= 1.f / HLength;
@@ -412,7 +477,7 @@ OPENCL_FORCE_NOT_INLINE void GlossyCoatingMaterial_Sample(__global const Materia
 	EvalStack_PushBSDFEvent(event);
 }
 
-OPENCL_FORCE_NOT_INLINE void GlossyCoatingMaterial_SampleMatBaseSample(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void GlossyCoatingMaterial_SampleMatBaseSample(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {
@@ -424,6 +489,17 @@ OPENCL_FORCE_NOT_INLINE void GlossyCoatingMaterial_SampleMatBaseSample(__global 
 	EvalStack_PopFloat(pdfWMatBase);
 	EvalStack_PopFloat3(sampledDirMatBase);
 	EvalStack_PopFloat3(resultMatBase);
+
+	// Pop saved original shading normal/dpdu/dpdv
+	float3 originalShadeN, originalDpdu, originalDpdv;
+	EvalStack_PopFloat3(originalDpdv);
+	EvalStack_PopFloat3(originalDpdu);
+	EvalStack_PopFloat3(originalShadeN);
+	// Restore original hitPoint
+	__global HitPoint *hitPointTmp = (__global HitPoint *)hitPoint;
+	VSTORE3F(originalShadeN, &hitPointTmp->shadeN.x);
+	VSTORE3F(originalDpdu, &hitPointTmp->dpdu.x);
+	VSTORE3F(originalDpdv, &hitPointTmp->dpdv.x);
 
 	// Pop wCoating
 	float wCoating;
@@ -482,7 +558,7 @@ OPENCL_FORCE_NOT_INLINE void GlossyCoatingMaterial_SampleMatBaseSample(__global 
 		MATERIALS_PARAM);
 }
 
-OPENCL_FORCE_NOT_INLINE void GlossyCoatingMaterial_SampleMatBaseEvaluate(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void GlossyCoatingMaterial_SampleMatBaseEvaluate(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {
@@ -501,7 +577,18 @@ OPENCL_FORCE_NOT_INLINE void GlossyCoatingMaterial_SampleMatBaseEvaluate(__globa
 	EvalStack_PopFloat3(sampledDir);
 	EvalStack_PopFloat(coatingPdf);
 	EvalStack_PopFloat3(coatingF);
-	
+
+	// Pop saved original shading normal/dpdu/dpdv
+	float3 originalShadeN, originalDpdu, originalDpdv;
+	EvalStack_PopFloat3(originalDpdv);
+	EvalStack_PopFloat3(originalDpdu);
+	EvalStack_PopFloat3(originalShadeN);
+	// Restore original hitPoint
+	__global HitPoint *hitPointTmp = (__global HitPoint *)hitPoint;
+	VSTORE3F(originalShadeN, &hitPointTmp->shadeN.x);
+	VSTORE3F(originalDpdu, &hitPointTmp->dpdu.x);
+	VSTORE3F(originalDpdv, &hitPointTmp->dpdv.x);
+
 	// Pop wCoating
 	float wCoating;
 	EvalStack_PopFloat(wCoating);

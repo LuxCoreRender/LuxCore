@@ -33,6 +33,8 @@ public:
 	RenderConfig(const luxrays::Properties &props, Scene *scene = NULL);
 	~RenderConfig();
 
+	bool HasCachedKernels();
+
 	const luxrays::Property GetProperty(const std::string &name) const;
 
 	void Parse(const luxrays::Properties &props);

@@ -1,3 +1,5 @@
+#line 2 "cudadevice_math.cl"
+
 /* Copyright (c) 2019, NVIDIA CORPORATION. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -220,27 +222,27 @@ __forceinline__ __device__ uint4 make_uint4(int4 a)
 // negate
 ////////////////////////////////////////////////////////////////////////////////
 
-__forceinline__ __device__ float2 operator-(float2 &a)
+__forceinline__ __device__ float2 operator-(const float2 &a)
 {
     return make_float2(-a.x, -a.y);
 }
-__forceinline__ __device__ int2 operator-(int2 &a)
+__forceinline__ __device__ int2 operator-(const int2 &a)
 {
     return make_int2(-a.x, -a.y);
 }
-__forceinline__ __device__ float3 operator-(float3 &a)
+__forceinline__ __device__ float3 operator-(const float3 &a)
 {
     return make_float3(-a.x, -a.y, -a.z);
 }
-__forceinline__ __device__ int3 operator-(int3 &a)
+__forceinline__ __device__ int3 operator-(const int3 &a)
 {
     return make_int3(-a.x, -a.y, -a.z);
 }
-__forceinline__ __device__ float4 operator-(float4 &a)
+__forceinline__ __device__ float4 operator-(const float4 &a)
 {
     return make_float4(-a.x, -a.y, -a.z, -a.w);
 }
-__forceinline__ __device__ int4 operator-(int4 &a)
+__forceinline__ __device__ int4 operator-(const int4 &a)
 {
     return make_int4(-a.x, -a.y, -a.z, -a.w);
 }

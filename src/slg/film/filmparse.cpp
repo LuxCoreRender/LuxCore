@@ -21,6 +21,8 @@
 #include <boost/lexical_cast.hpp>
 
 #include "luxrays/utils/fileext.h"
+#include "luxrays/utils/thread.h"
+
 #include "slg/core/sdl.h"
 #include "slg/film/film.h"
 #include "slg/film/filters/filter.h"
@@ -48,6 +50,8 @@
 #include "slg/film/imagepipeline/plugins/intel_oidn.h"
 #include "slg/film/imagepipeline/plugins/whitebalance.h"
 #include "slg/film/imagepipeline/plugins/bakemapmargin.h"
+#include "slg/film/imagepipeline/plugins/colorlut.h"
+#include "slg/film/imagepipeline/plugins/optixdenoiser.h"
 
 using namespace std;
 using namespace luxrays;
@@ -201,6 +205,24 @@ void Film::ParseOutputs(const Properties &props) {
 					throw runtime_error("Direct diffuse image can be saved only in HDR formats: " + outputName);
 				break;
 			}
+			case FilmOutputs::DIRECT_DIFFUSE_REFLECT: {
+				if (hdrImage) {
+					if (!initialized)
+						AddChannel(Film::DIRECT_DIFFUSE);
+					filmOutputs.Add(FilmOutputs::DIRECT_DIFFUSE_REFLECT, fileName);
+				} else
+					throw runtime_error("Direct diffuse reflect image can be saved only in HDR formats: " + outputName);
+				break;
+			}
+			case FilmOutputs::DIRECT_DIFFUSE_TRANSMIT: {
+				if (hdrImage) {
+					if (!initialized)
+						AddChannel(Film::DIRECT_DIFFUSE_TRANSMIT);
+					filmOutputs.Add(FilmOutputs::DIRECT_DIFFUSE_TRANSMIT, fileName);
+				} else
+					throw runtime_error("Direct diffuse transmit image can be saved only in HDR formats: " + outputName);
+				break;
+			}
 			case FilmOutputs::DIRECT_GLOSSY: {
 				if (hdrImage) {
 					if (!initialized)
@@ -208,6 +230,24 @@ void Film::ParseOutputs(const Properties &props) {
 					filmOutputs.Add(FilmOutputs::DIRECT_GLOSSY, fileName);
 				} else
 					throw runtime_error("Direct glossy image can be saved only in HDR formats: " + outputName);
+				break;
+			}
+			case FilmOutputs::DIRECT_GLOSSY_REFLECT: {
+				if (hdrImage) {
+					if (!initialized)
+						AddChannel(Film::DIRECT_GLOSSY_REFLECT);
+					filmOutputs.Add(FilmOutputs::DIRECT_GLOSSY_REFLECT, fileName);
+				} else
+					throw runtime_error("Direct glossy reflect image can be saved only in HDR formats: " + outputName);
+				break;
+			}
+			case FilmOutputs::DIRECT_GLOSSY_TRANSMIT: {
+				if (hdrImage) {
+					if (!initialized)
+						AddChannel(Film::DIRECT_GLOSSY_TRANSMIT);
+					filmOutputs.Add(FilmOutputs::DIRECT_GLOSSY_TRANSMIT, fileName);
+				} else
+					throw runtime_error("Direct glossy transmit image can be saved only in HDR formats: " + outputName);
 				break;
 			}
 			case FilmOutputs::EMISSION: {
@@ -228,6 +268,24 @@ void Film::ParseOutputs(const Properties &props) {
 					throw runtime_error("Indirect diffuse image can be saved only in HDR formats: " + outputName);
 				break;
 			}
+			case FilmOutputs::INDIRECT_DIFFUSE_REFLECT: {
+				if (hdrImage) {
+					if (!initialized)
+						AddChannel(Film::INDIRECT_DIFFUSE_REFLECT);
+					filmOutputs.Add(FilmOutputs::INDIRECT_DIFFUSE_REFLECT, fileName);
+				} else
+					throw runtime_error("Indirect diffuse reflect image can be saved only in HDR formats: " + outputName);
+				break;
+			}
+			case FilmOutputs::INDIRECT_DIFFUSE_TRANSMIT: {
+				if (hdrImage) {
+					if (!initialized)
+						AddChannel(Film::INDIRECT_DIFFUSE_TRANSMIT);
+					filmOutputs.Add(FilmOutputs::INDIRECT_DIFFUSE_TRANSMIT, fileName);
+				} else
+					throw runtime_error("Indirect diffuse transmit image can be saved only in HDR formats: " + outputName);
+				break;
+			}
 			case FilmOutputs::INDIRECT_GLOSSY: {
 				if (hdrImage) {
 					if (!initialized)
@@ -237,6 +295,24 @@ void Film::ParseOutputs(const Properties &props) {
 					throw runtime_error("Indirect glossy image can be saved only in HDR formats: " + outputName);
 				break;
 			}
+			case FilmOutputs::INDIRECT_GLOSSY_REFLECT: {
+				if (hdrImage) {
+					if (!initialized)
+						AddChannel(Film::INDIRECT_GLOSSY_REFLECT);
+					filmOutputs.Add(FilmOutputs::INDIRECT_GLOSSY_REFLECT, fileName);
+				} else
+					throw runtime_error("Indirect glossy reflect image can be saved only in HDR formats: " + outputName);
+				break;
+			}
+			case FilmOutputs::INDIRECT_GLOSSY_TRANSMIT: {
+				if (hdrImage) {
+					if (!initialized)
+						AddChannel(Film::INDIRECT_GLOSSY_TRANSMIT);
+					filmOutputs.Add(FilmOutputs::INDIRECT_GLOSSY_TRANSMIT, fileName);
+				} else
+					throw runtime_error("Indirect glossy transmit image can be saved only in HDR formats: " + outputName);
+				break;
+			}
 			case FilmOutputs::INDIRECT_SPECULAR: {
 				if (hdrImage) {
 					if (!initialized)
@@ -244,6 +320,24 @@ void Film::ParseOutputs(const Properties &props) {
 					filmOutputs.Add(FilmOutputs::INDIRECT_SPECULAR, fileName);
 				} else
 					throw runtime_error("Indirect specular image can be saved only in HDR formats: " + outputName);
+				break;
+			}
+			case FilmOutputs::INDIRECT_SPECULAR_REFLECT: {
+				if (hdrImage) {
+					if (!initialized)
+						AddChannel(Film::INDIRECT_SPECULAR_REFLECT);
+					filmOutputs.Add(FilmOutputs::INDIRECT_SPECULAR_REFLECT, fileName);
+				} else
+					throw runtime_error("Indirect specular reflect image can be saved only in HDR formats: " + outputName);
+				break;
+			}
+			case FilmOutputs::INDIRECT_SPECULAR_TRANSMIT: {
+				if (hdrImage) {
+					if (!initialized)
+						AddChannel(Film::INDIRECT_SPECULAR_TRANSMIT);
+					filmOutputs.Add(FilmOutputs::INDIRECT_SPECULAR_TRANSMIT, fileName);
+				} else
+					throw runtime_error("Indirect specular transmit image can be saved only in HDR formats: " + outputName);
 				break;
 			}
 			case FilmOutputs::MATERIAL_ID_MASK: {
@@ -391,6 +485,13 @@ void Film::ParseOutputs(const Properties &props) {
 				filmOutputs.Add(FilmOutputs::USER_IMPORTANCE, fileName);				
 				break;
 			}
+			case FilmOutputs::CAUSTIC: {
+				if (hdrImage)
+					filmOutputs.Add(FilmOutputs::CAUSTIC, fileName);
+				else
+					throw runtime_error("Caustic image can be saved only in HDR formats: " + outputName);
+				break;
+			}
 			default:
 				throw runtime_error("Unknown type in film output: " + type);
 		}
@@ -448,11 +549,8 @@ void Film::ParseRadianceGroupsScale(const Properties &props, const u_int imagePi
 
 void Film::ParseRadianceGroupsScales(const Properties &props) {
 	// Look for the definition of multiple image pipelines
-	vector<string> imagePipelineKeys = props.GetAllUniqueSubNames("film.imagepipelines");
+	vector<string> imagePipelineKeys = props.GetAllUniqueSubNames("film.imagepipelines", true);
 	if (imagePipelineKeys.size() > 0) {
-		// Sort the entries
-		sort(imagePipelineKeys.begin(), imagePipelineKeys.end());
-
 		for (vector<string>::const_iterator imagePipelineKey = imagePipelineKeys.begin(); imagePipelineKey != imagePipelineKeys.end(); ++imagePipelineKey) {
 			// Extract the image pipeline priority name
 			const string imagePipelineNumberStr = Property::ExtractField(*imagePipelineKey, 2);
@@ -488,11 +586,8 @@ ImagePipeline *Film::CreateImagePipeline(const Properties &props, const string &
 	const u_int keyFieldCount = Property::CountFields(imagePipelinePrefix);
 	unique_ptr<ImagePipeline> imagePipeline(new ImagePipeline());
 
-	vector<string> imagePipelineKeys = props.GetAllUniqueSubNames(imagePipelinePrefix);
+	vector<string> imagePipelineKeys = props.GetAllUniqueSubNames(imagePipelinePrefix, true);
 	if (imagePipelineKeys.size() > 0) {
-		// Sort the entries
-		sort(imagePipelineKeys.begin(), imagePipelineKeys.end());
-
 		SDL_LOG("Image pipeline: " << imagePipelinePrefix);
 		for (vector<string>::const_iterator imagePipelineKey = imagePipelineKeys.begin(); imagePipelineKey != imagePipelineKeys.end(); ++imagePipelineKey) {
 			// Extract the plugin priority name
@@ -569,9 +664,18 @@ ImagePipeline *Film::CreateImagePipeline(const Properties &props, const string &
 
 				imagePipeline->AddPlugin(new VignettingPlugin(scale));
 			} else if (type == "COLOR_ABERRATION") {
-				const float scale = Clamp(props.Get(Property(prefix + ".amount")(.005f)).Get<float>(), 0.f, 1.f);
+				const Property defaultProp = Property(prefix + ".amount")(.005f);
+				const Property &prop = props.Get(defaultProp);
+				float scaleX, scaleY;
+				if (prop.GetSize() == 2) {
+					scaleX = Clamp(prop.Get<float>(0), 0.f, 1.f);
+					scaleY = Clamp(prop.Get<float>(1), 0.f, 1.f);
+				} else {
+					scaleX = Clamp(prop.Get<float>(), 0.f, 1.f);
+					scaleY = scaleX;
+				}
 
-				imagePipeline->AddPlugin(new ColorAberrationPlugin(scale));
+				imagePipeline->AddPlugin(new ColorAberrationPlugin(scaleX, scaleY));
 			} else if (type == "PREMULTIPLY_ALPHA") {
 				imagePipeline->AddPlugin(new PremultiplyAlphaPlugin());
 			} else if (type == "MIST") {
@@ -597,7 +701,7 @@ ImagePipeline *Film::CreateImagePipeline(const Properties &props, const string &
 				const bool applyDenoise = props.Get(Property(prefix + ".applydenoise")(true)).Get<bool>();
 				const float prefilterThresholdStDevFactor = props.Get(Property(prefix + ".spikestddev")(2.f)).Get<float>();
 
-				const int threadCount = (userThreadCount > 0) ? userThreadCount : boost::thread::hardware_concurrency();
+				const int threadCount = (userThreadCount > 0) ? userThreadCount : GetHardwareThreadCount();
 				
 				imagePipeline->AddPlugin(new BCDDenoiserPlugin(
 						warmUpSamplesPerPixel,
@@ -616,9 +720,10 @@ ImagePipeline *Film::CreateImagePipeline(const Properties &props, const string &
 				const u_int type = props.Get(Property(prefix + ".index")(0)).Get<u_int>();
 				imagePipeline->AddPlugin(new PatternsPlugin(type));
 			} else if (type == "INTEL_OIDN") {
+				const string filterType = props.Get(Property(prefix + ".filter.type")("RT")).Get<string>();
 				const int oidnMemLimit = props.Get(Property(prefix + ".oidnmemory")(6000)).Get<int>();
 				const float sharpness = Clamp(props.Get(Property(prefix + ".sharpness")(.1f)).Get<float>(), 0.f, 1.f);
-				imagePipeline->AddPlugin(new IntelOIDN(oidnMemLimit, sharpness));
+				imagePipeline->AddPlugin(new IntelOIDN(filterType, oidnMemLimit, sharpness));
 			} else if (type == "WHITE_BALANCE") {
 				const float temperature = Clamp(props.Get(Property(prefix + ".temperature")(6500.f)).Get<float>(), 1000.f, 40000.f);
 				imagePipeline->AddPlugin(new WhiteBalance(temperature));
@@ -626,6 +731,16 @@ ImagePipeline *Film::CreateImagePipeline(const Properties &props, const string &
 				const u_int marginPixels = Max(props.Get(Property(prefix + ".margin")(2)).Get<u_int>(), 1u);
 				const float samplesThreshold = Max(props.Get(Property(prefix + ".samplesthreshold")(0.f)).Get<float>(), 0.f);
 				imagePipeline->AddPlugin(new BakeMapMarginPlugin(marginPixels, samplesThreshold));
+			} else if (type == "COLOR_LUT") {
+				const string fileName = props.Get(Property(prefix + ".file")("lut.cube")).Get<string>();
+				const float strength = Clamp(props.Get(Property(prefix + ".strength")(1.f)).Get<float>(), 0.f, 1.f);
+				imagePipeline->AddPlugin(new ColorLUTPlugin(fileName, strength));
+#if !defined(LUXRAYS_DISABLE_CUDA)
+			} else if (type == "OPTIX_DENOISER") {
+				const float sharpness = Clamp(props.Get(Property(prefix + ".sharpness")(.1f)).Get<float>(), 0.f, 1.f);
+				const u_int minSPP = props.Get(Property(prefix + ".minspp")(0)).Get<u_int>();
+				imagePipeline->AddPlugin(new OptixDenoiserPlugin(sharpness, minSPP));
+#endif
 			} else
 				throw runtime_error("Unknown image pipeline plugin type: " + type);
 		}
@@ -646,11 +761,8 @@ ImagePipeline *Film::CreateImagePipeline(const Properties &props, const string &
 
 void Film::ParseImagePipelines(const Properties &props) {
 	// Look for the definition of multiple image pipelines
-	vector<string> imagePipelineKeys = props.GetAllUniqueSubNames("film.imagepipelines");
-	if (imagePipelineKeys.size() > 0) {
-		// Sort the entries
-		sort(imagePipelineKeys.begin(), imagePipelineKeys.end());
-
+	vector<string> imagePipelineKeys = props.GetAllUniqueSubNames("film.imagepipelines", true);
+	if (imagePipelineKeys.size() > 0) {	
 		for (vector<string>::const_iterator imagePipelineKey = imagePipelineKeys.begin(); imagePipelineKey != imagePipelineKeys.end(); ++imagePipelineKey) {
 			// Extract the image pipeline priority name
 			const string imagePipelineNumberStr = Property::ExtractField(*imagePipelineKey, 2);
@@ -761,9 +873,25 @@ void Film::Parse(const Properties &props) {
 	if (props.IsDefined("batch.halttime"))
 		haltTime = Max(0.0, props.Get(Property("batch.halttime")(0.0)).Get<double>());
 
-	if (props.IsDefined("batch.haltspp"))
-		haltSPP = Max(0u, props.Get(Property("batch.haltspp")(0u)).Get<u_int>());
-
+	if (props.IsDefined("batch.haltspp")) {
+		const Property haltDefaultProp = Property("batch.haltspp")(0u);
+		const Property &haltProp = props.Get(haltDefaultProp);
+		switch (haltProp.GetSize()) {
+			case 1:
+				haltSPP = haltProp.Get<u_int>();
+				haltSPP_PixelNormalized = 0;
+				haltSPP_ScreenNormalized = 0;
+				break;
+			case 2:
+				haltSPP = 0;
+				haltSPP_PixelNormalized = haltProp.Get<u_int>(0);
+				haltSPP_ScreenNormalized = haltProp.Get<u_int>(1);
+				break;
+			default:
+				throw runtime_error("Wrong number of arguments in batch.haltspp property: " + ToString(haltProp.GetSize()));
+		}
+		
+	}
 
 	//--------------------------------------------------------------------------
 	// Check if there is adaptive sampling

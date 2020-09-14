@@ -16,6 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "luxrays/utils/strutils.h"
 #include "luxrays/utils/fileext.h"
 #include "luxrays/utils/serializationutils.h"
 #include "slg/film/filmoutputs.h"
@@ -160,7 +161,35 @@ Properties FilmOutputs::ToProperties(const Properties &cfg) {
 					throw runtime_error("Direct diffuse image can be saved only in HDR formats: " + outputName);
 				break;
 			}
+			case DIRECT_DIFFUSE_REFLECT: {
+				if (hdrImage)
+					props << type << fileName;
+				else
+					throw runtime_error("Direct diffuse image can be saved only in HDR formats: " + outputName);
+				break;
+			}
+			case DIRECT_DIFFUSE_TRANSMIT: {
+				if (hdrImage)
+					props << type << fileName;
+				else
+					throw runtime_error("Direct diffuse image can be saved only in HDR formats: " + outputName);
+				break;
+			}
 			case DIRECT_GLOSSY: {
+				if (hdrImage)
+					props << type << fileName;
+				else
+					throw runtime_error("Direct glossy image can be saved only in HDR formats: " + outputName);
+				break;
+			}
+			case DIRECT_GLOSSY_REFLECT: {
+				if (hdrImage)
+					props << type << fileName;
+				else
+					throw runtime_error("Direct glossy image can be saved only in HDR formats: " + outputName);
+				break;
+			}
+			case DIRECT_GLOSSY_TRANSMIT: {
 				if (hdrImage)
 					props << type << fileName;
 				else
@@ -181,6 +210,20 @@ Properties FilmOutputs::ToProperties(const Properties &cfg) {
 					throw runtime_error("Indirect diffuse image can be saved only in HDR formats: " + outputName);
 				break;
 			}
+			case INDIRECT_DIFFUSE_REFLECT: {
+				if (hdrImage)
+					props << type << fileName;
+				else
+					throw runtime_error("Indirect diffuse image can be saved only in HDR formats: " + outputName);
+				break;
+			}
+			case INDIRECT_DIFFUSE_TRANSMIT: {
+				if (hdrImage)
+					props << type << fileName;
+				else
+					throw runtime_error("Indirect diffuse image can be saved only in HDR formats: " + outputName);
+				break;
+			}
 			case INDIRECT_GLOSSY: {
 				if (hdrImage)
 					props << type << fileName;
@@ -188,7 +231,35 @@ Properties FilmOutputs::ToProperties(const Properties &cfg) {
 					throw runtime_error("Indirect glossy image can be saved only in HDR formats: " + outputName);
 				break;
 			}
+			case INDIRECT_GLOSSY_REFLECT: {
+				if (hdrImage)
+					props << type << fileName;
+				else
+					throw runtime_error("Indirect glossy image can be saved only in HDR formats: " + outputName);
+				break;
+			}
+			case INDIRECT_GLOSSY_TRANSMIT: {
+				if (hdrImage)
+					props << type << fileName;
+				else
+					throw runtime_error("Indirect glossy image can be saved only in HDR formats: " + outputName);
+				break;
+			}
 			case INDIRECT_SPECULAR: {
+				if (hdrImage)
+					props << type << fileName;
+				else
+					throw runtime_error("Indirect specular image can be saved only in HDR formats: " + outputName);
+				break;
+			}
+			case INDIRECT_SPECULAR_REFLECT: {
+				if (hdrImage)
+					props << type << fileName;
+				else
+					throw runtime_error("Indirect specular image can be saved only in HDR formats: " + outputName);
+				break;
+			}
+			case INDIRECT_SPECULAR_TRANSMIT: {
 				if (hdrImage)
 					props << type << fileName;
 				else
@@ -279,6 +350,13 @@ Properties FilmOutputs::ToProperties(const Properties &cfg) {
 				props << type << fileName;
 				break;
 			}
+			case CAUSTIC: {
+				if (hdrImage)
+					props << type << fileName;
+				else
+					throw runtime_error("Caustic image can be saved only in HDR formats: " + outputName);
+				break;
+			}
 			default:
 				throw runtime_error("Unknown film output type: " + type.Get<string>());
 		}
@@ -310,16 +388,36 @@ FilmOutputs::FilmOutputType FilmOutputs::String2FilmOutputType(const string &typ
 		return MATERIAL_ID;
 	else if (type == "DIRECT_DIFFUSE")
 		return DIRECT_DIFFUSE;
+	else if (type == "DIRECT_DIFFUSE_REFLECT")
+		return DIRECT_DIFFUSE_REFLECT;
+	else if (type == "DIRECT_DIFFUSE_TRANSMIT")
+		return DIRECT_DIFFUSE_TRANSMIT;
 	else if (type == "DIRECT_GLOSSY")
 		return DIRECT_GLOSSY;
+	else if (type == "DIRECT_GLOSSY_REFLECT")
+		return DIRECT_GLOSSY_REFLECT;
+	else if (type == "DIRECT_GLOSSY_TRANSMIT")
+		return DIRECT_GLOSSY_TRANSMIT;
 	else if (type == "EMISSION")
 		return EMISSION;
 	else if (type == "INDIRECT_DIFFUSE")
 		return INDIRECT_DIFFUSE;
+	else if (type == "INDIRECT_DIFFUSE_REFLECT")
+		return INDIRECT_DIFFUSE_REFLECT;
+	else if (type == "INDIRECT_DIFFUSE_TRANSMIT")
+		return INDIRECT_DIFFUSE_TRANSMIT;
 	else if (type == "INDIRECT_GLOSSY")
 		return INDIRECT_GLOSSY;
+	else if (type == "INDIRECT_GLOSSY_REFLECT")
+		return INDIRECT_GLOSSY_REFLECT;
+	else if (type == "INDIRECT_GLOSSY_TRANSMIT")
+		return INDIRECT_GLOSSY_TRANSMIT;
 	else if (type == "INDIRECT_SPECULAR")
 		return INDIRECT_SPECULAR;
+	else if (type == "INDIRECT_SPECULAR_REFLECT")
+		return INDIRECT_SPECULAR_REFLECT;
+	else if (type == "INDIRECT_SPECULAR_TRANSMIT")
+		return INDIRECT_SPECULAR_TRANSMIT;
 	else if (type == "MATERIAL_ID_MASK")
 		return MATERIAL_ID_MASK;
 	else if (type == "DIRECT_SHADOW_MASK")
@@ -358,6 +456,8 @@ FilmOutputs::FilmOutputType FilmOutputs::String2FilmOutputType(const string &typ
 		return NOISE;
 	else if (type == "USER_IMPORTANCE")
 		return USER_IMPORTANCE;
+	else if (type == "CAUSTIC")
+		return CAUSTIC;
 	else
 		throw runtime_error("Unknown film output type: " + type);
 }
@@ -386,16 +486,36 @@ const string FilmOutputs::FilmOutputType2String(const FilmOutputs::FilmOutputTyp
 			return "MATERIAL_ID";
 		case DIRECT_DIFFUSE:
 			return "DIRECT_DIFFUSE";
+		case DIRECT_DIFFUSE_REFLECT:
+			return "DIRECT_DIFFUSE_REFLECT";
+		case DIRECT_DIFFUSE_TRANSMIT:
+			return "DIRECT_DIFFUSE_TRANSMIT";
 		case DIRECT_GLOSSY:
 			return "DIRECT_GLOSSY";
+		case DIRECT_GLOSSY_REFLECT:
+			return "DIRECT_GLOSSY_REFLECT";
+		case DIRECT_GLOSSY_TRANSMIT:
+			return "DIRECT_GLOSSY_TRANSMIT";
 		case EMISSION:
 			return "EMISSION";
 		case INDIRECT_DIFFUSE:
 			return "INDIRECT_DIFFUSE";
+		case INDIRECT_DIFFUSE_REFLECT:
+			return "INDIRECT_DIFFUSE_REFLECT";
+		case INDIRECT_DIFFUSE_TRANSMIT:
+			return "INDIRECT_DIFFUSE_TRANSMIT";
 		case INDIRECT_GLOSSY:
 			return "INDIRECT_GLOSSY";
+		case INDIRECT_GLOSSY_REFLECT:
+			return "INDIRECT_GLOSSY_REFLECT";
+		case INDIRECT_GLOSSY_TRANSMIT:
+			return "INDIRECT_GLOSSY_TRANSMIT";
 		case INDIRECT_SPECULAR:
 			return "INDIRECT_SPECULAR";
+		case INDIRECT_SPECULAR_REFLECT:
+			return "INDIRECT_SPECULAR_REFLECT";
+		case INDIRECT_SPECULAR_TRANSMIT:
+			return "INDIRECT_SPECULAR_TRANSMIT";
 		case MATERIAL_ID_MASK:
 			return "MATERIAL_ID_MASK";
 		case DIRECT_SHADOW_MASK:
@@ -434,6 +554,8 @@ const string FilmOutputs::FilmOutputType2String(const FilmOutputs::FilmOutputTyp
 			return "NOISE";
 		case USER_IMPORTANCE:
 			return "USER_IMPORTANCE";
+		case CAUSTIC:
+			return "CAUSTIC";
 		default:
 			throw runtime_error("Unknown film output type: " + ToString(type));
 	}

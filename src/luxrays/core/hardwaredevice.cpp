@@ -16,9 +16,12 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <vector>
+
 #include "luxrays/core/hardwaredevice.h"
 
-namespace luxrays {
+using namespace std;
+using namespace luxrays;
 
 //------------------------------------------------------------------------------
 // HardwareDevice
@@ -33,9 +36,15 @@ HardwareDevice::~HardwareDevice() {
 		LR_LOG(deviceContext, "WARNING: there is a memory leak in LuxRays HardwareDevice " << GetName() << ": " << ToString(usedMemory) << "bytes");
 }
 
+void HardwareDevice::SetAdditionalCompileOpts(const vector<string> &opts) {
+	additionalCompileOpts = opts;
+}
+
+const vector<string> &HardwareDevice::GetAdditionalCompileOpts() {
+	return additionalCompileOpts;
+}
+
 template <>
 void HardwareDevice::SetKernelArg<HardwareDeviceBufferPtr>(HardwareDeviceKernel *kernel, const u_int index, const HardwareDeviceBufferPtr &buff) {
 	SetKernelArgBuffer(kernel, index, buff);
-}
-
 }

@@ -20,7 +20,6 @@
 #include <cassert>
 #include <deque>
 #include <sstream>
-#include <boost/lexical_cast.hpp>
 #include <boost/foreach.hpp>
 
 #include "luxrays/core/dataset.h"
@@ -29,6 +28,7 @@
 #include "luxrays/accelerators/bvhaccel.h"
 #include "luxrays/accelerators/mbvhaccel.h"
 #include "luxrays/accelerators/embreeaccel.h"
+#include "luxrays/accelerators/optixaccel.h"
 #include "luxrays/core/geometry/bsphere.h"
 
 using namespace luxrays;
@@ -104,13 +104,10 @@ void DataSet::UpdateBBoxes() {
 	bsphere = bbox.BoundingSphere();
 }
 
-const Accelerator *DataSet::GetAccelerator() {
-	boost::unordered_map<AcceleratorType, Accelerator *>::const_iterator it = accels.begin();
-
-	if (it == accels.end())
-		return NULL;
-	else
-		return it->second;
+bool DataSet::HasAccelerator(const AcceleratorType accelType) const {
+	boost::unordered_map<AcceleratorType, Accelerator *>::const_iterator it = accels.find(accelType);
+	
+	return !(it == accels.end());
 }
 
 const Accelerator *DataSet::GetAccelerator(const AcceleratorType accelType) {
@@ -131,6 +128,9 @@ const Accelerator *DataSet::GetAccelerator(const AcceleratorType accelType) {
 				break;
 			case ACCEL_EMBREE:
 				accel = new EmbreeAccel(context);
+				break;
+			case ACCEL_OPTIX:
+				accel = new OptixAccel(context);
 				break;
 			default:
 				throw runtime_error("Unknown AcceleratorType in DataSet::AddAccelerator()");

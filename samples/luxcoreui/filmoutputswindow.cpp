@@ -82,16 +82,27 @@ void FilmOutputWindow::RefreshTexture() {
 		case Film::OUTPUT_GEOMETRY_NORMAL:
 		case Film::OUTPUT_SHADING_NORMAL:
 		case Film::OUTPUT_DIRECT_DIFFUSE:
+		case Film::OUTPUT_DIRECT_DIFFUSE_REFLECT:
+		case Film::OUTPUT_DIRECT_DIFFUSE_TRANSMIT:
 		case Film::OUTPUT_DIRECT_GLOSSY:
+		case Film::OUTPUT_DIRECT_GLOSSY_REFLECT:
+		case Film::OUTPUT_DIRECT_GLOSSY_TRANSMIT:
 		case Film::OUTPUT_EMISSION:
 		case Film::OUTPUT_INDIRECT_DIFFUSE:
+		case Film::OUTPUT_INDIRECT_DIFFUSE_REFLECT:
+		case Film::OUTPUT_INDIRECT_DIFFUSE_TRANSMIT:
 		case Film::OUTPUT_INDIRECT_GLOSSY:
+		case Film::OUTPUT_INDIRECT_GLOSSY_REFLECT:
+		case Film::OUTPUT_INDIRECT_GLOSSY_TRANSMIT:
 		case Film::OUTPUT_INDIRECT_SPECULAR:
+		case Film::OUTPUT_INDIRECT_SPECULAR_REFLECT:
+		case Film::OUTPUT_INDIRECT_SPECULAR_TRANSMIT:
 		case Film::OUTPUT_RADIANCE_GROUP:
 		case Film::OUTPUT_BY_MATERIAL_ID:
 		case Film::OUTPUT_IRRADIANCE:
 		case Film::OUTPUT_BY_OBJECT_ID:
-		case Film::OUTPUT_AVG_SHADING_NORMAL: {
+		case Film::OUTPUT_AVG_SHADING_NORMAL:
+		case Film::OUTPUT_CAUSTIC: {
 			app->session->GetFilm().GetOutput<float>(type, pixels.get(), index);
 			UpdateStats(pixels.get(), filmWidth, filmHeight);
 			AutoLinearToneMap(pixels.get(), pixels.get(), filmWidth, filmHeight);
@@ -199,29 +210,40 @@ FilmOutputsWindow::FilmOutputsWindow(LuxCoreApp *a) : ObjectEditorWindow(a, "Fil
 		.Add("SHADING_NORMAL", 8)
 		.Add("MATERIAL_ID", 9)
 		.Add("DIRECT_DIFFUSE", 10)
-		.Add("DIRECT_GLOSSY", 11)
-		.Add("EMISSION", 12)
-		.Add("INDIRECT_DIFFUSE", 13)
-		.Add("INDIRECT_GLOSSY", 14)
-		.Add("INDIRECT_SPECULAR", 15)
-		.Add("MATERIAL_ID_MASK", 16)
-		.Add("DIRECT_SHADOW_MASK", 17)
-		.Add("INDIRECT_SHADOW_MASK", 18)
-		.Add("RADIANCE_GROUP", 19)
-		.Add("UV", 20)
-		.Add("RAYCOUNT", 21)
-		.Add("BY_MATERIAL_ID", 22)
-		.Add("IRRADIANCE", 23)
-		.Add("OBJECT_ID", 24)
-		.Add("OBJECT_ID_MASK", 25)
-		.Add("BY_OBJECT_ID", 26)
-		.Add("SAMPLECOUNT", 27)
-		.Add("CONVERGENCE", 28)
-		//OUTPUT_SERIALIZED_FILM = 29
-		.Add("MATERIAL_ID_COLOR", 30)
-		.Add("ALBEDO", 31)
-		.Add("AVG_SHADING_NORMAL", 32)
-		.Add("NOISE", 33)
+		.Add("DIRECT_DIFFUSE_REFLECT", 11)
+		.Add("DIRECT_DIFFUSE_TRANSMIT", 12)
+		.Add("DIRECT_GLOSSY", 13)
+		.Add("DIRECT_GLOSSY_REFLECT", 14)
+		.Add("DIRECT_GLOSSY_TRANSMIT", 15)
+		.Add("EMISSION", 16)
+		.Add("INDIRECT_DIFFUSE", 17)
+		.Add("INDIRECT_DIFFUSE_REFLECT", 18)
+		.Add("INDIRECT_DIFFUSE_TRANSMIT", 19)
+		.Add("INDIRECT_GLOSSY", 20)
+		.Add("INDIRECT_GLOSSY_REFLECT", 21)
+		.Add("INDIRECT_GLOSSY_TRANSMIT", 22)
+		.Add("INDIRECT_SPECULAR", 23)
+		.Add("INDIRECT_SPECULAR_REFLECT", 24)
+		.Add("INDIRECT_SPECULAR_TRANSMIT", 25)
+		.Add("MATERIAL_ID_MASK", 26)
+		.Add("DIRECT_SHADOW_MASK", 27)
+		.Add("INDIRECT_SHADOW_MASK", 28)
+		.Add("RADIANCE_GROUP", 29)
+		.Add("UV", 30)
+		.Add("RAYCOUNT", 31)
+		.Add("BY_MATERIAL_ID", 32)
+		.Add("IRRADIANCE", 33)
+		.Add("OBJECT_ID", 34)
+		.Add("OBJECT_ID_MASK", 35)
+		.Add("BY_OBJECT_ID", 36)
+		.Add("SAMPLECOUNT", 37)
+		.Add("CONVERGENCE", 38)
+	//OUTPUT_SERIALIZED_FILM = 39
+		.Add("MATERIAL_ID_COLOR", 40)
+		.Add("ALBEDO", 41)
+		.Add("AVG_SHADING_NORMAL", 42)
+		.Add("NOISE", 43)
+		.Add("CAUSTIC", 44)
 		.SetDefault("RGB");
 
 	newType = 0;

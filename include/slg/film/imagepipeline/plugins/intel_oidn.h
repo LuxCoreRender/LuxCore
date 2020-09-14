@@ -33,12 +33,13 @@
 namespace slg {
 
 //------------------------------------------------------------------------------
-//Intel Open Image Denoise
+// Intel Open Image Denoise
 //------------------------------------------------------------------------------
 
 class IntelOIDN : public ImagePipelinePlugin {
 public:
-	IntelOIDN(const int oidnMemLimit, const float sharpness);
+	IntelOIDN(const std::string filterType,
+			const int oidnMemLimit, const float sharpness);
 
 	virtual ImagePipelinePlugin *Copy() const;
 
@@ -55,8 +56,10 @@ private:
 		ar & oidnMemLimit;
 		ar & iTileCount;
 		ar & jTileCount;
+		ar & sharpness;
 	}
 
+	std::string filterType;
 	u_int iTileCount;
 	u_int jTileCount;
 	int oidnMemLimit; //needs to be signed int for OIDN call

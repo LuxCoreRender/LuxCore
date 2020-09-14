@@ -109,6 +109,7 @@ IslandAOVShape::IslandAOVShape(ExtTriangleMesh *srcMesh, const u_int dataIndex) 
 	SDL_LOG("IslandAOV shape island count: " << islandCount);
 
 	mesh = srcMesh->Copy();
+	mesh->DeleteTriAOV(dataIndex);
 	mesh->SetTriAOV(dataIndex, &triAOV[0]);
 
 	const double endTime = WallClockTime();

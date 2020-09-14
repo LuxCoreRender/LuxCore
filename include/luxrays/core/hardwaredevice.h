@@ -87,11 +87,20 @@ protected:
 // HardwareDeviceBuffer: a memory region allocated on an hardware device
 //------------------------------------------------------------------------------
 
+typedef enum {
+	BUFFER_TYPE_NONE = 0,
+	BUFFER_TYPE_READ_ONLY = 1 << 0,
+	BUFFER_TYPE_READ_WRITE = 1 << 1,
+	BUFFER_TYPE_OUT_OF_CORE = 1 << 2
+} BufferType;
+
 class HardwareDeviceBuffer {
 public:
 	virtual ~HardwareDeviceBuffer() { }
 
 	virtual bool IsNull() const = 0;
+	
+	virtual size_t GetSize() const = 0;
 
 protected:
 	HardwareDeviceBuffer() { }
@@ -107,13 +116,17 @@ public:
 	// Kernels handling for hardware (aka GPU) only applications
 	//--------------------------------------------------------------------------
 
+	void SetAdditionalCompileOpts(const std::vector<std::string> &opts);
+	const std::vector<std::string> &GetAdditionalCompileOpts();
+	
 	virtual void CompileProgram(HardwareDeviceProgram **program,
-			const std::string &programParameters, const std::string &programSource,
+			const std::vector<std::string> &programParameters, const std::string &programSource,
 			const std::string &programName) = 0;
 
 	virtual void GetKernel(HardwareDeviceProgram *program,
 			HardwareDeviceKernel **kernel,
 			const std::string &kernelName) = 0;
+	virtual u_int GetKernelWorkGroupSize(HardwareDeviceKernel *kernel) = 0;
 
 	virtual void SetKernelArg(HardwareDeviceKernel *kernel,
 			const u_int index, const size_t size, const void *arg) = 0;
@@ -140,11 +153,17 @@ public:
 	// Memory management for hardware (aka GPU) only applications
 	//--------------------------------------------------------------------------
 
-	virtual size_t GetMaxMemory() const { return 0; }
 	size_t GetUsedMemory() const { return usedMemory; }
 
-	virtual void AllocBufferRO(HardwareDeviceBuffer **buff, void *src, const size_t size, const std::string &desc = "") = 0;
-	virtual void AllocBufferRW(HardwareDeviceBuffer **buff, void *src, const size_t size, const std::string &desc = "") = 0;
+	virtual void AllocBuffer(HardwareDeviceBuffer **buff, const BufferType type,
+			void *src, const size_t size, const std::string &desc = "") = 0;
+	virtual void AllocBufferRO(HardwareDeviceBuffer **buff,
+			void *src, const size_t size, const std::string &desc = "") {
+		AllocBuffer(buff, BUFFER_TYPE_READ_ONLY, src, size, desc);
+	}
+	virtual void AllocBufferRW(HardwareDeviceBuffer **buff, void *src, const size_t size, const std::string &desc = "") {
+		AllocBuffer(buff, BUFFER_TYPE_READ_WRITE, src, size, desc);
+	}
 	virtual void FreeBuffer(HardwareDeviceBuffer **buff) = 0;
 
 protected:
@@ -159,6 +178,7 @@ protected:
 	void AllocMemory(const size_t s) { usedMemory += s; }
 	void FreeMemory(const size_t s) { usedMemory -= s; }
 
+	std::vector<std::string> additionalCompileOpts;
 	size_t usedMemory;
 };
 

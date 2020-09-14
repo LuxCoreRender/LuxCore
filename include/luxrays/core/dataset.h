@@ -51,8 +51,7 @@ public:
 	bool IsPreprocessed() const { return preprocessed; }
 	void UpdateBBoxes();
 
-	// Just return the first available
-	const Accelerator *GetAccelerator();
+	bool HasAccelerator(const AcceleratorType accelType) const;
 	const Accelerator *GetAccelerator(const AcceleratorType accelType);
 	bool DoesAllAcceleratorsSupportUpdate() const;
 	void UpdateAccelerators();

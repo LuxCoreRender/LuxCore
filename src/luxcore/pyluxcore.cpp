@@ -118,7 +118,7 @@ static boost::python::list GetOpenCLDeviceList() {
 	vector<luxrays::DeviceDescription *> deviceDescriptions = ctx.GetAvailableDeviceDescriptions();
 
 	// Select only OpenCL devices
-	luxrays::DeviceDescription::Filter(luxrays::DEVICE_TYPE_OPENCL_ALL, deviceDescriptions);
+	luxrays::DeviceDescription::Filter((luxrays::DeviceType)(luxrays::DEVICE_TYPE_OPENCL_ALL | luxrays::DEVICE_TYPE_CUDA_ALL), deviceDescriptions);
 
 	// Add all device information to the list
 	boost::python::list l;
@@ -1880,11 +1880,21 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.value("SHADING_NORMAL", Film::OUTPUT_SHADING_NORMAL)
 		.value("MATERIAL_ID", Film::OUTPUT_MATERIAL_ID)
 		.value("DIRECT_DIFFUSE", Film::OUTPUT_DIRECT_DIFFUSE)
+		.value("DIRECT_DIFFUSE_REFLECT", Film::OUTPUT_DIRECT_DIFFUSE_REFLECT)
+		.value("DIRECT_DIFFUSE_TRANSMIT", Film::OUTPUT_DIRECT_DIFFUSE_TRANSMIT)
 		.value("DIRECT_GLOSSY", Film::OUTPUT_DIRECT_GLOSSY)
+		.value("DIRECT_GLOSSY_REFLECT", Film::OUTPUT_DIRECT_GLOSSY_REFLECT)
+		.value("DIRECT_GLOSSY_TRANSMIT", Film::OUTPUT_DIRECT_GLOSSY_TRANSMIT)
 		.value("EMISSION", Film::OUTPUT_EMISSION)
 		.value("INDIRECT_DIFFUSE", Film::OUTPUT_INDIRECT_DIFFUSE)
+		.value("INDIRECT_DIFFUSE_REFLECT", Film::OUTPUT_INDIRECT_DIFFUSE_REFLECT)
+		.value("INDIRECT_DIFFUSE_TRANSMIT", Film::OUTPUT_INDIRECT_DIFFUSE_TRANSMIT)
 		.value("INDIRECT_GLOSSY", Film::OUTPUT_INDIRECT_GLOSSY)
+		.value("INDIRECT_GLOSSY_REFLECT", Film::OUTPUT_INDIRECT_GLOSSY_REFLECT)
+		.value("INDIRECT_GLOSSY_TRANSMIT", Film::OUTPUT_INDIRECT_GLOSSY_TRANSMIT)
 		.value("INDIRECT_SPECULAR", Film::OUTPUT_INDIRECT_SPECULAR)
+		.value("INDIRECT_SPECULAR_REFLECT", Film::OUTPUT_INDIRECT_SPECULAR_REFLECT)
+		.value("INDIRECT_SPECULAR_TRANSMIT", Film::OUTPUT_INDIRECT_SPECULAR_TRANSMIT)
 		.value("MATERIAL_ID_MASK", Film::OUTPUT_MATERIAL_ID_MASK)
 		.value("DIRECT_SHADOW_MASK", Film::OUTPUT_DIRECT_SHADOW_MASK)
 		.value("INDIRECT_SHADOW_MASK", Film::OUTPUT_INDIRECT_SHADOW_MASK)
@@ -1904,6 +1914,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.value("AVG_SHADING_NORMAL", Film::OUTPUT_AVG_SHADING_NORMAL)
 		.value("NOISE", Film::OUTPUT_NOISE)
 		.value("USER_IMPORTANCE", Film::OUTPUT_USER_IMPORTANCE)
+		.value("CAUSTIC", Film::OUTPUT_CAUSTIC)
 	;
 
     class_<luxcore::detail::FilmImpl>("Film", init<string>())
@@ -2015,6 +2026,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("GetProperties", &luxcore::detail::RenderConfigImpl::GetProperties, return_internal_reference<>())
 		.def("GetProperty", &luxcore::detail::RenderConfigImpl::GetProperty)
 		.def("GetScene", &RenderConfig_GetScene, return_internal_reference<>())
+		.def("HasCachedKernels", &luxcore::detail::RenderConfigImpl::HasCachedKernels)
 		.def("Parse", &luxcore::detail::RenderConfigImpl::Parse)
 		.def("Delete", &luxcore::detail::RenderConfigImpl::Delete)
 		.def("GetFilmSize", &RenderConfig_GetFilmSize)

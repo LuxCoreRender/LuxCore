@@ -153,6 +153,10 @@ void LuxCoreApp::GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int
 				// For some test with lux-hdr scene
 
 				/*app->session->BeginSceneEdit();
+				app->session->GetRenderConfig().GetScene().DeleteLight("infinitelight");
+				app->session->EndSceneEdit();*/
+
+				/*app->session->BeginSceneEdit();
 				app->session->GetFilm().DeleteAllImagePipelines();
 				app->session->Parse(Properties().SetFromString(
 						"film.imagepipelines.0.0.type = NOP\n"
@@ -280,12 +284,12 @@ void LuxCoreApp::GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int
 				app->IncScreenRefreshInterval();
 				break;
 			}
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 			case GLFW_KEY_1:
-				app->CloseAllRenderConfigEditors();
-				app->SetRenderingEngineType("PATHOCL");
+				if (app->isGPURenderingAvailable()) {
+					app->CloseAllRenderConfigEditors();
+					app->SetRenderingEngineType("PATHOCL");
+				}
 				break;
-#endif
 			case GLFW_KEY_2:
 				app->CloseAllRenderConfigEditors();
 				app->SetRenderingEngineType("LIGHTCPU");
@@ -302,22 +306,22 @@ void LuxCoreApp::GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int
 				app->CloseAllRenderConfigEditors();
 				app->SetRenderingEngineType("BIDIRVMCPU");
 				break;
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 			case GLFW_KEY_6:
-				app->CloseAllRenderConfigEditors();
-				app->SetRenderingEngineType("RTPATHOCL");
+				if (app->isGPURenderingAvailable()) {
+					app->CloseAllRenderConfigEditors();
+					app->SetRenderingEngineType("RTPATHOCL");
+				}
 				break;
-#endif
 			case GLFW_KEY_7:
 				app->CloseAllRenderConfigEditors();
 				app->SetRenderingEngineType("TILEPATHCPU");
 				break;
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 			case GLFW_KEY_8:
-				app->CloseAllRenderConfigEditors();
-				app->SetRenderingEngineType("TILEPATHOCL");
+				if (app->isGPURenderingAvailable()) {
+					app->CloseAllRenderConfigEditors();
+					app->SetRenderingEngineType("TILEPATHOCL");
+				}
 				break;
-#endif
 			case GLFW_KEY_9:
 				app->CloseAllRenderConfigEditors();
 				app->SetRenderingEngineType("RTPATHCPU");

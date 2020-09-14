@@ -61,7 +61,7 @@ OPENCL_FORCE_INLINE void ClearVolMaterial_GetEmittedRadiance(__global const Mate
 	DefaultMaterial_GetEmittedRadiance(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
 }
 
-OPENCL_FORCE_NOT_INLINE void ClearVolMaterial_Evaluate(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void ClearVolMaterial_Evaluate(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {
@@ -72,7 +72,7 @@ OPENCL_FORCE_NOT_INLINE void ClearVolMaterial_Evaluate(__global const Material* 
 	MATERIAL_EVALUATE_RETURN_BLACK;
 }
 
-OPENCL_FORCE_NOT_INLINE void ClearVolMaterial_Sample(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void ClearVolMaterial_Sample(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {

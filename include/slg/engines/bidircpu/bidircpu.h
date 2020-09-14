@@ -103,6 +103,9 @@ protected:
 	float misVmWeightFactor; // Weight of vertex merging (used in VC)
     float misVcWeightFactor; // Weight of vertex connection (used in VM)
 	float vmNormalization; // 1 / (Pi * radius^2 * light_path_count)
+
+	static const Film::FilmChannels eyeSampleResultsChannels;
+	static const Film::FilmChannels lightSampleResultsChannels;
 };
 
 class BiDirCPURenderEngine : public CPUNoTileRenderEngine {

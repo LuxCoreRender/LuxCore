@@ -37,6 +37,11 @@ public:
 	void Resize(const u_int s) { group.resize(s); }
 	void Shrink(const u_int s) { group.shrink_to_fit(); }
 
+	void Clear() {
+		for (auto &s : group)
+			s = Spectrum();
+	}
+
 	Spectrum Sum() const {
 		Spectrum sum;
 

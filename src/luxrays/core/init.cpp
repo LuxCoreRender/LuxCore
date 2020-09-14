@@ -16,8 +16,14 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <iostream>
+#include <boost/filesystem.hpp>
+
 #include "luxrays/luxrays.h"
-#if defined(LUXRAYS_ENABLE_CUDA)
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+#include "luxrays/utils/ocl.h"
+#endif
+#if !defined(LUXRAYS_DISABLE_CUDA)
 #include "luxrays/utils/cuda.h"
 #endif
 
@@ -30,10 +36,39 @@ using namespace luxrays;
 
 namespace luxrays {
 
+bool isOpenCLAvilable = false;
+bool isCudaAvilable = false;
+bool isOptixAvilable = false;
+
+std::locale cLocale("C");
+
 void Init() {
-#if defined(LUXRAYS_ENABLE_CUDA)
-	CHECK_CUDA_ERROR(cuInit(0));
-#endif	
+#if defined(WIN32)
+	// Set locale for conversion from UTF-16 to UTF-8 on Windows. LuxRays/LuxCore assume
+	// all file names are UTF-8 encoded. This works fine on Linux/MacOS but
+	// requires a conversion to UTF-16 on Windows.
+
+	boost::filesystem::path::imbue(
+			std::locale(std::locale(), new std::codecvt_utf8_utf16<wchar_t>()));
+#endif
+
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	if (clewInit() == CLEW_SUCCESS) {
+		isOpenCLAvilable = true;
+	}
+#endif
+
+#if !defined(LUXRAYS_DISABLE_CUDA)
+	if (cuewInit(CUEW_INIT_CUDA|CUEW_INIT_NVRTC) == CUEW_SUCCESS) {
+		isCudaAvilable = true;
+
+		CHECK_CUDA_ERROR(cuInit(0));
+
+		// Try to initialize Optix too
+		if (optixInit() == OPTIX_SUCCESS)
+			isOptixAvilable = true;
+	}
+#endif
 }
 
 }

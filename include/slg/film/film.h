@@ -26,7 +26,7 @@
 #include <fstream>
 #include <iostream>
 #include <vector>
-#include <set>
+#include <unordered_set>
 
 #include <boost/thread/mutex.hpp>
 #include <bcd/core/SamplesAccumulator.h>
@@ -35,7 +35,6 @@
 #include "luxrays/utils/properties.h"
 #include "luxrays/utils/serializationutils.h"
 #include "slg/slg.h"
-#include "slg/film/imagepipeline/imagepipeline.h"
 #include "slg/film/framebuffer.h"
 #include "slg/film/filmoutputs.h"
 #include "slg/film/convtest/filmconvtest.h"
@@ -98,45 +97,57 @@ private:
 //------------------------------------------------------------------------------
 
 class SampleResult;
+class ImagePipeline;
 
 class Film {
 public:
 	typedef enum {
-		NONE = 0,
-		RADIANCE_PER_PIXEL_NORMALIZED = 1 << 0,
-		RADIANCE_PER_SCREEN_NORMALIZED = 1 << 1,
-		ALPHA = 1 << 2,
+		RADIANCE_PER_PIXEL_NORMALIZED,
+		RADIANCE_PER_SCREEN_NORMALIZED,
+		ALPHA,
 		// RGB_TONEMAPPED is deprecated and replaced by IMAGEPIPELINE
-		IMAGEPIPELINE = 1 << 3,
-		DEPTH = 1 << 4,
-		POSITION = 1 << 5,
-		GEOMETRY_NORMAL = 1 << 6,
-		SHADING_NORMAL = 1 << 7,
-		MATERIAL_ID = 1 << 8,
-		DIRECT_DIFFUSE = 1 << 9,
-		DIRECT_GLOSSY = 1 << 10,
-		EMISSION = 1 << 11,
-		INDIRECT_DIFFUSE = 1 << 12,
-		INDIRECT_GLOSSY = 1 << 13,
-		INDIRECT_SPECULAR = 1 << 14,
-		MATERIAL_ID_MASK = 1 << 15,
-		DIRECT_SHADOW_MASK = 1 << 16,
-		INDIRECT_SHADOW_MASK = 1 << 17,
-		UV = 1 << 18,
-		RAYCOUNT = 1 << 19,
-		BY_MATERIAL_ID = 1 << 20,
-		IRRADIANCE = 1 << 21,
-		OBJECT_ID = 1 << 22,
-		OBJECT_ID_MASK = 1 << 23,
-		BY_OBJECT_ID = 1 << 24,
-		SAMPLECOUNT = 1 << 25,
-		CONVERGENCE = 1 << 26,
-		MATERIAL_ID_COLOR = 1 << 27,
-		ALBEDO = 1 << 28,
-		AVG_SHADING_NORMAL = 1 << 29,
-		NOISE = 1 << 30,
-		USER_IMPORTANCE = 1 << 31
+		IMAGEPIPELINE,
+		DEPTH,
+		POSITION,
+		GEOMETRY_NORMAL,
+		SHADING_NORMAL,
+		MATERIAL_ID,
+		DIRECT_DIFFUSE,
+		DIRECT_DIFFUSE_REFLECT,
+		DIRECT_DIFFUSE_TRANSMIT,
+		DIRECT_GLOSSY,
+		DIRECT_GLOSSY_REFLECT,
+		DIRECT_GLOSSY_TRANSMIT,
+		EMISSION,
+		INDIRECT_DIFFUSE,
+		INDIRECT_DIFFUSE_REFLECT,
+		INDIRECT_DIFFUSE_TRANSMIT,
+		INDIRECT_GLOSSY,
+		INDIRECT_GLOSSY_REFLECT,
+		INDIRECT_GLOSSY_TRANSMIT,
+		INDIRECT_SPECULAR,
+		INDIRECT_SPECULAR_REFLECT,
+		INDIRECT_SPECULAR_TRANSMIT,
+		MATERIAL_ID_MASK,
+		DIRECT_SHADOW_MASK,
+		INDIRECT_SHADOW_MASK,
+		UV,
+		RAYCOUNT,
+		BY_MATERIAL_ID,
+		IRRADIANCE,
+		OBJECT_ID,
+		OBJECT_ID_MASK,
+		BY_OBJECT_ID,
+		SAMPLECOUNT,
+		CONVERGENCE,
+		MATERIAL_ID_COLOR,
+		ALBEDO,
+		AVG_SHADING_NORMAL,
+		NOISE,
+		USER_IMPORTANCE
 	} FilmChannelType;
+	
+	typedef std::unordered_set<FilmChannelType, std::hash<int> > FilmChannels;
 
 	Film(const u_int width, const u_int height, const u_int *subRegion = NULL);
 	~Film();
@@ -146,7 +157,7 @@ public:
 	void Init();
 	bool IsInitiliazed() const { return initialized; }
 	void Resize(const u_int w, const u_int h);
-	void Reset();
+	void Reset(const bool onlyCounters = false);
 	void Clear();
 	void Parse(const luxrays::Properties &props);
 
@@ -168,12 +179,12 @@ public:
 	float GetFilmY(const u_int imagePipeLineIndex) const;
 	float GetFilmMaxValue(const u_int imagePipeLineIndex) const;
 
-	void VarianceClampFilm(const VarianceClamping &varianceClamping, const Film &film,
+	void SetFilm(const Film &film,
 		const u_int srcOffsetX, const u_int srcOffsetY,
 		const u_int srcWidth, const u_int srcHeight,
 		const u_int dstOffsetX, const u_int dstOffsetY);
-	void VarianceClampFilm(const VarianceClamping &varianceClamping, const Film &film) {
-		VarianceClampFilm(varianceClamping, film, 0, 0, width, height, 0, 0);
+	void SetFilm(const Film &film) {
+		SetFilm(film, 0, 0, width, height, 0, 0);
 	}
 
 	void AddFilm(const Film &film,
@@ -190,6 +201,7 @@ public:
 
 	bool HasChannel(const FilmChannelType type) const { return channels.count(type) > 0; }
 	u_int GetChannelCount(const FilmChannelType type) const;
+	const FilmChannels &GetChannels() const { return channels; }
 
 	// This one must be called before Init()
 	void AddChannel(const FilmChannelType type,
@@ -197,7 +209,10 @@ public:
 	// This one must be called before Init()
 	void RemoveChannel(const FilmChannelType type);
 	// This one must be called before Init()
-	void SetRadianceGroupCount(const u_int count) { radianceGroupCount = count; }
+	void SetRadianceGroupCount(const u_int count) {
+		// I can not have less than 1 radiance group
+		radianceGroupCount = luxrays::Max(count, 1u);
+	}
 
 	u_int GetRadianceGroupCount() const { return radianceGroupCount; }
 	u_int GetMaskMaterialID(const u_int index) const { return maskMaterialIDs[index]; }
@@ -313,37 +328,30 @@ public:
 	void ReadHWBuffer_IMAGEPIPELINE(const u_int index);
 	void WriteHWBuffer_IMAGEPIPELINE(const u_int index);
 
-	void GetPixelFromMergedSampleBuffers(const FilmChannelType channels,
+	void GetPixelFromMergedSampleBuffers(
+		const bool use_RADIANCE_PER_PIXEL_NORMALIZEDs, const bool use_RADIANCE_PER_SCREEN_NORMALIZEDs,
 		const std::vector<RadianceChannelScale> *radianceChannelScales,
 		const double RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
 		const u_int index, float *c) const;
-	void GetPixelFromMergedSampleBuffers(const FilmChannelType channels,
+	void GetPixelFromMergedSampleBuffers(
+		const bool use_RADIANCE_PER_PIXEL_NORMALIZEDs, const bool use_RADIANCE_PER_SCREEN_NORMALIZEDs,
 		const std::vector<RadianceChannelScale> *radianceChannelScales,
 		const double RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
-		const u_int x, const u_int y, float *c) const {
-		GetPixelFromMergedSampleBuffers(channels, radianceChannelScales,
-				RADIANCE_PER_SCREEN_NORMALIZED_SampleCount, x + y * width, c);
-	}
+		const u_int x, const u_int y, float *c) const;
 	void GetPixelFromMergedSampleBuffers(const u_int imagePipelineIndex,
 			const double RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
-			const u_int x, const u_int y, float *c) const {
-		const ImagePipeline *ip = (imagePipelineIndex < imagePipelines.size()) ? imagePipelines[imagePipelineIndex] : NULL;
-		const std::vector<RadianceChannelScale> *radianceChannelScales = ip ? &ip->radianceChannelScales : NULL;
-
-		GetPixelFromMergedSampleBuffers((FilmChannelType)(RADIANCE_PER_PIXEL_NORMALIZED | RADIANCE_PER_SCREEN_NORMALIZED),
-				radianceChannelScales, RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
-				x, y, c);
-	}
+			const u_int x, const u_int y, float *c) const;
 	void GetPixelFromMergedSampleBuffers(const u_int imagePipelineIndex,
 			const double RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
-			const u_int index, float *c) const {
-		const ImagePipeline *ip = (imagePipelineIndex < imagePipelines.size()) ? imagePipelines[imagePipelineIndex] : NULL;
-		const std::vector<RadianceChannelScale> *radianceChannelScales = ip ? &ip->radianceChannelScales : NULL;
-
-		GetPixelFromMergedSampleBuffers((FilmChannelType)(RADIANCE_PER_PIXEL_NORMALIZED | RADIANCE_PER_SCREEN_NORMALIZED),
-				radianceChannelScales, RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
-				index, c);
-	}
+			const u_int index, float *c) const;
+	void GetPixelFromMergedSampleBuffers(const u_int imagePipelineIndex,
+			const bool use_RADIANCE_PER_PIXEL_NORMALIZEDs, const bool use_RADIANCE_PER_SCREEN_NORMALIZEDs,
+			const double RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
+			const u_int x, const u_int y, float *c) const;
+	void GetPixelFromMergedSampleBuffers(const u_int imagePipelineIndex,
+			const bool use_RADIANCE_PER_PIXEL_NORMALIZEDs, const bool use_RADIANCE_PER_SCREEN_NORMALIZEDs,
+			const double RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
+			const u_int index, float *c) const;
 	
 	bool HasThresholdSamples(const bool has_RADIANCE_PER_PIXEL_NORMALIZEDs, const bool has_RADIANCE_PER_SCREEN_NORMALIZEDs,
 			const u_int index, const float threshold) const {
@@ -389,11 +397,21 @@ public:
 	GenericFrameBuffer<4, 1, float> *channel_AVG_SHADING_NORMAL;
 	GenericFrameBuffer<1, 0, u_int> *channel_MATERIAL_ID;
 	GenericFrameBuffer<4, 1, float> *channel_DIRECT_DIFFUSE;
+	GenericFrameBuffer<4, 1, float> *channel_DIRECT_DIFFUSE_REFLECT;
+	GenericFrameBuffer<4, 1, float> *channel_DIRECT_DIFFUSE_TRANSMIT;
 	GenericFrameBuffer<4, 1, float> *channel_DIRECT_GLOSSY;
+	GenericFrameBuffer<4, 1, float> *channel_DIRECT_GLOSSY_REFLECT;
+	GenericFrameBuffer<4, 1, float> *channel_DIRECT_GLOSSY_TRANSMIT;
 	GenericFrameBuffer<4, 1, float> *channel_EMISSION;
 	GenericFrameBuffer<4, 1, float> *channel_INDIRECT_DIFFUSE;
+	GenericFrameBuffer<4, 1, float> *channel_INDIRECT_DIFFUSE_REFLECT;
+	GenericFrameBuffer<4, 1, float> *channel_INDIRECT_DIFFUSE_TRANSMIT;
 	GenericFrameBuffer<4, 1, float> *channel_INDIRECT_GLOSSY;
+	GenericFrameBuffer<4, 1, float> *channel_INDIRECT_GLOSSY_REFLECT;
+	GenericFrameBuffer<4, 1, float> *channel_INDIRECT_GLOSSY_TRANSMIT;
 	GenericFrameBuffer<4, 1, float> *channel_INDIRECT_SPECULAR;
+	GenericFrameBuffer<4, 1, float> *channel_INDIRECT_SPECULAR_REFLECT;
+	GenericFrameBuffer<4, 1, float> *channel_INDIRECT_SPECULAR_TRANSMIT;
 	std::vector<GenericFrameBuffer<2, 1, float> *> channel_MATERIAL_ID_MASKs;
 	GenericFrameBuffer<2, 1, float> *channel_DIRECT_SHADOW_MASK;
 	GenericFrameBuffer<2, 1, float> *channel_INDIRECT_SHADOW_MASK;
@@ -422,6 +440,8 @@ public:
 	luxrays::HardwareDeviceBuffer *hw_IMAGEPIPELINE;
 	luxrays::HardwareDeviceBuffer *hw_ALPHA;
 	luxrays::HardwareDeviceBuffer *hw_OBJECT_ID;
+	luxrays::HardwareDeviceBuffer *hw_ALBEDO;
+	luxrays::HardwareDeviceBuffer *hw_AVG_SHADING_NORMAL;
 	
 	luxrays::HardwareDeviceBuffer *hw_mergeBuffer;
 	
@@ -476,7 +496,13 @@ private:
 	void ExecuteImagePipelineThreadImpl(const u_int index);
 	void ExecuteImagePipelineImpl(const u_int index);
 
-	std::set<FilmChannelType> channels;
+	template <bool overwrite>
+	void AddFilmImpl(const Film &film,
+		const u_int srcOffsetX, const u_int srcOffsetY,
+		const u_int srcWidth, const u_int srcHeight,
+		const u_int dstOffsetX, const u_int dstOffsetY);
+
+	FilmChannels channels;
 	u_int width, height, pixelCount, radianceGroupCount;
 	u_int subRegion[4];
 	std::vector<u_int> maskMaterialIDs, byMaterialIDs;
@@ -495,7 +521,7 @@ private:
 	// Halt conditions
 	FilmConvTest *convTest;
 	double haltTime;
-	u_int haltSPP;
+	u_int haltSPP, haltSPP_PixelNormalized, haltSPP_ScreenNormalized;
 	
 	float haltNoiseThreshold;
 	u_int haltNoiseThresholdWarmUp, haltNoiseThresholdTestStep, haltNoiseThresholdImagePipelineIndex;
@@ -522,8 +548,10 @@ template<> void Film::GetOutput<u_int>(const FilmOutputs::FilmOutputType type, u
 
 }
 
-BOOST_CLASS_VERSION(slg::Film, 25)
+BOOST_CLASS_VERSION(slg::Film, 27)
+BOOST_CLASS_VERSION(slg::FilmSamplesCounts, 1)
 
 BOOST_CLASS_EXPORT_KEY(slg::Film)
+BOOST_CLASS_EXPORT_KEY(slg::FilmSamplesCounts)
 
 #endif	/* _SLG_FILM_H */

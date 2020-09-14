@@ -51,11 +51,8 @@
 //------------------------------------------------------------------------------
 
 typedef struct {
-	unsigned int pixelIndexBase, pixelIndexOffset, pixelIndexRandomStart;
+	unsigned int bucketIndex, pixelOffset, passOffset, pass;
 } RandomSample;
-
-// This is defined only under OpenCL because of variable size structures
-#if defined(SLG_OPENCL_KERNEL)
 
 typedef struct {
 	float totalI;
@@ -69,10 +66,8 @@ typedef struct {
 	SampleResult currentResult;
 } MetropolisSample;
 
-#endif
-
 typedef struct {
-	unsigned int pixelIndexBase, pixelIndexOffset, pass, pixelIndexRandomStart;
+	unsigned int bucketIndex, pixelOffset, passOffset, pass;
 
 	Seed rngGeneratorSeed;
 	unsigned int rngPass;
@@ -91,14 +86,12 @@ typedef struct {
 //------------------------------------------------------------------------------
 
 typedef struct {
-	unsigned int pixelBucketIndex;
-	float adaptiveStrength, adaptiveUserImportanceWeight;
+	unsigned int bucketIndex;
 } RandomSamplerSharedData;
 
 typedef struct {
 	unsigned int seedBase;
-	unsigned int pixelBucketIndex;
-	float adaptiveStrength, adaptiveUserImportanceWeight;
+	unsigned int bucketIndex;
 
 	// This is used to compute the size of appended data at the end
 	// of SobolSamplerSharedData
@@ -115,6 +108,7 @@ typedef struct {
 	unsigned int tileStartX, tileStartY;
 	unsigned int tileWidth, tileHeight;
 	unsigned int tilePass, aaSamples;
+	unsigned int multipassIndexToRender;
 
 	// Plus Sobol directions array
 } TilePathSamplerSharedData;
@@ -135,9 +129,11 @@ typedef struct {
 	union {
 		struct {
 			float adaptiveStrength, adaptiveUserImportanceWeight;
+			unsigned int bucketSize, tileSize, superSampling, overlapping;
 		} random;
 		struct {
 			float adaptiveStrength, adaptiveUserImportanceWeight;
+			unsigned int bucketSize, tileSize, superSampling, overlapping;
 		} sobol;
 		struct {
 			float largeMutationProbability, imageMutationRange;
@@ -146,11 +142,9 @@ typedef struct {
 	};
 } Sampler;
 
-#define RANDOM_OCL_WORK_SIZE 16
-
-#define SOBOL_OCL_WORK_SIZE 16
 #define SOBOL_BITS 32
 #define SOBOL_MAX_DIMENSIONS 21201
+#define SOBOL_STARTOFFSET 32
 
 #define SAMPLER_PARAM_DECL \
 		, Seed *seed \

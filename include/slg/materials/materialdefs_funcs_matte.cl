@@ -60,7 +60,7 @@ OPENCL_FORCE_INLINE void MatteMaterial_GetEmittedRadiance(__global const Materia
 	DefaultMaterial_GetEmittedRadiance(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
 }
 
-OPENCL_FORCE_NOT_INLINE void MatteMaterial_Evaluate(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void MatteMaterial_Evaluate(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {
@@ -80,7 +80,7 @@ OPENCL_FORCE_NOT_INLINE void MatteMaterial_Evaluate(__global const Material* res
 	EvalStack_PushFloat(directPdfW);
 }
 
-OPENCL_FORCE_NOT_INLINE void MatteMaterial_Sample(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void MatteMaterial_Sample(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {
@@ -193,7 +193,7 @@ OPENCL_FORCE_INLINE void RoughMatteMaterial_GetEmittedRadiance(__global const Ma
 	DefaultMaterial_GetEmittedRadiance(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
 }
 
-OPENCL_FORCE_NOT_INLINE void RoughMatteMaterial_Evaluate(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void RoughMatteMaterial_Evaluate(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {
@@ -227,7 +227,7 @@ OPENCL_FORCE_NOT_INLINE void RoughMatteMaterial_Evaluate(__global const Material
 	EvalStack_PushFloat(directPdfW);
 }
 
-OPENCL_FORCE_NOT_INLINE void RoughMatteMaterial_Sample(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void RoughMatteMaterial_Sample(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {

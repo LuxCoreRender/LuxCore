@@ -121,6 +121,20 @@ RenderConfig::~RenderConfig() {
 		delete scene;
 }
 
+bool RenderConfig::HasCachedKernels() {
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	const string type = cfg.Get(Property("renderengine.type")(PathCPURenderEngine::GetObjectTag())).Get<string>();
+	if ((type == "PATHOCL") ||
+			(type == "RTPATHOCL") ||
+			(type == "TILEPATHOCL")) {
+		return PathOCLBaseRenderEngine::HasCachedKernels(*this);
+	} else
+		return true;
+#else
+	return true;
+#endif
+}
+
 const Property RenderConfig::GetProperty(const string &name) const {
 	return ToProperties().Get(name);
 }
@@ -269,7 +283,10 @@ Film *RenderConfig::AllocFilm() const {
 	Film *film = Film::FromProperties(cfg);
 
 	// Add the channels required by the Sampler
-	film->AddChannel(Sampler::GetRequiredChannels(cfg));
+	Film::FilmChannels channels;
+	Sampler::AddRequiredChannels(channels, cfg);
+	for (auto const c : channels)
+		film->AddChannel(c);
 
 	return film;
 }
@@ -302,7 +319,7 @@ RenderEngine *RenderConfig::AllocRenderEngine() const {
 
 const Properties &RenderConfig::ToProperties() const {
 	if (!propsCache.GetSize())
-			propsCache = ToProperties(cfg);
+		propsCache = ToProperties(cfg);
 
 	return propsCache;
 }

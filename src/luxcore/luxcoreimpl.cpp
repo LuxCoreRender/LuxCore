@@ -432,7 +432,7 @@ SceneImpl::SceneImpl(const luxrays::Properties &props, const float imageScale) {
 SceneImpl::SceneImpl(const string &fileName, const float imageScale) {
 	camera = new CameraImpl(*this);
 
-	const string ext = slg::GetFileNameExt(fileName);
+	const string ext = luxrays::GetFileNameExt(fileName);
 	if (ext == ".bsc") {
 		// The file is in a binary format
 		scene = slg::Scene::LoadSerialized(fileName);
@@ -892,6 +892,10 @@ Scene &RenderConfigImpl::GetScene() const {
 	return *scene;
 }
 
+bool RenderConfigImpl::HasCachedKernels() const {
+	return renderConfig->HasCachedKernels();
+}
+
 void RenderConfigImpl::Parse(const Properties &props) {
 	renderConfig->Parse(props);
 }
@@ -1123,7 +1127,7 @@ void RenderSessionImpl::UpdateStats() {
 
 		const HardwareDevice *hardDev = dynamic_cast<const HardwareDevice *>(dev);
 		if (hardDev) {
-			stats.Set(Property(prefix + ".memory.total")((u_longlong)hardDev->GetMaxMemory()));
+			stats.Set(Property(prefix + ".memory.total")((u_longlong)hardDev->GetDeviceDesc()->GetMaxMemory()));
 			stats.Set(Property(prefix + ".memory.used")((u_longlong)hardDev->GetUsedMemory()));
 		} else {
 			stats.Set(Property(prefix + ".memory.total")(0ull));

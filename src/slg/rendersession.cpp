@@ -67,8 +67,8 @@ RenderSession::~RenderSession() {
 
 void RenderSession::Start() {
 	if (film->IsInitiliazed()) {
-		// I need to allocate a new film because the current one has been already
-		// used. for instance, it can happen when stopping and starting the
+		// I need to allocate a new film because the current one has already been
+		// used. For instance, it can happen when stopping and starting the
 		// same session.
 
 		// Delete the old film

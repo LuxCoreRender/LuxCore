@@ -27,6 +27,7 @@ using namespace slg;
 void CompiledScene::CompileFilm(const Film &film, slg::ocl::Film &oclFilm) {
 	oclFilm.radianceGroupCount = film.GetRadianceGroupCount();
 	oclFilm.bcdDenoiserEnable = film.GetDenoiser().IsEnabled();
+	oclFilm.usePixelAtomics = false;
 
 	// Film channels (AOVs)
 
@@ -37,11 +38,21 @@ void CompiledScene::CompileFilm(const Film &film, slg::ocl::Film &oclFilm) {
 	oclFilm.hasChannelShadingNormal = film.HasChannel(Film::SHADING_NORMAL);
 	oclFilm.hasChannelMaterialID = film.HasChannel(Film::MATERIAL_ID);
 	oclFilm.hasChannelDirectDiffuse = film.HasChannel(Film::DIRECT_DIFFUSE);
+	oclFilm.hasChannelDirectDiffuseReflect = film.HasChannel(Film::DIRECT_DIFFUSE_REFLECT);
+	oclFilm.hasChannelDirectDiffuseTransmit = film.HasChannel(Film::DIRECT_DIFFUSE_TRANSMIT);
 	oclFilm.hasChannelDirectGlossy = film.HasChannel(Film::DIRECT_GLOSSY);
+	oclFilm.hasChannelDirectGlossyReflect = film.HasChannel(Film::DIRECT_GLOSSY_REFLECT);
+	oclFilm.hasChannelDirectGlossyTransmit = film.HasChannel(Film::DIRECT_GLOSSY_TRANSMIT);
 	oclFilm.hasChannelEmission = film.HasChannel(Film::EMISSION);
 	oclFilm.hasChannelIndirectDiffuse = film.HasChannel(Film::INDIRECT_DIFFUSE);
+	oclFilm.hasChannelIndirectDiffuseReflect = film.HasChannel(Film::INDIRECT_DIFFUSE_REFLECT);
+	oclFilm.hasChannelIndirectDiffuseTransmit = film.HasChannel(Film::INDIRECT_DIFFUSE_TRANSMIT);
 	oclFilm.hasChannelIndirectGlossy = film.HasChannel(Film::INDIRECT_GLOSSY);
+	oclFilm.hasChannelIndirectGlossyReflect = film.HasChannel(Film::INDIRECT_GLOSSY_REFLECT);
+	oclFilm.hasChannelIndirectGlossyTransmit = film.HasChannel(Film::INDIRECT_GLOSSY_TRANSMIT);
 	oclFilm.hasChannelIndirectSpecular = film.HasChannel(Film::INDIRECT_SPECULAR);
+	oclFilm.hasChannelIndirectSpecularReflect = film.HasChannel(Film::INDIRECT_SPECULAR_REFLECT);
+	oclFilm.hasChannelIndirectSpecularTransmit = film.HasChannel(Film::INDIRECT_SPECULAR_TRANSMIT);
 	oclFilm.hasChannelMaterialIDMask = film.HasChannel(Film::MATERIAL_ID_MASK);
 	if (oclFilm.hasChannelMaterialIDMask)
 		oclFilm.channelMaterialIDMask = film.GetMaskMaterialID(0);

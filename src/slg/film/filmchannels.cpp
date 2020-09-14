@@ -24,6 +24,7 @@
 #include <boost/foreach.hpp>
 
 #include "slg/film/film.h"
+#include "slg/film/imagepipeline/imagepipeline.h"
 #include "slg/film/imagepipeline/radiancechannelscale.h"
 
 using namespace std;
@@ -48,11 +49,21 @@ void Film::FreeChannels() {
 	delete channel_SHADING_NORMAL;
 	delete channel_MATERIAL_ID;
 	delete channel_DIRECT_DIFFUSE;
+	delete channel_DIRECT_DIFFUSE_REFLECT;
+	delete channel_DIRECT_DIFFUSE_TRANSMIT;
 	delete channel_DIRECT_GLOSSY;
+	delete channel_DIRECT_GLOSSY_REFLECT;
+	delete channel_DIRECT_GLOSSY_TRANSMIT;
 	delete channel_EMISSION;
 	delete channel_INDIRECT_DIFFUSE;
+	delete channel_INDIRECT_DIFFUSE_REFLECT;
+	delete channel_INDIRECT_DIFFUSE_TRANSMIT;
 	delete channel_INDIRECT_GLOSSY;
+	delete channel_INDIRECT_GLOSSY_REFLECT;
+	delete channel_INDIRECT_GLOSSY_TRANSMIT;
 	delete channel_INDIRECT_SPECULAR;
+	delete channel_INDIRECT_SPECULAR_REFLECT;
+	delete channel_INDIRECT_SPECULAR_TRANSMIT;
 	for (u_int i = 0; i < channel_MATERIAL_ID_MASKs.size(); ++i)
 		delete channel_MATERIAL_ID_MASKs[i];
 	delete channel_DIRECT_SHADOW_MASK;
@@ -140,16 +151,36 @@ u_int Film::GetChannelCount(const FilmChannelType type) const {
 			return channel_MATERIAL_ID ? 1 : 0;
 		case DIRECT_DIFFUSE:
 			return channel_DIRECT_DIFFUSE ? 1 : 0;
+		case DIRECT_DIFFUSE_REFLECT:
+			return channel_DIRECT_DIFFUSE_REFLECT ? 1 : 0;
+		case DIRECT_DIFFUSE_TRANSMIT:
+			return channel_DIRECT_DIFFUSE_TRANSMIT ? 1 : 0;
 		case DIRECT_GLOSSY:
 			return channel_DIRECT_GLOSSY ? 1 : 0;
+		case DIRECT_GLOSSY_REFLECT:
+			return channel_DIRECT_GLOSSY_REFLECT ? 1 : 0;
+		case DIRECT_GLOSSY_TRANSMIT:
+			return channel_DIRECT_GLOSSY_TRANSMIT ? 1 : 0;
 		case EMISSION:
 			return channel_EMISSION ? 1 : 0;
 		case INDIRECT_DIFFUSE:
 			return channel_INDIRECT_DIFFUSE ? 1 : 0;
+		case INDIRECT_DIFFUSE_REFLECT:
+			return channel_INDIRECT_DIFFUSE_REFLECT ? 1 : 0;
+		case INDIRECT_DIFFUSE_TRANSMIT:
+			return channel_INDIRECT_DIFFUSE_TRANSMIT ? 1 : 0;
 		case INDIRECT_GLOSSY:
 			return channel_INDIRECT_GLOSSY ? 1 : 0;
+		case INDIRECT_GLOSSY_REFLECT:
+			return channel_INDIRECT_GLOSSY_REFLECT ? 1 : 0;
+		case INDIRECT_GLOSSY_TRANSMIT:
+			return channel_INDIRECT_GLOSSY_TRANSMIT ? 1 : 0;
 		case INDIRECT_SPECULAR:
 			return channel_INDIRECT_SPECULAR ? 1 : 0;
+		case INDIRECT_SPECULAR_REFLECT:
+			return channel_INDIRECT_SPECULAR_REFLECT ? 1 : 0;
+		case INDIRECT_SPECULAR_TRANSMIT:
+			return channel_INDIRECT_SPECULAR_TRANSMIT ? 1 : 0;
 		case MATERIAL_ID_MASK:
 			return channel_MATERIAL_ID_MASKs.size();
 		case DIRECT_SHADOW_MASK:
@@ -219,16 +250,36 @@ template<> float *Film::GetChannel<float>(const FilmChannelType type,
 			return channel_SHADING_NORMAL->GetPixels();
 		case DIRECT_DIFFUSE:
 			return channel_DIRECT_DIFFUSE->GetPixels();
+		case DIRECT_DIFFUSE_REFLECT:
+			return channel_DIRECT_DIFFUSE_REFLECT->GetPixels();
+		case DIRECT_DIFFUSE_TRANSMIT:
+			return channel_DIRECT_DIFFUSE_TRANSMIT->GetPixels();
 		case DIRECT_GLOSSY:
 			return channel_DIRECT_GLOSSY->GetPixels();
+		case DIRECT_GLOSSY_REFLECT:
+			return channel_DIRECT_GLOSSY_REFLECT->GetPixels();
+		case DIRECT_GLOSSY_TRANSMIT:
+			return channel_DIRECT_GLOSSY_TRANSMIT->GetPixels();
 		case EMISSION:
 			return channel_EMISSION->GetPixels();
 		case INDIRECT_DIFFUSE:
 			return channel_INDIRECT_DIFFUSE->GetPixels();
+		case INDIRECT_DIFFUSE_REFLECT:
+			return channel_INDIRECT_DIFFUSE_REFLECT->GetPixels();
+		case INDIRECT_DIFFUSE_TRANSMIT:
+			return channel_INDIRECT_DIFFUSE_TRANSMIT->GetPixels();
 		case INDIRECT_GLOSSY:
 			return channel_INDIRECT_GLOSSY->GetPixels();
+		case INDIRECT_GLOSSY_REFLECT:
+			return channel_INDIRECT_GLOSSY_REFLECT->GetPixels();
+		case INDIRECT_GLOSSY_TRANSMIT:
+			return channel_INDIRECT_GLOSSY_TRANSMIT->GetPixels();
 		case INDIRECT_SPECULAR:
 			return channel_INDIRECT_SPECULAR->GetPixels();
+		case INDIRECT_SPECULAR_REFLECT:
+			return channel_INDIRECT_SPECULAR_REFLECT->GetPixels();
+		case INDIRECT_SPECULAR_TRANSMIT:
+			return channel_INDIRECT_SPECULAR_TRANSMIT->GetPixels();
 		case MATERIAL_ID_MASK:
 			return channel_MATERIAL_ID_MASKs[index]->GetPixels();
 		case DIRECT_SHADOW_MASK:
@@ -284,15 +335,16 @@ template<> u_int *Film::GetChannel<u_int>(const FilmChannelType type,
 	}
 }
 
-void Film::GetPixelFromMergedSampleBuffers(const FilmChannelType channels,
-		const std::vector<RadianceChannelScale> *radianceChannelScales,
+void Film::GetPixelFromMergedSampleBuffers(
+		const bool use_RADIANCE_PER_PIXEL_NORMALIZEDs, const bool use_RADIANCE_PER_SCREEN_NORMALIZEDs,
+		const vector<RadianceChannelScale> *radianceChannelScales,
 		const double RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
 		const u_int index, float *c) const {
 	c[0] = 0.f;
 	c[1] = 0.f;
 	c[2] = 0.f;
 	
-	if (channels & RADIANCE_PER_PIXEL_NORMALIZED) {
+	if (use_RADIANCE_PER_PIXEL_NORMALIZEDs) {
 		for (u_int i = 0; i < channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size(); ++i) {
 			if (!radianceChannelScales || (*radianceChannelScales)[i].enabled) {
 				float v[3];
@@ -308,7 +360,7 @@ void Film::GetPixelFromMergedSampleBuffers(const FilmChannelType channels,
 		}
 	}
 
-	if (channels & RADIANCE_PER_SCREEN_NORMALIZED) {
+	if (use_RADIANCE_PER_SCREEN_NORMALIZEDs) {
 		if (channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size() > 0) {
 			const float factor = (RADIANCE_PER_SCREEN_NORMALIZED_SampleCount > 0) ? (pixelCount / RADIANCE_PER_SCREEN_NORMALIZED_SampleCount) : 1.f;
 
@@ -333,6 +385,62 @@ void Film::GetPixelFromMergedSampleBuffers(const FilmChannelType channels,
 	}
 }
 
+void Film::GetPixelFromMergedSampleBuffers(
+		const bool use_RADIANCE_PER_PIXEL_NORMALIZEDs, const bool use_RADIANCE_PER_SCREEN_NORMALIZEDs,
+	const vector<RadianceChannelScale> *radianceChannelScales,
+	const double RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
+	const u_int x, const u_int y, float *c) const {
+	GetPixelFromMergedSampleBuffers(use_RADIANCE_PER_PIXEL_NORMALIZEDs,
+			use_RADIANCE_PER_SCREEN_NORMALIZEDs, radianceChannelScales,
+			RADIANCE_PER_SCREEN_NORMALIZED_SampleCount, x + y * width, c);
+}
+
+void Film::GetPixelFromMergedSampleBuffers(const u_int imagePipelineIndex,
+		const double RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
+		const u_int x, const u_int y, float *c) const {
+	const ImagePipeline *ip = (imagePipelineIndex < imagePipelines.size()) ? imagePipelines[imagePipelineIndex] : NULL;
+	const vector<RadianceChannelScale> *radianceChannelScales = ip ? &ip->radianceChannelScales : NULL;
+
+	GetPixelFromMergedSampleBuffers(true, true,
+			radianceChannelScales, RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
+			x, y, c);
+}
+
+void Film::GetPixelFromMergedSampleBuffers(const u_int imagePipelineIndex,
+		const double RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
+		const u_int index, float *c) const {
+	const ImagePipeline *ip = (imagePipelineIndex < imagePipelines.size()) ? imagePipelines[imagePipelineIndex] : NULL;
+	const vector<RadianceChannelScale> *radianceChannelScales = ip ? &ip->radianceChannelScales : NULL;
+
+	GetPixelFromMergedSampleBuffers(true, true,
+			radianceChannelScales, RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
+			index, c);
+}
+
+void Film::GetPixelFromMergedSampleBuffers(const u_int imagePipelineIndex,
+		const bool use_RADIANCE_PER_PIXEL_NORMALIZEDs, const bool use_RADIANCE_PER_SCREEN_NORMALIZEDs,
+		const double RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
+		const u_int x, const u_int y, float *c) const {
+	const ImagePipeline *ip = (imagePipelineIndex < imagePipelines.size()) ? imagePipelines[imagePipelineIndex] : NULL;
+	const vector<RadianceChannelScale> *radianceChannelScales = ip ? &ip->radianceChannelScales : NULL;
+
+	GetPixelFromMergedSampleBuffers(use_RADIANCE_PER_PIXEL_NORMALIZEDs, use_RADIANCE_PER_SCREEN_NORMALIZEDs,
+			radianceChannelScales, RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
+			x, y, c);
+}
+
+void Film::GetPixelFromMergedSampleBuffers(const u_int imagePipelineIndex,
+		const bool use_RADIANCE_PER_PIXEL_NORMALIZEDs, const bool use_RADIANCE_PER_SCREEN_NORMALIZEDs,
+		const double RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
+		const u_int index, float *c) const {
+	const ImagePipeline *ip = (imagePipelineIndex < imagePipelines.size()) ? imagePipelines[imagePipelineIndex] : NULL;
+	const vector<RadianceChannelScale> *radianceChannelScales = ip ? &ip->radianceChannelScales : NULL;
+
+	GetPixelFromMergedSampleBuffers(use_RADIANCE_PER_PIXEL_NORMALIZEDs, use_RADIANCE_PER_SCREEN_NORMALIZEDs,
+			radianceChannelScales, RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
+			index, c);
+}
+
 float Film::GetFilmY(const u_int imagePipelineIndex) const {
 	//const double t1 = WallClockTime();
 
@@ -343,7 +451,7 @@ float Film::GetFilmY(const u_int imagePipelineIndex) const {
 	Spectrum pixel;
 	const double samplesCount = samplesCounts.GetSampleCount_RADIANCE_PER_SCREEN_NORMALIZED();
 	for (u_int i = 0; i < pixelCount; ++i) {
-		GetPixelFromMergedSampleBuffers((FilmChannelType)(RADIANCE_PER_PIXEL_NORMALIZED | RADIANCE_PER_SCREEN_NORMALIZED),
+		GetPixelFromMergedSampleBuffers(true, true,
 				radianceChannelScales, samplesCount, i, pixel.c);
 
 		const float y = pixel.Y();
@@ -371,7 +479,7 @@ float Film::GetFilmMaxValue(const u_int imagePipelineIndex) const {
 	Spectrum pixel;
 	const double samplesCount = samplesCounts.GetSampleCount_RADIANCE_PER_SCREEN_NORMALIZED();
 	for (u_int i = 0; i < pixelCount; ++i) {
-		GetPixelFromMergedSampleBuffers((FilmChannelType)(RADIANCE_PER_PIXEL_NORMALIZED | RADIANCE_PER_SCREEN_NORMALIZED),
+		GetPixelFromMergedSampleBuffers(true, true,
 				radianceChannelScales, samplesCount, i, pixel.c);
 
 		const float v = pixel.Max();
@@ -387,7 +495,7 @@ float Film::GetFilmMaxValue(const u_int imagePipelineIndex) const {
 	return maxValue;
 }
 
-Film::FilmChannelType Film::String2FilmChannelType(const std::string &type) {
+Film::FilmChannelType Film::String2FilmChannelType(const string &type) {
 	if (type == "RADIANCE_PER_PIXEL_NORMALIZED")
 		return RADIANCE_PER_PIXEL_NORMALIZED;
 	else if (type == "RADIANCE_PER_SCREEN_NORMALIZED")
@@ -406,18 +514,36 @@ Film::FilmChannelType Film::String2FilmChannelType(const std::string &type) {
 		return MATERIAL_ID;
 	else if (type == "DIRECT_DIFFUSE")
 		return DIRECT_DIFFUSE;
+	else if (type == "DIRECT_DIFFUSE_REFLECT")
+		return DIRECT_DIFFUSE_REFLECT;
+	else if (type == "DIRECT_DIFFUSE_TRANSMIT")
+		return DIRECT_DIFFUSE_TRANSMIT;
 	else if (type == "DIRECT_GLOSSY")
 		return DIRECT_GLOSSY;
+	else if (type == "DIRECT_GLOSSY_REFLECT")
+		return DIRECT_GLOSSY_REFLECT;
+	else if (type == "DIRECT_GLOSSY_TRANSMIT")
+		return DIRECT_GLOSSY_TRANSMIT;
 	else if (type == "EMISSION")
 		return EMISSION;
 	else if (type == "INDIRECT_DIFFUSE")
 		return INDIRECT_DIFFUSE;
+	else if (type == "INDIRECT_DIFFUSE_REFLECT")
+		return INDIRECT_DIFFUSE_REFLECT;
+	else if (type == "INDIRECT_DIFFUSE_TRANSMIT")
+		return INDIRECT_DIFFUSE_TRANSMIT;
 	else if (type == "INDIRECT_GLOSSY")
 		return INDIRECT_GLOSSY;
+	else if (type == "INDIRECT_GLOSSY_REFLECT")
+		return INDIRECT_GLOSSY_REFLECT;
+	else if (type == "INDIRECT_GLOSSY_TRANSMIT")
+		return INDIRECT_GLOSSY_TRANSMIT;
 	else if (type == "INDIRECT_SPECULAR")
 		return INDIRECT_SPECULAR;
-	else if (type == "INDIRECT_SPECULAR")
-		return INDIRECT_SPECULAR;
+	else if (type == "INDIRECT_SPECULAR_REFLECT")
+		return INDIRECT_SPECULAR_REFLECT;
+	else if (type == "INDIRECT_SPECULAR_TRANSMIT")
+		return INDIRECT_SPECULAR_TRANSMIT;
 	else if (type == "MATERIAL_ID_MASK")
 		return MATERIAL_ID_MASK;
 	else if (type == "DIRECT_SHADOW_MASK")
@@ -456,7 +582,7 @@ Film::FilmChannelType Film::String2FilmChannelType(const std::string &type) {
 		throw runtime_error("Unknown film output type in Film::String2FilmChannelType(): " + type);
 }
 
-const std::string Film::FilmChannelType2String(const Film::FilmChannelType type) {
+const string Film::FilmChannelType2String(const Film::FilmChannelType type) {
 	switch (type) {
 		case Film::RADIANCE_PER_PIXEL_NORMALIZED:
 			return "RADIANCE_PER_PIXEL_NORMALIZED";
@@ -476,16 +602,36 @@ const std::string Film::FilmChannelType2String(const Film::FilmChannelType type)
 			return "MATERIAL_ID";
 		case Film::DIRECT_DIFFUSE:
 			return "DIRECT_DIFFUSE";
+		case Film::DIRECT_DIFFUSE_REFLECT:
+			return "DIRECT_DIFFUSE_REFLECT";
+		case Film::DIRECT_DIFFUSE_TRANSMIT:
+			return "DIRECT_DIFFUSE_TRANSMIT";
 		case Film::DIRECT_GLOSSY:
 			return "DIRECT_GLOSSY";
+		case Film::DIRECT_GLOSSY_REFLECT:
+			return "DIRECT_GLOSSY_REFLECT";
+		case Film::DIRECT_GLOSSY_TRANSMIT:
+			return "DIRECT_GLOSSY_TRANSMIT";
 		case Film::EMISSION:
 			return "EMISSION";
 		case Film::INDIRECT_DIFFUSE:
 			return "INDIRECT_DIFFUSE";
+		case Film::INDIRECT_DIFFUSE_REFLECT:
+			return "INDIRECT_DIFFUSE_REFLECT";
+		case Film::INDIRECT_DIFFUSE_TRANSMIT:
+			return "INDIRECT_DIFFUSE_TRANSMIT";
 		case Film::INDIRECT_GLOSSY:
 			return "INDIRECT_GLOSSY";
+		case Film::INDIRECT_GLOSSY_REFLECT:
+			return "INDIRECT_GLOSSY_REFLECT";
+		case Film::INDIRECT_GLOSSY_TRANSMIT:
+			return "INDIRECT_GLOSSY_TRANSMIT";
 		case Film::INDIRECT_SPECULAR:
 			return "INDIRECT_SPECULAR";
+		case Film::INDIRECT_SPECULAR_REFLECT:
+			return "INDIRECT_SPECULAR_REFLECT";
+		case Film::INDIRECT_SPECULAR_TRANSMIT:
+			return "INDIRECT_SPECULAR_TRANSMIT";
 		case Film::MATERIAL_ID_MASK:
 			return "MATERIAL_ID_MASK";
 		case Film::DIRECT_SHADOW_MASK:

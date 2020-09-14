@@ -25,11 +25,13 @@
 #include <limits>
 
 #include "luxrays/luxrays.h"
+#include "luxrays/utils/ocl.h"
 #include "luxrays/core/color/color.h"
 #include "luxrays/core/geometry/uv.h"
 #include "luxrays/core/namedobject.h"
 #include "luxrays/utils/properties.h"
 #include "luxrays/utils/serializationutils.h"
+#include "luxrays/utils/ocl.h"
 #include "slg/utils/halfserialization.h"
 
 namespace slg {

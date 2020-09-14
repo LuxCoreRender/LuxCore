@@ -91,6 +91,8 @@ typedef struct {
 	unsigned int ktTexIndex;
 	unsigned int exteriorIorTexIndex, interiorIorTexIndex;
 	unsigned int cauchyCTex;
+	unsigned int filmThicknessTexIndex;
+	unsigned int filmIorTexIndex;
 } GlassParam;
 
 typedef struct {
@@ -102,6 +104,8 @@ typedef struct {
     unsigned int krTexIndex;
 	unsigned int ktTexIndex;
 	unsigned int exteriorIorTexIndex, interiorIorTexIndex;
+	unsigned int filmThicknessTexIndex;
+	unsigned int filmIorTexIndex;
 } ArchGlassParam;
 
 typedef struct {
@@ -145,6 +149,8 @@ typedef struct {
 	unsigned int exteriorIorTexIndex, interiorIorTexIndex;
 	unsigned int nuTexIndex;
 	unsigned int nvTexIndex;
+	unsigned int filmThicknessTexIndex;
+	unsigned int filmIorTexIndex;
 } RoughGlassParam;
 
 typedef struct {
@@ -280,6 +286,9 @@ typedef struct {
 	unsigned int anisotropicTexIndex;
 	unsigned int sheenTexIndex;
 	unsigned int sheenTintTexIndex;
+	unsigned int filmAmountTexIndex;
+	unsigned int filmThicknessTexIndex;
+	unsigned int filmIorTexIndex;
 } DisneyParam;
 
 typedef struct {
@@ -337,7 +346,8 @@ typedef struct {
 	BSDFEvent visibility;
 	unsigned int interiorVolumeIndex, exteriorVolumeIndex;
 	float glossiness, avgPassThroughTransparency;
-	int isShadowCatcher, isShadowCatcherOnlyInfiniteLights, isPhotonGIEnabled;
+	int isShadowCatcher, isShadowCatcherOnlyInfiniteLights, isPhotonGIEnabled,
+			isHoldout;
 
 	// The result of calling Material::GetEventTypes()
 	BSDFEvent eventTypes;
@@ -410,7 +420,7 @@ typedef struct {
 #define MATERIAL_SAMPLE_RETURN_BLACK { \
 		const float3 result = BLACK; \
 		EvalStack_PushFloat3(result); \
-		const float3 sampledDir = 0.f; \
+		const float3 sampledDir = ZERO; \
 		EvalStack_PushFloat3(sampledDir); \
 		const BSDFEvent event = NONE; \
 		EvalStack_PushBSDFEvent(event); \

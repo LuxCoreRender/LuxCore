@@ -99,7 +99,6 @@ public:
 	bool HasWork() const { return (tile != nullptr); }
 	void Reset() { tile = nullptr; }
 	const Tile::TileCoord &GetCoord() const { return tile->coord; }
-	u_int GetTileSeed() const;
 
 	// Read-only for every one but Tile/TileRepository classes
 	u_int multipassIndexToRender;
@@ -158,7 +157,7 @@ public:
 	float convergenceTestThreshold, convergenceTestThresholdReduction;
 	u_int convergenceTestWarmUpSamples;
 	VarianceClamping varianceClamping;
-	bool enableMultipassRendering, enableRenderingDonePrint;
+	bool enableMultipassRendering, enableRenderingDonePrint, enableFirstPassClear;
 
 	bool done;
 

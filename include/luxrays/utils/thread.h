@@ -25,33 +25,9 @@
 
 namespace luxrays {
 
-inline bool SetThreadRRPriority(boost::thread *thread, int pri = 0) {
-#if defined (__linux__) || defined (__APPLE__) || defined(__CYGWIN__) || defined(__OpenBSD__) || defined(__FreeBSD__)
-	{
-		const pthread_t tid = (pthread_t)thread->native_handle();
-
-		int policy = SCHED_FIFO;
-		int sysMinPriority = sched_get_priority_min(policy);
-		struct sched_param param;
-		param.sched_priority = sysMinPriority + pri;
-
-		return pthread_setschedparam(tid, policy, &param);
-	}
-#elif defined (WIN32)
-	{
-		const HANDLE tid = (HANDLE)thread->native_handle();
-		if (!SetPriorityClass(tid, HIGH_PRIORITY_CLASS))
-			return false;
-		else
-			return true;
-
-		/*if (!SetThreadPriority(tid, THREAD_PRIORITY_HIGHEST))
-			return false;
-		else
-			return true;*/
-	}
-#endif
-}
+extern size_t GetHardwareThreadCount();
+extern void SetThreadGroupAffinity(const size_t threadIndex);
+extern bool SetThreadRRPriority(boost::thread *thread, int pri = 0);
 
 }
 

@@ -33,7 +33,7 @@ class PathOCLRenderEngine;
 
 class PathOCLOpenCLRenderThread : public PathOCLBaseOCLRenderThread {
 public:
-	PathOCLOpenCLRenderThread(const u_int index, luxrays::OpenCLIntersectionDevice *device,
+	PathOCLOpenCLRenderThread(const u_int index, luxrays::HardwareIntersectionDevice *device,
 			PathOCLRenderEngine *re);
 	virtual ~PathOCLOpenCLRenderThread();
 
@@ -99,7 +99,7 @@ protected:
 	static const luxrays::Properties &GetDefaultProps();
 
 	virtual PathOCLBaseOCLRenderThread *CreateOCLThread(const u_int index,
-			luxrays::OpenCLIntersectionDevice *device);
+			luxrays::HardwareIntersectionDevice *device);
 	virtual PathOCLBaseNativeRenderThread *CreateNativeThread(const u_int index,
 			luxrays::NativeIntersectionDevice *device);
 
@@ -113,6 +113,7 @@ protected:
 
 	u_int GetTotalEyeSPP() const;
 	
+	FilmSampleSplatter *lightSampleSplatter;
 	SamplerSharedData *eyeSamplerSharedData;
 	SamplerSharedData *lightSamplerSharedData;
 

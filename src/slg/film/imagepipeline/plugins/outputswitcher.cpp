@@ -157,10 +157,37 @@ void OutputSwitcherPlugin::Apply(Film &film, const u_int index) {
 			}
 			break;
 		}
+		case Film::DIRECT_DIFFUSE_REFLECT: {
+			for (u_int i = 0; i < pixelCount; ++i) {
+				if (film.HasSamples(hasPN, hasSN, i))
+					film.channel_DIRECT_DIFFUSE_REFLECT->GetWeightedPixel(i, pixels[i].c);
+			}
+			break;
+		}		case Film::DIRECT_DIFFUSE_TRANSMIT: {
+			for (u_int i = 0; i < pixelCount; ++i) {
+				if (film.HasSamples(hasPN, hasSN, i))
+					film.channel_DIRECT_DIFFUSE_TRANSMIT->GetWeightedPixel(i, pixels[i].c);
+			}
+			break;
+		}
 		case Film::DIRECT_GLOSSY: {
 			for (u_int i = 0; i < pixelCount; ++i) {
 				if (film.HasSamples(hasPN, hasSN, i))
 					film.channel_DIRECT_GLOSSY->GetWeightedPixel(i, pixels[i].c);
+			}
+			break;
+		}
+		case Film::DIRECT_GLOSSY_REFLECT: {
+			for (u_int i = 0; i < pixelCount; ++i) {
+				if (film.HasSamples(hasPN, hasSN, i))
+					film.channel_DIRECT_GLOSSY_REFLECT->GetWeightedPixel(i, pixels[i].c);
+			}
+			break;
+		}
+		case Film::DIRECT_GLOSSY_TRANSMIT: {
+			for (u_int i = 0; i < pixelCount; ++i) {
+				if (film.HasSamples(hasPN, hasSN, i))
+					film.channel_DIRECT_GLOSSY_TRANSMIT->GetWeightedPixel(i, pixels[i].c);
 			}
 			break;
 		}
@@ -178,6 +205,20 @@ void OutputSwitcherPlugin::Apply(Film &film, const u_int index) {
 			}
 			break;
 		}
+		case Film::INDIRECT_DIFFUSE_REFLECT: {
+			for (u_int i = 0; i < pixelCount; ++i) {
+				if (film.HasSamples(hasPN, hasSN, i))
+					film.channel_INDIRECT_DIFFUSE_REFLECT->GetWeightedPixel(i, pixels[i].c);
+			}
+			break;
+		}
+		case Film::INDIRECT_DIFFUSE_TRANSMIT: {
+			for (u_int i = 0; i < pixelCount; ++i) {
+				if (film.HasSamples(hasPN, hasSN, i))
+					film.channel_INDIRECT_DIFFUSE_TRANSMIT->GetWeightedPixel(i, pixels[i].c);
+			}
+			break;
+		}
 		case Film::INDIRECT_GLOSSY: {
 			for (u_int i = 0; i < pixelCount; ++i) {
 				if (film.HasSamples(hasPN, hasSN, i))
@@ -185,10 +226,38 @@ void OutputSwitcherPlugin::Apply(Film &film, const u_int index) {
 			}
 			break;
 		}
+		case Film::INDIRECT_GLOSSY_REFLECT: {
+			for (u_int i = 0; i < pixelCount; ++i) {
+				if (film.HasSamples(hasPN, hasSN, i))
+					film.channel_INDIRECT_GLOSSY_REFLECT->GetWeightedPixel(i, pixels[i].c);
+			}
+			break;
+		}
+		case Film::INDIRECT_GLOSSY_TRANSMIT: {
+			for (u_int i = 0; i < pixelCount; ++i) {
+				if (film.HasSamples(hasPN, hasSN, i))
+					film.channel_INDIRECT_GLOSSY_TRANSMIT->GetWeightedPixel(i, pixels[i].c);
+			}
+			break;
+		}
 		case Film::INDIRECT_SPECULAR: {
 			for (u_int i = 0; i < pixelCount; ++i) {
 				if (film.HasSamples(hasPN, hasSN, i))
 					film.channel_INDIRECT_SPECULAR->GetWeightedPixel(i, pixels[i].c);
+			}
+			break;
+		}
+		case Film::INDIRECT_SPECULAR_REFLECT: {
+			for (u_int i = 0; i < pixelCount; ++i) {
+				if (film.HasSamples(hasPN, hasSN, i))
+					film.channel_INDIRECT_SPECULAR_REFLECT->GetWeightedPixel(i, pixels[i].c);
+			}
+			break;
+		}
+		case Film::INDIRECT_SPECULAR_TRANSMIT: {
+			for (u_int i = 0; i < pixelCount; ++i) {
+				if (film.HasSamples(hasPN, hasSN, i))
+					film.channel_INDIRECT_SPECULAR_TRANSMIT->GetWeightedPixel(i, pixels[i].c);
 			}
 			break;
 		}

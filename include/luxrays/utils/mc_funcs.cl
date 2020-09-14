@@ -18,6 +18,79 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+// Code from "An algorithm for computing the 
+ // inverse normal cumulative distribution function"
+ // by Peter J. Acklam
+ // http://home.online.no/~pjacklam/notes/invnorm/index.html
+OPENCL_FORCE_INLINE float normsinvf(float p) {
+	const float A1 = (-3.969683028665376e+01);
+	const float A2 = 2.209460984245205e+02;
+	const float A3 = (-2.759285104469687e+02);
+	const float A4 = 1.383577518672690e+02;
+	const float A5 = (-3.066479806614716e+01);
+	const float A6 = 2.506628277459239e+00;
+
+	const float B1 = (-5.447609879822406e+01);
+	const float B2 = 1.615858368580409e+02;
+	const float B3 = (-1.556989798598866e+02);
+	const float B4 = 6.680131188771972e+01;
+	const float B5 = (-1.328068155288572e+01);
+
+	const float C1 = (-7.784894002430293e-03);
+	const float C2 = (-3.223964580411365e-01);
+	const float C3 = (-2.400758277161838e+00);
+	const float C4 = (-2.549732539343734e+00);
+	const float C5 = 4.374664141464968e+00;
+	const float C6 = 2.938163982698783e+00;
+
+	const float D1 = 7.784695709041462e-03;
+	const float D2 = 3.224671290700398e-01;
+	const float D3 = 2.445134137142996e+00;
+	const float D4 = 3.754408661907416e+00;
+
+	const float P_LOW = 0.02425;
+	/* P_high = 1 - p_low*/
+	const float P_HIGH = 0.97575;
+
+	if ((0 < p )  && (p < P_LOW)) {
+		const float q = sqrt(-2 * log(p));
+		return (((((C1 * q + C2) * q + C3) * q + C4) * q + C5) * q + C6) /
+			((((D1 * q + D2) * q + D3) * q + D4) * q + 1);
+	} else if ((P_LOW <= p) && (p <= P_HIGH)) {
+		const float q = p - 0.5;
+		const float r = q * q;
+		return (((((A1 * r + A2) * r + A3) * r + A4) * r + A5) * r + A6) * q /
+			(((((B1 * r + B2) * r + B3) * r + B4) * r + B5) * r + 1);
+	} else if ((P_HIGH < p) && (p < 1)) {
+                   const float q = sqrt(-2 * log(1 - p));
+                   return -(((((C1 * q + C2) * q + C3) * q + C4) * q + C5) * q + C6) /
+			   ((((D1 * q + D2) * q + D3) * q + D4) * q + 1);
+	} else {
+		return INFINITY;
+	}
+}
+
+OPENCL_FORCE_INLINE float GaussianSampleDisk(float u1) {
+	return clamp(normsinvf(u1), 0.f, 1.f);
+}
+
+OPENCL_FORCE_INLINE float InverseGaussianSampleDisk(float u1) {
+	return clamp(1.f - normsinvf(u1), 0.f, 1.f);
+}
+
+OPENCL_FORCE_INLINE float ExponentialSampleDisk(float u1, int power) {
+	return clamp(-log(u1) / power, 0.f, 1.f);
+}
+
+OPENCL_FORCE_INLINE float InverseExponentialSampleDisk(float u1, int power) {
+	return clamp(1.f + log(u1) / power, 0.f, 1.f);
+}
+
+float TriangularSampleDisk(float u1) {
+	return clamp(u1 <= .5f ? sqrt(u1 * .5f) :
+		1.f - sqrt((1.f - u1) * .5f), 0.f, 1.f);
+}
+
 OPENCL_FORCE_INLINE void ConcentricSampleDisk(const float u0, const float u1, float *dx, float *dy) {
 	float r, theta;
 	// Map uniform random numbers to $[-1,1]^2$
@@ -65,7 +138,7 @@ OPENCL_FORCE_INLINE float3 CosineSampleHemisphere(const float u0, const float u1
 
 	const float z = sqrt(fmax(0.f, 1.f - x * x - y * y));
 
-	return (float3)(x, y, z);
+	return MAKE_FLOAT3(x, y, z);
 }
 
 OPENCL_FORCE_INLINE float3 CosineSampleHemisphereWithPdf(const float u0, const float u1, float *pdfW) {
@@ -76,7 +149,7 @@ OPENCL_FORCE_INLINE float3 CosineSampleHemisphereWithPdf(const float u0, const f
 
 	*pdfW = z * M_1_PI_F;
 
-	return (float3)(x, y, z);
+	return MAKE_FLOAT3(x, y, z);
 }
 
 OPENCL_FORCE_INLINE float3 UniformSampleHemisphere(const float u1, const float u2) {
@@ -86,7 +159,7 @@ OPENCL_FORCE_INLINE float3 UniformSampleHemisphere(const float u1, const float u
 	const float x = r * cos(phi);
 	const float y = r * sin(phi);
 
-	return (float3)(x, y, z);
+	return MAKE_FLOAT3(x, y, z);
 }
 
 OPENCL_FORCE_INLINE float3 UniformSampleSphere(const float u1, const float u2) {
@@ -96,7 +169,7 @@ OPENCL_FORCE_INLINE float3 UniformSampleSphere(const float u1, const float u2) {
 	const float x = r * cos(phi);
 	const float y = r * sin(phi);
 
-	return (float3)(x, y, z);
+	return MAKE_FLOAT3(x, y, z);
 }
 
 OPENCL_FORCE_INLINE float UniformSpherePdf() {
@@ -109,7 +182,7 @@ OPENCL_FORCE_INLINE float3 UniformSampleConeLocal(const float u0, const float u1
 	const float sintheta = sqrt(u0x * (2.f - u0x));
 	const float phi = u1 * 2.f * M_PI_F;
 
-	return (float3)(cos(phi) * sintheta, sin(phi) * sintheta, costheta);
+	return MAKE_FLOAT3(cos(phi) * sintheta, sin(phi) * sintheta, costheta);
 }
 
 OPENCL_FORCE_INLINE float3 UniformSampleCone(const float u0, const float u1, const float costhetamax,
@@ -123,7 +196,7 @@ OPENCL_FORCE_INLINE float3 UniformSampleCone(const float u0, const float u1, con
 	const float ky = sin(phi) * sintheta;
 	const float kz = costheta;
 
-	return (float3)(kx * x.x + ky * y.x + kz * z.x,
+	return MAKE_FLOAT3(kx * x.x + ky * y.x + kz * z.x,
 			kx * x.y + ky * y.y + kz * z.y,
 			kx * x.z + ky * y.z + kz * z.z);
 }
@@ -308,11 +381,11 @@ OPENCL_FORCE_INLINE void Distribution2D_SampleContinuous(__global const float* r
 
 	float pdf1;
 	uint index;
-	(*uv).s1 = Distribution1D_SampleContinuous(marginal, u1, &pdf1, &index);
+	(*uv).y = Distribution1D_SampleContinuous(marginal, u1, &pdf1, &index);
 
 	float pdf0;
 	__global const float* restrict conditional = &distribution2D[2 + marginalSize + index * conditionalSize];
-	(*uv).s0 = Distribution1D_SampleContinuous(conditional, u0, &pdf0, NULL);
+	(*uv).x = Distribution1D_SampleContinuous(conditional, u0, &pdf0, NULL);
 
 	*pdf = pdf0 * pdf1;
 }

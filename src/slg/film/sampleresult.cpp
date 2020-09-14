@@ -27,12 +27,12 @@ using namespace slg;
 // SampleResult
 //------------------------------------------------------------------------------
 
-void SampleResult::Init(const u_int channelTypes, const u_int radianceGroupCount) {
-	channels = channelTypes;
+void SampleResult::Init(const Film::FilmChannels *chnls, const u_int radianceGroupCount) {
+	channels = chnls;
 
-	if ((channels & Film::RADIANCE_PER_PIXEL_NORMALIZED) && (channels & Film::RADIANCE_PER_SCREEN_NORMALIZED))
+	if (HasChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED) && HasChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED))
 		throw runtime_error("RADIANCE_PER_PIXEL_NORMALIZED and RADIANCE_PER_SCREEN_NORMALIZED, both used in SampleResult");
-	else if ((channels & Film::RADIANCE_PER_PIXEL_NORMALIZED) || (channels & Film::RADIANCE_PER_SCREEN_NORMALIZED))
+	else if (HasChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED) || HasChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED))
 		radiance.Resize(radianceGroupCount);
 	else
 		radiance.Resize(0);
@@ -66,12 +66,18 @@ void SampleResult::AddEmission(const u_int lightID, const Spectrum &pathThroughp
 	else {
 		indirectShadowMask = 0.f;
 
-		if (firstPathVertexEvent & DIFFUSE)
-			indirectDiffuse += r;
-		else if (firstPathVertexEvent & GLOSSY)
-			indirectGlossy += r;
-		else if (firstPathVertexEvent & SPECULAR)
-			indirectSpecular += r;
+		if ((firstPathVertexEvent & (DIFFUSE | REFLECT)) == (DIFFUSE | REFLECT))
+			indirectDiffuseReflect += r;
+		else if ((firstPathVertexEvent & (DIFFUSE | TRANSMIT)) == (DIFFUSE | TRANSMIT))
+			indirectDiffuseTransmit += r;
+		else if ((firstPathVertexEvent & (GLOSSY | REFLECT)) == (GLOSSY | REFLECT))
+			indirectGlossyReflect += r;
+		else if ((firstPathVertexEvent & (GLOSSY | TRANSMIT)) == (GLOSSY | TRANSMIT))
+			indirectGlossyTransmit += r;
+		else if ((firstPathVertexEvent & (SPECULAR | REFLECT)) == (SPECULAR | REFLECT))
+			indirectSpecularReflect += r;
+		else if ((firstPathVertexEvent & (SPECULAR | TRANSMIT)) == (SPECULAR | TRANSMIT))
+			indirectSpecularTransmit += r;
 	}
 }
 
@@ -84,28 +90,33 @@ void SampleResult::AddDirectLight(const u_int lightID, const BSDFEvent bsdfEvent
 		// directShadowMask is supposed to be initialized to 1.0
 		directShadowMask = Max(0.f, directShadowMask - lightScale);
 
-		if (bsdfEvent & DIFFUSE)
-			directDiffuse += r;
-		else
-			directGlossy += r;
+		if ((bsdfEvent & (DIFFUSE | REFLECT)) == (DIFFUSE | REFLECT))
+			directDiffuseReflect += r;
+		else if ((bsdfEvent & (DIFFUSE | TRANSMIT)) == (DIFFUSE | TRANSMIT))
+			directDiffuseTransmit += r;
+		else if ((bsdfEvent & (GLOSSY | REFLECT)) == (GLOSSY | REFLECT))
+			directGlossyReflect += r;
+		else if ((bsdfEvent & (GLOSSY | TRANSMIT)) == (GLOSSY | TRANSMIT))
+			directGlossyTransmit += r;
 	} else {
 		// indirectShadowMask is supposed to be initialized to 1.0
 		indirectShadowMask = Max(0.f, indirectShadowMask - lightScale);
 
-		if (firstPathVertexEvent & DIFFUSE)
-			indirectDiffuse += r;
-		else if (firstPathVertexEvent & GLOSSY)
-			indirectGlossy += r;
-		else if (firstPathVertexEvent & SPECULAR)
-			indirectSpecular += r;
+		if ((firstPathVertexEvent & (DIFFUSE | REFLECT)) == (DIFFUSE | REFLECT))
+			indirectDiffuseReflect += r;
+		else if ((firstPathVertexEvent & (DIFFUSE | TRANSMIT)) == (DIFFUSE | TRANSMIT))
+			indirectDiffuseTransmit += r;
+		else if ((firstPathVertexEvent & (GLOSSY | REFLECT)) == (GLOSSY | REFLECT))
+			indirectGlossyReflect += r;
+		else if ((firstPathVertexEvent & (GLOSSY | TRANSMIT)) == (GLOSSY | TRANSMIT))
+			indirectGlossyTransmit += r;
+		else if ((firstPathVertexEvent & (SPECULAR | REFLECT)) == (SPECULAR | REFLECT))
+			indirectSpecularReflect += r;
+		else if ((firstPathVertexEvent & (SPECULAR | TRANSMIT)) == (SPECULAR | TRANSMIT))
+			indirectSpecularTransmit += r;
 
 		irradiance += irradiancePathThroughput * incomingRadiance;
 	}
-}
-
-void SampleResult::ClampRadiance(const float minRadiance, const float maxRadiance) {
-	for (u_int i = 0; i < radiance.Size(); ++i)
-		radiance[i] = radiance[i].ScaledClamp(minRadiance, maxRadiance);
 }
 
 bool SampleResult::IsValid() const {

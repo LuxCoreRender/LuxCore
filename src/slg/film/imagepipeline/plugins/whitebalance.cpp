@@ -83,8 +83,12 @@ void WhiteBalance::Apply(Film &film, const u_int index) {
 }
 
 //------------------------------------------------------------------------------
-// OpenCL version
+// HardwareDevice version
 //------------------------------------------------------------------------------
+
+void WhiteBalance::AddHWChannelsUsed(unordered_set<Film::FilmChannelType, hash<int> > &hwChannelsUsed) const {
+	hwChannelsUsed.insert(Film::IMAGEPIPELINE);
+}
 
 void WhiteBalance::ApplyHW(Film &film, const u_int index) {
 	HardwareDevice *hardwareDevice = film.hardwareDevice;
@@ -93,9 +97,13 @@ void WhiteBalance::ApplyHW(Film &film, const u_int index) {
 		// Compile sources
 		const double tStart = WallClockTime();
 
+		vector<string> opts;
+		opts.push_back("-D LUXRAYS_OPENCL_KERNEL");
+		opts.push_back("-D SLG_OPENCL_KERNEL");
+
 		HardwareDeviceProgram *program = nullptr;
 		hardwareDevice->CompileProgram(&program,
-				"-D LUXRAYS_OPENCL_KERNEL -D SLG_OPENCL_KERNEL",
+				opts,
 				slg::ocl::KernelSource_plugin_whitebalance_funcs,
 				"WhiteBalance");
 

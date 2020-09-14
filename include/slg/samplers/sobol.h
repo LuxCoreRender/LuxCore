@@ -43,8 +43,7 @@ public:
 
 	virtual void Reset();
 
-	void GetNewPixelIndex(u_int &index, u_int &seed);
-
+	void GetNewBucket(const u_int bucketCount, u_int *bucketIndex, u_int *seed);
 	u_int GetNewPixelPass(const u_int pixelIndex = 0);
 	
 	static SamplerSharedData *FromProperties(const luxrays::Properties &cfg,
@@ -55,8 +54,7 @@ public:
 	u_int filmRegionPixelCount;
 
 private:
-	luxrays::SpinLock spinLock;
-	u_int pixelIndex;
+	u_int bucketIndex;
 
 	// Holds the current pass for each pixel when using adaptive sampling
 	std::vector<u_int> passPerPixel;
@@ -69,15 +67,13 @@ private:
 // This sampler is based on Blender Cycles Sobol implementation.
 //------------------------------------------------------------------------------
 
-#define SOBOL_STARTOFFSET 32
-#define SOBOL_THREAD_WORK_SIZE 4096
-
 class SobolSampler : public Sampler {
 public:
 	SobolSampler(luxrays::RandomGenerator *rnd, Film *flm,
 			const FilmSampleSplatter *flmSplatter, const bool imgSamplesEnable,
 			const float adaptiveStr, const float adaptiveUserImpWeight,
-			SobolSamplerSharedData *samplerSharedData);
+			const u_int bucketSize, const u_int tileSize, const u_int superSampling,
+			const u_int overlapping, SobolSamplerSharedData *samplerSharedData);
 	virtual ~SobolSampler();
 
 	virtual SamplerType GetType() const { return GetObjectType(); }
@@ -99,7 +95,7 @@ public:
 	static Sampler *FromProperties(const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen,
 		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData);
 	static slg::ocl::Sampler *FromPropertiesOCL(const luxrays::Properties &cfg);
-	static Film::FilmChannelType GetRequiredChannels(const luxrays::Properties &cfg);
+	static void AddRequiredChannels(Film::FilmChannels &channels, const luxrays::Properties &cfg);
 
 private:
 	void InitNewSample();
@@ -110,8 +106,9 @@ private:
 	SobolSamplerSharedData *sharedData;
 	SobolSequence sobolSequence;
 	float adaptiveStrength, adaptiveUserImportanceWeight;
+	u_int bucketSize, tileSize, superSampling, overlapping;
 
-	u_int pixelIndexBase, pixelIndexOffset, pass;
+	u_int bucketIndex, pixelOffset, passOffset, pass;
 	luxrays::TauswortheRandomGenerator rngGenerator;
 
 	float sample0, sample1;

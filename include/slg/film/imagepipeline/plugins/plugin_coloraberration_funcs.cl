@@ -46,7 +46,7 @@ __kernel void ColorAberrationPlugin_Apply(
 		const uint filmWidth, const uint filmHeight,
 		__global float *channel_IMAGEPIPELINE,
 		__global float *tmpBuffer,
-		const float amount) {
+		const float amountX, const float amountY) {
 	const size_t gid = get_global_id(0);
 	if (gid >= filmWidth * filmHeight)
 		return;
@@ -61,10 +61,10 @@ __kernel void ColorAberrationPlugin_Apply(
 		const float yOffset = ny - .5f;
 		const float tOffset = sqrt(xOffset * xOffset + yOffset * yOffset);
 
-		const float rbX = (.5f + xOffset * (1.f + tOffset * amount)) * filmWidth;
-		const float rbY = (.5f + yOffset * (1.f + tOffset * amount)) * filmHeight;
-		const float gX =  (.5f + xOffset * (1.f - tOffset * amount)) * filmWidth;
-		const float gY =  (.5f + yOffset * (1.f - tOffset * amount)) * filmHeight;
+		const float rbX = (.5f + xOffset * (1.f + tOffset * amountX)) * filmWidth;
+		const float rbY = (.5f + yOffset * (1.f + tOffset * amountY)) * filmHeight;
+		const float gX =  (.5f + xOffset * (1.f - tOffset * amountX)) * filmWidth;
+		const float gY =  (.5f + yOffset * (1.f - tOffset * amountY)) * filmHeight;
 
 		const float3 redblue = MAKE_FLOAT3(1.f, 0.f, 1.f);
 		const float3 green = MAKE_FLOAT3(0.f, 1.f, 0.f);

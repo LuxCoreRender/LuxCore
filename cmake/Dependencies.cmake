@@ -75,6 +75,8 @@ if (NOT Boost_FOUND)
         else()
                 set(Boost_USE_STATIC_LIBS ON)
         endif()
+        # The following line is necessary with CMake 3.18.0 to find static libs on Windows
+        unset(Boost_LIB_PREFIX)
 		message(STATUS "Re-trying with link static = ${Boost_USE_STATIC_LIBS}")
         find_package(Boost ${Boost_MINIMUM_VERSION} COMPONENTS ${LUXRAYS_BOOST_COMPONENTS})
 endif()
@@ -96,37 +98,6 @@ find_package(OpenGL)
 
 if (OPENGL_FOUND)
 	include_directories(BEFORE SYSTEM ${OPENGL_INCLUDE_PATH})
-endif ()
-
-# OpenCL
-if (NOT LUXRAYS_DISABLE_OPENCL)
-	set(OPENCL_ROOT                "${OPENCL_SEARCH_PATH}")
-	find_package(OpenCL)
-
-	if (OPENCL_FOUND)
-		include_directories(BEFORE SYSTEM ${OPENCL_INCLUDE_DIR} ${OPENCL_C_INCLUDE_DIR})
-		ADD_DEFINITIONS(-DCL_TARGET_OPENCL_VERSION=120)
-	endif ()
-endif ()
-
-# CUDA
-if (LUXRAYS_ENABLE_CUDA)
-	find_package(CUDA)
-
-	if (CUDA_FOUND)
-		include_directories(BEFORE SYSTEM ${CUDA_INCLUDE_DIRS})
-
-		# Construct path to CUDA driver API lib (not provided by FindCUDA)
-		get_filename_component(CUDADRIVER_LIBRARIES_DIR ${CUDA_cudart_static_LIBRARY} DIRECTORY)
-		find_library(CUDADRIVER_LIBRARIES NAMES cuda HINTS ${CUDADRIVER_LIBRARIES_DIR})
-
-		# Construct path to NVRTC API lib (not provided by FindCUDA)
-		get_filename_component(CUDANVRTC_LIBRARIES_DIR ${CUDA_cudart_static_LIBRARY} DIRECTORY)
-		find_library(CUDANVRTC_LIBRARIES NAMES nvrtc HINTS ${CUDANVRTC_LIBRARIES_DIR})
-		set(CUDA_ALL_LIBRARIES ${CUDADRIVER_LIBRARIES} ${CUDANVRTC_LIBRARIES})
-	endif ()
-else()
-	set(CUDA_ALL_LIBRARIES "")
 endif ()
 
 # Intel Embree

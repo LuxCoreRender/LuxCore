@@ -393,7 +393,13 @@ void FileSaverRenderEngine::ExportSceneGLTF(const RenderConfig *renderConfig,
 	//SLG_LOG("glTF: ");
 	//SLG_LOG(endl << std::setw(4) << j);
 	
-	BOOST_OFSTREAM gltfFile(fileName.c_str(), std::ofstream::out | std::ofstream::binary | std::ofstream::trunc);
+	// The use of boost::filesystem::path is required for UNICODE support: fileName
+	// is supposed to be UTF-8 encoded.
+	boost::filesystem::ofstream gltfFile(boost::filesystem::path(fileName),
+			boost::filesystem::ofstream::out |
+			boost::filesystem::ofstream::binary |
+			boost::filesystem::ofstream::trunc);
+
 	if(!gltfFile.is_open())
 		throw std::runtime_error("Unable to open: " + fileName);
 
@@ -432,15 +438,7 @@ void FileSaverRenderEngine::ExportScene(const RenderConfig *renderConfig,
 		// Remove FileSaver Option
 		cfg.Delete("filesaver.directory");
 
-		BOOST_OFSTREAM cfgFile(cfgFileName.c_str(), std::ofstream::out | std::ofstream::binary | std::ofstream::trunc);
-		if(!cfgFile.is_open())
-			throw std::runtime_error("Unable to open: " + cfgFileName);
-
-		cfgFile << cfg.ToString();
-		if(!cfgFile.good())
-			throw std::runtime_error("Error while writing file: " + cfgFileName);
-
-		cfgFile.close();
+		cfg.Save(cfgFileName);
 	}
 
 	//--------------------------------------------------------------------------
@@ -453,11 +451,7 @@ void FileSaverRenderEngine::ExportScene(const RenderConfig *renderConfig,
 		Properties props = renderConfig->scene->ToProperties(false);
 
 		// Write the scene file
-		BOOST_OFSTREAM sceneFile(sceneFileName.c_str(), std::ofstream::out | std::ofstream::binary | std::ofstream::trunc);
-		if(!sceneFile.is_open())
-			throw std::runtime_error("Unable to open: " + sceneFileName);
-		sceneFile << props.ToString();
-		sceneFile.close();
+		props.Save(sceneFileName);
 	}
 
 	//--------------------------------------------------------------------------

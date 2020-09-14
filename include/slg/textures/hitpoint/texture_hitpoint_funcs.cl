@@ -89,7 +89,7 @@ OPENCL_FORCE_INLINE float3 HitPointAlphaTexture_ConstEvaluateSpectrum(__global c
 		const uint dataIndex
 		TEXTURES_PARAM_DECL) {
 	const float alpha = HitPoint_GetAlpha(hitPoint, dataIndex EXTMESH_PARAM);
-	return (float3)(alpha, alpha, alpha);
+	return MAKE_FLOAT3(alpha, alpha, alpha);
 }
 
 OPENCL_FORCE_NOT_INLINE void HitPointAlphaTexture_EvalOp(
@@ -144,11 +144,11 @@ OPENCL_FORCE_INLINE float HitPointGreyTexture_ConstEvaluateFloat(__global const 
 
 	switch (channel) {
 		case 0:
-			return col.s0;
+			return col.x;
 		case 1:
-			return col.s1;
+			return col.y;
 		case 2:
-			return col.s2;
+			return col.z;
 		default:
 			return Spectrum_Y(col);
 	}
@@ -162,20 +162,20 @@ OPENCL_FORCE_INLINE float3 HitPointGreyTexture_ConstEvaluateSpectrum(__global co
 	float v;
 	switch (channel) {
 		case 0:
-			v = col.s0;
+			v = col.x;
 			break;
 		case 1:
-			v = col.s1;
+			v = col.y;
 			break;
 		case 2:
-			v = col.s2;
+			v = col.z;
 			break;
 		default:
 			v = Spectrum_Y(col);
 			break;
 	}
 
-	return (float3)(v, v, v);
+	return TO_FLOAT3(v);
 }
 
 OPENCL_FORCE_NOT_INLINE void HitPointGreyTexture_EvalOp(
@@ -233,7 +233,7 @@ OPENCL_FORCE_INLINE float3 HitPointVertexAOVTexture_ConstEvaluateSpectrum(__glob
 		const uint dataIndex
 		TEXTURES_PARAM_DECL) {
 	const float v = HitPoint_GetVertexAOV(hitPoint, dataIndex EXTMESH_PARAM);
-	return (float3)(v, v, v);
+	return TO_FLOAT3(v);
 }
 
 OPENCL_FORCE_NOT_INLINE void HitPointVertexAOVTexture_EvalOp(
@@ -291,7 +291,7 @@ OPENCL_FORCE_INLINE float3 HitPointTriangleAOVTexture_ConstEvaluateSpectrum(__gl
 		const uint dataIndex
 		TEXTURES_PARAM_DECL) {
 	const float t = HitPoint_GetTriAOV(hitPoint, dataIndex EXTMESH_PARAM);
-	return (float3)(t, t, t);
+	return MAKE_FLOAT3(t, t, t);
 }
 
 OPENCL_FORCE_NOT_INLINE void HitPointTriangleAOVTexture_EvalOp(
@@ -345,7 +345,7 @@ OPENCL_FORCE_INLINE float ShadingNormalTexture_ConstEvaluateFloat(__global const
 }
 
 OPENCL_FORCE_INLINE float3 ShadingNormalTexture_ConstEvaluateSpectrum(__global const HitPoint *hitPoint) {
-	return (float3)(hitPoint->shadeN.x, hitPoint->shadeN.y, hitPoint->shadeN.z);
+	return MAKE_FLOAT3(hitPoint->shadeN.x, hitPoint->shadeN.y, hitPoint->shadeN.z);
 }
 
 OPENCL_FORCE_NOT_INLINE void ShadingNormalTexture_EvalOp(

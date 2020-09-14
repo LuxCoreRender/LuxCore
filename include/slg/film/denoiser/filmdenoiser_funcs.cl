@@ -47,41 +47,41 @@ OPENCL_FORCE_INLINE void SamplesAccumulator_AddSampleAtomic(
 	SamplesAccumulator_AtomicAdd(filmDenoiserMeanImage,
 			filmWidth, filmHeight, 3,
 			line, column, 0,
-			weight * sample.s0);
+			weight * sample.x);
 	SamplesAccumulator_AtomicAdd(filmDenoiserMeanImage,
 			filmWidth, filmHeight, 3,
 			line, column, 1,
-			weight * sample.s1);
+			weight * sample.y);
 	SamplesAccumulator_AtomicAdd(filmDenoiserMeanImage,
 			filmWidth, filmHeight, 3,
 			line, column, 2,
-			weight * sample.s2);
+			weight * sample.z);
 
 	// Covariance
 	SamplesAccumulator_AtomicAdd(filmDenoiserCovarImage,
 			filmWidth, filmHeight, 6,
 			line, column, 0,
-			weight * sample.s0 * sample.s0);
+			weight * sample.x * sample.x);
 	SamplesAccumulator_AtomicAdd(filmDenoiserCovarImage,
 			filmWidth, filmHeight, 6,
 			line, column, 1,
-			weight * sample.s1 * sample.s1);
+			weight * sample.y * sample.y);
 	SamplesAccumulator_AtomicAdd(filmDenoiserCovarImage,
 			filmWidth, filmHeight, 6,
 			line, column, 2,
-			weight * sample.s2 * sample.s2);
+			weight * sample.z * sample.z);
 	SamplesAccumulator_AtomicAdd(filmDenoiserCovarImage,
 			filmWidth, filmHeight, 6,
 			line, column, 3,
-			weight * sample.s1 * sample.s2);
+			weight * sample.y * sample.z);
 	SamplesAccumulator_AtomicAdd(filmDenoiserCovarImage,
 			filmWidth, filmHeight, 6,
 			line, column, 4,
-			weight * sample.s0 * sample.s2);
+			weight * sample.x * sample.z);
 	SamplesAccumulator_AtomicAdd(filmDenoiserCovarImage,
 			filmWidth, filmHeight, 6,
 			line, column, 5,
-			weight * sample.s0 * sample.s1);
+			weight * sample.x * sample.y);
 
 	int floorBinIndex;
 	int ceilBinIndex;
@@ -90,7 +90,7 @@ OPENCL_FORCE_INLINE void SamplesAccumulator_AddSampleAtomic(
 	float ceilBinWeight;
 
 	for (int channelIndex = 0; channelIndex < 3; ++channelIndex) { // fill histogram; code refactored from Ray Histogram Fusion PBRT code
-		float value = (channelIndex == 0) ? sample.s0 : ((channelIndex == 1) ? sample.s1 : sample.s2);
+		float value = (channelIndex == 0) ? sample.x : ((channelIndex == 1) ? sample.y : sample.z);
 		value = (value > 0 ? value : 0);
 		if (filmDenoiserGamma > 1)
 			value = pow(value, 1.f / filmDenoiserGamma); // exponential scaling

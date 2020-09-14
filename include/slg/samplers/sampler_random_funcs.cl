@@ -54,8 +54,9 @@ OPENCL_FORCE_INLINE void RandomSampler_SplatSample(
 			FILM_PARAM);
 }
 
-OPENCL_FORCE_INLINE uint RandomSamplerSharedData_GetNewPixelBucketIndex(__global RandomSamplerSharedData *samplerSharedData) {
-	return atomic_inc(&samplerSharedData->pixelBucketIndex);
+OPENCL_FORCE_INLINE void RandomSamplerSharedData_GetNewBucket(__global RandomSamplerSharedData *samplerSharedData,
+		const uint bucketCount, uint *newBucketIndex) {
+	*newBucketIndex = atomic_inc(&samplerSharedData->bucketIndex) % bucketCount;
 }
 
 OPENCL_FORCE_INLINE void RandomSampler_InitNewSample(__constant const GPUTaskConfiguration* restrict taskConfig,
@@ -66,48 +67,66 @@ OPENCL_FORCE_INLINE void RandomSampler_InitNewSample(__constant const GPUTaskCon
 		const uint filmSubRegion2, const uint filmSubRegion3
 		SAMPLER_PARAM_DECL) {
 	const size_t gid = get_global_id(0);
+	__constant const Sampler *sampler = &taskConfig->sampler;
 	__global RandomSamplerSharedData *samplerSharedData = (__global RandomSamplerSharedData *)samplerSharedDataBuff;
 	__global RandomSample *samples = (__global RandomSample *)samplesBuff;
 	__global RandomSample *sample = &samples[gid];
 	__global float *samplesData = &samplesDataBuff[gid * RANDOMSAMPLER_TOTAL_U_SIZE];
 
-	const uint filmRegionPixelCount = (filmSubRegion1 - filmSubRegion0 + 1) * (filmSubRegion3 - filmSubRegion2 + 1);
+	const uint bucketSize = sampler->sobol.bucketSize;
+	const uint tileSize = sampler->sobol.tileSize;
+	const uint superSampling = sampler->sobol.superSampling;
+	const uint overlapping = sampler->sobol.overlapping;
+	
+	const uint subRegionWidth = filmSubRegion1 - filmSubRegion0 + 1;
+	const uint subRegionHeight = filmSubRegion3 - filmSubRegion2 + 1;
 
-	// Update pixelIndexOffset
+	const uint tiletWidthCount = (subRegionWidth + tileSize - 1) / tileSize;
+	const uint tileHeightCount = (subRegionHeight + tileSize - 1) / tileSize;
 
-	uint pixelIndexBase  = sample->pixelIndexBase;
-	uint pixelIndexOffset = sample->pixelIndexOffset;
-	// pixelIndexRandomStart is used to jitter the order of the pixel rendering
-	uint pixelIndexRandomStart = sample->pixelIndexRandomStart;
+	const uint bucketCount = overlapping * (tiletWidthCount * tileSize * tileHeightCount * tileSize + bucketSize - 1) / bucketSize;
+
+	// Pick the pixel to render
+
+	uint bucketIndex = sample->bucketIndex;
+	uint pixelOffset = sample->pixelOffset;
+	uint passOffset = sample->passOffset;
 
 	for (;;) {
-		pixelIndexOffset++;
-		if (pixelIndexOffset >= RANDOM_OCL_WORK_SIZE) {
-			// Ask for a new base
+		passOffset++;
+		if (passOffset >= superSampling) {
+			pixelOffset++;
+			passOffset = 0;
 
-			// Transform the bucket index in a pixel index
-			pixelIndexBase = (RandomSamplerSharedData_GetNewPixelBucketIndex(samplerSharedData) %
-					((filmRegionPixelCount + RANDOM_OCL_WORK_SIZE - 1) / RANDOM_OCL_WORK_SIZE)) * RANDOM_OCL_WORK_SIZE;
-			sample->pixelIndexBase = pixelIndexBase;
+			if (pixelOffset >= bucketSize) {
+				// Ask for a new bucket
+				RandomSamplerSharedData_GetNewBucket(samplerSharedData, bucketCount,
+						&bucketIndex);
 
-			pixelIndexOffset = 0;
-
-			pixelIndexRandomStart = Floor2UInt(Rnd_FloatValue(seed) * RANDOM_OCL_WORK_SIZE);
-			sample->pixelIndexRandomStart = pixelIndexRandomStart;
+				sample->bucketIndex = bucketIndex;
+				pixelOffset = 0;
+				passOffset = 0;
+			}
 		}
 
-		const uint pixelIndex = pixelIndexBase + (pixelIndexOffset + pixelIndexRandomStart) % RANDOM_OCL_WORK_SIZE;
-		if (pixelIndex >= filmRegionPixelCount) {
+		// Transform the bucket index in a pixel coordinate
+
+		const uint pixelBucketIndex = (bucketIndex / overlapping) * bucketSize + pixelOffset;
+		const uint mortonCurveOffset = pixelBucketIndex % (tileSize * tileSize);
+		const uint pixelTileIndex = pixelBucketIndex / (tileSize * tileSize);
+
+		const uint subRegionPixelX = (pixelTileIndex % tiletWidthCount) * tileSize + DecodeMorton2X(mortonCurveOffset);
+		const uint subRegionPixelY = (pixelTileIndex / tiletWidthCount) * tileSize + DecodeMorton2Y(mortonCurveOffset);
+		if ((subRegionPixelX >= subRegionWidth) || (subRegionPixelY >= subRegionHeight)) {
 			// Skip the pixels out of the film sub region
 			continue;
 		}
-		
-		const uint subRegionWidth = filmSubRegion1 - filmSubRegion0 + 1;
-		const uint pixelX = filmSubRegion0 + (pixelIndex % subRegionWidth);
-		const uint pixelY = filmSubRegion2 + (pixelIndex / subRegionWidth);
+
+		const uint pixelX = filmSubRegion0 + subRegionPixelX;
+		const uint pixelY = filmSubRegion2 + subRegionPixelY;
 
 		if (filmNoise) {
-			const float adaptiveStrength = samplerSharedData->adaptiveStrength;
+			const float adaptiveStrength = sampler->sobol.adaptiveStrength;
 
 			if (adaptiveStrength > 0.f) {
 				// Pixels are sampled in accordance with how far from convergence they are
@@ -122,7 +141,7 @@ OPENCL_FORCE_INLINE void RandomSampler_InitNewSample(__constant const GPUTaskCon
 					if (isinf(noise))
 						threshold = userImportance;
 					else
-						threshold = (userImportance > 0.f) ? Lerp(samplerSharedData->adaptiveUserImportanceWeight, noise, userImportance) : 0.f;
+						threshold = (userImportance > 0.f) ? Lerp(sampler->sobol.adaptiveUserImportanceWeight, noise, userImportance) : 0.f;
 				} else
 					threshold = noise;
 
@@ -142,9 +161,10 @@ OPENCL_FORCE_INLINE void RandomSampler_InitNewSample(__constant const GPUTaskCon
 		samplesData[IDX_SCREEN_Y] = pixelY + Rnd_FloatValue(seed);
 		break;
 	}
-
-	// Save the new value
-	sample->pixelIndexOffset = pixelIndexOffset;
+	
+	// Save the new values
+	sample->pixelOffset = pixelOffset;
+	sample->passOffset = passOffset;
 }
 
 OPENCL_FORCE_INLINE void RandomSampler_NextSample(
@@ -172,16 +192,13 @@ OPENCL_FORCE_INLINE bool RandomSampler_Init(
 		const uint filmSubRegion2, const uint filmSubRegion3
 		SAMPLER_PARAM_DECL) {
 	const size_t gid = get_global_id(0);
-	__global RandomSamplerSharedData *samplerSharedData = (__global RandomSamplerSharedData *)samplerSharedDataBuff;
+	__constant const Sampler *sampler = &taskConfig->sampler;
 	__global RandomSample *samples = (__global RandomSample *)samplesBuff;
 	__global RandomSample *sample = &samples[gid];
 
-	if (gid == 0) {
-		__global RandomSamplerSharedData *samplerSharedData = (__global RandomSamplerSharedData *)samplerSharedDataBuff;
-
-		samplerSharedData->pixelBucketIndex = 0;
-	}
-	sample->pixelIndexOffset = RANDOM_OCL_WORK_SIZE;
+	const uint bucketSize = sampler->random.bucketSize;
+	sample->pixelOffset = bucketSize * bucketSize;
+	sample->passOffset = sampler->sobol.superSampling;
 
 	RandomSampler_NextSample(taskConfig,
 			filmNoise,

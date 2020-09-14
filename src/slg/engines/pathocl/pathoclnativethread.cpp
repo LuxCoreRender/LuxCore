@@ -23,6 +23,7 @@
 #include "luxrays/core/geometry/transform.h"
 #include "luxrays/core/randomgen.h"
 #include "luxrays/utils/ocl.h"
+#include "luxrays/utils/thread.h"
 #include "luxrays/devices/ocldevice.h"
 #include "luxrays/kernels/kernels.h"
 
@@ -30,6 +31,10 @@
 #include "slg/kernels/kernels.h"
 #include "slg/renderconfig.h"
 #include "slg/engines/pathocl/pathocl.h"
+
+#if defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(WIN64)
+#include <Windows.h>
+#endif
 
 using namespace std;
 using namespace luxrays;
@@ -90,6 +95,10 @@ void PathOCLNativeRenderThread::RenderThreadImpl() {
 
 	PathOCLRenderEngine *engine = (PathOCLRenderEngine *)renderEngine;
 	const PathTracer &pathTracer = engine->pathTracer;
+
+	// This is really used only by Windows for 64+ threads support
+	SetThreadGroupAffinity(threadIndex);
+
 	// (engine->seedBase + 1) seed is used for sharedRndGen
 	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + 1 + threadIndex);
 
@@ -112,9 +121,10 @@ void PathOCLNativeRenderThread::RenderThreadImpl() {
 		props <<
 			Property("sampler.type")("METROPOLIS") <<
 			// Disable image plane meaning for samples 0 and 1
-			Property("sampler.imagesamples.enable")(false);
+			Property("sampler.imagesamples.enable")(false) <<
+			Property("sampler.metropolis.addonlycaustics")(true);
 
-		lightSampler = Sampler::FromProperties(props, rndGen, film, nullptr,
+		lightSampler = Sampler::FromProperties(props, rndGen, film, engine->lightSampleSplatter,
 				engine->lightSamplerSharedData);
 		lightSampler->SetThreadIndex(threadIndex);
 		lightSampler->RequestSamples(SCREEN_NORMALIZED_ONLY, pathTracer.lightSampleSize);

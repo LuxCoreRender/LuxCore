@@ -41,7 +41,8 @@ public:
 		HARLEQUIN,
 		SIMPLIFY,
 		ISLANDAOV,
-		RANDOMTRIANGLEAOV
+		RANDOMTRIANGLEAOV,
+		EDGEDETECTORAOV
 	} ShapeType;
 
 	Shape() : refined(false) { }

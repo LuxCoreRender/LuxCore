@@ -54,11 +54,21 @@ Film::Film() : filmDenoiser(this) {
 	channel_SHADING_NORMAL = nullptr;
 	channel_MATERIAL_ID = nullptr;
 	channel_DIRECT_DIFFUSE = nullptr;
+	channel_DIRECT_DIFFUSE_REFLECT = nullptr;
+	channel_DIRECT_DIFFUSE_TRANSMIT = nullptr;
 	channel_DIRECT_GLOSSY = nullptr;
+	channel_DIRECT_GLOSSY_REFLECT = nullptr;
+	channel_DIRECT_GLOSSY_TRANSMIT = nullptr;
 	channel_EMISSION = nullptr;
 	channel_INDIRECT_DIFFUSE = nullptr;
+	channel_INDIRECT_DIFFUSE_REFLECT = nullptr;
+	channel_INDIRECT_DIFFUSE_TRANSMIT = nullptr;
 	channel_INDIRECT_GLOSSY = nullptr;
+	channel_INDIRECT_GLOSSY_REFLECT = nullptr;
+	channel_INDIRECT_GLOSSY_TRANSMIT = nullptr;
 	channel_INDIRECT_SPECULAR = nullptr;
+	channel_INDIRECT_SPECULAR_REFLECT = nullptr;
+	channel_INDIRECT_SPECULAR_TRANSMIT = nullptr;
 	channel_DIRECT_SHADOW_MASK = nullptr;
 	channel_INDIRECT_SHADOW_MASK = nullptr;
 	channel_UV = nullptr;
@@ -77,6 +87,8 @@ Film::Film() : filmDenoiser(this) {
 	noiseEstimation = nullptr;
 	haltTime = 0.0;
 	haltSPP = 0;
+	haltSPP_PixelNormalized = 0;
+	haltSPP_ScreenNormalized = 0;
 	haltNoiseThreshold = 0.f;
 
 	isAsyncImagePipelineRunning = false;
@@ -114,11 +126,21 @@ Film::Film(const u_int w, const u_int h, const u_int *sr) : filmDenoiser(this) {
 	channel_SHADING_NORMAL = nullptr;
 	channel_MATERIAL_ID = nullptr;
 	channel_DIRECT_DIFFUSE = nullptr;
+	channel_DIRECT_DIFFUSE_REFLECT = nullptr;
+	channel_DIRECT_DIFFUSE_TRANSMIT = nullptr;
 	channel_DIRECT_GLOSSY = nullptr;
+	channel_DIRECT_GLOSSY_REFLECT = nullptr;
+	channel_DIRECT_GLOSSY_TRANSMIT = nullptr;
 	channel_EMISSION = nullptr;
 	channel_INDIRECT_DIFFUSE = nullptr;
+	channel_INDIRECT_DIFFUSE_REFLECT = nullptr;
+	channel_INDIRECT_DIFFUSE_TRANSMIT = nullptr;
 	channel_INDIRECT_GLOSSY = nullptr;
+	channel_INDIRECT_GLOSSY_REFLECT = nullptr;
+	channel_INDIRECT_GLOSSY_TRANSMIT = nullptr;
 	channel_INDIRECT_SPECULAR = nullptr;
+	channel_INDIRECT_SPECULAR_REFLECT = nullptr;
+	channel_INDIRECT_SPECULAR_TRANSMIT = nullptr;
 	channel_DIRECT_SHADOW_MASK = nullptr;
 	channel_INDIRECT_SHADOW_MASK = nullptr;
 	channel_UV = nullptr;
@@ -138,6 +160,8 @@ Film::Film(const u_int w, const u_int h, const u_int *sr) : filmDenoiser(this) {
 	haltTime = 0.0;
 
 	haltSPP = 0;
+	haltSPP_PixelNormalized = 0;
+	haltSPP_ScreenNormalized = 0;
 
 	// Noise halt threshold related variables
 	haltNoiseThreshold = .02f;
@@ -159,7 +183,7 @@ Film::Film(const u_int w, const u_int h, const u_int *sr) : filmDenoiser(this) {
 	// Initialize variables to nullptr
 	SetUpHW();
 }
-
+#include <slg/film/imagepipeline/plugins/optixdenoiser.h>
 Film::~Film() {
 	if (imagePipelineThread) {
 		imagePipelineThread->interrupt();
@@ -167,8 +191,16 @@ Film::~Film() {
 		delete imagePipelineThread;
 	}
 
+	// The image pipeline plugin destructor can use the hardware device to free
+	// some memory so I have to set the current context
+	if (hardwareDevice)
+		hardwareDevice->PushThreadCurrentDevice();
+		
 	BOOST_FOREACH(ImagePipeline *ip, imagePipelines)
 		delete ip;
+
+	if (hardwareDevice)
+		hardwareDevice->PopThreadCurrentDevice();
 
 	// I have to delete the OCL context after the image pipeline because it
 	// can be used by plugins
@@ -199,6 +231,8 @@ void Film::CopyDynamicSettings(const Film &film) {
 void Film::CopyHaltSettings(const Film &film) {
 	haltTime = film.haltTime;
 	haltSPP = film.haltSPP;
+	haltSPP_PixelNormalized = film.haltSPP_PixelNormalized;
+	haltSPP_ScreenNormalized = film.haltSPP_ScreenNormalized;
 	
 	haltNoiseThreshold = film.haltNoiseThreshold;
 	haltNoiseThresholdWarmUp = film.haltNoiseThresholdWarmUp;
@@ -373,9 +407,29 @@ void Film::Resize(const u_int w, const u_int h) {
 		channel_DIRECT_DIFFUSE->Clear();
 		hasComposingChannel = true;
 	}
+	if (HasChannel(DIRECT_DIFFUSE_REFLECT)) {
+		channel_DIRECT_DIFFUSE_REFLECT = new GenericFrameBuffer<4, 1, float>(width, height);
+		channel_DIRECT_DIFFUSE_REFLECT->Clear();
+		hasComposingChannel = true;
+	}
+	if (HasChannel(DIRECT_DIFFUSE_TRANSMIT)) {
+		channel_DIRECT_DIFFUSE_TRANSMIT = new GenericFrameBuffer<4, 1, float>(width, height);
+		channel_DIRECT_DIFFUSE_TRANSMIT->Clear();
+		hasComposingChannel = true;
+	}
 	if (HasChannel(DIRECT_GLOSSY)) {
 		channel_DIRECT_GLOSSY = new GenericFrameBuffer<4, 1, float>(width, height);
 		channel_DIRECT_GLOSSY->Clear();
+		hasComposingChannel = true;
+	}
+	if (HasChannel(DIRECT_GLOSSY_REFLECT)) {
+		channel_DIRECT_GLOSSY_REFLECT = new GenericFrameBuffer<4, 1, float>(width, height);
+		channel_DIRECT_GLOSSY_REFLECT->Clear();
+		hasComposingChannel = true;
+	}
+	if (HasChannel(DIRECT_GLOSSY_TRANSMIT)) {
+		channel_DIRECT_GLOSSY_TRANSMIT = new GenericFrameBuffer<4, 1, float>(width, height);
+		channel_DIRECT_GLOSSY_TRANSMIT->Clear();
 		hasComposingChannel = true;
 	}
 	if (HasChannel(EMISSION)) {
@@ -388,14 +442,44 @@ void Film::Resize(const u_int w, const u_int h) {
 		channel_INDIRECT_DIFFUSE->Clear();
 		hasComposingChannel = true;
 	}
+	if (HasChannel(INDIRECT_DIFFUSE_REFLECT)) {
+		channel_INDIRECT_DIFFUSE_REFLECT = new GenericFrameBuffer<4, 1, float>(width, height);
+		channel_INDIRECT_DIFFUSE_REFLECT->Clear();
+		hasComposingChannel = true;
+	}
+	if (HasChannel(INDIRECT_DIFFUSE_TRANSMIT)) {
+		channel_INDIRECT_DIFFUSE_TRANSMIT = new GenericFrameBuffer<4, 1, float>(width, height);
+		channel_INDIRECT_DIFFUSE_TRANSMIT->Clear();
+		hasComposingChannel = true;
+	}
 	if (HasChannel(INDIRECT_GLOSSY)) {
 		channel_INDIRECT_GLOSSY = new GenericFrameBuffer<4, 1, float>(width, height);
 		channel_INDIRECT_GLOSSY->Clear();
 		hasComposingChannel = true;
 	}
+	if (HasChannel(INDIRECT_GLOSSY_REFLECT)) {
+		channel_INDIRECT_GLOSSY_REFLECT = new GenericFrameBuffer<4, 1, float>(width, height);
+		channel_INDIRECT_GLOSSY_REFLECT->Clear();
+		hasComposingChannel = true;
+	}
+	if (HasChannel(INDIRECT_GLOSSY_TRANSMIT)) {
+		channel_INDIRECT_GLOSSY_TRANSMIT = new GenericFrameBuffer<4, 1, float>(width, height);
+		channel_INDIRECT_GLOSSY_TRANSMIT->Clear();
+		hasComposingChannel = true;
+	}
 	if (HasChannel(INDIRECT_SPECULAR)) {
 		channel_INDIRECT_SPECULAR = new GenericFrameBuffer<4, 1, float>(width, height);
 		channel_INDIRECT_SPECULAR->Clear();
+		hasComposingChannel = true;
+	}
+	if (HasChannel(INDIRECT_SPECULAR_REFLECT)) {
+		channel_INDIRECT_SPECULAR_REFLECT = new GenericFrameBuffer<4, 1, float>(width, height);
+		channel_INDIRECT_SPECULAR_REFLECT->Clear();
+		hasComposingChannel = true;
+	}
+	if (HasChannel(INDIRECT_SPECULAR_TRANSMIT)) {
+		channel_INDIRECT_SPECULAR_TRANSMIT = new GenericFrameBuffer<4, 1, float>(width, height);
+		channel_INDIRECT_SPECULAR_TRANSMIT->Clear();
 		hasComposingChannel = true;
 	}
 	if (HasChannel(MATERIAL_ID_MASK)) {
@@ -528,16 +612,36 @@ void Film::Clear() {
 		channel_MATERIAL_ID->Clear(numeric_limits<u_int>::max());
 	if (HasChannel(DIRECT_DIFFUSE))
 		channel_DIRECT_DIFFUSE->Clear();
+	if (HasChannel(DIRECT_DIFFUSE_REFLECT))
+		channel_DIRECT_DIFFUSE_REFLECT->Clear();
+	if (HasChannel(DIRECT_DIFFUSE_TRANSMIT))
+		channel_DIRECT_DIFFUSE_TRANSMIT->Clear();
 	if (HasChannel(DIRECT_GLOSSY))
 		channel_DIRECT_GLOSSY->Clear();
+	if (HasChannel(DIRECT_GLOSSY_REFLECT))
+		channel_DIRECT_GLOSSY_REFLECT->Clear();
+	if (HasChannel(DIRECT_GLOSSY_TRANSMIT))
+		channel_DIRECT_GLOSSY_TRANSMIT->Clear();
 	if (HasChannel(EMISSION))
 		channel_EMISSION->Clear();
 	if (HasChannel(INDIRECT_DIFFUSE))
 		channel_INDIRECT_DIFFUSE->Clear();
+	if (HasChannel(INDIRECT_DIFFUSE_REFLECT))
+		channel_INDIRECT_DIFFUSE_REFLECT->Clear();
+	if (HasChannel(INDIRECT_DIFFUSE_TRANSMIT))
+		channel_INDIRECT_DIFFUSE_TRANSMIT->Clear();
 	if (HasChannel(INDIRECT_GLOSSY))
 		channel_INDIRECT_GLOSSY->Clear();
+	if (HasChannel(INDIRECT_GLOSSY_REFLECT))
+		channel_INDIRECT_GLOSSY_REFLECT->Clear();
+	if (HasChannel(INDIRECT_GLOSSY_TRANSMIT))
+		channel_INDIRECT_GLOSSY_TRANSMIT->Clear();
 	if (HasChannel(INDIRECT_SPECULAR))
 		channel_INDIRECT_SPECULAR->Clear();
+	if (HasChannel(INDIRECT_SPECULAR_REFLECT))
+		channel_INDIRECT_SPECULAR_REFLECT->Clear();
+	if (HasChannel(INDIRECT_SPECULAR_TRANSMIT))
+		channel_INDIRECT_SPECULAR_TRANSMIT->Clear();
 	if (HasChannel(MATERIAL_ID_MASK)) {
 		for (u_int i = 0; i < channel_MATERIAL_ID_MASKs.size(); ++i)
 			channel_MATERIAL_ID_MASKs[i]->Clear();
@@ -585,10 +689,11 @@ void Film::Clear() {
 	// would be lost
 }
 
-void Film::Reset() {
-	Clear();
+void Film::Reset(const bool onlyCounters) {
+	if (!onlyCounters)
+		Clear();
 
-	// denoiser  has to be reset explicitly
+	// denoiser has to be reset explicitly
 
 	// convTest has to be reset explicitly
 
@@ -597,25 +702,8 @@ void Film::Reset() {
 	statsStartSampleTime = WallClockTime();
 }
 
-void Film::VarianceClampFilm(const VarianceClamping &varianceClamping,
-		const Film &film, const u_int srcOffsetX, const u_int srcOffsetY,
-		const u_int srcWidth, const u_int srcHeight,
-		const u_int dstOffsetX, const u_int dstOffsetY) {
-	if (HasChannel(RADIANCE_PER_PIXEL_NORMALIZED) && film.HasChannel(RADIANCE_PER_PIXEL_NORMALIZED)) {
-		for (u_int i = 0; i < Min(radianceGroupCount, film.radianceGroupCount); ++i) {
-			for (u_int y = 0; y < srcHeight; ++y) {
-				for (u_int x = 0; x < srcWidth; ++x) {
-					float *srcPixel = film.channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->GetPixel(srcOffsetX + x, srcOffsetY + y);
-					const float *dstPixel = channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->GetPixel(dstOffsetX + x, dstOffsetY + y);
-
-					varianceClamping.Clamp(dstPixel, srcPixel);
-				}
-			}
-		}
-	}
-}
-
-void Film::AddFilm(const Film &film,
+template <bool overwrite>
+void Film::AddFilmImpl(const Film &film,
 		const u_int srcOffsetX, const u_int srcOffsetY,
 		const u_int srcWidth, const u_int srcHeight,
 		const u_int dstOffsetX, const u_int dstOffsetY) {
@@ -630,7 +718,10 @@ void Film::AddFilm(const Film &film,
 			for (u_int y = 0; y < srcHeight; ++y) {
 				for (u_int x = 0; x < srcWidth; ++x) {
 					const float *srcPixel = film.channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->GetPixel(srcOffsetX + x, srcOffsetY + y);
-					channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+					if (overwrite)
+						channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+					else
+						channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 				}
 			}
 		}
@@ -643,12 +734,15 @@ void Film::AddFilm(const Film &film,
 			for (u_int y = 0; y < srcHeight; ++y) {
 				for (u_int x = 0; x < srcWidth; ++x) {
 					const float *srcPixel = film.channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->GetPixel(srcOffsetX + x, srcOffsetY + y);
-					channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+					if (overwrite)
+						channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+					else
+						channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 				}
 			}
 		}
 	}
-	
+
 	samplesCounts.AddSampleCount(additional_SampleCount,
 			additional_RADIANCE_PER_PIXEL_NORMALIZED_SampleCount,
 			additional_RADIANCE_PER_SCREEN_NORMALIZED_SampleCount);
@@ -657,13 +751,16 @@ void Film::AddFilm(const Film &film,
 		for (u_int y = 0; y < srcHeight; ++y) {
 			for (u_int x = 0; x < srcWidth; ++x) {
 				const float *srcPixel = film.channel_ALPHA->GetPixel(srcOffsetX + x, srcOffsetY + y);
-				channel_ALPHA->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				if (overwrite)
+					channel_ALPHA->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				else
+					channel_ALPHA->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 			}
 		}
 	}
 
 	if (HasChannel(POSITION) && film.HasChannel(POSITION)) {
-		if (HasChannel(DEPTH) && film.HasChannel(DEPTH)) {
+		if (HasChannel(DEPTH) && film.HasChannel(DEPTH) && !overwrite) {
 			// Used DEPTH information to merge Films
 			for (u_int y = 0; y < srcHeight; ++y) {
 				for (u_int x = 0; x < srcWidth; ++x) {
@@ -684,7 +781,7 @@ void Film::AddFilm(const Film &film,
 	}
 
 	if (HasChannel(GEOMETRY_NORMAL) && film.HasChannel(GEOMETRY_NORMAL)) {
-		if (HasChannel(DEPTH) && film.HasChannel(DEPTH)) {
+		if (HasChannel(DEPTH) && film.HasChannel(DEPTH) && !overwrite) {
 			// Used DEPTH information to merge Films
 			for (u_int y = 0; y < srcHeight; ++y) {
 				for (u_int x = 0; x < srcWidth; ++x) {
@@ -705,7 +802,7 @@ void Film::AddFilm(const Film &film,
 	}
 
 	if (HasChannel(SHADING_NORMAL) && film.HasChannel(SHADING_NORMAL)) {
-		if (HasChannel(DEPTH) && film.HasChannel(DEPTH)) {
+		if (HasChannel(DEPTH) && film.HasChannel(DEPTH) && !overwrite) {
 			// Used DEPTH information to merge Films
 			for (u_int y = 0; y < srcHeight; ++y) {
 				for (u_int x = 0; x < srcWidth; ++x) {
@@ -726,7 +823,7 @@ void Film::AddFilm(const Film &film,
 	}
 
 	if (HasChannel(MATERIAL_ID) && film.HasChannel(MATERIAL_ID)) {
-		if (HasChannel(DEPTH) && film.HasChannel(DEPTH)) {
+		if (HasChannel(DEPTH) && film.HasChannel(DEPTH) && !overwrite) {
 			// Used DEPTH information to merge Films
 			for (u_int y = 0; y < srcHeight; ++y) {
 				for (u_int x = 0; x < srcWidth; ++x) {
@@ -750,7 +847,33 @@ void Film::AddFilm(const Film &film,
 		for (u_int y = 0; y < srcHeight; ++y) {
 			for (u_int x = 0; x < srcWidth; ++x) {
 				const float *srcPixel = film.channel_DIRECT_DIFFUSE->GetPixel(srcOffsetX + x, srcOffsetY + y);
-				channel_DIRECT_DIFFUSE->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				if (overwrite)
+					channel_DIRECT_DIFFUSE->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				else
+					channel_DIRECT_DIFFUSE->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+			}
+		}
+	}
+	if (HasChannel(DIRECT_DIFFUSE_REFLECT) && film.HasChannel(DIRECT_DIFFUSE_REFLECT)) {
+		for (u_int y = 0; y < srcHeight; ++y) {
+			for (u_int x = 0; x < srcWidth; ++x) {
+				const float *srcPixel = film.channel_DIRECT_DIFFUSE_REFLECT->GetPixel(srcOffsetX + x, srcOffsetY + y);
+				if (overwrite)
+					channel_DIRECT_DIFFUSE_REFLECT->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				else
+					channel_DIRECT_DIFFUSE_REFLECT->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+			}
+		}
+	}
+
+	if (HasChannel(DIRECT_DIFFUSE_TRANSMIT) && film.HasChannel(DIRECT_DIFFUSE_TRANSMIT)) {
+		for (u_int y = 0; y < srcHeight; ++y) {
+			for (u_int x = 0; x < srcWidth; ++x) {
+				const float *srcPixel = film.channel_DIRECT_DIFFUSE_TRANSMIT->GetPixel(srcOffsetX + x, srcOffsetY + y);
+				if (overwrite)
+					channel_DIRECT_DIFFUSE_TRANSMIT->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				else
+					channel_DIRECT_DIFFUSE_TRANSMIT->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 			}
 		}
 	}
@@ -759,7 +882,34 @@ void Film::AddFilm(const Film &film,
 		for (u_int y = 0; y < srcHeight; ++y) {
 			for (u_int x = 0; x < srcWidth; ++x) {
 				const float *srcPixel = film.channel_DIRECT_GLOSSY->GetPixel(srcOffsetX + x, srcOffsetY + y);
-				channel_DIRECT_GLOSSY->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				if (overwrite)
+					channel_DIRECT_GLOSSY->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				else
+					channel_DIRECT_GLOSSY->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+			}
+		}
+	}
+
+	if (HasChannel(DIRECT_GLOSSY_REFLECT) && film.HasChannel(DIRECT_GLOSSY_REFLECT)) {
+		for (u_int y = 0; y < srcHeight; ++y) {
+			for (u_int x = 0; x < srcWidth; ++x) {
+				const float *srcPixel = film.channel_DIRECT_GLOSSY_REFLECT->GetPixel(srcOffsetX + x, srcOffsetY + y);
+				if (overwrite)
+					channel_DIRECT_GLOSSY_REFLECT->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				else
+					channel_DIRECT_GLOSSY_REFLECT->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+			}
+		}
+	}
+
+	if (HasChannel(DIRECT_GLOSSY_TRANSMIT) && film.HasChannel(DIRECT_GLOSSY_TRANSMIT)) {
+		for (u_int y = 0; y < srcHeight; ++y) {
+			for (u_int x = 0; x < srcWidth; ++x) {
+				const float *srcPixel = film.channel_DIRECT_GLOSSY_TRANSMIT->GetPixel(srcOffsetX + x, srcOffsetY + y);
+				if (overwrite)
+					channel_DIRECT_GLOSSY_TRANSMIT->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				else
+					channel_DIRECT_GLOSSY_TRANSMIT->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 			}
 		}
 	}
@@ -768,7 +918,10 @@ void Film::AddFilm(const Film &film,
 		for (u_int y = 0; y < srcHeight; ++y) {
 			for (u_int x = 0; x < srcWidth; ++x) {
 				const float *srcPixel = film.channel_EMISSION->GetPixel(srcOffsetX + x, srcOffsetY + y);
-				channel_EMISSION->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				if (overwrite)
+					channel_EMISSION->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				else
+					channel_EMISSION->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 			}
 		}
 	}
@@ -777,7 +930,34 @@ void Film::AddFilm(const Film &film,
 		for (u_int y = 0; y < srcHeight; ++y) {
 			for (u_int x = 0; x < srcWidth; ++x) {
 				const float *srcPixel = film.channel_INDIRECT_DIFFUSE->GetPixel(srcOffsetX + x, srcOffsetY + y);
-				channel_INDIRECT_DIFFUSE->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				if (overwrite)
+					channel_INDIRECT_DIFFUSE->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				else
+					channel_INDIRECT_DIFFUSE->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+			}
+		}
+	}
+
+	if (HasChannel(INDIRECT_DIFFUSE_REFLECT) && film.HasChannel(INDIRECT_DIFFUSE_REFLECT)) {
+		for (u_int y = 0; y < srcHeight; ++y) {
+			for (u_int x = 0; x < srcWidth; ++x) {
+				const float *srcPixel = film.channel_INDIRECT_DIFFUSE_REFLECT->GetPixel(srcOffsetX + x, srcOffsetY + y);
+				if (overwrite)
+					channel_INDIRECT_DIFFUSE_REFLECT->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				else
+					channel_INDIRECT_DIFFUSE_REFLECT->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+			}
+		}
+	}
+
+	if (HasChannel(INDIRECT_DIFFUSE_TRANSMIT) && film.HasChannel(INDIRECT_DIFFUSE_TRANSMIT)) {
+		for (u_int y = 0; y < srcHeight; ++y) {
+			for (u_int x = 0; x < srcWidth; ++x) {
+				const float *srcPixel = film.channel_INDIRECT_DIFFUSE_TRANSMIT->GetPixel(srcOffsetX + x, srcOffsetY + y);
+				if (overwrite)
+					channel_INDIRECT_DIFFUSE_TRANSMIT->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				else
+					channel_INDIRECT_DIFFUSE_TRANSMIT->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 			}
 		}
 	}
@@ -786,7 +966,34 @@ void Film::AddFilm(const Film &film,
 		for (u_int y = 0; y < srcHeight; ++y) {
 			for (u_int x = 0; x < srcWidth; ++x) {
 				const float *srcPixel = film.channel_INDIRECT_GLOSSY->GetPixel(srcOffsetX + x, srcOffsetY + y);
-				channel_INDIRECT_GLOSSY->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				if (overwrite)
+					channel_INDIRECT_GLOSSY->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				else
+					channel_INDIRECT_GLOSSY->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+			}
+		}
+	}
+
+	if (HasChannel(INDIRECT_GLOSSY_REFLECT) && film.HasChannel(INDIRECT_GLOSSY_REFLECT)) {
+		for (u_int y = 0; y < srcHeight; ++y) {
+			for (u_int x = 0; x < srcWidth; ++x) {
+				const float *srcPixel = film.channel_INDIRECT_GLOSSY_REFLECT->GetPixel(srcOffsetX + x, srcOffsetY + y);
+				if (overwrite)
+					channel_INDIRECT_GLOSSY_REFLECT->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				else
+					channel_INDIRECT_GLOSSY_REFLECT->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+			}
+		}
+	}
+
+	if (HasChannel(INDIRECT_GLOSSY_TRANSMIT) && film.HasChannel(INDIRECT_GLOSSY_TRANSMIT)) {
+		for (u_int y = 0; y < srcHeight; ++y) {
+			for (u_int x = 0; x < srcWidth; ++x) {
+				const float *srcPixel = film.channel_INDIRECT_GLOSSY_TRANSMIT->GetPixel(srcOffsetX + x, srcOffsetY + y);
+				if (overwrite)
+					channel_INDIRECT_GLOSSY_TRANSMIT->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				else
+					channel_INDIRECT_GLOSSY_TRANSMIT->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 			}
 		}
 	}
@@ -795,7 +1002,34 @@ void Film::AddFilm(const Film &film,
 		for (u_int y = 0; y < srcHeight; ++y) {
 			for (u_int x = 0; x < srcWidth; ++x) {
 				const float *srcPixel = film.channel_INDIRECT_SPECULAR->GetPixel(srcOffsetX + x, srcOffsetY + y);
-				channel_INDIRECT_SPECULAR->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				if (overwrite)
+					channel_INDIRECT_SPECULAR->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				else
+					channel_INDIRECT_SPECULAR->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+			}
+		}
+	}
+
+	if (HasChannel(INDIRECT_SPECULAR_REFLECT) && film.HasChannel(INDIRECT_SPECULAR_REFLECT)) {
+		for (u_int y = 0; y < srcHeight; ++y) {
+			for (u_int x = 0; x < srcWidth; ++x) {
+				const float *srcPixel = film.channel_INDIRECT_SPECULAR_REFLECT->GetPixel(srcOffsetX + x, srcOffsetY + y);
+				if (overwrite)
+					channel_INDIRECT_SPECULAR_REFLECT->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				else
+					channel_INDIRECT_SPECULAR_REFLECT->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+			}
+		}
+	}
+
+	if (HasChannel(INDIRECT_SPECULAR_TRANSMIT) && film.HasChannel(INDIRECT_SPECULAR_TRANSMIT)) {
+		for (u_int y = 0; y < srcHeight; ++y) {
+			for (u_int x = 0; x < srcWidth; ++x) {
+				const float *srcPixel = film.channel_INDIRECT_SPECULAR_TRANSMIT->GetPixel(srcOffsetX + x, srcOffsetY + y);
+				if (overwrite)
+					channel_INDIRECT_SPECULAR_TRANSMIT->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				else
+					channel_INDIRECT_SPECULAR_TRANSMIT->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 			}
 		}
 	}
@@ -807,7 +1041,10 @@ void Film::AddFilm(const Film &film,
 					for (u_int y = 0; y < srcHeight; ++y) {
 						for (u_int x = 0; x < srcWidth; ++x) {
 							const float *srcPixel = film.channel_MATERIAL_ID_MASKs[j]->GetPixel(srcOffsetX + x, srcOffsetY + y);
-							channel_MATERIAL_ID_MASKs[i]->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+							if (overwrite)
+								channel_MATERIAL_ID_MASKs[i]->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+							else
+								channel_MATERIAL_ID_MASKs[i]->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 						}
 					}
 				}
@@ -819,7 +1056,10 @@ void Film::AddFilm(const Film &film,
 		for (u_int y = 0; y < srcHeight; ++y) {
 			for (u_int x = 0; x < srcWidth; ++x) {
 				const float *srcPixel = film.channel_DIRECT_SHADOW_MASK->GetPixel(srcOffsetX + x, srcOffsetY + y);
-				channel_DIRECT_SHADOW_MASK->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				if (overwrite)
+					channel_DIRECT_SHADOW_MASK->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				else
+					channel_DIRECT_SHADOW_MASK->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 			}
 		}
 	}
@@ -834,7 +1074,7 @@ void Film::AddFilm(const Film &film,
 	}
 
 	if (HasChannel(UV) && film.HasChannel(UV)) {
-		if (HasChannel(DEPTH) && film.HasChannel(DEPTH)) {
+		if (HasChannel(DEPTH) && film.HasChannel(DEPTH) && !overwrite) {
 			// Used DEPTH information to merge Films
 			for (u_int y = 0; y < srcHeight; ++y) {
 				for (u_int x = 0; x < srcWidth; ++x) {
@@ -858,7 +1098,10 @@ void Film::AddFilm(const Film &film,
 		for (u_int y = 0; y < srcHeight; ++y) {
 			for (u_int x = 0; x < srcWidth; ++x) {
 				const float *srcPixel = film.channel_RAYCOUNT->GetPixel(srcOffsetX + x, srcOffsetY + y);
-				channel_RAYCOUNT->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				if (overwrite)
+					channel_RAYCOUNT->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				else
+					channel_RAYCOUNT->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 			}
 		}
 	}
@@ -870,7 +1113,10 @@ void Film::AddFilm(const Film &film,
 					for (u_int y = 0; y < srcHeight; ++y) {
 						for (u_int x = 0; x < srcWidth; ++x) {
 							const float *srcPixel = film.channel_BY_MATERIAL_IDs[j]->GetPixel(srcOffsetX + x, srcOffsetY + y);
-							channel_BY_MATERIAL_IDs[i]->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+							if (overwrite)
+								channel_BY_MATERIAL_IDs[i]->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+							else
+								channel_BY_MATERIAL_IDs[i]->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 						}
 					}
 				}
@@ -882,13 +1128,16 @@ void Film::AddFilm(const Film &film,
 		for (u_int y = 0; y < srcHeight; ++y) {
 			for (u_int x = 0; x < srcWidth; ++x) {
 				const float *srcPixel = film.channel_IRRADIANCE->GetPixel(srcOffsetX + x, srcOffsetY + y);
-				channel_IRRADIANCE->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				if (overwrite)
+					channel_IRRADIANCE->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				else
+					channel_IRRADIANCE->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 			}
 		}
 	}
 
 	if (HasChannel(OBJECT_ID) && film.HasChannel(OBJECT_ID)) {
-		if (HasChannel(DEPTH) && film.HasChannel(DEPTH)) {
+		if (HasChannel(DEPTH) && film.HasChannel(DEPTH) && !overwrite) {
 			// Used DEPTH information to merge Films
 			for (u_int y = 0; y < srcHeight; ++y) {
 				for (u_int x = 0; x < srcWidth; ++x) {
@@ -915,7 +1164,10 @@ void Film::AddFilm(const Film &film,
 					for (u_int y = 0; y < srcHeight; ++y) {
 						for (u_int x = 0; x < srcWidth; ++x) {
 							const float *srcPixel = film.channel_OBJECT_ID_MASKs[j]->GetPixel(srcOffsetX + x, srcOffsetY + y);
-							channel_OBJECT_ID_MASKs[i]->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+							if (overwrite)
+								channel_OBJECT_ID_MASKs[i]->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+							else
+								channel_OBJECT_ID_MASKs[i]->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 						}
 					}
 				}
@@ -930,7 +1182,10 @@ void Film::AddFilm(const Film &film,
 					for (u_int y = 0; y < srcHeight; ++y) {
 						for (u_int x = 0; x < srcWidth; ++x) {
 							const float *srcPixel = film.channel_BY_OBJECT_IDs[j]->GetPixel(srcOffsetX + x, srcOffsetY + y);
-							channel_BY_OBJECT_IDs[i]->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+							if (overwrite)
+								channel_BY_OBJECT_IDs[i]->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+							else
+								channel_BY_OBJECT_IDs[i]->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 						}
 					}
 				}
@@ -942,7 +1197,10 @@ void Film::AddFilm(const Film &film,
 		for (u_int y = 0; y < srcHeight; ++y) {
 			for (u_int x = 0; x < srcWidth; ++x) {
 				const u_int *srcPixel = film.channel_SAMPLECOUNT->GetPixel(srcOffsetX + x, srcOffsetY + y);
-				channel_SAMPLECOUNT->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				if (overwrite)
+					channel_SAMPLECOUNT->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				else
+					channel_SAMPLECOUNT->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 			}
 		}
 	}
@@ -953,7 +1211,10 @@ void Film::AddFilm(const Film &film,
 		for (u_int y = 0; y < srcHeight; ++y) {
 			for (u_int x = 0; x < srcWidth; ++x) {
 				const float *srcPixel = film.channel_MATERIAL_ID_COLOR->GetPixel(srcOffsetX + x, srcOffsetY + y);
-				channel_MATERIAL_ID_COLOR->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				if (overwrite)
+					channel_MATERIAL_ID_COLOR->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				else
+					channel_MATERIAL_ID_COLOR->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 			}
 		}
 	}
@@ -962,7 +1223,10 @@ void Film::AddFilm(const Film &film,
 		for (u_int y = 0; y < srcHeight; ++y) {
 			for (u_int x = 0; x < srcWidth; ++x) {
 				const float *srcPixel = film.channel_ALBEDO->GetPixel(srcOffsetX + x, srcOffsetY + y);
-				channel_ALBEDO->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				if (overwrite)
+					channel_ALBEDO->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				else
+					channel_ALBEDO->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 			}
 		}
 	}
@@ -972,7 +1236,10 @@ void Film::AddFilm(const Film &film,
 		for (u_int y = 0; y < srcHeight; ++y) {
 			for (u_int x = 0; x < srcWidth; ++x) {
 				const float *srcPixel = film.channel_AVG_SHADING_NORMAL->GetPixel(srcOffsetX + x, srcOffsetY + y);
-				channel_AVG_SHADING_NORMAL->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				if (overwrite)
+					channel_AVG_SHADING_NORMAL->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				else
+					channel_AVG_SHADING_NORMAL->AddPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 			}
 		}
 	}
@@ -982,21 +1249,49 @@ void Film::AddFilm(const Film &film,
 		for (u_int y = 0; y < srcHeight; ++y) {
 			for (u_int x = 0; x < srcWidth; ++x) {
 				const float *srcPixel = film.channel_DEPTH->GetPixel(srcOffsetX + x, srcOffsetY + y);
-				channel_DEPTH->MinPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				if (overwrite)
+					channel_DEPTH->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				else
+					channel_DEPTH->MinPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
 			}
 		}
 	}
 
-	// NOISE values can not really be added, they will be updated at the next test
+	if (overwrite) {
+		if (HasChannel(NOISE) && film.HasChannel(NOISE)) {
+			for (u_int y = 0; y < srcHeight; ++y) {
+				for (u_int x = 0; x < srcWidth; ++x) {
+					const float *srcPixel = film.channel_NOISE->GetPixel(srcOffsetX + x, srcOffsetY + y);
+					channel_NOISE->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				}
+			}
+		}
+	} else {
+		// NOISE values can not really be added, they will be updated at the next test
+	}
 
-	// USER_IMPORTANCE values can not really be added, I will keep the one in the
-	// current film
+	if (overwrite) {
+		if (HasChannel(USER_IMPORTANCE) && film.HasChannel(USER_IMPORTANCE)) {
+			for (u_int y = 0; y < srcHeight; ++y) {
+				for (u_int x = 0; x < srcWidth; ++x) {
+					const float *srcPixel = film.channel_USER_IMPORTANCE->GetPixel(srcOffsetX + x, srcOffsetY + y);
+					channel_USER_IMPORTANCE->SetPixel(dstOffsetX + x, dstOffsetY + y, srcPixel);
+				}
+			}
+		}
+	} else {
+		// USER_IMPORTANCE values can not really be added, I will keep the one in the
+		// current film
+	}
 
 	//--------------------------------------------------------------------------
 	// Film denoiser related code
 	//--------------------------------------------------------------------------
 
 	if (filmDenoiser.IsEnabled() && !filmDenoiser.HasReferenceFilm()) {
+		if (overwrite)
+			filmDenoiser.Reset();
+
 		// Add denoiser SamplesAccumulator statistics
 		filmDenoiser.AddDenoiser(film.GetDenoiser(),
 				srcOffsetX, srcOffsetY,
@@ -1007,6 +1302,22 @@ void Film::AddFilm(const Film &film,
 		if (!filmDenoiser.IsWarmUpDone())
 			filmDenoiser.CheckIfWarmUpDone();
 	}
+}
+
+void Film::SetFilm(const Film &film,
+	const u_int srcOffsetX, const u_int srcOffsetY,
+	const u_int srcWidth, const u_int srcHeight,
+	const u_int dstOffsetX, const u_int dstOffsetY) {
+	AddFilmImpl<true>(film, srcOffsetX, srcOffsetY,
+			srcWidth, srcHeight, dstOffsetX, dstOffsetY);
+}
+
+void Film::AddFilm(const Film &film,
+	const u_int srcOffsetX, const u_int srcOffsetY,
+	const u_int srcWidth, const u_int srcHeight,
+	const u_int dstOffsetX, const u_int dstOffsetY) {
+	AddFilmImpl<false>(film, srcOffsetX, srcOffsetY,
+			srcWidth, srcHeight, dstOffsetX, dstOffsetY);
 }
 
 void Film::ResetTests() {
@@ -1030,8 +1341,38 @@ void Film::RunTests() {
 
 	// Check the halt SPP condition with the average samples of
 	// the rendered region
-	const double spp = GetTotalSampleCount() / ((subRegion[1] - subRegion[0] + 1) * (subRegion[3] - subRegion[2] + 1));
-	if ((haltSPP > 0.0) && (spp > haltSPP)) {
+
+	const u_int regionPixelsCount = (subRegion[1] - subRegion[0] + 1) * (subRegion[3] - subRegion[2] + 1);
+	const double spp = GetTotalSampleCount() / regionPixelsCount;
+	const double spp_PixelNormalized = GetTotalEyeSampleCount() / regionPixelsCount;
+	const double spp_ScreenNormalized = GetTotalLightSampleCount() / regionPixelsCount;
+
+	bool haltSPPStop = false;
+
+	// All halt SPP cases
+	if (
+			(haltSPP_PixelNormalized > 0) && (spp_PixelNormalized > haltSPP_PixelNormalized) &&
+			(haltSPP_ScreenNormalized > 0) && (haltSPP_ScreenNormalized > spp_ScreenNormalized)
+		)
+		haltSPPStop = true;
+	if (
+			(haltSPP_PixelNormalized > 0) && (spp_PixelNormalized > haltSPP_PixelNormalized) &&
+			(haltSPP_ScreenNormalized == 0)
+		)
+		haltSPPStop = true;
+	if (
+			(haltSPP_PixelNormalized == 0) &&
+			(haltSPP_ScreenNormalized > 0) && (spp_ScreenNormalized > haltSPP_ScreenNormalized)
+		)
+		haltSPPStop = true;
+	if (
+			(haltSPP_PixelNormalized == 0) &&
+			(haltSPP_ScreenNormalized == 0) &&
+			(haltSPP > 0) && (spp > haltSPP)
+		)
+		haltSPPStop = true;
+		
+	if (haltSPPStop) {
 		SLG_LOG("Samples per pixel 100%, rendering done.");
 		statsConvergence = 1.f;
 

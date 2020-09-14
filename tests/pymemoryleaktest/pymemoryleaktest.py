@@ -50,15 +50,18 @@ def SceneOps():
 	scene = pyluxcore.Scene("scenes/luxball/luxball-hdr.scn", 1.0)
 
 def RenderConfigOps():
-	renderConfig = pyluxcore.Scene("scenes/luxball/luxball-hdr.cfg", 1.0)
+	props = pyluxcore.Properties("scenes/luxball/luxball-hdr.cfg")
+	config = pyluxcore.RenderConfig(props)
 
 def SimpleRender():
 	# Load the configuration from file
 	props = pyluxcore.Properties("scenes/luxball/luxball-hdr.cfg")
 
-	# Change the render engine to PATHCPU
-	props.Set(pyluxcore.Property("renderengine.type", ["PATHCPU"]))
-	#props.Set(pyluxcore.Property("opencl.devices.select", ["0100"]))
+	# Change the render engine
+	props.Set(pyluxcore.Property("renderengine.type", ["PATHOCL"]))
+	props.Set(pyluxcore.Property("opencl.devices.select", ["01000"]))
+	props.Set(pyluxcore.Property("film.hw.enable", ["0"]))
+	props.Set(pyluxcore.Property("opencl.native.threads.count", [0]))
 
 	config = pyluxcore.RenderConfig(props)
 	session = pyluxcore.RenderSession(config)
@@ -78,7 +81,7 @@ def SimpleRender():
 	session.Stop()
 
 	# Save the rendered image
-	session.GetFilm().Save()
+	#session.GetFilm().Save()
 
 
 ################################################################################
@@ -86,7 +89,7 @@ def SimpleRender():
 def MemoryUsage():
     import psutil
     process = psutil.Process(os.getpid())
-    mem = process.get_memory_info()[0]
+    mem = process.memory_info()[0]
     return mem
 
 def PropertiesTest():
@@ -169,9 +172,9 @@ def main():
 
 	print("LuxCore %s" % pyluxcore.Version())
 
-	PropertiesTest()
-	SceneTest()
-	RenderConfigTest()
+	#PropertiesTest()
+	#SceneTest()
+	#RenderConfigTest()
 	SimpleRenderTest()
 
 if __name__ == '__main__':

@@ -93,6 +93,9 @@ SET(LuxRays_INCLUDE_DIR "${LuxRays_SOURCE_DIR}/include")
 include_directories("${LuxRays_INCLUDE_DIR}")
 
 include_directories("${LuxRays_SOURCE_DIR}/deps/json-3.7.3/include")
+include_directories("${LuxRays_SOURCE_DIR}/deps/cuew/include")
+include_directories("${LuxRays_SOURCE_DIR}/deps/clew/include")
+include_directories("${LuxRays_SOURCE_DIR}/deps/optix-7.1.0/include")
 
 # Find dependencies
 include(Dependencies)
@@ -105,18 +108,8 @@ if (NOT OPENIMAGEIO_FOUND)
 	MESSAGE(FATAL_ERROR "--> Could not locate required OpenImageIO files - Please check ${OPENIMAGEIO_SEARCH_PATH}")
 endif()
 
-if (NOT OPENCL_FOUND AND NOT LUXRAYS_DISABLE_OPENCL)
-	MESSAGE(ERROR "--> Could not locate required OpenCL files, disabling OpenCL support - Please check ${OPENCL_SEARCH_PATH}")
-	SET(LUXRAYS_DISABLE_OPENCL 1)
-endif()
-
-if (NOT CUDA_FOUND AND LUXRAYS_ENABLE_CUDA)
-	MESSAGE(FATAL_ERROR "--> Could not locate required CUDA files - Please check ${CUDA_TOOLKIT_ROOT_DIR}")
-endif()
-
-if (NOT OPENGL_FOUND AND NOT LUXRAYS_DISABLE_OPENCL)
-	MESSAGE(ERROR "--> Could not locate required OpenGL files, disabling OpenCL support, disabling samples build")
-	SET(LUXRAYS_DISABLE_OPENCL 1)
+if (NOT OPENGL_FOUND)
+	MESSAGE(FATAL_ERROR "--> Could not locate required OpenGL file")
 endif()
 
 if (NOT EMBREE_FOUND)
@@ -143,10 +136,19 @@ endif()
 
 if (LUXRAYS_DISABLE_OPENCL)
 	ADD_DEFINITIONS("-DLUXRAYS_DISABLE_OPENCL")
-endif()
+	# CUDA requires OpenCL support
+	ADD_DEFINITIONS("-DLUXRAYS_DISABLE_CUDA")
 
-if (LUXRAYS_ENABLE_CUDA)
-	ADD_DEFINITIONS("-DLUXRAYS_ENABLE_CUDA")
+	message(STATUS "OpenCL and CUDA support: disabled")
+else()
+	if (LUXRAYS_DISABLE_CUDA)
+		ADD_DEFINITIONS("-DLUXRAYS_DISABLE_CUDA")
+		message(STATUS "OpenCL support: enabled")
+		message(STATUS "CUDA support: disabled")
+	else()
+		message(STATUS "OpenCL support: enabled")
+		message(STATUS "CUDA support: enabled")
+	endif()
 endif()
 
 if (BUILD_LUXCORE_DLL)

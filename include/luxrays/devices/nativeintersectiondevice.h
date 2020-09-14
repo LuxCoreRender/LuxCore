@@ -53,12 +53,18 @@ protected:
 
 class NativeIntersectionDevice : public IntersectionDevice {
 public:
-	NativeIntersectionDevice(const Context *context, const size_t devIndex);
+	NativeIntersectionDevice(const Context *context,
+			NativeIntersectionDeviceDescription *deviceDesc,
+			const size_t devIndex);
 	virtual ~NativeIntersectionDevice();
+
+	virtual const DeviceDescription *GetDeviceDesc() const { return deviceDesc; }
 
 	virtual void SetDataSet(DataSet *newDataSet);
 
 	friend class Context;
+
+	NativeIntersectionDeviceDescription *deviceDesc;
 };
 
 }

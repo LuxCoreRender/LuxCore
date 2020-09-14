@@ -32,10 +32,13 @@ void LightStrategyPower::Preprocess(const Scene *scn, const LightStrategyTask ta
 			const bool useRTMode) {
 	DistributionLightStrategy::Preprocess(scn, taskType);
 
+	const u_int lightCount = scene->lightDefs.GetSize();
+	if (lightCount == 0)
+		return;
+
 	const float envRadius = InfiniteLightSource::GetEnvRadius(*scene);
 	const float invEnvRadius2 = 1.f / (envRadius * envRadius);
 
-	const u_int lightCount = scene->lightDefs.GetSize();
 	vector<float> lightPower;
 	lightPower.reserve(lightCount);
 

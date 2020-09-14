@@ -47,6 +47,9 @@ void CompiledScene::CompileCamera() {
 
 	const Camera *sceneCamera = scene->camera;
 
+	delete[] cameraBokehDistribution;
+	cameraBokehDistribution = nullptr;
+	
 	// Initialize CameraBase
 
 	camera.base.yon = sceneCamera->clipYon;
@@ -117,6 +120,41 @@ void CompiledScene::CompileCamera() {
 				ASSIGN_VECTOR(camera.persp.projCamera.clippingPlaneNormal, perspCamera->clippingPlaneNormal);
 			} else
 				camera.persp.projCamera.enableClippingPlane = false;
+
+			camera.persp.bokehBlades = perspCamera->bokehBlades;
+			camera.persp.bokehPower = perspCamera->bokehPower;
+			switch (perspCamera->bokehDistribution) {
+				case PerspectiveCamera::DIST_NONE:
+					camera.persp.bokehDistribution = slg::ocl::DIST_NONE;
+				case PerspectiveCamera::DIST_UNIFORM:
+					camera.persp.bokehDistribution = slg::ocl::DIST_UNIFORM;
+					break;
+				case PerspectiveCamera::DIST_EXPONENTIAL:
+					camera.persp.bokehDistribution = slg::ocl::DIST_EXPONENTIAL;
+					break;
+				case PerspectiveCamera::DIST_INVERSEEXPONENTIAL:
+					camera.persp.bokehDistribution = slg::ocl::DIST_INVERSEEXPONENTIAL;
+					break;
+				case PerspectiveCamera::DIST_GAUSSIAN:
+					camera.persp.bokehDistribution = slg::ocl::DIST_GAUSSIAN;
+					break;
+				case PerspectiveCamera::DIST_INVERSEGAUSSIAN:
+					camera.persp.bokehDistribution = slg::ocl::DIST_INVERSEGAUSSIAN;
+					break;
+				case PerspectiveCamera::DIST_TRIANGULAR:
+					camera.persp.bokehDistribution = slg::ocl::DIST_TRIANGULAR;
+					break;
+				case PerspectiveCamera::DIST_CUSTOM: {
+					camera.persp.bokehDistribution = slg::ocl::DIST_CUSTOM;
+
+					cameraBokehDistribution = CompileDistribution2D(perspCamera->bokehDistributionMap, &cameraBokehDistributionSize);
+					break;
+				}
+				default:
+					throw runtime_error("Unknown bokeh distribution type in CompiledScene::CompileCamera(): " + ToString(perspCamera->bokehDistribution));
+			}
+			camera.persp.bokehScaleX = perspCamera->bokehScaleX;
+			camera.persp.bokehScaleY = perspCamera->bokehScaleY;
 			break;
 		}
 		case Camera::STEREO: {
@@ -149,7 +187,7 @@ void CompiledScene::CompileCamera() {
 			break;			
 		}		
 		default:
-			throw runtime_error("Unknown camera type in CompiledScene::CompileCamera(): " + boost::lexical_cast<string>(sceneCamera->GetType()));
+			throw runtime_error("Unknown camera type in CompiledScene::CompileCamera(): " + ToString(sceneCamera->GetType()));
 	}
 }
 

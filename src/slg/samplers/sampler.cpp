@@ -49,15 +49,6 @@ void Sampler::RequestSamples(const SampleType smplType, const u_int size) {
 	requestedSamples = size;
 }
 
-void Sampler::AtomicAddSamplesToFilm(const vector<SampleResult> &sampleResults, const float weight) const {
-	for (vector<SampleResult>::const_iterator sr = sampleResults.begin(); sr < sampleResults.end(); ++sr) {
-		if (sr->useFilmSplat && filmSplatter)
-			filmSplatter->AtomicSplatSample(*film, *sr, weight);
-		else
-			film->AtomicAddSample(sr->pixelX, sr->pixelY, *sr, weight);
-	}
-}
-
 Properties Sampler::ToProperties() const {
 	return Properties() <<
 			Property("sampler.type")(SamplerType2String(GetType())) <<
@@ -101,14 +92,14 @@ slg::ocl::Sampler *Sampler::FromPropertiesOCL(const Properties &cfg) {
 		throw runtime_error("Unknown sampler type in Sampler::FromPropertiesOCL(): " + type);
 }
 
-Film::FilmChannelType Sampler::GetRequiredChannels(const Properties &cfg) {
+void Sampler::AddRequiredChannels(Film::FilmChannels &channels, const luxrays::Properties &cfg) {
 	const string type = cfg.Get(Property("sampler.type")(SobolSampler::GetObjectTag())).Get<string>();
 
-	SamplerRegistry::GetRequiredChannels func;
-	if (SamplerRegistry::STATICTABLE_NAME(GetRequiredChannels).Get(type, func))
-		return func(cfg);
+	SamplerRegistry::AddRequiredChannels func;
+	if (SamplerRegistry::STATICTABLE_NAME(AddRequiredChannels).Get(type, func))
+		return func(channels, cfg);
 	else
-		throw runtime_error("Unknown sampler type in Sampler::GetRequiredChannels(): " + type);
+		throw runtime_error("Unknown sampler type in Sampler::AddRequiredChannels(): " + type);
 }
 
 SamplerType Sampler::String2SamplerType(const string &type) {
@@ -124,7 +115,7 @@ string Sampler::SamplerType2String(const SamplerType type) {
 	if (SamplerRegistry::STATICTABLE_NAME(GetObjectTag).Get(type, func))
 		return func();
 	else
-		throw runtime_error("Unknown sampler type in Sampler::SamplerType2String(): " + boost::lexical_cast<string>(type));
+		throw runtime_error("Unknown sampler type in Sampler::SamplerType2String(): " + ToString(type));
 }
 
 const Properties &Sampler::GetDefaultProps() {

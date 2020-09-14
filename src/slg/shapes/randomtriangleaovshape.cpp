@@ -54,6 +54,7 @@ RandomTriangleAOVShape::RandomTriangleAOVShape(luxrays::ExtTriangleMesh *srcMesh
 	}
 	
 	mesh = srcMesh->Copy();
+	mesh->DeleteTriAOV(dstDataIndex);
 	mesh->SetTriAOV(dstDataIndex, &dstTriAOV[0]);
 
 	const double endTime = WallClockTime();

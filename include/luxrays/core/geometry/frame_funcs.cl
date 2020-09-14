@@ -72,7 +72,7 @@ OPENCL_FORCE_INLINE float3 ToWorld(const float3 X, const float3 Y, const float3 
 }
 
 OPENCL_FORCE_INLINE float3 ToLocal(const float3 X, const float3 Y, const float3 Z, const float3 a) {
-	return (float3)(dot(a, X), dot(a, Y), dot(a, Z));
+	return MAKE_FLOAT3(dot(a, X), dot(a, Y), dot(a, Z));
 }
 
 OPENCL_FORCE_INLINE float3 Frame_ToWorld(__global const Frame* restrict frame, const float3 v) {
@@ -81,9 +81,9 @@ OPENCL_FORCE_INLINE float3 Frame_ToWorld(__global const Frame* restrict frame, c
 
 OPENCL_FORCE_INLINE float3 Frame_ToWorld_Private(const Frame *frame, const float3 v) {
 	return ToWorld(
-			(float3)(frame->X.x, frame->X.y, frame->X.z),
-			(float3)(frame->Y.x, frame->Y.y, frame->Y.z),
-			(float3)(frame->Z.x, frame->Z.y, frame->Z.z), v);
+			MAKE_FLOAT3(frame->X.x, frame->X.y, frame->X.z),
+			MAKE_FLOAT3(frame->Y.x, frame->Y.y, frame->Y.z),
+			MAKE_FLOAT3(frame->Z.x, frame->Z.y, frame->Z.z), v);
 }
 
 OPENCL_FORCE_INLINE float3 Frame_ToLocal(__global const Frame* restrict frame, const float3 v) {
@@ -92,7 +92,7 @@ OPENCL_FORCE_INLINE float3 Frame_ToLocal(__global const Frame* restrict frame, c
 
 OPENCL_FORCE_INLINE float3 Frame_ToLocal_Private(const Frame *frame, const float3 v) {
 	return ToLocal(
-			(float3)(frame->X.x, frame->X.y, frame->X.z),
-			(float3)(frame->Y.x, frame->Y.y, frame->Y.z),
-			(float3)(frame->Z.x, frame->Z.y, frame->Z.z), v);
+			MAKE_FLOAT3(frame->X.x, frame->X.y, frame->X.z),
+			MAKE_FLOAT3(frame->Y.x, frame->Y.y, frame->Y.z),
+			MAKE_FLOAT3(frame->Z.x, frame->Z.y, frame->Z.z), v);
 }

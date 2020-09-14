@@ -230,7 +230,7 @@ OPENCL_FORCE_INLINE bool PGICPhotonBvh_ConnectAllNearEntries(__global const BSDF
 	return isEmpty;
 }
 
-OPENCL_FORCE_NOT_INLINE bool PhotonGICache_ConnectWithCausticPaths(__global const BSDF *bsdf,
+OPENCL_FORCE_INLINE bool PhotonGICache_ConnectWithCausticPaths(__global const BSDF *bsdf,
 		__global const Photon* restrict pgicCausticPhotons,
 		__global const IndexBVHArrayNode* restrict pgicCausticPhotonsBVHNodes,
 		const uint pgicCausticPhotonTracedCount,

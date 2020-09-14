@@ -5,7 +5,7 @@
 # To trigger an official release, add a commit tagged in the form "luxcorerender_v*"
 # The "version_string" after the "_" in the tag is used in following steps
 # to generate binary names like "luxcorerender-<version_string>-<platform>-..."
-# One, and only one, tag in the form "luxcorerender_v*" is needed, 
+# One, and only one, tag in the form "luxcorerender_v*" is needed,
 # otherwise the official release build aborts.
 
 variables:
@@ -15,6 +15,9 @@ trigger:
   branches:
     include:
     - '*'
+  tags:
+    include:
+    - 'luxcorerender_v*'
 
 
 jobs:
@@ -22,7 +25,7 @@ jobs:
   timeoutInMinutes: 0
   pool:
     vmImage: 'ubuntu-18.04'
-    
+
   steps:
   - script: ./scripts/azurepipeline/detect-build-type.sh
     displayName: Detecting release type (daily, alpha, beta or final)
@@ -33,8 +36,8 @@ jobs:
       artifactName: LuxCore
     displayName: 'Upload github_release_title'
     condition: eq(variables['System.PullRequest.IsFork'], 'False')
-    
-    
+
+
 #==============================================================================
 # Linux binaries
 #==============================================================================
@@ -94,18 +97,12 @@ jobs:
     displayName: Getting required deps
   - template: ./scripts/azurepipeline/windows/windows_jobs.yml
     parameters:
-      build_script: './scripts/azurepipeline/windows/build.cmd /cmake-only /no-ocl'
-      post_script: './scripts/azurepipeline/windows/post-build.cmd /no-ocl'
-      ocl_text: 'OpenCL disabled'
-      minimalargs: '/target:pyluxcore,pyluxcoretools,luxcoreui'
-  - template: ./scripts/azurepipeline/windows/windows_jobs.yml
-    parameters:
       build_script: './scripts/azurepipeline/windows/build.cmd /cmake-only'
       post_script: './scripts/azurepipeline/windows/post-build.cmd'
-      ocl_text: 'OpenCL enabled'
+      ocl_text: 'Unified CPU/OpenCL/CUDA binaries'
       minimalargs: '/target:pyluxcore,pyluxcoretools,luxcoreui'
-  - script: './scripts/azurepipeline/windows/test.cmd'
-    displayName: Testing LuxCore
+#  - script: './scripts/azurepipeline/windows/test.cmd'
+#    displayName: Testing LuxCore
   - task: PublishBuildArtifacts@1
     inputs:
       pathtoPublish: '$(Build.ArtifactStagingDirectory)'
@@ -139,14 +136,9 @@ jobs:
     displayName: Getting required deps
   - template: ./scripts/azurepipeline/windows/windows_jobs.yml
     parameters:
-      build_script: './scripts/azurepipeline/windows/build.cmd /cmake-only /no-ocl /dll'
-      post_script: './scripts/azurepipeline/windows/post-build.cmd /no-ocl'
-      ocl_text: 'OpenCL disabled'
-  - template: ./scripts/azurepipeline/windows/windows_jobs.yml
-    parameters:
       build_script: './scripts/azurepipeline/windows/build.cmd /cmake-only /dll'
       post_script: './scripts/azurepipeline/windows/post-build.cmd'
-      ocl_text: 'OpenCL enabled'
+      ocl_text: 'Unified CPU/OpenCL/CUDA binaries'
   - task: PublishBuildArtifacts@1
     inputs:
       pathtoPublish: '$(Build.ArtifactStagingDirectory)'
@@ -172,8 +164,12 @@ jobs:
     displayName: Install Build Tools
   - script: ./scripts/azurepipeline/macos/build.sh
     displayName: Building LuxCore
-  - script: ./scripts/azurepipeline/macos/test.sh
-    displayName: Testing LuxCore
+#  - script: ./scripts/azurepipeline/macos/test.sh
+#    displayName: Testing LuxCore
+  - task: InstallAppleCertificate@2
+    inputs:
+      certSecureFile: LuxCore2.q3de.com.p12
+      certPwd: $(AppleCertPwd)
   - script: ./scripts/azurepipeline/macos/pack.sh
     displayName: Packing DiskImages
   - task: PublishBuildArtifacts@1
@@ -191,10 +187,10 @@ jobs:
 # recreated at the current commit by the following release pipeline
 # Runs only if:
 # - this is a daily build
-# - at least one of the build jobs was successful 
+# - at least one of the build jobs was successful
 # - the pipeline has been triggered by master branch and not by a pull request
 - job: DeleteLatestTag
-  dependsOn: 
+  dependsOn:
   - DetectBuildType
   - LuxCoreRenderLinux
   - LuxCoreRenderWindows
@@ -214,7 +210,7 @@ jobs:
   timeoutInMinutes: 0
   pool:
     vmImage: 'ubuntu-18.04'
-    
+
   steps:
   - task: InstallSSHKey@0
     inputs:

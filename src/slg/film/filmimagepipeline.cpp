@@ -24,6 +24,7 @@
 #include <boost/foreach.hpp>
 
 #include "slg/film/film.h"
+#include "slg/film/imagepipeline/imagepipeline.h"
 #include "slg/film/imagepipeline/radiancechannelscale.h"
 #include "luxrays/utils/oclerror.h"
 
@@ -155,11 +156,6 @@ void Film::ExecuteImagePipelineThreadImpl(const u_int index) {
 		ExecuteImagePipelineImpl(index);
 	} catch (boost::thread_interrupted) {
 		SLG_LOG("[ExecuteImagePipelineThreadImpl::" << index << "] Image pipeline thread halted");
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	} catch (cl::Error &err) {
-		SLG_LOG("[ExecuteImagePipelineThreadImpl::" << index << "] Image pipeline thread ERROR: " << err.what() <<
-				"(" << oclErrorString(err.err()) << ")");
-#endif
 	}
 
 	isAsyncImagePipelineRunning = false;
@@ -175,12 +171,15 @@ void Film::ExecuteImagePipelineImpl(const u_int index) {
 	// Initialize OpenCL device
 	if (hwEnable && !ctx) {
 		CreateHWContext();
-
+	
 		if (hardwareDevice) {
 			AllocateHWBuffers();
 			CompileHWKernels();
 		}
 	}
+
+	if (hwEnable && hardwareDevice)
+		hardwareDevice->PushThreadCurrentDevice();
 
 	// Merge all buffers
 	//const double t1 = WallClockTime();
@@ -200,6 +199,10 @@ void Film::ExecuteImagePipelineImpl(const u_int index) {
 		WriteAllHWBuffers();
 
 	imagePipelines[index]->Apply(*this, index);
+
+	if (hwEnable && hardwareDevice)
+		hardwareDevice->PopThreadCurrentDevice();
+
 	//const double p2 = WallClockTime();
 	//SLG_LOG("Image pipeline " << index << " time: " << int((p2 - p1) * 1000.0) << "ms");
 }

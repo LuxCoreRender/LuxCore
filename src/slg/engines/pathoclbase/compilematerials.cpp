@@ -249,12 +249,12 @@ u_int CompiledScene::CompileMaterialOps(const u_int matIndex,
 					evalOpStackSize += 5;
 					break;
 				case slg::ocl::EVAL_EVALUATE_MIX_SETUP1:
-					// 6 x parameters and 12 x results
-					evalOpStackSize += 12;
+					// 6 x parameters and 21 x results
+					evalOpStackSize += 21;
 					break;
 				case slg::ocl::EVAL_EVALUATE_MIX_SETUP2:
-					// 12 x parameters and 17 x results
-					evalOpStackSize += 17;
+					// 12 x parameters and 26 x results
+					evalOpStackSize += 26;
 					break;
 				case slg::ocl::EVAL_EVALUATE:
 					evalOpStackSize += CompileMaterialOps(matIndex, slg::ocl::EVAL_EVALUATE_MIX_SETUP1, evalOps);
@@ -263,12 +263,12 @@ u_int CompiledScene::CompileMaterialOps(const u_int matIndex,
 					evalOpStackSize += CompileMaterialOps(mat->mix.matBIndex, slg::ocl::EVAL_EVALUATE, evalOps);
 					break;
 				case slg::ocl::EVAL_SAMPLE_MIX_SETUP1:
-					// 6 x parameters and 16 x results
-					evalOpStackSize += 16;
+					// 6 x parameters and 25 x results
+					evalOpStackSize += 25;
 					break;
 				case slg::ocl::EVAL_SAMPLE_MIX_SETUP2:
-					// 16 x parameters and 24 x results
-					evalOpStackSize += 24;
+					// 16 x parameters and 33 x results
+					evalOpStackSize += 33;
 					break;
 				case slg::ocl::EVAL_SAMPLE: {
 					evalOpStackSize += CompileMaterialOps(matIndex, slg::ocl::EVAL_SAMPLE_MIX_SETUP1, evalOps);
@@ -320,16 +320,16 @@ u_int CompiledScene::CompileMaterialOps(const u_int matIndex,
 					evalOpStackSize += 5;
 					break;
 				case slg::ocl::EVAL_EVALUATE_GLOSSYCOATING_SETUP:
-					// 6 x parameters and 12 x results
-					evalOpStackSize += 12;
+					// 6 x parameters and 21 x results
+					evalOpStackSize += 21;
 					break;
 				case slg::ocl::EVAL_EVALUATE:
 					evalOpStackSize += CompileMaterialOps(matIndex, slg::ocl::EVAL_EVALUATE_GLOSSYCOATING_SETUP, evalOps);
 					evalOpStackSize += CompileMaterialOps(mat->glossycoating.matBaseIndex, slg::ocl::EVAL_EVALUATE, evalOps);
 					break;
 				case slg::ocl::EVAL_SAMPLE_GLOSSYCOATING_SETUP:
-					// 6 x parameters and 26 x results
-					evalOpStackSize += 26;
+					// 6 x parameters and 35 x results
+					evalOpStackSize += 35;
 					break;
 				case slg::ocl::EVAL_SAMPLE_GLOSSYCOATING_CLOSE_SAMPLE_BASE:
 					// 26 x parameters and 8 x results
@@ -541,6 +541,7 @@ void CompiledScene::CompileMaterials() {
 		mat->isShadowCatcher = m->IsShadowCatcher();
 		mat->isShadowCatcherOnlyInfiniteLights = m->IsShadowCatcherOnlyInfiniteLights();
 		mat->isPhotonGIEnabled = m->IsPhotonGIEnabled();
+		mat->isHoldout = m->IsHoldout();
 
 		// Bake Material::GetEventTypes() and Material::IsDelta()
 		mat->eventTypes = m->GetEventTypes();
@@ -588,6 +589,14 @@ void CompiledScene::CompileMaterials() {
 					mat->glass.cauchyCTex = scene->texDefs.GetTextureIndex(gm->GetCauchyC());
 				else
 					mat->glass.cauchyCTex = NULL_INDEX;
+				if (gm->GetFilmThickness())
+					mat->glass.filmThicknessTexIndex = scene->texDefs.GetTextureIndex(gm->GetFilmThickness());
+				else
+					mat->glass.filmThicknessTexIndex = NULL_INDEX;
+				if (gm->GetFilmIOR())
+					mat->glass.filmIorTexIndex = scene->texDefs.GetTextureIndex(gm->GetFilmIOR());
+				else
+					mat->glass.filmIorTexIndex = NULL_INDEX;
 				break;
 			}
 			case ARCHGLASS: {
@@ -604,6 +613,14 @@ void CompiledScene::CompileMaterials() {
 					mat->archglass.interiorIorTexIndex = scene->texDefs.GetTextureIndex(am->GetInteriorIOR());
 				else
 					mat->archglass.interiorIorTexIndex = NULL_INDEX;
+				if (am->GetFilmThickness())
+					mat->archglass.filmThicknessTexIndex = scene->texDefs.GetTextureIndex(am->GetFilmThickness());
+				else
+					mat->archglass.filmThicknessTexIndex = NULL_INDEX;
+				if (am->GetFilmIOR())
+					mat->archglass.filmIorTexIndex = scene->texDefs.GetTextureIndex(am->GetFilmIOR());
+				else
+					mat->archglass.filmIorTexIndex = NULL_INDEX;
 				break;
 			}
 			case MIX: {
@@ -699,6 +716,15 @@ void CompiledScene::CompileMaterials() {
 				const Texture *nvTex = rgm->GetNv();
 				mat->roughglass.nuTexIndex = scene->texDefs.GetTextureIndex(nuTex);
 				mat->roughglass.nvTexIndex = scene->texDefs.GetTextureIndex(nvTex);
+				
+				if (rgm->GetFilmThickness())
+					mat->roughglass.filmThicknessTexIndex = scene->texDefs.GetTextureIndex(rgm->GetFilmThickness());
+				else
+					mat->roughglass.filmThicknessTexIndex = NULL_INDEX;
+				if (rgm->GetFilmIOR())
+					mat->roughglass.filmIorTexIndex = scene->texDefs.GetTextureIndex(rgm->GetFilmIOR());
+				else
+					mat->roughglass.filmIorTexIndex = NULL_INDEX;
 				break;
 			}
 			case VELVET: {
@@ -811,6 +837,18 @@ void CompiledScene::CompileMaterials() {
 				mat->disney.anisotropicTexIndex = scene->texDefs.GetTextureIndex(dm->GetAnisotropic());
 				mat->disney.sheenTexIndex = scene->texDefs.GetTextureIndex(dm->GetSheen());
 				mat->disney.sheenTintTexIndex = scene->texDefs.GetTextureIndex(dm->GetSheenTint());
+				if (dm->GetFilmAmount())
+					mat->disney.filmAmountTexIndex = scene->texDefs.GetTextureIndex(dm->GetFilmAmount());
+				else
+					mat->disney.filmAmountTexIndex = NULL_INDEX;
+				if (dm->GetFilmThickness())
+					mat->disney.filmThicknessTexIndex = scene->texDefs.GetTextureIndex(dm->GetFilmThickness());
+				else
+					mat->disney.filmThicknessTexIndex = NULL_INDEX;
+				if (dm->GetFilmIOR())
+					mat->disney.filmIorTexIndex = scene->texDefs.GetTextureIndex(dm->GetFilmIOR());
+				else
+					mat->disney.filmIorTexIndex = NULL_INDEX;
 				break;
 			}
 			case TWOSIDED: {
@@ -827,7 +865,7 @@ void CompiledScene::CompileMaterials() {
 			case CLEAR_VOL:
 			case HOMOGENEOUS_VOL:
 			case HETEROGENEOUS_VOL: {
-				const Volume *v = static_cast<const ClearVolume *>(m);
+				const Volume *v = static_cast<const Volume *>(m);
 				mat->volume.iorTexIndex = v->GetIORTexture() ?
 					scene->texDefs.GetTextureIndex(v->GetIORTexture()) :
 					NULL_INDEX;
@@ -865,12 +903,12 @@ void CompiledScene::CompileMaterials() {
 						break;
 					}
 					default:
-						throw runtime_error("Unknown volume in CompiledScene::CompileMaterials(): " + boost::lexical_cast<string>(m->GetType()));
+						throw runtime_error("Unknown volume in CompiledScene::CompileMaterials(): " + ToString(m->GetType()));
 				}
 				break;
 			}
 			default:
-				throw runtime_error("Unknown material in CompiledScene::CompileMaterials(): " + boost::lexical_cast<string>(m->GetType()));
+				throw runtime_error("Unknown material in CompiledScene::CompileMaterials(): " + ToString(m->GetType()));
 		}
 	}
 

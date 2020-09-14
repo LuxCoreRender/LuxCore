@@ -27,7 +27,7 @@
 ################################################################################
 
 set(LUXRAYS_VERSION_MAJOR 2)
-set(LUXRAYS_VERSION_MINOR 4alpha0)
+set(LUXRAYS_VERSION_MINOR 5alpha0)
 
 # Configure a header file to pass some of the CMake settings
 # to the source code:
@@ -99,6 +99,8 @@ set(LUXRAYS_KERNELS
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/bvh/bvhbuild_types.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/accelerators/bvh.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/accelerators/mbvh.cl
+	${LuxRays_SOURCE_DIR}/include/luxrays/accelerators/optixaccel.cl
+	${LuxRays_SOURCE_DIR}/include/luxrays/accelerators/optixemptyaccel.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/exttrianglemesh_types.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/exttrianglemesh_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/randomgen_types.cl
@@ -150,10 +152,12 @@ SOURCE_GROUP("Source Files\\LuxRays Kernels" FILES ${LUXRAYS_KERNELS})
 
 set(LUXRAYS_SRCS
 	${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/bvhaccel.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/bvhaccelocl.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/bvhaccelhw.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/embreeaccel.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/mbvhaccel.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/mbvhaccelocl.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/mbvhaccelhw.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/optixaccel.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/optixaccelhw.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/bvh/bvhbuild.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/bvh/bvhclassicbuild.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/bvh/bvhembreebuild.cpp
@@ -177,6 +181,7 @@ set(LUXRAYS_SRCS
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/exttrianglemesh.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/exttrianglemeshfile.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/hardwaredevice.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/core/hardwareintersectiondevice.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/init.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/intersectiondevice.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/namedobject.cpp
@@ -189,15 +194,21 @@ set(LUXRAYS_SRCS
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/geometry/quaternion.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/geometry/transform.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/devices/cudadevice.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/devices/cudaintersectiondevice.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/devices/nativeintersectiondevice.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/devices/ocldevice.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/devices/oclintersectiondevice.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/utils/config.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/utils/cuda.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/utils/mc.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/utils/ocl.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/utils/safesave.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/utils/serializationutils.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/utils/thread.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/utils/ply/rply.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/utils/properties.cpp
+	${LuxRays_SOURCE_DIR}/deps/cuew/src/cuew.cpp
+	${LuxRays_SOURCE_DIR}/deps/clew/src/clew.cpp
 )
 SOURCE_GROUP("Source Files\\LuxRays Library" FILES ${LUXRAYS_SRCS})
 
@@ -216,6 +227,8 @@ set(LUXRAYS_SRCS_KERNELS
 	${generated_kernels_dir}/bvhbuild_types_kernel.cpp
 	${generated_kernels_dir}/bvh_kernel.cpp
 	${generated_kernels_dir}/mbvh_kernel.cpp
+	${generated_kernels_dir}/optixaccel_kernel.cpp
+	${generated_kernels_dir}/optixemptyaccel_kernel.cpp
 	${generated_kernels_dir}/randomgen_types_kernel.cpp
 	${generated_kernels_dir}/randomgen_funcs_kernel.cpp
 	${generated_kernels_dir}/trianglemesh_types_kernel.cpp
@@ -271,14 +284,7 @@ if (WIN32)
     TARGET_LINK_LIBRARIES(luxrays bcrypt.lib)
 endif(WIN32)
 
-IF (NOT LUXRAYS_DISABLE_OPENCL)
-	TARGET_LINK_LIBRARIES(luxrays ${OPENGL_gl_LIBRARY})
-	TARGET_LINK_LIBRARIES(luxrays ${OPENCL_LIBRARIES})
-ENDIF(NOT LUXRAYS_DISABLE_OPENCL)
-
-IF (LUXRAYS_ENABLE_CUDA)
-	TARGET_LINK_LIBRARIES(luxrays ${CUDA_ALL_LIBRARIES})
-ENDIF(LUXRAYS_ENABLE_CUDA)
+TARGET_LINK_LIBRARIES(luxrays ${CMAKE_DL_LIBS})
 
 ################################################################################
 #

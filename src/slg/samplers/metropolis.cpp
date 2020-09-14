@@ -16,6 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <atomic>
+
 #include <boost/lexical_cast.hpp>
 
 #include "luxrays/core/color/color.h"
@@ -42,9 +44,16 @@ SamplerSharedData *MetropolisSamplerSharedData::FromProperties(const Properties 
 }
 
 void MetropolisSamplerSharedData::Reset() {
-	totalLuminance = 0.;
+	totalLuminance = 0.f;
 	sampleCount = 0;
 	noBlackSampleCount = 0;
+
+	lastLuminance = 0.f;
+	lastSampleCount = 0;
+	lastNoBlackSampleCount = 0;
+
+	invLuminance = 1.f;
+	cooldown = true;
 }
 
 //------------------------------------------------------------------------------
@@ -53,12 +62,13 @@ void MetropolisSamplerSharedData::Reset() {
 
 MetropolisSampler::MetropolisSampler(RandomGenerator *rnd, Film *flm,
 		const FilmSampleSplatter *flmSplatter, const bool imgSamplesEnable,
-		const u_int maxRej, const float pLarge, const float imgRange,
+		const u_int maxRej, const float pLarge, const float imgRange, const bool addOnlyCstcs,
 		MetropolisSamplerSharedData *samplerSharedData) : Sampler(rnd, flm, flmSplatter, imgSamplesEnable),
 		sharedData(samplerSharedData),
 		maxRejects(maxRej),	largeMutationProbability(pLarge), imageMutationRange(imgRange),
+		addOnlyCuastics(addOnlyCstcs),
 		samples(NULL), sampleStamps(NULL), currentSamples(NULL), currentSampleStamps(NULL),
-		largeMutationCount(0), cooldown(true) {
+		largeMutationCount(0) {
 }
 
 MetropolisSampler::~MetropolisSampler() {
@@ -158,7 +168,7 @@ void MetropolisSampler::RequestSamples(const SampleType smplType, const u_int si
 	fill(sampleStamps, sampleStamps + requestedSamples, 0);
 	stamp = 1;
 	currentStamp = 1;
-	currentSampleResult.resize(0);
+	currentSampleResults.resize(0);
 }
 
 float MetropolisSampler::GetSample(const u_int index) {
@@ -201,6 +211,18 @@ float MetropolisSampler::GetSample(const u_int index) {
 }
 
 void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
+	//--------------------------------------------------------------------------
+	// Some hard coded parameter:
+	//--------------------------------------------------------------------------
+	const u_longlong warmupMinSampleCount = 250000;
+	const u_longlong warmupMinNoBlackSampleCount = warmupMinSampleCount / 100 * 5; // 5%
+
+	const u_longlong stepMinSampleCount = 250000;
+	const u_longlong stepMinNoBlackSampleCount = warmupMinSampleCount / 100 * 5; // 5%
+
+	const double luminanceThreshold = .01; // 1%	// Thread 0 check if the cooldown is over
+	//--------------------------------------------------------------------------
+
 	if (film) {
 		double pixelNormalizedCount, screenNormalizedCount;
 		switch (sampleType) {
@@ -245,20 +267,18 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 			}
 		}
 	}
-
-	if (cooldown && isLargeMutation) {
-		AtomicAdd(&sharedData->totalLuminance, newLuminance);
-		AtomicInc(&sharedData->sampleCount);
+	
+	if (sharedData->cooldown && isLargeMutation) {
+		AtomicAdd(&sharedData->totalLuminance, (double)newLuminance);
+		sharedData->sampleCount++;
 		if (newLuminance > 0.f)
-			AtomicInc(&sharedData->noBlackSampleCount);
+			sharedData->noBlackSampleCount++;
 	}
 
-	const float invMeanIntensity = (sharedData->totalLuminance > 0.) ?
-		static_cast<float>(sharedData->sampleCount / sharedData->totalLuminance) : 1.f;
+	const float invMeanIntensity = sharedData->invLuminance;
 
-	// Define the probability of large mutations. It is 100% if we are still
-	// inside the cooldown phase.
-	const float currentLargeMutationProbability = cooldown ? 1.f : largeMutationProbability;
+	// Define the probability of large mutations.
+	const float currentLargeMutationProbability = (sharedData->cooldown) ? .5 : largeMutationProbability;
 
 	// Calculate accept probability from old and new image sample
 	float accProb;
@@ -293,8 +313,12 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 						currentSampleResult[0].radiance[0].c[2],
 						norm, consecRejects);*/
 
-			if (film)
-				AtomicAddSamplesToFilm(currentSampleResult, norm);
+			if (film) {
+				for (auto const &sr : currentSampleResults) {
+					if (!addOnlyCuastics || (sr.HasChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED) && sr.isCaustic))
+						AtomicAddSampleToFilm(sr, norm);
+				}
+			}
 		}
 
 		lastSampleAcceptance = METRO_ACCEPTED;
@@ -306,7 +330,7 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 		currentLuminance = newLuminance;
 		copy(samples, samples + requestedSamples, currentSamples);
 		copy(sampleStamps, sampleStamps + requestedSamples, currentSampleStamps);
-		currentSampleResult = sampleResults;
+		currentSampleResults = sampleResults;
 
 		consecRejects = 0;
 	} else {
@@ -323,8 +347,12 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 						sampleResults[0].radiance[0].c[2],
 						norm, consecRejects);*/
 
-			if (film)
-				AtomicAddSamplesToFilm(sampleResults, norm);
+			if (film) {
+				for (auto const &sr : sampleResults) {
+					if (!addOnlyCuastics || (sr.HasChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED) && sr.isCaustic))
+						AtomicAddSampleToFilm(sr, norm);
+				}
+			}
 		}
 
 		lastSampleAcceptance = METRO_REJECTED;
@@ -340,29 +368,54 @@ void MetropolisSampler::NextSample(const vector<SampleResult> &sampleResults) {
 
 	// Cooldown is used in order to not have problems in the estimation of meanIntensity
 	// when large mutation probability is very small.
-	if (cooldown) {
-		// Check if it is time to end the cooldown (i.e. I have an average of
-		// 1 sample for each pixel).
-		//
-		// Note: I have to use a cap for pixelCount or the accumulated luminance
-		// will overflow the floating point 32bit variable
-		const u_int pixelCount = film ? Min(4u * film->GetWidth() * film->GetHeight(), 768u * 768u) : 8192;
-		if ((sharedData->noBlackSampleCount > pixelCount) || (sharedData->sampleCount > 50000000)) {
-			if (sharedData->sampleCount > 50000000) {
-				LC_LOG("Metropolis sampler had only " << sharedData->noBlackSampleCount <<
-						" not black samples over a total of " << sharedData->sampleCount <<
-						" samples. The rendering may be inaccurate because how hard is to estimate the average image intensity.");
+	if (threadIndex == 0) {
+		// Update shared inv. luminance
+		const double luminance = (sharedData->totalLuminance > 0.) ?
+			(sharedData->totalLuminance / sharedData->sampleCount) : 1.;
+		sharedData->invLuminance = (float)(1. / luminance);
+	
+		/*SLG_LOG("Step: " << sharedData->sampleCount <<  "/" << sharedData->noBlackSampleCount <<
+				" Luminance: " << luminance);*/
+
+		const u_longlong sampleCount = sharedData->sampleCount;
+		const u_longlong noBlackSampleCount = sharedData->noBlackSampleCount;
+		const u_longlong lastSampleCount = sharedData->lastSampleCount;
+		const u_longlong lastNoBlackSampleCount = sharedData->lastNoBlackSampleCount;
+		const double lastLuminance = sharedData->lastLuminance;
+
+		if (
+			// Warmup period
+			((sampleCount > warmupMinSampleCount) &&
+				(noBlackSampleCount > warmupMinNoBlackSampleCount)) &&
+			// Step period
+			((sampleCount - lastSampleCount > stepMinSampleCount) &&
+				(noBlackSampleCount - lastNoBlackSampleCount > stepMinNoBlackSampleCount))
+			) {
+			// Time to check if I can end the cooldown
+			const double deltaLuminance = fabs(luminance  - lastLuminance) / luminance;
+
+			SLG_LOG("Metropolis sampler image luminance estimation: Step[" << sampleCount <<  "/" << noBlackSampleCount <<
+					"] Luminance[" << luminance << "] Delta[" << (deltaLuminance * 100.) << "%]");
+
+			if (
+				// To avoid any kind of overflow
+				(sampleCount > 0xefffffffu) ||
+				// Check if the delta estimated luminance is small enough
+				((luminance > 0.) && (deltaLuminance < luminanceThreshold))
+				) {
+				// I can end the cooldown phase
+				SLG_LOG("Metropolis sampler estimated image luminance: " << luminance << " (" << (deltaLuminance * 100.) << "%)");
+
+				sharedData->cooldown = false;
 			}
 
-			//printf("Cool down: false\n");
+			sharedData->lastSampleCount = sampleCount;
+			sharedData->lastNoBlackSampleCount = noBlackSampleCount;
+			sharedData->lastLuminance = luminance;
+		}
+	}
 
-			cooldown = false;
-			isLargeMutation = (rndGen->floatValue() < currentLargeMutationProbability);
-		} else
-			isLargeMutation = (rndGen->floatValue() < .5f);
-	} else
-		isLargeMutation = (rndGen->floatValue() < currentLargeMutationProbability);
-
+	isLargeMutation = (rndGen->floatValue() < currentLargeMutationProbability);
 	if (isLargeMutation) {
 		stamp = 1;
 		fill(sampleStamps, sampleStamps + requestedSamples, 0);
@@ -383,7 +436,8 @@ Properties MetropolisSampler::ToProperties() const {
 	return Sampler::ToProperties() <<
 			Property("sampler.metropolis.largesteprate")(largeMutationProbability) <<
 			Property("sampler.metropolis.maxconsecutivereject")(maxRejects) <<
-			Property("sampler.metropolis.imagemutationrate")(imageMutationRange);
+			Property("sampler.metropolis.imagemutationrate")(imageMutationRange) <<
+			Property("sampler.metropolis.addonlycaustics")(addOnlyCuastics);
 }
 
 //------------------------------------------------------------------------------
@@ -396,7 +450,8 @@ Properties MetropolisSampler::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("sampler.imagesamples.enable")) <<
 			cfg.Get(GetDefaultProps().Get("sampler.metropolis.largesteprate")) <<
 			cfg.Get(GetDefaultProps().Get("sampler.metropolis.maxconsecutivereject")) <<
-			cfg.Get(GetDefaultProps().Get("sampler.metropolis.imagemutationrate"));
+			cfg.Get(GetDefaultProps().Get("sampler.metropolis.imagemutationrate")) <<
+			cfg.Get(GetDefaultProps().Get("sampler.metropolis.addonlycaustics"));
 }
 
 Sampler *MetropolisSampler::FromProperties(const Properties &cfg, RandomGenerator *rndGen,
@@ -406,9 +461,11 @@ Sampler *MetropolisSampler::FromProperties(const Properties &cfg, RandomGenerato
 	const float rate = Clamp(cfg.Get(GetDefaultProps().Get("sampler.metropolis.largesteprate")).Get<float>(), 0.f, 1.f);
 	const u_int reject = cfg.Get(GetDefaultProps().Get("sampler.metropolis.maxconsecutivereject")).Get<u_int>();
 	const float mutationRate = Clamp(cfg.Get(GetDefaultProps().Get("sampler.metropolis.imagemutationrate")).Get<float>(), 0.f, 1.f);
+	const bool addOnlyCaustics = cfg.Get(GetDefaultProps().Get("sampler.metropolis.addonlycaustics")).Get<bool>();
 
 	return new MetropolisSampler(rndGen, film, flmSplatter, imageSamplesEnable,
-			reject, rate, mutationRate, (MetropolisSamplerSharedData *)sharedData);
+			reject, rate, mutationRate, addOnlyCaustics,
+			(MetropolisSamplerSharedData *)sharedData);
 }
 
 slg::ocl::Sampler *MetropolisSampler::FromPropertiesOCL(const Properties &cfg) {
@@ -422,8 +479,8 @@ slg::ocl::Sampler *MetropolisSampler::FromPropertiesOCL(const Properties &cfg) {
 	return oclSampler;
 }
 
-Film::FilmChannelType MetropolisSampler::GetRequiredChannels(const luxrays::Properties &cfg) {
-	return Film::NONE;
+void MetropolisSampler::AddRequiredChannels(Film::FilmChannels &channels, const luxrays::Properties &cfg) {
+	// No additional channels required
 }
 
 const Properties &MetropolisSampler::GetDefaultProps() {
@@ -432,7 +489,8 @@ const Properties &MetropolisSampler::GetDefaultProps() {
 			Property("sampler.type")(GetObjectTag()) <<
 			Property("sampler.metropolis.largesteprate")(.4f) <<
 			Property("sampler.metropolis.maxconsecutivereject")(512) <<
-			Property("sampler.metropolis.imagemutationrate")(.1f);
+			Property("sampler.metropolis.imagemutationrate")(.1f) <<
+			Property("sampler.metropolis.addonlycaustics")(false);
 
 	return props;
 }

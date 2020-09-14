@@ -104,7 +104,7 @@ public:
 		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData);
 	static slg::ocl::Sampler *FromPropertiesOCL(const luxrays::Properties &cfg);
 
-	static Film::FilmChannelType GetRequiredChannels(const luxrays::Properties &cfg);
+	static void AddRequiredChannels(Film::FilmChannels &channels, const luxrays::Properties &cfg);
 
 	static SamplerType String2SamplerType(const std::string &type);
 	static std::string SamplerType2String(const SamplerType type);
@@ -112,7 +112,18 @@ public:
 protected:
 	static const luxrays::Properties &GetDefaultProps();
 
-	void AtomicAddSamplesToFilm(const std::vector<SampleResult> &sampleResults, const float weight = 1.f) const;
+	
+	void AtomicAddSampleToFilm(const SampleResult &sampleResult, const float weight = 1.f) const {
+		if (sampleResult.useFilmSplat && filmSplatter)
+			filmSplatter->AtomicSplatSample(*film, sampleResult, weight);
+		else
+			film->AtomicAddSample(sampleResult.pixelX, sampleResult.pixelY, sampleResult, weight);
+	}
+
+	void AtomicAddSamplesToFilm(const std::vector<SampleResult> &sampleResults, const float weight = 1.f) const {
+		for (auto const &sr : sampleResults)
+			AtomicAddSampleToFilm(sr, weight);
+	}
 
 	u_int threadIndex;
 	luxrays::RandomGenerator *rndGen;

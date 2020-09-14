@@ -59,7 +59,7 @@ OPENCL_FORCE_INLINE void MirrorMaterial_GetEmittedRadiance(__global const Materi
 	DefaultMaterial_GetEmittedRadiance(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
 }
 
-OPENCL_FORCE_NOT_INLINE void MirrorMaterial_Evaluate(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void MirrorMaterial_Evaluate(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {
@@ -83,7 +83,7 @@ OPENCL_FORCE_INLINE void MirrorMaterial_Sample(__global const Material* restrict
 
 	const BSDFEvent event = SPECULAR | REFLECT;
 
-	const float3 sampledDir = (float3)(-fixedDir.x, -fixedDir.y, fixedDir.z);
+	const float3 sampledDir = MAKE_FLOAT3(-fixedDir.x, -fixedDir.y, fixedDir.z);
 	const float pdfW = 1.f;
 
 	const float3 krVal = Texture_GetSpectrumValue(material->mirror.krTexIndex, hitPoint TEXTURES_PARAM);

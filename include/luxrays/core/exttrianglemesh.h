@@ -128,12 +128,18 @@ public:
 	virtual void Delete();
 
 	void SetVertexAOV(const u_int dataIndex, float *values) {
-		delete vertAOV[dataIndex];
 		vertAOV[dataIndex] = values;
 	}
+	void DeleteVertexAOV(const u_int dataIndex) {
+		delete[] vertAOV[dataIndex];
+		vertAOV[dataIndex] = nullptr;
+	}
 	void SetTriAOV(const u_int dataIndex, float *values) {
-		delete triAOV[dataIndex];
 		triAOV[dataIndex] = values;
+	}
+	void DeleteTriAOV(const u_int dataIndex) {
+		delete[] triAOV[dataIndex];
+		triAOV[dataIndex] = nullptr;
 	}
 
 	Normal *GetNormals() const { return normals; }
@@ -176,8 +182,18 @@ public:
 	virtual Spectrum GetColor(const u_int vertIndex, const u_int dataIndex) const { return cols[dataIndex][vertIndex]; }
 	virtual float GetAlpha(const u_int vertIndex, const u_int dataIndex) const { return alphas[dataIndex][vertIndex]; }
 	
-	virtual float GetVertexAOV(const u_int vertIndex, const u_int dataIndex) const { return vertAOV[dataIndex][vertIndex]; }
-	virtual float GetTriAOV(const u_int triIndex, const u_int dataIndex) const { return triAOV[dataIndex][triIndex]; }
+	virtual float GetVertexAOV(const u_int vertIndex, const u_int dataIndex) const {
+		if (HasTriAOV(dataIndex))
+			return vertAOV[dataIndex][vertIndex];
+		else
+			return 0.f;
+	}
+	virtual float GetTriAOV(const u_int triIndex, const u_int dataIndex) const {
+		if (HasTriAOV(dataIndex))
+			return triAOV[dataIndex][triIndex];
+		else
+			return 0.f;
+	}
 
 	virtual bool GetTriBaryCoords(const luxrays::Transform &local2World, const u_int triIndex, const Point &hitPoint, float *b1, float *b2) const {
 		const Triangle &tri = tris[triIndex];

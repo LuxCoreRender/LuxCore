@@ -24,7 +24,7 @@
 
 typedef struct {
 	unsigned int radianceGroupCount;
-	int bcdDenoiserEnable;
+	int bcdDenoiserEnable, usePixelAtomics;
 	
 	// Film channels (AOVs)
 	int hasChannelAlpha;
@@ -34,11 +34,21 @@ typedef struct {
 	int hasChannelShadingNormal;
 	int hasChannelMaterialID;
 	int hasChannelDirectDiffuse;
+	int hasChannelDirectDiffuseReflect;
+	int hasChannelDirectDiffuseTransmit;
 	int hasChannelDirectGlossy;
+	int hasChannelDirectGlossyReflect;
+	int hasChannelDirectGlossyTransmit;
 	int hasChannelEmission;
 	int hasChannelIndirectDiffuse;
+	int hasChannelIndirectDiffuseReflect;
+	int hasChannelIndirectDiffuseTransmit;
 	int hasChannelIndirectGlossy;
+	int hasChannelIndirectGlossyReflect;
+	int hasChannelIndirectGlossyTransmit;
 	int hasChannelIndirectSpecular;
+	int hasChannelIndirectSpecularReflect;
+	int hasChannelIndirectSpecularTransmit;
 	int hasChannelMaterialIDMask;
 	unsigned int channelMaterialIDMask;
 	int hasChannelDirectShadowMask;
@@ -105,11 +115,21 @@ typedef struct {
 	, __global float *filmShadingNormal \
 	, __global uint *filmMaterialID \
 	, __global float *filmDirectDiffuse \
+	, __global float *filmDirectDiffuseReflect \
+	, __global float *filmDirectDiffuseTransmit \
 	, __global float *filmDirectGlossy \
+	, __global float *filmDirectGlossyReflect \
+	, __global float *filmDirectGlossyTransmit \
 	, __global float *filmEmission \
 	, __global float *filmIndirectDiffuse \
+	, __global float *filmIndirectDiffuseReflect \
+	, __global float *filmIndirectDiffuseTransmit \
 	, __global float *filmIndirectGlossy \
+	, __global float *filmIndirectGlossyReflect \
+	, __global float *filmIndirectGlossyTransmit \
 	, __global float *filmIndirectSpecular \
+	, __global float *filmIndirectSpecularReflect \
+	, __global float *filmIndirectSpecularTransmit \
 	, __global float *filmMaterialIDMask \
 	, __global float *filmDirectShadowMask \
 	, __global float *filmIndirectShadowMask \
@@ -141,11 +161,21 @@ typedef struct {
 	, filmShadingNormal \
 	, filmMaterialID \
 	, filmDirectDiffuse \
+	, filmDirectDiffuseReflect \
+	, filmDirectDiffuseTransmit \
 	, filmDirectGlossy \
+	, filmDirectGlossyReflect \
+	, filmDirectGlossyTransmit \
 	, filmEmission \
 	, filmIndirectDiffuse \
+	, filmIndirectDiffuseReflect \
+	, filmIndirectDiffuseTransmit \
 	, filmIndirectGlossy \
+	, filmIndirectGlossyReflect \
+	, filmIndirectGlossyTransmit \
 	, filmIndirectSpecular \
+	, filmIndirectSpecularReflect \
+	, filmIndirectSpecularTransmit \
 	, filmMaterialIDMask \
 	, filmDirectShadowMask \
 	, filmIndirectShadowMask \

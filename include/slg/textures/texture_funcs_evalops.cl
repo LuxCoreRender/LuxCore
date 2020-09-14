@@ -99,26 +99,8 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		// IMAGEMAP
 		//----------------------------------------------------------------------
 		case IMAGEMAP: {
-			switch (evalType) {
-				case EVAL_FLOAT: {
-					const float eval = ImageMapTexture_ConstEvaluateFloat(texture, hitPoint TEXTURES_PARAM);
-					EvalStack_PushFloat(eval);
-					break;
-				}
-				case EVAL_SPECTRUM: {
-					const float3 eval = ImageMapTexture_ConstEvaluateSpectrum(texture, hitPoint TEXTURES_PARAM);
-					EvalStack_PushFloat3(eval);
-					break;
-				}
-				case EVAL_BUMP: {
-					const float3 shadeN = ImageMapTexture_Bump(texture, hitPoint TEXTURES_PARAM);
-					EvalStack_PushFloat3(shadeN);
-					break;
-				}
-				default:
-					// Something wrong here
-					break;
-			}
+			ImageMapTexture_EvalOp(texture, evalType, evalStack, evalStackOffset,
+					hitPoint, sampleDistance TEXTURES_PARAM);
 			break;
 		}
 		//----------------------------------------------------------------------
@@ -265,7 +247,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 					EvalStack_PopFloat3(tex2);
 					EvalStack_PopFloat3(tex1);
 
-					const float3 eval = MixTexture_ConstEvaluateSpectrum(tex1, tex2, amt);
+					const float3 eval = MixTexture_ConstEvaluateSpectrum(tex1, tex2, MAKE_FLOAT3(amt, amt, amt));
 					EvalStack_PushFloat3(eval);
 					break;
 				}
@@ -634,11 +616,12 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 		case HSV_TEX: {
 			switch (evalType) {
 				case EVAL_FLOAT: {
-					float tex1, hueTex, satTex, valTex;
+					float3 tex1;
+					float hueTex, satTex, valTex;
 					EvalStack_PopFloat(valTex);
 					EvalStack_PopFloat(satTex);
 					EvalStack_PopFloat(hueTex);
-					EvalStack_PopFloat(tex1);
+					EvalStack_PopFloat3(tex1);
 					
 
 					const float eval = HsvTexture_ConstEvaluateFloat(tex1, hueTex, satTex, valTex);
@@ -1146,7 +1129,7 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 				}
 				case EVAL_SPECTRUM: {
 					float3 tex1;
-					EvalStack_PopFloat(tex1);
+					EvalStack_PopFloat3(tex1);
 
 					const float3 eval = SplitFloat3Texture_ConstEvaluateSpectrum(tex1,
 							texture->splitFloat3Tex.channelIndex);
@@ -1762,10 +1745,64 @@ OPENCL_FORCE_NOT_INLINE void Texture_EvalOp(
 			break;
 		}
 		//----------------------------------------------------------------------
+		// WIREFRAME_TEX
+		//----------------------------------------------------------------------
+		case WIREFRAME_TEX: {
+			switch (evalType) {
+				case EVAL_FLOAT: {
+					float tex1, tex2;
+					EvalStack_PopFloat(tex2);
+					EvalStack_PopFloat(tex1);
+
+					const float eval = WireFrameTexture_ConstEvaluateFloat(hitPoint,
+							texture->wireFrameTex.width,
+							tex1, tex2
+							TEXTURES_PARAM);
+					EvalStack_PushFloat(eval);
+					break;
+				}
+				case EVAL_SPECTRUM: {
+					float3 tex1, tex2;
+					EvalStack_PopFloat3(tex2);
+					EvalStack_PopFloat3(tex1);
+
+					const float3 eval = WireFrameTexture_ConstEvaluateSpectrum(hitPoint,
+							texture->wireFrameTex.width,
+							tex1, tex2
+							TEXTURES_PARAM);
+					EvalStack_PushFloat3(eval);
+					break;
+				}
+				case EVAL_BUMP_GENERIC_OFFSET_U:
+					Texture_EvalOpGenericBumpOffsetU(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP_GENERIC_OFFSET_V:
+					Texture_EvalOpGenericBumpOffsetV(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				case EVAL_BUMP:
+					Texture_EvalOpGenericBump(evalStack, evalStackOffset,
+							hitPoint, sampleDistance);
+					break;
+				default:
+					// Something wrong here
+					break;
+			}
+			break;
+		}
+		//----------------------------------------------------------------------
 		// TRIPLANAR_TEX
 		//----------------------------------------------------------------------
 		case TRIPLANAR_TEX:
 			TriplanarTexture_EvalOp(texture, evalType, evalStack, evalStackOffset,
+					hitPoint, sampleDistance TEXTURES_PARAM);
+			break;
+		//----------------------------------------------------------------------
+		// DISTORT_TEX
+		//----------------------------------------------------------------------
+		case DISTORT_TEX:
+			DistortTexture_EvalOp(texture, evalType, evalStack, evalStackOffset,
 					hitPoint, sampleDistance TEXTURES_PARAM);
 			break;
 		//----------------------------------------------------------------------

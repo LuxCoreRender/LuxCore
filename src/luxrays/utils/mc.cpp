@@ -103,7 +103,7 @@ void UniformSampleDisk(const float u1, const float u2, float *x, float *y) {
 
 void ConcentricSampleDisk(const float u1, const float u2, float *dx, float *dy) {
 	float r, theta;
-	// Map uniform random numbers to $[-1,1]^2$
+	// Map uniform random numbers to [-1,1]^2
 	const float sx = 2.f * u1 - 1.f;
 	const float sy = 2.f * u2 - 1.f;
 	// Map square to $(r,\theta)$

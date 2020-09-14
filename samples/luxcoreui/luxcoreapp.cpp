@@ -21,6 +21,8 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/filesystem.hpp>
 
+#include "luxrays/utils/oclerror.h"
+
 #include "luxcoreapp.h"
 #include "fileext.h"
 
@@ -37,12 +39,14 @@ ImVec4 LuxCoreApp::colLabel = ImVec4(1.f, .5f, 0.f, 1.f);
 //------------------------------------------------------------------------------
 
 LuxCoreApp::LuxCoreApp(luxcore::RenderConfig *renderConfig) :
+		// Note: isOpenCLAvailable and isCUDAAvailable have to be initialized before
+		// ObjectEditorWindow constructors call (it is used by RenderEngineWindow).
+		isOpenCLAvailable(GetPlatformDesc().Get(Property("compile.LUXRAYS_ENABLE_OPENCL")(false)).Get<bool>()),
+		isCUDAAvailable(GetPlatformDesc().Get(Property("compile.LUXRAYS_ENABLE_CUDA")(false)).Get<bool>()),
 		acceleratorWindow(this), epsilonWindow(this),
 		filmChannelsWindow(this), filmOutputsWindow(this),
 		filmRadianceGroupsWindow(this), lightStrategyWindow(this),
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 		oclDeviceWindow(this),
-#endif
 		pixelFilterWindow(this), renderEngineWindow(this),
 		samplerWindow(this), haltConditionsWindow(this),
 		statsWindow(this), logWindow(this), helpWindow(this),
@@ -147,9 +151,7 @@ void LuxCoreApp::CloseAllRenderConfigEditors() {
 	filmOutputsWindow.Close();
 	filmRadianceGroupsWindow.Close();
 	lightStrategyWindow.Close();
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	oclDeviceWindow.Close();
-#endif
 	pixelFilterWindow.Close();
 	renderEngineWindow.Close();
 	samplerWindow.Close();
@@ -350,6 +352,8 @@ void LuxCoreApp::StartRendering(RenderState *startState, Film *startFilm) {
 			Property("film.width")(filmWidth) <<
 			Property("film.height")(filmHeight);
 	config->Parse(cfgProps);
+
+	LA_LOG("RenderConfig has cached kernels: " << (config->HasCachedKernels() ? "True" : "False"));
 
 	try {
 		session = RenderSession::Create(config, startState, startFilm);

@@ -8,10 +8,7 @@ mklink /J Luxcore %SYSTEM_DEFAULTWORKINGDIRECTORY%
 
 pip install --upgrade pip
 
-:: setuptools 45.x has issues when packaged with PyInstaller, see:
-:: https://github.com/pypa/setuptools/issues/1963
-:: Next PyInstaller version will fix
-pip install --upgrade "setuptools<45.0.0"
+pip install --upgrade setuptools
 
 pip install wheel
 pip install pyinstaller
@@ -20,9 +17,3 @@ pip install pyinstaller
 pip install numpy==1.15.4
 
 pip install PySide2
-
-.\WindowsCompile\support\bin\wget.exe https://github.com/GPUOpen-LibrariesAndSDKs/OCL-SDK/files/1406216/lightOCLSDK.zip
-.\WindowsCompile\support\bin\7z.exe x -oWindowsCompile\OCL_SDK_Light lightOCLSDK.zip
-
-.\WindowsCompile\support\bin\wget.exe https://www.khronos.org/registry/OpenCL/api/2.1/cl.hpp
-copy /Y cl.hpp WindowsCompile\OCL_SDK_Light\include\CL\cl.hpp

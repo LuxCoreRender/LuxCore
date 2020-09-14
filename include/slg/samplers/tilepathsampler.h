@@ -81,7 +81,7 @@ public:
 	static Sampler *FromProperties(const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen,
 		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData);
 	static slg::ocl::Sampler *FromPropertiesOCL(const luxrays::Properties &cfg);
-	static Film::FilmChannelType GetRequiredChannels(const luxrays::Properties &cfg);
+	static void AddRequiredChannels(Film::FilmChannels &channels, const luxrays::Properties &cfg);
 
 private:
 	static const luxrays::Properties &GetDefaultProps();
@@ -94,7 +94,6 @@ private:
 	TileWork *tileWork;
 	Film *tileFilm;
 	u_int tileX, tileY, tilePass;
-	luxrays::TauswortheRandomGenerator rngGenerator;
 
 	float sample0, sample1;
 };

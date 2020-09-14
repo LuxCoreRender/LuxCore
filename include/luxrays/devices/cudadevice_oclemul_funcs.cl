@@ -201,12 +201,21 @@ __forceinline__ float mix(const float x, const float y, const float a) {
 __forceinline__ float2 mix(const float2 x, const float2 y, const float a) {
 	return x + (y - x) * a;
 }
+__forceinline__ float2 mix(const float2 x, const float2 y, const float2 a) {
+	return x + (y - x) * a;
+}
 
 __forceinline__ float3 mix(const float3 x, const float3 y, const float a) {
 	return x + (y - x) * a;
 }
+__forceinline__ float3 mix(const float3 x, const float3 y, const float3 a) {
+	return x + (y - x) * a;
+}
 
 __forceinline__ float4 mix(const float4 x, const float4 y, const float a) {
+	return x + (y - x) * a;
+}
+__forceinline__ float4 mix(const float4 x, const float4 y, const float4 a) {
 	return x + (y - x) * a;
 }
 
@@ -350,12 +359,64 @@ __forceinline__ float log(const float x) {
 	return logf(x);
 }
 
+__forceinline__ float3 log(const float3 x) {
+	return MAKE_FLOAT3(logf(x.x), logf(x.y), logf(x.z));
+}
+
 //------------------------------------------------------------------------------
 // native_log()
 //------------------------------------------------------------------------------
 
 __forceinline__ float native_log(const float x) {
 	return logf(x);
+}
+
+//------------------------------------------------------------------------------
+// sin()
+//------------------------------------------------------------------------------
+
+__forceinline__ float sin(const float x) {
+	return sinf(x);
+}
+
+//------------------------------------------------------------------------------
+// cos()
+//------------------------------------------------------------------------------
+
+__forceinline__ float cos(const float x) {
+	return cosf(x);
+}
+
+//------------------------------------------------------------------------------
+// atan()
+//------------------------------------------------------------------------------
+
+__forceinline__ float atan(const float x) {
+	return atanf(x);
+}
+
+//------------------------------------------------------------------------------
+// atan2()
+//------------------------------------------------------------------------------
+
+__forceinline__ float atan2(const float x, const float y) {
+	return atan2f(x, y);
+}
+
+//------------------------------------------------------------------------------
+// atanh()
+//------------------------------------------------------------------------------
+
+__forceinline__ float atanh(const float x) {
+	return atanhf(x);
+}
+
+//------------------------------------------------------------------------------
+// fabs()
+//------------------------------------------------------------------------------
+
+__forceinline__ float fabs(const float x) {
+	return fabsf(x);
 }
 
 //------------------------------------------------------------------------------
@@ -366,10 +427,83 @@ __forceinline__ float fmax(const float x, const float y) {
 	return fmaxf(x, y);
 }
 
+
+__forceinline__ float3 fmax(const float3 x, const float3 y) {
+	return MAKE_FLOAT3(fmaxf(x.x, y.x), fmaxf(x.y, y.y), fmaxf(x.z, y.z));
+}
+
 //------------------------------------------------------------------------------
 // fmin()
 //------------------------------------------------------------------------------
 
 __forceinline__ float fmin(const float x, const float y) {
 	return fminf(x, y);
+}
+
+__forceinline__ float3 fmin(const float3 x, const float3 y) {
+	return MAKE_FLOAT3(fminf(x.x, y.x), fminf(x.y, y.y), fminf(x.z, y.z));
+}
+
+//------------------------------------------------------------------------------
+// as_*()
+//------------------------------------------------------------------------------
+
+template<typename T>
+__forceinline__ int as_int(const T v) {
+	union {
+		T src;
+		int dst;
+	} val;
+	
+	val.src = v;
+
+	return val.dst;
+}
+
+template<typename T>
+__forceinline__ uint as_uint(const T v) {
+	union {
+		T src;
+		uint dst;
+	} val;
+	
+	val.src = v;
+
+	return val.dst;
+}
+
+template<typename T>
+__forceinline__ float as_float(const T v) {
+	union {
+		T src;
+		float dst;
+	} val;
+	
+	val.src = v;
+
+	return val.dst;
+}
+
+//------------------------------------------------------------------------------
+// atomic_*()
+//------------------------------------------------------------------------------
+
+uint atomic_cmpxchg(uint *p, uint cmp, uint val) {
+	return atomicCAS(p, cmp, val);
+}
+
+uint atomic_inc(uint *p) {
+	return atomicAdd(p, 1u);
+}
+
+int atomic_inc(int *p) {
+	return atomicAdd(p, 1);
+}
+
+uint atomic_dec(uint *p) {
+	return atomicSub(p, 1u);
+}
+
+int atomic_dec(int *p) {
+	return atomicSub(p, 1);
 }

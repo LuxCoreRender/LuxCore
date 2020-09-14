@@ -24,10 +24,6 @@
 
 #if defined(SLG_OPENCL_KERNEL)
 
-#if defined(PARAM_USE_PIXEL_ATOMICS)
-#pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
-#endif
-
 #ifndef TRUE
 #define TRUE 1
 #endif

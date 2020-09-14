@@ -59,7 +59,7 @@ OPENCL_FORCE_INLINE void RoughGlassMaterial_GetEmittedRadiance(__global const Ma
 	DefaultMaterial_GetEmittedRadiance(material, hitPoint, evalStack, evalStackOffset MATERIALS_PARAM);
 }
 
-OPENCL_FORCE_NOT_INLINE void RoughGlassMaterial_Evaluate(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void RoughGlassMaterial_Evaluate(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {
@@ -156,16 +156,24 @@ OPENCL_FORCE_NOT_INLINE void RoughGlassMaterial_Evaluate(__global const Material
 		//	*reversePdfW = (1.f - threshold) * specPdf / (4.f * fabs(dot(lightDir, wh));
 
 		result = (D * G / (4.f * cosThetaI)) * kr * F;
+		
+		const float localFilmThickness = (material->roughglass.filmThicknessTexIndex != NULL_INDEX) 
+										 ? Texture_GetFloatValue(material->roughglass.filmThicknessTexIndex, hitPoint TEXTURES_PARAM) : 0.f;
+		if (localFilmThickness > 0.f) {
+			const float localFilmIor = (material->roughglass.filmIorTexIndex != NULL_INDEX) 
+									   ? Texture_GetFloatValue(material->roughglass.filmIorTexIndex, hitPoint TEXTURES_PARAM) : 1.f;
+			result *= CalcFilmColor(eyeDir, localFilmThickness, localFilmIor);
+		}
 
         event = GLOSSY | REFLECT;
 	}
-	
+
 	EvalStack_PushFloat3(result);
 	EvalStack_PushBSDFEvent(event);
 	EvalStack_PushFloat(directPdfW);
 }
 
-OPENCL_FORCE_NOT_INLINE void RoughGlassMaterial_Sample(__global const Material* restrict material,
+OPENCL_FORCE_INLINE void RoughGlassMaterial_Sample(__global const Material* restrict material,
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {
@@ -290,6 +298,14 @@ OPENCL_FORCE_NOT_INLINE void RoughGlassMaterial_Sample(__global const Material* 
 		//factor /= (!hitPoint.fromLight) ? coso : cosi;
 		factor /= coso;
 		result = factor * F * kr;
+		
+		const float localFilmThickness = (material->roughglass.filmThicknessTexIndex != NULL_INDEX) 
+										 ? Texture_GetFloatValue(material->roughglass.filmThicknessTexIndex, hitPoint TEXTURES_PARAM) : 0.f;
+		if (localFilmThickness > 0.f) {
+			const float localFilmIor = (material->roughglass.filmIorTexIndex != NULL_INDEX) 
+									   ? Texture_GetFloatValue(material->roughglass.filmIorTexIndex, hitPoint TEXTURES_PARAM) : 1.f;
+			result *= CalcFilmColor(fixedDir, localFilmThickness, localFilmIor);
+		}
 
 		pdfW *= (1.f - threshold);
 		event = GLOSSY | REFLECT;

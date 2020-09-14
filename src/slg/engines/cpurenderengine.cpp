@@ -18,6 +18,8 @@
 
 #include <boost/format.hpp>
 
+#include "luxrays/utils/thread.h"
+
 #include "slg/engines/cpurenderengine.h"
 
 using namespace std;
@@ -186,7 +188,7 @@ Properties CPURenderEngine::ToProperties(const Properties &cfg) {
 const Properties &CPURenderEngine::GetDefaultProps() {
 	static Properties props = Properties() <<
 			RenderEngine::GetDefaultProps() <<
-			Property("native.threads.count")(boost::thread::hardware_concurrency());
+			Property("native.threads.count")((u_int)GetHardwareThreadCount());
 
 	return props;
 }
@@ -229,6 +231,8 @@ void CPUNoTileRenderEngine::StopLockLess() {
 
 void CPUNoTileRenderEngine::EndSceneEditLockLess(const EditActionList &editActions) {
 	samplerSharedData->Reset();
+
+	CPURenderEngine::EndSceneEditLockLess(editActions);
 }
 
 void CPUNoTileRenderEngine::UpdateFilmLockLess() {

@@ -30,6 +30,7 @@
 #include "slg/utils/filenameresolver.h"
 
 #include "slg/textures/band.h"
+#include "slg/textures/bevel.h"
 #include "slg/textures/bilerp.h"
 #include "slg/textures/blackbody.h"
 #include "slg/textures/blender_texture.h"
@@ -40,8 +41,9 @@
 #include "slg/textures/constfloat.h"
 #include "slg/textures/constfloat3.h"
 #include "slg/textures/cloud.h"
-#include "slg/textures/dots.h"
 #include "slg/textures/densitygrid.h"
+#include "slg/textures/distort.h"
+#include "slg/textures/dots.h"
 #include "slg/textures/fbm.h"
 #include "slg/textures/fresnelapprox.h"
 #include "slg/textures/fresnel/fresnelcauchy.h"
@@ -80,6 +82,7 @@
 #include "slg/textures/vectormath/makefloat3.h"
 #include "slg/textures/vectormath/splitfloat3.h"
 #include "slg/textures/windy.h"
+#include "slg/textures/wireframe.h"
 #include "slg/textures/wrinkled.h"
 #include "slg/textures/uv.h"
 #include "slg/textures/triplanar.h"
@@ -150,9 +153,16 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		
 		const ImageMapStorage::WrapType wrapType = ImageMapStorage::String2WrapType(
 			props.Get(Property(propName + ".wrap")("repeat")).Get<string>());
+		
+		const bool randomizedTiling = props.Get(Property(propName + ".randomizedtiling.enable")(false)).Get<bool>();
 
 		ImageMap *im = imgMapCache.GetImageMap(name, gamma, selectionType, storageType, wrapType);
-		tex = new ImageMapTexture(im, CreateTextureMapping2D(propName + ".mapping", props), gain);
+		if (randomizedTiling && (im->GetStorage()->wrapType != ImageMapStorage::REPEAT))
+			throw runtime_error("Randomized tiling requires REPAT wrap type in imagemap texture: " + propName);
+
+		tex = ImageMapTexture::AllocImageMapTexture(texName, imgMapCache, im,
+				CreateTextureMapping2D(propName + ".mapping", props),
+				gain, randomizedTiling);
 	} else if (texType == "constfloat1") {
 		const float v = props.Get(Property(propName + ".value")(1.f)).Get<float>();
 		tex = new ConstFloatTexture(v);
@@ -363,16 +373,16 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const Texture *tex2 = GetTexture(props.Get(Property(propName + ".mortartex")(.2f, .2f, .2f)));
 		const Texture *tex3 = GetTexture(props.Get(Property(propName + ".brickmodtex")(1.f, 1.f, 1.f)));
 
+		const float modulationBias = Clamp(props.Get(Property(propName + ".brickmodbias")(0.f)).Get<float>(), -1.f, 1.f);
 		const string brickbond = props.Get(Property(propName + ".brickbond")("running")).Get<string>();
 		const float brickwidth = props.Get(Property(propName + ".brickwidth")(.3f)).Get<float>();
 		const float brickheight = props.Get(Property(propName + ".brickheight")(.1f)).Get<float>();
 		const float brickdepth = props.Get(Property(propName + ".brickdepth")(.15f)).Get<float>();
 		const float mortarsize = props.Get(Property(propName + ".mortarsize")(.01f)).Get<float>();
 		const float brickrun = props.Get(Property(propName + ".brickrun")(.75f)).Get<float>();
-		const float brickbevel = props.Get(Property(propName + ".brickbevel")(0.f)).Get<float>();
 
 		tex = new BrickTexture(CreateTextureMapping3D(propName + ".mapping", props), tex1, tex2, tex3,
-				brickwidth, brickheight, brickdepth, mortarsize, brickrun, brickbevel, brickbond);
+				brickwidth, brickheight, brickdepth, mortarsize, brickrun, brickbond, modulationBias);
 	} else if (texType == "add") {
 		const Texture *tex1 = GetTexture(props.Get(Property(propName + ".texture1")(1.f)));
 		const Texture *tex2 = GetTexture(props.Get(Property(propName + ".texture2")(1.f)));
@@ -591,14 +601,32 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const Texture *t1 = GetTexture(props.Get(Property(propName + ".texture1")(1.f)));
 		const Texture *t2 = GetTexture(props.Get(Property(propName + ".texture2")(1.f)));
 		const Texture *t3 = GetTexture(props.Get(Property(propName + ".texture3")(1.f)));
-		const u_int dataIndex = Clamp(props.Get(Property(propName + ".uvindex")(0u)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
 		const bool enableUVlessBumpMap = props.Get(Property(propName + ".uvlessbumpmap.enable")(true)).Get<bool>();
 		tex = new TriplanarTexture(CreateTextureMapping3D(propName + ".mapping", props),
-				t1, t2, t3, dataIndex, enableUVlessBumpMap);
+				t1, t2, t3, enableUVlessBumpMap);
     } else if (texType == "random") {
 		const Texture *texture = GetTexture(props.Get(Property(propName + ".texture")(1.f)));
 		const u_int seedOffset = props.Get(Property(propName + ".seed")(0u)).Get<u_int>();
 		tex = new RandomTexture(texture, seedOffset);
+	} else if (texType == "wireframe") {
+		const Texture *borderTex = GetTexture(props.Get(Property(propName + ".border")(1.f)));
+		const Texture *insideTex = GetTexture(props.Get(Property(propName + ".inside")(0.f)));
+		const float width = props.Get(Property(propName + ".width")(0.f)).Get<float>();
+
+		tex = new WireFrameTexture(width, borderTex, insideTex);
+	/*} else if (texType == "bevel") {
+		const Texture *bumpTex = props.IsDefined(propName + ".bumptex") ?
+			GetTexture(props.Get(Property(propName + ".bumptex")(1.f))) : nullptr;
+		
+		const float radius = props.Get(Property(propName + ".radius")(.025f)).Get<float>();
+
+		tex = new BevelTexture(bumpTex, radius);*/
+	} else if (texType == "distort") {
+		const Texture *texture = GetTexture(props.Get(Property(propName + ".texture")(0.f)));
+		const Texture *offset = GetTexture(props.Get(Property(propName + ".offset")(0.f)));
+		const float strength = props.Get(Property(propName + ".strength")(1.f)).Get<float>();
+
+		tex = new DistortTexture(texture, offset, strength);
 	} else
 		throw runtime_error("Unknown texture type: " + texType);
 
@@ -640,7 +668,7 @@ const Texture *Scene::GetTexture(const luxrays::Property &prop) {
 				return tex;
 			} else
 				throw runtime_error("Wrong number of arguments in the implicit definition of a constant texture: " +
-						boost::lexical_cast<string>(floats.size()));
+						ToString(floats.size()));
 		} catch (boost::bad_lexical_cast &) {
 			throw runtime_error("Syntax error in texture name: " + name);
 		}
@@ -653,12 +681,46 @@ TextureMapping2D *Scene::CreateTextureMapping2D(const string &prefixName, const 
 	const string mapType = props.Get(Property(prefixName + ".type")("uvmapping2d")).Get<string>();
 
 	if (mapType == "uvmapping2d") {
-		const float rotation = props.Get(Property(prefixName + ".rotation")(0.f)).Get<float>();
 		const u_int dataIndex = Clamp(props.Get(Property(prefixName + ".uvindex")(0u)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
+
+		const float rotation = props.Get(Property(prefixName + ".rotation")(0.f)).Get<float>();
 		const UV uvScale = props.Get(Property(prefixName + ".uvscale")(1.f, 1.f)).Get<UV>();
 		const UV uvDelta = props.Get(Property(prefixName + ".uvdelta")(0.f, 0.f)).Get<UV>();
 
 		return new UVMapping2D(dataIndex, rotation, uvScale.u, uvScale.v, uvDelta.u, uvDelta.v);
+	} else if (mapType == "uvrandommapping2d") {
+		const u_int dataIndex = Clamp(props.Get(Property(prefixName + ".uvindex")(0u)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
+
+		const RandomMappingSeedType seedType = String2RandomMappingSeedType(props.Get(Property(prefixName + ".seed.type")("object_id")).Get<string>());
+		const u_int triAOVIndex = props.Get(Property(prefixName + ".triangleaov.index")(0u)).Get<u_int>();
+		const u_int objectIDOffset = props.Get(Property(prefixName + ".objectidoffset.value")(0u)).Get<u_int>();
+
+		const Property uvRotationDefaultProp = Property(prefixName + ".rotation")(0.f, 0.f);
+		const Property &uvRotationProp = props.Get(uvRotationDefaultProp);
+		const float uvRotationMin = uvRotationProp.Get<float>(0);
+		const float uvRotationMax = uvRotationProp.Get<float>(1);
+
+		const Property uvScaleDefaultProp = Property(prefixName + ".uvscale")(1.f, 1.f, 1.f, 1.f);
+		const Property &uvScaleProp = props.Get(uvScaleDefaultProp);
+		const float uScaleMin = uvScaleProp.Get<float>(0);
+		const float uScaleMax = uvScaleProp.Get<float>(1);
+		const float vScaleMin = uvScaleProp.Get<float>(2);
+		const float vScaleMax = uvScaleProp.Get<float>(3);
+		
+		const bool uniformScale = props.Get(Property(prefixName + ".uvscale.uniform")(false)).Get<bool>();
+
+		const Property uvDeltaDefaultProp = Property(prefixName + ".uvdelta")(0.f, 0.f, 0.f, 0.f);
+		const Property &uvDeltaProp = props.Get(uvDeltaDefaultProp);
+		const float uDeltaMin = uvDeltaProp.Get<float>(0);
+		const float uDeltaMax = uvDeltaProp.Get<float>(1);
+		const float vDeltaMin = uvDeltaProp.Get<float>(2);
+		const float vDeltaMax = uvDeltaProp.Get<float>(3);
+
+		return new UVRandomMapping2D(dataIndex, seedType, triAOVIndex, objectIDOffset,
+				uvRotationMin, uvRotationMax,
+				uScaleMin, uScaleMax, vScaleMin, vScaleMax,
+				uDeltaMin, uDeltaMax, vDeltaMin, vDeltaMax,
+				uniformScale);
 	} else
 		throw runtime_error("Unknown 2D texture coordinate mapping type: " + mapType);
 }
@@ -682,6 +744,69 @@ TextureMapping3D *Scene::CreateTextureMapping3D(const string &prefixName, const 
 		const Transform trans(mat);
 
 		return new LocalMapping3D(trans);
+	} else if (mapType == "localrandommapping3d") {
+		const Matrix4x4 mat = props.Get(Property(prefixName + ".transformation")(Matrix4x4::MAT_IDENTITY)).Get<Matrix4x4>();
+		const Transform trans(mat);
+
+		const RandomMappingSeedType seedType = String2RandomMappingSeedType(props.Get(Property(prefixName + ".seed.type")("object_id")).Get<string>());
+		const u_int triAOVIndex = props.Get(Property(prefixName + ".triangleaov.index")(0u)).Get<u_int>();
+		const u_int objectIDOffset = props.Get(Property(prefixName + ".objectidoffset.value")(0u)).Get<u_int>();
+
+		const Property xRotationDefaultProp = Property(prefixName + ".xrotation")(0.f, 0.f);
+		const Property yRotationDefaultProp = Property(prefixName + ".yrotation")(0.f, 0.f);
+		const Property zRotationDefaultProp = Property(prefixName + ".zrotation")(0.f, 0.f);
+
+		const Property &xRotationProp = props.Get(xRotationDefaultProp);
+		const float xRotationMin = xRotationProp.Get<float>(0);
+		const float xRotationMax = xRotationProp.Get<float>(1);
+		const Property &yRotationProp = props.Get(yRotationDefaultProp);
+		const float yRotationMin = yRotationProp.Get<float>(0);
+		const float yRotationMax = yRotationProp.Get<float>(1);
+		const Property &zRotationProp = props.Get(zRotationDefaultProp);
+		const float zRotationMin = zRotationProp.Get<float>(0);
+		const float zRotationMax = zRotationProp.Get<float>(1);
+
+		const Property xScaleDefaultProp = Property(prefixName + ".xscale")(1.f, 1.f);
+		const Property yScaleDefaultProp = Property(prefixName + ".yscale")(1.f, 1.f);
+		const Property zScaleDefaultProp = Property(prefixName + ".zscale")(1.f, 1.f);
+
+		const Property &xScaleProp = props.Get(xScaleDefaultProp);
+		const float xScaleMin = xScaleProp.Get<float>(0);
+		const float xScaleMax = xScaleProp.Get<float>(1);
+		const Property &yScaleProp = props.Get(yScaleDefaultProp);
+		const float yScaleMin = yScaleProp.Get<float>(0);
+		const float yScaleMax = yScaleProp.Get<float>(1);
+		const Property &zScaleProp = props.Get(zScaleDefaultProp);
+		const float zScaleMin = zScaleProp.Get<float>(0);
+		const float zScaleMax = zScaleProp.Get<float>(1);
+		
+		const bool uniformScale = props.Get(Property(prefixName + ".xyzscale.uniform")(false)).Get<bool>();
+
+		const Property xTranslateDefaultProp = Property(prefixName + ".xtranslate")(0.f, 0.f);
+		const Property yTranslateDefaultProp = Property(prefixName + ".ytranslate")(0.f, 0.f);
+		const Property zTranslateDefaultProp = Property(prefixName + ".ztranslate")(0.f, 0.f);
+		
+		const Property &xTranslateProp = props.Get(xTranslateDefaultProp);
+		const float xTranslateMin = xTranslateProp.Get<float>(0);
+		const float xTranslateMax = xTranslateProp.Get<float>(1);
+		const Property &yTranslateProp = props.Get(yTranslateDefaultProp);
+		const float yTranslateMin = yTranslateProp.Get<float>(0);
+		const float yTranslateMax = yTranslateProp.Get<float>(1);
+		const Property &zTranslateProp = props.Get(zTranslateDefaultProp);
+		const float zTranslateMin = zTranslateProp.Get<float>(0);
+		const float zTranslateMax = zTranslateProp.Get<float>(1);
+
+		return new LocalRandomMapping3D(trans, seedType, triAOVIndex, objectIDOffset,
+				xRotationMin, xRotationMax,
+				yRotationMin, yRotationMax,
+				zRotationMin, zRotationMax,
+				xScaleMin, xScaleMax,
+				yScaleMin, yScaleMax,
+				zScaleMin, zScaleMax,
+				xTranslateMin, xTranslateMax,
+				yTranslateMin, yTranslateMax,
+				zTranslateMin, zTranslateMax,
+				uniformScale);
 	} else
 		throw runtime_error("Unknown 3D texture coordinate mapping type: " + mapType);
 }

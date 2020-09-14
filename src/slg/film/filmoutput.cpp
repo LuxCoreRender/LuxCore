@@ -32,6 +32,8 @@
 #include "luxrays/utils/fileext.h"
 #include "slg/editaction.h"
 #include "slg/film/film.h"
+#include "slg/film/imagepipeline/imagepipeline.h"
+#include "slg/film/imagepipeline/radiancechannelscale.h"
 #include "slg/film/sampleresult.h"
 
 using namespace std;
@@ -69,15 +71,35 @@ size_t Film::GetOutputSize(const FilmOutputs::FilmOutputType type) const {
 			return pixelCount;
 		case FilmOutputs::DIRECT_DIFFUSE:
 			return 3 * pixelCount;
+		case FilmOutputs::DIRECT_DIFFUSE_REFLECT:
+			return 3 * pixelCount;
+		case FilmOutputs::DIRECT_DIFFUSE_TRANSMIT:
+			return 3 * pixelCount;
 		case FilmOutputs::DIRECT_GLOSSY:
+			return 3 * pixelCount;
+		case FilmOutputs::DIRECT_GLOSSY_REFLECT:
+			return 3 * pixelCount;
+		case FilmOutputs::DIRECT_GLOSSY_TRANSMIT:
 			return 3 * pixelCount;
 		case FilmOutputs::EMISSION:
 			return 3 * pixelCount;
 		case FilmOutputs::INDIRECT_DIFFUSE:
 			return 3 * pixelCount;
+		case FilmOutputs::INDIRECT_DIFFUSE_REFLECT:
+			return 3 * pixelCount;
+		case FilmOutputs::INDIRECT_DIFFUSE_TRANSMIT:
+			return 3 * pixelCount;
 		case FilmOutputs::INDIRECT_GLOSSY:
 			return 3 * pixelCount;
+		case FilmOutputs::INDIRECT_GLOSSY_REFLECT:
+			return 3 * pixelCount;
+		case FilmOutputs::INDIRECT_GLOSSY_TRANSMIT:
+			return 3 * pixelCount;
 		case FilmOutputs::INDIRECT_SPECULAR:
+			return 3 * pixelCount;
+		case FilmOutputs::INDIRECT_SPECULAR_REFLECT:
+			return 3 * pixelCount;
+		case FilmOutputs::INDIRECT_SPECULAR_TRANSMIT:
 			return 3 * pixelCount;
 		case FilmOutputs::MATERIAL_ID_MASK:
 			return pixelCount;
@@ -115,6 +137,8 @@ size_t Film::GetOutputSize(const FilmOutputs::FilmOutputType type) const {
 			return pixelCount;
 		case FilmOutputs::USER_IMPORTANCE:
 			return pixelCount;
+		case FilmOutputs::CAUSTIC:
+			return 3 * pixelCount;
 		default:
 			throw runtime_error("Unknown FilmOutputType in Film::GetOutputSize(): " + ToString(type));
 	}
@@ -144,16 +168,36 @@ bool Film::HasOutput(const FilmOutputs::FilmOutputType type) const {
 			return HasChannel(MATERIAL_ID);
 		case FilmOutputs::DIRECT_DIFFUSE:
 			return HasChannel(DIRECT_DIFFUSE);
+		case FilmOutputs::DIRECT_DIFFUSE_REFLECT:
+			return HasChannel(DIRECT_DIFFUSE_REFLECT);
+		case FilmOutputs::DIRECT_DIFFUSE_TRANSMIT:
+			return HasChannel(DIRECT_DIFFUSE_TRANSMIT);
 		case FilmOutputs::DIRECT_GLOSSY:
 			return HasChannel(DIRECT_GLOSSY);
+		case FilmOutputs::DIRECT_GLOSSY_REFLECT:
+			return HasChannel(DIRECT_GLOSSY_REFLECT);
+		case FilmOutputs::DIRECT_GLOSSY_TRANSMIT:
+			return HasChannel(DIRECT_GLOSSY_TRANSMIT);
 		case FilmOutputs::EMISSION:
 			return HasChannel(EMISSION);
 		case FilmOutputs::INDIRECT_DIFFUSE:
 			return HasChannel(INDIRECT_DIFFUSE);
+		case FilmOutputs::INDIRECT_DIFFUSE_REFLECT:
+			return HasChannel(INDIRECT_DIFFUSE_REFLECT);
+		case FilmOutputs::INDIRECT_DIFFUSE_TRANSMIT:
+			return HasChannel(INDIRECT_DIFFUSE_TRANSMIT);
 		case FilmOutputs::INDIRECT_GLOSSY:
 			return HasChannel(INDIRECT_GLOSSY);
+		case FilmOutputs::INDIRECT_GLOSSY_REFLECT:
+			return HasChannel(INDIRECT_GLOSSY_REFLECT);
+		case FilmOutputs::INDIRECT_GLOSSY_TRANSMIT:
+			return HasChannel(INDIRECT_GLOSSY_TRANSMIT);
 		case FilmOutputs::INDIRECT_SPECULAR:
 			return HasChannel(INDIRECT_SPECULAR);
+		case FilmOutputs::INDIRECT_SPECULAR_REFLECT:
+			return HasChannel(INDIRECT_SPECULAR_REFLECT);
+		case FilmOutputs::INDIRECT_SPECULAR_TRANSMIT:
+			return HasChannel(INDIRECT_SPECULAR_TRANSMIT);
 		case FilmOutputs::MATERIAL_ID_MASK:
 			return HasChannel(MATERIAL_ID_MASK);
 		case FilmOutputs::DIRECT_SHADOW_MASK:
@@ -192,6 +236,10 @@ bool Film::HasOutput(const FilmOutputs::FilmOutputType type) const {
 			return HasChannel(NOISE);
 		case FilmOutputs::USER_IMPORTANCE:
 			return HasChannel(USER_IMPORTANCE);
+		case FilmOutputs::CAUSTIC:
+			// Caustic has not dedicated channel but is RADIANCE_PER_SCREEN_NORMALIZED
+			// when doing hybrid rendering
+			return HasChannel(RADIANCE_PER_SCREEN_NORMALIZED);
 		default:
 			throw runtime_error("Unknown film output type in Film::HasOutput(): " + ToString(type));
 	}
@@ -290,8 +338,24 @@ void Film::Output(const string &fileName,const FilmOutputs::FilmOutputType type,
 			if (!HasChannel(DIRECT_DIFFUSE))
 				return;
 			break;
+		case FilmOutputs::DIRECT_DIFFUSE_REFLECT:
+			if (!HasChannel(DIRECT_DIFFUSE_REFLECT))
+				return;
+			break;
+		case FilmOutputs::DIRECT_DIFFUSE_TRANSMIT:
+			if (!HasChannel(DIRECT_DIFFUSE_TRANSMIT))
+				return;
+			break;
 		case FilmOutputs::DIRECT_GLOSSY:
 			if (!HasChannel(DIRECT_GLOSSY))
+				return;
+			break;
+		case FilmOutputs::DIRECT_GLOSSY_REFLECT:
+			if (!HasChannel(DIRECT_GLOSSY_REFLECT))
+				return;
+			break;
+		case FilmOutputs::DIRECT_GLOSSY_TRANSMIT:
+			if (!HasChannel(DIRECT_GLOSSY_TRANSMIT))
 				return;
 			break;
 		case FilmOutputs::EMISSION:
@@ -302,12 +366,36 @@ void Film::Output(const string &fileName,const FilmOutputs::FilmOutputType type,
 			if (!HasChannel(INDIRECT_DIFFUSE))
 				return;
 			break;
+		case FilmOutputs::INDIRECT_DIFFUSE_REFLECT:
+			if (!HasChannel(INDIRECT_DIFFUSE_REFLECT))
+				return;
+			break;
+		case FilmOutputs::INDIRECT_DIFFUSE_TRANSMIT:
+			if (!HasChannel(INDIRECT_DIFFUSE_TRANSMIT))
+				return;
+			break;
 		case FilmOutputs::INDIRECT_GLOSSY:
 			if (!HasChannel(INDIRECT_GLOSSY))
 				return;
 			break;
+		case FilmOutputs::INDIRECT_GLOSSY_REFLECT:
+			if (!HasChannel(INDIRECT_GLOSSY_REFLECT))
+				return;
+			break;
+		case FilmOutputs::INDIRECT_GLOSSY_TRANSMIT:
+			if (!HasChannel(INDIRECT_GLOSSY_TRANSMIT))
+				return;
+			break;
 		case FilmOutputs::INDIRECT_SPECULAR:
 			if (!HasChannel(INDIRECT_SPECULAR))
+				return;
+			break;
+		case FilmOutputs::INDIRECT_SPECULAR_REFLECT:
+			if (!HasChannel(INDIRECT_SPECULAR_REFLECT))
+				return;
+			break;
+		case FilmOutputs::INDIRECT_SPECULAR_TRANSMIT:
+			if (!HasChannel(INDIRECT_SPECULAR_TRANSMIT))
 				return;
 			break;
 		case FilmOutputs::MATERIAL_ID_MASK:
@@ -446,6 +534,12 @@ void Film::Output(const string &fileName,const FilmOutputs::FilmOutputType type,
 				return;
 			channelCount = 1;
 			break;
+		case FilmOutputs::CAUSTIC:
+			// Caustic has not dedicated channel but is RADIANCE_PER_SCREEN_NORMALIZED
+			// when doing hybrid rendering
+			if (!HasChannel(RADIANCE_PER_SCREEN_NORMALIZED))
+				return;
+			break;
 		default:
 			throw runtime_error("Unknown film output type in Film::Output(): " + ToString(type));
 	}
@@ -563,8 +657,24 @@ void Film::Output(const string &fileName,const FilmOutputs::FilmOutputType type,
 					channel_DIRECT_DIFFUSE->GetWeightedPixel(x, y, pixel);
 					break;
 				}
+				case FilmOutputs::DIRECT_DIFFUSE_REFLECT: {
+					channel_DIRECT_DIFFUSE_REFLECT->GetWeightedPixel(x, y, pixel);
+					break;
+				}
+				case FilmOutputs::DIRECT_DIFFUSE_TRANSMIT: {
+					channel_DIRECT_DIFFUSE_TRANSMIT->GetWeightedPixel(x, y, pixel);
+					break;
+				}
 				case FilmOutputs::DIRECT_GLOSSY: {
 					channel_DIRECT_GLOSSY->GetWeightedPixel(x, y, pixel);
+					break;
+				}
+				case FilmOutputs::DIRECT_GLOSSY_REFLECT: {
+					channel_DIRECT_GLOSSY_REFLECT->GetWeightedPixel(x, y, pixel);
+					break;
+				}
+				case FilmOutputs::DIRECT_GLOSSY_TRANSMIT: {
+					channel_DIRECT_GLOSSY_TRANSMIT->GetWeightedPixel(x, y, pixel);
 					break;
 				}
 				case FilmOutputs::EMISSION: {
@@ -575,12 +685,36 @@ void Film::Output(const string &fileName,const FilmOutputs::FilmOutputType type,
 					channel_INDIRECT_DIFFUSE->GetWeightedPixel(x, y, pixel);
 					break;
 				}
+				case FilmOutputs::INDIRECT_DIFFUSE_REFLECT: {
+					channel_INDIRECT_DIFFUSE_REFLECT->GetWeightedPixel(x, y, pixel);
+					break;
+				}
+				case FilmOutputs::INDIRECT_DIFFUSE_TRANSMIT: {
+					channel_INDIRECT_DIFFUSE_TRANSMIT->GetWeightedPixel(x, y, pixel);
+					break;
+				}
 				case FilmOutputs::INDIRECT_GLOSSY: {
 					channel_INDIRECT_GLOSSY->GetWeightedPixel(x, y, pixel);
 					break;
 				}
+				case FilmOutputs::INDIRECT_GLOSSY_REFLECT: {
+					channel_INDIRECT_GLOSSY_REFLECT->GetWeightedPixel(x, y, pixel);
+					break;
+				}
+				case FilmOutputs::INDIRECT_GLOSSY_TRANSMIT: {
+					channel_INDIRECT_GLOSSY_TRANSMIT->GetWeightedPixel(x, y, pixel);
+					break;
+				}
 				case FilmOutputs::INDIRECT_SPECULAR: {
 					channel_INDIRECT_SPECULAR->GetWeightedPixel(x, y, pixel);
+					break;
+				}
+				case FilmOutputs::INDIRECT_SPECULAR_REFLECT: {
+					channel_INDIRECT_SPECULAR_REFLECT->GetWeightedPixel(x, y, pixel);
+					break;
+				}
+				case FilmOutputs::INDIRECT_SPECULAR_TRANSMIT: {
+					channel_INDIRECT_SPECULAR_TRANSMIT->GetWeightedPixel(x, y, pixel);
 					break;
 				}
 				case FilmOutputs::MATERIAL_ID_MASK: {
@@ -676,6 +810,13 @@ void Film::Output(const string &fileName,const FilmOutputs::FilmOutputType type,
 				}
 				case FilmOutputs::USER_IMPORTANCE: {
 					channel_USER_IMPORTANCE->GetWeightedPixel(x, y, pixel);
+					break;
+				}
+				case FilmOutputs::CAUSTIC: {
+					// Accumulate all light groups			
+					GetPixelFromMergedSampleBuffers(0, false, true,
+							RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
+							x, y, pixel);
 					break;
 				}
 				default:
@@ -802,9 +943,29 @@ template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, f
 				channel_DIRECT_DIFFUSE->GetWeightedPixel(i, &buffer[i * 3]);
 			break;
 		}
+		case FilmOutputs::DIRECT_DIFFUSE_REFLECT: {
+			for (u_int i = 0; i < pixelCount; ++i)
+				channel_DIRECT_DIFFUSE_REFLECT->GetWeightedPixel(i, &buffer[i * 3]);
+			break;
+		}
+		case FilmOutputs::DIRECT_DIFFUSE_TRANSMIT: {
+			for (u_int i = 0; i < pixelCount; ++i)
+				channel_DIRECT_DIFFUSE_TRANSMIT->GetWeightedPixel(i, &buffer[i * 3]);
+			break;
+		}
 		case FilmOutputs::DIRECT_GLOSSY: {
 			for (u_int i = 0; i < pixelCount; ++i)
 				channel_DIRECT_GLOSSY->GetWeightedPixel(i, &buffer[i * 3]);
+			break;
+		}
+		case FilmOutputs::DIRECT_GLOSSY_REFLECT: {
+			for (u_int i = 0; i < pixelCount; ++i)
+				channel_DIRECT_GLOSSY_REFLECT->GetWeightedPixel(i, &buffer[i * 3]);
+			break;
+		}
+		case FilmOutputs::DIRECT_GLOSSY_TRANSMIT: {
+			for (u_int i = 0; i < pixelCount; ++i)
+				channel_DIRECT_GLOSSY_TRANSMIT->GetWeightedPixel(i, &buffer[i * 3]);
 			break;
 		}
 		case FilmOutputs::EMISSION: {
@@ -817,14 +978,44 @@ template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, f
 				channel_INDIRECT_DIFFUSE->GetWeightedPixel(i, &buffer[i * 3]);
 			break;
 		}
+		case FilmOutputs::INDIRECT_DIFFUSE_REFLECT: {
+			for (u_int i = 0; i < pixelCount; ++i)
+				channel_INDIRECT_DIFFUSE_REFLECT->GetWeightedPixel(i, &buffer[i * 3]);
+			break;
+		}
+		case FilmOutputs::INDIRECT_DIFFUSE_TRANSMIT: {
+			for (u_int i = 0; i < pixelCount; ++i)
+				channel_INDIRECT_DIFFUSE_TRANSMIT->GetWeightedPixel(i, &buffer[i * 3]);
+			break;
+		}
 		case FilmOutputs::INDIRECT_GLOSSY: {
 			for (u_int i = 0; i < pixelCount; ++i)
 				channel_INDIRECT_GLOSSY->GetWeightedPixel(i, &buffer[i * 3]);
 			break;
 		}
+		case FilmOutputs::INDIRECT_GLOSSY_REFLECT: {
+			for (u_int i = 0; i < pixelCount; ++i)
+				channel_INDIRECT_GLOSSY_REFLECT->GetWeightedPixel(i, &buffer[i * 3]);
+			break;
+		}
+		case FilmOutputs::INDIRECT_GLOSSY_TRANSMIT: {
+			for (u_int i = 0; i < pixelCount; ++i)
+				channel_INDIRECT_GLOSSY_TRANSMIT->GetWeightedPixel(i, &buffer[i * 3]);
+			break;
+		}
 		case FilmOutputs::INDIRECT_SPECULAR: {
 			for (u_int i = 0; i < pixelCount; ++i)
 				channel_INDIRECT_SPECULAR->GetWeightedPixel(i, &buffer[i * 3]);
+			break;
+		}
+		case FilmOutputs::INDIRECT_SPECULAR_REFLECT: {
+			for (u_int i = 0; i < pixelCount; ++i)
+				channel_INDIRECT_SPECULAR_REFLECT->GetWeightedPixel(i, &buffer[i * 3]);
+			break;
+		}
+		case FilmOutputs::INDIRECT_SPECULAR_TRANSMIT: {
+			for (u_int i = 0; i < pixelCount; ++i)
+				channel_INDIRECT_SPECULAR_TRANSMIT->GetWeightedPixel(i, &buffer[i * 3]);
 			break;
 		}
 		case FilmOutputs::MATERIAL_ID_MASK: {
@@ -928,6 +1119,15 @@ template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, f
 		case FilmOutputs::USER_IMPORTANCE:
 			copy(channel_USER_IMPORTANCE->GetPixels(), channel_USER_IMPORTANCE->GetPixels() + pixelCount, buffer);
 			break;
+		case FilmOutputs::CAUSTIC: {
+			const double RADIANCE_PER_SCREEN_NORMALIZED_SampleCount = samplesCounts.GetSampleCount_RADIANCE_PER_SCREEN_NORMALIZED();
+
+			for (u_int i = 0; i < pixelCount; ++i)
+				GetPixelFromMergedSampleBuffers(0, false, true,
+						RADIANCE_PER_SCREEN_NORMALIZED_SampleCount,
+						i, &buffer[i * 3]);
+			break;
+		}
 		default:
 			throw runtime_error("Unknown film output type in Film::GetOutput<float>(): " + ToString(type));
 	}

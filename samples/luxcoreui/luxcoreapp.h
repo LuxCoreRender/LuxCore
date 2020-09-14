@@ -50,6 +50,8 @@ public:
 
 	void RunApp(luxcore::RenderState *startState = NULL, luxcore::Film *startFilm = NULL);
 
+	bool isGPURenderingAvailable() const { return isOpenCLAvailable || isCUDAAvailable; }
+
 	static void LogHandler(const char *msg);
 	static void ColoredLabelText(const ImVec4 &col, const char *label, const char *fmt, ...) IM_PRINTFARGS(3);
 	static void ColoredLabelText(const char *label, const char *fmt, ...) IM_PRINTFARGS(2);
@@ -135,15 +137,15 @@ private:
 	
 	static LogWindow *currentLogWindow;
 
+	bool isOpenCLAvailable, isCUDAAvailable;
+
 	AcceleratorWindow acceleratorWindow;
 	EpsilonWindow epsilonWindow;
 	FilmChannelsWindow filmChannelsWindow;
 	FilmOutputsWindow filmOutputsWindow;
 	FilmRadianceGroupsWindow filmRadianceGroupsWindow;
 	LightStrategyWindow lightStrategyWindow;
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 	OCLDeviceWindow oclDeviceWindow;
-#endif
 	PixelFilterWindow pixelFilterWindow;
 	RenderEngineWindow renderEngineWindow;
 	SamplerWindow samplerWindow;
@@ -201,6 +203,22 @@ private:
 };
 
 #define LA_LOG(a) { std::stringstream _LUXCOREUI_LOG_LOCAL_SS; _LUXCOREUI_LOG_LOCAL_SS << a; LuxCoreApp::LogHandler(_LUXCOREUI_LOG_LOCAL_SS.str().c_str()); }
+
+template <class T> inline std::string ToString(const T &t) {
+	std::ostringstream ss;
+
+	ss << t;
+	
+	return ss.str();
+}
+
+inline std::string ToString(const float t) {
+	std::ostringstream ss;
+	
+	ss << std::setprecision(std::numeric_limits<float>::digits10 + 1) << t;
+
+	return ss.str();
+}
 
 #endif	/* _LUXCOREAPP_H */
 

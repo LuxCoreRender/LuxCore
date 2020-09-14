@@ -19,37 +19,12 @@
 #ifndef _LUXRAYS_H
 #define	_LUXRAYS_H
 
+#include <locale>
+
 #include <boost/version.hpp>
 
 #include "luxrays/cfg.h"
 #include "luxrays/utils/utils.h"
-
-//------------------------------------------------------------------------------
-// Configure unicode support (requires Boost version 1.50 or better)
-
-#if (BOOST_VERSION / 100000 >= 1) && (BOOST_VERSION / 100 % 1000 >= 50)
-#define ENABLE_UNICODE_SUPPORT 1
-#else
-#undef ENABLE_UNICODE_SUPPORT
-#endif
-
-//------------------------------------------------------------------------------
-
-#if defined(ENABLE_UNICODE_SUPPORT)
-#include <boost/locale.hpp>
-#include <boost/filesystem/fstream.hpp>
-
-#define BOOST_IFSTREAM boost::filesystem::ifstream
-#define BOOST_OFSTREAM boost::filesystem::ofstream
-
-#else
-
-#define BOOST_IFSTREAM std::ifstream
-#define BOOST_OFSTREAM std::ofstream
-
-#endif
-
-//------------------------------------------------------------------------------
 
 /*!
  * \namespace luxrays
@@ -84,6 +59,11 @@ class UV;
 class Vector;
 
 extern void Init();
+
+extern bool isOpenCLAvilable;
+extern bool isCudaAvilable;
+extern bool isOptixAvilable;
+extern std::locale cLocale;
 
 }
 

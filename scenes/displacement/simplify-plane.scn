@@ -28,14 +28,20 @@ scene.textures.checktex.texture1 = 1.0 0.0 0.0
 scene.textures.checktex.texture2 = 1.0 1.0 1.0
 scene.textures.checktex.mapping.type = uvmapping2d
 scene.textures.checktex.mapping.uvscale = 20.0 20.0
+##
+scene.textures.wireframetex.type = wireframe
+scene.textures.wireframetex.width = 0.02
+scene.textures.wireframetex.border = 1.0 0.0 0.0
+scene.textures.wireframetex.inside = 1.0 1.0 1.0
 ################################################################################
 scene.materials.mat_light.type = matte
 scene.materials.mat_light.emission = 240 240 240
 scene.materials.mat_light.kd = 0.0 0.0 0.0
 ##
 scene.materials.mat_white.type = matte
-scene.materials.mat_white.kd = vertcol
+#scene.materials.mat_white.kd = vertcol
 #scene.materials.mat_white.kd = checktex
+scene.materials.mat_white.kd = wireframetex
 ################################################################################
 scene.shapes.obj_whiteply.type = mesh
 scene.shapes.obj_whiteply.ply = scenes/displacement/large-plane.ply
@@ -60,6 +66,7 @@ scene.shapes.obj_whitesimplify.preserveborder = 1
 ##
 scene.shapes.obj_white.type = harlequin
 scene.shapes.obj_white.source = obj_whitesimplify
+#scene.shapes.obj_white.source = obj_whiteply
 ################################################################################
 #scene.objects.obj_light.ply = scenes/bump/mat_light.ply
 #scene.objects.obj_light.material = mat_light

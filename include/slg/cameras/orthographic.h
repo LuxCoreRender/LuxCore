@@ -35,13 +35,15 @@ public:
 
 	virtual void ClampRay(luxrays::Ray *ray) const;
 	virtual bool GetSamplePosition(luxrays::Ray *eyeRay, float *filmX, float *filmY) const;
+	virtual bool LocalSampleLens(const float time, const float u1, const float u2,
+		luxrays::Point *lensPoint) const;
 	virtual bool SampleLens(const float time, const float u1, const float u2,
 		luxrays::Point *lensPoint) const;
 	virtual void GetPDF(const luxrays::Ray &eyeRay, const float eyeDistance,
 		const float filmX, const float filmY,
 		float *pdfW, float *fluxToRadianceFactor) const;
 
-	luxrays::Properties ToProperties() const;
+	luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
 	virtual void InitCameraTransforms(CameraTransforms *trans);

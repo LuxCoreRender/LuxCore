@@ -19,6 +19,7 @@
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
 #include "slg/slg.h"
+#include "slg/cameras/perspective.h"
 #include "slg/engines/rtpathocl/rtpathocl.h"
 
 using namespace std;
@@ -34,8 +35,12 @@ RTPathOCLRenderEngine::RTPathOCLRenderEngine(const RenderConfig *rcfg) :
 	if (nativeRenderThreadCount > 0)
 		throw runtime_error("opencl.native.threads.count must be 0 for RTPATHOCL");
 
-	frameBarrier = new boost::barrier(renderOCLThreads.size() + 1);
-	frameStartTime = 0.f;
+	syncBarrier = new boost::barrier(2);
+	if (renderOCLThreads.size() > 1)
+		frameBarrier = new boost::barrier(renderOCLThreads.size());
+	else
+		frameBarrier = nullptr;
+
 	frameTime = 0.f;
 }
 
@@ -52,7 +57,7 @@ void RTPathOCLRenderEngine::InitGPUTaskConfiguration() {
 }
 
 PathOCLBaseOCLRenderThread *RTPathOCLRenderEngine::CreateOCLThread(const u_int index,
-	OpenCLIntersectionDevice *device) {
+	HardwareIntersectionDevice *device) {
 	return new RTPathOCLRenderThread(index, device, this);
 }
 
@@ -77,21 +82,28 @@ void RTPathOCLRenderEngine::StartLockLess() {
 	maxTilePerDevice = 1;
 
 	tileRepository->enableRenderingDonePrint = false;
-	frameCounter = 0;
+	tileRepository->enableFirstPassClear = true;
+
+	updateActions.Reset();
+	useFastCameraEditPath = false;
+	cameraIsUsingCustomBokeh = (renderConfig->scene->camera->GetType() == Camera::PERSPECTIVE) &&
+			(dynamic_cast<PerspectiveCamera *>(renderConfig->scene->camera))->bokehDistributionImageMap;
 
 	// To synchronize the start of all threads
-	frameBarrier->wait();
+	syncType = SYNCTYPE_NONE;
+	syncBarrier->wait();
 }
 
 void RTPathOCLRenderEngine::StopLockLess() {
-	frameBarrier->wait();
-	frameBarrier->wait();
+	syncType = SYNCTYPE_STOP;
+	syncBarrier->wait();
 
 	// All render threads are now suspended and I can set the interrupt signal
 	for (size_t i = 0; i < renderOCLThreads.size(); ++i)
 		((RTPathOCLRenderThread *)renderOCLThreads[i])->renderThread->interrupt();
 
-	frameBarrier->wait();
+	syncType = SYNCTYPE_NONE;
+	syncBarrier->wait();
 
 	// Render threads will now detect the interruption
 
@@ -99,40 +111,43 @@ void RTPathOCLRenderEngine::StopLockLess() {
 }
 
 void RTPathOCLRenderEngine::EndSceneEdit(const EditActionList &editActions) {
-	const bool requireSync = editActions.HasAnyAction() && !editActions.HasOnly(CAMERA_EDIT);
+	// Check if I can use the fast camera edit path
+	if (editActions.HasOnly(CAMERA_EDIT) &&
+			(renderConfig->scene->camera->GetType() == Camera::PERSPECTIVE) &&
+			// Camera is not using custom bokeh
+			!(dynamic_cast<PerspectiveCamera *>(renderConfig->scene->camera))->bokehDistributionImageMap &&
+			// Camera was not using custom bokeh
+			!cameraIsUsingCustomBokeh) {
+		TilePathOCLRenderEngine::EndSceneEdit(editActions);
+		useFastCameraEditPath = true;
+	} else {
+		syncType = SYNCTYPE_ENDSCENEEDIT;
+		updateActions.AddActions(editActions.GetActions());
+		syncBarrier->wait();
+		
+		TilePathOCLRenderEngine::EndSceneEdit(editActions);
+		cameraIsUsingCustomBokeh = (renderConfig->scene->camera->GetType() == Camera::PERSPECTIVE) &&
+				(dynamic_cast<PerspectiveCamera *>(renderConfig->scene->camera))->bokehDistributionImageMap;
+		syncBarrier->wait();
+		
+		// Here, rendering thread 0 will update all OpenCL buffers here
 
-	if (requireSync) {
-		// This is required to move the rendering thread forward
-		frameBarrier->wait();
-	}
-
-	// While threads splat their tiles on the film I can finish the scene edit
-	TilePathOCLRenderEngine::EndSceneEdit(editActions);
-	updateActions.AddActions(editActions.GetActions());
-
-	frameCounter = 0;
-
-	if (requireSync) {
-		// This is required to move the rendering thread forward
-		frameBarrier->wait();
-
-		// Re-initialize the tile queue for the next frame
-		tileRepository->Restart(film, frameCounter);
-
-		frameBarrier->wait();
+		syncType = SYNCTYPE_NONE;
+		syncBarrier->wait();
 	}
 }
 
 // A fast path for film resize
 void RTPathOCLRenderEngine::BeginFilmEdit() {
-	frameBarrier->wait();
-	frameBarrier->wait();
+	syncType = SYNCTYPE_BEGINFILMEDIT;
+	syncBarrier->wait();
 
 	// All render threads are now suspended and I can set the interrupt signal
 	for (size_t i = 0; i < renderOCLThreads.size(); ++i)
 		((RTPathOCLRenderThread *)renderOCLThreads[i])->renderThread->interrupt();
 
-	frameBarrier->wait();
+	syncType = SYNCTYPE_NONE;
+	syncBarrier->wait();
 
 	// Render threads will now detect the interruption
 	for (size_t i = 0; i < renderOCLThreads.size(); ++i)
@@ -149,11 +164,10 @@ void RTPathOCLRenderEngine::EndFilmEdit(Film *flm, boost::mutex *flmMutex) {
 	// Disable denoiser statistics collection
 	film->GetDenoiser().SetEnabled(false);
 
-	frameCounter = 0;
-
 	// Create a tile repository based on the new film
 	InitTileRepository();
 	tileRepository->enableRenderingDonePrint = false;
+	tileRepository->enableFirstPassClear = true;
 
 	// The camera has been updated too
 	EditActionList a;
@@ -165,35 +179,19 @@ void RTPathOCLRenderEngine::EndFilmEdit(Film *flm, boost::mutex *flmMutex) {
 		renderOCLThreads[i]->Start();
 
 	// To synchronize the start of all threads
-	frameBarrier->wait();
+	syncType = SYNCTYPE_NONE;
+	syncBarrier->wait();
 }
 
 void RTPathOCLRenderEngine::UpdateFilmLockLess() {
-	// Nothing to do: the display thread is in charge of updating the film
+	// Nothing to do: the render threads are in charge of updating the film
 }
 
 void RTPathOCLRenderEngine::WaitNewFrame() {
 	// Avoid to move forward rendering threads if I'm in pause
 	if (!pauseMode) {
-		// Threads do the rendering
-
-		frameBarrier->wait();
-
-		// Threads splat their tiles on the film
-
-		frameBarrier->wait();
-
-		// Re-initialize the tile queue for the next frame
-		tileRepository->Restart(film, frameCounter++);
-
-		frameBarrier->wait();
-
 		// Update the statistics
 		UpdateCounters();
-
-		const double currentTime = WallClockTime();
-		frameTime = currentTime - frameStartTime;
-		frameStartTime = currentTime;
 	}
 }
 

@@ -33,7 +33,8 @@ public:
 			const Texture *emitted, const Texture *bump,
 			const Texture *refl, const Texture *trans,
 			const Texture *exteriorIorFact, const Texture *interiorIorFact,
-			const Texture *C);
+			const Texture *C, 
+			const Texture *filmThickness, const Texture *filmIor);
 
 	virtual MaterialType GetType() const { return GLASS; }
 	virtual BSDFEvent GetEventTypes() const { return SPECULAR | REFLECT | TRANSMIT; };
@@ -61,11 +62,14 @@ public:
 	const Texture *GetExteriorIOR() const { return exteriorIor; }
 	const Texture *GetInteriorIOR() const { return interiorIor; }
 	const Texture *GetCauchyC() const { return cauchyC; }
+	const Texture *GetFilmThickness() const { return filmThickness; }
+	const Texture *GetFilmIOR() const { return filmIor; }
 
 	static luxrays::Spectrum EvalSpecularReflection(const HitPoint &hitPoint,
 			const luxrays::Vector &localFixedDir,
 			const luxrays::Spectrum &kr, const float nc, const float nt,
-			luxrays::Vector *localSampledDir);
+			luxrays::Vector *localSampledDir,
+			const float localFilmThickness, const float localFilmIor);
 	static luxrays::Spectrum EvalSpecularTransmission(const HitPoint &hitPoint,
 			const luxrays::Vector &localFixedDir, const float u0,
 			const luxrays::Spectrum &kt,
@@ -79,6 +83,8 @@ private:
 	const Texture *exteriorIor;
 	const Texture *interiorIor;
 	const Texture *cauchyC;
+	const Texture *filmThickness;
+	const Texture *filmIor;
 };
 
 }

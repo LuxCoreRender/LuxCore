@@ -66,33 +66,14 @@ Tile::~Tile() {
 void Tile::InitTileFilm(const Film &film, Film **tileFilm) {
 	(*tileFilm) = new Film(coord.width, coord.height);
 	(*tileFilm)->CopyDynamicSettings(film);
+
 	// Remove all channels but RADIANCE_PER_PIXEL_NORMALIZED and IMAGEPIPELINE
-	(*tileFilm)->RemoveChannel(Film::ALPHA);
-	(*tileFilm)->RemoveChannel(Film::DEPTH);
-	(*tileFilm)->RemoveChannel(Film::POSITION);
-	(*tileFilm)->RemoveChannel(Film::GEOMETRY_NORMAL);
-	(*tileFilm)->RemoveChannel(Film::SHADING_NORMAL);
-	(*tileFilm)->RemoveChannel(Film::MATERIAL_ID);
-	(*tileFilm)->RemoveChannel(Film::DIRECT_GLOSSY);
-	(*tileFilm)->RemoveChannel(Film::EMISSION);
-	(*tileFilm)->RemoveChannel(Film::INDIRECT_DIFFUSE);
-	(*tileFilm)->RemoveChannel(Film::INDIRECT_GLOSSY);
-	(*tileFilm)->RemoveChannel(Film::INDIRECT_SPECULAR);
-	(*tileFilm)->RemoveChannel(Film::MATERIAL_ID_MASK);
-	(*tileFilm)->RemoveChannel(Film::DIRECT_SHADOW_MASK);
-	(*tileFilm)->RemoveChannel(Film::INDIRECT_SHADOW_MASK);
-	(*tileFilm)->RemoveChannel(Film::UV);
-	(*tileFilm)->RemoveChannel(Film::RAYCOUNT);
-	(*tileFilm)->RemoveChannel(Film::BY_MATERIAL_ID);
-	(*tileFilm)->RemoveChannel(Film::IRRADIANCE);
-	(*tileFilm)->RemoveChannel(Film::OBJECT_ID);
-	(*tileFilm)->RemoveChannel(Film::OBJECT_ID_MASK);
-	(*tileFilm)->RemoveChannel(Film::BY_OBJECT_ID);
-	(*tileFilm)->RemoveChannel(Film::SAMPLECOUNT);
-	(*tileFilm)->RemoveChannel(Film::CONVERGENCE);
-	(*tileFilm)->RemoveChannel(Film::MATERIAL_ID_COLOR);
-	(*tileFilm)->RemoveChannel(Film::ALBEDO);
-	(*tileFilm)->RemoveChannel(Film::NOISE);
+	const Film::FilmChannels &channels = (*tileFilm)->GetChannels();
+	
+	for (auto const &c : channels) {
+		if ((c != Film::RADIANCE_PER_PIXEL_NORMALIZED) && (c != Film::IMAGEPIPELINE))
+			(*tileFilm)->RemoveChannel(c);
+	}
 
 	// Build an image pipeline with only an auto-linear tone mapping and
 	// gamma correction.
@@ -125,7 +106,7 @@ void Tile::Restart(const u_int startPass) {
 }
 
 void Tile::VarianceClamp(Film &tileFilm) {
-	allPassFilm->VarianceClampFilm(tileRepository->varianceClamping, tileFilm);
+	tileRepository->varianceClamping.ClampFilm(*allPassFilm, tileFilm);
 }
 
 void Tile::AddPass(Film &tileFilm, const u_int passRendered) {
@@ -275,10 +256,6 @@ void TileWork::Init(Tile *t) {
 	passToRender = tile->pass + tile->pendingPasses;
 }
 
-u_int TileWork::GetTileSeed() const {
-	return tile->tileIndex + (multipassIndexToRender << 16) + 1;
-}
-
 void TileWork::AddPass(Film &tileFilm) {		
 	tile->AddPass(tileFilm, passToRender);
 	if (tile->pendingPasses > 0)
@@ -298,6 +275,7 @@ TileRepository::TileRepository(const u_int tileW, const u_int tileH) {
 	convergenceTestThresholdReduction = 0.f;
 	convergenceTestWarmUpSamples = 32;
 	enableRenderingDonePrint = true;
+	enableFirstPassClear = false;
 
 	done = false;
 	filmTotalYValue = 0.f;
@@ -524,11 +502,20 @@ bool TileRepository::NextTile(Film *film, boost::mutex *filmMutex,
 		// Add the tile also to the global film
 		boost::unique_lock<boost::mutex> lock(*filmMutex);
 
-		film->AddFilm(*tileFilm,
-				0, 0,
-				Min(tileWidth, film->GetWidth() - tile->coord.x),
-				Min(tileHeight, film->GetHeight() - tile->coord.y),
-				tile->coord.x, tile->coord.y);
+		// This allow to avoid to have to clear the film
+		if (enableFirstPassClear && (tileWork.passToRender == 1)) {
+			film->SetFilm(*tileFilm,
+					0, 0,
+					Min(tileWidth, film->GetWidth() - tile->coord.x),
+					Min(tileHeight, film->GetHeight() - tile->coord.y),
+					tile->coord.x, tile->coord.y);
+		} else {
+			film->AddFilm(*tileFilm,
+					0, 0,
+					Min(tileWidth, film->GetWidth() - tile->coord.x),
+					Min(tileHeight, film->GetHeight() - tile->coord.y),
+					tile->coord.x, tile->coord.y);
+		}
 	}
 
 	// For the support of film halt conditions

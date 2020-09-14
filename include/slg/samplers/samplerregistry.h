@@ -66,23 +66,23 @@ protected:
 // SamplerRegistry
 //------------------------------------------------------------------------------
 
-// Add the GetRequiredChannels() to the list of standard methods
+// Add the AddRequiredChannels() to the list of standard methods
 
 #define SAMPLER_OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(R, C) \
 OBJECTSTATICREGISTRY_DECLARE_REGISTRATION(R, C); \
-STATICTABLE_DECLARE_REGISTRATION(R, C, std::string, GetRequiredChannels)
+STATICTABLE_DECLARE_REGISTRATION(R, C, std::string, AddRequiredChannels)
 
 #define SAMPLER_OBJECTSTATICREGISTRY_REGISTER(R, C) \
 OBJECTSTATICREGISTRY_REGISTER(R, C); \
-STATICTABLE_REGISTER(R, C, C::GetObjectTag(), std::string, GetRequiredChannels)
+STATICTABLE_REGISTER(R, C, C::GetObjectTag(), std::string, AddRequiredChannels)
 
 #define SAMPLER_OBJECTSTATICREGISTRY_DECLARE_STATICFIELDS(R) \
 OBJECTSTATICREGISTRY_DECLARE_STATICFIELDS(R); \
-STATICTABLE_DECLARE_DECLARATION(R, std::string, GetRequiredChannels)
+STATICTABLE_DECLARE_DECLARATION(R, std::string, AddRequiredChannels)
 
 #define SAMPLER_OBJECTSTATICREGISTRY_STATICFIELDS(R) \
 OBJECTSTATICREGISTRY_STATICFIELDS(R); \
-STATICTABLE_DECLARATION(R, std::string, GetRequiredChannels)
+STATICTABLE_DECLARATION(R, std::string, AddRequiredChannels)
 
 class SamplerRegistry {
 protected:
@@ -102,8 +102,8 @@ protected:
 		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData);
 	// Used to register all sub-class FromPropertiesOCL() static methods
 	typedef slg::ocl::Sampler *(*FromPropertiesOCL)(const luxrays::Properties &cfg);
-	// Used to register all sub-class GetRequiredChannels() static methods
-	typedef slg::Film::FilmChannelType (*GetRequiredChannels)(const luxrays::Properties &cfg);
+	// Used to register all sub-class AddRequiredChannels() static methods
+	typedef void (*AddRequiredChannels)(Film::FilmChannels &channels, const luxrays::Properties &cfg);
 
 	SAMPLER_OBJECTSTATICREGISTRY_DECLARE_STATICFIELDS(SamplerRegistry);
 

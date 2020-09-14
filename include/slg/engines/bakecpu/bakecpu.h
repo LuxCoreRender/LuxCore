@@ -61,7 +61,8 @@ protected:
 	void SetSampleResultXY(const BakeMapInfo &mapInfo, const HitPoint &hitPoint,
 			const Film &film, SampleResult &sampleResult) const;
 	void RenderEyeSample(const BakeMapInfo &mapInfo, PathTracerThreadState &state) const;
-	void RenderConnectToEyeCallBack(const BakeMapInfo &mapInfo, const BSDF &bsdf, const u_int lightID,
+	void RenderConnectToEyeCallBack(const BakeMapInfo &mapInfo,
+			const LightPathInfo &pathInfo, const BSDF &bsdf, const u_int lightID,
 			const luxrays::Spectrum &lightPathFlux, std::vector<SampleResult> &sampleResults) const;
 	void RenderLightSample(const BakeMapInfo &mapInfo, PathTracerThreadState &state) const;
 	void RenderSample(const BakeMapInfo &mapInfo, PathTracerThreadState &state) const;

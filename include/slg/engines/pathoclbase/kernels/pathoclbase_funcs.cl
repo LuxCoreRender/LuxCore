@@ -21,7 +21,6 @@
 // List of symbols defined at compile time:
 //  PARAM_RAY_EPSILON_MIN
 //  PARAM_RAY_EPSILON_MAX
-//  PARAM_USE_PIXEL_ATOMICS
 
 /*void MangleMemory(__global unsigned char *ptr, const size_t size) {
 	Seed seed;
@@ -35,7 +34,7 @@
 // Init functions
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_NOT_INLINE void InitSampleResult(
+OPENCL_FORCE_INLINE void InitSampleResult(
 		__constant const GPUTaskConfiguration* restrict taskConfig,
 		const uint filmWidth, const uint filmHeight,
 		const uint filmSubRegion0, const uint filmSubRegion1,
@@ -79,11 +78,12 @@ OPENCL_FORCE_NOT_INLINE void InitSampleResult(
 	sampleResult->lastPathVertex = (taskConfig->pathTracer.maxPathDepth.depth == 1);
 }
 
-OPENCL_FORCE_NOT_INLINE void GenerateEyePath(
+OPENCL_FORCE_INLINE void GenerateEyePath(
 		__constant const GPUTaskConfiguration* restrict taskConfig,
 		__global GPUTaskDirectLight *taskDirectLight,
 		__global GPUTaskState *taskState,
 		__global const Camera* restrict camera,
+		__global const float* restrict cameraBokehDistribution,
 		const uint filmWidth, const uint filmHeight,
 		const uint filmSubRegion0, const uint filmSubRegion1,
 		const uint filmSubRegion2, const uint filmSubRegion3,
@@ -116,14 +116,14 @@ OPENCL_FORCE_NOT_INLINE void GenerateEyePath(
 	const float dofSampleY = Sampler_GetSample(taskConfig, IDX_DOF_Y SAMPLER_PARAM);
 
 #if defined(RENDER_ENGINE_TILEPATHOCL) || defined(RENDER_ENGINE_RTPATHOCL)
-	Camera_GenerateRay(camera, cameraFilmWidth, cameraFilmHeight,
+	Camera_GenerateRay(camera, cameraBokehDistribution, cameraFilmWidth, cameraFilmHeight,
 			ray,
 			&pathInfo->volume,
 			sampleResult->filmX + tileStartX, sampleResult->filmY + tileStartY,
 			timeSample,
 			dofSampleX, dofSampleY);
 #else
-	Camera_GenerateRay(camera, filmWidth, filmHeight,
+	Camera_GenerateRay(camera, cameraBokehDistribution, filmWidth, filmHeight,
 			ray,
 			&pathInfo->volume,
 			sampleResult->filmX, sampleResult->filmY,
@@ -170,7 +170,7 @@ OPENCL_FORCE_INLINE bool CheckDirectHitVisibilityFlags(__global const LightSourc
 	return false;
 }
 
-OPENCL_FORCE_NOT_INLINE void DirectHitInfiniteLight(__constant const Film* restrict film,
+OPENCL_FORCE_INLINE void DirectHitInfiniteLight(__constant const Film* restrict film,
 		__global EyePathInfo *pathInfo, __global const Spectrum* restrict pathThroughput,
 		const __global Ray *ray, __global const BSDF *bsdf, __global SampleResult *sampleResult
 		LIGHTS_PARAM_DECL) {
@@ -214,7 +214,7 @@ OPENCL_FORCE_NOT_INLINE void DirectHitInfiniteLight(__constant const Film* restr
 	}
 }
 
-OPENCL_FORCE_NOT_INLINE void DirectHitFiniteLight(__constant const Film* restrict film,
+OPENCL_FORCE_INLINE void DirectHitFiniteLight(__constant const Film* restrict film,
 		__global EyePathInfo *pathInfo,
 		__global const Spectrum* restrict pathThroughput, const __global Ray *ray,
 		const float distance, __global const BSDF *bsdf,
@@ -269,7 +269,7 @@ OPENCL_FORCE_INLINE float RussianRouletteProb(const float importanceCap, const f
 	return clamp(Spectrum_Filter(color), importanceCap, 1.f);
 }
 
-OPENCL_FORCE_NOT_INLINE bool DirectLight_Illuminate(
+OPENCL_FORCE_INLINE bool DirectLight_Illuminate(
 		__global const BSDF *bsdf,
 		__global Ray *shadowRay,
 		const float worldCenterX,
@@ -304,8 +304,7 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_Illuminate(
 	info->pickPdf = lightPickPdf;
 
 	// Illuminate the point
-	float3 lightRayDir;
-	float distance, directPdfW;
+	float directPdfW;
 	const float3 lightRadiance = Light_Illuminate(
 			&lights[lightIndex],
 			bsdf,
@@ -326,7 +325,7 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_Illuminate(
 	}
 }
 
-OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
+OPENCL_FORCE_INLINE bool DirectLight_BSDFSampling(
 		__constant const GPUTaskConfiguration* restrict taskConfig,
 		__global DirectLightIlluminateInfo *info,
 		const float time,
@@ -345,7 +344,7 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 
 	if (Spectrum_IsBlack(bsdfEval) ||
 			(taskConfig->pathTracer.hybridBackForward.enabled &&
-			EyePathInfo_IsCausticPath(pathInfo, event,
+			EyePathInfo_IsCausticPathWithEvent(pathInfo, event,
 				BSDF_GetGlossiness(bsdf MATERIALS_PARAM),
 				taskConfig->pathTracer.hybridBackForward.glossinessThreshold))
 			)
@@ -377,7 +376,8 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 
 	const bool misEnabled = !lastPathVertex &&
 			Light_IsEnvOrIntersectable(light) &&
-			CheckDirectHitVisibilityFlags(light, tmpDepthInfo, event);
+			CheckDirectHitVisibilityFlags(light, tmpDepthInfo, event) &&
+			!bsdf->hitPoint.throughShadowTransparency;
 
 	const float weight = misEnabled ? PowerHeuristic(directLightSamplingPdfW, bsdfPdfW) : 1.f;
 
@@ -485,6 +485,7 @@ OPENCL_FORCE_NOT_INLINE bool DirectLight_BSDFSampling(
 		, __global const Triangle* restrict triangles \
 		, __global const InterpolatedTransform* restrict interpolatedTransforms \
 		, __global const Camera* restrict camera \
+		, __global const float* restrict cameraBokehDistribution \
 		/* Lights */ \
 		, __global const LightSource* restrict lights \
 		KERNEL_ARGS_ENVLIGHTS \
@@ -557,7 +558,8 @@ __kernel void Init(
 		__global EyePathInfo *eyePathInfos,
 		__global float *pixelFilterDistribution,
 		__global Ray *rays,
-		__global Camera *camera
+		__global Camera *camera,
+		__global const float* restrict cameraBokehDistribution
 		KERNEL_ARGS_FILM
 		) {
 	const size_t gid = get_global_id(0);
@@ -606,6 +608,7 @@ __kernel void Init(
 		GenerateEyePath(taskConfig,
 				taskDirectLight, taskState,
 				camera,
+				cameraBokehDistribution,
 				filmWidth, filmHeight,
 				filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3,
 				pixelFilterDistribution,

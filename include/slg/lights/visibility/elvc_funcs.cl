@@ -89,7 +89,7 @@ OPENCL_FORCE_INLINE __global const float* restrict EnvLightVisibilityCache_GetVi
 // Sample
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_NOT_INLINE void EnvLightVisibilityCache_Sample(__global const BSDF *bsdf,
+OPENCL_FORCE_INLINE void EnvLightVisibilityCache_Sample(__global const BSDF *bsdf,
 		const float u0, const float u1, float2 *uv, float *pdf
 		LIGHTS_PARAM_DECL) {
 	*pdf = 0.f;
@@ -111,14 +111,14 @@ OPENCL_FORCE_NOT_INLINE void EnvLightVisibilityCache_Sample(__global const BSDF 
 				Distribution2D_SampleContinuous(tileDistribution, du0, du1, &tileXY, &tileDistPdf);
 
 				if (tileDistPdf > 0.f) {
-					(*uv).s0 = (cacheDistXY[0] + tileXY.s0) / elvcTilesXCount;
-					(*uv).s1 = (cacheDistXY[1] + tileXY.s1) / elvcTilesYCount;
+					(*uv).x = (cacheDistXY[0] + tileXY.x) / elvcTilesXCount;
+					(*uv).y = (cacheDistXY[1] + tileXY.y) / elvcTilesYCount;
 
 					*pdf = cacheDistPdf * tileDistPdf * (elvcTilesXCount * elvcTilesYCount);
 				}
 			} else {
-				(*uv).s0 = (cacheDistXY[0] + du0) / elvcTilesXCount;
-				(*uv).s1 = (cacheDistXY[1] + du1) / elvcTilesYCount;
+				(*uv).x = (cacheDistXY[0] + du0) / elvcTilesXCount;
+				(*uv).y = (cacheDistXY[1] + du1) / elvcTilesYCount;
 
 				*pdf = cacheDistPdf * (elvcTilesXCount * elvcTilesYCount);
 			}
@@ -130,7 +130,7 @@ OPENCL_FORCE_NOT_INLINE void EnvLightVisibilityCache_Sample(__global const BSDF 
 // Pdf
 //------------------------------------------------------------------------------
 
-float EnvLightVisibilityCache_Pdf(__global const BSDF *bsdf,
+OPENCL_FORCE_INLINE float EnvLightVisibilityCache_Pdf(__global const BSDF *bsdf,
 		const float u, const float v
 		LIGHTS_PARAM_DECL) {
 	float pdf = 0.f;

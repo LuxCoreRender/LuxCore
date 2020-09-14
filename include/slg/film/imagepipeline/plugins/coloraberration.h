@@ -38,7 +38,7 @@ class Film;
 
 class ColorAberrationPlugin : public ImagePipelinePlugin {
 public:
-	ColorAberrationPlugin(const float amount = .005f);
+	ColorAberrationPlugin(const float amountX = .005f, const float amountY = .005f);
 	virtual ~ColorAberrationPlugin();
 
 	virtual ImagePipelinePlugin *Copy() const;
@@ -46,16 +46,18 @@ public:
 	virtual void Apply(Film &film, const u_int index);
 
 	virtual bool CanUseHW() const { return true; }
+	virtual void AddHWChannelsUsed(Film::FilmChannels &hwChannelsUsed) const;
 	virtual void ApplyHW(Film &film, const u_int index);
 
-	float amount;
+	float amountX, amountY;
 
 	friend class boost::serialization::access;
 
 private:
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImagePipelinePlugin);
-		ar & amount;
+		ar & amountX;
+		ar & amountY;
 	}
 
 	static luxrays::Spectrum BilinearSampleImage(const luxrays::Spectrum *pixels,
@@ -75,7 +77,7 @@ private:
 
 }
 
-BOOST_CLASS_VERSION(slg::ColorAberrationPlugin, 1)
+BOOST_CLASS_VERSION(slg::ColorAberrationPlugin, 2)
 
 BOOST_CLASS_EXPORT_KEY(slg::ColorAberrationPlugin)
 

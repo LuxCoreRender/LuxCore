@@ -469,13 +469,9 @@ void DirectLightSamplingCache::BuildCacheEntries() {
 void DirectLightSamplingCache::Build(const Scene *scn) {
 	scene = scn;
 
-	// This check is required because FILESAVER engine doesn't
-	// initialize any accelerator
-	if (!scene->dataSet->GetAccelerator()) {
-		SLG_LOG("DirectLightSamplingCache is not built");
+	if (scene->lightDefs.GetSize() == 0)
 		return;
-	}
-	
+
 	SLG_LOG("Building DirectLightSamplingCache");
 
 	//--------------------------------------------------------------------------
@@ -551,7 +547,7 @@ const Distribution1D *DirectLightSamplingCache::GetLightDistribution(const luxra
 		const luxrays::Normal &n, const bool isVolume) const {
 	if (cacheEntriesBVH) {
 		const DLSCacheEntry *entry = cacheEntriesBVH->GetNearestEntry(p, n, isVolume);
-		
+
 		if (entry)
 			return entry->lightsDistribution;
 	}

@@ -30,6 +30,8 @@ typedef enum {
 	EVAL_TRIPLANAR_STEP_1,
 	EVAL_TRIPLANAR_STEP_2,
 	EVAL_TRIPLANAR_STEP_3,
+	// For the very special case of Distort texture
+	EVAL_DISTORT_SETUP,
 	// For evaluting generic bump mapping
 	EVAL_BUMP_GENERIC_OFFSET_U,
 	EVAL_BUMP_GENERIC_OFFSET_V,
@@ -58,12 +60,13 @@ typedef enum {
 	OBJECTID_TEX, OBJECTID_COLOR_TEX, OBJECTID_NORMALIZED_TEX, DOT_PRODUCT_TEX,
 	POWER_TEX, LESS_THAN_TEX, GREATER_THAN_TEX, ROUNDING_TEX, MODULO_TEX, SHADING_NORMAL_TEX,
     POSITION_TEX, SPLIT_FLOAT3, MAKE_FLOAT3, BRIGHT_CONTRAST_TEX, HITPOINTVERTEXAOV,
-	HITPOINTTRIANGLEAOV, TRIPLANAR_TEX, RANDOM_TEX, // 41 textures
+	HITPOINTTRIANGLEAOV, TRIPLANAR_TEX, RANDOM_TEX, DISTORT_TEX, // 42 textures
 	// Procedural textures
 	BLENDER_BLEND, BLENDER_CLOUDS, BLENDER_DISTORTED_NOISE, BLENDER_MAGIC, BLENDER_MARBLE,
 	BLENDER_MUSGRAVE, BLENDER_NOISE, BLENDER_STUCCI, BLENDER_WOOD,  BLENDER_VORONOI,
 	CHECKERBOARD2D, CHECKERBOARD3D, CLOUD_TEX, FBM_TEX,
-	MARBLE, DOTS, BRICK, WINDY, WRINKLED, UV_TEX, BAND_TEX, // 59 textures
+	MARBLE, DOTS, BRICK, WINDY, WRINKLED, UV_TEX, BAND_TEX,
+	WIREFRAME_TEX, // 63 textures
 	// Fresnel textures
 	FRESNELCOLOR_TEX, FRESNELCONST_TEX
 } TextureType;
@@ -81,6 +84,11 @@ typedef struct {
 	float gain;
 
 	unsigned int imageMapIndex;
+
+	int randomizedTiling;
+	unsigned int randomizedTilingLUTIndex;
+	unsigned int randomizedTilingInvLUTIndex;
+	unsigned int randomImageMapIndex;
 } ImageMapTexParam;
 
 typedef struct {
@@ -155,8 +163,7 @@ typedef struct {
 	float brickwidth, brickheight, brickdepth, mortarsize;
 	float proportion, invproportion, run;
 	float mortarwidth, mortarheight, mortardepth;
-	float bevelwidth, bevelheight, beveldepth;
-	int usebevel;
+	float modulationBias;
 } BrickTexParam;
 
 typedef struct {
@@ -458,6 +465,16 @@ typedef struct {
 } RandomTexParam;
 
 typedef struct {
+	float width;
+	unsigned int borderTexIndex, insideTexIndex;
+} WireFrameTexParam;
+
+typedef struct {
+	float strength;
+	unsigned int texIndex, offsetTexIndex;
+} DistortTexParam;
+
+typedef struct {
 	TextureType type;
 
 	unsigned int evalFloatOpStartIndex, evalFloatOpLength;
@@ -524,6 +541,8 @@ typedef struct {
 		BrightContrastTexParam brightContrastTex;
 		TriplanarTexParam triplanarTex;
 		RandomTexParam randomTex;
+		WireFrameTexParam wireFrameTex;
+		DistortTexParam distortTex;
 	};
 } Texture;
 

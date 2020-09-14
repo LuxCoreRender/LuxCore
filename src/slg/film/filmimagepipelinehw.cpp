@@ -21,7 +21,10 @@
 #include "luxrays/devices/ocldevice.h"
 
 #include "slg/film/film.h"
+#include "slg/film/imagepipeline/imagepipeline.h"
+#include "slg/film/imagepipeline/radiancechannelscale.h"
 #include "slg/kernels/kernels.h"
+#include "luxrays/devices/cudadevice.h"
 
 using namespace std;
 using namespace luxrays;
@@ -43,6 +46,8 @@ void Film::SetUpHW() {
 	hw_IMAGEPIPELINE = nullptr;
 	hw_ALPHA = nullptr;
 	hw_OBJECT_ID = nullptr;
+	hw_ALBEDO = nullptr;
+	hw_AVG_SHADING_NORMAL = nullptr;
 	hw_mergeBuffer = nullptr;
 
 	mergeInitializeKernel = nullptr;
@@ -90,13 +95,21 @@ void Film::CreateHWContext() {
 	}
 
 	if (selectedDeviceDesc) {
+		// Force the Optix usage also on no-RTX GPUs for Optix denoiser plugin
+		if (selectedDeviceDesc->GetType() == DEVICE_TYPE_CUDA_GPU) {
+			CUDADeviceDescription *cudaDeviceDesc = (CUDADeviceDescription *)selectedDeviceDesc;
+			cudaDeviceDesc->SetCUDAUseOptix(true);
+		}
+
 		// Allocate the device
 		vector<luxrays::DeviceDescription *> selectedDeviceDescs;
 		selectedDeviceDescs.push_back(selectedDeviceDesc);
 		vector<HardwareDevice *> devs = ctx->AddHardwareDevices(selectedDeviceDescs);
 		hardwareDevice = dynamic_cast<HardwareDevice *>(devs[0]);
 		assert (hardwareDevice);
-		SLG_LOG("Film hardware device used: " << hardwareDevice->GetName() << " (Type: " << DeviceDescription::GetDeviceType(hardwareDevice->GetType()) << ")");
+		SLG_LOG("Film hardware device used: " << hardwareDevice->GetName() << " (Type: " << DeviceDescription::GetDeviceType(hardwareDevice->GetDeviceDesc()->GetType()) << ")");
+
+		hardwareDevice->PushThreadCurrentDevice();
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 		OpenCLDeviceDescription *oclDesc = dynamic_cast<OpenCLDeviceDescription *>(selectedDeviceDesc);
@@ -111,16 +124,38 @@ void Film::CreateHWContext() {
 		}
 #endif
 
+		if (hardwareDevice->GetDeviceDesc()->GetType() & DEVICE_TYPE_CUDA_ALL) {
+			// Suggested compiler options: --use_fast_math
+			vector<string> compileOpts;
+			compileOpts.push_back("--use_fast_math");
+
+			hardwareDevice->SetAdditionalCompileOpts(compileOpts);
+		}
+
+		if (hardwareDevice->GetDeviceDesc()->GetType() & DEVICE_TYPE_OPENCL_ALL) {
+			// Suggested compiler options: -cl-fast-relaxed-math -cl-mad-enable
+
+			vector<string> compileOpts;
+			compileOpts.push_back("-cl-fast-relaxed-math");
+			compileOpts.push_back("-cl-mad-enable");
+
+			hardwareDevice->SetAdditionalCompileOpts(compileOpts);
+		}
+
 		// Just an empty data set
 		dataSet = new DataSet(ctx);
 		dataSet->Preprocess();
 		ctx->SetDataSet(dataSet);
 		ctx->Start();
+		
+		hardwareDevice->PopThreadCurrentDevice();
 	}
 }
 
 void Film::DeleteHWContext() {
 	if (hardwareDevice) {
+		hardwareDevice->PushThreadCurrentDevice();
+
 		const size_t size = hardwareDevice->GetUsedMemory();
 		SLG_LOG("[" << hardwareDevice->GetName() << "] Memory used for hardware image pipeline: " <<
 				(size < 10000 ? size : (size / 1024)) << (size < 10000 ? "bytes" : "Kbytes"));
@@ -133,39 +168,64 @@ void Film::DeleteHWContext() {
 		hardwareDevice->FreeBuffer(&hw_IMAGEPIPELINE);
 		hardwareDevice->FreeBuffer(&hw_ALPHA);
 		hardwareDevice->FreeBuffer(&hw_OBJECT_ID);
+		hardwareDevice->FreeBuffer(&hw_ALBEDO);
+		hardwareDevice->FreeBuffer(&hw_AVG_SHADING_NORMAL);
 		hardwareDevice->FreeBuffer(&hw_mergeBuffer);
+
+		hardwareDevice->PopThreadCurrentDevice();
+		hardwareDevice = nullptr;
 	}
 
 	delete ctx;
+	ctx = nullptr;
 	delete dataSet;
+	dataSet = nullptr;
 }
 
 void Film::AllocateHWBuffers() {
 	ctx->SetVerbose(true);
+	hardwareDevice->PushThreadCurrentDevice();
 
-	hardwareDevice->AllocBufferRW(&hw_IMAGEPIPELINE, channel_IMAGEPIPELINEs[0]->GetPixels(), channel_IMAGEPIPELINEs[0]->GetSize(), "IMAGEPIPELINE");
-	if (HasChannel(ALPHA))
+	FilmChannels hwChannelsUsed;
+	for (auto const ip : imagePipelines)
+		ip->AddHWChannelsUsed(hwChannelsUsed);
+	
+	if (hwChannelsUsed.count(IMAGEPIPELINE))
+		hardwareDevice->AllocBufferRW(&hw_IMAGEPIPELINE, channel_IMAGEPIPELINEs[0]->GetPixels(), channel_IMAGEPIPELINEs[0]->GetSize(), "IMAGEPIPELINE");
+
+	if (HasChannel(ALPHA) && hwChannelsUsed.count(ALPHA))
 		hardwareDevice->AllocBufferRO(&hw_ALPHA, channel_ALPHA->GetPixels(), channel_ALPHA->GetSize(), "ALPHA");
-	if (HasChannel(OBJECT_ID))
+	if (HasChannel(OBJECT_ID) && hwChannelsUsed.count(OBJECT_ID))
 		hardwareDevice->AllocBufferRO(&hw_OBJECT_ID, channel_OBJECT_ID->GetPixels(), channel_OBJECT_ID->GetSize(), "OBJECT_ID");
+	if (HasChannel(ALBEDO) && hwChannelsUsed.count(ALBEDO))
+		hardwareDevice->AllocBufferRO(&hw_ALBEDO, channel_ALBEDO->GetPixels(), channel_ALBEDO->GetSize(), "ALBEDO");
+	if (HasChannel(AVG_SHADING_NORMAL) && hwChannelsUsed.count(AVG_SHADING_NORMAL))
+		hardwareDevice->AllocBufferRO(&hw_AVG_SHADING_NORMAL, channel_AVG_SHADING_NORMAL->GetPixels(), channel_AVG_SHADING_NORMAL->GetSize(), "AVG_SHADING_NORMAL");
+
 	const size_t mergeBufferSize = Max(
 			HasChannel(RADIANCE_PER_PIXEL_NORMALIZED) ? channel_RADIANCE_PER_PIXEL_NORMALIZEDs[0]->GetSize() : 0,
 			HasChannel(RADIANCE_PER_SCREEN_NORMALIZED) ? channel_RADIANCE_PER_SCREEN_NORMALIZEDs[0]->GetSize() : 0);
 	if (mergeBufferSize > 0)
 		hardwareDevice->AllocBufferRO(&hw_mergeBuffer, nullptr, mergeBufferSize, "Merge");
 
+	hardwareDevice->PopThreadCurrentDevice();
 	ctx->SetVerbose(false);
 }
 
 void Film::CompileHWKernels() {
 	ctx->SetVerbose(true);
+	hardwareDevice->PushThreadCurrentDevice();
 
 	// Compile MergeSampleBuffersOCL() kernels
 	const double tStart = WallClockTime();
 
+	vector<string> opts;
+	opts.push_back("-D LUXRAYS_OPENCL_KERNEL");
+	opts.push_back("-D SLG_OPENCL_KERNEL");
+
 	HardwareDeviceProgram *program = nullptr;
 	hardwareDevice->CompileProgram(&program,
-			"-D LUXRAYS_OPENCL_KERNEL -D SLG_OPENCL_KERNEL",
+			opts,
 			slg::ocl::KernelSource_film_mergesamplebuffer_funcs,
 			"MergeSampleBuffersOCL");
 
@@ -231,36 +291,52 @@ void Film::CompileHWKernels() {
 
 	const double tEnd = WallClockTime();
 	SLG_LOG("[MergeSampleBuffersOCL] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
-	
+
+	hardwareDevice->PopThreadCurrentDevice();
 	ctx->SetVerbose(false);
 }
 
 void Film::WriteAllHWBuffers() {
-	if (HasChannel(ALPHA))
+	// hardwareDevice->Push/PopThreadCurrentDevice() is done by the caller
+
+	if (HasChannel(ALPHA) && hw_ALPHA)
 		hardwareDevice->EnqueueWriteBuffer(hw_ALPHA, false,
 				channel_ALPHA->GetSize(),
 				channel_ALPHA->GetPixels());
-	if (HasChannel(OBJECT_ID))
+	if (HasChannel(OBJECT_ID) && hw_OBJECT_ID)
 		hardwareDevice->EnqueueWriteBuffer(hw_OBJECT_ID, false,
 				channel_OBJECT_ID->GetSize(),
 				channel_OBJECT_ID->GetPixels());
+	if (HasChannel(ALBEDO) && hw_ALBEDO)
+		hardwareDevice->EnqueueWriteBuffer(hw_ALBEDO, false,
+				channel_ALBEDO->GetSize(),
+				channel_ALBEDO->GetPixels());
+	if (HasChannel(AVG_SHADING_NORMAL) && hw_AVG_SHADING_NORMAL)
+		hardwareDevice->EnqueueWriteBuffer(hw_AVG_SHADING_NORMAL, false,
+				channel_AVG_SHADING_NORMAL->GetSize(),
+				channel_AVG_SHADING_NORMAL->GetPixels());
 }
 
 void Film::ReadHWBuffer_IMAGEPIPELINE(const u_int index) {
+	// hardwareDevice->Push/PopThreadCurrentDevice() is done by the caller
+
 	hardwareDevice->EnqueueReadBuffer(hw_IMAGEPIPELINE, false,
 			channel_IMAGEPIPELINEs[index]->GetSize(),
 			channel_IMAGEPIPELINEs[index]->GetPixels());
 }
 
 void Film::WriteHWBuffer_IMAGEPIPELINE(const u_int index) {
+	// hardwareDevice->Push/PopThreadCurrentDevice() is done by the caller
+
 	hardwareDevice->EnqueueWriteBuffer(hw_IMAGEPIPELINE, false,
 			channel_IMAGEPIPELINEs[index]->GetSize(),
 			channel_IMAGEPIPELINEs[index]->GetPixels());
 }
 
 void Film::MergeSampleBuffersHW(const u_int imagePipelineIndex) {
-	const ImagePipeline *ip = (imagePipelineIndex < imagePipelines.size()) ? imagePipelines[imagePipelineIndex] : nullptr;
+	// hardwareDevice->Push/PopThreadCurrentDevice() is done by the caller
 
+	const ImagePipeline *ip = (imagePipelineIndex < imagePipelines.size()) ? imagePipelines[imagePipelineIndex] : nullptr;
 	// Transfer IMAGEPIPELINEs[index]
 	hardwareDevice->EnqueueWriteBuffer(hw_IMAGEPIPELINE, false,
 			channel_IMAGEPIPELINEs[imagePipelineIndex]->GetSize(),

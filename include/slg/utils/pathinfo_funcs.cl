@@ -91,8 +91,10 @@ OPENCL_FORCE_INLINE void EyePathInfo_AddVertex(__global EyePathInfo *pathInfo,
 	// EyePathInfo::AddVertex()
 	//--------------------------------------------------------------------------
 
-	// Update isNearlyCaustic
-	pathInfo->isNearlyCaustic = (pathInfo->depth.depth == 0) ? 
+	// Update 
+	//
+	// Note: depth.depth has been already incremented by 1 with the depth.IncDepths(event);
+	pathInfo->isNearlyCaustic = (pathInfo->depth.depth == 1) ? 
 		// First vertex must a nearly diffuse
 		(!isNewVertexNearlySpecular) :
 		// All other vertices must be nearly specular
@@ -106,8 +108,13 @@ OPENCL_FORCE_INLINE void EyePathInfo_AddVertex(__global EyePathInfo *pathInfo,
 	pathInfo->lastGlossiness = glossiness;
 }
 
-OPENCL_FORCE_INLINE bool EyePathInfo_IsCausticPath(__global EyePathInfo *pathInfo,
+OPENCL_FORCE_INLINE bool EyePathInfo_IsCausticPath(__global EyePathInfo *pathInfo) {
+	return pathInfo->isNearlyCaustic && (pathInfo->depth.depth > 1);
+}
+
+OPENCL_FORCE_INLINE bool EyePathInfo_IsCausticPathWithEvent(__global EyePathInfo *pathInfo,
 		const BSDFEvent event, const float glossiness, const float glossinessThreshold) {
-	return pathInfo->isNearlyCaustic && (pathInfo->depth.depth > 1) &&
+	// Note: the +1 is there for the event passed as method arguments
+	return pathInfo->isNearlyCaustic && (pathInfo->depth.depth + 1 > 1) &&
 			EyePathInfo_IsNearlySpecular(pathInfo, event, glossiness, glossinessThreshold);
 }

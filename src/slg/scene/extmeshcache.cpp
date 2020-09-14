@@ -101,6 +101,7 @@ void ExtMeshCache::SetMeshVertexAOV(const string &meshName,
 		throw runtime_error("Can not set vertex AOV of mesh " + meshName + " of type " + ToString(mesh->GetType()));
 
 	ExtTriangleMesh *triMesh = static_cast<ExtTriangleMesh *>(mesh);
+	triMesh->DeleteVertexAOV(index);
 	triMesh->SetVertexAOV(index, data);
 }
 
@@ -114,6 +115,7 @@ void ExtMeshCache::SetMeshTriangleAOV(const string &meshName,
 		throw runtime_error("Can not set triangle AOV of mesh " + meshName + " of type " + ToString(mesh->GetType()));
 
 	ExtTriangleMesh *triMesh = static_cast<ExtTriangleMesh *>(mesh);
+	triMesh->DeleteTriAOV(index);
 	triMesh->SetTriAOV(index, data);
 }
 

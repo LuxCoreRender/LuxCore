@@ -25,6 +25,7 @@
 #include <cmath>
 #include <limits>
 #include <iomanip>
+#include <codecvt>
 
 #if defined (__linux__)
 #include <pthread.h>
@@ -74,6 +75,8 @@
 #else
 #error "Unsupported Platform !!!"
 #endif
+
+#include <boost/lexical_cast.hpp>
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846f
@@ -305,22 +308,6 @@ template <class T> int SignOf(T x)
 	return (x > 0) - (x < 0);
 }
 
-template <class T> inline std::string ToString(const T &t) {
-	std::ostringstream ss;
-	ss << t;
-	return ss.str();
-}
-
-inline std::string ToString(const float t) {
-	std::ostringstream ss;
-	ss << std::setprecision(std::numeric_limits<float>::digits10 + 1) << t;
-	return ss.str();
-}
-
-inline std::string ToMemString(const size_t size) {
-	return (size < 10000 ? (ToString(size) + "bytes") : (ToString(size / 1024) + "Kbytes"));
-}
-
 inline unsigned int UIntLog2(unsigned int value) {
 	unsigned int l = 0;
 	while (value >>= 1) l++;
@@ -342,6 +329,20 @@ template <class T> T inline Remap(const T value,
 
 inline bool IsValid(float a) {
 	return !isnan(a) && !isinf(a) && (a >= 0.f);
+}
+
+// Convert between UTF-8 and UTF-16
+inline std::wstring utf8_to_utf16(const std::string &str) {
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t> > converter;
+
+    return converter.from_bytes(str);
+}
+
+// Convert between UTF-16 and UTF-8
+inline std::string utf16_to_utf8(const std::wstring &wstr) {
+    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t> > converter;
+
+    return converter.to_bytes(wstr);
 }
 
 }

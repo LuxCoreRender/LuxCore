@@ -21,7 +21,7 @@
 
 #include <ostream>
 
-#include "luxrays/utils/utils.h"
+#include "luxrays/utils/strutils.h"
 #include "luxrays/utils/serializationutils.h"
 
 namespace luxrays {

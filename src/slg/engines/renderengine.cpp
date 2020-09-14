@@ -291,7 +291,7 @@ string RenderEngine::RenderEngineType2String(const RenderEngineType type) {
 	if (RenderEngineRegistry::STATICTABLE_NAME(GetObjectTag).Get(type, func))
 		return func();
 	else
-		throw runtime_error("Unknown render engine type in RenderEngine::RenderEngineType2String(): " + boost::lexical_cast<string>(type));
+		throw runtime_error("Unknown render engine type in RenderEngine::RenderEngineType2String(): " + ToString(type));
 }
 
 const Properties &RenderEngine::GetDefaultProps() {

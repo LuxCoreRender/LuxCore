@@ -19,46 +19,18 @@
  ***************************************************************************/
 
 //------------------------------------------------------------------------------
-// Morton related functions
-//------------------------------------------------------------------------------
-
-// Morton decode from https://fgiesen.wordpress.com/2009/12/13/decoding-morton-codes/
-
-// Inverse of Part1By1 - "delete" all odd-indexed bits
-
-OPENCL_FORCE_INLINE uint Compact1By1(uint x) {
-	x &= 0x55555555;					// x = -f-e -d-c -b-a -9-8 -7-6 -5-4 -3-2 -1-0
-	x = (x ^ (x >> 1)) & 0x33333333;	// x = --fe --dc --ba --98 --76 --54 --32 --10
-	x = (x ^ (x >> 2)) & 0x0f0f0f0f;	// x = ---- fedc ---- ba98 ---- 7654 ---- 3210
-	x = (x ^ (x >> 4)) & 0x00ff00ff;	// x = ---- ---- fedc ba98 ---- ---- 7654 3210
-	x = (x ^ (x >> 8)) & 0x0000ffff;	// x = ---- ---- ---- ---- fedc ba98 7654 3210
-	return x;
-}
-
-// Inverse of Part1By2 - "delete" all bits not at positions divisible by 3
-
-OPENCL_FORCE_INLINE uint Compact1By2(uint x) {
-	x &= 0x09249249;					// x = ---- 9--8 --7- -6-- 5--4 --3- -2-- 1--0
-	x = (x ^ (x >> 2)) & 0x030c30c3;	// x = ---- --98 ---- 76-- --54 ---- 32-- --10
-	x = (x ^ (x >> 4)) & 0x0300f00f;	// x = ---- --98 ---- ---- 7654 ---- ---- 3210
-	x = (x ^ (x >> 8)) & 0xff0000ff;	// x = ---- --98 ---- ---- ---- ---- 7654 3210
-	x = (x ^ (x >> 16)) & 0x000003ff;	// x = ---- ---- ---- ---- ---- --98 7654 3210
-	return x;
-}
-
-OPENCL_FORCE_INLINE uint DecodeMorton2X(const uint code) {
-	return Compact1By1(code >> 0);
-}
-
-OPENCL_FORCE_INLINE uint DecodeMorton2Y(const uint code) {
-	return Compact1By1(code >> 1);
-}
-
-//------------------------------------------------------------------------------
 // TilePath Sampler Kernel
 //------------------------------------------------------------------------------
 
 #define TILEPATHSAMPLER_TOTAL_U_SIZE 2
+
+OPENCL_FORCE_INLINE __global const uint* restrict TilePathSampler_GetSobolDirectionsPtr(
+		__global TilePathSamplerSharedData *samplerSharedData) {
+	// Sobol directions array is appended at the end of slg::ocl::TilePathSamplerSharedData
+	return (__global uint *)(
+			(__global char *)samplerSharedData +
+			sizeof(TilePathSamplerSharedData));
+}
 
 OPENCL_FORCE_INLINE float TilePathSampler_GetSample(
 		__constant const GPUTaskConfiguration* restrict taskConfig,
@@ -76,12 +48,13 @@ OPENCL_FORCE_INLINE float TilePathSampler_GetSample(
 #if defined(RENDER_ENGINE_RTPATHOCL)
 			return Rnd_FloatValue(seed);
 #else
-			__global const uint* restrict sobolDirections = (__global const uint* restrict)samplerSharedDataBuff;
+			__global TilePathSamplerSharedData *samplerSharedData = (__global TilePathSamplerSharedData *)samplerSharedDataBuff;
+			__global const uint* restrict sobolDirections = TilePathSampler_GetSobolDirectionsPtr(samplerSharedData);
 
 			__global TilePathSample *samples = (__global TilePathSample *)samplesBuff;
 			__global TilePathSample *sample = &samples[gid];
 
-			return SobolSequence_GetSample(sobolDirections, sample->pass,
+			return SobolSequence_GetSample(sobolDirections, sample->pass + SOBOL_STARTOFFSET,
 					sample->rngPass, sample->rng0, sample->rng1, index);	
 #endif
 		}
@@ -94,11 +67,12 @@ OPENCL_FORCE_INLINE void TilePathSampler_SplatSample(
 		FILM_PARAM_DECL
 		) {
 	const size_t gid = get_global_id(0);
-	__global TilePathSample *samples = (__global TilePathSample *)samplesBuff;
-	__global TilePathSample *sample = &samples[gid];
 	__global SampleResult *sampleResult = &sampleResultsBuff[gid];
 
 #if defined(RENDER_ENGINE_RTPATHOCL)
+	__global TilePathSample *samples = (__global TilePathSample *)samplesBuff;
+	__global TilePathSample *sample = &samples[gid];
+
 	// Check if I'm in preview phase
 	if (sample->pass < taskConfig->renderEngine.rtpathocl.previewResolutionReductionStep) {
 		// I have to copy the current pixel to fill the assigned square
@@ -201,14 +175,23 @@ OPENCL_FORCE_INLINE bool TilePathSampler_Init(
 	if ((pixelX >= samplerSharedData->tileWidth) || (pixelY >= samplerSharedData->tileHeight))
 		return false;
 
-	// Note: sample->rngPass, sample->rng0 and sample->rng1 are initialize by the CPU
+	// Initialize rng0, rng1 and rngPass
+	const uint pixelRngGenSeed = (samplerSharedData->tileStartX + pixelX + (samplerSharedData->tileStartY + pixelY) * samplerSharedData->cameraFilmWidth + 1) *
+			(samplerSharedData->multipassIndexToRender + 1);
+	Seed pixelSeed;
+	Rnd_Init(pixelRngGenSeed, &pixelSeed);
+
+	sample->rngPass = Rnd_UintValue(&pixelSeed);
+	sample->rng0 = Rnd_FloatValue(&pixelSeed);
+	sample->rng1 = Rnd_FloatValue(&pixelSeed);
 
 	sample->pass = samplerSharedData->tilePass * aaSamples2 + gid % aaSamples2;
 
-	__global const uint* restrict sobolDirections = (__global const uint* restrict)samplerSharedDataBuff;
-	samplesData[IDX_SCREEN_X] = pixelX + SobolSequence_GetSample(sobolDirections, sample->pass,
+	__global const uint* restrict sobolDirections = TilePathSampler_GetSobolDirectionsPtr(samplerSharedData);
+
+	samplesData[IDX_SCREEN_X] = pixelX + SobolSequence_GetSample(sobolDirections, sample->pass + SOBOL_STARTOFFSET,
 			sample->rngPass, sample->rng0, sample->rng1, IDX_SCREEN_X);
-	samplesData[IDX_SCREEN_Y] = pixelY + SobolSequence_GetSample(sobolDirections, sample->pass,
+	samplesData[IDX_SCREEN_Y] = pixelY + SobolSequence_GetSample(sobolDirections, sample->pass + SOBOL_STARTOFFSET,
 			sample->rngPass, sample->rng0, sample->rng1, IDX_SCREEN_Y);
 #endif
 

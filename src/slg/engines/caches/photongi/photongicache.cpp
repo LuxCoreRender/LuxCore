@@ -21,6 +21,9 @@
 #include <boost/format.hpp>
 #include <boost/filesystem.hpp>
 
+#include "luxrays/utils/thread.h"
+#include "luxrays/utils/strutils.h"
+
 #include "slg/samplers/sobol.h"
 #include "slg/utils/pathdepthinfo.h"
 #include "slg/engines/caches/photongi/photongicache.h"
@@ -104,7 +107,7 @@ void PhotonGICache::TracePhotons(const u_int seedBase, const u_int photonTracedC
 		const bool indirectCacheDone, const bool causticCacheDone,
 		boost::atomic<u_int> &globalIndirectPhotonsTraced, boost::atomic<u_int> &globalCausticPhotonsTraced,
 		boost::atomic<u_int> &globalIndirectSize, boost::atomic<u_int> &globalCausticSize) {
-	const size_t renderThreadCount = boost::thread::hardware_concurrency();
+	const size_t renderThreadCount = GetHardwareThreadCount();
 	vector<TracePhotonsThread *> renderThreads(renderThreadCount, nullptr);
 
 	boost::atomic<u_int> globalPhotonsCounter(0);
@@ -158,7 +161,7 @@ void PhotonGICache::TracePhotons(const u_int seedBase, const u_int photonTracedC
 }
 
 void PhotonGICache::TracePhotons(const bool indirectEnabled, const bool causticEnabled) {
-	const size_t renderThreadCount = boost::thread::hardware_concurrency();
+	const size_t renderThreadCount = GetHardwareThreadCount();
 
 	boost::atomic<u_int> globalIndirectPhotonsTraced(0);
 	boost::atomic<u_int> globalCausticPhotonsTraced(0);

@@ -637,10 +637,11 @@ public:
 	 * - test.prop2
 	 *
 	 * \param prefix of the Property names to return.
+	 * \param sorted if the returned vector should be sorted according last field
 	 *
 	 * \return a vector of Property names.
 	 */
-	std::vector<std::string> GetAllUniqueSubNames(const std::string &prefix) const;
+	std::vector<std::string> GetAllUniqueSubNames(const std::string &prefix, const bool sorted = false) const;
 	/*!
 	 * \brief Returns if there are at least a Property starting for specific prefix.
 	 *

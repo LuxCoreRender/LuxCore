@@ -41,6 +41,7 @@
 #include "slg/scene/scene.h"
 #include "slg/textures/constfloat.h"
 #include "slg/textures/constfloat3.h"
+#include "slg/textures/imagemaptex.h"
 #include "slg/utils/pathinfo.h"
 
 using namespace std;
@@ -70,6 +71,8 @@ void Scene::Init(const float imageScale) {
 
 	editActions.AddAllAction();
 	imgMapCache.SetImageResize(imageScale);
+	// Add random image map to imgMapCache 
+	imgMapCache.DefineImageMap(ImageMapTexture::randomImageMap.get());
 
 	enableParsePrint = false;
 }
@@ -85,7 +88,7 @@ Properties Scene::ToProperties(const bool useRealFileName) const {
 
 		// Write the camera information
 		if (camera)
-			props.Set(camera->ToProperties());
+			props.Set(camera->ToProperties(imgMapCache, useRealFileName));
 
 		// Save all not intersectable light sources
 		vector<string> lightNames = lightDefs.GetLightSourceNames();
@@ -364,6 +367,9 @@ void Scene::RemoveUnusedImageMaps() {
 	for (u_int i = 0; i < matDefs.GetSize(); ++i)
 		matDefs.GetMaterial(i)->AddReferencedImageMaps(referencedImgMaps);
 
+	// Avoid to remove random image map from imgMapCache 
+	referencedImgMaps.insert(ImageMapTexture::randomImageMap.get());
+	
 	// Get the list of all defined image maps
 	vector<const ImageMap *> ims;
 	imgMapCache.GetImageMaps(ims);
@@ -527,7 +533,7 @@ bool Scene::Intersect(IntersectionDevice *device,
 	bsdf->hitPoint.throughShadowTransparency = false;
 
 	for (;;) {
-		const bool hit = device ? device->TraceRay(ray, rayHit) : dataSet->GetAccelerator()->Intersect(ray, rayHit);
+		const bool hit = device ? device->TraceRay(ray, rayHit) : dataSet->GetAccelerator(ACCEL_EMBREE)->Intersect(ray, rayHit);
 
 		const Volume *rayVolume = volInfo->GetCurrentVolume();
 		if (hit) {
@@ -590,10 +596,10 @@ bool Scene::Intersect(IntersectionDevice *device,
 			}
 
 			if (!continueToTrace && shadowRay) {
-				const Spectrum &transp = bsdf->GetPassThroughShadowTransparency();
+				const Spectrum &shadowTransparency = bsdf->GetPassThroughShadowTransparency();
 				
-				if (!transp.Black()) {
-					*connectionThroughput *= transp;
+				if (!shadowTransparency.Black()) {
+					*connectionThroughput *= shadowTransparency;
 					throughShadowTransparency = true;
 					continueToTrace = true;
 				}

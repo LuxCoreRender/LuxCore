@@ -32,8 +32,8 @@ OpenCLIntersectionDevice::OpenCLIntersectionDevice(
 		const Context *context,
 		OpenCLDeviceDescription *desc,
 		const size_t devIndex) :
-		Device(context, desc->GetType(), devIndex), OpenCLDevice(context, desc, devIndex),
-		kernel(nullptr) {
+		Device(context, devIndex), OpenCLDevice(context, desc, devIndex),
+		HardwareIntersectionDevice(), kernel(nullptr) {
 }
 
 OpenCLIntersectionDevice::~OpenCLIntersectionDevice() {
@@ -63,35 +63,22 @@ void OpenCLIntersectionDevice::Start() {
 	OpenCLDevice::Start();
 
 	// Compile required kernel
-	kernel = accel->NewOpenCLKernel(this);
+	kernel = accel->NewHardwareIntersectionKernel(*this);
 }
 
 void OpenCLIntersectionDevice::Stop() {
-	OpenCLDevice::Stop();
-
 	delete kernel;
 	kernel = nullptr;
 
+	OpenCLDevice::Stop();
 }
 
-//------------------------------------------------------------------------------
-// OpenCL Device specific methods
-//------------------------------------------------------------------------------
-
-void OpenCLIntersectionDevice::AllocBufferRO(cl::Buffer **buff, void *src, const size_t size, const std::string &desc) {
-	AllocBuffer(src ? (CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR) : CL_MEM_READ_ONLY, buff, src, size, desc);
-}
-
-void OpenCLIntersectionDevice::AllocBufferRW(cl::Buffer **buff, void *src, const size_t size, const std::string &desc) {
-	AllocBuffer(src ? (CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR) : CL_MEM_READ_WRITE, buff, src, size, desc);
-}
-
-void OpenCLIntersectionDevice::FreeBuffer(cl::Buffer **buff) {
-	if (*buff) {
-		FreeMemory((*buff)->getInfo<CL_MEM_SIZE>());
-		delete *buff;
-		*buff = nullptr;
-	}
+void OpenCLIntersectionDevice::EnqueueTraceRayBuffer(HardwareDeviceBuffer *rayBuff,
+			HardwareDeviceBuffer *rayHitBuff,
+			const unsigned int rayCount) {
+	// Enqueue the intersection kernel
+	kernel->EnqueueTraceRayBuffer(rayBuff, rayHitBuff, rayCount);
+	statsTotalDataParallelRayCount += rayCount;
 }
 
 }

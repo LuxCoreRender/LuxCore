@@ -92,8 +92,8 @@ scene.materials.mat_cube1139858847948808.shadowcatcher.onlyinfinitelights = 0
 scene.materials.mat_cube1139858847948808.photongi.enable = 1
 ##
 scene.materials.mat_plane139857991252616.type = "matte"
-#scene.materials.mat_plane139857991252616.kd = "139857989714440Color"
-scene.materials.mat_plane139857991252616.kd = 0.7 0.7 0.7
+scene.materials.mat_plane139857991252616.kd = "139857989714440Color"
+#scene.materials.mat_plane139857991252616.kd = 0.7 0.7 0.7
 scene.materials.mat_plane139857991252616.transparency.shadow = 0 0 0
 scene.materials.mat_plane139857991252616.id = 10034367
 scene.materials.mat_plane139857991252616.emission.gain = 1 1 1

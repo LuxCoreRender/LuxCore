@@ -32,11 +32,9 @@ using namespace luxcore;
 // MenuRendering
 //------------------------------------------------------------------------------
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
 static void KernelCacheFillProgressHandler(const size_t step, const size_t count) {
 	LA_LOG("KernelCache FillProgressHandler Step: " << step << "/" << count);
 }
-#endif
 
 void LuxCoreApp::MenuRendering() {
 	if (ImGui::MenuItem("Load")) {
@@ -161,8 +159,7 @@ void LuxCoreApp::MenuRendering() {
 		ImGui::Separator();
 	}
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	if (ImGui::MenuItem("Fill kernel cache")) {
+	if (isGPURenderingAvailable() && ImGui::MenuItem("Fill kernel cache")) {
 		if (session) {
 			// Stop any current rendering
 			DeleteRendering();
@@ -170,27 +167,13 @@ void LuxCoreApp::MenuRendering() {
 
 		Properties props;
 		/*props <<
-				Property("opencl.devices.select")("010") <<
-				Property("opencl.code.alwaysenabled")(
-					"MATTE MIRROR GLASS ARCHGLASS MATTETRANSLUCENT GLOSSY2 "
-					"METAL2 ROUGHGLASS ROUGHMATTE ROUGHMATTETRANSLUCENT "
-					"GLOSSYTRANSLUCENT "
-					"GLOSSY2_ABSORPTION GLOSSY2_MULTIBOUNCE "
-					"HOMOGENEOUS_VOL CLEAR_VOL "
-					"IMAGEMAPS_BYTE_FORMAT IMAGEMAPS_HALF_FORMAT "
-					"IMAGEMAPS_1xCHANNELS IMAGEMAPS_3xCHANNELS "
-					"HAS_BUMPMAPS "
-					"INFINITE TRIANGLELIGHT") <<
-				Property("kernelcachefill.renderengine.types")("PATHOCL") <<
-				Property("kernelcachefill.sampler.types")("SOBOL") <<
-				Property("kernelcachefill.camera.types")("perspective") <<
-				Property("kernelcachefill.light.types")("infinite", "trianglelight") <<
-				Property("kernelcachefill.texture.types")("checkerboard2d", "checkerboard3d");*/
+				Property("opencl.devices.select")("100") <<
+				Property("scene.epsilon.min")(0.000123f) <<
+				Property("scene.epsilon.max")(0.123f);*/
 		KernelCacheFill(props, KernelCacheFillProgressHandler);
 	}
 
 	ImGui::Separator();
-#endif
 
 	if (ImGui::MenuItem("Quit", "ESC"))
 		glfwSetWindowShouldClose(window, GL_TRUE);
@@ -203,12 +186,10 @@ void LuxCoreApp::MenuRendering() {
 void LuxCoreApp::MenuEngine() {
 	const string currentEngineType = config->ToProperties().Get("renderengine.type").Get<string>();
 
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	if (ImGui::MenuItem("PATHOCL", "1", (currentEngineType == "PATHOCL"))) {
+	if (isGPURenderingAvailable() && ImGui::MenuItem("PATHOCL", "1", (currentEngineType == "PATHOCL"))) {
 		SetRenderingEngineType("PATHOCL");
 		CloseAllRenderConfigEditors();
 	}
-#endif
 	if (ImGui::MenuItem("LIGHTCPU", "2", (currentEngineType == "LIGHTCPU"))) {
 		SetRenderingEngineType("LIGHTCPU");
 		CloseAllRenderConfigEditors();
@@ -225,22 +206,18 @@ void LuxCoreApp::MenuEngine() {
 		SetRenderingEngineType("BIDIRVMCPU");
 		CloseAllRenderConfigEditors();
 	}
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	if (ImGui::MenuItem("RTPATHOCL", "6", (currentEngineType == "RTPATHOCL"))) {
+	if (isGPURenderingAvailable() && ImGui::MenuItem("RTPATHOCL", "6", (currentEngineType == "RTPATHOCL"))) {
 		SetRenderingEngineType("RTPATHOCL");
 		CloseAllRenderConfigEditors();
 	}
-#endif
 	if (ImGui::MenuItem("TILEPATHCPU", "7", (currentEngineType == "TILEPATHCPU"))) {
 		SetRenderingEngineType("TILEPATHCPU");
 		CloseAllRenderConfigEditors();
 	}
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	if (ImGui::MenuItem("TILEPATHOCL", "8", (currentEngineType == "TILEPATHOCL"))) {
+	if (isGPURenderingAvailable() && ImGui::MenuItem("TILEPATHOCL", "8", (currentEngineType == "TILEPATHOCL"))) {
 		SetRenderingEngineType("TILEPATHOCL");
 		CloseAllRenderConfigEditors();
 	}
-#endif
 	if (ImGui::MenuItem("RTPATHCPU", "9", (currentEngineType == "RTPATHCPU"))) {
 		SetRenderingEngineType("RTPATHCPU");
 		CloseAllRenderConfigEditors();
@@ -502,11 +479,9 @@ void LuxCoreApp::MenuWindow() {
 			samplerWindow.Toggle();
 		if (ImGui::MenuItem("Pixel Filter editor", NULL, pixelFilterWindow.IsOpen()))
 			pixelFilterWindow.Toggle();
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-		if (ImGui::MenuItem("OpenCL Device editor", NULL, oclDeviceWindow.IsOpen(),
+		if (isGPURenderingAvailable() && ImGui::MenuItem("OpenCL Device editor", NULL, oclDeviceWindow.IsOpen(),
 				boost::ends_with(currentRenderEngineType, "OCL")))
 			oclDeviceWindow.Toggle();
-#endif
 		if (ImGui::MenuItem("Light Strategy editor", NULL, lightStrategyWindow.IsOpen()))
 			lightStrategyWindow.Toggle();
 		if (ImGui::MenuItem("Accelerator editor", NULL, acceleratorWindow.IsOpen()))

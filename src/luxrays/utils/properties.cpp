@@ -197,7 +197,7 @@ template<> bool PropertyValue::Get<bool>() const {
 		case ULONGLONG_VAL:
 			return boost::lexical_cast<bool>(data.ulonglongVal);
 		case STRING_VAL:
-			return boost::lexical_cast<bool>(*data.stringVal);
+			return FromString<bool>(*data.stringVal);
 		case BLOB_VAL:
 			throw std::runtime_error("A Blob property can not be converted to other types");
 		default:
@@ -220,7 +220,7 @@ template<> int PropertyValue::Get<int>() const {
 		case ULONGLONG_VAL:
 			return boost::lexical_cast<int>(data.ulonglongVal);
 		case STRING_VAL:
-			return boost::lexical_cast<int>(*data.stringVal);
+			return FromString<int>(*data.stringVal);
 		case BLOB_VAL:
 			throw std::runtime_error("A Blob property can not be converted to other types");
 		default:
@@ -243,7 +243,7 @@ template<> unsigned int PropertyValue::Get<unsigned int>() const {
 		case ULONGLONG_VAL:
 			return boost::lexical_cast<unsigned int>(data.ulonglongVal);
 		case STRING_VAL:
-			return boost::lexical_cast<unsigned int>(*data.stringVal);
+			return FromString<unsigned int>(*data.stringVal);
 		case BLOB_VAL:
 			throw std::runtime_error("A Blob property can not be converted to other types");
 		default:
@@ -266,7 +266,7 @@ template<> float PropertyValue::Get<float>() const {
 		case ULONGLONG_VAL:
 			return boost::lexical_cast<float>(data.ulonglongVal);
 		case STRING_VAL:
-			return boost::lexical_cast<float>(*data.stringVal);
+			return FromString<float>(*data.stringVal);
 		case BLOB_VAL:
 			throw std::runtime_error("A Blob property can not be converted to other types");
 		default:
@@ -289,7 +289,7 @@ template<> double PropertyValue::Get<double>() const {
 		case ULONGLONG_VAL:
 			return boost::lexical_cast<double>(data.ulonglongVal);
 		case STRING_VAL:
-			return boost::lexical_cast<double>(*data.stringVal);
+			return FromString<double>(*data.stringVal);
 		case BLOB_VAL:
 			throw std::runtime_error("A Blob property can not be converted to other types");
 		default:
@@ -312,7 +312,7 @@ template<> unsigned long long PropertyValue::Get<unsigned long long>() const {
 		case ULONGLONG_VAL:
 			return boost::lexical_cast<unsigned long long>(data.ulonglongVal);
 		case STRING_VAL:
-			return boost::lexical_cast<unsigned long long>(*data.stringVal);
+			return FromString<unsigned long long>(*data.stringVal);
 		case BLOB_VAL:
 			throw std::runtime_error("A Blob property can not be converted to other types");
 		default:
@@ -323,19 +323,19 @@ template<> unsigned long long PropertyValue::Get<unsigned long long>() const {
 template<> string PropertyValue::Get<string>() const {
 	switch (dataType) {
 		case BOOL_VAL:
-			return boost::lexical_cast<string>(data.boolVal);
+			return ToString(data.boolVal);
 		case INT_VAL:
-			return boost::lexical_cast<string>(data.intVal);
+			return ToString(data.intVal);
 		case UINT_VAL:
-			return boost::lexical_cast<string>(data.uintVal);
+			return ToString(data.uintVal);
 		case FLOAT_VAL:
-			return boost::lexical_cast<string>(data.floatVal);
+			return ToString(data.floatVal);
 		case DOUBLE_VAL:
-			return boost::lexical_cast<string>(data.doubleVal);
+			return ToString(data.doubleVal);
 		case ULONGLONG_VAL:
-			return boost::lexical_cast<string>(data.ulonglongVal);
+			return ToString(data.ulonglongVal);
 		case STRING_VAL:
-			return boost::lexical_cast<string>(*data.stringVal);
+			return ToString(*data.stringVal);
 		case BLOB_VAL:
 			return data.blobVal->ToString();
 		default:
@@ -826,27 +826,44 @@ Properties &Properties::SetFromStream(istream &stream) {
 }
 
 Properties &Properties::SetFromFile(const string &fileName) {
-	BOOST_IFSTREAM file(fileName.c_str(), ios::in);
-	if (file.fail())
+	// The use of boost::filesystem::path is required for UNICODE support: fileName
+	// is supposed to be UTF-8 encoded.
+	boost::filesystem::ifstream inFile(boost::filesystem::path(fileName),
+			boost::filesystem::ifstream::in); 
+
+	if (inFile.fail())
 		throw runtime_error("Unable to open properties file: " + fileName);
 
-	return SetFromStream(file);
+	// Force to use C locale
+	inFile.imbue(cLocale);
+
+	return SetFromStream(inFile);
 }
 
 Properties &Properties::SetFromString(const string &propDefinitions) {
 	istringstream stream(propDefinitions);
 
+	// Force to use C locale
+	stream.imbue(cLocale);
+
 	return SetFromStream(stream);
 }
 
 void Properties::Save(const std::string &fileName) {
-	BOOST_OFSTREAM outFile;
-	outFile.exceptions(BOOST_IFSTREAM::failbit | BOOST_IFSTREAM::badbit | BOOST_IFSTREAM::eofbit);
-	outFile.open(fileName.c_str(), BOOST_OFSTREAM::trunc);
+	// The use of boost::filesystem::path is required for UNICODE support: fileName
+	// is supposed to be UTF-8 encoded.
+	boost::filesystem::ofstream outFile(boost::filesystem::path(fileName),
+			boost::filesystem::ofstream::trunc);
 	
+	// Force to use C locale
+	outFile.imbue(cLocale);
+
 	outFile << ToString();
 	
-	outFile.close();
+	if (outFile.fail())
+		throw runtime_error("Unable to save properties file: " + fileName);
+
+	outFile.close();	
 }
 
 Properties &Properties::Clear() {
@@ -882,7 +899,7 @@ vector<string> Properties::GetAllNamesRE(const string &regularExpression) const 
 	return namesSubset;
 }
 
-vector<string> Properties::GetAllUniqueSubNames(const string &prefix) const {
+vector<string> Properties::GetAllUniqueSubNames(const string &prefix, const bool sorted) const {
 	const size_t fieldsCount = count(prefix.begin(), prefix.end(), '.') + 2;
 
 	set<string> definedNames;
@@ -897,6 +914,47 @@ vector<string> Properties::GetAllUniqueSubNames(const string &prefix) const {
 				definedNames.insert(s);
 			}
 		}
+	}
+
+	if (sorted) {
+		std::sort(namesSubset.begin(), namesSubset.end(),
+				[](const string &a, const string &b) -> bool{ 
+			// Try to convert a and b to a number
+			int aNumber = 0;
+			bool validA;
+			try {
+				const u_int lastFieldIndex = Property::CountFields(a) - 1;
+				const string lastField = Property::ExtractField(a, lastFieldIndex);
+				aNumber = boost::lexical_cast<int>(lastField);
+				validA = true;
+			} catch(...) {
+				validA = false;
+			}
+
+			int bNumber = 0;
+			bool validB;
+			try {
+				const u_int lastFieldIndex = Property::CountFields(b) - 1;
+				const string lastField = Property::ExtractField(b, lastFieldIndex);
+				bNumber = boost::lexical_cast<int>(lastField);
+				validB = true;
+			} catch(...) {
+				validB = false;
+			}
+
+			// Sort  with numbers natural order when possible
+			if (validA) {
+				if (validB)
+					return aNumber < bNumber;
+				else
+					return true;
+			} else {
+				if (validB)
+					return false;
+				else
+					return a < b;
+			}
+		});
 	}
 
 	return namesSubset;

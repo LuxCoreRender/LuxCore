@@ -70,7 +70,7 @@ void StatsWindow::Draw() {
 			glfwGetFramebufferSize(app->window, &frameBufferWidth, &frameBufferHeight);
 			LuxCoreApp::ColoredLabelText("Screen resolution:", "%d x %d", frameBufferWidth, frameBufferHeight);
 			
-#if !defined(LUXRAYS_DISABLE_OPENCL)
+#if defined(LUXRAYS_ENABLE_OPENCL)
 			if (engineType == "RTPATHOCL") {
 				static float fps = 0.f;
 				// This is a simple trick to smooth the fps counter

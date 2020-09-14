@@ -40,9 +40,6 @@ public:
 	virtual bool IsLightSource() const {
 		return (Material::IsLightSource() || matBase->IsLightSource());
 	}
-	virtual bool HasBumpTex() const { 
-		return (Material::HasBumpTex() || matBase->HasBumpTex());
-	}
 
 	virtual bool IsDelta() const {
 		return false;

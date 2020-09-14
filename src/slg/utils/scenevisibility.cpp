@@ -21,6 +21,8 @@
 #include <boost/thread.hpp>
 #include <boost/thread/mutex.hpp>
 
+#include "luxrays/utils/thread.h"
+
 #include "slg/core/indexoctree.h"
 #include "slg/scene/scene.h"
 #include "slg/engines/renderengine.h"
@@ -106,12 +108,17 @@ void SceneVisibility<T>::TraceVisibilityThread::RenderFunc() {
 	// Initialization
 	//--------------------------------------------------------------------------
 
+	// This is really used only by Windows for 64+ threads support
+	SetThreadGroupAffinity(threadIndex);
+
 	const Scene *scene = sv.scene;
 	const Camera *camera = scene->camera;
 
 	// Initialize the sampler
 	RandomGenerator rnd(1 + threadIndex);
-	SobolSampler sampler(&rnd, NULL, NULL, true, 0.f, 0.f, &visibilitySobolSharedData);
+	SobolSampler sampler(&rnd, NULL, NULL, true, 0.f, 0.f,
+			16, 16, 1, 1,
+			&visibilitySobolSharedData);
 	
 	// Request the samples
 	const u_int sampleBootSize = 5;
@@ -124,7 +131,10 @@ void SceneVisibility<T>::TraceVisibilityThread::RenderFunc() {
 	// Initialize SampleResult 
 	vector<SampleResult> sampleResults(1);
 	SampleResult &sampleResult = sampleResults[0];
-	sampleResult.Init(Film::RADIANCE_PER_PIXEL_NORMALIZED, 1);
+	const Film::FilmChannels sampleResultsChannels({
+		Film::RADIANCE_PER_PIXEL_NORMALIZED
+	});
+	sampleResult.Init(&sampleResultsChannels, 1);
 
 	// Initialize the max. path depth
 	PathDepthInfo maxPathDepthInfo;
@@ -336,7 +346,7 @@ SceneVisibility<T>::~SceneVisibility() {
 
 template <class T>
 void SceneVisibility<T>::Build() {
-	const size_t renderThreadCount = boost::thread::hardware_concurrency();
+	const size_t renderThreadCount = GetHardwareThreadCount();
 	vector<TraceVisibilityThread *> renderThreads(renderThreadCount, nullptr);
 	SLG_LOG("SceneVisibility trace thread count: " << renderThreadCount);
 

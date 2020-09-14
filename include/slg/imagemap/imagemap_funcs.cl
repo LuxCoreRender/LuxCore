@@ -419,7 +419,7 @@ OPENCL_FORCE_NOT_INLINE float3 ImageMap_GetSpectrum(__global const ImageMap *ima
 	return (k0 * c0 + k1 *c1 + k2 * c2 + k3 * c3);
 }
 
-OPENCL_FORCE_INLINE float2 ImageMap_GetDuv(__global const ImageMap *imageMap,
+OPENCL_FORCE_NOT_INLINE float2 ImageMap_GetDuv(__global const ImageMap *imageMap,
 		const float u, const float v
 		IMAGEMAPS_PARAM_DECL) {
 	__global const void *pixels = ImageMap_GetPixelsAddress(

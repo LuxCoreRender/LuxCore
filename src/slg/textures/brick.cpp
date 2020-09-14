@@ -29,10 +29,11 @@ using namespace slg;
 BrickTexture::BrickTexture(const TextureMapping3D *mp, const Texture *t1,
 		const Texture *t2, const Texture *t3,
 		float brickw, float brickh, float brickd, float mortar,
-		float r, float bev, const string &b) :
+		float r, const string &b, const float modulationBias) :
 		mapping(mp), tex1(t1), tex2(t2), tex3(t3),
 		brickwidth(brickw), brickheight(brickh), brickdepth(brickd), mortarsize(mortar),
-		run(r), initialbrickwidth(brickw), initialbrickheight(brickh), initialbrickdepth(brickd) {
+		run(r), initialbrickwidth(brickw), initialbrickheight(brickh), initialbrickdepth(brickd),
+		modulationBias(modulationBias) {
 	if (b == "stacked") {
 		bond = RUNNING;
 		run = 0.f;
@@ -61,10 +62,6 @@ BrickTexture::BrickTexture(const TextureMapping3D *mp, const Texture *t1,
 	mortarwidth = mortarsize / brickwidth;
 	mortarheight = mortarsize / brickheight;
 	mortardepth = mortarsize / brickdepth;
-	bevelwidth = bev / brickwidth;
-	bevelheight = bev / brickheight;
-	beveldepth = bev / brickdepth;
-	usebevel = bev > 0.f;
 }
 
 float BrickTexture::GetFloatValue(const HitPoint &hitPoint) const {
@@ -97,7 +94,7 @@ bool BrickTexture::Basket(const Point &p, Point &i) const {
 	float bx = p.x - i.x;
 	float by = p.y - i.y;
 	i.x += i.y - 2.f * floorf(0.5f * i.y);
-	const bool split = (i.x - 2.f * floor(0.5f * i.x)) < 1.f;
+	const bool split = (i.x - 2.f * floorf(0.5f * i.x)) < 1.f;
 	if (split) {
 		bx = fmodf(bx, invproportion);
 		i.x = floorf(proportion * p.x) * invproportion;
@@ -200,14 +197,33 @@ Spectrum BrickTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 	}
 
 	if (b) {
-		// Brick texture * Modulation texture
-		return tex1->GetSpectrumValue(hitPoint) * tex3->GetSpectrumValue(hitPoint);
+		// Return brick color
+		if (modulationBias == -1.f) {
+			return tex1->GetSpectrumValue(hitPoint);
+		} else if (modulationBias == 1.f) {
+			return tex3->GetSpectrumValue(hitPoint);
+		}
+		
+		const int rownum = brickIndex.y;
+		const int bricknum = brickIndex.x;
+		const float noise = BrickNoise((rownum << 16) + (bricknum & 0xffff));
+		const float modulation = Clamp(noise + modulationBias, 0.f, 1.f);
+		
+		return Lerp(modulation, tex1->GetSpectrumValue(hitPoint), tex3->GetSpectrumValue(hitPoint));
 	} else {
-		// Mortar texture
+		// Return mortar color
 		return tex2->GetSpectrumValue(hitPoint);
 	}
 #undef BRICK_EPSILON
 }
+
+float BrickTexture::BrickNoise(u_int n) const {
+	n = (n + 1013) & 0x7fffffff;
+	n = (n >> 13) ^ n;
+	const u_int nn = (n * (n * n * 60493 + 19990303) + 1376312589) & 0x7fffffff;
+	return 0.5f * ((float)nn / 1073741824.0f);
+}
+
 
 Properties BrickTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	Properties props;
@@ -217,12 +233,12 @@ Properties BrickTexture::ToProperties(const ImageMapCache &imgMapCache, const bo
 	props.Set(Property("scene.textures." + name + ".bricktex")(tex1->GetSDLValue()));
 	props.Set(Property("scene.textures." + name + ".mortartex")(tex2->GetSDLValue()));
 	props.Set(Property("scene.textures." + name + ".brickmodtex")(tex3->GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".brickwidth")(brickwidth));
-	props.Set(Property("scene.textures." + name + ".brickheight")(brickheight));
-	props.Set(Property("scene.textures." + name + ".brickdepth")(brickdepth));
+	props.Set(Property("scene.textures." + name + ".brickmodbias")(modulationBias));
+	props.Set(Property("scene.textures." + name + ".brickwidth")(initialbrickwidth));
+	props.Set(Property("scene.textures." + name + ".brickheight")(initialbrickheight));
+	props.Set(Property("scene.textures." + name + ".brickdepth")(initialbrickdepth));
 	props.Set(Property("scene.textures." + name + ".mortarsize")(mortarsize));
 	props.Set(Property("scene.textures." + name + ".brickrun")(run));
-	props.Set(Property("scene.textures." + name + ".brickbevel")(bevelwidth * brickwidth));
 
 	string brickBondValue;
 	switch (bond) {

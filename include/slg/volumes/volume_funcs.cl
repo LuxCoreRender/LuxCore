@@ -18,7 +18,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-OPENCL_FORCE_NOT_INLINE float3 Volume_Emission(__global const Volume *vol, __global const HitPoint *hitPoint
+OPENCL_FORCE_INLINE float3 Volume_Emission(__global const Volume *vol, __global const HitPoint *hitPoint
 	TEXTURES_PARAM_DECL) {
 	const uint emiTexIndex = vol->volume.volumeEmissionTexIndex;
 	if (emiTexIndex != NULL_INDEX) {
@@ -29,7 +29,7 @@ OPENCL_FORCE_NOT_INLINE float3 Volume_Emission(__global const Volume *vol, __glo
 		return BLACK;
 }
 
-OPENCL_FORCE_NOT_INLINE void Volume_InitializeTmpHitPoint(__global HitPoint *tmpHitPoint,
+OPENCL_FORCE_INLINE void Volume_InitializeTmpHitPoint(__global HitPoint *tmpHitPoint,
 		const float3 rayOrig, const float3 rayDir, const float passThroughEvent) {
 	// Initialize tmpHitPoint
 	HitPoint_InitDefault(tmpHitPoint);
@@ -43,7 +43,7 @@ OPENCL_FORCE_NOT_INLINE void Volume_InitializeTmpHitPoint(__global HitPoint *tmp
 	Transform_Init(&tmpHitPoint->localToWorld);
 }
 
-OPENCL_FORCE_NOT_INLINE float HomogeneousVolume_SegmentScatter(const float u, 
+OPENCL_FORCE_INLINE float HomogeneousVolume_SegmentScatter(const float u, 
 		const bool scatterAllowed, const float segmentLength,
 		const float3 *sigmaA, const float3 *sigmaS, const float3 *emission,
 		float3 *segmentTransmittance, float3 *segmentEmission) {
@@ -96,7 +96,7 @@ OPENCL_FORCE_NOT_INLINE float HomogeneousVolume_SegmentScatter(const float u,
 // ClearVolume scatter
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_NOT_INLINE float3 ClearVolume_SigmaA(__global const Volume *vol, __global const HitPoint *hitPoint
+OPENCL_FORCE_INLINE float3 ClearVolume_SigmaA(__global const Volume *vol, __global const HitPoint *hitPoint
 	TEXTURES_PARAM_DECL) {
 	const float3 sigmaA = Texture_GetSpectrumValue(vol->volume.clear.sigmaATexIndex, hitPoint
 		TEXTURES_PARAM);
@@ -118,7 +118,7 @@ OPENCL_FORCE_INLINE float3 ClearVolume_SigmaT(__global const Volume *vol, __glob
 				TEXTURES_PARAM);
 }
 
-OPENCL_FORCE_NOT_INLINE float ClearVolume_Scatter(__global const Volume *vol,
+OPENCL_FORCE_INLINE float ClearVolume_Scatter(__global const Volume *vol,
 		__global Ray *ray, const float hitT,
 		const float passThroughEvent,
 		const bool scatteredStart, float3 *connectionThroughput,
@@ -158,7 +158,7 @@ OPENCL_FORCE_NOT_INLINE float ClearVolume_Scatter(__global const Volume *vol,
 // HomogeneousVolume scatter
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_NOT_INLINE float3 HomogeneousVolume_SigmaA(__global const Volume *vol, __global const HitPoint *hitPoint
+OPENCL_FORCE_INLINE float3 HomogeneousVolume_SigmaA(__global const Volume *vol, __global const HitPoint *hitPoint
 	TEXTURES_PARAM_DECL) {
 	const float3 sigmaA = Texture_GetSpectrumValue(vol->volume.homogenous.sigmaATexIndex, hitPoint
 		TEXTURES_PARAM);
@@ -166,7 +166,7 @@ OPENCL_FORCE_NOT_INLINE float3 HomogeneousVolume_SigmaA(__global const Volume *v
 	return clamp(sigmaA, 0.f, INFINITY);
 }
 
-OPENCL_FORCE_NOT_INLINE float3 HomogeneousVolume_SigmaS(__global const Volume *vol, __global const HitPoint *hitPoint
+OPENCL_FORCE_INLINE float3 HomogeneousVolume_SigmaS(__global const Volume *vol, __global const HitPoint *hitPoint
 	TEXTURES_PARAM_DECL) {
 	const float3 sigmaS = Texture_GetSpectrumValue(vol->volume.homogenous.sigmaSTexIndex, hitPoint
 		TEXTURES_PARAM);
@@ -174,7 +174,7 @@ OPENCL_FORCE_NOT_INLINE float3 HomogeneousVolume_SigmaS(__global const Volume *v
 	return clamp(sigmaS, 0.f, INFINITY);
 }
 
-OPENCL_FORCE_NOT_INLINE float HomogeneousVolume_Scatter(__global const Volume *vol,
+OPENCL_FORCE_INLINE float HomogeneousVolume_Scatter(__global const Volume *vol,
 		__global Ray *ray, const float hitT,
 		const float passThroughEvent,
 		const bool scatteredStart, float3 *connectionThroughput,
@@ -214,7 +214,7 @@ OPENCL_FORCE_NOT_INLINE float HomogeneousVolume_Scatter(__global const Volume *v
 // HeterogeneousVolume scatter
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_NOT_INLINE float3 HeterogeneousVolume_SigmaA(__global const Volume *vol, __global const HitPoint *hitPoint
+OPENCL_FORCE_INLINE float3 HeterogeneousVolume_SigmaA(__global const Volume *vol, __global const HitPoint *hitPoint
 	TEXTURES_PARAM_DECL) {
 	const float3 sigmaA = Texture_GetSpectrumValue(vol->volume.heterogenous.sigmaATexIndex, hitPoint
 		TEXTURES_PARAM);
@@ -222,7 +222,7 @@ OPENCL_FORCE_NOT_INLINE float3 HeterogeneousVolume_SigmaA(__global const Volume 
 	return clamp(sigmaA, 0.f, INFINITY);
 }
 
-OPENCL_FORCE_NOT_INLINE float3 HeterogeneousVolume_SigmaS(__global const Volume *vol, __global const HitPoint *hitPoint
+OPENCL_FORCE_INLINE float3 HeterogeneousVolume_SigmaS(__global const Volume *vol, __global const HitPoint *hitPoint
 	TEXTURES_PARAM_DECL) {
 	const float3 sigmaS = Texture_GetSpectrumValue(vol->volume.heterogenous.sigmaSTexIndex, hitPoint
 		TEXTURES_PARAM);
@@ -236,7 +236,7 @@ OPENCL_FORCE_INLINE float3 HeterogeneousVolume_SigmaT(__global const Volume *vol
 			HeterogeneousVolume_SigmaS(vol, hitPoint TEXTURES_PARAM);
 }
 
-OPENCL_FORCE_NOT_INLINE float HeterogeneousVolume_Scatter(__global const Volume *vol,
+OPENCL_FORCE_INLINE float HeterogeneousVolume_Scatter(__global const Volume *vol,
 		__global Ray *ray, const float hitT,
 		const float passThroughEvent,
 		const bool scatteredStart, float3 *connectionThroughput,

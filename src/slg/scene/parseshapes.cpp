@@ -37,6 +37,7 @@
 #include "slg/shapes/simplify.h"
 #include "slg/shapes/islandaovshape.h"
 #include "slg/shapes/randomtriangleaovshape.h"
+#include "slg/shapes/edgedetectoraov.h"
 
 using namespace std;
 using namespace luxrays;
@@ -183,6 +184,8 @@ ExtTriangleMesh *Scene::CreateShape(const string &shapeName, const Properties &p
 			throw runtime_error("Unknown shape name in a pointiness shape: " + shapeName);
 
 		const u_int aovIndex = props.Get(Property(propName + ".aovindex")(NULL_INDEX)).Get<u_int>();
+		if ((aovIndex != NULL_INDEX) && (aovIndex >= EXTMESH_MAX_DATA_COUNT))
+			throw runtime_error("Pointiness aov index must be less than: " + ToString(EXTMESH_MAX_DATA_COUNT));
 		
 		shape = new PointinessShape((ExtTriangleMesh *)extMeshCache.GetExtMesh(sourceMeshName), aovIndex);
 	} else if (shapeType == "strands") {
@@ -236,11 +239,8 @@ ExtTriangleMesh *Scene::CreateShape(const string &shapeName, const Properties &p
 				solidSideCount, solidCapBottom, solidCapTop,
 				useCameraPosition);
 	} else if (shapeType == "group") {
-		vector<string> shapeNamesKeys = props.GetAllUniqueSubNames(propName);
+		vector<string> shapeNamesKeys = props.GetAllUniqueSubNames(propName, true);
 		if (shapeNamesKeys.size() > 0) {
-			// Sort the entries
-			sort(shapeNamesKeys.begin(), shapeNamesKeys.end());
-
 			vector<const ExtTriangleMesh *> meshes;
 			vector<Transform> trans;
 			for (auto const &shapeNamesKey : shapeNamesKeys) {
@@ -300,7 +300,8 @@ ExtTriangleMesh *Scene::CreateShape(const string &shapeName, const Properties &p
 		// So map.channels = 2 0 1
 		//
 		// Mudbox standard: map.channels = 0 2 1
-		const Property propChannels = props.Get(Property(propName + ".map.channels")(2u, 0u, 1u));
+		const Property defaultPropChannels = Property(propName + ".map.channels")(2u, 0u, 1u);
+		const Property propChannels = props.Get(defaultPropChannels);
 		if (propChannels.GetSize() != 3)
 			throw runtime_error("Wrong number of map channel indices in a displacement shape: " + shapeName);
 		params.mapChannels[0] = Min(propChannels.Get<u_int>(0), 2u);
@@ -309,6 +310,7 @@ ExtTriangleMesh *Scene::CreateShape(const string &shapeName, const Properties &p
 
 		params.scale = props.Get(Property(propName + ".scale")(1.f)).Get<float>();
 		params.offset = props.Get(Property(propName + ".offset")(0.f)).Get<float>();
+		params.uvIndex = props.Get(Property(propName + ".uvindex")(0)).Get<u_int>();
 		params.normalSmooth = props.Get(Property(propName + ".normalsmooth")(true)).Get<bool>();
 
 		shape = new DisplacementShape((ExtTriangleMesh *)extMeshCache.GetExtMesh(sourceMeshName),
@@ -345,9 +347,28 @@ ExtTriangleMesh *Scene::CreateShape(const string &shapeName, const Properties &p
 
 		const u_int srcDataIndex = Clamp(props.Get(Property(propName + ".srcdataindex")(0u)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
 		const u_int dstDataIndex = Clamp(props.Get(Property(propName + ".dstdataindex")(0u)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
-		
+
 		shape = new RandomTriangleAOVShape((ExtTriangleMesh *)extMeshCache.GetExtMesh(sourceMeshName),
 				srcDataIndex, dstDataIndex);
+	} else if (shapeType == "edgedetectoraov") {
+		const string sourceMeshName = props.Get(Property(propName + ".source")("")).Get<string>();
+		if (!extMeshCache.IsExtMeshDefined(sourceMeshName))
+			throw runtime_error("Unknown shape name in a edgedetectoraov shape: " + shapeName);
+
+		const u_int aovIndex0 = props.Get(Property(propName + ".aovindex0")(0)).Get<u_int>();
+		if (aovIndex0 >= EXTMESH_MAX_DATA_COUNT)
+			throw runtime_error("Edgedetectoraov aov index 0 must be less than: " + ToString(EXTMESH_MAX_DATA_COUNT));
+
+		const u_int aovIndex1 = props.Get(Property(propName + ".aovindex1")(1)).Get<u_int>();
+		if (aovIndex1 >= EXTMESH_MAX_DATA_COUNT)
+			throw runtime_error("Edgedetectoraov aov index 1 must be less than: " + ToString(EXTMESH_MAX_DATA_COUNT));
+
+		const u_int aovIndex2 = props.Get(Property(propName + ".aovindex2")(2)).Get<u_int>();
+		if (aovIndex2 >= EXTMESH_MAX_DATA_COUNT)
+			throw runtime_error("Edgedetectoraov aov index 2 must be less than: " + ToString(EXTMESH_MAX_DATA_COUNT));
+
+		shape = new EdgeDetectorAOVShape((ExtTriangleMesh *)extMeshCache.GetExtMesh(sourceMeshName),
+				aovIndex0, aovIndex1, aovIndex2);
 	} else
 		
 		throw runtime_error("Unknown shape type: " + shapeType);

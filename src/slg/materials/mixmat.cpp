@@ -42,10 +42,6 @@ bool MixMaterial::IsLightSourceImpl() const {
 	return (Material::IsLightSource() || matA->IsLightSource() || matB->IsLightSource());
 }
 
-bool MixMaterial::HasBumpTexImpl() const { 
-	return (Material::HasBumpTex() || matA->HasBumpTex() || matB->HasBumpTex());
-}
-
 bool MixMaterial::IsDeltaImpl() const {
 	return (matA->IsDelta() && matB->IsDelta());
 }
@@ -68,7 +64,6 @@ void MixMaterial::Preprocess() {
 	}
 
 	isLightSource = IsLightSourceImpl();
-	hasBumpTex = HasBumpTexImpl();
 	isDelta = IsDeltaImpl();
 }
 

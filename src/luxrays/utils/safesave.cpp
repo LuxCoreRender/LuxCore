@@ -23,10 +23,10 @@
 
 #include "luxrays/utils/safesave.h"
 #include "luxrays/utils/fileext.h"
+#include "luxrays/utils/strutils.h"
 
 using namespace std;
 using namespace luxrays;
-using namespace slg;
 
 //------------------------------------------------------------------------------
 // SafeSave

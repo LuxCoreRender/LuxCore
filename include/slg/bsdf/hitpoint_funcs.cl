@@ -75,23 +75,23 @@ OPENCL_FORCE_INLINE void HitPoint_InitDefault(__global HitPoint *hitPoint) {
 	hitPoint->throughShadowTransparency = false;
 	hitPoint->passThroughEvent = 0.f;
 
-	VSTORE3F((float3)(0.f, 0.f, 0.f), &hitPoint->p.x);
-	VSTORE3F((float3)(0.f, 0.f, 0.f), &hitPoint->fixedDir.x);
+	VSTORE3F(MAKE_FLOAT3(0.f, 0.f, 0.f), &hitPoint->p.x);
+	VSTORE3F(MAKE_FLOAT3(0.f, 0.f, 0.f), &hitPoint->fixedDir.x);
 
 	hitPoint->objectID = 0;
 	
-	VSTORE3F((float3)(0.f, 0.f, 0.f),  &hitPoint->geometryN.x);
-	VSTORE3F((float3)(0.f, 0.f, 0.f),  &hitPoint->interpolatedN.x);
-	VSTORE3F((float3)(0.f, 0.f, 0.f),  &hitPoint->shadeN.x);
+	VSTORE3F(MAKE_FLOAT3(0.f, 0.f, 0.f),  &hitPoint->geometryN.x);
+	VSTORE3F(MAKE_FLOAT3(0.f, 0.f, 0.f),  &hitPoint->interpolatedN.x);
+	VSTORE3F(MAKE_FLOAT3(0.f, 0.f, 0.f),  &hitPoint->shadeN.x);
 
 	hitPoint->intoObject = true;
 
-	VSTORE2F((float2)(0.f, 0.f), &hitPoint->defaultUV.u);
+	VSTORE2F(MAKE_FLOAT2(0.f, 0.f), &hitPoint->defaultUV.u);
 	
-	VSTORE3F((float3)(0.f, 0.f, 0.f), &hitPoint->dpdu.x);
-	VSTORE3F((float3)(0.f, 0.f, 0.f), &hitPoint->dpdv.x);
-	VSTORE3F((float3)(0.f, 0.f, 0.f), &hitPoint->dndu.x);
-	VSTORE3F((float3)(0.f, 0.f, 0.f), &hitPoint->dndv.x);
+	VSTORE3F(MAKE_FLOAT3(0.f, 0.f, 0.f), &hitPoint->dpdu.x);
+	VSTORE3F(MAKE_FLOAT3(0.f, 0.f, 0.f), &hitPoint->dpdv.x);
+	VSTORE3F(MAKE_FLOAT3(0.f, 0.f, 0.f), &hitPoint->dndu.x);
+	VSTORE3F(MAKE_FLOAT3(0.f, 0.f, 0.f), &hitPoint->dndv.x);
 
 	Transform_Init(&hitPoint->localToWorld);
 
@@ -125,7 +125,7 @@ OPENCL_FORCE_INLINE float2 HitPoint_GetUV(__global const HitPoint *hitPoint, con
 			VLOAD2F(&hitPoint->defaultUV.u) :
 			ExtMesh_GetInterpolateUV(meshIndex, hitPoint->triangleIndex, hitPoint->triangleBariCoord1, hitPoint->triangleBariCoord2, dataIndex EXTMESH_PARAM);
 	} else
-		return (float2)(0.f, 0.f);
+		return MAKE_FLOAT2(0.f, 0.f);
 }
 
 OPENCL_FORCE_INLINE float3 HitPoint_GetColor(__global const HitPoint *hitPoint, const uint dataIndex EXTMESH_PARAM_DECL) {

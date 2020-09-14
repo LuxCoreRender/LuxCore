@@ -21,6 +21,7 @@
 
 #include <string>
 #include <cstdlib>
+#include <limits>
 
 #include <boost/thread/thread.hpp>
 
@@ -53,25 +54,32 @@ typedef enum {
 
 class DeviceDescription {
 public:
-	DeviceDescription(const std::string deviceName,
+	DeviceDescription(const std::string &deviceName,
 		const DeviceType deviceType) :
-		name(deviceName), type(deviceType) { }
+		name(deviceName), type(deviceType),
+		forceWorkGroupSize(0) { }
 	virtual ~DeviceDescription() { }
 
 	const std::string &GetName() const { return name; }
 	const DeviceType GetType() const { return type; };
 	virtual int GetComputeUnits() const { return 1; }
 	virtual u_int GetNativeVectorWidthFloat() const { return 4; };
-	virtual size_t GetMaxMemory() const { return 0; }
-	virtual size_t GetMaxMemoryAllocSize() const { return 0; }
+	virtual size_t GetMaxMemory() const { return std::numeric_limits<size_t>::max(); }
+	virtual size_t GetMaxMemoryAllocSize() const { return std::numeric_limits<size_t>::max(); }
+	virtual bool HasOutOfCoreMemorySupport() const { return false; }
+
+	virtual u_int GetForceWorkGroupSize() const { return forceWorkGroupSize; }
+	virtual void SetForceWorkGroupSize(const u_int size) { forceWorkGroupSize = size; }
 
 	static void FilterOne(std::vector<DeviceDescription *> &deviceDescriptions);
-	static void Filter(DeviceType type, std::vector<DeviceDescription *> &deviceDescriptions);
+	static void Filter(const DeviceType type, std::vector<DeviceDescription *> &deviceDescriptions);
 	static std::string GetDeviceType(const DeviceType type);
 
 protected:
 	std::string name;
 	DeviceType type;
+
+	u_int forceWorkGroupSize;
 };
 
 //------------------------------------------------------------------------------
@@ -81,31 +89,40 @@ protected:
 /*
  * The inheritance scheme used here:
  *
- *  Device => | =>            IntersectionDevice             => | => NativeIntersectionDevice
+ *  Device => | =>                  IntersectionDevice                   => | => NativeIntersectionDevice
  *  
- *            | =>   HardwareDevice   => | =>  OpenCLDevice  => |
- *  Device => |                                                 | => OpenCLIntersectionDevice
- *            | =>            IntersectionDevice             => |
+ *            | =>   HardwareDevice   => | =>        OpenCLDevice        => |
+ *  Device => |                                                             | => OpenCLIntersectionDevice
+ *            | =>   HardwareDevice   => |                                  |
+ *            |                          | => HardwareIntersectionDevice => |
+ *            | => IntersectionDevice => |
  *
- *            | =>   HardwareDevice   => | =>   CudaDevice   => |
- *  Device => |                                                 | => CudaIntersectionDevice
- *            | =>            IntersectionDevice             => |
+ *            | =>   HardwareDevice   => | =>         CudaDevice         => |
+ *  Device => |					                                            | => CudaIntersectionDevice
+ *            | =>   HardwareDevice   => |                                  |
+ *            |                          | => HardwareIntersectionDevice => |
+ *            | => IntersectionDevice => |
  */
 
 class Device {
 public:
 	const std::string &GetName() const { return deviceName; }
 	const Context *GetContext() const { return deviceContext; }
-	const DeviceType GetType() const { return deviceType; }
+	virtual const DeviceDescription *GetDeviceDesc() const = 0;
+	const size_t GetDeviceIndex() const { return deviceIndex; }
 
 	virtual bool IsRunning() const { return started; };
+
+	// Set the thread current device
+	virtual void PushThreadCurrentDevice() { }
+	virtual void PopThreadCurrentDevice() { }
 
 	friend class Context;
 	friend class OpenCLIntersectionDevice;
 
 protected:
 	Device() { }
-	Device(const Context *context, const DeviceType type, const size_t index);
+	Device(const Context *context, const size_t index);
 	virtual ~Device();
 
 	virtual void Start();
@@ -113,7 +130,6 @@ protected:
 	virtual void Stop();
 
 	const Context *deviceContext;
-	DeviceType deviceType;
 	size_t deviceIndex;
 
 	std::string deviceName;

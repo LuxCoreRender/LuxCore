@@ -18,6 +18,7 @@
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
+#include "luxrays/utils/thread.h"
 #include "luxrays/core/intersectiondevice.h"
 
 #include "slg/slg.h"
@@ -71,6 +72,9 @@ void TilePathNativeRenderThread::RenderThreadImpl() {
 	//--------------------------------------------------------------------------
 	// Initialization
 	//--------------------------------------------------------------------------
+
+	// This is really used only by Windows for 64+ threads support
+	SetThreadGroupAffinity(threadIndex);
 
 	TilePathOCLRenderEngine *engine = (TilePathOCLRenderEngine *)renderEngine;
 	const PathTracer &pathTracer = engine->pathTracer;

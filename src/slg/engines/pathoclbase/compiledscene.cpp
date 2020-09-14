@@ -34,23 +34,25 @@ using namespace slg;
 CompiledScene::CompiledScene(Scene *scn, const PathTracer *pt) {
 	scene = scn;
 	pathTracer = pt;
-	maxMemPageSize = 0xffffffffu;
+	maxMemPageSize = numeric_limits<size_t>::max();
 
-	lightsDistribution = NULL;
-	infiniteLightSourcesDistribution = NULL;
-
+	cameraBokehDistribution = nullptr;
+	lightsDistribution = nullptr;
+	infiniteLightSourcesDistribution = nullptr;
+	
 	EditActionList editActions;
 	editActions.AddAllAction();
 	Recompile(editActions);
 }
 
 CompiledScene::~CompiledScene() {
+	delete[] cameraBokehDistribution;
 	delete[] lightsDistribution;
 	delete[] infiniteLightSourcesDistribution;
 }
 
 void CompiledScene::SetMaxMemPageSize(const size_t maxSize) {
-	maxMemPageSize = (u_int)Min<size_t>(maxSize, 0xffffffffu);
+	maxMemPageSize = maxSize;
 }
 
 void CompiledScene::EnableCode(const std::string &tags) {

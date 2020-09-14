@@ -16,6 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "luxrays/utils/thread.h"
+
 #include "slg/engines/lightcpu/lightcpu.h"
 
 using namespace std;
@@ -38,6 +40,9 @@ void LightCPURenderThread::RenderFunc() {
 	// Initialization
 	//--------------------------------------------------------------------------
 
+	// This is really used only by Windows for 64+ threads support
+	SetThreadGroupAffinity(threadIndex);
+
 	LightCPURenderEngine *engine = (LightCPURenderEngine *)renderEngine;
 	const PathTracer &pathTracer = engine->pathTracer;
 	// (engine->seedBase + 1) seed is used for sharedRndGen
@@ -47,7 +52,7 @@ void LightCPURenderThread::RenderFunc() {
 	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, engine->film,
 			engine->sampleSplatter, engine->samplerSharedData,
 			// Disable image plane meaning for samples 0 and 1
-			Properties() << Property("sampler.metropolis.imagemutationrate.enable")(false));
+			Properties() << Property("sampler.imagesamples.enable")(false));
 	sampler->SetThreadIndex(threadIndex);
 	sampler->RequestSamples(SCREEN_NORMALIZED_ONLY, pathTracer.lightSampleSize);
 

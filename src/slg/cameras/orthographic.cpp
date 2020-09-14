@@ -123,10 +123,19 @@ bool OrthographicCamera::GetSamplePosition(Ray *ray, float *x, float *y) const {
 	}
 }
 
+bool OrthographicCamera::LocalSampleLens(const float time,
+		const float u1, const float u2,
+		Point *lensp) const {
+	*lensp = Point(0.f, 0.f, 0.f);
+
+	return true;
+}
+
 bool OrthographicCamera::SampleLens(const float time,
 		const float u1, const float u2,
 		Point *lensp) const {
-	const Point lensPoint(0.f, 0.f, 0.f);
+	Point lensPoint(0.f, 0.f, 0.f);
+
 	if (motionSystem)
 		*lensp = motionSystem->Sample(time) * (camTrans.cameraToWorld * lensPoint);
 	else
@@ -144,8 +153,8 @@ void OrthographicCamera::GetPDF(const Ray &eyeRay, const float eyeDistance,
 		*fluxToRadianceFactor = cameraPdf;
 }
 
-Properties OrthographicCamera::ToProperties() const {
-	Properties props = ProjectiveCamera::ToProperties();
+Properties OrthographicCamera::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	Properties props = ProjectiveCamera::ToProperties(imgMapCache, useRealFileName);
 
 	props.Set(Property("scene.camera.type")("orthographic"));
 

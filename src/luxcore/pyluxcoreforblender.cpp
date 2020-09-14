@@ -67,12 +67,14 @@ namespace blender {
 // Blender struct access functions
 //------------------------------------------------------------------------------
 
+template<typename CustomData>
 static int CustomData_get_active_layer_index(const CustomData *data, int type)
 {
 	const int layer_index = data->typemap[type];
 	return (layer_index != -1) ? layer_index + data->layers[layer_index].active : -1;
 }
 
+template<typename CustomData>
 static void *CustomData_get_layer(const CustomData *data, int type)
 {
 	/* get the layer index of the active layer of type */
@@ -511,6 +513,8 @@ boost::python::list GetOpenVDBGridNames(const string &filePathStr) {
 
 boost::python::tuple GetOpenVDBGridInfo(const string &filePathStr, const string &gridName) {
 	boost::python::list bBox;
+	boost::python::list bBox_w;
+	boost::python::list trans_matrix;
 	boost::python::list BlenderMetadata;
 	openvdb::io::File file(filePathStr);
 	
@@ -526,16 +530,41 @@ boost::python::tuple GetOpenVDBGridInfo(const string &filePathStr, const string 
 
 	openvdb::GridBase::Ptr ovdbGrid = file.readGridMetadata(gridName);	
 
-	const openvdb::Vec3i bbox_min = ovdbGrid->metaValue<openvdb::Vec3i>("file_bbox_min");
-	const openvdb::Vec3i bbox_max = ovdbGrid->metaValue<openvdb::Vec3i>("file_bbox_max");
+	//const openvdb::Vec3i bbox_min = ovdbGrid->metaValue<openvdb::Vec3i>("file_bbox_min");
+	//const openvdb::Vec3i bbox_max = ovdbGrid->metaValue<openvdb::Vec3i>("file_bbox_max");
 
-	bBox.append(bbox_min[0]);
-	bBox.append(bbox_min[1]);
-	bBox.append(bbox_min[2]);
-	
-	bBox.append(bbox_max[0]);
-	bBox.append(bbox_max[1]);
-	bBox.append(bbox_max[2]);
+	const openvdb::math::Transform &transform = ovdbGrid->transform();
+	openvdb::math::Mat4f matrix = transform.baseMap()->getAffineMap()->getMat4();
+
+	for (int col = 0; col < 4; col++) {
+		for (int row = 0; row < 4; row++) {
+			trans_matrix.append(matrix(col, row));
+		}
+	}
+
+	// Read the grid from the file
+	ovdbGrid = file.readGrid(gridName);
+
+	openvdb::CoordBBox coordbbox;
+	ovdbGrid->baseTree().evalLeafBoundingBox(coordbbox);
+	openvdb::BBoxd bbox_world = ovdbGrid->transform().indexToWorld(coordbbox);
+
+	bBox.append(coordbbox.min()[0]);
+	bBox.append(coordbbox.min()[1]);
+	bBox.append(coordbbox.min()[2]);
+
+	bBox.append(coordbbox.max()[0]);
+	bBox.append(coordbbox.max()[1]);
+	bBox.append(coordbbox.max()[2]);
+
+	bBox_w.append(bbox_world.min().x());
+	bBox_w.append(bbox_world.min().y());
+	bBox_w.append(bbox_world.min().z());
+
+	bBox_w.append(bbox_world.max().x());
+	bBox_w.append(bbox_world.max().y());
+	bBox_w.append(bbox_world.max().z());
+
 
 	if (creator == "Blender/Smoke") {
 		boost::python::list min_bbox_list;
@@ -620,7 +649,7 @@ boost::python::tuple GetOpenVDBGridInfo(const string &filePathStr, const string 
 
 	file.close();
 
-	return boost::python::make_tuple(creator, bBox, ovdbGrid->valueType(), BlenderMetadata);
+	return boost::python::make_tuple(creator, bBox, bBox_w, trans_matrix, ovdbGrid->valueType(), BlenderMetadata);
 }
 
 //------------------------------------------------------------------------------
@@ -636,7 +665,8 @@ static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const str
 		const boost::python::object &loopColsPtrList,
 		const size_t meshPtr,
 		const short matIndex,
-		const luxrays::Transform *trans) {
+		const luxrays::Transform *trans,
+		const boost::python::tuple &blenderVersion) {
 
 	const MLoopTri *loopTris = reinterpret_cast<const MLoopTri *>(loopTriPtr);
 	const MLoop *loops = reinterpret_cast<const MLoop *>(loopPtr);
@@ -675,13 +705,31 @@ static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const str
 	vector<Normal> customNormals;
 	bool hasCustomNormals = false;
 	{
-		const Mesh *mesh = reinterpret_cast<const Mesh*>(meshPtr);
-		const float(*loop_normals)[3] = static_cast<const float(*)[3]>(CustomData_get_layer(&mesh->ldata, CD_NORMAL));
+		const float(*loopNormals)[3] = nullptr;
+		u_int loopCount = 0;
 		
-		if (loop_normals) {
+		if (len(blenderVersion) != 3) {
+			throw runtime_error("Blender version tuple needs to have exactly 3 elements for Scene.DefineMesh()");
+		}
+		const int blenderVersionMajor = extract<int>(blenderVersion[0]);
+		const int blenderVersionMinor = extract<int>(blenderVersion[1]);
+		const int blenderVersionSub = extract<int>(blenderVersion[2]);
+		
+		if (blenderVersionMajor == 2 && blenderVersionMinor == 82 && blenderVersionSub == 7) {
+			const blender_2_82::Mesh *mesh = reinterpret_cast<const blender_2_82::Mesh*>(meshPtr);
+			loopNormals = static_cast<const float(*)[3]>(CustomData_get_layer(&mesh->ldata, blender_2_82::CD_NORMAL));
+			loopCount = mesh->totloop;
+		} else if (blenderVersionMajor == 2 && blenderVersionMinor == 83) {
+			// Not checking the sub version here, for now we assume that these data structures stay the same across sub releases
+			const blender_2_83::Mesh *mesh = reinterpret_cast<const blender_2_83::Mesh*>(meshPtr);
+			loopNormals = static_cast<const float(*)[3]>(CustomData_get_layer(&mesh->ldata, blender_2_83::CD_NORMAL));
+			loopCount = mesh->totloop;
+		}
+		
+		if (loopNormals) {
 			hasCustomNormals = true;
-			for (u_int i = 0; i < (u_int)mesh->totloop; ++i) {
-				customNormals.push_back(Normal(loop_normals[i][0], loop_normals[i][1], loop_normals[i][2]));
+			for (u_int i = 0; i < loopCount; ++i) {
+				customNormals.push_back(Normal(loopNormals[i][0], loopNormals[i][1], loopNormals[i][2]));
 			}
 		}
 	}
@@ -962,15 +1010,16 @@ static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const str
 }
 
 boost::python::list Scene_DefineBlenderMesh1(luxcore::detail::SceneImpl *scene, const string &name,
-	const size_t loopTriCount, const size_t loopTriPtr,
-	const size_t loopPtr,
-	const size_t vertPtr,
-	const size_t polyPtr,
-	const boost::python::object &loopUVsPtrList,
-	const boost::python::object &loopColsPtrList,
-	const size_t meshPtr,
-	const u_int materialCount,
-	const boost::python::object &transformation) {
+		const size_t loopTriCount, const size_t loopTriPtr,
+		const size_t loopPtr,
+		const size_t vertPtr,
+		const size_t polyPtr,
+		const boost::python::object &loopUVsPtrList,
+		const boost::python::object &loopColsPtrList,
+		const size_t meshPtr,
+		const u_int materialCount,
+		const boost::python::object &transformation,
+		const boost::python::tuple &blenderVersion) {
 	
 	// Get the transformation if required
 	bool hasTransformation = false;
@@ -985,11 +1034,12 @@ boost::python::list Scene_DefineBlenderMesh1(luxcore::detail::SceneImpl *scene, 
 		const string meshName = (boost::format(name + "%03d") % matIndex).str();
 
 		if (Scene_DefineBlenderMesh(scene, meshName, loopTriCount, loopTriPtr,
-			loopPtr, vertPtr, polyPtr,
-			loopUVsPtrList, loopColsPtrList, 
-			meshPtr,
-			matIndex,
-			hasTransformation ? &trans : NULL)) {
+				loopPtr, vertPtr, polyPtr,
+				loopUVsPtrList, loopColsPtrList, 
+				meshPtr,
+				matIndex,
+				hasTransformation ? &trans : NULL,
+				blenderVersion)) {
 			boost::python::list meshInfo;
 			meshInfo.append(meshName);
 			meshInfo.append(matIndex);
@@ -1001,17 +1051,18 @@ boost::python::list Scene_DefineBlenderMesh1(luxcore::detail::SceneImpl *scene, 
 }
 
 boost::python::list Scene_DefineBlenderMesh2(luxcore::detail::SceneImpl *scene, const string &name,
-	const size_t loopTriCount, const size_t loopTriPtr,
-	const size_t loopPtr,
-	const size_t vertPtr,
-	const size_t polyPtr,
-	const boost::python::object &loopUVsPtrList,
-	const boost::python::object &loopColsPtrList,
-	const size_t meshPtr,
-	const u_int materialCount) {
+		const size_t loopTriCount, const size_t loopTriPtr,
+		const size_t loopPtr,
+		const size_t vertPtr,
+		const size_t polyPtr,
+		const boost::python::object &loopUVsPtrList,
+		const boost::python::object &loopColsPtrList,
+		const size_t meshPtr,
+		const u_int materialCount,
+		const boost::python::tuple &blenderVersion) {
 	return Scene_DefineBlenderMesh1(scene, name, loopTriCount, loopTriPtr,
 		loopPtr, vertPtr, polyPtr, loopUVsPtrList, loopColsPtrList, 
-		meshPtr, materialCount, boost::python::object());
+		meshPtr, materialCount, boost::python::object(), blenderVersion);
 }
 
 //------------------------------------------------------------------------------

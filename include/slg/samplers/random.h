@@ -43,31 +43,28 @@ public:
 
 	virtual void Reset();
 
-	u_int GetNewPixelIndex();
+	void GetNewBucket(const u_int bucketCount, u_int *newBucketIndex);
 	
 	static SamplerSharedData *FromProperties(const luxrays::Properties &cfg,
 			luxrays::RandomGenerator *rndGen, Film *film);
 
 	Film *engineFilm;
-	u_int filmRegionPixelCount;
 
 private:
-	luxrays::SpinLock spinLock;
-	u_int pixelIndex;
+	u_int bucketIndex;
 };
 
 //------------------------------------------------------------------------------
 // Random sampler
 //------------------------------------------------------------------------------
 
-#define RANDOM_THREAD_WORK_SIZE 4096
-
 class RandomSampler : public Sampler {
 public:
 	RandomSampler(luxrays::RandomGenerator *rnd, Film *flm,
 			const FilmSampleSplatter *flmSplatter, const bool imgSamplesEnable,
 			const float adaptiveStrength, const float adaptiveUserImpWeight,
-			RandomSamplerSharedData *samplerSharedData);
+			const u_int bucketSize, const u_int tileSize, const u_int superSampling,
+			const u_int overlapping, RandomSamplerSharedData *samplerSharedData);
 	virtual ~RandomSampler() { }
 
 	virtual SamplerType GetType() const { return GetObjectType(); }
@@ -89,7 +86,7 @@ public:
 	static Sampler *FromProperties(const luxrays::Properties &cfg, luxrays::RandomGenerator *rndGen,
 		Film *film, const FilmSampleSplatter *flmSplatter, SamplerSharedData *sharedData);
 	static slg::ocl::Sampler *FromPropertiesOCL(const luxrays::Properties &cfg);
-	static Film::FilmChannelType GetRequiredChannels(const luxrays::Properties &cfg);
+	static void AddRequiredChannels(Film::FilmChannels &channels, const luxrays::Properties &cfg);
 
 private:
 	void InitNewSample();
@@ -98,9 +95,10 @@ private:
 	
 	RandomSamplerSharedData *sharedData;
 	float adaptiveStrength, adaptiveUserImportanceWeight;
+	u_int bucketSize, tileSize, superSampling, overlapping;
 
 	float sample0, sample1;
-	u_int pixelIndexBase, pixelIndexOffset;
+	u_int bucketIndex, pixelOffset, passOffset, pass;
 };
 
 }

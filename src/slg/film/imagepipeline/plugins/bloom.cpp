@@ -256,8 +256,12 @@ void BloomFilterPlugin::Apply(Film &film, const u_int index) {
 }
 
 //------------------------------------------------------------------------------
-// OpenCL version
+// HardwareDevice version
 //------------------------------------------------------------------------------
+
+void BloomFilterPlugin::AddHWChannelsUsed(unordered_set<Film::FilmChannelType, hash<int> > &hwChannelsUsed) const {
+	hwChannelsUsed.insert(Film::IMAGEPIPELINE);
+}
 
 void BloomFilterPlugin::ApplyHW(Film &film, const u_int index) {
 	const u_int width = film.GetWidth();
@@ -281,9 +285,13 @@ void BloomFilterPlugin::ApplyHW(Film &film, const u_int index) {
 		// Compile sources
 		const double tStart = WallClockTime();
 
+		vector<string> opts;
+		opts.push_back("-D LUXRAYS_OPENCL_KERNEL");
+		opts.push_back("-D SLG_OPENCL_KERNEL");
+
 		HardwareDeviceProgram *program = nullptr;
 		hardwareDevice->CompileProgram(&program,
-				"-D LUXRAYS_OPENCL_KERNEL -D SLG_OPENCL_KERNEL",
+				opts,
 				luxrays::ocl::KernelSource_color_types +
 				slg::ocl::KernelSource_plugin_bloom_funcs,
 				"BloomFilterPlugin");

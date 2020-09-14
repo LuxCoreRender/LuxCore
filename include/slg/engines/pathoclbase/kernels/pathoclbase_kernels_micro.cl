@@ -74,7 +74,7 @@ __kernel void AdvancePaths_MK_RT_NEXT_VERTEX(
 
 	int throughShadowTransparency = taskState->throughShadowTransparency;
 	const bool continueToTrace = Scene_Intersect(taskConfig,
-			EYE_RAY | ((pathInfo->depth.depth == 0) ? CAMERA_RAY : GENERIC_RAY),
+			EYE_RAY | ((pathInfo->depth.depth == 0) ? CAMERA_RAY : INDIRECT_RAY),
 			&throughShadowTransparency,
 			&pathInfo->volume,
 			&tasks[gid].tmpHitPoint,
@@ -132,7 +132,6 @@ __kernel void AdvancePaths_MK_HIT_NOTHING(
 	// Start of variables setup
 	//--------------------------------------------------------------------------
 
-	__global GPUTaskDirectLight *taskDirectLight = &tasksDirectLight[gid];
 	__global EyePathInfo *pathInfo = &eyePathInfos[gid];
 	__constant const Scene* restrict scene = &taskConfig->scene;
 	__global SampleResult *sampleResult = &sampleResultsBuff[gid];
@@ -149,11 +148,11 @@ __kernel void AdvancePaths_MK_HIT_NOTHING(
 	bool checkDirectLightHit = true;
 	
 	checkDirectLightHit = checkDirectLightHit &&
-			(!(taskConfig->pathTracer.forceBlackBackground && sampleResult->firstPathVertex) || !pathInfo->isPassThroughPath);
+			(!(taskConfig->pathTracer.forceBlackBackground && pathInfo->isPassThroughPath) || !pathInfo->isPassThroughPath);
 
 	checkDirectLightHit = checkDirectLightHit &&
 			// Avoid to render caustic path if hybridBackForwardEnable
-			(!taskConfig->pathTracer.hybridBackForward.enabled || !pathInfo->isNearlyCaustic);
+			(!taskConfig->pathTracer.hybridBackForward.enabled || !EyePathInfo_IsCausticPath(pathInfo));
 
 	checkDirectLightHit = checkDirectLightHit &&
 			((!taskConfig->pathTracer.pgic.indirectEnabled && !taskConfig->pathTracer.pgic.causticEnabled) ||
@@ -186,6 +185,7 @@ __kernel void AdvancePaths_MK_HIT_NOTHING(
 		sampleResult->objectID = 0;
 		sampleResult->uv.u = INFINITY;
 		sampleResult->uv.v = INFINITY;
+		sampleResult->isHoldout = false;
 	}
 
 	taskState->state = MK_SPLAT_SAMPLE;
@@ -220,7 +220,6 @@ __kernel void AdvancePaths_MK_HIT_OBJECT(
 	//--------------------------------------------------------------------------
 
 	__global BSDF *bsdf = &taskState->bsdf;
-	__global GPUTaskDirectLight *taskDirectLight = &tasksDirectLight[gid];
 	__global EyePathInfo *pathInfo = &eyePathInfos[gid];
 	__constant const Scene* restrict scene = &taskConfig->scene;
 	__global SampleResult *sampleResult = &sampleResultsBuff[gid];
@@ -244,7 +243,9 @@ __kernel void AdvancePaths_MK_HIT_OBJECT(
 	}
 
 	if (pathInfo->depth.depth == 0) {
-		sampleResult->alpha = 1.f;
+		const bool isHoldout = BSDF_IsHoldout(bsdf
+				MATERIALS_PARAM);
+		sampleResult->alpha = isHoldout ? 0.f : 1.f;
 		sampleResult->depth = rayHits[gid].t;
 		sampleResult->position = bsdf->hitPoint.p;
 		sampleResult->geometryNormal = bsdf->hitPoint.geometryN;
@@ -253,6 +254,7 @@ __kernel void AdvancePaths_MK_HIT_OBJECT(
 				MATERIALS_PARAM);
 		sampleResult->objectID = BSDF_GetObjectID(bsdf, sceneObjs);
 		sampleResult->uv = bsdf->hitPoint.defaultUV;
+		sampleResult->isHoldout = isHoldout;
 	}
 
 	//----------------------------------------------------------------------
@@ -355,7 +357,7 @@ __kernel void AdvancePaths_MK_HIT_OBJECT(
 								taskConfig->pathTracer.pgic.glossinessUsageThreshold,
 								taskConfig->pathTracer.pgic.indirectUsageThresholdScale,
 								taskConfig->pathTracer.pgic.indirectLookUpRadius))) {
-						VSTORE3F((float3)(0.f, 0.f, 1.f), sampleResult->radiancePerPixelNormalized[0].c);
+						VSTORE3F(MAKE_FLOAT3(0.f, 0.f, 1.f), sampleResult->radiancePerPixelNormalized[0].c);
 						taskState->photonGIShowIndirectPathMixUsed = true;
 
 						taskState->state = MK_SPLAT_SAMPLE;
@@ -774,20 +776,30 @@ __kernel void AdvancePaths_MK_GENERATE_NEXT_VERTEX_RAY(
 			sampleResult->alpha = 0.f;
 		}
 	} else {
-		bsdfSample = BSDF_Sample(bsdf,
-				Sampler_GetSample(taskConfig, sampleOffset + IDX_BSDF_X SAMPLER_PARAM),
-				Sampler_GetSample(taskConfig, sampleOffset + IDX_BSDF_Y SAMPLER_PARAM),
-				&sampledDir, &bsdfPdfW, &cosSampledDir, &bsdfEvent
+		const float3 shadowTransparency = BSDF_GetPassThroughShadowTransparency(bsdf
 				MATERIALS_PARAM);
+		if (!sampleResult->firstPathVertex && !Spectrum_IsBlack(shadowTransparency) && !pathInfo->isNearlyS) {
+			sampledDir = -VLOAD3F(&bsdf->hitPoint.fixedDir.x);
+			bsdfSample = shadowTransparency;
+			bsdfPdfW = pathInfo->lastBSDFPdfW;
+			cosSampledDir = -1.f;
+			bsdfEvent = pathInfo->lastBSDFEvent;
+		} else {
+			bsdfSample = BSDF_Sample(bsdf,
+					Sampler_GetSample(taskConfig, sampleOffset + IDX_BSDF_X SAMPLER_PARAM),
+					Sampler_GetSample(taskConfig, sampleOffset + IDX_BSDF_Y SAMPLER_PARAM),
+					&sampledDir, &bsdfPdfW, &cosSampledDir, &bsdfEvent
+					MATERIALS_PARAM);
 
-		pathInfo->isPassThroughPath = false;
+			pathInfo->isPassThroughPath = false;
+		}
 	}
 
 	if (sampleResult->firstPathVertex)
 		sampleResult->firstPathVertexEvent = bsdfEvent;
 
 	EyePathInfo_AddVertex(pathInfo, bsdf, bsdfEvent, bsdfPdfW,
-			taskConfig->pathTracer.hybridBackForward.enabled ? taskConfig->pathTracer.hybridBackForward.glossinessThreshold : 0.f
+			taskConfig->pathTracer.hybridBackForward.glossinessThreshold
 			MATERIALS_PARAM);
 
 	// Russian Roulette
@@ -816,9 +828,9 @@ __kernel void AdvancePaths_MK_GENERATE_NEXT_VERTEX_RAY(
 		if (sampleResult->firstPathVertex) {
 			if (!(BSDF_GetEventTypes(&taskState->bsdf
 						MATERIALS_PARAM) & SPECULAR))
-				VSTORE3F(M_1_PI_F * fabs(dot(
+				VSTORE3F(TO_FLOAT3(M_1_PI_F * fabs(dot(
 						VLOAD3F(&bsdf->hitPoint.shadeN.x),
-						sampledDir)) / rrProb,
+						sampledDir)) / rrProb),
 						sampleResult->irradiancePathThroughput.c);
 			else
 				VSTORE3F(BLACK, sampleResult->irradiancePathThroughput.c);
@@ -909,19 +921,24 @@ __kernel void AdvancePaths_MK_SPLAT_SAMPLE(
 
 	// Initialize Film radiance group scale table
 	float3 filmRadianceGroupScale[FILM_MAX_RADIANCE_GROUP_COUNT];
-	filmRadianceGroupScale[0] = (float3)(filmRadianceGroupScale0_R, filmRadianceGroupScale0_G, filmRadianceGroupScale0_B);
-	filmRadianceGroupScale[1] = (float3)(filmRadianceGroupScale1_R, filmRadianceGroupScale1_G, filmRadianceGroupScale1_B);
-	filmRadianceGroupScale[2] = (float3)(filmRadianceGroupScale2_R, filmRadianceGroupScale2_G, filmRadianceGroupScale2_B);
-	filmRadianceGroupScale[3] = (float3)(filmRadianceGroupScale3_R, filmRadianceGroupScale3_G, filmRadianceGroupScale3_B);
-	filmRadianceGroupScale[4] = (float3)(filmRadianceGroupScale4_R, filmRadianceGroupScale4_G, filmRadianceGroupScale4_B);
-	filmRadianceGroupScale[5] = (float3)(filmRadianceGroupScale5_R, filmRadianceGroupScale5_G, filmRadianceGroupScale5_B);
-	filmRadianceGroupScale[6] = (float3)(filmRadianceGroupScale6_R, filmRadianceGroupScale6_G, filmRadianceGroupScale6_B);
-	filmRadianceGroupScale[7] = (float3)(filmRadianceGroupScale7_R, filmRadianceGroupScale7_G, filmRadianceGroupScale7_B);
+	filmRadianceGroupScale[0] = MAKE_FLOAT3(filmRadianceGroupScale0_R, filmRadianceGroupScale0_G, filmRadianceGroupScale0_B);
+	filmRadianceGroupScale[1] = MAKE_FLOAT3(filmRadianceGroupScale1_R, filmRadianceGroupScale1_G, filmRadianceGroupScale1_B);
+	filmRadianceGroupScale[2] = MAKE_FLOAT3(filmRadianceGroupScale2_R, filmRadianceGroupScale2_G, filmRadianceGroupScale2_B);
+	filmRadianceGroupScale[3] = MAKE_FLOAT3(filmRadianceGroupScale3_R, filmRadianceGroupScale3_G, filmRadianceGroupScale3_B);
+	filmRadianceGroupScale[4] = MAKE_FLOAT3(filmRadianceGroupScale4_R, filmRadianceGroupScale4_G, filmRadianceGroupScale4_B);
+	filmRadianceGroupScale[5] = MAKE_FLOAT3(filmRadianceGroupScale5_R, filmRadianceGroupScale5_G, filmRadianceGroupScale5_B);
+	filmRadianceGroupScale[6] = MAKE_FLOAT3(filmRadianceGroupScale6_R, filmRadianceGroupScale6_G, filmRadianceGroupScale6_B);
+	filmRadianceGroupScale[7] = MAKE_FLOAT3(filmRadianceGroupScale7_R, filmRadianceGroupScale7_G, filmRadianceGroupScale7_B);
+
+	if (sampleResult->isHoldout) {
+		SampleResult_ClearRadiance(sampleResult);
+		VSTORE3F(BLACK, sampleResult->albedo.c);
+	}
 
 	if (taskConfig->pathTracer.pgic.indirectEnabled &&
 			(taskConfig->pathTracer.pgic.debugType == PGIC_DEBUG_SHOWINDIRECTPATHMIX) &&
 			!taskState->photonGIShowIndirectPathMixUsed)
-		VSTORE3F((float3)(1.f, 0.f, 0.f), sampleResult->radiancePerPixelNormalized[0].c);
+		VSTORE3F(MAKE_FLOAT3(1.f, 0.f, 0.f), sampleResult->radiancePerPixelNormalized[0].c);
 
 	//--------------------------------------------------------------------------
 	// Variance clamping
@@ -1064,6 +1081,7 @@ __kernel void AdvancePaths_MK_GENERATE_CAMERA_RAY(
 	GenerateEyePath(taskConfig,
 			&tasksDirectLight[gid], taskState,
 			camera,
+			cameraBokehDistribution,
 			filmWidth, filmHeight,
 			filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3,
 			pixelFilterDistribution,
@@ -1079,3 +1097,4 @@ __kernel void AdvancePaths_MK_GENERATE_CAMERA_RAY(
 
 #endif
 }
+

@@ -20,10 +20,11 @@
 #include <boost/foreach.hpp>
 #include <boost/regex.hpp>
 
+#include "luxrays/kernels/kernels.h"
+
 #include "slg/film/film.h"
 #include "slg/kernels/kernels.h"
 #include "slg/film/imagepipeline/plugins/gammacorrection.h"
-#include "luxrays/kernels/kernels.h"
 
 using namespace std;
 using namespace luxrays;
@@ -96,8 +97,12 @@ void GammaCorrectionPlugin::Apply(Film &film, const u_int index) {
 }
 
 //------------------------------------------------------------------------------
-// OpenCL version
+// HardwareDevice version
 //------------------------------------------------------------------------------
+
+void GammaCorrectionPlugin::AddHWChannelsUsed(unordered_set<Film::FilmChannelType, hash<int> > &hwChannelsUsed) const {
+	hwChannelsUsed.insert(Film::IMAGEPIPELINE);
+}
 
 void GammaCorrectionPlugin::ApplyHW(Film &film, const u_int index) {
 	if (!applyKernel) {
@@ -111,9 +116,13 @@ void GammaCorrectionPlugin::ApplyHW(Film &film, const u_int index) {
 		// Compile sources
 		const double tStart = WallClockTime();
 
+		vector<string> opts;
+		opts.push_back("-D LUXRAYS_OPENCL_KERNEL");
+		opts.push_back("-D SLG_OPENCL_KERNEL");
+
 		HardwareDeviceProgram *program = nullptr;
 		hardwareDevice->CompileProgram(&program,
-				"-D LUXRAYS_OPENCL_KERNEL -D SLG_OPENCL_KERNEL",
+				opts,
 				luxrays::ocl::KernelSource_utils_funcs +
 				slg::ocl::KernelSource_plugin_gammacorrection_funcs,
 				"GammaCorrectionPlugin");

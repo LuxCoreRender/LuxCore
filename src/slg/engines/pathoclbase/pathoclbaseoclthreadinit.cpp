@@ -55,61 +55,92 @@ void PathOCLBaseOCLRenderThread::InitFilm() {
 }
 
 void PathOCLBaseOCLRenderThread::InitCamera() {
-	intersectionDevice->AllocBufferRO(&cameraBuff, &renderEngine->compiledScene->camera,
+	CompiledScene *cscene = renderEngine->compiledScene;
+
+	intersectionDevice->AllocBufferRO(&cameraBuff, &cscene->camera,
 			sizeof(slg::ocl::Camera), "Camera");
+	if (cscene->cameraBokehDistribution)
+		intersectionDevice->AllocBufferRO(&cameraBokehDistributionBuff, cscene->cameraBokehDistribution,
+				cscene->cameraBokehDistributionSize, "CameraBokehDistribution");
+	else
+		intersectionDevice->FreeBuffer(&cameraBokehDistributionBuff);
 }
 
 void PathOCLBaseOCLRenderThread::InitGeometry() {
 	CompiledScene *cscene = renderEngine->compiledScene;
 
+	const BufferType memTypeFlags = renderEngine->ctx->GetUseOutOfCoreBuffers() ?
+		((BufferType)(BUFFER_TYPE_READ_ONLY | BUFFER_TYPE_OUT_OF_CORE)) :
+		BUFFER_TYPE_READ_ONLY;
+
 	if (cscene->normals.size() > 0)
-		intersectionDevice->AllocBufferRO(&normalsBuff, &cscene->normals[0],
+		intersectionDevice->AllocBuffer(&normalsBuff,
+				memTypeFlags,
+				&cscene->normals[0],
 				sizeof(Normal) * cscene->normals.size(), "Normals");
 	else
 		intersectionDevice->FreeBuffer(&normalsBuff);
 
 	if (cscene->uvs.size() > 0)
-		intersectionDevice->AllocBufferRO(&uvsBuff, &cscene->uvs[0],
-			sizeof(UV) * cscene->uvs.size(), "UVs");
+		intersectionDevice->AllocBuffer(&uvsBuff,
+				memTypeFlags,
+				&cscene->uvs[0],
+				sizeof(UV) * cscene->uvs.size(), "UVs");
 	else
 		intersectionDevice->FreeBuffer(&uvsBuff);
 
 	if (cscene->cols.size() > 0)
-		intersectionDevice->AllocBufferRO(&colsBuff, &cscene->cols[0],
-			sizeof(Spectrum) * cscene->cols.size(), "Colors");
+		intersectionDevice->AllocBuffer(&colsBuff,
+				memTypeFlags,
+				&cscene->cols[0],
+				sizeof(Spectrum) * cscene->cols.size(), "Colors");
 	else
 		intersectionDevice->FreeBuffer(&colsBuff);
 
 	if (cscene->alphas.size() > 0)
-		intersectionDevice->AllocBufferRO(&alphasBuff, &cscene->alphas[0],
-			sizeof(float) * cscene->alphas.size(), "Alphas");
+		intersectionDevice->AllocBuffer(&alphasBuff,
+				memTypeFlags,
+				&cscene->alphas[0],
+				sizeof(float) * cscene->alphas.size(), "Alphas");
 	else
 		intersectionDevice->FreeBuffer(&alphasBuff);
 
 	if (cscene->vertexAOVs.size() > 0)
-		intersectionDevice->AllocBufferRO(&vertexAOVBuff, &cscene->vertexAOVs[0],
-			sizeof(float) * cscene->vertexAOVs.size(), "Vertex AOVs");
+		intersectionDevice->AllocBuffer(&vertexAOVBuff,
+				memTypeFlags,
+				&cscene->vertexAOVs[0],
+				sizeof(float) * cscene->vertexAOVs.size(), "Vertex AOVs");
 	else
 		intersectionDevice->FreeBuffer(&vertexAOVBuff);
 
 	if (cscene->triAOVs.size() > 0)
-		intersectionDevice->AllocBufferRO(&triAOVBuff, &cscene->triAOVs[0],
-			sizeof(float) * cscene->triAOVs.size(), "Triangle AOVs");
+		intersectionDevice->AllocBuffer(&triAOVBuff,
+				memTypeFlags,
+				&cscene->triAOVs[0],
+				sizeof(float) * cscene->triAOVs.size(), "Triangle AOVs");
 	else
 		intersectionDevice->FreeBuffer(&triAOVBuff);
 
-	intersectionDevice->AllocBufferRO(&triNormalsBuff, &cscene->triNormals[0],
-				sizeof(Normal) * cscene->triNormals.size(), "Triangle normals");
+	intersectionDevice->AllocBuffer(&triNormalsBuff,
+			memTypeFlags,
+			&cscene->triNormals[0],
+			sizeof(Normal) * cscene->triNormals.size(), "Triangle normals");
 
-	intersectionDevice->AllocBufferRO(&vertsBuff, &cscene->verts[0],
-		sizeof(Point) * cscene->verts.size(), "Vertices");
+	intersectionDevice->AllocBuffer(&vertsBuff,
+			memTypeFlags,
+			&cscene->verts[0],
+			sizeof(Point) * cscene->verts.size(), "Vertices");
 
-	intersectionDevice->AllocBufferRO(&trianglesBuff, &cscene->tris[0],
-		sizeof(Triangle) * cscene->tris.size(), "Triangles");
+	intersectionDevice->AllocBuffer(&trianglesBuff,
+			memTypeFlags,
+			&cscene->tris[0],
+			sizeof(Triangle) * cscene->tris.size(), "Triangles");
 
 	if (cscene->interpolatedTransforms.size() > 0) {
-		intersectionDevice->AllocBufferRO(&interpolatedTransformsBuff, &cscene->interpolatedTransforms[0],
-			sizeof(luxrays::ocl::InterpolatedTransform) * cscene->interpolatedTransforms.size(), "Interpolated transformations");
+		intersectionDevice->AllocBuffer(&interpolatedTransformsBuff,
+				memTypeFlags,
+				&cscene->interpolatedTransforms[0],
+				sizeof(luxrays::ocl::InterpolatedTransform) * cscene->interpolatedTransforms.size(), "Interpolated transformations");
 	} else
 		intersectionDevice->FreeBuffer(&interpolatedTransformsBuff);
 
@@ -133,8 +164,13 @@ void PathOCLBaseOCLRenderThread::InitMaterials() {
 }
 
 void PathOCLBaseOCLRenderThread::InitSceneObjects() {
+	const BufferType memTypeFlags = renderEngine->ctx->GetUseOutOfCoreBuffers() ?
+		((BufferType)(BUFFER_TYPE_READ_ONLY | BUFFER_TYPE_OUT_OF_CORE)) :
+		BUFFER_TYPE_READ_ONLY;
+
 	const u_int sceneObjsCount = renderEngine->compiledScene->sceneObjs.size();
-	intersectionDevice->AllocBufferRO(&scnObjsBuff, &renderEngine->compiledScene->sceneObjs[0],
+	intersectionDevice->AllocBuffer(&scnObjsBuff, memTypeFlags,
+			&renderEngine->compiledScene->sceneObjs[0],
 			sizeof(slg::ocl::SceneObject) * sceneObjsCount, "Scene objects");
 }
 
@@ -214,12 +250,16 @@ void PathOCLBaseOCLRenderThread::InitLights() {
 void PathOCLBaseOCLRenderThread::InitPhotonGI() {
 	CompiledScene *cscene = renderEngine->compiledScene;
 
+	const BufferType memTypeFlags = renderEngine->ctx->GetUseOutOfCoreBuffers() ?
+		((BufferType)(BUFFER_TYPE_READ_ONLY | BUFFER_TYPE_OUT_OF_CORE)) :
+		BUFFER_TYPE_READ_ONLY;
+
 	if (cscene->pgicRadiancePhotons.size() > 0) {
-		intersectionDevice->AllocBufferRO(&pgicRadiancePhotonsBuff, &cscene->pgicRadiancePhotons[0],
+		intersectionDevice->AllocBuffer(&pgicRadiancePhotonsBuff, memTypeFlags, &cscene->pgicRadiancePhotons[0],
 			cscene->pgicRadiancePhotons.size() * sizeof(slg::ocl::RadiancePhoton), "PhotonGI indirect cache all entries");
-		intersectionDevice->AllocBufferRO(&pgicRadiancePhotonsValuesBuff, &cscene->pgicRadiancePhotonsValues[0],
+		intersectionDevice->AllocBuffer(&pgicRadiancePhotonsValuesBuff, memTypeFlags, &cscene->pgicRadiancePhotonsValues[0],
 			cscene->pgicRadiancePhotonsValues.size() * sizeof(slg::ocl::Spectrum), "PhotonGI indirect cache all entry values");
-		intersectionDevice->AllocBufferRO(&pgicRadiancePhotonsBVHNodesBuff, &cscene->pgicRadiancePhotonsBVHArrayNode[0],
+		intersectionDevice->AllocBuffer(&pgicRadiancePhotonsBVHNodesBuff, memTypeFlags, &cscene->pgicRadiancePhotonsBVHArrayNode[0],
 			cscene->pgicRadiancePhotonsBVHArrayNode.size() * sizeof(slg::ocl::IndexBVHArrayNode), "PhotonGI indirect cache BVH nodes");
 	} else {
 		intersectionDevice->FreeBuffer(&pgicRadiancePhotonsBuff);
@@ -228,9 +268,9 @@ void PathOCLBaseOCLRenderThread::InitPhotonGI() {
 	}
 
 	if (cscene->pgicCausticPhotons.size() > 0) {
-		intersectionDevice->AllocBufferRO(&pgicCausticPhotonsBuff, &cscene->pgicCausticPhotons[0],
+		intersectionDevice->AllocBuffer(&pgicCausticPhotonsBuff, memTypeFlags, &cscene->pgicCausticPhotons[0],
 			cscene->pgicCausticPhotons.size() * sizeof(slg::ocl::Photon), "PhotonGI caustic cache all entries");
-		intersectionDevice->AllocBufferRO(&pgicCausticPhotonsBVHNodesBuff, &cscene->pgicCausticPhotonsBVHArrayNode[0],
+		intersectionDevice->AllocBuffer(&pgicCausticPhotonsBVHNodesBuff, memTypeFlags, &cscene->pgicCausticPhotonsBVHArrayNode[0],
 			cscene->pgicCausticPhotonsBVHArrayNode.size() * sizeof(slg::ocl::IndexBVHArrayNode), "PhotonGI caustic cache BVH nodes");
 	} else {
 		intersectionDevice->FreeBuffer(&pgicCausticPhotonsBuff);
@@ -242,7 +282,8 @@ void PathOCLBaseOCLRenderThread::InitImageMaps() {
 	CompiledScene *cscene = renderEngine->compiledScene;
 
 	if (cscene->imageMapDescs.size() > 0) {
-		intersectionDevice->AllocBufferRO(&imageMapDescsBuff, &cscene->imageMapDescs[0],
+		intersectionDevice->AllocBufferRO(&imageMapDescsBuff,
+				&cscene->imageMapDescs[0],
 				sizeof(slg::ocl::ImageMap) * cscene->imageMapDescs.size(), "ImageMap descriptions");
 
 		// Free unused pages
@@ -250,8 +291,14 @@ void PathOCLBaseOCLRenderThread::InitImageMaps() {
 			intersectionDevice->FreeBuffer(&imageMapsBuff[i]);
 		imageMapsBuff.resize(cscene->imageMapMemBlocks.size(), NULL);
 
+		const BufferType memTypeFlags = renderEngine->ctx->GetUseOutOfCoreBuffers() ?
+			((BufferType)(BUFFER_TYPE_READ_ONLY | BUFFER_TYPE_OUT_OF_CORE)) :
+			BUFFER_TYPE_READ_ONLY;
+
 		for (u_int i = 0; i < imageMapsBuff.size(); ++i) {
-			intersectionDevice->AllocBufferRO(&(imageMapsBuff[i]), &(cscene->imageMapMemBlocks[i][0]),
+			intersectionDevice->AllocBuffer(&(imageMapsBuff[i]),
+					memTypeFlags,
+					&(cscene->imageMapMemBlocks[i][0]),
 					sizeof(float) * cscene->imageMapMemBlocks[i].size(), "ImageMaps");
 		}
 	} else {
@@ -318,11 +365,11 @@ void PathOCLBaseOCLRenderThread::InitSamplerSharedDataBuffer() {
 				break;
 			default:
 				throw runtime_error("Unknown render engine in PathOCLBaseRenderThread::InitSamplerSharedDataBuffer(): " +
-						boost::lexical_cast<string>(renderEngine->GetType()));
+						ToString(renderEngine->GetType()));
 		}
 	} else
 		throw runtime_error("Unknown sampler.type in PathOCLBaseRenderThread::InitSamplerSharedDataBuffer(): " +
-				boost::lexical_cast<string>(renderEngine->oclSampler->type));
+				ToString(renderEngine->oclSampler->type));
 
 	if (size == 0)
 		intersectionDevice->FreeBuffer(&samplerSharedDataBuff);
@@ -332,12 +379,9 @@ void PathOCLBaseOCLRenderThread::InitSamplerSharedDataBuffer() {
 	// Initialize the sampler shared data
 	if (renderEngine->oclSampler->type == slg::ocl::RANDOM) {
 		slg::ocl::RandomSamplerSharedData rssd;
-		rssd.pixelBucketIndex = 0; // Initialized by OpenCL kernel
-		rssd.adaptiveStrength = renderEngine->oclSampler->random.adaptiveStrength;
-		rssd.adaptiveUserImportanceWeight = renderEngine->oclSampler->random.adaptiveUserImportanceWeight;
+		rssd.bucketIndex = 0;
 
-		cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
-		oclQueue.enqueueWriteBuffer(*samplerSharedDataBuff, CL_TRUE, 0, size, &rssd);
+		intersectionDevice->EnqueueWriteBuffer(samplerSharedDataBuff, CL_TRUE, size, &rssd);
 	} else if (renderEngine->oclSampler->type == slg::ocl::SOBOL) {
 		char *buffer = new char[size];
 
@@ -345,9 +389,7 @@ void PathOCLBaseOCLRenderThread::InitSamplerSharedDataBuffer() {
 		slg::ocl::SobolSamplerSharedData *sssd = (slg::ocl::SobolSamplerSharedData *)buffer;
 
 		sssd->seedBase = renderEngine->seedBase;
-		sssd->pixelBucketIndex = 0; // Initialized by OpenCL kernel
-		sssd->adaptiveStrength = renderEngine->oclSampler->sobol.adaptiveStrength;
-		sssd->adaptiveUserImportanceWeight = renderEngine->oclSampler->sobol.adaptiveUserImportanceWeight;
+		sssd->bucketIndex = 0;
 		sssd->filmRegionPixelCount = filmRegionPixelCount;
 
 		// Initialize all pass values. The pass buffer is attached at the
@@ -362,8 +404,7 @@ void PathOCLBaseOCLRenderThread::InitSamplerSharedDataBuffer() {
 		SobolSequence::GenerateDirectionVectors(sobolDirections, renderEngine->pathTracer.eyeSampleSize);
 
 		// Write the data
-		cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
-		oclQueue.enqueueWriteBuffer(*samplerSharedDataBuff, CL_TRUE, 0, size, buffer);
+		intersectionDevice->EnqueueWriteBuffer(samplerSharedDataBuff, CL_TRUE, size, buffer);
 		
 		delete[] buffer;
 	} else if (renderEngine->oclSampler->type == slg::ocl::TILEPATHSAMPLER) {
@@ -377,8 +418,7 @@ void PathOCLBaseOCLRenderThread::InitSamplerSharedDataBuffer() {
 				u_int *sobolDirections = (u_int *)(buffer + sizeof(slg::ocl::TilePathSamplerSharedData));
 				SobolSequence::GenerateDirectionVectors(sobolDirections, renderEngine->pathTracer.eyeSampleSize);
 
-				cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
-				oclQueue.enqueueWriteBuffer(*samplerSharedDataBuff, CL_TRUE, 0, size, &buffer[0]);
+				intersectionDevice->EnqueueWriteBuffer(samplerSharedDataBuff, CL_TRUE, size, &buffer[0]);
 				delete [] buffer;
 				break;
 			}
@@ -386,7 +426,7 @@ void PathOCLBaseOCLRenderThread::InitSamplerSharedDataBuffer() {
 				break;
 			default:
 				throw runtime_error("Unknown render engine in PathOCLBaseRenderThread::InitSamplerSharedDataBuffer(): " +
-						boost::lexical_cast<string>(renderEngine->GetType()));
+						ToString(renderEngine->GetType()));
 		}
 	}
 }
@@ -422,7 +462,7 @@ void PathOCLBaseOCLRenderThread::InitSamplesBuffer() {
 		}
 		default:
 			throw runtime_error("Unknown sampler.type in PathOCLBaseRenderThread::InitSamplesBuffer(): " +
-					boost::lexical_cast<string>(renderEngine->oclSampler->type));
+					ToString(renderEngine->oclSampler->type));
 	}
 
 	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Size of a Sample: " << sampleSize << "bytes");
@@ -435,7 +475,7 @@ void PathOCLBaseOCLRenderThread::InitSampleResultsBuffer() {
 	const size_t sampleResultSize = sizeof(slg::ocl::SampleResult);
 
 	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Size of a SampleResult: " << sampleResultSize << "bytes");
-	intersectionDevice->AllocBufferRW(&sampleResultsBuff, nullptr, sampleResultSize * taskCount, "Sample");
+	intersectionDevice->AllocBufferRW(&sampleResultsBuff, nullptr, sampleResultSize * taskCount, "SampleResult");
 }
 
 void PathOCLBaseOCLRenderThread::InitSampleDataBuffer() {
@@ -455,7 +495,7 @@ void PathOCLBaseOCLRenderThread::InitSampleDataBuffer() {
 		// To store IDX_SCREEN_X and IDX_SCREEN_Y
 		uDataSize = 2 * sizeof(float);
 	} else
-		throw runtime_error("Unknown sampler.type in PathOCLBaseRenderThread::InitSampleDataBuffer(): " + boost::lexical_cast<string>(renderEngine->oclSampler->type));
+		throw runtime_error("Unknown sampler.type in PathOCLBaseRenderThread::InitSampleDataBuffer(): " + ToString(renderEngine->oclSampler->type));
 
 	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Size of a SampleData: " << uDataSize << "bytes");
 
@@ -604,13 +644,14 @@ void PathOCLBaseOCLRenderThread::InitRender() {
 	// Set kernel arguments
 	SetKernelArgs();
 
-	cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
-
 	// Clear all thread films
-	BOOST_FOREACH(ThreadFilm *threadFilm, threadFilms)
-		threadFilm->ClearFilm(oclQueue, *filmClearKernel, filmClearWorkGroupSize);
+	BOOST_FOREACH(ThreadFilm *threadFilm, threadFilms) {
+		intersectionDevice->PushThreadCurrentDevice();
+		threadFilm->ClearFilm(intersectionDevice, filmClearKernel, filmClearWorkGroupSize);
+		intersectionDevice->PopThreadCurrentDevice();
+	}
 
-	oclQueue.finish();
+	intersectionDevice->FinishQueue();
 
 	// Reset statistics in order to be more accurate
 	intersectionDevice->ResetPerformaceStats();

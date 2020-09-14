@@ -36,17 +36,23 @@ LightSource *DistributionLightStrategy::SampleLights(const float u,
 
 float DistributionLightStrategy::SampleLightPdf(const LightSource *light,
 		const Point &p, const Normal &n, const bool isVolume) const {
-	return lightsDistribution->PdfDiscrete(light->lightSceneIndex);
+	if (lightsDistribution)
+		return lightsDistribution->PdfDiscrete(light->lightSceneIndex);
+	else
+		return 0.f;
 }
 
 LightSource *DistributionLightStrategy::SampleLights(const float u,
 		float *pdf) const {
-	const u_int lightIndex = lightsDistribution->SampleDiscrete(u, pdf);
-	assert ((lightIndex >= 0) && (lightIndex < scene->lightDefs.GetSize()));
+	if (lightsDistribution) {
+		const u_int lightIndex = lightsDistribution->SampleDiscrete(u, pdf);
+		assert ((lightIndex >= 0) && (lightIndex < scene->lightDefs.GetSize()));
 
-	if (*pdf > 0.f)
-		return scene->lightDefs.GetLightSources()[lightIndex];
-	else
+		if (*pdf > 0.f)
+			return scene->lightDefs.GetLightSources()[lightIndex];
+		else
+			return nullptr;
+	} else
 		return nullptr;
 }
 

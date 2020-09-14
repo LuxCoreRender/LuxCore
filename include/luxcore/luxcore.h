@@ -111,9 +111,13 @@ CPP_EXPORT CPP_API void KernelCacheFill(const luxrays::Properties &config, void 
  * properties currently supported are:
  * - version.number\n
  *		The LuxCore version. As string with "major.minor" version format.
- * - compile.LUXRAYS_DISABLE_OPENCL\n
- *		true or false if the sources has been compiled with LUXRAYS_DISABLE_OPENCL and
+ * - compile.LUXRAYS_ENABLE_OPENCL and compile.LUXRAYS_DISABLE_OPENCL\n
+ *		true or false if the sources has been compiled with LUXRAYS_ENABLE_OPENCL and
  *		OpenCL rendering engines are available or not.
+ * - compile.LUXRAYS_ENABLE_CUDA and compile.LUXRAYS_DISABLE_CUDA\n
+ *		true or false if the sources has been compiled with LUXRAYS_ENABLE_CUDA and
+ *		CUDA support is available or not.
+ * - compile.LUXRAYS_ENABLE_OPTIX is true if Optix is available, false otherwise.
  * - compile.LUXCORE_DISABLE_EMBREE_BVH_BUILDER\n
  *		true or false if the sources has been compiled with LUXCORE_DISABLE_EMBREE_BVH_BUILDER and
  *		Embree BVH builder is used for OpenCL or not. This is now always false.
@@ -183,11 +187,21 @@ public:
 		OUTPUT_SHADING_NORMAL,
 		OUTPUT_MATERIAL_ID,
 		OUTPUT_DIRECT_DIFFUSE,
+		OUTPUT_DIRECT_DIFFUSE_REFLECT,
+		OUTPUT_DIRECT_DIFFUSE_TRANSMIT,
 		OUTPUT_DIRECT_GLOSSY,
+		OUTPUT_DIRECT_GLOSSY_REFLECT,
+		OUTPUT_DIRECT_GLOSSY_TRANSMIT,
 		OUTPUT_EMISSION,
 		OUTPUT_INDIRECT_DIFFUSE,
+		OUTPUT_INDIRECT_DIFFUSE_REFLECT,
+		OUTPUT_INDIRECT_DIFFUSE_TRANSMIT,
 		OUTPUT_INDIRECT_GLOSSY,
+		OUTPUT_INDIRECT_GLOSSY_REFLECT,
+		OUTPUT_INDIRECT_GLOSSY_TRANSMIT,
 		OUTPUT_INDIRECT_SPECULAR,
+		OUTPUT_INDIRECT_SPECULAR_REFLECT,
+		OUTPUT_INDIRECT_SPECULAR_TRANSMIT,
 		OUTPUT_MATERIAL_ID_MASK,
 		OUTPUT_DIRECT_SHADOW_MASK,
 		OUTPUT_INDIRECT_SHADOW_MASK,
@@ -197,7 +211,7 @@ public:
 		OUTPUT_BY_MATERIAL_ID,
 		OUTPUT_IRRADIANCE,
 		OUTPUT_OBJECT_ID,
-		OUTPUT_OBJECT_ID_MASK ,
+		OUTPUT_OBJECT_ID_MASK,
 		OUTPUT_BY_OBJECT_ID,
 		OUTPUT_SAMPLECOUNT,
 		OUTPUT_CONVERGENCE,
@@ -206,7 +220,8 @@ public:
 		OUTPUT_ALBEDO,
 		OUTPUT_AVG_SHADING_NORMAL,
 		OUTPUT_NOISE,
-		OUTPUT_USER_IMPORTANCE
+		OUTPUT_USER_IMPORTANCE,
+		OUTPUT_CAUSTIC
 	} FilmOutputType;
 
 	/*!
@@ -214,38 +229,48 @@ public:
 	 */
 	typedef enum {
 		// This list must be aligned with slg::Film::FilmChannelType
-		CHANNEL_RADIANCE_PER_PIXEL_NORMALIZED = 1 << 0,
-		CHANNEL_RADIANCE_PER_SCREEN_NORMALIZED = 1 << 1,
-		CHANNEL_ALPHA = 1 << 2,
-		CHANNEL_IMAGEPIPELINE = 1 << 3,
-		CHANNEL_DEPTH = 1 << 4,
-		CHANNEL_POSITION = 1 << 5,
-		CHANNEL_GEOMETRY_NORMAL = 1 << 6,
-		CHANNEL_SHADING_NORMAL = 1 << 7,
-		CHANNEL_MATERIAL_ID = 1 << 8,
-		CHANNEL_DIRECT_DIFFUSE = 1 << 9,
-		CHANNEL_DIRECT_GLOSSY = 1 << 10,
-		CHANNEL_EMISSION = 1 << 11,
-		CHANNEL_INDIRECT_DIFFUSE = 1 << 12,
-		CHANNEL_INDIRECT_GLOSSY = 1 << 13,
-		CHANNEL_INDIRECT_SPECULAR = 1 << 14,
-		CHANNEL_MATERIAL_ID_MASK = 1 << 15,
-		CHANNEL_DIRECT_SHADOW_MASK = 1 << 16,
-		CHANNEL_INDIRECT_SHADOW_MASK = 1 << 17,
-		CHANNEL_UV = 1 << 18,
-		CHANNEL_RAYCOUNT = 1 << 19,
-		CHANNEL_BY_MATERIAL_ID = 1 << 20,
-		CHANNEL_IRRADIANCE = 1 << 21,
-		CHANNEL_OBJECT_ID = 1 << 22,
-		CHANNEL_OBJECT_ID_MASK = 1 << 23,
-		CHANNEL_BY_OBJECT_ID = 1 << 24,
-		CHANNEL_SAMPLECOUNT = 1 << 25,
-		CHANNEL_CONVERGENCE = 1 << 26,
-		CHANNEL_MATERIAL_ID_COLOR = 1 << 27,
-		CHANNEL_ALBEDO = 1 << 28,
-		CHANNEL_AVG_SHADING_NORMAL = 1 << 29,
-		CHANNEL_NOISE = 1 << 30,
-		CHANNEL_USER_IMPORTANCE = 1 << 31
+		CHANNEL_RADIANCE_PER_PIXEL_NORMALIZED,
+		CHANNEL_RADIANCE_PER_SCREEN_NORMALIZED,
+		CHANNEL_ALPHA,
+		CHANNEL_IMAGEPIPELINE,
+		CHANNEL_DEPTH,
+		CHANNEL_POSITION,
+		CHANNEL_GEOMETRY_NORMAL,
+		CHANNEL_SHADING_NORMAL,
+		CHANNEL_MATERIAL_ID,
+		CHANNEL_DIRECT_DIFFUSE,
+		CHANNEL_DIRECT_DIFFUSE_REFLECT,
+		CHANNEL_DIRECT_DIFFUSE_TRANSMIT,
+		CHANNEL_DIRECT_GLOSSY,
+		CHANNEL_DIRECT_GLOSSY_REFLECT,
+		CHANNEL_DIRECT_GLOSSY_TRANSMIT,
+		CHANNEL_EMISSION,
+		CHANNEL_INDIRECT_DIFFUSE,
+		CHANNEL_INDIRECT_DIFFUSE_REFLECT,
+		CHANNEL_INDIRECT_DIFFUSE_TRANSMIT,
+		CHANNEL_INDIRECT_GLOSSY,
+		CHANNEL_INDIRECT_GLOSSY_REFLECT,
+		CHANNEL_INDIRECT_GLOSSY_TRANSMIT,
+		CHANNEL_INDIRECT_SPECULAR,
+		CHANNEL_INDIRECT_SPECULAR_REFLECT,
+		CHANNEL_INDIRECT_SPECULAR_TRANSMIT,
+		CHANNEL_MATERIAL_ID_MASK,
+		CHANNEL_DIRECT_SHADOW_MASK,
+		CHANNEL_INDIRECT_SHADOW_MASK,
+		CHANNEL_UV,
+		CHANNEL_RAYCOUNT,
+		CHANNEL_BY_MATERIAL_ID,
+		CHANNEL_IRRADIANCE,
+		CHANNEL_OBJECT_ID,
+		CHANNEL_OBJECT_ID_MASK,
+		CHANNEL_BY_OBJECT_ID,
+		CHANNEL_SAMPLECOUNT,
+		CHANNEL_CONVERGENCE,
+		CHANNEL_MATERIAL_ID_COLOR,
+		CHANNEL_ALBEDO,
+		CHANNEL_AVG_SHADING_NORMAL,
+		CHANNEL_NOISE,
+		CHANNEL_USER_IMPORTANCE
 	} FilmChannelType;
 
 	virtual ~Film();
@@ -334,7 +359,7 @@ public:
 	virtual void SaveOutputs() const = 0;
 
 	/*!
-	 * \brief Saves the specified Film output channels.
+	 * \brief Saves the specified Film output channel.
 	 *
 	 * \param fileName is the name of the file where to save the output channel.
 	 * \param type is the Film output channel to use. It must be one
@@ -1219,6 +1244,14 @@ public:
 	 * \param fileName of file where to save.
 	 */
 	virtual void ExportGLTF(const std::string &fileName) const = 0;	
+
+	/*!
+	 * \brief Returns false if a (long) kernel compilation time is required at the
+	 * start of the rendering. True otherwise.
+	 *
+	 * \return if a (long) kernel compilation time is not required.
+	 */
+	virtual bool HasCachedKernels() const = 0;
 
 	/*!
 	 * \brief Returns a Properties container with all default values.

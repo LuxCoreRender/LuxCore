@@ -20,8 +20,10 @@
 
 #include <boost/lexical_cast.hpp>
 #include <boost/foreach.hpp>
+#include <boost/serialization/unordered_set.hpp>
 
 #include "slg/film/film.h"
+#include "slg/film/imagepipeline/imagepipeline.h"
 
 using namespace std;
 using namespace luxrays;
@@ -66,13 +68,24 @@ template<class Archive> void Film::load(Archive &ar, const u_int version) {
 	ar & channel_POSITION;
 	ar & channel_GEOMETRY_NORMAL;
 	ar & channel_SHADING_NORMAL;
+	ar & channel_AVG_SHADING_NORMAL;
 	ar & channel_MATERIAL_ID;
 	ar & channel_DIRECT_DIFFUSE;
+	ar & channel_DIRECT_DIFFUSE_REFLECT;
+	ar & channel_DIRECT_DIFFUSE_TRANSMIT;
 	ar & channel_DIRECT_GLOSSY;
+	ar & channel_DIRECT_GLOSSY_REFLECT;
+	ar & channel_DIRECT_GLOSSY_TRANSMIT;
 	ar & channel_EMISSION;
 	ar & channel_INDIRECT_DIFFUSE;
+	ar & channel_INDIRECT_DIFFUSE_REFLECT;
+	ar & channel_INDIRECT_DIFFUSE_TRANSMIT;
 	ar & channel_INDIRECT_GLOSSY;
+	ar & channel_INDIRECT_GLOSSY_REFLECT;
+	ar & channel_INDIRECT_GLOSSY_TRANSMIT;
 	ar & channel_INDIRECT_SPECULAR;
+	ar & channel_INDIRECT_SPECULAR_REFLECT;
+	ar & channel_INDIRECT_SPECULAR_TRANSMIT;
 	ar & channel_MATERIAL_ID_MASKs;
 	ar & channel_DIRECT_SHADOW_MASK;
 	ar & channel_INDIRECT_SHADOW_MASK;
@@ -87,7 +100,6 @@ template<class Archive> void Film::load(Archive &ar, const u_int version) {
 	ar & channel_CONVERGENCE;
 	ar & channel_MATERIAL_ID_COLOR;
 	ar & channel_ALBEDO;
-	ar & channel_AVG_SHADING_NORMAL;
 	ar & channel_NOISE;
 	ar & channel_USER_IMPORTANCE;
 
@@ -114,6 +126,8 @@ template<class Archive> void Film::load(Archive &ar, const u_int version) {
 	ar & noiseEstimation;
 	ar & haltTime;
 	ar & haltSPP;
+	ar & haltSPP_PixelNormalized;
+	ar & haltSPP_ScreenNormalized;
 	ar & haltNoiseThreshold;
 	ar & haltNoiseThresholdWarmUp;
 	ar & haltNoiseThresholdTestStep;
@@ -144,13 +158,24 @@ template<class Archive> void Film::save(Archive &ar, const u_int version) const 
 	ar & channel_POSITION;
 	ar & channel_GEOMETRY_NORMAL;
 	ar & channel_SHADING_NORMAL;
+	ar & channel_AVG_SHADING_NORMAL;
 	ar & channel_MATERIAL_ID;
 	ar & channel_DIRECT_DIFFUSE;
+	ar & channel_DIRECT_DIFFUSE_REFLECT;
+	ar & channel_DIRECT_DIFFUSE_TRANSMIT;
 	ar & channel_DIRECT_GLOSSY;
+	ar & channel_DIRECT_GLOSSY_REFLECT;
+	ar & channel_DIRECT_GLOSSY_TRANSMIT;
 	ar & channel_EMISSION;
 	ar & channel_INDIRECT_DIFFUSE;
+	ar & channel_INDIRECT_DIFFUSE_REFLECT;
+	ar & channel_INDIRECT_DIFFUSE_TRANSMIT;
 	ar & channel_INDIRECT_GLOSSY;
+	ar & channel_INDIRECT_GLOSSY_REFLECT;
+	ar & channel_INDIRECT_GLOSSY_TRANSMIT;
 	ar & channel_INDIRECT_SPECULAR;
+	ar & channel_INDIRECT_SPECULAR_REFLECT;
+	ar & channel_INDIRECT_SPECULAR_TRANSMIT;
 	ar & channel_MATERIAL_ID_MASKs;
 	ar & channel_DIRECT_SHADOW_MASK;
 	ar & channel_INDIRECT_SHADOW_MASK;
@@ -165,7 +190,6 @@ template<class Archive> void Film::save(Archive &ar, const u_int version) const 
 	ar & channel_CONVERGENCE;
 	ar & channel_MATERIAL_ID_COLOR;
 	ar & channel_ALBEDO;
-	ar & channel_AVG_SHADING_NORMAL;
 	ar & channel_NOISE;
 	ar & channel_USER_IMPORTANCE;
 
@@ -192,6 +216,8 @@ template<class Archive> void Film::save(Archive &ar, const u_int version) const 
 	ar & noiseEstimation;
 	ar & haltTime;
 	ar & haltSPP;
+	ar & haltSPP_PixelNormalized;
+	ar & haltSPP_ScreenNormalized;
 	ar & haltNoiseThreshold;
 	ar & haltNoiseThresholdWarmUp;
 	ar & haltNoiseThresholdTestStep;

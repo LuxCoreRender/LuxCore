@@ -152,8 +152,8 @@ void StereoCamera::GetPDF(const Ray &eyeRay, const float eyeDistance,
 	leftEye->GetPDF(eyeRay, eyeDistance, filmX, filmY, pdfW, fluxToRadianceFactor);
 }
 
-Properties StereoCamera::ToProperties() const {
-	Properties props = PerspectiveCamera::ToProperties();
+Properties StereoCamera::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	Properties props = PerspectiveCamera::ToProperties(imgMapCache, useRealFileName);
 
 	props.Set(Property("scene.camera.type")("stereo"));
 	props.Set(Property("scene.camera.eyesdistance")(horizStereoEyesDistance));

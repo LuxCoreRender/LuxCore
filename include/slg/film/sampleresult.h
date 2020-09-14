@@ -37,16 +37,15 @@ namespace ocl {
 
 class SampleResult {
 public:
-	SampleResult() : useFilmSplat(true) { }
-	SampleResult(const u_int channelTypes, const u_int radianceGroupCount) {
-		Init(channelTypes, radianceGroupCount);
+	SampleResult() : useFilmSplat(true), channels(nullptr) { }
+	SampleResult(const Film::FilmChannels *channels, const u_int radianceGroupCount) {
+		Init(channels, radianceGroupCount);
 	}
 	~SampleResult() { }
 
-	void Init(const u_int channelTypes, const u_int radianceGroupCount);
+	void Init(const Film::FilmChannels *channels, const u_int radianceGroupCount);
 
-	u_int GetChannels() const { return channels; }
-	bool HasChannel(const Film::FilmChannelType type) const { return (channels & type) != 0; }
+	bool HasChannel(const Film::FilmChannelType type) const { return channels->count(type) > 0; }
 
 	luxrays::Spectrum GetSpectrum(const std::vector<RadianceChannelScale> &radianceChannelScales) const;
 	float GetY(const std::vector<RadianceChannelScale> &radianceChannelScales) const;
@@ -57,7 +56,14 @@ public:
 		const luxrays::Spectrum &pathThroughput, const luxrays::Spectrum &incomingRadiance,
 		const float lightScale);
 
-	void ClampRadiance(const float minRadiance, const float maxRadiance);
+	void ClampRadiance(const u_int index, const float minRadiance, const float maxRadiance) {
+		radiance[index] = radiance[index].ScaledClamp(minRadiance, maxRadiance);
+	}
+
+	void ClampRadiance(const float minRadiance, const float maxRadiance) {
+		for (u_int i = 0; i < radiance.Size(); ++i)
+			ClampRadiance(i, minRadiance, maxRadiance);
+	}
 
 	bool IsValid() const;
 
@@ -77,9 +83,12 @@ public:
 	u_int materialID;
 	// Note: OBJECT_ID_MASK is calculated starting from objectID field
 	u_int objectID;
-	luxrays::Spectrum directDiffuse, directGlossy;
+	luxrays::Spectrum directDiffuseReflect, directDiffuseTransmit;
+	luxrays::Spectrum directGlossyReflect, directGlossyTransmit;
 	luxrays::Spectrum emission;
-	luxrays::Spectrum indirectDiffuse, indirectGlossy, indirectSpecular;
+	luxrays::Spectrum indirectDiffuseReflect, indirectDiffuseTransmit;
+	luxrays::Spectrum indirectGlossyReflect, indirectGlossyTransmit;
+	luxrays::Spectrum indirectSpecularReflect, indirectSpecularTransmit;
 	float directShadowMask, indirectShadowMask;
 	luxrays::UV uv;
 	float rayCount;
@@ -89,6 +98,9 @@ public:
 	luxrays::Spectrum albedo;
 
 	BSDFEvent firstPathVertexEvent;
+	bool isHoldout;
+	// isCaustic is used only for RADIANCE_PER_SCREEN_NORMALIZED samples
+	bool isCaustic;
 
 	// Used to keep some state of the current sample
 	bool firstPathVertex, lastPathVertex;
@@ -96,7 +108,7 @@ public:
 	bool useFilmSplat;
 
 private:
-	u_int channels;
+	const Film::FilmChannels *channels;
 };
 
 }

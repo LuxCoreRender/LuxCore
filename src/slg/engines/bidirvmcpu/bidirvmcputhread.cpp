@@ -19,6 +19,8 @@
 // NOTE: this is code is heavily based on Tomas Davidovic's SmallVCM
 // (http://www.davidovic.cz) and http://www.smallvcm.com)
 
+#include "luxrays/utils/thread.h"
+
 #include "slg/engines/bidirvmcpu/bidirvmcpu.h"
 
 using namespace std;
@@ -40,6 +42,9 @@ void BiDirVMCPURenderThread::RenderFuncVM() {
 	//--------------------------------------------------------------------------
 	// Initialization
 	//--------------------------------------------------------------------------
+
+	// This is really used only by Windows for 64+ threads support
+	SetThreadGroupAffinity(threadIndex);
 
 	BiDirVMCPURenderEngine *engine = (BiDirVMCPURenderEngine *)renderEngine;
 	// (engine->seedBase + 1) seed is used for sharedRndGen

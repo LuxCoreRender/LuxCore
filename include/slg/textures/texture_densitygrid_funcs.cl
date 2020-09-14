@@ -22,7 +22,7 @@
 // DensityGrid texture
 //------------------------------------------------------------------------------
 
-OPENCL_FORCE_NOT_INLINE float3 DensityGridTexture_D(
+OPENCL_FORCE_INLINE float3 DensityGridTexture_D(
 		__global const ImageMap *imageMap,
 		int x, int y, int z,
 		int nx, int ny, int nz
@@ -67,7 +67,7 @@ OPENCL_FORCE_NOT_INLINE float3 DensityGridTexture_ConstEvaluateSpectrum(__global
 			if (P.x < 0.f || P.x >= 1.f ||
 				P.y < 0.f || P.y >= 1.f ||
 				P.z < 0.f || P.z >= 1.f)
-				return 0.f;
+				return BLACK;
 			x = P.x * nx;
 			vx = Floor2Int(x);
 			x -= vx;
@@ -82,7 +82,7 @@ OPENCL_FORCE_NOT_INLINE float3 DensityGridTexture_ConstEvaluateSpectrum(__global
 			if (P.x < 0.f || P.x >= 1.f ||
 				P.y < 0.f || P.y >= 1.f ||
 				P.z < 0.f || P.z >= 1.f)
-				return 1.f;
+				return WHITE;
 			x = P.x * nx;
 			vx = Floor2Int(x);
 			x -= vx;
@@ -105,7 +105,7 @@ OPENCL_FORCE_NOT_INLINE float3 DensityGridTexture_ConstEvaluateSpectrum(__global
 			z -= vz;
 			break;
 		default:
-			return 0.f;
+			return BLACK;
 	}
 
 	// Trilinear interpolation of the grid element

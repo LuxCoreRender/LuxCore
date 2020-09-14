@@ -37,6 +37,10 @@ OPENCL_FORCE_INLINE float Degrees(float rad) {
 	return (180.f / M_PI_F) * rad;
 }
 
+OPENCL_FORCE_INLINE float Sgn(float a) {
+	return a < 0.f ? -1.f : 1.f;
+}
+
 OPENCL_FORCE_INLINE int Ceil2Int(float val) {
 	return (int)ceil(val);
 }

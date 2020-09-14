@@ -32,9 +32,10 @@ void NativeIntersectionDeviceDescription::AddDeviceDescs(std::vector<DeviceDescr
 // Native thread IntersectionDevice
 //------------------------------------------------------------------------------
 
-NativeIntersectionDevice::NativeIntersectionDevice(
-	const Context *context, const size_t devIndex) :
-	Device(context, DEVICE_TYPE_NATIVE, devIndex) {
+NativeIntersectionDevice::NativeIntersectionDevice(const Context *context,
+		NativeIntersectionDeviceDescription *desc,
+		const size_t devIndex) :
+	Device(context, devIndex), deviceDesc(desc) {
 
 	deviceName = std::string("NativeIntersect");
 }

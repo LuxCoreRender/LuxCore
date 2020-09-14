@@ -57,6 +57,8 @@ public:
 
 	// Compiled Camera
 	slg::ocl::Camera camera;
+	float *cameraBokehDistribution;
+	u_int cameraBokehDistributionSize;
 
 	// Compiled Scene Meshes
 	std::vector<luxrays::Point> verts;
@@ -138,6 +140,7 @@ public:
 
 private:
 	void AddToImageMapMem(slg::ocl::ImageMap &im, void *data, const size_t memSize);
+	u_int CompileImageMap(const ImageMap *im);
 
 	void CompileCamera();
 	void CompileSceneObjects();
@@ -173,7 +176,7 @@ private:
 	Scene *scene;
 	const PathTracer *pathTracer;
 
-	u_int maxMemPageSize;
+	size_t maxMemPageSize;
 	boost::unordered_set<std::string> enabledCode;
 }; 
 

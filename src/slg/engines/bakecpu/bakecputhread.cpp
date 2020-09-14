@@ -16,6 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "luxrays/utils/thread.h"
+
 #include "slg/engines/bakecpu/bakecpu.h"
 #include "slg/volumes/volume.h"
 #include "slg/utils/varianceclamping.h"
@@ -309,26 +311,30 @@ void BakeCPURenderThread::RenderEyeSample(const BakeMapInfo &mapInfo, PathTracer
 	sampleResult.uv = bsdf.hitPoint.GetUV(0);
 }
 
-void BakeCPURenderThread::RenderConnectToEyeCallBack(const BakeMapInfo &mapInfo, 
+void BakeCPURenderThread::RenderConnectToEyeCallBack(const BakeMapInfo &mapInfo,
+		const LightPathInfo &pathInfo,
 		const BSDF &bsdf, const u_int lightID,
 		const Spectrum &lightPathFlux, vector<SampleResult> &sampleResults) const {
 	BakeCPURenderEngine *engine = (BakeCPURenderEngine *)renderEngine;
 
-	// Check if the hit point is on one of the objects I'm baking
-	for (u_int i = 0; i < engine->currentSceneObjsToBake.size(); ++i) {
-		if (engine->currentSceneObjsToBake[i] == bsdf.GetSceneObject()) {
-			SampleResult &sampleResult = PathTracer::AddLightSampleResult(sampleResults, engine->mapFilm);
+	// Bake only caustics
+	if (pathInfo.IsSDPath() && (!engine->pathTracer.hybridBackForwardEnable || (pathInfo.depth.depth > 0))) {
+		// Check if the hit point is on one of the objects I'm baking
+		for (u_int i = 0; i < engine->currentSceneObjsToBake.size(); ++i) {
+			if (engine->currentSceneObjsToBake[i] == bsdf.GetSceneObject()) {
+				SampleResult &sampleResult = PathTracer::AddLightSampleResult(sampleResults, engine->mapFilm);
 
-			SetSampleResultXY(mapInfo, bsdf.hitPoint, *engine->mapFilm, sampleResult);
+				SetSampleResultXY(mapInfo, bsdf.hitPoint, *engine->mapFilm, sampleResult);
 
-			const float fluxToRadianceFactor = 1.f / engine->currentSceneObjsToBakeArea[i];
+				const float fluxToRadianceFactor = 1.f / engine->currentSceneObjsToBakeArea[i];
 
-			BSDFEvent event;
-			const Spectrum bsdfEval = bsdf.Evaluate(Vector(bsdf.hitPoint.shadeN), &event);
+				BSDFEvent event;
+				const Spectrum bsdfEval = bsdf.Evaluate(Vector(bsdf.hitPoint.shadeN), &event);
 
-			sampleResult.radiance[lightID] = lightPathFlux * fluxToRadianceFactor * bsdfEval;
+				sampleResult.radiance[lightID] = lightPathFlux * fluxToRadianceFactor * bsdfEval;
 
-			return;
+				return;
+			}
 		}
 	}
 }
@@ -338,7 +344,7 @@ void BakeCPURenderThread::RenderLightSample(const BakeMapInfo &mapInfo, PathTrac
 	const PathTracer &pathTracer = engine->pathTracer;
 	
 	const PathTracer::ConnectToEyeCallBackType connectToEyeCallBack = boost::bind(
-			&BakeCPURenderThread::RenderConnectToEyeCallBack, this, mapInfo, _1, _2, _3, _4);
+			&BakeCPURenderThread::RenderConnectToEyeCallBack, this, mapInfo, _1, _2, _3, _4, _5);
 
 	pathTracer.RenderLightSample(state.device, state.scene, state.film, state.lightSampler,
 			state.lightSampleResults, connectToEyeCallBack);
@@ -373,6 +379,9 @@ void BakeCPURenderThread::RenderSample(const BakeMapInfo &mapInfo, PathTracerThr
 
 void BakeCPURenderThread::RenderFunc() {
 	//SLG_LOG("[BakeCPURenderEngine::" << threadIndex << "] Rendering thread started");
+
+	// This is really used only by Windows for 64+ threads support
+	SetThreadGroupAffinity(threadIndex);
 
 	BakeCPURenderEngine *engine = (BakeCPURenderEngine *)renderEngine;
 	const PathTracer &pathTracer = engine->pathTracer;
@@ -430,7 +439,8 @@ void BakeCPURenderThread::RenderFunc() {
 			props <<
 				Property("sampler.type")("METROPOLIS") <<
 				// Disable image plane meaning for samples 0 and 1
-				Property("sampler.imagesamples.enable")(false);
+				Property("sampler.imagesamples.enable")(false) <<
+				Property("sampler.metropolis.addonlycaustics")(true);
 
 			lightSampler = Sampler::FromProperties(props, rndGen, engine->mapFilm, nullptr,
 					engine->lightSamplerSharedData);

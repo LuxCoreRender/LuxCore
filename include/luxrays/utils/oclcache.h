@@ -34,13 +34,14 @@ public:
 	oclKernelCache() { }
 	virtual ~oclKernelCache() { }
 
-	virtual cl::Program *Compile(cl::Context &context, cl::Device &device,
-		const std::string &kernelsParameters, const std::string &kernelSource,
-		bool *cached, cl::STRING_CLASS *error) = 0;
+	virtual cl_program Compile(cl_context context, cl_device_id device,
+		const std::vector<std::string> &kernelsParameters, const std::string &kernelSource,
+		bool *cached, std::string *errorStr) = 0;
 
-	static cl::Program *ForcedCompile(cl::Context &context, cl::Device &device,
-		const std::string &kernelsParameters, const std::string &kernelSource,
-		cl::STRING_CLASS *error);
+	static std::string ToOptsString(const std::vector<std::string> &kernelsParameters);
+	static cl_program ForcedCompile(cl_context context, cl_device_id device,
+		const std::vector<std::string> &kernelsParameters, const std::string &kernelSource,
+		std::string *errorStr);
 };
 
 class oclKernelDummyCache : public oclKernelCache {
@@ -48,28 +49,14 @@ public:
 	oclKernelDummyCache() { }
 	~oclKernelDummyCache() { }
 
-	cl::Program *Compile(cl::Context &context, cl::Device &device,
-		const std::string &kernelsParameters, const std::string &kernelSource,
-		bool *cached, cl::STRING_CLASS *error) {
+	virtual cl_program Compile(cl_context context, cl_device_id device,
+		const std::vector<std::string> &kernelsParameters, const std::string &kernelSource,
+		bool *cached, std::string *errorStr) {
 		if (cached)
 			*cached = false;
 
-		return ForcedCompile(context, device, kernelsParameters, kernelSource, error);
+		return ForcedCompile(context, device, kernelsParameters, kernelSource, errorStr);
 	}
-};
-
-class oclKernelVolatileCache : public oclKernelCache {
-public:
-	oclKernelVolatileCache();
-	~oclKernelVolatileCache();
-
-	cl::Program *Compile(cl::Context &context, cl::Device &device,
-		const std::string &kernelsParameters, const std::string &kernelSource,
-		bool *cached, cl::STRING_CLASS *error);
-
-private:
-	boost::unordered_map<std::string, cl::Program::Binaries> kernelCache;
-	std::vector<char *> kernels;
 };
 
 // WARNING: this class is not thread safe !
@@ -78,16 +65,16 @@ public:
 	oclKernelPersistentCache(const std::string &applicationName);
 	~oclKernelPersistentCache();
 
-	cl::Program *Compile(cl::Context &context, cl::Device &device,
-		const std::string &kernelsParameters, const std::string &kernelSource,
-		bool *cached, cl::STRING_CLASS *error);
+	virtual cl_program Compile(cl_context context, cl_device_id device,
+		const std::vector<std::string> &kernelsParameters, const std::string &kernelSource,
+		bool *cached, std::string *errorStr);
 
 	static std::string HashString(const std::string &ss);
 	static u_int HashBin(const char *s, const size_t size);
 
-private:
-	boost::filesystem::path GetCacheDir(const std::string &applicationName) const;
+	static boost::filesystem::path GetCacheDir(const std::string &applicationName);
 
+private:
 	std::string appName;
 };
 

@@ -16,6 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include "luxrays/utils/thread.h"
+
 #include "slg/engines/pathcpu/pathcpu.h"
 #include "slg/volumes/volume.h"
 #include "slg/utils/varianceclamping.h"
@@ -41,8 +43,12 @@ void PathCPURenderThread::RenderFunc() {
 	// Initialization
 	//--------------------------------------------------------------------------
 
+	// This is really used only by Windows for 64+ threads support
+	SetThreadGroupAffinity(threadIndex);
+
 	PathCPURenderEngine *engine = (PathCPURenderEngine *)renderEngine;
 	const PathTracer &pathTracer = engine->pathTracer;
+
 	// (engine->seedBase + 1) seed is used for sharedRndGen
 	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + 1 + threadIndex);
 
@@ -62,9 +68,10 @@ void PathCPURenderThread::RenderFunc() {
 		props <<
 			Property("sampler.type")("METROPOLIS") <<
 			// Disable image plane meaning for samples 0 and 1
-			Property("sampler.imagesamples.enable")(false);
+			Property("sampler.imagesamples.enable")(false) <<
+			Property("sampler.metropolis.addonlycaustics")(true);
 
-		lightSampler = Sampler::FromProperties(props, rndGen, engine->film, nullptr,
+		lightSampler = Sampler::FromProperties(props, rndGen, engine->film, engine->lightSampleSplatter,
 				engine->lightSamplerSharedData);
 		
 		lightSampler->SetThreadIndex(threadIndex);

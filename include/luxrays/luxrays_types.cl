@@ -22,7 +22,7 @@
 
 #if defined(LUXRAYS_OPENCL_KERNEL)
 
-// Used when the source are not compiled by SLG library
+// Used when the sources are not compiled by SLG library
 #if !defined(OPENCL_FORCE_NOT_INLINE)
 #define OPENCL_FORCE_NOT_INLINE
 #endif
@@ -32,55 +32,6 @@
 #endif
 
 #define NULL 0
-
-#if defined(__APPLE_CL__)
-OPENCL_FORCE_INLINE float3 __OVERLOAD__ mix(float3 a, float3 b, float t)
-{
-	return a + ( b - a ) * t;
-}
-#endif
-
-#if defined(__APPLE_FIX__)
-
-OPENCL_FORCE_INLINE float2 VLOAD2F(const __global float *p) {
-	return (float2)(p[0], p[1]);
-}
-
-OPENCL_FORCE_INLINE void VSTORE2F(const float2 v, __global float *p) {
-	p[0] = v.x;
-	p[1] = v.y;
-}
-
-OPENCL_FORCE_INLINE float3 VLOAD3F(const __global float *p) {
-	return (float3)(p[0], p[1], p[2]);
-}
-
-OPENCL_FORCE_INLINE float3 VLOAD3F_Private(const float *p) {
-	return (float3)(p[0], p[1], p[2]);
-}
-
-OPENCL_FORCE_INLINE void VSTORE3F(const float3 v, __global float *p) {
-	p[0] = v.x;
-	p[1] = v.y;
-	p[2] = v.z;
-}
-
-OPENCL_FORCE_INLINE float4 VLOAD4F(const __global float *p) {
-	return (float4)(p[0], p[1], p[2], p[3]);
-}
-
-OPENCL_FORCE_INLINE float4 VLOAD4F_Private(const float *p) {
-	return (float4)(p[0], p[1], p[2], p[3]);
-}
-
-OPENCL_FORCE_INLINE void VSTORE4F(const float4 v, __global float *p) {
-	p[0] = v.x;
-	p[1] = v.y;
-	p[2] = v.z;
-	p[3] = v.w;
-}
-
-#else
 
 OPENCL_FORCE_INLINE float2 VLOAD2F(const __global float *p) {
 	return vload2(0, p);
@@ -119,8 +70,6 @@ OPENCL_FORCE_INLINE float4 VLOAD4F_Private(const float *p) {
 OPENCL_FORCE_INLINE void VSTORE4F(const float4 v, __global float *p) {
 	vstore4(v, 0, p);
 }
-
-#endif
 
 OPENCL_FORCE_INLINE void VADD3F(__global float *p, const float3 v) {
 	VSTORE3F(VLOAD3F(p) + v, p);

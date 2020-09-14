@@ -49,11 +49,26 @@ typedef struct {
 	float focalDistance;
 } ProjectiveCamera;
 
+typedef enum {
+	DIST_NONE,
+	DIST_UNIFORM,
+	DIST_EXPONENTIAL,
+	DIST_INVERSEEXPONENTIAL,
+	DIST_GAUSSIAN,
+	DIST_INVERSEGAUSSIAN,
+	DIST_TRIANGULAR,
+	DIST_CUSTOM
+} BokehDistributionType;
+
 typedef struct {
 	ProjectiveCamera projCamera;
 	
 	float screenOffsetX, screenOffsetY;
 	float fieldOfView;
+
+	unsigned int bokehBlades, bokehPower;
+	BokehDistributionType bokehDistribution;
+	float bokehScaleX, bokehScaleY;
 
 	int enableOculusRiftBarrel;
 } PerspectiveCamera;

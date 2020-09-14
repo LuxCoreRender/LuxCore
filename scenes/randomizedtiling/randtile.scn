@@ -1,0 +1,57 @@
+#scene.camera.lookat = 7.481132 -6.50764 5.343665 0.932513 -0.400984 0.891212
+##
+scene.camera.lookat.orig = 2.8718164 -5.47710514 4.63370657
+scene.camera.lookat.target = -0.600622892 1.50124407 -1.6308527
+################################################################################
+scene.textures.imgtex.file = pattern-3.jpg
+scene.textures.imgtex.gamma = 1.0
+scene.textures.imgtex.randomizedtiling.enable = 1
+scene.textures.imgtex.mapping.uvscale = 2 2
+##
+#scene.textures.hsvtex.type = hsv
+#scene.textures.hsvtex.texture = 1.0
+#scene.textures.hsvtex.hue = 0.5
+#scene.textures.hsvtex.saturation = 1.0
+#scene.textures.hsvtex.value = imgtex
+##
+#scene.textures.bark-nm.file = scenes/randomizedtiling/bark-nm.jpg
+#scene.textures.bark-nm.gamma = 1.0
+#scene.textures.bark-nm.randomizedtiling.enable = 1
+#scene.textures.bark-nm.mapping.uvscale = 8 8
+##
+#scene.textures.bark-rgb.file = scenes/randomizedtiling/bark-rgb.jpg
+#scene.textures.bark-rgb.gamma = 1.0
+#scene.textures.bark-rgb.randomizedtiling.enable = 1
+#scene.textures.bark-rgb.mapping.uvscale = 8 8
+##
+#scene.textures.bark-bump.file = scenes/randomizedtiling/bark-bump.jpg
+#scene.textures.bark-bump.gamma = 1.0
+#scene.textures.bark-bump.randomizedtiling.enable = 1
+#scene.textures.bark-bump.mapping.uvscale = 8 8
+##
+#scene.textures.scaled_bumpmap.type = scale
+#scene.textures.scaled_bumpmap.texture1 = 0.1
+#scene.textures.scaled_bumpmap.texture2 = bark-bump
+################################################################################
+scene.materials.mat_light.type = matte
+scene.materials.mat_light.emission = 20. 20. 20.
+scene.materials.mat_light.kd = 0.0 0.0 0.0
+##
+#scene.materials.mat_red.type = matte
+#scene.materials.mat_red.kd = imgtex
+##
+scene.materials.mat_white.type = matte
+scene.materials.mat_white.kd = imgtex
+#scene.materials.mat_white.kd = bark-rgb
+#scene.materials.mat_white.normaltex = bark-nm
+#scene.materials.mat_white.bumptex = scaled_bumpmap
+################################################################################
+scene.objects.obj_light.ply = scenes/bump/mat_light.ply
+scene.objects.obj_light.material = mat_light
+#scene.objects.obj_red.ply = scenes/bump/mat_red.ply
+#scene.objects.obj_red.material = mat_red
+scene.objects.obj_white.ply = scenes/bump/mat_white_multi_uv.ply
+scene.objects.obj_white.material = mat_white
+################################################################################
+scene.lights.infinitelight.type = constantinfinite
+scene.lights.infinitelight.gain = 0.2 0.2 0.2

@@ -235,8 +235,12 @@ float CameraResponsePlugin::ApplyCrf(float point, const vector<float> &from, con
 }
 
 //------------------------------------------------------------------------------
-// OpenCL version
+// HardwareDevice version
 //------------------------------------------------------------------------------
+
+void CameraResponsePlugin::AddHWChannelsUsed(unordered_set<Film::FilmChannelType, hash<int> > &hwChannelsUsed) const {
+	hwChannelsUsed.insert(Film::IMAGEPIPELINE);
+}
 
 void CameraResponsePlugin::ApplyHW(Film &film, const u_int index) {
 	if (!applyKernel) {
@@ -266,9 +270,15 @@ void CameraResponsePlugin::ApplyHW(Film &film, const u_int index) {
 		if (color)
 			ssParams << " -D PARAM_CAMERARESPONSE_COLOR";
 
+		vector<string> opts;
+		opts.push_back("-D LUXRAYS_OPENCL_KERNEL");
+		opts.push_back("-D SLG_OPENCL_KERNEL");
+		if (color)
+			opts.push_back("-D PARAM_CAMERARESPONSE_COLOR");
+
 		HardwareDeviceProgram *program = nullptr;
 		hardwareDevice->CompileProgram(&program,
-				ssParams.str(),
+				opts,
 				luxrays::ocl::KernelSource_color_types +
 				luxrays::ocl::KernelSource_color_funcs +
 				slg::ocl::KernelSource_plugin_cameraresponse_funcs,

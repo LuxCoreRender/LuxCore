@@ -88,7 +88,9 @@ void EyePathInfo::AddVertex(const BSDF &bsdf,
 	//--------------------------------------------------------------------------
 
 	// Update isNearlyCaustic
-	isNearlyCaustic = (depth.depth == 0) ?
+	//
+	// Note: depth.depth has been already incremented by 1 with the depth.IncDepths(event);
+	isNearlyCaustic = (depth.depth == 1) ?
 		// First vertex must a nearly diffuse
 		(!isNewVertexNearlySpecular) :
 		// All other vertices must be nearly specular
@@ -103,7 +105,8 @@ void EyePathInfo::AddVertex(const BSDF &bsdf,
 
 bool EyePathInfo::IsCausticPath(const BSDFEvent event,
 		const float glossiness, const float glossinessThreshold) const {
-	return isNearlyCaustic && (depth.depth > 1) &&
+	// Note: the +1 is there for the event passed as method arguments
+	return isNearlyCaustic && (depth.depth + 1 > 1) &&
 			IsNearlySpecular(event, glossiness, glossinessThreshold);
 }
 
@@ -140,4 +143,11 @@ void LightPathInfo::AddVertex(const BSDF &bsdf, const BSDFEvent event,
 
 	// Update last path vertex information
 	lastBSDFEvent = event;
+}
+
+bool LightPathInfo::IsCausticPath(const BSDFEvent event,
+		const float glossiness, const float glossinessThreshold) const {
+	// Note: the +1 is there for the event passed as method arguments
+	return isNearlyS && (depth.depth + 1 > 1) &&
+			!IsNearlySpecular(event, glossiness, glossinessThreshold);
 }

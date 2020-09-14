@@ -20,8 +20,9 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/format.hpp>
 
-#include "slg/imagemap/imagemapcache.h"
 #include "slg/core/sdl.h"
+#include "slg/imagemap/imagemapcache.h"
+#include "slg/textures/imagemaptex.h"
 
 using namespace std;
 using namespace luxrays;
@@ -36,8 +37,11 @@ ImageMapCache::ImageMapCache() {
 }
 
 ImageMapCache::~ImageMapCache() {
-	BOOST_FOREACH(ImageMap *m, maps)
-		delete m;
+	BOOST_FOREACH(ImageMap *m, maps) {
+		// I avoid to free the static global ImageMapTexture::randomImageMap
+		if (m != ImageMapTexture::randomImageMap.get())
+			delete m;
+	}
 }
 
 string ImageMapCache::GetCacheKey(const string &fileName, const float gamma,
@@ -142,7 +146,7 @@ u_int ImageMapCache::GetImageMapIndex(const ImageMap *im) const {
 			return i;
 	}
 
-	throw runtime_error("Unknown image map: " + boost::lexical_cast<string>(im));
+	throw runtime_error("Unknown image map: " + ToString(im));
 }
 
 void ImageMapCache::GetImageMaps(vector<const ImageMap *> &ims) {

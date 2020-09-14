@@ -58,5 +58,5 @@ OPENCL_FORCE_INLINE float FresnelColorTexture_ConstEvaluateFloat() {
 }
 
 OPENCL_FORCE_INLINE float3 FresnelColorTexture_ConstEvaluateSpectrum() {
-	return 0.f;
+	return BLACK;
 }

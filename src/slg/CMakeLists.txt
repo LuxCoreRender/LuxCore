@@ -97,9 +97,10 @@ set(BCD_SRCS
 
 SOURCE_GROUP("Source Files\\BCD Library" FILES ${BCD_SRCS})
 
-include_directories(${LuxRays_SOURCE_DIR}/deps/eigen-3.3.4)
 include_directories(${LuxRays_SOURCE_DIR}/deps/bcd-1.1/include)
 include_directories(${LuxRays_SOURCE_DIR}/deps/bcd-1.1/include/bcd/core)
+include_directories(${LuxRays_SOURCE_DIR}/deps/eigen-3.3.4)
+include_directories(${LuxRays_SOURCE_DIR}/deps/lut)
 
 # Use only MPL licensed source code
 add_definitions("-DEIGEN_MPL2_ONLY")
@@ -113,35 +114,36 @@ add_library(bcd STATIC ${BCD_SRCS})
 ###########################################################################
 
 set(OPENVDB_SRCS
-	${LuxRays_SOURCE_DIR}/deps/openvdb-6.2.0/openvdb/Grid.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-6.2.0/openvdb/Metadata.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-6.2.0/openvdb/MetaMap.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-6.2.0/openvdb/Platform.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-6.2.0/openvdb/openvdb.cc	
-	${LuxRays_SOURCE_DIR}/deps/openvdb-6.2.0/openvdb/io/Archive.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-6.2.0/openvdb/io/Compression.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-6.2.0/openvdb/io/File.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-6.2.0/openvdb/io/GridDescriptor.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-6.2.0/openvdb/io/Queue.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-6.2.0/openvdb/io/Stream.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-6.2.0/openvdb/io/TempFile.cc	
-	${LuxRays_SOURCE_DIR}/deps/openvdb-6.2.0/openvdb/math/Maps.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-6.2.0/openvdb/math/Proximity.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-6.2.0/openvdb/math/QuantizedUnitVec.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-6.2.0/openvdb/math/Transform.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-6.2.0/openvdb/points/AttributeArray.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-6.2.0/openvdb/points/AttributeArrayString.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-6.2.0/openvdb/points/AttributeGroup.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-6.2.0/openvdb/points/AttributeSet.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-6.2.0/openvdb/points/points.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-6.2.0/openvdb/points/StreamCompression.cc	
-	${LuxRays_SOURCE_DIR}/deps/openvdb-6.2.0/openvdb/util/Formats.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-6.2.0/openvdb/util/Util.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/Grid.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/Metadata.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/MetaMap.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/Platform.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/openvdb.cc	
+	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/io/Archive.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/io/Compression.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/io/DelayedLoadMetadata.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/io/File.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/io/GridDescriptor.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/io/Queue.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/io/Stream.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/io/TempFile.cc	
+	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/math/Maps.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/math/Proximity.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/math/QuantizedUnitVec.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/math/Transform.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/points/AttributeArray.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/points/AttributeArrayString.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/points/AttributeGroup.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/points/AttributeSet.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/points/points.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/points/StreamCompression.cc	
+	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/util/Formats.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/util/Util.cc
 )
 
 SOURCE_GROUP("Source Files\\OpenVDB Library" FILES ${OPENVDB_SRCS})
 
-include_directories(${LuxRays_SOURCE_DIR}/deps/openvdb-6.2.0)
+include_directories(${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0)
 
 # Required by OpenVDB to read ABI 3
 #add_definitions("-D OPENVDB_USE_DEPRECATED_ABI -DOPENVDB_3_ABI_COMPATIBLE -DOPENVDB_STATICLIB -DOPENVDB_OPENEXR_STATICLIB")
@@ -235,6 +237,7 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_gammacorrection_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_gaussianblur3x3_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_objectidmask_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_optixdenoiser_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_premultiplyalpha_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_vignetting_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/film/imagepipeline/plugins/plugin_whitebalance_funcs.cl
@@ -287,6 +290,7 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_null.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_roughglass.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_roughmatte_translucent.cl
+	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_thinfilmcoating.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_velvet.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_disney.cl
 	${LuxRays_SOURCE_DIR}/include/slg/materials/materialdefs_funcs_twosided.cl
@@ -304,23 +308,26 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_funcs_evalops.cl
+	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_bilerp_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_blackbody_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_blender_noise_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_blender_noise_funcs2.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_blender_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_bump_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_noise_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_bilerp_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_blackbody_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_brick_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_bump_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_colordepth_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_densitygrid_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_distort_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_hsv_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_irregulardata_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_noise_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_imagemap_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_others_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_triplanar_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/fresnel/texture_fresnelcolor_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/fresnel/texture_fresnelconst_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/utils/evalstack_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/utils/mortoncurve_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/utils/pathdepthinfo_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/utils/pathdepthinfo_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/utils/pathvolumeinfo_types.cl
@@ -473,6 +480,7 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/materials/roughglass.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/materials/roughmatte.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/materials/roughmattetranslucent.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/materials/thinfilmcoating.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/materials/twosided.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/materials/velvet.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/samplers/sampler.cpp
@@ -499,6 +507,7 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/scene/sceneserialize.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/scene/sceneupdate.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/shapes/displacement.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/shapes/edgedetectoraov.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/shapes/groupshape.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/shapes/harlequinshape.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/shapes/islandaovshape.cpp
@@ -512,6 +521,7 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/slg.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/mapping/mapping.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/band.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/bevel.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/bilerp.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/blackbody.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/blender_noiselib.cpp
@@ -523,8 +533,9 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/textures/constfloat.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/constfloat3.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/cloud.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/textures/dots.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/densitygrid.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/distort.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/dots.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/fbm.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/fresnelapprox.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/fresnel/fresnelcauchy.cpp
@@ -561,12 +572,13 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/textures/object_id.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/texture.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/texturedefs.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/textures/uv.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/triplanar.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/uv.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/vectormath/dotproduct.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/vectormath/makefloat3.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/vectormath/splitfloat3.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/windy.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/textures/wireframe.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/wrinkled.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/filenameresolver.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/utils/film2sceneradius.cpp
@@ -620,6 +632,7 @@ set(SLG_KERNEL_SRCS
 	${generated_kernels_dir}/plugin_gammacorrection_funcs_kernel.cpp
 	${generated_kernels_dir}/plugin_gaussianblur3x3_funcs_kernel.cpp
 	${generated_kernels_dir}/plugin_objectidmask_funcs_kernel.cpp
+	${generated_kernels_dir}/plugin_optixdenoiser_funcs_kernel.cpp
 	${generated_kernels_dir}/plugin_premultiplyalpha_funcs_kernel.cpp
 	${generated_kernels_dir}/plugin_vignetting_funcs_kernel.cpp
 	${generated_kernels_dir}/plugin_whitebalance_funcs_kernel.cpp
@@ -660,6 +673,7 @@ set(SLG_KERNEL_SRCS
 	${generated_kernels_dir}/materialdefs_funcs_null_kernel.cpp
 	${generated_kernels_dir}/materialdefs_funcs_roughglass_kernel.cpp
 	${generated_kernels_dir}/materialdefs_funcs_roughmatte_translucent_kernel.cpp
+	${generated_kernels_dir}/materialdefs_funcs_thinfilmcoating_kernel.cpp
 	${generated_kernels_dir}/materialdefs_funcs_twosided_kernel.cpp
 	${generated_kernels_dir}/materialdefs_funcs_velvet_kernel.cpp
 	${generated_kernels_dir}/material_funcs_evalops_kernel.cpp
@@ -679,15 +693,18 @@ set(SLG_KERNEL_SRCS
 	${generated_kernels_dir}/texture_clamp_funcs_kernel.cpp
 	${generated_kernels_dir}/texture_colordepth_funcs_kernel.cpp
 	${generated_kernels_dir}/texture_densitygrid_funcs_kernel.cpp
+	${generated_kernels_dir}/texture_distort_funcs_kernel.cpp
 	${generated_kernels_dir}/texture_fresnelcolor_funcs_kernel.cpp
 	${generated_kernels_dir}/texture_fresnelconst_funcs_kernel.cpp
 	${generated_kernels_dir}/texture_hitpoint_funcs_kernel.cpp
 	${generated_kernels_dir}/texture_hsv_funcs_kernel.cpp
 	${generated_kernels_dir}/texture_irregulardata_funcs_kernel.cpp
+	${generated_kernels_dir}/texture_imagemap_funcs_kernel.cpp
 	${generated_kernels_dir}/texture_others_funcs_kernel.cpp
 	${generated_kernels_dir}/texture_random_funcs_kernel.cpp
 	${generated_kernels_dir}/texture_triplanar_funcs_kernel.cpp
 	${generated_kernels_dir}/evalstack_funcs_kernel.cpp
+	${generated_kernels_dir}/mortoncurve_funcs_kernel.cpp
 	${generated_kernels_dir}/pathdepthinfo_types_kernel.cpp
 	${generated_kernels_dir}/pathdepthinfo_funcs_kernel.cpp
 	${generated_kernels_dir}/pathvolumeinfo_types_kernel.cpp
@@ -750,11 +767,13 @@ set(SLG_FILM_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/film/filters/filter.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filters/filterdistribution.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filters/none.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filters/blackmanharris.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filters/box.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filters/catmullrom.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filters/gaussian.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filters/mitchell.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filters/mitchellss.cpp
-	${LuxRays_SOURCE_DIR}/src/slg/film/filters/blackmanharris.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/filters/sinc.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/imagepipeline.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/imagepipelineserialization.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/radiancechannelscale.cpp
@@ -765,6 +784,7 @@ set(SLG_FILM_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/bloom.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/cameraresponse.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/coloraberration.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/colorlut.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/contourlines.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/gammacorrection.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/gaussianblur3x3.cpp
@@ -782,6 +802,7 @@ set(SLG_FILM_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/tonemaps/tonemap.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/intel_oidn.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/whitebalance.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/imagepipeline/plugins/optixdenoiser.cpp
 )
 SOURCE_GROUP("Source Files\\SLG Film Library" FILES ${SLG_FILM_SRCS})
 

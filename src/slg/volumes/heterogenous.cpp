@@ -136,7 +136,7 @@ void HeterogeneousVolume::Pdf(const HitPoint &hitPoint,
 }
 
 void HeterogeneousVolume::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {
-	Material::AddReferencedTextures(referencedTexs);
+	Volume::AddReferencedTextures(referencedTexs);
 
 	sigmaA->AddReferencedTextures(referencedTexs);
 	sigmaS->AddReferencedTextures(referencedTexs);
@@ -144,7 +144,7 @@ void HeterogeneousVolume::AddReferencedTextures(boost::unordered_set<const Textu
 }
 
 void HeterogeneousVolume::UpdateTextureReferences(const Texture *oldTex, const Texture *newTex) {
-	Material::UpdateTextureReferences(oldTex, newTex);
+	Volume::UpdateTextureReferences(oldTex, newTex);
 
 	if (sigmaA == oldTex)
 		sigmaA = newTex;

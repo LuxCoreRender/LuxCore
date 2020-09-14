@@ -182,10 +182,22 @@ Properties luxcore::GetPlatformDesc() {
 	static const string luxCoreVersion(LUXCORE_VERSION_MAJOR "." LUXCORE_VERSION_MINOR);
 	props << Property("version.number")(luxCoreVersion);
 
-#if defined(LUXRAYS_DISABLE_OPENCL)
-	props << Property("compile.LUXRAYS_DISABLE_OPENCL")(true);
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	props << Property("compile.LUXRAYS_DISABLE_OPENCL")(!luxrays::isOpenCLAvilable);
+	props << Property("compile.LUXRAYS_ENABLE_OPENCL")(luxrays::isOpenCLAvilable);
 #else
-	props << Property("compile.LUXRAYS_DISABLE_OPENCL")(false);
+	props << Property("compile.LUXRAYS_DISABLE_OPENCL")(true);
+	props << Property("compile.LUXRAYS_ENABLE_OPENCL")(false);
+#endif
+
+#if !defined(LUXRAYS_DISABLE_CUDA)
+	props << Property("compile.LUXRAYS_DISABLE_CUDA")(!luxrays::isCudaAvilable);
+	props << Property("compile.LUXRAYS_ENABLE_CUDA")(luxrays::isCudaAvilable);
+	props << Property("compile.LUXRAYS_ENABLE_OPTIX")(luxrays::isOptixAvilable);
+#else
+	props << Property("compile.LUXRAYS_DISABLE_CUDA")(true);
+	props << Property("compile.LUXRAYS_ENABLE_CUDA")(false);
+	props << Property("compile.LUXRAYS_ENABLE_OPTIX")(false);
 #endif
 
 	props << Property("compile.LUXCORE_DISABLE_EMBREE_BVH_BUILDER")(false);
@@ -208,18 +220,28 @@ Properties luxcore::GetOpenCLDeviceDescs() {
 	vector<DeviceDescription *> deviceDescriptions = ctx.GetAvailableDeviceDescriptions();
 
 	// Select only OpenCL devices
-	DeviceDescription::Filter(DEVICE_TYPE_OPENCL_ALL, deviceDescriptions);
+	DeviceDescription::Filter((DeviceType)(DEVICE_TYPE_OPENCL_ALL | DEVICE_TYPE_CUDA_ALL), deviceDescriptions);
 
 	// Add all device information to the list
 	for (size_t i = 0; i < deviceDescriptions.size(); ++i) {
-		OpenCLDeviceDescription *desc = (OpenCLDeviceDescription *)deviceDescriptions[i];
+		DeviceDescription *desc = deviceDescriptions[i];
 
-		cl::Platform platform = desc->GetOCLDevice().getInfo<CL_DEVICE_PLATFORM>();
-        const string platformName = platform.getInfo<CL_PLATFORM_VENDOR>();
-		const string platformVersion = platform.getInfo<CL_PLATFORM_VERSION>();
-		const int deviceClock = desc->GetOCLDevice().getInfo<CL_DEVICE_MAX_CLOCK_FREQUENCY>();
-		const unsigned long long deviceLocalMem = desc->GetOCLDevice().getInfo<CL_DEVICE_LOCAL_MEM_SIZE>();
-		const unsigned long long deviceConstMem = desc->GetOCLDevice().getInfo<CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE>();
+		string platformName = "UNKNOWN";
+		string platformVersion = "UNKNOWN";
+		int deviceClock = 0;
+		unsigned long long deviceLocalMem = 0;
+		unsigned long long deviceConstMem = 0;
+		if (desc->GetType() & DEVICE_TYPE_OPENCL_ALL) {
+			OpenCLDeviceDescription *oclDesc = (OpenCLDeviceDescription *)deviceDescriptions[i];
+
+			platformName = oclDesc->GetOpenCLPlatform();
+			platformVersion = oclDesc->GetOpenCLVersion();
+			deviceClock = oclDesc->GetClock();
+			deviceLocalMem = oclDesc->GetLocalMem();
+			deviceConstMem = oclDesc->GetConstMem();
+		} else if (desc->GetType() & DEVICE_TYPE_CUDA_ALL) {
+			platformName = "NVIDIA";
+		}
 
 		const string prefix = "opencl.device." + ToString(i);
 		props <<
@@ -234,6 +256,14 @@ Properties luxcore::GetOpenCLDeviceDescs() {
 				Property(prefix + ".maxmemoryallocsize")((unsigned long long)desc->GetMaxMemoryAllocSize()) <<
 				Property(prefix + ".localmemory")((unsigned long long)deviceLocalMem) <<
 				Property(prefix + ".constmemory")((unsigned long long)deviceConstMem);
+		
+		if (desc->GetType() & DEVICE_TYPE_CUDA_ALL) {
+			const CUDADeviceDescription *cudaDesc = (CUDADeviceDescription *)desc;
+			
+			props <<
+					Property(prefix + ".cuda.compute.major")(cudaDesc->GetCUDAComputeCapabilityMajor()) <<
+					Property(prefix + ".cuda.compute.minor")(cudaDesc->GetCUDAComputeCapabilityMinor());
+		}
 	}
 
 	return props;

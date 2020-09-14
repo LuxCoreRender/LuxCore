@@ -1,0 +1,81 @@
+#scene.camera.type = stereo
+#scene.camera.type = environment
+#scene.camera.type = orthographic
+#scene.camera.lookat.orig = 8.0 -11.0 5.0
+scene.camera.lookat.orig = 5.0 -16.0 5.0
+scene.camera.lookat.target = 1.0 0.0 1.0
+#scene.camera.clippingplane.enable = 1
+#scene.camera.clippingplane.center = 2.0 0.0 0.0
+#scene.camera.clippingplane.normal = -1.0 -0.5 0.0
+#scene.camera.shutteropen = 0.25
+#scene.camera.shutterclose = 0.75
+################################################################################
+#scene.textures.lighttex.type = blackbody
+#scene.textures.lighttex.temperature = 6500
+#scene.textures.lighttex.normalize = 0
+##
+scene.textures.lighttex.type = lampspectrum
+scene.textures.lighttex.name = Daylight
+##
+scene.textures.red_tex.type = irregulardata
+scene.textures.red_tex.wavelengths = 580 620 660
+scene.textures.red_tex.data = 0.0 0.000015 0.0
+##
+scene.textures.wireframetex.type = wireframe
+scene.textures.wireframetex.width = 0.01
+scene.textures.wireframetex.border = 1.0 1.0 1.0
+scene.textures.wireframetex.inside = 0.0 0.0 0.0
+################################################################################
+#scene.materials.redmat.type = disney
+#scene.materials.redmat.basecolor = 0.7 0.0 0.0
+#scene.materials.redmat.specular = 1.0
+#scene.materials.redmat.roughness = 0.2
+#scene.materials.redmat.clearcoatgloss = 1.0
+##scene.materials.redmat.transparency.shadow = 1 1 1
+##
+#scene.materials.redmat.type = mirror
+#scene.materials.redmat.kr = 0.9 0.9 0.9
+##scene.materials.redmat.transparency.shadow = 1 1 1
+##
+#scene.materials.mat1.type = matte
+#scene.materials.mat1.kd = 0.75 0.0 0.0
+#scene.materials.mat2.type = mirror
+#scene.materials.mat2.kd = 0.75 0.75 0.75
+#scene.materials.mat2.type = matte
+#scene.materials.mat2.kd = 0.0 0.75 0.0
+#scene.materials.redmat.type = mix
+#scene.materials.redmat.amount = 0.2
+#scene.materials.redmat.material1 = mat1
+#scene.materials.redmat.material2 = mat2
+##
+#scene.materials.redmat.type = archglass
+#scene.materials.redmat.kr = 1.0 1.0 1.0
+#scene.materials.redmat.kt = 1.0 0.0 0.0
+#scene.materials.redmat.iorinside = 1.51
+##
+scene.materials.redmat.type = glossy2
+scene.materials.redmat.kd = 0.0 0.0 0.5
+scene.materials.redmat.ks = 0.5 0.5 0.5
+scene.materials.redmat.uroughness = 0.01
+scene.materials.redmat.vroughness = 0.01
+##
+scene.materials.whitematte.type = matte
+scene.materials.whitematte.kd = 0.75 0.75 0.75
+scene.materials.whitelight.type = matte
+scene.materials.whitelight.emission = lighttex
+scene.materials.whitelight.emission.gain = 0.00015 0.00015 0.00015
+scene.materials.whitelight.kd = 0.0 0.0 0.0
+################################################################################
+scene.shapes.monkey.type = mesh
+scene.shapes.monkey.ply = scenes/bigmonkey/bigmonkey.ply
+#scene.shapes.monkey.transformation = 0.5 0.0 0.0 0.0  0.0 0.5 0.0 0.0  0.0 0.0 0.5 0.0  -8.0 2.0 0.0 1.0
+################################################################################
+scene.objects.back.material = whitematte
+scene.objects.back.ply = scenes/bigmonkey/room.ply
+##
+scene.objects.red.material = redmat
+scene.objects.red.ply = monkey
+##
+scene.objects.l1.material = whitelight
+scene.objects.l1.ply = scenes/bigmonkey/bigmonkey-lights.ply
+scene.objects.l1.camerainvisible = 1

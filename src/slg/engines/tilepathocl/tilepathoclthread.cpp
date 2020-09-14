@@ -33,7 +33,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 TilePathOCLRenderThread::TilePathOCLRenderThread(const u_int index,
-	OpenCLIntersectionDevice *device, TilePathOCLRenderEngine *re) : 
+	HardwareIntersectionDevice *device, TilePathOCLRenderEngine *re) : 
 	PathOCLBaseOCLRenderThread(index, device, re) {
 }
 
@@ -51,44 +51,17 @@ void TilePathOCLRenderThread::GetThreadFilmSize(u_int *filmWidth, u_int *filmHei
 	filmSubRegion[3] = engine->tileRepository->tileHeight - 1;
 }
 
-void TilePathOCLRenderThread::UpdateSamplerData(const TileWork &tileWork) {
+void TilePathOCLRenderThread::UpdateSamplerData(const TileWork &tileWork,
+		slg::ocl::TilePathSamplerSharedData &sharedData) {
 	TilePathOCLRenderEngine *engine = (TilePathOCLRenderEngine *)renderEngine;
 	if (engine->oclSampler->type != slg::ocl::TILEPATHSAMPLER)
 		throw runtime_error("Wrong sampler in PathOCLBaseRenderThread::UpdateSamplesBuffer(): " +
-						boost::lexical_cast<string>(engine->oclSampler->type));
-
-	cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
-
-	// Update samplesBuff	
-	switch (engine->GetType()) {
-		case TILEPATHOCL: {
-			const u_int taskCount = renderEngine->taskCount;
-
-			// rngPass, rng0 and rng1 fields
-			vector<slg::ocl::TilePathSample> buffer(taskCount);
-
-			RandomGenerator rndGen(tileWork.GetTileSeed());
-
-			for (u_int i = 0; i < taskCount; ++i) {
-				buffer[i].rngPass = rndGen.uintValue();
-				buffer[i].rng0 = rndGen.floatValue();
-				buffer[i].rng1 = rndGen.floatValue();
-			}
-
-			// TODO: remove the forced synchronization (the CL_TRUE)
-			oclQueue.enqueueWriteBuffer(*samplesBuff, CL_TRUE, 0,
-					sizeof(slg::ocl::TilePathSample) * buffer.size(), &buffer[0]);
-			break;
-		}
-		case RTPATHOCL:
-			break;
-		default:
-			throw runtime_error("Unknown render engine in PathOCLBaseRenderThread::UpdateSamplesBuffer(): " +
-					boost::lexical_cast<string>(engine->GetType()));
-	}
+						ToString(engine->oclSampler->type));
 
 	// Update samplerSharedDataBuff
-	slg::ocl::TilePathSamplerSharedData sharedData;
+
+	// To have an asynchronous EnqueueWriteBuffer(), I need to keep a copy of
+	// sharedData around.
 	sharedData.cameraFilmWidth = engine->film->GetWidth();
 	sharedData.cameraFilmHeight =  engine->film->GetHeight();
 	sharedData.tileStartX =  tileWork.GetCoord().x;
@@ -97,14 +70,15 @@ void TilePathOCLRenderThread::UpdateSamplerData(const TileWork &tileWork) {
 	sharedData.tileHeight =  tileWork.GetCoord().height;
 	sharedData.tilePass =  tileWork.passToRender;
 	sharedData.aaSamples =  engine->aaSamples;
+	sharedData.multipassIndexToRender = tileWork.multipassIndexToRender;
 
-	// TODO: remove the forced synchronization (the CL_TRUE)
-	oclQueue.enqueueWriteBuffer(*samplerSharedDataBuff, CL_TRUE, 0, sizeof(slg::ocl::TilePathSamplerSharedData), &sharedData);
+	intersectionDevice->EnqueueWriteBuffer(samplerSharedDataBuff, CL_FALSE,
+			sizeof(slg::ocl::TilePathSamplerSharedData), &sharedData);
 }
 
 void TilePathOCLRenderThread::RenderTileWork(const TileWork &tileWork,
+		slg::ocl::TilePathSamplerSharedData &sharedData,
 		const u_int filmIndex) {
-	cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
 	TilePathOCLRenderEngine *engine = (TilePathOCLRenderEngine *)renderEngine;
 
 	threadFilms[filmIndex]->film->Reset();
@@ -112,13 +86,13 @@ void TilePathOCLRenderThread::RenderTileWork(const TileWork &tileWork,
 		threadFilms[filmIndex]->film->GetDenoiser().CopyReferenceFilm(engine->film);
 
 	// Clear the frame buffer
-	threadFilms[filmIndex]->ClearFilm(oclQueue, *filmClearKernel, filmClearWorkGroupSize);
+	threadFilms[filmIndex]->ClearFilm(intersectionDevice, filmClearKernel, filmClearWorkGroupSize);
 
 	// Clear the frame buffer
 	const u_int filmPixelCount = threadFilms[filmIndex]->film->GetWidth() * threadFilms[filmIndex]->film->GetHeight();
-	oclQueue.enqueueNDRangeKernel(*filmClearKernel, cl::NullRange,
-		cl::NDRange(RoundUp<u_int>(filmPixelCount, filmClearWorkGroupSize)),
-		cl::NDRange(filmClearWorkGroupSize));
+	intersectionDevice->EnqueueKernel(filmClearKernel,
+		HardwareDeviceRange(RoundUp<u_int>(filmPixelCount, filmClearWorkGroupSize)),
+		HardwareDeviceRange(filmClearWorkGroupSize));
 
 	// Update all kernel args
 	{
@@ -130,25 +104,24 @@ void TilePathOCLRenderThread::RenderTileWork(const TileWork &tileWork,
 	}
 
 	// Update Sampler shared data
-	UpdateSamplerData(tileWork);
+	UpdateSamplerData(tileWork, sharedData);
 
 	// Initialize the tasks buffer
-	oclQueue.enqueueNDRangeKernel(*initKernel, cl::NullRange,
-			cl::NDRange(engine->taskCount), cl::NDRange(initWorkGroupSize));
+	intersectionDevice->EnqueueKernel(initKernel,
+			HardwareDeviceRange(engine->taskCount), HardwareDeviceRange(initWorkGroupSize));
 
 	// There are 2 rays to trace for each path vertex (the last vertex traces only one ray)
 	const u_int worstCaseIterationCount = (engine->pathTracer.maxPathDepth.depth == 1) ? 2 : (engine->pathTracer.maxPathDepth.depth * 2 - 1);
 	for (u_int i = 0; i < worstCaseIterationCount; ++i) {
 		// Trace rays
-		intersectionDevice->EnqueueTraceRayBuffer(*raysBuff,
-				*(hitsBuff), engine->taskCount, NULL, NULL);
+		intersectionDevice->EnqueueTraceRayBuffer(raysBuff, hitsBuff, engine->taskCount);
 
 		// Advance to next path state
-		EnqueueAdvancePathsKernel(oclQueue);
+		EnqueueAdvancePathsKernel();
 	}
 
 	// Async. transfer of the Film buffers
-	threadFilms[filmIndex]->RecvFilm(oclQueue);
+	threadFilms[filmIndex]->RecvFilm(intersectionDevice);
 	threadFilms[filmIndex]->film->AddSampleCount(0,
 			tileWork.GetCoord().width * tileWork.GetCoord().height *
 			engine->aaSamples * engine->aaSamples, 0.0);
@@ -163,23 +136,25 @@ void TilePathOCLRenderThread::RenderThreadImpl() {
 
 	TilePathOCLRenderEngine *engine = (TilePathOCLRenderEngine *)renderEngine;
 
+	intersectionDevice->PushThreadCurrentDevice();
+
 	try {
 		//----------------------------------------------------------------------
 		// Initialization
 		//----------------------------------------------------------------------
 
-		cl::CommandQueue &oclQueue = intersectionDevice->GetOpenCLQueue();
 		const u_int taskCount = engine->taskCount;
 
 		// Initialize random number generator seeds
-		oclQueue.enqueueNDRangeKernel(*initSeedKernel, cl::NullRange,
-				cl::NDRange(taskCount), cl::NDRange(initWorkGroupSize));
+		intersectionDevice->EnqueueKernel(initSeedKernel,
+				HardwareDeviceRange(taskCount), HardwareDeviceRange(initWorkGroupSize));
 
 		//----------------------------------------------------------------------
 		// Extract the tile to render
 		//----------------------------------------------------------------------
 
 		vector<TileWork> tileWorks(1);
+		vector<slg::ocl::TilePathSamplerSharedData> samplerDatas(1);
 		const boost::function<void()> pgicUpdateCallBack = boost::bind(PGICUpdateCallBack, engine->compiledScene);
 		while (!boost::this_thread::interruption_requested()) {
 			// Check if we are in pause mode
@@ -202,7 +177,7 @@ void TilePathOCLRenderThread::RenderThreadImpl() {
 					//SLG_LOG("[TilePathOCLRenderThread::" << threadIndex << "] TileWork: " << tileWork);
 
 					// Render the tile
-					RenderTileWork(tileWorks[i], i);
+					RenderTileWork(tileWorks[i], samplerDatas[i], i);
 
 					allTileDone = false;
 				} else
@@ -210,14 +185,13 @@ void TilePathOCLRenderThread::RenderThreadImpl() {
 			}
 
 			// Async. transfer of GPU task statistics
-			oclQueue.enqueueReadBuffer(
-				*(taskStatsBuff),
+			intersectionDevice->EnqueueReadBuffer(
+				taskStatsBuff,
 				CL_FALSE,
-				0,
 				sizeof(slg::ocl::pathoclbase::GPUTaskStats) * taskCount,
 				gpuTaskStats);
 
-			oclQueue.finish();
+			intersectionDevice->FinishQueue();
 
 			const double t1 = WallClockTime();
 			const double renderingTime = t1 - t0;
@@ -232,6 +206,7 @@ void TilePathOCLRenderThread::RenderThreadImpl() {
 					(intersectionDevice->GetDeviceDesc()->GetType() != DEVICE_TYPE_OPENCL_CPU)) {
 				IncThreadFilms();
 				tileWorks.resize(tileWorks.size() + 1);
+				samplerDatas.resize(samplerDatas.size() + 1);
 
 				SLG_LOG("[TilePathOCLRenderThread::" << threadIndex << "] Increased the number of rendered tiles to: " << tileWorks.size());
 			}
@@ -254,9 +229,6 @@ void TilePathOCLRenderThread::RenderThreadImpl() {
 		//SLG_LOG("[TilePathOCLRenderThread::" << threadIndex << "] Rendering thread halted");
 	} catch (boost::thread_interrupted) {
 		SLG_LOG("[TilePathOCLRenderThread::" << threadIndex << "] Rendering thread halted");
-	} catch (cl::Error &err) {
-		SLG_LOG("[TilePathOCLRenderThread::" << threadIndex << "] Rendering thread ERROR: " << err.what() <<
-				"(" << oclErrorString(err.err()) << ")");
 	}
 
 	threadDone = true;
@@ -268,6 +240,8 @@ void TilePathOCLRenderThread::RenderThreadImpl() {
 		engine->renderOCLThreads[i]->Interrupt();
 	for (u_int i = 0; i < engine->renderNativeThreads.size(); ++i)
 		engine->renderNativeThreads[i]->Interrupt();
+	
+	intersectionDevice->PopThreadCurrentDevice();
 }
 
 #endif

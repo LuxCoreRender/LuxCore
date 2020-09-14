@@ -39,6 +39,7 @@
 #include "slg/textures/constfloat3.h"
 #include "slg/textures/cloud.h"
 #include "slg/textures/densitygrid.h"
+#include "slg/textures/distort.h"
 #include "slg/textures/dots.h"
 #include "slg/textures/fbm.h"
 #include "slg/textures/fresnelapprox.h"
@@ -73,13 +74,14 @@
 #include "slg/textures/math/subtract.h"
 #include "slg/textures/normalmap.h"
 #include "slg/textures/object_id.h"
-#include "slg/textures/windy.h"
-#include "slg/textures/wrinkled.h"
+#include "slg/textures/triplanar.h"
 #include "slg/textures/uv.h"
 #include "slg/textures/vectormath/dotproduct.h"
 #include "slg/textures/vectormath/makefloat3.h"
 #include "slg/textures/vectormath/splitfloat3.h"
-#include "slg/textures/triplanar.h"
+#include "slg/textures/windy.h"
+#include "slg/textures/wireframe.h"
+#include "slg/textures/wrinkled.h"
 
 using namespace std;
 using namespace luxrays;
@@ -100,6 +102,41 @@ void CompiledScene::CompileTextureMapping2D(slg::ocl::TextureMapping2D *mapping,
 			mapping->uvMapping2D.vScale = uvm->vScale;
 			mapping->uvMapping2D.uDelta = uvm->uDelta;
 			mapping->uvMapping2D.vDelta = uvm->vDelta;
+			break;
+		}
+		case UVRANDOMMAPPING2D: {
+			mapping->type = slg::ocl::UVRANDOMMAPPING2D;
+
+			const UVRandomMapping2D *uvm = static_cast<const UVRandomMapping2D *>(m);
+			mapping->dataIndex = uvm->GetDataIndex();
+
+			switch (uvm->seedType) {
+				case RandomMappingSeedType::OBJECT_ID:
+					mapping->uvRandomMapping2D.seedType = slg::ocl::RandomMappingSeedType::OBJECT_ID;
+					break;
+				case RandomMappingSeedType::TRIANGLE_AOV:
+					mapping->uvRandomMapping2D.seedType = slg::ocl::RandomMappingSeedType::TRIANGLE_AOV;
+					mapping->uvRandomMapping2D.triAOVIndex = uvm->triAOVIndex;
+					break;
+				case RandomMappingSeedType::OBJECT_ID_OFFSET:
+					mapping->uvRandomMapping2D.seedType = slg::ocl::RandomMappingSeedType::OBJECT_ID_OFFSET;
+					mapping->uvRandomMapping2D.objectIDOffset = uvm->objectIDOffset;
+					break;
+				default:
+					throw runtime_error("Unknown seed type in CompiledScene::CompileTextureMapping2D: " + ToString(uvm->seedType));
+			}
+
+			mapping->uvRandomMapping2D.uvRotationMin = uvm->uvRotationMin;
+			mapping->uvRandomMapping2D.uvRotationMax = uvm->uvRotationMax;
+			mapping->uvRandomMapping2D.uScaleMin = uvm->uScaleMin;
+			mapping->uvRandomMapping2D.uScaleMax = uvm->uScaleMax;
+			mapping->uvRandomMapping2D.vScaleMin = uvm->vScaleMin;
+			mapping->uvRandomMapping2D.vScaleMax = uvm->vScaleMax;
+			mapping->uvRandomMapping2D.uDeltaMin = uvm->uDeltaMin;
+			mapping->uvRandomMapping2D.uDeltaMax = uvm->uDeltaMax;
+			mapping->uvRandomMapping2D.vDeltaMin = uvm->vDeltaMin;
+			mapping->uvRandomMapping2D.vDeltaMax = uvm->vDeltaMax;
+			mapping->uvRandomMapping2D.uniformScale = uvm->uniformScale;
 			break;
 		}
 		default:
@@ -133,6 +170,53 @@ void CompiledScene::CompileTextureMapping3D(slg::ocl::TextureMapping3D *mapping,
 			const LocalMapping3D *gm = static_cast<const LocalMapping3D *>(m);
 			memcpy(&mapping->worldToLocal.m, &gm->worldToLocal.m, sizeof(float[4][4]));
 			memcpy(&mapping->worldToLocal.mInv, &gm->worldToLocal.mInv, sizeof(float[4][4]));
+			break;
+		}
+		case LOCALRANDOMMAPPING3D: {
+			mapping->type = slg::ocl::LOCALRANDOMMAPPING3D;
+
+			const LocalRandomMapping3D *gm = static_cast<const LocalRandomMapping3D *>(m);
+			memcpy(&mapping->worldToLocal.m, &gm->worldToLocal.m, sizeof(float[4][4]));
+			memcpy(&mapping->worldToLocal.mInv, &gm->worldToLocal.mInv, sizeof(float[4][4]));
+			
+			switch (gm->seedType) {
+				case RandomMappingSeedType::OBJECT_ID:
+					mapping->localRandomMapping.seedType = slg::ocl::RandomMappingSeedType::OBJECT_ID;
+					break;
+				case RandomMappingSeedType::TRIANGLE_AOV:
+					mapping->localRandomMapping.seedType = slg::ocl::RandomMappingSeedType::TRIANGLE_AOV;
+					mapping->localRandomMapping.triAOVIndex = gm->triAOVIndex;
+					break;
+				case RandomMappingSeedType::OBJECT_ID_OFFSET:
+					mapping->localRandomMapping.seedType = slg::ocl::RandomMappingSeedType::OBJECT_ID_OFFSET;
+					mapping->localRandomMapping.objectIDOffset = gm->objectIDOffset;
+					break;
+				default:
+					throw runtime_error("Unknown seed type in CompiledScene::CompileTextureMapping2D: " + ToString(gm->seedType));
+			}
+
+			mapping->localRandomMapping.xRotationMin = gm->xRotationMin;
+			mapping->localRandomMapping.xRotationMax = gm->xRotationMax;
+			mapping->localRandomMapping.yRotationMin = gm->yRotationMin;
+			mapping->localRandomMapping.yRotationMax = gm->yRotationMax;
+			mapping->localRandomMapping.zRotationMin = gm->zRotationMin;
+			mapping->localRandomMapping.zRotationMax = gm->zRotationMax;
+
+			mapping->localRandomMapping.xScaleMin = gm->xScaleMin;
+			mapping->localRandomMapping.xScaleMax = gm->xScaleMax;
+			mapping->localRandomMapping.yScaleMin = gm->xScaleMin;
+			mapping->localRandomMapping.yScaleMax = gm->xScaleMax;
+			mapping->localRandomMapping.zScaleMin = gm->zScaleMin;
+			mapping->localRandomMapping.zScaleMax = gm->zScaleMax;
+
+			mapping->localRandomMapping.xTranslateMin = gm->xTranslateMin;
+			mapping->localRandomMapping.xTranslateMax = gm->xTranslateMax;
+			mapping->localRandomMapping.yTranslateMin = gm->yTranslateMin;
+			mapping->localRandomMapping.yTranslateMax = gm->yTranslateMax;
+			mapping->localRandomMapping.zTranslateMin = gm->zTranslateMin;
+			mapping->localRandomMapping.zTranslateMax = gm->zTranslateMax;
+
+			mapping->localRandomMapping.uniformScale = gm->uniformScale;
 			break;
 		}
 		default:
@@ -494,7 +578,7 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 			switch (opType) {
 				case slg::ocl::TextureEvalOpType::EVAL_FLOAT:
 				case slg::ocl::TextureEvalOpType::EVAL_SPECTRUM: {
-					evalOpStackSize += CompileTextureOps(tex->hsvTex.texIndex, opType);
+					evalOpStackSize += CompileTextureOps(tex->hsvTex.texIndex, slg::ocl::TextureEvalOpType::EVAL_SPECTRUM);
 					evalOpStackSize += CompileTextureOps(tex->hsvTex.hueTexIndex, slg::ocl::TextureEvalOpType::EVAL_FLOAT);
 					evalOpStackSize += CompileTextureOps(tex->hsvTex.satTexIndex, slg::ocl::TextureEvalOpType::EVAL_FLOAT);
 					evalOpStackSize += CompileTextureOps(tex->hsvTex.valTexIndex, slg::ocl::TextureEvalOpType::EVAL_FLOAT);
@@ -793,6 +877,34 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 			}
 			break;
 		}
+		case slg::ocl::DISTORT_TEX: {
+			switch (opType) {
+				case slg::ocl::TextureEvalOpType::EVAL_FLOAT:
+				case slg::ocl::TextureEvalOpType::EVAL_SPECTRUM: {
+					// Eval offset texture
+					evalOpStackSize += CompileTextureOps(tex->distortTex.offsetTexIndex, slg::ocl::TextureEvalOpType::EVAL_SPECTRUM);
+
+					// EVAL_DISTORT_SETUP
+					slg::ocl::TextureEvalOp opSetUp;
+					opSetUp.texIndex = texIndex;
+					opSetUp.evalType = slg::ocl::TextureEvalOpType::EVAL_DISTORT_SETUP;
+					texEvalOps.push_back(opSetUp);
+					// Save original P and UV
+					evalOpStackSize += 3 + 2;
+
+					// Eval second texture
+					evalOpStackSize += CompileTextureOps(tex->distortTex.texIndex, slg::ocl::TextureEvalOpType::EVAL_SPECTRUM);
+					break;
+				}
+				case slg::ocl::TextureEvalOpType::EVAL_BUMP:
+					// Use generic bump map evaluation path
+					evalOpStackSize += CompileTextureOpsGenericBumpMap(texIndex);
+					break;
+				default:
+					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(" + ToString(tex->type) + "): " + ToString(opType));
+			}
+			break;
+		}
 		case slg::ocl::CHECKERBOARD2D: {
 			switch (opType) {
 				case slg::ocl::TextureEvalOpType::EVAL_FLOAT:
@@ -848,9 +960,9 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 			switch (opType) {
 				case slg::ocl::TextureEvalOpType::EVAL_FLOAT:
 				case slg::ocl::TextureEvalOpType::EVAL_SPECTRUM: {
-					evalOpStackSize += CompileTextureOps(tex->brick.tex1Index, opType);
-					evalOpStackSize += CompileTextureOps(tex->brick.tex2Index, opType);
-					evalOpStackSize += CompileTextureOps(tex->brick.tex3Index, opType);
+					evalOpStackSize += CompileTextureOps(tex->brick.tex1Index, slg::ocl::TextureEvalOpType::EVAL_SPECTRUM);
+					evalOpStackSize += CompileTextureOps(tex->brick.tex2Index, slg::ocl::TextureEvalOpType::EVAL_SPECTRUM);
+					evalOpStackSize += CompileTextureOps(tex->brick.tex3Index, slg::ocl::TextureEvalOpType::EVAL_SPECTRUM);
 					break;
 				}
 				case slg::ocl::TextureEvalOpType::EVAL_BUMP: {
@@ -883,6 +995,23 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 				case slg::ocl::TextureEvalOpType::EVAL_FLOAT:
 				case slg::ocl::TextureEvalOpType::EVAL_SPECTRUM: {
 					evalOpStackSize += CompileTextureOps(tex->randomTex.texIndex, slg::ocl::TextureEvalOpType::EVAL_FLOAT);
+					break;
+				}
+				case slg::ocl::TextureEvalOpType::EVAL_BUMP: {
+					evalOpStackSize += CompileTextureOpsGenericBumpMap(texIndex);
+					break;
+				}
+				default:
+					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(" + ToString(tex->type) + "): " + ToString(opType));
+			}
+			break;
+		}
+		case slg::ocl::WIREFRAME_TEX: {
+			switch (opType) {
+				case slg::ocl::TextureEvalOpType::EVAL_FLOAT:
+				case slg::ocl::TextureEvalOpType::EVAL_SPECTRUM: {
+					evalOpStackSize += CompileTextureOps(tex->wireFrameTex.borderTexIndex, opType);
+					evalOpStackSize += CompileTextureOps(tex->wireFrameTex.insideTexIndex, opType);
 					break;
 				}
 				case slg::ocl::TextureEvalOpType::EVAL_BUMP: {
@@ -953,8 +1082,6 @@ void CompiledScene::CompileTextureOps() {
 }
 
 void CompiledScene::CompileTextures() {
-	wasMaterialsCompiled = true;
-
 	const u_int texturesCount = scene->texDefs.GetSize();
 	SLG_LOG("Compile " << texturesCount << " Textures");
 	//SLG_LOG("  Texture size: " << sizeof(slg::ocl::Texture));
@@ -994,6 +1121,19 @@ void CompiledScene::CompileTextures() {
 				tex->imageMapTex.gain = imt->GetGain();
 				CompileTextureMapping2D(&tex->imageMapTex.mapping, imt->GetTextureMapping());
 				tex->imageMapTex.imageMapIndex = scene->imgMapCache.GetImageMapIndex(im);
+
+				if (imt->HasRandomizedTiling()) {
+					tex->imageMapTex.randomizedTiling = true;
+
+					tex->imageMapTex.randomizedTilingLUTIndex = scene->imgMapCache.GetImageMapIndex(imt->GetRandomizedTilingLUT());
+					tex->imageMapTex.randomizedTilingInvLUTIndex = scene->imgMapCache.GetImageMapIndex(imt->GetRandomizedTilingInvLUT());
+					tex->imageMapTex.randomImageMapIndex = scene->imgMapCache.GetImageMapIndex(ImageMapTexture::randomImageMap.get());
+				} else {
+					tex->imageMapTex.randomizedTiling = false;
+					tex->imageMapTex.randomizedTilingLUTIndex = NULL_INDEX;
+					tex->imageMapTex.randomizedTilingInvLUTIndex = NULL_INDEX;
+					tex->imageMapTex.randomImageMapIndex = NULL_INDEX;
+				}
 				break;
 			}
 			case SCALE_TEX: {
@@ -1159,10 +1299,7 @@ void CompiledScene::CompileTextures() {
 				tex->brick.mortarwidth = bt->GetMortarWidth();
 				tex->brick.mortarheight = bt->GetMortarHeight();
 				tex->brick.mortardepth = bt->GetMortarDepth();
-				tex->brick.bevelwidth = bt->GetBevelWidth();
-				tex->brick.bevelheight = bt->GetBevelHeight();
-				tex->brick.beveldepth = bt->GetBevelDepth();
-				tex->brick.usebevel = bt->GetUseBevel();
+				tex->brick.modulationBias = bt->GetModulationBias();
 				break;
 			}
 			case ADD_TEX: {
@@ -2041,6 +2178,30 @@ void CompiledScene::CompileTextures() {
 				tex->type = slg::ocl::RANDOM_TEX;
 				const Texture *t1 = rt->GetTexture();
 				tex->randomTex.texIndex = scene->texDefs.GetTextureIndex(t1);
+				break;
+			}
+			case WIREFRAME_TEX: {
+				const WireFrameTexture *wft = static_cast<const WireFrameTexture *>(t);
+
+				tex->type = slg::ocl::WIREFRAME_TEX;
+				tex->wireFrameTex.width = wft->GetWidth();
+				const Texture *borderTex = wft->GetBorderTex();
+				tex->wireFrameTex.borderTexIndex = scene->texDefs.GetTextureIndex(borderTex);
+
+				const Texture *insideTex = wft->GetInsideTex();
+				tex->wireFrameTex.insideTexIndex = scene->texDefs.GetTextureIndex(insideTex);
+				break;
+			}
+			case DISTORT_TEX: {
+				const DistortTexture *dt = static_cast<const DistortTexture *>(t);
+
+				tex->type = slg::ocl::DISTORT_TEX;
+				tex->distortTex.strength = dt->GetStrength();
+				const Texture *texture = dt->GetTex();
+				tex->distortTex.texIndex = scene->texDefs.GetTextureIndex(texture);
+
+				const Texture *offsetTex = dt->GetOffset();
+				tex->distortTex.offsetTexIndex = scene->texDefs.GetTextureIndex(offsetTex);
 				break;
 			}
 			default:

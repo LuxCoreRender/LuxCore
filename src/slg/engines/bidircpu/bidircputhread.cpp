@@ -19,6 +19,8 @@
 // NOTE: this is code is heavily based on Tomas Davidovic's SmallVCM
 // (http://www.davidovic.cz and http://www.smallvcm.com)
 
+#include "luxrays/utils/thread.h"
+
 #include "slg/engines/bidircpu/bidircpu.h"
 
 using namespace std;
@@ -28,6 +30,17 @@ using namespace slg;
 //------------------------------------------------------------------------------
 // BiDirCPU RenderThread
 //------------------------------------------------------------------------------
+
+const Film::FilmChannels BiDirCPURenderThread::eyeSampleResultsChannels({
+	Film::RADIANCE_PER_PIXEL_NORMALIZED, Film::ALPHA, Film::DEPTH,
+	Film::POSITION, Film::GEOMETRY_NORMAL, Film::SHADING_NORMAL, Film::MATERIAL_ID,
+	Film::UV, Film::OBJECT_ID, Film::SAMPLECOUNT, Film::CONVERGENCE,
+	Film::MATERIAL_ID_COLOR, Film::ALBEDO, Film::AVG_SHADING_NORMAL, Film::NOISE
+});
+
+const Film::FilmChannels BiDirCPURenderThread::lightSampleResultsChannels({
+	Film::RADIANCE_PER_SCREEN_NORMALIZED
+}); 
 
 BiDirCPURenderThread::BiDirCPURenderThread(BiDirCPURenderEngine *engine,
 		const u_int index, IntersectionDevice *device) :
@@ -43,13 +56,7 @@ SampleResult &BiDirCPURenderThread::AddResult(vector<SampleResult> &sampleResult
 	SampleResult &sampleResult = sampleResults[size];
 
 	sampleResult.Init(
-			fromLight ?
-				Film::RADIANCE_PER_SCREEN_NORMALIZED :
-				(Film::RADIANCE_PER_PIXEL_NORMALIZED | Film::ALPHA | Film::DEPTH |
-				Film::POSITION | Film::GEOMETRY_NORMAL | Film::SHADING_NORMAL | Film::MATERIAL_ID |
-				Film::UV | Film::OBJECT_ID | Film::SAMPLECOUNT | Film::CONVERGENCE |
-				Film::MATERIAL_ID_COLOR | Film::ALBEDO | Film::AVG_SHADING_NORMAL |
-				Film::NOISE),
+			fromLight ? &lightSampleResultsChannels : &eyeSampleResultsChannels,
 			engine->film->GetRadianceGroupCount());
 
 	return sampleResult;
@@ -98,7 +105,7 @@ void BiDirCPURenderThread::ConnectVertices(const float time,
 			BSDF bsdfConn;
 			Spectrum connectionThroughput;
 			PathVolumeInfo volInfo = eyeVertex.volInfo; // I need to use a copy here
-			if (!scene->Intersect(device, LIGHT_RAY | GENERIC_RAY, &volInfo, u0, &p2pRay, &p2pRayHit, &bsdfConn,
+			if (!scene->Intersect(device, LIGHT_RAY | INDIRECT_RAY, &volInfo, u0, &p2pRay, &p2pRayHit, &bsdfConn,
 					&connectionThroughput)) {
 				// Nothing was hit, the light path vertex is visible
 
@@ -254,7 +261,7 @@ void BiDirCPURenderThread::DirectLightSampling(const float time,
 					Spectrum connectionThroughput;
 					PathVolumeInfo volInfo = eyeVertex.volInfo; // I need to use a copy here
 					// Check if the light source is visible
-					if (!scene->Intersect(device, EYE_RAY | GENERIC_RAY, &volInfo, u4,
+					if (!scene->Intersect(device, EYE_RAY | SHADOW_RAY, &volInfo, u4,
 							&shadowRay, &shadowRayHit, &shadowBsdf, &connectionThroughput)) {
 						// I'm ignoring volume emission because it is not sampled in
 						// direct light step.
@@ -401,7 +408,7 @@ bool BiDirCPURenderThread::TraceLightPath(const float time,
 
 			RayHit nextEventRayHit;
 			Spectrum connectionThroughput;
-			const bool hit = scene->Intersect(device, LIGHT_RAY | GENERIC_RAY,
+			const bool hit = scene->Intersect(device, LIGHT_RAY | INDIRECT_RAY,
 					&lightVertex.volInfo, sampler->GetSample(sampleOffset),
 					&lightRay, &nextEventRayHit, &lightVertex.bsdf,
 					&connectionThroughput);
@@ -526,8 +533,12 @@ void BiDirCPURenderThread::RenderFunc() {
 	// Initialization
 	//--------------------------------------------------------------------------
 
+	// This is really used only by Windows for 64+ threads support
+	SetThreadGroupAffinity(threadIndex);
+
 	BiDirCPURenderEngine *engine = (BiDirCPURenderEngine *)renderEngine;
 	// (engine->seedBase + 1) seed is used for sharedRndGen
+
 	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + 1 + threadIndex);
 	Scene *scene = engine->renderConfig->scene;
 	Camera *camera = scene->camera;
@@ -623,7 +634,7 @@ void BiDirCPURenderThread::RenderFunc() {
 				RayHit eyeRayHit;
 				Spectrum connectionThroughput;
 				const bool hit = scene->Intersect(device,
-						EYE_RAY | (eyeSampleResult.firstPathVertex ? CAMERA_RAY : GENERIC_RAY),
+						EYE_RAY | (eyeSampleResult.firstPathVertex ? CAMERA_RAY : INDIRECT_RAY),
 						&eyeVertex.volInfo, sampler->GetSample(sampleOffset),
 						&eyeRay, &eyeRayHit, &eyeVertex.bsdf,
 						&connectionThroughput, &eyeVertex.throughput, &eyeSampleResult);

@@ -28,6 +28,8 @@
 
 namespace luxrays {
 
+class HardwareIntersectionDevice;
+
 // BVHAccel Declarations
 class BVHAccel : public Accelerator {
 public:
@@ -36,7 +38,12 @@ public:
 	virtual ~BVHAccel();
 
 	virtual AcceleratorType GetType() const { return ACCEL_BVH; }
-	virtual OpenCLKernel *NewOpenCLKernel(OpenCLIntersectionDevice *device) const;
+
+	virtual bool HasNativeSupport(const IntersectionDevice &device) const;
+	virtual bool HasHWSupport(const IntersectionDevice &device) const;
+
+	virtual HardwareIntersectionKernel *NewHardwareIntersectionKernel(HardwareIntersectionDevice &device) const;
+
 	virtual void Init(const std::deque<const Mesh *> &meshes,
 		const u_longlong totalVertexCount,
 		const u_longlong totalTriangleCount);
@@ -45,11 +52,9 @@ public:
 
 	static BVHParams ToBVHParams(const Properties &props);
 
+	friend class BVHKernel;
+	friend class MBVHKernel;
 	friend class MBVHAccel;
-#if !defined(LUXRAYS_DISABLE_OPENCL)
-	friend class OpenCLBVHKernel;
-	friend class OpenCLMBVHKernel;
-#endif
 
 private:
 	BVHParams params;

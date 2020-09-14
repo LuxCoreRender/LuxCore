@@ -32,6 +32,9 @@ void LightStrategyUniform::Preprocess(const Scene *scn, const LightStrategyTask 
 	DistributionLightStrategy::Preprocess(scn, taskType);
 	
 	const u_int lightCount = scene->lightDefs.GetSize();
+	if (lightCount == 0)
+		return;
+
 	vector<float> lightPower;
 	lightPower.reserve(lightCount);
 
