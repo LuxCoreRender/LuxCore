@@ -139,12 +139,12 @@ u_int CompiledScene::CompileMaterialOps(const u_int matIndex,
 		case ROUGHMATTETRANSLUCENT:
 		case GLOSSYTRANSLUCENT:
 		case DISNEY:
-		case TWOSIDED:  // TODO I probably need to move down to Materials with sub-nodes
 		case HOMOGENEOUS_VOL:
 		case CLEAR_VOL:
 		case HETEROGENEOUS_VOL:
 			switch (opType) {
 				case slg::ocl::EVAL_ALBEDO:
+					// 1 x parameter and 3 x results
 					evalOpStackSize += 3;
 					break;
 				case slg::ocl::EVAL_GET_INTERIOR_VOLUME:
@@ -360,6 +360,99 @@ u_int CompiledScene::CompileMaterialOps(const u_int matIndex,
 				}
 				default:
 					throw runtime_error("Unknown eval. type in CompiledScene::CompileMaterialOps(" + ToString(mat->type) + "): " + ToString(opType));
+			}
+			case TWOSIDED: {
+				switch (opType) {
+					case slg::ocl::EVAL_ALBEDO:
+						evalOpStackSize += CompileMaterialOps(matIndex, slg::ocl::EVAL_TWOSIDED_SETUP, evalOps);
+						evalOpStackSize += CompileMaterialConditionalOps(matIndex,
+								mat->twosided.frontMatIndex, opType,
+								mat->twosided.backMatIndex, opType,
+								evalOps);
+
+						addDefaultOp = false;
+						break;
+					case slg::ocl::EVAL_GET_INTERIOR_VOLUME:
+						if (mat->interiorVolumeIndex == NULL_INDEX) {
+							evalOpStackSize += CompileMaterialOps(matIndex, slg::ocl::EVAL_TWOSIDED_SETUP, evalOps);
+							evalOpStackSize += CompileMaterialConditionalOps(matIndex,
+									mat->twosided.frontMatIndex, opType,
+									mat->twosided.backMatIndex, opType,
+									evalOps);
+
+							addDefaultOp = false;
+						} else {
+							// 1 x parameter and 1 x result
+							evalOpStackSize += 1;
+						}
+						break;
+					case slg::ocl::EVAL_GET_EXTERIOR_VOLUME:
+						if (mat->exteriorVolumeIndex == NULL_INDEX) {
+							evalOpStackSize += CompileMaterialOps(matIndex, slg::ocl::EVAL_TWOSIDED_SETUP, evalOps);
+							evalOpStackSize += CompileMaterialConditionalOps(matIndex,
+									mat->twosided.frontMatIndex, opType,
+									mat->twosided.backMatIndex, opType,
+									evalOps);
+
+							addDefaultOp = false;
+						} else {
+							// 1 x parameter and 1 x result
+							evalOpStackSize += 1;
+						}
+						break;
+					case slg::ocl::EVAL_GET_EMITTED_RADIANCE:
+						if (mat->emitTexIndex == NULL_INDEX) {
+							evalOpStackSize += CompileMaterialOps(matIndex, slg::ocl::EVAL_TWOSIDED_SETUP, evalOps);
+							evalOpStackSize += CompileMaterialConditionalOps(matIndex,
+									mat->twosided.frontMatIndex, opType,
+									mat->twosided.backMatIndex, opType,
+									evalOps);
+
+							addDefaultOp = false;
+						} else {
+							// 1 x parameter and 3 x results
+							evalOpStackSize += 3;
+						}
+						break;
+					case slg::ocl::EVAL_GET_PASS_TROUGH_TRANSPARENCY:
+						if ((mat->frontTranspTexIndex == NULL_INDEX) && (mat->backTranspTexIndex == NULL_INDEX)) {
+							evalOpStackSize += CompileMaterialOps(matIndex, slg::ocl::EVAL_TWOSIDED_SETUP, evalOps);
+							evalOpStackSize += CompileMaterialConditionalOps(matIndex,
+									mat->twosided.frontMatIndex, opType,
+									mat->twosided.backMatIndex, opType,
+									evalOps);
+
+							addDefaultOp = false;
+						} else {
+							// 5 x parameters and 3 x results
+							evalOpStackSize += 5;
+						}
+						break;
+					case slg::ocl::EVAL_EVALUATE:
+						evalOpStackSize += CompileMaterialOps(matIndex, slg::ocl::EVAL_TWOSIDED_SETUP, evalOps);
+						evalOpStackSize += CompileMaterialConditionalOps(matIndex,
+								mat->twosided.frontMatIndex, opType,
+								mat->twosided.backMatIndex, opType,
+								evalOps);
+
+						addDefaultOp = false;
+						break;
+					case slg::ocl::EVAL_SAMPLE:
+						evalOpStackSize += CompileMaterialOps(matIndex, slg::ocl::EVAL_TWOSIDED_SETUP, evalOps);
+						evalOpStackSize += CompileMaterialConditionalOps(matIndex,
+								mat->twosided.frontMatIndex, opType,
+								mat->twosided.backMatIndex, opType,
+								evalOps);
+
+						addDefaultOp = false;
+						break;
+					case slg::ocl::EVAL_TWOSIDED_SETUP:
+						// 1 x parameter and 1 x results
+						evalOpStackSize += 1;
+						break;
+					default:
+						throw runtime_error("Unknown eval. type in CompiledScene::CompileMaterialOps(" + ToString(mat->type) + "): " + ToString(opType));
+				}
 			}
 			break;
 		default:

@@ -28,6 +28,7 @@
 * Added the support for UVRandomMapping2D
 * Added the support for LocalRandomMapping3D
 * Added the support for Caustic AOV when using hybrid rendering
+* Added the support for TwoSided material
 
 ### Fixed Bugs
 

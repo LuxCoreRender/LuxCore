@@ -63,10 +63,19 @@ OPENCL_FORCE_INLINE float Material_GetEmittedCosThetaMax(const uint matIndex
 
 OPENCL_FORCE_INLINE void Material_Bump(const uint matIndex, __global HitPoint *hitPoint
 	MATERIALS_PARAM_DECL) {
-	const uint bumpTexIndex = mats[matIndex].bumpTexIndex;
+	__global const Material *material = &mats[matIndex];
+
+	uint bumpTexIndex;
 	
+	// A special case here for TWOSIDED material
+	if (material->type == TWOSIDED) {
+		bumpTexIndex = hitPoint->intoObject ? mats[material->twosided.frontMatIndex].bumpTexIndex : 
+			mats[material->twosided.backMatIndex].bumpTexIndex;
+	} else
+		bumpTexIndex = material->bumpTexIndex;
+
 	if (bumpTexIndex != NULL_INDEX) {
-		const float3 shadeN = Texture_Bump(mats[matIndex].bumpTexIndex, hitPoint, mats[matIndex].bumpSampleDistance
+		const float3 shadeN = Texture_Bump(bumpTexIndex, hitPoint, material->bumpSampleDistance
 			TEXTURES_PARAM);
 
 		// Update dpdu and dpdv so they are still orthogonal to shadeN
