@@ -22,6 +22,7 @@
 #include "luxrays/core/color/spectrumwavelengths.h"
 #include "luxrays/core/color/swcspectrum.h"
 #include "luxrays/core/color/spds/data/xyzbasis.h"
+#include "luxrays/core/color/spds/blackbodyspd.h"
 
 using namespace luxrays;
 
@@ -338,4 +339,31 @@ ColorAdaptator &ColorAdaptator::operator*=(float s) {
 			conv[i][j] *= s;
 	}
 	return *this;
+}
+
+Spectrum luxrays::TemperatureToWhitePoint(const float temperature, const bool normalize) {
+    BlackbodySPD spd(temperature);
+
+    XYZColor colorTemp = spd.ToXYZ();
+
+    ColorSystem colorSpace;
+    Spectrum scale = colorSpace.ToRGBConstrained(colorTemp).Clamp(0.f);
+
+	// To find the normalization factor below
+
+	/*float maxValue = 0.f;
+	for (u_int i = 0; i < 13000; i += 1) {
+		BlackbodySPD spd(i);
+
+		ColorSystem colorSpace;
+		Spectrum s = colorSpace.ToRGBConstrained(spd.ToXYZ()).Clamp(0.f);
+		maxValue = Max(maxValue, s.Max());
+	}
+	cout << maxValue << "\n";*/
+
+	// To normalize scale, divide by maxValue
+	if (normalize)
+		scale /= 89159.6f;
+
+    return scale;
 }

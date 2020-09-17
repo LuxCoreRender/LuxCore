@@ -18,7 +18,6 @@
  ***************************************************************************/
 
 #include "slg/film/imagepipeline/imagepipeline.h"
-#include "luxrays/core/color/spds/blackbodyspd.h"
 
 using namespace std;
 using namespace luxrays;
@@ -29,7 +28,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 RadianceChannelScale::RadianceChannelScale() : globalScale(1.f), temperature(0.f), rgbScale(1.f),
-		enabled(true) {
+		reverse(true), normalize(false), enabled(true) {
 	Init();
 }
 
@@ -38,12 +37,9 @@ void RadianceChannelScale::Init() {
 		scale = 0.f;
 	else {
 		if (temperature > 0.f) {
-			BlackbodySPD spd(temperature);
-			XYZColor colorTemp = spd.ToXYZ();
-			colorTemp /= colorTemp.Y();
-
-			ColorSystem colorSpace;
-			scale = colorSpace.ToRGBConstrained(colorTemp).Clamp(0.f, 1.f) * rgbScale;
+			scale = TemperatureToWhitePoint(temperature, normalize);
+			if (reverse)
+				scale = Spectrum(1.f) / scale;
 		} else
 			scale = rgbScale;
 

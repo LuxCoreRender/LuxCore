@@ -31,17 +31,22 @@ using namespace slg;
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::WhiteBalance)
 
-WhiteBalance::WhiteBalance(): whitePoint(TemperatureToWhitePoint(6500.f)) {
+WhiteBalance::WhiteBalance(const float temperature, const bool reverse, const bool normalize) {
+	scale = TemperatureToWhitePoint(temperature, normalize);
+	if (reverse)
+		scale = Spectrum(1.f) / scale;
+			
 	applyKernel = nullptr;
 }
 
-WhiteBalance::WhiteBalance(const float temperature):
-		whitePoint(TemperatureToWhitePoint(temperature)) {
+WhiteBalance::WhiteBalance() {
+	scale = TemperatureToWhitePoint(6500.f, false);
+	scale = Spectrum(1.f) / scale;
+
 	applyKernel = nullptr;
 }
 
-WhiteBalance::WhiteBalance(const Spectrum &wht_pt): whitePoint(wht_pt) {
-	applyKernel = nullptr;
+WhiteBalance::WhiteBalance(const Spectrum &s): scale(s), applyKernel(nullptr) {
 }
 
 WhiteBalance::~WhiteBalance() {
@@ -49,18 +54,7 @@ WhiteBalance::~WhiteBalance() {
 }
 
 ImagePipelinePlugin *WhiteBalance::Copy() const {
-    return new WhiteBalance(whitePoint);
-}
-
-Spectrum WhiteBalance::TemperatureToWhitePoint(const float temperature) {
-    // Same code as in the RadianceChannelScale class
-    BlackbodySPD spd(temperature);
-    XYZColor colorTemp = spd.ToXYZ();
-    colorTemp /= colorTemp.Y();
-
-    ColorSystem colorSpace;
-    Spectrum scale = colorSpace.ToRGBConstrained(colorTemp).Clamp(0.f, 1.f);
-    return scale;
+    return new WhiteBalance(scale);
 }
 
 void WhiteBalance::Apply(Film &film, const u_int index) {
@@ -78,7 +72,7 @@ void WhiteBalance::Apply(Film &film, const u_int index) {
 			unsigned
 #endif
 			int i = 0; i < pixelCount; ++i) {
-		pixels[i] *= whitePoint;
+		pixels[i] *= scale;
 	}
 }
 
@@ -117,9 +111,9 @@ void WhiteBalance::ApplyHW(Film &film, const u_int index) {
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.GetWidth());
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.GetHeight());
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.hw_IMAGEPIPELINE);
-		hardwareDevice->SetKernelArg(applyKernel, argIndex++, whitePoint.c[0]);
-		hardwareDevice->SetKernelArg(applyKernel, argIndex++, whitePoint.c[1]);
-		hardwareDevice->SetKernelArg(applyKernel, argIndex++, whitePoint.c[2]);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, scale.c[0]);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, scale.c[1]);
+		hardwareDevice->SetKernelArg(applyKernel, argIndex++, scale.c[2]);
 
 		const double tEnd = WallClockTime();
 		SLG_LOG("[WhiteBalance] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");

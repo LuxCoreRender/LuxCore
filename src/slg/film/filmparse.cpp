@@ -541,6 +541,8 @@ void Film::ParseRadianceGroupsScale(const Properties &props, const u_int imagePi
 		radianceChannelScale.globalScale = props.Get(Property(prefix + ".globalscale")(1.f)).Get<float>();
 		radianceChannelScale.temperature = props.Get(Property(prefix + ".temperature")(0.f)).Get<float>();
 		radianceChannelScale.rgbScale = props.Get(Property(prefix + ".rgbscale")(1.f, 1.f, 1.f)).Get<Spectrum>();
+		radianceChannelScale.reverse = props.Get(Property(prefix + ".reverse")(true)).Get<bool>();
+		radianceChannelScale.normalize = props.Get(Property(prefix + ".normalize")(false)).Get<bool>();
 		radianceChannelScale.enabled = props.Get(Property(prefix + ".enabled")(true)).Get<bool>();
 
 		imagePipelines[imagePipelineIndex]->SetRadianceChannelScale(index, radianceChannelScale);
@@ -726,7 +728,10 @@ ImagePipeline *Film::CreateImagePipeline(const Properties &props, const string &
 				imagePipeline->AddPlugin(new IntelOIDN(filterType, oidnMemLimit, sharpness));
 			} else if (type == "WHITE_BALANCE") {
 				const float temperature = Clamp(props.Get(Property(prefix + ".temperature")(6500.f)).Get<float>(), 1000.f, 40000.f);
-				imagePipeline->AddPlugin(new WhiteBalance(temperature));
+				const bool reverse = props.Get(Property(prefix + ".reverse")(true)).Get<bool>();
+				const bool normalize = props.Get(Property(prefix + ".normalize")(false)).Get<bool>();
+
+				imagePipeline->AddPlugin(new WhiteBalance(temperature, reverse, normalize));
 			} else if (type == "BAKEMAP_MARGIN") {
 				const u_int marginPixels = Max(props.Get(Property(prefix + ".margin")(2)).Get<u_int>(), 1u);
 				const float samplesThreshold = Max(props.Get(Property(prefix + ".samplesthreshold")(0.f)).Get<float>(), 0.f);

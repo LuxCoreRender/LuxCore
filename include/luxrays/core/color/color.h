@@ -493,6 +493,8 @@ inline std::ostream &operator<<(std::ostream &os, const XYZColor &s) {
 
 typedef RGBColor Spectrum;
 
+extern Spectrum TemperatureToWhitePoint(const float temperature, const bool normalize);
+
 }
 
 // Eliminate serialization overhead at the cost of

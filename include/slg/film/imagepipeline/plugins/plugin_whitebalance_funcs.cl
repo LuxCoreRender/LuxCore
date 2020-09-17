@@ -25,7 +25,7 @@
 __kernel void WhiteBalance_Apply(
 		const uint filmWidth, const uint filmHeight,
 		__global float *channel_IMAGEPIPELINE,
-		const float whitePointR, const float whitePointG, const float whitePointB) {
+		const float scaleR, const float scaleG, const float scaleB) {
 	const size_t gid = get_global_id(0);
 	if (gid >= filmWidth * filmHeight)
 		return;
@@ -34,8 +34,8 @@ __kernel void WhiteBalance_Apply(
 	if (!isinf(channel_IMAGEPIPELINE[gid * 3])) {
 		__global float *pixel = &channel_IMAGEPIPELINE[gid * 3];
 
-		pixel[0] *= whitePointR;
-		pixel[1] *= whitePointG;
-		pixel[2] *= whitePointB;
+		pixel[0] *= scaleR;
+		pixel[1] *= scaleG;
+		pixel[2] *= scaleB;
 	}
 }

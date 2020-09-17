@@ -34,8 +34,7 @@ namespace slg {
 
 class WhiteBalance : public ImagePipelinePlugin {
 public:
-	WhiteBalance();
-	WhiteBalance(const float temperature);
+	WhiteBalance(const float temperature, const bool reverse, const bool normalize);
 	~WhiteBalance();
 
 	virtual ImagePipelinePlugin *Copy() const;
@@ -49,15 +48,14 @@ public:
 	friend class boost::serialization::access;
 
 private:
-	WhiteBalance(const luxrays::Spectrum &whitePoint);
+	WhiteBalance();
+	WhiteBalance(const luxrays::Spectrum &scale);
 
-	luxrays::Spectrum whitePoint;
-
-	static luxrays::Spectrum TemperatureToWhitePoint(const float temperature);
+	luxrays::Spectrum scale;
 
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImagePipelinePlugin);
-		ar & whitePoint;
+		ar & scale;
 	}
 
 	luxrays::HardwareDeviceKernel *applyKernel;
@@ -65,7 +63,7 @@ private:
 
 }
 
-BOOST_CLASS_VERSION(slg::WhiteBalance, 1)
+BOOST_CLASS_VERSION(slg::WhiteBalance, 2)
 
 BOOST_CLASS_EXPORT_KEY(slg::WhiteBalance)
 

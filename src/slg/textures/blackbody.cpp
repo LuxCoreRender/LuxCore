@@ -16,8 +16,6 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "luxrays/core/color/spds/blackbodyspd.h"
-
 #include "slg/textures/blackbody.h"
 
 using namespace std;
@@ -30,24 +28,7 @@ using namespace slg;
 
 BlackBodyTexture::BlackBodyTexture(const float temp, const bool norm) :
 		temperature(temp), normalize(norm) {
-	BlackbodySPD spd(temperature);
-
-	ColorSystem colorSpace;
-	rgb = colorSpace.ToRGBConstrained(spd.ToXYZ()).Clamp(0.f);
-
-	/*float maxValue = 0.f;
-	for (u_int i = 0; i < 13000; i += 1) {
-		BlackbodySPD spd(i);
-
-		ColorSystem colorSpace;
-		Spectrum s = colorSpace.ToRGBConstrained(spd.ToXYZ()).Clamp(0.f);
-		maxValue = Max(maxValue, s.Max());
-	}
-	cout << maxValue << "\n";*/
-	
-	// To normalize rgb, divide by maxValue
-	if (normalize)
-		rgb /= 89159.6f;
+	rgb = TemperatureToWhitePoint(temperature, norm);
 }
 
 Properties BlackBodyTexture::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {

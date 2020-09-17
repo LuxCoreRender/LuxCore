@@ -32,6 +32,8 @@ template<class Archive> void RadianceChannelScale::save(Archive &ar, const u_int
 	ar & globalScale;
 	ar & temperature;
 	ar & rgbScale;
+	ar & reverse;
+	ar & normalize;
 	ar & enabled;
 }
 
@@ -39,6 +41,8 @@ template<class Archive> void RadianceChannelScale::load(Archive &ar, const u_int
 	ar & globalScale;
 	ar & temperature;
 	ar & rgbScale;
+	ar & reverse;
+	ar & normalize;
 	ar & enabled;
 
 	Init();

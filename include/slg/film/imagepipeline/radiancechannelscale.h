@@ -50,7 +50,7 @@ public:
 
 	float globalScale, temperature;
 	luxrays::Spectrum rgbScale;
-	bool enabled;
+	bool reverse, normalize, enabled;
 
 	friend class boost::serialization::access;
 
@@ -64,7 +64,7 @@ private:
 
 }
 
-BOOST_CLASS_VERSION(slg::RadianceChannelScale, 1)
+BOOST_CLASS_VERSION(slg::RadianceChannelScale, 2)
 		
 BOOST_CLASS_EXPORT_KEY(slg::RadianceChannelScale)
 
