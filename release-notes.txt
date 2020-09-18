@@ -30,6 +30,7 @@
 * Added the support for Caustic AOV when using hybrid rendering
 * Added the support for TwoSided material
 * Reworked WhiteBalance plugin and light groups white balance support to be coherent with usual photographic white balance process (note: this change breaks the compatibility with past scene settings)
+* Added a cap (25% and 75%) to Glass transmission/reflection sampling to not under sample some case
 
 ### Fixed Bugs
 

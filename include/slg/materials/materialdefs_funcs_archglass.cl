@@ -170,8 +170,12 @@ OPENCL_FORCE_INLINE void ArchGlassMaterial_GetPassThroughTransparency(__global c
 			// Importance sampling
 			const float reflFilter = Spectrum_Filter(refl);
 			const float transFilter = Spectrum_Filter(trans);
-			const float threshold = transFilter / (reflFilter + transFilter);
-			
+			float threshold = transFilter / (reflFilter + transFilter);
+
+			// A place an upper and lower limit to not under sample
+			// reflection or transmission
+			threshold = clamp(threshold, .25f, .75f);
+
 			if (passThroughEvent < threshold) {
 				// Transmit
 				transp = trans / threshold;
@@ -251,6 +255,10 @@ OPENCL_FORCE_INLINE void ArchGlassMaterial_Sample(__global const Material* restr
 			const float reflFilter = Spectrum_Filter(refl);
 			const float transFilter = Spectrum_Filter(trans);
 			threshold = transFilter / (reflFilter + transFilter);
+
+			// A place an upper and lower limit to not under sample
+			// reflection or transmission
+			threshold = clamp(threshold, .25f, .75f);
 		} else
 			threshold = 0.f;
 	} else {

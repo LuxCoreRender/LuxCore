@@ -217,6 +217,10 @@ Spectrum GlassMaterial::Sample(const HitPoint &hitPoint,
 			const float reflFilter = refl.Filter();
 			const float transFilter = trans.Filter();
 			threshold = transFilter / (reflFilter + transFilter);
+
+			// A place an upper and lower limit to not under sample
+			// reflection or transmission
+			threshold = Clamp(threshold, .25f, .75f);
 		} else
 			threshold = 0.f;
 	} else {

@@ -127,6 +127,10 @@ Spectrum ArchGlassMaterial::Sample(const HitPoint &hitPoint,
 			const float reflFilter = refl.Filter();
 			const float transFilter = trans.Filter();
 			threshold = transFilter / (reflFilter + transFilter);
+
+			// A place an upper and lower limit to not under sample
+			// reflection or transmission
+			threshold = Clamp(threshold, .25f, .75f);
 		} else
 			threshold = 0.f;
 	} else {
@@ -178,13 +182,16 @@ Spectrum ArchGlassMaterial::GetPassThroughTransparency(const HitPoint &hitPoint,
 			kr, nc, nt, &reflLocalSampledDir, localFilmThickness, localFilmIor);
 
 	// Decide to transmit or reflect
-	float threshold;
 	if (!refl.Black()) {
 		if (!trans.Black()) {
 			// Importance sampling
 			const float reflFilter = refl.Filter();
 			const float transFilter = trans.Filter();
-			threshold = transFilter / (reflFilter + transFilter);
+			float threshold = transFilter / (reflFilter + transFilter);
+			
+			// A place an upper and lower limit to not under sample
+			// reflection or transmission
+			threshold = Clamp(threshold, .25f, .75f);
 			
 			if (passThroughEvent < threshold) {
 				// Transmit

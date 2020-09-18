@@ -243,6 +243,10 @@ OPENCL_FORCE_INLINE void GlassMaterial_Sample(__global const Material* restrict 
 			const float reflFilter = Spectrum_Filter(refl);
 			const float transFilter = Spectrum_Filter(trans);
 			threshold = transFilter / (reflFilter + transFilter);
+
+			// A place an upper and lower limit to not under sample
+			// reflection or transmission
+			threshold = clamp(threshold, .25f, .75f);
 		} else
 			threshold = 0.f;
 	} else {
