@@ -36,6 +36,8 @@ SharpDistantLight::~SharpDistantLight() {
 }
 
 void SharpDistantLight::Preprocess() {
+	InfiniteLightSource::Preprocess();
+
 	absoluteLightDir = Normalize(lightToWorld * localLightDir);
 	CoordinateSystem(absoluteLightDir, &x, &y);
 }
@@ -64,7 +66,7 @@ void SharpDistantLight::GetPreprocessedData(float *absoluteLightDirData,
 float SharpDistantLight::GetPower(const Scene &scene) const {
 	const float envRadius = GetEnvRadius(scene);
 
-	return gain.Y() * color.Y() * M_PI * envRadius * envRadius;
+	return temperatureScale.Y() * gain.Y() * color.Y() * M_PI * envRadius * envRadius;
 }
 
 Spectrum SharpDistantLight::Emit(const Scene &scene,
@@ -89,7 +91,7 @@ Spectrum SharpDistantLight::Emit(const Scene &scene,
 
 	ray.Update(rayOrig, absoluteLightDir, time);
 
-	return gain * color;
+	return temperatureScale * gain * color;
 }
 
 Spectrum SharpDistantLight::Illuminate(const Scene &scene, const BSDF &bsdf,
@@ -118,7 +120,7 @@ Spectrum SharpDistantLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 
 	shadowRay = Ray(shadowRayOrig, shadowRayDir, 0.f, shadowRayDistance, time);
 
-	return gain * color;
+	return temperatureScale * gain * color;
 }
 
 Properties SharpDistantLight::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {

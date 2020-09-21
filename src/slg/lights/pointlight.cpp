@@ -39,12 +39,14 @@ PointLight::~PointLight() {
 }
 
 void PointLight::Preprocess() {
+	NotIntersectableLightSource::Preprocess();
+
 	const float normalizeFactor = emittedPowerNormalize ? (1.f / Max(color.Y(), 0.f)) : 1.f;
 
-	emittedFactor = gain * color * (power * efficency * normalizeFactor);
+	emittedFactor = temperatureScale * gain * color * (power * efficency * normalizeFactor);
 
 	if (emittedFactor.Black() || emittedFactor.IsInf() || emittedFactor.IsNaN())
-		emittedFactor = gain * color;
+		emittedFactor = temperatureScale * gain * color;
 
 	absolutePos = lightToWorld * localPos;
 }

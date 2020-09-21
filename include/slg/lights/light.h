@@ -148,8 +148,11 @@ public:
 class NotIntersectableLightSource : public LightSource {
 public:
 	NotIntersectableLightSource() :
-		gain(1.f), id(0), importance(1.f) { }
+		gain(1.f), temperature(-1.f), normalizeTemperature(false),
+		id(0), importance(1.f), temperatureScale(1.f) { }
 	virtual ~NotIntersectableLightSource() { }
+
+	virtual void Preprocess();
 
 	virtual bool IsDirectLightSamplingEnabled() const { return true; }
 
@@ -157,19 +160,26 @@ public:
 	virtual bool IsVisibleIndirectGlossy() const { return false; }
 	virtual bool IsVisibleIndirectSpecular() const { return false; }
 	
-	virtual void SetID(const u_int lightID) { id = lightID; }
-	virtual u_int GetID() const { return id; }
-	virtual float GetImportance() const { return importance; }
-	virtual void SetImportance(const float imp) { importance = imp; }
+	void SetID(const u_int lightID) { id = lightID; }
+	u_int GetID() const { return id; }
+	float GetImportance() const { return importance; }
+	void SetImportance(const float imp) { importance = imp; }
+	
+	const luxrays::Spectrum &GetTemperatureScale() const { return temperatureScale; }
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 	luxrays::Transform lightToWorld;
 	luxrays::Spectrum gain;
 
+	float temperature;
+	bool normalizeTemperature;
+
 protected:
 	u_int id;
 	float importance;
+
+	luxrays::Spectrum temperatureScale;
 };
 
 //------------------------------------------------------------------------------

@@ -116,7 +116,7 @@ typedef struct {
 
 typedef struct {
 	Transform light2World;
-	Spectrum gain;
+	Spectrum gain, temperatureScale;
 
 	union {
 		SunLightParam sun;

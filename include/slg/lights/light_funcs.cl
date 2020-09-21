@@ -72,7 +72,8 @@ OPENCL_FORCE_INLINE float3 ConstantInfiniteLight_GetRadiance(__global const Ligh
 	} else
 		*directPdfA = bsdf ? UniformSpherePdf() : 0.f;
 
-	return VLOAD3F(constantInfiniteLight->notIntersectable.gain.c) *
+	return VLOAD3F(constantInfiniteLight->notIntersectable.temperatureScale.c) *
+			VLOAD3F(constantInfiniteLight->notIntersectable.gain.c) *
 			VLOAD3F(constantInfiniteLight->notIntersectable.constantInfinite.color.c);
 }
 
@@ -126,7 +127,8 @@ OPENCL_FORCE_INLINE float3 ConstantInfiniteLight_Illuminate(__global const Light
 	const float3 shadowRayOrig = BSDF_GetRayOrigin(bsdf, shadowRayDir);
 	Ray_Init4(shadowRay, shadowRayOrig, shadowRayDir, 0.f, shadowRayDistance, time);
 
-	return VLOAD3F(constantInfiniteLight->notIntersectable.gain.c) *
+	return VLOAD3F(constantInfiniteLight->notIntersectable.temperatureScale.c) *
+			VLOAD3F(constantInfiniteLight->notIntersectable.gain.c) *
 			VLOAD3F(constantInfiniteLight->notIntersectable.constantInfinite.color.c);
 }
 
@@ -157,10 +159,12 @@ OPENCL_FORCE_INLINE float3 InfiniteLight_GetRadiance(__global const LightSource 
 	}
 
 	__global const ImageMap *imageMap = &imageMapDescs[infiniteLight->notIntersectable.infinite.imageMapIndex];
-	return VLOAD3F(infiniteLight->notIntersectable.gain.c) * ImageMap_GetSpectrum(
-			imageMap,
-			u, v
-			IMAGEMAPS_PARAM);
+	return VLOAD3F(infiniteLight->notIntersectable.temperatureScale.c) *
+			VLOAD3F(infiniteLight->notIntersectable.gain.c) *
+			ImageMap_GetSpectrum(
+				imageMap,
+				u, v
+				IMAGEMAPS_PARAM);
 }
 
 OPENCL_FORCE_INLINE float3 InfiniteLight_Illuminate(__global const LightSource *infiniteLight,
@@ -219,10 +223,12 @@ OPENCL_FORCE_INLINE float3 InfiniteLight_Illuminate(__global const LightSource *
 
 	const float2 uv = MAKE_FLOAT2(sampleUV.x, sampleUV.y);
 
-	return VLOAD3F(infiniteLight->notIntersectable.gain.c) * ImageMap_GetSpectrum(
-			imageMap,
-			uv.x, uv.y
-			IMAGEMAPS_PARAM);
+	return VLOAD3F(infiniteLight->notIntersectable.temperatureScale.c) *
+			VLOAD3F(infiniteLight->notIntersectable.gain.c) *
+			ImageMap_GetSpectrum(
+				imageMap,
+				uv.x, uv.y
+				IMAGEMAPS_PARAM);
 }
 
 //------------------------------------------------------------------------------
@@ -268,7 +274,9 @@ OPENCL_FORCE_INLINE float3 Sky2Light_ComputeRadiance(__global const LightSource 
 		// Lower hemisphere
 		return VLOAD3F(sky2Light->notIntersectable.sky2.scaledGroundColor.c);
 	} else
-		return VLOAD3F(sky2Light->notIntersectable.gain.c) * Sky2Light_ComputeSkyRadiance(sky2Light, w);
+		return VLOAD3F(sky2Light->notIntersectable.temperatureScale.c) *
+				VLOAD3F(sky2Light->notIntersectable.gain.c) *
+				Sky2Light_ComputeSkyRadiance(sky2Light, w);
 }
 
 OPENCL_FORCE_INLINE float3 Sky2Light_GetRadiance(__global const LightSource *sky2Light,
@@ -850,7 +858,8 @@ OPENCL_FORCE_INLINE float3 SharpDistantLight_Illuminate(__global const LightSour
 	const float3 shadowRayOrig = BSDF_GetRayOrigin(bsdf, shadowRayDir);
 	Ray_Init4(shadowRay, shadowRayOrig, shadowRayDir, 0.f, shadowRayDistance, time);
 
-	return VLOAD3F(sharpDistantLight->notIntersectable.gain.c) *
+	return VLOAD3F(sharpDistantLight->notIntersectable.temperatureScale.c) *
+			VLOAD3F(sharpDistantLight->notIntersectable.gain.c) *
 			VLOAD3F(sharpDistantLight->notIntersectable.sharpDistant.color.c);
 }
 
@@ -886,7 +895,8 @@ OPENCL_FORCE_INLINE float3 DistantLight_Illuminate(__global const LightSource *d
 	const float3 shadowRayOrig = BSDF_GetRayOrigin(bsdf, shadowRayDir);
 	Ray_Init4(shadowRay, shadowRayOrig, shadowRayDir, 0.f, shadowRayDistance, time);
 
-	return VLOAD3F(distantLight->notIntersectable.gain.c) *
+	return VLOAD3F(distantLight->notIntersectable.temperatureScale.c) *
+			VLOAD3F(distantLight->notIntersectable.gain.c) *
 			VLOAD3F(distantLight->notIntersectable.sharpDistant.color.c);
 }
 

@@ -53,15 +53,19 @@ string LightSource::LightSourceType2String(const LightSourceType type) {
 // NotIntersectableLightSource
 //------------------------------------------------------------------------------
 
+void NotIntersectableLightSource::Preprocess() {
+	temperatureScale = (temperature >= 0.f) ? TemperatureToWhitePoint(temperature, normalizeTemperature) : Spectrum(1.f);
+}
+
 Properties NotIntersectableLightSource::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	const string prefix = "scene.lights." + GetName();
-	Properties props;
 
-	props.Set(Property(prefix + ".gain")(gain));
-	props.Set(Property(prefix + ".transformation")(lightToWorld.m));
-	props.Set(Property(prefix + ".id")(id));
-
-	return props;
+	return Properties() <<
+			Property(prefix + ".gain")(gain) <<
+			Property(prefix + ".transformation")(lightToWorld.m) <<
+			Property(prefix + ".id")(id) <<
+			Property(prefix + ".temperature")(temperature) <<
+			Property(prefix + ".temperature.normalize")(normalizeTemperature);
 }
 
 //------------------------------------------------------------------------------
@@ -74,13 +78,11 @@ float InfiniteLightSource::GetEnvRadius(const Scene &scene) {
 
 Properties InfiniteLightSource::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	const string prefix = "scene.lights." + GetName();
-	Properties props = NotIntersectableLightSource::ToProperties(imgMapCache, useRealFileName);
 
-	props.Set(Property(prefix + ".visibility.indirect.diffuse.enable")(isVisibleIndirectDiffuse));
-	props.Set(Property(prefix + ".visibility.indirect.glossy.enable")(isVisibleIndirectGlossy));
-	props.Set(Property(prefix + ".visibility.indirect.specular.enable")(isVisibleIndirectSpecular));
-
-	return props;
+	return NotIntersectableLightSource::ToProperties(imgMapCache, useRealFileName) <<
+			Property(prefix + ".visibility.indirect.diffuse.enable")(isVisibleIndirectDiffuse) <<
+			Property(prefix + ".visibility.indirect.glossy.enable")(isVisibleIndirectGlossy) <<
+			Property(prefix + ".visibility.indirect.specular.enable")(isVisibleIndirectSpecular);
 }
 
 //------------------------------------------------------------------------------

@@ -33,6 +33,8 @@ SunLight::SunLight() : color(1.f), localSunDir(0.f, 0.f, 1.f), turbidity(2.2f), 
 }
 
 void SunLight::Preprocess() {
+	EnvLightSource::Preprocess();
+
 	absoluteSunDir = Normalize(lightToWorld * localSunDir);
 	CoordinateSystem(absoluteSunDir, &x, &y);
 
@@ -97,7 +99,7 @@ void SunLight::Preprocess() {
 	}
 
 	RegularSPD LSPD(Ldata, 350, 800, 91);
-	color = (gain / (relSize * relSize)) *
+	color = ((temperatureScale * gain) / (relSize * relSize)) *
 			ColorSystem::DefaultColorSystem.ToRGBConstrained(LSPD.ToXYZ()).Clamp();
 }
 

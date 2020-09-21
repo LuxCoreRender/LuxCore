@@ -458,7 +458,7 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		tex = new CloudTexture(CreateTextureMapping3D(propName + ".mapping", props), radius, noisescale, turbulence,
 								sharpness, noiseoffset, spheres, octaves, omega, variability, baseflatness, spheresize);
 	} else if (texType == "blackbody") {
-		const float temperature = props.Get(Property(propName + ".temperature")(6500.f)).Get<float>();
+		const float temperature = Max(props.Get(Property(propName + ".temperature")(6500.f)).Get<float>(), 0.f);
 		const bool normalize = props.Get(Property(propName + ".normalize")(false)).Get<bool>();
 		tex = new BlackBodyTexture(temperature, normalize);
 	} else if (texType == "irregulardata") {

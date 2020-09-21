@@ -68,7 +68,7 @@ public:
 	void SetID(const u_int id) { matID = id; }
 	u_int GetID() const { return matID; }
 	void SetEmittedGain(const luxrays::Spectrum &v) { emittedGain = v; UpdateEmittedFactor(); }
-	luxrays::Spectrum GetEmittedGain() const { return emittedGain; }
+	const luxrays::Spectrum &GetEmittedGain() const { return emittedGain; }
 	void SetEmittedPower(const float v) { emittedPower = v; UpdateEmittedFactor(); }
 	float GetEmittedPower() const { return emittedPower; }
 	void SetEmittedPowerNormalize(const bool v) { emittedPowerNormalize = v; }
@@ -81,6 +81,8 @@ public:
 	void SetEmittedTheta(const float theta);
 	float GetEmittedTheta() const { return emittedTheta; }
 	float GetEmittedCosThetaMax() const { return emittedCosThetaMax; }
+	void SetEmittedTemperature(const float v) { emittedTemperature = v; UpdateEmittedFactor(); }
+	void SetEmittedTemperatureNormalize(const bool v) { emittedNormalizeTemperature = v; UpdateEmittedFactor(); }
 	bool IsUsingPrimitiveArea() const { return usePrimitiveArea; }
 
 	virtual MaterialType GetType() const = 0;
@@ -222,6 +224,8 @@ protected:
 	luxrays::Spectrum emittedGain, emittedFactor;
 	float emittedPower, emittedEfficency, emittedTheta, emittedCosThetaMax;
 	bool emittedPowerNormalize, emittedGainNormalize;
+	float emittedTemperature;
+	bool emittedNormalizeTemperature;
 
 	const Texture *frontTransparencyTex;
 	const Texture *backTransparencyTex;
@@ -236,6 +240,7 @@ protected:
 	const Volume *interiorVolume, *exteriorVolume;
 
 	float glossiness, avgPassThroughTransparency;
+
 	bool isVisibleIndirectDiffuse, isVisibleIndirectGlossy, isVisibleIndirectSpecular,
 		usePrimitiveArea, isShadowCatcher, isShadowCatcherOnlyInfiniteLights, isPhotonGIEnabled,
 		isHoldout;

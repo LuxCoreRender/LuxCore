@@ -40,6 +40,8 @@ InfiniteLight::~InfiniteLight() {
 }
 
 void InfiniteLight::Preprocess() {
+	EnvLightSource::Preprocess();
+
 	const ImageMapStorage *imageMapStorage = imageMap->GetStorage();
 
 	vector<float> data(imageMap->GetWidth() * imageMap->GetHeight());
@@ -76,7 +78,7 @@ float InfiniteLight::GetPower(const Scene &scene) const {
 	const float envRadius = GetEnvRadius(scene);
 
 	// TODO: I should consider sampleUpperHemisphereOnly here
-	return gain.Y() * imageMap->GetSpectrumMeanY() *
+	return temperatureScale.Y() * gain.Y() * imageMap->GetSpectrumMeanY() *
 			(4.f * M_PI * M_PI * envRadius * envRadius);
 }
 
@@ -113,7 +115,7 @@ Spectrum InfiniteLight::GetRadiance(const Scene &scene,
 		*emissionPdfW = distPdf * latLongMappingPdf / (M_PI * envRadius * envRadius);
 	}
 
-	return gain * imageMap->GetSpectrum(UV(u, v));
+	return temperatureScale * gain * imageMap->GetSpectrum(UV(u, v));
 }
 
 Spectrum InfiniteLight::Emit(const Scene &scene,
@@ -156,7 +158,7 @@ Spectrum InfiniteLight::Emit(const Scene &scene,
 	if (cosThetaAtLight)
 		*cosThetaAtLight = Dot(Normalize(worldCenter - rayOrig), rayDir);
 
-	const Spectrum result = gain * imageMap->GetSpectrum(uv);
+	const Spectrum result = temperatureScale * gain * imageMap->GetSpectrum(uv);
 	assert (!result.IsNaN() && !result.IsInf() && !result.IsNeg());
 
 	ray.Update(rayOrig, rayDir, time);
@@ -210,7 +212,7 @@ Spectrum InfiniteLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 	if (emissionPdfW)
 		*emissionPdfW = distPdf * latLongMappingPdf / (M_PI * envRadius * envRadius);
 
-	const Spectrum result = gain * imageMap->GetSpectrum(UV(uv[0], uv[1]));
+	const Spectrum result = temperatureScale * gain * imageMap->GetSpectrum(UV(uv[0], uv[1]));
 	assert (!result.IsNaN() && !result.IsInf() && !result.IsNeg());
 
 	shadowRay = Ray(shadowRayOrig, shadowRayDir, 0.f, shadowRayDistance, time);

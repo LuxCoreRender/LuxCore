@@ -36,6 +36,8 @@ DistantLight::~DistantLight() {
 }
 
 void DistantLight::Preprocess() {
+	InfiniteLightSource::Preprocess();
+
 	if (theta == 0.f) {
 		sin2ThetaMax = 2.f * MachineEpsilon::E(1.f);
 		cosThetaMax = 1.f - MachineEpsilon::E(1.f);
@@ -78,7 +80,7 @@ void DistantLight::GetPreprocessedData(float *absoluteLightDirData, float *xData
 float DistantLight::GetPower(const Scene &scene) const {
 	const float envRadius = GetEnvRadius(scene);
 
-	return gain.Y() * color.Y() * M_PI * envRadius * envRadius;
+	return temperatureScale.Y() * gain.Y() * color.Y() * M_PI * envRadius * envRadius;
 }
 
 Spectrum DistantLight::Emit(const Scene &scene,
@@ -106,7 +108,7 @@ Spectrum DistantLight::Emit(const Scene &scene,
 
 	ray.Update(rayOrig, rayDir, time);
 
-	return gain * color;
+	return temperatureScale * gain * color;
 }
 
 Spectrum DistantLight::Illuminate(const Scene &scene, const BSDF &bsdf,
@@ -136,7 +138,7 @@ Spectrum DistantLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 
 	shadowRay = Ray(shadowRayOrig, shadowRayDir, 0.f, shadowRayDistance, time);
 
-	return gain * color;
+	return temperatureScale * gain * color;
 }
 
 Properties DistantLight::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {

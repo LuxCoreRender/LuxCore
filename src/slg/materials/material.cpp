@@ -39,6 +39,7 @@ Material::Material(const Texture *frontTransp, const Texture *backTransp,
 		directLightSamplingType(DLS_AUTO), emittedImportance(1.f),
 		emittedGain(1.f), emittedPower(0.f), emittedEfficency(0.f),
 		emittedPowerNormalize(true), emittedGainNormalize(false),
+		emittedTemperature(-1.f), emittedNormalizeTemperature(false),
 		frontTransparencyTex(frontTransp), backTransparencyTex(backTransp),
 		emittedTex(emitted), bumpTex(bump), bumpSampleDistance(.001f),
 		emissionMap(nullptr), emissionFunc(nullptr),
@@ -156,6 +157,8 @@ Spectrum Material::EvaluateTotal(const HitPoint &hitPoint) const {
 }
 
 void Material::UpdateEmittedFactor() {
+	const Spectrum emittedTemperatureScale = (emittedTemperature >= 0.f) ? TemperatureToWhitePoint(emittedTemperature, emittedNormalizeTemperature) : Spectrum(1.f);
+
 	if (emittedTex) {
 		const float normalizePowerFactor = emittedPowerNormalize ? (1.f / Max(emittedTex->Y(), 0.f)) : 1.f;
 
@@ -180,6 +183,8 @@ void Material::UpdateEmittedFactor() {
 		emittedFactor = emittedGain * normalizeGainFactor;
 		usePrimitiveArea = false;
 	}
+	
+	emittedFactor *= emittedTemperatureScale;
 }
 
 void Material::UpdateAvgPassThroughTransparency() {
@@ -212,6 +217,8 @@ Properties Material::ToProperties(const ImageMapCache &imgMapCache, const bool u
 		props.Set(Property("scene.materials." + name + ".emission.mapfile")(fileName));
 		props.Set(emissionMap->ToProperties("scene.materials." + name, false));
 	}
+	props.Set(Property("scene.materials." + name + ".emission.temperature")(emittedTemperature));
+	props.Set(Property("scene.materials." + name + ".emission.temperature.normalize")(emittedNormalizeTemperature));
 
 	switch (directLightSamplingType) {
 		case DLS_ENABLED:

@@ -31,6 +31,7 @@
 * Added the support for TwoSided material
 * Reworked WhiteBalance plugin and light groups white balance support to be coherent with usual photographic white balance process (note: this change breaks the compatibility with past scene settings)
 * Added a cap (25% and 75%) to Glass transmission/reflection sampling to not under sample some case
+* Added the support to all light sources of ".temperature" and ".temperature.normalize" properties to set light temperature
 
 ### Fixed Bugs
 

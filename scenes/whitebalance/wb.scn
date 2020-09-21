@@ -13,8 +13,11 @@ scene.materials.whitematte.type = matte
 scene.materials.whitematte.kd = 0.75 0.75 0.75
 ##
 scene.materials.whitelight.type = matte
-scene.materials.whitelight.emission = lighttex
+#scene.materials.whitelight.emission = lighttex
+scene.materials.whitelight.emission = 1 1 1
 scene.materials.whitelight.emission.gain = 10 10 10
+scene.materials.whitelight.emission.temperature = 8000
+scene.materials.whitelight.emission.temperature.normalize = 0
 scene.materials.whitelight.kd = 0.0 0.0 0.0
 ################################################################################
 scene.shapes.monkey.type = mesh
@@ -29,3 +32,29 @@ scene.objects.red.ply = monkey
 scene.objects.l1.material = whitelight
 scene.objects.l1.ply = scenes/bigmonkey/bigmonkey-lights.ply
 scene.objects.l1.camerainvisible = 1
+##
+#scene.lights.l1.type = point
+#scene.lights.l1.position = -3.0 -5.0 4
+#scene.lights.l1.gain = 500 500 500
+#scene.lights.l1.temperature = 8000
+##
+#scene.lights.l1.type = sphere
+#scene.lights.l1.position = -3.0 -5.0 4
+#scene.lights.l1.radius = 0.5
+#scene.lights.l1.gain = 500 500 500
+#scene.lights.l1.temperature = 8000
+##
+#scene.lights.skylight.type = sky2
+#scene.lights.skylight.dir = 0.166974 -0.59908 0.783085
+#scene.lights.skylight.turbidity = 2.2
+#scene.lights.skylight.groundalbedo = 0.0 0.0 0.0
+#scene.lights.skylight.gain = 0.00005 0.00005 0.00005
+#scene.lights.skylight.temperature = 8000
+#
+#scene.lights.sunlight.type = sun
+#scene.lights.sunlight.dir = 0.166974 -0.59908 0.783085
+#scene.lights.sunlight.turbidity = 2.2
+#scene.lights.sunlight.gain = 0.00005 0.00005 0.00005
+#scene.lights.sunlight.temperature = 8000
+##
+

@@ -176,10 +176,12 @@ Spectrum SkyLight2::ComputeRadiance(const Vector &w) const {
 		// Lower hemisphere
 		return scaledGroundColor;
 	} else
-		return gain * ComputeSkyRadiance(w);
+		return temperatureScale * gain * ComputeSkyRadiance(w);
 }
 
 void SkyLight2::Preprocess() {
+	EnvLightSource::Preprocess();
+
 	absoluteSunDir = Normalize(lightToWorld * localSunDir);
 	absoluteUpDir = Normalize(lightToWorld * Vector(0.f, 0.f, 1.f));
 
@@ -197,7 +199,7 @@ void SkyLight2::Preprocess() {
 	radianceTerm = model[9];
 	
 	if (hasGroundAutoScale)
-		scaledGroundColor = gain * ComputeSkyRadiance(Vector(0.f, 0.f, 1.f)).Y() * groundColor;
+		scaledGroundColor = temperatureScale * gain * ComputeSkyRadiance(Vector(0.f, 0.f, 1.f)).Y() * groundColor;
 	else
 		scaledGroundColor = groundColor;
 

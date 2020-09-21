@@ -38,6 +38,8 @@ ProjectionLight::~ProjectionLight() {
 }
 
 void ProjectionLight::Preprocess() {
+	NotIntersectableLightSource::Preprocess();
+
 	const Vector dir = Normalize(localTarget - localPos);
 	Vector du, dv;
 	CoordinateSystem(dir, &du, &dv);
@@ -81,10 +83,10 @@ void ProjectionLight::Preprocess() {
 
 	const float normalizeFactor = emittedPowerNormalize ? (1.f / Max(imageMap ? imageMap->GetSpectrumMeanY() : 1.f, 0.f)) : 1.f;
 
-	emittedFactor = gain * color * (power * efficency * normalizeFactor /
+	emittedFactor = temperatureScale * gain * color * (power * efficency * normalizeFactor /
 			(2.f * M_PI *  (1.f - .5f * (1.f - cosTotalWidth))));
 	if (emittedFactor.Black() || emittedFactor.IsInf() || emittedFactor.IsNaN())
-		emittedFactor = gain * color;
+		emittedFactor = temperatureScale * gain * color;
 }
 
 void ProjectionLight::GetPreprocessedData(float *emittedFactorData, float *absolutePosData, float *lightNormalData,

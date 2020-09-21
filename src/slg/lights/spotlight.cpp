@@ -37,15 +37,17 @@ SpotLight::~SpotLight() {
 }
 
 void SpotLight::Preprocess() {
+	NotIntersectableLightSource::Preprocess();
+
 	cosTotalWidth = cosf(Radians(coneAngle));
 	cosFalloffStart = cosf(Radians(coneAngle - coneDeltaAngle));
 
 	const float normalizeFactor = emittedPowerNormalize ? (1.f / Max(color.Y(), 0.f)) : 1.f;
 
-	emittedFactor = gain * color * (power * efficency * normalizeFactor /
+	emittedFactor = temperatureScale * gain * color * (power * efficency * normalizeFactor /
 			(2.f * M_PI * (1.f - .5f * (cosFalloffStart + cosTotalWidth))));
 	if (emittedFactor.Black() || emittedFactor.IsInf() || emittedFactor.IsNaN())
-		emittedFactor = gain * color;
+		emittedFactor = temperatureScale * gain * color;
 
 	absolutePos = lightToWorld * localPos;
 

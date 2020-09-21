@@ -523,6 +523,8 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 	mat->SetEmittedTheta(Clamp(props.Get(Property(propName + ".emission.theta")(90.f)).Get<float>(), 0.f, 90.f));
 	mat->SetLightID(props.Get(Property(propName + ".emission.id")(0u)).Get<u_int>());
 	mat->SetEmittedImportance(props.Get(Property(propName + ".emission.importance")(1.f)).Get<float>());
+	mat->SetEmittedTemperature(props.Get(Property(propName + ".emission.temperature")(-1.f)).Get<float>());
+	mat->SetEmittedTemperatureNormalize(props.Get(Property(propName + ".emission.temperature.normalize")(false)).Get<float>());
 
 	mat->SetPassThroughShadowTransparency(props.Get(Property(propName + ".transparency.shadow")(Spectrum(0.f))).Get<Spectrum>());
 

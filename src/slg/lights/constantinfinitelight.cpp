@@ -43,7 +43,7 @@ void ConstantInfiniteLight::GetPreprocessedData(const EnvLightVisibilityCache **
 float ConstantInfiniteLight::GetPower(const Scene &scene) const {
 	const float envRadius = GetEnvRadius(scene);
 
-	return gain.Y() * (4.f * M_PI * M_PI * envRadius * envRadius) *
+	return temperatureScale.Y() * gain.Y() * (4.f * M_PI * M_PI * envRadius * envRadius) *
 		color.Y();
 }
 
@@ -75,7 +75,7 @@ Spectrum ConstantInfiniteLight::GetRadiance(const Scene &scene,
 			*emissionPdfW = UniformSpherePdf() / (M_PI * envRadius * envRadius);
 	}
 
-	return gain * color;
+	return temperatureScale * gain * color;
 }
 
 Spectrum ConstantInfiniteLight::Emit(const Scene &scene,
@@ -160,7 +160,7 @@ Spectrum ConstantInfiniteLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 
 	shadowRay = Ray(shadowRayOrig, shadowRayDir, 0.f, shadowRayDistance, time);
 	
-	return gain * color;
+	return temperatureScale * gain * color;
 }
 
 UV ConstantInfiniteLight::GetEnvUV(const luxrays::Vector &dir) const {

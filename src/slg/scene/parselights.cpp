@@ -453,8 +453,16 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 	lightSource->SetName(lightName);
 	lightSource->gain = props.Get(Property(propName + ".gain")(Spectrum(1.f))).Get<Spectrum>();
 	lightSource->SetID(props.Get(Property(propName + ".id")(0)).Get<int>());
-	lightSource->Preprocess();
 	lightSource->SetImportance(props.Get(Property(propName + ".importance")(1.f)).Get<float>());
+
+	if (!lightSource->IsIntersectable()) {
+		NotIntersectableLightSource *nils = (NotIntersectableLightSource *)lightSource;
+
+		nils->temperature = props.Get(Property(propName + ".temperature")(-1.f)).Get<float>();
+		nils->normalizeTemperature = props.Get(Property(propName + ".temperature.normalize")(false)).Get<bool>();
+	}
+
+	lightSource->Preprocess();
 
 	return lightSource;
 }
