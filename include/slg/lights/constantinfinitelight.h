@@ -33,7 +33,6 @@ public:
 	ConstantInfiniteLight();
 	virtual ~ConstantInfiniteLight();
 
-	virtual void Preprocess() { }
 	void GetPreprocessedData(const EnvLightVisibilityCache **visibilityMapCache) const;
 
 	virtual void UpdateVisibilityMap(const Scene *scene, const bool useRTMode);
