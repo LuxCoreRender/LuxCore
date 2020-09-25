@@ -245,8 +245,7 @@ Spectrum DisneyMaterial::Sample(
 		const float u1,
 		const float passThroughEvent,
 		float *pdfW,
-		BSDFEvent *event,
-		const BSDFEvent eventHint) const {
+		BSDFEvent *event) const {
 	const Spectrum color = BaseColor->GetSpectrumValue(hitPoint).Clamp(0.0f, 1.0f);
 	const float subsurface = Clamp(Subsurface->GetFloatValue(hitPoint), 0.0f, 1.0f);
 	const float roughness = Clamp(Roughness->GetFloatValue(hitPoint), 0.0f, 1.0f);

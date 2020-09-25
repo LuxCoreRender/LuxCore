@@ -163,11 +163,11 @@ Spectrum TwoSidedMaterial::Evaluate(const HitPoint &hitPoint,
 Spectrum TwoSidedMaterial::Sample(const HitPoint &hitPoint,
 		const Vector &localFixedDir, Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
-		float *pdfW, BSDFEvent *event, const BSDFEvent eventHint) const {
+		float *pdfW, BSDFEvent *event) const {
 	if (hitPoint.intoObject)
-		return frontMat->Sample(hitPoint, localFixedDir, localSampledDir, u0, u1, passThroughEvent, pdfW, event, eventHint);
+		return frontMat->Sample(hitPoint, localFixedDir, localSampledDir, u0, u1, passThroughEvent, pdfW, event);
 	else
-		return backMat->Sample(hitPoint, localFixedDir, localSampledDir, u0, u1, passThroughEvent, pdfW, event, eventHint);
+		return backMat->Sample(hitPoint, localFixedDir, localSampledDir, u0, u1, passThroughEvent, pdfW, event);
 }
 
 void TwoSidedMaterial::Pdf(const HitPoint &hitPoint,

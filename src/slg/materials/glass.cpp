@@ -190,7 +190,7 @@ Spectrum GlassMaterial::EvalSpecularTransmission(const HitPoint &hitPoint,
 Spectrum GlassMaterial::Sample(const HitPoint &hitPoint,
 		const Vector &localFixedDir, Vector *localSampledDir,
 		const float u0, const float u1, const float passThroughEvent,
-		float *pdfW, BSDFEvent *event, const BSDFEvent eventHint) const {
+		float *pdfW, BSDFEvent *event) const {
 	const Spectrum kr = Kr->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
 	const Spectrum kt = Kt->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f);
 
@@ -211,8 +211,8 @@ Spectrum GlassMaterial::Sample(const HitPoint &hitPoint,
 
 	// Decide to transmit or reflect
 	float threshold;
-	if (!refl.Black() && (eventHint != TRANSMIT)) {
-		if (!trans.Black() && (eventHint != REFLECT)) {
+	if (!refl.Black()) {
+		if (!trans.Black()) {
 			// Importance sampling
 			const float reflFilter = refl.Filter();
 			const float transFilter = trans.Filter();

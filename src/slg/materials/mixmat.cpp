@@ -232,7 +232,7 @@ Spectrum MixMaterial::Evaluate(const HitPoint &hitPoint,
 Spectrum MixMaterial::Sample(const HitPoint &hitPoint,
 	const Vector &localFixedDir, Vector *localSampledDir,
 	const float u0, const float u1, const float passThroughEvent,
-	float *pdfW, BSDFEvent *event, const BSDFEvent eventHint) const {
+	float *pdfW, BSDFEvent *event) const {
 	const Frame frame(hitPoint.GetFrame());
 
 	HitPoint hitPointA(hitPoint);
@@ -268,7 +268,7 @@ Spectrum MixMaterial::Sample(const HitPoint &hitPoint,
 
 	// Sample the first material
 	Spectrum result = matFirst->Sample(hitPoint1, fixedDir1, localSampledDir,
-			u0, u1, passThroughEventFirst, pdfW, event, eventHint);
+			u0, u1, passThroughEventFirst, pdfW, event);
 	if (result.Black())
 		return Spectrum();
 
