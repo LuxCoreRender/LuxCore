@@ -16,10 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include <boost/format.hpp>
-#include <boost/foreach.hpp>
-#include <boost/thread/once.hpp>
-#include <boost/thread/mutex.hpp>
+#include "spdlog/spdlog.h"
 
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/utils/utils.h"
@@ -36,67 +33,6 @@
 using namespace std;
 using namespace luxrays;
 using namespace luxcore;
-
-//------------------------------------------------------------------------------
-// Initialization and logging
-//------------------------------------------------------------------------------
-
-void (*luxcore::LuxCore_LogHandler)(const char *msg) = NULL;
-
-static double lcInitTime;
-
-
-static void NopDebugHandler(const char *msg) {
-}
-
-static void DefaultDebugHandler(const char *msg) {
-	cerr << msg << endl;
-}
-
-static void LuxRaysDebugHandler(const char *msg) {
-	if (LuxCore_LogHandler)
-		LuxCore_LogHandler((boost::format("[LuxRays][%.3f] %s") % (WallClockTime() - lcInitTime) % msg).str().c_str());
-}
-
-static void SDLDebugHandler(const char *msg) {
-	if (LuxCore_LogHandler)
-		LuxCore_LogHandler((boost::format("[SDL][%.3f] %s") % (WallClockTime() - lcInitTime) % msg).str().c_str());
-}
-
-static void SLGDebugHandler(const char *msg) {
-	if (LuxCore_LogHandler)
-		LuxCore_LogHandler((boost::format("[LuxCore][%.3f] %s") % (WallClockTime() - lcInitTime) % msg).str().c_str());
-}
-
-void luxcore::Init(void (*LogHandler)(const char *)) {
-	slg::Init();
-
-	// To be thread safe
-	static boost::mutex initMutex;
-	boost::unique_lock<boost::mutex> lock(initMutex);
-	
-	lcInitTime = WallClockTime();
-	
-	slg::LuxRays_DebugHandler = ::LuxRaysDebugHandler;
-	slg::SLG_DebugHandler = ::SLGDebugHandler;
-	slg::SLG_SDLDebugHandler = ::SDLDebugHandler;	
-
-	if (LogHandler)
-		SetLogHandler(LogHandler);
-	else
-		SetLogHandler(DefaultDebugHandler);
-}
-
-void luxcore::SetLogHandler(void (*LogHandler)(const char *)) {
-	// Set all debug handlers
-	if (LogHandler) {
-		// User provided handler
-		LuxCore_LogHandler = LogHandler;
-	} else {
-		// Default handler
-		LuxCore_LogHandler = NopDebugHandler;
-	}
-}
 
 //------------------------------------------------------------------------------
 // ParseLXS
@@ -135,7 +71,7 @@ void luxcore::ParseLXS(const string &fileName, Properties &renderConfigProps, Pr
 	else
 		luxcore_parserlxs_yyin = fopen(fileName.c_str(), "r");
 
-	if (luxcore_parserlxs_yyin != NULL) {
+	if (luxcore_parserlxs_yyin != nullptr) {
 		luxcore::parselxs::currentFile = fileName;
 		if (luxcore_parserlxs_yyin == stdin)
 			luxcore::parselxs::currentFile = "<standard input>";
@@ -161,7 +97,7 @@ void luxcore::ParseLXS(const string &fileName, Properties &renderConfigProps, Pr
 	luxcore::parselxs::currentFile = "";
 	luxcore::parselxs::lineNum = 0;
 
-	if ((luxcore_parserlxs_yyin == NULL) || !parseSuccess)
+	if ((luxcore_parserlxs_yyin == nullptr) || !parseSuccess)
 		throw runtime_error("Parsing failed: " + fileName);
 
 	// For some debugging

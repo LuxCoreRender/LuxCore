@@ -131,6 +131,7 @@ endif()
 set(LUXCORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/luxcore/luxcore.cpp
 	${LuxRays_SOURCE_DIR}/src/luxcore/luxcoreimpl.cpp
+	${LuxRays_SOURCE_DIR}/src/luxcore/luxcoreinit.cpp
 	${LuxRays_SOURCE_DIR}/src/luxcore/kernelcachefill.cpp
 )
 SOURCE_GROUP("Source Files\\LuxCore Library" FILES ${LUXCORE_SRCS})

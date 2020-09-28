@@ -63,9 +63,8 @@ namespace luxcore {
 
 #define LC_MESH_MAX_DATA_COUNT 8
 
-CPP_EXPORT CPP_API void (*LuxCore_LogHandler)(const char *msg); // LuxCore Log Handler
-
-#define LC_LOG(a) { if (luxcore::LuxCore_LogHandler) { std::stringstream _LUXCORE_LOG_LOCAL_SS; _LUXCORE_LOG_LOCAL_SS << a; luxcore::LuxCore_LogHandler(_LUXCORE_LOG_LOCAL_SS.str().c_str()); } }
+// This is mostly for compatibility with the past
+#define LC_LOG(a) { std::stringstream _LUXCORE_LOG_LOCAL_SS; _LUXCORE_LOG_LOCAL_SS << a; luxcore::PrintLogMsg(_LUXCORE_LOG_LOCAL_SS.str()); }
 
 /*!
  * \brief Initializes LuxCore API. This function is thread safe.
@@ -82,6 +81,27 @@ CPP_EXPORT CPP_API void Init(void (*LogHandler)(const char *) = NULL);
  * messages. If it is NULL, there will no printed information.
  */
 CPP_EXPORT CPP_API void SetLogHandler(void (*LogHandler)(const char *) = NULL);
+
+
+/*!
+ * \brief This function can be called if you want to enable file logging. By
+ * default, file logging is disabled.
+ *
+ * \param fileName is the file name of the log file. If it is set to "", it will
+ * disable file logging.
+ * \param size is the maximum size in bytes of the log files. If it is set to
+ * 0, it will disable file logging.
+ * \param count is the maximum number of rotating log files to keep. If it is set to
+ * 0, it will disable file logging.
+ */
+CPP_EXPORT CPP_API void SetFileLog(const std::string &fileName, const unsigned int size, const unsigned int count);
+
+/*!
+ * \brief This function can be called to print a log message
+ *
+ * \param msg is the message to print in all enabled log outputs.
+ */
+CPP_EXPORT CPP_API void PrintLogMsg(const std::string &msg);
 
 /*!
  * \brief Parses a scene described using LuxRender SDL (Scene Description Language).

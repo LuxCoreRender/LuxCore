@@ -96,6 +96,7 @@ include_directories("${LuxRays_SOURCE_DIR}/deps/json-3.7.3/include")
 include_directories("${LuxRays_SOURCE_DIR}/deps/cuew/include")
 include_directories("${LuxRays_SOURCE_DIR}/deps/clew/include")
 include_directories("${LuxRays_SOURCE_DIR}/deps/optix-7.1.0/include")
+include_directories("${LuxRays_SOURCE_DIR}/deps/spdlog-1.8.0/include")
 
 # Find dependencies
 include(Dependencies)
