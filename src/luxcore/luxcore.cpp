@@ -29,10 +29,12 @@
 #include "slg/utils/filenameresolver.h"
 #include "luxcore/luxcore.h"
 #include "luxcore/luxcoreimpl.h"
+#include "luxcore/luxcorelogger.h"
 
 using namespace std;
 using namespace luxrays;
 using namespace luxcore;
+using namespace luxcore::detail;
 
 //------------------------------------------------------------------------------
 // ParseLXS
@@ -56,6 +58,8 @@ extern Properties *sceneProps;
 } }
 
 void luxcore::ParseLXS(const string &fileName, Properties &renderConfigProps, Properties &sceneProps) {
+	API_BEGIN("{}, {}, {}", ToArgString(fileName), ToArgString(renderConfigProps), ToArgString(sceneProps));
+
 	// Otherwise the code is not thread-safe
 	static boost::mutex parseLXSMutex;
 	boost::unique_lock<boost::mutex> lock(parseLXSMutex);
@@ -106,6 +110,8 @@ void luxcore::ParseLXS(const string &fileName, Properties &renderConfigProps, Pr
 	cout << "================ ParseLXS RenderConfig Properties ================\n";
 	cout << sceneProps;
 	cout << "==================================================================\n";*/
+	
+	API_END();
 }
 
 //------------------------------------------------------------------------------
@@ -113,6 +119,8 @@ void luxcore::ParseLXS(const string &fileName, Properties &renderConfigProps, Pr
 //------------------------------------------------------------------------------
 
 Properties luxcore::GetPlatformDesc() {
+	API_BEGIN_NOARGS();
+
 	Properties props;
 
 	static const string luxCoreVersion(LUXCORE_VERSION_MAJOR "." LUXCORE_VERSION_MINOR);
@@ -139,6 +147,8 @@ Properties luxcore::GetPlatformDesc() {
 	props << Property("compile.LUXCORE_DISABLE_EMBREE_BVH_BUILDER")(false);
 	props << Property("compile.LC_MESH_MAX_DATA_COUNT")(LC_MESH_MAX_DATA_COUNT);
 
+	API_RETURN("{}", ToArgString(props));
+
 	return props;
 }
 
@@ -147,11 +157,11 @@ Properties luxcore::GetPlatformDesc() {
 //------------------------------------------------------------------------------
 
 Properties luxcore::GetOpenCLDeviceDescs() {
-#if defined(LUXRAYS_DISABLE_OPENCL)
-	return Properties();
-#else
+	API_BEGIN_NOARGS();
+
 	Properties props;
 
+#if !defined(LUXRAYS_DISABLE_OPENCL)
 	Context ctx;
 	vector<DeviceDescription *> deviceDescriptions = ctx.GetAvailableDeviceDescriptions();
 
@@ -201,9 +211,11 @@ Properties luxcore::GetOpenCLDeviceDescs() {
 					Property(prefix + ".cuda.compute.minor")(cudaDesc->GetCUDAComputeCapabilityMinor());
 		}
 	}
+#endif
+	
+	API_RETURN("{}", ToArgString(props));
 
 	return props;
-#endif
 }
 
 //------------------------------------------------------------------------------
@@ -211,15 +223,29 @@ Properties luxcore::GetOpenCLDeviceDescs() {
 //------------------------------------------------------------------------------
 
 void luxcore::ClearFileNameResolverPaths() {
+	API_BEGIN_NOARGS();
+	
 	slg::SLG_FileNameResolver.Clear();
+	
+	API_END();
 }
 
 void luxcore::AddFileNameResolverPath(const std::string &path) {
+	API_BEGIN("{}", ToArgString(path));
+
 	slg::SLG_FileNameResolver.AddPath(path);
+	
+	API_END();
 }
 
 vector<string> luxcore::GetFileNameResolverPaths() {
-	return slg::SLG_FileNameResolver.GetPaths();
+	API_BEGIN_NOARGS();
+
+	const vector<string> &result = slg::SLG_FileNameResolver.GetPaths();
+	
+	API_RETURN("{}", ToArgString(result));
+
+	return result;
 }
 
 //------------------------------------------------------------------------------

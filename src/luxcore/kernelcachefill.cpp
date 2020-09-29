@@ -20,12 +20,14 @@
 #include <boost/unordered_set.hpp>
 #include <boost/algorithm/string.hpp>
 
+#include "luxcore/luxcorelogger.h"
 #include "luxcore/luxcore.h"
 #include "luxcore/luxcoreimpl.h"
 
 using namespace std;
 using namespace luxrays;
 using namespace luxcore;
+using namespace luxcore::detail;
 
 //------------------------------------------------------------------------------
 // KernelCacheFill
@@ -305,7 +307,11 @@ static void KernelCacheFillImpl(const Properties &config, void (*ProgressHandler
 #endif
 
 void luxcore::KernelCacheFill(const Properties &config, void (*ProgressHandler)(const size_t, const size_t)) {
+	API_BEGIN("{}, {}", ToArgString(config),(void *)ProgressHandler);
+
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 	KernelCacheFillImpl(config, ProgressHandler);
 #endif
+	
+	API_END();
 }

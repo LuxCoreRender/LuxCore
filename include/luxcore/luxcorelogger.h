@@ -20,9 +20,92 @@
 #define	_LUXCORE_LOGGER_H
 
 #include <memory>
+#include <sstream>
 
 #include "spdlog/spdlog.h"
 
+#include "luxrays/utils/strutils.h"
+#include "luxrays/utils/properties.h"
+
+namespace luxcore {
+namespace detail {
+
+extern bool logLuxRaysEnabled;
+extern bool logSDLEnabled;
+extern bool logSLGEnabled;
+extern bool logAPIEnabled;
+
 extern std::shared_ptr<spdlog::logger> luxcoreLogger;
+
+extern double lcInitTime;
+
+#if defined(__GNUC__)
+#define LC_FUNCTION_NAME __PRETTY_FUNCTION__
+#elif defined(_MSC_VER)
+#define LC_FUNCTION_NAME __FUNCSIG__
+#else
+#define LC_FUNCTION_NAME __func__
+#endif
+
+#define API_BEGIN(fmt, ...) { \
+	if (luxcore::detail::logAPIEnabled) { \
+		luxcore::detail::luxcoreLogger->info("[API][{:.3f}] Begin [{}](" fmt ")", (luxrays::WallClockTime() - luxcore::detail::lcInitTime), LC_FUNCTION_NAME,  __VA_ARGS__); \
+	} \
+}
+
+#define API_BEGIN_NOARGS() { \
+	if (luxcore::detail::logAPIEnabled) { \
+		luxcore::detail::luxcoreLogger->info("[API][{:.3f}] Begin [{}]()", (luxrays::WallClockTime() - luxcore::detail::lcInitTime), LC_FUNCTION_NAME); \
+	} \
+}
+
+#define API_END() { \
+	if (luxcore::detail::logAPIEnabled) { \
+		luxcore::detail::luxcoreLogger->info("[API][{:.3f}] End [{}]()", (luxrays::WallClockTime() - luxcore::detail::lcInitTime), LC_FUNCTION_NAME); \
+	} \
+}
+
+#define API_RETURN(fmt, ...) { \
+	if (luxcore::detail::logAPIEnabled) { \
+		luxcore::detail::luxcoreLogger->info("[API][{:.3f}] Return [{}](" fmt ")", (luxrays::WallClockTime() - luxcore::detail::lcInitTime), LC_FUNCTION_NAME,  __VA_ARGS__); \
+	} \
+}
+
+template <class T>
+inline std::string ToArgString(const T &t) {
+	return luxrays::ToString(t);
+}
+
+inline std::string ToArgString(const std::string &t) {
+	return "\"" + t + "\"";
+}
+
+inline std::string ToArgString(const luxrays::Properties &p) {
+	return "Properties[\n" + p.ToString() + "]";
+}
+
+template <class T>
+inline std::string ToArgString(const std::vector<T> &v) {
+	std::ostringstream ss;
+
+	ss << "vector[";
+
+	bool first = true;
+	for (auto &e : v) {
+		if (!first)
+			ss << " ,";
+		else
+			first = false;
+
+		ss << luxrays::ToString(e);
+	}
+
+	ss << "]";
+	
+	return ss.str();
+}
+
+}
+}
 
 #endif	/* _LUXCORE_LOGGER_H */

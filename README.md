@@ -105,7 +105,6 @@ A special thanks goes to:
 - [HDR Labs sIBL archive](http://www.hdrlabs.com/sibl/archive.html) and
   [SHT Lab](http://shtlab.blogspot.com/2009/08/hdri-panoramic-skies-for-free.html) for HDR maps;
 - [Chronosphere](http://chronosphere.home.comcast.net/~chronosphere/radiosity.htm) for Cornell Blender scene;
-- [FreeImage](http://freeimage.sourceforge.net) open source image library (not used anymore);
 - [libPNG](http://www.libpng.org) authors;
 - [zlib](http://www.zlib.net) authors;
 - [OpenEXR](http://www.openexr.com) authors;
@@ -117,9 +116,9 @@ A special thanks goes to:
 - [OpenVDB](http://www.openvdb.org) authors;
 - [Eigen](http://eigen.tuxfamily.org) authors;
 - Yangli Hector Yee, Steven Myint and Jeff Terrace for [perceptualdiff](https://github.com/myint/perceptualdiff);
-- Christian Pfligersdorffer for [EOS portable archive](http://www.eos.info);
 - Michael Labbe for [Native File Dialog](https://github.com/mlabbe/nativefiledialog);
 - Sven Forstmann's [quadric mesh simplification code](https://github.com/sp4cerat/Fast-Quadric-Mesh-Simplification).
+- [SpdLog](https://github.com/gabime/spdlog) authors
 
 ### License
 

@@ -16,15 +16,15 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _LUXCORE_CALLBACK_SINK_H
-#define	_LUXCORE_CALLBACK_SINK_H
+#ifndef _LUXCORE_SINKS_H
+#define	_LUXCORE_SINKS_H
 
 #include <mutex>
 
 #include "spdlog/sinks/rotating_file_sink.h"
 
 //------------------------------------------------------------------------------
-// Our SpdLog sink for LuxCore_LogHandler
+// Our SpdLog sink for LuxCore call back handler
 //------------------------------------------------------------------------------
 
 namespace spdlog {
@@ -68,4 +68,4 @@ inline std::shared_ptr<logger> luxcore_callback_st(const std::string &logger_nam
 }
 }
 
-#endif	/* _LUXCORE_CALLBACK_SINK_H */
+#endif	/* _LUXCORE_SINKS_H */

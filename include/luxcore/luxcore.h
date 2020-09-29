@@ -82,7 +82,6 @@ CPP_EXPORT CPP_API void Init(void (*LogHandler)(const char *) = NULL);
  */
 CPP_EXPORT CPP_API void SetLogHandler(void (*LogHandler)(const char *) = NULL);
 
-
 /*!
  * \brief This function can be called if you want to enable file logging. By
  * default, file logging is disabled.
@@ -102,6 +101,22 @@ CPP_EXPORT CPP_API void SetFileLog(const std::string &fileName, const unsigned i
  * \param msg is the message to print in all enabled log outputs.
  */
 CPP_EXPORT CPP_API void PrintLogMsg(const std::string &msg);
+
+typedef enum {
+	LOG_LUXRAYS,
+	LOG_SDL,
+	LOG_SLG,
+	LOG_API
+} LogSubSystemType;
+
+/*!
+ * \brief This function can be called to enable/disable log messages of a single
+ * subsystem.
+ *
+ * \param type is the type of subsystem to enable/disable.
+ * \param v sets if to enable/disable the messages.
+ */
+CPP_EXPORT CPP_API void SetEnableLogSubSystem(const LogSubSystemType type, const bool v);
 
 /*!
  * \brief Parses a scene described using LuxRender SDL (Scene Description Language).
