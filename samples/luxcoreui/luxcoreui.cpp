@@ -71,7 +71,7 @@ int main(int argc, char *argv[]) {
 		luxcore::Init(LuxCoreApp::LogHandler);
 		luxcore::SetEnableLogSubSystem(luxcore::LOG_API, true);
 		luxcore::SetFileLog("luxcore.log", 1000 * 1024, 3);
-
+		
 		LA_LOG("LuxCoreUI v" LUXCORE_VERSION_MAJOR "." LUXCORE_VERSION_MINOR " (LuxCore demo: http://www.luxcorerender.org)");
 
 		//ConvertImage("samples/luxcoreui/resources/luxlogo_bg.png");

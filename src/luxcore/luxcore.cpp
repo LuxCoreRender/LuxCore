@@ -253,46 +253,88 @@ vector<string> luxcore::GetFileNameResolverPaths() {
 //------------------------------------------------------------------------------
 
 Film *Film::Create(const std::string &fileName) {
-	return new luxcore::detail::FilmImpl(fileName);
+	API_BEGIN("{}", ToArgString(fileName));
+
+	Film *result = new luxcore::detail::FilmImpl(fileName);
+	
+	API_RETURN("{}", (void *)result);
+	
+	return result;
 }
 
 Film *Film::Create(const luxrays::Properties &props,
 		const bool hasPixelNormalizedChannel,
 		const bool hasScreenNormalizedChannel) {
-	return new luxcore::detail::FilmImpl(props, hasPixelNormalizedChannel, hasScreenNormalizedChannel);
+	API_BEGIN("{}, {}, {}", ToArgString(props), hasPixelNormalizedChannel, hasScreenNormalizedChannel);
+
+	Film *result = new luxcore::detail::FilmImpl(props, hasPixelNormalizedChannel, hasScreenNormalizedChannel);
+
+	API_RETURN("{}", (void *)result);
+	
+	return result;
 }
 
 Film::~Film() {
+	API_BEGIN_NOARGS();
+	API_END();
 }
 
 template<> void Film::GetOutput<float>(const FilmOutputType type, float *buffer,
 		const unsigned int index, const bool executeImagePipeline) {
+	API_BEGIN("{}, {}, {}, {}", ToArgString(type), (void *)buffer, index, executeImagePipeline);
+
 	GetOutputFloat(type, buffer, index, executeImagePipeline);
+
+	API_END();
 }
 
 template<> void Film::GetOutput<unsigned int>(const FilmOutputType type, unsigned int *buffer,
 		const unsigned int index, const bool executeImagePipeline) {
+	API_BEGIN("{}, {}, {}, {}", ToArgString(type), (void *)buffer, index, executeImagePipeline);
+
 	GetOutputUInt(type, buffer, index, executeImagePipeline);
+	
+	API_END();
 }
 
 template<> void Film::UpdateOutput<float>(const FilmOutputType type, const float *buffer,
 		const unsigned int index, const bool executeImagePipeline) {
+	API_BEGIN("{}, {}, {}, {}", ToArgString(type), (void *)buffer, index, executeImagePipeline);
+
 	UpdateOutputFloat(type, buffer, index, executeImagePipeline);
+	
+	API_END();
 }
 
 template<> void Film::UpdateOutput<unsigned int>(const FilmOutputType type, const unsigned int *buffer,
 		const unsigned int index, const bool executeImagePipeline) {
+	API_BEGIN("{}, {}, {}, {}", ToArgString(type), (void *)buffer, index, executeImagePipeline);
+
 	UpdateOutputUInt(type, buffer, index, executeImagePipeline);
+	
+	API_END();
 }
 
 template<> const float *Film::GetChannel<float>(const FilmChannelType type,
 		const unsigned int index, const bool executeImagePipeline) {
-	return GetChannelFloat(type, index, executeImagePipeline);
+	API_BEGIN("{}, {}, {}", ToArgString(type), index, executeImagePipeline);
+
+	const float *result = GetChannelFloat(type, index, executeImagePipeline);
+
+	API_RETURN("{}", (void *)result);
+	
+	return result;
 }
 
 template<> const unsigned int *Film::GetChannel(const FilmChannelType type,
 		const unsigned int index, const bool executeImagePipeline) {
-	return GetChannelUInt(type, index, executeImagePipeline);
+	API_BEGIN("{}, {}, {}", ToArgString(type), index, executeImagePipeline);
+
+	const unsigned int *result =  GetChannelUInt(type, index, executeImagePipeline);
+
+	API_RETURN("{}", (void *)result);
+	
+	return result;
 }
 
 //------------------------------------------------------------------------------
@@ -300,6 +342,8 @@ template<> const unsigned int *Film::GetChannel(const FilmChannelType type,
 //------------------------------------------------------------------------------
 
 Camera::~Camera() {
+	API_BEGIN_NOARGS();
+	API_END();
 }
 
 //------------------------------------------------------------------------------
@@ -307,47 +351,91 @@ Camera::~Camera() {
 //------------------------------------------------------------------------------
 
 Scene *Scene::Create(const float imageScale) {
-	return new luxcore::detail::SceneImpl(imageScale);
+	API_BEGIN("{}", imageScale);
+
+	Scene *result = new luxcore::detail::SceneImpl(imageScale);
+
+	API_RETURN("{}", (void *)result);
+	
+	return result;
 }
 
 Scene *Scene::Create(const luxrays::Properties &props, const float imageScale) {
-	return new luxcore::detail::SceneImpl(props, imageScale);
+	API_BEGIN("{}, {}", ToArgString(props), imageScale);
+
+	Scene *result = new luxcore::detail::SceneImpl(props, imageScale);
+
+	API_RETURN("{}", (void *)result);
+	
+	return result;
 }
 
 Scene *Scene::Create(const string &fileName, const float imageScale) {
-	return new luxcore::detail::SceneImpl(fileName, imageScale);
+	API_BEGIN("{}, {}", ToArgString(fileName), imageScale);
+
+	Scene *result = new luxcore::detail::SceneImpl(fileName, imageScale);
+
+	API_RETURN("{}", (void *)result);
+	
+	return result;
 }
 
 Scene::~Scene() {
+	API_BEGIN_NOARGS();
+	API_END();
 }
 
 template<> void Scene::DefineImageMap<unsigned char>(const std::string &imgMapName,
 		unsigned char *pixels, const float gamma, const unsigned int channels,
 		const unsigned int width, const unsigned int height,
 		Scene::ChannelSelectionType selectionType, Scene::WrapType wrapType) {
+	API_BEGIN("{}, {}, {}, {}, {}, {}, {}, {}", ToArgString(imgMapName), (void *)pixels, gamma, channels, width, height, ToArgString(selectionType), ToArgString(wrapType));
+
 	DefineImageMapUChar(imgMapName, pixels, gamma, channels, width, height, selectionType, wrapType);
+	
+	API_END();
 }
 
 template<> void Scene::DefineImageMap<unsigned short>(const std::string &imgMapName,
 		unsigned short *pixels, const float gamma, const unsigned int channels,
 		const unsigned int width, const unsigned int height,
 		Scene::ChannelSelectionType selectionType, Scene::WrapType wrapType) {
+	API_BEGIN("{}, {}, {}, {}, {}, {}, {}, {}", ToArgString(imgMapName), (void *)pixels, gamma, channels, width, height, ToArgString(selectionType), ToArgString(wrapType));
+
 	DefineImageMapHalf(imgMapName, pixels, gamma, channels, width, height, selectionType, wrapType);
+	
+	API_END();
 }
 
 template<> void Scene::DefineImageMap<float>(const std::string &imgMapName,
 		float *pixels, const float gamma, const unsigned int channels,
 		const unsigned int width, const unsigned int height,
 		Scene::ChannelSelectionType selectionType, Scene::WrapType wrapType) {
+	API_BEGIN("{}, {}, {}, {}, {}, {}, {}, {}", ToArgString(imgMapName), (void *)pixels, gamma, channels, width, height, ToArgString(selectionType), ToArgString(wrapType));
+
 	DefineImageMapFloat(imgMapName, pixels, gamma, channels, width, height, selectionType, wrapType);
+	
+	API_END();
 }
 
 float *Scene::AllocVerticesBuffer(const unsigned int meshVertCount) {
-	return (float *)luxcore::detail::SceneImpl::AllocVerticesBuffer(meshVertCount);
+	API_BEGIN("{}", meshVertCount);
+
+	float *result = (float *)luxcore::detail::SceneImpl::AllocVerticesBuffer(meshVertCount);
+	
+	API_RETURN("{}", (void *)result);
+	
+	return result;
 }
 
 unsigned int *Scene::AllocTrianglesBuffer(const unsigned int meshTriCount) {
-	return (unsigned int *)luxcore::detail::SceneImpl::AllocTrianglesBuffer(meshTriCount);
+	API_BEGIN("{}", meshTriCount);
+
+	unsigned int *result =  (unsigned int *)luxcore::detail::SceneImpl::AllocTrianglesBuffer(meshTriCount);
+
+	API_RETURN("{}", (void *)result);
+	
+	return result;
 }
 
 //------------------------------------------------------------------------------
@@ -355,31 +443,56 @@ unsigned int *Scene::AllocTrianglesBuffer(const unsigned int meshTriCount) {
 //------------------------------------------------------------------------------
 
 RenderConfig *RenderConfig::Create(const Properties &props, Scene *scn) {
+	API_BEGIN("{}, {}", ToArgString(props), (void *)scn);
+
 	luxcore::detail::SceneImpl *scnImpl = dynamic_cast<luxcore::detail::SceneImpl *>(scn);
 
-	return new luxcore::detail::RenderConfigImpl(props, scnImpl);
+	RenderConfig *result = new luxcore::detail::RenderConfigImpl(props, scnImpl);
+
+	API_RETURN("{}", (void *)result);
+	
+	return result;
 }
 
 RenderConfig *RenderConfig::Create(const std::string &fileName) {
-	return new luxcore::detail::RenderConfigImpl(fileName);
+	API_BEGIN("{}", ToArgString(fileName));
+
+	RenderConfig *result = new luxcore::detail::RenderConfigImpl(fileName);
+
+	API_RETURN("{}", (void *)result);
+	
+	return result;
 }
 
 RenderConfig *RenderConfig::Create(const std::string &fileName, RenderState **startState,
 		Film **startFilm) {
+	API_BEGIN("{}, {}, {}", ToArgString(fileName), (void *)startState, (void *)startFilm);
+
 	luxcore::detail::RenderStateImpl *ss;
 	luxcore::detail::FilmImpl *sf;
 	RenderConfig *rcfg = new luxcore::detail::RenderConfigImpl(fileName, &ss, &sf);
 	
 	*startState = ss;
 	*startFilm = sf;
+
+	API_RETURN("{}", (void *)rcfg);
+	
 	return rcfg;
 }
 
 RenderConfig::~RenderConfig() {
+	API_BEGIN_NOARGS();
+	API_END();
 }
 
 const Properties &RenderConfig::GetDefaultProperties() {
-	return luxcore::detail::RenderConfigImpl::GetDefaultProperties();
+	API_BEGIN_NOARGS();
+
+	const Properties &result = luxcore::detail::RenderConfigImpl::GetDefaultProperties();
+	
+	API_RETURN("{}", ToArgString(result));
+	
+	return result;
 }
 
 //------------------------------------------------------------------------------
@@ -387,10 +500,18 @@ const Properties &RenderConfig::GetDefaultProperties() {
 //------------------------------------------------------------------------------
 
 RenderState *RenderState::Create(const std::string &fileName) {
-	return new luxcore::detail::RenderStateImpl(fileName);
+	API_BEGIN("{}", ToArgString(fileName));
+
+	RenderState *result = new luxcore::detail::RenderStateImpl(fileName);
+
+	API_RETURN("{}", ToArgString(result));
+	
+	return result;
 }
 
 RenderState::~RenderState() {
+	API_BEGIN_NOARGS();
+	API_END();
 }
 
 //------------------------------------------------------------------------------
@@ -398,19 +519,33 @@ RenderState::~RenderState() {
 //------------------------------------------------------------------------------
 
 RenderSession *RenderSession::Create(const RenderConfig *config, RenderState *startState, Film *startFilm) {
+	API_BEGIN("{}, {}, {}", (void *)config, (void *)startState, (void *)startFilm);
+
 	const luxcore::detail::RenderConfigImpl *configImpl = dynamic_cast<const luxcore::detail::RenderConfigImpl *>(config);
 	luxcore::detail::RenderStateImpl *startStateImpl = dynamic_cast<luxcore::detail::RenderStateImpl *>(startState);
 	luxcore::detail::FilmImpl *startFilmImpl = dynamic_cast<luxcore::detail::FilmImpl *>(startFilm);
 
-	return new luxcore::detail::RenderSessionImpl(configImpl, startStateImpl, startFilmImpl);
+	RenderSession *result = new luxcore::detail::RenderSessionImpl(configImpl, startStateImpl, startFilmImpl);
+
+	API_RETURN("{}", ToArgString(result));
+	
+	return result;
 }
 
 RenderSession *RenderSession::Create(const RenderConfig *config, const std::string &startStateFileName,
 		const std::string &startFilmFileName) {
+	API_BEGIN("{}, {}, {}", (void *)config, ToArgString(startStateFileName), ToArgString(startFilmFileName));
+
 	const luxcore::detail::RenderConfigImpl *configImpl = dynamic_cast<const luxcore::detail::RenderConfigImpl *>(config);
 
-	return new luxcore::detail::RenderSessionImpl(configImpl, startStateFileName, startFilmFileName);
+	RenderSession *result = new luxcore::detail::RenderSessionImpl(configImpl, startStateFileName, startFilmFileName);
+
+	API_RETURN("{}", ToArgString(result));
+	
+	return result;
 }
 
 RenderSession::~RenderSession() {
+	API_BEGIN_NOARGS();
+	API_END();
 }

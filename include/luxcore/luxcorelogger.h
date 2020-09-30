@@ -97,7 +97,7 @@ inline std::string ToArgString(const std::vector<T> &v) {
 		else
 			first = false;
 
-		ss << luxrays::ToString(e);
+		ss << ToArgString(e);
 	}
 
 	ss << "]";

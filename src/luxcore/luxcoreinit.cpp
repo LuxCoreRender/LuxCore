@@ -121,7 +121,7 @@ void luxcore::Init(void (*LogHandler)(const char *)) {
 }
 
 void luxcore::SetLogHandler(void (*LogHandler)(const char *)) {
-	API_BEGIN("{}", LogHandler);
+	API_BEGIN("{}", (void *)LogHandler);
 
 	// User provided handler
 	loggerCallBackHandler = LogHandler;
