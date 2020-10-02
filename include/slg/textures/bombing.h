@@ -30,9 +30,9 @@ namespace slg {
 class BombingTexture : public Texture {
 public:
 	BombingTexture(const TextureMapping2D *mp, const Texture *backgourndTx,
-			const Texture *bulletTx, const Texture *bulletMaskTx) :
+			const Texture *bulletTx, const Texture *bulletMaskTx, const u_int multiBulletCnt) :
 			mapping(mp), backgourndTex(backgourndTx), bulletTex(bulletTx),
-			bulletMaskTex(bulletMaskTx) { }
+			bulletMaskTex(bulletMaskTx), multiBulletCount(multiBulletCnt) { }
 	virtual ~BombingTexture() { delete mapping; }
 
 	virtual TextureType GetType() const { return BOMBING_TEX; }
@@ -58,6 +58,7 @@ private:
 	const Texture *backgourndTex;
 	const Texture *bulletTex;
 	const Texture *bulletMaskTex;
+	const u_int multiBulletCount;
 };
 
 }

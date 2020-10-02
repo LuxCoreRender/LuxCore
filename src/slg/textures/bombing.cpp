@@ -25,6 +25,9 @@ using namespace slg;
 
 //------------------------------------------------------------------------------
 // Bombing texture
+//
+// From GPU Gems: Chapter 20. Texture Bombing
+// https://developer.download.nvidia.com/books/HTML/gpugems/gpugems_ch20.html
 //------------------------------------------------------------------------------
 
 float BombingTexture::Y() const {
@@ -67,12 +70,17 @@ Spectrum BombingTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 			const float currentCellRandomOffsetX = noise.c[0];
 			const float currentCellRandomOffsetY = noise.c[1];
 			const float currentCellRandomPriority = noise.c[2];
-	
-			const UV bulletUV(currentCellOffset.u - currentCellRandomOffsetX, currentCellOffset.v - currentCellRandomOffsetY);
 
+			UV bulletUV(currentCellOffset.u - currentCellRandomOffsetX, currentCellOffset.v - currentCellRandomOffsetY);
 			if ((bulletUV.u < 0.f) || (bulletUV.u >= 1.f) ||
 					(bulletUV.v < 0.f) || (bulletUV.v >= 1.f))
 				continue;
+
+			// I generate a new random variable starting from currentCellRandomPriority
+			const float currentCellRandomBullet = fabsf(noise.c[2] - .5f) * 2.f;
+			// Pick a bullet out if multiple avilable shapes (if multiBulletCount > 1)
+			const u_int currentCellRandomBulletIndex = Floor2UInt(multiBulletCount * currentCellRandomBullet);
+			bulletUV.u = (currentCellRandomBulletIndex + bulletUV.u) / multiBulletCount;
 
 			hitPointTmp.defaultUV = bulletUV;
 
@@ -120,6 +128,7 @@ Properties BombingTexture::ToProperties(const ImageMapCache &imgMapCache, const 
 	props.Set(Property("scene.textures." + name + ".background")(backgourndTex->GetSDLValue()));
 	props.Set(Property("scene.textures." + name + ".bullet")(bulletTex->GetSDLValue()));
 	props.Set(Property("scene.textures." + name + ".bulletmask")(bulletMaskTex->GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".bulletcount")(multiBulletCount));
 	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;

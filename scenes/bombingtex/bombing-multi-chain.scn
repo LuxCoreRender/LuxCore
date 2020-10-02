@@ -8,26 +8,42 @@ scene.textures.backgroundtex.gamma = 1.0
 scene.textures.backgroundtex.randomizedtiling.enable = 1
 scene.textures.backgroundtex.mapping.uvscale = 2 2
 ##
-scene.textures.bullettex.file = autumn-leaf.jpg
+#scene.textures.bullettex.file = autumn-leaf.jpg
+scene.textures.bullettex.file = multi-autumn-leaf.jpg
 scene.textures.bullettex.gamma = 1.0
 ##
-scene.textures.bulletmasktex.file = autumn-leaf.jpg
+#scene.textures.bulletmasktex.file = autumn-leaf.jpg
+scene.textures.bulletmasktex.file = multi-autumn-leaf.jpg
 scene.textures.bulletmasktex.gamma = 1.0
 scene.textures.bulletmasktex.channel = alpha
 ##
-scene.textures.bombtex.type = bombing
-scene.textures.bombtex.background = backgroundtex
-scene.textures.bombtex.bullet = bullettex
-scene.textures.bombtex.bulletmask = bulletmasktex
-scene.textures.bombtex.bulletcount = 1
-scene.textures.bombtex.mapping.uvscale = 12 12
+scene.textures.bombtex1.type = bombing
+scene.textures.bombtex1.background = backgroundtex
+scene.textures.bombtex1.bullet = bullettex
+scene.textures.bombtex1.bulletmask = bulletmasktex
+scene.textures.bombtex1.bulletcount = 4
+scene.textures.bombtex1.mapping.uvscale = 12 12
+##
+scene.textures.bombtex2.type = bombing
+scene.textures.bombtex2.background = bombtex1
+scene.textures.bombtex2.bullet = bullettex
+scene.textures.bombtex2.bulletmask = bulletmasktex
+scene.textures.bombtex2.bulletcount = 4
+scene.textures.bombtex2.mapping.uvscale = 9 9
+##
+scene.textures.bombtex3.type = bombing
+scene.textures.bombtex3.background = bombtex2
+scene.textures.bombtex3.bullet = bullettex
+scene.textures.bombtex3.bulletmask = bulletmasktex
+scene.textures.bombtex3.bulletcount = 4
+scene.textures.bombtex3.mapping.uvscale = 15 15
 ################################################################################
 scene.materials.mat_light.type = matte
 scene.materials.mat_light.emission = 20. 20. 20.
 scene.materials.mat_light.kd = 0.0 0.0 0.0
 ##
 scene.materials.mat_white.type = matte
-scene.materials.mat_white.kd = bombtex
+scene.materials.mat_white.kd = bombtex2
 ################################################################################
 scene.objects.obj_light.ply = scenes/bump/mat_light.ply
 scene.objects.obj_light.material = mat_light
