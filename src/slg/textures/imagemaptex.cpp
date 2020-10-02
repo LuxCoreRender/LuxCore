@@ -210,7 +210,7 @@ Spectrum ImageMapTexture::RandomizedTilingGetSpectrumValue(const UV &pos) const 
 		surfaceToLattice_0_0 * pos.u + surfaceToLattice_0_1 * pos.v,
 		surfaceToLattice_1_0 * pos.u + surfaceToLattice_1_1 * pos.v
 	);
-	const UV cell = UV(floorf(lattice.u), floorf(lattice.v));
+	const UV cell(floorf(lattice.u), floorf(lattice.v));
 	UV uv = lattice - cell;
 
 	UV v0 = cell;

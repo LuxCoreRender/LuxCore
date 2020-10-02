@@ -34,6 +34,7 @@
 #include "slg/textures/bilerp.h"
 #include "slg/textures/blackbody.h"
 #include "slg/textures/blender_texture.h"
+#include "slg/textures/bombing.h"
 #include "slg/textures/brick.h"
 #include "slg/textures/brightcontrast.h"
 #include "slg/textures/checkerboard.h"
@@ -627,6 +628,13 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const float strength = props.Get(Property(propName + ".strength")(1.f)).Get<float>();
 
 		tex = new DistortTexture(texture, offset, strength);
+	} else if (texType == "bombing") {
+		const Texture *background = GetTexture(props.Get(Property(propName + ".background")(1.f)));
+		const Texture *bullet = GetTexture(props.Get(Property(propName + ".bullet")(1.f)));
+		const Texture *bulletMask = GetTexture(props.Get(Property(propName + ".bulletmask")(0.f)));
+
+		tex = new BombingTexture(CreateTextureMapping2D(propName + ".mapping", props),
+				background, bullet, bulletMask);
 	} else
 		throw runtime_error("Unknown texture type: " + texType);
 
