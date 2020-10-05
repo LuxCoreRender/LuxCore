@@ -631,11 +631,15 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 	} else if (texType == "bombing") {
 		const Texture *background = GetTexture(props.Get(Property(propName + ".background")(1.f)));
 		const Texture *bullet = GetTexture(props.Get(Property(propName + ".bullet")(1.f)));
-		const Texture *bulletMask = GetTexture(props.Get(Property(propName + ".bulletmask")(0.f)));
-		const u_int multiBulletCount = Max(props.Get(Property(propName + ".bulletcount")(1u)).Get<u_int>(), 1u);
+		const Texture *bulletMask = GetTexture(props.Get(Property(propName + ".bullet.mask")(0.f)));
+		
+		const float randomScaleFactor = Max(props.Get(Property(propName + ".bullet.randomscale.range")(.25f)).Get<float>(), 0.f);
+		const bool useRandomRotation = props.Get(Property(propName + ".bullet.randomrotation.enable")(true)).Get<bool>();
+		const u_int multiBulletCount = Max(props.Get(Property(propName + ".bullet.count")(1u)).Get<u_int>(), 1u);
 
 		tex = new BombingTexture(CreateTextureMapping2D(propName + ".mapping", props),
-				background, bullet, bulletMask, multiBulletCount);
+				background, bullet, bulletMask, randomScaleFactor, useRandomRotation,
+				multiBulletCount);
 	} else
 		throw runtime_error("Unknown texture type: " + texType);
 

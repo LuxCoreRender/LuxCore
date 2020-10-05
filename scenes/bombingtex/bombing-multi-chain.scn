@@ -20,15 +20,19 @@ scene.textures.bulletmasktex.channel = alpha
 scene.textures.bombtex1.type = bombing
 scene.textures.bombtex1.background = backgroundtex
 scene.textures.bombtex1.bullet = bullettex
-scene.textures.bombtex1.bulletmask = bulletmasktex
-scene.textures.bombtex1.bulletcount = 4
+scene.textures.bombtex1.bullet.mask = bulletmasktex
+scene.textures.bombtex1.bullet.count = 4
+scene.textures.bombtex1.bullet.randomscale.range = 0.75
+scene.textures.bombtex1.bullet.randomrotation.enable = 1
 scene.textures.bombtex1.mapping.uvscale = 12 12
 ##
 scene.textures.bombtex2.type = bombing
 scene.textures.bombtex2.background = bombtex1
 scene.textures.bombtex2.bullet = bullettex
-scene.textures.bombtex2.bulletmask = bulletmasktex
-scene.textures.bombtex2.bulletcount = 4
+scene.textures.bombtex2.bullet.mask = bulletmasktex
+scene.textures.bombtex2.bullet.count = 4
+scene.textures.bombtex2.bullet.randomscale.range = 0.75
+scene.textures.bombtex2.bullet.randomrotation.enable = 1
 scene.textures.bombtex2.mapping.uvscale = 9 9
 ##
 scene.textures.bombtex3.type = bombing

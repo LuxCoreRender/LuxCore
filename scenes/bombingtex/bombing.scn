@@ -9,17 +9,21 @@ scene.textures.backgroundtex.randomizedtiling.enable = 1
 scene.textures.backgroundtex.mapping.uvscale = 2 2
 ##
 scene.textures.bullettex.file = autumn-leaf.jpg
+#scene.textures.bullettex.file = square.jpg
 scene.textures.bullettex.gamma = 1.0
 ##
 scene.textures.bulletmasktex.file = autumn-leaf.jpg
+#scene.textures.bulletmasktex.file = square.jpg
 scene.textures.bulletmasktex.gamma = 1.0
 scene.textures.bulletmasktex.channel = alpha
 ##
 scene.textures.bombtex.type = bombing
 scene.textures.bombtex.background = backgroundtex
 scene.textures.bombtex.bullet = bullettex
-scene.textures.bombtex.bulletmask = bulletmasktex
-scene.textures.bombtex.bulletcount = 1
+scene.textures.bombtex.bullet.mask = bulletmasktex
+scene.textures.bombtex.bullet.count = 1
+scene.textures.bombtex.bullet.randomscale.range = 0.75
+scene.textures.bombtex.bullet.randomrotation.enable = 1
 scene.textures.bombtex.mapping.uvscale = 12 12
 ################################################################################
 scene.materials.mat_light.type = matte

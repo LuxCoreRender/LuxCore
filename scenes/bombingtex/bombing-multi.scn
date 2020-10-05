@@ -20,8 +20,11 @@ scene.textures.bulletmasktex.channel = alpha
 scene.textures.bombtex.type = bombing
 scene.textures.bombtex.background = backgroundtex
 scene.textures.bombtex.bullet = bullettex
-scene.textures.bombtex.bulletmask = bulletmasktex
-scene.textures.bombtex.bulletcount = 4
+scene.textures.bombtex.bullet.mask = bulletmasktex
+scene.textures.bombtex.bullet.count = 4
+scene.textures.bombtex.bullet.randomscale.range = 0.75
+scene.textures.bombtex.bullet.randomrotation.enable = 1
+
 scene.textures.bombtex.mapping.uvscale = 12 12
 ################################################################################
 scene.materials.mat_light.type = matte

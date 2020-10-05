@@ -63,22 +63,53 @@ Spectrum BombingTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 			const UV currentCell = cell + UV(i, j);
 			const UV currentCellOffset = cellOffset - UV(i, j);
 
-			const Spectrum noise = randomImageMapStorage->GetSpectrum(
-					((int)currentCell.u) % randomImageMapWidth,
-					((int)currentCell.v) % randomImageMapHeight);
+			// Pick cell random values
+			const u_int randomImageMapStorageIndex = (((int)currentCell.u) % (randomImageMapWidth / 2)) * 2 +
+					(((int)currentCell.v) % randomImageMapHeight) * randomImageMapWidth;
+			const Spectrum noise0 = randomImageMapStorage->GetSpectrum(randomImageMapStorageIndex);
 
-			const float currentCellRandomOffsetX = noise.c[0];
-			const float currentCellRandomOffsetY = noise.c[1];
-			const float currentCellRandomPriority = noise.c[2];
+			const float currentCellRandomOffsetX = noise0.c[0];
+			const float currentCellRandomOffsetY = noise0.c[1];
+			const float currentCellRandomPriority = noise0.c[2];
 
+			// Check the priority of this cell
+			if (currentCellRandomPriority <= resultPriority)
+					continue;
+
+			// Find The cell UV coordiantes
 			UV bulletUV(currentCellOffset.u - currentCellRandomOffsetX, currentCellOffset.v - currentCellRandomOffsetY);
+
+			// Pick some more cell random values
+			const Spectrum noise1 = randomImageMapStorage->GetSpectrum(randomImageMapStorageIndex + 1);
+			const float currentCellRandomRotate = noise1.c[0];
+			const float currentCellRandomScale = noise1.c[1];
+			const float currentCellRandomBullet = noise1.c[2];
+
+			// Translate to the cell center
+			const UV translatedUV(bulletUV.u - .5f, bulletUV.v - .5f);
+
+			// Apply random scale
+			const float scaleFactor = Lerp(currentCellRandomScale, 1.f, 1.f + randomScaleFactor);
+			const UV scaledUV(translatedUV.u * scaleFactor, translatedUV.v * scaleFactor);
+
+			// Apply random rotation
+			const float angle = useRandomRotation ? currentCellRandomRotate * (2.f * M_PI) : 0.f;
+			const float sinAngle = sinf(angle);
+			const float cosAngle = cosf(angle);
+			const UV rotatedUV(
+					scaledUV.u * cosAngle - scaledUV.v * sinAngle,
+					scaledUV.u * sinAngle + scaledUV.v * cosAngle);
+
+			// Translate back the cell center
+			bulletUV.u = rotatedUV.u + .5f;
+			bulletUV.v = rotatedUV.v + .5f;
+
+			// Check if I'm inside the cell
 			if ((bulletUV.u < 0.f) || (bulletUV.u >= 1.f) ||
 					(bulletUV.v < 0.f) || (bulletUV.v >= 1.f))
 				continue;
 
-			// I generate a new random variable starting from currentCellRandomPriority
-			const float currentCellRandomBullet = fabsf(noise.c[2] - .5f) * 2.f;
-			// Pick a bullet out if multiple avilable shapes (if multiBulletCount > 1)
+			// Pick a bullet out if multiple available shapes (if multiBulletCount > 1)
 			const u_int currentCellRandomBulletIndex = Floor2UInt(multiBulletCount * currentCellRandomBullet);
 			bulletUV.u = (currentCellRandomBulletIndex + bulletUV.u) / multiBulletCount;
 
@@ -87,7 +118,7 @@ Spectrum BombingTexture::GetSpectrumValue(const HitPoint &hitPoint) const {
 			const Spectrum bulletValue = bulletTex->GetSpectrumValue(hitPointTmp);
 			const float maskValue = bulletMaskTex->GetFloatValue(hitPointTmp);
 			
-			if ((currentCellRandomPriority > resultPriority) && (maskValue > 0.f)) {
+			if (maskValue > 0.f) {
 				resultPriority = currentCellRandomPriority;
 				result = Lerp(maskValue, backgroundValue, bulletValue);
 			}
@@ -127,8 +158,10 @@ Properties BombingTexture::ToProperties(const ImageMapCache &imgMapCache, const 
 	props.Set(Property("scene.textures." + name + ".type")("bombing"));
 	props.Set(Property("scene.textures." + name + ".background")(backgourndTex->GetSDLValue()));
 	props.Set(Property("scene.textures." + name + ".bullet")(bulletTex->GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".bulletmask")(bulletMaskTex->GetSDLValue()));
-	props.Set(Property("scene.textures." + name + ".bulletcount")(multiBulletCount));
+	props.Set(Property("scene.textures." + name + ".bullet.mask")(bulletMaskTex->GetSDLValue()));
+	props.Set(Property("scene.textures." + name + ".bullet.randomscale.range")(randomScaleFactor));
+	props.Set(Property("scene.textures." + name + ".bullet.randomrotation.enable")(useRandomRotation));
+	props.Set(Property("scene.textures." + name + ".bullet.count")(multiBulletCount));
 	props.Set(mapping->ToProperties("scene.textures." + name + ".mapping"));
 
 	return props;
