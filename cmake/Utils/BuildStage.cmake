@@ -67,6 +67,9 @@ function(BuildStage_files target dst_dir src_dir first_file) #...
 		list(APPEND dst_files ${dst_path})
 	endforeach()
 
+	# Silence MSB8065/MSB8064 warnings with VS2019
+	set_source_files_properties(${dirs} PROPERTIES SYMBOLIC True)
+
 	add_custom_target(${target} DEPENDS ${dst_files})
 
 endfunction()
