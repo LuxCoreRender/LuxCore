@@ -12,7 +12,7 @@ steps:
 - task: MSBuild@1
   inputs:
     solution: '..\WindowsCompile\Build_CMake\LuxCore\LuxRays.sln'
-    msbuildVersion: '15.0'
+    # msbuildVersion: '15.0'
     msbuildArchitecture: 'x64'
     platform: 'x64'
     configuration: 'Release'

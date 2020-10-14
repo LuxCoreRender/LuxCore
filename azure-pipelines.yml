@@ -83,7 +83,7 @@ jobs:
   condition: succeeded()
   timeoutInMinutes: 0
   pool:
-    vmImage: 'vs2017-win2016'
+    vmImage: 'windows-2019'
   variables:
     version_string: $[ dependencies.DetectBuildType.outputs['setvarStep.version_string'] ]
 
@@ -97,7 +97,7 @@ jobs:
     displayName: Getting required deps
   - template: ./scripts/azurepipeline/windows/windows_jobs.yml
     parameters:
-      build_script: './scripts/azurepipeline/windows/build.cmd /cmake-only'
+      build_script: './scripts/azurepipeline/windows/build.cmd /vs2019 /cmake-only'
       post_script: './scripts/azurepipeline/windows/post-build.cmd'
       ocl_text: 'Unified CPU/OpenCL/CUDA binaries'
       minimalargs: '/target:pyluxcore,pyluxcoretools,luxcoreui'
@@ -121,7 +121,7 @@ jobs:
     )
   timeoutInMinutes: 0
   pool:
-    vmImage: 'vs2017-win2016'
+    vmImage: 'windows-2019'
   variables:
     version_string: $[ dependencies.DetectBuildType.outputs['setvarStep.version_string'] ]
     final: $[ dependencies.DetectBuildType.outputs['setvarStep.final'] ]
@@ -136,7 +136,7 @@ jobs:
     displayName: Getting required deps
   - template: ./scripts/azurepipeline/windows/windows_jobs.yml
     parameters:
-      build_script: './scripts/azurepipeline/windows/build.cmd /cmake-only /dll'
+      build_script: './scripts/azurepipeline/windows/build.cmd /vs2019 /cmake-only /dll'
       post_script: './scripts/azurepipeline/windows/post-build.cmd'
       ocl_text: 'Unified CPU/OpenCL/CUDA binaries'
   - task: PublishBuildArtifacts@1
