@@ -120,6 +120,7 @@ void PathTracer::ResetEyeSampleResults(vector<SampleResult> &sampleResults) {
 	sampleResult.indirectShadowMask = 1.f;
 	sampleResult.irradiance = Spectrum();
 	sampleResult.albedo = Spectrum();
+	sampleResult.isHoldout = false;
 
 	sampleResult.rayCount = 0.f;
 }
@@ -431,7 +432,6 @@ void PathTracer::RenderEyePath(IntersectionDevice *device,
 				sampleResult.objectID = 0;
 				sampleResult.uv = UV(numeric_limits<float>::infinity(),
 						numeric_limits<float>::infinity());
-				sampleResult.isHoldout = false;
 			}
 			break;
 		}
