@@ -96,11 +96,18 @@ void BiDirCPURenderThread::ConnectVertices(const float time,
 			const float geometryTerm = 1.f / p2pDistance2;
 
 			// Trace ray between the two vertices
-			Ray p2pRay(eyeVertex.bsdf.GetRayOrigin(p2pDir), p2pDir,
+			const Point shadowRayOrig = eyeVertex.bsdf.GetRayOrigin(p2pDir);
+			const Vector shadowRayOrigP2P(lightVertex.bsdf.hitPoint.p - shadowRayOrig);
+			const float shadowRayDistanceSquared = shadowRayOrigP2P.LengthSquared();
+			const float shadowRayDistance = sqrtf(shadowRayDistanceSquared);
+			const Vector shadowRayDir = shadowRayOrigP2P / shadowRayDistance;
+
+			Ray p2pRay(shadowRayOrig, shadowRayDir,
 					0.f,
-					p2pDistance,
+					shadowRayDistance,
 					time);
 			p2pRay.UpdateMinMaxWithEpsilon();
+
 			RayHit p2pRayHit;
 			BSDF bsdfConn;
 			Spectrum connectionThroughput;
@@ -125,7 +132,7 @@ void BiDirCPURenderThread::ConnectVertices(const float time,
 
 				// Convert pdfs to area pdfs
 				const float eyeBsdfPdfA = PdfWtoA(eyeBsdfPdfW, p2pDistance, cosThetaAtLight);
-				const float lightBsdfPdfA  = PdfWtoA(lightBsdfPdfW,  p2pDistance, cosThetaAtCamera);
+				const float lightBsdfPdfA = PdfWtoA(lightBsdfPdfW,  p2pDistance, cosThetaAtCamera);
 
 				// MIS weights
 				const float lightWeight = MIS(eyeBsdfPdfA) *
