@@ -105,7 +105,7 @@ OPENCL_FORCE_INLINE float3 GlassMaterial_WaveLength2RGB(const float waveLength) 
 	return result * normFactor;
 }
 
-OPENCL_FORCE_INLINE float GlassMaterial_WaveLength2IOR(const float waveLength, const float IOR, const float C) {
+OPENCL_FORCE_INLINE float GlassMaterial_WaveLength2IOR(const float waveLength, const float IOR, const float B) {
 	// Cauchy's equation for relationship between the refractive index and wavelength
 	// note: Cauchy's lambda is expressed in micrometers while waveLength is in nanometers
 
@@ -114,10 +114,10 @@ OPENCL_FORCE_INLINE float GlassMaterial_WaveLength2IOR(const float waveLength, c
 	//const float B = IOR - C / Sqr(589.f / 1000.f);
 
 	// The B used by old LuxRender
-	const float B = IOR;
+	const float A = IOR;
 
 	// Cauchy's equation
-	const float cauchyEq = B + C / Sqr(waveLength / 1000.f);
+	const float cauchyEq = A + B / Sqr(waveLength / 1000.f);
 
 	return cauchyEq;
 }
@@ -144,7 +144,7 @@ OPENCL_FORCE_INLINE float3 GlassMaterial_EvalSpecularReflection(__global const H
 
 OPENCL_FORCE_INLINE float3 GlassMaterial_EvalSpecularTransmission(__global const HitPoint *hitPoint,
 		const float3 localFixedDir, const float u0,
-		const float3 kt, const float nc, const float nt, const float cauchyC,
+		const float3 kt, const float nc, const float nt, const float cauchyB,
 		float3 *sampledDir) {
 	if (Spectrum_IsBlack(kt))
 		return BLACK;
@@ -152,11 +152,11 @@ OPENCL_FORCE_INLINE float3 GlassMaterial_EvalSpecularTransmission(__global const
 	// Compute transmitted ray direction
 	float3 lkt;
 	float lnt;
-	if (cauchyC > 0.f) {
+	if (cauchyB > 0.f) {
 		// Select the wavelength to sample
 		const float waveLength = mix(380.f, 780.f, u0);
 
-		lnt = GlassMaterial_WaveLength2IOR(waveLength, nt, cauchyC);
+		lnt = GlassMaterial_WaveLength2IOR(waveLength, nt, cauchyB);
 
 		lkt = kt * GlassMaterial_WaveLength2RGB(waveLength);
 	} else {
@@ -220,11 +220,11 @@ OPENCL_FORCE_INLINE void GlassMaterial_Sample(__global const Material* restrict 
 	const float nc = ExtractExteriorIors(hitPoint, material->glass.exteriorIorTexIndex TEXTURES_PARAM);
 	const float nt = ExtractInteriorIors(hitPoint, material->glass.interiorIorTexIndex TEXTURES_PARAM);
 
-	const float cauchyC = (material->glass.cauchyCTex != NULL_INDEX) ? Texture_GetFloatValue(material->glass.cauchyCTex, hitPoint TEXTURES_PARAM) : -1.f;
+	const float cauchyB = (material->glass.cauchyBTex != NULL_INDEX) ? Texture_GetFloatValue(material->glass.cauchyBTex, hitPoint TEXTURES_PARAM) : -1.f;
 
 	float3 transLocalSampledDir; 
 	const float3 trans = GlassMaterial_EvalSpecularTransmission(hitPoint, fixedDir, u0,
-			kt, nc, nt, cauchyC, &transLocalSampledDir);
+			kt, nc, nt, cauchyB, &transLocalSampledDir);
 	
 	const float localFilmThickness = (material->glass.filmThicknessTexIndex != NULL_INDEX) 
 									 ? Texture_GetFloatValue(material->glass.filmThicknessTexIndex, hitPoint TEXTURES_PARAM) : 0.f;

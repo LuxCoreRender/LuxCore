@@ -32,10 +32,10 @@ GlassMaterial::GlassMaterial(const Texture *frontTransp, const Texture *backTran
 		const Texture *emitted, const Texture *bump,
 		const Texture *refl, const Texture *trans,
 		const Texture *exteriorIorFact, const Texture *interiorIorFact,
-		const Texture *C, const Texture *filmThickness, const Texture *filmIor) :
+		const Texture *B, const Texture *filmThickness, const Texture *filmIor) :
 			Material(frontTransp, backTransp, emitted, bump),
 			Kr(refl), Kt(trans), exteriorIor(exteriorIorFact), interiorIor(interiorIorFact),
-			cauchyC(C), filmThickness(filmThickness), filmIor(filmIor) {
+			cauchyB(B), filmThickness(filmThickness), filmIor(filmIor) {
 }
 
 Spectrum GlassMaterial::Evaluate(const HitPoint &hitPoint,
@@ -100,7 +100,7 @@ static Spectrum WaveLength2RGB(const float waveLength) {
 	return result * normFactor;
 }
 
-static float WaveLength2IOR(const float waveLength, const float IOR, const float C) {
+static float WaveLength2IOR(const float waveLength, const float IOR, const float B) {
 	// Cauchy's equation for relationship between the refractive index and wavelength
 	// note: Cauchy's lambda is expressed in micrometers while waveLength is in nanometers
 
@@ -110,10 +110,10 @@ static float WaveLength2IOR(const float waveLength, const float IOR, const float
 	//const float B = IOR - C / Sqr(589.f / 1000.f);
 
 	// The B used by old LuxRender
-	const float B = IOR;
+	const float A = IOR;
 
 	// Cauchy's equation
-	const float cauchyEq = B + C / Sqr(waveLength / 1000.f);
+	const float cauchyEq = A + B / Sqr(waveLength / 1000.f);
 
 	return cauchyEq;
 }
@@ -141,7 +141,7 @@ Spectrum GlassMaterial::EvalSpecularReflection(const HitPoint &hitPoint,
 
 Spectrum GlassMaterial::EvalSpecularTransmission(const HitPoint &hitPoint,
 		const Vector &localFixedDir, const float u0,
-		const Spectrum &kt, const float nc, const float nt, const float cauchyC,
+		const Spectrum &kt, const float nc, const float nt, const float cauchyB,
 		Vector *localSampledDir) {
 	if (kt.Black())
 		return Spectrum();
@@ -149,11 +149,11 @@ Spectrum GlassMaterial::EvalSpecularTransmission(const HitPoint &hitPoint,
 	// Compute transmitted ray direction
 	Spectrum lkt;
 	float lnt;
-	if (cauchyC > 0.f) {
+	if (cauchyB > 0.f) {
 		// Select the wavelength to sample
 		const float waveLength = Lerp(u0, 380.f, 780.f);
 
-		lnt = WaveLength2IOR(waveLength, nt, cauchyC);
+		lnt = WaveLength2IOR(waveLength, nt, cauchyB);
 
 		lkt = kt * WaveLength2RGB(waveLength);
 	} else {
@@ -197,11 +197,11 @@ Spectrum GlassMaterial::Sample(const HitPoint &hitPoint,
 	const float nc = ExtractExteriorIors(hitPoint, exteriorIor);
 	const float nt = ExtractInteriorIors(hitPoint, interiorIor);
 
-	const float cauchyCValue = cauchyC ? cauchyC->GetFloatValue(hitPoint) : 0.f;
+	const float cauchyBValue = cauchyB ? cauchyB->GetFloatValue(hitPoint) : 0.f;
 
 	Vector transLocalSampledDir; 
 	const Spectrum trans = EvalSpecularTransmission(hitPoint, localFixedDir, u0,
-			kt, nc, nt, cauchyCValue, &transLocalSampledDir);
+			kt, nc, nt, cauchyBValue, &transLocalSampledDir);
 	
 	const float localFilmThickness = filmThickness ? filmThickness->GetFloatValue(hitPoint) : 0.f;
 	const float localFilmIor = (localFilmThickness > 0.f && filmIor) ? filmIor->GetFloatValue(hitPoint) : 1.f;
@@ -306,8 +306,8 @@ Properties GlassMaterial::ToProperties(const ImageMapCache &imgMapCache, const b
 		props.Set(Property("scene.materials." + name + ".exteriorior")(exteriorIor->GetSDLValue()));
 	if (interiorIor)
 		props.Set(Property("scene.materials." + name + ".interiorior")(interiorIor->GetSDLValue()));
-	if (cauchyC)
-		props.Set(Property("scene.materials." + name + ".cauchyc")(cauchyC->GetSDLValue()));
+	if (cauchyB)
+		props.Set(Property("scene.materials." + name + ".cauchyb")(cauchyB->GetSDLValue()));
 	if (filmThickness)
 		props.Set(Property("scene.materials." + name + ".filmthickness")(filmThickness->GetSDLValue()));
 	if (filmIor)
