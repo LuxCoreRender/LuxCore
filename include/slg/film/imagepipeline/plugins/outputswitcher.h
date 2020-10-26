@@ -36,15 +36,20 @@ namespace slg {
 
 class OutputSwitcherPlugin : public ImagePipelinePlugin {
 public:
-	OutputSwitcherPlugin(const Film::FilmChannelType t, const u_int i) : type(t), index(i) { }
+	OutputSwitcherPlugin(const Film::FilmChannelType t, const u_int i);
+	OutputSwitcherPlugin(const FilmOutputs::FilmOutputType t);
 	virtual ~OutputSwitcherPlugin() { }
 
 	virtual ImagePipelinePlugin *Copy() const;
 
 	virtual void Apply(Film &film, const u_int index);
 
-	Film::FilmChannelType type;
-	u_int index;
+	Film::FilmChannelType channelType;
+	u_int channelIndex;
+
+	FilmOutputs::FilmOutputType outputType;
+
+	bool useOutput;
 
 	friend class boost::serialization::access;
 
@@ -54,14 +59,18 @@ private:
 
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImagePipelinePlugin);
-		ar & type;
-		ar & index;
+		ar & channelType;
+		ar & channelIndex;
+
+		ar & outputType;
+
+		ar & useOutput;
 	}
 };
 
 }
 
-BOOST_CLASS_VERSION(slg::OutputSwitcherPlugin, 1)
+BOOST_CLASS_VERSION(slg::OutputSwitcherPlugin, 2)
 
 BOOST_CLASS_EXPORT_KEY(slg::OutputSwitcherPlugin)
 

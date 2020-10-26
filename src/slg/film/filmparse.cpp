@@ -631,9 +631,15 @@ ImagePipeline *Film::CreateImagePipeline(const Properties &props, const string &
 					// 4096 => 12bit resolution
 					props.Get(Property(prefix + ".table.size")(4096u)).Get<u_int>()));
 			} else if (type == "OUTPUT_SWITCHER") {
-				imagePipeline->AddPlugin(new OutputSwitcherPlugin(
-					Film::String2FilmChannelType(props.Get(Property(prefix + ".channel")("DEPTH")).Get<string>()),
-					props.Get(Property(prefix + ".index")(0u)).Get<u_int>()));
+				const string type = props.Get(Property(prefix + ".channel")("DEPTH")).Get<string>();
+				
+				if (type == "CAUSTIC") {
+					imagePipeline->AddPlugin(new OutputSwitcherPlugin(FilmOutputs::CAUSTIC));
+				} else {
+					imagePipeline->AddPlugin(new OutputSwitcherPlugin(
+						Film::String2FilmChannelType(type),
+						props.Get(Property(prefix + ".index")(0u)).Get<u_int>()));
+				}
 			} else if (type == "GAUSSIANFILTER_3x3") {
 				const float weight = Clamp(props.Get(Property(prefix + ".weight")(.15f)).Get<float>(), 0.f, 1.f);
 

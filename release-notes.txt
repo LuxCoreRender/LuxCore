@@ -33,6 +33,7 @@
 * Added a cap (25% and 75%) to Glass transmission/reflection sampling to not under sample some case
 * Added the support to all light sources of ".temperature" and ".temperature.normalize" properties to set light temperature
 * Added the support for texture bombing
+* Added the support for Caustic AOV to OutputSwitcherPlugin
 
 ### Fixed Bugs
 
@@ -48,6 +49,7 @@
 * Fixed a possible crash when using trilinear texture with GPUs
 * Reworked some condition in hybrid rendering light tracing to solve the problem of flashing caustics (issue #441)
 * Fixed a problem with Blender Translation language preference option and scene export on file
+* Fixed a self-shadow problem in BIRCPU render engine
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.

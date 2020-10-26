@@ -183,6 +183,10 @@ void BakeCPURenderThread::RenderEyeSample(const BakeMapInfo &mapInfo, PathTracer
 			const double deviceRayCount = device->GetTotalRaysCount();
 
 			EyePathInfo pathInfo;
+			// I have to set isPassThroughPath to false to avoid problems with the
+			// force black background option (by default, it is set to true)
+			pathInfo.isPassThroughPath = false;
+
 			const PathTracer::DirectLightResult directLightResult = pathTracer.DirectLightSampling(state.device, state.scene,
 					timeSample,
 					state.eyeSampler->GetSample(pathTracer.eyeSampleSize + 3),
@@ -242,6 +246,10 @@ void BakeCPURenderThread::RenderEyeSample(const BakeMapInfo &mapInfo, PathTracer
 			const double deviceRayCount = device->GetTotalRaysCount();
 
 			EyePathInfo pathInfo;
+			// I have to set isPassThroughPath to false to avoid problems with the
+			// force black background option (by default, it is set to true)
+			pathInfo.isPassThroughPath = false;
+
 			const PathTracer::DirectLightResult directLightResult = pathTracer.DirectLightSampling(state.device, state.scene,
 					timeSample,
 					state.eyeSampler->GetSample(pathTracer.eyeSampleSize + 3),
