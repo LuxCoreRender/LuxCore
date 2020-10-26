@@ -104,12 +104,14 @@ static float WaveLength2IOR(const float waveLength, const float IOR, const float
 	// Cauchy's equation for relationship between the refractive index and wavelength
 	// note: Cauchy's lambda is expressed in micrometers while waveLength is in nanometers
 
-	// This is the formula suggested by Neo here:
+	// This is the formula suggested by Neo here, with a changed naming convention from B->A and C-> B:
 	// https://github.com/LuxCoreRender/BlendLuxCore/commit/d3fed046ab62e18226e410b42a16ca1bccefb530#commitcomment-26617643
-	// Compute IOR at 589 nm (natrium D line)
-	//const float B = IOR - C / Sqr(589.f / 1000.f);
+	
+	// Compute Cauchy-A assuming the user input IOR at 587.56 nm 
+	// (Fraunhofer d-line, Helium, used in one definition of the Abbe number)
+	//const float A = IOR - B / Sqr(587.56f / 1000.f);
 
-	// The B used by old LuxRender
+	// Use the user input IOR directly as Cauchy-A. Equivalent to the B used by old LuxRender.
 	const float A = IOR;
 
 	// Cauchy's equation

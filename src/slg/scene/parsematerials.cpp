@@ -217,6 +217,7 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 			cauchyB = GetTexture(props.Get(Property(propName + ".cauchyb")(0.f, 0.f, 0.f)));
 		// For compatibility with the past
 		else if (props.IsDefined(propName + ".cauchyc"))
+			SLG_LOG("WARNING: deprecated property " + propName + ".cauchyc");
 			cauchyB = GetTexture(props.Get(Property(propName + ".cauchyc")(0.f, 0.f, 0.f)));
 		
 		const Texture *filmThickness = NULL;
