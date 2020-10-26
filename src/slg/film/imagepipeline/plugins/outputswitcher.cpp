@@ -45,9 +45,9 @@ OutputSwitcherPlugin::OutputSwitcherPlugin(const FilmOutputs::FilmOutputType t) 
 
 ImagePipelinePlugin *OutputSwitcherPlugin::Copy() const {
 	if (useOutput)
-		return new OutputSwitcherPlugin(channelType, channelIndex);
-	else
 		return new OutputSwitcherPlugin(outputType);
+	else
+		return new OutputSwitcherPlugin(channelType, channelIndex);
 }
 
 void OutputSwitcherPlugin::Apply(Film &film, const u_int piepelineIndex) {
