@@ -16,6 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#if !defined(LUXRAYS_DISABLE_CUDA)
+
 #include "luxrays/core/context.h"
 #include "luxrays/core/exttrianglemesh.h"
 #include "luxrays/devices/cudaintersectiondevice.h"
@@ -760,3 +762,5 @@ HardwareIntersectionKernel *OptixAccel::NewHardwareIntersectionKernel(HardwareIn
 }
 
 }
+
+#endif

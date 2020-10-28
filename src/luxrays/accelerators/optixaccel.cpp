@@ -16,6 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#if !defined(LUXRAYS_DISABLE_CUDA)
+
 #include "luxrays/accelerators/optixaccel.h"
 #include "luxrays/utils/utils.h"
 #include "luxrays/core/context.h"
@@ -57,3 +59,5 @@ bool OptixAccel::Intersect(const Ray *initialRay, RayHit *rayHit) const {
 }
 
 }
+
+#endif

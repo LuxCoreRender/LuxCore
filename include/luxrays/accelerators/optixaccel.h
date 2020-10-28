@@ -16,6 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#if !defined(LUXRAYS_DISABLE_CUDA)
+
 #ifndef _LUXRAYS_OPTIXACCEL_H
 #define	_LUXRAYS_OPTIXACCEL_H
 
@@ -53,5 +55,7 @@ private:
 };
 
 }
+
+#endif
 
 #endif
