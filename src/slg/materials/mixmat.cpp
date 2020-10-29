@@ -181,15 +181,19 @@ Spectrum MixMaterial::Evaluate(const HitPoint &hitPoint,
 	if (reversePdfW)
 		*reversePdfW = 0.f;
 
-	BSDFEvent eventMatA = matA->GetEventTypes();
+	*event = NONE;
+	
+	BSDFEvent eventTypesMatA = matA->GetEventTypes();
 	if ((weight1 > 0.f) &&
-			((!isTransmitEval && (eventMatA & REFLECT)) ||
-			(isTransmitEval && (eventMatA & TRANSMIT)))) {
+			((!isTransmitEval && (eventTypesMatA & REFLECT)) ||
+			(isTransmitEval && (eventTypesMatA & TRANSMIT)))) {
 		HitPoint hitPointA(hitPoint);
 		matA->Bump(&hitPointA);
 		const Frame frameA(hitPointA.GetFrame());
 		const Vector lightDirA = frameA.ToLocal(frame.ToWorld(localLightDir));
 		const Vector eyeDirA = frameA.ToLocal(frame.ToWorld(localEyeDir));
+
+		BSDFEvent eventMatA;
 		float directPdfWMatA, reversePdfWMatA;
 		const Spectrum matAResult = matA->Evaluate(hitPointA, lightDirA, eyeDirA, &eventMatA, &directPdfWMatA, &reversePdfWMatA);
 		if (!matAResult.Black()) {
@@ -199,19 +203,22 @@ Spectrum MixMaterial::Evaluate(const HitPoint &hitPoint,
 				*directPdfW += weight1 * directPdfWMatA;
 			if (reversePdfW)
 				*reversePdfW += weight1 * reversePdfWMatA;
+			
+			*event |= eventMatA;
 		}
 	}
 
-	BSDFEvent eventMatB = matB->GetEventTypes();
+	BSDFEvent eventTypesMatB = matB->GetEventTypes();
 	if ((weight2 > 0.f) &&
-			((!isTransmitEval && (eventMatB & REFLECT)) ||
-			(isTransmitEval && (eventMatB & TRANSMIT)))) {
+			((!isTransmitEval && (eventTypesMatB & REFLECT)) ||
+			(isTransmitEval && (eventTypesMatB & TRANSMIT)))) {
 		HitPoint hitPointB(hitPoint);
 		matB->Bump(&hitPointB);
 		const Frame frameB(hitPointB.GetFrame());
 		const Vector lightDirB = frameB.ToLocal(frame.ToWorld(localLightDir));
 		const Vector eyeDirB = frameB.ToLocal(frame.ToWorld(localEyeDir));
 
+		BSDFEvent eventMatB;
 		float directPdfWMatB, reversePdfWMatB;
 		const Spectrum matBResult = matB->Evaluate(hitPointB, lightDirB, eyeDirB, &eventMatB, &directPdfWMatB, &reversePdfWMatB);
 		if (!matBResult.Black()) {
@@ -221,10 +228,10 @@ Spectrum MixMaterial::Evaluate(const HitPoint &hitPoint,
 				*directPdfW += weight2 * directPdfWMatB;
 			if (reversePdfW)
 				*reversePdfW += weight2 * reversePdfWMatB;
+			
+			*event |= eventMatB;
 		}
 	}
-
-	*event = eventMatA | eventMatB;
 
 	return result;
 }
