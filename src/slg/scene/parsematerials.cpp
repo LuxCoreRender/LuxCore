@@ -212,9 +212,14 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 		} else if (props.IsDefined(propName + ".interiorior"))
 			interiorIor = GetTexture(props.Get(Property(propName + ".interiorior")(1.5f)));
 
-		const Texture *cauchyC = NULL;
-		if (props.IsDefined(propName + ".cauchyc"))
-			cauchyC = GetTexture(props.Get(Property(propName + ".cauchyc")(0.f, 0.f, 0.f)));
+		const Texture *cauchyB = NULL;
+		if (props.IsDefined(propName + ".cauchyb"))
+			cauchyB = GetTexture(props.Get(Property(propName + ".cauchyb")(0.f, 0.f, 0.f)));
+		// For compatibility with the past
+		else if (props.IsDefined(propName + ".cauchyc")){
+			SLG_LOG("WARNING: deprecated property " + propName + ".cauchyc");
+			cauchyB = GetTexture(props.Get(Property(propName + ".cauchyc")(0.f, 0.f, 0.f)));
+		}
 		
 		const Texture *filmThickness = NULL;
 		if (props.IsDefined(propName + ".filmthickness"))
@@ -224,7 +229,7 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 		if (props.IsDefined(propName + ".filmior"))
 			filmIor = GetTexture(props.Get(Property(propName + ".filmior")(1.5f)));
 
-		mat = new GlassMaterial(frontTransparencyTex, backTransparencyTex, emissionTex, bumpTex, kr, kt, exteriorIor, interiorIor, cauchyC, filmThickness, filmIor);
+		mat = new GlassMaterial(frontTransparencyTex, backTransparencyTex, emissionTex, bumpTex, kr, kt, exteriorIor, interiorIor, cauchyB, filmThickness, filmIor);
 	} else if (matType == "archglass") {
 		const Texture *kr = GetTexture(props.Get(Property(propName + ".kr")(1.f, 1.f, 1.f)));
 		const Texture *kt = GetTexture(props.Get(Property(propName + ".kt")(1.f, 1.f, 1.f)));

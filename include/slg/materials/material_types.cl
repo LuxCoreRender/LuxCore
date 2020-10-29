@@ -92,7 +92,7 @@ typedef struct {
     unsigned int krTexIndex;
 	unsigned int ktTexIndex;
 	unsigned int exteriorIorTexIndex, interiorIorTexIndex;
-	unsigned int cauchyCTex;
+	unsigned int cauchyBTex;
 	unsigned int filmThicknessTexIndex;
 	unsigned int filmIorTexIndex;
 } GlassParam;
