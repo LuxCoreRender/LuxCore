@@ -113,24 +113,24 @@ def PropertiesTests():
 	a = array('f', [i for i in range(size)])
 	prop = pyluxcore.Property("test.array", [])
 	
-	start = time.clock()
+	start = time.perf_counter()
 	for i in range(size):
 		prop.Add([a[i]])
-	end = time.clock()
+	end = time.perf_counter()
 	print("Add test: %.2gs" % (end-start))
 
 	prop = pyluxcore.Property("test.array", [])
 	
-	start = time.clock()
+	start = time.perf_counter()
 	prop.AddAllFloat(a)
-	end = time.clock()
+	end = time.perf_counter()
 	print("AddAll test: %.2gs" % (end-start))
 	
 	prop = pyluxcore.Property("test.array", [])
 	
-	start = time.clock()
+	start = time.perf_counter()
 	prop.AddAllFloat(a, 3, 1)
-	end = time.clock()
+	end = time.perf_counter()
 	print("AddAllStride test: %.2gs" % (end-start))
 
 ################################################################################

@@ -101,9 +101,9 @@ def SaveFilm():
 	session.Stop()
 
 	# Save the rendered image
-	t1 = time.clock()
+	t1 = time.perf_counter()
 	session.GetFilm().SaveFilm("simple.flm")
-	t2 = time.clock()
+	t2 = time.perf_counter()
 	print("Film save time: %s secs" % (t2 - t1))
 
 	print("Done.")
@@ -114,9 +114,9 @@ def SaveFilm():
 
 def LoadFilm():
 	print("Film loading...")
-	t1 = time.clock()
+	t1 = time.perf_counter()
 	film = pyluxcore.Film("simple.flm")
-	t2 = time.clock()
+	t2 = time.perf_counter()
 	print("Film load time: %s secs" % (t2 - t1))
 
 	# Define the new image pipeline
@@ -148,9 +148,9 @@ def LoadFilm():
 		film.SaveOutput("simple" + str(i) + ".png", pyluxcore.FilmOutputType.RGB_IMAGEPIPELINE, pyluxcore.Properties())
 	
 	print("Film saving...")
-	t1 = time.clock()
+	t1 = time.perf_counter()
 	film.SaveFilm("simple2.flm")
-	t2 = time.clock()
+	t2 = time.perf_counter()
 	print("Film save time: %s secs" % (t2 - t1))
 
 	print("Done.")
