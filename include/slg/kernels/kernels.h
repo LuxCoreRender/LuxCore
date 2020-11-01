@@ -91,6 +91,7 @@ extern std::string KernelSource_texture_types;
 extern std::string KernelSource_texture_abs_funcs;
 extern std::string KernelSource_texture_bilerp_funcs;
 extern std::string KernelSource_texture_blackbody_funcs;
+extern std::string KernelSource_texture_bombing_funcs;
 extern std::string KernelSource_texture_brick_funcs;
 extern std::string KernelSource_texture_clamp_funcs;
 extern std::string KernelSource_texture_colordepth_funcs;

@@ -31,6 +31,7 @@
 #include "slg/textures/bilerp.h"
 #include "slg/textures/blackbody.h"
 #include "slg/textures/blender_texture.h"
+#include "slg/textures/bombing.h"
 #include "slg/textures/brick.h"
 #include "slg/textures/brightcontrast.h"
 #include "slg/textures/checkerboard.h"
@@ -1018,6 +1019,75 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 					evalOpStackSize += CompileTextureOpsGenericBumpMap(texIndex);
 					break;
 				}
+				default:
+					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(" + ToString(tex->type) + "): " + ToString(opType));
+			}
+			break;
+		}
+		case slg::ocl::BOMBING_TEX: {
+			switch (opType) {
+				case slg::ocl::TextureEvalOpType::EVAL_FLOAT:
+				case slg::ocl::TextureEvalOpType::EVAL_SPECTRUM: {
+					// Eval background texture 
+					evalOpStackSize += CompileTextureOps(tex->bombingTex.backgroundTex, slg::ocl::TextureEvalOpType::EVAL_SPECTRUM);
+
+					// EVAL_BOMBING_SETUP_11
+					slg::ocl::TextureEvalOp opStep11;
+					opStep11.texIndex = texIndex;
+					opStep11.evalType = slg::ocl::TextureEvalOpType::EVAL_BOMBING_SETUP_11;
+					texEvalOps.push_back(opStep11);
+					// Save original UV + mapped UV + background texture value + current texture value + result priority current result priority + usableResult
+					evalOpStackSize += 2 + 2 + 3 + 3 + 1;
+					
+					// Eval bullet texture
+					evalOpStackSize += CompileTextureOps(tex->bombingTex.bulletTexIndex, slg::ocl::TextureEvalOpType::EVAL_SPECTRUM);
+					// Eval bullet mask texture
+					evalOpStackSize += CompileTextureOps(tex->bombingTex.bulletMaskTexIndex, slg::ocl::TextureEvalOpType::EVAL_FLOAT);
+
+					// EVAL_BOMBING_SETUP_10
+					slg::ocl::TextureEvalOp opStep10;
+					opStep10.texIndex = texIndex;
+					opStep10.evalType = slg::ocl::TextureEvalOpType::EVAL_BOMBING_SETUP_10;
+					texEvalOps.push_back(opStep10);
+					// Save original UV + mapped UV + background texture value + current texture value + result priority current result priority + usableResult
+					evalOpStackSize += 2 + 2 + 3 + 3 + 1;
+					
+					// Eval bullet texture
+					evalOpStackSize += CompileTextureOps(tex->bombingTex.bulletTexIndex, slg::ocl::TextureEvalOpType::EVAL_SPECTRUM);
+					// Eval bullet mask texture
+					evalOpStackSize += CompileTextureOps(tex->bombingTex.bulletMaskTexIndex, slg::ocl::TextureEvalOpType::EVAL_FLOAT);
+
+					// EVAL_BOMBING_SETUP_01
+					slg::ocl::TextureEvalOp opStep01;
+					opStep01.texIndex = texIndex;
+					opStep01.evalType = slg::ocl::TextureEvalOpType::EVAL_BOMBING_SETUP_01;
+					texEvalOps.push_back(opStep01);
+					// Save original UV + mapped UV + background texture value + current texture value + result priority current result priority + usableResult
+					evalOpStackSize += 2 + 2 + 3 + 3 + 1;
+					
+					// Eval bullet texture
+					evalOpStackSize += CompileTextureOps(tex->bombingTex.bulletTexIndex, slg::ocl::TextureEvalOpType::EVAL_SPECTRUM);
+					// Eval bullet mask texture
+					evalOpStackSize += CompileTextureOps(tex->bombingTex.bulletMaskTexIndex, slg::ocl::TextureEvalOpType::EVAL_FLOAT);
+
+					// EVAL_BOMBING_SETUP_00
+					slg::ocl::TextureEvalOp opStep00;
+					opStep00.texIndex = texIndex;
+					opStep00.evalType = slg::ocl::TextureEvalOpType::EVAL_BOMBING_SETUP_00;
+					texEvalOps.push_back(opStep00);
+					// Save original UV + mapped UV + background texture value + current texture value + result priority current result priority + usableResult
+					evalOpStackSize += 2 + 2 + 3 + 3 + 1;
+					
+					// Eval bullet texture
+					evalOpStackSize += CompileTextureOps(tex->bombingTex.bulletTexIndex, slg::ocl::TextureEvalOpType::EVAL_SPECTRUM);
+					// Eval bullet mask texture
+					evalOpStackSize += CompileTextureOps(tex->bombingTex.bulletMaskTexIndex, slg::ocl::TextureEvalOpType::EVAL_FLOAT);
+					break;
+				}
+				case slg::ocl::TextureEvalOpType::EVAL_BUMP:
+					// Use generic bump map evaluation path
+					evalOpStackSize += CompileTextureOpsGenericBumpMap(texIndex);
+					break;
 				default:
 					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(" + ToString(tex->type) + "): " + ToString(opType));
 			}
@@ -2202,6 +2272,27 @@ void CompiledScene::CompileTextures() {
 
 				const Texture *offsetTex = dt->GetOffset();
 				tex->distortTex.offsetTexIndex = scene->texDefs.GetTextureIndex(offsetTex);
+				break;
+			}
+			case BOMBING_TEX: {
+				const BombingTexture *bt = static_cast<const BombingTexture *>(t);
+
+				tex->type = slg::ocl::BOMBING_TEX;
+				
+				CompileTextureMapping2D(&tex->bombingTex.mapping, bt->GetTextureMapping());
+				
+				tex->bombingTex.randomScaleFactor = bt->GetRandomScaleFactor();
+				tex->bombingTex.useRandomRotation = bt->GetUseRandomRotation();
+				tex->bombingTex.multiBulletCount = bt->GetMultiBulletCount();
+
+				const Texture *backgroundTex = bt->GetBackgroundTex();
+				tex->bombingTex.backgroundTex = scene->texDefs.GetTextureIndex(backgroundTex);
+				const Texture *bulletTexIndex = bt->GetBulletTex();
+				tex->bombingTex.bulletTexIndex = scene->texDefs.GetTextureIndex(bulletTexIndex);
+				const Texture *bulletMaskTexIndex = bt->GetBulletMaskTex();
+				tex->bombingTex.bulletMaskTexIndex = scene->texDefs.GetTextureIndex(bulletMaskTexIndex);
+
+				tex->bombingTex.randomImageMapIndex = scene->imgMapCache.GetImageMapIndex(ImageMapTexture::randomImageMap.get());
 				break;
 			}
 			default:
