@@ -29,6 +29,13 @@ sys.path.append("./lib")
 
 import pyluxcore
 
+# Choose the right timing function depending on Python version
+def Clock():
+	if sys.version_info < (3, 3, 0):
+		return time.clock()
+	else:
+		return time.perf_counter()
+
 ################################################################################
 ## Properties example
 ################################################################################
@@ -113,24 +120,24 @@ def PropertiesTests():
 	a = array('f', [i for i in range(size)])
 	prop = pyluxcore.Property("test.array", [])
 	
-	start = time.perf_counter()
+	start = Clock()
 	for i in range(size):
 		prop.Add([a[i]])
-	end = time.perf_counter()
+	end = Clock()
 	print("Add test: %.2gs" % (end-start))
 
 	prop = pyluxcore.Property("test.array", [])
 	
-	start = time.perf_counter()
+	start = Clock()
 	prop.AddAllFloat(a)
-	end = time.perf_counter()
+	end = Clock()
 	print("AddAll test: %.2gs" % (end-start))
 	
 	prop = pyluxcore.Property("test.array", [])
 	
-	start = time.perf_counter()
+	start = Clock()
 	prop.AddAllFloat(a, 3, 1)
-	end = time.perf_counter()
+	end = Clock()
 	print("AddAllStride test: %.2gs" % (end-start))
 
 ################################################################################
