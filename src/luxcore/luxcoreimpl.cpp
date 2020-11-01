@@ -514,57 +514,103 @@ CameraImpl::~CameraImpl() {
 }
 
 const CameraImpl::CameraType CameraImpl::GetType() const {
-	return (Camera::CameraType)scene.scene->camera->GetType();
+	API_BEGIN_NOARGS();
+
+	const CameraImpl::CameraType type = (Camera::CameraType)scene.scene->camera->GetType();
+	
+	API_RETURN("{}", type);
+
+	return type;
 }
 
 void CameraImpl::Translate(const float x, const float y, const float z) const {
+	API_BEGIN("{}, {}, {}", x, y, z);
+
 	scene.scene->camera->Translate(Vector(x, y, z));
 	scene.scene->editActions.AddAction(slg::CAMERA_EDIT);
+
+	API_END();
 }
 
 void CameraImpl::TranslateLeft(const float t) const {
+	API_BEGIN("{}", t);
+
 	scene.scene->camera->TranslateLeft(t);
 	scene.scene->editActions.AddAction(slg::CAMERA_EDIT);
+
+	API_END();
 }
 
 void CameraImpl::TranslateRight(const float t) const {
+	API_BEGIN("{}", t);
+
 	scene.scene->camera->TranslateRight(t);
 	scene.scene->editActions.AddAction(slg::CAMERA_EDIT);
+
+	API_END();
 }
 
 void CameraImpl::TranslateForward(const float t) const {
+	API_BEGIN("{}", t);
+
 	scene.scene->camera->TranslateForward(t);
 	scene.scene->editActions.AddAction(slg::CAMERA_EDIT);
+
+	API_END();
 }
 
 void CameraImpl::TranslateBackward(const float t) const {
+	API_BEGIN("{}", t);
+
 	scene.scene->camera->TranslateBackward(t);
 	scene.scene->editActions.AddAction(slg::CAMERA_EDIT);
+
+	API_END();
 }
 
 void CameraImpl::Rotate(const float angle, const float x, const float y, const float z) const {
+	API_BEGIN("{}, {}, {}, {}", angle, x ,y ,z);
+
 	scene.scene->camera->Rotate(angle, Vector(x, y, z));
 	scene.scene->editActions.AddAction(slg::CAMERA_EDIT);
+
+	API_END();
 }
 
 void CameraImpl::RotateLeft(const float angle) const {
+	API_BEGIN("{}", angle);
+
 	scene.scene->camera->RotateLeft(angle);
 	scene.scene->editActions.AddAction(slg::CAMERA_EDIT);
+
+	API_END();
 }
 
 void CameraImpl::RotateRight(const float angle) const {
+	API_BEGIN("{}", angle);
+
 	scene.scene->camera->RotateRight(angle);
 	scene.scene->editActions.AddAction(slg::CAMERA_EDIT);
+
+	API_END();
 }
 
 void CameraImpl::RotateUp(const float angle) const {
+	API_BEGIN("{}", angle);
+
 	scene.scene->camera->RotateUp(angle);
 	scene.scene->editActions.AddAction(slg::CAMERA_EDIT);
+
+	API_END();
 }
 
 void CameraImpl::RotateDown(const float angle) const {
+	API_BEGIN("{}", angle);
+
 	scene.scene->camera->RotateDown(angle);
 	scene.scene->editActions.AddAction(slg::CAMERA_EDIT);
+
+	API_END();
 }
 
 //------------------------------------------------------------------------------
