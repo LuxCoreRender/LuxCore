@@ -658,6 +658,8 @@ SceneImpl::~SceneImpl() {
 }
 
 void SceneImpl::GetBBox(float min[3], float max[3]) const {
+	API_BEGIN("{}, {}", (void *)min, (void *)max);
+
 	const BBox &worldBBox = scene->dataSet->GetBBox();
 
 	min[0] = worldBBox.pMin.x;
@@ -667,22 +669,39 @@ void SceneImpl::GetBBox(float min[3], float max[3]) const {
 	max[0] = worldBBox.pMax.x;
 	max[1] = worldBBox.pMax.y;
 	max[2] = worldBBox.pMax.z;
+	
+	API_RETURN("({}, {}, {}), ({}, {}, {})", min[0], min[1], min[2], max[0], max[1], max[2]);
 }
 
 const Camera &SceneImpl::GetCamera() const {
+	API_BEGIN_NOARGS();
+	API_RETURN("{}", (void *)camera);
+
 	return *camera;
 }
 
 bool SceneImpl::IsImageMapDefined(const std::string &imgMapName) const {
-	return scene->IsImageMapDefined(imgMapName);
+	API_BEGIN("{}", ToArgString(imgMapName));
+
+	const bool result = scene->IsImageMapDefined(imgMapName);
+	
+	API_RETURN("{}", result);
+
+	return result;
 }
 
 void SceneImpl::SetDeleteMeshData(const bool v) {
+	API_BEGIN("{}", v);
+
 	scene->extMeshCache.SetDeleteMeshData(v);
+
+	API_END();
 }
 
 void SceneImpl::SetMeshAppliedTransformation(const std::string &meshName,
 			const float appliedTransMat[16]) {
+	API_BEGIN("{}, {}", ToArgString(meshName), ToArgString(appliedTransMat, 16));
+
 	ExtMesh *mesh = scene->extMeshCache.GetExtMesh(meshName);
 	ExtTriangleMesh *extTriMesh = dynamic_cast<ExtTriangleMesh *>(mesh);
 	if (!extTriMesh)
@@ -697,18 +716,27 @@ void SceneImpl::SetMeshAppliedTransformation(const std::string &meshName,
 	const Transform trans(mat);
 
 	extTriMesh->SetLocal2World(trans);
+
+	API_END();
 }
 
 void SceneImpl::DefineMesh(const std::string &meshName,
 		const long plyNbVerts, const long plyNbTris,
 		float *p, unsigned int *vi, float *n,
 		float *uvs, float *cols, float *alphas) {
+	API_BEGIN("{}, {}, {}, {}, {}, {}, {}, {}, {}", ToArgString(meshName),
+			plyNbVerts, plyNbTris,
+			(void *)p, (void *)vi, (void *)n,
+			(void *)uvs, (void *)cols, (void *)alphas);
+
 	// Invalidate the scene properties cache
 	scenePropertiesCache.Clear();
 
 	scene->DefineMesh(meshName, plyNbVerts, plyNbTris, (Point *)p,
 			(Triangle *)vi, (Normal *)n,
 			(UV *)uvs, (Spectrum *)cols, alphas);
+
+	API_END();
 }
 
 void SceneImpl::DefineMeshExt(const std::string &meshName,
@@ -717,6 +745,11 @@ void SceneImpl::DefineMeshExt(const std::string &meshName,
 		array<float *, LC_MESH_MAX_DATA_COUNT> *uvs,
 		array<float *, LC_MESH_MAX_DATA_COUNT> *cols,
 		array<float *, LC_MESH_MAX_DATA_COUNT> *alphas) {
+	API_BEGIN("{}, {}, {}, {}, {}, {}, {}, {}, {}", ToArgString(meshName),
+			plyNbVerts, plyNbTris,
+			(void *)p, (void *)vi, (void *)n,
+			(void *)uvs, (void *)cols, (void *)alphas);
+
 	// A safety check
 	static_assert(LC_MESH_MAX_DATA_COUNT == EXTMESH_MAX_DATA_COUNT,
 			"LC_MESH_MAX_DATA_COUNT and EXTMESH_MAX_DATA_COUNT must have the same value");
@@ -748,21 +781,35 @@ void SceneImpl::DefineMeshExt(const std::string &meshName,
 	scene->DefineMeshExt(meshName, plyNbVerts, plyNbTris, (Point *)p,
 			(Triangle *)vi, (Normal *)n,
 			&slgUVs, &slgCols, &slgAlphas);
+
+	API_END();
 }
 
 void SceneImpl::SetMeshVertexAOV(const string &meshName,
 		const unsigned int index, float *data) {
+	API_BEGIN("{}, {}, {}", ToArgString(meshName), index, (void *)data);
+
 	scene->SetMeshVertexAOV(meshName, index, data);
+
+	API_END();
 }
 
 void SceneImpl::SetMeshTriangleAOV(const string &meshName,
 		const unsigned int index, float *data) {
+	API_BEGIN("{}, {}, {}", ToArgString(meshName), index, (void *)data);
+
 	scene->SetMeshTriangleAOV(meshName, index, data);
+
+	API_END();
 }
 
 void SceneImpl::SaveMesh(const string &meshName, const string &fileName) {
+	API_BEGIN("{}, {}", ToArgString(meshName), ToArgString(fileName));
+
 	const ExtMesh *mesh = scene->extMeshCache.GetExtMesh(meshName);
 	mesh->Save(fileName);
+
+	API_END();
 }
 
 void SceneImpl::DefineStrands(const string &shapeName, const cyHairFile &strandsFile,
@@ -770,6 +817,12 @@ void SceneImpl::DefineStrands(const string &shapeName, const cyHairFile &strands
 		const unsigned int adaptiveMaxDepth, const float adaptiveError,
 		const unsigned int solidSideCount, const bool solidCapBottom, const bool solidCapTop,
 		const bool useCameraPosition) {
+	API_BEGIN("{}, cyHairFile, {}, {}, {}, {}, {}, {}, {}", ToArgString(shapeName),
+			ToArgString(tesselType),
+			adaptiveMaxDepth, adaptiveError,
+			solidSideCount, solidCapBottom, solidCapTop,
+			useCameraPosition);
+
 	// Invalidate the scene properties cache
 	scenePropertiesCache.Clear();
 
@@ -777,37 +830,76 @@ void SceneImpl::DefineStrands(const string &shapeName, const cyHairFile &strands
 			(slg::StrendsShape::TessellationType)tesselType, adaptiveMaxDepth, adaptiveError,
 			solidSideCount, solidCapBottom, solidCapTop,
 			useCameraPosition);
+	
+	API_END();
 }
 
 bool SceneImpl::IsMeshDefined(const std::string &meshName) const {
-	return scene->IsMeshDefined(meshName);
+	API_BEGIN("{}", ToArgString(meshName));
+
+	const bool result = scene->IsMeshDefined(meshName);
+
+	API_RETURN("{}", result);
+
+	return result;
 }
 
 bool SceneImpl::IsTextureDefined(const std::string &texName) const {
-	return scene->IsTextureDefined(texName);
+	API_BEGIN("{}", ToArgString(texName));
+
+	const bool result = scene->IsTextureDefined(texName);
+
+	API_RETURN("{}", result);
+
+	return result;
 }
 
 bool SceneImpl::IsMaterialDefined(const std::string &matName) const {
-	return scene->IsMaterialDefined(matName);
+	API_BEGIN("{}", ToArgString(matName));
+
+	const bool result = scene->IsMaterialDefined(matName);
+
+	API_RETURN("{}", result);
+
+	return result;
 }
 
 const unsigned int SceneImpl::GetLightCount() const {
-	return scene->lightDefs.GetSize();
+	API_BEGIN_NOARGS();
+
+	const unsigned int result = scene->lightDefs.GetSize();
+
+	API_RETURN("{}", result);
+
+	return result;
 }
 
 const unsigned int  SceneImpl::GetObjectCount() const {
-	return scene->objDefs.GetSize();
+	API_BEGIN_NOARGS();
+
+	const unsigned int result = scene->objDefs.GetSize();
+
+	API_RETURN("{}", result);
+
+	return result;
 }
 
 void SceneImpl::Parse(const Properties &props) {
+	API_BEGIN("{}", ToArgString(props));
+
 	// Invalidate the scene properties cache
 	scenePropertiesCache.Clear();
 
 	scene->Parse(props);
+
+	API_END();
 }
 
 void SceneImpl::DuplicateObject(const std::string &srcObjName, const std::string &dstObjName,
 		const float transMat[16], const unsigned int objectID) {
+	API_BEGIN("{}, {}, {}, {}", ToArgString(srcObjName), ToArgString(dstObjName),
+			ToArgString(transMat, 16), objectID);
+
 	// Invalidate the scene properties cache
 	scenePropertiesCache.Clear();
 
@@ -819,10 +911,15 @@ void SceneImpl::DuplicateObject(const std::string &srcObjName, const std::string
 		transMat[3], transMat[7], transMat[11], transMat[15]);
 	const Transform trans(mat);
 	scene->DuplicateObject(srcObjName, dstObjName, trans, objectID);
+
+	API_END();
 }
 
 void SceneImpl::DuplicateObject(const std::string &srcObjName, const std::string &dstObjNamePrefix,
 			const unsigned int count, const float *transMats, const unsigned int *objectIDs) {
+	API_BEGIN("{}, {}, {}, {}, {}", ToArgString(srcObjName), ToArgString(dstObjNamePrefix),
+			count, (void *)transMats, (void *)objectIDs);
+
 	// Invalidate the scene properties cache
 	scenePropertiesCache.Clear();
 
@@ -844,10 +941,15 @@ void SceneImpl::DuplicateObject(const std::string &srcObjName, const std::string
 		// Move to the next matrix
 		transMat += 16;
 	}
+
+	API_END();
 }
 
 void SceneImpl::DuplicateObject(const std::string &srcObjName, const std::string &dstObjName,
 		const u_int steps, const float *times, const float *transMats, const unsigned int objectID) {
+	API_BEGIN("{}, {}, {}, {}, {}, {}", ToArgString(srcObjName), ToArgString(dstObjName),
+			steps, (void *)times, (void *)transMats, objectID);
+
 	// Invalidate the scene properties cache
 	scenePropertiesCache.Clear();
 
@@ -872,11 +974,16 @@ void SceneImpl::DuplicateObject(const std::string &srcObjName, const std::string
 	}
 
 	scene->DuplicateObject(srcObjName, dstObjName, MotionSystem(tms, trans), objectID);
+
+	API_END();
 }
 
 void SceneImpl::DuplicateObject(const std::string &srcObjName, const std::string &dstObjNamePrefix,
 		const unsigned int count, const u_int steps, const float *times, const float *transMats,
 		const unsigned int *objectIDs) {
+	API_BEGIN("{}, {}, {}, {}, {}, {}, {}", ToArgString(srcObjName), ToArgString(dstObjNamePrefix),
+			count, steps, (void *)times, (void *)transMats, (void *)objectIDs);
+
 	// Invalidate the scene properties cache
 	scenePropertiesCache.Clear();
 
@@ -906,9 +1013,13 @@ void SceneImpl::DuplicateObject(const std::string &srcObjName, const std::string
 		const string dstObjName = dstObjNamePrefix + ToString(j);
 		scene->DuplicateObject(srcObjName, dstObjName, MotionSystem(tms, trans), objectID);
 	}
+	
+	API_END();
 }
 
 void SceneImpl::UpdateObjectTransformation(const std::string &objName, const float transMat[16]) {
+	API_BEGIN("{}, {}", ToArgString(objName), ToArgString(transMat, 16));
+
 	// Invalidate the scene properties cache
 	scenePropertiesCache.Clear();
 
@@ -920,37 +1031,57 @@ void SceneImpl::UpdateObjectTransformation(const std::string &objName, const flo
 		transMat[3], transMat[7], transMat[11], transMat[15]);
 	const Transform trans(mat);
 	scene->UpdateObjectTransformation(objName, trans);
+
+	API_END();
 }
 
 void SceneImpl::UpdateObjectMaterial(const std::string &objName, const std::string &matName) {
+	API_BEGIN("{}, {}", ToArgString(objName), ToArgString(matName));
+
 	// Invalidate the scene properties cache
 	scenePropertiesCache.Clear();
 
 	scene->UpdateObjectMaterial(objName, matName);
+
+	API_END();
 }
 
 void SceneImpl::DeleteObject(const string &objName) {
+	API_BEGIN("{}", ToArgString(objName));
+
 	// Invalidate the scene properties cache
 	scenePropertiesCache.Clear();
 
 	scene->DeleteObject(objName);
+
+	API_END();
 }
 
 void SceneImpl::DeleteLight(const string &lightName) {
+	API_BEGIN("{}", ToArgString(lightName));
+
 	// Invalidate the scene properties cache
 	scenePropertiesCache.Clear();
 
 	scene->DeleteLight(lightName);
+
+	API_END();
 }
 
 void SceneImpl::RemoveUnusedImageMaps() {
+	API_BEGIN_NOARGS();
+
 	// Invalidate the scene properties cache
 	scenePropertiesCache.Clear();
 
 	scene->RemoveUnusedImageMaps();
+
+	API_END();
 }
 
 void SceneImpl::RemoveUnusedTextures() {
+	API_BEGIN_NOARGS();
+
 	// Invalidate the scene properties cache
 	scenePropertiesCache.Clear();
 
@@ -958,10 +1089,14 @@ void SceneImpl::RemoveUnusedTextures() {
 }
 
 void SceneImpl::RemoveUnusedMaterials() {
+	API_BEGIN_NOARGS();
+
 	// Invalidate the scene properties cache
 	scenePropertiesCache.Clear();
 
 	scene->RemoveUnusedMaterials();
+
+	API_END();
 }
 
 void SceneImpl::RemoveUnusedMeshes() {
@@ -969,60 +1104,101 @@ void SceneImpl::RemoveUnusedMeshes() {
 	scenePropertiesCache.Clear();
 
 	scene->RemoveUnusedMeshes();
+
+	API_END();
 }
 
 void SceneImpl::DefineImageMapUChar(const std::string &imgMapName,
 		unsigned char *pixels, const float gamma, const unsigned int channels,
 		const unsigned int width, const unsigned int height,
 		ChannelSelectionType selectionType, WrapType wrapType) {
+	API_BEGIN("{}, {}, {}, {}, {}, {}, {}, {}", ToArgString(imgMapName), (void *)pixels, gamma, channels,
+			width, height, ToArgString(selectionType), ToArgString(wrapType));
+
 	scene->DefineImageMap<u_char>(imgMapName, pixels, gamma, channels,
 			width, height, (slg::ImageMapStorage::ChannelSelectionType)selectionType,
 			(slg::ImageMapStorage::WrapType)wrapType);
+
+	API_END();
 }
 
 void SceneImpl::DefineImageMapHalf(const std::string &imgMapName,
 		unsigned short *pixels, const float gamma, const unsigned int channels,
 		const unsigned int width, const unsigned int height,
 		ChannelSelectionType selectionType, WrapType wrapType) {
+	API_BEGIN("{}, {}, {}, {}, {}, {}, {}, {}", ToArgString(imgMapName), (void *)pixels, gamma, channels,
+			width, height, ToArgString(selectionType), ToArgString(wrapType));
+
 	scene->DefineImageMap<half>(imgMapName, (half *)pixels, gamma, channels,
 			width, height, (slg::ImageMapStorage::ChannelSelectionType)selectionType,
 			(slg::ImageMapStorage::WrapType)wrapType);
+
+	API_END();
 }
 
 void SceneImpl::DefineImageMapFloat(const std::string &imgMapName,
 		float *pixels, const float gamma, const unsigned int channels,
 		const unsigned int width, const unsigned int height,
 		ChannelSelectionType selectionType, WrapType wrapType) {
+	API_BEGIN("{}, {}, {}, {}, {}, {}, {}, {}", ToArgString(imgMapName), (void *)pixels, gamma, channels,
+			width, height, ToArgString(selectionType), ToArgString(wrapType));
+
 	scene->DefineImageMap<float>(imgMapName, pixels, gamma, channels,
 			width, height, (slg::ImageMapStorage::ChannelSelectionType)selectionType,
 			(slg::ImageMapStorage::WrapType)wrapType);
+
+	API_END();
 }
 
 // Note: this method is not part of LuxCore API and it is used only internally
 void SceneImpl::DefineMesh(ExtTriangleMesh *mesh) {
+	API_BEGIN("{}", (void *)mesh);
+
 	// Invalidate the scene properties cache
 	scenePropertiesCache.Clear();
 
 	scene->DefineMesh(mesh);
+
+	API_END();
 }
 
 const Properties &SceneImpl::ToProperties() const {
+	API_BEGIN_NOARGS();
+
 	if (!scenePropertiesCache.GetSize())
 		scenePropertiesCache << scene->ToProperties(true);
+
+	API_RETURN("{}", ToArgString(scenePropertiesCache));
 
 	return scenePropertiesCache;
 }
 
 void SceneImpl::Save(const std::string &fileName) const {
+	API_BEGIN("{}", ToArgString(fileName));
+
 	slg::Scene::SaveSerialized(fileName, scene);
+
+	API_END();
 }
 
 Point *SceneImpl::AllocVerticesBuffer(const unsigned int meshVertCount) {
-	return TriangleMesh::AllocVerticesBuffer(meshVertCount);
+	API_BEGIN("{}", meshVertCount);
+
+	Point *result = TriangleMesh::AllocVerticesBuffer(meshVertCount);
+
+	API_RETURN("{}", (void *)result);
+	
+	return result;
 }
 
 Triangle *SceneImpl::AllocTrianglesBuffer(const unsigned int meshTriCount) {
-	return TriangleMesh::AllocTrianglesBuffer(meshTriCount);
+	API_BEGIN("{}", meshTriCount);
+
+	Triangle *result = TriangleMesh::AllocTrianglesBuffer(meshTriCount);
+
+	API_RETURN("{}", (void *)result);
+	
+	return result;
 }
 
 //------------------------------------------------------------------------------

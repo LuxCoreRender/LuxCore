@@ -105,6 +105,24 @@ inline std::string ToArgString(const std::vector<T> &v) {
 	return ss.str();
 }
 
+template <class T>
+inline std::string ToArgString(const T *p, const size_t size) {
+	std::ostringstream ss;
+
+	ss << "array[";
+
+	for (unsigned int i = 0; i < size; ++i) {
+		if (i != 0)
+			ss << " ,";
+
+		ss << ToArgString(p[i]);
+	}
+
+	ss << "]";
+	
+	return ss.str();
+}
+
 }
 }
 
