@@ -103,7 +103,7 @@ class RenderView(QMainWindow):
 			self.renderEnginePathOCLActs.append(
 				QAction(self.deviceList[i][0], self, triggered = partial(self.renderEnginePathOCL, i)))
 		
-		self.cameraToggleDOFAct = QAction("Togle &DOF", self, triggered = self.cameraToggleDOF)
+		self.cameraToggleDOFAct = QAction("Toggle &DOF", self, triggered = self.cameraToggleDOF)
 		self.cameraMoveLeftAct = QAction("Move &left", self, triggered = partial(self.cameraMove, -0.5))
 		self.cameraMoveLeftAct.setShortcuts(QKeySequence.MoveToPreviousChar)
 		self.cameraMoveRightAct = QAction("Move &right", self, triggered = partial(self.cameraMove, 0.5))

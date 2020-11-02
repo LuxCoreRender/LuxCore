@@ -54,6 +54,13 @@ import pyluxcore
 # Film load (2048 x 2048)
 # - time: 1.6987780000000043 secs
 
+# Choose the right timing function depending on Python version
+def Clock():
+	if sys.version_info < (3, 3, 0):
+		return time.clock()
+	else:
+		return time.perf_counter()
+
 ################################################################################
 ## Film save example
 ################################################################################
@@ -101,9 +108,9 @@ def SaveFilm():
 	session.Stop()
 
 	# Save the rendered image
-	t1 = time.clock()
+	t1 = Clock()
 	session.GetFilm().SaveFilm("simple.flm")
-	t2 = time.clock()
+	t2 = Clock()
 	print("Film save time: %s secs" % (t2 - t1))
 
 	print("Done.")
@@ -114,9 +121,9 @@ def SaveFilm():
 
 def LoadFilm():
 	print("Film loading...")
-	t1 = time.clock()
+	t1 = Clock()
 	film = pyluxcore.Film("simple.flm")
-	t2 = time.clock()
+	t2 = Clock()
 	print("Film load time: %s secs" % (t2 - t1))
 
 	# Define the new image pipeline
@@ -148,9 +155,9 @@ def LoadFilm():
 		film.SaveOutput("simple" + str(i) + ".png", pyluxcore.FilmOutputType.RGB_IMAGEPIPELINE, pyluxcore.Properties())
 	
 	print("Film saving...")
-	t1 = time.clock()
+	t1 = Clock()
 	film.SaveFilm("simple2.flm")
-	t2 = time.clock()
+	t2 = Clock()
 	print("Film save time: %s secs" % (t2 - t1))
 
 	print("Done.")
