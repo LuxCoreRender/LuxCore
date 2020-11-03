@@ -80,6 +80,10 @@ inline std::string ToArgString(const std::string &t) {
 	return "\"" + t + "\"";
 }
 
+inline std::string ToArgString(const luxrays::Property &p) {
+	return "Property[\n" + p.ToString() + "]";
+}
+
 inline std::string ToArgString(const luxrays::Properties &p) {
 	return "Properties[\n" + p.ToString() + "]";
 }

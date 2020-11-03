@@ -34,6 +34,7 @@
 * Added the support to all light sources of ".temperature" and ".temperature.normalize" properties to set light temperature
 * Added the support for texture bombing
 * Added the support for Caustic AOV to OutputSwitcherPlugin
+* LuxCore API has new log system
 
 ### Fixed Bugs
 

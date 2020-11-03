@@ -1168,7 +1168,8 @@ const Properties &SceneImpl::ToProperties() const {
 	if (!scenePropertiesCache.GetSize())
 		scenePropertiesCache << scene->ToProperties(true);
 
-	API_RETURN("{}", ToArgString(scenePropertiesCache));
+	//API_RETURN("{}", ToArgString(scenePropertiesCache));
+	API_END();
 
 	return scenePropertiesCache;
 }
@@ -1253,57 +1254,125 @@ RenderConfigImpl::~RenderConfigImpl() {
 }
 
 const Properties &RenderConfigImpl::GetProperties() const {
-	return renderConfig->cfg;
+	API_BEGIN_NOARGS();
+
+	const Properties &result = renderConfig->cfg;
+
+	//API_RETURN("{}", ToArgString(result));
+	API_END();
+
+	return result;
 }
 
 const Property RenderConfigImpl::GetProperty(const std::string &name) const {
-	return renderConfig->GetProperty(name);
+	API_BEGIN("{}", ToArgString(name));
+
+	const Property result = renderConfig->GetProperty(name);
+
+	API_RETURN("{}", ToArgString(result));
+
+	return result;
 }
 
 const Properties &RenderConfigImpl::ToProperties() const {
-	return renderConfig->ToProperties();
+	API_BEGIN_NOARGS();
+
+	const Properties &result = renderConfig->ToProperties();
+
+	//API_RETURN("{}", ToArgString(result));
+	API_END();
+
+	return result;
 }
 
 Scene &RenderConfigImpl::GetScene() const {
-	return *scene;
+	API_BEGIN_NOARGS();
+	
+	Scene &result = *scene;
+
+	API_RETURN("{}", (void *)&result);
+
+	return result;
 }
 
 bool RenderConfigImpl::HasCachedKernels() const {
-	return renderConfig->HasCachedKernels();
+	API_BEGIN_NOARGS();
+
+	bool result = renderConfig->HasCachedKernels();
+
+	API_RETURN("{}", result);
+
+	return result;
 }
 
 void RenderConfigImpl::Parse(const Properties &props) {
+	API_BEGIN("{}", ToArgString(props));
+
 	renderConfig->Parse(props);
+
+	API_END();
 }
 
 void RenderConfigImpl::Delete(const string &prefix) {
+	API_BEGIN("{}", ToArgString(prefix));
+
 	renderConfig->Delete(prefix);
+
+	API_END();
 }
 
 bool RenderConfigImpl::GetFilmSize(unsigned int *filmFullWidth, unsigned int *filmFullHeight,
 		unsigned int *filmSubRegion) const {
-	return slg::Film::GetFilmSize(renderConfig->cfg, filmFullWidth, filmFullHeight, filmSubRegion);
+	API_BEGIN("{}, {}, {}", (void *)filmFullWidth, (void *)filmFullHeight, (void *)filmSubRegion);
+
+	const bool result = slg::Film::GetFilmSize(renderConfig->cfg, filmFullWidth, filmFullHeight, filmSubRegion);
+	
+	API_RETURN("{}", result);
+
+	return result;
 }
 
 void RenderConfigImpl::DeleteSceneOnExit() {
+	API_BEGIN_NOARGS();
+
 	allocatedScene = true;
+
+	API_END();
 }
 
 void RenderConfigImpl::Save(const std::string &fileName) const {
+	API_BEGIN("{}", ToArgString(fileName));
+
 	slg::RenderConfig::SaveSerialized(fileName, renderConfig);
+
+	API_END();
 }
 
 void RenderConfigImpl::Export(const std::string &dirName) const {
+	API_BEGIN("{}", ToArgString(dirName));
+
 	slg::FileSaverRenderEngine::ExportScene(renderConfig, dirName,
 			renderConfig->GetProperty("renderengine.type").Get<string>());
+
+	API_END();
 }
 
 void RenderConfigImpl::ExportGLTF(const std::string &fileName) const {
+	API_BEGIN("{}", ToArgString(fileName));
+
 	slg::FileSaverRenderEngine::ExportSceneGLTF(renderConfig, fileName);
+
+	API_END();
 }
 
 const Properties &RenderConfigImpl::GetDefaultProperties() {
-	return slg::RenderConfig::GetDefaultProperties();
+	API_BEGIN_NOARGS();
+
+	const Properties &result = slg::RenderConfig::GetDefaultProperties();
+
+	API_END();
+
+	return result;
 }
 
 //------------------------------------------------------------------------------
@@ -1323,7 +1392,11 @@ RenderStateImpl::~RenderStateImpl() {
 }
 
 void RenderStateImpl::Save(const std::string &fileName) const {
+	API_BEGIN("{}", ToArgString(fileName));
+
 	renderState->SaveSerialized(fileName);
+
+	API_END();
 }
 
 //------------------------------------------------------------------------------
@@ -1370,69 +1443,143 @@ RenderSessionImpl::~RenderSessionImpl() {
 	delete renderSession;
 }
 const RenderConfig &RenderSessionImpl::GetRenderConfig() const {
-	return *renderConfig;
+	API_BEGIN_NOARGS();
+
+	const RenderConfig &result = *renderConfig;
+
+	API_RETURN("{}", (void *)&result);
+
+	return result;
 }
 
 RenderState *RenderSessionImpl::GetRenderState() {
-	return new RenderStateImpl(renderSession->GetRenderState());
+	API_BEGIN_NOARGS();
+
+	RenderState *result = new RenderStateImpl(renderSession->GetRenderState());
+	
+	API_RETURN("{}", (void *)result);
+
+	return result;
 }
 
 void RenderSessionImpl::Start() {
+	API_BEGIN_NOARGS();
+
 	renderSession->Start();
 
 	// In order to populate the stats.* Properties
 	UpdateStats();
+
+	API_END();
 }
 
 void RenderSessionImpl::Stop() {
+	API_BEGIN_NOARGS();
+
 	renderSession->Stop();
+
+	API_END();
 }
 
 bool RenderSessionImpl::IsStarted() const {
-	return renderSession->IsStarted();
+	API_BEGIN_NOARGS();
+
+	const bool result = renderSession->IsStarted();
+
+	API_RETURN("{}", result);
+
+	return result;
 }
 
 void RenderSessionImpl::BeginSceneEdit() {
+	API_BEGIN_NOARGS();
+
 	renderSession->BeginSceneEdit();
+
+	API_END();
 }
 
 void RenderSessionImpl::EndSceneEdit() {
+	API_BEGIN_NOARGS();
+
 	renderSession->EndSceneEdit();
 
 	// Invalidate the scene properties cache
 	renderConfig->scene->scenePropertiesCache.Clear();
+
+	API_END();
 }
 
 bool RenderSessionImpl::IsInSceneEdit() const {
-	return renderSession->IsInSceneEdit();
+	API_BEGIN_NOARGS();
+
+	const bool result = renderSession->IsInSceneEdit();
+
+	API_RETURN("{}", result);
+
+	return result;
 }
 
 void RenderSessionImpl::Pause() {
+	API_BEGIN_NOARGS();
+
 	renderSession->Pause();
+
+	API_END();
 }
 
 void RenderSessionImpl::Resume() {
+	API_BEGIN_NOARGS();
+
 	renderSession->Resume();
+
+	API_END();
 }
 
 bool RenderSessionImpl::IsInPause() const {
-	return renderSession->IsInPause();
+	API_BEGIN_NOARGS();
+
+	const bool result = renderSession->IsInPause();
+
+	API_RETURN("{}", result);
+
+	return result;
 }
 
 bool RenderSessionImpl::HasDone() const {
-	return renderSession->renderEngine->HasDone();
+	API_BEGIN_NOARGS();
+
+	const bool result = renderSession->renderEngine->HasDone();
+
+	API_RETURN("{}", result);
+
+	return result;
 }
 
 void RenderSessionImpl::WaitForDone() const {
+	API_BEGIN_NOARGS();
+
 	renderSession->renderEngine->WaitForDone();
+
+	API_END();
 }
 
 void RenderSessionImpl::WaitNewFrame() {
+	API_BEGIN_NOARGS();
+
 	renderSession->renderEngine->WaitNewFrame();
+
+	API_END();
 }
 
 Film &RenderSessionImpl::GetFilm() {
-	return *film;
+	API_BEGIN_NOARGS();
+
+	Film &result = *film;
+	
+	API_RETURN("{}", (void *)&result);
+
+	return result;
 }
 
 static void SetTileProperties(Properties &props, const string &prefix,
@@ -1457,10 +1604,15 @@ static void SetTileProperties(Properties &props, const string &prefix,
 }
 
 void RenderSessionImpl::UpdateStats() {
+	API_BEGIN_NOARGS();
+
 	// It is not really correct to call UpdateStats() outside a Start()/Stop()
 	// however it is easy to avoid any harm if it is done.
-	if (!renderSession->IsStarted())
+	if (!renderSession->IsStarted()) {
+		API_END();
+
 		return;
+	}
 
 	//--------------------------------------------------------------------------
 	// Stats update
@@ -1590,15 +1742,32 @@ void RenderSessionImpl::UpdateStats() {
 	//--------------------------------------------------------------------------
 
 	renderSession->CheckPeriodicSave();
+
+	API_END();
 }
 
 const Properties &RenderSessionImpl::GetStats() const {
-	return stats;
+	API_BEGIN_NOARGS();
+	
+	const Properties &result = stats;
+
+	//API_RETURN("{}", ToArgString(result));
+	API_END();
+
+	return result;
 }
 
 void RenderSessionImpl::Parse(const Properties &props) {
+	API_BEGIN("{}", ToArgString(props));
+
 	renderSession->Parse(props);
+
+	API_END();
 }
 void RenderSessionImpl::SaveResumeFile(const std::string &fileName) {
+	API_BEGIN("{}", ToArgString(fileName));
+
 	renderSession->SaveResumeFile(fileName);
+
+	API_END();
 }
