@@ -162,7 +162,7 @@ CUDADevice::CUDADevice(
 	CHECK_CUDA_ERROR(cuCtxSetCacheConfig(CU_FUNC_CACHE_PREFER_L1));
 
 	if (isOptixAvilable && desc->useOptix) {
-		OptixDeviceContextOptions optixOptions;
+		OptixDeviceContextOptions optixOptions = {};
 		optixOptions.logCallbackFunction = &OptixLogCB;
 		optixOptions.logCallbackData = (void *)deviceContext;
 		// For normal usage
