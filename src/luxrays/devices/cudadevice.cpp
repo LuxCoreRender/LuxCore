@@ -181,7 +181,12 @@ CUDADevice::CUDADevice(
 
 CUDADevice::~CUDADevice() {
 	if (optixContext) {
+		// cudaContext could be not the current context and Optix crashes in this case
+		CHECK_CUDA_ERROR(cuCtxPushCurrent(cudaContext));
+
 		CHECK_OPTIX_ERROR(optixDeviceContextDestroy(optixContext));
+
+		CHECK_CUDA_ERROR(cuCtxPopCurrent(nullptr));
 	}
 
 	// Free all loaded modules
