@@ -77,7 +77,14 @@ typedef struct {
 	ProjectiveCamera projCamera;
 } OrthographicCamera;
 
+typedef enum {
+	STEREO_PERSPECTIVE,
+	STEREO_ENVIRONMENT
+} StereoCameraType;
+
 typedef struct {
+	StereoCameraType stereoCameraType;
+
 	PerspectiveCamera perspCamera;
 
 	Transform leftEyeRasterToCamera;

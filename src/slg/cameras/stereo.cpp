@@ -17,14 +17,16 @@
  ***************************************************************************/
 
 #include "slg/cameras/stereo.h"
+#include "slg/cameras/environment.h"
 
 using namespace std;
 using namespace luxrays;
 using namespace slg;
 
-StereoCamera::StereoCamera(const luxrays::Point &o, const luxrays::Point &t,
-			const luxrays::Vector &u) : PerspectiveCamera(STEREO, o, t, u),
-			leftEye(NULL), rightEye(NULL) {
+StereoCamera::StereoCamera(const StereoCameraType sType,
+		const luxrays::Point &o, const luxrays::Point &t,
+		const luxrays::Vector &u) : PerspectiveCamera(STEREO, o, t, u),
+		stereoType(sType), leftEye(nullptr), rightEye(nullptr) {
 	horizStereoEyesDistance = .0626f;
 	horizStereoLensDistance = .2779f;
 }
@@ -78,50 +80,81 @@ void StereoCamera::Update(const u_int width, const u_int height,
 	y = Cross(x, dir);
 	y = Normalize(y);
 
-	// Create left eye camera
-	delete leftEye;
-	leftEye = new PerspectiveCamera(orig - .5f * horizStereoEyesDistance * x, target, up);
-	leftEye->clipHither = clipHither;
-	leftEye->clipYon = clipYon;
-	leftEye->shutterOpen = shutterOpen;
-	leftEye->shutterClose = shutterClose;
+	switch(stereoType) {
+		case STEREO_PERSPECTIVE: {
+			// Create left eye camera
+			delete leftEye;
+			PerspectiveCamera *left = new PerspectiveCamera(orig - .5f * horizStereoEyesDistance * x, target, up);
+			left->clipHither = clipHither;
+			left->clipYon = clipYon;
+			left->shutterOpen = shutterOpen;
+			left->shutterClose = shutterClose;
+			left->autoVolume = autoVolume;
+			left->volume = volume;
 
-	leftEye->clippingPlaneCenter = clippingPlaneCenter;
-	leftEye->clippingPlaneNormal = clippingPlaneNormal;
-	leftEye->enableClippingPlane = enableClippingPlane;
+			left->clippingPlaneCenter = clippingPlaneCenter;
+			left->clippingPlaneNormal = clippingPlaneNormal;
+			left->enableClippingPlane = enableClippingPlane;
 
-	leftEye->lensRadius = lensRadius;
-	leftEye->focalDistance = focalDistance;
-	leftEye->autoFocus = autoFocus;
+			left->lensRadius = lensRadius;
+			left->focalDistance = focalDistance;
+			left->autoFocus = autoFocus;
 
-	leftEye->screenOffsetX = -horizStereoLensDistance * .5f;
-	leftEye->fieldOfView = fieldOfView;
-	leftEye->enableOculusRiftBarrel = enableOculusRiftBarrel;
-	
-	leftEye->Update(filmWidth / 2, filmHeight, NULL);
+			left->screenOffsetX = -horizStereoLensDistance * .5f;
+			left->fieldOfView = fieldOfView;
+			left->enableOculusRiftBarrel = enableOculusRiftBarrel;
 
-	// Create right eye camera
-	delete rightEye;
-	rightEye = new PerspectiveCamera(orig + .5f * horizStereoEyesDistance * x, target, up);
+			left->Update(filmWidth / 2, filmHeight, nullptr);
+			leftEye = left;
 
-	rightEye->clipHither = clipHither;
-	rightEye->clipYon = clipYon;
-	rightEye->shutterOpen = shutterOpen;
-	rightEye->shutterClose = shutterClose;
+			// Create right eye camera
+			delete rightEye;
+			PerspectiveCamera *right = new PerspectiveCamera(orig + .5f * horizStereoEyesDistance * x, target, up);
 
-	rightEye->clippingPlaneCenter = clippingPlaneCenter;
-	rightEye->clippingPlaneNormal = clippingPlaneNormal;
-	rightEye->enableClippingPlane = enableClippingPlane;
+			right->clipHither = clipHither;
+			right->clipYon = clipYon;
+			right->shutterOpen = shutterOpen;
+			right->shutterClose = shutterClose;
+			right->autoVolume = autoVolume;
+			right->volume = volume;
 
-	rightEye->lensRadius = lensRadius;
-	rightEye->focalDistance = focalDistance;
-	rightEye->autoFocus = autoFocus;
+			right->clippingPlaneCenter = clippingPlaneCenter;
+			right->clippingPlaneNormal = clippingPlaneNormal;
+			right->enableClippingPlane = enableClippingPlane;
 
-	rightEye->screenOffsetX = horizStereoLensDistance * .5f;
-	rightEye->fieldOfView = fieldOfView;
-	rightEye->enableOculusRiftBarrel = enableOculusRiftBarrel;
+			right->lensRadius = lensRadius;
+			right->focalDistance = focalDistance;
+			right->autoFocus = autoFocus;
 
-	rightEye->Update(filmWidth / 2, filmHeight, NULL);
+			right->screenOffsetX = horizStereoLensDistance * .5f;
+			right->fieldOfView = fieldOfView;
+			right->enableOculusRiftBarrel = enableOculusRiftBarrel;
+
+			right->Update(filmWidth / 2, filmHeight, nullptr);
+			rightEye = right;
+			break;
+		}
+		case STEREO_ENVIRONMENT: {
+			// Create left eye camera
+			delete leftEye;
+			EnvironmentCamera *left = new EnvironmentCamera(orig - .5f * horizStereoEyesDistance * x, target, up);
+			left->screenOffsetX = -horizStereoLensDistance * .5f;
+
+			left->Update(filmWidth / 2, filmHeight, nullptr);
+			leftEye = left;
+
+			// Create right eye camera
+			delete rightEye;
+			EnvironmentCamera *right = new EnvironmentCamera(orig + .5f * horizStereoEyesDistance * x, target, up);
+			right->screenOffsetX = horizStereoLensDistance * .5f;
+
+			right->Update(filmWidth / 2, filmHeight, nullptr);
+			rightEye = right;
+			break;
+		}
+		default:
+			throw runtime_error("Unknown StereoCamera type in StereoCamera::Update(): " + ToString(stereoType));
+	}
 }
 
 void StereoCamera::GenerateRay(const float time,
@@ -156,6 +189,18 @@ Properties StereoCamera::ToProperties(const ImageMapCache &imgMapCache, const bo
 	Properties props = PerspectiveCamera::ToProperties(imgMapCache, useRealFileName);
 
 	props.Set(Property("scene.camera.type")("stereo"));
+
+	switch(stereoType) {
+		case STEREO_PERSPECTIVE:
+			props.Set(Property("scene.camera.stereo.type")("perspective"));
+			break;
+		case STEREO_ENVIRONMENT:
+			props.Set(Property("scene.camera.stereo.type")("environment"));
+			break;
+		default:
+			throw runtime_error("Unknown StereoCamera type in StereoCamera::ToProperties(): " + ToString(stereoType));
+	}
+	
 	props.Set(Property("scene.camera.eyesdistance")(horizStereoEyesDistance));
 	props.Set(Property("scene.camera.lensdistance")(horizStereoLensDistance));
 

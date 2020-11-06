@@ -159,7 +159,19 @@ void CompiledScene::CompileCamera() {
 		}
 		case Camera::STEREO: {
 			const StereoCamera *stereoCamera = (StereoCamera *)sceneCamera;
+
 			camera.type = slg::ocl::STEREO;
+			
+			switch(stereoCamera->GetStereoType()) {
+				case StereoCamera::STEREO_PERSPECTIVE:
+					camera.stereo.stereoCameraType = slg::ocl::STEREO_PERSPECTIVE;
+					break;
+				case StereoCamera::STEREO_ENVIRONMENT:
+					camera.stereo.stereoCameraType = slg::ocl::STEREO_ENVIRONMENT;
+					break;
+				default:
+					throw runtime_error("Unknown StereoCamera type in CompiledScene::CompileCamera(): " + ToString(stereoCamera->GetStereoType()));
+			}
 
 			camera.stereo.perspCamera.projCamera.lensRadius = stereoCamera->lensRadius;
 			camera.stereo.perspCamera.projCamera.focalDistance = stereoCamera->focalDistance;

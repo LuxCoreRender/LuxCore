@@ -35,6 +35,7 @@
 * Added the support for texture bombing
 * Added the support for Caustic AOV to OutputSwitcherPlugin
 * LuxCore API has new log system
+* Added the support for 360 degree stereo camera (issue #451)
 
 ### Fixed Bugs
 
