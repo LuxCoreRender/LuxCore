@@ -134,11 +134,12 @@ void StereoCamera::Update(const u_int width, const u_int height,
 			rightEye = right;
 			break;
 		}
-		case STEREO_ENVIRONMENT: {
+		case STEREO_ENVIRONMENT_180: {
 			// Create left eye camera
 			delete leftEye;
 			EnvironmentCamera *left = new EnvironmentCamera(orig - .5f * horizStereoEyesDistance * x, target, up);
 			left->screenOffsetX = -horizStereoLensDistance * .5f;
+			left->degrees = 180.f;
 
 			left->Update(filmWidth / 2, filmHeight, nullptr);
 			leftEye = left;
@@ -147,8 +148,29 @@ void StereoCamera::Update(const u_int width, const u_int height,
 			delete rightEye;
 			EnvironmentCamera *right = new EnvironmentCamera(orig + .5f * horizStereoEyesDistance * x, target, up);
 			right->screenOffsetX = horizStereoLensDistance * .5f;
+			right->degrees = 180.f;
 
 			right->Update(filmWidth / 2, filmHeight, nullptr);
+			rightEye = right;
+			break;
+		}
+		case STEREO_ENVIRONMENT_360: {
+			// Create left eye camera
+			delete leftEye;
+			EnvironmentCamera *left = new EnvironmentCamera(orig - .5f * horizStereoEyesDistance * x, target, up);
+			left->screenOffsetX = -horizStereoLensDistance * .5f;
+			left->degrees = 360.f;
+
+			left->Update(filmWidth, filmHeight / 2, nullptr);
+			leftEye = left;
+
+			// Create right eye camera
+			delete rightEye;
+			EnvironmentCamera *right = new EnvironmentCamera(orig + .5f * horizStereoEyesDistance * x, target, up);
+			right->screenOffsetX = horizStereoLensDistance * .5f;
+			right->degrees = 360.f;
+
+			right->Update(filmWidth, filmHeight / 2, nullptr);
 			rightEye = right;
 			break;
 		}
@@ -161,10 +183,23 @@ void StereoCamera::GenerateRay(const float time,
 		const float filmX, const float filmY,
 		Ray *ray, PathVolumeInfo *volInfo,
 		const float u0, const float u1) const {
-	if (filmX < filmWidth / 2)
-		leftEye->GenerateRay(time, filmX, filmY, ray, volInfo, u0, u1);
-	else
-		rightEye->GenerateRay(time, filmX - filmWidth / 2, filmY, ray, volInfo, u0, u1);
+	switch(stereoType) {
+		case STEREO_PERSPECTIVE:
+		case STEREO_ENVIRONMENT_180:
+			if (filmX < filmWidth / 2)
+				leftEye->GenerateRay(time, filmX, filmY, ray, volInfo, u0, u1);
+			else
+				rightEye->GenerateRay(time, filmX - filmWidth / 2, filmY, ray, volInfo, u0, u1);
+			break;
+		case STEREO_ENVIRONMENT_360:
+			if (filmY < filmHeight / 2)
+				leftEye->GenerateRay(time, filmX, filmY, ray, volInfo, u0, u1);
+			else
+				rightEye->GenerateRay(time, filmX, filmY - filmHeight / 2, ray, volInfo, u0, u1);
+			break;
+		default:
+			throw runtime_error("Unknown StereoCamera type in StereoCamera::GenerateRay(): " + ToString(stereoType));
+	}		
 }
 
 bool StereoCamera::GetSamplePosition(Ray *eyeRay, float *filmX, float *filmY) const {
@@ -194,8 +229,11 @@ Properties StereoCamera::ToProperties(const ImageMapCache &imgMapCache, const bo
 		case STEREO_PERSPECTIVE:
 			props.Set(Property("scene.camera.stereo.type")("perspective"));
 			break;
-		case STEREO_ENVIRONMENT:
-			props.Set(Property("scene.camera.stereo.type")("environment"));
+		case STEREO_ENVIRONMENT_180:
+			props.Set(Property("scene.camera.stereo.type")("environment_180"));
+			break;
+		case STEREO_ENVIRONMENT_360:
+			props.Set(Property("scene.camera.stereo.type")("environment_360"));
 			break;
 		default:
 			throw runtime_error("Unknown StereoCamera type in StereoCamera::ToProperties(): " + ToString(stereoType));

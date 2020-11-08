@@ -404,38 +404,80 @@ OPENCL_FORCE_INLINE void EnvironmentCamera_GenerateRay(
 OPENCL_FORCE_INLINE void StereoCamera_GenerateRay(
 		__global const Camera* restrict camera,
 		__global const float* restrict cameraBokehDistribution,
-		const uint origFilmWidth, const uint filmHeight,
+		const uint origFilmWidth, const uint origFilmHeight,
 		__global Ray *ray,
 		__global PathVolumeInfo *volInfo,
-		const float origFilmX, const float filmY, const float timeSample,
+		const float origFilmX, const float origFilmY, const float timeSample,
 		const float dofSampleX, const float dofSampleY) {
 	PathVolumeInfo_StartVolume(volInfo, camera->base.volumeIndex);
 
-	__global const Transform* restrict rasterToCamera;
-	__global const Transform* restrict cameraToWorld;
-	float filmX;
-	const float filmWidth = origFilmWidth / 2;
-	if (origFilmX < filmWidth) {
-		rasterToCamera = &camera->stereo.leftEyeRasterToCamera;
-		cameraToWorld = &camera->stereo.leftEyeCameraToWorld;
-		filmX = origFilmX;
-	} else {
-		rasterToCamera = &camera->stereo.rightEyeRasterToCamera;
-		cameraToWorld = &camera->stereo.rightEyeCameraToWorld;
-		filmX = origFilmX - filmWidth;
-	}
-
 	switch(camera->stereo.stereoCameraType) {
-		case STEREO_PERSPECTIVE:
+		case STEREO_PERSPECTIVE: {
+			__global const Transform* restrict rasterToCamera;
+			__global const Transform* restrict cameraToWorld;
+			float filmX, filmY;
+			const float filmWidth = origFilmWidth / 2;
+			const float filmHeight = origFilmHeight;
+			if (origFilmX < filmWidth) {
+				rasterToCamera = &camera->stereo.leftEyeRasterToCamera;
+				cameraToWorld = &camera->stereo.leftEyeCameraToWorld;
+				filmX = origFilmX;
+			} else {
+				rasterToCamera = &camera->stereo.rightEyeRasterToCamera;
+				cameraToWorld = &camera->stereo.rightEyeCameraToWorld;
+				filmX = origFilmX - filmWidth;
+			}
+			filmY = origFilmY;
+
 			PerspectiveCamera_GenerateRayImpl(&camera->base, &camera->stereo.perspCamera,
 					rasterToCamera, cameraToWorld, cameraBokehDistribution,
 					filmWidth, filmHeight, ray, volInfo, filmX, filmY, timeSample, dofSampleX, dofSampleY);
 			break;
-		case STEREO_ENVIRONMENT:
+		}
+		case STEREO_ENVIRONMENT_180: {
+			__global const Transform* restrict rasterToCamera;
+			__global const Transform* restrict cameraToWorld;
+			float filmX, filmY;
+			const float filmWidth = origFilmWidth / 2;
+			const float filmHeight = origFilmHeight;
+			if (origFilmX < filmWidth) {
+				rasterToCamera = &camera->stereo.leftEyeRasterToCamera;
+				cameraToWorld = &camera->stereo.leftEyeCameraToWorld;
+				filmX = origFilmX;
+			} else {
+				rasterToCamera = &camera->stereo.rightEyeRasterToCamera;
+				cameraToWorld = &camera->stereo.rightEyeCameraToWorld;
+				filmX = origFilmX - filmWidth;
+			}
+			filmY = origFilmY;
+
+			EnvironmentCamera_GenerateRayImpl(&camera->base, 180.f, cameraToWorld,
+					filmWidth, filmHeight, ray, volInfo,
+					filmX, filmY, timeSample, dofSampleX, dofSampleY);
+			break;
+		}
+		case STEREO_ENVIRONMENT_360: {
+			__global const Transform* restrict rasterToCamera;
+			__global const Transform* restrict cameraToWorld;
+			float filmX, filmY;
+			const float filmWidth = origFilmWidth;
+			const float filmHeight = origFilmHeight / 2;
+			filmX = origFilmX;
+			if (origFilmY < filmHeight) {
+				rasterToCamera = &camera->stereo.leftEyeRasterToCamera;
+				cameraToWorld = &camera->stereo.leftEyeCameraToWorld;
+				filmY = origFilmY;
+			} else {
+				rasterToCamera = &camera->stereo.rightEyeRasterToCamera;
+				cameraToWorld = &camera->stereo.rightEyeCameraToWorld;
+				filmY = origFilmY - filmHeight;
+			}
+
 			EnvironmentCamera_GenerateRayImpl(&camera->base, 360.f, cameraToWorld,
 					filmWidth, filmHeight, ray, volInfo,
 					filmX, filmY, timeSample, dofSampleX, dofSampleY);
 			break;
+		}
 		default:
 			// Something very wrong here...
 			break;

@@ -176,8 +176,11 @@ void CompiledScene::CompileCamera() {
 				case StereoCamera::STEREO_PERSPECTIVE:
 					camera.stereo.stereoCameraType = slg::ocl::STEREO_PERSPECTIVE;
 					break;
-				case StereoCamera::STEREO_ENVIRONMENT:
-					camera.stereo.stereoCameraType = slg::ocl::STEREO_ENVIRONMENT;
+				case StereoCamera::STEREO_ENVIRONMENT_180:
+					camera.stereo.stereoCameraType = slg::ocl::STEREO_ENVIRONMENT_180;
+					break;
+				case StereoCamera::STEREO_ENVIRONMENT_360:
+					camera.stereo.stereoCameraType = slg::ocl::STEREO_ENVIRONMENT_360;
 					break;
 				default:
 					throw runtime_error("Unknown StereoCamera type in CompiledScene::CompileCamera(): " + ToString(stereoCamera->GetStereoType()));

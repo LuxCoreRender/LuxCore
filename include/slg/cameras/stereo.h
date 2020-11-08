@@ -28,7 +28,8 @@ class StereoCamera : public PerspectiveCamera {
 public:
 	typedef enum {
 		STEREO_PERSPECTIVE,
-		STEREO_ENVIRONMENT
+		STEREO_ENVIRONMENT_180,
+		STEREO_ENVIRONMENT_360
 	} StereoCameraType;
 
 	StereoCamera(const StereoCameraType type,

@@ -143,8 +143,10 @@ Camera *Scene::CreateCamera(const Properties &props) {
 			StereoCamera *stereoCamera;
 			if (stereoTypeStr == "perspective")
 				stereoCamera = new StereoCamera(StereoCamera::STEREO_PERSPECTIVE, orig, target, up);
-			else if (stereoTypeStr == "environment")
-				stereoCamera = new StereoCamera(StereoCamera::STEREO_ENVIRONMENT, orig, target, up);
+			else if (stereoTypeStr == "environment_180")
+				stereoCamera = new StereoCamera(StereoCamera::STEREO_ENVIRONMENT_180, orig, target, up);
+			else if (stereoTypeStr == "environment_360")
+				stereoCamera = new StereoCamera(StereoCamera::STEREO_ENVIRONMENT_360, orig, target, up);
 			else
 				throw runtime_error("Unknown StereoCamera type: " + stereoTypeStr);
 			camera.reset(stereoCamera);
