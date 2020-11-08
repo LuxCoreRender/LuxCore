@@ -153,6 +153,7 @@ Camera *Scene::CreateCamera(const Properties &props) {
 			stereoCamera->horizStereoLensDistance = props.Get(Property("scene.camera.lensdistance")(.2779f)).Get<float>();
 		} else {
 			EnvironmentCamera *environmentCamera;
+
 			if (props.IsDefined("scene.camera.screenwindow")) {
 				float screenWindow[4];
 
@@ -167,6 +168,9 @@ Camera *Scene::CreateCamera(const Properties &props) {
 				environmentCamera = new EnvironmentCamera(orig, target, up);
 
 			camera.reset(environmentCamera);
+			
+			environmentCamera->degrees = Clamp(props.Get(Property("scene.camera.environment.degrees")(360.f)).Get<float>(),
+					0.f, 360.f);
 		};
 
 		if (type != "environment") {

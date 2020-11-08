@@ -347,6 +347,7 @@ OPENCL_FORCE_INLINE void OrthographicCamera_GenerateRay(
 
 OPENCL_FORCE_INLINE void EnvironmentCamera_GenerateRayImpl(
 		__global const CameraBase* restrict cameraBase,
+		const float degrees,
 		__global const Transform* restrict cameraToWorld,
 		const uint filmWidth, const uint filmHeight,
 		__global Ray *ray,
@@ -356,7 +357,7 @@ OPENCL_FORCE_INLINE void EnvironmentCamera_GenerateRayImpl(
 	PathVolumeInfo_StartVolume(volInfo, cameraBase->volumeIndex);
 
 	const float theta = M_PI_F * (filmHeight - filmY) / filmHeight;
-	const float phi = 2.f * M_PI_F * (filmWidth - filmX) / filmWidth - .5 * M_PI_F;
+	const float phi = Radians(360.f - ((360.f - degrees) * .5f + degrees * filmX / filmWidth)) - .5 * M_PI_F;
 
 	float3 rayOrig = MAKE_FLOAT3(0.f, 0.f, 0.f);
 	float3 rayDir = MAKE_FLOAT3(sin(theta)*cos(phi), cos(theta), sin(theta)*sin(phi));
@@ -391,7 +392,7 @@ OPENCL_FORCE_INLINE void EnvironmentCamera_GenerateRay(
 		__global PathVolumeInfo *volInfo,
 		const float filmX, const float filmY, const float timeSample,
 		const float dofSampleX, const float dofSampleY) {
-	EnvironmentCamera_GenerateRayImpl(&camera->base, &camera->base.cameraToWorld,
+	EnvironmentCamera_GenerateRayImpl(&camera->base, camera->env.degrees, &camera->base.cameraToWorld,
 			filmWidth, filmHeight, ray, volInfo,
 			filmX, filmY, timeSample, dofSampleX, dofSampleY);
 }
@@ -431,7 +432,7 @@ OPENCL_FORCE_INLINE void StereoCamera_GenerateRay(
 					filmWidth, filmHeight, ray, volInfo, filmX, filmY, timeSample, dofSampleX, dofSampleY);
 			break;
 		case STEREO_ENVIRONMENT:
-			EnvironmentCamera_GenerateRayImpl(&camera->base, cameraToWorld,
+			EnvironmentCamera_GenerateRayImpl(&camera->base, 360.f, cameraToWorld,
 					filmWidth, filmHeight, ray, volInfo,
 					filmX, filmY, timeSample, dofSampleX, dofSampleY);
 			break;

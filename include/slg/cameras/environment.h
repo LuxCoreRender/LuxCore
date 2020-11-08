@@ -112,6 +112,7 @@ public:
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 	float screenOffsetX, screenOffsetY;
+	float degrees;
 
 protected:
 	typedef struct {

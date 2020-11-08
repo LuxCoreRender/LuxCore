@@ -36,6 +36,7 @@
 * Added the support for Caustic AOV to OutputSwitcherPlugin
 * LuxCore API has new log system
 * Added the support for 360 degree stereo camera (issue #451)
+* Added the support for 180 (or any other amount of degrees) view to Environment camera
 
 ### Fixed Bugs
 

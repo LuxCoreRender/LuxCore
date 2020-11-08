@@ -77,6 +77,10 @@ typedef struct {
 	ProjectiveCamera projCamera;
 } OrthographicCamera;
 
+typedef struct {
+	float degrees;
+} EnvironmentCamera;
+
 typedef enum {
 	STEREO_PERSPECTIVE,
 	STEREO_ENVIRONMENT
@@ -103,6 +107,6 @@ typedef struct {
 		PerspectiveCamera persp;
 		OrthographicCamera ortho;
 		StereoCamera stereo;
-		// Nothing for EnvironmentCamera;
+		EnvironmentCamera env;
 	};
 } Camera;

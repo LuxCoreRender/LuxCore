@@ -157,6 +157,16 @@ void CompiledScene::CompileCamera() {
 			camera.persp.bokehScaleY = perspCamera->bokehScaleY;
 			break;
 		}
+		case Camera::ENVIRONMENT: {
+			const EnvironmentCamera *envCamera = (EnvironmentCamera *)sceneCamera;
+			camera.type = slg::ocl::ENVIRONMENT;
+
+			memcpy(camera.base.rasterToCamera.m.m, envCamera->GetRasterToCamera().m.m, 4 * 4 * sizeof(float));
+			memcpy(camera.base.cameraToWorld.m.m, envCamera->GetCameraToWorld().m.m, 4 * 4 * sizeof(float));
+			
+			camera.env.degrees = envCamera->degrees;	
+			break;			
+		}		
 		case Camera::STEREO: {
 			const StereoCamera *stereoCamera = (StereoCamera *)sceneCamera;
 
@@ -190,14 +200,6 @@ void CompiledScene::CompileCamera() {
 				camera.stereo.perspCamera.projCamera.enableClippingPlane = false;
 			break;
 		}
-		case Camera::ENVIRONMENT: {
-			const EnvironmentCamera *envCamera = (EnvironmentCamera *)sceneCamera;
-			camera.type = slg::ocl::ENVIRONMENT;
-
-			memcpy(camera.base.rasterToCamera.m.m, envCamera->GetRasterToCamera().m.m, 4 * 4 * sizeof(float));
-			memcpy(camera.base.cameraToWorld.m.m, envCamera->GetCameraToWorld().m.m, 4 * 4 * sizeof(float));
-			break;			
-		}		
 		default:
 			throw runtime_error("Unknown camera type in CompiledScene::CompileCamera(): " + ToString(sceneCamera->GetType()));
 	}
