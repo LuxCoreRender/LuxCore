@@ -12,7 +12,17 @@ scene.volumes.volglass.absorption = 0.1 0.1 0.1
 scene.volumes.volglass.ior = 1.45
 ################################################################################
 scene.materials.shell.type = disney
-scene.materials.shell.basecolor = 0.5 0.0 0.0
+scene.materials.shell.basecolor = 0.6 0.0 0.0
+scene.materials.shell.subsurface = 0.0
+scene.materials.shell.roughness = 0.5
+scene.materials.shell.metallic = 0.0
+scene.materials.shell.specular = 0.5
+scene.materials.shell.speculartint = 0.5
+scene.materials.shell.clearcoat = 0.0
+scene.materials.shell.clearcoatgloss = 0.03
+scene.materials.shell.anisotropic = 0.0
+scene.materials.shell.sheen = 0.0
+scene.materials.shell.sheentint = 0.5
 ##
 #scene.materials.shell.metallic = 1.0
 #scene.materials.shell.roughness = 0.1
@@ -23,9 +33,9 @@ scene.materials.shell.basecolor = 0.5 0.0 0.0
 #scene.materials.shell.roughness = 0.2
 #scene.materials.shell.clearcoatgloss = 1.0
 ##
-scene.materials.shell.roughness = 1.0
-scene.materials.shell.sheen = 10.0
-scene.materials.shell.sheentint = 0.0
+#scene.materials.shell.roughness = 1.0
+#scene.materials.shell.sheen = 10.0
+#scene.materials.shell.sheentint = 0.0
 ##
 scene.materials.whitematte.type = matte
 scene.materials.whitematte.kd = 0.75 0.75 0.75
