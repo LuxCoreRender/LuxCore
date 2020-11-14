@@ -95,11 +95,13 @@ void Film::CreateHWContext() {
 	}
 
 	if (selectedDeviceDesc) {
+#if !defined(LUXRAYS_DISABLE_CUDA)
 		// Force the Optix usage also on no-RTX GPUs for Optix denoiser plugin
 		if (selectedDeviceDesc->GetType() == DEVICE_TYPE_CUDA_GPU) {
 			CUDADeviceDescription *cudaDeviceDesc = (CUDADeviceDescription *)selectedDeviceDesc;
 			cudaDeviceDesc->SetCUDAUseOptix(true);
 		}
+#endif
 
 		// Allocate the device
 		vector<luxrays::DeviceDescription *> selectedDeviceDescs;

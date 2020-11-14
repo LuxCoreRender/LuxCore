@@ -33,7 +33,8 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 EnvironmentCamera::EnvironmentCamera(const Point &o, const Point &t, const Vector &u, const float *sw) :
-		Camera(ENVIRONMENT), orig(o), target(t), up(Normalize(u)) {
+		Camera(ENVIRONMENT), screenOffsetX(0.f), screenOffsetY(0.f), degrees(360.f),
+		orig(o), target(t), up(Normalize(u)) {
 	if (sw) {
 		autoUpdateScreenWindow = false;
 		screenWindow[0] = sw[0];
@@ -120,13 +121,13 @@ bool EnvironmentCamera::GetSamplePosition(Ray *ray, float *x, float *y) const {
 	const float theta = acosf(Min(1.f, cosTheta));
 	*y = filmHeight - 1 - (theta * filmHeight * INV_PI);
 	const float sinTheta = sqrtf(Clamp(1.f - cosTheta * cosTheta, 1e-5f, 1.f));
-	const float cosPhi = -w.z / sinTheta;
-	const float phi = acosf(Clamp(cosPhi, -1.f, 1.f));
-	if (w.x >= 0.f)
-		*x = (2.f * M_PI - phi) * filmWidth * INV_TWOPI;
-	else
-		*x = phi * filmWidth * INV_TWOPI;
 
+	const float cosPhi = -w.z / sinTheta;
+	float phi = acosf(Clamp(cosPhi, -1.f, 1.f));
+	if (w.x >= 0.f)
+		phi = 2.f * M_PI - phi;
+	*x = (phi - Radians((360.f - degrees) * .5f)) * filmWidth / Radians(degrees);
+	
 	return true;
 }
 
@@ -185,8 +186,8 @@ void EnvironmentCamera::InitPixelArea() {
 
 void EnvironmentCamera::InitRay(Ray *ray, const float filmX, const float filmY) const {
 	const float theta = M_PI * (filmHeight - filmY - 1.f) / filmHeight;
-	const float phi = 2.f * M_PI * filmX / filmWidth;
-	
+	const float phi = Radians((360.f - degrees) * .5f + degrees * filmX / filmWidth);
+
 	ray->Update(rayOrigin, Vector(-sinf(theta) * sinf(phi), cosf(theta), -sinf(theta) * cosf(phi)));
 }
 
@@ -211,6 +212,8 @@ Properties EnvironmentCamera::ToProperties(const ImageMapCache &imgMapCache, con
 
 	if (!autoUpdateScreenWindow)
 		props.Set(Property("scene.camera.screenwindow")(screenWindow[0], screenWindow[1], screenWindow[2], screenWindow[3]));
+	
+	props.Set(Property("scene.camera.environment.degrees")(degrees));
 	
 	return props;
 }

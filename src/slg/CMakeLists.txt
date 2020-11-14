@@ -313,6 +313,7 @@ set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_blender_noise_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_blender_noise_funcs2.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_blender_funcs.cl
+	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_bombing_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_brick_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_bump_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/textures/texture_colordepth_funcs.cl
@@ -690,6 +691,7 @@ set(SLG_KERNEL_SRCS
 	${generated_kernels_dir}/texture_abs_funcs_kernel.cpp
 	${generated_kernels_dir}/texture_bilerp_funcs_kernel.cpp
 	${generated_kernels_dir}/texture_blackbody_funcs_kernel.cpp
+	${generated_kernels_dir}/texture_bombing_funcs_kernel.cpp
 	${generated_kernels_dir}/texture_brick_funcs_kernel.cpp
 	${generated_kernels_dir}/texture_clamp_funcs_kernel.cpp
 	${generated_kernels_dir}/texture_colordepth_funcs_kernel.cpp

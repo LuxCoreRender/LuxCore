@@ -29,11 +29,11 @@ namespace slg {
 
 class BombingTexture : public Texture {
 public:
-	BombingTexture(const TextureMapping2D *mp, const Texture *backgourndTx,
+	BombingTexture(const TextureMapping2D *mp, const Texture *backgroundTx,
 			const Texture *bulletTx, const Texture *bulletMaskTx,
 			const float randomScaleFctr, const bool useRandomRot,
 			const u_int multiBulletCnt) :
-			mapping(mp), backgourndTex(backgourndTx), bulletTex(bulletTx),
+			mapping(mp), backgroundTex(backgroundTx), bulletTex(bulletTx),
 			bulletMaskTex(bulletMaskTx),
 			randomScaleFactor(randomScaleFctr), useRandomRotation(useRandomRot),
 			multiBulletCount(multiBulletCnt) { }
@@ -50,16 +50,20 @@ public:
 	virtual void UpdateTextureReferences(const Texture *oldTex, const Texture *newTex);
 
 	const TextureMapping2D *GetTextureMapping() const { return mapping; }
-	const Texture *GetBackgourndTex() const { return backgourndTex; }
+	const Texture *GetBackgroundTex() const { return backgroundTex; }
 	const Texture *GetBulletTex() const { return bulletTex; }
 	const Texture *GetBulletMaskTex() const { return bulletMaskTex; }
+	
+	const float GetRandomScaleFactor() const { return randomScaleFactor; }
+	const bool GetUseRandomRotation() const { return useRandomRotation; }
+	const u_int GetMultiBulletCount() const { return multiBulletCount; }
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 private:
 
 	const TextureMapping2D *mapping;
-	const Texture *backgourndTex;
+	const Texture *backgroundTex;
 	const Texture *bulletTex;
 	const Texture *bulletMaskTex;
 

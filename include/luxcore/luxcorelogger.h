@@ -80,6 +80,10 @@ inline std::string ToArgString(const std::string &t) {
 	return "\"" + t + "\"";
 }
 
+inline std::string ToArgString(const luxrays::Property &p) {
+	return "Property[\n" + p.ToString() + "]";
+}
+
 inline std::string ToArgString(const luxrays::Properties &p) {
 	return "Properties[\n" + p.ToString() + "]";
 }
@@ -98,6 +102,24 @@ inline std::string ToArgString(const std::vector<T> &v) {
 			first = false;
 
 		ss << ToArgString(e);
+	}
+
+	ss << "]";
+	
+	return ss.str();
+}
+
+template <class T>
+inline std::string ToArgString(const T *p, const size_t size) {
+	std::ostringstream ss;
+
+	ss << "array[";
+
+	for (unsigned int i = 0; i < size; ++i) {
+		if (i != 0)
+			ss << " ,";
+
+		ss << ToArgString(p[i]);
 	}
 
 	ss << "]";

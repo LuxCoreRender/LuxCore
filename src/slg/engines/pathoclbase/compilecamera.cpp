@@ -157,9 +157,34 @@ void CompiledScene::CompileCamera() {
 			camera.persp.bokehScaleY = perspCamera->bokehScaleY;
 			break;
 		}
+		case Camera::ENVIRONMENT: {
+			const EnvironmentCamera *envCamera = (EnvironmentCamera *)sceneCamera;
+			camera.type = slg::ocl::ENVIRONMENT;
+
+			memcpy(camera.base.rasterToCamera.m.m, envCamera->GetRasterToCamera().m.m, 4 * 4 * sizeof(float));
+			memcpy(camera.base.cameraToWorld.m.m, envCamera->GetCameraToWorld().m.m, 4 * 4 * sizeof(float));
+			
+			camera.env.degrees = envCamera->degrees;	
+			break;			
+		}		
 		case Camera::STEREO: {
 			const StereoCamera *stereoCamera = (StereoCamera *)sceneCamera;
+
 			camera.type = slg::ocl::STEREO;
+			
+			switch(stereoCamera->GetStereoType()) {
+				case StereoCamera::STEREO_PERSPECTIVE:
+					camera.stereo.stereoCameraType = slg::ocl::STEREO_PERSPECTIVE;
+					break;
+				case StereoCamera::STEREO_ENVIRONMENT_180:
+					camera.stereo.stereoCameraType = slg::ocl::STEREO_ENVIRONMENT_180;
+					break;
+				case StereoCamera::STEREO_ENVIRONMENT_360:
+					camera.stereo.stereoCameraType = slg::ocl::STEREO_ENVIRONMENT_360;
+					break;
+				default:
+					throw runtime_error("Unknown StereoCamera type in CompiledScene::CompileCamera(): " + ToString(stereoCamera->GetStereoType()));
+			}
 
 			camera.stereo.perspCamera.projCamera.lensRadius = stereoCamera->lensRadius;
 			camera.stereo.perspCamera.projCamera.focalDistance = stereoCamera->focalDistance;
@@ -178,14 +203,6 @@ void CompiledScene::CompileCamera() {
 				camera.stereo.perspCamera.projCamera.enableClippingPlane = false;
 			break;
 		}
-		case Camera::ENVIRONMENT: {
-			const EnvironmentCamera *envCamera = (EnvironmentCamera *)sceneCamera;
-			camera.type = slg::ocl::ENVIRONMENT;
-
-			memcpy(camera.base.rasterToCamera.m.m, envCamera->GetRasterToCamera().m.m, 4 * 4 * sizeof(float));
-			memcpy(camera.base.cameraToWorld.m.m, envCamera->GetCameraToWorld().m.m, 4 * 4 * sizeof(float));
-			break;			
-		}		
 		default:
 			throw runtime_error("Unknown camera type in CompiledScene::CompileCamera(): " + ToString(sceneCamera->GetType()));
 	}

@@ -26,7 +26,14 @@ namespace slg {
 
 class StereoCamera : public PerspectiveCamera {
 public:
-	StereoCamera(const luxrays::Point &orig, const luxrays::Point &target,
+	typedef enum {
+		STEREO_PERSPECTIVE,
+		STEREO_ENVIRONMENT_180,
+		STEREO_ENVIRONMENT_360
+	} StereoCameraType;
+
+	StereoCamera(const StereoCameraType type,
+			const luxrays::Point &orig, const luxrays::Point &target,
 			const luxrays::Vector &up);
 	virtual ~StereoCamera();
 
@@ -52,11 +59,14 @@ public:
 
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
+	StereoCameraType GetStereoType() const { return stereoType; }
+	
 	float horizStereoEyesDistance, horizStereoLensDistance;
 
 private:
-	PerspectiveCamera *leftEye;
-	PerspectiveCamera *rightEye;
+	const StereoCameraType stereoType;
+	Camera *leftEye;
+	Camera *rightEye;
 };
 
 }

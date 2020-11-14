@@ -75,7 +75,7 @@ OPENCL_FORCE_NOT_INLINE uint Material_EvalOp(
 		// MATTETRANSLUCENT
 		//----------------------------------------------------------------------
 		case MATTETRANSLUCENT:
-			MatteMaterial_EvalOp(material, evalType, evalStack, evalStackOffset, hitPoint MATERIALS_PARAM);
+			MatteTranslucentMaterial_EvalOp(material, evalType, evalStack, evalStackOffset, hitPoint MATERIALS_PARAM);
 			break;
 		//----------------------------------------------------------------------
 		// GLOSSY2

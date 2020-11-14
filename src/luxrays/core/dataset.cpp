@@ -129,9 +129,11 @@ const Accelerator *DataSet::GetAccelerator(const AcceleratorType accelType) {
 			case ACCEL_EMBREE:
 				accel = new EmbreeAccel(context);
 				break;
+#if !defined(LUXRAYS_DISABLE_CUDA)
 			case ACCEL_OPTIX:
 				accel = new OptixAccel(context);
 				break;
+#endif
 			default:
 				throw runtime_error("Unknown AcceleratorType in DataSet::AddAccelerator()");
 		}

@@ -138,14 +138,24 @@ Camera *Scene::CreateCamera(const Properties &props) {
 
 			perspCamera->enableOculusRiftBarrel = props.Get(Property("scene.camera.oculusrift.barrelpostpro.enable")(false)).Get<bool>();
 		} else if (type == "stereo")  {
-			StereoCamera *stereoCamera = new StereoCamera(orig, target, up);
-			camera.reset(stereoCamera);
+			const string stereoTypeStr = props.Get(Property("scene.camera.stereo.type")("perspective")).Get<string>();	
 
+			StereoCamera *stereoCamera;
+			if (stereoTypeStr == "perspective")
+				stereoCamera = new StereoCamera(StereoCamera::STEREO_PERSPECTIVE, orig, target, up);
+			else if (stereoTypeStr == "environment_180")
+				stereoCamera = new StereoCamera(StereoCamera::STEREO_ENVIRONMENT_180, orig, target, up);
+			else if (stereoTypeStr == "environment_360")
+				stereoCamera = new StereoCamera(StereoCamera::STEREO_ENVIRONMENT_360, orig, target, up);
+			else
+				throw runtime_error("Unknown StereoCamera type: " + stereoTypeStr);
+			camera.reset(stereoCamera);
 			stereoCamera->enableOculusRiftBarrel = props.Get(Property("scene.camera.oculusrift.barrelpostpro.enable")(false)).Get<bool>();
 			stereoCamera->horizStereoEyesDistance = props.Get(Property("scene.camera.eyesdistance")(.0626f)).Get<float>();
 			stereoCamera->horizStereoLensDistance = props.Get(Property("scene.camera.lensdistance")(.2779f)).Get<float>();
 		} else {
 			EnvironmentCamera *environmentCamera;
+
 			if (props.IsDefined("scene.camera.screenwindow")) {
 				float screenWindow[4];
 
@@ -160,6 +170,9 @@ Camera *Scene::CreateCamera(const Properties &props) {
 				environmentCamera = new EnvironmentCamera(orig, target, up);
 
 			camera.reset(environmentCamera);
+			
+			environmentCamera->degrees = Clamp(props.Get(Property("scene.camera.environment.degrees")(360.f)).Get<float>(),
+					0.f, 360.f);
 		};
 
 		if (type != "environment") {

@@ -450,6 +450,8 @@ OPENCL_FORCE_INLINE void MixMaterial_Evaluate(__global const Material* restrict 
 	const float weight2 = clamp(factor, 0.f, 1.f);
 	const float weight1 = 1.f - weight2;
 
+	BSDFEvent event = NONE;
+
 	//--------------------------------------------------------------------------
 	// Evaluate material A
 	//--------------------------------------------------------------------------
@@ -461,6 +463,8 @@ OPENCL_FORCE_INLINE void MixMaterial_Evaluate(__global const Material* restrict 
 			!Spectrum_IsBlack(resultMatA)) {
 		result += weight1 * resultMatA;
 		directPdfW += weight1 * directPdfWMatA;
+		
+		event |= eventMatA;
 	}
 
 	//--------------------------------------------------------------------------
@@ -474,10 +478,10 @@ OPENCL_FORCE_INLINE void MixMaterial_Evaluate(__global const Material* restrict 
 			!Spectrum_IsBlack(resultMatB)) {
 		result += weight2 * resultMatB;
 		directPdfW += weight2 * directPdfWMatB;
+
+		event |= eventMatB;
 	}
 
-	const BSDFEvent event = eventMatA | eventMatB;
-	
 	EvalStack_PushFloat3(result);
 	EvalStack_PushBSDFEvent(event);
 	EvalStack_PushFloat(directPdfW);
@@ -587,7 +591,7 @@ OPENCL_FORCE_INLINE void MixMaterial_SampleSetUp2(__global const Material* restr
 	EvalStack_PopFloat3(originalDpdu);
 	EvalStack_PopFloat3(originalShadeN);
 
-	// Set the first frame reference ssystem
+	// Set the first frame reference system
 	const float3 matFirstShadeN = VLOAD3F(&hitPoint->shadeN.x);
 	const float3 matFirstDpdu = VLOAD3F(&hitPoint->dpdu.x);
 	const float3 matFirstDpdv = VLOAD3F(&hitPoint->dpdv.x);
@@ -738,7 +742,7 @@ OPENCL_FORCE_INLINE void MixMaterial_Sample(__global const Material* restrict ma
 	// material referencing other materials
 	const float isTransmitEval = (signbit(fixedDirSecond.z) != signbit(sampledDirSecond.z));
 
-	const BSDFEvent eventTypesSecond = mats[sampleMatA ? material->mix.matAIndex : material->mix.matBIndex].eventTypes;
+	const BSDFEvent eventTypesSecond = mats[sampleMatA ? material->mix.matBIndex : material->mix.matAIndex].eventTypes;
 	if (((!isTransmitEval && (eventTypesSecond & REFLECT)) ||
 			(isTransmitEval && (eventTypesSecond & TRANSMIT))) &&
 			!Spectrum_IsBlack(resultSecond)) {

@@ -162,7 +162,7 @@ CUDADevice::CUDADevice(
 	CHECK_CUDA_ERROR(cuCtxSetCacheConfig(CU_FUNC_CACHE_PREFER_L1));
 
 	if (isOptixAvilable && desc->useOptix) {
-		OptixDeviceContextOptions optixOptions;
+		OptixDeviceContextOptions optixOptions = {};
 		optixOptions.logCallbackFunction = &OptixLogCB;
 		optixOptions.logCallbackData = (void *)deviceContext;
 		// For normal usage
@@ -181,7 +181,12 @@ CUDADevice::CUDADevice(
 
 CUDADevice::~CUDADevice() {
 	if (optixContext) {
+		// cudaContext could be not the current context and Optix crashes in this case
+		CHECK_CUDA_ERROR(cuCtxPushCurrent(cudaContext));
+
 		CHECK_OPTIX_ERROR(optixDeviceContextDestroy(optixContext));
+
+		CHECK_CUDA_ERROR(cuCtxPopCurrent(nullptr));
 	}
 
 	// Free all loaded modules

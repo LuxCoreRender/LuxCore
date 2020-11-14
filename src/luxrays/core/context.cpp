@@ -148,12 +148,14 @@ Context::Context(LuxRaysDebugHandler handler, const Properties &config) : cfg(co
 		LR_LOG(this, "Device " << i << " has out of core memory support: " <<
 			desc->HasOutOfCoreMemorySupport());
 
+#if !defined(LUXRAYS_DISABLE_CUDA)
 		if (desc->GetType() & DEVICE_TYPE_CUDA_ALL) {
 			const CUDADeviceDescription *cudaDesc = (CUDADeviceDescription *)desc;
 
 			LR_LOG(this, "Device " << i << " CUDA compute capability: " <<
 					cudaDesc->GetCUDAComputeCapabilityMajor() << "." << cudaDesc->GetCUDAComputeCapabilityMinor());
 		}
+#endif
 	}
 }
 

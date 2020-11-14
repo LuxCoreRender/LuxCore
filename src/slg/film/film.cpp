@@ -24,9 +24,10 @@
 #include <boost/foreach.hpp>
 
 #include "slg/film/film.h"
+#include "slg/film/imagepipeline/imagepipeline.h"
 #include "slg/film/sampleresult.h"
-#include "slg/utils/varianceclamping.h"
 #include "slg/film/denoiser/filmdenoiser.h"
+#include "slg/utils/varianceclamping.h"
 
 using namespace std;
 using namespace luxrays;
@@ -183,7 +184,7 @@ Film::Film(const u_int w, const u_int h, const u_int *sr) : filmDenoiser(this) {
 	// Initialize variables to nullptr
 	SetUpHW();
 }
-#include <slg/film/imagepipeline/plugins/optixdenoiser.h>
+
 Film::~Film() {
 	if (imagePipelineThread) {
 		imagePipelineThread->interrupt();

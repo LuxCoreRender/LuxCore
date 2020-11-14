@@ -154,6 +154,7 @@ string PathOCLBaseOCLRenderThread::GetKernelSources() {
 			slg::ocl::KernelSource_texture_abs_funcs <<
 			slg::ocl::KernelSource_texture_bilerp_funcs <<
 			slg::ocl::KernelSource_texture_blackbody_funcs <<
+			slg::ocl::KernelSource_texture_bombing_funcs <<
 			slg::ocl::KernelSource_texture_brick_funcs <<
 			slg::ocl::KernelSource_texture_clamp_funcs <<
 			slg::ocl::KernelSource_texture_colordepth_funcs <<

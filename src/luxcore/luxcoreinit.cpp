@@ -118,6 +118,8 @@ void luxcore::Init(void (*LogHandler)(const char *)) {
 		SetLogHandler(LogHandler);
 	else
 		SetLogHandler(DefaultDebugHandler);
+
+	//SetEnableLogSubSystem(LOG_API, true);
 }
 
 void luxcore::SetLogHandler(void (*LogHandler)(const char *)) {

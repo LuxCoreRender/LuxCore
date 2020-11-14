@@ -678,10 +678,10 @@ void CompiledScene::CompileMaterials() {
 					mat->glass.interiorIorTexIndex = scene->texDefs.GetTextureIndex(gm->GetInteriorIOR());
 				else
 					mat->glass.interiorIorTexIndex = NULL_INDEX;
-				if (gm->GetCauchyC())
-					mat->glass.cauchyCTex = scene->texDefs.GetTextureIndex(gm->GetCauchyC());
+				if (gm->GetCauchyB())
+					mat->glass.cauchyBTex = scene->texDefs.GetTextureIndex(gm->GetCauchyB());
 				else
-					mat->glass.cauchyCTex = NULL_INDEX;
+					mat->glass.cauchyBTex = NULL_INDEX;
 				if (gm->GetFilmThickness())
 					mat->glass.filmThicknessTexIndex = scene->texDefs.GetTextureIndex(gm->GetFilmThickness());
 				else
