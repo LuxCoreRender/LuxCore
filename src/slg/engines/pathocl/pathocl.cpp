@@ -62,6 +62,7 @@ PathOCLRenderEngine::PathOCLRenderEngine(const RenderConfig *rcfg) :
 	eyeSamplerSharedData = nullptr;
 	lightSamplerSharedData = nullptr;
 	hasStartFilm = false;
+	allRenderingThreadsStarted = false;
 }
 
 PathOCLRenderEngine::~PathOCLRenderEngine() {
@@ -158,9 +159,13 @@ void PathOCLRenderEngine::StartLockLess() {
 		lightSampleSplatter = new FilmSampleSplatter(pixelFilter);
 
 	PathOCLBaseRenderEngine::StartLockLess();
+
+	allRenderingThreadsStarted = true;
 }
 
 void PathOCLRenderEngine::StopLockLess() {
+	allRenderingThreadsStarted = false;
+
 	PathOCLBaseRenderEngine::StopLockLess();
 
 	pathTracer.DeletePixelFilterDistribution();
@@ -248,20 +253,24 @@ void PathOCLRenderEngine::UpdateTaskCount() {
 
 u_int PathOCLRenderEngine::GetTotalEyeSPP() const {
 	u_int spp = 0;
-	for (size_t i = 0; i < renderOCLThreads.size(); ++i) {
-		if (renderOCLThreads[i]) {
-			const PathOCLOpenCLRenderThread *thread = (const PathOCLOpenCLRenderThread *)renderOCLThreads[i];
-			const Film *film = thread->threadFilms[0]->film;
-			spp += film->GetTotalEyeSampleCount() / film->GetPixelCount();
-		}
-	}
 
-	if (renderNativeThreads.size() > 0) {
-		// All threads use the film of the first one
-		if (renderNativeThreads[0]) {
-			const PathOCLNativeRenderThread *thread = (const PathOCLNativeRenderThread *)renderNativeThreads[0];
-			const Film *film = thread->threadFilm;
-			spp += film->GetTotalEyeSampleCount() / film->GetPixelCount();
+	// I can access rendering threads film only after all have been started
+	if (allRenderingThreadsStarted) {
+		for (size_t i = 0; i < renderOCLThreads.size(); ++i) {
+			if (renderOCLThreads[i]) {
+				const PathOCLOpenCLRenderThread *thread = (const PathOCLOpenCLRenderThread *)renderOCLThreads[i];
+				const Film *film = thread->threadFilms[0]->film;
+				spp += film->GetTotalEyeSampleCount() / film->GetPixelCount();
+			}
+		}
+
+		if (renderNativeThreads.size() > 0) {
+			// All threads use the film of the first one
+			if (renderNativeThreads[0]) {
+				const PathOCLNativeRenderThread *thread = (const PathOCLNativeRenderThread *)renderNativeThreads[0];
+				const Film *film = thread->threadFilm;
+				spp += film->GetTotalEyeSampleCount() / film->GetPixelCount();
+			}
 		}
 	}
 

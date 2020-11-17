@@ -117,7 +117,7 @@ protected:
 	SamplerSharedData *eyeSamplerSharedData;
 	SamplerSharedData *lightSamplerSharedData;
 
-	bool hasStartFilm;
+	bool hasStartFilm, allRenderingThreadsStarted;
 };
 
 }

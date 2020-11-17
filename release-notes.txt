@@ -60,6 +60,7 @@ Beta1 released
 Beta1 released
 
 * Fixed a crash when using Subdivision shape with vertex colors (issue #469)
+* Fixed a possible crash when using multiple GPUs with PhotonGI
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
