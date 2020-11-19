@@ -84,7 +84,9 @@ static void UpdateLuxCoreLogger() {
 	vector<spdlog::sink_ptr> sinks;
 
 	if (loggerCallBackHandler) {
-		auto sink = std::make_shared<spdlog::sinks::luxcore_callback_sink_mt>(loggerCallBackHandler);
+		// Note: I can not use luxcore_callback_sink_mt without the risk of a
+		// deadlock if the called code calls any LuxCore method
+		auto sink = std::make_shared<spdlog::sinks::luxcore_callback_sink_st>(loggerCallBackHandler);
 		sink->set_pattern("%v");
 		sinks.push_back(sink);
 	}
