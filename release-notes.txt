@@ -64,6 +64,7 @@ Beta1 released
 * Fixed a crash when using Subdivision shape with vertex colors (issue #469)
 * Fixed a possible crash when using multiple GPUs with PhotonGI
 * Fixed a deadlock when using multiple renders at the same time in Blender (issue #575)
+* Fixed a bug in the support for material .bumpsamplingdistance property
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
