@@ -40,6 +40,8 @@
 
 Beta1 released
 
+* Removed the cap to opencl.task.count parameter
+
 ### Fixed Bugs
 
 * Added the support for pixel filtering to light tracing (issue #413)

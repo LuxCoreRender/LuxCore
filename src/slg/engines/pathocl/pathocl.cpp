@@ -216,11 +216,9 @@ void PathOCLRenderEngine::UpdateCounters() {
 
 void PathOCLRenderEngine::UpdateTaskCount() {
 	const Properties &cfg = renderConfig->cfg;
-
 	if (!cfg.IsDefined("opencl.task.count") && (GetType() == RTPATHOCL)) {
 		// In this case, I will tune task count for RTPATHOCL
 		taskCount = film->GetWidth() * film->GetHeight() / intersectionDevices.size();
-		taskCount = RoundUp<u_int>(taskCount, 8192);
 	} else {
 		const u_int defaultTaskCount = 512ull * 1024ull;
 
@@ -235,13 +233,12 @@ void PathOCLRenderEngine::UpdateTaskCount() {
 				taskCap = Min(taskCap, 64u * 1024u);
 		}
 
-		if (cfg.Get(Property("opencl.task.count")(defaultTaskCount)).Get<string>() == "AUTO")
-			taskCount = defaultTaskCount;
+		if (cfg.Get(Property("opencl.task.count")("AUTO")).Get<string>() == "AUTO")
+			taskCount = taskCap;
 		else
-			taskCount = cfg.Get(Property("opencl.task.count")(defaultTaskCount)).Get<u_int>();
-		taskCount = Min(taskCount, taskCap);
+			taskCount = cfg.Get(Property("opencl.task.count")(taskCap)).Get<u_int>();
 	}
-	
+
 	// I don't know yet the workgroup size of each device so I can not
 	// round up task count to be a multiple of workgroups size of all devices
 	// used. Rounding to 8192 is a simple trick based on the assumption that
