@@ -475,7 +475,7 @@ void PathTracer::RenderEyePath(IntersectionDevice *device,
 
 		if (bsdf.IsLightSource() && checkDirectLightHit) {
 			DirectHitFiniteLight(scene, pathInfo, pathThroughput,
-					eyeRay,  eyeRayHit.t, bsdf, &sampleResult);
+					eyeRay, eyeRayHit.t, bsdf, &sampleResult);
 		}
 
 		//----------------------------------------------------------------------

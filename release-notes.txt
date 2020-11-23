@@ -65,6 +65,7 @@ Beta1 released
 * Fixed a possible crash when using multiple GPUs with PhotonGI
 * Fixed a deadlock when using multiple renders at the same time in Blender (issue #575)
 * Fixed a bug in the support for material .bumpsamplingdistance property
+* Fixed a discrepancy in reflected area lights on glossy surfaces between CPU and GPU rendering when light tracing is enabled (issue #470)
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
