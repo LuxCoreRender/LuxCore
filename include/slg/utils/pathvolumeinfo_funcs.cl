@@ -201,7 +201,8 @@ OPENCL_FORCE_INLINE bool PathVolumeInfo_ContinueToTrace(__global PathVolumeInfo 
 		// SimulateRemoveVolume(bsdfInteriorVol) because PathVolumeInfo has not yet
 		// been updated with bsdf volume information. This is how Scene::Intersect()
 		// works and it is currently the only method to call this one.
-		if ((!intoObject) && (pvi->currentVolumeIndex == bsdfInteriorVolIndex))
+		if ((!intoObject) &&  (pvi->currentVolumeIndex != NULL_INDEX) &&
+				(pvi->currentVolumeIndex == bsdfInteriorVolIndex))
 			return true;
 	}
 
