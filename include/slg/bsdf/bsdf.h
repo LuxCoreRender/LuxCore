@@ -105,6 +105,7 @@ public:
 	bool IsHoldout() const { return material->IsHoldout(); }
 	bool IsAlbedoEndPoint() const;
 	u_int GetObjectID() const;
+	const std::string &GetMaterialName() const;
 	u_int GetMaterialID() const { return material->GetID(); }
 	u_int GetLightID() const { return material->GetLightID(); }
 	const Volume *GetMaterialInteriorVolume() const { return material->GetInteriorVolume(hitPoint, hitPoint.passThroughEvent); }
