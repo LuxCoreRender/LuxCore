@@ -60,13 +60,22 @@ void Init() {
 
 #if !defined(LUXRAYS_DISABLE_CUDA)
 	if (cuewInit(CUEW_INIT_CUDA|CUEW_INIT_NVRTC) == CUEW_SUCCESS) {
-		isCudaAvilable = true;
+		// Was:
+		//CHECK_CUDA_ERROR(cuInit(0));
 
-		CHECK_CUDA_ERROR(cuInit(0));
+		const CUresult err = cuInit(0);
+		if (err == CUDA_ERROR_NO_DEVICE) {
+			// This handles the case when CUDA is installed but there are no
+			// NVIDIA GPUs installed.
+		} else {
+			CHECK_CUDA_ERROR(err);
 
-		// Try to initialize Optix too
-		if (optixInit() == OPTIX_SUCCESS)
-			isOptixAvilable = true;
+			isCudaAvilable = true;
+
+			// Try to initialize Optix too
+			if (optixInit() == OPTIX_SUCCESS)
+				isOptixAvilable = true;
+		}
 	}
 #endif
 }
