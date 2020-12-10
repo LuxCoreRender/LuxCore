@@ -113,11 +113,12 @@ OCLRenderEngine::OCLRenderEngine(const RenderConfig *rcfg,
 		}
 	}
 	
+#if !defined(LUXRAYS_DISABLE_CUDA)
 	if (!haveSelectionString && hasCUDADevice) {
 		// If there is, at least, a CUDA device available, use only CUDA devices
 		DeviceDescription::Filter(DEVICE_TYPE_CUDA_ALL, selectedDeviceDescs);
 	}
-
+	
 	// Enable/Disable Optix according cuda.optix.devices.select string
 	if ((cudaDeviceCount > 0) && (cudaOptixDeviceConfig.length() > 0)) {
 		size_t cudaDeviceIndex = 0;
@@ -139,6 +140,7 @@ OCLRenderEngine::OCLRenderEngine(const RenderConfig *rcfg,
 			}
 		}
 	}
+#endif
 
 	oclRenderThreadCount = selectedDeviceDescs.size();
 #endif

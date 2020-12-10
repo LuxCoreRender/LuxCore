@@ -202,7 +202,8 @@ Properties luxcore::GetOpenCLDeviceDescs() {
 				Property(prefix + ".maxmemoryallocsize")((unsigned long long)desc->GetMaxMemoryAllocSize()) <<
 				Property(prefix + ".localmemory")((unsigned long long)deviceLocalMem) <<
 				Property(prefix + ".constmemory")((unsigned long long)deviceConstMem);
-		
+
+#if !defined(LUXRAYS_DISABLE_CUDA)
 		if (desc->GetType() & DEVICE_TYPE_CUDA_ALL) {
 			const CUDADeviceDescription *cudaDesc = (CUDADeviceDescription *)desc;
 			
@@ -210,6 +211,7 @@ Properties luxcore::GetOpenCLDeviceDescs() {
 					Property(prefix + ".cuda.compute.major")(cudaDesc->GetCUDAComputeCapabilityMajor()) <<
 					Property(prefix + ".cuda.compute.minor")(cudaDesc->GetCUDAComputeCapabilityMinor());
 		}
+#endif
 	}
 #endif
 	

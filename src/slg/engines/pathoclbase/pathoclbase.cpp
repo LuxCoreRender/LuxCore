@@ -68,6 +68,7 @@ PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg,
 	// Add CUDA devices
 	//--------------------------------------------------------------------------
 
+#if !defined(LUXRAYS_DISABLE_CUDA)
 	SLG_LOG("CUDA devices used:");
 	for (size_t i = 0; i < devs.size(); ++i) {
 		if (devs[i]->GetDeviceDesc()->GetType() & DEVICE_TYPE_CUDA_ALL) {
@@ -84,6 +85,7 @@ PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(const RenderConfig *rcfg,
 			hwDev->SetAdditionalCompileOpts(compileOpts);
 		}
 	}
+#endif
 
 	//--------------------------------------------------------------------------
 	// Add OpenCL devices
