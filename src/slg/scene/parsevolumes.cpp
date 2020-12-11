@@ -32,6 +32,8 @@
 #include "slg/volumes/heterogenous.h"
 #include "slg/volumes/homogenous.h"
 
+#include <atomic>
+
 using namespace std;
 using namespace luxrays;
 using namespace slg;
