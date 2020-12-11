@@ -169,11 +169,9 @@ bool PathVolumeInfo::ContinueToTrace(const BSDF &bsdf) const {
 
 		// Condition #2
 		//
-		// Note: I don't have to calculate the potentially new currentVolume (with
-		// SimulateRemoveVolume(bsdfInteriorVol) because PathVolumeInfo has not yet
-		// been updated with bsdf volume information. This is how Scene::Intersect()
-		// works and it is currently the only method to call this one.
-		if ((!bsdf.hitPoint.intoObject) && currentVolume && (currentVolume == bsdfInteriorVol))
+		// I have to calculate the potentially new currentVolume in order
+		// to check if I'm leaving the current one
+		if ((!bsdf.hitPoint.intoObject) && currentVolume && (SimulateRemoveVolume(bsdfInteriorVol) == currentVolume))
 			return true;
 	}
 

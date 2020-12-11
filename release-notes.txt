@@ -58,7 +58,6 @@ Beta1 released
 * Fixed a problem with Blender Translation language preference option and scene export on file
 * Fixed a self-shadow problem in BIRCPU render engine
 * Fixed a Mix material problem when using solid and transparent materials (issue #461)
-* Fixed a problem with shadow rays, transmitting materials and volumes (issue #601)
 
 Beta1 released
 
