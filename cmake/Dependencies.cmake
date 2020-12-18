@@ -57,7 +57,7 @@ find_program(PYSIDE_UIC NAMES pyside-uic pyside2-uic
 include_directories(${PYTHON_INCLUDE_DIRS})
 
 # Find Boost
-set(Boost_USE_STATIC_LIBS       OFF)
+set(Boost_USE_STATIC_LIBS       ON)
 set(Boost_USE_MULTITHREADED     ON)
 set(Boost_USE_STATIC_RUNTIME    OFF)
 set(BOOST_ROOT                  "${BOOST_SEARCH_PATH}")
