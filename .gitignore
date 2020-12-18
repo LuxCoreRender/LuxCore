@@ -35,6 +35,7 @@ build
 compile_commands.json
 dist
 samples/pyluxcoretool/__pycache__
+release_OSX/
 
 ###########################
 # XCode

@@ -116,7 +116,7 @@ IF(MSVC)
 		# Use multiple processors in debug mode, for faster rebuild:
 		AdjustToolFlags(
 				CMAKE_C_FLAGS_DEBUG CMAKE_CXX_FLAGS_DEBUG ADDITIONS "/MP")
-		
+
 		# Enable /bigobj for debug builds to prevent error C1128 when compiling OpenVDB
 		AdjustToolFlags(
 				CMAKE_C_FLAGS_DEBUG CMAKE_CXX_FLAGS_DEBUG ADDITIONS "/bigobj")
@@ -165,17 +165,19 @@ IF(APPLE)
 
 	SET(CMAKE_OSX_DEPLOYMENT_TARGET 10.9) # Minimum OS requirements for LuxCore
 
-  IF(${MAC_SYS} MATCHES 19)
-    SET(OSX_SYSTEM 10.15)
-    ELSEIF(${MAC_SYS} MATCHES 18)
+  IF(${MAC_SYS} MATCHES 20)
+    SET(OSX_SYSTEM 11.1)
+    ELSEIF(${MAC_SYS} MATCHES 19)
 		SET(OSX_SYSTEM 10.15)
-	ELSEIF(${MAC_SYS} MATCHES 17)
+    ELSEIF(${MAC_SYS} MATCHES 18)
 		SET(OSX_SYSTEM 10.14)
-	ELSEIF(${MAC_SYS} MATCHES 16)
+    ELSEIF(${MAC_SYS} MATCHES 17)
 		SET(OSX_SYSTEM 10.13)
-	ELSE()
+	  ELSEIF(${MAC_SYS} MATCHES 16)
+		SET(OSX_SYSTEM 10.13)
+	  ELSE()
 		SET(OSX_SYSTEM unsupported)
-	ENDIF()
+	  ENDIF()
 
 	SET(QT_BINARY_DIR /usr/local/bin)
 
