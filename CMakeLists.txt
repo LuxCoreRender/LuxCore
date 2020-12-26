@@ -183,7 +183,7 @@ add_subdirectory(src/pyluxcoretools)
 #
 ################################################################################
 
-if(NOT APPLE OR OSX_BUILD_DEMOS)
+if((${CMAKE_SYSTEM_NAME} MATCHES "Linux") OR OSX_BUILD_DEMOS OR WIN_BUILD_DEMOS)
 	add_subdirectory(samples/luxcoredemo)
 	add_subdirectory(samples/luxcorescenedemo)
 
@@ -193,7 +193,9 @@ if(NOT APPLE OR OSX_BUILD_DEMOS)
 	endif()
 endif()
 
-add_subdirectory(samples/luxcoreconsole)
+if (NOT WIN32 OR WIN_BUILD_DEMOS)
+	add_subdirectory(samples/luxcoreconsole)
+endif()
 
 if(OPENGL_FOUND)
 	add_subdirectory(samples/luxcoreui)
