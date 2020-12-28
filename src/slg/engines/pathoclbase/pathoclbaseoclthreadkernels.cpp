@@ -103,6 +103,7 @@ string PathOCLBaseOCLRenderThread::GetKernelSources() {
 			luxrays::ocl::KernelSource_motionsystem_types <<
 			luxrays::ocl::KernelSource_trianglemesh_types <<
 			luxrays::ocl::KernelSource_exttrianglemesh_types <<
+			luxrays::ocl::KernelSource_imagemapdesc_types <<
 			// OpenCL LuxRays Funcs
 			luxrays::ocl::KernelSource_randomgen_funcs <<
 			luxrays::ocl::KernelSource_atomic_funcs <<

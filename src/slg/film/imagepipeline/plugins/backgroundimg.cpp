@@ -155,12 +155,13 @@ void BackgroundImgPlugin::ApplyHW(Film &film, const u_int index) {
 		hardwareDevice = film.hardwareDevice;
 
 		slg::ocl::ImageMap imgMapDesc;
-		imgMapDesc.channelCount = filmImageMap->GetChannelCount();
-		imgMapDesc.width = filmImageMap->GetWidth();
-		imgMapDesc.height = filmImageMap->GetHeight();
-		imgMapDesc.pageIndex = 0;
-		imgMapDesc.pixelsIndex = 0;
-		imgMapDesc.storageType = (slg::ocl::ImageMapStorageType)filmImageMap->GetStorage()->GetStorageType();
+		imgMapDesc.desc.storageType = (luxrays::ocl::ImageMapStorageType)filmImageMap->GetStorage()->GetStorageType();
+		imgMapDesc.desc.wrapType = luxrays::ocl::WRAP_CLAMP;
+		imgMapDesc.desc.channelCount = filmImageMap->GetChannelCount();
+		imgMapDesc.desc.width = filmImageMap->GetWidth();
+		imgMapDesc.desc.height = filmImageMap->GetHeight();
+		imgMapDesc.genericAddr.pageIndex = 0;
+		imgMapDesc.genericAddr.pixelsIndex = 0;
 
 		// Allocate OpenCL buffers
 		hardwareDevice->AllocBufferRO(&hwFilmImageMapDesc, &imgMapDesc, sizeof(slg::ocl::ImageMap),

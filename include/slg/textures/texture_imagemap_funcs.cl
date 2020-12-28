@@ -1,4 +1,4 @@
-#line 2 "texture_brick_funcs.cl"
+#line 2 "texture_imagemap_funcs.cl"
 
 /***************************************************************************
  * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
@@ -71,7 +71,7 @@ OPENCL_FORCE_INLINE float3 ImageMapTexture_SampleTile(__global const Texture* re
 	__global const ImageMap *imageMap = &imageMapDescs[tex->imageMapTex.imageMapIndex];
 	__global const ImageMap *randomizedTilingLUT = &imageMapDescs[tex->imageMapTex.randomizedTilingLUTIndex];
 	
-	const float2 noiseP = MAKE_FLOAT2(vertex.x / randomImageMap->width, vertex.y / randomImageMap->height);
+	const float2 noiseP = MAKE_FLOAT2(vertex.x / randomImageMap->desc.width, vertex.y / randomImageMap->desc.height);
 	const float3 noise = ImageMap_GetSpectrum(randomImageMap, noiseP.x, noiseP.y IMAGEMAPS_PARAM);
 	const float2 pos = MAKE_FLOAT2(.25f, .25f) + MAKE_FLOAT2(noise.x, noise.y) * .5f + offset;
 

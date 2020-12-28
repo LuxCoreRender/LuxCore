@@ -18,42 +18,37 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-typedef enum {
-	BYTE, HALF, FLOAT
-} ImageMapStorageType;
-
-typedef enum {
-	WRAP_REPEAT,
-	WRAP_BLACK,
-	WRAP_WHITE,
-	WRAP_CLAMP
-} ImageWrapType;
-
 typedef struct {
-	ImageMapStorageType storageType;
-	ImageWrapType wrapType;
-	unsigned int channelCount, width, height;
-	unsigned int pageIndex;
-	// The following field must be 64bit aligned (for OpenCL)
+	ImageMapDescription desc;
+
+	struct {
+		unsigned int pageIndex;
+		// The following field must be 64bit aligned (for OpenCL)
 #if defined(SLG_OPENCL_KERNEL)
-	// CUDA unsigned long has a 32bit size so we need different definitions
-	// between CUDA and OpenCL
+		// CUDA unsigned long has a 32bit size so we need different definitions
+		// between CUDA and OpenCL
 #if defined(LUXRAYS_CUDA_DEVICE)
-	unsigned long long pixelsIndex;
+		unsigned long long pixelsIndex;
 #elif defined(LUXRAYS_OPENCL_DEVICE)
-	unsigned long pixelsIndex;
+		unsigned long pixelsIndex;
 #else
 #error "Unsupported device in ImageMap struct"
 #endif
 #else
 #if defined(LUXRAYS_ENABLE_OPENCL)
-	cl_ulong pixelsIndex;
+		cl_ulong pixelsIndex;
 #else
-	// In this, case cl_ulong is not defined. The type, in this case, doesn't
-	// really matter because this structure is not used at all.
-	unsigned long long pixelsIndex;
+		// In this, case cl_ulong is not defined. The type, in this case, doesn't
+		// really matter because this structure is not used at all.
+		unsigned long long pixelsIndex;
 #endif
 #endif
+	} genericAddr;
+
+	struct {
+		// This is the same type of CUtexObject but can be compiled everywhere
+		unsigned long long texObj;
+	} cudaAddr;
 } ImageMap;
 
 //------------------------------------------------------------------------------

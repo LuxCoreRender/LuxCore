@@ -28,9 +28,9 @@ OPENCL_FORCE_INLINE float3 DensityGridTexture_D(
 		int nx, int ny, int nz
 		IMAGEMAPS_PARAM_DECL) {
 	__global const void *pixels = ImageMap_GetPixelsAddress(
-		imageMapBuff, imageMap->pageIndex, imageMap->pixelsIndex);
-	const ImageMapStorageType storageType = imageMap->storageType;
-	const uint channelCount = imageMap->channelCount;
+		imageMapBuff, imageMap->genericAddr.pageIndex, imageMap->genericAddr.pixelsIndex);
+	const ImageMapStorageType storageType = imageMap->desc.storageType;
+	const uint channelCount = imageMap->desc.channelCount;
 
 	const uint index = ((clamp(z, 0, nz - 1) * ny) + clamp(y, 0, ny - 1)) * nx + clamp(x, 0, nx - 1);
 	
@@ -48,7 +48,7 @@ OPENCL_FORCE_NOT_INLINE float3 DensityGridTexture_ConstEvaluateSpectrum(__global
 	float x, y, z;
 	int vx, vy, vz;
 
-	switch (imageMap->wrapType) {
+	switch (imageMap->desc.wrapType) {
 		case WRAP_REPEAT:
 			x = P.x * nx;
 			vx = Floor2Int(x);

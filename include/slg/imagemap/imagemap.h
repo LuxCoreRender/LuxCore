@@ -29,6 +29,7 @@
 #include "luxrays/core/color/color.h"
 #include "luxrays/core/geometry/uv.h"
 #include "luxrays/core/namedobject.h"
+#include "luxrays/core/imagemapdesc.h"
 #include "luxrays/utils/properties.h"
 #include "luxrays/utils/serializationutils.h"
 #include "luxrays/utils/ocl.h"
@@ -38,6 +39,7 @@ namespace slg {
 
 // OpenCL data types
 namespace ocl {
+using luxrays::ocl::ImageMapDescription;
 #include "slg/imagemap/imagemap_types.cl"
 }
 

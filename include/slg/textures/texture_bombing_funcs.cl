@@ -41,8 +41,8 @@ OPENCL_FORCE_INLINE bool BombingTexture_WriteCellUV(__global const Texture* rest
 
 	// Pick cell random values
 	__global const ImageMap *randomImageMap = &imageMapDescs[texture->bombingTex.randomImageMapIndex];
-	const uint randomImageMapWidth = randomImageMap->width;
-	const uint randomImageMapHeight = randomImageMap->height;
+	const uint randomImageMapWidth = randomImageMap->desc.width;
+	const uint randomImageMapHeight = randomImageMap->desc.height;
 
 	const uint randomImageMapStorageIndex = (((int)currentCell.x) % (randomImageMapWidth / 2)) * 2 +
 			(((int)currentCell.y) % randomImageMapHeight) * randomImageMapWidth;

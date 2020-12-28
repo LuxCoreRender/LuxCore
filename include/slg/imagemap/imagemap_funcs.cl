@@ -323,12 +323,12 @@ OPENCL_FORCE_NOT_INLINE float ImageMapStorage_GetFloat(__global const ImageMap *
 		const uint s0, const uint t0 
 		IMAGEMAPS_PARAM_DECL) {
 	__global const void *pixels = ImageMap_GetPixelsAddress(
-		imageMapBuff, imageMap->pageIndex, imageMap->pixelsIndex);
-	const ImageMapStorageType storageType = imageMap->storageType;
-	const uint channelCount = imageMap->channelCount;
-	const uint width = imageMap->width;
-	const uint height = imageMap->height;
-	const ImageWrapType wrapType = imageMap->wrapType;
+		imageMapBuff, imageMap->genericAddr.pageIndex, imageMap->genericAddr.pixelsIndex);
+	const ImageMapStorageType storageType = imageMap->desc.storageType;
+	const uint channelCount = imageMap->desc.channelCount;
+	const uint width = imageMap->desc.width;
+	const uint height = imageMap->desc.height;
+	const ImageWrapType wrapType = imageMap->desc.wrapType;
 
 	return ImageMap_GetTexel_Float(storageType, pixels, width, height, channelCount, wrapType, s0, t0);	
 }
@@ -337,12 +337,12 @@ OPENCL_FORCE_NOT_INLINE float3 ImageMapStorage_GetSpectrum(__global const ImageM
 		const uint s0, const uint t0
 		IMAGEMAPS_PARAM_DECL) {
 	__global const void *pixels = ImageMap_GetPixelsAddress(
-		imageMapBuff, imageMap->pageIndex, imageMap->pixelsIndex);
-	const ImageMapStorageType storageType = imageMap->storageType;
-	const uint channelCount = imageMap->channelCount;
-	const uint width = imageMap->width;
-	const uint height = imageMap->height;
-	const ImageWrapType wrapType = imageMap->wrapType;
+		imageMapBuff, imageMap->genericAddr.pageIndex, imageMap->genericAddr.pixelsIndex);
+	const ImageMapStorageType storageType = imageMap->desc.storageType;
+	const uint channelCount = imageMap->desc.channelCount;
+	const uint width = imageMap->desc.width;
+	const uint height = imageMap->desc.height;
+	const ImageWrapType wrapType = imageMap->desc.wrapType;
 
 	return ImageMap_GetTexel_Spectrum(storageType, pixels, width, height, channelCount, wrapType, s0, t0);	
 }
@@ -351,12 +351,12 @@ OPENCL_FORCE_NOT_INLINE float ImageMap_GetFloat(__global const ImageMap *imageMa
 		const float u, const float v
 		IMAGEMAPS_PARAM_DECL) {
 	__global const void *pixels = ImageMap_GetPixelsAddress(
-		imageMapBuff, imageMap->pageIndex, imageMap->pixelsIndex);
-	const ImageMapStorageType storageType = imageMap->storageType;
-	const uint channelCount = imageMap->channelCount;
-	const uint width = imageMap->width;
-	const uint height = imageMap->height;
-	const ImageWrapType wrapType = imageMap->wrapType;
+		imageMapBuff, imageMap->genericAddr.pageIndex, imageMap->genericAddr.pixelsIndex);
+	const ImageMapStorageType storageType = imageMap->desc.storageType;
+	const uint channelCount = imageMap->desc.channelCount;
+	const uint width = imageMap->desc.width;
+	const uint height = imageMap->desc.height;
+	const ImageWrapType wrapType = imageMap->desc.wrapType;
 
 	const float s = u * width - .5f;
 	const float t = v * height - .5f;
@@ -386,13 +386,16 @@ OPENCL_FORCE_NOT_INLINE float ImageMap_GetFloat(__global const ImageMap *imageMa
 OPENCL_FORCE_NOT_INLINE float3 ImageMap_GetSpectrum(__global const ImageMap *imageMap,
 		const float u, const float v
 		IMAGEMAPS_PARAM_DECL) {
+//	const float texVal = tex2D<float>(imageMap->cudaAddr.texObj, u, v);
+//	return MAKE_FLOAT3(texVal, texVal, texVal);
+	
 	__global const void *pixels = ImageMap_GetPixelsAddress(
-		imageMapBuff, imageMap->pageIndex, imageMap->pixelsIndex);
-	const ImageMapStorageType storageType = imageMap->storageType;
-	const uint channelCount = imageMap->channelCount;
-	const uint width = imageMap->width;
-	const uint height = imageMap->height;
-	const ImageWrapType wrapType = imageMap->wrapType;
+		imageMapBuff, imageMap->genericAddr.pageIndex, imageMap->genericAddr.pixelsIndex);
+	const ImageMapStorageType storageType = imageMap->desc.storageType;
+	const uint channelCount = imageMap->desc.channelCount;
+	const uint width = imageMap->desc.width;
+	const uint height = imageMap->desc.height;
+	const ImageWrapType wrapType = imageMap->desc.wrapType;
 
 	const float s = u * width - .5f;
 	const float t = v * height - .5f;
@@ -423,12 +426,12 @@ OPENCL_FORCE_NOT_INLINE float2 ImageMap_GetDuv(__global const ImageMap *imageMap
 		const float u, const float v
 		IMAGEMAPS_PARAM_DECL) {
 	__global const void *pixels = ImageMap_GetPixelsAddress(
-		imageMapBuff, imageMap->pageIndex, imageMap->pixelsIndex);
-	const ImageMapStorageType storageType = imageMap->storageType;
-	const uint channelCount = imageMap->channelCount;
-	const uint width = imageMap->width;
-	const uint height = imageMap->height;
-	const ImageWrapType wrapType = imageMap->wrapType;
+		imageMapBuff, imageMap->genericAddr.pageIndex, imageMap->genericAddr.pixelsIndex);
+	const ImageMapStorageType storageType = imageMap->desc.storageType;
+	const uint channelCount = imageMap->desc.channelCount;
+	const uint width = imageMap->desc.width;
+	const uint height = imageMap->desc.height;
+	const ImageWrapType wrapType = imageMap->desc.wrapType;
 
 	const float s = u * width;
 	const float t = v * height;

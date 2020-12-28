@@ -31,7 +31,7 @@ namespace luxrays {
 
 class HardwareIntersectionDevice : public IntersectionDevice, virtual public HardwareDevice {
 public:
-	// Returns true if it support HardwareDevice ray tracing
+	// Returns true if it supports HardwareDevice ray tracing
 	virtual bool HasHWSupport() const { return true; }
 
 	//--------------------------------------------------------------------------

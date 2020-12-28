@@ -97,6 +97,7 @@ set(LUXRAYS_KERNELS
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/color/color_types.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/color/color_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/core/bvh/bvhbuild_types.cl
+	${LuxRays_SOURCE_DIR}/include/luxrays/core/imagemapdesc_types.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/accelerators/bvh.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/accelerators/mbvh.cl
 	${LuxRays_SOURCE_DIR}/include/luxrays/accelerators/optixaccel.cl
@@ -262,6 +263,7 @@ set(LUXRAYS_SRCS_KERNELS
 	${generated_kernels_dir}/mc_funcs_kernel.cpp
 	${generated_kernels_dir}/utils_funcs_kernel.cpp
 	${generated_kernels_dir}/atomic_funcs_kernel.cpp
+	${generated_kernels_dir}/imagemapdesc_types_kernel.cpp
 )
 
 SOURCE_GROUP(

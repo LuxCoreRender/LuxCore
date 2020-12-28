@@ -39,6 +39,8 @@ static ImageMap *AllocRandomImageMap(const u_int size) {
 	for (u_int i = 0; i < 3 * size * size; ++i)
 		randomMapData[i] = rndGen.floatValue();
 	
+	randomImageMap->SetName("LUXCORE__GlobalRandomImageMap");
+
 	return randomImageMap.release();
 }
 

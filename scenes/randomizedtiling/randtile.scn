@@ -5,8 +5,9 @@ scene.camera.lookat.target = -0.600622892 1.50124407 -1.6308527
 ################################################################################
 scene.textures.imgtex.file = pattern-3.jpg
 scene.textures.imgtex.gamma = 1.0
-scene.textures.imgtex.randomizedtiling.enable = 1
+#scene.textures.imgtex.randomizedtiling.enable = 1
 scene.textures.imgtex.mapping.uvscale = 2 2
+scene.textures.imgtex.channel = mean
 ##
 #scene.textures.hsvtex.type = hsv
 #scene.textures.hsvtex.texture = 1.0

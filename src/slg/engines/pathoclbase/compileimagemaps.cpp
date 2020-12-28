@@ -68,8 +68,8 @@ void CompiledScene::AddToImageMapMem(slg::ocl::ImageMap &im, void *data, const s
 	imageMapMemBlock.resize(start + memSizeInFloat);
 	memcpy(&imageMapMemBlock[start], data, dataSize);
 
-	im.pageIndex = page;
-	im.pixelsIndex = start;
+	im.genericAddr.pageIndex = page;
+	im.genericAddr.pixelsIndex = start;
 }
 
 u_int CompiledScene::CompileImageMap(const ImageMap *im) {
@@ -78,22 +78,22 @@ u_int CompiledScene::CompileImageMap(const ImageMap *im) {
 	imageMapDescs.resize(imageMapDescs.size() + 1);
 	slg::ocl::ImageMap *imd = &imageMapDescs[imgMapIndex];
 
-	imd->channelCount = im->GetChannelCount();
-	imd->width = im->GetWidth();
-	imd->height = im->GetHeight();
+	imd->desc.channelCount = im->GetChannelCount();
+	imd->desc.width = im->GetWidth();
+	imd->desc.height = im->GetHeight();
 
 	switch (im->GetStorage()->wrapType) {
 		case ImageMapStorage::REPEAT:
-			imd->wrapType = slg::ocl::WRAP_REPEAT;
+			imd->desc.wrapType = luxrays::ocl::WRAP_REPEAT;
 			break;
 		case ImageMapStorage::BLACK:
-			imd->wrapType = slg::ocl::WRAP_BLACK;
+			imd->desc.wrapType = luxrays::ocl::WRAP_BLACK;
 			break;
 		case ImageMapStorage::WHITE:
-			imd->wrapType = slg::ocl::WRAP_WHITE;
+			imd->desc.wrapType = luxrays::ocl::WRAP_WHITE;
 			break;
 		case ImageMapStorage::CLAMP:
-			imd->wrapType = slg::ocl::WRAP_CLAMP;
+			imd->desc.wrapType = luxrays::ocl::WRAP_CLAMP;
 			break;
 		default:
 			throw runtime_error("Unknown wrap type in CompiledScene::AddImageMap(): " +
@@ -102,13 +102,13 @@ u_int CompiledScene::CompileImageMap(const ImageMap *im) {
 
 	switch (im->GetStorage()->GetStorageType()) {
 		case ImageMapStorage::BYTE:
-			imd->storageType = slg::ocl::BYTE;
+			imd->desc.storageType = luxrays::ocl::BYTE;
 			break;
 		case ImageMapStorage::HALF:
-			imd->storageType = slg::ocl::HALF;
+			imd->desc.storageType = luxrays::ocl::HALF;
 			break;
 		case ImageMapStorage::FLOAT:
-			imd->storageType = slg::ocl::FLOAT;
+			imd->desc.storageType = luxrays::ocl::FLOAT;
 			break;
 		default:
 			throw runtime_error("Unknown storage type in CompiledScene::AddImageMap(): " +

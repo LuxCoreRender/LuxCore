@@ -20,6 +20,7 @@
 #define	_LUXRAYS_HARDWAREDEVICE_H
 
 #include "luxrays/core/device.h"
+#include "luxrays/core/imagemapdesc.h"
 #include "luxrays/utils/ocl.h"
 
 namespace luxrays {
@@ -107,6 +108,17 @@ protected:
 };
 
 //------------------------------------------------------------------------------
+// HardwareDeviceImage: a memory region allocated on an hardware device
+//------------------------------------------------------------------------------
+
+//class HardwareDeviceImage {
+//public:
+//	virtual ~HardwareDeviceImage() { }
+//protected:
+//	HardwareDeviceImage() { }
+//};
+
+//------------------------------------------------------------------------------
 // HardwareDevice
 //------------------------------------------------------------------------------
 
@@ -166,6 +178,13 @@ public:
 	}
 	virtual void FreeBuffer(HardwareDeviceBuffer **buff) = 0;
 
+	//--------------------------------------------------------------------------
+	// Optional Image management for hardware (aka GPU) only applications
+	//--------------------------------------------------------------------------
+
+	// Returns true if it support HardwareDevice ray tracing
+	virtual bool HasImageSupport() const { return false; }
+	
 protected:
 	template <typename T> struct KernelArgumentHandler {
 		static ::size_t Size(const T&) { return sizeof(T); }

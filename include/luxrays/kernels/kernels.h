@@ -71,6 +71,7 @@ extern std::string KernelSource_uv_types;
 extern std::string KernelSource_utils_funcs;
 extern std::string KernelSource_color_types;
 extern std::string KernelSource_color_funcs;
+extern std::string KernelSource_imagemapdesc_types;
 
 // Util kernel functions
 extern std::string KernelSource_atomic_funcs;

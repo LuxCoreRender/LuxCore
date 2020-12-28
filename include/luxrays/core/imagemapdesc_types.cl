@@ -1,4 +1,4 @@
-#line 2 "cudadevice_oclemul_types.cl"
+#line 2 "imagemapdesc_types.cl"
 
 /***************************************************************************
  * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
@@ -18,23 +18,19 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#define __kernel extern "C" __global__
-#define __global
-#define __local __shared__
-#define __constant
-#define restrict __restrict__
+typedef enum {
+	BYTE, HALF, FLOAT
+} ImageMapStorageType;
 
-// This is a workaround to long compilation time
-#define OPENCL_FORCE_NOT_INLINE __noinline__
-#define OPENCL_FORCE_INLINE __forceinline__
+typedef enum {
+	WRAP_REPEAT,
+	WRAP_BLACK,
+	WRAP_WHITE,
+	WRAP_CLAMP
+} ImageWrapType;
 
-typedef unsigned char uchar;
-typedef unsigned short ushort;
-typedef unsigned int uint;
-typedef unsigned long long ulong;
-
-#define INFINITY __int_as_float(0x7f800000)
-#define M_PI_F 3.141592654f
-#define M_1_PI_F (1.f / 3.141592654f)
-
-typedef unsigned long long CUtexObject;
+typedef struct {
+	ImageMapStorageType storageType;
+	ImageWrapType wrapType;
+	unsigned int channelCount, width, height;
+} ImageMapDescription;
