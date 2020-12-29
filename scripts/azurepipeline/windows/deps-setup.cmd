@@ -2,7 +2,7 @@
 
 cd ..
 git lfs install
-git clone --branch master https://github.com/LuxCoreRender/WindowsCompile .\WindowsCompile
+git clone --branch oiio_renamed https://github.com/LuxCoreRender/WindowsCompile .\WindowsCompile
 
 mklink /J Luxcore %SYSTEM_DEFAULTWORKINGDIRECTORY%
 
