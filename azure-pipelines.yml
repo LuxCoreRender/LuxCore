@@ -113,12 +113,13 @@ jobs:
 
 - job: LuxCoreRenderWindowsSDK
   dependsOn: DetectBuildType
-  condition: |
-    and
-    (
-      succeeded(),
-      eq(dependencies.DetectBuildType.outputs['setvarStep.final'], 'TRUE')
-    )
+  condition: succeeded()
+  # condition: |
+    # and
+    # (
+      # succeeded(),
+      # eq(dependencies.DetectBuildType.outputs['setvarStep.final'], 'TRUE')
+    # )
   timeoutInMinutes: 0
   pool:
     vmImage: 'vs2017-win2016'
