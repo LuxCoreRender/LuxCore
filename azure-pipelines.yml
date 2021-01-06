@@ -124,6 +124,7 @@ jobs:
     vmImage: 'vs2017-win2016'
   variables:
     version_string: $[ dependencies.DetectBuildType.outputs['setvarStep.version_string'] ]
+    # Variable 'final' is used only in this job to control execution of 'create-sdk.bat'
     final: $[ dependencies.DetectBuildType.outputs['setvarStep.final'] ]
 
   steps:
