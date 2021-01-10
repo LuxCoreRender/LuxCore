@@ -51,6 +51,15 @@ bool cudaKernelCache::ForcedCompilePTX(const vector<string> &kernelsParameters, 
 	vector<const char *> cudaOpts;
 	cudaOpts.push_back("--device-as-default-execution-space");
 	//cudaOpts.push_back("--disable-warnings");
+       
+        // Set target architecture, based on current device's capability
+        CUdevice device;
+        CHECK_CUDA_ERROR(cuCtxGetDevice(&device));
+        int major, minor;
+        CHECK_CUDA_ERROR(cuDeviceGetAttribute(&major, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR, device));
+        CHECK_CUDA_ERROR(cuDeviceGetAttribute(&minor, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR, device));
+        string targetArch = "--gpu-architecture=compute_" + major + minor;
+        cudaOpts.push_back(targetArch.c_str());
 
 	// To display warning numbers
 	cudaOpts.push_back("-Xcudafe");
