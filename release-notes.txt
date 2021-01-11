@@ -68,6 +68,7 @@ Beta1 released
 * Fixed a discrepancy in reflected area lights on glossy surfaces between CPU and GPU rendering when light tracing is enabled (issue #470)
 * Avoid to return CUDA_ERROR_NO_DEVICE error if CUDA is installed but there are no NVIDIA GPUs installed
 * Fixed compilation when CUDA is disabled but OpenCL is still enabled
+* Now disabling CUDA for any error during the cuInit() like when an external GPU is unplugged (issue #493)
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
