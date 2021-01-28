@@ -1395,8 +1395,10 @@ float BLI_gTurbulence(float noisesize, float x, float y, float z, int oct, int h
 		if (hard) t = fabs(2.f*t-1.f);
 		sum += t * amp;
 	}
-	
-	sum *= ((float)(1<<oct)/(float)((1<<(oct+1))-1));
+
+	assert (oct >= 0);
+	assert (oct <= 30);
+	sum *= (float)(1u << oct) / (float)((1u << (oct + 1)) - 1u);
 
 	return sum;
 
