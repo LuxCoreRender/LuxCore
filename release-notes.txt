@@ -70,7 +70,8 @@ Beta1 released
 * Fixed compilation when CUDA is disabled but OpenCL is still enabled
 * Now disabling CUDA for any error during the cuInit() like when an external GPU is unplugged (issue #493)
 * Compiling the code with LUXCORE_DISABLE_OIDN defined will disable Intel OIDN (for platforms where it is not available like Apple M1)
-* Fixed halt condition rendering stop when using both eye and light tracing parameters (issue #497)
+* Fixed halt condition rendering stop code when using both eye and light tracing parameters (issue #497)
+* Change sphere light implementation to provide an alternative to the point light fallback (issue #443)
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
