@@ -604,8 +604,8 @@ OPENCL_FORCE_NOT_INLINE float BLI_gTurbulence(float noisesize, float x, float y,
 		if (hard) t = fabs(2.f*t-1.f);
 		sum += t * amp;
 	}
-	
-	sum *= ((float)(1<<oct)/(float)((1<<(oct+1))-1));
+
+	sum *= (float)(1u << oct) / (float)((1u << (oct + 1)) - 1u);
 
 	return sum;
 
