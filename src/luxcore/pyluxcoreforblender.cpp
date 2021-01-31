@@ -666,7 +666,8 @@ static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const str
 		const size_t meshPtr,
 		const short matIndex,
 		const luxrays::Transform *trans,
-		const boost::python::tuple &blenderVersion) {
+		const boost::python::tuple &blenderVersion,
+		const boost::python::object &loopTriCustomNormals) {
 
 	const MLoopTri *loopTris = reinterpret_cast<const MLoopTri *>(loopTriPtr);
 	const MLoop *loops = reinterpret_cast<const MLoop *>(loopPtr);
@@ -729,7 +730,28 @@ static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const str
 		if (loopNormals) {
 			hasCustomNormals = true;
 			for (u_int i = 0; i < loopCount; ++i) {
-				customNormals.push_back(Normal(loopNormals[i][0], loopNormals[i][1], loopNormals[i][2]));
+				customNormals.emplace_back(Normal(loopNormals[i][0], loopNormals[i][1], loopNormals[i][2]));
+			}
+		} else {
+			// Fallback to Python-converted custom normals if we don't have support for the mesh layout of this Blender version
+			hasCustomNormals = !loopTriCustomNormals.is_none();
+			if (hasCustomNormals) {
+				extract<boost::python::list> getCustomNormalsList(loopTriCustomNormals);
+
+				if (!getCustomNormalsList.check()) {
+					const string objType = extract<string>((loopUVsPtrList.attr("__class__")).attr("__name__"));
+					throw runtime_error("Wrong data type for the list of custom normals of method Scene.DefineMesh(): " + objType);
+				}
+
+				const boost::python::list &loopTriCustomNormalsList = getCustomNormalsList();
+				const boost::python::ssize_t loopCustomNormalsCount = len(loopTriCustomNormalsList);
+
+				for (int i = 0; i < loopCustomNormalsCount; i += 3) {
+					const float x = extract<float>(loopTriCustomNormalsList[i]);
+					const float y = extract<float>(loopTriCustomNormalsList[i + 1]);
+					const float z = extract<float>(loopTriCustomNormalsList[i + 2]);
+					customNormals.emplace_back(Normal(x, y, z));
+				}
 			}
 		}
 	}
@@ -1019,7 +1041,8 @@ boost::python::list Scene_DefineBlenderMesh1(luxcore::detail::SceneImpl *scene, 
 		const size_t meshPtr,
 		const u_int materialCount,
 		const boost::python::object &transformation,
-		const boost::python::tuple &blenderVersion) {
+		const boost::python::tuple &blenderVersion,
+		const boost::python::object &loopTriCustomNormals) {
 	
 	// Get the transformation if required
 	bool hasTransformation = false;
@@ -1039,7 +1062,8 @@ boost::python::list Scene_DefineBlenderMesh1(luxcore::detail::SceneImpl *scene, 
 				meshPtr,
 				matIndex,
 				hasTransformation ? &trans : NULL,
-				blenderVersion)) {
+				blenderVersion,
+				loopTriCustomNormals)) {
 			boost::python::list meshInfo;
 			meshInfo.append(meshName);
 			meshInfo.append(matIndex);
@@ -1059,10 +1083,12 @@ boost::python::list Scene_DefineBlenderMesh2(luxcore::detail::SceneImpl *scene, 
 		const boost::python::object &loopColsPtrList,
 		const size_t meshPtr,
 		const u_int materialCount,
-		const boost::python::tuple &blenderVersion) {
+		const boost::python::tuple &blenderVersion,
+		const boost::python::object &loopTriCustomNormals) {
 	return Scene_DefineBlenderMesh1(scene, name, loopTriCount, loopTriPtr,
 		loopPtr, vertPtr, polyPtr, loopUVsPtrList, loopColsPtrList, 
-		meshPtr, materialCount, boost::python::object(), blenderVersion);
+		meshPtr, materialCount, boost::python::object(), blenderVersion, 
+		loopTriCustomNormals);
 }
 
 //------------------------------------------------------------------------------
