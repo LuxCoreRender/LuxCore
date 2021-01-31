@@ -19,6 +19,8 @@
 #ifndef _SLG_INTEL_OIDN_H
 #define	_SLG_INTEL_OIDN_H
 
+#if !defined(LUXCORE_DISABLE_OIDN)
+
 #include <vector>
 
 #include <boost/serialization/export.hpp>
@@ -73,4 +75,6 @@ BOOST_CLASS_VERSION(slg::IntelOIDN, 3)
 
 BOOST_CLASS_EXPORT_KEY(slg::IntelOIDN)
 
+#endif
+		
 #endif /* _SLG_INTEL_OIDN_H */

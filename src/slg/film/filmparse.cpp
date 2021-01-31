@@ -727,11 +727,13 @@ ImagePipeline *Film::CreateImagePipeline(const Properties &props, const string &
 			} else if (type == "PATTERNS") {
 				const u_int type = props.Get(Property(prefix + ".index")(0)).Get<u_int>();
 				imagePipeline->AddPlugin(new PatternsPlugin(type));
+#if !defined(LUXCORE_DISABLE_OIDN)
 			} else if (type == "INTEL_OIDN") {
 				const string filterType = props.Get(Property(prefix + ".filter.type")("RT")).Get<string>();
 				const int oidnMemLimit = props.Get(Property(prefix + ".oidnmemory")(6000)).Get<int>();
 				const float sharpness = Clamp(props.Get(Property(prefix + ".sharpness")(.1f)).Get<float>(), 0.f, 1.f);
 				imagePipeline->AddPlugin(new IntelOIDN(filterType, oidnMemLimit, sharpness));
+#endif
 			} else if (type == "WHITE_BALANCE") {
 				const float temperature = Clamp(props.Get(Property(prefix + ".temperature")(6500.f)).Get<float>(), 1000.f, 40000.f);
 				const bool reverse = props.Get(Property(prefix + ".reverse")(true)).Get<bool>();

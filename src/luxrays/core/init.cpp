@@ -59,17 +59,21 @@ void Init() {
 #endif
 
 #if !defined(LUXRAYS_DISABLE_CUDA)
-	if (cuewInit(CUEW_INIT_CUDA|CUEW_INIT_NVRTC) == CUEW_SUCCESS) {
+	if (cuewInit(CUEW_INIT_CUDA | CUEW_INIT_NVRTC) == CUEW_SUCCESS) {
 		// Was:
 		//CHECK_CUDA_ERROR(cuInit(0));
 
 		const CUresult err = cuInit(0);
-		if (err == CUDA_ERROR_NO_DEVICE) {
-			// This handles the case when CUDA is installed but there are no
-			// NVIDIA GPUs installed.
+		if (err != CUDA_SUCCESS) {
+			// Handling multiple cases like:
+			//
+			// - when CUDA is installed but there are no NVIDIA GPUs available (CUDA_ERROR_NO_DEVICE)
+			//
+			// - when CUDA is installed but there an external GPU is unplugged (CUDA_ERROR_UNKNOWN)
+			//
+			// In all above cases, I just disable CUDA (but with this solution, at
+			/// the moment I have no way to report the type of error).
 		} else {
-			CHECK_CUDA_ERROR(err);
-
 			isCudaAvilable = true;
 
 			// Try to initialize Optix too

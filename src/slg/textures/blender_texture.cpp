@@ -531,7 +531,7 @@ float BlenderMarbleTexture::GetFloatValue(const HitPoint &hitPoint) const {
 
 	float result = 0.f;
 
-    float n = 5.f * (P.x + P.y + P.z);
+    const float n = 5.f * (P.x + P.y + P.z);
 
     result = n + turbulence * BLI_gTurbulence(noisesize, P.x, P.y, P.z, noisedepth, hard, noisebasis);
 	result = waveform[wf](result);
