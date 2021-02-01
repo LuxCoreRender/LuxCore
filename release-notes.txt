@@ -72,6 +72,7 @@ Beta1 released
 * Compiling the code with LUXCORE_DISABLE_OIDN defined will disable Intel OIDN (for platforms where it is not available like Apple M1)
 * Fixed halt condition rendering stop code when using both eye and light tracing parameters (issue #497)
 * Change sphere light implementation to provide an alternative to the point light fallback (issue #443)
+* Fixed a compiler error when running with CUDA on Ampere GPUs (issue BlendLuxCore#626)
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
