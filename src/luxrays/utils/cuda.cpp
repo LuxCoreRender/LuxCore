@@ -36,17 +36,24 @@
 using namespace std;
 using namespace luxrays;
 
-namespace {
-
-string GetCudaArchitecture() {
+static string GetCuda10Architecture() {
 	CUdevice device;
 	int major, minor;
 	CHECK_CUDA_ERROR(cuCtxGetDevice(&device));
 	CHECK_CUDA_ERROR(cuDeviceGetAttribute(&major, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR, device));
 	CHECK_CUDA_ERROR(cuDeviceGetAttribute(&minor, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR, device));
-	return to_string(major) + to_string(minor);
-}
 
+	if ((major >= 7) && (minor >= 5)) {
+		// NVIDIA driver doesn't include NVIDA RTC (Run Time Compiler) so we ship
+		// CUDA 10 NRTC with LuxCore however it supports only up to Turing architecture
+		// (Ampere 8.0 architecture is not supported). So I have to bound the required
+		// architecture in order to not get an error.
+
+		major = 7;
+		minor = 5;
+	}
+
+	return to_string(major) + to_string(minor);
 }
 
 //------------------------------------------------------------------------------
@@ -66,7 +73,7 @@ bool cudaKernelCache::ForcedCompilePTX(const vector<string> &kernelsParameters, 
 	//cudaOpts.push_back("--disable-warnings");
        
         // Set target architecture, based on current device's capability
-        string targetArch = "--gpu-architecture=compute_" + GetCudaArchitecture();
+        string targetArch = "--gpu-architecture=compute_" + GetCuda10Architecture();
         cudaOpts.push_back(targetArch.c_str());
 
 
@@ -147,7 +154,7 @@ bool cudaKernelPersistentCache::CompilePTX(const vector<string> &kernelsParamete
 			oclKernelPersistentCache::HashString(oclKernelPersistentCache::ToOptsString(kernelsParameters))
 			+ "-" +
 			oclKernelPersistentCache::HashString(kernelSource) +
-                        "_compute_" + GetCudaArchitecture() + ".ptx";
+                        "_compute_" + GetCuda10Architecture() + ".ptx";
 	const boost::filesystem::path dirPath = GetCacheDir(appName);
 	const boost::filesystem::path filePath = dirPath / kernelName;
 	const string fileName = filePath.generic_string();
