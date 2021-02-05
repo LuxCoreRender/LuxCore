@@ -1641,13 +1641,16 @@ void RenderSessionImpl::UpdateStats() {
 	double totalPerf = 0.0;
 	BOOST_FOREACH(IntersectionDevice *dev, idevices) {
 		const string &devName = dev->GetName();
-
+		
 		// Append a device index for the case where the same device is used multiple times
 		unsigned int index = devCounters[devName]++;
 		const string uniqueName = devName + "-" + ToString(index);
 		devicesNames.Add(uniqueName);
 
 		const string prefix = "stats.renderengine.devices." + uniqueName;
+
+		stats.Set(Property(prefix + ".type")(DeviceDescription::GetDeviceType(dev->GetDeviceDesc()->GetType())));
+
 		totalPerf += dev->GetTotalPerformance();
 		stats.Set(Property(prefix + ".performance.total")(dev->GetTotalPerformance()));
 		stats.Set(Property(prefix + ".performance.serial")(dev->GetSerialPerformance()));

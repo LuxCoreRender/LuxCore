@@ -105,5 +105,5 @@ void Scene::Preprocess(Context *ctx, const u_int filmWidth, const u_int filmHeig
 	// Reset the edit actions
 	//--------------------------------------------------------------------------
 
-	editActions.Reset();	
+	editActions.Reset();
 }

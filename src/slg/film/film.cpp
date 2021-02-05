@@ -1353,7 +1353,7 @@ void Film::RunTests() {
 	// All halt SPP cases
 	if (
 			(haltSPP_PixelNormalized > 0) && (spp_PixelNormalized > haltSPP_PixelNormalized) &&
-			(haltSPP_ScreenNormalized > 0) && (haltSPP_ScreenNormalized > spp_ScreenNormalized)
+			(haltSPP_ScreenNormalized > 0) && (spp_ScreenNormalized > haltSPP_ScreenNormalized)
 		)
 		haltSPPStop = true;
 	if (

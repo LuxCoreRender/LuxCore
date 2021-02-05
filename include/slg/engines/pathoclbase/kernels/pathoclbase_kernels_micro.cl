@@ -285,7 +285,7 @@ __kernel void AdvancePaths_MK_HIT_OBJECT(
 
 	checkDirectLightHit = checkDirectLightHit &&
 			// Avoid to render caustic path if hybridBackForwardEnable
-			(!taskConfig->pathTracer.hybridBackForward.enabled || !pathInfo->isNearlyCaustic);
+			(!taskConfig->pathTracer.hybridBackForward.enabled || !EyePathInfo_IsCausticPath(pathInfo));
 
 	checkDirectLightHit = checkDirectLightHit &&
 			((!taskConfig->pathTracer.pgic.indirectEnabled && !taskConfig->pathTracer.pgic.causticEnabled) ||

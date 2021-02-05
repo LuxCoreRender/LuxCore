@@ -62,6 +62,7 @@ PathOCLRenderEngine::PathOCLRenderEngine(const RenderConfig *rcfg) :
 	eyeSamplerSharedData = nullptr;
 	lightSamplerSharedData = nullptr;
 	hasStartFilm = false;
+	allRenderingThreadsStarted = false;
 }
 
 PathOCLRenderEngine::~PathOCLRenderEngine() {
@@ -158,9 +159,13 @@ void PathOCLRenderEngine::StartLockLess() {
 		lightSampleSplatter = new FilmSampleSplatter(pixelFilter);
 
 	PathOCLBaseRenderEngine::StartLockLess();
+
+	allRenderingThreadsStarted = true;
 }
 
 void PathOCLRenderEngine::StopLockLess() {
+	allRenderingThreadsStarted = false;
+
 	PathOCLBaseRenderEngine::StopLockLess();
 
 	pathTracer.DeletePixelFilterDistribution();
@@ -211,11 +216,9 @@ void PathOCLRenderEngine::UpdateCounters() {
 
 void PathOCLRenderEngine::UpdateTaskCount() {
 	const Properties &cfg = renderConfig->cfg;
-
 	if (!cfg.IsDefined("opencl.task.count") && (GetType() == RTPATHOCL)) {
 		// In this case, I will tune task count for RTPATHOCL
 		taskCount = film->GetWidth() * film->GetHeight() / intersectionDevices.size();
-		taskCount = RoundUp<u_int>(taskCount, 8192);
 	} else {
 		const u_int defaultTaskCount = 512ull * 1024ull;
 
@@ -230,13 +233,12 @@ void PathOCLRenderEngine::UpdateTaskCount() {
 				taskCap = Min(taskCap, 64u * 1024u);
 		}
 
-		if (cfg.Get(Property("opencl.task.count")(defaultTaskCount)).Get<string>() == "AUTO")
-			taskCount = defaultTaskCount;
+		if (cfg.Get(Property("opencl.task.count")("AUTO")).Get<string>() == "AUTO")
+			taskCount = taskCap;
 		else
-			taskCount = cfg.Get(Property("opencl.task.count")(defaultTaskCount)).Get<u_int>();
-		taskCount = Min(taskCount, taskCap);
+			taskCount = cfg.Get(Property("opencl.task.count")(taskCap)).Get<u_int>();
 	}
-	
+
 	// I don't know yet the workgroup size of each device so I can not
 	// round up task count to be a multiple of workgroups size of all devices
 	// used. Rounding to 8192 is a simple trick based on the assumption that
@@ -248,20 +250,24 @@ void PathOCLRenderEngine::UpdateTaskCount() {
 
 u_int PathOCLRenderEngine::GetTotalEyeSPP() const {
 	u_int spp = 0;
-	for (size_t i = 0; i < renderOCLThreads.size(); ++i) {
-		if (renderOCLThreads[i]) {
-			const PathOCLOpenCLRenderThread *thread = (const PathOCLOpenCLRenderThread *)renderOCLThreads[i];
-			const Film *film = thread->threadFilms[0]->film;
-			spp += film->GetTotalEyeSampleCount() / film->GetPixelCount();
-		}
-	}
 
-	if (renderNativeThreads.size() > 0) {
-		// All threads use the film of the first one
-		if (renderNativeThreads[0]) {
-			const PathOCLNativeRenderThread *thread = (const PathOCLNativeRenderThread *)renderNativeThreads[0];
-			const Film *film = thread->threadFilm;
-			spp += film->GetTotalEyeSampleCount() / film->GetPixelCount();
+	// I can access rendering threads film only after all have been started
+	if (allRenderingThreadsStarted) {
+		for (size_t i = 0; i < renderOCLThreads.size(); ++i) {
+			if (renderOCLThreads[i]) {
+				const PathOCLOpenCLRenderThread *thread = (const PathOCLOpenCLRenderThread *)renderOCLThreads[i];
+				const Film *film = thread->threadFilms[0]->film;
+				spp += film->GetTotalEyeSampleCount() / film->GetPixelCount();
+			}
+		}
+
+		if (renderNativeThreads.size() > 0) {
+			// All threads use the film of the first one
+			if (renderNativeThreads[0]) {
+				const PathOCLNativeRenderThread *thread = (const PathOCLNativeRenderThread *)renderNativeThreads[0];
+				const Film *film = thread->threadFilm;
+				spp += film->GetTotalEyeSampleCount() / film->GetPixelCount();
+			}
 		}
 	}
 

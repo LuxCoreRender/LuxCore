@@ -1389,6 +1389,9 @@ float BLI_gTurbulence(float noisesize, float x, float y, float z, int oct, int h
 		z *= noisesize;
 	}
 
+	assert (oct >= 0);
+	assert (oct <= 25);  // If oct is too big, fscale will get too large
+
 	sum = 0;
 	for (i=0;i<=oct;i++, amp*=0.5f, fscale*=2.f) {
 		t = noisefunc(fscale*x, fscale*y, fscale*z);
@@ -1396,7 +1399,7 @@ float BLI_gTurbulence(float noisesize, float x, float y, float z, int oct, int h
 		sum += t * amp;
 	}
 	
-	sum *= ((float)(1<<oct)/(float)((1<<(oct+1))-1));
+	sum *= (float)(1u << oct) / (float)((1u << (oct + 1)) - 1u);
 
 	return sum;
 

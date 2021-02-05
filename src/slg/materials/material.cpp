@@ -236,6 +236,7 @@ Properties Material::ToProperties(const ImageMapCache &imgMapCache, const bool u
 
 	if (bumpTex)
 		props.Set(Property("scene.materials." + name + ".bumptex")(bumpTex->GetSDLValue()));
+	props.Set(Property("scene.materials." + name + ".bumpsamplingdistance")(bumpSampleDistance));
 
 	if (interiorVolume)
 		props.Set(Property("scene.materials." + name + ".volume.interior")(interiorVolume->GetName()));

@@ -388,7 +388,7 @@ ExtTriangleMesh *SubdivShape::ApplySubdiv(ExtTriangleMesh *srcMesh, const u_int 
 	// New colors
 	array<Spectrum *, EXTMESH_MAX_DATA_COUNT> newCols;
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; i++) {
-		if (srcMesh->HasColors(0)) {
+		if (srcMesh->HasColors(i)) {
 			newCols[i] = new Spectrum[newVertsCount];
 
 			const float *refinedCols = colsBuffers[i]->BindCpuBuffer() + 3 * vertsCount;

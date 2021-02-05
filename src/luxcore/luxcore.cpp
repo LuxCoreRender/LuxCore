@@ -144,6 +144,14 @@ Properties luxcore::GetPlatformDesc() {
 	props << Property("compile.LUXRAYS_ENABLE_OPTIX")(false);
 #endif
 
+#if !defined(LUXCORE_DISABLE_OIDN)
+	props << Property("compile.LUXCORE_ENABLE_OIDN")(true);
+	props << Property("compile.LUXCORE_DISABLE_OIDN")(false);
+#else
+	props << Property("compile.LUXCORE_ENABLE_OIDN")(false);
+	props << Property("compile.LUXCORE_DISABLE_OIDN")(true);
+#endif
+
 	props << Property("compile.LUXCORE_DISABLE_EMBREE_BVH_BUILDER")(false);
 	props << Property("compile.LC_MESH_MAX_DATA_COUNT")(LC_MESH_MAX_DATA_COUNT);
 
@@ -202,7 +210,8 @@ Properties luxcore::GetOpenCLDeviceDescs() {
 				Property(prefix + ".maxmemoryallocsize")((unsigned long long)desc->GetMaxMemoryAllocSize()) <<
 				Property(prefix + ".localmemory")((unsigned long long)deviceLocalMem) <<
 				Property(prefix + ".constmemory")((unsigned long long)deviceConstMem);
-		
+
+#if !defined(LUXRAYS_DISABLE_CUDA)
 		if (desc->GetType() & DEVICE_TYPE_CUDA_ALL) {
 			const CUDADeviceDescription *cudaDesc = (CUDADeviceDescription *)desc;
 			
@@ -210,6 +219,7 @@ Properties luxcore::GetOpenCLDeviceDescs() {
 					Property(prefix + ".cuda.compute.major")(cudaDesc->GetCUDAComputeCapabilityMajor()) <<
 					Property(prefix + ".cuda.compute.minor")(cudaDesc->GetCUDAComputeCapabilityMinor());
 		}
+#endif
 	}
 #endif
 	

@@ -163,6 +163,15 @@ u_int BSDF::GetObjectID() const {
 	return (sceneObject) ? sceneObject->GetID() : std::numeric_limits<u_int>::max();
 }
 
+static string MaterialNULLptrName = "NULL pointer";
+
+const string &BSDF::GetMaterialName() const {
+	if (material)
+		return material->GetName();
+	else
+		return MaterialNULLptrName;
+}
+
 Spectrum BSDF::Albedo() const {
 	return material->Albedo(hitPoint);
 }
