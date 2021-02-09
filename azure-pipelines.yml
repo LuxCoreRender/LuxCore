@@ -97,10 +97,9 @@ jobs:
     displayName: Getting required deps
   - template: ./scripts/azurepipeline/windows/windows_jobs.yml
     parameters:
-      build_script: './scripts/azurepipeline/windows/build.cmd /cmake-only'
+      build_script: './scripts/azurepipeline/windows/build.cmd /cmake-only /minimal'
       post_script: './scripts/azurepipeline/windows/post-build.cmd'
-      ocl_text: 'Unified CPU/OpenCL/CUDA binaries'
-      minimalargs: '/target:pyluxcore,pyluxcoretools,luxcoreui'
+      message_text: 'Unified CPU/OpenCL/CUDA binaries'
 #  - script: './scripts/azurepipeline/windows/test.cmd'
 #    displayName: Testing LuxCore
   - task: PublishBuildArtifacts@1
@@ -139,7 +138,7 @@ jobs:
     parameters:
       build_script: './scripts/azurepipeline/windows/build.cmd /cmake-only /dll'
       post_script: './scripts/azurepipeline/windows/post-build.cmd'
-      ocl_text: 'Unified CPU/OpenCL/CUDA binaries'
+      message_text: 'Unified CPU/OpenCL/CUDA binaries'
   - task: PublishBuildArtifacts@1
     inputs:
       pathtoPublish: '$(Build.ArtifactStagingDirectory)'
