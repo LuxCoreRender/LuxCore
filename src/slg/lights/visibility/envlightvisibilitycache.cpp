@@ -16,9 +16,6 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include <OpenImageIO/imageio.h>
-#include <OpenImageIO/imagebuf.h>
-
 #include <memory>
 #if defined(_OPENMP)
 #include <omp.h>
@@ -31,6 +28,9 @@
 #include "luxrays/core/bvh/bvhbuild.h"
 #include "luxrays/utils/atomic.h"
 #include "luxrays/utils/safesave.h"
+
+#include <OpenImageIO/imageio.h>
+#include <OpenImageIO/imagebuf.h>
 
 #include "slg/samplers/metropolis.h"
 #include "slg/lights/visibility/envlightvisibilitycache.h"

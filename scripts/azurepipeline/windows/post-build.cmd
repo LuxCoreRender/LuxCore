@@ -7,6 +7,8 @@ echo %VERSION_STRING%
 
 cd ..\WindowsCompile
 
+:: Variable FINAL is made available to this script only when
+:: 'LuxCoreRenderWindowsSDK' job is running (see 'azure-pipelines.yml')
 if "%FINAL%" EQU "TRUE" (
     call create-sdk.bat %1
     set LUX_LATEST=luxcorerender-%VERSION_STRING%-win64-sdk
