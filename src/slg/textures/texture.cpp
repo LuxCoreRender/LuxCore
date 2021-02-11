@@ -23,11 +23,12 @@
 #include <boost/foreach.hpp>
 #include <boost/filesystem.hpp>
 
+#include "slg/core/sdl.h"
+
 #include <OpenImageIO/imagebufalgo.h>
 #include <OpenImageIO/imagebuf.h>
 #include <OpenImageIO/dassert.h>
 
-#include "slg/core/sdl.h"
 #include "slg/bsdf/bsdf.h"
 #include "slg/textures/texture.h"
 #include "slg/textures/blender_texture.h"
