@@ -206,6 +206,17 @@ public:
 	virtual void FreeBuffer(HardwareDeviceBuffer **buff);
 
 	//--------------------------------------------------------------------------
+	// Optional Image management for hardware (aka GPU) only applications
+	//--------------------------------------------------------------------------
+	
+	// Returns true if it supports HardwareDevice image maps
+	virtual bool HasImageMapSupport() const { return true; }
+
+	virtual void AllocImageMap(const luxrays::ocl::ImageMapDescription &imgMapDesc,
+			void *data, luxrays::ocl::ImageMapObj *imgMapObjs);
+	virtual void FreeImageMap(luxrays::ocl::ImageMapObj *imgMapObjs);
+
+	//--------------------------------------------------------------------------
 	// CUDADevice specific methods
 	//--------------------------------------------------------------------------
 

@@ -46,9 +46,9 @@ typedef struct {
 	} genericAddr;
 
 	struct {
-		// This is the same type of CUtexObject but can be compiled everywhere
-		unsigned long long texObj;
-	} cudaAddr;
+		// This is the same type of CUtexObject but so it can be compiled everywhere
+		ImageMapObj imgMapObj;
+	} imageMapAddr;
 } ImageMap;
 
 //------------------------------------------------------------------------------

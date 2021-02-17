@@ -70,6 +70,8 @@ void CompiledScene::AddToImageMapMem(slg::ocl::ImageMap &im, void *data, const s
 
 	im.genericAddr.pageIndex = page;
 	im.genericAddr.pixelsIndex = start;
+	
+	im.imageMapAddr.imgMapObj = IMAGEMAPOBJ_NULL;
 }
 
 u_int CompiledScene::CompileImageMap(const ImageMap *im) {

@@ -40,6 +40,7 @@ namespace slg {
 // OpenCL data types
 namespace ocl {
 using luxrays::ocl::ImageMapDescription;
+using luxrays::ocl::ImageMapObj;
 #include "slg/imagemap/imagemap_types.cl"
 }
 

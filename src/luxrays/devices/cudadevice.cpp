@@ -539,4 +539,162 @@ void CUDADevice::FreeBuffer(HardwareDeviceBuffer **buff) {
 	}
 }
 
+//------------------------------------------------------------------------------
+// Optional Image management for hardware (aka GPU) only applications
+//------------------------------------------------------------------------------
+
+void CUDADevice::AllocImageMap(const luxrays::ocl::ImageMapDescription &imgMapDesc,
+		void *data, luxrays::ocl::ImageMapObj *imgMapObjs) {
+	u_int elementSizeBytes;
+	CUarray_format format;
+	switch (imgMapDesc.storageType) {
+		case luxrays::ocl::BYTE:
+			format = CU_AD_FORMAT_UNSIGNED_INT8;
+			elementSizeBytes = 1;
+			break;
+		case luxrays::ocl::HALF:
+			format = CU_AD_FORMAT_HALF;
+			elementSizeBytes = 2;
+			break;
+		case luxrays::ocl::FLOAT:
+			format = CU_AD_FORMAT_FLOAT;
+			elementSizeBytes = 4;
+			break;
+		default:
+			throw runtime_error("Unknown storage type in CUDADevice::AllocImageMap()");
+	}
+
+	CUDA_RESOURCE_DESC resDesc = {};
+	switch (imgMapDesc.channelCount) {
+		case 1: {
+			// In this case, I don't need to create a copy of the memory with the appropriate layout
+			
+			CUDA_ARRAY_DESCRIPTOR arrayDesc;
+			arrayDesc.Format = format;
+			arrayDesc.NumChannels = imgMapDesc.channelCount;
+			arrayDesc.Width = imgMapDesc.width;
+			arrayDesc.Height = imgMapDesc.height;
+
+			CUarray cuArray;
+			CHECK_CUDA_ERROR(cuArrayCreate(&cuArray, &arrayDesc));
+
+			CUDA_MEMCPY2D copyParam = {};
+			copyParam.dstMemoryType = CU_MEMORYTYPE_ARRAY;
+			copyParam.dstArray = cuArray;
+			copyParam.srcMemoryType = CU_MEMORYTYPE_HOST;
+			copyParam.srcHost = data;
+			copyParam.srcPitch = imgMapDesc.width;
+			copyParam.WidthInBytes = copyParam.srcPitch;//WORNG!!!
+			copyParam.Height = imgMapDesc.height;
+			CHECK_CUDA_ERROR(cuMemcpy2D(&copyParam));
+
+			resDesc.resType = CU_RESOURCE_TYPE_ARRAY;
+			resDesc.res.array.hArray = cuArray;			
+			break;
+		}
+		case 2:
+		case 3:
+		case 4: {
+			// In this case I need to create a copy of the memory with the appropriate layout
+
+			resDesc.resType = CU_RESOURCE_TYPE_PITCH2D;
+
+			size_t devicePitch;
+			CHECK_CUDA_ERROR(cuMemAllocPitch(&resDesc.res.pitch2D.devPtr, &devicePitch,
+					imgMapDesc.width * elementSizeBytes * imgMapDesc.channelCount,
+					imgMapDesc.height, 16));
+
+			resDesc.res.pitch2D.format = format;
+			resDesc.res.pitch2D.numChannels = imgMapDesc.channelCount;
+			resDesc.res.pitch2D.width = imgMapDesc.width;
+			resDesc.res.pitch2D.height = imgMapDesc.height;
+			resDesc.res.pitch2D.pitchInBytes = devicePitch;
+
+			CUDA_MEMCPY2D copyParam = {};
+			copyParam.WidthInBytes = imgMapDesc.width * elementSizeBytes * imgMapDesc.channelCount;
+			copyParam.Height = imgMapDesc.height;
+
+			copyParam.srcMemoryType = CU_MEMORYTYPE_HOST;
+			copyParam.srcHost = data;
+			copyParam.srcPitch = copyParam.WidthInBytes;
+
+			copyParam.dstMemoryType = CU_MEMORYTYPE_DEVICE;
+			copyParam.dstDevice = resDesc.res.pitch2D.devPtr;
+			copyParam.dstPitch = devicePitch;
+			CHECK_CUDA_ERROR(cuMemcpy2D(&copyParam));
+
+//			CUDA_MEMCPY2D copyParam = {};
+//			copyParam.WidthInBytes = 512 *4;
+//			copyParam.Height = 512;
+//
+//			copyParam.srcMemoryType = CU_MEMORYTYPE_HOST;
+//			copyParam.srcHost = data;
+//			copyParam.srcPitch = 512 *4;
+//			copyParam.srcPitch = devicePitch;
+//
+//			copyParam.dstMemoryType = CU_MEMORYTYPE_DEVICE;
+//			copyParam.dstDevice = resDesc.res.pitch2D.devPtr;
+//			copyParam.dstPitch = 512 *4;
+//			//CHECK_CUDA_ERROR(cuMemcpy2DUnaligned(&copyParam));
+//			CHECK_CUDA_ERROR(cuMemcpy2D(&copyParam));
+			break;
+		}
+		default:
+			throw runtime_error("Unknown channel count in CUDADevice::AllocImageMap()");
+	}
+
+	CUDA_TEXTURE_DESC texDesc = {};
+	switch (imgMapDesc.wrapType) {
+		case luxrays::ocl::WRAP_REPEAT:
+			texDesc.addressMode[0] = CU_TR_ADDRESS_MODE_WRAP;
+			texDesc.addressMode[1] = CU_TR_ADDRESS_MODE_WRAP;
+			texDesc.addressMode[2] = CU_TR_ADDRESS_MODE_WRAP;
+			break;
+		case luxrays::ocl::WRAP_BLACK:
+			texDesc.addressMode[0] = CU_TR_ADDRESS_MODE_BORDER;
+			texDesc.addressMode[1] = CU_TR_ADDRESS_MODE_BORDER;
+			texDesc.addressMode[2] = CU_TR_ADDRESS_MODE_BORDER;
+			texDesc.borderColor[0] = 0.f;
+			texDesc.borderColor[1] = 0.f;
+			texDesc.borderColor[2] = 0.f;
+			texDesc.borderColor[3] = 1.f;
+			break;
+		case luxrays::ocl::WRAP_WHITE:
+			texDesc.addressMode[0] = CU_TR_ADDRESS_MODE_BORDER;
+			texDesc.addressMode[1] = CU_TR_ADDRESS_MODE_BORDER;
+			texDesc.addressMode[2] = CU_TR_ADDRESS_MODE_BORDER;
+			texDesc.borderColor[0] = 1.f;
+			texDesc.borderColor[1] = 1.f;
+			texDesc.borderColor[2] = 1.f;
+			texDesc.borderColor[3] = 1.f;
+			break;
+		case luxrays::ocl::WRAP_CLAMP:
+			texDesc.addressMode[0] = CU_TR_ADDRESS_MODE_CLAMP;
+			texDesc.addressMode[1] = CU_TR_ADDRESS_MODE_CLAMP;
+			texDesc.addressMode[2] = CU_TR_ADDRESS_MODE_CLAMP;
+			break;
+		default:
+			throw runtime_error("Unknown wrap type in CUDADevice::AllocImageMap()");
+	}
+
+	texDesc.filterMode = CU_TR_FILTER_MODE_LINEAR;
+	texDesc.flags = CU_TRSF_NORMALIZED_COORDINATES;
+
+	CUtexObject texObject;
+	CHECK_CUDA_ERROR(cuTexObjectCreate(&texObject, &resDesc, &texDesc, nullptr));
+
+	*imgMapObjs = texObject;
+}
+
+void CUDADevice::FreeImageMap(luxrays::ocl::ImageMapObj *imgMapObjs) {
+	if (*imgMapObjs != IMAGEMAPOBJ_NULL) {
+		CHECK_CUDA_ERROR(cuTexObjectDestroy(*imgMapObjs));
+
+		*imgMapObjs = IMAGEMAPOBJ_NULL;
+		
+		// TODO: free cuArray or Pitch2D memory
+
+	}
+}
+
 #endif

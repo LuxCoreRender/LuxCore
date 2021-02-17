@@ -18,6 +18,10 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#define IMAGEMAPOBJ_NULL 0xffffffffffffffffull
+
+typedef unsigned long long ImageMapObj;
+
 typedef enum {
 	BYTE, HALF, FLOAT
 } ImageMapStorageType;

@@ -282,71 +282,35 @@ void PathOCLBaseOCLRenderThread::InitImageMaps() {
 	CompiledScene *cscene = renderEngine->compiledScene;
 
 	if (cscene->imageMapDescs.size() > 0) {
-		//----------------------------------------------------------------------
-		//----------------------------------------------------------------------
-		//----------------------------------------------------------------------
-
-//		CUarray cuArray;
-//		CUDA_ARRAY_DESCRIPTOR arrayDesc;
-//		arrayDesc.Format = CU_AD_FORMAT_UNSIGNED_INT8;
-//cout<<"===================="<<cscene->imageMapDescs.size()<<"\n";
-//cout<<"===================="<<cscene->imageMapDescs[1].width<<"\n";
-//cout<<"===================="<<cscene->imageMapDescs[1].height<<"\n";
-//		arrayDesc.NumChannels = cscene->imageMapDescs[1].channelCount;
-//		arrayDesc.Width = cscene->imageMapDescs[1].width;
-//		arrayDesc.Height = cscene->imageMapDescs[1].height;
-//		CHECK_CUDA_ERROR(cuArrayCreate(&cuArray, &arrayDesc));
-//
-//		CUDA_MEMCPY2D copyParam = {};
-//		copyParam.dstMemoryType = CU_MEMORYTYPE_ARRAY;
-//		copyParam.dstArray = cuArray;
-//		copyParam.srcMemoryType = CU_MEMORYTYPE_HOST;
-//		copyParam.srcHost = &(cscene->imageMapMemBlocks[0][cscene->imageMapDescs[1].pixelsIndex]);
-//		copyParam.srcPitch = cscene->imageMapDescs[1].width * cscene->imageMapDescs[1].channelCount;
-//		copyParam.WidthInBytes = copyParam.srcPitch;
-//		copyParam.Height = cscene->imageMapDescs[1].height;
-//		CHECK_CUDA_ERROR(cuMemcpy2D(&copyParam));
-//
-//		CUDA_RESOURCE_DESC resDesc = {};
-//		resDesc.resType = CU_RESOURCE_TYPE_ARRAY;
-//		resDesc.res.array.hArray = cuArray;
-//
-//		CUDA_TEXTURE_DESC texDesc = {};
-//		texDesc.addressMode[0] = CU_TR_ADDRESS_MODE_WRAP;
-//		texDesc.addressMode[1] = CU_TR_ADDRESS_MODE_WRAP;
-//		texDesc.addressMode[2] = CU_TR_ADDRESS_MODE_WRAP;
-//		texDesc.filterMode = CU_TR_FILTER_MODE_LINEAR;
-//		texDesc.flags = CU_TRSF_NORMALIZED_COORDINATES;
-//
-//		CUtexObject texObject;
-//		CHECK_CUDA_ERROR(cuTexObjectCreate(&texObject, &resDesc, &texDesc, nullptr));
-//cout<<"====================@@@@"<<texObject<<"\n";
-//
-//		cscene->imageMapDescs[1].pixelsIndex = (unsigned long long)texObject;
-
-		//----------------------------------------------------------------------
-		//----------------------------------------------------------------------
-		//----------------------------------------------------------------------
-
-		intersectionDevice->AllocBufferRO(&imageMapDescsBuff,
-				&cscene->imageMapDescs[0],
-				sizeof(slg::ocl::ImageMap) * cscene->imageMapDescs.size(), "ImageMap descriptions");
-
 		// Free unused pages
 		for (u_int i = cscene->imageMapMemBlocks.size(); i < imageMapsBuff.size(); ++i)
 			intersectionDevice->FreeBuffer(&imageMapsBuff[i]);
 		imageMapsBuff.resize(cscene->imageMapMemBlocks.size(), NULL);
 
-		const BufferType memTypeFlags = renderEngine->ctx->GetUseOutOfCoreBuffers() ?
-			((BufferType)(BUFFER_TYPE_READ_ONLY | BUFFER_TYPE_OUT_OF_CORE)) :
-			BUFFER_TYPE_READ_ONLY;
+		if (intersectionDevice->HasImageMapSupport() &&
+				!renderEngine->ctx->GetUseOutOfCoreBuffers()) {
+			for (auto &imgMap : cscene->imageMapDescs) {
+				intersectionDevice->AllocImageMap(imgMap.desc,
+						&cscene->imageMapMemBlocks[imgMap.genericAddr.pageIndex][imgMap.genericAddr.pixelsIndex],
+						&imgMap.imageMapAddr.imgMapObj);
+			}
+		} else {
+			const BufferType memTypeFlags = renderEngine->ctx->GetUseOutOfCoreBuffers() ?
+				((BufferType)(BUFFER_TYPE_READ_ONLY | BUFFER_TYPE_OUT_OF_CORE)) :
+				BUFFER_TYPE_READ_ONLY;
 
-		for (u_int i = 0; i < imageMapsBuff.size(); ++i) {
-			intersectionDevice->AllocBuffer(&(imageMapsBuff[i]),
-					memTypeFlags,
-					&(cscene->imageMapMemBlocks[i][0]),
-					sizeof(float) * cscene->imageMapMemBlocks[i].size(), "ImageMaps");
+			for (u_int i = 0; i < imageMapsBuff.size(); ++i) {
+				intersectionDevice->AllocBuffer(&(imageMapsBuff[i]),
+						memTypeFlags,
+						&(cscene->imageMapMemBlocks[i][0]),
+						sizeof(float) * cscene->imageMapMemBlocks[i].size(), "ImageMaps");
+			}
 		}
+
+		// I need to transfer image descriptions after having initialized imgMap.imageMapAddr.imgMapObj
+		intersectionDevice->AllocBufferRO(&imageMapDescsBuff,
+				&cscene->imageMapDescs[0],
+				sizeof(slg::ocl::ImageMap) * cscene->imageMapDescs.size(), "ImageMap descriptions");
 	} else {
 		intersectionDevice->FreeBuffer(&imageMapDescsBuff);
 		for (u_int i = 0; i < imageMapsBuff.size(); ++i)

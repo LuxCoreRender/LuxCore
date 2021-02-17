@@ -386,10 +386,11 @@ OPENCL_FORCE_NOT_INLINE float ImageMap_GetFloat(__global const ImageMap *imageMa
 OPENCL_FORCE_NOT_INLINE float3 ImageMap_GetSpectrum(__global const ImageMap *imageMap,
 		const float u, const float v
 		IMAGEMAPS_PARAM_DECL) {
-//	const float texVal = tex2D<float>(imageMap->cudaAddr.texObj, u, v);
-//	return MAKE_FLOAT3(texVal, texVal, texVal);
+	const float texVal = tex2D<float>(imageMap->imageMapAddr.imgMapObj, u, v);
+
+	return MAKE_FLOAT3(texVal, texVal, texVal);
 	
-	__global const void *pixels = ImageMap_GetPixelsAddress(
+/*	__global const void *pixels = ImageMap_GetPixelsAddress(
 		imageMapBuff, imageMap->genericAddr.pageIndex, imageMap->genericAddr.pixelsIndex);
 	const ImageMapStorageType storageType = imageMap->desc.storageType;
 	const uint channelCount = imageMap->desc.channelCount;
@@ -419,7 +420,7 @@ OPENCL_FORCE_NOT_INLINE float3 ImageMap_GetSpectrum(__global const ImageMap *ima
 	const float k2 = ds * idt;
 	const float k3 = ds * dt;
 
-	return (k0 * c0 + k1 *c1 + k2 * c2 + k3 * c3);
+	return (k0 * c0 + k1 *c1 + k2 * c2 + k3 * c3);*/
 }
 
 OPENCL_FORCE_NOT_INLINE float2 ImageMap_GetDuv(__global const ImageMap *imageMap,

@@ -3,10 +3,12 @@
 scene.camera.lookat.orig = 2.8718164 -5.47710514 4.63370657
 scene.camera.lookat.target = -0.600622892 1.50124407 -1.6308527
 ################################################################################
-scene.textures.imgtex.file = pattern-3.jpg
+#scene.textures.imgtex.file = pattern-3.jpg
+scene.textures.imgtex.file = scenes/randomizedtiling/bark-bump.jpg
 scene.textures.imgtex.gamma = 1.0
 #scene.textures.imgtex.randomizedtiling.enable = 1
-scene.textures.imgtex.mapping.uvscale = 2 2
+##scene.textures.imgtex.mapping.uvscale = 2 2
+scene.textures.imgtex.mapping.uvscale = 1 1
 scene.textures.imgtex.channel = mean
 ##
 #scene.textures.hsvtex.type = hsv

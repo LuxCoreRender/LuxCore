@@ -108,17 +108,6 @@ protected:
 };
 
 //------------------------------------------------------------------------------
-// HardwareDeviceImage: a memory region allocated on an hardware device
-//------------------------------------------------------------------------------
-
-//class HardwareDeviceImage {
-//public:
-//	virtual ~HardwareDeviceImage() { }
-//protected:
-//	HardwareDeviceImage() { }
-//};
-
-//------------------------------------------------------------------------------
 // HardwareDevice
 //------------------------------------------------------------------------------
 
@@ -182,9 +171,17 @@ public:
 	// Optional Image management for hardware (aka GPU) only applications
 	//--------------------------------------------------------------------------
 
-	// Returns true if it support HardwareDevice ray tracing
-	virtual bool HasImageSupport() const { return false; }
-	
+	// Returns true if it supports HardwareDevice image maps
+	virtual bool HasImageMapSupport() const { return false; }
+
+	virtual void AllocImageMap(const luxrays::ocl::ImageMapDescription &imgMapDesc,
+			void *data, luxrays::ocl::ImageMapObj *ImageMapObjs) {
+		throw std::runtime_error("Internal error in HardwareDevice::AllocImageMap()");
+	}
+	virtual void FreeImageMap(luxrays::ocl::ImageMapObj *imgMapObjs) {
+		throw std::runtime_error("Internal error in HardwareDevice::FreeImageMap()");
+	}
+
 protected:
 	template <typename T> struct KernelArgumentHandler {
 		static ::size_t Size(const T&) { return sizeof(T); }
