@@ -270,12 +270,12 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const string hard = props.Get(Property(propName + ".noisetype")("soft_noise")).Get<string>();
 		const string noisebasis = props.Get(Property(propName + ".noisebasis")("blender_original")).Get<string>();
 		const float noisesize = props.Get(Property(propName + ".noisesize")(.25f)).Get<float>();
-		const int noisedepth = props.Get(Property(propName + ".noisedepth")(2)).Get<int>();
+		const int noisedepth = Clamp(props.Get(Property(propName + ".noisedepth")(2)).Get<int>(), 0, 25);
 		const float bright = props.Get(Property(propName + ".bright")(1.f)).Get<float>();
 		const float contrast = props.Get(Property(propName + ".contrast")(1.f)).Get<float>();
 
 		tex = new BlenderCloudsTexture(CreateTextureMapping3D(propName + ".mapping", props),
-				noisebasis, noisesize, noisedepth,(hard=="hard_noise"), bright, contrast);
+				noisebasis, noisesize, noisedepth, (hard == "hard_noise"), bright, contrast);
 	} else if (texType == "blender_distortednoise") {
 		const string noisedistortion = props.Get(Property(propName + ".noise_distortion")("blender_original")).Get<string>();
 		const string noisebasis = props.Get(Property(propName + ".noisebasis")("blender_original")).Get<string>();
@@ -287,7 +287,7 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		tex = new BlenderDistortedNoiseTexture(CreateTextureMapping3D(propName + ".mapping", props),
 				noisedistortion, noisebasis, distortion, noisesize, bright, contrast);
 	} else if (texType == "blender_magic") {
-		const int noisedepth = props.Get(Property(propName + ".noisedepth")(2)).Get<int>();
+		const int noisedepth = Clamp(props.Get(Property(propName + ".noisedepth")(2)).Get<int>(), 0, 25);
 		const float turbulence = props.Get(Property(propName + ".turbulence")(5.f)).Get<float>();
 		const float bright = props.Get(Property(propName + ".bright")(1.f)).Get<float>();
 		const float contrast = props.Get(Property(propName + ".contrast")(1.f)).Get<float>();
@@ -298,7 +298,7 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		const string marbletype = props.Get(Property(propName + ".marbletype")("soft")).Get<string>();
 		const string noisebasis = props.Get(Property(propName + ".noisebasis")("blender_original")).Get<string>();
 		const string noisebasis2 = props.Get(Property(propName + ".noisebasis2")("sin")).Get<string>();
-		const int noisedepth = props.Get(Property(propName + ".noisedepth")(2)).Get<int>();
+		const int noisedepth = Clamp(props.Get(Property(propName + ".noisedepth")(2)).Get<int>(), 0, 25);
 		const float noisesize = props.Get(Property(propName + ".noisesize")(.25f)).Get<float>();
 		const string hard = props.Get(Property(propName + ".noisetype")("soft_noise")).Get<string>();
 		const float turbulence = props.Get(Property(propName + ".turbulence")(5.f)).Get<float>();
@@ -323,7 +323,7 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		tex = new BlenderMusgraveTexture(CreateTextureMapping3D(propName + ".mapping", props),
 				musgravetype, noisebasis, dimension, intensity, lacunarity, offset, gain, octaves, noisesize, bright, contrast);
 	} else if (texType == "blender_noise") {
-		const int noisedepth = props.Get(Property(propName + ".noisedepth")(2)).Get<int>();
+		const int noisedepth = Clamp(props.Get(Property(propName + ".noisedepth")(2)).Get<int>(), 0, 25);
 		const float bright = props.Get(Property(propName + ".bright")(1.f)).Get<float>();
 		const float contrast = props.Get(Property(propName + ".contrast")(1.f)).Get<float>();
 

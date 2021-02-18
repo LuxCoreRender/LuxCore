@@ -16,6 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#if !defined(LUXCORE_DISABLE_OIDN)
+
 #include <math.h>
 
 #include <boost/format.hpp>
@@ -110,3 +112,5 @@ void IntelOIDN::Apply(Film &film, const u_int index) {
 
 	SLG_LOG("IntelOIDNPlugin single execution took a total of " << (boost::format("%.3f") % (WallClockTime() - totalStartTime)) << "secs");
 }
+
+#endif

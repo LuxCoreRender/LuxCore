@@ -117,7 +117,7 @@ if (NOT EMBREE_FOUND)
 	MESSAGE(FATAL_ERROR "--> Could not locate required Intel Embree files - Please check ${EMBREE_SEARCH_PATH}")
 endif()
 
-if (NOT OIDN_FOUND)
+if (NOT OIDN_FOUND AND NOT LUXCORE_DISABLE_OIDN)
 	MESSAGE(FATAL_ERROR "--> Could not locate required Intel Oidn files - Please check ${OIDN_SEARCH_PATH}")
 endif()
 
@@ -152,6 +152,14 @@ else()
 	endif()
 endif()
 
+if (LUXCORE_DISABLE_OIDN)
+	ADD_DEFINITIONS("-DLUXCORE_DISABLE_OIDN")
+
+	message(STATUS "Intel OIDN support: disabled")
+else()
+	message(STATUS "Intel OIDN support: enabled")
+endif()
+
 if (BUILD_LUXCORE_DLL)
 	set(LUXCORE_LIBRARY luxcore)
 	ADD_DEFINITIONS("-DLUXCORE_DLL")
@@ -183,7 +191,7 @@ add_subdirectory(src/pyluxcoretools)
 #
 ################################################################################
 
-if(NOT APPLE OR OSX_BUILD_DEMOS)
+if((${CMAKE_SYSTEM_NAME} MATCHES "Linux") OR OSX_BUILD_DEMOS OR WIN_BUILD_DEMOS)
 	add_subdirectory(samples/luxcoredemo)
 	add_subdirectory(samples/luxcorescenedemo)
 
@@ -193,7 +201,9 @@ if(NOT APPLE OR OSX_BUILD_DEMOS)
 	endif()
 endif()
 
-add_subdirectory(samples/luxcoreconsole)
+if (NOT WIN32 OR WIN_BUILD_DEMOS)
+	add_subdirectory(samples/luxcoreconsole)
+endif()
 
 if(OPENGL_FOUND)
 	add_subdirectory(samples/luxcoreui)

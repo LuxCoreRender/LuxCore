@@ -36,5 +36,13 @@ ImagePipelinePlugin *NopPlugin::Copy() const {
 void NopPlugin::Apply(Film &film, const u_int index) {
 }
 
+//------------------------------------------------------------------------------
+// HardwareDevice version
+//------------------------------------------------------------------------------
+
+void NopPlugin::AddHWChannelsUsed(unordered_set<Film::FilmChannelType, hash<int> > &hwChannelsUsed) const {
+	hwChannelsUsed.insert(Film::IMAGEPIPELINE);
+}
+
 void NopPlugin::ApplyHW(Film &film, const u_int index) {
 }

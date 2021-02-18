@@ -117,31 +117,43 @@ Spectrum SphereLight::Illuminate(const Scene &scene, const BSDF &bsdf,
 	// The point isn't inside the sphere
 
 	const float cosThetaMax = sqrtf(Max(0.f, 1.f - radiusSquared / centerDistanceSquared));
+
+	// Build a local coordinate system
+	const Vector localZ = toLight / centerDistance;
+	Frame localFrame(localZ);
+
+	// Sample sphere uniformly inside subtended cone
+	const Vector localRayDir = UniformSampleCone(u0, u1, cosThetaMax);
+
+	if (CosTheta(localRayDir) < DEFAULT_COS_EPSILON_STATIC)
+		return Spectrum();
+
+	const Vector shadowRayDir = localFrame.ToWorld(localRayDir);
+	const Point shadowRayOrig = bsdf.GetRayOrigin(shadowRayDir);
+	const Ray ray(shadowRayOrig, shadowRayDir);
+
+	// Check the intersection with the sphere
+	float shadowRayDistance;
+	if (!SphereIntersect(ray, shadowRayDistance))
+		shadowRayDistance = Dot(toLight, shadowRayDir);
+
 	if (cosThetaMax > 1.f - DEFAULT_EPSILON_STATIC) {
-		// If the subtended angle is too small, I sample the light source like
-		// if it was a point light source in order to avoiding banding due to
-		// (lack of) numerical precision.
-		return PointLight::Illuminate(scene, bsdf, time, u0, u1, passThroughEvent, shadowRay, directPdfW, emissionPdfW, cosThetaAtLight);
-	} else {
-		// Build a local coordinate system
-		const Vector localZ = toLight / centerDistance;
-		Frame localFrame(localZ);
+		// If the subtended angle is too small, I replace the computations for
+		// cosThetaAtLight, directPdfW, emissionPdfW and return factor with that of a 
+		// point light source in order to avoiding banding due to (lack of) numerical precision.
+		if (cosThetaAtLight)
+			*cosThetaAtLight = 1.f;
 
-		// Sample sphere uniformly inside subtended cone
-		const Vector localRayDir = UniformSampleCone(u0, u1, cosThetaMax);
+		directPdfW = shadowRayDistance * shadowRayDistance;
 
-		if (CosTheta(localRayDir) < DEFAULT_COS_EPSILON_STATIC)
-			return Spectrum();
+		if (emissionPdfW)
+			*emissionPdfW = UniformSpherePdf();
 
-		const Vector shadowRayDir = localFrame.ToWorld(localRayDir);
-		const Point shadowRayOrig = bsdf.GetRayOrigin(shadowRayDir);
-		const Ray ray(shadowRayOrig, shadowRayDir);
+		shadowRay = Ray(shadowRayOrig, shadowRayDir, 0.f, shadowRayDistance, time);
 
-		// Check the intersection with the sphere
-		float shadowRayDistance;
-		if (!SphereIntersect(ray, shadowRayDistance))
-			shadowRayDistance = Dot(toLight, shadowRayDir);
-
+		return emittedFactor * (1.f / (4.f * M_PI));
+	}
+	else {
 		if (cosThetaAtLight)
 			*cosThetaAtLight = CosTheta(localRayDir);
 

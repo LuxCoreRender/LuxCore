@@ -144,6 +144,14 @@ Properties luxcore::GetPlatformDesc() {
 	props << Property("compile.LUXRAYS_ENABLE_OPTIX")(false);
 #endif
 
+#if !defined(LUXCORE_DISABLE_OIDN)
+	props << Property("compile.LUXCORE_ENABLE_OIDN")(true);
+	props << Property("compile.LUXCORE_DISABLE_OIDN")(false);
+#else
+	props << Property("compile.LUXCORE_ENABLE_OIDN")(false);
+	props << Property("compile.LUXCORE_DISABLE_OIDN")(true);
+#endif
+
 	props << Property("compile.LUXCORE_DISABLE_EMBREE_BVH_BUILDER")(false);
 	props << Property("compile.LC_MESH_MAX_DATA_COUNT")(LC_MESH_MAX_DATA_COUNT);
 
