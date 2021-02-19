@@ -16,7 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include <boost/format.hpp>
+#include <boost/lexical_cast.hpp>
 
 #include "slg/scene/scene.h"
 #include "slg/lights/trianglelight.h"
@@ -57,7 +57,12 @@ void SceneObjectDefinitions::DefineIntersectableLights(LightSourceDefinitions &l
 	const string prefix = Scene::EncodeTriangleLightNamePrefix(obj->GetName());
 	for (u_int i = 0; i < mesh->GetTotalTriangleCount(); ++i) {
 		TriangleLight *tl = new TriangleLight();
-		tl->SetName(prefix + ToString(i));
+		
+		// I use here boost::lexical_cast instead of ToString() because it is a
+		// lot faster and there can not be locale related problems with integers
+		//tl->SetName(prefix + ToString(i));
+		tl->SetName(prefix + boost::lexical_cast<string>(i));
+
 		tl->lightMaterial = obj->GetMaterial();
 		tl->sceneObject = obj;
 		// This is initialized in LightSourceDefinitions::Preprocess()

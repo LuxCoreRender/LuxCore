@@ -23,6 +23,8 @@
 #include <sstream>
 #include <limits>
 
+#include <boost/lexical_cast.hpp>
+
 #include "luxrays/luxrays.h"
 
 namespace luxrays {
@@ -45,6 +47,34 @@ inline std::string ToString(const float t) {
 	ss << std::setprecision(std::numeric_limits<float>::digits10 + 1) << t;
 
 	return ss.str();
+}
+
+inline std::string ToString(const int t) {
+	// I use here boost::lexical_cast instead of generic ToString() because it
+	// is a lot faster and there can not be locale related problems with integers.
+
+	return boost::lexical_cast<std::string>(t);
+}
+
+inline std::string ToString(const u_int t) {
+	// I use here boost::lexical_cast instead of generic ToString() because it
+	// is a lot faster and there can not be locale related problems with integers.
+
+	return boost::lexical_cast<std::string>(t);
+}
+
+inline std::string ToString(const long long t) {
+	// I use here boost::lexical_cast instead of generic ToString() because it
+	// is a lot faster and there can not be locale related problems with integers.
+
+	return boost::lexical_cast<std::string>(t);
+}
+
+inline std::string ToString(const u_longlong t) {
+	// I use here boost::lexical_cast instead of generic ToString() because it
+	// is a lot faster and there can not be locale related problems with integers.
+
+	return boost::lexical_cast<std::string>(t);
 }
 
 template <class T> inline T FromString(const std::string &str) {

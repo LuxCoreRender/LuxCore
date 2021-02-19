@@ -231,8 +231,9 @@ void LightSourceDefinitions::Preprocess(const Scene *scene, const bool useRTMode
 			lightIndexOffsetByMeshIndex[meshIndex] = lightIndexByTriIndex.size();
 
 			const ExtMesh *mesh = so->GetExtMesh();
+			const string prefix = Scene::EncodeTriangleLightNamePrefix(so->GetName());
 			for (u_int triIndex = 0; triIndex < mesh->GetTotalTriangleCount(); ++triIndex) {
-				const string lightName = Scene::EncodeTriangleLightNamePrefix(so->GetName()) + ToString(triIndex);
+				const string lightName = prefix + ToString(triIndex);
 
 				lightIndexByTriIndex.push_back(light2indexLookupAccel[GetLightSource(lightName)]);
 			}
