@@ -54,8 +54,6 @@ namespace ocl {
 #include "slg/scene/scene_types.cl"
 }
 
-#define TRIANGLE_LIGHT_POSTFIX "__triangle__light__"
-
 // Note: keep aligned with the copy in scene_types.cl
 typedef enum {
 	// Mandatory setting: one or the other must be used
@@ -171,6 +169,8 @@ public:
 
 	static Scene *LoadSerialized(const std::string &fileName);
 	static void SaveSerialized(const std::string &fileName, const Scene *scene);
+	
+	static std::string EncodeTriangleLightNamePrefix(const std::string &objectName);
 
 	//--------------------------------------------------------------------------
 

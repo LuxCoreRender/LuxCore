@@ -183,7 +183,7 @@ void Scene::DefineMesh(ExtMesh *mesh) {
 				const string objName = o->GetName();
 
 				// Delete all old triangle lights
-				lightDefs.DeleteLightSourceStartWith(objName + TRIANGLE_LIGHT_POSTFIX);
+				lightDefs.DeleteLightSourceStartWith(Scene::EncodeTriangleLightNamePrefix(objName));
 
 				// Add all new triangle lights
 				SDL_LOG("The " << objName << " object is a light sources with " << mesh->GetTotalTriangleCount() << " triangles");
@@ -489,8 +489,9 @@ void Scene::DeleteObject(const string &objName) {
 
 			// Delete all old triangle lights
 			const ExtMesh *mesh = oldObj->GetExtMesh();
+			const string prefix = Scene::EncodeTriangleLightNamePrefix(oldObj->GetName());
 			for (u_int i = 0; i < mesh->GetTotalTriangleCount(); ++i)
-				lightDefs.DeleteLightSource(oldObj->GetName() + TRIANGLE_LIGHT_POSTFIX + ToString(i));
+				lightDefs.DeleteLightSource(prefix + ToString(i));
 		}
 
 		objDefs.DeleteSceneObject(objName);
@@ -625,4 +626,15 @@ bool Scene::Intersect(IntersectionDevice *device,
 
 		passThrough = rng.floatValue();
 	}
+}
+
+//------------------------------------------------------------------------------
+
+string Scene::EncodeTriangleLightNamePrefix(const std::string &objectName) {
+	// It is important to encode triangle light names in short strings in order
+	// to reduce the time to process very large number of light sources.
+
+	const string prefix = objectName + "__triangle__light__";
+
+	return (boost::format("TL%0zx_") % robin_hood::hash_bytes(prefix.data(), sizeof(char) * prefix.size())).str();
 }

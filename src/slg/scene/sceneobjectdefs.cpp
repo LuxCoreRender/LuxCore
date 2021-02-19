@@ -53,9 +53,11 @@ void SceneObjectDefinitions::DefineIntersectableLights(LightSourceDefinitions &l
 	const ExtMesh *mesh = obj->GetExtMesh();
 
 	// Add all new triangle lights
+	
+	const string prefix = Scene::EncodeTriangleLightNamePrefix(obj->GetName());
 	for (u_int i = 0; i < mesh->GetTotalTriangleCount(); ++i) {
 		TriangleLight *tl = new TriangleLight();
-		tl->SetName(obj->GetName() + TRIANGLE_LIGHT_POSTFIX + ToString(i));
+		tl->SetName(prefix + ToString(i));
 		tl->lightMaterial = obj->GetMaterial();
 		tl->sceneObject = obj;
 		// This is initialized in LightSourceDefinitions::Preprocess()
