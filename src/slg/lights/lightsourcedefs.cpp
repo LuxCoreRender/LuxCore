@@ -41,8 +41,8 @@ LightSourceDefinitions::~LightSourceDefinitions() {
 	delete emitLightStrategy;
 	delete illuminateLightStrategy;
 	delete infiniteLightStrategy;
-	for (boost::unordered_map<std::string, LightSource *>::const_iterator it = lightsByName.begin(); it != lightsByName.end(); ++it)
-		delete it->second;
+	for (auto const &e : lightsByName)
+		delete e.second;
 }
 
 void LightSourceDefinitions::DefineLightSource(LightSource *newLight) {
@@ -53,13 +53,13 @@ void LightSourceDefinitions::DefineLightSource(LightSource *newLight) {
 
 		// Update name/LightSource definition
 		lightsByName.erase(name);
-		lightsByName.insert(std::make_pair(name, newLight));
+		lightsByName[name] = newLight;
 
 		// Delete old LightSource
 		delete oldLight;
 	} else {
 		// Add the new LightSource
-		lightsByName.insert(std::make_pair(name, newLight));
+		lightsByName[name] = newLight;
 	}
 }
 
@@ -69,22 +69,22 @@ bool LightSourceDefinitions::IsLightSourceDefined(const std::string &name) const
 
 const LightSource *LightSourceDefinitions::GetLightSource(const string &name) const {
 	// Check if the LightSource has been already defined
-	boost::unordered_map<std::string, LightSource *>::const_iterator it = lightsByName.find(name);
+	auto e = lightsByName.find(name);
 
-	if (it == lightsByName.end())
+	if (e == lightsByName.end())
 		throw runtime_error("Reference to an undefined LightSource in LightSourceDefinitions::GetLightSource(): " + name);
 	else
-		return it->second;
+		return e->second;
 }
 
 LightSource *LightSourceDefinitions::GetLightSource(const string &name) {
 	// Check if the LightSource has been already defined
-	boost::unordered_map<std::string, LightSource *>::const_iterator it = lightsByName.find(name);
+	auto e = lightsByName.find(name);
 
-	if (it == lightsByName.end())
+	if (e == lightsByName.end())
 		throw runtime_error("Reference to an undefined LightSource in LightSourceDefinitions::GetLightSource(): " + name);
 	else
-		return it->second;
+		return e->second;
 }
 
 const TriangleLight *LightSourceDefinitions::GetLightSourceByMeshAndTriIndex(const u_int meshIndex, const u_int triIndex) const {
@@ -97,19 +97,19 @@ const TriangleLight *LightSourceDefinitions::GetLightSourceByMeshAndTriIndex(con
 vector<string> LightSourceDefinitions::GetLightSourceNames() const {
 	vector<string> names;
 	names.reserve(lights.size());
-	for (boost::unordered_map<std::string, LightSource *>::const_iterator it = lightsByName.begin(); it != lightsByName.end(); ++it)
-		names.push_back(it->first);
+	for (auto const &e : lightsByName)
+		names.push_back(e.first);
 
 	return names;
 }
 
 void LightSourceDefinitions::DeleteLightSource(const string &name) {
-	boost::unordered_map<std::string, LightSource *>::const_iterator it = lightsByName.find(name);
+	auto e = lightsByName.find(name);
 
-	if (it == lightsByName.end())
+	if (e == lightsByName.end())
 		throw runtime_error("Reference to an undefined LightSource in LightSourceDefinitions::DeleteLightSource(): " + name);
 	else {
-		delete it->second;
+		delete e->second;
 		lightsByName.erase(name);
 	}
 }
@@ -117,23 +117,23 @@ void LightSourceDefinitions::DeleteLightSource(const string &name) {
 void LightSourceDefinitions::DeleteLightSourceStartWith(const string &namePrefix) {
 	// Build the list of lights to delete
 	vector<const string *> nameList;
-	for(boost::unordered_map<std::string, LightSource *>::const_iterator itr = lightsByName.begin(); itr != lightsByName.end(); ++itr) {
-		const string &name = itr->first;
+	for (auto const &e : lightsByName) {
+		const string &name = e.first;
 
 		if (boost::starts_with(name, namePrefix))
 			nameList.push_back(&name);
 	}
 
-	BOOST_FOREACH(const string *name, nameList)
+	for (auto const name : nameList)
 		DeleteLightSource(*name);
 }
 
 void LightSourceDefinitions::DeleteLightSourceByMaterial(const Material *mat) {
 	// Build the list of lights to delete
 	vector<const string *> nameList;
-	for(boost::unordered_map<std::string, LightSource *>::const_iterator itr = lightsByName.begin(); itr != lightsByName.end(); ++itr) {
-		const string &name = itr->first;
-		const LightSource *l = itr->second;
+	for (auto const &e : lightsByName) {
+		const string &name = e.first;
+		const LightSource *l = e.second;
 
 		if ((l->GetType() == TYPE_TRIANGLE) && (((const TriangleLight *)l)->lightMaterial == mat))
 			nameList.push_back(&name);
@@ -164,7 +164,7 @@ void LightSourceDefinitions::Preprocess(const Scene *scene, const bool useRTMode
 	// Update lightGroupCount, envLightSources, intersectableLightSources,
 	// lightIndexOffsetByMeshIndex, lightsDistribution, etc.
 
-	//const bool start = WallClockTime();
+	const double start = WallClockTime();
 	
 	lightGroupCount = 0;
 	lights.clear();
@@ -173,11 +173,11 @@ void LightSourceDefinitions::Preprocess(const Scene *scene, const bool useRTMode
 	envLightSources.clear();
 	fill(lightTypeCount.begin(), lightTypeCount.end(), 0);
 	// To accelerate the light pointer to light index lookup
-	boost::unordered_map<const LightSource *, u_int> light2indexLookupAccel;
+	robin_hood::unordered_flat_map<const LightSource *, u_int> light2indexLookupAccel;
 	
 	u_int i = 0;
-	for(boost::unordered_map<std::string, LightSource *>::const_iterator itr = lightsByName.begin(); itr != lightsByName.end(); ++itr) {
-		LightSource *l = itr->second;
+	for (auto const &e : lightsByName) {
+		LightSource *l = e.second;
 
 		// Initialize the light source index
 		l->lightSceneIndex = i;
@@ -206,6 +206,21 @@ void LightSourceDefinitions::Preprocess(const Scene *scene, const bool useRTMode
 		++i;
 	}
 
+	const double end1 = WallClockTime();
+	SLG_LOG("Light step #1 preprocessing time: " << (end1 - start) << "secs");
+
+	for(u_int i = 0; i < lights.size(); ++i) {
+		TriangleLight *tl = dynamic_cast<TriangleLight *>(lights[i]);
+		if (tl) {
+			intersectableLightSources.push_back(tl);
+
+			tl->meshIndex = scene->objDefs.GetSceneObjectIndex(tl->sceneObject);
+		}
+	}
+
+	const double end2 = WallClockTime();
+	SLG_LOG("Light step #2 preprocessing time: " << (end2 - end1) << "secs");
+
 	// Build 2 tables to go from mesh index and triangle index to light index
 	lightIndexOffsetByMeshIndex.resize(scene->objDefs.GetSize());
 	lightIndexByTriIndex.clear();
@@ -224,6 +239,9 @@ void LightSourceDefinitions::Preprocess(const Scene *scene, const bool useRTMode
 		} else
 			lightIndexOffsetByMeshIndex[meshIndex] = NULL_INDEX;
 	}
+	
+	const double end3 = WallClockTime();
+	SLG_LOG("Light step #3 preprocessing time: " << (end3 - end2) << "secs");
 
 	// I need to check all volume definitions for radiance group usage too
 	for (u_int i = 0; i < scene->matDefs.GetSize(); ++i) {
@@ -237,17 +255,23 @@ void LightSourceDefinitions::Preprocess(const Scene *scene, const bool useRTMode
 	}
 	//SLG_LOG("Radiance group count: " << lightGroupCount);
 
+	const double end4 = WallClockTime();
+	SLG_LOG("Light step #4 preprocessing time: " << (end4 - end3) << "secs");
+
 	// Build the light strategy
 	emitLightStrategy->Preprocess(scene, TASK_EMIT, useRTMode);
 	illuminateLightStrategy->Preprocess(scene, TASK_ILLUMINATE, useRTMode);
 	infiniteLightStrategy->Preprocess(scene, TASK_INFINITE_ONLY, useRTMode);
-	
-	//const bool end = WallClockTime();
-	//SLG_LOG("Light preprocessing time: " << (end - start) / 1000.0 << "ms");
+
+	const double end5 = WallClockTime();
+	SLG_LOG("Light step #5 preprocessing time: " << (end5 - end4) << "secs");
+
+	const double endTotal = WallClockTime();
+	SLG_LOG("Light total preprocessing time: " << (endTotal - start) << "secs");
 }
 
 void LightSourceDefinitions::UpdateVisibilityMaps(const Scene *scene, const bool useRTMode) {
 	// Build visibility maps for Env. lights
-	BOOST_FOREACH(EnvLightSource *envLight, GetEnvLightSources())
+	for (EnvLightSource *envLight : GetEnvLightSources())
 		envLight->UpdateVisibilityMap(scene, useRTMode);
 }
