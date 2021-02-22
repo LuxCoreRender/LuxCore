@@ -4,6 +4,7 @@
 
 * BIDIRCPU can now use PhotonGI caustic cache to render SDS paths
 * Optimized the parsing of mesh light sources and it is now about 3x faster
+* Introduced (partial) multi-thread support in pre-processing of Light sources
 
 ### Fixed Bugs
 

@@ -16,6 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <thread>
+
 #include <boost/algorithm/string/predicate.hpp>
 
 #include "slg/scene/scene.h"
@@ -164,7 +166,7 @@ void LightSourceDefinitions::Preprocess(const Scene *scene, const bool useRTMode
 	// Update lightGroupCount, envLightSources, intersectableLightSources,
 	// lightIndexOffsetByMeshIndex, lightsDistribution, etc.
 
-	const double start = WallClockTime();
+//	const double start = WallClockTime();
 	
 	lightGroupCount = 0;
 	lights.clear();
@@ -206,8 +208,8 @@ void LightSourceDefinitions::Preprocess(const Scene *scene, const bool useRTMode
 		++i;
 	}
 
-	const double end1 = WallClockTime();
-	SLG_LOG("Light step #1 preprocessing time: " << (end1 - start) << "secs");
+//	const double end1 = WallClockTime();
+//	SLG_LOG("Light step #1 preprocessing time: " << (end1 - start) << "secs");
 
 	for(u_int i = 0; i < lights.size(); ++i) {
 		TriangleLight *tl = dynamic_cast<TriangleLight *>(lights[i]);
@@ -218,31 +220,54 @@ void LightSourceDefinitions::Preprocess(const Scene *scene, const bool useRTMode
 		}
 	}
 
-	const double end2 = WallClockTime();
-	SLG_LOG("Light step #2 preprocessing time: " << (end2 - end1) << "secs");
+//	const double end2 = WallClockTime();
+//	SLG_LOG("Light step #2 preprocessing time: " << (end2 - end1) << "secs");
 
 	// Build 2 tables to go from mesh index and triangle index to light index
 	lightIndexOffsetByMeshIndex.resize(scene->objDefs.GetSize());
 	lightIndexByTriIndex.clear();
-	for (u_int meshIndex = 0; meshIndex < scene->objDefs.GetSize(); ++meshIndex) {
+	
+	// Step #1: initialize lightIndexOffsetByMeshIndex and set the lightIndexByTriIndex size
+	
+	const u_int meshCount = scene->objDefs.GetSize();
+	for (u_int meshIndex = 0; meshIndex < meshCount; ++meshIndex) {
 		const SceneObject *so = scene->objDefs.GetSceneObject(meshIndex);
 
 		if (so->GetMaterial()->IsLightSource()) {
 			lightIndexOffsetByMeshIndex[meshIndex] = lightIndexByTriIndex.size();
 
 			const ExtMesh *mesh = so->GetExtMesh();
+			lightIndexByTriIndex.resize(lightIndexByTriIndex.size() + mesh->GetTotalTriangleCount());
+		} else
+			lightIndexOffsetByMeshIndex[meshIndex] = NULL_INDEX;
+	}
+
+	// Step #2: initializelightIndexByTriIndex in parallel (to speed up the
+	// execution in case of large number of light sources)
+	
+	#pragma omp parallel for
+	for (
+			// Visual C++ 2013 supports only OpenMP 2.5
+#if _OPENMP >= 200805
+			unsigned
+#endif
+			int meshIndex = 0; meshIndex < meshCount; ++meshIndex) {
+		const SceneObject *so = scene->objDefs.GetSceneObject(meshIndex);
+
+		if (so->GetMaterial()->IsLightSource()) {
+			const ExtMesh *mesh = so->GetExtMesh();
 			const string prefix = Scene::EncodeTriangleLightNamePrefix(so->GetName());
 			for (u_int triIndex = 0; triIndex < mesh->GetTotalTriangleCount(); ++triIndex) {
 				const string lightName = prefix + ToString(triIndex);
 
-				lightIndexByTriIndex.push_back(light2indexLookupAccel[GetLightSource(lightName)]);
+				lightIndexByTriIndex[lightIndexOffsetByMeshIndex[meshIndex] + triIndex] =
+						light2indexLookupAccel[GetLightSource(lightName)];
 			}
-		} else
-			lightIndexOffsetByMeshIndex[meshIndex] = NULL_INDEX;
+		}
 	}
-	
-	const double end3 = WallClockTime();
-	SLG_LOG("Light step #3 preprocessing time: " << (end3 - end2) << "secs");
+
+//	const double end3 = WallClockTime();
+//	SLG_LOG("Light step #3 preprocessing time: " << (end3 - end2) << "secs");
 
 	// I need to check all volume definitions for radiance group usage too
 	for (u_int i = 0; i < scene->matDefs.GetSize(); ++i) {
@@ -256,19 +281,36 @@ void LightSourceDefinitions::Preprocess(const Scene *scene, const bool useRTMode
 	}
 	//SLG_LOG("Radiance group count: " << lightGroupCount);
 
-	const double end4 = WallClockTime();
-	SLG_LOG("Light step #4 preprocessing time: " << (end4 - end3) << "secs");
+//	const double end4 = WallClockTime();
+//	SLG_LOG("Light step #4 preprocessing time: " << (end4 - end3) << "secs");
 
 	// Build the light strategy
-	emitLightStrategy->Preprocess(scene, TASK_EMIT, useRTMode);
-	illuminateLightStrategy->Preprocess(scene, TASK_ILLUMINATE, useRTMode);
-	infiniteLightStrategy->Preprocess(scene, TASK_INFINITE_ONLY, useRTMode);
+	if (lights.size() > 1024) {
+		// Use a multi-thread initialization for large number of light sources
+		std::thread emitLightStrategyThread([&, this, scene, useRTMode]() {
+			emitLightStrategy->Preprocess(scene, TASK_EMIT, useRTMode);
+		});
+		std::thread illuminateLightStrategyThread([&, this, scene, useRTMode]() {
+			illuminateLightStrategy->Preprocess(scene, TASK_ILLUMINATE, useRTMode);
+		});
+		std::thread infiniteLightStrategyThread([&, this, scene, useRTMode]() {
+			infiniteLightStrategy->Preprocess(scene, TASK_INFINITE_ONLY, useRTMode);
+		});
 
-	const double end5 = WallClockTime();
-	SLG_LOG("Light step #5 preprocessing time: " << (end5 - end4) << "secs");
+		emitLightStrategyThread.join();
+		illuminateLightStrategyThread.join();
+		infiniteLightStrategyThread.join();
+	} else {
+		emitLightStrategy->Preprocess(scene, TASK_EMIT, useRTMode);
+		illuminateLightStrategy->Preprocess(scene, TASK_ILLUMINATE, useRTMode);
+		infiniteLightStrategy->Preprocess(scene, TASK_INFINITE_ONLY, useRTMode);
+	}
 
-	const double endTotal = WallClockTime();
-	SLG_LOG("Light total preprocessing time: " << (endTotal - start) << "secs");
+//	const double end5 = WallClockTime();
+//	SLG_LOG("Light step #5 preprocessing time: " << (end5 - end4) << "secs");
+
+//	const double endTotal = WallClockTime();
+//	SLG_LOG("Light total preprocessing time: " << (endTotal - start) << "secs");
 }
 
 void LightSourceDefinitions::UpdateVisibilityMaps(const Scene *scene, const bool useRTMode) {
