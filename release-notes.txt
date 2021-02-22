@@ -74,6 +74,7 @@ Beta1 released
 * Change sphere light implementation to provide an alternative to the point light fallback (issue #443)
 * Fixed a compiler error when running with CUDA on Ampere GPUs (issue BlendLuxCore#626)
 * Fixed a crash when using an image pipeline with only NOP plugin
+* CPU code now rejects NaN/Inf sample values for AOVs like GPU code
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
