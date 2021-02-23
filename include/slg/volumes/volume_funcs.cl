@@ -79,8 +79,13 @@ OPENCL_FORCE_INLINE float HomogeneousVolume_SegmentScatter(const float u,
 	
 	const float3 sigmaT = *sigmaA + *sigmaS;
 	if (!Spectrum_IsBlack(sigmaT)) {
-		const float3 tau = scatterDistance * sigmaT;
-		*segmentTransmittance *= Spectrum_Exp(-tau) * (scatter ? sigmaT : WHITE);
+		if (isinf(scatterDistance)) {
+			// This avoid NaN in case scatterDistance is inf
+			*segmentTransmittance = BLACK;
+		} else {
+			const float3 tau = scatterDistance * sigmaT;
+			*segmentTransmittance *= Spectrum_Exp(-tau) * (scatter ? sigmaT : WHITE);
+		}
 	}
 
 	//--------------------------------------------------------------------------

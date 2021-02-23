@@ -72,8 +72,13 @@ float HomogeneousVolume::Scatter(const float u,
 	
 	const Spectrum sigmaT = sigmaA + sigmaS;
 	if (!sigmaT.Black()) {
-		const Spectrum tau = scatterDistance * sigmaT;
-		segmentTransmittance *= Exp(-tau) * (scatter ? sigmaT : Spectrum(1.f));
+		if (isinf(scatterDistance)) {
+			// This avoid NaN in case scatterDistance is inf
+			segmentTransmittance = Spectrum(0.f);
+		} else {
+			const Spectrum tau = scatterDistance * sigmaT;
+			segmentTransmittance *= Exp(-tau) * (scatter ? sigmaT : Spectrum(1.f));
+		}
 	}
 
 	//--------------------------------------------------------------------------
@@ -121,7 +126,7 @@ float HomogeneousVolume::Scatter(const Ray &ray, const float u,
 	// I need to update first connectionEmission and than connectionThroughput
 	*connectionEmission += *connectionThroughput * emission;
 	*connectionThroughput *= segmentTransmittance;
-	
+
 	return (scatterDistance == -1.f) ? -1.f : (ray.mint + scatterDistance);
 }
 
