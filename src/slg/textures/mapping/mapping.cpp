@@ -339,10 +339,11 @@ Point LocalRandomMapping3D::Map(const HitPoint &hitPoint, Normal *shadeN) const 
 	const float yTranslate = Lerp(rndGen.floatValue(), yTranslateMin, yTranslateMax);
 	const float zTranslate = Lerp(rndGen.floatValue(), zTranslateMin, zTranslateMax);
 
-	w2t = w2t *
+	w2t =
 			Scale(xScale, yScale, zScale) *
 			RotateX(xRotation) * RotateY(yRotation) * RotateZ(zRotation) *
-			Translate(Vector(xTranslate, yTranslate, zTranslate));
+			Translate(Vector(xTranslate, yTranslate, zTranslate)) *
+			w2t;
 
 	return w2t * hitPoint.p;
 }
