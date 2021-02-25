@@ -56,22 +56,32 @@ OPENCL_FORCE_INLINE void Film_AddPixelVal(const bool usePixelAtomics, __global f
 }
 
 OPENCL_FORCE_INLINE void Film_AddWeightedPixel2Val(const bool usePixelAtomics, __global float *dst, const float val, const float weight) {
-	if (usePixelAtomics) {
-		AtomicAdd(&dst[0], val * weight);
-		AtomicAdd(&dst[1], weight);
-	} else {
-		dst[0] += val * weight;
-		dst[1] += weight;
+	const float v = val;
+
+	if (!isnan(v) && !isinf(v) &&
+		!isnan(weight) && !isinf(weight)) {
+		if (usePixelAtomics) {
+			AtomicAdd(&dst[0], v * weight);
+			AtomicAdd(&dst[1], weight);
+		} else {
+			dst[0] += v * weight;
+			dst[1] += weight;
+		}
 	}
 }
 
 OPENCL_FORCE_INLINE void Film_AddWeightedPixel2(const bool usePixelAtomics, __global float *dst, __global float *val, const float weight) {
-	if (usePixelAtomics) {
-		AtomicAdd(&dst[0], val[0] * weight);
-		AtomicAdd(&dst[1], weight);
-	} else {
-		dst[0] += val[0] * weight;
-		dst[1] += weight;
+	const float v = *val;
+
+	if (!isnan(v) && !isinf(v) &&
+		!isnan(weight) && !isinf(weight)) {
+		if (usePixelAtomics) {
+			AtomicAdd(&dst[0], v * weight);
+			AtomicAdd(&dst[1], weight);
+		} else {
+			dst[0] += v * weight;
+			dst[1] += weight;
+		}
 	}
 }
 

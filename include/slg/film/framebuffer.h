@@ -116,10 +116,11 @@ public:
 	}
 
 	void AddIfValidWeightedPixel(const u_int x, const u_int y, const T *v, const float weight) {
+		for (u_int i = 0; i < CHANNELS - 1; ++i) {
+			if (isnan(v[i]) || isinf(v[i]))
+				return;
+		}
 		if (isnan(weight) || isinf(weight)) return;
-		if (isnan(v[0]) || isinf(v[0])) return;
-		if (isnan(v[1]) || isinf(v[1])) return;
-		if (isnan(v[2]) || isinf(v[2])) return;
 
 		AddWeightedPixel(x, y, v, weight);
 	}
@@ -189,10 +190,11 @@ public:
 	}
 
 	void AtomicAddIfValidWeightedPixel(const u_int x, const u_int y, const T *v, const float weight) {
+		for (u_int i = 0; i < CHANNELS - 1; ++i) {
+			if (isnan(v[i]) || isinf(v[i]))
+				return;
+		}
 		if (isnan(weight) || isinf(weight)) return;
-		if (isnan(v[0]) || isinf(v[0])) return;
-		if (isnan(v[1]) || isinf(v[1])) return;
-		if (isnan(v[2]) || isinf(v[2])) return;
 
 		AtomicAddWeightedPixel(x, y, v, weight);
 	}
