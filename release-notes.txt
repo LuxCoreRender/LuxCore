@@ -42,6 +42,8 @@ Beta1 released
 
 * Removed the cap to opencl.task.count parameter
 
+RC1 released
+
 ### Fixed Bugs
 
 * Added the support for pixel filtering to light tracing (issue #413)
@@ -76,6 +78,8 @@ Beta1 released
 * Fixed a crash when using an image pipeline with only NOP plugin
 * CPU code now rejects NaN/Inf sample values for AOVs like GPU code
 * Avoid to generate NaN volume transmittance if the segment is infinite
+
+RC1 released
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
