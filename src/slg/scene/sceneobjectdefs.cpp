@@ -76,13 +76,13 @@ void SceneObjectDefinitions::DefineIntersectableLights(LightSourceDefinitions &l
 
 void SceneObjectDefinitions::UpdateMaterialReferences(const Material *oldMat, const Material *newMat) {
 	// Replace old material direct references with new ones
-	BOOST_FOREACH(NamedObject *o, objs.GetObjs())
+	for (auto o : objs.GetObjs())
 		static_cast<SceneObject *>(o)->UpdateMaterialReferences(oldMat, newMat);
 }
 
 void SceneObjectDefinitions::UpdateMeshReferences(const ExtMesh *oldMesh, ExtMesh *newMesh,
 		boost::unordered_set<SceneObject *> &modifiedObjsList) {
-	BOOST_FOREACH(NamedObject *o, objs.GetObjs()) {
+	for (auto o : objs.GetObjs()) {
 		SceneObject *so = static_cast<SceneObject *>(o);
 
 		if (so->UpdateMeshReference(oldMesh, newMesh))

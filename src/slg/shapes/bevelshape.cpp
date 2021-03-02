@@ -16,51 +16,23 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_SHAPE_H
-#define	_SLG_SHAPE_H
+#include "luxrays/core/exttrianglemesh.h"
+#include "slg/shapes/bevelshape.h"
+#include "slg/scene/scene.h"
 
-#include <vector>
+using namespace std;
+using namespace luxrays;
+using namespace slg;
 
-namespace luxrays {
-	class ExtTriangleMesh;
+BevelShape::BevelShape(ExtTriangleMesh *m, const float bevelRadius) {
+	mesh = m->Copy(bevelRadius);
 }
 
-namespace slg {
-
-class Scene;
-
-class Shape {
-public:
-	typedef enum {
-		MESH,
-		POINTINESS,
-		STRANDS,
-		GROUP,
-		SUBDIV,
-		DISPLACEMENT,
-		HARLEQUIN,
-		SIMPLIFY,
-		ISLANDAOV,
-		RANDOMTRIANGLEAOV,
-		EDGEDETECTORAOV,
-		BEVEL
-	} ShapeType;
-
-	Shape() : refined(false) { }
-	virtual ~Shape() { }
-
-	virtual ShapeType GetType() const = 0;
-
-	// Note: this method can be called only once and the object is not usable
-	// anymore (this is mostly due to optimize memory management).
-	luxrays::ExtTriangleMesh *Refine(const Scene *scene);
-
-protected:
-	virtual luxrays::ExtTriangleMesh *RefineImpl(const Scene *scene) = 0;
-	
-	bool refined;
-};
-
+BevelShape::~BevelShape() {
+	if (!refined)
+		delete mesh;
 }
 
-#endif	/* _SLG_SHAPE_H */
+ExtTriangleMesh *BevelShape::RefineImpl(const Scene *scene) {
+	return mesh;
+}

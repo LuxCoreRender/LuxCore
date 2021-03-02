@@ -118,15 +118,19 @@ class ExtTriangleMesh : public TriangleMesh, public ExtMesh {
 public:
 	ExtTriangleMesh(const u_int meshVertCount, const u_int meshTriCount,
 			Point *meshVertices, Triangle *meshTris, Normal *meshNormals = nullptr,
-			UV *meshUVs = nullptr, Spectrum *meshCols = nullptr, float *meshAlphas = nullptr);
+			UV *meshUVs = nullptr, Spectrum *meshCols = nullptr, float *meshAlphas = nullptr,
+			const float bevelRadius = 0.f);
 	ExtTriangleMesh(const u_int meshVertCount, const u_int meshTriCount,
 			Point *meshVertices, Triangle *meshTris, Normal *meshNormals,
 			std::array<UV *, EXTMESH_MAX_DATA_COUNT> *meshUVs,
 			std::array<Spectrum *, EXTMESH_MAX_DATA_COUNT> *meshCols,
-			std::array<float *, EXTMESH_MAX_DATA_COUNT> *meshAlphas);
+			std::array<float *, EXTMESH_MAX_DATA_COUNT> *meshAlphas,
+			const float bevelRadius = 0.f);
 	~ExtTriangleMesh() { };
 	virtual void Delete();
 
+	float GetBevelRadius() const { return bevelRadius; }
+	
 	void SetVertexAOV(const u_int dataIndex, float *values) {
 		vertAOV[dataIndex] = values;
 	}
@@ -261,11 +265,13 @@ public:
 	ExtTriangleMesh *CopyExt(Point *meshVertices, Triangle *meshTris, Normal *meshNormals,
 			std::array<UV *, EXTMESH_MAX_DATA_COUNT> *meshUVs,
 			std::array<Spectrum *, EXTMESH_MAX_DATA_COUNT> *meshCols,
-			std::array<float *, EXTMESH_MAX_DATA_COUNT> *meshAlphas) const;
+			std::array<float *, EXTMESH_MAX_DATA_COUNT> *meshAlphas,
+			const float bevelRadius = 0.f) const;
 	ExtTriangleMesh *Copy(Point *meshVertices, Triangle *meshTris, Normal *meshNormals,
-			UV *meshUVs, Spectrum *meshCols, float *meshAlphas) const;
-	ExtTriangleMesh *Copy() const {
-		return CopyExt(nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
+			UV *meshUVs, Spectrum *meshCols, float *meshAlphas,
+			const float bevelRadius = 0.f) const;
+	ExtTriangleMesh *Copy(const float bevelRadius = 0.f) const {
+		return CopyExt(nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, bevelRadius);
 	}
 
 	static ExtTriangleMesh *Load(const std::string &fileName);
@@ -277,6 +283,43 @@ public:
 	friend class boost::serialization::access;
 
 private:
+	class BevelCylinder {
+	public:
+		BevelCylinder() { }
+		BevelCylinder(const luxrays::Vector &cv0, const luxrays::Vector &cv1) {
+			v0 = cv0;
+			v1 = cv1;
+		}
+
+		luxrays::Vector v0, v1;
+	};
+
+	class TriangleBevelCylinders {
+	public:
+		TriangleBevelCylinders() {
+			indices[0] = NULL_INDEX;
+			indices[1] = NULL_INDEX;
+			indices[2] = NULL_INDEX;
+		}
+
+		void AddBevelCylinderIndex(const u_int i) {
+			if (indices[0] == NULL_INDEX)
+				indices[0] = i;
+			else if (indices[1] == NULL_INDEX)
+				indices[1] = i;
+			else if (indices[2] == NULL_INDEX)
+				indices[2] = i;
+		}
+
+		bool IsFull() const {
+			return (indices[0] != NULL_INDEX) &&
+					(indices[1] != NULL_INDEX) &&
+					(indices[2] != NULL_INDEX);
+		}
+
+		u_int indices[3];
+	};
+
 	static ExtTriangleMesh *LoadPly(const std::string &fileName);
 	static ExtTriangleMesh *LoadSerialized(const std::string &fileName);
 
@@ -290,6 +333,7 @@ private:
 			std::array<float *, EXTMESH_MAX_DATA_COUNT> *meshAlphas);
 
 	void Preprocess();
+	void PreprocessBevel();
 
 	virtual void SavePly(const std::string &fileName) const;
 	virtual void SaveSerialized(const std::string &fileName) const;
@@ -330,6 +374,8 @@ private:
 			if (hasTriangleAOV)
 				ar & boost::serialization::make_array<float>(triAOV[i], triCount);
 		}
+		
+		ar & bevelRadius;
 	}
 
 	template<class Archive>	void load(Archive &ar, const unsigned int version) {
@@ -388,6 +434,10 @@ private:
 				triAOV[i] = nullptr;
 		}
 
+		bevelCylinders = nullptr;
+		triBevelCylinders = nullptr;
+		ar & bevelRadius;
+		
 		Preprocess();
 	}
 	BOOST_SERIALIZATION_SPLIT_MEMBER()
@@ -401,6 +451,10 @@ private:
 
 	std::array<float *, EXTMESH_MAX_DATA_COUNT> vertAOV; // Vertex AOV
 	std::array<float *, EXTMESH_MAX_DATA_COUNT> triAOV; // Triangle AOV
+
+	BevelCylinder *bevelCylinders;
+	TriangleBevelCylinders *triBevelCylinders;
+	float bevelRadius;
 };
 
 class ExtInstanceTriangleMesh : public InstanceTriangleMesh, public ExtMesh {

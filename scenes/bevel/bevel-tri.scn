@@ -47,62 +47,49 @@ scene.textures.140062619160584Color.texture2 = "0.6 0.6 0.6"
 scene.textures.140062619160584Color.mapping.type = "globalmapping3d"
 scene.textures.140062619160584Color.mapping.transformation = 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1
 #
-scene.textures.beveltex.type = bevel
-scene.textures.beveltex.radius = 0.06
-#
 scene.textures.wireframetex.type = wireframe
-scene.textures.wireframetex.width = 0.02
+scene.textures.wireframetex.width = 0.04
 scene.textures.wireframetex.border = 0.7 0.0 0.0
 scene.textures.wireframetex.inside = 0.7 0.7 0.7
 ################################################################################
-scene.materials.cube1_mat.type = "matte"
-scene.materials.cube1_mat.kd = "0.7"
+#scene.materials.cube1_mat.type = "matte"
+#scene.materials.cube1_mat.kd = "0.7"
 ##
 scene.materials.cube1_mat.type = disney
 scene.materials.cube1_mat.basecolor = 0.5 0.0 0.0
+#scene.materials.cube1_mat.basecolor = wireframetex
 scene.materials.cube1_mat.specular = 0.5
 scene.materials.cube1_mat.roughness = 0.1
 scene.materials.cube1_mat.clearcoatgloss = 1.0
 #######
-#scene.materials.cube2_mat.type = "matte"
-#scene.materials.cube2_mat.kd = "0.7"
-##scene.materials.cube2_mat.kd = wireframetex
-#scene.materials.cube2_mat.bumptex = beveltex
-#
-#scene.materials.cube2_mat.type = glossy2
-#scene.materials.cube2_mat.kd = 0.7 0.0 0.0
-#scene.materials.cube2_mat.ks = 0.7 0.7 0.7
-#scene.materials.cube2_mat.uroughness = 0.06
-#scene.materials.cube2_mat.vroughness = 0.06
-##scene.materials.cube2_mat.kd = wireframetex
-#scene.materials.cube2_mat.bumptex = beveltex
-#
-scene.materials.cube2_mat.type = disney
-scene.materials.cube2_mat.basecolor = 0.5 0.0 0.0
-scene.materials.cube2_mat.specular = 0.5
-scene.materials.cube2_mat.roughness = 0.1
-scene.materials.cube2_mat.clearcoatgloss = 1.0
+scene.materials.cube2_mat.type = "matte"
+scene.materials.cube2_mat.kd = "0.7"
 #scene.materials.cube2_mat.kd = wireframetex
-scene.materials.cube2_mat.bumptex = beveltex
+##
+#scene.materials.cube2_mat.type = disney
+#scene.materials.cube2_mat.basecolor = 0.5 0.0 0.0
+#scene.materials.cube2_mat.specular = 0.5
+#scene.materials.cube2_mat.roughness = 0.1
+#scene.materials.cube2_mat.clearcoatgloss = 1.0
 #
 scene.materials.ground_mat140061226915208.type = "matte"
 scene.materials.ground_mat140061226915208.kd = "140062619160584Color"
 ################################################################################
-scene.shapes.obj_cube1.type = mesh
-scene.shapes.obj_cube1.ply = tri.ply
-#scene.shapes.obj_cube1.ply = mesh-00000.ply
+scene.shapes.obj_cube.type = mesh
+#scene.shapes.obj_cube.ply = tri.ply
+scene.shapes.obj_cube.ply = mesh-00000.ply
 ##
-scene.shapes.obj_cube2.type = edgedetectoraov
-scene.shapes.obj_cube2.source = obj_cube1
-scene.shapes.obj_cube2.aovindex = 0
+scene.shapes.obj_bevel.type = bevel
+scene.shapes.obj_bevel.source = obj_cube
+scene.shapes.obj_bevel.bevel.radius = 0.04
 ################################################################################
 scene.objects.cube1.material = cube1_mat
-scene.objects.cube1.ply = obj_cube1
-scene.objects.cube1.transformation = 1 0 0 0 0 1 0 0 0 0 1 0  0 -2 0 1
+scene.objects.cube1.ply = obj_bevel
+#scene.objects.cube1.transformation = 1 0 0 0 0 1 0 0 0 0 1 0  0 -2 0 1
 #
-scene.objects.cube2.material = cube2_mat
-scene.objects.cube2.ply = obj_cube2
-scene.objects.cube2.transformation = 1 0 0 0 0 1 0 0 0 0 1 0  0 2 0 1
+#scene.objects.cube2.material = cube2_mat
+#scene.objects.cube2.ply = obj_bevel
+#scene.objects.cube2.transformation = 1 0 0 0 0 1 0 0 0 0 1 0  0 2 0 1
 #
 scene.objects.1400612316620880.material = "ground_mat140061226915208"
 scene.objects.1400612316620880.ply = "mesh-00001.ply"
