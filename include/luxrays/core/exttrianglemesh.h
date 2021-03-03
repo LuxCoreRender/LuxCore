@@ -119,18 +119,16 @@ public:
 	ExtTriangleMesh(const u_int meshVertCount, const u_int meshTriCount,
 			Point *meshVertices, Triangle *meshTris, Normal *meshNormals = nullptr,
 			UV *meshUVs = nullptr, Spectrum *meshCols = nullptr, float *meshAlphas = nullptr,
-			const float bevelRadius = 0.f);
+			const float bRadius = 0.f);
 	ExtTriangleMesh(const u_int meshVertCount, const u_int meshTriCount,
 			Point *meshVertices, Triangle *meshTris, Normal *meshNormals,
 			std::array<UV *, EXTMESH_MAX_DATA_COUNT> *meshUVs,
 			std::array<Spectrum *, EXTMESH_MAX_DATA_COUNT> *meshCols,
 			std::array<float *, EXTMESH_MAX_DATA_COUNT> *meshAlphas,
-			const float bevelRadius = 0.f);
+			const float bRadius = 0.f);
 	~ExtTriangleMesh() { };
 	virtual void Delete();
 
-	float GetBevelRadius() const { return bevelRadius; }
-	
 	void SetVertexAOV(const u_int dataIndex, float *values) {
 		vertAOV[dataIndex] = values;
 	}
@@ -266,14 +264,16 @@ public:
 			std::array<UV *, EXTMESH_MAX_DATA_COUNT> *meshUVs,
 			std::array<Spectrum *, EXTMESH_MAX_DATA_COUNT> *meshCols,
 			std::array<float *, EXTMESH_MAX_DATA_COUNT> *meshAlphas,
-			const float bevelRadius = 0.f) const;
+			const float bRadius = 0.f) const;
 	ExtTriangleMesh *Copy(Point *meshVertices, Triangle *meshTris, Normal *meshNormals,
 			UV *meshUVs, Spectrum *meshCols, float *meshAlphas,
-			const float bevelRadius = 0.f) const;
-	ExtTriangleMesh *Copy(const float bevelRadius = 0.f) const {
-		return CopyExt(nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, bevelRadius);
+			const float bRadius = 0.f) const;
+	ExtTriangleMesh *Copy(const float bRadius = 0.f) const {
+		return CopyExt(nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, bRadius);
 	}
 
+	virtual bool IntersectBevel(luxrays::Ray &ray, luxrays::RayHit rayHit) const;
+	
 	static ExtTriangleMesh *Load(const std::string &fileName);
 	static ExtTriangleMesh *Merge(const std::vector<const ExtTriangleMesh *> &meshes,
 			const std::vector<luxrays::Transform> *trans = nullptr);
@@ -374,8 +374,6 @@ private:
 			if (hasTriangleAOV)
 				ar & boost::serialization::make_array<float>(triAOV[i], triCount);
 		}
-		
-		ar & bevelRadius;
 	}
 
 	template<class Archive>	void load(Archive &ar, const unsigned int version) {
@@ -436,7 +434,6 @@ private:
 
 		bevelCylinders = nullptr;
 		triBevelCylinders = nullptr;
-		ar & bevelRadius;
 		
 		Preprocess();
 	}
@@ -454,7 +451,6 @@ private:
 
 	BevelCylinder *bevelCylinders;
 	TriangleBevelCylinders *triBevelCylinders;
-	float bevelRadius;
 };
 
 class ExtInstanceTriangleMesh : public InstanceTriangleMesh, public ExtMesh {
@@ -465,6 +461,8 @@ public:
 	virtual void Delete() {	}
 
 	virtual MeshType GetType() const { return TYPE_EXT_TRIANGLE_INSTANCE; }
+	
+	virtual float GetBevelRadius() const { return mesh->GetBevelRadius(); }
 
 	virtual bool HasNormals() const { return static_cast<ExtTriangleMesh *>(mesh)->HasNormals(); }
 	virtual bool HasUVs(const u_int dataIndex) const { return static_cast<ExtTriangleMesh *>(mesh)->HasUVs(dataIndex); }
@@ -575,6 +573,8 @@ public:
 	virtual void Delete() {	}
 
 	virtual MeshType GetType() const { return TYPE_EXT_TRIANGLE_MOTION; }
+
+	virtual float GetBevelRadius() const { return mesh->GetBevelRadius(); }
 
 	virtual bool HasNormals() const { return static_cast<ExtTriangleMesh *>(mesh)->HasNormals(); }
 	virtual bool HasUVs(const u_int dataIndex) const { return static_cast<ExtTriangleMesh *>(mesh)->HasUVs(dataIndex); }

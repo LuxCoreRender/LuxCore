@@ -43,7 +43,7 @@ scene.lights.140062413928968.radius = 0.100000001
 ################################################################################
 scene.textures.140062619160584Color.type = "checkerboard3d"
 scene.textures.140062619160584Color.texture1 = "1 0 0"
-scene.textures.140062619160584Color.texture2 = "0.6 0.6 0.6"
+scene.textures.140062619160584Color.texture2 = "1 1 0"
 scene.textures.140062619160584Color.mapping.type = "globalmapping3d"
 scene.textures.140062619160584Color.mapping.transformation = 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1
 #
@@ -56,7 +56,7 @@ scene.textures.wireframetex.inside = 0.7 0.7 0.7
 #scene.materials.cube1_mat.kd = "0.7"
 ##
 scene.materials.cube1_mat.type = disney
-scene.materials.cube1_mat.basecolor = 0.5 0.0 0.0
+scene.materials.cube1_mat.basecolor = 0.5 0.5 0.5
 #scene.materials.cube1_mat.basecolor = wireframetex
 scene.materials.cube1_mat.specular = 0.5
 scene.materials.cube1_mat.roughness = 0.1

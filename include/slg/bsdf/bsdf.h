@@ -154,7 +154,6 @@ public:
 
 private:
 	const SceneObject *sceneObject;
-	const luxrays::ExtMesh *mesh;
 	const Material *material;
 	const TriangleLight *triangleLightSource; // != NULL only if it is an area light
 	luxrays::Frame frame;
