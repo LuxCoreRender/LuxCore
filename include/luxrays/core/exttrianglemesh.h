@@ -44,6 +44,9 @@ namespace ocl {
 #include "luxrays/core/exttrianglemesh_types.cl"
 }
 
+class Ray;
+class RayHit;
+
 /*
  * The inheritance scheme used here:
  *
@@ -62,8 +65,15 @@ namespace ocl {
 
 class ExtMesh : virtual public Mesh, public NamedObject {
 public:
-	ExtMesh() { }
+	ExtMesh() : bevelRadius(0.f) { }
 	virtual ~ExtMesh() { }
+
+	virtual float GetBevelRadius() const { return bevelRadius; }
+	virtual float IntersectBevel(const luxrays::Ray &ray, const u_int triangleIndex) const { return -1.f; }
+	virtual void IntersectBevelNormal(const luxrays::Point &pos, const u_int triangleIndex,
+			luxrays::Normal &n) const {
+		throw std::runtime_error("Called ExtMesh::IntersectBevelNormal()");
+	}
 
 	virtual bool HasNormals() const = 0;
 	virtual bool HasUVs(const u_int dataIndex) const = 0;
@@ -107,10 +117,15 @@ public:
 
 	friend class boost::serialization::access;
 
+protected:
+	float bevelRadius;
+
 private:
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(Mesh);
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(NamedObject);
+
+		ar & bevelRadius;
 	}
 };
 
@@ -272,7 +287,9 @@ public:
 		return CopyExt(nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, bRadius);
 	}
 
-	virtual bool IntersectBevel(luxrays::Ray &ray, luxrays::RayHit rayHit) const;
+	virtual float IntersectBevel(const luxrays::Ray &ray, const u_int triangleIndex) const;
+	virtual void IntersectBevelNormal(const luxrays::Point &posy, const u_int triangleIndex,
+			luxrays::Normal &n) const;
 	
 	static ExtTriangleMesh *Load(const std::string &fileName);
 	static ExtTriangleMesh *Merge(const std::vector<const ExtTriangleMesh *> &meshes,
@@ -286,12 +303,16 @@ private:
 	class BevelCylinder {
 	public:
 		BevelCylinder() { }
-		BevelCylinder(const luxrays::Vector &cv0, const luxrays::Vector &cv1) {
+		BevelCylinder(const luxrays::Point &cv0, const luxrays::Point &cv1) {
 			v0 = cv0;
 			v1 = cv1;
 		}
 
-		luxrays::Vector v0, v1;
+		float Intersect(const luxrays::Ray &ray, const float bevelRadius) const;
+		void IntersectNormal(const luxrays::Point &pos, const float bevelRadius,
+				luxrays::Normal &n) const;
+
+		luxrays::Point v0, v1;
 	};
 
 	class TriangleBevelCylinders {
@@ -316,7 +337,7 @@ private:
 					(indices[1] != NULL_INDEX) &&
 					(indices[2] != NULL_INDEX);
 		}
-
+		
 		u_int indices[3];
 	};
 
@@ -462,7 +483,7 @@ public:
 
 	virtual MeshType GetType() const { return TYPE_EXT_TRIANGLE_INSTANCE; }
 	
-	virtual float GetBevelRadius() const { return mesh->GetBevelRadius(); }
+	virtual float GetBevelRadius() const { return static_cast<ExtTriangleMesh *>(mesh)->GetBevelRadius(); }
 
 	virtual bool HasNormals() const { return static_cast<ExtTriangleMesh *>(mesh)->HasNormals(); }
 	virtual bool HasUVs(const u_int dataIndex) const { return static_cast<ExtTriangleMesh *>(mesh)->HasUVs(dataIndex); }
@@ -574,7 +595,7 @@ public:
 
 	virtual MeshType GetType() const { return TYPE_EXT_TRIANGLE_MOTION; }
 
-	virtual float GetBevelRadius() const { return mesh->GetBevelRadius(); }
+	virtual float GetBevelRadius() const { return static_cast<ExtTriangleMesh *>(mesh)->GetBevelRadius(); }
 
 	virtual bool HasNormals() const { return static_cast<ExtTriangleMesh *>(mesh)->HasNormals(); }
 	virtual bool HasUVs(const u_int dataIndex) const { return static_cast<ExtTriangleMesh *>(mesh)->HasUVs(dataIndex); }

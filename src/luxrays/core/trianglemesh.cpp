@@ -39,14 +39,12 @@ BOOST_CLASS_EXPORT_IMPLEMENT(luxrays::TriangleMesh)
 
 TriangleMesh::TriangleMesh(const u_int meshVertCount,
 		const u_int meshTriCount, Point *meshVertices,
-		Triangle *meshTris,
-		const float bRadius) {
+		Triangle *meshTris) {
 	assert (meshVertCount > 0);
 	assert (meshTriCount > 0);
 	assert (meshVertices != NULL);
 	assert (meshTris != NULL);
 
-	bevelRadius = bRadius;
 	appliedTransSwapsHandedness = false;
 
 	// Check if the buffer has been really allocated with AllocVerticesBuffer() or not.
@@ -148,7 +146,7 @@ TriangleMesh *TriangleMesh::Merge(
 		}
 	}
 
-	return new TriangleMesh(totalVertexCount, totalTriangleCount, v, i, 0.f);
+	return new TriangleMesh(totalVertexCount, totalTriangleCount, v, i);
 }
 
 u_int TriangleMesh::GetUniqueVerticesMapping(vector<u_int> &uniqueVertices,

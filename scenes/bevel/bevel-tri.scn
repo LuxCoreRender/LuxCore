@@ -81,7 +81,7 @@ scene.shapes.obj_cube.ply = mesh-00000.ply
 ##
 scene.shapes.obj_bevel.type = bevel
 scene.shapes.obj_bevel.source = obj_cube
-scene.shapes.obj_bevel.bevel.radius = 0.04
+scene.shapes.obj_bevel.bevel.radius = 0.16
 ################################################################################
 scene.objects.cube1.material = cube1_mat
 scene.objects.cube1.ply = obj_bevel
@@ -91,8 +91,8 @@ scene.objects.cube1.ply = obj_bevel
 #scene.objects.cube2.ply = obj_bevel
 #scene.objects.cube2.transformation = 1 0 0 0 0 1 0 0 0 0 1 0  0 2 0 1
 #
-scene.objects.1400612316620880.material = "ground_mat140061226915208"
-scene.objects.1400612316620880.ply = "mesh-00001.ply"
-scene.objects.1400612316620880.camerainvisible = 0
-scene.objects.1400612316620880.id = 3772660237
-scene.objects.1400612316620880.appliedtransformation = 5.05059481 0 0 0 0 5.05059481 0 0 0 0 5.05059481 0 0 0 0 1
+#scene.objects.1400612316620880.material = "ground_mat140061226915208"
+#scene.objects.1400612316620880.ply = "mesh-00001.ply"
+#scene.objects.1400612316620880.camerainvisible = 0
+#scene.objects.1400612316620880.id = 3772660237
+#scene.objects.1400612316620880.appliedtransformation = 5.05059481 0 0 0 0 5.05059481 0 0 0 0 5.05059481 0 0 0 0 1

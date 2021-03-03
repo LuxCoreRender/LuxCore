@@ -44,18 +44,13 @@ typedef enum {
 	TYPE_EXT_TRIANGLE, TYPE_EXT_TRIANGLE_INSTANCE, TYPE_EXT_TRIANGLE_MOTION
 } MeshType;
 
-class Ray;
-class RayHit;
 
 class Mesh {
 public:
-	Mesh() : bevelRadius(0.f) { }
+	Mesh() { }
 	virtual ~Mesh() { }
 
 	virtual MeshType GetType() const = 0;
-
-	virtual float GetBevelRadius() const { return bevelRadius; }
-	virtual bool IntersectBevel(luxrays::Ray &ray, luxrays::RayHit rayHit) const { return true; }
 
 	virtual BBox GetBBox() const = 0;
 	virtual void GetLocal2World(const float time, luxrays::Transform &local2World) const = 0;
@@ -76,12 +71,8 @@ public:
 
 	friend class boost::serialization::access;
 
-protected:
-	float bevelRadius;
-
 private:
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
-		ar & bevelRadius;
 	}
 };
 
@@ -90,8 +81,7 @@ public:
 	// NOTE: deleting meshVertices and meshIndices is up to the application
 	TriangleMesh(const u_int meshVertCount,
 		const u_int meshTriCount, Point *meshVertices,
-		Triangle *meshTris,
-		const float bRadius);
+		Triangle *meshTris);
 	virtual ~TriangleMesh() { };
 	void Delete() {
 		delete[] vertices;

@@ -123,7 +123,8 @@ BOOST_CLASS_EXPORT_IMPLEMENT(luxrays::ExtTriangleMesh)
 ExtTriangleMesh::ExtTriangleMesh(const u_int meshVertCount, const u_int meshTriCount,
 		Point *meshVertices, Triangle *meshTris, Normal *meshNormals,
 		UV *mUVs, Spectrum *mCols, float *mAlphas, const float bRadius) :
-		TriangleMesh(meshVertCount, meshTriCount, meshVertices, meshTris, bRadius) {
+		TriangleMesh(meshVertCount, meshTriCount, meshVertices, meshTris) {
+	bevelRadius = bRadius;
 	bevelCylinders = nullptr;
 	triBevelCylinders = nullptr;
 
@@ -157,7 +158,8 @@ ExtTriangleMesh::ExtTriangleMesh(const u_int meshVertCount, const u_int meshTriC
 		array<Spectrum *, EXTMESH_MAX_DATA_COUNT> *meshCols,
 		array<float *, EXTMESH_MAX_DATA_COUNT> *meshAlphas,
 		const float bRadius) :
-		TriangleMesh(meshVertCount, meshTriCount, meshVertices, meshTris, bRadius) {
+		TriangleMesh(meshVertCount, meshTriCount, meshVertices, meshTris) {
+	bevelRadius = bRadius;
 	bevelCylinders = nullptr;
 	triBevelCylinders = nullptr;
 

@@ -534,21 +534,32 @@ bool Scene::Intersect(IntersectionDevice *device,
 	bsdf->hitPoint.throughShadowTransparency = false;
 
 	for (;;) {
-		const bool hit = device ? device->TraceRay(ray, rayHit) : dataSet->GetAccelerator(ACCEL_EMBREE)->Intersect(ray, rayHit);
+		bool hit = device ? device->TraceRay(ray, rayHit) : dataSet->GetAccelerator(ACCEL_EMBREE)->Intersect(ray, rayHit);
 
-		bool bevelContinueToTrace = false;
+		bool bevelContinueToTrace = !hit;
 		const Volume *rayVolume = volInfo->GetCurrentVolume();
-		if (hit) {
-			bsdf->Init(fromLight, throughShadowTransparency, *this, *ray, *rayHit, passThrough, volInfo);
-			rayVolume = bsdf->hitPoint.intoObject ? bsdf->hitPoint.exteriorVolume : bsdf->hitPoint.interiorVolume;
-			
+		if (hit) {		
 			// Check if it a triangle with bevel edges
-			const ExtMesh *mesh = bsdf->GetSceneObject()->GetExtMesh();
+			const ExtMesh *mesh = objDefs.GetSceneObject(rayHit->meshIndex)->GetExtMesh();
 			if (mesh->GetBevelRadius() > 0.f) {
-				bevelContinueToTrace = !mesh->IntersectBevel(*ray, *rayHit);
+				bsdf->Init(fromLight, throughShadowTransparency, *this, *ray, *rayHit, passThrough, volInfo);
+				rayVolume = bsdf->hitPoint.intoObject ? bsdf->hitPoint.exteriorVolume : bsdf->hitPoint.interiorVolume;
+				ray->maxt = rayHit->t;
+
+				const float t = mesh->IntersectBevel(*ray, rayHit->triangleIndex);
+				if (t > 0.f) {
+					rayHit->t = t;
+					ray->maxt = t;
+
+					// Update the BSDF with the new intersection point
+					bsdf->hitPoint.p = (*ray)(t);
+					mesh->IntersectBevelNormal(bsdf->hitPoint.p, rayHit->triangleIndex, bsdf->hitPoint.geometryN);
+					bsdf->hitPoint.shadeN = bsdf->hitPoint.geometryN;
+
+					bevelContinueToTrace = false;
+				} else
+					bevelContinueToTrace = true;
 			}
-			
-			ray->maxt = rayHit->t;
 		} else if (!rayVolume) {
 			// No volume information, I use the default volume
 			rayVolume = defaultWorldVolume;
