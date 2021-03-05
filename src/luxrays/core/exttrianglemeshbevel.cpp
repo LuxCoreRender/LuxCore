@@ -69,21 +69,21 @@ void ExtTriangleMesh::PreprocessBevel() {
 		// Look for bevel edges
 		//----------------------------------------------------------------------
 
-//		auto IsSameVertex = [&](const u_int v0, const u_int v1) {
-//			return DistanceSquared(vertices[v0], vertices[v1]) < DEFAULT_EPSILON_STATIC;
-//		};
-//
-//		auto IsSameEdge = [&](const u_int edge0Index, const u_int edge1Index) {
-//			const u_int e0v0 = edges[edge0Index].v0;
-//			const u_int e0v1 = edges[edge0Index].v1;
-//			const u_int e1v0 = edges[edge1Index].v0;
-//			const u_int e1v1 = edges[edge1Index].v1;
-//
-//			return
-//				// Check if the vertices are near enough
-//				(IsSameVertex(e0v0, e1v0) && IsSameVertex(e0v1, e1v1)) ||
-//					(IsSameVertex(e0v0, e1v1) && IsSameVertex(e0v1, e1v0));
-//		};
+		auto IsSameVertex = [&](const u_int v0, const u_int v1) {
+			return DistanceSquared(vertices[v0], vertices[v1]) < DEFAULT_EPSILON_STATIC;
+		};
+
+		auto IsSameEdge = [&](const u_int edge0Index, const u_int edge1Index) {
+			const u_int e0v0 = edges[edge0Index].v0;
+			const u_int e0v1 = edges[edge0Index].v1;
+			const u_int e1v0 = edges[edge1Index].v0;
+			const u_int e1v1 = edges[edge1Index].v1;
+
+			return
+				// Check if the vertices are near enough
+				(IsSameVertex(e0v0, e1v0) && IsSameVertex(e0v1, e1v1)) ||
+					(IsSameVertex(e0v0, e1v1) && IsSameVertex(e0v1, e1v0));
+		};
 
 		for (u_int edge0Index = 0; edge0Index < edges.size(); ++edge0Index) {
 			Edge &e0 = edges[edge0Index];
@@ -92,54 +92,63 @@ void ExtTriangleMesh::PreprocessBevel() {
 			for (u_int edge1Index = edge0Index + 1; edge1Index < edges.size(); ++edge1Index) {
 				Edge &e1 = edges[edge1Index];
 
-				if (!e1.alreadyFound /*&& IsSameEdge(edge0Index, edge1Index)*/) {
-					// It is a candidate. Check if it a convex edge.
+				if (!e1.alreadyFound && IsSameEdge(edge0Index, edge1Index)) {
+					// It is a shared edge. Check if the 2 triangle are not coplanar.
 					
-					// Pick the normal of the first triangles
+					// Pick the triangle normals
 					const Normal &tri0Normal = triNormals[e0.tri];
+					const Normal &tri1Normal = triNormals[e1.tri];
 
-					// Pick the vertex, not part of the edge, of the first triangle
-					const Point &tri0Vertex = vertices[(e0.edge + 2) % 3];
+					if (AbsDot(tri0Normal, tri1Normal) < 1.f -  DEFAULT_EPSILON_STATIC) {
+						// It is a candidate. Check if it is a convex edge.
 
-					// Pick the vertex, not part of the edge, of the second triangle
-					const Point &tri1Vertex = vertices[(e1.edge + 2) % 3];
-					
-					// Compare the vector between the vertices not part of the shared edge and
-					// the triangle 0 normal
-					const float angle = Dot(tri0Normal, Normalize(tri1Vertex - tri0Vertex));
-					
-					if (angle <= DEFAULT_EPSILON_STATIC) {
-						// Ok, it is a convex edge. It is an edge to bevel.
-						e1.alreadyFound = true;
-						
-						const Normal &tri1Normal = triNormals[e1.tri];
+						// Pick the vertex, not part of the edge, of the first triangle
+						const Point &tri0Vertex = vertices[tris[e0.tri].v[(e0.edge + 2) % 3]];
 
-						// /Normals half vector direction
-						const Vector h(-Normalize(tri0Normal + tri1Normal));
-						const float cosHAngle = AbsDot(h, tri0Normal);
+						// Pick the vertex, not part of the edge, of the second triangle
+						const Point &tri1Vertex = vertices[tris[e1.tri].v[(e1.edge + 2) % 3]];
 
-						// Compute the bevel cylinder vertices
+						// Compare the vector between the vertices not part of the shared edge and
+						// the triangle 0 normal
+						const float angle = Dot(tri0Normal, Normalize(tri1Vertex - tri0Vertex));
 
-						const float sinAlpha = sinf(acosf(cosHAngle));
-						const float distance = bevelRadius / sinAlpha;
-						const Vector vertexOffset(distance * h);
-						Point cv0(vertices[e0.v0] + vertexOffset);
-						Point cv1(vertices[e0.v1] + vertexOffset);
-						
-						// Add a new BevelCylinder
-						const u_int bevelCylinderIndex = bevelCyls.size();
-						bevelCyls.push_back(BevelCylinder(cv0, cv1));
+						if (angle < -DEFAULT_EPSILON_STATIC) {
+							// Ok, it is a convex edge. It is an edge to bevel.
+							e1.alreadyFound = true;
 
-						// Add the BevelCylinder to the 2 triangles sharing the edge
-						if (!triBevelCyls[e0.tri].IsFull())
-							triBevelCyls[e0.tri].AddBevelCylinderIndex(bevelCylinderIndex);
-						if (!triBevelCyls[e1.tri].IsFull())
-							triBevelCyls[e1.tri].AddBevelCylinderIndex(bevelCylinderIndex);
+							const Normal &tri1Normal = triNormals[e1.tri];
+
+							// /Normals half vector direction
+							const Vector h(-Normalize(tri0Normal + tri1Normal));
+							const float cosHAngle = AbsDot(h, tri0Normal);
+
+							// Compute the bevel cylinder vertices
+
+							const float sinAlpha = sinf(acosf(cosHAngle));
+							const float distance = bevelRadius / sinAlpha;
+							const Vector vertexOffset(distance * h);
+							const Vector bevelOffset = Normalize(vertices[e0.v1] - vertices[e0.v0]) * bevelRadius;
+							Point cv0(vertices[e0.v0] + vertexOffset + bevelOffset);
+							Point cv1(vertices[e0.v1] + vertexOffset - bevelOffset);
+
+							// Add a new BevelCylinder
+							const u_int bevelCylinderIndex = bevelCyls.size();
+							bevelCyls.push_back(BevelCylinder(cv0, cv1));
+
+							// Add the BevelCylinder to the 2 triangles sharing the edge
+							if (!triBevelCyls[e0.tri].IsFull())
+								triBevelCyls[e0.tri].AddBevelCylinderIndex(bevelCylinderIndex);
+							if (!triBevelCyls[e1.tri].IsFull())
+								triBevelCyls[e1.tri].AddBevelCylinderIndex(bevelCylinderIndex);
+						}
+
+						// I will bevel only edges shared by only 2 triangles
+						break;
 					}
 				}
 			}			
 		}
-
+		
 		cout << "ExtTriangleMesh " << this << " bevel cylinders count: " << bevelCyls.size() << endl;
 
 		delete[] bevelCylinders;
@@ -225,30 +234,27 @@ void ExtTriangleMesh::BevelCylinder::IntersectNormal(const Point &pos, const flo
 float ExtTriangleMesh::IntersectBevel(const Ray &ray, const u_int triangleIndex,
 		luxrays::Point &p, luxrays::Normal &n) const {
 	// Check the intersection with TriangleBevelCylinders
-//	const TriangleBevelCylinders &triBevelCyl = triBevelCylinders[triangleIndex];
+	const TriangleBevelCylinders &triBevelCyl = triBevelCylinders[triangleIndex];
 
 	// Check the intersection with all BevelCylinder
 	float minT = numeric_limits<float>::infinity();
-//	for (u_int i = 0; i < 3; ++i) {
-//		if (triBevelCyl.indices[0] != NULL_INDEX) {
-//			const float t = bevelCylinders[triBevelCyl.indices[0]].Intersect(ray, bevelRadius);
-//			if (t > 0.f)
-//				minT = Min(minT, t);
-//		}
-//	}
+	u_int triBevelCylIndex = NULL_INDEX;
+	for (u_int i = 0; i < 3; ++i) {
+		if (triBevelCyl.indices[i] != NULL_INDEX) {
+			const float t = bevelCylinders[triBevelCyl.indices[i]].Intersect(ray, bevelRadius);
+			if ((t > 0.f) && (t < minT)) {
+				triBevelCylIndex = triBevelCyl.indices[i];
+				minT = t;
+			}
+		}
+	}
 	
-	BevelCylinder bevelCyl(Point(0.f, 0.f, 1.5f), Point(0.f, 0.f, 2.5f));
-
-	const float t = bevelCyl.Intersect(ray, bevelRadius);
-	if (t > 0.f)
-		minT = Min(minT, t);
-
-	if (minT == numeric_limits<float>::infinity())
+	if (triBevelCylIndex == NULL_INDEX)
 		return -1.f;
 	else {
 		p = ray(minT);
 
-		bevelCyl.IntersectNormal(p, bevelRadius, n);
+		bevelCylinders[triBevelCylIndex].IntersectNormal(p, bevelRadius, n);
 
 		return minT;
 	}
