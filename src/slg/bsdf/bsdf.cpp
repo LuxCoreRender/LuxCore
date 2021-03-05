@@ -146,6 +146,17 @@ void BSDF::Init(const bool fixedFromLight, const bool throughShadowTransparency,
 	frame.SetFromZ(hitPoint.shadeN);
 }
 
+void BSDF::MoveHitPoint(const Point &p, const Normal &n) {
+	hitPoint.p = p;
+	hitPoint.geometryN = n;
+	hitPoint.interpolatedN = n;
+	hitPoint.shadeN = n;
+
+	Vector x, y;
+	CoordinateSystem(Vector(n), &x, &y);
+	frame = Frame(x, y, n);
+}
+
 bool BSDF::IsAlbedoEndPoint() const {
 	return !IsDelta() ||
 			// This is a very special case to not have white Albedo AOV if the

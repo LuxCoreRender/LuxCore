@@ -69,11 +69,8 @@ public:
 	virtual ~ExtMesh() { }
 
 	virtual float GetBevelRadius() const { return bevelRadius; }
-	virtual float IntersectBevel(const luxrays::Ray &ray, const u_int triangleIndex) const { return -1.f; }
-	virtual void IntersectBevelNormal(const luxrays::Point &pos, const u_int triangleIndex,
-			luxrays::Normal &n) const {
-		throw std::runtime_error("Called ExtMesh::IntersectBevelNormal()");
-	}
+	virtual float IntersectBevel(const luxrays::Ray &ray, const u_int triangleIndex,
+			luxrays::Point &p, luxrays::Normal &n) const { return -1.f; }
 
 	virtual bool HasNormals() const = 0;
 	virtual bool HasUVs(const u_int dataIndex) const = 0;
@@ -287,9 +284,8 @@ public:
 		return CopyExt(nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, bRadius);
 	}
 
-	virtual float IntersectBevel(const luxrays::Ray &ray, const u_int triangleIndex) const;
-	virtual void IntersectBevelNormal(const luxrays::Point &posy, const u_int triangleIndex,
-			luxrays::Normal &n) const;
+	virtual float IntersectBevel(const luxrays::Ray &ray, const u_int triangleIndex,
+			luxrays::Point &p, luxrays::Normal &n) const;
 	
 	static ExtTriangleMesh *Load(const std::string &fileName);
 	static ExtTriangleMesh *Merge(const std::vector<const ExtTriangleMesh *> &meshes,
@@ -299,7 +295,7 @@ public:
 	friend class ExtMotionTriangleMesh;
 	friend class boost::serialization::access;
 
-private:
+public:
 	class BevelCylinder {
 	public:
 		BevelCylinder() { }

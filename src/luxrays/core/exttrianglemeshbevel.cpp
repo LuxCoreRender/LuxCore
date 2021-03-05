@@ -187,10 +187,10 @@ float ExtTriangleMesh::BevelCylinder::Intersect(const Ray &ray, const float beve
 	float h = b * b - a * c;
     if (h >= 0.f) {
 		float t = (-b - sqrtf(h)) / a;
-		const float y = baoa + t*bard;
+		const float y = baoa + t * bard;
 
 		// Cylinder body of the BevelCylinder
-		if ((t > ray.mint) && (t < ray.maxt) && (y < baba))
+		if ((y > 0.f) && (y < baba) && (t > ray.mint) && (t < ray.maxt))
 			return t;
 
 		// Spherical caps of the BevelCylinder
@@ -218,11 +218,12 @@ void ExtTriangleMesh::BevelCylinder::IntersectNormal(const Point &pos, const flo
     const Vector ba = b - a;
     const Vector pa = pos - a;
 	const float h = Clamp(Dot(pa, ba) / Dot(ba, ba), 0.f, 1.f);
-	
+
 	n = Normal((pa - h * ba) * (1.f / r));
 }
 
-float ExtTriangleMesh::IntersectBevel(const Ray &ray, const u_int triangleIndex) const {
+float ExtTriangleMesh::IntersectBevel(const Ray &ray, const u_int triangleIndex,
+		luxrays::Point &p, luxrays::Normal &n) const {
 	// Check the intersection with TriangleBevelCylinders
 //	const TriangleBevelCylinders &triBevelCyl = triBevelCylinders[triangleIndex];
 
@@ -236,7 +237,7 @@ float ExtTriangleMesh::IntersectBevel(const Ray &ray, const u_int triangleIndex)
 //		}
 //	}
 	
-	BevelCylinder bevelCyl(Point(0.f, 0.f, 2.2f), Point(0.f, 0.f, 2.8f));
+	BevelCylinder bevelCyl(Point(0.f, 0.f, 1.5f), Point(0.f, 0.f, 2.5f));
 
 	const float t = bevelCyl.Intersect(ray, bevelRadius);
 	if (t > 0.f)
@@ -244,15 +245,11 @@ float ExtTriangleMesh::IntersectBevel(const Ray &ray, const u_int triangleIndex)
 
 	if (minT == numeric_limits<float>::infinity())
 		return -1.f;
-	else
-		return minT;
-}
+	else {
+		p = ray(minT);
 
-void ExtTriangleMesh::IntersectBevelNormal(const luxrays::Point &pos, const u_int triangleIndex,
-		luxrays::Normal &n) const {
-	//const TriangleBevelCylinders &triBevelCyl = triBevelCylinders[triangleIndex];
-	
-	BevelCylinder bevelCyl(Point(0.f, 0.f, 2.2f), Point(0.f, 0.f, 2.8f));
-	
-	bevelCyl.IntersectNormal(pos, bevelRadius, n);
+		bevelCyl.IntersectNormal(p, bevelRadius, n);
+
+		return minT;
+	}
 }
