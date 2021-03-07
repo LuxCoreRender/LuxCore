@@ -545,19 +545,15 @@ bool Scene::Intersect(IntersectionDevice *device,
 			// Check if it a triangle with bevel edges
 			const ExtMesh *mesh = objDefs.GetSceneObject(rayHit->meshIndex)->GetExtMesh();
 			if (mesh->GetBevelRadius() > 0.f) {
+				float t;
 				Point p;
 				Normal n;
-				const float t = mesh->IntersectBevel(*ray, rayHit->triangleIndex, p, n);
-
-				if (t > 0.f) {
+				if (mesh->IntersectBevel(*ray, *rayHit, bevelContinueToTrace, t, p, n)) {
 					rayHit->t = t;
 
 					// Update the BSDF with the new intersection point and normal
 					bsdf->MoveHitPoint(p, n);
-
-					bevelContinueToTrace = false;
-				} else
-					bevelContinueToTrace = true;
+				}
 			}
 
 			ray->maxt = rayHit->t;

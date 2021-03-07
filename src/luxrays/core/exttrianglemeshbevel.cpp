@@ -118,22 +118,25 @@ void ExtTriangleMesh::PreprocessBevel() {
 
 							const Normal &tri1Normal = triNormals[e1.tri];
 
-							// /Normals half vector direction
+							// Normals half vector direction
 							const Vector h(-Normalize(tri0Normal + tri1Normal));
 							const float cosHAngle = AbsDot(h, tri0Normal);
 
 							// Compute the bevel cylinder vertices
+							const float distance = bevelRadius / cosHAngle;
 
-							const float sinAlpha = sinf(acosf(cosHAngle));
-							const float distance = bevelRadius / sinAlpha;
 							const Vector vertexOffset(distance * h);
-							const Vector bevelOffset = Normalize(vertices[e0.v1] - vertices[e0.v0]) * bevelRadius;
+							const Vector bevelOffset =  Normalize(vertices[e0.v1] - vertices[e0.v0]) * bevelRadius;
 							Point cv0(vertices[e0.v0] + vertexOffset + bevelOffset);
 							Point cv1(vertices[e0.v1] + vertexOffset - bevelOffset);
 
+							// Compute the max. distance from the edge of beveled point
+							const float hAngle = acosf(cosHAngle);
+							const float maxEdgeDistance = distance * sinf(hAngle);
+
 							// Add a new BevelCylinder
 							const u_int bevelCylinderIndex = bevelCyls.size();
-							bevelCyls.push_back(BevelCylinder(cv0, cv1));
+							bevelCyls.push_back(BevelCylinder(cv0, cv1, e0.v0, e0.v1, maxEdgeDistance));
 
 							// Add the BevelCylinder to the 2 triangles sharing the edge
 							if (!triBevelCyls[e0.tri].IsFull())
@@ -167,6 +170,22 @@ void ExtTriangleMesh::PreprocessBevel() {
 	
 	const double endTotal = WallClockTime();
 	cout << "ExtTriangleMesh " << this << " bevel preprocessing time: " << (endTotal - start) << "secs" << endl;
+}
+
+bool ExtTriangleMesh::BevelCylinder::CanIntersect(const Point *vertices, const luxrays::Point &pos) const {
+	const Point &a = pos;
+	const Point &b = vertices[indexEdgeV0];
+	const Point &c = vertices[indexEdgeV1];
+
+	const Vector d = Normalize(c - b);
+	const Vector v = a - b;
+
+	const float t = Dot(v, d);
+	const Point p = b + t * d;
+
+	const float distance = (a - p).Length();
+
+	return (distance < maxEdgeDistance);
 }
 
 float ExtTriangleMesh::BevelCylinder::Intersect(const Ray &ray, const float bevelRadius) const {
@@ -231,31 +250,37 @@ void ExtTriangleMesh::BevelCylinder::IntersectNormal(const Point &pos, const flo
 	n = Normal((pa - h * ba) * (1.f / r));
 }
 
-float ExtTriangleMesh::IntersectBevel(const Ray &ray, const u_int triangleIndex,
-		luxrays::Point &p, luxrays::Normal &n) const {
+bool ExtTriangleMesh::IntersectBevel(const Ray &ray, const RayHit &rayHit,
+		bool &continueToTrace, float &rayHitT, Point &p, Normal &n) const {
 	// Check the intersection with TriangleBevelCylinders
-	const TriangleBevelCylinders &triBevelCyl = triBevelCylinders[triangleIndex];
+	const TriangleBevelCylinders &triBevelCyl = triBevelCylinders[rayHit.triangleIndex];
 
 	// Check the intersection with all BevelCylinder
-	float minT = numeric_limits<float>::infinity();
-	u_int triBevelCylIndex = NULL_INDEX;
 	for (u_int i = 0; i < 3; ++i) {
 		if (triBevelCyl.indices[i] != NULL_INDEX) {
-			const float t = bevelCylinders[triBevelCyl.indices[i]].Intersect(ray, bevelRadius);
-			if ((t > 0.f) && (t < minT)) {
-				triBevelCylIndex = triBevelCyl.indices[i];
-				minT = t;
+			const BevelCylinder &bevelCylinder = bevelCylinders[triBevelCyl.indices[i]];
+
+			// Check if p distance form the edge is small enough to be a candidate
+			// for the bevel process
+			p = ray(rayHit.t);
+			if (bevelCylinder.CanIntersect(vertices, p)) {
+				rayHitT = bevelCylinder.Intersect(ray, bevelRadius);
+				if (rayHitT > 0.f) {
+					continueToTrace = false;
+
+					bevelCylinder.IntersectNormal(p, bevelRadius, n);
+
+					return true;
+				} else {
+					continueToTrace = true;
+
+					return false;
+				}
 			}
 		}
 	}
-	
-	if (triBevelCylIndex == NULL_INDEX)
-		return -1.f;
-	else {
-		p = ray(minT);
 
-		bevelCylinders[triBevelCylIndex].IntersectNormal(p, bevelRadius, n);
+	continueToTrace = false;
 
-		return minT;
-	}
+	return false;
 }

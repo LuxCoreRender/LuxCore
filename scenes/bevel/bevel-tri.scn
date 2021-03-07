@@ -3,8 +3,6 @@ scene.camera.clipyon = 100
 scene.camera.shutteropen = 0
 scene.camera.shutterclose = 1
 scene.camera.autovolume.enable = 1
-scene.camera.lookat.orig = 9.40680981 -6.48706007 6.90903854
-scene.camera.lookat.target = 8.66987419 -5.97847414 6.46376705
 scene.camera.up = 0 0 1
 scene.camera.screenwindow = -1 1 -0.5625 0.5625
 scene.camera.lensradius = 0
@@ -18,16 +16,22 @@ scene.camera.bokeh.power = 3
 scene.camera.bokeh.distribution.type = "NONE"
 scene.camera.bokeh.scale.x = 0.707106829
 scene.camera.bokeh.scale.y = 0.707106829
+#
+#scene.camera.lookat.orig = 2.583127 0.1859199 3.847553
+#scene.camera.lookat.target = 1.780911 0.5072598 3.344372
+#
+scene.camera.lookat.orig = 9.40680981 -6.48706007 6.90903854
+scene.camera.lookat.target = 8.66987419 -5.97847414 6.46376705
 ##
 #scene.camera.lookat.orig = 3.36148238 -1.48848963 4.42218685
 #scene.camera.lookat.target = 2.7136817 -0.827001512 4.04431009
 #scene.camera.up = 0 0 1
 ##
-scene.lights.__WORLD_BACKGROUND_LIGHT__.gain = 1.99999995e-05 1.99999995e-05 1.99999995e-05
-scene.lights.__WORLD_BACKGROUND_LIGHT__.transformation = 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1
-scene.lights.__WORLD_BACKGROUND_LIGHT__.type = "sky2"
-scene.lights.__WORLD_BACKGROUND_LIGHT__.dir = 0 0 1
-scene.lights.__WORLD_BACKGROUND_LIGHT__.turbidity = 2.20000005
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.gain = 1.99999995e-05 1.99999995e-05 1.99999995e-05
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.transformation = 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.type = "sky2"
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.dir = 0 0 1
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.turbidity = 2.20000005
 ##
 scene.lights.140062413928968.gain = 1200 1200 1200
 scene.lights.140062413928968.transformation = -0.290864646 0.955171168 -0.0551890582 0 -0.771100819 -0.199883357 0.604524732 0 0.566393197 0.218391195 0.794672251 0 4.07624531 1.00545394 5.903862 1
@@ -48,7 +52,7 @@ scene.textures.140062619160584Color.mapping.type = "globalmapping3d"
 scene.textures.140062619160584Color.mapping.transformation = 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1
 #
 scene.textures.wireframetex.type = wireframe
-scene.textures.wireframetex.width = 0.04
+scene.textures.wireframetex.width = 0.3
 scene.textures.wireframetex.border = 0.7 0.0 0.0
 scene.textures.wireframetex.inside = 0.7 0.7 0.7
 ################################################################################
@@ -81,7 +85,7 @@ scene.shapes.obj_cube.ply = mesh-00000.ply
 ##
 scene.shapes.obj_bevel.type = bevel
 scene.shapes.obj_bevel.source = obj_cube
-scene.shapes.obj_bevel.bevel.radius = 0.16
+scene.shapes.obj_bevel.bevel.radius = 0.3
 ################################################################################
 scene.objects.cube1.material = cube1_mat
 scene.objects.cube1.ply = obj_bevel

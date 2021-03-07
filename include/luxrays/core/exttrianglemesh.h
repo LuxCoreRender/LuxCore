@@ -69,8 +69,12 @@ public:
 	virtual ~ExtMesh() { }
 
 	virtual float GetBevelRadius() const { return bevelRadius; }
-	virtual float IntersectBevel(const luxrays::Ray &ray, const u_int triangleIndex,
-			luxrays::Point &p, luxrays::Normal &n) const { return -1.f; }
+	virtual bool IntersectBevel(const luxrays::Ray &ray, const luxrays::RayHit &rayHit,
+			bool &continueToTrace, float &rayHitT,
+			luxrays::Point &p, luxrays::Normal &n) const {
+		continueToTrace = false;
+		return false;
+	}
 
 	virtual bool HasNormals() const = 0;
 	virtual bool HasUVs(const u_int dataIndex) const = 0;
@@ -284,7 +288,8 @@ public:
 		return CopyExt(nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, bRadius);
 	}
 
-	virtual float IntersectBevel(const luxrays::Ray &ray, const u_int triangleIndex,
+	virtual bool IntersectBevel(const luxrays::Ray &ray, const luxrays::RayHit &rayHit,
+			bool &continueToTrace, float &rayHitT,
 			luxrays::Point &p, luxrays::Normal &n) const;
 	
 	static ExtTriangleMesh *Load(const std::string &fileName);
@@ -299,16 +304,24 @@ public:
 	class BevelCylinder {
 	public:
 		BevelCylinder() { }
-		BevelCylinder(const luxrays::Point &cv0, const luxrays::Point &cv1) {
+		BevelCylinder(const luxrays::Point &cv0, const luxrays::Point &cv1,
+				const u_int iev0, const u_int iev1, const float maxDist) {
 			v0 = cv0;
 			v1 = cv1;
+
+			indexEdgeV0 = iev0;
+			indexEdgeV1 = iev1;
+			maxEdgeDistance = maxDist;
 		}
 
+		bool CanIntersect(const Point *vertices, const luxrays::Point &pos) const;
 		float Intersect(const luxrays::Ray &ray, const float bevelRadius) const;
 		void IntersectNormal(const luxrays::Point &pos, const float bevelRadius,
 				luxrays::Normal &n) const;
 
 		luxrays::Point v0, v1;
+		u_int indexEdgeV0, indexEdgeV1;
+		float maxEdgeDistance;
 	};
 
 	class TriangleBevelCylinders {
