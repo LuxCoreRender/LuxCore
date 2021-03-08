@@ -50,11 +50,13 @@ scene.textures.140062619160584Color.texture1 = "1 0 0"
 scene.textures.140062619160584Color.texture2 = "1 1 0"
 scene.textures.140062619160584Color.mapping.type = "globalmapping3d"
 scene.textures.140062619160584Color.mapping.transformation = 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1
-#
+##
 scene.textures.wireframetex.type = wireframe
 scene.textures.wireframetex.width = 0.3
 scene.textures.wireframetex.border = 0.7 0.0 0.0
 scene.textures.wireframetex.inside = 0.7 0.7 0.7
+##
+scene.textures.vertcol.type = hitpointcolor
 ################################################################################
 #scene.materials.cube1_mat.type = "matte"
 #scene.materials.cube1_mat.kd = "0.7"
@@ -62,6 +64,7 @@ scene.textures.wireframetex.inside = 0.7 0.7 0.7
 scene.materials.cube1_mat.type = disney
 scene.materials.cube1_mat.basecolor = 0.5 0.5 0.5
 #scene.materials.cube1_mat.basecolor = wireframetex
+#scene.materials.cube1_mat.basecolor = vertcol
 scene.materials.cube1_mat.specular = 0.5
 scene.materials.cube1_mat.roughness = 0.1
 scene.materials.cube1_mat.clearcoatgloss = 1.0
@@ -83,8 +86,11 @@ scene.shapes.obj_cube.type = mesh
 #scene.shapes.obj_cube.ply = tri.ply
 scene.shapes.obj_cube.ply = mesh-00000.ply
 ##
+scene.shapes.obj_harl.type = harlequin
+scene.shapes.obj_harl.source = obj_cube
+##
 scene.shapes.obj_bevel.type = bevel
-scene.shapes.obj_bevel.source = obj_cube
+scene.shapes.obj_bevel.source = obj_harl
 scene.shapes.obj_bevel.bevel.radius = 0.3
 ################################################################################
 scene.objects.cube1.material = cube1_mat

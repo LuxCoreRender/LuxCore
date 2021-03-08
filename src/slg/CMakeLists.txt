@@ -218,7 +218,6 @@ add_library(opensubdiv STATIC ${OPENSUBDIV_SRCS})
 set(SLG_KERNELS
 	${LuxRays_SOURCE_DIR}/include/slg/cameras/camera_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/cameras/camera_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/slg/core/indexbvh_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/engines/caches/photongi/pgic_types.cl
 	${LuxRays_SOURCE_DIR}/include/slg/engines/caches/photongi/pgic_funcs.cl
 	${LuxRays_SOURCE_DIR}/include/slg/engines/pathoclbase/kernels/pathoclbase_datatypes.cl
@@ -616,7 +615,6 @@ file(MAKE_DIRECTORY ${generated_kernels_dir})
 PreprocessOCLKernels(${generated_kernels_dir} slg ${SLG_KERNELS})
 
 set(SLG_KERNEL_SRCS
-	${generated_kernels_dir}/indexbvh_types_kernel.cpp
 	${generated_kernels_dir}/sampler_types_kernel.cpp
 	${generated_kernels_dir}/sampler_funcs_kernel.cpp
 	${generated_kernels_dir}/sampler_random_funcs_kernel.cpp

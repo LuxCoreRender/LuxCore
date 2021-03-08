@@ -617,7 +617,7 @@ const ELVCacheEntry *ELVCBvh::GetNearestEntry(const Point &p, const Normal &n, c
 	const u_int stopNode = BVHNodeData_GetSkipIndex(arrayNodes[0].nodeData); // Non-existent
 
 	while (currentNode < stopNode) {
-		const slg::ocl::IndexBVHArrayNode &node = arrayNodes[currentNode];
+		const luxrays::ocl::IndexBVHArrayNode &node = arrayNodes[currentNode];
 
 		const u_int nodeData = node.nodeData;
 		if (BVHNodeData_IsLeaf(nodeData)) {

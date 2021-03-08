@@ -27,6 +27,7 @@
 #include <boost/foreach.hpp>
 
 #include "luxrays/luxrays.h"
+#include "luxrays/core/bvh/bvhbuild.h"
 #include "luxrays/core/color/color.h"
 #include "luxrays/core/geometry/uv.h"
 #include "luxrays/core/geometry/triangle.h"
@@ -304,50 +305,33 @@ public:
 	class BevelCylinder {
 	public:
 		BevelCylinder() { }
-		BevelCylinder(const luxrays::Point &cv0, const luxrays::Point &cv1,
-				const u_int iev0, const u_int iev1, const float maxDist) {
+		BevelCylinder(const luxrays::Point &cv0, const luxrays::Point &cv1) {
 			v0 = cv0;
 			v1 = cv1;
-
-			indexEdgeV0 = iev0;
-			indexEdgeV1 = iev1;
-			maxEdgeDistance = maxDist;
 		}
 
-		bool CanIntersect(const Point *vertices, const luxrays::Point &pos) const;
 		float Intersect(const luxrays::Ray &ray, const float bevelRadius) const;
 		void IntersectNormal(const luxrays::Point &pos, const float bevelRadius,
 				luxrays::Normal &n) const;
 
 		luxrays::Point v0, v1;
-		u_int indexEdgeV0, indexEdgeV1;
-		float maxEdgeDistance;
 	};
-
-	class TriangleBevelCylinders {
+	
+	class BevelBoundingCylinder {
 	public:
-		TriangleBevelCylinders() {
-			indices[0] = NULL_INDEX;
-			indices[1] = NULL_INDEX;
-			indices[2] = NULL_INDEX;
+		BevelBoundingCylinder() { }
+		BevelBoundingCylinder(const luxrays::Point &cv0, const luxrays::Point &cv1,
+		const u_int index) {
+			v0 = cv0;
+			v1 = cv1;
+			bevelCylinderIndex = index;
 		}
 
-		void AddBevelCylinderIndex(const u_int i) {
-			if (indices[0] == NULL_INDEX)
-				indices[0] = i;
-			else if (indices[1] == NULL_INDEX)
-				indices[1] = i;
-			else if (indices[2] == NULL_INDEX)
-				indices[2] = i;
-		}
-
-		bool IsFull() const {
-			return (indices[0] != NULL_INDEX) &&
-					(indices[1] != NULL_INDEX) &&
-					(indices[2] != NULL_INDEX);
-		}
+		luxrays::BBox GetBBox(const float bevelRadius) const;
+		bool IsInside(const luxrays::Point &p, const float bevelRadius) const;
 		
-		u_int indices[3];
+		luxrays::Point v0, v1;
+		u_int bevelCylinderIndex;
 	};
 
 	static ExtTriangleMesh *LoadPly(const std::string &fileName);
@@ -364,7 +348,7 @@ public:
 
 	void Preprocess();
 	void PreprocessBevel();
-
+	
 	virtual void SavePly(const std::string &fileName) const;
 	virtual void SaveSerialized(const std::string &fileName) const;
 
@@ -463,7 +447,8 @@ public:
 		}
 
 		bevelCylinders = nullptr;
-		triBevelCylinders = nullptr;
+		bevelBoundingCylinders = nullptr;
+		bevelBVHArrayNodes = nullptr;
 		
 		Preprocess();
 	}
@@ -480,7 +465,8 @@ public:
 	std::array<float *, EXTMESH_MAX_DATA_COUNT> triAOV; // Triangle AOV
 
 	BevelCylinder *bevelCylinders;
-	TriangleBevelCylinders *triBevelCylinders;
+	BevelBoundingCylinder *bevelBoundingCylinders;
+	luxrays::ocl::IndexBVHArrayNode *bevelBVHArrayNodes;
 };
 
 class ExtInstanceTriangleMesh : public InstanceTriangleMesh, public ExtMesh {

@@ -71,7 +71,7 @@ SpectrumGroup PGICPhotonBvh::ConnectAllNearEntries(const BSDF &bsdf) const {
 	const u_int stopNode = IndexBVHNodeData_GetSkipIndex(arrayNodes[0].nodeData); // Non-existent
 
 	while (currentNode < stopNode) {
-		const slg::ocl::IndexBVHArrayNode &node = arrayNodes[currentNode];
+		const luxrays::ocl::IndexBVHArrayNode &node = arrayNodes[currentNode];
 
 		const u_int nodeData = node.nodeData;
 		if (IndexBVHNodeData_IsLeaf(nodeData)) {
@@ -131,7 +131,7 @@ const RadiancePhoton *PGICRadiancePhotonBvh::GetNearestEntry(const Point &p, con
 	const u_int stopNode = BVHNodeData_GetSkipIndex(arrayNodes[0].nodeData); // Non-existent
 
 	while (currentNode < stopNode) {
-		const slg::ocl::IndexBVHArrayNode &node = arrayNodes[currentNode];
+		const luxrays::ocl::IndexBVHArrayNode &node = arrayNodes[currentNode];
 
 		const u_int nodeData = node.nodeData;
 		if (BVHNodeData_IsLeaf(nodeData)) {

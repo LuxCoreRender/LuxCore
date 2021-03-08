@@ -106,7 +106,7 @@ void CompiledScene::CompileDLSC(const LightStrategyDLSCache *dlscLightStrategy) 
 
 		// Compile the DLSC BVH
 		u_int nNodes;
-		const slg::ocl::IndexBVHArrayNode *nodes = bvh->GetArrayNodes(&nNodes);
+		const luxrays::ocl::IndexBVHArrayNode *nodes = bvh->GetArrayNodes(&nNodes);
 		dlscBVHArrayNode.resize(nNodes);
 		copy(&nodes[0], &nodes[0] + nNodes, dlscBVHArrayNode.begin());
 	} else {
@@ -250,7 +250,7 @@ void CompiledScene::CompileELVC(const EnvLightVisibilityCache *visibilityMapCach
 	
 		// Compile the ELVC BVH
 		u_int nNodes;
-		const slg::ocl::IndexBVHArrayNode *nodes = bvh->GetArrayNodes(&nNodes);
+		const luxrays::ocl::IndexBVHArrayNode *nodes = bvh->GetArrayNodes(&nNodes);
 		elvcBVHArrayNode.resize(nNodes);
 		copy(&nodes[0], &nodes[0] + nNodes, elvcBVHArrayNode.begin());
 

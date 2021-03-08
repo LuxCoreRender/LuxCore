@@ -126,7 +126,8 @@ ExtTriangleMesh::ExtTriangleMesh(const u_int meshVertCount, const u_int meshTriC
 		TriangleMesh(meshVertCount, meshTriCount, meshVertices, meshTris) {
 	bevelRadius = bRadius;
 	bevelCylinders = nullptr;
-	triBevelCylinders = nullptr;
+	bevelBoundingCylinders = nullptr;
+	bevelBVHArrayNodes = nullptr;
 
 	fill(uvs.begin(), uvs.end(), nullptr);
 	fill(cols.begin(), cols.end(), nullptr);
@@ -161,7 +162,8 @@ ExtTriangleMesh::ExtTriangleMesh(const u_int meshVertCount, const u_int meshTriC
 		TriangleMesh(meshVertCount, meshTriCount, meshVertices, meshTris) {
 	bevelRadius = bRadius;
 	bevelCylinders = nullptr;
-	triBevelCylinders = nullptr;
+	bevelBoundingCylinders = nullptr;
+	bevelBVHArrayNodes = nullptr;
 
 	fill(uvs.begin(), uvs.end(), nullptr);
 	fill(cols.begin(), cols.end(), nullptr);
@@ -229,7 +231,8 @@ void ExtTriangleMesh::Delete() {
 		delete[] t;
 
 	delete[] bevelCylinders;
-	delete[] triBevelCylinders;
+	delete[] bevelBoundingCylinders;
+	delete[] bevelBVHArrayNodes;
 }
 
 Normal *ExtTriangleMesh::ComputeNormals() {
