@@ -321,16 +321,18 @@ public:
 	public:
 		BevelBoundingCylinder() { }
 		BevelBoundingCylinder(const luxrays::Point &cv0, const luxrays::Point &cv1,
-		const u_int index) {
+		const float r, const u_int index) {
 			v0 = cv0;
 			v1 = cv1;
+			radius = r;
 			bevelCylinderIndex = index;
 		}
 
-		luxrays::BBox GetBBox(const float bevelRadius) const;
-		bool IsInside(const luxrays::Point &p, const float bevelRadius) const;
+		luxrays::BBox GetBBox() const;
+		bool IsInside(const luxrays::Point &p) const;
 		
 		luxrays::Point v0, v1;
+		float radius;
 		u_int bevelCylinderIndex;
 	};
 

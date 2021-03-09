@@ -36,8 +36,8 @@ float ExtTriangleMesh::BevelCylinder::Intersect(const Ray &ray, const float beve
 	const Vector &rd = ray.d;
 	const float &ra = bevelRadius;
 	
-    const Vector  ba = pb - pa;
-    const Vector  oa = ro - pa;
+    const Vector ba = pb - pa;
+    const Vector oa = ro - pa;
 
     const float baba = Dot(ba, ba);
     const float bard = Dot(ba, rd);
@@ -84,14 +84,14 @@ void ExtTriangleMesh::BevelCylinder::IntersectNormal(const Point &pos, const flo
     const Vector pa = pos - a;
 	const float h = Clamp(Dot(pa, ba) / Dot(ba, ba), 0.f, 1.f);
 
-	n = Normal((pa - h * ba) * (1.f / r));
+	n = Normal((pa - h * ba) / r);
 }
 
 //------------------------------------------------------------------------------
 // ExtTriangleMesh::BevelBoundingCylinder
 //------------------------------------------------------------------------------
 
-BBox ExtTriangleMesh::BevelBoundingCylinder::GetBBox(const float bevelRadius) const {
+BBox ExtTriangleMesh::BevelBoundingCylinder::GetBBox() const {
 	// From https://www.iquilezles.org/www/articles/diskbbox/diskbbox.htm
 	
 	const Point &pa = v0;
@@ -99,9 +99,9 @@ BBox ExtTriangleMesh::BevelBoundingCylinder::GetBBox(const float bevelRadius) co
 	const Vector a = pb - pa;
 	const float aLength = a.LengthSquared();
     const Vector e(
-			bevelRadius * sqrtf(1.f - a.x * a.x / aLength),
-			bevelRadius * sqrtf(1.f - a.y * a.y / aLength),
-			bevelRadius * sqrtf(1.f - a.z * a.z / aLength)
+			radius * sqrtf(1.f - a.x * a.x / aLength),
+			radius * sqrtf(1.f - a.y * a.y / aLength),
+			radius * sqrtf(1.f - a.z * a.z / aLength)
 		);
 
 	BBox bbox;
@@ -114,7 +114,7 @@ BBox ExtTriangleMesh::BevelBoundingCylinder::GetBBox(const float bevelRadius) co
     return bbox;
 }
 
-bool ExtTriangleMesh::BevelBoundingCylinder::IsInside(const luxrays::Point &pos, const float bevelRadius) const {
+bool ExtTriangleMesh::BevelBoundingCylinder::IsInside(const luxrays::Point &pos) const {
 	// From https://math.stackexchange.com/questions/1905533/find-perpendicular-distance-from-point-to-line-in-3d
 
 	const Point &a = pos;
@@ -133,7 +133,7 @@ bool ExtTriangleMesh::BevelBoundingCylinder::IsInside(const luxrays::Point &pos,
 	
 	const Point p = b + t * d;
 
-    return (p - a).Length();
+    return (p - a).Length() < radius;
 }
 
 //------------------------------------------------------------------------------
@@ -236,7 +236,7 @@ void ExtTriangleMesh::PreprocessBevel() {
 							const float distance = bevelRadius / cosHAngle;
 
 							const Vector vertexOffset(distance * h);
-							const Vector bevelOffset =  Normalize(vertices[e0.v1] - vertices[e0.v0]) * bevelRadius;
+							const Vector bevelOffset = Normalize(vertices[e0.v1] - vertices[e0.v0]) * bevelRadius;
 							Point cv0(vertices[e0.v0] + vertexOffset + bevelOffset);
 							Point cv1(vertices[e0.v1] + vertexOffset - bevelOffset);
 
@@ -245,9 +245,10 @@ void ExtTriangleMesh::PreprocessBevel() {
 							bevelCyls.push_back(BevelCylinder(cv0, cv1));
 							
 							// Add a new BoundinglCylinder
-							Point bcv0(vertices[e0.v0] + .5 * vertexOffset);
-							Point bcv1(vertices[e0.v1] + .5 * vertexOffset);
-							boundingCyls.push_back(BevelBoundingCylinder(bcv0, bcv1, bevelCylinderIndex));
+							Point bcv0(vertices[e0.v0] + .5 * vertexOffset - DEFAULT_EPSILON_STATIC * bevelOffset);
+							Point bcv1(vertices[e0.v1] + .5 * vertexOffset + DEFAULT_EPSILON_STATIC * bevelOffset);
+							const float bcRadius = (vertices[e0.v0] - bcv0).Length() + DEFAULT_EPSILON_STATIC;
+							boundingCyls.push_back(BevelBoundingCylinder(bcv0, bcv1, bcRadius, bevelCylinderIndex));
 						}
 					}
 				}
@@ -280,7 +281,7 @@ void ExtTriangleMesh::PreprocessBevel() {
 #endif
 				int i = 0; i < prims.size(); ++i) {
 			RTCBuildPrimitive &prim = prims[i];
-			const BBox bbox = bevelBoundingCylinders[i].GetBBox(bevelRadius);
+			const BBox bbox = bevelBoundingCylinders[i].GetBBox();
 			prim.lower_x = bbox.pMin[0];
 			prim.lower_y = bbox.pMin[1];
 			prim.lower_z = bbox.pMin[2];
@@ -311,8 +312,8 @@ void ExtTriangleMesh::PreprocessBevel() {
 }
 
 bool ExtTriangleMesh::IntersectBevel(const Ray &ray, const RayHit &rayHit,
-		bool &continueToTrace, float &rayHitT, Point &p, Normal &n) const {
-	p = ray(rayHit.t);
+		bool &continueToTrace, float &rayHitT, Point &newP, Normal &n) const {
+	const Point p = ray(rayHit.t);
 
 	u_int currentNode = 0; // Root Node
 	const u_int stopNode = IndexBVHNodeData_GetSkipIndex(bevelBVHArrayNodes[0].nodeData); // Non-existent
@@ -329,7 +330,7 @@ bool ExtTriangleMesh::IntersectBevel(const Ray &ray, const RayHit &rayHit,
 			// It is a leaf, check the entry
 			const BevelBoundingCylinder &entry = bevelBoundingCylinders[node.entryLeaf.entryIndex];
 
-			if (entry.IsInside(p, bevelRadius)) {
+			if (entry.IsInside(p)) {
 				// It is inside the bounding cylinder
 
 				continueToTrace = true;
@@ -360,7 +361,8 @@ bool ExtTriangleMesh::IntersectBevel(const Ray &ray, const RayHit &rayHit,
 	if (bevelCylinderIndex != NULL_INDEX) {
 		continueToTrace = false;
 		rayHitT = minT;
-		bevelCylinders[bevelCylinderIndex].IntersectNormal(p, bevelRadius, n);
+		newP = ray(rayHitT);
+		bevelCylinders[bevelCylinderIndex].IntersectNormal(newP, bevelRadius, n);
 
 		return true;
 	} else

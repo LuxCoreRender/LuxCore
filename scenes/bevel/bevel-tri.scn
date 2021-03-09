@@ -17,8 +17,8 @@ scene.camera.bokeh.distribution.type = "NONE"
 scene.camera.bokeh.scale.x = 0.707106829
 scene.camera.bokeh.scale.y = 0.707106829
 #
-#scene.camera.lookat.orig = 2.583127 0.1859199 3.847553
-#scene.camera.lookat.target = 1.780911 0.5072598 3.344372
+#scene.camera.lookat.orig = 2.016118 1.222715 3.620146
+#scene.camera.lookat.target = 1.255855 0.7321835 3.194258
 #
 scene.camera.lookat.orig = 9.40680981 -6.48706007 6.90903854
 scene.camera.lookat.target = 8.66987419 -5.97847414 6.46376705
