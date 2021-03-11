@@ -17,11 +17,11 @@ scene.camera.bokeh.distribution.type = "NONE"
 scene.camera.bokeh.scale.x = 0.707106829
 scene.camera.bokeh.scale.y = 0.707106829
 #
-#scene.camera.lookat.orig = 2.016118 1.222715 3.620146
-#scene.camera.lookat.target = 1.255855 0.7321835 3.194258
+scene.camera.lookat.orig = 2.016118 1.222715 3.620146
+scene.camera.lookat.target = 1.255855 0.7321835 3.194258
 #
-scene.camera.lookat.orig = 9.40680981 -6.48706007 6.90903854
-scene.camera.lookat.target = 8.66987419 -5.97847414 6.46376705
+#scene.camera.lookat.orig = 9.40680981 -6.48706007 6.90903854
+#scene.camera.lookat.target = 8.66987419 -5.97847414 6.46376705
 ##
 #scene.camera.lookat.orig = 3.36148238 -1.48848963 4.42218685
 #scene.camera.lookat.target = 2.7136817 -0.827001512 4.04431009
@@ -83,15 +83,15 @@ scene.materials.ground_mat140061226915208.type = "matte"
 scene.materials.ground_mat140061226915208.kd = "140062619160584Color"
 ################################################################################
 scene.shapes.obj_cube.type = mesh
-#scene.shapes.obj_cube.ply = tri.ply
-scene.shapes.obj_cube.ply = mesh-00000.ply
+scene.shapes.obj_cube.ply = tri.ply
+#scene.shapes.obj_cube.ply = mesh-00000.ply
 ##
 scene.shapes.obj_harl.type = harlequin
 scene.shapes.obj_harl.source = obj_cube
 ##
 scene.shapes.obj_bevel.type = bevel
 scene.shapes.obj_bevel.source = obj_harl
-scene.shapes.obj_bevel.bevel.radius = 0.3
+scene.shapes.obj_bevel.bevel.radius = 0.1
 ################################################################################
 scene.objects.cube1.material = cube1_mat
 scene.objects.cube1.ply = obj_bevel

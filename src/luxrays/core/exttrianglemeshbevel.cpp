@@ -231,9 +231,10 @@ void ExtTriangleMesh::PreprocessBevel() {
 							// Normals half vector direction
 							const Vector h(-Normalize(tri0Normal + tri1Normal));
 							const float cosHAngle = AbsDot(h, tri0Normal);
+							const float alpha = M_PI - .5f * M_PI - acosf(cosHAngle);
 
 							// Compute the bevel cylinder vertices
-							const float distance = bevelRadius / cosHAngle;
+							const float distance = bevelRadius / sinf(alpha);
 
 							const Vector vertexOffset(distance * h);
 							const Vector bevelOffset = Normalize(vertices[e0.v1] - vertices[e0.v0]) * bevelRadius;
