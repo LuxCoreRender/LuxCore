@@ -17,11 +17,11 @@ scene.camera.bokeh.distribution.type = "NONE"
 scene.camera.bokeh.scale.x = 0.707106829
 scene.camera.bokeh.scale.y = 0.707106829
 #
-scene.camera.lookat.orig = 2.016118 1.222715 3.620146
-scene.camera.lookat.target = 1.255855 0.7321835 3.194258
+#scene.camera.lookat.orig = 2.016118 1.222715 3.620146
+#scene.camera.lookat.target = 1.255855 0.7321835 3.194258
 #
-#scene.camera.lookat.orig = 9.40680981 -6.48706007 6.90903854
-#scene.camera.lookat.target = 8.66987419 -5.97847414 6.46376705
+scene.camera.lookat.orig = 9.40680981 -6.48706007 6.90903854
+scene.camera.lookat.target = 8.66987419 -5.97847414 6.46376705
 ##
 #scene.camera.lookat.orig = 3.36148238 -1.48848963 4.42218685
 #scene.camera.lookat.target = 2.7136817 -0.827001512 4.04431009

@@ -17,9 +17,16 @@
  ***************************************************************************/
 
 #include "luxrays/core/exttrianglemesh.h"
+#include "boost/unordered/unordered_set.hpp"
 
 using namespace std;
 using namespace luxrays;
+
+//------------------------------------------------------------------------------
+// Based on: "Efficient Rendering of Rounded Corners and Edges for Convex Objects"
+// by Simon Courtin, Sébastien Horna, Mickaël Ribardière  Pierre Poulin and Daniel Meneveaux
+// https://simoncourtin.github.io/publication/efficient-rendering-rounded-corners-edges-convex-object
+//------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
 // ExtTriangleMesh::BevelBoundingCylinder
@@ -140,6 +147,39 @@ bool ExtTriangleMesh::BevelBoundingCylinder::IsInside(const luxrays::Point &pos)
 // ExtTriangleMesh bevel related methods
 //------------------------------------------------------------------------------
 
+static Point LineIntersection(const Point &p1, const Point &p2,
+		const Point &p3, const Point &p4) {
+	// "The shortest line between two lines in 3D" from http://paulbourke.net/geometry/pointlineplane/
+
+	const Vector p13 = p1 - p3;
+	const Vector p43 = p4 - p3;
+	if ((fabsf(p43.x) < DEFAULT_EPSILON_STATIC) && (fabsf(p43.y) < DEFAULT_EPSILON_STATIC) && (fabsf(p43.z) < DEFAULT_EPSILON_STATIC))
+		return p1;
+
+	const Vector p21 = p2 -p1;
+	if ((fabsf(p21.x) < DEFAULT_EPSILON_STATIC) && (fabsf(p21.y) < DEFAULT_EPSILON_STATIC) && (fabsf(p21.z) < DEFAULT_EPSILON_STATIC))
+		return p1;
+
+	const float d1343 = Dot(p13, p43);
+	const float d4321 = Dot(p43, p21);
+	const float d1321 = Dot(p13, p21);
+	const float d4343 = Dot(p43, p43);
+	const float d2121 = Dot(p21, p21);
+	
+	const float denom = d2121 * d4343 - d4321 * d4321;
+	if (fabsf(denom) < DEFAULT_EPSILON_STATIC)
+		return p1;
+   const float numer = d1343 * d4321 - d1321 * d4343;
+	
+	const float mua = numer / denom;
+//	const float mub = (d1343 + d4321 * mua) / d4343;
+
+	const Point pa = p1 + mua * p21;
+//	const Point pb = p3 + mub * p43;
+	
+	return pa;
+}
+
 void ExtTriangleMesh::PreprocessBevel() {
 	const double start = WallClockTime();
 
@@ -151,14 +191,46 @@ void ExtTriangleMesh::PreprocessBevel() {
 		class Edge {
 		public:
 			Edge(const u_int triIndex, const u_int e, const u_int va, const u_int vb) : tri(triIndex),
-					edge(e), v0(va), v1(vb), alreadyFound(false) { }
+					edge(e), v0(va), v1(vb), bevelCylinderIndex(NULL_INDEX),
+					alreadyFound(false), isBevel(false) { }
 			~Edge() { }
 
 			const u_int tri, edge;
 			const u_int v0, v1;
 
-			bool alreadyFound;
+			u_int bevelCylinderIndex;
+			Point bevelCylinderV0, bevelCylinderV1;
+			bool alreadyFound, isBevel;
 		};
+		
+		//----------------------------------------------------------------------
+		// Corner class
+		//----------------------------------------------------------------------
+
+		class Corner {
+		public:
+			Corner() { }
+			~Corner() { }
+
+			vector<u_int> edgeIndices;
+		};
+
+		//----------------------------------------------------------------------
+		// Find duplicate vertices
+		//----------------------------------------------------------------------
+
+		auto compareVerts = [](const TriangleMesh &mesh, const u_int vertIndex1, const u_int vertIndex2) {
+			const ExtTriangleMesh *triMesh = dynamic_cast<const ExtTriangleMesh *>(&mesh);
+			assert (triMesh);
+
+			return (DistanceSquared(
+						triMesh->GetVertex(Transform::TRANS_IDENTITY, vertIndex1),
+						triMesh->GetVertex(Transform::TRANS_IDENTITY, vertIndex2)) < DEFAULT_EPSILON_STATIC);
+		};
+		vector<u_int> uniqueVertices;
+		const u_int uniqueVertCount = GetUniqueVerticesMapping(uniqueVertices, compareVerts);
+
+		cout << "ExtTriangleMesh " << this->GetName() << " has " << uniqueVertCount << " unique vertices over " << vertCount << endl;
 
 		//----------------------------------------------------------------------
 		// Build the list of all edges
@@ -166,9 +238,9 @@ void ExtTriangleMesh::PreprocessBevel() {
 
 		vector<Edge> edges;
 		for (u_int i = 0; i < triCount; ++i) {
-			edges.push_back(Edge(i, 0, tris[i].v[0], tris[i].v[1]));
-			edges.push_back(Edge(i, 1, tris[i].v[1], tris[i].v[2]));
-			edges.push_back(Edge(i, 2, tris[i].v[2], tris[i].v[0]));
+			edges.push_back(Edge(i, 0, uniqueVertices[tris[i].v[0]], uniqueVertices[tris[i].v[1]]));
+			edges.push_back(Edge(i, 1, uniqueVertices[tris[i].v[1]], uniqueVertices[tris[i].v[2]]));
+			edges.push_back(Edge(i, 2, uniqueVertices[tris[i].v[2]], uniqueVertices[tris[i].v[0]]));
 		}
 
 		cout << "ExtTriangleMesh " << this->GetName() << " all edges count: " << edges.size() << endl;
@@ -178,7 +250,7 @@ void ExtTriangleMesh::PreprocessBevel() {
 		//----------------------------------------------------------------------
 
 		auto IsSameVertex = [&](const u_int v0, const u_int v1) {
-			return DistanceSquared(vertices[v0], vertices[v1]) < DEFAULT_EPSILON_STATIC;
+			return (v0 == v1);
 		};
 
 		auto IsSameEdge = [&](const u_int edge0Index, const u_int edge1Index) {
@@ -193,6 +265,7 @@ void ExtTriangleMesh::PreprocessBevel() {
 					(IsSameVertex(e0v0, e1v1) && IsSameVertex(e0v1, e1v0));
 		};
 
+		vector<Corner> corners(vertCount);
 		vector<BevelCylinder> bevelCyls;
 		vector<BevelBoundingCylinder> boundingCyls;
 		for (u_int edge0Index = 0; edge0Index < edges.size(); ++edge0Index) {
@@ -224,9 +297,8 @@ void ExtTriangleMesh::PreprocessBevel() {
 
 						if (angle < -DEFAULT_EPSILON_STATIC) {
 							// Ok, it is a convex edge. It is an edge to bevel.
+							e0.isBevel = true;
 							e1.alreadyFound = true;
-
-							const Normal &tri1Normal = triNormals[e1.tri];
 
 							// Normals half vector direction
 							const Vector h(-Normalize(tri0Normal + tri1Normal));
@@ -238,24 +310,65 @@ void ExtTriangleMesh::PreprocessBevel() {
 
 							const Vector vertexOffset(distance * h);
 							const Vector bevelOffset = Normalize(vertices[e0.v1] - vertices[e0.v0]) * bevelRadius;
-							Point cv0(vertices[e0.v0] + vertexOffset + bevelOffset);
-							Point cv1(vertices[e0.v1] + vertexOffset - bevelOffset);
+							e0.bevelCylinderV0 = vertices[e0.v0] + vertexOffset + bevelOffset;
+							e0.bevelCylinderV1 = vertices[e0.v1] + vertexOffset - bevelOffset;
 
 							// Add a new BevelCylinder
-							const u_int bevelCylinderIndex = bevelCyls.size();
-							bevelCyls.push_back(BevelCylinder(cv0, cv1));
-							
+							e0.bevelCylinderIndex = bevelCyls.size();
+							bevelCyls.push_back(BevelCylinder());
+
 							// Add a new BoundinglCylinder
 							Point bcv0(vertices[e0.v0] + .5 * vertexOffset - DEFAULT_EPSILON_STATIC * bevelOffset);
 							Point bcv1(vertices[e0.v1] + .5 * vertexOffset + DEFAULT_EPSILON_STATIC * bevelOffset);
 							const float bcRadius = (vertices[e0.v0] - bcv0).Length() + DEFAULT_EPSILON_STATIC;
-							boundingCyls.push_back(BevelBoundingCylinder(bcv0, bcv1, bcRadius, bevelCylinderIndex));
+							boundingCyls.push_back(BevelBoundingCylinder(bcv0, bcv1, bcRadius));
+
+							// Add edge to corner edge indices
+							corners[e0.v0].edgeIndices.push_back(edge0Index);
+							corners[e0.v1].edgeIndices.push_back(edge0Index);
 						}
 					}
 				}
 			}
 		}
+
+		//----------------------------------------------------------------------
+		// Update the bevel cylinder vertices
+		//----------------------------------------------------------------------
 		
+		for (u_int edgeIndex = 0; edgeIndex < edges.size(); ++edgeIndex) {
+			Edge &e = edges[edgeIndex];
+
+			if (e.isBevel) {
+				Point bcv0;
+				for (auto i : corners[e.v0].edgeIndices) {
+					if (i != edgeIndex) {
+						bcv0 = LineIntersection(
+								e.bevelCylinderV0, e.bevelCylinderV1,
+								edges[i].bevelCylinderV0, edges[i].bevelCylinderV1);
+						break;
+					}
+				}
+
+				Point bcv1;
+				for (auto i : corners[e.v1].edgeIndices) {
+					if (i != edgeIndex) {
+						bcv1 = LineIntersection(
+								e.bevelCylinderV1, e.bevelCylinderV0,
+								edges[i].bevelCylinderV0, edges[i].bevelCylinderV1);
+						break;
+					}
+				}
+
+				bevelCyls[e.bevelCylinderIndex].v0 = bcv0;
+				bevelCyls[e.bevelCylinderIndex].v1 = bcv1;
+			}
+		}
+
+		//----------------------------------------------------------------------
+		// Copy local data to ExtTriangleMesh
+		//----------------------------------------------------------------------
+
 		cout << "ExtTriangleMesh " << this->GetName() << " bevel cylinders count: " << bevelCyls.size() << endl;
 
 		delete[] bevelCylinders;
@@ -337,9 +450,9 @@ bool ExtTriangleMesh::IntersectBevel(const Ray &ray, const RayHit &rayHit,
 				continueToTrace = true;
 				
 				// Check if the ray intersect the linked bevel cylinder
-				const float t = bevelCylinders[entry.bevelCylinderIndex].Intersect(ray, bevelRadius);
+				const float t = bevelCylinders[node.entryLeaf.entryIndex].Intersect(ray, bevelRadius);
 				if ((t > 0.f) && (t < minT)) {
-					bevelCylinderIndex = entry.bevelCylinderIndex;
+					bevelCylinderIndex = node.entryLeaf.entryIndex;
 					minT = t;
 				}
 			}

@@ -321,11 +321,10 @@ public:
 	public:
 		BevelBoundingCylinder() { }
 		BevelBoundingCylinder(const luxrays::Point &cv0, const luxrays::Point &cv1,
-		const float r, const u_int index) {
+		const float r) {
 			v0 = cv0;
 			v1 = cv1;
 			radius = r;
-			bevelCylinderIndex = index;
 		}
 
 		luxrays::BBox GetBBox() const;
@@ -333,7 +332,6 @@ public:
 		
 		luxrays::Point v0, v1;
 		float radius;
-		u_int bevelCylinderIndex;
 	};
 
 	static ExtTriangleMesh *LoadPly(const std::string &fileName);
