@@ -425,6 +425,10 @@ void ExtTriangleMesh::PreprocessBevel() {
 	cout << "ExtTriangleMesh " << this->GetName() << " bevel preprocessing time: " << (endTotal - start) << "secs" << endl;
 }
 
+//------------------------------------------------------------------------------
+// ExtTriangleMesh::IntersectBevel()
+//------------------------------------------------------------------------------
+
 bool ExtTriangleMesh::IntersectBevel(const Ray &ray, const RayHit &rayHit,
 		bool &continueToTrace, float &rayHitT, Point &newP, Normal &n) const {
 	const Point p = ray(rayHit.t);
@@ -478,6 +482,28 @@ bool ExtTriangleMesh::IntersectBevel(const Ray &ray, const RayHit &rayHit,
 		newP = ray(rayHitT);
 		bevelCylinders[bevelCylinderIndex].IntersectNormal(newP, bevelRadius, n);
 
+		return true;
+	} else
+		return false;
+}
+
+//------------------------------------------------------------------------------
+// ExtInstanceTriangleMesh::IntersectBevel()
+//------------------------------------------------------------------------------
+
+bool ExtInstanceTriangleMesh::IntersectBevel(const Ray &ray, const RayHit &rayHit,
+		bool &continueToTrace, float &rayHitT, Point &newP, Normal &n) const {
+	// Transform the ray in local space	
+	Ray localRay = Inverse(trans) * ray;
+	
+	Point localNewP;
+	Normal localN;
+	const bool result = static_cast<ExtTriangleMesh *>(mesh)->IntersectBevel(localRay, rayHit, continueToTrace, rayHitT, localNewP, localN);
+	if( result) {
+		// Transform newP and N in global space
+		newP = trans * localNewP;
+		n = trans * localN;
+		
 		return true;
 	} else
 		return false;

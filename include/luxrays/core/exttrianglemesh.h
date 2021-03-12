@@ -555,6 +555,10 @@ public:
 				b1, b2, dataIndex);
 	}
 
+	virtual bool IntersectBevel(const luxrays::Ray &ray, const luxrays::RayHit &rayHit,
+			bool &continueToTrace, float &rayHitT,
+			luxrays::Point &p, luxrays::Normal &n) const;
+
 	virtual void Save(const std::string &fileName) const { static_cast<ExtTriangleMesh *>(mesh)->Save(fileName); }
 
 	const Transform &GetTransformation() const { return trans; }

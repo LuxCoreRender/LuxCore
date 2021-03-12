@@ -20,18 +20,18 @@ scene.camera.bokeh.scale.y = 0.707106829
 #scene.camera.lookat.orig = 2.016118 1.222715 3.620146
 #scene.camera.lookat.target = 1.255855 0.7321835 3.194258
 #
-scene.camera.lookat.orig = 9.40680981 -6.48706007 6.90903854
-scene.camera.lookat.target = 8.66987419 -5.97847414 6.46376705
+scene.camera.lookat.orig = 11.78887 -8.131003 8.348324
+scene.camera.lookat.target = 11.05193 -7.622418 7.903052
 ##
 #scene.camera.lookat.orig = 3.36148238 -1.48848963 4.42218685
 #scene.camera.lookat.target = 2.7136817 -0.827001512 4.04431009
 #scene.camera.up = 0 0 1
 ##
-#scene.lights.__WORLD_BACKGROUND_LIGHT__.gain = 1.99999995e-05 1.99999995e-05 1.99999995e-05
-#scene.lights.__WORLD_BACKGROUND_LIGHT__.transformation = 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1
-#scene.lights.__WORLD_BACKGROUND_LIGHT__.type = "sky2"
-#scene.lights.__WORLD_BACKGROUND_LIGHT__.dir = 0 0 1
-#scene.lights.__WORLD_BACKGROUND_LIGHT__.turbidity = 2.20000005
+scene.lights.__WORLD_BACKGROUND_LIGHT__.gain = 0.00004 0.00004 0.00004
+scene.lights.__WORLD_BACKGROUND_LIGHT__.transformation = 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1
+scene.lights.__WORLD_BACKGROUND_LIGHT__.type = "sky2"
+scene.lights.__WORLD_BACKGROUND_LIGHT__.dir = 0 0 1
+scene.lights.__WORLD_BACKGROUND_LIGHT__.turbidity = 2.20000005
 ##
 scene.lights.140062413928968.gain = 1200 1200 1200
 scene.lights.140062413928968.transformation = -0.290864646 0.955171168 -0.0551890582 0 -0.771100819 -0.199883357 0.604524732 0 0.566393197 0.218391195 0.794672251 0 4.07624531 1.00545394 5.903862 1
@@ -83,26 +83,54 @@ scene.materials.ground_mat140061226915208.type = "matte"
 scene.materials.ground_mat140061226915208.kd = "140062619160584Color"
 ################################################################################
 scene.shapes.obj_cube.type = mesh
-scene.shapes.obj_cube.ply = tri.ply
-#scene.shapes.obj_cube.ply = mesh-00000.ply
+#scene.shapes.obj_cube.ply = tri.ply
+scene.shapes.obj_cube.ply = mesh-00000.ply
 ##
-scene.shapes.obj_harl.type = harlequin
-scene.shapes.obj_harl.source = obj_cube
+scene.shapes.obj_cube_bevel0.type = bevel
+scene.shapes.obj_cube_bevel0.source = obj_cube
+scene.shapes.obj_cube_bevel0.bevel.radius = 0.1
 ##
-scene.shapes.obj_bevel.type = bevel
-scene.shapes.obj_bevel.source = obj_harl
-scene.shapes.obj_bevel.bevel.radius = 0.1
+scene.shapes.obj_cube_bevel1.type = bevel
+scene.shapes.obj_cube_bevel1.source = obj_cube
+scene.shapes.obj_cube_bevel1.bevel.radius = 0.3
+################################################################################
+scene.shapes.obj_pyram.type = mesh
+scene.shapes.obj_pyram.ply = tri.ply
+##
+scene.shapes.obj_pyram_bevel0.type = bevel
+scene.shapes.obj_pyram_bevel0.source = obj_pyram
+scene.shapes.obj_pyram_bevel0.bevel.radius = 0.1
+##
+scene.shapes.obj_pyram_bevel1.type = bevel
+scene.shapes.obj_pyram_bevel1.source = obj_pyram
+scene.shapes.obj_pyram_bevel1.bevel.radius = 0.3
 ################################################################################
 scene.objects.cube1.material = cube1_mat
-scene.objects.cube1.ply = obj_bevel
-#scene.objects.cube1.transformation = 1 0 0 0 0 1 0 0 0 0 1 0  0 -2 0 1
+scene.objects.cube1.ply = obj_cube
+scene.objects.cube1.transformation = 1 0 0 0 0 1 0 0 0 0 1 0  -2 3 0 1
 #
-#scene.objects.cube2.material = cube2_mat
-#scene.objects.cube2.ply = obj_bevel
-#scene.objects.cube2.transformation = 1 0 0 0 0 1 0 0 0 0 1 0  0 2 0 1
+scene.objects.cube2.material = cube1_mat
+scene.objects.cube2.ply = obj_cube_bevel0
+scene.objects.cube2.transformation = 1 0 0 0 0 1 0 0 0 0 1 0  -2 0 0 1
 #
+scene.objects.cube3.material = cube1_mat
+scene.objects.cube3.ply = obj_cube_bevel1
+scene.objects.cube3.transformation = 1 0 0 0 0 1 0 0 0 0 1 0  -2 -3 0 1
+################################################################################
+scene.objects.pyram1.material = cube1_mat
+scene.objects.pyram1.ply = obj_pyram
+scene.objects.pyram1.transformation = 1 0 0 0 0 1 0 0 0 0 1 0  2 3 0 1
+#
+scene.objects.pyram2.material = cube1_mat
+scene.objects.pyram2.ply = obj_pyram_bevel0
+scene.objects.pyram2.transformation = 1 0 0 0 0 1 0 0 0 0 1 0  2 0 0 1
+#
+scene.objects.pyram3.material = cube1_mat
+scene.objects.pyram3.ply = obj_pyram_bevel1
+scene.objects.pyram3.transformation = 1 0 0 0 0 1 0 0 0 0 1 0  2 -3 0 1
+################################################################################
 scene.objects.1400612316620880.material = "ground_mat140061226915208"
 scene.objects.1400612316620880.ply = "mesh-00001.ply"
 scene.objects.1400612316620880.camerainvisible = 0
 scene.objects.1400612316620880.id = 3772660237
-scene.objects.1400612316620880.appliedtransformation = 5.05059481 0 0 0 0 5.05059481 0 0 0 0 5.05059481 0 0 0 0 1
+scene.objects.1400612316620880.transformation = 2 0 0 0 0 2 0 0 0 0 2 0 0 0 0 1
