@@ -1,0 +1,95 @@
+scene.camera.cliphither = 0.100000001
+scene.camera.clipyon = 100
+scene.camera.shutteropen = 0
+scene.camera.shutterclose = 1
+scene.camera.autovolume.enable = 1
+scene.camera.up = 0 0 1
+scene.camera.screenwindow = -1 1 -0.5625 0.5625
+scene.camera.lensradius = 0
+scene.camera.focaldistance = 10
+scene.camera.autofocus.enable = 0
+scene.camera.type = "perspective"
+scene.camera.oculusrift.barrelpostpro.enable = 0
+scene.camera.fieldofview = 39.5977554
+scene.camera.bokeh.blades = 0
+scene.camera.bokeh.power = 3
+scene.camera.bokeh.distribution.type = "NONE"
+scene.camera.bokeh.scale.x = 0.707106829
+scene.camera.bokeh.scale.y = 0.707106829
+#
+#scene.camera.lookat.orig = 11.78887 -8.131003 8.348324
+#scene.camera.lookat.target = 11.05193 -7.622418 7.903052
+##
+scene.camera.lookat.orig = 4.940449 -3.404687 5.018475
+scene.camera.lookat.target = 4.20351 -2.896101 4.573202
+##
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.gain = 0.00004 0.00004 0.00004
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.transformation = 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.type = "sky2"
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.dir = 0 0 1
+#scene.lights.__WORLD_BACKGROUND_LIGHT__.turbidity = 2.20000005
+##
+scene.lights.140062413928968.gain = 1200 1200 1200
+scene.lights.140062413928968.transformation = -0.290864646 0.955171168 -0.0551890582 0 -0.771100819 -0.199883357 0.604524732 0 0.566393197 0.218391195 0.794672251 0 4.07624531 1.00545394 5.903862 1
+#scene.lights.140062413928968.transformation = -0.290864646 0.955171168 -0.0551890582 0 -0.771100819 -0.199883357 0.604524732 0 0.566393197 0.218391195 0.794672251 0 4.07624531 -4.00545394 5.903862 1
+scene.lights.140062413928968.id = 0
+scene.lights.140062413928968.type = "sphere"
+scene.lights.140062413928968.color = 1 1 1
+scene.lights.140062413928968.power = 0
+scene.lights.140062413928968.normalizebycolor = 0
+scene.lights.140062413928968.efficency = 0
+scene.lights.140062413928968.position = 0 0 0
+scene.lights.140062413928968.radius = 0.100000001
+################################################################################
+scene.textures.140062619160584Color.type = "checkerboard3d"
+scene.textures.140062619160584Color.texture1 = "1 0 0"
+scene.textures.140062619160584Color.texture2 = "1 1 0"
+scene.textures.140062619160584Color.mapping.type = "globalmapping3d"
+scene.textures.140062619160584Color.mapping.transformation = 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1
+##
+scene.textures.wireframetex.type = wireframe
+scene.textures.wireframetex.width = 0.3
+scene.textures.wireframetex.border = 0.7 0.0 0.0
+scene.textures.wireframetex.inside = 0.7 0.7 0.7
+##
+scene.textures.vertcol.type = hitpointcolor
+################################################################################
+#scene.materials.cube1_mat.type = "matte"
+#scene.materials.cube1_mat.kd = "0.7"
+##
+scene.materials.cube1_mat.type = disney
+scene.materials.cube1_mat.basecolor = 0.5 0.5 0.5
+#scene.materials.cube1_mat.basecolor = wireframetex
+#scene.materials.cube1_mat.basecolor = vertcol
+scene.materials.cube1_mat.specular = 0.5
+scene.materials.cube1_mat.roughness = 0.1
+scene.materials.cube1_mat.clearcoatgloss = 1.0
+#######
+scene.materials.cube2_mat.type = "matte"
+scene.materials.cube2_mat.kd = "0.7"
+#scene.materials.cube2_mat.kd = wireframetex
+##
+#scene.materials.cube2_mat.type = disney
+#scene.materials.cube2_mat.basecolor = 0.5 0.0 0.0
+#scene.materials.cube2_mat.specular = 0.5
+#scene.materials.cube2_mat.roughness = 0.1
+#scene.materials.cube2_mat.clearcoatgloss = 1.0
+#
+scene.materials.ground_mat140061226915208.type = "matte"
+scene.materials.ground_mat140061226915208.kd = "140062619160584Color"
+################################################################################
+scene.shapes.obj_suzanne.type = mesh
+scene.shapes.obj_suzanne.ply = irr0.ply
+##
+scene.shapes.obj_suzanne_bevel0.type = bevel
+scene.shapes.obj_suzanne_bevel0.source = obj_suzanne
+scene.shapes.obj_suzanne_bevel0.bevel.radius = 0.2
+################################################################################
+scene.objects.suzanne.material = cube1_mat
+scene.objects.suzanne.ply = obj_suzanne_bevel0
+##
+scene.objects.1400612316620880.material = "ground_mat140061226915208"
+scene.objects.1400612316620880.ply = "mesh-00001.ply"
+scene.objects.1400612316620880.camerainvisible = 0
+scene.objects.1400612316620880.id = 3772660237
+scene.objects.1400612316620880.transformation = 2 0 0 0 0 2 0 0 0 0 2 0 0 0 0 1

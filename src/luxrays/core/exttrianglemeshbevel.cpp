@@ -315,7 +315,7 @@ void ExtTriangleMesh::PreprocessBevel() {
 
 							// Add a new BevelCylinder
 							e0.bevelCylinderIndex = bevelCyls.size();
-							bevelCyls.push_back(BevelCylinder());
+							bevelCyls.push_back(BevelCylinder(e0.bevelCylinderV0, e0.bevelCylinderV1));
 
 							// Add a new BoundinglCylinder
 							Point bcv0(vertices[e0.v0] + .5 * vertexOffset - DEFAULT_EPSILON_STATIC * bevelOffset);
@@ -340,28 +340,30 @@ void ExtTriangleMesh::PreprocessBevel() {
 			Edge &e = edges[edgeIndex];
 
 			if (e.isBevel) {
-				Point bcv0;
-				for (auto i : corners[e.v0].edgeIndices) {
-					if (i != edgeIndex) {
-						bcv0 = LineIntersection(
-								e.bevelCylinderV0, e.bevelCylinderV1,
-								edges[i].bevelCylinderV0, edges[i].bevelCylinderV1);
-						break;
+				// If a corner is shared among multiple edges, move the bevel
+				// cylinder cap to the intersection of the cylinders axes
+
+				if (corners[e.v0].edgeIndices.size() > 1) {
+					for (auto i : corners[e.v0].edgeIndices) {
+						if (i != edgeIndex) {
+							bevelCyls[e.bevelCylinderIndex].v0 = LineIntersection(
+									e.bevelCylinderV0, e.bevelCylinderV1,
+									edges[i].bevelCylinderV0, edges[i].bevelCylinderV1);
+							break;
+						}
 					}
 				}
 
-				Point bcv1;
-				for (auto i : corners[e.v1].edgeIndices) {
-					if (i != edgeIndex) {
-						bcv1 = LineIntersection(
-								e.bevelCylinderV1, e.bevelCylinderV0,
-								edges[i].bevelCylinderV0, edges[i].bevelCylinderV1);
-						break;
+				if (corners[e.v1].edgeIndices.size() > 1) {
+					for (auto i : corners[e.v1].edgeIndices) {
+						if (i != edgeIndex) {
+							bevelCyls[e.bevelCylinderIndex].v1 = LineIntersection(
+									e.bevelCylinderV1, e.bevelCylinderV0,
+									edges[i].bevelCylinderV0, edges[i].bevelCylinderV1);
+							break;
+						}
 					}
 				}
-
-				bevelCyls[e.bevelCylinderIndex].v0 = bcv0;
-				bevelCyls[e.bevelCylinderIndex].v1 = bcv1;
 			}
 		}
 
@@ -431,15 +433,22 @@ void ExtTriangleMesh::PreprocessBevel() {
 
 bool ExtTriangleMesh::IntersectBevel(const Ray &ray, const RayHit &rayHit,
 		bool &continueToTrace, float &rayHitT, Point &newP, Normal &n) const {
-	const Point p = ray(rayHit.t);
-
-	u_int currentNode = 0; // Root Node
-	const u_int stopNode = IndexBVHNodeData_GetSkipIndex(bevelBVHArrayNodes[0].nodeData); // Non-existent
-
 	u_int bevelCylinderIndex = NULL_INDEX;
 	float minT = numeric_limits<float>::infinity();
 	continueToTrace = false;
 
+	// Some debug code
+//	for (u_int i = 0; i < 5; ++i) {
+//		const float t = bevelCylinders[i].Intersect(ray, bevelRadius);
+//		if ((t > 0.f) && (t < minT)) {
+//			bevelCylinderIndex = i;
+//			minT = t;
+//		}
+//	}
+
+	const Point p = ray(rayHit.t);
+	u_int currentNode = 0; // Root Node
+	const u_int stopNode = IndexBVHNodeData_GetSkipIndex(bevelBVHArrayNodes[0].nodeData); // Non-existent
 	while (currentNode < stopNode) {
 		const luxrays::ocl::IndexBVHArrayNode &node = bevelBVHArrayNodes[currentNode];
 
