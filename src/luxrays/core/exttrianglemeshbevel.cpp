@@ -191,14 +191,12 @@ void ExtTriangleMesh::PreprocessBevel() {
 		class Edge {
 		public:
 			Edge(const u_int triIndex, const u_int e, const u_int va, const u_int vb) : tri(triIndex),
-					edge(e), v0(va), v1(vb), bevelCylinderIndex(NULL_INDEX),
-					alreadyFound(false), isBevel(false) { }
+					edge(e), v0(va), v1(vb), alreadyFound(false), isBevel(false) { }
 			~Edge() { }
 
 			const u_int tri, edge;
 			const u_int v0, v1;
 
-			u_int bevelCylinderIndex;
 			Point bevelCylinderV0, bevelCylinderV1;
 			bool alreadyFound, isBevel;
 		};
@@ -212,7 +210,12 @@ void ExtTriangleMesh::PreprocessBevel() {
 			Corner() { }
 			~Corner() { }
 
+			// List of edges using this corner
 			vector<u_int> edgeIndices;
+			vector<bool> edgeFlips;
+
+			// Initialized if the corner is shared by multiple edges
+			Point p;
 		};
 
 		//----------------------------------------------------------------------
@@ -266,8 +269,6 @@ void ExtTriangleMesh::PreprocessBevel() {
 		};
 
 		vector<Corner> corners(vertCount);
-		vector<BevelCylinder> bevelCyls;
-		vector<BevelBoundingCylinder> boundingCyls;
 		for (u_int edge0Index = 0; edge0Index < edges.size(); ++edge0Index) {
 			Edge &e0 = edges[edge0Index];
 			e0.alreadyFound = true;
@@ -309,23 +310,14 @@ void ExtTriangleMesh::PreprocessBevel() {
 							const float distance = bevelRadius / sinf(alpha);
 
 							const Vector vertexOffset(distance * h);
-							const Vector bevelOffset = Normalize(vertices[e0.v1] - vertices[e0.v0]) * bevelRadius;
-							e0.bevelCylinderV0 = vertices[e0.v0] + vertexOffset + bevelOffset;
-							e0.bevelCylinderV1 = vertices[e0.v1] + vertexOffset - bevelOffset;
+							e0.bevelCylinderV0 = vertices[e0.v0] + vertexOffset;
+							e0.bevelCylinderV1 = vertices[e0.v1] + vertexOffset;
 
-							// Add a new BevelCylinder
-							e0.bevelCylinderIndex = bevelCyls.size();
-							bevelCyls.push_back(BevelCylinder(e0.bevelCylinderV0, e0.bevelCylinderV1));
-
-							// Add a new BoundinglCylinder
-							Point bcv0(vertices[e0.v0] + .5 * vertexOffset - DEFAULT_EPSILON_STATIC * bevelOffset);
-							Point bcv1(vertices[e0.v1] + .5 * vertexOffset + DEFAULT_EPSILON_STATIC * bevelOffset);
-							const float bcRadius = (vertices[e0.v0] - bcv0).Length() + DEFAULT_EPSILON_STATIC;
-							boundingCyls.push_back(BevelBoundingCylinder(bcv0, bcv1, bcRadius));
-
-							// Add edge to corner edge indices
+							// Add edge to corner edges list
 							corners[e0.v0].edgeIndices.push_back(edge0Index);
+							corners[e0.v0].edgeFlips.push_back(false);
 							corners[e0.v1].edgeIndices.push_back(edge0Index);
+							corners[e0.v1].edgeFlips.push_back(true);
 						}
 					}
 				}
@@ -333,37 +325,46 @@ void ExtTriangleMesh::PreprocessBevel() {
 		}
 
 		//----------------------------------------------------------------------
+		// Compute shared corner positions
+		//----------------------------------------------------------------------
+
+		for (auto &c : corners) {
+			if (c.edgeIndices.size() == 1) {
+				// It is a corner used by a single edge
+				c.p = c.edgeFlips[0] ? edges[c.edgeIndices[0]].bevelCylinderV1 : edges[c.edgeIndices[0]].bevelCylinderV0;
+			} else if (c.edgeIndices.size() > 1) {
+				// It is a corner used by multiple edges
+				
+				// Move the bevel cylinder caps to the intersection of the cylinders axes
+				// I can ignore edgeFlips here because it doesn't matter
+				for (u_int i = 0; i < c.edgeIndices.size() - 1; ++i) {
+					c.p += LineIntersection(
+							edges[c.edgeIndices[i]].bevelCylinderV0, edges[c.edgeIndices[i]].bevelCylinderV1,
+							edges[c.edgeIndices[i + 1]].bevelCylinderV0, edges[c.edgeIndices[i + 1]].bevelCylinderV1);
+				}
+				c.p *= 1.f / (c.edgeIndices.size() - 1);
+			}
+		}
+
+		//----------------------------------------------------------------------
 		// Update the bevel cylinder vertices
 		//----------------------------------------------------------------------
-		
+
+		vector<BevelCylinder> bevelCyls;
+		vector<BevelBoundingCylinder> boundingCyls;
 		for (u_int edgeIndex = 0; edgeIndex < edges.size(); ++edgeIndex) {
 			Edge &e = edges[edgeIndex];
 
 			if (e.isBevel) {
-				// If a corner is shared among multiple edges, move the bevel
-				// cylinder cap to the intersection of the cylinders axes
+				// Add a new BevelCylinder
+				bevelCyls.push_back(BevelCylinder(corners[e.v0].p, corners[e.v1].p));
 
-				if (corners[e.v0].edgeIndices.size() > 1) {
-					for (auto i : corners[e.v0].edgeIndices) {
-						if (i != edgeIndex) {
-							bevelCyls[e.bevelCylinderIndex].v0 = LineIntersection(
-									e.bevelCylinderV0, e.bevelCylinderV1,
-									edges[i].bevelCylinderV0, edges[i].bevelCylinderV1);
-							break;
-						}
-					}
-				}
-
-				if (corners[e.v1].edgeIndices.size() > 1) {
-					for (auto i : corners[e.v1].edgeIndices) {
-						if (i != edgeIndex) {
-							bevelCyls[e.bevelCylinderIndex].v1 = LineIntersection(
-									e.bevelCylinderV1, e.bevelCylinderV0,
-									edges[i].bevelCylinderV0, edges[i].bevelCylinderV1);
-							break;
-						}
-					}
-				}
+				// Add a new BoundinglCylinder
+				const Vector bevelVecOffset = Normalize(e.bevelCylinderV1 - e.bevelCylinderV0);
+				const Point bcv0 = .5f * (vertices[e.v0] + e.bevelCylinderV0) - DEFAULT_EPSILON_STATIC * bevelVecOffset;
+				const Point bcv1 = .5f * (vertices[e.v1] + e.bevelCylinderV1) + DEFAULT_EPSILON_STATIC * bevelVecOffset;
+				const float bcr = (vertices[e.v0] - bcv0).Length();
+				boundingCyls.push_back(BevelBoundingCylinder(bcv0, bcv1, bcr));
 			}
 		}
 
@@ -438,7 +439,9 @@ bool ExtTriangleMesh::IntersectBevel(const Ray &ray, const RayHit &rayHit,
 	continueToTrace = false;
 
 	// Some debug code
-//	for (u_int i = 0; i < 5; ++i) {
+//	continueToTrace = true;
+//	// NOTE: remember to update the bevelCylinders count
+//	for (u_int i = 0; i < 120; ++i) {
 //		const float t = bevelCylinders[i].Intersect(ray, bevelRadius);
 //		if ((t > 0.f) && (t < minT)) {
 //			bevelCylinderIndex = i;
