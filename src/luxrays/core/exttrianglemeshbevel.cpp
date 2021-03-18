@@ -29,7 +29,7 @@ using namespace luxrays;
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
-// ExtTriangleMesh::BevelBoundingCylinder
+// ExtTriangleMesh::BevelCylinder
 //------------------------------------------------------------------------------
 
 float ExtTriangleMesh::BevelCylinder::Intersect(const Ray &ray, const float bevelRadius) const {
@@ -141,6 +141,56 @@ bool ExtTriangleMesh::BevelBoundingCylinder::IsInside(const luxrays::Point &pos)
 	const Point p = b + t * d;
 
     return (p - a).Length() < radius;
+}
+
+float ExtTriangleMesh::BevelBoundingCylinder::Intersect(const Ray &ray, const float bevelRadius) const {
+
+	// From Capsule intersection code at https://iquilezles.org/www/articles/intersectors/intersectors.htm
+	// See also Distance between Lines at http://geomalgorithms.com/a07-_distance.html
+	
+	const Point &pa = v0;
+	const Point &pb = v1;
+	const Point &ro = ray.o;
+	const Vector &rd = ray.d;
+	const float &ra = bevelRadius;
+	
+    const Vector ba = pb - pa;
+    const Vector oa = ro - pa;
+
+    const float baba = Dot(ba, ba);
+    const float bard = Dot(ba, rd);
+    const float baoa = Dot(ba, oa);
+    const float rdoa = Dot(rd, oa);
+    const float oaoa = Dot(oa, oa);
+
+    float a = baba - bard * bard;
+    float b = baba * rdoa - baoa * bard;
+	float c = baba * oaoa - baoa * baoa - ra * ra * baba;
+    
+	float h = b * b - a * c;
+    if (h >= 0.f) {
+		float t = (-b - sqrtf(h)) / a;
+		const float y = baoa + t * bard;
+
+		// Cylinder body of the BevelCylinder
+		if ((y > 0.f) && (y < baba) && (t > ray.mint) && (t < ray.maxt))
+			return t;
+	}
+
+    return -1.f;
+}
+
+void ExtTriangleMesh::BevelBoundingCylinder::IntersectNormal(const Point &pos, const float bevelRadius,
+		Normal &n) const {
+	const Point &a = v0;
+	const Point &b = v1;
+	const float &r = bevelRadius;
+	
+    const Vector ba = b - a;
+    const Vector pa = pos - a;
+	const float h = Clamp(Dot(pa, ba) / Dot(ba, ba), 0.f, 1.f);
+
+	n = Normal((pa - h * ba) / r);
 }
 
 //------------------------------------------------------------------------------
@@ -438,16 +488,19 @@ bool ExtTriangleMesh::IntersectBevel(const Ray &ray, const RayHit &rayHit,
 	float minT = numeric_limits<float>::infinity();
 	continueToTrace = false;
 
-	// Some debug code
+	//--------------------------------------------------------------------------
+	// Some debug code to render only the BevelCylinder or the BevelBoundingCylinder
 //	continueToTrace = true;
-//	// NOTE: remember to update the bevelCylinders count
+//	// NOTE: remember to update the bevelCylinders count according the object
 //	for (u_int i = 0; i < 120; ++i) {
 //		const float t = bevelCylinders[i].Intersect(ray, bevelRadius);
+//		//const float t = bevelBoundingCylinders[i].Intersect(ray, bevelRadius);
 //		if ((t > 0.f) && (t < minT)) {
 //			bevelCylinderIndex = i;
 //			minT = t;
 //		}
 //	}
+	//--------------------------------------------------------------------------
 
 	const Point p = ray(rayHit.t);
 	u_int currentNode = 0; // Root Node
@@ -487,6 +540,7 @@ bool ExtTriangleMesh::IntersectBevel(const Ray &ray, const RayHit &rayHit,
 			}
 		}
 	}
+	//--------------------------------------------------------------------------
 
 	if (bevelCylinderIndex != NULL_INDEX) {
 		continueToTrace = false;

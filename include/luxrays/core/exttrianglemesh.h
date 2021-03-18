@@ -329,6 +329,9 @@ public:
 
 		luxrays::BBox GetBBox() const;
 		bool IsInside(const luxrays::Point &p) const;
+		float Intersect(const luxrays::Ray &ray, const float bevelRadius) const;
+		void IntersectNormal(const luxrays::Point &pos, const float bevelRadius,
+				luxrays::Normal &n) const;
 		
 		luxrays::Point v0, v1;
 		float radius;

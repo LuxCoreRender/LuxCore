@@ -83,7 +83,7 @@ scene.shapes.obj_suzanne.ply = irr0.ply
 ##
 scene.shapes.obj_suzanne_bevel0.type = bevel
 scene.shapes.obj_suzanne_bevel0.source = obj_suzanne
-scene.shapes.obj_suzanne_bevel0.bevel.radius = 0.05
+scene.shapes.obj_suzanne_bevel0.bevel.radius = 0.1
 ################################################################################
 scene.objects.suzanne.material = cube1_mat
 scene.objects.suzanne.ply = obj_suzanne_bevel0
