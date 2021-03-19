@@ -406,15 +406,23 @@ void ExtTriangleMesh::PreprocessBevel() {
 			Edge &e = edges[edgeIndex];
 
 			if (e.isBevel) {
-				// Add a new BevelCylinder
-				bevelCyls.push_back(BevelCylinder(corners[e.v0].p, corners[e.v1].p));
+				// Add a new BevelCylinder. Place the cylinder vertices on the
+				// intersection between the axis and the corner half vector. All
+				// this is required to avoid precision problems and surface cracks.
+				const Point bcv0 = LineIntersection(
+						e.bevelCylinderV1, e.bevelCylinderV0,
+						vertices[e.v0], corners[e.v0].p);
+				const Point bcv1 = LineIntersection(
+						e.bevelCylinderV1, e.bevelCylinderV0,
+						vertices[e.v1], corners[e.v1].p);
+				bevelCyls.push_back(BevelCylinder(bcv0, bcv1));
 
 				// Add a new BoundinglCylinder
 				const Vector bevelVecOffset = Normalize(e.bevelCylinderV1 - e.bevelCylinderV0);
-				const Point bcv0 = .5f * (vertices[e.v0] + e.bevelCylinderV0) - DEFAULT_EPSILON_STATIC * bevelVecOffset;
-				const Point bcv1 = .5f * (vertices[e.v1] + e.bevelCylinderV1) + DEFAULT_EPSILON_STATIC * bevelVecOffset;
-				const float bcr = (vertices[e.v0] - bcv0).Length();
-				boundingCyls.push_back(BevelBoundingCylinder(bcv0, bcv1, bcr));
+				const Point bbcv0 = .5f * (vertices[e.v0] + e.bevelCylinderV0) - DEFAULT_EPSILON_STATIC * bevelVecOffset;
+				const Point bbcv1 = .5f * (vertices[e.v1] + e.bevelCylinderV1) + DEFAULT_EPSILON_STATIC * bevelVecOffset;
+				const float bbcr = (vertices[e.v0] - bbcv0).Length();
+				boundingCyls.push_back(BevelBoundingCylinder(bbcv0, bbcv1, bbcr));
 			}
 		}
 

@@ -79,7 +79,8 @@ scene.materials.ground_mat140061226915208.type = "matte"
 scene.materials.ground_mat140061226915208.kd = "140062619160584Color"
 ################################################################################
 scene.shapes.obj_suzanne.type = mesh
-scene.shapes.obj_suzanne.ply = irr0.ply
+#scene.shapes.obj_suzanne.ply = irr0.ply
+scene.shapes.obj_suzanne.ply = irr1.ply
 ##
 scene.shapes.obj_suzanne_bevel0.type = bevel
 scene.shapes.obj_suzanne_bevel0.source = obj_suzanne
