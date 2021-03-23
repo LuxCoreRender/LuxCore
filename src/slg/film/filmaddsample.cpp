@@ -45,82 +45,75 @@ void Film::AddSampleResultColor(const u_int x, const u_int y,
 	filmDenoiser.AddSample(x, y, sampleResult, weight);
 
 	if ((channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size() > 0) && sampleResult.HasChannel(RADIANCE_PER_PIXEL_NORMALIZED)) {
-		for (u_int i = 0; i < Min<u_int>(sampleResult.radiance.Size(), channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size()); ++i) {
-			if (sampleResult.radiance[i].IsNaN() || sampleResult.radiance[i].IsInf())
-				continue;
-
-			channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->AddWeightedPixel(x, y, sampleResult.radiance[i].c, weight);
-		}
+		for (u_int i = 0; i < Min<u_int>(sampleResult.radiance.Size(), channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size()); ++i)
+			channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->AddIfValidWeightedPixel(x, y, sampleResult.radiance[i].c, weight);
 	}
 
 	// Faster than HasChannel(channel_RADIANCE_PER_SCREEN_NORMALIZED)
 	if ((channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size() > 0) && sampleResult.HasChannel(RADIANCE_PER_SCREEN_NORMALIZED)) {
 		for (u_int i = 0; i < Min<u_int>(sampleResult.radiance.Size(), channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size()); ++i) {
-			if (sampleResult.radiance[i].IsNaN() || sampleResult.radiance[i].IsInf())
-				continue;
-
-			channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->AddWeightedPixel(x, y, sampleResult.radiance[i].c, weight);
+			channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->AddIfValidWeightedPixel(x, y, sampleResult.radiance[i].c, weight);
 		}
 	}
 
 	// Faster than HasChannel(ALPHA)
 	if (channel_ALPHA && sampleResult.HasChannel(ALPHA))
-		channel_ALPHA->AddWeightedPixel(x, y, &sampleResult.alpha, weight);
+		channel_ALPHA->AddIfValidWeightedPixel(x, y, &sampleResult.alpha, weight);
 
 	if (hasComposingChannel) {
 		// Faster than HasChannel(DIRECT_DIFFUSE)
 		if (channel_DIRECT_DIFFUSE && sampleResult.HasChannel(DIRECT_DIFFUSE)) {
 			const Spectrum c = sampleResult.directDiffuseReflect + sampleResult.directDiffuseTransmit;
-			channel_DIRECT_DIFFUSE->AddWeightedPixel(x, y, c.c, weight);
+			channel_DIRECT_DIFFUSE->AddIfValidWeightedPixel(x, y, c.c, weight);
 		}
 		if (channel_DIRECT_DIFFUSE_REFLECT && sampleResult.HasChannel(DIRECT_DIFFUSE_REFLECT))
-			channel_DIRECT_DIFFUSE_REFLECT->AddWeightedPixel(x, y, sampleResult.directDiffuseReflect.c, weight);
+			channel_DIRECT_DIFFUSE_REFLECT->AddIfValidWeightedPixel(x, y, sampleResult.directDiffuseReflect.c, weight);
 		if (channel_DIRECT_DIFFUSE_TRANSMIT && sampleResult.HasChannel(DIRECT_DIFFUSE_TRANSMIT))
-			channel_DIRECT_DIFFUSE_TRANSMIT->AddWeightedPixel(x, y, sampleResult.directDiffuseTransmit.c, weight);
+			channel_DIRECT_DIFFUSE_TRANSMIT->AddIfValidWeightedPixel(x, y, sampleResult.directDiffuseTransmit.c, weight);
 
 		// Faster than HasChannel(DIRECT_GLOSSY)
 		if (channel_DIRECT_GLOSSY && sampleResult.HasChannel(DIRECT_GLOSSY)) {
 			const Spectrum c = sampleResult.directGlossyReflect + sampleResult.directGlossyTransmit;
-			channel_DIRECT_GLOSSY->AddWeightedPixel(x, y, c.c, weight);
+			channel_DIRECT_GLOSSY->AddIfValidWeightedPixel(x, y, c.c, weight);
 		}
 		if (channel_DIRECT_GLOSSY_REFLECT && sampleResult.HasChannel(DIRECT_GLOSSY_REFLECT))
-			channel_DIRECT_GLOSSY_REFLECT->AddWeightedPixel(x, y, sampleResult.directGlossyReflect.c, weight);
+			channel_DIRECT_GLOSSY_REFLECT->AddIfValidWeightedPixel(x, y, sampleResult.directGlossyReflect.c, weight);
 		if (channel_DIRECT_GLOSSY_TRANSMIT && sampleResult.HasChannel(DIRECT_GLOSSY_TRANSMIT))
-			channel_DIRECT_GLOSSY_TRANSMIT->AddWeightedPixel(x, y, sampleResult.directGlossyTransmit.c, weight);
+			channel_DIRECT_GLOSSY_TRANSMIT->AddIfValidWeightedPixel(x, y, sampleResult.directGlossyTransmit.c, weight);
 
 		// Faster than HasChannel(EMISSION)
 		if (channel_EMISSION && sampleResult.HasChannel(EMISSION))
-			channel_EMISSION->AddWeightedPixel(x, y, sampleResult.emission.c, weight);
+			channel_EMISSION->AddIfValidWeightedPixel(x, y, sampleResult.emission.c, weight);
 
 		// Faster than HasChannel(INDIRECT_DIFFUSE)
 		if (channel_INDIRECT_DIFFUSE && sampleResult.HasChannel(INDIRECT_DIFFUSE)) {
 			const Spectrum c = sampleResult.indirectDiffuseReflect + sampleResult.indirectDiffuseTransmit;
-			channel_INDIRECT_DIFFUSE->AddWeightedPixel(x, y, c.c, weight);
+			channel_INDIRECT_DIFFUSE->AddIfValidWeightedPixel(x, y, c.c, weight);
 		}
 		if (channel_INDIRECT_DIFFUSE_REFLECT && sampleResult.HasChannel(INDIRECT_DIFFUSE_REFLECT))
-			channel_INDIRECT_DIFFUSE_REFLECT->AddWeightedPixel(x, y, sampleResult.indirectDiffuseReflect.c, weight);
+			channel_INDIRECT_DIFFUSE_REFLECT->AddIfValidWeightedPixel(x, y, sampleResult.indirectDiffuseReflect.c, weight);
 		if (channel_INDIRECT_DIFFUSE_TRANSMIT && sampleResult.HasChannel(INDIRECT_DIFFUSE_TRANSMIT))
-			channel_INDIRECT_DIFFUSE_TRANSMIT->AddWeightedPixel(x, y, sampleResult.indirectDiffuseTransmit.c, weight);
+			channel_INDIRECT_DIFFUSE_TRANSMIT->AddIfValidWeightedPixel(x, y, sampleResult.indirectDiffuseTransmit.c, weight);
 
 		// Faster than HasChannel(INDIRECT_GLOSSY)
 		if (channel_INDIRECT_GLOSSY && sampleResult.HasChannel(INDIRECT_GLOSSY)) {
 			const Spectrum c = sampleResult.indirectGlossyReflect + sampleResult.indirectGlossyTransmit;
-			channel_INDIRECT_GLOSSY->AddWeightedPixel(x, y, c.c, weight);
+			channel_INDIRECT_GLOSSY->AddIfValidWeightedPixel(x, y, c.c, weight);
 		}
 		if (channel_INDIRECT_GLOSSY_REFLECT && sampleResult.HasChannel(INDIRECT_GLOSSY_REFLECT))
-			channel_INDIRECT_GLOSSY_REFLECT->AddWeightedPixel(x, y, sampleResult.indirectGlossyReflect.c, weight);
+			channel_INDIRECT_GLOSSY_REFLECT->AddIfValidWeightedPixel(x, y, sampleResult.indirectGlossyReflect.c, weight);
 		if (channel_INDIRECT_GLOSSY_TRANSMIT && sampleResult.HasChannel(INDIRECT_GLOSSY_TRANSMIT))
-			channel_INDIRECT_GLOSSY_TRANSMIT->AddWeightedPixel(x, y, sampleResult.indirectGlossyTransmit.c, weight);
+			channel_INDIRECT_GLOSSY_TRANSMIT->AddIfValidWeightedPixel(x, y, sampleResult.indirectGlossyTransmit.c, weight);
 
 		// Faster than HasChannel(INDIRECT_SPECULAR)
 		if (channel_INDIRECT_SPECULAR && sampleResult.HasChannel(INDIRECT_SPECULAR)) {
 			const Spectrum c = sampleResult.indirectSpecularReflect + sampleResult.indirectSpecularTransmit;
-			channel_INDIRECT_SPECULAR->AddWeightedPixel(x, y, c.c, weight);
+			channel_INDIRECT_SPECULAR->AddIfValidWeightedPixel(x, y, c.c, weight);
 		}
 		if (channel_INDIRECT_SPECULAR_REFLECT && sampleResult.HasChannel(INDIRECT_SPECULAR_REFLECT))
-			channel_INDIRECT_SPECULAR_REFLECT->AddWeightedPixel(x, y, sampleResult.indirectSpecularReflect.c, weight);
+			channel_INDIRECT_SPECULAR_REFLECT->AddIfValidWeightedPixel(x, y, sampleResult.indirectSpecularReflect.c, weight);
 		if (channel_INDIRECT_SPECULAR_TRANSMIT && sampleResult.HasChannel(INDIRECT_SPECULAR_TRANSMIT))
-			channel_INDIRECT_SPECULAR_TRANSMIT->AddWeightedPixel(x, y, sampleResult.indirectSpecularTransmit.c, weight);
+			channel_INDIRECT_SPECULAR_TRANSMIT->AddIfValidWeightedPixel(x, y, sampleResult.indirectSpecularTransmit.c, weight);
 
 		// This is MATERIAL_ID_MASK and BY_MATERIAL_ID
 		if (sampleResult.HasChannel(MATERIAL_ID)) {
@@ -139,30 +132,26 @@ void Film::AddSampleResultColor(const u_int x, const u_int y,
 
 					if (sampleResult.materialID == byMaterialIDs[index]) {
 						// Merge all radiance groups
-						for (u_int i = 0; i < Min<u_int>(sampleResult.radiance.Size(), channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size()); ++i) {
-							if (sampleResult.radiance[i].IsNaN() || sampleResult.radiance[i].IsInf())
-								continue;
-
+						for (u_int i = 0; i < Min<u_int>(sampleResult.radiance.Size(), channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size()); ++i)
 							c += sampleResult.radiance[i];
-						}
 					}
 
-					channel_BY_MATERIAL_IDs[index]->AddWeightedPixel(x, y, c.c, weight);
+					channel_BY_MATERIAL_IDs[index]->AddIfValidWeightedPixel(x, y, c.c, weight);
 				}
 			}
 		}
 
 		// Faster than HasChannel(DIRECT_SHADOW)
 		if (channel_DIRECT_SHADOW_MASK && sampleResult.HasChannel(DIRECT_SHADOW_MASK))
-			channel_DIRECT_SHADOW_MASK->AddWeightedPixel(x, y, &sampleResult.directShadowMask, weight);
+			channel_DIRECT_SHADOW_MASK->AddIfValidWeightedPixel(x, y, &sampleResult.directShadowMask, weight);
 
 		// Faster than HasChannel(INDIRECT_SHADOW_MASK)
 		if (channel_INDIRECT_SHADOW_MASK && sampleResult.HasChannel(INDIRECT_SHADOW_MASK))
-			channel_INDIRECT_SHADOW_MASK->AddWeightedPixel(x, y, &sampleResult.indirectShadowMask, weight);
+			channel_INDIRECT_SHADOW_MASK->AddIfValidWeightedPixel(x, y, &sampleResult.indirectShadowMask, weight);
 
 		// Faster than HasChannel(IRRADIANCE)
 		if (channel_IRRADIANCE && sampleResult.HasChannel(IRRADIANCE))
-			channel_IRRADIANCE->AddWeightedPixel(x, y, sampleResult.irradiance.c, weight);
+			channel_IRRADIANCE->AddIfValidWeightedPixel(x, y, sampleResult.irradiance.c, weight);
 
 		// This is OBJECT_ID_MASK and BY_OBJECT_ID
 		if (sampleResult.HasChannel(OBJECT_ID)) {
@@ -181,15 +170,11 @@ void Film::AddSampleResultColor(const u_int x, const u_int y,
 
 					if (sampleResult.objectID == byObjectIDs[index]) {
 						// Merge all radiance groups
-						for (u_int i = 0; i < Min<u_int>(sampleResult.radiance.Size(), channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size()); ++i) {
-							if (sampleResult.radiance[i].IsNaN() || sampleResult.radiance[i].IsInf())
-								continue;
-
+						for (u_int i = 0; i < Min<u_int>(sampleResult.radiance.Size(), channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size()); ++i)
 							c += sampleResult.radiance[i];
-						}
 					}
 
-					channel_BY_OBJECT_IDs[index]->AddWeightedPixel(x, y, c.c, weight);
+					channel_BY_OBJECT_IDs[index]->AddIfValidWeightedPixel(x, y, c.c, weight);
 				}
 			}
 		}
@@ -202,16 +187,16 @@ void Film::AddSampleResultColor(const u_int x, const u_int y,
 					((matID & 0x00ff00u) >> 8) * (1.f / 255.f),
 					((matID & 0xff0000u) >> 16) * (1.f / 255.f));
 
-			channel_MATERIAL_ID_COLOR->AddWeightedPixel(x, y, matColID.c, weight);
+			channel_MATERIAL_ID_COLOR->AddIfValidWeightedPixel(x, y, matColID.c, weight);
 		}
 
 		// Faster than HasChannel(ALBEDO)
 		if (channel_ALBEDO && sampleResult.HasChannel(ALBEDO))
-			channel_ALBEDO->AddWeightedPixel(x, y, sampleResult.albedo.c, weight);
+			channel_ALBEDO->AddIfValidWeightedPixel(x, y, sampleResult.albedo.c, weight);
 		
 		// Faster than HasChannel(AVG_SHADING_NORMAL)
 		if (channel_AVG_SHADING_NORMAL && sampleResult.HasChannel(AVG_SHADING_NORMAL))
-			channel_AVG_SHADING_NORMAL->AddWeightedPixel(x, y, &sampleResult.shadingNormal.x, weight);
+			channel_AVG_SHADING_NORMAL->AddIfValidWeightedPixel(x, y, &sampleResult.shadingNormal.x, weight);
 	}
 }
 
@@ -278,82 +263,74 @@ void Film::AtomicAddSampleResultColor(const u_int x, const u_int y,
 	filmDenoiser.AddSample(x, y, sampleResult, weight);
 
 	if ((channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size() > 0) && sampleResult.HasChannel(RADIANCE_PER_PIXEL_NORMALIZED)) {
-		for (u_int i = 0; i < Min<u_int>(sampleResult.radiance.Size(), channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size()); ++i) {
-			if (sampleResult.radiance[i].IsNaN() || sampleResult.radiance[i].IsInf())
-				continue;
-
-			channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->AtomicAddWeightedPixel(x, y, sampleResult.radiance[i].c, weight);
-		}
+		for (u_int i = 0; i < Min<u_int>(sampleResult.radiance.Size(), channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size()); ++i)
+			channel_RADIANCE_PER_PIXEL_NORMALIZEDs[i]->AtomicAddIfValidWeightedPixel(x, y, sampleResult.radiance[i].c, weight);
 	}
 
 	// Faster than HasChannel(channel_RADIANCE_PER_SCREEN_NORMALIZED)
 	if ((channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size() > 0) && sampleResult.HasChannel(RADIANCE_PER_SCREEN_NORMALIZED)) {
-		for (u_int i = 0; i < Min<u_int>(sampleResult.radiance.Size(), channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size()); ++i) {
-			if (sampleResult.radiance[i].IsNaN() || sampleResult.radiance[i].IsInf())
-				continue;
-
-			channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->AtomicAddWeightedPixel(x, y, sampleResult.radiance[i].c, weight);
-		}
+		for (u_int i = 0; i < Min<u_int>(sampleResult.radiance.Size(), channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size()); ++i)
+			channel_RADIANCE_PER_SCREEN_NORMALIZEDs[i]->AtomicAddIfValidWeightedPixel(x, y, sampleResult.radiance[i].c, weight);
 	}
 
 	// Faster than HasChannel(ALPHA)
 	if (channel_ALPHA && sampleResult.HasChannel(ALPHA))
-		channel_ALPHA->AtomicAddWeightedPixel(x, y, &sampleResult.alpha, weight);
+		channel_ALPHA->AtomicAddIfValidWeightedPixel(x, y, &sampleResult.alpha, weight);
 
 	if (hasComposingChannel) {
 		// Faster than HasChannel(DIRECT_DIFFUSE)
 		if (channel_DIRECT_DIFFUSE && sampleResult.HasChannel(DIRECT_DIFFUSE)) {
 			const Spectrum c = sampleResult.directDiffuseReflect + sampleResult.directDiffuseTransmit;
-			channel_DIRECT_DIFFUSE->AtomicAddWeightedPixel(x, y, c.c, weight);
+			channel_DIRECT_DIFFUSE->AtomicAddIfValidWeightedPixel(x, y, c.c, weight);
 		}
 		if (channel_DIRECT_DIFFUSE_REFLECT && sampleResult.HasChannel(DIRECT_DIFFUSE_REFLECT))
-			channel_DIRECT_DIFFUSE_REFLECT->AtomicAddWeightedPixel(x, y, sampleResult.directDiffuseReflect.c, weight);
+			channel_DIRECT_DIFFUSE_REFLECT->AtomicAddIfValidWeightedPixel(x, y, sampleResult.directDiffuseReflect.c, weight);
 		if (channel_DIRECT_DIFFUSE_TRANSMIT && sampleResult.HasChannel(DIRECT_DIFFUSE_TRANSMIT))
-			channel_DIRECT_DIFFUSE_TRANSMIT->AtomicAddWeightedPixel(x, y, sampleResult.directDiffuseTransmit.c, weight);
+			channel_DIRECT_DIFFUSE_TRANSMIT->AtomicAddIfValidWeightedPixel(x, y, sampleResult.directDiffuseTransmit.c, weight);
 
 		// Faster than HasChannel(DIRECT_GLOSSY)
 		if (channel_DIRECT_GLOSSY && sampleResult.HasChannel(DIRECT_GLOSSY)) {
 			const Spectrum c = sampleResult.directGlossyReflect + sampleResult.directGlossyTransmit;
-			channel_DIRECT_GLOSSY->AtomicAddWeightedPixel(x, y, c.c, weight);
+			channel_DIRECT_GLOSSY->AtomicAddIfValidWeightedPixel(x, y, c.c, weight);
 		}
 		if (channel_DIRECT_GLOSSY_REFLECT && sampleResult.HasChannel(DIRECT_GLOSSY_REFLECT))
-			channel_DIRECT_GLOSSY_REFLECT->AtomicAddWeightedPixel(x, y, sampleResult.directGlossyReflect.c, weight);
+			channel_DIRECT_GLOSSY_REFLECT->AtomicAddIfValidWeightedPixel(x, y, sampleResult.directGlossyReflect.c, weight);
 		if (channel_DIRECT_GLOSSY_TRANSMIT && sampleResult.HasChannel(DIRECT_GLOSSY_TRANSMIT))
-			channel_DIRECT_GLOSSY_TRANSMIT->AtomicAddWeightedPixel(x, y, sampleResult.directGlossyTransmit.c, weight);
+			channel_DIRECT_GLOSSY_TRANSMIT->AtomicAddIfValidWeightedPixel(x, y, sampleResult.directGlossyTransmit.c, weight);
 
 		// Faster than HasChannel(EMISSION)
 		if (channel_EMISSION && sampleResult.HasChannel(EMISSION))
-			channel_EMISSION->AtomicAddWeightedPixel(x, y, sampleResult.emission.c, weight);
+			channel_EMISSION->AtomicAddIfValidWeightedPixel(x, y, sampleResult.emission.c, weight);
 
 		// Faster than HasChannel(INDIRECT_DIFFUSE)
 		if (channel_INDIRECT_DIFFUSE && sampleResult.HasChannel(INDIRECT_DIFFUSE)) {
 			const Spectrum c = sampleResult.indirectDiffuseReflect + sampleResult.indirectDiffuseTransmit;
-			channel_INDIRECT_DIFFUSE->AtomicAddWeightedPixel(x, y, c.c, weight);
+			channel_INDIRECT_DIFFUSE->AtomicAddIfValidWeightedPixel(x, y, c.c, weight);
 		}
 		if (channel_INDIRECT_DIFFUSE_REFLECT && sampleResult.HasChannel(INDIRECT_DIFFUSE_REFLECT))
-			channel_INDIRECT_DIFFUSE_REFLECT->AtomicAddWeightedPixel(x, y, sampleResult.indirectDiffuseReflect.c, weight);
+			channel_INDIRECT_DIFFUSE_REFLECT->AtomicAddIfValidWeightedPixel(x, y, sampleResult.indirectDiffuseReflect.c, weight);
 		if (channel_INDIRECT_DIFFUSE_TRANSMIT && sampleResult.HasChannel(INDIRECT_DIFFUSE_TRANSMIT))
-			channel_INDIRECT_DIFFUSE_TRANSMIT->AtomicAddWeightedPixel(x, y, sampleResult.indirectDiffuseTransmit.c, weight);
+			channel_INDIRECT_DIFFUSE_TRANSMIT->AtomicAddIfValidWeightedPixel(x, y, sampleResult.indirectDiffuseTransmit.c, weight);
 
 		// Faster than HasChannel(INDIRECT_GLOSSY)
 		if (channel_INDIRECT_GLOSSY && sampleResult.HasChannel(INDIRECT_GLOSSY)) {
 			const Spectrum c = sampleResult.indirectGlossyReflect + sampleResult.indirectGlossyTransmit;
-			channel_INDIRECT_GLOSSY->AtomicAddWeightedPixel(x, y, c.c, weight);
+			channel_INDIRECT_GLOSSY->AtomicAddIfValidWeightedPixel(x, y, c.c, weight);
 		}
 		if (channel_INDIRECT_GLOSSY_REFLECT && sampleResult.HasChannel(INDIRECT_GLOSSY_REFLECT))
-			channel_INDIRECT_GLOSSY_REFLECT->AtomicAddWeightedPixel(x, y, sampleResult.indirectGlossyReflect.c, weight);
+			channel_INDIRECT_GLOSSY_REFLECT->AtomicAddIfValidWeightedPixel(x, y, sampleResult.indirectGlossyReflect.c, weight);
 		if (channel_INDIRECT_GLOSSY_TRANSMIT && sampleResult.HasChannel(INDIRECT_GLOSSY_TRANSMIT))
-			channel_INDIRECT_GLOSSY_TRANSMIT->AtomicAddWeightedPixel(x, y, sampleResult.indirectGlossyTransmit.c, weight);
+			channel_INDIRECT_GLOSSY_TRANSMIT->AtomicAddIfValidWeightedPixel(x, y, sampleResult.indirectGlossyTransmit.c, weight);
 
 		// Faster than HasChannel(INDIRECT_SPECULAR)
 		if (channel_INDIRECT_SPECULAR && sampleResult.HasChannel(INDIRECT_SPECULAR)) {
 			const Spectrum c = sampleResult.indirectSpecularReflect + sampleResult.indirectSpecularTransmit;
-			channel_INDIRECT_SPECULAR->AtomicAddWeightedPixel(x, y, c.c, weight);
+			channel_INDIRECT_SPECULAR->AtomicAddIfValidWeightedPixel(x, y, c.c, weight);
 		}
 		if (channel_INDIRECT_SPECULAR_REFLECT && sampleResult.HasChannel(INDIRECT_SPECULAR_REFLECT))
-			channel_INDIRECT_SPECULAR_REFLECT->AtomicAddWeightedPixel(x, y, sampleResult.indirectSpecularReflect.c, weight);
+			channel_INDIRECT_SPECULAR_REFLECT->AtomicAddIfValidWeightedPixel(x, y, sampleResult.indirectSpecularReflect.c, weight);
 		if (channel_INDIRECT_SPECULAR_TRANSMIT && sampleResult.HasChannel(INDIRECT_SPECULAR_TRANSMIT))
-			channel_INDIRECT_SPECULAR_TRANSMIT->AtomicAddWeightedPixel(x, y, sampleResult.indirectSpecularTransmit.c, weight);
+			channel_INDIRECT_SPECULAR_TRANSMIT->AtomicAddIfValidWeightedPixel(x, y, sampleResult.indirectSpecularTransmit.c, weight);
 
 		// This is MATERIAL_ID_MASK and BY_MATERIAL_ID
 		if (sampleResult.HasChannel(MATERIAL_ID)) {
@@ -372,30 +349,26 @@ void Film::AtomicAddSampleResultColor(const u_int x, const u_int y,
 
 					if (sampleResult.materialID == byMaterialIDs[index]) {
 						// Merge all radiance groups
-						for (u_int i = 0; i < Min<u_int>(sampleResult.radiance.Size(), channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size()); ++i) {
-							if (sampleResult.radiance[i].IsNaN() || sampleResult.radiance[i].IsInf())
-								continue;
-
+						for (u_int i = 0; i < Min<u_int>(sampleResult.radiance.Size(), channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size()); ++i)
 							c += sampleResult.radiance[i];
-						}
 					}
 
-					channel_BY_MATERIAL_IDs[index]->AtomicAddWeightedPixel(x, y, c.c, weight);
+					channel_BY_MATERIAL_IDs[index]->AtomicAddIfValidWeightedPixel(x, y, c.c, weight);
 				}
 			}
 		}
 
 		// Faster than HasChannel(DIRECT_SHADOW)
 		if (channel_DIRECT_SHADOW_MASK && sampleResult.HasChannel(DIRECT_SHADOW_MASK))
-			channel_DIRECT_SHADOW_MASK->AtomicAddWeightedPixel(x, y, &sampleResult.directShadowMask, weight);
+			channel_DIRECT_SHADOW_MASK->AtomicAddIfValidWeightedPixel(x, y, &sampleResult.directShadowMask, weight);
 
 		// Faster than HasChannel(INDIRECT_SHADOW_MASK)
 		if (channel_INDIRECT_SHADOW_MASK && sampleResult.HasChannel(INDIRECT_SHADOW_MASK))
-			channel_INDIRECT_SHADOW_MASK->AtomicAddWeightedPixel(x, y, &sampleResult.indirectShadowMask, weight);
+			channel_INDIRECT_SHADOW_MASK->AtomicAddIfValidWeightedPixel(x, y, &sampleResult.indirectShadowMask, weight);
 
 		// Faster than HasChannel(IRRADIANCE)
 		if (channel_IRRADIANCE && sampleResult.HasChannel(IRRADIANCE))
-			channel_IRRADIANCE->AtomicAddWeightedPixel(x, y, sampleResult.irradiance.c, weight);
+			channel_IRRADIANCE->AtomicAddIfValidWeightedPixel(x, y, sampleResult.irradiance.c, weight);
 
 		// This is OBJECT_ID_MASK and BY_OBJECT_ID
 		if (sampleResult.HasChannel(OBJECT_ID)) {
@@ -414,15 +387,11 @@ void Film::AtomicAddSampleResultColor(const u_int x, const u_int y,
 
 					if (sampleResult.objectID == byObjectIDs[index]) {
 						// Merge all radiance groups
-						for (u_int i = 0; i < Min<u_int>(sampleResult.radiance.Size(), channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size()); ++i) {
-							if (sampleResult.radiance[i].IsNaN() || sampleResult.radiance[i].IsInf())
-								continue;
-
+						for (u_int i = 0; i < Min<u_int>(sampleResult.radiance.Size(), channel_RADIANCE_PER_PIXEL_NORMALIZEDs.size()); ++i)
 							c += sampleResult.radiance[i];
-						}
 					}
 
-					channel_BY_OBJECT_IDs[index]->AtomicAddWeightedPixel(x, y, c.c, weight);
+					channel_BY_OBJECT_IDs[index]->AtomicAddIfValidWeightedPixel(x, y, c.c, weight);
 				}
 			}
 		}
@@ -435,16 +404,16 @@ void Film::AtomicAddSampleResultColor(const u_int x, const u_int y,
 					((matID & 0x00ff00u) >> 8) * ( 1.f / 255.f),
 					((matID & 0xff0000u) >> 16) * ( 1.f / 255.f));
 
-			channel_MATERIAL_ID_COLOR->AtomicAddWeightedPixel(x, y, matColID.c, weight);
+			channel_MATERIAL_ID_COLOR->AtomicAddIfValidWeightedPixel(x, y, matColID.c, weight);
 		}
 		
 		// Faster than HasChannel(ALBEDO)
 		if (channel_ALBEDO && sampleResult.HasChannel(ALBEDO))
-			channel_ALBEDO->AtomicAddWeightedPixel(x, y, sampleResult.albedo.c, weight);
+			channel_ALBEDO->AtomicAddIfValidWeightedPixel(x, y, sampleResult.albedo.c, weight);
 
 		// Faster than HasChannel(AVG_SHADING_NORMAL)
 		if (channel_AVG_SHADING_NORMAL && sampleResult.HasChannel(AVG_SHADING_NORMAL))
-			channel_AVG_SHADING_NORMAL->AtomicAddWeightedPixel(x, y, &sampleResult.shadingNormal.x, weight);
+			channel_AVG_SHADING_NORMAL->AtomicAddIfValidWeightedPixel(x, y, &sampleResult.shadingNormal.x, weight);
 	}
 }
 

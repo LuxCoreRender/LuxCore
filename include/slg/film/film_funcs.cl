@@ -56,26 +56,36 @@ OPENCL_FORCE_INLINE void Film_AddPixelVal(const bool usePixelAtomics, __global f
 }
 
 OPENCL_FORCE_INLINE void Film_AddWeightedPixel2Val(const bool usePixelAtomics, __global float *dst, const float val, const float weight) {
-	if (usePixelAtomics) {
-		AtomicAdd(&dst[0], val * weight);
-		AtomicAdd(&dst[1], weight);
-	} else {
-		dst[0] += val * weight;
-		dst[1] += weight;
+	const float v = val;
+
+	if (!isnan(v) && !isinf(v) &&
+		!isnan(weight) && !isinf(weight)) {
+		if (usePixelAtomics) {
+			AtomicAdd(&dst[0], v * weight);
+			AtomicAdd(&dst[1], weight);
+		} else {
+			dst[0] += v * weight;
+			dst[1] += weight;
+		}
 	}
 }
 
 OPENCL_FORCE_INLINE void Film_AddWeightedPixel2(const bool usePixelAtomics, __global float *dst, __global float *val, const float weight) {
-	if (usePixelAtomics) {
-		AtomicAdd(&dst[0], val[0] * weight);
-		AtomicAdd(&dst[1], weight);
-	} else {
-		dst[0] += val[0] * weight;
-		dst[1] += weight;
+	const float v = *val;
+
+	if (!isnan(v) && !isinf(v) &&
+		!isnan(weight) && !isinf(weight)) {
+		if (usePixelAtomics) {
+			AtomicAdd(&dst[0], v * weight);
+			AtomicAdd(&dst[1], weight);
+		} else {
+			dst[0] += v * weight;
+			dst[1] += weight;
+		}
 	}
 }
 
-OPENCL_FORCE_INLINE void Film_AddWeightedPixel4Val(const bool usePixelAtomics, __global float *dst, float3 val, const float weight) {
+OPENCL_FORCE_INLINE void Film_AddIfValidWeightedPixel4Val(const bool usePixelAtomics, __global float *dst, float3 val, const float weight) {
 	const float r = val.x;
 	const float g = val.y;
 	const float b = val.z;
@@ -106,7 +116,7 @@ OPENCL_FORCE_INLINE void Film_AddWeightedPixel4Val(const bool usePixelAtomics, _
 	}*/
 }
 
-OPENCL_FORCE_INLINE void Film_AddWeightedPixel4(const bool usePixelAtomics, __global float *dst, __global float *val, const float weight) {
+OPENCL_FORCE_INLINE void Film_AddIfValidWeightedPixel4(const bool usePixelAtomics, __global float *dst, __global float *val, const float weight) {
 	const float r = val[0];
 	const float g = val[1];
 	const float b = val[2];
@@ -148,7 +158,7 @@ OPENCL_FORCE_INLINE void Film_AddSampleResultColor(const uint x, const uint y,
 
 	for (uint i = 0; i < FILM_MAX_RADIANCE_GROUP_COUNT; ++i) {
 		if (filmRadianceGroup[i])
-			Film_AddWeightedPixel4(usePixelAtomics, &((filmRadianceGroup[i])[index4]), sampleResult->radiancePerPixelNormalized[i].c, weight);
+			Film_AddIfValidWeightedPixel4(usePixelAtomics, &((filmRadianceGroup[i])[index4]), sampleResult->radiancePerPixelNormalized[i].c, weight);
 	}
 
 	if (film->hasChannelAlpha)
@@ -156,51 +166,51 @@ OPENCL_FORCE_INLINE void Film_AddSampleResultColor(const uint x, const uint y,
 
 	if (film->hasChannelDirectDiffuse) {
 		const float3 c = VLOAD3F(sampleResult->directDiffuseReflect.c) + VLOAD3F(sampleResult->directDiffuseTransmit.c);
-		Film_AddWeightedPixel4Val(usePixelAtomics, &filmDirectDiffuse[index4], c, weight);
+		Film_AddIfValidWeightedPixel4Val(usePixelAtomics, &filmDirectDiffuse[index4], c, weight);
 	}
 	if (film->hasChannelDirectDiffuseReflect)
-		Film_AddWeightedPixel4(usePixelAtomics, &filmDirectDiffuseReflect[index4], sampleResult->directDiffuseReflect.c, weight);
+		Film_AddIfValidWeightedPixel4(usePixelAtomics, &filmDirectDiffuseReflect[index4], sampleResult->directDiffuseReflect.c, weight);
 	if (film->hasChannelDirectDiffuseTransmit)
-		Film_AddWeightedPixel4(usePixelAtomics, &filmDirectDiffuseTransmit[index4], sampleResult->directDiffuseTransmit.c, weight);
+		Film_AddIfValidWeightedPixel4(usePixelAtomics, &filmDirectDiffuseTransmit[index4], sampleResult->directDiffuseTransmit.c, weight);
 
 	if (film->hasChannelDirectGlossy) {
 		const float3 c = VLOAD3F(sampleResult->directGlossyReflect.c) + VLOAD3F(sampleResult->directGlossyTransmit.c);
-		Film_AddWeightedPixel4Val(usePixelAtomics, &filmDirectGlossy[index4], c, weight);
+		Film_AddIfValidWeightedPixel4Val(usePixelAtomics, &filmDirectGlossy[index4], c, weight);
 	}
 	if (film->hasChannelDirectGlossyReflect)
-		Film_AddWeightedPixel4(usePixelAtomics, &filmDirectGlossyReflect[index4], sampleResult->directGlossyReflect.c, weight);
+		Film_AddIfValidWeightedPixel4(usePixelAtomics, &filmDirectGlossyReflect[index4], sampleResult->directGlossyReflect.c, weight);
 	if (film->hasChannelDirectGlossyTransmit)
-		Film_AddWeightedPixel4(usePixelAtomics, &filmDirectGlossyTransmit[index4], sampleResult->directGlossyTransmit.c, weight);
+		Film_AddIfValidWeightedPixel4(usePixelAtomics, &filmDirectGlossyTransmit[index4], sampleResult->directGlossyTransmit.c, weight);
 
 	if (film->hasChannelEmission)
-		Film_AddWeightedPixel4(usePixelAtomics, &filmEmission[index4], sampleResult->emission.c, weight);
+		Film_AddIfValidWeightedPixel4(usePixelAtomics, &filmEmission[index4], sampleResult->emission.c, weight);
 
 	if (film->hasChannelIndirectDiffuse) {
 		const float3 c = VLOAD3F(sampleResult->indirectDiffuseReflect.c) + VLOAD3F(sampleResult->indirectDiffuseTransmit.c);
-		Film_AddWeightedPixel4Val(usePixelAtomics, &filmIndirectDiffuse[index4], c, weight);
+		Film_AddIfValidWeightedPixel4Val(usePixelAtomics, &filmIndirectDiffuse[index4], c, weight);
 	}
 	if (film->hasChannelIndirectDiffuseReflect)
-		Film_AddWeightedPixel4(usePixelAtomics, &filmIndirectDiffuseReflect[index4], sampleResult->indirectDiffuseReflect.c, weight);
+		Film_AddIfValidWeightedPixel4(usePixelAtomics, &filmIndirectDiffuseReflect[index4], sampleResult->indirectDiffuseReflect.c, weight);
 	if (film->hasChannelIndirectDiffuseTransmit)
-		Film_AddWeightedPixel4(usePixelAtomics, &filmIndirectDiffuseTransmit[index4], sampleResult->indirectDiffuseTransmit.c, weight);
+		Film_AddIfValidWeightedPixel4(usePixelAtomics, &filmIndirectDiffuseTransmit[index4], sampleResult->indirectDiffuseTransmit.c, weight);
 
 	if (film->hasChannelIndirectGlossy) {
 		const float3 c = VLOAD3F(sampleResult->indirectGlossyReflect.c) + VLOAD3F(sampleResult->indirectGlossyTransmit.c);
-		Film_AddWeightedPixel4Val(usePixelAtomics, &filmIndirectGlossy[index4], c, weight);
+		Film_AddIfValidWeightedPixel4Val(usePixelAtomics, &filmIndirectGlossy[index4], c, weight);
 	}
 	if (film->hasChannelIndirectGlossyReflect)
-		Film_AddWeightedPixel4(usePixelAtomics, &filmIndirectGlossyReflect[index4], sampleResult->indirectGlossyReflect.c, weight);
+		Film_AddIfValidWeightedPixel4(usePixelAtomics, &filmIndirectGlossyReflect[index4], sampleResult->indirectGlossyReflect.c, weight);
 	if (film->hasChannelIndirectGlossyTransmit)
-		Film_AddWeightedPixel4(usePixelAtomics, &filmIndirectGlossyTransmit[index4], sampleResult->indirectGlossyTransmit.c, weight);
+		Film_AddIfValidWeightedPixel4(usePixelAtomics, &filmIndirectGlossyTransmit[index4], sampleResult->indirectGlossyTransmit.c, weight);
 
 	if (film->hasChannelIndirectSpecular) {
 		const float3 c = VLOAD3F(sampleResult->indirectSpecularReflect.c) + VLOAD3F(sampleResult->indirectSpecularTransmit.c);
-		Film_AddWeightedPixel4Val(usePixelAtomics, &filmIndirectSpecular[index4], c, weight);
+		Film_AddIfValidWeightedPixel4Val(usePixelAtomics, &filmIndirectSpecular[index4], c, weight);
 	}
 	if (film->hasChannelIndirectSpecularReflect)
-		Film_AddWeightedPixel4(usePixelAtomics, &filmIndirectSpecularReflect[index4], sampleResult->indirectSpecularReflect.c, weight);
+		Film_AddIfValidWeightedPixel4(usePixelAtomics, &filmIndirectSpecularReflect[index4], sampleResult->indirectSpecularReflect.c, weight);
 	if (film->hasChannelIndirectSpecularTransmit)
-		Film_AddWeightedPixel4(usePixelAtomics, &filmIndirectSpecularTransmit[index4], sampleResult->indirectSpecularTransmit.c, weight);
+		Film_AddIfValidWeightedPixel4(usePixelAtomics, &filmIndirectSpecularTransmit[index4], sampleResult->indirectSpecularTransmit.c, weight);
 
 	if (film->hasChannelMaterialIDMask) {
 		const float materialIDMask = (sampleResult->materialID == film->channelMaterialIDMask) ? 1.f : 0.f;
@@ -219,10 +229,10 @@ OPENCL_FORCE_INLINE void Film_AddSampleResultColor(const uint x, const uint y,
 					byMaterialIDColor += VLOAD3F(sampleResult->radiancePerPixelNormalized[i].c);
 			}
 		}
-		Film_AddWeightedPixel4Val(usePixelAtomics, &filmByMaterialID[index4], byMaterialIDColor, weight);
+		Film_AddIfValidWeightedPixel4Val(usePixelAtomics, &filmByMaterialID[index4], byMaterialIDColor, weight);
 	}
 	if (film->hasChannelIrradiance)
-		Film_AddWeightedPixel4(usePixelAtomics, &filmIrradiance[index4], sampleResult->irradiance.c, weight);
+		Film_AddIfValidWeightedPixel4(usePixelAtomics, &filmIrradiance[index4], sampleResult->irradiance.c, weight);
 	if (film->hasChannelObjectIDMask) {
 		const float objectIDMask = (sampleResult->objectID == film->channelObjectIDMask) ? 1.f : 0.f;
 		Film_AddWeightedPixel2Val(usePixelAtomics, &filmObjectIDMask[index2], objectIDMask, weight);
@@ -236,7 +246,7 @@ OPENCL_FORCE_INLINE void Film_AddSampleResultColor(const uint x, const uint y,
 					byObjectIDColor += VLOAD3F(sampleResult->radiancePerPixelNormalized[i].c);
 			}
 		}
-		Film_AddWeightedPixel4Val(usePixelAtomics, &filmByObjectID[index4], byObjectIDColor, weight);
+		Film_AddIfValidWeightedPixel4Val(usePixelAtomics, &filmByObjectID[index4], byObjectIDColor, weight);
 	}
 	if (film->hasChannelMaterialIDColor) {
 		const uint matID = sampleResult->materialID;
@@ -246,12 +256,12 @@ OPENCL_FORCE_INLINE void Film_AddSampleResultColor(const uint x, const uint y,
 		matIDCol.y = ((matID & 0x00ff00u) >> 8) * (1.f / 255.f);
 		matIDCol.z = ((matID & 0xff0000u) >> 16) * (1.f / 255.f);
 
-		Film_AddWeightedPixel4Val(usePixelAtomics, &filmMaterialIDColor[index4], matIDCol, weight);
+		Film_AddIfValidWeightedPixel4Val(usePixelAtomics, &filmMaterialIDColor[index4], matIDCol, weight);
 	}
 	if (film->hasChannelAlbedo)
-		Film_AddWeightedPixel4(usePixelAtomics, &filmAlbedo[index4], sampleResult->albedo.c, weight);
+		Film_AddIfValidWeightedPixel4(usePixelAtomics, &filmAlbedo[index4], sampleResult->albedo.c, weight);
 	if (film->hasChannelAvgShadingNormal)
-		Film_AddWeightedPixel4(usePixelAtomics, &filmAvgShadingNormal[index4], &sampleResult->shadingNormal.x, weight);
+		Film_AddIfValidWeightedPixel4(usePixelAtomics, &filmAvgShadingNormal[index4], &sampleResult->shadingNormal.x, weight);
 }
 
 OPENCL_FORCE_INLINE void Film_AddSampleResultData(const uint x, const uint y,
