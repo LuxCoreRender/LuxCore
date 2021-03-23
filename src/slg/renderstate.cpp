@@ -42,7 +42,7 @@ void RenderState::CheckEngineTag(const std::string &tag) {
 }
 
 RenderState *RenderState::LoadSerialized(const std::string &fileName) {
-	SerializationInputFile sif(fileName);
+	SerializationInputFile<LuxInputBinArchive> sif(fileName);
 
 	RenderState *renderState;
 	sif.GetArchive() >> renderState;
@@ -56,7 +56,7 @@ RenderState *RenderState::LoadSerialized(const std::string &fileName) {
 void RenderState::SaveSerialized(const std::string &fileName) {
 	SLG_LOG("Saving render state: " << fileName);
 
-	SerializationOutputFile sof(fileName);
+	SerializationOutputFile<LuxOutputBinArchive> sof(fileName);
 
 	// The following line is a workaround to a clang bug
 	RenderState *state = this;

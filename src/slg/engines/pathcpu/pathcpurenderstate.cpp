@@ -61,6 +61,8 @@ template<class Archive> void PathCPURenderState::save(Archive &ar, const u_int v
 
 namespace slg {
 // Explicit instantiations for portable archives
-template void PathCPURenderState::save(LuxOutputArchive &ar, const u_int version) const;
-template void PathCPURenderState::load(LuxInputArchive &ar, const u_int version);
+template void PathCPURenderState::save(LuxOutputBinArchive &ar, const u_int version) const;
+template void PathCPURenderState::load(LuxInputBinArchive &ar, const u_int version);
+template void PathCPURenderState::save(LuxOutputTextArchive &ar, const u_int version) const;
+template void PathCPURenderState::load(LuxInputTextArchive &ar, const u_int version);
 }

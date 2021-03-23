@@ -47,8 +47,8 @@ using namespace luxcore::detail;
 // FilmImpl
 //------------------------------------------------------------------------------
 
-FilmImpl::FilmImpl(const std::string &fileName) : renderSession(NULL) {
-	standAloneFilm = slg::Film::LoadSerialized(fileName);
+FilmImpl::FilmImpl(const std::string &fileName, const bool useBinFormat) : renderSession(NULL) {
+	standAloneFilm = slg::Film::LoadSerialized(fileName, useBinFormat);
 }
 
 FilmImpl::FilmImpl(const luxrays::Properties &props, const bool hasPixelNormalizedChannel,
@@ -207,13 +207,13 @@ void FilmImpl::SaveOutput(const std::string &fileName, const FilmOutputType type
 	API_END();
 }
 
-void FilmImpl::SaveFilm(const string &fileName) const {
+void FilmImpl::SaveFilm(const string &fileName, const bool useBinFormat) const {
 	API_BEGIN("{}", ToArgString(fileName));
 
-	if (renderSession)
-		renderSession->renderSession->SaveFilm(fileName);
-	else
-		slg::Film::SaveSerialized(fileName, standAloneFilm);
+	if (renderSession) {
+		renderSession->renderSession->SaveFilm(fileName, useBinFormat);
+	} else 
+		slg::Film::SaveSerialized(fileName, useBinFormat, standAloneFilm);
 
 	API_END();
 }
@@ -1226,7 +1226,7 @@ RenderConfigImpl::RenderConfigImpl(const std::string &fileName) {
 
 RenderConfigImpl::RenderConfigImpl(const std::string &fileName, RenderStateImpl **startState,
 			FilmImpl **startFilm) {
-	SerializationInputFile sif(fileName);
+	SerializationInputFile<LuxInputBinArchive> sif(fileName);
 
 	// Read the render configuration and the scene
 	sif.GetArchive() >> renderConfig;
@@ -1431,7 +1431,7 @@ RenderSessionImpl::RenderSessionImpl(const RenderConfigImpl *config, const std::
 		renderConfig(config) {
 	film = new FilmImpl(*this);
 
-	unique_ptr<slg::Film> startFilm(slg::Film::LoadSerialized(startFilmFileName));
+	unique_ptr<slg::Film> startFilm(slg::Film::LoadSerialized(startFilmFileName, true));
 	unique_ptr<slg::RenderState> startState(slg::RenderState::LoadSerialized(startStateFileName));
 
 	renderSession = new slg::RenderSession(config->renderConfig,

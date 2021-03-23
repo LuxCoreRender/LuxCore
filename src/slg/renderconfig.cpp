@@ -393,7 +393,7 @@ Properties RenderConfig::ToProperties(const Properties &cfg) {
 //------------------------------------------------------------------------------
 
 RenderConfig *RenderConfig::LoadSerialized(const std::string &fileName) {
-	SerializationInputFile sif(fileName);
+	SerializationInputFile<LuxInputBinArchive> sif(fileName);
 
 	RenderConfig *renderConfig;
 	sif.GetArchive() >> renderConfig;
@@ -411,7 +411,7 @@ void RenderConfig::SaveSerialized(const std::string &fileName, const RenderConfi
 
 void RenderConfig::SaveSerialized(const std::string &fileName, const RenderConfig *renderConfig,
 		const luxrays::Properties &additionalCfg) {
-	SerializationOutputFile sof(fileName);
+	SerializationOutputFile<LuxOutputBinArchive> sof(fileName);
 
 	// This is quite a trick
 	renderConfig->saveAdditionalCfg.Clear();
@@ -452,6 +452,8 @@ template<class Archive>	void RenderConfig::load(Archive &ar, const unsigned int 
 
 namespace slg {
 // Explicit instantiations for portable archives
-template void RenderConfig::save(LuxOutputArchive &ar, const u_int version) const;
-template void RenderConfig::load(LuxInputArchive &ar, const u_int version);
+template void RenderConfig::save(LuxOutputBinArchive &ar, const u_int version) const;
+template void RenderConfig::load(LuxInputBinArchive &ar, const u_int version);
+template void RenderConfig::save(LuxOutputTextArchive &ar, const u_int version) const;
+template void RenderConfig::load(LuxInputTextArchive &ar, const u_int version);
 }

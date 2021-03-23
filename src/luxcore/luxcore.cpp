@@ -262,10 +262,10 @@ vector<string> luxcore::GetFileNameResolverPaths() {
 // Film
 //------------------------------------------------------------------------------
 
-Film *Film::Create(const std::string &fileName) {
+Film *Film::Create(const std::string &fileName, const bool useBinFormat) {
 	API_BEGIN("{}", ToArgString(fileName));
 
-	Film *result = new luxcore::detail::FilmImpl(fileName);
+	Film *result = new luxcore::detail::FilmImpl(fileName, useBinFormat);
 	
 	API_RETURN("{}", (void *)result);
 	

@@ -35,28 +35,52 @@ using namespace slg;
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::Film)
 
-Film *Film::LoadSerialized(const string &fileName) {
-	SerializationInputFile sif(fileName);
+Film *Film::LoadSerialized(const string &fileName, const bool useBinFormat) {
+	if (useBinFormat) {
+		SerializationInputFile<LuxInputBinArchive> sif(fileName);
 
-	Film *film;
-	sif.GetArchive() >> film;
+		Film *film;
+		sif.GetArchive() >> film;
 
-	if (!sif.IsGood())
-		throw runtime_error("Error while loading serialized film: " + fileName);
+		if (!sif.IsGood())
+			throw runtime_error("Error while loading serialized binary film: " + fileName);
 
-	return film;
+		return film;
+	} else {
+		SerializationInputFile<LuxInputTextArchive> sif(fileName);
+
+		Film *film;
+		sif.GetArchive() >> film;
+
+		if (!sif.IsGood())
+			throw runtime_error("Error while loading serialized text film: " + fileName);
+
+		return film;		
+	}
 }
 
-void Film::SaveSerialized(const string &fileName, const Film *film) {
-	SerializationOutputFile sof(fileName);
+void Film::SaveSerialized(const string &fileName, const bool useBinFormat, const Film *film) {
+	if (useBinFormat) {
+		SerializationOutputFile<LuxOutputBinArchive> sof(fileName);
 
-	sof.GetArchive() << film;
+		sof.GetArchive() << film;
 
-	if (!sof.IsGood())
-		throw runtime_error("Error while saving serialized film: " + fileName);
+		if (!sof.IsGood())
+			throw runtime_error("Error while saving serialized binary film: " + fileName);
 
-	sof.Flush();
-	SLG_LOG("Film saved: " << (sof.GetPosition() / 1024) << " Kbytes");
+		sof.Flush();
+		SLG_LOG("Film (binary) saved: " << (sof.GetPosition() / 1024) << " Kbytes");
+	} else {
+		SerializationOutputFile<LuxOutputTextArchive> sof(fileName);
+
+		sof.GetArchive() << film;
+
+		if (!sof.IsGood())
+			throw runtime_error("Error while saving serialized text film: " + fileName);
+
+		sof.Flush();
+		SLG_LOG("Film (text) saved: " << (sof.GetPosition() / 1024) << " Kbytes");
+	}
 }
 
 template<class Archive> void Film::load(Archive &ar, const u_int version) {
@@ -235,6 +259,8 @@ template<class Archive> void Film::save(Archive &ar, const u_int version) const 
 
 namespace slg {
 // Explicit instantiations for portable archives
-template void Film::save(LuxOutputArchive &ar, const u_int version) const;
-template void Film::load(LuxInputArchive &ar, const u_int version);
+template void Film::save(LuxOutputBinArchive &ar, const u_int version) const;
+template void Film::load(LuxInputBinArchive &ar, const u_int version);
+template void Film::save(LuxOutputTextArchive &ar, const u_int version) const;
+template void Film::load(LuxInputTextArchive &ar, const u_int version);
 }

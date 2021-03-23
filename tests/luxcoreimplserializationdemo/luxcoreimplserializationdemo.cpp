@@ -48,7 +48,7 @@ static void TestPropertiesSerialization() {
 
 	// Serialize to a file
 	{
-		SerializationOutputFile sof("test-ser.txt");
+		SerializationOutputFile<LuxOutputBinArchive> sof("test-ser.txt");
 
 		Properties *propsPtr = &props;
 		sof.GetArchive() << propsPtr;
@@ -63,7 +63,7 @@ static void TestPropertiesSerialization() {
 
 	Properties *propsCpy;
 	{
-		SerializationInputFile sif("test-ser.txt");
+		SerializationInputFile<LuxInputBinArchive> sif("test-ser.txt");
 
 		sif.GetArchive() >> propsCpy;
 
@@ -81,11 +81,13 @@ static void TestPropertiesSerialization() {
 		throw runtime_error("Wrong properties [2] value");
 }
 
-static void TestFilmSerialization() {
+static void TestFilmSerialization(const bool binFormat) {
 	// Create a film
 	SLG_LOG("Create a film");
 
-	Film film(512, 512);
+	const u_int imageWidth = 1024;
+	const u_int imageHeight = 1024;
+	Film film(imageWidth, imageHeight);
 	film.hwEnable = false;
 	film.AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
 	film.AddChannel(Film::IMAGEPIPELINE);
@@ -97,9 +99,9 @@ static void TestFilmSerialization() {
 
 	film.Init();
 
-	for (u_int y = 0; y < 512; ++y) {
-		for (u_int x = 0; x < 512; ++x) {
-			const float rgb[3] = { x / 512.f, y / 512.f, 0.f };
+	for (u_int y = 0; y < imageHeight; ++y) {
+		for (u_int x = 0; x < imageWidth; ++x) {
+			const float rgb[3] = { x / (float)imageWidth, y / (float)imageHeight, 0.f };
 			film.channel_RADIANCE_PER_PIXEL_NORMALIZEDs[0]->AddWeightedPixel(x, y, rgb, 1.f);
 		}
 	}
@@ -113,11 +115,11 @@ static void TestFilmSerialization() {
 
 	// Write the film
 	SLG_LOG("Write the film");
-	Film::SaveSerialized("film.flm", &film);
+	Film::SaveSerialized(binFormat ? "film.flm" : "film.pflm", binFormat, &film);
 
 	// Read the film
 	SLG_LOG("Read the film");
-	unique_ptr<Film> filmCopy(Film::LoadSerialized("film.flm"));
+	unique_ptr<Film> filmCopy(Film::LoadSerialized(binFormat ? "film.flm" : "film.pflm", binFormat));
 	filmCopy->hwEnable = false;
 	
 	filmCopy->ExecuteImagePipeline(0);
@@ -175,7 +177,7 @@ template <class T> void TestImageMapSerialization() {
 		SLG_LOG("Write the image map");
 
 		const double t1 = WallClockTime();
-		SerializationOutputFile sof("imgmap.bin");
+		SerializationOutputFile<LuxOutputBinArchive> sof("imgmap.bin");
 		sof.GetArchive() << imgMap;
 		if(!sof.IsGood())
 			throw runtime_error("Error while saving image map: imgmap.bin"); 
@@ -191,7 +193,7 @@ template <class T> void TestImageMapSerialization() {
 	SLG_LOG("Read the image map");
 
 	const double t1 = WallClockTime();
-	SerializationInputFile sif("imgmap.bin");
+	SerializationInputFile<LuxInputBinArchive> sif("imgmap.bin");
 	
 	ImageMap *imgMapCopy;
 	sif.GetArchive() >> imgMapCopy;
@@ -254,7 +256,8 @@ int main(int argc, char *argv[]) {
 	luxcore::Init();
 
 	TestPropertiesSerialization();
-	TestFilmSerialization();
+	TestFilmSerialization(true);
+	TestFilmSerialization(false);
 	TestImageMapSerialization<u_char>();
 	TestImageMapSerialization<half>();
 	TestImageMapSerialization<float>();

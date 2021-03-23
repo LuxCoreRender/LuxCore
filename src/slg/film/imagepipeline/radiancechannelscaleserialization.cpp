@@ -50,6 +50,8 @@ template<class Archive> void RadianceChannelScale::load(Archive &ar, const u_int
 
 namespace slg {
 // Explicit instantiations for portable archives
-template void RadianceChannelScale::save(LuxOutputArchive &ar, const u_int version) const;
-template void RadianceChannelScale::load(LuxInputArchive &ar, const u_int version);
+template void RadianceChannelScale::save(LuxOutputBinArchive &ar, const u_int version) const;
+template void RadianceChannelScale::load(LuxInputBinArchive &ar, const u_int version);
+template void RadianceChannelScale::save(LuxOutputTextArchive &ar, const u_int version) const;
+template void RadianceChannelScale::load(LuxInputTextArchive &ar, const u_int version);
 }

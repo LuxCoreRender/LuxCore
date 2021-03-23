@@ -492,6 +492,10 @@ void Film::ParseOutputs(const Properties &props) {
 					throw runtime_error("Caustic image can be saved only in HDR formats: " + outputName);
 				break;
 			}
+			case FilmOutputs::SERIALIZED_TEXT_FILM: {
+				filmOutputs.Add(FilmOutputs::SERIALIZED_TEXT_FILM, fileName);
+				break;
+			}
 			default:
 				throw runtime_error("Unknown type in film output: " + type);
 		}

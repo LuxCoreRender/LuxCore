@@ -511,7 +511,7 @@ ExtTriangleMesh *ExtTriangleMesh::Merge(const vector<const ExtTriangleMesh *> &m
 // file of BOOST_CLASS_EXPORT_IMPLEMENT()
 
 ExtTriangleMesh *ExtTriangleMesh::LoadSerialized(const string &fileName) {
-	SerializationInputFile sif(fileName);
+	SerializationInputFile<LuxInputBinArchive> sif(fileName);
 
 	ExtTriangleMesh *mesh;
 	sif.GetArchive() >> mesh;
@@ -523,7 +523,7 @@ ExtTriangleMesh *ExtTriangleMesh::LoadSerialized(const string &fileName) {
 }
 
 void ExtTriangleMesh::SaveSerialized(const string &fileName) const {
-	SerializationOutputFile sof(fileName);
+	SerializationOutputFile<LuxOutputBinArchive> sof(fileName);
 
 	const ExtTriangleMesh *mesh = this;
 	sof.GetArchive() << mesh;

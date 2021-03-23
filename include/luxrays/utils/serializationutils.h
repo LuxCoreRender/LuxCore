@@ -45,20 +45,25 @@
 
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
 
 #include "luxrays/luxrays.h"
 
 namespace luxrays {
 
-typedef boost::archive::binary_oarchive LuxOutputArchive;
-typedef boost::archive::binary_iarchive LuxInputArchive;
+typedef boost::archive::binary_oarchive LuxOutputBinArchive;
+typedef boost::archive::binary_iarchive LuxInputBinArchive;
+typedef boost::archive::text_oarchive LuxOutputTextArchive;
+typedef boost::archive::text_iarchive LuxInputTextArchive;
 
+template <class T>
 class SerializationOutputFile {
 public:
 	SerializationOutputFile(const std::string &fileName);
 	virtual ~SerializationOutputFile();
 
-	LuxOutputArchive &GetArchive();
+	T &GetArchive();
 
 	bool IsGood();
 	std::streampos GetPosition();
@@ -67,22 +72,23 @@ public:
 private:
 	boost::filesystem::ofstream outFile;
 	boost::iostreams::filtering_ostream outStream;
-	LuxOutputArchive *outArchive;
+	T *outArchive;
 };
 
+template <class T>
 class SerializationInputFile {
 public:
 	SerializationInputFile(const std::string &fileName);
 	virtual ~SerializationInputFile();
 
-	LuxInputArchive &GetArchive();
+	T &GetArchive();
 
 	bool IsGood();
 
 private:
 	boost::filesystem::ifstream inFile;
 	boost::iostreams::filtering_istream inStream;
-	LuxInputArchive *inArchive;
+	T *inArchive;
 };
 
 }

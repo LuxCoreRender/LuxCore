@@ -25,11 +25,14 @@ using namespace luxrays;
 // SerializationOuputFile
 //------------------------------------------------------------------------------
 
-SerializationOutputFile::SerializationOutputFile(const std::string &fileName) :
+template <class T>
+SerializationOutputFile<T>::SerializationOutputFile(const std::string &fileName) :
 		outArchive(NULL) {
 	outFile.exceptions(boost::filesystem::ofstream::failbit |
 			boost::filesystem::ofstream::badbit |
 			boost::filesystem::ofstream::eofbit);
+	// Force to use C locale
+	outFile.imbue(cLocale);
 
 	// The use of boost::filesystem::path is required for UNICODE support: fileName
 	// is supposed to be UTF-8 encoded.
@@ -41,26 +44,31 @@ SerializationOutputFile::SerializationOutputFile(const std::string &fileName) :
 	outStream.push(outFile);
 
 	// Use portable archive
-	outArchive = new LuxOutputArchive(outStream);
+	outArchive = new T(outStream);
 }
 
-SerializationOutputFile::~SerializationOutputFile() {
+template <class T>
+SerializationOutputFile<T>::~SerializationOutputFile() {
 	delete outArchive;
 }
 
-LuxOutputArchive &SerializationOutputFile::GetArchive() {
+template <class T>
+T &SerializationOutputFile<T>::GetArchive() {
 	return *outArchive;
 }
 
-bool SerializationOutputFile::IsGood() {
+template <class T>
+bool SerializationOutputFile<T>::IsGood() {
 	return outStream.good();
 }
 
-void SerializationOutputFile::Flush() {
+template <class T>
+void SerializationOutputFile<T>::Flush() {
 	outStream.flush();
 }
 
-std::streampos SerializationOutputFile::GetPosition() {
+template <class T>
+std::streampos SerializationOutputFile<T>::GetPosition() {
 	return outFile.tellp();
 }
 
@@ -68,7 +76,8 @@ std::streampos SerializationOutputFile::GetPosition() {
 // SerializationInputFile
 //------------------------------------------------------------------------------
 
-SerializationInputFile::SerializationInputFile(const std::string &fileName) :
+template <class T>
+SerializationInputFile<T>::SerializationInputFile(const std::string &fileName) :
 		inArchive(NULL) {
 	inFile.exceptions(boost::filesystem::ifstream::failbit |
 		boost::filesystem::ifstream::badbit |
@@ -84,18 +93,32 @@ SerializationInputFile::SerializationInputFile(const std::string &fileName) :
 	inStream.push(inFile);
 
 	// Use portable archive
-	inArchive = new LuxInputArchive(inStream);
+	inArchive = new T(inStream);
 	
 }
 
-SerializationInputFile::~SerializationInputFile() {
+template <class T>
+SerializationInputFile<T>::~SerializationInputFile() {
 	delete inArchive;
 }
 
-LuxInputArchive &SerializationInputFile::GetArchive() {
+template <class T>
+T &SerializationInputFile<T>::GetArchive() {
 	return *inArchive;
 }
 
-bool SerializationInputFile::IsGood() {
+template <class T>
+bool SerializationInputFile<T>::IsGood() {
 	return inStream.good();
+}
+
+//------------------------------------------------------------------------------
+// Explicit instantiations
+//------------------------------------------------------------------------------
+
+namespace luxrays {
+template class SerializationOutputFile<LuxOutputBinArchive>;
+template class SerializationInputFile<LuxInputBinArchive>;
+template class SerializationOutputFile<LuxOutputTextArchive>;
+template class SerializationInputFile<LuxInputTextArchive>;
 }

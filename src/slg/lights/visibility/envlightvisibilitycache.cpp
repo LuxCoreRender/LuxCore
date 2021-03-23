@@ -866,7 +866,7 @@ Properties EnvLightVisibilityCache::Params2Props(const string &prefix, const ELV
 void EnvLightVisibilityCache::LoadPersistentCache(const std::string &fileName) {
 	SLG_LOG("Loading persistent EnvLightVisibility cache: " + fileName);
 
-	SerializationInputFile sif(fileName);
+	SerializationInputFile<LuxInputBinArchive> sif(fileName);
 
 	sif.GetArchive() >> mapWidth;
 	sif.GetArchive() >> mapHeight;
@@ -891,7 +891,7 @@ void EnvLightVisibilityCache::SavePersistentCache(const std::string &fileName) {
 
 	SafeSave safeSave(fileName);
 	{
-		SerializationOutputFile sof(params.persistent.safeSave ? safeSave.GetSaveFileName() : fileName);
+		SerializationOutputFile<LuxOutputBinArchive> sof(params.persistent.safeSave ? safeSave.GetSaveFileName() : fileName);
 
 		sof.GetArchive() << mapWidth;
 		sof.GetArchive() << mapHeight;

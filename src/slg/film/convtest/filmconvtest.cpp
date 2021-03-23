@@ -145,6 +145,8 @@ template<class Archive> void FilmConvTest::serialize(Archive &ar, const u_int ve
 
 namespace slg {
 // Explicit instantiations for portable archives
-template void FilmConvTest::serialize(LuxOutputArchive &ar, const u_int version);
-template void FilmConvTest::serialize(LuxInputArchive &ar, const u_int version);
+template void FilmConvTest::serialize(LuxOutputBinArchive &ar, const u_int version);
+template void FilmConvTest::serialize(LuxInputBinArchive &ar, const u_int version);
+template void FilmConvTest::serialize(LuxOutputTextArchive &ar, const u_int version);
+template void FilmConvTest::serialize(LuxInputTextArchive &ar, const u_int version);
 }

@@ -31,7 +31,7 @@ using namespace slg;
 void PhotonGICache::LoadPersistentCache(const std::string &fileName) {
 	SLG_LOG("Loading persistent PhotonGI cache: " + fileName);
 
-	SerializationInputFile sif(fileName);
+	SerializationInputFile<LuxInputBinArchive> sif(fileName);
 
 	sif.GetArchive() >> params;
 
@@ -56,7 +56,7 @@ void PhotonGICache::SavePersistentCache(const std::string &fileName) {
 
 	SafeSave safeSave(fileName);
 	{
-		SerializationOutputFile sof(params.persistent.safeSave ? safeSave.GetSaveFileName() : fileName);
+		SerializationOutputFile<LuxOutputBinArchive> sof(params.persistent.safeSave ? safeSave.GetSaveFileName() : fileName);
 
 		sof.GetArchive() << params;
 
@@ -119,6 +119,8 @@ template<class Archive> void PhotonGICache::serialize(Archive &ar, const u_int v
 
 namespace slg {
 // Explicit instantiations for portable archives
-template void PhotonGICache::serialize(LuxOutputArchive &ar, const u_int version);
-template void PhotonGICache::serialize(LuxInputArchive &ar, const u_int version);
+template void PhotonGICache::serialize(LuxOutputBinArchive &ar, const u_int version);
+template void PhotonGICache::serialize(LuxInputBinArchive &ar, const u_int version);
+template void PhotonGICache::serialize(LuxOutputTextArchive &ar, const u_int version);
+template void PhotonGICache::serialize(LuxInputTextArchive &ar, const u_int version);
 }

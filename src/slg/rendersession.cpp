@@ -183,7 +183,7 @@ bool RenderSession::NeedResumeRenderingSave(const bool force) {
 		return false;
 }
 
-void RenderSession::SaveFilm(const string &fileName) {
+void RenderSession::SaveFilm(const string &fileName, const bool useBinFormat) {
 	SLG_LOG("Saving film: " << fileName);
 
 	// Ask the RenderEngine to update the film
@@ -195,11 +195,11 @@ void RenderSession::SaveFilm(const string &fileName) {
 	if (renderConfig->GetProperty("film.safesave").Get<bool>()) {
 		SafeSave safeSave(fileName);
 
-		Film::SaveSerialized(safeSave.GetSaveFileName(), film);
+		Film::SaveSerialized(safeSave.GetSaveFileName(), useBinFormat, film);
 
 		safeSave.Process();
 	} else
-		Film::SaveSerialized(fileName, film);
+		Film::SaveSerialized(fileName, useBinFormat, film);
 }
 
 void RenderSession::SaveFilmOutputs() {
@@ -262,7 +262,7 @@ void RenderSession::CheckPeriodicSave(const bool force) {
 	if (NeedPeriodicFilmSave(force)) {
 		const string fileName = renderConfig->GetProperty("periodicsave.film.filename").Get<string>();
 
-		SaveFilm(fileName);
+		SaveFilm(fileName, true);
 	}
 
 	// Rendering resume periodic save
@@ -278,7 +278,7 @@ void RenderSession::CheckPeriodicSave(const bool force) {
 }
 
 static size_t SaveRsmFile(RenderSession *renderSession, const std::string &fileName) {
-	SerializationOutputFile sof(fileName);
+	SerializationOutputFile<LuxOutputBinArchive> sof(fileName);
 
 	// Save the render configuration and the scene
 	sof.GetArchive() << renderSession->renderConfig;

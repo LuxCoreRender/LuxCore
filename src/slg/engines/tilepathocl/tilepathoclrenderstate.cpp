@@ -76,8 +76,10 @@ template<class Archive> void TilePathOCLRenderState::save(Archive &ar, const u_i
 
 namespace slg {
 // Explicit instantiations for portable archives
-template void TilePathOCLRenderState::save(LuxOutputArchive &ar, const u_int version) const;
-template void TilePathOCLRenderState::load(LuxInputArchive &ar, const u_int version);
+template void TilePathOCLRenderState::save(LuxOutputBinArchive &ar, const u_int version) const;
+template void TilePathOCLRenderState::load(LuxInputBinArchive &ar, const u_int version);
+template void TilePathOCLRenderState::save(LuxOutputTextArchive &ar, const u_int version) const;
+template void TilePathOCLRenderState::load(LuxInputTextArchive &ar, const u_int version);
 }
 
 #endif

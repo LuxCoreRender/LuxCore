@@ -63,6 +63,8 @@ template<class Archive> void ExtMeshCache::save(Archive &ar, const u_int version
 
 namespace slg {
 // Explicit instantiations for portable archives
-template void ExtMeshCache::save(LuxOutputArchive &ar, const u_int version) const;
-template void ExtMeshCache::load(LuxInputArchive &ar, const u_int version);
+template void ExtMeshCache::save(LuxOutputBinArchive &ar, const u_int version) const;
+template void ExtMeshCache::load(LuxInputBinArchive &ar, const u_int version);
+template void ExtMeshCache::save(LuxOutputTextArchive &ar, const u_int version) const;
+template void ExtMeshCache::load(LuxInputTextArchive &ar, const u_int version);
 }

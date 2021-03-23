@@ -39,8 +39,10 @@ template<class Archive> void Tile::TileCoord::serialize(Archive &ar, const unsig
 
 namespace slg {
 // Explicit instantiations for portable archives
-template void Tile::serialize(LuxOutputArchive &ar, const unsigned int version);
-template void Tile::serialize(LuxInputArchive &ar, const unsigned int version);
+template void Tile::serialize(LuxOutputBinArchive &ar, const unsigned int version);
+template void Tile::serialize(LuxInputBinArchive &ar, const unsigned int version);
+template void Tile::serialize(LuxOutputTextArchive &ar, const unsigned int version);
+template void Tile::serialize(LuxInputTextArchive &ar, const unsigned int version);
 }
 
 //------------------------------------------------------------------------------
@@ -86,8 +88,10 @@ template<class Archive> void Tile::save(Archive &ar, const u_int version) const 
 
 namespace slg {
 // Explicit instantiations for portable archives
-template void Tile::save(LuxOutputArchive &ar, const u_int version) const;
-template void Tile::load(LuxInputArchive &ar, const u_int version);
+template void Tile::save(LuxOutputBinArchive &ar, const u_int version) const;
+template void Tile::load(LuxInputBinArchive &ar, const u_int version);
+template void Tile::save(LuxOutputTextArchive &ar, const u_int version) const;
+template void Tile::load(LuxInputTextArchive &ar, const u_int version);
 }
 
 //------------------------------------------------------------------------------
@@ -164,6 +168,8 @@ template<class Archive> void TileRepository::save(Archive &ar, const u_int versi
 
 namespace slg {
 // Explicit instantiations for portable archives
-template void TileRepository::save(LuxOutputArchive &ar, const u_int version) const;
-template void TileRepository::load(LuxInputArchive &ar, const unsigned int version);
+template void TileRepository::save(LuxOutputBinArchive &ar, const u_int version) const;
+template void TileRepository::load(LuxInputBinArchive &ar, const unsigned int version);
+template void TileRepository::save(LuxOutputTextArchive &ar, const u_int version) const;
+template void TileRepository::load(LuxInputTextArchive &ar, const unsigned int version);
 }

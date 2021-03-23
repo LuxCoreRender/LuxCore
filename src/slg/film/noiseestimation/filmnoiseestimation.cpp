@@ -232,6 +232,8 @@ template<class Archive> void FilmNoiseEstimation::serialize(Archive &ar, const u
 
 namespace slg {
 // Explicit instantiations for portable archives
-template void FilmNoiseEstimation::serialize(LuxOutputArchive &ar, const u_int version);
-template void FilmNoiseEstimation::serialize(LuxInputArchive &ar, const u_int version);
+template void FilmNoiseEstimation::serialize(LuxOutputBinArchive &ar, const u_int version);
+template void FilmNoiseEstimation::serialize(LuxInputBinArchive &ar, const u_int version);
+template void FilmNoiseEstimation::serialize(LuxOutputTextArchive &ar, const u_int version);
+template void FilmNoiseEstimation::serialize(LuxInputTextArchive &ar, const u_int version);
 }

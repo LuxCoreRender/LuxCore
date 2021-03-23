@@ -36,8 +36,10 @@ template<class Archive> void ImageMapStorage::serialize(Archive &ar, const u_int
 
 namespace slg {
 // Explicit instantiations for portable archives
-template void ImageMapStorage::serialize(LuxOutputArchive &ar, const u_int version);
-template void ImageMapStorage::serialize(LuxInputArchive &ar, const u_int version);
+template void ImageMapStorage::serialize(LuxOutputBinArchive &ar, const u_int version);
+template void ImageMapStorage::serialize(LuxInputBinArchive &ar, const u_int version);
+template void ImageMapStorage::serialize(LuxOutputTextArchive &ar, const u_int version);
+template void ImageMapStorage::serialize(LuxInputTextArchive &ar, const u_int version);
 }
 
 //------------------------------------------------------------------------------
@@ -85,6 +87,8 @@ template<class Archive>	void ImageMap::load(Archive &ar, const unsigned int vers
 
 namespace slg {
 // Explicit instantiations for portable archives
-template void ImageMap::save(LuxOutputArchive &ar, const u_int version) const;
-template void ImageMap::load(LuxInputArchive &ar, const u_int version);
+template void ImageMap::save(LuxOutputBinArchive &ar, const u_int version) const;
+template void ImageMap::load(LuxInputBinArchive &ar, const u_int version);
+template void ImageMap::save(LuxOutputTextArchive &ar, const u_int version) const;
+template void ImageMap::load(LuxInputTextArchive &ar, const u_int version);
 }

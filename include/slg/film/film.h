@@ -450,8 +450,8 @@ public:
 	luxrays::HardwareDeviceKernel *mergeRADIANCE_PER_SCREEN_NORMALIZEDKernel;
 	luxrays::HardwareDeviceKernel *mergeFinalizeKernel;
 
-	static Film *LoadSerialized(const std::string &fileName);
-	static void SaveSerialized(const std::string &fileName, const Film *film);
+	static Film *LoadSerialized(const std::string &fileName, const bool useBinFormat);
+	static void SaveSerialized(const std::string &fileName, const bool useBinFormat, const Film *film);
 
 	static bool GetFilmSize(const luxrays::Properties &cfg,
 		u_int *filmFullWidth, u_int *filmFullHeight,

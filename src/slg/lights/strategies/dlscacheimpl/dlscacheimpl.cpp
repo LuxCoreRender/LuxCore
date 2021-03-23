@@ -591,7 +591,7 @@ void DirectLightSamplingCache::DebugExport(const string &fileName, const float s
 void DirectLightSamplingCache::LoadPersistentCache(const std::string &fileName) {
 	SLG_LOG("Loading persistent EnvLightVisibility cache: " + fileName);
 
-	SerializationInputFile sif(fileName);
+	SerializationInputFile<LuxInputBinArchive> sif(fileName);
 
 	sif.GetArchive() >> params;
 
@@ -610,7 +610,7 @@ void DirectLightSamplingCache::SavePersistentCache(const std::string &fileName) 
 
 	SafeSave safeSave(fileName);
 	{
-		SerializationOutputFile sof(params.persistent.safeSave ? safeSave.GetSaveFileName() : fileName);
+		SerializationOutputFile<LuxOutputBinArchive> sof(params.persistent.safeSave ? safeSave.GetSaveFileName() : fileName);
 
 		sof.GetArchive() << params;
 

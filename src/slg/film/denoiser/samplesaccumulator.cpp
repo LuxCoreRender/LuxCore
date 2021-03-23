@@ -341,6 +341,8 @@ template<class Archive>	void SamplesAccumulator::load(Archive &ar, const unsigne
 
 namespace slg {
 // Explicit instantiations for portable archives
-template void SamplesAccumulator::save(LuxOutputArchive &ar, const u_int version) const;
-template void SamplesAccumulator::load(LuxInputArchive &ar, const u_int version);
+template void SamplesAccumulator::save(LuxOutputBinArchive &ar, const u_int version) const;
+template void SamplesAccumulator::load(LuxInputBinArchive &ar, const u_int version);
+template void SamplesAccumulator::save(LuxOutputTextArchive &ar, const u_int version) const;
+template void SamplesAccumulator::load(LuxInputTextArchive &ar, const u_int version);
 }

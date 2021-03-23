@@ -256,7 +256,8 @@ public:
 		OUTPUT_AVG_SHADING_NORMAL,
 		OUTPUT_NOISE,
 		OUTPUT_USER_IMPORTANCE,
-		OUTPUT_CAUSTIC
+		OUTPUT_CAUSTIC,
+		OUTPUT_SERIALIZED_TEXT_FILM
 	} FilmOutputType;
 
 	/*!
@@ -312,11 +313,13 @@ public:
 
 	/*!
 	 * \brief Loads a stand alone Film (i.e. not connected to a rendering session)
-	 * from a file.
+	 * from a binary or portable text format file.
 	 *
-	 * \param fileName is the name of the file with the serialized film to read.
+	 * \param fileName is the name of the file with the serialized binary format film to read.
+	 * \param useBinFormat if to use binary or portable text format file.
 	 */
-	static Film *Create(const std::string &fileName);
+	static Film *Create(const std::string &fileName, const bool useBinFormat = true);
+
 	/*!
 	 * \brief Create a stand alone Film (i.e. not connected to a rendering session)
 	 * from the properties.
@@ -410,11 +413,12 @@ public:
 	virtual void SaveOutput(const std::string &fileName, const FilmOutputType type, const luxrays::Properties &props) const = 0;
 
 	/*!
-	 * \brief Serializes a Film in a file.
+	 * \brief Serializes a binary or portable text format Film in a file.
 	 *
 	 * \param fileName is the name of the file where to serialize the film.
+	 * \param useBinFormat if to use binary or portable text format file.
 	 */
-	virtual void SaveFilm(const std::string &fileName) const = 0;
+	virtual void SaveFilm(const std::string &fileName, const bool useBinFormat = true) const = 0;
 
 	/*!
 	 * \brief Returns the total sample count.

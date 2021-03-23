@@ -77,6 +77,8 @@ template<class Archive> void ImageMapCache::load(Archive &ar, const u_int versio
 
 namespace slg {
 // Explicit instantiations for portable archives
-template void ImageMapCache::save(LuxOutputArchive &ar, const u_int version) const;
-template void ImageMapCache::load(LuxInputArchive &ar, const u_int version);
+template void ImageMapCache::save(LuxOutputBinArchive &ar, const u_int version) const;
+template void ImageMapCache::load(LuxInputBinArchive &ar, const u_int version);
+template void ImageMapCache::save(LuxOutputTextArchive &ar, const u_int version) const;
+template void ImageMapCache::load(LuxInputTextArchive &ar, const u_int version);
 }

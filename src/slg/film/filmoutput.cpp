@@ -240,6 +240,8 @@ bool Film::HasOutput(const FilmOutputs::FilmOutputType type) const {
 			// Caustic has not dedicated channel but is RADIANCE_PER_SCREEN_NORMALIZED
 			// when doing hybrid rendering
 			return HasChannel(RADIANCE_PER_SCREEN_NORMALIZED);
+		case FilmOutputs::SERIALIZED_TEXT_FILM:
+			return filmOutputs.HasType(FilmOutputs::SERIALIZED_TEXT_FILM);
 		default:
 			throw runtime_error("Unknown film output type in Film::HasOutput(): " + ToString(type));
 	}
@@ -252,7 +254,7 @@ void Film::Output() {
 
 void Film::Output(const string &fileName,const FilmOutputs::FilmOutputType type,
 		const Properties *props, const bool executeImagePipeline) { 
-	// Handle the special case of the serialized film output
+	// Handle the special case of the serialized film output in binary/text format
 	if (type == FilmOutputs::SERIALIZED_FILM) {
 		if (!filmOutputs.HasType(FilmOutputs::SERIALIZED_FILM))
 			throw runtime_error("SERIALIZED_FILM has not been configured as output in Film::Output()");
@@ -262,11 +264,27 @@ void Film::Output(const string &fileName,const FilmOutputs::FilmOutputType type,
 		if (filmOutputs.UseSafeSave()) {
 			SafeSave safeSave(fileName);
 
-			Film::SaveSerialized(safeSave.GetSaveFileName(), this);
+			Film::SaveSerialized(safeSave.GetSaveFileName(), true, this);
 
 			safeSave.Process();
 		} else
-			Film::SaveSerialized(fileName, this);
+			Film::SaveSerialized(fileName, true, this);
+		
+		return;
+	} else if (type == FilmOutputs::SERIALIZED_TEXT_FILM) {
+		if (!filmOutputs.HasType(FilmOutputs::SERIALIZED_TEXT_FILM))
+			throw runtime_error("SERIALIZED_TEXT_FILM has not been configured as output in Film::Output()");
+
+		SLG_LOG("Outputting film: " << fileName << " type: " << ToString(type));
+
+		if (filmOutputs.UseSafeSave()) {
+			SafeSave safeSave(fileName);
+
+			Film::SaveSerialized(safeSave.GetSaveFileName(), false, this);
+
+			safeSave.Process();
+		} else
+			Film::SaveSerialized(fileName, false, this);
 		
 		return;
 	}

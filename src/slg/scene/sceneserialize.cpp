@@ -35,7 +35,7 @@ using namespace slg;
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::Scene)
 
 Scene *Scene::LoadSerialized(const std::string &fileName) {
-	SerializationInputFile sif(fileName);
+	SerializationInputFile<LuxInputBinArchive> sif(fileName);
 
 	Scene *scene;
 	sif.GetArchive() >> scene;
@@ -47,7 +47,7 @@ Scene *Scene::LoadSerialized(const std::string &fileName) {
 }
 
 void Scene::SaveSerialized(const std::string &fileName, const Scene *scene) {
-	SerializationOutputFile sof(fileName);
+	SerializationOutputFile<LuxOutputBinArchive> sof(fileName);
 
 	sof.GetArchive() << scene;
 
@@ -94,6 +94,8 @@ template<class Archive> void Scene::save(Archive &ar, const u_int version) const
 
 namespace slg {
 // Explicit instantiations for portable archives
-template void Scene::save(LuxOutputArchive &ar, const u_int version) const;
-template void Scene::load(LuxInputArchive &ar, const u_int version);
+template void Scene::save(LuxOutputBinArchive &ar, const u_int version) const;
+template void Scene::load(LuxInputBinArchive &ar, const u_int version);
+template void Scene::save(LuxOutputTextArchive &ar, const u_int version) const;
+template void Scene::load(LuxInputTextArchive &ar, const u_int version);
 }

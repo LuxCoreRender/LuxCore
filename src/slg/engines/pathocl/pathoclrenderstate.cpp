@@ -63,8 +63,10 @@ template<class Archive> void PathOCLRenderState::save(Archive &ar, const u_int v
 
 namespace slg {
 // Explicit instantiations for portable archives
-template void PathOCLRenderState::save(LuxOutputArchive &ar, const u_int version) const;
-template void PathOCLRenderState::load(LuxInputArchive &ar, const u_int version);
+template void PathOCLRenderState::save(LuxOutputBinArchive &ar, const u_int version) const;
+template void PathOCLRenderState::load(LuxInputBinArchive &ar, const u_int version);
+template void PathOCLRenderState::save(LuxOutputTextArchive &ar, const u_int version) const;
+template void PathOCLRenderState::load(LuxInputTextArchive &ar, const u_int version);
 }
 
 #endif

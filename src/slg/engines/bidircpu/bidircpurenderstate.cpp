@@ -61,6 +61,8 @@ template<class Archive> void BiDirCPURenderState::save(Archive &ar, const u_int 
 
 namespace slg {
 // Explicit instantiations for portable archives
-template void BiDirCPURenderState::serialize(LuxOutputArchive &ar, const u_int version);
-template void BiDirCPURenderState::serialize(LuxInputArchive &ar, const u_int version);
+template void BiDirCPURenderState::serialize(LuxOutputBinArchive &ar, const u_int version);
+template void BiDirCPURenderState::serialize(LuxInputBinArchive &ar, const u_int version);
+template void BiDirCPURenderState::serialize(LuxOutputTextArchive &ar, const u_int version);
+template void BiDirCPURenderState::serialize(LuxInputTextArchive &ar, const u_int version);
 }

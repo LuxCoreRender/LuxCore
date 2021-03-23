@@ -47,7 +47,7 @@ public:
 	void Resume();
 
 	void SaveFilmOutputs();
-	void SaveFilm(const std::string &fileName);
+	void SaveFilm(const std::string &fileName, const bool useBinFormat);
 	void SaveResumeFile(const std::string &fileName);
 	
 	void CheckPeriodicSave(const bool force = false);

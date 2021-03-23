@@ -1915,9 +1915,11 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.value("NOISE", Film::OUTPUT_NOISE)
 		.value("USER_IMPORTANCE", Film::OUTPUT_USER_IMPORTANCE)
 		.value("CAUSTIC", Film::OUTPUT_CAUSTIC)
+		.value("SERIALIZED_TEXT_FILM", Film::OUTPUT_SERIALIZED_TEXT_FILM)
 	;
 
     class_<luxcore::detail::FilmImpl>("Film", init<string>())
+		.def(init<string, bool>())
 		.def(init<luxrays::Properties, bool, bool>())
 		.def("GetWidth", &luxcore::detail::FilmImpl::GetWidth)
 		.def("GetHeight", &luxcore::detail::FilmImpl::GetHeight)

@@ -41,8 +41,11 @@ def LoadFilm(filmFileName, hasPixelNormalizedChannel, hasScreenNormalizedChannel
 		props = pyluxcore.Properties(filmFileName)
 		return pyluxcore.Film(props, hasPixelNormalizedChannel, hasScreenNormalizedChannel)
 	elif (fileExt == ".flm"):
-		# It is a stand alone film
-		return pyluxcore.Film(filmFileName)
+		# It is a stand alone film (binary format)
+		return pyluxcore.Film(filmFileName, True)
+	elif (fileExt == ".pflm"):
+		# It is a stand alone film (portable text format)
+		return pyluxcore.Film(filmFileName, False)
 	elif (fileExt == ".rsm"):
 		# It is a resume rendering file
 		(config, startState, startFilm) = pyluxcore.RenderConfig.LoadResumeFile(filmFileName)
@@ -55,7 +58,7 @@ def LuxCoreMerge(argv):
 	filmParser = argparse.ArgumentParser(description="Film Options", add_help=False)
 	# Film options
 	filmParser.add_argument("fileFilm",
-							help=".cfg, .flm or .rsm files with a film")
+							help=".cfg, .pflm, .flm or .rsm files with a film")
 	filmParser.add_argument("-p", "--pixel-normalized-channel", action = "store_true", default=False,
 							help = "The film will have CHANNEL_RADIANCE_PER_PIXEL_NORMALIZED (required by all render engines)")
 	filmParser.add_argument("-s", "--screen-normalized-channel", action = "store_true", default=False,
@@ -100,7 +103,7 @@ def LuxCoreMerge(argv):
 		aovOutput = generalArgs.aov_output[1]
 
 	# Split the arguments based of film files
-	filmsArgv = list(argsutils.ArgvSplitter(filmArgv, [".cfg", ".flm", ".rsm"]))
+	filmsArgv = list(argsutils.ArgvSplitter(filmArgv, [".cfg", ".pflm", ".flm", ".rsm"]))
 	if not filmsArgv:
 		generalParser.print_help()
 		filmParser.print_help()

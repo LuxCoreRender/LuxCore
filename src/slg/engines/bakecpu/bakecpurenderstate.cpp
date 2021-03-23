@@ -61,6 +61,8 @@ template<class Archive> void BakeCPURenderState::save(Archive &ar, const u_int v
 
 namespace slg {
 // Explicit instantiations for portable archives
-template void BakeCPURenderState::save(LuxOutputArchive &ar, const u_int version) const;
-template void BakeCPURenderState::load(LuxInputArchive &ar, const u_int version);
+template void BakeCPURenderState::save(LuxOutputBinArchive &ar, const u_int version) const;
+template void BakeCPURenderState::load(LuxInputBinArchive &ar, const u_int version);
+template void BakeCPURenderState::save(LuxOutputTextArchive &ar, const u_int version) const;
+template void BakeCPURenderState::load(LuxInputTextArchive &ar, const u_int version);
 }

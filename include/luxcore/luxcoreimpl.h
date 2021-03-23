@@ -37,7 +37,7 @@ class RenderSessionImpl;
 
 class FilmImpl : public Film {
 public:
-	FilmImpl(const std::string &fileName);
+	FilmImpl(const std::string &fileName, const bool useBinFormat = true);
 	FilmImpl(const luxrays::Properties &props,
 		const bool hasPixelNormalizedChannel,
 		const bool hasScreenNormalizedChannel);
@@ -59,7 +59,7 @@ public:
 
 	void SaveOutputs() const;
 	void SaveOutput(const std::string &fileName, const FilmOutputType type, const luxrays::Properties &props) const;
-	void SaveFilm(const std::string &fileName) const;
+	void SaveFilm(const std::string &fileName, const bool useBinFormat = true) const;
 
 	double GetTotalSampleCount() const;
 

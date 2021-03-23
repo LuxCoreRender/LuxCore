@@ -33,8 +33,10 @@ template<class Archive> void ImagePipelinePlugin::serialize(Archive &ar, const u
 
 namespace slg {
 // Explicit instantiations for portable archives
-template void ImagePipelinePlugin::serialize(LuxOutputArchive &ar, const u_int version);
-template void ImagePipelinePlugin::serialize(LuxInputArchive &ar, const u_int version);
+template void ImagePipelinePlugin::serialize(LuxOutputBinArchive &ar, const u_int version);
+template void ImagePipelinePlugin::serialize(LuxInputBinArchive &ar, const u_int version);
+template void ImagePipelinePlugin::serialize(LuxOutputTextArchive &ar, const u_int version);
+template void ImagePipelinePlugin::serialize(LuxInputTextArchive &ar, const u_int version);
 }
 
 //------------------------------------------------------------------------------
@@ -52,6 +54,8 @@ template<class Archive> void ImagePipeline::serialize(Archive &ar, const u_int v
 
 namespace slg {
 // Explicit instantiations for portable archives
-template void ImagePipeline::serialize(LuxOutputArchive &ar, const u_int version);
-template void ImagePipeline::serialize(LuxInputArchive &ar, const u_int version);
+template void ImagePipeline::serialize(LuxOutputBinArchive &ar, const u_int version);
+template void ImagePipeline::serialize(LuxInputBinArchive &ar, const u_int version);
+template void ImagePipeline::serialize(LuxOutputTextArchive &ar, const u_int version);
+template void ImagePipeline::serialize(LuxInputTextArchive &ar, const u_int version);
 }

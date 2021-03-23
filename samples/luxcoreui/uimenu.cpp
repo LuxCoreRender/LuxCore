@@ -338,8 +338,10 @@ void LuxCoreApp::MenuFilm() {
 	ImGui::Separator();
 	if (session && ImGui::MenuItem("Save outputs"))
 		session->GetFilm().SaveOutputs();
-	if (session && ImGui::MenuItem("Save film"))
-		session->GetFilm().SaveFilm("film.flm");
+	if (session && ImGui::MenuItem("Save binary film"))
+		session->GetFilm().SaveFilm("film.flm", true);
+	if (session && ImGui::MenuItem("Save portable (text) film"))
+		session->GetFilm().SaveFilm("film.pflm", false);
 }
 
 //------------------------------------------------------------------------------

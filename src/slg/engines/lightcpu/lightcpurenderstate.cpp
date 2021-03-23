@@ -45,6 +45,8 @@ template<class Archive> void LightCPURenderState::serialize(Archive &ar, const u
 
 namespace slg {
 // Explicit instantiations for portable archives
-template void LightCPURenderState::serialize(LuxOutputArchive &ar, const u_int version);
-template void LightCPURenderState::serialize(LuxInputArchive &ar, const u_int version);
+template void LightCPURenderState::serialize(LuxOutputBinArchive &ar, const u_int version);
+template void LightCPURenderState::serialize(LuxInputBinArchive &ar, const u_int version);
+template void LightCPURenderState::serialize(LuxOutputTextArchive &ar, const u_int version);
+template void LightCPURenderState::serialize(LuxInputTextArchive &ar, const u_int version);
 }
