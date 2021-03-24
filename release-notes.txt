@@ -44,6 +44,8 @@ Beta1 released
 
 RC1 released
 
+* Fixed a problem when using the DIRECT_DIFFUSE_REFLECT AOV (issue #517)
+
 ### Fixed Bugs
 
 * Added the support for pixel filtering to light tracing (issue #413)
