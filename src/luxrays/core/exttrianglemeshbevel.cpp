@@ -72,7 +72,7 @@ float ExtTriangleMesh::BevelCylinder::Intersect(const Ray &ray, const float beve
 		h = b * b - c;
 		if (h > 0.f) {
 			t = -b - sqrtf(h);
-			
+
 			if ((t > ray.mint) && (t < ray.maxt))
 				return t;
 		}
@@ -144,7 +144,6 @@ bool ExtTriangleMesh::BevelBoundingCylinder::IsInside(const luxrays::Point &pos)
 }
 
 float ExtTriangleMesh::BevelBoundingCylinder::Intersect(const Ray &ray, const float bevelRadius) const {
-
 	// From Capsule intersection code at https://iquilezles.org/www/articles/intersectors/intersectors.htm
 	// See also Distance between Lines at http://geomalgorithms.com/a07-_distance.html
 	
