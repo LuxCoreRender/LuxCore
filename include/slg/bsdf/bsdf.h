@@ -91,6 +91,8 @@ public:
 		const Scene &scene, const luxrays::Ray &ray,
 		const Volume &volume, const float t, const float passThroughEvent);
 
+	void MoveHitPoint(const luxrays::Point &p, const luxrays::Normal &n);
+	
 	bool IsEmpty() const { return (material == NULL); }
 	bool IsLightSource() const { return material->IsLightSource(); }
 	bool IsDelta() const { return material->IsDelta(); }
@@ -154,7 +156,6 @@ public:
 
 private:
 	const SceneObject *sceneObject;
-	const luxrays::ExtMesh *mesh;
 	const Material *material;
 	const TriangleLight *triangleLightSource; // != NULL only if it is an area light
 	luxrays::Frame frame;

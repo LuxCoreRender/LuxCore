@@ -44,6 +44,7 @@ typedef enum {
 	TYPE_EXT_TRIANGLE, TYPE_EXT_TRIANGLE_INSTANCE, TYPE_EXT_TRIANGLE_MOTION
 } MeshType;
 
+
 class Mesh {
 public:
 	Mesh() { }

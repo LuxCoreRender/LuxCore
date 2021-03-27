@@ -534,12 +534,28 @@ bool Scene::Intersect(IntersectionDevice *device,
 	bsdf->hitPoint.throughShadowTransparency = false;
 
 	for (;;) {
-		const bool hit = device ? device->TraceRay(ray, rayHit) : dataSet->GetAccelerator(ACCEL_EMBREE)->Intersect(ray, rayHit);
+		bool hit = device ? device->TraceRay(ray, rayHit) : dataSet->GetAccelerator(ACCEL_EMBREE)->Intersect(ray, rayHit);
 
+		bool bevelContinueToTrace = !hit;
 		const Volume *rayVolume = volInfo->GetCurrentVolume();
-		if (hit) {
+		if (hit) {		
 			bsdf->Init(fromLight, throughShadowTransparency, *this, *ray, *rayHit, passThrough, volInfo);
 			rayVolume = bsdf->hitPoint.intoObject ? bsdf->hitPoint.exteriorVolume : bsdf->hitPoint.interiorVolume;
+
+			// Check if it a triangle with bevel edges
+			const ExtMesh *mesh = objDefs.GetSceneObject(rayHit->meshIndex)->GetExtMesh();
+			if (mesh->GetBevelRadius() > 0.f) {
+				float t;
+				Point p;
+				Normal n;
+				if (mesh->IntersectBevel(*ray, *rayHit, bevelContinueToTrace, t, p, n)) {
+					rayHit->t = t;
+
+					// Update the BSDF with the new intersection point and normal
+					bsdf->MoveHitPoint(p, n);
+				}
+			}
+
 			ray->maxt = rayHit->t;
 		} else if (!rayVolume) {
 			// No volume information, I use the default volume
@@ -582,6 +598,8 @@ bool Scene::Intersect(IntersectionDevice *device,
 
 		if (hit) {
 			bool continueToTrace =
+					// Check if was a false hit because of a bevel triangle edge
+					bevelContinueToTrace ||
 					// Check if the volume priority system tells me to continue to trace the ray
 					volInfo->ContinueToTrace(*bsdf) ||
 					// Check if it is a camera invisible object and we are a tracing a camera ray

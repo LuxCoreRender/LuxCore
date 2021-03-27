@@ -1,5 +1,3 @@
-#line 2 "indexbvh_types.cl"
-
 /***************************************************************************
  * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
@@ -18,22 +16,23 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-typedef struct {
-	union {
-		// I can not use BBox/Point/Normal here because objects with a constructor are not
-		// allowed inside an union.
-		struct {
-			float bboxMin[3];
-			float bboxMax[3];
-		} bvhNode;
-		struct {
-			unsigned int entryIndex;
-		} entryLeaf;
-	};
-	// Most significant bit is used to mark leafs
-	unsigned int nodeData;
-	int pad; // To align to float4
-} IndexBVHArrayNode;
+#include "luxrays/core/exttrianglemesh.h"
+#include "slg/shapes/bevelshape.h"
+#include "slg/scene/scene.h"
 
-#define IndexBVHNodeData_IsLeaf(nodeData) ((nodeData) & 0x80000000u)
-#define IndexBVHNodeData_GetSkipIndex(nodeData) ((nodeData) & 0x7fffffffu)
+using namespace std;
+using namespace luxrays;
+using namespace slg;
+
+BevelShape::BevelShape(ExtTriangleMesh *m, const float bevelRadius) {
+	mesh = m->Copy(bevelRadius);
+}
+
+BevelShape::~BevelShape() {
+	if (!refined)
+		delete mesh;
+}
+
+ExtTriangleMesh *BevelShape::RefineImpl(const Scene *scene) {
+	return mesh;
+}

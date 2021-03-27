@@ -1,5 +1,3 @@
-#line 2 "bvhbuild_types.cl"
-
 /***************************************************************************
  * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
@@ -18,45 +16,28 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-typedef struct {
-	union {
-		struct {
-			// I can not use BBox here because objects with a constructor are not
-			// allowed inside an union.
-			float bboxMin[3];
-			float bboxMax[3];
-		} bvhNode;
-		struct {
-			unsigned int v[3];
-			unsigned int meshIndex, triangleIndex;
-		} triangleLeaf;
-		struct {
-			unsigned int leafIndex;
-			unsigned int transformIndex, motionIndex; // transformIndex or motionIndex have to be NULL_INDEX (i.e. only one can be used)
-			unsigned int meshOffsetIndex;
-		} bvhLeaf; // Used by MBVH
-	};
-	// Most significant bit is used to mark leafs
-	unsigned int nodeData;
-	int pad0; // To align to float4
-} BVHArrayNode;
+#ifndef _SLG_BEVELSHAPE_H
+#define	_SLG_BEVELSHAPE_H
 
-typedef struct {
-	union {
-		// I can not use BBox/Point/Normal here because objects with a constructor are not
-		// allowed inside an union.
-		struct {
-			float bboxMin[3];
-			float bboxMax[3];
-		} bvhNode;
-		struct {
-			unsigned int entryIndex;
-		} entryLeaf;
-	};
-	// Most significant bit is used to mark leafs
-	unsigned int nodeData;
-	int pad; // To align to float4
-} IndexBVHArrayNode;
+#include <string>
 
-#define IndexBVHNodeData_IsLeaf(nodeData) ((nodeData) & 0x80000000u)
-#define IndexBVHNodeData_GetSkipIndex(nodeData) ((nodeData) & 0x7fffffffu)
+#include "slg/shapes/shape.h"
+
+namespace slg {
+
+class BevelShape : public Shape {
+public:
+	BevelShape(luxrays::ExtTriangleMesh *mesh, const float bevelRadius);
+	virtual ~BevelShape();
+
+	virtual ShapeType GetType() const { return BEVEL; }
+	
+protected:
+	virtual luxrays::ExtTriangleMesh *RefineImpl(const Scene *scene);
+
+	luxrays::ExtTriangleMesh *mesh;
+};
+
+}
+
+#endif	/* _SLG_MESHSHAPE_H */
