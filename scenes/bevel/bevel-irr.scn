@@ -23,11 +23,11 @@ scene.camera.bokeh.scale.y = 0.707106829
 scene.camera.lookat.orig = 4.940449 -3.404687 5.018475
 scene.camera.lookat.target = 4.20351 -2.896101 4.573202
 ##
-#scene.lights.__WORLD_BACKGROUND_LIGHT__.gain = 0.00004 0.00004 0.00004
-#scene.lights.__WORLD_BACKGROUND_LIGHT__.transformation = 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1
-#scene.lights.__WORLD_BACKGROUND_LIGHT__.type = "sky2"
-#scene.lights.__WORLD_BACKGROUND_LIGHT__.dir = 0 0 1
-#scene.lights.__WORLD_BACKGROUND_LIGHT__.turbidity = 2.20000005
+scene.lights.__WORLD_BACKGROUND_LIGHT__.gain = 0.00004 0.00004 0.00004
+scene.lights.__WORLD_BACKGROUND_LIGHT__.transformation = 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1
+scene.lights.__WORLD_BACKGROUND_LIGHT__.type = "sky2"
+scene.lights.__WORLD_BACKGROUND_LIGHT__.dir = 0 0 1
+scene.lights.__WORLD_BACKGROUND_LIGHT__.turbidity = 2.20000005
 ##
 scene.lights.140062413928968.gain = 1200 1200 1200
 scene.lights.140062413928968.transformation = -0.290864646 0.955171168 -0.0551890582 0 -0.771100819 -0.199883357 0.604524732 0 0.566393197 0.218391195 0.794672251 0 4.07624531 1.00545394 5.903862 1
@@ -79,8 +79,8 @@ scene.materials.ground_mat140061226915208.type = "matte"
 scene.materials.ground_mat140061226915208.kd = "140062619160584Color"
 ################################################################################
 scene.shapes.obj_suzanne.type = mesh
-#scene.shapes.obj_suzanne.ply = irr0.ply
-scene.shapes.obj_suzanne.ply = irr1.ply
+scene.shapes.obj_suzanne.ply = irr0.ply
+#scene.shapes.obj_suzanne.ply = irr1.ply
 ##
 scene.shapes.obj_suzanne_bevel0.type = bevel
 scene.shapes.obj_suzanne_bevel0.source = obj_suzanne

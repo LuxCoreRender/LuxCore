@@ -230,7 +230,7 @@ static Point LineIntersection(const Point &p1, const Point &p2,
 }
 
 void ExtTriangleMesh::PreprocessBevel() {
-	const double start = WallClockTime();
+	//const double start = WallClockTime();
 
 	if (bevelRadius > 0.f) {
 		//----------------------------------------------------------------------
@@ -280,9 +280,8 @@ void ExtTriangleMesh::PreprocessBevel() {
 						triMesh->GetVertex(Transform::TRANS_IDENTITY, vertIndex2)) < DEFAULT_EPSILON_STATIC);
 		};
 		vector<u_int> uniqueVertices;
-		const u_int uniqueVertCount = GetUniqueVerticesMapping(uniqueVertices, compareVerts);
-
-		cout << "ExtTriangleMesh " << this->GetName() << " has " << uniqueVertCount << " unique vertices over " << vertCount << endl;
+		/*const u_int uniqueVertCount =*/ GetUniqueVerticesMapping(uniqueVertices, compareVerts);
+		//cout << "ExtTriangleMesh " << this->GetName() << " has " << uniqueVertCount << " unique vertices over " << vertCount << endl;
 
 		//----------------------------------------------------------------------
 		// Build the list of all edges
@@ -295,7 +294,7 @@ void ExtTriangleMesh::PreprocessBevel() {
 			edges.push_back(Edge(i, 2, uniqueVertices[tris[i].v[2]], uniqueVertices[tris[i].v[0]]));
 		}
 
-		cout << "ExtTriangleMesh " << this->GetName() << " all edges count: " << edges.size() << endl;
+		//cout << "ExtTriangleMesh " << this->GetName() << " all edges count: " << edges.size() << endl;
 
 		//----------------------------------------------------------------------
 		// Build the list of edges to bevel
@@ -429,7 +428,7 @@ void ExtTriangleMesh::PreprocessBevel() {
 		// Copy local data to ExtTriangleMesh
 		//----------------------------------------------------------------------
 
-		cout << "ExtTriangleMesh " << this->GetName() << " bevel cylinders count: " << bevelCyls.size() << endl;
+		//cout << "ExtTriangleMesh " << this->GetName() << " bevel cylinders count: " << bevelCyls.size() << endl;
 
 		delete[] bevelCylinders;
 		bevelCylinders = new BevelCylinder[bevelCyls.size()];
@@ -481,8 +480,8 @@ void ExtTriangleMesh::PreprocessBevel() {
 		bevelBVHArrayNodes = nullptr;
 	}
 	
-	const double endTotal = WallClockTime();
-	cout << "ExtTriangleMesh " << this->GetName() << " bevel preprocessing time: " << (endTotal - start) << "secs" << endl;
+	//const double endTotal = WallClockTime();
+	//cout << "ExtTriangleMesh " << this->GetName() << " bevel preprocessing time: " << (endTotal - start) << "secs" << endl;
 }
 
 //------------------------------------------------------------------------------
