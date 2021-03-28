@@ -418,14 +418,25 @@ set(YAMLCPP_SRCS
 	${LuxRays_SOURCE_DIR}/deps/yaml-cpp-0.6.3/src/tag.cpp
 )
 
+set(EXPAT_SRCS	
+	${LuxRays_SOURCE_DIR}/deps/expat-2.3.0/src/xmlparse.c
+	${LuxRays_SOURCE_DIR}/deps/expat-2.3.0/src/xmlrole.c
+	${LuxRays_SOURCE_DIR}/deps/expat-2.3.0/src/xmltok.c
+	${LuxRays_SOURCE_DIR}/deps/expat-2.3.0/src/xmltok_impl.c
+	${LuxRays_SOURCE_DIR}/deps/expat-2.3.0/src/xmltok_ns.c
+)
+
 SOURCE_GROUP("Source Files\\OpenColorIO Library" FILES ${OPENCOLORIO_SRCS} ${YAMLCPP_SRCS})
 
 include_directories(${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/include)
 include_directories(${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src)
 include_directories(${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO)
 include_directories(${LuxRays_SOURCE_DIR}/deps/yaml-cpp-0.6.3/include)
+include_directories(${LuxRays_SOURCE_DIR}/deps/expat-2.3.0/src)
 
-add_library(opencolorio STATIC ${OPENCOLORIO_SRCS} ${YAMLCPP_SRCS})
+add_definitions("-DHAVE_GETRANDOM")
+
+add_library(opencolorio STATIC ${OPENCOLORIO_SRCS} ${YAMLCPP_SRCS} ${EXPAT_SRCS})
 
 ###########################################################################
 #
