@@ -435,6 +435,10 @@ include_directories(${LuxRays_SOURCE_DIR}/deps/yaml-cpp-0.6.3/include)
 include_directories(${LuxRays_SOURCE_DIR}/deps/expat-2.3.0/src)
 
 add_definitions("-DHAVE_GETRANDOM")
+if(WIN32)
+	add_definitions("-DOpenColorIO_SKIP_IMPORTS")
+endif(WIN32)
+
 
 add_library(opencolorio STATIC ${OPENCOLORIO_SRCS} ${YAMLCPP_SRCS} ${EXPAT_SRCS})
 
