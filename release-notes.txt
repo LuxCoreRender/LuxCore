@@ -44,9 +44,6 @@ Beta1 released
 
 RC1 released
 
-* Fixed a problem when using the DIRECT_DIFFUSE_REFLECT AOV (issue #517)
-* Fixed a crash when using CPU-only image pipeline plugins but image pipeline GPU support is still enabled
-
 ### Fixed Bugs
 
 * Added the support for pixel filtering to light tracing (issue #413)
@@ -83,6 +80,9 @@ Beta1 released
 * Avoid to generate NaN volume transmittance if the segment is infinite
 
 RC1 released
+
+* Fixed a problem when using the DIRECT_DIFFUSE_REFLECT AOV (issue #517)
+* Fixed a crash when using CPU-only image pipeline plugins but image pipeline GPU support is still enabled
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
