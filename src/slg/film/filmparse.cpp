@@ -31,6 +31,7 @@
 #include "slg/film/imagepipeline/plugins/tonemaps/linear.h"
 #include "slg/film/imagepipeline/plugins/tonemaps/luxlinear.h"
 #include "slg/film/imagepipeline/plugins/tonemaps/reinhard02.h"
+#include "slg/film/imagepipeline/plugins/tonemaps/opencolorio.h"
 
 #include "slg/film/imagepipeline/plugins/cameraresponse.h"
 #include "slg/film/imagepipeline/plugins/contourlines.h"
@@ -754,6 +755,10 @@ ImagePipeline *Film::CreateImagePipeline(const Properties &props, const string &
 				const u_int minSPP = props.Get(Property(prefix + ".minspp")(0)).Get<u_int>();
 				imagePipeline->AddPlugin(new OptixDenoiserPlugin(sharpness, minSPP));
 #endif
+			} else if (type == "TONEMAP_OPENCOLORIO") {
+				imagePipeline->AddPlugin(new OpenColorIOToneMap(
+					props.Get(Property(prefix + ".src")("lnf")).Get<string>(),
+					props.Get(Property(prefix + ".dst")("vd8")).Get<string>()));
 			} else
 				throw runtime_error("Unknown image pipeline plugin type: " + type);
 		}

@@ -16,47 +16,52 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include <boost/lexical_cast.hpp>
+#include <OpenColorIO/OpenColorIO.h>
+namespace OCIO = OCIO_NAMESPACE;
 
 #include "luxrays/utils/serializationutils.h"
-#include "slg/film/imagepipeline/plugins/tonemaps/tonemap.h"
+#include "slg/kernels/kernels.h"
+#include "slg/film/film.h"
+#include "slg/film/imagepipeline/plugins/tonemaps/opencolorio.h"
 
 using namespace std;
 using namespace luxrays;
 using namespace slg;
 
 //------------------------------------------------------------------------------
-// Tone mapping
+// Linear tone mapping
 //------------------------------------------------------------------------------
 
-string slg::ToneMapType2String(const ToneMapType type) {
-	switch (type) {		
-		case TONEMAP_LINEAR:
-			return "LINEAR";
-		case TONEMAP_REINHARD02:
-			return "REINHARD02";
-		case TONEMAP_AUTOLINEAR:
-			return "AUTOLINEAR";
-		case TONEMAP_LUXLINEAR:
-			return "LUXLINEAR";
-		case TONEMAP_OPENCOLORIO:
-			return "OPENCOLORIO";
-		default:
-			throw runtime_error("Unknown tone mapping type: " + ToString(type));
-	}
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::OpenColorIOToneMap)
+
+OpenColorIOToneMap::OpenColorIOToneMap() {
 }
 
-ToneMapType slg::String2ToneMapType(const std::string &type) {
-	if ((type.compare("0") == 0) || (type.compare("LINEAR") == 0))
-		return TONEMAP_LINEAR;
-	else if ((type.compare("1") == 0) || (type.compare("REINHARD02") == 0))
-		return TONEMAP_REINHARD02;
-	else if ((type.compare("2") == 0) || (type.compare("AUTOLINEAR") == 0))
-		return TONEMAP_AUTOLINEAR;
-	else if ((type.compare("3") == 0) || (type.compare("LUXLINEAR") == 0))
-		return TONEMAP_LUXLINEAR;
-	else if ((type.compare("4") == 0) || (type.compare("OPENCOLORIO") == 0))
-		return TONEMAP_LUXLINEAR;
-	else
-		throw runtime_error("Unknown tone mapping type: " + type);
+OpenColorIOToneMap::OpenColorIOToneMap(const std::string &ics, const std::string &ocs) {
+	inputColorSpace = ics;
+	outputColorSpace = ocs;
+}
+
+OpenColorIOToneMap::~OpenColorIOToneMap() {
+}
+
+//------------------------------------------------------------------------------
+// CPU version
+//------------------------------------------------------------------------------
+
+void OpenColorIOToneMap::Apply(Film &film, const u_int index) {
+	Spectrum *pixels = (Spectrum *)film.channel_IMAGEPIPELINEs[index]->GetPixels();
+
+	try {
+		OCIO::ConstConfigRcPtr config = OCIO::GetCurrentConfig();
+		OCIO::ConstProcessorRcPtr processor = config->getProcessor(inputColorSpace.c_str(), outputColorSpace.c_str());
+
+		OCIO::ConstCPUProcessorRcPtr cpu = processor->getDefaultCPUProcessor();
+
+		// Apply the color transform with OpenColorIO
+		OCIO::PackedImageDesc img(pixels, film.GetWidth(), film.GetHeight(), 3);
+		cpu->apply(img);
+	} catch (OCIO::Exception & exception) {
+		SLG_LOG("OpenColorIO Error in OpenColorIOToneMap::Apply(): " << exception.what());
+	}
 }

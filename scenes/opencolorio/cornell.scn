@@ -1,0 +1,145 @@
+scene.camera.type = "perspective"
+#scene.camera.lookat.orig = -2.78071809 -3.70725536 1.98850083
+#scene.camera.lookat.target = -2.84487319 5.99062538 -0.45017153
+scene.camera.lookat.orig = -2.78 -8. 2.73
+scene.camera.lookat.target = -2.78 2. 2.73
+scene.camera.fieldofview = 39.1463
+##
+#scene.camera.shutteropen = 0.1
+#scene.camera.shutterclose = 0.11
+#scene.camera.motion.0.time = 0.0
+#scene.camera.motion.0.transformation = 1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  -6.0 0.0 0.0 1.0
+#scene.camera.motion.1.time = 1.0
+#scene.camera.motion.1.transformation = 1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  6.0 0.0 0.0 1.0
+##
+#scene.camera.type = "orthographic"
+#scene.camera.screenwindow = -5 5 -5 5
+################################################################################
+scene.materials.Khaki.type = matte
+scene.materials.Khaki.kd = 1. 0.824176 0.549451
+##
+#scene.materials.Khaki.type = glossy2
+#scene.materials.Khaki.kd = 0.75 0.75 0.75
+#scene.materials.Khaki.ks = 0.5 0.5 0.5
+#scene.materials.Khaki.uroughness = 0.06
+#scene.materials.Khaki.vroughness = 0.06
+############################
+scene.materials.HalveRed.type = matte
+scene.materials.HalveRed.kd = 0.70003 0. 0.
+##
+#scene.materials.HalveRed.type = glossy2
+#scene.materials.HalveRed.kd = 0.75 0.0 0.0
+#scene.materials.HalveRed.ks = 0.5 0.5 0.5
+#scene.materials.HalveRed.uroughness = 0.06
+#scene.materials.HalveRed.vroughness = 0.06
+##scene.materials.HalveRed.photongi.enable = 1
+##
+#scene.materials.HalveRed.type = glossy2
+#scene.materials.HalveRed.kd = 0.0 0.0 0.0
+#scene.materials.HalveRed.ks = 0.95 0.5 0.5
+#scene.materials.HalveRed.uroughness = 0.051
+#scene.materials.HalveRed.vroughness = 0.051
+#scene.materials.HalveRed.photongi.enable = 1
+##
+#scene.materials.HalveRed.type = mirror
+#scene.materials.HalveRed.kr = 0.9 0.0 0.0
+##scene.materials.HalveRed.photongi.enable = 1
+##
+#scene.materials.HalveRed.type = carpaint
+#scene.materials.HalveRed.preset = "opel titan"
+##
+#scene.materials.HalveRed.type = cloth
+#scene.materials.HalveRed.preset = silk_charmeuse
+#scene.materials.HalveRed.warp_kd = 0.065344 0.00076876 0.00051252
+#scene.materials.HalveRed.warp_ks = 0.27408 0.048368 0.040844
+#scene.materials.HalveRed.weft_kd = 0.065344 0.00076876 0.00051252
+#scene.materials.HalveRed.weft_ks = 0.27085 0.047292 0.040844
+#scene.materials.HalveRed.repeat_u = 200.0
+#scene.materials.HalveRed.repeat_v = 100.0
+##
+#scene.materials.HalveRed.type = metal2
+##scene.materials.HalveRed.preset = gold
+##scene.materials.HalveRed.preset = silver
+#scene.materials.HalveRed.preset = copper
+##scene.materials.HalveRed.preset = "amorphous carbon"
+##scene.materials.HalveRed.preset = aluminium
+#scene.materials.HalveRed.uroughness = 0.2
+#scene.materials.HalveRed.vroughness = 0.2
+############################
+scene.materials.DarkGreen.type = matte
+scene.materials.DarkGreen.kd = 0. 0.4 0.
+##
+#scene.materials.DarkGreen.type = glossy2
+#scene.materials.DarkGreen.kd = 0.0 0.0 0.0
+#scene.materials.DarkGreen.ks = 0.5 0.95 0.5
+#scene.materials.DarkGreen.uroughness = 0.06
+#scene.materials.DarkGreen.vroughness = 0.06
+#scene.materials.DarkGreen.photongi.enable = 1
+##
+scene.materials.Light.type = matte
+scene.materials.Light.emission = 30. 30. 30.
+scene.materials.Light.emission.id = 0
+#scene.materials.Light.emission = 10 5 5
+#scene.materials.Light.emission.gain = 1 1 1
+#scene.materials.Light.emission.gain.normalizebycolor = 1
+#scene.materials.Light.emission.power = 1
+#scene.materials.Light.emission.normalizebycolor = 0
+#scene.materials.Light.emission.efficency = 17
+#scene.materials.Light.emission.directlightsampling.type = DISABLED
+#scene.materials.Light.emission.theta = 20.0
+scene.materials.Light.kd = 0.75 0.75 0.75
+################################################################################
+scene.objects.Khaki.material = Khaki
+scene.objects.Khaki.ply = scenes/cornell/Khaki.ply
+scene.objects.HalveRed.material = HalveRed
+scene.objects.HalveRed.ply = scenes/cornell/HalveRed.ply
+scene.objects.DarkGreen.material = DarkGreen
+scene.objects.DarkGreen.ply = scenes/cornell/DarkGreen.ply
+################################################################################
+scene.objects.Grey.material = Light
+scene.objects.Grey.ply = scenes/cornell/Grey.ply
+# Instance
+#scene.objects.Grey.transformation = 1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  -1.95 0.0 0.0 1.0
+# Motion blur
+#scene.objects.Grey.motion.0.time = 0.0
+#scene.objects.Grey.motion.0.transformation = 1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  -1.95 0.0 0.0 1.0
+#scene.objects.Grey.motion.1.time = 1.0
+#scene.objects.Grey.motion.1.transformation = 1.0 0.0 0.0 0.0  0.0 1.0 0.0 0.0  0.0 0.0 1.0 0.0  1.95 0.0 0.0 1.0
+##
+#scene.lights.l1.type = point
+#scene.lights.l1.position = -2.78 2.79 4
+#scene.lights.l1.radius = 0.5
+#scene.lights.l1.power = 10
+#scene.lights.l1.efficency = 17
+#scene.lights.l1.color = 0 0 1
+#scene.lights.l1.id = 1
+#scene.lights.l2.type = point
+##scene.lights.l2.color = 0 0 1
+#scene.lights.l2.position = -2.78 2.79 2
+#scene.lights.l2.power = 10
+#scene.lights.l2.efficency = 17
+##
+#scene.lights.infinitelight.type = sky2
+#scene.lights.infinitelight.dir = 0.166974 -0.59908 0.783085
+#scene.lights.infinitelight.turbidity = 2.2
+#scene.lights.infinitelight.gain = 0.0003 0.0003 0.0003
+##
+#scene.lights.infinitelight.type = constantinfinite
+#scene.lights.infinitelight.color = 1.0 1.0 1.0
+#scene.lights.infinitelight.gain = 2.0 2.0 2.0
+##
+#scene.lights.infinitelight.type = infinite
+#scene.lights.infinitelight.file = scenes/simple-mat/arch.exr
+#scene.lights.infinitelight.gamma = 1.0
+#scene.lights.infinitelight.gain = 3.0 3.0 3.0
+#scene.lights.infinitelight.storage = byte
+##
+#scene.lights.infinitelight.visibilitymap.enable = 1
+#scene.lights.infinitelight.visibilitymap.samples = 10000000
+#scene.lights.infinitelight.visibilitymap.width = 128
+#scene.lights.infinitelight.visibilitymap.height = 64
+##
+#scene.lights.infinitelight.visibilitymapcache.enable = 1
+#scene.lights.infinitelight.visibilitymapcache.map.width = 128
+#scene.lights.infinitelight.visibilitymapcache.map.height = 64
+#scene.lights.infinitelight.visibilitymapcache.map.samplecount = 8

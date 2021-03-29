@@ -16,47 +16,52 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include <boost/lexical_cast.hpp>
+#ifndef _SLG_OPENCOLOR_TONEMAP_H
+#define	_SLG_OPENCOLOR_TONEMAP_H
+
+#include <cmath>
+#include <string>
 
 #include "luxrays/utils/serializationutils.h"
 #include "slg/film/imagepipeline/plugins/tonemaps/tonemap.h"
 
-using namespace std;
-using namespace luxrays;
-using namespace slg;
+namespace slg {
 
 //------------------------------------------------------------------------------
-// Tone mapping
+// OpenColorIO tone mapping
 //------------------------------------------------------------------------------
 
-string slg::ToneMapType2String(const ToneMapType type) {
-	switch (type) {		
-		case TONEMAP_LINEAR:
-			return "LINEAR";
-		case TONEMAP_REINHARD02:
-			return "REINHARD02";
-		case TONEMAP_AUTOLINEAR:
-			return "AUTOLINEAR";
-		case TONEMAP_LUXLINEAR:
-			return "LUXLINEAR";
-		case TONEMAP_OPENCOLORIO:
-			return "OPENCOLORIO";
-		default:
-			throw runtime_error("Unknown tone mapping type: " + ToString(type));
+class OpenColorIOToneMap : public ToneMap {
+public:
+	OpenColorIOToneMap();
+	OpenColorIOToneMap(const std::string &inputColorSpace, const std::string &outputColorSpace);
+	virtual ~OpenColorIOToneMap();
+
+	virtual ToneMapType GetType() const { return TONEMAP_OPENCOLORIO; }
+
+	virtual ToneMap *Copy() const {
+		return new OpenColorIOToneMap(inputColorSpace, outputColorSpace);
 	}
+
+	virtual void Apply(Film &film, const u_int index);
+
+	friend class boost::serialization::access;
+
+private:
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ToneMap);
+		ar & inputColorSpace;
+		ar & outputColorSpace;
+	}
+	
+	std::string inputColorSpace;
+	std::string outputColorSpace;
+};
+
 }
 
-ToneMapType slg::String2ToneMapType(const std::string &type) {
-	if ((type.compare("0") == 0) || (type.compare("LINEAR") == 0))
-		return TONEMAP_LINEAR;
-	else if ((type.compare("1") == 0) || (type.compare("REINHARD02") == 0))
-		return TONEMAP_REINHARD02;
-	else if ((type.compare("2") == 0) || (type.compare("AUTOLINEAR") == 0))
-		return TONEMAP_AUTOLINEAR;
-	else if ((type.compare("3") == 0) || (type.compare("LUXLINEAR") == 0))
-		return TONEMAP_LUXLINEAR;
-	else if ((type.compare("4") == 0) || (type.compare("OPENCOLORIO") == 0))
-		return TONEMAP_LUXLINEAR;
-	else
-		throw runtime_error("Unknown tone mapping type: " + type);
-}
+BOOST_CLASS_VERSION(slg::OpenColorIOToneMap, 1)
+
+BOOST_CLASS_EXPORT_KEY(slg::OpenColorIOToneMap)
+
+#endif	/* _SLG_LINEAR_TONEMAP_H */

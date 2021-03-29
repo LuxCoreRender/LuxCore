@@ -5,6 +5,8 @@
 * BIDIRCPU can now use PhotonGI caustic cache to render SDS paths
 * Optimized the parsing of mesh light sources and it is now about 3x faster
 * Introduced (partial) multi-thread support in pre-processing of Light sources
+* Integrated OpenColorIO v2.0
+* Added the support for new TONEMAP_OPENCOLORIO tone mapper
 
 ### Fixed Bugs
 

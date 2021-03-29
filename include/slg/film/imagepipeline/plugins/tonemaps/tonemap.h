@@ -32,7 +32,8 @@ namespace slg {
 //------------------------------------------------------------------------------
 
 typedef enum {
-	TONEMAP_LINEAR, TONEMAP_REINHARD02, TONEMAP_AUTOLINEAR, TONEMAP_LUXLINEAR
+	TONEMAP_LINEAR, TONEMAP_REINHARD02, TONEMAP_AUTOLINEAR, TONEMAP_LUXLINEAR,
+	TONEMAP_OPENCOLORIO
 } ToneMapType;
 
 extern std::string ToneMapType2String(const ToneMapType type);
