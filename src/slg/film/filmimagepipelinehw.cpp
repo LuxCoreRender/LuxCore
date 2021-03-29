@@ -192,8 +192,8 @@ void Film::AllocateHWBuffers() {
 	for (auto const ip : imagePipelines)
 		ip->AddHWChannelsUsed(hwChannelsUsed);
 	
-	if (hwChannelsUsed.count(IMAGEPIPELINE))
-		hardwareDevice->AllocBufferRW(&hw_IMAGEPIPELINE, channel_IMAGEPIPELINEs[0]->GetPixels(), channel_IMAGEPIPELINEs[0]->GetSize(), "IMAGEPIPELINE");
+	// I have to allocate this anyway because of the Film::MergeSampleBuffersHW()
+	hardwareDevice->AllocBufferRW(&hw_IMAGEPIPELINE, channel_IMAGEPIPELINEs[0]->GetPixels(), channel_IMAGEPIPELINEs[0]->GetSize(), "IMAGEPIPELINE");
 
 	if (HasChannel(ALPHA) && hwChannelsUsed.count(ALPHA))
 		hardwareDevice->AllocBufferRO(&hw_ALPHA, channel_ALPHA->GetPixels(), channel_ALPHA->GetSize(), "ALPHA");
