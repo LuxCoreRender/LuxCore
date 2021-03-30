@@ -37,7 +37,9 @@ BOOST_CLASS_EXPORT_IMPLEMENT(slg::OpenColorIOToneMap)
 OpenColorIOToneMap::OpenColorIOToneMap() {
 }
 
-OpenColorIOToneMap::OpenColorIOToneMap(const std::string &ics, const std::string &ocs) {
+OpenColorIOToneMap::OpenColorIOToneMap(const std::string &cfn,
+		const std::string &ics, const std::string &ocs) {
+	configFileName = cfn;
 	inputColorSpace = ics;
 	outputColorSpace = ocs;
 }
@@ -53,7 +55,9 @@ void OpenColorIOToneMap::Apply(Film &film, const u_int index) {
 	Spectrum *pixels = (Spectrum *)film.channel_IMAGEPIPELINEs[index]->GetPixels();
 
 	try {
-		OCIO::ConstConfigRcPtr config = OCIO::GetCurrentConfig();
+		OCIO::ConstConfigRcPtr config = (configFileName == "") ?
+			OCIO::GetCurrentConfig() :
+			OCIO::Config::CreateFromFile(configFileName.c_str());
 		OCIO::ConstProcessorRcPtr processor = config->getProcessor(inputColorSpace.c_str(), outputColorSpace.c_str());
 
 		OCIO::ConstCPUProcessorRcPtr cpu = processor->getDefaultCPUProcessor();

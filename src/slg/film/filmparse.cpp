@@ -757,6 +757,7 @@ ImagePipeline *Film::CreateImagePipeline(const Properties &props, const string &
 #endif
 			} else if (type == "TONEMAP_OPENCOLORIO") {
 				imagePipeline->AddPlugin(new OpenColorIOToneMap(
+					props.Get(Property(prefix + ".config")("")).Get<string>(),
 					props.Get(Property(prefix + ".src")("lnf")).Get<string>(),
 					props.Get(Property(prefix + ".dst")("vd8")).Get<string>()));
 			} else

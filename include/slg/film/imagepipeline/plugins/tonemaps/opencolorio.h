@@ -34,13 +34,14 @@ namespace slg {
 class OpenColorIOToneMap : public ToneMap {
 public:
 	OpenColorIOToneMap();
-	OpenColorIOToneMap(const std::string &inputColorSpace, const std::string &outputColorSpace);
+	OpenColorIOToneMap(const std::string &configFileName,
+			const std::string &inputColorSpace, const std::string &outputColorSpace);
 	virtual ~OpenColorIOToneMap();
 
 	virtual ToneMapType GetType() const { return TONEMAP_OPENCOLORIO; }
 
 	virtual ToneMap *Copy() const {
-		return new OpenColorIOToneMap(inputColorSpace, outputColorSpace);
+		return new OpenColorIOToneMap(configFileName, inputColorSpace, outputColorSpace);
 	}
 
 	virtual void Apply(Film &film, const u_int index);
@@ -50,10 +51,12 @@ public:
 private:
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ToneMap);
+		ar & configFileName;
 		ar & inputColorSpace;
 		ar & outputColorSpace;
 	}
 	
+	std::string configFileName;
 	std::string inputColorSpace;
 	std::string outputColorSpace;
 };
