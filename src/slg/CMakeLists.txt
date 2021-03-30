@@ -434,7 +434,15 @@ include_directories(${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO
 include_directories(${LuxRays_SOURCE_DIR}/deps/yaml-cpp-0.6.3/include)
 include_directories(${LuxRays_SOURCE_DIR}/deps/expat-2.3.0/src)
 
-add_definitions("-DHAVE_GETRANDOM")
+if(NOT WIN32)
+	# "sys/random.h" not available on Windows
+	add_definitions("-DHAVE_GETRANDOM")
+endif(NOT WIN32)
+
+if(WIN32)
+	# Prevents __declspec(dllimport) on Windows
+	add_definitions("-DOpenColorIO_SKIP_IMPORTS")
+endif(WIN32)
 
 add_library(opencolorio STATIC ${OPENCOLORIO_SRCS} ${YAMLCPP_SRCS} ${EXPAT_SRCS})
 
