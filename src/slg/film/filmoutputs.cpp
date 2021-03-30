@@ -165,14 +165,14 @@ Properties FilmOutputs::ToProperties(const Properties &cfg) {
 				if (hdrImage)
 					props << type << fileName;
 				else
-					throw runtime_error("Direct diffuse image can be saved only in HDR formats: " + outputName);
+					throw runtime_error("Direct diffuse reflect image can be saved only in HDR formats: " + outputName);
 				break;
 			}
 			case DIRECT_DIFFUSE_TRANSMIT: {
 				if (hdrImage)
 					props << type << fileName;
 				else
-					throw runtime_error("Direct diffuse image can be saved only in HDR formats: " + outputName);
+					throw runtime_error("Direct diffuse transmit image can be saved only in HDR formats: " + outputName);
 				break;
 			}
 			case DIRECT_GLOSSY: {
@@ -214,14 +214,14 @@ Properties FilmOutputs::ToProperties(const Properties &cfg) {
 				if (hdrImage)
 					props << type << fileName;
 				else
-					throw runtime_error("Indirect diffuse image can be saved only in HDR formats: " + outputName);
+					throw runtime_error("Indirect diffuse reflect image can be saved only in HDR formats: " + outputName);
 				break;
 			}
 			case INDIRECT_DIFFUSE_TRANSMIT: {
 				if (hdrImage)
 					props << type << fileName;
 				else
-					throw runtime_error("Indirect diffuse image can be saved only in HDR formats: " + outputName);
+					throw runtime_error("Indirect diffuse transmit image can be saved only in HDR formats: " + outputName);
 				break;
 			}
 			case INDIRECT_GLOSSY: {

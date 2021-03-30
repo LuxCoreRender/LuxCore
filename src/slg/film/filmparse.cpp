@@ -209,7 +209,7 @@ void Film::ParseOutputs(const Properties &props) {
 			case FilmOutputs::DIRECT_DIFFUSE_REFLECT: {
 				if (hdrImage) {
 					if (!initialized)
-						AddChannel(Film::DIRECT_DIFFUSE);
+						AddChannel(Film::DIRECT_DIFFUSE_REFLECT);
 					filmOutputs.Add(FilmOutputs::DIRECT_DIFFUSE_REFLECT, fileName);
 				} else
 					throw runtime_error("Direct diffuse reflect image can be saved only in HDR formats: " + outputName);
