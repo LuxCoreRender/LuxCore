@@ -763,7 +763,11 @@ ImagePipeline *Film::CreateImagePipeline(const Properties &props, const string &
 						props.Get(Property(prefix + ".config")("")).Get<string>(),
 						props.Get(Property(prefix + ".src")("lnf")).Get<string>(),
 						props.Get(Property(prefix + ".dst")("vd8")).Get<string>()));
-				}
+				} else if (mode == "LUT_CONVERSION") {
+					imagePipeline->AddPlugin(OpenColorIOToneMap::CreateLUTConversion(
+						props.Get(Property(prefix + ".lutfile")("file.lut")).Get<string>()));
+				} else
+					throw runtime_error("Unknown mode for TONEMAP_OPENCOLORIO: " + mode);
 			} else
 				throw runtime_error("Unknown image pipeline plugin type: " + type);
 		}

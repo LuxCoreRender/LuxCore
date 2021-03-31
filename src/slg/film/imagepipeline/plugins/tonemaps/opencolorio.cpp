@@ -121,6 +121,21 @@ void OpenColorIOToneMap::Apply(Film &film, const u_int index) {
 				cpu->apply(img);
 				break;
 			}
+			case LUT_CONVERSION: {
+				OCIO::ConstConfigRcPtr config = OCIO::Config::CreateRaw();
+
+				OCIO::FileTransformRcPtr t = OCIO::FileTransform::Create();
+				t->setSrc(lutFileName.c_str());
+				t->setInterpolation(OCIO::INTERP_BEST);
+				OCIO::ConstProcessorRcPtr processor = config->getProcessor(t);
+
+				OCIO::ConstCPUProcessorRcPtr cpu = processor->getDefaultCPUProcessor();
+
+				// Apply the color transform with OpenColorIO
+				OCIO::PackedImageDesc img(pixels, film.GetWidth(), film.GetHeight(), 3);
+				cpu->apply(img);
+				break;
+			}
 			default:
 				throw runtime_error("Unknown mode in OpenColorIOToneMap::Apply(): " + ToString(conversionType));
 		}
