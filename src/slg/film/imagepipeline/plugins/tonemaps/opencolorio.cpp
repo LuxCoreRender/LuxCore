@@ -112,6 +112,7 @@ void OpenColorIOToneMap::Apply(Film &film, const u_int index) {
 				OCIO::ConstConfigRcPtr config = (configFileName == "") ?
 					OCIO::GetCurrentConfig() :
 					OCIO::Config::CreateFromFile(configFileName.c_str());
+
 				OCIO::ConstProcessorRcPtr processor = config->getProcessor(inputColorSpace.c_str(), outputColorSpace.c_str());
 
 				OCIO::ConstCPUProcessorRcPtr cpu = processor->getDefaultCPUProcessor();
@@ -127,6 +128,24 @@ void OpenColorIOToneMap::Apply(Film &film, const u_int index) {
 				OCIO::FileTransformRcPtr t = OCIO::FileTransform::Create();
 				t->setSrc(lutFileName.c_str());
 				t->setInterpolation(OCIO::INTERP_BEST);
+				OCIO::ConstProcessorRcPtr processor = config->getProcessor(t);
+
+				OCIO::ConstCPUProcessorRcPtr cpu = processor->getDefaultCPUProcessor();
+
+				// Apply the color transform with OpenColorIO
+				OCIO::PackedImageDesc img(pixels, film.GetWidth(), film.GetHeight(), 3);
+				cpu->apply(img);
+				break;
+			}
+			case DISPLAY_CONVERSION: {
+				OCIO::ConstConfigRcPtr config = (configFileName == "") ?
+					OCIO::GetCurrentConfig() :
+					OCIO::Config::CreateFromFile(configFileName.c_str());
+
+				OCIO::DisplayViewTransformRcPtr t = OCIO::DisplayViewTransform::Create();
+				t->setSrc(inputColorSpace.c_str());
+				t->setDisplay(displayName.c_str());
+				t->setView(viewName.c_str());
 				OCIO::ConstProcessorRcPtr processor = config->getProcessor(t);
 
 				OCIO::ConstCPUProcessorRcPtr cpu = processor->getDefaultCPUProcessor();
