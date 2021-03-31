@@ -34,31 +34,56 @@ namespace slg {
 class OpenColorIOToneMap : public ToneMap {
 public:
 	OpenColorIOToneMap();
-	OpenColorIOToneMap(const std::string &configFileName,
-			const std::string &inputColorSpace, const std::string &outputColorSpace);
+
 	virtual ~OpenColorIOToneMap();
 
 	virtual ToneMapType GetType() const { return TONEMAP_OPENCOLORIO; }
 
-	virtual ToneMap *Copy() const {
-		return new OpenColorIOToneMap(configFileName, inputColorSpace, outputColorSpace);
-	}
+	virtual ToneMap *Copy() const;
 
 	virtual void Apply(Film &film, const u_int index);
+
+	static OpenColorIOToneMap *CreateColorSpaceConversion(const std::string &configFileName,
+			const std::string &inputColorSpace, const std::string &outputColorSpace);
+	static OpenColorIOToneMap *CreateLUTConversion(const std::string &lutFileName);
+	static OpenColorIOToneMap *CreateDisplayConversion(const std::string &configFileName,
+			const std::string &inputColorSpace, const std::string &displayName,
+			const std::string &viewName);
 
 	friend class boost::serialization::access;
 
 private:
+	typedef enum {
+		COLORSPACE_CONVERSION,
+		LUT_CONVERSION,
+		DISPLAY_CONVERSION
+	} OCIOConversionType;
+
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ToneMap);
+		ar & conversionType;
 		ar & configFileName;
 		ar & inputColorSpace;
 		ar & outputColorSpace;
+		ar & lutFileName;
+		ar & displayName;
+		ar & viewName;
 	}
 	
+	OCIOConversionType conversionType;
+	
 	std::string configFileName;
+
+	// COLORSPACE_CONVERSION
 	std::string inputColorSpace;
 	std::string outputColorSpace;
+
+	// LUT_CONVERSION
+	std::string lutFileName;
+	
+	// DISPLAY_CONVERSION
+	std::string displayName;
+	std::string viewName;
 };
 
 }

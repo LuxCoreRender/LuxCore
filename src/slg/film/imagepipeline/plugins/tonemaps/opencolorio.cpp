@@ -29,7 +29,7 @@ using namespace luxrays;
 using namespace slg;
 
 //------------------------------------------------------------------------------
-// Linear tone mapping
+// OpenColorIO tone mapping
 //------------------------------------------------------------------------------
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::OpenColorIOToneMap)
@@ -37,14 +37,66 @@ BOOST_CLASS_EXPORT_IMPLEMENT(slg::OpenColorIOToneMap)
 OpenColorIOToneMap::OpenColorIOToneMap() {
 }
 
-OpenColorIOToneMap::OpenColorIOToneMap(const std::string &cfn,
-		const std::string &ics, const std::string &ocs) {
-	configFileName = cfn;
-	inputColorSpace = ics;
-	outputColorSpace = ocs;
+OpenColorIOToneMap::~OpenColorIOToneMap() {
 }
 
-OpenColorIOToneMap::~OpenColorIOToneMap() {
+ToneMap *OpenColorIOToneMap::Copy() const {
+	OpenColorIOToneMap *ociotm = new OpenColorIOToneMap();
+	
+	ociotm->conversionType = conversionType;
+	
+	ociotm->configFileName = configFileName;
+
+	// COLORSPACE_CONVERSION
+	ociotm->inputColorSpace = inputColorSpace;
+	ociotm->outputColorSpace = outputColorSpace;
+
+	// LUT_CONVERSION
+	ociotm->lutFileName = lutFileName;
+	
+	// DISPLAY_CONVERSION
+	ociotm->displayName = displayName;
+	ociotm->viewName = viewName;
+	
+	return ociotm;
+}
+
+OpenColorIOToneMap *OpenColorIOToneMap::CreateColorSpaceConversion(const std::string &configFileName,
+		const std::string &inputColorSpace, const std::string &outputColorSpace) {
+	OpenColorIOToneMap *ociotm = new OpenColorIOToneMap();
+	
+	ociotm->conversionType = COLORSPACE_CONVERSION;
+	
+	ociotm->configFileName = configFileName;
+	ociotm->inputColorSpace = inputColorSpace;
+	ociotm->outputColorSpace = outputColorSpace;
+	
+	return ociotm;
+}
+
+OpenColorIOToneMap *OpenColorIOToneMap::CreateLUTConversion(const std::string &lutFileName) {
+	OpenColorIOToneMap *ociotm = new OpenColorIOToneMap();
+	
+	ociotm->conversionType = LUT_CONVERSION;
+	
+	ociotm->lutFileName = lutFileName;
+	
+	return ociotm;
+}
+
+OpenColorIOToneMap *OpenColorIOToneMap::CreateDisplayConversion(const std::string &configFileName,
+		const std::string &inputColorSpace, const std::string &displayName,
+		const std::string &viewName) {
+	OpenColorIOToneMap *ociotm = new OpenColorIOToneMap();
+	
+	ociotm->conversionType = DISPLAY_CONVERSION;
+	
+	ociotm->configFileName = configFileName;
+	ociotm->inputColorSpace = inputColorSpace;
+	ociotm->displayName = displayName;
+	ociotm->viewName = viewName;
+	
+	return ociotm;
 }
 
 //------------------------------------------------------------------------------
@@ -55,16 +107,23 @@ void OpenColorIOToneMap::Apply(Film &film, const u_int index) {
 	Spectrum *pixels = (Spectrum *)film.channel_IMAGEPIPELINEs[index]->GetPixels();
 
 	try {
-		OCIO::ConstConfigRcPtr config = (configFileName == "") ?
-			OCIO::GetCurrentConfig() :
-			OCIO::Config::CreateFromFile(configFileName.c_str());
-		OCIO::ConstProcessorRcPtr processor = config->getProcessor(inputColorSpace.c_str(), outputColorSpace.c_str());
+		switch (conversionType) {
+			case COLORSPACE_CONVERSION: {
+				OCIO::ConstConfigRcPtr config = (configFileName == "") ?
+					OCIO::GetCurrentConfig() :
+					OCIO::Config::CreateFromFile(configFileName.c_str());
+				OCIO::ConstProcessorRcPtr processor = config->getProcessor(inputColorSpace.c_str(), outputColorSpace.c_str());
 
-		OCIO::ConstCPUProcessorRcPtr cpu = processor->getDefaultCPUProcessor();
+				OCIO::ConstCPUProcessorRcPtr cpu = processor->getDefaultCPUProcessor();
 
-		// Apply the color transform with OpenColorIO
-		OCIO::PackedImageDesc img(pixels, film.GetWidth(), film.GetHeight(), 3);
-		cpu->apply(img);
+				// Apply the color transform with OpenColorIO
+				OCIO::PackedImageDesc img(pixels, film.GetWidth(), film.GetHeight(), 3);
+				cpu->apply(img);
+				break;
+			}
+			default:
+				throw runtime_error("Unknown mode in OpenColorIOToneMap::Apply(): " + ToString(conversionType));
+		}
 	} catch (OCIO::Exception & exception) {
 		SLG_LOG("OpenColorIO Error in OpenColorIOToneMap::Apply(): " << exception.what());
 	}

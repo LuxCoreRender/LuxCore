@@ -756,10 +756,14 @@ ImagePipeline *Film::CreateImagePipeline(const Properties &props, const string &
 				imagePipeline->AddPlugin(new OptixDenoiserPlugin(sharpness, minSPP));
 #endif
 			} else if (type == "TONEMAP_OPENCOLORIO") {
-				imagePipeline->AddPlugin(new OpenColorIOToneMap(
-					props.Get(Property(prefix + ".config")("")).Get<string>(),
-					props.Get(Property(prefix + ".src")("lnf")).Get<string>(),
-					props.Get(Property(prefix + ".dst")("vd8")).Get<string>()));
+				const string mode = props.Get(Property(prefix + ".mode")("COLORSPACE_CONVERSION")).Get<string>();
+
+				if (mode == "COLORSPACE_CONVERSION") {
+					imagePipeline->AddPlugin(OpenColorIOToneMap::CreateColorSpaceConversion(
+						props.Get(Property(prefix + ".config")("")).Get<string>(),
+						props.Get(Property(prefix + ".src")("lnf")).Get<string>(),
+						props.Get(Property(prefix + ".dst")("vd8")).Get<string>()));
+				}
 			} else
 				throw runtime_error("Unknown image pipeline plugin type: " + type);
 		}
