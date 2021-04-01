@@ -441,11 +441,14 @@ endif(NOT WIN32)
 
 if(WIN32)
 	# Prevents __declspec(dllimport) on Windows
-	add_definitions("-DOpenColorIO_SKIP_IMPORTS")
+	add_definitions("-DOpenColorIO_SKIP_IMPORTS -DXML_STATIC")
 endif(WIN32)
 
 add_library(opencolorio STATIC ${OPENCOLORIO_SRCS} ${YAMLCPP_SRCS} ${EXPAT_SRCS})
 
+if(WIN32)
+	target_compile_definitions(opencolorio PRIVATE "-D_MBCS -DUSE_SSE")
+endif(WIN32)
 ###########################################################################
 #
 # Kernel files
