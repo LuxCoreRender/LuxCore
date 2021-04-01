@@ -8,6 +8,13 @@
 
 #endif
 
+// Patched for LuxCore build on Windows
+// Compilation with -D_UNICODE is not supported
+#ifdef _UNICODE
+#undef _UNICODE
+#undef UNICODE
+#endif
+
 #include <windows.h>
 
 #include <Logging.h>
