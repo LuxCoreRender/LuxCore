@@ -167,12 +167,11 @@ inline Vector Normalize(const Vector &v) {
 }
 
 inline void CoordinateSystem(const Vector &v1, Vector *v2, Vector *v3) {
-	if (fabsf(v1.x) > fabsf(v1.y)) {
-		float invLen = 1.f / sqrtf(v1.x * v1.x + v1.z * v1.z);
-		*v2 = Vector(-v1.z * invLen, 0.f, v1.x * invLen);
+	float len = sqrtf (v1.y * v1.y + v1.z * v1.z);
+	if (len < 1e-5) { // it's pretty-much along x-axis
+		*v2 = Vector (0.f, 0.f, 1.f);
 	} else {
-		float invLen = 1.f / sqrtf(v1.y * v1.y + v1.z * v1.z);
-		*v2 = Vector(0.f, v1.z * invLen, -v1.y * invLen);
+		*v2 = Vector(0.f, v1.z / len, -v1.y / len);
 	}
 	*v3 = Cross(v1, *v2);
 }
