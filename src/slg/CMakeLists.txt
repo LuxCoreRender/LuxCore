@@ -426,7 +426,7 @@ set(EXPAT_SRCS
 	${LuxRays_SOURCE_DIR}/deps/expat-2.3.0/src/xmltok_ns.c
 )
 
-SOURCE_GROUP("Source Files\\OpenColorIO Library" FILES ${OPENCOLORIO_SRCS} ${YAMLCPP_SRCS})
+SOURCE_GROUP("Source Files\\OpenColorIO Library" FILES ${OPENCOLORIO_SRCS} ${YAMLCPP_SRCS} ${EXPAT_SRCS})
 
 include_directories(${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/include)
 include_directories(${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src)
@@ -437,6 +437,7 @@ include_directories(${LuxRays_SOURCE_DIR}/deps/expat-2.3.0/src)
 if(NOT WIN32)
 	# "sys/random.h" not available on Windows
 	add_definitions("-DHAVE_GETRANDOM")
+	add_definitions("-DUSE_SSE")
 endif(NOT WIN32)
 
 if(WIN32)
@@ -449,6 +450,7 @@ add_library(opencolorio STATIC ${OPENCOLORIO_SRCS} ${YAMLCPP_SRCS} ${EXPAT_SRCS}
 if(WIN32)
 	target_compile_definitions(opencolorio PRIVATE "-D_MBCS -DUSE_SSE")
 endif(WIN32)
+
 ###########################################################################
 #
 # Kernel files
