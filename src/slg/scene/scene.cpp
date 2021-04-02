@@ -159,6 +159,16 @@ void Scene::DefineImageMap(ImageMap *im) {
 
 	editActions.AddAction(IMAGEMAPS_EDIT);
 }
+void Scene::DefineImageMap(const std::string &name, void *pixels,
+		const u_int channels, const u_int width, const u_int height,
+		const ImageMapConfig &cfg) {
+	ImageMap *imgMap = ImageMap::AllocImageMap(pixels, channels, width, height, cfg);
+	imgMap->SetName(name);
+
+	DefineImageMap(imgMap);
+
+	editActions.AddAction(IMAGEMAPS_EDIT);
+}
 
 bool Scene::IsImageMapDefined(const string &imgMapName) const {
 	return imgMapCache.IsImageMapDefined(imgMapName);

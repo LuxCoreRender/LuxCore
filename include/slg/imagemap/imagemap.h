@@ -26,6 +26,7 @@
 
 #include "luxrays/luxrays.h"
 #include "luxrays/utils/ocl.h"
+#include "luxrays/utils/strutils.h"
 #include "luxrays/core/color/color.h"
 #include "luxrays/core/geometry/uv.h"
 #include "luxrays/core/namedobject.h"
@@ -786,6 +787,42 @@ template <class T> ImageMapStorage *AllocImageMapStorage(const u_int channels,
 }
 
 //------------------------------------------------------------------------------
+// ImageMapConfig
+//------------------------------------------------------------------------------
+
+class ImageMapConfig {
+public:
+	typedef enum {
+		LUXCORE_COLORSPACE,
+		OPENCOLORIO_COLORSPACE
+	} ColorSpaceType;
+
+	// LUXCORE_COLORSPACE constructor
+	ImageMapConfig();
+	ImageMapConfig(const float gamma,
+			const ImageMapStorage::StorageType storageType,
+			const ImageMapStorage::WrapType wrapType,
+			const ImageMapStorage::ChannelSelectionType selectionType);
+	// LUXCORE_COLORSPACE constructor
+	// TODO
+	~ImageMapConfig() { }
+
+	ColorSpaceType colorSpaceType;
+	struct {
+		struct {
+			float gamma;
+		} luxcore;
+		struct {
+			std::string colorSpaceName;
+		} ocio;
+	} colorSpaceInfo;
+	
+	ImageMapStorage::StorageType storageType;
+	ImageMapStorage::WrapType wrapType;
+	ImageMapStorage::ChannelSelectionType selectionType;
+};
+
+//------------------------------------------------------------------------------
 // ImageMap
 //------------------------------------------------------------------------------
 
@@ -793,17 +830,12 @@ class ImageMapCache;
 
 class ImageMap : public luxrays::NamedObject {
 public:
-	ImageMap(const std::string &fileName, const float gamma,
-		const ImageMapStorage::StorageType storageType,
-		const ImageMapStorage::WrapType wrapType = ImageMapStorage::REPEAT);
+	ImageMap(const std::string &fileName, const ImageMapConfig &cfg);
 	~ImageMap();
 
 	void Preprocess();
-
 	void SelectChannel(const ImageMapStorage::ChannelSelectionType selectionType);
-	void ReverseGammaCorrection();
-	
-	float GetGamma() const { return gamma; }
+
 	u_int GetChannelCount() const { return pixelStorage->GetChannelCount(); }
 	u_int GetWidth() const { return pixelStorage->width; }
 	u_int GetHeight() const { return pixelStorage->height; }
@@ -836,12 +868,10 @@ public:
 		const u_int width, const u_int height);
 	static ImageMap *FromProperties(const luxrays::Properties &props, const std::string &prefix);
 
-	template <class T> static ImageMap *AllocImageMap(const float gamma, const u_int channels,
-		const u_int width, const u_int height, const ImageMapStorage::WrapType wrapType) {
-		ImageMapStorage *imageMapStorage = AllocImageMapStorage<T>(channels, width, height, wrapType);
-
-		return new ImageMap(imageMapStorage, gamma);
-	}
+	static ImageMap *AllocImageMap(const u_int channels, const u_int width, const u_int height,
+		const ImageMapConfig &cfg);
+	static ImageMap *AllocImageMap(void *pixels, const u_int channels, const u_int width, const u_int height,
+		const ImageMapConfig &cfg);
 
 	luxrays::Properties ToProperties(const std::string &prefix, const bool includeBlobImg) const;
 
@@ -850,16 +880,13 @@ public:
 private:
 	// Used by serialization
 	ImageMap();
-	ImageMap(ImageMapStorage *pixels, const float gamma);
+	ImageMap(ImageMapStorage *pixels, const float imageMean, const float imageMeanY);
 
 	float CalcSpectrumMean() const;
 	float CalcSpectrumMeanY() const;
 
-	template<class Archive> void save(Archive &ar, const unsigned int version) const;
-	template<class Archive>	void load(Archive &ar, const unsigned int version);
-	BOOST_SERIALIZATION_SPLIT_MEMBER()
+	template<class Archive> void serialize(Archive &ar, const u_int version);
 
-	float gamma;
 	ImageMapStorage *pixelStorage;
 
 	// Cached image information
@@ -896,7 +923,7 @@ BOOST_CLASS_VERSION(slg::ImageMapStorageImplFloat2, 2)
 BOOST_CLASS_VERSION(slg::ImageMapStorageImplFloat3, 2)
 BOOST_CLASS_VERSION(slg::ImageMapStorageImplFloat4, 2)
 
-BOOST_CLASS_VERSION(slg::ImageMap, 2)
+BOOST_CLASS_VERSION(slg::ImageMap, 3)
 
 BOOST_CLASS_EXPORT_KEY(slg::ImageMapPixelUChar1)
 BOOST_CLASS_EXPORT_KEY(slg::ImageMapPixelUChar2)

@@ -84,8 +84,7 @@ ImageMap *ImageMapCache::GetImageMap(const string &fileName, const float gamma,
 
 	// I haven't yet loaded the file
 
-	ImageMap *im = new ImageMap(fileName, gamma, storageType, wrapType);
-	im->SelectChannel(selectionType);
+	ImageMap *im = new ImageMap(fileName, ImageMapConfig(gamma, storageType, wrapType, selectionType));
 
 	// Scale the image if required
 	const u_int width = im->GetWidth();

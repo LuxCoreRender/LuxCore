@@ -516,14 +516,14 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 	switch (selectionType) {
 		case ImageMapStorage::DEFAULT:
 			// Nothing to do
-			return NULL;
+			return nullptr;
 		case ImageMapStorage::RED:
 		case ImageMapStorage::GREEN:
 		case ImageMapStorage::BLUE:
 		case ImageMapStorage::ALPHA: {
 			if (CHANNELS == 1) {
 				// Nothing to do
-				return NULL;
+				return nullptr;
 			} else if (CHANNELS == 2) {
 				unique_ptr<ImageMapPixel<T, 1>[]> newPixels(new ImageMapPixel<T, 1>[pixelCount]);
 
@@ -563,7 +563,7 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 		case ImageMapStorage::WEIGHTED_MEAN: {
 			if (CHANNELS == 1) {
 				// Nothing to do
-				return NULL;
+				return nullptr;
 			} else if (CHANNELS == 2) {
 				unique_ptr<ImageMapPixel<T, 1>[]> newPixels(new ImageMapPixel<T, 1>[pixelCount]);
 
@@ -607,7 +607,7 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 		case ImageMapStorage::RGB: {
 			if ((CHANNELS == 1) || (CHANNELS == 2) || (CHANNELS == 3)) {
 				// Nothing to do
-				return NULL;
+				return nullptr;
 			} else {
 				unique_ptr<ImageMapPixel<T, 3>[]> newPixels(new ImageMapPixel<T, 3>[pixelCount]);
 
@@ -627,7 +627,7 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 		case ImageMapStorage::DIRECTX2OPENGL_NORMALMAP: {
 			if ((CHANNELS == 1) || (CHANNELS == 2)) {
 				// Nothing to do
-				return NULL;
+				return nullptr;
 			} else {
 				unique_ptr<ImageMapPixel<T, 3>[]> newPixels(new ImageMapPixel<T, 3>[pixelCount]);
 
@@ -655,18 +655,37 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 }
 
 //------------------------------------------------------------------------------
+// ImageMapConfig
+//------------------------------------------------------------------------------
+
+ImageMapConfig::ImageMapConfig() {
+	colorSpaceType = LUXCORE_COLORSPACE;
+	colorSpaceInfo.luxcore.gamma = 1.f;
+	storageType = ImageMapStorage::StorageType::FLOAT;
+	wrapType = ImageMapStorage::WrapType::REPEAT;
+	selectionType = ImageMapStorage::ChannelSelectionType::DEFAULT;
+}
+
+ImageMapConfig::ImageMapConfig(const float gamma,
+			const ImageMapStorage::StorageType store,
+			const ImageMapStorage::WrapType wrap,
+			const ImageMapStorage::ChannelSelectionType selection) {
+	colorSpaceType = LUXCORE_COLORSPACE;
+	colorSpaceInfo.luxcore.gamma = gamma;
+	storageType = store;
+	wrapType = wrap;
+	selectionType = selection;
+}
+
+//------------------------------------------------------------------------------
 // ImageMap
 //------------------------------------------------------------------------------
 
 ImageMap::ImageMap() {
-	pixelStorage = NULL;
+	pixelStorage = nullptr;
 }
 
-ImageMap::ImageMap(const string &fileName, const float g,
-		const ImageMapStorage::StorageType storageType,
-		const ImageMapStorage::WrapType wrapType) : NamedObject(fileName) {
-	gamma = g;
-
+ImageMap::ImageMap(const string &fileName, const ImageMapConfig &cfg) : NamedObject(fileName) {
 	const string resolvedFileName = SLG_FileNameResolver.ResolveFile(fileName);
 	SDL_LOG("Reading texture map: " << resolvedFileName);
 
@@ -689,7 +708,7 @@ ImageMap::ImageMap(const string &fileName, const float g,
 
 			// Anything not TypeDesc::UCHAR or TypeDesc::HALF, is stored in float format
 
-			ImageMapStorage::StorageType selectedStorageType = storageType;
+			ImageMapStorage::StorageType selectedStorageType = cfg.storageType;
 			if (selectedStorageType == ImageMapStorage::AUTO) {
 				// Automatically select the storage type
 
@@ -703,7 +722,7 @@ ImageMap::ImageMap(const string &fileName, const float g,
 
 			switch (selectedStorageType) {
 				case ImageMapStorage::BYTE: {
-					pixelStorage = AllocImageMapStorage<u_char>(channelCount, width, height, wrapType);
+					pixelStorage = AllocImageMapStorage<u_char>(channelCount, width, height, cfg.wrapType);
 
 					in->read_image(TypeDesc::UCHAR, pixelStorage->GetPixelsData());
 					in->close();
@@ -711,7 +730,7 @@ ImageMap::ImageMap(const string &fileName, const float g,
 					break;
 				}
 				case ImageMapStorage::HALF: {
-					pixelStorage = AllocImageMapStorage<half>(channelCount, width, height, wrapType);
+					pixelStorage = AllocImageMapStorage<half>(channelCount, width, height, cfg.wrapType);
 
 					in->read_image(TypeDesc::HALF, pixelStorage->GetPixelsData());
 					in->close();
@@ -719,7 +738,7 @@ ImageMap::ImageMap(const string &fileName, const float g,
 					break;
 				}
 				case ImageMapStorage::FLOAT: {
-					pixelStorage = AllocImageMapStorage<float>(channelCount, width, height, wrapType);
+					pixelStorage = AllocImageMapStorage<float>(channelCount, width, height, cfg.wrapType);
 
 					in->read_image(TypeDesc::FLOAT, pixelStorage->GetPixelsData());
 					in->close();
@@ -730,23 +749,86 @@ ImageMap::ImageMap(const string &fileName, const float g,
 					throw runtime_error("Unsupported selected storage type in an ImageMap: " + ToString(selectedStorageType));
 			}
 		} else
-			throw runtime_error("Error opening image file : " + resolvedFileName +
+			throw runtime_error("Error opening image file: " + resolvedFileName +
 					" (error = " + geterror() +")");
-
-		pixelStorage->wrapType = wrapType;
-		pixelStorage->ReverseGammaCorrection(gamma);
 	}
 
-	Preprocess();
+	if (cfg.colorSpaceType == ImageMapConfig::LUXCORE_COLORSPACE)
+		pixelStorage->ReverseGammaCorrection(cfg.colorSpaceInfo.luxcore.gamma);
+	else /*if (cfg.colorSpaceType == ImageMapConfig::OPENCOLORIO_COLORSPACE) {
+		// TODO
+	} else*/
+		throw runtime_error("Unknown color space in ImageMap::ImageMap(" +
+				fileName + "): " + ToString(cfg.colorSpaceType));
+	
+	if (cfg.selectionType == ImageMapStorage::ChannelSelectionType::DEFAULT)
+		Preprocess();
+	else
+		SelectChannel(cfg.selectionType);
 }
 
-ImageMap::ImageMap(ImageMapStorage *pixels, const float g) {
+ImageMap::ImageMap(ImageMapStorage *pixels, const float im, const float imy) {
 	pixelStorage = pixels;
-	gamma = g;
+	imageMean = im;
+	imageMeanY = imy;
 }
 
 ImageMap::~ImageMap() {
 	delete pixelStorage;
+}
+
+ImageMap *ImageMap::AllocImageMap(const u_int channels, const u_int width, const u_int height,
+		const ImageMapConfig &cfg) {
+	ImageMapStorage *imageMapStorage;
+	switch (cfg.storageType) {
+		case ImageMapStorage::BYTE:
+			imageMapStorage = AllocImageMapStorage<u_char>(channels, width, height, cfg.wrapType);
+			break;
+		case ImageMapStorage::HALF:
+			imageMapStorage = AllocImageMapStorage<half>(channels, width, height, cfg.wrapType);
+			break;
+		case ImageMapStorage::FLOAT:
+			imageMapStorage = AllocImageMapStorage<float>(channels, width, height, cfg.wrapType);
+			break;
+		default:
+			throw std::runtime_error("Unknown storage type in ImageMap::AllocImageMap(): " + ToString(cfg.storageType));
+	}
+	ImageMap *imageMap = new ImageMap(imageMapStorage, 0.f, 0.f);
+
+	return imageMap;
+}
+
+ImageMap *ImageMap::AllocImageMap(void *pixels, const u_int channels,
+		const u_int width, const u_int height, const ImageMapConfig &cfg) {
+	ImageMapStorage *imageMapStorage;
+	switch (cfg.storageType) {
+		case ImageMapStorage::BYTE:
+			imageMapStorage = AllocImageMapStorage<u_char>(channels, width, height, cfg.wrapType);
+			break;
+		case ImageMapStorage::HALF:
+			imageMapStorage = AllocImageMapStorage<half>(channels, width, height, cfg.wrapType);
+			break;
+		case ImageMapStorage::FLOAT:
+			imageMapStorage = AllocImageMapStorage<float>(channels, width, height, cfg.wrapType);
+			break;
+		default:
+			throw std::runtime_error("Unknown storage type in ImageMap::AllocImageMap(): " + ToString(cfg.storageType));
+	}
+
+	ImageMap *imageMap = new ImageMap(imageMapStorage, 0.f , 0.f);
+	memcpy(imageMap->GetStorage()->GetPixelsData(), pixels, imageMap->GetStorage()->GetMemorySize());
+
+	if (cfg.colorSpaceType == ImageMapConfig::LUXCORE_COLORSPACE)
+		imageMap->pixelStorage->ReverseGammaCorrection(cfg.colorSpaceInfo.luxcore.gamma);
+	else/*if (cfg.colorSpaceType == ImageMapConfig::OPENCOLORIO_COLORSPACE) {
+		// TODO
+	} else*/
+		throw std::runtime_error("Unknown color space in ImageMap::AllocImageMap(): " + luxrays::ToString(cfg.colorSpaceType));
+
+	imageMap->SelectChannel(cfg.selectionType);
+	imageMap->Preprocess();
+
+	return imageMap;
 }
 
 float ImageMap::CalcSpectrumMean() const {
@@ -807,15 +889,9 @@ void ImageMap::SelectChannel(const ImageMapStorage::ChannelSelectionType selecti
 	if (newPixelStorage) {
 		delete pixelStorage;
 		pixelStorage = newPixelStorage;
+
+		Preprocess();
 	}
-
-	Preprocess();
-}
-
-void ImageMap::ReverseGammaCorrection() {
-	pixelStorage->ReverseGammaCorrection(gamma);
-
-	Preprocess();
 }
 
 void ImageMap::Resize(const u_int newWidth, const u_int newHeight) {
@@ -951,14 +1027,18 @@ void ImageMap::WriteImage(const string &fileName) const {
 }
 
 ImageMap *ImageMap::Copy() const {
-	return new ImageMap(pixelStorage->Copy(), gamma);
+	return new ImageMap(pixelStorage->Copy(), imageMean, imageMeanY);
 }
 
 ImageMap *ImageMap::Merge(const ImageMap *map0, const ImageMap *map1, const u_int channels,
 		const u_int width, const u_int height) {
 	if (channels == 1) {
 		// I assume the images have the same gamma
-		ImageMap *imgMap = AllocImageMap<float>(map0->GetGamma(), 1, width, height, map0->GetStorage()->wrapType);
+		ImageMap *imgMap = AllocImageMap(1, width, height,
+				ImageMapConfig(1.f,
+					ImageMapStorage::StorageType::FLOAT,
+					map0->GetStorage()->wrapType,
+					ImageMapStorage::ChannelSelectionType::DEFAULT));
 		float *mergedImg = (float *)imgMap->GetStorage()->GetPixelsData();
 
 		for (u_int y = 0; y < height; ++y) {
@@ -973,7 +1053,11 @@ ImageMap *ImageMap::Merge(const ImageMap *map0, const ImageMap *map1, const u_in
 		return imgMap;
 	} else if (channels == 3) {
 		// I assume the images have the same gamma
-		ImageMap *imgMap = AllocImageMap<float>(map0->GetGamma(), 3, width, height, map0->GetStorage()->wrapType);
+		ImageMap *imgMap = AllocImageMap(3, width, height,
+				ImageMapConfig(1.f,
+					ImageMapStorage::StorageType::FLOAT,
+					map0->GetStorage()->wrapType,
+					ImageMapStorage::ChannelSelectionType::DEFAULT));
 		float *mergedImg = (float *)imgMap->GetStorage()->GetPixelsData();
 
 		for (u_int y = 0; y < height; ++y) {
@@ -1005,7 +1089,11 @@ ImageMap *ImageMap::Merge(const ImageMap *map0, const ImageMap *map1, const u_in
 ImageMap *ImageMap::Resample(const ImageMap *map, const u_int channels,
 		const u_int width, const u_int height) {
 	if (channels == 1) {
-		ImageMap *imgMap = AllocImageMap<float>(map->GetGamma(), 1, width, height, map->GetStorage()->wrapType);
+		ImageMap *imgMap = AllocImageMap(1, width, height,
+				ImageMapConfig(1.f,
+					ImageMapStorage::StorageType::FLOAT,
+					map->GetStorage()->wrapType,
+					ImageMapStorage::ChannelSelectionType::DEFAULT));
 		float *newImg = (float *)imgMap->GetStorage()->GetPixelsData();
 
 		for (u_int y = 0; y < height; ++y) {
@@ -1019,7 +1107,11 @@ ImageMap *ImageMap::Resample(const ImageMap *map, const u_int channels,
 
 		return imgMap;
 	} else if (channels == 3) {
-		ImageMap *imgMap = AllocImageMap<float>(map->GetGamma(), 3, width, height, map->GetStorage()->wrapType);
+		ImageMap *imgMap = AllocImageMap(3, width, height,
+				ImageMapConfig(1.f,
+					ImageMapStorage::StorageType::FLOAT,
+					map->GetStorage()->wrapType,
+					ImageMapStorage::ChannelSelectionType::DEFAULT));
 		float *newImg = (float *)imgMap->GetStorage()->GetPixelsData();
 
 		for (u_int y = 0; y < height; ++y) {
@@ -1053,7 +1145,8 @@ ImageMap *ImageMap::FromProperties(const luxrays::Properties &props, const strin
 		// Read the image map from a file
 		const string fileName = props.Get(Property(prefix + ".file")("image.png")).Get<string>();
 
-		im = new ImageMap(fileName, gamma, storageType, wrapType);
+		im = new ImageMap(fileName,
+				ImageMapConfig(gamma, storageType, wrapType, ImageMapStorage::ChannelSelectionType::DEFAULT));
 	} else if (props.IsDefined(prefix + ".blob")) {
 		// Read the image map from embedded data
 		const u_int width = props.Get(Property(prefix + ".blob.width")(512)).Get<u_int>();
@@ -1081,7 +1174,8 @@ ImageMap *ImageMap::FromProperties(const luxrays::Properties &props, const strin
 		const Blob &blob = props.Get(Property(prefix + ".blob")).Get<const Blob &>();
 		copy(blob.GetData(), blob.GetData() + blob.GetSize(), (char *)pixelStorage->GetPixelsData());
 
-		im = new ImageMap(pixelStorage, gamma);
+		im = new ImageMap(pixelStorage, 0.f, 0.f);
+		im->Preprocess();
 	} else
 		throw runtime_error("Missing data ImageMap::FromProperties()");
 

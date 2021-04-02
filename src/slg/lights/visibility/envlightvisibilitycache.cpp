@@ -299,8 +299,8 @@ void EnvLightVisibilityCache::BuildCacheEntry(const u_int entryIndex, const Imag
 	cacheEntry.visibilityMap = nullptr;
 
 	// Allocate the map storage
-	unique_ptr<ImageMap> visibilityMapImage(ImageMap::AllocImageMap<float>(1.f, 1,
-			tilesXCount, tilesYCount, ImageMapStorage::REPEAT));
+	unique_ptr<ImageMap> visibilityMapImage(ImageMap::AllocImageMap(1,
+			tilesXCount, tilesYCount, ImageMapConfig()));
 	float *visibilityMap = (float *)visibilityMapImage->GetStorage()->GetPixelsData();
 	fill(visibilityMap, visibilityMap + tilesXCount * tilesYCount, 0.f);
 	vector<u_int> sampleCount(tilesXCount * tilesYCount, 0);

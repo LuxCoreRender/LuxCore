@@ -475,9 +475,9 @@ void SkyLight2::UpdateVisibilityMap(const Scene *scene, const bool useRTMode) {
 		visibilityMapCache = nullptr;
 
 		// Build a luminance map of the sky
-		unique_ptr<ImageMap> luminanceMapImage(ImageMap::AllocImageMap<float>(1.f, 1,
+		unique_ptr<ImageMap> luminanceMapImage(ImageMap::AllocImageMap(1,
 				EnvLightVisibilityCache::defaultLuminanceMapWidth, EnvLightVisibilityCache::defaultLuminanceMapHeight,
-				ImageMapStorage::REPEAT));
+				ImageMapConfig()));
 
 		float *pixels = (float *)luminanceMapImage->GetStorage()->GetPixelsData();
 		for (u_int y = 0; y < EnvLightVisibilityCache::defaultLuminanceMapHeight; ++y) {
