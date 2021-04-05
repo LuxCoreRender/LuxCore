@@ -232,6 +232,7 @@ void InfiniteLight::UpdateVisibilityMap(const Scene *scene, const bool useRTMode
 		unique_ptr<ImageMap> luminanceMapImage(imageMap->Copy());
 		// Select the image luminance
 		luminanceMapImage->SelectChannel(ImageMapStorage::WEIGHTED_MEAN);
+		luminanceMapImage->Preprocess();
 
 		visibilityMapCache = new EnvLightVisibilityCache(scene, this,
 				luminanceMapImage.get(), visibilityMapCacheParams);		

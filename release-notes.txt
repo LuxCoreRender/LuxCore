@@ -7,6 +7,7 @@
 * Introduced (partial) multi-thread support in pre-processing of Light sources
 * Integrated OpenColorIO v2.0
 * Added the support for new TONEMAP_OPENCOLORIO tone mapper
+* Added the support for color spaces (LuxCore and OpenColorIO) to image maps
 * FILESAVER avoids to save the internal random image map (used by randomized tiling)
 
 ### Fixed Bugs

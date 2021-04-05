@@ -20,6 +20,9 @@
 #include <boost/unordered_set.hpp>
 #include <boost/lexical_cast.hpp>
 
+#include <OpenColorIO/OpenColorIO.h>
+namespace OCIO = OCIO_NAMESPACE;
+
 #include "luxrays/utils/fileext.h"
 #include "luxrays/utils/thread.h"
 
@@ -761,17 +764,17 @@ ImagePipeline *Film::CreateImagePipeline(const Properties &props, const string &
 				if (mode == "COLORSPACE_CONVERSION") {
 					imagePipeline->AddPlugin(OpenColorIOToneMap::CreateColorSpaceConversion(
 						props.Get(Property(prefix + ".config")("")).Get<string>(),
-						props.Get(Property(prefix + ".src")("lnf")).Get<string>(),
-						props.Get(Property(prefix + ".dst")("vd8")).Get<string>()));
+						props.Get(Property(prefix + ".src")(OCIO::ROLE_RENDERING)).Get<string>(),
+						props.Get(Property(prefix + ".dst")(OCIO::ROLE_INTERCHANGE_DISPLAY)).Get<string>()));
 				} else if (mode == "LUT_CONVERSION") {
 					imagePipeline->AddPlugin(OpenColorIOToneMap::CreateLUTConversion(
 						props.Get(Property(prefix + ".lutfile")("file.lut")).Get<string>()));
 				} else if (mode == "DISPLAY_CONVERSION") {
 					imagePipeline->AddPlugin(OpenColorIOToneMap::CreateDisplayConversion(
 						props.Get(Property(prefix + ".config")("")).Get<string>(),
-						props.Get(Property(prefix + ".src")("lnf")).Get<string>(),
-						props.Get(Property(prefix + ".display")("sRGB")).Get<string>(),
-						props.Get(Property(prefix + ".view")("Film")).Get<string>()));
+						props.Get(Property(prefix + ".src")(OCIO::ROLE_RENDERING)).Get<string>(),
+						props.Get(Property(prefix + ".display")(OCIO::ROLE_INTERCHANGE_DISPLAY)).Get<string>(),
+						props.Get(Property(prefix + ".view")(OCIO::OCIO_VIEW_USE_DISPLAY_NAME)).Get<string>()));
 				} else
 					throw runtime_error("Unknown mode for TONEMAP_OPENCOLORIO: " + mode);
 			} else

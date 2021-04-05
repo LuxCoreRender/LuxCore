@@ -23,6 +23,7 @@ namespace OCIO = OCIO_NAMESPACE;
 #include "slg/kernels/kernels.h"
 #include "slg/film/film.h"
 #include "slg/film/imagepipeline/plugins/tonemaps/opencolorio.h"
+#include "slg/utils/filenameresolver.h"
 
 using namespace std;
 using namespace luxrays;
@@ -111,7 +112,7 @@ void OpenColorIOToneMap::Apply(Film &film, const u_int index) {
 			case COLORSPACE_CONVERSION: {
 				OCIO::ConstConfigRcPtr config = (configFileName == "") ?
 					OCIO::GetCurrentConfig() :
-					OCIO::Config::CreateFromFile(configFileName.c_str());
+					OCIO::Config::CreateFromFile(SLG_FileNameResolver.ResolveFile(configFileName).c_str());
 
 				OCIO::ConstProcessorRcPtr processor = config->getProcessor(inputColorSpace.c_str(), outputColorSpace.c_str());
 
@@ -158,7 +159,7 @@ void OpenColorIOToneMap::Apply(Film &film, const u_int index) {
 			default:
 				throw runtime_error("Unknown mode in OpenColorIOToneMap::Apply(): " + ToString(conversionType));
 		}
-	} catch (OCIO::Exception & exception) {
+	} catch (OCIO::Exception &exception) {
 		SLG_LOG("OpenColorIO Error in OpenColorIOToneMap::Apply(): " << exception.what());
 	}
 }

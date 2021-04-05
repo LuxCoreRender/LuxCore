@@ -12,6 +12,7 @@ roles:
   default: ncf
   matte_paint: vd8
   reference: lnf
+  rendering: lnf
   scene_linear: lnf
   texture_paint: dt16
 

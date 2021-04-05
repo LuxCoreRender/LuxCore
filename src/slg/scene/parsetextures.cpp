@@ -143,24 +143,14 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 	Texture *tex = NULL;
 	if (texType == "imagemap") {
 		const string name = props.Get(Property(propName + ".file")("image.png")).Get<string>();
-		const float gamma = props.Get(Property(propName + ".gamma")(2.2f)).Get<float>();
-		const float gain = props.Get(Property(propName + ".gain")(1.f)).Get<float>();
 
-		const ImageMapStorage::ChannelSelectionType selectionType = ImageMapStorage::String2ChannelSelectionType(
-				props.Get(Property(propName + ".channel")("default")).Get<string>());
+		ImageMap *im = imgMapCache.GetImageMap(name, ImageMapConfig(props, propName));
 
-		const ImageMapStorage::StorageType storageType = ImageMapStorage::String2StorageType(
-			props.Get(Property(propName + ".storage")("auto")).Get<string>());
-		
-		const ImageMapStorage::WrapType wrapType = ImageMapStorage::String2WrapType(
-			props.Get(Property(propName + ".wrap")("repeat")).Get<string>());
-		
 		const bool randomizedTiling = props.Get(Property(propName + ".randomizedtiling.enable")(false)).Get<bool>();
-
-		ImageMap *im = imgMapCache.GetImageMap(name, gamma, selectionType, storageType, wrapType);
 		if (randomizedTiling && (im->GetStorage()->wrapType != ImageMapStorage::REPEAT))
 			throw runtime_error("Randomized tiling requires REPAT wrap type in imagemap texture: " + propName);
 
+		const float gain = props.Get(Property(propName + ".gain")(1.f)).Get<float>();
 		tex = ImageMapTexture::AllocImageMapTexture(texName, imgMapCache, im,
 				CreateTextureMapping2D(propName + ".mapping", props),
 				gain, randomizedTiling);

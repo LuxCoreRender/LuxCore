@@ -520,6 +520,7 @@ void EnvLightVisibilityCache::BuildCacheEntries() {
 		// Scale the image
 		luminanceMapImageScaled.reset(ImageMap::Resample(luminanceMapImage, 1,
 				tilesXCount, tilesYCount));
+		luminanceMapImageScaled->Preprocess();
 	}
 
 	const double startTime = WallClockTime();

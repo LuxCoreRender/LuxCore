@@ -101,7 +101,6 @@ void Scene::ParseLights(const Properties &props) {
 
 
 ImageMap *Scene::CreateEmissionMap(const string &propName, const luxrays::Properties &props) {
-	const float gamma = props.Get(Property(propName + ".gamma")(2.2f)).Get<float>();
 	const u_int width = props.Get(Property(propName + ".map.width")(0)).Get<u_int>();
 	const u_int height = props.Get(Property(propName + ".map.height")(0)).Get<u_int>();
 
@@ -144,16 +143,20 @@ ImageMap *Scene::CreateEmissionMap(const string &propName, const luxrays::Proper
 
 	ImageMap *imgMap = NULL;
 	if (props.IsDefined(propName + ".mapfile")) {
-		const string imgMapName = SLG_FileNameResolver.ResolveFile(props.Get(propName + ".mapfile").Get<string>());
+		const string imgMapName = props.Get(propName + ".mapfile").Get<string>();
 
-		imgMap = imgMapCache.GetImageMap(imgMapName, gamma,
-				ImageMapStorage::DEFAULT, ImageMapStorage::FLOAT);
+		ImageMapConfig imgCfg(props, propName);
+		// Force float storage
+		imgCfg.storageType = ImageMapStorage::FLOAT;
+
+		imgMap = imgMapCache.GetImageMap(imgMapName, imgCfg);
 
 		if ((width > 0) || (height > 0)) {
 			// I have to resample the image
 			ImageMap *resampledImgMap = ImageMap::Resample(imgMap, imgMap->GetChannelCount(),
 					(width > 0) ? width: imgMap->GetWidth(),
 					(height > 0) ? height : imgMap->GetHeight());
+			resampledImgMap->Preprocess();
 
 			// Delete the old map
 			imgMapCache.DeleteImageMap(imgMap);
@@ -178,6 +181,7 @@ ImageMap *Scene::CreateEmissionMap(const string &propName, const luxrays::Proper
 	if (iesMap && imgMap) {
 		// Merge the 2 maps
 		map = ImageMap::Merge(imgMap, iesMap, imgMap->GetChannelCount());
+		map->Preprocess();
 		delete iesMap;
 		imgMapCache.DeleteImageMap(imgMap);
 
@@ -256,12 +260,8 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 		const Transform light2World(mat);
 
 		const string imageName = props.Get(Property(propName + ".file")("image.png")).Get<string>();
-		const float gamma = props.Get(Property(propName + ".gamma")(2.2f)).Get<float>();
-		const ImageMapStorage::StorageType storageType = ImageMapStorage::String2StorageType(
-			props.Get(Property(propName + ".storage")("auto")).Get<string>());
 
-		const ImageMap *imgMap = imgMapCache.GetImageMap(imageName, gamma,
-				ImageMapStorage::DEFAULT, storageType);
+		const ImageMap *imgMap = imgMapCache.GetImageMap(imageName, ImageMapConfig(props, propName));
 
 		InfiniteLight *il = new InfiniteLight();
 		il->lightToWorld = light2World;
@@ -378,13 +378,10 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 		const Transform light2World(mat);
 
 		const string imageName = props.Get(Property(propName + ".mapfile")("")).Get<string>();
-		const float gamma = props.Get(Property(propName + ".gamma")(2.2f)).Get<float>();
-		const ImageMapStorage::StorageType storageType = ImageMapStorage::String2StorageType(
-			props.Get(Property(propName + ".storage")("auto")).Get<string>());
 
 		const ImageMap *imgMap = (imageName == "") ?
 			NULL :
-			imgMapCache.GetImageMap(imageName, gamma, ImageMapStorage::DEFAULT, storageType);
+			imgMapCache.GetImageMap(imageName, ImageMapConfig(props, propName));
 
 		ProjectionLight *pl = new ProjectionLight();
 		pl->lightToWorld = light2World;
