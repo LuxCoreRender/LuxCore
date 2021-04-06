@@ -666,10 +666,7 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 // ImageMapConfig
 //------------------------------------------------------------------------------
 
-ImageMapConfig::ImageMapConfig() {
-	colorSpaceType = LUXCORE_COLORSPACE;
-	colorSpaceInfo.luxcore.gamma = 1.f;
-
+ImageMapConfig::ImageMapConfig() : colorSpaceCfg(1.f) {
 	storageType = ImageMapStorage::StorageType::FLOAT;
 	wrapType = ImageMapStorage::WrapType::REPEAT;
 	selectionType = ImageMapStorage::ChannelSelectionType::DEFAULT;
@@ -678,10 +675,7 @@ ImageMapConfig::ImageMapConfig() {
 ImageMapConfig::ImageMapConfig(const float gamma,
 			const ImageMapStorage::StorageType store,
 			const ImageMapStorage::WrapType wrap,
-			const ImageMapStorage::ChannelSelectionType selection) {
-	colorSpaceType = LUXCORE_COLORSPACE;
-	colorSpaceInfo.luxcore.gamma = gamma;
-
+			const ImageMapStorage::ChannelSelectionType selection) : colorSpaceCfg(gamma) {
 	storageType = store;
 	wrapType = wrap;
 	selectionType = selection;
@@ -690,11 +684,7 @@ ImageMapConfig::ImageMapConfig(const float gamma,
 ImageMapConfig::ImageMapConfig(const string &configName, const string &colorSpaceName,
 		const ImageMapStorage::StorageType store,
 		const ImageMapStorage::WrapType wrap,
-		const ImageMapStorage::ChannelSelectionType selection) {
-	colorSpaceType = OPENCOLORIO_COLORSPACE;
-	colorSpaceInfo.ocio.configName = configName;
-	colorSpaceInfo.ocio.colorSpaceName = colorSpaceName;
-
+		const ImageMapStorage::ChannelSelectionType selection) : colorSpaceCfg(configName, colorSpaceName) {
 	storageType = store;
 	wrapType = wrap;
 	selectionType = selection;
@@ -704,20 +694,8 @@ ImageMapConfig::ImageMapConfig(const Properties &props, const string &prefix) {
 	FromProperties(props, prefix, *this);
 }
 
-void ImageMapConfig::FromProperties(const Properties &props, const string &prefix, ImageMapConfig &imgCfg) {		
-	const string colorSpace = props.Get(Property(prefix + ".colorspace")("luxcore")).Get<string>();
-
-	if (colorSpace == "luxcore") {
-		imgCfg.colorSpaceType = LUXCORE_COLORSPACE;
-		// For compatibility with the past
-		const float oldGamma = props.Get(Property(prefix + ".gamma")(2.2f)).Get<float>();
-		imgCfg.colorSpaceInfo.luxcore.gamma = props.Get(Property(prefix + ".colorspace.gamma")(oldGamma)).Get<float>();
-	} else if (colorSpace == "opencolorio") {
-		imgCfg.colorSpaceType = OPENCOLORIO_COLORSPACE;
-		imgCfg.colorSpaceInfo.ocio.configName = props.Get(Property(prefix + ".colorspace.config")("")).Get<string>();
-		imgCfg.colorSpaceInfo.ocio.colorSpaceName = props.Get(Property(prefix + ".colorspace.name")(OCIO::ROLE_TEXTURE_PAINT)).Get<string>();
-	} else
-		throw runtime_error("Unknown color space in ImageMapConfig::FromProperties(): " + colorSpace);
+void ImageMapConfig::FromProperties(const Properties &props, const string &prefix, ImageMapConfig &imgCfg) {	
+	ColorSpaceConfig::FromProperties(props, prefix, imgCfg.colorSpaceCfg);
 
 	imgCfg.storageType = ImageMapStorage::String2StorageType(
 		props.Get(Property(prefix + ".storage")("auto")).Get<string>());
@@ -803,15 +781,22 @@ ImageMap::ImageMap(const string &fileName, const ImageMapConfig &cfg) : NamedObj
 					" (error = " + geterror() +")");
 	}
 
-	if (cfg.colorSpaceType == ImageMapConfig::LUXCORE_COLORSPACE)
-		pixelStorage->ReverseGammaCorrection(cfg.colorSpaceInfo.luxcore.gamma);
-	else if (cfg.colorSpaceType == ImageMapConfig::OPENCOLORIO_COLORSPACE) {
-		ConvertColorSpace(cfg.colorSpaceInfo.ocio.configName,
-				cfg.colorSpaceInfo.ocio.colorSpaceName,
-				OCIO::ROLE_SCENE_LINEAR);
-	} else
-		throw runtime_error("Unknown color space in ImageMap::ImageMap(" +
-				fileName + "): " + ToString(cfg.colorSpaceType));
+	switch (cfg.colorSpaceCfg.colorSpaceType) {
+		case ColorSpaceConfig::NOP_COLORSPACE:
+			// Nothing to do
+			break;
+		case ColorSpaceConfig::LUXCORE_COLORSPACE:
+			pixelStorage->ReverseGammaCorrection(cfg.colorSpaceCfg.luxcore.gamma);
+			break;
+		case ColorSpaceConfig::OPENCOLORIO_COLORSPACE:
+			ConvertColorSpace(cfg.colorSpaceCfg.ocio.configName,
+					cfg.colorSpaceCfg.ocio.colorSpaceName,
+					OCIO::ROLE_SCENE_LINEAR);
+			break;
+		default:
+			throw runtime_error("Unknown color space in ImageMap::ImageMap(" +
+					fileName + "): " + ToString(cfg.colorSpaceCfg.colorSpaceType));
+	}
 	
 	SelectChannel(cfg.selectionType);
 	Preprocess();
@@ -841,7 +826,7 @@ ImageMap *ImageMap::AllocImageMap(const u_int channels, const u_int width, const
 			imageMapStorage = AllocImageMapStorage<float>(channels, width, height, cfg.wrapType);
 			break;
 		default:
-			throw std::runtime_error("Unknown storage type in ImageMap::AllocImageMap(): " + ToString(cfg.storageType));
+			throw runtime_error("Unknown storage type in ImageMap::AllocImageMap(): " + ToString(cfg.storageType));
 	}
 	ImageMap *imageMap = new ImageMap(imageMapStorage, 0.f, 0.f);
 
@@ -862,20 +847,28 @@ ImageMap *ImageMap::AllocImageMap(void *pixels, const u_int channels,
 			imageMapStorage = AllocImageMapStorage<float>(channels, width, height, cfg.wrapType);
 			break;
 		default:
-			throw std::runtime_error("Unknown storage type in ImageMap::AllocImageMap(): " + ToString(cfg.storageType));
+			throw runtime_error("Unknown storage type in ImageMap::AllocImageMap(): " + ToString(cfg.storageType));
 	}
 
 	ImageMap *imageMap = new ImageMap(imageMapStorage, 0.f , 0.f);
 	memcpy(imageMap->GetStorage()->GetPixelsData(), pixels, imageMap->GetStorage()->GetMemorySize());
 
-	if (cfg.colorSpaceType == ImageMapConfig::LUXCORE_COLORSPACE)
-		imageMap->pixelStorage->ReverseGammaCorrection(cfg.colorSpaceInfo.luxcore.gamma);
-	else if (cfg.colorSpaceType == ImageMapConfig::OPENCOLORIO_COLORSPACE) {
-		imageMap->ConvertColorSpace(cfg.colorSpaceInfo.ocio.configName,
-				cfg.colorSpaceInfo.ocio.colorSpaceName,
-				OCIO::ROLE_RENDERING);
-	} else
-		throw std::runtime_error("Unknown color space in ImageMap::AllocImageMap(): " + ToString(cfg.colorSpaceType));
+	switch (cfg.colorSpaceCfg.colorSpaceType) {
+		case ColorSpaceConfig::NOP_COLORSPACE:
+			// Nothing to do
+			break;
+		case ColorSpaceConfig::LUXCORE_COLORSPACE:
+			imageMap->pixelStorage->ReverseGammaCorrection(cfg.colorSpaceCfg.luxcore.gamma);
+			break;
+		case ColorSpaceConfig::OPENCOLORIO_COLORSPACE:
+			imageMap->ConvertColorSpace(cfg.colorSpaceCfg.ocio.configName,
+					cfg.colorSpaceCfg.ocio.colorSpaceName,
+					OCIO::ROLE_SCENE_LINEAR);
+			break;
+		default:
+			throw runtime_error("Unknown color space in ImageMap::AllocImageMap(): " +
+					ToString(cfg.colorSpaceCfg.colorSpaceType));
+	}
 
 	imageMap->SelectChannel(cfg.selectionType);
 	imageMap->Preprocess();
@@ -1324,13 +1317,12 @@ ImageMap *ImageMap::FromProperties(const Properties &props, const string &prefix
 	return im;
 }
 
-Properties ImageMap::ToProperties(const std::string &prefix, const bool includeBlobImg) const {
+Properties ImageMap::ToProperties(const string &prefix, const bool includeBlobImg) const {
 	Properties props;
 
 	props <<
-			// The image is internally stored always in LUXCORE_COLORSPACE with a 1.0 gamma
-			Property(prefix + ".colorspace")("luxcore") <<
-			Property(prefix + ".gamma")(1.f) <<
+			// The image is internally stored always in NOP_COLORSPACE
+			Property(prefix + ".colorspace")("nop") <<
 			Property(prefix + ".storage")(ImageMapStorage::StorageType2String(pixelStorage->GetStorageType()));
 			Property(prefix + ".wrap")(ImageMapStorage::WrapType2String(pixelStorage->wrapType));
 

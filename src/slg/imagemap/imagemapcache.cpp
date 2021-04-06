@@ -47,17 +47,21 @@ ImageMapCache::~ImageMapCache() {
 string ImageMapCache::GetCacheKey(const string &fileName, const ImageMapConfig &imgCfg) const {
 	string key = fileName + "_#_";
 
-	switch (imgCfg.colorSpaceType) {
-		case ImageMapConfig::ColorSpaceType::LUXCORE_COLORSPACE:
-			key += "CS_LUXCORE_#_" + ToString(imgCfg.colorSpaceInfo.luxcore.gamma) + "_#_";
+	switch (imgCfg.colorSpaceCfg.colorSpaceType) {
+		case ColorSpaceConfig::NOP_COLORSPACE:
+			key += "CS_NOP_#_";
 			break;
-		case ImageMapConfig::ColorSpaceType::OPENCOLORIO_COLORSPACE:
+		case ColorSpaceConfig::LUXCORE_COLORSPACE:
+			key += "CS_LUXCORE_#_" + ToString(imgCfg.colorSpaceCfg.luxcore.gamma) + "_#_";
+			break;
+		case ColorSpaceConfig::OPENCOLORIO_COLORSPACE:
 			key += "CS_OPENCOLORIO_#_" +
-					ToString(imgCfg.colorSpaceInfo.ocio.configName) + "_#_" +
-					ToString(imgCfg.colorSpaceInfo.ocio.colorSpaceName) + "_#_";
+					ToString(imgCfg.colorSpaceCfg.ocio.configName) + "_#_" +
+					ToString(imgCfg.colorSpaceCfg.ocio.colorSpaceName) + "_#_";
 			break;
 		default:
-			throw runtime_error("Unknown color space type in ImageMapCache::GetCacheKey(): " + ToString(imgCfg.colorSpaceType));
+			throw runtime_error("Unknown color space type in ImageMapCache::GetCacheKey(): " + 
+					ToString(imgCfg.colorSpaceCfg.colorSpaceType));
 	}
 	
 	key += ToString(imgCfg.storageType) + "_#_" +

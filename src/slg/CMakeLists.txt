@@ -603,6 +603,7 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/cameras/perspective.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/cameras/projective.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/cameras/stereo.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/core/colorspace.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/core/indexbvh.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/core/indexkdtree.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/core/indexoctree.cpp
@@ -733,6 +734,7 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/samplers/soboldata.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/samplers/sobolsequence.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/samplers/metropolis.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/scene/colorspaceconverters.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/scene/extmeshcache.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/scene/extmeshcacheserialize.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/scene/parsecamera.cpp

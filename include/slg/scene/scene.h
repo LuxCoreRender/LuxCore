@@ -45,6 +45,7 @@
 #include "slg/volumes/volume.h"
 #include "slg/scene/sceneobjectdefs.h"
 #include "slg/scene/extmeshcache.h"
+#include "slg/scene/colorspaceconverters.h"
 
 
 namespace slg {
@@ -187,6 +188,8 @@ public:
 	friend class boost::serialization::access;
 
 private:
+	ColorSpaceConverters colorSpaceConv;
+
 	void Init(const float imageScale);
 
 	void ParseCamera(const luxrays::Properties &props);

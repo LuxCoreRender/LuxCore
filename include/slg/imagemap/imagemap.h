@@ -33,6 +33,7 @@
 #include "luxrays/utils/properties.h"
 #include "luxrays/utils/serializationutils.h"
 #include "luxrays/utils/ocl.h"
+#include "slg/core/colorspace.h"
 #include "slg/utils/halfserialization.h"
 
 namespace slg {
@@ -843,18 +844,13 @@ template <class T> ImageMapStorage *AllocImageMapStorage(const u_int channels,
 
 class ImageMapConfig {
 public:
-	typedef enum {
-		LUXCORE_COLORSPACE,
-		OPENCOLORIO_COLORSPACE
-	} ColorSpaceType;
-
 	// LUXCORE_COLORSPACE constructor
 	ImageMapConfig();
 	ImageMapConfig(const float gamma,
 			const ImageMapStorage::StorageType storageType,
 			const ImageMapStorage::WrapType wrapType,
 			const ImageMapStorage::ChannelSelectionType selectionType);
-	// LUXCORE_COLORSPACE constructor
+	// OPENCOLORIO_COLORSPACE constructor
 	ImageMapConfig(const std::string &configName, const std::string &colorSpaceName,
 			const ImageMapStorage::StorageType storageType,
 			const ImageMapStorage::WrapType wrapType,
@@ -865,17 +861,8 @@ public:
 
 	static void FromProperties(const luxrays::Properties &props, const std::string &prefix, ImageMapConfig &imgCfg);
 
-	ColorSpaceType colorSpaceType;
-	struct {
-		struct {
-			float gamma;
-		} luxcore;
-		struct {
-			std::string configName;
-			std::string colorSpaceName;
-		} ocio;
-	} colorSpaceInfo;
-	
+	ColorSpaceConfig colorSpaceCfg;
+
 	ImageMapStorage::StorageType storageType;
 	ImageMapStorage::WrapType wrapType;
 	ImageMapStorage::ChannelSelectionType selectionType;
