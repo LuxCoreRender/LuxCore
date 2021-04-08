@@ -47,7 +47,6 @@
 #include "slg/scene/extmeshcache.h"
 #include "slg/scene/colorspaceconverters.h"
 
-
 namespace slg {
 
 	// OpenCL data types

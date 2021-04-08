@@ -148,18 +148,33 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 
 		const bool randomizedTiling = props.Get(Property(propName + ".randomizedtiling.enable")(false)).Get<bool>();
 		if (randomizedTiling && (im->GetStorage()->wrapType != ImageMapStorage::REPEAT))
-			throw runtime_error("Randomized tiling requires REPAT wrap type in imagemap texture: " + propName);
+			throw runtime_error("Randomized tiling requires REPEAT wrap type in imagemap texture: " + propName);
 
 		const float gain = props.Get(Property(propName + ".gain")(1.f)).Get<float>();
 		tex = ImageMapTexture::AllocImageMapTexture(texName, imgMapCache, im,
 				CreateTextureMapping2D(propName + ".mapping", props),
 				gain, randomizedTiling);
 	} else if (texType == "constfloat1") {
-		const float v = props.Get(Property(propName + ".value")(1.f)).Get<float>();
+		float v = props.Get(Property(propName + ".value")(1.f)).Get<float>();
+		
+		ColorSpaceConfig colorCfg;
+		ColorSpaceConfig::FromProperties(props, propName, colorCfg, ColorSpaceConfig::defaultNopConfig);
+		colorSpaceConv.ConvertFrom(colorCfg, v);
+		
 		tex = new ConstFloatTexture(v);
 	} else if (texType == "constfloat3") {
-		const Spectrum v = props.Get(Property(propName + ".value")(1.f, 1.f, 1.f)).Get<Spectrum>();
-		tex = new ConstFloat3Texture(v);
+		ColorSpaceConfig colorCfg;
+		ColorSpaceConfig::FromProperties(props, propName, colorCfg, ColorSpaceConfig::defaultNopConfig);
+
+		Spectrum c = props.Get(Property(propName + ".value")(1.f, 1.f, 1.f)).Get<Spectrum>();
+cout<<c<<"==";
+//		ColorSpaceConfig colorCfg;
+//		ColorSpaceConfig::FromProperties(props, propName, colorCfg, ColorSpaceConfig::defaultNopConfig);
+cout<<"#"<<colorCfg.colorSpaceType<<"@"<<colorCfg.luxcore.gamma<<"#";
+		colorSpaceConv.ConvertFrom(colorCfg, c);
+cout<<c<<"==";
+		tex = new ConstFloat3Texture(c);
+cout<<tex->GetName()<<"\n";
 	} else if (texType == "scale") {
 		const Texture *tex1 = GetTexture(props.Get(Property(propName + ".texture1")(1.f)));
 		const Texture *tex2 = GetTexture(props.Get(Property(propName + ".texture2")(1.f)));

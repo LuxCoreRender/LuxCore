@@ -160,6 +160,6 @@ void OpenColorIOToneMap::Apply(Film &film, const u_int index) {
 				throw runtime_error("Unknown mode in OpenColorIOToneMap::Apply(): " + ToString(conversionType));
 		}
 	} catch (OCIO::Exception &exception) {
-		SLG_LOG("OpenColorIO Error in OpenColorIOToneMap::Apply(): " << exception.what());
+		throw runtime_error("OpenColorIO Error in OpenColorIOToneMap::Apply(): " + string(exception.what()));
 	}
 }

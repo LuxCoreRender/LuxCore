@@ -557,7 +557,7 @@ PhotonGISamplerType PhotonGICache::String2SamplerType(const string &type) {
 	else if (type == "METROPOLIS")
 		return PhotonGISamplerType::PGIC_SAMPLER_METROPOLIS;
 	else
-		throw runtime_error("Unknown PhotonGI cache debug type: " + type);
+		throw runtime_error("Unknown PhotonGI cache sampler type: " + type);
 }
 
 string PhotonGICache::SamplerType2String(const PhotonGISamplerType type) {
@@ -567,7 +567,7 @@ string PhotonGICache::SamplerType2String(const PhotonGISamplerType type) {
 		case PhotonGISamplerType::PGIC_SAMPLER_METROPOLIS:
 			return "METROPOLIS";
 		default:
-			throw runtime_error("Unsupported wrap type in PhotonGICache::SamplerType2String(): " + ToString(type));
+			throw runtime_error("Unsupported sampler type in PhotonGICache::SamplerType2String(): " + ToString(type));
 	}
 }
 

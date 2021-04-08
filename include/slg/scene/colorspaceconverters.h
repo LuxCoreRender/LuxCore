@@ -20,11 +20,14 @@
 #define	_SLG_COLORSPACECONVERTERS_H
 
 #include <string>
+#include <boost/unordered_map.hpp>
 
-#include <boost/unordered_set.hpp>
+#include <OpenColorIO/OpenColorIO.h>
+namespace OCIO = OCIO_NAMESPACE;
 
 #include "luxrays/core/color/color.h"
 #include "slg/slg.h"
+#include "slg/core/colorspace.h"
 
 namespace slg {
 
@@ -36,12 +39,20 @@ class ColorSpaceConverters {
 public:
 	ColorSpaceConverters();
 	virtual ~ColorSpaceConverters();
-	
+
+	void ConvertFrom(const ColorSpaceConfig &cfg, float &v);
+	void ConvertFrom(const ColorSpaceConfig &cfg, luxrays::Spectrum &c);
+
+private:
 	void ConvertFromLuxCore(const float gamma, float &v);
 	void ConvertFromLuxCore(const float gamma, luxrays::Spectrum &c);
 
-private:
-	//std::string GetKey() const;
+	void ConvertFromOpenColorIO(const std::string &configFileName,
+		const std::string &inputColorSpace, float &v);
+	void ConvertFromOpenColorIO(const std::string &configFileName,
+		const std::string &inputColorSpace, luxrays::Spectrum &c);
+
+	boost::unordered_map<std::string, OCIO::ConstCPUProcessorRcPtr> ocioProcessorCache;
 };
 
 }

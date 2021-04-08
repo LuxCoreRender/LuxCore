@@ -44,12 +44,19 @@ public:
 	// OPENCOLORIO_COLORSPACE constructor
 	ColorSpaceConfig(const std::string &configName, const std::string &colorSpaceName);
 	// From properties constructor
-	ColorSpaceConfig(const luxrays::Properties &props, const std::string &prefix);
+	ColorSpaceConfig(const luxrays::Properties &props, const std::string &prefix,
+			const ColorSpaceConfig &defaultCfg);
 
 	~ColorSpaceConfig();
 
 	static void FromProperties(const luxrays::Properties &props, const std::string &prefix,
-			ColorSpaceConfig &colorSpaceCfg);
+			ColorSpaceConfig &colorSpaceCfg, const ColorSpaceConfig &defaultCfg);
+	static ColorSpaceType String2ColorSpaceType(const std::string &type);
+	static std::string ColorSpaceType2String(const ColorSpaceConfig::ColorSpaceType type);
+
+	static const ColorSpaceConfig defaultNopConfig;
+	static const ColorSpaceConfig defaultLuxCoreConfig;
+	static const ColorSpaceConfig defaultOpenColorIOConfig;
 
 	ColorSpaceType colorSpaceType;
 

@@ -695,7 +695,7 @@ ImageMapConfig::ImageMapConfig(const Properties &props, const string &prefix) {
 }
 
 void ImageMapConfig::FromProperties(const Properties &props, const string &prefix, ImageMapConfig &imgCfg) {	
-	ColorSpaceConfig::FromProperties(props, prefix, imgCfg.colorSpaceCfg);
+	ColorSpaceConfig::FromProperties(props, prefix, imgCfg.colorSpaceCfg, ColorSpaceConfig::defaultLuxCoreConfig);
 
 	imgCfg.storageType = ImageMapStorage::String2StorageType(
 		props.Get(Property(prefix + ".storage")("auto")).Get<string>());
@@ -1034,7 +1034,7 @@ void ImageMap::ConvertColorSpace(const string &configFileName,
 				pixelStorage->GetChannelCount());
 		cpu->apply(img);
 	} catch (OCIO::Exception &exception) {
-		SLG_LOG("OpenColorIO Error in OpenColorIOToneMap::Apply(): " << exception.what());
+		throw runtime_error("OpenColorIO Error in OpenColorIOToneMap::Apply(): " + string(exception.what()));
 	}
 
 	// Convert back the image to the original storage type and channel count
