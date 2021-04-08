@@ -268,16 +268,22 @@ void ExtTriangleMesh::ApplyTransform(const Transform &trans) {
 	Preprocess();
 }
 
-void ExtTriangleMesh::CopyAOV(ExtMesh *destMesh) const {
+void ExtTriangleMesh::CopyAOV(ExtTriangleMesh *destMesh) const {
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
 		if (HasVertexAOV(i)) {
 			float *v = new float[vertCount];
 			copy(&vertAOV[i][0], &vertAOV[i][0] + vertCount, v);
+
+			destMesh->DeleteVertexAOV(i);
+			destMesh->SetVertexAOV(i, v);
 		}
 
 		if (HasTriAOV(i)) {
 			float *t = new float[triCount];
 			copy(&triAOV[i][0], &triAOV[i][0] + triCount, t);
+
+			destMesh->DeleteTriAOV(i);
+			destMesh->SetTriAOV(i, t);
 		}
 	}
 }
