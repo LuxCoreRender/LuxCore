@@ -704,7 +704,7 @@ void BiDirCPURenderThread::RenderFunc() {
 				if (eyeVertex.bsdf.IsLightSource() &&
 					// Avoid to render caustic path if PhotonGI caustic cache
 					// has been used (for SDS paths)
-					photonGICausticCacheUsed){
+					!photonGICausticCacheUsed){
 					DirectHitLight(true, eyeVertex, eyeSampleResult);
 				}
 
