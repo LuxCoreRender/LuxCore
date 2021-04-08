@@ -83,6 +83,7 @@ RC1 released
 
 * Fixed a problem when using the DIRECT_DIFFUSE_REFLECT AOV (issue #517)
 * Fixed a crash when using CPU-only image pipeline plugins but image pipeline GPU support is still enabled
+* Fixed a problem with BIDIRCPU and RADIANCE_GROUP AOV
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
