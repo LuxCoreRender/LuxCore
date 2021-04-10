@@ -9,6 +9,7 @@
 * Added the support for new TONEMAP_OPENCOLORIO tone mapper
 * Added the support for color spaces (Nop, LuxCore and OpenColorIO) to image maps
 * Added the support for color spaces (Nop, LuxCore and OpenColorIO) to constant textures
+* Added the support for color spaces (Nop, LuxCore and OpenColorIO) to implicit definitions of constant textures
 * FILESAVER avoids to save the internal random image map (used by randomized tiling)
 
 ### Fixed Bugs

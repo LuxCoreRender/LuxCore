@@ -20,7 +20,10 @@ scene.materials.DarkGreen.type = matte
 scene.materials.DarkGreen.kd = DarkGreenCol
 ##
 scene.materials.HalveRed.type = matte
-scene.materials.HalveRed.kd = 0.70003 0. 0.
+#scene.materials.HalveRed.kd = 0.70003 0. 0.
+#scene.materials.HalveRed.kd = nop 0.70003 0. 0.
+#scene.materials.HalveRed.kd = luxcore 2.2 0.70003 0. 0.
+scene.materials.HalveRed.kd = opencolorio "" vd8 0.70003 0. 0.
 ##
 scene.materials.Light.type = matte
 scene.materials.Light.emission = 30. 30. 30.

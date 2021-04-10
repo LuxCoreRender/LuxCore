@@ -199,7 +199,8 @@ private:
 	void ParseObjects(const luxrays::Properties &props);
 	void ParseLights(const luxrays::Properties &props);
 
-	const Texture *GetTexture(const luxrays::Property &name);
+	const luxrays::Spectrum GetColor(const luxrays::Property &prop);
+	const Texture *GetTexture(const luxrays::Property &prop);
 
 	Camera *CreateCamera(const luxrays::Properties &props);
 	TextureMapping2D *CreateTextureMapping2D(const std::string &prefixName, const luxrays::Properties &props);
