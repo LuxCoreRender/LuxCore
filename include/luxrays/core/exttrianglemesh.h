@@ -276,7 +276,7 @@ public:
 
 	virtual void Save(const std::string &fileName) const;
 
-	void CopyAOV(ExtMesh *destMesh) const;
+	void CopyAOV(ExtTriangleMesh *destMesh) const;
 	ExtTriangleMesh *CopyExt(Point *meshVertices, Triangle *meshTris, Normal *meshNormals,
 			std::array<UV *, EXTMESH_MAX_DATA_COUNT> *meshUVs,
 			std::array<Spectrum *, EXTMESH_MAX_DATA_COUNT> *meshCols,
