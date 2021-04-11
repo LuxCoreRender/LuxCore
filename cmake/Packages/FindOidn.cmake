@@ -14,10 +14,10 @@
 ## limitations under the License.                                           ##
 ## ======================================================================== ##
 
-FIND_PATH(OIDN_INCLUDE_PATH NAMES OpenImageDenoise/version.h PATHS
+FIND_PATH(OIDN_INCLUDE_PATH NAMES OpenImageDenoise/version.h OpenImageDenoise/config.h PATHS
 	${OIDN_ROOT}/include)
 IF (NOT OIDN_INCLUDE_PATH)
-	FIND_PATH(OIDN_INCLUDE_PATH NAMES OpenImageDenoise/version.h PATHS
+	FIND_PATH(OIDN_INCLUDE_PATH NAMES OpenImageDenoise/version.h OpenImageDenoise/config.h PATHS
 		/usr/include
 		/usr/local/include
 		/opt/local/include)
