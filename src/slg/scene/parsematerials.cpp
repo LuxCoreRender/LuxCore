@@ -520,7 +520,8 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 	mat->SetID(props.Get(Property(propName + ".id")(defaultMatID)).Get<u_int>());
 	mat->SetBumpSampleDistance(bumpSampleDistance);
 
-	mat->SetEmittedGain(GetColor(Property(propName + ".emission.gain")(Spectrum(1.f))));
+	// Gain is not really a color so I avoid to use GetColor()
+	mat->SetEmittedGain(props.Get(Property(propName + ".emission.gain")(Spectrum(1.f))).Get<Spectrum>());
 	mat->SetEmittedPower(Max(0.f, props.Get(Property(propName + ".emission.power")(0.f)).Get<float>()));
 	mat->SetEmittedPowerNormalize(props.Get(Property(propName + ".emission.normalizebycolor")(true)).Get<bool>());
 	mat->SetEmittedGainNormalize(props.Get(Property(propName + ".emission.gain.normalizebycolor")(false)).Get<bool>());
