@@ -145,15 +145,15 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 
 	// For compatibility with the past
 	const Texture *transparencyTex = props.IsDefined(propName + ".transparency") ?
-		GetTexture(props.Get(Property(propName + ".transparency")(0.f, 0.f, 0.f))) : NULL;
+		GetTexture(props.Get(Property(propName + ".transparency")(Spectrum(0.f)))) : NULL;
 
 	const Texture *frontTransparencyTex = props.IsDefined(propName + ".transparency.front") ?
-		GetTexture(props.Get(Property(propName + ".transparency.front")(0.f, 0.f, 0.f))) : transparencyTex;
+		GetTexture(props.Get(Property(propName + ".transparency.front")(Spectrum(0.f)))) : transparencyTex;
 	const Texture *backTransparencyTex = props.IsDefined(propName + ".transparency.back") ?
-		GetTexture(props.Get(Property(propName + ".transparency.back")(0.f, 0.f, 0.f))) : transparencyTex;
+		GetTexture(props.Get(Property(propName + ".transparency.back")(Spectrum(0.f)))) : transparencyTex;
 
 	const Texture *emissionTex = props.IsDefined(propName + ".emission") ?
-		GetTexture(props.Get(Property(propName + ".emission")(0.f, 0.f, 0.f))) : NULL;
+		GetTexture(props.Get(Property(propName + ".emission")(Spectrum(0.f)))) : NULL;
 	// Required to remove light source while editing the scene
 	if (emissionTex && (
 			((emissionTex->GetType() == CONST_FLOAT) && (((ConstFloatTexture *)emissionTex)->GetValue() == 0.f)) ||
@@ -520,7 +520,7 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 	mat->SetID(props.Get(Property(propName + ".id")(defaultMatID)).Get<u_int>());
 	mat->SetBumpSampleDistance(bumpSampleDistance);
 
-	mat->SetEmittedGain(props.Get(Property(propName + ".emission.gain")(Spectrum(1.f))).Get<Spectrum>());
+	mat->SetEmittedGain(GetColor(Property(propName + ".emission.gain")(Spectrum(1.f))));
 	mat->SetEmittedPower(Max(0.f, props.Get(Property(propName + ".emission.power")(0.f)).Get<float>()));
 	mat->SetEmittedPowerNormalize(props.Get(Property(propName + ".emission.normalizebycolor")(true)).Get<bool>());
 	mat->SetEmittedGainNormalize(props.Get(Property(propName + ".emission.gain.normalizebycolor")(false)).Get<bool>());
@@ -531,7 +531,7 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 	mat->SetEmittedTemperature(props.Get(Property(propName + ".emission.temperature")(-1.f)).Get<float>());
 	mat->SetEmittedTemperatureNormalize(props.Get(Property(propName + ".emission.temperature.normalize")(false)).Get<float>());
 
-	mat->SetPassThroughShadowTransparency(props.Get(Property(propName + ".transparency.shadow")(Spectrum(0.f))).Get<Spectrum>());
+	mat->SetPassThroughShadowTransparency(GetColor(Property(propName + ".transparency.shadow")(Spectrum(0.f))));
 
 	const string dlsType = props.Get(Property(propName + ".emission.directlightsampling.type")("AUTO")).Get<string>();
 	if (dlsType == "ENABLED")

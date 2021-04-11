@@ -199,7 +199,7 @@ private:
 	void ParseObjects(const luxrays::Properties &props);
 	void ParseLights(const luxrays::Properties &props);
 
-	const luxrays::Spectrum GetColor(const luxrays::Property &prop);
+	luxrays::Spectrum GetColor(const luxrays::Property &prop);
 	const Texture *GetTexture(const luxrays::Property &prop);
 
 	Camera *CreateCamera(const luxrays::Properties &props);
