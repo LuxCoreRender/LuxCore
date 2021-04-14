@@ -1,0 +1,11 @@
+**Version 1.0_r2 (Aug 27 2012):**
+    * (ACES) Updated to v0.1.1 RRT
+    * (ACES) Added sony/f65 IDTs (beta)
+    * (ACES) Misc. dir cleanup
+
+**Version 1.0_r1 (March 16 2012):**
+    * (ACES) Updated to ut33 RRT
+    * (ACES) Added arri alexa
+    * (ACES) Added sony/slog
+    * (nuke-default) Added sRGBf (Matches sRGB, but with extra range for highlight preservation)
+

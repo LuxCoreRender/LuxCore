@@ -1,78 +1,20 @@
-### Release v2.5
+### Release v2.6
 
 ### New Features
 
-* Added the support for Optix/RTX acceleration
-* Added the support for Optix denoiser imagepipeline plugin
-* GPU imagepipeline now allocated buffers for only the used AOVs by each plugin
-* batch.haltspp now supports 2 parameters too in order to have separate halt conditions for eye and light tracing
-* Added the support for camera not uniform and anamorphic bokeh (issue #409)
-* Added the support for camera bokeh with custom distribution
-* Variance clamping is now applied separately to each radiance group (issue #414)
-* Added the support for lateral and longitudinal chromatic aberration (issue #409)
-* Added the support for SINC pixel filter (issue #415)
-* Added the support for CATMULLROM pixel filter (issue #415)
-* It is now possible to disable Optix (with property context.cuda.optix.enable) even if it is detected and available
-* Any mesh UV map can now be used for displacement (issue #416)
-* Subdiv shape now supports multiple vertex UVs, colors, alphas and AOVs (issue #416)
-* Added the support for holdout (issue #423)
-* Added the support for wireframe texture
-* Variance clamping is applied applied to DIRECT_DIFFUSE, DIRECT_GLOSSY, EMISSION, INDIRECT_DIFFUSE, INDIRECT_GLOSSY and INDIRECT_SPECULAR AOVs too
-* GetPlatformDesc() now returns compile.LUXRAYS_ENABLE_OPTIX property to check if Optix is available
-* Removed the limit of max. 32 AOV types
-* Added the support for new AOVs (issue #429): DIRECT_DIFFUSE_REFLECT, DIRECT_DIFFUSE_TRANSMIT, DIRECT_GLOSSY_REFLECT, DIRECT_GLOSSY_TRANSMIT, INDIRECT_DIFFUSE_REFLECT, INDIRECT_DIFFUSE_TRANSMIT, INDIRECT_GLOSSY_REFLECT, INDIRECT_GLOSSY_TRANSMIT, INDIRECT_SPECULAR_REFLECT and INDIRECT_SPECULAR_TRANSMIT
-* Added a fast evaluation path in GPU code for constant and image map textures
-* Added the support for Distort texture
-* Now individual bricks, in brick texture, have a pseudo-random mix between two colors by default
-* Added the support for Randomized Texture Tiling (#228)
-* Added the support for UVRandomMapping2D
-* Added the support for LocalRandomMapping3D
-* Added the support for Caustic AOV when using hybrid rendering
-* Added the support for TwoSided material
-* Reworked WhiteBalance plugin and light groups white balance support to be coherent with usual photographic white balance process (note: this change breaks the compatibility with past scene settings)
-* Added a cap (25% and 75%) to Glass transmission/reflection sampling to not under sample some case
-* Added the support to all light sources of ".temperature" and ".temperature.normalize" properties to set light temperature
-* Added the support for texture bombing
-* Added the support for Caustic AOV to OutputSwitcherPlugin
-* LuxCore API has new log system
-* Added the support for 180 (or any other amount of degrees) view to Environment camera
-* Added the support for 180 (horizontal stacked) and 360 degree (vertical stacked) stereo camera (issue #451)
-
-Beta1 released
-
-* Removed the cap to opencl.task.count parameter
+* BIDIRCPU can now use PhotonGI caustic cache to render SDS paths
+* Optimized the parsing of mesh light sources and it is now about 3x faster
+* Introduced (partial) multi-thread support in pre-processing of Light sources
+* Integrated OpenColorIO v2.0
+* Added the support for new TONEMAP_OPENCOLORIO tone mapper
+* Added the support for color spaces (Nop, LuxCore and OpenColorIO) to image maps
+* Added the support for color spaces (Nop, LuxCore and OpenColorIO) to constant textures
+* Added the support for color spaces (Nop, LuxCore and OpenColorIO) to implicit definitions of constant textures
+* Added the support for color spaces (Nop, LuxCore and OpenColorIO) to materials
+* Added the support for color spaces (Nop, LuxCore and OpenColorIO) to light sources
+* FILESAVER avoids to save the internal random image map (used by randomized tiling)
 
 ### Fixed Bugs
-
-* Added the support for pixel filtering to light tracing (issue #413)
-* Now LuxCore works even if OpenCL is available but not a valid OpenCL ICD platform has been found (issue #422)
-* Fixed a problem with cloth material when using CUDA and Windows (issue #417)
-* Fixed a problem in glossy coating albedo evaluation on GPUs
-* Fixed a difference between CPU and GPU rendering when using a roughglass with a shadow transparency color
-* Fixed the support in .ply files for triangle AOVs
-* Fixed a memory leak when rendering with OpenCL (noticeable when rendering animations)
-* Fixed text export of brick texture HERRINGBONE and BASKET
-* Fixed scale problem in GPU code for brick texture HERRINGBONE and BASKET (issue #438)
-* Fixed a possible crash when using trilinear texture with GPUs
-* Reworked some condition in hybrid rendering light tracing to solve the problem of flashing caustics (issue #441)
-* Fixed a problem with Blender Translation language preference option and scene export on file
-* Fixed a self-shadow problem in BIRCPU render engine
-* Fixed a Mix material problem when using solid and transparent materials (issue #461)
-
-Beta1 released
-
-* Fixed a crash when using Subdivision shape with vertex colors (issue #469)
-* Fixed a possible crash when using multiple GPUs with PhotonGI
-* Fixed a deadlock when using multiple renders at the same time in Blender (issue #575)
-* Fixed a bug in the support for material .bumpsamplingdistance property
-* Fixed a discrepancy in reflected area lights on glossy surfaces between CPU and GPU rendering when light tracing is enabled (issue #470)
-* Avoid to return CUDA_ERROR_NO_DEVICE error if CUDA is installed but there are no NVIDIA GPUs installed
-* Fixed compilation when CUDA is disabled but OpenCL is still enabled
-* Now disabling CUDA for any error during the cuInit() like when an external GPU is unplugged (issue #493)
-* Compiling the code with LUXCORE_DISABLE_OIDN defined will disable Intel OIDN (for platforms where it is not available like Apple M1)
-* Fixed halt condition rendering stop code when using both eye and light tracing parameters (issue #497)
-* Change sphere light implementation to provide an alternative to the point light fallback (issue #443)
-* Fixed a compiler error when running with CUDA on Ampere GPUs (issue BlendLuxCore#626)
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.

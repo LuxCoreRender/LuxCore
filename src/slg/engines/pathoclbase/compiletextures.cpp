@@ -205,8 +205,8 @@ void CompiledScene::CompileTextureMapping3D(slg::ocl::TextureMapping3D *mapping,
 
 			mapping->localRandomMapping.xScaleMin = gm->xScaleMin;
 			mapping->localRandomMapping.xScaleMax = gm->xScaleMax;
-			mapping->localRandomMapping.yScaleMin = gm->xScaleMin;
-			mapping->localRandomMapping.yScaleMax = gm->xScaleMax;
+			mapping->localRandomMapping.yScaleMin = gm->yScaleMin;
+			mapping->localRandomMapping.yScaleMax = gm->yScaleMax;
 			mapping->localRandomMapping.zScaleMin = gm->zScaleMin;
 			mapping->localRandomMapping.zScaleMax = gm->zScaleMax;
 

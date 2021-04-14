@@ -251,18 +251,19 @@ OPENCL_FORCE_INLINE float3 LocalRandomMapping3D_Map(__global const TextureMappin
 	const float yTranslate = Lerp(Rnd_FloatValue(&rndSeed), mapping->localRandomMapping.yTranslateMin, mapping->localRandomMapping.yTranslateMax);
 	const float zTranslate = Lerp(Rnd_FloatValue(&rndSeed), mapping->localRandomMapping.zTranslateMin, mapping->localRandomMapping.zTranslateMax);
 
-	const Matrix4x4 mScale = Matrix4x4_Scale(xScale, yScale, zScale);
-	m = Matrix4x4_Mul_Private(&m, &mScale);
+	Matrix4x4 mRandomTrans = Matrix4x4_Scale(xScale, yScale, zScale);
 
 	const Matrix4x4 mRotateX = Matrix4x4_RotateX(xRotation);
-	m = Matrix4x4_Mul_Private(&m, &mRotateX);
+	mRandomTrans = Matrix4x4_Mul_Private(&mRandomTrans, &mRotateX);
 	const Matrix4x4 mRotateY = Matrix4x4_RotateY(yRotation);
-	m = Matrix4x4_Mul_Private(&m, &mRotateY);
+	mRandomTrans = Matrix4x4_Mul_Private(&mRandomTrans, &mRotateY);
 	const Matrix4x4 mRotateZ = Matrix4x4_RotateZ(zRotation);
-	m = Matrix4x4_Mul_Private(&m, &mRotateZ);
+	mRandomTrans = Matrix4x4_Mul_Private(&mRandomTrans, &mRotateZ);
 
 	const Matrix4x4 mTranslate = Matrix4x4_Translate(xTranslate, yTranslate, zTranslate);
-	m = Matrix4x4_Mul_Private(&m, &mTranslate);
+	mRandomTrans = Matrix4x4_Mul_Private(&mRandomTrans, &mTranslate);
+	
+	m = Matrix4x4_Mul_Private(&mRandomTrans, &m);
 
 	const float3 p = VLOAD3F(&hitPoint->p.x);
 	return Matrix4x4_ApplyPoint_Private(&m, p);

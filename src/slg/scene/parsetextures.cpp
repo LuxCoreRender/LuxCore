@@ -143,33 +143,33 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 	Texture *tex = NULL;
 	if (texType == "imagemap") {
 		const string name = props.Get(Property(propName + ".file")("image.png")).Get<string>();
-		const float gamma = props.Get(Property(propName + ".gamma")(2.2f)).Get<float>();
-		const float gain = props.Get(Property(propName + ".gain")(1.f)).Get<float>();
 
-		const ImageMapStorage::ChannelSelectionType selectionType = ImageMapStorage::String2ChannelSelectionType(
-				props.Get(Property(propName + ".channel")("default")).Get<string>());
+		ImageMap *im = imgMapCache.GetImageMap(name, ImageMapConfig(props, propName));
 
-		const ImageMapStorage::StorageType storageType = ImageMapStorage::String2StorageType(
-			props.Get(Property(propName + ".storage")("auto")).Get<string>());
-		
-		const ImageMapStorage::WrapType wrapType = ImageMapStorage::String2WrapType(
-			props.Get(Property(propName + ".wrap")("repeat")).Get<string>());
-		
 		const bool randomizedTiling = props.Get(Property(propName + ".randomizedtiling.enable")(false)).Get<bool>();
-
-		ImageMap *im = imgMapCache.GetImageMap(name, gamma, selectionType, storageType, wrapType);
 		if (randomizedTiling && (im->GetStorage()->wrapType != ImageMapStorage::REPEAT))
-			throw runtime_error("Randomized tiling requires REPAT wrap type in imagemap texture: " + propName);
+			throw runtime_error("Randomized tiling requires REPEAT wrap type in imagemap texture: " + propName);
 
+		const float gain = props.Get(Property(propName + ".gain")(1.f)).Get<float>();
 		tex = ImageMapTexture::AllocImageMapTexture(texName, imgMapCache, im,
 				CreateTextureMapping2D(propName + ".mapping", props),
 				gain, randomizedTiling);
 	} else if (texType == "constfloat1") {
-		const float v = props.Get(Property(propName + ".value")(1.f)).Get<float>();
+		float v = props.Get(Property(propName + ".value")(1.f)).Get<float>();
+		
+		ColorSpaceConfig colorCfg;
+		ColorSpaceConfig::FromProperties(props, propName, colorCfg, ColorSpaceConfig::defaultNopConfig);
+		colorSpaceConv.ConvertFrom(colorCfg, v);
+		
 		tex = new ConstFloatTexture(v);
 	} else if (texType == "constfloat3") {
-		const Spectrum v = props.Get(Property(propName + ".value")(1.f, 1.f, 1.f)).Get<Spectrum>();
-		tex = new ConstFloat3Texture(v);
+		Spectrum c = props.Get(Property(propName + ".value")(1.f, 1.f, 1.f)).Get<Spectrum>();
+
+		ColorSpaceConfig colorCfg;
+		ColorSpaceConfig::FromProperties(props, propName, colorCfg, ColorSpaceConfig::defaultNopConfig);
+		colorSpaceConv.ConvertFrom(colorCfg, c);
+
+		tex = new ConstFloat3Texture(c);
 	} else if (texType == "scale") {
 		const Texture *tex1 = GetTexture(props.Get(Property(propName + ".texture1")(1.f)));
 		const Texture *tex2 = GetTexture(props.Get(Property(propName + ".texture2")(1.f)));
@@ -411,7 +411,7 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		vector<Spectrum> values;
 		for (u_int i = 0; props.IsDefined(propName + ".offset" + ToString(i)); ++i) {
 			const float offset = props.Get(Property(propName + ".offset" + ToString(i))(0.f)).Get<float>();
-			const Spectrum value = props.Get(Property(propName + ".value" + ToString(i))(1.f, 1.f, 1.f)).Get<Spectrum>();
+			const Spectrum value = GetColor(Property(propName + ".value" + ToString(i))(1.f, 1.f, 1.f));
 
 			offsets.push_back(offset);
 			values.push_back(value);
@@ -495,8 +495,8 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 
 		tex = new FresnelColorTexture(col);
 	} else if (texType == "fresnelconst") {
-		const Spectrum n = props.Get(Property(propName + ".n")(1.f, 1.f, 1.f)).Get<Spectrum>();
-		const Spectrum k = props.Get(Property(propName + ".k")(1.f, 1.f, 1.f)).Get<Spectrum>();
+		const Spectrum n = GetColor(Property(propName + ".n")(1.f, 1.f, 1.f));
+		const Spectrum k = GetColor(Property(propName + ".k")(1.f, 1.f, 1.f));
 
 		tex = new FresnelConstTexture(n, k);
 	} else if (texType == "fresnelluxpop") {
@@ -648,6 +648,44 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 	return tex;
 }
 
+Spectrum Scene::GetColor(const luxrays::Property &prop) {
+	if (prop.GetSize() > 1) {
+		string colorSpaceName = prop.Get<string>(0);
+
+		if (colorSpaceName == ColorSpaceConfig::ColorSpaceType2String(ColorSpaceConfig::NOP_COLORSPACE)) {
+			if (prop.GetSize() == 4) {
+				Spectrum c(prop.Get<float>(1), prop.Get<float>(2), prop.Get<float>(3));
+				colorSpaceConv.ConvertFrom(ColorSpaceConfig::defaultNopConfig, c);
+
+				return c;
+			} else
+				throw runtime_error("Wrong number of arguments in the color definition with a color space: " + prop.ToString());
+		} else if (colorSpaceName == ColorSpaceConfig::ColorSpaceType2String(ColorSpaceConfig::LUXCORE_COLORSPACE)) {
+			if (prop.GetSize() == 5) {
+				const float gamma = prop.Get<float>(1);
+				Spectrum c(prop.Get<float>(2), prop.Get<float>(3), prop.Get<float>(4));
+				colorSpaceConv.ConvertFrom(ColorSpaceConfig(gamma), c);
+
+				return c;
+			} else
+				throw runtime_error("Wrong number of arguments in the color definition with a color space: " + prop.ToString());
+		} else if (colorSpaceName == ColorSpaceConfig::ColorSpaceType2String(ColorSpaceConfig::OPENCOLORIO_COLORSPACE)) {
+			if (prop.GetSize() == 6) {
+				const string configName = prop.Get<string>(1);
+				const string colorSapceName = prop.Get<string>(2);
+				Spectrum c(prop.Get<float>(3), prop.Get<float>(4), prop.Get<float>(5));
+				colorSpaceConv.ConvertFrom(ColorSpaceConfig(configName, colorSapceName), c);
+
+				return c;
+			} else
+				throw runtime_error("Wrong number of arguments in the color definition with a color space: " + prop.ToString());
+		}
+
+		return prop.Get<Spectrum>();
+	} else
+		throw runtime_error("Wrong number of arguments in the color definition with a color space: " + prop.ToString());
+}
+
 const Texture *Scene::GetTexture(const luxrays::Property &prop) {
 	const string &name = prop.GetValuesString();
 
@@ -656,6 +694,83 @@ const Texture *Scene::GetTexture(const luxrays::Property &prop) {
 	else {
 		// Check if it is an implicit declaration of a constant texture
 		try {
+			// Check if the first element is a name space
+			if (prop.GetSize() > 1) {
+				string colorSpaceName = prop.Get<string>(0);
+
+				if (colorSpaceName == ColorSpaceConfig::ColorSpaceType2String(ColorSpaceConfig::NOP_COLORSPACE)) {
+					if (prop.GetSize() == 2) {
+						float v = prop.Get<float>(1);				
+						colorSpaceConv.ConvertFrom(ColorSpaceConfig::defaultNopConfig, v);
+		
+						ConstFloatTexture *tex = new ConstFloatTexture(v);
+						tex->SetName(NamedObject::GetUniqueName("Implicit-ConstFloatTexture"));
+						texDefs.DefineTexture(tex);
+
+						return tex;
+					} else if (prop.GetSize() == 4) {
+						Spectrum c(prop.Get<float>(1), prop.Get<float>(2), prop.Get<float>(3));
+						colorSpaceConv.ConvertFrom(ColorSpaceConfig::defaultNopConfig, c);
+
+						ConstFloat3Texture *tex = new ConstFloat3Texture(c);
+						tex->SetName(NamedObject::GetUniqueName("Implicit-ConstFloatTexture3"));
+						texDefs.DefineTexture(tex);
+
+						return tex;
+					} else
+						throw runtime_error("Wrong number of arguments in the implicit definition of a constant texture with a color space: " + prop.ToString());
+				} else if (colorSpaceName == ColorSpaceConfig::ColorSpaceType2String(ColorSpaceConfig::LUXCORE_COLORSPACE)) {
+					if (prop.GetSize() == 3) {
+						const float gamma = prop.Get<float>(1);
+						float v = prop.Get<float>(2);
+						colorSpaceConv.ConvertFrom(ColorSpaceConfig(gamma), v);
+		
+						ConstFloatTexture *tex = new ConstFloatTexture(v);
+						tex->SetName(NamedObject::GetUniqueName("Implicit-ConstFloatTexture"));
+						texDefs.DefineTexture(tex);
+
+						return tex;
+					} else if (prop.GetSize() == 5) {
+						const float gamma = prop.Get<float>(1);
+						Spectrum c(prop.Get<float>(2), prop.Get<float>(3), prop.Get<float>(4));
+						colorSpaceConv.ConvertFrom(ColorSpaceConfig(gamma), c);
+
+						ConstFloat3Texture *tex = new ConstFloat3Texture(c);
+						tex->SetName(NamedObject::GetUniqueName("Implicit-ConstFloatTexture3"));
+						texDefs.DefineTexture(tex);
+
+						return tex;
+					} else
+						throw runtime_error("Wrong number of arguments in the implicit definition of a constant texture with a color space: " + prop.ToString());
+				} else if (colorSpaceName == ColorSpaceConfig::ColorSpaceType2String(ColorSpaceConfig::OPENCOLORIO_COLORSPACE)) {
+					if (prop.GetSize() == 4) {
+						const string configName = prop.Get<string>(1);
+						const string colorSapceName = prop.Get<string>(2);
+						float v = prop.Get<float>(3);
+						colorSpaceConv.ConvertFrom(ColorSpaceConfig(configName, colorSapceName), v);
+		
+						ConstFloatTexture *tex = new ConstFloatTexture(v);
+						tex->SetName(NamedObject::GetUniqueName("Implicit-ConstFloatTexture"));
+						texDefs.DefineTexture(tex);
+
+						return tex;
+					} else if (prop.GetSize() == 6) {
+						const string configName = prop.Get<string>(1);
+						const string colorSapceName = prop.Get<string>(2);
+						Spectrum c(prop.Get<float>(3), prop.Get<float>(4), prop.Get<float>(5));
+						colorSpaceConv.ConvertFrom(ColorSpaceConfig(configName, colorSapceName), c);
+
+						ConstFloat3Texture *tex = new ConstFloat3Texture(c);
+						tex->SetName(NamedObject::GetUniqueName("Implicit-ConstFloatTexture3"));
+						texDefs.DefineTexture(tex);
+
+						return tex;
+					} else
+						throw runtime_error("Wrong number of arguments in the implicit definition of a constant texture with a color space: " + prop.ToString());
+				}
+			}
+
+			// Check if is a single float or a spectrum
 			vector<string> strs;
 			boost::split(strs, name, boost::is_any_of("\t "));
 
@@ -666,7 +781,7 @@ const Texture *Scene::GetTexture(const luxrays::Property &prop) {
 					floats.push_back(static_cast<float>(f));
 				}
 			}
-
+		
 			if (floats.size() == 1) {
 				ConstFloatTexture *tex = new ConstFloatTexture(floats.at(0));
 				tex->SetName(NamedObject::GetUniqueName("Implicit-ConstFloatTexture"));

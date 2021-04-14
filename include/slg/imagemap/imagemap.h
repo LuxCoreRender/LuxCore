@@ -26,12 +26,14 @@
 
 #include "luxrays/luxrays.h"
 #include "luxrays/utils/ocl.h"
+#include "luxrays/utils/strutils.h"
 #include "luxrays/core/color/color.h"
 #include "luxrays/core/geometry/uv.h"
 #include "luxrays/core/namedobject.h"
 #include "luxrays/utils/properties.h"
 #include "luxrays/utils/serializationutils.h"
 #include "luxrays/utils/ocl.h"
+#include "slg/core/colorspace.h"
 #include "slg/utils/halfserialization.h"
 
 namespace slg {
@@ -74,6 +76,7 @@ public:
 	}
 	void SetFloat(const float v);
 	void SetSpectrum(const luxrays::Spectrum &v);
+	void SetAlpha(const float v);
 
 	void ReverseGammaCorrection(const float gamma);
 
@@ -135,6 +138,9 @@ template<> inline void ImageMapPixel<u_char, 1>::SetSpectrum(const luxrays::Spec
 	c[0] = (u_char)floorf(v.Y() * maxv + .5f);
 }
 
+template<> inline void ImageMapPixel<u_char, 1>::SetAlpha(const float v) {
+}
+
 template<> const ImageMapPixel<u_char, 1> *ImageMapPixel<u_char, 1>::GetWhite();
 template<> const ImageMapPixel<u_char, 1> *ImageMapPixel<u_char, 1>::GetBlack();
 
@@ -171,6 +177,11 @@ template<> inline void ImageMapPixel<u_char, 2>::SetFloat(const float v) {
 template<> inline void ImageMapPixel<u_char, 2>::SetSpectrum(const luxrays::Spectrum &v) {
 	const float maxv = std::numeric_limits<u_char>::max();
 	c[0] = (u_char)floorf(v.Y() * maxv + .5f);
+}
+
+template<> inline void ImageMapPixel<u_char, 2>::SetAlpha(const float v) {
+	const float maxv = std::numeric_limits<u_char>::max();
+	c[1] = (u_char)floorf(v * maxv + .5f);
 }
 
 template<> const ImageMapPixel<u_char, 2> *ImageMapPixel<u_char, 2>::GetWhite();
@@ -214,6 +225,9 @@ template<> inline void ImageMapPixel<u_char, 3>::SetSpectrum(const luxrays::Spec
 	c[0] = (u_char)floorf(v.c[0] * maxv + .5f);
 	c[1] = (u_char)floorf(v.c[1] * maxv + .5f);
 	c[2] = (u_char)floorf(v.c[2] * maxv + .5f);
+}
+
+template<> inline void ImageMapPixel<u_char, 3>::SetAlpha(const float v) {
 }
 
 template<> const ImageMapPixel<u_char, 3> *ImageMapPixel<u_char, 3>::GetWhite();
@@ -260,6 +274,11 @@ template<> inline void ImageMapPixel<u_char, 4>::SetSpectrum(const luxrays::Spec
 	c[2] = (u_char)floorf(v.c[2] * maxv + .5f);
 }
 
+template<> inline void ImageMapPixel<u_char, 4>::SetAlpha(const float v) {
+	const float maxv = std::numeric_limits<u_char>::max();
+	c[3] = (u_char)floorf(v * maxv + .5f);
+}
+
 template<> const ImageMapPixel<u_char, 4> *ImageMapPixel<u_char, 4>::GetWhite();
 template<> const ImageMapPixel<u_char, 4> *ImageMapPixel<u_char, 4>::GetBlack();
 
@@ -291,6 +310,9 @@ template<> inline void ImageMapPixel<half, 1>::SetSpectrum(const luxrays::Spectr
 	c[0] = v.Y();
 }
 
+template<> inline void ImageMapPixel<half, 1>::SetAlpha(const float v) {
+}
+
 template<> const ImageMapPixel<half, 1> *ImageMapPixel<half, 1>::GetWhite();
 template<> const ImageMapPixel<half, 1> *ImageMapPixel<half, 1>::GetBlack();
 
@@ -320,6 +342,10 @@ template<> inline void ImageMapPixel<half, 2>::SetFloat(const float v) {
 
 template<> inline void ImageMapPixel<half, 2>::SetSpectrum(const luxrays::Spectrum &v) {
 	c[0] = v.Y();
+}
+
+template<> inline void ImageMapPixel<half, 2>::SetAlpha(const float v) {
+	c[1] = v;
 }
 
 template<> const ImageMapPixel<half, 2> *ImageMapPixel<half, 2>::GetWhite();
@@ -359,6 +385,9 @@ template<> inline void ImageMapPixel<half, 3>::SetSpectrum(const luxrays::Spectr
 	c[2] = v.c[2];
 }
 
+template<> inline void ImageMapPixel<half, 3>::SetAlpha(const float v) {
+}
+
 template<> const ImageMapPixel<half, 3> *ImageMapPixel<half, 3>::GetWhite();
 template<> const ImageMapPixel<half, 3> *ImageMapPixel<half, 3>::GetBlack();
 
@@ -396,6 +425,10 @@ template<> inline void ImageMapPixel<half, 4>::SetSpectrum(const luxrays::Spectr
 	c[2] = v.c[2];
 }
 
+template<> inline void ImageMapPixel<half, 4>::SetAlpha(const float v) {
+	c[3] = v;
+}
+
 template<> const ImageMapPixel<half, 4> *ImageMapPixel<half, 4>::GetWhite();
 template<> const ImageMapPixel<half, 4> *ImageMapPixel<half, 4>::GetBlack();
 
@@ -427,6 +460,9 @@ template<> inline void ImageMapPixel<float, 1>::SetSpectrum(const luxrays::Spect
 	c[0] = v.Y();
 }
 
+template<> inline void ImageMapPixel<float, 1>::SetAlpha(const float v) {
+}
+
 template<> const ImageMapPixel<float, 1> *ImageMapPixel<float, 1>::GetWhite();
 template<> const ImageMapPixel<float, 1> *ImageMapPixel<float, 1>::GetBlack();
 
@@ -456,6 +492,10 @@ template<> inline void ImageMapPixel<float, 2>::SetFloat(const float v) {
 
 template<> inline void ImageMapPixel<float, 2>::SetSpectrum(const luxrays::Spectrum &v) {
 	c[0] = v.Y();
+}
+
+template<> inline void ImageMapPixel<float, 2>::SetAlpha(const float v) {
+	c[1] = v;
 }
 
 template<> const ImageMapPixel<float, 2> *ImageMapPixel<float, 2>::GetWhite();
@@ -495,6 +535,9 @@ template<> inline void ImageMapPixel<float, 3>::SetSpectrum(const luxrays::Spect
 	c[2] = v.c[2];
 }
 
+template<> inline void ImageMapPixel<float, 3>::SetAlpha(const float v) {
+}
+
 template<> const ImageMapPixel<float, 3> *ImageMapPixel<float, 3>::GetWhite();
 template<> const ImageMapPixel<float, 3> *ImageMapPixel<float, 3>::GetBlack();
 
@@ -530,6 +573,10 @@ template<> inline void ImageMapPixel<float, 4>::SetSpectrum(const luxrays::Spect
 	c[0] = v.c[0];
 	c[1] = v.c[1];
 	c[2] = v.c[2];
+}
+
+template<> inline void ImageMapPixel<float, 4>::SetAlpha(const float v) {
+	c[3] = v;
 }
 
 template<> const ImageMapPixel<float, 4> *ImageMapPixel<float, 4>::GetWhite();
@@ -588,6 +635,11 @@ public:
 	virtual void SetSpectrum(const u_int index, const luxrays::Spectrum &v) = 0;
 	void SetSpectrum(const u_int x, const u_int y, const luxrays::Spectrum &v) {
 		SetSpectrum(x + y * width, v);
+	}
+
+	virtual void SetAlpha(const u_int index, const float v) = 0;
+	void SetAlpha(const u_int x, const u_int y, const float v) {
+		SetAlpha(x + y * width, v);
 	}
 	
 	// Methods accepting UV parameters return an interpolated value while
@@ -654,6 +706,7 @@ public:
 
 	virtual void SetFloat(const u_int index, const float v);
 	virtual void SetSpectrum(const u_int index, const luxrays::Spectrum &v);
+	virtual void SetAlpha(const u_int index, const float v);
 
 	virtual float GetFloat(const luxrays::UV &uv) const;
 	virtual float GetFloat(const u_int index) const;
@@ -786,6 +839,36 @@ template <class T> ImageMapStorage *AllocImageMapStorage(const u_int channels,
 }
 
 //------------------------------------------------------------------------------
+// ImageMapConfig
+//------------------------------------------------------------------------------
+
+class ImageMapConfig {
+public:
+	// LUXCORE_COLORSPACE constructor
+	ImageMapConfig();
+	ImageMapConfig(const float gamma,
+			const ImageMapStorage::StorageType storageType,
+			const ImageMapStorage::WrapType wrapType,
+			const ImageMapStorage::ChannelSelectionType selectionType);
+	// OPENCOLORIO_COLORSPACE constructor
+	ImageMapConfig(const std::string &configName, const std::string &colorSpaceName,
+			const ImageMapStorage::StorageType storageType,
+			const ImageMapStorage::WrapType wrapType,
+			const ImageMapStorage::ChannelSelectionType selectionType);
+	// From properties constructor
+	ImageMapConfig(const luxrays::Properties &props, const std::string &prefix);
+	~ImageMapConfig() { }
+
+	static void FromProperties(const luxrays::Properties &props, const std::string &prefix, ImageMapConfig &imgCfg);
+
+	ColorSpaceConfig colorSpaceCfg;
+
+	ImageMapStorage::StorageType storageType;
+	ImageMapStorage::WrapType wrapType;
+	ImageMapStorage::ChannelSelectionType selectionType;
+};
+
+//------------------------------------------------------------------------------
 // ImageMap
 //------------------------------------------------------------------------------
 
@@ -793,17 +876,16 @@ class ImageMapCache;
 
 class ImageMap : public luxrays::NamedObject {
 public:
-	ImageMap(const std::string &fileName, const float gamma,
-		const ImageMapStorage::StorageType storageType,
-		const ImageMapStorage::WrapType wrapType = ImageMapStorage::REPEAT);
+	ImageMap(const std::string &fileName, const ImageMapConfig &cfg);
 	~ImageMap();
 
+	void SelectChannel(const ImageMapStorage::ChannelSelectionType selectionType);
+	void ConvertColorSpace(const std::string &configFileName,
+		const std::string &inputColorSpace, const std::string &outputColorSpace);
+	void ConvertStorage(const ImageMapStorage::StorageType storageType,
+		const u_int newChannelCount);
 	void Preprocess();
 
-	void SelectChannel(const ImageMapStorage::ChannelSelectionType selectionType);
-	void ReverseGammaCorrection();
-	
-	float GetGamma() const { return gamma; }
 	u_int GetChannelCount() const { return pixelStorage->GetChannelCount(); }
 	u_int GetWidth() const { return pixelStorage->width; }
 	u_int GetHeight() const { return pixelStorage->height; }
@@ -836,12 +918,10 @@ public:
 		const u_int width, const u_int height);
 	static ImageMap *FromProperties(const luxrays::Properties &props, const std::string &prefix);
 
-	template <class T> static ImageMap *AllocImageMap(const float gamma, const u_int channels,
-		const u_int width, const u_int height, const ImageMapStorage::WrapType wrapType) {
-		ImageMapStorage *imageMapStorage = AllocImageMapStorage<T>(channels, width, height, wrapType);
-
-		return new ImageMap(imageMapStorage, gamma);
-	}
+	static ImageMap *AllocImageMap(const u_int channels, const u_int width, const u_int height,
+		const ImageMapConfig &cfg);
+	static ImageMap *AllocImageMap(void *pixels, const u_int channels, const u_int width, const u_int height,
+		const ImageMapConfig &cfg);
 
 	luxrays::Properties ToProperties(const std::string &prefix, const bool includeBlobImg) const;
 
@@ -850,16 +930,13 @@ public:
 private:
 	// Used by serialization
 	ImageMap();
-	ImageMap(ImageMapStorage *pixels, const float gamma);
+	ImageMap(ImageMapStorage *pixels, const float imageMean, const float imageMeanY);
 
 	float CalcSpectrumMean() const;
 	float CalcSpectrumMeanY() const;
 
-	template<class Archive> void save(Archive &ar, const unsigned int version) const;
-	template<class Archive>	void load(Archive &ar, const unsigned int version);
-	BOOST_SERIALIZATION_SPLIT_MEMBER()
+	template<class Archive> void serialize(Archive &ar, const u_int version);
 
-	float gamma;
 	ImageMapStorage *pixelStorage;
 
 	// Cached image information
@@ -896,7 +973,7 @@ BOOST_CLASS_VERSION(slg::ImageMapStorageImplFloat2, 2)
 BOOST_CLASS_VERSION(slg::ImageMapStorageImplFloat3, 2)
 BOOST_CLASS_VERSION(slg::ImageMapStorageImplFloat4, 2)
 
-BOOST_CLASS_VERSION(slg::ImageMap, 2)
+BOOST_CLASS_VERSION(slg::ImageMap, 3)
 
 BOOST_CLASS_EXPORT_KEY(slg::ImageMapPixelUChar1)
 BOOST_CLASS_EXPORT_KEY(slg::ImageMapPixelUChar2)

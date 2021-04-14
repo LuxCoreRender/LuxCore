@@ -63,21 +63,9 @@ BOOST_CLASS_EXPORT_IMPLEMENT(slg::ImageMapStorageImplFloat4)
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::ImageMap)
 
-template<class Archive> void ImageMap::save(Archive &ar, const unsigned int version) const {
+template<class Archive> void ImageMap::serialize(Archive &ar, const u_int version) {
 	ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(NamedObject);
 
-	// The image is internally stored always with a 1.0 gamma
-	const float imageMapStorageGamma = 1.f;
-	ar & imageMapStorageGamma;
-	ar & pixelStorage;
-	ar & imageMean;
-	ar & imageMeanY;
-}
-
-template<class Archive>	void ImageMap::load(Archive &ar, const unsigned int version) {
-	ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(NamedObject);
-
-	ar & gamma;
 	ar & pixelStorage;
 	ar & imageMean;
 	ar & imageMeanY;
@@ -85,6 +73,6 @@ template<class Archive>	void ImageMap::load(Archive &ar, const unsigned int vers
 
 namespace slg {
 // Explicit instantiations for portable archives
-template void ImageMap::save(LuxOutputArchive &ar, const u_int version) const;
-template void ImageMap::load(LuxInputArchive &ar, const u_int version);
+template void ImageMap::serialize(LuxOutputArchive &ar, const u_int version);
+template void ImageMap::serialize(LuxInputArchive &ar, const u_int version);
 }

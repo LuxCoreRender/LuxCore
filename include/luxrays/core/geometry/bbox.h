@@ -81,6 +81,15 @@ public:
 		pMin -= Vector(delta, delta, delta);
 		pMax += Vector(delta, delta, delta);
 	}
+	
+	void Expand(const Point &p) {
+		pMin = Point(Min(pMin.x, p.x),
+				Min(pMin.y, p.y),
+				Min(pMin.z, p.z));
+		pMax = Point(Max(pMax.x, p.x),
+				Max(pMax.y, p.y),
+				Max(pMax.z, p.z));
+	}
 
 	float Volume() const {
 		Vector d = pMax - pMin;

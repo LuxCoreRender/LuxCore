@@ -97,6 +97,7 @@ include_directories("${LuxRays_SOURCE_DIR}/deps/cuew/include")
 include_directories("${LuxRays_SOURCE_DIR}/deps/clew/include")
 include_directories("${LuxRays_SOURCE_DIR}/deps/optix-7.1.0/include")
 include_directories("${LuxRays_SOURCE_DIR}/deps/spdlog-1.8.0/include")
+include_directories("${LuxRays_SOURCE_DIR}/deps/robin-hood-hashing-3.9.1/src/include")
 
 # Find dependencies
 include(Dependencies)
@@ -164,7 +165,7 @@ if (BUILD_LUXCORE_DLL)
 	set(LUXCORE_LIBRARY luxcore)
 	ADD_DEFINITIONS("-DLUXCORE_DLL")
 else()
-	set(LUXCORE_LIBRARY luxcore slg-core slg-film slg-kernels luxrays bcd opensubdiv openvdb ${BLOSC_LIBRARY} ${EMBREE_LIBRARY} ${OIDN_LIBRARY} ${TBB_LIBRARY} ${TIFF_LIBRARIES} ${TIFF_LIBRARIES} ${OPENEXR_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES})
+	set(LUXCORE_LIBRARY luxcore slg-core slg-film slg-kernels luxrays bcd opensubdiv openvdb opencolorio ${BLOSC_LIBRARY} ${EMBREE_LIBRARY} ${OIDN_LIBRARY} ${TBB_LIBRARY} ${TIFF_LIBRARIES} ${TIFF_LIBRARIES} ${OPENEXR_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES})
 endif()
 
 ################################################################################

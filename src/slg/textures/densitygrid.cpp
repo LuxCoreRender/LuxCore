@@ -50,21 +50,13 @@ ImageMap *DensityGridTexture::ParseData(const luxrays::Property &dataProp,
 	// sample the image. The image data are accessed directly and the wrapping is
 	// implemented by the code accessing the data.
 
-	unique_ptr<ImageMap> imgMap;
 	const u_int channelCount = isRGB ? 3 : 1;
-	switch (storageType) {
-		case ImageMapStorage::BYTE:
-			imgMap.reset(ImageMap::AllocImageMap<u_char>(1.f, channelCount, nx, ny * nz, wrapMode));
-			break;
-		default:
-		case ImageMapStorage::HALF:
-			imgMap.reset(ImageMap::AllocImageMap<half>(1.f, channelCount, nx, ny * nz, wrapMode));
-			break;
-		case ImageMapStorage::FLOAT:
-			imgMap.reset(ImageMap::AllocImageMap<float>(1.f, channelCount, nx, ny * nz, wrapMode));
-			break;
-	}
-	
+	unique_ptr<ImageMap> imgMap(ImageMap::AllocImageMap(channelCount, nx, ny * nz,
+			ImageMapConfig(1.f,
+				storageType,
+				wrapMode,
+				ImageMapStorage::ChannelSelectionType::DEFAULT)));
+
 	ImageMapStorage *imgStorage = imgMap->GetStorage();
 
 	if (isRGB) {
@@ -135,19 +127,11 @@ ImageMap *DensityGridTexture::ParseOpenVDB(const string &fileName, const string 
 	// sample the image. The image data are accessed directly and the wrapping is
 	// implemented by the code accessing the data.
 
-	unique_ptr<ImageMap> imgMap;
-	switch (storageType) {
-		case ImageMapStorage::BYTE:
-			imgMap.reset(ImageMap::AllocImageMap<u_char>(1.f, channelsCount, nx, ny * nz, wrapMode));
-			break;
-		default:
-		case ImageMapStorage::HALF:
-			imgMap.reset(ImageMap::AllocImageMap<half>(1.f, channelsCount, nx, ny * nz, wrapMode));
-			break;
-		case ImageMapStorage::FLOAT:
-			imgMap.reset(ImageMap::AllocImageMap<float>(1.f, channelsCount, nx, ny * nz, wrapMode));
-			break;
-	}
+	unique_ptr<ImageMap> imgMap(ImageMap::AllocImageMap(channelsCount, nx, ny * nz,
+			ImageMapConfig(1.f,
+				storageType,
+				wrapMode,
+				ImageMapStorage::ChannelSelectionType::DEFAULT)));
 
 	ImageMapStorage *imgStorage = imgMap->GetStorage();	
 

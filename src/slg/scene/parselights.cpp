@@ -101,7 +101,6 @@ void Scene::ParseLights(const Properties &props) {
 
 
 ImageMap *Scene::CreateEmissionMap(const string &propName, const luxrays::Properties &props) {
-	const float gamma = props.Get(Property(propName + ".gamma")(2.2f)).Get<float>();
 	const u_int width = props.Get(Property(propName + ".map.width")(0)).Get<u_int>();
 	const u_int height = props.Get(Property(propName + ".map.height")(0)).Get<u_int>();
 
@@ -144,16 +143,20 @@ ImageMap *Scene::CreateEmissionMap(const string &propName, const luxrays::Proper
 
 	ImageMap *imgMap = NULL;
 	if (props.IsDefined(propName + ".mapfile")) {
-		const string imgMapName = SLG_FileNameResolver.ResolveFile(props.Get(propName + ".mapfile").Get<string>());
+		const string imgMapName = props.Get(propName + ".mapfile").Get<string>();
 
-		imgMap = imgMapCache.GetImageMap(imgMapName, gamma,
-				ImageMapStorage::DEFAULT, ImageMapStorage::FLOAT);
+		ImageMapConfig imgCfg(props, propName);
+		// Force float storage
+		imgCfg.storageType = ImageMapStorage::FLOAT;
+
+		imgMap = imgMapCache.GetImageMap(imgMapName, imgCfg);
 
 		if ((width > 0) || (height > 0)) {
 			// I have to resample the image
 			ImageMap *resampledImgMap = ImageMap::Resample(imgMap, imgMap->GetChannelCount(),
 					(width > 0) ? width: imgMap->GetWidth(),
 					(height > 0) ? height : imgMap->GetHeight());
+			resampledImgMap->Preprocess();
 
 			// Delete the old map
 			imgMapCache.DeleteImageMap(imgMap);
@@ -178,6 +181,7 @@ ImageMap *Scene::CreateEmissionMap(const string &propName, const luxrays::Proper
 	if (iesMap && imgMap) {
 		// Merge the 2 maps
 		map = ImageMap::Merge(imgMap, iesMap, imgMap->GetChannelCount());
+		map->Preprocess();
 		delete iesMap;
 		imgMapCache.DeleteImageMap(imgMap);
 
@@ -231,10 +235,10 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 		SkyLight2 *sl = new SkyLight2();
 		sl->lightToWorld = light2World;
 		sl->turbidity = Max(0.f, props.Get(Property(propName + ".turbidity")(2.2f)).Get<float>());
-		sl->groundAlbedo = props.Get(Property(propName + ".groundalbedo")(Spectrum())).Get<Spectrum>().Clamp(0.f);
+		sl->groundAlbedo = GetColor(Property(propName + ".groundalbedo")(Spectrum())).Clamp(0.f);
 		sl->hasGround = props.Get(Property(propName + ".ground.enable")(false)).Get<bool>();
 		sl->hasGroundAutoScale = props.Get(Property(propName + ".ground.autoscale")(true)).Get<bool>();
-		sl->groundColor = props.Get(Property(propName + ".ground.color")(Spectrum(.75f, .75f, .75f))).Get<Spectrum>().Clamp(0.f);
+		sl->groundColor = GetColor(Property(propName + ".ground.color")(Spectrum(.75f, .75f, .75f))).Clamp(0.f);
 		sl->localSunDir = Normalize(props.Get(Property(propName + ".dir")(0.f, 0.f, 1.f)).Get<Vector>());
 
 		sl->SetIndirectDiffuseVisibility(props.Get(Property(propName + ".visibility.indirect.diffuse.enable")(true)).Get<bool>());
@@ -256,12 +260,8 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 		const Transform light2World(mat);
 
 		const string imageName = props.Get(Property(propName + ".file")("image.png")).Get<string>();
-		const float gamma = props.Get(Property(propName + ".gamma")(2.2f)).Get<float>();
-		const ImageMapStorage::StorageType storageType = ImageMapStorage::String2StorageType(
-			props.Get(Property(propName + ".storage")("auto")).Get<string>());
 
-		const ImageMap *imgMap = imgMapCache.GetImageMap(imageName, gamma,
-				ImageMapStorage::DEFAULT, storageType);
+		const ImageMap *imgMap = imgMapCache.GetImageMap(imageName, ImageMapConfig(props, propName));
 
 		InfiniteLight *il = new InfiniteLight();
 		il->lightToWorld = light2World;
@@ -300,7 +300,7 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 		PointLight *pl = new PointLight();
 		pl->lightToWorld = light2World;
 		pl->localPos = props.Get(Property(propName + ".position")(Point())).Get<Point>();
-		pl->color = props.Get(Property(propName + ".color")(Spectrum(1.f))).Get<Spectrum>();
+		pl->color = GetColor(Property(propName + ".color")(Spectrum(1.f)));
 		pl->power = Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>());
 		pl->emittedPowerNormalize = props.Get(Property(propName + ".normalizebycolor")(true)).Get<bool>();
 		pl->efficency = Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>());
@@ -318,7 +318,7 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 		mpl->lightToWorld = light2World;
 		mpl->localPos = props.Get(Property(propName + ".position")(Point())).Get<Point>();
 		mpl->imageMap = map;
-		mpl->color = props.Get(Property(propName + ".color")(Spectrum(1.f))).Get<Spectrum>();
+		mpl->color = GetColor(Property(propName + ".color")(Spectrum(1.f)));
 		mpl->power = Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>());
 		mpl->emittedPowerNormalize = props.Get(Property(propName + ".normalizebycolor")(true)).Get<bool>();
 		mpl->efficency = Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>());
@@ -332,7 +332,7 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 		sl->lightToWorld = light2World;
 		sl->localPos = props.Get(Property(propName + ".position")(Point())).Get<Point>();
 		sl->radius = Max(0.f, props.Get(Property(propName + ".radius")(1.f)).Get<float>());
-		sl->color = props.Get(Property(propName + ".color")(Spectrum(1.f))).Get<Spectrum>();
+		sl->color = GetColor(Property(propName + ".color")(Spectrum(1.f)));
 		sl->power = Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>());
 		sl->emittedPowerNormalize = props.Get(Property(propName + ".normalizebycolor")(true)).Get<bool>();
 		sl->efficency = Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>());
@@ -351,7 +351,7 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 		msl->localPos = props.Get(Property(propName + ".position")(Point())).Get<Point>();
 		msl->radius = Max(0.f, props.Get(Property(propName + ".radius")(1.f)).Get<float>());
 		msl->imageMap = map;
-		msl->color = props.Get(Property(propName + ".color")(Spectrum(1.f))).Get<Spectrum>();
+		msl->color = GetColor(Property(propName + ".color")(Spectrum(1.f)));
 		msl->power = Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>());
 		msl->emittedPowerNormalize = props.Get(Property(propName + ".normalizebycolor")(true)).Get<bool>();
 		msl->efficency = Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>());
@@ -367,7 +367,7 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 		sl->localTarget = props.Get(Property(propName + ".target")(Point(0.f, 0.f, 1.f))).Get<Point>();
 		sl->coneAngle = Max(0.f, props.Get(Property(propName + ".coneangle")(30.f)).Get<float>());
 		sl->coneDeltaAngle = Max(0.f, props.Get(Property(propName + ".conedeltaangle")(5.f)).Get<float>());
-		sl->color = props.Get(Property(propName + ".color")(Spectrum(1.f))).Get<Spectrum>();
+		sl->color = GetColor(Property(propName + ".color")(Spectrum(1.f)));
 		sl->power = Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>());
 		sl->emittedPowerNormalize = props.Get(Property(propName + ".normalizebycolor")(true)).Get<bool>();
 		sl->efficency = Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>());
@@ -378,13 +378,10 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 		const Transform light2World(mat);
 
 		const string imageName = props.Get(Property(propName + ".mapfile")("")).Get<string>();
-		const float gamma = props.Get(Property(propName + ".gamma")(2.2f)).Get<float>();
-		const ImageMapStorage::StorageType storageType = ImageMapStorage::String2StorageType(
-			props.Get(Property(propName + ".storage")("auto")).Get<string>());
 
 		const ImageMap *imgMap = (imageName == "") ?
 			NULL :
-			imgMapCache.GetImageMap(imageName, gamma, ImageMapStorage::DEFAULT, storageType);
+			imgMapCache.GetImageMap(imageName, ImageMapConfig(props, propName));
 
 		ProjectionLight *pl = new ProjectionLight();
 		pl->lightToWorld = light2World;
@@ -406,7 +403,7 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 		ll->localPos = props.Get(Property(propName + ".position")(Point())).Get<Point>();
 		ll->localTarget = props.Get(Property(propName + ".target")(Point(0.f, 0.f, 1.f))).Get<Point>();
 		ll->radius = Max(0.f, props.Get(Property(propName + ".radius")(.01f)).Get<float>());
-		ll->color = props.Get(Property(propName + ".color")(Spectrum(1.f))).Get<Spectrum>();
+		ll->color = GetColor(Property(propName + ".color")(Spectrum(1.f)));
 		ll->power = Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>());
 		ll->emittedPowerNormalize = props.Get(Property(propName + ".normalizebycolor")(true)).Get<bool>();
 		ll->efficency = Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>());
@@ -415,7 +412,7 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 	} else if (lightType == "constantinfinite") {
 		ConstantInfiniteLight *cil = new ConstantInfiniteLight();
 
-		cil->color = props.Get(Property(propName + ".color")(Spectrum(1.f))).Get<Spectrum>();
+		cil->color = GetColor(Property(propName + ".color")(Spectrum(1.f)));
 		cil->SetIndirectDiffuseVisibility(props.Get(Property(propName + ".visibility.indirect.diffuse.enable")(true)).Get<bool>());
 		cil->SetIndirectGlossyVisibility(props.Get(Property(propName + ".visibility.indirect.glossy.enable")(true)).Get<bool>());
 		cil->SetIndirectSpecularVisibility(props.Get(Property(propName + ".visibility.indirect.specular.enable")(true)).Get<bool>());
@@ -432,7 +429,7 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 
 		SharpDistantLight *sdl = new SharpDistantLight();
 		sdl->lightToWorld = light2World;
-		sdl->color = props.Get(Property(propName + ".color")(Spectrum(1.f))).Get<Spectrum>();
+		sdl->color = GetColor(Property(propName + ".color")(Spectrum(1.f)));
 		sdl->localLightDir = Normalize(props.Get(Property(propName + ".direction")(Vector(0.f, 0.f, 1.f))).Get<Vector>());
 
 		lightSource = sdl;
@@ -442,7 +439,7 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 
 		DistantLight *dl = new DistantLight();
 		dl->lightToWorld = light2World;
-		dl->color = props.Get(Property(propName + ".color")(Spectrum(1.f))).Get<Spectrum>();
+		dl->color = GetColor(Property(propName + ".color")(Spectrum(1.f)));
 		dl->localLightDir = Normalize(props.Get(Property(propName + ".direction")(Vector(0.f, 0.f, 1.f))).Get<Vector>());
 		dl->theta = props.Get(Property(propName + ".theta")(10.f)).Get<float>();
 
@@ -451,6 +448,7 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 		throw runtime_error("Unknown light type: " + lightType);
 
 	lightSource->SetName(lightName);
+	// Gain is not really a color so I avoid to use GetColor()
 	lightSource->gain = props.Get(Property(propName + ".gain")(Spectrum(1.f))).Get<Spectrum>();
 	lightSource->SetID(props.Get(Property(propName + ".id")(0)).Get<int>());
 	lightSource->SetImportance(props.Get(Property(propName + ".importance")(1.f)).Get<float>());

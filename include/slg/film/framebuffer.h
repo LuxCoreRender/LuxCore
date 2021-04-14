@@ -115,6 +115,16 @@ public:
 		}
 	}
 
+	void AddIfValidWeightedPixel(const u_int x, const u_int y, const T *v, const float weight) {
+		for (u_int i = 0; i < CHANNELS - 1; ++i) {
+			if (isnan(v[i]) || isinf(v[i]))
+				return;
+		}
+		if (isnan(weight) || isinf(weight)) return;
+
+		AddWeightedPixel(x, y, v, weight);
+	}
+
 	//--------------------------------------------------------------------------
 	// Atomic Ops
 	//--------------------------------------------------------------------------
@@ -177,6 +187,16 @@ public:
 				luxrays::AtomicAdd(&pixel[i], v[i] * weight);
 			pixel[CHANNELS - 1] += weight;
 		}
+	}
+
+	void AtomicAddIfValidWeightedPixel(const u_int x, const u_int y, const T *v, const float weight) {
+		for (u_int i = 0; i < CHANNELS - 1; ++i) {
+			if (isnan(v[i]) || isinf(v[i]))
+				return;
+		}
+		if (isnan(weight) || isinf(weight)) return;
+
+		AtomicAddWeightedPixel(x, y, v, weight);
 	}
 
 	//--------------------------------------------------------------------------

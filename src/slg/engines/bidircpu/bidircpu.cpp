@@ -29,13 +29,22 @@ using namespace std;
 //------------------------------------------------------------------------------
 
 BiDirCPURenderEngine::BiDirCPURenderEngine(const RenderConfig *rcfg) :
-		CPUNoTileRenderEngine(rcfg), sampleSplatter(NULL) {
+		CPUNoTileRenderEngine(rcfg), sampleSplatter(nullptr),
+		photonGICache(nullptr) {
 	if (rcfg->scene->camera->GetType() == Camera::STEREO)
 		throw std::runtime_error("BIDIRCPU render engine doesn't support stereo camera");
 
 	lightPathsCount = 1;
 	baseRadius = 0.f;
 	radiusAlpha = 0.f;
+}
+
+BiDirCPURenderEngine::~BiDirCPURenderEngine() {
+	delete photonGICache;
+}
+
+RenderState *BiDirCPURenderEngine::GetRenderState() {
+	return new BiDirCPURenderState(bootStrapSeed, photonGICache);
 }
 
 void BiDirCPURenderEngine::StartLockLess() {
@@ -79,8 +88,30 @@ void BiDirCPURenderEngine::StartLockLess() {
 		SLG_LOG("Continuing the rendering with new BIDIRCPU seed: " + ToString(newSeed));
 		SetSeed(newSeed);
 		
+		// Transfer the ownership of PhotonGI cache pointer
+		photonGICache = rs->photonGICache;
+		rs->photonGICache = nullptr;
+
+		// I have to set the scene pointer in photonGICache because it is not
+		// saved by serialization
+		if (photonGICache)
+			photonGICache->SetScene(renderConfig->scene);
+
 		delete startRenderState;
-		startRenderState = NULL;
+		startRenderState = nullptr;
+	}
+
+	//--------------------------------------------------------------------------
+	// Allocate PhotonGICache if enabled
+	//--------------------------------------------------------------------------
+
+	// note: photonGICache could have been restored from the render state
+	if (!photonGICache) {
+		photonGICache = PhotonGICache::FromProperties(renderConfig->scene, cfg);
+
+		// photonGICache will be nullptr if the cache is disabled
+		if (photonGICache)
+			photonGICache->Preprocess(renderThreads.size());
 	}
 
 	//--------------------------------------------------------------------------
@@ -103,11 +134,10 @@ void BiDirCPURenderEngine::StopLockLess() {
 	CPUNoTileRenderEngine::StopLockLess();
 
 	delete sampleSplatter;
-	sampleSplatter = NULL;
-}
+	sampleSplatter = nullptr;
 
-RenderState *BiDirCPURenderEngine::GetRenderState() {
-	return new BiDirCPURenderState(bootStrapSeed);
+	delete photonGICache;
+	photonGICache = nullptr;
 }
 
 //------------------------------------------------------------------------------
@@ -122,7 +152,8 @@ Properties BiDirCPURenderEngine::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("path.russianroulette.depth")) <<
 			cfg.Get(GetDefaultProps().Get("path.russianroulette.cap")) <<
 			cfg.Get(GetDefaultProps().Get("path.clamping.variance.maxvalue")) <<
-			Sampler::ToProperties(cfg);
+			Sampler::ToProperties(cfg) <<
+			PhotonGICache::ToProperties(cfg);
 }
 
 RenderEngine *BiDirCPURenderEngine::FromProperties(const RenderConfig *rcfg) {
@@ -137,7 +168,8 @@ const Properties &BiDirCPURenderEngine::GetDefaultProps() {
 			Property("light.maxdepth")(5) <<
 			Property("path.russianroulette.depth")(3) <<
 			Property("path.russianroulette.cap")(.5f) <<
-			Property("path.clamping.variance.maxvalue")(0.f);
+			Property("path.clamping.variance.maxvalue")(0.f) <<
+			PhotonGICache::GetDefaultProps();
 
 	return props;
 }

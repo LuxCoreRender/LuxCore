@@ -25,25 +25,32 @@
 
 namespace slg {
 
+	class PhotonGICache;
+
 class BiDirCPURenderState : public RenderState {
 public:
-	BiDirCPURenderState(const u_int seed);
+	BiDirCPURenderState(const u_int seed, PhotonGICache *photonGICache);
 	virtual ~BiDirCPURenderState();
 
 	u_int bootStrapSeed;
+	PhotonGICache *photonGICache;
 
 	friend class boost::serialization::access;
 
 private:
 	// Used by serialization
-	BiDirCPURenderState() { }
+	BiDirCPURenderState();
 
-	template<class Archive> void serialize(Archive &ar, const u_int version);
+	template<class Archive> void save(Archive &ar, const unsigned int version) const;
+	template<class Archive>	void load(Archive &ar, const unsigned int version);
+	BOOST_SERIALIZATION_SPLIT_MEMBER()
+
+	bool deletePhotonGICachePtr;
 };
 
 }
 
-BOOST_CLASS_VERSION(slg::BiDirCPURenderState, 1)
+BOOST_CLASS_VERSION(slg::BiDirCPURenderState, 2)
 
 BOOST_CLASS_EXPORT_KEY(slg::BiDirCPURenderState)
 

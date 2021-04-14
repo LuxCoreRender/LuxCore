@@ -740,7 +740,7 @@ void Film::Output(const string &fileName,const FilmOutputs::FilmOutputType type,
 						channel_RADIANCE_PER_SCREEN_NORMALIZEDs[radianceGroupIndex]->AccumulateWeightedPixel(x, y, pixel);
 
 						// Normalize the value
-						const float factor = RADIANCE_PER_SCREEN_NORMALIZED_SampleCount / pixelCount;
+						const float factor = (RADIANCE_PER_SCREEN_NORMALIZED_SampleCount > 0) ? (pixelCount / RADIANCE_PER_SCREEN_NORMALIZED_SampleCount) : 1.f;
 						pixel[0] *= factor;
 						pixel[1] *= factor;
 						pixel[2] *= factor;
@@ -837,13 +837,13 @@ void Film::Output(const string &fileName,const FilmOutputs::FilmOutputType type,
 
 		if (!buffer.write(safeSave.GetSaveFileName()))
 			throw runtime_error("Error while writing an output type in Film::Output(): " +
-					safeSave.GetSaveFileName() + " (error = " + geterror() + ")");
+					safeSave.GetSaveFileName() + " (error = " + buffer.geterror() + ")");
 
 		safeSave.Process();
 	} else {
 		if (!buffer.write(fileName))
 			throw runtime_error("Error while writing an output type in Film::Output(): " +
-					fileName + " (error = " + geterror() + ")");
+					fileName + " (error = " + buffer.geterror() + ")");
 	}
 }
 
@@ -1054,6 +1054,7 @@ template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, f
 
 			if (index < channel_RADIANCE_PER_SCREEN_NORMALIZEDs.size()) {
 				const ImagePipeline *ip = (imagePipelines.size() > 0) ? imagePipelines[0] : NULL;
+				const double RADIANCE_PER_SCREEN_NORMALIZED_SampleCount = samplesCounts.GetSampleCount_RADIANCE_PER_SCREEN_NORMALIZED();
 
 				float *dst = buffer;
 				for (u_int i = 0; i < pixelCount; ++i) {
@@ -1061,10 +1062,11 @@ template<> void Film::GetOutput<float>(const FilmOutputs::FilmOutputType type, f
 					channel_RADIANCE_PER_SCREEN_NORMALIZEDs[index]->GetWeightedPixel(i, c);
 					if (ip)
 						ip->radianceChannelScales[index].Scale(c);
+					const float factor = (RADIANCE_PER_SCREEN_NORMALIZED_SampleCount > 0) ? (pixelCount / RADIANCE_PER_SCREEN_NORMALIZED_SampleCount) : 1.f;
 
-					*dst++ += c[0];
-					*dst++ += c[1];
-					*dst++ += c[2];
+					*dst++ += factor * c[0];
+					*dst++ += factor * c[1];
+					*dst++ += factor * c[2];
 				}
 			}
 			break;
