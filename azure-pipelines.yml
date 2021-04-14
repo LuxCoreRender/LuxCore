@@ -97,7 +97,7 @@ jobs:
     displayName: Getting required deps
   - template: ./scripts/azurepipeline/windows/windows_jobs.yml
     parameters:
-      build_script: './scripts/azurepipeline/windows/build.cmd /vs2019 /cmake-only /minimal'
+      build_script: './scripts/azurepipeline/windows/build.cmd /cmake-only /minimal'
       post_script: './scripts/azurepipeline/windows/post-build.cmd'
       message_text: 'Unified CPU/OpenCL/CUDA binaries'
 #  - script: './scripts/azurepipeline/windows/test.cmd'
@@ -136,7 +136,7 @@ jobs:
     displayName: Getting required deps
   - template: ./scripts/azurepipeline/windows/windows_jobs.yml
     parameters:
-      build_script: './scripts/azurepipeline/windows/build.cmd /vs2019 /cmake-only /dll'
+      build_script: './scripts/azurepipeline/windows/build.cmd /cmake-only /dll'
       post_script: './scripts/azurepipeline/windows/post-build.cmd'
       message_text: 'Unified CPU/OpenCL/CUDA binaries'
   - task: PublishBuildArtifacts@1
