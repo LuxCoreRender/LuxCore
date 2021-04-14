@@ -122,8 +122,13 @@ BOOST_CLASS_EXPORT_IMPLEMENT(luxrays::ExtTriangleMesh)
 
 ExtTriangleMesh::ExtTriangleMesh(const u_int meshVertCount, const u_int meshTriCount,
 		Point *meshVertices, Triangle *meshTris, Normal *meshNormals,
-		UV *mUVs, Spectrum *mCols, float *mAlphas) :
+		UV *mUVs, Spectrum *mCols, float *mAlphas, const float bRadius) :
 		TriangleMesh(meshVertCount, meshTriCount, meshVertices, meshTris) {
+	bevelRadius = bRadius;
+	bevelCylinders = nullptr;
+	bevelBoundingCylinders = nullptr;
+	bevelBVHArrayNodes = nullptr;
+
 	fill(uvs.begin(), uvs.end(), nullptr);
 	fill(cols.begin(), cols.end(), nullptr);
 	fill(alphas.begin(), alphas.end(), nullptr);
@@ -152,8 +157,14 @@ ExtTriangleMesh::ExtTriangleMesh(const u_int meshVertCount, const u_int meshTriC
 		Point *meshVertices, Triangle *meshTris, Normal *meshNormals,
 		array<UV *, EXTMESH_MAX_DATA_COUNT> *meshUVs,
 		array<Spectrum *, EXTMESH_MAX_DATA_COUNT> *meshCols,
-		array<float *, EXTMESH_MAX_DATA_COUNT> *meshAlphas) :
+		array<float *, EXTMESH_MAX_DATA_COUNT> *meshAlphas,
+		const float bRadius) :
 		TriangleMesh(meshVertCount, meshTriCount, meshVertices, meshTris) {
+	bevelRadius = bRadius;
+	bevelCylinders = nullptr;
+	bevelBoundingCylinders = nullptr;
+	bevelBVHArrayNodes = nullptr;
+
 	fill(uvs.begin(), uvs.end(), nullptr);
 	fill(cols.begin(), cols.end(), nullptr);
 	fill(alphas.begin(), alphas.end(), nullptr);
@@ -197,6 +208,8 @@ void ExtTriangleMesh::Preprocess() {
 	// Compute all triangle normals
 	for (u_int i = 0; i < triCount; ++i)
 		triNormals[i] = tris[i].GetGeometryNormal(vertices);
+	
+	PreprocessBevel();
 }
 
 void ExtTriangleMesh::Delete() {
@@ -216,6 +229,10 @@ void ExtTriangleMesh::Delete() {
 		delete[] v;
 	for (float *t : triAOV)
 		delete[] t;
+
+	delete[] bevelCylinders;
+	delete[] bevelBoundingCylinders;
+	delete[] bevelBVHArrayNodes;
 }
 
 Normal *ExtTriangleMesh::ComputeNormals() {
@@ -291,7 +308,8 @@ void ExtTriangleMesh::CopyAOV(ExtTriangleMesh *destMesh) const {
 ExtTriangleMesh *ExtTriangleMesh::CopyExt(Point *meshVertices, Triangle *meshTris, Normal *meshNormals,
 		array<UV *, EXTMESH_MAX_DATA_COUNT> *meshUVs,
 		array<Spectrum *, EXTMESH_MAX_DATA_COUNT> *meshCols,
-		array<float *, EXTMESH_MAX_DATA_COUNT> *meshAlphas) const {
+		array<float *, EXTMESH_MAX_DATA_COUNT> *meshAlphas,
+		const float bRadius) const {
 	Point *vs = meshVertices;
 	if (!vs) {
 		vs = AllocVerticesBuffer(vertCount);
@@ -333,7 +351,8 @@ ExtTriangleMesh *ExtTriangleMesh::CopyExt(Point *meshVertices, Triangle *meshTri
 			as[i] = meshAlphas ? (*meshAlphas)[i] : nullptr;
 	}
 
-	ExtTriangleMesh *m = new ExtTriangleMesh(vertCount, triCount, vs, ts, ns, &us, &cs, &as);
+	ExtTriangleMesh *m = new ExtTriangleMesh(vertCount, triCount,
+			vs, ts, ns, &us, &cs, &as, bRadius);
 	m->SetLocal2World(appliedTrans);
 	
 	// Copy AOV too
@@ -343,7 +362,7 @@ ExtTriangleMesh *ExtTriangleMesh::CopyExt(Point *meshVertices, Triangle *meshTri
 }
 
 ExtTriangleMesh *ExtTriangleMesh::Copy(Point *meshVertices, Triangle *meshTris, Normal *meshNormals,
-		UV *mUVs, Spectrum *mCols, float *mAlphas) const {
+		UV *mUVs, Spectrum *mCols, float *mAlphas, const float bRadius) const {
 	array<UV *, EXTMESH_MAX_DATA_COUNT> meshUVs;
 	fill(meshUVs.begin(), meshUVs.end(), nullptr);
 	if (mUVs)
@@ -359,7 +378,7 @@ ExtTriangleMesh *ExtTriangleMesh::Copy(Point *meshVertices, Triangle *meshTris, 
 	if (mAlphas)
 		meshAlphas[0] = mAlphas;
 
-	return CopyExt(meshVertices, meshTris, meshNormals, &meshUVs, &meshCols, &meshAlphas);
+	return CopyExt(meshVertices, meshTris, meshNormals, &meshUVs, &meshCols, &meshAlphas, bRadius);
 }
 
 ExtTriangleMesh *ExtTriangleMesh::Merge(const vector<const ExtTriangleMesh *> &meshes,

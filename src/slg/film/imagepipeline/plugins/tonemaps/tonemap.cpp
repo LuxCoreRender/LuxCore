@@ -39,6 +39,8 @@ string slg::ToneMapType2String(const ToneMapType type) {
 			return "AUTOLINEAR";
 		case TONEMAP_LUXLINEAR:
 			return "LUXLINEAR";
+		case TONEMAP_OPENCOLORIO:
+			return "OPENCOLORIO";
 		default:
 			throw runtime_error("Unknown tone mapping type: " + ToString(type));
 	}
@@ -47,12 +49,14 @@ string slg::ToneMapType2String(const ToneMapType type) {
 ToneMapType slg::String2ToneMapType(const std::string &type) {
 	if ((type.compare("0") == 0) || (type.compare("LINEAR") == 0))
 		return TONEMAP_LINEAR;
-	if ((type.compare("1") == 0) || (type.compare("REINHARD02") == 0))
+	else if ((type.compare("1") == 0) || (type.compare("REINHARD02") == 0))
 		return TONEMAP_REINHARD02;
-	if ((type.compare("2") == 0) || (type.compare("AUTOLINEAR") == 0))
+	else if ((type.compare("2") == 0) || (type.compare("AUTOLINEAR") == 0))
 		return TONEMAP_AUTOLINEAR;
-	if ((type.compare("3") == 0) || (type.compare("LUXLINEAR") == 0))
+	else if ((type.compare("3") == 0) || (type.compare("LUXLINEAR") == 0))
 		return TONEMAP_LUXLINEAR;
-
-	throw runtime_error("Unknown tone mapping type: " + type);
+	else if ((type.compare("4") == 0) || (type.compare("OPENCOLORIO") == 0))
+		return TONEMAP_LUXLINEAR;
+	else
+		throw runtime_error("Unknown tone mapping type: " + type);
 }

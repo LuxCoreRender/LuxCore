@@ -52,7 +52,7 @@ void Scene::ParseObjects(const Properties &props) {
 				editActions.AddActions(LIGHTS_EDIT | LIGHT_TYPES_EDIT);
 
 				// Delete all old triangle lights
-				lightDefs.DeleteLightSourceStartWith(oldObj->GetName() + TRIANGLE_LIGHT_POSTFIX);
+				lightDefs.DeleteLightSourceStartWith(Scene::EncodeTriangleLightNamePrefix(oldObj->GetName()));
 			}
 		}
 

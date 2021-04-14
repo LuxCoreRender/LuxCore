@@ -88,17 +88,17 @@ void OptixDenoiserPlugin::ApplyHW(Film &film, const u_int index) {
 		film.ctx->SetVerbose(true);
 
 		if (!isOptixAvilable)
-			throw std::runtime_error("OptixDenoiserPlugin used while Optix is not available");
+			throw runtime_error("OptixDenoiserPlugin used while Optix is not available");
 		if (!film.hardwareDevice)
-			throw std::runtime_error("OptixDenoiserPlugin used while imagepipeline hardware execution is not enabled");
+			throw runtime_error("OptixDenoiserPlugin used while imagepipeline hardware execution is not enabled");
 
 		cudaDevice = dynamic_cast<CUDADevice *>(film.hardwareDevice);
 		if (!cudaDevice)
-			throw std::runtime_error("OptixDenoiserPlugin used while imagepipeline hardware execution isn't on a CUDA device");
+			throw runtime_error("OptixDenoiserPlugin used while imagepipeline hardware execution isn't on a CUDA device");
 
 		OptixDeviceContext optixContext = cudaDevice->GetOptixContext();
 		if (!optixContext)
-			throw std::runtime_error("OptixDenoiserPlugin used on device where Optix is not available");
+			throw runtime_error("OptixDenoiserPlugin used on device where Optix is not available");
 
 		OptixDenoiserOptions options = {};
 		// Use ALBEDO and AVG_SHADING_NORMAL AOVs if they are available

@@ -124,7 +124,7 @@ static void TestFilmSerialization() {
 	filmCopy->Output("film-copy.png", FilmOutputs::RGB_IMAGEPIPELINE);
 }
 
-template <class T> void TestImageMapSerialization() {
+void TestImageMapSerialization(const ImageMapStorage::StorageType storageType) {
 //	First test result.
 //	4096x4096
 //
@@ -162,14 +162,15 @@ template <class T> void TestImageMapSerialization() {
 	// Create the image map file
 	{
 		SLG_LOG("Create an image map");
-		ImageMap *imgMap = ImageMap::AllocImageMap<T>(1.f, 3, 4096, 4096, ImageMapStorage::REPEAT);
+		ImageMap *imgMap = ImageMap::AllocImageMap(3, 4096, 4096,
+				ImageMapConfig(1.f,
+					storageType,
+					ImageMapStorage::WrapType::REPEAT,
+					ImageMapStorage::ChannelSelectionType::DEFAULT));
 		// Write some data
-		for (u_int y = 0; y < imgMap->GetHeight(); ++y) {
-			for (u_int x = 0; x < imgMap->GetWidth(); ++x) {
-				T *data = (T *)imgMap->GetStorage()->GetPixelsData();
-				data[(x + y * imgMap->GetWidth()) * 3] = static_cast<T>(x + y);
-			}
-		}
+		for (u_int y = 0; y < imgMap->GetHeight(); ++y)
+			for (u_int x = 0; x < imgMap->GetWidth(); ++x)
+				imgMap->GetStorage()->SetFloat(x, y, 1.f);
 
 		// Write the scene
 		SLG_LOG("Write the image map");
@@ -203,13 +204,13 @@ template <class T> void TestImageMapSerialization() {
 	// Check data
 	for (u_int y = 0; y < imgMapCopy->GetHeight(); ++y) {
 		for (u_int x = 0; x < imgMapCopy->GetWidth(); ++x) {
-			T *data = (T *)imgMapCopy->GetStorage()->GetPixelsData();
+			const float data = imgMapCopy->GetStorage()->GetFloat(x, y);
+			const float expectedValue = 1.f;
 
-			const u_int index = (x + y * imgMapCopy->GetWidth()) * 3;
-			if (data[index] != static_cast<T>(x + y))
+			if (data != expectedValue)
 				throw runtime_error("Error while checking image map (" +
-						ToString(x) + "," + ToString(y) +
-						") pixel");
+						ToString(x) + ", " + ToString(y) +
+						") pixel: " + ToString(data) + " (expected value: " + ToString(expectedValue) + ")");
 		}
 	}
 
@@ -255,9 +256,9 @@ int main(int argc, char *argv[]) {
 
 	TestPropertiesSerialization();
 	TestFilmSerialization();
-	TestImageMapSerialization<u_char>();
-	TestImageMapSerialization<half>();
-	TestImageMapSerialization<float>();
+	TestImageMapSerialization(ImageMapStorage::StorageType::BYTE);
+	TestImageMapSerialization(ImageMapStorage::StorageType::HALF);
+	TestImageMapSerialization(ImageMapStorage::StorageType::FLOAT);
 	TestSceneSerialization();
 	TestRenderConfigSerialization();
 

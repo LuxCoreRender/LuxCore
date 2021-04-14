@@ -27,6 +27,7 @@
 #include <boost/foreach.hpp>
 
 #include "luxrays/luxrays.h"
+#include "luxrays/core/bvh/bvhbuild.h"
 #include "luxrays/core/color/color.h"
 #include "luxrays/core/geometry/uv.h"
 #include "luxrays/core/geometry/triangle.h"
@@ -43,6 +44,9 @@ namespace luxrays {
 namespace ocl {
 #include "luxrays/core/exttrianglemesh_types.cl"
 }
+
+class Ray;
+class RayHit;
 
 /*
  * The inheritance scheme used here:
@@ -62,8 +66,16 @@ namespace ocl {
 
 class ExtMesh : virtual public Mesh, public NamedObject {
 public:
-	ExtMesh() { }
+	ExtMesh() : bevelRadius(0.f) { }
 	virtual ~ExtMesh() { }
+
+	virtual float GetBevelRadius() const { return bevelRadius; }
+	virtual bool IntersectBevel(const luxrays::Ray &ray, const luxrays::RayHit &rayHit,
+			bool &continueToTrace, float &rayHitT,
+			luxrays::Point &p, luxrays::Normal &n) const {
+		continueToTrace = false;
+		return false;
+	}
 
 	virtual bool HasNormals() const = 0;
 	virtual bool HasUVs(const u_int dataIndex) const = 0;
@@ -107,10 +119,15 @@ public:
 
 	friend class boost::serialization::access;
 
+protected:
+	float bevelRadius;
+
 private:
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(Mesh);
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(NamedObject);
+
+		ar & bevelRadius;
 	}
 };
 
@@ -118,12 +135,14 @@ class ExtTriangleMesh : public TriangleMesh, public ExtMesh {
 public:
 	ExtTriangleMesh(const u_int meshVertCount, const u_int meshTriCount,
 			Point *meshVertices, Triangle *meshTris, Normal *meshNormals = nullptr,
-			UV *meshUVs = nullptr, Spectrum *meshCols = nullptr, float *meshAlphas = nullptr);
+			UV *meshUVs = nullptr, Spectrum *meshCols = nullptr, float *meshAlphas = nullptr,
+			const float bRadius = 0.f);
 	ExtTriangleMesh(const u_int meshVertCount, const u_int meshTriCount,
 			Point *meshVertices, Triangle *meshTris, Normal *meshNormals,
 			std::array<UV *, EXTMESH_MAX_DATA_COUNT> *meshUVs,
 			std::array<Spectrum *, EXTMESH_MAX_DATA_COUNT> *meshCols,
-			std::array<float *, EXTMESH_MAX_DATA_COUNT> *meshAlphas);
+			std::array<float *, EXTMESH_MAX_DATA_COUNT> *meshAlphas,
+			const float bRadius = 0.f);
 	~ExtTriangleMesh() { };
 	virtual void Delete();
 
@@ -261,13 +280,19 @@ public:
 	ExtTriangleMesh *CopyExt(Point *meshVertices, Triangle *meshTris, Normal *meshNormals,
 			std::array<UV *, EXTMESH_MAX_DATA_COUNT> *meshUVs,
 			std::array<Spectrum *, EXTMESH_MAX_DATA_COUNT> *meshCols,
-			std::array<float *, EXTMESH_MAX_DATA_COUNT> *meshAlphas) const;
+			std::array<float *, EXTMESH_MAX_DATA_COUNT> *meshAlphas,
+			const float bRadius = 0.f) const;
 	ExtTriangleMesh *Copy(Point *meshVertices, Triangle *meshTris, Normal *meshNormals,
-			UV *meshUVs, Spectrum *meshCols, float *meshAlphas) const;
-	ExtTriangleMesh *Copy() const {
-		return CopyExt(nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
+			UV *meshUVs, Spectrum *meshCols, float *meshAlphas,
+			const float bRadius = 0.f) const;
+	ExtTriangleMesh *Copy(const float bRadius = 0.f) const {
+		return CopyExt(nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, bRadius);
 	}
 
+	virtual bool IntersectBevel(const luxrays::Ray &ray, const luxrays::RayHit &rayHit,
+			bool &continueToTrace, float &rayHitT,
+			luxrays::Point &p, luxrays::Normal &n) const;
+	
 	static ExtTriangleMesh *Load(const std::string &fileName);
 	static ExtTriangleMesh *Merge(const std::vector<const ExtTriangleMesh *> &meshes,
 			const std::vector<luxrays::Transform> *trans = nullptr);
@@ -276,7 +301,42 @@ public:
 	friend class ExtMotionTriangleMesh;
 	friend class boost::serialization::access;
 
-private:
+public:
+	class BevelCylinder {
+	public:
+		BevelCylinder() { }
+		BevelCylinder(const luxrays::Point &cv0, const luxrays::Point &cv1) {
+			v0 = cv0;
+			v1 = cv1;
+		}
+
+		float Intersect(const luxrays::Ray &ray, const float bevelRadius) const;
+		void IntersectNormal(const luxrays::Point &pos, const float bevelRadius,
+				luxrays::Normal &n) const;
+
+		luxrays::Point v0, v1;
+	};
+	
+	class BevelBoundingCylinder {
+	public:
+		BevelBoundingCylinder() { }
+		BevelBoundingCylinder(const luxrays::Point &cv0, const luxrays::Point &cv1,
+		const float r) {
+			v0 = cv0;
+			v1 = cv1;
+			radius = r;
+		}
+
+		luxrays::BBox GetBBox() const;
+		bool IsInside(const luxrays::Point &p) const;
+		float Intersect(const luxrays::Ray &ray, const float bevelRadius) const;
+		void IntersectNormal(const luxrays::Point &pos, const float bevelRadius,
+				luxrays::Normal &n) const;
+		
+		luxrays::Point v0, v1;
+		float radius;
+	};
+
 	static ExtTriangleMesh *LoadPly(const std::string &fileName);
 	static ExtTriangleMesh *LoadSerialized(const std::string &fileName);
 
@@ -290,7 +350,8 @@ private:
 			std::array<float *, EXTMESH_MAX_DATA_COUNT> *meshAlphas);
 
 	void Preprocess();
-
+	void PreprocessBevel();
+	
 	virtual void SavePly(const std::string &fileName) const;
 	virtual void SaveSerialized(const std::string &fileName) const;
 
@@ -388,6 +449,10 @@ private:
 				triAOV[i] = nullptr;
 		}
 
+		bevelCylinders = nullptr;
+		bevelBoundingCylinders = nullptr;
+		bevelBVHArrayNodes = nullptr;
+		
 		Preprocess();
 	}
 	BOOST_SERIALIZATION_SPLIT_MEMBER()
@@ -401,6 +466,10 @@ private:
 
 	std::array<float *, EXTMESH_MAX_DATA_COUNT> vertAOV; // Vertex AOV
 	std::array<float *, EXTMESH_MAX_DATA_COUNT> triAOV; // Triangle AOV
+
+	BevelCylinder *bevelCylinders;
+	BevelBoundingCylinder *bevelBoundingCylinders;
+	luxrays::ocl::IndexBVHArrayNode *bevelBVHArrayNodes;
 };
 
 class ExtInstanceTriangleMesh : public InstanceTriangleMesh, public ExtMesh {
@@ -411,6 +480,8 @@ public:
 	virtual void Delete() {	}
 
 	virtual MeshType GetType() const { return TYPE_EXT_TRIANGLE_INSTANCE; }
+	
+	virtual float GetBevelRadius() const { return static_cast<ExtTriangleMesh *>(mesh)->GetBevelRadius(); }
 
 	virtual bool HasNormals() const { return static_cast<ExtTriangleMesh *>(mesh)->HasNormals(); }
 	virtual bool HasUVs(const u_int dataIndex) const { return static_cast<ExtTriangleMesh *>(mesh)->HasUVs(dataIndex); }
@@ -487,6 +558,10 @@ public:
 				b1, b2, dataIndex);
 	}
 
+	virtual bool IntersectBevel(const luxrays::Ray &ray, const luxrays::RayHit &rayHit,
+			bool &continueToTrace, float &rayHitT,
+			luxrays::Point &p, luxrays::Normal &n) const;
+
 	virtual void Save(const std::string &fileName) const { static_cast<ExtTriangleMesh *>(mesh)->Save(fileName); }
 
 	const Transform &GetTransformation() const { return trans; }
@@ -521,6 +596,8 @@ public:
 	virtual void Delete() {	}
 
 	virtual MeshType GetType() const { return TYPE_EXT_TRIANGLE_MOTION; }
+
+	virtual float GetBevelRadius() const { return static_cast<ExtTriangleMesh *>(mesh)->GetBevelRadius(); }
 
 	virtual bool HasNormals() const { return static_cast<ExtTriangleMesh *>(mesh)->HasNormals(); }
 	virtual bool HasUVs(const u_int dataIndex) const { return static_cast<ExtTriangleMesh *>(mesh)->HasUVs(dataIndex); }

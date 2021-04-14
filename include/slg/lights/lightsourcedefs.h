@@ -19,6 +19,8 @@
 #ifndef _SLG_LIGHTSOURCEDEFINITIONS_H
 #define	_SLG_LIGHTSOURCEDEFINITIONS_H
 
+#include <robin_hood.h>
+
 #include "luxrays/utils/properties.h"
 #include "slg/lights/light.h"
 #include "slg/lights/strategies/lightstrategy.h"
@@ -87,7 +89,7 @@ private:
 	// This is called by Scene::Preprocess()
 	void Preprocess(const Scene *scene, const bool useRTMode);
 
-	boost::unordered_map<std::string, LightSource *> lightsByName;
+	robin_hood::unordered_flat_map<std::string, LightSource *> lightsByName;
 
 	//--------------------------------------------------------------------------
 	// Following fields are updated with Preprocess() method

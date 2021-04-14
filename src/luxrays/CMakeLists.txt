@@ -27,7 +27,7 @@
 ################################################################################
 
 set(LUXRAYS_VERSION_MAJOR 2)
-set(LUXRAYS_VERSION_MINOR 5)
+set(LUXRAYS_VERSION_MINOR 6alpha0)
 
 # Configure a header file to pass some of the CMake settings
 # to the source code:
@@ -179,6 +179,7 @@ set(LUXRAYS_SRCS
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/device.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/epsilon.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/exttrianglemesh.cpp
+	${LuxRays_SOURCE_DIR}/src/luxrays/core/exttrianglemeshbevel.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/exttrianglemeshfile.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/hardwaredevice.cpp
 	${LuxRays_SOURCE_DIR}/src/luxrays/core/hardwareintersectiondevice.cpp

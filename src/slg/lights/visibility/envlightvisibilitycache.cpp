@@ -299,8 +299,8 @@ void EnvLightVisibilityCache::BuildCacheEntry(const u_int entryIndex, const Imag
 	cacheEntry.visibilityMap = nullptr;
 
 	// Allocate the map storage
-	unique_ptr<ImageMap> visibilityMapImage(ImageMap::AllocImageMap<float>(1.f, 1,
-			tilesXCount, tilesYCount, ImageMapStorage::REPEAT));
+	unique_ptr<ImageMap> visibilityMapImage(ImageMap::AllocImageMap(1,
+			tilesXCount, tilesYCount, ImageMapConfig()));
 	float *visibilityMap = (float *)visibilityMapImage->GetStorage()->GetPixelsData();
 	fill(visibilityMap, visibilityMap + tilesXCount * tilesYCount, 0.f);
 	vector<u_int> sampleCount(tilesXCount * tilesYCount, 0);
@@ -520,6 +520,7 @@ void EnvLightVisibilityCache::BuildCacheEntries() {
 		// Scale the image
 		luminanceMapImageScaled.reset(ImageMap::Resample(luminanceMapImage, 1,
 				tilesXCount, tilesYCount));
+		luminanceMapImageScaled->Preprocess();
 	}
 
 	const double startTime = WallClockTime();
@@ -617,7 +618,7 @@ const ELVCacheEntry *ELVCBvh::GetNearestEntry(const Point &p, const Normal &n, c
 	const u_int stopNode = BVHNodeData_GetSkipIndex(arrayNodes[0].nodeData); // Non-existent
 
 	while (currentNode < stopNode) {
-		const slg::ocl::IndexBVHArrayNode &node = arrayNodes[currentNode];
+		const luxrays::ocl::IndexBVHArrayNode &node = arrayNodes[currentNode];
 
 		const u_int nodeData = node.nodeData;
 		if (BVHNodeData_IsLeaf(nodeData)) {

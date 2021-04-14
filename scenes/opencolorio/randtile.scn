@@ -1,0 +1,30 @@
+scene.camera.lookat.orig = 2.8718164 -5.47710514 4.63370657
+scene.camera.lookat.target = -0.600622892 1.50124407 -1.6308527
+################################################################################
+scene.textures.imgtex.file = scenes/randomizedtiling/pattern-3.jpg
+## For compatibility with the past
+#scene.textures.imgtex.gamma = 2.2
+## Default LuxCore color space
+#scene.textures.imgtex.colorspace = luxcore
+#scene.textures.imgtex.colorspace.gamma = 2.2
+## OpenColorIO
+scene.textures.imgtex.colorspace = opencolorio
+scene.textures.imgtex.colorspace.name = vd8
+#
+scene.textures.imgtex.randomizedtiling.enable = 1
+scene.textures.imgtex.mapping.uvscale = 2 2
+################################################################################
+scene.materials.mat_light.type = matte
+scene.materials.mat_light.emission = 20. 20. 20.
+scene.materials.mat_light.kd = 0.0 0.0 0.0
+##
+scene.materials.mat_white.type = matte
+scene.materials.mat_white.kd = imgtex
+################################################################################
+scene.objects.obj_light.ply = scenes/bump/mat_light.ply
+scene.objects.obj_light.material = mat_light
+scene.objects.obj_white.ply = scenes/bump/mat_white_multi_uv.ply
+scene.objects.obj_white.material = mat_white
+################################################################################
+scene.lights.infinitelight.type = constantinfinite
+scene.lights.infinitelight.gain = 0.2 0.2 0.2

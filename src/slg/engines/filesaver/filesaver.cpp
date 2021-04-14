@@ -30,6 +30,7 @@
 #include <nlohmann/json.hpp>
 
 #include "slg/engines/filesaver/filesaver.h"
+#include "slg/textures/imagemaptex.h"
 
 using namespace std;
 using namespace luxrays;
@@ -463,9 +464,12 @@ void FileSaverRenderEngine::ExportScene(const RenderConfig *renderConfig,
 		vector<const ImageMap *> ims;
 		renderConfig->scene->imgMapCache.GetImageMaps(ims);
 		for (u_int i = 0; i < ims.size(); ++i) {
-			const string fileName = (dirPath / renderConfig->scene->imgMapCache.GetSequenceFileName(ims[i])).generic_string();
-			SDL_LOG("  " + fileName);
-			ims[i]->WriteImage(fileName);
+			// Avoid to save ImageMapTexture::randomImageMap
+			if (ims[i] != ImageMapTexture::randomImageMap.get()) {
+				const string fileName = (dirPath / renderConfig->scene->imgMapCache.GetSequenceFileName(ims[i])).generic_string();
+				SDL_LOG("  " + fileName);
+				ims[i]->WriteImage(fileName);
+			}
 		}
 
 		// Write the mesh information

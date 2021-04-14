@@ -123,11 +123,13 @@ Camera *Scene::CreateCamera(const Properties &props) {
 			perspCamera->bokehDistribution = PerspectiveCamera::String2BokehDistributionType(
 					props.Get(Property("scene.camera.bokeh.distribution.type")("NONE")).Get<string>());
 			if (perspCamera->bokehDistribution == PerspectiveCamera::DIST_CUSTOM) {
-				const string imgMapName = SLG_FileNameResolver.ResolveFile(
-						props.Get(Property("scene.camera.bokeh.distribution.image")("image.png")).Get<string>());
+				const string imgMapName = props.Get(Property("scene.camera.bokeh.distribution.image")("image.png")).Get<string>();
 
-				perspCamera->bokehDistributionImageMap = imgMapCache.GetImageMap(imgMapName, 1.f,
-						ImageMapStorage::DEFAULT, ImageMapStorage::FLOAT);
+				ImageMapConfig imgCfg(props, "scene.camera.bokeh.distribution.image");
+				// Force float storage
+				imgCfg.storageType = ImageMapStorage::FLOAT;
+
+				perspCamera->bokehDistributionImageMap = imgMapCache.GetImageMap(imgMapName, imgCfg);
 				
 				if (perspCamera->bokehDistributionImageMap->GetSpectrumMean() == 0.f)
 					throw runtime_error("Used a black image in camera bokeh distribution: " + imgMapName);
