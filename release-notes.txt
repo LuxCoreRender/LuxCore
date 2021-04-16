@@ -13,6 +13,8 @@
 * Added the support for color spaces (Nop, LuxCore and OpenColorIO) to materials
 * Added the support for color spaces (Nop, LuxCore and OpenColorIO) to light sources
 * FILESAVER avoids to save the internal random image map (used by randomized tiling)
+* Updated to Intel Embree v3.12.2
+* Updated to Intel OIDN v1.3.0
 
 ### Fixed Bugs
 
