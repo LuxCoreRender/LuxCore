@@ -49,6 +49,18 @@ Spectrum Glossy2Material::Evaluate(const HitPoint &hitPoint,
 	const Vector &localSampledDir = hitPoint.fromLight ? localEyeDir : localLightDir;
 
 	const Spectrum baseF = Kd->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f) * INV_PI * fabsf(localLightDir.z);
+	if (localEyeDir.z <= 0.f) {
+		// Back face: no coating
+
+		if (directPdfW)
+			*directPdfW = fabsf(localSampledDir.z * INV_PI);
+
+		if (reversePdfW)
+			*reversePdfW = fabsf(localFixedDir.z * INV_PI);
+
+		*event = DIFFUSE | REFLECT;
+		return baseF;
+	}
 
 	// Front face: coating+base
 	*event = GLOSSY | REFLECT;
@@ -69,19 +81,34 @@ Spectrum Glossy2Material::Evaluate(const HitPoint &hitPoint,
 	const float roughness = u * v;
 
 	if (directPdfW) {
-		const float wCoating = SchlickBSDF_CoatingWeight(ks, localFixedDir);
-		const float wBase = 1.f - wCoating;
+		if (localFixedDir.z < 0.f) {
+			// Backface
+			*directPdfW = fabsf(localSampledDir.z * INV_PI);
+		} else {
+			const float wCoating = SchlickBSDF_CoatingWeight(ks, localFixedDir);
+			const float wBase = 1.f - wCoating;
 
-		*directPdfW = wBase * fabsf(localSampledDir.z * INV_PI) +
-			wCoating * SchlickBSDF_CoatingPdf(roughness, anisotropy, localFixedDir, localSampledDir);
+			*directPdfW = wBase * fabsf(localSampledDir.z * INV_PI) +
+				wCoating * SchlickBSDF_CoatingPdf(roughness, anisotropy, localFixedDir, localSampledDir);
+		}
 	}
 
 	if (reversePdfW) {
-		const float wCoatingR = SchlickBSDF_CoatingWeight(ks, localSampledDir);
-		const float wBaseR = 1.f - wCoatingR;
+		if (localSampledDir.z < 0.f) {
+			// Backface
+			*reversePdfW = fabsf(localFixedDir.z * INV_PI);
+		} else {
+			const float wCoatingR = SchlickBSDF_CoatingWeight(ks, localSampledDir);
+			const float wBaseR = 1.f - wCoatingR;
 
-		*reversePdfW = wBaseR * fabsf(localFixedDir.z * INV_PI) +
-			wCoatingR * SchlickBSDF_CoatingPdf(roughness, anisotropy, localSampledDir, localFixedDir);
+			*reversePdfW = wBaseR * fabsf(localFixedDir.z * INV_PI) +
+				wCoatingR * SchlickBSDF_CoatingPdf(roughness, anisotropy, localSampledDir, localFixedDir);
+		}
+	}
+
+	if (localFixedDir.z < 0.f) {
+		// Backface, no coating
+		return baseF;
 	}
 
 	// Absorption
@@ -110,6 +137,20 @@ Spectrum Glossy2Material::Sample(const HitPoint &hitPoint,
 	if (fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 
+	if (localFixedDir.z <= 0.f) {
+		// Back face
+		*localSampledDir = -CosineSampleHemisphere(u0, u1, pdfW);
+
+		const float absCosSampledDir = fabsf(localSampledDir->z);
+		if (absCosSampledDir < DEFAULT_COS_EPSILON_STATIC)
+			return Spectrum();
+		*event = DIFFUSE | REFLECT;
+		if (hitPoint.fromLight)
+			return Kd->GetSpectrumValue(hitPoint) * fabsf(localFixedDir.z / absCosSampledDir);
+		else
+			return Kd->GetSpectrumValue(hitPoint);
+	}
+
 	Spectrum ks = Ks->GetSpectrumValue(hitPoint);
 	const float i = index->GetFloatValue(hitPoint);
 	if (i > 0.f) {
@@ -118,15 +159,15 @@ Spectrum Glossy2Material::Sample(const HitPoint &hitPoint,
 	}
 	ks = ks.Clamp(0.f, 1.f);
 
-	const float u = Clamp(nu->GetFloatValue(hitPoint), 1e-5f, 1.f);
-	const float v = Clamp(nv->GetFloatValue(hitPoint), 1e-5f, 1.f);
+	const float u = Clamp(nu->GetFloatValue(hitPoint), 1e-9f, 1.f);
+	const float v = Clamp(nv->GetFloatValue(hitPoint), 1e-9f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
 	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : u2 > 0.f ? (v2 / u2 - 1.f) : 0.f;
 	const float roughness = u * v;
 
 	// Coating is used only on the front face
-	const float wCoating = SchlickBSDF_CoatingWeight (ks, localFixedDir);
+	const float wCoating = SchlickBSDF_CoatingWeight(ks, localFixedDir);
 	const float wBase = 1.f - wCoating;
 
 	float basePdf, coatingPdf;
@@ -206,19 +247,29 @@ void Glossy2Material::Pdf(const HitPoint &hitPoint,
 	const float roughness = u * v;
 
 	if (directPdfW) {
-		const float wCoating = SchlickBSDF_CoatingWeight(ks, localFixedDir);
-		const float wBase = 1.f - wCoating;
+		if (localFixedDir.z < 0.f) {
+			// Backface
+			*directPdfW = fabsf(localSampledDir.z * INV_PI);
+		} else {
+			const float wCoating = SchlickBSDF_CoatingWeight(ks, localFixedDir);
+			const float wBase = 1.f - wCoating;
 
-		*directPdfW = wBase * fabsf(localSampledDir.z * INV_PI) +
-			wCoating * SchlickBSDF_CoatingPdf(roughness, anisotropy, localFixedDir, localSampledDir);
+			*directPdfW = wBase * fabsf(localSampledDir.z * INV_PI) +
+				wCoating * SchlickBSDF_CoatingPdf(roughness, anisotropy, localFixedDir, localSampledDir);
+		}
 	}
 
 	if (reversePdfW) {
-		const float wCoatingR = SchlickBSDF_CoatingWeight(ks, localSampledDir);
-		const float wBaseR = 1.f - wCoatingR;
+		if (localSampledDir.z < 0.f) {
+			// Backface
+			*reversePdfW = fabsf(localFixedDir.z * INV_PI);
+		} else {
+			const float wCoatingR = SchlickBSDF_CoatingWeight(ks, localSampledDir);
+			const float wBaseR = 1.f - wCoatingR;
 
-		*reversePdfW = wBaseR * fabsf(localFixedDir.z * INV_PI) +
-			wCoatingR * SchlickBSDF_CoatingPdf(roughness, anisotropy, localSampledDir, localFixedDir);
+			*reversePdfW = wBaseR * fabsf(localFixedDir.z * INV_PI) +
+				wCoatingR * SchlickBSDF_CoatingPdf(roughness, anisotropy, localSampledDir, localFixedDir);
+		}
 	}
 }
 

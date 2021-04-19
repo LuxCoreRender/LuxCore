@@ -76,6 +76,19 @@ OPENCL_FORCE_INLINE void Glossy2Material_Evaluate(__global const Material* restr
 	const float3 kdVal = Texture_GetSpectrumValue(material->glossy2.kdTexIndex, hitPoint TEXTURES_PARAM);
 
 	const float3 baseF = Spectrum_Clamp(kdVal) * M_1_PI_F * fabs(lightDir.z);
+	if (eyeDir.z <= 0.f) {
+		// Back face: no coating
+
+		const float directPdfW = fabs(sampledDir.z * M_1_PI_F);
+		const BSDFEvent event = DIFFUSE | REFLECT;
+		const float3 result = baseF;
+
+		EvalStack_PushFloat3(result);
+		EvalStack_PushBSDFEvent(event);
+		EvalStack_PushFloat(directPdfW);
+
+		return;
+	}
 
 	// Front face: coating+base
 	const BSDFEvent event = GLOSSY | REFLECT;
@@ -119,7 +132,7 @@ OPENCL_FORCE_INLINE void Glossy2Material_Evaluate(__global const Material* restr
 	const float3 S = FresnelSchlick_Evaluate(ks, fabs(dot(sampledDir, H)));
 
 	const float3 coatingF = SchlickBSDF_CoatingF(ks, roughness, anisotropy, material->glossy2.multibounce,
-			fixedDir, sampledDir); 
+			fixedDir, sampledDir);
 
 	// Blend in base layer Schlick style
 	// assumes coating bxdf takes fresnel factor S into account
@@ -148,6 +161,25 @@ OPENCL_FORCE_INLINE void Glossy2Material_Sample(__global const Material* restric
 
 	const float3 kdVal = Texture_GetSpectrumValue(material->glossy2.kdTexIndex, hitPoint TEXTURES_PARAM);
 
+	if (fixedDir.z <= 0.f) {
+		// Back Face
+		float pdfW;
+		const float3 sampledDir = -1.f * CosineSampleHemisphereWithPdf(u0, u1, &pdfW);
+		if (fabs(CosTheta(sampledDir)) < DEFAULT_COS_EPSILON_STATIC) {
+			MATERIAL_SAMPLE_RETURN_BLACK;
+		}
+		
+		const BSDFEvent event = DIFFUSE | REFLECT;
+		const float3 result = Spectrum_Clamp(kdVal);
+		
+		EvalStack_PushFloat3(result);
+		EvalStack_PushFloat3(sampledDir);
+		EvalStack_PushFloat(pdfW);
+		EvalStack_PushBSDFEvent(event);
+
+		return;
+	}
+
 	const float3 ksVal = Texture_GetSpectrumValue(material->glossy2.ksTexIndex, hitPoint TEXTURES_PARAM);
 	float3 ks = ksVal;
 	const float i = Texture_GetFloatValue(material->glossy2.indexTexIndex, hitPoint TEXTURES_PARAM);
@@ -160,8 +192,8 @@ OPENCL_FORCE_INLINE void Glossy2Material_Sample(__global const Material* restric
 	const float nuVal = Texture_GetFloatValue(material->glossy2.nuTexIndex, hitPoint TEXTURES_PARAM);
 	const float nvVal = Texture_GetFloatValue(material->glossy2.nvTexIndex, hitPoint TEXTURES_PARAM);
 
-	const float u = clamp(nuVal, 1e-5f, 1.f);
-	const float v = clamp(nvVal, 1e-5f, 1.f);
+	const float u = clamp(nuVal, 1e-9f, 1.f);
+	const float v = clamp(nvVal, 1e-9f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
 	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : u2 > 0.f ? (v2 / u2 - 1.f) : 0.f;
@@ -175,13 +207,18 @@ OPENCL_FORCE_INLINE void Glossy2Material_Sample(__global const Material* restric
 	float basePdf, coatingPdf;
 	float3 baseF, coatingF;
 	if (passThroughEvent < wBase) {
+		// Sample base BSDF (Matte BSDF)
+		baseF = Spectrum_Clamp(kdVal);
+		if (Spectrum_IsBlack(baseF)) {
+			MATERIAL_SAMPLE_RETURN_BLACK;
+		}
 		
 		sampledDir = (signbit(fixedDir.z) ? -1.f : 1.f) * CosineSampleHemisphereWithPdf(u0, u1, &basePdf);
-		if (fabs(sampledDir.z) < DEFAULT_COS_EPSILON_STATIC) {
+		if (fabs(CosTheta(sampledDir)) < DEFAULT_COS_EPSILON_STATIC) {
 			MATERIAL_SAMPLE_RETURN_BLACK;
 		}
 
-		baseF = Spectrum_Clamp (kdVal) * M_1_PI_F * fabs(sampledDir.z);
+		baseF *= basePdf;
 
 		// Evaluate coating BSDF (Schlick BSDF)
 		coatingF = SchlickBSDF_CoatingF(ks, roughness, anisotropy, material->glossy2.multibounce,
@@ -195,7 +232,7 @@ OPENCL_FORCE_INLINE void Glossy2Material_Sample(__global const Material* restric
 			MATERIAL_SAMPLE_RETURN_BLACK;
 		}
 
-		const float absCosSampledDir = fabs(sampledDir.z);
+		const float absCosSampledDir = fabs(CosTheta(sampledDir));
 		if (absCosSampledDir < DEFAULT_COS_EPSILON_STATIC) {
 			MATERIAL_SAMPLE_RETURN_BLACK;
 		}
@@ -204,7 +241,7 @@ OPENCL_FORCE_INLINE void Glossy2Material_Sample(__global const Material* restric
 
 		// Evaluate base BSDF (Matte BSDF)
 		basePdf = absCosSampledDir * M_1_PI_F;
-		baseF = Spectrum_Clamp(kdVal) * M_1_PI_F * absCosSampledDir; 
+		baseF = Spectrum_Clamp(kdVal) * basePdf;
 	}
 
 	const BSDFEvent event = GLOSSY | REFLECT;

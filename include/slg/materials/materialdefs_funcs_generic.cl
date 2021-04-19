@@ -160,7 +160,6 @@ OPENCL_FORCE_INLINE float SchlickDistribution_G(const float roughness, const flo
 }
 
 OPENCL_FORCE_INLINE float GetPhi(const float a, const float b) {
-	if ((a < DEFAULT_EPSILON_MIN) || (b < DEFAULT_EPSILON_MIN)) return 0.f;
 	return M_PI_F * .5f * sqrt(a * b / (1.f - a * (1.f - b)));
 }
 
@@ -255,13 +254,13 @@ OPENCL_FORCE_INLINE float3 SchlickBSDF_CoatingSampleF(const float3 ks,
 	const float cosWH = dot(fixedDir, wh);
 	*sampledDir = 2.f * cosWH * wh - fixedDir;
 
-	if ((fabs((*sampledDir).z) < DEFAULT_COS_EPSILON_STATIC))
+	if ((fabs((*sampledDir).z) < DEFAULT_COS_EPSILON_STATIC) || (fixedDir.z * (*sampledDir).z < 0.f))
 		return BLACK;
 
 	const float coso = fabs(fixedDir.z);
 	const float cosi = fabs((*sampledDir).z);
 
-	*pdf = specPdf / (4.f * fabs (cosWH));
+	*pdf = specPdf / (4.f * cosWH);
 	if (*pdf <= 0.f)
 		return BLACK;
 
