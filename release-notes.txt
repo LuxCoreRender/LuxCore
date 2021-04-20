@@ -20,6 +20,8 @@
 
 ### Fixed Bugs
 
+* Fixed the reading of IES files on system with not-US locale
+
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
 
