@@ -68,7 +68,7 @@ bool PhotometricDataIES::Load(const char *sFileName) {
 		return false;
 
 	// Force to use C locale
-	ifs.imbue(cLocale);
+	ifs.imbue(luxrays::cLocale);
 
 	const bool ok = PrivateLoad(ifs);
 
