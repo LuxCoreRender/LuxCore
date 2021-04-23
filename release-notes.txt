@@ -21,6 +21,7 @@
 ### Fixed Bugs
 
 * Fixed the reading of IES files on system with not-US locale
+* Fixed a problem with Python and Property objects initialized as double even if they were int
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
