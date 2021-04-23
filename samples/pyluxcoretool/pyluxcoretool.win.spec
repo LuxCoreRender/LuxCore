@@ -13,7 +13,6 @@ def binaries_list():
 		('../../../WindowsCompileDeps/x64/Release/lib/tbb12.dll', '.'),
         ('../../../WindowsCompileDeps/x64/Release/lib/tbb.dll', '.'),
 		('../../../WindowsCompileDeps/x64/Release/lib/tbbmalloc.dll', '.'),
-		('../../../WindowsCompileDeps/x64/Release/lib/OpenImageIO_LuxCore.dll', '.'),
 		('../../../WindowsCompileDeps/x64/Release/lib/nvrtc64_101_0.dll', '.'),
 		('../../../WindowsCompileDeps/x64/Release/lib/nvrtc-builtins64_101.dll', '.')
 	]
