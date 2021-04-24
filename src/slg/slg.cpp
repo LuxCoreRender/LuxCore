@@ -18,11 +18,11 @@
 
 #include <openvdb/openvdb.h>
 
+#include <OpenImageIO/imageio.h>
+
 #include "luxrays/luxrays.h"
 #include "slg/slg.h"
 #include "slg/utils/filenameresolver.h"
-
-#include <OpenImageIO/imageio.h>
 
 using namespace std;
 using namespace luxrays;
