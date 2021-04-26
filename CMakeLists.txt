@@ -18,6 +18,8 @@
 
 MESSAGE(STATUS "CMake version " ${CMAKE_VERSION} " detected")
 
+set(LUXCORERENDER_VERSION_MAJOR 2)
+set(LUXCORERENDER_VERSION_MINOR 6alpha0)
 
 ################################################################################
 #
@@ -25,11 +27,7 @@ MESSAGE(STATUS "CMake version " ${CMAKE_VERSION} " detected")
 #
 ################################################################################
 
-cmake_minimum_required(VERSION 3.5.1)
-cmake_policy(VERSION 3.0)
-
-# Remove the following when the version check is at least 2.8.4
-SET(CMAKE_LEGACY_CYGWIN_WIN32 0)
+cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
 
 set(supported_build_variants "Debug" "Release")
 
@@ -38,12 +36,7 @@ set(supported_build_variants "Debug" "Release")
 
 unset(CMAKE_CONFIGURATION_TYPES CACHE)
 
-# This boots up the generator:
-enable_language(C)
-enable_language(CXX)
-
 if (CMAKE_CONFIGURATION_TYPES)
-
 	message(STATUS "Multi-config generator detected")
 
 	# Hard-wire supported configurations:
@@ -61,12 +54,14 @@ else()
 			CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS ${supported_build_variants})
 
 	message(STATUS "Using build variant: " ${CMAKE_BUILD_TYPE})
-
 endif()
 
-# The following implicitly boots up the generator, so don't move it up:
-
-project(LuxRays)
+if (LUXCORE_DISABLE_CUDA_CPLUSPLUS)
+	project(LuxCoreRender LANGUAGES CXX C )
+else()
+	project(LuxCoreRender LANGUAGES CXX C CUDA)
+	set_property(GLOBAL PROPERTY CUDA_SEPARABLE_COMPILATION ON)
+endif()
 
 ################################################################################
 #
@@ -75,29 +70,26 @@ project(LuxRays)
 ################################################################################
 
 set(CMAKE_MODULE_PATH
-	"${LuxRays_SOURCE_DIR}"
-	"${LuxRays_SOURCE_DIR}/cmake"
-	"${LuxRays_SOURCE_DIR}/cmake/Utils"
-	"${LuxRays_SOURCE_DIR}/cmake/Packages"
-	"${LuxRays_SOURCE_DIR}/cmake/SpecializedConfig"
+	"${LuxCoreRender_SOURCE_DIR}"
+	"${LuxCoreRender_SOURCE_DIR}/cmake"
+	"${LuxCoreRender_SOURCE_DIR}/cmake/Utils"
+	"${LuxCoreRender_SOURCE_DIR}/cmake/Packages"
+	"${LuxCoreRender_SOURCE_DIR}/cmake/SpecializedConfig"
 )
 
 INCLUDE(PlatformSpecific)
 INCLUDE(Configuration)
 INCLUDE(KernelPreprocess)
 
-# Install CMake modules
-#add_subdirectory(CMake)
+SET(LuxCoreRender_INCLUDE_DIR "${LuxCoreRender_SOURCE_DIR}/include")
+include_directories("${LuxCoreRender_INCLUDE_DIR}")
 
-SET(LuxRays_INCLUDE_DIR "${LuxRays_SOURCE_DIR}/include")
-include_directories("${LuxRays_INCLUDE_DIR}")
-
-include_directories("${LuxRays_SOURCE_DIR}/deps/json-3.7.3/include")
-include_directories("${LuxRays_SOURCE_DIR}/deps/cuew/include")
-include_directories("${LuxRays_SOURCE_DIR}/deps/clew/include")
-include_directories("${LuxRays_SOURCE_DIR}/deps/optix-7.1.0/include")
-include_directories("${LuxRays_SOURCE_DIR}/deps/spdlog-1.8.0/include")
-include_directories("${LuxRays_SOURCE_DIR}/deps/robin-hood-hashing-3.9.1/src/include")
+include_directories("${LuxCoreRender_SOURCE_DIR}/deps/json-3.7.3/include")
+include_directories("${LuxCoreRender_SOURCE_DIR}/deps/cuew/include")
+include_directories("${LuxCoreRender_SOURCE_DIR}/deps/clew/include")
+include_directories("${LuxCoreRender_SOURCE_DIR}/deps/optix-7.1.0/include")
+include_directories("${LuxCoreRender_SOURCE_DIR}/deps/spdlog-1.8.0/include")
+include_directories("${LuxCoreRender_SOURCE_DIR}/deps/robin-hood-hashing-3.9.1/src/include")
 
 # Find dependencies
 include(Dependencies)
@@ -108,10 +100,6 @@ endif()
 
 if (NOT OPENIMAGEIO_FOUND)
 	MESSAGE(FATAL_ERROR "--> Could not locate required OpenImageIO files - Please check ${OPENIMAGEIO_SEARCH_PATH}")
-endif()
-
-if (NOT OPENGL_FOUND)
-	MESSAGE(FATAL_ERROR "--> Could not locate required OpenGL file")
 endif()
 
 if (NOT EMBREE_FOUND)
@@ -153,6 +141,14 @@ else()
 	endif()
 endif()
 
+if (LUXCORE_DISABLE_CUDA_CPLUSPLUS)
+	ADD_DEFINITIONS("-DLUXCORE_DISABLE_CUDA_CPLUSPLUS")
+
+	message(STATUS "CUDA C++ support: disabled")
+else()
+	message(STATUS "CUDA C++ support: enabled")
+endif()
+
 if (LUXCORE_DISABLE_OIDN)
 	ADD_DEFINITIONS("-DLUXCORE_DISABLE_OIDN")
 
@@ -167,6 +163,9 @@ if (BUILD_LUXCORE_DLL)
 else()
 	set(LUXCORE_LIBRARY luxcore slg-core slg-film slg-kernels luxrays bcd opensubdiv openvdb opencolorio ${BLOSC_LIBRARY} ${EMBREE_LIBRARY} ${OIDN_LIBRARY} ${TBB_LIBRARY} ${TIFF_LIBRARIES} ${TIFF_LIBRARIES} ${OPENEXR_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES})
 endif()
+
+ADD_DEFINITIONS("-DLUXCORERENDER_VERSION_MAJOR=\"${LUXCORERENDER_VERSION_MAJOR}\"")
+ADD_DEFINITIONS("-DLUXCORERENDER_VERSION_MINOR=\"${LUXCORERENDER_VERSION_MINOR}\"")
 
 ################################################################################
 #
@@ -206,10 +205,7 @@ if (NOT WIN32 OR WIN_BUILD_DEMOS)
 	add_subdirectory(samples/luxcoreconsole)
 endif()
 
-if(OPENGL_FOUND)
-	add_subdirectory(samples/luxcoreui)
-endif(OPENGL_FOUND)
-
+add_subdirectory(samples/luxcoreui)
 
 ################################################################################
 #

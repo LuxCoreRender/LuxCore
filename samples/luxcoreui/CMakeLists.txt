@@ -16,21 +16,50 @@
 # limitations under the License.
 ################################################################################
 
-#############################################################################
+################################################################################
+#
+# Find OpenGL
+#
+################################################################################
+
+find_package(OpenGL)
+
+if (OPENGL_FOUND)
+	include_directories(BEFORE SYSTEM ${OPENGL_INCLUDE_PATH})
+endif()
+
+if (NOT OPENGL_FOUND)
+	MESSAGE(FATAL_ERROR "--> Could not locate required OpenGL files")
+endif()
+
+################################################################################
+#
+# Find GTK 3.0
+#
+################################################################################
+
+# Find GTK 3.0 for Linux only (required by luxcoreui NFD)
+if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+	find_package(PkgConfig REQUIRED)
+	pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
+	include_directories(${GTK3_INCLUDE_DIRS})
+endif()
+
+################################################################################
 #
 # GLFW library
 #
-#############################################################################
+################################################################################
 
 add_subdirectory(deps/glfw-3.1.1)
 include_directories(deps/glfw-3.1.1/include)
 include_directories(deps/nfd/include)
 
-#############################################################################
+################################################################################
 #
 # luxcore UI binary
 #
-#############################################################################
+################################################################################
 
 include_directories(deps/imgui-1.46)
 
@@ -85,8 +114,7 @@ add_executable(luxcoreui ${LUXCOREUI_SRCS})
 
 TARGET_LINK_LIBRARIES(luxcoreui
 	glfw
-	${GLFW_LIBRARIES}
 	${LUXCORE_LIBRARY}
+	${GLFW_LIBRARIES}
 	${OPENGL_LIBRARIES}
-	${GTK3_LIBRARIES}
-	${Boost_LIBRARIES})
+	${GTK3_LIBRARIES})

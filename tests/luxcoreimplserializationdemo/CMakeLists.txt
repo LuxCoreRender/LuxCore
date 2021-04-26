@@ -26,8 +26,8 @@ set(LUXCOREIMPL_SERIALIZATIONDEMO_SRCS
 	luxcoreimplserializationdemo.cpp
 	)
 
-include_directories(${LuxRays_SOURCE_DIR}/deps/bcd-1.1/include)
-include_directories(${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/include)
+include_directories(${LuxCoreRender_SOURCE_DIR}/deps/bcd-1.1/include)
+include_directories(${LuxCoreRender_SOURCE_DIR}/deps/opencolorio-2.0.0/include)
 
 add_executable(luxcoreimplserializationdemo ${LUXCOREIMPL_SERIALIZATIONDEMO_SRCS})
 

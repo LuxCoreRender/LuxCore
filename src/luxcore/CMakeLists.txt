@@ -37,7 +37,7 @@ set(generated_header_dir "${GENERATED_INCLUDE_DIR}/luxcore")
 file(MAKE_DIRECTORY ${generated_header_dir})
 
 configure_file(
-		"${LuxRays_SOURCE_DIR}/include/luxcore/cfg.h.in"
+		"${LuxCoreRender_SOURCE_DIR}/include/luxcore/cfg.h.in"
 		"${generated_header_dir}/cfg.h")
 
 ################################################################################
@@ -98,17 +98,17 @@ file(MAKE_DIRECTORY ${generated_parser_dir})
 if (BISON_FOUND AND FLEX_FOUND)
 
 	# Create custom command for bison/yacc
-	BISON_TARGET(lux_parser ${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxparse.y ${generated_parser_dir}/luxparse.cpp)
-	set_source_files_properties(${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxparse.cpp GENERATED)
+	BISON_TARGET(lux_parser ${LuxCoreRender_SOURCE_DIR}/src/luxcore/luxparser/luxparse.y ${generated_parser_dir}/luxparse.cpp)
+	set_source_files_properties(${LuxCoreRender_SOURCE_DIR}/src/luxcore/luxparser/luxparse.cpp GENERATED)
 
 	# Create custom command for flex/lex
-	FLEX_TARGET(lux_lexer ${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxlex.l ${generated_parser_dir}/luxlex.cpp COMPILE_FLAGS "${FLEX_FLAGS}")
-	set_source_files_properties(${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxlex.cpp GENERATED)
+	FLEX_TARGET(lux_lexer ${LuxCoreRender_SOURCE_DIR}/src/luxcore/luxparser/luxlex.l ${generated_parser_dir}/luxlex.cpp COMPILE_FLAGS "${FLEX_FLAGS}")
+	set_source_files_properties(${LuxCoreRender_SOURCE_DIR}/src/luxcore/luxparser/luxlex.cpp GENERATED)
 	ADD_FLEX_BISON_DEPENDENCY(lux_lexer lux_parser)
 
 	set(LUX_PARSER_SRC
-		${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxparse.y
-		${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxlex.l
+		${LuxCoreRender_SOURCE_DIR}/src/luxcore/luxparser/luxparse.y
+		${LuxCoreRender_SOURCE_DIR}/src/luxcore/luxparser/luxlex.l
 	)
 	source_group("Source Files\\Lux Parser" FILES ${LUX_PARSER_SRC})
 
@@ -129,10 +129,10 @@ endif()
 ################################################################################
 
 set(LUXCORE_SRCS
-	${LuxRays_SOURCE_DIR}/src/luxcore/luxcore.cpp
-	${LuxRays_SOURCE_DIR}/src/luxcore/luxcoreimpl.cpp
-	${LuxRays_SOURCE_DIR}/src/luxcore/luxcoreinit.cpp
-	${LuxRays_SOURCE_DIR}/src/luxcore/kernelcachefill.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxcore/luxcore.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxcore/luxcoreimpl.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxcore/luxcoreinit.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxcore/kernelcachefill.cpp
 )
 SOURCE_GROUP("Source Files\\LuxCore Library" FILES ${LUXCORE_SRCS})
 
@@ -156,10 +156,10 @@ else()
 	add_library(luxcore STATIC ${LUXCORE_LIB_SRCS} ${LUX_PARSER_SRC})
 endif()
 
-include_directories(${LuxRays_SOURCE_DIR}/deps/bcd-1.1/include)
+include_directories(${LuxCoreRender_SOURCE_DIR}/deps/bcd-1.1/include)
 
 add_definitions(-DCPP_API_EXPORTS ${VISIBILITY_FLAGS}) # for controlling visibility
-link_directories (${SLG_LIB_DIR} ${LuxRays_LIB_DIR})
+link_directories (${SLG_LIB_DIR} ${LuxCoreRender_LIB_DIR})
 
 ################################################################################
 #
@@ -168,14 +168,14 @@ link_directories (${SLG_LIB_DIR} ${LuxRays_LIB_DIR})
 ################################################################################
 
 set(PYLUXCORE_SRCS
-	${LuxRays_SOURCE_DIR}/src/luxcore/pyluxcore.cpp
-	${LuxRays_SOURCE_DIR}/src/luxcore/pyluxcoreforblender.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxcore/pyluxcore.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxcore/pyluxcoreforblender.cpp
 )
 
 add_library(pyluxcore MODULE ${PYLUXCORE_SRCS} ${LUXCORE_LIB_SRCS} ${LUX_PARSER_SRC})
 
-include_directories(${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0)
-include_directories(${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/include)
+include_directories(${LuxCoreRender_SOURCE_DIR}/deps/openvdb-7.0.0)
+include_directories(${LuxCoreRender_SOURCE_DIR}/deps/opencolorio-2.0.0/include)
 
 add_definitions(-DOPENVDB_STATICLIB ${VISIBILITY_FLAGS})
 if(APPLE)

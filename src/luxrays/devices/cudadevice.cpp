@@ -154,7 +154,7 @@ CUDADevice::CUDADevice(
 		cudaContext(nullptr), optixContext(nullptr) {
 	deviceName = (desc->GetName() + " CUDAIntersect").c_str();
 
-	kernelCache = new cudaKernelPersistentCache("LUXRAYS_" LUXRAYS_VERSION_MAJOR "." LUXRAYS_VERSION_MINOR);
+	kernelCache = new cudaKernelPersistentCache("LUXCORERENDER_" LUXCORERENDER_VERSION_MAJOR "." LUXCORERENDER_VERSION_MINOR);
 
 	CHECK_CUDA_ERROR(cuCtxCreate(&cudaContext, CU_CTX_SCHED_YIELD, deviceDesc->GetCUDADevice()));
 

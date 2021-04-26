@@ -8,8 +8,8 @@
 
 MESSAGE(STATUS "Using Linux static settings")
 
-SET(CMAKE_INCLUDE_PATH "${LuxRays_SOURCE_DIR}/../target-64-sse2/include;${LuxRays_SOURCE_DIR}/../target-64-sse2")
-SET(CMAKE_LIBRARY_PATH "${LuxRays_SOURCE_DIR}/../target-64-sse2/lib;${LuxRays_SOURCE_DIR}/../target-64-sse2")
+SET(CMAKE_INCLUDE_PATH "${LuxCoreRender_SOURCE_DIR}/../target-64-sse2/include;${LuxCoreRender_SOURCE_DIR}/../target-64-sse2")
+SET(CMAKE_LIBRARY_PATH "${LuxCoreRender_SOURCE_DIR}/../target-64-sse2/lib;${LuxCoreRender_SOURCE_DIR}/../target-64-sse2")
 SET(Blosc_USE_STATIC_LIBS   "ON")
 
 #SET(BUILD_LUXCORE_DLL TRUE)

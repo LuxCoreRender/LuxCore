@@ -23,7 +23,6 @@
 
 #include <boost/version.hpp>
 
-#include "luxrays/cfg.h"
 #include "luxrays/utils/utils.h"
 
 /*!

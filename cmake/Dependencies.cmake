@@ -17,7 +17,7 @@
 ################################################################################
 
 include(FindPkgMacros)
-getenv_path(LuxRays_DEPENDENCIES_DIR)
+getenv_path(LuxCoreRender_DEPENDENCIES_DIR)
 
 ################################################################################
 #
@@ -94,6 +94,7 @@ endif ()
 
 
 # OpenGL
+set (OpenGL_GL_PREFERENCE "GLVND")
 find_package(OpenGL)
 
 if (OPENGL_FOUND)

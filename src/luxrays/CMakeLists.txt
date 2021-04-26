@@ -26,19 +26,12 @@
 ################################################################################
 ################################################################################
 
-set(LUXRAYS_VERSION_MAJOR 2)
-set(LUXRAYS_VERSION_MINOR 6alpha0)
-
 # Configure a header file to pass some of the CMake settings
 # to the source code:
 
 set(generated_header_dir "${GENERATED_INCLUDE_DIR}/luxrays")
 
 file(MAKE_DIRECTORY ${generated_header_dir})
-
-configure_file(
-		"${LuxRays_SOURCE_DIR}/include/luxrays/cfg.h.in"
-		"${generated_header_dir}/cfg.h")
 
 ################################################################################
 #
@@ -93,49 +86,49 @@ endif(DOXYGEN_FOUND)
 ################################################################################
 
 set(LUXRAYS_KERNELS
-	${LuxRays_SOURCE_DIR}/include/luxrays/luxrays_types.cl
-	${LuxRays_SOURCE_DIR}/include/luxrays/core/color/color_types.cl
-	${LuxRays_SOURCE_DIR}/include/luxrays/core/color/color_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/luxrays/core/bvh/bvhbuild_types.cl
-	${LuxRays_SOURCE_DIR}/include/luxrays/accelerators/bvh.cl
-	${LuxRays_SOURCE_DIR}/include/luxrays/accelerators/mbvh.cl
-	${LuxRays_SOURCE_DIR}/include/luxrays/accelerators/optixaccel.cl
-	${LuxRays_SOURCE_DIR}/include/luxrays/accelerators/optixemptyaccel.cl
-	${LuxRays_SOURCE_DIR}/include/luxrays/core/exttrianglemesh_types.cl
-	${LuxRays_SOURCE_DIR}/include/luxrays/core/exttrianglemesh_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/luxrays/core/randomgen_types.cl
-	${LuxRays_SOURCE_DIR}/include/luxrays/core/randomgen_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/luxrays/core/trianglemesh_types.cl
-	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/matrix4x4_types.cl
-	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/matrix4x4_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/transform_types.cl
-	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/transform_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/frame_types.cl
-	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/frame_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/luxrays/core/epsilon_types.cl
-	${LuxRays_SOURCE_DIR}/include/luxrays/core/epsilon_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/ray_types.cl
-	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/ray_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/point_types.cl
-	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/vector_types.cl
-	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/vector_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/normal_types.cl
-	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/quaternion_types.cl
-	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/quaternion_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/bbox_types.cl
-	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/bbox_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/motionsystem_types.cl
-	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/motionsystem_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/triangle_types.cl
-	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/triangle_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/luxrays/core/geometry/uv_types.cl
-	${LuxRays_SOURCE_DIR}/include/luxrays/core/utils_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/luxrays/devices/cudadevice_math.cl
-	${LuxRays_SOURCE_DIR}/include/luxrays/devices/cudadevice_oclemul_types.cl
-	${LuxRays_SOURCE_DIR}/include/luxrays/devices/cudadevice_oclemul_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/luxrays/devices/ocldevice_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/luxrays/utils/atomic_funcs.cl
-	${LuxRays_SOURCE_DIR}/include/luxrays/utils/mc_funcs.cl
+	${LuxCoreRender_SOURCE_DIR}/include/luxrays/luxrays_types.cl
+	${LuxCoreRender_SOURCE_DIR}/include/luxrays/core/color/color_types.cl
+	${LuxCoreRender_SOURCE_DIR}/include/luxrays/core/color/color_funcs.cl
+	${LuxCoreRender_SOURCE_DIR}/include/luxrays/core/bvh/bvhbuild_types.cl
+	${LuxCoreRender_SOURCE_DIR}/include/luxrays/accelerators/bvh.cl
+	${LuxCoreRender_SOURCE_DIR}/include/luxrays/accelerators/mbvh.cl
+	${LuxCoreRender_SOURCE_DIR}/include/luxrays/accelerators/optixaccel.cl
+	${LuxCoreRender_SOURCE_DIR}/include/luxrays/accelerators/optixemptyaccel.cl
+	${LuxCoreRender_SOURCE_DIR}/include/luxrays/core/exttrianglemesh_types.cl
+	${LuxCoreRender_SOURCE_DIR}/include/luxrays/core/exttrianglemesh_funcs.cl
+	${LuxCoreRender_SOURCE_DIR}/include/luxrays/core/randomgen_types.cl
+	${LuxCoreRender_SOURCE_DIR}/include/luxrays/core/randomgen_funcs.cl
+	${LuxCoreRender_SOURCE_DIR}/include/luxrays/core/trianglemesh_types.cl
+	${LuxCoreRender_SOURCE_DIR}/include/luxrays/core/geometry/matrix4x4_types.cl
+	${LuxCoreRender_SOURCE_DIR}/include/luxrays/core/geometry/matrix4x4_funcs.cl
+	${LuxCoreRender_SOURCE_DIR}/include/luxrays/core/geometry/transform_types.cl
+	${LuxCoreRender_SOURCE_DIR}/include/luxrays/core/geometry/transform_funcs.cl
+	${LuxCoreRender_SOURCE_DIR}/include/luxrays/core/geometry/frame_types.cl
+	${LuxCoreRender_SOURCE_DIR}/include/luxrays/core/geometry/frame_funcs.cl
+	${LuxCoreRender_SOURCE_DIR}/include/luxrays/core/epsilon_types.cl
+	${LuxCoreRender_SOURCE_DIR}/include/luxrays/core/epsilon_funcs.cl
+	${LuxCoreRender_SOURCE_DIR}/include/luxrays/core/geometry/ray_types.cl
+	${LuxCoreRender_SOURCE_DIR}/include/luxrays/core/geometry/ray_funcs.cl
+	${LuxCoreRender_SOURCE_DIR}/include/luxrays/core/geometry/point_types.cl
+	${LuxCoreRender_SOURCE_DIR}/include/luxrays/core/geometry/vector_types.cl
+	${LuxCoreRender_SOURCE_DIR}/include/luxrays/core/geometry/vector_funcs.cl
+	${LuxCoreRender_SOURCE_DIR}/include/luxrays/core/geometry/normal_types.cl
+	${LuxCoreRender_SOURCE_DIR}/include/luxrays/core/geometry/quaternion_types.cl
+	${LuxCoreRender_SOURCE_DIR}/include/luxrays/core/geometry/quaternion_funcs.cl
+	${LuxCoreRender_SOURCE_DIR}/include/luxrays/core/geometry/bbox_types.cl
+	${LuxCoreRender_SOURCE_DIR}/include/luxrays/core/geometry/bbox_funcs.cl
+	${LuxCoreRender_SOURCE_DIR}/include/luxrays/core/geometry/motionsystem_types.cl
+	${LuxCoreRender_SOURCE_DIR}/include/luxrays/core/geometry/motionsystem_funcs.cl
+	${LuxCoreRender_SOURCE_DIR}/include/luxrays/core/geometry/triangle_types.cl
+	${LuxCoreRender_SOURCE_DIR}/include/luxrays/core/geometry/triangle_funcs.cl
+	${LuxCoreRender_SOURCE_DIR}/include/luxrays/core/geometry/uv_types.cl
+	${LuxCoreRender_SOURCE_DIR}/include/luxrays/core/utils_funcs.cl
+	${LuxCoreRender_SOURCE_DIR}/include/luxrays/devices/cudadevice_math.cl
+	${LuxCoreRender_SOURCE_DIR}/include/luxrays/devices/cudadevice_oclemul_types.cl
+	${LuxCoreRender_SOURCE_DIR}/include/luxrays/devices/cudadevice_oclemul_funcs.cl
+	${LuxCoreRender_SOURCE_DIR}/include/luxrays/devices/ocldevice_funcs.cl
+	${LuxCoreRender_SOURCE_DIR}/include/luxrays/utils/atomic_funcs.cl
+	${LuxCoreRender_SOURCE_DIR}/include/luxrays/utils/mc_funcs.cl
 )
 
 # Make sure some IDE won't try to compile CL by some built-in rule:
@@ -151,68 +144,68 @@ SOURCE_GROUP("Source Files\\LuxRays Kernels" FILES ${LUXRAYS_KERNELS})
 ################################################################################
 
 set(LUXRAYS_SRCS
-	${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/bvhaccel.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/bvhaccelhw.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/embreeaccel.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/mbvhaccel.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/mbvhaccelhw.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/optixaccel.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/accelerators/optixaccelhw.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/core/bvh/bvhbuild.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/core/bvh/bvhclassicbuild.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/core/bvh/bvhembreebuild.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/core/color/color.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/core/color/spd.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/core/color/spds/blackbodyspd.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/core/color/spds/equalspd.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/core/color/spds/frequencyspd.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/core/color/spds/gaussianspd.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/core/color/spds/irregular.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/core/color/spds/regular.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/core/color/spds/rgbillum.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/core/color/spds/rgbrefl.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/core/color/spectrumwavelengths.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/core/color/swcspectrum.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/core/accelerator.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/core/context.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/core/dataset.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/core/device.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/core/epsilon.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/core/exttrianglemesh.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/core/exttrianglemeshbevel.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/core/exttrianglemeshfile.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/core/hardwaredevice.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/core/hardwareintersectiondevice.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/core/init.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/core/intersectiondevice.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/core/namedobject.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/core/namedobjectvector.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/core/trianglemesh.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/core/geometry/basictypeserialization.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/core/geometry/bbox.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/core/geometry/matrix4x4.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/core/geometry/motionsystem.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/core/geometry/quaternion.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/core/geometry/transform.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/devices/cudadevice.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/devices/cudaintersectiondevice.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/devices/nativeintersectiondevice.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/devices/ocldevice.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/devices/oclintersectiondevice.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/utils/config.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/utils/cuda.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/utils/mc.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/utils/ocl.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/utils/safesave.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/utils/serializationutils.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/utils/thread.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/utils/ply/rply.cpp
-	${LuxRays_SOURCE_DIR}/src/luxrays/utils/properties.cpp
-	${LuxRays_SOURCE_DIR}/deps/cuew/src/cuew.cpp
-	${LuxRays_SOURCE_DIR}/deps/clew/src/clew.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/accelerators/bvhaccel.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/accelerators/bvhaccelhw.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/accelerators/embreeaccel.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/accelerators/mbvhaccel.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/accelerators/mbvhaccelhw.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/accelerators/optixaccel.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/accelerators/optixaccelhw.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/core/bvh/bvhbuild.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/core/bvh/bvhclassicbuild.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/core/bvh/bvhembreebuild.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/core/color/color.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/core/color/spd.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/core/color/spds/blackbodyspd.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/core/color/spds/equalspd.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/core/color/spds/frequencyspd.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/core/color/spds/gaussianspd.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/core/color/spds/irregular.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/core/color/spds/regular.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/core/color/spds/rgbillum.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/core/color/spds/rgbrefl.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/core/color/spectrumwavelengths.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/core/color/swcspectrum.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/core/accelerator.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/core/context.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/core/dataset.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/core/device.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/core/epsilon.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/core/exttrianglemesh.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/core/exttrianglemeshbevel.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/core/exttrianglemeshfile.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/core/hardwaredevice.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/core/hardwareintersectiondevice.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/core/init.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/core/intersectiondevice.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/core/namedobject.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/core/namedobjectvector.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/core/trianglemesh.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/core/geometry/basictypeserialization.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/core/geometry/bbox.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/core/geometry/matrix4x4.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/core/geometry/motionsystem.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/core/geometry/quaternion.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/core/geometry/transform.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/devices/cudadevice.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/devices/cudaintersectiondevice.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/devices/nativeintersectiondevice.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/devices/ocldevice.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/devices/oclintersectiondevice.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/utils/config.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/utils/cuda.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/utils/mc.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/utils/ocl.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/utils/safesave.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/utils/serializationutils.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/utils/thread.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/utils/ply/rply.cpp
+	${LuxCoreRender_SOURCE_DIR}/src/luxrays/utils/properties.cpp
 )
+
 SOURCE_GROUP("Source Files\\LuxRays Library" FILES ${LUXRAYS_SRCS})
 
+#set_source_files_properties(${LUXRAYS_SRCS} PROPERTIES LANGUAGE CUDA)
 
 set(generated_kernels_dir "${GENERATED_DIR}/luxrays-kernels")
 file(MAKE_DIRECTORY ${generated_kernels_dir})
@@ -269,10 +262,18 @@ SOURCE_GROUP(
 		"Source Files\\LuxRays Kernels\\Generated"
 		FILES ${LUXRAYS_SRCS_KERNELS})
 
+set(LUXRAYS_CUEW_CLEW_SRCS
+	${LuxCoreRender_SOURCE_DIR}/deps/cuew/src/cuew.cpp
+	${LuxCoreRender_SOURCE_DIR}/deps/clew/src/clew.cpp
+)
+
+SOURCE_GROUP("Source Files\\LuxRays CUEW/CLEW Library" FILES ${LUXRAYS_CUEW_CLEW_SRCS})
+
 set(LUXRAYS_LIB_SRCS
 	${LUXRAYS_SRCS}
 	${LUXRAYS_KERNELS}
 	${LUXRAYS_SRCS_KERNELS}
+	${LUXRAYS_CUEW_CLEW_SRCS}
 )
 
 add_library(luxrays STATIC ${LUXRAYS_LIB_SRCS})

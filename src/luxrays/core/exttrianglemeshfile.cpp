@@ -474,7 +474,7 @@ void ExtTriangleMesh::SavePly(const string &fileName) const {
 	// Write the PLY header
 	plyFile << "ply\n"
 			"format " + string(ply_storage_mode_list[ply_arch_endian()]) + " 1.0\n"
-			"comment Created by LuxRays v" LUXRAYS_VERSION_MAJOR "." LUXRAYS_VERSION_MINOR "\n"
+			"comment Created by LuxCoreRender v" LUXCORERENDER_VERSION_MAJOR "." LUXCORERENDER_VERSION_MINOR "\n"
 			"element vertex " << vertCount << "\n"
 			"property float x\n"
 			"property float y\n"

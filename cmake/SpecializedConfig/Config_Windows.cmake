@@ -39,8 +39,8 @@ ELSE(MSVC)
 
   SET(ENV{QTDIR} "c:/qt/")
 
-  SET(FREEIMAGE_SEARCH_PATH     "${LuxRays_SOURCE_DIR}/../FreeImage")
-  SET(BOOST_SEARCH_PATH         "${LuxRays_SOURCE_DIR}/../boost")
+  SET(FREEIMAGE_SEARCH_PATH     "${LuxCoreRender_SOURCE_DIR}/../FreeImage")
+  SET(BOOST_SEARCH_PATH         "${LuxCoreRender_SOURCE_DIR}/../boost")
 
 ENDIF(MSVC)
 
