@@ -71,6 +71,7 @@ CPP_EXPORT CPP_API std::ostream &operator<<(std::ostream &os, const Blob &blob);
  * - unsigned int
  * - float
  * - double
+ * - long long
  * - unsigned long long
  * - string
  * - Blob
@@ -88,6 +89,7 @@ public:
 		UINT_VAL,
 		FLOAT_VAL,
 		DOUBLE_VAL,
+		LONGLONG_VAL,
 		ULONGLONG_VAL,
 		STRING_VAL,
 		BLOB_VAL
@@ -100,6 +102,7 @@ public:
 	PropertyValue(const unsigned int val);
 	PropertyValue(const float val);
 	PropertyValue(const double val);
+	PropertyValue(const long long val);
 	PropertyValue(const unsigned long long val);
 	PropertyValue(const std::string &val);
 	PropertyValue(const Blob &val);
@@ -122,6 +125,7 @@ private:
 		unsigned int uintVal;
 		float floatVal;
 		double doubleVal;
+		long long longlongVal;
 		unsigned long long ulonglongVal;
 		std::string *stringVal;
 		Blob *blobVal;

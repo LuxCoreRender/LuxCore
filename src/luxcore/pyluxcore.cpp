@@ -1766,6 +1766,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
     class_<luxrays::Property>("Property", init<string>())
 		.def(init<string, bool>())
 		.def(init<string, double>())
+		.def(init<string, long long>())
 		.def(init<string, int>())
 		.def(init<string, string>())
 		.def("__init__", make_constructor(Property_InitWithList))

@@ -149,6 +149,10 @@ PropertyValue::PropertyValue(const double val) : dataType(DOUBLE_VAL) {
 	data.doubleVal = val;
 }
 
+PropertyValue::PropertyValue(const long long val) : dataType(LONGLONG_VAL) {
+	data.longlongVal = val;
+}
+
 PropertyValue::PropertyValue(const unsigned long long val) : dataType(ULONGLONG_VAL) {
 	data.ulonglongVal = val;
 }
@@ -169,6 +173,7 @@ PropertyValue::~PropertyValue() {
 		case UINT_VAL:
 		case FLOAT_VAL:
 		case DOUBLE_VAL:
+		case LONGLONG_VAL:
 		case ULONGLONG_VAL:
 			break;
 		case STRING_VAL:
@@ -194,6 +199,8 @@ template<> bool PropertyValue::Get<bool>() const {
 			return boost::lexical_cast<bool>(data.floatVal);
 		case DOUBLE_VAL:
 			return boost::lexical_cast<bool>(data.doubleVal);
+		case LONGLONG_VAL:
+			return boost::lexical_cast<bool>(data.longlongVal);
 		case ULONGLONG_VAL:
 			return boost::lexical_cast<bool>(data.ulonglongVal);
 		case STRING_VAL:
@@ -217,6 +224,8 @@ template<> int PropertyValue::Get<int>() const {
 			return boost::lexical_cast<int>(data.floatVal);
 		case DOUBLE_VAL:
 			return boost::lexical_cast<int>(data.doubleVal);
+		case LONGLONG_VAL:
+			return boost::lexical_cast<int>(data.longlongVal);
 		case ULONGLONG_VAL:
 			return boost::lexical_cast<int>(data.ulonglongVal);
 		case STRING_VAL:
@@ -240,6 +249,8 @@ template<> unsigned int PropertyValue::Get<unsigned int>() const {
 			return boost::lexical_cast<unsigned int>(data.floatVal);
 		case DOUBLE_VAL:
 			return boost::lexical_cast<unsigned int>(data.doubleVal);
+		case LONGLONG_VAL:
+			return boost::lexical_cast<unsigned int>(data.longlongVal);
 		case ULONGLONG_VAL:
 			return boost::lexical_cast<unsigned int>(data.ulonglongVal);
 		case STRING_VAL:
@@ -263,6 +274,8 @@ template<> float PropertyValue::Get<float>() const {
 			return boost::lexical_cast<float>(data.floatVal);
 		case DOUBLE_VAL:
 			return boost::lexical_cast<float>(data.doubleVal);
+		case LONGLONG_VAL:
+			return boost::lexical_cast<float>(data.longlongVal);
 		case ULONGLONG_VAL:
 			return boost::lexical_cast<float>(data.ulonglongVal);
 		case STRING_VAL:
@@ -286,6 +299,8 @@ template<> double PropertyValue::Get<double>() const {
 			return boost::lexical_cast<double>(data.floatVal);
 		case DOUBLE_VAL:
 			return boost::lexical_cast<double>(data.doubleVal);
+		case LONGLONG_VAL:
+			return boost::lexical_cast<double>(data.longlongVal);
 		case ULONGLONG_VAL:
 			return boost::lexical_cast<double>(data.ulonglongVal);
 		case STRING_VAL:
@@ -309,6 +324,8 @@ template<> unsigned long long PropertyValue::Get<unsigned long long>() const {
 			return boost::lexical_cast<unsigned long long>(data.floatVal);
 		case DOUBLE_VAL:
 			return boost::lexical_cast<unsigned long long>(data.doubleVal);
+		case LONGLONG_VAL:
+			return boost::lexical_cast<unsigned long long>(data.longlongVal);
 		case ULONGLONG_VAL:
 			return boost::lexical_cast<unsigned long long>(data.ulonglongVal);
 		case STRING_VAL:
@@ -332,6 +349,8 @@ template<> string PropertyValue::Get<string>() const {
 			return ToString(data.floatVal);
 		case DOUBLE_VAL:
 			return ToString(data.doubleVal);
+		case LONGLONG_VAL:
+			return ToString(data.longlongVal);
 		case ULONGLONG_VAL:
 			return ToString(data.ulonglongVal);
 		case STRING_VAL:
@@ -350,6 +369,7 @@ template<> const Blob &PropertyValue::Get<const Blob &>() const {
 		case UINT_VAL:
 		case FLOAT_VAL:
 		case DOUBLE_VAL:
+		case LONGLONG_VAL:
 		case ULONGLONG_VAL:
 		case STRING_VAL:
 			throw std::runtime_error("Only a Blob property can be converted in a Blob");
@@ -378,6 +398,7 @@ void PropertyValue::Copy(const PropertyValue &propVal0, PropertyValue &propVal1)
 		case UINT_VAL:
 		case FLOAT_VAL:
 		case DOUBLE_VAL:
+		case LONGLONG_VAL:
 		case ULONGLONG_VAL:
 			break;
 		case STRING_VAL:
@@ -410,6 +431,9 @@ void PropertyValue::Copy(const PropertyValue &propVal0, PropertyValue &propVal1)
 			break;
 		case DOUBLE_VAL:
 			propVal1.data.doubleVal = propVal0.data.doubleVal;
+			break;
+		case LONGLONG_VAL:
+			propVal1.data.longlongVal = propVal0.data.longlongVal;
 			break;
 		case ULONGLONG_VAL:
 			propVal1.data.ulonglongVal = propVal0.data.ulonglongVal;
