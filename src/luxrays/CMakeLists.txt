@@ -205,8 +205,6 @@ set(LUXRAYS_SRCS
 
 SOURCE_GROUP("Source Files\\LuxRays Library" FILES ${LUXRAYS_SRCS})
 
-#set_source_files_properties(${LUXRAYS_SRCS} PROPERTIES LANGUAGE CUDA)
-
 set(generated_kernels_dir "${GENERATED_DIR}/luxrays-kernels")
 file(MAKE_DIRECTORY ${generated_kernels_dir})
 

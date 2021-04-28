@@ -16,11 +16,27 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include "luxrays/core/epsilon.h"
+#ifndef _LUXRAYS_CUDACPP_H
+#define	_LUXRAYS_CUDACPP_H
+
+#if !defined(LUXCORE_DISABLE_CUDA_CPLUSPLUS)
+
+#include <stdexcept>
+
+#include "luxrays/utils/strutils.h"
 
 namespace luxrays {
 
-float MachineEpsilon::minEpsilon = DEFAULT_EPSILON_MIN;
-float MachineEpsilon::maxEpsilon = DEFAULT_EPSILON_MAX;
+#define CHECK_CUDACPP_ERROR() luxrays::CheckCUDACPPError(cudaGetLastError(), __FILE__, __LINE__)
+
+inline void CheckCUDACPPError(const cudaError_t error, const char *file, const int line) {
+	if (error != cudaSuccess)
+		throw std::runtime_error("CUDA C++ error: " + std::string(cudaGetErrorString(error)) + " "
+				"(file:" + std::string(file) + ", line: " + ToString(line) + ")\n");
+}
 
 }
+
+#endif
+
+#endif	/* _LUXRAYS_CUDACPP_H */

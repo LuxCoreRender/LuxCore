@@ -198,6 +198,10 @@ if((${CMAKE_SYSTEM_NAME} MATCHES "Linux") OR OSX_BUILD_DEMOS OR WIN_BUILD_DEMOS)
 	if (NOT WIN32 OR NOT BUILD_LUXCORE_DLL)
 		# Internal tests can not be compiled on WIN32 with DLL enabled
 		add_subdirectory(tests/luxcoreimplserializationdemo)
+
+		if (NOT LUXCORE_DISABLE_CUDA_CPLUSPLUS)
+			add_subdirectory(tests/cudacplusplus)
+		endif()
 	endif()
 endif()
 

@@ -31,7 +31,7 @@
 
 namespace luxrays {
 
-#define CHECK_CUDA_ERROR(err) CheckCUDAError(err, __FILE__, __LINE__)
+#define CHECK_CUDA_ERROR(err) luxrays::CheckCUDAError(err, __FILE__, __LINE__)
 
 inline void CheckCUDAError(const CUresult err, const char *file, const int line) {
   if (err != CUDA_SUCCESS) {
