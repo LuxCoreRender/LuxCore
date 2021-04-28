@@ -4,6 +4,7 @@
 #include "luxrays/utils/cudacpp.h"
 
 using namespace std;
+using namespace luxrays;
 
 //------------------------------------------------------------------------------
 // DevicesInfo()
@@ -13,12 +14,12 @@ void DevicesInfo() {
 	int count;
 
 	cudaGetDeviceCount(&count);
-	CHECK_CUDACPP_ERROR();
+	CUDACPP_CHECKERROR();
 
 	for (int i = 0; i < count; i++) {
 		cudaDeviceProp prop;
 		cudaGetDeviceProperties(&prop, i);
-		CHECK_CUDACPP_ERROR();
+		CUDACPP_CHECKERROR();
 
 		cout << "Device Number: " << i << endl;
 		cout << "  Device name: " << prop.name << endl;
@@ -37,7 +38,7 @@ public:
 	__host__ __device__ VectorTest(float _x = 0.f, float _y = 0.f, float _z = 0.f) :
 		x(_x), y(_y), z(_z) {
 	}
-
+		
 	__host__ __device__ VectorTest operator+(const VectorTest &v) const {
 		return VectorTest(x + v.x, y + v.y, z + v.z);
 	}
@@ -65,17 +66,9 @@ void ClassTest() {
 
 	const size_t size = 1024;
 
-	VectorTest *va;
-	cudaMallocManaged(&va, size * sizeof(VectorTest));
-	CHECK_CUDACPP_ERROR();
-	
-	VectorTest *vb;
-	cudaMallocManaged(&vb, size * sizeof(VectorTest));
-	CHECK_CUDACPP_ERROR();
-	
-	VectorTest *vc;
-	cudaMallocManaged(&vc, size * sizeof(VectorTest));
-	CHECK_CUDACPP_ERROR();
+	VectorTest *va = CudaCPPNew<VectorTest>(size);
+	VectorTest *vb = CudaCPPNew<VectorTest>(size);
+	VectorTest *vc = CudaCPPNew<VectorTest>(size);
 
 	for (u_int i = 0; i < size; ++i) {
 		va[i] = VectorTest(i, 0.f, 0.f);
@@ -84,17 +77,21 @@ void ClassTest() {
 	}
 
 	SumVectorTest<<<size / 32, 32>>>(&va[0], &vb[0], &vc[0]);
-	CHECK_CUDACPP_ERROR();
+	CUDACPP_CHECKERROR();
 
 	cudaDeviceSynchronize();
-	CHECK_CUDACPP_ERROR();
-	
+	CUDACPP_CHECKERROR();
+
 	for (u_int i = 0; i < size; ++i) {
 		if (vc[i] != va[i] + vb[i])
 			cout << "Failed index: " << i << endl;
 		
 		//cout << vc[i] << " = " << va[i] << " + " << vb[i] << endl;
 	}
+
+	CudaCPPDelete(va, size);
+	CudaCPPDelete(vb, size);
+	CudaCPPDelete(vc, size);
 
 	cout << "Done" << endl;
 }
@@ -105,9 +102,8 @@ int main(int argc, char ** argv) {
 	cout << "CUDA C++ Tests" << endl;
 
 	DevicesInfo();
-	
-	cudaSetDevice(0);
-	CHECK_CUDACPP_ERROR();
+	//cudaSetDevice(0);
+	//CUDACPP_CHECKERROR();
 	
 	ClassTest();
 

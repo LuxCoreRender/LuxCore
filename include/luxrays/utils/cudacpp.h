@@ -27,12 +27,30 @@
 
 namespace luxrays {
 
-#define CHECK_CUDACPP_ERROR() luxrays::CheckCUDACPPError(cudaGetLastError(), __FILE__, __LINE__)
+#define CUDACPP_CHECKERROR() luxrays::CudaCPPCheckError(cudaGetLastError(), __FILE__, __LINE__)
 
-inline void CheckCUDACPPError(const cudaError_t error, const char *file, const int line) {
+inline void CudaCPPCheckError(const cudaError_t error, const char *file, const int line) {
 	if (error != cudaSuccess)
 		throw std::runtime_error("CUDA C++ error: " + std::string(cudaGetErrorString(error)) + " "
 				"(file:" + std::string(file) + ", line: " + ToString(line) + ")\n");
+}
+
+template<class T>
+inline T *CudaCPPNew(const size_t n = 1) {
+	T *p;
+	cudaMallocManaged(&p, n * sizeof(T));
+	CUDACPP_CHECKERROR();
+
+	return new (p) T[n];
+}
+
+template<class T>
+inline void CudaCPPDelete(T *p, const size_t n = 1) {
+	for (u_int i = 0; i < n; ++i)
+		p[i].~T();
+
+	cudaFree(p);
+	CUDACPP_CHECKERROR();
 }
 
 }
