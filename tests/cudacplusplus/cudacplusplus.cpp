@@ -50,8 +50,8 @@ public:
 	float x, y, z;
 };
 
-__global__ void SumVectorTest(VectorTest *va, VectorTest *vb, VectorTest *vc) {
-	u_int index = blockIdx.x * blockDim.x + threadIdx.x;
+__global__ void VectorTestKernel(VectorTest *va, VectorTest *vb, VectorTest *vc) {
+	const u_int index = blockIdx.x * blockDim.x + threadIdx.x;
 
 	vc[index] = va[index] + vb[index];
 }
@@ -66,9 +66,9 @@ void ClassTest() {
 
 	const size_t size = 1024;
 
-	VectorTest *va = CudaCPPNew<VectorTest>(size);
-	VectorTest *vb = CudaCPPNew<VectorTest>(size);
-	VectorTest *vc = CudaCPPNew<VectorTest>(size);
+	VectorTest *va = CudaCPPHostNewArray<VectorTest>(size);
+	VectorTest *vb = CudaCPPHostNewArray<VectorTest>(size);
+	VectorTest *vc = CudaCPPHostNewArray<VectorTest>(size);
 
 	for (u_int i = 0; i < size; ++i) {
 		va[i] = VectorTest(i, 0.f, 0.f);
@@ -76,7 +76,7 @@ void ClassTest() {
 		vc[i] = VectorTest(0.f, 0.f, 0.f);
 	}
 
-	SumVectorTest<<<size / 32, 32>>>(&va[0], &vb[0], &vc[0]);
+	VectorTestKernel<<<size / 32, 32>>>(&va[0], &vb[0], &vc[0]);
 	CUDACPP_CHECKERROR();
 
 	cudaDeviceSynchronize();
@@ -89,14 +89,108 @@ void ClassTest() {
 		//cout << vc[i] << " = " << va[i] << " + " << vb[i] << endl;
 	}
 
-	CudaCPPDelete(va, size);
-	CudaCPPDelete(vb, size);
-	CudaCPPDelete(vc, size);
+	CudaCPPHostDeleteArray<VectorTest>(va, size);
+	CudaCPPHostDeleteArray<VectorTest>(vb, size);
+	CudaCPPHostDeleteArray<VectorTest>(vc, size);
 
 	cout << "Done" << endl;
 }
 
 //------------------------------------------------------------------------------
+// VirtualMethodTest()
+//------------------------------------------------------------------------------
+
+typedef enum {
+	MATERIAL_TEST_MATTE, MATERIAL_TEST_MIRROR
+} MaterialType;
+
+class MaterialTest {
+public:
+	__host__ __device__ MaterialTest() {
+	}
+
+	__host__ virtual MaterialType GetType() = 0;
+
+	__device__ static MaterialType GetType(const MaterialTest *m);
+
+protected:
+	MaterialType type;
+};
+
+class MatteMaterialTest : public MaterialTest {
+public:
+	__host__ MatteMaterialTest(float t1, int t2) {
+		type = GetType();
+	}
+	
+	__host__ virtual MaterialType GetType() { return MATERIAL_TEST_MATTE; }
+};
+
+class MirrorMaterialTest : public MaterialTest {
+public:
+	__host__ MirrorMaterialTest() {
+		type = GetType();
+	}
+
+	__host__ virtual MaterialType GetType() { return MATERIAL_TEST_MIRROR; }
+};
+
+__device__ MaterialType MaterialTest::GetType(const MaterialTest *m) {
+	return m->type;
+}
+
+__global__ void VirtualMethodTestKernel(MaterialTest **vm, MaterialType *vt) {
+	const u_int index = blockIdx.x * blockDim.x + threadIdx.x;
+	
+	vt[index] = MaterialTest::GetType(vm[index]);
+}
+
+void VirtualMethodTest() {
+	cout << "Virtual method test..." << endl;
+
+	const size_t size = 32;
+
+	MaterialTest **vm = CudaCPPHostNewArray<MaterialTest *>(size);
+	for (u_int i = 0; i < size; ++i) {
+		if (i % 2 == 0)
+			vm[i] = CudaCPPHostNew<MatteMaterialTest>(1.f, 2.f);
+		else
+			vm[i] = CudaCPPHostNew<MirrorMaterialTest>();
+	}
+
+	MaterialType *vt = CudaCPPHostNewArray<MaterialType>(size);
+	
+	VirtualMethodTestKernel<<<size / 32, 32>>>(vm, vt);
+	CUDACPP_CHECKERROR();
+
+	cudaDeviceSynchronize();
+	CUDACPP_CHECKERROR();
+
+	for (u_int i = 0; i < size; ++i) {
+		if (((i % 2 == 0) && (vt[i] != MATERIAL_TEST_MATTE)) ||
+				((i % 2 == 1) && (vt[i] != MATERIAL_TEST_MIRROR)))
+			cout << "Failed index: " << i << " (value = " << ToString(vt[i]) << ")" << endl;
+	}
+
+	for (u_int i = 0; i < size; ++i) {
+		if (vm[i]->GetType() == MATERIAL_TEST_MATTE)
+			CudaCPPHostDelete<MatteMaterialTest>(vm[i]);
+		else
+			CudaCPPHostDelete<MirrorMaterialTest>(vm[i]);
+	}
+	
+	CudaCPPHostDeleteArray<MaterialTest *>(vm, size);
+	CudaCPPHostDeleteArray<MaterialType>(vt, size);
+
+	cout << "Done" << endl;
+}
+
+//------------------------------------------------------------------------------
+
+// This is required ot be able to use ToString()
+namespace luxrays {
+std::locale cLocale("C");
+}
 
 int main(int argc, char ** argv) {
 	cout << "CUDA C++ Tests" << endl;
@@ -106,6 +200,7 @@ int main(int argc, char ** argv) {
 	//CUDACPP_CHECKERROR();
 	
 	ClassTest();
+	VirtualMethodTest();
 
 	return 0;
 }

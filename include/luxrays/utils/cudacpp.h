@@ -32,11 +32,16 @@ namespace luxrays {
 inline void CudaCPPCheckError(const cudaError_t error, const char *file, const int line) {
 	if (error != cudaSuccess)
 		throw std::runtime_error("CUDA C++ error: " + std::string(cudaGetErrorString(error)) + " "
-				"(file:" + std::string(file) + ", line: " + ToString(line) + ")\n");
+				"(code: " + std::string(cudaGetErrorName(error)) + ", file: " + std::string(file) +
+				", line: " + ToString(line) + ")\n");
 }
 
+//------------------------------------------------------------------------------
+// CudaCPPHostNew()/CudaCPPHostDelete()
+//------------------------------------------------------------------------------
+
 template<class T>
-inline T *CudaCPPNew(const size_t n = 1) {
+inline T *CudaCPPHostNewArray(const size_t n) {
 	T *p;
 	cudaMallocManaged(&p, n * sizeof(T));
 	CUDACPP_CHECKERROR();
@@ -45,13 +50,60 @@ inline T *CudaCPPNew(const size_t n = 1) {
 }
 
 template<class T>
-inline void CudaCPPDelete(T *p, const size_t n = 1) {
-	for (u_int i = 0; i < n; ++i)
-		p[i].~T();
+inline void CudaCPPHostDeleteArray(T *p, const size_t n) {
+	if (p) {
+		for (u_int i = 0; i < n; ++i)
+			p[i].~T();
 
-	cudaFree(p);
-	CUDACPP_CHECKERROR();
+		cudaFree(p);
+		CUDACPP_CHECKERROR();
+	}
 }
+
+//------------------------------------------------------------------------------
+// CudaCPPHostAlloc()/CudaCPPHostFree()
+//------------------------------------------------------------------------------
+
+template<class T, class... Args>
+inline T *CudaCPPHostNew(Args... args) {
+	T *p;
+	cudaMallocManaged(&p, sizeof(T));
+	CUDACPP_CHECKERROR();
+
+	return new (p) T(args...);
+}
+
+template<class T>
+inline void CudaCPPHostDelete(void *ptr) {
+	if (ptr) {
+		T *p = (T *)ptr;
+		p->~T();
+
+		cudaFree(p);
+		CUDACPP_CHECKERROR();
+	}
+}
+
+//------------------------------------------------------------------------------
+// CudaCPPHostAlloc()/CudaCPPHostFree()
+//------------------------------------------------------------------------------
+
+//class CudaCPPManaged {
+//public:
+//  void *operator new(size_t len) {
+//    void *ptr;
+//
+//    cudaMallocManaged(&ptr, len);
+//	CUDACPP_CHECKERROR();
+//
+//    return ptr;
+//  }
+//
+//  void operator delete(void *ptr) {
+//    cudaFree(ptr);
+//	CUDACPP_CHECKERROR();
+//  }
+//};
 
 }
 
