@@ -109,10 +109,10 @@ public:
 	__host__ __device__ MaterialTest() {
 	}
 
-	__host__ virtual MaterialType GetType() = 0;
+	__host__ __device__ MaterialType GetType() { return type; }
 
-	__device__ static MaterialType GetType(const MaterialTest *m);
-
+	__device__ float Evaluate(const float v) const;
+	
 protected:
 	MaterialType type;
 };
@@ -120,29 +120,47 @@ protected:
 class MatteMaterialTest : public MaterialTest {
 public:
 	__host__ MatteMaterialTest(float t1, int t2) {
-		type = GetType();
+		type = MATERIAL_TEST_MATTE;
 	}
 	
-	__host__ virtual MaterialType GetType() { return MATERIAL_TEST_MATTE; }
+	friend class MaterialTest;
+
+protected:
+	__host__ __device__ float EvaluateImpl(const float v) const { return v; }
 };
 
 class MirrorMaterialTest : public MaterialTest {
 public:
 	__host__ MirrorMaterialTest() {
-		type = GetType();
+		type = MATERIAL_TEST_MIRROR;
 	}
+	
+	friend class MaterialTest;
 
-	__host__ virtual MaterialType GetType() { return MATERIAL_TEST_MIRROR; }
+protected:
+	__host__ __device__ float EvaluateImpl(const float v) const { return v + 1.f; }
 };
 
-__device__ MaterialType MaterialTest::GetType(const MaterialTest *m) {
-	return m->type;
+__device__ float MaterialTest::Evaluate(const float v)  const {
+	switch (type) {
+		case MATERIAL_TEST_MATTE:
+			return ((const MatteMaterialTest *)this)->EvaluateImpl(v);
+		case MATERIAL_TEST_MIRROR:
+			return ((const MirrorMaterialTest *)this)->EvaluateImpl(v);
+		default:
+#if defined(__CUDA_ARCH__)
+			return 123.f;
+#else
+			throw std::runtime_error("Unknown material type in MaterialTest::Evaluate()");
+#endif
+	}
 }
 
-__global__ void VirtualMethodTestKernel(MaterialTest **vm, MaterialType *vt) {
+__global__ void VirtualMethodTestKernel(MaterialTest **vm, MaterialType *vt, float *vv) {
 	const u_int index = blockIdx.x * blockDim.x + threadIdx.x;
 	
-	vt[index] = MaterialTest::GetType(vm[index]);
+	vt[index] = vm[index]->GetType();
+	vv[index] = vm[index]->Evaluate(0.f);
 }
 
 void VirtualMethodTest() {
@@ -159,8 +177,9 @@ void VirtualMethodTest() {
 	}
 
 	MaterialType *vt = CudaCPPHostNewArray<MaterialType>(size);
+	float *vv = CudaCPPHostNewArray<float>(size);
 	
-	VirtualMethodTestKernel<<<size / 32, 32>>>(vm, vt);
+	VirtualMethodTestKernel<<<size / 32, 32>>>(vm, vt, vv);
 	CUDACPP_CHECKERROR();
 
 	cudaDeviceSynchronize();
@@ -169,7 +188,13 @@ void VirtualMethodTest() {
 	for (u_int i = 0; i < size; ++i) {
 		if (((i % 2 == 0) && (vt[i] != MATERIAL_TEST_MATTE)) ||
 				((i % 2 == 1) && (vt[i] != MATERIAL_TEST_MIRROR)))
-			cout << "Failed index: " << i << " (value = " << ToString(vt[i]) << ")" << endl;
+			cout << "Failed GetType() index: " << i << " (value = " << ToString(vt[i]) << ")" << endl;
+	}
+
+	for (u_int i = 0; i < size; ++i) {
+		if (((i % 2 == 0) && (vv[i] != 0.f)) ||
+				((i % 2 == 1) && (vv[i] != 1.f)))
+			cout << "Failed Evaluate() index: " << i << " (value = " << ToString(vv[i]) << ")" << endl;
 	}
 
 	for (u_int i = 0; i < size; ++i) {
@@ -181,6 +206,7 @@ void VirtualMethodTest() {
 	
 	CudaCPPHostDeleteArray<MaterialTest *>(vm, size);
 	CudaCPPHostDeleteArray<MaterialType>(vt, size);
+	CudaCPPHostDeleteArray<float>(vv, size);
 
 	cout << "Done" << endl;
 }
