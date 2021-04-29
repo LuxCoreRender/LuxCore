@@ -312,6 +312,31 @@ template<> double PropertyValue::Get<double>() const {
 	}
 }
 
+template<> long long PropertyValue::Get<long long>() const {
+	switch (dataType) {
+		case BOOL_VAL:
+			return boost::lexical_cast<long long>(data.boolVal);
+		case INT_VAL:
+			return boost::lexical_cast<long long>(data.intVal);
+		case UINT_VAL:
+			return boost::lexical_cast<long long>(data.uintVal);
+		case FLOAT_VAL:
+			return boost::lexical_cast<long long>(data.floatVal);
+		case DOUBLE_VAL:
+			return boost::lexical_cast<long long>(data.doubleVal);
+		case LONGLONG_VAL:
+			return boost::lexical_cast<long long>(data.longlongVal);
+		case ULONGLONG_VAL:
+			return boost::lexical_cast<long long>(data.ulonglongVal);
+		case STRING_VAL:
+			return FromString<long long>(*data.stringVal);
+		case BLOB_VAL:
+			throw std::runtime_error("A Blob property can not be converted to other types");
+		default:
+			throw std::runtime_error("Unknown type in PropertyValue::Get<long long>(): " + ToString(dataType));
+	}
+}
+
 template<> unsigned long long PropertyValue::Get<unsigned long long>() const {
 	switch (dataType) {
 		case BOOL_VAL:

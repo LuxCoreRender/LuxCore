@@ -42,6 +42,12 @@ def Clock():
 
 def PropertiesTests():
 	print("Properties examples...")
+	prop = pyluxcore.Property("test1.prop1", 0)
+	prop.Set(0, 3705339624)
+
+	prop = pyluxcore.Property("test1.prop1", 3705339624)
+	print("test1.prop1 => %s\n" % prop.GetInt(0))
+
 	prop = pyluxcore.Property("test1.prop1", "aa")
 	print("test1.prop1 => %s\n" % prop.GetString(0))
 

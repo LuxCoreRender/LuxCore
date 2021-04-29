@@ -138,6 +138,7 @@ template<> CPP_API int PropertyValue::Get<int>() const;
 template<> CPP_API unsigned int PropertyValue::Get<unsigned int>() const;
 template<> CPP_API float PropertyValue::Get<float>() const;
 template<> CPP_API double PropertyValue::Get<double>() const;
+template<> CPP_API long long PropertyValue::Get<long long>() const;
 template<> CPP_API unsigned long long PropertyValue::Get<unsigned long long>() const;
 template<> CPP_API std::string PropertyValue::Get<std::string>() const;
 template<> CPP_API const Blob &PropertyValue::Get<const Blob &>() const;
