@@ -37,13 +37,17 @@ public:
 	
 	void RequestSamples(const u_int size);
 	float GetSample(const u_int pass, const u_int index);
+	float GetSampleOwen(const u_int pass, const u_int index);
 
 	u_int rngPass;
 	float rng0, rng1;
 
 	static void GenerateDirectionVectors(u_int *vectors, const u_int dimensions);
+	static void GetDirectionVectorsOwen(u_int *vectors);
+	
 private:
 	u_int SobolDimension(const u_int index, const u_int dimension) const;
+	u_int GetSobolSample(u_int index, u_int dim);
 
 	u_int *directions;
 };

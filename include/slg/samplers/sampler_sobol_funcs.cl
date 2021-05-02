@@ -22,6 +22,45 @@
 // Sobol Sequence
 //------------------------------------------------------------------------------
 
+OPENCL_FORCE_INLINE uint hash_combine(uint seed, uint v)
+{
+  return seed ^ (v + (seed << 6) + (seed >> 2));
+}
+
+OPENCL_FORCE_INLINE uint reverse_bits(uint x)
+{
+	x = (((x & 0xaaaaaaaa) >> 1) | ((x & 0x55555555) << 1));
+	x = (((x & 0xcccccccc) >> 2) | ((x & 0x33333333) << 2));
+	x = (((x & 0xf0f0f0f0) >> 4) | ((x & 0x0f0f0f0f) << 4));
+	x = (((x & 0xff00ff00) >> 8) | ((x & 0x00ff00ff) << 8));
+	return ((x >> 16) | (x << 16));
+}
+
+OPENCL_FORCE_INLINE uint laine_karras_permutation(uint x, uint seed) {
+	x += seed;
+	x ^= x * 0x6c50b47cu;
+	x ^= x * 0xb82f1e52u;
+	x ^= x * 0xc7afe638u;
+	x ^= x * 0x8d22f6e6u;
+	return x;
+}
+
+OPENCL_FORCE_INLINE uint nested_uniform_scramble_base2(uint x, uint seed) {
+	x = reverse_bits(x);
+	x = laine_karras_permutation(x, seed);
+	x = reverse_bits(x);
+	return x;
+}
+
+OPENCL_FORCE_INLINE uint cmj_hash_simple(uint i, uint p) {
+	i = (i ^ 61) ^ p;
+	i += i << 3;
+	i ^= i >> 4;
+	i *= 0x27d4eb2d;
+	return i;
+}
+
+
 OPENCL_FORCE_INLINE uint SobolSequence_SobolDimension(
 		__global const uint* restrict sobolDirections,
 		const uint index, const uint dimension) {
@@ -37,6 +76,19 @@ OPENCL_FORCE_INLINE uint SobolSequence_SobolDimension(
 	return result;
 }
 
+OPENCL_FORCE_INLINE uint SobolSequence_SobolSample(
+		__global const uint* restrict sobolDirections,
+		const uint index, const uint dimension) {
+	const uint offset = dimension * 32;
+
+	uint X = 0;
+    for (int bit = 0; bit < 32; bit++) {
+      int mask = (index >> bit) & 1;
+      X ^= mask * sobolDirections[offset + bit];
+    }
+    return X;
+}
+
 OPENCL_FORCE_INLINE float SobolSequence_GetSample(
 		__global const uint* restrict sobolDirections,
 		const uint pass, const uint rngPass, const float rng0, const float rng1,
@@ -50,6 +102,18 @@ OPENCL_FORCE_INLINE float SobolSequence_GetSample(
 	const float val = fResult + shift;
 
 	return val - floor(val);
+}
+
+OPENCL_FORCE_INLINE float SobolSequence_GetSampleOwen(
+		__global const uint* restrict sobolDirections,
+		const uint pass, const uint rngPass, const uint index) {
+
+	uint seed = cmj_hash_simple(index/4, rngPass);
+	uint owenIndex = nested_uniform_scramble_base2(pass, seed);
+	uint X = SobolSequence_SobolSample(sobolDirections, owenIndex, index%4);
+    float sample = nested_uniform_scramble_base2(X, hash_combine(seed, index%4)) * (1.f / 0xffffffffu);
+
+	return sample;
 }
 
 //------------------------------------------------------------------------------
@@ -95,7 +159,8 @@ OPENCL_FORCE_INLINE float SobolSampler_GetSample(
 			__global SobolSample *samples = (__global SobolSample *)samplesBuff;
 			__global SobolSample *sample = &samples[gid];
 
-			return SobolSequence_GetSample(sobolDirections, sample->pass, sample->rngPass, sample->rng0, sample->rng1, index);	
+			// return SobolSequence_GetSample(sobolDirections, sample->pass, sample->rngPass, sample->rng0, sample->rng1, index);	
+			return SobolSequence_GetSampleOwen(sobolDirections, sample->pass, sample->rngPass, index);	
 		}
 	}
 }

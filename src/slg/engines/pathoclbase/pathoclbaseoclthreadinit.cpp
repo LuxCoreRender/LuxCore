@@ -353,7 +353,10 @@ void PathOCLBaseOCLRenderThread::InitSamplerSharedDataBuffer() {
 		size += sizeof(u_int) * filmRegionPixelCount;
 
 		// Plus the Sobol directions array
-		size += sizeof(u_int) * renderEngine->pathTracer.eyeSampleSize * SOBOL_BITS;
+		// size += sizeof(u_int) * renderEngine->pathTracer.eyeSampleSize * SOBOL_BITS;
+
+		// Owen-scrambling direction vectors uses a fixed 5*32 directions vector (see soboldata.cpp)
+		size += sizeof(u_int) * 160;
 	} else if (renderEngine->oclSampler->type == slg::ocl::TILEPATHSAMPLER) {
 		size += sizeof(slg::ocl::TilePathSamplerSharedData);
 
@@ -401,7 +404,8 @@ void PathOCLBaseOCLRenderThread::InitSamplerSharedDataBuffer() {
 		// end of slg::ocl::SobolSamplerSharedData + all pass values
 
 		u_int *sobolDirections = (u_int *)(buffer + sizeof(slg::ocl::SobolSamplerSharedData) + sizeof(u_int) * filmRegionPixelCount);
-		SobolSequence::GenerateDirectionVectors(sobolDirections, renderEngine->pathTracer.eyeSampleSize);
+		// SobolSequence::GenerateDirectionVectors(sobolDirections, renderEngine->pathTracer.eyeSampleSize);
+		SobolSequence::GetDirectionVectorsOwen(sobolDirections);
 
 		// Write the data
 		intersectionDevice->EnqueueWriteBuffer(samplerSharedDataBuff, CL_TRUE, size, buffer);
