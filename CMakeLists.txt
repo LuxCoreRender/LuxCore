@@ -60,7 +60,6 @@ if (LUXCORE_DISABLE_CUDA_CPLUSPLUS)
 	project(LuxCoreRender LANGUAGES CXX C )
 else()
 	project(LuxCoreRender LANGUAGES CXX C CUDA)
-	set_property(GLOBAL PROPERTY CUDA_SEPARABLE_COMPILATION ON)
 endif()
 
 ################################################################################

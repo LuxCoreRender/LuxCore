@@ -1,3 +1,24 @@
+/***************************************************************************
+ * Copyright 1998-2018 by authors (see AUTHORS.txt)                        *
+ *                                                                         *
+ *   This file is part of LuxCoreRender.                                   *
+ *                                                                         *
+ * Licensed under the Apache License, Version 2.0 (the "License");         *
+ * you may not use this file except in compliance with the License.        *
+ * You may obtain a copy of the License at                                 *
+ *                                                                         *
+ *     http://www.apache.org/licenses/LICENSE-2.0                          *
+ *                                                                         *
+ * Unless required by applicable law or agreed to in writing, software     *
+ * distributed under the License is distributed on an "AS IS" BASIS,       *
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.*
+ * See the License for the specific language governing permissions and     *
+ * limitations under the License.                                          *
+ ***************************************************************************/
+
+// This is a set of tests to study the viability of using the same C++ for CPU
+// and CUDA.
+
 #include <iostream>
 #include <vector>
 
@@ -212,8 +233,87 @@ void VirtualMethodTest() {
 }
 
 //------------------------------------------------------------------------------
+// LinkerTest()
+//------------------------------------------------------------------------------
 
-// This is required ot be able to use ToString()
+#include "linkertest.h"
+
+__host__ __device__ LinkerVectorTest LinkerVectorTest::operator+(const LinkerVectorTest &v) const {
+	return LinkerVectorTest(x + v.x, y + v.y, z + v.z);
+}
+
+__global__ void LinkerVectorTestKernel1(LinkerVectorTest *va, LinkerVectorTest *vb, LinkerVectorTest *vc) {
+	const u_int index = blockIdx.x * blockDim.x + threadIdx.x;
+
+	vc[index] = va[index] + vb[index];
+}
+
+inline ostream &operator<<(std::ostream &os, const LinkerVectorTest &v) {
+	os << "LinkerVectorTest[" << v.x << ", " << v.y << ", " << v.z << "]";
+	return os;
+}
+
+void LinkerTest() {
+	cout << "Linker test..." << endl;
+
+	const size_t size = 1024;
+
+	LinkerVectorTest *va = CudaCPPHostNewArray<LinkerVectorTest>(size);
+	LinkerVectorTest *vb = CudaCPPHostNewArray<LinkerVectorTest>(size);
+	LinkerVectorTest *vc = CudaCPPHostNewArray<LinkerVectorTest>(size);
+
+	{
+		for (u_int i = 0; i < size; ++i) {
+			va[i] = LinkerVectorTest(i, 0.f, 0.f);
+			vb[i] = LinkerVectorTest(0.f, i, 0.f);
+			vc[i] = LinkerVectorTest(0.f, 0.f, 0.f);
+		}
+
+		LinkerVectorTestKernel1<<<size / 32, 32>>>(&va[0], &vb[0], &vc[0]);
+		CUDACPP_CHECKERROR();
+
+		cudaDeviceSynchronize();
+		CUDACPP_CHECKERROR();
+
+		for (u_int i = 0; i < size; ++i) {
+			if (vc[i] != va[i] + vb[i])
+				cout << "Failed #1index: " << i << endl;
+
+			//cout << vc[i] << " = " << va[i] << " + " << vb[i] << endl;
+		}
+	}
+
+	{
+		for (u_int i = 0; i < size; ++i) {
+			va[i] = LinkerVectorTest(i, 0.f, 0.f);
+			vb[i] = LinkerVectorTest(0.f, i, 0.f);
+			vc[i] = LinkerVectorTest(0.f, 0.f, 0.f);
+		}
+
+		LinkerVectorTestKernel2<<<size / 32, 32>>>(&va[0], &vb[0], &vc[0]);
+		CUDACPP_CHECKERROR();
+
+		cudaDeviceSynchronize();
+		CUDACPP_CHECKERROR();
+
+		for (u_int i = 0; i < size; ++i) {
+			if (vc[i] != va[i] + vb[i])
+				cout << "Failed #2 index: " << i << endl;
+
+			//cout << vc[i] << " = " << va[i] << " + " << vb[i] << endl;
+		}
+	}
+
+	CudaCPPHostDeleteArray<LinkerVectorTest>(va, size);
+	CudaCPPHostDeleteArray<LinkerVectorTest>(vb, size);
+	CudaCPPHostDeleteArray<LinkerVectorTest>(vc, size);
+
+	cout << "Done" << endl;
+}
+
+//------------------------------------------------------------------------------
+
+// This is required to be able to use ToString()
 namespace luxrays {
 std::locale cLocale("C");
 }
@@ -227,6 +327,7 @@ int main(int argc, char ** argv) {
 	
 	ClassTest();
 	VirtualMethodTest();
+	LinkerTest();
 
 	return 0;
 }

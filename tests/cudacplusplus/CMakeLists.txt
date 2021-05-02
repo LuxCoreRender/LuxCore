@@ -24,10 +24,12 @@
 
 set(CUDACPLUSPLUS_SRCS
 	cudacplusplus.cpp
+	linkertest.cpp
 	)
 
 set_source_files_properties(${CUDACPLUSPLUS_SRCS} PROPERTIES LANGUAGE CUDA)
 
 add_executable(cudacplusplus ${CUDACPLUSPLUS_SRCS})
 
-TARGET_LINK_LIBRARIES(cudacplusplus)
+set_target_properties(cudacplusplus PROPERTIES POSITION_INDEPENDENT_CODE ON)
+set_target_properties(cudacplusplus PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
