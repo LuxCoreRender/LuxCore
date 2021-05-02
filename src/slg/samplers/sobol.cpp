@@ -181,8 +181,8 @@ void SobolSampler::InitNewSample() {
 				if (rndGen->floatValue() > threshold) {
 
 					// Workaround for preserving random number distribution behavior
-					rngGenerator.floatValue();
-					rngGenerator.floatValue();
+					// rngGenerator.floatValue();
+					// rngGenerator.floatValue();
 					rngGenerator.uintValue();
 
 					// Skip this pixel and try the next one
@@ -200,21 +200,25 @@ void SobolSampler::InitNewSample() {
 
 		// Initialize rng0, rng1 and rngPass
 
-		sobolSequence.rng0 = rngGenerator.floatValue();
-		sobolSequence.rng1 = rngGenerator.floatValue();
+		// sobolSequence.rng0 = rngGenerator.floatValue();
+		// sobolSequence.rng1 = rngGenerator.floatValue();
 		sobolSequence.rngPass = rngGenerator.uintValue();
 
-		sample0 = pixelX +  sobolSequence.GetSample(pass, 0);
-		sample1 = pixelY +  sobolSequence.GetSample(pass, 1);
+		sample0 = pixelX + sobolSequence.GetSampleOwen(pass, 0);
+		sample1 = pixelY + sobolSequence.GetSampleOwen(pass, 1);
+		// sample0 = pixelX +  sobolSequence.GetSample(pass, 0);
+		// sample1 = pixelY +  sobolSequence.GetSample(pass, 1);
 		break;
 	}
 }
 
+
 void SobolSampler::RequestSamples(const SampleType smplType, const u_int size) {
 	Sampler::RequestSamples(smplType, size);
 
-	sobolSequence.RequestSamples(size);
-
+	// sobolSequence.RequestSamples(size);
+	// sobolSequence.seeds.reserve(requestedSamples/4 + 1);
+	// SLG_LOG(requestedSamples << " samples requested");
 	pixelOffset = bucketSize * bucketSize;
 	passOffset = superSampling;
 
@@ -230,7 +234,8 @@ float SobolSampler::GetSample(const u_int index) {
 		case 1:
 			return sample1;
 		default:
-			return sobolSequence.GetSample(pass, index);
+			// return sobolSequence.GetSample(pass, index);
+			return sobolSequence.GetSampleOwen(pass, index);
 	}
 }
 
