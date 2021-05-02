@@ -794,7 +794,7 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 					evalOpStackSize += 3;
 					break;
 				case slg::ocl::TextureEvalOpType::EVAL_BUMP:
-						evalOpStackSize += CompileTextureOps(tex->normalMap.texIndex, slg::ocl::TextureEvalOpType::EVAL_SPECTRUM);
+					evalOpStackSize += CompileTextureOps(tex->normalMap.texIndex, slg::ocl::TextureEvalOpType::EVAL_SPECTRUM);
 					break;
 				default:
 					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(" + ToString(tex->type) + "): " + ToString(opType));

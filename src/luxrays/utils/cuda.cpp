@@ -76,7 +76,6 @@ bool cudaKernelCache::ForcedCompilePTX(const vector<string> &kernelsParameters, 
         string targetArch = "--gpu-architecture=compute_" + GetCuda10Architecture();
         cudaOpts.push_back(targetArch.c_str());
 
-
 	// To display warning numbers
 	cudaOpts.push_back("-Xcudafe");
 	cudaOpts.push_back("--display_error_number");
@@ -92,6 +91,11 @@ bool cudaKernelCache::ForcedCompilePTX(const vector<string> &kernelsParameters, 
 	// To suppress warning: warning #68-D: integer conversion resulted in a change of sign
 	cudaOpts.push_back("-Xcudafe");
 	cudaOpts.push_back("--diag_suppress=68");
+
+	// Enable debug info
+	//cudaOpts.push_back("-G");
+	// Enable only debug line info
+	//cudaOpts.push_back("--generate-line-info");
 
 	for	(auto const &p : kernelsParameters)
 		cudaOpts.push_back(p.c_str());
