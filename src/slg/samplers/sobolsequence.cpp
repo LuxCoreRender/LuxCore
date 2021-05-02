@@ -24,8 +24,6 @@ using namespace std;
 using namespace luxrays;
 using namespace slg;
 
-constexpr float S = float(1.0/(4294967296));
-
 inline u_int hash_combine(u_int seed, u_int v)
 {
   return seed ^ (v + (seed << 6) + (seed >> 2));
@@ -120,7 +118,7 @@ float SobolSequence::GetSampleOwen(const u_int pass, const u_int index) {
 	u_int X = GetSobolSample(owenIndex, index%4);
 
 	// Get Owen-scrambled sobol sample using the laine-karras permutation and some bit inversion
-    float sample = nested_uniform_scramble_base2(X, hash_combine(seed, index%4)) * S;
+    float sample = nested_uniform_scramble_base2(X, hash_combine(seed, index%4)) * (1.f / 0xffffffffu);
 	
 	// if (index == 0 || index == 1 || index == 12 || index == 13) {
 	// 	SLG_LOG("pass: " << pass  << " hash: " << hash << " rngPass:" << rngPass << " index: " << index  << " sample: " << sample << " sample2: " << sample2);
