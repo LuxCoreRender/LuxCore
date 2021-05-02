@@ -10,7 +10,7 @@ steps:
   displayName: Generating build files with CMake - ${{ parameters.message_text }}
 - task: MSBuild@1
   inputs:
-    solution: '..\WindowsCompile\Build_CMake\LuxCore\LuxRays.sln'
+    solution: '..\WindowsCompile\Build_CMake\LuxCore\LuxCoreRender.sln'
     # msbuildVersion: '15.0'
     msbuildArchitecture: 'x64'
     platform: 'x64'

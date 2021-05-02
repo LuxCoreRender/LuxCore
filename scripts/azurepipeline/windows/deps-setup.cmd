@@ -11,8 +11,8 @@ call .\cuda_10.1.243_win10_network.exe -s nvcc_10.1 cudart_10.1 nvrtc_10.1 nvrtc
 
 set CUDA_PATH=%ProgramFiles%\NVIDIA GPU Computing Toolkit\CUDA\v10.1
 set CUDA_PATH_V10_1=%ProgramFiles%\NVIDIA GPU Computing Toolkit\CUDA\v10.1
-echo "##vso[task.setvariable variable=cuda.path]%CUDA_PATH%"
-echo "##vso[task.setvariable variable=cuda.path.v10.1]%CUDA_PATH_V10_1%"
+echo ##vso[task.setvariable variable=cuda.path]%CUDA_PATH%
+echo ##vso[task.setvariable variable=cuda.path.v10.1]%CUDA_PATH_V10_1%
 
 pip install --upgrade pip
 
