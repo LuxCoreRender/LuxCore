@@ -97,7 +97,7 @@ jobs:
     displayName: Getting required deps
   - template: ./scripts/azurepipeline/windows/windows_jobs.yml
     parameters:
-      build_script: './scripts/azurepipeline/windows/build.cmd /cmake-only /vs2017 /minimal'
+      build_script: './scripts/azurepipeline/windows/build.cmd /cmake-only /vs2017'
       post_script: './scripts/azurepipeline/windows/post-build.cmd'
       message_text: 'Unified CPU/OpenCL/CUDA binaries'
 #  - script: './scripts/azurepipeline/windows/test.cmd'

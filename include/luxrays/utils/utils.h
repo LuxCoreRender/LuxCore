@@ -31,13 +31,13 @@
 #include <pthread.h>
 #endif
 
-#if (defined(WIN32) && defined(_MSC_VER) && _MSC_VER < 1800)
+#if (defined(_WIN32) && defined(_MSC_VER) && _MSC_VER < 1800)
 #include <float.h>
 #define isnan(a) _isnan(a)
 #define isinf(f) (!_finite((f)))
 #endif
 
-#if defined(WIN32)
+#if defined(_WIN32)
 #define isnanf(a) _isnan(a)
 #endif
 
@@ -47,7 +47,7 @@
 
 #if !defined(__APPLE__) && !defined(__OpenBSD__) && !defined(__FreeBSD__)
 #  include <malloc.h> // for _alloca, memalign
-#  if !defined(WIN32) || defined(__CYGWIN__)
+#  if !defined(_WIN32) || defined(__CYGWIN__)
 #    include <alloca.h>
 #  else
 #    define memalign(a,b) _aligned_malloc(b, a)
@@ -67,7 +67,7 @@
 #if defined(__linux__) || defined(__APPLE__) || defined(__CYGWIN__) || defined(__OpenBSD__) || defined(__FreeBSD__)
 #include <stddef.h>
 #include <sys/time.h>
-#elif defined (WIN32)
+#elif defined (_WIN32)
 #include <windows.h>
 #else
 #error "Unsupported Platform !!!"
