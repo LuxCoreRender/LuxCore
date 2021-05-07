@@ -34,10 +34,10 @@ OPENCL_FORCE_INLINE __global const uint* restrict TilePathSampler_GetSobolDirect
 
 OPENCL_FORCE_INLINE float TilePathSampler_GetSample(
 		__constant const GPUTaskConfiguration* restrict taskConfig,
+		const uint taskIndex,
 		const uint index
 		SAMPLER_PARAM_DECL) {
-	const size_t gid = get_global_id(0);
-	__global float *samplesData = &samplesDataBuff[gid * TILEPATHSAMPLER_TOTAL_U_SIZE];
+	__global float *samplesData = &samplesDataBuff[taskIndex * TILEPATHSAMPLER_TOTAL_U_SIZE];
 
 	switch (index) {
 		case IDX_SCREEN_X:
@@ -52,7 +52,7 @@ OPENCL_FORCE_INLINE float TilePathSampler_GetSample(
 			__global const uint* restrict sobolDirections = TilePathSampler_GetSobolDirectionsPtr(samplerSharedData);
 
 			__global TilePathSample *samples = (__global TilePathSample *)samplesBuff;
-			__global TilePathSample *sample = &samples[gid];
+			__global TilePathSample *sample = &samples[taskIndex];
 
 			return SobolSequence_GetSample(sobolDirections, sample->pass + SOBOL_STARTOFFSET,
 					sample->rngPass, sample->rng0, sample->rng1, index);	
@@ -62,16 +62,16 @@ OPENCL_FORCE_INLINE float TilePathSampler_GetSample(
 }
 
 OPENCL_FORCE_INLINE void TilePathSampler_SplatSample(
-		__constant const GPUTaskConfiguration* restrict taskConfig
+		__constant const GPUTaskConfiguration* restrict taskConfig,
+		const uint taskIndex
 		SAMPLER_PARAM_DECL
 		FILM_PARAM_DECL
 		) {
-	const size_t gid = get_global_id(0);
-	__global SampleResult *sampleResult = &sampleResultsBuff[gid];
+	__global SampleResult *sampleResult = &sampleResultsBuff[taskIndex];
 
 #if defined(RENDER_ENGINE_RTPATHOCL)
 	__global TilePathSample *samples = (__global TilePathSample *)samplesBuff;
-	__global TilePathSample *sample = &samples[gid];
+	__global TilePathSample *sample = &samples[taskIndex];
 
 	// Check if I'm in preview phase
 	if (sample->pass < taskConfig->renderEngine.rtpathocl.previewResolutionReductionStep) {
@@ -99,6 +99,7 @@ OPENCL_FORCE_INLINE void TilePathSampler_SplatSample(
 
 OPENCL_FORCE_INLINE void TilePathSampler_NextSample(
 		__constant const GPUTaskConfiguration* restrict taskConfig,
+		const uint taskIndex,
 		__global float *filmNoise,
 		__global float *filmUserImportance,
 		const uint filmWidth, const uint filmHeight,
@@ -110,17 +111,17 @@ OPENCL_FORCE_INLINE void TilePathSampler_NextSample(
 
 OPENCL_FORCE_INLINE bool TilePathSampler_Init(
 		__constant const GPUTaskConfiguration* restrict taskConfig,
+		const uint taskIndex,
 		__global float *filmNoise,
 		__global float *filmUserImportance,
 		const uint filmWidth, const uint filmHeight,
 		const uint filmSubRegion0, const uint filmSubRegion1,
 		const uint filmSubRegion2, const uint filmSubRegion3
 		SAMPLER_PARAM_DECL) {
-	const size_t gid = get_global_id(0);
 	__global TilePathSamplerSharedData *samplerSharedData = (__global TilePathSamplerSharedData *)samplerSharedDataBuff;
 	__global TilePathSample *samples = (__global TilePathSample *)samplesBuff;
-	__global TilePathSample *sample = &samples[gid];
-	__global float *samplesData = &samplesDataBuff[gid * TILEPATHSAMPLER_TOTAL_U_SIZE];
+	__global TilePathSample *sample = &samples[taskIndex];
+	__global float *samplesData = &samplesDataBuff[taskIndex * TILEPATHSAMPLER_TOTAL_U_SIZE];
 
 #if defined(RENDER_ENGINE_RTPATHOCL)
 	// 1 thread for each pixel
@@ -128,15 +129,15 @@ OPENCL_FORCE_INLINE bool TilePathSampler_Init(
 	uint pixelX, pixelY;
 	if (samplerSharedData->tilePass < taskConfig->renderEngine.rtpathocl.previewResolutionReductionStep) {
 		const uint samplesPerRow = filmWidth / taskConfig->renderEngine.rtpathocl.previewResolutionReduction;
-		const uint subPixelX = gid % samplesPerRow;
-		const uint subPixelY = gid / samplesPerRow;
+		const uint subPixelX = taskIndex % samplesPerRow;
+		const uint subPixelY = taskIndex / samplesPerRow;
 
 		pixelX = subPixelX * taskConfig->renderEngine.rtpathocl.previewResolutionReduction;
 		pixelY = subPixelY * taskConfig->renderEngine.rtpathocl.previewResolutionReduction;
 	} else {
 		const uint samplesPerRow = filmWidth / taskConfig->renderEngine.rtpathocl.resolutionReduction;
-		const uint subPixelX = gid % samplesPerRow;
-		const uint subPixelY = gid / samplesPerRow;
+		const uint subPixelX = taskIndex % samplesPerRow;
+		const uint subPixelY = taskIndex / samplesPerRow;
 
 		pixelX = subPixelX * taskConfig->renderEngine.rtpathocl.resolutionReduction;
 		pixelY = subPixelY * taskConfig->renderEngine.rtpathocl.resolutionReduction;
@@ -165,10 +166,10 @@ OPENCL_FORCE_INLINE bool TilePathSampler_Init(
 
 	const uint aaSamples2 = Sqr(samplerSharedData->aaSamples);
 
-	if (gid >= filmWidth * filmHeight * aaSamples2)
+	if (taskIndex >= filmWidth * filmHeight * aaSamples2)
 		return false;
 
-	const uint pixelIndex = gid / aaSamples2;
+	const uint pixelIndex = taskIndex / aaSamples2;
 
 	const uint pixelX = pixelIndex % filmWidth;
 	const uint pixelY = pixelIndex / filmWidth;
@@ -185,7 +186,7 @@ OPENCL_FORCE_INLINE bool TilePathSampler_Init(
 	sample->rng0 = Rnd_FloatValue(&pixelSeed);
 	sample->rng1 = Rnd_FloatValue(&pixelSeed);
 
-	sample->pass = samplerSharedData->tilePass * aaSamples2 + gid % aaSamples2;
+	sample->pass = samplerSharedData->tilePass * aaSamples2 + taskIndex % aaSamples2;
 
 	__global const uint* restrict sobolDirections = TilePathSampler_GetSobolDirectionsPtr(samplerSharedData);
 

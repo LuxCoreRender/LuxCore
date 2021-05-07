@@ -43,15 +43,31 @@ typedef enum {
 	MK_RT_NEXT_VERTEX = 0,
 	MK_HIT_NOTHING = 1,
 	MK_HIT_OBJECT = 2,
-	MK_DL_ILLUMINATE = 3,
-	MK_DL_SAMPLE_BSDF = 4,
-	MK_RT_DL = 5,
+	MK_RT_DL = 3,
+	MK_DL_ILLUMINATE = 4,
+	MK_DL_SAMPLE_BSDF = 5,
 	MK_GENERATE_NEXT_VERTEX_RAY = 6,
 	MK_SPLAT_SAMPLE = 7,
 	MK_NEXT_SAMPLE = 8,
 	MK_GENERATE_CAMERA_RAY = 9,
-	MK_DONE = 10
+	MK_DONE = 10,
+	MK_COUNT = 11
 } PathState;
+
+#if defined(SLG_OPENCL_KERNEL)
+
+// TODO: remove the GPUTASK_COUNT conditional compilation
+
+typedef struct {
+	int stateQueueSize[MK_COUNT];
+	int stateIndices[MK_COUNT][GPUTASK_COUNT];
+
+	// Used to store temporary information during task state processing
+	int stateQueueSizeTmp;
+	int stateIndicesTmp[GPUTASK_COUNT];
+} GPUTaskQueues;
+
+#endif
 
 typedef struct {
 	union {

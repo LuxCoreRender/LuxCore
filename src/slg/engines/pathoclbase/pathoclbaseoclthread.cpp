@@ -102,6 +102,7 @@ PathOCLBaseOCLRenderThread::PathOCLBaseOCLRenderThread(const u_int index,
 	raysBuff = nullptr;
 	hitsBuff = nullptr;
 	taskConfigBuff = nullptr;
+	taskQueuesBuff = nullptr;
 	tasksBuff = nullptr;
 	tasksDirectLightBuff = nullptr;
 	tasksStateBuff = nullptr;
@@ -117,6 +118,19 @@ PathOCLBaseOCLRenderThread::PathOCLBaseOCLRenderThread(const u_int index,
 	// OpenCL kernels
 	initSeedKernel = nullptr;
 	initKernel = nullptr;
+
+	taskQueuesKernel_Init = nullptr;
+	taskQueuesKernel_Process_MK_RT_NEXT_VERTEX = nullptr;
+	taskQueuesKernel_Process_MK_HIT_NOTHING = nullptr;
+	taskQueuesKernel_Process_MK_HIT_OBJECT = nullptr;
+	taskQueuesKernel_Process_MK_RT_DL = nullptr;
+	taskQueuesKernel_Process_MK_DL_ILLUMINATE = nullptr;
+	taskQueuesKernel_Process_MK_DL_SAMPLE_BSDF = nullptr;
+	taskQueuesKernel_Process_MK_GENERATE_NEXT_VERTEX_RAY = nullptr;
+	taskQueuesKernel_Process_MK_SPLAT_SAMPLE = nullptr;
+	taskQueuesKernel_Process_MK_NEXT_SAMPLE = nullptr;
+	taskQueuesKernel_Process_MK_GENERATE_CAMERA_RAY = nullptr;
+
 	advancePathsKernel_MK_RT_NEXT_VERTEX = nullptr;
 	advancePathsKernel_MK_HIT_NOTHING = nullptr;
 	advancePathsKernel_MK_HIT_OBJECT = nullptr;
@@ -142,8 +156,22 @@ PathOCLBaseOCLRenderThread::~PathOCLBaseOCLRenderThread() {
 	FreeThreadFilms();
 
 	delete filmClearKernel;
+
 	delete initSeedKernel;
 	delete initKernel;
+
+	delete taskQueuesKernel_Init;
+	delete taskQueuesKernel_Process_MK_RT_NEXT_VERTEX;
+	delete taskQueuesKernel_Process_MK_HIT_NOTHING;
+	delete taskQueuesKernel_Process_MK_HIT_OBJECT;
+	delete taskQueuesKernel_Process_MK_RT_DL;
+	delete taskQueuesKernel_Process_MK_DL_ILLUMINATE;
+	delete taskQueuesKernel_Process_MK_DL_SAMPLE_BSDF;
+	delete taskQueuesKernel_Process_MK_GENERATE_NEXT_VERTEX_RAY;
+	delete taskQueuesKernel_Process_MK_SPLAT_SAMPLE;
+	delete taskQueuesKernel_Process_MK_NEXT_SAMPLE;
+	delete taskQueuesKernel_Process_MK_GENERATE_CAMERA_RAY;
+
 	delete advancePathsKernel_MK_RT_NEXT_VERTEX;
 	delete advancePathsKernel_MK_HIT_NOTHING;
 	delete advancePathsKernel_MK_HIT_OBJECT;
@@ -226,6 +254,7 @@ void PathOCLBaseOCLRenderThread::Stop() {
 	intersectionDevice->FreeBuffer(&raysBuff);
 	intersectionDevice->FreeBuffer(&hitsBuff);
 	intersectionDevice->FreeBuffer(&taskConfigBuff);
+	intersectionDevice->FreeBuffer(&taskQueuesBuff);
 	intersectionDevice->FreeBuffer(&tasksBuff);
 	intersectionDevice->FreeBuffer(&tasksDirectLightBuff);
 	intersectionDevice->FreeBuffer(&tasksStateBuff);

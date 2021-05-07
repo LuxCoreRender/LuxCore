@@ -100,6 +100,10 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl() {
 		intersectionDevice->EnqueueKernel(initSeedKernel,
 				HardwareDeviceRange(engine->taskCount), HardwareDeviceRange(initWorkGroupSize));
 
+		// Initialize task queues
+		intersectionDevice->EnqueueKernel(taskQueuesKernel_Init,
+				HardwareDeviceRange(engine->taskCount), HardwareDeviceRange(taskQueuesWorkGroupSize));
+
 		// Initialize the tasks buffer
 		intersectionDevice->EnqueueKernel(initKernel,
 				HardwareDeviceRange(engine->taskCount), HardwareDeviceRange(initWorkGroupSize));

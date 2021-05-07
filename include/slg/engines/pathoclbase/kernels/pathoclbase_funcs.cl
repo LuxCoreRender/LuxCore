@@ -36,18 +36,17 @@
 
 OPENCL_FORCE_INLINE void InitSampleResult(
 		__constant const GPUTaskConfiguration* restrict taskConfig,
+		const uint taskIndex,
 		const uint filmWidth, const uint filmHeight,
 		const uint filmSubRegion0, const uint filmSubRegion1,
 		const uint filmSubRegion2, const uint filmSubRegion3,
 		__global float *pixelFilterDistribution
 		SAMPLER_PARAM_DECL) {
-	const size_t gid = get_global_id(0);
-	__global SampleResult *sampleResult = &sampleResultsBuff[gid];
-
+	__global SampleResult *sampleResult = &sampleResultsBuff[taskIndex];
 	SampleResult_Init(&taskConfig->film, sampleResult);
 
-	float filmX = Sampler_GetSample(taskConfig, IDX_SCREEN_X SAMPLER_PARAM);
-	float filmY = Sampler_GetSample(taskConfig, IDX_SCREEN_Y SAMPLER_PARAM);
+	float filmX = Sampler_GetSample(taskConfig, taskIndex, IDX_SCREEN_X SAMPLER_PARAM);
+	float filmY = Sampler_GetSample(taskConfig, taskIndex, IDX_SCREEN_Y SAMPLER_PARAM);
 
 	// Metropolis return IDX_SCREEN_X and IDX_SCREEN_Y between [0.0, 1.0] instead
 	// that in film pixels like RANDOM and SOBOL samplers
@@ -80,6 +79,7 @@ OPENCL_FORCE_INLINE void InitSampleResult(
 
 OPENCL_FORCE_INLINE void GenerateEyePath(
 		__constant const GPUTaskConfiguration* restrict taskConfig,
+		const uint taskIndex,
 		__global GPUTaskDirectLight *taskDirectLight,
 		__global GPUTaskState *taskState,
 		__global const Camera* restrict camera,
@@ -97,12 +97,12 @@ OPENCL_FORCE_INLINE void GenerateEyePath(
 		const uint tileStartX, const uint tileStartY
 #endif
 		SAMPLER_PARAM_DECL) {
-	const size_t gid = get_global_id(0);
-	__global SampleResult *sampleResult = &sampleResultsBuff[gid];
+	__global SampleResult *sampleResult = &sampleResultsBuff[taskIndex];
 
 	EyePathInfo_Init(pathInfo);
 
 	InitSampleResult(taskConfig,
+			taskIndex,
 			filmWidth, filmHeight,
 			filmSubRegion0, filmSubRegion1,
 			filmSubRegion2, filmSubRegion3,
@@ -110,10 +110,10 @@ OPENCL_FORCE_INLINE void GenerateEyePath(
 			SAMPLER_PARAM);
 
 	// Generate the came ray
-	const float timeSample = Sampler_GetSample(taskConfig, IDX_EYE_TIME SAMPLER_PARAM);
+	const float timeSample = Sampler_GetSample(taskConfig, taskIndex, IDX_EYE_TIME SAMPLER_PARAM);
 
-	const float dofSampleX = Sampler_GetSample(taskConfig, IDX_DOF_X SAMPLER_PARAM);
-	const float dofSampleY = Sampler_GetSample(taskConfig, IDX_DOF_Y SAMPLER_PARAM);
+	const float dofSampleX = Sampler_GetSample(taskConfig, taskIndex, IDX_DOF_X SAMPLER_PARAM);
+	const float dofSampleY = Sampler_GetSample(taskConfig, taskIndex, IDX_DOF_Y SAMPLER_PARAM);
 
 #if defined(RENDER_ENGINE_TILEPATHOCL) || defined(RENDER_ENGINE_RTPATHOCL)
 	Camera_GenerateRay(camera, cameraBokehDistribution, cameraFilmWidth, cameraFilmHeight,
@@ -144,7 +144,7 @@ OPENCL_FORCE_INLINE void GenerateEyePath(
 	// Initialize the pass-through event seed
 	//
 	// Note: using the IDX_PASSTHROUGH of path depth 0
-	const float passThroughEvent = Sampler_GetSample(taskConfig, IDX_BSDF_OFFSET + IDX_PASSTHROUGH SAMPLER_PARAM);
+	const float passThroughEvent = Sampler_GetSample(taskConfig, taskIndex, IDX_BSDF_OFFSET + IDX_PASSTHROUGH SAMPLER_PARAM);
 	Seed seedPassThroughEvent;
 	Rnd_InitFloat(passThroughEvent, &seedPassThroughEvent);
 	taskState->seedPassThroughEvent = seedPassThroughEvent;
@@ -447,6 +447,7 @@ OPENCL_FORCE_INLINE bool DirectLight_BSDFSampling(
 
 #define KERNEL_ARGS \
 		__constant const GPUTaskConfiguration* restrict taskConfig \
+		, __global GPUTaskQueues *taskQueues \
 		, __global GPUTask *tasks \
 		, __global GPUTaskDirectLight *tasksDirectLight \
 		, __global GPUTaskState *tasksState \
@@ -528,7 +529,124 @@ OPENCL_FORCE_INLINE bool DirectLight_BSDFSampling(
 	imageMapBuff[7] = imageMapBuff7;
 
 //------------------------------------------------------------------------------
-// Init Kernels
+// Task queues functions and kernels
+//------------------------------------------------------------------------------
+
+//#define DEBUG_PRINTF_TASKQUEUES 1
+
+__kernel void TaskQueues_Init(__global GPUTaskQueues *taskQueues) {
+	const size_t gid = get_global_id(0);
+	
+	if (gid == 0) {
+		for (uint i = 0; i < MK_COUNT; ++i)
+			taskQueues->stateQueueSize[i] = 0;
+
+		taskQueues->stateQueueSizeTmp = 0;
+	}
+}
+
+OPENCL_FORCE_INLINE void AddToTaskQueue(__global GPUTaskQueues *taskQueues,
+		const PathState toState, const uint taskIndex) {
+	// Add the task to the new queue
+	const uint newThreadIndex = atomic_inc(&taskQueues->stateQueueSize[toState]);
+	taskQueues->stateIndices[toState][newThreadIndex] = taskIndex;
+}
+
+OPENCL_FORCE_INLINE void MoveToTaskQueue(__global GPUTaskQueues *taskQueues,
+		const PathState fromState, const PathState toState, const uint taskIndex) {
+	if (fromState == toState) {
+		// Add the task to the temporary copy of the current queue
+		const uint newThreadIndex = atomic_inc(&taskQueues->stateQueueSizeTmp);
+		taskQueues->stateIndicesTmp[newThreadIndex] = taskIndex;
+	} else {
+		// Add the task to the new queue
+		const uint newThreadIndex = atomic_inc(&taskQueues->stateQueueSize[toState]);
+		taskQueues->stateIndices[toState][newThreadIndex] = taskIndex;
+	}
+}
+
+OPENCL_FORCE_INLINE void PrintSpaces(const uint spaceCount) {
+	for (uint i = 0; i < spaceCount; ++i)
+		printf(" ");
+}
+
+OPENCL_FORCE_INLINE void PrintTaskQueues(__global GPUTaskQueues *taskQueues, const uint spaceCount) {
+	for (uint i = 0; i < MK_COUNT; ++i) {
+		PrintSpaces(spaceCount);
+		printf("Queue #%d size = %d\n", i, taskQueues->stateQueueSize[i]);
+	}
+
+	PrintSpaces(spaceCount);
+	printf("Queue Tmp size = %d\n", taskQueues->stateQueueSizeTmp);
+}
+
+OPENCL_FORCE_INLINE void TaskQueues_Process(__global GPUTaskQueues *taskQueues, const uint stateIndex) {
+	const size_t gid = get_global_id(0);
+
+#if defined(DEBUG_PRINTF_TASKQUEUES)
+	if (gid == 0) {
+		printf("===========================================================\n");
+		printf("Before TaskQueues_#%d kernel: \n", stateIndex);
+		PrintTaskQueues(taskQueues, 2);
+	}
+#endif
+	
+	if (gid == 0) {
+		taskQueues->stateQueueSize[stateIndex] = taskQueues->stateQueueSizeTmp;
+		taskQueues->stateQueueSizeTmp = 0;
+	}
+	taskQueues->stateIndices[stateIndex][gid] = taskQueues->stateIndicesTmp[gid];
+
+#if defined(DEBUG_PRINTF_TASKQUEUES)
+	if (gid == 0) {
+		printf("After TaskQueues_#%d kernel: \n", stateIndex);
+		PrintTaskQueues(taskQueues, 2);
+	}
+#endif
+}
+
+__kernel void TaskQueues_Process_MK_RT_NEXT_VERTEX(__global GPUTaskQueues *taskQueues) {
+	TaskQueues_Process(taskQueues, (uint)MK_RT_NEXT_VERTEX);
+}
+
+__kernel void TaskQueues_Process_MK_HIT_NOTHING(__global GPUTaskQueues *taskQueues) {
+	TaskQueues_Process(taskQueues, (uint)MK_HIT_NOTHING);
+}
+
+__kernel void TaskQueues_Process_MK_HIT_OBJECT(__global GPUTaskQueues *taskQueues) {
+	TaskQueues_Process(taskQueues, (uint)MK_HIT_OBJECT);
+}
+
+__kernel void TaskQueues_Process_MK_DL_ILLUMINATE(__global GPUTaskQueues *taskQueues) {
+	TaskQueues_Process(taskQueues, (uint)MK_DL_ILLUMINATE);
+}
+
+__kernel void TaskQueues_Process_MK_DL_SAMPLE_BSDF(__global GPUTaskQueues *taskQueues) {
+	TaskQueues_Process(taskQueues, (uint)MK_DL_SAMPLE_BSDF);
+}
+
+__kernel void TaskQueues_Process_MK_RT_DL(__global GPUTaskQueues *taskQueues) {
+	TaskQueues_Process(taskQueues, (uint)MK_RT_DL);
+}
+
+__kernel void TaskQueues_Process_MK_GENERATE_NEXT_VERTEX_RAY(__global GPUTaskQueues *taskQueues) {
+	TaskQueues_Process(taskQueues, (uint)MK_GENERATE_NEXT_VERTEX_RAY);
+}
+
+__kernel void TaskQueues_Process_MK_SPLAT_SAMPLE(__global GPUTaskQueues *taskQueues) {
+	TaskQueues_Process(taskQueues, (uint)MK_SPLAT_SAMPLE);
+}
+
+__kernel void TaskQueues_Process_MK_NEXT_SAMPLE(__global GPUTaskQueues *taskQueues) {
+	TaskQueues_Process(taskQueues, (uint)MK_NEXT_SAMPLE);
+}
+
+__kernel void TaskQueues_Process_MK_GENERATE_CAMERA_RAY(__global GPUTaskQueues *taskQueues) {
+	TaskQueues_Process(taskQueues, (uint)MK_GENERATE_CAMERA_RAY);
+}
+
+//------------------------------------------------------------------------------
+// InitSeed Kernels
 //------------------------------------------------------------------------------
 
 __kernel void InitSeed(__global GPUTask *tasks,
@@ -545,8 +663,15 @@ __kernel void InitSeed(__global GPUTask *tasks,
 	task->seed = seed;
 }
 
+//------------------------------------------------------------------------------
+// Initialization of the Path finite state machine.
+//
+// To: MK_DONE or MK_GENERATE_CAMERA_RAY or MK_RT_NEXT_VERTEX
+//------------------------------------------------------------------------------
+
 __kernel void Init(
 		__constant const GPUTaskConfiguration* restrict taskConfig,
+		__global GPUTaskQueues *taskQueues,
 		__global GPUTask *tasks,
 		__global GPUTaskDirectLight *tasksDirectLight,
 		__global GPUTaskState *tasksState,
@@ -562,25 +687,28 @@ __kernel void Init(
 		__global const float* restrict cameraBokehDistribution
 		KERNEL_ARGS_FILM
 		) {
-	const size_t gid = get_global_id(0);
-
-	__global GPUTaskState *taskState = &tasksState[gid];
+	const size_t threadIndex = get_global_id(0);
+	const uint taskIndex = threadIndex;
+	
+	__global GPUTaskState *taskState = &tasksState[taskIndex];
 
 #if defined(RENDER_ENGINE_TILEPATHOCL) || defined(RENDER_ENGINE_RTPATHOCL)
 	__global TilePathSamplerSharedData *samplerSharedData = (__global TilePathSamplerSharedData *)samplerSharedDataBuff;
 
-	if (gid >= filmWidth * filmHeight * Sqr(samplerSharedData->aaSamples)) {
+	if (taskIndex >= filmWidth * filmHeight * Sqr(samplerSharedData->aaSamples)) {
 		taskState->state = MK_DONE;
-		// Mark the ray like like one to NOT trace
-		rays[gid].flags = RAY_FLAGS_MASKED;
+		// Mark the ray like one to NOT trace
+		rays[taskIndex].flags = RAY_FLAGS_MASKED;
+
+		AddToTaskQueue(taskQueues, MK_DONE, taskIndex);
 
 		return;
 	}
 #endif
 
 	// Initialize the task
-	__global GPUTask *task = &tasks[gid];
-	__global GPUTaskDirectLight *taskDirectLight = &tasksDirectLight[gid];
+	__global GPUTask *task = &tasks[taskIndex];
+	__global GPUTaskDirectLight *taskDirectLight = &tasksDirectLight[taskIndex];
 
 	// Read the seed
 	Seed seedValue = task->seed;
@@ -589,6 +717,7 @@ __kernel void Init(
 
 	// Initialize the sample and path
 	const bool validSample = Sampler_Init(taskConfig,
+			taskIndex,
 			filmNoise,
 			filmUserImportance,
 			filmWidth, filmHeight,
@@ -606,14 +735,15 @@ __kernel void Init(
 
 		// Generate the eye path
 		GenerateEyePath(taskConfig,
+				taskIndex,
 				taskDirectLight, taskState,
 				camera,
 				cameraBokehDistribution,
 				filmWidth, filmHeight,
 				filmSubRegion0, filmSubRegion1, filmSubRegion2, filmSubRegion3,
 				pixelFilterDistribution,
-				&rays[gid],
-				&eyePathInfos[gid]
+				&rays[taskIndex],
+				&eyePathInfos[taskIndex]
 #if defined(RENDER_ENGINE_TILEPATHOCL) || defined(RENDER_ENGINE_RTPATHOCL)
 				, cameraFilmWidth, cameraFilmHeight,
 				tileStartX, tileStartY
@@ -625,13 +755,15 @@ __kernel void Init(
 #else
 		taskState->state = MK_GENERATE_CAMERA_RAY;
 #endif
-		// Mark the ray like like one to NOT trace
-		rays[gid].flags = RAY_FLAGS_MASKED;
+		// Mark the ray like one to NOT trace
+		rays[taskIndex].flags = RAY_FLAGS_MASKED;
 	}
 
 	// Save the seed
 	task->seed = seedValue;
 
-	__global GPUTaskStats *taskStat = &taskStats[gid];
+	__global GPUTaskStats *taskStat = &taskStats[taskIndex];
 	taskStat->sampleCount = 0;
+
+	AddToTaskQueue(taskQueues, taskState->state, taskIndex);
 }

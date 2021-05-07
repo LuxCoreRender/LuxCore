@@ -62,12 +62,15 @@ void PathOCLBaseOCLRenderThread::GetKernelParamters(
 		vector<string> &params,
 		HardwareIntersectionDevice *intersectionDevice,
 		const string renderEngineType,
-		const float epsilonMin, const float epsilonMax) {
+		const float epsilonMin, const float epsilonMax,
+		const u_int taskCount) {
 	params.push_back("-D LUXRAYS_OPENCL_KERNEL");
 	params.push_back("-D SLG_OPENCL_KERNEL");
 	params.push_back("-D RENDER_ENGINE_" + renderEngineType);
 	params.push_back("-D PARAM_RAY_EPSILON_MIN=" + ToString(epsilonMin) + "f");
 	params.push_back("-D PARAM_RAY_EPSILON_MAX=" + ToString(epsilonMax) + "f");
+	// TODO: remove the GPUTASK_COUNT conditional compilation
+	params.push_back("-D GPUTASK_COUNT=" + ToString(taskCount));
 
 	const OpenCLDeviceDescription *oclDeviceDesc = dynamic_cast<const OpenCLDeviceDescription *>(intersectionDevice->GetDeviceDesc());
 	if (oclDeviceDesc) {
@@ -263,7 +266,8 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 	vector<string> kernelsParameters;
 	GetKernelParamters(kernelsParameters, intersectionDevice,
 			RenderEngine::RenderEngineType2String(renderEngine->GetType()),
-			MachineEpsilon::GetMin(), MachineEpsilon::GetMax());
+			MachineEpsilon::GetMin(), MachineEpsilon::GetMax(),
+			renderEngine->taskCount);
 
 	const string kernelSource = GetKernelSources();
 
@@ -305,12 +309,39 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 
 	// Init kernel
 
+	size_t workGroupSize;
 	CompileKernel(intersectionDevice, program, &initSeedKernel, &initWorkGroupSize, "InitSeed");
-	CompileKernel(intersectionDevice, program, &initKernel, &initWorkGroupSize, "Init");
+	CompileKernel(intersectionDevice, program, &initKernel, &workGroupSize, "Init");
+	initWorkGroupSize = Min(initWorkGroupSize, workGroupSize);
+	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Init* workgroup size: " << initWorkGroupSize);
+	
+	// Task queues kernels
+		
+	CompileKernel(intersectionDevice, program, &taskQueuesKernel_Init, &taskQueuesWorkGroupSize, "TaskQueues_Init");
+	CompileKernel(intersectionDevice, program, &taskQueuesKernel_Process_MK_RT_NEXT_VERTEX, &workGroupSize, "TaskQueues_Process_MK_RT_NEXT_VERTEX");
+	taskQueuesWorkGroupSize = Min(taskQueuesWorkGroupSize, workGroupSize);
+	CompileKernel(intersectionDevice, program, &taskQueuesKernel_Process_MK_HIT_NOTHING, &workGroupSize, "TaskQueues_Process_MK_HIT_NOTHING");
+	taskQueuesWorkGroupSize = Min(taskQueuesWorkGroupSize, workGroupSize);
+	CompileKernel(intersectionDevice, program, &taskQueuesKernel_Process_MK_HIT_OBJECT, &workGroupSize, "TaskQueues_Process_MK_HIT_OBJECT");
+	taskQueuesWorkGroupSize = Min(taskQueuesWorkGroupSize, workGroupSize);
+	CompileKernel(intersectionDevice, program, &taskQueuesKernel_Process_MK_RT_DL, &workGroupSize, "TaskQueues_Process_MK_RT_DL");
+	taskQueuesWorkGroupSize = Min(taskQueuesWorkGroupSize, workGroupSize);
+	CompileKernel(intersectionDevice, program, &taskQueuesKernel_Process_MK_DL_ILLUMINATE, &workGroupSize, "TaskQueues_Process_MK_DL_ILLUMINATE");
+	taskQueuesWorkGroupSize = Min(taskQueuesWorkGroupSize, workGroupSize);
+	CompileKernel(intersectionDevice, program, &taskQueuesKernel_Process_MK_DL_SAMPLE_BSDF, &workGroupSize, "TaskQueues_Process_MK_DL_SAMPLE_BSDF");
+	taskQueuesWorkGroupSize = Min(taskQueuesWorkGroupSize, workGroupSize);
+	CompileKernel(intersectionDevice, program, &taskQueuesKernel_Process_MK_GENERATE_NEXT_VERTEX_RAY, &workGroupSize, "TaskQueues_Process_MK_GENERATE_NEXT_VERTEX_RAY");
+	taskQueuesWorkGroupSize = Min(taskQueuesWorkGroupSize, workGroupSize);
+	CompileKernel(intersectionDevice, program, &taskQueuesKernel_Process_MK_SPLAT_SAMPLE, &workGroupSize, "TaskQueues_Process_MK_SPLAT_SAMPLE");
+	taskQueuesWorkGroupSize = Min(taskQueuesWorkGroupSize, workGroupSize);
+	CompileKernel(intersectionDevice, program, &taskQueuesKernel_Process_MK_NEXT_SAMPLE, &workGroupSize, "TaskQueues_Process_MK_NEXT_SAMPLE");
+	taskQueuesWorkGroupSize = Min(taskQueuesWorkGroupSize, workGroupSize);
+	CompileKernel(intersectionDevice, program, &taskQueuesKernel_Process_MK_GENERATE_CAMERA_RAY, &workGroupSize, "TaskQueues_Process_MK_GENERATE_CAMERA_RAY");
+	taskQueuesWorkGroupSize = Min(taskQueuesWorkGroupSize, workGroupSize);
+	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] TaskQueues* workgroup size: " << taskQueuesWorkGroupSize);
 
 	// AdvancePaths kernel (Micro-Kernels)
 
-	size_t workGroupSize;
 	CompileKernel(intersectionDevice, program, &advancePathsKernel_MK_RT_NEXT_VERTEX, &advancePathsWorkGroupSize,
 			"AdvancePaths_MK_RT_NEXT_VERTEX");
 	CompileKernel(intersectionDevice, program, &advancePathsKernel_MK_HIT_NOTHING, &workGroupSize,
@@ -357,6 +388,7 @@ void PathOCLBaseOCLRenderThread::SetInitKernelArgs(const u_int filmIndex) {
 	// initKernel kernel
 	argIndex = 0;
 	intersectionDevice->SetKernelArg(initKernel, argIndex++, taskConfigBuff);
+	intersectionDevice->SetKernelArg(initKernel, argIndex++, taskQueuesBuff);
 	intersectionDevice->SetKernelArg(initKernel, argIndex++, tasksBuff);
 	intersectionDevice->SetKernelArg(initKernel, argIndex++, tasksDirectLightBuff);
 	intersectionDevice->SetKernelArg(initKernel, argIndex++, tasksStateBuff);
@@ -377,11 +409,26 @@ void PathOCLBaseOCLRenderThread::SetInitKernelArgs(const u_int filmIndex) {
 	initKernelArgsCount = argIndex;
 }
 
+void PathOCLBaseOCLRenderThread::SetTaskQueuesKernelArgs() {
+	intersectionDevice->SetKernelArg(taskQueuesKernel_Init, 0, taskQueuesBuff);
+	intersectionDevice->SetKernelArg(taskQueuesKernel_Process_MK_RT_NEXT_VERTEX, 0, taskQueuesBuff);
+	intersectionDevice->SetKernelArg(taskQueuesKernel_Process_MK_HIT_NOTHING, 0, taskQueuesBuff);
+	intersectionDevice->SetKernelArg(taskQueuesKernel_Process_MK_HIT_OBJECT, 0, taskQueuesBuff);
+	intersectionDevice->SetKernelArg(taskQueuesKernel_Process_MK_RT_DL, 0, taskQueuesBuff);
+	intersectionDevice->SetKernelArg(taskQueuesKernel_Process_MK_DL_ILLUMINATE, 0, taskQueuesBuff);
+	intersectionDevice->SetKernelArg(taskQueuesKernel_Process_MK_DL_SAMPLE_BSDF, 0, taskQueuesBuff);
+	intersectionDevice->SetKernelArg(taskQueuesKernel_Process_MK_GENERATE_NEXT_VERTEX_RAY, 0, taskQueuesBuff);
+	intersectionDevice->SetKernelArg(taskQueuesKernel_Process_MK_SPLAT_SAMPLE, 0, taskQueuesBuff);
+	intersectionDevice->SetKernelArg(taskQueuesKernel_Process_MK_NEXT_SAMPLE, 0, taskQueuesBuff);
+	intersectionDevice->SetKernelArg(taskQueuesKernel_Process_MK_GENERATE_CAMERA_RAY, 0, taskQueuesBuff);
+}
+
 void PathOCLBaseOCLRenderThread::SetAdvancePathsKernelArgs(HardwareDeviceKernel *advancePathsKernel, const u_int filmIndex) {
 	CompiledScene *cscene = renderEngine->compiledScene;
 
 	u_int argIndex = 0;
 	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, taskConfigBuff);
+	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, taskQueuesBuff);
 	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, tasksBuff);
 	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, tasksDirectLightBuff);
 	intersectionDevice->SetKernelArg(advancePathsKernel, argIndex++, tasksStateBuff);
@@ -499,6 +546,12 @@ void PathOCLBaseOCLRenderThread::SetKernelArgs() {
 	boost::unique_lock<boost::mutex> lock(renderEngine->setKernelArgsMutex);
 
 	//--------------------------------------------------------------------------
+	// initKernel
+	//--------------------------------------------------------------------------
+
+	SetInitKernelArgs(0);
+
+	//--------------------------------------------------------------------------
 	// advancePathsKernels
 	//--------------------------------------------------------------------------
 
@@ -507,8 +560,8 @@ void PathOCLBaseOCLRenderThread::SetKernelArgs() {
 	//--------------------------------------------------------------------------
 	// initKernel
 	//--------------------------------------------------------------------------
-
-	SetInitKernelArgs(0);
+	
+	SetTaskQueuesKernelArgs();
 }
 
 void PathOCLBaseOCLRenderThread::EnqueueAdvancePathsKernel() {
@@ -517,24 +570,53 @@ void PathOCLBaseOCLRenderThread::EnqueueAdvancePathsKernel() {
 	// Micro kernels version
 	intersectionDevice->EnqueueKernel(advancePathsKernel_MK_RT_NEXT_VERTEX,
 			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSize));
+	intersectionDevice->EnqueueKernel(taskQueuesKernel_Process_MK_RT_NEXT_VERTEX,
+			HardwareDeviceRange(taskCount), HardwareDeviceRange(taskQueuesWorkGroupSize));
+	
 	intersectionDevice->EnqueueKernel(advancePathsKernel_MK_HIT_NOTHING,
 			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSize));
+	intersectionDevice->EnqueueKernel(taskQueuesKernel_Process_MK_HIT_NOTHING,
+			HardwareDeviceRange(taskCount), HardwareDeviceRange(taskQueuesWorkGroupSize));
+
 	intersectionDevice->EnqueueKernel(advancePathsKernel_MK_HIT_OBJECT,
 			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSize));
+	intersectionDevice->EnqueueKernel(taskQueuesKernel_Process_MK_HIT_OBJECT,
+			HardwareDeviceRange(taskCount), HardwareDeviceRange(taskQueuesWorkGroupSize));
+
 	intersectionDevice->EnqueueKernel(advancePathsKernel_MK_RT_DL,
 			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSize));
+	intersectionDevice->EnqueueKernel(taskQueuesKernel_Process_MK_RT_DL,
+			HardwareDeviceRange(taskCount), HardwareDeviceRange(taskQueuesWorkGroupSize));
+
 	intersectionDevice->EnqueueKernel(advancePathsKernel_MK_DL_ILLUMINATE,
 			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSize));
+	intersectionDevice->EnqueueKernel(taskQueuesKernel_Process_MK_DL_ILLUMINATE,
+			HardwareDeviceRange(taskCount), HardwareDeviceRange(taskQueuesWorkGroupSize));
+
 	intersectionDevice->EnqueueKernel(advancePathsKernel_MK_DL_SAMPLE_BSDF,
 			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSize));
+	intersectionDevice->EnqueueKernel(taskQueuesKernel_Process_MK_DL_SAMPLE_BSDF,
+			HardwareDeviceRange(taskCount), HardwareDeviceRange(taskQueuesWorkGroupSize));
+
 	intersectionDevice->EnqueueKernel(advancePathsKernel_MK_GENERATE_NEXT_VERTEX_RAY,
 			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSize));
+	intersectionDevice->EnqueueKernel(taskQueuesKernel_Process_MK_GENERATE_NEXT_VERTEX_RAY,
+			HardwareDeviceRange(taskCount), HardwareDeviceRange(taskQueuesWorkGroupSize));
+
 	intersectionDevice->EnqueueKernel(advancePathsKernel_MK_SPLAT_SAMPLE,
 			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSize));
+	intersectionDevice->EnqueueKernel(taskQueuesKernel_Process_MK_SPLAT_SAMPLE,
+			HardwareDeviceRange(taskCount), HardwareDeviceRange(taskQueuesWorkGroupSize));
+
 	intersectionDevice->EnqueueKernel(advancePathsKernel_MK_NEXT_SAMPLE,
 			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSize));
+	intersectionDevice->EnqueueKernel(taskQueuesKernel_Process_MK_NEXT_SAMPLE,
+			HardwareDeviceRange(taskCount), HardwareDeviceRange(taskQueuesWorkGroupSize));
+
 	intersectionDevice->EnqueueKernel(advancePathsKernel_MK_GENERATE_CAMERA_RAY,
 			HardwareDeviceRange(taskCount), HardwareDeviceRange(advancePathsWorkGroupSize));
+	intersectionDevice->EnqueueKernel(taskQueuesKernel_Process_MK_GENERATE_CAMERA_RAY,
+			HardwareDeviceRange(taskCount), HardwareDeviceRange(taskQueuesWorkGroupSize));
 }
 
 #endif

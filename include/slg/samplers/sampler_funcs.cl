@@ -24,17 +24,18 @@
 
 OPENCL_FORCE_INLINE float Sampler_GetSample(
 		__constant const GPUTaskConfiguration* restrict taskConfig,
+		const uint taskIndex,
 		const uint index
 		SAMPLER_PARAM_DECL) {
 	switch (taskConfig->sampler.type) {
 		case RANDOM:
-			return RandomSampler_GetSample(taskConfig, index SAMPLER_PARAM);
+			return RandomSampler_GetSample(taskConfig, taskIndex, index SAMPLER_PARAM);
 		case SOBOL:
-			return SobolSampler_GetSample(taskConfig, index SAMPLER_PARAM);
+			return SobolSampler_GetSample(taskConfig, taskIndex, index SAMPLER_PARAM);
 		case METROPOLIS:
-			return MetropolisSampler_GetSample(taskConfig, index SAMPLER_PARAM);
+			return MetropolisSampler_GetSample(taskConfig, taskIndex, index SAMPLER_PARAM);
 		case TILEPATHSAMPLER:
-			return TilePathSampler_GetSample(taskConfig, index SAMPLER_PARAM);
+			return TilePathSampler_GetSample(taskConfig, taskIndex, index SAMPLER_PARAM);
 		default:
 			// Something has gone very wrong here
 			return 0.f;
@@ -43,25 +44,30 @@ OPENCL_FORCE_INLINE float Sampler_GetSample(
 
 // Cuda reports large argument size, so overrides noinline attribute anyway
 OPENCL_FORCE_INLINE void Sampler_SplatSample(
-		__constant const GPUTaskConfiguration* restrict taskConfig
+		__constant const GPUTaskConfiguration* restrict taskConfig,
+		const uint taskIndex
 		SAMPLER_PARAM_DECL
 		FILM_PARAM_DECL
 		) {
 	switch (taskConfig->sampler.type) {
 		case RANDOM:
-			return RandomSampler_SplatSample(taskConfig
+			return RandomSampler_SplatSample(taskConfig,
+					taskIndex
 					SAMPLER_PARAM
 					FILM_PARAM);
 		case SOBOL:
-			return SobolSampler_SplatSample(taskConfig
+			return SobolSampler_SplatSample(taskConfig,
+					taskIndex
 					SAMPLER_PARAM
 					FILM_PARAM);
 		case METROPOLIS:
-			return MetropolisSampler_SplatSample(taskConfig
+			return MetropolisSampler_SplatSample(taskConfig,
+					taskIndex
 					SAMPLER_PARAM
 					FILM_PARAM);
 		case TILEPATHSAMPLER:
-			return TilePathSampler_SplatSample(taskConfig
+			return TilePathSampler_SplatSample(taskConfig,
+					taskIndex
 					SAMPLER_PARAM
 					FILM_PARAM);
 		default:
@@ -72,6 +78,7 @@ OPENCL_FORCE_INLINE void Sampler_SplatSample(
 
 OPENCL_FORCE_NOT_INLINE void Sampler_NextSample(
 		__constant const GPUTaskConfiguration* restrict taskConfig,
+		const uint taskIndex,
 		__global float *filmNoise,
 		__global float *filmUserImportance,
 		const uint filmWidth, const uint filmHeight,
@@ -81,6 +88,7 @@ OPENCL_FORCE_NOT_INLINE void Sampler_NextSample(
 	switch (taskConfig->sampler.type) {
 		case RANDOM:
 			return RandomSampler_NextSample(taskConfig,
+					taskIndex,
 					filmNoise,
 					filmUserImportance,
 					filmWidth, filmHeight,
@@ -89,6 +97,7 @@ OPENCL_FORCE_NOT_INLINE void Sampler_NextSample(
 					SAMPLER_PARAM);
 		case SOBOL:
 			return SobolSampler_NextSample(taskConfig,
+					taskIndex,
 					filmNoise,
 					filmUserImportance,
 					filmWidth, filmHeight,
@@ -97,6 +106,7 @@ OPENCL_FORCE_NOT_INLINE void Sampler_NextSample(
 					SAMPLER_PARAM);
 		case METROPOLIS:
 			return MetropolisSampler_NextSample(taskConfig,
+					taskIndex,
 					filmNoise,
 					filmUserImportance,
 					filmWidth, filmHeight,
@@ -105,6 +115,7 @@ OPENCL_FORCE_NOT_INLINE void Sampler_NextSample(
 					SAMPLER_PARAM);
 		case TILEPATHSAMPLER:
 			return TilePathSampler_NextSample(taskConfig,
+					taskIndex,
 					filmNoise,
 					filmUserImportance,
 					filmWidth, filmHeight,
@@ -119,6 +130,7 @@ OPENCL_FORCE_NOT_INLINE void Sampler_NextSample(
 
 OPENCL_FORCE_NOT_INLINE bool Sampler_Init(
 		__constant const GPUTaskConfiguration* restrict taskConfig,
+		const uint taskIndex,
 		__global float *filmNoise,
 		__global float *filmUserImportance,
 		const uint filmWidth, const uint filmHeight,
@@ -128,6 +140,7 @@ OPENCL_FORCE_NOT_INLINE bool Sampler_Init(
 	switch (taskConfig->sampler.type) {
 		case RANDOM:
 			return RandomSampler_Init(taskConfig,
+					taskIndex,
 					filmNoise,
 					filmUserImportance,
 					filmWidth, filmHeight,
@@ -136,6 +149,7 @@ OPENCL_FORCE_NOT_INLINE bool Sampler_Init(
 					SAMPLER_PARAM);
 		case SOBOL:
 			return SobolSampler_Init(taskConfig,
+					taskIndex,
 					filmNoise,
 					filmUserImportance,
 					filmWidth, filmHeight,
@@ -144,6 +158,7 @@ OPENCL_FORCE_NOT_INLINE bool Sampler_Init(
 					SAMPLER_PARAM);
 		case METROPOLIS:
 			return MetropolisSampler_Init(taskConfig,
+					taskIndex,
 					filmNoise,
 					filmUserImportance,
 					filmWidth, filmHeight,
@@ -152,6 +167,7 @@ OPENCL_FORCE_NOT_INLINE bool Sampler_Init(
 					SAMPLER_PARAM);
 		case TILEPATHSAMPLER:
 			return TilePathSampler_Init(taskConfig,
+					taskIndex,
 					filmNoise,
 					filmUserImportance,
 					filmWidth, filmHeight,

@@ -24,16 +24,15 @@
 
 #define METROPOLISSAMPLER_TOTAL_U_SIZE (IDX_BSDF_OFFSET + taskConfig->pathTracer.maxPathDepth.depth * VERTEX_SAMPLE_SIZE)
 
-
 OPENCL_FORCE_INLINE float MetropolisSampler_GetSample(
 		__constant const GPUTaskConfiguration* restrict taskConfig,
+		const uint taskIndex,
 		const uint index
 		SAMPLER_PARAM_DECL) {
-	const size_t gid = get_global_id(0);
 	__global MetropolisSample *samples = (__global MetropolisSample *)samplesBuff;
-	__global MetropolisSample *sample = &samples[gid];
+	__global MetropolisSample *sample = &samples[taskIndex];
 
-	__global float *samplesData = &samplesDataBuff[gid * METROPOLISSAMPLER_TOTAL_U_SIZE] +
+	__global float *samplesData = &samplesDataBuff[taskIndex * METROPOLISSAMPLER_TOTAL_U_SIZE] +
 			sample->proposed * METROPOLISSAMPLER_TOTAL_U_SIZE;
 
 	return samplesData[index];
@@ -104,14 +103,14 @@ OPENCL_FORCE_INLINE void SmallStep(__constant const GPUTaskConfiguration* restri
 }
 
 OPENCL_FORCE_INLINE void MetropolisSampler_SplatSample(
-		__constant const GPUTaskConfiguration* restrict taskConfig
+		__constant const GPUTaskConfiguration* restrict taskConfig,
+		const uint taskIndex
 		SAMPLER_PARAM_DECL
 		FILM_PARAM_DECL
 		) {
-	const size_t gid = get_global_id(0);
 	__global MetropolisSample *samples = (__global MetropolisSample *)samplesBuff;
-	__global MetropolisSample *sample = &samples[gid];
-	__global SampleResult *sampleResult = &sampleResultsBuff[gid];
+	__global MetropolisSample *sample = &samples[taskIndex];
+	__global SampleResult *sampleResult = &sampleResultsBuff[taskIndex];
 
 	//--------------------------------------------------------------------------
 	// Accept/Reject the sample
@@ -233,27 +232,27 @@ OPENCL_FORCE_INLINE void MetropolisSampler_SplatSample(
 
 OPENCL_FORCE_INLINE void MetropolisSampler_NextSample(
 		__constant const GPUTaskConfiguration* restrict taskConfig,
+		const uint taskIndex,
 		__global float *filmNoise,
 		__global float *filmUserImportance,
 		const uint filmWidth, const uint filmHeight,
 		const uint filmSubRegion0, const uint filmSubRegion1,
 		const uint filmSubRegion2, const uint filmSubRegion3
 		SAMPLER_PARAM_DECL) {
-	const size_t gid = get_global_id(0);
 	__global MetropolisSample *samples = (__global MetropolisSample *)samplesBuff;
-	__global MetropolisSample *sample = &samples[gid];
+	__global MetropolisSample *sample = &samples[taskIndex];
 
 	//--------------------------------------------------------------------------
 	// Mutate the sample
 	//--------------------------------------------------------------------------
 
-	__global float *proposedU = &samplesDataBuff[gid * METROPOLISSAMPLER_TOTAL_U_SIZE] +
+	__global float *proposedU = &samplesDataBuff[taskIndex * METROPOLISSAMPLER_TOTAL_U_SIZE] +
 			sample->proposed * METROPOLISSAMPLER_TOTAL_U_SIZE;
 	if (Rnd_FloatValue(seed) < taskConfig->sampler.metropolis.largeMutationProbability) {
 		LargeStep(taskConfig, seed, proposedU);
 		sample->smallMutationCount = 0;
 	} else {
-		__global float *currentU = &samplesDataBuff[gid * METROPOLISSAMPLER_TOTAL_U_SIZE] +
+		__global float *currentU = &samplesDataBuff[taskIndex * METROPOLISSAMPLER_TOTAL_U_SIZE] +
 			sample->current * METROPOLISSAMPLER_TOTAL_U_SIZE;
 
 		SmallStep(taskConfig, seed, currentU, proposedU);
@@ -263,15 +262,15 @@ OPENCL_FORCE_INLINE void MetropolisSampler_NextSample(
 
 OPENCL_FORCE_INLINE bool MetropolisSampler_Init(
 		__constant const GPUTaskConfiguration* restrict taskConfig,
+		const uint taskIndex,
 		__global float *filmNoise,
 		__global float *filmUserImportance,
 		const uint filmWidth, const uint filmHeight,
 		const uint filmSubRegion0, const uint filmSubRegion1,
 		const uint filmSubRegion2, const uint filmSubRegion3
 		SAMPLER_PARAM_DECL) {
-	const size_t gid = get_global_id(0);
 	__global MetropolisSample *samples = (__global MetropolisSample *)samplesBuff;
-	__global MetropolisSample *sample = &samples[gid];
+	__global MetropolisSample *sample = &samples[taskIndex];
 
 	sample->totalI = 0.f;
 	sample->largeMutationCount = 1.f;
@@ -284,7 +283,7 @@ OPENCL_FORCE_INLINE bool MetropolisSampler_Init(
 
 	sample->weight = 0.f;
 
-	__global float *samplesData = &samplesDataBuff[gid * METROPOLISSAMPLER_TOTAL_U_SIZE] +
+	__global float *samplesData = &samplesDataBuff[taskIndex * METROPOLISSAMPLER_TOTAL_U_SIZE] +
 			sample->proposed * METROPOLISSAMPLER_TOTAL_U_SIZE;
 	LargeStep(taskConfig, seed, samplesData);
 

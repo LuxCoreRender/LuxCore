@@ -319,6 +319,15 @@ void PathOCLBaseOCLRenderThread::InitGPUTaskBuffer() {
 	intersectionDevice->AllocBufferRO(&taskConfigBuff, &renderEngine->taskConfig, sizeof(slg::ocl::pathoclbase::GPUTaskConfiguration), "GPUTaskConfiguration");
 
 	//--------------------------------------------------------------------------
+	// Allocate taskQueuesBuff
+	//--------------------------------------------------------------------------
+
+	const size_t taskQueuesSize =
+			sizeof(int) * (slg::ocl::pathoclbase::MK_COUNT + 1) +
+			sizeof(int) * (slg::ocl::pathoclbase::MK_COUNT + 1) * taskCount;
+	intersectionDevice->AllocBufferRW(&taskQueuesBuff, nullptr, taskQueuesSize, "GPUTaskQueues");
+
+	//--------------------------------------------------------------------------
 	// Allocate tasksBuff
 	//--------------------------------------------------------------------------
 

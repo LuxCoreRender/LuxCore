@@ -170,6 +170,7 @@ protected:
 	void InitSampleResultsBuffer();
 
 	void SetInitKernelArgs(const u_int filmIndex);
+	void SetTaskQueuesKernelArgs();
 	void SetAdvancePathsKernelArgs(luxrays::HardwareDeviceKernel *advancePathsKernel, const u_int filmIndex);
 	void SetAllAdvancePathsKernelArgs(const u_int filmIndex);
 	void SetKernelArgs();
@@ -185,7 +186,8 @@ protected:
 	static void GetKernelParamters(std::vector<std::string> &params,
 			luxrays::HardwareIntersectionDevice *intersectionDevice,
 			const std::string renderEngineType,
-			const float epsilonMin, const float epsilonMax);
+			const float epsilonMin, const float epsilonMax,
+			const u_int taskCount);
 	static std::string GetKernelSources();
 
 	u_int threadIndex;
@@ -245,6 +247,7 @@ protected:
 	luxrays::HardwareDeviceBuffer *raysBuff;
 	luxrays::HardwareDeviceBuffer *hitsBuff;
 	luxrays::HardwareDeviceBuffer *taskConfigBuff;
+	luxrays::HardwareDeviceBuffer *taskQueuesBuff;
 	luxrays::HardwareDeviceBuffer *tasksBuff;
 	luxrays::HardwareDeviceBuffer *tasksDirectLightBuff;
 	luxrays::HardwareDeviceBuffer *tasksStateBuff;
@@ -268,6 +271,20 @@ protected:
 	luxrays::HardwareDeviceKernel *initSeedKernel;
 	luxrays::HardwareDeviceKernel *initKernel;
 	size_t initWorkGroupSize;
+
+	luxrays::HardwareDeviceKernel *taskQueuesKernel_Init;
+	luxrays::HardwareDeviceKernel *taskQueuesKernel_Process_MK_RT_NEXT_VERTEX;
+	luxrays::HardwareDeviceKernel *taskQueuesKernel_Process_MK_HIT_NOTHING;
+	luxrays::HardwareDeviceKernel *taskQueuesKernel_Process_MK_HIT_OBJECT;
+	luxrays::HardwareDeviceKernel *taskQueuesKernel_Process_MK_RT_DL;
+	luxrays::HardwareDeviceKernel *taskQueuesKernel_Process_MK_DL_ILLUMINATE;
+	luxrays::HardwareDeviceKernel *taskQueuesKernel_Process_MK_DL_SAMPLE_BSDF;
+	luxrays::HardwareDeviceKernel *taskQueuesKernel_Process_MK_GENERATE_NEXT_VERTEX_RAY;
+	luxrays::HardwareDeviceKernel *taskQueuesKernel_Process_MK_SPLAT_SAMPLE;
+	luxrays::HardwareDeviceKernel *taskQueuesKernel_Process_MK_NEXT_SAMPLE;
+	luxrays::HardwareDeviceKernel *taskQueuesKernel_Process_MK_GENERATE_CAMERA_RAY;
+	size_t taskQueuesWorkGroupSize;
+
 	luxrays::HardwareDeviceKernel *advancePathsKernel_MK_RT_NEXT_VERTEX;
 	luxrays::HardwareDeviceKernel *advancePathsKernel_MK_HIT_NOTHING;
 	luxrays::HardwareDeviceKernel *advancePathsKernel_MK_HIT_OBJECT;
