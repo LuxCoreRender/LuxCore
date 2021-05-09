@@ -827,6 +827,7 @@ TextureMapping2D *Scene::CreateTextureMapping2D(const string &prefixName, const 
 		const Property &uvRotationProp = props.Get(uvRotationDefaultProp);
 		const float uvRotationMin = uvRotationProp.Get<float>(0);
 		const float uvRotationMax = uvRotationProp.Get<float>(1);
+		const float uvRotationStep = (uvRotationProp.GetSize() > 2) ? uvRotationProp.Get<float>(2) : 0.f;
 
 		const Property uvScaleDefaultProp = Property(prefixName + ".uvscale")(1.f, 1.f, 1.f, 1.f);
 		const Property &uvScaleProp = props.Get(uvScaleDefaultProp);
@@ -845,7 +846,7 @@ TextureMapping2D *Scene::CreateTextureMapping2D(const string &prefixName, const 
 		const float vDeltaMax = uvDeltaProp.Get<float>(3);
 
 		return new UVRandomMapping2D(dataIndex, seedType, triAOVIndex, objectIDOffset,
-				uvRotationMin, uvRotationMax,
+				uvRotationMin, uvRotationMax, uvRotationStep,
 				uScaleMin, uScaleMax, vScaleMin, vScaleMax,
 				uDeltaMin, uDeltaMax, vDeltaMin, vDeltaMax,
 				uniformScale);

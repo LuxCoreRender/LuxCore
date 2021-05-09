@@ -129,6 +129,7 @@ void CompiledScene::CompileTextureMapping2D(slg::ocl::TextureMapping2D *mapping,
 
 			mapping->uvRandomMapping2D.uvRotationMin = uvm->uvRotationMin;
 			mapping->uvRandomMapping2D.uvRotationMax = uvm->uvRotationMax;
+			mapping->uvRandomMapping2D.uvRotationStep = uvm->uvRotationStep;
 			mapping->uvRandomMapping2D.uScaleMin = uvm->uScaleMin;
 			mapping->uvRandomMapping2D.uScaleMax = uvm->uScaleMax;
 			mapping->uvRandomMapping2D.vScaleMin = uvm->vScaleMin;

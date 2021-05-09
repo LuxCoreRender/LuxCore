@@ -118,7 +118,7 @@ Properties UVMapping2D::ToProperties(const string &name) const {
 
 UVRandomMapping2D::UVRandomMapping2D(const u_int index, const RandomMappingSeedType seedTyp,
 		const u_int triAOVIdx, const u_int objectIDOffst,
-		const float uvRotationMn, const float uvRotationMx,
+		const float uvRotationMn, const float uvRotationMx, const float uvRotationStp,
 		const float uScaleMn, const float uScaleMx,
 		const float vScaleMn, const float vScaleMx,
 		const float uDeltaMn, const float uDeltaMx,
@@ -126,7 +126,7 @@ UVRandomMapping2D::UVRandomMapping2D(const u_int index, const RandomMappingSeedT
 		const bool uniformScl) :
 		TextureMapping2D(index), seedType(seedTyp),
 		triAOVIndex(triAOVIdx), objectIDOffset(objectIDOffst),
-		uvRotationMin(uvRotationMn), uvRotationMax(uvRotationMx),
+		uvRotationMin(uvRotationMn), uvRotationMax(uvRotationMx), uvRotationStep(uvRotationStp),
 		uScaleMin(uScaleMn), uScaleMax(uScaleMx),
 		vScaleMin(vScaleMn), vScaleMax(vScaleMx),
 		uDeltaMin(uDeltaMn), uDeltaMax(uDeltaMx),
@@ -153,7 +153,7 @@ UV UVRandomMapping2D::Map(const HitPoint &hitPoint, UV *ds, UV *dt) const {
 	
 	TauswortheRandomGenerator rndGen(seed);
 
-	const float uvRotation = Lerp(rndGen.floatValue(), uvRotationMin, uvRotationMax);
+	const float uvRotation = LerpWithStep(rndGen.floatValue(), uvRotationMin, uvRotationMax, uvRotationStep);
 	const float uScale = Lerp(rndGen.floatValue(), uScaleMin, uScaleMax);
 	const float vScale = uniformScale ? uScale : Lerp(rndGen.floatValue(), vScaleMin, vScaleMax);
 	const float uDelta = Lerp(rndGen.floatValue(), uDeltaMin, uDeltaMax);
@@ -203,7 +203,7 @@ Properties UVRandomMapping2D::ToProperties(const string &name) const {
 			Property(name + ".seed.type")(RandomMappingSeedType2String(seedType)) <<
 			Property(name + ".triangleaov.index")(triAOVIndex) <<
 			Property(name + ".objectidoffset.value")(objectIDOffset) <<
-			Property(name + ".rotation")(uvRotationMin, uvRotationMax) <<
+			Property(name + ".rotation")(uvRotationMin, uvRotationMax, uvRotationStep) <<
 			Property(name + ".uvscale")(uScaleMin, uScaleMax, vScaleMin, uScaleMax) <<
 			Property(name + ".uvscale.uniform")(uniformScale) <<
 			Property(name + ".uvdelta")(uDeltaMin, uDeltaMax, vDeltaMin, vDeltaMax);

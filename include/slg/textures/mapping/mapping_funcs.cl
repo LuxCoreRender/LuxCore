@@ -80,8 +80,9 @@ OPENCL_FORCE_INLINE float2 UVRandomMapping2D_MapImpl(__global const TextureMappi
 	Seed rndSeed;
 	Rnd_Init(seed, &rndSeed);
 
-	const float uvRotation = Lerp(Rnd_FloatValue(&rndSeed),
-			mapping->uvRandomMapping2D.uvRotationMin, mapping->uvRandomMapping2D.uvRotationMax);
+	const float uvRotation = LerpWithStep(Rnd_FloatValue(&rndSeed),
+			mapping->uvRandomMapping2D.uvRotationMin, mapping->uvRandomMapping2D.uvRotationMax,
+			mapping->uvRandomMapping2D.uvRotationStep);
 	const float uScale = Lerp(Rnd_FloatValue(&rndSeed),
 			mapping->uvRandomMapping2D.uScaleMin, mapping->uvRandomMapping2D.uScaleMax);
 	const float vScale = mapping->uvRandomMapping2D.uniformScale ?

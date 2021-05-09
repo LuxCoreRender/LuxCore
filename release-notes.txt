@@ -17,6 +17,7 @@
 * Updated to Intel OIDN v1.3.0
 * Updated to OpenImageIO v2.2.13.1
 * Regularize coordinate system to solve some anisotropic related issue with glossy material (pull request #521)
+* UVRandomMapping2D now supports optional random rotation step parameter (issue #528)
 
 ### Fixed Bugs
 

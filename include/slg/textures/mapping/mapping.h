@@ -101,7 +101,7 @@ class UVRandomMapping2D : public TextureMapping2D {
 public:
 	UVRandomMapping2D(const u_int dataIndex, const RandomMappingSeedType seedType,
 			const u_int triAOVIndex, const u_int objectIDOffset,
-			const float uvRotationMin, const float uvRotationMax,
+			const float uvRotationMin, const float uvRotationMax, const float uvRotationStep,
 			const float uScaleMin, const float uScaleMax,
 			const float vScaleMin, const float vScaleMax,
 			const float uDeltaMin, const float uDeltaMax,
@@ -119,7 +119,7 @@ public:
 	const RandomMappingSeedType seedType;
 	const u_int triAOVIndex;
 	const u_int objectIDOffset;
-	const float uvRotationMin, uvRotationMax;
+	const float uvRotationMin, uvRotationMax, uvRotationStep;
 	const float uScaleMin, uScaleMax;
 	const float vScaleMin, vScaleMax;
 	const float uDeltaMin, uDeltaMax;
