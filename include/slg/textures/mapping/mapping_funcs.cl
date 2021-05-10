@@ -239,9 +239,18 @@ OPENCL_FORCE_INLINE float3 LocalRandomMapping3D_Map(__global const TextureMappin
 	Seed rndSeed;
 	Rnd_Init(seed, &rndSeed);
 	
-	const float xRotation = Lerp(Rnd_FloatValue(&rndSeed), mapping->localRandomMapping.xRotationMin, mapping->localRandomMapping.xRotationMax);
-	const float yRotation = Lerp(Rnd_FloatValue(&rndSeed), mapping->localRandomMapping.yRotationMin, mapping->localRandomMapping.yRotationMax);
-	const float zRotation = Lerp(Rnd_FloatValue(&rndSeed), mapping->localRandomMapping.zRotationMin, mapping->localRandomMapping.zRotationMax);
+	const float xRotation = LerpWithStep(Rnd_FloatValue(&rndSeed),
+			mapping->localRandomMapping.xRotationMin,
+			mapping->localRandomMapping.xRotationMax,
+			mapping->localRandomMapping.xRotationStep);
+	const float yRotation = LerpWithStep(Rnd_FloatValue(&rndSeed),
+			mapping->localRandomMapping.yRotationMin,
+			mapping->localRandomMapping.yRotationMax,
+			mapping->localRandomMapping.yRotationStep);
+	const float zRotation = LerpWithStep(Rnd_FloatValue(&rndSeed),
+			mapping->localRandomMapping.zRotationMin,
+			mapping->localRandomMapping.zRotationMax,
+			mapping->localRandomMapping.yRotationStep);
 	
 	const float xScale = Lerp(Rnd_FloatValue(&rndSeed), mapping->localRandomMapping.xScaleMin, mapping->localRandomMapping.xScaleMax);
 	const bool uniformScale = mapping->localRandomMapping.uniformScale;

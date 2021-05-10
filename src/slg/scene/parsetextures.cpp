@@ -881,19 +881,22 @@ TextureMapping3D *Scene::CreateTextureMapping3D(const string &prefixName, const 
 		const u_int triAOVIndex = props.Get(Property(prefixName + ".triangleaov.index")(0u)).Get<u_int>();
 		const u_int objectIDOffset = props.Get(Property(prefixName + ".objectidoffset.value")(0u)).Get<u_int>();
 
-		const Property xRotationDefaultProp = Property(prefixName + ".xrotation")(0.f, 0.f);
-		const Property yRotationDefaultProp = Property(prefixName + ".yrotation")(0.f, 0.f);
-		const Property zRotationDefaultProp = Property(prefixName + ".zrotation")(0.f, 0.f);
+		const Property xRotationDefaultProp = Property(prefixName + ".xrotation")(0.f, 0.f, 0.f);
+		const Property yRotationDefaultProp = Property(prefixName + ".yrotation")(0.f, 0.f, 0.f);
+		const Property zRotationDefaultProp = Property(prefixName + ".zrotation")(0.f, 0.f, 0.f);
 
 		const Property &xRotationProp = props.Get(xRotationDefaultProp);
 		const float xRotationMin = xRotationProp.Get<float>(0);
 		const float xRotationMax = xRotationProp.Get<float>(1);
+		const float xRotationStep = (xRotationProp.GetSize() > 2) ? xRotationProp.Get<float>(2) : 0.f;
 		const Property &yRotationProp = props.Get(yRotationDefaultProp);
 		const float yRotationMin = yRotationProp.Get<float>(0);
 		const float yRotationMax = yRotationProp.Get<float>(1);
+		const float yRotationStep = (yRotationProp.GetSize() > 2) ? yRotationProp.Get<float>(2) : 0.f;
 		const Property &zRotationProp = props.Get(zRotationDefaultProp);
 		const float zRotationMin = zRotationProp.Get<float>(0);
 		const float zRotationMax = zRotationProp.Get<float>(1);
+		const float zRotationStep = (zRotationProp.GetSize() > 2) ? zRotationProp.Get<float>(2) : 0.f;
 
 		const Property xScaleDefaultProp = Property(prefixName + ".xscale")(1.f, 1.f);
 		const Property yScaleDefaultProp = Property(prefixName + ".yscale")(1.f, 1.f);
@@ -926,9 +929,9 @@ TextureMapping3D *Scene::CreateTextureMapping3D(const string &prefixName, const 
 		const float zTranslateMax = zTranslateProp.Get<float>(1);
 
 		return new LocalRandomMapping3D(trans, seedType, triAOVIndex, objectIDOffset,
-				xRotationMin, xRotationMax,
-				yRotationMin, yRotationMax,
-				zRotationMin, zRotationMax,
+				xRotationMin, xRotationMax, xRotationStep,
+				yRotationMin, yRotationMax, yRotationStep,
+				zRotationMin, zRotationMax, zRotationStep,
 				xScaleMin, xScaleMax,
 				yScaleMin, yScaleMax,
 				zScaleMin, zScaleMax,

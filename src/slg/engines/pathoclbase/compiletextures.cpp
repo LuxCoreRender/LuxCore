@@ -199,10 +199,13 @@ void CompiledScene::CompileTextureMapping3D(slg::ocl::TextureMapping3D *mapping,
 
 			mapping->localRandomMapping.xRotationMin = gm->xRotationMin;
 			mapping->localRandomMapping.xRotationMax = gm->xRotationMax;
+			mapping->localRandomMapping.xRotationStep = gm->xRotationStep;
 			mapping->localRandomMapping.yRotationMin = gm->yRotationMin;
 			mapping->localRandomMapping.yRotationMax = gm->yRotationMax;
+			mapping->localRandomMapping.yRotationStep = gm->yRotationStep;
 			mapping->localRandomMapping.zRotationMin = gm->zRotationMin;
 			mapping->localRandomMapping.zRotationMax = gm->zRotationMax;
+			mapping->localRandomMapping.zRotationStep = gm->zRotationStep;
 
 			mapping->localRandomMapping.xScaleMin = gm->xScaleMin;
 			mapping->localRandomMapping.xScaleMax = gm->xScaleMax;

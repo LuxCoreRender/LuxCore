@@ -215,9 +215,9 @@ class LocalRandomMapping3D : public TextureMapping3D {
 public:
 	LocalRandomMapping3D(const luxrays::Transform &w2l, const RandomMappingSeedType seedType,
 			const u_int triAOVIndex, const u_int objectIDOffset,
-			const float xRotationMin, const float xRotationMax,
-			const float yRotationMin, const float yRotationMax,
-			const float zRotationMin, const float zRotationMax,
+			const float xRotationMin, const float xRotationMax, const float xRotationStep,
+			const float yRotationMin, const float yRotationMax, const float yRotationStep,
+			const float zRotationMin, const float zRotationMax, const float zRotationStep,
 			const float xScaleMin, const float xScaleMax,
 			const float yScaleMin, const float yScaleMax,
 			const float zScaleMin, const float zScaleMax,
@@ -236,9 +236,9 @@ public:
 	const RandomMappingSeedType seedType;
 	const u_int triAOVIndex;
 	const u_int objectIDOffset;
-	const float xRotationMin, xRotationMax;
-	const float yRotationMin, yRotationMax;
-	const float zRotationMin, zRotationMax;
+	const float xRotationMin, xRotationMax, xRotationStep;
+	const float yRotationMin, yRotationMax, yRotationStep;
+	const float zRotationMin, zRotationMax, zRotationStep;
 	const float xScaleMin, xScaleMax;
 	const float yScaleMin, yScaleMax;
 	const float zScaleMin, zScaleMax;
