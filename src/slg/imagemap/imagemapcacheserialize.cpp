@@ -24,6 +24,21 @@ using namespace luxrays;
 using namespace slg;
 
 //------------------------------------------------------------------------------
+// ImageMapResizePolicy Serialization
+//------------------------------------------------------------------------------
+
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::ImageMapResizePolicy)
+
+namespace slg {
+// Explicit instantiations for portable archives
+template void ImageMapResizePolicy::serialize(LuxOutputArchive &ar, const u_int version);
+template void ImageMapResizePolicy::serialize(LuxInputArchive &ar, const u_int version);
+}
+
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::ImageMapResizeNonePolicy)
+BOOST_CLASS_EXPORT_IMPLEMENT(slg::ImageMapResizeFixedPolicy)
+
+//------------------------------------------------------------------------------
 // ImageMapCache
 //------------------------------------------------------------------------------
 
@@ -45,7 +60,7 @@ template<class Archive> void ImageMapCache::save(Archive &ar, const u_int versio
 		ar & im;
 	}
 
-	ar & allImageScale;
+	ar & resizePolicy;
 }
 
 template<class Archive> void ImageMapCache::load(Archive &ar, const u_int version) {
@@ -73,7 +88,7 @@ template<class Archive> void ImageMapCache::load(Archive &ar, const u_int versio
 		mapByKey.insert(make_pair(key, im));	
 	}
 
-	ar & allImageScale;
+	ar & resizePolicy;
 }
 
 namespace slg {

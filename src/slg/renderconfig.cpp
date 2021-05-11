@@ -100,11 +100,9 @@ RenderConfig::RenderConfig(const Properties &props, Scene *scn) : scene(scn) {
 		// Create the Scene
 		const string defaultSceneName = GetDefaultProperties().Get("scene.file").Get<string>();
 		const string sceneFileName = SLG_FileNameResolver.ResolveFile(props.Get(Property("scene.file")(defaultSceneName)).Get<string>());
-		const float defaultImageScale = GetDefaultProperties().Get("images.scale").Get<float>();
-		const float imageScale = Max(.01f, props.Get(Property("images.scale")(defaultImageScale)).Get<float>());
-
+				
 		SDL_LOG("Reading scene: " << sceneFileName);
-		scene = new Scene(sceneFileName, imageScale);
+		scene = new Scene(sceneFileName, &props);
 		allocatedScene = true;
 	}
 
@@ -347,7 +345,7 @@ Properties RenderConfig::ToProperties(const Properties &cfg) {
 	props << cfg.Get(Property("scene.epsilon.max")(DEFAULT_EPSILON_MAX));
 
 	props << cfg.Get(Property("scene.file")("scenes/luxball/luxball.scn"));
-	props << cfg.Get(Property("images.scale")(1.f));
+	props << cfg.Get(Property("scene.images.resizepolicy.type")("NONE"));
 
 	// LightStrategy
 	props << LightStrategy::ToProperties(cfg);

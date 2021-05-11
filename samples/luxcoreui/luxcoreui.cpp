@@ -174,7 +174,7 @@ int main(int argc, char *argv[]) {
 			//LA_LOG("RenderConfig: \n" << renderConfigProps);
 			//LA_LOG("Scene: \n" << sceneProps);
 
-			Scene *scene = Scene::Create(renderConfigProps.Get(Property("images.scale")(1.f)).Get<float>());
+			Scene *scene = Scene::Create();
 			scene->Parse(sceneProps);
 			config = RenderConfig::Create(renderConfigProps.Set(cmdLineProp), scene);
 			config->DeleteSceneOnExit();

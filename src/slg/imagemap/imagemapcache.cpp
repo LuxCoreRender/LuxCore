@@ -29,11 +29,57 @@ using namespace luxrays;
 using namespace slg;
 
 //------------------------------------------------------------------------------
+// ImageMapResizePolicy
+//------------------------------------------------------------------------------
+
+ImageMapResizePolicy *ImageMapResizePolicy::FromProperties(const luxrays::Properties &props) {
+	// For compatibility with the past
+	if (!props.IsDefined("scene.images.resizepolicy.type") && props.IsDefined("images.scale")) {
+		const float imageScale = Max(.01f, props.Get(Property("images.scale")(1.f)).Get<float>());
+		return new ImageMapResizeFixedPolicy(imageScale, 128);
+	}
+	
+	const ImageMapResizePolicyType type = String2ImageMapResizePolicyType(props.Get(Property("scene.images.resizepolicy.type")("NONE")).Get<string>());
+	switch (type) {
+		case POLICY_NONE:
+			return new ImageMapResizeNonePolicy();
+		case POLICY_FIXED: {
+			const float scale = props.Get(Property("scene.images.resizepolicy.scale")(1.f)).Get<float>();
+			const u_int minSize = props.Get(Property("scene.images.resizepolicy.minsize")(128)).Get<u_int>();
+
+			return new ImageMapResizeFixedPolicy(scale, minSize);
+		}
+		default:
+			throw runtime_error("Unknown image map resize policy type in ImageMapResizePolicy::FromProperties(): " + ToString(type));
+	}
+}
+
+ImageMapResizePolicyType ImageMapResizePolicy::String2ImageMapResizePolicyType(const string &type) {
+	if (type == "NONE")
+		return POLICY_NONE;
+	else if (type == "FIXED")
+		return POLICY_FIXED;
+	else
+		throw runtime_error("Unknown image map resize policy type in ImageMapResizePolicy::String2ImageMapResizePolicyType(): " + type);
+}
+
+string ImageMapResizePolicy::ImageMapResizePolicyType2String(const ImageMapResizePolicyType type) {
+	switch (type) {
+		case POLICY_NONE:
+			return "NONE";
+		case POLICY_FIXED:
+			return "POLICY_FIXED";
+		default:
+			throw runtime_error("Unknown image map resize policy type in ImageMapResizePolicy::ImageMapResizePolicyType2String(): " + ToString(type));
+	}
+}
+
+//------------------------------------------------------------------------------
 // ImageMapCache
 //------------------------------------------------------------------------------
 
 ImageMapCache::ImageMapCache() {
-	allImageScale = 1.f;
+	resizePolicy = new ImageMapResizeNonePolicy();
 }
 
 ImageMapCache::~ImageMapCache() {
@@ -42,6 +88,13 @@ ImageMapCache::~ImageMapCache() {
 		if (m != ImageMapTexture::randomImageMap.get())
 			delete m;
 	}
+
+	delete resizePolicy;
+}
+
+void ImageMapCache::SetImageResizePolicy(ImageMapResizePolicy *policy) {
+	delete resizePolicy;
+	resizePolicy = policy;
 }
 
 string ImageMapCache::GetCacheKey(const string &fileName, const ImageMapConfig &imgCfg) const {
@@ -105,17 +158,44 @@ ImageMap *ImageMapCache::GetImageMap(const string &fileName, const ImageMapConfi
 	// Scale the image if required
 	const u_int width = im->GetWidth();
 	const u_int height = im->GetHeight();
-	if (allImageScale > 1.f) {
-		// Enlarge all images
-		const u_int newWidth = width * allImageScale;
-		const u_int newHeight = height * allImageScale;
-		im->Resize(newWidth, newHeight);
-		im->Preprocess();
-	} else if ((allImageScale < 1.f) && (width > 128) && (height > 128)) {
-		const u_int newWidth = Max<u_int>(128, width * allImageScale);
-		const u_int newHeight = Max<u_int>(128, height * allImageScale);
-		im->Resize(newWidth, newHeight);
-		im->Preprocess();
+
+	switch (resizePolicy->GetType()) {
+		case POLICY_NONE:
+			// Nothing to do
+			break;
+		case POLICY_FIXED: {
+			const ImageMapResizeFixedPolicy *rp = (ImageMapResizeFixedPolicy *)resizePolicy;
+
+			if (rp->scale > 1.f) {
+				// Enlarge all images (may be for testing, not very useful otherwise)
+				const u_int newWidth = width * rp->scale;
+				const u_int newHeight = height * rp->scale;
+				im->Resize(newWidth, newHeight);
+				im->Preprocess();
+			} else if (rp->scale < 1.f) {
+				u_int newWidth = width * rp->scale;
+				u_int newHeight = height * rp->scale;
+				
+				if (newWidth < rp->minSize) {
+					newWidth = rp->minSize;
+					newHeight = rp->minSize * (width / (float)height);
+				} else if (newHeight < rp->minSize) {
+					newHeight = rp->minSize;
+					newWidth = rp->minSize * (height / (float)width);
+				} 
+
+				SDL_LOG("Scaling ImageMap: " << fileName << " [from " << width << "x" << height <<
+						" to " << newWidth << "x" << newHeight <<"]");
+
+				im->Resize(newWidth, newHeight);
+				im->Preprocess();
+			} else {
+				// Nothing to do for a scale of 1.0
+			}
+			break;
+		}
+		default:
+			throw runtime_error("Unknown resize policy in ImageMapCache::GetImageMap(): " + ToString(resizePolicy->GetType()));
 	}
 
 	mapByKey.insert(make_pair(key, im));

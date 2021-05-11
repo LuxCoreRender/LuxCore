@@ -617,19 +617,19 @@ void CameraImpl::RotateDown(const float angle) const {
 // SceneImpl
 //------------------------------------------------------------------------------
 
-SceneImpl::SceneImpl(const float imageScale) {
+SceneImpl::SceneImpl(const luxrays::Properties *resizePolicyProps) {
 	camera = new CameraImpl(*this);
-	scene = new slg::Scene(imageScale);
+	scene = new slg::Scene(resizePolicyProps);
 	allocatedScene = true;
 }
 
-SceneImpl::SceneImpl(const luxrays::Properties &props, const float imageScale) {
+SceneImpl::SceneImpl(const luxrays::Properties &props, const luxrays::Properties *resizePolicyProps) {
 	camera = new CameraImpl(*this);
-	scene = new slg::Scene(props, imageScale);
+	scene = new slg::Scene(props, resizePolicyProps);
 	allocatedScene = true;
 }
 
-SceneImpl::SceneImpl(const string &fileName, const float imageScale) {
+SceneImpl::SceneImpl(const string &fileName, const luxrays::Properties *resizePolicyProps) {
 	camera = new CameraImpl(*this);
 
 	const string ext = luxrays::GetFileNameExt(fileName);
@@ -638,7 +638,7 @@ SceneImpl::SceneImpl(const string &fileName, const float imageScale) {
 		scene = slg::Scene::LoadSerialized(fileName);
 	} else if (ext == ".scn") {
 		// The file is in a text format
-		scene = new slg::Scene(Properties(fileName), imageScale);
+		scene = new slg::Scene(Properties(fileName), resizePolicyProps);
 	} else
 		throw runtime_error("Unknown scene file extension: " + fileName);
 

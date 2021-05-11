@@ -181,7 +181,7 @@ int main(int argc, char *argv[]) {
 
 			renderConfigProps.Set(cmdLineProp);
 
-			scene = Scene::Create(renderConfigProps.Get(Property("images.scale")(1.f)).Get<float>());
+			scene = Scene::Create();
 			scene->Parse(sceneProps);
 			config = RenderConfig::Create(renderConfigProps.Set(cmdLineProp), scene);
 		} else if (configFileNameExt == ".cfg") {

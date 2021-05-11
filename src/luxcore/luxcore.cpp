@@ -360,30 +360,30 @@ Camera::~Camera() {
 // Scene
 //------------------------------------------------------------------------------
 
-Scene *Scene::Create(const float imageScale) {
-	API_BEGIN("{}", imageScale);
+Scene *Scene::Create(const luxrays::Properties *resizePolicyProps) {
+	API_BEGIN("{}, {}", (void *)resizePolicyProps);
 
-	Scene *result = new luxcore::detail::SceneImpl(imageScale);
-
-	API_RETURN("{}", (void *)result);
-	
-	return result;
-}
-
-Scene *Scene::Create(const luxrays::Properties &props, const float imageScale) {
-	API_BEGIN("{}, {}", ToArgString(props), imageScale);
-
-	Scene *result = new luxcore::detail::SceneImpl(props, imageScale);
+	Scene *result = new luxcore::detail::SceneImpl(resizePolicyProps);
 
 	API_RETURN("{}", (void *)result);
 	
 	return result;
 }
 
-Scene *Scene::Create(const string &fileName, const float imageScale) {
-	API_BEGIN("{}, {}", ToArgString(fileName), imageScale);
+Scene *Scene::Create(const luxrays::Properties &props, const luxrays::Properties *resizePolicyProps) {
+	API_BEGIN("{}, {}", ToArgString(props), (void *)resizePolicyProps);
 
-	Scene *result = new luxcore::detail::SceneImpl(fileName, imageScale);
+	Scene *result = new luxcore::detail::SceneImpl(resizePolicyProps);
+
+	API_RETURN("{}", (void *)result);
+	
+	return result;
+}
+
+Scene *Scene::Create(const string &fileName, const luxrays::Properties *resizePolicyProps) {
+	API_BEGIN("{}, {}", ToArgString(fileName), (void *)resizePolicyProps);
+
+	Scene *result = new luxcore::detail::SceneImpl(fileName, resizePolicyProps);
 
 	API_RETURN("{}", (void *)result);
 	

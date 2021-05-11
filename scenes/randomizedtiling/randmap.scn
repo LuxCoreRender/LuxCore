@@ -18,8 +18,8 @@ scene.textures.imgtex.mapping.seed.type = object_id
 # If seed type is "triangle_aov", the index of the AOV to use
 scene.textures.imgtex.triangleaov.index = 0
 # Rotation Min/Max range and (optional) step
-#scene.textures.imgtex.mapping.rotation = 0 360
-scene.textures.imgtex.mapping.rotation = 0 360 45
+scene.textures.imgtex.mapping.rotation = 0 360
+#scene.textures.imgtex.mapping.rotation = 0 360 45
 # Scale Min/Max range
 scene.textures.imgtex.mapping.uvscale = 2 2 2 2
 # If to use the same scale for U and V or decouple them

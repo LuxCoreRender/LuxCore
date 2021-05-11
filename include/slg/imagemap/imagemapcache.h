@@ -31,6 +31,73 @@
 namespace slg {
 
 //------------------------------------------------------------------------------
+// ImageMapResizePoly
+//------------------------------------------------------------------------------
+
+typedef enum {
+	POLICY_NONE,
+	POLICY_FIXED
+} ImageMapResizePolicyType;
+
+class ImageMapResizePolicy {
+public:
+	ImageMapResizePolicy() { }
+	virtual ~ImageMapResizePolicy() { }
+	
+	virtual ImageMapResizePolicyType GetType() const = 0;
+
+	static ImageMapResizePolicy *FromProperties(const luxrays::Properties &props);
+	static ImageMapResizePolicyType String2ImageMapResizePolicyType(const std::string &type);
+	static std::string ImageMapResizePolicyType2String(const ImageMapResizePolicyType type);
+
+	friend class boost::serialization::access;
+
+private:
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+	}
+};
+
+class ImageMapResizeNonePolicy : public ImageMapResizePolicy {
+public:
+	ImageMapResizeNonePolicy() { }
+	~ImageMapResizeNonePolicy() { }
+	
+	virtual ImageMapResizePolicyType GetType() const { return POLICY_NONE; }
+
+	friend class boost::serialization::access;
+
+private:
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImageMapResizePolicy);
+	}
+};
+
+class ImageMapResizeFixedPolicy : public ImageMapResizePolicy {
+public:
+	ImageMapResizeFixedPolicy(const float s, const u_int m = 128) : scale(s), minSize(m) { }
+	~ImageMapResizeFixedPolicy() { }
+	
+	virtual ImageMapResizePolicyType GetType() const { return POLICY_FIXED; }
+
+	friend class boost::serialization::access;
+
+	float scale;
+	u_int minSize;
+
+private:
+	// Used by serilization
+	ImageMapResizeFixedPolicy() : scale(1.f), minSize(128) {		
+	}
+
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImageMapResizePolicy);
+		
+		ar & scale;
+		ar & minSize;
+	}
+};
+
+//------------------------------------------------------------------------------
 // ImageMapCache
 //------------------------------------------------------------------------------
 
@@ -39,7 +106,7 @@ public:
 	ImageMapCache();
 	~ImageMapCache();
 
-	void SetImageResize(const float s) { allImageScale = s; }
+	void SetImageResizePolicy(ImageMapResizePolicy *policy);
 
 	void DefineImageMap(ImageMap *im);
 
@@ -70,13 +137,17 @@ private:
 	std::vector<std::string> mapNames;
 	std::vector<ImageMap *> maps;
 
-	float allImageScale;
+	ImageMapResizePolicy *resizePolicy;
 };
 
 }
 
 BOOST_CLASS_VERSION(slg::ImageMapCache, 2)
+BOOST_CLASS_VERSION(slg::ImageMapResizeNonePolicy, 1)
+BOOST_CLASS_VERSION(slg::ImageMapResizeFixedPolicy, 1)
 
 BOOST_CLASS_EXPORT_KEY(slg::ImageMapCache)
+BOOST_CLASS_EXPORT_KEY(slg::ImageMapResizeNonePolicy)
+BOOST_CLASS_EXPORT_KEY(slg::ImageMapResizeFixedPolicy)
 
 #endif	/* _SLG_IMAGEMAPCACHE_H */

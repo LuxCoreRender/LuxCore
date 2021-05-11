@@ -759,27 +759,27 @@ public:
 	/*!
 	 * \brief Create a new empty Scene.
 	 *
-	 * \param imageScale defines the scale used for storing any kind of image in memory.
+	 * \param resizePolicyProps defines texture image maps resize policy.
 	 */
-	static Scene *Create(const float imageScale = 1.f);
+	static Scene *Create(const luxrays::Properties *resizePolicyProps = nullptr);
 	/*!
 	 * \brief Creates a new Scene as defined by props.
 	 *
 	 * \param props are the Properties used to build the new Scene.
-	 * \param imageScale defines the scale used for storing any kind of image in memory.
+	 * \param resizePolicyProps defines texture image maps resize policy.
 	 */
-	static Scene *Create(const luxrays::Properties &props, const float imageScale = 1.f);
+	static Scene *Create(const luxrays::Properties &props, const luxrays::Properties *resizePolicyProps = nullptr);
 	/*!
 	 * \brief Creates a new Scene as defined in fileName file.
 	 *
 	 * \param fileName is the name of the file with the scene description to read. It
 	 * can be a text SDL file or a serialized binary file. The extension for the
 	 * binary format must be ".bsc".
-	 * \param imageScale defines the scale used for storing any kind of image in
-	 * memory. This parameter has no effect when loading binary serialized binary
+	 * \param resizePolicyProps defines texture image maps resize policy.
+	 * This parameter has no effect when loading binary serialized binary
 	 * file.
 	 */
-	static Scene *Create(const std::string &fileName, const float imageScale = 1.f);
+	static Scene *Create(const std::string &fileName, const luxrays::Properties *resizePolicyProps = nullptr);
 
 	virtual ~Scene();
 
