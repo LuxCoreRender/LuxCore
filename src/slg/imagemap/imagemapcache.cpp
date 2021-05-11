@@ -128,7 +128,51 @@ string ImageMapCache::GetCacheKey(const string &fileName) const {
 	return fileName;
 }
 
-ImageMap *ImageMapCache::GetImageMap(const string &fileName, const ImageMapConfig &imgCfg) {
+void ImageMapCache::ApplyResizePolicy(ImageMap *im) const {
+	switch (resizePolicy->GetType()) {
+		case POLICY_NONE:
+			// Nothing to do
+			break;
+		case POLICY_FIXED: {
+			const ImageMapResizeFixedPolicy *rp = (ImageMapResizeFixedPolicy *)resizePolicy;
+			const u_int width = im->GetWidth();
+			const u_int height = im->GetHeight();
+
+			if (rp->scale > 1.f) {
+				// Enlarge all images (may be for testing, not very useful otherwise)
+				const u_int newWidth = width * rp->scale;
+				const u_int newHeight = height * rp->scale;
+				im->Resize(newWidth, newHeight);
+				im->Preprocess();
+			} else if (rp->scale < 1.f) {
+				u_int newWidth = width * rp->scale;
+				u_int newHeight = height * rp->scale;
+
+				if (newWidth < rp->minSize) {
+					newWidth = rp->minSize;
+					newHeight = rp->minSize * (width / (float)height);
+				} else if (newHeight < rp->minSize) {
+					newHeight = rp->minSize;
+					newWidth = rp->minSize * (height / (float)width);
+				} 
+
+				SDL_LOG("Scaling ImageMap: " << im->GetName() << " [from " << width << "x" << height <<
+						" to " << newWidth << "x" << newHeight <<"]");
+
+				im->Resize(newWidth, newHeight);
+				im->Preprocess();
+			} else {
+				// Nothing to do for a scale of 1.0
+			}
+			break;
+		}
+		default:
+			throw runtime_error("Unknown resize policy in ImageMapCache::GetImageMap(): " + ToString(resizePolicy->GetType()));
+	}
+}
+
+ImageMap *ImageMapCache::GetImageMap(const string &fileName, const ImageMapConfig &imgCfg,
+		const bool applyResizePolicy) {
 	// Compose the cache key
 	string key = GetCacheKey(fileName);
 
@@ -154,49 +198,10 @@ ImageMap *ImageMapCache::GetImageMap(const string &fileName, const ImageMapConfi
 	// I haven't yet loaded the file
 
 	ImageMap *im = new ImageMap(fileName, imgCfg);
-
+	
 	// Scale the image if required
-	const u_int width = im->GetWidth();
-	const u_int height = im->GetHeight();
-
-	switch (resizePolicy->GetType()) {
-		case POLICY_NONE:
-			// Nothing to do
-			break;
-		case POLICY_FIXED: {
-			const ImageMapResizeFixedPolicy *rp = (ImageMapResizeFixedPolicy *)resizePolicy;
-
-			if (rp->scale > 1.f) {
-				// Enlarge all images (may be for testing, not very useful otherwise)
-				const u_int newWidth = width * rp->scale;
-				const u_int newHeight = height * rp->scale;
-				im->Resize(newWidth, newHeight);
-				im->Preprocess();
-			} else if (rp->scale < 1.f) {
-				u_int newWidth = width * rp->scale;
-				u_int newHeight = height * rp->scale;
-				
-				if (newWidth < rp->minSize) {
-					newWidth = rp->minSize;
-					newHeight = rp->minSize * (width / (float)height);
-				} else if (newHeight < rp->minSize) {
-					newHeight = rp->minSize;
-					newWidth = rp->minSize * (height / (float)width);
-				} 
-
-				SDL_LOG("Scaling ImageMap: " << fileName << " [from " << width << "x" << height <<
-						" to " << newWidth << "x" << newHeight <<"]");
-
-				im->Resize(newWidth, newHeight);
-				im->Preprocess();
-			} else {
-				// Nothing to do for a scale of 1.0
-			}
-			break;
-		}
-		default:
-			throw runtime_error("Unknown resize policy in ImageMapCache::GetImageMap(): " + ToString(resizePolicy->GetType()));
-	}
+	if (applyResizePolicy)
+		ApplyResizePolicy(im);
 
 	mapByKey.insert(make_pair(key, im));
 	mapNames.push_back(fileName);
@@ -205,11 +210,16 @@ ImageMap *ImageMapCache::GetImageMap(const string &fileName, const ImageMapConfi
 	return im;
 }
 
-void ImageMapCache::DefineImageMap(ImageMap *im) {
+void ImageMapCache::DefineImageMap(ImageMap *im,
+		const bool applyResizePolicy) {
 	const string &name = im->GetName();
 
 	SDL_LOG("Define ImageMap: " << name);
 
+	// Scale the image if required
+	if (applyResizePolicy)
+		ApplyResizePolicy(im);
+	
 	// Compose the cache key
 	const string key = GetCacheKey(name);
 

@@ -144,7 +144,7 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 	if (texType == "imagemap") {
 		const string name = props.Get(Property(propName + ".file")("image.png")).Get<string>();
 
-		ImageMap *im = imgMapCache.GetImageMap(name, ImageMapConfig(props, propName));
+		ImageMap *im = imgMapCache.GetImageMap(name, ImageMapConfig(props, propName), true);
 
 		const bool randomizedTiling = props.Get(Property(propName + ".randomizedtiling.enable")(false)).Get<bool>();
 		if (randomizedTiling && (im->GetStorage()->wrapType != ImageMapStorage::REPEAT))
@@ -236,7 +236,7 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		// Add the image map to the cache
 		const string name ="LUXCORE_DENSITYGRID_" + texName;
 		imgMap->SetName(name);
-		imgMapCache.DefineImageMap(imgMap);
+		imgMapCache.DefineImageMap(imgMap, false);
 
 		tex = new DensityGridTexture(CreateTextureMapping3D(propName + ".mapping", props),
 				nx, ny, nz, imgMap);

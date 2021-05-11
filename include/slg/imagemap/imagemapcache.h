@@ -108,9 +108,10 @@ public:
 
 	void SetImageResizePolicy(ImageMapResizePolicy *policy);
 
-	void DefineImageMap(ImageMap *im);
+	void DefineImageMap(ImageMap *im, const bool applyResizePolicy);
 
-	ImageMap *GetImageMap(const std::string &fileName, const ImageMapConfig &imgCfg);
+	ImageMap *GetImageMap(const std::string &fileName, const ImageMapConfig &imgCfg,
+			const bool applyResizePolicy);
 
 	void DeleteImageMap(const ImageMap *im);
 
@@ -127,6 +128,8 @@ private:
 	std::string GetCacheKey(const std::string &fileName,
 				const ImageMapConfig &imgCfg) const;
 	std::string GetCacheKey(const std::string &fileName) const;
+	
+	void ApplyResizePolicy(ImageMap *im) const;
 
 	template<class Archive> void save(Archive &ar, const unsigned int version) const;
 	template<class Archive>	void load(Archive &ar, const unsigned int version);

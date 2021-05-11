@@ -1111,16 +1111,18 @@ void SceneImpl::RemoveUnusedMeshes() {
 void SceneImpl::DefineImageMapUChar(const std::string &imgMapName,
 		unsigned char *pixels, const float gamma, const unsigned int channels,
 		const unsigned int width, const unsigned int height,
-		ChannelSelectionType selectionType, WrapType wrapType) {
-	API_BEGIN("{}, {}, {}, {}, {}, {}, {}, {}", ToArgString(imgMapName), (void *)pixels, gamma, channels,
-			width, height, ToArgString(selectionType), ToArgString(wrapType));
+		ChannelSelectionType selectionType, WrapType wrapType,
+		const bool applyResizePolicy) {
+	API_BEGIN("{}, {}, {}, {}, {}, {}, {}, {}, {}", ToArgString(imgMapName), (void *)pixels, gamma, channels,
+			width, height, ToArgString(selectionType), ToArgString(wrapType), applyResizePolicy);
 
 	scene->DefineImageMap(imgMapName, pixels, channels, width, height,
 			slg::ImageMapConfig(
 				gamma,
 				slg::ImageMapStorage::StorageType::BYTE,
 				(slg::ImageMapStorage::WrapType)wrapType,
-				(slg::ImageMapStorage::ChannelSelectionType)selectionType));
+				(slg::ImageMapStorage::ChannelSelectionType)selectionType),
+			applyResizePolicy);
 
 	API_END();
 }
@@ -1128,16 +1130,18 @@ void SceneImpl::DefineImageMapUChar(const std::string &imgMapName,
 void SceneImpl::DefineImageMapHalf(const std::string &imgMapName,
 		unsigned short *pixels, const float gamma, const unsigned int channels,
 		const unsigned int width, const unsigned int height,
-		ChannelSelectionType selectionType, WrapType wrapType) {
-	API_BEGIN("{}, {}, {}, {}, {}, {}, {}, {}", ToArgString(imgMapName), (void *)pixels, gamma, channels,
-			width, height, ToArgString(selectionType), ToArgString(wrapType));
+		ChannelSelectionType selectionType, WrapType wrapType,
+		const bool applyResizePolicy) {
+	API_BEGIN("{}, {}, {}, {}, {}, {}, {}, {}, {}", ToArgString(imgMapName), (void *)pixels, gamma, channels,
+			width, height, ToArgString(selectionType), ToArgString(wrapType), applyResizePolicy);
 
 	scene->DefineImageMap(imgMapName, (half *)pixels, channels, width, height,
 			slg::ImageMapConfig(
 				gamma,
 				slg::ImageMapStorage::StorageType::HALF,
 				(slg::ImageMapStorage::WrapType)wrapType,
-				(slg::ImageMapStorage::ChannelSelectionType)selectionType));
+				(slg::ImageMapStorage::ChannelSelectionType)selectionType),
+			applyResizePolicy);
 
 	API_END();
 }
@@ -1145,16 +1149,18 @@ void SceneImpl::DefineImageMapHalf(const std::string &imgMapName,
 void SceneImpl::DefineImageMapFloat(const std::string &imgMapName,
 		float *pixels, const float gamma, const unsigned int channels,
 		const unsigned int width, const unsigned int height,
-		ChannelSelectionType selectionType, WrapType wrapType) {
-	API_BEGIN("{}, {}, {}, {}, {}, {}, {}, {}", ToArgString(imgMapName), (void *)pixels, gamma, channels,
-			width, height, ToArgString(selectionType), ToArgString(wrapType));
+		ChannelSelectionType selectionType, WrapType wrapType,
+		const bool applyResizePolicy) {
+	API_BEGIN("{}, {}, {}, {}, {}, {}, {}, {}, {}", ToArgString(imgMapName), (void *)pixels, gamma, channels,
+			width, height, ToArgString(selectionType), ToArgString(wrapType), applyResizePolicy);
 
 	scene->DefineImageMap(imgMapName, pixels, channels, width, height,
 			slg::ImageMapConfig(
 				gamma,
 				slg::ImageMapStorage::StorageType::FLOAT,
 				(slg::ImageMapStorage::WrapType)wrapType,
-				(slg::ImageMapStorage::ChannelSelectionType)selectionType));
+				(slg::ImageMapStorage::ChannelSelectionType)selectionType),
+			applyResizePolicy);
 
 	API_END();
 }

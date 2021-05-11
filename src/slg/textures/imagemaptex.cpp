@@ -268,8 +268,8 @@ ImageMapTexture *ImageMapTexture::AllocImageMapTexture(const string &texName,
 
 	if (rt) {
 		// I need to add the LUTs to the ImageMapCache
-		imgMapCache.DefineImageMap(imt->randomizedTilingLUT);
-		imgMapCache.DefineImageMap(imt->randomizedTilingInvLUT);
+		imgMapCache.DefineImageMap(imt->randomizedTilingLUT, false);
+		imgMapCache.DefineImageMap(imt->randomizedTilingInvLUT, false);
 	}
 
 	return imt;

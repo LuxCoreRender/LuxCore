@@ -214,15 +214,18 @@ public:
 	void DefineImageMapUChar(const std::string &imgMapName,
 			unsigned char *pixels, const float gamma, const unsigned int channels,
 			const unsigned int width, const unsigned int height,
-			ChannelSelectionType selectionType, WrapType wrapType);
+			ChannelSelectionType selectionType, WrapType wrapType,
+			const bool applyResizePolicy);
 	void DefineImageMapHalf(const std::string &imgMapName,
 			unsigned short *pixels, const float gamma, const unsigned int channels,
 			const unsigned int width, const unsigned int height,
-			ChannelSelectionType selectionType, WrapType wrapType);
+			ChannelSelectionType selectionType, WrapType wrapType,
+			const bool applyResizePolicy);
 	void DefineImageMapFloat(const std::string &imgMapName,
 			float *pixels, const float gamma, const unsigned int channels,
 			const unsigned int width, const unsigned int height,
-			ChannelSelectionType selectionType, WrapType wrapType);
+			ChannelSelectionType selectionType, WrapType wrapType,
+			const bool applyResizePolicy);
 
 	const luxrays::Properties &ToProperties() const;
 	void Save(const std::string &fileName) const;

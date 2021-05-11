@@ -99,10 +99,10 @@ public:
 	// Methods to build and edit scene
 	//--------------------------------------------------------------------------
 
-	void DefineImageMap(ImageMap *im);
+	void DefineImageMap(ImageMap *im, const bool applyResizePolicy);
 	void DefineImageMap(const std::string &name, void *pixels,
 		const u_int channels, const u_int width, const u_int height,
-		const ImageMapConfig &cfg);
+		const ImageMapConfig &cfg, const bool applyResizePolicy);
 
 	bool IsImageMapDefined(const std::string &imgMapName) const;
 

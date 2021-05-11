@@ -149,7 +149,7 @@ ImageMap *Scene::CreateEmissionMap(const string &propName, const luxrays::Proper
 		// Force float storage
 		imgCfg.storageType = ImageMapStorage::FLOAT;
 
-		imgMap = imgMapCache.GetImageMap(imgMapName, imgCfg);
+		imgMap = imgMapCache.GetImageMap(imgMapName, imgCfg, false);
 
 		if ((width > 0) || (height > 0)) {
 			// I have to resample the image
@@ -164,7 +164,7 @@ ImageMap *Scene::CreateEmissionMap(const string &propName, const luxrays::Proper
 			// Add the image map to the cache
 			const string name ="LUXCORE_EMISSIONMAP_RESAMPLED_" + propName;
 			resampledImgMap->SetName(name);
-			imgMapCache.DefineImageMap(resampledImgMap);
+			imgMapCache.DefineImageMap(resampledImgMap, false);
 			imgMap = resampledImgMap;
 		}
 	}
@@ -188,12 +188,12 @@ ImageMap *Scene::CreateEmissionMap(const string &propName, const luxrays::Proper
 		// Add the image map to the cache
 		const string name ="LUXCORE_EMISSIONMAP_MERGEDMAP_" + propName;
 		map->SetName(name);
-		imgMapCache.DefineImageMap(map);
+		imgMapCache.DefineImageMap(map, false);
 	} else if (imgMap)
 		map = imgMap;
 	else if (iesMap) {
 		map = iesMap;
-		imgMapCache.DefineImageMap(map);
+		imgMapCache.DefineImageMap(map, false);
 	}
 
 	return map;
@@ -261,7 +261,7 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 
 		const string imageName = props.Get(Property(propName + ".file")("image.png")).Get<string>();
 
-		const ImageMap *imgMap = imgMapCache.GetImageMap(imageName, ImageMapConfig(props, propName));
+		const ImageMap *imgMap = imgMapCache.GetImageMap(imageName, ImageMapConfig(props, propName), false);
 
 		InfiniteLight *il = new InfiniteLight();
 		il->lightToWorld = light2World;
@@ -381,7 +381,7 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 
 		const ImageMap *imgMap = (imageName == "") ?
 			NULL :
-			imgMapCache.GetImageMap(imageName, ImageMapConfig(props, propName));
+			imgMapCache.GetImageMap(imageName, ImageMapConfig(props, propName), false);
 
 		ProjectionLight *pl = new ProjectionLight();
 		pl->lightToWorld = light2World;

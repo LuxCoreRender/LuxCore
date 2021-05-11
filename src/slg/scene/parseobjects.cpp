@@ -185,7 +185,7 @@ SceneObject *Scene::CreateObject(const u_int defaultObjID, const string &objName
 		// Add the image map to the cache
 		const string name ="LUXCORE_BAKEMAP_COMBINED_" + propName;
 		imgMap->SetName(name);
-		imgMapCache.DefineImageMap(imgMap);
+		imgMapCache.DefineImageMap(imgMap, false);
 
 		const u_int uvIndex = Clamp(props.Get(Property(propName + ".bake.combined.uvindex")(0)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
 
@@ -196,7 +196,7 @@ SceneObject *Scene::CreateObject(const u_int defaultObjID, const string &objName
 		// Add the image map to the cache
 		const string name ="LUXCORE_BAKEMAP_LIGHTMAP_" + propName;
 		imgMap->SetName(name);
-		imgMapCache.DefineImageMap(imgMap);
+		imgMapCache.DefineImageMap(imgMap, false);
 
 		const u_int uvIndex = Clamp(props.Get(Property(propName + ".bake.lightmap.uvindex")(0)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
 
