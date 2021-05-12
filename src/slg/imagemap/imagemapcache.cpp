@@ -44,10 +44,16 @@ ImageMapResizePolicy *ImageMapResizePolicy::FromProperties(const luxrays::Proper
 		case POLICY_NONE:
 			return new ImageMapResizeNonePolicy();
 		case POLICY_FIXED: {
-			const float scale = props.Get(Property("scene.images.resizepolicy.scale")(1.f)).Get<float>();
-			const u_int minSize = props.Get(Property("scene.images.resizepolicy.minsize")(128)).Get<u_int>();
+			const float scale = Max(.001f, props.Get(Property("scene.images.resizepolicy.scale")(1.f)).Get<float>());
+			const u_int minSize = Max(2u, props.Get(Property("scene.images.resizepolicy.minsize")(64)).Get<u_int>());
 
 			return new ImageMapResizeFixedPolicy(scale, minSize);
+		}
+		case POLICY_MINMEM: {
+			const float scale = Max(.001f, props.Get(Property("scene.images.resizepolicy.scale")(1.f)).Get<float>());
+			const u_int minSize = Max(2u, props.Get(Property("scene.images.resizepolicy.minsize")(64)).Get<u_int>());
+
+			return new ImageMapResizeMinMemPolicy(scale, minSize);
 		}
 		default:
 			throw runtime_error("Unknown image map resize policy type in ImageMapResizePolicy::FromProperties(): " + ToString(type));
@@ -59,6 +65,8 @@ ImageMapResizePolicyType ImageMapResizePolicy::String2ImageMapResizePolicyType(c
 		return POLICY_NONE;
 	else if (type == "FIXED")
 		return POLICY_FIXED;
+	else if (type == "MINMEM")
+		return POLICY_MINMEM;
 	else
 		throw runtime_error("Unknown image map resize policy type in ImageMapResizePolicy::String2ImageMapResizePolicyType(): " + type);
 }
@@ -68,7 +76,9 @@ string ImageMapResizePolicy::ImageMapResizePolicyType2String(const ImageMapResiz
 		case POLICY_NONE:
 			return "NONE";
 		case POLICY_FIXED:
-			return "POLICY_FIXED";
+			return "FIXED";
+		case POLICY_MINMEM:
+			return "MINMEM";
 		default:
 			throw runtime_error("Unknown image map resize policy type in ImageMapResizePolicy::ImageMapResizePolicyType2String(): " + ToString(type));
 	}
@@ -145,24 +155,46 @@ void ImageMapCache::ApplyResizePolicy(ImageMap *im) const {
 				im->Resize(newWidth, newHeight);
 				im->Preprocess();
 			} else if (rp->scale < 1.f) {
-				u_int newWidth = width * rp->scale;
-				u_int newHeight = height * rp->scale;
+				if (Max(width, height) > rp->minSize) {
+					u_int newWidth = Max<u_int>(width * rp->scale, rp->minSize);
+					u_int newHeight = Max<u_int>(height * rp->scale, rp->minSize);
 
-				if (newWidth < rp->minSize) {
-					newWidth = rp->minSize;
-					newHeight = rp->minSize * (width / (float)height);
-				} else if (newHeight < rp->minSize) {
-					newHeight = rp->minSize;
-					newWidth = rp->minSize * (height / (float)width);
-				} 
+					if (newWidth >= newHeight)
+						newHeight = Max<u_int>(newWidth * (width / (float)height), 1u);
+					else
+						newWidth = Max<u_int>(newHeight * (height / (float)width), 1u);
 
-				SDL_LOG("Scaling ImageMap: " << im->GetName() << " [from " << width << "x" << height <<
+					SDL_LOG("Scaling ImageMap: " << im->GetName() << " [from " << width << "x" << height <<
+							" to " << newWidth << "x" << newHeight <<"]");
+
+					im->Resize(newWidth, newHeight);
+					im->Preprocess();
+				}
+			} else {
+				// Nothing to do for a scale of 1.0
+			}
+			break;
+		}
+		case POLICY_MINMEM: {
+			const ImageMapResizeMinMemPolicy *rp = (ImageMapResizeMinMemPolicy *)resizePolicy;
+			const u_int width = im->GetWidth();
+			const u_int height = im->GetHeight();
+
+			if (Max(width, height) > rp->minSize) {
+				u_int newWidth = Max<u_int>(width * rp->scale, rp->minSize);
+				u_int newHeight = Max<u_int>(height * rp->scale, rp->minSize);
+
+				if (newWidth >= newHeight)
+					newHeight = Max<u_int>(newWidth * (width / (float)height), 1u);
+				else
+					newWidth = Max<u_int>(newHeight * (height / (float)width), 1u);
+
+
+				SDL_LOG("Scaling probe ImageMap: " << im->GetName() << " [from " << width << "x" << height <<
 						" to " << newWidth << "x" << newHeight <<"]");
 
 				im->Resize(newWidth, newHeight);
 				im->Preprocess();
-			} else {
-				// Nothing to do for a scale of 1.0
 			}
 			break;
 		}

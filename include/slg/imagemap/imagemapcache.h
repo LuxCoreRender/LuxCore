@@ -36,7 +36,8 @@ namespace slg {
 
 typedef enum {
 	POLICY_NONE,
-	POLICY_FIXED
+	POLICY_FIXED,
+	POLICY_MINMEM
 } ImageMapResizePolicyType;
 
 class ImageMapResizePolicy {
@@ -85,13 +86,38 @@ public:
 	u_int minSize;
 
 private:
-	// Used by serilization
+	// Used by serialization
 	ImageMapResizeFixedPolicy() : scale(1.f), minSize(128) {		
 	}
 
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImageMapResizePolicy);
 		
+		ar & scale;
+		ar & minSize;
+	}
+};
+
+class ImageMapResizeMinMemPolicy : public ImageMapResizePolicy {
+public:
+	ImageMapResizeMinMemPolicy(const float s = 1.f, const u_int m = 32) : scale(s), minSize(m) { }
+	~ImageMapResizeMinMemPolicy() { }
+	
+	virtual ImageMapResizePolicyType GetType() const { return POLICY_MINMEM; }
+
+	friend class boost::serialization::access;
+
+	float scale;
+	u_int minSize;
+
+private:
+	// Used by serialization
+	ImageMapResizeMinMemPolicy() : scale(1.f), minSize(32) {		
+	}
+
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImageMapResizePolicy);
+
 		ar & scale;
 		ar & minSize;
 	}
@@ -107,6 +133,7 @@ public:
 	~ImageMapCache();
 
 	void SetImageResizePolicy(ImageMapResizePolicy *policy);
+	const ImageMapResizePolicy *GetImageResizePolicy() const { return resizePolicy; }
 
 	void DefineImageMap(ImageMap *im, const bool applyResizePolicy);
 
