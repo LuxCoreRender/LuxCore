@@ -76,7 +76,22 @@ OPENCL_FORCE_INLINE void Glossy2Material_Evaluate(__global const Material* restr
 	const float3 kdVal = Texture_GetSpectrumValue(material->glossy2.kdTexIndex, hitPoint TEXTURES_PARAM);
 
 	const float3 baseF = Spectrum_Clamp(kdVal) * M_1_PI_F * fabs(lightDir.z);
+	const bool doublesided = material->glossy2.doublesided;
 
+	if ((!doublesided) && (eyeDir.z <= 0.f)) {
+		// Back face: no coating
+
+		const float directPdfW = fabs(sampledDir.z * M_1_PI_F);
+		const BSDFEvent event = DIFFUSE | REFLECT;
+		const float3 result = baseF;
+
+		EvalStack_PushFloat3(result);
+		EvalStack_PushBSDFEvent(event);
+		EvalStack_PushFloat(directPdfW);
+
+		return;
+	}
+	
 	// Front face: coating+base
 	const BSDFEvent event = GLOSSY | REFLECT;
 
@@ -147,9 +162,30 @@ OPENCL_FORCE_INLINE void Glossy2Material_Sample(__global const Material* restric
 	}
 
 	const float3 kdVal = Texture_GetSpectrumValue(material->glossy2.kdTexIndex, hitPoint TEXTURES_PARAM);
+	const bool doublesided = material->glossy2.doublesided;
+
+	if ((!doublesided) && (fixedDir.z <= 0.f)) {
+		// Back Face
+		float pdfW;
+		const float3 sampledDir = -1.f * CosineSampleHemisphereWithPdf(u0, u1, &pdfW);
+		if (fabs(CosTheta(sampledDir)) < DEFAULT_COS_EPSILON_STATIC) {
+			MATERIAL_SAMPLE_RETURN_BLACK;
+		}
+		
+		const BSDFEvent event = DIFFUSE | REFLECT;
+		const float3 result = Spectrum_Clamp(kdVal);
+		
+		EvalStack_PushFloat3(result);
+		EvalStack_PushFloat3(sampledDir);
+		EvalStack_PushFloat(pdfW);
+		EvalStack_PushBSDFEvent(event);
+
+		return;
+	}
 
 	const float3 ksVal = Texture_GetSpectrumValue(material->glossy2.ksTexIndex, hitPoint TEXTURES_PARAM);
 	float3 ks = ksVal;
+
 	const float i = Texture_GetFloatValue(material->glossy2.indexTexIndex, hitPoint TEXTURES_PARAM);
 	if (i > 0.f) {
 		const float ti = (i - 1.f) / (i + 1.f);

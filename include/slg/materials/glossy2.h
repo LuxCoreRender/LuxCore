@@ -32,7 +32,7 @@ public:
 	Glossy2Material(const Texture *frontTransp, const Texture *backTransp,
 			const Texture *emitted, const Texture *bump,
 			const Texture *kd, const Texture *ks, const Texture *u, const Texture *v,
-			const Texture *ka, const Texture *d, const Texture *i, const bool mbounce);
+			const Texture *ka, const Texture *d, const Texture *i, const bool mbounce, const bool doublesided);
 
 	virtual MaterialType GetType() const { return GLOSSY2; }
 	virtual BSDFEvent GetEventTypes() const { return GLOSSY | REFLECT; }
@@ -62,7 +62,8 @@ public:
 	const Texture *GetKa() const { return Ka; }
 	const Texture *GetDepth() const { return depth; }
 	const Texture *GetIndex() const { return index; }
-	const bool IsMultibounce() const { return multibounce; }
+	const bool IsMultibounce () const { return multibounce; }
+	const bool IsDoubleSided () const { return doublesided; }
 
 private:
 	const Texture *Kd;
@@ -73,6 +74,7 @@ private:
 	const Texture *depth;
 	const Texture *index;
 	const bool multibounce;
+	const bool doublesided;
 };
 
 }
