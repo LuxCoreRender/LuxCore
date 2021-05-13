@@ -186,6 +186,9 @@ __kernel void AdvancePaths_MK_HIT_NOTHING(
 		sampleResult->uv.u = INFINITY;
 		sampleResult->uv.v = INFINITY;
 		sampleResult->isHoldout = false;
+	} else if (!sampleResult->isHoldout && pathInfo->isTransmittedPath) {
+		// I set to 0.0 also the alpha all purely transmitted paths hitting nothing
+		sampleResult->alpha = 0.f;
 	}
 
 	taskState->state = MK_SPLAT_SAMPLE;

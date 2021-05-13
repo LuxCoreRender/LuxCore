@@ -432,6 +432,9 @@ void PathTracer::RenderEyePath(IntersectionDevice *device,
 				sampleResult.objectID = 0;
 				sampleResult.uv = UV(numeric_limits<float>::infinity(),
 						numeric_limits<float>::infinity());
+			} else if (!sampleResult.isHoldout && pathInfo.isTransmittedPath) {
+				// I set to 0.0 also the alpha all purely transmitted paths hitting nothing
+				sampleResult.alpha = 0.f;
 			}
 			break;
 		}

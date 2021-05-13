@@ -86,7 +86,7 @@ public:
 	float lastBSDFPdfW;
 	float lastGlossiness;
 	luxrays::Normal lastShadeN;
-	bool lastFromVolume;
+	bool lastFromVolume, isTransmittedPath;
 
 private:
 	bool isNearlyCaustic;
@@ -102,6 +102,7 @@ inline std::ostream &operator<<(std::ostream &os, const EyePathInfo &epi) {
 			epi.isPassThroughPath << ", " <<
 			epi.lastGlossiness << ", " <<
 			epi.lastShadeN << ", " <<
+			epi.isTransmittedPath << ", " <<
 			epi.lastFromVolume << ", " <<
 			epi.IsCausticPath() << ", " <<
 			epi.IsSpecularPath() << ", " <<

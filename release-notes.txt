@@ -20,6 +20,7 @@
 * UVRandomMapping2D now supports optional random rotation step parameter (issue #528)
 * LocalRandomMapping3D now supports optional random rotation step parameter (issue #528)
 * Introduced the concept of Scene texture image maps resize policy and the support for NONE and FIXED policies
+* Reworked the way alpha channel is computed for transmitted paths
 
 ### Fixed Bugs
 
