@@ -54,6 +54,7 @@ template<class Archive> void ImageMapCache::save(Archive &ar, const u_int versio
 		const std::string &name = mapNames[i];
 		SDL_LOG("Saving serialized image map: " << name);
 		ar & name;
+		ar & resizePolicyToApply[i];
 
 		// Save the ImageMap
 		ImageMap *im = maps[i];
@@ -75,6 +76,10 @@ template<class Archive> void ImageMapCache::load(Archive &ar, const u_int versio
 		std::string &name = mapNames[i];
 		ar & name;
 		SDL_LOG("Loading serialized image map: " << name);
+
+		bool rpta;
+		ar & rpta;
+		resizePolicyToApply[i] = rpta;
 
 		// Load the ImageMap
 		ImageMap *im;

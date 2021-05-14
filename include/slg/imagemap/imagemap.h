@@ -886,6 +886,11 @@ public:
 		const u_int newChannelCount);
 	void Preprocess();
 
+	void SetUpInstrumentation(const u_int originalWidth, const u_int originalHegith);
+	void EnableInstrumentation();
+	void DisableInstrumentation();
+	void DeleteInstrumentation();
+
 	u_int GetChannelCount() const { return pixelStorage->GetChannelCount(); }
 	u_int GetWidth() const { return pixelStorage->width; }
 	u_int GetHeight() const { return pixelStorage->height; }
@@ -928,6 +933,28 @@ public:
 	friend class boost::serialization::access;
 
 private:
+	class InstrumentationInfo {
+	public:
+		InstrumentationInfo(const u_int w, const u_int h) : originalWidth(w),
+				originalHeigth(h), enabled(false) { }
+		~InstrumentationInfo() { }
+
+		u_int originalWidth, originalHeigth;
+		bool enabled;
+	
+		friend class boost::serialization::access;
+
+	private:
+		// Used by serialization
+		InstrumentationInfo() { }
+
+		template<class Archive> void serialize(Archive &ar, const u_int version) {
+			ar & originalWidth;
+			ar & originalHeigth;
+			ar & enabled;
+		}
+	};
+
 	// Used by serialization
 	ImageMap();
 	ImageMap(ImageMapStorage *pixels, const float imageMean, const float imageMeanY);
@@ -941,6 +968,8 @@ private:
 
 	// Cached image information
 	float imageMean, imageMeanY;
+	
+	InstrumentationInfo *instrumentationInfo;
 };
 
 }

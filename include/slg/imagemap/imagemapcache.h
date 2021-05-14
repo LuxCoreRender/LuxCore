@@ -30,6 +30,9 @@
 
 namespace slg {
 
+class Scene;
+class ImageMapCache;
+
 //------------------------------------------------------------------------------
 // ImageMapResizePoly
 //------------------------------------------------------------------------------
@@ -46,6 +49,8 @@ public:
 	virtual ~ImageMapResizePolicy() { }
 	
 	virtual ImageMapResizePolicyType GetType() const = 0;
+	
+	virtual void Preprocess(ImageMapCache &imc, const Scene *scene, const bool useRTMode) { };
 
 	static ImageMapResizePolicy *FromProperties(const luxrays::Properties &props);
 	static ImageMapResizePolicyType String2ImageMapResizePolicyType(const std::string &type);
@@ -64,6 +69,7 @@ public:
 	~ImageMapResizeNonePolicy() { }
 	
 	virtual ImageMapResizePolicyType GetType() const { return POLICY_NONE; }
+	virtual void Preprocess(ImageMapCache &imc, const Scene *scene, const bool useRTMode) { };
 
 	friend class boost::serialization::access;
 
@@ -79,6 +85,7 @@ public:
 	~ImageMapResizeFixedPolicy() { }
 	
 	virtual ImageMapResizePolicyType GetType() const { return POLICY_FIXED; }
+	virtual void Preprocess(ImageMapCache &imc, const Scene *scene, const bool useRTMode) { };
 
 	friend class boost::serialization::access;
 
@@ -104,6 +111,7 @@ public:
 	~ImageMapResizeMinMemPolicy() { }
 	
 	virtual ImageMapResizePolicyType GetType() const { return POLICY_MINMEM; }
+	virtual void Preprocess(ImageMapCache &imc, const Scene *scene, const bool useRTMode);
 
 	friend class boost::serialization::access;
 
@@ -149,14 +157,19 @@ public:
 	u_int GetSize()const { return static_cast<u_int>(mapByKey.size()); }
 	bool IsImageMapDefined(const std::string &name) const { return mapByKey.find(name) != mapByKey.end(); }
 
+	friend class Scene;
+	friend class ImageMapResizeMinMemPolicy;
 	friend class boost::serialization::access;
 
 private:
+	// Used for the support of resize policies
+	void Preprocess(const Scene *scene, const bool useRTMode);
+
 	std::string GetCacheKey(const std::string &fileName,
 				const ImageMapConfig &imgCfg) const;
 	std::string GetCacheKey(const std::string &fileName) const;
 	
-	void ApplyResizePolicy(ImageMap *im) const;
+	bool ApplyResizePolicy(ImageMap *im) const;
 
 	template<class Archive> void save(Archive &ar, const unsigned int version) const;
 	template<class Archive>	void load(Archive &ar, const unsigned int version);
@@ -168,6 +181,7 @@ private:
 	std::vector<ImageMap *> maps;
 
 	ImageMapResizePolicy *resizePolicy;
+	std::vector<bool> resizePolicyToApply;
 };
 
 }
