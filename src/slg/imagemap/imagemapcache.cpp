@@ -44,22 +44,38 @@ ImageMapCache::~ImageMapCache() {
 	}
 }
 
-string ImageMapCache::GetCacheKey(const string &fileName, const float gamma,
-		const ImageMapStorage::ChannelSelectionType selectionType,
-		const ImageMapStorage::StorageType storageType,
-		const ImageMapStorage::WrapType wrapType) const {
-	return fileName + "_#_" + ToString(gamma) + "_#_" + ToString(selectionType) +
-			"_#_" + ToString(storageType) + "_#_" + ToString(wrapType);
+string ImageMapCache::GetCacheKey(const string &fileName, const ImageMapConfig &imgCfg) const {
+	string key = fileName + "_#_";
+
+	switch (imgCfg.colorSpaceCfg.colorSpaceType) {
+		case ColorSpaceConfig::NOP_COLORSPACE:
+			key += "CS_NOP_#_";
+			break;
+		case ColorSpaceConfig::LUXCORE_COLORSPACE:
+			key += "CS_LUXCORE_#_" + ToString(imgCfg.colorSpaceCfg.luxcore.gamma) + "_#_";
+			break;
+		case ColorSpaceConfig::OPENCOLORIO_COLORSPACE:
+			key += "CS_OPENCOLORIO_#_" +
+					ToString(imgCfg.colorSpaceCfg.ocio.configName) + "_#_" +
+					ToString(imgCfg.colorSpaceCfg.ocio.colorSpaceName) + "_#_";
+			break;
+		default:
+			throw runtime_error("Unknown color space type in ImageMapCache::GetCacheKey(): " + 
+					ToString(imgCfg.colorSpaceCfg.colorSpaceType));
+	}
+	
+	key += ToString(imgCfg.storageType) + "_#_" +
+			ToString(imgCfg.wrapType) + "_#_" +
+			ToString(imgCfg.selectionType);
+
+	return key;
 }
 
 string ImageMapCache::GetCacheKey(const string &fileName) const {
 	return fileName;
 }
 
-ImageMap *ImageMapCache::GetImageMap(const string &fileName, const float gamma,
-		const ImageMapStorage::ChannelSelectionType selectionType,
-		const ImageMapStorage::StorageType storageType,
-		const ImageMapStorage::WrapType wrapType) {
+ImageMap *ImageMapCache::GetImageMap(const string &fileName, const ImageMapConfig &imgCfg) {
 	// Compose the cache key
 	string key = GetCacheKey(fileName);
 
@@ -73,7 +89,7 @@ ImageMap *ImageMapCache::GetImageMap(const string &fileName, const float gamma,
 	}
 
 	// Check if it is a reference to a file
-	key = GetCacheKey(fileName, gamma, selectionType, storageType, wrapType);
+	key = GetCacheKey(fileName, imgCfg);
 	it = mapByKey.find(key);
 
 	if (it != mapByKey.end()) {
@@ -84,8 +100,7 @@ ImageMap *ImageMapCache::GetImageMap(const string &fileName, const float gamma,
 
 	// I haven't yet loaded the file
 
-	ImageMap *im = new ImageMap(fileName, gamma, storageType, wrapType);
-	im->SelectChannel(selectionType);
+	ImageMap *im = new ImageMap(fileName, imgCfg);
 
 	// Scale the image if required
 	const u_int width = im->GetWidth();
@@ -95,10 +110,12 @@ ImageMap *ImageMapCache::GetImageMap(const string &fileName, const float gamma,
 		const u_int newWidth = width * allImageScale;
 		const u_int newHeight = height * allImageScale;
 		im->Resize(newWidth, newHeight);
+		im->Preprocess();
 	} else if ((allImageScale < 1.f) && (width > 128) && (height > 128)) {
 		const u_int newWidth = Max<u_int>(128, width * allImageScale);
 		const u_int newHeight = Max<u_int>(128, height * allImageScale);
 		im->Resize(newWidth, newHeight);
+		im->Preprocess();
 	}
 
 	mapByKey.insert(make_pair(key, im));
@@ -132,6 +149,18 @@ void ImageMapCache::DefineImageMap(ImageMap *im) {
 		// otherwise (it->second would point to the new ImageMap and not to the old one)
 		mapByKey.erase(key);
 		mapByKey.insert(make_pair(key, im));
+	}
+}
+
+void ImageMapCache::DeleteImageMap(const ImageMap *im) {
+	for (boost::unordered_map<std::string, ImageMap *>::iterator it = mapByKey.begin(); it != mapByKey.end(); ++it) {
+		if (it->second == im) {
+			delete it->second;
+
+			maps.erase(std::find(maps.begin(), maps.end(), it->second));
+			mapByKey.erase(it);
+			return;
+		}
 	}
 }
 

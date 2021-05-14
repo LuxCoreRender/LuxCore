@@ -18,7 +18,6 @@
 
 #include "slg/engines/pathcpu/pathcpu.h"
 #include "slg/engines/pathcpu/pathcpurenderstate.h"
-#include "slg/engines/caches/photongi/photongicache.h"
 #include "slg/film/filters/filter.h"
 #include "slg/samplers/sobol.h"
 #include "slg/samplers/metropolis.h"

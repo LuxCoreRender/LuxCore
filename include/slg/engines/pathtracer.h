@@ -181,7 +181,7 @@ private:
 			std::vector<SampleResult> &sampleResults) const;
 
 	FilterDistribution *pixelFilterDistribution;
-	const PhotonGICache *photonGICache;	
+	const PhotonGICache *photonGICache;
 
 	static const Film::FilmChannels eyeSampleResultsChannels;
 	static const Film::FilmChannels lightSampleResultsChannels;

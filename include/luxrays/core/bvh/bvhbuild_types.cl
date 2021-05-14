@@ -40,3 +40,23 @@ typedef struct {
 	unsigned int nodeData;
 	int pad0; // To align to float4
 } BVHArrayNode;
+
+typedef struct {
+	union {
+		// I can not use BBox/Point/Normal here because objects with a constructor are not
+		// allowed inside an union.
+		struct {
+			float bboxMin[3];
+			float bboxMax[3];
+		} bvhNode;
+		struct {
+			unsigned int entryIndex;
+		} entryLeaf;
+	};
+	// Most significant bit is used to mark leafs
+	unsigned int nodeData;
+	int pad; // To align to float4
+} IndexBVHArrayNode;
+
+#define IndexBVHNodeData_IsLeaf(nodeData) ((nodeData) & 0x80000000u)
+#define IndexBVHNodeData_GetSkipIndex(nodeData) ((nodeData) & 0x7fffffffu)

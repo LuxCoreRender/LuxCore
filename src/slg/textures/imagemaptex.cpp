@@ -30,7 +30,9 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 static ImageMap *AllocRandomImageMap(const u_int size) {
-	unique_ptr<ImageMap> randomImageMap(ImageMap::AllocImageMap<float>(1.f, 3, size, size, ImageMapStorage::REPEAT));
+	unique_ptr<ImageMap> randomImageMap(ImageMap::AllocImageMap(3, size, size,
+			ImageMapConfig())
+	);
 
 	// Initialized the random image map
 
@@ -310,14 +312,22 @@ ImageMapTexture::ImageMapTexture(const string &texName,
 		for (u_int i = 0; i < RT_HISTOGRAM_SIZE; ++i)
 			lut[i] = TruncCDFInv(histogram[i] / (float)histogram[RT_HISTOGRAM_SIZE - 1], 1.f / 6.f);
 
-		randomizedTilingLUT = ImageMap::AllocImageMap<float>(1.f, 1, RT_HISTOGRAM_SIZE, 1, ImageMapStorage::CLAMP);
+		randomizedTilingLUT = ImageMap::AllocImageMap(1, RT_HISTOGRAM_SIZE, 1,
+				ImageMapConfig(1.f,
+					ImageMapStorage::StorageType::FLOAT,
+					ImageMapStorage::WrapType::CLAMP,
+					ImageMapStorage::ChannelSelectionType::DEFAULT));
 		randomizedTilingLUT->SetName(this->GetName() + "_#_randomizedTilingLUT");
 		float *randomizedTilingLUTData = (float *)randomizedTilingLUT->GetStorage()->GetPixelsData();
 		for (u_int i = 0; i < RT_HISTOGRAM_SIZE; ++i)
 			randomizedTilingLUTData[i] = Clamp(lut[i], 0.f, 1.f);
 
 		// Initialize randomized tiling LUT
-		randomizedTilingInvLUT = ImageMap::AllocImageMap<float>(1.f, 1, RT_LUT_SIZE, 1, ImageMapStorage::CLAMP);
+		randomizedTilingInvLUT = ImageMap::AllocImageMap(1, RT_LUT_SIZE, 1,
+				ImageMapConfig(1.f,
+					ImageMapStorage::StorageType::FLOAT,
+					ImageMapStorage::WrapType::CLAMP,
+					ImageMapStorage::ChannelSelectionType::DEFAULT));
 		randomizedTilingInvLUT->SetName(this->GetName() + "_#_randomizedTilingInvLUT");
 		float *randomizedTilingInvLUTData = (float *)randomizedTilingInvLUT->GetStorage()->GetPixelsData();
 

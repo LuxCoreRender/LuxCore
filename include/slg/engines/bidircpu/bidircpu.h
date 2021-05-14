@@ -21,7 +21,7 @@
 
 #include "slg/slg.h"
 #include "slg/engines/cpurenderengine.h"
-
+#include "slg/engines/caches/photongi/photongicache.h"
 #include "slg/samplers/sampler.h"
 #include "slg/film/film.h"
 #include "slg/film/filmsamplesplatter.h"
@@ -111,6 +111,7 @@ protected:
 class BiDirCPURenderEngine : public CPUNoTileRenderEngine {
 public:
 	BiDirCPURenderEngine(const RenderConfig *cfg);
+	virtual ~BiDirCPURenderEngine();
 
 	virtual RenderEngineType GetType() const { return GetObjectType(); }
 	virtual std::string GetTag() const { return GetObjectTag(); }
@@ -152,6 +153,7 @@ protected:
 	virtual void StopLockLess();
 
 	FilmSampleSplatter *sampleSplatter;
+	PhotonGICache *photonGICache;
 
 private:
 	CPURenderThread *NewRenderThread(const u_int index, luxrays::IntersectionDevice *device) {

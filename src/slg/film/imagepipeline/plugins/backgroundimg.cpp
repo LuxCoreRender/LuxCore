@@ -84,6 +84,7 @@ void BackgroundImgPlugin::UpdateFilmImageMap(const Film &film) {
 
 		filmImageMap = imgMap->Copy();
 		filmImageMap->Resize(width, height);
+		filmImageMap->Preprocess();
 	}
 }
 

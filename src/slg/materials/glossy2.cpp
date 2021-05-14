@@ -49,6 +49,7 @@ Spectrum Glossy2Material::Evaluate(const HitPoint &hitPoint,
 	const Vector &localSampledDir = hitPoint.fromLight ? localEyeDir : localLightDir;
 
 	const Spectrum baseF = Kd->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f) * INV_PI * fabsf(localLightDir.z);
+
 	if ((!doublesided) && (localEyeDir.z <= 0.f)) {
 		// Back face: no coating
 
@@ -91,6 +92,7 @@ Spectrum Glossy2Material::Evaluate(const HitPoint &hitPoint,
 
 			*directPdfW = wBase * fabsf (localSampledDir.z * INV_PI) +
 				wCoating * SchlickBSDF_CoatingPdf (roughness, anisotropy, localFixedDir, localSampledDir);
+
 		}
 	}
 
@@ -161,14 +163,15 @@ Spectrum Glossy2Material::Sample(const HitPoint &hitPoint,
 	}
 	ks = ks.Clamp(0.f, 1.f);
 
-	const float u = Clamp(nu->GetFloatValue(hitPoint), 1e-5f, 1.f);
-	const float v = Clamp(nv->GetFloatValue(hitPoint), 1e-5f, 1.f);
+	const float u = Clamp(nu->GetFloatValue(hitPoint), 1e-9f, 1.f);
+	const float v = Clamp(nv->GetFloatValue(hitPoint), 1e-9f, 1.f);
 	const float u2 = u * u;
 	const float v2 = v * v;
 	const float anisotropy = (u2 < v2) ? (1.f - u2 / v2) : u2 > 0.f ? (v2 / u2 - 1.f) : 0.f;
 	const float roughness = u * v;
 
-	const float wCoating = ((localFixedDir.z < 0) && !doublesided) ? 0 : SchlickBSDF_CoatingWeight (ks, localFixedDir);
+	// Coating is used only on the front face
+	const float wCoating = SchlickBSDF_CoatingWeight(ks, localFixedDir);
 	const float wBase = 1.f - wCoating;
 
 	float basePdf, coatingPdf;
@@ -262,8 +265,9 @@ void Glossy2Material::Pdf(const HitPoint &hitPoint,
 	}
 
 	if (reversePdfW) {
-		if (localSampledDir.z < 0.f) {
+		if ((!doublesided) && (localSampledDir.z < 0.f)) {
 			// Backface
+
 			*reversePdfW = fabsf (localFixedDir.z * INV_PI);
 		}
 		else {

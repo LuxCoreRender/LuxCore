@@ -45,7 +45,7 @@
 #include "slg/volumes/volume.h"
 #include "slg/scene/sceneobjectdefs.h"
 #include "slg/scene/extmeshcache.h"
-
+#include "slg/scene/colorspaceconverters.h"
 
 namespace slg {
 
@@ -53,8 +53,6 @@ namespace slg {
 namespace ocl {
 #include "slg/scene/scene_types.cl"
 }
-
-#define TRIANGLE_LIGHT_POSTFIX "__triangle__light__"
 
 // Note: keep aligned with the copy in scene_types.cl
 typedef enum {
@@ -102,20 +100,9 @@ public:
 	//--------------------------------------------------------------------------
 
 	void DefineImageMap(ImageMap *im);
-	template <class T> void DefineImageMap(const std::string &name, T *pixels, const float gamma,
+	void DefineImageMap(const std::string &name, void *pixels,
 		const u_int channels, const u_int width, const u_int height,
-		ImageMapStorage::ChannelSelectionType selectionType,
-		ImageMapStorage::WrapType wrapType) {
-		ImageMap *imgMap = ImageMap::AllocImageMap<T>(gamma, channels, width, height, wrapType);
-		imgMap->SetName(name);
-		memcpy(imgMap->GetStorage()->GetPixelsData(), pixels, width * height * channels * sizeof(T));
-		imgMap->ReverseGammaCorrection();
-		imgMap->SelectChannel(selectionType);
-
-		DefineImageMap(imgMap);
-
-		editActions.AddAction(IMAGEMAPS_EDIT);
-	}
+		const ImageMapConfig &cfg);
 
 	bool IsImageMapDefined(const std::string &imgMapName) const;
 
@@ -171,6 +158,8 @@ public:
 
 	static Scene *LoadSerialized(const std::string &fileName);
 	static void SaveSerialized(const std::string &fileName, const Scene *scene);
+	
+	static std::string EncodeTriangleLightNamePrefix(const std::string &objectName);
 
 	//--------------------------------------------------------------------------
 
@@ -198,6 +187,8 @@ public:
 	friend class boost::serialization::access;
 
 private:
+	ColorSpaceConverters colorSpaceConv;
+
 	void Init(const float imageScale);
 
 	void ParseCamera(const luxrays::Properties &props);
@@ -208,7 +199,8 @@ private:
 	void ParseObjects(const luxrays::Properties &props);
 	void ParseLights(const luxrays::Properties &props);
 
-	const Texture *GetTexture(const luxrays::Property &name);
+	luxrays::Spectrum GetColor(const luxrays::Property &prop);
+	const Texture *GetTexture(const luxrays::Property &prop);
 
 	Camera *CreateCamera(const luxrays::Properties &props);
 	TextureMapping2D *CreateTextureMapping2D(const std::string &prefixName, const luxrays::Properties &props);

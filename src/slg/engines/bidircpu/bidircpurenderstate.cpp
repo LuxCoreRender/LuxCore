@@ -30,17 +30,33 @@ using namespace slg;
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::BiDirCPURenderState)
 
-BiDirCPURenderState::BiDirCPURenderState(const u_int seed) :
+BiDirCPURenderState::BiDirCPURenderState() :
 		RenderState(BiDirCPURenderEngine::GetObjectTag()),
-		bootStrapSeed(seed) {
+		photonGICache(nullptr), deletePhotonGICachePtr(false) {
+}
+
+BiDirCPURenderState::BiDirCPURenderState(const u_int seed, PhotonGICache *pgic) :
+		RenderState(BiDirCPURenderEngine::GetObjectTag()),
+		bootStrapSeed(seed), photonGICache(pgic), deletePhotonGICachePtr(false) {
 }
 
 BiDirCPURenderState::~BiDirCPURenderState() {
+	if (deletePhotonGICachePtr)
+		delete photonGICache;
 }
 
-template<class Archive> void BiDirCPURenderState::serialize(Archive &ar, const u_int version) {
+template<class Archive> void BiDirCPURenderState::load(Archive &ar, const u_int version) {
 	ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(RenderState);
 	ar & bootStrapSeed;
+	ar & photonGICache;
+
+	deletePhotonGICachePtr = true;
+}
+
+template<class Archive> void BiDirCPURenderState::save(Archive &ar, const u_int version) const {
+	ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(RenderState);
+	ar & bootStrapSeed;
+	ar & photonGICache;
 }
 
 namespace slg {

@@ -121,7 +121,7 @@ void CompiledScene::CompilePhotonGI() {
 			const PGICRadiancePhotonBvh *radiancePhotonsBVH = photonGICache->GetRadiancePhotonsBVH();
 
 			u_int nNodes;
-			const slg::ocl::IndexBVHArrayNode *nodes = radiancePhotonsBVH->GetArrayNodes(&nNodes);
+			const luxrays::ocl::IndexBVHArrayNode *nodes = radiancePhotonsBVH->GetArrayNodes(&nNodes);
 			pgicRadiancePhotonsBVHArrayNode.resize(nNodes);
 			copy(&nodes[0], &nodes[0] + nNodes, pgicRadiancePhotonsBVHArrayNode.begin());
 
@@ -161,7 +161,7 @@ void CompiledScene::CompilePhotonGI() {
 			const PGICPhotonBvh *causticPhotonsBVH = photonGICache->GetCausticPhotonsBVH();
 
 			u_int nNodes;
-			const slg::ocl::IndexBVHArrayNode *nodes = causticPhotonsBVH->GetArrayNodes(&nNodes);
+			const luxrays::ocl::IndexBVHArrayNode *nodes = causticPhotonsBVH->GetArrayNodes(&nNodes);
 			pgicCausticPhotonsBVHArrayNode.resize(nNodes);
 			copy(&nodes[0], &nodes[0] + nNodes, pgicCausticPhotonsBVHArrayNode.begin());
 

@@ -423,7 +423,6 @@ float slg::SchlickDistribution_G(const float roughness, const Vector &localFixed
 }
 
 static float GetPhi(const float a, const float b) {
-	if ((a < DEFAULT_EPSILON_MIN) || (b < DEFAULT_EPSILON_MIN)) return 0.f;
 	return M_PI * .5f * sqrtf(a * b / (1.f - a * (1.f - b)));
 }
 
@@ -507,13 +506,13 @@ Spectrum slg::SchlickBSDF_CoatingSampleF(const bool fromLight, const Spectrum ks
 	const float cosWH = Dot(localFixedDir, wh);
 	*localSampledDir = 2.f * cosWH * wh - localFixedDir;
 
-	if ((fabsf (localSampledDir->z) < DEFAULT_COS_EPSILON_STATIC))
+	if ((fabsf(localSampledDir->z) < DEFAULT_COS_EPSILON_STATIC) || (localFixedDir.z * localSampledDir->z < 0.f))
 		return Spectrum();
 
 	const float coso = fabsf(localFixedDir.z);
 	const float cosi = fabsf(localSampledDir->z);
 
-	*pdf = specPdf / (4.f * fabs (cosWH));
+	*pdf = specPdf / (4.f * cosWH);
 	if (*pdf <= 0.f)
 		return Spectrum();
 

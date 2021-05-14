@@ -229,7 +229,7 @@ ImageMap *IESSphericalFunction::IES2ImageMap(const PhotometricDataIES &data, con
 	delete[] uFuncY;
 
 	// Resample the irregular functions
-	ImageMap *imgMap = ImageMap::AllocImageMap<float>(1.f, 1, xRes, yRes, ImageMapStorage::REPEAT);
+	ImageMap *imgMap = ImageMap::AllocImageMap(1, xRes, yRes, ImageMapConfig());
 	float *img = (float *)imgMap->GetStorage()->GetPixelsData();
 
 	for (u_int y = 0; y < yRes; ++y) {

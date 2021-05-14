@@ -549,6 +549,7 @@ void BiDirCPURenderThread::RenderFunc() {
 	RandomGenerator *rndGen = new RandomGenerator(engine->seedBase + 1 + threadIndex);
 	Scene *scene = engine->renderConfig->scene;
 	Camera *camera = scene->camera;
+	PhotonGICache *photonGICache = engine->photonGICache;
 
 	// Setup the sampler
 	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, engine->film, engine->sampleSplatter,
@@ -629,6 +630,7 @@ void BiDirCPURenderThread::RenderFunc() {
 
 			eyeVertex.depth = 1;
 			bool albedoToDo = true;
+			bool photonGICausticCacheUsed = false;
 			while (eyeVertex.depth <= engine->maxEyePathDepth) {
 				eyeSampleResult.firstPathVertex = (eyeVertex.depth == 1);
 				eyeSampleResult.lastPathVertex = (eyeVertex.depth == engine->maxEyePathDepth);
@@ -699,10 +701,36 @@ void BiDirCPURenderThread::RenderFunc() {
 				eyeVertex.dVM *= factor;
 
 				// Check if it is a light source
-				if (eyeVertex.bsdf.IsLightSource())
+				if (eyeVertex.bsdf.IsLightSource() &&
+					// Avoid to render caustic path if PhotonGI caustic cache
+					// has been used (for SDS paths)
+					!photonGICausticCacheUsed){
 					DirectHitLight(true, eyeVertex, eyeSampleResult);
+				}
 
 				// Note: pass-through check is done inside Scene::Intersect()
+		
+				//--------------------------------------------------------------
+				// Check if I can use the photon cache
+				//--------------------------------------------------------------
+
+				if (photonGICache) {
+					const bool isPhotonGIEnabled = photonGICache->IsPhotonGIEnabled(eyeVertex.bsdf);
+
+					// Check if the cache is enabled for this material
+					if (isPhotonGIEnabled) {
+						// TODO: add support for AOVs (possible ?)
+
+						if (photonGICache->IsCausticEnabled() && (eyeVertex.depth > 1)) {
+							const SpectrumGroup causticRadiance = photonGICache->ConnectWithCausticPaths(eyeVertex.bsdf);
+
+							if (!causticRadiance.Black())
+								eyeSampleResult.radiance.AddWeighted(eyeVertex.throughput, causticRadiance);
+							
+							photonGICausticCacheUsed = true;
+						}
+					}
+				}
 
 				//--------------------------------------------------------------
 				// Direct light sampling
@@ -760,6 +788,16 @@ void BiDirCPURenderThread::RenderFunc() {
 		// Check halt conditions
 		if (engine->film->GetConvergence() == 1.f)
 			break;
+
+		if (photonGICache) {
+			try {
+				const u_int spp = engine->film->GetTotalEyeSampleCount() / engine->film->GetPixelCount();
+				photonGICache->Update(threadIndex, spp);
+			} catch (boost::thread_interrupted &ti) {
+				// I have been interrupted, I must stop
+				break;
+			}
+		}
 	}
 
 	delete sampler;

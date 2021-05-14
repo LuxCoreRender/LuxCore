@@ -1,5 +1,3 @@
-#line 2 "indexbvh_types.cl"
-
 /***************************************************************************
  * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
  *                                                                         *
@@ -18,22 +16,45 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-typedef struct {
-	union {
-		// I can not use BBox/Point/Normal here because objects with a constructor are not
-		// allowed inside an union.
-		struct {
-			float bboxMin[3];
-			float bboxMax[3];
-		} bvhNode;
-		struct {
-			unsigned int entryIndex;
-		} entryLeaf;
-	};
-	// Most significant bit is used to mark leafs
-	unsigned int nodeData;
-	int pad; // To align to float4
-} IndexBVHArrayNode;
+#ifndef _SLG_COLORSPACECONVERTERS_H
+#define	_SLG_COLORSPACECONVERTERS_H
 
-#define IndexBVHNodeData_IsLeaf(nodeData) ((nodeData) & 0x80000000u)
-#define IndexBVHNodeData_GetSkipIndex(nodeData) ((nodeData) & 0x7fffffffu)
+#include <string>
+#include <boost/unordered_map.hpp>
+
+#include <OpenColorIO/OpenColorIO.h>
+namespace OCIO = OCIO_NAMESPACE;
+
+#include "luxrays/core/color/color.h"
+#include "slg/slg.h"
+#include "slg/core/colorspace.h"
+
+namespace slg {
+
+//------------------------------------------------------------------------------
+// ColorSpaceConverters
+//------------------------------------------------------------------------------
+
+class ColorSpaceConverters {
+public:
+	ColorSpaceConverters();
+	virtual ~ColorSpaceConverters();
+
+	void ConvertFrom(const ColorSpaceConfig &cfg, float &v);
+	void ConvertFrom(const ColorSpaceConfig &cfg, luxrays::Spectrum &c);
+
+private:
+	void ConvertFromLuxCore(const float gamma, float &v);
+	void ConvertFromLuxCore(const float gamma, luxrays::Spectrum &c);
+
+	void ConvertFromOpenColorIO(const std::string &configFileName,
+		const std::string &inputColorSpace, float &v);
+	void ConvertFromOpenColorIO(const std::string &configFileName,
+		const std::string &inputColorSpace, luxrays::Spectrum &c);
+
+	boost::unordered_map<std::string, OCIO::ConstCPUProcessorRcPtr> ocioProcessorCache;
+};
+
+}
+
+#endif	/* _SLG_COLORSPACECONVERTERS_H */

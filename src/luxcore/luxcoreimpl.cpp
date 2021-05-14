@@ -1115,9 +1115,12 @@ void SceneImpl::DefineImageMapUChar(const std::string &imgMapName,
 	API_BEGIN("{}, {}, {}, {}, {}, {}, {}, {}", ToArgString(imgMapName), (void *)pixels, gamma, channels,
 			width, height, ToArgString(selectionType), ToArgString(wrapType));
 
-	scene->DefineImageMap<u_char>(imgMapName, pixels, gamma, channels,
-			width, height, (slg::ImageMapStorage::ChannelSelectionType)selectionType,
-			(slg::ImageMapStorage::WrapType)wrapType);
+	scene->DefineImageMap(imgMapName, pixels, channels, width, height,
+			slg::ImageMapConfig(
+				gamma,
+				slg::ImageMapStorage::StorageType::BYTE,
+				(slg::ImageMapStorage::WrapType)wrapType,
+				(slg::ImageMapStorage::ChannelSelectionType)selectionType));
 
 	API_END();
 }
@@ -1129,9 +1132,12 @@ void SceneImpl::DefineImageMapHalf(const std::string &imgMapName,
 	API_BEGIN("{}, {}, {}, {}, {}, {}, {}, {}", ToArgString(imgMapName), (void *)pixels, gamma, channels,
 			width, height, ToArgString(selectionType), ToArgString(wrapType));
 
-	scene->DefineImageMap<half>(imgMapName, (half *)pixels, gamma, channels,
-			width, height, (slg::ImageMapStorage::ChannelSelectionType)selectionType,
-			(slg::ImageMapStorage::WrapType)wrapType);
+	scene->DefineImageMap(imgMapName, (half *)pixels, channels, width, height,
+			slg::ImageMapConfig(
+				gamma,
+				slg::ImageMapStorage::StorageType::HALF,
+				(slg::ImageMapStorage::WrapType)wrapType,
+				(slg::ImageMapStorage::ChannelSelectionType)selectionType));
 
 	API_END();
 }
@@ -1143,9 +1149,12 @@ void SceneImpl::DefineImageMapFloat(const std::string &imgMapName,
 	API_BEGIN("{}, {}, {}, {}, {}, {}, {}, {}", ToArgString(imgMapName), (void *)pixels, gamma, channels,
 			width, height, ToArgString(selectionType), ToArgString(wrapType));
 
-	scene->DefineImageMap<float>(imgMapName, pixels, gamma, channels,
-			width, height, (slg::ImageMapStorage::ChannelSelectionType)selectionType,
-			(slg::ImageMapStorage::WrapType)wrapType);
+	scene->DefineImageMap(imgMapName, pixels, channels, width, height,
+			slg::ImageMapConfig(
+				gamma,
+				slg::ImageMapStorage::StorageType::FLOAT,
+				(slg::ImageMapStorage::WrapType)wrapType,
+				(slg::ImageMapStorage::ChannelSelectionType)selectionType));
 
 	API_END();
 }

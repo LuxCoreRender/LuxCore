@@ -43,22 +43,9 @@ public:
 
 	void DefineImageMap(ImageMap *im);
 
-	ImageMap *GetImageMap(const std::string &fileName, const float gamma,
-		const ImageMapStorage::ChannelSelectionType selectionType,
-		const ImageMapStorage::StorageType storageType,
-		const ImageMapStorage::WrapType wrapType = ImageMapStorage::REPEAT);
+	ImageMap *GetImageMap(const std::string &fileName, const ImageMapConfig &imgCfg);
 
-	void DeleteImageMap(const ImageMap *im) {
-		for (boost::unordered_map<std::string, ImageMap *>::iterator it = mapByKey.begin(); it != mapByKey.end(); ++it) {
-			if (it->second == im) {
-				delete it->second;
-
-				maps.erase(std::find(maps.begin(), maps.end(), it->second));
-				mapByKey.erase(it);
-				return;
-			}
-		}
-	}
+	void DeleteImageMap(const ImageMap *im);
 
 	std::string GetSequenceFileName(const ImageMap *im) const;
 	u_int GetImageMapIndex(const ImageMap *im) const;
@@ -70,10 +57,8 @@ public:
 	friend class boost::serialization::access;
 
 private:
-	std::string GetCacheKey(const std::string &fileName, const float gamma,
-		const ImageMapStorage::ChannelSelectionType selectionType,
-		const ImageMapStorage::StorageType storageType,
-		const ImageMapStorage::WrapType wrapType) const;
+	std::string GetCacheKey(const std::string &fileName,
+				const ImageMapConfig &imgCfg) const;
 	std::string GetCacheKey(const std::string &fileName) const;
 
 	template<class Archive> void save(Archive &ar, const unsigned int version) const;
