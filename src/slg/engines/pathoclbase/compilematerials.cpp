@@ -764,7 +764,8 @@ void CompiledScene::CompileMaterials() {
 
 				const Texture *indexTex = g2m->GetIndex();
 				mat->glossy2.indexTexIndex = scene->texDefs.GetTextureIndex(indexTex);
-				mat->glossy2.multibounce = g2m->IsMultibounce() ? 1 : 0;
+				mat->glossy2.multibounce = g2m->IsMultibounce () ? 1 : 0;
+				mat->glossy2.doublesided = g2m->IsDoubleSided () ? 1 : 0;
 				break;
 			}
 			case METAL2: {

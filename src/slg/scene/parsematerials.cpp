@@ -293,9 +293,10 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 		const Texture *ka = GetTexture(props.Get(Property(propName + ".ka")(0.f, 0.f, 0.f)));
 		const Texture *d = GetTexture(props.Get(Property(propName + ".d")(0.f)));
 		const Texture *index = GetTexture(props.Get(Property(propName + ".index")(0.f, 0.f, 0.f)));
-		const bool multibounce = props.Get(Property(propName + ".multibounce")(false)).Get<bool>();
+		const bool multibounce = props.Get (Property (propName + ".multibounce")(false)).Get<bool> ();
+		const bool doublesided = props.Get (Property (propName + ".doublesided")(false)).Get<bool> ();
 
-		mat = new Glossy2Material(frontTransparencyTex, backTransparencyTex, emissionTex, bumpTex, kd, ks, nu, nv, ka, d, index, multibounce);
+		mat = new Glossy2Material(frontTransparencyTex, backTransparencyTex, emissionTex, bumpTex, kd, ks, nu, nv, ka, d, index, multibounce, doublesided);
 	} else if (matType == "metal2") {
 		const Texture *nu = GetTexture(props.Get(Property(propName + ".uroughness")(.1f)));
 		const Texture *nv = GetTexture(props.Get(Property(propName + ".vroughness")(.1f)));

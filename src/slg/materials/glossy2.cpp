@@ -32,9 +32,9 @@ using namespace slg;
 Glossy2Material::Glossy2Material(const Texture *frontTransp, const Texture *backTransp,
 		const Texture *emitted, const Texture *bump,
 		const Texture *kd, const Texture *ks, const Texture *u, const Texture *v,
-		const Texture *ka, const Texture *d, const Texture *i, const bool mbounce) :
+		const Texture *ka, const Texture *d, const Texture *i, const bool mbounce, const bool doublesided) :
 			Material(frontTransp, backTransp, emitted, bump), Kd(kd), Ks(ks), nu(u), nv(v),
-			Ka(ka), depth(d), index(i), multibounce(mbounce) {
+			Ka(ka), depth(d), index(i), multibounce(mbounce), doublesided (doublesided) {
 	glossiness = ComputeGlossiness(nu, nv);
 }
 
@@ -49,14 +49,15 @@ Spectrum Glossy2Material::Evaluate(const HitPoint &hitPoint,
 	const Vector &localSampledDir = hitPoint.fromLight ? localEyeDir : localLightDir;
 
 	const Spectrum baseF = Kd->GetSpectrumValue(hitPoint).Clamp(0.f, 1.f) * INV_PI * fabsf(localLightDir.z);
-	if (localEyeDir.z <= 0.f) {
+
+	if ((!doublesided) && (localEyeDir.z <= 0.f)) {
 		// Back face: no coating
 
 		if (directPdfW)
-			*directPdfW = fabsf(localSampledDir.z * INV_PI);
+			*directPdfW = fabsf (localSampledDir.z * INV_PI);
 
 		if (reversePdfW)
-			*reversePdfW = fabsf(localFixedDir.z * INV_PI);
+			*reversePdfW = fabsf (localFixedDir.z * INV_PI);
 
 		*event = DIFFUSE | REFLECT;
 		return baseF;
@@ -81,35 +82,38 @@ Spectrum Glossy2Material::Evaluate(const HitPoint &hitPoint,
 	const float roughness = u * v;
 
 	if (directPdfW) {
-		if (localFixedDir.z < 0.f) {
+		if ((!doublesided) && (localFixedDir.z < 0.f)) {
 			// Backface
-			*directPdfW = fabsf(localSampledDir.z * INV_PI);
-		} else {
-			const float wCoating = SchlickBSDF_CoatingWeight(ks, localFixedDir);
+			*directPdfW = fabsf (localSampledDir.z * INV_PI);
+		}
+		else {
+			const float wCoating = SchlickBSDF_CoatingWeight (ks, localFixedDir);
 			const float wBase = 1.f - wCoating;
 
-			*directPdfW = wBase * fabsf(localSampledDir.z * INV_PI) +
-				wCoating * SchlickBSDF_CoatingPdf(roughness, anisotropy, localFixedDir, localSampledDir);
+			*directPdfW = wBase * fabsf (localSampledDir.z * INV_PI) +
+				wCoating * SchlickBSDF_CoatingPdf (roughness, anisotropy, localFixedDir, localSampledDir);
+
 		}
 	}
 
 	if (reversePdfW) {
-		if (localSampledDir.z < 0.f) {
+		if ((!doublesided) && (localSampledDir.z < 0.f)) {
 			// Backface
-			*reversePdfW = fabsf(localFixedDir.z * INV_PI);
-		} else {
-			const float wCoatingR = SchlickBSDF_CoatingWeight(ks, localSampledDir);
+			*reversePdfW = fabsf (localFixedDir.z * INV_PI);
+		}
+		else {
+			const float wCoatingR = SchlickBSDF_CoatingWeight (ks, localSampledDir);
 			const float wBaseR = 1.f - wCoatingR;
 
-			*reversePdfW = wBaseR * fabsf(localFixedDir.z * INV_PI) +
-				wCoatingR * SchlickBSDF_CoatingPdf(roughness, anisotropy, localSampledDir, localFixedDir);
+			*reversePdfW = wBaseR * fabsf (localFixedDir.z * INV_PI) +
+				wCoatingR * SchlickBSDF_CoatingPdf (roughness, anisotropy, localSampledDir, localFixedDir);
 		}
 	}
-
-	if (localFixedDir.z < 0.f) {
+	if ((!doublesided) && (localFixedDir.z < 0.f)) {
 		// Backface, no coating
 		return baseF;
 	}
+
 
 	// Absorption
 	const float cosi = fabsf(localSampledDir.z);
@@ -137,18 +141,18 @@ Spectrum Glossy2Material::Sample(const HitPoint &hitPoint,
 	if (fabsf(localFixedDir.z) < DEFAULT_COS_EPSILON_STATIC)
 		return Spectrum();
 
-	if (localFixedDir.z <= 0.f) {
+	if ((!doublesided) && (localFixedDir.z <= 0.f)) {
 		// Back face
-		*localSampledDir = -CosineSampleHemisphere(u0, u1, pdfW);
+		*localSampledDir = -CosineSampleHemisphere (u0, u1, pdfW);
 
-		const float absCosSampledDir = fabsf(localSampledDir->z);
+		const float absCosSampledDir = fabsf (localSampledDir->z);
 		if (absCosSampledDir < DEFAULT_COS_EPSILON_STATIC)
-			return Spectrum();
+			return Spectrum ();
 		*event = DIFFUSE | REFLECT;
 		if (hitPoint.fromLight)
-			return Kd->GetSpectrumValue(hitPoint) * fabsf(localFixedDir.z / absCosSampledDir);
+			return Kd->GetSpectrumValue (hitPoint) * fabsf (localFixedDir.z / absCosSampledDir);
 		else
-			return Kd->GetSpectrumValue(hitPoint);
+			return Kd->GetSpectrumValue (hitPoint);
 	}
 
 	Spectrum ks = Ks->GetSpectrumValue(hitPoint);
@@ -247,28 +251,31 @@ void Glossy2Material::Pdf(const HitPoint &hitPoint,
 	const float roughness = u * v;
 
 	if (directPdfW) {
-		if (localFixedDir.z < 0.f) {
+		if ((!doublesided) && (localFixedDir.z < 0.f)) {
 			// Backface
-			*directPdfW = fabsf(localSampledDir.z * INV_PI);
-		} else {
-			const float wCoating = SchlickBSDF_CoatingWeight(ks, localFixedDir);
+			*directPdfW = fabsf (localSampledDir.z * INV_PI);
+		}
+		else {
+			const float wCoating = SchlickBSDF_CoatingWeight (ks, localFixedDir);
 			const float wBase = 1.f - wCoating;
 
-			*directPdfW = wBase * fabsf(localSampledDir.z * INV_PI) +
-				wCoating * SchlickBSDF_CoatingPdf(roughness, anisotropy, localFixedDir, localSampledDir);
+			*directPdfW = wBase * fabsf (localSampledDir.z * INV_PI) +
+				wCoating * SchlickBSDF_CoatingPdf (roughness, anisotropy, localFixedDir, localSampledDir);
 		}
 	}
 
 	if (reversePdfW) {
-		if (localSampledDir.z < 0.f) {
+		if ((!doublesided) && (localSampledDir.z < 0.f)) {
 			// Backface
-			*reversePdfW = fabsf(localFixedDir.z * INV_PI);
-		} else {
-			const float wCoatingR = SchlickBSDF_CoatingWeight(ks, localSampledDir);
+
+			*reversePdfW = fabsf (localFixedDir.z * INV_PI);
+		}
+		else {
+			const float wCoatingR = SchlickBSDF_CoatingWeight (ks, localSampledDir);
 			const float wBaseR = 1.f - wCoatingR;
 
-			*reversePdfW = wBaseR * fabsf(localFixedDir.z * INV_PI) +
-				wCoatingR * SchlickBSDF_CoatingPdf(roughness, anisotropy, localSampledDir, localFixedDir);
+			*reversePdfW = wBaseR * fabsf (localFixedDir.z * INV_PI) +
+				wCoatingR * SchlickBSDF_CoatingPdf (roughness, anisotropy, localSampledDir, localFixedDir);
 		}
 	}
 }
@@ -324,7 +331,8 @@ Properties Glossy2Material::ToProperties(const ImageMapCache &imgMapCache, const
 	props.Set(Property("scene.materials." + name + ".ka")(Ka->GetSDLValue()));
 	props.Set(Property("scene.materials." + name + ".d")(depth->GetSDLValue()));
 	props.Set(Property("scene.materials." + name + ".index")(index->GetSDLValue()));
-	props.Set(Property("scene.materials." + name + ".multibounce")(multibounce));
+	props.Set (Property ("scene.materials." + name + ".multibounce")(multibounce));
+	props.Set (Property ("scene.materials." + name + ".doublesided")(doublesided));
 	props.Set(Material::ToProperties(imgMapCache, useRealFileName));
 
 	return props;
