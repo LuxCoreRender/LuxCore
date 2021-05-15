@@ -54,7 +54,9 @@ template<class Archive> void ImageMapCache::save(Archive &ar, const u_int versio
 		const std::string &name = mapNames[i];
 		SDL_LOG("Saving serialized image map: " << name);
 		ar & name;
-		ar & resizePolicyToApply[i];
+		// I'm using a bool variable here as work around for MacOS
+		const bool rpta = resizePolicyToApply[i];
+		ar & rpta;
 
 		// Save the ImageMap
 		ImageMap *im = maps[i];
