@@ -27,6 +27,7 @@
 * Fixed the reading of IES files on system with not-US locale
 * Fixed a problem with Python and Property objects initialized as double even if they were int
 * Python Property object now consider int data type always as a 64 bit value
+* Fixed a bug rendering black baked maps when using bump mapping and COMBINED type with BAKECPU rendering engine
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
