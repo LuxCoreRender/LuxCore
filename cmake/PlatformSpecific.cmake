@@ -163,7 +163,7 @@ IF(APPLE)
 
 	EXECUTE_PROCESS(COMMAND uname -r OUTPUT_VARIABLE MAC_SYS) # check for actual system-version
 
-	SET(CMAKE_OSX_DEPLOYMENT_TARGET 10.9) # Minimum OS requirements for LuxCore
+	SET(CMAKE_OSX_DEPLOYMENT_TARGET 10.13) # Minimum OS requirements for LuxCore
 
   IF(${MAC_SYS} MATCHES 20)
     SET(OSX_SYSTEM 11.1)
