@@ -28,4 +28,8 @@ set(LUXCORECONSOLE_SRCS
 
 add_executable(luxcoreconsole ${LUXCORECONSOLE_SRCS})
 
+if(APPLE)
+TARGET_LINK_LIBRARIES(luxcoreconsole expat "-framework Carbon" "-framework IOKit" ${LUXCORE_LIBRARY} ${Boost_LIBRARIES})
+else()
 TARGET_LINK_LIBRARIES(luxcoreconsole ${LUXCORE_LIBRARY} ${Boost_LIBRARIES})
+endif()
