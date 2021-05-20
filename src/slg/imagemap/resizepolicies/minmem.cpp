@@ -305,6 +305,8 @@ void ImageMapResizeMinMemPolicy::Preprocess(ImageMapCache &imc, const Scene *sce
 				optimalWidth << "x" << optimalHeigth);
 	}
 
+	size_t originalMemUsed = 0;
+	size_t currentMemUsed = 0;
 	for (auto i : imgMapsIndices) {
 		const u_int originalWidth = imc.maps[i]->instrumentationInfo->originalWidth;
 		const u_int originalHeigth = imc.maps[i]->instrumentationInfo->originalHeigth;
@@ -346,14 +348,20 @@ void ImageMapResizeMinMemPolicy::Preprocess(ImageMapCache &imc, const Scene *sce
 
 		// Reload the original image map
 		imc.maps[i]->Reload();
+		originalMemUsed += imc.maps[i]->GetStorage()->GetMemorySize();
+
 		// Resize the image map
 		imc.maps[i]->Resize(newWidth, newHeight);
+		currentMemUsed += imc.maps[i]->GetStorage()->GetMemorySize();
 		
 		SDL_LOG("Image maps \"" << imc.maps[i]->GetName() << "\" scaled: " <<
 				originalWidth << "x" << originalHeigth << " => " <<
 				newWidth << "x" << newHeight);
 	}
 
+	SDL_LOG("Memory required for original Image maps: " + ToMemString(originalMemUsed));
+	SDL_LOG("Memory required for MINMEM Image maps: " + ToMemString(currentMemUsed));
+	
 	// Delete instrumentation for image maps checked
 	for (auto i : imgMapsIndices)
 		imc.maps[i]->DeleteInstrumentation();
