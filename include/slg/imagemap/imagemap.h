@@ -23,6 +23,10 @@
 
 #include <string>
 #include <limits>
+#include <unordered_map>
+
+#include <boost/thread.hpp>
+#include <boost/thread/mutex.hpp>
 
 #include "luxrays/luxrays.h"
 #include "luxrays/utils/ocl.h"
@@ -879,6 +883,8 @@ public:
 	ImageMap(const std::string &fileName, const ImageMapConfig &cfg);
 	~ImageMap();
 
+	void Reload();
+	
 	void SelectChannel(const ImageMapStorage::ChannelSelectionType selectionType);
 	void ConvertColorSpace(const std::string &configFileName,
 		const std::string &inputColorSpace, const std::string &outputColorSpace);
@@ -886,7 +892,8 @@ public:
 		const u_int newChannelCount);
 	void Preprocess();
 
-	void SetUpInstrumentation(const u_int originalWidth, const u_int originalHegith);
+	void SetUpInstrumentation(const u_int originalWidth, const u_int originalHegith,
+		const ImageMapConfig &imgCfg);
 	void EnableInstrumentation();
 	void DisableInstrumentation();
 	void DeleteInstrumentation();
@@ -897,10 +904,10 @@ public:
 	const ImageMapStorage *GetStorage() const { return pixelStorage; }
 	ImageMapStorage *GetStorage() { return pixelStorage; }
 
-	float GetFloat(const luxrays::UV &uv) const { return pixelStorage->GetFloat(uv); }
-	luxrays::Spectrum GetSpectrum(const luxrays::UV &uv) const { return pixelStorage->GetSpectrum(uv); }
-	float GetAlpha(const luxrays::UV &uv) const { return pixelStorage->GetAlpha(uv); }
-	luxrays::UV GetDuv(const luxrays::UV &uv) const { return pixelStorage->GetDuv(uv); }
+	float GetFloat(const luxrays::UV &uv) const;
+	luxrays::Spectrum GetSpectrum(const luxrays::UV &uv) const;
+	float GetAlpha(const luxrays::UV &uv) const;
+	luxrays::UV GetDuv(const luxrays::UV &uv) const;
 
 	// Note: Resize() uses OpenImageIO Resize and it can return negative values
 	// very high floating point pixel values (it is a classic filtering problem).
@@ -930,21 +937,49 @@ public:
 
 	luxrays::Properties ToProperties(const std::string &prefix, const bool includeBlobImg) const;
 
+	friend class ImageMapResizeMinMemPolicy;
 	friend class boost::serialization::access;
 
-private:
+protected:
 	class InstrumentationInfo {
 	public:
-		InstrumentationInfo(const u_int w, const u_int h) : originalWidth(w),
-				originalHeigth(h), enabled(false) { }
-		~InstrumentationInfo() { }
+		typedef enum {
+			BASE_INDEX = 0,
+			OFFSET_U_INDEX = 1,
+			OFFSET_V_INDEX = 2
+		} InstrumentationSampleIndex;
+
+		InstrumentationInfo(const u_int originalWidth, const u_int originalHeigth,
+			const ImageMapConfig &originalImgCfg);
+		~InstrumentationInfo();
+
+		void ThreadSetUp();
+		void ThreadSetSampleIndex(const InstrumentationSampleIndex index);
+		void ThreadAddSample(const luxrays::UV &uv);
+		void ThreadAccumulateSamples();
+		void ThreadFinalize();
 
 		u_int originalWidth, originalHeigth;
+		ImageMapConfig originalImgCfg;
+
+		u_int optimalWidth, optimalHeigth;
 		bool enabled;
 	
 		friend class boost::serialization::access;
 
 	private:
+		class ThreadData {
+		public:
+			ThreadData();
+			~ThreadData();
+
+			u_int currentSamplesIndex;
+			std::vector<luxrays::UV> samples[3];
+			
+			u_int samplesCount;
+			float minDistance;
+		};
+
 		// Used by serialization
 		InstrumentationInfo() { }
 
@@ -953,11 +988,17 @@ private:
 			ar & originalHeigth;
 			ar & enabled;
 		}
-	};
 
+		std::map<boost::thread::id, ThreadData *> threadInfo;
+
+		boost::mutex classLock;
+	};
+	
 	// Used by serialization
 	ImageMap();
 	ImageMap(ImageMapStorage *pixels, const float imageMean, const float imageMeanY);
+
+	void Init(const std::string &fileName, const ImageMapConfig &cfg);
 
 	float CalcSpectrumMean() const;
 	float CalcSpectrumMeanY() const;

@@ -715,6 +715,30 @@ ImageMap::ImageMap() {
 
 ImageMap::ImageMap(const string &fileName, const ImageMapConfig &cfg) : NamedObject(fileName),
 		instrumentationInfo(nullptr) {
+	Init(fileName, cfg);
+}
+
+ImageMap::ImageMap(ImageMapStorage *pixels, const float im, const float imy) {
+	pixelStorage = pixels;
+	imageMean = im;
+	imageMeanY = imy;
+	instrumentationInfo = nullptr;
+}
+
+ImageMap::~ImageMap() {
+	delete pixelStorage;
+	delete instrumentationInfo;
+}
+
+void ImageMap::Reload() {
+	if (!instrumentationInfo)
+		throw runtime_error("ImageMap::Reload() called on a not instrumented image map: " + GetName());
+
+	delete pixelStorage;
+	Init(GetName(), instrumentationInfo->originalImgCfg);
+}
+
+void ImageMap::Init(const string &fileName, const ImageMapConfig &cfg) {
 	const string resolvedFileName = SLG_FileNameResolver.ResolveFile(fileName);
 	SDL_LOG("Reading texture map: " << resolvedFileName);
 
@@ -803,16 +827,32 @@ ImageMap::ImageMap(const string &fileName, const ImageMapConfig &cfg) : NamedObj
 	Preprocess();
 }
 
-ImageMap::ImageMap(ImageMapStorage *pixels, const float im, const float imy) {
-	pixelStorage = pixels;
-	imageMean = im;
-	imageMeanY = imy;
-	instrumentationInfo = nullptr;
+float ImageMap::GetFloat(const UV &uv) const {
+	if (instrumentationInfo)
+		instrumentationInfo->ThreadAddSample(uv);
+
+	return pixelStorage->GetFloat(uv);
 }
 
-ImageMap::~ImageMap() {
-	delete pixelStorage;
-	delete instrumentationInfo;
+Spectrum ImageMap::GetSpectrum(const UV &uv) const {
+	if (instrumentationInfo)
+		instrumentationInfo->ThreadAddSample(uv);
+
+	return pixelStorage->GetSpectrum(uv);
+}
+
+float ImageMap::GetAlpha(const UV &uv) const {
+	if (instrumentationInfo)
+		instrumentationInfo->ThreadAddSample(uv);
+
+	return pixelStorage->GetAlpha(uv);
+}
+
+UV ImageMap::GetDuv(const UV &uv) const {
+	if (instrumentationInfo)
+		instrumentationInfo->ThreadAddSample(uv);
+
+	return pixelStorage->GetDuv(uv);
 }
 
 ImageMap *ImageMap::AllocImageMap(const u_int channels, const u_int width, const u_int height,
@@ -938,23 +978,6 @@ void ImageMap::SelectChannel(const ImageMapStorage::ChannelSelectionType selecti
 		delete pixelStorage;
 		pixelStorage = newPixelStorage;
 	}
-}
-
-void ImageMap::SetUpInstrumentation(const u_int originalWidth, const u_int originalHeigth) {
-	instrumentationInfo = new InstrumentationInfo(originalWidth, originalHeigth);
-}
-
-void ImageMap::EnableInstrumentation() {
-	instrumentationInfo->enabled = true;
-}
-
-void ImageMap::DisableInstrumentation() {
-	instrumentationInfo->enabled = false;
-}
-
-void ImageMap::DeleteInstrumentation() {
-	delete instrumentationInfo;
-	instrumentationInfo = nullptr;
 }
 
 void ImageMap::ConvertStorage(const ImageMapStorage::StorageType newStorageType,

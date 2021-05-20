@@ -32,6 +32,7 @@ namespace slg {
 
 class Scene;
 class ImageMapCache;
+class SobolSamplerSharedData;
 
 //------------------------------------------------------------------------------
 // ImageMapResizePoly
@@ -129,6 +130,11 @@ private:
 		ar & scale;
 		ar & minSize;
 	}
+
+	static void RenderFunc(const u_int threadIndex, ImageMapResizeMinMemPolicy *mmp,
+		ImageMapCache *imc, const std::vector<u_int> *imgMapsIndices, u_int *workCounter,
+		const Scene *scene, SobolSamplerSharedData *sobolSharedData,
+		boost::barrier *threadsSyncBarrier);
 };
 
 //------------------------------------------------------------------------------
@@ -143,7 +149,7 @@ public:
 	void SetImageResizePolicy(ImageMapResizePolicy *policy);
 	const ImageMapResizePolicy *GetImageResizePolicy() const { return resizePolicy; }
 
-	void DefineImageMap(ImageMap *im, const bool applyResizePolicy);
+	void DefineImageMap(ImageMap *im);
 
 	ImageMap *GetImageMap(const std::string &fileName, const ImageMapConfig &imgCfg,
 			const bool applyResizePolicy);
@@ -169,7 +175,7 @@ private:
 				const ImageMapConfig &imgCfg) const;
 	std::string GetCacheKey(const std::string &fileName) const;
 	
-	bool ApplyResizePolicy(ImageMap *im) const;
+	bool ApplyResizePolicy(ImageMap *im, const ImageMapConfig &imgCfg) const;
 
 	template<class Archive> void save(Archive &ar, const unsigned int version) const;
 	template<class Archive>	void load(Archive &ar, const unsigned int version);

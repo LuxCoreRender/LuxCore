@@ -164,7 +164,7 @@ ImageMap *Scene::CreateEmissionMap(const string &propName, const luxrays::Proper
 			// Add the image map to the cache
 			const string name ="LUXCORE_EMISSIONMAP_RESAMPLED_" + propName;
 			resampledImgMap->SetName(name);
-			imgMapCache.DefineImageMap(resampledImgMap, false);
+			imgMapCache.DefineImageMap(resampledImgMap);
 			imgMap = resampledImgMap;
 		}
 	}
@@ -188,12 +188,12 @@ ImageMap *Scene::CreateEmissionMap(const string &propName, const luxrays::Proper
 		// Add the image map to the cache
 		const string name ="LUXCORE_EMISSIONMAP_MERGEDMAP_" + propName;
 		map->SetName(name);
-		imgMapCache.DefineImageMap(map, false);
+		imgMapCache.DefineImageMap(map);
 	} else if (imgMap)
 		map = imgMap;
 	else if (iesMap) {
 		map = iesMap;
-		imgMapCache.DefineImageMap(map, false);
+		imgMapCache.DefineImageMap(map);
 	}
 
 	return map;

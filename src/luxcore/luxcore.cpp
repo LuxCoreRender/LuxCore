@@ -398,14 +398,12 @@ Scene::~Scene() {
 template<> void Scene::DefineImageMap<unsigned char>(const std::string &imgMapName,
 		unsigned char *pixels, const float gamma, const unsigned int channels,
 		const unsigned int width, const unsigned int height,
-		Scene::ChannelSelectionType selectionType, Scene::WrapType wrapType,
-		const bool applyResizePolicy) {
-	API_BEGIN("{}, {}, {}, {}, {}, {}, {}, {}, {}", ToArgString(imgMapName), (void *)pixels,
-			gamma, channels, width, height, ToArgString(selectionType), ToArgString(wrapType),
-			applyResizePolicy);
+		Scene::ChannelSelectionType selectionType, Scene::WrapType wrapType) {
+	API_BEGIN("{}, {}, {}, {}, {}, {}, {}, {}", ToArgString(imgMapName), (void *)pixels,
+			gamma, channels, width, height, ToArgString(selectionType), ToArgString(wrapType));
 
 	DefineImageMapUChar(imgMapName, pixels, gamma, channels, width, height,
-			selectionType, wrapType, applyResizePolicy);
+			selectionType, wrapType);
 	
 	API_END();
 }
@@ -413,14 +411,12 @@ template<> void Scene::DefineImageMap<unsigned char>(const std::string &imgMapNa
 template<> void Scene::DefineImageMap<unsigned short>(const std::string &imgMapName,
 		unsigned short *pixels, const float gamma, const unsigned int channels,
 		const unsigned int width, const unsigned int height,
-		Scene::ChannelSelectionType selectionType, Scene::WrapType wrapType,
-		const bool applyResizePolicy) {
-	API_BEGIN("{}, {}, {}, {}, {}, {}, {}, {}, {}", ToArgString(imgMapName), (void *)pixels,
-			gamma, channels, width, height, ToArgString(selectionType), ToArgString(wrapType),
-			applyResizePolicy);
+		Scene::ChannelSelectionType selectionType, Scene::WrapType wrapType) {
+	API_BEGIN("{}, {}, {}, {}, {}, {}, {}, {}", ToArgString(imgMapName), (void *)pixels,
+			gamma, channels, width, height, ToArgString(selectionType), ToArgString(wrapType));
 
 	DefineImageMapHalf(imgMapName, pixels, gamma, channels, width, height,
-			selectionType, wrapType, applyResizePolicy);
+			selectionType, wrapType);
 	
 	API_END();
 }
@@ -428,14 +424,12 @@ template<> void Scene::DefineImageMap<unsigned short>(const std::string &imgMapN
 template<> void Scene::DefineImageMap<float>(const std::string &imgMapName,
 		float *pixels, const float gamma, const unsigned int channels,
 		const unsigned int width, const unsigned int height,
-		Scene::ChannelSelectionType selectionType, Scene::WrapType wrapType,
-		const bool applyResizePolicy) {
-	API_BEGIN("{}, {}, {}, {}, {}, {}, {}, {}, {}", ToArgString(imgMapName), (void *)pixels,
-			gamma, channels, width, height, ToArgString(selectionType), ToArgString(wrapType),
-			applyResizePolicy);
+		Scene::ChannelSelectionType selectionType, Scene::WrapType wrapType) {
+	API_BEGIN("{}, {}, {}, {}, {}, {}, {}, {}", ToArgString(imgMapName), (void *)pixels,
+			gamma, channels, width, height, ToArgString(selectionType), ToArgString(wrapType));
 
 	DefineImageMapFloat(imgMapName, pixels, gamma, channels, width, height,
-			selectionType, wrapType, applyResizePolicy);
+			selectionType, wrapType);
 	
 	API_END();
 }
