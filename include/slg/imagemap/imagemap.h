@@ -883,6 +883,8 @@ public:
 	ImageMap(const std::string &fileName, const ImageMapConfig &cfg);
 	~ImageMap();
 
+	void Reload();
+	
 	void SelectChannel(const ImageMapStorage::ChannelSelectionType selectionType);
 	void ConvertColorSpace(const std::string &configFileName,
 		const std::string &inputColorSpace, const std::string &outputColorSpace);
@@ -890,7 +892,8 @@ public:
 		const u_int newChannelCount);
 	void Preprocess();
 
-	void SetUpInstrumentation(const u_int originalWidth, const u_int originalHegith);
+	void SetUpInstrumentation(const u_int originalWidth, const u_int originalHegith,
+		const ImageMapConfig &imgCfg);
 	void EnableInstrumentation();
 	void DisableInstrumentation();
 	void DeleteInstrumentation();
@@ -946,7 +949,8 @@ protected:
 			OFFSET_V_INDEX = 2
 		} InstrumentationSampleIndex;
 
-		InstrumentationInfo(const u_int w, const u_int h);
+		InstrumentationInfo(const u_int originalWidth, const u_int originalHeigth,
+			const ImageMapConfig &originalImgCfg);
 		~InstrumentationInfo();
 
 		void ThreadSetUp();
@@ -956,6 +960,8 @@ protected:
 		void ThreadFinalize();
 
 		u_int originalWidth, originalHeigth;
+		ImageMapConfig originalImgCfg;
+
 		u_int optimalWidth, optimalHeigth;
 		bool enabled;
 	
@@ -992,6 +998,8 @@ protected:
 	// Used by serialization
 	ImageMap();
 	ImageMap(ImageMapStorage *pixels, const float imageMean, const float imageMeanY);
+
+	void Init(const std::string &fileName, const ImageMapConfig &cfg);
 
 	float CalcSpectrumMean() const;
 	float CalcSpectrumMeanY() const;

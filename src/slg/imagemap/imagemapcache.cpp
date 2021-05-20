@@ -138,7 +138,7 @@ string ImageMapCache::GetCacheKey(const string &fileName) const {
 	return fileName;
 }
 
-bool ImageMapCache::ApplyResizePolicy(ImageMap *im) const {
+bool ImageMapCache::ApplyResizePolicy(ImageMap *im, const ImageMapConfig &imgCfg) const {
 	switch (resizePolicy->GetType()) {
 		case POLICY_NONE:
 			// Nothing to do
@@ -198,7 +198,7 @@ bool ImageMapCache::ApplyResizePolicy(ImageMap *im) const {
 				im->Resize(newWidth, newHeight);
 				im->Preprocess();
 
-				im->SetUpInstrumentation(width, height);
+				im->SetUpInstrumentation(width, height, imgCfg);
 
 				return true;
 			} else
@@ -243,15 +243,14 @@ ImageMap *ImageMapCache::GetImageMap(const string &fileName, const ImageMapConfi
 
 	// Scale the image if required
 	if (applyResizePolicy)
-		resizePolicyToApply.push_back(ApplyResizePolicy(im));
+		resizePolicyToApply.push_back(ApplyResizePolicy(im, imgCfg));
 	else
 		resizePolicyToApply.push_back(false);
 
 	return im;
 }
 
-void ImageMapCache::DefineImageMap(ImageMap *im,
-		const bool applyResizePolicy) {
+void ImageMapCache::DefineImageMap(ImageMap *im) {
 	const string &name = im->GetName();
 
 	SDL_LOG("Define ImageMap: " << name);
@@ -266,22 +265,14 @@ void ImageMapCache::DefineImageMap(ImageMap *im,
 		mapNames.push_back(name);
 		maps.push_back(im);
 		
-		// Scale the image if required
-		if (applyResizePolicy)
-			resizePolicyToApply.push_back(ApplyResizePolicy(im));
-		else
-			resizePolicyToApply.push_back(false);
+		resizePolicyToApply.push_back(false);
 	} else {
 		// Overwrite the existing image definition
 		const u_int index = GetImageMapIndex(it->second);
 		delete maps[index];
 		maps[index] = im;
 
-		// Scale the image if required
-		if (applyResizePolicy)
-			resizePolicyToApply[index] = ApplyResizePolicy(im);
-		else
-			resizePolicyToApply[index] = false;
+		resizePolicyToApply[index] = false;
 
 		// I have to modify mapByName for last or it iterator would be modified
 		// otherwise (it->second would point to the new ImageMap and not to the old one)

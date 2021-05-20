@@ -73,7 +73,7 @@ void Scene::Init(const luxrays::Properties *resizePolicyProps) {
 	if (resizePolicyProps)
 		imgMapCache.SetImageResizePolicy(ImageMapResizePolicy::FromProperties(*resizePolicyProps));
 	// Add random image map to imgMapCache 
-	imgMapCache.DefineImageMap(ImageMapTexture::randomImageMap.get(), false);
+	imgMapCache.DefineImageMap(ImageMapTexture::randomImageMap.get());
 
 	enableParsePrint = false;
 }
@@ -155,18 +155,18 @@ Properties Scene::ToProperties(const bool useRealFileName) const {
 // Methods to build and edit a scene
 //--------------------------------------------------------------------------
 
-void Scene::DefineImageMap(ImageMap *im, const bool applyResizePolicy) {
-	imgMapCache.DefineImageMap(im, applyResizePolicy);
+void Scene::DefineImageMap(ImageMap *im) {
+	imgMapCache.DefineImageMap(im);
 
 	editActions.AddAction(IMAGEMAPS_EDIT);
 }
 void Scene::DefineImageMap(const std::string &name, void *pixels,
 		const u_int channels, const u_int width, const u_int height,
-		const ImageMapConfig &cfg, const bool applyResizePolicy) {
+		const ImageMapConfig &cfg) {
 	ImageMap *imgMap = ImageMap::AllocImageMap(pixels, channels, width, height, cfg);
 	imgMap->SetName(name);
 
-	DefineImageMap(imgMap, applyResizePolicy);
+	DefineImageMap(imgMap);
 
 	editActions.AddAction(IMAGEMAPS_EDIT);
 }

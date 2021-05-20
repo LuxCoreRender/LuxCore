@@ -99,11 +99,13 @@ scene.objects.1407055512355920.ply = "mesh-00000.ply"
 scene.objects.1407055512355920.camerainvisible = 0
 scene.objects.1407055512355920.id = 3772660237
 scene.objects.1407055512355920.appliedtransformation = 1 2.220446e-16 -2.220446e-16 0 2.220446e-16 7.54979e-08 1 0 2.220446e-16 -1 7.54979e-08 0 -2.5 0 0 1
+##
 scene.objects.1407071029458000.material = "Material__002140705337791112"
 scene.objects.1407071029458000.ply = "mesh-00001.ply"
 scene.objects.1407071029458000.camerainvisible = 0
 scene.objects.1407071029458000.id = 149862629
 scene.objects.1407071029458000.appliedtransformation = 1 2.220446e-16 -2.220446e-16 0 2.220446e-16 7.54979e-08 1 0 2.220446e-16 -1 7.54979e-08 0 1 10 0 1
+##
 scene.objects.1407071029575760.material = "Material__003140705337784968"
 scene.objects.1407071029575760.ply = "mesh-00002.ply"
 scene.objects.1407071029575760.camerainvisible = 0

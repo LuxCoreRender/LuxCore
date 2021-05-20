@@ -236,7 +236,7 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		// Add the image map to the cache
 		const string name ="LUXCORE_DENSITYGRID_" + texName;
 		imgMap->SetName(name);
-		imgMapCache.DefineImageMap(imgMap, false);
+		imgMapCache.DefineImageMap(imgMap);
 
 		tex = new DensityGridTexture(CreateTextureMapping3D(propName + ".mapping", props),
 				nx, ny, nz, imgMap);

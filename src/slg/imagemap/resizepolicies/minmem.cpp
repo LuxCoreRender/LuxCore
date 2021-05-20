@@ -297,9 +297,64 @@ void ImageMapResizeMinMemPolicy::Preprocess(ImageMapCache &imc, const Scene *sce
 	}
 
 	for (auto i : imgMapsIndices) {
+		const u_int originalWidth = imc.maps[i]->instrumentationInfo->originalWidth;
+		const u_int originalHeigth = imc.maps[i]->instrumentationInfo->originalHeigth;
+
+		u_int optimalWidth = scale * imc.maps[i]->instrumentationInfo->optimalWidth;
+		u_int optimalHeigth = scale * imc.maps[i]->instrumentationInfo->optimalHeigth;
+
 		SDL_LOG("Image maps \"" << imc.maps[i]->GetName() << "\" optimal resize: " <<
-				imc.maps[i]->instrumentationInfo->originalWidth << "x" << imc.maps[i]->instrumentationInfo->originalHeigth << " => " <<
-				imc.maps[i]->instrumentationInfo->optimalWidth << "x" << imc.maps[i]->instrumentationInfo->optimalHeigth);
+				originalWidth << "x" << originalHeigth << " => " <<
+				optimalWidth << "x" << optimalHeigth);
+	}
+
+	for (auto i : imgMapsIndices) {
+		const u_int originalWidth = imc.maps[i]->instrumentationInfo->originalWidth;
+		const u_int originalHeigth = imc.maps[i]->instrumentationInfo->originalHeigth;
+
+		u_int optimalWidth = scale * imc.maps[i]->instrumentationInfo->optimalWidth;
+		u_int optimalHeigth = scale * imc.maps[i]->instrumentationInfo->optimalHeigth;
+
+		u_int newWidth, newHeight;
+		if ((optimalWidth == 0) || (optimalHeigth == 0)) {
+			newWidth = imc.maps[i]->GetWidth();
+			newHeight = imc.maps[i]->GetHeight();
+		} else {
+			if (originalWidth >= originalHeigth) {
+				const float scaleFactor = optimalWidth / (float)originalWidth;
+
+				if (scaleFactor > 1.f) {
+					SDL_LOG("WARNING: image maps \"" << imc.maps[i]->GetName() << "\" too small !");
+					newWidth = originalWidth;
+					newHeight = originalHeigth;
+				} else {
+					newWidth = Max<u_int>(optimalWidth, minSize);
+					newHeight = Max<u_int>(originalHeigth * (newWidth / (float)originalWidth), 1u);
+				}
+			} else {
+				const float scaleFactor = optimalHeigth / (float)originalHeigth;
+
+				if (scaleFactor > 1.f) {
+					SDL_LOG("WARNING: image maps \"" << imc.maps[i]->GetName() << "\" too small !");
+					newWidth = originalWidth;
+					newHeight = originalHeigth;
+				} else {
+					newHeight = Max<u_int>(optimalHeigth, minSize);
+					newWidth = Max<u_int>(originalWidth * (newHeight / (float)originalHeigth), 1u);
+				}
+			}
+		}
+
+		imc.resizePolicyToApply[i] = false;
+
+		// Reload the original image map
+		imc.maps[i]->Reload();
+		// Resize the image map
+		imc.maps[i]->Resize(newWidth, newHeight);
+		
+		SDL_LOG("Image maps \"" << imc.maps[i]->GetName() << "\" scaled: " <<
+				originalWidth << "x" << originalHeigth << " => " <<
+				newWidth << "x" << newHeight);
 	}
 
 	// Delete instrumentation for image maps checked

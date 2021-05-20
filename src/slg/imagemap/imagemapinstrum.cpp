@@ -27,8 +27,9 @@ using namespace slg;
 // ImageMap instrumentation
 //------------------------------------------------------------------------------
 
-void ImageMap::SetUpInstrumentation(const u_int originalWidth, const u_int originalHeigth) {
-	instrumentationInfo = new InstrumentationInfo(originalWidth, originalHeigth);
+void ImageMap::SetUpInstrumentation(const u_int originalWidth, const u_int originalHeigth,
+		const ImageMapConfig &imgCfg) {
+	instrumentationInfo = new InstrumentationInfo(originalWidth, originalHeigth, imgCfg);
 }
 
 void ImageMap::EnableInstrumentation() {
@@ -48,8 +49,10 @@ void ImageMap::DeleteInstrumentation() {
 // ImageMap InstrumentationInfo
 //------------------------------------------------------------------------------
 
-ImageMap::InstrumentationInfo::InstrumentationInfo(const u_int w, const u_int h) : originalWidth(w),
-		originalHeigth(h), optimalWidth(0), optimalHeigth(0),
+ImageMap::InstrumentationInfo::InstrumentationInfo(const u_int w, const u_int h,
+		const ImageMapConfig &imgCfg) : originalWidth(w), originalHeigth(h),
+		originalImgCfg(imgCfg),
+		optimalWidth(0), optimalHeigth(0),
 		enabled(false) {
 }
 

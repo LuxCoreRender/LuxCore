@@ -715,6 +715,30 @@ ImageMap::ImageMap() {
 
 ImageMap::ImageMap(const string &fileName, const ImageMapConfig &cfg) : NamedObject(fileName),
 		instrumentationInfo(nullptr) {
+	Init(fileName, cfg);
+}
+
+ImageMap::ImageMap(ImageMapStorage *pixels, const float im, const float imy) {
+	pixelStorage = pixels;
+	imageMean = im;
+	imageMeanY = imy;
+	instrumentationInfo = nullptr;
+}
+
+ImageMap::~ImageMap() {
+	delete pixelStorage;
+	delete instrumentationInfo;
+}
+
+void ImageMap::Reload() {
+	if (!instrumentationInfo)
+		throw runtime_error("ImageMap::Reload() called on a not instrumented image map: " + GetName());
+
+	delete pixelStorage;
+	Init(GetName(), instrumentationInfo->originalImgCfg);
+}
+
+void ImageMap::Init(const string &fileName, const ImageMapConfig &cfg) {
 	const string resolvedFileName = SLG_FileNameResolver.ResolveFile(fileName);
 	SDL_LOG("Reading texture map: " << resolvedFileName);
 
@@ -801,18 +825,6 @@ ImageMap::ImageMap(const string &fileName, const ImageMapConfig &cfg) : NamedObj
 	
 	SelectChannel(cfg.selectionType);
 	Preprocess();
-}
-
-ImageMap::ImageMap(ImageMapStorage *pixels, const float im, const float imy) {
-	pixelStorage = pixels;
-	imageMean = im;
-	imageMeanY = imy;
-	instrumentationInfo = nullptr;
-}
-
-ImageMap::~ImageMap() {
-	delete pixelStorage;
-	delete instrumentationInfo;
 }
 
 float ImageMap::GetFloat(const UV &uv) const {

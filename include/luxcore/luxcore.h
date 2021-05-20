@@ -808,15 +808,12 @@ public:
 	 * \param channels is the number of data used for each pixel (1 or 3).
 	 * \param width is the width of the image map.
 	 * \param height is the height of the image map.
-	 * \param applyResizePolicy set to true if the scene image maps resize policy have
-	 * to be applied, false otherwise.
 	 */
 	template<class T> void DefineImageMap(const std::string &imgMapName,
 			T *pixels, const float gamma, const unsigned int channels,
 			const unsigned int width, const unsigned int height,
 			ChannelSelectionType selectionType = DEFAULT,
-			WrapType wrapType = REPEAT,
-			const bool applyResizePolicy = true) {
+			WrapType wrapType = REPEAT) {
 		throw std::runtime_error("Called Scene::DefineImageMap() with wrong type");
 	}
 	/*!
@@ -1132,35 +1129,29 @@ protected:
 	virtual void DefineImageMapUChar(const std::string &imgMapName,
 			unsigned char *pixels, const float gamma, const unsigned int channels,
 			const unsigned int width, const unsigned int height,
-			ChannelSelectionType selectionType, WrapType wrapType,
-			const bool applyResizePolicy) = 0;
+			ChannelSelectionType selectionType, WrapType wrapType) = 0;
 	virtual void DefineImageMapHalf(const std::string &imgMapName,
 			unsigned short *pixels, const float gamma, const unsigned int channels,
 			const unsigned int width, const unsigned int height,
-			ChannelSelectionType selectionType, WrapType wrapType,
-			const bool applyResizePolicy) = 0;
+			ChannelSelectionType selectionType, WrapType wrapType) = 0;
 	virtual void DefineImageMapFloat(const std::string &imgMapName,
 			float *pixels, const float gamma, const unsigned int channels,
 			const unsigned int width, const unsigned int height,
-			ChannelSelectionType selectionType, WrapType wrapType,
-			const bool applyResizePolicy) = 0;
+			ChannelSelectionType selectionType, WrapType wrapType) = 0;
 };
 
 template<> void CPP_API Scene::DefineImageMap<unsigned char>(const std::string &imgMapName,
 	unsigned char *pixels, const float gamma, const unsigned int channels,
 	const unsigned int width, const unsigned int height,
-	Scene::ChannelSelectionType selectionType, Scene::WrapType wrapType,
-	const bool applyResizePolicy);
+	Scene::ChannelSelectionType selectionType, Scene::WrapType wrapType);
 template<> void CPP_API Scene::DefineImageMap<unsigned short>(const std::string &imgMapName,
 	unsigned short *pixels, const float gamma, const unsigned int channels,
 	const unsigned int width, const unsigned int height,
-	Scene::ChannelSelectionType selectionType, Scene::WrapType wrapType,
-	const bool applyResizePolicy);
+	Scene::ChannelSelectionType selectionType, Scene::WrapType wrapType);
 template<> void CPP_API Scene::DefineImageMap<float>(const std::string &imgMapName,
 	float *pixels, const float gamma, const unsigned int channels,
 	const unsigned int width, const unsigned int height,
-	Scene::ChannelSelectionType selectionType, Scene::WrapType wrapType,
-	const bool applyResizePolicy);
+	Scene::ChannelSelectionType selectionType, Scene::WrapType wrapType);
 
 /*!
  * \brief RenderConfig stores all the configuration settings used to render a
