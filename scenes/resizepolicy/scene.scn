@@ -94,6 +94,12 @@ scene.materials.Material__002140705337791112.kd = "140707101904392Color"
 scene.materials.Material__003140705337784968.type = "matte"
 scene.materials.Material__003140705337784968.kd = "140707106223624Color"
 ##
+scene.materials.glass.type = glass
+scene.materials.glass.kr = 0.9 0.9 0.9
+scene.materials.glass.kt = 0.9 0.9 0.9
+scene.materials.glass.exteriorior = 1.0
+scene.materials.glass.interiorior = 1.45
+##
 scene.objects.1407055512355920.material = "Material__001140708169907080"
 scene.objects.1407055512355920.ply = "mesh-00000.ply"
 scene.objects.1407055512355920.camerainvisible = 0
@@ -111,3 +117,6 @@ scene.objects.1407071029575760.ply = "mesh-00002.ply"
 scene.objects.1407071029575760.camerainvisible = 0
 scene.objects.1407071029575760.id = 2438528163
 scene.objects.1407071029575760.appliedtransformation = 1 2.220446e-16 -2.220446e-16 0 2.220446e-16 7.54979e-08 1 0 2.220446e-16 -1 7.54979e-08 0 9 30 0 1
+##
+scene.objects.sphere.material = glass
+scene.objects.sphere.ply = "sphere.ply"

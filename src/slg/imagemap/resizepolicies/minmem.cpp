@@ -194,15 +194,12 @@ void ImageMapResizeMinMemPolicy::RenderFunc(const u_int threadIndex, ImageMapRes
 					assert (!bsdfSample.IsNaN() && !bsdfSample.IsInf());
 					// Check if I have to continue with this path or not
 					if (bsdfSample.Black() ||
-							!(lastBSDFEvent & SPECULAR) ||
-							!((lastBSDFEvent & GLOSSY) && (bsdf.GetGlossiness() > glossinessThreshold))
+							(!(lastBSDFEvent & SPECULAR) &&
+							!((lastBSDFEvent & GLOSSY) && (bsdf.GetGlossiness() < glossinessThreshold)))
 							)
 						break;
 					assert (!isnan(lastPdfW) && !isinf(lastPdfW));
-
-					// TODO: support specular and nearly specular reflections/transmissions
-					break;
-					
+				
 					if (sampleResult.firstPathVertex)
 						sampleResult.firstPathVertexEvent = lastBSDFEvent;
 

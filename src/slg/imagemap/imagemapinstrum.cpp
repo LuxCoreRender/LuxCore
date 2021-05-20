@@ -46,6 +46,17 @@ void ImageMap::DeleteInstrumentation() {
 }
 
 //------------------------------------------------------------------------------
+// ImageMap InstrumentationInfo ThreadData
+//------------------------------------------------------------------------------
+
+ImageMap::InstrumentationInfo::ThreadData::ThreadData() : currentSamplesIndex(0), samplesCount(0),
+		minDistance(numeric_limits<float>::infinity()) {
+}
+
+ImageMap::InstrumentationInfo::ThreadData::~ThreadData() {
+}
+
+//------------------------------------------------------------------------------
 // ImageMap InstrumentationInfo
 //------------------------------------------------------------------------------
 
@@ -73,17 +84,17 @@ void ImageMap::InstrumentationInfo::ThreadFinalize() {
 
 	 ThreadData *ti = threadInfo[boost::this_thread::get_id()];
 	if (ti->samplesCount > 0) {
-//		cout << "Max. U distance in pixel: " << (ti->maxDistance.u * originalWidth) << endl;
-//		cout << "Max. V distance in pixel: " << (ti->maxDistance.v * originalHeigth) << endl;
+//		cout << "Min. U distance in pixel: " << (ti->minDistance * originalWidth) << endl;
+//		cout << "Min. V distance in pixel: " << (ti->minDistance * originalHeigth) << endl;
 
-		// Max distance U/V should match one pixel
-		const u_int w = (ti->maxDistance.u > 0.f) ?
-			(u_int)(originalWidth / (ti->maxDistance.u * originalWidth)) : 0;
-		const u_int h = (ti->maxDistance.v > 0.f) ?
-			(u_int)(originalHeigth / (ti->maxDistance.v * originalHeigth)) : 0;
+		// Min distance U/V should match one pixel
+		if (ti->minDistance != numeric_limits<float>::infinity()) {
+			const u_int w = (u_int)(originalWidth / (ti->minDistance * originalWidth));
+			const u_int h = (u_int)(originalHeigth / (ti->minDistance * originalHeigth));
 
-		AtomicMax(&optimalWidth, w);
-		AtomicMax(&optimalHeigth, h);
+			AtomicMax(&optimalWidth, w);
+			AtomicMax(&optimalHeigth, h);
+		}
 	}
 
 	boost::unique_lock<boost::mutex> lock(classLock);
@@ -114,17 +125,17 @@ void ImageMap::InstrumentationInfo::ThreadAccumulateSamples() {
 			(ti->samples[0].size() == ti->samples[2].size())) {
 		for (u_int i = 0; i < ti->samples[0].size(); ++i) {
 			for (u_int j = 1; j <= 2; ++j) {
-				const UV dist = ti->samples[j][i] - ti->samples[0][i];
+				const UV distUV = ti->samples[j][i] - ti->samples[0][i];
+				const float dist = sqrtf(distUV.u * distUV.u  + distUV.v * distUV.v);
 
-				ti->maxDistance.u = Max(ti->maxDistance.u, fabsf(dist.u));
-				ti->maxDistance.v = Max(ti->maxDistance.v, fabsf(dist.v));				
+				ti->minDistance = Min(ti->minDistance, dist);
 			}
 
 			ti->samplesCount += 1;
 		}
 	}
 	
-//	cout << "[ti->maxDistance = " << ti->maxDistance << "][ti->samplesCount = " << ti->samplesCount << "]" << endl;
+//	cout << "[ti->minDistance = " << ti->minDistance << "][ti->samplesCount = " << ti->samplesCount << "]" << endl;
 
 	ti->currentSamplesIndex = 0;
 	ti->samples[0].clear();

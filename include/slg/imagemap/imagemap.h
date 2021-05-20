@@ -970,15 +970,14 @@ protected:
 	private:
 		class ThreadData {
 		public:
-			ThreadData() : currentSamplesIndex(0), samplesCount(0) {
-			}
-			~ThreadData() { }
+			ThreadData();
+			~ThreadData();
 
 			u_int currentSamplesIndex;
 			std::vector<luxrays::UV> samples[3];
 			
 			u_int samplesCount;
-			luxrays::UV maxDistance;
+			float minDistance;
 		};
 
 		// Used by serialization
