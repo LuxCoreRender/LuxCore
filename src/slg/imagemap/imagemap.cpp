@@ -815,6 +815,34 @@ ImageMap::~ImageMap() {
 	delete instrumentationInfo;
 }
 
+float ImageMap::GetFloat(const UV &uv) const {
+	if (instrumentationInfo)
+		instrumentationInfo->ThreadAddSample(uv);
+
+	return pixelStorage->GetFloat(uv);
+}
+
+Spectrum ImageMap::GetSpectrum(const UV &uv) const {
+	if (instrumentationInfo)
+		instrumentationInfo->ThreadAddSample(uv);
+
+	return pixelStorage->GetSpectrum(uv);
+}
+
+float ImageMap::GetAlpha(const UV &uv) const {
+	if (instrumentationInfo)
+		instrumentationInfo->ThreadAddSample(uv);
+
+	return pixelStorage->GetAlpha(uv);
+}
+
+UV ImageMap::GetDuv(const UV &uv) const {
+	if (instrumentationInfo)
+		instrumentationInfo->ThreadAddSample(uv);
+
+	return pixelStorage->GetDuv(uv);
+}
+
 ImageMap *ImageMap::AllocImageMap(const u_int channels, const u_int width, const u_int height,
 		const ImageMapConfig &cfg) {
 	ImageMapStorage *imageMapStorage;
@@ -938,23 +966,6 @@ void ImageMap::SelectChannel(const ImageMapStorage::ChannelSelectionType selecti
 		delete pixelStorage;
 		pixelStorage = newPixelStorage;
 	}
-}
-
-void ImageMap::SetUpInstrumentation(const u_int originalWidth, const u_int originalHeigth) {
-	instrumentationInfo = new InstrumentationInfo(originalWidth, originalHeigth);
-}
-
-void ImageMap::EnableInstrumentation() {
-	instrumentationInfo->enabled = true;
-}
-
-void ImageMap::DisableInstrumentation() {
-	instrumentationInfo->enabled = false;
-}
-
-void ImageMap::DeleteInstrumentation() {
-	delete instrumentationInfo;
-	instrumentationInfo = nullptr;
 }
 
 void ImageMap::ConvertStorage(const ImageMapStorage::StorageType newStorageType,

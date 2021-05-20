@@ -677,6 +677,7 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/imagemap/imagemap.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/imagemap/imagemapcache.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/imagemap/imagemapcacheserialize.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/imagemap/imagemapinstrum.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/imagemap/imagemapserialize.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/imagemap/resizepolicies/minmem.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/constantinfinitelight.cpp
@@ -1006,6 +1007,7 @@ set(SLG_FILM_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/film/filmsamplesplatter.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filmserialize.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filmproperties.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/framebuffer.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/sampleresult.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/convtest/filmconvtest.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/noiseestimation/filmnoiseestimation.cpp

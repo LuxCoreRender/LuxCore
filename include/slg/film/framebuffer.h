@@ -316,6 +316,8 @@ public:
 	u_int GetWidth() const { return width; }
 	u_int GetHeight() const { return height; }
 	size_t GetSize() const { return width * height * CHANNELS * sizeof(T); }
+	
+	void SaveHDR(const std::string &fileName) const;
 
 	friend class boost::serialization::access;
 
@@ -333,6 +335,8 @@ private:
 
 	std::vector<T> pixels;
 };
+
+template<> void GenericFrameBuffer<4, 1, float>::SaveHDR(const std::string &fileName) const;
 
 // Mostly used for Boost serialization macros
 typedef GenericFrameBuffer<4, 1, float> GenericFrameBuffer41Float;

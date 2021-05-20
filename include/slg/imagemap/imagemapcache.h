@@ -32,6 +32,7 @@ namespace slg {
 
 class Scene;
 class ImageMapCache;
+class SobolSamplerSharedData;
 
 //------------------------------------------------------------------------------
 // ImageMapResizePoly
@@ -129,6 +130,11 @@ private:
 		ar & scale;
 		ar & minSize;
 	}
+
+	static void RenderFunc(const u_int threadIndex, ImageMapResizeMinMemPolicy *mmp,
+		ImageMapCache *imc, const std::vector<u_int> *imgMapsIndices, u_int *workCounter,
+		const Scene *scene, SobolSamplerSharedData *sobolSharedData,
+		boost::barrier *threadsSyncBarrier);
 };
 
 //------------------------------------------------------------------------------
