@@ -88,8 +88,6 @@ if(APPLE)
 TARGET_LINK_LIBRARIES(luxcoreui
 	glfw
 	expat
-	"-framework Carbon"
-	"-framework IOKit"
 	${GLFW_LIBRARIES}
 	${LUXCORE_LIBRARY}
 	${OPENGL_LIBRARIES}
