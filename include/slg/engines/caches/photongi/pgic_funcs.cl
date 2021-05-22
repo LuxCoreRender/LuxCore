@@ -161,12 +161,15 @@ OPENCL_FORCE_INLINE float3 PGICPhotonBvh_ConnectCacheEntry(__global const Photon
 		MATERIALS_PARAM_DECL) {
 	BSDFEvent event;
 	const float3 photonDir = VLOAD3F(&photon->d.x);
-	float3 bsdfEval = BSDF_Evaluate(bsdf, -photonDir, &event, NULL MATERIALS_PARAM);
+	float directPdfW;
+	float3 bsdfEval = BSDF_Evaluate(bsdf, -photonDir, &event, &directPdfW MATERIALS_PARAM);
 	// bsdf.Evaluate() multiplies the result by AbsDot(bsdf.hitPoint.shadeN, -photon->d)
 	// so I have to cancel that factor. It is already included in photon density
 	// estimation.
 	if (!bsdf->isVolume)
 		bsdfEval /= fabs(dot(VLOAD3F(&bsdf->hitPoint.shadeN.x), -photonDir));
+	else
+		bsdfEval /= directPdfW;
 
 	return VLOAD3F(photon->alpha.c) * bsdfEval;
 }
@@ -175,7 +178,7 @@ OPENCL_FORCE_INLINE bool PGICPhotonBvh_ConnectAllNearEntries(__global const BSDF
 		__global const Photon* restrict pgicCausticPhotons,
 		__global const IndexBVHArrayNode* restrict pgicCausticPhotonsBVHNodes,
 		const uint pgicCausticPhotonTracedCount,
-		const float pgicCausticLookUpRadius2, const float pgicCausticLookUpNormalCosAngle,
+		const float pgicCausticLookUpRadius, const float pgicCausticLookUpNormalCosAngle,
 		const float3 scale,
 		__global Spectrum *radiance
 		MATERIALS_PARAM_DECL) {
@@ -187,7 +190,10 @@ OPENCL_FORCE_INLINE bool PGICPhotonBvh_ConnectAllNearEntries(__global const BSDF
 	uint currentNode = 0; // Root Node
 	const uint stopNode = IndexBVHNodeData_GetSkipIndex(pgicCausticPhotonsBVHNodes[0].nodeData); // Non-existent
 
-	const float factor = 1.f / (pgicCausticPhotonTracedCount * M_PI_F * pgicCausticLookUpRadius2);
+	const float pgicCausticLookUpRadius2 = pgicCausticLookUpRadius * pgicCausticLookUpRadius;
+	const float factor = isVolume ?
+		1.f / (pgicCausticPhotonTracedCount * (4.f / 3.f * M_PI_F * pgicCausticLookUpRadius2 * pgicCausticLookUpRadius)) :
+		1.f / (pgicCausticPhotonTracedCount * (M_PI_F * pgicCausticLookUpRadius2));
 
 	bool isEmpty = true;
 	while (currentNode < stopNode) {
@@ -234,14 +240,14 @@ OPENCL_FORCE_INLINE bool PhotonGICache_ConnectWithCausticPaths(__global const BS
 		__global const Photon* restrict pgicCausticPhotons,
 		__global const IndexBVHArrayNode* restrict pgicCausticPhotonsBVHNodes,
 		const uint pgicCausticPhotonTracedCount,
-		const float pgicCausticLookUpRadius2, const float pgicCausticLookUpNormalCosAngle,
+		const float pgicCausticLookUpRadius, const float pgicCausticLookUpNormalCosAngle,
 		const float3 scale,
 		__global Spectrum *radiance
 		MATERIALS_PARAM_DECL) {
 
 	return pgicCausticPhotons ?
 		PGICPhotonBvh_ConnectAllNearEntries(bsdf, pgicCausticPhotons, pgicCausticPhotonsBVHNodes,
-			pgicCausticPhotonTracedCount, pgicCausticLookUpRadius2, pgicCausticLookUpNormalCosAngle,
+			pgicCausticPhotonTracedCount, pgicCausticLookUpRadius, pgicCausticLookUpNormalCosAngle,
 			scale, radiance
 			MATERIALS_PARAM) :
 		true;

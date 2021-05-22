@@ -336,7 +336,7 @@ __kernel void AdvancePaths_MK_HIT_OBJECT(
 					PhotonGICache_ConnectWithCausticPaths(bsdf,
 							pgicCausticPhotons, pgicCausticPhotonsBVHNodes,
 							taskConfig->pathTracer.pgic.causticPhotonTracedCount,
-							taskConfig->pathTracer.pgic.causticLookUpRadius * taskConfig->pathTracer.pgic.causticLookUpRadius,
+							taskConfig->pathTracer.pgic.causticLookUpRadius,
 							taskConfig->pathTracer.pgic.causticLookUpNormalCosAngle,
 							WHITE,
 							&sampleResult->radiancePerPixelNormalized[0]
@@ -381,7 +381,7 @@ __kernel void AdvancePaths_MK_HIT_OBJECT(
 						const bool isEmpty = PhotonGICache_ConnectWithCausticPaths(bsdf,
 								pgicCausticPhotons, pgicCausticPhotonsBVHNodes,
 								taskConfig->pathTracer.pgic.causticPhotonTracedCount,
-								taskConfig->pathTracer.pgic.causticLookUpRadius * taskConfig->pathTracer.pgic.causticLookUpRadius,
+								taskConfig->pathTracer.pgic.causticLookUpRadius,
 								taskConfig->pathTracer.pgic.causticLookUpNormalCosAngle,
 								VLOAD3F(taskState->throughput.c),
 								&sampleResult->radiancePerPixelNormalized[0]
