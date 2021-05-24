@@ -28,7 +28,7 @@ OPENCL_FORCE_INLINE float SphericalPhi(const float3 v) {
 }
 
 OPENCL_FORCE_INLINE void CoordinateSystem(const float3 v1, float3 *v2, float3 *v3) {
-	float len = sqrt(v1.x * v1.x + v1.z * v1.z);
+	float len = sqrt(v1.x * v1.x + v1.y * v1.y);
 	if (len < 1.e-5) { // it's pretty-much along z-axis
 		(*v3).x = 1.f;
 		(*v3).y = 0.f;
