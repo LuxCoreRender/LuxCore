@@ -22,6 +22,8 @@
 * Introduced the concept of Scene texture image maps resize policy and the support for NONE and FIXED policies
 * Reworked the way alpha channel is computed for transmitted paths
 * Introduced the MINMEM Scene texture image maps resize policy
+* Updated to Intel OIDN v1.4.0
+* Added the support for Intel OIDN auxiliary buffers pre-filtering
 
 ### Fixed Bugs
 

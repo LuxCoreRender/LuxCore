@@ -16,6 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <type_traits>
+
 #include <OpenImageIO/imageio.h>
 #include <OpenImageIO/imagebuf.h>
 
@@ -26,25 +28,57 @@ using namespace luxrays;
 using namespace slg;
 OIIO_NAMESPACE_USING
 
-typedef unsigned char BYTE;
-
-template<> void GenericFrameBuffer<4, 1, float>::SaveHDR(const string &fileName) const {
+template<> 
+void GenericFrameBuffer<4, 1, float>::SaveHDR(const string &fileName,
+		const vector<float> &pixels, const u_int width, const u_int height) {
 	ImageSpec spec(width, height, 3, TypeDesc::FLOAT);
 	ImageBuf buffer(spec);
 
 	for (ImageBuf::ConstIterator<float> it(buffer); !it.done(); ++it) {
 		u_int x = it.x();
 		u_int y = it.y();
-		float *pixel = (float *)buffer.pixeladdr(x, y, 0);
+		float *dst = (float *)buffer.pixeladdr(x, y, 0);
 		y = height - y - 1;
 
-		if (pixel == NULL)
+		if (dst == NULL)
 			throw runtime_error("Error while unpacking film data, could not address buffer in GenericFrameBuffer<4, 1, float>::SaveHDR()");
 		
-		GetWeightedPixel(x, y, pixel);
+		
+		const float *src = &pixels[(x + y * width) * 4];
+		const float k = 1.f / src[3];
+		dst[0] = src[0] * k;
+		dst[1] = src[1] * k;
+		dst[2] = src[2] * k;
 	}
 
 	if (!buffer.write(fileName))
 		throw runtime_error("Error while writing an output type in GenericFrameBuffer<4, 1, float>::SaveHDR(): " +
-					fileName + " (error = " + buffer.geterror() + ")");
+				fileName + " (error = " + buffer.geterror() + ")");
+}
+
+template<> 
+void GenericFrameBuffer<3, 0, float>::SaveHDR(const string &fileName,
+		const vector<float> &pixels, const u_int width, const u_int height) {
+	ImageSpec spec(width, height, 3, TypeDesc::FLOAT);
+	ImageBuf buffer(spec);
+
+	for (ImageBuf::ConstIterator<float> it(buffer); !it.done(); ++it) {
+		u_int x = it.x();
+		u_int y = it.y();
+		float *dst = (float *)buffer.pixeladdr(x, y, 0);
+		y = height - y - 1;
+
+		if (dst == NULL)
+			throw runtime_error("Error while unpacking film data, could not address buffer in GenericFrameBuffer<4, 1, float>::SaveHDR()");
+		
+		
+		const float *src = &pixels[(x + y * width) * 3];
+		dst[0] = src[0];
+		dst[1] = src[1];
+		dst[2] = src[2];
+	}
+
+	if (!buffer.write(fileName))
+		throw runtime_error("Error while writing an output type in GenericFrameBuffer<4, 1, float>::SaveHDR(): " +
+				fileName + " (error = " + buffer.geterror() + ")");
 }
