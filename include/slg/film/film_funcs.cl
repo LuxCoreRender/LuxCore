@@ -163,7 +163,7 @@ OPENCL_FORCE_INLINE void Film_AddSampleResultColor(const uint x, const uint y,
 
 	if (film->hasChannelAlpha)
 		Film_AddWeightedPixel2(usePixelAtomics, &filmAlpha[index2], &sampleResult->alpha, weight);
-
+		
 	if (film->hasChannelDirectDiffuse) {
 		const float3 c = VLOAD3F(sampleResult->directDiffuseReflect.c) + VLOAD3F(sampleResult->directDiffuseTransmit.c);
 		Film_AddIfValidWeightedPixel4Val(usePixelAtomics, &filmDirectDiffuse[index4], c, weight);

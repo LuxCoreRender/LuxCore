@@ -210,7 +210,6 @@ string PathOCLBaseRenderEngine::GetCachedKernelsHash(const RenderConfig &renderC
 	const float epsilonMax = renderConfig.GetProperty("scene.epsilon.max").Get<float>();
 		
 	const Properties &cfg = renderConfig.cfg;
-	const bool usePixelAtomics = cfg.Get(Property("pathocl.pixelatomics.enable")(false)).Get<bool>();
 	const bool useCPUs = cfg.Get(GetDefaultProps().Get("opencl.cpu.use")).Get<bool>();
 	const bool useGPUs = cfg.Get(GetDefaultProps().Get("opencl.gpu.use")).Get<bool>();
 	const string oclDeviceConfig = cfg.Get(GetDefaultProps().Get("opencl.devices.select")).Get<string>();
@@ -221,7 +220,6 @@ string PathOCLBaseRenderEngine::GetCachedKernelsHash(const RenderConfig &renderC
 			renderEngineType << "##" <<
 			epsilonMin << "##" <<
 			epsilonMax << "##" <<
-			usePixelAtomics << "##" <<
 			useCPUs << "##" <<
 			useGPUs << "##" <<
 			oclDeviceConfig;

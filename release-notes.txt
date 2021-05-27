@@ -33,6 +33,7 @@
 * Fixed a bug rendering black baked maps when using bump mapping and COMBINED type with BAKECPU rendering engine
 * Fixed a bug when rendering caustics over volumes with Caustic cache (issue #533)
 * Fixed a problem causing the initialization of multiple dataset accelerators in some case
+* Fixed a problem with incorrect alpha AOV values (issue #536)
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
