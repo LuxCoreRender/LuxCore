@@ -411,7 +411,7 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		vector<Spectrum> values;
 		for (u_int i = 0; props.IsDefined(propName + ".offset" + ToString(i)); ++i) {
 			const float offset = props.Get(Property(propName + ".offset" + ToString(i))(0.f)).Get<float>();
-			const Spectrum value = GetColor(Property(propName + ".value" + ToString(i))(1.f, 1.f, 1.f));
+			const Spectrum value = GetColor(props.Get(Property(propName + ".value" + ToString(i))(1.f, 1.f, 1.f)));
 
 			offsets.push_back(offset);
 			values.push_back(value);
@@ -495,8 +495,8 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 
 		tex = new FresnelColorTexture(col);
 	} else if (texType == "fresnelconst") {
-		const Spectrum n = GetColor(Property(propName + ".n")(1.f, 1.f, 1.f));
-		const Spectrum k = GetColor(Property(propName + ".k")(1.f, 1.f, 1.f));
+		const Spectrum n = GetColor(props.Get(Property(propName + ".n")(1.f, 1.f, 1.f)));
+		const Spectrum k = GetColor(props.Get(Property(propName + ".k")(1.f, 1.f, 1.f)));
 
 		tex = new FresnelConstTexture(n, k);
 	} else if (texType == "fresnelluxpop") {

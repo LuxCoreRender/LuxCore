@@ -22,6 +22,8 @@
 * Introduced the concept of Scene texture image maps resize policy and the support for NONE and FIXED policies
 * Reworked the way alpha channel is computed for transmitted paths
 * Introduced the MINMEM Scene texture image maps resize policy
+* Updated to Intel OIDN v1.4.0
+* Added the support for Intel OIDN auxiliary buffers pre-filtering
 
 ### Fixed Bugs
 
@@ -29,6 +31,9 @@
 * Fixed a problem with Python and Property objects initialized as double even if they were int
 * Python Property object now consider int data type always as a 64 bit value
 * Fixed a bug rendering black baked maps when using bump mapping and COMBINED type with BAKECPU rendering engine
+* Fixed a bug when rendering caustics over volumes with Caustic cache (issue #533)
+* Fixed a problem causing the initialization of multiple dataset accelerators in some case
+* Fixed a problem with incorrect alpha AOV values (issue #536)
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
