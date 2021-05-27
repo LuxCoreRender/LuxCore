@@ -533,7 +533,7 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 	mat->SetEmittedTemperature(props.Get(Property(propName + ".emission.temperature")(-1.f)).Get<float>());
 	mat->SetEmittedTemperatureNormalize(props.Get(Property(propName + ".emission.temperature.normalize")(false)).Get<float>());
 
-	mat->SetPassThroughShadowTransparency(GetColor(Property(propName + ".transparency.shadow")(Spectrum(0.f))));
+	mat->SetPassThroughShadowTransparency(GetColor(props.Get(Property(propName + ".transparency.shadow")(Spectrum(0.f)))));
 
 	const string dlsType = props.Get(Property(propName + ".emission.directlightsampling.type")("AUTO")).Get<string>();
 	if (dlsType == "ENABLED")
