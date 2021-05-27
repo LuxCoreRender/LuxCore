@@ -132,7 +132,7 @@ install_name_tool -id @loader_path/libtiff.5.dylib ./libtiff.5.dylib
 #libOpenImageIO
 
 cp -f $DEPS_SOURCE/lib/libOpenImageIO.2.2.dylib ./libOpenImageIO.2.2.dylib
-chmod +w ./libOpenImageIO.1.8.dylib
+chmod +w ./libOpenImageIO.2.2.dylib
 install_name_tool -id @loader_path/libOpenImageIO.2.2.dylib ./libOpenImageIO.2.2.dylib
 install_name_tool -change @rpath/libtiff.5.dylib @loader_path/libtiff.5.dylib ./libOpenImageIO.2.2.dylib
 
