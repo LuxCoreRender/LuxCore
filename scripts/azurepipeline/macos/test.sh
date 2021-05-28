@@ -3,7 +3,7 @@
 # Set Environment Variables
 export PATH="/usr/local/bin:$PATH"
 eval "$(pyenv init -)"
-pyenv shell 3.7.4
+pyenv shell 3.7.7
 
 PLUXSO=`pwd`/build/lib/Release/pyluxcore.so
 
