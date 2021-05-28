@@ -434,11 +434,11 @@ include_directories(${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO
 include_directories(${LuxRays_SOURCE_DIR}/deps/yaml-cpp-0.6.3/include)
 include_directories(${LuxRays_SOURCE_DIR}/deps/expat-2.3.0/src)
 
-if(LINUX)
+if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 	# "sys/random.h" not available on Windows
 	add_definitions("-DHAVE_GETRANDOM")
 	add_definitions("-DUSE_SSE")
-endif(LINUX)
+endif()
 
 if(APPLE)
 	add_definitions("-DHAVE_ARC4RANDOM_BUF")
