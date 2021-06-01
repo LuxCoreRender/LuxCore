@@ -102,7 +102,7 @@ void EyePathInfo::AddVertex(const BSDF &bsdf,
 	lastFromVolume =  bsdf.IsVolume();
 	lastGlossiness = glossiness;
 
-	isTransmittedPath = isTransmittedPath && (event & TRANSMIT);
+	isTransmittedPath = isTransmittedPath && (event & TRANSMIT) && (event & (SPECULAR | GLOSSY));
 }
 
 bool EyePathInfo::IsCausticPath(const BSDFEvent event,
