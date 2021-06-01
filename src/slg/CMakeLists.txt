@@ -434,11 +434,10 @@ include_directories(${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO
 include_directories(${LuxRays_SOURCE_DIR}/deps/yaml-cpp-0.6.3/include)
 include_directories(${LuxRays_SOURCE_DIR}/deps/expat-2.3.0/src)
 
-if(LINUX)
-	# "sys/random.h" not available on Windows
+if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 	add_definitions("-DHAVE_GETRANDOM")
 	add_definitions("-DUSE_SSE")
-endif(LINUX)
+endif()
 
 if(APPLE)
 	add_definitions("-DHAVE_ARC4RANDOM_BUF")
@@ -448,12 +447,14 @@ endif(APPLE)
 if(WIN32)
 	# Prevents __declspec(dllimport) on Windows
 	add_definitions("-DOpenColorIO_SKIP_IMPORTS -DXML_STATIC")
+	add_definitions("-DUSE_SSE")
 endif(WIN32)
 
 add_library(opencolorio STATIC ${OPENCOLORIO_SRCS} ${YAMLCPP_SRCS} ${EXPAT_SRCS})
 
 if(WIN32)
-	target_compile_definitions(opencolorio PRIVATE "-D_MBCS -DUSE_SSE")
+	# OCIO 2.0.0 is the only module not supporting -D_UNICODE
+	target_compile_definitions(opencolorio PRIVATE "-D_MBCS")
 endif(WIN32)
 
 ###########################################################################

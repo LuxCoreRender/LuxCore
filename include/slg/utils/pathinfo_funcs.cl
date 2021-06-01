@@ -108,7 +108,7 @@ OPENCL_FORCE_INLINE void EyePathInfo_AddVertex(__global EyePathInfo *pathInfo,
 	pathInfo->lastFromVolume =  bsdf->isVolume;
 	pathInfo->lastGlossiness = glossiness;
 	
-	pathInfo->isTransmittedPath = pathInfo->isTransmittedPath && (event & TRANSMIT);
+	pathInfo->isTransmittedPath = pathInfo->isTransmittedPath && (event & TRANSMIT) && (event & (SPECULAR | GLOSSY));
 }
 
 OPENCL_FORCE_INLINE bool EyePathInfo_IsCausticPath(__global EyePathInfo *pathInfo) {
