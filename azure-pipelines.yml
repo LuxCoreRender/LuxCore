@@ -168,7 +168,7 @@ jobs:
 #    displayName: Testing LuxCore
   - task: InstallAppleCertificate@2
     inputs:
-      certSecureFile: LuxCore2.q3de.com.p12
+      certSecureFile: LuxCoreSignCert.p12
       certPwd: $(AppleCertPwd)
   - script: ./scripts/azurepipeline/macos/pack.sh
     displayName: Packing DiskImages
