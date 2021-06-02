@@ -163,7 +163,7 @@ install_name_tool -change @rpath/libtbb.dylib @loader_path/libtbb.dylib pyluxcor
 install_name_tool -change @rpath/libtiff.5.dylib @loader_path/libtiff.5.dylib pyluxcore.so
 install_name_tool -change @rpath/libOpenImageIO.2.2.dylib @loader_path/libOpenImageIO.2.2.dylib pyluxcore.so
 install_name_tool -change @rpath/libtbbmalloc.dylib @loader_path/libtbbmalloc.dylib pyluxcore.so
-install_name_tool -change @rpath/libOpenImageDenoise.0.dylib @loader_path/libOpenImageDenoise.1.4.0.dylib pyluxcore.so
+install_name_tool -change @rpath/libOpenImageDenoise.1.dylib @loader_path/libOpenImageDenoise.1.4.0.dylib pyluxcore.so
 
 echo "PyLuxCore installed"
 
@@ -173,7 +173,7 @@ echo "PyLuxCore installed"
 cp ../../macos/bin/oidnDenoise .
 chmod +w ./oidnDenoise
 install_name_tool -id @executable_path/oidnDenoise ./oidnDenoise
-install_name_tool -change @rpath/libOpenImageDenoise.0.dylib @executable_path/libOpenImageDenoise.1.4.0.dylib oidnDenoise
+install_name_tool -change @rpath/libOpenImageDenoise.1.dylib @executable_path/libOpenImageDenoise.1.4.0.dylib oidnDenoise
 install_name_tool -change @rpath/libOpenImageDenoise.1.4.0.dylib @executable_path/libOpenImageDenoise.1.4.0.dylib oidnDenoise
 install_name_tool -change @rpath/libtbb.dylib @executable_path/libtbb.dylib oidnDenoise
 install_name_tool -change @rpath/libtbbmalloc.dylib @executable_path/libtbbmalloc.dylib oidnDenoise
