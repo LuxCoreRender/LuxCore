@@ -78,7 +78,7 @@ install_name_tool -change @rpath/libtbb.dylib @executable_path/../Resources/libs
 install_name_tool -change @rpath/libOpenImageIO.2.2.dylib @executable_path/../Resources/libs/libOpenImageIO.2.2.dylib LuxCore.app/Contents/MacOS/luxcoreui
 install_name_tool -change @rpath/libtbbmalloc.dylib @executable_path/../Resources/libs/libtbbmalloc.dylib LuxCore.app/Contents/MacOS/luxcoreui
 install_name_tool -change @rpath/libtiff.5.dylib @executable_path/../Resources/libs/libtiff.5.dylib LuxCore.app/Contents/MacOS/luxcoreui
-install_name_tool -change @rpath/libOpenImageDenoise.0.dylib @executable_path/../Resources/libs/libOpenImageDenoise.1.4.0.dylib LuxCore.app/Contents/MacOS/luxcoreui
+install_name_tool -change @rpath/libOpenImageDenoise.1.dylib @executable_path/../Resources/libs/libOpenImageDenoise.1.4.0.dylib LuxCore.app/Contents/MacOS/luxcoreui
 
 echo "LuxCoreUi installed"
 
@@ -94,7 +94,7 @@ install_name_tool -change @rpath/libtbb.dylib @executable_path/../Resources/libs
 install_name_tool -change @rpath/libOpenImageIO.2.2.dylib @executable_path/../Resources/libs/libOpenImageIO.2.2.dylib ./LuxCore.app/Contents/MacOS/luxcoreconsole
 install_name_tool -change @rpath/libtbbmalloc.dylib @executable_path/../Resources/libs/libtbbmalloc.dylib ./LuxCore.app/Contents/MacOS/luxcoreconsole
 install_name_tool -change @rpath/libtiff.5.dylib @executable_path/../Resources/libs/libtiff.5.dylib ./LuxCore.app/Contents/MacOS/luxcoreconsole
-install_name_tool -change @rpath/libOpenImageDenoise.0.dylib @executable_path/../Resources/libs/libOpenImageDenoise.1.4.0.dylib ./LuxCore.app/Contents/MacOS/luxcoreconsole
+install_name_tool -change @rpath/libOpenImageDenoise.1.dylib @executable_path/../Resources/libs/libOpenImageDenoise.1.4.0.dylib ./LuxCore.app/Contents/MacOS/luxcoreconsole
 
 echo "LuxCoreConsole installed"
 
