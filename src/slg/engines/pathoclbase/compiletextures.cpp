@@ -481,9 +481,6 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 				case slg::ocl::TextureEvalOpType::EVAL_BUMP: {
 					evalOpStackSize += CompileTextureOps(tex->addTex.tex1Index, slg::ocl::TextureEvalOpType::EVAL_BUMP);
 					evalOpStackSize += CompileTextureOps(tex->addTex.tex2Index, slg::ocl::TextureEvalOpType::EVAL_BUMP);
-
-					evalOpStackSize += CompileTextureOps(tex->addTex.tex1Index, slg::ocl::TextureEvalOpType::EVAL_FLOAT);
-					evalOpStackSize += CompileTextureOps(tex->addTex.tex2Index, slg::ocl::TextureEvalOpType::EVAL_FLOAT);
 					break;
 				}
 				default:
@@ -502,9 +499,6 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 				case slg::ocl::TextureEvalOpType::EVAL_BUMP: {
 					evalOpStackSize += CompileTextureOps(tex->subtractTex.tex1Index, slg::ocl::TextureEvalOpType::EVAL_BUMP);
 					evalOpStackSize += CompileTextureOps(tex->subtractTex.tex2Index, slg::ocl::TextureEvalOpType::EVAL_BUMP);
-
-					evalOpStackSize += CompileTextureOps(tex->subtractTex.tex1Index, slg::ocl::TextureEvalOpType::EVAL_FLOAT);
-					evalOpStackSize += CompileTextureOps(tex->subtractTex.tex2Index, slg::ocl::TextureEvalOpType::EVAL_FLOAT);
 					break;
 				}
 				default:
