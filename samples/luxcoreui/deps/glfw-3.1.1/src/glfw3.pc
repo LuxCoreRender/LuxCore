@@ -9,5 +9,5 @@ Version: 3.1.1
 URL: http://www.glfw.org/
 Requires.private:  x11 xrandr xinerama xi xcursor gl
 Libs: -L${libdir} -lglfw3
-Libs.private:  -lrt -lm -ldl
+Libs.private:  -lrt -lm
 Cflags: -I${includedir}

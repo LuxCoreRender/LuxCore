@@ -16,6 +16,9 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <OpenImageIO/imagebuf.h>
+#include <OpenImageIO/imagebufalgo.h>
+
 #include "spdlog/spdlog.h"
 
 #include "luxrays/core/intersectiondevice.h"
@@ -35,6 +38,7 @@ using namespace std;
 using namespace luxrays;
 using namespace luxcore;
 using namespace luxcore::detail;
+OIIO_NAMESPACE_USING
 
 //------------------------------------------------------------------------------
 // ParseLXS
@@ -112,6 +116,19 @@ void luxcore::ParseLXS(const string &fileName, Properties &renderConfigProps, Pr
 	cout << "==================================================================\n";*/
 	
 	API_END();
+}
+
+//------------------------------------------------------------------------------
+// MakeTx
+//------------------------------------------------------------------------------
+
+void luxcore::MakeTx(const string &srcFileName, const string &dstFileName) {
+	ImageBuf Input(srcFileName);
+
+	ImageSpec config;
+	stringstream s;
+	if (!ImageBufAlgo::make_texture(ImageBufAlgo::MakeTxTexture, Input, dstFileName, config, &s))
+		throw runtime_error("MakeTx error: " + s.str());
 }
 
 //------------------------------------------------------------------------------

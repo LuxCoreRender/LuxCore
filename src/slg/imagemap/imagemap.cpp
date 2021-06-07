@@ -27,8 +27,8 @@
 #include <OpenColorIO/OpenColorIO.h>
 namespace OCIO = OCIO_NAMESPACE;
 
-#include <OpenImageIO/imagebufalgo.h>
 #include <OpenImageIO/imagebuf.h>
+#include <OpenImageIO/imagebufalgo.h>
 #include <OpenImageIO/dassert.h>
 
 #include "luxrays/utils/properties.h"
