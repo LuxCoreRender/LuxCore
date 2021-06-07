@@ -38,6 +38,7 @@
 #include "luxrays/utils/serializationutils.h"
 #include "luxrays/utils/ocl.h"
 #include "slg/core/colorspace.h"
+#include "slg/imagemap/resizepolicies/resizepolicies.h"
 #include "slg/utils/halfserialization.h"
 
 namespace slg {
@@ -937,6 +938,7 @@ public:
 
 	luxrays::Properties ToProperties(const std::string &prefix, const bool includeBlobImg) const;
 
+	friend class ImageMapResizePolicy;
 	friend class ImageMapResizeMinMemPolicy;
 	friend class boost::serialization::access;
 
