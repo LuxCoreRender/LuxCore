@@ -26,6 +26,7 @@
 
 #include "luxrays/devices/ocldevice.h"
 #include "slg/imagemap/imagemap.h"
+#include "slg/imagemap/resizepolicies/resizepolicies.h"
 #include "slg/core/sdl.h"
 
 namespace slg {
@@ -61,6 +62,7 @@ public:
 	friend class Scene;
 	friend class ImageMapResizePolicy;
 	friend class ImageMapResizeMinMemPolicy;
+	friend class ImageMapResizeMipMapMemPolicy;
 	friend class boost::serialization::access;
 
 private:
@@ -71,8 +73,6 @@ private:
 				const ImageMapConfig &imgCfg) const;
 	std::string GetCacheKey(const std::string &fileName) const;
 	
-	bool ApplyResizePolicy(ImageMap *im, const ImageMapConfig &imgCfg) const;
-
 	template<class Archive> void save(Archive &ar, const unsigned int version) const;
 	template<class Archive>	void load(Archive &ar, const unsigned int version);
 	BOOST_SERIALIZATION_SPLIT_MEMBER()

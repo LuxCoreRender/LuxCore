@@ -123,12 +123,7 @@ void luxcore::ParseLXS(const string &fileName, Properties &renderConfigProps, Pr
 //------------------------------------------------------------------------------
 
 void luxcore::MakeTx(const string &srcFileName, const string &dstFileName) {
-	ImageBuf Input(srcFileName);
-
-	ImageSpec config;
-	stringstream s;
-	if (!ImageBufAlgo::make_texture(ImageBufAlgo::MakeTxTexture, Input, dstFileName, config, &s))
-		throw runtime_error("MakeTx error: " + s.str());
+	slg::ImageMap::MakeTx(srcFileName, dstFileName);
 }
 
 //------------------------------------------------------------------------------

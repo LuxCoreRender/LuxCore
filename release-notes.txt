@@ -25,6 +25,7 @@
 * Updated to Intel OIDN v1.4.0
 * Added the support for Intel OIDN auxiliary buffers pre-filtering
 * Added the support for new pyluxcoretools MakeTX
+* Introduced the MIPMAPMEM Scene texture image maps resize policy
 
 ### Fixed Bugs
 

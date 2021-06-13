@@ -35,13 +35,14 @@ class ImageMapCache;
 class SobolSamplerSharedData;
 
 //------------------------------------------------------------------------------
-// ImageMapResizePoly
+// ImageMapResizePolicy
 //------------------------------------------------------------------------------
 
 typedef enum {
 	POLICY_NONE,
 	POLICY_FIXED,
-	POLICY_MINMEM
+	POLICY_MINMEM,
+	POLICY_MIPMAPMEM
 } ImageMapResizePolicyType;
 
 class ImageMapResizePolicy {
@@ -50,8 +51,9 @@ public:
 	virtual ~ImageMapResizePolicy() { }
 	
 	virtual ImageMapResizePolicyType GetType() const = 0;
-	
-	virtual void Preprocess(ImageMapCache &imc, const Scene *scene, const bool useRTMode) { };
+
+	virtual ImageMap *ApplyResizePolicy(const std::string &fileName, const ImageMapConfig &imgCfg, bool &toApply) const = 0;
+	virtual void Preprocess(ImageMapCache &imc, const Scene *scene, const bool useRTMode) const = 0;
 
 	static ImageMapResizePolicy *FromProperties(const luxrays::Properties &props);
 	static ImageMapResizePolicyType String2ImageMapResizePolicyType(const std::string &type);
@@ -72,13 +74,18 @@ private:
 		boost::barrier *threadsSyncBarrier);
 };
 
+//------------------------------------------------------------------------------
+// ImageMapResizeNonePolicy
+//------------------------------------------------------------------------------
+
 class ImageMapResizeNonePolicy : public ImageMapResizePolicy {
 public:
 	ImageMapResizeNonePolicy() { }
 	~ImageMapResizeNonePolicy() { }
 	
 	virtual ImageMapResizePolicyType GetType() const { return POLICY_NONE; }
-	virtual void Preprocess(ImageMapCache &imc, const Scene *scene, const bool useRTMode) { };
+	virtual ImageMap *ApplyResizePolicy(const std::string &fileName, const ImageMapConfig &imgCfg, bool &toApply) const;
+	virtual void Preprocess(ImageMapCache &imc, const Scene *scene, const bool useRTMode) const { };
 
 	friend class boost::serialization::access;
 
@@ -88,13 +95,18 @@ private:
 	}
 };
 
+//------------------------------------------------------------------------------
+// ImageMapResizeFixedPolicy
+//------------------------------------------------------------------------------
+
 class ImageMapResizeFixedPolicy : public ImageMapResizePolicy {
 public:
 	ImageMapResizeFixedPolicy(const float s, const u_int m = 128) : scale(s), minSize(m) { }
 	~ImageMapResizeFixedPolicy() { }
 	
 	virtual ImageMapResizePolicyType GetType() const { return POLICY_FIXED; }
-	virtual void Preprocess(ImageMapCache &imc, const Scene *scene, const bool useRTMode) { };
+	virtual ImageMap *ApplyResizePolicy(const std::string &fileName, const ImageMapConfig &imgCfg, bool &toApply) const;
+	virtual void Preprocess(ImageMapCache &imc, const Scene *scene, const bool useRTMode) const { };
 
 	friend class boost::serialization::access;
 
@@ -114,13 +126,18 @@ private:
 	}
 };
 
+//------------------------------------------------------------------------------
+// ImageMapResizeMinMemPolicy
+//------------------------------------------------------------------------------
+
 class ImageMapResizeMinMemPolicy : public ImageMapResizePolicy {
 public:
 	ImageMapResizeMinMemPolicy(const float s = 1.f, const u_int m = 32) : scale(s), minSize(m) { }
 	~ImageMapResizeMinMemPolicy() { }
 	
 	virtual ImageMapResizePolicyType GetType() const { return POLICY_MINMEM; }
-	virtual void Preprocess(ImageMapCache &imc, const Scene *scene, const bool useRTMode);
+	virtual ImageMap *ApplyResizePolicy(const std::string &fileName, const ImageMapConfig &imgCfg, bool &toApply) const;
+	virtual void Preprocess(ImageMapCache &imc, const Scene *scene, const bool useRTMode) const;
 
 	friend class boost::serialization::access;
 
@@ -140,12 +157,49 @@ private:
 	}
 };
 
+//------------------------------------------------------------------------------
+// ImageMapResizeMipMapMemPolicy
+//------------------------------------------------------------------------------
+
+class ImageMapResizeMipMapMemPolicy : public ImageMapResizePolicy {
+public:
+	ImageMapResizeMipMapMemPolicy(const float s = 1.f, const u_int m = 32) : scale(s), minSize(m) { }
+	~ImageMapResizeMipMapMemPolicy() { }
+	
+	virtual ImageMapResizePolicyType GetType() const { return POLICY_MIPMAPMEM; }
+	virtual ImageMap *ApplyResizePolicy(const std::string &fileName, const ImageMapConfig &imgCfg, bool &toApply) const;
+	virtual void Preprocess(ImageMapCache &imc, const Scene *scene, const bool useRTMode)const;
+
+	friend class boost::serialization::access;
+
+	float scale;
+	u_int minSize;
+
+private:
+	// Used by serialization
+	ImageMapResizeMipMapMemPolicy() : scale(1.f), minSize(32) {		
+	}
+
+	template<class Archive> void serialize(Archive &ar, const u_int version) {
+		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImageMapResizePolicy);
+
+		ar & scale;
+		ar & minSize;
+	}
+};
+
 }
 
+BOOST_CLASS_VERSION(slg::ImageMapResizePolicy, 1)
 BOOST_CLASS_VERSION(slg::ImageMapResizeNonePolicy, 1)
 BOOST_CLASS_VERSION(slg::ImageMapResizeFixedPolicy, 1)
+BOOST_CLASS_VERSION(slg::ImageMapResizeMinMemPolicy, 1)
+BOOST_CLASS_VERSION(slg::ImageMapResizeMipMapMemPolicy, 1)
 
+BOOST_CLASS_EXPORT_KEY(slg::ImageMapResizePolicy)
 BOOST_CLASS_EXPORT_KEY(slg::ImageMapResizeNonePolicy)
 BOOST_CLASS_EXPORT_KEY(slg::ImageMapResizeFixedPolicy)
+BOOST_CLASS_EXPORT_KEY(slg::ImageMapResizeMinMemPolicy)
+BOOST_CLASS_EXPORT_KEY(slg::ImageMapResizeMipMapMemPolicy)
 
 #endif	/* _SLG_IMAGEMAPRESIZEPOLICIES_H */

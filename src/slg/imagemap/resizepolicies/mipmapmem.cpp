@@ -17,9 +17,9 @@
  ***************************************************************************/
 
 #include <boost/format.hpp>
+#include <boost/filesystem.hpp>
 
 #include "slg/scene/scene.h"
-#include "slg/imagemap/resizepolicies/resizepolicies.h"
 #include "slg/imagemap/imagemapcache.h"
 
 using namespace std;
@@ -27,15 +27,25 @@ using namespace luxrays;
 using namespace slg;
 
 //------------------------------------------------------------------------------
-// ImageMapResizeMinMemPolicy::ApplyResizePolicy()
+// ImageMapResizeMipMapMemPolicy::ApplyResizePolicy()
 //------------------------------------------------------------------------------
 
-ImageMap *ImageMapResizeMinMemPolicy::ApplyResizePolicy(const std::string &fileName,
+ImageMap *ImageMapResizeMipMapMemPolicy::ApplyResizePolicy(const std::string &srcFileName,
 		const ImageMapConfig &imgCfg, bool &toApply) const {
-	ImageMap *im = new ImageMap(fileName, imgCfg);
+	// Check/Create and TX file for each image map
+	const string dstFileName = srcFileName + ".tx";
 
-	const u_int width = im->GetWidth();
-	const u_int height = im->GetHeight();
+	// Check if the TX file exist and it is up to date
+	if (!boost::filesystem::exists(dstFileName) ||
+			(boost::filesystem::last_write_time(srcFileName) > boost::filesystem::last_write_time(dstFileName))) {
+		SDL_LOG("Creating TX image file:  " << srcFileName);
+
+		ImageMap::MakeTx(srcFileName, dstFileName);
+	}
+
+	pair<u_int, u_int> size = ImageMap::GetSize(dstFileName);
+	const u_int width = size.first;
+	const u_int height = size.second;
 
 	if (Max(width, height) > minSize) {
 		u_int newWidth, newHeight;
@@ -47,26 +57,28 @@ ImageMap *ImageMapResizeMinMemPolicy::ApplyResizePolicy(const std::string &fileN
 			newHeight = minSize;
 		}
 
-		SDL_LOG("Scaling probe ImageMap: " << im->GetName() << " [from " << width << "x" << height <<
+		SDL_LOG("Probe ImageMap: " << dstFileName << " [from " << width << "x" << height <<
 				" to " << newWidth << "x" << newHeight <<"]");
 
-		im->Resize(newWidth, newHeight);
-		im->Preprocess();
-
+		ImageMap *im = new ImageMap(dstFileName, imgCfg, newWidth, newHeight);
 		im->SetUpInstrumentation(width, height, imgCfg);
 
 		toApply = true;
-	} else
+
+		return im;
+	} else {
+		ImageMap *im = new ImageMap(dstFileName, imgCfg);
 		toApply = false;
-	
-	return im;
+
+		return im;
+	}
 }
 
 //------------------------------------------------------------------------------
 // ImageMapResizeMinMemPolicy::Preprocess()
 //------------------------------------------------------------------------------
 
-void ImageMapResizeMinMemPolicy::Preprocess(ImageMapCache &imc, const Scene *scene,
+void ImageMapResizeMipMapMemPolicy::Preprocess(ImageMapCache &imc, const Scene *scene,
 		const bool useRTMode) const {
 	if (useRTMode)
 		return;
@@ -134,12 +146,10 @@ void ImageMapResizeMinMemPolicy::Preprocess(ImageMapCache &imc, const Scene *sce
 
 		imc.resizePolicyToApply[i] = false;
 
-		// Reload the original image map
-		imc.maps[i]->Reload();
-		originalMemUsed += imc.maps[i]->GetStorage()->GetMemorySize();
+		originalMemUsed += originalWidth * originalHeigth * imc.maps[i]->GetStorage()->GetMemoryPixelSize();
 
-		// Resize the image map
-		imc.maps[i]->Resize(newWidth, newHeight);
+		// Reload the original image map with the best mip map level
+		imc.maps[i]->Reload(newWidth, newHeight);
 		currentMemUsed += imc.maps[i]->GetStorage()->GetMemorySize();
 		
 		SDL_LOG("Image maps \"" << imc.maps[i]->GetName() << "\" scaled: " <<
@@ -148,7 +158,7 @@ void ImageMapResizeMinMemPolicy::Preprocess(ImageMapCache &imc, const Scene *sce
 	}
 
 	SDL_LOG("Memory required for original Image maps: " + ToMemString(originalMemUsed));
-	SDL_LOG("Memory required for MINMEM Image maps: " + ToMemString(currentMemUsed));
+	SDL_LOG("Memory required for MIPMAPMEM Image maps: " + ToMemString(currentMemUsed));
 	
 	// Delete instrumentation for image maps checked
 	for (auto i : imgMapsIndices)

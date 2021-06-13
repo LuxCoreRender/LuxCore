@@ -38,7 +38,6 @@
 #include "luxrays/utils/serializationutils.h"
 #include "luxrays/utils/ocl.h"
 #include "slg/core/colorspace.h"
-#include "slg/imagemap/resizepolicies/resizepolicies.h"
 #include "slg/utils/halfserialization.h"
 
 namespace slg {
@@ -630,6 +629,8 @@ public:
 	virtual StorageType GetStorageType() const = 0;
 	virtual u_int GetChannelCount() const = 0;
 	virtual size_t GetMemorySize() const = 0;
+	virtual size_t GetMemoryPixelSize() const = 0;
+	virtual size_t GetMemoryChannelSize() const = 0;
 	virtual void *GetPixelsData() const = 0;
 
 	virtual void SetFloat(const u_int index, const float v) = 0;
@@ -707,6 +708,8 @@ public:
 	virtual StorageType GetStorageType() const;
 	virtual u_int GetChannelCount() const { return CHANNELS; }
 	virtual size_t GetMemorySize() const { return width * height * CHANNELS * sizeof(T); };
+	virtual size_t GetMemoryPixelSize() const { return CHANNELS * sizeof(T); };
+	virtual size_t GetMemoryChannelSize() const { return sizeof(T); };
 	virtual void *GetPixelsData() const { return pixels; }
 
 	virtual void SetFloat(const u_int index, const float v);
@@ -881,10 +884,11 @@ class ImageMapCache;
 
 class ImageMap : public luxrays::NamedObject {
 public:
-	ImageMap(const std::string &fileName, const ImageMapConfig &cfg);
+	ImageMap(const std::string &fileName, const ImageMapConfig &cfg,
+			const u_int widthHint = 0, const u_int heightHint = 0);
 	~ImageMap();
 
-	void Reload();
+	void Reload(const u_int widthHint = 0, const u_int heightHint = 0);
 	
 	void SelectChannel(const ImageMapStorage::ChannelSelectionType selectionType);
 	void ConvertColorSpace(const std::string &configFileName,
@@ -922,6 +926,8 @@ public:
 	float GetSpectrumMeanY() const { return imageMeanY; }
 
 	ImageMap *Copy() const;
+
+	luxrays::Properties ToProperties(const std::string &prefix, const bool includeBlobImg) const;
 	
 	// The following 3 methods always return an ImageMap with FLOAT storage
 	static ImageMap *Merge(const ImageMap *map0, const ImageMap *map1, const u_int channels);
@@ -936,10 +942,12 @@ public:
 	static ImageMap *AllocImageMap(void *pixels, const u_int channels, const u_int width, const u_int height,
 		const ImageMapConfig &cfg);
 
-	luxrays::Properties ToProperties(const std::string &prefix, const bool includeBlobImg) const;
+	static std::pair<u_int, u_int> GetSize(const std::string &fileName);
+	static void MakeTx(const std::string &srcFileName, const std::string &dstFileName);
 
 	friend class ImageMapResizePolicy;
 	friend class ImageMapResizeMinMemPolicy;
+	friend class ImageMapResizeMipMapMemPolicy;
 	friend class boost::serialization::access;
 
 protected:
@@ -1000,7 +1008,8 @@ protected:
 	ImageMap();
 	ImageMap(ImageMapStorage *pixels, const float imageMean, const float imageMeanY);
 
-	void Init(const std::string &fileName, const ImageMapConfig &cfg);
+	void Init(const std::string &fileName, const ImageMapConfig &cfg,
+		const u_int widthHint = 0, const u_int heightHint = 0);
 
 	float CalcSpectrumMean() const;
 	float CalcSpectrumMeanY() const;

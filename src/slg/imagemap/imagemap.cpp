@@ -713,9 +713,10 @@ ImageMap::ImageMap() {
 	instrumentationInfo = nullptr;
 }
 
-ImageMap::ImageMap(const string &fileName, const ImageMapConfig &cfg) : NamedObject(fileName),
+ImageMap::ImageMap(const string &fileName, const ImageMapConfig &cfg,
+		const u_int widthHint, const u_int heightHint) : NamedObject(fileName),
 		instrumentationInfo(nullptr) {
-	Init(fileName, cfg);
+	Init(fileName, cfg, widthHint, heightHint);
 }
 
 ImageMap::ImageMap(ImageMapStorage *pixels, const float im, const float imy) {
@@ -730,15 +731,16 @@ ImageMap::~ImageMap() {
 	delete instrumentationInfo;
 }
 
-void ImageMap::Reload() {
+void ImageMap::Reload(const u_int widthHint, const u_int heightHint) {
 	if (!instrumentationInfo)
 		throw runtime_error("ImageMap::Reload() called on a not instrumented image map: " + GetName());
 
 	delete pixelStorage;
-	Init(GetName(), instrumentationInfo->originalImgCfg);
+	Init(GetName(), instrumentationInfo->originalImgCfg, widthHint, heightHint);
 }
 
-void ImageMap::Init(const string &fileName, const ImageMapConfig &cfg) {
+void ImageMap::Init(const string &fileName, const ImageMapConfig &cfg,
+		const u_int widthHint, const u_int heightHint) {
 	const string resolvedFileName = SLG_FileNameResolver.ResolveFile(fileName);
 	SDL_LOG("Reading texture map: " << resolvedFileName);
 
@@ -748,9 +750,46 @@ void ImageMap::Init(const string &fileName, const ImageMapConfig &cfg) {
 		ImageSpec config;
 		config.attribute ("oiio:UnassociatedAlpha", 1);
 		unique_ptr<ImageInput> in(ImageInput::open(resolvedFileName, &config));
-		if (in.get()) {
-			const ImageSpec &spec = in->spec();
 
+		if (in.get()) {
+			// Check the mipmap level available
+			int mipmapLevel = 0;
+			stringstream ss;
+			vector<pair<u_int, u_int> > mipmapSizes;
+			while (in->seek_subimage(0, mipmapLevel)) {
+				const ImageSpec &spec = in->spec();
+				
+				mipmapSizes.push_back(make_pair(spec.width, spec.height));
+				ss << "[" << spec.width << "x" << spec.height << "]";
+
+				++mipmapLevel;
+			}
+			SDL_LOG("Mip map available: " << ss.str());
+			
+			// Select the best mipmap
+			u_int bestMipmapIndex = 0;
+			u_int bestMipmapWidth = mipmapSizes[0].first;
+			u_int bestMipmapHeight = mipmapSizes[0].second;
+
+			if ((widthHint > 0) || (heightHint > 0)) {
+				// Only if I have size hints
+				for (u_int i = 1 ; i < mipmapSizes.size(); ++i) {
+					if ((mipmapSizes[i].first >= widthHint) &&
+							(mipmapSizes[i].second >= heightHint) &&
+							(mipmapSizes[i].first < bestMipmapWidth) &&
+							(mipmapSizes[i].second < bestMipmapHeight)) {
+						bestMipmapIndex = i;
+						bestMipmapWidth = mipmapSizes[i].first;
+						bestMipmapHeight = mipmapSizes[i].second;
+					}
+				}
+			}
+
+			SDL_LOG("Reading mip map level: " << bestMipmapIndex);
+			if (!in->seek_subimage(0, bestMipmapIndex))
+				throw runtime_error("Unable to read mip map level: " + ToString(bestMipmapIndex));
+
+			const ImageSpec &spec = in->spec();
 			u_int width = spec.width;
 			u_int height = spec.height;
 			u_int channelCount = spec.nchannels;
@@ -1311,6 +1350,35 @@ ImageMap *ImageMap::Resample(const ImageMap *map, const u_int channels,
 		return imgMap;
 	} else
 		throw runtime_error("Unsupported number of channels in ImageMap::Resample(): " + ToString(channels));
+}
+
+pair<u_int, u_int> ImageMap::GetSize(const std::string &fileName) {
+	const string resolvedFileName = SLG_FileNameResolver.ResolveFile(fileName);
+
+	if (!boost::filesystem::exists(resolvedFileName))
+		throw runtime_error("ImageMap file doesn't exist: " + resolvedFileName);
+	else {
+		ImageSpec config;
+		config.attribute ("oiio:UnassociatedAlpha", 1);
+		unique_ptr<ImageInput> in(ImageInput::open(resolvedFileName, &config));
+
+		if (in.get()) {
+			const ImageSpec &spec = in->spec();
+				
+			return make_pair(spec.width, spec.height);
+		} else
+			throw runtime_error("Error opening image file: " + resolvedFileName +
+					" (error = " + geterror() +")");
+	}
+}
+
+void ImageMap::MakeTx(const std::string &srcFileName, const std::string &dstFileName) {
+	ImageBuf Input(srcFileName);
+
+	ImageSpec config;
+	stringstream s;
+	if (!ImageBufAlgo::make_texture(ImageBufAlgo::MakeTxTexture, Input, dstFileName, config, &s))
+		throw runtime_error("ImageMap::MakeTx error: " + s.str());
 }
 
 ImageMap *ImageMap::FromProperties(const Properties &props, const string &prefix) {
