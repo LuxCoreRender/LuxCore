@@ -156,12 +156,15 @@ void ImageMapResizeMipMapMemPolicy::Preprocess(ImageMapCache &imc, const Scene *
 		originalMemUsed += originalWidth * originalHeigth * imc.maps[i]->GetStorage()->GetMemoryPixelSize();
 
 		// Reload the original image map with the best mip map level
-		imc.maps[i]->Reload(newWidth, newHeight);
+		const string srcFileName = SLG_FileNameResolver.ResolveFile(imc.maps[i]->GetName());
+		const string dstFileName = srcFileName + ".tx";
+		imc.maps[i]->Reload(dstFileName, newWidth, newHeight);
+
 		currentMemUsed += imc.maps[i]->GetStorage()->GetMemorySize();
 		
 		SDL_LOG("Image maps \"" << imc.maps[i]->GetName() << "\" scaled: " <<
 				originalWidth << "x" << originalHeigth << " => " <<
-				newWidth << "x" << newHeight);
+				imc.maps[i]->GetWidth() << "x" << imc.maps[i]->GetHeight());
 	}
 
 	SDL_LOG("Memory required for original Image maps: " + ToMemString(originalMemUsed));

@@ -731,12 +731,20 @@ ImageMap::~ImageMap() {
 	delete instrumentationInfo;
 }
 
-void ImageMap::Reload(const u_int widthHint, const u_int heightHint) {
+void ImageMap::Reload() {
 	if (!instrumentationInfo)
 		throw runtime_error("ImageMap::Reload() called on a not instrumented image map: " + GetName());
 
 	delete pixelStorage;
-	Init(GetName(), instrumentationInfo->originalImgCfg, widthHint, heightHint);
+	Init(GetName(), instrumentationInfo->originalImgCfg, 0, 0);
+}
+
+void ImageMap::Reload(const string &fileName, const u_int widthHint, const u_int heightHint) {
+	if (!instrumentationInfo)
+		throw runtime_error("ImageMap::Reload() called on a not instrumented image map: " + GetName() + " from " + fileName);
+
+	delete pixelStorage;
+	Init(fileName, instrumentationInfo->originalImgCfg, widthHint, heightHint);
 }
 
 void ImageMap::Init(const string &fileName, const ImageMapConfig &cfg,

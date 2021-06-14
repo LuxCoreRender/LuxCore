@@ -888,7 +888,8 @@ public:
 			const u_int widthHint = 0, const u_int heightHint = 0);
 	~ImageMap();
 
-	void Reload(const u_int widthHint = 0, const u_int heightHint = 0);
+	void Reload();
+	void Reload(const std::string &fileName, const u_int widthHint = 0, const u_int heightHint = 0);
 	
 	void SelectChannel(const ImageMapStorage::ChannelSelectionType selectionType);
 	void ConvertColorSpace(const std::string &configFileName,
