@@ -21,6 +21,7 @@
 
 #include "slg/scene/scene.h"
 #include "slg/imagemap/imagemapcache.h"
+#include "slg/utils/filenameresolver.h"
 
 using namespace std;
 using namespace luxrays;
@@ -30,15 +31,17 @@ using namespace slg;
 // ImageMapResizeMipMapMemPolicy::ApplyResizePolicy()
 //------------------------------------------------------------------------------
 
-ImageMap *ImageMapResizeMipMapMemPolicy::ApplyResizePolicy(const std::string &srcFileName,
+ImageMap *ImageMapResizeMipMapMemPolicy::ApplyResizePolicy(const std::string &fileName,
 		const ImageMapConfig &imgCfg, bool &toApply) const {
+	const string srcFileName = SLG_FileNameResolver.ResolveFile(fileName);
+	
 	// Check/Create and TX file for each image map
 	const string dstFileName = srcFileName + ".tx";
 
 	// Check if the TX file exist and it is up to date
 	if (!boost::filesystem::exists(dstFileName) ||
 			(boost::filesystem::last_write_time(srcFileName) > boost::filesystem::last_write_time(dstFileName))) {
-		SDL_LOG("Creating TX image file:  " << srcFileName);
+		SDL_LOG("Creating TX image for file:  " << srcFileName);
 
 		ImageMap::MakeTx(srcFileName, dstFileName);
 	}
@@ -61,13 +64,17 @@ ImageMap *ImageMapResizeMipMapMemPolicy::ApplyResizePolicy(const std::string &sr
 				" to " << newWidth << "x" << newHeight <<"]");
 
 		ImageMap *im = new ImageMap(dstFileName, imgCfg, newWidth, newHeight);
+		// Set the ImageMap with  the original name
+		im->SetName(fileName);
+
 		im->SetUpInstrumentation(width, height, imgCfg);
 
 		toApply = true;
 
 		return im;
 	} else {
-		ImageMap *im = new ImageMap(dstFileName, imgCfg);
+		ImageMap *im = new ImageMap(fileName, imgCfg);
+
 		toApply = false;
 
 		return im;
