@@ -1979,6 +1979,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 	//--------------------------------------------------------------------------
 
     class_<luxcore::detail::SceneImpl>("Scene", init<>())
+		.def(init<luxrays::Properties, luxrays::Properties *>())
 		.def(init<luxrays::Properties>())
 		.def(init<string>())
 		.def("ToProperties", &luxcore::detail::SceneImpl::ToProperties, return_internal_reference<>())
