@@ -875,28 +875,28 @@ void ImageMap::Init(const string &fileName, const ImageMapConfig &cfg,
 }
 
 float ImageMap::GetFloat(const UV &uv) const {
-	if (instrumentationInfo)
+	if (instrumentationInfo && instrumentationInfo->enabled)
 		instrumentationInfo->ThreadAddSample(uv);
 
 	return pixelStorage->GetFloat(uv);
 }
 
 Spectrum ImageMap::GetSpectrum(const UV &uv) const {
-	if (instrumentationInfo)
+	if (instrumentationInfo && instrumentationInfo->enabled)
 		instrumentationInfo->ThreadAddSample(uv);
 
 	return pixelStorage->GetSpectrum(uv);
 }
 
 float ImageMap::GetAlpha(const UV &uv) const {
-	if (instrumentationInfo)
+	if (instrumentationInfo && instrumentationInfo->enabled)
 		instrumentationInfo->ThreadAddSample(uv);
 
 	return pixelStorage->GetAlpha(uv);
 }
 
 UV ImageMap::GetDuv(const UV &uv) const {
-	if (instrumentationInfo)
+	if (instrumentationInfo && instrumentationInfo->enabled)
 		instrumentationInfo->ThreadAddSample(uv);
 
 	return pixelStorage->GetDuv(uv);
