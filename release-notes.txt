@@ -27,6 +27,7 @@
 * Added the support for new pyluxcoretools MakeTX
 * Introduced the MIPMAPMEM Scene texture image maps resize policy
 * GPU out-of-core rendering now automatically disable Film GPU image pipeline to save more memory
+* Added the support for Film-only out-of-core rendering (CUDA-only) with property opencl.outofcore.film.enable
 
 ### Fixed Bugs
 
