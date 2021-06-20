@@ -191,7 +191,7 @@ void PathOCLBaseRenderEngine::InitPixelFilterDistribution() {
 }
 
 void PathOCLBaseRenderEngine::InitFilm() {
-	if (ctx->GetUseOutOfCoreBuffers()) {
+	if (ctx->GetUseOutOfCoreBuffers() || useFilmOutOfCoreMemory) {
 		// If out-of-core rendering is enabled, I disable Film GPU image pipeline
 		// in order to save more GPU memory
 		film->hwEnable = false;

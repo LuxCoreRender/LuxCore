@@ -41,6 +41,7 @@ protected:
 	static const luxrays::Properties &GetDefaultProps();
 
 	u_int oclRenderThreadCount, nativeRenderThreadCount;
+	bool useFilmOutOfCoreMemory;
 };
 
 }
