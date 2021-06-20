@@ -191,6 +191,12 @@ void PathOCLBaseRenderEngine::InitPixelFilterDistribution() {
 }
 
 void PathOCLBaseRenderEngine::InitFilm() {
+	if (ctx->GetUseOutOfCoreBuffers()) {
+		// If out-of-core rendering is enabled, I disable Film GPU image pipeline
+		// in order to save more GPU memory
+		film->hwEnable = false;
+	}
+	
 	film->AddChannel(Film::RADIANCE_PER_PIXEL_NORMALIZED);
 
 	// pathTracer has not yet been initialized
