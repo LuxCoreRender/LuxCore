@@ -81,8 +81,9 @@ void ImageMap::InstrumentationInfo::ThreadSetUp() {
 
 void ImageMap::InstrumentationInfo::ThreadFinalize() {
 //	cout << "ImageMap::InstrumentationInfo::ThreadFinalize() [" << this << "]" << endl;
-
-	 ThreadData *ti = threadInfo[boost::this_thread::get_id()];
+	
+	boost::unique_lock<boost::mutex> lock(classLock);
+	ThreadData *ti = threadInfo[boost::this_thread::get_id()];
 	if (ti->samplesCount > 0) {
 //		cout << "Min. U distance in pixel: " << (ti->minDistance * originalWidth) << endl;
 //		cout << "Min. V distance in pixel: " << (ti->minDistance * originalHeigth) << endl;
@@ -97,7 +98,6 @@ void ImageMap::InstrumentationInfo::ThreadFinalize() {
 		}
 	}
 
-	boost::unique_lock<boost::mutex> lock(classLock);
 	delete ti;
 	threadInfo.erase(boost::this_thread::get_id());
 }
