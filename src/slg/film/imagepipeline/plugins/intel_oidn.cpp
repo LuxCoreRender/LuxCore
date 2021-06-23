@@ -23,6 +23,7 @@
 #include <boost/format.hpp>
 
 #include "slg/film/imagepipeline/plugins/intel_oidn.h"
+#include "slg/film/framebuffer.h"
 
 using namespace std;
 using namespace luxrays;
@@ -50,9 +51,45 @@ ImagePipelinePlugin *IntelOIDN::Copy() const {
 	return new IntelOIDN(filterType, oidnMemLimit, sharpness);
 }
 
+void IntelOIDN::FilterImage(const string &imageName,
+		const float *srcBuffer, float *dstBuffer,
+		const float *albedoBuffer, const float *normalBuffer,
+		const u_int width, const u_int height) const {
+    oidn::DeviceRef device = oidn::newDevice();
+    device.commit();
+
+    oidn::FilterRef filter = device.newFilter(filterType.c_str());
+
+    filter.set("hdr", true);
+	filter.set("cleanAux", true);
+	filter.set("maxMemoryMB", oidnMemLimit);
+    filter.setImage("color", (float *)srcBuffer, oidn::Format::Float3, width, height);
+    if (albedoBuffer) {	
+        filter.setImage("albedo", (float *)albedoBuffer, oidn::Format::Float3, width, height);
+
+        // Normals can only be used if albedo is supplied as well
+        if (normalBuffer)
+            filter.setImage("normal", (float *)normalBuffer, oidn::Format::Float3, width, height);
+    }
+    
+    filter.setImage("output", dstBuffer, oidn::Format::Float3, width, height);
+    filter.commit();
+
+    SLG_LOG("IntelOIDNPlugin executing " + imageName + " filter");
+	const double startTime = WallClockTime();
+    filter.execute();
+	SLG_LOG("IntelOIDNPlugin " + imageName + " filter took: " << (boost::format("%.1f") % (WallClockTime() - startTime)) << "secs");
+
+    const char *errorMessage;
+    if (device.getError(errorMessage) != oidn::Error::None)
+         SLG_LOG("IntelOIDNPlugin " + imageName + " filtering error: " << errorMessage);
+}
+
 void IntelOIDN::Apply(Film &film, const u_int index) {
 	const double totalStartTime = WallClockTime();
+
 	SLG_LOG("[IntelOIDNPlugin] Applying single OIDN");
+
     Spectrum *pixels = (Spectrum *)film.channel_IMAGEPIPELINEs[index]->GetPixels();
 
     const u_int width = film.GetWidth();
@@ -63,44 +100,37 @@ void IntelOIDN::Apply(Film &film, const u_int index) {
     vector<float> albedoBuffer;
     vector<float> normalBuffer;
 
-    oidn::DeviceRef device = oidn::newDevice();
-    device.commit();
-
-    oidn::FilterRef filter = device.newFilter(filterType.c_str());
-
-    filter.set("hdr", true);
-	filter.set("maxMemoryMB", oidnMemLimit);
-    filter.setImage("color", (float *)pixels, oidn::Format::Float3, width, height);
     if (film.HasChannel(Film::ALBEDO)) {
 		albedoBuffer.resize(3 * pixelCount);
 		for (u_int i = 0; i < pixelCount; ++i)
 			film.channel_ALBEDO->GetWeightedPixel(i, &albedoBuffer[i * 3]);
 		
-        filter.setImage("albedo", &albedoBuffer[0], oidn::Format::Float3, width, height);
+		//GenericFrameBuffer<3, 0, float>::SaveHDR("debug-albedo0.exr", albedoBuffer, width, height);
+
+		vector<float> albedoBufferTmp(3 * pixelCount);
+		FilterImage("Albedo", &albedoBuffer[0], &albedoBufferTmp[0],
+			nullptr, nullptr, width, height);
+		for (u_int i = 0; i < albedoBuffer.size(); ++i)
+			albedoBuffer[i] = albedoBufferTmp[i];
+
+		//GenericFrameBuffer<3, 0, float>::SaveHDR("debug-albedo1.exr", albedoBuffer, width, height);
 
         // Normals can only be used if albedo is supplied as well
         if (film.HasChannel(Film::AVG_SHADING_NORMAL)) {
             normalBuffer.resize(3 * pixelCount);
             for (u_int i = 0; i < pixelCount; ++i)
                 film.channel_AVG_SHADING_NORMAL->GetWeightedPixel(i, &normalBuffer[i * 3]);
-
-            filter.setImage("normal", &normalBuffer[0], oidn::Format::Float3, width, height);
+			
+			//GenericFrameBuffer<3, 0, float>::SaveHDR("debug-normal.exr", normalBuffer, width, height);
         } else
             SLG_LOG("[IntelOIDNPlugin] Warning: AVG_SHADING_NORMAL AOV not found");
     } else
 		SLG_LOG("[IntelOIDNPlugin] Warning: ALBEDO AOV not found");
-    
-    filter.setImage("output", &outputBuffer[0], oidn::Format::Float3, width, height);
-    filter.commit();
-    
-    SLG_LOG("IntelOIDNPlugin executing filter");
-	const double startTime = WallClockTime();
-    filter.execute();
-	SLG_LOG("IntelOIDNPlugin apply took: " << (boost::format("%.1f") % (WallClockTime() - startTime)) << "secs");
 
-    const char *errorMessage;
-    if (device.getError(errorMessage) != oidn::Error::None)
-         SLG_LOG("IntelOIDNPlugin error: " << errorMessage);
+	FilterImage("Image Pipeline", (float *)pixels, &outputBuffer[0],
+			(albedoBuffer.size() > 0) ? &albedoBuffer[0] : nullptr,
+			(normalBuffer.size() > 0) ? &normalBuffer[0] : nullptr,
+			width, height);
 
     SLG_LOG("IntelOIDNPlugin copying output buffer");
     for (u_int i = 0; i < pixelCount; ++i) {

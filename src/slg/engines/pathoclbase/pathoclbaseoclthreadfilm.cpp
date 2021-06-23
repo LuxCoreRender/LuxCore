@@ -134,7 +134,8 @@ void PathOCLBaseOCLRenderThread::ThreadFilm::Init(Film *engineFlm,
 	if (film->GetRadianceGroupCount() > 8)
 		throw runtime_error("PathOCL supports only up to 8 Radiance Groups");
 
-	const BufferType memTypeFlags = renderThread->intersectionDevice->GetContext()->GetUseOutOfCoreBuffers() ?
+	const BufferType memTypeFlags = (renderThread->intersectionDevice->GetContext()->GetUseOutOfCoreBuffers() ||
+				renderThread->renderEngine->useFilmOutOfCoreMemory) ?
 		((BufferType)(BUFFER_TYPE_READ_WRITE | BUFFER_TYPE_OUT_OF_CORE)) :
 		BUFFER_TYPE_READ_WRITE;
 

@@ -32,6 +32,7 @@ OPENCL_FORCE_INLINE void EyePathInfo_Init(__global EyePathInfo *pathInfo) {
 	pathInfo->lastBSDFPdfW = 1.f;
 	pathInfo->lastGlossiness = 0.f;
 	pathInfo->lastFromVolume = false;
+	pathInfo->isTransmittedPath = true;
 
 	pathInfo->isNearlyCaustic = false;
 	pathInfo->isNearlyS = false;
@@ -106,6 +107,8 @@ OPENCL_FORCE_INLINE void EyePathInfo_AddVertex(__global EyePathInfo *pathInfo,
 	VSTORE3F(bsdf->hitPoint.intoObject ? shadeN : -shadeN, &pathInfo->lastShadeN.x);
 	pathInfo->lastFromVolume =  bsdf->isVolume;
 	pathInfo->lastGlossiness = glossiness;
+	
+	pathInfo->isTransmittedPath = pathInfo->isTransmittedPath && (event & TRANSMIT) && (event & (SPECULAR | GLOSSY));
 }
 
 OPENCL_FORCE_INLINE bool EyePathInfo_IsCausticPath(__global EyePathInfo *pathInfo) {

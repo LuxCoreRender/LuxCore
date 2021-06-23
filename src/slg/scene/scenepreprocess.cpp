@@ -102,6 +102,12 @@ void Scene::Preprocess(Context *ctx, const u_int filmWidth, const u_int filmHeig
 	lightDefs.UpdateVisibilityMaps(this, useRTMode);
 
 	//--------------------------------------------------------------------------
+	// Preprocess image maps according resize policy
+	//--------------------------------------------------------------------------
+
+	imgMapCache.Preprocess(this, useRTMode);
+	
+	//--------------------------------------------------------------------------
 	// Reset the edit actions
 	//--------------------------------------------------------------------------
 

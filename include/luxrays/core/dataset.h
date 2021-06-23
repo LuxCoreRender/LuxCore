@@ -22,6 +22,7 @@
 #include <deque>
 #include <vector>
 
+#include <boost/thread/mutex.hpp>
 #include <boost/unordered_map.hpp>
 
 #include "luxrays/luxrays.h"
@@ -80,6 +81,7 @@ private:
 	BBox bbox;
 	BSphere bsphere;
 
+	boost::mutex accelsMutex;
 	boost::unordered_map<AcceleratorType, Accelerator *> accels;
 
 	AcceleratorType accelType;

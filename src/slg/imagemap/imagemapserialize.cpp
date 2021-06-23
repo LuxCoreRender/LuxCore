@@ -69,6 +69,8 @@ template<class Archive> void ImageMap::serialize(Archive &ar, const u_int versio
 	ar & pixelStorage;
 	ar & imageMean;
 	ar & imageMeanY;
+	
+	ar & instrumentationInfo;
 }
 
 namespace slg {

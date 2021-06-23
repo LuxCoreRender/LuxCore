@@ -33,7 +33,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 ImageMapCache::ImageMapCache() {
-	allImageScale = 1.f;
+	resizePolicy = new ImageMapResizeNonePolicy();
 }
 
 ImageMapCache::~ImageMapCache() {
@@ -42,6 +42,13 @@ ImageMapCache::~ImageMapCache() {
 		if (m != ImageMapTexture::randomImageMap.get())
 			delete m;
 	}
+
+	delete resizePolicy;
+}
+
+void ImageMapCache::SetImageResizePolicy(ImageMapResizePolicy *policy) {
+	delete resizePolicy;
+	resizePolicy = policy;
 }
 
 string ImageMapCache::GetCacheKey(const string &fileName, const ImageMapConfig &imgCfg) const {
@@ -75,7 +82,8 @@ string ImageMapCache::GetCacheKey(const string &fileName) const {
 	return fileName;
 }
 
-ImageMap *ImageMapCache::GetImageMap(const string &fileName, const ImageMapConfig &imgCfg) {
+ImageMap *ImageMapCache::GetImageMap(const string &fileName, const ImageMapConfig &imgCfg,
+		const bool applyResizePolicy) {
 	// Compose the cache key
 	string key = GetCacheKey(fileName);
 
@@ -100,24 +108,19 @@ ImageMap *ImageMapCache::GetImageMap(const string &fileName, const ImageMapConfi
 
 	// I haven't yet loaded the file
 
-	ImageMap *im = new ImageMap(fileName, imgCfg);
+	ImageMap *im;
+	if (applyResizePolicy) {
+		// Scale the image if required
+		bool toApply;
+		im = resizePolicy->ApplyResizePolicy(fileName, imgCfg, toApply);
+		
+		resizePolicyToApply.push_back(toApply);
+	} else {
+		im = new ImageMap(fileName, imgCfg);
 
-	// Scale the image if required
-	const u_int width = im->GetWidth();
-	const u_int height = im->GetHeight();
-	if (allImageScale > 1.f) {
-		// Enlarge all images
-		const u_int newWidth = width * allImageScale;
-		const u_int newHeight = height * allImageScale;
-		im->Resize(newWidth, newHeight);
-		im->Preprocess();
-	} else if ((allImageScale < 1.f) && (width > 128) && (height > 128)) {
-		const u_int newWidth = Max<u_int>(128, width * allImageScale);
-		const u_int newHeight = Max<u_int>(128, height * allImageScale);
-		im->Resize(newWidth, newHeight);
-		im->Preprocess();
+		resizePolicyToApply.push_back(false);
 	}
-
+	
 	mapByKey.insert(make_pair(key, im));
 	mapNames.push_back(fileName);
 	maps.push_back(im);
@@ -139,11 +142,15 @@ void ImageMapCache::DefineImageMap(ImageMap *im) {
 		mapByKey.insert(make_pair(key, im));
 		mapNames.push_back(name);
 		maps.push_back(im);
+		
+		resizePolicyToApply.push_back(false);
 	} else {
 		// Overwrite the existing image definition
 		const u_int index = GetImageMapIndex(it->second);
 		delete maps[index];
 		maps[index] = im;
+
+		resizePolicyToApply[index] = false;
 
 		// I have to modify mapByName for last or it iterator would be modified
 		// otherwise (it->second would point to the new ImageMap and not to the old one)
@@ -156,9 +163,17 @@ void ImageMapCache::DeleteImageMap(const ImageMap *im) {
 	for (boost::unordered_map<std::string, ImageMap *>::iterator it = mapByKey.begin(); it != mapByKey.end(); ++it) {
 		if (it->second == im) {
 			delete it->second;
-
-			maps.erase(std::find(maps.begin(), maps.end(), it->second));
 			mapByKey.erase(it);
+
+			for (u_int i = 0; i < maps.size(); ++i) {
+				if (maps[i] == im) {
+					mapNames.erase(mapNames.begin() + i);
+					maps.erase(maps.begin() + i);
+					resizePolicyToApply.erase(resizePolicyToApply.begin() + i);
+					break;
+				}
+			}
+
 			return;
 		}
 	}
@@ -183,4 +198,8 @@ void ImageMapCache::GetImageMaps(vector<const ImageMap *> &ims) {
 
 	BOOST_FOREACH(ImageMap *im, maps)
 		ims.push_back(im);
+}
+
+void ImageMapCache::Preprocess(const Scene *scene, const bool useRTMode) {
+	resizePolicy->Preprocess(*this, scene, useRTMode);
 }

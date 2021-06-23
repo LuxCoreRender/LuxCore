@@ -16,6 +16,9 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
+#include <OpenImageIO/imagebuf.h>
+#include <OpenImageIO/imagebufalgo.h>
+
 #include "spdlog/spdlog.h"
 
 #include "luxrays/core/intersectiondevice.h"
@@ -35,6 +38,7 @@ using namespace std;
 using namespace luxrays;
 using namespace luxcore;
 using namespace luxcore::detail;
+OIIO_NAMESPACE_USING
 
 //------------------------------------------------------------------------------
 // ParseLXS
@@ -112,6 +116,14 @@ void luxcore::ParseLXS(const string &fileName, Properties &renderConfigProps, Pr
 	cout << "==================================================================\n";*/
 	
 	API_END();
+}
+
+//------------------------------------------------------------------------------
+// MakeTx
+//------------------------------------------------------------------------------
+
+void luxcore::MakeTx(const string &srcFileName, const string &dstFileName) {
+	slg::ImageMap::MakeTx(srcFileName, dstFileName);
 }
 
 //------------------------------------------------------------------------------
@@ -360,30 +372,30 @@ Camera::~Camera() {
 // Scene
 //------------------------------------------------------------------------------
 
-Scene *Scene::Create(const float imageScale) {
-	API_BEGIN("{}", imageScale);
+Scene *Scene::Create(const luxrays::Properties *resizePolicyProps) {
+	API_BEGIN("{}, {}", (void *)resizePolicyProps);
 
-	Scene *result = new luxcore::detail::SceneImpl(imageScale);
-
-	API_RETURN("{}", (void *)result);
-	
-	return result;
-}
-
-Scene *Scene::Create(const luxrays::Properties &props, const float imageScale) {
-	API_BEGIN("{}, {}", ToArgString(props), imageScale);
-
-	Scene *result = new luxcore::detail::SceneImpl(props, imageScale);
+	Scene *result = new luxcore::detail::SceneImpl(resizePolicyProps);
 
 	API_RETURN("{}", (void *)result);
 	
 	return result;
 }
 
-Scene *Scene::Create(const string &fileName, const float imageScale) {
-	API_BEGIN("{}, {}", ToArgString(fileName), imageScale);
+Scene *Scene::Create(const luxrays::Properties &props, const luxrays::Properties *resizePolicyProps) {
+	API_BEGIN("{}, {}", ToArgString(props), (void *)resizePolicyProps);
 
-	Scene *result = new luxcore::detail::SceneImpl(fileName, imageScale);
+	Scene *result = new luxcore::detail::SceneImpl(resizePolicyProps);
+
+	API_RETURN("{}", (void *)result);
+	
+	return result;
+}
+
+Scene *Scene::Create(const string &fileName, const luxrays::Properties *resizePolicyProps) {
+	API_BEGIN("{}, {}", ToArgString(fileName), (void *)resizePolicyProps);
+
+	Scene *result = new luxcore::detail::SceneImpl(fileName, resizePolicyProps);
 
 	API_RETURN("{}", (void *)result);
 	
@@ -399,9 +411,11 @@ template<> void Scene::DefineImageMap<unsigned char>(const std::string &imgMapNa
 		unsigned char *pixels, const float gamma, const unsigned int channels,
 		const unsigned int width, const unsigned int height,
 		Scene::ChannelSelectionType selectionType, Scene::WrapType wrapType) {
-	API_BEGIN("{}, {}, {}, {}, {}, {}, {}, {}", ToArgString(imgMapName), (void *)pixels, gamma, channels, width, height, ToArgString(selectionType), ToArgString(wrapType));
+	API_BEGIN("{}, {}, {}, {}, {}, {}, {}, {}", ToArgString(imgMapName), (void *)pixels,
+			gamma, channels, width, height, ToArgString(selectionType), ToArgString(wrapType));
 
-	DefineImageMapUChar(imgMapName, pixels, gamma, channels, width, height, selectionType, wrapType);
+	DefineImageMapUChar(imgMapName, pixels, gamma, channels, width, height,
+			selectionType, wrapType);
 	
 	API_END();
 }
@@ -410,9 +424,11 @@ template<> void Scene::DefineImageMap<unsigned short>(const std::string &imgMapN
 		unsigned short *pixels, const float gamma, const unsigned int channels,
 		const unsigned int width, const unsigned int height,
 		Scene::ChannelSelectionType selectionType, Scene::WrapType wrapType) {
-	API_BEGIN("{}, {}, {}, {}, {}, {}, {}, {}", ToArgString(imgMapName), (void *)pixels, gamma, channels, width, height, ToArgString(selectionType), ToArgString(wrapType));
+	API_BEGIN("{}, {}, {}, {}, {}, {}, {}, {}", ToArgString(imgMapName), (void *)pixels,
+			gamma, channels, width, height, ToArgString(selectionType), ToArgString(wrapType));
 
-	DefineImageMapHalf(imgMapName, pixels, gamma, channels, width, height, selectionType, wrapType);
+	DefineImageMapHalf(imgMapName, pixels, gamma, channels, width, height,
+			selectionType, wrapType);
 	
 	API_END();
 }
@@ -421,9 +437,11 @@ template<> void Scene::DefineImageMap<float>(const std::string &imgMapName,
 		float *pixels, const float gamma, const unsigned int channels,
 		const unsigned int width, const unsigned int height,
 		Scene::ChannelSelectionType selectionType, Scene::WrapType wrapType) {
-	API_BEGIN("{}, {}, {}, {}, {}, {}, {}, {}", ToArgString(imgMapName), (void *)pixels, gamma, channels, width, height, ToArgString(selectionType), ToArgString(wrapType));
+	API_BEGIN("{}, {}, {}, {}, {}, {}, {}, {}", ToArgString(imgMapName), (void *)pixels,
+			gamma, channels, width, height, ToArgString(selectionType), ToArgString(wrapType));
 
-	DefineImageMapFloat(imgMapName, pixels, gamma, channels, width, height, selectionType, wrapType);
+	DefineImageMapFloat(imgMapName, pixels, gamma, channels, width, height,
+			selectionType, wrapType);
 	
 	API_END();
 }

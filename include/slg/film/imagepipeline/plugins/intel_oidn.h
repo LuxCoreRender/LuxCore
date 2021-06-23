@@ -22,6 +22,7 @@
 #if !defined(LUXCORE_DISABLE_OIDN)
 
 #include <vector>
+#include <string>
 
 #include <boost/serialization/export.hpp>
 
@@ -53,6 +54,11 @@ private:
 	// Used by serialization
 	IntelOIDN();
 
+	void FilterImage(const std::string &imageName,
+			const float *srcBuffer, float *dstBuffer,
+			const float *albedoBuffer, const float *normalBuffer,
+			const u_int width, const u_int height) const;
+	
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImagePipelinePlugin);
 		ar & oidnMemLimit;

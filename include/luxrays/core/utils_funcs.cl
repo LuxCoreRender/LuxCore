@@ -62,6 +62,16 @@ OPENCL_FORCE_INLINE float Lerp(const float t, const float v1, const float v2) {
 	return mix(v1, v2, t);
 }
 
+OPENCL_FORCE_INLINE float LerpWithStep(const float t, const float v1, const float v2, const float step) {
+	const float lerp = mix(v1, v2, t);
+
+	if (step <= 0.f)
+		return lerp;
+
+	// Linear interpolation with steps
+	return floor(lerp / step) * step;
+}
+
 OPENCL_FORCE_INLINE float3 Lerp3(const float t, const float3 v1, const float3 v2) {
 	// Linear interpolation
 	return mix(v1, v2, t);

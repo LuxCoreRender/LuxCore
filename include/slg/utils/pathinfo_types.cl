@@ -29,7 +29,7 @@ typedef struct {
 	float lastBSDFPdfW;
 	float lastGlossiness;
 	Normal lastShadeN;
-	bool lastFromVolume;
+	bool lastFromVolume, isTransmittedPath;
 
 	int isNearlyCaustic;
 	// Specular, Specular+ Diffuse and Specular+ Diffuse Specular+ paths

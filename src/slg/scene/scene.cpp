@@ -52,17 +52,17 @@ using namespace slg;
 // Scene
 //------------------------------------------------------------------------------
 
-Scene::Scene(const float imageScale) {
-	Init(imageScale);
+Scene::Scene(const luxrays::Properties *resizePolicyProps) {
+	Init(resizePolicyProps);
 }
 
-Scene::Scene(const Properties &scnProp, const float imageScale) {
-	Init(imageScale);
+Scene::Scene(const Properties &scnProps, const luxrays::Properties *resizePolicyProps) {
+	Init(resizePolicyProps);
 
-	Parse(scnProp);
+	Parse(scnProps);
 }
 
-void Scene::Init(const float imageScale) {
+void Scene::Init(const luxrays::Properties *resizePolicyProps) {
 	defaultWorldVolume = NULL;
 	// Just in case there is an unexpected exception during the scene loading
     camera = NULL;
@@ -70,7 +70,8 @@ void Scene::Init(const float imageScale) {
 	dataSet = NULL;
 
 	editActions.AddAllAction();
-	imgMapCache.SetImageResize(imageScale);
+	if (resizePolicyProps)
+		imgMapCache.SetImageResizePolicy(ImageMapResizePolicy::FromProperties(*resizePolicyProps));
 	// Add random image map to imgMapCache 
 	imgMapCache.DefineImageMap(ImageMapTexture::randomImageMap.get());
 

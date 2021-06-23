@@ -1,8 +1,8 @@
 #!/bin/bash
 
 #Fetch BuildDeps
-wget https://github.com/LuxCoreRender/MacOSCompileDeps/releases/download/luxcorerender_v2.5rc1/MacDistFiles.tar.gz
-tar xzf MacDistFiles.tar.gz
+wget https://github.com/LuxCoreRender/MacOSCompileDeps/releases/download/luxcorerender_v2.6alpha/MacDistFiles_39.tar.gz
+tar xzf MacDistFiles_39.tar.gz
 
 # Set Environment Variables
 export PATH="/usr/local/opt/bison/bin:/usr/local/bin:$PATH"

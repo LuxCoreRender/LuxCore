@@ -46,12 +46,15 @@ PGICPhotonBvh::~PGICPhotonBvh() {
 
 SpectrumGroup PGICPhotonBvh::ConnectCacheEntry(const Photon &photon, const BSDF &bsdf) const {
 	BSDFEvent event;
-	Spectrum bsdfEval = bsdf.Evaluate(-photon.d, &event, nullptr, nullptr);
+	float directPdfW;
+	Spectrum bsdfEval = bsdf.Evaluate(-photon.d, &event, &directPdfW, nullptr);
 	// bsdf.Evaluate() multiplies the result by AbsDot(bsdf.hitPoint.shadeN, -photon->d)
 	// so I have to cancel that factor. It is already included in photon density
 	// estimation.
 	if (!bsdf.IsVolume())
 		bsdfEval /= AbsDot(bsdf.hitPoint.shadeN, -photon.d);
+	else
+		bsdfEval /= directPdfW;
 
 	SpectrumGroup result;
 	result.Add(photon.lightID, photon.alpha * bsdfEval);
@@ -102,8 +105,11 @@ SpectrumGroup PGICPhotonBvh::ConnectAllNearEntries(const BSDF &bsdf) const {
 			}
 		}
 	}
-	
-	result /= photonTracedCount * M_PI * entryRadius2;
+
+	if (isVolume)
+		result /= photonTracedCount * (4.f / 3.f * M_PI * entryRadius2 * entryRadius);
+	else
+		result /= photonTracedCount * (M_PI * entryRadius2);
 
 	return result;
 }

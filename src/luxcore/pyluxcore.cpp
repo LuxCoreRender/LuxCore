@@ -1746,6 +1746,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 	def("Init", &LuxCore_InitDefaultHandler);
 	def("SetLogHandler", &LuxCore_SetLogHandler);
 	def("ParseLXS", &ParseLXS);
+	def("MakeTx", &MakeTx);
 
 	def("GetPlatformDesc", &GetPlatformDesc);
 	def("GetOpenCLDeviceDescs", &GetOpenCLDeviceDescs);
@@ -1977,9 +1978,10 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 	// Scene class
 	//--------------------------------------------------------------------------
 
-    class_<luxcore::detail::SceneImpl>("Scene", init<optional<float> >())
-		.def(init<luxrays::Properties, optional<float> >())
-		.def(init<string, optional<float> >())
+    class_<luxcore::detail::SceneImpl>("Scene", init<>())
+		.def(init<luxrays::Properties, luxrays::Properties *>())
+		.def(init<luxrays::Properties>())
+		.def(init<string>())
 		.def("ToProperties", &luxcore::detail::SceneImpl::ToProperties, return_internal_reference<>())
 		.def("GetCamera", &Scene_GetCamera, return_internal_reference<>())
 		.def("GetLightCount", &luxcore::detail::SceneImpl::GetLightCount)
