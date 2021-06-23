@@ -35,10 +35,9 @@ __kernel void AdvancePaths_MK_RT_NEXT_VERTEX(
 		KERNEL_ARGS
 		) {
 	// Pick the task index to elaborate from the task queue
-	const size_t threadIndex = get_global_id(0);
-	if (threadIndex >= taskQueues->stateQueueSize[MK_RT_NEXT_VERTEX])
+	const uint taskIndex = GetTaskIndex(taskQueues, MK_RT_NEXT_VERTEX);
+	if (taskIndex == NULL_INDEX)
 		return;
-	const uint taskIndex = taskQueues->stateIndices[MK_RT_NEXT_VERTEX][threadIndex];
 
 	__global SampleResult *sampleResult = &sampleResultsBuff[taskIndex];
 
@@ -120,10 +119,9 @@ __kernel void AdvancePaths_MK_HIT_NOTHING(
 		KERNEL_ARGS
 		) {
 	// Pick the task index to elaborate from the task queue
-	const size_t threadIndex = get_global_id(0);
-	if (threadIndex >= taskQueues->stateQueueSize[MK_HIT_NOTHING])
+	const uint taskIndex = GetTaskIndex(taskQueues, MK_HIT_NOTHING);
+	if (taskIndex == NULL_INDEX)
 		return;
-	const uint taskIndex = taskQueues->stateIndices[MK_HIT_NOTHING][threadIndex];
 
 	// Read the path state
 	__global GPUTaskState *taskState = &tasksState[taskIndex];
@@ -213,10 +211,9 @@ __kernel void AdvancePaths_MK_HIT_OBJECT(
 		KERNEL_ARGS
 		) {
 	// Pick the task index to elaborate from the task queue
-	const size_t threadIndex = get_global_id(0);
-	if (threadIndex >= taskQueues->stateQueueSize[MK_HIT_OBJECT])
+	const uint taskIndex = GetTaskIndex(taskQueues, MK_HIT_OBJECT);
+	if (taskIndex == NULL_INDEX)
 		return;
-	const uint taskIndex = taskQueues->stateIndices[MK_HIT_OBJECT][threadIndex];
 
 	// Read the path state
 	__global GPUTaskState *taskState = &tasksState[taskIndex];
@@ -479,10 +476,9 @@ __kernel void AdvancePaths_MK_RT_DL(
 		KERNEL_ARGS
 		) {
 	// Pick the task index to elaborate from the task queue
-	const size_t threadIndex = get_global_id(0);
-	if (threadIndex >= taskQueues->stateQueueSize[MK_RT_DL])
+	const uint taskIndex = GetTaskIndex(taskQueues, MK_RT_DL);
+	if (taskIndex == NULL_INDEX)
 		return;
-	const uint taskIndex = taskQueues->stateIndices[MK_RT_DL][threadIndex];
 
 	// Read the path state
 	__global GPUTask *task = &tasks[taskIndex];
@@ -589,10 +585,9 @@ __kernel void AdvancePaths_MK_DL_ILLUMINATE(
 		KERNEL_ARGS
 		) {
 	// Pick the task index to elaborate from the task queue
-	const size_t threadIndex = get_global_id(0);
-	if (threadIndex >= taskQueues->stateQueueSize[MK_DL_ILLUMINATE])
+	const uint taskIndex = GetTaskIndex(taskQueues, MK_DL_ILLUMINATE);
+	if (taskIndex == NULL_INDEX)
 		return;
-	const uint taskIndex = taskQueues->stateIndices[MK_DL_ILLUMINATE][threadIndex];
 
 	// Read the path state
 	__global GPUTask *task = &tasks[taskIndex];
@@ -674,10 +669,9 @@ __kernel void AdvancePaths_MK_DL_SAMPLE_BSDF(
 		KERNEL_ARGS
 		) {
 	// Pick the task index to elaborate from the task queue
-	const size_t threadIndex = get_global_id(0);
-	if (threadIndex >= taskQueues->stateQueueSize[MK_DL_SAMPLE_BSDF])
+	const uint taskIndex = GetTaskIndex(taskQueues, MK_DL_SAMPLE_BSDF);
+	if (taskIndex == NULL_INDEX)
 		return;
-	const uint taskIndex = taskQueues->stateIndices[MK_DL_SAMPLE_BSDF][threadIndex];
 
 	// Read the path state
 	__global GPUTaskState *taskState = &tasksState[taskIndex];
@@ -758,10 +752,9 @@ __kernel void AdvancePaths_MK_GENERATE_NEXT_VERTEX_RAY(
 		KERNEL_ARGS
 		) {
 	// Pick the task index to elaborate from the task queue
-	const size_t threadIndex = get_global_id(0);
-	if (threadIndex >= taskQueues->stateQueueSize[MK_GENERATE_NEXT_VERTEX_RAY])
+	const uint taskIndex = GetTaskIndex(taskQueues, MK_GENERATE_NEXT_VERTEX_RAY);
+	if (taskIndex == NULL_INDEX)
 		return;
-	const uint taskIndex = taskQueues->stateIndices[MK_GENERATE_NEXT_VERTEX_RAY][threadIndex];
 
 	// Read the path state
 	__global GPUTask *task = &tasks[taskIndex];
@@ -917,10 +910,9 @@ __kernel void AdvancePaths_MK_SPLAT_SAMPLE(
 		KERNEL_ARGS
 		) {
 	// Pick the task index to elaborate from the task queue
-	const size_t threadIndex = get_global_id(0);
-	if (threadIndex >= taskQueues->stateQueueSize[MK_SPLAT_SAMPLE])
+	const uint taskIndex = GetTaskIndex(taskQueues, MK_SPLAT_SAMPLE);
+	if (taskIndex == NULL_INDEX)
 		return;
-	const uint taskIndex = taskQueues->stateIndices[MK_SPLAT_SAMPLE][threadIndex];
 
 	// Read the path state
 	__global GPUTask *task = &tasks[taskIndex];
@@ -1024,10 +1016,9 @@ __kernel void AdvancePaths_MK_NEXT_SAMPLE(
 		KERNEL_ARGS
 		) {
 	// Pick the task index to elaborate from the task queue
-	const size_t threadIndex = get_global_id(0);
-	if (threadIndex >= taskQueues->stateQueueSize[MK_NEXT_SAMPLE])
+	const uint taskIndex = GetTaskIndex(taskQueues, MK_NEXT_SAMPLE);
+	if (taskIndex == NULL_INDEX)
 		return;
-	const uint taskIndex = taskQueues->stateIndices[MK_NEXT_SAMPLE][threadIndex];
 
 	// Read the path state
 	__global GPUTask *task = &tasks[taskIndex];
@@ -1094,10 +1085,9 @@ __kernel void AdvancePaths_MK_GENERATE_CAMERA_RAY(
 	// is not used in this case
 #if !defined(RENDER_ENGINE_TILEPATHOCL) && !defined(RENDER_ENGINE_RTPATHOCL)
 	// Pick the task index to elaborate from the task queue
-	const size_t threadIndex = get_global_id(0);
-	if (threadIndex >= taskQueues->stateQueueSize[MK_GENERATE_CAMERA_RAY])
+	const uint taskIndex = GetTaskIndex(taskQueues, MK_GENERATE_CAMERA_RAY);
+	if (taskIndex == NULL_INDEX)
 		return;
-	const uint taskIndex = taskQueues->stateIndices[MK_GENERATE_CAMERA_RAY][threadIndex];
 
 	// Read the path state
 	__global GPUTask *task = &tasks[taskIndex];

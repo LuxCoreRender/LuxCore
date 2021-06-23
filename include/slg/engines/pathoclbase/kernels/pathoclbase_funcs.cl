@@ -565,6 +565,14 @@ OPENCL_FORCE_INLINE void MoveToTaskQueue(__global GPUTaskQueues *taskQueues,
 	}
 }
 
+OPENCL_FORCE_INLINE uint GetTaskIndex(__global GPUTaskQueues *taskQueues, const PathState state) {
+	const size_t threadIndex = get_global_id(0);
+	if (threadIndex >= taskQueues->stateQueueSize[state])
+		return NULL_INDEX;
+
+	return taskQueues->stateIndices[state][threadIndex];
+}
+
 OPENCL_FORCE_INLINE void PrintSpaces(const uint spaceCount) {
 	for (uint i = 0; i < spaceCount; ++i)
 		printf(" ");
