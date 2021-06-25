@@ -57,7 +57,7 @@ void InfiniteLight::Preprocess() {
 				data[index] = imageMapStorage->GetFloat(index);
 
 			if (!IsValid(data[index]))
-				throw runtime_error("Pixel (" + ToString(x) + ", " + ToString(y) + ") in infinite light has an invalid: " + ToString(data[index]));
+				throw runtime_error("Pixel (" + ToString(x) + ", " + ToString(y) + ") in infinite light has an invalid value: " + ToString(data[index]));
 
 			//maxVal = Max(data[index], maxVal);
 			//minVal = Min(data[index], minVal);
