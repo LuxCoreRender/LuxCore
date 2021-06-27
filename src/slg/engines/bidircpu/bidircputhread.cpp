@@ -682,7 +682,8 @@ void BiDirCPURenderThread::RenderFunc() {
 
 				// Something was hit
 
-				if (albedoToDo && eyeVertex.bsdf.IsAlbedoEndPoint()) {
+				if (albedoToDo && eyeVertex.bsdf.IsAlbedoEndPoint(engine->albedoSpecularSetting,
+						engine->albedoSpecularGlossinessThreshold)) {
 					eyeSampleResult.albedo = eyeVertex.throughput * eyeVertex.bsdf.Albedo();
 					albedoToDo = false;
 				}

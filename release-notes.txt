@@ -29,6 +29,7 @@
 * GPU out-of-core rendering now automatically disable Film GPU image pipeline to save more memory
 * Added the support for Film-only out-of-core rendering (CUDA-only) with property opencl.outofcore.film.enable
 * Added a safety check for infinite light source when HDR with invalid values (NaN, Inf, etc.) is used
+* Albedo AOV reflections and transmissions can now be configured (mostly for denoising)
 
 ### Fixed Bugs
 

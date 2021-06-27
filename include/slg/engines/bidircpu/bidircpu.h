@@ -142,6 +142,10 @@ public:
 	// Clamping settings
 	float sqrtVarianceClampMaxValue;
 
+	// Albedo AOV settings
+	AlbedoSpecularSetting albedoSpecularSetting;
+	float albedoSpecularGlossinessThreshold;
+
 	bool forceBlackBackground;
 
 	friend class BiDirCPURenderThread;

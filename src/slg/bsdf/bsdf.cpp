@@ -157,12 +157,24 @@ void BSDF::MoveHitPoint(const Point &p, const Normal &n) {
 	frame = Frame(x, y, n);
 }
 
-bool BSDF::IsAlbedoEndPoint() const {
-	return !IsDelta() ||
-			// This is a very special case to not have white Albedo AOV if the
-			// material is mirror. Mirror has no ray split so it can be render
-			// without any noise.
-			(material->GetType() != MIRROR);
+bool BSDF::IsAlbedoEndPoint(const AlbedoSpecularSetting albedoSpecularSetting,
+		const float albedoSpecularGlossinessThreshold) const {
+	if (!IsDelta() || (GetGlossiness() > albedoSpecularGlossinessThreshold))
+		return true;
+	
+	const BSDFEvent event = GetEventTypes();
+	switch (albedoSpecularSetting) {
+		case NO_REFLECT_TRANSMIT:
+			return true;
+		case ONLY_REFLECT:
+			return !((event & REFLECT) && !(event & TRANSMIT));
+		case ONLY_TRANSMIT:
+			return !(!(event & REFLECT) && (event & TRANSMIT));
+		case REFLECT_TRANSMIT:
+			return !((event & REFLECT) || (event & TRANSMIT));
+		default:
+			throw runtime_error("Unknown AlbedoSpecularSetting in BSDF::IsAlbedoEndPoint(): " + ToString(albedoSpecularSetting));
+	}
 }
 
 bool BSDF::IsCameraInvisible() const {
@@ -382,4 +394,32 @@ Spectrum BSDF::GetEmittedRadiance(float *directPdfA, float *emissionPdfW) const 
 	return triangleLightSource ?
 		triangleLightSource->GetRadiance(hitPoint, directPdfA, emissionPdfW) :
 		Spectrum();
+}
+
+AlbedoSpecularSetting slg::String2AlbedoSpecularSetting(const string &type) {
+	if (type == "NO_REFLECT_TRANSMIT")
+		return NO_REFLECT_TRANSMIT;
+	else if (type == "ONLY_REFLECT")
+		return ONLY_REFLECT;
+	else if (type == "ONLY_TRANSMIT")
+		return ONLY_TRANSMIT;
+	else if (type == "REFLECT_TRANSMIT")
+		return REFLECT_TRANSMIT;
+	else
+		throw runtime_error("Unknown albedo specular setting in String2AlbedoSpecularSetting(): " + type);
+}
+
+const string slg::AlbedoSpecularSetting2String(const AlbedoSpecularSetting type) {
+	switch (type) {
+		case NO_REFLECT_TRANSMIT:
+			return "NO_REFLECT_TRANSMIT";
+		case ONLY_REFLECT:
+			return "ONLY_REFLECT";
+		case ONLY_TRANSMIT:
+			return "ONLY_TRANSMIT";
+		case REFLECT_TRANSMIT:
+			return "REFLECT_TRANSMIT";
+		default:
+			throw runtime_error("Unknown albedo specular setting in AlbedoSpecularSetting2String(): " + ToString(type));
+	}
 }

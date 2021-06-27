@@ -441,7 +441,7 @@ void PathTracer::RenderEyePath(IntersectionDevice *device,
 
 		// Something was hit
 
-		if (albedoToDo && bsdf.IsAlbedoEndPoint()) {
+		if (albedoToDo && bsdf.IsAlbedoEndPoint(albedoSpecularSetting, albedoSpecularGlossinessThreshold)) {
 			sampleResult.albedo = pathThroughput * bsdf.Albedo();
 			albedoToDo = false;
 		}
@@ -997,6 +997,10 @@ void PathTracer::ParseOptions(const luxrays::Properties &cfg, const luxrays::Pro
 		hybridBackForwardGlossinessThreshold = Clamp(cfg.Get(defaultProps.Get("path.hybridbackforward.glossinessthreshold")).Get<float>(), 0.f, 1.f);
 	}
 
+	// Albedo AOV settings
+	albedoSpecularSetting = String2AlbedoSpecularSetting(cfg.Get(defaultProps.Get("path.albedospecular.type")).Get<string>());
+	albedoSpecularGlossinessThreshold = Max(cfg.Get(defaultProps.Get("path.albedospecular.glossinessthreshold")).Get<float>(), 0.f);
+
 	// Update eye sample size
 	eyeSampleBootSize = 5;
 	eyeSampleStepSize = 9;
@@ -1046,6 +1050,8 @@ Properties PathTracer::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("path.russianroulette.cap")) <<
 			cfg.Get(GetDefaultProps().Get("path.clamping.variance.maxvalue")) <<
 			cfg.Get(GetDefaultProps().Get("path.forceblackbackground.enable")) <<
+			cfg.Get(GetDefaultProps().Get("path.albedospecular.type")) <<
+			cfg.Get(GetDefaultProps().Get("path.albedospecular.glossinessthreshold")) <<
 			Sampler::ToProperties(cfg);
 
 	return props;
@@ -1063,7 +1069,9 @@ const Properties &PathTracer::GetDefaultProps() {
 			Property("path.russianroulette.depth")(3) <<
 			Property("path.russianroulette.cap")(.5f) <<
 			Property("path.clamping.variance.maxvalue")(0.f) <<
-			Property("path.forceblackbackground.enable")(false);
+			Property("path.forceblackbackground.enable")(false) <<
+			Property("path.albedospecular.type")("only_reflect") <<
+			Property("path.albedospecular.glossinessthreshold")(.05f);
 
 	return props;
 }
