@@ -159,19 +159,19 @@ void BSDF::MoveHitPoint(const Point &p, const Normal &n) {
 
 bool BSDF::IsAlbedoEndPoint(const AlbedoSpecularSetting albedoSpecularSetting,
 		const float albedoSpecularGlossinessThreshold) const {
-	if (!IsDelta() || (GetGlossiness() > albedoSpecularGlossinessThreshold))
+	const BSDFEvent eventTypes = GetEventTypes();
+	if (!IsDelta() && !((eventTypes & GLOSSY) && (GetGlossiness() < albedoSpecularGlossinessThreshold)))
 		return true;
 	
-	const BSDFEvent event = GetEventTypes();
 	switch (albedoSpecularSetting) {
 		case NO_REFLECT_TRANSMIT:
 			return true;
 		case ONLY_REFLECT:
-			return !((event & REFLECT) && !(event & TRANSMIT));
+			return !((eventTypes & REFLECT) && !(eventTypes & TRANSMIT));
 		case ONLY_TRANSMIT:
-			return !(!(event & REFLECT) && (event & TRANSMIT));
+			return !(!(eventTypes & REFLECT) && (eventTypes & TRANSMIT));
 		case REFLECT_TRANSMIT:
-			return !((event & REFLECT) || (event & TRANSMIT));
+			return !((eventTypes & REFLECT) || (eventTypes & TRANSMIT));
 		default:
 			throw runtime_error("Unknown AlbedoSpecularSetting in BSDF::IsAlbedoEndPoint(): " + ToString(albedoSpecularSetting));
 	}

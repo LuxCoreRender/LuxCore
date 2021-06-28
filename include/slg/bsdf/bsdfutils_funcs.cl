@@ -30,15 +30,6 @@ OPENCL_FORCE_INLINE bool BSDF_IsDelta(__global const BSDF *bsdf
 			MATERIALS_PARAM);
 }
 
-OPENCL_FORCE_INLINE bool BSDF_IsAlbedoEndPoint(__global const BSDF *bsdf
-		MATERIALS_PARAM_DECL) {
-	return !BSDF_IsDelta(bsdf MATERIALS_PARAM) ||
-			// This is a very special case to not have white Albedo AOV if the
-			// material is mirror. Mirror has no ray split so it can be render
-			// without any noise.
-			(mats[bsdf->materialIndex].type != MIRROR);
-}
-
 OPENCL_FORCE_INLINE uint BSDF_GetObjectID(__global const BSDF *bsdf, __global const SceneObject* restrict sceneObjs) {
 	const uint sceneObjectIndex = bsdf->sceneObjectIndex;
 
@@ -103,5 +94,28 @@ OPENCL_FORCE_INLINE float3 BSDF_GetRayOrigin(__global const BSDF *bsdf, const fl
 		const float riseDirection = (dot(sampleDir, geometryN) > 0.f) ? 1.f : -1.f;
 		
 		return p + riseDirection * (geometryN * MachineEpsilon_E_Float3(p));
+	}
+}
+
+OPENCL_FORCE_INLINE bool BSDF_IsAlbedoEndPoint(__global const BSDF *bsdf,
+		const AlbedoSpecularSetting albedoSpecularSetting,
+		const float albedoSpecularGlossinessThreshold
+		MATERIALS_PARAM_DECL) {
+	const BSDFEvent eventTypes = BSDF_GetEventTypes(bsdf MATERIALS_PARAM);
+	if (!BSDF_IsDelta(bsdf MATERIALS_PARAM) &&
+			!((eventTypes & GLOSSY) && (BSDF_GetGlossiness(bsdf MATERIALS_PARAM) < albedoSpecularGlossinessThreshold)))
+		return true;
+
+	switch (albedoSpecularSetting) {
+		case NO_REFLECT_TRANSMIT:
+			return true;
+		case ONLY_REFLECT:
+			return !((eventTypes & REFLECT) && !(eventTypes & TRANSMIT));
+		case ONLY_TRANSMIT:
+			return !(!(eventTypes & REFLECT) && (eventTypes & TRANSMIT));
+		case REFLECT_TRANSMIT:
+			return !((eventTypes & REFLECT) || (eventTypes & TRANSMIT));
+		default:
+			return true;
 	}
 }
