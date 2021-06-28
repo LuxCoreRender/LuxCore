@@ -107,7 +107,7 @@ void IntelOIDN::Apply(Film &film, const u_int index) {
 		for (u_int i = 0; i < pixelCount; ++i)
 			film.channel_ALBEDO->GetWeightedPixel(i, &albedoBuffer[i * 3]);
 		
-		GenericFrameBuffer<3, 0, float>::SaveHDR("debug-albedo0.exr", albedoBuffer, width, height);
+		//GenericFrameBuffer<3, 0, float>::SaveHDR("debug-albedo0.exr", albedoBuffer, width, height);
 
 		if (enablePrefiltering) {
 			vector<float> albedoBufferTmp(3 * pixelCount);
@@ -116,7 +116,7 @@ void IntelOIDN::Apply(Film &film, const u_int index) {
 			for (u_int i = 0; i < albedoBuffer.size(); ++i)
 				albedoBuffer[i] = albedoBufferTmp[i];
 
-			GenericFrameBuffer<3, 0, float>::SaveHDR("debug-albedo1.exr", albedoBuffer, width, height);
+			//GenericFrameBuffer<3, 0, float>::SaveHDR("debug-albedo1.exr", albedoBuffer, width, height);
 		}
 
         // Normals can only be used if albedo is supplied as well

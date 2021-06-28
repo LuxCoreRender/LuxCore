@@ -175,7 +175,7 @@ const Properties &BiDirCPURenderEngine::GetDefaultProps() {
 			Property("path.russianroulette.depth")(3) <<
 			Property("path.russianroulette.cap")(.5f) <<
 			Property("path.clamping.variance.maxvalue")(0.f) <<
-			Property("path.albedospecular.type")("only_reflect") <<
+			Property("path.albedospecular.type")("REFLECT_TRANSMIT") <<
 			Property("path.albedospecular.glossinessthreshold")(.05f) <<
 			PhotonGICache::GetDefaultProps();
 
