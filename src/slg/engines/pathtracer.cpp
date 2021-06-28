@@ -1070,7 +1070,7 @@ const Properties &PathTracer::GetDefaultProps() {
 			Property("path.russianroulette.cap")(.5f) <<
 			Property("path.clamping.variance.maxvalue")(0.f) <<
 			Property("path.forceblackbackground.enable")(false) <<
-			Property("path.albedospecular.type")("only_reflect") <<
+			Property("path.albedospecular.type")("ONLY_REFLECT") <<
 			Property("path.albedospecular.glossinessthreshold")(.05f);
 
 	return props;
