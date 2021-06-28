@@ -30,6 +30,7 @@
 * Added the support for Film-only out-of-core rendering (CUDA-only) with property opencl.outofcore.film.enable
 * Added a safety check for infinite light source when HDR with invalid values (NaN, Inf, etc.) is used
 * Albedo AOV reflections and transmissions can now be configured (mostly for denoising)
+* Added the support to Intel OIDN plugin for enabling/diasbling prefiltering with .prefilter.enable property
 
 ### Fixed Bugs
 

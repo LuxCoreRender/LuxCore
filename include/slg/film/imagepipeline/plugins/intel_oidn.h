@@ -42,7 +42,8 @@ namespace slg {
 class IntelOIDN : public ImagePipelinePlugin {
 public:
 	IntelOIDN(const std::string filterType,
-			const int oidnMemLimit, const float sharpness);
+			const int oidnMemLimit, const float sharpness,
+			bool enablePrefiltering);
 
 	virtual ImagePipelinePlugin *Copy() const;
 
@@ -65,6 +66,7 @@ private:
 		ar & iTileCount;
 		ar & jTileCount;
 		ar & sharpness;
+		ar & enablePrefiltering;
 	}
 
 	std::string filterType;
@@ -72,12 +74,13 @@ private:
 	u_int jTileCount;
 	int oidnMemLimit; //needs to be signed int for OIDN call
 	float sharpness;
+	bool enablePrefiltering;
 };
 
 }
 
 
-BOOST_CLASS_VERSION(slg::IntelOIDN, 3)
+BOOST_CLASS_VERSION(slg::IntelOIDN, 4)
 
 BOOST_CLASS_EXPORT_KEY(slg::IntelOIDN)
 

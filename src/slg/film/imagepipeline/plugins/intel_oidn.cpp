@@ -35,20 +35,22 @@ using namespace slg;
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::IntelOIDN)
 
-IntelOIDN::IntelOIDN(const string ft, const int m, const float s) {
+IntelOIDN::IntelOIDN(const string ft, const int m, const float s, const bool pref) {
 	filterType = ft;
 	oidnMemLimit = m;
 	sharpness = s;
+	enablePrefiltering = pref;
 }
 
 IntelOIDN::IntelOIDN() {
 	filterType = "RT";
 	oidnMemLimit = 6000;
 	sharpness = 0.f;
+	enablePrefiltering = true;
 }
 
 ImagePipelinePlugin *IntelOIDN::Copy() const {
-	return new IntelOIDN(filterType, oidnMemLimit, sharpness);
+	return new IntelOIDN(filterType, oidnMemLimit, sharpness, enablePrefiltering);
 }
 
 void IntelOIDN::FilterImage(const string &imageName,
@@ -61,7 +63,7 @@ void IntelOIDN::FilterImage(const string &imageName,
     oidn::FilterRef filter = device.newFilter(filterType.c_str());
 
     filter.set("hdr", true);
-	filter.set("cleanAux", true);
+	filter.set("cleanAux", enablePrefiltering);
 	filter.set("maxMemoryMB", oidnMemLimit);
     filter.setImage("color", (float *)srcBuffer, oidn::Format::Float3, width, height);
     if (albedoBuffer) {	
@@ -105,15 +107,17 @@ void IntelOIDN::Apply(Film &film, const u_int index) {
 		for (u_int i = 0; i < pixelCount; ++i)
 			film.channel_ALBEDO->GetWeightedPixel(i, &albedoBuffer[i * 3]);
 		
-		//GenericFrameBuffer<3, 0, float>::SaveHDR("debug-albedo0.exr", albedoBuffer, width, height);
+		GenericFrameBuffer<3, 0, float>::SaveHDR("debug-albedo0.exr", albedoBuffer, width, height);
 
-		vector<float> albedoBufferTmp(3 * pixelCount);
-		FilterImage("Albedo", &albedoBuffer[0], &albedoBufferTmp[0],
-			nullptr, nullptr, width, height);
-		for (u_int i = 0; i < albedoBuffer.size(); ++i)
-			albedoBuffer[i] = albedoBufferTmp[i];
+		if (enablePrefiltering) {
+			vector<float> albedoBufferTmp(3 * pixelCount);
+			FilterImage("Albedo", &albedoBuffer[0], &albedoBufferTmp[0],
+				nullptr, nullptr, width, height);
+			for (u_int i = 0; i < albedoBuffer.size(); ++i)
+				albedoBuffer[i] = albedoBufferTmp[i];
 
-		//GenericFrameBuffer<3, 0, float>::SaveHDR("debug-albedo1.exr", albedoBuffer, width, height);
+			GenericFrameBuffer<3, 0, float>::SaveHDR("debug-albedo1.exr", albedoBuffer, width, height);
+		}
 
         // Normals can only be used if albedo is supplied as well
         if (film.HasChannel(Film::AVG_SHADING_NORMAL)) {
