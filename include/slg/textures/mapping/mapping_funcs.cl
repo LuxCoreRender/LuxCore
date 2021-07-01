@@ -80,8 +80,9 @@ OPENCL_FORCE_INLINE float2 UVRandomMapping2D_MapImpl(__global const TextureMappi
 	Seed rndSeed;
 	Rnd_Init(seed, &rndSeed);
 
-	const float uvRotation = Lerp(Rnd_FloatValue(&rndSeed),
-			mapping->uvRandomMapping2D.uvRotationMin, mapping->uvRandomMapping2D.uvRotationMax);
+	const float uvRotation = LerpWithStep(Rnd_FloatValue(&rndSeed),
+			mapping->uvRandomMapping2D.uvRotationMin, mapping->uvRandomMapping2D.uvRotationMax,
+			mapping->uvRandomMapping2D.uvRotationStep);
 	const float uScale = Lerp(Rnd_FloatValue(&rndSeed),
 			mapping->uvRandomMapping2D.uScaleMin, mapping->uvRandomMapping2D.uScaleMax);
 	const float vScale = mapping->uvRandomMapping2D.uniformScale ?
@@ -238,9 +239,18 @@ OPENCL_FORCE_INLINE float3 LocalRandomMapping3D_Map(__global const TextureMappin
 	Seed rndSeed;
 	Rnd_Init(seed, &rndSeed);
 	
-	const float xRotation = Lerp(Rnd_FloatValue(&rndSeed), mapping->localRandomMapping.xRotationMin, mapping->localRandomMapping.xRotationMax);
-	const float yRotation = Lerp(Rnd_FloatValue(&rndSeed), mapping->localRandomMapping.yRotationMin, mapping->localRandomMapping.yRotationMax);
-	const float zRotation = Lerp(Rnd_FloatValue(&rndSeed), mapping->localRandomMapping.zRotationMin, mapping->localRandomMapping.zRotationMax);
+	const float xRotation = LerpWithStep(Rnd_FloatValue(&rndSeed),
+			mapping->localRandomMapping.xRotationMin,
+			mapping->localRandomMapping.xRotationMax,
+			mapping->localRandomMapping.xRotationStep);
+	const float yRotation = LerpWithStep(Rnd_FloatValue(&rndSeed),
+			mapping->localRandomMapping.yRotationMin,
+			mapping->localRandomMapping.yRotationMax,
+			mapping->localRandomMapping.yRotationStep);
+	const float zRotation = LerpWithStep(Rnd_FloatValue(&rndSeed),
+			mapping->localRandomMapping.zRotationMin,
+			mapping->localRandomMapping.zRotationMax,
+			mapping->localRandomMapping.yRotationStep);
 	
 	const float xScale = Lerp(Rnd_FloatValue(&rndSeed), mapping->localRandomMapping.xScaleMin, mapping->localRandomMapping.xScaleMax);
 	const bool uniformScale = mapping->localRandomMapping.uniformScale;
@@ -251,18 +261,19 @@ OPENCL_FORCE_INLINE float3 LocalRandomMapping3D_Map(__global const TextureMappin
 	const float yTranslate = Lerp(Rnd_FloatValue(&rndSeed), mapping->localRandomMapping.yTranslateMin, mapping->localRandomMapping.yTranslateMax);
 	const float zTranslate = Lerp(Rnd_FloatValue(&rndSeed), mapping->localRandomMapping.zTranslateMin, mapping->localRandomMapping.zTranslateMax);
 
-	const Matrix4x4 mScale = Matrix4x4_Scale(xScale, yScale, zScale);
-	m = Matrix4x4_Mul_Private(&m, &mScale);
+	Matrix4x4 mRandomTrans = Matrix4x4_Scale(xScale, yScale, zScale);
 
 	const Matrix4x4 mRotateX = Matrix4x4_RotateX(xRotation);
-	m = Matrix4x4_Mul_Private(&m, &mRotateX);
+	mRandomTrans = Matrix4x4_Mul_Private(&mRandomTrans, &mRotateX);
 	const Matrix4x4 mRotateY = Matrix4x4_RotateY(yRotation);
-	m = Matrix4x4_Mul_Private(&m, &mRotateY);
+	mRandomTrans = Matrix4x4_Mul_Private(&mRandomTrans, &mRotateY);
 	const Matrix4x4 mRotateZ = Matrix4x4_RotateZ(zRotation);
-	m = Matrix4x4_Mul_Private(&m, &mRotateZ);
+	mRandomTrans = Matrix4x4_Mul_Private(&mRandomTrans, &mRotateZ);
 
 	const Matrix4x4 mTranslate = Matrix4x4_Translate(xTranslate, yTranslate, zTranslate);
-	m = Matrix4x4_Mul_Private(&m, &mTranslate);
+	mRandomTrans = Matrix4x4_Mul_Private(&mRandomTrans, &mTranslate);
+	
+	m = Matrix4x4_Mul_Private(&mRandomTrans, &m);
 
 	const float3 p = VLOAD3F(&hitPoint->p.x);
 	return Matrix4x4_ApplyPoint_Private(&m, p);

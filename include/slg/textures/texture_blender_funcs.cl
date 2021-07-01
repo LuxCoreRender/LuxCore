@@ -1079,7 +1079,7 @@ OPENCL_FORCE_NOT_INLINE void BlenderVoronoiTexture_EvalOp(
 					texture->blenderVoronoi.feature_weight4, texture->blenderVoronoi.noisesize,
 					texture->blenderVoronoi.intensity, texture->blenderVoronoi.exponent,
 					texture->blenderVoronoi.contrast, texture->blenderVoronoi.bright,
-					&texture->blenderWood.mapping TEXTURES_PARAM);
+					&texture->blenderVoronoi.mapping TEXTURES_PARAM);
 			EvalStack_PushFloat(eval);
 			break;
 		}
@@ -1090,7 +1090,7 @@ OPENCL_FORCE_NOT_INLINE void BlenderVoronoiTexture_EvalOp(
 					texture->blenderVoronoi.feature_weight4, texture->blenderVoronoi.noisesize,
 					texture->blenderVoronoi.intensity, texture->blenderVoronoi.exponent,
 					texture->blenderVoronoi.contrast, texture->blenderVoronoi.bright,
-					&texture->blenderWood.mapping TEXTURES_PARAM);
+					&texture->blenderVoronoi.mapping TEXTURES_PARAM);
 			EvalStack_PushFloat3(eval);
 			break;
 		}

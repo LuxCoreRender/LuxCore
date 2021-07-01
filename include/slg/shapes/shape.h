@@ -42,7 +42,8 @@ public:
 		SIMPLIFY,
 		ISLANDAOV,
 		RANDOMTRIANGLEAOV,
-		EDGEDETECTORAOV
+		EDGEDETECTORAOV,
+		BEVEL
 	} ShapeType;
 
 	Shape() : refined(false) { }

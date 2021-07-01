@@ -92,13 +92,13 @@ public:
 	// DLSC related data
 	std::vector<slg::ocl::DLSCacheEntry> dlscAllEntries;
 	std::vector<float> dlscDistributions; 
-	std::vector<slg::ocl::IndexBVHArrayNode> dlscBVHArrayNode;
+	std::vector<luxrays::ocl::IndexBVHArrayNode> dlscBVHArrayNode;
 	float dlscRadius2, dlscNormalCosAngle;
 	// EnvLightVisibilityCache related data
 	std::vector<slg::ocl::ELVCacheEntry> elvcAllEntries;
 	std::vector<float> elvcDistributions;
 	std::vector<u_int> elvcTileDistributionOffsets; 
-	std::vector<slg::ocl::IndexBVHArrayNode> elvcBVHArrayNode;
+	std::vector<luxrays::ocl::IndexBVHArrayNode> elvcBVHArrayNode;
 	float elvcRadius2, elvcNormalCosAngle;
 	u_int elvcTilesXCount, elvcTilesYCount;
 	
@@ -125,10 +125,10 @@ public:
 	std::vector<slg::ocl::RadiancePhoton> pgicRadiancePhotons;
 	u_int pgicLightGroupCounts;
 	std::vector<slg::ocl::Spectrum> pgicRadiancePhotonsValues;
-	std::vector<slg::ocl::IndexBVHArrayNode> pgicRadiancePhotonsBVHArrayNode;
+	std::vector<luxrays::ocl::IndexBVHArrayNode> pgicRadiancePhotonsBVHArrayNode;
 	// PhotonGI caustic cache
 	std::vector<slg::ocl::Photon> pgicCausticPhotons;
-	std::vector<slg::ocl::IndexBVHArrayNode> pgicCausticPhotonsBVHArrayNode;
+	std::vector<luxrays::ocl::IndexBVHArrayNode> pgicCausticPhotonsBVHArrayNode;
 
 	// All global settings
 	slg::ocl::PathTracer compiledPathTracer;

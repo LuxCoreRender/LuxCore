@@ -97,6 +97,7 @@ include_directories("${LuxRays_SOURCE_DIR}/deps/cuew/include")
 include_directories("${LuxRays_SOURCE_DIR}/deps/clew/include")
 include_directories("${LuxRays_SOURCE_DIR}/deps/optix-7.1.0/include")
 include_directories("${LuxRays_SOURCE_DIR}/deps/spdlog-1.8.0/include")
+include_directories("${LuxRays_SOURCE_DIR}/deps/robin-hood-hashing-3.9.1/src/include")
 
 # Find dependencies
 include(Dependencies)
@@ -117,7 +118,7 @@ if (NOT EMBREE_FOUND)
 	MESSAGE(FATAL_ERROR "--> Could not locate required Intel Embree files - Please check ${EMBREE_SEARCH_PATH}")
 endif()
 
-if (NOT OIDN_FOUND)
+if (NOT OIDN_FOUND AND NOT LUXCORE_DISABLE_OIDN)
 	MESSAGE(FATAL_ERROR "--> Could not locate required Intel Oidn files - Please check ${OIDN_SEARCH_PATH}")
 endif()
 
@@ -152,11 +153,19 @@ else()
 	endif()
 endif()
 
+if (LUXCORE_DISABLE_OIDN)
+	ADD_DEFINITIONS("-DLUXCORE_DISABLE_OIDN")
+
+	message(STATUS "Intel OIDN support: disabled")
+else()
+	message(STATUS "Intel OIDN support: enabled")
+endif()
+
 if (BUILD_LUXCORE_DLL)
 	set(LUXCORE_LIBRARY luxcore)
 	ADD_DEFINITIONS("-DLUXCORE_DLL")
 else()
-	set(LUXCORE_LIBRARY luxcore slg-core slg-film slg-kernels luxrays bcd opensubdiv openvdb ${BLOSC_LIBRARY} ${EMBREE_LIBRARY} ${OIDN_LIBRARY} ${TBB_LIBRARY} ${TIFF_LIBRARIES} ${TIFF_LIBRARIES} ${OPENEXR_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES})
+	set(LUXCORE_LIBRARY luxcore slg-core slg-film slg-kernels luxrays bcd opensubdiv openvdb opencolorio ${BLOSC_LIBRARY} ${EMBREE_LIBRARY} ${OIDN_LIBRARY} ${TBB_LIBRARY} ${TIFF_LIBRARIES} ${TIFF_LIBRARIES} ${OPENEXR_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES})
 endif()
 
 ################################################################################
@@ -171,7 +180,6 @@ set(GENERATED_INCLUDE_DIR "${GENERATED_DIR}/include")
 file(MAKE_DIRECTORY ${GENERATED_INCLUDE_DIR})
 include_directories(${GENERATED_INCLUDE_DIR})
 
-
 add_subdirectory(src/luxrays)
 add_subdirectory(src/slg)
 add_subdirectory(src/luxcore)
@@ -183,7 +191,7 @@ add_subdirectory(src/pyluxcoretools)
 #
 ################################################################################
 
-if(NOT APPLE OR OSX_BUILD_DEMOS)
+if((${CMAKE_SYSTEM_NAME} MATCHES "Linux") OR OSX_BUILD_DEMOS OR WIN_BUILD_DEMOS)
 	add_subdirectory(samples/luxcoredemo)
 	add_subdirectory(samples/luxcorescenedemo)
 
@@ -193,7 +201,9 @@ if(NOT APPLE OR OSX_BUILD_DEMOS)
 	endif()
 endif()
 
-add_subdirectory(samples/luxcoreconsole)
+if (NOT WIN32 OR WIN_BUILD_DEMOS)
+	add_subdirectory(samples/luxcoreconsole)
+endif()
 
 if(OPENGL_FOUND)
 	add_subdirectory(samples/luxcoreui)

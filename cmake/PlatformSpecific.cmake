@@ -163,7 +163,7 @@ IF(APPLE)
 
 	EXECUTE_PROCESS(COMMAND uname -r OUTPUT_VARIABLE MAC_SYS) # check for actual system-version
 
-	SET(CMAKE_OSX_DEPLOYMENT_TARGET 10.9) # Minimum OS requirements for LuxCore
+	SET(CMAKE_OSX_DEPLOYMENT_TARGET 10.13) # Minimum OS requirements for LuxCore
 
   IF(${MAC_SYS} MATCHES 20)
     SET(OSX_SYSTEM 11.1)
@@ -259,12 +259,13 @@ ENDIF(APPLE)
 #
 ###########################################################################
 
-IF(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
+IF(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 	# Update if necessary
 	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wno-long-long -pedantic")
 	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -msse -msse2 -msse3 -mssse3")
 	IF(NOT CYGWIN)
-	  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
+		SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
 	ENDIF(NOT CYGWIN)
 
 	SET(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")

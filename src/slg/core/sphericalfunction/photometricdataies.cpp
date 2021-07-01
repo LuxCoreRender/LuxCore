@@ -24,6 +24,7 @@
 #include <iostream>
 #include <vector>
 
+#include "luxrays/luxrays.h"
 #include "slg/core/sphericalfunction/photometricdataies.h"
 
 using namespace std;
@@ -65,7 +66,10 @@ bool PhotometricDataIES::Load(const char *sFileName) {
 	ifs.open(sFileName);
 	if (!ifs.good())
 		return false;
-	
+
+	// Force to use C locale
+	ifs.imbue(luxrays::cLocale);
+
 	const bool ok = PrivateLoad(ifs);
 
 	ifs.close();

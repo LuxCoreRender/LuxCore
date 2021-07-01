@@ -33,7 +33,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 ImageMapCache::ImageMapCache() {
-	allImageScale = 1.f;
+	resizePolicy = new ImageMapResizeNonePolicy();
 }
 
 ImageMapCache::~ImageMapCache() {
@@ -42,24 +42,48 @@ ImageMapCache::~ImageMapCache() {
 		if (m != ImageMapTexture::randomImageMap.get())
 			delete m;
 	}
+
+	delete resizePolicy;
 }
 
-string ImageMapCache::GetCacheKey(const string &fileName, const float gamma,
-		const ImageMapStorage::ChannelSelectionType selectionType,
-		const ImageMapStorage::StorageType storageType,
-		const ImageMapStorage::WrapType wrapType) const {
-	return fileName + "_#_" + ToString(gamma) + "_#_" + ToString(selectionType) +
-			"_#_" + ToString(storageType) + "_#_" + ToString(wrapType);
+void ImageMapCache::SetImageResizePolicy(ImageMapResizePolicy *policy) {
+	delete resizePolicy;
+	resizePolicy = policy;
+}
+
+string ImageMapCache::GetCacheKey(const string &fileName, const ImageMapConfig &imgCfg) const {
+	string key = fileName + "_#_";
+
+	switch (imgCfg.colorSpaceCfg.colorSpaceType) {
+		case ColorSpaceConfig::NOP_COLORSPACE:
+			key += "CS_NOP_#_";
+			break;
+		case ColorSpaceConfig::LUXCORE_COLORSPACE:
+			key += "CS_LUXCORE_#_" + ToString(imgCfg.colorSpaceCfg.luxcore.gamma) + "_#_";
+			break;
+		case ColorSpaceConfig::OPENCOLORIO_COLORSPACE:
+			key += "CS_OPENCOLORIO_#_" +
+					ToString(imgCfg.colorSpaceCfg.ocio.configName) + "_#_" +
+					ToString(imgCfg.colorSpaceCfg.ocio.colorSpaceName) + "_#_";
+			break;
+		default:
+			throw runtime_error("Unknown color space type in ImageMapCache::GetCacheKey(): " + 
+					ToString(imgCfg.colorSpaceCfg.colorSpaceType));
+	}
+	
+	key += ToString(imgCfg.storageType) + "_#_" +
+			ToString(imgCfg.wrapType) + "_#_" +
+			ToString(imgCfg.selectionType);
+
+	return key;
 }
 
 string ImageMapCache::GetCacheKey(const string &fileName) const {
 	return fileName;
 }
 
-ImageMap *ImageMapCache::GetImageMap(const string &fileName, const float gamma,
-		const ImageMapStorage::ChannelSelectionType selectionType,
-		const ImageMapStorage::StorageType storageType,
-		const ImageMapStorage::WrapType wrapType) {
+ImageMap *ImageMapCache::GetImageMap(const string &fileName, const ImageMapConfig &imgCfg,
+		const bool applyResizePolicy) {
 	// Compose the cache key
 	string key = GetCacheKey(fileName);
 
@@ -73,7 +97,7 @@ ImageMap *ImageMapCache::GetImageMap(const string &fileName, const float gamma,
 	}
 
 	// Check if it is a reference to a file
-	key = GetCacheKey(fileName, gamma, selectionType, storageType, wrapType);
+	key = GetCacheKey(fileName, imgCfg);
 	it = mapByKey.find(key);
 
 	if (it != mapByKey.end()) {
@@ -84,23 +108,19 @@ ImageMap *ImageMapCache::GetImageMap(const string &fileName, const float gamma,
 
 	// I haven't yet loaded the file
 
-	ImageMap *im = new ImageMap(fileName, gamma, storageType, wrapType);
-	im->SelectChannel(selectionType);
+	ImageMap *im;
+	if (applyResizePolicy) {
+		// Scale the image if required
+		bool toApply;
+		im = resizePolicy->ApplyResizePolicy(fileName, imgCfg, toApply);
+		
+		resizePolicyToApply.push_back(toApply);
+	} else {
+		im = new ImageMap(fileName, imgCfg);
 
-	// Scale the image if required
-	const u_int width = im->GetWidth();
-	const u_int height = im->GetHeight();
-	if (allImageScale > 1.f) {
-		// Enlarge all images
-		const u_int newWidth = width * allImageScale;
-		const u_int newHeight = height * allImageScale;
-		im->Resize(newWidth, newHeight);
-	} else if ((allImageScale < 1.f) && (width > 128) && (height > 128)) {
-		const u_int newWidth = Max<u_int>(128, width * allImageScale);
-		const u_int newHeight = Max<u_int>(128, height * allImageScale);
-		im->Resize(newWidth, newHeight);
+		resizePolicyToApply.push_back(false);
 	}
-
+	
 	mapByKey.insert(make_pair(key, im));
 	mapNames.push_back(fileName);
 	maps.push_back(im);
@@ -122,16 +142,40 @@ void ImageMapCache::DefineImageMap(ImageMap *im) {
 		mapByKey.insert(make_pair(key, im));
 		mapNames.push_back(name);
 		maps.push_back(im);
+		
+		resizePolicyToApply.push_back(false);
 	} else {
 		// Overwrite the existing image definition
 		const u_int index = GetImageMapIndex(it->second);
 		delete maps[index];
 		maps[index] = im;
 
+		resizePolicyToApply[index] = false;
+
 		// I have to modify mapByName for last or it iterator would be modified
 		// otherwise (it->second would point to the new ImageMap and not to the old one)
 		mapByKey.erase(key);
 		mapByKey.insert(make_pair(key, im));
+	}
+}
+
+void ImageMapCache::DeleteImageMap(const ImageMap *im) {
+	for (boost::unordered_map<std::string, ImageMap *>::iterator it = mapByKey.begin(); it != mapByKey.end(); ++it) {
+		if (it->second == im) {
+			delete it->second;
+			mapByKey.erase(it);
+
+			for (u_int i = 0; i < maps.size(); ++i) {
+				if (maps[i] == im) {
+					mapNames.erase(mapNames.begin() + i);
+					maps.erase(maps.begin() + i);
+					resizePolicyToApply.erase(resizePolicyToApply.begin() + i);
+					break;
+				}
+			}
+
+			return;
+		}
 	}
 }
 
@@ -154,4 +198,8 @@ void ImageMapCache::GetImageMaps(vector<const ImageMap *> &ims) {
 
 	BOOST_FOREACH(ImageMap *im, maps)
 		ims.push_back(im);
+}
+
+void ImageMapCache::Preprocess(const Scene *scene, const bool useRTMode) {
+	resizePolicy->Preprocess(*this, scene, useRTMode);
 }

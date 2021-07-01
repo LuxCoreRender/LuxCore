@@ -167,14 +167,13 @@ inline Vector Normalize(const Vector &v) {
 }
 
 inline void CoordinateSystem(const Vector &v1, Vector *v2, Vector *v3) {
-	if (fabsf(v1.x) > fabsf(v1.y)) {
-		float invLen = 1.f / sqrtf(v1.x * v1.x + v1.z * v1.z);
-		*v2 = Vector(-v1.z * invLen, 0.f, v1.x * invLen);
+	float len = sqrtf (v1.x * v1.x + v1.y * v1.y);
+	if (len < 1e-5) { // it's pretty-much along z-axis
+		*v3 = Vector (1.f, 0.f, 0.f);
 	} else {
-		float invLen = 1.f / sqrtf(v1.y * v1.y + v1.z * v1.z);
-		*v2 = Vector(0.f, v1.z * invLen, -v1.y * invLen);
+		*v3 = Vector(-v1.y / len, v1.x / len, 0);
 	}
-	*v3 = Cross(v1, *v2);
+	*v2 = Cross(v1, *v3);
 }
 
 inline Vector SphericalDirection(float sintheta, float costheta, float phi) {

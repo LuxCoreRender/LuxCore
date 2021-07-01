@@ -21,16 +21,12 @@
 
 #include <vector>
 
+#include "luxrays/core/bvh/bvhbuild.h"
 #include "luxrays/utils/serializationutils.h"
 
 #include "slg/slg.h"
 
 namespace slg {
-
-// OpenCL data types
-namespace ocl {
-#include "slg/core/indexbvh_types.cl"
-}
 
 //------------------------------------------------------------------------------
 // Index BVH
@@ -43,9 +39,9 @@ public:
 	virtual ~IndexBvh();
 
 	float GetEntryRadius() const { return entryRadius; }
-	size_t GetMemoryUsage() const { return nNodes * sizeof(slg::ocl::IndexBVHArrayNode); }
+	size_t GetMemoryUsage() const { return nNodes * sizeof(luxrays::ocl::IndexBVHArrayNode); }
 	
-	const slg::ocl::IndexBVHArrayNode *GetArrayNodes(u_int *count = nullptr) const {
+	const luxrays::ocl::IndexBVHArrayNode *GetArrayNodes(u_int *count = nullptr) const {
 		if (count)
 			*count = nNodes;
 		return arrayNodes;
@@ -63,7 +59,7 @@ protected:
 		ar & entryRadius2;
 
 		ar & nNodes;
-		ar & boost::serialization::make_array<slg::ocl::IndexBVHArrayNode>(arrayNodes, nNodes);		
+		ar & boost::serialization::make_array<luxrays::ocl::IndexBVHArrayNode>(arrayNodes, nNodes);		
 	}
 
 	template<class Archive>	void load(Archive &ar, const unsigned int version) {
@@ -72,8 +68,8 @@ protected:
 		ar & entryRadius2;
 
 		ar & nNodes;
-		arrayNodes = new slg::ocl::IndexBVHArrayNode[nNodes];
-		ar & boost::serialization::make_array<slg::ocl::IndexBVHArrayNode>(arrayNodes, nNodes);
+		arrayNodes = new luxrays::ocl::IndexBVHArrayNode[nNodes];
+		ar & boost::serialization::make_array<luxrays::ocl::IndexBVHArrayNode>(arrayNodes, nNodes);
 	}
 	
 	BOOST_SERIALIZATION_SPLIT_MEMBER()
@@ -81,7 +77,7 @@ protected:
 	const std::vector<T> *allEntries;
 	float entryRadius, entryRadius2;
 
-	slg::ocl::IndexBVHArrayNode *arrayNodes;
+	luxrays::ocl::IndexBVHArrayNode *arrayNodes;
 	u_int nNodes;
 };
 
@@ -90,16 +86,16 @@ protected:
 BOOST_SERIALIZATION_ASSUME_ABSTRACT(slg::IndexBvh)
 
 //------------------------------------------------------------------------------
-// slg::ocl::IndexBVHArrayNode serialization
+// luxrays::ocl::IndexBVHArrayNode serialization
 //------------------------------------------------------------------------------
 
-BOOST_SERIALIZATION_SPLIT_FREE(slg::ocl::IndexBVHArrayNode)
+BOOST_SERIALIZATION_SPLIT_FREE(luxrays::ocl::IndexBVHArrayNode)
 
 namespace boost {
 namespace serialization {
 
 template<class Archive>
-void save(Archive &ar, const slg::ocl::IndexBVHArrayNode &node, const unsigned int version) {
+void save(Archive &ar, const luxrays::ocl::IndexBVHArrayNode &node, const unsigned int version) {
 	ar & node.nodeData;
 
 	if (IndexBVHNodeData_IsLeaf(node.nodeData))
@@ -116,7 +112,7 @@ void save(Archive &ar, const slg::ocl::IndexBVHArrayNode &node, const unsigned i
 }
 
 template<class Archive>
-void load(Archive &ar, slg::ocl::IndexBVHArrayNode &node, const unsigned int version) {
+void load(Archive &ar, luxrays::ocl::IndexBVHArrayNode &node, const unsigned int version) {
 	ar & node.nodeData;
 
 	if (IndexBVHNodeData_IsLeaf(node.nodeData))
@@ -135,6 +131,6 @@ void load(Archive &ar, slg::ocl::IndexBVHArrayNode &node, const unsigned int ver
 }
 }
 
-BOOST_CLASS_VERSION(slg::ocl::IndexBVHArrayNode, 1)
+BOOST_CLASS_VERSION(luxrays::ocl::IndexBVHArrayNode, 1)
 		
 #endif	/* __SLG_INDEXBVH_H */

@@ -43,8 +43,9 @@ void Scene::UpdateObjectTransformation(const string &objName, const Transform &t
 	// Check if it is a light source
 	if (obj->GetMaterial()->IsLightSource()) {
 		// Have to update all light sources using this mesh
+		const string prefix = Scene::EncodeTriangleLightNamePrefix(obj->GetName());
 		for (u_int i = 0; i < mesh->GetTotalTriangleCount(); ++i)
-			lightDefs.GetLightSource(obj->GetName() + TRIANGLE_LIGHT_POSTFIX + ToString(i))->Preprocess();
+			lightDefs.GetLightSource(prefix + ToString(i))->Preprocess();
 
 		editActions.AddActions(LIGHTS_EDIT | LIGHT_TYPES_EDIT);
 	}
@@ -61,7 +62,7 @@ void Scene::UpdateObjectMaterial(const string &objName, const string &matName) {
 	// Check if the object is a light source
 	if (obj->GetMaterial()->IsLightSource()) {
 		// Delete all old triangle lights
-		lightDefs.DeleteLightSourceStartWith(obj->GetName() + TRIANGLE_LIGHT_POSTFIX);
+		lightDefs.DeleteLightSourceStartWith(Scene::EncodeTriangleLightNamePrefix(obj->GetName()));
 
 		editActions.AddActions(LIGHTS_EDIT | LIGHT_TYPES_EDIT);
 	}

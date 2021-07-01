@@ -50,4 +50,10 @@ typedef struct {
 
 		PhotonGIDebugType debugType;
 	} pgic;
+
+	// Albedo AOV settings
+	struct {
+		AlbedoSpecularSetting specularSetting;
+		float specularGlossinessThreshold;
+	} albedo;
 } PathTracer;

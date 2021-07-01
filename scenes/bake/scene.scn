@@ -55,6 +55,14 @@ scene.textures.139857990544904Color.mapping.rotation = 0
 scene.textures.139857990544904Color.mapping.uvscale = 20 -20
 scene.textures.139857990544904Color.mapping.uvdelta = 0 1
 ##
+#scene.textures.bumpmap.file = scenes/bump/map2.png
+#scene.textures.bumpmap.gamma = 1.0
+#scene.textures.bumpmap.mapping.uvscale = 2 2
+##
+#scene.textures.scaled_bumpmap.type = scale
+#scene.textures.scaled_bumpmap.texture1 = 0.03
+#scene.textures.scaled_bumpmap.texture2 = bumpmap
+##
 scene.materials.__CLAY__.type = "matte"
 scene.materials.__CLAY__.kd = "0.5 0.5 0.5"
 scene.materials.__CLAY__.transparency.shadow = 0 0 0
@@ -90,6 +98,7 @@ scene.materials.mat_cube1139858847948808.visibility.indirect.specular.enable = 1
 scene.materials.mat_cube1139858847948808.shadowcatcher.enable = 0
 scene.materials.mat_cube1139858847948808.shadowcatcher.onlyinfinitelights = 0
 scene.materials.mat_cube1139858847948808.photongi.enable = 1
+#scene.materials.mat_cube1139858847948808.bumptex = scaled_bumpmap
 ##
 scene.materials.mat_plane139857991252616.type = "matte"
 scene.materials.mat_plane139857991252616.kd = "139857989714440Color"

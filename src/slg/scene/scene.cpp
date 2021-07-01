@@ -52,17 +52,17 @@ using namespace slg;
 // Scene
 //------------------------------------------------------------------------------
 
-Scene::Scene(const float imageScale) {
-	Init(imageScale);
+Scene::Scene(const luxrays::Properties *resizePolicyProps) {
+	Init(resizePolicyProps);
 }
 
-Scene::Scene(const Properties &scnProp, const float imageScale) {
-	Init(imageScale);
+Scene::Scene(const Properties &scnProps, const luxrays::Properties *resizePolicyProps) {
+	Init(resizePolicyProps);
 
-	Parse(scnProp);
+	Parse(scnProps);
 }
 
-void Scene::Init(const float imageScale) {
+void Scene::Init(const luxrays::Properties *resizePolicyProps) {
 	defaultWorldVolume = NULL;
 	// Just in case there is an unexpected exception during the scene loading
     camera = NULL;
@@ -70,7 +70,8 @@ void Scene::Init(const float imageScale) {
 	dataSet = NULL;
 
 	editActions.AddAllAction();
-	imgMapCache.SetImageResize(imageScale);
+	if (resizePolicyProps)
+		imgMapCache.SetImageResizePolicy(ImageMapResizePolicy::FromProperties(*resizePolicyProps));
 	// Add random image map to imgMapCache 
 	imgMapCache.DefineImageMap(ImageMapTexture::randomImageMap.get());
 
@@ -159,6 +160,16 @@ void Scene::DefineImageMap(ImageMap *im) {
 
 	editActions.AddAction(IMAGEMAPS_EDIT);
 }
+void Scene::DefineImageMap(const std::string &name, void *pixels,
+		const u_int channels, const u_int width, const u_int height,
+		const ImageMapConfig &cfg) {
+	ImageMap *imgMap = ImageMap::AllocImageMap(pixels, channels, width, height, cfg);
+	imgMap->SetName(name);
+
+	DefineImageMap(imgMap);
+
+	editActions.AddAction(IMAGEMAPS_EDIT);
+}
 
 bool Scene::IsImageMapDefined(const string &imgMapName) const {
 	return imgMapCache.IsImageMapDefined(imgMapName);
@@ -183,7 +194,7 @@ void Scene::DefineMesh(ExtMesh *mesh) {
 				const string objName = o->GetName();
 
 				// Delete all old triangle lights
-				lightDefs.DeleteLightSourceStartWith(objName + TRIANGLE_LIGHT_POSTFIX);
+				lightDefs.DeleteLightSourceStartWith(Scene::EncodeTriangleLightNamePrefix(objName));
 
 				// Add all new triangle lights
 				SDL_LOG("The " << objName << " object is a light sources with " << mesh->GetTotalTriangleCount() << " triangles");
@@ -489,8 +500,9 @@ void Scene::DeleteObject(const string &objName) {
 
 			// Delete all old triangle lights
 			const ExtMesh *mesh = oldObj->GetExtMesh();
+			const string prefix = Scene::EncodeTriangleLightNamePrefix(oldObj->GetName());
 			for (u_int i = 0; i < mesh->GetTotalTriangleCount(); ++i)
-				lightDefs.DeleteLightSource(oldObj->GetName() + TRIANGLE_LIGHT_POSTFIX + ToString(i));
+				lightDefs.DeleteLightSource(prefix + ToString(i));
 		}
 
 		objDefs.DeleteSceneObject(objName);
@@ -533,12 +545,28 @@ bool Scene::Intersect(IntersectionDevice *device,
 	bsdf->hitPoint.throughShadowTransparency = false;
 
 	for (;;) {
-		const bool hit = device ? device->TraceRay(ray, rayHit) : dataSet->GetAccelerator(ACCEL_EMBREE)->Intersect(ray, rayHit);
+		bool hit = device ? device->TraceRay(ray, rayHit) : dataSet->GetAccelerator(ACCEL_EMBREE)->Intersect(ray, rayHit);
 
+		bool bevelContinueToTrace = !hit;
 		const Volume *rayVolume = volInfo->GetCurrentVolume();
-		if (hit) {
+		if (hit) {		
 			bsdf->Init(fromLight, throughShadowTransparency, *this, *ray, *rayHit, passThrough, volInfo);
 			rayVolume = bsdf->hitPoint.intoObject ? bsdf->hitPoint.exteriorVolume : bsdf->hitPoint.interiorVolume;
+
+			// Check if it a triangle with bevel edges
+			const ExtMesh *mesh = objDefs.GetSceneObject(rayHit->meshIndex)->GetExtMesh();
+			if (mesh->GetBevelRadius() > 0.f) {
+				float t;
+				Point p;
+				Normal n;
+				if (mesh->IntersectBevel(*ray, *rayHit, bevelContinueToTrace, t, p, n)) {
+					rayHit->t = t;
+
+					// Update the BSDF with the new intersection point and normal
+					bsdf->MoveHitPoint(p, n);
+				}
+			}
+
 			ray->maxt = rayHit->t;
 		} else if (!rayVolume) {
 			// No volume information, I use the default volume
@@ -581,6 +609,8 @@ bool Scene::Intersect(IntersectionDevice *device,
 
 		if (hit) {
 			bool continueToTrace =
+					// Check if was a false hit because of a bevel triangle edge
+					bevelContinueToTrace ||
 					// Check if the volume priority system tells me to continue to trace the ray
 					volInfo->ContinueToTrace(*bsdf) ||
 					// Check if it is a camera invisible object and we are a tracing a camera ray
@@ -625,4 +655,15 @@ bool Scene::Intersect(IntersectionDevice *device,
 
 		passThrough = rng.floatValue();
 	}
+}
+
+//------------------------------------------------------------------------------
+
+string Scene::EncodeTriangleLightNamePrefix(const std::string &objectName) {
+	// It is important to encode triangle light names in short strings in order
+	// to reduce the time to process very large number of light sources.
+
+	const string prefix = objectName + "__triangle__light__";
+
+	return (boost::format("TL%0zx_") % robin_hood::hash_bytes(prefix.data(), sizeof(char) * prefix.size())).str();
 }

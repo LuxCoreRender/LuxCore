@@ -220,7 +220,7 @@ void PathOCLBaseOCLRenderThread::InitLights() {
 		intersectionDevice->AllocBufferRO(&dlscDistributionsBuff, &cscene->dlscDistributions[0],
 			cscene->dlscDistributions.size() * sizeof(float), "DLSC distributions table");
 		intersectionDevice->AllocBufferRO(&dlscBVHNodesBuff, &cscene->dlscBVHArrayNode[0],
-			cscene->dlscBVHArrayNode.size() * sizeof(slg::ocl::IndexBVHArrayNode), "DLSC BVH nodes");
+			cscene->dlscBVHArrayNode.size() * sizeof(luxrays::ocl::IndexBVHArrayNode), "DLSC BVH nodes");
 	} else {
 		intersectionDevice->FreeBuffer(&dlscAllEntriesBuff);
 		intersectionDevice->FreeBuffer(&dlscDistributionsBuff);
@@ -238,7 +238,7 @@ void PathOCLBaseOCLRenderThread::InitLights() {
 		} else
 			intersectionDevice->FreeBuffer(&elvcTileDistributionOffsetsBuff);
 		intersectionDevice->AllocBufferRO(&elvcBVHNodesBuff, &cscene->elvcBVHArrayNode[0],
-			cscene->elvcBVHArrayNode.size() * sizeof(slg::ocl::IndexBVHArrayNode), "ELVC BVH nodes");
+			cscene->elvcBVHArrayNode.size() * sizeof(luxrays::ocl::IndexBVHArrayNode), "ELVC BVH nodes");
 	} else {
 		intersectionDevice->FreeBuffer(&elvcAllEntriesBuff);
 		intersectionDevice->FreeBuffer(&elvcDistributionsBuff);
@@ -260,7 +260,7 @@ void PathOCLBaseOCLRenderThread::InitPhotonGI() {
 		intersectionDevice->AllocBuffer(&pgicRadiancePhotonsValuesBuff, memTypeFlags, &cscene->pgicRadiancePhotonsValues[0],
 			cscene->pgicRadiancePhotonsValues.size() * sizeof(slg::ocl::Spectrum), "PhotonGI indirect cache all entry values");
 		intersectionDevice->AllocBuffer(&pgicRadiancePhotonsBVHNodesBuff, memTypeFlags, &cscene->pgicRadiancePhotonsBVHArrayNode[0],
-			cscene->pgicRadiancePhotonsBVHArrayNode.size() * sizeof(slg::ocl::IndexBVHArrayNode), "PhotonGI indirect cache BVH nodes");
+			cscene->pgicRadiancePhotonsBVHArrayNode.size() * sizeof(luxrays::ocl::IndexBVHArrayNode), "PhotonGI indirect cache BVH nodes");
 	} else {
 		intersectionDevice->FreeBuffer(&pgicRadiancePhotonsBuff);
 		intersectionDevice->FreeBuffer(&pgicRadiancePhotonsValuesBuff);
@@ -271,7 +271,7 @@ void PathOCLBaseOCLRenderThread::InitPhotonGI() {
 		intersectionDevice->AllocBuffer(&pgicCausticPhotonsBuff, memTypeFlags, &cscene->pgicCausticPhotons[0],
 			cscene->pgicCausticPhotons.size() * sizeof(slg::ocl::Photon), "PhotonGI caustic cache all entries");
 		intersectionDevice->AllocBuffer(&pgicCausticPhotonsBVHNodesBuff, memTypeFlags, &cscene->pgicCausticPhotonsBVHArrayNode[0],
-			cscene->pgicCausticPhotonsBVHArrayNode.size() * sizeof(slg::ocl::IndexBVHArrayNode), "PhotonGI caustic cache BVH nodes");
+			cscene->pgicCausticPhotonsBVHArrayNode.size() * sizeof(luxrays::ocl::IndexBVHArrayNode), "PhotonGI caustic cache BVH nodes");
 	} else {
 		intersectionDevice->FreeBuffer(&pgicCausticPhotonsBuff);
 		intersectionDevice->FreeBuffer(&pgicCausticPhotonsBVHNodesBuff);

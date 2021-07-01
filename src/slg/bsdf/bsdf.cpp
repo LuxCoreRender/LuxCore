@@ -32,7 +32,7 @@ void BSDF::Init(const bool fixedFromLight, const bool throughShadowTransparency,
 	sceneObject = scene.objDefs.GetSceneObject(rayHit.meshIndex);
 
 	// Get the mesh
-	mesh = sceneObject->GetExtMesh();
+	const ExtMesh *mesh = sceneObject->GetExtMesh();
 	mesh->GetLocal2World(ray.time, hitPoint.localToWorld);
 
 	hitPoint.Init(fixedFromLight, throughShadowTransparency,
@@ -74,14 +74,14 @@ void BSDF::Init(const Scene &scene,
 	sceneObject = scene.objDefs.GetSceneObject(meshIndex);
 
 	// Get the mesh
-	mesh = sceneObject->GetExtMesh();
+	const ExtMesh *mesh = sceneObject->GetExtMesh();
 	mesh->GetLocal2World(time, hitPoint.localToWorld);
 
+	const Vector fixedDir = Vector(mesh->GetGeometryNormal(hitPoint.localToWorld, triangleIndex));
 	hitPoint.Init(false, false,
 			scene, meshIndex, triangleIndex,
-			surfacePoint, Vector(0.f, 0.f, 0.f),
+			surfacePoint, fixedDir,
 			surfacePointBary1, surfacePointBary2, passThroughEvent);
-	hitPoint.fixedDir = Vector(hitPoint.geometryN);
 	
 	// Get the material
 	material = sceneObject->GetMaterial();
@@ -117,7 +117,6 @@ void BSDF::Init(const bool fixedFromLight, const bool throughShadowTransparency,
 	hitPoint.fixedDir = -ray.d;
 
 	sceneObject = NULL;
-	mesh = NULL;
 	material = &volume;
 
 	hitPoint.geometryN = Normal(-ray.d);
@@ -147,12 +146,35 @@ void BSDF::Init(const bool fixedFromLight, const bool throughShadowTransparency,
 	frame.SetFromZ(hitPoint.shadeN);
 }
 
-bool BSDF::IsAlbedoEndPoint() const {
-	return !IsDelta() ||
-			// This is a very special case to not have white Albedo AOV if the
-			// material is mirror. Mirror has no ray split so it can be render
-			// without any noise.
-			(material->GetType() != MIRROR);
+void BSDF::MoveHitPoint(const Point &p, const Normal &n) {
+	hitPoint.p = p;
+	hitPoint.geometryN = n;
+	hitPoint.interpolatedN = n;
+	hitPoint.shadeN = n;
+
+	Vector x, y;
+	CoordinateSystem(Vector(n), &x, &y);
+	frame = Frame(x, y, n);
+}
+
+bool BSDF::IsAlbedoEndPoint(const AlbedoSpecularSetting albedoSpecularSetting,
+		const float albedoSpecularGlossinessThreshold) const {
+	const BSDFEvent eventTypes = GetEventTypes();
+	if (!IsDelta() && !((eventTypes & GLOSSY) && (GetGlossiness() < albedoSpecularGlossinessThreshold)))
+		return true;
+	
+	switch (albedoSpecularSetting) {
+		case NO_REFLECT_TRANSMIT:
+			return true;
+		case ONLY_REFLECT:
+			return !((eventTypes & REFLECT) && !(eventTypes & TRANSMIT));
+		case ONLY_TRANSMIT:
+			return !(!(eventTypes & REFLECT) && (eventTypes & TRANSMIT));
+		case REFLECT_TRANSMIT:
+			return !((eventTypes & REFLECT) || (eventTypes & TRANSMIT));
+		default:
+			throw runtime_error("Unknown AlbedoSpecularSetting in BSDF::IsAlbedoEndPoint(): " + ToString(albedoSpecularSetting));
+	}
 }
 
 bool BSDF::IsCameraInvisible() const {
@@ -372,4 +394,32 @@ Spectrum BSDF::GetEmittedRadiance(float *directPdfA, float *emissionPdfW) const 
 	return triangleLightSource ?
 		triangleLightSource->GetRadiance(hitPoint, directPdfA, emissionPdfW) :
 		Spectrum();
+}
+
+AlbedoSpecularSetting slg::String2AlbedoSpecularSetting(const string &type) {
+	if (type == "NO_REFLECT_TRANSMIT")
+		return NO_REFLECT_TRANSMIT;
+	else if (type == "ONLY_REFLECT")
+		return ONLY_REFLECT;
+	else if (type == "ONLY_TRANSMIT")
+		return ONLY_TRANSMIT;
+	else if (type == "REFLECT_TRANSMIT")
+		return REFLECT_TRANSMIT;
+	else
+		throw runtime_error("Unknown albedo specular setting in String2AlbedoSpecularSetting(): " + type);
+}
+
+const string slg::AlbedoSpecularSetting2String(const AlbedoSpecularSetting type) {
+	switch (type) {
+		case NO_REFLECT_TRANSMIT:
+			return "NO_REFLECT_TRANSMIT";
+		case ONLY_REFLECT:
+			return "ONLY_REFLECT";
+		case ONLY_TRANSMIT:
+			return "ONLY_TRANSMIT";
+		case REFLECT_TRANSMIT:
+			return "REFLECT_TRANSMIT";
+		default:
+			throw runtime_error("Unknown albedo specular setting in AlbedoSpecularSetting2String(): " + ToString(type));
+	}
 }

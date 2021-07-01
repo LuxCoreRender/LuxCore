@@ -39,6 +39,13 @@ namespace ocl {
 #include "slg/bsdf/bsdf_types.cl"
 }
 
+typedef enum {
+	NO_REFLECT_TRANSMIT, ONLY_REFLECT, ONLY_TRANSMIT, REFLECT_TRANSMIT
+} AlbedoSpecularSetting;
+
+extern AlbedoSpecularSetting String2AlbedoSpecularSetting(const std::string &type);
+extern const std::string AlbedoSpecularSetting2String(const AlbedoSpecularSetting type);
+
 class Scene;
 
 class BSDF {
@@ -91,6 +98,8 @@ public:
 		const Scene &scene, const luxrays::Ray &ray,
 		const Volume &volume, const float t, const float passThroughEvent);
 
+	void MoveHitPoint(const luxrays::Point &p, const luxrays::Normal &n);
+	
 	bool IsEmpty() const { return (material == NULL); }
 	bool IsLightSource() const { return material->IsLightSource(); }
 	bool IsDelta() const { return material->IsDelta(); }
@@ -103,7 +112,8 @@ public:
 	bool IsVolume() const { return dynamic_cast<const Volume *>(material) != NULL; }
 	bool IsPhotonGIEnabled() const { return material->IsPhotonGIEnabled(); }
 	bool IsHoldout() const { return material->IsHoldout(); }
-	bool IsAlbedoEndPoint() const;
+	bool IsAlbedoEndPoint(const AlbedoSpecularSetting albedoSpecularSetting,
+		const float albedoSpecularGlossinessThreshold) const;
 	u_int GetObjectID() const;
 	const std::string &GetMaterialName() const;
 	u_int GetMaterialID() const { return material->GetID(); }
@@ -154,7 +164,6 @@ public:
 
 private:
 	const SceneObject *sceneObject;
-	const luxrays::ExtMesh *mesh;
 	const Material *material;
 	const TriangleLight *triangleLightSource; // != NULL only if it is an area light
 	luxrays::Frame frame;

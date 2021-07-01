@@ -73,6 +73,10 @@ void BiDirCPURenderEngine::StartLockLess() {
 		sqrtVarianceClampMaxValue = cfg.Get(GetDefaultProps().Get("path.clamping.variance.maxvalue")).Get<float>();
 	sqrtVarianceClampMaxValue = Max(0.f, sqrtVarianceClampMaxValue);
 
+	// Albedo AOV settings
+	albedoSpecularSetting = String2AlbedoSpecularSetting(cfg.Get(GetDefaultProps().Get("path.albedospecular.type")).Get<string>());
+	albedoSpecularGlossinessThreshold = Max(cfg.Get(GetDefaultProps().Get("path.albedospecular.glossinessthreshold")).Get<float>(), 0.f);
+
 	//--------------------------------------------------------------------------
 	// Restore render state if there is one
 	//--------------------------------------------------------------------------
@@ -152,6 +156,8 @@ Properties BiDirCPURenderEngine::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("path.russianroulette.depth")) <<
 			cfg.Get(GetDefaultProps().Get("path.russianroulette.cap")) <<
 			cfg.Get(GetDefaultProps().Get("path.clamping.variance.maxvalue")) <<
+			cfg.Get(GetDefaultProps().Get("path.albedospecular.type")) <<
+			cfg.Get(GetDefaultProps().Get("path.albedospecular.glossinessthreshold")) <<
 			Sampler::ToProperties(cfg) <<
 			PhotonGICache::ToProperties(cfg);
 }
@@ -169,6 +175,8 @@ const Properties &BiDirCPURenderEngine::GetDefaultProps() {
 			Property("path.russianroulette.depth")(3) <<
 			Property("path.russianroulette.cap")(.5f) <<
 			Property("path.clamping.variance.maxvalue")(0.f) <<
+			Property("path.albedospecular.type")("REFLECT_TRANSMIT") <<
+			Property("path.albedospecular.glossinessthreshold")(.05f) <<
 			PhotonGICache::GetDefaultProps();
 
 	return props;

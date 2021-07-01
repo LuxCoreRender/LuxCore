@@ -24,7 +24,7 @@ jobs:
 - job: DetectBuildType
   timeoutInMinutes: 0
   pool:
-    vmImage: 'ubuntu-18.04'
+    vmImage: 'ubuntu-20.04'
 
   steps:
   - script: ./scripts/azurepipeline/detect-build-type.sh
@@ -46,7 +46,7 @@ jobs:
   condition: succeeded()
   timeoutInMinutes: 0
   pool:
-    vmImage: 'ubuntu-18.04'
+    vmImage: 'ubuntu-20.04'
   variables:
     version_string: $[ dependencies.DetectBuildType.outputs['setvarStep.version_string'] ]
 
@@ -64,7 +64,7 @@ jobs:
     )
   timeoutInMinutes: 0
   pool:
-    vmImage: 'ubuntu-18.04'
+    vmImage: 'ubuntu-20.04'
   variables:
     version_string: $[ dependencies.DetectBuildType.outputs['setvarStep.version_string'] ]
     final: $[ dependencies.DetectBuildType.outputs['setvarStep.final'] ]
@@ -90,17 +90,16 @@ jobs:
   steps:
   - task: UsePythonVersion@0
     inputs:
-      versionSpec: '3.7'
+      versionSpec: '3.9'
       addToPath: true
       architecture: 'x64'
   - script: ./scripts/azurepipeline/windows/deps-setup.cmd
     displayName: Getting required deps
   - template: ./scripts/azurepipeline/windows/windows_jobs.yml
     parameters:
-      build_script: './scripts/azurepipeline/windows/build.cmd /cmake-only'
+      build_script: './scripts/azurepipeline/windows/build.cmd /cmake-only /vs2017 /minimal'
       post_script: './scripts/azurepipeline/windows/post-build.cmd'
-      ocl_text: 'Unified CPU/OpenCL/CUDA binaries'
-      minimalargs: '/target:pyluxcore,pyluxcoretools,luxcoreui'
+      message_text: 'Unified CPU/OpenCL/CUDA binaries'
 #  - script: './scripts/azurepipeline/windows/test.cmd'
 #    displayName: Testing LuxCore
   - task: PublishBuildArtifacts@1
@@ -124,21 +123,22 @@ jobs:
     vmImage: 'vs2017-win2016'
   variables:
     version_string: $[ dependencies.DetectBuildType.outputs['setvarStep.version_string'] ]
+    # Variable 'final' is used only in this job to control execution of 'create-sdk.bat'
     final: $[ dependencies.DetectBuildType.outputs['setvarStep.final'] ]
 
   steps:
   - task: UsePythonVersion@0
     inputs:
-      versionSpec: '3.7'
+      versionSpec: '3.9'
       addToPath: true
       architecture: 'x64'
   - script: ./scripts/azurepipeline/windows/deps-setup.cmd
     displayName: Getting required deps
   - template: ./scripts/azurepipeline/windows/windows_jobs.yml
     parameters:
-      build_script: './scripts/azurepipeline/windows/build.cmd /cmake-only /dll'
+      build_script: './scripts/azurepipeline/windows/build.cmd /cmake-only /vs2017 /dll'
       post_script: './scripts/azurepipeline/windows/post-build.cmd'
-      ocl_text: 'Unified CPU/OpenCL/CUDA binaries'
+      message_text: 'Unified CPU/OpenCL/CUDA binaries'
   - task: PublishBuildArtifacts@1
     inputs:
       pathtoPublish: '$(Build.ArtifactStagingDirectory)'
@@ -168,7 +168,7 @@ jobs:
 #    displayName: Testing LuxCore
   - task: InstallAppleCertificate@2
     inputs:
-      certSecureFile: LuxCore2.q3de.com.p12
+      certSecureFile: LuxCoreSignCert.p12
       certPwd: $(AppleCertPwd)
   - script: ./scripts/azurepipeline/macos/pack.sh
     displayName: Packing DiskImages
@@ -209,7 +209,7 @@ jobs:
     )
   timeoutInMinutes: 0
   pool:
-    vmImage: 'ubuntu-18.04'
+    vmImage: 'ubuntu-20.04'
 
   steps:
   - task: InstallSSHKey@0

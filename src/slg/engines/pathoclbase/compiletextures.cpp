@@ -129,6 +129,7 @@ void CompiledScene::CompileTextureMapping2D(slg::ocl::TextureMapping2D *mapping,
 
 			mapping->uvRandomMapping2D.uvRotationMin = uvm->uvRotationMin;
 			mapping->uvRandomMapping2D.uvRotationMax = uvm->uvRotationMax;
+			mapping->uvRandomMapping2D.uvRotationStep = uvm->uvRotationStep;
 			mapping->uvRandomMapping2D.uScaleMin = uvm->uScaleMin;
 			mapping->uvRandomMapping2D.uScaleMax = uvm->uScaleMax;
 			mapping->uvRandomMapping2D.vScaleMin = uvm->vScaleMin;
@@ -198,15 +199,18 @@ void CompiledScene::CompileTextureMapping3D(slg::ocl::TextureMapping3D *mapping,
 
 			mapping->localRandomMapping.xRotationMin = gm->xRotationMin;
 			mapping->localRandomMapping.xRotationMax = gm->xRotationMax;
+			mapping->localRandomMapping.xRotationStep = gm->xRotationStep;
 			mapping->localRandomMapping.yRotationMin = gm->yRotationMin;
 			mapping->localRandomMapping.yRotationMax = gm->yRotationMax;
+			mapping->localRandomMapping.yRotationStep = gm->yRotationStep;
 			mapping->localRandomMapping.zRotationMin = gm->zRotationMin;
 			mapping->localRandomMapping.zRotationMax = gm->zRotationMax;
+			mapping->localRandomMapping.zRotationStep = gm->zRotationStep;
 
 			mapping->localRandomMapping.xScaleMin = gm->xScaleMin;
 			mapping->localRandomMapping.xScaleMax = gm->xScaleMax;
-			mapping->localRandomMapping.yScaleMin = gm->xScaleMin;
-			mapping->localRandomMapping.yScaleMax = gm->xScaleMax;
+			mapping->localRandomMapping.yScaleMin = gm->yScaleMin;
+			mapping->localRandomMapping.yScaleMax = gm->yScaleMax;
 			mapping->localRandomMapping.zScaleMin = gm->zScaleMin;
 			mapping->localRandomMapping.zScaleMax = gm->zScaleMax;
 
@@ -477,9 +481,6 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 				case slg::ocl::TextureEvalOpType::EVAL_BUMP: {
 					evalOpStackSize += CompileTextureOps(tex->addTex.tex1Index, slg::ocl::TextureEvalOpType::EVAL_BUMP);
 					evalOpStackSize += CompileTextureOps(tex->addTex.tex2Index, slg::ocl::TextureEvalOpType::EVAL_BUMP);
-
-					evalOpStackSize += CompileTextureOps(tex->addTex.tex1Index, slg::ocl::TextureEvalOpType::EVAL_FLOAT);
-					evalOpStackSize += CompileTextureOps(tex->addTex.tex2Index, slg::ocl::TextureEvalOpType::EVAL_FLOAT);
 					break;
 				}
 				default:
@@ -498,9 +499,6 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 				case slg::ocl::TextureEvalOpType::EVAL_BUMP: {
 					evalOpStackSize += CompileTextureOps(tex->subtractTex.tex1Index, slg::ocl::TextureEvalOpType::EVAL_BUMP);
 					evalOpStackSize += CompileTextureOps(tex->subtractTex.tex2Index, slg::ocl::TextureEvalOpType::EVAL_BUMP);
-
-					evalOpStackSize += CompileTextureOps(tex->subtractTex.tex1Index, slg::ocl::TextureEvalOpType::EVAL_FLOAT);
-					evalOpStackSize += CompileTextureOps(tex->subtractTex.tex2Index, slg::ocl::TextureEvalOpType::EVAL_FLOAT);
 					break;
 				}
 				default:
@@ -794,7 +792,7 @@ u_int CompiledScene::CompileTextureOps(const u_int texIndex,
 					evalOpStackSize += 3;
 					break;
 				case slg::ocl::TextureEvalOpType::EVAL_BUMP:
-						evalOpStackSize += CompileTextureOps(tex->normalMap.texIndex, slg::ocl::TextureEvalOpType::EVAL_SPECTRUM);
+					evalOpStackSize += CompileTextureOps(tex->normalMap.texIndex, slg::ocl::TextureEvalOpType::EVAL_SPECTRUM);
 					break;
 				default:
 					throw runtime_error("Unknown op. type in CompiledScene::CompileTextureOps(" + ToString(tex->type) + "): " + ToString(opType));

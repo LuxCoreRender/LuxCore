@@ -186,6 +186,9 @@ __kernel void AdvancePaths_MK_HIT_NOTHING(
 		sampleResult->uv.u = INFINITY;
 		sampleResult->uv.v = INFINITY;
 		sampleResult->isHoldout = false;
+	} else if (!sampleResult->isHoldout && pathInfo->isTransmittedPath) {
+		// I set to 0.0 also the alpha all purely transmitted paths hitting nothing
+		sampleResult->alpha = 0.f;
 	}
 
 	taskState->state = MK_SPLAT_SAMPLE;
@@ -234,7 +237,8 @@ __kernel void AdvancePaths_MK_HIT_OBJECT(
 
 	// Something was hit
 
-	if (taskState->albedoToDo && BSDF_IsAlbedoEndPoint(bsdf MATERIALS_PARAM)) {
+	if (taskState->albedoToDo && BSDF_IsAlbedoEndPoint(bsdf, taskConfig->pathTracer.albedo.specularSetting,
+			taskConfig->pathTracer.albedo.specularGlossinessThreshold MATERIALS_PARAM)) {
 		const float3 albedo = VLOAD3F(taskState->throughput.c) * BSDF_Albedo(bsdf
 				MATERIALS_PARAM);
 		VSTORE3F(albedo, sampleResult->albedo.c);
@@ -333,7 +337,7 @@ __kernel void AdvancePaths_MK_HIT_OBJECT(
 					PhotonGICache_ConnectWithCausticPaths(bsdf,
 							pgicCausticPhotons, pgicCausticPhotonsBVHNodes,
 							taskConfig->pathTracer.pgic.causticPhotonTracedCount,
-							taskConfig->pathTracer.pgic.causticLookUpRadius * taskConfig->pathTracer.pgic.causticLookUpRadius,
+							taskConfig->pathTracer.pgic.causticLookUpRadius,
 							taskConfig->pathTracer.pgic.causticLookUpNormalCosAngle,
 							WHITE,
 							&sampleResult->radiancePerPixelNormalized[0]
@@ -378,7 +382,7 @@ __kernel void AdvancePaths_MK_HIT_OBJECT(
 						const bool isEmpty = PhotonGICache_ConnectWithCausticPaths(bsdf,
 								pgicCausticPhotons, pgicCausticPhotonsBVHNodes,
 								taskConfig->pathTracer.pgic.causticPhotonTracedCount,
-								taskConfig->pathTracer.pgic.causticLookUpRadius * taskConfig->pathTracer.pgic.causticLookUpRadius,
+								taskConfig->pathTracer.pgic.causticLookUpRadius,
 								taskConfig->pathTracer.pgic.causticLookUpNormalCosAngle,
 								VLOAD3F(taskState->throughput.c),
 								&sampleResult->radiancePerPixelNormalized[0]

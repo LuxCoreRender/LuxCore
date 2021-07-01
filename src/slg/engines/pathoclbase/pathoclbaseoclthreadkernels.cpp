@@ -86,6 +86,7 @@ string PathOCLBaseOCLRenderThread::GetKernelSources() {
 	ssKernel <<
 			// OpenCL LuxRays Types
 			luxrays::ocl::KernelSource_luxrays_types <<
+			luxrays::ocl::KernelSource_bvhbuild_types <<
 			luxrays::ocl::KernelSource_randomgen_types <<
 			luxrays::ocl::KernelSource_uv_types <<
 			luxrays::ocl::KernelSource_point_types <<
@@ -137,7 +138,6 @@ string PathOCLBaseOCLRenderThread::GetKernelSources() {
 			slg::ocl::KernelSource_sampler_types <<
 			slg::ocl::KernelSource_camera_types <<
 			slg::ocl::KernelSource_light_types <<
-			slg::ocl::KernelSource_indexbvh_types <<
 			slg::ocl::KernelSource_dlsc_types <<
 			slg::ocl::KernelSource_elvc_types <<
 			slg::ocl::KernelSource_pgic_types <<

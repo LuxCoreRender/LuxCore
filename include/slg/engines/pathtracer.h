@@ -150,6 +150,10 @@ public:
 	// Hybrid backward/forward path tracing settings
 	float hybridBackForwardPartition, hybridBackForwardGlossinessThreshold;
 
+	// Albedo AOV settings
+	AlbedoSpecularSetting albedoSpecularSetting;
+	float albedoSpecularGlossinessThreshold;
+	
 	// Option flags
 	bool forceBlackBackground, hybridBackForwardEnable;
 

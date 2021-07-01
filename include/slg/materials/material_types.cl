@@ -135,6 +135,7 @@ typedef struct {
 	unsigned int depthTexIndex;
 	unsigned int indexTexIndex;
 	int multibounce;
+	int doublesided;
 } Glossy2Param;
 
 typedef struct {

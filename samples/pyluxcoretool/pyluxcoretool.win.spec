@@ -10,9 +10,9 @@ def binaries_list():
 		('../../../WindowsCompile/Build_CMake/LuxCore/lib/pyluxcoretools.zip', '.'),
 		('../../../WindowsCompileDeps/x64/Release/lib/OpenImageDenoise.dll', '.'),
 		('../../../WindowsCompileDeps/x64/Release/lib/embree3.dll', '.'),
-		('../../../WindowsCompileDeps/x64/Release/lib/tbb.dll', '.'),
+		('../../../WindowsCompileDeps/x64/Release/lib/tbb12.dll', '.'),
+        ('../../../WindowsCompileDeps/x64/Release/lib/tbb.dll', '.'),
 		('../../../WindowsCompileDeps/x64/Release/lib/tbbmalloc.dll', '.'),
-		('../../../WindowsCompileDeps/x64/Release/lib/OpenImageIO.dll', '.'),
 		('../../../WindowsCompileDeps/x64/Release/lib/nvrtc64_101_0.dll', '.'),
 		('../../../WindowsCompileDeps/x64/Release/lib/nvrtc-builtins64_101.dll', '.')
 	]

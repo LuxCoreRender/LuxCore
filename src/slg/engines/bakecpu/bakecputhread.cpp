@@ -307,7 +307,7 @@ void BakeCPURenderThread::RenderEyeSample(const BakeMapInfo &mapInfo, PathTracer
 	// AOV support
 	//--------------------------------------------------------------------------
 
-	if (bsdf.IsAlbedoEndPoint())
+	if (bsdf.IsAlbedoEndPoint(pathTracer.albedoSpecularSetting, pathTracer.albedoSpecularGlossinessThreshold))
 		sampleResult.albedo = bsdf.Albedo();
 
 	sampleResult.depth = 0.f;

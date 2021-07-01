@@ -26,9 +26,12 @@
 
 #include "luxrays/devices/ocldevice.h"
 #include "slg/imagemap/imagemap.h"
+#include "slg/imagemap/resizepolicies/resizepolicies.h"
 #include "slg/core/sdl.h"
 
 namespace slg {
+
+class Scene;
 
 //------------------------------------------------------------------------------
 // ImageMapCache
@@ -39,26 +42,15 @@ public:
 	ImageMapCache();
 	~ImageMapCache();
 
-	void SetImageResize(const float s) { allImageScale = s; }
+	void SetImageResizePolicy(ImageMapResizePolicy *policy);
+	const ImageMapResizePolicy *GetImageResizePolicy() const { return resizePolicy; }
 
 	void DefineImageMap(ImageMap *im);
 
-	ImageMap *GetImageMap(const std::string &fileName, const float gamma,
-		const ImageMapStorage::ChannelSelectionType selectionType,
-		const ImageMapStorage::StorageType storageType,
-		const ImageMapStorage::WrapType wrapType = ImageMapStorage::REPEAT);
+	ImageMap *GetImageMap(const std::string &fileName, const ImageMapConfig &imgCfg,
+			const bool applyResizePolicy);
 
-	void DeleteImageMap(const ImageMap *im) {
-		for (boost::unordered_map<std::string, ImageMap *>::iterator it = mapByKey.begin(); it != mapByKey.end(); ++it) {
-			if (it->second == im) {
-				delete it->second;
-
-				maps.erase(std::find(maps.begin(), maps.end(), it->second));
-				mapByKey.erase(it);
-				return;
-			}
-		}
-	}
+	void DeleteImageMap(const ImageMap *im);
 
 	std::string GetSequenceFileName(const ImageMap *im) const;
 	u_int GetImageMapIndex(const ImageMap *im) const;
@@ -67,15 +59,20 @@ public:
 	u_int GetSize()const { return static_cast<u_int>(mapByKey.size()); }
 	bool IsImageMapDefined(const std::string &name) const { return mapByKey.find(name) != mapByKey.end(); }
 
+	friend class Scene;
+	friend class ImageMapResizePolicy;
+	friend class ImageMapResizeMinMemPolicy;
+	friend class ImageMapResizeMipMapMemPolicy;
 	friend class boost::serialization::access;
 
 private:
-	std::string GetCacheKey(const std::string &fileName, const float gamma,
-		const ImageMapStorage::ChannelSelectionType selectionType,
-		const ImageMapStorage::StorageType storageType,
-		const ImageMapStorage::WrapType wrapType) const;
-	std::string GetCacheKey(const std::string &fileName) const;
+	// Used for the support of resize policies
+	void Preprocess(const Scene *scene, const bool useRTMode);
 
+	std::string GetCacheKey(const std::string &fileName,
+				const ImageMapConfig &imgCfg) const;
+	std::string GetCacheKey(const std::string &fileName) const;
+	
 	template<class Archive> void save(Archive &ar, const unsigned int version) const;
 	template<class Archive>	void load(Archive &ar, const unsigned int version);
 	BOOST_SERIALIZATION_SPLIT_MEMBER()
@@ -85,7 +82,8 @@ private:
 	std::vector<std::string> mapNames;
 	std::vector<ImageMap *> maps;
 
-	float allImageScale;
+	ImageMapResizePolicy *resizePolicy;
+	std::vector<bool> resizePolicyToApply;
 };
 
 }

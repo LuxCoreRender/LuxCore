@@ -38,6 +38,7 @@
 #include "slg/shapes/islandaovshape.h"
 #include "slg/shapes/randomtriangleaovshape.h"
 #include "slg/shapes/edgedetectoraov.h"
+#include "slg/shapes/bevelshape.h"
 
 using namespace std;
 using namespace luxrays;
@@ -134,7 +135,7 @@ ExtTriangleMesh *Scene::CreateInlinedMesh(const string &shapeName, const string 
 			uvs[i] = UV(prop.Get<float>(index), prop.Get<float>(index + 1));
 		}
 	}
-
+	
 	return new ExtTriangleMesh(pointsSize, trisSize, points, tris, normals, uvs);
 }
 
@@ -165,7 +166,7 @@ ExtTriangleMesh *Scene::CreateShape(const string &shapeName, const Properties &p
 		shape = meshShape;
 	} else if (shapeType == "inlinedmesh") {
 		MeshShape *meshShape = new MeshShape(CreateInlinedMesh(shapeName, propName, props));
-
+		
 		if (props.IsDefined(propName + ".transformation")) {
 			// Apply the transformation
 			const Matrix4x4 mat = props.Get(Property(propName +
@@ -369,8 +370,15 @@ ExtTriangleMesh *Scene::CreateShape(const string &shapeName, const Properties &p
 
 		shape = new EdgeDetectorAOVShape((ExtTriangleMesh *)extMeshCache.GetExtMesh(sourceMeshName),
 				aovIndex0, aovIndex1, aovIndex2);
+	} else if (shapeType == "bevel") {
+		const string sourceMeshName = props.Get(Property(propName + ".source")("")).Get<string>();
+		if (!extMeshCache.IsExtMeshDefined(sourceMeshName))
+			throw runtime_error("Unknown shape name in a bevel shape: " + shapeName);
+
+		const float geometryBevel = props.Get(Property(propName + ".bevel.radius")(0.f)).Get<float>();
+
+		shape = new BevelShape((ExtTriangleMesh *)extMeshCache.GetExtMesh(sourceMeshName), geometryBevel);
 	} else
-		
 		throw runtime_error("Unknown shape type: " + shapeType);
 
 	ExtTriangleMesh *mesh = shape->Refine(this);

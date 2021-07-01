@@ -635,30 +635,36 @@ OPENCL_FORCE_INLINE float3 SphereLight_Illuminate(__global const LightSource *sp
 	// The point isn't inside the sphere
 
 	const float cosThetaMax = sqrt(max(0.f, 1.f - radiusSquared / centerDistanceSquared));
+
+	// Build a local coordinate system
+	const float3 localZ = toLight * (1.f / centerDistance);
+	Frame localFrame;
+	Frame_SetFromZ_Private(&localFrame, localZ);
+
+	// Sample sphere uniformly inside subtended cone
+	const float3 localShadowRayDir = UniformSampleConeLocal(u0, u1, cosThetaMax);
+	if (CosTheta(localShadowRayDir) < DEFAULT_COS_EPSILON_STATIC)
+		return BLACK;
+
+	const float3 shadowRayDir = Frame_ToWorld_Private(&localFrame, localShadowRayDir);
+
+	// Check the intersection with the sphere
+	const float3 shadowRayOrig = BSDF_GetRayOrigin(bsdf, shadowRayDir);
+	float shadowRayDistance;
+	if (!SphereLight_SphereIntersect(absolutePos, radiusSquared, shadowRayOrig, shadowRayDir, &shadowRayDistance))
+		shadowRayDistance = dot(toLight, shadowRayDir);
+
 	if (cosThetaMax > 1.f - DEFAULT_EPSILON_STATIC) {
-		// If the subtended angle is too small, I sample the light source like
-		// if it was a point light source in order to avoiding banding due to
-		// (lack of) numerical precision.
-		return PointLight_Illuminate(sphereLight, bsdf, time, shadowRay, directPdfW);
+		// If the subtended angle is too small, I replace the computation for
+		// directPdfW  and return factor with that of a point light source in
+		// order to avoiding banding due to (lack of) numerical precision.
+		*directPdfW = shadowRayDistance * shadowRayDistance;
+
+		// Setup the shadow ray
+		Ray_Init4(shadowRay, shadowRayOrig, shadowRayDir, 0.f, shadowRayDistance, time);
+
+		return VLOAD3F(sphereLight->notIntersectable.sphere.emittedFactor.c) * (1.f / (4.f * M_PI_F));
 	} else {
-		// Build a local coordinate system
-		const float3 localZ = toLight * (1.f / centerDistance);
-		Frame localFrame;
-		Frame_SetFromZ_Private(&localFrame, localZ);
-
-		// Sample sphere uniformly inside subtended cone
-		const float3 localShadowRayDir = UniformSampleConeLocal(u0, u1, cosThetaMax);
-		if (CosTheta(localShadowRayDir) < DEFAULT_COS_EPSILON_STATIC)
-			return BLACK;
-
-		const float3 shadowRayDir = Frame_ToWorld_Private(&localFrame, localShadowRayDir);
-
-		// Check the intersection with the sphere
-		const float3 shadowRayOrig = BSDF_GetRayOrigin(bsdf, shadowRayDir);
-		float shadowRayDistance;
-		if (!SphereLight_SphereIntersect(absolutePos, radiusSquared, shadowRayOrig, shadowRayDir, &shadowRayDistance))
-			shadowRayDistance = dot(toLight, shadowRayDir);
-
 		*directPdfW = UniformConePdf(cosThetaMax);
 
 		// Setup the shadow ray

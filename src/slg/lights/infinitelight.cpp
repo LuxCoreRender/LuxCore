@@ -55,7 +55,10 @@ void InfiniteLight::Preprocess() {
 				data[index] = 0.f;
 			else
 				data[index] = imageMapStorage->GetFloat(index);
-			
+
+			if (!IsValid(data[index]))
+				throw runtime_error("Pixel (" + ToString(x) + ", " + ToString(y) + ") in infinite light has an invalid value: " + ToString(data[index]));
+
 			//maxVal = Max(data[index], maxVal);
 			//minVal = Min(data[index], minVal);
 		}
@@ -232,6 +235,7 @@ void InfiniteLight::UpdateVisibilityMap(const Scene *scene, const bool useRTMode
 		unique_ptr<ImageMap> luminanceMapImage(imageMap->Copy());
 		// Select the image luminance
 		luminanceMapImage->SelectChannel(ImageMapStorage::WEIGHTED_MEAN);
+		luminanceMapImage->Preprocess();
 
 		visibilityMapCache = new EnvLightVisibilityCache(scene, this,
 				luminanceMapImage.get(), visibilityMapCacheParams);		

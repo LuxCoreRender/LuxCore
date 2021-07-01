@@ -16,7 +16,7 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#include <boost/format.hpp>
+#include <boost/lexical_cast.hpp>
 
 #include "slg/scene/scene.h"
 #include "slg/lights/trianglelight.h"
@@ -53,9 +53,16 @@ void SceneObjectDefinitions::DefineIntersectableLights(LightSourceDefinitions &l
 	const ExtMesh *mesh = obj->GetExtMesh();
 
 	// Add all new triangle lights
+	
+	const string prefix = Scene::EncodeTriangleLightNamePrefix(obj->GetName());
 	for (u_int i = 0; i < mesh->GetTotalTriangleCount(); ++i) {
 		TriangleLight *tl = new TriangleLight();
-		tl->SetName(obj->GetName() + TRIANGLE_LIGHT_POSTFIX + ToString(i));
+		
+		// I use here boost::lexical_cast instead of ToString() because it is a
+		// lot faster and there can not be locale related problems with integers
+		//tl->SetName(prefix + ToString(i));
+		tl->SetName(prefix + boost::lexical_cast<string>(i));
+
 		tl->lightMaterial = obj->GetMaterial();
 		tl->sceneObject = obj;
 		// This is initialized in LightSourceDefinitions::Preprocess()
@@ -69,13 +76,13 @@ void SceneObjectDefinitions::DefineIntersectableLights(LightSourceDefinitions &l
 
 void SceneObjectDefinitions::UpdateMaterialReferences(const Material *oldMat, const Material *newMat) {
 	// Replace old material direct references with new ones
-	BOOST_FOREACH(NamedObject *o, objs.GetObjs())
+	for (auto o : objs.GetObjs())
 		static_cast<SceneObject *>(o)->UpdateMaterialReferences(oldMat, newMat);
 }
 
 void SceneObjectDefinitions::UpdateMeshReferences(const ExtMesh *oldMesh, ExtMesh *newMesh,
 		boost::unordered_set<SceneObject *> &modifiedObjsList) {
-	BOOST_FOREACH(NamedObject *o, objs.GetObjs()) {
+	for (auto o : objs.GetObjs()) {
 		SceneObject *so = static_cast<SceneObject *>(o);
 
 		if (so->UpdateMeshReference(oldMesh, newMesh))

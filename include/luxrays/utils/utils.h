@@ -35,9 +35,6 @@
 #include <float.h>
 #define isnan(a) _isnan(a)
 #define isinf(f) (!_finite((f)))
-#else
-#define isnan(a) std::isnan(a)
-#define isinf(f) std::isinf(f)
 #endif
 
 #if defined(WIN32)
@@ -118,6 +115,16 @@ inline double WallClockTime() {
 template<class T> inline T Lerp(float t, T v1, T v2) {
 	// Linear interpolation
 	return v1 + t * (v2 - v1);
+}
+
+template<class T> inline T LerpWithStep(float t, T v1, T v2, float step) {
+	const float lerp = Lerp(t, v1, v2);
+
+	if (step <= 0.f)
+		return lerp;
+
+	// Linear interpolation with steps
+	return floorf(lerp / step) * step;
 }
 
 template<class T> inline T Cerp(float t, T v0, T v1, T v2, T v3) {

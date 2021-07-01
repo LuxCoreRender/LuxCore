@@ -83,6 +83,17 @@ ENDIF()
 
 add_executable(luxcoreui ${LUXCOREUI_SRCS})
 
+if(APPLE)
+
+TARGET_LINK_LIBRARIES(luxcoreui
+	glfw
+	expat
+	${GLFW_LIBRARIES}
+	${LUXCORE_LIBRARY}
+	${OPENGL_LIBRARIES}
+	${GTK3_LIBRARIES}
+	${Boost_LIBRARIES})
+else()
 TARGET_LINK_LIBRARIES(luxcoreui
 	glfw
 	${GLFW_LIBRARIES}
@@ -90,3 +101,4 @@ TARGET_LINK_LIBRARIES(luxcoreui
 	${OPENGL_LIBRARIES}
 	${GTK3_LIBRARIES}
 	${Boost_LIBRARIES})
+endif()

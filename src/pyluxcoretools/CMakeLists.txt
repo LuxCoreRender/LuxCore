@@ -35,7 +35,7 @@ BuildStage_directory(
 		pyluxcoretools_copy_dir ${pyluxcoretools_stage} pyluxcoretools)
 
 if (PYSIDE_UIC MATCHES "pyside-uic")
-# Delete python pre-generated files since they are PySide2 but PySide has been found
+	# Delete python pre-generated files since they are PySide2 but PySide has been found
 	file(REMOVE
 			 "${pyluxcoretools_dir}/pyluxcoremenu/menuwindow.py"
 			 "${pyluxcoretools_dir}/pyluxcorenetnode/mainwindow.py"

@@ -3,8 +3,45 @@
 ### New Features
 
 * BIDIRCPU can now use PhotonGI caustic cache to render SDS paths
+* Optimized the parsing of mesh light sources and it is now about 3x faster
+* Introduced (partial) multi-thread support in pre-processing of Light sources
+* Integrated OpenColorIO v2.0
+* Added the support for new TONEMAP_OPENCOLORIO tone mapper
+* Added the support for color spaces (Nop, LuxCore and OpenColorIO) to image maps
+* Added the support for color spaces (Nop, LuxCore and OpenColorIO) to constant textures
+* Added the support for color spaces (Nop, LuxCore and OpenColorIO) to implicit definitions of constant textures
+* Added the support for color spaces (Nop, LuxCore and OpenColorIO) to materials
+* Added the support for color spaces (Nop, LuxCore and OpenColorIO) to light sources
+* FILESAVER avoids to save the internal random image map (used by randomized tiling)
+* Updated to Intel Embree v3.12.2
+* Updated to Intel OIDN v1.3.0
+* Updated to OpenImageIO v2.2.13.1
+* Regularize coordinate system to solve some anisotropic related issue with glossy material (pull request #521)
+* UVRandomMapping2D now supports optional random rotation step parameter (issue #528)
+* LocalRandomMapping3D now supports optional random rotation step parameter (issue #528)
+* Introduced the concept of Scene texture image maps resize policy and the support for NONE and FIXED policies
+* Reworked the way alpha channel is computed for transmitted paths
+* Introduced the MINMEM Scene texture image maps resize policy
+* Updated to Intel OIDN v1.4.0
+* Added the support for Intel OIDN auxiliary buffers pre-filtering
+* Added the support for new pyluxcoretools MakeTX
+* Introduced the MIPMAPMEM Scene texture image maps resize policy
+* GPU out-of-core rendering now automatically disable Film GPU image pipeline to save more memory
+* Added the support for Film-only out-of-core rendering (CUDA-only) with property opencl.outofcore.film.enable
+* Added a safety check for infinite light source when HDR with invalid values (NaN, Inf, etc.) is used
+* Albedo AOV reflections and transmissions can now be configured (mostly for denoising)
+* Added the support to Intel OIDN plugin for enabling/diasbling prefiltering with .prefilter.enable property
 
 ### Fixed Bugs
+
+* Fixed the reading of IES files on system with not-US locale
+* Fixed a problem with Python and Property objects initialized as double even if they were int
+* Python Property object now consider int data type always as a 64 bit value
+* Fixed a bug rendering black baked maps when using bump mapping and COMBINED type with BAKECPU rendering engine
+* Fixed a bug when rendering caustics over volumes with Caustic cache (issue #533)
+* Fixed a problem causing the initialization of multiple dataset accelerators in some case
+* Fixed a problem with incorrect alpha AOV values (issue #536)
+* Fixed a problem when using Add/Subtract textures with bump mapping (issue #689)
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
