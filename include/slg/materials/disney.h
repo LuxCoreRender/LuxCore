@@ -129,6 +129,8 @@ private:
 	const Texture *filmThickness;
 	const Texture *filmIor;
 
+	void UpdateGlossiness();
+
 	luxrays::Spectrum CalculateTint(const luxrays::Spectrum &color) const;
 
 	float GTR1(const float NdotH, const float a) const;

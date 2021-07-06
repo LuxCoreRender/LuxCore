@@ -31,6 +31,8 @@
 * Added a safety check for infinite light source when HDR with invalid values (NaN, Inf, etc.) is used
 * Albedo AOV reflections and transmissions can now be configured (mostly for denoising)
 * Added the support to Intel OIDN plugin for enabling/diasbling prefiltering with .prefilter.enable property
+* Disney glossiness evaluation (for PGI, Albedo AOV, etc.) now checks metal and specular parameters
+* Disney glossiness evaluation uses now the square root of the value to align with the roughness of Glossy2, Metal, etc.
 
 ### Fixed Bugs
 
