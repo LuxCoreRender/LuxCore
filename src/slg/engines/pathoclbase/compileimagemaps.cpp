@@ -100,6 +100,18 @@ u_int CompiledScene::CompileImageMap(const ImageMap *im) {
 					ToString(im->GetStorage()->wrapType));
 	}
 
+	switch (im->GetStorage()->filterType) {
+		case ImageMapStorage::NEAREST:
+			imd->filterType = slg::ocl::FILTER_NEAREST;
+			break;
+		case ImageMapStorage::LINEAR:
+			imd->filterType = slg::ocl::FILTER_LINEAR;
+			break;
+		default:
+			throw runtime_error("Unknown filter type in CompiledScene::AddImageMap(): " +
+					ToString(im->GetStorage()->filterType));
+	}
+
 	switch (im->GetStorage()->GetStorageType()) {
 		case ImageMapStorage::BYTE:
 			imd->storageType = slg::ocl::BYTE;

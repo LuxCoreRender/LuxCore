@@ -33,6 +33,7 @@
 * Added the support to Intel OIDN plugin for enabling/diasbling prefiltering with .prefilter.enable property
 * Disney glossiness evaluation (for PGI, Albedo AOV, etc.) now checks metal and specular parameters
 * Disney glossiness evaluation uses now the square root of the value to align with the roughness of Glossy2, Metal, etc.
+* Added the support for image map filtering nearest, linear was the only mode available before (issue #545)
 
 ### Fixed Bugs
 

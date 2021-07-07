@@ -620,8 +620,13 @@ public:
 		WHITE,
 		CLAMP
 	} WrapType;
+	
+	typedef enum {
+		NEAREST,
+		LINEAR
+	} FilterType;
 
-	ImageMapStorage(const u_int w, const u_int h, const WrapType wm);
+	ImageMapStorage(const u_int w, const u_int h, const WrapType wm, const FilterType ft);
 	virtual ~ImageMapStorage() { }
 
 	virtual ImageMapStorage *SelectChannel(const ChannelSelectionType selectionType) const = 0;
@@ -684,11 +689,14 @@ public:
 	static ChannelSelectionType String2ChannelSelectionType(const std::string &type);
 	static WrapType String2WrapType(const std::string &type);
 	static std::string WrapType2String(const WrapType type);
+	static FilterType String2FilterType(const std::string &type);
+	static std::string FilterType2String(const FilterType type);
 
 	friend class boost::serialization::access;
 
 	u_int width, height;
 	WrapType wrapType;
+	FilterType filterType;
 
 protected:
 	// Used by serialization
@@ -700,7 +708,8 @@ protected:
 template <class T, u_int CHANNELS> class ImageMapStorageImpl : public ImageMapStorage {
 public:
 	ImageMapStorageImpl(ImageMapPixel<T, CHANNELS> *ps, const u_int w,
-			const u_int h, const WrapType wm) : ImageMapStorage(w, h, wm), pixels(ps) { }
+			const u_int h, const WrapType wm, const FilterType ft) :
+			ImageMapStorage(w, h, wm, ft), pixels(ps) { }
 	virtual ~ImageMapStorageImpl() { delete[] pixels; }
 
 	virtual ImageMapStorage *SelectChannel(const ChannelSelectionType selectionType) const;
@@ -829,18 +838,23 @@ template<> inline ImageMapStorage::StorageType ImageMapStorageImpl<float, 4>::Ge
 }
 
 template <class T> ImageMapStorage *AllocImageMapStorage(const u_int channels,
-		const u_int width, const u_int height, const ImageMapStorage::WrapType wrapType) {
+		const u_int width, const u_int height, const ImageMapStorage::WrapType wrapType,
+		const ImageMapStorage::FilterType filterType) {
 	const u_int pixelCount = width * height;
 
 	switch (channels) {
 		case 1:
-			return new ImageMapStorageImpl<T, 1>(new ImageMapPixel<T, 1>[pixelCount], width, height, wrapType);
+			return new ImageMapStorageImpl<T, 1>(new ImageMapPixel<T, 1>[pixelCount],
+					width, height, wrapType, filterType);
 		case 2:
-			return new ImageMapStorageImpl<T, 2>(new ImageMapPixel<T, 2>[pixelCount], width, height, wrapType);
+			return new ImageMapStorageImpl<T, 2>(new ImageMapPixel<T, 2>[pixelCount],
+					width, height, wrapType, filterType);
 		case 3:
-			return new ImageMapStorageImpl<T, 3>(new ImageMapPixel<T, 3>[pixelCount], width, height, wrapType);
+			return new ImageMapStorageImpl<T, 3>(new ImageMapPixel<T, 3>[pixelCount],
+					width, height, wrapType, filterType);
 		case 4:
-			return new ImageMapStorageImpl<T, 4>(new ImageMapPixel<T, 4>[pixelCount], width, height, wrapType);
+			return new ImageMapStorageImpl<T, 4>(new ImageMapPixel<T, 4>[pixelCount],
+					width, height, wrapType, filterType);
 		default:
 			return NULL;
 	}
@@ -857,12 +871,14 @@ public:
 	ImageMapConfig(const float gamma,
 			const ImageMapStorage::StorageType storageType,
 			const ImageMapStorage::WrapType wrapType,
-			const ImageMapStorage::ChannelSelectionType selectionType);
+			const ImageMapStorage::ChannelSelectionType selectionType,
+			ImageMapStorage::FilterType filterType = ImageMapStorage::LINEAR);
 	// OPENCOLORIO_COLORSPACE constructor
 	ImageMapConfig(const std::string &configName, const std::string &colorSpaceName,
 			const ImageMapStorage::StorageType storageType,
 			const ImageMapStorage::WrapType wrapType,
-			const ImageMapStorage::ChannelSelectionType selectionType);
+			const ImageMapStorage::ChannelSelectionType selectionType,
+			ImageMapStorage::FilterType filterType = ImageMapStorage::LINEAR);
 	// From properties constructor
 	ImageMapConfig(const luxrays::Properties &props, const std::string &prefix);
 	~ImageMapConfig() { }
@@ -873,6 +889,7 @@ public:
 
 	ImageMapStorage::StorageType storageType;
 	ImageMapStorage::WrapType wrapType;
+	ImageMapStorage::FilterType filterType;
 	ImageMapStorage::ChannelSelectionType selectionType;
 };
 

@@ -60,6 +60,7 @@ scene.textures.140707097861640Color.mapping.rotation = 0
 scene.textures.140707097861640Color.mapping.uvscale = 1 -1
 scene.textures.140707097861640Color.mapping.uvdelta = 0 1
 scene.textures.140707097861640Color.randomizedtiling.enable = 0
+#scene.textures.140707097861640Color.filter = linear
 ##
 scene.textures.140707101904392Color.type = "imagemap"
 scene.textures.140707101904392Color.file = "scenes/randomizedtiling/pattern-7.jpg"
