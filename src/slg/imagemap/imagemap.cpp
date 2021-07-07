@@ -728,22 +728,22 @@ ImageMapConfig::ImageMapConfig(const float gamma,
 		const ImageMapStorage::StorageType store,
 		const ImageMapStorage::WrapType wrap,
 		const ImageMapStorage::ChannelSelectionType selection,
-		ImageMapStorage::FilterType filterType) : colorSpaceCfg(gamma) {
+		const ImageMapStorage::FilterType filter) : colorSpaceCfg(gamma) {
 	storageType = store;
 	wrapType = wrap;
 	selectionType = selection;
-	filterType = filterType;
+	filterType = filter;
 }
 
 ImageMapConfig::ImageMapConfig(const string &configName, const string &colorSpaceName,
 		const ImageMapStorage::StorageType store,
 		const ImageMapStorage::WrapType wrap,
 		const ImageMapStorage::ChannelSelectionType selection,
-		ImageMapStorage::FilterType filterType) : colorSpaceCfg(configName, colorSpaceName) {
+		const ImageMapStorage::FilterType filter) : colorSpaceCfg(configName, colorSpaceName) {
 	storageType = store;
 	wrapType = wrap;
 	selectionType = selection;
-	filterType = filterType;
+	filterType = filter;
 }
 
 ImageMapConfig::ImageMapConfig(const Properties &props, const string &prefix) {

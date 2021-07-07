@@ -96,7 +96,7 @@ u_int CompiledScene::CompileImageMap(const ImageMap *im) {
 			imd->wrapType = slg::ocl::WRAP_CLAMP;
 			break;
 		default:
-			throw runtime_error("Unknown wrap type in CompiledScene::AddImageMap(): " +
+			throw runtime_error("Unknown wrap type in CompiledScene::CompileImageMap(): " +
 					ToString(im->GetStorage()->wrapType));
 	}
 
@@ -108,7 +108,7 @@ u_int CompiledScene::CompileImageMap(const ImageMap *im) {
 			imd->filterType = slg::ocl::FILTER_LINEAR;
 			break;
 		default:
-			throw runtime_error("Unknown filter type in CompiledScene::AddImageMap(): " +
+			throw runtime_error("Unknown filter type in CompiledScene::CompileImageMap(): " +
 					ToString(im->GetStorage()->filterType));
 	}
 
@@ -123,7 +123,7 @@ u_int CompiledScene::CompileImageMap(const ImageMap *im) {
 			imd->storageType = slg::ocl::FLOAT;
 			break;
 		default:
-			throw runtime_error("Unknown storage type in CompiledScene::AddImageMap(): " +
+			throw runtime_error("Unknown storage type in CompiledScene::CompileImageMap(): " +
 					ToString(im->GetStorage()->GetStorageType()));
 	}
 

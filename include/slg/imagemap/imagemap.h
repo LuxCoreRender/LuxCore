@@ -872,13 +872,13 @@ public:
 			const ImageMapStorage::StorageType storageType,
 			const ImageMapStorage::WrapType wrapType,
 			const ImageMapStorage::ChannelSelectionType selectionType,
-			ImageMapStorage::FilterType filterType = ImageMapStorage::LINEAR);
+			const ImageMapStorage::FilterType filterType = ImageMapStorage::LINEAR);
 	// OPENCOLORIO_COLORSPACE constructor
 	ImageMapConfig(const std::string &configName, const std::string &colorSpaceName,
 			const ImageMapStorage::StorageType storageType,
 			const ImageMapStorage::WrapType wrapType,
 			const ImageMapStorage::ChannelSelectionType selectionType,
-			ImageMapStorage::FilterType filterType = ImageMapStorage::LINEAR);
+			const ImageMapStorage::FilterType filterType = ImageMapStorage::LINEAR);
 	// From properties constructor
 	ImageMapConfig(const luxrays::Properties &props, const std::string &prefix);
 	~ImageMapConfig() { }
