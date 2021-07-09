@@ -630,6 +630,8 @@ void BiDirCPURenderThread::RenderFunc() {
 
 			eyeVertex.depth = 1;
 			bool albedoToDo = true;
+			eyeSampleResult.albedo = Spectrum(); // Just in case albedoToDo is never true
+			eyeSampleResult.shadingNormal = Normal();
 			bool photonGICausticCacheUsed = false;
 			bool isTransmittedEyePath = true;
 			while (eyeVertex.depth <= engine->maxEyePathDepth) {
@@ -685,6 +687,7 @@ void BiDirCPURenderThread::RenderFunc() {
 				if (albedoToDo && eyeVertex.bsdf.IsAlbedoEndPoint(engine->albedoSpecularSetting,
 						engine->albedoSpecularGlossinessThreshold)) {
 					eyeSampleResult.albedo = eyeVertex.throughput * eyeVertex.bsdf.Albedo();
+					eyeSampleResult.shadingNormal = eyeVertex.bsdf.hitPoint.shadeN;
 					albedoToDo = false;
 				}
 
@@ -693,7 +696,6 @@ void BiDirCPURenderThread::RenderFunc() {
 					eyeSampleResult.depth = eyeRayHit.t;
 					eyeSampleResult.position = eyeVertex.bsdf.hitPoint.p;
 					eyeSampleResult.geometryNormal = eyeVertex.bsdf.hitPoint.geometryN;
-					eyeSampleResult.shadingNormal = eyeVertex.bsdf.hitPoint.shadeN;
 					eyeSampleResult.materialID = eyeVertex.bsdf.GetMaterialID();
 					eyeSampleResult.objectID = eyeVertex.bsdf.GetObjectID();
 					eyeSampleResult.uv = eyeVertex.bsdf.hitPoint.GetUV(0);
