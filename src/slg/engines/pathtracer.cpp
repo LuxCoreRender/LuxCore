@@ -386,6 +386,8 @@ void PathTracer::RenderEyePath(IntersectionDevice *device,
 	bool photonGICausticCacheUsed = false;
 	bool photonGICacheEnabledOnLastHit = false;
 	bool albedoToDo = true;
+	sampleResult.albedo = Spectrum(); // Just in case albedoToDo is never true
+	sampleResult.shadingNormal = Normal();
 	Spectrum pathThroughput(eyeTroughput);
 	BSDF bsdf;
 	for (;;) {
@@ -443,6 +445,7 @@ void PathTracer::RenderEyePath(IntersectionDevice *device,
 
 		if (albedoToDo && bsdf.IsAlbedoEndPoint(albedoSpecularSetting, albedoSpecularGlossinessThreshold)) {
 			sampleResult.albedo = pathThroughput * bsdf.Albedo();
+			sampleResult.shadingNormal = bsdf.hitPoint.shadeN;
 			albedoToDo = false;
 		}
 
@@ -452,7 +455,6 @@ void PathTracer::RenderEyePath(IntersectionDevice *device,
 			sampleResult.depth = eyeRayHit.t;
 			sampleResult.position = bsdf.hitPoint.p;
 			sampleResult.geometryNormal = bsdf.hitPoint.geometryN;
-			sampleResult.shadingNormal = bsdf.hitPoint.shadeN;
 			sampleResult.materialID = bsdf.GetMaterialID();
 			sampleResult.objectID = bsdf.GetObjectID();
 			sampleResult.uv = bsdf.hitPoint.GetUV(0);

@@ -58,7 +58,8 @@ private:
 	void FilterImage(const std::string &imageName,
 			const float *srcBuffer, float *dstBuffer,
 			const float *albedoBuffer, const float *normalBuffer,
-			const u_int width, const u_int height) const;
+			const u_int width, const u_int height,
+			const bool cleanAux) const;
 	
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImagePipelinePlugin);
