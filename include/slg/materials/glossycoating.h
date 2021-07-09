@@ -42,7 +42,7 @@ public:
 	}
 
 	virtual bool IsDelta() const {
-		return false;
+		return matBase->IsDelta();
 	}
 	virtual luxrays::Spectrum GetPassThroughTransparency(const HitPoint &hitPoint,
 		const luxrays::Vector &localFixedDir, const float passThroughEvent,

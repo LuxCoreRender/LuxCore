@@ -162,7 +162,7 @@ bool BSDF::IsAlbedoEndPoint(const AlbedoSpecularSetting albedoSpecularSetting,
 	const BSDFEvent eventTypes = GetEventTypes();
 	if (!IsDelta() && !((eventTypes & GLOSSY) && (GetGlossiness() < albedoSpecularGlossinessThreshold)))
 		return true;
-	
+
 	switch (albedoSpecularSetting) {
 		case NO_REFLECT_TRANSMIT:
 			return true;
