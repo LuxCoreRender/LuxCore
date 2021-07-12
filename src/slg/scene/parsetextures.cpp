@@ -144,7 +144,7 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 	if (texType == "imagemap") {
 		const string name = props.Get(Property(propName + ".file")("image.png")).Get<string>();
 
-		ImageMap *im = imgMapCache.GetImageMap(name, ImageMapConfig(props, propName));
+		ImageMap *im = imgMapCache.GetImageMap(name, ImageMapConfig(props, propName), true);
 
 		const bool randomizedTiling = props.Get(Property(propName + ".randomizedtiling.enable")(false)).Get<bool>();
 		if (randomizedTiling && (im->GetStorage()->wrapType != ImageMapStorage::REPEAT))
@@ -411,7 +411,7 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 		vector<Spectrum> values;
 		for (u_int i = 0; props.IsDefined(propName + ".offset" + ToString(i)); ++i) {
 			const float offset = props.Get(Property(propName + ".offset" + ToString(i))(0.f)).Get<float>();
-			const Spectrum value = GetColor(Property(propName + ".value" + ToString(i))(1.f, 1.f, 1.f));
+			const Spectrum value = GetColor(props.Get(Property(propName + ".value" + ToString(i))(1.f, 1.f, 1.f)));
 
 			offsets.push_back(offset);
 			values.push_back(value);
@@ -495,8 +495,8 @@ Texture *Scene::CreateTexture(const string &texName, const Properties &props) {
 
 		tex = new FresnelColorTexture(col);
 	} else if (texType == "fresnelconst") {
-		const Spectrum n = GetColor(Property(propName + ".n")(1.f, 1.f, 1.f));
-		const Spectrum k = GetColor(Property(propName + ".k")(1.f, 1.f, 1.f));
+		const Spectrum n = GetColor(props.Get(Property(propName + ".n")(1.f, 1.f, 1.f)));
+		const Spectrum k = GetColor(props.Get(Property(propName + ".k")(1.f, 1.f, 1.f)));
 
 		tex = new FresnelConstTexture(n, k);
 	} else if (texType == "fresnelluxpop") {
@@ -827,6 +827,7 @@ TextureMapping2D *Scene::CreateTextureMapping2D(const string &prefixName, const 
 		const Property &uvRotationProp = props.Get(uvRotationDefaultProp);
 		const float uvRotationMin = uvRotationProp.Get<float>(0);
 		const float uvRotationMax = uvRotationProp.Get<float>(1);
+		const float uvRotationStep = (uvRotationProp.GetSize() > 2) ? uvRotationProp.Get<float>(2) : 0.f;
 
 		const Property uvScaleDefaultProp = Property(prefixName + ".uvscale")(1.f, 1.f, 1.f, 1.f);
 		const Property &uvScaleProp = props.Get(uvScaleDefaultProp);
@@ -845,7 +846,7 @@ TextureMapping2D *Scene::CreateTextureMapping2D(const string &prefixName, const 
 		const float vDeltaMax = uvDeltaProp.Get<float>(3);
 
 		return new UVRandomMapping2D(dataIndex, seedType, triAOVIndex, objectIDOffset,
-				uvRotationMin, uvRotationMax,
+				uvRotationMin, uvRotationMax, uvRotationStep,
 				uScaleMin, uScaleMax, vScaleMin, vScaleMax,
 				uDeltaMin, uDeltaMax, vDeltaMin, vDeltaMax,
 				uniformScale);
@@ -880,19 +881,22 @@ TextureMapping3D *Scene::CreateTextureMapping3D(const string &prefixName, const 
 		const u_int triAOVIndex = props.Get(Property(prefixName + ".triangleaov.index")(0u)).Get<u_int>();
 		const u_int objectIDOffset = props.Get(Property(prefixName + ".objectidoffset.value")(0u)).Get<u_int>();
 
-		const Property xRotationDefaultProp = Property(prefixName + ".xrotation")(0.f, 0.f);
-		const Property yRotationDefaultProp = Property(prefixName + ".yrotation")(0.f, 0.f);
-		const Property zRotationDefaultProp = Property(prefixName + ".zrotation")(0.f, 0.f);
+		const Property xRotationDefaultProp = Property(prefixName + ".xrotation")(0.f, 0.f, 0.f);
+		const Property yRotationDefaultProp = Property(prefixName + ".yrotation")(0.f, 0.f, 0.f);
+		const Property zRotationDefaultProp = Property(prefixName + ".zrotation")(0.f, 0.f, 0.f);
 
 		const Property &xRotationProp = props.Get(xRotationDefaultProp);
 		const float xRotationMin = xRotationProp.Get<float>(0);
 		const float xRotationMax = xRotationProp.Get<float>(1);
+		const float xRotationStep = (xRotationProp.GetSize() > 2) ? xRotationProp.Get<float>(2) : 0.f;
 		const Property &yRotationProp = props.Get(yRotationDefaultProp);
 		const float yRotationMin = yRotationProp.Get<float>(0);
 		const float yRotationMax = yRotationProp.Get<float>(1);
+		const float yRotationStep = (yRotationProp.GetSize() > 2) ? yRotationProp.Get<float>(2) : 0.f;
 		const Property &zRotationProp = props.Get(zRotationDefaultProp);
 		const float zRotationMin = zRotationProp.Get<float>(0);
 		const float zRotationMax = zRotationProp.Get<float>(1);
+		const float zRotationStep = (zRotationProp.GetSize() > 2) ? zRotationProp.Get<float>(2) : 0.f;
 
 		const Property xScaleDefaultProp = Property(prefixName + ".xscale")(1.f, 1.f);
 		const Property yScaleDefaultProp = Property(prefixName + ".yscale")(1.f, 1.f);
@@ -925,9 +929,9 @@ TextureMapping3D *Scene::CreateTextureMapping3D(const string &prefixName, const 
 		const float zTranslateMax = zTranslateProp.Get<float>(1);
 
 		return new LocalRandomMapping3D(trans, seedType, triAOVIndex, objectIDOffset,
-				xRotationMin, xRotationMax,
-				yRotationMin, yRotationMax,
-				zRotationMin, zRotationMax,
+				xRotationMin, xRotationMax, xRotationStep,
+				yRotationMin, yRotationMax, yRotationStep,
+				zRotationMin, zRotationMax, zRotationStep,
 				xScaleMin, xScaleMax,
 				yScaleMin, yScaleMax,
 				zScaleMin, zScaleMax,

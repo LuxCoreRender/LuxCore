@@ -470,7 +470,7 @@ bool BiDirCPURenderThread::Bounce(const float time, Sampler *sampler,
 	BiDirCPURenderEngine *engine = (BiDirCPURenderEngine *)renderEngine;
 
 	Vector sampledDir;
-	BSDFEvent event;
+	BSDFEvent &event = pathVertex->bsdfEvent;
 	float bsdfPdfW, cosSampledDir;
 	const Spectrum bsdfSample = pathVertex->bsdf.Sample(&sampledDir,
 			sampler->GetSample(sampleOffset),
@@ -630,7 +630,10 @@ void BiDirCPURenderThread::RenderFunc() {
 
 			eyeVertex.depth = 1;
 			bool albedoToDo = true;
+			eyeSampleResult.albedo = Spectrum(); // Just in case albedoToDo is never true
+			eyeSampleResult.shadingNormal = Normal();
 			bool photonGICausticCacheUsed = false;
+			bool isTransmittedEyePath = true;
 			while (eyeVertex.depth <= engine->maxEyePathDepth) {
 				eyeSampleResult.firstPathVertex = (eyeVertex.depth == 1);
 				eyeSampleResult.lastPathVertex = (eyeVertex.depth == engine->maxEyePathDepth);
@@ -671,6 +674,9 @@ void BiDirCPURenderThread::RenderFunc() {
 						eyeSampleResult.objectID = 0;
 						eyeSampleResult.uv = UV(numeric_limits<float>::infinity(),
 								numeric_limits<float>::infinity());
+					} else if (isTransmittedEyePath) {
+						// I set to 0.0 also the alpha all purely transmitted paths hitting nothing
+						eyeSampleResult.alpha = 0.f;
 					}
 					break;
 				}
@@ -678,8 +684,10 @@ void BiDirCPURenderThread::RenderFunc() {
 
 				// Something was hit
 
-				if (albedoToDo && eyeVertex.bsdf.IsAlbedoEndPoint()) {
+				if (albedoToDo && eyeVertex.bsdf.IsAlbedoEndPoint(engine->albedoSpecularSetting,
+						engine->albedoSpecularGlossinessThreshold)) {
 					eyeSampleResult.albedo = eyeVertex.throughput * eyeVertex.bsdf.Albedo();
+					eyeSampleResult.shadingNormal = eyeVertex.bsdf.hitPoint.shadeN;
 					albedoToDo = false;
 				}
 
@@ -688,7 +696,6 @@ void BiDirCPURenderThread::RenderFunc() {
 					eyeSampleResult.depth = eyeRayHit.t;
 					eyeSampleResult.position = eyeVertex.bsdf.hitPoint.p;
 					eyeSampleResult.geometryNormal = eyeVertex.bsdf.hitPoint.geometryN;
-					eyeSampleResult.shadingNormal = eyeVertex.bsdf.hitPoint.shadeN;
 					eyeSampleResult.materialID = eyeVertex.bsdf.GetMaterialID();
 					eyeSampleResult.objectID = eyeVertex.bsdf.GetObjectID();
 					eyeSampleResult.uv = eyeVertex.bsdf.hitPoint.GetUV(0);
@@ -765,6 +772,8 @@ void BiDirCPURenderThread::RenderFunc() {
 
 				if (!Bounce(time, sampler, sampleOffset + 7, &eyeVertex, &eyeRay))
 					break;
+				
+				isTransmittedEyePath = isTransmittedEyePath && (eyeVertex.bsdfEvent & TRANSMIT);
 
 #ifdef WIN32
 				// Work around Windows bad scheduling

@@ -118,7 +118,7 @@ Properties UVMapping2D::ToProperties(const string &name) const {
 
 UVRandomMapping2D::UVRandomMapping2D(const u_int index, const RandomMappingSeedType seedTyp,
 		const u_int triAOVIdx, const u_int objectIDOffst,
-		const float uvRotationMn, const float uvRotationMx,
+		const float uvRotationMn, const float uvRotationMx, const float uvRotationStp,
 		const float uScaleMn, const float uScaleMx,
 		const float vScaleMn, const float vScaleMx,
 		const float uDeltaMn, const float uDeltaMx,
@@ -126,7 +126,7 @@ UVRandomMapping2D::UVRandomMapping2D(const u_int index, const RandomMappingSeedT
 		const bool uniformScl) :
 		TextureMapping2D(index), seedType(seedTyp),
 		triAOVIndex(triAOVIdx), objectIDOffset(objectIDOffst),
-		uvRotationMin(uvRotationMn), uvRotationMax(uvRotationMx),
+		uvRotationMin(uvRotationMn), uvRotationMax(uvRotationMx), uvRotationStep(uvRotationStp),
 		uScaleMin(uScaleMn), uScaleMax(uScaleMx),
 		vScaleMin(vScaleMn), vScaleMax(vScaleMx),
 		uDeltaMin(uDeltaMn), uDeltaMax(uDeltaMx),
@@ -153,7 +153,7 @@ UV UVRandomMapping2D::Map(const HitPoint &hitPoint, UV *ds, UV *dt) const {
 	
 	TauswortheRandomGenerator rndGen(seed);
 
-	const float uvRotation = Lerp(rndGen.floatValue(), uvRotationMin, uvRotationMax);
+	const float uvRotation = LerpWithStep(rndGen.floatValue(), uvRotationMin, uvRotationMax, uvRotationStep);
 	const float uScale = Lerp(rndGen.floatValue(), uScaleMin, uScaleMax);
 	const float vScale = uniformScale ? uScale : Lerp(rndGen.floatValue(), vScaleMin, vScaleMax);
 	const float uDelta = Lerp(rndGen.floatValue(), uDeltaMin, uDeltaMax);
@@ -203,7 +203,7 @@ Properties UVRandomMapping2D::ToProperties(const string &name) const {
 			Property(name + ".seed.type")(RandomMappingSeedType2String(seedType)) <<
 			Property(name + ".triangleaov.index")(triAOVIndex) <<
 			Property(name + ".objectidoffset.value")(objectIDOffset) <<
-			Property(name + ".rotation")(uvRotationMin, uvRotationMax) <<
+			Property(name + ".rotation")(uvRotationMin, uvRotationMax, uvRotationStep) <<
 			Property(name + ".uvscale")(uScaleMin, uScaleMax, vScaleMin, uScaleMax) <<
 			Property(name + ".uvscale.uniform")(uniformScale) <<
 			Property(name + ".uvdelta")(uDeltaMin, uDeltaMax, vDeltaMin, vDeltaMax);
@@ -276,9 +276,9 @@ Properties LocalMapping3D::ToProperties(const string &name) const {
 
 LocalRandomMapping3D::LocalRandomMapping3D(const luxrays::Transform &w2l, const RandomMappingSeedType seedTyp,
 		const u_int triAOVIdx, const u_int objectIDOffst,
-		const float xRotationMn, const float xRotationMx,
-		const float yRotationMn, const float yRotationMx,
-		const float zRotationMn, const float zRotationMx,
+		const float xRotationMn, const float xRotationMx, const float xRotationStp,
+		const float yRotationMn, const float yRotationMx, const float yRotationStp,
+		const float zRotationMn, const float zRotationMx, const float zRotationStp,
 		const float xScaleMn, const float xScaleMx,
 		const float yScaleMn, const float yScaleMx,
 		const float zScaleMn, const float zScaleMx,
@@ -290,9 +290,9 @@ LocalRandomMapping3D::LocalRandomMapping3D(const luxrays::Transform &w2l, const 
 			seedType(seedTyp),
 			triAOVIndex(triAOVIdx),
 			objectIDOffset(objectIDOffst),
-			xRotationMin(xRotationMn), xRotationMax(xRotationMx),
-			yRotationMin(yRotationMn), yRotationMax(yRotationMx),
-			zRotationMin(zRotationMn), zRotationMax(zRotationMx),
+			xRotationMin(xRotationMn), xRotationMax(xRotationMx), xRotationStep(xRotationStp),
+			yRotationMin(yRotationMn), yRotationMax(yRotationMx), yRotationStep(yRotationStp),
+			zRotationMin(zRotationMn), zRotationMax(zRotationMx), zRotationStep(zRotationStp),
 			xScaleMin(xScaleMn), xScaleMax(xScaleMx),
 			yScaleMin(yScaleMn), yScaleMax(yScaleMx),
 			zScaleMin(zScaleMn), zScaleMax(zScaleMx),
@@ -327,9 +327,9 @@ Point LocalRandomMapping3D::Map(const HitPoint &hitPoint, Normal *shadeN) const 
 	
 	TauswortheRandomGenerator rndGen(seed);
 
-	const float xRotation = Lerp(rndGen.floatValue(), xRotationMin, xRotationMax);
-	const float yRotation = Lerp(rndGen.floatValue(), yRotationMin, yRotationMax);
-	const float zRotation = Lerp(rndGen.floatValue(), zRotationMin, zRotationMax);
+	const float xRotation = LerpWithStep(rndGen.floatValue(), xRotationMin, xRotationMax, xRotationStep);
+	const float yRotation = LerpWithStep(rndGen.floatValue(), yRotationMin, yRotationMax, yRotationStep);
+	const float zRotation = LerpWithStep(rndGen.floatValue(), zRotationMin, zRotationMax, zRotationStep);
 	
 	const float xScale = Lerp(rndGen.floatValue(), xScaleMin, xScaleMax);
 	const float yScale = uniformScale ? xScale : Lerp(rndGen.floatValue(), yScaleMin, yScaleMax);
@@ -355,9 +355,9 @@ Properties LocalRandomMapping3D::ToProperties(const string &name) const {
 			Property(name + ".seed.type")(RandomMappingSeedType2String(seedType)) <<
 			Property(name + ".triangleaov.index")(triAOVIndex) <<
 			Property(name + ".objectidoffset.value")(objectIDOffset) <<
-			Property(name + ".xrotation")(xRotationMin, xRotationMax) <<
-			Property(name + ".yrotation")(yRotationMin, yRotationMax) <<
-			Property(name + ".zrotation")(zRotationMin, zRotationMax) <<
+			Property(name + ".xrotation")(xRotationMin, xRotationMax, xRotationStep) <<
+			Property(name + ".yrotation")(yRotationMin, yRotationMax, yRotationStep) <<
+			Property(name + ".zrotation")(zRotationMin, zRotationMax, zRotationStep) <<
 			Property(name + ".xscale")(xScaleMin, xScaleMax) <<
 			Property(name + ".yscale")(yScaleMin, yScaleMax) <<
 			Property(name + ".zscale")(zScaleMin, zScaleMax) <<

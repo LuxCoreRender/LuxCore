@@ -22,6 +22,7 @@
 #if !defined(LUXCORE_DISABLE_OIDN)
 
 #include <vector>
+#include <string>
 
 #include <boost/serialization/export.hpp>
 
@@ -41,7 +42,8 @@ namespace slg {
 class IntelOIDN : public ImagePipelinePlugin {
 public:
 	IntelOIDN(const std::string filterType,
-			const int oidnMemLimit, const float sharpness);
+			const int oidnMemLimit, const float sharpness,
+			bool enablePrefiltering);
 
 	virtual ImagePipelinePlugin *Copy() const;
 
@@ -53,12 +55,19 @@ private:
 	// Used by serialization
 	IntelOIDN();
 
+	void FilterImage(const std::string &imageName,
+			const float *srcBuffer, float *dstBuffer,
+			const float *albedoBuffer, const float *normalBuffer,
+			const u_int width, const u_int height,
+			const bool cleanAux) const;
+	
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImagePipelinePlugin);
 		ar & oidnMemLimit;
 		ar & iTileCount;
 		ar & jTileCount;
 		ar & sharpness;
+		ar & enablePrefiltering;
 	}
 
 	std::string filterType;
@@ -66,12 +75,13 @@ private:
 	u_int jTileCount;
 	int oidnMemLimit; //needs to be signed int for OIDN call
 	float sharpness;
+	bool enablePrefiltering;
 };
 
 }
 
 
-BOOST_CLASS_VERSION(slg::IntelOIDN, 3)
+BOOST_CLASS_VERSION(slg::IntelOIDN, 4)
 
 BOOST_CLASS_EXPORT_KEY(slg::IntelOIDN)
 

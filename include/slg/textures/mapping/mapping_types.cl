@@ -40,7 +40,7 @@ typedef struct {
 		unsigned int triAOVIndex;
 		unsigned int objectIDOffset;
 	};
-	float uvRotationMin, uvRotationMax;
+	float uvRotationMin, uvRotationMax, uvRotationStep;
 	float uScaleMin, uScaleMax;
 	float vScaleMin, vScaleMax;
 	float uDeltaMin, uDeltaMax;
@@ -76,9 +76,9 @@ typedef struct {
 		unsigned int triAOVIndex;
 		unsigned int objectIDOffset;
 	};
-	float xRotationMin, xRotationMax;
-	float yRotationMin, yRotationMax;
-	float zRotationMin, zRotationMax;
+	float xRotationMin, xRotationMax, xRotationStep;
+	float yRotationMin, yRotationMax, yRotationStep;
+	float zRotationMin, zRotationMax, zRotationStep;
 	float xScaleMin, xScaleMax;
 	float yScaleMin, yScaleMax;
 	float zScaleMin, zScaleMax;

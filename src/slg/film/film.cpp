@@ -322,7 +322,7 @@ void Film::AddSampleCount(const u_int threadIndex,
 
 void Film::Resize(const u_int w, const u_int h) {
 	if ((w == 0) || (h == 0))
-		throw runtime_error("Film can not have 0 width or a height");
+		throw runtime_error("Film can not have 0 width or height");
 
 	width = w;
 	height = h;

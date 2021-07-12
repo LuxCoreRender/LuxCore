@@ -58,7 +58,27 @@ DisneyMaterial::DisneyMaterial(
 	filmAmount(filmAmount),
 	filmThickness(filmThickness),
 	filmIor(filmIor) {
-	glossiness = Sqr(ComputeGlossiness(Roughness));
+	UpdateGlossiness();
+}
+
+void DisneyMaterial::UpdateGlossiness() {
+	// Disney glossiness requires a very special care because he material can be
+	// matte, glossy or specular and everything in between
+
+	// I first decide if it is going to look like a glossy/specular material
+	const float metallicFitler = Metallic->Filter();
+	const float specularFitler = Specular->Filter();
+	if ((metallicFitler >= .5f) || (specularFitler >= .5f)) {
+		// I use the sqrt() because the difference between Disney microfacet model
+		// and Glossy2/Metal/etc. models
+		const float g = ComputeGlossiness(Roughness);
+		
+		if (g > 0.f)
+			glossiness = sqrt(ComputeGlossiness(Roughness));
+		else
+			glossiness = 0.f;
+	} else
+		glossiness = 1.f;
 }
 
 Spectrum DisneyMaterial::Albedo(const HitPoint &hitPoint) const {
@@ -529,7 +549,7 @@ void DisneyMaterial::UpdateTextureReferences(const Texture *oldTex, const Textur
 	if (filmIor == oldTex) filmIor = newTex;
 
 	if (updateGlossiness)
-		glossiness = Sqr(ComputeGlossiness(Roughness));
+		UpdateGlossiness();
 }
 
 void DisneyMaterial::AddReferencedTextures(boost::unordered_set<const Texture *> &referencedTexs) const {

@@ -135,6 +135,8 @@ OPENCL_FORCE_INLINE void GenerateEyePath(
 	taskState->state = MK_RT_NEXT_VERTEX;
 	VSTORE3F(WHITE, taskState->throughput.c);
 	taskState->albedoToDo = true;
+	VSTORE3F(BLACK, sampleResult->albedo.c);  // Just in case albedoToDo is never true
+	VSTORE3F(BLACK, &sampleResult->shadingNormal.x);
 	taskState->photonGICacheEnabledOnLastHit = false;
 	taskState->photonGICausticCacheUsed = false;
 	taskState->photonGIShowIndirectPathMixUsed = false;

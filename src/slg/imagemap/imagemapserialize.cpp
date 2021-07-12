@@ -32,6 +32,7 @@ template<class Archive> void ImageMapStorage::serialize(Archive &ar, const u_int
 	ar & width;
 	ar & height;
 	ar & wrapType;
+	ar & filterType;
 }
 
 namespace slg {
@@ -69,6 +70,8 @@ template<class Archive> void ImageMap::serialize(Archive &ar, const u_int versio
 	ar & pixelStorage;
 	ar & imageMean;
 	ar & imageMeanY;
+	
+	ar & instrumentationInfo;
 }
 
 namespace slg {

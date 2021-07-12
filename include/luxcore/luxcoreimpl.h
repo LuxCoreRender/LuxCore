@@ -145,9 +145,9 @@ private:
 class SceneImpl : public Scene {
 public:
 	SceneImpl(slg::Scene *scn);
-	SceneImpl(const float imageScale = 1.f);
-	SceneImpl(const luxrays::Properties &props, const float imageScale = 1.f);
-	SceneImpl(const std::string &fileName, const float imageScale = 1.f);
+	SceneImpl(const luxrays::Properties *resizePolicyProps = nullptr);
+	SceneImpl(const luxrays::Properties &props, const luxrays::Properties *resizePolicyProps = nullptr);
+	SceneImpl(const std::string &fileName,  const luxrays::Properties *resizePolicyProps = nullptr);
 	~SceneImpl();
 
 	void GetBBox(float min[3], float max[3]) const;

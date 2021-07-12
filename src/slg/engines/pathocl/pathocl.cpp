@@ -302,7 +302,7 @@ const Properties &PathOCLRenderEngine::GetDefaultProps() {
 			OCLRenderEngine::GetDefaultProps() <<
 			Property("renderengine.type")(GetObjectTag()) <<
 			PathTracer::GetDefaultProps() <<
-			Property("pathocl.pixelatomics.enable")(false) <<
+			Property("pathocl.pixelatomics.enable")(true) <<
 			Property("opencl.task.count")("AUTO") <<
 			PhotonGICache::GetDefaultProps();
 

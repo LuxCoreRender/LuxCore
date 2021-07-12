@@ -113,36 +113,44 @@ bool DataSet::HasAccelerator(const AcceleratorType accelType) const {
 const Accelerator *DataSet::GetAccelerator(const AcceleratorType accelType) {
 	boost::unordered_map<AcceleratorType, Accelerator *>::const_iterator it = accels.find(accelType);
 	if (it == accels.end()) {
-		LR_LOG(context, "Adding DataSet accelerator: " << Accelerator::AcceleratorType2String(accelType));
-		LR_LOG(context, "Total vertex count: " << totalVertexCount);
-		LR_LOG(context, "Total triangle count: " << totalTriangleCount);
+		boost::unique_lock<boost::mutex> lock(accelsMutex);
 
-		// Build the Accelerator
-		Accelerator *accel;
-		switch (accelType) {
-			case ACCEL_BVH:
-				accel = new BVHAccel(context);
-				break;
-			case ACCEL_MBVH:
-				accel = new MBVHAccel(context);
-				break;
-			case ACCEL_EMBREE:
-				accel = new EmbreeAccel(context);
-				break;
+		// Try again under mutex
+		it = accels.find(accelType);
+
+		if (it == accels.end()) {
+			LR_LOG(context, "Adding DataSet accelerator: " << Accelerator::AcceleratorType2String(accelType));
+			LR_LOG(context, "Total vertex count: " << totalVertexCount);
+			LR_LOG(context, "Total triangle count: " << totalTriangleCount);
+
+			// Build the Accelerator
+			Accelerator *accel;
+			switch (accelType) {
+				case ACCEL_BVH:
+					accel = new BVHAccel(context);
+					break;
+				case ACCEL_MBVH:
+					accel = new MBVHAccel(context);
+					break;
+				case ACCEL_EMBREE:
+					accel = new EmbreeAccel(context);
+					break;
 #if !defined(LUXRAYS_DISABLE_CUDA)
-			case ACCEL_OPTIX:
-				accel = new OptixAccel(context);
-				break;
+				case ACCEL_OPTIX:
+					accel = new OptixAccel(context);
+					break;
 #endif
-			default:
-				throw runtime_error("Unknown AcceleratorType in DataSet::AddAccelerator()");
-		}
+				default:
+					throw runtime_error("Unknown AcceleratorType in DataSet::AddAccelerator()");
+			}
 
-		accel->Init(meshes, totalVertexCount, totalTriangleCount);
+			accel->Init(meshes, totalVertexCount, totalTriangleCount);
 
-		accels[accelType] = accel;
+			accels[accelType] = accel;
 
-		return accel;
+			return accel;
+		} else
+			return it->second;
 	} else
 		return it->second;
 }

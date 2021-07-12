@@ -29,9 +29,15 @@ typedef enum {
 	WRAP_CLAMP
 } ImageWrapType;
 
+typedef enum {
+	FILTER_NEAREST,
+	FILTER_LINEAR
+} ImageFilterType;
+
 typedef struct {
 	ImageMapStorageType storageType;
 	ImageWrapType wrapType;
+	ImageFilterType filterType;
 	unsigned int channelCount, width, height;
 	unsigned int pageIndex;
 	// The following field must be 64bit aligned (for OpenCL)

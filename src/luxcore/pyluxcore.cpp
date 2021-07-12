@@ -171,7 +171,8 @@ static boost::python::list Property_Get(luxrays::Property *prop) {
 				l.append(prop->Get<bool>(i));
 				break;
 			case luxrays::PropertyValue::INT_VAL:
-				l.append(prop->Get<int>(i));
+			case luxrays::PropertyValue::LONGLONG_VAL:
+				l.append(prop->Get<long long>(i));
 				break;
 			case luxrays::PropertyValue::DOUBLE_VAL:
 				l.append(prop->Get<double>(i));
@@ -200,7 +201,7 @@ static boost::python::list Property_GetBools(luxrays::Property *prop) {
 static boost::python::list Property_GetInts(luxrays::Property *prop) {
 	boost::python::list l;
 	for (u_int i = 0; i < prop->GetSize(); ++i)
-		l.append(prop->Get<int>(i));
+		l.append(prop->Get<long long>(i));
 	return l;
 }
 
@@ -229,8 +230,8 @@ static bool Property_GetBool(luxrays::Property *prop) {
 	return prop->Get<bool>(0);
 }
 
-static int Property_GetInt(luxrays::Property *prop) {
-	return prop->Get<int>(0);
+static long long Property_GetInt(luxrays::Property *prop) {
+	return prop->Get<long long>(0);
 }
 
 static unsigned long long Property_GetUnsignedLongLong(luxrays::Property *prop) {
@@ -259,7 +260,7 @@ static luxrays::Property &Property_Add(luxrays::Property *prop, const boost::pyt
 			const bool v = extract<bool>(obj);
 			prop->Add(v);
 		} else if (objType == "int") {
-			const int v = extract<int>(obj);
+			const long long v = extract<long long>(obj);
 			prop->Add(v);
 		} else if (objType == "float") {
 			const double v = extract<double>(obj);
@@ -309,11 +310,11 @@ static luxrays::Property &Property_AddAllBool(luxrays::Property *prop,
 
 static luxrays::Property &Property_AddAllInt(luxrays::Property *prop,
 		const boost::python::object &obj) {
-	vector<int> v;
-	GetArray<int>(obj, v);
+	vector<long long> v;
+	GetArray<long long>(obj, v);
 
 	for (auto e : v)
-		prop->Add<int>(e);
+		prop->Add<long long>(e);
 
 	return *prop;
 }
@@ -353,11 +354,11 @@ static luxrays::Property &Property_AddAllBoolStride(luxrays::Property *prop,
 
 static luxrays::Property &Property_AddAllIntStride(luxrays::Property *prop,
 		const boost::python::object &obj, const u_int width, const u_int stride) {
-	vector<int> v;
-	GetArray<int>(obj, v, width, stride);
+	vector<long long> v;
+	GetArray<long long>(obj, v, width, stride);
 
 	for (auto e : v)
-		prop->Add<int>(e);
+		prop->Add<long long>(e);
 
 	return *prop;
 }
@@ -392,7 +393,7 @@ static luxrays::Property &Property_Set(luxrays::Property *prop, const u_int i,
 		const bool v = extract<bool>(obj);
 		prop->Set(i, v);
 	} else if (objType == "int") {
-		const int v = extract<int>(obj);
+		const long long v = extract<long long>(obj);
 		prop->Set(i, v);
 	} else if (objType == "float") {
 		const double v = extract<double>(obj);
@@ -421,7 +422,7 @@ static luxrays::Property &Property_Set(luxrays::Property *prop, const u_int i,
 
 			PyBuffer_Release(&view);
 		} else
-			throw runtime_error("Unable to get a data view in Property.Add() method: " + objType);
+			throw runtime_error("Unable to get a data view in Property.Set() method: " + objType);
 	} else
 		throw runtime_error("Unsupported data type used for Property.Set() method: " + objType);
 
@@ -502,7 +503,7 @@ static luxrays::Property Properties_GetWithDefaultValues(luxrays::Properties *pr
 			const bool v = extract<bool>(l[i]);
 			values.push_back(v);
 		} else if (objType == "int") {
-			const int v = extract<int>(l[i]);
+			const long long v = extract<long long>(l[i]);
 			values.push_back(v);
 		} else if (objType == "float") {
 			const double v = extract<double>(l[i]);
@@ -1745,6 +1746,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 	def("Init", &LuxCore_InitDefaultHandler);
 	def("SetLogHandler", &LuxCore_SetLogHandler);
 	def("ParseLXS", &ParseLXS);
+	def("MakeTx", &MakeTx);
 
 	def("GetPlatformDesc", &GetPlatformDesc);
 	def("GetOpenCLDeviceDescs", &GetOpenCLDeviceDescs);
@@ -1766,7 +1768,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
     class_<luxrays::Property>("Property", init<string>())
 		.def(init<string, bool>())
 		.def(init<string, double>())
-		.def(init<string, int>())
+		.def(init<string, long long>())
 		.def(init<string, string>())
 		.def("__init__", make_constructor(Property_InitWithList))
 
@@ -1778,7 +1780,7 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 
 		.def<bool (luxrays::Property::*)(const u_int) const>
 			("GetBool", &luxrays::Property::Get)
-		.def<int (luxrays::Property::*)(const u_int) const>
+		.def<long long (luxrays::Property::*)(const u_int) const>
 			("GetInt", &luxrays::Property::Get)
 		.def<double (luxrays::Property::*)(const u_int) const>
 			("GetFloat", &luxrays::Property::Get)
@@ -1976,9 +1978,10 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 	// Scene class
 	//--------------------------------------------------------------------------
 
-    class_<luxcore::detail::SceneImpl>("Scene", init<optional<float> >())
-		.def(init<luxrays::Properties, optional<float> >())
-		.def(init<string, optional<float> >())
+    class_<luxcore::detail::SceneImpl>("Scene", init<>())
+		.def(init<luxrays::Properties, luxrays::Properties *>())
+		.def(init<luxrays::Properties>())
+		.def(init<string>())
 		.def("ToProperties", &luxcore::detail::SceneImpl::ToProperties, return_internal_reference<>())
 		.def("GetCamera", &Scene_GetCamera, return_internal_reference<>())
 		.def("GetLightCount", &luxcore::detail::SceneImpl::GetLightCount)

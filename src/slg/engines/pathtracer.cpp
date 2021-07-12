@@ -386,6 +386,8 @@ void PathTracer::RenderEyePath(IntersectionDevice *device,
 	bool photonGICausticCacheUsed = false;
 	bool photonGICacheEnabledOnLastHit = false;
 	bool albedoToDo = true;
+	sampleResult.albedo = Spectrum(); // Just in case albedoToDo is never true
+	sampleResult.shadingNormal = Normal();
 	Spectrum pathThroughput(eyeTroughput);
 	BSDF bsdf;
 	for (;;) {
@@ -432,14 +434,18 @@ void PathTracer::RenderEyePath(IntersectionDevice *device,
 				sampleResult.objectID = 0;
 				sampleResult.uv = UV(numeric_limits<float>::infinity(),
 						numeric_limits<float>::infinity());
+			} else if (!sampleResult.isHoldout && pathInfo.isTransmittedPath) {
+				// I set to 0.0 also the alpha all purely transmitted paths hitting nothing
+				sampleResult.alpha = 0.f;
 			}
 			break;
 		}
 
 		// Something was hit
 
-		if (albedoToDo && bsdf.IsAlbedoEndPoint()) {
+		if (albedoToDo && bsdf.IsAlbedoEndPoint(albedoSpecularSetting, albedoSpecularGlossinessThreshold)) {
 			sampleResult.albedo = pathThroughput * bsdf.Albedo();
+			sampleResult.shadingNormal = bsdf.hitPoint.shadeN;
 			albedoToDo = false;
 		}
 
@@ -449,7 +455,6 @@ void PathTracer::RenderEyePath(IntersectionDevice *device,
 			sampleResult.depth = eyeRayHit.t;
 			sampleResult.position = bsdf.hitPoint.p;
 			sampleResult.geometryNormal = bsdf.hitPoint.geometryN;
-			sampleResult.shadingNormal = bsdf.hitPoint.shadeN;
 			sampleResult.materialID = bsdf.GetMaterialID();
 			sampleResult.objectID = bsdf.GetObjectID();
 			sampleResult.uv = bsdf.hitPoint.GetUV(0);
@@ -496,7 +501,7 @@ void PathTracer::RenderEyePath(IntersectionDevice *device,
 			} else if (photonGICache->GetDebugType() == PhotonGIDebugType::PGIC_DEBUG_SHOWCAUSTIC) {
 				if (isPhotonGIEnabled)
 					sampleResult.radiance += photonGICache->ConnectWithCausticPaths(bsdf);
-					break;
+				break;
 			} else if (photonGICache->GetDebugType() == PhotonGIDebugType::PGIC_DEBUG_SHOWINDIRECTPATHMIX) {
 				// Check if the cache is enabled for this material
 				if (isPhotonGIEnabled) {
@@ -994,6 +999,10 @@ void PathTracer::ParseOptions(const luxrays::Properties &cfg, const luxrays::Pro
 		hybridBackForwardGlossinessThreshold = Clamp(cfg.Get(defaultProps.Get("path.hybridbackforward.glossinessthreshold")).Get<float>(), 0.f, 1.f);
 	}
 
+	// Albedo AOV settings
+	albedoSpecularSetting = String2AlbedoSpecularSetting(cfg.Get(defaultProps.Get("path.albedospecular.type")).Get<string>());
+	albedoSpecularGlossinessThreshold = Max(cfg.Get(defaultProps.Get("path.albedospecular.glossinessthreshold")).Get<float>(), 0.f);
+
 	// Update eye sample size
 	eyeSampleBootSize = 5;
 	eyeSampleStepSize = 9;
@@ -1043,6 +1052,8 @@ Properties PathTracer::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("path.russianroulette.cap")) <<
 			cfg.Get(GetDefaultProps().Get("path.clamping.variance.maxvalue")) <<
 			cfg.Get(GetDefaultProps().Get("path.forceblackbackground.enable")) <<
+			cfg.Get(GetDefaultProps().Get("path.albedospecular.type")) <<
+			cfg.Get(GetDefaultProps().Get("path.albedospecular.glossinessthreshold")) <<
 			Sampler::ToProperties(cfg);
 
 	return props;
@@ -1060,7 +1071,9 @@ const Properties &PathTracer::GetDefaultProps() {
 			Property("path.russianroulette.depth")(3) <<
 			Property("path.russianroulette.cap")(.5f) <<
 			Property("path.clamping.variance.maxvalue")(0.f) <<
-			Property("path.forceblackbackground.enable")(false);
+			Property("path.forceblackbackground.enable")(false) <<
+			Property("path.albedospecular.type")("REFLECT_TRANSMIT") <<
+			Property("path.albedospecular.glossinessthreshold")(.05f);
 
 	return props;
 }

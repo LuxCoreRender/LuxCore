@@ -45,6 +45,9 @@ void CompiledScene::CompilePathTracer() {
 	compiledPathTracer.forceBlackBackground = pathTracer->forceBlackBackground;
 
 	CompilePhotonGI();
+
+	compiledPathTracer.albedo.specularSetting = (slg::ocl::AlbedoSpecularSetting)pathTracer->albedoSpecularSetting;
+	compiledPathTracer.albedo.specularGlossinessThreshold = pathTracer->albedoSpecularGlossinessThreshold;
 }
 
 #endif

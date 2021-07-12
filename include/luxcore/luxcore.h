@@ -183,6 +183,14 @@ CPP_EXPORT CPP_API luxrays::Properties GetPlatformDesc();
 CPP_EXPORT CPP_API luxrays::Properties GetOpenCLDeviceDescs();
 
 /*!
+ * \brief Convert an image file to TX format
+ *
+ * \param srcFileName defines the source image file name
+ * \param srcFileName defines the destination image file name
+ */
+CPP_EXPORT CPP_API void MakeTx(const std::string &srcFileName, const std::string &dstFileName);
+
+/*!
  * \brief Clear the list of places where to look for files.
  */
 CPP_EXPORT CPP_API void ClearFileNameResolverPaths();
@@ -759,27 +767,27 @@ public:
 	/*!
 	 * \brief Create a new empty Scene.
 	 *
-	 * \param imageScale defines the scale used for storing any kind of image in memory.
+	 * \param resizePolicyProps defines texture image maps resize policy.
 	 */
-	static Scene *Create(const float imageScale = 1.f);
+	static Scene *Create(const luxrays::Properties *resizePolicyProps = nullptr);
 	/*!
 	 * \brief Creates a new Scene as defined by props.
 	 *
 	 * \param props are the Properties used to build the new Scene.
-	 * \param imageScale defines the scale used for storing any kind of image in memory.
+	 * \param resizePolicyProps defines texture image maps resize policy.
 	 */
-	static Scene *Create(const luxrays::Properties &props, const float imageScale = 1.f);
+	static Scene *Create(const luxrays::Properties &props, const luxrays::Properties *resizePolicyProps = nullptr);
 	/*!
 	 * \brief Creates a new Scene as defined in fileName file.
 	 *
 	 * \param fileName is the name of the file with the scene description to read. It
 	 * can be a text SDL file or a serialized binary file. The extension for the
 	 * binary format must be ".bsc".
-	 * \param imageScale defines the scale used for storing any kind of image in
-	 * memory. This parameter has no effect when loading binary serialized binary
+	 * \param resizePolicyProps defines texture image maps resize policy.
+	 * This parameter has no effect when loading binary serialized binary
 	 * file.
 	 */
-	static Scene *Create(const std::string &fileName, const float imageScale = 1.f);
+	static Scene *Create(const std::string &fileName, const luxrays::Properties *resizePolicyProps = nullptr);
 
 	virtual ~Scene();
 

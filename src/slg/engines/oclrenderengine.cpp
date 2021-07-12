@@ -54,6 +54,8 @@ OCLRenderEngine::OCLRenderEngine(const RenderConfig *rcfg,
 
 	const bool useOutOfCoreMemory = cfg.Get(Property("opencl.outofcore.enable")(false)).Get<bool>();
 	ctx->SetUseOutOfCoreBuffers(useOutOfCoreMemory);
+	
+	useFilmOutOfCoreMemory = cfg.Get(Property("opencl.outofcore.film.enable")(false)).Get<bool>();
 
 	//--------------------------------------------------------------------------
 	// Get OpenCL device descriptions

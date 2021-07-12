@@ -118,7 +118,7 @@ set(OPENVDB_SRCS
 	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/Metadata.cc
 	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/MetaMap.cc
 	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/Platform.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/openvdb.cc	
+	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/openvdb.cc
 	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/io/Archive.cc
 	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/io/Compression.cc
 	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/io/DelayedLoadMetadata.cc
@@ -126,7 +126,7 @@ set(OPENVDB_SRCS
 	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/io/GridDescriptor.cc
 	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/io/Queue.cc
 	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/io/Stream.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/io/TempFile.cc	
+	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/io/TempFile.cc
 	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/math/Maps.cc
 	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/math/Proximity.cc
 	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/math/QuantizedUnitVec.cc
@@ -136,7 +136,7 @@ set(OPENVDB_SRCS
 	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/points/AttributeGroup.cc
 	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/points/AttributeSet.cc
 	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/points/points.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/points/StreamCompression.cc	
+	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/points/StreamCompression.cc
 	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/util/Formats.cc
 	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/util/Util.cc
 )
@@ -215,7 +215,7 @@ add_library(opensubdiv STATIC ${OPENSUBDIV_SRCS})
 #
 ###########################################################################
 
-set(OPENCOLORIO_SRCS	
+set(OPENCOLORIO_SRCS
 	${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/apphelpers/CategoryHelpers.cpp
 	${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/apphelpers/ColorSpaceHelpers.cpp
 	${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/apphelpers/DisplayViewHelpers.cpp
@@ -387,7 +387,7 @@ set(OPENCOLORIO_SRCS
 	${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/pystring/pystring.cpp
 )
 
-set(YAMLCPP_SRCS	
+set(YAMLCPP_SRCS
 	${LuxRays_SOURCE_DIR}/deps/yaml-cpp-0.6.3/src/binary.cpp
 	${LuxRays_SOURCE_DIR}/deps/yaml-cpp-0.6.3/src/directives.cpp
 	${LuxRays_SOURCE_DIR}/deps/yaml-cpp-0.6.3/src/emitfromevents.cpp
@@ -418,7 +418,7 @@ set(YAMLCPP_SRCS
 	${LuxRays_SOURCE_DIR}/deps/yaml-cpp-0.6.3/src/tag.cpp
 )
 
-set(EXPAT_SRCS	
+set(EXPAT_SRCS
 	${LuxRays_SOURCE_DIR}/deps/expat-2.3.0/src/xmlparse.c
 	${LuxRays_SOURCE_DIR}/deps/expat-2.3.0/src/xmlrole.c
 	${LuxRays_SOURCE_DIR}/deps/expat-2.3.0/src/xmltok.c
@@ -434,21 +434,27 @@ include_directories(${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO
 include_directories(${LuxRays_SOURCE_DIR}/deps/yaml-cpp-0.6.3/include)
 include_directories(${LuxRays_SOURCE_DIR}/deps/expat-2.3.0/src)
 
-if(NOT WIN32)
-	# "sys/random.h" not available on Windows
+if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 	add_definitions("-DHAVE_GETRANDOM")
 	add_definitions("-DUSE_SSE")
-endif(NOT WIN32)
+endif()
+
+if(APPLE)
+	add_definitions("-DHAVE_ARC4RANDOM_BUF")
+	add_definitions("-DUSE_SSE")
+endif(APPLE)
 
 if(WIN32)
 	# Prevents __declspec(dllimport) on Windows
 	add_definitions("-DOpenColorIO_SKIP_IMPORTS -DXML_STATIC")
+	add_definitions("-DUSE_SSE")
 endif(WIN32)
 
 add_library(opencolorio STATIC ${OPENCOLORIO_SRCS} ${YAMLCPP_SRCS} ${EXPAT_SRCS})
 
 if(WIN32)
-	target_compile_definitions(opencolorio PRIVATE "-D_MBCS -DUSE_SSE")
+	# OCIO 2.0.0 is the only module not supporting -D_UNICODE
+	target_compile_definitions(opencolorio PRIVATE "-D_MBCS")
 endif(WIN32)
 
 ###########################################################################
@@ -677,7 +683,14 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/imagemap/imagemap.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/imagemap/imagemapcache.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/imagemap/imagemapcacheserialize.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/imagemap/imagemapinstrum.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/imagemap/imagemapserialize.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/imagemap/resizepolicies/calcoptsize.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/imagemap/resizepolicies/fixed.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/imagemap/resizepolicies/minmem.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/imagemap/resizepolicies/mipmapmem.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/imagemap/resizepolicies/none.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/imagemap/resizepolicies/resizepolicy.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/constantinfinitelight.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/distantlight.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/lights/infinitelight.cpp
@@ -811,7 +824,7 @@ set(SLG_CORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/textures/math/power.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/math/random.cpp
     ${LuxRays_SOURCE_DIR}/src/slg/textures/math/remap.cpp
-    ${LuxRays_SOURCE_DIR}/src/slg/textures/math/rounding.cpp  
+    ${LuxRays_SOURCE_DIR}/src/slg/textures/math/rounding.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/math/scale.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/math/subtract.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/textures/normalmap.cpp
@@ -1005,6 +1018,7 @@ set(SLG_FILM_SRCS
 	${LuxRays_SOURCE_DIR}/src/slg/film/filmsamplesplatter.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filmserialize.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/filmproperties.cpp
+	${LuxRays_SOURCE_DIR}/src/slg/film/framebuffer.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/sampleresult.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/convtest/filmconvtest.cpp
 	${LuxRays_SOURCE_DIR}/src/slg/film/noiseestimation/filmnoiseestimation.cpp

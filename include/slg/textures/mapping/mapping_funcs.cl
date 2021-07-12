@@ -80,8 +80,9 @@ OPENCL_FORCE_INLINE float2 UVRandomMapping2D_MapImpl(__global const TextureMappi
 	Seed rndSeed;
 	Rnd_Init(seed, &rndSeed);
 
-	const float uvRotation = Lerp(Rnd_FloatValue(&rndSeed),
-			mapping->uvRandomMapping2D.uvRotationMin, mapping->uvRandomMapping2D.uvRotationMax);
+	const float uvRotation = LerpWithStep(Rnd_FloatValue(&rndSeed),
+			mapping->uvRandomMapping2D.uvRotationMin, mapping->uvRandomMapping2D.uvRotationMax,
+			mapping->uvRandomMapping2D.uvRotationStep);
 	const float uScale = Lerp(Rnd_FloatValue(&rndSeed),
 			mapping->uvRandomMapping2D.uScaleMin, mapping->uvRandomMapping2D.uScaleMax);
 	const float vScale = mapping->uvRandomMapping2D.uniformScale ?
@@ -238,9 +239,18 @@ OPENCL_FORCE_INLINE float3 LocalRandomMapping3D_Map(__global const TextureMappin
 	Seed rndSeed;
 	Rnd_Init(seed, &rndSeed);
 	
-	const float xRotation = Lerp(Rnd_FloatValue(&rndSeed), mapping->localRandomMapping.xRotationMin, mapping->localRandomMapping.xRotationMax);
-	const float yRotation = Lerp(Rnd_FloatValue(&rndSeed), mapping->localRandomMapping.yRotationMin, mapping->localRandomMapping.yRotationMax);
-	const float zRotation = Lerp(Rnd_FloatValue(&rndSeed), mapping->localRandomMapping.zRotationMin, mapping->localRandomMapping.zRotationMax);
+	const float xRotation = LerpWithStep(Rnd_FloatValue(&rndSeed),
+			mapping->localRandomMapping.xRotationMin,
+			mapping->localRandomMapping.xRotationMax,
+			mapping->localRandomMapping.xRotationStep);
+	const float yRotation = LerpWithStep(Rnd_FloatValue(&rndSeed),
+			mapping->localRandomMapping.yRotationMin,
+			mapping->localRandomMapping.yRotationMax,
+			mapping->localRandomMapping.yRotationStep);
+	const float zRotation = LerpWithStep(Rnd_FloatValue(&rndSeed),
+			mapping->localRandomMapping.zRotationMin,
+			mapping->localRandomMapping.zRotationMax,
+			mapping->localRandomMapping.yRotationStep);
 	
 	const float xScale = Lerp(Rnd_FloatValue(&rndSeed), mapping->localRandomMapping.xScaleMin, mapping->localRandomMapping.xScaleMax);
 	const bool uniformScale = mapping->localRandomMapping.uniformScale;

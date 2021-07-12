@@ -78,9 +78,9 @@ class SampleResult;
 class Scene {
 public:
 	// Constructor used to create a scene by calling methods
-	Scene(const float imageScale = 1.f);
+	Scene(const luxrays::Properties *resizePolicyProps = nullptr);
 	// Constructor used to create a scene from properties
-	Scene(const luxrays::Properties &scnProp, const float imageScale = 1.f);
+	Scene(const luxrays::Properties &scnProps, const luxrays::Properties *resizePolicyProps = nullptr);
 	~Scene();
 
 	bool Intersect(luxrays::IntersectionDevice *device, const SceneRayType rayType, PathVolumeInfo *volInfo,
@@ -189,7 +189,7 @@ public:
 private:
 	ColorSpaceConverters colorSpaceConv;
 
-	void Init(const float imageScale);
+	void Init(const luxrays::Properties *resizePolicyProps);
 
 	void ParseCamera(const luxrays::Properties &props);
 	void ParseTextures(const luxrays::Properties &props);

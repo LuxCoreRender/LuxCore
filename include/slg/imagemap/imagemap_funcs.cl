@@ -358,29 +358,44 @@ OPENCL_FORCE_NOT_INLINE float ImageMap_GetFloat(__global const ImageMap *imageMa
 	const uint height = imageMap->height;
 	const ImageWrapType wrapType = imageMap->wrapType;
 
-	const float s = u * width - .5f;
-	const float t = v * height - .5f;
+	switch (imageMap->filterType) {
+		case FILTER_NEAREST: {
+			const float s = u * width;
+			const float t = v * height;
 
-	const int s0 = Floor2Int(s);
-	const int t0 = Floor2Int(t);
+			const int s0 = Floor2Int(s);
+			const int t0 = Floor2Int(t);
 
-	const float ds = s - s0;
-	const float dt = t - t0;
+			return ImageMap_GetTexel_Float(storageType, pixels, width, height, channelCount, wrapType, s0, t0);
+		}
+		case FILTER_LINEAR: {
+			const float s = u * width - .5f;
+			const float t = v * height - .5f;
 
-	const float ids = 1.f - ds;
-	const float idt = 1.f - dt;
+			const int s0 = Floor2Int(s);
+			const int t0 = Floor2Int(t);
 
-	const float c0 = ImageMap_GetTexel_Float(storageType, pixels, width, height, channelCount, wrapType, s0, t0);
-	const float c1 = ImageMap_GetTexel_Float(storageType, pixels, width, height, channelCount, wrapType, s0, t0 + 1);
-	const float c2 = ImageMap_GetTexel_Float(storageType, pixels, width, height, channelCount, wrapType, s0 + 1, t0);
-	const float c3 = ImageMap_GetTexel_Float(storageType, pixels, width, height, channelCount, wrapType, s0 + 1, t0 + 1);
+			const float ds = s - s0;
+			const float dt = t - t0;
 
-	const float k0 = ids * idt;
-	const float k1 = ids * dt;
-	const float k2 = ds * idt;
-	const float k3 = ds * dt;
+			const float ids = 1.f - ds;
+			const float idt = 1.f - dt;
 
-	return (k0 * c0 + k1 *c1 + k2 * c2 + k3 * c3);
+			const float c0 = ImageMap_GetTexel_Float(storageType, pixels, width, height, channelCount, wrapType, s0, t0);
+			const float c1 = ImageMap_GetTexel_Float(storageType, pixels, width, height, channelCount, wrapType, s0, t0 + 1);
+			const float c2 = ImageMap_GetTexel_Float(storageType, pixels, width, height, channelCount, wrapType, s0 + 1, t0);
+			const float c3 = ImageMap_GetTexel_Float(storageType, pixels, width, height, channelCount, wrapType, s0 + 1, t0 + 1);
+
+			const float k0 = ids * idt;
+			const float k1 = ids * dt;
+			const float k2 = ds * idt;
+			const float k3 = ds * dt;
+
+			return (k0 * c0 + k1 * c1 + k2 * c2 + k3 * c3);
+		}
+		default:
+			return 0.f;
+	}
 }
 
 OPENCL_FORCE_NOT_INLINE float3 ImageMap_GetSpectrum(__global const ImageMap *imageMap,
@@ -394,29 +409,44 @@ OPENCL_FORCE_NOT_INLINE float3 ImageMap_GetSpectrum(__global const ImageMap *ima
 	const uint height = imageMap->height;
 	const ImageWrapType wrapType = imageMap->wrapType;
 
-	const float s = u * width - .5f;
-	const float t = v * height - .5f;
+	switch (imageMap->filterType) {
+		case FILTER_NEAREST: {
+			const float s = u * width;
+			const float t = v * height;
 
-	const int s0 = Floor2Int(s);
-	const int t0 = Floor2Int(t);
+			const int s0 = Floor2Int(s);
+			const int t0 = Floor2Int(t);
 
-	const float ds = s - s0;
-	const float dt = t - t0;
+			return ImageMap_GetTexel_Spectrum(storageType, pixels, width, height, channelCount, wrapType, s0, t0);
+		}
+		case FILTER_LINEAR: {
+			const float s = u * width - .5f;
+			const float t = v * height - .5f;
 
-	const float ids = 1.f - ds;
-	const float idt = 1.f - dt;
+			const int s0 = Floor2Int(s);
+			const int t0 = Floor2Int(t);
 
-	const float3 c0 = ImageMap_GetTexel_Spectrum(storageType, pixels, width, height, channelCount, wrapType, s0, t0);
-	const float3 c1 = ImageMap_GetTexel_Spectrum(storageType, pixels, width, height, channelCount, wrapType, s0, t0 + 1);
-	const float3 c2 = ImageMap_GetTexel_Spectrum(storageType, pixels, width, height, channelCount, wrapType, s0 + 1, t0);
-	const float3 c3 = ImageMap_GetTexel_Spectrum(storageType, pixels, width, height, channelCount, wrapType, s0 + 1, t0 + 1);
+			const float ds = s - s0;
+			const float dt = t - t0;
 
-	const float k0 = ids * idt;
-	const float k1 = ids * dt;
-	const float k2 = ds * idt;
-	const float k3 = ds * dt;
+			const float ids = 1.f - ds;
+			const float idt = 1.f - dt;
 
-	return (k0 * c0 + k1 *c1 + k2 * c2 + k3 * c3);
+			const float3 c0 = ImageMap_GetTexel_Spectrum(storageType, pixels, width, height, channelCount, wrapType, s0, t0);
+			const float3 c1 = ImageMap_GetTexel_Spectrum(storageType, pixels, width, height, channelCount, wrapType, s0, t0 + 1);
+			const float3 c2 = ImageMap_GetTexel_Spectrum(storageType, pixels, width, height, channelCount, wrapType, s0 + 1, t0);
+			const float3 c3 = ImageMap_GetTexel_Spectrum(storageType, pixels, width, height, channelCount, wrapType, s0 + 1, t0 + 1);
+
+			const float k0 = ids * idt;
+			const float k1 = ids * dt;
+			const float k2 = ds * idt;
+			const float k3 = ds * dt;
+
+			return (k0 * c0 + k1 * c1 + k2 * c2 + k3 * c3);
+		}
+		default:
+			return BLACK;
+	}
 }
 
 OPENCL_FORCE_NOT_INLINE float2 ImageMap_GetDuv(__global const ImageMap *imageMap,

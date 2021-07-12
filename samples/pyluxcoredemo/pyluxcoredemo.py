@@ -42,6 +42,12 @@ def Clock():
 
 def PropertiesTests():
 	print("Properties examples...")
+	prop = pyluxcore.Property("test1.prop1", 0)
+	prop.Set(0, 3705339624)
+
+	prop = pyluxcore.Property("test1.prop1", 3705339624)
+	print("test1.prop1 => %s\n" % prop.GetInt(0))
+
 	prop = pyluxcore.Property("test1.prop1", "aa")
 	print("test1.prop1 => %s\n" % prop.GetString(0))
 
@@ -357,6 +363,14 @@ def StrandsRender():
 		""")
 	
 	# Create the scene
+	#resizePolicyProps = pyluxcore.Properties()
+	#resizePolicyProps.SetFromString("""
+	#	scene.images.resizepolicy.type = "MIPMAPMEM"
+	#	scene.images.resizepolicy.scale = 1.0
+	#	scene.images.resizepolicy.minsize = 64
+	#	""")
+	#scene = pyluxcore.Scene(scnProps, resizePolicyProps)
+
 	scene = pyluxcore.Scene()
 	scene.Parse(scnProps)
 
@@ -664,15 +678,15 @@ def main():
 	print("LuxCore %s" % pyluxcore.Version())
 	#print("OS:", os.name)
 	
-	PropertiesTests()
-	LuxRaysDeviceTests()
-	SimpleRender()
-	GetOutputTest()
-	ExtractConfiguration()
+	#PropertiesTests()
+	#LuxRaysDeviceTests()
+	#SimpleRender()
+	#GetOutputTest()
+	#ExtractConfiguration()
 	StrandsRender()
-	ImagePipelineEdit()
-	SaveResumeRenderingM()
-	SaveResumeRenderingS()
+	#ImagePipelineEdit()
+	#SaveResumeRenderingM()
+	#SaveResumeRenderingS()
 
 	#if (os.name == "posix"):
 	#	print("Max. memory usage:", resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)

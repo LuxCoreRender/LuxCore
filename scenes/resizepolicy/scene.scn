@@ -1,0 +1,123 @@
+scene.camera.cliphither = 0.1
+scene.camera.clipyon = 100
+scene.camera.shutteropen = 0
+scene.camera.shutterclose = 1
+scene.camera.autovolume.enable = 1
+scene.camera.lookat.orig = 0 -10 0
+scene.camera.lookat.target = 0 -9 4.371139e-08
+scene.camera.up = 0 -4.371139e-08 1
+scene.camera.screenwindow = -1 1 -0.5625 0.5625
+scene.camera.lensradius = 0
+scene.camera.focaldistance = 10
+scene.camera.autofocus.enable = 0
+scene.camera.type = "perspective"
+scene.camera.oculusrift.barrelpostpro.enable = 0
+scene.camera.fieldofview = 39.59776
+scene.camera.bokeh.blades = 0
+scene.camera.bokeh.power = 3
+scene.camera.bokeh.distribution.type = "NONE"
+scene.camera.bokeh.scale.x = 0.7071068
+scene.camera.bokeh.scale.y = 0.7071068
+scene.lights.__WORLD_BACKGROUND_LIGHT__.gain = 2e-05 2e-05 2e-05
+scene.lights.__WORLD_BACKGROUND_LIGHT__.transformation = 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1
+scene.lights.__WORLD_BACKGROUND_LIGHT__.id = 0
+scene.lights.__WORLD_BACKGROUND_LIGHT__.temperature = -1
+scene.lights.__WORLD_BACKGROUND_LIGHT__.temperature.normalize = 0
+scene.lights.__WORLD_BACKGROUND_LIGHT__.visibility.indirect.diffuse.enable = 1
+scene.lights.__WORLD_BACKGROUND_LIGHT__.visibility.indirect.glossy.enable = 1
+scene.lights.__WORLD_BACKGROUND_LIGHT__.visibility.indirect.specular.enable = 1
+scene.lights.__WORLD_BACKGROUND_LIGHT__.type = "sky2"
+scene.lights.__WORLD_BACKGROUND_LIGHT__.dir = 0 0 1
+scene.lights.__WORLD_BACKGROUND_LIGHT__.turbidity = 2.2
+scene.lights.__WORLD_BACKGROUND_LIGHT__.groundalbedo = 0 0 0
+scene.lights.__WORLD_BACKGROUND_LIGHT__.ground.enable = 0
+scene.lights.__WORLD_BACKGROUND_LIGHT__.ground.color = 0.75 0.75 0.75
+scene.lights.__WORLD_BACKGROUND_LIGHT__.ground.autoscale = 1
+scene.lights.__WORLD_BACKGROUND_LIGHT__.distribution.width = 512
+scene.lights.__WORLD_BACKGROUND_LIGHT__.distribution.height = 256
+scene.lights.__WORLD_BACKGROUND_LIGHT__.visibilitymapcache.enable = 0
+scene.lights.140707944747016.gain = 2e-05 2e-05 2e-05
+scene.lights.140707944747016.transformation = 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1
+scene.lights.140707944747016.id = 0
+scene.lights.140707944747016.temperature = -1
+scene.lights.140707944747016.temperature.normalize = 0
+scene.lights.140707944747016.visibility.indirect.diffuse.enable = 1
+scene.lights.140707944747016.visibility.indirect.glossy.enable = 1
+scene.lights.140707944747016.visibility.indirect.specular.enable = 1
+scene.lights.140707944747016.type = "sun"
+scene.lights.140707944747016.dir = -0.2029078 -0.503131 0.8400521
+scene.lights.140707944747016.turbidity = 2.2
+scene.lights.140707944747016.relsize = 1
+##
+scene.textures.140707097861640Color.type = "imagemap"
+scene.textures.140707097861640Color.file = "scenes/randomizedtiling/pattern-3.jpg"
+scene.textures.140707097861640Color.gain = 1
+scene.textures.140707097861640Color.colorspace = "nop"
+scene.textures.140707097861640Color.storage = "byte"
+scene.textures.140707097861640Color.mapping.type = "uvmapping2d"
+scene.textures.140707097861640Color.mapping.uvindex = 0
+scene.textures.140707097861640Color.mapping.rotation = 0
+scene.textures.140707097861640Color.mapping.uvscale = 1 -1
+scene.textures.140707097861640Color.mapping.uvdelta = 0 1
+scene.textures.140707097861640Color.randomizedtiling.enable = 0
+#scene.textures.140707097861640Color.filter = linear
+##
+scene.textures.140707101904392Color.type = "imagemap"
+scene.textures.140707101904392Color.file = "scenes/randomizedtiling/pattern-7.jpg"
+scene.textures.140707101904392Color.gain = 1
+scene.textures.140707101904392Color.colorspace = "nop"
+scene.textures.140707101904392Color.storage = "byte"
+scene.textures.140707101904392Color.mapping.type = "uvmapping2d"
+scene.textures.140707101904392Color.mapping.uvindex = 0
+scene.textures.140707101904392Color.mapping.rotation = 0
+scene.textures.140707101904392Color.mapping.uvscale = 1 -1
+scene.textures.140707101904392Color.mapping.uvdelta = 0 1
+scene.textures.140707101904392Color.randomizedtiling.enable = 0
+##
+scene.textures.140707106223624Color.type = "imagemap"
+scene.textures.140707106223624Color.file = "scenes/randomizedtiling/pattern-9.jpg"
+scene.textures.140707106223624Color.gain = 1
+scene.textures.140707106223624Color.colorspace = "nop"
+scene.textures.140707106223624Color.storage = "byte"
+scene.textures.140707106223624Color.mapping.type = "uvmapping2d"
+scene.textures.140707106223624Color.mapping.uvindex = 0
+scene.textures.140707106223624Color.mapping.rotation = 0
+scene.textures.140707106223624Color.mapping.uvscale = 1 -1
+scene.textures.140707106223624Color.mapping.uvdelta = 0 1
+scene.textures.140707106223624Color.randomizedtiling.enable = 0
+##
+scene.materials.Material__001140708169907080.type = "matte"
+scene.materials.Material__001140708169907080.kd = "140707097861640Color"
+##
+scene.materials.Material__002140705337791112.type = "matte"
+scene.materials.Material__002140705337791112.kd = "140707101904392Color"
+##
+scene.materials.Material__003140705337784968.type = "matte"
+scene.materials.Material__003140705337784968.kd = "140707106223624Color"
+##
+scene.materials.glass.type = glass
+scene.materials.glass.kr = 0.9 0.9 0.9
+scene.materials.glass.kt = 0.9 0.9 0.9
+scene.materials.glass.exteriorior = 1.0
+scene.materials.glass.interiorior = 1.45
+##
+scene.objects.1407055512355920.material = "Material__001140708169907080"
+scene.objects.1407055512355920.ply = "mesh-00000.ply"
+scene.objects.1407055512355920.camerainvisible = 0
+scene.objects.1407055512355920.id = 3772660237
+scene.objects.1407055512355920.appliedtransformation = 1 2.220446e-16 -2.220446e-16 0 2.220446e-16 7.54979e-08 1 0 2.220446e-16 -1 7.54979e-08 0 -2.5 0 0 1
+##
+scene.objects.1407071029458000.material = "Material__002140705337791112"
+scene.objects.1407071029458000.ply = "mesh-00001.ply"
+scene.objects.1407071029458000.camerainvisible = 0
+scene.objects.1407071029458000.id = 149862629
+scene.objects.1407071029458000.appliedtransformation = 1 2.220446e-16 -2.220446e-16 0 2.220446e-16 7.54979e-08 1 0 2.220446e-16 -1 7.54979e-08 0 1 10 0 1
+##
+scene.objects.1407071029575760.material = "Material__003140705337784968"
+scene.objects.1407071029575760.ply = "mesh-00002.ply"
+scene.objects.1407071029575760.camerainvisible = 0
+scene.objects.1407071029575760.id = 2438528163
+scene.objects.1407071029575760.appliedtransformation = 1 2.220446e-16 -2.220446e-16 0 2.220446e-16 7.54979e-08 1 0 2.220446e-16 -1 7.54979e-08 0 9 30 0 1
+##
+scene.objects.sphere.material = glass
+scene.objects.sphere.ply = "sphere.ply"
