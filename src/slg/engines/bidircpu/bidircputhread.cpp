@@ -19,6 +19,9 @@
 // NOTE: this is code is heavily based on Tomas Davidovic's SmallVCM
 // (http://www.davidovic.cz and http://www.smallvcm.com)
 
+#include <boost/format.hpp>
+#include <boost/function.hpp>
+
 #include "luxrays/utils/thread.h"
 
 #include "slg/engines/bidircpu/bidircpu.h"
@@ -45,6 +48,169 @@ const Film::FilmChannels BiDirCPURenderThread::lightSampleResultsChannels({
 BiDirCPURenderThread::BiDirCPURenderThread(BiDirCPURenderEngine *engine,
 		const u_int index, IntersectionDevice *device) :
 		CPUNoTileRenderThread(engine, index, device) {
+}
+
+void BiDirCPURenderThread::AOVWarmUp(RandomGenerator *rndGen) {
+	if (threadIndex == 0)
+		SLG_LOG("[BiDirCPURenderThread::" << threadIndex << "] AOV warmup started");
+	
+	const double start = WallClockTime();
+	double lastProgressPrint = start;
+		
+	BiDirCPURenderEngine *engine = (BiDirCPURenderEngine *)renderEngine;
+	Scene *scene = engine->renderConfig->scene;
+	Camera *camera = scene->camera;
+
+	SobolSampler sampler(rndGen, engine->film, engine->sampleSplatter, true, 0.f, 0.f,
+		16, 16, 1, 1,
+		engine->aovWarmupSamplerSharedData);
+
+	// Request the samples
+	const u_int sampleBootSize = 5;
+	const u_int sampleStepSize = 3;
+	const u_int sampleSize = 
+		sampleBootSize + // To generate eye ray
+		engine->maxEyePathDepth * sampleStepSize; // For each path vertex
+	sampler.RequestSamples(ONLY_AOV_SAMPLE, sampleSize);
+
+	// Initialize SampleResult 
+	vector<SampleResult> sampleResults(1);
+	SampleResult &sampleResult = sampleResults[0];
+	const Film::FilmChannels sampleResultsChannels({
+		Film::ALBEDO, Film::AVG_SHADING_NORMAL
+	});
+
+	sampleResult.Init(&sampleResultsChannels, engine->film->GetRadianceGroupCount());
+
+	// Initialize the max. path depth
+	PathDepthInfo maxPathDepthInfo;
+	maxPathDepthInfo.depth = engine->maxEyePathDepth;
+	maxPathDepthInfo.diffuseDepth = engine->maxEyePathDepth;
+	maxPathDepthInfo.glossyDepth = engine->maxEyePathDepth;
+	maxPathDepthInfo.specularDepth = engine->maxEyePathDepth;
+
+	while (sampler.GetPassCount() < engine->aovWarmupSPP) {
+		if (boost::this_thread::interruption_requested())
+			return;
+
+		sampleResult.filmX = sampler.GetSample(0);
+		sampleResult.filmY = sampler.GetSample(1);
+
+		const float timeSample = sampler.GetSample(4);
+		const float time = scene->camera->GenerateRayTime(timeSample);
+
+		Ray eyeRay;
+		PathVolumeInfo volInfo;
+		camera->GenerateRay(time,
+				sampleResult.filmX, sampleResult.filmY, &eyeRay,
+				&volInfo, sampler.GetSample(2), sampler.GetSample(3));
+
+		sampleResult.albedo = Spectrum(); // Just in case albedoToDo is never true
+		sampleResult.shadingNormal = Normal();
+
+		Spectrum pathThroughput(1.f);
+		u_int depth = 0;
+		BSDF bsdf;
+		while (depth < engine->maxEyePathDepth) {
+			sampleResult.firstPathVertex = (depth == 0);
+
+			const u_int sampleOffset = sampleBootSize + depth * sampleStepSize;
+
+			// NOTE: I account for volume emission only with path tracing (i.e. here and
+			// not in any other place)
+			RayHit eyeRayHit;
+			Spectrum connectionThroughput;
+			const bool hit = scene->Intersect(device,
+					EYE_RAY | (sampleResult.firstPathVertex ? CAMERA_RAY : INDIRECT_RAY),
+					&volInfo, sampler.GetSample(sampleOffset),
+					&eyeRay, &eyeRayHit, &bsdf,
+					&connectionThroughput, &pathThroughput, &sampleResult);
+			pathThroughput *= connectionThroughput;
+
+			if (!hit) {
+				// Nothing was hit
+				break;
+			}
+
+			//------------------------------------------------------------------
+			// Something was hit
+			//------------------------------------------------------------------
+
+			if (bsdf.IsAlbedoEndPoint(engine->albedoSpecularSetting,
+					engine->albedoSpecularGlossinessThreshold)) {
+				sampleResult.albedo = pathThroughput * bsdf.Albedo();
+				sampleResult.shadingNormal = bsdf.hitPoint.shadeN;
+				break;
+			}
+
+			// Check if I reached the max. depth
+			if (depth == engine->maxEyePathDepth)
+				break;
+
+			//------------------------------------------------------------------
+			// Build the next vertex path ray
+			//------------------------------------------------------------------
+
+			Vector sampledDir;
+			float cosSampledDir, lastPdfW;
+			BSDFEvent lastBSDFEvent;
+			const Spectrum bsdfSample = bsdf.Sample(&sampledDir,
+						sampler.GetSample(sampleOffset + 1),
+						sampler.GetSample(sampleOffset + 2),
+						&lastPdfW, &cosSampledDir, &lastBSDFEvent);
+
+			assert (!bsdfSample.IsNaN() && !bsdfSample.IsInf());
+			if (bsdfSample.Black())
+				break;
+			assert (!isnan(lastPdfW) && !isinf(lastPdfW));
+
+			pathThroughput *= bsdfSample;
+			assert (!pathThroughput.IsNaN() && !pathThroughput.IsInf());
+
+			// Update volume information
+			volInfo.Update(lastBSDFEvent, bsdf);
+
+			eyeRay.Update(bsdf.GetRayOrigin(sampledDir), sampledDir);
+		}
+
+		sampler.NextSample(sampleResults);
+
+		if (threadIndex == 0) {
+			const double end = WallClockTime();
+			const double delta = end - lastProgressPrint;
+
+			if (delta > 2.0) {
+				const u_int *filmSubRegion = engine->film->GetSubRegion();
+				const u_int subRegionWidth = filmSubRegion[1] - filmSubRegion[0] + 1;
+				const u_int subRegionHeight = filmSubRegion[3] - filmSubRegion[2] + 1;
+
+				const double samplesSec = sampler.GetPassCount() * (double)(subRegionWidth * subRegionHeight) / (1000000.0 * (end -start));
+
+				SLG_LOG("[BiDirCPURenderThread::" << threadIndex << "] AOV warmup progress: " <<
+						sampler.GetPassCount() << "/" << engine->aovWarmupSPP << " pass"
+						" (" << boost::str(boost::format("%3.2fM") % samplesSec) << " samples/sec)");
+				
+				lastProgressPrint = WallClockTime();
+			}
+		}
+#ifdef WIN32
+		// Work around Windows bad scheduling
+		renderThread->yield();
+#endif
+	}
+	
+	if (threadIndex == 0) {
+		const double end = WallClockTime();
+		
+		const u_int *filmSubRegion = engine->film->GetSubRegion();
+		const u_int subRegionWidth = filmSubRegion[1] - filmSubRegion[0] + 1;
+		const u_int subRegionHeight = filmSubRegion[3] - filmSubRegion[2] + 1;
+		
+		const double samplesSec = engine->aovWarmupSPP * (double)(subRegionWidth * subRegionHeight) / (1000000.0 * (end -start));
+		
+		SLG_LOG("[BiDirCPURenderThread::" << threadIndex << "] AOV warmup done: " <<
+				boost::str(boost::format("%3.2fM") % samplesSec) << " samples/sec");
+	}
 }
 
 SampleResult &BiDirCPURenderThread::AddResult(vector<SampleResult> &sampleResults, const bool fromLight) const {
@@ -551,6 +717,10 @@ void BiDirCPURenderThread::RenderFunc() {
 	Camera *camera = scene->camera;
 	PhotonGICache *photonGICache = engine->photonGICache;
 
+	// Albedo and Normal AOV warm up
+	if (engine->aovWarmupSPP > 0)
+		AOVWarmUp(rndGen);
+	
 	// Setup the sampler
 	Sampler *sampler = engine->renderConfig->AllocSampler(rndGen, engine->film, engine->sampleSplatter,
 			engine->samplerSharedData, Properties());

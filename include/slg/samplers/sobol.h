@@ -46,6 +46,8 @@ public:
 	void GetNewBucket(const u_int bucketCount, u_int *bucketIndex, u_int *seed);
 	u_int GetNewPixelPass(const u_int pixelIndex = 0);
 	
+	u_int GetPassCount(const u_int bucketCount) const;
+	
 	static SamplerSharedData *FromProperties(const luxrays::Properties &cfg,
 			luxrays::RandomGenerator *rndGen, Film *film);
 
@@ -84,6 +86,8 @@ public:
 	virtual void NextSample(const std::vector<SampleResult> &sampleResults);
 
 	virtual luxrays::Properties ToProperties() const;
+
+	u_int GetPassCount() const;
 
 	//--------------------------------------------------------------------------
 	// Static methods used by SamplerRegistry

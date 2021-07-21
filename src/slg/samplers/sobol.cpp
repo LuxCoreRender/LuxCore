@@ -70,6 +70,10 @@ u_int SobolSamplerSharedData::GetNewPixelPass(const u_int pixelIndex) {
 	return AtomicInc(&passPerPixel[pixelIndex]);
 }
 
+u_int SobolSamplerSharedData::GetPassCount(const u_int bucketCount) const {
+	return bucketIndex / bucketCount;
+}
+
 SamplerSharedData *SobolSamplerSharedData::FromProperties(const Properties &cfg,
 		RandomGenerator *rndGen, Film *film) {
 	return new SobolSamplerSharedData(rndGen, film);
@@ -236,29 +240,44 @@ float SobolSampler::GetSample(const u_int index) {
 
 void SobolSampler::NextSample(const vector<SampleResult> &sampleResults) {
 	if (film) {
-		double pixelNormalizedCount, screenNormalizedCount;
 		switch (sampleType) {
 			case PIXEL_NORMALIZED_ONLY:
-				pixelNormalizedCount = 1.0;
-				screenNormalizedCount = 0.0;
+				film->AddSampleCount(threadIndex, 1.0, 0.0);
 				break;
 			case SCREEN_NORMALIZED_ONLY:
-				pixelNormalizedCount = 0.0;
-				screenNormalizedCount = 1.0;
+				film->AddSampleCount(threadIndex, 0.0, 1.0);
 				break;
 			case PIXEL_NORMALIZED_AND_SCREEN_NORMALIZED:
-				pixelNormalizedCount = 1.0;
-				screenNormalizedCount = 1.0;
+				film->AddSampleCount(threadIndex, 1.0, 1.0);
+				break;
+			case ONLY_AOV_SAMPLE:
 				break;
 			default:
 				throw runtime_error("Unknown sample type in SobolSampler::NextSample(): " + ToString(sampleType));
 		}
-		film->AddSampleCount(threadIndex, pixelNormalizedCount, screenNormalizedCount);
 
 		AtomicAddSamplesToFilm(sampleResults);
 	}
 
 	InitNewSample();
+}
+
+u_int SobolSampler::GetPassCount() const {
+	const bool doImageSamples = (imageSamplesEnable && film);
+	if (!doImageSamples)
+		throw runtime_error("Called SobolSampler::GetPassCount() without sampling an image");
+	
+	const u_int *filmSubRegion = film->GetSubRegion();
+
+	const u_int subRegionWidth = filmSubRegion[1] - filmSubRegion[0] + 1;
+	const u_int subRegionHeight = filmSubRegion[3] - filmSubRegion[2] + 1;
+
+	const u_int tiletWidthCount = (subRegionWidth + tileSize - 1) / tileSize;
+	const u_int tileHeightCount = (subRegionHeight + tileSize - 1) / tileSize;
+
+	const u_int bucketCount = overlapping * (tiletWidthCount * tileSize * tileHeightCount * tileSize + bucketSize - 1) / bucketSize;
+
+	return sharedData->GetPassCount(bucketCount);
 }
 
 Properties SobolSampler::ToProperties() const {

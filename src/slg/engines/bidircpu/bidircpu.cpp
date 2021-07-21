@@ -18,7 +18,7 @@
 
 #include "slg/engines/bidircpu/bidircpu.h"
 #include "slg/engines/bidircpu/bidircpurenderstate.h"
-#include "slg/samplers/random.h"
+#include "slg/samplers/sobol.h"
 
 using namespace luxrays;
 using namespace slg;
@@ -37,10 +37,13 @@ BiDirCPURenderEngine::BiDirCPURenderEngine(const RenderConfig *rcfg) :
 	lightPathsCount = 1;
 	baseRadius = 0.f;
 	radiusAlpha = 0.f;
+
+	aovWarmupSamplerSharedData = nullptr;
 }
 
 BiDirCPURenderEngine::~BiDirCPURenderEngine() {
 	delete photonGICache;
+	delete aovWarmupSamplerSharedData;
 }
 
 RenderState *BiDirCPURenderEngine::GetRenderState() {
@@ -117,6 +120,16 @@ void BiDirCPURenderEngine::StartLockLess() {
 		if (photonGICache)
 			photonGICache->Preprocess(renderThreads.size());
 	}
+	
+	//--------------------------------------------------------------------------
+	// Albedo and Normal AOV warm up settings
+	//--------------------------------------------------------------------------
+
+	aovWarmupSPP = Max(0u, cfg.Get(GetDefaultProps().Get("path.aovs.warmup.spp")).Get<u_int>());
+	if (!film->HasChannel(Film::ALBEDO) && !film->HasChannel(Film::AVG_SHADING_NORMAL))
+		aovWarmupSPP = 0;
+	if (aovWarmupSPP > 0)
+		aovWarmupSamplerSharedData = new SobolSamplerSharedData(seedBaseGenerator.uintValue(), film);
 
 	//--------------------------------------------------------------------------
 
@@ -153,6 +166,7 @@ Properties BiDirCPURenderEngine::ToProperties(const Properties &cfg) {
 			cfg.Get(GetDefaultProps().Get("renderengine.type")) <<
 			cfg.Get(GetDefaultProps().Get("path.maxdepth")) <<
 			cfg.Get(GetDefaultProps().Get("light.maxdepth")) <<
+			cfg.Get(GetDefaultProps().Get("path.aovs.warmup.spp")) <<
 			cfg.Get(GetDefaultProps().Get("path.russianroulette.depth")) <<
 			cfg.Get(GetDefaultProps().Get("path.russianroulette.cap")) <<
 			cfg.Get(GetDefaultProps().Get("path.clamping.variance.maxvalue")) <<
@@ -172,6 +186,7 @@ const Properties &BiDirCPURenderEngine::GetDefaultProps() {
 			Property("renderengine.type")(GetObjectTag()) <<
 			Property("path.maxdepth")(5) <<
 			Property("light.maxdepth")(5) <<
+			Property("path.aovs.warmup.spp")(0) <<
 			Property("path.russianroulette.depth")(3) <<
 			Property("path.russianroulette.cap")(.5f) <<
 			Property("path.clamping.variance.maxvalue")(0.f) <<
