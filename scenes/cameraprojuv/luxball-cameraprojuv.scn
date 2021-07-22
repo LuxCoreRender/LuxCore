@@ -1,0 +1,68 @@
+scene.camera.lookat.orig = 0.5 -1.4 1.7
+scene.camera.lookat.target = 0.0 0.0 0.4
+################################################################################
+scene.volumes.volglass.type = clear
+scene.volumes.volglass.absorption = 0.1 0.1 0.1
+scene.volumes.volglass.ior = 1.45
+################################################################################
+scene.materials.shell.type = matte
+scene.materials.shell.kd = 0.75 0.0 0.0
+##
+#scene.materials.shell.type = roughmatte
+#scene.materials.shell.kd = 0.75 0.0 0.0
+#scene.materials.shell.sigma = 0.75
+##
+scene.materials.shell.type = glass
+scene.materials.shell.kr = 0.69 0.78 1.0
+scene.materials.shell.kt = 0.69 0.78 1.0
+#scene.materials.shell.exteriorior = 1.0
+#scene.materials.shell.interiorior = 1.45
+scene.materials.shell.volume.interior = volglass
+##
+#scene.materials.shell.type = archglass
+#scene.materials.shell.kr = 0.29 0.48 0.7
+#scene.materials.shell.kt = 0.29 0.48 0.7
+#scene.materials.shell.exteriorior = 1.0
+#scene.materials.shell.interiorior = 1.45
+##
+#scene.materials.shell.type = roughglass
+#scene.materials.shell.kr = 0.69 0.78 1.0
+#scene.materials.shell.kt = 0.69 0.78 1.0
+#scene.materials.shell.exteriorior = 1.0
+#scene.materials.shell.interiorior = 1.45
+#scene.materials.shell.uroughness = 0.01
+#scene.materials.shell.vroughness = 0.03
+##
+#scene.materials.shell.type = mattetranslucent
+#scene.materials.shell.kr = 0.6 0.0 0.0
+#scene.materials.shell.kt = 0.9 0.0 0.0
+##
+#scene.materials.shell.type = mirror
+#scene.materials.shell.kr = 0.9 0.0 0.0
+##
+#scene.materials.shell.type = null
+##
+scene.materials.whitematte.type = matte
+scene.materials.whitematte.kd = 0.75 0.75 0.75
+scene.materials.luxtext.type = matte
+scene.materials.luxtext.kd = 0.0 0.0 0.75
+scene.materials.blacktext.type = matte
+scene.materials.blacktext.kd = 0.0 0.0 0.0
+scene.materials.whitematte.type = matte
+scene.materials.whitematte.kd = 0.75 0.75 0.75
+scene.materials.whitelight.type = matte
+scene.materials.whitelight.emission = 40.0 40.0 40.0
+scene.materials.whitelight.visibility.indirect.diffuse.enable = 1
+scene.materials.whitelight.visibility.indirect.glossy.enable = 1
+scene.materials.whitelight.visibility.indirect.specular.enable = 1
+################################################################################
+scene.objects.room.ply = scenes/luxball/room.ply
+scene.objects.room.material = whitematte
+scene.objects.luxshell.ply = scenes/luxball/cube-shell.ply
+scene.objects.luxshell.material = shell
+scene.objects.blacktext.ply = scenes/luxball/blacktext.ply
+scene.objects.blacktext.material = blacktext
+scene.objects.l1.ply = scenes/luxball/luxball-light1.ply
+scene.objects.l1.material = whitelight
+scene.objects.l2.ply = scenes/luxball/luxball-light2.ply
+scene.objects.l2.material = whitelight
