@@ -16,8 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_BEVELSHAPE_H
-#define	_SLG_BEVELSHAPE_H
+#ifndef _SLG_CAMERAPROJUV_H
+#define	_SLG_CAMERAPROJUV_H
 
 #include <string>
 
@@ -25,16 +25,17 @@
 
 namespace slg {
 
-class BevelShape : public Shape {
+class CameraProjUVShape : public Shape {
 public:
-	BevelShape(luxrays::ExtTriangleMesh *mesh, const float bevelRadius);
-	virtual ~BevelShape();
+	CameraProjUVShape(luxrays::ExtTriangleMesh *mesh, const u_int uvIndex);
+	virtual ~CameraProjUVShape();
 
-	virtual ShapeType GetType() const { return BEVEL; }
+	virtual ShapeType GetType() const { return CAMERAPROJUV; }
 	
 protected:
 	virtual luxrays::ExtTriangleMesh *RefineImpl(const Scene *scene);
 
+	const u_int uvIndex;
 	luxrays::ExtTriangleMesh *mesh;
 };
 

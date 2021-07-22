@@ -153,6 +153,8 @@ public:
 		delete[] vertAOV[dataIndex];
 		vertAOV[dataIndex] = nullptr;
 	}
+	float *GetVertexAOVs(const u_int dataIndex) const { return vertAOV[dataIndex]; }
+
 	void SetTriAOV(const u_int dataIndex, float *values) {
 		triAOV[dataIndex] = values;
 	}
@@ -160,15 +162,37 @@ public:
 		delete[] triAOV[dataIndex];
 		triAOV[dataIndex] = nullptr;
 	}
+	float *GetTriAOVs(const u_int dataIndex) const { return triAOV[dataIndex]; }
 
 	Normal *GetNormals() const { return normals; }
 	Normal *GetTriNormals() const { return triNormals; }
 
+	void SetUVs(const u_int dataIndex, UV *data) {
+		uvs[dataIndex] = data;
+	}
+	void DeleteUVs(const u_int dataIndex) {
+		delete [] uvs[dataIndex];
+		uvs[dataIndex] = nullptr;
+	}
 	UV *GetUVs(const u_int dataIndex) const { return uvs[dataIndex]; }
+
+	void SetColors(const u_int dataIndex, Spectrum *data) {
+		cols[dataIndex] = data;
+	}
+	void DeleteColors(const u_int dataIndex) {
+		delete [] cols[dataIndex];
+		cols[dataIndex] = nullptr;
+	}
 	Spectrum *GetColors(const u_int dataIndex) const { return cols[dataIndex]; }
+
+	void SetAlphas(const u_int dataIndex, float *data) {
+		alphas[dataIndex] = data;
+	}
+	void DeleteAlphas(const u_int dataIndex) {
+		delete [] alphas[dataIndex];
+		alphas[dataIndex] = nullptr;
+	}
 	float *GetAlphas(const u_int dataIndex) const { return alphas[dataIndex]; }
-	float *GetVertexAOVs(const u_int dataIndex) const { return vertAOV[dataIndex]; }
-	float *GetTriAOVs(const u_int dataIndex) const { return triAOV[dataIndex]; }
 
 	const std::array<UV *, EXTMESH_MAX_DATA_COUNT> &GetAllUVs() const { return uvs; }
 	const std::array<Spectrum *, EXTMESH_MAX_DATA_COUNT> &GetAllColors() const { return cols; }

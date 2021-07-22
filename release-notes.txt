@@ -37,6 +37,7 @@
 * Avg. Shading Normal AOV is now coherent with Albedo AOV reflections and transmissions settings
 * Intel OIDN plugin now pre-filters Avg. Shading Normal AOV too
 * Added the support for Albedo and Normal AOV warmup for improved denoising with BIDIRCPU
+* Added the support for camera projection UV shape
 
 ### Fixed Bugs
 

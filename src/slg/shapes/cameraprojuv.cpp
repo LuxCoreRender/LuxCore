@@ -17,22 +17,55 @@
  ***************************************************************************/
 
 #include "luxrays/core/exttrianglemesh.h"
-#include "slg/shapes/bevelshape.h"
+#include "slg/shapes/cameraprojuv.h"
 #include "slg/scene/scene.h"
+#include "slg/cameras/camera.h"
 
 using namespace std;
 using namespace luxrays;
 using namespace slg;
 
-BevelShape::BevelShape(ExtTriangleMesh *m, const float bevelRadius) {
-	mesh = m->Copy(bevelRadius);
+CameraProjUVShape::CameraProjUVShape(ExtTriangleMesh *m, const u_int index) :
+		uvIndex(index) {
+	mesh = m->Copy();
 }
 
-BevelShape::~BevelShape() {
+CameraProjUVShape::~CameraProjUVShape() {
 	if (!refined)
 		delete mesh;
 }
 
-ExtTriangleMesh *BevelShape::RefineImpl(const Scene *scene) {
+ExtTriangleMesh *CameraProjUVShape::RefineImpl(const Scene *scene) {
+	SDL_LOG("CameraProjUV shape " << mesh->GetName());
+
+	const u_int vertCount = mesh->GetTotalVertexCount();
+	SDL_LOG("CameraProjUV shape has " << vertCount << " vertices");
+
+	const Camera *camera = scene->camera;
+
+	UV *uvs = new UV[vertCount];
+	const float invFilmWidth = 1.f / camera->filmWidth;
+	const float invFilmHeight = 1.f / camera->filmHeight;
+
+#pragma omp parallel for
+	for (
+			// Visual C++ 2013 supports only OpenMP 2.5
+#if _OPENMP >= 200805
+			unsigned
+#endif
+			int i = 0; i < vertCount; ++i) {
+		const Point p = mesh->GetVertex(Transform::TRANS_IDENTITY, i);
+
+		float filmX = 0.f;
+		float filmY = 0.f;
+		camera->GetSamplePosition(p, &filmX, &filmY);
+		uvs[i].u = filmX * invFilmWidth;
+		uvs[i].v = filmY * invFilmHeight;
+	}
+	
+	if (mesh->HasUVs(uvIndex))
+		mesh->DeleteUVs(uvIndex);
+	mesh->SetUVs(uvIndex, uvs);
+	
 	return mesh;
 }
