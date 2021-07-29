@@ -53,7 +53,7 @@ ImageMap *DensityGridTexture::ParseData(const luxrays::Property &dataProp,
 	const u_int channelCount = isRGB ? 3 : 1;
 	unique_ptr<ImageMap> imgMap(ImageMap::AllocImageMap(channelCount, nx, ny * nz,
 			ImageMapConfig(1.f,
-				storageType,
+				(storageType == ImageMapStorage::AUTO) ? ImageMapStorage::HALF : storageType,
 				wrapMode,
 				ImageMapStorage::ChannelSelectionType::DEFAULT)));
 
