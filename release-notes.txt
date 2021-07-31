@@ -50,6 +50,7 @@
 * Fixed a problem with incorrect alpha AOV values (issue #536)
 * Fixed a problem when using Add/Subtract textures with bump mapping (issue #689)
 * GlossyCoating is now a delta material if the base material is
+* Fixed a crash when editing light source emission
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.

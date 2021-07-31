@@ -118,31 +118,31 @@ void LightSourceDefinitions::DeleteLightSource(const string &name) {
 
 void LightSourceDefinitions::DeleteLightSourceStartWith(const string &namePrefix) {
 	// Build the list of lights to delete
-	vector<const string *> nameList;
+	vector<string> nameList;
 	for (auto const &e : lightsByName) {
 		const string &name = e.first;
 
 		if (boost::starts_with(name, namePrefix))
-			nameList.push_back(&name);
+			nameList.push_back(name);
 	}
 
-	for (auto const name : nameList)
-		DeleteLightSource(*name);
+	for (auto const &name : nameList)
+		DeleteLightSource(name);
 }
 
 void LightSourceDefinitions::DeleteLightSourceByMaterial(const Material *mat) {
 	// Build the list of lights to delete
-	vector<const string *> nameList;
+	vector<string> nameList;
 	for (auto const &e : lightsByName) {
 		const string &name = e.first;
 		const LightSource *l = e.second;
 
 		if ((l->GetType() == TYPE_TRIANGLE) && (((const TriangleLight *)l)->lightMaterial == mat))
-			nameList.push_back(&name);
+			nameList.push_back(name);
 	}
 
-	BOOST_FOREACH(const string *name, nameList)
-		DeleteLightSource(*name);
+	for (auto const &name : nameList)
+		DeleteLightSource(name);
 }
 
 void LightSourceDefinitions::SetLightStrategy(const luxrays::Properties &props) {
