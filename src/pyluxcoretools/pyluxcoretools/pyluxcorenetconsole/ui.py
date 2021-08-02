@@ -24,6 +24,10 @@ import logging
 import functools
 import socket
 
+# For some unknown reason, I need to import pyluxcore before PySide2 or
+# it will break streams and parsing in an unpredictable way
+import pyluxcore
+
 try:
 	import PySide.QtCore as QtCore
 	import PySide.QtGui as QtGui
@@ -33,7 +37,6 @@ except ImportError:
 	from PySide2 import QtGui, QtCore, QtWidgets
 	PYSIDE2 = True
 
-import pyluxcore
 import pyluxcoretools.renderfarm.renderfarm as renderfarm
 import pyluxcoretools.renderfarm.renderfarmjobsingleimage as jobsingleimage
 import pyluxcoretools.utils.loghandler as loghandler
