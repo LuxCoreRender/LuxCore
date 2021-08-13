@@ -74,6 +74,8 @@ protected:
 
 	virtual boost::thread *AllocRenderThread() { return new boost::thread(&BiDirCPURenderThread::RenderFunc, this); }
 
+	void AOVWarmUp(luxrays::RandomGenerator *rndGen);
+	
 	SampleResult &AddResult(std::vector<SampleResult> &sampleResults, const bool fromLight) const;
 	void RenderFunc();
 
@@ -109,6 +111,8 @@ protected:
 	static const Film::FilmChannels lightSampleResultsChannels;
 };
 
+class SobolSamplerSharedData;
+
 class BiDirCPURenderEngine : public CPUNoTileRenderEngine {
 public:
 	BiDirCPURenderEngine(const RenderConfig *cfg);
@@ -142,6 +146,10 @@ public:
 	// Clamping settings
 	float sqrtVarianceClampMaxValue;
 
+	// Albedo AOV settings
+	AlbedoSpecularSetting albedoSpecularSetting;
+	float albedoSpecularGlossinessThreshold;
+
 	bool forceBlackBackground;
 
 	friend class BiDirCPURenderThread;
@@ -155,6 +163,9 @@ protected:
 
 	FilmSampleSplatter *sampleSplatter;
 	PhotonGICache *photonGICache;
+
+	u_int aovWarmupSPP;
+	SobolSamplerSharedData *aovWarmupSamplerSharedData;
 
 private:
 	CPURenderThread *NewRenderThread(const u_int index, luxrays::IntersectionDevice *device) {

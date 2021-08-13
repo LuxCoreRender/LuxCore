@@ -19,6 +19,10 @@
  ***************************************************************************/
 
 typedef enum {
+	NO_REFLECT_TRANSMIT, ONLY_REFLECT, ONLY_TRANSMIT, REFLECT_TRANSMIT
+} AlbedoSpecularSetting;
+
+typedef enum {
 	NONE = 0,
 	DIFFUSE = 1,
 	GLOSSY = 2,

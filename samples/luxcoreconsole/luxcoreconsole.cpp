@@ -42,11 +42,12 @@ static string GetFileNameExt(const string &fileName) {
 	return boost::algorithm::to_lower_copy(boost::filesystem::path(fileName).extension().string());
 }
 
-static void BatchRendering(RenderConfig *config, RenderState *startState, Film *startFilm) {
+static void BatchRendering(RenderConfig *config, RenderState *startState, Film *startFilm,
+		const bool showDevicesStats) {
 	RenderSession *session = RenderSession::Create(config, startState, startFilm);
 
 	const unsigned int haltTime = config->GetProperty("batch.halttime").Get<unsigned int>();
-	const unsigned int haltSpp = config->GetProperty("batch.haltspp").Get<unsigned int>();
+	const unsigned int haltSpp = config->GetProperty("batch.haltspp").Get<unsigned int>(0);
 
 	// Start the rendering
 	session->Start();
@@ -66,6 +67,35 @@ static void BatchRendering(RenderConfig *config, RenderState *startState, Film *
 				int(elapsedTime) % int(haltTime) % pass % haltSpp % (100.f * convergence) %
 				(stats.Get("stats.renderengine.total.samplesec").Get<double>() / 1000000.0) %
 				(stats.Get("stats.dataset.trianglecount").Get<double>() / 1000.0)));
+		
+		if (showDevicesStats) {
+			// Intersection devices
+			const Property &deviceNames = stats.Get("stats.renderengine.devices");
+
+			double minPerf = numeric_limits<double>::infinity();
+			double totalPerf = 0.0;
+			for (unsigned int i = 0; i < deviceNames.GetSize(); ++i) {
+				const string deviceName = deviceNames.Get<string>(i);
+
+				const double perf = stats.Get("stats.renderengine.devices." + deviceName + ".performance.total").Get<double>();
+				minPerf = Min(minPerf, perf);
+				totalPerf += perf;
+			}
+
+			for (unsigned int i = 0; i < deviceNames.GetSize(); ++i) {
+				const string deviceName = deviceNames.Get<string>(i);
+
+				LC_LOG(boost::str(boost::format("  %s: [Rays/sec %dK (%dK + %dK)][Prf Idx %.2f][Wrkld %.1f%%][Mem %dM/%dM]") %
+						deviceName %
+						int(stats.Get("stats.renderengine.devices." + deviceName + ".performance.total").Get<double>() / 1000.0) %
+						int(stats.Get("stats.renderengine.devices." + deviceName + ".performance.serial").Get<double>() / 1000.0) %
+						int(stats.Get("stats.renderengine.devices." + deviceName + ".performance.dataparallel").Get<double>() / 1000.0) %
+						(stats.Get("stats.renderengine.devices." + deviceName + ".performance.total").Get<double>() / minPerf) %
+						(100.0 * stats.Get("stats.renderengine.devices." + deviceName + ".performance.total").Get<double>() / totalPerf) %
+						int(stats.Get("stats.renderengine.devices." + deviceName + ".memory.used").Get<double>() / (1024 * 1024)) %
+						int(stats.Get("stats.renderengine.devices." + deviceName + ".memory.total").Get<double>() / (1024 * 1024))));
+			}
+		}
 	}
 
 	// Stop the rendering
@@ -89,6 +119,7 @@ int main(int argc, char *argv[]) {
 		luxcore::Init();
 
 		bool removeUnused = false;
+		bool showDevicesStats = false;
 		Properties cmdLineProp;
 		string configFileName;
 		for (int i = 1; i < argc; i++) {
@@ -104,6 +135,7 @@ int main(int argc, char *argv[]) {
 							" -D [property name] [property value]" << endl <<
 							" -d [current directory path]" << endl <<
 							" -c <remove all unused meshes, materials, textures and image maps>" << endl <<
+							" -s" << endl <<
 							" -h <display this help and exit>");
 					exit(EXIT_SUCCESS);
 				}
@@ -128,6 +160,8 @@ int main(int argc, char *argv[]) {
 				else if (argv[i][1] == 'd') boost::filesystem::current_path(boost::filesystem::path(argv[++i]));
 
 				else if (argv[i][1] == 'c') removeUnused = true;
+				
+				else if (argv[i][1] == 's') showDevicesStats = true;
 
 				else {
 					LC_LOG("Invalid option: " << argv[i]);
@@ -212,7 +246,7 @@ int main(int argc, char *argv[]) {
 			config->Parse(Properties().Set(Property("screen.refresh.interval")(2500)));
 		}
 		
-		BatchRendering(config, startRenderState, startFilm);
+		BatchRendering(config, startRenderState, startFilm, showDevicesStats);
 
 		delete config;
 		delete scene;

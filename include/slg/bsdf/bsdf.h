@@ -39,6 +39,13 @@ namespace ocl {
 #include "slg/bsdf/bsdf_types.cl"
 }
 
+typedef enum {
+	NO_REFLECT_TRANSMIT, ONLY_REFLECT, ONLY_TRANSMIT, REFLECT_TRANSMIT
+} AlbedoSpecularSetting;
+
+extern AlbedoSpecularSetting String2AlbedoSpecularSetting(const std::string &type);
+extern const std::string AlbedoSpecularSetting2String(const AlbedoSpecularSetting type);
+
 class Scene;
 
 class BSDF {
@@ -105,7 +112,8 @@ public:
 	bool IsVolume() const { return dynamic_cast<const Volume *>(material) != NULL; }
 	bool IsPhotonGIEnabled() const { return material->IsPhotonGIEnabled(); }
 	bool IsHoldout() const { return material->IsHoldout(); }
-	bool IsAlbedoEndPoint() const;
+	bool IsAlbedoEndPoint(const AlbedoSpecularSetting albedoSpecularSetting,
+		const float albedoSpecularGlossinessThreshold) const;
 	u_int GetObjectID() const;
 	const std::string &GetMaterialName() const;
 	u_int GetMaterialID() const { return material->GetID(); }

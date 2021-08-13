@@ -39,6 +39,7 @@
 #include "slg/shapes/randomtriangleaovshape.h"
 #include "slg/shapes/edgedetectoraov.h"
 #include "slg/shapes/bevelshape.h"
+#include "slg/shapes/cameraprojuv.h"
 
 using namespace std;
 using namespace luxrays;
@@ -311,7 +312,7 @@ ExtTriangleMesh *Scene::CreateShape(const string &shapeName, const Properties &p
 
 		params.scale = props.Get(Property(propName + ".scale")(1.f)).Get<float>();
 		params.offset = props.Get(Property(propName + ".offset")(0.f)).Get<float>();
-		params.uvIndex = props.Get(Property(propName + ".uvindex")(0)).Get<u_int>();
+		params.uvIndex = Clamp(props.Get(Property(propName + ".uvindex")(0)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
 		params.normalSmooth = props.Get(Property(propName + ".normalsmooth")(true)).Get<bool>();
 
 		shape = new DisplacementShape((ExtTriangleMesh *)extMeshCache.GetExtMesh(sourceMeshName),
@@ -378,6 +379,14 @@ ExtTriangleMesh *Scene::CreateShape(const string &shapeName, const Properties &p
 		const float geometryBevel = props.Get(Property(propName + ".bevel.radius")(0.f)).Get<float>();
 
 		shape = new BevelShape((ExtTriangleMesh *)extMeshCache.GetExtMesh(sourceMeshName), geometryBevel);
+	} else if (shapeType == "cameraprojuv") {
+		const string sourceMeshName = props.Get(Property(propName + ".source")("")).Get<string>();
+		if (!extMeshCache.IsExtMeshDefined(sourceMeshName))
+			throw runtime_error("Unknown shape name in a cameraprojuv shape: " + shapeName);
+
+		const u_int uvIndex = Clamp(props.Get(Property(propName + ".uvindex")(0)).Get<u_int>(), 0u, EXTMESH_MAX_DATA_COUNT);
+
+		shape = new CameraProjUVShape((ExtTriangleMesh *)extMeshCache.GetExtMesh(sourceMeshName), uvIndex);
 	} else
 		throw runtime_error("Unknown shape type: " + shapeType);
 

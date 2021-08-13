@@ -35,33 +35,35 @@ using namespace slg;
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::IntelOIDN)
 
-IntelOIDN::IntelOIDN(const string ft, const int m, const float s) {
+IntelOIDN::IntelOIDN(const string ft, const int m, const float s, const bool pref) {
 	filterType = ft;
 	oidnMemLimit = m;
 	sharpness = s;
+	enablePrefiltering = pref;
 }
 
 IntelOIDN::IntelOIDN() {
 	filterType = "RT";
 	oidnMemLimit = 6000;
 	sharpness = 0.f;
+	enablePrefiltering = true;
 }
 
 ImagePipelinePlugin *IntelOIDN::Copy() const {
-	return new IntelOIDN(filterType, oidnMemLimit, sharpness);
+	return new IntelOIDN(filterType, oidnMemLimit, sharpness, enablePrefiltering);
 }
 
 void IntelOIDN::FilterImage(const string &imageName,
 		const float *srcBuffer, float *dstBuffer,
 		const float *albedoBuffer, const float *normalBuffer,
-		const u_int width, const u_int height) const {
+		const u_int width, const u_int height, const bool cleanAux) const {
     oidn::DeviceRef device = oidn::newDevice();
     device.commit();
 
     oidn::FilterRef filter = device.newFilter(filterType.c_str());
 
     filter.set("hdr", true);
-	filter.set("cleanAux", true);
+	filter.set("cleanAux", cleanAux);
 	filter.set("maxMemoryMB", oidnMemLimit);
     filter.setImage("color", (float *)srcBuffer, oidn::Format::Float3, width, height);
     if (albedoBuffer) {	
@@ -107,13 +109,15 @@ void IntelOIDN::Apply(Film &film, const u_int index) {
 		
 		//GenericFrameBuffer<3, 0, float>::SaveHDR("debug-albedo0.exr", albedoBuffer, width, height);
 
-		vector<float> albedoBufferTmp(3 * pixelCount);
-		FilterImage("Albedo", &albedoBuffer[0], &albedoBufferTmp[0],
-			nullptr, nullptr, width, height);
-		for (u_int i = 0; i < albedoBuffer.size(); ++i)
-			albedoBuffer[i] = albedoBufferTmp[i];
+		if (enablePrefiltering) {
+			vector<float> albedoBufferTmp(3 * pixelCount);
+			FilterImage("Albedo", &albedoBuffer[0], &albedoBufferTmp[0],
+				nullptr, nullptr, width, height, false);
+			for (u_int i = 0; i < albedoBuffer.size(); ++i)
+				albedoBuffer[i] = albedoBufferTmp[i];
 
-		//GenericFrameBuffer<3, 0, float>::SaveHDR("debug-albedo1.exr", albedoBuffer, width, height);
+			//GenericFrameBuffer<3, 0, float>::SaveHDR("debug-albedo1.exr", albedoBuffer, width, height);
+		}
 
         // Normals can only be used if albedo is supplied as well
         if (film.HasChannel(Film::AVG_SHADING_NORMAL)) {
@@ -121,7 +125,17 @@ void IntelOIDN::Apply(Film &film, const u_int index) {
             for (u_int i = 0; i < pixelCount; ++i)
                 film.channel_AVG_SHADING_NORMAL->GetWeightedPixel(i, &normalBuffer[i * 3]);
 			
-			//GenericFrameBuffer<3, 0, float>::SaveHDR("debug-normal.exr", normalBuffer, width, height);
+				//GenericFrameBuffer<3, 0, float>::SaveHDR("debug-normal.exr", normalBuffer, width, height);
+
+				if (enablePrefiltering) {
+					vector<float> normalBufferTmp(3 * pixelCount);
+					FilterImage("Normal", &normalBuffer[0], &normalBufferTmp[0],
+						nullptr, nullptr, width, height, false);
+					for (u_int i = 0; i < normalBuffer.size(); ++i)
+						normalBuffer[i] = normalBufferTmp[i];
+
+					//GenericFrameBuffer<3, 0, float>::SaveHDR("debug-normal1.exr", normalBuffer, width, height);
+				}
         } else
             SLG_LOG("[IntelOIDNPlugin] Warning: AVG_SHADING_NORMAL AOV not found");
     } else
@@ -130,7 +144,7 @@ void IntelOIDN::Apply(Film &film, const u_int index) {
 	FilterImage("Image Pipeline", (float *)pixels, &outputBuffer[0],
 			(albedoBuffer.size() > 0) ? &albedoBuffer[0] : nullptr,
 			(normalBuffer.size() > 0) ? &normalBuffer[0] : nullptr,
-			width, height);
+			width, height, enablePrefiltering);
 
     SLG_LOG("IntelOIDNPlugin copying output buffer");
     for (u_int i = 0; i < pixelCount; ++i) {

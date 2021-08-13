@@ -183,6 +183,14 @@ CPP_EXPORT CPP_API luxrays::Properties GetPlatformDesc();
 CPP_EXPORT CPP_API luxrays::Properties GetOpenCLDeviceDescs();
 
 /*!
+ * \brief Convert an image file to TX format
+ *
+ * \param srcFileName defines the source image file name
+ * \param srcFileName defines the destination image file name
+ */
+CPP_EXPORT CPP_API void MakeTx(const std::string &srcFileName, const std::string &dstFileName);
+
+/*!
  * \brief Clear the list of places where to look for files.
  */
 CPP_EXPORT CPP_API void ClearFileNameResolverPaths();

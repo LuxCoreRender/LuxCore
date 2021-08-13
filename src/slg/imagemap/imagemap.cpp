@@ -27,8 +27,8 @@
 #include <OpenColorIO/OpenColorIO.h>
 namespace OCIO = OCIO_NAMESPACE;
 
-#include <OpenImageIO/imagebufalgo.h>
 #include <OpenImageIO/imagebuf.h>
+#include <OpenImageIO/imagebufalgo.h>
 #include <OpenImageIO/dassert.h>
 
 #include "luxrays/utils/properties.h"
@@ -218,10 +218,12 @@ template<> inline const ImageMapPixel<float, 4> *ImageMapPixel<float, 4>::GetBla
 // ImageMapStorage
 //------------------------------------------------------------------------------
 
-ImageMapStorage::ImageMapStorage(const u_int w, const u_int h, const WrapType wm) {
+ImageMapStorage::ImageMapStorage(const u_int w, const u_int h, const WrapType wm,
+		const FilterType ft) {
 	width = w;
 	height = h;
 	wrapType = wm;
+	filterType = ft;
 }
 
 ImageMapStorage::StorageType ImageMapStorage::String2StorageType(const string &type) {
@@ -278,6 +280,26 @@ string ImageMapStorage::WrapType2String(const WrapType type) {
 	}
 }
 
+ImageMapStorage::FilterType ImageMapStorage::String2FilterType(const string &type) {
+	if (type == "nearest")
+		return ImageMapStorage::NEAREST;
+	else if (type == "linear")
+		return ImageMapStorage::LINEAR;
+	else
+		throw runtime_error("Unknown filter type: " + type);
+}
+
+string ImageMapStorage::FilterType2String(const FilterType type) {
+	switch (type) {
+		case ImageMapStorage::NEAREST:
+			return "nearest";
+		case ImageMapStorage::LINEAR:
+			return "linear";
+		default:
+			throw runtime_error("Unsupported wrap type in ImageMapStorage::FilterType2String(): " + ToString(type));
+	}
+}
+
 ImageMapStorage::ChannelSelectionType ImageMapStorage::String2ChannelSelectionType(
 		const string &type) {
 	if (type == "default")
@@ -323,22 +345,37 @@ void ImageMapStorageImpl<T, CHANNELS>::SetAlpha(const u_int index, const float v
 
 template <class T, u_int CHANNELS>
 float ImageMapStorageImpl<T, CHANNELS>::GetFloat(const UV &uv) const {
-	const float s = uv.u * width - .5f;
-	const float t = uv.v * height - .5f;
+	switch (filterType) {
+		case NEAREST: {
+			const float s = uv.u * width;
+			const float t = uv.v * height;
 
-	const int s0 = Floor2Int(s);
-	const int t0 = Floor2Int(t);
+			const int s0 = Floor2Int(s);
+			const int t0 = Floor2Int(t);
 
-	const float ds = s - s0;
-	const float dt = t - t0;
+			return GetTexel(s0, t0)->GetFloat();
+		}
+		case LINEAR: {
+			const float s = uv.u * width - .5f;
+			const float t = uv.v * height - .5f;
 
-	const float ids = 1.f - ds;
-	const float idt = 1.f - dt;
+			const int s0 = Floor2Int(s);
+			const int t0 = Floor2Int(t);
 
-	return ids * idt * GetTexel(s0, t0)->GetFloat() +
-			ids * dt * GetTexel(s0, t0 + 1)->GetFloat() +
-			ds * idt * GetTexel(s0 + 1, t0)->GetFloat() +
-			ds * dt * GetTexel(s0 + 1, t0 + 1)->GetFloat();
+			const float ds = s - s0;
+			const float dt = t - t0;
+
+			const float ids = 1.f - ds;
+			const float idt = 1.f - dt;
+
+			return ids * idt * GetTexel(s0, t0)->GetFloat() +
+					ids * dt * GetTexel(s0, t0 + 1)->GetFloat() +
+					ds * idt * GetTexel(s0 + 1, t0)->GetFloat() +
+					ds * dt * GetTexel(s0 + 1, t0 + 1)->GetFloat();
+		}
+		default:
+			throw runtime_error("Unknown filter mode in ImageMapStorageImpl<T, CHANNELS>::GetFloat(): " + ToString(filterType));
+	}
 }
 
 template <class T, u_int CHANNELS>
@@ -351,22 +388,37 @@ float ImageMapStorageImpl<T, CHANNELS>::GetFloat(const u_int index) const {
 
 template <class T, u_int CHANNELS>
 Spectrum ImageMapStorageImpl<T, CHANNELS>::GetSpectrum(const UV &uv) const {
-	const float s = uv.u * width - .5f;
-	const float t = uv.v * height - .5f;
+	switch (filterType) {
+		case NEAREST: {
+			const float s = uv.u * width;
+			const float t = uv.v * height;
 
-	const int s0 = Floor2Int(s);
-	const int t0 = Floor2Int(t);
+			const int s0 = Floor2Int(s);
+			const int t0 = Floor2Int(t);
 
-	const float ds = s - s0;
-	const float dt = t - t0;
+			return GetTexel(s0, t0)->GetSpectrum();
+		}
+		case LINEAR: {
+			const float s = uv.u * width - .5f;
+			const float t = uv.v * height - .5f;
 
-	const float ids = 1.f - ds;
-	const float idt = 1.f - dt;
+			const int s0 = Floor2Int(s);
+			const int t0 = Floor2Int(t);
 
-	return ids * idt * GetTexel(s0, t0)->GetSpectrum() +
-			ids * dt * GetTexel(s0, t0 + 1)->GetSpectrum() +
-			ds * idt * GetTexel(s0 + 1, t0)->GetSpectrum() +
-			ds * dt * GetTexel(s0 + 1, t0 + 1)->GetSpectrum();
+			const float ds = s - s0;
+			const float dt = t - t0;
+
+			const float ids = 1.f - ds;
+			const float idt = 1.f - dt;
+
+			return ids * idt * GetTexel(s0, t0)->GetSpectrum() +
+					ids * dt * GetTexel(s0, t0 + 1)->GetSpectrum() +
+					ds * idt * GetTexel(s0 + 1, t0)->GetSpectrum() +
+					ds * dt * GetTexel(s0 + 1, t0 + 1)->GetSpectrum();
+		}
+		default:
+			throw runtime_error("Unknown filter mode in ImageMapStorageImpl<T, CHANNELS>::GetSpectrum(): " + ToString(filterType));
+	}
 }
 
 template <class T, u_int CHANNELS>
@@ -512,7 +564,7 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::Copy() const {
 		dst++;
 	}
 
-	return new ImageMapStorageImpl<T, CHANNELS>(newPixels.release(), width, height, wrapType);
+	return new ImageMapStorageImpl<T, CHANNELS>(newPixels.release(), width, height, wrapType, filterType);
 }
 
 template <class T, u_int CHANNELS>
@@ -548,7 +600,7 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 					dst++;
 				}
 
-				return new ImageMapStorageImpl<T, 1>(newPixels.release(), width, height, wrapType);
+				return new ImageMapStorageImpl<T, 1>(newPixels.release(), width, height, wrapType, filterType);
 			} else {
 				unique_ptr<ImageMapPixel<T, 1>[]> newPixels(new ImageMapPixel<T, 1>[pixelCount]);
 
@@ -563,7 +615,7 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 					dst++;
 				}
 
-				return new ImageMapStorageImpl<T, 1>(newPixels.release(), width, height, wrapType);
+				return new ImageMapStorageImpl<T, 1>(newPixels.release(), width, height, wrapType, filterType);
 			}
 		}
 		case ImageMapStorage::MEAN:
@@ -585,7 +637,7 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 					dst++;
 				}
 
-				return new ImageMapStorageImpl<T, 1>(newPixels.release(), width, height, wrapType);
+				return new ImageMapStorageImpl<T, 1>(newPixels.release(), width, height, wrapType, filterType);
 			} else {
 				unique_ptr<ImageMapPixel<T, 1>[]> newPixels(new ImageMapPixel<T, 1>[pixelCount]);
 
@@ -608,7 +660,7 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 					}
 				}
 
-				return new ImageMapStorageImpl<T, 1>(newPixels.release(), width, height, wrapType);
+				return new ImageMapStorageImpl<T, 1>(newPixels.release(), width, height, wrapType, filterType);
 			}
 		}
 		case ImageMapStorage::RGB: {
@@ -628,7 +680,7 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 					dst++;
 				}
 
-				return new ImageMapStorageImpl<T, 3>(newPixels.release(), width, height, wrapType);
+				return new ImageMapStorageImpl<T, 3>(newPixels.release(), width, height, wrapType, filterType);
 			}
 		}
 		case ImageMapStorage::DIRECTX2OPENGL_NORMALMAP: {
@@ -653,7 +705,7 @@ ImageMapStorage *ImageMapStorageImpl<T, CHANNELS>::SelectChannel(const ChannelSe
 					dst++;
 				}
 
-				return new ImageMapStorageImpl<T, 3>(newPixels.release(), width, height, wrapType);
+				return new ImageMapStorageImpl<T, 3>(newPixels.release(), width, height, wrapType, filterType);
 			}
 		}
 		default:
@@ -669,24 +721,29 @@ ImageMapConfig::ImageMapConfig() : colorSpaceCfg(1.f) {
 	storageType = ImageMapStorage::StorageType::FLOAT;
 	wrapType = ImageMapStorage::WrapType::REPEAT;
 	selectionType = ImageMapStorage::ChannelSelectionType::DEFAULT;
+	filterType = ImageMapStorage::LINEAR;
 }
 
 ImageMapConfig::ImageMapConfig(const float gamma,
-			const ImageMapStorage::StorageType store,
-			const ImageMapStorage::WrapType wrap,
-			const ImageMapStorage::ChannelSelectionType selection) : colorSpaceCfg(gamma) {
+		const ImageMapStorage::StorageType store,
+		const ImageMapStorage::WrapType wrap,
+		const ImageMapStorage::ChannelSelectionType selection,
+		const ImageMapStorage::FilterType filter) : colorSpaceCfg(gamma) {
 	storageType = store;
 	wrapType = wrap;
 	selectionType = selection;
+	filterType = filter;
 }
 
 ImageMapConfig::ImageMapConfig(const string &configName, const string &colorSpaceName,
 		const ImageMapStorage::StorageType store,
 		const ImageMapStorage::WrapType wrap,
-		const ImageMapStorage::ChannelSelectionType selection) : colorSpaceCfg(configName, colorSpaceName) {
+		const ImageMapStorage::ChannelSelectionType selection,
+		const ImageMapStorage::FilterType filter) : colorSpaceCfg(configName, colorSpaceName) {
 	storageType = store;
 	wrapType = wrap;
 	selectionType = selection;
+	filterType = filter;
 }
 
 ImageMapConfig::ImageMapConfig(const Properties &props, const string &prefix) {
@@ -700,6 +757,8 @@ void ImageMapConfig::FromProperties(const Properties &props, const string &prefi
 		props.Get(Property(prefix + ".storage")("auto")).Get<string>());
 	imgCfg.wrapType = ImageMapStorage::String2WrapType(
 			props.Get(Property(prefix + ".wrap")("repeat")).Get<string>());
+	imgCfg.filterType = ImageMapStorage::String2FilterType(
+			props.Get(Property(prefix + ".filter")("linear")).Get<string>());
 	imgCfg.selectionType = ImageMapStorage::String2ChannelSelectionType(
 		props.Get(Property(prefix + ".channel")("default")).Get<string>());
 }
@@ -713,9 +772,10 @@ ImageMap::ImageMap() {
 	instrumentationInfo = nullptr;
 }
 
-ImageMap::ImageMap(const string &fileName, const ImageMapConfig &cfg) : NamedObject(fileName),
+ImageMap::ImageMap(const string &fileName, const ImageMapConfig &cfg,
+		const u_int widthHint, const u_int heightHint) : NamedObject(fileName),
 		instrumentationInfo(nullptr) {
-	Init(fileName, cfg);
+	Init(fileName, cfg, widthHint, heightHint);
 }
 
 ImageMap::ImageMap(ImageMapStorage *pixels, const float im, const float imy) {
@@ -735,10 +795,19 @@ void ImageMap::Reload() {
 		throw runtime_error("ImageMap::Reload() called on a not instrumented image map: " + GetName());
 
 	delete pixelStorage;
-	Init(GetName(), instrumentationInfo->originalImgCfg);
+	Init(GetName(), instrumentationInfo->originalImgCfg, 0, 0);
 }
 
-void ImageMap::Init(const string &fileName, const ImageMapConfig &cfg) {
+void ImageMap::Reload(const string &fileName, const u_int widthHint, const u_int heightHint) {
+	if (!instrumentationInfo)
+		throw runtime_error("ImageMap::Reload() called on a not instrumented image map: " + GetName() + " from " + fileName);
+
+	delete pixelStorage;
+	Init(fileName, instrumentationInfo->originalImgCfg, widthHint, heightHint);
+}
+
+void ImageMap::Init(const string &fileName, const ImageMapConfig &cfg,
+		const u_int widthHint, const u_int heightHint) {
 	const string resolvedFileName = SLG_FileNameResolver.ResolveFile(fileName);
 	SDL_LOG("Reading texture map: " << resolvedFileName);
 
@@ -748,9 +817,46 @@ void ImageMap::Init(const string &fileName, const ImageMapConfig &cfg) {
 		ImageSpec config;
 		config.attribute ("oiio:UnassociatedAlpha", 1);
 		unique_ptr<ImageInput> in(ImageInput::open(resolvedFileName, &config));
-		if (in.get()) {
-			const ImageSpec &spec = in->spec();
 
+		if (in.get()) {
+			// Check the mipmap level available
+			int mipmapLevel = 0;
+			stringstream ss;
+			vector<pair<u_int, u_int> > mipmapSizes;
+			while (in->seek_subimage(0, mipmapLevel)) {
+				const ImageSpec &spec = in->spec();
+				
+				mipmapSizes.push_back(make_pair(spec.width, spec.height));
+				ss << "[" << spec.width << "x" << spec.height << "]";
+
+				++mipmapLevel;
+			}
+			SDL_LOG("Mip map available: " << ss.str());
+			
+			// Select the best mipmap
+			u_int bestMipmapIndex = 0;
+			u_int bestMipmapWidth = mipmapSizes[0].first;
+			u_int bestMipmapHeight = mipmapSizes[0].second;
+
+			if ((widthHint > 0) || (heightHint > 0)) {
+				// Only if I have size hints
+				for (u_int i = 1 ; i < mipmapSizes.size(); ++i) {
+					if ((mipmapSizes[i].first >= widthHint) &&
+							(mipmapSizes[i].second >= heightHint) &&
+							(mipmapSizes[i].first < bestMipmapWidth) &&
+							(mipmapSizes[i].second < bestMipmapHeight)) {
+						bestMipmapIndex = i;
+						bestMipmapWidth = mipmapSizes[i].first;
+						bestMipmapHeight = mipmapSizes[i].second;
+					}
+				}
+			}
+
+			SDL_LOG("Reading mip map level: " << bestMipmapIndex);
+			if (!in->seek_subimage(0, bestMipmapIndex))
+				throw runtime_error("Unable to read mip map level: " + ToString(bestMipmapIndex));
+
+			const ImageSpec &spec = in->spec();
 			u_int width = spec.width;
 			u_int height = spec.height;
 			u_int channelCount = spec.nchannels;
@@ -775,7 +881,8 @@ void ImageMap::Init(const string &fileName, const ImageMapConfig &cfg) {
 
 			switch (selectedStorageType) {
 				case ImageMapStorage::BYTE: {
-					pixelStorage = AllocImageMapStorage<u_char>(channelCount, width, height, cfg.wrapType);
+					pixelStorage = AllocImageMapStorage<u_char>(channelCount, width, height,
+							cfg.wrapType, cfg.filterType);
 
 					in->read_image(TypeDesc::UCHAR, pixelStorage->GetPixelsData());
 					in->close();
@@ -783,7 +890,8 @@ void ImageMap::Init(const string &fileName, const ImageMapConfig &cfg) {
 					break;
 				}
 				case ImageMapStorage::HALF: {
-					pixelStorage = AllocImageMapStorage<half>(channelCount, width, height, cfg.wrapType);
+					pixelStorage = AllocImageMapStorage<half>(channelCount, width, height,
+							cfg.wrapType, cfg.filterType);
 
 					in->read_image(TypeDesc::HALF, pixelStorage->GetPixelsData());
 					in->close();
@@ -791,7 +899,8 @@ void ImageMap::Init(const string &fileName, const ImageMapConfig &cfg) {
 					break;
 				}
 				case ImageMapStorage::FLOAT: {
-					pixelStorage = AllocImageMapStorage<float>(channelCount, width, height, cfg.wrapType);
+					pixelStorage = AllocImageMapStorage<float>(channelCount, width, height,
+							cfg.wrapType, cfg.filterType);
 
 					in->read_image(TypeDesc::FLOAT, pixelStorage->GetPixelsData());
 					in->close();
@@ -828,28 +937,28 @@ void ImageMap::Init(const string &fileName, const ImageMapConfig &cfg) {
 }
 
 float ImageMap::GetFloat(const UV &uv) const {
-	if (instrumentationInfo)
+	if (instrumentationInfo && instrumentationInfo->enabled)
 		instrumentationInfo->ThreadAddSample(uv);
 
 	return pixelStorage->GetFloat(uv);
 }
 
 Spectrum ImageMap::GetSpectrum(const UV &uv) const {
-	if (instrumentationInfo)
+	if (instrumentationInfo && instrumentationInfo->enabled)
 		instrumentationInfo->ThreadAddSample(uv);
 
 	return pixelStorage->GetSpectrum(uv);
 }
 
 float ImageMap::GetAlpha(const UV &uv) const {
-	if (instrumentationInfo)
+	if (instrumentationInfo && instrumentationInfo->enabled)
 		instrumentationInfo->ThreadAddSample(uv);
 
 	return pixelStorage->GetAlpha(uv);
 }
 
 UV ImageMap::GetDuv(const UV &uv) const {
-	if (instrumentationInfo)
+	if (instrumentationInfo && instrumentationInfo->enabled)
 		instrumentationInfo->ThreadAddSample(uv);
 
 	return pixelStorage->GetDuv(uv);
@@ -860,13 +969,13 @@ ImageMap *ImageMap::AllocImageMap(const u_int channels, const u_int width, const
 	ImageMapStorage *imageMapStorage;
 	switch (cfg.storageType) {
 		case ImageMapStorage::BYTE:
-			imageMapStorage = AllocImageMapStorage<u_char>(channels, width, height, cfg.wrapType);
+			imageMapStorage = AllocImageMapStorage<u_char>(channels, width, height,cfg.wrapType, cfg.filterType);
 			break;
 		case ImageMapStorage::HALF:
-			imageMapStorage = AllocImageMapStorage<half>(channels, width, height, cfg.wrapType);
+			imageMapStorage = AllocImageMapStorage<half>(channels, width, height, cfg.wrapType, cfg.filterType);
 			break;
 		case ImageMapStorage::FLOAT:
-			imageMapStorage = AllocImageMapStorage<float>(channels, width, height, cfg.wrapType);
+			imageMapStorage = AllocImageMapStorage<float>(channels, width, height, cfg.wrapType, cfg.filterType);
 			break;
 		default:
 			throw runtime_error("Unknown storage type in ImageMap::AllocImageMap(): " + ToString(cfg.storageType));
@@ -881,13 +990,13 @@ ImageMap *ImageMap::AllocImageMap(void *pixels, const u_int channels,
 	ImageMapStorage *imageMapStorage;
 	switch (cfg.storageType) {
 		case ImageMapStorage::BYTE:
-			imageMapStorage = AllocImageMapStorage<u_char>(channels, width, height, cfg.wrapType);
+			imageMapStorage = AllocImageMapStorage<u_char>(channels, width, height, cfg.wrapType, cfg.filterType);
 			break;
 		case ImageMapStorage::HALF:
-			imageMapStorage = AllocImageMapStorage<half>(channels, width, height, cfg.wrapType);
+			imageMapStorage = AllocImageMapStorage<half>(channels, width, height, cfg.wrapType, cfg.filterType);
 			break;
 		case ImageMapStorage::FLOAT:
-			imageMapStorage = AllocImageMapStorage<float>(channels, width, height, cfg.wrapType);
+			imageMapStorage = AllocImageMapStorage<float>(channels, width, height, cfg.wrapType, cfg.filterType);
 			break;
 		default:
 			throw runtime_error("Unknown storage type in ImageMap::AllocImageMap(): " + ToString(cfg.storageType));
@@ -990,20 +1099,21 @@ void ImageMap::ConvertStorage(const ImageMapStorage::StorageType newStorageType,
 	const u_int width = pixelStorage->width;
 	const u_int height = pixelStorage->height;
 	const ImageMapStorage::WrapType wrapType = pixelStorage->wrapType;
+	const ImageMapStorage::FilterType filterType = pixelStorage->filterType;
 
 	// Allocate the new image map storage
 	ImageMapStorage *newPixelStorage;
 	switch (newStorageType) {
 		case ImageMapStorage::BYTE: {
-			newPixelStorage = AllocImageMapStorage<u_char>(newChannelCount, width, height, wrapType);
+			newPixelStorage = AllocImageMapStorage<u_char>(newChannelCount, width, height, wrapType, filterType);
 			break;
 		}
 		case ImageMapStorage::HALF: {
-			newPixelStorage = AllocImageMapStorage<half>(newChannelCount, width, height, wrapType);
+			newPixelStorage = AllocImageMapStorage<half>(newChannelCount, width, height, wrapType, filterType);
 			break;
 		}
 		case ImageMapStorage::FLOAT: {
-			newPixelStorage = AllocImageMapStorage<float>(newChannelCount, width, height, wrapType);
+			newPixelStorage = AllocImageMapStorage<float>(newChannelCount, width, height, wrapType, filterType);
 			break;
 		}
 		default:
@@ -1118,21 +1228,23 @@ void ImageMap::Resize(const u_int newWidth, const u_int newHeight) {
 
 	// Save the wrap mode
 	const ImageMapStorage::WrapType wrapType = pixelStorage->wrapType;
+	// Save the filter mode
+	const ImageMapStorage::FilterType filterType = pixelStorage->filterType;
 	// I can delete the current image
 	delete pixelStorage;
 
 	// Allocate the new image map storage
 	switch (storageType) {
 		case ImageMapStorage::BYTE: {
-			pixelStorage = AllocImageMapStorage<u_char>(channelCount, newWidth, newHeight, wrapType);
+			pixelStorage = AllocImageMapStorage<u_char>(channelCount, newWidth, newHeight, wrapType, filterType);
 			break;
 		}
 		case ImageMapStorage::HALF: {
-			pixelStorage = AllocImageMapStorage<half>(channelCount, newWidth, newHeight, wrapType);
+			pixelStorage = AllocImageMapStorage<half>(channelCount, newWidth, newHeight, wrapType, filterType);
 			break;
 		}
 		case ImageMapStorage::FLOAT: {
-			pixelStorage = AllocImageMapStorage<float>(channelCount, newWidth, newHeight, wrapType);
+			pixelStorage = AllocImageMapStorage<float>(channelCount, newWidth, newHeight, wrapType, filterType);
 			break;
 		}
 		default:
@@ -1313,6 +1425,35 @@ ImageMap *ImageMap::Resample(const ImageMap *map, const u_int channels,
 		throw runtime_error("Unsupported number of channels in ImageMap::Resample(): " + ToString(channels));
 }
 
+pair<u_int, u_int> ImageMap::GetSize(const std::string &fileName) {
+	const string resolvedFileName = SLG_FileNameResolver.ResolveFile(fileName);
+
+	if (!boost::filesystem::exists(resolvedFileName))
+		throw runtime_error("ImageMap file doesn't exist: " + resolvedFileName);
+	else {
+		ImageSpec config;
+		config.attribute ("oiio:UnassociatedAlpha", 1);
+		unique_ptr<ImageInput> in(ImageInput::open(resolvedFileName, &config));
+
+		if (in.get()) {
+			const ImageSpec &spec = in->spec();
+				
+			return make_pair(spec.width, spec.height);
+		} else
+			throw runtime_error("Error opening image file: " + resolvedFileName +
+					" (error = " + geterror() +")");
+	}
+}
+
+void ImageMap::MakeTx(const std::string &srcFileName, const std::string &dstFileName) {
+	ImageBuf Input(srcFileName);
+
+	ImageSpec config;
+	stringstream s;
+	if (!ImageBufAlgo::make_texture(ImageBufAlgo::MakeTxTexture, Input, dstFileName, config, &s))
+		throw runtime_error("ImageMap::MakeTx error: " + s.str());
+}
+
 ImageMap *ImageMap::FromProperties(const Properties &props, const string &prefix) {
 	ImageMap *im;
 	if (props.IsDefined(prefix + ".file")) {
@@ -1330,19 +1471,21 @@ ImageMap *ImageMap::FromProperties(const Properties &props, const string &prefix
 			props.Get(Property(prefix + ".storage")("auto")).Get<string>());
 		const ImageMapStorage::WrapType wrapType = ImageMapStorage::String2WrapType(
 				props.Get(Property(prefix + ".wrap")("repeat")).Get<string>());
+		const ImageMapStorage::FilterType filterType = ImageMapStorage::String2FilterType(
+				props.Get(Property(prefix + ".filter")("linear")).Get<string>());
 
 		ImageMapStorage *pixelStorage;
 		switch (storageType) {
 			case ImageMapStorage::BYTE: {
-				pixelStorage = AllocImageMapStorage<u_char>(channelCount, width, height, wrapType);
+				pixelStorage = AllocImageMapStorage<u_char>(channelCount, width, height, wrapType, filterType);
 				break;
 			}
 			case ImageMapStorage::HALF: {
-				pixelStorage = AllocImageMapStorage<half>(channelCount, width, height, wrapType);
+				pixelStorage = AllocImageMapStorage<half>(channelCount, width, height, wrapType, filterType);
 				break;
 			}
 			case ImageMapStorage::FLOAT: {
-				pixelStorage = AllocImageMapStorage<float>(channelCount, width, height, wrapType);
+				pixelStorage = AllocImageMapStorage<float>(channelCount, width, height, wrapType, filterType);
 				break;
 			}
 			default:
@@ -1368,6 +1511,7 @@ Properties ImageMap::ToProperties(const string &prefix, const bool includeBlobIm
 			Property(prefix + ".colorspace")("nop") <<
 			Property(prefix + ".storage")(ImageMapStorage::StorageType2String(pixelStorage->GetStorageType()));
 			Property(prefix + ".wrap")(ImageMapStorage::WrapType2String(pixelStorage->wrapType));
+			Property(prefix + ".filter")(ImageMapStorage::FilterType2String(pixelStorage->filterType));
 
 	if (includeBlobImg)
 		props <<

@@ -234,10 +234,20 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl() {
 	// This is done to interrupt thread pending on barrier wait
 	// inside engine->photonGICache->Update(). This can happen when an
 	// halt condition is satisfied.
-	for (u_int i = 0; i < engine->renderOCLThreads.size(); ++i)
-		engine->renderOCLThreads[i]->Interrupt();
-	for (u_int i = 0; i < engine->renderNativeThreads.size(); ++i)
-		engine->renderNativeThreads[i]->Interrupt();
+	for (u_int i = 0; i < engine->renderOCLThreads.size(); ++i) {
+		try {
+			engine->renderOCLThreads[i]->Interrupt();
+		} catch(...) {
+			// Ignore any exception
+		}
+	}
+	for (u_int i = 0; i < engine->renderNativeThreads.size(); ++i) {
+		try {
+			engine->renderNativeThreads[i]->Interrupt();
+		} catch(...) {
+			// Ignore any exception
+		}
+	}
 	
 	intersectionDevice->PopThreadCurrentDevice();
 }

@@ -237,10 +237,12 @@ __kernel void AdvancePaths_MK_HIT_OBJECT(
 
 	// Something was hit
 
-	if (taskState->albedoToDo && BSDF_IsAlbedoEndPoint(bsdf MATERIALS_PARAM)) {
+	if (taskState->albedoToDo && BSDF_IsAlbedoEndPoint(bsdf, taskConfig->pathTracer.albedo.specularSetting,
+			taskConfig->pathTracer.albedo.specularGlossinessThreshold MATERIALS_PARAM)) {
 		const float3 albedo = VLOAD3F(taskState->throughput.c) * BSDF_Albedo(bsdf
 				MATERIALS_PARAM);
 		VSTORE3F(albedo, sampleResult->albedo.c);
+		sampleResult->shadingNormal = bsdf->hitPoint.shadeN;
 
 		taskState->albedoToDo = false;
 	}
@@ -252,7 +254,6 @@ __kernel void AdvancePaths_MK_HIT_OBJECT(
 		sampleResult->depth = rayHits[gid].t;
 		sampleResult->position = bsdf->hitPoint.p;
 		sampleResult->geometryNormal = bsdf->hitPoint.geometryN;
-		sampleResult->shadingNormal = bsdf->hitPoint.shadeN;
 		sampleResult->materialID = BSDF_GetMaterialID(bsdf
 				MATERIALS_PARAM);
 		sampleResult->objectID = BSDF_GetObjectID(bsdf, sceneObjs);

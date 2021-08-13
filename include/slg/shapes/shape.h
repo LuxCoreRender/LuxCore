@@ -43,7 +43,8 @@ public:
 		ISLANDAOV,
 		RANDOMTRIANGLEAOV,
 		EDGEDETECTORAOV,
-		BEVEL
+		BEVEL,
+		CAMERAPROJUV
 	} ShapeType;
 
 	Shape() : refined(false) { }

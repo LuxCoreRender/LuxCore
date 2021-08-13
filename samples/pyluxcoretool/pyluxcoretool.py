@@ -37,16 +37,11 @@ sys.path.append(".")
 sys.path.append("./lib")
 sys.path.append("./lib/pyluxcoretools.zip")
 
-import pyluxcoretools.pyluxcoreconsole.cmd as consoleCmd
-import pyluxcoretools.pyluxcoremerge.cmd as mergeCmd
-import pyluxcoretools.pyluxcorenetconsole.cmd as netConsoleCmd
-import pyluxcoretools.pyluxcorenetnode.cmd as netNodeCmd
-
 if __name__ == '__main__':
 	# Prepare the render configuration options parser
 	generalParser = argparse.ArgumentParser(description="PyLuxCoreTool", add_help=False)
 	generalParser.add_argument("commandToExecute", default="menu", nargs='?',
-							help="help, console, merge, netconsole, netconsoleui, netnode or netnodeui")
+							help="help, console, merge, maketx, netconsole, netconsoleui, netnode or netnodeui")
 
 	# Parse the general options
 	(generalArgs, cmdArgv) = generalParser.parse_known_args()
@@ -56,15 +51,22 @@ if __name__ == '__main__':
 	if generalArgs.commandToExecute == "help":
 		generalParser.print_help()
 	elif generalArgs.commandToExecute == "console":
+		import pyluxcoretools.pyluxcoreconsole.cmd as consoleCmd
 		consoleCmd.main(cmdArgv)
 	elif generalArgs.commandToExecute == "merge":
+		import pyluxcoretools.pyluxcoremerge.cmd as mergeCmd
 		mergeCmd.main(cmdArgv)
+	elif generalArgs.commandToExecute == "maketx":
+		import pyluxcoretools.pyluxcoremaketx.cmd as maketxCmd
+		maketxCmd.main(cmdArgv)
 	elif generalArgs.commandToExecute == "netconsole":
+		import pyluxcoretools.pyluxcorenetconsole.cmd as netConsoleCmd
 		netConsoleCmd.main(cmdArgv)
 	elif generalArgs.commandToExecute == "netconsoleui":
 		import pyluxcoretools.pyluxcorenetconsole.ui as netConsoleUI
 		netConsoleUI.main(cmdArgv)
 	elif generalArgs.commandToExecute == "netnode":
+		import pyluxcoretools.pyluxcorenetnode.cmd as netNodeCmd
 		netNodeCmd.main(cmdArgv)
 	elif generalArgs.commandToExecute == "netnodeui":
 		import pyluxcoretools.pyluxcorenetnode.ui as netNodeUI

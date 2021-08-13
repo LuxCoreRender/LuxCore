@@ -29,62 +29,6 @@ using namespace luxrays;
 using namespace slg;
 
 //------------------------------------------------------------------------------
-// ImageMapResizePolicy
-//------------------------------------------------------------------------------
-
-ImageMapResizePolicy *ImageMapResizePolicy::FromProperties(const luxrays::Properties &props) {
-	// For compatibility with the past
-	if (!props.IsDefined("scene.images.resizepolicy.type") && props.IsDefined("images.scale")) {
-		const float imageScale = Max(.01f, props.Get(Property("images.scale")(1.f)).Get<float>());
-		return new ImageMapResizeFixedPolicy(imageScale, 128);
-	}
-	
-	const ImageMapResizePolicyType type = String2ImageMapResizePolicyType(props.Get(Property("scene.images.resizepolicy.type")("NONE")).Get<string>());
-	switch (type) {
-		case POLICY_NONE:
-			return new ImageMapResizeNonePolicy();
-		case POLICY_FIXED: {
-			const float scale = Max(.001f, props.Get(Property("scene.images.resizepolicy.scale")(1.f)).Get<float>());
-			const u_int minSize = Max(2u, props.Get(Property("scene.images.resizepolicy.minsize")(64)).Get<u_int>());
-
-			return new ImageMapResizeFixedPolicy(scale, minSize);
-		}
-		case POLICY_MINMEM: {
-			const float scale = Max(.001f, props.Get(Property("scene.images.resizepolicy.scale")(1.f)).Get<float>());
-			const u_int minSize = Max(2u, props.Get(Property("scene.images.resizepolicy.minsize")(64)).Get<u_int>());
-
-			return new ImageMapResizeMinMemPolicy(scale, minSize);
-		}
-		default:
-			throw runtime_error("Unknown image map resize policy type in ImageMapResizePolicy::FromProperties(): " + ToString(type));
-	}
-}
-
-ImageMapResizePolicyType ImageMapResizePolicy::String2ImageMapResizePolicyType(const string &type) {
-	if (type == "NONE")
-		return POLICY_NONE;
-	else if (type == "FIXED")
-		return POLICY_FIXED;
-	else if (type == "MINMEM")
-		return POLICY_MINMEM;
-	else
-		throw runtime_error("Unknown image map resize policy type in ImageMapResizePolicy::String2ImageMapResizePolicyType(): " + type);
-}
-
-string ImageMapResizePolicy::ImageMapResizePolicyType2String(const ImageMapResizePolicyType type) {
-	switch (type) {
-		case POLICY_NONE:
-			return "NONE";
-		case POLICY_FIXED:
-			return "FIXED";
-		case POLICY_MINMEM:
-			return "MINMEM";
-		default:
-			throw runtime_error("Unknown image map resize policy type in ImageMapResizePolicy::ImageMapResizePolicyType2String(): " + ToString(type));
-	}
-}
-
-//------------------------------------------------------------------------------
 // ImageMapCache
 //------------------------------------------------------------------------------
 
@@ -138,77 +82,6 @@ string ImageMapCache::GetCacheKey(const string &fileName) const {
 	return fileName;
 }
 
-bool ImageMapCache::ApplyResizePolicy(ImageMap *im, const ImageMapConfig &imgCfg) const {
-	switch (resizePolicy->GetType()) {
-		case POLICY_NONE:
-			// Nothing to do
-
-			return false;
-		case POLICY_FIXED: {
-			const ImageMapResizeFixedPolicy *rp = (ImageMapResizeFixedPolicy *)resizePolicy;
-			const u_int width = im->GetWidth();
-			const u_int height = im->GetHeight();
-
-			if (rp->scale > 1.f) {
-				// Enlarge all images (may be for testing, not very useful otherwise)
-				const u_int newWidth = width * rp->scale;
-				const u_int newHeight = height * rp->scale;
-				im->Resize(newWidth, newHeight);
-				im->Preprocess();
-			} else if (rp->scale < 1.f) {
-				if (Max(width, height) > rp->minSize) {
-					u_int newWidth = Max<u_int>(width * rp->scale, rp->minSize);
-					u_int newHeight = Max<u_int>(height * rp->scale, rp->minSize);
-
-					if (newWidth >= newHeight)
-						newHeight = Max<u_int>(newWidth * (width / (float)height), 1u);
-					else
-						newWidth = Max<u_int>(newHeight * (height / (float)width), 1u);
-
-					SDL_LOG("Scaling ImageMap: " << im->GetName() << " [from " << width << "x" << height <<
-							" to " << newWidth << "x" << newHeight <<"]");
-
-					im->Resize(newWidth, newHeight);
-					im->Preprocess();
-				}
-			} else {
-				// Nothing to do for a scale of 1.0
-			}
-
-			return false;
-		}
-		case POLICY_MINMEM: {
-			const ImageMapResizeMinMemPolicy *rp = (ImageMapResizeMinMemPolicy *)resizePolicy;
-			const u_int width = im->GetWidth();
-			const u_int height = im->GetHeight();
-
-			if (Max(width, height) > rp->minSize) {
-				u_int newWidth, newHeight;
-				if (width >= height) {
-					newWidth = rp->minSize;
-					newHeight = Max<u_int>(rp->minSize * (width / (float)height), 1u);
-				} else {
-					newWidth = Max<u_int>(rp->minSize * (height / (float)width), 1u);
-					newHeight = rp->minSize;
-				}
-
-				SDL_LOG("Scaling probe ImageMap: " << im->GetName() << " [from " << width << "x" << height <<
-						" to " << newWidth << "x" << newHeight <<"]");
-
-				im->Resize(newWidth, newHeight);
-				im->Preprocess();
-
-				im->SetUpInstrumentation(width, height, imgCfg);
-
-				return true;
-			} else
-				return false;
-		}
-		default:
-			throw runtime_error("Unknown resize policy in ImageMapCache::GetImageMap(): " + ToString(resizePolicy->GetType()));
-	}
-}
-
 ImageMap *ImageMapCache::GetImageMap(const string &fileName, const ImageMapConfig &imgCfg,
 		const bool applyResizePolicy) {
 	// Compose the cache key
@@ -235,17 +108,22 @@ ImageMap *ImageMapCache::GetImageMap(const string &fileName, const ImageMapConfi
 
 	// I haven't yet loaded the file
 
-	ImageMap *im = new ImageMap(fileName, imgCfg);
+	ImageMap *im;
+	if (applyResizePolicy) {
+		// Scale the image if required
+		bool toApply;
+		im = resizePolicy->ApplyResizePolicy(fileName, imgCfg, toApply);
+		
+		resizePolicyToApply.push_back(toApply);
+	} else {
+		im = new ImageMap(fileName, imgCfg);
+
+		resizePolicyToApply.push_back(false);
+	}
 	
 	mapByKey.insert(make_pair(key, im));
 	mapNames.push_back(fileName);
 	maps.push_back(im);
-
-	// Scale the image if required
-	if (applyResizePolicy)
-		resizePolicyToApply.push_back(ApplyResizePolicy(im, imgCfg));
-	else
-		resizePolicyToApply.push_back(false);
 
 	return im;
 }
