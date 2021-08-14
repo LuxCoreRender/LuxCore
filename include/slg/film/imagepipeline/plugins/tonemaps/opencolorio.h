@@ -49,6 +49,8 @@ public:
 	static OpenColorIOToneMap *CreateDisplayConversion(const std::string &configFileName,
 			const std::string &inputColorSpace, const std::string &displayName,
 			const std::string &viewName);
+	static OpenColorIOToneMap *CreateLookConversion(const std::string &configFileName,
+			const std::string &lookInputColorSpace, const std::string &lookName);
 
 	friend class boost::serialization::access;
 
@@ -56,7 +58,8 @@ private:
 	typedef enum {
 		COLORSPACE_CONVERSION,
 		LUT_CONVERSION,
-		DISPLAY_CONVERSION
+		DISPLAY_CONVERSION,
+		LOOK_CONVERSION
 	} OCIOConversionType;
 
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
@@ -84,6 +87,10 @@ private:
 	// DISPLAY_CONVERSION
 	std::string displayName;
 	std::string viewName;
+	
+	// LOOK_CONVERSION
+	std::string lookInputColorSpace;
+	std::string lookName;
 };
 
 }

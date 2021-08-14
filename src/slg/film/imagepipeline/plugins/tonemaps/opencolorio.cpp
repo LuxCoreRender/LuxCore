@@ -59,11 +59,15 @@ ToneMap *OpenColorIOToneMap::Copy() const {
 	ociotm->displayName = displayName;
 	ociotm->viewName = viewName;
 	
+	// LOOK_CONVERSION
+	ociotm->lookInputColorSpace = lookInputColorSpace;
+	ociotm->lookName = lookName;
+	
 	return ociotm;
 }
 
-OpenColorIOToneMap *OpenColorIOToneMap::CreateColorSpaceConversion(const std::string &configFileName,
-		const std::string &inputColorSpace, const std::string &outputColorSpace) {
+OpenColorIOToneMap *OpenColorIOToneMap::CreateColorSpaceConversion(const string &configFileName,
+		const string &inputColorSpace, const string &outputColorSpace) {
 	OpenColorIOToneMap *ociotm = new OpenColorIOToneMap();
 	
 	ociotm->conversionType = COLORSPACE_CONVERSION;
@@ -75,7 +79,7 @@ OpenColorIOToneMap *OpenColorIOToneMap::CreateColorSpaceConversion(const std::st
 	return ociotm;
 }
 
-OpenColorIOToneMap *OpenColorIOToneMap::CreateLUTConversion(const std::string &lutFileName) {
+OpenColorIOToneMap *OpenColorIOToneMap::CreateLUTConversion(const string &lutFileName) {
 	OpenColorIOToneMap *ociotm = new OpenColorIOToneMap();
 	
 	ociotm->conversionType = LUT_CONVERSION;
@@ -85,9 +89,9 @@ OpenColorIOToneMap *OpenColorIOToneMap::CreateLUTConversion(const std::string &l
 	return ociotm;
 }
 
-OpenColorIOToneMap *OpenColorIOToneMap::CreateDisplayConversion(const std::string &configFileName,
-		const std::string &inputColorSpace, const std::string &displayName,
-		const std::string &viewName) {
+OpenColorIOToneMap *OpenColorIOToneMap::CreateDisplayConversion(const string &configFileName,
+		const string &inputColorSpace, const string &displayName,
+		const string &viewName) {
 	OpenColorIOToneMap *ociotm = new OpenColorIOToneMap();
 	
 	ociotm->conversionType = DISPLAY_CONVERSION;
@@ -96,6 +100,19 @@ OpenColorIOToneMap *OpenColorIOToneMap::CreateDisplayConversion(const std::strin
 	ociotm->inputColorSpace = inputColorSpace;
 	ociotm->displayName = displayName;
 	ociotm->viewName = viewName;
+	
+	return ociotm;
+}
+
+OpenColorIOToneMap *OpenColorIOToneMap::CreateLookConversion(const string &configFileName,
+		const string &lookInputColorSpace, const string &lookName) {
+	OpenColorIOToneMap *ociotm = new OpenColorIOToneMap();
+	
+	ociotm->conversionType = LOOK_CONVERSION;
+	
+	ociotm->configFileName = configFileName;
+	ociotm->lookInputColorSpace = lookInputColorSpace;
+	ociotm->lookName = lookName;
 	
 	return ociotm;
 }
@@ -126,10 +143,10 @@ void OpenColorIOToneMap::Apply(Film &film, const u_int index) {
 			case LUT_CONVERSION: {
 				OCIO::ConstConfigRcPtr config = OCIO::Config::CreateRaw();
 
-				OCIO::FileTransformRcPtr t = OCIO::FileTransform::Create();
-				t->setSrc(lutFileName.c_str());
-				t->setInterpolation(OCIO::INTERP_BEST);
-				OCIO::ConstProcessorRcPtr processor = config->getProcessor(t);
+				OCIO::FileTransformRcPtr transform = OCIO::FileTransform::Create();
+				transform->setSrc(lutFileName.c_str());
+				transform->setInterpolation(OCIO::INTERP_BEST);
+				OCIO::ConstProcessorRcPtr processor = config->getProcessor(transform);
 
 				OCIO::ConstCPUProcessorRcPtr cpu = processor->getDefaultCPUProcessor();
 
@@ -143,17 +160,41 @@ void OpenColorIOToneMap::Apply(Film &film, const u_int index) {
 					OCIO::GetCurrentConfig() :
 					OCIO::Config::CreateFromFile(configFileName.c_str());
 
-				OCIO::DisplayViewTransformRcPtr t = OCIO::DisplayViewTransform::Create();
-				t->setSrc(inputColorSpace.c_str());
-				t->setDisplay(displayName.c_str());
-				t->setView(viewName.c_str());
-				OCIO::ConstProcessorRcPtr processor = config->getProcessor(t);
+				OCIO::DisplayViewTransformRcPtr transform = OCIO::DisplayViewTransform::Create();
+				transform->setSrc(inputColorSpace.c_str());
+				transform->setDisplay(displayName.c_str());
+				transform->setView(viewName.c_str());
+				OCIO::ConstProcessorRcPtr processor = config->getProcessor(transform);
 
 				OCIO::ConstCPUProcessorRcPtr cpu = processor->getDefaultCPUProcessor();
 
 				// Apply the color transform with OpenColorIO
 				OCIO::PackedImageDesc img(pixels, film.GetWidth(), film.GetHeight(), 3);
 				cpu->apply(img);
+				break;
+			}
+			case LOOK_CONVERSION: {
+				OCIO::ConstConfigRcPtr config = (configFileName == "") ?
+					OCIO::GetCurrentConfig() :
+					OCIO::Config::CreateFromFile(SLG_FileNameResolver.ResolveFile(configFileName).c_str());
+
+				const char *lookOutputColorSpace = OCIO::LookTransform::GetLooksResultColorSpace(config,
+						config->getCurrentContext(), lookName.c_str());
+				if (lookOutputColorSpace && lookOutputColorSpace[0] != 0) {
+					OCIO::LookTransformRcPtr transform = OCIO::LookTransform::Create();
+					transform->setSrc(lookInputColorSpace.c_str());
+					transform->setDst(lookOutputColorSpace);
+					transform->setLooks(lookName.c_str());
+
+					OCIO::ConstProcessorRcPtr processor = config->getProcessor(transform);
+
+					OCIO::ConstCPUProcessorRcPtr cpu = processor->getDefaultCPUProcessor();
+
+					// Apply the color transform with OpenColorIO
+					OCIO::PackedImageDesc img(pixels, film.GetWidth(), film.GetHeight(), 3);
+					cpu->apply(img);
+				} else
+					throw runtime_error("Unknown look destination color space in OpenColorIOToneMap::Apply()");
 				break;
 			}
 			default:
