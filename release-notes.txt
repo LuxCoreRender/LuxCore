@@ -38,7 +38,8 @@
 * Intel OIDN plugin now pre-filters Avg. Shading Normal AOV too
 * Added the support for Albedo and Normal AOV warmup for improved denoising with BIDIRCPU
 * Added the support for camera projection UV shape
-* Added the support for OpenColorIO Looks to TONEMAP_OPENCOLORIO tone mapper
+* Added the support for OpenColorIO Looks to TONEMAP_OPENCOLORIO color space mode
+* Added the support for OpenColorIO Looks to TONEMAP_OPENCOLORIO display mode
 
 ### Fixed Bugs
 

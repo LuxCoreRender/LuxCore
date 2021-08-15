@@ -776,7 +776,8 @@ ImagePipeline *Film::CreateImagePipeline(const Properties &props, const string &
 						props.Get(Property(prefix + ".config")("")).Get<string>(),
 						props.Get(Property(prefix + ".src")(OCIO::ROLE_RENDERING)).Get<string>(),
 						props.Get(Property(prefix + ".display")(OCIO::ROLE_INTERCHANGE_DISPLAY)).Get<string>(),
-						props.Get(Property(prefix + ".view")(OCIO::OCIO_VIEW_USE_DISPLAY_NAME)).Get<string>()));
+						props.Get(Property(prefix + ".view")(OCIO::OCIO_VIEW_USE_DISPLAY_NAME)).Get<string>(),
+						props.Get(Property(prefix + ".look")("")).Get<string>()));
 				} else if (mode == "LOOK_CONVERSION") {
 					imagePipeline->AddPlugin(OpenColorIOToneMap::CreateLookConversion(
 						props.Get(Property(prefix + ".config")("")).Get<string>(),

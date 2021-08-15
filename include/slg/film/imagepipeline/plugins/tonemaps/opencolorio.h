@@ -48,7 +48,7 @@ public:
 	static OpenColorIOToneMap *CreateLUTConversion(const std::string &lutFileName);
 	static OpenColorIOToneMap *CreateDisplayConversion(const std::string &configFileName,
 			const std::string &inputColorSpace, const std::string &displayName,
-			const std::string &viewName);
+			const std::string &viewName, const std::string &lookName);
 	static OpenColorIOToneMap *CreateLookConversion(const std::string &configFileName,
 			const std::string &lookInputColorSpace, const std::string &lookName);
 
@@ -66,11 +66,18 @@ private:
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ToneMap);
 		ar & conversionType;
 		ar & configFileName;
+
 		ar & inputColorSpace;
 		ar & outputColorSpace;
 		ar & lutFileName;
-		ar & displayName;
-		ar & viewName;
+
+		ar & displayConversion.inputColorSpace;
+		ar & displayConversion.displayName;
+		ar & displayConversion.viewName;
+		ar & displayConversion.lookName;
+
+		ar & lookInputColorSpace;
+		ar & lookName;
 	}
 	
 	OCIOConversionType conversionType;
@@ -85,8 +92,12 @@ private:
 	std::string lutFileName;
 	
 	// DISPLAY_CONVERSION
-	std::string displayName;
-	std::string viewName;
+	struct {
+		std::string inputColorSpace;
+		std::string displayName;
+		std::string viewName;
+		std::string lookName;
+	} displayConversion;
 	
 	// LOOK_CONVERSION
 	std::string lookInputColorSpace;
@@ -95,7 +106,7 @@ private:
 
 }
 
-BOOST_CLASS_VERSION(slg::OpenColorIOToneMap, 1)
+BOOST_CLASS_VERSION(slg::OpenColorIOToneMap, 2)
 
 BOOST_CLASS_EXPORT_KEY(slg::OpenColorIOToneMap)
 

@@ -56,8 +56,7 @@ ToneMap *OpenColorIOToneMap::Copy() const {
 	ociotm->lutFileName = lutFileName;
 	
 	// DISPLAY_CONVERSION
-	ociotm->displayName = displayName;
-	ociotm->viewName = viewName;
+	ociotm->displayConversion = displayConversion;
 	
 	// LOOK_CONVERSION
 	ociotm->lookInputColorSpace = lookInputColorSpace;
@@ -91,15 +90,16 @@ OpenColorIOToneMap *OpenColorIOToneMap::CreateLUTConversion(const string &lutFil
 
 OpenColorIOToneMap *OpenColorIOToneMap::CreateDisplayConversion(const string &configFileName,
 		const string &inputColorSpace, const string &displayName,
-		const string &viewName) {
+		const string &viewName, const string &lookName) {
 	OpenColorIOToneMap *ociotm = new OpenColorIOToneMap();
 	
 	ociotm->conversionType = DISPLAY_CONVERSION;
 	
 	ociotm->configFileName = configFileName;
-	ociotm->inputColorSpace = inputColorSpace;
-	ociotm->displayName = displayName;
-	ociotm->viewName = viewName;
+	ociotm->displayConversion.inputColorSpace = inputColorSpace;
+	ociotm->displayConversion.displayName = displayName;
+	ociotm->displayConversion.viewName = viewName;
+	ociotm->displayConversion.lookName = lookName;
 	
 	return ociotm;
 }
@@ -160,11 +160,32 @@ void OpenColorIOToneMap::Apply(Film &film, const u_int index) {
 					OCIO::GetCurrentConfig() :
 					OCIO::Config::CreateFromFile(configFileName.c_str());
 
+				OCIO::GroupTransformRcPtr group = OCIO::GroupTransform::Create();
+
+				const char *currentInputColorSpace = displayConversion.inputColorSpace.c_str();
+				if (displayConversion.lookName != "") {
+					const char *lookOutputColorSpace = OCIO::LookTransform::GetLooksResultColorSpace(config,
+						config->getCurrentContext(), displayConversion.lookName.c_str());
+
+					if (lookOutputColorSpace && lookOutputColorSpace[0] != 0) {
+						OCIO::LookTransformRcPtr transform = OCIO::LookTransform::Create();
+						transform->setSrc(currentInputColorSpace);
+						transform->setDst(lookOutputColorSpace);
+						transform->setLooks(displayConversion.lookName.c_str());
+						group->appendTransform(transform);
+						
+						currentInputColorSpace = lookOutputColorSpace;
+					}
+				}
+
 				OCIO::DisplayViewTransformRcPtr transform = OCIO::DisplayViewTransform::Create();
-				transform->setSrc(inputColorSpace.c_str());
-				transform->setDisplay(displayName.c_str());
-				transform->setView(viewName.c_str());
-				OCIO::ConstProcessorRcPtr processor = config->getProcessor(transform);
+				transform->setSrc(currentInputColorSpace);
+				transform->setDisplay(displayConversion.displayName.c_str());
+				transform->setView(displayConversion.viewName.c_str());
+				transform->setLooksBypass(displayConversion.lookName != "");
+				group->appendTransform(transform);
+				
+				OCIO::ConstProcessorRcPtr processor = config->getProcessor(group);
 
 				OCIO::ConstCPUProcessorRcPtr cpu = processor->getDefaultCPUProcessor();
 
