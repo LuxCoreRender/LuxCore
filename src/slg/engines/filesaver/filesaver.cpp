@@ -88,7 +88,10 @@ static string Base64Encode(const char *data, const size_t size) {
 
 	copy(base64_t(data), base64_t(data + size), boost::archive::iterators::ostream_iterator<char>(ss));
 
-	return ss.str();
+	// "===" padding is there as work around to Python base64.b64decode()
+	// behavior. See https://gist.github.com/perrygeo/ee7c65bb1541ff6ac770
+
+	return ss.str() + "===";
 }
 
 void FileSaverRenderEngine::ExportSceneGLTF(const RenderConfig *renderConfig,

@@ -55,6 +55,7 @@
 * Fixed a crash when editing light source emission
 * Added a work around to pyluxcoretools with PySide2 causing a std::bad_cast
 * Fixed a possible crash when editing a scene
+* Fixed glTF export to work with Python base64.b64decode()
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
