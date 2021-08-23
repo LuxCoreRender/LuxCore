@@ -72,7 +72,7 @@ Spectrum RoughGlassMaterial::Evaluate(const HitPoint &hitPoint,
 		const float eta = entering ? (nc / nt) : ntc;
 
 		Vector wh = eta * localLightDir + localEyeDir;
-		if (wh.z < 0.f)
+		if (wh.z > 0.f)
 			wh = -wh;
 
 		const float lengthSquared = wh.LengthSquared();
@@ -164,9 +164,6 @@ Spectrum RoughGlassMaterial::Sample(const HitPoint &hitPoint,
 	Vector wh;
 	float d, specPdf;
 	SchlickDistribution_SampleH(roughness, anisotropy, u0, u1, &wh, &d, &specPdf);
-	if (wh.z < 0.f)
-		wh = -wh;
-	const float cosThetaOH = Dot(localFixedDir, wh);
 
 	const float nc = ExtractExteriorIors(hitPoint, exteriorIor);
 	const float nt = ExtractInteriorIors(hitPoint, interiorIor);
@@ -191,6 +188,10 @@ Spectrum RoughGlassMaterial::Sample(const HitPoint &hitPoint,
 	Spectrum result;
 	if (passThroughEvent < threshold) {
 		// Transmit
+
+		if (wh.z > 0.f)
+			wh = -wh;
+		const float cosThetaOH = Dot(localFixedDir, wh);
 
 		const bool entering = (CosTheta(localFixedDir) > 0.f);
 		const float eta = entering ? (nc / nt) : ntc;
@@ -226,6 +227,11 @@ Spectrum RoughGlassMaterial::Sample(const HitPoint &hitPoint,
 		*event = GLOSSY | TRANSMIT;
 	} else {
 		// Reflect
+		
+		if (wh.z < 0.f)
+			wh = -wh;
+		const float cosThetaOH = Dot(localFixedDir, wh);
+
 		*pdfW = specPdf / (4.f * fabsf(cosThetaOH));
 		if (*pdfW <= 0.f)
 			return Spectrum();
