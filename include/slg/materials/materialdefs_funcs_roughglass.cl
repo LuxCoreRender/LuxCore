@@ -102,7 +102,7 @@ OPENCL_FORCE_INLINE void RoughGlassMaterial_Evaluate(__global const Material* re
 		const float eta = entering ? (nc / nt) : ntc;
 
 		float3 wh = eta * lightDir + eyeDir;
-		if (wh.z > 0.f)
+		if (wh.z < 0.f)
 			wh = -wh;
 
 		const float lengthSquared = dot(wh, wh);
@@ -211,6 +211,9 @@ OPENCL_FORCE_INLINE void RoughGlassMaterial_Sample(__global const Material* rest
 	float3 wh;
 	float d, specPdf;
 	SchlickDistribution_SampleH(roughness, anisotropy, u0, u1, &wh, &d, &specPdf);
+	if (wh.z < 0.f)
+		wh = -wh;
+	const float cosThetaOH = dot(fixedDir, wh);
 
 	const float nc = ExtractExteriorIors(hitPoint, material->roughglass.exteriorIorTexIndex TEXTURES_PARAM);
 	const float nt = ExtractInteriorIors(hitPoint, material->roughglass.interiorIorTexIndex TEXTURES_PARAM);
@@ -239,10 +242,6 @@ OPENCL_FORCE_INLINE void RoughGlassMaterial_Sample(__global const Material* rest
 	float3 result;
 	if (passThroughEvent < threshold) {
 		// Transmit
-
-		if (wh.z > 0.f)
-			wh = -wh;
-		const float cosThetaOH = dot(fixedDir, wh);
 
 		const bool entering = (CosTheta(fixedDir) > 0.f);
 		const float eta = entering ? (nc / nt) : ntc;
@@ -280,11 +279,6 @@ OPENCL_FORCE_INLINE void RoughGlassMaterial_Sample(__global const Material* rest
 		event = GLOSSY | TRANSMIT;
 	} else {
 		// Reflect
-
-		if (wh.z < 0.f)
-			wh = -wh;
-		const float cosThetaOH = dot(fixedDir, wh);
-
 		pdfW = specPdf / (4.f * fabs(cosThetaOH));
 		if (pdfW <= 0.f) {
 			MATERIAL_SAMPLE_RETURN_BLACK;
