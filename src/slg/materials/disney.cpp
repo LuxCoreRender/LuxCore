@@ -69,12 +69,12 @@ void DisneyMaterial::UpdateGlossiness() {
 	const float metallicFitler = Metallic->Filter();
 	const float specularFitler = Specular->Filter();
 	if ((metallicFitler >= .5f) || (specularFitler >= .5f)) {
-		// I use the sqrt() because the difference between Disney microfacet model
+		// I use the sqrtf() because the difference between Disney microfacet model
 		// and Glossy2/Metal/etc. models
 		const float g = ComputeGlossiness(Roughness);
 		
 		if (g > 0.f)
-			glossiness = sqrt(ComputeGlossiness(Roughness));
+			glossiness = sqrtf(ComputeGlossiness(Roughness));
 		else
 			glossiness = 0.f;
 	} else
@@ -171,6 +171,9 @@ Spectrum DisneyMaterial::DisneyEvaluate(
 		const float pdf = DisneyPdf(roughness, metallic, clearcoat, clearcoatGloss,
 				anisotropicGloss, localLightDir, localEyeDir);
 
+		if (pdf < 0.0001f)
+			return Spectrum();
+
 		if (directPdfW)
 			*directPdfW = pdf;
 		if (reversePdfW)
@@ -178,7 +181,7 @@ Spectrum DisneyMaterial::DisneyEvaluate(
 	}
 
 	*event = GLOSSY | REFLECT;
-	
+
 	const Spectrum f = (Lerp(subsurface, diffuseEval, subsurfaceEval) + sheenEval) * (1.0f - metallic) + glossyEval;
 
 	return f * abs(NdotL);
@@ -293,18 +296,23 @@ Spectrum DisneyMaterial::Sample(
 		*localSampledDir = DisneyDiffuseSample(wo, u0, u1);
 	else
 		return Spectrum();
-	
-	*event = GLOSSY | REFLECT;
-	
+
 	const Vector &localLightDir = hitPoint.fromLight ? localFixedDir : *localSampledDir;
 	const Vector &localEyeDir = hitPoint.fromLight ? *localSampledDir : localFixedDir;
 
+	const float NdotL = fabsf(CosTheta(localLightDir));
+	const float NdotV = fabsf(CosTheta(localEyeDir));
+	if (NdotL < DEFAULT_COS_EPSILON_STATIC || NdotV < DEFAULT_COS_EPSILON_STATIC)
+		return Spectrum();
+
+	*event = GLOSSY | REFLECT;
+	
 	*pdfW = DisneyPdf(roughness, metallic, clearcoat, clearcoatGloss, anisotropicGloss,
 			localLightDir, localEyeDir);
 
 	if (*pdfW < 0.0001f)
 		return Spectrum();
-		
+
 	const float localFilmAmount = filmAmount ? Clamp(filmAmount->GetFloatValue(hitPoint), 0.0f, 1.0f) : 1.f;
 	const float localFilmThickness = filmThickness ? filmThickness->GetFloatValue(hitPoint) : 0.f;
 	const float localFilmIor = (localFilmThickness > 0.f && filmIor) ? filmIor->GetFloatValue(hitPoint) : 1.f;
@@ -326,17 +334,17 @@ Vector DisneyMaterial::DisneyMetallicSample(const float anisotropic, const float
 	float ax, ay;
 	Anisotropic_Params(anisotropic, roughness, ax, ay);
 
-	float phi = atan(ay / ax * tan(2.0f * M_PI * u1 + 0.5f * M_PI));
+	float phi = atanf(ay / ax * tan(2.0f * M_PI * u1 + 0.5f * M_PI));
 	if (u1 > 0.5f)
 		phi += M_PI;
 
-	const float sinPhi = sin(phi), cosPhi = cos(phi);
+	const float sinPhi = sinf(phi), cosPhi = cosf(phi);
 	const float ax2 = ax * ax, ay2 = ay * ay;
 	const float alpha2 = 1.0f / (cosPhi * cosPhi / ax2 + sinPhi * sinPhi / ay2);
 	const float tanTheta2 = alpha2 * u0 / (1.0f - u0);
-	const float cosTheta = 1.0f / sqrt(1.0f + tanTheta2);
+	const float cosTheta = 1.0f / sqrtf(1.0f + tanTheta2);
 
-	const float sinTheta = sqrt(Max(0.0f, 1.0f - cosTheta * cosTheta));
+	const float sinTheta = sqrtf(Max(0.0f, 1.0f - cosTheta * cosTheta));
 	Vector wh = Vector(sinTheta * cosPhi, sinTheta * sinPhi, cosTheta);
 
 	if (CosTheta(wo) * CosTheta(wh) <= 0.0f)
@@ -349,11 +357,11 @@ Vector DisneyMaterial::DisneyClearcoatSample(const float clearcoatGloss,
 		const Vector &wo, float u0, float u1) const {
 	const float gloss = Lerp(clearcoatGloss, 0.1f, 0.001f);
 	const float alpha2 = gloss * gloss;
-	const float cosTheta = sqrt(Max(0.0001f, (1.0f - pow(alpha2, 1.0f - u0)) / (1.0f - alpha2)));
-	const float sinTheta = sqrt(Max(0.0001f, 1.0f - cosTheta * cosTheta));
+	const float cosTheta = sqrtf(Max(0.0001f, (1.0f - pow(alpha2, 1.0f - u0)) / (1.0f - alpha2)));
+	const float sinTheta = sqrtf(Max(0.0001f, 1.0f - cosTheta * cosTheta));
 	const float phi = 2.0f * M_PI * u1;
 
-	Vector wh = Vector(sinTheta * cos(phi), sinTheta * sin(phi), cosTheta);
+	Vector wh = Vector(sinTheta * cosf(phi), sinTheta * sinf(phi), cosTheta);
 	if (CosTheta(wo) * CosTheta(wh) <= 0.0f)
 		wh *= -1.f;
 
@@ -373,8 +381,11 @@ void DisneyMaterial::Pdf(
 		const float clearcoatGloss = Clamp(ClearcoatGloss->GetFloatValue(hitPoint), 0.0f, 1.0f);
 		const float anisotropicGloss = Clamp(Anisotropic->GetFloatValue(hitPoint), 0.0f, 1.0f);
 
-		const float pdf = DisneyPdf(roughness, metallic, clearcoat, clearcoatGloss,
+		float pdf = DisneyPdf(roughness, metallic, clearcoat, clearcoatGloss,
 				anisotropicGloss, localLightDir, localEyeDir);
+
+		if (pdf < 0.0001f)
+			pdf = 0.f;
 
 		if (directPdfW)
 			*directPdfW = pdf;
@@ -462,14 +473,14 @@ float DisneyMaterial::GTR2_Aniso(const float NdotH, const float HdotX, const flo
 
 float DisneyMaterial::SmithG_GGX_Aniso(const float NdotV, const float VdotX, const float VdotY,
 		const float ax, const float ay) const {
-	return 1.0f / (NdotV + sqrt(Sqr(VdotX * ax) + Sqr(VdotY * ay) + Sqr(NdotV)));
+	return 1.0f / (NdotV + sqrtf(Sqr(VdotX * ax) + Sqr(VdotY * ay) + Sqr(NdotV)));
 }
 
 float DisneyMaterial::SmithG_GGX(const float NdotV, const float alphaG) const {
 	const float a = alphaG * alphaG;
 	const float b = NdotV * NdotV;
 
-	return 1.0f / (abs(NdotV) + Max(sqrt(a + b - a * b), 0.0001f));
+	return 1.0f / (abs(NdotV) + Max(sqrtf(a + b - a * b), 0.0001f));
 }
 
 float DisneyMaterial::Schlick_Weight(const float cosi) const {
