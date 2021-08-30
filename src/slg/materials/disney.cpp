@@ -109,12 +109,13 @@ Spectrum DisneyMaterial::Evaluate(
 	const float localFilmThickness = filmThickness ? filmThickness->GetFloatValue(hitPoint) : 0.f;
 	const float localFilmIor = (localFilmThickness > 0.f && filmIor) ? filmIor->GetFloatValue(hitPoint) : 1.f;
 
-	return DisneyEvaluate(color, subsurface, roughness, metallic, specular, specularTint,
+	return DisneyEvaluate(hitPoint.fromLight, color, subsurface, roughness, metallic, specular, specularTint,
 			clearcoat, clearcoatGloss, anisotropicGloss, sheen, sheenTint, localFilmAmount, localFilmThickness, 
 			localFilmIor, localLightDir, localEyeDir, event, directPdfW, reversePdfW);
 }
 
 Spectrum DisneyMaterial::DisneyEvaluate(
+		const bool fromLight,
 		const Spectrum &color,
 		const float subsurface,
 		const float roughness,
@@ -167,18 +168,8 @@ Spectrum DisneyMaterial::DisneyEvaluate(
 
 	const Spectrum sheenEval = DisneySheen(color, sheen, sheenTint, LdotH);
 
-	if (directPdfW || reversePdfW) {
-		const float pdf = DisneyPdf(roughness, metallic, clearcoat, clearcoatGloss,
-				anisotropicGloss, localLightDir, localEyeDir);
-
-		if (pdf < 0.0001f)
-			return Spectrum();
-
-		if (directPdfW)
-			*directPdfW = pdf;
-		if (reversePdfW)
-			*reversePdfW = pdf;
-	}
+	DisneyPdf(fromLight, roughness, metallic, clearcoat, clearcoatGloss,
+			anisotropicGloss, localLightDir, localEyeDir, directPdfW, reversePdfW);
 
 	*event = GLOSSY | REFLECT;
 
@@ -307,17 +298,14 @@ Spectrum DisneyMaterial::Sample(
 
 	*event = GLOSSY | REFLECT;
 	
-	*pdfW = DisneyPdf(roughness, metallic, clearcoat, clearcoatGloss, anisotropicGloss,
-			localLightDir, localEyeDir);
-
-	if (*pdfW < 0.0001f)
-		return Spectrum();
+	DisneyPdf(hitPoint.fromLight, roughness, metallic, clearcoat, clearcoatGloss, anisotropicGloss,
+			localLightDir, localEyeDir, pdfW, nullptr);
 
 	const float localFilmAmount = filmAmount ? Clamp(filmAmount->GetFloatValue(hitPoint), 0.0f, 1.0f) : 1.f;
 	const float localFilmThickness = filmThickness ? filmThickness->GetFloatValue(hitPoint) : 0.f;
 	const float localFilmIor = (localFilmThickness > 0.f && filmIor) ? filmIor->GetFloatValue(hitPoint) : 1.f;
 
-	const Spectrum f = DisneyEvaluate(color, subsurface, roughness,
+	const Spectrum f = DisneyEvaluate(hitPoint.fromLight, color, subsurface, roughness,
 			metallic, specular, specularTint, clearcoat, clearcoatGloss,
 			anisotropicGloss, sheen, sheenTint, localFilmAmount, localFilmThickness, localFilmIor,
 			localLightDir, localEyeDir, event, nullptr, nullptr);
@@ -374,52 +362,62 @@ void DisneyMaterial::Pdf(
 		const Vector &localEyeDir,
 		float *directPdfW, 
 		float *reversePdfW) const {
-	if (directPdfW || reversePdfW) {
-		const float roughness = Clamp(Roughness->GetFloatValue(hitPoint), 0.0f, 1.0f);
-		const float metallic = Clamp(Metallic->GetFloatValue(hitPoint), 0.0f, 1.0f);
-		const float clearcoat = Clamp(SpecularTint->GetFloatValue(hitPoint), 0.0f, 1.0f);
-		const float clearcoatGloss = Clamp(ClearcoatGloss->GetFloatValue(hitPoint), 0.0f, 1.0f);
-		const float anisotropicGloss = Clamp(Anisotropic->GetFloatValue(hitPoint), 0.0f, 1.0f);
+	const float roughness = Clamp(Roughness->GetFloatValue(hitPoint), 0.0f, 1.0f);
+	const float metallic = Clamp(Metallic->GetFloatValue(hitPoint), 0.0f, 1.0f);
+	const float clearcoat = Clamp(SpecularTint->GetFloatValue(hitPoint), 0.0f, 1.0f);
+	const float clearcoatGloss = Clamp(ClearcoatGloss->GetFloatValue(hitPoint), 0.0f, 1.0f);
+	const float anisotropicGloss = Clamp(Anisotropic->GetFloatValue(hitPoint), 0.0f, 1.0f);
 
-		float pdf = DisneyPdf(roughness, metallic, clearcoat, clearcoatGloss,
-				anisotropicGloss, localLightDir, localEyeDir);
-
-		if (pdf < 0.0001f)
-			pdf = 0.f;
-
-		if (directPdfW)
-			*directPdfW = pdf;
-		if (reversePdfW)
-			*reversePdfW = pdf;
-	}
+	DisneyPdf(hitPoint.fromLight, roughness, metallic, clearcoat, clearcoatGloss,
+			anisotropicGloss, localLightDir, localEyeDir, directPdfW, reversePdfW);
 }
 
-float DisneyMaterial::DisneyPdf(const float roughness, const float metallic,
+void DisneyMaterial::DisneyPdf(const bool fromLight,
+		const float roughness, const float metallic,
 		const float clearcoat, const float clearcoatGloss, const float anisotropic,
-		const Vector &localLightDir, const Vector &localEyeDir) const {
-	if (CosTheta(localLightDir) * CosTheta(localEyeDir) <= 0.0f)
-		return 0.0f;
+		const Vector &localLightDir, const Vector &localEyeDir,
+		float *directPdfW,  float *reversePdfW) const {
+	if (CosTheta(localLightDir) * CosTheta(localEyeDir) <= 0.0f) {
+		if (directPdfW)
+			*directPdfW = 0.f;
+		if (reversePdfW)
+			*reversePdfW = 0.f;
 
-	const Vector wi = Normalize(localLightDir);
-	const Vector wo = Normalize(localEyeDir);
+		return;
+	}
 
 	float ratioGlossy, ratioDiffuse, ratioClearcoat;
 	ComputeRatio(metallic, clearcoat, ratioGlossy, ratioDiffuse, ratioClearcoat);
 
-	const float pdfDiffuse = ratioDiffuse * DiffusePdf(wi, wo);
-	const float pdfMicrofacet = ratioGlossy * MetallicPdf(anisotropic, roughness, wi, wo);
-	const float pdfClearcoat = ratioClearcoat * ClearcoatPdf(clearcoatGloss, wi, wo);
+	float diffuseDirectPdfW, diffuseReversePdfW;
+	DiffusePdf(fromLight, localLightDir, localEyeDir, &diffuseDirectPdfW, &diffuseReversePdfW);
 
-	return pdfDiffuse + pdfMicrofacet + pdfClearcoat;	
+	float metallicDirectPdfW, metallicReversePdfW;
+	MetallicPdf(fromLight, anisotropic, roughness, localLightDir, localEyeDir, &metallicDirectPdfW, &metallicReversePdfW);
+
+	float clearcoatDirectPdfW, clearcoatReversePdfW;
+	ClearcoatPdf(fromLight, clearcoatGloss, localLightDir, localEyeDir, &clearcoatDirectPdfW, &clearcoatReversePdfW);
+
+	if (directPdfW)
+		*directPdfW =  ratioDiffuse * diffuseDirectPdfW + ratioGlossy * metallicDirectPdfW + ratioClearcoat * clearcoatDirectPdfW;
+	if (reversePdfW)
+		*reversePdfW =  ratioDiffuse * diffuseReversePdfW + ratioGlossy * metallicReversePdfW + ratioClearcoat * clearcoatReversePdfW;
 }
 
-float DisneyMaterial::DiffusePdf(const Vector &wi, const Vector &wo) const {
-	return fabsf(CosTheta(wi)) * INV_PI;
+void DisneyMaterial::DiffusePdf(const bool fromLight,
+		const Vector &localLightDir, const Vector &localEyeDir,
+		float *directPdfW, float *reversePdfW) const {
+	if (directPdfW)
+		*directPdfW = fabsf(CosTheta(fromLight ? localEyeDir : localLightDir)) * INV_PI;
+	if (reversePdfW)
+		*reversePdfW = fabsf(CosTheta(fromLight ? localLightDir : localEyeDir)) * INV_PI;
 }
 
-float DisneyMaterial::MetallicPdf(const float anisotropic, const float roughness,
-		const Vector &wi, const Vector &wo) const {
-	const Vector wh = Normalize(wo + wi);
+void DisneyMaterial::MetallicPdf(const bool fromLight,
+		const float anisotropic, const float roughness,
+		const Vector &localLightDir, const Vector &localEyeDir,
+		float *directPdfW, float *reversePdfW) const {
+	const Vector wh = Normalize(localEyeDir + localLightDir);
 
 	float ax, ay;
 	Anisotropic_Params(anisotropic, roughness, ax, ay);
@@ -432,22 +430,35 @@ float DisneyMaterial::MetallicPdf(const float anisotropic, const float roughness
 	const float NdotH = fabsf(CosTheta(wh));
 
 	const float denom = HdotX * HdotX / ax2 + HdotY * HdotY / ay2 + NdotH * NdotH;
-	if (denom == 0.0f)
-		return 0.0f;
+	if (denom == 0.0f) {
+		if (directPdfW)
+			*directPdfW = 0.f;
+		if (reversePdfW)
+			*reversePdfW = 0.f;
+
+		return;
+	}
 
 	const float pdfDistribution = NdotH / (M_PI * ax * ay * denom * denom);
 
-	return pdfDistribution / (4.0f * Dot(wo, wh));
+	if (directPdfW)
+		*directPdfW = pdfDistribution / (4.0f * Dot(fromLight ? localEyeDir : localLightDir, wh));
+	if (reversePdfW)
+		*reversePdfW = pdfDistribution / (4.0f * Dot(fromLight ? localLightDir : localEyeDir, wh));
 }
 
-float DisneyMaterial::ClearcoatPdf(const float clearcoatGloss, const Vector &wi,
-		const Vector &wo) const {
-	const Vector wh = Normalize(wi + wo);
+void DisneyMaterial::ClearcoatPdf(const bool fromLight, const float clearcoatGloss,
+		const Vector &localLightDir, const Vector &localEyeDir,
+		float *directPdfW, float *reversePdfW) const {
+	const Vector wh = Normalize(localLightDir + localEyeDir);
 
 	const float NdotH = fabsf(CosTheta(wh));
 	const float Dr = GTR1(NdotH, Lerp(clearcoatGloss, 0.1f, 0.001f));
 
-	return Dr * NdotH / (4.0f * Dot(wo, wh));
+	if (directPdfW)
+		*directPdfW = Dr * NdotH / (4.0f * Dot(fromLight ? localEyeDir : localLightDir, wh));
+	if (reversePdfW)
+		*reversePdfW = Dr * NdotH / (4.0f * Dot(fromLight ? localLightDir : localEyeDir, wh));
 }
 
 Spectrum DisneyMaterial::CalculateTint(const Spectrum &color) const {

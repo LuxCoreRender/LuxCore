@@ -159,7 +159,8 @@ private:
 	luxrays::Spectrum DisneySheen(const luxrays::Spectrum &color, const float sheen,
 			const float sheenTint, const float LdotH) const;
 	
-	luxrays::Spectrum DisneyEvaluate(const luxrays::Spectrum &color,
+	luxrays::Spectrum DisneyEvaluate(const bool fromLight, 
+		const luxrays::Spectrum &color,
 		const float subsurface, const float roughness,
 		const float metallic, const float specular, const float specularTint,
 		const float clearcoat, const float clearcoatGloss, const float anisotropicGloss,
@@ -173,14 +174,19 @@ private:
 	luxrays::Vector DisneyClearcoatSample(const float clearcoatGloss,
 			const luxrays::Vector &wo, float u0, float u1) const;
 
-	float DisneyPdf(const float roughness, const float metallic,
+	void DisneyPdf(const bool fromLight, const float roughness, const float metallic,
 			const float clearcoat, const float clearcoatGloss, const float anisotropic,
-			const Vector &localLightDir, const Vector &localEyeDir) const;
-	float DiffusePdf(const luxrays::Vector &wi, const luxrays::Vector &wo) const;
-	float MetallicPdf(const float anisotropic, const float roughness,
-			const luxrays::Vector &wi, const luxrays::Vector &wo) const;
-	float ClearcoatPdf(const float clearcoatGloss, const luxrays::Vector &wi,
-			const luxrays::Vector &wo) const;
+			const Vector &localLightDir, const Vector &localEyeDir,
+			float *directPdfW, float *reversePdfW) const;
+	void DiffusePdf(const bool fromLight,
+			const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
+			float *directPdfW, float *reversePdfW) const;
+	void MetallicPdf(const bool fromLight, const float anisotropic, const float roughness,
+			const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
+			float *directPdfW, float *reversePdfW) const;
+	void ClearcoatPdf(const bool fromLight, const float clearcoatGloss,
+			const luxrays::Vector &localLightDir, const luxrays::Vector &localEyeDir,
+			float *directPdfW, float *reversePdfW) const;
 };
 
 }
