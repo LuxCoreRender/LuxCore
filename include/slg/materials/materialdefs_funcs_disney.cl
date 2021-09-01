@@ -356,7 +356,9 @@ OPENCL_FORCE_INLINE void DisneyMaterial_Evaluate(__global const Material* restri
 		Texture_GetFloatValue(material->disney.anisotropicTexIndex, hitPoint TEXTURES_PARAM),
 		Texture_GetFloatValue(material->disney.sheenTexIndex, hitPoint TEXTURES_PARAM),
 		Texture_GetFloatValue(material->disney.sheenTintTexIndex, hitPoint TEXTURES_PARAM),
-		localFilmAmount, localFilmThickness, localFilmIor);
+		localFilmAmount, localFilmThickness, localFilmIor)
+		// Evaluate() follows LuxRender habit to return the result multiplied by cosThetaToLight
+		* fabs(CosTheta(lightDir));
 
 	if (Spectrum_IsBlack(result)) {
 		MATERIAL_EVALUATE_RETURN_BLACK;
