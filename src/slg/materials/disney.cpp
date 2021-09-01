@@ -111,7 +111,9 @@ Spectrum DisneyMaterial::Evaluate(
 
 	return DisneyEvaluate(hitPoint.fromLight, color, subsurface, roughness, metallic, specular, specularTint,
 			clearcoat, clearcoatGloss, anisotropicGloss, sheen, sheenTint, localFilmAmount, localFilmThickness, 
-			localFilmIor, localLightDir, localEyeDir, event, directPdfW, reversePdfW);
+			localFilmIor, localLightDir, localEyeDir, event, directPdfW, reversePdfW)
+			// Evaluate() follows LuxRender habit to return the result multiplied by cosThetaToLight
+			* fabsf(CosTheta(localLightDir));
 }
 
 Spectrum DisneyMaterial::DisneyEvaluate(
@@ -175,7 +177,7 @@ Spectrum DisneyMaterial::DisneyEvaluate(
 
 	const Spectrum f = (Lerp(subsurface, diffuseEval, subsurfaceEval) + sheenEval) * (1.0f - metallic) + glossyEval;
 
-	return f * abs(NdotL);
+	return f * fabsf(NdotL);
 }
 
 Spectrum DisneyMaterial::DisneyDiffuse(const Spectrum &color, const float roughness,
@@ -233,7 +235,7 @@ float DisneyMaterial::DisneyClearCoat(const float clearcoat, const float clearco
 		float NdotL, float NdotV, float NdotH, float LdotH) const {
 	const float gloss = Lerp(clearcoatGloss, 0.1f, 0.001f);
 
-	const float Dr = GTR1(abs(NdotH), gloss);
+	const float Dr = GTR1(fabsf(NdotH), gloss);
 	const float FH = Schlick_Weight(LdotH);
 	const float Fr = Lerp(FH, 0.04f, 1.0f);
 	const float Gr = SmithG_GGX(NdotL, 0.25f) * SmithG_GGX(NdotV, 0.25f);
@@ -274,7 +276,7 @@ Spectrum DisneyMaterial::Sample(
 	const float sheen = Sheen->GetFloatValue(hitPoint);
 	const float sheenTint = Clamp(SheenTint->GetFloatValue(hitPoint), 0.0f, 1.0f);
 
-	const Vector wo = Normalize(localFixedDir);
+	const Vector &wo = localFixedDir;
 
 	float ratioGlossy, ratioDiffuse, ratioClearcoat;
 	ComputeRatio(metallic, clearcoat, ratioGlossy, ratioDiffuse, ratioClearcoat);
@@ -290,6 +292,9 @@ Spectrum DisneyMaterial::Sample(
 
 	const Vector &localLightDir = hitPoint.fromLight ? localFixedDir : *localSampledDir;
 	const Vector &localEyeDir = hitPoint.fromLight ? *localSampledDir : localFixedDir;
+
+	if (CosTheta(localLightDir) * CosTheta(localEyeDir) <= 0.f)
+		return Spectrum();
 
 	const float NdotL = fabsf(CosTheta(localLightDir));
 	const float NdotV = fabsf(CosTheta(localEyeDir));
@@ -336,7 +341,7 @@ Vector DisneyMaterial::DisneyMetallicSample(const float anisotropic, const float
 	Vector wh = Vector(sinTheta * cosPhi, sinTheta * sinPhi, cosTheta);
 
 	if (CosTheta(wo) * CosTheta(wh) <= 0.0f)
-		wh *= -1.f;
+		return Vector();
 
 	return Normalize(2.0f * Dot(wh, wo) * wh - wo);
 }
@@ -407,10 +412,12 @@ void DisneyMaterial::DisneyPdf(const bool fromLight,
 void DisneyMaterial::DiffusePdf(const bool fromLight,
 		const Vector &localLightDir, const Vector &localEyeDir,
 		float *directPdfW, float *reversePdfW) const {
-	if (directPdfW)
-		*directPdfW = fabsf(CosTheta(fromLight ? localEyeDir : localLightDir)) * INV_PI;
+
+	const Vector &localFixedDir = fromLight ? localLightDir : localEyeDir;
+	const Vector &localSampledDir = fromLight ? localEyeDir : localLightDir;	if (directPdfW)
+		*directPdfW = fabsf(CosTheta(localSampledDir)) * INV_PI;
 	if (reversePdfW)
-		*reversePdfW = fabsf(CosTheta(fromLight ? localLightDir : localEyeDir)) * INV_PI;
+		*reversePdfW = fabsf(CosTheta(localFixedDir)) * INV_PI;
 }
 
 void DisneyMaterial::MetallicPdf(const bool fromLight,
@@ -441,10 +448,12 @@ void DisneyMaterial::MetallicPdf(const bool fromLight,
 
 	const float pdfDistribution = NdotH / (M_PI * ax * ay * denom * denom);
 
+	const Vector &localFixedDir = fromLight ? localLightDir : localEyeDir;
+	const Vector &localSampledDir = fromLight ? localEyeDir : localLightDir;
 	if (directPdfW)
-		*directPdfW = pdfDistribution / (4.0f * Dot(fromLight ? localEyeDir : localLightDir, wh));
+		*directPdfW = pdfDistribution / (4.0f * Dot(localFixedDir, wh));
 	if (reversePdfW)
-		*reversePdfW = pdfDistribution / (4.0f * Dot(fromLight ? localLightDir : localEyeDir, wh));
+		*reversePdfW = pdfDistribution / (4.0f * Dot(localSampledDir, wh));
 }
 
 void DisneyMaterial::ClearcoatPdf(const bool fromLight, const float clearcoatGloss,
@@ -455,10 +464,12 @@ void DisneyMaterial::ClearcoatPdf(const bool fromLight, const float clearcoatGlo
 	const float NdotH = fabsf(CosTheta(wh));
 	const float Dr = GTR1(NdotH, Lerp(clearcoatGloss, 0.1f, 0.001f));
 
+	const Vector &localFixedDir = fromLight ? localLightDir : localEyeDir;
+	const Vector &localSampledDir = fromLight ? localEyeDir : localLightDir;
 	if (directPdfW)
-		*directPdfW = Dr * NdotH / (4.0f * Dot(fromLight ? localEyeDir : localLightDir, wh));
+		*directPdfW = Dr * NdotH / (4.0f * Dot(localFixedDir, wh));
 	if (reversePdfW)
-		*reversePdfW = Dr * NdotH / (4.0f * Dot(fromLight ? localLightDir : localEyeDir, wh));
+		*reversePdfW = Dr * NdotH / (4.0f * Dot(localSampledDir, wh));
 }
 
 Spectrum DisneyMaterial::CalculateTint(const Spectrum &color) const {
@@ -491,7 +502,7 @@ float DisneyMaterial::SmithG_GGX(const float NdotV, const float alphaG) const {
 	const float a = alphaG * alphaG;
 	const float b = NdotV * NdotV;
 
-	return 1.0f / (abs(NdotV) + Max(sqrtf(a + b - a * b), 0.0001f));
+	return 1.0f / (fabsf(NdotV) + Max(sqrtf(a + b - a * b), 0.0001f));
 }
 
 float DisneyMaterial::Schlick_Weight(const float cosi) const {
