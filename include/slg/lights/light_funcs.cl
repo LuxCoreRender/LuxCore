@@ -59,9 +59,10 @@ OPENCL_FORCE_INLINE float3 ConstantInfiniteLight_GetRadiance(__global const Ligh
 	const bool useVisibilityMapCache = constantInfiniteLight->notIntersectable.constantInfinite.useVisibilityMapCache;
 
 	if (useVisibilityMapCache && (!bsdf || EnvLightVisibilityCache_IsCacheEnabled(bsdf MATERIALS_PARAM))) {
-		const float3 w = -dir;
+		const float3 localDir = normalize(Transform_InvApplyVector(&constantInfiniteLight->notIntersectable.light2World, -dir));
+
 		float u, v, latLongMappingPdf;
-		EnvLightSource_ToLatLongMapping(w, &u, &v, &latLongMappingPdf);
+		EnvLightSource_ToLatLongMapping(localDir, &u, &v, &latLongMappingPdf);
 		if (latLongMappingPdf == 0.f)
 			return BLACK;
 

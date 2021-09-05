@@ -52,9 +52,10 @@ Spectrum ConstantInfiniteLight::GetRadiance(const Scene &scene,
 	const float envRadius = GetEnvRadius(scene);
 
 	if (visibilityMapCache && (!bsdf || visibilityMapCache->IsCacheEnabled(*bsdf))) {
-		const Vector w = -dir;
+		const Vector localDir = Normalize(Inverse(lightToWorld) * -dir);
+		
 		float u, v, latLongMappingPdf;
-		ToLatLongMapping(w, &u, &v, &latLongMappingPdf);
+		ToLatLongMapping(localDir, &u, &v, &latLongMappingPdf);
 		if (latLongMappingPdf == 0.f)
 			return Spectrum();
 
