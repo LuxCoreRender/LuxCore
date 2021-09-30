@@ -162,6 +162,15 @@ void LightSourceDefinitions::SetLightStrategy(const luxrays::Properties &props) 
 	}
 }
 
+void LightSourceDefinitions::UpdateVolumeReferences(const Volume *oldVol, const Volume *newVol) {
+	for (auto const &e : lightsByName) {
+		LightSource *l = e.second;
+		
+		l->UpdateVolumeReferences(oldVol, newVol);
+	}
+
+}
+
 void LightSourceDefinitions::Preprocess(const Scene *scene, const bool useRTMode) {
 	// Update lightGroupCount, envLightSources, intersectableLightSources,
 	// lightIndexOffsetByMeshIndex, lightsDistribution, etc.

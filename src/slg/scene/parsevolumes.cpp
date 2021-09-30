@@ -78,6 +78,8 @@ void Scene::ParseVolumes(const Properties &props) {
 			// Check also the camera volume
 			if (camera)
 				camera->UpdateVolumeReferences(static_cast<const Volume *>(oldMat), static_cast<const Volume *>(newMat));
+			// Check also the light source volumes
+			lightDefs.UpdateVolumeReferences(static_cast<const Volume *>(oldMat), static_cast<const Volume *>(newMat));
 
 			// Check also the world default volume
 			if (defaultWorldVolume == oldMat)

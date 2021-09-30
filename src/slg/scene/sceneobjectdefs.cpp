@@ -64,6 +64,7 @@ void SceneObjectDefinitions::DefineIntersectableLights(LightSourceDefinitions &l
 		tl->SetName(prefix + boost::lexical_cast<string>(i));
 
 		tl->lightMaterial = obj->GetMaterial();
+		tl->volume = tl->lightMaterial->GetExteriorVolume();
 		tl->sceneObject = obj;
 		// This is initialized in LightSourceDefinitions::Preprocess()
 		tl->meshIndex = NULL_INDEX;

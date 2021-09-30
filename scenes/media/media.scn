@@ -1,8 +1,8 @@
 scene.camera.lookat.orig = 0.618576 -11.311428 5.343666
 scene.camera.lookat.target = -2.558834 -1.985422 3.632028
 scene.camera.fieldofview = 77.3196
-scene.camera.autovolume.enable = 1
-#scene.camera.volume = vol_air
+#scene.camera.autovolume.enable = 1
+scene.camera.volume = vol_air
 ################################################################################
 #scene.textures.fbmtex.type = fbm
 #scene.textures.fbmtex.octaves = 1
@@ -43,8 +43,8 @@ scene.materials.mat_light.volume.interior = vol_air
 scene.materials.mat_light.volume.exterior = vol_air
 scene.materials.mat_white.type = matte
 scene.materials.mat_white.kd = 0.1 0.1 0.1
-scene.materials.mat_white.volume.interior = vol_air
-scene.materials.mat_white.volume.exterior = vol_air
+#scene.materials.mat_white.volume.interior = vol_air
+#scene.materials.mat_white.volume.exterior = vol_air
 ################################################################################
 scene.objects.mat_light.material = mat_light
 scene.objects.mat_light.ply = scenes/media/mat_light.ply

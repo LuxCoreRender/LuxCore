@@ -40,6 +40,7 @@
 * Added the support for camera projection UV shape
 * Added the support for OpenColorIO Looks to TONEMAP_OPENCOLORIO color space mode
 * Added the support for OpenColorIO Looks to TONEMAP_OPENCOLORIO display mode
+* It is now possible to set the light source volume like with camera (for BiDir)
 
 ### Fixed Bugs
 

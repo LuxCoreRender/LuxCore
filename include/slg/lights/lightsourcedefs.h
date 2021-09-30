@@ -55,6 +55,8 @@ public:
 	void DeleteLightSource(const std::string &name);
 	void DeleteLightSourceStartWith(const std::string &namePrefix);
 	void DeleteLightSourceByMaterial(const Material *mat);
+	
+	void UpdateVolumeReferences(const Volume *oldVol, const Volume *newVol);
 
 	//--------------------------------------------------------------------------
 	// Following methods require Preprocess()

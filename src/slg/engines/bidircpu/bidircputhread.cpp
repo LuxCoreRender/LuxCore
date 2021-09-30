@@ -557,6 +557,8 @@ bool BiDirCPURenderThread::TraceLightPath(const float time,
 			lightRay, lightEmitPdfW,
 			&lightDirectPdfW, &cosThetaAtLight);
 	if (!lightVertex.throughput.Black()) {
+		lightVertex.volInfo.AddVolume(light->volume);
+
 		lightEmitPdfW *= lightPickPdf;
 		lightDirectPdfW *= lightPickPdf;
 

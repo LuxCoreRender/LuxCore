@@ -27,6 +27,21 @@ using namespace slg;
 // LightSource
 //------------------------------------------------------------------------------
 
+Properties LightSource::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
+	const string prefix = "scene.lights." + GetName();
+
+	Properties props;
+	if (volume)
+		props.Set(Property(prefix + ".volume")(volume->GetName()));
+
+	return props;
+}
+
+void LightSource::UpdateVolumeReferences(const Volume *oldVol, const Volume *newVol) {
+	if (volume == oldVol)
+		volume = (const Volume *)newVol;
+}
+
 string LightSource::LightSourceType2String(const LightSourceType type) {
 	switch (type) {
 		case TYPE_IL: return "INFINITE";
@@ -60,7 +75,7 @@ void NotIntersectableLightSource::Preprocess() {
 Properties NotIntersectableLightSource::ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const {
 	const string prefix = "scene.lights." + GetName();
 
-	return Properties() <<
+	return LightSource::ToProperties(imgMapCache, useRealFileName) <<
 			Property(prefix + ".gain")(gain) <<
 			Property(prefix + ".transformation")(lightToWorld.m) <<
 			Property(prefix + ".id")(id) <<

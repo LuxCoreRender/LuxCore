@@ -45,6 +45,7 @@ using luxrays::ocl::Vector;
 
 class BSDF;
 class Scene;
+class Volume;
 
 typedef enum {
 	TYPE_IL, TYPE_IL_SKY, TYPE_SUN, TYPE_TRIANGLE, TYPE_POINT, TYPE_MAPPOINT,
@@ -59,7 +60,8 @@ typedef enum {
 
 class LightSource : public luxrays::NamedObject {
 public:
-	LightSource() : NamedObject("light"), lightSceneIndex(0) { }
+	LightSource() : NamedObject("light"), lightSceneIndex(0),
+			volume(NULL) { }
 	virtual ~LightSource() { }
 
 	virtual void Preprocess() = 0;
@@ -107,11 +109,15 @@ public:
 		return false;
 	}
 	
+	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
+
 	virtual void AddReferencedImageMaps(boost::unordered_set<const ImageMap *> &referencedImgMaps) const { }
+	virtual void UpdateVolumeReferences(const Volume *oldVol, const Volume *newVol);
 
 	static std::string LightSourceType2String(const LightSourceType type);
 
 	u_int lightSceneIndex;
+	const Volume *volume;
 };
 
 //------------------------------------------------------------------------------
