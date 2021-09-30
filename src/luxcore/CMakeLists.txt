@@ -115,8 +115,8 @@ if (BISON_FOUND AND FLEX_FOUND)
 else()
 
 	# Just copy the pre-generated files from the source tree:
-	file(COPY "luxcore/luxparser/luxparse.cpp"
-		"luxcore/luxparser/luxlex.cpp" DESTINATION ${generated_parser_dir})
+	file(COPY "${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxparse.cpp"
+		"${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxlex.cpp" DESTINATION ${generated_parser_dir})
 
 	message(WARNING "Flex or Bison not available "
 			"- using pre-generated files from the source tree")
