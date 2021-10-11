@@ -159,7 +159,8 @@ bool PathVolumeInfo::ContinueToTrace(const BSDF &bsdf) const {
 		// 1) I'm entering an object and the interior volume has a
 		// lower priority than the current one (or is the same volume).
 		//
-		// 2) I'm exiting an object and I'm not leaving the current volume.
+		// 2) I'm exiting an object, the material is NULL and I'm not leaving
+		// the current volume.
 
 		const Volume *bsdfInteriorVol = bsdf.GetMaterialInteriorVolume();
 
@@ -171,7 +172,9 @@ bool PathVolumeInfo::ContinueToTrace(const BSDF &bsdf) const {
 		//
 		// I have to calculate the potentially new currentVolume in order
 		// to check if I'm leaving the current one
-		if ((!bsdf.hitPoint.intoObject) && currentVolume && (SimulateRemoveVolume(bsdfInteriorVol) == currentVolume))
+		if ((!bsdf.hitPoint.intoObject) &&
+				(bsdf.GetMaterialType() == NULLMAT) &&
+				currentVolume && (SimulateRemoveVolume(bsdfInteriorVol) == currentVolume))
 			return true;
 	}
 

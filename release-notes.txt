@@ -58,6 +58,7 @@
 * Fixed a possible crash when editing a scene
 * Fixed glTF export to work with Python base64.b64decode()
 * Fixed a bug in Disney material causing bright edges
+* Fixed a problem with not-NULL transparent surfaces when the interior and the exterior volumes are the same
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
