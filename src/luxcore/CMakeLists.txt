@@ -116,6 +116,7 @@ else()
 
 	# Just copy the pre-generated files from the source tree:
 	file(COPY "${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxparse.cpp"
+		"${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxparse.hpp"
 		"${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxlex.cpp" DESTINATION ${generated_parser_dir})
 
 	message(WARNING "Flex or Bison not available "
