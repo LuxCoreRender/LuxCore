@@ -677,7 +677,7 @@ public:
 	virtual luxrays::UV GetDuv(const luxrays::UV &uv) const = 0;
 	virtual luxrays::UV GetDuv(const u_int index) const = 0;
 	luxrays::UV GetDuv(const u_int x, const u_int y) const {
-		return GetAlpha(x + y * width);
+		return GetDuv(x + y * width);
 	}
 
 	virtual void ReverseGammaCorrection(const float gamma) = 0;
