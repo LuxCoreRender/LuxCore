@@ -60,6 +60,7 @@
 * Fixed a bug in Disney material causing bright edges
 * Fixed a problem with not-NULL transparent surfaces when the interior and the exterior volumes are the same
 * Fixed a cut&paste error in ImageMapStorage::GetDuv() (issue #560)
+* Fixed a problem with indirect light going trough objects with white shadow transparency in BIDIRCPU
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.

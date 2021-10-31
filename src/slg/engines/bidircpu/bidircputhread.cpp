@@ -356,7 +356,7 @@ void BiDirCPURenderThread::ConnectToEye(const float time,
 			BSDF bsdfConn;
 			Spectrum connectionThroughput;
 			PathVolumeInfo volInfo = lightVertex.volInfo; // I need to use a copy here
-			if (!scene->Intersect(device, LIGHT_RAY | CAMERA_RAY, &volInfo, u0, &traceRay, &traceRayHit, &bsdfConn,
+			if (!scene->Intersect(device, LIGHT_RAY | CAMERA_RAY | SHADOW_RAY, &volInfo, u0, &traceRay, &traceRayHit, &bsdfConn,
 					&connectionThroughput)) {
 				// Nothing was hit, the light path vertex is visible
 
