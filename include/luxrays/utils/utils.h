@@ -42,7 +42,10 @@
 #endif
 
 #if (defined(__GNUC__) && (__GNUC__ > 5))
-using namespace std;
+template <class T>
+int isnan(T a) { return std::isnan(a); }
+template <class T>
+int isinf(T a) { return std::isinf(a); }
 #endif
 
 #if defined(__APPLE__)
