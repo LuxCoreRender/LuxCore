@@ -41,6 +41,10 @@
 #define isnanf(a) _isnan(a)
 #endif
 
+#if (defined(__GNUC__) && (__GNUC__ > 5))
+using namespace std;
+#endif
+
 #if defined(__APPLE__)
 #include <string>
 #endif
