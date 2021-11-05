@@ -68,6 +68,10 @@ endif()
 
 project(LuxRays)
 
+if (NOT DEFINED LuxRays_SOURCE_DIR)
+	SET(LuxRays_SOURCE_DIR "${CMAKE_SOURCE_DIR}")
+endif (NOT DEFINED LuxRays_SOURCE_DIR)
+
 ################################################################################
 #
 # Include necessary submodules

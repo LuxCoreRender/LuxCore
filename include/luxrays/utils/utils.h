@@ -41,6 +41,13 @@
 #define isnanf(a) _isnan(a)
 #endif
 
+#if (defined(__GNUC__) && (__GNUC__ > 5))
+template <class T>
+int isnan(T a) { return std::isnan(a); }
+template <class T>
+int isinf(T a) { return std::isinf(a); }
+#endif
+
 #if defined(__APPLE__)
 #include <string>
 #endif
