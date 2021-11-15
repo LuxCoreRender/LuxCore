@@ -44,8 +44,6 @@ public:
 	ImagePipelinePlugin() { }
 	virtual ~ImagePipelinePlugin() { }
 
-	void SetRadianceChannelScale(const u_int index, const RadianceChannelScale &scale);
-
 	virtual bool CanUseNative() const { return true; }
 	virtual bool CanUseHW() const { return false; }
 	virtual void AddHWChannelsUsed(Film::FilmChannels &hwChannelsUsed) const { }

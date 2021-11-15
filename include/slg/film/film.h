@@ -41,7 +41,6 @@
 #include "slg/film/noiseestimation/filmnoiseestimation.h"
 #include "slg/film/denoiser/filmdenoiser.h"
 #include "slg/utils/varianceclamping.h"
-#include "denoiser/filmdenoiser.h"
 
 namespace slg {
 
