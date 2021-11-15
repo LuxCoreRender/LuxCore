@@ -325,8 +325,12 @@ void BakeCPURenderThread::RenderConnectToEyeCallBack(const BakeMapInfo &mapInfo,
 		const Spectrum &lightPathFlux, vector<SampleResult> &sampleResults) const {
 	BakeCPURenderEngine *engine = (BakeCPURenderEngine *)renderEngine;
 
-	// Bake only caustics
-	if (pathInfo.IsSDPath() && (!engine->pathTracer.hybridBackForwardEnable || (pathInfo.depth.depth > 0))) {
+	// Bake only caustics (note: pathInfo is not updated with the current hit point):
+	// - the path must be specular;
+	// - the current hit point must be diffuse/glossy (aka not specular)
+	if (pathInfo.IsSpecularPath() &&
+			!pathInfo.IsNearlySpecular(bsdf.GetEventTypes(), bsdf.GetGlossiness(), engine->pathTracer.hybridBackForwardGlossinessThreshold) &&
+			(!engine->pathTracer.hybridBackForwardEnable || (pathInfo.depth.depth > 0))) {
 		// Check if the hit point is on one of the objects I'm baking
 		for (u_int i = 0; i < engine->currentSceneObjsToBake.size(); ++i) {
 			if (engine->currentSceneObjsToBake[i] == bsdf.GetSceneObject()) {
