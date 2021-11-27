@@ -286,6 +286,7 @@ public:
 		const boost::function<void()> noCallback;
 		return Update(threadIndex, filmSPP, noCallback);
 	}
+	void FinishUpdate(const u_int threadIndex);
 
 	const luxrays::SpectrumGroup *GetIndirectRadiance(const BSDF &bsdf) const;
 	luxrays::SpectrumGroup ConnectWithCausticPaths(const BSDF &bsdf) const;
@@ -341,6 +342,7 @@ private:
 	u_int threadCount;
 	std::unique_ptr<boost::barrier> threadsSyncBarrier;
 	u_int lastUpdateSpp, updateSeedBase;
+	bool finishUpdateFlag;
 
 	// Visibility map
 	std::vector<PGICVisibilityParticle> visibilityParticles;

@@ -368,6 +368,7 @@ void PhotonGICache::Preprocess(const u_int threadCnt) {
 	threadsSyncBarrier.reset(new boost::barrier(threadCount));
 	lastUpdateSpp = 0;
 	updateSeedBase = 1;
+	finishUpdateFlag = false;
 
 	if (params.persistent.fileName != "") {
 		// Check if the file already exist

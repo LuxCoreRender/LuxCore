@@ -137,16 +137,11 @@ void TilePathCPURenderThread::RenderFunc() {
 
 	threadDone = true;
 
-	// This is done to interrupt thread pending on barrier wait
+	// This is done to stop threads pending on barrier wait
 	// inside engine->photonGICache->Update(). This can happen when an
 	// halt condition is satisfied.
-	for (u_int i = 0; i < engine->renderThreads.size(); ++i) {
-		try {
-			engine->renderThreads[i]->Interrupt();
-		} catch(...) {
-			// Ignore any exception
-		}
-	}
+	if (engine->photonGICache)
+		engine->photonGICache->FinishUpdate(threadIndex);
 
 	//SLG_LOG("[TilePathCPURenderEngine::" << threadIndex << "] Rendering thread halted");
 }

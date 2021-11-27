@@ -180,23 +180,11 @@ void PathOCLNativeRenderThread::RenderThreadImpl() {
 
 	threadDone = true;
 
-	// This is done to interrupt thread pending on barrier wait
+	// This is done to stop threads pending on barrier wait
 	// inside engine->photonGICache->Update(). This can happen when an
 	// halt condition is satisfied.
-	for (u_int i = 0; i < engine->renderOCLThreads.size(); ++i) {
-		try {
-			engine->renderOCLThreads[i]->Interrupt();
-		} catch(...) {
-			// Ignore any exception
-		}
-	}
-	for (u_int i = 0; i < engine->renderNativeThreads.size(); ++i) {
-		try {
-			engine->renderNativeThreads[i]->Interrupt();
-		} catch(...) {
-			// Ignore any exception
-		}
-	}
+	if (engine->photonGICache)
+		engine->photonGICache->FinishUpdate(threadIndex);
 
 	//SLG_LOG("[PathOCLRenderEngine::" << threadIndex << "] Rendering thread halted");
 }
