@@ -23,8 +23,12 @@ def pyside_imports():
         import PySide.QtCore as QtCore
         result = ['PySide.QtCore','PySide.QtGui']
     except ImportError:
-        from PySide2 import QtCore
-        result = ['PySide2.QtCore','PySide2.QtGui', 'PySide2.QtWidgets']
+        try:
+            from PySide2 import QtCore
+            result = ['PySide2.QtCore','PySide2.QtGui', 'PySide2.QtWidgets']
+        except ImportError:
+            from PySide6 import QtCore
+            result = ['PySide6.QtCore','PySide6.QtGui', 'PySide6.QtWidgets']
     return result
 
 a = Analysis(['pyluxcoretool.py'],
