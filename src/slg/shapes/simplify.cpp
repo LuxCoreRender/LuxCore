@@ -358,7 +358,7 @@ private:
 		Point p;
 		CalculateCollapseError(i0, i1, &p);
 
-		// true/false if the trinagles referencing the vertex are deleted
+		// true/false if the triangles referencing the vertex are deleted
 		deleted0.resize(v0.tcount);
 		deleted1.resize(v1.tcount);
 

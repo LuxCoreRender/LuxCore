@@ -400,7 +400,7 @@ class RenderFarmJobSingleImageThread:
 
 			socketutils.SendLine(nodeSocket, pyluxcore.Version())
 			socketutils.RecvOk(nodeSocket)
-			logger.info("Remote node has the same pyluxcore verison")
+			logger.info("Remote node has the same pyluxcore version")
 
 			#-------------------------------------------------------------------
 			# Send the RenderConfig serialized file

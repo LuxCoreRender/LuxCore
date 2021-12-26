@@ -234,7 +234,7 @@ void SceneVisibility<T>::TraceVisibilityThread::RenderFunc() {
 				if (sampleResult.firstPathVertex)
 					sampleResult.firstPathVertexEvent = lastBSDFEvent;
 
-				// Increment path depth informations
+				// Increment path depth information
 				depthInfo.IncDepths(lastBSDFEvent);
 
 				// Russian Roulette

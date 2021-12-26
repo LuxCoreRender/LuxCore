@@ -94,7 +94,7 @@ class RenderFarmFilmMerger:
 				filmThreadFileName = nodeThread.GetNodeFilmFileName()
 				# Check if the file exist
 				if (not os.path.isfile(filmThreadFileName)):
-					logger.info("Film file not yet avilable: " + nodeThread.thread.name + " (" + filmThreadFileName + ")")
+					logger.info("Film file not yet available: " + nodeThread.thread.name + " (" + filmThreadFileName + ")")
 					continue
 
 				logger.info("Merging film: " + nodeThread.thread.name + " (" + filmThreadFileName + ")")

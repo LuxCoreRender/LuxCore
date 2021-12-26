@@ -84,7 +84,7 @@ set(GLUT_INCLUDE_PATH 		"${GLUT_SEARCH_PATH}/Headers")
 
 SET(OPENEXR_ROOT "${OSX_SEARCH_PATH}")
 
-# Libs with hardcoded pathes ( macos repo )
+# Libs with hardcoded paths ( macos repo )
 SET(TIFF_LIBRARIES ${OSX_DEPENDENCY_ROOT}/lib/libtiff.dylib ${OSX_DEPENDENCY_ROOT}/lib/liblzma.a)
 SET(TIFF_INCLUDE_DIR ${OSX_DEPENDENCY_ROOT}/include/tiff)
 SET(TIFF_FOUND ON)

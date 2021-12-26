@@ -92,7 +92,7 @@ OPENCL_FORCE_INLINE bool BombingTexture_WriteCellUV(__global const Texture* rest
 
 	// Check if I'm inside the cell
 	//
-	// The check is done ouside this function on GPUs
+	// The check is done outside this function on GPUs
 	if ((bulletUV.x < 0.f) || (bulletUV.x >= 1.f) ||
 			(bulletUV.y < 0.f) || (bulletUV.y >= 1.f))
 		return false;

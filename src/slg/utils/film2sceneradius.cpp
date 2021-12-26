@@ -234,7 +234,7 @@ static void Film2SceneRadiusThread(Film2SceneRadiusThreadParams &params) {
 			if (sampleResult.firstPathVertex)
 				sampleResult.firstPathVertexEvent = lastBSDFEvent;
 
-			// Increment path depth informations
+			// Increment path depth information
 			depthInfo.IncDepths(lastBSDFEvent);
 
 			// Russian Roulette

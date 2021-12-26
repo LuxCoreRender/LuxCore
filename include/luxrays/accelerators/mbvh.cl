@@ -55,7 +55,7 @@ void NextNode(uint *pageIndex, uint *nodeIndex) {
 #define ACCELERATOR_INTERSECT_PARAM MBVH_TRANSFORMATIONS_PARAM MBVH_MOTIONSYSTEMS_PARAM, accelVertPage0, accelVertPage1, accelVertPage2, accelVertPage3, accelVertPage4, accelVertPage5, accelVertPage6, accelVertPage7, accelNodePage0, accelNodePage1, accelNodePage2, accelNodePage3, accelNodePage4, accelNodePage5, accelNodePage6, accelNodePage7
 
 #if (MBVH_NODES_PAGE_COUNT > 8)
-ERROR: unsuported MBVH_NODES_PAGE_COUNT !!!
+ERROR: unsupported MBVH_NODES_PAGE_COUNT !!!
 #endif
 
 void Accelerator_Intersect(

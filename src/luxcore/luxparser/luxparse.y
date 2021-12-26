@@ -1725,7 +1725,7 @@ ri_stmt: ACCELERATOR STRING paramlist
 	} else if (texType == "irregulardata") {
 		const Property &wl = props.Get(Property("wavelengths"));
 		if (wl.GetSize() < 2)
-			throw runtime_error("Insufficient wavelenghts in an irregulardata texture");
+			throw runtime_error("Insufficient wavelengths in an irregulardata texture");
 
 		const Property &dt = props.Get(Property("data"));
 		if (dt.GetSize() < 2)

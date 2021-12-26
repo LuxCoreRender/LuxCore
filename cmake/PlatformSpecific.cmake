@@ -192,7 +192,7 @@ IF(APPLE)
 
   SET(CMAKE_XCODE_ATTRIBUTE_SDKROOT macosx) # to silence sdk not found warning, just overrides CMAKE_OSX_SYSROOT, gets latest available
 
-	# set a precedence of sdk path over all other default search pathes
+	# set a precedence of sdk path over all other default search paths
 	SET(CMAKE_FIND_ROOT_PATH ${CMAKE_OSX_SYSROOT})
 
 	### options

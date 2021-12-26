@@ -288,7 +288,7 @@ ExtTriangleMesh *ExtTriangleMesh::LoadPly(const string &fileName) {
 		throw runtime_error(ss.str());
 	}
 
-	// Check if the file includes triaov informations
+	// Check if the file includes triaov information
 	array<float *, EXTMESH_MAX_DATA_COUNT> TriAOVs;
 	array<u_int, EXTMESH_MAX_DATA_COUNT> plyNbTriAOVs;
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
@@ -302,7 +302,7 @@ ExtTriangleMesh *ExtTriangleMesh::LoadPly(const string &fileName) {
 		}
 	}
 
-	// Check if the file includes normal informations
+	// Check if the file includes normal information
 	Normal *n;
 	const long plyNbNormals = ply_set_read_cb(plyfile, "vertex", "nx", NormalCB, &n, 0);
 	ply_set_read_cb(plyfile, "vertex", "ny", NormalCB, &n, 1);
@@ -329,7 +329,7 @@ ExtTriangleMesh *ExtTriangleMesh::LoadPly(const string &fileName) {
 	for (u_int i = 0; i < EXTMESH_MAX_DATA_COUNT; ++i) {
 		const string suffix = (i == 0) ? "" : ToString(i);
 
-		// Check if the file includes uv informations
+		// Check if the file includes uv information
 		plyNbUVs[i] = ply_set_read_cb(plyfile, "vertex", ("s" + suffix).c_str(), UVCB, &uvs[i], 0);
 		ply_set_read_cb(plyfile, "vertex", ("t" + suffix).c_str(), UVCB, &uvs[i], 1);
 		if ((plyNbUVs[i] > 0) && (plyNbUVs[i] != plyNbVerts)) {
@@ -338,7 +338,7 @@ ExtTriangleMesh *ExtTriangleMesh::LoadPly(const string &fileName) {
 			throw runtime_error(ss.str());
 		}
 
-		// Check if the file includes color informations
+		// Check if the file includes color information
 		plyNbColors[i] = ply_set_read_cb(plyfile, "vertex", ("red" + suffix).c_str(), ColorCB, &cols[i], 0);
 		ply_set_read_cb(plyfile, "vertex", ("green" + suffix).c_str(), ColorCB, &cols[i], 1);
 		ply_set_read_cb(plyfile, "vertex", ("blue" + suffix).c_str(), ColorCB, &cols[i], 2);
@@ -348,7 +348,7 @@ ExtTriangleMesh *ExtTriangleMesh::LoadPly(const string &fileName) {
 			throw runtime_error(ss.str());
 		}
 
-		// Check if the file includes alpha informations
+		// Check if the file includes alpha information
 		plyNbAlphas[i] = ply_set_read_cb(plyfile, "vertex", ("alpha" + suffix).c_str(), AlphaCB, &alphas[i], 0);
 		if ((plyNbAlphas[i] > 0) && (plyNbAlphas[i] != plyNbVerts)) {
 			stringstream ss;
@@ -356,7 +356,7 @@ ExtTriangleMesh *ExtTriangleMesh::LoadPly(const string &fileName) {
 			throw runtime_error(ss.str());
 		}
 
-		// Check if the file includes vertexAOV informations
+		// Check if the file includes vertexAOV information
 		plyNbVertexAOVs[i] = ply_set_read_cb(plyfile, "vertex", ("vertaov" + suffix).c_str(), VertexAOVCB, &vertexAOVs[i], 0);
 		if ((plyNbVertexAOVs[i] > 0) && (plyNbVertexAOVs[i] != plyNbVerts)) {
 			stringstream ss;
