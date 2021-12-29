@@ -62,7 +62,7 @@ void EyePathInfo::AddVertex(const BSDF &bsdf,
 	// PathInfo::AddVertex() inlined here for performances
 	//--------------------------------------------------------------------------
 
-	// Increment path depth informations
+	// Increment path depth information
 	depth.IncDepths(event);
 	
 	// Update volume information
@@ -125,7 +125,7 @@ void LightPathInfo::AddVertex(const BSDF &bsdf, const BSDFEvent event,
 	// PathInfo::AddVertex() inlined here for performances
 	//--------------------------------------------------------------------------
 
-	// Increment path depth informations
+	// Increment path depth information
 	depth.IncDepths(event);
 	
 	// Update volume information

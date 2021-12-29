@@ -39,7 +39,7 @@ void NextNode(uint *pageIndex, uint *nodeIndex) {
 #define ACCELERATOR_INTERSECT_PARAM , accelVertPage0, accelVertPage1, accelVertPage2, accelVertPage3, accelVertPage4, accelVertPage5, accelVertPage6, accelVertPage7, accelNodePage0, accelNodePage1, accelNodePage2, accelNodePage3, accelNodePage4, accelNodePage5, accelNodePage6, accelNodePage7
 
 #if (BVH_NODES_PAGE_COUNT > 8)
-ERROR: unsuported BVH_NODES_PAGE_COUNT !!!
+ERROR: unsupported BVH_NODES_PAGE_COUNT !!!
 #endif
 
 void Accelerator_Intersect(

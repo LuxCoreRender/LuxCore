@@ -526,7 +526,7 @@ MotionTransform MotionTransform::operator*(const MotionTransform &t) const {
 		const Transform tL = Transform(itL.Sample(*timeN));
 		const Transform tR = Transform(itR.Sample(*timeN));
 
-		// append the concantenated result
+		// append the concatenated result
 		new_transforms.push_back(tL * tR);
 	}
 

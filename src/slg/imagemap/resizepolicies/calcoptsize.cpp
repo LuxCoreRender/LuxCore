@@ -203,7 +203,7 @@ void ImageMapResizePolicy::RenderFunc(const u_int threadIndex,
 					if (sampleResult.firstPathVertex)
 						sampleResult.firstPathVertexEvent = lastBSDFEvent;
 
-					// Increment path depth informations
+					// Increment path depth information
 					depthInfo.IncDepths(lastBSDFEvent);
 
 					pathThroughput *= bsdfSample;

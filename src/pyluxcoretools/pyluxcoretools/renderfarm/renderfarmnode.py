@@ -180,7 +180,7 @@ class RenderFarmNode:
 			try:
 				socketutils.SendLine(clientSocket, "RENDERING_STARTED")
 
-				statsLine = "Not yet avilable"
+				statsLine = "Not yet available"
 				while not self.threadStop:
 					result = socketutils.RecvLineWithTimeOut(clientSocket, 0.2)
 					# Check if there was the timeout
@@ -222,7 +222,7 @@ class RenderFarmNode:
 						socketutils.SendOk(clientSocket)
 						break
 					else:
-						raise SyntaxError("Unknow command: " + result)
+						raise SyntaxError("Unknown command: " + result)
 
 					#-------------------------------------------------------
 					# Print some information about the rendering progress

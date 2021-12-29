@@ -37,7 +37,7 @@ typedef enum {
 	EVAL_BOMBING_SETUP_10,
 	EVAL_BOMBING_SETUP_01,
 	EVAL_BOMBING_SETUP_00,
-	// For evaluting generic bump mapping
+	// For evaluating generic bump mapping
 	EVAL_BUMP_GENERIC_OFFSET_U,
 	EVAL_BUMP_GENERIC_OFFSET_V,
 	// For the very special case of Triplanar texture

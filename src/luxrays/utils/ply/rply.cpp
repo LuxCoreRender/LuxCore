@@ -62,7 +62,7 @@ const char *const ply_type_list[] = {
  * value: value of property
  * pdata/idata: user data defined with ply_set_cb
  *
- * Returns handle to ply file if succesful, NULL otherwise.
+ * Returns handle to ply file if successful, NULL otherwise.
  * ---------------------------------------------------------------------- */
 typedef struct t_ply_argument_ {
     p_ply_element element;
@@ -147,7 +147,7 @@ typedef t_ply_odriver *p_ply_odriver;
  * nobj_infos: number of obj_info items in file
  * fp: file pointer associated with ply file
  * c: last character read from ply file
- * buffer: last word/chunck of data read from ply file
+ * buffer: last word/chunk of data read from ply file
  * buffer_first, buffer_last: interval of untouched good data in buffer
  * buffer_token: start of parsed token (line or word) in buffer
  * idriver, odriver: input driver used to get property fields from file 

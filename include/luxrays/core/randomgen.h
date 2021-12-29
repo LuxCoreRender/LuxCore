@@ -100,7 +100,7 @@ private:
 		if (z4 < 128UL)
 			z4 += 128UL;
 
-		// Calling RNG ten times to satify recurrence condition
+		// Calling RNG ten times to satisfy recurrence condition
 		for (int i = 0; i < 10; ++i)
 			nobuf_generateUInt();
 	}

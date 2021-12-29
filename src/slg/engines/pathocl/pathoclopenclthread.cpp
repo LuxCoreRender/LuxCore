@@ -165,7 +165,7 @@ void PathOCLOpenCLRenderThread::RenderThreadImpl() {
 					totalCount += gpuTaskStats[i].sampleCount;
 				threadFilms[0]->film->SetSampleCount(totalCount, totalCount, 0.0);
 
-				//SLG_LOG("[DEBUG] film transfered");
+				//SLG_LOG("[DEBUG] film transferred");
 			}
 			const double timeTransferEnd = WallClockTime();
 			totalTransferTime += timeTransferEnd - timeTransferStart;

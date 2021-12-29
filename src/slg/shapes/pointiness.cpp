@@ -171,7 +171,7 @@ PointinessShape::PointinessShape(ExtTriangleMesh *srcMesh, const u_int destAOVIn
 	}
 
 	if (destAOVIndex == NULL_INDEX) {
-		// Make a copy of the original mesh and overwrite vertex color informations
+		// Make a copy of the original mesh and overwrite vertex color information
 		mesh = srcMesh->Copy(NULL, NULL, NULL, NULL, NULL, curvature);
 	} else {
 		mesh = srcMesh->Copy();
