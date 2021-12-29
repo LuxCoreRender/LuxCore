@@ -53,8 +53,7 @@ class RenderView(QMainWindow):
 		props.Set(pyluxcore.Property("renderengine.type", ["PATHCPU"]))
 
 		# Read the configuration and start the rendering
-		self.scene = pyluxcore.Scene(props.Get("scene.file").GetString(),
-			props.Get("images.scale", [1.0]).GetFloat())
+		self.scene = pyluxcore.Scene(props.Get("scene.file").GetString())
 		sceneProps = self.scene.ToProperties()
 		# Save Camera position
 		self.cameraPos = sceneProps.Get("scene.camera.lookat.orig").GetFloats()

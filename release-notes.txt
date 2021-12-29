@@ -63,6 +63,10 @@
 * Fixed a problem with indirect light going trough objects with white shadow transparency in BIDIRCPU
 * Fixed a possible crash when editing a scene
 
+### Fixed Bugs in v2.6.1
+
+* Fixed pysideluxcoredemo.py sample
+
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
 
