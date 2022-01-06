@@ -67,6 +67,7 @@
 
 * Fixed pysideluxcoredemo.py sample
 * Fixed a bug in BIDIRCPU when using shadow transparency (issue #576)
+* Workaround to broken NumPy included in Blender v3.0
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.
