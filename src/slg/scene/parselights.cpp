@@ -303,7 +303,7 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 		pl->color = GetColor(props.Get(Property(propName + ".color")(Spectrum(1.f))));
 		pl->power = Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>());
 		pl->emittedPowerNormalize = props.Get(Property(propName + ".normalizebycolor")(true)).Get<bool>();
-		pl->efficency = Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>());
+		pl->efficiency = Max(0.f, props.Get(Property(propName + ".efficiency")(0.f), propName + ".efficency").Get<float>());
 
 		lightSource = pl;
 	} else if (lightType == "mappoint") {
@@ -321,7 +321,7 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 		mpl->color = GetColor(props.Get(Property(propName + ".color")(Spectrum(1.f))));
 		mpl->power = Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>());
 		mpl->emittedPowerNormalize = props.Get(Property(propName + ".normalizebycolor")(true)).Get<bool>();
-		mpl->efficency = Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>());
+		mpl->efficiency = Max(0.f, props.Get(Property(propName + ".efficiency")(0.f), propName + ".efficency").Get<float>());
 
 		lightSource = mpl;
 	} else if (lightType == "sphere") {
@@ -335,7 +335,7 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 		sl->color = GetColor(props.Get(Property(propName + ".color")(Spectrum(1.f))));
 		sl->power = Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>());
 		sl->emittedPowerNormalize = props.Get(Property(propName + ".normalizebycolor")(true)).Get<bool>();
-		sl->efficency = Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>());
+		sl->efficiency = Max(0.f, props.Get(Property(propName + ".efficiency")(0.f), propName + ".efficency").Get<float>());
 
 		lightSource = sl;
 	} else if (lightType == "mapsphere") {
@@ -354,7 +354,7 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 		msl->color = GetColor(props.Get(Property(propName + ".color")(Spectrum(1.f))));
 		msl->power = Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>());
 		msl->emittedPowerNormalize = props.Get(Property(propName + ".normalizebycolor")(true)).Get<bool>();
-		msl->efficency = Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>());
+		msl->efficiency = Max(0.f, props.Get(Property(propName + ".efficiency")(0.f), propName + ".efficency").Get<float>());
 
 		lightSource = msl;
 	} else if (lightType == "spot") {
@@ -370,7 +370,7 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 		sl->color = GetColor(props.Get(Property(propName + ".color")(Spectrum(1.f))));
 		sl->power = Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>());
 		sl->emittedPowerNormalize = props.Get(Property(propName + ".normalizebycolor")(true)).Get<bool>();
-		sl->efficency = Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>());
+		sl->efficiency = Max(0.f, props.Get(Property(propName + ".efficiency")(0.f), propName + ".efficency").Get<float>());
 
 		lightSource = sl;
 	} else if (lightType == "projection") {
@@ -389,7 +389,7 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 		pl->localTarget = props.Get(Property(propName + ".target")(Point(0.f, 0.f, 1.f))).Get<Point>();
 		pl->power = Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>());
 		pl->emittedPowerNormalize = props.Get(Property(propName + ".normalizebycolor")(true)).Get<bool>();
-		pl->efficency = Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>());
+		pl->efficiency = Max(0.f, props.Get(Property(propName + ".efficiency")(0.f), propName + ".efficency").Get<float>());
 		pl->imageMap = imgMap;
 		pl->fov = Max(0.f, props.Get(Property(propName + ".fov")(45.f)).Get<float>());
 
@@ -406,7 +406,7 @@ LightSource *Scene::CreateLightSource(const string &name, const luxrays::Propert
 		ll->color = GetColor(props.Get(Property(propName + ".color")(Spectrum(1.f))));
 		ll->power = Max(0.f, props.Get(Property(propName + ".power")(0.f)).Get<float>());
 		ll->emittedPowerNormalize = props.Get(Property(propName + ".normalizebycolor")(true)).Get<bool>();
-		ll->efficency = Max(0.f, props.Get(Property(propName + ".efficency")(0.f)).Get<float>());
+		ll->efficiency = Max(0.f, props.Get(Property(propName + ".efficiency")(0.f), propName + ".efficency").Get<float>());
 
 		lightSource = ll;
 	} else if (lightType == "constantinfinite") {

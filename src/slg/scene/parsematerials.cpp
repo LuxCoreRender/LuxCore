@@ -526,7 +526,7 @@ Material *Scene::CreateMaterial(const u_int defaultMatID, const string &matName,
 	mat->SetEmittedPower(Max(0.f, props.Get(Property(propName + ".emission.power")(0.f)).Get<float>()));
 	mat->SetEmittedPowerNormalize(props.Get(Property(propName + ".emission.normalizebycolor")(true)).Get<bool>());
 	mat->SetEmittedGainNormalize(props.Get(Property(propName + ".emission.gain.normalizebycolor")(false)).Get<bool>());
-	mat->SetEmittedEfficency(Max(0.f, props.Get(Property(propName + ".emission.efficency")(0.f)).Get<float>()));
+	mat->SetEmittedEfficency(Max(0.f, props.Get(Property(propName + ".emission.efficiency")(0.f), propName + ".emission.efficency").Get<float>()));
 	mat->SetEmittedTheta(Clamp(props.Get(Property(propName + ".emission.theta")(90.f)).Get<float>(), 0.f, 90.f));
 	mat->SetLightID(props.Get(Property(propName + ".emission.id")(0u)).Get<u_int>());
 	mat->SetEmittedImportance(props.Get(Property(propName + ".emission.importance")(1.f)).Get<float>());

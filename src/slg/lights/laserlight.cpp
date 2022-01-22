@@ -28,7 +28,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 LaserLight::LaserLight() :
-	color(1.f), power(0.f), efficency(0.f), emittedPowerNormalize(true),
+	color(1.f), power(0.f), efficiency(0.f), emittedPowerNormalize(true),
 	localPos(), localTarget(0.f, 0.f, 1.f),
 	radius(.01f) {
 }
@@ -41,7 +41,7 @@ void LaserLight::Preprocess() {
 
 	const float normalizeFactor = emittedPowerNormalize ? (1.f / Max(color.Y(), 0.f)) : 1.f;
 
-	emittedFactor = temperatureScale * gain * color * (power * efficency * normalizeFactor / (M_PI * radius * radius));
+	emittedFactor = temperatureScale * gain * color * (power * efficiency * normalizeFactor / (M_PI * radius * radius));
 	if (emittedFactor.Black() || emittedFactor.IsInf() || emittedFactor.IsNaN())
 		emittedFactor = temperatureScale * gain * color;
 
@@ -187,7 +187,7 @@ Properties LaserLight::ToProperties(const ImageMapCache &imgMapCache, const bool
 	props.Set(Property(prefix + ".color")(color));
 	props.Set(Property(prefix + ".power")(power));
 	props.Set(Property(prefix + ".normalizebycolor")(emittedPowerNormalize));
-	props.Set(Property(prefix + ".efficency")(efficency));
+	props.Set(Property(prefix + ".efficiency")(efficiency));
 	props.Set(Property(prefix + ".position")(localPos));
 	props.Set(Property(prefix + ".target")(localTarget));
 	props.Set(Property(prefix + ".radius")(radius));

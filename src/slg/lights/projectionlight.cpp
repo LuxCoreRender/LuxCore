@@ -29,7 +29,7 @@ using namespace slg;
 // ProjectionLight
 //------------------------------------------------------------------------------
 
-ProjectionLight::ProjectionLight() : color(1.f), power(0.f), efficency(0.f),
+ProjectionLight::ProjectionLight() : color(1.f), power(0.f), efficiency(0.f),
 		emittedPowerNormalize(true), localPos(), localTarget(0.f, 0.f, 1.f),
 		fov(45.f), imageMap(NULL) {
 }
@@ -83,7 +83,7 @@ void ProjectionLight::Preprocess() {
 
 	const float normalizeFactor = emittedPowerNormalize ? (1.f / Max(imageMap ? imageMap->GetSpectrumMeanY() : 1.f, 0.f)) : 1.f;
 
-	emittedFactor = temperatureScale * gain * color * (power * efficency * normalizeFactor /
+	emittedFactor = temperatureScale * gain * color * (power * efficiency * normalizeFactor /
 			(2.f * M_PI *  (1.f - .5f * (1.f - cosTotalWidth))));
 	if (emittedFactor.Black() || emittedFactor.IsInf() || emittedFactor.IsNaN())
 		emittedFactor = temperatureScale * gain * color;
@@ -216,7 +216,7 @@ Properties ProjectionLight::ToProperties(const ImageMapCache &imgMapCache, const
 	props.Set(Property(prefix + ".color")(color));
 	props.Set(Property(prefix + ".power")(power));
 	props.Set(Property(prefix + ".normalizebycolor")(emittedPowerNormalize));
-	props.Set(Property(prefix + ".efficency")(efficency));
+	props.Set(Property(prefix + ".efficiency")(efficiency));
 	props.Set(Property(prefix + ".position")(localPos));
 	props.Set(Property(prefix + ".target")(localTarget));
 	props.Set(Property(prefix + ".fov")(fov));

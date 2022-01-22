@@ -483,7 +483,7 @@ static void DefineMaterial(const string &name, const Properties &matProps, const
 				GetTexture(prefix + ".emission", Property("L")(Spectrum(1.f)), lightProps) << 
 				Property(prefix + ".emission.gain")(Spectrum(lightProps.Get(Property("gain")(1.f)).Get<float>())) <<
 				Property(prefix + ".emission.power")(lightProps.Get(Property("power")(100.f)).Get<float>()) <<
-				Property(prefix + ".emission.efficency")(lightProps.Get(Property("efficency")(17.f)).Get<float>()) <<
+				Property(prefix + ".emission.efficiency")(lightProps.Get(Property("efficiency")(17.f), "efficency").Get<float>()) <<
 				Property(prefix + ".emission.id")(currentGraphicsState.currentLightGroup) <<
 				Property(prefix + ".emission.mapfile")(lightProps.Get(Property("mapname")("")).Get<string>()) <<
 				Property(prefix + ".emission.iesfile")(lightProps.Get(Property("iesname")("")).Get<string>()) <<
@@ -2593,7 +2593,7 @@ yyreduce:
 				Property(prefix + ".color")(props.Get(Property("L")(Spectrum(1.f))).Get<Spectrum>()) <<
 				Property(prefix + ".gain")(Spectrum(props.Get(Property("gain")(1.f)).Get<float>())) <<
 				Property(prefix + ".power")(props.Get(Property("power")(0.f)).Get<float>()) <<
-				Property(prefix + ".efficency")(props.Get(Property("efficency")(0.f)).Get<float>()) <<
+				Property(prefix + ".efficiency")(props.Get(Property("efficiency")(0.f), "efficency").Get<float>()) <<
 				Property(prefix + ".transformation")(currentTransform.m) <<
 				Property(prefix + ".id")(currentGraphicsState.currentLightGroup);
 	} else if (name == "spot") {
@@ -2606,7 +2606,7 @@ yyreduce:
 				Property(prefix + ".color")(props.Get(Property("L")(Spectrum(1.f))).Get<Spectrum>()) <<
 				Property(prefix + ".gain")(Spectrum(props.Get(Property("gain")(1.f)).Get<float>())) <<
 				Property(prefix + ".power")(props.Get(Property("power")(0.f)).Get<float>()) <<
-				Property(prefix + ".efficency")(props.Get(Property("efficency")(0.f)).Get<float>()) <<
+				Property(prefix + ".efficiency")(props.Get(Property("efficiency")(0.f), "efficency").Get<float>()) <<
 				Property(prefix + ".transformation")(currentTransform.m) <<
 				Property(prefix + ".id")(currentGraphicsState.currentLightGroup);
 	} else if (name == "projection") {

@@ -75,8 +75,8 @@ public:
 	bool IsEmittedPowerNormalize() { return emittedPowerNormalize; }
 	void SetEmittedGainNormalize(const bool v) { emittedGainNormalize = v; }
 	bool IsEmittedGainNormalize() { return emittedGainNormalize; }
-	void SetEmittedEfficency(const float v) { emittedEfficency = v; UpdateEmittedFactor(); }
-	float GetEmittedEfficency() const { return emittedEfficency; }
+	void SetEmittedEfficency(const float v) { emittedEfficiency = v; UpdateEmittedFactor(); }
+	float GetEmittedEfficency() const { return emittedEfficiency; }
 	const luxrays::Spectrum &GetEmittedFactor() const { return emittedFactor; }
 	void SetEmittedTheta(const float theta);
 	float GetEmittedTheta() const { return emittedTheta; }
@@ -219,7 +219,7 @@ protected:
 
 	float emittedImportance;
 	luxrays::Spectrum emittedGain, emittedFactor;
-	float emittedPower, emittedEfficency, emittedTheta, emittedCosThetaMax;
+	float emittedPower, emittedEfficiency, emittedTheta, emittedCosThetaMax;
 	bool emittedPowerNormalize, emittedGainNormalize;
 	float emittedTemperature;
 	bool emittedNormalizeTemperature;
