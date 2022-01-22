@@ -343,12 +343,12 @@ void CompiledScene::CompileLights() {
 
 				const SampleableSphericalFunction *emissionFunc = tl->lightMaterial->GetEmissionFunc();
 				if (emissionFunc) {
-					oclLight->triangle.avarage = emissionFunc->Average();
+					oclLight->triangle.average = emissionFunc->Average();
 					oclLight->triangle.imageMapIndex = scene->imgMapCache.GetImageMapIndex(
 							// I use only ImageMapSphericalFunction
 							((const ImageMapSphericalFunction *)(emissionFunc->GetFunc()))->GetImageMap());
 				} else {
-					oclLight->triangle.avarage = 0.f;
+					oclLight->triangle.average = 0.f;
 					oclLight->triangle.imageMapIndex = NULL_INDEX;
 				}
 				break;
@@ -522,7 +522,7 @@ void CompiledScene::CompileLights() {
 					&oclLight->notIntersectable.mapPoint.absolutePos.x,
 					oclLight->notIntersectable.mapPoint.emittedFactor.c,
 					&funcData);
-				oclLight->notIntersectable.mapPoint.avarage = funcData->Average();
+				oclLight->notIntersectable.mapPoint.average = funcData->Average();
 				oclLight->notIntersectable.mapPoint.imageMapIndex = scene->imgMapCache.GetImageMapIndex(mpl->imageMap);
 				break;
 			}
@@ -718,7 +718,7 @@ void CompiledScene::CompileLights() {
 					&funcData);
 				oclLight->notIntersectable.mapSphere.sphere.radius = msl->radius;
 
-				oclLight->notIntersectable.mapSphere.avarage = funcData->Average();
+				oclLight->notIntersectable.mapSphere.average = funcData->Average();
 				oclLight->notIntersectable.mapSphere.imageMapIndex = scene->imgMapCache.GetImageMapIndex(msl->imageMap);
 				break;
 			}
