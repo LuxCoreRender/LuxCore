@@ -72,8 +72,8 @@ Spectrum MatteTranslucentMaterial::Evaluate(const HitPoint &hitPoint,
 		}
 	}
 	
-	const bool relfected = (CosTheta(localLightDir) * CosTheta(localEyeDir) > 0.f);
-	const float weight = relfected ? threshold : (1.f - threshold);
+	const bool reflected = (CosTheta(localLightDir) * CosTheta(localEyeDir) > 0.f);
+	const float weight = reflected ? threshold : (1.f - threshold);
 
 	if (directPdfW)
 		*directPdfW = fabsf((hitPoint.fromLight ? CosTheta(localEyeDir) : CosTheta(localLightDir)) * (weight * INV_PI));
@@ -174,8 +174,8 @@ void MatteTranslucentMaterial::Pdf(const HitPoint &hitPoint,
 		}
 	}
 
-	const bool relfected = (Sgn(CosTheta(localLightDir)) == Sgn(CosTheta(localEyeDir)));
-	weight = relfected ? weight : (1.f - weight);
+	const bool reflected = (Sgn(CosTheta(localLightDir)) == Sgn(CosTheta(localEyeDir)));
+	weight = reflected ? weight : (1.f - weight);
 
 	if (directPdfW)
 		*directPdfW = fabsf((hitPoint.fromLight ? localEyeDir.z : localLightDir.z) * (weight * INV_PI));
