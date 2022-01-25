@@ -37,7 +37,7 @@ Material::Material(const Texture *frontTransp, const Texture *backTransp,
 		NamedObject("material"),
 		matID(0), lightID(0),
 		directLightSamplingType(DLS_AUTO), emittedImportance(1.f),
-		emittedGain(1.f), emittedPower(0.f), emittedEfficency(0.f),
+		emittedGain(1.f), emittedPower(0.f), emittedEfficiency(0.f),
 		emittedPowerNormalize(true), emittedGainNormalize(false),
 		emittedTemperature(-1.f), emittedNormalizeTemperature(false),
 		frontTransparencyTex(frontTransp), backTransparencyTex(backTransp),
@@ -162,7 +162,7 @@ void Material::UpdateEmittedFactor() {
 	if (emittedTex) {
 		const float normalizePowerFactor = emittedPowerNormalize ? (1.f / Max(emittedTex->Y(), 0.f)) : 1.f;
 
-		emittedFactor = emittedGain * (emittedPower * emittedEfficency  * normalizePowerFactor);
+		emittedFactor = emittedGain * (emittedPower * emittedEfficiency  * normalizePowerFactor);
 		if (emittedFactor.Black() || emittedFactor.IsInf() || emittedFactor.IsNaN()) {
 			const float normalizeGainFactor = emittedGainNormalize ? (1.f / Max(emittedTex->Y(), 0.f)) : 1.f;
 
@@ -205,7 +205,7 @@ Properties Material::ToProperties(const ImageMapCache &imgMapCache, const bool u
 	props.Set(Property("scene.materials." + name + ".emission.gain")(emittedGain));
 	props.Set(Property("scene.materials." + name + ".emission.power")(emittedPower));
 	props.Set(Property("scene.materials." + name + ".emission.normalizebycolor")(emittedPowerNormalize));
-	props.Set(Property("scene.materials." + name + ".emission.efficency")(emittedEfficency));
+	props.Set(Property("scene.materials." + name + ".emission.efficiency")(emittedEfficiency));
 	props.Set(Property("scene.materials." + name + ".emission.theta")(emittedTheta));
 	props.Set(Property("scene.materials." + name + ".emission.id")(lightID));
 	props.Set(Property("scene.materials." + name + ".emission.importance")(emittedImportance));

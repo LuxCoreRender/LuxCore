@@ -50,7 +50,7 @@ if(NOT APPLE)
     endif()
 endif()
 
-find_program(PYSIDE_UIC NAMES pyside-uic pyside2-uic
+find_program(PYSIDE_UIC NAMES pyside-uic pyside2-uic pyside6-uic
 		HINTS "${PYTHON_INCLUDE_DIRS}/../Scripts"
 		PATHS "c:/Program Files/Python${PYTHON_V}/Scripts")
 

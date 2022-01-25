@@ -24,7 +24,7 @@ using namespace slg;
 
 bool PhotonGICache::Update(const u_int threadIndex, const u_int filmSPP,
 		const boost::function<void()> &threadZeroCallback) {
-	if (!params.caustic.enabled || params.caustic.updateSpp == 0)
+	if (!params.caustic.enabled || (params.caustic.updateSpp == 0) || finishUpdateFlag)
 		return false;
 
 	// Check if it is time to update the caustic cache
@@ -34,20 +34,19 @@ bool PhotonGICache::Update(const u_int threadIndex, const u_int filmSPP,
 
 		threadsSyncBarrier->wait();
 
-		bool result = true;
-		if (threadIndex == 0) {
+		bool result = false;
+		if ((threadIndex == 0) && !finishUpdateFlag) {
 			// To avoid the interruption of the following code
 			boost::this_thread::disable_interruption di;
 
 			const double startTime = WallClockTime();
-			
+
 			SLG_LOG("Updating PhotonGI caustic cache after " << filmSPP << " samples/pixel (Pass " << causticPhotonPass << ")");
 
 			// A safety check to avoid the update if visibility map has been deallocated
 			if (visibilityParticles.size() == 0) {
 				SLG_LOG("ERROR: Updating PhotonGI caustic cache is not possible without visibility information");
 				lastUpdateSpp = filmSPP;
-				result = false;
 			} else {
 				// Drop previous cache
 				delete causticPhotonsBVH;
@@ -62,7 +61,7 @@ bool PhotonGICache::Update(const u_int threadIndex, const u_int filmSPP,
 				params.caustic.lookUpRadius2 = Sqr(params.caustic.lookUpRadius);
 				SLG_LOG("New PhotonGI caustic cache lookup radius: " << params.caustic.lookUpRadius);
 				++causticPhotonPass;
-				
+
 				// Trace the photons for a new one
 				TracePhotons(false, params.caustic.enabled);
 
@@ -77,8 +76,10 @@ bool PhotonGICache::Update(const u_int threadIndex, const u_int filmSPP,
 
 				if (threadZeroCallback)
 					threadZeroCallback();
+
+				result = true;
 			}
-			
+
 			const float dt = WallClockTime() - startTime;
 			SLG_LOG("Updating PhotonGI caustic cache done in: " << std::setprecision(3) << dt << " secs");
 		}
@@ -88,4 +89,15 @@ bool PhotonGICache::Update(const u_int threadIndex, const u_int filmSPP,
 		return result;
 	} else
 		return false;
+}
+
+void PhotonGICache::FinishUpdate(const u_int threadIndex) {
+	for (;;) {
+		if (finishUpdateFlag)
+			return;
+
+		threadsSyncBarrier->wait();
+		finishUpdateFlag = true;
+		threadsSyncBarrier->wait();
+	}
 }

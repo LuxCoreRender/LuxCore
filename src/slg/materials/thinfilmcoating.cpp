@@ -143,7 +143,7 @@ static const float CIE_Z_reduced[] = {
 
 static const float Y_sum = 10.683556556701660f;
 
-// 24 wavelengths seem to do the job. Any less and artifacs begin to appear at thickness around 2000 nm
+// 24 wavelengths seem to do the job. Any less and artifacts begin to appear at thickness around 2000 nm
 // Using 34 now so I can use integers for the wavelengths, and 720 - 380 = 340.
 const u_int NUM_WAVELENGTHS = 34;
 const u_int MIN_WAVELENGTH = 380;

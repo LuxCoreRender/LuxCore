@@ -62,7 +62,7 @@ typedef struct {
 typedef struct {
 	Vector absolutePos, localPos;
 	Spectrum emittedFactor;
-	float avarage;
+	float average;
 	unsigned int imageMapIndex;
 } MapPointLightParam;
 
@@ -110,7 +110,7 @@ typedef struct {
 
 typedef struct {
 	SphereLightParam sphere;
-	float avarage;
+	float average;
 	unsigned int imageMapIndex;
 } MapSphereLightParam;
 
@@ -141,7 +141,7 @@ typedef struct {
 	unsigned int meshIndex, triangleIndex;
 
 	// Used for image map and/or IES map
-	float avarage;
+	float average;
 	unsigned int imageMapIndex;
 } TriangleLightParam;
 

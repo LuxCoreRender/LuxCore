@@ -86,7 +86,7 @@ static float dot(const float a[3], const float b[3]) {
 //!
 //! Initialize a colorspace conversion instance by providing reference values
 //! of red, green, blue and white point.
-//! This functions computes the corresponding convertion matrix from XYZ
+//! This functions computes the corresponding conversion matrix from XYZ
 //! space to RGB space.
 //!
 ColorSystem::ColorSystem(float xR, float yR, float xG, float yG, float xB, float yB,
@@ -153,7 +153,7 @@ static inline bool HighGamut(const RGBColor &color) {
 //! \return Whether the RGB representation was modified or not
 //! \retval true The color has been modified
 //! \retval false The color was inside the representable gamut:
-//! no modification occured
+//! no modification occurred
 //!
 //! If the requested RGB shade contains a negative weight for one of
 //! the primaries, it lies outside the colour gamut accessible from the

@@ -56,7 +56,7 @@ public:
 	virtual luxrays::Properties ToProperties(const ImageMapCache &imgMapCache, const bool useRealFileName) const;
 
 	luxrays::Spectrum color;
-	float power, efficency;
+	float power, efficiency;
 	bool emittedPowerNormalize;
 
 	luxrays::Point localPos, localTarget;

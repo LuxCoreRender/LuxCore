@@ -692,6 +692,18 @@ public:
 	 * \return a Property.
 	 */
 	const Property &Get(const Property &defaultProp) const;
+	/*!
+	 * \brief Returns a Property with the same name of the passed Property if
+	 * it has been defined or the passed Property itself (i.e. the default values).
+	 *
+	 * \param defaultProp has the Property to look for and the default values in
+	 * case it has not been defined.
+	 * \parma alternativeName alternative property name. It can be used to maintain
+	 * the compatibility with a different property name.
+	 *
+	 * \return a Property.
+	 */
+	const Property Get(const Property &defaultProp, const std::string alternativeName) const;
 
 	/*!
 	 * \brief Returns if a Property with the given name has been defined.

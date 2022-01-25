@@ -1054,7 +1054,22 @@ const Property &Properties::Get(const string &propName) const {
 const Property &Properties::Get(const Property &prop) const {
 	std::map<string, Property>::const_iterator it = props.find(prop.GetName());
 	if (it == props.end())
-		return prop;
+			return prop;
+
+	return it->second;
+}
+
+const Property Properties::Get(const Property &prop, const std::string alternativeName) const {
+	std::map<string, Property>::const_iterator it = props.find(prop.GetName());
+	if (it == props.end()) {
+		// Look for the alternative property name
+		std::map<string, Property>::const_iterator itAlt = props.find(alternativeName);
+	
+		if (itAlt == props.end())
+			return prop;
+		else
+			return itAlt->second.Renamed(prop.GetName());
+	}
 
 	return it->second;
 }

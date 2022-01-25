@@ -403,7 +403,7 @@ void LuxCoreApp::RunApp(luxcore::RenderState *startState, luxcore::Film *startFi
 	//--------------------------------------------------------------------------
 
 	// It is important to initialize OpenGL before OpenCL
-	// (required in case of OpenGL/OpenCL inter-operability)
+	// (required in case of OpenGL/OpenCL interoperability)
 
 	glfwSetErrorCallback(GLFWErrorCallback);
 	if (!glfwInit())

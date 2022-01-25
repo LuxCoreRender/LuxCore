@@ -452,7 +452,7 @@ OPENCL_FORCE_INLINE float3 TriangleLight_GetRadiance(__global const LightSource 
 		emissionColor = ImageMap_GetSpectrum(
 				imageMap,
 				uv.x, uv.y
-				IMAGEMAPS_PARAM) / triLight->triangle.avarage;
+				IMAGEMAPS_PARAM) / triLight->triangle.average;
 	}
 
 	return Material_GetEmittedRadiance(materialIndex,
@@ -545,7 +545,7 @@ OPENCL_FORCE_INLINE float3 TriangleLight_Illuminate(__global const LightSource *
 		emissionColor = ImageMap_GetSpectrum(
 				imageMap,
 				uv.x, uv.y
-				IMAGEMAPS_PARAM) / triLight->triangle.avarage;
+				IMAGEMAPS_PARAM) / triLight->triangle.average;
 
 		*directPdfW = triLight->triangle.invTriangleArea * shadowRayDistanceSquared ;
 	} else
@@ -706,7 +706,7 @@ OPENCL_FORCE_INLINE float3 MapPointLight_Illuminate(__global const LightSource *
 	const float3 emissionColor = ImageMap_GetSpectrum(
 			imageMap,
 			uv.x, uv.y
-			IMAGEMAPS_PARAM) / (4.f * M_PI_F * mapPointLight->notIntersectable.mapPoint.avarage);
+			IMAGEMAPS_PARAM) / (4.f * M_PI_F * mapPointLight->notIntersectable.mapPoint.average);
 
 	return VLOAD3F(mapPointLight->notIntersectable.mapPoint.emittedFactor.c) * emissionColor;
 }
@@ -731,7 +731,7 @@ OPENCL_FORCE_INLINE float3 MapSphereLight_Illuminate(__global const LightSource 
 	const float3 emissionColor = ImageMap_GetSpectrum(
 			imageMap,
 			uv.x, uv.y
-			IMAGEMAPS_PARAM) * (1.f / mapSphereLight->notIntersectable.mapSphere.avarage);
+			IMAGEMAPS_PARAM) * (1.f / mapSphereLight->notIntersectable.mapSphere.average);
 
 	return result * emissionColor;
 }

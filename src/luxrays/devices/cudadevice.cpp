@@ -71,7 +71,7 @@ int CUDADeviceDescription::GetComputeUnits() const {
 	} SM2Cores;
 
 	static SM2Cores archCoresPerSM[] = {
-		// 0xMm (hexidecimal notation) where M = SM Major version and m = SM minor version
+		// 0xMm (hexadecimal notation) where M = SM Major version and m = SM minor version
 		{0x30, 192},
 		{0x32, 192},
 		{0x35, 192},

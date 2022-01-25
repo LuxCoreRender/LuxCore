@@ -31,7 +31,7 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 PointLight::PointLight() : localPos(0.f), color(1.f),
-		power(0.f), efficency(0.f),
+		power(0.f), efficiency(0.f),
 		emittedPowerNormalize(true) {
 }
 
@@ -43,7 +43,7 @@ void PointLight::Preprocess() {
 
 	const float normalizeFactor = emittedPowerNormalize ? (1.f / Max(color.Y(), 0.f)) : 1.f;
 
-	emittedFactor = temperatureScale * gain * color * (power * efficency * normalizeFactor);
+	emittedFactor = temperatureScale * gain * color * (power * efficiency * normalizeFactor);
 
 	if (emittedFactor.Black() || emittedFactor.IsInf() || emittedFactor.IsNaN())
 		emittedFactor = temperatureScale * gain * color;
@@ -127,7 +127,7 @@ Properties PointLight::ToProperties(const ImageMapCache &imgMapCache, const bool
 	props.Set(Property(prefix + ".color")(color));
 	props.Set(Property(prefix + ".power")(power));
 	props.Set(Property(prefix + ".normalizebycolor")(emittedPowerNormalize));
-	props.Set(Property(prefix + ".efficency")(efficency));
+	props.Set(Property(prefix + ".efficiency")(efficiency));
 	props.Set(Property(prefix + ".position")(localPos));
 
 	return props;

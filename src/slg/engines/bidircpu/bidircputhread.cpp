@@ -509,9 +509,6 @@ void BiDirCPURenderThread::DirectHitLight(
 
 void BiDirCPURenderThread::DirectHitLight(const bool finiteLightSource,
 		const PathVertexVM &eyeVertex, SampleResult &eyeSampleResult) const {
-	BiDirCPURenderEngine *engine = (BiDirCPURenderEngine *)renderEngine;
-	Scene *scene = engine->renderConfig->scene;
-
 	float directPdfA, emissionPdfW;
 	if (finiteLightSource) {
 		const Spectrum lightRadiance = eyeVertex.bsdf.GetEmittedRadiance(&directPdfA, &emissionPdfW);
@@ -519,6 +516,9 @@ void BiDirCPURenderThread::DirectHitLight(const bool finiteLightSource,
 		DirectHitLight(eyeVertex.bsdf.GetLightSource(), lightRadiance, directPdfA, emissionPdfW,
 				eyeVertex, &eyeSampleResult.radiance[eyeVertex.bsdf.GetLightID()]);
 	} else {
+		BiDirCPURenderEngine *engine = (BiDirCPURenderEngine *)renderEngine;
+		Scene *scene = engine->renderConfig->scene;
+
 		BOOST_FOREACH(EnvLightSource *el, scene->lightDefs.GetEnvLightSources()) {
 			const Spectrum lightRadiance = el->GetRadiance(*scene,
 					(eyeVertex.depth == 1) ? nullptr : &eyeVertex.bsdf,
@@ -590,6 +590,12 @@ bool BiDirCPURenderThread::TraceLightPath(const float time,
 
 			if (hit) {
 				// Something was hit
+				
+				// Check if it is something with a not black shadow transparency
+				// and stop if it has. Direct light sampling will take care of
+				// this kind of paths.
+				if (!lightVertex.bsdf.GetPassThroughShadowTransparency().Black())
+					break;
 
 				// Update the new light vertex
 				lightVertex.throughput *= connectionThroughput;
@@ -986,16 +992,11 @@ void BiDirCPURenderThread::RenderFunc() {
 
 	threadDone = true;
 
-	// This is done to interrupt thread pending on barrier wait
+	// This is done to stop threads pending on barrier wait
 	// inside engine->photonGICache->Update(). This can happen when an
 	// halt condition is satisfied.
-	for (u_int i = 0; i < engine->renderThreads.size(); ++i) {
-		try {
-			engine->renderThreads[i]->Interrupt();
-		} catch(...) {
-			// Ignore any exception
-		}
-	}
+	if (photonGICache)
+		photonGICache->FinishUpdate(threadIndex);
 
 	//SLG_LOG("[BiDirCPURenderThread::" << threadIndex << "] Rendering thread halted");
 }

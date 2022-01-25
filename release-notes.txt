@@ -61,6 +61,13 @@
 * Fixed a problem with not-NULL transparent surfaces when the interior and the exterior volumes are the same
 * Fixed a cut&paste error in ImageMapStorage::GetDuv() (issue #560)
 * Fixed a problem with indirect light going trough objects with white shadow transparency in BIDIRCPU
+* Fixed a possible crash when editing a scene
+
+### Fixed Bugs in v2.6.1
+
+* Fixed pysideluxcoredemo.py sample
+* Fixed a bug in BIDIRCPU when using shadow transparency (issue #576)
+* Workaround to broken NumPy included in Blender v3.0
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.

@@ -95,7 +95,7 @@ OPENCL_FORCE_INLINE void MatteTranslucentMaterial_Evaluate(__global const Materi
 		}
 	}
 
-	const bool relfected = (CosTheta(lightDir) * CosTheta(eyeDir) > 0.f);
+	const bool reflected = (CosTheta(lightDir) * CosTheta(eyeDir) > 0.f);
 	const float weight = (lightDir.z * eyeDir.z > 0.f) ? threshold : (1.f - threshold);
 
 	const float directPdfW = weight * fabs(lightDir.z * M_1_PI_F);

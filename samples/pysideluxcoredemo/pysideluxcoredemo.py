@@ -53,8 +53,7 @@ class RenderView(QMainWindow):
 		props.Set(pyluxcore.Property("renderengine.type", ["PATHCPU"]))
 
 		# Read the configuration and start the rendering
-		self.scene = pyluxcore.Scene(props.Get("scene.file").GetString(),
-			props.Get("images.scale", [1.0]).GetFloat())
+		self.scene = pyluxcore.Scene(props.Get("scene.file").GetString())
 		sceneProps = self.scene.ToProperties()
 		# Save Camera position
 		self.cameraPos = sceneProps.Get("scene.camera.lookat.orig").GetFloats()
@@ -96,7 +95,7 @@ class RenderView(QMainWindow):
 		
 		# RenderEngine type
 		self.renderEnginePathCPUAct = QAction("Path&CPU", self, triggered = self.renderEnginePathCPU)
-		# Get the list of all OpenCL devices avilable
+		# Get the list of all OpenCL devices available
 		self.deviceList = pyluxcore.GetOpenCLDeviceList()
 		self.renderEnginePathOCLActs = []
 		for i in range(len(self.deviceList)):
@@ -255,7 +254,7 @@ class RenderView(QMainWindow):
 		self.scene.Parse(pyluxcore.Properties().
 			Set(pyluxcore.Property("scene.materials.shell.type", ["mirror"])).
 			Set(pyluxcore.Property("scene.materials.shell.kr", [0.75, 0.75, 0.75])))
-		# To remove unreferenced constant textures defined implicitely
+		# To remove unreferenced constant textures defined implicitly
 		self.scene.RemoveUnusedTextures()
 		# To remove all unreferenced image maps (note: the order of call does matter)
 		self.scene.RemoveUnusedImageMaps()
@@ -273,7 +272,7 @@ class RenderView(QMainWindow):
 			Set(pyluxcore.Property("scene.materials.shell.type", ["matte"])).
 			Set(pyluxcore.Property("scene.materials.shell.kd", [0.75, 0.0, 0.0])))
 		
-		# To remove unreferenced constant textures defined implicitely
+		# To remove unreferenced constant textures defined implicitly
 		self.scene.RemoveUnusedTextures()
 		# To remove all unreferenced image maps (note: the order of call does matter)
 		self.scene.RemoveUnusedImageMaps()
@@ -295,7 +294,7 @@ class RenderView(QMainWindow):
 			Set(pyluxcore.Property("scene.materials.shell.iorinside", [1.45]))
 			)
 		
-		# To remove unreferenced constant textures defined implicitely
+		# To remove unreferenced constant textures defined implicitly
 		self.scene.RemoveUnusedTextures()
 		# To remove all unreferenced image maps (note: the order of call does matter)
 		self.scene.RemoveUnusedImageMaps()
@@ -338,7 +337,7 @@ class RenderView(QMainWindow):
 			Set(pyluxcore.Property("scene.materials.shell.uroughness", [0.05])).
 			Set(pyluxcore.Property("scene.materials.shell.vroughness", [0.05])))
 
-		# To remove unreferenced constant textures defined implicitely
+		# To remove unreferenced constant textures defined implicitly
 		self.scene.RemoveUnusedTextures()
 		# To remove all unreferenced image maps (note: the order of call does matter)
 		self.scene.RemoveUnusedImageMaps()

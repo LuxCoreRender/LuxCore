@@ -54,7 +54,7 @@ public:
 	luxrays::Point localPos;
 
 	luxrays::Spectrum color;
-	float power, efficency;
+	float power, efficiency;
 	bool emittedPowerNormalize;
 
 protected:

@@ -156,7 +156,7 @@ DisplacementShape::DisplacementShape(luxrays::ExtTriangleMesh *srcMesh, const Te
 		newVertices[i] = vertices[i] + disp;
 	}
 	
-	// Make a copy of the original mesh and overwrite vertex informations
+	// Make a copy of the original mesh and overwrite vertex information
 	mesh = srcMesh->Copy(newVertices, nullptr, nullptr, nullptr, nullptr, nullptr);
 	if (params.normalSmooth)
 		mesh->ComputeNormals();

@@ -732,7 +732,7 @@ void OptixKernel::EnqueueTraceRayBuffer(HardwareDeviceBuffer *rayBuff,
 				HardwareDeviceRange(optixEmptyAccelWorkGroupSize));
 	} else {
 		// Note: the assumption here is that rayBuff and rayHitBuff are always
-		// the same otherwise I would have to syncronize the EnqueueWriteBuffer().
+		// the same otherwise I would have to synchronize the EnqueueWriteBuffer().
 		// This is always true at the moment for all render engines.
 		optixAccelParams.rayBuff = ((CUDADeviceBuffer *)rayBuff)->GetCUDADevicePointer();
 		optixAccelParams.rayHitBuff = ((CUDADeviceBuffer *)rayHitBuff)->GetCUDADevicePointer();

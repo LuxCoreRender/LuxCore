@@ -229,7 +229,7 @@ public:
 	// further usage.
 
 	// After you call Begin, everything in the MemoryArena which has not been
-	// Commited is invalidated.
+	// Committed is invalidated.
 	// End put a synchronisation point
 	// If you call Commit, everything between the Begin and the End() call is
 	// guaranteed to be saved in the Arena until the next FreeAll()

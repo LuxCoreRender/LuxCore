@@ -281,7 +281,7 @@ OPENCL_FORCE_NOT_INLINE float3 CalcFilmColor(const float3 localFixedDir, const f
 	if (filmThickness * (filmIOR - .4f) > 2000.f)
 		return TO_FLOAT3(.5f);
 		
-	// 24 wavelengths seem to do the job. Any less and artifacs begin to appear at thickness around 2000 nm
+	// 24 wavelengths seem to do the job. Any less and artifacts begin to appear at thickness around 2000 nm
 	// Using 34 now so I can use integers for the wavelengths, and 720 - 380 = 340.
 	const uint NUM_WAVELENGTHS = 34;
 	const uint MIN_WAVELENGTH = 380;

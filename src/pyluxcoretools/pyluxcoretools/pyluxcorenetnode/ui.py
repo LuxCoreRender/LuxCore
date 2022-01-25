@@ -29,10 +29,14 @@ try:
 	import PySide.QtCore as QtCore
 	import PySide.QtGui as QtGui
 	import PySide.QtGui as QtWidgets
-	PYSIDE2 = False
+	PYSIDE_V = int(QtCore.qVersion()[:1])
 except ImportError:
-	from PySide2 import QtGui, QtCore, QtWidgets
-	PYSIDE2 = True
+	try:
+		from PySide2 import QtGui, QtCore, QtWidgets
+		PYSIDE_V = int(QtCore.qVersion()[:1])
+	except ImportError:
+		from PySide6 import QtGui, QtCore, QtWidgets
+		PYSIDE_V = int(QtCore.qVersion()[:1])
 
 import pyluxcoretools.renderfarm.renderfarm as renderfarm
 import pyluxcoretools.renderfarm.renderfarmnode as renderfarmnode
@@ -48,15 +52,20 @@ class MainApp(QtWidgets.QMainWindow, mainwindow.Ui_MainWindow, logging.Handler):
 		super(MainApp, self).__init__(parent)
 		self.setupUi(self)
 
-		if not PYSIDE2:
+		if PYSIDE_V < 5:
 			self.move(QtWidgets.QApplication.desktop().screen().rect().center()- self.rect().center())
 		
 		uiloghandler.AddUILogHandler(loghandler.loggerName, self)
 		
-		ipRegExp = QtCore.QRegExp("^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5]).){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$")
-		self.lineEditIPAddress.setValidator(QtGui.QRegExpValidator(ipRegExp))
+		if PYSIDE_V >= 6:
+			ipRegExp = QtCore.QRegularExpression("^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5]).){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$")
+			ipRegExpVal = QtGui.QRegularExpressionValidator(ipRegExp)
+		else:
+			ipRegExp = QtCore.QRegExp("^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5]).){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$")
+			ipRegExpVal = QtGui.QRegExpValidator(ipRegExp)
+		self.lineEditIPAddress.setValidator(ipRegExpVal)
 		self.lineEditPort.setValidator(QtGui.QIntValidator(0, 65535))
-		self.lineEditBroadcastAddress.setValidator(QtGui.QRegExpValidator(ipRegExp))
+		self.lineEditBroadcastAddress.setValidator(ipRegExpVal)
 
 		self.__ResetConfigUI()
 	
