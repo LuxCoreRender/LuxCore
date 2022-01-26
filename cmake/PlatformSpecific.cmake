@@ -163,10 +163,10 @@ IF(APPLE)
 
 	EXECUTE_PROCESS(COMMAND uname -r OUTPUT_VARIABLE MAC_SYS) # check for actual system-version
 
-	SET(CMAKE_OSX_DEPLOYMENT_TARGET 10.13) # Minimum OS requirements for LuxCore
+	SET(CMAKE_OSX_DEPLOYMENT_TARGET 11.0) # Minimum OS requirements for LuxCore
 
   IF(${MAC_SYS} MATCHES 20)
-    SET(OSX_SYSTEM 11.3)
+    SET(OSX_SYSTEM 12.0)
     ELSEIF(${MAC_SYS} MATCHES 19)
 		SET(OSX_SYSTEM 10.15)
     ELSEIF(${MAC_SYS} MATCHES 18)
@@ -192,7 +192,7 @@ IF(APPLE)
 
   SET(CMAKE_XCODE_ATTRIBUTE_SDKROOT macosx) # to silence sdk not found warning, just overrides CMAKE_OSX_SYSROOT, gets latest available
 
-	# set a precedence of sdk path over all other default search paths
+	# set a precedence of sdk path over all other default search pathes
 	SET(CMAKE_FIND_ROOT_PATH ${CMAKE_OSX_SYSROOT})
 
 	### options
