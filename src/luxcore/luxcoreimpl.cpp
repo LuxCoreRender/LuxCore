@@ -1057,6 +1057,29 @@ void SceneImpl::DeleteObject(const string &objName) {
 	API_END();
 }
 
+void SceneImpl::DeleteObjects(std::vector<std::string> &objNames) {
+
+	// Invalidate the scene properties cache
+	scenePropertiesCache.Clear();
+
+	BOOST_FOREACH(const string  &objName, objNames) {
+		scene->DeleteObject(objName);
+	}
+}
+
+void SceneImpl::DeleteObjectsInstance(const std::string &prefixName, const unsigned int count, const unsigned int start) {
+
+	// Invalidate the scene properties cache
+	scenePropertiesCache.Clear();
+
+	// Deleting the instances from the start amount till the counting number of instances
+	for (unsigned int i = 0; i < start + count; i++)
+	{
+		string objectName = prefixName + std::to_string(i);
+		scene->DeleteObject(objectName);
+	}
+}
+
 void SceneImpl::DeleteLight(const string &lightName) {
 	API_BEGIN("{}", ToArgString(lightName));
 
@@ -1066,6 +1089,17 @@ void SceneImpl::DeleteLight(const string &lightName) {
 	scene->DeleteLight(lightName);
 
 	API_END();
+}
+
+void SceneImpl::DeleteLights(std::vector<std::string> &lightNames) {
+
+	// Invalidate the scene properties cache
+	scenePropertiesCache.Clear();
+
+	// Separate the objects and send them to delete
+	BOOST_FOREACH(const string  &lightName, lightNames) {
+		scene->DeleteLight(lightName);
+	}
 }
 
 void SceneImpl::RemoveUnusedImageMaps() {
