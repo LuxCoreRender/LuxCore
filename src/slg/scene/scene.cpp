@@ -511,11 +511,34 @@ void Scene::DeleteObject(const string &objName) {
 	}
 }
 
+void Scene::DeleteObjects(std::vector<std::string> &objNames) {
+	// Separate the objects and send them to delete
+	BOOST_FOREACH(const string  &objName, objNames) {
+		DeleteObject(objName);
+	}
+}
+
+void Scene::DeleteObjectsInstance(const std::string &prefixName, const unsigned int count, const unsigned int start) {
+	// Deleting the instances from the start amount till the counting number of instances
+	for (unsigned int i = 0; i < start + count; i++)
+	{
+		string objectName = prefixName + std::to_string(i);
+		DeleteObject(objectName);
+	}
+}
+
 void Scene::DeleteLight(const string &lightName) {
 	if (lightDefs.IsLightSourceDefined(lightName)) {
 		lightDefs.DeleteLightSource(lightName);
 
 		editActions.AddActions(LIGHTS_EDIT | LIGHT_TYPES_EDIT);
+	}
+}
+
+void Scene::DeleteLights(std::vector<std::string> &lightNames) {
+	// Separate the objects and send them to delete
+	BOOST_FOREACH(const string  &lightName, lightNames) {
+		DeleteLight(lightName);
 	}
 }
 
