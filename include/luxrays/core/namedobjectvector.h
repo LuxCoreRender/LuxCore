@@ -55,6 +55,7 @@ public:
 	std::vector<NamedObject *> &GetObjs();
 
 	void DeleteObj(const std::string &name);
+	void DeleteObjs(const std::vector<std::string> &names);
 	
 	std::string ToString() const;
 

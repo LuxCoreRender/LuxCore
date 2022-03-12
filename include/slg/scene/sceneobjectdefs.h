@@ -77,6 +77,10 @@ public:
 	void DeleteSceneObject(const std::string &name) {
 		objs.DeleteObj(name);
 	}
+
+	void DeleteSceneObjects(const std::vector<std::string> &names) {
+		objs.DeleteObjs(names);
+	}
   
 private:
 	luxrays::NamedObjectVector objs;

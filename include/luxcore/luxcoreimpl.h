@@ -205,7 +205,6 @@ public:
 
 	void DeleteObject(const std::string &objName);
 	void DeleteObjects(std::vector<std::string> &objNames);
-	void DeleteObjectsInstance(const std::string &prefixName, const unsigned int count, const unsigned int start);
 	void DeleteLight(const std::string &lightName);
 	void DeleteLights(std::vector<std::string> &lightNames);
 

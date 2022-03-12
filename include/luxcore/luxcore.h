@@ -1094,13 +1094,6 @@ public:
 	virtual void DeleteObjects(std::vector<std::string> &objNames) = 0;
 
 	/*!
-	 * \brief Deletes multiple instance objects from the scene.
-	 *
-	 * \param prefixName is the prefix name of the instance object, count is the numbers of object should be delete and start is the instance number to start operation from.
-	 */
-	virtual void DeleteObjectsInstance(const std::string &prefixName, const unsigned int count, const unsigned int start) = 0;
-
-	/*!
 	 * \brief Deletes a light from the scene.
 	 *
 	 * \param lightName is the name of the object to delete. Note: to delete

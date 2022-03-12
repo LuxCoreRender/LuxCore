@@ -78,9 +78,11 @@ class TestDuplicateObject(unittest.TestCase):
 
 		# Duplicate the base object
 		mat = [1.0 if i==j else 0.0 for j in range(4) for i in range(4)]
+
 		#t1 = time.time()
 		#objCount = 1000000
 		objCount = 5
+
 		for i in range(objCount):
 			mat[0 + 3 * 4] = 2.5 * (i + 1)
 			objID = i
@@ -113,9 +115,11 @@ class TestDuplicateObject(unittest.TestCase):
 		# Duplicate the base object
 		mat1 = [1.0 if i==j else 0.0 for j in range(4) for i in range(4)]
 		mat2 = [1.0 if i==j else 0.0 for j in range(4) for i in range(4)]
+
 		#t1 = time.time()
 		#objCount = 1000000
 		objCount = 5
+
 		times = [0.0, 1.0]
 		mats = [mat1, mat2]
 		for i in range(objCount):

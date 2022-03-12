@@ -1657,6 +1657,40 @@ static void Scene_DuplicateMotionObjectMulti(luxcore::detail::SceneImpl *scene,
 		PyBuffer_Release(&objectIDsView);
 }
 
+static void Scene_DeleteObjects(luxcore::detail::SceneImpl *scene,
+		const boost::python::list &l) {
+	const boost::python::ssize_t size = len(l);
+	vector<string> names;
+	names.reserve(size);
+	for (boost::python::ssize_t i = 0; i < size; ++i) {
+		const string objType = extract<string>((l[i].attr("__class__")).attr("__name__"));
+
+		if (objType == "str")
+			names.push_back(extract<string>(l[i]));
+		else
+			throw runtime_error("Unsupported data type included in Scene.DeleteObjects() list: " + objType);
+	}
+
+	scene->DeleteObjects(names);
+}
+
+static void Scene_DeleteLights(luxcore::detail::SceneImpl *scene,
+		const boost::python::list &l) {
+	const boost::python::ssize_t size = len(l);
+	vector<string> names;
+	names.reserve(size);
+	for (boost::python::ssize_t i = 0; i < size; ++i) {
+		const string objType = extract<string>((l[i].attr("__class__")).attr("__name__"));
+
+		if (objType == "str")
+			names.push_back(extract<string>(l[i]));
+		else
+			throw runtime_error("Unsupported data type included in Scene.DeleteLights() list: " + objType);
+	}
+
+	scene->DeleteLights(names);
+}
+
 static void Scene_UpdateObjectTransformation(luxcore::detail::SceneImpl *scene,
 		const string &objName,
 		const boost::python::object &transformation) {
@@ -2009,6 +2043,8 @@ BOOST_PYTHON_MODULE(pyluxcore) {
 		.def("DuplicateObject", &Scene_DuplicateObjectMulti)
 		.def("DuplicateObject", &Scene_DuplicateMotionObject)
 		.def("DuplicateObject", &Scene_DuplicateMotionObjectMulti)
+		.def("DeleteObjects", &Scene_DeleteObjects)
+		.def("DeleteLights", &Scene_DeleteLights)
 		.def("UpdateObjectTransformation", &Scene_UpdateObjectTransformation)
 		.def("UpdateObjectMaterial", &luxcore::detail::SceneImpl::UpdateObjectMaterial)
 		.def("DeleteObject", &luxcore::detail::SceneImpl::DeleteObject)

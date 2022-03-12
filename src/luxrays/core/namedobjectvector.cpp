@@ -17,6 +17,7 @@
  ***************************************************************************/
 
 #include <sstream>
+#include <algorithm>
 #include <boost/foreach.hpp>
 
 #include "luxrays/utils/strutils.h"
@@ -65,15 +66,15 @@ NamedObject *NamedObjectVector::DefineObj(NamedObject *newObj) {
 	}
 }
 
-bool NamedObjectVector::IsObjDefined(const std::string &name) const {
+bool NamedObjectVector::IsObjDefined(const string &name) const {
 	return (name2index.left.count(name) > 0);
 }
 
-const NamedObject *NamedObjectVector::GetObj(const std::string &name) const {
+const NamedObject *NamedObjectVector::GetObj(const string &name) const {
 	return objs[GetIndex(name)];
 }
 
-NamedObject *NamedObjectVector::GetObj(const std::string &name) {
+NamedObject *NamedObjectVector::GetObj(const string &name) {
 	return objs[GetIndex(name)];
 }
 
@@ -85,7 +86,7 @@ NamedObject *NamedObjectVector::GetObj(const u_int index) {
 	return objs[index];
 }
 
-u_int NamedObjectVector::GetIndex(const std::string &name) const {
+u_int NamedObjectVector::GetIndex(const string &name) const {
 	Name2IndexType::left_const_iterator it = name2index.left.find(name);
 
 	if (it == name2index.left.end())
@@ -103,7 +104,7 @@ u_int NamedObjectVector::GetIndex(const NamedObject *o) const {
 		return it->second;
 }
 
-const std::string &NamedObjectVector::GetName(const u_int index) const {
+const string &NamedObjectVector::GetName(const u_int index) const {
 	Name2IndexType::right_const_iterator it = name2index.right.find(index);
 
 	if (it == name2index.right.end())
@@ -113,7 +114,7 @@ const std::string &NamedObjectVector::GetName(const u_int index) const {
 	
 }
 
-const std::string &NamedObjectVector::GetName(const NamedObject *o) const {
+const string &NamedObjectVector::GetName(const NamedObject *o) const {
 	Name2IndexType::right_const_iterator it = name2index.right.find(GetIndex(o));
 
 	if (it == name2index.right.end())
@@ -126,7 +127,7 @@ u_int NamedObjectVector::GetSize()const {
 	return static_cast<u_int>(objs.size());
 }
 
-void NamedObjectVector::GetNames(std::vector<std::string> &names) const {
+void NamedObjectVector::GetNames(vector<string> &names) const {
 	const u_int size = GetSize();
 	names.resize(size);
 
@@ -134,11 +135,11 @@ void NamedObjectVector::GetNames(std::vector<std::string> &names) const {
 		names[i] = GetName(i);
 }
 
-std::vector<NamedObject *> &NamedObjectVector::GetObjs() {
+vector<NamedObject *> &NamedObjectVector::GetObjs() {
 	return objs;
 }
 
-void NamedObjectVector::DeleteObj(const std::string &name) {
+void NamedObjectVector::DeleteObj(const string &name) {
 	const u_int index = GetIndex(name);
 	objs.erase(objs.begin() + index);
 
@@ -154,7 +155,33 @@ void NamedObjectVector::DeleteObj(const std::string &name) {
 	}
 }
 
-template<class MapType> void PrintMap(const MapType &map, std::ostream &os) {
+void NamedObjectVector::DeleteObjs(const vector<string> &names) {
+	vector<u_int> removeList;
+	removeList.reserve(names.size());
+	for (const string &name : names) {
+		if (IsObjDefined(name)) {
+			const u_int index = GetIndex(name);
+			removeList.push_back(index);
+		}
+	}
+	sort(removeList.begin(), removeList.end(), greater<u_int>());
+
+	for (u_int i : removeList)
+		objs.erase(objs.begin() + i);
+
+	// I have to rebuild the indices from scratch
+	name2index.clear();
+	index2obj.clear();
+
+	for (u_int i = 0; i < objs.size(); ++i) {
+		NamedObject *obj = objs[i];
+
+		name2index.insert(Name2IndexType::value_type(obj->GetName(), i));
+		index2obj.insert(Index2ObjType::value_type(i, obj));	
+	}
+}
+
+template<class MapType> void PrintMap(const MapType &map, ostream &os) {
 	typedef typename MapType::const_iterator const_iterator;
 
 	os << "Map[";
@@ -171,8 +198,8 @@ template<class MapType> void PrintMap(const MapType &map, std::ostream &os) {
 	os << "]";
 }
 
-std::string NamedObjectVector::ToString() const {
-	std::stringstream ss;
+string NamedObjectVector::ToString() const {
+	stringstream ss;
 
 	ss << "NamedObjectVector[\n";
 	

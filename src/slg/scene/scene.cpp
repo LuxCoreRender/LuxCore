@@ -100,7 +100,7 @@ Properties Scene::ToProperties(const bool useRealFileName) const {
 		}
 
 		// Get the sorted list of texture names according their dependencies
-		vector<std::string> texNames;
+		vector<string> texNames;
 		texDefs.GetTextureSortedNames(texNames);
 
 		// Write the textures information
@@ -115,7 +115,7 @@ Properties Scene::ToProperties(const bool useRealFileName) const {
 		}
 
 		// Get the sorted list of material names according their dependencies
-		vector<std::string> matNames;
+		vector<string> matNames;
 		matDefs.GetMaterialSortedNames(matNames);
 
 		// Write the volumes information
@@ -160,7 +160,7 @@ void Scene::DefineImageMap(ImageMap *im) {
 
 	editActions.AddAction(IMAGEMAPS_EDIT);
 }
-void Scene::DefineImageMap(const std::string &name, void *pixels,
+void Scene::DefineImageMap(const string &name, void *pixels,
 		const u_int channels, const u_int width, const u_int height,
 		const ImageMapConfig &cfg) {
 	ImageMap *imgMap = ImageMap::AllocImageMap(pixels, channels, width, height, cfg);
@@ -511,20 +511,29 @@ void Scene::DeleteObject(const string &objName) {
 	}
 }
 
-void Scene::DeleteObjects(std::vector<std::string> &objNames) {
-	// Separate the objects and send them to delete
-	BOOST_FOREACH(const string  &objName, objNames) {
-		DeleteObject(objName);
-	}
-}
+void Scene::DeleteObjects(vector<string> &objNames) {
+	// Delete the light sources
+	BOOST_FOREACH(const string &objName, objNames) {
+		if (objDefs.IsSceneObjectDefined(objName)) {
+			const SceneObject *oldObj = objDefs.GetSceneObject(objName);
+			const bool wasLightSource = oldObj->GetMaterial()->IsLightSource();
 
-void Scene::DeleteObjectsInstance(const std::string &prefixName, const unsigned int count, const unsigned int start) {
-	// Deleting the instances from the start amount till the counting number of instances
-	for (unsigned int i = 0; i < start + count; i++)
-	{
-		string objectName = prefixName + std::to_string(i);
-		DeleteObject(objectName);
+			// Check if the old object was a light source
+			if (wasLightSource) {
+				editActions.AddActions(LIGHTS_EDIT | LIGHT_TYPES_EDIT);
+
+				// Delete all old triangle lights
+				const ExtMesh *mesh = oldObj->GetExtMesh();
+				const string prefix = Scene::EncodeTriangleLightNamePrefix(oldObj->GetName());
+				for (u_int i = 0; i < mesh->GetTotalTriangleCount(); ++i)
+					lightDefs.DeleteLightSource(prefix + ToString(i));
+			}
+		}
 	}
+	
+	objDefs.DeleteSceneObjects(objNames);
+
+	editActions.AddAction(GEOMETRY_EDIT);
 }
 
 void Scene::DeleteLight(const string &lightName) {
@@ -535,9 +544,9 @@ void Scene::DeleteLight(const string &lightName) {
 	}
 }
 
-void Scene::DeleteLights(std::vector<std::string> &lightNames) {
+void Scene::DeleteLights(vector<string> &lightNames) {
 	// Separate the objects and send them to delete
-	BOOST_FOREACH(const string  &lightName, lightNames) {
+	BOOST_FOREACH(const string &lightName, lightNames) {
 		DeleteLight(lightName);
 	}
 }
@@ -682,7 +691,7 @@ bool Scene::Intersect(IntersectionDevice *device,
 
 //------------------------------------------------------------------------------
 
-string Scene::EncodeTriangleLightNamePrefix(const std::string &objectName) {
+string Scene::EncodeTriangleLightNamePrefix(const string &objectName) {
 	// It is important to encode triangle light names in short strings in order
 	// to reduce the time to process very large number of light sources.
 
