@@ -16,4 +16,4 @@ pip install pyinstaller
 :: pyluxcoretool will use same numpy version used to build LuxCore
 pip install numpy==1.19.5
 
-pip install PySide2
+pip install PySide6
