@@ -661,6 +661,7 @@ static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const str
 		const size_t loopTriCount, const size_t loopTriPtr,
 		const size_t loopPtr,
 		const size_t vertPtr,
+		const size_t normalPtr,
 		const size_t polyPtr,
 		const boost::python::object &loopUVsPtrList,
 		const boost::python::object &loopColsPtrList,
@@ -674,7 +675,9 @@ static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const str
 	const MLoop *loops = reinterpret_cast<const MLoop *>(loopPtr);
 	const MVert *verts = reinterpret_cast<const MVert *>(vertPtr);
 	const MPoly *polygons = reinterpret_cast<const MPoly *>(polyPtr);
-	
+	const float(*normals)[3] = nullptr;
+	normals = reinterpret_cast<const float(*)[3]>(normalPtr);
+
 	extract<boost::python::list> getUVPtrList(loopUVsPtrList);
 	extract<boost::python::list> getColPtrList(loopColsPtrList);
 
@@ -853,9 +856,9 @@ static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const str
 						tmpMeshNorms.push_back(customNormals[tri]);
 					} else {
 						tmpMeshNorms.push_back(Normalize(Normal(
-							vertex.no[0] * normalScale,
-							vertex.no[1] * normalScale,
-							vertex.no[2] * normalScale)));
+							normals[index][0] * normalScale,
+							normals[index][1] * normalScale,
+							normals[index][2] * normalScale)));
 					}
 					
 					// Add the UV
@@ -1036,6 +1039,7 @@ boost::python::list Scene_DefineBlenderMesh1(luxcore::detail::SceneImpl *scene, 
 		const size_t loopTriCount, const size_t loopTriPtr,
 		const size_t loopPtr,
 		const size_t vertPtr,
+		const size_t normalPtr,
 		const size_t polyPtr,
 		const boost::python::object &loopUVsPtrList,
 		const boost::python::object &loopColsPtrList,
@@ -1058,7 +1062,7 @@ boost::python::list Scene_DefineBlenderMesh1(luxcore::detail::SceneImpl *scene, 
 		const string meshName = (boost::format(name + "%03d") % matIndex).str();
 
 		if (Scene_DefineBlenderMesh(scene, meshName, loopTriCount, loopTriPtr,
-				loopPtr, vertPtr, polyPtr,
+				loopPtr, vertPtr, normalPtr, polyPtr,
 				loopUVsPtrList, loopColsPtrList, 
 				meshPtr,
 				matIndex,
@@ -1079,6 +1083,7 @@ boost::python::list Scene_DefineBlenderMesh2(luxcore::detail::SceneImpl *scene, 
 		const size_t loopTriCount, const size_t loopTriPtr,
 		const size_t loopPtr,
 		const size_t vertPtr,
+		const size_t normalPtr,	
 		const size_t polyPtr,
 		const boost::python::object &loopUVsPtrList,
 		const boost::python::object &loopColsPtrList,
@@ -1087,7 +1092,7 @@ boost::python::list Scene_DefineBlenderMesh2(luxcore::detail::SceneImpl *scene, 
 		const boost::python::tuple &blenderVersion,
 		const boost::python::object &loopTriCustomNormals) {
 	return Scene_DefineBlenderMesh1(scene, name, loopTriCount, loopTriPtr,
-		loopPtr, vertPtr, polyPtr, loopUVsPtrList, loopColsPtrList, 
+		loopPtr, vertPtr, normalPtr, polyPtr, loopUVsPtrList, loopColsPtrList,
 		meshPtr, materialCount, boost::python::object(), blenderVersion, 
 		loopTriCustomNormals);
 }
