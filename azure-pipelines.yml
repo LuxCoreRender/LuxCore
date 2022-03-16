@@ -51,6 +51,11 @@ jobs:
     version_string: $[ dependencies.DetectBuildType.outputs['setvarStep.version_string'] ]
 
   steps:
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '3.10'
+      addToPath: true
+      architecture: 'x64'
   - template: ./scripts/azurepipeline/linux/linux_jobs.yml
 
 
@@ -70,6 +75,11 @@ jobs:
     final: $[ dependencies.DetectBuildType.outputs['setvarStep.final'] ]
 
   steps:
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '3.10'
+      addToPath: true
+      architecture: 'x64'
   - template: ./scripts/azurepipeline/linux/linux_jobs.yml
     parameters:
       build: 'SDK'
