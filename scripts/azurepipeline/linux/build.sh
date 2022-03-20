@@ -14,7 +14,7 @@ export PATH=/usr/local/cuda-10.1/bin${PATH:+:${PATH}}
 export LD_LIBRARY_PATH=/usr/local/cuda-10.1/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
 
 # Install Python 3.10
-sudo apt-get install -y spython3.10 python3.10-dev
+sudo apt-get install -y python3.10 python3.10-dev
 sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 1
 
 # Get cl.hpp file
