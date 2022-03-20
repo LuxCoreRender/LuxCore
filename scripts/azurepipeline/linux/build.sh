@@ -13,6 +13,10 @@ sudo apt-get install -y cuda-10-1
 export PATH=/usr/local/cuda-10.1/bin${PATH:+:${PATH}}
 export LD_LIBRARY_PATH=/usr/local/cuda-10.1/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
 
+# Install Python 3.10
+sudo apt-get install -y spython3.10 python3.10-dev
+sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 1
+
 # Get cl.hpp file
 wget https://www.khronos.org/registry/OpenCL/api/2.1/cl.hpp
 sudo cp cl.hpp /usr/include/CL/cl.hpp
