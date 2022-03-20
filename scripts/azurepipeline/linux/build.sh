@@ -10,6 +10,7 @@ sudo add-apt-repository ppa:deadsnakes/ppa -y
 sudo apt-get install -y python3.10 python3.10-dev python3-numpy 
 sudo update-alternatives --install /usr/bin/python python /usr/bin/python3.10 1
 sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 1
+sudo apt-get remove python3.8-dev
 
 # Install CUDA 10.1 Update 2 (https://docs.nvidia.com/cuda/archive/10.1/cuda-installation-guide-linux/index.html)
 wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/cuda-repo-ubuntu1804_10.1.243-1_amd64.deb
