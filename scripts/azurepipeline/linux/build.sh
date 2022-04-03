@@ -5,9 +5,13 @@ sudo apt-get -qq update
 sudo apt-get install -y libtool-bin cmake flex bison libgtk-3-dev libgl1-mesa-dev ocl-icd-opencl-dev patchelf
 
 # Install Python 3.10
-#sudo apt install software-properties-common -y
-#sudo add-apt-repository ppa:deadsnakes/ppa -y
-#sudo apt-get install -y python3.10 python3.10-dev python3-numpy 
+sudo apt install software-properties-common -y
+sudo add-apt-repository ppa:deadsnakes/ppa -y
+sudo apt-get install -y python3.10 python3.10-dev python3.10-distutils
+# Update pip
+curl -sS https://bootstrap.pypa.io/get-pip.py | python3.10
+# Install numpy for Python 3.10
+python3.10 -m pip install numpy
 
 # Install CUDA 10.1 Update 2 (https://docs.nvidia.com/cuda/archive/10.1/cuda-installation-guide-linux/index.html)
 wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/cuda-repo-ubuntu1804_10.1.243-1_amd64.deb
