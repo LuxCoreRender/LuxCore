@@ -53,7 +53,7 @@ DisplacementShape::DisplacementShape(luxrays::ExtTriangleMesh *srcMesh, const Te
 
 	vector<u_int> triangleIndex(vertCount);
 
-	// Go trough the faces and save the information
+	// Go through the faces and save the information
 	vector<bool> doneVerts(vertCount, false);
 	const u_int triCount = srcMesh->GetTotalTriangleCount();
 	const Triangle *tris = srcMesh->GetTriangles();

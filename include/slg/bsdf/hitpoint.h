@@ -72,7 +72,7 @@ typedef struct {
 	const Volume *interiorVolume, *exteriorVolume;
 	u_int objectID;
 	bool fromLight, intoObject;
-	// If I got here going trough a shadow transparency. It can be used to disable MIS.
+	// If I got here going through a shadow transparency. It can be used to disable MIS.
 	bool throughShadowTransparency;
 
 	// Used when hitting a surface

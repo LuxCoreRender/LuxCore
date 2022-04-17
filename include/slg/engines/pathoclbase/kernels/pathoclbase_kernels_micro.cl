@@ -697,7 +697,7 @@ __kernel void AdvancePaths_MK_DL_SAMPLE_BSDF(
 		// Save the seed
 		task->seed = seedValue;
 
-		// Initialize the trough a shadow transparency flag used by Scene_Intersect()
+		// Initialize the through a shadow transparency flag used by Scene_Intersect()
 		tasksDirectLight[gid].throughShadowTransparency = false;
 
 		// Make a copy of current PathVolumeInfo for tracing the
@@ -854,7 +854,7 @@ __kernel void AdvancePaths_MK_GENERATE_NEXT_VERTEX_RAY(
 		Rnd_InitFloat(passThroughEvent, &seedPassThroughEvent);
 		taskState->seedPassThroughEvent = seedPassThroughEvent;
 
-		// Initialize the trough a shadow transparency flag used by Scene_Intersect()
+		// Initialize the through a shadow transparency flag used by Scene_Intersect()
 		taskState->throughShadowTransparency = false;
 
 

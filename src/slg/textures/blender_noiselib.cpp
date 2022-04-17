@@ -25,7 +25,7 @@ namespace blender {
 
 /*
  * NOTE: This code is not thread safe and should been replaced by the usage
- * pass trough random variable in procedural textures
+ * pass through random variable in procedural textures
  */
 
 typedef unsigned long long r_uint64;

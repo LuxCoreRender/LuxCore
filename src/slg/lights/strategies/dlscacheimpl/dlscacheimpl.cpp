@@ -487,7 +487,7 @@ void DirectLightSamplingCache::Build(const Scene *scn) {
 			return;
 		}
 		
-		// The file doesn't exist so I have to go trough normal pre-processing
+		// The file doesn't exist so I have to go through normal pre-processing
 	}
 
 	//--------------------------------------------------------------------------
