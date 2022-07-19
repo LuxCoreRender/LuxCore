@@ -44,13 +44,19 @@ void SobolSequence::RequestSamples(const u_int size) {
 }
 
 u_int SobolSequence::SobolDimension(const u_int index, const u_int dimension) const {
-	const u_int offset = dimension * SOBOL_BITS;
+	u_int offset = dimension * SOBOL_BITS;
 	u_int result = 0;
 	u_int i = index;
 
-	for (u_int j = 0; i; i >>= 1, j++) {
-		if (i & 1)
-			result ^= directions[offset + j];
+	while (i) {
+		result ^= ((i & 1) * directions[offset]);
+		i >>= 1; offset++;
+		result ^= ((i & 1) * directions[offset]);
+		i >>= 1; offset++;
+		result ^= ((i & 1) * directions[offset]);
+		i >>= 1; offset++;
+		result ^= ((i & 1) * directions[offset]);
+		i >>= 1; offset++;
 	}
 
 	return result;

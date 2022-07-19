@@ -37,6 +37,12 @@ PathCPURenderThread::PathCPURenderThread(PathCPURenderEngine *engine,
 }
 
 void PathCPURenderThread::RenderFunc() {
+#if defined (_MSC_VER) || defined (__INTEL_COMPILER)
+	// Embree recommends settings these flags in each thread to improve performance
+	_MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
+	_MM_SET_DENORMALS_ZERO_MODE(_MM_DENORMALS_ZERO_ON);
+#endif
+
 	//SLG_LOG("[PathCPURenderEngine::" << threadIndex << "] Rendering thread started");
 
 	//--------------------------------------------------------------------------
