@@ -194,7 +194,7 @@ jobs:
   - DetectBuildType
   - LuxCoreRenderLinux
   - LuxCoreRenderWindows
-  - LuxCoreRenderMacOS
+  #- LuxCoreRenderMacOS
   variables:
     version_string: $[ dependencies.DetectBuildType.outputs['setvarStep.version_string'] ]
   condition: |
@@ -204,8 +204,8 @@ jobs:
       eq(variables['Build.SourceBranchName'], 'master'),
       eq(dependencies.DetectBuildType.outputs['setvarStep.version_string'], 'latest'),
       in(dependencies.LuxCoreRenderLinux.result, 'Succeeded', 'SucceededWithIssues'),
-      in(dependencies.LuxCoreRenderWindows.result, 'Succeeded', 'SucceededWithIssues'),
-      in(dependencies.LuxCoreRenderMacOS.result, 'Succeeded', 'SucceededWithIssues')
+      in(dependencies.LuxCoreRenderWindows.result, 'Succeeded', 'SucceededWithIssues')
+#      in(dependencies.LuxCoreRenderMacOS.result, 'Succeeded', 'SucceededWithIssues')
     )
   timeoutInMinutes: 0
   pool:
