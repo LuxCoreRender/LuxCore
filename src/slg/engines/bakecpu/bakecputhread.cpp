@@ -356,7 +356,7 @@ void BakeCPURenderThread::RenderLightSample(const BakeMapInfo &mapInfo, PathTrac
 	const PathTracer &pathTracer = engine->pathTracer;
 	
 	const PathTracer::ConnectToEyeCallBackType connectToEyeCallBack = boost::bind(
-			&BakeCPURenderThread::RenderConnectToEyeCallBack, this, mapInfo, _1, _2, _3, _4, _5);
+			&BakeCPURenderThread::RenderConnectToEyeCallBack, this, mapInfo, boost::placeholders::_1, boost::placeholders::_2, boost::placeholders::_3, boost::placeholders::_4, boost::placeholders::_5);
 
 	pathTracer.RenderLightSample(state.device, state.scene, state.film, state.lightSampler,
 			state.lightSampleResults, connectToEyeCallBack);
