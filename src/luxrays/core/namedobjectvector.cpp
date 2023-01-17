@@ -141,43 +141,43 @@ vector<NamedObject *> &NamedObjectVector::GetObjs() {
 
 void NamedObjectVector::DeleteObj(const string &name) {
 	const u_int index = GetIndex(name);
-	objs.erase(objs.begin() + index);
 
-	// I have to rebuild the indices from scratch
-	name2index.clear();
-	index2obj.clear();
+	if (objs.size() > 0)
+	{
+		NamedObject* removedObj = objs[index];
+		int lastIndex = objs.size() - 1;
+		if (lastIndex != index)
+		{
+			NamedObject* lastObj = objs[lastIndex];
+			int newIndex = index;
+			objs[index] = lastObj;
 
-	for (u_int i = 0; i < objs.size(); ++i) {
-		NamedObject *obj = objs[i];
+			// redo links
+			name2index.left.erase(removedObj->GetName());
+			name2index.left.erase(lastObj->GetName());
+			name2index.insert(Name2IndexType::value_type(lastObj->GetName(), index));
 
-		name2index.insert(Name2IndexType::value_type(obj->GetName(), i));
-		index2obj.insert(Index2ObjType::value_type(i, obj));	
+			index2obj.left.erase(lastIndex);
+			index2obj.left.erase(index);
+			index2obj.insert(Index2ObjType::value_type(index, lastObj));
+
+		}
+		else
+		{
+			// ultimo
+			last.left.erase(removedObj->GetName());
+			index2obj.left.erase(index);
+		}
 	}
+
+	// remove last
+	objs.pop_back();
 }
 
 void NamedObjectVector::DeleteObjs(const vector<string> &names) {
-	vector<u_int> removeList;
-	removeList.reserve(names.size());
-	for (const string &name : names) {
-		if (IsObjDefined(name)) {
-			const u_int index = GetIndex(name);
-			removeList.push_back(index);
-		}
-	}
-	sort(removeList.begin(), removeList.end(), greater<u_int>());
 
-	for (u_int i : removeList)
-		objs.erase(objs.begin() + i);
-
-	// I have to rebuild the indices from scratch
-	name2index.clear();
-	index2obj.clear();
-
-	for (u_int i = 0; i < objs.size(); ++i) {
-		NamedObject *obj = objs[i];
-
-		name2index.insert(Name2IndexType::value_type(obj->GetName(), i));
-		index2obj.insert(Index2ObjType::value_type(i, obj));	
+	for (const string& name : names) {
+		DeleteObj(name);
 	}
 }
 

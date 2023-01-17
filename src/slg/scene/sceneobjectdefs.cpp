@@ -30,7 +30,11 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 void SceneObjectDefinitions::DefineSceneObject(SceneObject *newObj) {
-	const SceneObject *oldObj = static_cast<const SceneObject *>(objs.DefineObj(newObj));
+
+	if (newObj->GetExtMesh() != NULL)
+		meshToSceneObjects.insert(make_pair(newObj->GetExtMesh()->GetName() , newObj->GetName()));
+
+	const SceneObject* oldObj = static_cast<const SceneObject*>(objs.DefineObj(newObj));
 
 	// Delete the old object definition
 	delete oldObj;
@@ -53,11 +57,11 @@ void SceneObjectDefinitions::DefineIntersectableLights(LightSourceDefinitions &l
 	const ExtMesh *mesh = obj->GetExtMesh();
 
 	// Add all new triangle lights
-	
+
 	const string prefix = Scene::EncodeTriangleLightNamePrefix(obj->GetName());
 	for (u_int i = 0; i < mesh->GetTotalTriangleCount(); ++i) {
 		TriangleLight *tl = new TriangleLight();
-		
+
 		// I use here boost::lexical_cast instead of ToString() because it is a
 		// lot faster and there can not be locale related problems with integers
 		//tl->SetName(prefix + ToString(i));
@@ -81,12 +85,26 @@ void SceneObjectDefinitions::UpdateMaterialReferences(const Material *oldMat, co
 		static_cast<SceneObject *>(o)->UpdateMaterialReferences(oldMat, newMat);
 }
 
-void SceneObjectDefinitions::UpdateMeshReferences(const ExtMesh *oldMesh, ExtMesh *newMesh,
-		boost::unordered_set<SceneObject *> &modifiedObjsList) {
-	for (auto o : objs.GetObjs()) {
-		SceneObject *so = static_cast<SceneObject *>(o);
+void SceneObjectDefinitions::UpdateMeshReferences(const ExtMesh* oldMesh, ExtMesh* newMesh,
+	boost::unordered_set<SceneObject*>& modifiedObjsList) {
 
-		if (so->UpdateMeshReference(oldMesh, newMesh))
-			modifiedObjsList.insert(so);
-	}
+	auto p = meshToSceneObjects.equal_range(oldMesh->GetName());
+	for (auto it = p.first; it != p.second; ++it)
+	{
+		std::string soName = it->second;
+		if (objs.IsObjDefined(soName))
+		{
+			SceneObject* so = static_cast<SceneObject*>(objs.GetObj(soName));
+			if (so->UpdateMeshReference(oldMesh, newMesh))
+			{
+				modifiedObjsList.insert(so);
+				
+				// change index
+				meshToSceneObjects.insert(make_pair(newMesh->GetName(), so->GetName()));
+			}
+		}
+		meshToSceneObjects.erase(it);
+	}		
 }
+
+
