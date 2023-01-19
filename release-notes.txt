@@ -70,6 +70,7 @@
 * Workaround to broken NumPy included in Blender v3.0
 * Introduced Scene:DeleteObjects() and Scene::DeleteLights() methods
 * Optimized Scene:DeleteObjects() method
+* Fixed a problem with infinite lights, BiDir and shadow transparent materials
 
 Check https://wiki.luxcorerender.org/LuxCoreRender_Release_Notes for the full list
 of release notes.

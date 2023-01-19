@@ -61,6 +61,8 @@ using namespace boost::python;
 namespace np = boost::python::numpy;
 OIIO_NAMESPACE_USING
 
+#define STREQ(a, b) (strcmp(a, b) == 0)
+
 namespace luxcore {
 namespace blender {
 
@@ -76,6 +78,23 @@ static int CustomData_get_active_layer_index(const CustomData *data, int type)
 }
 
 template<typename CustomData>
+static int CustomData_get_named_layer_index(const CustomData* data, const int type, const char* name)
+{
+	cout << "Tot layer: " << data->totlayer << endl;
+
+	for (int i = 0; i < data->totlayer; i++) {
+		cout << i << ":" << data->layers[i].name << ", " << data->layers[i].type << endl;
+		if (data->layers[i].type == type) {
+			if (STREQ(data->layers[i].name, name)) {
+				return i;
+			}
+		}
+	}
+
+	return -1;
+}
+
+template<typename CustomData>
 static void *CustomData_get_layer(const CustomData *data, int type)
 {
 	/* get the layer index of the active layer of type */
@@ -87,6 +106,17 @@ static void *CustomData_get_layer(const CustomData *data, int type)
 	return data->layers[layer_index].data;
 }
 
+template<typename CustomData>
+static void* CustomData_get_layer_named(const CustomData* data, int type, const char *name)
+{
+	/* get the layer index of the active layer of type */
+	int layer_index = CustomData_get_named_layer_index(data, type, name);
+	if (layer_index == -1) {
+		return nullptr;
+	}
+
+	return data->layers[layer_index].data;
+}
 //------------------------------------------------------------------------------
 // Utility functions
 //------------------------------------------------------------------------------
@@ -669,6 +699,7 @@ static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const str
 		const short matIndex,
 		const luxrays::Transform *trans,
 		const boost::python::tuple &blenderVersion,
+		const boost::python::object& material_indices,
 		const boost::python::object &loopTriCustomNormals) {
 
 	const MLoopTri *loopTris = reinterpret_cast<const MLoopTri *>(loopTriPtr);
@@ -721,16 +752,16 @@ static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const str
 		const int blenderVersionSub = extract<int>(blenderVersion[2]);
 		
 		if (blenderVersionMajor == 2 && blenderVersionMinor == 82 && blenderVersionSub == 7) {
-			const blender_2_82::Mesh *mesh = reinterpret_cast<const blender_2_82::Mesh*>(meshPtr);
+			const blender_2_82::Mesh* mesh = reinterpret_cast<const blender_2_82::Mesh*>(meshPtr);
 			loopNormals = static_cast<const float(*)[3]>(CustomData_get_layer(&mesh->ldata, blender_2_82::CD_NORMAL));
 			loopCount = mesh->totloop;
 		} else if (blenderVersionMajor == 2 && blenderVersionMinor == 83) {
 			// Not checking the sub version here, for now we assume that these data structures stay the same across sub releases
-			const blender_2_83::Mesh *mesh = reinterpret_cast<const blender_2_83::Mesh*>(meshPtr);
+			const blender_2_83::Mesh* mesh = reinterpret_cast<const blender_2_83::Mesh*>(meshPtr);
 			loopNormals = static_cast<const float(*)[3]>(CustomData_get_layer(&mesh->ldata, blender_2_83::CD_NORMAL));
 			loopCount = mesh->totloop;
 		}
-		
+
 		if (loopNormals) {
 			hasCustomNormals = true;
 			for (u_int i = 0; i < loopCount; ++i) {
@@ -788,14 +819,23 @@ static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const str
 	boost::unordered_map<u_int, u_int> vertexMap;
 
 	const float normalScale = 1.f / 32767.f;
-	const float rgbScale = 1.f / 255.f;
+	const float rgbScale = 1.f / 255.f;	
+
+	const int blenderVersionMajor = extract<int>(blenderVersion[0]);
+	const int blenderVersionMinor = extract<int>(blenderVersion[1]);
+	const int blenderVersionSub = extract<int>(blenderVersion[2]);
 
 	for (u_int loopTriIndex = 0; loopTriIndex < loopTriCount; ++loopTriIndex) {
 		const MLoopTri &loopTri = loopTris[loopTriIndex];
 		const MPoly &poly = polygons[loopTri.poly];
 
-		if (poly.mat_nr != matIndex)
-			continue;
+		if (blenderVersionMajor == 3 && blenderVersionMinor >= 4 && !material_indices.is_none()) {
+			if (material_indices[loopTri.poly] != matIndex)
+				continue;
+		} else {
+			if (poly.mat_nr != matIndex)
+				continue;
+		}
 
 		u_int vertIndices[3];
 
@@ -1047,7 +1087,8 @@ boost::python::list Scene_DefineBlenderMesh1(luxcore::detail::SceneImpl *scene, 
 		const u_int materialCount,
 		const boost::python::object &transformation,
 		const boost::python::tuple &blenderVersion,
-		const boost::python::object &loopTriCustomNormals) {
+		const boost::python::object& material_indices,
+		const boost::python::object& loopTriCustomNormals) {
 	
 	// Get the transformation if required
 	bool hasTransformation = false;
@@ -1068,6 +1109,7 @@ boost::python::list Scene_DefineBlenderMesh1(luxcore::detail::SceneImpl *scene, 
 				matIndex,
 				hasTransformation ? &trans : NULL,
 				blenderVersion,
+				material_indices,
 				loopTriCustomNormals)) {
 			boost::python::list meshInfo;
 			meshInfo.append(meshName);
@@ -1090,10 +1132,11 @@ boost::python::list Scene_DefineBlenderMesh2(luxcore::detail::SceneImpl *scene, 
 		const size_t meshPtr,
 		const u_int materialCount,
 		const boost::python::tuple &blenderVersion,
+		const boost::python::object& material_indices,
 		const boost::python::object &loopTriCustomNormals) {
 	return Scene_DefineBlenderMesh1(scene, name, loopTriCount, loopTriPtr,
 		loopPtr, vertPtr, normalPtr, polyPtr, loopUVsPtrList, loopColsPtrList,
-		meshPtr, materialCount, boost::python::object(), blenderVersion, 
+		meshPtr, materialCount, boost::python::object(), blenderVersion, material_indices,
 		loopTriCustomNormals);
 }
 

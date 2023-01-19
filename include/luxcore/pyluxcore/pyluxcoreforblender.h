@@ -81,6 +81,7 @@ extern boost::python::list Scene_DefineBlenderMesh1(luxcore::detail::SceneImpl *
 		const u_int materialCount,
 		const boost::python::object &transformation,
 		const boost::python::tuple &blenderVersion,
+		const boost::python::object& material_indices,
 		const boost::python::object &loopTriCustomNormals);
 		
 extern boost::python::list Scene_DefineBlenderMesh2(luxcore::detail::SceneImpl *scene, const std::string &name,
@@ -94,6 +95,7 @@ extern boost::python::list Scene_DefineBlenderMesh2(luxcore::detail::SceneImpl *
 		const size_t meshPtr,
 		const u_int materialCount,
 		const boost::python::tuple &blenderVersion,
+		const boost::python::object& material_indices,
 		const boost::python::object &loopTriCustomNormals);
 	
 
