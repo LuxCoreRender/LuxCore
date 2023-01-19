@@ -151,33 +151,33 @@ jobs:
 # MacOS binaries
 #==============================================================================
 - job: LuxCoreRenderMacOS
-   dependsOn: DetectBuildType
-   condition: succeeded()
-   timeoutInMinutes: 0
-   pool:
-     vmImage: 'macOS-11'
-   variables:
-     version_string: $[ dependencies.DetectBuildType.outputs['setvarStep.version_string'] ]
+  dependsOn: DetectBuildType
+  condition: succeeded()
+  timeoutInMinutes: 0
+  pool:
+    vmImage: 'macOS-11'
+    variables:
+    version_string: $[ dependencies.DetectBuildType.outputs['setvarStep.version_string'] ]
 
-   steps:
-      - script: ./scripts/azurepipeline/macos/install.sh
-        displayName: Install Build Tools
-      - script: ./scripts/azurepipeline/macos/build.sh
-        displayName: Building LuxCore
+  steps:
+  - script: ./scripts/azurepipeline/macos/install.sh
+    displayName: Install Build Tools
+  - script: ./scripts/azurepipeline/macos/build.sh
+    displayName: Building LuxCore
   #  - script: ./scripts/azurepipeline/macos/test.sh
   #    displayName: Testing LuxCore
-   - task: InstallAppleCertificate@2
-     inputs:
-       certSecureFile: LuxCoreSignCert.p12
-       certPwd: $(AppleCertPwd)
-   - script: ./scripts/azurepipeline/macos/pack.sh
-     displayName: Packing DiskImages
-   - task: PublishBuildArtifacts@1
-     inputs:
-       pathtoPublish: '$(Build.ArtifactStagingDirectory)'
-       artifactName: LuxCore
-     displayName: 'Upload luxcorerender-<version>'
-     condition: eq(variables['System.PullRequest.IsFork'], 'False')
+  - task: InstallAppleCertificate@2
+    inputs:
+    certSecureFile: LuxCoreSignCert.p12
+    certPwd: $(AppleCertPwd)
+  - script: ./scripts/azurepipeline/macos/pack.sh
+    displayName: Packing DiskImages
+  - task: PublishBuildArtifacts@1
+    inputs:
+      pathtoPublish: '$(Build.ArtifactStagingDirectory)'
+      artifactName: LuxCore
+    displayName: 'Upload luxcorerender-<version>'
+    condition: eq(variables['System.PullRequest.IsFork'], 'False')
 
 
 #==============================================================================
