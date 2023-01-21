@@ -184,7 +184,7 @@ echo "oidnDenoise installed"
 
 cd ../..
 
-#sudo ./scripts/macos/codesign.sh ./release_OSX/pyluxcore
+./scripts/macos/codesign.sh ./release_OSX/pyluxcore
 
 # Set up correct names for release version and SDK
 if [[ -z "$VERSION_STRING" ]] ; then
