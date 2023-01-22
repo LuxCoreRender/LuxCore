@@ -89,21 +89,26 @@ void SceneObjectDefinitions::UpdateMeshReferences(const ExtMesh* oldMesh, ExtMes
 	boost::unordered_set<SceneObject*>& modifiedObjsList) {
 
 	auto p = meshToSceneObjects.equal_range(oldMesh->GetName());
-	for (auto it = p.first; it != p.second; ++it)
+	auto it = p.first;
+	
+	while(it != p.second)
 	{
+		bool updated = false;
 		std::string soName = it->second;
 		if (objs.IsObjDefined(soName))
 		{
 			SceneObject* so = static_cast<SceneObject*>(objs.GetObj(soName));
 			if (so->UpdateMeshReference(oldMesh, newMesh))
 			{
+				updated = true;
 				modifiedObjsList.insert(so);
+				meshToSceneObjects.erase(it++);
 				
 				// change index
 				meshToSceneObjects.insert(make_pair(newMesh->GetName(), so->GetName()));
 			}
 		}
-		meshToSceneObjects.erase(it);
+		if(!updated) ++it;
 	}		
 }
 
