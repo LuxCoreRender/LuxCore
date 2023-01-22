@@ -164,8 +164,8 @@ void NamedObjectVector::DeleteObj(const string &name) {
 		}
 		else
 		{
-			// ultimo
-			last.left.erase(removedObj->GetName());
+			// last
+			name2index.left.erase(removedObj->GetName());
 			index2obj.left.erase(index);
 		}
 	}
