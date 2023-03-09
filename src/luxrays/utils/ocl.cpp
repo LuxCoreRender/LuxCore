@@ -24,6 +24,7 @@
 
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/algorithm/string/trim.hpp>
+#include <boost/nowide/fstream.hpp>
 
 #include "luxrays/luxrays.h"
 #include "luxrays/utils/utils.h"
@@ -303,10 +304,10 @@ cl_program oclKernelPersistentCache::Compile(cl_context context, cl_device_id de
 
 			// The use of boost::filesystem::path is required for UNICODE support: fileName
 			// is supposed to be UTF-8 encoded.
-			boost::filesystem::ofstream file(boost::filesystem::path(fileName),
-					boost::filesystem::ofstream::out |
-					boost::filesystem::ofstream::binary |
-					boost::filesystem::ofstream::trunc);
+			boost::nowide::ofstream file(boost::filesystem::path(fileName),
+					boost::nowide::ofstream::out |
+					boost::nowide::ofstream::binary |
+					boost::nowide::ofstream::trunc);
 
 			// Write the binary hash
 			const u_int hashBin = HashBin(bins, binsSizes[0]);
@@ -337,8 +338,8 @@ cl_program oclKernelPersistentCache::Compile(cl_context context, cl_device_id de
 
 			// The use of boost::filesystem::path is required for UNICODE support: fileName
 			// is supposed to be UTF-8 encoded.
-			boost::filesystem::ifstream file(boost::filesystem::path(fileName),
-					boost::filesystem::ifstream::in | boost::filesystem::ifstream::binary);
+			boost::nowide::ifstream file(boost::filesystem::path(fileName),
+					boost::nowide::ifstream::in | boost::nowide::ifstream::binary);
 
 			// Read the binary hash
 			u_int hashBin;
