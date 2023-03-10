@@ -69,11 +69,15 @@ void Tile::InitTileFilm(const Film &film, Film **tileFilm) {
 
 	// Remove all channels but RADIANCE_PER_PIXEL_NORMALIZED and IMAGEPIPELINE
 	const Film::FilmChannels &channels = (*tileFilm)->GetChannels();
-	
+
+        std::vector<Film::FilmChannelType> keysDelete;
 	for (auto const &c : channels) {
 		if ((c != Film::RADIANCE_PER_PIXEL_NORMALIZED) && (c != Film::IMAGEPIPELINE))
-			(*tileFilm)->RemoveChannel(c);
+                        keysDelete.push_back(c);
 	}
+        for (auto k : keysDelete) {
+                (*tileFilm)->RemoveChannel(k);
+        }
 
 	// Build an image pipeline with only an auto-linear tone mapping and
 	// gamma correction.
