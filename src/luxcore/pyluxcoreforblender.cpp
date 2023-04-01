@@ -791,7 +791,7 @@ static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const str
 		}
 	}
 
-	vector<const MLoopUV *> loopUVsList;
+	vector<size_t> loopUVsList;
 	vector<const MLoopCol *> loopColsList;
 	vector<Point> tmpMeshVerts;
 	vector<Normal> tmpMeshNorms;
@@ -800,8 +800,7 @@ static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const str
 	vector<Triangle> tmpMeshTris;
 
 	for (u_int i = 0; i < loopUVsCount; ++i) {
-		const size_t UVListPtr = extract<size_t>(UVsList[i]);
-		loopUVsList.push_back(reinterpret_cast<const MLoopUV *>(UVListPtr));
+		loopUVsList.push_back(extract<size_t>(UVsList[i]));
 
 		vector<UV> temp;
 		tmpMeshUVs.push_back(temp);
@@ -851,17 +850,31 @@ static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const str
 						alreadyDefined = false;
 					
 					for (u_int uvLayerIndex = 0; uvLayerIndex < loopUVsList.size() && alreadyDefined; ++uvLayerIndex) {
-						const MLoopUV *loopUVs = loopUVsList[uvLayerIndex];
-
-						if (loopUVs) {
-							const MLoopUV &loopUV = loopUVs[tri];
-							// Check if the already defined vertex has the right UV coordinates
-							if ((loopUV.uv[0] != tmpMeshUVs[uvLayerIndex][mappedIndex].u) ||
-								(loopUV.uv[1] != tmpMeshUVs[uvLayerIndex][mappedIndex].v)) {
-								// I have to create a new vertex
-								alreadyDefined = false;
+						
+						if (blenderVersionMajor == 3 && blenderVersionMinor < 5) {
+							const MLoopUV* loopUVs = reinterpret_cast<const MLoopUV*>(loopUVsList[uvLayerIndex]);
+							if (loopUVs) {
+								const MLoopUV& loopUV = loopUVs[tri];								
+								// Check if the already defined vertex has the right UV coordinates
+								if ((loopUV.uv[0] != tmpMeshUVs[uvLayerIndex][mappedIndex].u) ||
+									(loopUV.uv[1] != tmpMeshUVs[uvLayerIndex][mappedIndex].v)) {
+									// I have to create a new vertex
+									alreadyDefined = false;
+								}
 							}
 						}
+						else {
+							const float(*loopUVs)[2] = reinterpret_cast<const float(*)[2]>(loopUVsList[uvLayerIndex]);
+							if (loopUVs) {
+								const float* loopUV = loopUVs[tri];
+								// Check if the already defined vertex has the right UV coordinates
+								if ((loopUV[0] != tmpMeshUVs[uvLayerIndex][mappedIndex].u) ||
+									(loopUV[1] != tmpMeshUVs[uvLayerIndex][mappedIndex].v)) {
+									// I have to create a new vertex
+									alreadyDefined = false;
+								}
+							}
+						}				
 					}
 					for (u_int colLayerIndex = 0; colLayerIndex < loopColsList.size() && alreadyDefined; ++colLayerIndex) {
 						const MLoopCol *loopCols = loopColsList[colLayerIndex];
@@ -907,10 +920,19 @@ static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const str
 					
 					// Add the UV
 					for (u_int uvLayerIndex = 0; uvLayerIndex < loopUVsList.size(); ++uvLayerIndex) {
-						const MLoopUV *loopUVs = loopUVsList[uvLayerIndex];
-						if (loopUVs) {
-							const MLoopUV &loopUV = loopUVs[tri];
-							tmpMeshUVs[uvLayerIndex].push_back(UV(loopUV.uv));
+						if (blenderVersionMajor == 3 && blenderVersionMinor < 5) {
+							const MLoopUV* loopUVs = reinterpret_cast<const MLoopUV*>(loopUVsList[uvLayerIndex]);
+							if (loopUVs) {
+								const MLoopUV& loopUV = loopUVs[tri];								
+								tmpMeshUVs[uvLayerIndex].push_back(UV(loopUV.uv));								
+							}
+						}
+						else {
+							const float(*loopUVs)[2] = reinterpret_cast<const float(*)[2]>(loopUVsList[uvLayerIndex]);
+							if (loopUVs) {								
+								const float* loopUV = loopUVs[tri];								
+								tmpMeshUVs[uvLayerIndex].push_back(UV(loopUV));
+							}
 						}
 					}
 					// Add the color
@@ -976,15 +998,27 @@ static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const str
 						alreadyDefined = false;
 					
 					for (u_int uvLayerIndex = 0; uvLayerIndex < loopUVsList.size() && alreadyDefined; ++uvLayerIndex) {
-						const MLoopUV * loopUVs = loopUVsList[uvLayerIndex];
-
-						if (loopUVs) {
-							const MLoopUV &loopUV = loopUVs[tri];
-							// Check if the already defined vertex has the right UV coordinates
-							if ((loopUV.uv[0] != tmpMeshUVs[uvLayerIndex][mappedIndex].u) ||
-								(loopUV.uv[1] != tmpMeshUVs[uvLayerIndex][mappedIndex].v)) {
-								// I have to create a new vertex
-								alreadyDefined = false;
+						if (blenderVersionMajor == 3 && blenderVersionMinor < 5) {
+							const MLoopUV* loopUVs = reinterpret_cast<const MLoopUV *>(loopUVsList[uvLayerIndex]);
+							if (loopUVs) {
+								const MLoopUV& loopUV = loopUVs[tri];								
+								// Check if the already defined vertex has the right UV coordinates
+								if ((loopUV.uv[0] != tmpMeshUVs[uvLayerIndex][mappedIndex].u) ||
+									(loopUV.uv[1] != tmpMeshUVs[uvLayerIndex][mappedIndex].v)) {
+									// I have to create a new vertex
+									alreadyDefined = false;
+								}
+							}
+						} else {
+							const float(*loopUVs)[2] = reinterpret_cast<const float(*)[2]>(loopUVsList[uvLayerIndex]);
+							if (loopUVs) {								
+								const float* loopUV = loopUVs[tri];
+								// Check if the already defined vertex has the right UV coordinates
+								if ((loopUV[0] != tmpMeshUVs[uvLayerIndex][mappedIndex].u) ||
+									(loopUV[1] != tmpMeshUVs[uvLayerIndex][mappedIndex].v)) {
+									// I have to create a new vertex
+									alreadyDefined = false;
+								}
 							}
 						}
 					}
@@ -1025,10 +1059,19 @@ static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const str
 
 					// Add the UV
 					for (u_int uvLayerIndex = 0; uvLayerIndex < loopUVsList.size(); ++uvLayerIndex) {
-						const MLoopUV * loopUVs = loopUVsList[uvLayerIndex];
-						if (loopUVs) {
-							const MLoopUV &loopUV = loopUVs[tri];
-							tmpMeshUVs[uvLayerIndex].push_back(UV(loopUV.uv));
+						if (blenderVersionMajor == 3 && blenderVersionMinor < 5) {
+							const MLoopUV* loopUVs = reinterpret_cast<const MLoopUV*>(loopUVsList[uvLayerIndex]);
+							if (loopUVs) {
+								const MLoopUV& loopUV = loopUVs[tri];								
+								tmpMeshUVs[uvLayerIndex].push_back(UV(loopUV.uv));
+							}
+						}
+						else {
+							const float(*loopUVs)[2] = reinterpret_cast<const float(*)[2]>(loopUVsList[uvLayerIndex]);
+							if (loopUVs) {								
+								const float* loopUV = loopUVs[tri];
+								tmpMeshUVs[uvLayerIndex].push_back(UV(loopUV));
+							}
 						}
 					}
 					// Add the color
@@ -1074,12 +1117,21 @@ static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const str
 	fill(meshCols.begin(), meshCols.end(), nullptr);
 	
 	for (u_int i = 0; i < loopUVsList.size(); ++i) {
-		const MLoopUV * loopUVs = loopUVsList[i];
-		if (loopUVs) {
-			meshUVs[i] = new UV[tmpMeshVerts.size()];
-			copy(tmpMeshUVs[i].begin(), tmpMeshUVs[i].end(), meshUVs[i]);
+		if (blenderVersionMajor == 3 && blenderVersionMinor < 5) {
+			const MLoopUV* loopUVs = reinterpret_cast<const MLoopUV*>(loopUVsList[i]);
+			if (loopUVs) {
+				meshUVs[i] = new UV[tmpMeshVerts.size()];
+				copy(tmpMeshUVs[i].begin(), tmpMeshUVs[i].end(), meshUVs[i]);
+			}
+		} else {
+			const float(*loopUVs)[2] = reinterpret_cast<const float(*)[2]>(loopUVsList[i]);
+			if (loopUVs) {
+				meshUVs[i] = new UV[tmpMeshVerts.size()];
+				copy(tmpMeshUVs[i].begin(), tmpMeshUVs[i].end(), meshUVs[i]);
+			}
 		}
 	}
+
 	for (u_int i = 0; i < loopColsList.size(); ++i) {
 		const MLoopCol * loopCols = loopColsList[i];
 		if (loopCols) {
