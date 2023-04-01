@@ -703,14 +703,21 @@ static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const str
 		const boost::python::object &loopTriCustomNormals) {
 
 	const MLoopTri *loopTris = reinterpret_cast<const MLoopTri *>(loopTriPtr);
-	const MLoop *loops = reinterpret_cast<const MLoop *>(loopPtr);
-	const MVert *verts = reinterpret_cast<const MVert *>(vertPtr);
+	const MLoop *loops = reinterpret_cast<const MLoop *>(loopPtr);	
 	const MPoly *polygons = reinterpret_cast<const MPoly *>(polyPtr);
 	const float(*normals)[3] = nullptr;
 	normals = reinterpret_cast<const float(*)[3]>(normalPtr);
 
 	extract<boost::python::list> getUVPtrList(loopUVsPtrList);
 	extract<boost::python::list> getColPtrList(loopColsPtrList);
+
+	if (len(blenderVersion) != 3) {
+		throw runtime_error("Blender version tuple needs to have exactly 3 elements for Scene.DefineMesh()");
+	}
+
+	const int blenderVersionMajor = extract<int>(blenderVersion[0]);
+	const int blenderVersionMinor = extract<int>(blenderVersion[1]);
+	const int blenderVersionSub = extract<int>(blenderVersion[2]);			
 
     // Check UVs
     if (!getUVPtrList.check()) {
@@ -743,14 +750,7 @@ static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const str
 	{
 		const float(*loopNormals)[3] = nullptr;
 		u_int loopCount = 0;
-		
-		if (len(blenderVersion) != 3) {
-			throw runtime_error("Blender version tuple needs to have exactly 3 elements for Scene.DefineMesh()");
-		}
-		const int blenderVersionMajor = extract<int>(blenderVersion[0]);
-		const int blenderVersionMinor = extract<int>(blenderVersion[1]);
-		const int blenderVersionSub = extract<int>(blenderVersion[2]);
-		
+				
 		if (blenderVersionMajor == 2 && blenderVersionMinor == 82 && blenderVersionSub == 7) {
 			const blender_2_82::Mesh* mesh = reinterpret_cast<const blender_2_82::Mesh*>(meshPtr);
 			loopNormals = static_cast<const float(*)[3]>(CustomData_get_layer(&mesh->ldata, blender_2_82::CD_NORMAL));
@@ -821,10 +821,6 @@ static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const str
 	const float normalScale = 1.f / 32767.f;
 	const float rgbScale = 1.f / 255.f;	
 
-	const int blenderVersionMajor = extract<int>(blenderVersion[0]);
-	const int blenderVersionMinor = extract<int>(blenderVersion[1]);
-	const int blenderVersionSub = extract<int>(blenderVersion[2]);
-
 	for (u_int loopTriIndex = 0; loopTriIndex < loopTriCount; ++loopTriIndex) {
 		const MLoopTri &loopTri = loopTris[loopTriIndex];
 		const MPoly &poly = polygons[loopTri.poly];
@@ -886,10 +882,18 @@ static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const str
 				if (alreadyDefined)
 					vertIndices[i] = vertexMap[index];
 				else {
-					const MVert &vertex = verts[index];
+					const float *vertex;
+
+					if (blenderVersionMajor == 3 && blenderVersionMinor < 5) {
+						const MVert* verts = reinterpret_cast<const MVert*>(vertPtr);
+						vertex = verts[index].co;
+					} else {
+						const float(*verts)[3] = reinterpret_cast<const float(*)[3]>(vertPtr);
+						vertex = verts[index];
+					};					
 
 					// Add the vertex
-					tmpMeshVerts.emplace_back(Point(vertex.co));
+					tmpMeshVerts.emplace_back(Point(vertex));
 
 					// Add the normal
 					if (hasCustomNormals) {
@@ -928,13 +932,27 @@ static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const str
 			}
 		} else {
 			// Flat shaded, use the Blender face normal
-			const MVert &v0 = verts[loops[loopTri.tri[0]].v];
-			const MVert &v1 = verts[loops[loopTri.tri[1]].v];
-			const MVert &v2 = verts[loops[loopTri.tri[2]].v];
+			const float* v0;
+			const float* v1;
+			const float* v2;
 
-			const Point p0(v0.co);
-			const Point p1(v1.co);
-			const Point p2(v2.co);
+			if (blenderVersionMajor == 3 && blenderVersionMinor < 5) {
+				const MVert* verts = reinterpret_cast<const MVert*>(vertPtr);
+				v0 = verts[loops[loopTri.tri[0]].v].co;
+				v1 = verts[loops[loopTri.tri[1]].v].co;
+				v2 = verts[loops[loopTri.tri[2]].v].co;
+			}
+			else {
+				const float(*verts)[3] = reinterpret_cast<const float(*)[3]>(vertPtr);
+				v0 = verts[loops[loopTri.tri[0]].v];
+				v1 = verts[loops[loopTri.tri[1]].v];
+				v2 = verts[loops[loopTri.tri[2]].v];
+			};
+
+
+			const Point p0(v0);
+			const Point p1(v1);
+			const Point p2(v2);
 
 			const Vector e1 = p1 - p0;
 			const Vector e2 = p2 - p0;
@@ -989,10 +1007,19 @@ static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const str
 				if (alreadyDefined)
 					vertIndices[i] = vertexMap[index];
 				else {
-					const MVert &vertex = verts[index];
+
+					const float *vertex;
+					if (blenderVersionMajor == 3 && blenderVersionMinor < 5) {
+						const MVert* verts = reinterpret_cast<const MVert*>(vertPtr);
+						vertex = verts[index].co;
+					}
+					else {
+						const float(*verts)[3] = reinterpret_cast<const float(*)[3]>(vertPtr);
+						vertex = verts[index];
+					};
 
 					// Add the vertex
-					tmpMeshVerts.emplace_back(Point(vertex.co));
+					tmpMeshVerts.emplace_back(Point(vertex));
 					// Add the normal (same for all vertices of this face, to have flat shading)
 					tmpMeshNorms.push_back(faceNormal);
 
