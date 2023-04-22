@@ -127,759 +127,24 @@ struct MCol;
 struct BMEditMesh;
 struct Multires;
 
-
-namespace blender_2_82 {
-
-typedef struct ID {
-  void *next, *prev;
-  struct ID *newid;
-  struct Library *lib;
-  /** MAX_ID_NAME. */
-  char name[66];
-  /**
-   * LIB_... flags report on status of the data-block this ID belongs to
-   * (persistent, saved to and read from .blend).
-   */
-  short flag;
-  /**
-   * LIB_TAG_... tags (runtime only, cleared at read time).
-   */
-  int tag;
-  int us;
-  int icon_id;
-  int recalc;
-  char _pad[4];
-  IDProperty *properties;
-
-  /** Reference linked ID which this one overrides. */
-  IDOverrideLibrary *override_library;
-
-  /**
-   * Only set for data-blocks which are coming from copy-on-write, points to
-   * the original version of it.
-   */
-  struct ID *orig_id;
-
-  void *py_instance;
-} ID;
-
-typedef struct CustomDataLayer {
-  /** Type of data in layer. */
-  int type;
-  /** In editmode, offset of layer in block. */
-  int offset;
-  /** General purpose flag. */
-  int flag;
-  /** Number of the active layer of this type. */
-  int active;
-  /** Number of the layer to render. */
-  int active_rnd;
-  /** Number of the layer to render. */
-  int active_clone;
-  /** Number of the layer to render. */
-  int active_mask;
-  /** Shape keyblock unique id reference. */
-  int uid;
-  /** Layer name, MAX_CUSTOMDATA_LAYER_NAME. */
-  char name[64];
-  /** Layer data. */
-  void *data;
-} CustomDataLayer;
-
-typedef struct CustomData {
-  /** CustomDataLayers, ordered by type. */
-  CustomDataLayer *layers;
-  /**
-   * runtime only! - maps types to indices of first layer of that type,
-   * MUST be >= CD_NUMTYPES, but we cant use a define here.
-   * Correct size is ensured in CustomData_update_typemap assert().
-   */
-  int typemap[42];
-  char _pad0[4];
-  /** Number of layers, size of layers array. */
-  int totlayer, maxlayer;
-  /** In editmode, total size of all data layers. */
-  int totsize;
-  /** (BMesh Only): Memory pool for allocation of blocks. */
-  struct BLI_mempool *pool;
-  /** External file storing customdata layers. */
-  CustomDataExternal *external;
-} CustomData;
-
-typedef enum CustomDataType {
-  /* Used by GLSL attributes in the cases when we need a delayed CD type
-   * assignment (in the cases when we don't know in advance which layer
-   * we are addressing).
-   */
-  CD_AUTO_FROM_NAME = -1,
-
-  CD_MVERT = 0,
-#ifdef DNA_DEPRECATED_ALLOW
-  CD_MSTICKY = 1, /* DEPRECATED */
-#endif
-  CD_MDEFORMVERT = 2,
-  CD_MEDGE = 3,
-  CD_MFACE = 4,
-  CD_MTFACE = 5,
-  CD_MCOL = 6,
-  CD_ORIGINDEX = 7,
-  CD_NORMAL = 8,
-  CD_FACEMAP = 9, /* exclusive face group, each face can only be part of one */
-  CD_PROP_FLT = 10,
-  CD_PROP_INT = 11,
-  CD_PROP_STR = 12,
-  CD_ORIGSPACE = 13, /* for modifier stack face location mapping */
-  CD_ORCO = 14,      /* undeformed vertex coordinates, normalized to 0..1 range */
-#ifdef DNA_DEPRECATED_ALLOW
-  CD_MTEXPOLY = 15, /* deprecated */
-#endif
-  CD_MLOOPUV = 16,
-  CD_MLOOPCOL = 17,
-  CD_TANGENT = 18,
-  CD_MDISPS = 19,
-  CD_PREVIEW_MCOL = 20, /* for displaying weightpaint colors */
-                        /*  CD_ID_MCOL          = 21, */
-  CD_TEXTURE_MLOOPCOL = 22,
-  CD_CLOTH_ORCO = 23,
-  CD_RECAST = 24,
-
-  /* BMESH ONLY START */
-  CD_MPOLY = 25,
-  CD_MLOOP = 26,
-  CD_SHAPE_KEYINDEX = 27,
-  CD_SHAPEKEY = 28,
-  CD_BWEIGHT = 29,
-  CD_CREASE = 30,
-  CD_ORIGSPACE_MLOOP = 31,
-  CD_PREVIEW_MLOOPCOL = 32,
-  CD_BM_ELEM_PYPTR = 33,
-  /* BMESH ONLY END */
-
-  CD_PAINT_MASK = 34,
-  CD_GRID_PAINT_MASK = 35,
-  CD_MVERT_SKIN = 36,
-  CD_FREESTYLE_EDGE = 37,
-  CD_FREESTYLE_FACE = 38,
-  CD_MLOOPTANGENT = 39,
-  CD_TESSLOOPNORMAL = 40,
-  CD_CUSTOMLOOPNORMAL = 41,
-
-  CD_NUMTYPES = 42,
-} CustomDataType;
-
-struct MLoopTri_Store {
-  /* WARNING! swapping between array (ready-to-be-used data) and array_wip
-   * (where data is actually computed)
-   * shall always be protected by same lock as one used for looptris computing. */
-  struct MLoopTri *array, *array_wip;
-  int len;
-  int len_alloc;
-};
-
-typedef struct Mesh_Runtime {
-  /* Evaluated mesh for objects which do not have effective modifiers. This mesh is sued as a
-   * result of modifier stack evaluation.
-   * Since modifier stack evaluation is threaded on object level we need some synchronization. */
-  struct Mesh *mesh_eval;
-  void *eval_mutex;
-
-  struct EditMeshData *edit_data;
-  void *batch_cache;
-
-  struct SubdivCCG *subdiv_ccg;
-  void *_pad1;
-  int subdiv_ccg_tot_level;
-  char _pad2[4];
-
-  int64_t cd_dirty_vert;
-  int64_t cd_dirty_edge;
-  int64_t cd_dirty_loop;
-  int64_t cd_dirty_poly;
-
-  struct MLoopTri_Store looptris;
-
-  /** 'BVHCache', for 'BKE_bvhutil.c' */
-  struct LinkNode *bvh_cache;
-
-  /** Non-manifold boundary data for Shrinkwrap Target Project. */
-  struct ShrinkwrapBoundaryData *shrinkwrap_data;
-
-  /** Set by modifier stack if only deformed from original. */
-  char deformed_only;
-  /**
-   * Copied from edit-mesh (hint, draw with editmesh data).
-   * In the future we may leave the mesh-data empty
-   * since its not needed if we can use edit-mesh data. */
-  char is_original;
-  char _pad[6];
-} Mesh_Runtime;
-
-typedef struct Mesh {
-  ID id;
-  /** Animation data (must be immediately after id for utilities to use it). */
-  struct AnimData *adt;
-
-  /** Old animation system, deprecated for 2.5. */
-  struct Ipo *ipo DNA_DEPRECATED;
-  struct Key *key;
-  struct Material **mat;
-  struct MSelect *mselect;
-
-  /* BMESH ONLY */
-  /*new face structures*/
-  struct MPoly *mpoly;
-  struct MLoop *mloop;
-  struct MLoopUV *mloopuv;
-  struct MLoopCol *mloopcol;
-  /* END BMESH ONLY */
-
-  /* mface stores the tessellation (triangulation) of the mesh,
-   * real faces are now stored in nface.*/
-  /** Array of mesh object mode faces for tessellation. */
-  struct MFace *mface;
-  /** Store tessellation face UV's and texture here. */
-  struct MTFace *mtface;
-  /** Deprecated, use mtface. */
-  struct TFace *tface DNA_DEPRECATED;
-  /** Array of verts. */
-  struct MVert *mvert;
-  /** Array of edges. */
-  struct MEdge *medge;
-  /** Deformgroup vertices. */
-  struct MDeformVert *dvert;
-
-  /* array of colors for the tessellated faces, must be number of tessellated
-   * faces * 4 in length */
-  struct MCol *mcol;
-  struct Mesh *texcomesh;
-
-  /* When the object is available, the preferred access method is: BKE_editmesh_from_object(ob) */
-  /** Not saved in file!. */
-  struct BMEditMesh *edit_mesh;
-
-  struct CustomData vdata, edata, fdata;
-
-  /* BMESH ONLY */
-  struct CustomData pdata, ldata;
-  /* END BMESH ONLY */
-
-  int totvert, totedge, totface, totselect;
-
-  /* BMESH ONLY */
-  int totpoly, totloop;
-  /* END BMESH ONLY */
-
-  /* the last selected vertex/edge/face are used for the active face however
-   * this means the active face must always be selected, this is to keep track
-   * of the last selected face and is similar to the old active face flag where
-   * the face does not need to be selected, -1 is inactive */
-  int act_face;
-
-  /* texture space, copied as one block in editobject.c */
-  float loc[3];
-  float size[3];
-
-  short texflag, flag;
-  float smoothresh;
-
-  /* customdata flag, for bevel-weight and crease, which are now optional */
-  char cd_flag, _pad;
-
-  char subdiv DNA_DEPRECATED, subdivr DNA_DEPRECATED;
-  /** Only kept for backwards compat, not used anymore. */
-  char subsurftype DNA_DEPRECATED;
-  char editflag;
-
-  short totcol;
-
-  float remesh_voxel_size;
-  float remesh_voxel_adaptivity;
-  char remesh_mode;
-  char _pad1[3];
-  /** Deprecated multiresolution modeling data, only keep for loading old files. */
-  struct Multires *mr DNA_DEPRECATED;
-
-  Mesh_Runtime runtime;
-} Mesh;
-
-} // namespace blender_2_82
-
-namespace blender_2_83 {
-
-// -------------------------------------------------------------------------------------
-// From blender/source/blender/makesdna/DNA_ID.h
-
-typedef struct ID {
-  void *next, *prev;
-  struct ID *newid;
-  struct Library *lib;
-  /** MAX_ID_NAME. */
-  char name[66];
-  /**
-   * LIB_... flags report on status of the data-block this ID belongs to
-   * (persistent, saved to and read from .blend).
-   */
-  short flag;
-  /**
-   * LIB_TAG_... tags (runtime only, cleared at read time).
-   */
-  int tag;
-  int us;
-  int icon_id;
-  int recalc;
-  /**
-   * Used by undo code. recalc_after_undo_push contains the changes between the
-   * last undo push and the current state. This is accumulated as IDs are tagged
-   * for update in the depsgraph, and only cleared on undo push.
-   *
-   * recalc_up_to_undo_push is saved to undo memory, and is the value of
-   * recalc_after_undo_push at the time of the undo push. This means it can be
-   * used to find the changes between undo states.
-   */
-  int recalc_up_to_undo_push;
-  int recalc_after_undo_push;
-
-  /**
-   * A session-wide unique identifier for a given ID, that remain the same across potential
-   * re-allocations (e.g. due to undo/redo steps).
-   */
-  unsigned int session_uuid;
-
-  IDProperty *properties;
-
-  /** Reference linked ID which this one overrides. */
-  IDOverrideLibrary *override_library;
-
-  /**
-   * Only set for data-blocks which are coming from copy-on-write, points to
-   * the original version of it.
-   */
-  struct ID *orig_id;
-
-  void *py_instance;
-} ID;
-
-// -------------------------------------------------------------------------------------
-// From blender/source/blender/makesdna/DNA_listBase.h
-typedef struct ListBase {
-	void *first, *last;
-} ListBase;
-
-
-// -------------------------------------------------------------------------------------
-// From blender/source/blender/makesdna/DNA_customdata_types.h
-
-typedef struct CustomDataLayer {
-  /** Type of data in layer. */
-  int type;
-  /** In editmode, offset of layer in block. */
-  int offset;
-  /** General purpose flag. */
-  int flag;
-  /** Number of the active layer of this type. */
-  int active;
-  /** Number of the layer to render. */
-  int active_rnd;
-  /** Number of the layer to render. */
-  int active_clone;
-  /** Number of the layer to render. */
-  int active_mask;
-  /** Shape keyblock unique id reference. */
-  int uid;
-  /** Layer name, MAX_CUSTOMDATA_LAYER_NAME. */
-  char name[64];
-  /** Layer data. */
-  void *data;
-} CustomDataLayer;
-
-typedef struct CustomData {
-  /** CustomDataLayers, ordered by type. */
-  CustomDataLayer *layers;
-  /**
-   * runtime only! - maps types to indices of first layer of that type,
-   * MUST be >= CD_NUMTYPES, but we cant use a define here.
-   * Correct size is ensured in CustomData_update_typemap assert().
-   */
-  int typemap[47];
-  /** Number of layers, size of layers array. */
-  int totlayer, maxlayer;
-  /** In editmode, total size of all data layers. */
-  int totsize;
-  /** (BMesh Only): Memory pool for allocation of blocks. */
-  struct BLI_mempool *pool;
-  /** External file storing customdata layers. */
-  CustomDataExternal *external;
-} CustomData;
-
-typedef enum CustomDataType {
-  /* Used by GLSL attributes in the cases when we need a delayed CD type
-   * assignment (in the cases when we don't know in advance which layer
-   * we are addressing).
-   */
-  CD_AUTO_FROM_NAME = -1,
-
-  CD_MVERT = 0,
-#ifdef DNA_DEPRECATED_ALLOW
-  CD_MSTICKY = 1, /* DEPRECATED */
-#endif
-  CD_MDEFORMVERT = 2,
-  CD_MEDGE = 3,
-  CD_MFACE = 4,
-  CD_MTFACE = 5,
-  CD_MCOL = 6,
-  CD_ORIGINDEX = 7,
-  CD_NORMAL = 8,
-  CD_FACEMAP = 9, /* exclusive face group, each face can only be part of one */
-  CD_PROP_FLT = 10,
-  CD_PROP_INT = 11,
-  CD_PROP_STR = 12,
-  CD_ORIGSPACE = 13, /* for modifier stack face location mapping */
-  CD_ORCO = 14,      /* undeformed vertex coordinates, normalized to 0..1 range */
-#ifdef DNA_DEPRECATED_ALLOW
-  CD_MTEXPOLY = 15, /* deprecated */
-#endif
-  CD_MLOOPUV = 16,
-  CD_MLOOPCOL = 17,
-  CD_TANGENT = 18,
-  CD_MDISPS = 19,
-  CD_PREVIEW_MCOL = 20,           /* for displaying weightpaint colors */
-                                  /*  CD_ID_MCOL          = 21, */
-  /* CD_TEXTURE_MLOOPCOL = 22, */ /* UNUSED */
-  CD_CLOTH_ORCO = 23,
-  CD_RECAST = 24,
-
-  /* BMESH ONLY START */
-  CD_MPOLY = 25,
-  CD_MLOOP = 26,
-  CD_SHAPE_KEYINDEX = 27,
-  CD_SHAPEKEY = 28,
-  CD_BWEIGHT = 29,
-  CD_CREASE = 30,
-  CD_ORIGSPACE_MLOOP = 31,
-  CD_PREVIEW_MLOOPCOL = 32,
-  CD_BM_ELEM_PYPTR = 33,
-  /* BMESH ONLY END */
-
-  CD_PAINT_MASK = 34,
-  CD_GRID_PAINT_MASK = 35,
-  CD_MVERT_SKIN = 36,
-  CD_FREESTYLE_EDGE = 37,
-  CD_FREESTYLE_FACE = 38,
-  CD_MLOOPTANGENT = 39,
-  CD_TESSLOOPNORMAL = 40,
-  CD_CUSTOMLOOPNORMAL = 41,
-  CD_SCULPT_FACE_SETS = 42,
-
-  /* Hair and PointCloud */
-  CD_LOCATION = 43,
-  CD_RADIUS = 44,
-  CD_HAIRCURVE = 45,
-  CD_HAIRMAPPING = 46,
-
-  CD_NUMTYPES = 47,
-} CustomDataType;
-
-// -------------------------------------------------------------------------------------
-// From blender/source/blender/makesdna/DNA_mesh_types.h
-
-typedef struct CustomData_MeshMasks {
-	uint64_t vmask;
-	uint64_t emask;
-	uint64_t fmask;
-	uint64_t pmask;
-	uint64_t lmask;
-} CustomData_MeshMasks;
-
-struct MLoopTri_Store {
-  /* WARNING! swapping between array (ready-to-be-used data) and array_wip
-   * (where data is actually computed)
-   * shall always be protected by same lock as one used for looptris computing. */
-  struct MLoopTri *array, *array_wip;
-  int len;
-  int len_alloc;
-};
-
-typedef struct Mesh_Runtime {
-	/* Evaluated mesh for objects which do not have effective modifiers.
-	 * This mesh is used as a result of modifier stack evaluation.
-	 * Since modifier stack evaluation is threaded on object level we need some synchronization. */
-	struct Mesh *mesh_eval;
-	void *eval_mutex;
-
-	/* A separate mutex is needed for normal calculation, because sometimes
-	 * the normals are needed while #eval_mutex is already locked. */
-	void *normals_mutex;
-
-	/** Needed to ensure some thread-safety during render data pre-processing. */
-	void *render_mutex;
-
-	/** Lazily initialized SoA data from the #edit_mesh field in #Mesh. */
-	struct EditMeshData *edit_data;
-
-	/**
-	 * Data used to efficiently draw the mesh in the viewport, especially useful when
-	 * the same mesh is used in many objects or instances. See `draw_cache_impl_mesh.c`.
-	 */
-	void *batch_cache;
-
-	/** Cache for derived triangulation of the mesh. */
-	struct MLoopTri_Store looptris;
-
-	/** Cache for BVH trees generated for the mesh. Defined in 'BKE_bvhutil.c' */
-	struct BVHCache *bvh_cache;
-
-	/** Cache of non-manifold boundary data for Shrinkwrap Target Project. */
-	struct ShrinkwrapBoundaryData *shrinkwrap_data;
-
-	/** Needed in case we need to lazily initialize the mesh. */
-	CustomData_MeshMasks cd_mask_extra;
-
-	struct SubdivCCG *subdiv_ccg;
-	int subdiv_ccg_tot_level;
-
-	/** Set by modifier stack if only deformed from original. */
-	char deformed_only;
-	/**
-	 * Copied from edit-mesh (hint, draw with edit-mesh data when true).
-	 *
-	 * Modifiers that edit the mesh data in-place must set this to false
-	 * (most #eModifierTypeType_NonGeometrical modifiers). Otherwise the edit-mesh
-	 * data will be used for drawing, missing changes from modifiers. See T79517.
-	 */
-	char is_original;
-
-	/** #eMeshWrapperType and others. */
-	char wrapper_type;
-	/**
-	 * A type mask from wrapper_type,
-	 * in case there are differences in finalizing logic between types.
-	 */
-	char wrapper_type_finalize;
-
-	int subsurf_resolution;
-	/**
-	 * Settings for lazily evaluating the subdivision on the CPU if needed. These are
-	 * set in the modifier when GPU subdivision can be performed.
-	 */
-	char subsurf_apply_render;
-	char subsurf_use_optimal_display;
-
-	/**
-	 * Caches for lazily computed vertex and polygon normals. These are stored here rather than in
-	 * #CustomData because they can be calculated on a const mesh, and adding custom data layers on a
-	 * const mesh is not thread-safe.
-	 */
-	char vert_normals_dirty;
-	char poly_normals_dirty;
-	float(*vert_normals)[3];
-	float(*poly_normals)[3];
-
-	void *_pad2;
-} Mesh_Runtime;
-
-
-typedef struct Mesh {
-	ID id;
-	/** Animation data (must be immediately after id for utilities to use it). */
-	struct AnimData *adt;
-
-	/** Old animation system, deprecated for 2.5. */
-	struct Ipo *ipo DNA_DEPRECATED;
-	struct Key *key;
-
-	/**
-	 * An array of materials, with length #totcol. These can be overridden by material slots
-	 * on #Object. Indices in #MPoly.mat_nr control which material is used for every face.
-	 */
-	struct Material **mat;
-
-	/**
-	 * Array of vertices. Edges and faces are defined by indices into this array.
-	 * \note This pointer is for convenient access to the #CD_MVERT layer in #vdata.
-	 */
-	struct MVert *mvert;
-	/**
-	 * Array of edges, containing vertex indices. For simple triangle or quad meshes, edges could be
-	 * calculated from the #MPoly and #MLoop arrays, however, edges need to be stored explicitly to
-	 * edge domain attributes and to support loose edges that aren't connected to faces.
-	 * \note This pointer is for convenient access to the #CD_MEDGE layer in #edata.
-	 */
-	struct MEdge *medge;
-	/**
-	 * Face topology storage of the size and offset of each face's section of the #mloop face corner
-	 * array. Also stores various flags and the `material_index` attribute.
-	 * \note This pointer is for convenient access to the #CD_MPOLY layer in #pdata.
-	 */
-	struct MPoly *mpoly;
-	/**
-	 * The vertex and edge index at each face corner.
-	 * \note This pointer is for convenient access to the #CD_MLOOP layer in #ldata.
-	 */
-	struct MLoop *mloop;
-
-	/** The number of vertices (#MVert) in the mesh, and the size of #vdata. */
-	int totvert;
-	/** The number of edges (#MEdge) in the mesh, and the size of #edata. */
-	int totedge;
-	/** The number of polygons/faces (#MPoly) in the mesh, and the size of #pdata. */
-	int totpoly;
-	/** The number of face corners (#MLoop) in the mesh, and the size of #ldata. */
-	int totloop;
-
-	CustomData vdata, edata, pdata, ldata;
-
-	/** "Vertex group" vertices. */
-	struct MDeformVert *dvert;
-	/**
-	 * List of vertex group (#bDeformGroup) names and flags only. Actual weights are stored in dvert.
-	 * \note This pointer is for convenient access to the #CD_MDEFORMVERT layer in #vdata.
-	 */
-	ListBase vertex_group_names;
-	/** The active index in the #vertex_group_names list. */
-	int vertex_group_active_index;
-
-	/**
-	 * The index of the active attribute in the UI. The attribute list is a combination of the
-	 * generic type attributes from vertex, edge, face, and corner custom data.
-	 */
-	int attributes_active_index;
-
-	/**
-	 * 2D vector data used for UVs. "UV" data can also be stored as generic attributes in #ldata.
-	 * \note This pointer is for convenient access to the #CD_MLOOPUV layer in #ldata.
-	 */
-	struct MLoopUV *mloopuv;
-	/**
-	 * The active vertex corner color layer, if it exists. Also called "Vertex Color" in Blender's
-	 * UI, even though it is stored per face corner.
-	 * \note This pointer is for convenient access to the #CD_MLOOPCOL layer in #ldata.
-	 */
-	struct MLoopCol *mloopcol;
-
-	/**
-	 * Runtime storage of the edit mode mesh. If it exists, it generally has the most up-to-date
-	 * information about the mesh.
-	 * \note When the object is available, the preferred access method is #BKE_editmesh_from_object.
-	 */
-	struct BMEditMesh *edit_mesh;
-
-	/**
-	 * This array represents the selection order when the user manually picks elements in edit-mode,
-	 * some tools take advantage of this information. All elements in this array are expected to be
-	 * selected, see #BKE_mesh_mselect_validate which ensures this. For procedurally created meshes,
-	 * this is generally empty (selections are stored as boolean attributes in the corresponding
-	 * custom data).
-	 */
-	struct MSelect *mselect;
-
-	/** The length of the #mselect array. */
-	int totselect;
-
-	/**
-	 * In most cases the last selected element (see #mselect) represents the active element.
-	 * For faces we make an exception and store the active face separately so it can be active
-	 * even when no faces are selected. This is done to prevent flickering in the material properties
-	 * and UV Editor which base the content they display on the current material which is controlled
-	 * by the active face.
-	 *
-	 * \note This is mainly stored for use in edit-mode.
-	 */
-	int act_face;
-
-	/**
-	 * An optional mesh owned elsewhere (by #Main) that can be used to override
-	 * the texture space #loc and #size.
-	 * \note Vertex indices should be aligned for this to work usefully.
-	 */
-	struct Mesh *texcomesh;
-
-	/** Texture space location and size, used for procedural coordinates when rendering. */
-	float loc[3];
-	float size[3];
-	char texflag;
-
-	/** Various flags used when editing the mesh. */
-	char editflag;
-	/** Mostly more flags used when editing or displaying the mesh. */
-	short flag;
-
-	/**
-	 * The angle for auto smooth in radians. `M_PI` (180 degrees) causes all edges to be smooth.
-	 */
-	float smoothresh;
-
-	/**
-	 * Flag for choosing whether or not so store bevel weight and crease as custom data layers in the
-	 * edit mesh (they are always stored in #MVert and #MEdge currently). In the future, this data
-	 * may be stored as generic named attributes (see T89054 and T93602).
-	 */
-	char cd_flag;
-
-	/**
-	 * User-defined symmetry flag (#eMeshSymmetryType) that causes editing operations to maintain
-	 * symmetrical geometry. Supported by operations such as transform and weight-painting.
-	 */
-	char symmetry;
-
-	/** The length of the #mat array. */
-	short totcol;
-
-	/** Choice between different remesh methods in the UI. */
-	char remesh_mode;
-
-	char subdiv DNA_DEPRECATED;
-	char subdivr DNA_DEPRECATED;
-	char subsurftype DNA_DEPRECATED;
-
-	/**
-	 * Deprecated. Store of runtime data for tessellation face UVs and texture.
-	 *
-	 * \note This would be marked deprecated, however the particles still use this at run-time
-	 * for placing particles on the mesh (something which should be eventually upgraded).
-	 */
-	struct MTFace *mtface;
-	/** Deprecated, use mtface. */
-	struct TFace *tface DNA_DEPRECATED;
-
-	/* Deprecated. Array of colors for the tessellated faces, must be number of tessellated
-	 * faces * 4 in length. This is stored in #fdata, and deprecated. */
-	struct MCol *mcol;
-
-	/**
-	 * Deprecated face storage (quads & triangles only);
-	 * faces are now pointed to by #Mesh.mpoly and #Mesh.mloop.
-	 *
-	 * \note This would be marked deprecated, however the particles still use this at run-time
-	 * for placing particles on the mesh (something which should be eventually upgraded).
-	 */
-	struct MFace *mface;
-	/* Deprecated storage of old faces (only triangles or quads). */
-	CustomData fdata;
-	/* Deprecated size of #fdata. */
-	int totface;
-
-	/** Per-mesh settings for voxel remesh. */
-	float remesh_voxel_size;
-	float remesh_voxel_adaptivity;
-
-	int face_sets_color_seed;
-	/* Stores the initial Face Set to be rendered white. This way the overlay can be enabled by
-	 * default and Face Sets can be used without affecting the color of the mesh. */
-	int face_sets_color_default;
-
-	char _pad1[4];
-
-	void *_pad2;
-
-	Mesh_Runtime runtime;
-} Mesh;
-
-
-} // namespace blender_2_83
-
-namespace blender_3_4 {		
+namespace blender_3_6 {		
 	template<typename T> class Span;
 	template<typename T> class MutableSpan;
+	template<typename T> class OffsetIndices;
+
+	using float3 = float[3];
+	
+	template<typename T> struct Bounds {
+		T min;
+		T max;
+	};
+
+	namespace bke {
+		struct MeshRuntime;
+		class AttributeAccessor;
+		class MutableAttributeAccessor;
+		struct LooseEdgeCache;
+	}  // namespace bke
 
 	struct MeshRuntimeHandle;
 
@@ -925,8 +190,12 @@ namespace blender_3_4 {
 		void* py_instance;
 	} ID;
 	// -------------------------------------------------------------------------------------
+	typedef struct AnonymousAttributeIDHandle AnonymousAttributeIDHandle;
 
 	// -------------------------------------------------------------------------------------
+	// From blender/source/blender/makesdna/DNA_customdata_types.h
+
+	/** Descriptor and storage for a custom data layer. */
 	typedef struct CustomDataLayer {
 		/** Type of data in layer. */
 		int type;
@@ -942,13 +211,20 @@ namespace blender_3_4 {
 		int active_clone;
 		/** Number of the layer to render. */
 		int active_mask;
-		/** Shape keyblock unique id reference. */
+		/** Shape key-block unique id reference. */
 		int uid;
 		/** Layer name, MAX_CUSTOMDATA_LAYER_NAME. */
-		char name[64];
+		char name[68];
+		char _pad1[4];
 		/** Layer data. */
 		void* data;
+		/**
+		 * Run-time identifier for this layer. Can be used to retrieve information about where this
+		 * attribute was created.
+		 */
+		const AnonymousAttributeIDHandle* anonymous_id;
 	} CustomDataLayer;
+
 
 	typedef struct CustomData {
 		/** CustomDataLayers, ordered by type. */
@@ -966,9 +242,99 @@ namespace blender_3_4 {
 		int totsize;
 		/** (BMesh Only): Memory pool for allocation of blocks. */
 		struct BLI_mempool* pool;
-		/** External file storing customdata layers. */
+		/** External file storing custom-data layers. */
 		CustomDataExternal* external;
 	} CustomData;
+
+
+	/** #CustomData.type */
+	typedef enum CustomDataType {
+		/* Used by GLSL attributes in the cases when we need a delayed CD type
+		 * assignment (in the cases when we don't know in advance which layer
+		 * we are addressing).
+		 */
+		CD_AUTO_FROM_NAME = -1,
+
+#ifdef DNA_DEPRECATED_ALLOW
+		CD_MVERT = 0,   /* DEPRECATED */
+		CD_MSTICKY = 1, /* DEPRECATED */
+#endif
+		CD_MDEFORMVERT = 2, /* Array of `MDeformVert`. */
+		CD_MEDGE = 3,
+		CD_MFACE = 4,
+		CD_MTFACE = 5,
+		CD_MCOL = 6,
+		CD_ORIGINDEX = 7,
+		/**
+		 * Used for derived face corner normals on mesh `ldata`, since currently they are not computed
+		 * lazily. Derived vertex and polygon normals are stored in #Mesh_Runtime.
+		 */
+		 CD_NORMAL = 8,
+		 CD_FACEMAP = 9, /* exclusive face group, each face can only be part of one */
+		 CD_PROP_FLOAT = 10,
+		 CD_PROP_INT32 = 11,
+		 CD_PROP_STRING = 12,
+		 CD_ORIGSPACE = 13, /* for modifier stack face location mapping */
+		 CD_ORCO = 14,      /* undeformed vertex coordinates, normalized to 0..1 range */
+#ifdef DNA_DEPRECATED_ALLOW
+		 CD_MTEXPOLY = 15, /* deprecated */
+#endif
+		 CD_MLOOPUV = 16,
+		 CD_PROP_BYTE_COLOR = 17,
+		 CD_TANGENT = 18,
+		 CD_MDISPS = 19,
+		 CD_PREVIEW_MCOL = 20,           /* For displaying weight-paint colors. */
+										 /*  CD_ID_MCOL          = 21, */
+		 /* CD_TEXTURE_MLOOPCOL = 22, */ /* UNUSED */
+		 CD_CLOTH_ORCO = 23,
+		 /* CD_RECAST = 24, */ /* UNUSED */
+
+		 CD_MPOLY = 25,
+		 CD_MLOOP = 26,
+		 CD_SHAPE_KEYINDEX = 27,
+		 CD_SHAPEKEY = 28,
+		 CD_BWEIGHT = 29,
+		 /** Subdivision sharpness data per edge or per vertex. */
+		 CD_CREASE = 30,
+		 CD_ORIGSPACE_MLOOP = 31,
+		 CD_PREVIEW_MLOOPCOL = 32,
+		 CD_BM_ELEM_PYPTR = 33,
+
+		 CD_PAINT_MASK = 34,
+		 CD_GRID_PAINT_MASK = 35,
+		 CD_MVERT_SKIN = 36,
+		 CD_FREESTYLE_EDGE = 37,
+		 CD_FREESTYLE_FACE = 38,
+		 CD_MLOOPTANGENT = 39,
+		 CD_TESSLOOPNORMAL = 40,
+		 CD_CUSTOMLOOPNORMAL = 41,
+		 CD_SCULPT_FACE_SETS = 42,
+
+		 /* CD_LOCATION = 43, */ /* UNUSED */
+		 /* CD_RADIUS = 44, */   /* UNUSED */
+		 CD_PROP_INT8 = 45,
+		 /* CD_HAIRMAPPING = 46, */ /* UNUSED, can be reused. */
+
+		 CD_PROP_COLOR = 47,
+		 CD_PROP_FLOAT3 = 48,
+		 CD_PROP_FLOAT2 = 49,
+		 CD_PROP_BOOL = 50,
+
+		 CD_HAIRLENGTH = 51,
+
+		 CD_NUMTYPES = 52,
+	} CustomDataType;
+
+	// -------------------------------------------------------------------------------------
+	// From blender/source/blender/makesdna/DNA_mesh_types.h
+
+	typedef struct CustomData_MeshMasks {
+		uint64_t vmask;
+		uint64_t emask;
+		uint64_t fmask;
+		uint64_t pmask;
+		uint64_t lmask;
+	} CustomData_MeshMasks;
 
 	typedef struct Mesh {
 		ID id;
@@ -994,7 +360,13 @@ namespace blender_3_4 {
 		int totpoly;
 		/** The number of face corners (#MLoop) in the mesh, and the size of #ldata. */
 		int totloop;
-
+		
+		/**
+		   * Array owned by mesh. May be null of there are no polygons. Index of the first corner of each
+		   * polygon, with the total number of corners at the end. See #Mesh::polys() and #OffsetIndices.
+		   */
+		int* poly_offset_indices;
+		
 		CustomData vdata, edata, pdata, ldata;
 
 		/**
@@ -1049,9 +421,9 @@ namespace blender_3_4 {
 		struct Mesh* texcomesh;
 
 		/** Texture space location and size, used for procedural coordinates when rendering. */
-		float loc[3];
-		float size[3];
-		char texflag;
+		float texspace_location[3];
+		float texspace_size[3];
+		char texspace_flag;
 
 		/** Various flags used when editing the mesh. */
 		char editflag;
@@ -1138,87 +510,96 @@ namespace blender_3_4 {
 		 * free the data if they are passed to functions that expect run-time data.
 		 */
 		MeshRuntimeHandle* runtime;
+
+		Span<float3> vert_positions() const;
+		/** Write access to vertex data. */
+		MutableSpan<float3> vert_positions_for_write();
+		/**
+		 * Array of edges, containing vertex indices. For simple triangle or quad meshes, edges could be
+		 * calculated from the polygon and "corner edge" arrays, however, edges need to be stored
+		 * explicitly to edge domain attributes and to support loose edges that aren't connected to
+		 * faces.
+		 */
+		Span<MEdge> edges() const;
+		/** Write access to edge data. */
+		MutableSpan<MEdge> edges_for_write();
+		/**
+		 * Face topology storage of the offset of each face's section of the face corners. The size of
+		 * each polygon is encoded using the next offset value. Can be used to slice the #corner_verts or
+		 * #corner_edges arrays to find the vertices or edges that make up each face.
+		 */
+		OffsetIndices<int> polys() const;
+		/** The first corner index of every polygon. */
+		Span<int> poly_offsets() const;
+		/** Write access to #poly_offsets data. */
+		MutableSpan<int> poly_offsets_for_write();
+
+		/**
+		 * Array of vertices for every face corner,  stored in the ".corner_vert" integer attribute.
+		 * For example, the vertices in a face can be retrieved with the #slice method:
+		 * \code{.cc}
+		 * const Span<int> poly_verts = corner_verts.slice(poly.loopstart, poly.totloop);
+		 * \endcode
+		 * Such a span can often be passed as an argument in lieu of a polygon and the entire corner
+		 * verts array.
+		 */
+		Span<int> corner_verts() const;
+		/** Write access to the #corner_verts data. */
+		MutableSpan<int> corner_verts_for_write();
+
+		/**
+		 * Array of edges following every face corner traveling around each face, stored in the
+		 * ".corner_edge" attribute. The array sliced the same way as the #corner_verts data. The edge
+		 * previous to a corner must be accessed with the index of the previous face corner.
+		 */
+		Span<int> corner_edges() const;
+		/** Write access to the #corner_edges data. */
+		MutableSpan<int> corner_edges_for_write();
+
+		bke::AttributeAccessor attributes() const;
+		bke::MutableAttributeAccessor attributes_for_write();
+
+		/**
+		 * Vertex group data, encoded as an array of indices and weights for every vertex.
+		 * \warning: May be empty.
+		 */
+		Span<MDeformVert> deform_verts() const;
+		/** Write access to vertex group data. */
+		MutableSpan<MDeformVert> deform_verts_for_write();
+
+		/**
+		 * Cached triangulation of the mesh.
+		 */
+		Span<MLoopTri> looptris() const;
+
+		/** Set cached mesh bounds to a known-correct value to avoid their lazy calculation later on. */
+		void bounds_set_eager(const Bounds<float3>& bounds);
+
+		/**
+		 * Cached information about loose edges, calculated lazily when necessary.
+		 */
+		const bke::LooseEdgeCache& loose_edges() const;
+		/**
+		 * Explicitly set the cached number of loose edges to zero. This can improve performance
+		 * later on, because finding loose edges lazily can be skipped entirely.
+		 *
+		 * \note To allow setting this status on meshes without changing them, this does not tag the
+		 * cache dirty. If the mesh was changed first, the relevant dirty tags should be called first.
+		 */
+		void loose_edges_tag_none() const;
+
+		/**
+		 * Normal direction of polygons, defined by positions and the winding direction of face corners.
+		 */
+		Span<float3> poly_normals() const;
+		/**
+		 * Normal direction of vertices, defined as the weighted average of face normals
+		 * surrounding each vertex and the normalized position for loose vertices.
+		 */
+		Span<float3> vert_normals() const;
 	} Mesh;
 
-	/** #CustomData.type */
-	typedef enum CustomDataType {
-		/* Used by GLSL attributes in the cases when we need a delayed CD type
-		 * assignment (in the cases when we don't know in advance which layer
-		 * we are addressing).
-		 */
-		CD_AUTO_FROM_NAME = -1,
-
-		CD_MVERT = 0,
-#ifdef DNA_DEPRECATED_ALLOW
-		CD_MSTICKY = 1, /* DEPRECATED */
-#endif
-		CD_MDEFORMVERT = 2,
-		CD_MEDGE = 3,
-		CD_MFACE = 4,
-		CD_MTFACE = 5,
-		CD_MCOL = 6,
-		CD_ORIGINDEX = 7,
-		/**
-		 * Used for derived face corner normals on mesh `ldata`, since currently they are not computed
-		 * lazily. Derived vertex and polygon normals are stored in #Mesh_Runtime.
-		 */
-		 CD_NORMAL = 8,
-		 CD_FACEMAP = 9, /* exclusive face group, each face can only be part of one */
-		 CD_PROP_FLOAT = 10,
-		 CD_PROP_INT32 = 11,
-		 CD_PROP_STRING = 12,
-		 CD_ORIGSPACE = 13, /* for modifier stack face location mapping */
-		 CD_ORCO = 14,      /* undeformed vertex coordinates, normalized to 0..1 range */
-#ifdef DNA_DEPRECATED_ALLOW
-		 CD_MTEXPOLY = 15, /* deprecated */
-#endif
-		 CD_MLOOPUV = 16,
-		 CD_PROP_BYTE_COLOR = 17,
-		 CD_TANGENT = 18,
-		 CD_MDISPS = 19,
-		 CD_PREVIEW_MCOL = 20,           /* For displaying weight-paint colors. */
-										 /*  CD_ID_MCOL          = 21, */
-		 /* CD_TEXTURE_MLOOPCOL = 22, */ /* UNUSED */
-		 CD_CLOTH_ORCO = 23,
-		 /* CD_RECAST = 24, */ /* UNUSED */
-
-		 CD_MPOLY = 25,
-		 CD_MLOOP = 26,
-		 CD_SHAPE_KEYINDEX = 27,
-		 CD_SHAPEKEY = 28,
-		 CD_BWEIGHT = 29,
-		 /** Subdivision sharpness data per edge or per vertex. */
-		 CD_CREASE = 30,
-		 CD_ORIGSPACE_MLOOP = 31,
-		 CD_PREVIEW_MLOOPCOL = 32,
-		 CD_BM_ELEM_PYPTR = 33,
-
-		 CD_PAINT_MASK = 34,
-		 CD_GRID_PAINT_MASK = 35,
-		 CD_MVERT_SKIN = 36,
-		 CD_FREESTYLE_EDGE = 37,
-		 CD_FREESTYLE_FACE = 38,
-		 CD_MLOOPTANGENT = 39,
-		 CD_TESSLOOPNORMAL = 40,
-		 CD_CUSTOMLOOPNORMAL = 41,
-		 CD_SCULPT_FACE_SETS = 42,
-
-		 /* CD_LOCATION = 43, */ /* UNUSED */
-		 /* CD_RADIUS = 44, */   /* UNUSED */
-		 CD_PROP_INT8 = 45,
-		 /* CD_HAIRMAPPING = 46, */ /* UNUSED, can be reused. */
-
-		 CD_PROP_COLOR = 47,
-		 CD_PROP_FLOAT3 = 48,
-		 CD_PROP_FLOAT2 = 49,
-		 CD_PROP_BOOL = 50,
-
-		 CD_HAIRLENGTH = 51,
-
-		 CD_NUMTYPES = 52,
-	} CustomDataType;
-
-}// namespace blender 3.4
+}// namespace blender 3.6
 
 } // namespace blender
 } // namespace luxcore
