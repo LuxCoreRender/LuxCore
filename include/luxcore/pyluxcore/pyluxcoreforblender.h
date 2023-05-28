@@ -16,8 +16,8 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _LUXCORE_FOR_BLENER_H
-#define	_LUXCORE_FOR_BLENER_H
+#ifndef _LUXCORE_FOR_BLENDER_H
+#define	_LUXCORE_FOR_BLENDER_H
 
 #include "luxcore/luxcoreimpl.h"
 
@@ -70,35 +70,33 @@ extern boost::python::tuple GetOpenVDBGridInfo(const std::string &filePathStr, c
 
 
 extern boost::python::list Scene_DefineBlenderMesh1(luxcore::detail::SceneImpl *scene, const std::string &name,
-		const size_t loopTriCount, const size_t loopTriPtr,
+		const size_t loopTriCount, const size_t loopTriPtr, const size_t loopTriPolyPtr,
 		const size_t loopPtr,
 		const size_t vertPtr,
-		const size_t normalPtr,
-		const size_t polyPtr,
-		const size_t sharpPtr,
+		const size_t normalPtr,		
+		const size_t sharpPtr,		
 		const bool sharpAttr,
 		const boost::python::object &loopUVsPtrList,
 		const boost::python::object &loopColsPtrList,
 		const size_t meshPtr,
 		const u_int materialCount,
-		const boost::python::object &transformation,
+		const boost::python::object& transformation,
 		const boost::python::tuple &blenderVersion,
 		const boost::python::object& material_indices,
 		const boost::python::object &loopTriCustomNormals);
 		
 extern boost::python::list Scene_DefineBlenderMesh2(luxcore::detail::SceneImpl *scene, const std::string &name,
-		const size_t loopTriCount, const size_t loopTriPtr,
+		const size_t loopTriCount, const size_t loopTriPtr, const size_t loopTriPolyPtr,
 		const size_t loopPtr,
 		const size_t vertPtr,
-		const size_t normalPtr,
-		const size_t polyPtr,
-		const size_t sharpPtr,
+		const size_t normalPtr,		
+		const size_t sharpPtr,		
 		const bool sharpAttr,
 		const boost::python::object &loopUVsPtrList,
 		const boost::python::object &loopColsPtrList,
 		const size_t meshPtr,
 		const u_int materialCount,
-		const boost::python::tuple &blenderVersion,
+		const boost::python::tuple &blenderVersion,		
 		const boost::python::object& material_indices,
 		const boost::python::object &loopTriCustomNormals);
 	

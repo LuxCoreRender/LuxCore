@@ -688,29 +688,29 @@ boost::python::tuple GetOpenVDBGridInfo(const string &filePathStr, const string 
 //------------------------------------------------------------------------------
 
 static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const string &name,
-		const size_t loopTriCount, const size_t loopTriPtr,
+		const size_t loopTriCount, const size_t loopTriPtr, const size_t loopTriPolyPtr,
 		const size_t loopPtr,
 		const size_t vertPtr,
-		const size_t normalPtr,
-		const size_t polyPtr,
-		const size_t sharpPtr,
+		const size_t normalPtr,		
+		const size_t sharpPtr,		
 		const bool sharpAttr,
 		const boost::python::object &loopUVsPtrList,
 		const boost::python::object &loopColsPtrList,
 		const size_t meshPtr,
 		const short matIndex,
 		const luxrays::Transform *trans,
-		const boost::python::tuple &blenderVersion,
-		const boost::python::object &material_indices,
-		const boost::python::object &loopTriCustomNormals) {
+		const boost::python::tuple& blenderVersion,
+		const boost::python::object& material_indices,
+		const boost::python::object&loopTriCustomNormals) {
 
 	const MLoopTri *loopTris = reinterpret_cast<const MLoopTri *>(loopTriPtr);
-	const u_int *loops = reinterpret_cast<const u_int *>(loopPtr);
-	const MPoly *polygons = reinterpret_cast<const MPoly *>(polyPtr);
+	const int* loopTriPolys = reinterpret_cast<const int*>(loopTriPolyPtr);
+	
+	const u_int* loops = reinterpret_cast<const u_int*>(loopPtr);	
 	const float(*normals)[3] = nullptr;
 	normals = reinterpret_cast<const float(*)[3]>(normalPtr);
 
-	const bool *sharpList = reinterpret_cast<const bool *>(sharpPtr);
+	const bool* sharpList = reinterpret_cast<const bool*>(sharpPtr);	
 
 	extract<boost::python::list> getUVPtrList(loopUVsPtrList);
 	extract<boost::python::list> getColPtrList(loopColsPtrList);
@@ -779,21 +779,16 @@ static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const str
 	const float rgbScale = 1.f / 255.f;
 
 	for (u_int loopTriIndex = 0; loopTriIndex < loopTriCount; ++loopTriIndex) {
-		const MLoopTri &loopTri = loopTris[loopTriIndex];
-		const MPoly &poly = polygons[loopTri.poly];
-		
-		if (blenderVersionMajor == 3 && blenderVersionMinor >= 4 && !material_indices.is_none()) {
-			if (material_indices[loopTri.poly] != matIndex)
-				continue;
-		} else {
-			if (poly.mat_nr != matIndex)
-				continue;
-		}
+		const MLoopTri &loopTri = loopTris[loopTriIndex];		
+		const int poly = loopTriPolys[loopTriIndex];
+				
+		if (material_indices[poly] != matIndex)
+			continue;		
 
 		u_int vertIndices[3];
 
 		bool smooth = true;
-		if(sharpAttr) smooth = !sharpList[loopTri.poly];
+		if(sharpAttr) smooth = !sharpList[poly];
 
 		if (smooth) {
 			// Smooth shaded, use the Blender vertex normal
@@ -979,9 +974,10 @@ static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const str
 					vertIndices[i] = vertIndex;
 				}
 			}
+			
 		}
 
-		tmpMeshTris.emplace_back(Triangle(vertIndices[0], vertIndices[1], vertIndices[2]));
+		tmpMeshTris.emplace_back(Triangle(vertIndices[0], vertIndices[1], vertIndices[2]));	
 	}
 
 	// Check if there wasn't any triangles with matIndex
@@ -1035,21 +1031,20 @@ static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const str
 }
 
 boost::python::list Scene_DefineBlenderMesh1(luxcore::detail::SceneImpl *scene, const string &name,
-		const size_t loopTriCount, const size_t loopTriPtr,
+		const size_t loopTriCount, const size_t loopTriPtr, const size_t loopTriPolyPtr,
 		const size_t loopPtr,
 		const size_t vertPtr,
-		const size_t normalPtr,
-		const size_t polyPtr,
-		const size_t sharpPtr,
+		const size_t normalPtr,		
+		const size_t sharpPtr,		
 		const bool sharpAttr,
 		const boost::python::object &loopUVsPtrList,
 		const boost::python::object &loopColsPtrList,
 		const size_t meshPtr,
 		const u_int materialCount,
 		const boost::python::object &transformation,
-		const boost::python::tuple &blenderVersion,
-		const boost::python::object& material_indices,
-		const boost::python::object& loopTriCustomNormals) {
+		const boost::python::tuple &blenderVersion,		
+		const boost::python::object &material_indices,
+		const boost::python::object &loopTriCustomNormals) {
 	
 	// Get the transformation if required
 	bool hasTransformation = false;
@@ -1063,13 +1058,13 @@ boost::python::list Scene_DefineBlenderMesh1(luxcore::detail::SceneImpl *scene, 
 	for (u_int matIndex = 0; matIndex < materialCount; ++matIndex) {
 		const string meshName = (boost::format(name + "%03d") % matIndex).str();
 
-		if (Scene_DefineBlenderMesh(scene, meshName, loopTriCount, loopTriPtr,
-				loopPtr, vertPtr, normalPtr, polyPtr, sharpPtr, sharpAttr,
+		if (Scene_DefineBlenderMesh(scene, meshName, loopTriCount, loopTriPtr, loopTriPolyPtr,
+				loopPtr, vertPtr, normalPtr, sharpPtr, sharpAttr,
 				loopUVsPtrList, loopColsPtrList, 
 				meshPtr,
 				matIndex,
 				hasTransformation ? &trans : NULL,
-				blenderVersion,
+				blenderVersion,				
 				material_indices,
 				loopTriCustomNormals)) {
 			boost::python::list meshInfo;
@@ -1083,22 +1078,21 @@ boost::python::list Scene_DefineBlenderMesh1(luxcore::detail::SceneImpl *scene, 
 }
 
 boost::python::list Scene_DefineBlenderMesh2(luxcore::detail::SceneImpl *scene, const string &name,
-		const size_t loopTriCount, const size_t loopTriPtr,
+		const size_t loopTriCount, const size_t loopTriPtr, const size_t loopTriPolyPtr,
 		const size_t loopPtr,
 		const size_t vertPtr,
-		const size_t normalPtr,	
-		const size_t polyPtr,
-		const size_t sharpPtr,
+		const size_t normalPtr,			
+		const size_t sharpPtr,		
 		const bool sharpAttr,
 		const boost::python::object &loopUVsPtrList,
 		const boost::python::object &loopColsPtrList,
 		const size_t meshPtr,
 		const u_int materialCount,
 		const boost::python::tuple &blenderVersion,
-		const boost::python::object& material_indices,
+		const boost::python::object &material_indices,
 		const boost::python::object &loopTriCustomNormals) {
-	return Scene_DefineBlenderMesh1(scene, name, loopTriCount, loopTriPtr,
-		loopPtr, vertPtr, normalPtr, polyPtr, sharpPtr, sharpAttr, loopUVsPtrList, loopColsPtrList,
+	return Scene_DefineBlenderMesh1(scene, name, loopTriCount, loopTriPtr, loopTriPolyPtr,
+		loopPtr, vertPtr, normalPtr, sharpPtr, sharpAttr, loopUVsPtrList, loopColsPtrList,
 		meshPtr, materialCount, boost::python::object(), blenderVersion, material_indices,
 		loopTriCustomNormals);
 }

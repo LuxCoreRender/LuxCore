@@ -32,7 +32,6 @@ static const int ME_SMOOTH = 1;
 
 typedef struct MLoopTri {
 	unsigned int tri[3];
-	unsigned int poly;
 } MLoopTri;
 
 typedef struct MLoopUV {
