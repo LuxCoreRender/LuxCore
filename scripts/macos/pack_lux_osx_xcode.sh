@@ -10,7 +10,7 @@ mkdir release_OSX
 
 ###luxcoreui bundle
 
-echo "Bundeling OpenCL Version"
+echo "Bundling OpenCL Version"
 
 cp -R macos/mac_bundle/LuxCore.app release_OSX
 mkdir -p release_OSX/LuxCore.app/Contents/MacOS/
