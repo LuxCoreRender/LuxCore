@@ -231,6 +231,9 @@ bool EmbreeAccel::Intersect(const Ray *ray, RayHit *hit) const {
 
 	RTCRayHit embreeRayHit;
 
+	if (isnan(ray->o.x) || isnan(ray->o.y) || isnan(ray->o.z) || isnan(ray->d.x) || isnan(ray->d.y) || isnan(ray->d.z))
+		return false;
+
 	embreeRayHit.ray.org_x = ray->o.x;
 	embreeRayHit.ray.org_y = ray->o.y;
 	embreeRayHit.ray.org_z = ray->o.z;
