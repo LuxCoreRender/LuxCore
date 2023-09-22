@@ -40,12 +40,38 @@ string SanitizeFileName(const string &name) {
 	return sanitizedName;
 }
 
-boost::filesystem::path GetConfigDir() {
+boost::filesystem::path GetEnvPath(const string &name) {
+	char *path = getenv(name.c_str());
+
+	if (path && path[0]) {
+		return boost::filesystem::path(path);
+	}
+
+	return "";
+}
+
+boost::filesystem::path GetCacheDir() {
 #if defined(__linux__)
 	// boost::filesystem::temp_directory_path() is usually mapped to /tmp and
 	// the content of the directory is often deleted at each reboot
-	boost::filesystem::path kernelConfigDir = getenv("HOME");
-	kernelConfigDir = kernelConfigDir / ".config" / "luxcorerender.org";
+
+	// XDG standard says XDG_CACHE_HOME is unset by default.
+	boost::filesystem::path xdgCacheHome = GetEnvPath("XDG_CACHE_HOME");
+
+	if (!xdgCacheHome.size()) {
+		// HOME should never be unset, but we better not want to
+		// crash if that happens.
+		boost::filesystem::path home = GetEnvPath("HOME");
+
+		if (home.size()) {
+			xdgCacheHome = home / ".config";
+		}
+		else {
+			xdgCacheHome = boost::filesystem::temp_directory_path();
+		}
+	}
+
+	boost::filesystem::path kernelConfigDir = xdgCacheHome / "luxcorerender.org";
 #elif defined(__APPLE__)
 	// boost::filesystem::temp_directory_path() is usually mapped to /tmp and
 	// the content of the directory is deleted at each reboot on MacOS

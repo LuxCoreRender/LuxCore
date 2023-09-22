@@ -202,7 +202,7 @@ cl_program oclKernelCache::ForcedCompile(cl_context context, cl_device_id device
 //------------------------------------------------------------------------------
 
 boost::filesystem::path oclKernelPersistentCache::GetCacheDir(const string &applicationName) {
-	return GetConfigDir() / "ocl_kernel_cache" / SanitizeFileName(applicationName);
+	return luxrays::GetCacheDir() / "ocl_kernel_cache" / SanitizeFileName(applicationName);
 }
 
 oclKernelPersistentCache::oclKernelPersistentCache(const string &applicationName) {
