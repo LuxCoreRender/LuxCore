@@ -20,6 +20,7 @@
 
 #include <boost/lexical_cast.hpp>
 #include <boost/foreach.hpp>
+#include <boost/serialization/library_version_type.hpp>
 #include <boost/serialization/unordered_set.hpp>
 
 #include "slg/film/film.h"
