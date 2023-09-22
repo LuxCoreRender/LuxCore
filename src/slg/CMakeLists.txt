@@ -143,12 +143,19 @@ set(OPENVDB_SRCS
 
 SOURCE_GROUP("Source Files\\OpenVDB Library" FILES ${OPENVDB_SRCS})
 
-include_directories(${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0)
-
 # Required by OpenVDB to read ABI 3
 #add_definitions("-D OPENVDB_USE_DEPRECATED_ABI -DOPENVDB_3_ABI_COMPATIBLE -DOPENVDB_STATICLIB -DOPENVDB_OPENEXR_STATICLIB")
 add_definitions("-DOPENVDB_USE_BLOSC -DOPENVDB_STATICLIB -DOPENVDB_OPENEXR_STATICLIB")
-add_library(openvdb STATIC ${OPENVDB_SRCS})
+if(USE_BUNDLE_OPENVDB)
+	add_library(openvdb STATIC ${OPENVDB_SRCS})
+	set_target_properties(openvdb INCLUDE_DIRECTORIES ${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0)
+else()
+	set(CMAKE_FIND_PACKAGE_PREFER_CONFIG TRUE)
+	find_package(OpenVDB REQUIRED)
+	set(CMAKE_FIND_PACKAGE_PREFER_CONFIG FALSE)
+	add_library(openvdb INTERFACE)
+	target_link_libraries(openvdb INTERFACE OpenVDB::openvdb)
+endif()
 
 ###########################################################################
 #
