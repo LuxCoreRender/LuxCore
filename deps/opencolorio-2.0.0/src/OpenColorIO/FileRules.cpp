@@ -14,6 +14,7 @@
 #include "PathUtils.h"
 #include "Platform.h"
 #include "utils/StringUtils.h"
+#include <cstring>
 
 
 namespace OCIO_NAMESPACE
