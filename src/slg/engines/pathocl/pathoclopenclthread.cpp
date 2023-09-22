@@ -31,6 +31,8 @@
 #include "slg/renderconfig.h"
 #include "slg/engines/pathocl/pathocl.h"
 
+#include <boost/bind.hpp>
+
 using namespace std;
 using namespace luxrays;
 using namespace slg;

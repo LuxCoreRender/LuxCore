@@ -24,6 +24,8 @@
 #include "slg/kernels/kernels.h"
 #include "slg/engines/tilepathocl/tilepathocl.h"
 
+#include <boost/bind.hpp>
+
 using namespace std;
 using namespace luxrays;
 using namespace slg;

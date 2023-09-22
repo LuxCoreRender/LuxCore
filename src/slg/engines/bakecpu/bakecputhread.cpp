@@ -23,6 +23,8 @@
 #include "slg/utils/varianceclamping.h"
 #include "slg/film/imagepipeline/plugins/bakemapmargin.h"
 
+#include <boost/bind.hpp>
+
 using namespace std;
 using namespace luxrays;
 using namespace slg;
