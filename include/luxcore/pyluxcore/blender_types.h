@@ -64,20 +64,174 @@ struct MVert {
 	char _pad[2];
 };
 
-struct RenderPass {
-	struct RenderPass *next, *prev;
+typedef enum ImBufOwnership {
+	/* The ImBuf simply shares pointer with data owned by someone else, and will not perform any
+	 * memory management when the ImBuf frees the buffer. */
+	IB_DO_NOT_TAKE_OWNERSHIP = 0,
+
+	/* The ImBuf takes ownership of the buffer data, and will use MEM_freeN() to free this memory
+	 * when the ImBuf needs to free the data. */
+	 IB_TAKE_OWNERSHIP = 1,
+} ImBufOwnership;
+
+typedef struct ImBufByteBuffer {
+	uint8_t* data;
+	ImBufOwnership ownership;
+
+	struct ColorSpace* colorspace;
+} ImBufByteBuffer;
+
+typedef struct ImBufFloatBuffer {
+	float* data;
+	ImBufOwnership ownership;
+
+	struct ColorSpace* colorspace;
+} ImBufFloatBuffer;
+
+typedef struct ImBufGPU {
+	/* Texture which corresponds to the state of the ImBug on the GPU.
+	 *
+	 * Allocation is supposed to happen outside of the ImBug module from a proper GPU context.
+	 * De-referencing the ImBuf or its GPU texture can happen from any state. */
+	 /* TODO(sergey): This should become a list of textures, to support having high-res ImBuf on GPU
+	  * without hitting hardware limitations. */
+	struct GPUTexture* texture;
+} ImBufGPU;
+
+typedef struct ImbFormatOptions {
+	short flag;
+	/** Quality serves dual purpose as quality number for JPEG or compression amount for PNG. */
+	char quality;
+} ImbFormatOptions;
+
+#define IMB_MIPMAP_LEVELS 20
+#define IMB_FILEPATH_SIZE 1024
+
+typedef struct DDSData {
+	/** DDS fourcc info */
+	unsigned int fourcc;
+	/** The number of mipmaps in the dds file */
+	unsigned int nummipmaps;
+	/** The compressed image data */
+	unsigned char* data;
+	/** The size of the compressed data */
+	unsigned int size;
+} DDSData;
+
+typedef struct rcti {
+	int xmin, xmax;
+	int ymin, ymax;
+} rcti;
+
+typedef struct ImBuf {
+	/* dimensions */
+	/** Width and Height of our image buffer.
+	 * Should be 'unsigned int' since most formats use this.
+	 * but this is problematic with texture math in `imagetexture.c`
+	 * avoid problems and use int. - campbell */
+	int x, y;
+
+	/** Active amount of bits/bit-planes. */
+	unsigned char planes;
+	/** Number of channels in `rect_float` (0 = 4 channel default) */
 	int channels;
-	char name[64];
-	char chan_id[8];
-	float *rect;  // The only thing we are interested in
+
+	/* flags */
+	/** Controls which components should exist. */
+	int flags;
+
+	/* pixels */
+
+	/**
+	 * Image pixel buffer (8bit representation):
+	 * - color space defaults to `sRGB`.
+	 * - alpha defaults to 'straight'.
+	 */
+	ImBufByteBuffer byte_buffer;
+
+	/**
+	 * Image pixel buffer (float representation):
+	 * - color space defaults to 'linear' (`rec709`).
+	 * - alpha defaults to 'premul'.
+	 * \note May need gamma correction to `sRGB` when generating 8bit representations.
+	 * \note Formats that support higher more than 8 but channels load as floats.
+	 */
+	ImBufFloatBuffer float_buffer;
+
+	/* Image buffer on the GPU. */
+	ImBufGPU gpu;
+
+	/** Resolution in pixels per meter. Multiply by `0.0254` for DPI. */
+	double ppm[2];
+
+	/* parameters used by conversion between byte and float */
+	/** random dither value, for conversion from float -> byte rect */
+	float dither;
+
+	/* mipmapping */
+	/** MipMap levels, a series of halved images */
+	struct ImBuf* mipmap[IMB_MIPMAP_LEVELS];
+	int miptot, miplevel;
+
+	/* externally used data */
+	/** reference index for ImBuf lists */
+	int index;
+	/** used to set imbuf to dirty and other stuff */
+	int userflags;
+	/** image metadata */
+	struct IDProperty* metadata;
+	/** temporary storage */
+	void* userdata;
+
+	/* file information */
+	/** file type we are going to save as */
+	enum eImbFileType ftype;
+	/** file format specific flags */
+	ImbFormatOptions foptions;
+	/** The absolute file path associated with this image. */
+	char filepath[IMB_FILEPATH_SIZE];
+
+	/* memory cache limiter */
+	/** reference counter for multiple users */
+	int refcounter;
+
+	/* some parameters to pass along for packing images */
+	/** Compressed image only used with PNG and EXR currently. */
+	ImBufByteBuffer encoded_buffer;
+	/** Size of data written to `encoded_buffer`. */
+	unsigned int encoded_size;
+	/** Size of `encoded_buffer` */
+	unsigned int encoded_buffer_size;
+
+	/* color management */
+	/** array of per-display display buffers dirty flags */
+	unsigned int* display_buffer_flags;
+	/** cache used by color management */
+	struct ColormanageCache* colormanage_cache;
+	int colormanage_flag;
+	rcti invalid_rect;
+
+	/* information for compressed textures */
+	struct DDSData dds_data;
+} ImBuf;
+
+struct RenderPass {
+	struct RenderPass* next, * prev;
+	int channels;
+	char name[64];   /* amount defined in IMB_openexr.h */
+	char chan_id[8]; /* amount defined in IMB_openexr.h */
+
+	struct ImBuf* ibuf;
+
 	int rectx, recty;
 
-	char fullname[64];
-	char view[64];
-	int view_id;
+	char fullname[64]; /* EXR_PASS_MAXNAME */
+	char view[64];     /* EXR_VIEW_MAXNAME */
+	int view_id;       /* quick lookup */
 
-	int pad;
+	char _pad0[4];
 };
+
 
 // from blender/source/blender/python/mathutils/mathutils_Matrix.h
 typedef struct {

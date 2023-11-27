@@ -204,18 +204,18 @@ void ConvertFilmChannelOutput_1xFloat_To_1xFloatList(boost::python::object &film
 	RenderPass *renderPass = reinterpret_cast<RenderPass *>(renderPassPtr);
 	ThrowIfSizeMismatch(renderPass, width, height);
 	
-	// srcBufferDepth is equal, write directly to the renderPass
-	GetOutput(filmObj, outputType, outputIndex, renderPass->rect, executeImagePipeline);
-	
+	// srcBufferDepth is equal, write directly to the renderPass	
+	GetOutput(filmObj, outputType, outputIndex, renderPass->ibuf->float_buffer.data, executeImagePipeline);
+
 	if (normalize) {
-		const float maxValue = FindMaxValue(renderPass->rect, width * height * srcBufferDepth);
+		const float maxValue = FindMaxValue(renderPass->ibuf->float_buffer.data, width * height * srcBufferDepth);
 		const float k = (maxValue == 0.f) ? 0.f : (1.f / maxValue);
 		
 		for (u_int y = 0; y < height; ++y) {
 			u_int srcIndex = y * width * srcBufferDepth;
 
 			for (u_int x = 0; x < width; ++x) {
-				renderPass->rect[srcIndex++] *= k;
+				renderPass->ibuf->float_buffer.data[srcIndex++] *= k;
 			}
 		}
 	}
@@ -250,12 +250,12 @@ void ConvertFilmChannelOutput_UV_to_Blender_UV(boost::python::object &filmObj,
 		for (u_int x = 0; x < width; ++x) {
 			const float u = src[srcIndex] * k;
 			const float v = src[srcIndex + 1] * k;
-			
-			renderPass->rect[dstIndex] = u;
-			renderPass->rect[dstIndex + 1] = v;
+			renderPass->ibuf->float_buffer.data[dstIndex] = u;						
+			renderPass->ibuf->float_buffer.data[dstIndex + 1] = v;			
 			// The third channel is a mask that is 1 where a UV map exists and 0 otherwise.
-			renderPass->rect[dstIndex + 2] = (u || v) ? 1.f : 0.f;
-			
+
+			renderPass->ibuf->float_buffer.data[dstIndex + 2] = (u || v) ? 1.f : 0.f;			
+
 			srcIndex += srcBufferDepth;
 			dstIndex += dstBufferDepth;
 		}
@@ -287,10 +287,10 @@ void ConvertFilmChannelOutput_1xFloat_To_4xFloatList(boost::python::object &film
 
 		for (u_int x = 0; x < width; ++x) {
 			const float val = src[srcIndex] * k;
-			renderPass->rect[dstIndex] = val;
-			renderPass->rect[dstIndex + 1] = val;
-			renderPass->rect[dstIndex + 2] = val;
-			renderPass->rect[dstIndex + 3] = 1.f;  // Alpha
+			renderPass->ibuf->float_buffer.data[dstIndex] = val;
+			renderPass->ibuf->float_buffer.data[dstIndex + 1] = val;
+			renderPass->ibuf->float_buffer.data[dstIndex + 2] = val;
+			renderPass->ibuf->float_buffer.data[dstIndex + 3] = 1.f;  // Alpha
 			
 			srcIndex += srcBufferDepth;
 			dstIndex += dstBufferDepth;
@@ -307,19 +307,19 @@ void ConvertFilmChannelOutput_3xFloat_To_3xFloatList(boost::python::object &film
 	ThrowIfSizeMismatch(renderPass, width, height);
 	
 	// srcBufferDepth is equal, write directly to the renderPass
-	GetOutput(filmObj, outputType, outputIndex, renderPass->rect, executeImagePipeline);
+	GetOutput(filmObj, outputType, outputIndex, renderPass->ibuf->float_buffer.data, executeImagePipeline);
 	
 	if (normalize) {
-		const float maxValue = FindMaxValue(renderPass->rect, width * height);
+		const float maxValue = FindMaxValue(renderPass->ibuf->float_buffer.data, width * height);
 		const float k = (maxValue == 0.f) ? 0.f : (1.f / maxValue);
 		
 		for (u_int y = 0; y < height; ++y) {
 			u_int srcIndex = y * width * srcBufferDepth;
 
 			for (u_int x = 0; x < width; ++x) {
-				renderPass->rect[srcIndex] *= k;
-				renderPass->rect[srcIndex + 1] *= k;
-				renderPass->rect[srcIndex + 2] *= k;
+				renderPass->ibuf->float_buffer.data[srcIndex] *= k;
+				renderPass->ibuf->float_buffer.data[srcIndex + 1] *= k;
+				renderPass->ibuf->float_buffer.data[srcIndex + 2] *= k;
 				srcIndex += srcBufferDepth;
 			}
 		}
@@ -350,10 +350,10 @@ void ConvertFilmChannelOutput_3xFloat_To_4xFloatList(boost::python::object &film
 		u_int dstIndex = y * width * dstBufferDepth;
 
 		for (u_int x = 0; x < width; ++x) {
-			renderPass->rect[dstIndex] = src[srcIndex] * k;
-			renderPass->rect[dstIndex + 1] = src[srcIndex + 1] * k;
-			renderPass->rect[dstIndex + 2] = src[srcIndex + 2] * k;
-			renderPass->rect[dstIndex + 3] = 1.f;  // Alpha
+			renderPass->ibuf->float_buffer.data[dstIndex] = src[srcIndex] * k;
+			renderPass->ibuf->float_buffer.data[dstIndex + 1] = src[srcIndex + 1] * k;
+			renderPass->ibuf->float_buffer.data[dstIndex + 2] = src[srcIndex + 2] * k;
+			renderPass->ibuf->float_buffer.data[dstIndex + 3] = 1.f;  // Alpha
 			
 			srcIndex += srcBufferDepth;
 			dstIndex += dstBufferDepth;
@@ -370,13 +370,13 @@ void ConvertFilmChannelOutput_4xFloat_To_4xFloatList(boost::python::object &film
 	ThrowIfSizeMismatch(renderPass, width, height);
 	
 	// srcBufferDepth is equal, write directly to the renderPass
-	GetOutput(filmObj, outputType, outputIndex, renderPass->rect, executeImagePipeline);
+	GetOutput(filmObj, outputType, outputIndex, renderPass->ibuf->float_buffer.data, executeImagePipeline);
 	
 	if (normalize) {
 		// Look for the max. in source buffer (only among RGB values, not Alpha)
 		float maxValue = 0.f;
 		for (u_int i = 0; i < width * height * 4; ++i) {
-			const float value = renderPass->rect[i];
+			const float value = renderPass->ibuf->float_buffer.data[i];
 			// Leave out every multiple of 4 (alpha values)
 			if ((i % 4 != 0) && !isinf(value) && !isnan(value) && (value > maxValue))
 				maxValue = value;
@@ -387,9 +387,9 @@ void ConvertFilmChannelOutput_4xFloat_To_4xFloatList(boost::python::object &film
 			u_int srcIndex = y * width * srcBufferDepth;
 
 			for (u_int x = 0; x < width; ++x) {
-				renderPass->rect[srcIndex] *= k;
-				renderPass->rect[srcIndex + 1] *= k;
-				renderPass->rect[srcIndex + 2] *= k;
+				renderPass->ibuf->float_buffer.data[srcIndex] *= k;
+				renderPass->ibuf->float_buffer.data[srcIndex + 1] *= k;
+				renderPass->ibuf->float_buffer.data[srcIndex + 2] *= k;
 				// Note: we do not normalize the alpha channel
 				srcIndex += srcBufferDepth;
 			}
@@ -422,7 +422,7 @@ void ConvertFilmChannelOutput_1xUInt_To_1xFloatList(boost::python::object &filmO
 
 		for (u_int x = 0; x < width; ++x) {
 			// u_int is converted to float here
-			renderPass->rect[srcIndex] = src[srcIndex] * k;
+			renderPass->ibuf->float_buffer.data[srcIndex] = src[srcIndex] * k;
 			srcIndex += srcBufferDepth;
 		}
 	}
