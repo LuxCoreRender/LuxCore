@@ -121,6 +121,27 @@ extern bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
 		const boost::python::list &rootColor,
 		const boost::python::list &tipColor);
 
+
+extern bool Scene_DefineBlenderCurveStrands(luxcore::detail::SceneImpl* scene,
+	const std::string& shapeName,
+	const boost::python::object& pointsPerStrand,
+	const boost::python::object& points,
+	const boost::python::object& colors,
+	const boost::python::object& uvs,
+	const std::string& imageFilename,
+	const float imageGamma,
+	const bool copyUVs,
+	const boost::python::object& transformation,
+	const float strandDiameter,
+	const float rootWidth,
+	const float tipWidth,
+	const float widthOffset,
+	const std::string& tessellationTypeStr,
+	const u_int adaptiveMaxDepth, const float adaptiveError,
+	const u_int solidSideCount, const bool solidCapBottom, const bool solidCapTop,
+	const boost::python::list& rootColor,
+	const boost::python::list& tipColor);
+
 } // namespace blender
 } // namespace luxcore
 
