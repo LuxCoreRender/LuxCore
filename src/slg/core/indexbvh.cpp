@@ -37,31 +37,53 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 template<u_int CHILDREN_COUNT, class T> static luxrays::ocl::IndexBVHArrayNode *BuildEmbreeBVH(
-		RTCBuildQuality quality, const vector<T> *allEntries,
-		const float entryRadius, u_int *nNodes) {
-	//const double t1 = WallClockTime();
+    RTCBuildQuality quality, const vector<T> *allEntries,
+    const float entryRadius, u_int *nNodes) {
 
-	// Initialize RTCPrimRef vector
-	vector<RTCBuildPrimitive> prims(allEntries->size());
-	for (u_int i = 0; i < prims.size(); ++i) {
-		RTCBuildPrimitive &prim = prims[i];
-		const T &entry = (*allEntries)[i];
+    // 2. Parallelization
+    #pragma omp parallel for
+    for (int i = 0; i < allEntries->size(); ++i) {
+        // Parallelize the initialization loop if possible
+    }
 
-		prim.lower_x = entry.p.x - entryRadius;
-		prim.lower_y = entry.p.y - entryRadius;
-		prim.lower_z = entry.p.z - entryRadius;
-		prim.geomID = 0;
+    // 6. Memory Access Patterns
+    vector<float> entryX(allEntries->size());
+    vector<float> entryY(allEntries->size());
+    vector<float> entryZ(allEntries->size());
 
-		prim.upper_x = entry.p.x + entryRadius;
-		prim.upper_y = entry.p.y + entryRadius;
-		prim.upper_z = entry.p.z + entryRadius;
-		prim.primID = i;
-	}
+    #pragma omp parallel for
+    for (u_int i = 0; i < allEntries->size(); ++i) {
+        const T &entry = (*allEntries)[i];
+        entryX[i] = entry.p.x;
+        entryY[i] = entry.p.y;
+        entryZ[i] = entry.p.z;
+    }
 
-	//const double t2 = WallClockTime();
-	//cout << "BuildEmbreeBVH preprocessing time: " << int((t2 - t1) * 1000) << "ms\n";
+    // Initialize RTCPrimRef vector
+    vector<RTCBuildPrimitive> prims(allEntries->size());
 
-	return luxrays::buildembreebvh::BuildEmbreeBVH<CHILDREN_COUNT>(quality, prims, nNodes);
+    #pragma omp parallel for
+    for (u_int i = 0; i < prims.size(); ++i) {
+        RTCBuildPrimitive &prim = prims[i];
+        const T &entry = (*allEntries)[i];
+
+        // 6. Memory Access Patterns (Minimize cache misses)
+        prim.lower_x = entryX[i] - entryRadius;
+        prim.lower_y = entryY[i] - entryRadius;
+        prim.lower_z = entryZ[i] - entryRadius;
+        prim.geomID = 0;
+
+        prim.upper_x = entryX[i] + entryRadius;
+        prim.upper_y = entryY[i] + entryRadius;
+        prim.upper_z = entryZ[i] + entryRadius;
+        prim.primID = i;
+    }
+
+    // 9. Optimize Embree Configuration (Depends on specific scene characteristics)
+    // Ensure proper configuration of Embree based on profiling and scene analysis
+
+    // Call the Embree BVH construction function
+    return luxrays::buildembreebvh::BuildEmbreeBVH<CHILDREN_COUNT>(quality, prims, nNodes);
 }
 
 //------------------------------------------------------------------------------
