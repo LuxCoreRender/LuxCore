@@ -31,12 +31,15 @@ ExtTriangleMesh *ScreenProjection(const Camera &camera, const ExtTriangleMesh &m
     const u_int vertCount = mesh.GetTotalVertexCount();
     const u_int triCount = mesh.GetTotalTriangleCount();
 
-    const Point *vertices = mesh.GetVertices();
+    // Make a non-const copy of the vertices
+    Point *vertices = new Point[vertCount];
+    const Point *originalVertices = mesh.GetVertices();
+    std::copy(originalVertices, originalVertices + vertCount, vertices);
 
     // 1. Parallelization using OpenMP
     #pragma omp parallel for
     for (u_int i = 0; i < vertCount; ++i) {
-        const Point &oldVertex = vertices[i];
+        const Point &oldVertex = originalVertices[i];
 
         Point newVertex;
         if (!camera.GetSamplePosition(oldVertex, &newVertex.x, &newVertex.y))
@@ -47,14 +50,14 @@ ExtTriangleMesh *ScreenProjection(const Camera &camera, const ExtTriangleMesh &m
             newVertex.y /= camera.filmHeight;
         }
 
-        // 3. Memory Management (Reuse original vertices memory)
+        // Update the non-const vertices array
         vertices[i] = newVertex;
     }
 
     const Triangle *triangles = mesh.GetTriangles();
 
     Triangle *newTris = ExtTriangleMesh::AllocTrianglesBuffer(triCount);
-    copy(triangles, triangles + triCount, newTris);
+    std::copy(triangles, triangles + triCount, newTris);
 
     return new ExtTriangleMesh(vertCount, triCount, const_cast<Point*>(vertices), newTris);
 }
