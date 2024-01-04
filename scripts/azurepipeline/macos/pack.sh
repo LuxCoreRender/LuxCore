@@ -201,6 +201,7 @@ fi
 
 ### creating opencl less DMG
 
+echo $VERSION_STRING
 echo "Creating Unified Version DMG ..."
 
 hdiutil create luxcorerender-$VERSION_STRING-mac64$SDK_BUILD.dmg -volname "luxcorerender-$VERSION_STRING-mac64" -fs HFS+ -srcfolder release_OSX/
