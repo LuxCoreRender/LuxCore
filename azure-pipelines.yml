@@ -156,8 +156,8 @@ jobs:
   timeoutInMinutes: 0
   pool:
     vmImage: 'macOS-11'
-    variables:
-    version_string: $[ dependencies.DetectBuildType.outputs['setvarStep.version_string'] ]
+  variables:
+    version_string: $[ dependencies.DetectBuildType.outputs['setvarStep.version_string'] ]    
 
   steps:
   - script: ./scripts/azurepipeline/macos/install.sh
