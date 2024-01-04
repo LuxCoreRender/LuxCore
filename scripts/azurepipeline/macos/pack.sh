@@ -184,10 +184,13 @@ cd ../..
 
 ./scripts/azurepipeline/macos/codesign.sh ./release_OSX/pyluxcore
 
+echo $VERSION_STRING
+
 # Set up correct names for release version and SDK
 if [[ -z "$VERSION_STRING" ]] ; then
     VERSION_STRING=latest
 fi
+echo $VERSION_STRING
 
 # if [[ "$FINAL" == "TRUE" ]] ; then
     # SDK_BUILD=-sdk
@@ -201,7 +204,6 @@ fi
 
 ### creating opencl less DMG
 
-echo $VERSION_STRING
 echo "Creating Unified Version DMG ..."
 
 hdiutil create luxcorerender-$VERSION_STRING-mac64$SDK_BUILD.dmg -volname "luxcorerender-$VERSION_STRING-mac64" -fs HFS+ -srcfolder release_OSX/
