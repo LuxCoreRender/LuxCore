@@ -28,32 +28,35 @@ using namespace slg;
 //------------------------------------------------------------------------------
 
 ExtTriangleMesh *ScreenProjection(const Camera &camera, const ExtTriangleMesh &mesh) {
-	const u_int vertCount = mesh.GetTotalVertexCount();
-	const u_int triCount = mesh.GetTotalTriangleCount();
+    const u_int vertCount = mesh.GetTotalVertexCount();
+    const u_int triCount = mesh.GetTotalTriangleCount();
 
-	const Point *vertices = mesh.GetVertices();
-	const Triangle *triangles = mesh.GetTriangles();
+    const Point *vertices = mesh.GetVertices();
 
-	Point *newVertices = ExtTriangleMesh::AllocVerticesBuffer(vertCount);
-	for (u_int i = 0; i < vertCount; ++i) {
-		const Point &oldVertex = vertices[i];
+    // 1. Parallelization using OpenMP
+    #pragma omp parallel for
+    for (u_int i = 0; i < vertCount; ++i) {
+        const Point &oldVertex = vertices[i];
 
-		Point newVertex;
-		if (!camera.GetSamplePosition(oldVertex, &newVertex.x, &newVertex.y))
-			newVertex = oldVertex[i];
-		else {
-			// Normalize
-			newVertex.x /= camera.filmWidth;
-			newVertex.y /= camera.filmHeight;
-		}
+        Point newVertex;
+        if (!camera.GetSamplePosition(oldVertex, &newVertex.x, &newVertex.y))
+            newVertex = oldVertex[i];
+        else {
+            // Normalize
+            newVertex.x /= camera.filmWidth;
+            newVertex.y /= camera.filmHeight;
+        }
 
-		newVertices[i] = newVertex;
-	}
+        // 3. Memory Management (Reuse original vertices memory)
+        vertices[i] = newVertex;
+    }
 
-	Triangle *newTris = ExtTriangleMesh::AllocTrianglesBuffer(triCount);
-	copy(triangles, triangles + triCount, newTris);
+    const Triangle *triangles = mesh.GetTriangles();
 
-	return new ExtTriangleMesh(vertCount, triCount, newVertices, newTris);
+    Triangle *newTris = ExtTriangleMesh::AllocTrianglesBuffer(triCount);
+    copy(triangles, triangles + triCount, newTris);
+
+    return new ExtTriangleMesh(vertCount, triCount, const_cast<Point*>(vertices), newTris);
 }
 
 //------------------------------------------------------------------------------
@@ -61,14 +64,15 @@ ExtTriangleMesh *ScreenProjection(const Camera &camera, const ExtTriangleMesh &m
 //------------------------------------------------------------------------------
 
 ExtTriangleMesh *ExtTriangleMeshBuilder::GetExtTriangleMesh() const {
-	const u_int vertCount = vertices.size();
-	const u_int triCount = triangles.size();
+    const u_int vertCount = vertices.size();
+    const u_int triCount = triangles.size();
 
-	Point *newVertices = ExtTriangleMesh::AllocVerticesBuffer(vertCount);
-	copy(vertices.begin(), vertices.end(), newVertices);
+    // 3. Memory Management (Reuse original vertices memory)
+    Point *newVertices = const_cast<Point*>(vertices.data());
+    // No need to copy vertices, assuming vertices won't be modified elsewhere
 
-	Triangle *newTris = ExtTriangleMesh::AllocTrianglesBuffer(triCount);
-	copy(triangles.begin(), triangles.end(), newTris);
+    Triangle *newTris = ExtTriangleMesh::AllocTrianglesBuffer(triCount);
+    copy(triangles.begin(), triangles.end(), newTris);
 
-	return new ExtTriangleMesh(vertCount, triCount, newVertices, newTris);
+    return new ExtTriangleMesh(vertCount, triCount, newVertices, newTris);
 }
