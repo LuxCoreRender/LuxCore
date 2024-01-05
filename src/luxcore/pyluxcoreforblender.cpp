@@ -749,6 +749,34 @@ static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const str
         throw runtime_error("Too many Vertex Color Maps in list for method Scene.DefineMesh()");
     }
 
+	vector<Normal> customNormals;
+	bool hasCustomNormals = false;
+
+	
+	const float(*loopNormals)[3] = nullptr;
+	u_int loopCount = 0;
+		
+	hasCustomNormals = !loopTriCustomNormals.is_none();
+	if (hasCustomNormals) {
+		extract<boost::python::list> getCustomNormalsList(loopTriCustomNormals);
+
+		if (!getCustomNormalsList.check()) {
+			const string objType = extract<string>((loopUVsPtrList.attr("__class__")).attr("__name__"));
+			throw runtime_error("Wrong data type for the list of custom normals of method Scene.DefineMesh(): " + objType);
+		}
+
+		const boost::python::list& loopTriCustomNormalsList = getCustomNormalsList();
+		const boost::python::ssize_t loopCustomNormalsCount = len(loopTriCustomNormalsList);
+
+		for (int i = 0; i < loopCustomNormalsCount; i += 3) {
+			const float x = extract<float>(loopTriCustomNormalsList[i]);
+			const float y = extract<float>(loopTriCustomNormalsList[i + 1]);
+			const float z = extract<float>(loopTriCustomNormalsList[i + 2]);
+			customNormals.emplace_back(Normal(x, y, z));
+		}
+	}
+	
+
 	vector<size_t> loopUVsList;
 	vector<const MLoopCol *> loopColsList;
 	vector<Point> tmpMeshVerts;
@@ -802,6 +830,9 @@ static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const str
 				if (alreadyDefined) {
 					const u_int mappedIndex = vertexMap[index];
 					
+					if (hasCustomNormals && (customNormals[tri] != tmpMeshNorms[mappedIndex]))
+						alreadyDefined = false;
+
 					for (u_int uvLayerIndex = 0; uvLayerIndex < loopUVsList.size() && alreadyDefined; ++uvLayerIndex) {
 						const float(*loopUVs)[2] = reinterpret_cast<const float(*)[2]>(loopUVsList[uvLayerIndex]);
 						if (loopUVs) {
@@ -842,10 +873,15 @@ static bool Scene_DefineBlenderMesh(luxcore::detail::SceneImpl *scene, const str
 					tmpMeshVerts.emplace_back(Point(vertex));
 
 					// Add the normal
-					tmpMeshNorms.push_back(Normalize(Normal(
-						normals[index][0] * normalScale,
-						normals[index][1] * normalScale,
-						normals[index][2] * normalScale)));
+					if (hasCustomNormals) {
+						tmpMeshNorms.push_back(customNormals[tri]);
+					}
+					else {
+						tmpMeshNorms.push_back(Normalize(Normal(
+							normals[index][0] * normalScale,
+							normals[index][1] * normalScale,
+							normals[index][2] * normalScale)));
+					}
 					
 					// Add the UV
 					for (u_int uvLayerIndex = 0; uvLayerIndex < loopUVsList.size(); ++uvLayerIndex) {
