@@ -27,7 +27,7 @@
 ################################################################################
 
 set(LUXCORE_VERSION_MAJOR 2)
-set(LUXCORE_VERSION_MINOR 6)
+set(LUXCORE_VERSION_MINOR 9)
 
 # Configure a header file to pass some of the CMake settings
 # to the source code:
@@ -175,7 +175,7 @@ set(PYLUXCORE_SRCS
 
 add_library(pyluxcore MODULE ${PYLUXCORE_SRCS} ${LUXCORE_LIB_SRCS} ${LUX_PARSER_SRC})
 
-include_directories(${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0)
+include_directories(${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0)
 include_directories(${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/include)
 
 add_definitions(-DOPENVDB_STATICLIB ${VISIBILITY_FLAGS})

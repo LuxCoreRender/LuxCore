@@ -114,36 +114,87 @@ add_library(bcd STATIC ${BCD_SRCS})
 ###########################################################################
 
 set(OPENVDB_SRCS
-	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/Grid.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/Metadata.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/MetaMap.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/Platform.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/openvdb.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/io/Archive.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/io/Compression.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/io/DelayedLoadMetadata.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/io/File.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/io/GridDescriptor.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/io/Queue.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/io/Stream.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/io/TempFile.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/math/Maps.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/math/Proximity.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/math/QuantizedUnitVec.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/math/Transform.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/points/AttributeArray.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/points/AttributeArrayString.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/points/AttributeGroup.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/points/AttributeSet.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/points/points.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/points/StreamCompression.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/util/Formats.cc
-	${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/util/Util.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/openvdb/Grid.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/openvdb/Metadata.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/openvdb/MetaMap.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/openvdb/Platform.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/openvdb/openvdb.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/openvdb/io/Archive.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/openvdb/io/Compression.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/openvdb/io/DelayedLoadMetadata.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/openvdb/io/File.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/openvdb/io/GridDescriptor.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/openvdb/io/Queue.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/openvdb/io/Stream.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/openvdb/io/TempFile.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/openvdb/math/Maps.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/openvdb/math/Proximity.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/openvdb/math/QuantizedUnitVec.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/openvdb/math/Transform.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/openvdb/points/AttributeArray.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/openvdb/points/AttributeArrayString.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/openvdb/points/AttributeGroup.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/openvdb/points/AttributeSet.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/openvdb/points/points.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/openvdb/points/StreamCompression.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/openvdb/util/Formats.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/instantiations/Activate.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/instantiations/ChangeBackground.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/instantiations/Clip.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/instantiations/Composite.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/instantiations/Count.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/instantiations/Dense.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/instantiations/DenseSparseTools.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/instantiations/Diagnostics.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/instantiations/FastSweeping.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/instantiations/Filter.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/instantiations/FindActiveValues.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/instantiations/GridOperators.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/instantiations/GridTransformer.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/instantiations/Interpolation.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/instantiations/LevelSetAdvect.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/instantiations/LevelSetFilter.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/instantiations/LevelSetFracture.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/instantiations/LevelSetMeasure.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/instantiations/LevelSetMorph.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/instantiations/LevelSetPlatonic.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/instantiations/LevelSetRebuild.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/instantiations/LevelSetSphere.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/instantiations/LevelSetTracker.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/instantiations/LevelSetUtil.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/instantiations/Mask.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/instantiations/Merge.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/instantiations/MeshToVolume.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/instantiations/Morphology.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/instantiations/MultiResGrid.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/instantiations/NodeVisitor.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/instantiations/ParticleAtlas.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/instantiations/ParticlesToLevelSet.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/instantiations/PointAdvect.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/instantiations/PointIndexGrid.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/instantiations/PointPartitioner.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/instantiations/PointScatter.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/instantiations/PointsToMask.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/instantiations/PoissonSolver.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/instantiations/PotentialFlow.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/instantiations/Prune.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/instantiations/RayIntersector.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/instantiations/RayTracer.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/instantiations/SignedFloodFill.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/instantiations/Statistics.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/instantiations/TopologyToLevelSet.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/instantiations/ValueTransformer.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/instantiations/VectorTransformer.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/instantiations/VelocityFields.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/instantiations/VolumeAdvect.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/instantiations/VolumeToMesh.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/instantiations/VolumeAdvect.cc
+	${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0/instantiations/VolumeToSpheres.cc
 )
 
 SOURCE_GROUP("Source Files\\OpenVDB Library" FILES ${OPENVDB_SRCS})
 
-include_directories(${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0)
+include_directories(${LuxRays_SOURCE_DIR}/deps/openvdb-11.0.0)
 
 # Required by OpenVDB to read ABI 3
 #add_definitions("-D OPENVDB_USE_DEPRECATED_ABI -DOPENVDB_3_ABI_COMPATIBLE -DOPENVDB_STATICLIB -DOPENVDB_OPENEXR_STATICLIB")
@@ -157,8 +208,8 @@ add_library(openvdb STATIC ${OPENVDB_SRCS})
 ###########################################################################
 
 set(OPENSUBDIV_SRCS
-	${LuxRays_SOURCE_DIR}/deps/opensubdiv-3.4.0/opensubdiv/version.cpp
-	${LuxRays_SOURCE_DIR}/deps/opensubdiv-3.4.0/opensubdiv/far/bilinearPatchBuilder.cpp
+    ${LuxRays_SOURCE_DIR}/deps/opensubdiv-3.4.0/opensubdiv/version.cpp 
+    ${LuxRays_SOURCE_DIR}/deps/opensubdiv-3.4.0/opensubdiv/far/bilinearPatchBuilder.cpp
     ${LuxRays_SOURCE_DIR}/deps/opensubdiv-3.4.0/opensubdiv/far/catmarkPatchBuilder.cpp
     ${LuxRays_SOURCE_DIR}/deps/opensubdiv-3.4.0/opensubdiv/far/error.cpp
     ${LuxRays_SOURCE_DIR}/deps/opensubdiv-3.4.0/opensubdiv/far/loopPatchBuilder.cpp

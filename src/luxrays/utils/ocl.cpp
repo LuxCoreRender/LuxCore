@@ -19,11 +19,11 @@
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
 #include <iostream>
-#include <fstream>
 #include <string.h>
 
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/algorithm/string/trim.hpp>
+#include <boost/filesystem/fstream.hpp>
 
 #include "luxrays/luxrays.h"
 #include "luxrays/utils/utils.h"
@@ -303,10 +303,11 @@ cl_program oclKernelPersistentCache::Compile(cl_context context, cl_device_id de
 
 			// The use of boost::filesystem::path is required for UNICODE support: fileName
 			// is supposed to be UTF-8 encoded.
+			
 			boost::filesystem::ofstream file(boost::filesystem::path(fileName),
-					boost::filesystem::ofstream::out |
-					boost::filesystem::ofstream::binary |
-					boost::filesystem::ofstream::trunc);
+				boost::filesystem::ofstream::out |
+				boost::filesystem::ofstream::binary |
+				boost::filesystem::ofstream::trunc);
 
 			// Write the binary hash
 			const u_int hashBin = HashBin(bins, binsSizes[0]);
@@ -338,7 +339,7 @@ cl_program oclKernelPersistentCache::Compile(cl_context context, cl_device_id de
 			// The use of boost::filesystem::path is required for UNICODE support: fileName
 			// is supposed to be UTF-8 encoded.
 			boost::filesystem::ifstream file(boost::filesystem::path(fileName),
-					boost::filesystem::ifstream::in | boost::filesystem::ifstream::binary);
+				boost::filesystem::ifstream::in | boost::filesystem::ifstream::binary);
 
 			// Read the binary hash
 			u_int hashBin;

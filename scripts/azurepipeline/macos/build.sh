@@ -1,8 +1,8 @@
 #!/bin/bash
 
 #Fetch BuildDeps
-wget https://github.com/LuxCoreRender/MacOSCompileDeps/releases/download/luxcorerender_v2.6_python_3.10/MacDistFiles_310_intel_static.tar.gz
-tar xzf MacDistFiles_310_intel_static.tar.gz
+wget https://github.com/LuxCoreRender/MacOSCompileDeps/releases/download/luxcorerender_v2.9_python_3.11/MacDistFiles_311_intel_static.tar.gz
+tar xzf MacDistFiles_311_intel_static.tar.gz
 
 # Set Environment Variables
 export PATH="/usr/local/opt/bison/bin:/usr/local/bin:$PATH"

@@ -100,7 +100,7 @@ include_directories("${LuxRays_SOURCE_DIR}/deps/json-3.7.3/include")
 include_directories("${LuxRays_SOURCE_DIR}/deps/cuew/include")
 include_directories("${LuxRays_SOURCE_DIR}/deps/clew/include")
 include_directories("${LuxRays_SOURCE_DIR}/deps/optix-7.1.0/include")
-include_directories("${LuxRays_SOURCE_DIR}/deps/spdlog-1.8.0/include")
+include_directories("${LuxRays_SOURCE_DIR}/deps/spdlog-1.13.0/include")
 include_directories("${LuxRays_SOURCE_DIR}/deps/robin-hood-hashing-3.9.1/src/include")
 
 # Find dependencies
@@ -178,6 +178,7 @@ endif()
 #
 ################################################################################
 
+set(CMAKE_CXX_STANDARD 17)
 set(GENERATED_DIR "${CMAKE_BINARY_DIR}/generated")
 set(GENERATED_INCLUDE_DIR "${GENERATED_DIR}/include")
 

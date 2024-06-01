@@ -150,7 +150,9 @@ static BVHTreeNode *BuildBVH(u_int *nNodes, const BVHParams &params,
 			FindBestSplit(params, leafList, splits[j], splits[j + 1], &splitValue, &splitAxis);
 
 			vector<BVHTreeNode *>::iterator it =
-					partition(leafList.begin() + splits[j], leafList.begin() + splits[j + 1], bind2nd(ptr_fun(bvh_ltf[splitAxis]), splitValue));
+				//C++17 compatibility: replace bind2nd and ptr_fun by lambda funciton
+				//partition(leafList.begin() + splits[j], leafList.begin() + splits[j + 1], bind2nd(ptr_fun(bvh_ltf[splitAxis]), splitValue));
+				partition(leafList.begin() + splits[j], leafList.begin() + splits[j + 1], [&](auto elem) { return bvh_ltf[splitAxis](elem, splitValue); });
 			u_int middle = distance(leafList.begin(), it);
 			middle = Max(splits[j] + 1, Min(splits[j + 1] - 1, middle)); // Make sure coincidental BBs are still split
 			splits.insert(splits.begin() + j + 1, middle);

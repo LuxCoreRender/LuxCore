@@ -5,7 +5,7 @@
 #include <OpenColorIO/OpenColorIO.h>
 
 
-#include "OpenEXR/half.h"
+#include "Imath/half.h"
 #include "oiiohelpers.h"
 #include "utils/StringUtils.h"
 
