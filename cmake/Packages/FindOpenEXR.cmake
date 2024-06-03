@@ -43,7 +43,7 @@ FIND_PATH(OPENEXR_INCLUDE_DIRS
 
 IF (OPENEXR_INCLUDE_DIRS)
 # Lookup additional headers in case they are in subdirectories
-SET(OpenEXR_MODULES Iex Imf Imath IlmThread)
+SET(OpenEXR_MODULES Iex Imath IlmThread OpenEXR OpenEXRCore OpenEXRUtil)
 FOREACH(i ${OpenEXR_MODULES})
 	FIND_PATH(OpenEXR_${i}_INCLUDE_DIR
 		NAMES ${i}.h ${i}Header.h ${i}Math.h
@@ -63,9 +63,10 @@ ENDFOREACH(i)
 FOREACH(i ${OpenEXR_MODULES})
 	SET(OPENEXR_INCLUDE_DIRS ${OPENEXR_INCLUDE_DIRS} ${OpenEXR_${i}_INCLUDE_DIR})
 ENDFOREACH(i)
-ENDIF(OPENEXR_INCLUDE_DIRS)
 
-SET(OpenEXR_LIBRARY_MODULES Iex IlmImf Imath IlmThread)
+ENDIF(OPENEXR_INCLUDE_DIRS)
+SET(OpenEXR_LIBRARY_MODULES Iex Imath IlmThread OpenEXR OpenEXRCore OpenEXRUtil)
+
 SET(OpenEXR_LIB_SUFFIXES lib64 lib Lib lib/OpenEXR Libs x64/Release/lib)
 SET(OpenEXR_LIB_SUFFIXES_REL)
 SET(OpenEXR_LIB_SUFFIXES_DBG)

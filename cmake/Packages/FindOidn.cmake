@@ -36,8 +36,21 @@ IF (NOT OIDN_LIBRARY)
 		/opt/local/lib)
 ENDIF()
 
+FIND_LIBRARY(OIDN_CORE_LIBRARY NAMES OpenImageDenoise_core libOpenImageDenoise.so.0 PATHS
+	${OIDN_ROOT}/lib/x64
+	${OIDN_ROOT}/lib
+	${OIDN_ROOT}/build
+	NO_DEFAULT_PATH)
+IF (NOT OIDN_CORE_LIBRARY)
+	FIND_LIBRARY(OIDN_CORE_LIBRARY NAMES OpenImageDenoise_core libOpenImageDenoise.so.0 PATHS
+		/usr/lib 
+		/usr/lib64
+		/usr/local/lib 
+		/opt/local/lib)
+ENDIF()
+
 IF (OIDN_INCLUDE_PATH AND OIDN_LIBRARY)
-	SET(OIDN_LIBRARY ${OIDN_LIBRARY})
+	SET(OIDN_LIBRARY ${OIDN_LIBRARY} ${OIDN_CORE_LIBRARY})
 	SET(OIDN_FOUND TRUE)
 ENDIF()
 
