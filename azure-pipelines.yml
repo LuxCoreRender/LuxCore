@@ -194,7 +194,7 @@ jobs:
   - DetectBuildType
   - LuxCoreRenderLinux
   - LuxCoreRenderWindows
-  - LuxCoreRenderMacOS
+  # - LuxCoreRenderMacOS
   variables:
     version_string: $[ dependencies.DetectBuildType.outputs['setvarStep.version_string'] ]
   condition: |
