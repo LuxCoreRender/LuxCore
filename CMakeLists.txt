@@ -33,6 +33,12 @@ SET(CMAKE_LEGACY_CYGWIN_WIN32 0)
 
 set(supported_build_variants "Debug" "Release")
 
+# Options
+OPTION(LUX_DEMOS "Enable to build LuxCore demos" OFF)
+OPTION(LUX_CONSOLE "Enable to build luxcoreconsole" OFF)
+OPTION(LUX_UI "Enable to build luxcoreui" OFF)
+OPTION(LUX_TESTS "Enable to build tests" OFF)
+
 # Detect whether we're using a single config or multi config generator and
 # configure it:
 
@@ -198,23 +204,29 @@ add_subdirectory(src/pyluxcoretools)
 #
 ################################################################################
 
-if((${CMAKE_SYSTEM_NAME} MATCHES "Linux") OR OSX_BUILD_DEMOS OR WIN_BUILD_DEMOS)
-	add_subdirectory(samples/luxcoredemo)
-	add_subdirectory(samples/luxcorescenedemo)
+if(LUX_DEMOS)
+  if((${CMAKE_SYSTEM_NAME} MATCHES "Linux") OR OSX_BUILD_DEMOS OR WIN_BUILD_DEMOS)
+    add_subdirectory(samples/luxcoredemo)
+    add_subdirectory(samples/luxcorescenedemo)
 
-	if (NOT WIN32 OR NOT BUILD_LUXCORE_DLL)
-		# Internal tests can not be compiled on WIN32 with DLL enabled
-		add_subdirectory(tests/luxcoreimplserializationdemo)
-	endif()
+    if (NOT WIN32 OR NOT BUILD_LUXCORE_DLL)
+      # Internal tests can not be compiled on WIN32 with DLL enabled
+      add_subdirectory(tests/luxcoreimplserializationdemo)
+    endif()
+  endif()
 endif()
 
-if (NOT WIN32 OR WIN_BUILD_DEMOS)
-	add_subdirectory(samples/luxcoreconsole)
+if(LUX_CONSOLE)
+  add_subdirectory(samples/luxcoreconsole)
 endif()
 
-if(OPENGL_FOUND)
-	add_subdirectory(samples/luxcoreui)
-endif(OPENGL_FOUND)
+if(LUX_UI)
+  find_package(OpenGL)
+  IF (NOT OPENGL_FOUND)
+    MESSAGE(FATAL_ERROR "OpenGL not found! Please either install OpenGL or disable LUX_UI.")
+  ENDIF()
+  add_subdirectory(samples/luxcoreui)
+endif()
 
 
 ################################################################################
@@ -223,7 +235,9 @@ endif(OPENGL_FOUND)
 #
 ################################################################################
 
-add_subdirectory(pyunittests)
+if(LUX_TESTS)
+  add_subdirectory(pyunittests)
+endif()
 
 ################################################################################
 #
