@@ -107,48 +107,6 @@ add_definitions("-DEIGEN_MPL2_ONLY")
 
 add_library(bcd STATIC ${BCD_SRCS})
 
-###########################################################################
-#
-# OpenVDB files
-#
-###########################################################################
-
-set(OPENVDB_SRCS
-  ${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/Grid.cc
-  ${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/Metadata.cc
-  ${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/MetaMap.cc
-  ${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/Platform.cc
-  ${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/openvdb.cc
-  ${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/io/Archive.cc
-  ${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/io/Compression.cc
-  ${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/io/DelayedLoadMetadata.cc
-  ${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/io/File.cc
-  ${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/io/GridDescriptor.cc
-  ${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/io/Queue.cc
-  ${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/io/Stream.cc
-  ${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/io/TempFile.cc
-  ${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/math/Maps.cc
-  ${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/math/Proximity.cc
-  ${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/math/QuantizedUnitVec.cc
-  ${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/math/Transform.cc
-  ${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/points/AttributeArray.cc
-  ${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/points/AttributeArrayString.cc
-  ${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/points/AttributeGroup.cc
-  ${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/points/AttributeSet.cc
-  ${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/points/points.cc
-  ${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/points/StreamCompression.cc
-  ${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/util/Formats.cc
-  ${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0/openvdb/util/Util.cc
-)
-
-SOURCE_GROUP("Source Files\\OpenVDB Library" FILES ${OPENVDB_SRCS})
-
-include_directories(${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0)
-
-# Required by OpenVDB to read ABI 3
-#add_definitions("-D OPENVDB_USE_DEPRECATED_ABI -DOPENVDB_3_ABI_COMPATIBLE -DOPENVDB_STATICLIB -DOPENVDB_OPENEXR_STATICLIB")
-add_definitions("-DOPENVDB_USE_BLOSC -DOPENVDB_STATICLIB -DOPENVDB_OPENEXR_STATICLIB")
-add_library(openvdb STATIC ${OPENVDB_SRCS})
 
 ###########################################################################
 #
