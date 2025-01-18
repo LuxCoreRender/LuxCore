@@ -99,11 +99,7 @@ SOURCE_GROUP("Source Files\\BCD Library" FILES ${BCD_SRCS})
 
 include_directories(${LuxRays_SOURCE_DIR}/deps/bcd-1.1/include)
 include_directories(${LuxRays_SOURCE_DIR}/deps/bcd-1.1/include/bcd/core)
-include_directories(${LuxRays_SOURCE_DIR}/deps/eigen-3.3.4)
 include_directories(${LuxRays_SOURCE_DIR}/deps/lut)
-
-# Use only MPL licensed source code
-add_definitions("-DEIGEN_MPL2_ONLY")
 
 add_library(bcd STATIC ${BCD_SRCS})
 
