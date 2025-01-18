@@ -103,11 +103,9 @@ INCLUDE(KernelPreprocess)
 SET(LuxRays_INCLUDE_DIR "${LuxRays_SOURCE_DIR}/include")
 include_directories("${LuxRays_INCLUDE_DIR}")
 
-include_directories("${LuxRays_SOURCE_DIR}/deps/json-3.7.3/include")
 include_directories("${LuxRays_SOURCE_DIR}/deps/cuew/include")
 include_directories("${LuxRays_SOURCE_DIR}/deps/clew/include")
 include_directories("${LuxRays_SOURCE_DIR}/deps/optix-7.1.0/include")
-include_directories("${LuxRays_SOURCE_DIR}/deps/spdlog-1.13.0/include")
 include_directories("${LuxRays_SOURCE_DIR}/deps/robin-hood-hashing-3.9.1/src/include")
 
 set(Boost_USE_STATIC_LIBS ON)
@@ -178,6 +176,7 @@ if (BUILD_LUXCORE_DLL)
   set(LUXCORE_LIBRARY luxcore)
   ADD_DEFINITIONS("-DLUXCORE_DLL")
 else()
+  # TODO
   set(LUXCORE_LIBRARY luxcore slg-core slg-film slg-kernels luxrays bcd opensubdiv openvdb opencolorio ${BLOSC_LIBRARY} ${EMBREE_LIBRARY} ${OIDN_LIBRARY} ${TBB_LIBRARY} ${TIFF_LIBRARIES} ${TIFF_LIBRARIES} ${OPENEXR_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES})
 endif()
 
