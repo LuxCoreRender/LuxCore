@@ -210,18 +210,6 @@ add_definitions("-D_USE_MATH_DEFINES")
 add_library(opensubdiv STATIC ${OPENSUBDIV_SRCS})
 
 
-set(EXPAT_SRCS
-  ${LuxRays_SOURCE_DIR}/deps/expat-2.3.0/src/xmlparse.c
-  ${LuxRays_SOURCE_DIR}/deps/expat-2.3.0/src/xmlrole.c
-  ${LuxRays_SOURCE_DIR}/deps/expat-2.3.0/src/xmltok.c
-  ${LuxRays_SOURCE_DIR}/deps/expat-2.3.0/src/xmltok_impl.c
-  ${LuxRays_SOURCE_DIR}/deps/expat-2.3.0/src/xmltok_ns.c
-)
-
-SOURCE_GROUP("Source Files\\OpenColorIO Library" FILES ${OPENCOLORIO_SRCS} ${YAMLCPP_SRCS} ${EXPAT_SRCS})
-
-include_directories(${LuxRays_SOURCE_DIR}/deps/expat-2.3.0/src)
-
 if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
   add_definitions("-DHAVE_GETRANDOM")
   add_definitions("-DUSE_SSE")
