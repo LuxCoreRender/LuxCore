@@ -25,7 +25,7 @@ MESSAGE(STATUS "CMake version " ${CMAKE_VERSION} " detected")
 #
 ################################################################################
 
-cmake_minimum_required(VERSION 3.5.1)
+cmake_minimum_required(VERSION 3.25)
 cmake_policy(VERSION 3.0)
 
 # Remove the following when the version check is at least 2.8.4
@@ -184,7 +184,7 @@ endif()
 #
 ################################################################################
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 17)
 set(GENERATED_DIR "${CMAKE_BINARY_DIR}/generated")
 set(GENERATED_INCLUDE_DIR "${GENERATED_DIR}/include")
 
@@ -215,10 +215,12 @@ if(LUX_DEMOS)
 endif()
 
 if(LUX_CONSOLE)
+  message(STATUS "Compiling luxcoreconsole")
   add_subdirectory(samples/luxcoreconsole)
 endif()
 
 if(LUX_UI)
+  message(STATUS "Compiling luxcoreui")
   find_package(OpenGL)
   IF (NOT OPENGL_FOUND)
     MESSAGE(FATAL_ERROR "OpenGL not found! Please either install OpenGL or disable LUX_UI.")
