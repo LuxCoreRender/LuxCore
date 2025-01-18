@@ -210,37 +210,6 @@ add_definitions("-D_USE_MATH_DEFINES")
 add_library(opensubdiv STATIC ${OPENSUBDIV_SRCS})
 
 
-set(YAMLCPP_SRCS
-  ${LuxRays_SOURCE_DIR}/deps/yaml-cpp-0.6.3/src/binary.cpp
-  ${LuxRays_SOURCE_DIR}/deps/yaml-cpp-0.6.3/src/directives.cpp
-  ${LuxRays_SOURCE_DIR}/deps/yaml-cpp-0.6.3/src/emitfromevents.cpp
-  ${LuxRays_SOURCE_DIR}/deps/yaml-cpp-0.6.3/src/emitterstate.cpp
-  ${LuxRays_SOURCE_DIR}/deps/yaml-cpp-0.6.3/src/exceptions.cpp
-  ${LuxRays_SOURCE_DIR}/deps/yaml-cpp-0.6.3/src/memory.cpp
-  ${LuxRays_SOURCE_DIR}/deps/yaml-cpp-0.6.3/src/node.cpp
-  ${LuxRays_SOURCE_DIR}/deps/yaml-cpp-0.6.3/src/nodeevents.cpp
-  ${LuxRays_SOURCE_DIR}/deps/yaml-cpp-0.6.3/src/ostream_wrapper.cpp
-  ${LuxRays_SOURCE_DIR}/deps/yaml-cpp-0.6.3/src/parser.cpp
-  ${LuxRays_SOURCE_DIR}/deps/yaml-cpp-0.6.3/src/scanner.cpp
-  ${LuxRays_SOURCE_DIR}/deps/yaml-cpp-0.6.3/src/scantag.cpp
-  ${LuxRays_SOURCE_DIR}/deps/yaml-cpp-0.6.3/src/simplekey.cpp
-  ${LuxRays_SOURCE_DIR}/deps/yaml-cpp-0.6.3/src/stream.cpp
-  ${LuxRays_SOURCE_DIR}/deps/yaml-cpp-0.6.3/src/convert.cpp
-  ${LuxRays_SOURCE_DIR}/deps/yaml-cpp-0.6.3/src/emit.cpp
-  ${LuxRays_SOURCE_DIR}/deps/yaml-cpp-0.6.3/src/emitter.cpp
-  ${LuxRays_SOURCE_DIR}/deps/yaml-cpp-0.6.3/src/emitterutils.cpp
-  ${LuxRays_SOURCE_DIR}/deps/yaml-cpp-0.6.3/src/exp.cpp
-  ${LuxRays_SOURCE_DIR}/deps/yaml-cpp-0.6.3/src/nodebuilder.cpp
-  ${LuxRays_SOURCE_DIR}/deps/yaml-cpp-0.6.3/src/node_data.cpp
-  ${LuxRays_SOURCE_DIR}/deps/yaml-cpp-0.6.3/src/null.cpp
-  ${LuxRays_SOURCE_DIR}/deps/yaml-cpp-0.6.3/src/parse.cpp
-  ${LuxRays_SOURCE_DIR}/deps/yaml-cpp-0.6.3/src/regex_yaml.cpp
-  ${LuxRays_SOURCE_DIR}/deps/yaml-cpp-0.6.3/src/scanscalar.cpp
-  ${LuxRays_SOURCE_DIR}/deps/yaml-cpp-0.6.3/src/scantoken.cpp
-  ${LuxRays_SOURCE_DIR}/deps/yaml-cpp-0.6.3/src/singledocparser.cpp
-  ${LuxRays_SOURCE_DIR}/deps/yaml-cpp-0.6.3/src/tag.cpp
-)
-
 set(EXPAT_SRCS
   ${LuxRays_SOURCE_DIR}/deps/expat-2.3.0/src/xmlparse.c
   ${LuxRays_SOURCE_DIR}/deps/expat-2.3.0/src/xmlrole.c
@@ -251,7 +220,6 @@ set(EXPAT_SRCS
 
 SOURCE_GROUP("Source Files\\OpenColorIO Library" FILES ${OPENCOLORIO_SRCS} ${YAMLCPP_SRCS} ${EXPAT_SRCS})
 
-include_directories(${LuxRays_SOURCE_DIR}/deps/yaml-cpp-0.6.3/include)
 include_directories(${LuxRays_SOURCE_DIR}/deps/expat-2.3.0/src)
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
