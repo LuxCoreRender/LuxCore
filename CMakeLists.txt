@@ -111,7 +111,7 @@ include_directories("${LuxRays_SOURCE_DIR}/deps/optix-7.1.0/include")
 #set(Boost_USE_STATIC_LIBS ON)
 
 # Find dependencies
-#include(Dependencies)
+include(Dependencies)
 
 #if (NOT Boost_FOUND)
   #MESSAGE(FATAL_ERROR "--> Could not locate required Boost files - Please check ${BOOST_SEARCH_PATH}")
