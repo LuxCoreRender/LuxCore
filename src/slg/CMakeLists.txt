@@ -209,183 +209,6 @@ add_definitions("-D_USE_MATH_DEFINES")
 
 add_library(opensubdiv STATIC ${OPENSUBDIV_SRCS})
 
-###########################################################################
-#
-# OpenColorIO files
-#
-###########################################################################
-
-set(OPENCOLORIO_SRCS
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/apphelpers/CategoryHelpers.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/apphelpers/ColorSpaceHelpers.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/apphelpers/DisplayViewHelpers.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/apphelpers/LegacyViewingPipeline.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/apphelpers/MixingHelpers.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/Baker.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/BitDepthUtils.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/Caching.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ColorSpace.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ColorSpaceSet.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/Config.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/Context.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ContextVariableUtils.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/CPUProcessor.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/Display.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/DynamicProperty.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/Exception.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/fileformats/cdl/CDLParser.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/fileformats/cdl/CDLReaderHelper.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/fileformats/cdl/CDLWriter.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/fileformats/ctf/CTFReaderHelper.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/fileformats/ctf/CTFReaderUtils.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/fileformats/ctf/CTFTransform.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/fileformats/ctf/IndexMapping.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/fileformats/FileFormat3DL.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/fileformats/FileFormatCCC.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/fileformats/FileFormatCC.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/fileformats/FileFormatCDL.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/fileformats/FileFormatCSP.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/fileformats/FileFormatCTF.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/fileformats/FileFormatDiscreet1DL.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/fileformats/FileFormatHDL.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/fileformats/FileFormatICC.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/fileformats/FileFormatIridasCube.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/fileformats/FileFormatIridasItx.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/fileformats/FileFormatIridasLook.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/fileformats/FileFormatPandora.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/fileformats/FileFormatResolveCube.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/fileformats/FileFormatSpi1D.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/fileformats/FileFormatSpi3D.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/fileformats/FileFormatSpiMtx.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/fileformats/FileFormatTruelight.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/fileformats/FileFormatUtils.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/fileformats/FileFormatVF.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/fileformats/FormatMetadata.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/fileformats/xmlutils/XMLReaderHelper.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/fileformats/xmlutils/XMLReaderUtils.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/fileformats/xmlutils/XMLWriterUtils.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/FileRules.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/GPUProcessor.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/GpuShader.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/GpuShaderDesc.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/GpuShaderUtils.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/HashUtils.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ImageDesc.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ImagePacking.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/Logging.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/Look.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/LookParse.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/MathUtils.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/md5/md5.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/NamedTransform.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/OCIOYaml.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/Op.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/OpOptimizers.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/allocation/AllocationOp.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/cdl/CDLOpCPU.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/cdl/CDLOpData.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/cdl/CDLOpGPU.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/cdl/CDLOp.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/exponent/ExponentOp.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/exposurecontrast/ExposureContrastOpCPU.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/exposurecontrast/ExposureContrastOpData.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/exposurecontrast/ExposureContrastOpGPU.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/exposurecontrast/ExposureContrastOp.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/fixedfunction/FixedFunctionOpCPU.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/fixedfunction/FixedFunctionOpData.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/fixedfunction/FixedFunctionOpGPU.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/fixedfunction/FixedFunctionOp.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/gamma/GammaOpCPU.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/gamma/GammaOpData.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/gamma/GammaOpGPU.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/gamma/GammaOpUtils.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/gamma/GammaOp.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/gradingprimary/GradingPrimary.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/gradingprimary/GradingPrimaryOpCPU.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/gradingprimary/GradingPrimaryOpData.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/gradingprimary/GradingPrimaryOpGPU.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/gradingprimary/GradingPrimaryOp.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/gradingrgbcurve/GradingBSplineCurve.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/gradingrgbcurve/GradingRGBCurveOpCPU.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/gradingrgbcurve/GradingRGBCurveOpData.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/gradingrgbcurve/GradingRGBCurveOpGPU.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/gradingrgbcurve/GradingRGBCurveOp.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/gradingrgbcurve/GradingRGBCurve.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/gradingtone/GradingTone.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/gradingtone/GradingToneOpCPU.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/gradingtone/GradingToneOpData.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/gradingtone/GradingToneOpGPU.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/gradingtone/GradingToneOp.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/log/LogOpCPU.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/log/LogOpData.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/log/LogOpGPU.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/log/LogOp.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/log/LogUtils.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/lut1d/Lut1DOp.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/lut1d/Lut1DOpCPU.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/lut1d/Lut1DOpData.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/lut1d/Lut1DOpGPU.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/lut3d/Lut3DOp.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/lut3d/Lut3DOpCPU.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/lut3d/Lut3DOpData.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/lut3d/Lut3DOpGPU.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/matrix/MatrixOpCPU.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/matrix/MatrixOpData.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/matrix/MatrixOpGPU.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/matrix/MatrixOp.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/noop/NoOps.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/OpTools.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/range/RangeOpCPU.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/range/RangeOpData.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/range/RangeOpGPU.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/range/RangeOp.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ops/reference/ReferenceOpData.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ParseUtils.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/PathUtils.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/Platform.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/Processor.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ScanlineHelper.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/Transform.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/transforms/AllocationTransform.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/transforms/builtins/ACES.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/transforms/builtins/BuiltinTransformRegistry.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/transforms/builtins/ColorMatrixHelpers.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/transforms/builtins/OpHelpers.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/transforms/BuiltinTransform.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/transforms/CDLTransform.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/transforms/ColorSpaceTransform.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/transforms/DisplayViewTransform.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/transforms/ExponentTransform.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/transforms/ExponentWithLinearTransform.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/transforms/ExposureContrastTransform.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/transforms/FileTransform.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/transforms/FixedFunctionTransform.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/transforms/GradingPrimaryTransform.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/transforms/GradingRGBCurveTransform.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/transforms/GradingToneTransform.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/transforms/GroupTransform.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/transforms/LogAffineTransform.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/transforms/LogCameraTransform.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/transforms/LogTransform.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/transforms/LookTransform.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/transforms/Lut1DTransform.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/transforms/Lut3DTransform.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/transforms/MatrixTransform.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/transforms/RangeTransform.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/transforms/builtins/ArriCameras.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/transforms/builtins/CanonCameras.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/transforms/builtins/Displays.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/transforms/builtins/PanasonicCameras.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/transforms/builtins/RedCameras.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/transforms/builtins/SonyCameras.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ViewingRules.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/ViewTransform.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO/SystemMonitor.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/apputils/argparse.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/apputils/strutil.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/libutils/oiiohelpers/oiiohelpers.cpp
-  ${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/pystring/pystring.cpp
-)
 
 set(YAMLCPP_SRCS
   ${LuxRays_SOURCE_DIR}/deps/yaml-cpp-0.6.3/src/binary.cpp
@@ -428,9 +251,6 @@ set(EXPAT_SRCS
 
 SOURCE_GROUP("Source Files\\OpenColorIO Library" FILES ${OPENCOLORIO_SRCS} ${YAMLCPP_SRCS} ${EXPAT_SRCS})
 
-include_directories(${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/include)
-include_directories(${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src)
-include_directories(${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/src/OpenColorIO)
 include_directories(${LuxRays_SOURCE_DIR}/deps/yaml-cpp-0.6.3/include)
 include_directories(${LuxRays_SOURCE_DIR}/deps/expat-2.3.0/src)
 
@@ -444,18 +264,7 @@ if(APPLE)
   add_definitions("-DUSE_SSE")
 endif(APPLE)
 
-if(WIN32)
-  # Prevents __declspec(dllimport) on Windows
-  add_definitions("-DOpenColorIO_SKIP_IMPORTS -DXML_STATIC")
-  add_definitions("-DUSE_SSE")
-endif(WIN32)
 
-add_library(opencolorio STATIC ${OPENCOLORIO_SRCS} ${YAMLCPP_SRCS} ${EXPAT_SRCS})
-
-if(WIN32)
-  # OCIO 2.0.0 is the only module not supporting -D_UNICODE
-  target_compile_definitions(opencolorio PRIVATE "-D_MBCS")
-endif(WIN32)
 
 ###########################################################################
 #
