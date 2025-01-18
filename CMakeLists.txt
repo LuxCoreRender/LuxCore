@@ -106,7 +106,8 @@ include_directories("${LuxRays_INCLUDE_DIR}")
 include_directories("${LuxRays_SOURCE_DIR}/deps/cuew/include")
 include_directories("${LuxRays_SOURCE_DIR}/deps/clew/include")
 include_directories("${LuxRays_SOURCE_DIR}/deps/optix-7.1.0/include")
-include_directories("${LuxRays_SOURCE_DIR}/deps/robin-hood-hashing-3.9.1/src/include")
+TODO
+#include_directories("${LuxRays_SOURCE_DIR}/deps/robin-hood-hashing-3.9.1/src/include")
 
 set(Boost_USE_STATIC_LIBS ON)
 
