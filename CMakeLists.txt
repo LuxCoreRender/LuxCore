@@ -75,9 +75,10 @@ endif()
 
 project(LuxRays)
 
-if (NOT DEFINED LuxRays_SOURCE_DIR)
-  SET(LuxRays_SOURCE_DIR "${CMAKE_SOURCE_DIR}")
-endif (NOT DEFINED LuxRays_SOURCE_DIR)
+# TODO
+#if (NOT DEFINED LuxRays_SOURCE_DIR)
+  #SET(LuxRays_SOURCE_DIR "${CMAKE_SOURCE_DIR}")
+#endif (NOT DEFINED LuxRays_SOURCE_DIR)
 
 ################################################################################
 #
@@ -93,8 +94,8 @@ set(CMAKE_MODULE_PATH
   "${LuxRays_SOURCE_DIR}/cmake/SpecializedConfig"
 )
 
-INCLUDE(PlatformSpecific)
-INCLUDE(Configuration)
+#INCLUDE(PlatformSpecific)
+#INCLUDE(Configuration)
 INCLUDE(KernelPreprocess)
 
 # Install CMake modules
@@ -106,38 +107,39 @@ include_directories("${LuxRays_SOURCE_DIR}/deps/cuew/include")
 include_directories("${LuxRays_SOURCE_DIR}/deps/clew/include")
 include_directories("${LuxRays_SOURCE_DIR}/deps/optix-7.1.0/include")
 
-set(Boost_USE_STATIC_LIBS ON)
+# TODO
+#set(Boost_USE_STATIC_LIBS ON)
 
 # Find dependencies
-include(Dependencies)
+#include(Dependencies)
 
-if (NOT Boost_FOUND)
-  MESSAGE(FATAL_ERROR "--> Could not locate required Boost files - Please check ${BOOST_SEARCH_PATH}")
-endif()
+#if (NOT Boost_FOUND)
+  #MESSAGE(FATAL_ERROR "--> Could not locate required Boost files - Please check ${BOOST_SEARCH_PATH}")
+#endif()
 
-if (NOT OPENIMAGEIO_FOUND)
-  MESSAGE(FATAL_ERROR "--> Could not locate required OpenImageIO files - Please check ${OPENIMAGEIO_SEARCH_PATH}")
-endif()
+#if (NOT OPENIMAGEIO_FOUND)
+  #MESSAGE(FATAL_ERROR "--> Could not locate required OpenImageIO files - Please check ${OPENIMAGEIO_SEARCH_PATH}")
+#endif()
 
-if (NOT OPENGL_FOUND)
-  MESSAGE(FATAL_ERROR "--> Could not locate required OpenGL file")
-endif()
+#if (NOT OPENGL_FOUND)
+  #MESSAGE(FATAL_ERROR "--> Could not locate required OpenGL file")
+#endif()
 
-if (NOT EMBREE_FOUND)
-  MESSAGE(FATAL_ERROR "--> Could not locate required Intel Embree files - Please check ${EMBREE_SEARCH_PATH}")
-endif()
+#if (NOT EMBREE_FOUND)
+  #MESSAGE(FATAL_ERROR "--> Could not locate required Intel Embree files - Please check ${EMBREE_SEARCH_PATH}")
+#endif()
 
-if (NOT OIDN_FOUND AND NOT LUXCORE_DISABLE_OIDN)
-  MESSAGE(FATAL_ERROR "--> Could not locate required Intel Oidn files - Please check ${OIDN_SEARCH_PATH}")
-endif()
+#if (NOT OIDN_FOUND AND NOT LUXCORE_DISABLE_OIDN)
+  #MESSAGE(FATAL_ERROR "--> Could not locate required Intel Oidn files - Please check ${OIDN_SEARCH_PATH}")
+#endif()
 
-if (NOT TBB_FOUND)
-  MESSAGE(FATAL_ERROR "--> Could not locate required Intel TBB files - Please check ${TBB_SEARCH_PATH}")
-endif()
+#if (NOT TBB_FOUND)
+  #MESSAGE(FATAL_ERROR "--> Could not locate required Intel TBB files - Please check ${TBB_SEARCH_PATH}")
+#endif()
 
-if (NOT BLOSC_FOUND)
-  MESSAGE(FATAL_ERROR "--> Could not locate required C-BLOSC files - Please check ${BLOSC_SEARCH_PATH}")
-endif()
+#if (NOT BLOSC_FOUND)
+  #MESSAGE(FATAL_ERROR "--> Could not locate required C-BLOSC files - Please check ${BLOSC_SEARCH_PATH}")
+#endif()
 
 ################################################################################
 #
@@ -170,13 +172,13 @@ else()
   message(STATUS "Intel OIDN support: enabled")
 endif()
 
-if (BUILD_LUXCORE_DLL)
-  set(LUXCORE_LIBRARY luxcore)
-  ADD_DEFINITIONS("-DLUXCORE_DLL")
-else()
-  # TODO
-  set(LUXCORE_LIBRARY luxcore slg-core slg-film slg-kernels luxrays bcd opensubdiv openvdb opencolorio ${BLOSC_LIBRARY} ${EMBREE_LIBRARY} ${OIDN_LIBRARY} ${TBB_LIBRARY} ${TIFF_LIBRARIES} ${TIFF_LIBRARIES} ${OPENEXR_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES})
-endif()
+#if (BUILD_LUXCORE_DLL)
+  #set(LUXCORE_LIBRARY luxcore)
+  #ADD_DEFINITIONS("-DLUXCORE_DLL")
+#else()
+  ## TODO
+  #set(LUXCORE_LIBRARY luxcore slg-core slg-film slg-kernels luxrays bcd opensubdiv openvdb opencolorio ${BLOSC_LIBRARY} ${EMBREE_LIBRARY} ${OIDN_LIBRARY} ${TBB_LIBRARY} ${TIFF_LIBRARIES} ${TIFF_LIBRARIES} ${OPENEXR_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES})
+#endif()
 
 ################################################################################
 #
