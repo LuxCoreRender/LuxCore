@@ -77,7 +77,7 @@ project(LuxRays)
 
 # TODO
 #if (NOT DEFINED LuxRays_SOURCE_DIR)
-  #SET(LuxRays_SOURCE_DIR "${CMAKE_SOURCE_DIR}")
+  #SET(LuxRays_SOURCE_DIR "${PROJECT_SOURCE_DIR}")
 #endif (NOT DEFINED LuxRays_SOURCE_DIR)
 
 ################################################################################

@@ -59,8 +59,8 @@ SET(LUXRAYS_CUSTOM_CONFIG "" CACHE STRING
 
 # Find all config files:
 FILE(GLOB available_config_files
-		RELATIVE "${CMAKE_SOURCE_DIR}/${custom_config_dir}"
-		"${CMAKE_SOURCE_DIR}/${custom_config_dir}/*.cmake")
+		RELATIVE "${PROJECT_SOURCE_DIR}/${custom_config_dir}"
+		"${PROJECT_SOURCE_DIR}/${custom_config_dir}/*.cmake")
 
 # Remove file extensions:
 set(available_configs "")
