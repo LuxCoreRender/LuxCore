@@ -19,7 +19,7 @@
 #ifndef _SLG_HALFSERIALIZATION_H
 #define	_SLG_HALFSERIALIZATION_H
 
-#include <OpenEXR/half.h>
+#include <Imath/half.h>
 
 #include "luxrays/utils/utils.h"
 #include "luxrays/utils/serializationutils.h"

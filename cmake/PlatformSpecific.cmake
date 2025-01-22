@@ -226,8 +226,8 @@ IF(APPLE)
   SET(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} ${OSX_FLAGS_RELEASE}")
   SET(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${OSX_FLAGS_RELEASE}")
 
-  SET(CMAKE_EXE_LINKER_FLAGS "-Wl,-unexported_symbols_list -Wl,\"${CMAKE_SOURCE_DIR}/cmake/exportmaps/unexported_symbols.map\"")
-  SET(CMAKE_MODULE_LINKER_FLAGS "-Wl,-unexported_symbols_list -Wl,\"${CMAKE_SOURCE_DIR}/cmake/exportmaps/unexported_symbols.map\"")
+  SET(CMAKE_EXE_LINKER_FLAGS "-Wl,-unexported_symbols_list -Wl,\"${PROJECT_SOURCE_DIR}/cmake/exportmaps/unexported_symbols.map\"")
+  SET(CMAKE_MODULE_LINKER_FLAGS "-Wl,-unexported_symbols_list -Wl,\"${PROJECT_SOURCE_DIR}/cmake/exportmaps/unexported_symbols.map\"")
 
   SET(CMAKE_XCODE_ATTRIBUTE_DEPLOYMENT_POSTPROCESSING YES) # strip symbols in whole project, disabled in pylux target
   SET(CMAKE_XCODE_ATTRIBUTE_DEAD_CODE_STRIPPING YES)
@@ -274,9 +274,9 @@ IF(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID 
 ENDIF()
 
 IF(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-	SET(CMAKE_EXE_LINKER_FLAGS -Wl,--disable-new-dtags,--version-script='${CMAKE_SOURCE_DIR}/cmake/exportmaps/linux_symbol_exports.map')
-	SET(CMAKE_SHARED_LINKER_FLAGS -Wl,--disable-new-dtags,--version-script='${CMAKE_SOURCE_DIR}/cmake/exportmaps/linux_symbol_exports.map')
-	SET(CMAKE_MODULE_LINKER_FLAGS -Wl,--disable-new-dtags,--version-script='${CMAKE_SOURCE_DIR}/cmake/exportmaps/linux_symbol_exports.map')
+	SET(CMAKE_EXE_LINKER_FLAGS -Wl,--disable-new-dtags,--version-script='${PROJECT_SOURCE_DIR}/cmake/exportmaps/linux_symbol_exports.map')
+	SET(CMAKE_SHARED_LINKER_FLAGS -Wl,--disable-new-dtags,--version-script='${PROJECT_SOURCE_DIR}/cmake/exportmaps/linux_symbol_exports.map')
+	SET(CMAKE_MODULE_LINKER_FLAGS -Wl,--disable-new-dtags,--version-script='${PROJECT_SOURCE_DIR}/cmake/exportmaps/linux_symbol_exports.map')
 	SET(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 	SET(CMAKE_INSTALL_RPATH "$ORIGIN")
 ENDIF()

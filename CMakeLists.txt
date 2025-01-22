@@ -25,7 +25,7 @@ MESSAGE(STATUS "CMake version " ${CMAKE_VERSION} " detected")
 #
 ################################################################################
 
-cmake_minimum_required(VERSION 3.5.1)
+cmake_minimum_required(VERSION 3.25)
 cmake_policy(VERSION 3.0)
 
 # Remove the following when the version check is at least 2.8.4
@@ -50,23 +50,24 @@ enable_language(CXX)
 
 if (CMAKE_CONFIGURATION_TYPES)
 
-	message(STATUS "Multi-config generator detected")
+  message(STATUS "Multi-config generator detected")
 
-	# Hard-wire supported configurations:
+  # Hard-wire supported configurations:
 
-	set(CMAKE_CONFIGURATION_TYPES
-			${supported_build_variants} CACHE INTERNAL "-" FORCE)
+  set(CMAKE_CONFIGURATION_TYPES
+    ${supported_build_variants} CACHE INTERNAL "-" FORCE)
 else()
-	message(STATUS "Single-config generator detected")
+  message(STATUS "Single-config generator detected")
 
-	# For generators like make, cmake needs to know which variant to use
-	# so let's have a drop-down selector for it in the GUI:
+  # For generators like make, cmake needs to know which variant to use
+  # so let's have a drop-down selector for it in the GUI:
 
-	set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build configuration")
-	set_property(
-			CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS ${supported_build_variants})
+  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build configuration")
+  set_property(
+    CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS ${supported_build_variants}
+  )
 
-	message(STATUS "Using build variant: " ${CMAKE_BUILD_TYPE})
+  message(STATUS "Using build variant: " ${CMAKE_BUILD_TYPE})
 
 endif()
 
@@ -74,9 +75,10 @@ endif()
 
 project(LuxRays)
 
-if (NOT DEFINED LuxRays_SOURCE_DIR)
-	SET(LuxRays_SOURCE_DIR "${CMAKE_SOURCE_DIR}")
-endif (NOT DEFINED LuxRays_SOURCE_DIR)
+# TODO
+#if (NOT DEFINED LuxRays_SOURCE_DIR)
+  #SET(LuxRays_SOURCE_DIR "${PROJECT_SOURCE_DIR}")
+#endif (NOT DEFINED LuxRays_SOURCE_DIR)
 
 ################################################################################
 #
@@ -85,62 +87,57 @@ endif (NOT DEFINED LuxRays_SOURCE_DIR)
 ################################################################################
 
 set(CMAKE_MODULE_PATH
-	"${LuxRays_SOURCE_DIR}"
-	"${LuxRays_SOURCE_DIR}/cmake"
-	"${LuxRays_SOURCE_DIR}/cmake/Utils"
-	"${LuxRays_SOURCE_DIR}/cmake/Packages"
-	"${LuxRays_SOURCE_DIR}/cmake/SpecializedConfig"
+  "${LuxRays_SOURCE_DIR}"
+  "${LuxRays_SOURCE_DIR}/cmake"
+  "${LuxRays_SOURCE_DIR}/cmake/Utils"
+  "${LuxRays_SOURCE_DIR}/cmake/Packages"
+  "${LuxRays_SOURCE_DIR}/cmake/SpecializedConfig"
 )
 
-INCLUDE(PlatformSpecific)
-INCLUDE(Configuration)
 INCLUDE(KernelPreprocess)
 
 # Install CMake modules
-#add_subdirectory(CMake)
 
 SET(LuxRays_INCLUDE_DIR "${LuxRays_SOURCE_DIR}/include")
 include_directories("${LuxRays_INCLUDE_DIR}")
 
-include_directories("${LuxRays_SOURCE_DIR}/deps/json-3.7.3/include")
 include_directories("${LuxRays_SOURCE_DIR}/deps/cuew/include")
 include_directories("${LuxRays_SOURCE_DIR}/deps/clew/include")
 include_directories("${LuxRays_SOURCE_DIR}/deps/optix-7.1.0/include")
-include_directories("${LuxRays_SOURCE_DIR}/deps/spdlog-1.13.0/include")
-include_directories("${LuxRays_SOURCE_DIR}/deps/robin-hood-hashing-3.9.1/src/include")
 
-set(Boost_USE_STATIC_LIBS ON)
+# TODO
+#set(Boost_USE_STATIC_LIBS ON)
 
 # Find dependencies
 include(Dependencies)
 
-if (NOT Boost_FOUND)
-	MESSAGE(FATAL_ERROR "--> Could not locate required Boost files - Please check ${BOOST_SEARCH_PATH}")
-endif()
+#if (NOT Boost_FOUND)
+  #MESSAGE(FATAL_ERROR "--> Could not locate required Boost files - Please check ${BOOST_SEARCH_PATH}")
+#endif()
 
-if (NOT OPENIMAGEIO_FOUND)
-	MESSAGE(FATAL_ERROR "--> Could not locate required OpenImageIO files - Please check ${OPENIMAGEIO_SEARCH_PATH}")
-endif()
+#if (NOT OPENIMAGEIO_FOUND)
+  #MESSAGE(FATAL_ERROR "--> Could not locate required OpenImageIO files - Please check ${OPENIMAGEIO_SEARCH_PATH}")
+#endif()
 
-if (NOT OPENGL_FOUND)
-	MESSAGE(FATAL_ERROR "--> Could not locate required OpenGL file")
-endif()
+#if (NOT OPENGL_FOUND)
+  #MESSAGE(FATAL_ERROR "--> Could not locate required OpenGL file")
+#endif()
 
-if (NOT EMBREE_FOUND)
-	MESSAGE(FATAL_ERROR "--> Could not locate required Intel Embree files - Please check ${EMBREE_SEARCH_PATH}")
-endif()
+#if (NOT EMBREE_FOUND)
+  #MESSAGE(FATAL_ERROR "--> Could not locate required Intel Embree files - Please check ${EMBREE_SEARCH_PATH}")
+#endif()
 
-if (NOT OIDN_FOUND AND NOT LUXCORE_DISABLE_OIDN)
-	MESSAGE(FATAL_ERROR "--> Could not locate required Intel Oidn files - Please check ${OIDN_SEARCH_PATH}")
-endif()
+#if (NOT OIDN_FOUND AND NOT LUXCORE_DISABLE_OIDN)
+  #MESSAGE(FATAL_ERROR "--> Could not locate required Intel Oidn files - Please check ${OIDN_SEARCH_PATH}")
+#endif()
 
-if (NOT TBB_FOUND)
-	MESSAGE(FATAL_ERROR "--> Could not locate required Intel TBB files - Please check ${TBB_SEARCH_PATH}")
-endif()
+#if (NOT TBB_FOUND)
+  #MESSAGE(FATAL_ERROR "--> Could not locate required Intel TBB files - Please check ${TBB_SEARCH_PATH}")
+#endif()
 
-if (NOT BLOSC_FOUND)
-	MESSAGE(FATAL_ERROR "--> Could not locate required C-BLOSC files - Please check ${BLOSC_SEARCH_PATH}")
-endif()
+#if (NOT BLOSC_FOUND)
+  #MESSAGE(FATAL_ERROR "--> Could not locate required C-BLOSC files - Please check ${BLOSC_SEARCH_PATH}")
+#endif()
 
 ################################################################################
 #
@@ -149,36 +146,37 @@ endif()
 ################################################################################
 
 if (LUXRAYS_DISABLE_OPENCL)
-	ADD_DEFINITIONS("-DLUXRAYS_DISABLE_OPENCL")
-	# CUDA requires OpenCL support
-	ADD_DEFINITIONS("-DLUXRAYS_DISABLE_CUDA")
+  ADD_DEFINITIONS("-DLUXRAYS_DISABLE_OPENCL")
+  # CUDA requires OpenCL support
+  ADD_DEFINITIONS("-DLUXRAYS_DISABLE_CUDA")
 
-	message(STATUS "OpenCL and CUDA support: disabled")
+  message(STATUS "OpenCL and CUDA support: disabled")
 else()
-	if (LUXRAYS_DISABLE_CUDA)
-		ADD_DEFINITIONS("-DLUXRAYS_DISABLE_CUDA")
-		message(STATUS "OpenCL support: enabled")
-		message(STATUS "CUDA support: disabled")
-	else()
-		message(STATUS "OpenCL support: enabled")
-		message(STATUS "CUDA support: enabled")
-	endif()
+  if (LUXRAYS_DISABLE_CUDA)
+    ADD_DEFINITIONS("-DLUXRAYS_DISABLE_CUDA")
+    message(STATUS "OpenCL support: enabled")
+    message(STATUS "CUDA support: disabled")
+  else()
+    message(STATUS "OpenCL support: enabled")
+    message(STATUS "CUDA support: enabled")
+  endif()
 endif()
 
 if (LUXCORE_DISABLE_OIDN)
-	ADD_DEFINITIONS("-DLUXCORE_DISABLE_OIDN")
+  ADD_DEFINITIONS("-DLUXCORE_DISABLE_OIDN")
 
-	message(STATUS "Intel OIDN support: disabled")
+  message(STATUS "Intel OIDN support: disabled")
 else()
-	message(STATUS "Intel OIDN support: enabled")
+  message(STATUS "Intel OIDN support: enabled")
 endif()
 
-if (BUILD_LUXCORE_DLL)
-	set(LUXCORE_LIBRARY luxcore)
-	ADD_DEFINITIONS("-DLUXCORE_DLL")
-else()
-	set(LUXCORE_LIBRARY luxcore slg-core slg-film slg-kernels luxrays bcd opensubdiv openvdb opencolorio ${BLOSC_LIBRARY} ${EMBREE_LIBRARY} ${OIDN_LIBRARY} ${TBB_LIBRARY} ${TIFF_LIBRARIES} ${TIFF_LIBRARIES} ${OPENEXR_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES})
-endif()
+#if (BUILD_LUXCORE_DLL)
+  #set(LUXCORE_LIBRARY luxcore)
+  #ADD_DEFINITIONS("-DLUXCORE_DLL")
+#else()
+  ## TODO
+  #set(LUXCORE_LIBRARY luxcore slg-core slg-film slg-kernels luxrays bcd opensubdiv openvdb opencolorio ${BLOSC_LIBRARY} ${EMBREE_LIBRARY} ${OIDN_LIBRARY} ${TBB_LIBRARY} ${TIFF_LIBRARIES} ${TIFF_LIBRARIES} ${OPENEXR_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES})
+#endif()
 
 ################################################################################
 #
@@ -217,10 +215,12 @@ if(LUX_DEMOS)
 endif()
 
 if(LUX_CONSOLE)
+  message(STATUS "Compiling luxcoreconsole")
   add_subdirectory(samples/luxcoreconsole)
 endif()
 
 if(LUX_UI)
+  message(STATUS "Compiling luxcoreui")
   find_package(OpenGL)
   IF (NOT OPENGL_FOUND)
     MESSAGE(FATAL_ERROR "OpenGL not found! Please either install OpenGL or disable LUX_UI.")
