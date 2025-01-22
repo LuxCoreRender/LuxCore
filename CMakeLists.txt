@@ -94,8 +94,6 @@ set(CMAKE_MODULE_PATH
   "${LuxRays_SOURCE_DIR}/cmake/SpecializedConfig"
 )
 
-INCLUDE(PlatformSpecific)
-INCLUDE(Configuration)
 INCLUDE(KernelPreprocess)
 
 # Install CMake modules
