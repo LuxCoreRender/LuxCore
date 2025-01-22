@@ -35,6 +35,10 @@ using namespace slg;
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::IntelOIDN)
 
+void errorCallback(void* userPtr, oidn::Error error, const char* message) {
+  throw std::runtime_error(message);
+}
+
 IntelOIDN::IntelOIDN(const string ft, const int m, const float s, const bool pref) {
 	filterType = ft;
 	oidnMemLimit = m;
@@ -58,15 +62,25 @@ void IntelOIDN::FilterImage(const string &imageName,
 		const float *srcBuffer, float * dstBuffer,
 		const float *albedoBuffer, const float *normalBuffer,
 		const u_int width, const u_int height, const bool cleanAux) const {
+
     oidn::DeviceRef device = oidn::newDevice(oidn::DeviceType::CPU);
+
+    const char* errorMessage2;
+
+    if (device.getError(errorMessage2) != oidn::Error::None) {
+      throw std::runtime_error(errorMessage2);
+    }
+
+    device.setErrorFunction(errorCallback);
+    device.set("verbose", 3);
     device.commit();
 
     oidn::FilterRef filter = device.newFilter(filterType.c_str());
-	
-	oidn::BufferRef colorBuf = device.newBuffer((float*)srcBuffer, width * height * 3 * sizeof(float));
-	oidn::BufferRef albedoBuf = device.newBuffer((float*)albedoBuffer, width * height * 3 * sizeof(float));
-	oidn::BufferRef normalBuf = device.newBuffer((float*)normalBuffer, width * height * 3 * sizeof(float));
-	oidn::BufferRef dstBuf = device.newBuffer((float*)dstBuffer, width * height * 3 * sizeof(float));
+
+    oidn::BufferRef colorBuf = device.newBuffer((float*)srcBuffer, width * height * 3 * sizeof(float));
+    oidn::BufferRef albedoBuf = device.newBuffer((float*)albedoBuffer, width * height * 3 * sizeof(float));
+    oidn::BufferRef normalBuf = device.newBuffer((float*)normalBuffer, width * height * 3 * sizeof(float));
+    oidn::BufferRef dstBuf = device.newBuffer((float*)dstBuffer, width * height * 3 * sizeof(float));
 
 
     filter.set("hdr", true);
@@ -106,8 +120,8 @@ void IntelOIDN::Apply(Film &film, const u_int index) {
     const u_int pixelCount = width * height;
 
     vector<float> outputBuffer(3 * pixelCount);
-    vector<float> albedoBuffer;
-    vector<float> normalBuffer;
+    vector<float> albedoBuffer(3 * pixelCount);
+    vector<float> normalBuffer(3 * pixelCount), dummy1(3 * pixelCount), dummy2(3 * pixelCount);
 
     if (film.HasChannel(Film::ALBEDO)) {
 		albedoBuffer.resize(3 * pixelCount);
@@ -119,7 +133,7 @@ void IntelOIDN::Apply(Film &film, const u_int index) {
 		if (enablePrefiltering) {
 			vector<float> albedoBufferTmp(3 * pixelCount);
 			FilterImage("Albedo", &albedoBuffer[0], &albedoBufferTmp[0],
-				nullptr, nullptr, width, height, false);
+				&dummy1[0], &dummy2[0], width, height, false);
 			for (u_int i = 0; i < albedoBuffer.size(); ++i)
 				albedoBuffer[i] = albedoBufferTmp[i];
 
@@ -137,7 +151,7 @@ void IntelOIDN::Apply(Film &film, const u_int index) {
 				if (enablePrefiltering) {
 					vector<float> normalBufferTmp(3 * pixelCount);
 					FilterImage("Normal", &normalBuffer[0], &normalBufferTmp[0],
-						nullptr, nullptr, width, height, false);
+						&dummy1[0], &dummy2[0], width, height, false);
 					for (u_int i = 0; i < normalBuffer.size(); ++i)
 						normalBuffer[i] = normalBufferTmp[i];
 
