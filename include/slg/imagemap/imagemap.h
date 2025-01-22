@@ -19,7 +19,7 @@
 #ifndef _SLG_IMAGEMAP_H
 #define	_SLG_IMAGEMAP_H
 
-#include <OpenEXR/half.h>
+#include <Imath/half.h>
 
 #include <string>
 #include <limits>
