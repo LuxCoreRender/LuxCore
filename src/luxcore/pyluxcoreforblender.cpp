@@ -51,7 +51,7 @@
 #include "luxcore/luxcore.h"
 #include "luxcore/luxcoreimpl.h"
 #include "luxcore/pyluxcore/pyluxcoreforblender.h"
-#include "luxcore/pyluxcore/blender_types.h"
+#include <blender_types.h>
 #include "luxrays/utils/utils.h"
 
 using namespace std;
