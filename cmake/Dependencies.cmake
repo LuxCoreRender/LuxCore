@@ -147,8 +147,6 @@ endif()
 # Find GTK 3.0 for Linux only (required by luxcoreui NFD)
 if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 	find_package(PkgConfig REQUIRED)
-	pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
-	include_directories(${GTK3_INCLUDE_DIRS})
 endif()
 
 # Find BISON
