@@ -17,130 +17,145 @@
  ***************************************************************************/
 
 #ifndef _LUXCORE_FOR_BLENDER_H
-#define	_LUXCORE_FOR_BLENDER_H
+#define  _LUXCORE_FOR_BLENDER_H
 
+#include <pybind11/pybind11.h>
+#include <pybind11/numpy.h>
 #include "luxcore/luxcoreimpl.h"
+
+namespace py = pybind11;
 
 namespace luxcore {
 namespace blender {
 
-extern void ConvertFilmChannelOutput_1xFloat_To_1xFloatList(boost::python::object &filmObj,
-		const Film::FilmOutputType outputType, const u_int outputIndex, const u_int width,
-		const u_int height, const size_t renderPassPtr, const bool normalize,
-		const bool executeImagePipeline);
-		
-extern void ConvertFilmChannelOutput_UV_to_Blender_UV(boost::python::object &filmObj,
-		const Film::FilmOutputType outputType, const u_int outputIndex, const u_int width,
-		const u_int height, const size_t renderPassPtr, const bool normalize,
-		const bool executeImagePipeline);
-		
-extern void ConvertFilmChannelOutput_1xFloat_To_4xFloatList(boost::python::object &filmObj,
-		const Film::FilmOutputType outputType, const u_int outputIndex, const u_int width,
-		const u_int height, const size_t renderPassPtr, const bool normalize,
-		const bool executeImagePipeline);
-		
-extern void ConvertFilmChannelOutput_3xFloat_To_3xFloatList(boost::python::object &filmObj,
-		const Film::FilmOutputType outputType, const u_int outputIndex, const u_int width,
-		const u_int height, const size_t renderPassPtr, const bool normalize,
-		const bool executeImagePipeline);
-		
-extern void ConvertFilmChannelOutput_3xFloat_To_4xFloatList(boost::python::object &filmObj,
-		const Film::FilmOutputType outputType, const u_int outputIndex, const u_int width,
-		const u_int height, const size_t renderPassPtr, const bool normalize,
-		const bool executeImagePipeline);
-		
-extern void ConvertFilmChannelOutput_4xFloat_To_4xFloatList(boost::python::object &filmObj,
-		const Film::FilmOutputType outputType, const u_int outputIndex, const u_int width,
-		const u_int height, const size_t renderPassPtr, const bool normalize,
-		const bool executeImagePipeline);
-		
-extern void ConvertFilmChannelOutput_1xUInt_To_1xFloatList(boost::python::object &filmObj,
-		const Film::FilmOutputType outputType, const u_int outputIndex, const u_int width,
-		const u_int height, const size_t renderPassPtr, const bool normalize,
-		const bool executeImagePipeline);
+using blender_ptr = size_t;
+
+extern void ConvertFilmChannelOutput_1xFloat_To_1xFloatList(py::object &filmObj,
+    const Film::FilmOutputType outputType, const size_t outputIndex, const size_t width,
+    const size_t height, blender_ptr renderPassPtr, const bool normalize,
+    const bool executeImagePipeline);
+
+extern void ConvertFilmChannelOutput_UV_to_Blender_UV(py::object &filmObj,
+    const Film::FilmOutputType outputType, const size_t outputIndex, const size_t width,
+    const size_t height, blender_ptr renderPassPtr, const bool normalize,
+    const bool executeImagePipeline);
+
+extern void ConvertFilmChannelOutput_1xFloat_To_4xFloatList(py::object &filmObj,
+    const Film::FilmOutputType outputType, const size_t outputIndex, const size_t width,
+    const size_t height, blender_ptr renderPassPtr, const bool normalize,
+    const bool executeImagePipeline);
+
+extern void ConvertFilmChannelOutput_3xFloat_To_3xFloatList(py::object &filmObj,
+    const Film::FilmOutputType outputType, const size_t outputIndex, const size_t width,
+    const size_t height, blender_ptr renderPassPtr, const bool normalize,
+    const bool executeImagePipeline);
+
+extern void ConvertFilmChannelOutput_3xFloat_To_4xFloatList(py::object &filmObj,
+    const Film::FilmOutputType outputType, const size_t outputIndex, const size_t width,
+    const size_t height, blender_ptr renderPassPtr, const bool normalize,
+    const bool executeImagePipeline);
+
+extern void ConvertFilmChannelOutput_4xFloat_To_4xFloatList(py::object &filmObj,
+    const Film::FilmOutputType outputType, const size_t outputIndex, const size_t width,
+    const size_t height, blender_ptr renderPassPtr, const bool normalize,
+    const bool executeImagePipeline);
+
+extern void ConvertFilmChannelOutput_1xUInt_To_1xFloatList(py::object &filmObj,
+    const Film::FilmOutputType outputType, const size_t outputIndex, const size_t width,
+    const size_t height, blender_ptr renderPassPtr, const bool normalize,
+    const bool executeImagePipeline);
 
 // Note: This method is used by pyluxcoredemo.py, do not remove.
-extern void ConvertFilmChannelOutput_3xFloat_To_4xUChar(const u_int width, const u_int height,
-		boost::python::object &objSrc, boost::python::object &objDst, const bool normalize);
+extern void ConvertFilmChannelOutput_3xFloat_To_4xUChar(const size_t width, const size_t height,
+    py::object &objSrc, py::object &objDst, const bool normalize);
 
-extern boost::python::list BlenderMatrix4x4ToList(boost::python::object &blenderMatrix);
+extern py::list BlenderMatrix4x4ToList(py::object &blenderMatrix);
 
-extern boost::python::list GetOpenVDBGridNames(const std::string &filePathStr);
-extern boost::python::tuple GetOpenVDBGridInfo(const std::string &filePathStr, const std::string &gridName);
+extern py::list GetOpenVDBGridNames(const std::string &filePathStr);
+extern py::tuple GetOpenVDBGridInfo(const std::string &filePathStr, const std::string &gridName);
 
+using mesh_list = std::vector< std::tuple<std::string, size_t> >;
 
-extern boost::python::list Scene_DefineBlenderMesh1(luxcore::detail::SceneImpl *scene, const std::string &name,
-		const size_t loopTriCount, const size_t loopTriPtr, const size_t loopTriPolyPtr,
-		const size_t loopPtr,
-		const size_t vertPtr,
-		const size_t normalPtr,		
-		const size_t sharpPtr,		
-		const bool sharpAttr,
-		const boost::python::object &loopUVsPtrList,
-		const boost::python::object &loopColsPtrList,
-		const size_t meshPtr,
-		const u_int materialCount,
-		const boost::python::object& transformation,
-		const boost::python::tuple &blenderVersion,
-		const boost::python::object& material_indices,
-		const boost::python::object &loopTriCustomNormals);
-		
-extern boost::python::list Scene_DefineBlenderMesh2(luxcore::detail::SceneImpl *scene, const std::string &name,
-		const size_t loopTriCount, const size_t loopTriPtr, const size_t loopTriPolyPtr,
-		const size_t loopPtr,
-		const size_t vertPtr,
-		const size_t normalPtr,		
-		const size_t sharpPtr,		
-		const bool sharpAttr,
-		const boost::python::object &loopUVsPtrList,
-		const boost::python::object &loopColsPtrList,
-		const size_t meshPtr,
-		const u_int materialCount,
-		const boost::python::tuple &blenderVersion,		
-		const boost::python::object& material_indices,
-		const boost::python::object &loopTriCustomNormals);
-	
+extern mesh_list Scene_DefineBlenderMesh1(
+    luxcore::detail::SceneImpl *scene,
+    const std::string &name,
+    const size_t loopTriCount,
+    blender_ptr loopTriPtr,
+    blender_ptr loopTriPolyPtr,
+    blender_ptr loopPtr,
+    blender_ptr vertPtr,
+    blender_ptr normalPtr,
+    blender_ptr sharpPtr,
+    const bool sharpAttr,
+    const py::object& loopUVsPtrList,
+    const py::object& loopColsPtrList,
+    blender_ptr meshPtr,
+    const size_t materialCount,
+    const py::object& transformation,
+    const py::tuple& blenderVersion,
+    const py::object& material_indices,
+    const py::object& loopTriCustomNormals);
+
+extern mesh_list Scene_DefineBlenderMesh2(
+    luxcore::detail::SceneImpl *scene,
+    const std::string &name,
+    const size_t loopTriCount,
+    blender_ptr loopTriPtr,
+    blender_ptr loopTriPolyPtr,
+    blender_ptr loopPtr,
+    blender_ptr vertPtr,
+    blender_ptr normalPtr,
+    blender_ptr sharpPtr,
+    const bool sharpAttr,
+    const py::object& loopUVsPtrList,
+    const py::object& loopColsPtrList,
+    blender_ptr meshPtr,
+    const size_t materialCount,
+    const py::tuple& blenderVersion,
+    const py::object& material_indices,
+    const py::object& loopTriCustomNormals);
+
 
 extern bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
-		const std::string &shapeName,
-		const u_int pointsPerStrand,
-		const boost::python::object &points,
-		const boost::python::object &colors,
-		const boost::python::object &uvs,
-		const std::string &imageFilename,
-		const float imageGamma,
-		const bool copyUVs,
-		const boost::python::object &transformation,
-		const float strandDiameter,
-		const float rootWidth,
-		const float tipWidth,
-		const float widthOffset,
-		const std::string &tessellationTypeStr,
-		const u_int adaptiveMaxDepth, const float adaptiveError,
-		const u_int solidSideCount, const bool solidCapBottom, const bool solidCapTop,
-		const boost::python::list &rootColor,
-		const boost::python::list &tipColor);
+    const std::string &shapeName,
+    const size_t pointsPerStrand,
+    const py::array_t<float> &points,
+    const py::array_t<float> &colors,
+    const py::array_t<float> &uvs,
+    const std::string &imageFilename,
+    const float imageGamma,
+    const bool copyUVs,
+    const py::object &transformation,
+    const float strandDiameter,
+    const float rootWidth,
+    const float tipWidth,
+    const float widthOffset,
+    const std::string &tessellationTypeStr,
+    const size_t adaptiveMaxDepth, const float adaptiveError,
+    const size_t solidSideCount, const bool solidCapBottom, const bool solidCapTop,
+    const py::list &rootColor,
+    const py::list &tipColor);
 
 
 extern bool Scene_DefineBlenderCurveStrands(luxcore::detail::SceneImpl* scene,
-	const std::string& shapeName,
-	const boost::python::object& pointsPerStrand,
-	const boost::python::object& points,
-	const boost::python::object& colors,
-	const boost::python::object& uvs,
-	const std::string& imageFilename,
-	const float imageGamma,
-	const bool copyUVs,
-	const boost::python::object& transformation,
-	const float strandDiameter,
-	const float rootWidth,
-	const float tipWidth,
-	const float widthOffset,
-	const std::string& tessellationTypeStr,
-	const u_int adaptiveMaxDepth, const float adaptiveError,
-	const u_int solidSideCount, const bool solidCapBottom, const bool solidCapTop,
-	const boost::python::list& rootColor,
-	const boost::python::list& tipColor);
+  const std::string& shapeName,
+  const py::array_t<int>& pointsPerStrand,
+  const py::array_t<float>& points,
+  const py::array_t<float>& colors,
+  const py::array_t<float>& uvs,
+  const std::string& imageFilename,
+  const float imageGamma,
+  const bool copyUVs,
+  const py::object& transformation,
+  const float strandDiameter,
+  const float rootWidth,
+  const float tipWidth,
+  const float widthOffset,
+  const std::string& tessellationTypeStr,
+  const size_t adaptiveMaxDepth, const float adaptiveError,
+  const size_t solidSideCount, const bool solidCapBottom, const bool solidCapTop,
+  const py::list& rootColor,
+  const py::list& tipColor);
 
 } // namespace blender
 } // namespace luxcore
