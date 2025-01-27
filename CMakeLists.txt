@@ -184,7 +184,7 @@ endif()
 #
 ################################################################################
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 17)
 set(GENERATED_DIR "${CMAKE_BINARY_DIR}/generated")
 set(GENERATED_INCLUDE_DIR "${GENERATED_DIR}/include")
 
