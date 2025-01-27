@@ -43,7 +43,7 @@ using luxrays::ocl::Spectrum;
 class Volume;
 class Scene;
 
-typedef struct {
+typedef struct HitPoint_t {
 	// The incoming direction. It is the eyeDir when fromLight = false and
 	// lightDir when fromLight = true
 	luxrays::Vector fixedDir;

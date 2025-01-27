@@ -177,7 +177,7 @@ typedef enum {
 	PGIC_SAMPLER_RANDOM, PGIC_SAMPLER_METROPOLIS
 } PhotonGISamplerType;
 
-typedef struct {
+typedef struct PhotonGICacheParams_t {
 	PhotonGISamplerType samplerType;
 
 	struct {

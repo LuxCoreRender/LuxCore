@@ -47,9 +47,13 @@ extern double lcInitTime;
 #define LC_FUNCTION_NAME __func__
 #endif
 
-#define API_BEGIN(fmt, ...) { \
+#define API_BEGIN(FMT, ...) { \
 	if (luxcore::detail::logAPIEnabled) { \
-		luxcore::detail::luxcoreLogger->info("[API][{:.3f}] Begin [{}](" fmt ")", (luxrays::WallClockTime() - luxcore::detail::lcInitTime), LC_FUNCTION_NAME,  __VA_ARGS__); \
+		luxcore::detail::luxcoreLogger->info( \
+                    fmt::runtime("[API][{:.3f}] Begin [{}](" FMT ")"), \
+                    (luxrays::WallClockTime() - luxcore::detail::lcInitTime), \
+                    LC_FUNCTION_NAME, \
+                    __VA_ARGS__); \
 	} \
 }
 

@@ -1805,17 +1805,3 @@ void RenderSessionImpl::SaveResumeFile(const std::string &fileName) {
 
 	API_END();
 }
-
-template <> struct fmt::formatter<luxcore::Camera::CameraType> {
-  formatter() {
-    std::cout << "formatter<luxcore::Camera::CameraType>()\n";
-  }
-
-  constexpr auto parse(fmt::format_parse_context& ctx) {
-    return ctx.begin();
-  }
-
-  auto format(const luxcore::Camera::CameraType& cam, fmt::format_context& ctx) const {
-    return fmt::format_to(ctx.out(), "{}", int(cam));
-  }
-};
