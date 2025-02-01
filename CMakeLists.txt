@@ -44,6 +44,8 @@ unset(CMAKE_CONFIGURATION_TYPES CACHE)
 # This boots up the generator:
 enable_language(C)
 enable_language(CXX)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_FIND_PACKAGE_TARGETS_GLOBAL ON)  # Propagate Conan targets to subdirs
@@ -78,6 +80,7 @@ endif()
 
 project(LuxRays)
 
+# Set path to modules
 set(CMAKE_MODULE_PATH
   "${PROJECT_SOURCE_DIR}"
   "${PROJECT_SOURCE_DIR}/cmake"
@@ -91,10 +94,8 @@ MESSAGE(STATUS "CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}")  # TODO
 ################################################################################
 
 # Python
-MESSAGE(STATUS "LuxCore - Python_ROOT_DIR: ${Python_ROOT_DIR}")
-find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
-
 message(STATUS "LuxCore - Add dependency targets")
+find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
 find_package(OpenMP REQUIRED)
 find_package(TBB REQUIRED)
 find_package(minizip REQUIRED)
@@ -124,6 +125,7 @@ if(APPLE)
   # OpenMP
   find_package(OpenMP REQUIRED)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Xclang -fopenmp -Wno-register")
+
 endif(APPLE)
 
 INCLUDE(KernelPreprocess)
