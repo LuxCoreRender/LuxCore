@@ -112,10 +112,11 @@ find_package(pybind11 CONFIG REQUIRED)
 find_package(BISON REQUIRED)
 find_package(FLEX REQUIRED)
 
-set(CMAKE_MODULE_PATH
-  "${PROJECT_SOURCE_DIR}"
-  "${PROJECT_SOURCE_DIR}/cmake"
-)
+if(APPLE)
+  # OpenMP
+  find_package(OpenMP REQUIRED)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Xclang -fopenmp -Wno-register")
+endif(APPLE)
 
 INCLUDE(KernelPreprocess)
 
@@ -134,6 +135,29 @@ include_directories("${PROJECT_SOURCE_DIR}/deps/optix-7.1.0/include")
 # Build options
 #
 ################################################################################
+
+if(LINUX)
+  set(OpenGL_GL_PREFERENCE "LEGACY")
+endif(LINUX)
+
+if(MSVC)
+  # Minimizes Windows header files
+  #ADD_DEFINITIONS(-DWIN32_LEAN_AND_MEAN)
+  # Do not define MIN and MAX macros
+  ADD_DEFINITIONS(-DNOMINMAX)
+  # Do not warn about standard but insecure functions
+  ADD_DEFINITIONS(-D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS)
+  # Enable Unicode
+  ADD_DEFINITIONS(-D_UNICODE)
+  # Enable SSE2/SSE/MMX
+  ADD_DEFINITIONS(-D__SSE2__ -D__SSE__ -D__MMX__)
+  add_link_options("/INCREMENTAL:NO" "/PDBALTPATH:%_PDB%")
+endif(MSVC)
+
+set(CMAKE_MODULE_PATH
+  "${PROJECT_SOURCE_DIR}"
+  "${PROJECT_SOURCE_DIR}/cmake"
+)
 
 if (LUXRAYS_DISABLE_OPENCL)
   ADD_DEFINITIONS("-DLUXRAYS_DISABLE_OPENCL")
