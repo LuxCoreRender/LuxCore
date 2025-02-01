@@ -37,8 +37,9 @@ set(generated_header_dir "${GENERATED_INCLUDE_DIR}/luxcore")
 file(MAKE_DIRECTORY ${generated_header_dir})
 
 configure_file(
-		"${LuxRays_SOURCE_DIR}/include/luxcore/cfg.h.in"
-		"${generated_header_dir}/cfg.h")
+  "${PROJECT_SOURCE_DIR}/include/luxcore/cfg.h.in"
+  "${generated_header_dir}/cfg.h"
+)
 
 ################################################################################
 #
@@ -49,41 +50,41 @@ configure_file(
 find_package(Doxygen)
 
 if(DOXYGEN_FOUND)
-	message(STATUS "Found Doxygen and generating LuxCore documentation")
+  message(STATUS "Found Doxygen and generating LuxCore documentation")
 
-	# Generate doxygen.template
-	set(DOXYGEN_LUXCORE_TEMPLATE ${CMAKE_CURRENT_SOURCE_DIR}/../../doxygen/luxcore.template)
-	configure_file(
-	  "${DOXYGEN_LUXCORE_TEMPLATE}.in"
-	  "${DOXYGEN_LUXCORE_TEMPLATE}"
-	  )
+  # Generate doxygen.template
+  set(DOXYGEN_LUXCORE_TEMPLATE ${CMAKE_CURRENT_SOURCE_DIR}/../../doxygen/luxcore.template)
+  configure_file(
+    "${DOXYGEN_LUXCORE_TEMPLATE}.in"
+    "${DOXYGEN_LUXCORE_TEMPLATE}"
+    )
 
-	set(DOXYGEN_LUXCORE_INPUT ${CMAKE_CURRENT_BINARY_DIR}/../../doxygen-luxcore.conf)
-	set(DOXYGEN_LUXCORE_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/../../doc/luxcore)
-	set(DOXYGEN_LUXCORE_OUTPUT ${DOXYGEN_OUTPUT_DIR}/luxcore/html/index.html)
+  set(DOXYGEN_LUXCORE_INPUT ${CMAKE_CURRENT_BINARY_DIR}/../../doxygen-luxcore.conf)
+  set(DOXYGEN_LUXCORE_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/../../doc/luxcore)
+  set(DOXYGEN_LUXCORE_OUTPUT ${DOXYGEN_OUTPUT_DIR}/luxcore/html/index.html)
 
-	message(STATUS "Doxygen LuxCore output: " ${DOXYGEN_LUXCORE_OUTPUT})
+  message(STATUS "Doxygen LuxCore output: " ${DOXYGEN_LUXCORE_OUTPUT})
 
-	if(DOXYGEN_DOT_FOUND)
-			message(STATUS "Found dot")
-			set(DOXYGEN_DOT_CONF "HAVE_DOT = YES")
-	endif(DOXYGEN_DOT_FOUND)
+  if(DOXYGEN_DOT_FOUND)
+      message(STATUS "Found dot")
+      set(DOXYGEN_DOT_CONF "HAVE_DOT = YES")
+  endif(DOXYGEN_DOT_FOUND)
 
-	add_custom_command(
-		OUTPUT ${DOXYGEN_LUXCORE_OUTPUT}
-		# Creating custom doxygen-luxrays.conf
-		COMMAND mkdir -p ${DOXYGEN_LUXCORE_OUTPUT_DIR}
-		COMMAND cp ${DOXYGEN_LUXCORE_TEMPLATE} ${DOXYGEN_LUXCORE_INPUT}
-		COMMAND echo "INPUT = " ${CMAKE_CURRENT_SOURCE_DIR}/../../include/luxcore/luxcore.h ${CMAKE_CURRENT_SOURCE_DIR}/../../include/luxrays/utils/properties.h ${CMAKE_CURRENT_SOURCE_DIR}/../../include/luxrays/utils/cyhair/cyHairFile.h >> ${DOXYGEN_LUXCORE_INPUT}
-		COMMAND echo "OUTPUT_DIRECTORY = " ${DOXYGEN_LUXCORE_OUTPUT_DIR} >> ${DOXYGEN_LUXCORE_INPUT}
-		COMMAND echo ${DOXYGEN_DOT_CONF} >> ${DOXYGEN_LUXCORE_INPUT}
-		# Launch doxygen
-		COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_LUXCORE_INPUT}
-		DEPENDS ${DOXYGEN_LUXCORE_TEMPLATE}
-		WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../../..
-	)
+  add_custom_command(
+    OUTPUT ${DOXYGEN_LUXCORE_OUTPUT}
+    # Creating custom doxygen-luxrays.conf
+    COMMAND mkdir -p ${DOXYGEN_LUXCORE_OUTPUT_DIR}
+    COMMAND cp ${DOXYGEN_LUXCORE_TEMPLATE} ${DOXYGEN_LUXCORE_INPUT}
+    COMMAND echo "INPUT = " ${CMAKE_CURRENT_SOURCE_DIR}/../../include/luxcore/luxcore.h ${CMAKE_CURRENT_SOURCE_DIR}/../../include/luxrays/utils/properties.h ${CMAKE_CURRENT_SOURCE_DIR}/../../include/luxrays/utils/cyhair/cyHairFile.h >> ${DOXYGEN_LUXCORE_INPUT}
+    COMMAND echo "OUTPUT_DIRECTORY = " ${DOXYGEN_LUXCORE_OUTPUT_DIR} >> ${DOXYGEN_LUXCORE_INPUT}
+    COMMAND echo ${DOXYGEN_DOT_CONF} >> ${DOXYGEN_LUXCORE_INPUT}
+    # Launch doxygen
+    COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_LUXCORE_INPUT}
+    DEPENDS ${DOXYGEN_LUXCORE_TEMPLATE}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../../..
+  )
 
-	add_custom_target(apidoc_luxcore DEPENDS ${DOXYGEN_LUXCORE_OUTPUT})
+  add_custom_target(apidoc_luxcore DEPENDS ${DOXYGEN_LUXCORE_OUTPUT})
 endif(DOXYGEN_FOUND)
 
 ################################################################################
@@ -97,30 +98,30 @@ file(MAKE_DIRECTORY ${generated_parser_dir})
 
 if (BISON_FOUND AND FLEX_FOUND)
 
-	# Create custom command for bison/yacc
-	BISON_TARGET(lux_parser ${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxparse.y ${generated_parser_dir}/luxparse.cpp)
-	set_source_files_properties(${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxparse.cpp GENERATED)
+  # Create custom command for bison/yacc
+  BISON_TARGET(lux_parser ${PROJECT_SOURCE_DIR}/src/luxcore/luxparser/luxparse.y ${generated_parser_dir}/luxparse.cpp)
+  set_source_files_properties(${PROJECT_SOURCE_DIR}/src/luxcore/luxparser/luxparse.cpp GENERATED)
 
-	# Create custom command for flex/lex
-	FLEX_TARGET(lux_lexer ${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxlex.l ${generated_parser_dir}/luxlex.cpp COMPILE_FLAGS "${FLEX_FLAGS}")
-	set_source_files_properties(${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxlex.cpp GENERATED)
-	ADD_FLEX_BISON_DEPENDENCY(lux_lexer lux_parser)
+  # Create custom command for flex/lex
+  FLEX_TARGET(lux_lexer ${PROJECT_SOURCE_DIR}/src/luxcore/luxparser/luxlex.l ${generated_parser_dir}/luxlex.cpp COMPILE_FLAGS "${FLEX_FLAGS}")
+  set_source_files_properties(${PROJECT_SOURCE_DIR}/src/luxcore/luxparser/luxlex.cpp GENERATED)
+  ADD_FLEX_BISON_DEPENDENCY(lux_lexer lux_parser)
 
-	set(LUX_PARSER_SRC
-		${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxparse.y
-		${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxlex.l
-	)
-	source_group("Source Files\\Lux Parser" FILES ${LUX_PARSER_SRC})
+  set(LUX_PARSER_SRC
+    ${PROJECT_SOURCE_DIR}/src/luxcore/luxparser/luxparse.y
+    ${PROJECT_SOURCE_DIR}/src/luxcore/luxparser/luxlex.l
+  )
+  source_group("Source Files\\Lux Parser" FILES ${LUX_PARSER_SRC})
 
 else()
 
-	# Just copy the pre-generated files from the source tree:
-	file(COPY "${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxparse.cpp"
-		"${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxparse.hpp"
-		"${LuxRays_SOURCE_DIR}/src/luxcore/luxparser/luxlex.cpp" DESTINATION ${generated_parser_dir})
+  # Just copy the pre-generated files from the source tree:
+  file(COPY "${PROJECT_SOURCE_DIR}/src/luxcore/luxparser/luxparse.cpp"
+    "${PROJECT_SOURCE_DIR}/src/luxcore/luxparser/luxparse.hpp"
+    "${PROJECT_SOURCE_DIR}/src/luxcore/luxparser/luxlex.cpp" DESTINATION ${generated_parser_dir})
 
-	message(WARNING "Flex or Bison not available "
-			"- using pre-generated files from the source tree")
+  message(WARNING "Flex or Bison not available "
+      "- using pre-generated files from the source tree")
 endif()
 
 ################################################################################
@@ -130,33 +131,33 @@ endif()
 ################################################################################
 
 set(LUXCORE_SRCS
-	${LuxRays_SOURCE_DIR}/src/luxcore/luxcore.cpp
-	${LuxRays_SOURCE_DIR}/src/luxcore/luxcoreimpl.cpp
-	${LuxRays_SOURCE_DIR}/src/luxcore/luxcoreinit.cpp
-	${LuxRays_SOURCE_DIR}/src/luxcore/kernelcachefill.cpp
+  ${PROJECT_SOURCE_DIR}/src/luxcore/luxcore.cpp
+  ${PROJECT_SOURCE_DIR}/src/luxcore/luxcoreimpl.cpp
+  ${PROJECT_SOURCE_DIR}/src/luxcore/luxcoreinit.cpp
+  ${PROJECT_SOURCE_DIR}/src/luxcore/kernelcachefill.cpp
 )
 SOURCE_GROUP("Source Files\\LuxCore Library" FILES ${LUXCORE_SRCS})
 
 set(LUXCORE_GENERATED_SRCS
-	${generated_parser_dir}/luxparse.cpp
-	${generated_parser_dir}/luxlex.cpp
+  ${generated_parser_dir}/luxparse.cpp
+  ${generated_parser_dir}/luxlex.cpp
 )
 SOURCE_GROUP(
-		"Source Files\\LuxCore Library\\Generated"
-		FILES ${LUXCORE_GENERATED_SRCS})
+    "Source Files\\LuxCore Library\\Generated"
+    FILES ${LUXCORE_GENERATED_SRCS})
 
 set(LUXCORE_LIB_SRCS
-	${LUXCORE_SRCS}
-	${LUXCORE_GENERATED_SRCS}
+  ${LUXCORE_SRCS}
+  ${LUXCORE_GENERATED_SRCS}
 )
 
 if (BUILD_LUXCORE_DLL)
-	add_library(luxcore SHARED ${LUXCORE_LIB_SRCS} ${LUX_PARSER_SRC})
+  add_library(luxcore SHARED ${LUXCORE_LIB_SRCS} ${LUX_PARSER_SRC})
 else()
-	add_library(luxcore STATIC ${LUXCORE_LIB_SRCS} ${LUX_PARSER_SRC})
+  add_library(luxcore STATIC ${LUXCORE_LIB_SRCS} ${LUX_PARSER_SRC})
 endif()
 
-include_directories(${LuxRays_SOURCE_DIR}/deps/bcd-1.1/include)
+include_directories(${PROJECT_SOURCE_DIR}/deps/bcd-1.1/include)
 
 add_definitions(-DCPP_API_EXPORTS ${VISIBILITY_FLAGS}) # for controlling visibility
 link_directories (${SLG_LIB_DIR} ${LuxRays_LIB_DIR})
@@ -168,24 +169,44 @@ link_directories (${SLG_LIB_DIR} ${LuxRays_LIB_DIR})
 ################################################################################
 
 set(PYLUXCORE_SRCS
-	${LuxRays_SOURCE_DIR}/src/luxcore/pyluxcore.cpp
-	${LuxRays_SOURCE_DIR}/src/luxcore/pyluxcoreforblender.cpp
+  ${PROJECT_SOURCE_DIR}/src/luxcore/pyluxcore.cpp
+  ${PROJECT_SOURCE_DIR}/src/luxcore/pyluxcoreforblender.cpp
 )
 
 pybind11_add_module(pyluxcore MODULE ${PYLUXCORE_SRCS} ${LUXCORE_LIB_SRCS} ${LUX_PARSER_SRC})
 
-include_directories(${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0)
-include_directories(${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/include)
+target_link_libraries(pyluxcore PRIVATE
+    $<$<BOOL:${HAVE_SANITIZER}>:asan>
+    slg-core
+    slg-film
+    slg-kernels
+    luxrays
+    bcd
+    OpenVDB::openvdb
+    spdlog::spdlog_header_only
+    pybind11::pybind11
+    Python::Module
+    boost::boost
+    onetbb::onetbb
+    blender-types
+    robin_hood::robin_hood
+)
 
-add_definitions(-DOPENVDB_STATICLIB ${VISIBILITY_FLAGS})
+target_link_options(pyluxcore PRIVATE $<$<BOOL:${HAVE_SANITIZER}>:-fsanitize=address>)
+
 if(APPLE)
-    SET_TARGET_PROPERTIES(pyluxcore PROPERTIES XCODE_ATTRIBUTE_DEPLOYMENT_POSTPROCESSING NO) # exclude pylux from strip, not possible
-else()
+  target_link_libraries(pyluxcore PRIVATE llvm-openmp::llvm-openmp)
 endif()
+
+# TODO
+#if(APPLE)
+    #SET_TARGET_PROPERTIES(pyluxcore PROPERTIES XCODE_ATTRIBUTE_DEPLOYMENT_POSTPROCESSING NO) # exclude pylux from strip, not possible
+#else()
+#endif()
 
 set_target_properties(pyluxcore PROPERTIES PREFIX "")
 if(MSVC)
-	set_target_properties(pyluxcore PROPERTIES SUFFIX ".pyd")
+  set_target_properties(pyluxcore PROPERTIES SUFFIX ".pyd")
 endif(MSVC)
 
 ################################################################################
