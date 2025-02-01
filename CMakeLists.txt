@@ -26,10 +26,7 @@ MESSAGE(STATUS "CMake version " ${CMAKE_VERSION} " detected")
 ################################################################################
 
 cmake_minimum_required(VERSION 3.25)
-cmake_policy(VERSION 3.0)
-
-# Remove the following when the version check is at least 2.8.4
-SET(CMAKE_LEGACY_CYGWIN_WIN32 0)
+cmake_policy(VERSION 3.25)
 
 set(supported_build_variants "Debug" "Release")
 
@@ -47,6 +44,10 @@ unset(CMAKE_CONFIGURATION_TYPES CACHE)
 # This boots up the generator:
 enable_language(C)
 enable_language(CXX)
+
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set(CMAKE_FIND_PACKAGE_TARGETS_GLOBAL ON)  # Propagate Conan targets to subdirs
+set(CMAKE_VERBOSE_MAKEFILE ON)
 
 if (CMAKE_CONFIGURATION_TYPES)
 
@@ -71,10 +72,17 @@ else()
 
 endif()
 
+
+
 # The following implicitly boots up the generator, so don't move it up:
 
 project(LuxRays)
 
+set(CMAKE_MODULE_PATH
+  "${PROJECT_SOURCE_DIR}"
+  "${PROJECT_SOURCE_DIR}/cmake"
+)
+MESSAGE(STATUS "CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}")  # TODO
 
 ################################################################################
 #
@@ -153,11 +161,6 @@ if(MSVC)
   ADD_DEFINITIONS(-D__SSE2__ -D__SSE__ -D__MMX__)
   add_link_options("/INCREMENTAL:NO" "/PDBALTPATH:%_PDB%")
 endif(MSVC)
-
-set(CMAKE_MODULE_PATH
-  "${PROJECT_SOURCE_DIR}"
-  "${PROJECT_SOURCE_DIR}/cmake"
-)
 
 if (LUXRAYS_DISABLE_OPENCL)
   ADD_DEFINITIONS("-DLUXRAYS_DISABLE_OPENCL")
