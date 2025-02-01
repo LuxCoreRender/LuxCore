@@ -82,6 +82,36 @@ project(LuxRays)
 #
 ################################################################################
 
+# Python
+MESSAGE(STATUS "LuxCore - Python_ROOT_DIR: ${Python_ROOT_DIR}")
+find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
+
+message(STATUS "LuxCore - Add dependency targets")
+find_package(OpenMP REQUIRED)
+find_package(TBB REQUIRED)
+find_package(minizip REQUIRED)
+find_package(spdlog REQUIRED)
+find_package(OpenImageIO REQUIRED)
+find_package(PNG REQUIRED)
+find_package(OpenColorIO REQUIRED)
+find_package(OpenEXR REQUIRED)
+find_package(embree REQUIRED)
+find_package(Blosc REQUIRED)
+find_package(oidn REQUIRED)
+find_package(Boost REQUIRED)
+find_package(OpenVDB REQUIRED)
+find_package(Imath REQUIRED)
+find_package(Eigen3 REQUIRED)
+find_package(blender-types REQUIRED)
+find_package(OpenSubdiv REQUIRED)
+find_package(nlohmann_json REQUIRED)
+find_package(robin_hood REQUIRED)
+find_package(pybind11 CONFIG REQUIRED)
+
+# Bison/Flex
+find_package(BISON REQUIRED)
+find_package(FLEX REQUIRED)
+
 set(CMAKE_MODULE_PATH
   "${PROJECT_SOURCE_DIR}"
   "${PROJECT_SOURCE_DIR}/cmake"
@@ -89,7 +119,7 @@ set(CMAKE_MODULE_PATH
 
 INCLUDE(KernelPreprocess)
 
-# Install CMake modules
+# Include embedded dependencies
 
 SET(LuxRays_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/include")
 include_directories("${LuxRays_INCLUDE_DIR}")
@@ -97,6 +127,7 @@ include_directories("${LuxRays_INCLUDE_DIR}")
 include_directories("${PROJECT_SOURCE_DIR}/deps/cuew/include")
 include_directories("${PROJECT_SOURCE_DIR}/deps/clew/include")
 include_directories("${PROJECT_SOURCE_DIR}/deps/optix-7.1.0/include")
+
 
 ################################################################################
 #
@@ -128,14 +159,6 @@ if (LUXCORE_DISABLE_OIDN)
 else()
   message(STATUS "Intel OIDN support: enabled")
 endif()
-
-#if (BUILD_LUXCORE_DLL)
-  #set(LUXCORE_LIBRARY luxcore)
-  #ADD_DEFINITIONS("-DLUXCORE_DLL")
-#else()
-  ## TODO
-  #set(LUXCORE_LIBRARY luxcore slg-core slg-film slg-kernels luxrays bcd opensubdiv openvdb opencolorio ${BLOSC_LIBRARY} ${EMBREE_LIBRARY} ${OIDN_LIBRARY} ${TBB_LIBRARY} ${TIFF_LIBRARIES} ${TIFF_LIBRARIES} ${OPENEXR_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES})
-#endif()
 
 ################################################################################
 #
