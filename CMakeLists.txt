@@ -89,7 +89,6 @@ project(LuxRays)
 set(CMAKE_MODULE_PATH
   "${LuxRays_SOURCE_DIR}"
   "${LuxRays_SOURCE_DIR}/cmake"
-  "${LuxRays_SOURCE_DIR}/cmake/Utils"
   "${LuxRays_SOURCE_DIR}/cmake/SpecializedConfig"
 )
 
