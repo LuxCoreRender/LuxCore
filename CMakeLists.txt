@@ -89,7 +89,6 @@ project(LuxRays)
 set(CMAKE_MODULE_PATH
   "${LuxRays_SOURCE_DIR}"
   "${LuxRays_SOURCE_DIR}/cmake"
-  "${LuxRays_SOURCE_DIR}/cmake/SpecializedConfig"
 )
 
 INCLUDE(KernelPreprocess)
@@ -106,8 +105,9 @@ include_directories("${LuxRays_SOURCE_DIR}/deps/optix-7.1.0/include")
 # TODO
 #set(Boost_USE_STATIC_LIBS ON)
 
-# Find dependencies
-include(Dependencies)
+# TODO
+## Find dependencies
+#include(Dependencies)
 
 #if (NOT Boost_FOUND)
   #MESSAGE(FATAL_ERROR "--> Could not locate required Boost files - Please check ${BOOST_SEARCH_PATH}")
