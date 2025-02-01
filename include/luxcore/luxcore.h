@@ -41,8 +41,8 @@
 #include <stdexcept>
 #include <string>
 #include <array>
-#include <format>
-#include <string_view>
+
+#include <fmt/base.h>
 
 #include <luxcore/cfg.h>
 #include <luxrays/utils/exportdefs.h>
@@ -1488,21 +1488,10 @@ public:
 
 }
 
-template <>
-struct std::formatter<luxcore::Camera::CameraType> : std::formatter<std::string> {
+template <> struct fmt::formatter<luxcore::Camera::CameraType>: formatter<string_view> {
 
-  auto format(luxcore::Camera::CameraType cam, std::format_context& ctx) const {
-
-  std::string name = "UNKNOWN";
-  switch (cam) {
-    case luxcore::Camera::CameraType::PERSPECTIVE: name = "PERSPECTIVE"; break;
-    case luxcore::Camera::CameraType::ORTHOGRAPHIC: name = "ORTHOGRAPHIC"; break;
-    case luxcore::Camera::CameraType::STEREO: name = "STEREO"; break;
-    case luxcore::Camera::CameraType::ENVIRONMENT: name = "ENVIRONMENT"; break;
-  }
-    // return formatter<std::string>::format(name, ctx);
-    return std::format_to(ctx.out(), "{}", name);
-}
+  auto format(luxcore::Camera::CameraType cam, format_context& ctx) const
+    -> format_context::iterator;
 };
 
 #endif	/* _LUXCORE_H */

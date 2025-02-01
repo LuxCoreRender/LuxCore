@@ -20,7 +20,6 @@
 #define	_LUXCORE_SINKS_H
 
 #include <mutex>
-#include <string>
 
 #include "spdlog/sinks/rotating_file_sink.h"
 
@@ -42,10 +41,10 @@ namespace sinks {
 				memory_buf_t formatted;
 				base_sink<Mutex>::formatter_->format(msg, formatted);
 
-				logHandler(formatted.c_str());
+				logHandler(fmt::to_string(formatted).c_str());
 			}
 		}
-
+		
 		void flush_() override {
 		}
 

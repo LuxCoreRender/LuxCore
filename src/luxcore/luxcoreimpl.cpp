@@ -16,11 +16,12 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-//#include <boost/format.hpp>
+#include <boost/format.hpp>
 #include <boost/foreach.hpp>
 #include <boost/thread/once.hpp>
 #include <boost/thread/mutex.hpp>
 
+#include "luxcore/luxcorelogger.h"
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/utils/fileext.h"
 #include "luxrays/utils/serializationutils.h"
@@ -36,7 +37,6 @@
 #include "slg/engines/filesaver/filesaver.h"
 #include "luxcore/luxcore.h"
 #include "luxcore/luxcoreimpl.h"
-#include "luxcore/luxcorelogger.h"
 
 using namespace std;
 using namespace luxrays;
@@ -513,15 +513,12 @@ CameraImpl::CameraImpl(const SceneImpl &scn) : scene(scn) {
 CameraImpl::~CameraImpl() {
 }
 
-const luxcore::Camera::CameraType CameraImpl::GetType() const {
+const CameraImpl::CameraType CameraImpl::GetType() const {
 	API_BEGIN_NOARGS();
 
-	const luxcore::Camera::CameraType type = (luxcore::Camera::CameraType) scene.scene->camera->GetType();
-
-        // TODO 2025-01-31
-        // This line prevents compilation in clang (MacOS)
-        // Seems related to boost/thread. We'll clean it up one day...
-	// API_RETURN("{}", type);
+	const CameraImpl::CameraType type = (Camera::CameraType)scene.scene->camera->GetType();
+	
+	API_RETURN("{}", type);
 
 	return type;
 }
@@ -1154,7 +1151,7 @@ void SceneImpl::DefineImageMapHalf(const std::string &imgMapName,
 		unsigned short *pixels, const float gamma, const unsigned int channels,
 		const unsigned int width, const unsigned int height,
 		ChannelSelectionType selectionType, WrapType wrapType) {
-	API_BEGIN("{}, {}, {}, {}, {}, {}, {}, {}", ToArgString(imgMapName), (void *)pixels, gamma, channels,
+	API_BEGIN("{}, {}, {}, {}, {}, {}, {}, {}, {}", ToArgString(imgMapName), (void *)pixels, gamma, channels,
 			width, height, ToArgString(selectionType), ToArgString(wrapType));
 
 	scene->DefineImageMap(imgMapName, (half *)pixels, channels, width, height,
@@ -1171,7 +1168,7 @@ void SceneImpl::DefineImageMapFloat(const std::string &imgMapName,
 		float *pixels, const float gamma, const unsigned int channels,
 		const unsigned int width, const unsigned int height,
 		ChannelSelectionType selectionType, WrapType wrapType) {
-	API_BEGIN("{}, {}, {}, {}, {}, {}, {}, {}", ToArgString(imgMapName), (void *)pixels, gamma, channels,
+	API_BEGIN("{}, {}, {}, {}, {}, {}, {}, {}, {}", ToArgString(imgMapName), (void *)pixels, gamma, channels,
 			width, height, ToArgString(selectionType), ToArgString(wrapType));
 
 	scene->DefineImageMap(imgMapName, pixels, channels, width, height,

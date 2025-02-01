@@ -21,9 +21,8 @@
 
 #include <memory>
 #include <sstream>
-#include <format>
 
-#include <spdlog/spdlog.h>
+#include "spdlog/spdlog.h"
 
 #include "luxrays/utils/strutils.h"
 #include "luxrays/utils/properties.h"
@@ -50,9 +49,8 @@ extern double lcInitTime;
 
 #define API_BEGIN(FMT, ...) { \
 	if (luxcore::detail::logAPIEnabled) { \
-                static constexpr std::string_view _format = "[API][{:.3f}] Begin [{}](" FMT ")"; \
 		luxcore::detail::luxcoreLogger->info( \
-                    _format, \
+                    fmt::runtime("[API][{:.3f}] Begin [{}](" FMT ")"), \
                     (luxrays::WallClockTime() - luxcore::detail::lcInitTime), \
                     LC_FUNCTION_NAME, \
                     __VA_ARGS__); \
@@ -71,14 +69,9 @@ extern double lcInitTime;
 	} \
 }
 
-#define API_RETURN(FMT, ...) { \
+#define API_RETURN(fmt, ...) { \
 	if (luxcore::detail::logAPIEnabled) { \
-                static constexpr std::string_view _format = "[API][{:.3f}] Return [{}](" FMT ")"; \
-		luxcore::detail::luxcoreLogger->info( \
-                    _format, \
-                    (luxrays::WallClockTime() - luxcore::detail::lcInitTime), \
-                    LC_FUNCTION_NAME, \
-                    __VA_ARGS__); \
+		luxcore::detail::luxcoreLogger->info("[API][{:.3f}] Return [{}](" fmt ")", (luxrays::WallClockTime() - luxcore::detail::lcInitTime), LC_FUNCTION_NAME,  __VA_ARGS__); \
 	} \
 }
 

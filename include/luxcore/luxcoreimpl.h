@@ -365,5 +365,4 @@ private:
 }
 }
 
-
 #endif	/* _LUXCOREIMPL_H */
