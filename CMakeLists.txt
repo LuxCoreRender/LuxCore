@@ -236,11 +236,3 @@ endif()
 if(LUX_TESTS)
   add_subdirectory(pyunittests)
 endif()
-
-################################################################################
-#
-# For non win32 we'll have to copy everything to a single dir
-#
-################################################################################
-
-INCLUDE(AssembleBinDirs)
