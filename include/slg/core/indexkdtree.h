@@ -41,7 +41,7 @@ namespace slg {
 #define KdTreeNodeData_SetRightChild(nodeData, index) nodeData = ((nodeData) & 0xe0000000u) | ((index) & 0x1fffffffu)
 #define KdTreeNodeData_NULL_INDEX 0x1fffffffu
 
-typedef struct {
+typedef struct IndexKdTreeArrayNode_t {
 	float splitPos;
 	u_int index;
 

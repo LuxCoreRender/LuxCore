@@ -172,7 +172,7 @@ set(PYLUXCORE_SRCS
 	${LuxRays_SOURCE_DIR}/src/luxcore/pyluxcoreforblender.cpp
 )
 
-add_library(pyluxcore MODULE ${PYLUXCORE_SRCS} ${LUXCORE_LIB_SRCS} ${LUX_PARSER_SRC})
+pybind11_add_module(pyluxcore MODULE ${PYLUXCORE_SRCS} ${LUXCORE_LIB_SRCS} ${LUX_PARSER_SRC})
 
 include_directories(${LuxRays_SOURCE_DIR}/deps/openvdb-7.0.0)
 include_directories(${LuxRays_SOURCE_DIR}/deps/opencolorio-2.0.0/include)
