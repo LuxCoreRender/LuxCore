@@ -139,11 +139,6 @@ if (LUXCORE_PYLUXCORE)
 endif()
 
 
-if(APPLE)
-  # OpenMP
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Xclang -fopenmp -Wno-register")
-endif(APPLE)
-
 # Include embedded dependencies
 
 SET(LuxRays_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/include")
@@ -177,10 +172,15 @@ if(MSVC)
   ADD_DEFINITIONS(-D_UNICODE)
   # Enable SSE2/SSE/MMX
   ADD_DEFINITIONS(-D__SSE2__ -D__SSE__ -D__MMX__)
-  # This is Windows...
-  ADD_DEFINITIONS(-DWIN32)
+  # Add compile and link options
+  add_compile_options("/arch:AVX" "/DWIN32" "/D_WINDOWS" "/EHsc")
   add_link_options("/INCREMENTAL:NO" "/PDBALTPATH:%_PDB%")
 endif(MSVC)
+
+if(APPLE)
+  # OpenMP
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Xclang -fopenmp -Wno-register")
+endif(APPLE)
 
 if (LUXRAYS_DISABLE_OPENCL)
   ADD_DEFINITIONS("-DLUXRAYS_DISABLE_OPENCL")
