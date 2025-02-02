@@ -28,28 +28,35 @@ MESSAGE(STATUS "CMake version " ${CMAKE_VERSION} " detected")
 cmake_minimum_required(VERSION 3.25)
 cmake_policy(VERSION 3.25)
 
-set(supported_build_variants "Debug" "Release")
 
 # Options
-OPTION(LUX_DEMOS "Enable to build LuxCore demos" OFF)
-OPTION(LUX_CONSOLE "Enable to build luxcoreconsole" OFF)
-OPTION(LUX_UI "Enable to build luxcoreui" OFF)
-OPTION(LUX_TESTS "Enable to build tests" OFF)
+OPTION(LUXCORE_DEMOS "Enable to build LuxCore demos" OFF)
+OPTION(LUXCORE_CONSOLE "Enable to build luxcoreconsole" OFF)
+OPTION(LUXCORE_UI "Enable to build luxcoreui" OFF)
+OPTION(LUXCORE_TESTS "Enable to build tests" OFF)
+OPTION(LUXCORE_PYLUXCORE "Enable to build Pyluxcore (Python bindings" OFF)
+OPTION(BUILD_LUXCORE_DLL "Enable to build LuxCore as shared library" OFF)
+OPTION(LUXRAYS_ENABLE_OPENCL "Enable to use OpenCL" ON)
+OPTION(LUXRAYS_ENABLE_CUDA "Enable to use CUDA" ON)
+OPTION(LUXRAYS_ENABLE_OPTIX "Enable to use Optix" ON)
 
-# Detect whether we're using a single config or multi config generator and
-# configure it:
-
-unset(CMAKE_CONFIGURATION_TYPES CACHE)
-
+# Fundamental settings
 # This boots up the generator:
 enable_language(C)
 enable_language(CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_FIND_PACKAGE_TARGETS_GLOBAL ON)  # Propagate Conan targets to subdirs
 set(CMAKE_VERBOSE_MAKEFILE ON)
+
+
+# Build type
+# Detect whether we're using a single config or multi config generator and
+# configure it:
+
+set(supported_build_variants "Debug" "Release")
+unset(CMAKE_CONFIGURATION_TYPES CACHE)
 
 if (CMAKE_CONFIGURATION_TYPES)
 
@@ -80,12 +87,11 @@ endif()
 
 project(LuxRays)
 
-# Set path to modules
+# Set path to modules (keep it after project declaration)
 set(CMAKE_MODULE_PATH
   "${PROJECT_SOURCE_DIR}"
   "${PROJECT_SOURCE_DIR}/cmake"
 )
-MESSAGE(STATUS "CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}")  # TODO
 
 ################################################################################
 #
@@ -93,9 +99,8 @@ MESSAGE(STATUS "CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH}")  # TODO
 #
 ################################################################################
 
-# Python
+# Nota: please keep all 'find_package' gathered here (for maintenance reason)
 message(STATUS "LuxCore - Add dependency targets")
-find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
 find_package(OpenMP REQUIRED)
 find_package(TBB REQUIRED)
 find_package(minizip REQUIRED)
@@ -111,24 +116,26 @@ find_package(Boost REQUIRED)
 find_package(OpenVDB REQUIRED)
 find_package(Imath REQUIRED)
 find_package(Eigen3 REQUIRED)
-find_package(blender-types REQUIRED)
 find_package(OpenSubdiv REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(robin_hood REQUIRED)
-find_package(pybind11 CONFIG REQUIRED)
 
 # Bison/Flex
 find_package(BISON REQUIRED)
 find_package(FLEX REQUIRED)
 
+if (LUXCORE_PYLUXCORE)
+  # Additional dependencies for pyluxcore
+  find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
+  find_package(blender-types REQUIRED)
+  find_package(pybind11 CONFIG REQUIRED)
+endif()
+
+
 if(APPLE)
   # OpenMP
-  find_package(OpenMP REQUIRED)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Xclang -fopenmp -Wno-register")
-
 endif(APPLE)
-
-INCLUDE(KernelPreprocess)
 
 # Include embedded dependencies
 
@@ -139,6 +146,8 @@ include_directories("${PROJECT_SOURCE_DIR}/deps/cuew/include")
 include_directories("${PROJECT_SOURCE_DIR}/deps/clew/include")
 include_directories("${PROJECT_SOURCE_DIR}/deps/optix-7.1.0/include")
 
+# OpenCL preprocessing
+INCLUDE(KernelPreprocess)
 
 ################################################################################
 #
@@ -195,7 +204,6 @@ endif()
 #
 ################################################################################
 
-set(CMAKE_CXX_STANDARD 20)
 set(GENERATED_DIR "${CMAKE_BINARY_DIR}/generated")
 set(GENERATED_INCLUDE_DIR "${GENERATED_DIR}/include")
 
@@ -213,7 +221,7 @@ add_subdirectory(src/pyluxcoretools)
 #
 ################################################################################
 
-if(LUX_DEMOS)
+if(LUXCORE_DEMOS)
   if((${CMAKE_SYSTEM_NAME} MATCHES "Linux") OR OSX_BUILD_DEMOS OR WIN_BUILD_DEMOS)
     add_subdirectory(samples/luxcoredemo)
     add_subdirectory(samples/luxcorescenedemo)
@@ -225,12 +233,12 @@ if(LUX_DEMOS)
   endif()
 endif()
 
-if(LUX_CONSOLE)
+if(LUXCORE_CONSOLE)
   message(STATUS "Compiling luxcoreconsole")
   add_subdirectory(samples/luxcoreconsole)
 endif()
 
-if(LUX_UI)
+if(LUXCORE_UI)
   message(STATUS "Compiling luxcoreui")
   find_package(OpenGL)
   IF (NOT OPENGL_FOUND)
@@ -246,6 +254,6 @@ endif()
 #
 ################################################################################
 
-if(LUX_TESTS)
+if(LUXCORE_TESTS)
   add_subdirectory(pyunittests)
 endif()
