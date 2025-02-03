@@ -26,27 +26,45 @@ MESSAGE(STATUS "CMake version " ${CMAKE_VERSION} " detected")
 ################################################################################
 
 cmake_minimum_required(VERSION 3.25)
-cmake_policy(VERSION 3.0)
+cmake_policy(VERSION 3.25)
 
-# Remove the following when the version check is at least 2.8.4
-SET(CMAKE_LEGACY_CYGWIN_WIN32 0)
-
-set(supported_build_variants "Debug" "Release")
+project(LuxRays)
 
 # Options
-OPTION(LUX_DEMOS "Enable to build LuxCore demos" OFF)
-OPTION(LUX_CONSOLE "Enable to build luxcoreconsole" OFF)
-OPTION(LUX_UI "Enable to build luxcoreui" OFF)
-OPTION(LUX_TESTS "Enable to build tests" OFF)
+OPTION(LUXCORE_DEMOS "Enable to build LuxCore demos" OFF)
+OPTION(LUXCORE_CONSOLE "Enable to build luxcoreconsole" OFF)
+OPTION(LUXCORE_UI "Enable to build luxcoreui" OFF)
+OPTION(LUXCORE_TESTS "Enable to build tests" OFF)
+OPTION(LUXCORE_PYLUXCORE "Enable to build Pyluxcore (Python bindings)" OFF)
+OPTION(LUXCORE_STATIC "Enable to build LuxCore as shared library" OFF)
+OPTION(LUXRAYS_ENABLE_OPENCL "Enable to use OpenCL" ON)
+OPTION(LUXRAYS_ENABLE_CUDA "Enable to use CUDA" ON)
+OPTION(LUXRAYS_ENABLE_OPTIX "Enable to use Optix" ON)
 
-# Detect whether we're using a single config or multi config generator and
-# configure it:
+if(LUXCORE_PYLUXCORE OR NOT LUXCORE_STATIC)
+  set(BUILD_LUXCORE_DLL ON)
+else()
+  set(BUILD_LUXCORE_DLL OFF)
+endif()
+MESSAGE("Set BUILD_LUXCORE_DLL to ${BUILD_LUXCORE_DLL}")
 
-unset(CMAKE_CONFIGURATION_TYPES CACHE)
-
+# Fundamental settings
 # This boots up the generator:
 enable_language(C)
 enable_language(CXX)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set(CMAKE_FIND_PACKAGE_TARGETS_GLOBAL ON)  # Propagate Conan targets to subdirs
+set(CMAKE_VERBOSE_MAKEFILE ON)
+
+
+# Build type
+# Detect whether we're using a single config or multi config generator and
+# configure it:
+
+set(supported_build_variants "Debug" "Release")
+unset(CMAKE_CONFIGURATION_TYPES CACHE)
 
 if (CMAKE_CONFIGURATION_TYPES)
 
@@ -71,79 +89,98 @@ else()
 
 endif()
 
+
+
 # The following implicitly boots up the generator, so don't move it up:
 
-project(LuxRays)
 
-# TODO
-#if (NOT DEFINED LuxRays_SOURCE_DIR)
-  #SET(LuxRays_SOURCE_DIR "${PROJECT_SOURCE_DIR}")
-#endif (NOT DEFINED LuxRays_SOURCE_DIR)
-
-################################################################################
-#
-# Include necessary submodules
-#
-################################################################################
-
+# Set path to modules (keep it after project declaration)
 set(CMAKE_MODULE_PATH
-  "${LuxRays_SOURCE_DIR}"
-  "${LuxRays_SOURCE_DIR}/cmake"
-  "${LuxRays_SOURCE_DIR}/cmake/Utils"
-  "${LuxRays_SOURCE_DIR}/cmake/Packages"
-  "${LuxRays_SOURCE_DIR}/cmake/SpecializedConfig"
+  "${PROJECT_SOURCE_DIR}"
+  "${PROJECT_SOURCE_DIR}/cmake"
 )
 
-INCLUDE(KernelPreprocess)
+################################################################################
+#
+# Include necessary dependencies
+#
+################################################################################
 
-# Install CMake modules
+# Nota: please keep all 'find_package' gathered here (for maintenance reason)
+message(STATUS "LuxCore - Add dependency targets")
+find_package(OpenMP REQUIRED)
+find_package(TBB REQUIRED)
+find_package(minizip REQUIRED)
+find_package(spdlog REQUIRED)
+find_package(OpenImageIO REQUIRED)
+find_package(PNG REQUIRED)
+find_package(OpenColorIO REQUIRED)
+find_package(OpenEXR REQUIRED)
+find_package(embree REQUIRED)
+find_package(Blosc REQUIRED)
+find_package(oidn REQUIRED)
+find_package(Boost REQUIRED)
+find_package(OpenVDB REQUIRED)
+find_package(Imath REQUIRED)
+find_package(Eigen3 REQUIRED)
+find_package(OpenSubdiv REQUIRED)
+find_package(nlohmann_json REQUIRED)
+find_package(robin_hood REQUIRED)
 
-SET(LuxRays_INCLUDE_DIR "${LuxRays_SOURCE_DIR}/include")
+# Bison/Flex
+find_package(BISON REQUIRED)
+find_package(FLEX REQUIRED)
+
+if (LUXCORE_PYLUXCORE)
+  # Additional dependencies for pyluxcore
+  find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
+  find_package(blender-types REQUIRED)
+  find_package(pybind11 CONFIG REQUIRED)
+endif()
+
+
+# Include embedded dependencies
+
+SET(LuxRays_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/include")
 include_directories("${LuxRays_INCLUDE_DIR}")
 
-include_directories("${LuxRays_SOURCE_DIR}/deps/cuew/include")
-include_directories("${LuxRays_SOURCE_DIR}/deps/clew/include")
-include_directories("${LuxRays_SOURCE_DIR}/deps/optix-7.1.0/include")
+include_directories("${PROJECT_SOURCE_DIR}/deps/cuew/include")
+include_directories("${PROJECT_SOURCE_DIR}/deps/clew/include")
+include_directories("${PROJECT_SOURCE_DIR}/deps/optix-7.1.0/include")
 
-# TODO
-#set(Boost_USE_STATIC_LIBS ON)
-
-# Find dependencies
-include(Dependencies)
-
-#if (NOT Boost_FOUND)
-  #MESSAGE(FATAL_ERROR "--> Could not locate required Boost files - Please check ${BOOST_SEARCH_PATH}")
-#endif()
-
-#if (NOT OPENIMAGEIO_FOUND)
-  #MESSAGE(FATAL_ERROR "--> Could not locate required OpenImageIO files - Please check ${OPENIMAGEIO_SEARCH_PATH}")
-#endif()
-
-#if (NOT OPENGL_FOUND)
-  #MESSAGE(FATAL_ERROR "--> Could not locate required OpenGL file")
-#endif()
-
-#if (NOT EMBREE_FOUND)
-  #MESSAGE(FATAL_ERROR "--> Could not locate required Intel Embree files - Please check ${EMBREE_SEARCH_PATH}")
-#endif()
-
-#if (NOT OIDN_FOUND AND NOT LUXCORE_DISABLE_OIDN)
-  #MESSAGE(FATAL_ERROR "--> Could not locate required Intel Oidn files - Please check ${OIDN_SEARCH_PATH}")
-#endif()
-
-#if (NOT TBB_FOUND)
-  #MESSAGE(FATAL_ERROR "--> Could not locate required Intel TBB files - Please check ${TBB_SEARCH_PATH}")
-#endif()
-
-#if (NOT BLOSC_FOUND)
-  #MESSAGE(FATAL_ERROR "--> Could not locate required C-BLOSC files - Please check ${BLOSC_SEARCH_PATH}")
-#endif()
+# OpenCL preprocessing
+INCLUDE(KernelPreprocess)
 
 ################################################################################
 #
 # Build options
 #
 ################################################################################
+
+if(LINUX)
+  set(OpenGL_GL_PREFERENCE "LEGACY")
+endif(LINUX)
+
+if(MSVC)
+  # Minimizes Windows header files
+  #ADD_DEFINITIONS(-DWIN32_LEAN_AND_MEAN)
+  # Do not define MIN and MAX macros
+  ADD_DEFINITIONS(-DNOMINMAX)
+  # Do not warn about standard but insecure functions
+  ADD_DEFINITIONS(-D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS)
+  # Enable Unicode
+  ADD_DEFINITIONS(-D_UNICODE)
+  # Enable SSE2/SSE/MMX
+  ADD_DEFINITIONS(-D__SSE2__ -D__SSE__ -D__MMX__)
+  # Add compile and link options
+  add_compile_options("/arch:AVX" "/DWIN32" "/D_WINDOWS" "/EHsc")
+  add_link_options("/INCREMENTAL:NO" "/PDBALTPATH:%_PDB%")
+endif(MSVC)
+
+if(APPLE)
+  # OpenMP
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Xclang -fopenmp -Wno-register")
+endif(APPLE)
 
 if (LUXRAYS_DISABLE_OPENCL)
   ADD_DEFINITIONS("-DLUXRAYS_DISABLE_OPENCL")
@@ -170,21 +207,12 @@ else()
   message(STATUS "Intel OIDN support: enabled")
 endif()
 
-#if (BUILD_LUXCORE_DLL)
-  #set(LUXCORE_LIBRARY luxcore)
-  #ADD_DEFINITIONS("-DLUXCORE_DLL")
-#else()
-  ## TODO
-  #set(LUXCORE_LIBRARY luxcore slg-core slg-film slg-kernels luxrays bcd opensubdiv openvdb opencolorio ${BLOSC_LIBRARY} ${EMBREE_LIBRARY} ${OIDN_LIBRARY} ${TBB_LIBRARY} ${TIFF_LIBRARIES} ${TIFF_LIBRARIES} ${OPENEXR_LIBRARIES} ${PNG_LIBRARIES} ${JPEG_LIBRARIES})
-#endif()
-
 ################################################################################
 #
 # LuxRays, SLG, LuxCore and PyLuxCoreTools libraries
 #
 ################################################################################
 
-set(CMAKE_CXX_STANDARD 20)
 set(GENERATED_DIR "${CMAKE_BINARY_DIR}/generated")
 set(GENERATED_INCLUDE_DIR "${GENERATED_DIR}/include")
 
@@ -202,7 +230,7 @@ add_subdirectory(src/pyluxcoretools)
 #
 ################################################################################
 
-if(LUX_DEMOS)
+if(LUXCORE_DEMOS)
   if((${CMAKE_SYSTEM_NAME} MATCHES "Linux") OR OSX_BUILD_DEMOS OR WIN_BUILD_DEMOS)
     add_subdirectory(samples/luxcoredemo)
     add_subdirectory(samples/luxcorescenedemo)
@@ -214,12 +242,12 @@ if(LUX_DEMOS)
   endif()
 endif()
 
-if(LUX_CONSOLE)
+if(LUXCORE_CONSOLE)
   message(STATUS "Compiling luxcoreconsole")
   add_subdirectory(samples/luxcoreconsole)
 endif()
 
-if(LUX_UI)
+if(LUXCORE_UI)
   message(STATUS "Compiling luxcoreui")
   find_package(OpenGL)
   IF (NOT OPENGL_FOUND)
@@ -235,14 +263,6 @@ endif()
 #
 ################################################################################
 
-if(LUX_TESTS)
+if(LUXCORE_TESTS)
   add_subdirectory(pyunittests)
 endif()
-
-################################################################################
-#
-# For non win32 we'll have to copy everything to a single dir
-#
-################################################################################
-
-INCLUDE(AssembleBinDirs)
