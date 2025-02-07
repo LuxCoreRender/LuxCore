@@ -24,11 +24,11 @@ all: release
 
 release:
 	mkdir -p $(BUILD_DIR)
-	cd $(BUILD_DIR) && cmake $(BUILD_CMAKE_ARGS) -DCMAKE_BUILD_TYPE=Release --preset conan-release $(SOURCE_DIR) && cmake --build --preset conan-release .
+	cd $(BUILD_DIR) && cmake $(BUILD_CMAKE_ARGS) -DCMAKE_BUILD_TYPE=Release --preset conan-release $(SOURCE_DIR) && cmake --build --preset conan-release
 
 debug:
 	mkdir -p $(BUILD_DIR)
-	cd $(BUILD_DIR) && cmake $(BUILD_CMAKE_ARGS) -DCMAKE_BUILD_TYPE=Release --preset conan-release $(SOURCE_DIR) && cmake --build --preset conan-debug .
+	cd $(BUILD_DIR) && cmake $(BUILD_CMAKE_ARGS) -DCMAKE_BUILD_TYPE=Release --preset conan-release $(SOURCE_DIR) && cmake --build --preset conan-debug
 
 clean:
 	rm -rf $(BUILD_DIR)
