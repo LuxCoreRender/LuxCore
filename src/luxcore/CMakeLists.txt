@@ -157,6 +157,10 @@ else()
   add_library(luxcore STATIC ${LUXCORE_LIB_SRCS} ${LUX_PARSER_SRC})
 endif()
 
+target_link_libraries(luxcore PRIVATE
+    robin_hood::robin_hood
+)
+
 include_directories(${PROJECT_SOURCE_DIR}/deps/bcd-1.1/include)
 
 add_definitions(-DCPP_API_EXPORTS ${VISIBILITY_FLAGS}) # for controlling visibility
