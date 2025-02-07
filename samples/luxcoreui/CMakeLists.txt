@@ -82,10 +82,11 @@ IF(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 ENDIF()
 
 add_executable(luxcoreui ${LUXCOREUI_SRCS})
+target_link_libraries(luxcoreui PRIVATE luxrays boost::boost luxcore)
 
 if(APPLE)
 
-TARGET_LINK_LIBRARIES(luxcoreui
+  TARGET_LINK_LIBRARIES(luxcoreui PRIVATE
 	glfw
 	expat
 	${GLFW_LIBRARIES}
@@ -94,11 +95,15 @@ TARGET_LINK_LIBRARIES(luxcoreui
 	${GTK3_LIBRARIES}
 	${Boost_LIBRARIES})
 else()
-TARGET_LINK_LIBRARIES(luxcoreui
+TARGET_LINK_LIBRARIES(luxcoreui PRIVATE
 	glfw
 	${GLFW_LIBRARIES}
 	${LUXCORE_LIBRARY}
 	${OPENGL_LIBRARIES}
 	${GTK3_LIBRARIES}
 	${Boost_LIBRARIES})
+endif()
+
+if(LINUX)
+  target_link_libraries(luxcoreui PRIVATE gtk::gtk)
 endif()

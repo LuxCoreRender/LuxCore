@@ -158,7 +158,13 @@ else()
 endif()
 
 target_link_libraries(luxcore PRIVATE
+    slg-core
+    slg-film
+    slg-kernels
+    luxrays
+    bcd
     robin_hood::robin_hood
+    boost::boost
 )
 
 include_directories(${PROJECT_SOURCE_DIR}/deps/bcd-1.1/include)
