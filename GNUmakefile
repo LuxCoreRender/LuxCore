@@ -14,6 +14,8 @@ ifndef BUILD_DIR
 	BUILD_DIR:=./build
 endif
 
+SOURCE_DIR:=$(shell pwd)
+
 ifndef PYTHON
 	PYTHON:=python3
 endif
@@ -21,11 +23,12 @@ endif
 all: release
 
 release:
-	cmake $(BUILD_CMAKE_ARGS) -DCMAKE_BUILD_TYPE=Release --preset conan-release && cmake --build --preset conan-release
+	mkdir -p $(BUILD_DIR)
+	cd $(BUILD_DIR) && cmake $(BUILD_CMAKE_ARGS) -DCMAKE_BUILD_TYPE=Release --preset conan-release $(SOURCE_DIR) && cmake --build --preset conan-release .
 
 debug:
 	mkdir -p $(BUILD_DIR)
-	cd $(BUILD_DIR) && cmake $(BUILD_CMAKE_ARGS) -DCMAKE_BUILD_TYPE=Debug .. && cmake --build .
+	cd $(BUILD_DIR) && cmake $(BUILD_CMAKE_ARGS) -DCMAKE_BUILD_TYPE=Release --preset conan-release $(SOURCE_DIR) && cmake --build --preset conan-debug .
 
 clean:
 	rm -rf $(BUILD_DIR)
