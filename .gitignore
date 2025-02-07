@@ -71,3 +71,4 @@ MacDistFiles.tar.gz
 ###########################
 # Conan
 .conan2
+CMakeUserPresets.json
