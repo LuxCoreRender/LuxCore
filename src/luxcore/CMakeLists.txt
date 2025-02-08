@@ -157,6 +157,16 @@ else()
   add_library(luxcore STATIC ${LUXCORE_LIB_SRCS} ${LUX_PARSER_SRC})
 endif()
 
+target_link_libraries(luxcore PRIVATE
+    slg-core
+    slg-film
+    slg-kernels
+    luxrays
+    bcd
+    robin_hood::robin_hood
+    boost::boost
+)
+
 include_directories(${PROJECT_SOURCE_DIR}/deps/bcd-1.1/include)
 
 add_definitions(-DCPP_API_EXPORTS ${VISIBILITY_FLAGS}) # for controlling visibility
@@ -168,42 +178,39 @@ link_directories (${SLG_LIB_DIR} ${LuxRays_LIB_DIR})
 #
 ################################################################################
 
-if (LUXCORE_PYLUXCORE)
+set(PYLUXCORE_SRCS
+  ${PROJECT_SOURCE_DIR}/src/luxcore/pyluxcore.cpp
+  ${PROJECT_SOURCE_DIR}/src/luxcore/pyluxcoreforblender.cpp
+)
 
-  set(PYLUXCORE_SRCS
-    ${PROJECT_SOURCE_DIR}/src/luxcore/pyluxcore.cpp
-    ${PROJECT_SOURCE_DIR}/src/luxcore/pyluxcoreforblender.cpp
-  )
+pybind11_add_module(pyluxcore MODULE ${PYLUXCORE_SRCS} ${LUXCORE_LIB_SRCS} ${LUX_PARSER_SRC})
 
-  pybind11_add_module(pyluxcore MODULE ${PYLUXCORE_SRCS} ${LUXCORE_LIB_SRCS} ${LUX_PARSER_SRC})
+target_link_libraries(pyluxcore PRIVATE
+    slg-core
+    slg-film
+    slg-kernels
+    luxrays
+    bcd
+    OpenVDB::openvdb
+    spdlog::spdlog_header_only
+    pybind11::pybind11
+    Python::Module
+    boost::boost
+    onetbb::onetbb
+    blender-types
+    robin_hood::robin_hood
+)
 
-  target_link_libraries(pyluxcore PRIVATE
-      slg-core
-      slg-film
-      slg-kernels
-      luxrays
-      bcd
-      OpenVDB::openvdb
-      spdlog::spdlog_header_only
-      pybind11::pybind11
-      Python::Module
-      boost::boost
-      onetbb::onetbb
-      blender-types
-      robin_hood::robin_hood
-  )
+if(APPLE)
+  target_link_libraries(pyluxcore PRIVATE llvm-openmp::llvm-openmp)
+else()
+  target_link_libraries(pyluxcore PRIVATE OpenMP::OpenMP_CXX)
+endif(APPLE)
 
-  if(APPLE)
-    target_link_libraries(pyluxcore PRIVATE llvm-openmp::llvm-openmp)
-  else()
-    target_link_libraries(pyluxcore PRIVATE OpenMP::OpenMP_CXX)
-  endif(APPLE)
-
-  set_target_properties(pyluxcore PROPERTIES PREFIX "")
-  if(MSVC)
-    set_target_properties(pyluxcore PROPERTIES SUFFIX ".pyd")
-  endif(MSVC)
-endif()
+set_target_properties(pyluxcore PROPERTIES PREFIX "")
+if(MSVC)
+  set_target_properties(pyluxcore PROPERTIES SUFFIX ".pyd")
+endif(MSVC)
 
 ################################################################################
 #

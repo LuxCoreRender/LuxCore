@@ -67,3 +67,8 @@ TAGS
 build_lux_osx.sh
 pack_lux_osx_2.sh
 MacDistFiles.tar.gz
+
+###########################
+# Conan
+.conan2
+CMakeUserPresets.json
