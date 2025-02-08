@@ -39,15 +39,14 @@ make
 This will download LuxCore source code, LuxCore precompiled dependencies,
 configure CMake and build.
 
-Last line can be adapted to build a specific target:
+Last statement can be adapted to build a specific target. Example: `make pyluxcore`
 
-`make pyluxcore`
+#### Other commands
 
-#### Updates
-
-Clean build tree (delete intermediate files): `make clean`
-Remove build tree: `make clear`
-Update dependencies: `make deps`
+- `make clean`: clean build tree (delete intermediate files)
+- `make clear`: remove build tree
+- `make config`: configure/reconfigure project
+- `make deps`: update dependencies: `make deps`
 
 
 ### LuxCore library
@@ -56,20 +55,6 @@ LuxCore is the new LuxCoreRender v2.x C++ and Python API. It is released under A
 License v2.0 and can be freely used in open source and commercial applications.
 
 You can find more information about the API at https://wiki.luxcorerender.org/LuxCore_API
-
-### SLG library
-
-SLG is an implementation of LuxCore API and it can be safely ignored if you are
-not interested in internal LuxCoreRender development.
-
-### LuxRays library
-
-LuxRays is the part of LuxCoreRender dedicated to accelerate the ray intersection
-process by using CPUs and/or GPUs. LuxRays provides an device abstraction layer
-over various API like OpenCL, CUDA, CUDA+Optix, etc.
-
-If you don't have any specific interest in the ray/triangle intersection topic
-or internal LuxCoreRender development, you can safely ignore this library.
 
 ### LuxCoreUI
 
