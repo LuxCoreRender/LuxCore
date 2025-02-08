@@ -12,6 +12,7 @@ import logging
 import shutil
 import textwrap
 import argparse
+import json
 
 # TODO
 URL = "https://github.com/howetuft/LuxCoreDeps/releases/download/v0.0.1/luxcore-deps-ubuntu-latest-2.10.zip"
@@ -19,11 +20,14 @@ URL = "https://github.com/howetuft/LuxCoreDeps/releases/download/v0.0.1/luxcore-
 # TODO
 # Manage separate build folder
 
-CONAN_HOME = Path("./.conan2")
 
 CONAN_APP = None
 
 CONAN_ALL_PACKAGES = '"*"'
+
+BUILD_DIR = os.getenv("BUILD_DIR", "./build")
+
+CMAKE_DIR = Path(BUILD_DIR) / "cmake"
 
 logger = logging.getLogger("LuxCoreDeps")
 
@@ -108,7 +112,6 @@ if __name__ == "__main__":
     parser.add_argument("-f", "--file", type=Path)
     args = parser.parse_args()
 
-    BUILD_DIR = os.getenv("BUILD_DIR", "./build")
 
     logger.setLevel(logging.INFO)
     logging.basicConfig(level=logging.INFO)
@@ -116,9 +119,10 @@ if __name__ == "__main__":
 
         tmpdir = Path(tmpdir)
 
+        CONAN_HOME = tmpdir / ".conan2"
+
         # Initialize
         ensure_conan_app()
-        ensure_conan_home()
 
         # Download and unzip
         logger.info("Downloading dependencies")
@@ -152,7 +156,7 @@ if __name__ == "__main__":
         logger.info("Installing profiles")
         run_conan(["config", "install-pkg", "luxcoreconf/2.10.0@luxcore/luxcore"])  # TODO version as a param
 
-        # Generate
+        # Generate & deploy
         logger.info("Generating")
         run_conan([
             "install",
@@ -163,14 +167,5 @@ if __name__ == "__main__":
             f"--deployer-folder={BUILD_DIR}",
             "--generator=CMakeToolchain",
             "--generator=CMakeDeps",
-            f"--output-folder={BUILD_DIR}",
+            f"--output-folder={CMAKE_DIR}",
         ])
-        # res = run_conan(["list", "--format=compact"], capture_output=True)
-        # conanfile = ["[requires]"]
-        # conanfile += [textwrap.dedent(p) for p in res.stdout.splitlines()[1:]]
-        # conanfile += ["", "[generators]", "CMakeDeps", "CMakeToolChain"]
-        # with open("conanfile.txt", "w") as f:
-            # f.writelines(line + '\n' for line in conanfile)
-        # run_conan(["install", ".", "--build=never"])
-
-

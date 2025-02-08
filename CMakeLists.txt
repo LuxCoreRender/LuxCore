@@ -32,16 +32,13 @@ project(LuxRays)
 
 # Options
 OPTION(LUXCORE_DEMOS "Enable to build LuxCore demos" OFF)
-OPTION(LUXCORE_CONSOLE "Enable to build luxcoreconsole" OFF)
-OPTION(LUXCORE_UI "Enable to build luxcoreui" OFF)
 OPTION(LUXCORE_TESTS "Enable to build tests" OFF)
-OPTION(LUXCORE_PYLUXCORE "Enable to build Pyluxcore (Python bindings)" OFF)
 OPTION(LUXCORE_STATIC "Enable to build LuxCore as static library" OFF)
 OPTION(LUXRAYS_ENABLE_OPENCL "Enable to use OpenCL" ON)
 OPTION(LUXRAYS_ENABLE_CUDA "Enable to use CUDA" ON)
 OPTION(LUXRAYS_ENABLE_OPTIX "Enable to use Optix" ON)
 
-if(LUXCORE_PYLUXCORE OR NOT LUXCORE_STATIC)
+if(TARGET pyluxcore OR NOT LUXCORE_STATIC)
   set(BUILD_LUXCORE_DLL ON)
 else()
   set(BUILD_LUXCORE_DLL OFF)
@@ -131,16 +128,12 @@ find_package(robin_hood REQUIRED)
 find_package(BISON REQUIRED)
 find_package(FLEX REQUIRED)
 
-if (LUXCORE_PYLUXCORE)
-  # Additional dependencies for pyluxcore
-  find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
-  find_package(blender-types REQUIRED)
-  find_package(pybind11 CONFIG REQUIRED)
-endif()
+# Additional dependencies for pyluxcore
+find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
+find_package(blender-types REQUIRED)
+find_package(pybind11 CONFIG REQUIRED)
 
-if (LUXCORE_UI)
-  find_package(gtk REQUIRED)
-endif()
+find_package(gtk REQUIRED)
 
 
 # Include embedded dependencies
@@ -246,19 +239,13 @@ if(LUXCORE_DEMOS)
   endif()
 endif()
 
-if(LUXCORE_CONSOLE)
-  message(STATUS "Compiling luxcoreconsole")
-  add_subdirectory(samples/luxcoreconsole)
-endif()
+add_subdirectory(samples/luxcoreconsole)
 
-if(LUXCORE_UI)
-  message(STATUS "Compiling luxcoreui")
-  find_package(OpenGL)
-  IF (NOT OPENGL_FOUND)
-    MESSAGE(FATAL_ERROR "OpenGL not found! Please either install OpenGL or disable LUX_UI.")
-  ENDIF()
-  add_subdirectory(samples/luxcoreui)
-endif()
+find_package(OpenGL)
+IF (NOT OPENGL_FOUND)
+  MESSAGE(FATAL_ERROR "OpenGL not found! Please either install OpenGL or disable LUX_UI.")
+ENDIF()
+add_subdirectory(samples/luxcoreui)
 
 
 ################################################################################

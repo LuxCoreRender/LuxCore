@@ -20,20 +20,35 @@ ifndef PYTHON
 	PYTHON:=python3
 endif
 
-all: release
+.PHONY: clean deps config luxcore pyluxcore
 
-release:
-	mkdir -p $(BUILD_DIR)
-	cd $(BUILD_DIR) && cmake $(BUILD_CMAKE_ARGS) -DCMAKE_BUILD_TYPE=Release --preset conan-release $(SOURCE_DIR) && cmake --build --preset conan-release
+all: luxcore pyluxcore luxcoreui luxcoreconsole
 
-debug:
-	mkdir -p $(BUILD_DIR)
-	cd $(BUILD_DIR) && cmake $(BUILD_CMAKE_ARGS) -DCMAKE_BUILD_TYPE=Release --preset conan-release $(SOURCE_DIR) && cmake --build --preset conan-debug
+luxcore: config
+	cmake $(BUILD_CMAKE_ARGS) --build --preset conan-release --target luxcore
 
-clean:
+pyluxcore: config
+	cmake $(BUILD_CMAKE_ARGS) --build --preset conan-release --target pyluxcore
+
+luxcoreui: config
+	cmake $(BUILD_CMAKE_ARGS) --build --preset conan-release --target luxcoreui
+
+luxcoreconsole: config
+	cmake $(BUILD_CMAKE_ARGS) --build --preset conan-release --target luxcoreconsole
+
+# TODO Make debug targets
+
+clear:
 	rm -rf $(BUILD_DIR)
 
-.PHONY: deps
+clean:
+	cmake --build --preset conan-release --target clean
+
+config:
+	cmake $(BUILD_CMAKE_ARGS) --preset conan-release -S $(SOURCE_DIR)
+
 deps:
 	$(PYTHON) cmake/make_deps.py
 
+list-presets:
+	cmake --list-presets
