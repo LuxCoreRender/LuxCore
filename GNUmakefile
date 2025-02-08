@@ -20,7 +20,7 @@ ifndef PYTHON
 	PYTHON:=python3
 endif
 
-.PHONY: clean deps config luxcore pyluxcore
+.PHONY: clean deps config luxcore pyluxcore luxcoreui luxcoreconsole
 
 all: luxcore pyluxcore luxcoreui luxcoreconsole
 
@@ -38,14 +38,15 @@ luxcoreconsole: config
 
 # TODO Make debug targets
 
-clear:
-	rm -rf $(BUILD_DIR)
-
 clean:
 	cmake --build --preset conan-release --target clean
 
 config:
 	cmake $(BUILD_CMAKE_ARGS) --preset conan-release -S $(SOURCE_DIR)
+
+# Presets independant
+clear:
+	rm -rf $(BUILD_DIR)
 
 deps:
 	$(PYTHON) cmake/make_deps.py
