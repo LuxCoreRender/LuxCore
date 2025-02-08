@@ -11,6 +11,45 @@ programs are simply unable to reproduce.
 
 You can find more information about at https://www.luxcorerender.org
 
+
+### Building
+
+#### Tool requirements
+
+Ensure the following software is installed and available in the PATH:
+
+- Git
+- Conan (`pip install conan`)
+- Python 3
+- CMake
+- Ninja
+
+#### Quick build
+
+```
+git clone https://github.com/LuxCoreRender/LuxCore.git
+
+cd LuxCore
+git checkout for_v2.10
+
+make deps
+make
+```
+
+This will download LuxCore source code, LuxCore precompiled dependencies,
+configure CMake and build.
+
+Last line can be adapted to build a specific target:
+
+`make pyluxcore`
+
+#### Updates
+
+Clean build tree (delete intermediate files): `make clean`
+Remove build tree: `make clear`
+Update dependencies: `make deps`
+
+
 ### LuxCore library
 
 LuxCore is the new LuxCoreRender v2.x C++ and Python API. It is released under Apache Public
@@ -51,40 +90,6 @@ Just run `luxcoreconsole` from the root directory with:
 
 ```
 ./bin/luxcoreconsole -D batch.halttime 10 scenes/cornell/cornell.cfg
-```
-
-### LuxCore API SDK
-
-If you have downloaded the LuxCore API SDK, you can compile the examples with:
-
-```
-cmake .
-make
-```
-
-### PyLuxCoreTools
-
-PyLuxCoreTools are a set of command line tools available in the LuxCoreRender
-stand-alone version. They includes network rendering, film merging, command line
-rendering and more.
-
-NOTE: `pyluxcoretool` is a stand-alone, self-containing executable on Windows. On
-Linux, you have to install Python and PySide before running the tool. PySide
-can be usually installed with:
-
-```
-sudo pip3 install PySide
-# or
-sudo pip install PySide
-```
-
-You can skip installing PySide if you use only the command-line tools available in
-`pyluxcoretool`. You can then run `pyluxcoretool` with:
-
-```
-python3 pyluxcoretools.zip
-# or
-python pyluxcoretools.zip
 ```
 
 ### Authors

@@ -2,6 +2,8 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+"""This script downloads and installs dependencies for LuxCore build."""
+
 import os
 import tempfile
 from urllib.request import urlretrieve
@@ -13,13 +15,8 @@ import shutil
 import textwrap
 import argparse
 import json
-
-# TODO
-URL = "https://github.com/howetuft/LuxCoreDeps/releases/download/v0.0.1/luxcore-deps-ubuntu-latest-2.10.zip"
-
-# TODO
-# Manage separate build folder
-
+import configparser
+import platform
 
 CONAN_APP = None
 
@@ -31,29 +28,28 @@ CMAKE_DIR = Path(BUILD_DIR) / "cmake"
 
 logger = logging.getLogger("LuxCoreDeps")
 
-# TODO
-VERSIONS = {
-    "BOOST_VERSION": "1.84.0",
-    "OIIO_VERSION": "2.5.16.0",
-    "OCIO_VERSION": "2.4.0",
-    "OIDN_VERSION": "2.3.1",
-    "TBB_VERSION": "2021.12.0",
-    "OPENEXR_VERSION": "3.3.2",
-    "BLENDER_VERSION": "4.2.3",
-    "OPENVDB_VERSION": "11.0.0",
-    "SPDLOG_VERSION": "1.15.0",
-    "EMBREE3_VERSION": "3.13.5",
-    "FMT_VERSION": "11.0.2",
-    "OPENSUBDIV_VERSION": "3.6.0",
-    "JSON_VERSION": "3.11.3",
-    "EIGEN_VERSION": "3.4.0",
-    "ROBINHOOD_VERSION": "3.11.5",
-    "MINIZIP_VERSION": "4.0.3",
-    "PYBIND11_VERSION": "2.13.6",
-    "CXX_VERSION": "20",
-    "GCC_VERSION": "14",
-    "BUILD_TYPE": "Release",
-}
+CONAN_ENV = {}
+
+
+def build_url(user, release):
+    """Build the url to download from."""
+    # Compute zip filename, according to platform
+    if platform.system() == "Linux":
+        suffix = "ubuntu-latest"
+    elif platform.system() == "Windows":
+        suffix = "windows-latest"
+    elif platform.system() == "Darwin":
+        if platform.machine() == "arm64":
+            suffix = "macos-14"
+        else:
+            suffix = "macos-13"
+    else:
+        raise RuntimeError("Unknown system '{platform.system}'")
+
+    if not user:
+        user = "LuxCoreRender"
+
+    return f"https://github.com/{user}/LuxCoreDeps/releases/download/{release}/luxcore-deps-{suffix}.zip"
 
 
 def ensure_conan_app():
@@ -62,25 +58,12 @@ def ensure_conan_app():
     CONAN_APP = shutil.which("conan")
     logger.info(f"Conan found: '{CONAN_APP}'")
 
-def ensure_conan_home():
-    logger.info("Ensuring CONAN_HOME exists")
-    global CONAN_HOME
-    if not CONAN_HOME.exists():
-        CONAN_HOME.mkdir()
-
-    if not CONAN_HOME.is_dir():
-        logger.critical("CONAN_HOME('{CONAN_HOME}') exists but is not a directory")
-        exit(1)
-
-    CONAN_HOME = CONAN_HOME.resolve()
-
-    logger.info(f"CONAN_HOME exists at '{CONAN_HOME}' - OK")
-
 
 def run_conan(args, **kwargs):
-    conan_env = {"CONAN_HOME": CONAN_HOME}
-    conan_env.update(VERSIONS)
-    kwargs["env"] = conan_env
+    if not "env" in kwargs:
+        kwargs["env"] = CONAN_ENV
+    else:
+        kwargs["env"] |= CONAN_ENV
     kwargs["text"] = kwargs.get("text", True)
     args = [CONAN_APP] + args
     res = subprocess.run(args, **kwargs)
@@ -108,28 +91,42 @@ def install(filename, destdir):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-f", "--file", type=Path)
-    args = parser.parse_args()
 
-
+    # Set-up logger
     logger.setLevel(logging.INFO)
     logging.basicConfig(level=logging.INFO)
+
+    # Get settings
+    with open("luxcore.ini") as f:
+        settings = configparser.ConfigParser(allow_no_value=True)
+        settings.read_file(f)
+
+    # Process
     with tempfile.TemporaryDirectory() as tmpdir:
 
         tmpdir = Path(tmpdir)
 
         CONAN_HOME = tmpdir / ".conan2"
 
+        CONAN_ENV = {
+            "CONAN_HOME": CONAN_HOME,
+            "GCC_VERSION": settings["Build"]["gcc"],
+            "CXX_VERSION": settings["Build"]["cxx"],
+            "BUILD_TYPE": "Release",  # TODO Command line parameter
+        }
+
         # Initialize
         ensure_conan_app()
+        url = build_url(
+            settings["Dependencies"]["user"],
+            settings["Dependencies"]["release"]
+        )
+        gcc_version = settings["Build"]["gcc"]
+        cxx_version = settings["Build"]["cxx"]
 
         # Download and unzip
-        logger.info("Downloading dependencies")
-        if not args.file:
-            download(URL, tmpdir)
-        else:
-            install(args.file, tmpdir)
+        logger.info(f"Downloading dependencies (url='{url}')")
+        download(url, tmpdir)
 
         # Clean
         logger.info("Cleaning local cache")
@@ -154,18 +151,22 @@ if __name__ == "__main__":
 
         # Installing profiles
         logger.info("Installing profiles")
-        run_conan(["config", "install-pkg", "luxcoreconf/2.10.0@luxcore/luxcore"])  # TODO version as a param
+        run_conan(
+            ["config", "install-pkg", "luxcoreconf/2.10.0@luxcore/luxcore"]
+        )  # TODO version as a param
 
         # Generate & deploy
         logger.info("Generating")
-        run_conan([
-            "install",
-            "--requires=luxcoredeps/2.10.0@luxcore/luxcore",  # TODO version as a param
-            "--build=missing",
-            "--profile:all=conan-profile-Linux-X64",  # TODO compute profile name
-            "--deployer=full_deploy",
-            f"--deployer-folder={BUILD_DIR}",
-            "--generator=CMakeToolchain",
-            "--generator=CMakeDeps",
-            f"--output-folder={CMAKE_DIR}",
-        ])
+        run_conan(
+            [
+                "install",
+                "--requires=luxcoredeps/2.10.0@luxcore/luxcore",  # TODO version as a param
+                "--build=missing",
+                "--profile:all=conan-profile-Linux-X64",  # TODO compute profile name
+                "--deployer=full_deploy",
+                f"--deployer-folder={BUILD_DIR}",
+                "--generator=CMakeToolchain",
+                "--generator=CMakeDeps",
+                f"--output-folder={CMAKE_DIR}",
+            ]
+        )
