@@ -192,7 +192,7 @@ target_link_libraries(pyluxcore PRIVATE
     luxrays
     bcd
     OpenVDB::openvdb
-    spdlog::spdlog_header_only
+    spdlog::spdlog
     pybind11::pybind11
     Python::Module
     boost::boost
