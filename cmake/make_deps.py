@@ -110,6 +110,23 @@ def install(filename, destdir):
     zipfile.extractall(destdir)
 
 
+def conan_home():
+    res = subprocess.run([CONAN_APP, "config", "home"], capture_output=True, text=True)
+    if res.returncode:
+        logger.critical("Error while executing conan")
+        print(res.stdout)
+        print(res.stderr)
+        exit(1)
+    return Path(res.stdout.strip())
+
+
+def copy_conf(dest):
+    home = conan_home()
+    source = home / "global.conf"
+    logger.info(f"Copying {source}")
+    shutil.copy(source, dest)
+
+
 if __name__ == "__main__":
 
     # Set-up logger
@@ -127,6 +144,7 @@ if __name__ == "__main__":
         tmpdir = Path(tmpdir)
 
         CONAN_HOME = tmpdir / ".conan2"
+
 
         CONAN_ENV = {
             "CONAN_HOME": str(CONAN_HOME),
@@ -153,6 +171,7 @@ if __name__ == "__main__":
         res = run_conan(["remove", "-c", "*"], capture_output=True)
         for line in res.stderr.splitlines():
             logger.info(line)
+        copy_conf(CONAN_HOME)  # Copy global.conf in current conan home
 
         # Install
         logger.info("Installing")
