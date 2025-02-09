@@ -1,9 +1,11 @@
-@echo on
+@echo off
 
 REM Convenience wrapper for CMake commands
 
 REM Script command (1st parameter)
 set COMMAND=%1
+
+set CONAN_PRESET=conan-release
 
 echo Build cmake args: %BUILD_CMAKE_ARGS%
 
@@ -61,31 +63,31 @@ endlocal
 goto :EOF
 
 :Clean
-call :InvokeCMake conan-release clean
+call :InvokeCMake %CONAN_PRESET% clean
 goto :EOF
 
 :Config
-call :InvokeCMakeConfig conan-default
+call :InvokeCMakeConfig %CONAN_PRESET%
 goto :EOF
 
 :Luxcore
 call :Config
-call :InvokeCMake conan-release luxcore
+call :InvokeCMake %CONAN_PRESET% luxcore
 goto :EOF
 
 :PyLuxcore
 call :Config
-call :InvokeCMake conan-release pyluxcore
+call :InvokeCMake %CONAN_PRESET% pyluxcore
 goto :EOF
 
 :LuxcoreUI
 call :Config
-call :InvokeCMake conan-release luxcoreui
+call :InvokeCMake %CONAN_PRESET% luxcoreui
 goto :EOF
 
 :LuxcoreConsole
 call :Config
-call :InvokeCMake conan-release luxcoreconsole
+call :InvokeCMake %CONAN_PRESET% luxcoreconsole
 goto :EOF
 
 :Clear
