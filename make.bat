@@ -49,7 +49,7 @@ exit /B
 setlocal
 set PRESET=%1
 set TARGET=%2
-cmake %BUILD_CMAKE_ARGS% --build --preset %PRESET% --target %TARGET%
+cmake --build --preset %PRESET% --target %TARGET% %BUILD_CMAKE_ARGS%
 endlocal
 goto :EOF
 
@@ -70,22 +70,22 @@ goto :EOF
 
 :Luxcore
 call :Config
-call :InvokeCMake conan-default luxcore
+call :InvokeCMake conan-release luxcore
 goto :EOF
 
 :PyLuxcore
 call :Config
-call :InvokeCMake conan-default pyluxcore
+call :InvokeCMake conan-release pyluxcore
 goto :EOF
 
 :LuxcoreUI
 call :Config
-call :InvokeCMake conan-default luxcoreui
+call :InvokeCMake conan-release luxcoreui
 goto :EOF
 
 :LuxcoreConsole
 call :Config
-call :InvokeCMake conan-default luxcoreconsole
+call :InvokeCMake conan-release luxcoreconsole
 goto :EOF
 
 :Clear
