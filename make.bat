@@ -1,13 +1,11 @@
-@echo off
+@echo on
 
 REM Convenience wrapper for CMake commands
 
 REM Script command (1st parameter)
 set COMMAND=%1
 
-if "%BUILD_CMAKE_ARGS%" == "" (
-    set BUILD_CMAKE_ARGS=
-)
+echo Build cmake args: %BUILD_CMAKE_ARGS%
 
 if "%BUILD_DIR%" == "" (
     set BUILD_DIR=.\build
@@ -36,6 +34,8 @@ if "%COMMAND%" == "" (
     call :Config
 ) else if "%COMMAND%" == "clean" (
     call :Clean
+) else if "%COMMAND%" == "clear" (
+    call :Clear
 ) else if "%COMMAND%" == "deps" (
     call :Deps
 ) else if "%COMMAND%" == "list-presets" (
@@ -56,7 +56,7 @@ goto :EOF
 :InvokeCMakeConfig
 setlocal
 set PRESET=%1
-cmake --preset %PRESET% -S %SOURCE_DIR%
+cmake %BUILD_CMAKE_ARGS% --preset %PRESET% -S %SOURCE_DIR%
 endlocal
 goto :EOF
 
@@ -65,31 +65,31 @@ call :InvokeCMake conan-release clean
 goto :EOF
 
 :Config
-call :InvokeCMakeConfig conan-release
+call :InvokeCMakeConfig conan-default
 goto :EOF
 
 :Luxcore
 call :Config
-call :InvokeCMake conan-release luxcore
+call :InvokeCMake conan-default luxcore
 goto :EOF
 
 :PyLuxcore
 call :Config
-call :InvokeCMake conan-release pyluxcore
+call :InvokeCMake conan-default pyluxcore
 goto :EOF
 
 :LuxcoreUI
 call :Config
-call :InvokeCMake conan-release luxcoreui
+call :InvokeCMake conan-default luxcoreui
 goto :EOF
 
 :LuxcoreConsole
 call :Config
-call :InvokeCMake conan-release luxcoreconsole
+call :InvokeCMake conan-default luxcoreconsole
 goto :EOF
 
 :Clear
-rd /s /q %BUILD_DIR%
+rmdir /S /Q %BUILD_DIR%
 goto :EOF
 
 :Deps

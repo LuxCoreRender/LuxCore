@@ -125,8 +125,10 @@ find_package(nlohmann_json REQUIRED)
 find_package(robin_hood REQUIRED)
 
 # Bison/Flex
-find_package(BISON REQUIRED)
-find_package(FLEX REQUIRED)
+if(NOT WIN32)
+    find_package(BISON REQUIRED)
+    find_package(FLEX REQUIRED)
+endif()
 
 # Additional dependencies for pyluxcore
 find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
