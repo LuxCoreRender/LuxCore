@@ -30,26 +30,45 @@ logger = logging.getLogger("LuxCoreDeps")
 
 CONAN_ENV = {}
 
+URL_SUFFIXES = {
+    "Linux-X64": "ubuntu-latest",
+    "Windows-X64": "windows-latest",
+    "macOS-ARM64": "macos-14",
+    "macOS-X64": "macos-13",
+}
+
+def find_platform():
+    system = platform.system()
+    if system == "Linux":
+        res = "Linux-X64"
+    elif system == "Windows":
+        res = "Windows-X64"
+    elif system == "Darwin":
+        machine = platform.machine()
+        if machine == "arm64":
+            res = "macOS-ARM64"
+        elif machine == "x86_64":
+            res = "macOS-X64"
+        else:
+            raise RuntimeError(f"Unknown machine for MacOS: '{machine}'")
+    else:
+        raise RuntimeError(f"Unknown system '{system}'")
+    return res
+
 
 def build_url(user, release):
     """Build the url to download from."""
-    # Compute zip filename, according to platform
-    if platform.system() == "Linux":
-        suffix = "ubuntu-latest"
-    elif platform.system() == "Windows":
-        suffix = "windows-latest"
-    elif platform.system() == "Darwin":
-        if platform.machine() == "arm64":
-            suffix = "macos-14"
-        else:
-            suffix = "macos-13"
-    else:
-        raise RuntimeError("Unknown system '{platform.system}'")
+    suffix = URL_SUFFIXES[find_platform()]
 
     if not user:
         user = "LuxCoreRender"
 
     return f"https://github.com/{user}/LuxCoreDeps/releases/download/{release}/luxcore-deps-{suffix}.zip"
+
+
+def get_profile_name():
+    """Get the profile file name, based on platform."""
+    return f"conan-profile-{find_platform()}"
 
 
 def ensure_conan_app():
@@ -64,9 +83,10 @@ def run_conan(args, **kwargs):
         kwargs["env"] = CONAN_ENV
     else:
         kwargs["env"] |= CONAN_ENV
+    kwargs["env"] |= os.environ
     kwargs["text"] = kwargs.get("text", True)
     args = [CONAN_APP] + args
-    res = subprocess.run(args, **kwargs)
+    res = subprocess.run(args, shell=False, **kwargs)
     if res.returncode:
         logger.critical("Error while executing conan")
         print(res.stdout)
@@ -109,9 +129,9 @@ if __name__ == "__main__":
         CONAN_HOME = tmpdir / ".conan2"
 
         CONAN_ENV = {
-            "CONAN_HOME": CONAN_HOME,
-            "GCC_VERSION": settings["Build"]["gcc"],
-            "CXX_VERSION": settings["Build"]["cxx"],
+            "CONAN_HOME": str(CONAN_HOME),
+            "GCC_VERSION": str(settings["Build"]["gcc"]),
+            "CXX_VERSION": str(settings["Build"]["cxx"]),
             "BUILD_TYPE": "Release",  # TODO Command line parameter
         }
 
@@ -162,7 +182,7 @@ if __name__ == "__main__":
                 "install",
                 "--requires=luxcoredeps/2.10.0@luxcore/luxcore",  # TODO version as a param
                 "--build=missing",
-                "--profile:all=conan-profile-Linux-X64",  # TODO compute profile name
+                f"--profile:all={get_profile_name()}",
                 "--deployer=full_deploy",
                 f"--deployer-folder={BUILD_DIR}",
                 "--generator=CMakeToolchain",

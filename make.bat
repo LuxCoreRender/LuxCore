@@ -15,9 +15,35 @@ if "%BUILD_DIR%" == "" (
 
 set SOURCE_DIR=%cd%
 
-if "%PYTHON%" == "" (
-    set PYTHON=python3
+if "%LUX_PYTHON%" == "" (
+    set LUX_PYTHON=python.exe
 )
+
+if "%COMMAND%" == "" (
+    call :Luxcore
+    call :PyLuxcore
+    call :LuxcoreUI
+    call :LuxcoreConsole
+) else if "%COMMAND%" == "luxcore" (
+    call :Luxcore
+) else if "%COMMAND%" == "pyluxcore" (
+    call :PyLuxcore
+) else if "%COMMAND%" == "luxcoreui" (
+    call :LuxcoreUI
+) else if "%COMMAND%" == "luxcoreconsole" (
+    call :LuxcoreConsole
+) else if "%COMMAND%" == "config" (
+    call :Config
+) else if "%COMMAND%" == "clean" (
+    call :Clean
+) else if "%COMMAND%" == "deps" (
+    call :Deps
+) else if "%COMMAND%" == "list-presets" (
+    call :ListPresets
+) else (
+    echo Command "%COMMAND%" unknown
+)
+exit /B
 
 :InvokeCMake
 setlocal
@@ -67,34 +93,11 @@ rd /s /q %BUILD_DIR%
 goto :EOF
 
 :Deps
-%PYTHON% cmake/make_deps.py
+%LUX_PYTHON% -u cmake\make_deps.py
 goto :EOF
 
 :ListPresets
 cmake --list-presets
 goto :EOF
 
-if "%COMMAND%" == "" (
-    call :Luxcore
-    call :PyLuxcore
-    call :LuxcoreUI
-    call :LuxcoreConsole
-) else if "%COMMAND%" == "luxcore" (
-    call :Luxcore
-) else if "%COMMAND%" == "pyluxcore" (
-    call :PyLuxcore
-) else if "%COMMAND%" == "luxcoreui" (
-    call :LuxcoreUI
-) else if "%COMMAND%" == "luxcoreconsole" (
-    call :LuxcoreConsole
-) else if "%COMMAND%" == "config" (
-    call :Config
-) else if "%COMMAND%" == "clean" (
-    call :Clean
-) else if "%COMMAND%" == "deps" (
-    call :Deps
-) else if "%COMMAND%" == "list-presets" (
-    call :ListPresets
-) else (
-    echo Command "%COMMAND%" unknown
-)
+:EOF
