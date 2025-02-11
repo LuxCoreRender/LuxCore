@@ -278,16 +278,15 @@ set(LUXRAYS_LIB_SRCS
 add_library(luxrays STATIC ${LUXRAYS_LIB_SRCS})
 add_definitions(-DCPP_API_EXPORTS ${VISIBILITY_FLAGS}) # for controlling visibility
 
-TARGET_LINK_LIBRARIES(luxrays ${OPENIMAGEIO_LIBRARIES})
-TARGET_LINK_LIBRARIES(luxrays ${Boost_LIBRARIES})
-if (WIN32)
-# This is needed by Boost 1.67 but is not found automatically
-    TARGET_LINK_LIBRARIES(luxrays bcrypt.lib)
-endif(WIN32)
+# TODO
+#if (WIN32)
+## This is needed by Boost 1.67 but is not found automatically
+#TARGET_LINK_LIBRARIES(luxrays PRIVATE bcrypt.lib)
+#endif(WIN32)
 
-TARGET_LINK_LIBRARIES(luxrays ${CMAKE_DL_LIBS})
+#TARGET_LINK_LIBRARIES(luxrays ${CMAKE_DL_LIBS})
 
-target_link_libraries(luxrays embree openimageio::openimageio boost::boost)
+target_link_libraries(luxrays PRIVATE embree openimageio::openimageio boost::boost)
 
 ################################################################################
 #

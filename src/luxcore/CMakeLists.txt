@@ -167,6 +167,8 @@ target_link_libraries(luxcore PRIVATE
     boost::boost
     spdlog::spdlog
     fmt::fmt
+    openimageio::openimageio
+    embree
 )
 
 include_directories(${PROJECT_SOURCE_DIR}/deps/bcd-1.1/include)
