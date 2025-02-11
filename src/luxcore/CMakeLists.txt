@@ -165,6 +165,8 @@ target_link_libraries(luxcore PRIVATE
     bcd
     robin_hood::robin_hood
     boost::boost
+    spdlog::spdlog
+    fmt::fmt
 )
 
 include_directories(${PROJECT_SOURCE_DIR}/deps/bcd-1.1/include)
