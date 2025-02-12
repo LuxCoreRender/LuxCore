@@ -5,7 +5,8 @@ REM Convenience wrapper for CMake commands
 REM Script command (1st parameter)
 set COMMAND=%1
 
-set CONAN_PRESET=conan-release
+for /f "delims=" %%A in ('python cmake\get_preset.py') do set "CONAN_PRESET=%%A"
+echo CMake preset: %CONAN_PRESET%
 
 echo Build cmake args: %BUILD_CMAKE_ARGS%
 
