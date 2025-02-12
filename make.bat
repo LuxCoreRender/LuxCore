@@ -107,7 +107,7 @@ REM Define a function to extract preset names from cmake --list-presets
 REM Call cmake --list-presets and capture the output
 for /f "tokens=*" %%i in ('cmake --list-presets') do (
     REM Check if the line contains a preset name (assuming preset names are in the format "  "<preset_name>" - ")
-    echo %%i | findstr /r "^  \"[^\"]*\" -" >nul
+    echo %%i | find "  \"" >nul
     if !errorlevel! equ 0 (
         REM Extract the preset name
         for /f "tokens=1 delims=-" %%j in ("%%i") do (
