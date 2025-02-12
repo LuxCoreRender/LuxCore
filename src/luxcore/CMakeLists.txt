@@ -165,7 +165,7 @@ target_link_libraries(luxcore PRIVATE
     bcd
     robin_hood::robin_hood
     boost::boost
-    spdlog::spdlog
+    spdlog::spdlog_header_only
     fmt::fmt
     openimageio::openimageio
     embree
