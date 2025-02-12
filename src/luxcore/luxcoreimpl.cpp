@@ -1805,3 +1805,19 @@ void RenderSessionImpl::SaveResumeFile(const std::string &fileName) {
 
 	API_END();
 }
+
+
+auto fmt::formatter<luxcore::Camera::CameraType>::format(
+    luxcore::Camera::CameraType cam,
+    fmt::format_context& ctx
+) const -> format_context::iterator {
+
+  string_view name = "UNKNOWN";
+  switch (cam) {
+    case luxcore::Camera::CameraType::PERSPECTIVE: name = "PERSPECTIVE"; break;
+    case luxcore::Camera::CameraType::ORTHOGRAPHIC: name = "ORTHOGRAPHIC"; break;
+    case luxcore::Camera::CameraType::STEREO: name = "STEREO"; break;
+    case luxcore::Camera::CameraType::ENVIRONMENT: name = "ENVIRONMENT"; break;
+  }
+    return formatter<string_view>::format(name, ctx);
+}

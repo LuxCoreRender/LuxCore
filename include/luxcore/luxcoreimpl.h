@@ -19,6 +19,8 @@
 #ifndef _LUXCOREIMPL_H
 #define	_LUXCOREIMPL_H
 
+#include <fmt/core.h>
+
 #include <luxcore/luxcore.h>
 #include <slg/renderconfig.h>
 #include <slg/rendersession.h>
@@ -364,5 +366,11 @@ private:
 
 }
 }
+
+template <> struct fmt::formatter<luxcore::Camera::CameraType>: formatter<string_view> {
+
+  auto format(luxcore::Camera::CameraType cam, format_context& ctx) const
+    -> format_context::iterator;
+};
 
 #endif	/* _LUXCOREIMPL_H */
