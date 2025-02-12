@@ -203,6 +203,8 @@ target_link_libraries(pyluxcore PRIVATE
     onetbb::onetbb
     blender-types
     robin_hood::robin_hood
+    openimageio::openimageio
+    embree
 )
 
 if(APPLE)
