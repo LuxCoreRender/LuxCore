@@ -1,10 +1,11 @@
 @echo off
-setlocal
 
 REM Convenience wrapper for CMake commands
 
 REM Script command (1st parameter)
 set COMMAND=%1
+
+set CONAN_PRESET=conan-release
 
 echo Build cmake args: %BUILD_CMAKE_ARGS%
 
@@ -66,7 +67,6 @@ call :InvokeCMake %CONAN_PRESET% clean
 goto :EOF
 
 :Config
-call :extract_cmake_presets
 call :InvokeCMakeConfig %CONAN_PRESET%
 goto :EOF
 
@@ -102,24 +102,4 @@ goto :EOF
 cmake --list-presets
 goto :EOF
 
-REM Define a function to extract preset names from cmake --list-presets
-:extract_cmake_presets
-REM Call cmake --list-presets and capture the output
-for /f "tokens=*" %%i in ('cmake --list-presets') do (
-    REM Check if the line contains a preset name (assuming preset names are in the format "  "<preset_name>" - ")
-    echo %%i | findstr /r "^  \"[^\"]*\" -" >nul
-    if !errorlevel! equ 0 (
-        REM Extract the preset name
-        for /f "tokens=1 delims=-" %%j in ("%%i") do (
-            set "presetName=%%j"
-            REM Remove leading and trailing spaces and quotes
-            set "presetName=!presetName:~2,-2!"
-            REM Check if CONAN_PRESET is set
-            if not defined CONAN_PRESET (
-                set "CONAN_PRESET=!presetName!"
-                echo CONAN_PRESET is set to: !CONAN_PRESET!
-            )
-        )
-    )
-)
-goto :eof
+:EOF
