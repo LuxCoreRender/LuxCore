@@ -19,9 +19,6 @@
 #include <OpenImageIO/imagebuf.h>
 #include <OpenImageIO/imagebufalgo.h>
 
-#include <fmt/format.h>
-#include "spdlog/spdlog.h"
-
 #include "luxrays/core/intersectiondevice.h"
 #include "luxrays/utils/utils.h"
 #include "slg/slg.h"
@@ -577,19 +574,4 @@ RenderSession *RenderSession::Create(const RenderConfig *config, const std::stri
 RenderSession::~RenderSession() {
 	API_BEGIN_NOARGS();
 	API_END();
-}
-
-auto fmt::formatter<luxcore::Camera::CameraType>::format(
-    luxcore::Camera::CameraType cam,
-    fmt::format_context& ctx
-) const -> format_context::iterator {
-
-  string_view name = "UNKNOWN";
-  switch (cam) {
-    case luxcore::Camera::CameraType::PERSPECTIVE: name = "PERSPECTIVE"; break;
-    case luxcore::Camera::CameraType::ORTHOGRAPHIC: name = "ORTHOGRAPHIC"; break;
-    case luxcore::Camera::CameraType::STEREO: name = "STEREO"; break;
-    case luxcore::Camera::CameraType::ENVIRONMENT: name = "ENVIRONMENT"; break;
-  }
-    return formatter<string_view>::format(name, ctx);
 }

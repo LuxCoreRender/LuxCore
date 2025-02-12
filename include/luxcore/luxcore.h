@@ -42,8 +42,6 @@
 #include <string>
 #include <array>
 
-#include <fmt/base.h>
-
 #include <luxcore/cfg.h>
 #include <luxrays/utils/exportdefs.h>
 #include <luxrays/utils/properties.h>
@@ -1487,11 +1485,5 @@ public:
 };
 
 }
-
-template <> struct fmt::formatter<luxcore::Camera::CameraType>: formatter<string_view> {
-
-  auto format(luxcore::Camera::CameraType cam, format_context& ctx) const
-    -> format_context::iterator;
-};
 
 #endif	/* _LUXCORE_H */
