@@ -33,7 +33,7 @@ project(LuxRays)
 # Options
 OPTION(LUXCORE_DEMOS "Enable to build LuxCore demos" OFF)
 OPTION(LUXCORE_TESTS "Enable to build tests" OFF)
-OPTION(LUXCORE_STATIC "Enable to build LuxCore as static library" OFF)
+OPTION(LUXCORE_STATIC "Enable to build LuxCore as static library" ON)
 OPTION(LUXRAYS_ENABLE_OPENCL "Enable to use OpenCL" ON)
 OPTION(LUXRAYS_ENABLE_CUDA "Enable to use CUDA" ON)
 OPTION(LUXRAYS_ENABLE_OPTIX "Enable to use Optix" ON)

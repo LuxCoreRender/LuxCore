@@ -27,9 +27,8 @@ set(LUXCORECONSOLE_SRCS
 	)
 
 add_executable(luxcoreconsole ${LUXCORECONSOLE_SRCS})
+TARGET_LINK_LIBRARIES(luxcoreconsole PRIVATE luxrays luxcore boost::boost)
 
 if(APPLE)
-  TARGET_LINK_LIBRARIES(luxcoreconsole PRIVATE expat "-framework Carbon" "-framework IOKit" luxcore boost::boost)
-else()
-  TARGET_LINK_LIBRARIES(luxcoreconsole PRIVATE luxcore boost::boost)
+  TARGET_LINK_LIBRARIES(luxcoreconsole PRIVATE expat "-framework Carbon" "-framework IOKit")
 endif()
