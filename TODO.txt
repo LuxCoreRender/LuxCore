@@ -1,0 +1,4 @@
+Move OpenCL translation in build step
+Black py files
+Remove luxcoreui static deps
+Add demo targets
