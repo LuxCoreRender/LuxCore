@@ -133,7 +133,7 @@ Properties luxcore::GetPlatformDesc() {
 
 	Properties props;
 
-	static const string luxCoreVersion(LUXCORE_VERSION_MAJOR "." LUXCORE_VERSION_MINOR);
+	static const string luxCoreVersion(LUXCORE_VERSION_MAJOR "." LUXCORE_VERSION_MINOR "." LUXCORE_VERSION_BUGFIX);
 	props << Property("version.number")(luxCoreVersion);
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)

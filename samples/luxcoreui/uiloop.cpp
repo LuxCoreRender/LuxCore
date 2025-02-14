@@ -38,7 +38,7 @@ extern unsigned int LuxLogo_imageWidth;
 extern unsigned int LuxLogo_imageHeight;
 extern unsigned char LuxLogo_image[];
 
-const string windowTitle = "LuxCore UI v" LUXCORE_VERSION_MAJOR "." LUXCORE_VERSION_MINOR " (http://www.luxcorerender.org)";
+const string windowTitle = "LuxCore UI v" LUXCORE_VERSION_MAJOR "." LUXCORE_VERSION_MINOR "." LUXCORE_VERSION_BUGFIX " (http://www.luxcorerender.org)";
 
 static void GLFWErrorCallback(int error, const char *description) {
   cout <<
