@@ -135,7 +135,10 @@ find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
 find_package(blender-types REQUIRED)
 find_package(pybind11 CONFIG REQUIRED)
 
-find_package(gtk REQUIRED)
+# Additional dependencies for luxcoreui
+find_package(imgui)
+find_package(glfw3)
+find_package(nativefiledialog)
 
 
 # Include embedded dependencies

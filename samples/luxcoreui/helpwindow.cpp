@@ -38,7 +38,7 @@ void HelpWindow::Draw() {
 		// GUI help
 		//----------------------------------------------------------------------
 
-		if (ImGui::CollapsingHeader("GUI help", NULL, true, true)) {
+		if (ImGui::CollapsingHeader("GUI help", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) {
 			ImGui::PushID("GUI help");
 			ImGui::ShowUserGuide();
 			ImGui::PopID();
@@ -47,7 +47,7 @@ void HelpWindow::Draw() {
 		// Keys help
 		//----------------------------------------------------------------------
 
-		if (ImGui::CollapsingHeader("Keys help", NULL, true, true)) {
+		if (ImGui::CollapsingHeader("Keys help", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) {
 			ImGui::PushID("Keys help");
 
 			LuxCoreApp::ColoredLabelText("h", "%s", "toggle Help");

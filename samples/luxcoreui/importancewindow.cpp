@@ -34,7 +34,7 @@ void UserImportancePaintWindow::Draw() {
 	if (!opened)
 		return;
 
-	ImGui::SetNextWindowSize(ImVec2(320.f, 180.f), ImGuiSetCond_Appearing);
+	ImGui::SetNextWindowSize(ImVec2(320.f, 180.f), ImGuiCond_Appearing);
 
 	if (ImGui::Begin(windowTitle.c_str(), &opened)) {
 		ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.f);

@@ -46,7 +46,7 @@ void LogWindow::Draw() {
 	if (!opened)
 		return;
 
-	ImGui::SetNextWindowSize(ImVec2(512.f, 200.f), ImGuiSetCond_Appearing);
+	ImGui::SetNextWindowSize(ImVec2(512.f, 200.f), ImGuiCond_Appearing);
 
 	if (ImGui::Begin(windowTitle.c_str(), &opened)) {
 		ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.f);
@@ -78,7 +78,7 @@ void LogWindow::Draw() {
 			ImGui::TextUnformatted(buffer.begin());
 
 		if (scrollToBottom)
-			ImGui::SetScrollHere(1.0f);
+			ImGui::SetScrollHereY(1.0f);
 		scrollToBottom = false;
 
 		ImGui::EndChild();

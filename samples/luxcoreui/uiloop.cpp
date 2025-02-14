@@ -50,11 +50,11 @@ void LuxCoreApp::DrawBackgroundLogo() {
 	glfwGetFramebufferSize(window, &frameBufferWidth, &frameBufferHeight);
 
 	ImGui::SetNextWindowPos(ImVec2(0.f, 0.f));
-	ImGui::SetNextWindowSize(ImVec2(frameBufferWidth, frameBufferHeight), ImGuiSetCond_Always);
+	ImGui::SetNextWindowSize(ImVec2(frameBufferWidth, frameBufferHeight), ImGuiCond_Always);
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.f, 0.f));
 
 	bool opened = true;
-	if (ImGui::Begin("Background_logo", &opened, ImVec2(0.f, 0.f), 0.0f,
+	if (ImGui::Begin("Background_logo", &opened,
 			ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
 			ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoScrollbar |
 			ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoInputs)) {
@@ -65,7 +65,7 @@ void LuxCoreApp::DrawBackgroundLogo() {
 		// There seems to be a bug in ImGui, I have to move down the window or
 		// it will hide the menu bar
 		ImGui::SetCursorScreenPos(ImVec2(0, 25));
-		ImGui::Image((void *)(intptr_t)backgroundLogoTexID,
+		ImGui::Image((ImTextureID)(intptr_t)backgroundLogoTexID,
 				ImVec2(frameBufferWidth, frameBufferHeight),
 				ImVec2(border - pad, 1.f + pad), ImVec2(1.f - border + pad, 0.f - pad));
 	}
@@ -158,15 +158,15 @@ void LuxCoreApp::DrawRendering() {
 		// Draw the rendering to fill all the window area
 
 		ImGui::SetNextWindowPos(ImVec2(0.f, 0.f));
-		ImGui::SetNextWindowSize(ImVec2(frameBufferWidth, frameBufferHeight), ImGuiSetCond_Always);
+		ImGui::SetNextWindowSize(ImVec2(frameBufferWidth, frameBufferHeight), ImGuiCond_Always);
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.f, 0.f));
 
-		if (ImGui::Begin("Rendering", NULL, ImVec2(0.f, 0.f), 0.0f,
+		if (ImGui::Begin("Rendering", NULL,
 				ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
 				ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoBringToFrontOnFocus |
 				ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse |
 				ImGuiWindowFlags_NoInputs)) {
-			ImGui::Image((void *)(intptr_t)renderFrameBufferTexID,
+			ImGui::Image((ImTextureID)(intptr_t)renderFrameBufferTexID,
 					ImVec2(frameBufferWidth, frameBufferHeight),
 					ImVec2(0.f, 1.f), ImVec2(1.f, 0.f));
 
@@ -183,21 +183,20 @@ void LuxCoreApp::DrawRendering() {
 
 		ImGui::SetNextWindowPos(ImVec2(0.f, menuBarHeight));
 		ImGui::SetNextWindowContentSize(ImVec2(filmWidth, 0.f));
-		ImGui::SetNextWindowSize(ImVec2(frameBufferWidth, frameBufferHeight - menuBarHeight - captionHeight), ImGuiSetCond_Always);
+		ImGui::SetNextWindowSize(ImVec2(frameBufferWidth, frameBufferHeight - menuBarHeight - captionHeight), ImGuiCond_Always);
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.f, 0.f));
-
-		if (ImGui::Begin("Rendering", NULL, ImVec2(0.f, 0.f), 0.0f,
+		if (ImGui::Begin("Rendering", NULL,
 				ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
 				ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoBringToFrontOnFocus |
 				ImGuiWindowFlags_HorizontalScrollbar)) {
 
-			ImGui::Image((void *)(intptr_t)renderFrameBufferTexID,
+			ImGui::Image((ImTextureID)(intptr_t)renderFrameBufferTexID,
 					ImVec2(filmWidth, filmHeight),
 					ImVec2(0.f, 1.f), ImVec2(1.f, 0.f));
 
 			DrawTiles();
 
-			mouseHoverRenderingWindow = ImGui::IsMouseHoveringWindow();
+			mouseHoverRenderingWindow = ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup | ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);
 		}
 		ImGui::End();
 	}
@@ -205,7 +204,7 @@ void LuxCoreApp::DrawRendering() {
 	ImGui::PopStyleVar(1);
 }
 
-void LuxCoreApp::DrawTiles(const Property &propCoords, const Property &propPasses, 
+void LuxCoreApp::DrawTiles(const Property &propCoords, const Property &propPasses,
 		const Property &propPendingPasses,  const Property &propErrors,
 		const unsigned int tileCount, const unsigned int tileWidth, const unsigned int tileHeight, const ImU32 col) {
 	const bool showPassCount = config->GetProperties().Get(Property("screen.tiles.passcount.show")(false)).Get<bool>();
@@ -325,7 +324,7 @@ void LuxCoreApp::DrawCaptions() {
 
 	// Top screen label (to use only in full-screen mode)
 	/*ImGui::SetNextWindowPos(ImVec2(0.f, -8.f));
-	ImGui::SetNextWindowSize(ImVec2(frameBufferWidth, 0.f), ImGuiSetCond_Always);
+	ImGui::SetNextWindowSize(ImVec2(frameBufferWidth, 0.f), ImGuiCond_Always);
 
 	bool topOpened = true;
 	if (ImGui::Begin("Top screen label", &topOpened,
@@ -366,7 +365,7 @@ void LuxCoreApp::DrawCaptions() {
 	const ImVec2 windowSize = ImVec2(frameBufferWidth, textSize.y + 9);
 
 	ImGui::SetNextWindowPos(ImVec2(0.f, frameBufferHeight - windowSize.y));
-	ImGui::SetNextWindowSize(windowSize, ImGuiSetCond_Always);
+	ImGui::SetNextWindowSize(windowSize, ImGuiCond_Always);
 
 	bool bottomOpened = true;
 	if (ImGui::Begin("Bottom screen label", &bottomOpened,

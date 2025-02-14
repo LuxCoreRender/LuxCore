@@ -18,92 +18,83 @@
 
 #############################################################################
 #
-# GLFW library
-#
-#############################################################################
-
-add_subdirectory(deps/glfw-3.1.1)
-include_directories(deps/glfw-3.1.1/include)
-include_directories(deps/nfd/include)
-
-#############################################################################
-#
 # luxcore UI binary
 #
 #############################################################################
 
-include_directories(deps/imgui-1.46)
 
 set(LUXCOREUI_SRCS
-	luxcoreui.cpp
-	luxcoreapp.cpp
-	uiloop.cpp
-	uikeys.cpp
-	uimenu.cpp
-	uimouse.cpp
-	helpwindow.cpp
-	logwindow.cpp
-	objectwindow.cpp
-	objecteditorwindow.cpp
-	acceleratorwindow.cpp
-	epsilonwindow.cpp
-	filmchannelswindow.cpp
-	filmoutputswindow.cpp
-	filmradiancegroupswindow.cpp
-	imagewindow.cpp
-	lightstrategywindow.cpp
-	ocldevicewindow.cpp
-	pixelfilterwindow.cpp
-	renderenginewindow.cpp
-	samplerwindow.cpp
-	haltconditionswindow.cpp
-	statswindow.cpp
-	importancewindow.cpp
-	imgui_impl_glfw.cpp
-	bake.cpp
-	resources/luxlogo_bg.cpp
-	deps/imgui-1.46/imgui.cpp
-	deps/imgui-1.46/imgui_demo.cpp
-	deps/imgui-1.46/imgui_draw.cpp
-	deps/nfd/nfd_common.c
-	)
+  luxcoreui.cpp
+  luxcoreapp.cpp
+  uiloop.cpp
+  uikeys.cpp
+  uimenu.cpp
+  uimouse.cpp
+  helpwindow.cpp
+  logwindow.cpp
+  objectwindow.cpp
+  objecteditorwindow.cpp
+  acceleratorwindow.cpp
+  epsilonwindow.cpp
+  filmchannelswindow.cpp
+  filmoutputswindow.cpp
+  filmradiancegroupswindow.cpp
+  imagewindow.cpp
+  lightstrategywindow.cpp
+  ocldevicewindow.cpp
+  pixelfilterwindow.cpp
+  renderenginewindow.cpp
+  samplerwindow.cpp
+  haltconditionswindow.cpp
+  statswindow.cpp
+  importancewindow.cpp
+  bake.cpp
+  resources/luxlogo_bg.cpp
+)
 
-IF(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
-	SET(LUXCOREUI_SRCS ${LUXCOREUI_SRCS} deps/nfd/nfd_win.cpp)
-ENDIF()
+#IF(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
+	#SET(LUXCOREUI_SRCS ${LUXCOREUI_SRCS} deps/nfd/nfd_win.cpp)
+#ENDIF()
 
-IF(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-	SET(LUXCOREUI_SRCS ${LUXCOREUI_SRCS} deps/nfd/nfd_gtk.c)
-	add_definitions(${GTK3_CFLAGS_OTHER})
-ENDIF()
+#IF(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+	#SET(LUXCOREUI_SRCS ${LUXCOREUI_SRCS} deps/nfd/nfd_gtk.c)
+	#add_definitions(${GTK3_CFLAGS_OTHER})
+#ENDIF()
 
-IF(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-	SET(LUXCOREUI_SRCS ${LUXCOREUI_SRCS} deps/nfd/nfd_cocoa.m)
-ENDIF()
+#IF(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+	#SET(LUXCOREUI_SRCS ${LUXCOREUI_SRCS} deps/nfd/nfd_cocoa.m)
+#ENDIF()
 
 add_executable(luxcoreui ${LUXCOREUI_SRCS})
-target_link_libraries(luxcoreui PRIVATE luxrays boost::boost luxcore)
+target_link_libraries(luxcoreui PRIVATE
+  luxrays
+  boost::boost
+  luxcore
+  nativefiledialog::nativefiledialog
+  imgui::imgui
+  glfw
+)
 
-if(APPLE)
+#if(APPLE)
 
-  TARGET_LINK_LIBRARIES(luxcoreui PRIVATE
-	glfw
-	expat
-	${GLFW_LIBRARIES}
-	${LUXCORE_LIBRARY}
-	${OPENGL_LIBRARIES}
-	${GTK3_LIBRARIES}
-	${Boost_LIBRARIES})
-else()
-TARGET_LINK_LIBRARIES(luxcoreui PRIVATE
-	glfw
-	${GLFW_LIBRARIES}
-	${LUXCORE_LIBRARY}
-	${OPENGL_LIBRARIES}
-	${GTK3_LIBRARIES}
-	${Boost_LIBRARIES})
-endif()
+  #TARGET_LINK_LIBRARIES(luxcoreui PRIVATE
+	#glfw
+	#expat
+	#${GLFW_LIBRARIES}
+	#${LUXCORE_LIBRARY}
+	#${OPENGL_LIBRARIES}
+	#${GTK3_LIBRARIES}
+	#${Boost_LIBRARIES})
+#else()
+#TARGET_LINK_LIBRARIES(luxcoreui PRIVATE
+	#glfw
+	#${GLFW_LIBRARIES}
+	#${LUXCORE_LIBRARY}
+	#${OPENGL_LIBRARIES}
+	#${GTK3_LIBRARIES}
+	#${Boost_LIBRARIES})
+#endif()
 
-if(LINUX)
-  target_link_libraries(luxcoreui PRIVATE gtk::gtk)
-endif()
+#if(LINUX)
+  #target_link_libraries(luxcoreui PRIVATE gtk::gtk)
+#endif()
