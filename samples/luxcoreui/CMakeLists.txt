@@ -50,6 +50,8 @@ set(LUXCOREUI_SRCS
   importancewindow.cpp
   bake.cpp
   resources/luxlogo_bg.cpp
+  imgui_impl_glfw.cpp
+  imgui_impl_opengl2.cpp
 )
 
 #IF(${CMAKE_SYSTEM_NAME} MATCHES "Windows")

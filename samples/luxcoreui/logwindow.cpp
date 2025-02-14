@@ -27,62 +27,62 @@ using namespace std;
 //------------------------------------------------------------------------------
 
 void LogWindow::Clear() {
-	buffer.clear();
-	lineOffsets.clear();
+  buffer.clear();
+  lineOffsets.clear();
 }
 
 void LogWindow::AddMsg(const char *msg) {
-	int oldSize = buffer.size();
-	buffer.append("%s\n", msg);
+  int oldSize = buffer.size();
+  buffer.append(msg);
 
-	for (int newSize = buffer.size(); oldSize < newSize; oldSize++)
-		if (buffer[oldSize] == '\n')
-			lineOffsets.push_back(oldSize);
+  for (int newSize = buffer.size(); oldSize < newSize; oldSize++)
+    if (buffer[oldSize] == '\n')
+      lineOffsets.push_back(oldSize);
 
-	scrollToBottom = true;
+  scrollToBottom = true;
 }
 
 void LogWindow::Draw() {
-	if (!opened)
-		return;
+  if (!opened)
+    return;
 
-	ImGui::SetNextWindowSize(ImVec2(512.f, 200.f), ImGuiCond_Appearing);
+  ImGui::SetNextWindowSize(ImVec2(512.f, 200.f), ImGuiCond_Appearing);
 
-	if (ImGui::Begin(windowTitle.c_str(), &opened)) {
-		ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.f);
+  if (ImGui::Begin(windowTitle.c_str(), &opened)) {
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.f);
 
-		if (ImGui::Button("Clear"))
-			Clear();
-		ImGui::SameLine();
+    if (ImGui::Button("Clear"))
+      Clear();
+    ImGui::SameLine();
 
-		const bool copy = ImGui::Button("Copy");
-		ImGui::SameLine();
+    const bool copy = ImGui::Button("Copy");
+    ImGui::SameLine();
 
-		filter.Draw("Filter", -100.0f);
-		ImGui::Separator();
-		ImGui::BeginChild("scrolling", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar);
-		if (copy)
-			ImGui::LogToClipboard();
+    filter.Draw("Filter", -100.0f);
+    ImGui::Separator();
+    ImGui::BeginChild("scrolling", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar);
+    if (copy)
+      ImGui::LogToClipboard();
 
-		if (filter.IsActive()) {
-			const char *bufferBegin = buffer.begin();
-			const char *line = bufferBegin;
-			for (int lineNumber = 0; line != NULL; lineNumber++) {
-				const char *line_end = (lineNumber < lineOffsets.Size) ? bufferBegin + lineOffsets[lineNumber] : NULL;
+    if (filter.IsActive()) {
+      const char *bufferBegin = buffer.begin();
+      const char *line = bufferBegin;
+      for (int lineNumber = 0; line != NULL; lineNumber++) {
+        const char *line_end = (lineNumber < lineOffsets.Size) ? bufferBegin + lineOffsets[lineNumber] : NULL;
 
-				if (filter.PassFilter(line, line_end))
-					ImGui::TextUnformatted(line, line_end);
-				line = line_end && line_end[1] ? line_end + 1 : NULL;
-			}
-		} else
-			ImGui::TextUnformatted(buffer.begin());
+        if (filter.PassFilter(line, line_end))
+          ImGui::TextUnformatted(line, line_end);
+        line = line_end && line_end[1] ? line_end + 1 : NULL;
+      }
+    } else
+      ImGui::TextUnformatted(buffer.begin());
 
-		if (scrollToBottom)
-			ImGui::SetScrollHereY(1.0f);
-		scrollToBottom = false;
+    if (scrollToBottom)
+      ImGui::SetScrollHereY(1.0f);
+    scrollToBottom = false;
 
-		ImGui::EndChild();
-		ImGui::PopStyleVar();
-	}
-	ImGui::End();
+    ImGui::EndChild();
+    ImGui::PopStyleVar();
+  }
+  ImGui::End();
 }
