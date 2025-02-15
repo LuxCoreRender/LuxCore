@@ -106,7 +106,7 @@ void LuxCoreApp::ToolCameraEditKeys(GLFWwindow *window, int key, int scanCode, i
 }
 
 void LuxCoreApp::GLFW_KeyCallBack(GLFWwindow *window, int key, int scanCode, int action, int mods) {
-	ImGui_ImplGlFw_KeyCallback(window, key, scanCode, action, mods);
+	ImGui_ImplGlfw_KeyCallback(window, key, scanCode, action, mods);
 
 	if (ImGui::GetIO().WantCaptureKeyboard)
 		return;

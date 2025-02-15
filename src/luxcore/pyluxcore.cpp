@@ -101,7 +101,7 @@ static void LuxCore_SetLogHandler(py::object &logHandler) {
 }
 
 static const char *LuxCoreVersion() {
-  static const char *luxCoreVersion = LUXCORE_VERSION_MAJOR "." LUXCORE_VERSION_MINOR;
+  static const char *luxCoreVersion = LUXCORE_VERSION_MAJOR "." LUXCORE_VERSION_MINOR ". "LUXCORE_VERSION_BUGFIX;
   return luxCoreVersion;
 }
 

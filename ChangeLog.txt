@@ -1,0 +1,7 @@
+Change Log for 2.10
+- all: create a dependency provider based on Conan (LuxCoreDeps)
+- all: refactor CMake files to use Conan features
+- luxcore: removed most of static deps and replace with Conan equivalent, latest versions
+- luxcoreui: removed static deps (nfd, glfw, imgui) and replace them with Conan
+- luxcoreui: refactor code to fit to deps latest versions
+- luxcoreui: move to nativefiledialog-extended (in lieu of nativefiledialog)

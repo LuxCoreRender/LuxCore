@@ -149,7 +149,7 @@ void RenderEngineWindow::PathGUI(Properties &props, bool &modifiedProps) {
 	float fval;
 	int ival;
 
-	if (ImGui::CollapsingHeader("Path Bounces", NULL, true, true)) {
+	if (ImGui::CollapsingHeader("Path Bounces", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) {
 		ival = props.Get("path.pathdepth.total").Get<int>();
 		if (ImGui::InputInt("Total maximum recursion bounces", &ival)) {
 			props.Set(Property("path.pathdepth.total")(ival));
@@ -179,7 +179,7 @@ void RenderEngineWindow::PathGUI(Properties &props, bool &modifiedProps) {
 		LuxCoreApp::HelpMarker("path.pathdepth.specular");
 	}
 
-	if (ImGui::CollapsingHeader("Russian Roulette", NULL, true, true)) {
+	if (ImGui::CollapsingHeader("Russian Roulette", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) {
 		ival = props.Get("path.russianroulette.depth").Get<int>();
 		if (ImGui::InputInt("Russian Roulette start depth", &ival)) {
 			props.Set(Property("path.russianroulette.depth")(ival));
@@ -195,7 +195,7 @@ void RenderEngineWindow::PathGUI(Properties &props, bool &modifiedProps) {
 		LuxCoreApp::HelpMarker("path.russianroulette.cap");
 	}
 
-	if (ImGui::CollapsingHeader("Clamping", NULL, true, true)) {
+	if (ImGui::CollapsingHeader("Clamping", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) {
 		fval = props.Get("path.clamping.variance.maxvalue").Get<float>();
 		if (ImGui::InputFloat("Variance clamping", &fval)) {
 			props.Set(Property("path.clamping.variance.maxvalue")(fval));
@@ -205,7 +205,7 @@ void RenderEngineWindow::PathGUI(Properties &props, bool &modifiedProps) {
 		DrawVarianceClampingSuggestedValue("path", props, modifiedProps);
 	}
 
-	if (ImGui::CollapsingHeader("Options", NULL, true, true)) {
+	if (ImGui::CollapsingHeader("Options", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) {
 		bval = props.Get("path.forceblackbackground.enable").Get<bool>();
 		if (ImGui::Checkbox("Force black background", &bval)) {
 			props.Set(Property("path.forceblackbackground.enable")(bval));
@@ -222,7 +222,7 @@ void RenderEngineWindow::TilePathGUI(Properties &props, bool &modifiedProps) {
 	float fval;
 	int ival;
 
-	if (ImGui::CollapsingHeader("Sampling", NULL, true, true)) {
+	if (ImGui::CollapsingHeader("Sampling", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) {
 		ival = props.Get("tilepath.sampling.aa.size").Get<int>();
 		if (ImGui::InputInt(("x" + ToString(ival) + " Anti-aliasing").c_str(), &ival)) {
 			props.Set(Property("tilepath.sampling.aa.size")(ival));
@@ -231,7 +231,7 @@ void RenderEngineWindow::TilePathGUI(Properties &props, bool &modifiedProps) {
 		LuxCoreApp::HelpMarker("tilepath.sampling.aa.size");
 	}
 
-	if (ImGui::CollapsingHeader("Tiles", NULL, true, true)) {
+	if (ImGui::CollapsingHeader("Tiles", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) {
 		if (props.IsDefined("tile.size.x") || props.IsDefined("tile.size.y")) {
 			ival = props.Get("tile.size.x").Get<int>();
 			if (ImGui::SliderInt("Tile width", &ival, 8, 512, "%.0f pixels")) {
@@ -296,7 +296,7 @@ void RenderEngineWindow::TilePathGUI(Properties &props, bool &modifiedProps) {
 void RenderEngineWindow::PathOCLGUI(Properties &props, bool &modifiedProps) {
 	PathGUI(props, modifiedProps);
 
-	if (ImGui::CollapsingHeader("OpenCL Options", NULL, true, true)) {
+	if (ImGui::CollapsingHeader("OpenCL Options", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) {
 		bool bval;
 		int ival;
 
@@ -339,7 +339,7 @@ void RenderEngineWindow::PathOCLGUI(Properties &props, bool &modifiedProps) {
 void RenderEngineWindow::TilePathOCLGUI(Properties &props, bool &modifiedProps) {
 	TilePathGUI(props, modifiedProps);
 
-	if (ImGui::CollapsingHeader("OpenCL Options", NULL, true, true)) {
+	if (ImGui::CollapsingHeader("OpenCL Options", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) {
 		int ival;
 
 		ival = props.Get("tilepathocl.devices.maxtiles").Get<int>();
@@ -362,7 +362,7 @@ void RenderEngineWindow::BiDirGUI(Properties &props, bool &modifiedProps) {
 	float fval;
 	int ival;
 
-	if (ImGui::CollapsingHeader("Path Depths", NULL, true, true)) {
+	if (ImGui::CollapsingHeader("Path Depths", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) {
 		ival = props.Get("path.maxdepth").Get<int>();
 		if (ImGui::InputInt("Maximum eye path recursion depth", &ival)) {
 			props.Set(Property("path.maxdepth")(ival));
@@ -378,7 +378,7 @@ void RenderEngineWindow::BiDirGUI(Properties &props, bool &modifiedProps) {
 		LuxCoreApp::HelpMarker("light.maxdepth");
 	}
 
-	if (ImGui::CollapsingHeader("Russian Roulette", NULL, true, true)) {
+	if (ImGui::CollapsingHeader("Russian Roulette", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) {
 		ival = props.Get("path.russianroulette.depth").Get<int>();
 		if (ImGui::InputInt("Russian Roulette start depth", &ival)) {
 			props.Set(Property("path.russianroulette.depth")(ival));
@@ -398,7 +398,7 @@ void RenderEngineWindow::BiDirGUI(Properties &props, bool &modifiedProps) {
 }
 
 void RenderEngineWindow::ThreadsGUI(Properties &props, bool &modifiedProps) {
-	if (ImGui::CollapsingHeader("Threads", NULL, true, true)) {
+	if (ImGui::CollapsingHeader("Threads", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) {
 		int ival = props.Get("native.threads.count").Get<int>();
 		if (ImGui::SliderInt("Threads count", &ival, 1, boost::thread::hardware_concurrency())) {
 			props.Set(Property("native.threads.count")(ival));
@@ -445,7 +445,7 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 	if (currentRenderEngineType == "RTPATHOCL") {
 		TilePathOCLGUI(props, modifiedProps);
 
-		if (ImGui::CollapsingHeader("Sampling", NULL, true, true)) {
+		if (ImGui::CollapsingHeader("Sampling", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) {
 			int ival = props.Get("tilepath.sampling.aa.size").Get<int>();
 			if (ImGui::InputInt(("x" + ToString(ival) + " Anti-aliasing").c_str(), &ival)) {
 				props.Set(Property("tilepath.sampling.aa.size")(ival));
@@ -454,7 +454,7 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 			LuxCoreApp::HelpMarker("tilepath.sampling.aa.size");
 		}
 
-		if (ImGui::CollapsingHeader("Real Time", NULL, true, true)) {
+		if (ImGui::CollapsingHeader("Real Time", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) {
 			// Preview phase
 
 			int ival = props.Get("rtpath.resolutionreduction.preview").Get<int>();
@@ -557,7 +557,7 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 		PathGUI(props, modifiedProps);
 		ThreadsGUI(props, modifiedProps);
 
-		if (ImGui::CollapsingHeader("Real Time", NULL, true, true)) {
+		if (ImGui::CollapsingHeader("Real Time", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) {
 			int ival = props.Get("rtpathcpu.zoomphase.size").Get<int>();
 			if (ImGui::InputInt("Zoom phase size", &ival)) {
 				props.Set(Property("rtpathcpu.zoomphase.size")(Max(ival, 1)));
@@ -595,7 +595,7 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 	if (currentRenderEngineType == "BIDIRVMCPU") {
 		BiDirGUI(props, modifiedProps);
 
-		if (ImGui::CollapsingHeader("BiDirVM Options", NULL, true, true)) {
+		if (ImGui::CollapsingHeader("BiDirVM Options", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) {
 			float fval;
 			int ival;
 
@@ -638,7 +638,7 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 		float fval;
 		int ival;
 
-		if (ImGui::CollapsingHeader("Path Depth", NULL, true, true)) {
+		if (ImGui::CollapsingHeader("Path Depth", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) {
 			ival = props.Get("path.pathdepth.total").Get<int>();
 			if (ImGui::InputInt("Maximum light path recursion depth", &ival)) {
 				props.Set(Property("path.pathdepth.total")(ival));
@@ -647,7 +647,7 @@ bool RenderEngineWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 			LuxCoreApp::HelpMarker("path.pathdepth.total");
 		}
 
-		if (ImGui::CollapsingHeader("Russian Roulette", NULL, true, true)) {
+		if (ImGui::CollapsingHeader("Russian Roulette", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) {
 			ival = props.Get("path.russianroulette.depth").Get<int>();
 			if (ImGui::InputInt("Russian Roulette start depth", &ival)) {
 				props.Set(Property("path.russianroulette.depth")(ival));

@@ -56,14 +56,14 @@ bool EpsilonWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 	float fval;
 
 	fval = props.Get("scene.epsilon.min").Get<float>();
-	if (ImGui::InputFloat("Min. epsilon value", &fval, 0.f, 0.f, 15)) {
+	if (ImGui::InputFloat("Min. epsilon value", &fval, 0.f, 0.f, "%.15f")) {
 		props.Set(Property("scene.epsilon.min")(fval));
 		modifiedProps = true;
 	}
 	LuxCoreApp::HelpMarker("scene.epsilon.min");
 
 	fval = props.Get("scene.epsilon.max").Get<float>();
-	if (ImGui::InputFloat("Max. epsilon value", &fval, 0.f, 0.f, 15)) {
+	if (ImGui::InputFloat("Max. epsilon value", &fval, 0.f, 0.f, "%.15f")) {
 		props.Set(Property("scene.epsilon.max")(fval));
 		modifiedProps = true;
 	}

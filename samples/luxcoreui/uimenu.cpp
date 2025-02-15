@@ -38,12 +38,22 @@ static void KernelCacheFillProgressHandler(const size_t step, const size_t count
 
 void LuxCoreApp::MenuRendering() {
 	if (ImGui::MenuItem("Load")) {
-		nfdchar_t *fileFileName = NULL;
-		nfdresult_t result = NFD_OpenDialog("cfg,bcf,lxs;cfg;bcf;lxs", NULL, &fileFileName);
+
+		nfdu8char_t *fileFileName = nullptr;
+                nfdu8filteritem_t filters[4] = {
+                  { "LuxCore scenes", "cfg,bcf,lxs" },
+                  { "LuxCore scene (text)", "cfg" },
+                  { "LuxCore scene (binary)", "bcf" },
+                  { "LuxRender scene", "lxs" },
+                };
+                nfdopendialogu8args_t args = {0};
+                args.filterList = filters;
+                args.filterCount = 4;
+		nfdresult_t result = NFD_OpenDialogU8_With(&fileFileName, &args);
 
 		if (result == NFD_OKAY) {
 			LoadRenderConfig(fileFileName);
-			free(fileFileName);
+			NFD_FreePathU8(fileFileName);
 		}
 	}
 
@@ -51,8 +61,9 @@ void LuxCoreApp::MenuRendering() {
 		ImGui::Separator();
 
 		if (ImGui::MenuItem("Export")) {
-			nfdchar_t *outPath = NULL;
-			nfdresult_t result = NFD_SaveDialog(NULL, NULL, &outPath);
+			nfdu8char_t *outPath = nullptr;
+                        nfdsavedialogu8args_t args = {0};
+			nfdresult_t result = NFD_SaveDialogU8_With(&outPath, &args);
 
 			if (result == NFD_OKAY) {
 				LA_LOG("Export current scene to directory in text format: " << outPath);
@@ -73,26 +84,42 @@ void LuxCoreApp::MenuRendering() {
 				// Restore the render engine setting
 				RenderConfigParse(Properties() <<
 						Property("renderengine.type")(renderEngine));
+
+                                NFD_FreePathU8(outPath);
 			}
 		}
 
 		if (ImGui::MenuItem("Export (binary)")) {
-			nfdchar_t *fileName = NULL;
-			nfdresult_t result = NFD_SaveDialog("bcf", NULL, &fileName);
+			nfdu8char_t *fileName = nullptr;
+                        nfdsavedialogu8args_t args = {0};
+                        nfdu8filteritem_t filters[1] = {
+                          { "LuxCore exported scene", "bcf" },
+                        };
+                        args.filterList = filters;
+                        args.filterCount = 1;
+			nfdresult_t result = NFD_SaveDialogU8_With(&fileName, &args);
 
 			if (result == NFD_OKAY) {
 				LA_LOG("Export current scene to file in binary format: " << fileName);
 				config->Save(fileName);
+                                NFD_FreePathU8(fileName);
 			}
 		}
 
 		if (ImGui::MenuItem("Export (glTF)")) {
-			nfdchar_t *fileName = NULL;
-			nfdresult_t result = NFD_SaveDialog("gltf", NULL, &fileName);
+			nfdu8char_t *fileName = nullptr;
+                        nfdsavedialogu8args_t args = {0};
+                        nfdu8filteritem_t filters[1] = {
+                          { "glTF", "gltf" },
+                        };
+                        args.filterList = filters;
+                        args.filterCount = 1;
+			nfdresult_t result = NFD_SaveDialogU8_With(&fileName, &args);
 
 			if (result == NFD_OKAY) {
 				LA_LOG("Export current scene to file in glTF format: " << fileName);
 				config->ExportGLTF(fileName);
+                                NFD_FreePathU8(fileName);
 			}
 		}
 	}
@@ -108,8 +135,15 @@ void LuxCoreApp::MenuRendering() {
 		ImGui::Separator();
 
 		if (ImGui::MenuItem("Save rendering")) {
-			nfdchar_t *fileName = NULL;
-			nfdresult_t result = NFD_SaveDialog("rsm", NULL, &fileName);
+			nfdu8char_t *fileName = nullptr;
+                        nfdsavedialogu8args_t args = {0};
+                        nfdu8filteritem_t filters[1] = {
+                          { "LuxCore resume file", "rsm" },
+                        };
+                        args.filterList = filters;
+                        args.filterCount = 1;
+			nfdresult_t result = NFD_SaveDialogU8_With(&fileName, &args);
+
 
 			if (result == NFD_OKAY) {
 				// Pause the current rendering
@@ -118,6 +152,8 @@ void LuxCoreApp::MenuRendering() {
 				// Save the session
 				session->SaveResumeFile(string(fileName));
 
+                                NFD_FreePathU8(fileName);
+
 				// Resume the current rendering
 				session->Resume();
 			}
@@ -125,14 +161,20 @@ void LuxCoreApp::MenuRendering() {
 	}
 
 	if (ImGui::MenuItem("Resume rendering")) {
+
 		// Select the scene
-		nfdchar_t *fileName = NULL;
-		nfdresult_t result = NFD_OpenDialog("rsm", NULL, &fileName);
+		nfdu8char_t *fileFileName = nullptr;
+                nfdu8filteritem_t filters[4] = {
+                  { "LuxCore resume rendering", "rsm" },
+                };
+                nfdopendialogu8args_t args = {0};
+                args.filterList = filters;
+                args.filterCount = 4;
+		nfdresult_t result = NFD_OpenDialogU8_With(&fileFileName, &args);
 
 		if (result == NFD_OKAY) {
-			LoadRenderConfig(fileName);
-
-			free(fileName);
+			LoadRenderConfig(fileFileName);
+			NFD_FreePathU8(fileFileName);
 		}
 	}
 

@@ -1,0 +1,15 @@
+{
+  "Version": {
+    "major": "2",
+    "minor": "10",
+    "bugfix": "0"
+  },
+  "Dependencies": {
+    "user": "LuxCoreRender",
+    "release": "v0.0.2"
+  },
+  "Build": {
+    "gcc": "14",
+    "cxx": "20"
+  }
+}

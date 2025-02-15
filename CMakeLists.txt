@@ -38,12 +38,16 @@ OPTION(LUXRAYS_ENABLE_OPENCL "Enable to use OpenCL" ON)
 OPTION(LUXRAYS_ENABLE_CUDA "Enable to use CUDA" ON)
 OPTION(LUXRAYS_ENABLE_OPTIX "Enable to use Optix" ON)
 
-if(TARGET pyluxcore OR NOT LUXCORE_STATIC)
-  set(BUILD_LUXCORE_DLL ON)
-else()
-  set(BUILD_LUXCORE_DLL OFF)
-endif()
-MESSAGE("Set BUILD_LUXCORE_DLL to ${BUILD_LUXCORE_DLL}")
+# Version
+FILE(READ "${CMAKE_CURRENT_LIST_DIR}/luxcore.json" luxcore_json)
+STRING(JSON LUXCORE_VERSION_MAJOR GET "${luxcore_json}" Version major)
+STRING(JSON LUXCORE_VERSION_MINOR GET "${luxcore_json}" Version minor)
+STRING(JSON LUXCORE_VERSION_BUGFIX GET "${luxcore_json}" Version bugfix)
+MESSAGE(STATUS "Building LuxCore ${LUXCORE_VERSION_MAJOR}.${LUXCORE_VERSION_MINOR}.${LUXCORE_VERSION_BUGFIX}")
+# We set LuxRays version same as LuxCore (don't know if it is judicious...)
+SET(LUXRAYS_VERSION_MAJOR ${LUXCORE_VERSION_MAJOR})
+SET(LUXRAYS_VERSION_MINOR ${LUXCORE_VERSION_MINOR})
+SET(LUXRAYS_VERSION_BUGFIX ${LUXCORE_VERSION_BUGFIX})
 
 # Fundamental settings
 # This boots up the generator:
@@ -54,6 +58,37 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_FIND_PACKAGE_TARGETS_GLOBAL ON)  # Propagate Conan targets to subdirs
 set(CMAKE_VERBOSE_MAKEFILE ON)
+
+# RPATH
+# From https://gitlab.kitware.com/cmake/community/-/wikis/doc/cmake/RPATH-handling
+# use, i.e. don't skip the full RPATH for the build tree
+set(CMAKE_SKIP_BUILD_RPATH FALSE)
+MESSAGE(STATUS "Install Prefix: ${CMAKE_INSTALL_PREFIX}")
+
+# when building, don't use the install RPATH already
+# (but later on when installing)
+set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+
+set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+
+# add the automatically determined parts of the RPATH
+# which point to directories outside the build tree to the install RPATH
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+
+# the RPATH to be used when installing, but only if it's not a system directory
+list(FIND CMAKE_PLATFORM_IMPLICIT_LINK_DIRECTORIES "${CMAKE_INSTALL_PREFIX}/lib" isSystemDir)
+if("${isSystemDir}" STREQUAL "-1")
+    set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+endif("${isSystemDir}" STREQUAL "-1")
+MESSAGE(STATUS "Install RPATH: ${CMAKE_INSTALL_RPATH}")
+
+
+if(TARGET pyluxcore OR NOT LUXCORE_STATIC)
+  set(BUILD_LUXCORE_DLL ON)
+else()
+  set(BUILD_LUXCORE_DLL OFF)
+endif()
+MESSAGE(STATUS "Set BUILD_LUXCORE_DLL to ${BUILD_LUXCORE_DLL}")
 
 
 # Build type
@@ -135,7 +170,10 @@ find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
 find_package(blender-types REQUIRED)
 find_package(pybind11 CONFIG REQUIRED)
 
-find_package(gtk REQUIRED)
+# Additional dependencies for luxcoreui
+find_package(imgui)
+find_package(glfw3)
+find_package(nativefiledialog)
 
 
 # Include embedded dependencies

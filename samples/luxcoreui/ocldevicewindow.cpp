@@ -89,7 +89,7 @@ bool OCLDeviceWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 			modifiedProps = true;
 		}
 
-		if (ImGui::CollapsingHeader("General", NULL, true, true)) {
+		if (ImGui::CollapsingHeader("General", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) {
 			int ival;
 			bool bval;
 
@@ -137,7 +137,7 @@ bool OCLDeviceWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 			LuxCoreApp::HelpMarker("opencl.gpu.workgroup.size");
 		}
 
-		if (ImGui::CollapsingHeader("Device list", NULL, true, true)) {
+		if (ImGui::CollapsingHeader("Device list", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) {
 			// Show the device list
 			for (unsigned int i = 0; i < oclDevDescPrefixs.size(); ++i) {
 				const string devName = oclDevDescs.Get(oclDevDescPrefixs[i] + ".name").Get<string>();
@@ -145,7 +145,7 @@ bool OCLDeviceWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 
 				bool bval = (selection.at(i) == '1');
 
-				ImGui::SetNextTreeNodeOpened(true, ImGuiSetCond_Appearing);
+				ImGui::SetNextItemOpen(true, ImGuiCond_Appearing);
 				if (ImGui::TreeNode(("#" + ToString(i) + " => " + devName +
 						(bval ? " (Used)" : " (Not used)")).c_str())) {
 					LuxCoreApp::ColoredLabelText("Name:", "%s", devName.c_str());

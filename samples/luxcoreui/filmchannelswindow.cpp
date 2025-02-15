@@ -254,7 +254,7 @@ void FilmChannelsWindow::DrawChannelInfo(const string &label, const Film::FilmCh
 
 	if (count > 0) {
 		ImGui::PushID(label.c_str());
-		if (ImGui::CollapsingHeader((label + ": " + ToString(count) + " channel(s)").c_str(), NULL, true, true)) {
+		if (ImGui::CollapsingHeader((label + ": " + ToString(count) + " channel(s)").c_str(), ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) {
 			for (unsigned int i = 0; i < count; ++i) {
 				DrawShowCheckBox(label, type, i);
 				

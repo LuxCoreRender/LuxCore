@@ -49,7 +49,7 @@ void HaltConditionsWindow::ParseObjectProperties(const Properties &props) {
 }
 
 bool HaltConditionsWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
-	if (ImGui::CollapsingHeader("Halt threshold", NULL, true, true)) {
+	if (ImGui::CollapsingHeader("Halt threshold", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) {
 		float fval = props.Get("batch.haltnoisethreshold").Get<float>();
 		if (ImGui::InputFloat("Convergence threshold", &fval)) {
 			props.Set(Property("batch.haltnoisethreshold")(fval));
@@ -83,7 +83,7 @@ bool HaltConditionsWindow::DrawObjectGUI(Properties &props, bool &modifiedProps)
 		LuxCoreApp::HelpMarker("batch.haltnoisethreshold.stoprendering.enable");
 	}
 	
-	if (ImGui::CollapsingHeader("Halt time", NULL, true, true)) {
+	if (ImGui::CollapsingHeader("Halt time", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) {
 		float fval = props.Get("batch.halttime").Get<float>();
 		if (ImGui::InputFloat("Total time in secs", &fval)) {
 			props.Set(Property("batch.halttime")(fval));
@@ -91,7 +91,7 @@ bool HaltConditionsWindow::DrawObjectGUI(Properties &props, bool &modifiedProps)
 		}
 	}
 	
-	if (ImGui::CollapsingHeader("Halt samples/pixel", NULL, true, true)) {
+	if (ImGui::CollapsingHeader("Halt samples/pixel", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) {
 		int ival = props.Get("batch.haltspp").Get<int>();
 		if (ImGui::InputInt("Total samples/pixel", &ival)) {
 			props.Set(Property("batch.haltspp")(ival));

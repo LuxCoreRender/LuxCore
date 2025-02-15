@@ -26,9 +26,6 @@
 ################################################################################
 ################################################################################
 
-set(LUXCORE_VERSION_MAJOR 2)
-set(LUXCORE_VERSION_MINOR 9)
-
 # Configure a header file to pass some of the CMake settings
 # to the source code:
 
@@ -178,6 +175,15 @@ add_definitions(-DCPP_API_EXPORTS ${VISIBILITY_FLAGS}) # for controlling visibil
 link_directories (${SLG_LIB_DIR} ${LuxRays_LIB_DIR})
 
 set_target_properties(luxcore PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
+
+install(
+    TARGETS luxcore
+    DESTINATION bin
+    RUNTIME_DEPENDENCIES
+    PRE_EXCLUDE_REGEXES "api-ms-" "ext-ms-"
+    POST_EXCLUDE_REGEXES ".*system32/.*\\.dll"
+    DIRECTORIES ${CONAN_RUNTIME_LIB_DIRS}
+)
 
 ################################################################################
 #

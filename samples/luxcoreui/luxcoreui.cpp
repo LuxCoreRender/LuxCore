@@ -20,6 +20,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/format.hpp>
+#include <nfd.h>
 
 #include "luxrays/utils/oclerror.h"
 #include "luxcoreapp.h"
@@ -72,7 +73,9 @@ int main(int argc, char *argv[]) {
 		//luxcore::SetEnableLogSubSystem(luxcore::LOG_API, true);
 		//luxcore::SetFileLog("luxcore.log", 1000 * 1024, 3);
 		
-		LA_LOG("LuxCoreUI v" LUXCORE_VERSION_MAJOR "." LUXCORE_VERSION_MINOR " (LuxCore demo: http://www.luxcorerender.org)");
+		LA_LOG("LuxCoreUI v" LUXCORE_VERSION_MAJOR "." LUXCORE_VERSION_MINOR "." LUXCORE_VERSION_BUGFIX " (LuxCore demo: http://www.luxcorerender.org)");
+
+                NFD_Init();
 
 		//ConvertImage("samples/luxcoreui/resources/luxlogo_bg.png");
 		
@@ -223,6 +226,8 @@ int main(int argc, char *argv[]) {
 
 			app.RunApp(startRenderState, startFilm);
 		}
+
+                NFD_Quit();
 
 		LA_LOG("Done.");
 	} catch (runtime_error &err) {

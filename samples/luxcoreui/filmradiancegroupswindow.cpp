@@ -59,7 +59,7 @@ bool FilmRadianceGroupsWindow::DrawObjectGUI(Properties &props, bool &modifiedPr
 		const string radianceGroupIndexStr = ToString(radianceGroupIndex);
 		ImGui::PushID(radianceGroupIndexStr.c_str());
 
-		ImGui::SetNextTreeNodeOpened(true, ImGuiSetCond_Appearing);
+		ImGui::SetNextItemOpen(true, ImGuiCond_Appearing);
 		if (ImGui::TreeNode(("Radiance group: #" + radianceGroupIndexStr).c_str())) {
 			// Check the properties include a definition for this group
 

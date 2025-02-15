@@ -15,7 +15,6 @@ import shutil
 import textwrap
 import argparse
 import json
-import configparser
 import platform
 
 CONAN_APP = None
@@ -134,9 +133,9 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
     # Get settings
-    with open("luxcore.ini") as f:
-        settings = configparser.ConfigParser(allow_no_value=True)
-        settings.read_file(f)
+    logger.info(f"Reading settings")
+    with open("luxcore.json") as f:
+        settings = json.load(f)
 
     # Process
     with tempfile.TemporaryDirectory() as tmpdir:

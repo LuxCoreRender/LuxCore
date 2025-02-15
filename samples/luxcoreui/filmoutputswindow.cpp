@@ -330,7 +330,7 @@ bool FilmOutputsWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 	// To add a new output
 	//--------------------------------------------------------------------------
 
-	if (ImGui::CollapsingHeader("New Film output", NULL, true, true)) {
+	if (ImGui::CollapsingHeader("New Film output", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) {
 		// Film output name
 		ImGui::InputText("Output name", newOutputNameBuff, 4 * 1024);
 		const string prefix = "film.outputs." + string(newOutputNameBuff);
@@ -437,7 +437,7 @@ bool FilmOutputsWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 	// The list of current outputs
 	//--------------------------------------------------------------------------
 
-	if (ImGui::CollapsingHeader("Current Film output(s)", NULL, true, true)) {
+	if (ImGui::CollapsingHeader("Current Film output(s)", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) {
 		boost::unordered_set<string> outputNames;
 		boost::unordered_map<string, unsigned int> typeCount;
 		vector<string> outputKeys = props.GetAllNames("film.outputs.");
@@ -468,7 +468,7 @@ bool FilmOutputsWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 				typeCount[type] += 1;
 			const unsigned int index = typeCount[type];
 
-			ImGui::SetNextTreeNodeOpened(true, ImGuiSetCond_Appearing);
+			ImGui::SetNextItemOpen(true, ImGuiCond_Appearing);
 			if (ImGui::TreeNode(type.c_str())) {
 				const string fileName = props.Get("film.outputs." + outputName + ".filename").Get<string>();
 				char fileNameBuff[4 * 1024];
@@ -512,7 +512,7 @@ bool FilmOutputsWindow::DrawObjectGUI(Properties &props, bool &modifiedProps) {
 	// The list of current film channels
 	//--------------------------------------------------------------------------
 
-	if (ImGui::CollapsingHeader("Current Film channel(s)", NULL, true, true)) {
+	if (ImGui::CollapsingHeader("Current Film channel(s)", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen)) {
 		const Film &film = app->session->GetFilm();
 		unsigned int count;
 
