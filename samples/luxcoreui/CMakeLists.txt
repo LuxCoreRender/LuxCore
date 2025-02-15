@@ -62,3 +62,5 @@ target_link_libraries(luxcoreui PRIVATE
   imgui::imgui
   glfw
 )
+
+install(TARGETS luxcoreui RUNTIME_DEPENDENCIES)

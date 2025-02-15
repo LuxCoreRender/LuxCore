@@ -14,7 +14,13 @@ ifndef BUILD_DIR
 	BUILD_DIR:=./build
 endif
 
+ifndef INSTALL_DIR
+	INSTALL_DIR:=./build
+endif
+
+
 SOURCE_DIR:=$(shell pwd)
+
 
 ifndef PYTHON
 	PYTHON:=python3
@@ -28,12 +34,12 @@ luxcore: config
 	cmake $(BUILD_CMAKE_ARGS) --build --preset conan-release --target luxcore
 
 pyluxcore: config
-	cmake $(BUILD_CMAKE_ARGS) --build --preset conan-release --target pyluxcore
+	cmake $(BUILD_CMAKE_ARGS) --build --preset conan-release  --target pyluxcore
 
-luxcoreui: config
+luxcoreui: config luxcore
 	cmake $(BUILD_CMAKE_ARGS) --build --preset conan-release --target luxcoreui
 
-luxcoreconsole: config
+luxcoreconsole: config luxcore
 	cmake $(BUILD_CMAKE_ARGS) --build --preset conan-release --target luxcoreconsole
 
 # TODO Make debug targets
@@ -42,7 +48,12 @@ clean:
 	cmake --build --preset conan-release --target clean
 
 config:
-	cmake $(BUILD_CMAKE_ARGS) --preset conan-release -S $(SOURCE_DIR)
+	cmake $(BUILD_CMAKE_ARGS) --preset conan-release \
+		-DCMAKE_INSTALL_PREFIX=$(INSTALL_DIR) \
+		-S $(SOURCE_DIR)
+
+install:
+	cmake --install $(BUILD_DIR)/cmake --prefix $(BUILD_DIR)
 
 # Presets independant
 clear:

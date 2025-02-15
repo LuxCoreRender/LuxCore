@@ -176,6 +176,8 @@ link_directories (${SLG_LIB_DIR} ${LuxRays_LIB_DIR})
 
 set_target_properties(luxcore PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
+install(TARGETS luxcore DESTINATION lib RUNTIME_DEPENDENCIES RUNTIME)
+
 ################################################################################
 #
 # PyLuxCore (Python bindings)
