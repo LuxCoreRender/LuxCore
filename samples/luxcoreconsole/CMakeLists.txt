@@ -32,3 +32,11 @@ TARGET_LINK_LIBRARIES(luxcoreconsole PRIVATE luxrays luxcore boost::boost)
 if(APPLE)
   TARGET_LINK_LIBRARIES(luxcoreconsole PRIVATE expat "-framework Carbon" "-framework IOKit")
 endif()
+
+install(
+    TARGETS luxcoreconsole
+    RUNTIME_DEPENDENCIES
+    PRE_EXCLUDE_REGEXES "api-ms-" "ext-ms-"
+    POST_EXCLUDE_REGEXES ".*system32/.*\\.dll"
+    DIRECTORIES ${CONAN_RUNTIME_LIB_DIRS}
+)

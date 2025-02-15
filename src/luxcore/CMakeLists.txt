@@ -176,7 +176,14 @@ link_directories (${SLG_LIB_DIR} ${LuxRays_LIB_DIR})
 
 set_target_properties(luxcore PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
-install(TARGETS luxcore DESTINATION lib RUNTIME_DEPENDENCIES RUNTIME)
+install(
+    TARGETS luxcore
+    DESTINATION bin
+    RUNTIME_DEPENDENCIES
+    PRE_EXCLUDE_REGEXES "api-ms-" "ext-ms-"
+    POST_EXCLUDE_REGEXES ".*system32/.*\\.dll"
+    DIRECTORIES ${CONAN_RUNTIME_LIB_DIRS}
+)
 
 ################################################################################
 #
