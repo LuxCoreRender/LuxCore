@@ -14,6 +14,10 @@ if "%BUILD_DIR%" == "" (
     set BUILD_DIR=.\build
 )
 
+if "%INSTALL_DIR%" == "" (
+    set INSTALL_DIR=.\build
+)
+
 set SOURCE_DIR=%cd%
 
 if "%LUX_PYTHON%" == "" (
@@ -35,6 +39,8 @@ if "%COMMAND%" == "" (
     call :LuxcoreConsole
 ) else if "%COMMAND%" == "config" (
     call :Config
+) else if "%COMMAND%" == "install" (
+    call :InvokeCMakeInstall
 ) else if "%COMMAND%" == "clean" (
     call :Clean
 ) else if "%COMMAND%" == "clear" (
@@ -59,8 +65,12 @@ goto :EOF
 :InvokeCMakeConfig
 setlocal
 set PRESET=%1
-cmake %BUILD_CMAKE_ARGS% --preset %PRESET% -S %SOURCE_DIR%
+cmake %BUILD_CMAKE_ARGS% --preset %PRESET% -DCMAKE_INSTALL_PREFIX=%INSTALL_DIR% -S %SOURCE_DIR%
 endlocal
+goto :EOF
+
+:InvokeCMakeInstall
+cmake --install %BUILD_DIR%/cmake --prefix %BUILD_DIR%
 goto :EOF
 
 :Clean
