@@ -22,7 +22,6 @@
 #
 #############################################################################
 
-
 set(LUXCOREUI_SRCS
   luxcoreui.cpp
   luxcoreapp.cpp
@@ -54,19 +53,6 @@ set(LUXCOREUI_SRCS
   imgui_impl_opengl2.cpp
 )
 
-#IF(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
-	#SET(LUXCOREUI_SRCS ${LUXCOREUI_SRCS} deps/nfd/nfd_win.cpp)
-#ENDIF()
-
-#IF(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-	#SET(LUXCOREUI_SRCS ${LUXCOREUI_SRCS} deps/nfd/nfd_gtk.c)
-	#add_definitions(${GTK3_CFLAGS_OTHER})
-#ENDIF()
-
-#IF(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-	#SET(LUXCOREUI_SRCS ${LUXCOREUI_SRCS} deps/nfd/nfd_cocoa.m)
-#ENDIF()
-
 add_executable(luxcoreui ${LUXCOREUI_SRCS})
 target_link_libraries(luxcoreui PRIVATE
   luxrays
@@ -76,27 +62,3 @@ target_link_libraries(luxcoreui PRIVATE
   imgui::imgui
   glfw
 )
-
-#if(APPLE)
-
-  #TARGET_LINK_LIBRARIES(luxcoreui PRIVATE
-	#glfw
-	#expat
-	#${GLFW_LIBRARIES}
-	#${LUXCORE_LIBRARY}
-	#${OPENGL_LIBRARIES}
-	#${GTK3_LIBRARIES}
-	#${Boost_LIBRARIES})
-#else()
-#TARGET_LINK_LIBRARIES(luxcoreui PRIVATE
-	#glfw
-	#${GLFW_LIBRARIES}
-	#${LUXCORE_LIBRARY}
-	#${OPENGL_LIBRARIES}
-	#${GTK3_LIBRARIES}
-	#${Boost_LIBRARIES})
-#endif()
-
-#if(LINUX)
-  #target_link_libraries(luxcoreui PRIVATE gtk::gtk)
-#endif()
