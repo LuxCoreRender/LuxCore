@@ -34,6 +34,7 @@ git checkout for_v2.10
 
 make deps
 make
+make install
 ```
 
 This will download LuxCore source code, LuxCore precompiled dependencies,
