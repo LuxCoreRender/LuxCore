@@ -40,7 +40,7 @@ make install
 This will download LuxCore source code, LuxCore precompiled dependencies,
 configure CMake and build.
 
-Last statement can be adapted to build a specific target.
+Second `make` statement can be adapted to build a specific target.
 
 Examples: `make luxcore` `make pyluxcore` `make luxcoreconsole` `make luxcoreui`
 
