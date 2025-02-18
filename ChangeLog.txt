@@ -2,7 +2,8 @@ Change Log for 2.10
 - all: implement a new dependency and build system, based on Conan
 - all: create a dependency provider based on Conan (LuxCoreDeps)
 - all: refactor CMake files to use Conan features
-- luxcore: removed most of static deps and replace with Conan equivalent, latest versions
-- luxcoreui: removed static deps (nfd, glfw, imgui) and replace them with Conan
+- luxcore: remove most of static deps and replace with Conan equivalent, latest versions
+- luxcore: move from boost::python to pybind11
+- luxcoreui: remove static deps (nfd, glfw, imgui) and replace them with Conan
 - luxcoreui: refactor code to fit to deps latest versions
 - luxcoreui: move to nativefiledialog-extended (in lieu of nativefiledialog)
