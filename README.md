@@ -37,12 +37,11 @@ make
 make install
 ```
 
-This will download LuxCore source code, LuxCore precompiled dependencies,
-configure CMake and build.
+This will download LuxCore source code and LuxCore precompiled dependencies,
+configure CMake and start the build.
 
-Second `make` statement can be adapted to build a specific target.
-
-Examples: `make luxcore` `make pyluxcore` `make luxcoreconsole` `make luxcoreui`
+Nota: second `make` statement can also name a specific target. Examples:
+`make luxcore` `make pyluxcore` `make luxcoreconsole` `make luxcoreui`
 
 #### Other commands
 
@@ -67,7 +66,7 @@ the [`samples/luxcoreui`](samples/luxcoreui) directory.
 To see how it works, just run `luxcoreui` from the root directory:
 
 ```
-./bin/luxcoreui scenes/cornell/cornell.cfg
+./build/bin/luxcoreui scenes/cornell/cornell.cfg
 ```
 
 ### LuxCoreConsole
@@ -77,7 +76,7 @@ available in the [`samples/luxcoreconsole`](samples/luxcoreconsole) directory.
 Just run `luxcoreconsole` from the root directory with:
 
 ```
-./bin/luxcoreconsole -D batch.halttime 10 scenes/cornell/cornell.cfg
+./build/bin/luxcoreconsole -D batch.halttime 10 scenes/cornell/cornell.cfg
 ```
 
 ### Authors
