@@ -1,0 +1,403 @@
+# SPDX-FileCopyrightText: 2024 Howetuft
+#
+# SPDX-License-Identifier: Apache-2.0
+
+name: LuxCore Python Wheels
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-wheels:
+    name: Build wheel ${{ matrix.os }}-3.${{ matrix.python-minor }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-minor: [8, 9, 10, 11, 12, 13]
+        os: [ubuntu-latest, windows-latest, macos-13, macos-14]
+        #python-minor: [ 9 ]
+        #python-minor: [ 12]
+        #os: [ubuntu-latest]
+        #python-minor: [ 11]
+        #os: [windows-latest]
+        #python-minor: [ 11]
+        #os: [macos-13]
+        exclude:
+          - os: macos-14
+            python-minor: 8
+    env:
+      # Reminder: report all variables here to CIBW_ENVIRONMENT_PASS_LINUX
+      BUILD_TYPE: Release
+      # SANITIZE: true # uncomment to sanitize
+      CXX_VERSION: 20
+      GCC_VERSION: 14
+      GLIBC_VERSION: 2_28
+      GH_TOKEN: ${{ github.token }}
+      PYTHON_MINOR: ${{ matrix.python-minor }}
+      LUXCORE_REPO: ${{ inputs.luxcore_repo != '' && inputs.luxcore_repo || 'Howetuft/LuxCore' }}  # TODO
+      LUXCORE_REF: ${{ inputs.luxcore_ref != '' && inputs.luxcore_ref || 'for_v2.10' }}
+
+      # TODO
+      ## Versions
+      #BOOST_INSTALL_LAYOUT: system
+      #SPDLOG_FMT_EXTERNAL: on
+      #BOOST_VERSION: 1.84.0
+      #OIIO_VERSION: 2.5.16.0
+      #OCIO_VERSION: 2.4.0
+      #OIDN_VERSION: 2.3.1
+      #TBB_VERSION: 2021.12.0
+      #OPENEXR_VERSION: 3.3.2
+      #BLENDER_VERSION: 4.2.3
+      #OPENVDB_VERSION: 11.0.0
+      #SPDLOG_VERSION: 1.15.0
+      #EMBREE3_VERSION: 3.13.5
+      #FMT_VERSION: 11.0.2
+      #OPENSUBDIV_VERSION: 3.6.0
+      #JSON_VERSION: 3.11.3
+      #EIGEN_VERSION: 3.4.0
+      #ROBINHOOD_VERSION: 3.11.5
+      #MINIZIP_VERSION: 4.0.3
+      #PYBIND11_VERSION: 2.13.6
+
+
+    steps:
+
+      - name: Configure git for long paths
+        shell: bash
+        if: runner.os == 'Windows'
+        run: git config --system core.longpaths true
+
+      - name: Checkout main repository (LuxCore)
+        uses: actions/checkout@v4
+
+      #- name: Checkout LuxCoreRender
+        #uses: actions/checkout@v4
+        #with:
+          #repository: ${{ env.LUXCORE_REPO }}
+          #path: LuxCore
+          #submodules: recursive
+          #ref: ${{ env.LUXCORE_REF }}
+
+      - name: Find workspace
+        shell: bash
+        run: |
+          case ${{ runner.os }} in
+            Linux) _workspace="/project";;
+            Windows) _workspace=$(cygpath -u $GITHUB_WORKSPACE);;
+            macOS) _workspace="$GITHUB_WORKSPACE";;
+            *) echo "Unhandled os ${{ runner.os }}";exit 64;;
+          esac
+          echo "WORKSPACE=${_workspace}" >> "$GITHUB_ENV"
+
+      - name: Set conan preset
+        uses: actions/github-script@v7
+        with:
+          script: |
+            core.exportVariable(
+              'CONAN_PRESET',
+              String.raw`conan-${{ env.BUILD_TYPE }}`.toLowerCase()
+            )
+
+      - name: Configure ccache
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const workspace = String.raw`${{ github.workspace }}`;
+
+            const envVariables = {
+                'cache-variant': String.raw`ccache`,
+                'CMAKE_CXX_COMPILER_LAUNCHER': String.raw`ccache`,
+                'CMAKE_C_COMPILER_LAUNCHER': String.raw`ccache`,
+                'CCACHE_CONFIGPATH': String.raw`${workspace}/ccache.conf`,
+                'CCACHE_DIR': String.raw`${workspace}/.ccache`,
+                'CCACHE_DEBUGDIR': String.raw`${workspace}/ccache-debug`,
+                'CCACHE_LOGFILE': String.raw`${workspace}/ccache.log`
+            };
+
+            for (const [key, value] of Object.entries(envVariables)) {
+                core.exportVariable(key, value);
+            }
+
+      - name: Update apt (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          sudo apt-get update -y
+
+      - name: ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          create-symlink: false
+          variant: ${{ env.cache-variant }}
+          key: cpl-${{ matrix.os }}-${{ matrix.python-minor}}
+          restore-keys: cpl-${{ matrix.os }}-${{ matrix.python-minor}}-
+          max-size: 5G
+          verbose: 1
+
+      #- name: Get cmake
+        #if: runner.os == 'macOS' || runner.os == 'Windows'
+        #uses: lukka/get-cmake@latest
+
+      #- name: Install ISPC
+        #if: runner.os == 'macOS' || runner.os == 'Windows'
+        #uses: ispc/install-ispc-action@main
+        #with:
+          #version: 1.25.3
+
+      - name: Prepare msvc
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Prepare Linux
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          _V=${{ env.GCC_VERSION }}
+          _T=/opt/rh/gcc-toolset-${_V}/root
+
+          echo "TOOLSET_ROOT=${_T}" >> $GITHUB_ENV
+          echo "CXX=${_T}/usr/bin/g++" >> $GITHUB_ENV
+          echo "CC=${_T}/usr/bin/gcc" >> $GITHUB_ENV
+          echo "AR=${_T}/usr/bin/ar" >> $GITHUB_ENV
+          echo "RANLIB=${_T}/usr/bin/ranlib" >> $GITHUB_ENV
+
+          echo "ASAN_PATH=${_T}/usr/lib/gcc/x86_64-redhat-linux/${_V}/libasan.so" >> $GITHUB_ENV
+
+      - name: Set MacOS deployment target
+        if: runner.os == 'macOS'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            if ('${{ runner.arch }}' == 'X64') {
+              target = '10.13';
+              arch='x86_64';
+            }
+            else if ('${{ env.PYTHON_MINOR }}' != '8') {
+              target = '11.0';
+              arch='armv8';
+            }
+            else {
+              target = '12.0';
+              arch='armv8';
+            }
+            core.exportVariable('MACOSX_DEPLOYMENT_TARGET', target);
+            core.exportVariable('PKG_ARCH', arch);
+
+      # TODO
+      #- name: Retrieve cached dependencies
+        #id: retrieve-cache-deps
+        #uses: actions/cache/restore@v4
+        #with:
+          #path: conan-cache
+          #key: deps-${{ matrix.os }}-${{ matrix.python-minor}}-
+          #restore-keys: deps-${{ matrix.os }}-${{ matrix.python-minor}}-
+
+      # Build wheel
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.22.0
+        env:
+          CIBW_BUILD_FRONTEND: build
+          CIBW_BUILD_VERBOSITY: 1
+          CIBW_BUILD: cp3${{ matrix.python-minor }}-*
+          CIBW_SKIP: "*musllinux*"
+          CIBW_ARCHS: auto64
+          CIBW_MANYLINUX_X86_64_IMAGE: quay.io/pypa/manylinux_${{ env.GLIBC_VERSION }}_x86_64
+          CIBW_ENVIRONMENT: >
+            SKBUILD_CMAKE_ARGS='--preset ${{ env.CONAN_PRESET }};-G Ninja;--log-level=VERBOSE'
+            SKBUILD_CMAKE_BUILD_TYPE='${{ env.BUILD_TYPE }}'
+          CIBW_ENVIRONMENT_PASS_LINUX: |
+            CC
+            CXX
+            BUILD_TYPE
+            GCC_VERSION
+            SANITIZE
+            ASAN_PATH
+            RUNNER_OS
+            RUNNER_ARCH
+            WORKSPACE
+            CMAKE_CXX_COMPILER_LAUNCHER
+            CMAKE_C_COMPILER_LAUNCHER
+            PYTHON_MINOR
+            BOOST_INSTALL_LAYOUT
+            SPDLOG_FMT_EXTERNAL
+            CXX_VERSION
+          CIBW_BEFORE_ALL_LINUX: |
+            dnf install -y epel-release
+            dnf install -y almalinux-release-devel
+            dnf install -y ninja-build bison flex wget ccache
+            dnf install -y perl-IPC-Cmd perl-Digest-SHA
+
+            if [[ ${{ env.GLIBC_VERSION }} != 2_28 ]]; then
+              dnf install -y perl-FindBin perl-lib
+            fi
+
+            ccache --show-config
+
+            ## TODO
+            ## Install git-lfs
+            #curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.rpm.sh | sudo bash
+            #dnf install -y git-lfs
+
+            if [[ -z ${SANITIZE+x} ]]; then
+              echo "No sanitizing";
+            else
+              dnf install -y gcc-toolset-14-libasan-devel;
+            fi
+
+            ## TODO
+            ## Install ispc
+            ## https://www.intel.com/content/www/us/en/docs/oneapi/installation-guide-linux/2023-0/yum-dnf-zypper.html
+            #tee > /tmp/oneAPI.repo << EOF
+            #[oneAPI]
+            #name=Intel® oneAPI repository
+            #baseurl=https://yum.repos.intel.com/oneapi
+            #enabled=1
+            #gpgcheck=1
+            #repo_gpgcheck=1
+            #gpgkey=https://yum.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB
+            #EOF
+            #mv /tmp/oneAPI.repo /etc/yum.repos.d
+
+            #dnf install -y intel-oneapi-ispc
+            #source /opt/intel/oneapi/ispc/latest/env/vars.sh
+
+            # TODO
+            ## Install Cuda
+            #dnf install -y --nogpgcheck https://dl.fedoraproject.org/pub/epel/epel-release-latest-$(rpm -E %rhel).noarch.rpm
+            #dnf install -y --nogpgcheck https://mirrors.rpmfusion.org/free/el/rpmfusion-free-release-$(rpm -E %rhel).noarch.rpm https://mirrors.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release-$(rpm -E %rhel).noarch.rpm
+            #subscription-manager repos --enable "codeready-builder-for-rhel-8-$(uname -m)-rpms"
+            #dnf install -y xorg-x11-drv-nvidia-470xx-cuda-libs
+
+          CIBW_BEFORE_ALL_MACOS: |
+            brew install bison flex
+          CIBW_BEFORE_BUILD: |
+            echo "::group::CIBW_BEFORE_BUILD: dependencies"
+            pip install conan
+            make deps
+            ls -Rl
+            echo "::endgroup::"
+
+          CIBW_REPAIR_WHEEL_COMMAND_LINUX: |
+            TBB=/project/full_deploy/host/onetbb/$TBB_VERSION/${BUILD_TYPE}/x86_64/lib
+            OIDN=/project/full_deploy/host/oidn/$OIDN_VERSION/${BUILD_TYPE}/x86_64/lib
+            EMBREE3=/project/full_deploy/host/embree3/$EMBREE3_VERSION/${BUILD_TYPE}/x86_64/lib
+            HWLOC=/project/full_deploy/host/hwloc/2.9.3/${BUILD_TYPE}/x86_64/lib
+            LEVEL_ZERO=/project/full_deploy/host/level-zero/1.17.39/${BUILD_TYPE}/x86_64/lib
+            LD_LIBRARY_PATH=$TBB:$HWLOC:$LEVEL_ZERO:$OIDN:$EMBREE3:$LD_LIBRARY_PATH
+            echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}"
+            export LD_LIBRARY_PATH
+
+            ## Check build data
+            unzip {wheel} -d /tmp/wheel
+            readelf --string-dump .comment /tmp/wheel/pyluxcore/pyluxcore.so
+
+            auditwheel \
+              --verbose repair -w {dest_dir} \
+              --plat manylinux_${{ env.GLIBC_VERSION }}_x86_64 \
+              --only-plat \
+              ${{ env.BUILD_TYPE == 'Release' && '--strip' || '' }} \
+              {wheel}
+
+          CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: |
+            bash.exe ${{ env.WORKSPACE }}/scripts/repair_wheel_windows.sh '{wheel}' '{dest_dir}' '%VCToolsRedistDir%%Platform%'
+          CIBW_REPAIR_WHEEL_COMMAND_MACOS: |
+            cp {wheel} ${{ env.WORKSPACE }}
+            BASE=${{ env.WORKSPACE }}/full_deploy/host
+            TBB=$BASE/onetbb/${{ env.TBB_VERSION }}/${BUILD_TYPE}/${{ env.PKG_ARCH }}/lib
+            OIDN=$BASE/oidn/${{ env.OIDN_VERSION }}/${BUILD_TYPE}/${{ env.PKG_ARCH }}/lib
+            EMBREE3=$BASE/embree3/${{ env.EMBREE3_VERSION }}/${BUILD_TYPE}/${{ env.PKG_ARCH }}/lib
+            export DYLD_LIBRARY_PATH=$TBB:$OIDN:$EMBREE3
+            delocate-listdeps -v {wheel}
+            delocate-wheel --require-archs {delocate_archs} -w {dest_dir} -v {wheel}
+          CIBW_TEST_COMMAND_LINUX: pyluxcoretest
+          CIBW_TEST_COMMAND_WINDOWS: pyluxcoretest
+          CIBW_TEST_COMMAND_MACOS: |
+            if [[ ${{ matrix.os }} == 'macos-13' ]]; then
+              # Only for Intel: ARM runner raises an OpenCL driver issue
+              pyluxcoretest
+            fi
+          CIBW_CONTAINER_ENGINE: >
+            docker;
+            create_args:
+              --mount type=bind,source=${{ env.CCACHE_DIR }},target=/root/.ccache
+
+        with:
+            package-dir: .
+            output-dir: wheelhouse
+            config-file: "{package}/pyproject.toml"
+
+
+      - name: Save dependency cache
+        if: always()
+        id: cache-deps-save
+        uses: actions/cache/save@v4
+        with:
+          path: conan-cache
+          key: deps-${{ matrix.os }}-${{ matrix.python-minor}}-${{ hashFiles('**/conan-cache') }}
+
+      #- name: Setup tmate session
+        #uses: mxschmitt/action-tmate@v3
+
+      #- name: Setup tmate session (debug)
+        #if: ${{ failure() }}
+        #uses: mxschmitt/action-tmate@v3
+
+      # Upload artifacts
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cibw-wheels-${{ matrix.os }}-${{ matrix.python-minor }}
+          path: ./wheelhouse/*.whl
+  # TODO
+
+  upload_test:
+    needs: [build_wheels]
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/pyluxcore
+    permissions:
+      id-token: write
+      attestations: write
+      contents: read
+    runs-on: ubuntu-latest
+    if: ${{ github.ref_name }} == 'work'
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: cibw-*
+          path: dist
+          merge-multiple: true
+
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          verbose: true
+          verify-metadata: true
+          skip-existing: true
+
+
+  upload_prod:
+    needs: [build_wheels]
+    environment:
+      name: pypi
+      url: https://pypi.org/p/pyluxcore
+    permissions:
+      id-token: write
+      attestations: write
+      contents: read
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release' && github.event.action == 'published'
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: cibw-*
+          path: dist
+          merge-multiple: true
+
+      - name: Generate artifact attestations
+        uses: actions/attest-build-provenance@v1.4.3
+        with:
+          subject-path: "dist/*"
+
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
