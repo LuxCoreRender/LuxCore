@@ -25,7 +25,7 @@ BUILD_DIR = os.getenv("BUILD_DIR", "./build")
 
 CMAKE_DIR = Path(BUILD_DIR) / "cmake"
 
-logger = logging.getLogger("LuxCoreDeps")
+logger = logging.getLogger("LuxCore Dependencies")
 
 CONAN_ENV = {}
 
@@ -74,6 +74,9 @@ def ensure_conan_app():
     logger.info("Looking for conan")
     global CONAN_APP
     CONAN_APP = shutil.which("conan")
+    if not CONAN_APP:
+        logger.error("Conan not found!")
+        exit(1)
     logger.info(f"Conan found: '{CONAN_APP}'")
 
 
@@ -81,13 +84,14 @@ def run_conan(args, **kwargs):
     if not "env" in kwargs:
         kwargs["env"] = CONAN_ENV
     else:
-        kwargs["env"] |= CONAN_ENV
-    kwargs["env"] |= os.environ
+        kwargs["env"].update(CONAN_ENV)
+    kwargs["env"].update(os.environ)
     kwargs["text"] = kwargs.get("text", True)
     args = [CONAN_APP] + args
+    logger.debug(args)
     res = subprocess.run(args, shell=False, **kwargs)
     if res.returncode:
-        logger.critical("Error while executing conan")
+        logger.error("Error while executing conan")
         print(res.stdout)
         print(res.stderr)
         exit(1)
@@ -112,7 +116,7 @@ def install(filename, destdir):
 def conan_home():
     res = subprocess.run([CONAN_APP, "config", "home"], capture_output=True, text=True)
     if res.returncode:
-        logger.critical("Error while executing conan")
+        logger.error("Error while executing conan")
         print(res.stdout)
         print(res.stderr)
         exit(1)
