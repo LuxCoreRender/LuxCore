@@ -1,11 +1,10 @@
 # Credits to Blender Cycles
 
-OS:=$(shell uname -s)
-
 ifeq ($(OS),Windows_NT)
 	$(error On Windows, use "cmd //c make.bat" instead of "make")
 endif
 
+OS:=$(shell uname -s)
 
 ifndef BUILD_CMAKE_ARGS
 	BUILD_CMAKE_ARGS:=
@@ -21,7 +20,6 @@ endif
 
 
 SOURCE_DIR:=$(shell pwd)
-SOURCE_DIR=.
 
 
 ifndef PYTHON
@@ -30,23 +28,19 @@ endif
 
 .PHONY: clean deps config luxcore pyluxcore luxcoreui luxcoreconsole
 
-all: pyluxcore luxcoreui luxcoreconsole
+all: luxcore pyluxcore luxcoreui luxcoreconsole
 
-luxcore: _TARGET = LUXCORE_LIBONLY
 luxcore: config
-	cmake $(BUILD_CMAKE_ARGS) --build --preset conan-release
+	cmake $(BUILD_CMAKE_ARGS) --build --preset conan-release --target luxcore
 
-pyluxcore: _TARGET = PYLUXCORE_LIBONLY
 pyluxcore: config
-	cmake $(BUILD_CMAKE_ARGS) --build --preset conan-release
+	cmake $(BUILD_CMAKE_ARGS) --build --preset conan-release  --target pyluxcore
 
-luxcoreui: _TARGET = LUXCORE_UI
-luxcoreui: config
-	cmake $(BUILD_CMAKE_ARGS) --build --preset conan-release
+luxcoreui: config luxcore
+	cmake $(BUILD_CMAKE_ARGS) --build --preset conan-release --target luxcoreui
 
-luxcoreconsole: _TARGET = LUXCORE_CON
-luxcoreconsole: config
-	cmake $(BUILD_CMAKE_ARGS) --build --preset conan-release
+luxcoreconsole: config luxcore
+	cmake $(BUILD_CMAKE_ARGS) --build --preset conan-release --target luxcoreconsole
 
 # TODO Make debug targets
 
@@ -56,8 +50,7 @@ clean:
 config:
 	cmake $(BUILD_CMAKE_ARGS) --preset conan-release \
 		-DCMAKE_INSTALL_PREFIX=$(INSTALL_DIR) \
-		-S $(SOURCE_DIR) \
-		-D$(_TARGET)=ON
+		-S $(SOURCE_DIR)
 
 install:
 	cmake --install $(BUILD_DIR)/cmake --prefix $(BUILD_DIR)
