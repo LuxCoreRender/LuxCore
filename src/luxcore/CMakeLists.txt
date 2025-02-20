@@ -147,43 +147,45 @@ set(LUXCORE_LIB_SRCS
   ${LUXCORE_SRCS}
   ${LUXCORE_GENERATED_SRCS}
 )
-
-if (BUILD_LUXCORE_DLL)
-  add_library(luxcore SHARED ${LUXCORE_LIB_SRCS} ${LUX_PARSER_SRC})
-else()
-  add_library(luxcore STATIC ${LUXCORE_LIB_SRCS} ${LUX_PARSER_SRC})
-endif()
-
-target_link_libraries(luxcore PRIVATE
-    slg-core
-    slg-film
-    slg-kernels
-    luxrays
-    bcd
-    robin_hood::robin_hood
-    boost::boost
-    spdlog::spdlog_header_only
-    fmt::fmt
-    openimageio::openimageio
-    embree
-)
-
-
 include_directories(${PROJECT_SOURCE_DIR}/deps/bcd-1.1/include)
-
-add_definitions(-DCPP_API_EXPORTS ${VISIBILITY_FLAGS}) # for controlling visibility
 link_directories (${SLG_LIB_DIR} ${LuxRays_LIB_DIR})
 
-set_target_properties(luxcore PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
+if(LUXCORE_LIB)
+    if (BUILD_LUXCORE_DLL)
+      add_library(luxcore SHARED ${LUXCORE_LIB_SRCS} ${LUX_PARSER_SRC})
+    else()
+      add_library(luxcore STATIC ${LUXCORE_LIB_SRCS} ${LUX_PARSER_SRC})
+    endif()
 
-install(
-    TARGETS luxcore
-    DESTINATION bin
-    RUNTIME_DEPENDENCIES
-    PRE_EXCLUDE_REGEXES "api-ms-" "ext-ms-"
-    POST_EXCLUDE_REGEXES ".*system32/.*\\.dll"
-    DIRECTORIES ${CONAN_RUNTIME_LIB_DIRS}
-)
+    target_link_libraries(luxcore PRIVATE
+        slg-core
+        slg-film
+        slg-kernels
+        luxrays
+        bcd
+        robin_hood::robin_hood
+        boost::boost
+        spdlog::spdlog_header_only
+        fmt::fmt
+        openimageio::openimageio
+        embree
+    )
+
+
+
+    add_definitions(-DCPP_API_EXPORTS ${VISIBILITY_FLAGS}) # for controlling visibility
+
+    set_target_properties(luxcore PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
+
+    install(
+        TARGETS luxcore
+        DESTINATION bin
+        RUNTIME_DEPENDENCIES
+        PRE_EXCLUDE_REGEXES "api-ms-" "ext-ms-"
+        POST_EXCLUDE_REGEXES ".*system32/.*\\.dll"
+        DIRECTORIES ${CONAN_RUNTIME_LIB_DIRS}
+    )
+endif()
 
 ################################################################################
 #
@@ -191,41 +193,43 @@ install(
 #
 ################################################################################
 
-set(PYLUXCORE_SRCS
-  ${PROJECT_SOURCE_DIR}/src/luxcore/pyluxcore.cpp
-  ${PROJECT_SOURCE_DIR}/src/luxcore/pyluxcoreforblender.cpp
-)
+if(LUXCORE_PYLUXCORE)
+    set(PYLUXCORE_SRCS
+      ${PROJECT_SOURCE_DIR}/src/luxcore/pyluxcore.cpp
+      ${PROJECT_SOURCE_DIR}/src/luxcore/pyluxcoreforblender.cpp
+    )
 
-pybind11_add_module(pyluxcore MODULE ${PYLUXCORE_SRCS} ${LUXCORE_LIB_SRCS} ${LUX_PARSER_SRC})
+    pybind11_add_module(pyluxcore MODULE ${PYLUXCORE_SRCS} ${LUXCORE_LIB_SRCS} ${LUX_PARSER_SRC})
 
-target_link_libraries(pyluxcore PRIVATE
-    slg-core
-    slg-film
-    slg-kernels
-    luxrays
-    bcd
-    OpenVDB::openvdb
-    spdlog::spdlog_header_only
-    pybind11::pybind11
-    Python::Module
-    boost::boost
-    onetbb::onetbb
-    blender-types
-    robin_hood::robin_hood
-    openimageio::openimageio
-    embree
-)
+    target_link_libraries(pyluxcore PRIVATE
+        slg-core
+        slg-film
+        slg-kernels
+        luxrays
+        bcd
+        OpenVDB::openvdb
+        spdlog::spdlog_header_only
+        pybind11::pybind11
+        Python::Module
+        boost::boost
+        onetbb::onetbb
+        blender-types
+        robin_hood::robin_hood
+        openimageio::openimageio
+        embree
+    )
 
-if(APPLE)
-  target_link_libraries(pyluxcore PRIVATE llvm-openmp::llvm-openmp)
-else()
-  target_link_libraries(pyluxcore PRIVATE OpenMP::OpenMP_CXX)
-endif(APPLE)
+    if(APPLE)
+      target_link_libraries(pyluxcore PRIVATE llvm-openmp::llvm-openmp)
+    else()
+      target_link_libraries(pyluxcore PRIVATE OpenMP::OpenMP_CXX)
+    endif(APPLE)
 
-set_target_properties(pyluxcore PROPERTIES PREFIX "")
-if(MSVC)
-  set_target_properties(pyluxcore PROPERTIES SUFFIX ".pyd")
-endif(MSVC)
+    set_target_properties(pyluxcore PROPERTIES PREFIX "")
+    if(MSVC)
+      set_target_properties(pyluxcore PROPERTIES SUFFIX ".pyd")
+    endif(MSVC)
+endif()
 
 ################################################################################
 #

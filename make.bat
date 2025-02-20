@@ -57,15 +57,15 @@ exit /B
 :InvokeCMake
 setlocal
 set PRESET=%1
-set TARGET=%2
-cmake --build --preset %PRESET% --target %TARGET% %BUILD_CMAKE_ARGS%
+cmake --build --preset %PRESET%
 endlocal
 goto :EOF
 
 :InvokeCMakeConfig
 setlocal
 set PRESET=%1
-cmake %BUILD_CMAKE_ARGS% --preset %PRESET% -DCMAKE_INSTALL_PREFIX=%INSTALL_DIR% -S %SOURCE_DIR%
+set TARGET=%2
+cmake %BUILD_CMAKE_ARGS% -D%TARGET%=ON --preset %PRESET% -DCMAKE_INSTALL_PREFIX=%INSTALL_DIR% -S %SOURCE_DIR%
 endlocal
 goto :EOF
 
@@ -78,27 +78,28 @@ call :InvokeCMake %CONAN_PRESET% clean
 goto :EOF
 
 :Config
-call :InvokeCMakeConfig %CONAN_PRESET%
+set TARGET=%1
+call :InvokeCMakeConfig %CONAN_PRESET% %TARGET%
 goto :EOF
 
 :Luxcore
-call :Config
-call :InvokeCMake %CONAN_PRESET% luxcore
+call :Config LUXCORE_LIBONLY
+call :InvokeCMake %CONAN_PRESET%
 goto :EOF
 
 :PyLuxcore
-call :Config
-call :InvokeCMake %CONAN_PRESET% pyluxcore
+call :Config LUXCORE_PYLUXCORE
+call :InvokeCMake %CONAN_PRESET%
 goto :EOF
 
 :LuxcoreUI
-call :Config
-call :InvokeCMake %CONAN_PRESET% luxcoreui
+call :Config LUXCORE_UI
+call :InvokeCMake %CONAN_PRESET%
 goto :EOF
 
 :LuxcoreConsole
-call :Config
-call :InvokeCMake %CONAN_PRESET% luxcoreconsole
+call :Config LUXCORE_CON
+call :InvokeCMake %CONAN_PRESET%
 goto :EOF
 
 :Clear

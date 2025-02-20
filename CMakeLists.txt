@@ -27,16 +27,27 @@ MESSAGE(STATUS "CMake version " ${CMAKE_VERSION} " detected")
 
 cmake_minimum_required(VERSION 3.25)
 cmake_policy(VERSION 3.25)
+include(CMakeDependentOption)
 
 project(LuxRays)
 
 # Options
+OPTION(LUXCORE_LIBONLY "Enable to build LuxCore library only" OFF)
+cmake_dependent_option(LUXCORE_UI "Enable to build luxcoreui" OFF "NOT LUXCORE_LIBONLY" OFF)
+cmake_dependent_option(LUXCORE_CON "Enable to build luxcoreconsole" OFF "NOT LUXCORE_LIBONLY" OFF)
+OPTION(LUXCORE_PYLUXCORE "Enable to build LuxCore Python bindings" OFF)
 OPTION(LUXCORE_DEMOS "Enable to build LuxCore demos" OFF)
 OPTION(LUXCORE_TESTS "Enable to build tests" OFF)
 OPTION(LUXCORE_STATIC "Enable to build LuxCore as static library" ON)
 OPTION(LUXRAYS_ENABLE_OPENCL "Enable to use OpenCL" ON)
 OPTION(LUXRAYS_ENABLE_CUDA "Enable to use CUDA" ON)
 OPTION(LUXRAYS_ENABLE_OPTIX "Enable to use Optix" ON)
+
+if(LUXCORE_LIBONLY OR LUXCORE_UI OR LUXCORE_CON)
+    set(LUXCORE_LIB ON)
+else()
+    set(LUXCORE_LIB OFF)
+endif()
 
 # Version
 FILE(READ "${CMAKE_CURRENT_LIST_DIR}/luxcore.json" luxcore_json)
@@ -83,7 +94,7 @@ endif("${isSystemDir}" STREQUAL "-1")
 MESSAGE(STATUS "Install RPATH: ${CMAKE_INSTALL_RPATH}")
 
 
-if(TARGET pyluxcore OR NOT LUXCORE_STATIC)
+if(LUXCORE_LIB AND NOT LUXCORE_STATIC)
   set(BUILD_LUXCORE_DLL ON)
 else()
   set(BUILD_LUXCORE_DLL OFF)
@@ -166,14 +177,18 @@ if(NOT WIN32)
 endif()
 
 # Additional dependencies for pyluxcore
-find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
-find_package(blender-types REQUIRED)
-find_package(pybind11 CONFIG REQUIRED)
+if(LUXCORE_PYLUXCORE)
+    find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
+    find_package(blender-types REQUIRED)
+    find_package(pybind11 CONFIG REQUIRED)
+endif()
 
 # Additional dependencies for luxcoreui
-find_package(imgui)
-find_package(glfw3)
-find_package(nativefiledialog)
+if(LUXCORE_UI)
+    find_package(imgui)
+    find_package(glfw3)
+    find_package(nativefiledialog)
+endif()
 
 
 # Include embedded dependencies
@@ -259,7 +274,9 @@ include_directories(${GENERATED_INCLUDE_DIR})
 add_subdirectory(src/luxrays)
 add_subdirectory(src/slg)
 add_subdirectory(src/luxcore)
-add_subdirectory(src/pyluxcoretools)
+if(LUXCORE_PYLUXCORE)
+    add_subdirectory(src/pyluxcoretools)
+endif()
 
 ################################################################################
 #
@@ -279,14 +296,19 @@ if(LUXCORE_DEMOS)
   endif()
 endif()
 
-add_subdirectory(samples/luxcoreconsole)
+if(LUXCORE_CON)
+    add_subdirectory(samples/luxcoreconsole)
+endif()
 
+# TODO
 find_package(OpenGL)
 IF (NOT OPENGL_FOUND)
   MESSAGE(FATAL_ERROR "OpenGL not found! Please either install OpenGL or disable LUX_UI.")
 ENDIF()
-add_subdirectory(samples/luxcoreui)
 
+if(LUXCORE_UI)
+    add_subdirectory(samples/luxcoreui)
+endif()
 
 ################################################################################
 #
