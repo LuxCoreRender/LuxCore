@@ -281,10 +281,6 @@ endif()
 
 add_subdirectory(samples/luxcoreconsole)
 
-find_package(OpenGL)
-IF (NOT OPENGL_FOUND)
-  MESSAGE(FATAL_ERROR "OpenGL not found! Please either install OpenGL or disable LUX_UI.")
-ENDIF()
 add_subdirectory(samples/luxcoreui)
 
 
