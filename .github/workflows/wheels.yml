@@ -6,6 +6,7 @@ name: LuxCore Python Wheels
 
 on:
   workflow_dispatch:
+  push:
 
 jobs:
   build-wheels:
@@ -14,11 +15,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-minor: [8, 9, 10, 11, 12, 13]
-        os: [ubuntu-latest, windows-latest, macos-13, macos-14]
-        #python-minor: [ 9 ]
+        #python-minor: [8, 9, 10, 11, 12, 13]
+        #os: [ubuntu-latest, windows-latest, macos-13, macos-14]
+        python-minor: [ 9 ]
         #python-minor: [ 12]
-        #os: [ubuntu-latest]
+        os: [ubuntu-latest]
         #python-minor: [ 11]
         #os: [windows-latest]
         #python-minor: [ 11]
@@ -275,7 +276,6 @@ jobs:
             echo "::group::CIBW_BEFORE_BUILD: dependencies"
             pip install conan
             make deps
-            ls -Rl
             echo "::endgroup::"
 
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: |
@@ -350,8 +350,8 @@ jobs:
           path: ./wheelhouse/*.whl
   # TODO
 
-  upload_test:
-    needs: [build_wheels]
+  upload-test:
+    needs: [build-wheels]
     environment:
       name: testpypi
       url: https://test.pypi.org/p/pyluxcore
@@ -376,8 +376,8 @@ jobs:
           skip-existing: true
 
 
-  upload_prod:
-    needs: [build_wheels]
+  upload-prod:
+    needs: [build-wheels]
     environment:
       name: pypi
       url: https://pypi.org/p/pyluxcore
