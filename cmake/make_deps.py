@@ -202,13 +202,11 @@ if __name__ == "__main__":
         run_conan(
             [
                 "install",
-                "--requires=luxcoredeps/2.10.0@luxcore/luxcore",  # TODO version as a param
                 "--build=missing",
                 f"--profile:all={get_profile_name()}",
                 "--deployer=full_deploy",
                 f"--deployer-folder={BUILD_DIR}",
-                "--generator=CMakeToolchain",
-                "--generator=CMakeDeps",
                 f"--output-folder={CMAKE_DIR}",
+                "."
             ]
         )
