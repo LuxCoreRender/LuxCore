@@ -56,6 +56,7 @@ wheel.cmake = true
 wheel.packages = ["src/pyluxcore", "src/pyluxcoretest"]
 build-dir = "build"
 ninja.make-fallback = false
+install.components = ["pyluxcore"]
 
 [tool.scikit-build.cmake.define]
 CMAKE_INSTALL_PREFIX = "build"
