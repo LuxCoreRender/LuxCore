@@ -19,12 +19,12 @@ class LuxCore(ConanFile):
     def generate(self):
         tc = CMakeToolchain(self)
         tc.absolute_paths = True
-        tc.preprocessor_definitions["OIIO_STATIC_DEFINE"] = True
         tc.variables["CMAKE_COMPILE_WARNING_AS_ERROR"] = False
 
         # OIDN denoiser executable
         oidn = self.dependencies["luxcoredeps"].dependencies["oidn"]
         oidn_info = oidn.cpp_info
+        oidn_version = oidn.ref.version
         oidn_bindir = Path(oidn_info.bindirs[0])
         if self.settings.os == "Windows":
             denoise_path = oidn_bindir / "oidnDenoise.exe"
@@ -36,16 +36,16 @@ class LuxCore(ConanFile):
         oidn_libdir = Path(oidn_info.libdirs[0])
         tc.variables["LUX_OIDN_DENOISE_LIBS"] = oidn_libdir.as_posix()
         tc.variables["LUX_OIDN_DENOISE_BINS"] = oidn_bindir.as_posix()
-        tc.variables["LUX_OIDN_VERSION"] = oidn.ref.version
+        tc.variables["LUX_OIDN_VERSION"] = oidn_version
         if self.settings.os == "Linux":
             denoise_cpu = (
-                oidn_libdir / f"libOpenImageDenoise_device_cpu.so.{OIDN_VERSION}"
+                oidn_libdir / f"libOpenImageDenoise_device_cpu.so.{oidn_version}"
             )
         elif self.settings.os == "Windows":
             denoise_cpu = oidn_bindir / "OpenImageDenoise_device_cpu.dll"
         elif self.settings.os == "Macos":
             denoise_cpu = (
-                oidn_libdir / f"OpenImageDenoise_device_cpu.{OIDN_VERSION}.pylib"
+                oidn_libdir / f"OpenImageDenoise_device_cpu.{oidn_version}.pylib"
             )
         tc.variables["LUX_OIDN_DENOISE_CPU"] = denoise_cpu.as_posix()
 
