@@ -69,4 +69,6 @@ install(
     PRE_EXCLUDE_REGEXES "api-ms-" "ext-ms-"
     POST_EXCLUDE_REGEXES ".*system32/.*\\.dll"
     DIRECTORIES ${CONAN_RUNTIME_LIB_DIRS}
+    COMPONENT luxcoreui
+    OPTIONAL
 )

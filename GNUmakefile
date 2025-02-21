@@ -32,15 +32,19 @@ all: luxcore pyluxcore luxcoreui luxcoreconsole
 
 luxcore: config
 	cmake $(BUILD_CMAKE_ARGS) --build --preset conan-release --target luxcore
+	cmake --install $(BUILD_DIR)/cmake --prefix $(BUILD_DIR) --component luxcore
 
 pyluxcore: config
 	cmake $(BUILD_CMAKE_ARGS) --build --preset conan-release  --target pyluxcore
+	cmake --install $(BUILD_DIR)/cmake --prefix $(BUILD_DIR) --component pyluxcore
 
-luxcoreui: config luxcore
+luxcoreui: config
 	cmake $(BUILD_CMAKE_ARGS) --build --preset conan-release --target luxcoreui
+	cmake --install $(BUILD_DIR)/cmake --prefix $(BUILD_DIR) --component luxcoreui
 
-luxcoreconsole: config luxcore
+luxcoreconsole: config
 	cmake $(BUILD_CMAKE_ARGS) --build --preset conan-release --target luxcoreconsole
+	cmake --install $(BUILD_DIR)/cmake --prefix $(BUILD_DIR) --component luxcoreconsole
 
 # TODO Make debug targets
 

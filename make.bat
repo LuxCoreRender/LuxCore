@@ -29,14 +29,19 @@ if "%COMMAND%" == "" (
     call :PyLuxcore
     call :LuxcoreUI
     call :LuxcoreConsole
+    call :InvokeCMakeInstall
 ) else if "%COMMAND%" == "luxcore" (
     call :Luxcore
+    call :InvokeCMakeInstall luxcore
 ) else if "%COMMAND%" == "pyluxcore" (
     call :PyLuxcore
+    call :InvokeCMakeInstall pyluxcore
 ) else if "%COMMAND%" == "luxcoreui" (
     call :LuxcoreUI
+    call :InvokeCMakeInstall luxcoreui
 ) else if "%COMMAND%" == "luxcoreconsole" (
     call :LuxcoreConsole
+    call :InvokeCMakeInstall luxcoreconsole
 ) else if "%COMMAND%" == "config" (
     call :Config
 ) else if "%COMMAND%" == "install" (
@@ -70,7 +75,13 @@ endlocal
 goto :EOF
 
 :InvokeCMakeInstall
-cmake --install %BUILD_DIR%/cmake --prefix %BUILD_DIR%
+setlocal
+IF "%~1" == "" (
+    cmake --install %BUILD_DIR%/cmake --prefix %BUILD_DIR%
+) else (
+    cmake --install %BUILD_DIR%/cmake --prefix %BUILD_DIR% --component %1
+)
+endlocal
 goto :EOF
 
 :Clean
