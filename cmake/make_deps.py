@@ -36,6 +36,8 @@ URL_SUFFIXES = {
     "macOS-X64": "macos-13",
 }
 
+LUX_GENERATOR = os.getenv("LUX_GENERATOR", "")
+
 def find_platform():
     system = platform.system()
     if system == "Linux":
@@ -126,20 +128,23 @@ def conan_home():
 def copy_conf(dest):
     home = conan_home()
     source = home / "global.conf"
-    logger.info(f"Copying {source}")
+    logger.info(f"Copying {source} to {dest}")
     shutil.copy(source, dest)
 
 
 if __name__ == "__main__":
 
+
     # Set-up logger
     logger.setLevel(logging.INFO)
     logging.basicConfig(level=logging.INFO)
+    logger.info("BEGIN")
 
     # Get settings
     logger.info(f"Reading settings")
     with open("luxcore.json") as f:
         settings = json.load(f)
+    logger.info(f"Build directory: {BUILD_DIR}")
 
     # Process
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -199,14 +204,22 @@ if __name__ == "__main__":
 
         # Generate & deploy
         logger.info("Generating")
-        run_conan(
-            [
-                "install",
-                "--build=missing",
-                f"--profile:all={get_profile_name()}",
-                "--deployer=full_deploy",
-                f"--deployer-folder={BUILD_DIR}",
-                f"--output-folder={CMAKE_DIR}",
-                "."
-            ]
-        )
+        main_block = [
+            "install",
+            "--build=missing",
+            f"--profile:all={get_profile_name()}",
+            "--deployer=full_deploy",
+            f"--deployer-folder={BUILD_DIR}",
+            f"--output-folder={CMAKE_DIR}",
+        ]
+        ninja_block = [
+            "--conf:all=tools.microsoft.msbuild:installation_path=!",
+            "--conf:all=tools.cmake.cmaketoolchain:generator=Ninja",
+            "--conf:all=tools.cmake.cmaketoolchain:presets_environment=disabled",
+            "--conf:all=tools.cmake.cmaketoolchain:toolset_arch=!",
+        ] if LUX_GENERATOR.upper() == "NINJA" else []
+        statement = main_block + ninja_block + ["."]
+        run_conan(statement)
+
+
+    logger.info("END")

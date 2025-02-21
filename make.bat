@@ -5,9 +5,6 @@ REM Convenience wrapper for CMake commands
 REM Script command (1st parameter)
 set COMMAND=%1
 
-for /f "delims=" %%A in ('python cmake\get_preset.py') do set "CONAN_PRESET=%%A"
-echo CMake preset: %CONAN_PRESET%
-
 echo Build cmake args: %BUILD_CMAKE_ARGS%
 
 if "%BUILD_DIR%" == "" (
@@ -61,31 +58,31 @@ exit /B
 
 :InvokeCMake
 setlocal
-set PRESET=%1
-set TARGET=%2
+for /f "delims=" %%A in ('python cmake\get_preset.py') do set "PRESET=%%A"
+echo CMake preset: %PRESET%
+set TARGET=%1
 cmake --build --preset %PRESET% --target %TARGET% %BUILD_CMAKE_ARGS%
 endlocal
 goto :EOF
 
 :InvokeCMakeConfig
 setlocal
-set PRESET=%1
+for /f "delims=" %%A in ('python cmake\get_preset.py') do set "PRESET=%%A"
+echo CMake preset: %PRESET%
 cmake %BUILD_CMAKE_ARGS% --preset %PRESET% -DCMAKE_INSTALL_PREFIX=%INSTALL_DIR% -S %SOURCE_DIR%
 endlocal
 goto :EOF
 
 :InvokeCMakeInstall
-setlocal
 IF "%~1" == "" (
     cmake --install %BUILD_DIR%/cmake --prefix %BUILD_DIR%
 ) else (
     cmake --install %BUILD_DIR%/cmake --prefix %BUILD_DIR% --component %1
 )
-endlocal
 goto :EOF
 
 :Clean
-call :InvokeCMake %CONAN_PRESET% clean
+call :InvokeCMake clean
 goto :EOF
 
 :Config
@@ -94,22 +91,22 @@ goto :EOF
 
 :Luxcore
 call :Config
-call :InvokeCMake %CONAN_PRESET% luxcore
+call :InvokeCMake luxcore
 goto :EOF
 
 :PyLuxcore
 call :Config
-call :InvokeCMake %CONAN_PRESET% pyluxcore
+call :InvokeCMake pyluxcore
 goto :EOF
 
 :LuxcoreUI
 call :Config
-call :InvokeCMake %CONAN_PRESET% luxcoreui
+call :InvokeCMake luxcoreui
 goto :EOF
 
 :LuxcoreConsole
 call :Config
-call :InvokeCMake %CONAN_PRESET% luxcoreconsole
+call :InvokeCMake luxcoreconsole
 goto :EOF
 
 :Clear

@@ -294,7 +294,17 @@ if(WIN32)
   # we have to make it an executable again...
   message(STATUS "oidnDenoise suffix back to pyd")
   INSTALL(
-    CODE "file(RENAME \"${CMAKE_INSTALL_PREFIX}/pyluxcore.libs/oidnDenoise.exe\" \"${CMAKE_INSTALL_PREFIX}/pyluxcore.libs/oidnDenoise.pyd\")"
+    CODE
+    "
+    MESSAGE(STATUS
+        \"Renaming '$<INSTALL_PREFIX>/pyluxcore.libs/oidnDenoise.exe' \
+        into '$<INSTALL_PREFIX>/pyluxcore.libs/oidnDenoise.pyd'\"
+    )
+    FILE(RENAME
+        $<INSTALL_PREFIX>/pyluxcore.libs/oidnDenoise.exe
+        $<INSTALL_PREFIX>/pyluxcore.libs/oidnDenoise.pyd
+    )
+    "
     COMPONENT pyluxcore
   )
 
