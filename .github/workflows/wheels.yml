@@ -279,12 +279,8 @@ jobs:
             echo "::endgroup::"
 
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: |
-            TBB=/project/full_deploy/host/onetbb/$TBB_VERSION/${BUILD_TYPE}/x86_64/lib
-            OIDN=/project/full_deploy/host/oidn/$OIDN_VERSION/${BUILD_TYPE}/x86_64/lib
-            EMBREE3=/project/full_deploy/host/embree3/$EMBREE3_VERSION/${BUILD_TYPE}/x86_64/lib
-            HWLOC=/project/full_deploy/host/hwloc/2.9.3/${BUILD_TYPE}/x86_64/lib
-            LEVEL_ZERO=/project/full_deploy/host/level-zero/1.17.39/${BUILD_TYPE}/x86_64/lib
-            LD_LIBRARY_PATH=$TBB:$HWLOC:$LEVEL_ZERO:$OIDN:$EMBREE3:$LD_LIBRARY_PATH
+            paths=$(find /project -type d -wholename "*/lib" -print0 | xargs -0 realpath | tr "\n" ":")
+            LD_LIBRARY_PATH=$paths:$LD_LIBRARY_PATH
             echo "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}"
             export LD_LIBRARY_PATH
 
