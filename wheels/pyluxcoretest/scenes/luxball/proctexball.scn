@@ -1,0 +1,171 @@
+scene.camera.lookat = 0.5 -1.4 1.7 0.0 0.0 0.4
+#scene.camera.screenwindow = 0.5 1.0 0.0 1.0
+################################################################################
+#scene.textures.tex.type = scale
+#scene.textures.tex.texture1 = 0.75
+#scene.textures.tex.texture2 = 1.0 0.0 0.0
+################################################################################
+#scene.textures.tex.type = mix
+#scene.textures.tex.amount = 0.5
+#scene.textures.tex.texture1 = 0.0 0.0 1.0
+#scene.textures.tex.texture2 = 1.0 0.0 0.0
+################################################################################
+#scene.textures.tex.type = add
+#scene.textures.tex.texture1 = 0.0 0.0 0.75
+#scene.textures.tex.texture2 = 0.75 0.0 0.0
+################################################################################
+#scene.textures.tex.type = marble
+#scene.textures.tex.octaves = 8
+#scene.textures.tex.omega = 1.5
+#scene.textures.tex.scale = 0.8
+#scene.textures.tex.variation = 0.2
+#scene.textures.tex.mapping.type = globalmapping3d
+#scene.textures.tex.mapping.transformation = 25.0 0.01 0.0 0.0  0.01 25.0 0.01 0.0  0.0 0.01 25.0 0.0  0.0 0.0 0.0 1.0
+################################################################################
+#scene.textures.tex.type = dots
+#scene.textures.tex.inside = 1.0 0.0 0.0
+#scene.textures.tex.outside = 1.0 1.0 1.0
+#scene.textures.tex.mapping.type = uvmapping2d
+#scene.textures.tex.mapping.uvscale = 50.0 50.0
+################################################################################
+#scene.textures.tex.type = checkerboard2d
+#scene.textures.tex.texture1 = 1.0 0.0 0.0
+#cene.textures.tex.texture2 = 1.0 1.0 1.0
+#scene.textures.tex.mapping.type = uvmapping2d
+#scene.textures.tex.mapping.uvscale = 10.0 10.0
+################################################################################
+#scene.textures.tex.type = checkerboard3d
+#scene.textures.tex.texture1 = 1.0 0.0 0.0
+#scene.textures.tex.texture2 = 1.0 1.0 1.0
+#scene.textures.tex.mapping.type = globalmapping3d
+#scene.textures.tex.mapping.transformation = 25.0 0.01 0.0 0.0  0.0 25.0 0.01 0.0  0.0 0.0 25.0 0.0  0.0 0.0 0.0 1.0
+################################################################################
+#scene.textures.fbmtex.type = fbm
+#scene.textures.fbmtex.octaves = 8
+#scene.textures.fbmtex.omega = 0.5
+#scene.textures.fbmtex.mapping.type = globalmapping3d
+#scene.textures.fbmtex.mapping.transformation = 20.0 0.0 0.0 0.0  0.0 20.0 0.0 0.0  0.0 0.0 20.0 0.0  0.0 0.0 0.0 1.0
+#scene.textures.tex.type = scale
+#scene.textures.tex.texture1 = 0.5
+#scene.textures.tex.texture2 = fbmtex
+################################################################################
+#scene.textures.fbmtex.type = fbm
+#scene.textures.fbmtex.octaves = 8
+#scene.textures.fbmtex.omega = 0.5
+#scene.textures.fbmtex.mapping.type = globalmapping3d
+#scene.textures.fbmtex.mapping.transformation = 200.0 0.0 0.0 0.0  0.0 200.0 0.0 0.0  0.0 0.0 200.0 0.0  0.0 0.0 0.0 1.0
+#scene.textures.scalefbmtex.type = scale
+#scene.textures.scalefbmtex.texture1 = 0.5
+#scene.textures.scalefbmtex.texture2 = fbmtex
+#scene.textures.addfbmtex.type = add
+#scene.textures.addfbmtex.texture1 = 0.85
+#scene.textures.addfbmtex.texture2 = scalefbmtex
+#scene.textures.tex.type = brick
+#scene.textures.tex.bricktex = 1.0 0.2 0.05
+#scene.textures.tex.mortartex = 1.0 1.0 1.0
+#scene.textures.tex.brickmodtex = addfbmtex
+#scene.textures.tex.brickbond = herringbone
+#scene.textures.tex.mapping.type = uvmapping3d
+#scene.textures.tex.mapping.transformation = 10.0 0.0 0.0 0.0  0.0 10.0 0.01 0.0  0.0 0.0 10.0 0.0  0.0 0.0 0.0 1.0
+################################################################################
+#scene.textures.tex.type = windy
+#scene.textures.tex.mapping.type = globalmapping3d
+#scene.textures.tex.mapping.transformation = 100.0 0.0 0.0 0.0  0.0 100.0 0.01 0.0  0.0 0.0 100.0 0.0  0.0 0.0 0.0 1.0
+################################################################################
+#scene.textures.tex.type = wrinkled
+#scene.textures.tex.mapping.type = globalmapping3d
+#scene.textures.tex.mapping.transformation = 100.0 0.0 0.0 0.0  0.0 100.0 0.01 0.0  0.0 0.0 100.0 0.0  0.0 0.0 0.0 1.0
+################################################################################
+#scene.textures.tex.type = uv
+#scene.textures.tex.mapping.type = uvmapping2d
+#scene.textures.tex.mapping.uvscale = 10.0 10.0
+################################################################################
+scene.textures.wrtex.type = wrinkled
+scene.textures.wrtex.mapping.type = globalmapping3d
+scene.textures.wrtex.mapping.transformation = 40.0 0.0 0.0 0.0  0.0 40.0 0.01 0.0  0.0 0.0 40.0 0.0  0.0 0.0 0.0 1.0
+scene.textures.tex.type = band
+scene.textures.tex.amount = wrtex
+scene.textures.tex.offset0 = 0.0
+scene.textures.tex.value0 = 0.75 0.0 0.0
+scene.textures.tex.offset1 = 0.33
+scene.textures.tex.value1 = 0.0 0.75 0.0
+scene.textures.tex.offset2 = 0.66
+scene.textures.tex.value2 = 0.0 0.0 0.75
+################################################################################
+#scene.textures.uvtex.type = uv
+#scene.textures.uvtex.mapping.type = uvmapping2d
+#scene.textures.uvtex.mapping.uvscale = 40.0 40.0
+#scene.textures.tex.type = band
+##scene.textures.tex.interpolation = none
+#scene.textures.tex.interpolation = linear
+#scene.textures.tex.amount = uvtex
+#scene.textures.tex.offset0 = 0.0
+#scene.textures.tex.value0 = 0.75 0.0 0.0
+#scene.textures.tex.offset1 = 0.33
+#scene.textures.tex.value1 = 0.0 0.75 0.0
+#scene.textures.tex.offset2 = 0.66
+#scene.textures.tex.value2 = 0.0 0.0 0.75
+################################################################################
+##scene.textures.tex.type = blender_clouds
+#scene.textures.tex.type = blender_wood
+#scene.textures.tex.mapping.type = globalmapping3d
+#scene.textures.tex.mapping.transformation = 10.0 0.0 0.0 0.0  0.0 10.0 0.0 0.0  0.0 0.0 10.0 0.0  0.0 0.0 0.0 1.0
+################################################################################
+#scene.textures.stex.type = scale
+#scene.textures.stex.texture1 = 0.01
+#scene.textures.stex.texture2 = tex
+################################################################################
+#scene.textures.tex.type = blender_noise
+##scene.textures.tex.noisedepth = 5
+################################################################################
+#scene.materials.shell.type = glossy2
+##scene.materials.shell.kd = stex
+#scene.materials.shell.kd = 0.6 0.0 0.0
+#scene.materials.shell.ks = 0.35 0.35 0.35
+#scene.materials.shell.uroughness = 0.03
+#scene.materials.shell.vroughness = 0.03
+#scene.materials.shell.bumptex = stex
+scene.materials.shell.type = matte
+scene.materials.shell.kd = tex
+#scene.materials.shell.bumptex = scalefbmtex
+#scene.materials.shell.type = matte
+#scene.materials.shell.kd = 0.0 0.3 0.6
+#scene.materials.shell.bumptex = stex
+#scene.materials.shell.type = glass
+#scene.materials.shell.kt = 0.0 0.5 1.0
+#scene.materials.shell.kr = 0.8 0.8 0.8
+#scene.materials.shell.bumptex = stex
+scene.materials.whitematte.type = matte
+scene.materials.whitematte.kd = 0.75 0.75 0.75
+scene.materials.luxtext.type = matte
+scene.materials.luxtext.kd = 0.0 0.0 0.75
+scene.materials.blacktext.type = matte
+scene.materials.blacktext.kd = 0.0 0.0 0.0
+scene.materials.whitematte.type = matte
+scene.materials.whitematte.kd = 0.75 0.75 0.75
+scene.materials.whitelight.type = matte
+scene.materials.whitelight.emission = 40.0 40.0 40.0
+scene.materials.whitelight.kd = 0.0 0.0 0.0
+################################################################################
+scene.objects.room.ply = scenes/luxball/room.ply
+#scene.objects.room.ply = scenes/luxball/room-nowall.ply
+scene.objects.room.material = whitematte
+scene.objects.luxinner.ply = scenes/luxball/luxball-inner.ply
+scene.objects.luxinner.material = whitematte
+scene.objects.luxtext.ply = scenes/luxball/luxball-text.ply
+scene.objects.luxtext.material = luxtext
+scene.objects.luxshell.ply = scenes/luxball/luxball-shell.ply
+scene.objects.luxshell.material = shell
+scene.objects.blacktext.ply = scenes/luxball/blacktext.ply
+scene.objects.blacktext.material = blacktext
+scene.objects.l1.ply = scenes/luxball/luxball-light1.ply
+scene.objects.l1.material = whitelight
+scene.objects.l2.ply = scenes/luxball/luxball-light2.ply
+scene.objects.l2.material = whitelight
+################################################################################
+##scene.infinitelight.file = scenes/simple-mat/sky.exr
+#scene.infinitelight.file = scenes/simple-mat/arch.exr
+#scene.infinitelight.gamma = 1.0
+#scene.infinitelight.gain = 3.0 3.0 3.0
+##scene.infinitelight.shift = 0.25 0.0
+#scene.infinitelight.usebruteforce = 1

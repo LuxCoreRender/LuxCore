@@ -1,0 +1,55 @@
+#scene.camera.type = environment
+scene.camera.type = stereo
+##
+#scene.camera.stereo.type = perspective
+#scene.camera.stereo.type = environment_180
+scene.camera.stereo.type = environment_360
+##
+scene.camera.lookat = 0.6 -1.7 0.4 0.0 0.0 0.4
+#scene.camera.lensradius = 0.015
+#scene.camera.focaldistance = 2.0
+scene.camera.fieldofview = 120.0
+scene.camera.oculusrift.barrelpostpro.enable = 1
+scene.camera.eyesdistance = 0.2262
+scene.camera.lensdistance = 0.2779
+################################################################################
+scene.materials.shell.type = mirror
+scene.materials.shell.kr = 0.75 0.75 0.75
+scene.materials.shell.id = 255
+scene.materials.whitematte.type = matte
+scene.materials.whitematte.kd = 0.75 0.75 0.75
+scene.materials.luxtext.type = matte
+scene.materials.luxtext.kd = 0.0 0.0 0.75
+scene.materials.blacktext.type = matte
+scene.materials.blacktext.id = 128
+scene.materials.blacktext.kd = 0.05 0.05 0.05
+################################################################################
+scene.shapes.room.type = mesh
+scene.shapes.room.ply = scenes/luxball/room-nowall.ply
+scene.shapes.luxinner.type = mesh
+scene.shapes.luxinner.ply = scenes/luxball/luxball-inner.ply
+scene.shapes.luxtext.type = mesh
+scene.shapes.luxtext.ply = scenes/luxball/luxball-text.ply
+scene.shapes.luxshell.type = mesh
+scene.shapes.luxshell.ply = scenes/luxball/luxball-shell.ply
+#scene.shapes.luxshell.ply = scenes/luxball/cube-shell.ply
+scene.shapes.blacktext.type = mesh
+scene.shapes.blacktext.ply = scenes/luxball/blacktext.ply
+################################################################################
+scene.objects.room.material = whitematte
+scene.objects.room.shape = room
+scene.objects.luxinner.material = whitematte
+scene.objects.luxinner.shape = luxinner
+scene.objects.luxtext.material = luxtext
+scene.objects.luxtext.shape = luxtext
+scene.objects.luxshell.material = shell
+scene.objects.luxshell.shape = luxshell
+scene.objects.blacktext.material = blacktext
+scene.objects.blacktext.shape = blacktext
+################################################################################
+#scene.infinitelight.file = scenes/simple-mat/sky.exr
+scene.infinitelight.file = scenes/simple-mat/arch.exr
+scene.infinitelight.gamma = 1.0
+scene.infinitelight.gain = 3.0 3.0 3.0
+scene.infinitelight.storage = byte
+#scene.infinitelight.shift = 0.25 0.0

@@ -1,0 +1,36 @@
+scene.camera.lookat = 0.6 -1.7 0.4 0.0 0.0 0.4
+scene.camera.lensradius = 0.015
+scene.camera.focaldistance = 2.0
+################################################################################
+scene.materials.mat1.type = matte
+scene.materials.mat1.kd = 0.75 0.0 0.0
+scene.materials.mat2.type = metal2
+scene.materials.mat2.kr = 0.75 0.75 0.75
+scene.materials.mat2.exp = 50
+scene.materials.shell.type = mix
+scene.materials.shell.amount = 0.2
+scene.materials.shell.material1 = mat1
+scene.materials.shell.material2 = mat2
+scene.materials.whitematte.type = matte
+scene.materials.whitematte.kd = 0.75 0.75 0.75
+scene.materials.luxtext.type = matte
+scene.materials.luxtext.kd = 0.0 0.0 0.75
+scene.materials.blacktext.type = matte
+scene.materials.blacktext.kd = 0.0 0.0 0.0
+################################################################################
+scene.objects.room.material = whitematte
+scene.objects.room.ply = scenes/luxball/room-nowall.ply
+scene.objects.luxinner.material = whitematte
+scene.objects.luxinner.ply = scenes/luxball/luxball-inner.ply
+scene.objects.luxtext.material = luxtext
+scene.objects.luxtext.ply = scenes/luxball/luxball-text.ply
+scene.objects.luxshell.material = shell
+scene.objects.luxshell.ply = scenes/luxball/luxball-shell.ply
+scene.objects.blacktext.material = blacktext
+scene.objects.blacktext.ply = scenes/luxball/blacktext.ply
+################################################################################
+#scene.infinitelight.file = scenes/simple-mat/sky.exr
+scene.infinitelight.file = scenes/simple-mat/arch.exr
+scene.infinitelight.gamma = 1.0
+scene.infinitelight.gain = 3.0 3.0 3.0
+scene.infinitelight.usebruteforce = 1

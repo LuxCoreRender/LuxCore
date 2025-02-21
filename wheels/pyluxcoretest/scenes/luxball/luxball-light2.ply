@@ -1,0 +1,22 @@
+ply
+format ascii 1.0
+comment Created by Blender3D 249 - www.blender.org, source file: luxball.blend
+element vertex 4
+property float x
+property float y
+property float z
+property float nx
+property float ny
+property float nz
+property uchar red
+property uchar green
+property uchar blue
+element face 2
+property list uchar uint vertex_indices
+end_header
+-0.000756 -1.622591 1.978461 -0.050210 0.525136 -0.849536 255 255 255
+0.526459 -1.080241 2.282552 -0.050210 0.525136 -0.849536 255 255 255
+0.573069 -1.567726 1.978461 -0.050210 0.525136 -0.849536 255 255 255
+-0.047366 -1.135106 2.282552 -0.050210 0.525136 -0.849536 255 255 255
+3 0 1 2 
+3 0 3 1 

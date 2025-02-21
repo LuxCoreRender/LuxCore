@@ -1,0 +1,63 @@
+scene.camera.lookat = 0.5 -1.4 1.7 0.0 0.0 0.4
+#scene.camera.screenwindow = 0.5 1.0 0.0 1.0
+#scene.camera.lookat.orig = 0.157588303 -0.441247225 0.80972904
+#scene.camera.lookat.target = -0.342411667 0.958752155 -0.490269899
+################################################################################
+scene.textures.tex1.type = checkerboard2d
+scene.textures.tex1.texture1 = 0.7 0.0 0.0
+scene.textures.tex1.texture2 = 0.7 0.7 0.0
+scene.textures.tex1.mapping.type = uvmapping2d
+scene.textures.tex1.mapping.uvscale = 20 -20
+##
+scene.textures.tex2.type = checkerboard2d
+scene.textures.tex2.texture1 = 0.0 0.7 0.7
+scene.textures.tex2.texture2 = 0.7 0.0 0.7
+scene.textures.tex2.mapping.type = uvmapping2d
+scene.textures.tex2.mapping.uvscale = 20 -20
+##
+scene.textures.tex3.type = checkerboard2d
+scene.textures.tex3.texture1 = 0.7 0.0 0.7
+scene.textures.tex3.texture2 = 0.0 0.7 0.0
+scene.textures.tex3.mapping.type = uvmapping2d
+scene.textures.tex3.mapping.uvscale = 20 -20
+##
+scene.textures.tex.type = triplanar
+scene.textures.tex.texture1 = tex1
+scene.textures.tex.texture2 = tex2
+scene.textures.tex.texture3 = tex3
+scene.textures.tex.mapping.type = localmapping3d
+################################################################################
+scene.materials.shell.type = matte
+scene.materials.shell.kd = tex
+scene.materials.whitematte.type = matte
+scene.materials.whitematte.kd = 0.75 0.75 0.75
+scene.materials.luxtext.type = matte
+scene.materials.luxtext.kd = 0.0 0.0 0.75
+scene.materials.blacktext.type = matte
+scene.materials.blacktext.kd = 0.0 0.0 0.0
+scene.materials.whitematte.type = matte
+scene.materials.whitematte.kd = 0.75 0.75 0.75
+scene.materials.whitelight.type = matte
+scene.materials.whitelight.emission = 30.0 30.0 30.0
+scene.materials.whitelight.kd = 0.0 0.0 0.0
+################################################################################
+#scene.objects.room.ply = scenes/luxball/room-nowall.ply
+scene.objects.room.ply = scenes/luxball/room.ply
+scene.objects.room.material = whitematte
+#scene.objects.room.bake.combined.file = room-bake.exr
+#scene.objects.room.bake.combined.gamma = 1.0
+#
+scene.objects.luxshell.ply = scenes/luxball/luxball-shell.ply
+scene.objects.luxshell.material = shell
+scene.objects.luxshell.appliedtransformation = 0.941364586 -0.329231501 -0.0737521648 0 0.201132208 0.723118901 -0.660791099 0 0.270884842 0.607211411 0.746937573 0 0 0 0 1
+#
+scene.objects.luxinner.ply = scenes/luxball/luxball-inner.ply
+scene.objects.luxinner.material = whitematte
+scene.objects.luxtext.ply = scenes/luxball/luxball-text.ply
+scene.objects.luxtext.material = luxtext
+scene.objects.blacktext.ply = scenes/luxball/blacktext.ply
+scene.objects.blacktext.material = blacktext
+scene.objects.l1.ply = scenes/luxball/luxball-light1.ply
+scene.objects.l1.material = whitelight
+scene.objects.l2.ply = scenes/luxball/luxball-light2.ply
+scene.objects.l2.material = whitelight
