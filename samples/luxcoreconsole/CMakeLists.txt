@@ -38,5 +38,7 @@ install(
     POST_EXCLUDE_REGEXES ".*system32/.*\\.dll"
     DIRECTORIES ${CONAN_RUNTIME_LIB_DIRS}
     COMPONENT luxcoreconsole
+    FRAMEWORK
+        DESTINATION luxcore
     OPTIONAL
 )

@@ -2,10 +2,14 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from conan import ConanFile
-
-from conan.tools.cmake import CMake, CMakeDeps, CMakeToolchain, cmake_layout
 from pathlib import Path
+import io
+import os
+
+from conan import ConanFile
+from conan.tools.cmake import CMake, CMakeDeps, CMakeToolchain, cmake_layout
+from conan.tools.env import VirtualBuildEnv
+
 
 class LuxCore(ConanFile):
     name = "luxcore"
