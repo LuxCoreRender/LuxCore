@@ -24,19 +24,13 @@ redist_paths=`find "${VCToolsRedistDir}" -type d | paste -s -d ":"`
 
 echo "Paths: ${redist_paths}"
 
-# TODO Should not be hard-coded...
 base="$workspace/build/full_deploy/host"
-echo "Base folder: ${base}"
-TBB_VERSION="2021.12.0"
-OIDN_VERSION="2.3.1"
-EMBREE3_VERSION="3.13.5"
+paths=$(find $base -type d -wholename "*/bin" -print0 | xargs -0 realpath | tr "\n" ":")
 
 delvewheel repair -v \
   --add-path="$GITHUB_WORKSPACE/libs" \
   --add-path="${redist_paths}" \
-  --add-path="${base}/onetbb/${TBB_VERSION}/Release/x86_64/bin" \
-  --add-path="${base}/oidn/${OIDN_VERSION}/Release/x86_64/bin" \
-  --add-path="${base}/embree3/${EMBREE3_VERSION}/Release/x86_64/bin" \
+  --add-path="${paths}" \
   -w "${dest_dir}" \
   "${wheel}"
 
