@@ -56,21 +56,50 @@ class LuxCore(ConanFile):
         if self.settings.os == "Macos" and self.settings.arch == "armv8":
             tc.cache_variables["CMAKE_OSX_ARCHITECTURES"] = "arm64"
 
-        if self.settings.os == "Macos":
-            buildenv = VirtualBuildEnv(self)
+        # Bison/Flex
+        # FLEX_EXECUTABLE and BISON_EXECUTABLE are recognized by
+        # standard FindFlex and FindBison
+        if self.settings.os == "Windows":
+            # winflexbison
+            winflexbison = self.dependencies["luxcoredeps"].dependencies["winflexbison"]
 
-            bisonbrewpath = io.StringIO()
-            self.run("brew --prefix bison", stdout=bisonbrewpath)
-            bison_root = os.path.join(bisonbrewpath.getvalue().rstrip(), "bin")
-            buildenv.environment().define("BISON_ROOT", bison_root)
+            lex_path = os.path.join(winflexbison.package_folder, "bin", "win_flex.exe").replace("\\", "/")
+            tc.cache_variables["FLEX_EXECUTABLE"] = lex_path
 
-            flexbrewpath = io.StringIO()
-            self.run("brew --prefix flex", stdout=flexbrewpath)
-            flex_root = os.path.join(flexbrewpath.getvalue().rstrip(), "bin")
-            buildenv.environment().define("FLEX_ROOT", flex_root)
+            yacc_path = os.path.join(winflexbison.package_folder, "bin", "win_bison.exe").replace("\\", "/")
+            tc.cache_variables["BISON_EXECUTABLE"] = yacc_path
+        # else:
+            # # *nix Flex and Bison
+            # flex = self.dependencies["flex"]
+            # flex_path = os.path.join(flex.package_folder, "bin", "flex").replace("\\", "/")
+            # tc.cache_variables["FLEX_EXECUTABLE"] = flex_path
 
-            buildenv.generate()
-            tc.presets_build_environment = buildenv.environment()
+
+            # bison = self.dependencies["bison"]
+            # bison_path = os.path.join(bison.package_folder, "bin", "bison").replace("\\", "/")
+            # tc.cache_variables["BISON_EXECUTABLE"] = bison_path
+            # bison.cpp_info.set_property("cmake_find_mode", "none")  # Force use of standard CMake FindBISON
+
+            # # *nix Flex and Bison
+            # flex = self.dependencies["luxcoredeps"].dependencies["flex"]
+            # flex_path = os.path.join(flex.package_folder, "bin", "flex").replace("\\", "/")
+            # tc.cache_variables["FLEX_EXECUTABLE"] = flex_path
+
+
+            # bison = self.dependencies["luxcoredeps"].dependencies["bison"]
+            # bison_path = os.path.join(bison.package_folder, "bin", "bison").replace("\\", "/")
+            # tc.cache_variables["BISON_EXECUTABLE"] = bison_path
+            # bison.cpp_info.set_property("cmake_find_mode", "none")  # Force use of standard CMake FindBISON
+
+            # bison_root = bison.package_folder.replace("\\", "/")
+            # self.buildenv_info.define_path("CONAN_BISON_ROOT", bison_root)
+
+            # pkgdir = os.path.join(bison.package_folder, "res", "bison")
+            # self.buildenv_info.define_path("BISON_PKGDATADIR", pkgdir)
+
+            # # yacc is a shell script, so requires a shell (such as bash)
+            # yacc = os.path.join(bison.package_folder, "bin", "yacc").replace("\\", "/")
+            # self.conf_info.define("user.bison:yacc", yacc)
 
         tc.cache_variables["SPDLOG_FMT_EXTERNAL_HO"] = True
 

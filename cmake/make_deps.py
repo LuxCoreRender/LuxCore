@@ -202,6 +202,41 @@ if __name__ == "__main__":
             ["config", "install-pkg", "luxcoreconf/2.10.0@luxcore/luxcore"]
         )  # TODO version as a param
 
+        # Add Bison/Flex
+        if platform.system() != "Windows":
+            logger.info("Adding Bison/Flex")
+            run_conan(["profile", "detect"])  # If we want to catch a prebuilt
+            settings_block = [
+                    "--build=never",
+                    "-r=conancenter",
+                    "--settings:all=os=Macos",
+                    "--settings:all=arch=x86_64",
+                    "--settings:all=compiler=apple-clang",
+                    "--settings:all=compiler.version=13",
+                    "--settings:all=build_type=Release",
+            ]
+            run_conan(
+                [
+                    "install",
+                    "--tool-requires=m4/1.4.19",
+                ] + settings_block
+            )
+            run_conan(
+                [
+                    "install",
+                    "--tool-requires=flex/2.6.4",
+                    "--options:all=&:fPIC=True",
+                    "--options:all=&:shared=False",
+                ] + settings_block
+            )
+            run_conan(
+                [
+                    "install",
+                    "--tool-requires=bison/3.8.2",
+                    "--options:all=&:fPIC=True",
+                ] + settings_block
+            )
+
         # Generate & deploy
         logger.info("Generating")
         main_block = [
@@ -220,6 +255,11 @@ if __name__ == "__main__":
         ] if LUX_GENERATOR.upper() == "NINJA" else []
         statement = main_block + ninja_block + ["."]
         run_conan(statement)
+
+        # Debug
+        run_conan(["cache", "path", "bison/3.8.2"])
+
+
 
 
     logger.info("END")
