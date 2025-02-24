@@ -69,8 +69,9 @@ class LuxCore(ConanFile):
             yacc_path = os.path.join(winflexbison.package_folder, "bin", "win_bison.exe").replace("\\", "/")
             tc.cache_variables["BISON_EXECUTABLE"] = yacc_path
         else:
-            # https://github.com/conda-forge/bison-feedstock/issues/7
             # *nix Flex and Bison
+            # CMake variables for CMake to find Bison & Flex (relying on
+            # standard FindBison and FindFlex
             flex = self.dependencies["luxcoredeps"].dependencies["flex"]
             flex_path = os.path.join(flex.package_folder, "bin", "flex").replace("\\", "/")
             tc.cache_variables["FLEX_EXECUTABLE"] = flex_path
@@ -80,15 +81,22 @@ class LuxCore(ConanFile):
             tc.cache_variables["BISON_EXECUTABLE"] = bison_path
             bison.cpp_info.set_property("cmake_find_mode", "none")  # Force use of standard CMake FindBISON
 
+            # Environment variables for Bison/Flex/m4 to work together
+            buildenv = VirtualBuildEnv(self)
+
             bison_root = bison.package_folder.replace("\\", "/")
-            self.buildenv_info.define_path("CONAN_BISON_ROOT", bison_root)
+            buildenv.environment().define_path("CONAN_BISON_ROOT", bison_root)
 
             pkgdir = os.path.join(bison.package_folder, "res", "bison")
-            self.buildenv_info.define_path("BISON_PKGDATADIR", pkgdir)
+            buildenv.environment().define_path("BISON_PKGDATADIR", pkgdir)
 
-            # yacc is a shell script, so requires a shell (such as bash)
-            yacc = os.path.join(bison.package_folder, "bin", "yacc").replace("\\", "/")
-            self.conf_info.define("user.bison:yacc", yacc)
+            # https://github.com/conda-forge/bison-feedstock/issues/7
+            m4 = self.dependencies["luxcoredeps"].dependencies["m4"]
+            m4_path = os.path.join(m4.package_folder, "bin", "m4").replace("\\", "/")
+            buildenv.environment().define_path("M4", m4_path)
+
+            buildenv.generate()
+            tc.presets_build_environment = buildenv.environment()
 
         tc.cache_variables["SPDLOG_FMT_EXTERNAL_HO"] = True
 

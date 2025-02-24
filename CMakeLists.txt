@@ -160,6 +160,8 @@ find_package(nlohmann_json REQUIRED)
 find_package(robin_hood REQUIRED)
 
 # Bison/Flex
+find_package(m4 REQUIRED)
+message(STATUS "M4 = $ENV{M4}")
 find_package(BISON REQUIRED)
 find_package(FLEX REQUIRED)
 
