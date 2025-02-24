@@ -533,6 +533,7 @@ SOURCE_GROUP("Source Files\\SLG Core Library" FILES ${SLG_CORE_SRCS})
 add_library(slg-core STATIC ${SLG_CORE_SRCS})
 
 target_link_libraries(slg-core PRIVATE
+    luxrays
     boost::boost
     OpenColorIO::OpenColorIO
     OpenVDB::openvdb
