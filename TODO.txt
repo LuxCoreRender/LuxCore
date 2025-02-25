@@ -3,6 +3,7 @@ Move OpenCL translation in build step
 Remove nativefiledialog (due to very heavy gtk dep)
 Remove boost deps that are superseded by C++20 std
 Add CUDA
+Transfer pyluxcore ownership to LuxCoreRender
 
 Black py files
 Add demo targets
