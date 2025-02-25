@@ -36,31 +36,6 @@ jobs:
       GLIBC_VERSION: 2_28
       GH_TOKEN: ${{ github.token }}
       PYTHON_MINOR: ${{ matrix.python-minor }}
-      #LUXCORE_REPO: ${{ inputs.luxcore_repo != '' && inputs.luxcore_repo || 'Howetuft/LuxCore' }}  # TODO
-      #LUXCORE_REF: ${{ inputs.luxcore_ref != '' && inputs.luxcore_ref || 'for_v2.10' }}
-
-      # TODO
-      ## Versions
-      #BOOST_INSTALL_LAYOUT: system
-      #SPDLOG_FMT_EXTERNAL: on
-      #BOOST_VERSION: 1.84.0
-      #OIIO_VERSION: 2.5.16.0
-      #OCIO_VERSION: 2.4.0
-      #OIDN_VERSION: 2.3.1
-      #TBB_VERSION: 2021.12.0
-      #OPENEXR_VERSION: 3.3.2
-      #BLENDER_VERSION: 4.2.3
-      #OPENVDB_VERSION: 11.0.0
-      #SPDLOG_VERSION: 1.15.0
-      #EMBREE3_VERSION: 3.13.5
-      #FMT_VERSION: 11.0.2
-      #OPENSUBDIV_VERSION: 3.6.0
-      #JSON_VERSION: 3.11.3
-      #EIGEN_VERSION: 3.4.0
-      #ROBINHOOD_VERSION: 3.11.5
-      #MINIZIP_VERSION: 4.0.3
-      #PYBIND11_VERSION: 2.13.6
-
 
     steps:
 
@@ -71,14 +46,6 @@ jobs:
 
       - name: Checkout main repository (LuxCore)
         uses: actions/checkout@v4
-
-      #- name: Checkout LuxCoreRender
-        #uses: actions/checkout@v4
-        #with:
-          #repository: ${{ env.LUXCORE_REPO }}
-          #path: LuxCore
-          #submodules: recursive
-          #ref: ${{ env.LUXCORE_REF }}
 
       - name: Find workspace
         shell: bash
@@ -135,17 +102,6 @@ jobs:
           max-size: 5G
           verbose: 1
 
-      # TODO
-      #- name: Get cmake
-        #if: runner.os == 'macOS' || runner.os == 'Windows'
-        #uses: lukka/get-cmake@latest
-
-      #- name: Install ISPC
-        #if: runner.os == 'macOS' || runner.os == 'Windows'
-        #uses: ispc/install-ispc-action@main
-        #with:
-          #version: 1.25.3
-
       - name: Prepare msvc
         if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@v1
@@ -201,15 +157,6 @@ jobs:
             base = '${{ env.WORKSPACE }}/build/full_deploy/host/m4/1.4.19/Release/'
             core.exportVariable('M4', base + arch + '/bin/m4')
 
-      # TODO
-      #- name: Retrieve cached dependencies
-        #id: retrieve-cache-deps
-        #uses: actions/cache/restore@v4
-        #with:
-          #path: conan-cache
-          #key: deps-${{ matrix.os }}-${{ matrix.python-minor}}-
-          #restore-keys: deps-${{ matrix.os }}-${{ matrix.python-minor}}-
-
       # Build wheel
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.22.0
@@ -246,7 +193,7 @@ jobs:
           CIBW_BEFORE_ALL_LINUX: |
             dnf install -y epel-release
             dnf install -y almalinux-release-devel
-            dnf install -y ninja-build bison flex wget ccache
+            dnf install -y ninja-build wget ccache
             dnf install -y perl-IPC-Cmd perl-Digest-SHA
 
             if [[ ${{ env.GLIBC_VERSION }} != 2_28 ]]; then
@@ -254,11 +201,6 @@ jobs:
             fi
 
             ccache --show-config
-
-            ## TODO
-            ## Install git-lfs
-            #curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.rpm.sh | sudo bash
-            #dnf install -y git-lfs
 
             if [[ -z ${SANITIZE+x} ]]; then
               echo "No sanitizing";
@@ -268,30 +210,6 @@ jobs:
 
             pip install conan
             make deps
-
-            ## TODO
-            ## Install ispc
-            ## https://www.intel.com/content/www/us/en/docs/oneapi/installation-guide-linux/2023-0/yum-dnf-zypper.html
-            #tee > /tmp/oneAPI.repo << EOF
-            #[oneAPI]
-            #name=Intel® oneAPI repository
-            #baseurl=https://yum.repos.intel.com/oneapi
-            #enabled=1
-            #gpgcheck=1
-            #repo_gpgcheck=1
-            #gpgkey=https://yum.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB
-            #EOF
-            #mv /tmp/oneAPI.repo /etc/yum.repos.d
-
-            #dnf install -y intel-oneapi-ispc
-            #source /opt/intel/oneapi/ispc/latest/env/vars.sh
-
-            # TODO
-            ## Install Cuda
-            #dnf install -y --nogpgcheck https://dl.fedoraproject.org/pub/epel/epel-release-latest-$(rpm -E %rhel).noarch.rpm
-            #dnf install -y --nogpgcheck https://mirrors.rpmfusion.org/free/el/rpmfusion-free-release-$(rpm -E %rhel).noarch.rpm https://mirrors.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release-$(rpm -E %rhel).noarch.rpm
-            #subscription-manager repos --enable "codeready-builder-for-rhel-8-$(uname -m)-rpms"
-            #dnf install -y xorg-x11-drv-nvidia-470xx-cuda-libs
 
           CIBW_BEFORE_ALL_MACOS: |
             pip install conan
