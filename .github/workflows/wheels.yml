@@ -19,7 +19,7 @@ jobs:
         #os: [ubuntu-latest, windows-latest, macos-13, macos-14]
         python-minor: [ 9 ]
         #python-minor: [ 12]
-        os: [macos-13, ubuntu-latest]
+        os: [macos-13]
         #python-minor: [ 11]
         #os: [windows-latest]
         #python-minor: [ 11]
@@ -127,7 +127,7 @@ jobs:
         with:
           script: |
             if ('${{ runner.arch }}' == 'X64') {
-              target = '10.13';
+              target = '10.15';
               arch='x86_64';
             }
             else if ('${{ env.PYTHON_MINOR }}' != '8') {
@@ -241,11 +241,10 @@ jobs:
             bash.exe ${{ env.WORKSPACE }}/scripts/repair_wheel_windows.sh '{wheel}' '{dest_dir}' '%VCToolsRedistDir%%Platform%' '${{ env.WORKSPACE }}'
           CIBW_REPAIR_WHEEL_COMMAND_MACOS: |
             cp {wheel} ${{ env.WORKSPACE }}
-            BASE=${{ env.WORKSPACE }}/full_deploy/host
-            TBB=$BASE/onetbb/${{ env.TBB_VERSION }}/${BUILD_TYPE}/${{ env.PKG_ARCH }}/lib
-            OIDN=$BASE/oidn/${{ env.OIDN_VERSION }}/${BUILD_TYPE}/${{ env.PKG_ARCH }}/lib
-            EMBREE3=$BASE/embree3/${{ env.EMBREE3_VERSION }}/${BUILD_TYPE}/${{ env.PKG_ARCH }}/lib
-            export DYLD_LIBRARY_PATH=$TBB:$OIDN:$EMBREE3
+            paths=$(find ${{ env.WORKSPACE }} -type d -wholename "*/lib" -print0 | xargs -0 realpath | tr "\n" ":")
+            DYLD_LIBRARY_PATH=$paths:$DYLD_LIBRARY_PATH
+            echo "DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH}"
+            export DYLD_LIBRARY_PATH
             delocate-listdeps -v {wheel}
             delocate-wheel --require-archs {delocate_archs} -w {dest_dir} -v {wheel}
           CIBW_TEST_COMMAND_LINUX: pyluxcoretest
