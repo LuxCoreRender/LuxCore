@@ -93,7 +93,9 @@ class LuxCore(ConanFile):
             # https://github.com/conda-forge/bison-feedstock/issues/7
             m4 = self.dependencies["luxcoredeps"].dependencies["m4"]
             m4_path = os.path.join(m4.package_folder, "bin", "m4").replace("\\", "/")
+            tc.cache_variables["CONAN_M4_PATH"] = m4_path
             buildenv.environment().define_path("M4", m4_path)
+
 
             buildenv.generate()
             tc.presets_build_environment = buildenv.environment()

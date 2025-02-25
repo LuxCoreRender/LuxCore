@@ -1,6 +1,9 @@
+Sign deps zip (security)
 Move OpenCL translation in build step
+Remove nativefiledialog (due to very heavy gtk dep)
+Remove boost deps that are superseded by C++20 std
 Black py files
 Add demo targets
 Post PR to conan-center-index for fixing OpenImageIO (make fmt private link in cmake)
-Remove nativefiledialog (due to gtk dep)
-Remove boost deps that are superseded by C++20 std
+
+

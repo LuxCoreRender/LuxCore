@@ -206,7 +206,6 @@ jobs:
           CIBW_MANYLINUX_X86_64_IMAGE: quay.io/pypa/manylinux_${{ env.GLIBC_VERSION }}_x86_64
           CIBW_ENVIRONMENT: >
             SKBUILD_CMAKE_ARGS='--preset ${{ env.CONAN_PRESET }};-G Ninja;--log-level=VERBOSE'
-            SKBUILD_BUILD_TOOL_ARGS='--preset ${{ env.CONAN_PRESET }}'
             SKBUILD_CMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
             LUX_GENERATOR='Ninja'
           CIBW_ENVIRONMENT_PASS_LINUX: |
@@ -250,6 +249,9 @@ jobs:
               dnf install -y gcc-toolset-14-libasan-devel;
             fi
 
+            pip install conan
+            make deps
+
             ## TODO
             ## Install ispc
             ## https://www.intel.com/content/www/us/en/docs/oneapi/installation-guide-linux/2023-0/yum-dnf-zypper.html
@@ -274,8 +276,16 @@ jobs:
             #subscription-manager repos --enable "codeready-builder-for-rhel-8-$(uname -m)-rpms"
             #dnf install -y xorg-x11-drv-nvidia-470xx-cuda-libs
 
-          CIBW_BEFORE_ALL_MACOS: brew install bison flex
-          CIBW_BEFORE_BUILD: pip install conan && make deps
+          CIBW_BEFORE_ALL_MACOS: |
+            pip install conan
+            make deps
+            export M4=$(find $(pwd)/build -wholename "*/bin/m4")
+            echo "M4 = $M4"
+
+          CIBW_BEFORE_ALL_WINDOWS: |
+            pip install conan
+            make deps
+
 
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: |
             paths=$(find /project -type d -wholename "*/lib" -print0 | xargs -0 realpath | tr "\n" ":")

@@ -160,10 +160,12 @@ find_package(nlohmann_json REQUIRED)
 find_package(robin_hood REQUIRED)
 
 # Bison/Flex
-find_package(m4 REQUIRED)
-message(STATUS "M4 = $ENV{M4}")
-find_package(BISON REQUIRED)
-find_package(FLEX REQUIRED)
+if (CONAN_M4_PATH)
+    set(ENV{M4} ${CONAN_M4_PATH})
+    message(STATUS "m4 located at $ENV{M4}")
+    find_package(BISON REQUIRED)
+    find_package(FLEX REQUIRED)
+endif()
 
 # Additional dependencies for pyluxcore
 find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
