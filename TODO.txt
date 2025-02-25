@@ -4,6 +4,7 @@ Remove nativefiledialog (due to very heavy gtk dep)
 Remove boost deps that are superseded by C++20 std
 Add CUDA
 Transfer pyluxcore ownership to LuxCoreRender
+Add packaging workflow (deb, rpm, msi...)
 
 Black py files
 Add demo targets

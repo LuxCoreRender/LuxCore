@@ -15,11 +15,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        #python-minor: [8, 9, 10, 11, 12, 13]
-        #os: [ubuntu-latest, windows-latest, macos-13, macos-14]
-        python-minor: [ 9 ]
+        python-minor: [8, 9, 10, 11, 12, 13]
+        os: [ubuntu-latest, windows-latest, macos-13, macos-14]
+        #python-minor: [ 9 ]
         #python-minor: [ 12]
-        os: [macos-14]
+        #os: [macos-14]
         #python-minor: [ 11]
         #os: [windows-latest]
         #python-minor: [ 11]
@@ -208,16 +208,13 @@ jobs:
               dnf install -y gcc-toolset-14-libasan-devel;
             fi
 
-            pip install conan
-            make deps
+            pip install conan && make deps
 
           CIBW_BEFORE_ALL_MACOS: |
-            pip install conan
-            make deps
+            pip install conan && make deps
 
           CIBW_BEFORE_ALL_WINDOWS: |
-            pip install conan
-            make deps
+            pip install conan && make deps
 
 
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: |
