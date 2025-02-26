@@ -61,7 +61,7 @@ setlocal
 for /f "delims=" %%A in ('python cmake\get_preset.py') do set "PRESET=%%A"
 echo CMake preset: %PRESET%
 set TARGET=%1
-cmake --build --preset %PRESET% --target %TARGET% %BUILD_CMAKE_ARGS%
+cmake --build --preset conan-release --target %TARGET% %BUILD_CMAKE_ARGS%
 endlocal
 goto :EOF
 
