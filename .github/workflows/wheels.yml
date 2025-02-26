@@ -30,7 +30,6 @@ jobs:
     env:
       # Reminder: report all variables here to CIBW_ENVIRONMENT_PASS_LINUX
       BUILD_TYPE: Release
-      # SANITIZE: true # uncomment to sanitize
       CXX_VERSION: 20
       GCC_VERSION: 14
       GLIBC_VERSION: 2_28
@@ -120,8 +119,6 @@ jobs:
           echo "AR=${_T}/usr/bin/ar" >> $GITHUB_ENV
           echo "RANLIB=${_T}/usr/bin/ranlib" >> $GITHUB_ENV
 
-          echo "ASAN_PATH=${_T}/usr/lib/gcc/x86_64-redhat-linux/${_V}/libasan.so" >> $GITHUB_ENV
-
       - name: Set MacOS deployment target
         if: runner.os == 'macOS'
         uses: actions/github-script@v7
@@ -177,8 +174,6 @@ jobs:
             CXX
             BUILD_TYPE
             GCC_VERSION
-            SANITIZE
-            ASAN_PATH
             RUNNER_OS
             RUNNER_ARCH
             WORKSPACE
@@ -191,32 +186,7 @@ jobs:
             CONAN_HOME
             CONAN_PRESET
             M4
-          CIBW_BEFORE_ALL_LINUX: |
-
-            # Linux only: a sanitizing capability is activable (debug)
-            if [[ -z ${SANITIZE+x} ]]; then
-              echo "No sanitizing";
-            else
-              dnf install -y epel-release
-              dnf install -y almalinux-release-devel
-              dnf install -y ninja-build wget ccache
-              dnf install -y perl-IPC-Cmd perl-Digest-SHA
-
-              if [[ ${{ env.GLIBC_VERSION }} != 2_28 ]]; then
-                dnf install -y perl-FindBin perl-lib
-              fi
-              dnf install -y gcc-toolset-14-libasan-devel;
-            fi
-
-            pip install conan && make deps
-
-          CIBW_BEFORE_ALL_MACOS: |
-            pip install conan && make deps
-
-          CIBW_BEFORE_ALL_WINDOWS: |
-            pip install conan && make deps
-
-
+          CIBW_BEFORE_ALL: pip install conan && make deps
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: |
             paths=$(find /project -type d -wholename "*/lib" -print0 | xargs -0 realpath | tr "\n" ":")
             LD_LIBRARY_PATH=$paths:$LD_LIBRARY_PATH
