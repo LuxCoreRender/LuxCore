@@ -82,7 +82,6 @@ if("${isSystemDir}" STREQUAL "-1")
 endif("${isSystemDir}" STREQUAL "-1")
 MESSAGE(STATUS "Install RPATH: ${CMAKE_INSTALL_RPATH}")
 
-
 if(TARGET pyluxcore OR NOT LUXCORE_STATIC)
   set(BUILD_LUXCORE_DLL ON)
 else()
@@ -90,6 +89,30 @@ else()
 endif()
 MESSAGE(STATUS "Set BUILD_LUXCORE_DLL to ${BUILD_LUXCORE_DLL}")
 
+if (LUXRAYS_DISABLE_OPENCL)
+  ADD_DEFINITIONS("-DLUXRAYS_DISABLE_OPENCL")
+  # CUDA requires OpenCL support
+  ADD_DEFINITIONS("-DLUXRAYS_DISABLE_CUDA")
+
+  message(STATUS "OpenCL and CUDA support: disabled")
+else()
+  if (LUXRAYS_DISABLE_CUDA)
+    ADD_DEFINITIONS("-DLUXRAYS_DISABLE_CUDA")
+    message(STATUS "OpenCL support: enabled")
+    message(STATUS "CUDA support: disabled")
+  else()
+    message(STATUS "OpenCL support: enabled")
+    message(STATUS "CUDA support: enabled")
+  endif()
+endif()
+
+if (LUXCORE_DISABLE_OIDN)
+  ADD_DEFINITIONS("-DLUXCORE_DISABLE_OIDN")
+
+  message(STATUS "Intel OIDN support: disabled")
+else()
+  message(STATUS "Intel OIDN support: enabled")
+endif()
 
 # Build type
 # Detect whether we're using a single config or multi config generator and
@@ -121,16 +144,10 @@ else()
 
 endif()
 
-
-
-# The following implicitly boots up the generator, so don't move it up:
-
+include(GNUInstallDirs)
 
 # Set path to modules (keep it after project declaration)
-set(CMAKE_MODULE_PATH
-  "${PROJECT_SOURCE_DIR}"
-  "${PROJECT_SOURCE_DIR}/cmake"
-)
+set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
 ################################################################################
 #
@@ -138,7 +155,7 @@ set(CMAKE_MODULE_PATH
 #
 ################################################################################
 
-# Nota: please keep all 'find_package' gathered here (for maintenance reason)
+# Nota: please keep all 'find_package' gathered here (for maintenance reasons)
 message(STATUS "LuxCore - Add dependency targets")
 find_package(OpenMP REQUIRED)
 find_package(TBB REQUIRED)
@@ -160,10 +177,8 @@ find_package(nlohmann_json REQUIRED)
 find_package(robin_hood REQUIRED)
 
 # Bison/Flex
-if(NOT WIN32)
-    find_package(BISON REQUIRED)
-    find_package(FLEX REQUIRED)
-endif()
+find_package(BISON REQUIRED)
+find_package(FLEX REQUIRED)
 
 # Additional dependencies for pyluxcore
 find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
@@ -190,7 +205,7 @@ INCLUDE(KernelPreprocess)
 
 ################################################################################
 #
-# Build options
+# Per-platform options
 #
 ################################################################################
 
@@ -219,30 +234,6 @@ if(APPLE)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Xclang -fopenmp -Wno-register")
 endif(APPLE)
 
-if (LUXRAYS_DISABLE_OPENCL)
-  ADD_DEFINITIONS("-DLUXRAYS_DISABLE_OPENCL")
-  # CUDA requires OpenCL support
-  ADD_DEFINITIONS("-DLUXRAYS_DISABLE_CUDA")
-
-  message(STATUS "OpenCL and CUDA support: disabled")
-else()
-  if (LUXRAYS_DISABLE_CUDA)
-    ADD_DEFINITIONS("-DLUXRAYS_DISABLE_CUDA")
-    message(STATUS "OpenCL support: enabled")
-    message(STATUS "CUDA support: disabled")
-  else()
-    message(STATUS "OpenCL support: enabled")
-    message(STATUS "CUDA support: enabled")
-  endif()
-endif()
-
-if (LUXCORE_DISABLE_OIDN)
-  ADD_DEFINITIONS("-DLUXCORE_DISABLE_OIDN")
-
-  message(STATUS "Intel OIDN support: disabled")
-else()
-  message(STATUS "Intel OIDN support: enabled")
-endif()
 
 ################################################################################
 #
@@ -281,10 +272,6 @@ endif()
 
 add_subdirectory(samples/luxcoreconsole)
 
-find_package(OpenGL)
-IF (NOT OPENGL_FOUND)
-  MESSAGE(FATAL_ERROR "OpenGL not found! Please either install OpenGL or disable LUX_UI.")
-ENDIF()
 add_subdirectory(samples/luxcoreui)
 
 

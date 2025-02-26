@@ -4,10 +4,6 @@ import re
 import os
 
 if __name__ == "__main__":
-    # if environment variable is set...
-    if "CONAN_PRESET" in os.environ and (conan_preset:= os.environ["CONAN_PRESET"]):
-        print(conan_preset)
-        exit(0)
 
     try:
         res = subprocess.run(
@@ -17,8 +13,13 @@ if __name__ == "__main__":
             check=True,
         )
     except FileNotFoundError as err:
-        print(str(err), file=sys.stderr)
-        exit(1)
+        # if environment variable is set...
+        if "CONAN_PRESET" in os.environ and (conan_preset:= os.environ["CONAN_PRESET"]):
+            print(conan_preset)
+            exit(0)
+        else:
+            print(str(err), file=sys.stderr)
+            exit(1)
     except subprocess.CalledProcessError as err:
         print(err.stderr, file=sys.stderr)
         exit(1)

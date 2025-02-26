@@ -22,9 +22,7 @@
 #
 #############################################################################
 
-set(LUXCORECONSOLE_SRCS
-	luxcoreconsole.cpp
-	)
+set(LUXCORECONSOLE_SRCS luxcoreconsole.cpp)
 
 add_executable(luxcoreconsole ${LUXCORECONSOLE_SRCS})
 TARGET_LINK_LIBRARIES(luxcoreconsole PRIVATE luxrays luxcore boost::boost)
@@ -39,4 +37,8 @@ install(
     PRE_EXCLUDE_REGEXES "api-ms-" "ext-ms-"
     POST_EXCLUDE_REGEXES ".*system32/.*\\.dll"
     DIRECTORIES ${CONAN_RUNTIME_LIB_DIRS}
+    COMPONENT luxcoreconsole
+    FRAMEWORK
+        DESTINATION luxcore
+    OPTIONAL
 )

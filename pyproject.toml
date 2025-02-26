@@ -1,0 +1,63 @@
+# SPDX-FileCopyrightText: 2024 Howetuft
+#
+# SPDX-License-Identifier: Apache-2.0
+
+[build-system]
+requires = ["scikit-build-core"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "pyluxcore"
+version = "2.9a1.post17"
+dependencies = [
+  "numpy >= 2; python_version > '3.8'",
+  "numpy < 2; python_version <= '3.8'",
+]
+requires-python = ">= 3.8"
+description = "LuxCore Python bindings"
+authors = [{name="LuxCoreRender"}]
+## See https://pypi.org/classifiers/
+classifiers = [
+    "License :: OSI Approved :: Apache Software License",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Development Status :: 7 - Inactive",
+    "Topic :: Multimedia :: Graphics :: 3D Rendering",
+]
+readme = "README.md"
+keywords = [
+  "raytracing",
+  "ray tracing",
+  "rendering",
+  "pbr",
+  "physical based rendering",
+  "path tracing",
+]
+
+[project.urls]
+Homepage = "https://luxcorerender.org/"
+Documentation = "http://wiki.luxcorerender.org/LuxCoreRender_Wiki"
+GitHub = "https://github.com/LuxCoreRender/LuxCore"
+
+[project.scripts]
+pyluxcoretest = "pyluxcoretest:main"
+
+[tool.scikit-build]
+logging.level = "DEBUG"
+build.verbose = true
+cmake.source-dir = "."
+build.targets = ["pyluxcore"]
+wheel.cmake = true
+wheel.packages = ["wheels/pyluxcore", "wheels/pyluxcoretest"]
+build-dir = "build"
+ninja.make-fallback = false
+install.components = ["pyluxcore"]
+
+[tool.scikit-build.cmake.define]
+CMAKE_INSTALL_PREFIX = "build"
+CMAKE_TOOLCHAIN_FILE = "build/cmake/conan_toolchain.cmake"

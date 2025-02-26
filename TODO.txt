@@ -1,4 +1,13 @@
+Sign deps zip (security)
 Move OpenCL translation in build step
+Remove nativefiledialog (due to very heavy gtk dep)
+Remove boost deps that are superseded by C++20 std
+Add CUDA
+Transfer pyluxcore ownership to LuxCoreRender
+Add packaging workflow (deb, rpm, msi...)
+Add debug targets
+
 Black py files
 Add demo targets
 Post PR to conan-center-index for fixing OpenImageIO (make fmt private link in cmake)
+Remove M4 hack (when scikit-build-core has cmake.preset ready)

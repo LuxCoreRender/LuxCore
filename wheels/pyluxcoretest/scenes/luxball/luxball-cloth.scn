@@ -1,0 +1,105 @@
+scene.camera.lookat = 0.5 -1.4 1.7 0.0 0.0 0.4
+#scene.camera.screenwindow = 0.5 1.0 0.0 1.0
+################################################################################
+#scene.materials.cloth.type = glossy2
+#scene.materials.cloth.kd = 0.5 0.0 0.0
+#scene.materials.cloth.ks = 0.5 0.5 0.5
+#scene.materials.cloth.uroughness = 0.3
+#scene.materials.cloth.vroughness = 0.3
+##
+#scene.materials.cloth.type = cloth
+#scene.materials.cloth.preset = silk_shantung
+#scene.materials.cloth.warp_kd = 0.0096037 0.003146 0.0029804
+#scene.materials.cloth.warp_ks = 0.059085 0.063159 0.068253
+#scene.materials.cloth.weft_kd = 0.042223 0.0044707 0.0034772
+#scene.materials.cloth.weft_ks = 0.25977 0.088627 0.080477
+#scene.materials.cloth.repeat_u = 224.0
+#scene.materials.cloth.repeat_v = 168.0
+##
+#scene.materials.cloth.type = cloth
+#scene.materials.cloth.preset = wool_gabardine
+#scene.materials.cloth.warp_kd = 0.29531 0.045165 0.019687
+#scene.materials.cloth.warp_ks = 0.33414 0.11662 0.089103
+#scene.materials.cloth.weft_kd = 0.29531 0.045165 0.019687
+#scene.materials.cloth.weft_ks = 0.33414 0.11662 0.089103
+#scene.materials.cloth.repeat_u = 100.8
+#scene.materials.cloth.repeat_v = 67.2
+##
+#scene.materials.cloth.type = cloth
+#scene.materials.cloth.preset = cotton_twill
+#scene.materials.cloth.warp_kd = 0.069492 0.045238 0.053414
+#scene.materials.cloth.warp_ks = 0.076142 0.076142 0.076142
+#scene.materials.cloth.weft_kd = 0.069492 0.045238 0.053414
+#scene.materials.cloth.weft_ks = 0.076142 0.076142 0.076142
+#scene.materials.cloth.repeat_u = 125.0
+#scene.materials.cloth.repeat_v = 62.5
+##
+#scene.materials.cloth.type = cloth
+#scene.materials.cloth.preset = silk_charmeuse
+#scene.materials.cloth.warp_kd = 0.065344 0.00076876 0.00051252
+#scene.materials.cloth.warp_ks = 0.27408 0.048368 0.040844
+#scene.materials.cloth.weft_kd = 0.065344 0.00076876 0.00051252
+#scene.materials.cloth.weft_ks = 0.27085 0.047292 0.040844
+#scene.materials.cloth.repeat_u = 200.0
+#scene.materials.cloth.repeat_v = 100.0
+##
+#scene.materials.cloth.preset = polyester_lining_cloth
+#scene.materials.cloth.warp_kd = 0.24033 0.034872 0.017907
+#scene.materials.cloth.warp_ks = 0.10686 0.056992 0.052382
+#scene.materials.cloth.weft_kd = 0.24033 0.034872 0.017907
+#scene.materials.cloth.weft_ks = 0.10686 0.056992 0.052382
+#scene.materials.cloth.repeat_u = 225.0
+#scene.materials.cloth.repeat_v = 225.0
+#scene.materials.cloth.preset = denim
+#scene.materials.cloth.warp_kd = 0.0076877 0.0096096 0.014735
+#scene.materials.cloth.warp_ks = 0.020799 0.026346 0.031893
+#scene.materials.cloth.weft_kd = 0.13774 0.13133 0.16336
+#scene.materials.cloth.weft_ks = 0.35359 0.35359 0.35359
+#scene.materials.cloth.repeat_u = 117.0
+#scene.materials.cloth.repeat_v = 58.5
+##
+scene.materials.cloth.type = "cloth"
+scene.materials.cloth.preset = "denim"
+scene.materials.cloth.weft_kd = "0.64 0.64 0.64"
+scene.materials.cloth.weft_ks = "0.04 0.04 0.04"
+scene.materials.cloth.warp_kd = "0 0 0"
+scene.materials.cloth.warp_ks = "0.04 0.04 0.04"
+scene.materials.cloth.repeat_u = 150
+scene.materials.cloth.repeat_v = 150
+##
+scene.materials.shell.type = matte
+scene.materials.shell.kd = 0.5 0.0 0.0
+scene.materials.whitematte.type = matte
+scene.materials.whitematte.kd = 0.75 0.75 0.75
+scene.materials.luxtext.type = matte
+scene.materials.luxtext.kd = 0.0 0.0 0.75
+scene.materials.blacktext.type = matte
+scene.materials.blacktext.kd = 0.0 0.0 0.0
+scene.materials.whitematte.type = matte
+scene.materials.whitematte.kd = 0.75 0.75 0.75
+scene.materials.whitelight.type = matte
+scene.materials.whitelight.emission = 5.0 5.0 5.0
+#scene.materials.whitelight.emission.samples = 7
+scene.materials.whitelight.visibility.indirect.diffuse.enable = 1
+scene.materials.whitelight.visibility.indirect.glossy.enable = 1
+scene.materials.whitelight.visibility.indirect.specular.enable = 1
+################################################################################
+scene.objects.cloth.ply = scenes/luxball/luxball-cloth.ply
+scene.objects.cloth.transformation = 8.0 0.0 0.0 0.0  0.0 8.0 0.0 0.0  0.0 0.0 8.0 0.0  0.0 0.0 0.5 1.0
+scene.objects.cloth.material = cloth
+scene.objects.room.ply = scenes/luxball/room.ply
+scene.objects.room.material = whitematte
+scene.objects.luxinner.ply = scenes/luxball/luxball-inner.ply
+scene.objects.luxinner.material = whitematte
+scene.objects.luxtext.ply = scenes/luxball/luxball-text.ply
+scene.objects.luxtext.material = luxtext
+scene.objects.luxshell.ply = scenes/luxball/luxball-shell.ply
+scene.objects.luxshell.material = shell
+scene.objects.blacktext.ply = scenes/luxball/blacktext.ply
+scene.objects.blacktext.material = blacktext
+scene.objects.l1.ply = scenes/luxball/luxball-light1.ply
+scene.objects.l1.material = whitelight
+scene.objects.l1.transformation = 0.125 0.0 0.0 0.0  0.0 0.125 0.0 0.0  0.0 0.0 0.125 0.0  0.0 -2.0 2.0 1.0
+#scene.objects.l2.ply = scenes/luxball/luxball-light2.ply
+#scene.objects.l2.material = whitelight
+#scene.objects.l2.transformation = 0.25 0.0 0.0 0.0  0.0 0.25 0.0 0.0  0.0 0.0 0.25 0.0  0.0 0.0 2.0 1.0

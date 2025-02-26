@@ -1,0 +1,79 @@
+#scene.camera.type = stereo
+#scene.camera.type = environment
+#scene.camera.type = orthographic
+#scene.camera.lookat.orig = 0.5 -1.4 1.7
+#scene.camera.lookat.target = 0.0 0.0 0.4
+#scene.camera.screenwindow = 0.5 1.0 0.0 1.0
+scene.camera.lookat.orig = 0.309202552 -0.865767121 1.20392668
+scene.camera.lookat.target = -0.190797448 0.534232795 -0.0960733816
+################################################################################
+scene.volumes.volglass.type = clear
+scene.volumes.volglass.absorption = 0.1 0.1 0.1
+scene.volumes.volglass.ior = 1.45
+################################################################################
+scene.materials.shell.type = disney
+scene.materials.shell.basecolor = 0.6 0.0 0.0
+scene.materials.shell.subsurface = 0.0
+scene.materials.shell.roughness = 0.5
+scene.materials.shell.metallic = 0.0
+scene.materials.shell.specular = 0.5
+scene.materials.shell.speculartint = 0.5
+scene.materials.shell.clearcoat = 0.0
+scene.materials.shell.clearcoatgloss = 0.03
+scene.materials.shell.anisotropic = 0.0
+scene.materials.shell.sheen = 0.0
+scene.materials.shell.sheentint = 0.5
+##
+#scene.materials.shell.metallic = 1.0
+#scene.materials.shell.roughness = 0.1
+##
+#scene.materials.shell.subsurface = 0.5
+##
+#scene.materials.shell.specular = 0.5
+#scene.materials.shell.roughness = 0.2
+#scene.materials.shell.clearcoatgloss = 1.0
+##
+#scene.materials.shell.roughness = 1.0
+#scene.materials.shell.sheen = 10.0
+#scene.materials.shell.sheentint = 0.0
+##
+scene.materials.whitematte.type = matte
+scene.materials.whitematte.kd = 0.75 0.75 0.75
+scene.materials.luxtext.type = matte
+scene.materials.luxtext.kd = 0.0 0.0 0.75
+scene.materials.blacktext.type = matte
+scene.materials.blacktext.kd = 0.0 0.0 0.0
+scene.materials.whitematte.type = matte
+scene.materials.whitematte.kd = 0.75 0.75 0.75
+scene.materials.whitelight.type = matte
+scene.materials.whitelight.emission = 40.0 40.0 40.0
+#scene.materials.whitelight.emission.theta = 30.0
+#scene.materials.whitelight.emission.samples = 3
+scene.materials.whitelight.visibility.indirect.diffuse.enable = 1
+scene.materials.whitelight.visibility.indirect.glossy.enable = 1
+scene.materials.whitelight.visibility.indirect.specular.enable = 1
+################################################################################
+scene.objects.room.ply = scenes/luxball/room.ply
+scene.objects.room.material = whitematte
+#scene.objects.room.ply = scenes/luxball/room-nowall.ply
+#scene.objects.room.material = whitematte
+##
+scene.objects.luxinner.ply = scenes/luxball/luxball-inner.ply
+scene.objects.luxinner.material = whitematte
+scene.objects.luxtext.ply = scenes/luxball/luxball-text.ply
+scene.objects.luxtext.material = luxtext
+scene.objects.luxshell.ply = scenes/luxball/luxball-shell.ply
+scene.objects.luxshell.material = shell
+scene.objects.blacktext.ply = scenes/luxball/blacktext.ply
+scene.objects.blacktext.material = blacktext
+scene.objects.l1.ply = scenes/luxball/luxball-light1.ply
+scene.objects.l1.material = whitelight
+scene.objects.l2.ply = scenes/luxball/luxball-light2.ply
+scene.objects.l2.material = whitelight
+################################################################################
+#scene.lights.infinitelight.type = infinite
+##scene.lights.infinitelight.file = scenes/simple-mat/sky.exr
+#scene.lights.infinitelight.file = scenes/simple-mat/arch.exr
+#scene.lights.infinitelight.gamma = 1.0
+#scene.lights.infinitelight.gain = 3.0 3.0 3.0
+#scene.lights.infinitelight.storage = byte
