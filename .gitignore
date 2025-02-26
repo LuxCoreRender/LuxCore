@@ -72,3 +72,23 @@ MacDistFiles.tar.gz
 # Conan
 .conan2
 CMakeUserPresets.json
+
+###########################
+# ccache
+.ccache/0/
+.ccache/1/
+.ccache/2/
+.ccache/3/
+.ccache/4/
+.ccache/5/
+.ccache/6/
+.ccache/7/
+.ccache/8/
+.ccache/9/
+.ccache/a/
+.ccache/b/
+.ccache/c/
+.ccache/ccache.conf
+.ccache/d/
+.ccache/e/
+.ccache/f/
