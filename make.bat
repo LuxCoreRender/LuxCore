@@ -64,12 +64,12 @@ cmake %BUILD_CMAKE_ARGS% --preset %PRESET% -DCMAKE_INSTALL_PREFIX=%INSTALL_DIR% 
 endlocal
 goto :EOF
 
-:InvokeCMake
+:InvokeCMakeBuild
 setlocal
 for /f "delims=" %%A in ('python cmake\get_preset.py') do set "PRESET=%%A"
 echo CMake preset: %PRESET%
 set TARGET=%1
-cmake --build --preset conan-release --target %TARGET% %BUILD_CMAKE_ARGS%
+cmake --build --preset %PRESET% --target %TARGET% %BUILD_CMAKE_ARGS%
 endlocal
 goto :EOF
 
@@ -91,22 +91,22 @@ goto :EOF
 
 :Luxcore
 call :Config
-call :InvokeCMake luxcore
+call :InvokeCMakeBuild luxcore
 goto :EOF
 
 :PyLuxcore
 call :Config
-call :InvokeCMake pyluxcore
+call :InvokeCMakeBuild pyluxcore
 goto :EOF
 
 :LuxcoreUI
 call :Config
-call :InvokeCMake luxcoreui
+call :InvokeCMakeBuild luxcoreui
 goto :EOF
 
 :LuxcoreConsole
 call :Config
-call :InvokeCMake luxcoreconsole
+call :InvokeCMakeBuild luxcoreconsole
 goto :EOF
 
 :Clear
