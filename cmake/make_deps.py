@@ -218,7 +218,7 @@ if __name__ == "__main__":
             "--conf:all=tools.cmake.cmaketoolchain:generator=Ninja",
             "--conf:all=tools.cmake.cmaketoolchain:presets_environment=disabled",
             "--conf:all=tools.cmake.cmaketoolchain:toolset_arch=!",
-        ] if LUX_GENERATOR.upper() == "NINJA" else []
+        ]
         statement = main_block + ninja_block + ["."]
         run_conan(statement)
 
