@@ -56,20 +56,20 @@ if "%COMMAND%" == "" (
 )
 exit /B
 
+:InvokeCMakeConfig
+setlocal
+for /f "delims=" %%A in ('python cmake\get_preset.py') do set "PRESET=%%A"
+echo CMake preset: %PRESET%
+cmake %BUILD_CMAKE_ARGS% --preset %PRESET% -DCMAKE_INSTALL_PREFIX=%INSTALL_DIR% -S %SOURCE_DIR% -G Ninja
+endlocal
+goto :EOF
+
 :InvokeCMake
 setlocal
 for /f "delims=" %%A in ('python cmake\get_preset.py') do set "PRESET=%%A"
 echo CMake preset: %PRESET%
 set TARGET=%1
 cmake --build --preset conan-release --target %TARGET% %BUILD_CMAKE_ARGS%
-endlocal
-goto :EOF
-
-:InvokeCMakeConfig
-setlocal
-for /f "delims=" %%A in ('python cmake\get_preset.py') do set "PRESET=%%A"
-echo CMake preset: %PRESET%
-cmake %BUILD_CMAKE_ARGS% --preset %PRESET% -DCMAKE_INSTALL_PREFIX=%INSTALL_DIR% -S %SOURCE_DIR%
 endlocal
 goto :EOF
 
