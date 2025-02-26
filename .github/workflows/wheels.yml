@@ -174,6 +174,8 @@ jobs:
             CXX
             BUILD_TYPE
             GCC_VERSION
+            SANITIZE
+            ASAN_PATH
             RUNNER_OS
             RUNNER_ARCH
             WORKSPACE
@@ -186,7 +188,27 @@ jobs:
             CONAN_HOME
             CONAN_PRESET
             M4
-          CIBW_BEFORE_ALL: pip install conan && make deps
+          CIBW_BEFORE_ALL_LINUX: |
+            # Install toolchain (gcc, ninja, ccache...)
+            dnf install -y epel-release
+            dnf install -y almalinux-release-devel
+            dnf install -y ninja-build wget ccache
+            dnf install -y perl-IPC-Cmd perl-Digest-SHA
+
+            # Manylinux_2_34 compatibility
+            if [[ ${{ env.GLIBC_VERSION }} != 2_28 ]]; then
+              dnf install -y perl-FindBin perl-lib
+            fi
+
+            pip install conan && make deps
+
+          CIBW_BEFORE_ALL_MACOS: |
+            pip install conan && make deps
+
+          CIBW_BEFORE_ALL_WINDOWS: |
+            pip install conan && make deps
+
+
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: |
             paths=$(find /project -type d -wholename "*/lib" -print0 | xargs -0 realpath | tr "\n" ":")
             LD_LIBRARY_PATH=$paths:$LD_LIBRARY_PATH
