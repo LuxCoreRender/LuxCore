@@ -86,6 +86,7 @@ jobs:
                 core.exportVariable(key, value);
             }
 
+      # Update apt: needed to install ccache
       - name: Update apt (Linux)
         if: runner.os == 'Linux'
         shell: bash
@@ -141,7 +142,7 @@ jobs:
             core.exportVariable('MACOSX_DEPLOYMENT_TARGET', target);
             core.exportVariable('PKG_ARCH', arch);
 
-      # The following block is an ugly hack but, at the moment (2025-02-25),
+      # TODO: The following block is an ugly hack but, at the moment (2025-02-25),
       # scikit-build-core lacks a preset parameter, so this is the only way
       # I found to pass a calculated environment var to CMake build step
       - name: Set M4 env var
@@ -191,20 +192,19 @@ jobs:
             CONAN_PRESET
             M4
           CIBW_BEFORE_ALL_LINUX: |
-            dnf install -y epel-release
-            dnf install -y almalinux-release-devel
-            dnf install -y ninja-build wget ccache
-            dnf install -y perl-IPC-Cmd perl-Digest-SHA
 
-            if [[ ${{ env.GLIBC_VERSION }} != 2_28 ]]; then
-              dnf install -y perl-FindBin perl-lib
-            fi
-
-            ccache --show-config
-
+            # Linux only: a sanitizing capability is activable (debug)
             if [[ -z ${SANITIZE+x} ]]; then
               echo "No sanitizing";
             else
+              dnf install -y epel-release
+              dnf install -y almalinux-release-devel
+              dnf install -y ninja-build wget ccache
+              dnf install -y perl-IPC-Cmd perl-Digest-SHA
+
+              if [[ ${{ env.GLIBC_VERSION }} != 2_28 ]]; then
+                dnf install -y perl-FindBin perl-lib
+              fi
               dnf install -y gcc-toolset-14-libasan-devel;
             fi
 
