@@ -189,11 +189,18 @@ install(
 
 if(WIN32)
     install(
-        PROGRAMS "${LUX_OIDN_DENOISE_BINS}/OpenImageDenoise_device_cpu.dll"
-        DESTINATION bin
+        PROGRAMS "${LUX_OIDN_DENOISE_CPU}"
+        TYPE BIN
+        COMPONENT luxcore
+    )
+else()
+    install(
+        PROGRAMS "${LUX_OIDN_DENOISE_CPU}"
+        TYPE LIB
         COMPONENT luxcore
     )
 endif()
+
 
 ################################################################################
 #

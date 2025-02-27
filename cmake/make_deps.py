@@ -212,7 +212,6 @@ if __name__ == "__main__":
             "--deployer=full_deploy",
             f"--deployer-folder={BUILD_DIR}",
             f"--output-folder={CMAKE_DIR}",
-            #"--conf:all=tools.microsoft.msbuild:installation_path=",  # TODO
             "--conf:all=tools.cmake.cmaketoolchain:generator=Ninja",
         ]
         statement = main_block + ["."]
