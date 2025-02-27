@@ -146,6 +146,11 @@ if __name__ == "__main__":
         settings = json.load(f)
     logger.info(f"Build directory: {BUILD_DIR}")
 
+    # Get optional command-line parameters
+    parser = argparse.parser()
+    parser.add_argument("-l", "--local", type=Path)
+    parser.parse_args()
+
     # Process
     with tempfile.TemporaryDirectory() as tmpdir:
 
@@ -171,8 +176,9 @@ if __name__ == "__main__":
         cxx_version = settings["Build"]["cxx"]
 
         # Download and unzip
-        logger.info(f"Downloading dependencies (url='{url}')")
-        download(url, tmpdir)
+        if not parser.local:
+            logger.info(f"Downloading dependencies (url='{url}')")
+            download(url, tmpdir)
 
         # Clean
         logger.info("Cleaning local cache")
@@ -183,7 +189,10 @@ if __name__ == "__main__":
 
         # Install
         logger.info("Installing")
-        archive = tmpdir / "conan-cache-save.tgz"
+        if not (local := parser.local):
+            archive = tmpdir / "conan-cache-save.tgz"
+        else:
+            archive = local
         res = run_conan(
             ["cache", "restore", archive],
             capture_output=True,
