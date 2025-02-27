@@ -212,14 +212,10 @@ if __name__ == "__main__":
             "--deployer=full_deploy",
             f"--deployer-folder={BUILD_DIR}",
             f"--output-folder={CMAKE_DIR}",
-        ]
-        ninja_block = [
-            "--conf:all=tools.microsoft.msbuild:installation_path=!",
+            #"--conf:all=tools.microsoft.msbuild:installation_path=",  # TODO
             "--conf:all=tools.cmake.cmaketoolchain:generator=Ninja",
-            "--conf:all=tools.cmake.cmaketoolchain:presets_environment=disabled",
-            "--conf:all=tools.cmake.cmaketoolchain:toolset_arch=!",
         ]
-        statement = main_block + ninja_block + ["."]
+        statement = main_block + ["."]
         run_conan(statement)
 
 
