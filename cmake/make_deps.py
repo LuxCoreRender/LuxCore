@@ -12,12 +12,12 @@ from zipfile import ZipFile
 import subprocess
 import logging
 import shutil
-import textwrap
 import argparse
 import json
 import platform
+import sys
+from functools import cache
 
-CONAN_APP = None
 
 CONAN_ALL_PACKAGES = '"*"'
 
@@ -38,7 +38,9 @@ URL_SUFFIXES = {
 
 LUX_GENERATOR = os.getenv("LUX_GENERATOR", "")
 
+
 def find_platform():
+    """Find current platform."""
     system = platform.system()
     if system == "Linux":
         res = "Linux-X64"
@@ -64,7 +66,17 @@ def build_url(user, release):
     if not user:
         user = "LuxCoreRender"
 
-    return f"https://github.com/{user}/LuxCoreDeps/releases/download/{release}/luxcore-deps-{suffix}.zip"
+    url = (
+        "https://github.com",
+        user,
+        "LuxCoreDeps",
+        "releases",
+        "download",
+        release,
+        f"luxcore-deps-{suffix}.zip"
+    )
+
+    return "/".join(url)
 
 
 def get_profile_name():
@@ -72,31 +84,34 @@ def get_profile_name():
     return f"conan-profile-{find_platform()}"
 
 
+@cache
 def ensure_conan_app():
+    """Ensure Conan is installed."""
     logger.info("Looking for conan")
-    global CONAN_APP
-    CONAN_APP = shutil.which("conan")
-    if not CONAN_APP:
+    if not (res := shutil.which("conan")):
         logger.error("Conan not found!")
-        exit(1)
-    logger.info(f"Conan found: '{CONAN_APP}'")
+        sys.exit(1)
+    logger.info("Conan found: '%s'", res)
+    return res
 
 
 def run_conan(args, **kwargs):
-    if not "env" in kwargs:
+    """Run conan statement."""
+    conan_app = ensure_conan_app()
+    if "env" not in kwargs:
         kwargs["env"] = CONAN_ENV
     else:
         kwargs["env"].update(CONAN_ENV)
     kwargs["env"].update(os.environ)
     kwargs["text"] = kwargs.get("text", True)
-    args = [CONAN_APP] + args
+    args = [conan_app] + args
     logger.debug(args)
-    res = subprocess.run(args, shell=False, **kwargs)
+    res = subprocess.run(args, shell=False, check=True, **kwargs)
     if res.returncode:
         logger.error("Error while executing conan")
         print(res.stdout)
         print(res.stderr)
-        exit(1)
+        sys.exit(1)
     return res
 
 
@@ -104,36 +119,45 @@ def download(url, destdir):
     """Download file from url into destdir."""
     filename = destdir / "deps.zip"
     local_filename, _ = urlretrieve(url, filename=filename)
-    downloaded = ZipFile(local_filename)
-    downloaded.extractall(destdir)
+    with ZipFile(local_filename) as downloaded:
+        downloaded.extractall(destdir)
 
 
 def install(filename, destdir):
     """Install file from local directory into destdir."""
-    logger.info(f"Importing {filename}")
-    zipfile = ZipFile(str(filename))
-    zipfile.extractall(destdir)
+    logger.info("Importing %s", filename)
+    with ZipFile(str(filename)) as zipfile:
+        zipfile.extractall(destdir)
 
 
 def conan_home():
-    res = subprocess.run([CONAN_APP, "config", "home"], capture_output=True, text=True)
+    """Get Conan home path."""
+    conan_app = ensure_conan_app()
+    res = subprocess.run(
+        [conan_app, "config", "home"],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
     if res.returncode:
         logger.error("Error while executing conan")
         print(res.stdout)
         print(res.stderr)
-        exit(1)
+        sys.exit(1)
     return Path(res.stdout.strip())
 
 
 def copy_conf(dest):
+    """Copy global.conf into conan tree."""
     home = conan_home()
     source = home / "global.conf"
-    logger.info(f"Copying {source} to {dest}")
+    logger.info("Copying %s to %s", source, dest)
     shutil.copy(source, dest)
 
 
-if __name__ == "__main__":
 
+def main():
+    """Entry point."""
 
     # Set-up logger
     logger.setLevel(logging.INFO)
@@ -141,15 +165,15 @@ if __name__ == "__main__":
     logger.info("BEGIN")
 
     # Get settings
-    logger.info(f"Reading settings")
-    with open("luxcore.json") as f:
+    logger.info("Reading settings")
+    with open("luxcore.json", encoding="utf-8") as f:
         settings = json.load(f)
-    logger.info(f"Build directory: {BUILD_DIR}")
+    logger.info("Build directory: %s", BUILD_DIR)
 
     # Get optional command-line parameters
-    parser = argparse.parser()
+    parser = argparse.ArgumentParser()
     parser.add_argument("-l", "--local", type=Path)
-    parser.add_argument("-v", "--verbose", action='store_true')
+    parser.add_argument("-v", "--verbose", action="store_true")
     args = parser.parse_args()
     if args.verbose:
         logger.setLevel(logging.DEBUG)
@@ -159,28 +183,26 @@ if __name__ == "__main__":
 
         tmpdir = Path(tmpdir)
 
-        CONAN_HOME = tmpdir / ".conan2"
+        _conan_home = tmpdir / ".conan2"
 
-
-        CONAN_ENV = {
-            "CONAN_HOME": str(CONAN_HOME),
-            "GCC_VERSION": str(settings["Build"]["gcc"]),
-            "CXX_VERSION": str(settings["Build"]["cxx"]),
-            "BUILD_TYPE": "Release",  # TODO Command line parameter
-        }
+        CONAN_ENV.update(
+            {
+                "CONAN_HOME": str(_conan_home),
+                "GCC_VERSION": str(settings["Build"]["gcc"]),
+                "CXX_VERSION": str(settings["Build"]["cxx"]),
+                "BUILD_TYPE": "Release",  # TODO Command line parameter
+            }
+        )
 
         # Initialize
-        ensure_conan_app()
         url = build_url(
             settings["Dependencies"]["user"],
-            settings["Dependencies"]["release"]
+            settings["Dependencies"]["release"],
         )
-        gcc_version = settings["Build"]["gcc"]
-        cxx_version = settings["Build"]["cxx"]
 
         # Download and unzip
         if not args.local:
-            logger.info(f"Downloading dependencies (url='{url}')")
+            logger.info("Downloading dependencies (url='%s')", url)
             download(url, tmpdir)
 
         # Clean
@@ -188,7 +210,7 @@ if __name__ == "__main__":
         res = run_conan(["remove", "-c", "*"], capture_output=True)
         for line in res.stderr.splitlines():
             logger.info(line)
-        copy_conf(CONAN_HOME)  # Copy global.conf in current conan home
+        copy_conf(_conan_home)  # Copy global.conf in current conan home
 
         # Install
         logger.info("Installing")
@@ -214,7 +236,6 @@ if __name__ == "__main__":
             ["config", "install-pkg", "luxcoreconf/2.10.0@luxcore/luxcore"]
         )  # TODO version as a param
 
-
         # Generate & deploy
         logger.info("Generating")
         main_block = [
@@ -229,6 +250,8 @@ if __name__ == "__main__":
         statement = main_block + ["."]
         run_conan(statement)
 
-
-
     logger.info("END")
+
+
+if __name__ == "__main__":
+    main()
