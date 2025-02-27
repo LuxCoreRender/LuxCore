@@ -149,7 +149,10 @@ if __name__ == "__main__":
     # Get optional command-line parameters
     parser = argparse.parser()
     parser.add_argument("-l", "--local", type=Path)
-    parser.parse_args()
+    parser.add_argument("-v", "--verbose", action='store_true')
+    args = parser.parse_args()
+    if args.verbose:
+        logger.setLevel(logging.DEBUG)
 
     # Process
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -176,7 +179,7 @@ if __name__ == "__main__":
         cxx_version = settings["Build"]["cxx"]
 
         # Download and unzip
-        if not parser.local:
+        if not args.local:
             logger.info(f"Downloading dependencies (url='{url}')")
             download(url, tmpdir)
 
@@ -189,7 +192,7 @@ if __name__ == "__main__":
 
         # Install
         logger.info("Installing")
-        if not (local := parser.local):
+        if not (local := args.local):
             archive = tmpdir / "conan-cache-save.tgz"
         else:
             archive = local
