@@ -36,9 +36,11 @@ if "%COMMAND%" == "" (
 ) else if "%COMMAND%" == "luxcoreui" (
     call :LuxcoreUI
     call :InvokeCMakeInstall luxcoreui
+    call :InvokeCMakeInstall luxcore
 ) else if "%COMMAND%" == "luxcoreconsole" (
     call :LuxcoreConsole
     call :InvokeCMakeInstall luxcoreconsole
+    call :InvokeCMakeInstall luxcore
 ) else if "%COMMAND%" == "config" (
     call :Config
 ) else if "%COMMAND%" == "install" (

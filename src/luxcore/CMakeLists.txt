@@ -187,6 +187,14 @@ install(
     OPTIONAL
 )
 
+if(WIN32)
+    install(
+        PROGRAMS "${LUX_OIDN_DENOISE_BINS}/OpenImageDenoise_device_cpu.dll"
+        DESTINATION bin
+        COMPONENT luxcore
+    )
+endif()
+
 ################################################################################
 #
 # PyLuxCore (Python bindings)
