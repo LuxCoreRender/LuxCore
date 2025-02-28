@@ -193,13 +193,16 @@ if(WIN32)
         TYPE BIN
         COMPONENT luxcore
     )
-else()
+endif()
+if(LINUX)
     install(
         PROGRAMS "${LUX_OIDN_DENOISE_CPU}"
         TYPE LIB
         COMPONENT luxcore
     )
 endif()
+# For MacOS, DENOISE_CPU is declared as dep and directly installed by
+luxcore's runtime_dependencies
 
 
 ################################################################################
