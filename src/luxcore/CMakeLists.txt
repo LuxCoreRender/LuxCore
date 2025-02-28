@@ -202,7 +202,7 @@ if(LINUX)
     )
 endif()
 # For MacOS, DENOISE_CPU is declared as dep and directly installed by
-luxcore's runtime_dependencies
+# luxcore's runtime_dependencies
 
 
 ################################################################################
