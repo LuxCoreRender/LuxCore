@@ -171,6 +171,7 @@ def main():
     logger.info("Build directory: %s", BUILD_DIR)
 
     # Get optional command-line parameters
+    # Nota: --local option is used by LuxCoreDeps CI
     parser = argparse.ArgumentParser()
     parser.add_argument("-l", "--local", type=Path)
     parser.add_argument("-v", "--verbose", action="store_true")

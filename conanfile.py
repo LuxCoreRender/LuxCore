@@ -18,6 +18,7 @@ class LuxCore(ConanFile):
     channel = "luxcore"
 
     requires = "luxcoredeps/2.10.0@luxcore/luxcore"
+    tool_requires = "ninja/[*]"
     settings = "os", "compiler", "build_type", "arch"
 
     def generate(self):
