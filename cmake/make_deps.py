@@ -247,6 +247,7 @@ def main():
             f"--deployer-folder={BUILD_DIR}",
             f"--output-folder={CMAKE_DIR}",
             "--conf:all=tools.cmake.cmaketoolchain:generator=Ninja",
+            "--conf:all=tools.system.package_manager:sudo=True",
         ]
         statement = main_block + ["."]
         run_conan(statement)
