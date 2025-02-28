@@ -27,7 +27,6 @@ Ensure the following software is also installed and available in the PATH:
 - Conan (`pip install conan`)
 - Python 3
 - CMake
-- Ninja
 
 #### Quick build
 
