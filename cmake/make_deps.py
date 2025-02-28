@@ -106,7 +106,7 @@ def run_conan(args, **kwargs):
     kwargs["text"] = kwargs.get("text", True)
     args = [conan_app] + args
     logger.debug(args)
-    res = subprocess.run(args, shell=False, check=True, **kwargs)
+    res = subprocess.run(args, shell=False, check=False, **kwargs)
     if res.returncode:
         logger.error("Error while executing conan")
         print(res.stdout)
@@ -137,7 +137,7 @@ def conan_home():
         [conan_app, "config", "home"],
         capture_output=True,
         text=True,
-        check=True,
+        check=False,
     )
     if res.returncode:
         logger.error("Error while executing conan")
