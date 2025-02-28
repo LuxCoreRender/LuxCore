@@ -189,10 +189,10 @@ jobs:
             CONAN_PRESET
             M4
           CIBW_BEFORE_ALL_LINUX: |
-            # Install toolchain (gcc, ninja, ccache...)
+            # Install toolchain (gcc, ccache...)
             dnf install -y epel-release
             dnf install -y almalinux-release-devel
-            dnf install -y ninja-build wget ccache
+            dnf install -y ccache
             dnf install -y perl-IPC-Cmd perl-Digest-SHA
 
             # Manylinux_2_34 compatibility
