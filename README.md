@@ -69,7 +69,7 @@ the [`samples/luxcoreui`](samples/luxcoreui) directory.
 To see how it works, just run `luxcoreui` from the root directory:
 
 ```
-./build/bin/luxcoreui scenes/cornell/cornell.cfg
+./out/install/bin/luxcoreui scenes/cornell/cornell.cfg
 ```
 
 ### LuxCoreConsole
@@ -79,7 +79,7 @@ available in the [`samples/luxcoreconsole`](samples/luxcoreconsole) directory.
 Just run `luxcoreconsole` from the root directory with:
 
 ```
-./build/bin/luxcoreconsole -D batch.halttime 10 scenes/cornell/cornell.cfg
+./out/install/bin/luxcoreconsole -D batch.halttime 10 scenes/cornell/cornell.cfg
 ```
 
 ### Authors
