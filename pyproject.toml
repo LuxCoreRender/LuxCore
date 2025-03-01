@@ -59,5 +59,5 @@ ninja.make-fallback = false
 install.components = ["pyluxcore"]
 
 [tool.scikit-build.cmake.define]
-CMAKE_INSTALL_PREFIX = "build"
-CMAKE_TOOLCHAIN_FILE = "build/cmake/conan_toolchain.cmake"
+CMAKE_INSTALL_PREFIX = "install"
+#CMAKE_TOOLCHAIN_FILE = "out/build/Release/conan_toolchain.cmake"

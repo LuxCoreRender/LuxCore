@@ -152,7 +152,7 @@ jobs:
             } else {
               arch = 'armv8'
             }
-            base = '${{ env.WORKSPACE }}/build/full_deploy/host/m4/1.4.19/Release/'
+            base = '${{ env.WORKSPACE }}/out/dependencies/full_deploy/host/m4/1.4.19/Release/'
             core.exportVariable('M4', base + arch + '/bin/m4')
 
       # Build wheel
@@ -193,6 +193,7 @@ jobs:
             dnf install -y epel-release
             dnf install -y almalinux-release-devel
             dnf install -y ccache
+            dnf install -y sudo  # for gtk3...
             dnf install -y perl-IPC-Cmd perl-Digest-SHA
 
             # Manylinux_2_34 compatibility
@@ -217,7 +218,6 @@ jobs:
 
             ## Check build data
             unzip {wheel} -d /tmp/wheel
-            readelf --string-dump .comment /tmp/wheel/pyluxcore/pyluxcore.so
 
             auditwheel \
               --verbose repair -w {dest_dir} \
