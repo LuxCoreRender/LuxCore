@@ -1,23 +1,17 @@
 # Credits to Blender Cycles
 
-ifeq ($(OS),Windows_NT)
-	$(error On Windows, use "cmd //c make.bat" instead of "make")
-endif
-
-OS:=$(shell uname -s)
-
+# TODO Make debug targets
+#
 ifndef BUILD_CMAKE_ARGS
 	BUILD_CMAKE_ARGS:=
 endif
 
-ifndef BUILD_DIR
-	BUILD_DIR:=./build
+ifndef OUTPUT_DIR
+	OUTPUT_DIR:=out
 endif
 
-ifndef INSTALL_DIR
-	INSTALL_DIR:=./build
-endif
-
+BUILD_DIR = ${OUTPUT_DIR}/build
+INSTALL_DIR = ${OUTPUT_DIR}/install
 
 SOURCE_DIR:=$(shell pwd)
 
@@ -26,45 +20,34 @@ ifndef PYTHON
 	PYTHON:=python3
 endif
 
+
+build-targets = pyluxcore luxcoreui luxcoreconsole luxcore
+
 .PHONY: clean deps config luxcore pyluxcore luxcoreui luxcoreconsole
 
 all: luxcore pyluxcore luxcoreui luxcoreconsole
 
-luxcore: config
-	cmake $(BUILD_CMAKE_ARGS) --build --preset conan-release --target luxcore
-	cmake --install $(BUILD_DIR)/cmake --prefix $(BUILD_DIR) --component luxcore
-
-pyluxcore: config
-	cmake $(BUILD_CMAKE_ARGS) --build --preset conan-release  --target pyluxcore
-	cmake --install $(BUILD_DIR)/cmake --prefix $(BUILD_DIR) --component pyluxcore
-
-luxcoreui: config
-	cmake $(BUILD_CMAKE_ARGS) --build --preset conan-release --target luxcoreui
-	cmake --install $(BUILD_DIR)/cmake --prefix $(BUILD_DIR) --component luxcoreui
-
-luxcoreconsole: config
-	cmake $(BUILD_CMAKE_ARGS) --build --preset conan-release --target luxcoreconsole
-	cmake --install $(BUILD_DIR)/cmake --prefix $(BUILD_DIR) --component luxcoreconsole
-
-# TODO Make debug targets
-
-clean:
-	cmake --build --preset conan-release --target clean
+$(build-targets): %: config
+	cmake $(BUILD_CMAKE_ARGS) --build --preset conan-release --target $*
+	cmake --install $(BUILD_DIR)/Release --prefix $(INSTALL_DIR) --component $*
 
 config:
 	cmake $(BUILD_CMAKE_ARGS) --preset conan-release \
 		-DCMAKE_INSTALL_PREFIX=$(INSTALL_DIR) \
 		-S $(SOURCE_DIR)
 
-install:
-	cmake --install $(BUILD_DIR)/cmake --prefix $(BUILD_DIR)
+clean:
+	cmake --build --preset conan-release --target clean
 
-# Presets independant
+install:
+	cmake --install $(BUILD_DIR)/Release --prefix $(BUILD_DIR)
+
+# Preset-independant targets
 clear:
-	rm -rf $(BUILD_DIR)
+	rm -rf $(OUTPUT_DIR)
 
 deps:
-	$(PYTHON) cmake/make_deps.py
+	$(PYTHON) cmake/make_deps.py -o ${OUTPUT_DIR}
 
 list-presets:
 	cmake --list-presets

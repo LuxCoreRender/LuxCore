@@ -21,9 +21,7 @@ from functools import cache
 
 CONAN_ALL_PACKAGES = '"*"'
 
-BUILD_DIR = os.getenv("BUILD_DIR", "./build")
-
-CMAKE_DIR = Path(BUILD_DIR) / "cmake"
+OUTPUT_DIR = os.getenv("OUTPUT_DIR", "out")
 
 logger = logging.getLogger("LuxCore Dependencies")
 
@@ -35,8 +33,6 @@ URL_SUFFIXES = {
     "macOS-ARM64": "macos-14",
     "macOS-X64": "macos-13",
 }
-
-LUX_GENERATOR = os.getenv("LUX_GENERATOR", "")
 
 
 def find_platform():
@@ -158,6 +154,7 @@ def copy_conf(dest):
 
 def main():
     """Entry point."""
+    global OUTPUT_DIR
 
     # Set-up logger
     logger.setLevel(logging.INFO)
@@ -168,16 +165,19 @@ def main():
     logger.info("Reading settings")
     with open("luxcore.json", encoding="utf-8") as f:
         settings = json.load(f)
-    logger.info("Build directory: %s", BUILD_DIR)
+    logger.info("Output directory: %s", OUTPUT_DIR)
 
     # Get optional command-line parameters
     # Nota: --local option is used by LuxCoreDeps CI
     parser = argparse.ArgumentParser()
     parser.add_argument("-l", "--local", type=Path)
+    parser.add_argument("-o", "--output", type=Path)
     parser.add_argument("-v", "--verbose", action="store_true")
     args = parser.parse_args()
     if args.verbose:
         logger.setLevel(logging.DEBUG)
+    if args.output:
+        OUTPUT_DIR = args.output
 
     # Process
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -244,8 +244,8 @@ def main():
             "--build=missing",
             f"--profile:all={get_profile_name()}",
             "--deployer=full_deploy",
-            f"--deployer-folder={BUILD_DIR}",
-            f"--output-folder={CMAKE_DIR}",
+            f"--deployer-folder={OUTPUT_DIR}/dependencies",
+            f"--output-folder={OUTPUT_DIR}",
             "--conf:all=tools.cmake.cmaketoolchain:generator=Ninja",
             "--conf:all=tools.system.package_manager:sudo=True",
         ]

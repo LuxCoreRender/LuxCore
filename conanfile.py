@@ -108,3 +108,6 @@ class LuxCore(ConanFile):
         cd = CMakeDeps(self)
 
         cd.generate()
+
+    def layout(self):
+        cmake_layout(self, generator="Ninja")

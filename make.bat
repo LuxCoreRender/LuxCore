@@ -7,13 +7,12 @@ set COMMAND=%1
 
 echo Build cmake args: %BUILD_CMAKE_ARGS%
 
-if "%BUILD_DIR%" == "" (
-    set BUILD_DIR=.\build
+if "%OUTPUT_DIR%" == "" (
+    set OUTPUT_DIR=out
 )
 
-if "%INSTALL_DIR%" == "" (
-    set INSTALL_DIR=.\build
-)
+set BUILD_DIR=%OUTPUT_DIR%\build
+set INSTALL_DIR=%OUTPUT_DIR%\install
 
 set SOURCE_DIR=%cd%
 

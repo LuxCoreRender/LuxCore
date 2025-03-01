@@ -31,7 +31,7 @@ ui_*.h
 qrc_*.cxx
 *.sdf
 *.vcxproj*
-build
+out
 compile_commands.json
 dist
 samples/pyluxcoretool/__pycache__
