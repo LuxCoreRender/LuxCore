@@ -78,9 +78,9 @@ goto :EOF
 
 :InvokeCMakeInstall
 IF "%~1" == "" (
-    cmake --install %BUILD_DIR%/cmake --prefix %BUILD_DIR%
+    cmake --install %BUILD_DIR%/Release --prefix %BUILD_DIR%
 ) else (
-    cmake --install %BUILD_DIR%/cmake --prefix %BUILD_DIR% --component %1
+    cmake --install %BUILD_DIR%/Release --prefix %BUILD_DIR% --component %1
 )
 goto :EOF
 
