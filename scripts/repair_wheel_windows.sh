@@ -24,9 +24,11 @@ redist_paths=`find "${VCToolsRedistDir}" -type d | paste -s -d ":"`
 
 echo "Paths: ${redist_paths}"
 
-base="$workspace/build/full_deploy/host"
+# Compute dependency paths
+base="$workspace/out/dependencies/full_deploy/host"
 paths=$(find $base -type d -wholename "*/bin" -print0 | xargs -0 realpath | tr "\n" ":")
 
+# Repair wheel
 delvewheel repair -v \
   --add-path="$GITHUB_WORKSPACE/libs" \
   --add-path="${redist_paths}" \
