@@ -82,7 +82,9 @@ set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
     #set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 #endif("${isSystemDir}" STREQUAL "-1")
 MESSAGE(STATUS "Install RPATH: ${CMAKE_INSTALL_RPATH}")
-add_link_options("LINKER:--disable-new-dtags")
+if(LINUX)
+  add_link_options("LINKER:--disable-new-dtags")
+endif()
 
 
 if(TARGET pyluxcore OR NOT LUXCORE_STATIC)
