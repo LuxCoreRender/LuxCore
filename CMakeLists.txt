@@ -193,7 +193,7 @@ find_package(pybind11 CONFIG REQUIRED)
 # Additional dependencies for luxcoreui
 find_package(imgui)
 find_package(glfw3)
-find_package(nativefiledialog)
+find_package(imguifiledialog)
 
 
 # Include embedded dependencies

@@ -20,7 +20,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/format.hpp>
-#include <nfd.h>
+#include <ImGuiFileDialog.h>
 
 #include "luxrays/utils/oclerror.h"
 #include "luxcoreapp.h"
@@ -72,13 +72,11 @@ int main(int argc, char *argv[]) {
     luxcore::Init(LuxCoreApp::LogHandler);
     //luxcore::SetEnableLogSubSystem(luxcore::LOG_API, true);
     //luxcore::SetFileLog("luxcore.log", 1000 * 1024, 3);
-    
-    LA_LOG("LuxCoreUI v" LUXCORE_VERSION_MAJOR "." LUXCORE_VERSION_MINOR "." LUXCORE_VERSION_BUGFIX " (LuxCore demo: http://www.luxcorerender.org)");
 
-                NFD_Init();
+    LA_LOG("LuxCoreUI v" LUXCORE_VERSION_MAJOR "." LUXCORE_VERSION_MINOR "." LUXCORE_VERSION_BUGFIX " (http://www.luxcorerender.org)");
 
     //ConvertImage("samples/luxcoreui/resources/luxlogo_bg.png");
-    
+
     bool removeUnused = false;
     bool mouseGrabMode = false;
     bool fullScreen = false;
@@ -98,7 +96,7 @@ int main(int argc, char *argv[]) {
               " -t [halt time in secs]" << endl <<
               " -D [property name] [property value]" << endl <<
               " -d [current directory path]" << endl <<
-              " -m <makes the mouse operations work in \"grab mode\">" << endl << 
+              " -m <makes the mouse operations work in \"grab mode\">" << endl <<
               " -c <remove all unused meshes, materials, textures and image maps>" << endl <<
               " -h <display this help and exit>");
           exit(EXIT_SUCCESS);
@@ -226,8 +224,6 @@ int main(int argc, char *argv[]) {
 
       app.RunApp(startRenderState, startFilm);
     }
-
-                NFD_Quit();
 
     LA_LOG("Done.");
   } catch (runtime_error &err) {

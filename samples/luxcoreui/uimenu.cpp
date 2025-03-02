@@ -20,7 +20,7 @@
 #include <iostream>
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string/predicate.hpp>
-#include <nfd.h>
+#include <ImGuiFileDialog.h>
 
 #include "luxcoreapp.h"
 
@@ -36,146 +36,128 @@ static void KernelCacheFillProgressHandler(const size_t step, const size_t count
   LA_LOG("KernelCache FillProgressHandler Step: " << step << "/" << count);
 }
 
-void LuxCoreApp::MenuRendering() {
-  if (ImGui::MenuItem("Load")) {
+enum fileBrowserType { open, save, save_directory };
 
-    nfdu8char_t *fileFileName = nullptr;
-                nfdu8filteritem_t filters[4] = {
-                  { "LuxCore scenes", "cfg,bcf,lxs" },
-                  { "LuxCore scene (text)", "cfg" },
-                  { "LuxCore scene (binary)", "bcf" },
-                  { "LuxRender scene", "lxs" },
-                };
-                nfdopendialogu8args_t args = {0};
-                args.filterList = filters;
-                args.filterCount = 4;
-    nfdresult_t result = NFD_OpenDialogU8_With(&fileFileName, &args);
+bool fileBrowser(
+    string &fileName,
+    const std::string &prompt,
+    const std::vector<std::string> &filterList,
+    fileBrowserType type
+)
+{
+  static std::string defaultPath = ".";
+  bool close = false;
 
-    if (result == NFD_OKAY) {
-      LoadRenderConfig(fileFileName);
-      NFD_FreePathU8(fileFileName);
-    }
+  std::string _filters = "";
+  for (auto filter : filterList)
+    _filters += filter + ",";
+  auto filters = _filters.c_str();
+
+  // Set min and max dialog window size based on main window size
+  ImVec2 maxSize = ImGui::GetIO().DisplaySize;
+  ImVec2 minSize(maxSize.x * 0.5, maxSize.y * 0.5);
+
+  IGFD::FileDialogConfig fdConfig{};
+  fdConfig.path = ".";
+  fdConfig.fileName = "";
+  fdConfig.countSelectionMax = 1;
+  fdConfig.flags = ImGuiFileDialogFlags_Modal | ImGuiFileDialogFlags_HideColumnType;
+
+  switch(type)
+  {
+    case save:
+      fdConfig.flags |= ImGuiFileDialogFlags_ConfirmOverwrite;
+      break;
+    case open:
+      fdConfig.flags |= ImGuiFileDialogFlags_ReadOnlyFileNameField | ImGuiFileDialogFlags_DisableCreateDirectoryButton;
+      break;
+    case save_directory:
+      filters = nullptr;
+      break;
   }
 
-  if (session) {
+
+
+  auto fd = ImGuiFileDialog::Instance();
+  fd->OpenDialog(prompt.c_str(), prompt.c_str(), filters, fdConfig);
+
+  if (fd->Display(prompt.c_str(), ImGuiWindowFlags_NoCollapse, minSize, maxSize))
+  {
+    if (fd->IsOk())
+    {
+      if (type != fileBrowserType::save_directory)
+      {
+        fileName = fd->GetFilePathName();
+      }
+      else
+      {
+        fileName = fd->GetCurrentPath();
+      }
+    }
+
+    fd->Close();
+    close = true;
+  }
+
+  return close;
+
+}
+
+bool showLoadFileDialog = false;
+bool showExportFileDialog = false;
+bool showExportBinaryFileDialog = false;
+bool showExportGltfFileDialog = false;
+bool showSaveRenderingFileDialog = false;
+bool showResumeRenderingFileDialog = false;
+
+void LuxCoreApp::MenuRendering()
+{
+  if (ImGui::MenuItem("Load"))
+  {
+    showLoadFileDialog = true;
+  }
+
+  if (session)
+  {
     ImGui::Separator();
 
-    if (ImGui::MenuItem("Export")) {
-      nfdu8char_t *outPath = nullptr;
-                        nfdsavedialogu8args_t args = {0};
-      nfdresult_t result = NFD_SaveDialogU8_With(&outPath, &args);
-
-      if (result == NFD_OKAY) {
-        LA_LOG("Export current scene to directory in text format: " << outPath);
-
-        boost::filesystem::path dir(outPath);
-        boost::filesystem::create_directories(dir);
-
-        // Save the current render engine
-        const string renderEngine = config->GetProperty("renderengine.type").Get<string>();
-
-        // Set the render engine to FILESAVER
-        RenderConfigParse(Properties() <<
-            Property("renderengine.type")("FILESAVER") <<
-            Property("filesaver.format")("TXT") <<
-            Property("filesaver.directory")(outPath) <<
-            Property("filesaver.renderengine.type")(renderEngine));
-
-        // Restore the render engine setting
-        RenderConfigParse(Properties() <<
-            Property("renderengine.type")(renderEngine));
-
-                                NFD_FreePathU8(outPath);
-      }
+    if (ImGui::MenuItem("Export"))
+    {
+      showExportFileDialog = true;
     }
 
-    if (ImGui::MenuItem("Export (binary)")) {
-      nfdu8char_t *fileName = nullptr;
-                        nfdsavedialogu8args_t args = {0};
-                        nfdu8filteritem_t filters[1] = {
-                          { "LuxCore exported scene", "bcf" },
-                        };
-                        args.filterList = filters;
-                        args.filterCount = 1;
-      nfdresult_t result = NFD_SaveDialogU8_With(&fileName, &args);
-
-      if (result == NFD_OKAY) {
-        LA_LOG("Export current scene to file in binary format: " << fileName);
-        config->Save(fileName);
-                                NFD_FreePathU8(fileName);
-      }
+    if (ImGui::MenuItem("Export (binary)"))
+    {
+      showExportBinaryFileDialog = true;
     }
 
-    if (ImGui::MenuItem("Export (glTF)")) {
-      nfdu8char_t *fileName = nullptr;
-                        nfdsavedialogu8args_t args = {0};
-                        nfdu8filteritem_t filters[1] = {
-                          { "glTF", "gltf" },
-                        };
-                        args.filterList = filters;
-                        args.filterCount = 1;
-      nfdresult_t result = NFD_SaveDialogU8_With(&fileName, &args);
-
-      if (result == NFD_OKAY) {
-        LA_LOG("Export current scene to file in glTF format: " << fileName);
-        config->ExportGLTF(fileName);
-                                NFD_FreePathU8(fileName);
-      }
+    if (ImGui::MenuItem("Export (glTF)"))
+    {
+      showExportGltfFileDialog = true;
     }
   }
-  
-  if (session) {
+
+  if (session)
+  {
     ImGui::Separator();
 
     if (ImGui::MenuItem("Bake all objects"))
       BakeAllSceneObjects();
   }
 
-  if (session) {
+  if (session)
+  {
     ImGui::Separator();
 
-    if (ImGui::MenuItem("Save rendering")) {
-      nfdu8char_t *fileName = nullptr;
-                        nfdsavedialogu8args_t args = {0};
-                        nfdu8filteritem_t filters[1] = {
-                          { "LuxCore resume file", "rsm" },
-                        };
-                        args.filterList = filters;
-                        args.filterCount = 1;
-      nfdresult_t result = NFD_SaveDialogU8_With(&fileName, &args);
-
-
-      if (result == NFD_OKAY) {
-        // Pause the current rendering
-        session->Pause();
-
-        // Save the session
-        session->SaveResumeFile(string(fileName));
-
-                                NFD_FreePathU8(fileName);
-
-        // Resume the current rendering
-        session->Resume();
-      }
+    if (ImGui::MenuItem("Save rendering"))
+    {
+      showSaveRenderingFileDialog = true;
     }
   }
 
-  if (ImGui::MenuItem("Resume rendering")) {
-
-    // Select the scene
-    nfdu8char_t *fileFileName = nullptr;
-                nfdu8filteritem_t filters[4] = {
-                  { "LuxCore resume rendering", "rsm" },
-                };
-                nfdopendialogu8args_t args = {0};
-                args.filterList = filters;
-                args.filterCount = 4;
-    nfdresult_t result = NFD_OpenDialogU8_With(&fileFileName, &args);
-
-    if (result == NFD_OKAY) {
-      LoadRenderConfig(fileFileName);
-      NFD_FreePathU8(fileFileName);
-    }
+  if (ImGui::MenuItem("Resume rendering"))
+  {
+    showResumeRenderingFileDialog = true;
   }
 
   ImGui::Separator();
@@ -197,7 +179,7 @@ void LuxCoreApp::MenuRendering() {
       session->Stop();
       session->Start();
     }
-    
+
     ImGui::Separator();
   }
 
@@ -490,7 +472,7 @@ void LuxCoreApp::MenuTool() {
   }
   if (ImGui::MenuItem("User importance painting", NULL, (currentTool == TOOL_USER_IMPORTANCE_PAINT))) {
     currentTool = TOOL_USER_IMPORTANCE_PAINT;
-    
+
     Properties props;
     props << Property("screen.tool.type")("USER_IMPORTANCE_PAINT");
 
@@ -562,12 +544,152 @@ void LuxCoreApp::MainMenuBar() {
       ImGui::SetWindowFocus();
       popupMenuBar = false;
     }
-    
+
     if (ImGui::BeginMenu("Rendering")) {
       MenuRendering();
       ImGui::EndMenu();
     }
 
+    // File Dialogs
+    if (showLoadFileDialog) {
+      std::string fileToLoad;
+      static const std::vector<std::string> filterLoad = {
+        "LuxCore scenes (.cfg,.bcf,.lxs){.cfg,.bcf,.lxs}",
+        "LuxCore scene - text (.cfg){.cfg}",
+        "LuxCore scene - binary (.bcf){.bcf}",
+        "LuxRender scene (.lxs){.lxs}",
+      };
+
+      if (fileBrowser(
+            fileToLoad,
+            "Select File to Load",
+            filterLoad,
+            fileBrowserType::open ))
+      {
+        showLoadFileDialog = false;
+        LoadRenderConfig(fileToLoad);
+      }
+    }
+
+    if (showExportFileDialog) {
+      std::string fileToExport;
+      static const std::vector<std::string> filterExport = {"All (.*){.*}"};
+
+      if (fileBrowser(
+            fileToExport,
+            "Select Directory to Export",
+            filterExport,
+            fileBrowserType::save_directory))
+      {
+        showExportFileDialog = false;
+        LA_LOG("Export current scene to directory in text format: " << fileToExport);
+        boost::filesystem::path dir(fileToExport);
+        boost::filesystem::create_directories(dir);
+
+        // Save the current render engine
+        const string renderEngine = config->GetProperty("renderengine.type").Get<string>();
+
+        // Set the render engine to FILESAVER
+        RenderConfigParse(Properties() <<
+          Property("renderengine.type")("FILESAVER") <<
+          Property("filesaver.format")("TXT") <<
+          Property("filesaver.directory")(fileToExport) <<
+          Property("filesaver.renderengine.type")(renderEngine));
+
+        // Restore the render engine setting
+        RenderConfigParse(Properties() <<
+          Property("renderengine.type")(renderEngine));
+      }
+    }
+
+    if (showExportBinaryFileDialog)
+    {
+      std::string fileToExport;
+      static const std::vector<std::string> filterExport = {
+        "LuxCore exported scene (.bcf){.bcf}"
+      };
+
+      if (fileBrowser(
+            fileToExport,
+            "Select File to Export",
+            filterExport,
+            fileBrowserType::save))
+      {
+        showExportBinaryFileDialog = false;
+        LA_LOG("Export current scene to file in binary format: " << fileToExport);
+        config->Save(fileToExport);
+      }
+    }
+
+    if (showExportGltfFileDialog)
+    {
+      std::string fileToExport;
+      static const std::vector<std::string> filterExport = {
+        "glTF files (.glTF,.gltf){.glTF,.gltf}",
+        "All files (.*){.*}",
+      };
+
+      if (fileBrowser(
+            fileToExport,
+            "Select File to Export",
+            filterExport,
+            fileBrowserType::save))
+      {
+        showExportGltfFileDialog = false;
+        LA_LOG("Export current scene to file in glTF format: " << fileToExport);
+        config->ExportGLTF(fileToExport);
+      }
+    }
+
+    if (showSaveRenderingFileDialog)
+    {
+      std::string fileToExport;
+      static const std::vector<std::string> filterExport = {
+        "LuxCore resume files (.rsm){.rsm}",
+        "All files (.*){.*}",
+      };
+
+      if (fileBrowser(
+            fileToExport,
+            "Select File to Save",
+            filterExport,
+            fileBrowserType::save))
+      {
+        showSaveRenderingFileDialog = false;
+
+        // Pause the current rendering
+        session->Pause();
+
+        // Save the session
+        session->SaveResumeFile(string(fileToExport));
+
+        // Resume the current rendering
+        session->Resume();
+      }
+    }  // Save Rendering
+
+
+    if (showResumeRenderingFileDialog)
+    {
+      std::string fileToLoad;
+      static const std::vector<std::string> filterExport = {
+        "LuxCore resume files (.rsm){.rsm}",
+        "All files (.*){.*}",
+      };
+
+      if (fileBrowser(
+            fileToLoad,
+            "Select File to Load",
+            filterExport,
+            fileBrowserType::open))
+      {
+        showResumeRenderingFileDialog = false;
+        LoadRenderConfig(fileToLoad);
+      }
+    } // Resume Rendering
+
+
+    // Other Menus - Conditionned by session
     if (session) {
       const string currentEngineType = config->ToProperties().Get("renderengine.type").Get<string>();
 

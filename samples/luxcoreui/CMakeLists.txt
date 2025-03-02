@@ -58,8 +58,8 @@ target_link_libraries(luxcoreui PRIVATE
   luxrays
   boost::boost
   luxcore
-  nativefiledialog::nativefiledialog
   imgui::imgui
+  imguifiledialog::imguifiledialog
   glfw
 )
 
