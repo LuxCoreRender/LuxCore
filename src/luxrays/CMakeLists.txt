@@ -26,9 +26,6 @@
 ################################################################################
 ################################################################################
 
-set(LUXRAYS_VERSION_MAJOR 2)
-set(LUXRAYS_VERSION_MINOR 9)
-
 # Configure a header file to pass some of the CMake settings
 # to the source code:
 
@@ -278,15 +275,11 @@ set(LUXRAYS_LIB_SRCS
 add_library(luxrays STATIC ${LUXRAYS_LIB_SRCS})
 add_definitions(-DCPP_API_EXPORTS ${VISIBILITY_FLAGS}) # for controlling visibility
 
-# TODO
-#if (WIN32)
-## This is needed by Boost 1.67 but is not found automatically
-#TARGET_LINK_LIBRARIES(luxrays PRIVATE bcrypt.lib)
-#endif(WIN32)
-
-#TARGET_LINK_LIBRARIES(luxrays ${CMAKE_DL_LIBS})
-
 target_link_libraries(luxrays PRIVATE embree openimageio::openimageio boost::boost)
+
+if (WIN32 OR LINUX)
+  target_link_libraries(luxrays PRIVATE nvrtc::nvrtc)
+endif()
 
 ################################################################################
 #
