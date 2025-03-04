@@ -16,7 +16,7 @@ You can find more information about at https://www.luxcorerender.org
 
 #### Tool requirements
 First, ensure you have a suitable toolchain:
-- Windows: MSVC >= 1942 (runtime >= 14.42)
+- Windows: MSVC >= 194x _latest version_
 - Linux: gcc 14
 - MacOS Intel: XCode 15.2
 - MacOS Arm: XCode 15.4
@@ -24,8 +24,8 @@ First, ensure you have a suitable toolchain:
 Ensure the following software is also installed and available in the PATH:
 
 - Git
-- Conan (`pip install conan`)
 - Python 3
+- Conan (`pip install conan`)
 - CMake
 
 #### Quick build
