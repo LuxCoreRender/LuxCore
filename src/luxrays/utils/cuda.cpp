@@ -43,15 +43,18 @@ static string GetCuda10Architecture() {
 	CHECK_CUDA_ERROR(cuDeviceGetAttribute(&major, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR, device));
 	CHECK_CUDA_ERROR(cuDeviceGetAttribute(&minor, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR, device));
 
-	if ((major >= 7) && (minor >= 5)) {
-		// NVIDIA driver doesn't include NVIDA RTC (Run Time Compiler) so we ship
-		// CUDA 10 NRTC with LuxCore however it supports only up to Turing architecture
-		// (Ampere 8.0 architecture is not supported). So I have to bound the required
-		// architecture in order to not get an error.
+        // v2.10: as nvrtc has been updated, the below code should not still be necessary...
+        // we keep it "just-in-case"
+        //
+	//if ((major >= 7) && (minor >= 5)) {
+		//// NVIDIA driver doesn't include NVIDA RTC (Run Time Compiler) so we ship
+		//// CUDA 10 NRTC with LuxCore however it supports only up to Turing architecture
+		//// (Ampere 8.0 architecture is not supported). So I have to bound the required
+		//// architecture in order to not get an error.
 
-		major = 7;
-		minor = 5;
-	}
+		//major = 7;
+		//minor = 5;
+	//}
 
 	return to_string(major) + to_string(minor);
 }

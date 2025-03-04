@@ -37,7 +37,7 @@ CUDADeviceDescription::CUDADeviceDescription(CUdevice dev, const size_t devIndex
 	char buff[128];
     CHECK_CUDA_ERROR(cuDeviceGetName(buff, 128, cudaDevice));
 	name = string(buff);
-	
+
 	const int major = GetCUDAComputeCapabilityMajor();
 	const int minor = GetCUDAComputeCapabilityMinor();
 	useOptix = (isOptixAvilable && ((major > 7) || ((major == 7) && (minor == 5)))) ? true : false;
@@ -154,7 +154,7 @@ CUDADevice::CUDADevice(
 		cudaContext(nullptr), optixContext(nullptr) {
 	deviceName = (desc->GetName() + " CUDAIntersect").c_str();
 
-	kernelCache = new cudaKernelPersistentCache("LUXRAYS_" LUXRAYS_VERSION_MAJOR "." LUXRAYS_VERSION_MINOR);
+	kernelCache = new cudaKernelPersistentCache("LUXRAYS_" LUXRAYS_VERSION_MAJOR "." LUXRAYS_VERSION_MINOR "." LUXRAYS_VERSION_BUGFIX);
 
 	CHECK_CUDA_ERROR(cuCtxCreate(&cudaContext, CU_CTX_SCHED_YIELD, deviceDesc->GetCUDADevice()));
 
