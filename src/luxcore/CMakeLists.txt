@@ -166,7 +166,6 @@ target_link_libraries(luxcore PRIVATE
     fmt::fmt
     openimageio::openimageio
     embree
-    nvrtc::nvrtc
 )
 
 
@@ -184,6 +183,8 @@ install(
     POST_EXCLUDE_REGEXES ".*system32/.*\\.dll"
     DIRECTORIES ${CONAN_RUNTIME_LIB_DIRS}
     COMPONENT luxcore
+    FRAMEWORK
+      DESTINATION luxcore
     OPTIONAL
 )
 
@@ -206,8 +207,10 @@ endif()
 
 # nvrtc
 if(WIN32)
+  set(LUX_NVRTC_LIST "${LUX_NVRTC}")
+  message(STATUS "NVRTC installation: ${LUX_NVRTC_LIST}")
   install(
-      PROGRAMS "${LUX_NVRTC}"
+      PROGRAMS ${LUX_NVRTC_LIST}
       TYPE BIN
       COMPONENT luxcore
   )
@@ -220,6 +223,7 @@ if(LINUX)
       COMPONENT luxcore
   )
 endif()
+# No nvrtc for MacOS (no Nvidia card?)
 
 ################################################################################
 #
@@ -291,6 +295,12 @@ if(LINUX)
     DESTINATION "pyluxcore.libs"
     COMPONENT pyluxcore
   )
+  set(LUX_NVRTC_LIST "${LUX_NVRTC}")
+  install(
+    PROGRAMS ${LUX_NVRTC_LIST}
+    DESTINATION "pyluxcore.libs"
+    COMPONENT pyluxcore
+)
 endif(LINUX)
 
 if(APPLE)
@@ -321,6 +331,15 @@ if(WIN32)
     DESTINATION "pyluxcore.libs"
     RENAME "OpenImageDenoise_device_cpu.pyd"
     COMPONENT pyluxcore
+  )
+
+  # Idem oidn_device_cpu
+  set(LUX_NVRTC_LIST "${LUX_NVRTC}")
+  install(
+      PROGRAMS "${LUX_NVRTC_BINS}/nvrtc-builtins64_128.dll"
+      DESTINATION "pyluxcore.libs"
+      TYPE BIN
+      COMPONENT pyluxcore
   )
 
   # Delvewheel doesn't handle executables, however we need to delocate oidnDenoise.

@@ -55,18 +55,20 @@ class LuxCore(ConanFile):
         tc.variables["LUX_OIDN_DENOISE_CPU"] = denoise_cpu.as_posix()
 
         # nvrtc
-        nvrtc = self.dependencies["luxcoredeps"].dependencies["nvrtc"]
-        nvrtc_info = nvrtc.cpp_info
-        nvrtc_libdir = Path(nvrtc_info.libdirs[0])
-        nvrtc_bindir = Path(nvrtc_info.bindirs[0])
-        tc.variables["LUX_NVRTC_LIBS"] = nvrtc_libdir.as_posix()
-        tc.variables["LUX_NVRTC_BINS"] = nvrtc_bindir.as_posix()
-        nvrtc_libs = [
-            f.as_posix()
-            for f in nvrtc_libdir.iterdir()
-            if f.is_file()
-        ]
-        if nvrtc_libs:
+        if self.settings.os in ("Linux", "Windows"):
+            nvrtc = self.dependencies["luxcoredeps"].dependencies["nvrtc"]
+            nvrtc_info = nvrtc.cpp_info
+            if self.settings.os == "Linux":
+                nvrtc_dir = Path(nvrtc_info.libdirs[0])
+            else:
+                nvrtc_dir = Path(nvrtc_info.bindirs[0])
+                tc.cache_variables["LUX_NVRTC_BINS"] = nvrtc_dir
+
+            nvrtc_libs = [
+                f.as_posix()
+                for f in nvrtc_dir.iterdir()
+                if f.is_file()
+            ]
             tc.cache_variables["LUX_NVRTC"] = ";".join(nvrtc_libs)
 
 
