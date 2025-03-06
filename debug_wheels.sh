@@ -16,6 +16,7 @@ act workflow_dispatch \
   --job build-wheels \
   -s GITHUB_TOKEN="$(gh auth token)" \
   --matrix os:ubuntu-latest \
+  --matrix python-minor:10 \
   --artifact-server-path /tmp/pyluxcore \
   --rm \
   | tee /tmp/pyluxcore.log
