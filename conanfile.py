@@ -54,8 +54,26 @@ class LuxCore(ConanFile):
             )
         tc.variables["LUX_OIDN_DENOISE_CPU"] = denoise_cpu.as_posix()
 
+        # nvrtc
+        nvrtc = self.dependencies["luxcoredeps"].dependencies["nvrtc"]
+        nvrtc_info = nvrtc.cpp_info
+        nvrtc_libdir = Path(nvrtc_info.libdirs[0])
+        nvrtc_bindir = Path(nvrtc_info.bindirs[0])
+        tc.variables["LUX_NVRTC_LIBS"] = nvrtc_libdir.as_posix()
+        tc.variables["LUX_NVRTC_BINS"] = nvrtc_bindir.as_posix()
+        nvrtc_libs = [
+            f.as_posix()
+            for f in nvrtc_libdir.iterdir()
+            if f.is_file()
+        ]
+        if nvrtc_libs:
+            tc.cache_variables["LUX_NVRTC"] = ";".join(nvrtc_libs)
+
+
+        # CMAKE_OSX_ARCHITECTURES
         if self.settings.os == "Macos" and self.settings.arch == "armv8":
             tc.cache_variables["CMAKE_OSX_ARCHITECTURES"] = "arm64"
+
 
         # Bison/Flex
         # FLEX_EXECUTABLE and BISON_EXECUTABLE are recognized by

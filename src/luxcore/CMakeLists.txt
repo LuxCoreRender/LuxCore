@@ -166,6 +166,7 @@ target_link_libraries(luxcore PRIVATE
     fmt::fmt
     openimageio::openimageio
     embree
+    nvrtc::nvrtc
 )
 
 
@@ -203,6 +204,22 @@ endif()
 # For MacOS, DENOISE_CPU is declared as dep and directly installed by
 # luxcore's runtime_dependencies
 
+# nvrtc
+if(WIN32)
+  install(
+      PROGRAMS "${LUX_NVRTC}"
+      TYPE BIN
+      COMPONENT luxcore
+  )
+endif()
+if(LINUX)
+  set(LUX_NVRTC_LIST "${LUX_NVRTC}")
+  install(
+      PROGRAMS ${LUX_NVRTC_LIST}
+      TYPE LIB
+      COMPONENT luxcore
+  )
+endif()
 
 ################################################################################
 #
@@ -326,6 +343,8 @@ if(WIN32)
   )
 
 endif(WIN32)
+
+
 
 ################################################################################
 #

@@ -32,7 +32,7 @@ $(build-targets): %: config
 	cmake --install $(BUILD_DIR)/Release --prefix $(INSTALL_DIR) --component $*
 
 config:
-	cmake $(BUILD_CMAKE_ARGS) --preset conan-release \
+	cmake $(CONFIG_CMAKE_ARGS) --preset conan-release \
 		-DCMAKE_INSTALL_PREFIX=$(INSTALL_DIR) \
 		-S $(SOURCE_DIR)
 

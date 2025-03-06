@@ -205,6 +205,9 @@ def main():
         if not args.local:
             logger.info("Downloading dependencies (url='%s')", url)
             download(url, tmpdir)
+        else:
+            logger.info("Using local dependency set ('%s')", args.local)
+
 
         # Clean
         logger.info("Cleaning local cache")
