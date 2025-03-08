@@ -5,6 +5,7 @@ Change Log for 2.10
 - all: upgrade all dependencies to latest versions
 - luxcore: remove most of static hard-coded deps and replace with Conan equivalent, latest versions
 - luxcore: move from boost::python to pybind11
+- luxcore: remove static/shared option for luxcore.so: always build both static (for pyluxcore) and shared (for luxcoreui/console)
 - luxcoreui: remove hard-coded deps (nfd, glfw, imgui) and replace them with Conan
 - luxcoreui: refactor code to fit to deps latest versions
 - luxcoreui: replace nativefiledialog, which requires gtk3, by ImGuiFileDialog, which is pure ImGui.
