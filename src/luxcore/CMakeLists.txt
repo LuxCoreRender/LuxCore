@@ -38,6 +38,8 @@ configure_file(
   "${generated_header_dir}/cfg.h"
 )
 
+add_subdirectory(luxparser)
+
 ################################################################################
 #
 # LuxCore Docs
@@ -86,48 +88,11 @@ endif(DOXYGEN_FOUND)
 
 ################################################################################
 #
-# Custom Command
-#
-################################################################################
-
-set(generated_parser_dir "${GENERATED_DIR}/luxparser")
-file(MAKE_DIRECTORY ${generated_parser_dir})
-
-if (BISON_FOUND AND FLEX_FOUND)
-
-  # Create custom command for bison/yacc
-  BISON_TARGET(lux_parser ${PROJECT_SOURCE_DIR}/src/luxcore/luxparser/luxparse.y ${generated_parser_dir}/luxparse.cpp)
-  set_source_files_properties(${PROJECT_SOURCE_DIR}/src/luxcore/luxparser/luxparse.cpp GENERATED)
-
-  # Create custom command for flex/lex
-  FLEX_TARGET(lux_lexer ${PROJECT_SOURCE_DIR}/src/luxcore/luxparser/luxlex.l ${generated_parser_dir}/luxlex.cpp COMPILE_FLAGS "${FLEX_FLAGS}")
-  set_source_files_properties(${PROJECT_SOURCE_DIR}/src/luxcore/luxparser/luxlex.cpp GENERATED)
-  ADD_FLEX_BISON_DEPENDENCY(lux_lexer lux_parser)
-
-  set(LUX_PARSER_SRC
-    ${PROJECT_SOURCE_DIR}/src/luxcore/luxparser/luxparse.y
-    ${PROJECT_SOURCE_DIR}/src/luxcore/luxparser/luxlex.l
-  )
-  source_group("Source Files\\Lux Parser" FILES ${LUX_PARSER_SRC})
-
-else()
-
-  # Just copy the pre-generated files from the source tree:
-  file(COPY "${PROJECT_SOURCE_DIR}/src/luxcore/luxparser/luxparse.cpp"
-    "${PROJECT_SOURCE_DIR}/src/luxcore/luxparser/luxparse.hpp"
-    "${PROJECT_SOURCE_DIR}/src/luxcore/luxparser/luxlex.cpp" DESTINATION ${generated_parser_dir})
-
-  message(WARNING "Flex or Bison not available "
-      "- using pre-generated files from the source tree")
-endif()
-
-################################################################################
-#
 # LuxCore library
 #
 ################################################################################
 
-set(LUXCORE_SRCS
+set(LUXCORE_SRC
   ${PROJECT_SOURCE_DIR}/src/luxcore/luxcore.cpp
   ${PROJECT_SOURCE_DIR}/src/luxcore/luxcoreimpl.cpp
   ${PROJECT_SOURCE_DIR}/src/luxcore/luxcoreinit.cpp
@@ -135,24 +100,17 @@ set(LUXCORE_SRCS
 )
 SOURCE_GROUP("Source Files\\LuxCore Library" FILES ${LUXCORE_SRCS})
 
-set(LUXCORE_GENERATED_SRCS
-  ${generated_parser_dir}/luxparse.cpp
-  ${generated_parser_dir}/luxlex.cpp
-)
 SOURCE_GROUP(
     "Source Files\\LuxCore Library\\Generated"
-    FILES ${LUXCORE_GENERATED_SRCS})
-
-set(LUXCORE_LIB_SRCS
-  ${LUXCORE_SRCS}
-  ${LUXCORE_GENERATED_SRCS}
+    FILES
+    ${generated_parser_dir}/luxparse.cpp
+    ${generated_parser_dir}/luxlex.cpp
 )
 
-if (BUILD_LUXCORE_DLL)
-  add_library(luxcore SHARED ${LUXCORE_LIB_SRCS} ${LUX_PARSER_SRC})
-else()
-  add_library(luxcore STATIC ${LUXCORE_LIB_SRCS} ${LUX_PARSER_SRC})
-endif()
+include_directories(${PROJECT_SOURCE_DIR}/deps/bcd-1.1/include)
+
+add_library(luxcore SHARED ${LUXCORE_SRC})
+add_library(luxcore_static STATIC ${LUXCORE_SRC})
 
 target_link_libraries(luxcore PRIVATE
     slg-core
@@ -166,15 +124,30 @@ target_link_libraries(luxcore PRIVATE
     fmt::fmt
     openimageio::openimageio
     embree
+    luxparser
+)
+target_link_libraries(luxcore_static PRIVATE
+    slg-core
+    slg-film
+    slg-kernels
+    luxrays
+    bcd
+    robin_hood::robin_hood
+    boost::boost
+    spdlog::spdlog_header_only
+    fmt::fmt
+    openimageio::openimageio
+    embree
+    luxparser
 )
 
 
-include_directories(${PROJECT_SOURCE_DIR}/deps/bcd-1.1/include)
 
 add_definitions(-DCPP_API_EXPORTS ${VISIBILITY_FLAGS}) # for controlling visibility
 link_directories (${SLG_LIB_DIR} ${LuxRays_LIB_DIR})
 
 set_target_properties(luxcore PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
+set_target_properties(luxcore_static PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
 install(
     TARGETS luxcore
@@ -188,6 +161,7 @@ install(
     OPTIONAL
 )
 
+# Install oidn_denoise_cpu
 if(WIN32)
     install(
         PROGRAMS "${LUX_OIDN_DENOISE_CPU}"
@@ -205,7 +179,7 @@ endif()
 # For MacOS, DENOISE_CPU is declared as dep and directly installed by
 # luxcore's runtime_dependencies
 
-# nvrtc
+# Install nvrtc
 if(WIN32)
   set(LUX_NVRTC_LIST "${LUX_NVRTC}")
   message(STATUS "NVRTC installation: ${LUX_NVRTC_LIST}")
@@ -224,144 +198,6 @@ if(LINUX)
   )
 endif()
 # No nvrtc for MacOS (no Nvidia card?)
-
-################################################################################
-#
-# PyLuxCore (Python bindings)
-#
-################################################################################
-
-set(PYLUXCORE_SRCS
-  ${PROJECT_SOURCE_DIR}/src/luxcore/pyluxcore.cpp
-  ${PROJECT_SOURCE_DIR}/src/luxcore/pyluxcoreforblender.cpp
-)
-
-pybind11_add_module(pyluxcore MODULE ${PYLUXCORE_SRCS} ${LUXCORE_LIB_SRCS} ${LUX_PARSER_SRC})
-
-target_link_libraries(pyluxcore PRIVATE
-    slg-core
-    slg-film
-    slg-kernels
-    luxrays
-    bcd
-    OpenVDB::openvdb
-    spdlog::spdlog_header_only
-    pybind11::pybind11
-    Python::Module
-    boost::boost
-    onetbb::onetbb
-    blender-types
-    robin_hood::robin_hood
-    openimageio::openimageio
-    embree
-)
-
-if(APPLE)
-  target_link_libraries(pyluxcore PRIVATE llvm-openmp::llvm-openmp)
-else()
-  target_link_libraries(pyluxcore PRIVATE OpenMP::OpenMP_CXX)
-endif(APPLE)
-
-set_target_properties(pyluxcore PROPERTIES PREFIX "")
-if(MSVC)
-  set_target_properties(pyluxcore PROPERTIES SUFFIX ".pyd")
-endif(MSVC)
-
-# Install
-INSTALL(TARGETS pyluxcore DESTINATION pyluxcore COMPONENT pyluxcore)
-
-# OIDN
-# oidnDenoise
-add_executable(oidn-denoise IMPORTED)
-set_property(TARGET oidn-denoise PROPERTY IMPORTED_LOCATION "${LUX_OIDN_DENOISE_PATH}")
-
-if(WIN32)
-  # Windows lacks rpath system, so we have to put oidnDenoise in the same
-  # folder as the dlls...
-  set(OIDN_DESTINATION "pyluxcore.libs")
-else()
-  # For Macos, reminder: don't put it in pyluxcore/.dylibs, it would prevent
-  # other deps' relocation
-  set(OIDN_DESTINATION "pyluxcore.oidn")
-endif(WIN32)
-
-if(LINUX)
-  set_property(
-    TARGET oidn-denoise
-    PROPERTY INSTALL_RPATH "\\\${ORIGIN}/../pyluxcore.libs"
-  )
-  install(
-    PROGRAMS "${LUX_OIDN_DENOISE_CPU}"
-    DESTINATION "pyluxcore.libs"
-    COMPONENT pyluxcore
-  )
-  set(LUX_NVRTC_LIST "${LUX_NVRTC}")
-  install(
-    PROGRAMS ${LUX_NVRTC_LIST}
-    DESTINATION "pyluxcore.libs"
-    COMPONENT pyluxcore
-)
-endif(LINUX)
-
-if(APPLE)
-  set_target_properties(
-    oidn-denoise PROPERTIES
-    INSTALL_RPATH "\\\${ORIGIN}/../pyluxcore/.pylibs"
-    BUILD_RPATH ""
-  )
-endif(APPLE)
-
-INSTALL(
-  IMPORTED_RUNTIME_ARTIFACTS oidn-denoise
-  DESTINATION ${OIDN_DESTINATION}
-  PERMISSIONS
-    OWNER_WRITE OWNER_READ OWNER_EXECUTE
-    GROUP_READ GROUP_EXECUTE
-    WORLD_READ WORLD_EXECUTE
-  COMPONENT pyluxcore
-)
-
-
-if(WIN32)
-  # For Win32, we need to add device_cpu
-  # device_cpu should first have a pyd extension to be repaired.
-  # This will be reverted after repairing
-  install(
-    PROGRAMS "${LUX_OIDN_DENOISE_BINS}/OpenImageDenoise_device_cpu.dll"
-    DESTINATION "pyluxcore.libs"
-    RENAME "OpenImageDenoise_device_cpu.pyd"
-    COMPONENT pyluxcore
-  )
-
-  # Idem oidn_device_cpu
-  set(LUX_NVRTC_LIST "${LUX_NVRTC}")
-  install(
-      PROGRAMS "${LUX_NVRTC_BINS}/nvrtc-builtins64_128.dll"
-      DESTINATION "pyluxcore.libs"
-      TYPE BIN
-      COMPONENT pyluxcore
-  )
-
-  # Delvewheel doesn't handle executables, however we need to delocate oidnDenoise.
-  # Therefore we had to let Delvewheel believe oidnDenoise is a lib, and now
-  # we have to make it an executable again...
-  message(STATUS "oidnDenoise suffix back to pyd")
-  INSTALL(
-    CODE
-    "
-    MESSAGE(STATUS
-        \"Renaming '$<INSTALL_PREFIX>/pyluxcore.libs/oidnDenoise.exe' \
-        into '$<INSTALL_PREFIX>/pyluxcore.libs/oidnDenoise.pyd'\"
-    )
-    FILE(RENAME
-        $<INSTALL_PREFIX>/pyluxcore.libs/oidnDenoise.exe
-        $<INSTALL_PREFIX>/pyluxcore.libs/oidnDenoise.pyd
-    )
-    "
-    COMPONENT pyluxcore
-  )
-
-endif(WIN32)
 
 
 
