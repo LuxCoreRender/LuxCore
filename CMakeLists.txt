@@ -33,7 +33,6 @@ project(LuxRays)
 # Options
 OPTION(LUXCORE_DEMOS "Enable to build LuxCore demos" OFF)
 OPTION(LUXCORE_TESTS "Enable to build tests" OFF)
-OPTION(LUXCORE_STATIC "Enable to build LuxCore as static library" OFF)
 OPTION(LUXRAYS_ENABLE_OPENCL "Enable to use OpenCL" ON)
 OPTION(LUXRAYS_ENABLE_CUDA "Enable to use CUDA" ON)
 OPTION(LUXRAYS_ENABLE_OPTIX "Enable to use Optix" ON)
@@ -85,14 +84,6 @@ MESSAGE(STATUS "Install RPATH: ${CMAKE_INSTALL_RPATH}")
 if(LINUX)
   add_link_options("LINKER:--disable-new-dtags")
 endif()
-
-
-if(TARGET pyluxcore OR NOT LUXCORE_STATIC)
-  set(BUILD_LUXCORE_DLL ON)
-else()
-  set(BUILD_LUXCORE_DLL OFF)
-endif()
-MESSAGE(STATUS "Set BUILD_LUXCORE_DLL to ${BUILD_LUXCORE_DLL}")
 
 if (LUXRAYS_DISABLE_OPENCL)
   ADD_DEFINITIONS("-DLUXRAYS_DISABLE_OPENCL")
