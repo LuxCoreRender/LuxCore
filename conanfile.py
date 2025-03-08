@@ -62,7 +62,7 @@ class LuxCore(ConanFile):
                 nvrtc_dir = Path(nvrtc_info.libdirs[0])
             else:
                 nvrtc_dir = Path(nvrtc_info.bindirs[0])
-                tc.cache_variables["LUX_NVRTC_BINS"] = nvrtc_dir
+                tc.cache_variables["LUX_NVRTC_BINS"] = nvrtc_dir.as_posix()
 
             nvrtc_libs = [
                 f.as_posix()
