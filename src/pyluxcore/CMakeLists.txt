@@ -40,6 +40,8 @@ target_link_libraries(pyluxcore PRIVATE
     blender-types
     robin_hood::robin_hood
     fmt::fmt
+    openimageio::openimageio
+    embree
 )
 
 if(APPLE)
