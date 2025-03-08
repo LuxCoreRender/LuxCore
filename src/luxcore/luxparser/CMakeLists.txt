@@ -40,4 +40,4 @@ set(LUX_PARSER_SRC
 source_group("Source Files\\Lux Parser" FILES ${LUX_PARSER_SRC})
 
 add_library(luxparser STATIC ${BISON_luxbison_OUTPUTS} ${FLEX_luxflex_OUTPUTS})
-target_link_libraries(luxparser PRIVATE robin_hood::robin_hood)
+target_link_libraries(luxparser PRIVATE robin_hood::robin_hood boost::boost)
