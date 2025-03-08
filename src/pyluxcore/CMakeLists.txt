@@ -23,12 +23,13 @@
 ################################################################################
 
 set(PYLUXCORE_SRCS
-  ${PROJECT_SOURCE_DIR}/src/pyluxcore/pyluxcore.cpp
-  ${PROJECT_SOURCE_DIR}/src/pyluxcore/pyluxcoreforblender.cpp
 )
 include_directories(${PROJECT_SOURCE_DIR}/deps/bcd-1.1/include)
 
-pybind11_add_module(pyluxcore MODULE ${PYLUXCORE_SRCS})
+pybind11_add_module(pyluxcore MODULE
+  ${PROJECT_SOURCE_DIR}/src/pyluxcore/pyluxcore.cpp
+  ${PROJECT_SOURCE_DIR}/src/pyluxcore/pyluxcoreforblender.cpp
+)
 
 target_link_libraries(pyluxcore PRIVATE
     luxcore_static
@@ -80,12 +81,6 @@ if(LINUX)
     DESTINATION "pyluxcore.libs"
     COMPONENT pyluxcore
   )
-  set(LUX_NVRTC_LIST "${LUX_NVRTC}")
-  install(
-    PROGRAMS ${LUX_NVRTC_LIST}
-    DESTINATION "pyluxcore.libs"
-    COMPONENT pyluxcore
-)
 endif(LINUX)
 
 if(APPLE)
@@ -116,15 +111,6 @@ if(WIN32)
     DESTINATION "pyluxcore.libs"
     RENAME "OpenImageDenoise_device_cpu.pyd"
     COMPONENT pyluxcore
-  )
-
-  # Idem oidn_device_cpu
-  set(LUX_NVRTC_LIST "${LUX_NVRTC}")
-  install(
-      PROGRAMS "${LUX_NVRTC_BINS}/nvrtc-builtins64_128.dll"
-      DESTINATION "pyluxcore.libs"
-      TYPE BIN
-      COMPONENT pyluxcore
   )
 
   # Delvewheel doesn't handle executables, however we need to delocate oidnDenoise.
