@@ -12,6 +12,7 @@ version = "2.9a1.post17"
 dependencies = [
   "numpy >= 2; python_version > '3.8'",
   "numpy < 2; python_version <= '3.8'",
+  "nvidia-cuda-nvrtc-cu12",
 ]
 requires-python = ">= 3.8"
 description = "LuxCore Python bindings"
