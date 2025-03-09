@@ -277,10 +277,6 @@ add_definitions(-DCPP_API_EXPORTS ${VISIBILITY_FLAGS}) # for controlling visibil
 
 target_link_libraries(luxrays PRIVATE embree openimageio::openimageio boost::boost)
 
-if (WIN32 OR LINUX)
-  target_link_libraries(luxrays PRIVATE nvrtc::nvrtc)
-endif()
-
 ################################################################################
 #
 # Predefines
