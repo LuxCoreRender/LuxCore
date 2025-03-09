@@ -2,10 +2,11 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-name: LuxCore Python Wheels
+name: LuxCore Python Wheels Builder
 
 on:
   workflow_dispatch:
+  workflow_call:
   push:
 
 jobs:
