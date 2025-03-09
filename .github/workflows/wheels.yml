@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-minor: [8, 9, 10, 11, 12, 13]
+        python-minor: [9, 10, 11, 12, 13]
         os: [ubuntu-latest, windows-latest, macos-13, macos-14]
         #python-minor: [ 9 ]
         #python-minor: [ 12]
@@ -25,9 +25,6 @@ jobs:
         #os: [windows-latest]
         #python-minor: [ 11]
         #os: [macos-13]
-        exclude:
-          - os: macos-14
-            python-minor: 8
     env:
       # Reminder: report all variables here to CIBW_ENVIRONMENT_PASS_LINUX
       BUILD_TYPE: Release
