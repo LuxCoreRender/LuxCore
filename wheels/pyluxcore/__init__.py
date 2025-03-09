@@ -33,6 +33,11 @@ _OIDN_PATHS = {
     "Darwin": (_LUXFOLDER / ".." / "pyluxcore.oidn", "oidnDenoise"),
 }
 
+CUDA_ARCHS = []
+NVRTC_VERSION_MAJOR = None
+NVRTC_VERSION_MINOR = None
+
+
 def which_oidn():
     """Retrieve external oidn path (applying which).
 
@@ -41,6 +46,7 @@ def which_oidn():
     path, executable = _OIDN_PATHS[platform.system()]
     denoiser_path = shutil.which(executable, path=path)
     return denoiser_path
+
 
 def path_to_oidn():
     """Retrieve external oidn path.
@@ -51,6 +57,7 @@ def path_to_oidn():
     path, executable = _OIDN_PATHS[platform.system()]
     return path / executable
 
+
 def preload_nvrtc():
     """Preload nvidia runtime compiler."""
     # Find Python module
@@ -58,7 +65,7 @@ def preload_nvrtc():
         nvrtc_mod = importlib.import_module("nvidia.cuda_nvrtc")
     except ModuleNotFoundError:
         print("nvrtc: Python module not found")
-        return
+        return None, None, []
     modpath = Path(nvrtc_mod.__path__[0])
     # print(f"Found nvrtc Python module at {modpath}")
 
@@ -68,26 +75,29 @@ def preload_nvrtc():
     elif platform.system() == "Windows":
         libpath = modpath / "bin" / "nvrtc64_120_0.dll"
     else:
-        return
+        return None, None, []
 
     try:
         nvrtc = CDLL(str(libpath), RTLD_GLOBAL)
     except OSError:
         print("nvrtc: could not load library")
-        return
+        return None, None, []
 
     # Check version
     major = c_int()
     minor = c_int()
     nvrtc.nvrtcVersion(byref(major), byref(minor))
-    print(f"Found nvrtc {major.value}.{minor.value} in Python modules")
 
     # Check architectures
     num_archs = c_int()
     nvrtc.nvrtcGetNumSupportedArchs(byref(num_archs))
-    nvrtc.nvrtcGetSupportedArchs.argtypes = [ARRAY(c_int, num_archs.value),]
+    nvrtc.nvrtcGetSupportedArchs.argtypes = [
+        ARRAY(c_int, num_archs.value),
+    ]
     archs = ARRAY(c_int, num_archs.value)()
     nvrtc.nvrtcGetSupportedArchs(archs)
-    print("Supported CUDA architectures:", *archs)
 
-preload_nvrtc()
+    return major, minor, archs
+
+
+NVRTC_VERSION_MAJOR, NVRTC_VERSION_MINOR, CUDA_ARCHS = preload_nvrtc()
