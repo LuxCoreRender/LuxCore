@@ -19,6 +19,8 @@
 #include "slg/scene/scene.h"
 #include "slg/utils/filenameresolver.h"
 
+#include <atomic>
+
 using namespace std;
 using namespace luxrays;
 using namespace slg;

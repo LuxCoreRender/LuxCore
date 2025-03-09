@@ -20,6 +20,9 @@
 
 #include <boost/lexical_cast.hpp>
 #include <boost/foreach.hpp>
+#if BOOST_VERSION >= 107400
+#include <boost/serialization/library_version_type.hpp>
+#endif
 #include <boost/serialization/unordered_set.hpp>
 
 #include "slg/film/film.h"
