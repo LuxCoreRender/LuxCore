@@ -22,6 +22,7 @@ import shutil
 
 import importlib
 from ctypes import CDLL, RTLD_GLOBAL, byref, c_int, ARRAY
+import os
 
 from .pyluxcore import *
 
@@ -82,17 +83,25 @@ def ensure_nvrtc():
 
     # Try to load lib
     if platform.system() == "Linux":
-        libpath = modpath / "lib" / "libnvrtc.so.12"
+        libpath = modpath / "lib"
     elif platform.system() == "Windows":
-        libpath = modpath / "bin" / "nvrtc64_120_0.dll"
+        libpath = modpath / "bin"
     else:
         return None, None, []
 
+    # Select main libs (not alt flavors) and order them so that main lib is the
+    # 1st item in the list
+    libs = [str(f) for f in libpath.iterdir() if "alt" not in f.name]
+    libs.sort(key=len)
+    assert libs
+
     try:
-        nvrtc = CDLL(str(libpath), RTLD_GLOBAL)
+        handles = [CDLL(l) for l in libs]
     except OSError:
-        print("nvrtc: could not load library")
+        print(f"nvrtc: could not load libraries (tried with {libs})")
         return None, None, []
+
+    nvrtc = handles[0]
 
     # Check version
     major = c_int()
@@ -115,7 +124,8 @@ def ensure_nvrtc():
         add_dll_directory = windll.kernel32.AddDllDirectory
         add_dll_directory.restype = DWORD
         add_dll_directory.argtypes = [c_wchar_p]
-        add_dll_directory(str(libpath.parent))
+        add_dll_directory(str(libpath))
+        os.environ["PATH"] = str(libpath) + os.pathsep + os.environ["PATH"]
 
     return major, minor, archs
 
