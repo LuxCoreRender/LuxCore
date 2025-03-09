@@ -1,0 +1,99 @@
+# SPDX-FileCopyrightText: 2024 Howetuft
+#
+#
+# SPDX-License-Identifier: Apache-2.0
+
+name: LuxCore Python Wheels Releaser
+
+on:
+  workflow_dispatch:
+    inputs:
+      release-tag:
+        description: "Tag for the release"
+        required: True
+        default: Test
+        type: string
+      release-name:
+        description: "Release name"
+        required: False
+        default: Test
+        type: string
+      release-title:
+        description: "Release title"
+        required: False
+        default: Test
+        type: string
+      allow-updates:
+        description: "Update existing release (if any)"
+        required: True
+        type: boolean
+        default: True
+      prerelease:
+        description: "Prerelease"
+        required: True
+        type: boolean
+        default: True
+      rebuild-all:
+        description: "Rebuild all"
+        required: True
+        type: boolean
+        default: False
+
+jobs:
+  call-build-wheels:
+    uses: ./.github/workflows/wheels.yml
+
+  create-release:
+    name: 'Create release'
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    needs: [call-build-wheels]
+    permissions:
+      id-token: write
+      attestations: write
+      contents: write
+    steps:
+      - run: |
+          echo "Creating release '${{ inputs.release-version }}'"
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: luxcore-deps-*
+          path: ${{ github.workspace }}/dist
+          merge-multiple: false
+
+      - name: Display structure of downloaded files
+        run: ls -Rl ${{ github.workspace }}/dist
+
+      - name: Generate artifact attestations
+        uses: actions/attest-build-provenance@v1.4.3
+        with:
+          subject-path: ${{ github.workspace }}/dist/*
+
+      - name: Re-zip artifacts
+        working-directory: ${{ github.workspace }}/dist
+        run: |
+          mkdir ../artifacts
+          for d in */ ; do
+              d2=${d%/}
+              echo "zip ${d2}"
+              zip -j ../artifacts/${d2}.zip ${d2}/*
+          done
+
+      - id: make-release
+        # Use full length commit SHA, otherwise CodeQL complains...
+        uses: ncipollo/release-action@cdcc88a9acf3ca41c16c37bb7d21b9ad48560d87
+        with:
+          name: ${{ inputs.release-name }}
+          tag: ${{ inputs.release-tag }}
+          artifacts: artifacts/*
+          removeArtifacts: true
+          allowUpdates: ${{ inputs.allow-updates }}
+          prerelease: ${{ inputs.prerelease }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          updateOnlyUnreleased: true
+
+      - run: |
+          echo "### Release""" >> $GITHUB_STEP_SUMMARY
+          echo ${{ steps.make-release.outputs.html_url }} >> $GITHUB_STEP_SUMMARY
+
