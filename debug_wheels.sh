@@ -10,13 +10,14 @@
 
 #export CIBW_DEBUG_KEEP_CONTAINER=TRUE
 
+python_version_minor=$(python -c 'import sys; print(sys.version_info[1])')
 
 act workflow_dispatch \
   --action-offline-mode \
   --job build-wheels \
   -s GITHUB_TOKEN="$(gh auth token)" \
   --matrix os:ubuntu-latest \
-  --matrix python-minor:12 \
+  --matrix python-minor:${python_version_minor} \
   --artifact-server-path /tmp/pyluxcore \
   --rm \
   | tee /tmp/pyluxcore.log
