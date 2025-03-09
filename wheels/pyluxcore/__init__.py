@@ -20,6 +20,9 @@ import platform
 from pathlib import Path
 import shutil
 
+import importlib
+from ctypes import CDLL, RTLD_GLOBAL, byref, c_int, ARRAY
+
 from .pyluxcore import *
 
 _LUXFOLDER = Path(pyluxcore.__file__).parent
@@ -47,3 +50,44 @@ def path_to_oidn():
     """
     path, executable = _OIDN_PATHS[platform.system()]
     return path / executable
+
+def preload_nvrtc():
+    """Preload nvidia runtime compiler."""
+    # Find Python module
+    try:
+        nvrtc_mod = importlib.import_module("nvidia.cuda_nvrtc")
+    except ModuleNotFoundError:
+        print("nvrtc: Python module not found")
+        return
+    modpath = Path(nvrtc_mod.__path__[0])
+    # print(f"Found nvrtc Python module at {modpath}")
+
+    # Try to load lib
+    if platform.system() == "Linux":
+        libpath = modpath / "lib" / "libnvrtc.so.12"
+    elif platform.system() == "Windows":
+        libpath = modpath / "bin" / "nvrtc64_120_0.dll"
+    else:
+        return
+
+    try:
+        nvrtc = CDLL(str(libpath), RTLD_GLOBAL)
+    except OSError:
+        print("nvrtc: could not load library")
+        return
+
+    # Check version
+    major = c_int()
+    minor = c_int()
+    nvrtc.nvrtcVersion(byref(major), byref(minor))
+    print(f"Found nvrtc {major.value}.{minor.value} in Python modules")
+
+    # Check architectures
+    num_archs = c_int()
+    nvrtc.nvrtcGetNumSupportedArchs(byref(num_archs))
+    nvrtc.nvrtcGetSupportedArchs.argtypes = [ARRAY(c_int, num_archs.value),]
+    archs = ARRAY(c_int, num_archs.value)()
+    nvrtc.nvrtcGetSupportedArchs(archs)
+    print("Supported CUDA architectures:", *archs)
+
+preload_nvrtc()
