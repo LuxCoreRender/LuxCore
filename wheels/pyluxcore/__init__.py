@@ -58,8 +58,19 @@ def path_to_oidn():
     return path / executable
 
 
-def preload_nvrtc():
-    """Preload nvidia runtime compiler."""
+def ensure_nvrtc():
+    """Ensure nvidia runtime compiler will be available for pyluxcore.
+
+    nvrtc is provided by 'nvidia-cuda-nvrtc' package on Pypi, via pyluxcore
+    dependencies. The challenge is to have the shared libs found by cuew.
+
+    2 strategies:
+    - Linux: we preload libnvrtc.so
+    - Windows: we preload nvrtc64_120, to ensure it is serviceable,
+        but we also add the dll path to the process DLL search path
+
+    Please note that MacOS is not in the scope of Cuda acceleration.
+    """
     # Find Python module
     try:
         nvrtc_mod = importlib.import_module("nvidia.cuda_nvrtc")
@@ -97,7 +108,16 @@ def preload_nvrtc():
     archs = ARRAY(c_int, num_archs.value)()
     nvrtc.nvrtcGetSupportedArchs(archs)
 
+    # Windows: we add path to nvrtc to the process dll search path
+    if platform.system() == "Windows":
+        from ctypes import windll, c_wchar_p
+        from ctypes.wintypes import DWORD
+        add_dll_directory = windll.kernel32.AddDllDirectory
+        add_dll_directory.restype = DWORD
+        add_dll_directory.argtypes = [c_wchar_p]
+        add_dll_directory(str(libpath.parent))
+
     return major, minor, archs
 
 
-NVRTC_VERSION_MAJOR, NVRTC_VERSION_MINOR, CUDA_ARCHS = preload_nvrtc()
+NVRTC_VERSION_MAJOR, NVRTC_VERSION_MINOR, CUDA_ARCHS = ensure_nvrtc()
