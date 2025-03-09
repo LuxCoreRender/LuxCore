@@ -58,7 +58,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
-          pattern: luxcore-deps-*
+          pattern: cibw-wheels-*
           path: ${{ github.workspace }}/dist
           merge-multiple: false
 
