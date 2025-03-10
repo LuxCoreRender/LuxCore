@@ -7,6 +7,17 @@ name: LuxCore Python Wheels Builder
 on:
   workflow_dispatch:
   workflow_call:
+    inputs:
+      repository:
+        description: 'Repository to check out'
+        required: false
+        default: ''
+        type: string
+      ref:
+        description: 'The branch, tag or SHA to checkout.'
+        required: false
+        default: ''
+        type: string
   push:
 
 jobs:
@@ -43,6 +54,9 @@ jobs:
 
       - name: Checkout main repository (LuxCore)
         uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.repository }}
+          ref: ${{ inputs.ref }}
 
       - name: Find workspace
         shell: bash
