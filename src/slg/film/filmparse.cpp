@@ -904,7 +904,7 @@ void Film::Parse(const Properties &props) {
 			haltNoiseThresholdImagePipelineIndex = props.Get(Property("batch.haltnoisethreshold.index")(0)).Get<u_int>();
 
 			if (haltNoiseThresholdImagePipelineIndex >= GetImagePipelineCount()) {
-				SLG_LOG("WARNING: Halt thereshold image pipeline index not available. Reverting to first image pipeline");
+				SLG_LOG("WARNING: Halt threshold image pipeline index not available. Reverting to first image pipeline");
 				haltNoiseThresholdImagePipelineIndex = 0;
 			}
 

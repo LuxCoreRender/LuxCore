@@ -458,7 +458,7 @@ void BiDirCPURenderThread::DirectLightSampling(const float time,
 						const float weightLight = MIS(bsdfPdfW / directLightSamplingPdfW);
 						const float weightCamera = MIS(emissionPdfW * cosThetaToLight / (directPdfW * cosThetaAtLight)) *
 								(misVmWeightFactor + eyeVertex.dVCM + eyeVertex.dVC * MIS(bsdfRevPdfW));
-						// Disable MIS if we have gone trough a shadow transparent object
+						// Disable MIS if we have gone through a shadow transparent object
 						const float misWeight = shadowBsdf.hitPoint.throughShadowTransparency ?
 							1.f : (1.f / (weightLight + 1.f + weightCamera));
 

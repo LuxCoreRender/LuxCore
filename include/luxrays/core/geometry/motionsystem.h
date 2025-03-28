@@ -210,7 +210,7 @@ public:
 
 	// Concatenate two MotionTransform.
 	// Extract the unique knots from input MotionTransform'
-	// for each unique knot interpolate the knots from the other MotionTransform and concantenate.
+	// for each unique knot interpolate the knots from the other MotionTransform and concatenate.
 	// Thus if left hand has knots at (1, 3) and right hand has knots at (1, 4) then output has 
 	// knots at (1, 3, 4) where right hand side has been interpolated at knot t=3 and left hand side
 	// is kept constant after t=3.

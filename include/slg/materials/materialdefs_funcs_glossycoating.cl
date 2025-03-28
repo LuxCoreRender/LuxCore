@@ -59,7 +59,7 @@ OPENCL_FORCE_INLINE void GlossyCoatingMaterial_GetPassThroughTransparency(__glob
 		__global const HitPoint *hitPoint,
 		__global float *evalStack, uint *evalStackOffset
 		MATERIALS_PARAM_DECL) {
-	// Nothing to do there is already the matBase pass trough
+	// Nothing to do there is already the matBase pass through
 	// transparency on the stack
 }
 
