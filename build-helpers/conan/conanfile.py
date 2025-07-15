@@ -8,8 +8,10 @@
 from pathlib import Path
 import os
 import json
+import subprocess
 
 from conan import ConanFile
+from conan.errors import ConanInvalidConfiguration
 from conan.tools.cmake import CMakeDeps, CMakeToolchain, cmake_layout
 from conan.tools.env import VirtualBuildEnv
 
@@ -20,6 +22,20 @@ with open(BUILD_SETTINGS_FILE, encoding="utf-8") as config:
     config_json = json.load(config)
     LUXDEPS_VERSION = config_json["Dependencies"]["release"]
 
+# dynamically check gcc version on the system
+def detect_gcc_version():
+    cc = os.getenv("CC", "gcc")  # fallback to gcc if CC is not set
+    try:
+        output = subprocess.check_output([cc, "--version"], encoding="utf-8")
+        first_line = output.splitlines()[0]
+        # Example: "gcc (Ubuntu 14.2.1-1ubuntu1) 14.2.1 20230921"
+        import re
+        match = re.search(r"\b(\d+\.\d+)", first_line)
+        if match:
+            return float(match.group(1))
+    except Exception:
+        pass
+    return None
 
 class LuxCore(ConanFile):
     """Conan recipe."""
@@ -32,6 +48,7 @@ class LuxCore(ConanFile):
     requires = f"luxcoredeps/{LUXDEPS_VERSION}@luxcore/luxcore"
     tool_requires = "ninja/[*]", "doxygen/[*]"
     settings = "os", "compiler", "build_type", "arch"
+
 
     def _generate_oidn(self, toolchain):
         """Generate toolchain part related to oidn."""
@@ -151,6 +168,15 @@ class LuxCore(ConanFile):
             toolchain.presets_build_environment = buildenv.environment()
 
     def generate(self):
+        """Ensure installed gcc version meet min requirements"""
+        compiler = self.settings.get_safe("compiler")
+    
+        if compiler == "gcc":
+            # dynamically check gcc version on the system
+            version = detect_gcc_version()
+            if version is None or version < 14.0:
+                raise ConanInvalidConfiguration(f"GCC >= 14 is required, found {version or 'unknown system gcc'}")
+
         """Generate toolchain and dependencies."""
         toolchain = CMakeToolchain(self)
         toolchain.absolute_paths = True
