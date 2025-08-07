@@ -34,6 +34,12 @@ namespace luxrays {
 EmbreeAccel::EmbreeAccel(const Context *context) : ctx(context),
 		uniqueRTCSceneByMesh(MeshPtrCompare), uniqueGeomByMesh(MeshPtrCompare),
 		uniqueInstMatrixByMesh(MeshPtrCompare) {
+#if defined (_MSC_VER) || defined (__INTEL_COMPILER)
+	// Embree recommends settings these flags to improve performance
+	_MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
+	_MM_SET_DENORMALS_ZERO_MODE(_MM_DENORMALS_ZERO_ON);
+#endif
+
 	embreeDevice = rtcNewDevice(NULL);
 	embreeScene = NULL;
 }
