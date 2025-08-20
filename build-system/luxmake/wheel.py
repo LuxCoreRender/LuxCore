@@ -11,10 +11,11 @@ import tempfile
 import shutil
 import platform
 import os
+import shlex
 from pathlib import Path
 
-from .constants import SOURCE_DIR, INSTALL_DIR, BINARY_DIR, WHEELHOUSE_DIR
-from .utils import logger, pack, fail
+from .constants import SOURCE_DIR, INSTALL_DIR, BINARY_DIR, WHEELHOUSE_DIR, WHEEL_HOOK
+from .utils import logger, pack, fail, Colors
 from .build import build_and_install
 from .windows import win_recompose
 
@@ -69,10 +70,12 @@ def _get_lib_paths():
 def make_wheel(args):
     """Build a wheel."""
     logger.warning(
+        f"{Colors.WARNING}"
         "This command builds a TEST wheel, "
         "not fully compliant to standard "
         "and only intended for test. "
         "DO NOT USE IN PRODUCTION."
+        f"{Colors.ENDC}"
     )
     # Build and install pyluxcore
     args.target = "pyluxcore"
@@ -171,3 +174,14 @@ def make_wheel(args):
         if platform.system() == "Windows":
             args.wheel = WHEELHOUSE_DIR / wheelname
             win_recompose(args)
+
+        # Finally, execute hook if exists
+        if WHEEL_HOOK:
+            logger.info("Executing hook: " + WHEEL_HOOK)
+            try:
+                result = subprocess.check_output(
+                    shlex.split(WHEEL_HOOK), text=True
+                )
+            except subprocess.CalledProcessError as err:
+                fail(err)
+            logger.info(result)

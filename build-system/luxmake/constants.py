@@ -24,6 +24,10 @@ BUILD_TYPE = os.getenv(
     "LUX_BUILD_TYPE",
     "Release",
 )
+WHEEL_HOOK = os.getenv(  # Hook to execute after wheel-test build
+    "LUX_WHEEL_HOOK",
+    "",
+)
 
 # Computed variables
 BUILD_DIR = BINARY_DIR / "build"
