@@ -1201,6 +1201,100 @@ static void Scene_DefineMeshExt2(luxcore::detail::SceneImpl *scene, const string
   Scene_DefineMeshExt1(scene, meshName, p, vi, n, uv, cols, alphas, py::none());
 }
 
+
+// Helper for DefineMeshExt3
+// Allocate internal data structure and copy array inside
+template<
+	typename S,  // Source
+	typename D,  // Destination
+	D* (*Allocator)(unsigned int),
+	size_t stride=3
+>
+std::tuple<std::unique_ptr<D>, u_int> dataCopy(
+	py::array_t<S, py::array::c_style> src,
+	const std::string& meshName,
+	const std::string& propertyName
+) {
+	// Remark:
+	// All buffers (triangles, points, normals...) are enclosed in smart pointers
+	// in order to guarantee that memory is released in case of exception arising
+	// during whole process: please keep it so.
+	using this_array_t = py::array_t<S, py::array::c_style>;
+	auto direct_src = src.template unchecked<2>();
+
+	// Check
+	if (direct_src.shape(1) != stride) {
+		std::string errorMsg = std::string("Scene.DefineMeshExt: Error - ")
+			+ "Mesh '" + meshName + "' / "
+			+ "Property '" + std::string(propertyName) + "' - "
+			+ "Shape must be [N," + std::to_string(stride) + "]";
+		throw std::runtime_error(errorMsg);
+	}
+
+	// Allocate & copy
+	u_int count = direct_src.shape(0);
+	if (!count) return std::tuple(nullptr, 0);
+    auto dest = std::unique_ptr<D>(Allocator(count));
+	std::memcpy(dest.get(), direct_src.data(0, 0), direct_src.nbytes());
+
+	return std::tuple(std::move(dest), count);
+}
+
+
+
+// Define Mesh from Numpy arrays
+static void Scene_DefineMeshExt3(
+	luxcore::detail::SceneImpl *scene,
+	const string &meshName,
+    const py::array_t<float, py::array::c_style> p,
+	const py::array_t<unsigned int, py::array::c_style> tri,
+    const py::array_t<float, py::array::c_style> n,
+    const py::array_t<float, py::array::c_style> uv,
+    const py::array_t<float, py::array::c_style> cols,
+    const py::array_t<float, py::array::c_style> alphas,
+    const py::array_t<float, py::array::c_style> transformation
+) {
+	// TODO Release GIL
+
+	// Points
+	auto [points, numPoints] = dataCopy<
+		float,
+		luxrays::Point,
+		&luxcore::detail::SceneImpl::AllocVerticesBuffer
+	> (p, meshName, "Points");
+
+	// Triangles
+	auto [triangles, numTriangles] = dataCopy<
+		u_int,
+		luxrays::Triangle,
+		&luxcore::detail::SceneImpl::AllocTrianglesBuffer
+	> (tri, meshName, "Triangles");
+
+	// Create Mesh
+	auto* newMesh =  new luxrays::ExtTriangleMesh(
+		u_int(numPoints),
+		u_int(numTriangles),
+		points.release(),
+		triangles.release(),
+		(luxrays::Normal*) nullptr,  // Normals
+		(luxrays::UV*) nullptr,  // UV
+		(luxrays::Spectrum*) nullptr,  // Colors
+		(float*) nullptr   // Alphas
+	);
+	newMesh->SetName(meshName);
+
+  // Apply the transformation if required
+  // TODO
+  //if (!transformation.is_none()) {
+    //float mat[16];
+    //GetMatrix4x4(transformation, mat);
+    //mesh->ApplyTransform(luxrays::Transform(luxrays::Matrix4x4(mat).Transpose()));
+  //}
+
+  // Insert mesh into the scene
+  scene->DefineMesh(newMesh);
+}
+
 static void Scene_SetMeshVertexAOV(luxcore::detail::SceneImpl *scene, const string &meshName,
     const size_t index, const py::object &data) {
   vector<float> v;
@@ -2002,6 +2096,19 @@ PYBIND11_MODULE(pyluxcore, m) {
     .def("DefineMesh", &Scene_DefineMesh2)
     .def("DefineMeshExt", &Scene_DefineMeshExt1)
     .def("DefineMeshExt", &Scene_DefineMeshExt2)
+    .def(
+		"DefineMeshExt",
+		&Scene_DefineMeshExt3,
+		"Define an extended mesh from Numpy arrays",
+		py::arg("name"),
+		py::arg("points"),
+		py::arg("triangles"),
+		py::arg("normals") = py::none(),
+		py::arg("uvs") = py::none(),
+		py::arg("colors") = py::none(),
+		py::arg("alphas") = py::none(),
+		py::arg("transformation") = py::none()
+	)
     .def("SetMeshVertexAOV", &Scene_SetMeshVertexAOV)
     .def("SetMeshTriangleAOV", &Scene_SetMeshTriangleAOV)
     .def("SetMeshAppliedTransformation", &Scene_SetMeshAppliedTransformation)
