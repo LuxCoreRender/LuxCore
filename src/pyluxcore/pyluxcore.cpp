@@ -1202,11 +1202,16 @@ static void Scene_DefineMeshExt2(luxcore::detail::SceneImpl *scene, const string
 }
 
 
+// TODO convert into lambda
+luxrays::Normal* AllocNormalsBuffer(unsigned int n) {
+	return (new luxrays::Normal[n]);
+}
+
 // Helper for DefineMeshExt3
 // Allocate internal data structure and copy array inside
 template<
-	typename S,  // Source
-	typename D,  // Destination
+	typename S,  // Source type
+	typename D,  // Destination type
 	D* (*Allocator)(unsigned int),
 	size_t stride=3
 >
@@ -1219,7 +1224,7 @@ std::tuple<std::unique_ptr<D>, u_int> dataCopy(
 	// All buffers (triangles, points, normals...) are enclosed in smart pointers
 	// in order to guarantee that memory is released in case of exception arising
 	// during whole process: please keep it so.
-	using this_array_t = py::array_t<S, py::array::c_style>;
+	using this_array_t = py::array_t< S, py::array::c_style | py::array::forcecast >;
 	auto direct_src = src.template unchecked<2>();
 
 	// Check
@@ -1240,19 +1245,20 @@ std::tuple<std::unique_ptr<D>, u_int> dataCopy(
 	return std::tuple(std::move(dest), count);
 }
 
-
+//
+using triangle_underlying_type = std::remove_all_extents<decltype(luxrays::Triangle::v)>::type;
 
 // Define Mesh from Numpy arrays
 static void Scene_DefineMeshExt3(
 	luxcore::detail::SceneImpl *scene,
 	const string &meshName,
-    const py::array_t<float, py::array::c_style> p,
-	const py::array_t<unsigned int, py::array::c_style> tri,
-    const py::array_t<float, py::array::c_style> n,
-    const py::array_t<float, py::array::c_style> uv,
-    const py::array_t<float, py::array::c_style> cols,
-    const py::array_t<float, py::array::c_style> alphas,
-    const py::array_t<float, py::array::c_style> transformation
+    const py::array_t<float, py::array::c_style > p,
+	const py::array_t<triangle_underlying_type, py::array::c_style > tri,
+    const py::array_t<float, py::array::c_style > n,
+    const py::array_t<float, py::array::c_style > uv,
+    const py::array_t<float, py::array::c_style > cols,
+    const py::array_t<float, py::array::c_style > alphas,
+    const py::array_t<float, py::array::c_style > transformation
 ) {
 	// TODO Release GIL
 
@@ -1260,23 +1266,34 @@ static void Scene_DefineMeshExt3(
 	auto [points, numPoints] = dataCopy<
 		float,
 		luxrays::Point,
-		&luxcore::detail::SceneImpl::AllocVerticesBuffer
+		&luxcore::detail::SceneImpl::AllocVerticesBuffer,
+		3
 	> (p, meshName, "Points");
 
 	// Triangles
 	auto [triangles, numTriangles] = dataCopy<
-		u_int,
+		triangle_underlying_type,
 		luxrays::Triangle,
-		&luxcore::detail::SceneImpl::AllocTrianglesBuffer
+		&luxcore::detail::SceneImpl::AllocTrianglesBuffer,
+		3
 	> (tri, meshName, "Triangles");
 
+	// Normals
+	auto [normals, numNormals] = dataCopy<
+		float,
+		luxrays::Normal,
+		&AllocNormalsBuffer,
+		3
+	> (n, meshName, "Normals");
+
 	// Create Mesh
+	// TODO Normals, UVs, Colors, Alphas
 	auto* newMesh =  new luxrays::ExtTriangleMesh(
 		u_int(numPoints),
 		u_int(numTriangles),
 		points.release(),
 		triangles.release(),
-		(luxrays::Normal*) nullptr,  // Normals
+		normals.release(),  // Normals
 		(luxrays::UV*) nullptr,  // UV
 		(luxrays::Spectrum*) nullptr,  // Colors
 		(float*) nullptr   // Alphas
@@ -2094,8 +2111,6 @@ PYBIND11_MODULE(pyluxcore, m) {
     .def("IsImageMapDefined", &luxcore::detail::SceneImpl::IsImageMapDefined)
     .def("DefineMesh", &Scene_DefineMesh1)
     .def("DefineMesh", &Scene_DefineMesh2)
-    .def("DefineMeshExt", &Scene_DefineMeshExt1)
-    .def("DefineMeshExt", &Scene_DefineMeshExt2)
     .def(
 		"DefineMeshExt",
 		&Scene_DefineMeshExt3,
@@ -2109,6 +2124,8 @@ PYBIND11_MODULE(pyluxcore, m) {
 		py::arg("alphas") = py::none(),
 		py::arg("transformation") = py::none()
 	)
+	.def("DefineMeshExt", &Scene_DefineMeshExt1)
+	.def("DefineMeshExt", &Scene_DefineMeshExt2)
     .def("SetMeshVertexAOV", &Scene_SetMeshVertexAOV)
     .def("SetMeshTriangleAOV", &Scene_SetMeshTriangleAOV)
     .def("SetMeshAppliedTransformation", &Scene_SetMeshAppliedTransformation)
