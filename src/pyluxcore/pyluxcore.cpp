@@ -28,6 +28,7 @@
 #include <pybind11/stl.h>
 #include <pybind11/numpy.h>
 #include <pybind11/operators.h>
+#include <pybind11/typing.h>
 
 
 #include <locale>
@@ -1202,9 +1203,18 @@ static void Scene_DefineMeshExt2(luxcore::detail::SceneImpl *scene, const string
 }
 
 
-// TODO convert into lambda
+// TODO make template
 luxrays::Normal* AllocNormalsBuffer(unsigned int n) {
 	return (new luxrays::Normal[n]);
+}
+luxrays::UV* AllocUVBuffer(unsigned int n) {
+	return (new luxrays::UV[n]);
+}
+luxrays::Spectrum* AllocRGBBuffer(unsigned int n) {
+	return (new luxrays::Spectrum[n]);
+}
+float* AllocAlphaBuffer(unsigned int n) {
+	return (new float[n]);
 }
 
 // Helper for DefineMeshExt3
@@ -1220,6 +1230,8 @@ std::tuple<std::unique_ptr<D>, u_int> dataCopy(
 	const std::string& meshName,
 	const std::string& propertyName
 ) {
+	auto src_stride = src.shape(1);
+
 	// Remark:
 	// All buffers (triangles, points, normals...) are enclosed in smart pointers
 	// in order to guarantee that memory is released in case of exception arising
@@ -1228,16 +1240,18 @@ std::tuple<std::unique_ptr<D>, u_int> dataCopy(
 	auto direct_src = src.template unchecked<2>();
 
 	// Check
-	if (direct_src.shape(1) != stride) {
+	if (src_stride != stride) {
 		std::string errorMsg = std::string("Scene.DefineMeshExt: Error - ")
 			+ "Mesh '" + meshName + "' / "
 			+ "Property '" + std::string(propertyName) + "' - "
-			+ "Shape must be [N," + std::to_string(stride) + "]";
+			+ "Shape must be [N,"
+			+ std::to_string(stride)
+			+ "]";
 		throw std::runtime_error(errorMsg);
 	}
 
 	// Allocate & copy
-	u_int count = direct_src.shape(0);
+	u_int count = src.shape(0);
 	if (!count) return std::tuple(nullptr, 0);
     auto dest = std::unique_ptr<D>(Allocator(count));
 	std::memcpy(dest.get(), direct_src.data(0, 0), direct_src.nbytes());
@@ -1245,22 +1259,43 @@ std::tuple<std::unique_ptr<D>, u_int> dataCopy(
 	return std::tuple(std::move(dest), count);
 }
 
-//
+// Variant of DataCopy for optional arguments
+template<
+	typename S,  // Source type
+	typename D,  // Destination type
+	D* (*Allocator)(unsigned int),
+	size_t stride=3
+>
+std::tuple<std::unique_ptr<D>, u_int> dataCopyOptional(
+	std::optional<py::array_t<S, py::array::c_style>> src,
+	const std::string& meshName,
+	const std::string& propertyName
+) {
+	if (src.has_value()) {
+		return dataCopy<S, D, Allocator, stride>(src.value(), meshName, propertyName);
+	} else {
+		return std::tuple(nullptr, 0);
+	}
+}
+
+
 using triangle_underlying_type = std::remove_all_extents<decltype(luxrays::Triangle::v)>::type;
+
+using py_float_array= py::array_t<float, py::array::c_style>;
 
 // Define Mesh from Numpy arrays
 static void Scene_DefineMeshExt3(
 	luxcore::detail::SceneImpl *scene,
 	const string &meshName,
-    const py::array_t<float, py::array::c_style > p,
+    const py_float_array p,
 	const py::array_t<triangle_underlying_type, py::array::c_style > tri,
-    const py::array_t<float, py::array::c_style > n,
-    const py::array_t<float, py::array::c_style > uv,
-    const py::array_t<float, py::array::c_style > cols,
-    const py::array_t<float, py::array::c_style > alphas,
-    const py::array_t<float, py::array::c_style > transformation
+    const std::optional<py_float_array> n,
+    const std::optional<std::vector<py_float_array>> uv_layers,
+    const std::optional<std::vector<py_float_array>> color_layers,
+    const std::optional<std::vector<py_float_array>> alpha_layers,
+    const std::optional<py_float_array> transformation
 ) {
-	// TODO Release GIL
+	// TODO Release GIL when possible
 
 	// Points
 	auto [points, numPoints] = dataCopy<
@@ -1279,37 +1314,97 @@ static void Scene_DefineMeshExt3(
 	> (tri, meshName, "Triangles");
 
 	// Normals
-	auto [normals, numNormals] = dataCopy<
+	auto [normals, numNormals] = dataCopyOptional<
 		float,
 		luxrays::Normal,
 		&AllocNormalsBuffer,
 		3
 	> (n, meshName, "Normals");
 
+	// UV
+	std::array<luxrays::UV *, EXTMESH_MAX_DATA_COUNT> meshUVs;
+	std::fill(meshUVs.begin(), meshUVs.end(), nullptr);
+	if (uv_layers.has_value()) {
+		auto uv_layers_count = uv_layers.value().size();
+		if (uv_layers_count > EXTMESH_MAX_DATA_COUNT) {
+			throw runtime_error("Too many UV Maps in list for method Scene.DefineMesh()");
+		}
+
+		for (size_t i = 0; i < uv_layers_count; ++i) {
+			auto uv_layer = uv_layers.value()[i];
+
+			auto [uv, numUV] = dataCopy< float, luxrays::UV, &AllocUVBuffer, 2>(
+				uv_layer, meshName, "uv"
+			);
+			meshUVs[i] = uv.release();
+		}
+	}
+
+	// Colors
+	std::array<luxrays::Spectrum *, EXTMESH_MAX_DATA_COUNT> meshCols;
+	std::fill(meshCols.begin(), meshCols.end(), nullptr);
+	if (color_layers.has_value()) {
+		auto color_layer_count = color_layers.value().size();
+		if (color_layer_count > EXTMESH_MAX_DATA_COUNT) {
+			throw runtime_error("Too many color attributes for method Scene.DefineMesh()");
+		}
+
+		for (size_t i = 0; i < color_layer_count; ++i) {
+			auto color_layer = color_layers.value()[i];
+
+			auto [colors, numColors] = dataCopy< float, luxrays::Spectrum, &AllocRGBBuffer, 3>(
+				color_layer, meshName, "colors"
+			);
+			meshCols[i] = colors.release();
+		}
+	}
+
+	// Alphas
+	std::array<float *, EXTMESH_MAX_DATA_COUNT> meshAlphas;
+	std::fill(meshAlphas.begin(), meshAlphas.end(), nullptr);
+	if (alpha_layers.has_value()) {
+		auto alpha_layer_count = alpha_layers.value().size();
+		if (alpha_layer_count > EXTMESH_MAX_DATA_COUNT) {
+			throw runtime_error("Too many alpha attributes for method Scene.DefineMesh()");
+		}
+
+		for (size_t i = 0; i < alpha_layer_count; ++i) {
+			auto alpha_layer = alpha_layers.value()[i];
+
+			// In caller's logic, alpha_layer shape must be (N,), but in
+			// DataCopy logic, it must be (N,1), so we reshape
+			pybind11::array::ShapeContainer new_shape({alpha_layer.shape(0), 1,});
+			auto reshaped_alpha_layer = alpha_layer.reshape(new_shape);
+			auto [alphas, numAlphas] = dataCopy< float, float, &AllocAlphaBuffer, 1>(
+				reshaped_alpha_layer, meshName, "alphas"
+			);
+			meshAlphas[i] = alphas.release();
+		}
+	}
+
 	// Create Mesh
-	// TODO Normals, UVs, Colors, Alphas
 	auto* newMesh =  new luxrays::ExtTriangleMesh(
 		u_int(numPoints),
 		u_int(numTriangles),
 		points.release(),
 		triangles.release(),
-		normals.release(),  // Normals
-		(luxrays::UV*) nullptr,  // UV
-		(luxrays::Spectrum*) nullptr,  // Colors
-		(float*) nullptr   // Alphas
+		normals.release(),
+		&meshUVs,
+		&meshCols,
+		&meshAlphas
 	);
 	newMesh->SetName(meshName);
 
-  // Apply the transformation if required
-  // TODO
-  //if (!transformation.is_none()) {
-    //float mat[16];
-    //GetMatrix4x4(transformation, mat);
-    //mesh->ApplyTransform(luxrays::Transform(luxrays::Matrix4x4(mat).Transpose()));
-  //}
+	if (transformation.has_value()) {
+		auto transval = transformation.value();
+		luxrays::Transform luxtrans{transval.data()};
+		newMesh->ApplyTransform(luxtrans);
+	}
 
-  // Insert mesh into the scene
-  scene->DefineMesh(newMesh);
+
+	// Insert mesh into the scene
+	scene->DefineMesh(newMesh);
+
 }
 
 static void Scene_SetMeshVertexAOV(luxcore::detail::SceneImpl *scene, const string &meshName,
