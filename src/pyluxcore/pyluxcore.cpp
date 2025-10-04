@@ -24,15 +24,18 @@
 #endif
 #endif
 
+#include <locale>
+#include <memory>
+
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include <pybind11/numpy.h>
 #include <pybind11/operators.h>
 #include <pybind11/typing.h>
 
+#include <openvdb/openvdb.h>
+#include <openvdb/io/File.h>
 
-#include <locale>
-#include <memory>
 
 #include "luxrays/luxrays.h"
 #include "luxcore/luxcore.h"
@@ -135,6 +138,163 @@ static void LuxCore_KernelCacheFill1() {
 
 static void LuxCore_KernelCacheFill2(const luxrays::Properties &config) {
   KernelCacheFill(config);
+}
+
+//------------------------------------------------------------------------------
+// OpenVDB helper functions
+//------------------------------------------------------------------------------
+py::list GetOpenVDBGridNames(const string &filePathStr) {
+  py::list gridNames;
+
+  openvdb::io::File file(filePathStr);
+  file.open();
+  for (auto i = file.beginName(); i != file.endName(); ++i)
+    gridNames.append(*i);
+
+  file.close();
+  return gridNames;
+}
+
+
+py::tuple GetOpenVDBGridInfo(const string &filePathStr, const string &gridName) {
+  py::list bBox;
+  py::list bBox_w;
+  py::list trans_matrix;
+  py::list BlenderMetadata;
+  openvdb::io::File file(filePathStr);
+  
+  file.open();
+  openvdb::MetaMap::Ptr ovdbMetaMap = file.getMetadata();
+
+  string creator = "";
+  try {
+    creator = ovdbMetaMap->metaValue<string>("creator");
+  } catch (openvdb::LookupError &e) {
+    cout << "No creator file meta data found in OpenVDB file " + filePathStr << endl;
+  };
+
+  openvdb::GridBase::Ptr ovdbGrid = file.readGridMetadata(gridName);  
+
+  //const openvdb::Vec3i bbox_min = ovdbGrid->metaValue<openvdb::Vec3i>("file_bbox_min");
+  //const openvdb::Vec3i bbox_max = ovdbGrid->metaValue<openvdb::Vec3i>("file_bbox_max");
+
+  const openvdb::math::Transform &transform = ovdbGrid->transform();
+  openvdb::math::Mat4f matrix = transform.baseMap()->getAffineMap()->getMat4();
+
+  for (int col = 0; col < 4; col++) {
+    for (int row = 0; row < 4; row++) {
+      trans_matrix.append(matrix(col, row));
+    }
+  }
+
+  // Read the grid from the file
+  ovdbGrid = file.readGrid(gridName);
+
+  openvdb::CoordBBox coordbbox;
+  ovdbGrid->baseTree().evalLeafBoundingBox(coordbbox);
+  openvdb::BBoxd bbox_world = ovdbGrid->transform().indexToWorld(coordbbox);
+
+  bBox.append(coordbbox.min()[0]);
+  bBox.append(coordbbox.min()[1]);
+  bBox.append(coordbbox.min()[2]);
+
+  bBox.append(coordbbox.max()[0]);
+  bBox.append(coordbbox.max()[1]);
+  bBox.append(coordbbox.max()[2]);
+
+  bBox_w.append(bbox_world.min().x());
+  bBox_w.append(bbox_world.min().y());
+  bBox_w.append(bbox_world.min().z());
+
+  bBox_w.append(bbox_world.max().x());
+  bBox_w.append(bbox_world.max().y());
+  bBox_w.append(bbox_world.max().z());
+
+
+  if (creator == "Blender/Smoke") {
+    py::list min_bbox_list;
+    py::list max_bbox_list;
+    py::list res_list;
+    py::list minres_list;
+    py::list maxres_list;
+    py::list baseres_list;
+    py::list obmat_list;
+    py::list obj_shift_f_list;
+
+    openvdb::Vec3s min_bbox = ovdbMetaMap->metaValue<openvdb::Vec3s>("blender/smoke/min_bbox");
+    openvdb::Vec3s max_bbox = ovdbMetaMap->metaValue<openvdb::Vec3s>("blender/smoke/max_bbox");
+    openvdb::Vec3i res = ovdbMetaMap->metaValue<openvdb::Vec3i>("blender/smoke/resolution");
+
+    //adaptive domain settings
+    openvdb::Vec3i minres = ovdbMetaMap->metaValue<openvdb::Vec3i>("blender/smoke/min_resolution");
+    openvdb::Vec3i maxres = ovdbMetaMap->metaValue<openvdb::Vec3i>("blender/smoke/max_resolution");
+
+    openvdb::Vec3i base_res = ovdbMetaMap->metaValue<openvdb::Vec3i>("blender/smoke/base_resolution");
+
+    openvdb::Mat4s obmat = ovdbMetaMap->metaValue<openvdb::Mat4s>("blender/smoke/obmat");
+    openvdb::Vec3s obj_shift_f = ovdbMetaMap->metaValue<openvdb::Vec3s>("blender/smoke/obj_shift_f");
+
+    min_bbox_list.append(min_bbox[0]);
+    min_bbox_list.append(min_bbox[1]);
+    min_bbox_list.append(min_bbox[2]);
+
+    max_bbox_list.append(max_bbox[0]);
+    max_bbox_list.append(max_bbox[1]);
+    max_bbox_list.append(max_bbox[2]);
+
+    res_list.append(res[0]);
+    res_list.append(res[1]);
+    res_list.append(res[2]);
+
+    minres_list.append(minres[0]);
+    minres_list.append(minres[1]);
+    minres_list.append(minres[2]);
+
+    maxres_list.append(maxres[0]);
+    maxres_list.append(maxres[1]);
+    maxres_list.append(maxres[2]);
+
+    baseres_list.append(base_res[0]);
+    baseres_list.append(base_res[1]);
+    baseres_list.append(base_res[2]);
+
+    obmat_list.append(obmat[0][0]);
+    obmat_list.append(obmat[0][1]);
+    obmat_list.append(obmat[0][2]);
+    obmat_list.append(obmat[0][3]);
+
+    obmat_list.append(obmat[1][0]);
+    obmat_list.append(obmat[1][1]);
+    obmat_list.append(obmat[1][2]);
+    obmat_list.append(obmat[1][3]);
+
+    obmat_list.append(obmat[2][0]);
+    obmat_list.append(obmat[2][1]);
+    obmat_list.append(obmat[2][2]);
+    obmat_list.append(obmat[2][3]);
+
+    obmat_list.append(obmat[3][0]);
+    obmat_list.append(obmat[3][1]);
+    obmat_list.append(obmat[3][2]);
+    obmat_list.append(obmat[3][3]);
+
+    obj_shift_f_list.append(obj_shift_f[0]);
+    obj_shift_f_list.append(obj_shift_f[1]);
+    obj_shift_f_list.append(obj_shift_f[2]);
+
+    BlenderMetadata.append(min_bbox_list);
+    BlenderMetadata.append(max_bbox_list);
+    BlenderMetadata.append(res_list);
+    BlenderMetadata.append(minres_list);
+    BlenderMetadata.append(maxres_list);
+    BlenderMetadata.append(baseres_list);
+    BlenderMetadata.append(obmat_list);
+    BlenderMetadata.append(obj_shift_f_list);
+  };
+
+  file.close();
+
+  return py::make_tuple(creator, bBox, bBox_w, trans_matrix, ovdbGrid->valueType(), BlenderMetadata);
 }
 
 //------------------------------------------------------------------------------
@@ -2315,6 +2475,9 @@ PYBIND11_MODULE(pyluxcore, m) {
     .def("SaveResumeFile", &luxcore::detail::RenderSessionImpl::SaveResumeFile)
   ;
 
+  m.def("GetOpenVDBGridNames", &GetOpenVDBGridNames);
+  m.def("GetOpenVDBGridInfo", &GetOpenVDBGridInfo);
+
   //--------------------------------------------------------------------------
   // Blender related functions
   //--------------------------------------------------------------------------
@@ -2327,9 +2490,6 @@ PYBIND11_MODULE(pyluxcore, m) {
   m.def("ConvertFilmChannelOutput_4xFloat_To_4xFloatList", &blender::ConvertFilmChannelOutput_4xFloat_To_4xFloatList);
   m.def("ConvertFilmChannelOutput_1xUInt_To_1xFloatList", &blender::ConvertFilmChannelOutput_1xUInt_To_1xFloatList);
   m.def("BlenderMatrix4x4ToList", &blender::BlenderMatrix4x4ToList);
-  m.def("GetOpenVDBGridNames", &blender::GetOpenVDBGridNames);
-  m.def("GetOpenVDBGridInfo", &blender::GetOpenVDBGridInfo);
-
   // Note: used by pyluxcoredemo.py, do not remove.
   m.def("ConvertFilmChannelOutput_3xFloat_To_4xUChar", &blender::ConvertFilmChannelOutput_3xFloat_To_4xUChar);
 }
