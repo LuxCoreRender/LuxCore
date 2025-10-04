@@ -39,7 +39,6 @@
 #include "luxcore/luxcore.h"
 #include "luxcore/luxcoreimpl.h"
 #include "luxcore/pyluxcore/pyluxcoreforblender.h"
-#include <blender_types.h>
 #include "luxrays/utils/utils.h"
 
 using namespace std;
@@ -53,134 +52,31 @@ OIIO_NAMESPACE_USING
 
 namespace {
 
-using blender::RenderPass;
-using blender::blender_ptr;
-using blender::MLoopTri;
-using blender::MLoopCol;
-//------------------------------------------------------------------------------
-// Blender struct access functions
-//------------------------------------------------------------------------------
-
-template<typename CustomData>
-static int CustomData_get_active_layer_index(const CustomData *data, int type)
-{
-  const int layer_index = data->typemap[type];
-  return (layer_index != -1) ? layer_index + data->layers[layer_index].active : -1;
-}
-
-template<typename CustomData>
-static int CustomData_get_named_layer_index(
-    const CustomData* data,
-    const int type,
-    const char* name)
-{
-  cout << "Tot layer: " << to_string(data->totlayer) << endl;
-
-  for (int i = 0; i < data->totlayer; i++) {
-    cout << i << ":" << data->layers[i].name << ", " << data->layers[i].type << endl;
-    if (data->layers[i].type == type) {
-      if (STREQ(data->layers[i].name, name)) {
-        return i;
-      }
-    }
-  }
-
-  return -1;
-}
-
-template<typename CustomData>
-static void* CustomData_get_layer(const CustomData *data, int type)
-{
-  /* get the layer index of the active layer of type */
-  int layer_index = CustomData_get_active_layer_index(data, type);
-  if (layer_index == -1) {
-    return nullptr;
-  }
-
-  return data->layers[layer_index].data;
-}
-
-template<typename CustomData>
-static void* CustomData_get_layer_named(const CustomData* data, int type, const char *name)
-{
-  /* get the layer index of the active layer of type */
-  int layer_index = CustomData_get_named_layer_index(data, type, name);
-  if (layer_index == -1) {
-    return nullptr;
-  }
-
-  return data->layers[layer_index].data;
-}
-//------------------------------------------------------------------------------
-// Utility functions
-//------------------------------------------------------------------------------
-
-template<class T>
-T FindMaxValue(const T* buffer, const size_t buffersize) {
-  T maxValue = 0;
-  for (u_int i = 0; i < buffersize; ++i) {
-    const T value = buffer[i];
-    if (value > maxValue) {
-      maxValue = value;
-    }
-  }
-  return maxValue;
-}
-
-template<>
-float FindMaxValue<float>(const float *buffer, const size_t buffersize) {
-  float maxValue = 0;
-  for (u_int i = 0; i < buffersize; ++i) {
-    const float value = buffer[i];
-    if (!isinf(value) && !isnan(value) && (value > maxValue)) {
-      maxValue = value;
-    }
-  }
-  return maxValue;
-}
-
-template<class T>
-void GetOutput(py::object &filmObj, const Film::FilmOutputType outputType,
-    const size_t outputIndex, T *pixels, const bool executeImagePipeline) {
-  // Convert py::object to C++ class
-  luxcore::detail::FilmImpl &filmImpl = py::cast<luxcore::detail::FilmImpl &>(filmObj);
-  Film &film = reinterpret_cast<Film &>(filmImpl);
-  film.GetOutput<T>(outputType, pixels, outputIndex, executeImagePipeline);
-}
-
-// Safety check
-static void ThrowIfSizeMismatch(const RenderPass *renderPass, const size_t width, const size_t height) {
-  if ((u_int)renderPass->rectx != width || (u_int)renderPass->recty != height) {
-    const string rectSize = luxrays::ToString(renderPass->rectx) + "x" + luxrays::ToString(renderPass->recty);
-    const string outputSize = luxrays::ToString(width) + "x" + luxrays::ToString(height);
-    throw runtime_error("Size mismatch. RenderPass->rect size: " + rectSize + ", passed width x height: " + outputSize);
-  }
-}
 
 static Transform ExtractTransformation(const py::object &transformation) {
   if (transformation.is_none()) {
-    return Transform();
+	return Transform();
   }
 
   if (py::isinstance<py::list>(transformation)) {
-    const py::list &lst = transformation.cast<py::list>();
-    const py::ssize_t size = py::len(lst);
-    if (size != 16) {
-      const string objType = py::cast<string>((transformation.attr("__class__")).attr("__name__"));
-      throw runtime_error("Wrong number of elements for the list of transformation values: " + objType);
-    }
+	const py::list &lst = transformation.cast<py::list>();
+	const py::ssize_t size = py::len(lst);
+	if (size != 16) {
+	  const string objType = py::cast<string>((transformation.attr("__class__")).attr("__name__"));
+	  throw runtime_error("Wrong number of elements for the list of transformation values: " + objType);
+	}
 
-    luxrays::Matrix4x4 mat;
-    py::ssize_t index = 0;
-    for (u_int j = 0; j < 4; ++j)
-      for (u_int i = 0; i < 4; ++i)
-        mat.m[i][j] = py::cast<float>(lst[index++]);
+	luxrays::Matrix4x4 mat;
+	py::ssize_t index = 0;
+	for (u_int j = 0; j < 4; ++j)
+	  for (u_int i = 0; i < 4; ++i)
+		mat.m[i][j] = py::cast<float>(lst[index++]);
 
-    return Transform(mat);
+	return Transform(mat);
   }
   else {
-    const string objType = py::cast<string>((transformation.attr("__class__")).attr("__name__"));
-    throw runtime_error("Wrong data type for the list of transformation values: " + objType);
+	const string objType = py::cast<string>((transformation.attr("__class__")).attr("__name__"));
+	throw runtime_error("Wrong data type for the list of transformation values: " + objType);
   }
 }
 
@@ -206,9 +102,9 @@ static Spectrum getColorFromImage(const vector<float> &imageData, const float ga
   assert (x < width);
   assert (y >= 0);
   assert (y < height);
-  
+
   const size_t index = (width * y + x) * channelCount;
-  
+
   if (channelCount == 1) {
     return Spectrum(powf(imageData[index], gamma));
   } else {
@@ -219,387 +115,6 @@ static Spectrum getColorFromImage(const vector<float> &imageData, const float ga
   }
 }
 
-static bool Scene_DefineBlenderMesh(
-    luxcore::detail::SceneImpl *scene,
-    const string &name,
-    const size_t loopTriCount,
-    blender_ptr loopTriPtr,
-    blender_ptr loopTriPolyPtr,
-    blender_ptr loopPtr,
-    blender_ptr vertPtr,
-    blender_ptr normalPtr,
-    blender_ptr sharpPtr,
-    const bool sharpAttr,
-    const py::object &loopUVsPtrList,
-    const py::object &loopColsPtrList,
-    blender_ptr meshPtr,
-    const int16_t matIndex,
-    const luxrays::Transform *trans,
-    const py::tuple& blenderVersion,
-    const py::object& material_indices,
-    const py::object& loopTriCustomNormals) {
-  const MLoopTri *loopTris = reinterpret_cast<const MLoopTri *>(loopTriPtr);
-  const int* loopTriPolys = reinterpret_cast<const int*>(loopTriPolyPtr);
-
-  const u_int* loops = reinterpret_cast<const u_int*>(loopPtr);
-  const float(*normals)[3] = nullptr;
-  normals = reinterpret_cast<const float(*)[3]>(normalPtr);
-
-  const bool* sharpList = reinterpret_cast<const bool*>(sharpPtr);
-
-
-
-  if (len(blenderVersion) != 3) {
-    throw runtime_error("Blender version tuple needs to have exactly 3 elements for Scene.DefineMesh()");
-  }
-
-  const int blenderVersionMajor = py::cast<int>(blenderVersion[0]);
-  const int blenderVersionMinor = py::cast<int>(blenderVersion[1]);
-  const int blenderVersionSub = py::cast<int>(blenderVersion[2]);
-
-  // Check UVs
-  if (!py::isinstance<py::list>(loopUVsPtrList)) {
-    const string objType = py::cast<string>((loopUVsPtrList.attr("__class__")).attr("__name__"));
-    throw runtime_error("Wrong data type for the list of UV maps of method Scene.DefineMesh(): " + objType);
-  }
-
-  const py::list& UVsList = py::cast<py::list>(loopUVsPtrList);
-  const py::ssize_t loopUVsCount = py::len(UVsList);
-
-  if (loopUVsCount > EXTMESH_MAX_DATA_COUNT) {
-    throw runtime_error("Too many UV Maps in list for method Scene.DefineMesh()");
-  }
-
-  // Check vertex colors
-  if (!py::isinstance<py::list>(loopColsPtrList)) {
-    const string objType = py::cast<string>((loopColsPtrList.attr("__class__")).attr("__name__"));
-    throw runtime_error("Wrong data type for the list of Vertex Color maps of method Scene.DefineMesh(): " + objType);
-  }
-
-  const py::list& ColsList = py::cast<py::list>(loopColsPtrList);
-  const py::ssize_t loopColsCount = py::len(ColsList);
-
-  if (loopColsCount > EXTMESH_MAX_DATA_COUNT) {
-    throw runtime_error("Too many Vertex Color Maps in list for method Scene.DefineMesh()");
-  }
-
-  vector<Normal> customNormals;
-  bool hasCustomNormals = false;
-
-
-  const float(*loopNormals)[3] = nullptr;
-  u_int loopCount = 0;
-
-  hasCustomNormals = !loopTriCustomNormals.is_none();
-  if (hasCustomNormals) {
-
-    if (!py::isinstance<py::list>(loopTriCustomNormals)) {
-      const string objType = py::cast<string>((loopUVsPtrList.attr("__class__")).attr("__name__"));
-      throw runtime_error("Wrong data type for the list of custom normals of method Scene.DefineMesh(): " + objType);
-    }
-
-    const py::list& loopTriCustomNormalsList = py::cast<py::list>(loopTriCustomNormals);
-    const py::ssize_t loopCustomNormalsCount = py::len(loopTriCustomNormalsList);
-
-    for (int i = 0; i < loopCustomNormalsCount; i += 3) {
-      const float x = py::cast<float>(loopTriCustomNormalsList[i]);
-      const float y = py::cast<float>(loopTriCustomNormalsList[i + 1]);
-      const float z = py::cast<float>(loopTriCustomNormalsList[i + 2]);
-      customNormals.emplace_back(Normal(x, y, z));
-    }
-  }
-
-
-  vector<size_t> loopUVsList;
-  vector<const MLoopCol *> loopColsList;
-  vector<Point> tmpMeshVerts;
-  vector<Normal> tmpMeshNorms;
-  vector<vector<UV>> tmpMeshUVs;
-  vector<vector<Spectrum>> tmpMeshCols;
-  vector<Triangle> tmpMeshTris;
-
-  for (u_int i = 0; i < loopUVsCount; ++i) {
-    loopUVsList.push_back(py::cast<size_t>(UVsList[i]));
-
-    vector<UV> temp;
-    tmpMeshUVs.push_back(temp);
-  }
-
-  for (u_int i = 0; i < loopColsCount; ++i) {
-    const size_t ColListPtr = py::cast<size_t>(ColsList[i]);
-    loopColsList.push_back(reinterpret_cast<const MLoopCol *>(ColListPtr));
-
-    vector<Spectrum> temp;
-    tmpMeshCols.push_back(temp);
-  }
-
-  u_int vertFreeIndex = 0;
-  std::unordered_map<u_int, u_int> vertexMap;
-
-  const float normalScale = 1.f / 32767.f;
-  const float rgbScale = 1.f / 255.f;
-
-  for (u_int loopTriIndex = 0; loopTriIndex < loopTriCount; ++loopTriIndex) {
-    const MLoopTri &loopTri = loopTris[loopTriIndex];
-    const int poly = loopTriPolys[loopTriIndex];
-
-    auto material_indices_list = py::cast<py::list>(material_indices);
-    if (py::cast<u_int>(material_indices_list[poly]) != matIndex)
-      continue;
-
-    u_int vertIndices[3];
-
-    bool smooth = true;
-    if(sharpAttr)
-      smooth = !sharpList[poly];
-
-    if (smooth) {
-      // Smooth shaded, use the Blender vertex normal
-      for (u_int i = 0; i < 3; ++i) {
-        const size_t tri = loopTri.tri[i];
-        const size_t index = loops[tri];
-
-        // Check if it has been already defined
-
-        bool alreadyDefined = (vertexMap.find(index) != vertexMap.end());
-        if (alreadyDefined) {
-          const size_t mappedIndex = vertexMap[index];
-
-          if (hasCustomNormals && (customNormals[tri] != tmpMeshNorms[mappedIndex]))
-            alreadyDefined = false;
-
-          for (u_int uvLayerIndex = 0; uvLayerIndex < loopUVsList.size() && alreadyDefined; ++uvLayerIndex) {
-            const float(*loopUVs)[2] = reinterpret_cast<const float(*)[2]>(loopUVsList[uvLayerIndex]);
-            if (loopUVs) {
-              const float* loopUV = loopUVs[tri];
-              // Check if the already defined vertex has the right UV coordinates
-              if ((loopUV[0] != tmpMeshUVs[uvLayerIndex][mappedIndex].u) ||
-                (loopUV[1] != tmpMeshUVs[uvLayerIndex][mappedIndex].v)) {
-                // I have to create a new vertex
-                alreadyDefined = false;
-              }
-            }
-          }
-          for (u_int colLayerIndex = 0; colLayerIndex < loopColsList.size() && alreadyDefined; ++colLayerIndex) {
-            const MLoopCol *loopCols = loopColsList[colLayerIndex];
-
-            if (loopCols) {
-              const MLoopCol &loopCol = loopCols[tri];
-              // Check if the already defined vertex has the right color
-              if (((loopCol.r * rgbScale) != tmpMeshCols[colLayerIndex][mappedIndex].c[0]) ||
-                ((loopCol.g * rgbScale) != tmpMeshCols[colLayerIndex][mappedIndex].c[1]) ||
-                ((loopCol.b * rgbScale) != tmpMeshCols[colLayerIndex][mappedIndex].c[2])) {
-                // I have to create a new vertex
-                alreadyDefined = false;
-              }
-            }
-          }
-        }
-
-        if (alreadyDefined)
-          vertIndices[i] = vertexMap[index];
-        else {
-          const float *vertex;
-
-          const float(*verts)[3] = reinterpret_cast<const float(*)[3]>(vertPtr);
-          vertex = verts[index];
-
-          // Add the vertex
-          tmpMeshVerts.emplace_back(Point(vertex));
-
-          // Add the normal
-          if (hasCustomNormals) {
-            tmpMeshNorms.push_back(customNormals[tri]);
-          }
-          else {
-            tmpMeshNorms.push_back(Normalize(Normal(
-              normals[index][0] * normalScale,
-              normals[index][1] * normalScale,
-              normals[index][2] * normalScale)));
-          }
-
-          // Add the UV
-          for (u_int uvLayerIndex = 0; uvLayerIndex < loopUVsList.size(); ++uvLayerIndex) {
-            const float(*loopUVs)[2] = reinterpret_cast<const float(*)[2]>(loopUVsList[uvLayerIndex]);
-            if (loopUVs) {
-              const float* loopUV = loopUVs[tri];
-              tmpMeshUVs[uvLayerIndex].push_back(UV(loopUV));
-            }
-          }
-          // Add the color
-          for (u_int colLayerIndex = 0; colLayerIndex < loopColsList.size(); ++colLayerIndex) {
-            const MLoopCol *loopCols = loopColsList[colLayerIndex];
-            if (loopCols) {
-              const MLoopCol &loopCol = loopCols[tri];
-              tmpMeshCols[colLayerIndex].push_back(Spectrum(
-                loopCol.r * rgbScale,
-                loopCol.g * rgbScale,
-                loopCol.b * rgbScale));
-            }
-          }
-          // Add the vertex mapping
-          const size_t vertIndex = vertFreeIndex++;
-          vertexMap[index] = vertIndex;
-          vertIndices[i] = vertIndex;
-        }
-      }
-    } else {
-      // Flat shaded, use the Blender face normal
-      const float* v0;
-      const float* v1;
-      const float* v2;
-
-      const float(*verts)[3] = reinterpret_cast<const float(*)[3]>(vertPtr);
-      v0 = verts[loops[loopTri.tri[0]]];
-      v1 = verts[loops[loopTri.tri[1]]];
-      v2 = verts[loops[loopTri.tri[2]]];
-
-      const Point p0(v0);
-      const Point p1(v1);
-      const Point p2(v2);
-
-      const Vector e1 = p1 - p0;
-      const Vector e2 = p2 - p0;
-      Normal faceNormal(Cross(e1, e2));
-
-      if ((faceNormal.x != 0.f) || (faceNormal.y != 0.f) || (faceNormal.z != 0.f))
-        faceNormal /= faceNormal.Length();
-
-      for (u_int i = 0; i < 3; ++i) {
-        const size_t tri = loopTri.tri[i];
-        const size_t index = loops[tri];
-
-        // Check if it has been already defined
-
-        bool alreadyDefined = (vertexMap.find(index) != vertexMap.end());
-        if (alreadyDefined) {
-          const size_t mappedIndex = vertexMap[index];
-
-          // In order to have flat shading, we need to duplicate vertices with differing normals
-          if (faceNormal != tmpMeshNorms[mappedIndex])
-            alreadyDefined = false;
-
-          for (u_int uvLayerIndex = 0; uvLayerIndex < loopUVsList.size() && alreadyDefined; ++uvLayerIndex) {
-            const float(*loopUVs)[2] = reinterpret_cast<const float(*)[2]>(loopUVsList[uvLayerIndex]);
-            if (loopUVs) {
-              const float* loopUV = loopUVs[tri];
-              // Check if the already defined vertex has the right UV coordinates
-              if ((loopUV[0] != tmpMeshUVs[uvLayerIndex][mappedIndex].u) ||
-                (loopUV[1] != tmpMeshUVs[uvLayerIndex][mappedIndex].v)) {
-                // I have to create a new vertex
-                alreadyDefined = false;
-              }
-            }
-          }
-          for (u_int colLayerIndex = 0; colLayerIndex < loopColsList.size() && alreadyDefined; ++colLayerIndex) {
-            const MLoopCol * loopCols = loopColsList[colLayerIndex];
-
-            if (loopCols) {
-              const MLoopCol &loopCol = loopCols[tri];
-              // Check if the already defined vertex has the right color
-              if (((loopCol.r * rgbScale) != tmpMeshCols[colLayerIndex][mappedIndex].c[0]) ||
-                ((loopCol.g * rgbScale) != tmpMeshCols[colLayerIndex][mappedIndex].c[1]) ||
-                ((loopCol.b * rgbScale) != tmpMeshCols[colLayerIndex][mappedIndex].c[2])) {
-                // I have to create a new vertex
-                alreadyDefined = false;
-              }
-            }
-          }
-        }
-
-        if (alreadyDefined)
-          vertIndices[i] = vertexMap[index];
-        else {
-          const float *vertex;
-          const float(*verts)[3] = reinterpret_cast<const float(*)[3]>(vertPtr);
-          vertex = verts[index];
-
-          // Add the vertex
-          tmpMeshVerts.emplace_back(Point(vertex));
-          // Add the normal (same for all vertices of this face, to have flat shading)
-          tmpMeshNorms.push_back(faceNormal);
-
-          // Add the UV
-          for (u_int uvLayerIndex = 0; uvLayerIndex < loopUVsList.size(); ++uvLayerIndex) {
-            const float(*loopUVs)[2] = reinterpret_cast<const float(*)[2]>(loopUVsList[uvLayerIndex]);
-            if (loopUVs) {
-              const float* loopUV = loopUVs[tri];
-              tmpMeshUVs[uvLayerIndex].push_back(UV(loopUV));
-            }
-          }
-
-          // Add the color
-          for (u_int colLayerIndex = 0; colLayerIndex < loopColsList.size(); ++colLayerIndex) {
-            const MLoopCol * loopCols = loopColsList[colLayerIndex];
-            if (loopCols) {
-              const MLoopCol &loopCol = loopCols[tri];
-              tmpMeshCols[colLayerIndex].push_back(Spectrum(
-                loopCol.r * rgbScale,
-                loopCol.g * rgbScale,
-                loopCol.b * rgbScale));
-            }
-          }
-          // Add the vertex mapping
-          const size_t vertIndex = vertFreeIndex++;
-          vertexMap[index] = vertIndex;
-          vertIndices[i] = vertIndex;
-        }
-      }
-
-    }
-
-    tmpMeshTris.emplace_back(Triangle(vertIndices[0], vertIndices[1], vertIndices[2]));  
-  }
-
-  // Check if there wasn't any triangles with matIndex
-  if (tmpMeshTris.size() == 0)
-    return false;
-
-  // Allocate memory for LuxCore mesh data
-  Triangle *meshTris = TriangleMesh::AllocTrianglesBuffer(tmpMeshTris.size());
-  copy(tmpMeshTris.begin(), tmpMeshTris.end(), meshTris);
-
-  Point *meshVerts = TriangleMesh::AllocVerticesBuffer(tmpMeshVerts.size());
-  copy(tmpMeshVerts.begin(), tmpMeshVerts.end(), meshVerts);
-
-  Normal *meshNorms = new Normal[tmpMeshVerts.size()];
-  copy(tmpMeshNorms.begin(), tmpMeshNorms.end(), meshNorms);
-
-  std::array<UV *, EXTMESH_MAX_DATA_COUNT> meshUVs;
-  std::array<Spectrum *, EXTMESH_MAX_DATA_COUNT> meshCols;
-
-  fill(meshUVs.begin(), meshUVs.end(), nullptr);
-  fill(meshCols.begin(), meshCols.end(), nullptr);
-
-  for (u_int i = 0; i < loopUVsList.size(); ++i) {
-    const float(*loopUVs)[2] = reinterpret_cast<const float(*)[2]>(loopUVsList[i]);
-    if (loopUVs) {
-      meshUVs[i] = new UV[tmpMeshVerts.size()];
-      copy(tmpMeshUVs[i].begin(), tmpMeshUVs[i].end(), meshUVs[i]);
-    }
-  }
-
-  for (u_int i = 0; i < loopColsList.size(); ++i) {
-    const MLoopCol * loopCols = loopColsList[i];
-    if (loopCols) {
-      meshCols[i] = new Spectrum[tmpMeshVerts.size()];
-      copy(tmpMeshCols[i].begin(), tmpMeshCols[i].end(), meshCols[i]);
-    }
-  }
-
-  luxrays::ExtTriangleMesh*mesh = new luxrays::ExtTriangleMesh(tmpMeshVerts.size(),
-    tmpMeshTris.size(), meshVerts, meshTris,
-    meshNorms, &meshUVs, &meshCols, NULL);
-
-  // Apply the transformation if required
-  if (trans)
-    mesh->ApplyTransform(*trans);
-
-  mesh->SetName(name);
-  scene->DefineMesh(mesh);
-
-  return true;
-}
 
 }
 
@@ -607,116 +122,6 @@ namespace luxcore {
 namespace blender {
 
 
-//------------------------------------------------------------------------------
-// General utility functions for the Blender addon
-//------------------------------------------------------------------------------
-
-// No safety checks to gain speed, this function is called for each particle, 
-// potentially millions of times.
-py::list BlenderMatrix4x4ToList(py::object &blenderMatrix) {
-  const PyObject *pyObj = blenderMatrix.ptr();
-  const MatrixObject *blenderMatrixObj = (MatrixObject *)pyObj;
-
-  py::list result;
-
-  for (int i = 0; i < 16; ++i) {
-    result.append(blenderMatrixObj->matrix[i]);
-  }
-
-  // Make invertible if necessary
-  Matrix4x4 matrix(blenderMatrixObj->matrix);
-  if (matrix.Determinant() == 0.f) {
-    const float epsilon = 1e-8f;
-    result[0] = py::cast<float>(result[0]) + epsilon;  // [0][0]
-    result[5]  = py::cast<float>(result[5]) + epsilon;  // [1][1]
-    result[10]  = py::cast<float>(result[10]) + epsilon;  // [2][2]
-    result[15]  = py::cast<float>(result[15]) + epsilon;  // [3][3]
-  }
-
-  return result;
-}
-
-
-//------------------------------------------------------------------------------
-// Mesh conversion functions
-//------------------------------------------------------------------------------
-
-
-
-
-mesh_list Scene_DefineBlenderMesh1(
-    luxcore::detail::SceneImpl *scene,
-    const std::string &name,
-    const size_t loopTriCount,
-    blender_ptr loopTriPtr,
-    blender_ptr loopTriPolyPtr,
-    blender_ptr loopPtr,
-    blender_ptr vertPtr,
-    blender_ptr normalPtr,
-    blender_ptr sharpPtr,
-    const bool sharpAttr,
-    const py::object& loopUVsPtrList,
-    const py::object& loopColsPtrList,
-    blender_ptr meshPtr,
-    const size_t materialCount,
-    const py::object& transformation,
-    const py::tuple& blenderVersion,
-    const py::object& material_indices,
-    const py::object& loopTriCustomNormals) {
-
-  // Get the transformation if required
-  bool hasTransformation = false;
-  Transform trans;
-  if (!transformation.is_none()) {
-    trans = ExtractTransformation(transformation);
-    hasTransformation = true;
-  }
-
-  mesh_list result;
-  for (u_int matIndex = 0; matIndex < materialCount; ++matIndex) {
-    const string meshName = (boost::format(name + "%03d") % matIndex).str();
-
-    if (Scene_DefineBlenderMesh(
-        scene, meshName,
-        loopTriCount, loopTriPtr, loopTriPolyPtr,
-        loopPtr, vertPtr, normalPtr, sharpPtr, sharpAttr,
-        loopUVsPtrList, loopColsPtrList,
-        meshPtr,
-        matIndex,
-        hasTransformation ? &trans : NULL,
-        blenderVersion,
-        material_indices,
-        loopTriCustomNormals)) {
-      result.push_back(std::make_tuple(meshName, matIndex));
-    }
-  }
-
-  return result;
-}
-
-mesh_list Scene_DefineBlenderMesh2(
-    luxcore::detail::SceneImpl *scene,
-    const string &name,
-    const size_t loopTriCount,
-    blender_ptr loopTriPtr,
-    blender_ptr loopTriPolyPtr,
-    blender_ptr loopPtr,
-    blender_ptr vertPtr,
-    blender_ptr normalPtr,
-    blender_ptr sharpPtr,
-    const bool sharpAttr,
-    const py::object& loopUVsPtrList,
-    const py::object& loopColsPtrList,
-    blender_ptr meshPtr,
-    const size_t materialCount,
-    const py::tuple& blenderVersion,
-    const py::object& material_indices,
-    const py::object& loopTriCustomNormals) {
-  return Scene_DefineBlenderMesh1(scene, name, loopTriCount, loopTriPtr, loopTriPolyPtr,
-    loopPtr, vertPtr, normalPtr, sharpPtr, sharpAttr, loopUVsPtrList, loopColsPtrList,
-    meshPtr, materialCount, py::list(), blenderVersion, material_indices,
-    loopTriCustomNormals);
-}
 
 
 // Returns true if the shape could be defined successfully, false otherwise.
@@ -876,7 +281,7 @@ bool Scene_DefineBlenderStrands(
   //--------------------------------------------------------------------------
 
   // There can be invalid points, so we have to filter them
-  const float epsilon = 0.000000001f;
+  constexpr float epsilon = 0.000000001f;
   const Point invalidPoint(0.f, 0.f, 0.f);
 
   vector<u_short> segments;

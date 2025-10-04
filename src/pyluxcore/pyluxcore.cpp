@@ -2175,14 +2175,6 @@ PYBIND11_MODULE(pyluxcore, m) {
     // "C.UTF-8" locale may not exist on some system so I ignore the error
   }
 
-  //np::initialize();  TODO
-
-  //docstring_options doc_options(
-    //true,  // Show user defined docstrings
-    //true,  // Show python signatures
-    //false  // Show C++ signatures
-  //);
-
   // This 'module' is actually a fake package
   m.attr("__path__") = "pyluxcore";
   m.attr("__package__") = "pyluxcore";
@@ -2314,7 +2306,6 @@ PYBIND11_MODULE(pyluxcore, m) {
     .def("DeleteAll", &Properties_DeleteAll)
     .def("ToString", &luxrays::Properties::ToString)
 
-    //.def(self_ns::str(self))
     .def("__str__", &luxrays::Properties::ToString)
   ;
 
@@ -2470,8 +2461,6 @@ PYBIND11_MODULE(pyluxcore, m) {
     .def("SetMeshTriangleAOV", &Scene_SetMeshTriangleAOV)
     .def("SetMeshAppliedTransformation", &Scene_SetMeshAppliedTransformation)
     .def("SaveMesh", &luxcore::detail::SceneImpl::SaveMesh)
-    .def("DefineBlenderMesh", &blender::Scene_DefineBlenderMesh1)
-    .def("DefineBlenderMesh", &blender::Scene_DefineBlenderMesh2)
     .def("DefineStrands", &Scene_DefineStrands)
     .def("DefineBlenderStrands", &blender::Scene_DefineBlenderStrands)
     .def("DefineBlenderCurveStrands", &blender::Scene_DefineBlenderCurveStrands)
@@ -2532,10 +2521,6 @@ PYBIND11_MODULE(pyluxcore, m) {
   //--------------------------------------------------------------------------
 
   py::class_<luxcore::detail::RenderSessionImpl>(m, "RenderSession")
-    // TODO
-    //.def(py::init<luxcore::detail::RenderConfigImpl *>()[with_custodian_and_ward<1, 2>()])
-    //.def(init<luxcore::detail::RenderConfigImpl *, string, string>()[with_custodian_and_ward<1, 2>()])
-    //.def(init<luxcore::detail::RenderConfigImpl *, luxcore::detail::RenderStateImpl *, luxcore::detail::FilmImpl *>()[with_custodian_and_ward<1, 2>()])
     .def(py::init<luxcore::detail::RenderConfigImpl *>(), py::keep_alive<1, 2>())
     .def(py::init<luxcore::detail::RenderConfigImpl *, string, string>(), py::keep_alive<1, 2>())
     .def(py::init<luxcore::detail::RenderConfigImpl *, luxcore::detail::RenderStateImpl *, luxcore::detail::FilmImpl *>(), py::keep_alive<1, 2>())
@@ -2563,11 +2548,6 @@ PYBIND11_MODULE(pyluxcore, m) {
   m.def("GetOpenVDBGridNames", &GetOpenVDBGridNames);
   m.def("GetOpenVDBGridInfo", &GetOpenVDBGridInfo);
 
-  //--------------------------------------------------------------------------
-  // Blender related functions
-  //--------------------------------------------------------------------------
-
-  m.def("BlenderMatrix4x4ToList", &blender::BlenderMatrix4x4ToList);
 
   // Note: used by pyluxcoredemo.py, do not remove.
   m.def("ConvertFilmChannelOutput_3xFloat_To_4xUChar", ConvertFilmChannelOutput_3xFloat_To_4xUChar);

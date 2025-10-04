@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2025 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -21,100 +21,18 @@
 
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
-#include "luxcore/luxcoreimpl.h"
 
 namespace py = pybind11;
 
+
+
 namespace luxcore {
+
+namespace detail {
+class SceneImpl;
+}
+
 namespace blender {
-
-using blender_ptr = size_t;
-
-extern void ConvertFilmChannelOutput_1xFloat_To_1xFloatList(py::object &filmObj,
-    const Film::FilmOutputType outputType, const size_t outputIndex, const size_t width,
-    const size_t height, blender_ptr renderPassPtr, const bool normalize,
-    const bool executeImagePipeline);
-
-extern void ConvertFilmChannelOutput_UV_to_Blender_UV(py::object &filmObj,
-    const Film::FilmOutputType outputType, const size_t outputIndex, const size_t width,
-    const size_t height, blender_ptr renderPassPtr, const bool normalize,
-    const bool executeImagePipeline);
-
-extern void ConvertFilmChannelOutput_1xFloat_To_4xFloatList(py::object &filmObj,
-    const Film::FilmOutputType outputType, const size_t outputIndex, const size_t width,
-    const size_t height, blender_ptr renderPassPtr, const bool normalize,
-    const bool executeImagePipeline);
-
-extern void ConvertFilmChannelOutput_3xFloat_To_3xFloatList(py::object &filmObj,
-    const Film::FilmOutputType outputType, const size_t outputIndex, const size_t width,
-    const size_t height, blender_ptr renderPassPtr, const bool normalize,
-    const bool executeImagePipeline);
-
-extern void ConvertFilmChannelOutput_3xFloat_To_4xFloatList(py::object &filmObj,
-    const Film::FilmOutputType outputType, const size_t outputIndex, const size_t width,
-    const size_t height, blender_ptr renderPassPtr, const bool normalize,
-    const bool executeImagePipeline);
-
-extern void ConvertFilmChannelOutput_4xFloat_To_4xFloatList(py::object &filmObj,
-    const Film::FilmOutputType outputType, const size_t outputIndex, const size_t width,
-    const size_t height, blender_ptr renderPassPtr, const bool normalize,
-    const bool executeImagePipeline);
-
-extern void ConvertFilmChannelOutput_1xUInt_To_1xFloatList(py::object &filmObj,
-    const Film::FilmOutputType outputType, const size_t outputIndex, const size_t width,
-    const size_t height, blender_ptr renderPassPtr, const bool normalize,
-    const bool executeImagePipeline);
-
-// Note: This method is used by pyluxcoredemo.py, do not remove.
-extern void ConvertFilmChannelOutput_3xFloat_To_4xUChar(const size_t width, const size_t height,
-    py::object &objSrc, py::object &objDst, const bool normalize);
-
-extern py::list BlenderMatrix4x4ToList(py::object &blenderMatrix);
-
-extern py::list GetOpenVDBGridNames(const std::string &filePathStr);
-extern py::tuple GetOpenVDBGridInfo(const std::string &filePathStr, const std::string &gridName);
-
-using mesh_list = std::vector< std::tuple<std::string, size_t> >;
-
-extern mesh_list Scene_DefineBlenderMesh1(
-    luxcore::detail::SceneImpl *scene,
-    const std::string &name,
-    const size_t loopTriCount,
-    blender_ptr loopTriPtr,
-    blender_ptr loopTriPolyPtr,
-    blender_ptr loopPtr,
-    blender_ptr vertPtr,
-    blender_ptr normalPtr,
-    blender_ptr sharpPtr,
-    const bool sharpAttr,
-    const py::object& loopUVsPtrList,
-    const py::object& loopColsPtrList,
-    blender_ptr meshPtr,
-    const size_t materialCount,
-    const py::object& transformation,
-    const py::tuple& blenderVersion,
-    const py::object& material_indices,
-    const py::object& loopTriCustomNormals);
-
-extern mesh_list Scene_DefineBlenderMesh2(
-    luxcore::detail::SceneImpl *scene,
-    const std::string &name,
-    const size_t loopTriCount,
-    blender_ptr loopTriPtr,
-    blender_ptr loopTriPolyPtr,
-    blender_ptr loopPtr,
-    blender_ptr vertPtr,
-    blender_ptr normalPtr,
-    blender_ptr sharpPtr,
-    const bool sharpAttr,
-    const py::object& loopUVsPtrList,
-    const py::object& loopColsPtrList,
-    blender_ptr meshPtr,
-    const size_t materialCount,
-    const py::tuple& blenderVersion,
-    const py::object& material_indices,
-    const py::object& loopTriCustomNormals);
-
 
 extern bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
     const std::string &shapeName,
