@@ -1363,7 +1363,7 @@ static void Scene_DefineMeshExt2(luxcore::detail::SceneImpl *scene, const string
 }
 
 
-// TODO make template
+// TODO make template and move to anonymous namespace
 luxrays::Normal* AllocNormalsBuffer(unsigned int n) {
 	return (new luxrays::Normal[n]);
 }
@@ -2093,7 +2093,8 @@ static float FindMaxValue(const float *buffer, const size_t buffersize) {
 	return maxValue;
 }
 
-// Note: This method is used by pyluxcoredemo.py, do not remove.
+// Note: This function is used by pyluxcoredemo.py, do not remove.
+// Note2: This function could be usefully implemented in Python/numpy (TODO).
 void ConvertFilmChannelOutput_3xFloat_To_4xUChar(const size_t width, const size_t height,
 		py::object &objSrc, py::object &objDst, const bool normalize) {
 	if (!PyObject_CheckBuffer(objSrc.ptr())) {
@@ -2566,13 +2567,6 @@ PYBIND11_MODULE(pyluxcore, m) {
   // Blender related functions
   //--------------------------------------------------------------------------
 
-  m.def("ConvertFilmChannelOutput_1xFloat_To_1xFloatList", &blender::ConvertFilmChannelOutput_1xFloat_To_1xFloatList);
-  m.def("ConvertFilmChannelOutput_UV_to_Blender_UV", &blender::ConvertFilmChannelOutput_UV_to_Blender_UV);
-  m.def("ConvertFilmChannelOutput_1xFloat_To_4xFloatList", &blender::ConvertFilmChannelOutput_1xFloat_To_4xFloatList);
-  m.def("ConvertFilmChannelOutput_3xFloat_To_3xFloatList", &blender::ConvertFilmChannelOutput_3xFloat_To_3xFloatList);
-  m.def("ConvertFilmChannelOutput_3xFloat_To_4xFloatList", &blender::ConvertFilmChannelOutput_3xFloat_To_4xFloatList);
-  m.def("ConvertFilmChannelOutput_4xFloat_To_4xFloatList", &blender::ConvertFilmChannelOutput_4xFloat_To_4xFloatList);
-  m.def("ConvertFilmChannelOutput_1xUInt_To_1xFloatList", &blender::ConvertFilmChannelOutput_1xUInt_To_1xFloatList);
   m.def("BlenderMatrix4x4ToList", &blender::BlenderMatrix4x4ToList);
 
   // Note: used by pyluxcoredemo.py, do not remove.
