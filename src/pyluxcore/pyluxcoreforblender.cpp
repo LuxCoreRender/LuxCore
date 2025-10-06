@@ -32,6 +32,7 @@
 #include <algorithm>
 #include <boost/format.hpp>
 
+
 #include <OpenImageIO/imagebufalgo.h>
 #include <OpenImageIO/imagebuf.h>
 #include <OpenImageIO/dassert.h>
@@ -80,6 +81,36 @@ static Transform ExtractTransformation(const py::object &transformation) {
   }
 }
 
+//------------------------------------------------------------------------------
+// General utility functions for the Blender addon
+//------------------------------------------------------------------------------
+
+
+// No safety checks to gain speed, this function is called for each particle,
+// potentially millions of times.
+static float determinant_4x4(const py::array_t<float> matrix) {
+	auto A = matrix.unchecked<2>();
+    return A(0, 0) * (
+        A(1, 1) * (A(2, 2) * A(3, 3) - A(2, 3) * A(3, 2)) -
+        A(1, 2) * (A(2, 1) * A(3, 3) - A(2, 3) * A(3, 1)) +
+        A(1, 3) * (A(2, 1) * A(3, 2) - A(2, 2) * A(3, 1))
+    )
+    - A(0, 1) * (
+        A(1, 0) * (A(2, 2) * A(3, 3) - A(2, 3) * A(3, 2)) -
+        A(1, 2) * (A(2, 0) * A(3, 3) - A(2, 3) * A(3, 0)) +
+        A(1, 3) * (A(2, 0) * A(3, 2) - A(2, 2) * A(3, 0))
+    )
+    + A(0, 2) * (
+        A(1, 0) * (A(2, 1) * A(3, 3) - A(2, 3) * A(3, 1)) -
+        A(1, 1) * (A(2, 0) * A(3, 3) - A(2, 3) * A(3, 0)) +
+        A(1, 3) * (A(2, 0) * A(3, 1) - A(2, 1) * A(3, 0))
+    )
+    - A(0, 3) * (
+        A(1, 0) * (A(2, 1) * A(3, 2) - A(2, 2) * A(3, 1)) -
+        A(1, 1) * (A(2, 0) * A(3, 2) - A(2, 2) * A(3, 0)) +
+        A(1, 2) * (A(2, 0) * A(3, 1) - A(2, 1) * A(3, 0))
+    );
+}
 
 //------------------------------------------------------------------------------
 // Hair/strands conversion functions
@@ -121,6 +152,32 @@ static Spectrum getColorFromImage(const vector<float> &imageData, const float ga
 namespace luxcore {
 namespace blender {
 
+
+// No safety checks to gain speed, this function is called for each particle,
+// potentially millions of times.
+py::list BlenderMatrix4x4ToList(const py::array_t<float>& blenderMatrix) {
+	auto unchecked = blenderMatrix.unchecked<2>();
+
+	py::list result;
+
+	// We have to transpose
+	for (py::ssize_t i = 0; i < unchecked.shape(1); ++i) {
+		for (py::ssize_t j = 0; j < unchecked.shape(0); ++j) {
+			result.append(unchecked(j, i));
+		}
+	}
+
+	// Make invertible if necessary
+	if (determinant_4x4(blenderMatrix) == 0.f) {
+		constexpr float epsilon = 1e-8f;
+		result[0] = py::cast<float>(result[0]) + epsilon;  // [0][0]
+		result[5]  = py::cast<float>(result[5]) + epsilon;  // [1][1]
+		result[10]  = py::cast<float>(result[10]) + epsilon;  // [2][2]
+		result[15]  = py::cast<float>(result[15]) + epsilon;  // [3][3]
+	}
+
+	return result;
+}
 
 
 

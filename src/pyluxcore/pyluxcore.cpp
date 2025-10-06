@@ -2547,6 +2547,7 @@ PYBIND11_MODULE(pyluxcore, m) {
 
   m.def("GetOpenVDBGridNames", &GetOpenVDBGridNames);
   m.def("GetOpenVDBGridInfo", &GetOpenVDBGridInfo);
+	m.def("BlenderMatrix4x4ToList", &blender::BlenderMatrix4x4ToList);
 
 
   // Note: used by pyluxcoredemo.py, do not remove.

@@ -34,6 +34,8 @@ class SceneImpl;
 
 namespace blender {
 
+extern py::list BlenderMatrix4x4ToList(const py::array_t<float>& blenderMatrix);
+
 extern bool Scene_DefineBlenderStrands(luxcore::detail::SceneImpl *scene,
     const std::string &shapeName,
     const size_t pointsPerStrand,
