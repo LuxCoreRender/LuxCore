@@ -37,7 +37,6 @@ target_link_libraries(pyluxcore PRIVATE
     pybind11::pybind11
     Python::Module
     onetbb::onetbb
-    blender-types
     robin_hood::robin_hood
     openimageio::openimageio
     embree::embree
