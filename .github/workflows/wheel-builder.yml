@@ -58,15 +58,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-minor: [9, 10, 11, 12, 13]
-        os: [ubuntu-latest, windows-latest, macos-13, macos-14]
-        #python-minor: [ 9 ]
-        #python-minor: [ 12]
-        #os: [macos-14]
-        #python-minor: [ 11]
-        #os: [windows-latest]
-        #python-minor: [ 11]
-        #os: [macos-13]
+        python-minor: [10, 11, 12, 13, 14]
+        os: [ubuntu-latest, windows-latest, macos-15-intel, macos-15]
     env:
       # Reminder: report all variables here to CIBW_ENVIRONMENT_PASS_LINUX
       BUILD_TYPE: ${{ github.event.inputs.build-type || 'Release' }}
