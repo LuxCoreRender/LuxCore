@@ -14,7 +14,7 @@ dependencies = [
   "numpy < 2; python_version <= '3.8'",
   "nvidia-cuda-nvrtc-cu12 == 12.8.93; sys_platform != 'darwin'",
 ]
-requires-python = ">= 3.9"
+requires-python = ">= 3.10"
 description = "LuxCore Python bindings"
 authors = [{name="LuxCoreRender"}]
 ## See https://pypi.org/classifiers/
