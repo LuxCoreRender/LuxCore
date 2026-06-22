@@ -9,6 +9,8 @@
 set(DOC_SOURCE_DIR ${PROJECT_SOURCE_DIR}/doxygen)
 set(DOC_BUILD_DIR ${PROJECT_BINARY_DIR}/doc)
 
+find_package(Doxygen)
+
 if (NOT TARGET doc)
   if(DOXYGEN_FOUND)
     configure_file("${DOC_SOURCE_DIR}/all.template.in" "${DOC_BUILD_DIR}/Doxyfile")
@@ -21,7 +23,7 @@ if (NOT TARGET doc)
     # Config/Release is not relevant for doc (thus ../doc/html)
     install(DIRECTORY ${DOC_BUILD_DIR}/html/ DESTINATION ../doc/html COMPONENT doc)
   else()
-    message(AUTHOR_WARNING "Doxygen not found, could not create documentation")
+    message(AUTHOR_WARNING "Doxygen not found: documentation generation will not be available")
   endif(DOXYGEN_FOUND)
 endif()
 
