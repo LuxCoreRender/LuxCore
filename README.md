@@ -37,6 +37,7 @@ software:
 - [Github CLI](https://cli.github.com/) (for dependency signature checking)
 - [repairwheel](https://pypi.org/project/repairwheel/) (to build test wheels)
 - [nektos/act](https://github.com/nektos/act) (to test Github scripts locally)
+- [Doxygen](https://www.doxygen.nl/download.html) (to generate development documentation)
 
 [Mandatory, Windows only] For Windows, ensure the command line is configured
 for building (`vcvarsall.bat`).
