@@ -319,6 +319,12 @@ jobs:
             rm miniconda3/miniconda.sh
             source miniconda3/bin/activate
             conda init --all
+
+            # Accept conda terms of service
+            conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
+            conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
+
+            # Install gh
             conda install gh --channel conda-forge -y
             echo ${{ secrets.GITHUB_TOKEN }} | gh auth login --with-token
 
