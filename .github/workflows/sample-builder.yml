@@ -43,7 +43,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-2022, macos-15, macos-15-intel]
+        os: [ubuntu-latest, windows-2022, macos-15, macos-15-intel, windows-11-arm]
     env:
       BUILD_TYPE: Release
       #CXX_VERSION: 20
@@ -170,6 +170,8 @@ jobs:
       - name: Prepare msvc
         if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: ${{ runner.arch == 'ARM64' && 'arm64' || 'x64' }}
 
       - name: Set MacOS deployment target
         if: runner.os == 'macOS'

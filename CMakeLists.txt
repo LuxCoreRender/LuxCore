@@ -255,10 +255,13 @@ if(MSVC)
   ADD_DEFINITIONS(-D_CRT_SECURE_NO_WARNINGS -D_SCL_SECURE_NO_WARNINGS)
   # Enable Unicode
   ADD_DEFINITIONS(-D_UNICODE)
-  # Enable SSE2/SSE/MMX
-  ADD_DEFINITIONS(-D__SSE2__ -D__SSE__ -D__MMX__)
+  if(NOT CMAKE_SYSTEM_PROCESSOR MATCHES "ARM64")
+    # SSE/AVX flags are only valid for x86/x64 targets
+    ADD_DEFINITIONS(-D__SSE2__ -D__SSE__ -D__MMX__)
+    add_compile_options("/arch:AVX")
+  endif()
   # Add compile and link options
-  add_compile_options("/arch:AVX" "/DWIN32" "/D_WINDOWS" "/EHsc" "/bigobj")
+  add_compile_options("/DWIN32" "/D_WINDOWS" "/EHsc" "/bigobj")
   add_link_options("/INCREMENTAL:NO" "/PDBALTPATH:%_PDB%")
 
   # Debug information format (embedded)

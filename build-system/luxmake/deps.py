@@ -28,6 +28,7 @@ CONAN_ENV = {}
 URL_SUFFIXES = {
     "Linux-X64": "ubuntu-latest",
     "Windows-X64": "windows-2022",
+    "Windows-ARM64": "windows-11-arm",
     "macOS-ARM64": "macos-15-arm64",
     "macOS-X64": "macos-15-intel",
 }
@@ -47,7 +48,13 @@ def find_platform():
     if system == "Linux":
         res = "Linux-X64"
     elif system == "Windows":
-        res = "Windows-X64"
+        machine = platform.machine()
+        if machine.lower() == "arm64":
+            res = "Windows-ARM64"
+        elif machine.lower() in ("amd64", "x86_64"):
+            res = "Windows-X64"
+        else:
+            raise RuntimeError(f"Unknown machine for Windows: '{machine}'")
     elif system == "Darwin":
         machine = platform.machine()
         if machine == "arm64":
@@ -514,6 +521,16 @@ def main(
                 f"luxcoreconf/{release}@luxcore/luxcore",
             ]
         )
+
+        # Install compatibility plugin so MSVC consumers can find clang-built
+        # packages on Windows ARM64 (e.g. Embree built with clang)
+        logger_step("Installing compatibility plugin")
+        plugins_dir = conan_home() / "extensions" / "plugins" / "compatibility"
+        plugins_dir.mkdir(parents=True, exist_ok=True)
+        compat_src = PARAMS.SOURCE_DIR / "build-system" / "conan" / "compatibility.py"
+        dest = plugins_dir / "compatibility.py"
+        shutil.copy(compat_src, dest)
+        logger.info("Installed compatibility plugin to %s", dest)
 
         # Install profiles into destination ("deploy")
         src_profile_dir = conan_home() / "profiles"
