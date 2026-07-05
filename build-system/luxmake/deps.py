@@ -74,7 +74,6 @@ def build_url(
 ):
     """Build the url to download from."""
     suffix = URL_SUFFIXES[find_platform()]
-
     if not user:
         user = "LuxCoreRender"
 
@@ -523,14 +522,41 @@ def main(
         )
 
         # Install compatibility plugin so MSVC consumers can find clang-built
-        # packages on Windows ARM64 (e.g. Embree built with clang)
+        # packages on Windows ARM64 (e.g. Embree built with clang). luxcoreconf
+        # ships its own compatibility.py (deployed to conan_home()/profiles by
+        # config install-pkg above); we just relocate it to the path Conan
+        # actually reads plugins from.
         logger_step("Installing compatibility plugin")
         plugins_dir = conan_home() / "extensions" / "plugins" / "compatibility"
         plugins_dir.mkdir(parents=True, exist_ok=True)
-        compat_src = PARAMS.SOURCE_DIR / "build-system" / "conan" / "compatibility.py"
+        bundled_compat = conan_home() / "profiles" / "compatibility.py"
         dest = plugins_dir / "compatibility.py"
-        shutil.copy(compat_src, dest)
-        logger.info("Installed compatibility plugin to %s", dest)
+
+        if bundled_compat.exists():
+            shutil.copy(bundled_compat, dest)
+            logger.info("Installed compatibility plugin to %s", dest)
+
+            # This CONAN_HOME is a temp dir deleted when this script exits,
+            # but the later build step runs separately against
+            # output_dir/.conan2 -- deploy the plugin there too, same as
+            # profiles are deployed below.
+            persistent_plugins_dir = (
+                output_dir.absolute()
+                / ".conan2"
+                / "extensions"
+                / "plugins"
+                / "compatibility"
+            )
+            persistent_plugins_dir.mkdir(parents=True, exist_ok=True)
+            shutil.copy(dest, persistent_plugins_dir / "compatibility.py")
+            logger.info(
+                "Deployed compatibility plugin to %s", persistent_plugins_dir
+            )
+        else:
+            logger.warning(
+                "No compatibility.py found in luxcoreconf; ARM64 clang "
+                "fallback will not be available"
+            )
 
         # Install profiles into destination ("deploy")
         src_profile_dir = conan_home() / "profiles"
