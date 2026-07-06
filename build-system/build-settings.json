@@ -7,7 +7,7 @@
   },
   "Dependencies": {
     "user": "LuxCoreRender",
-    "release": "2.1.2"
+    "release": "2.2.0"
   },
   "Build": {
     "gcc": "14",

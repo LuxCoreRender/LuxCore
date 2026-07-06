@@ -59,7 +59,7 @@ jobs:
       fail-fast: false
       matrix:
         python-minor: [10, 11, 12, 13, 14]
-        os: [ubuntu-latest, windows-2022, macos-15-intel, macos-15]
+        os: [ubuntu-latest, windows-2022, macos-15-intel, macos-15, windows-11-arm]
     env:
       # Reminder: report all variables here to CIBW_ENVIRONMENT_PASS_LINUX
       BUILD_TYPE: ${{ github.event.inputs.build-type || 'Release' }}
@@ -115,7 +115,11 @@ jobs:
         shell: bash
         run: |
             _build_type=$(echo "${{ env.BUILD_TYPE }}" | tr '[:upper:]' '[:lower:]')
-            _conan_home="${{ env.WORKSPACE }}/.conan2"
+            if [[ "${{ runner.os }}" == "Windows" ]]; then
+              _conan_home=$(cygpath -w "${{ env.WORKSPACE }}/.conan2")
+            else
+              _conan_home="${{ env.WORKSPACE }}/.conan2"
+            fi
             echo "CONAN_PRESET=conan-${_build_type}" >> $GITHUB_ENV
             echo "CONAN_HOME=${_conan_home}" >> $GITHUB_ENV
 
@@ -159,6 +163,8 @@ jobs:
       - name: Prepare msvc
         if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: ${{ runner.arch == 'ARM64' && 'arm64' || 'x64' }}
 
       - name: Prepare Linux
         if: runner.os == 'Linux'
