@@ -13,6 +13,8 @@ import platform
 import os
 import shlex
 import itertools
+import re
+import sysconfig
 from pathlib import Path
 
 from .constants import PARAMS
@@ -138,6 +140,38 @@ def make_wheel(args):
         # Set destination folders
         wheeltree = Path(wheeltree)
         raw_wheel_dir = Path(raw_wheel)
+
+        # Check Python version in extension
+        extension_path = PARAMS.INSTALL_DIR / "pyluxcore"
+        extensions = [
+            f.name for f in extension_path.iterdir()
+            if f.is_file() and f.name.startswith("pyluxcore")
+        ]
+        for extension in extensions:
+            break
+        else:
+            raise RuntimeError(f"No extension in {extension_path}")
+        try:
+            ext_version = re.search(r'\.[^.]*?(\d+)', extension).group(1)
+        except AttributeError:
+            logger.warn(
+                f"{Colors.WARNING2}"
+                "Could not get version tag from extension name "
+                f"('{extension}'). "
+                "Compatibility between extension tag and wheel tag could not "
+                "be verified."
+                f"{Colors.ENDC}"
+            )
+
+        soabi = sysconfig.get_config_var("SOABI")
+        abi_version = re.search(r'(\d+)', soabi).group(1)
+
+        if ext_version != abi_version:
+            raise RuntimeError(
+                "Cannot build wheel: "
+                f"Extension Python version ({ext_version}) is different "
+                f"from Wheel Python version ({abi_version})."
+            )
 
         # Create dist-info folder
         dist_info = wheeltree / f"pyluxcore-{version}.dist-info"
