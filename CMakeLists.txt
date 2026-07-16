@@ -133,6 +133,8 @@ set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 #endif("${isSystemDir}" STREQUAL "-1")
 MESSAGE(STATUS "Install RPATH: ${CMAKE_INSTALL_RPATH}")
 if(LINUX)
+  set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+  set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
   add_link_options("LINKER:--disable-new-dtags" "LINKER:-Bsymbolic" "LINKER:-Bsymbolic-functions")
 endif()
 
