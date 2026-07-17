@@ -316,7 +316,7 @@ def set_global_conf(cache_dir, existing_config):
     global_conf.touch()
 
     logger.info("Writing configuration file: '%s'", str(global_conf))
-    with global_conf.open("w+") as conf:
+    with global_conf.open("w+", encoding="utf-8") as conf:
 
         def write(entry):
             logger.info(" - %s", entry)
