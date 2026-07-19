@@ -78,6 +78,7 @@ add_library(luxcore SHARED ${LUXCORE_SRC} "${generated_header_dir}/cfg.h")
 add_library(luxcore_static STATIC ${LUXCORE_SRC} "${generated_header_dir}/cfg.h")
 
 target_link_libraries(luxcore PRIVATE
+    hwloc::hwloc
     slg-core
     slg-film
     slg-kernels
