@@ -138,9 +138,9 @@ if(WIN32)
   # device_cpu should first have a pyd extension to be repaired.
   # This will be reverted after repairing
   install(
-    PROGRAMS "${LUX_OIDN_DENOISE_BINS}/OpenImageDenoise_device_cpu.dll"
+    PROGRAMS "${LUX_OIDN_DENOISE_BINS}/LuxOpenImageDenoise_device_cpu.dll"
     DESTINATION "pyluxcore.libs"
-    RENAME "OpenImageDenoise_device_cpu.pyd"
+    RENAME "LuxOpenImageDenoise_device_cpu.pyd"
     COMPONENT pyluxcore
   )
 
