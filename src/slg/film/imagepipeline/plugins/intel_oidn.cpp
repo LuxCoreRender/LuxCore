@@ -33,13 +33,19 @@ using namespace luxrays;
 using namespace slg;
 using namespace oneapi::tbb;
 
+
+// Nota: We take advantage of one of oidn's build features (cmake option
+// OIDN_API_NAMESPACE), which allows us to define a specific namespace for a
+// build. This ensures clear isolation between oidn for Luxcore and oidn for
+// Blender.
+
 //------------------------------------------------------------------------------
 //Intel Open Image Denoise
 //------------------------------------------------------------------------------
 
 BOOST_CLASS_EXPORT_IMPLEMENT(slg::IntelOIDN)
 
-void errorCallback(void* userPtr, oidn::Error error, const char* message) {
+void errorCallback(void* userPtr, lux::oidn::Error error, const char* message) {
   throw std::runtime_error(message);
 }
 
@@ -67,11 +73,11 @@ void IntelOIDN::FilterImage(const string &imageName,
 		const float *albedoBuffer, const float *normalBuffer,
 		const u_int width, const u_int height, const bool cleanAux) const {
 
-    oidn::DeviceRef device = oidn::newDevice(oidn::DeviceType::CPU);
+    lux::oidn::DeviceRef device = lux::oidn::newDevice(lux::oidn::DeviceType::CPU);
 
     const char* errorMessage2;
 
-    if (device.getError(errorMessage2) != oidn::Error::None) {
+    if (device.getError(errorMessage2) != lux::oidn::Error::None) {
       throw std::runtime_error(errorMessage2);
     }
 
@@ -79,27 +85,27 @@ void IntelOIDN::FilterImage(const string &imageName,
     device.set("verbose", 3);
     device.commit();
 
-    oidn::FilterRef filter = device.newFilter(filterType.c_str());
+    lux::oidn::FilterRef filter = device.newFilter(filterType.c_str());
 
-    oidn::BufferRef colorBuf = device.newBuffer((float*)srcBuffer, width * height * 3 * sizeof(float));
-    oidn::BufferRef albedoBuf = device.newBuffer((float*)albedoBuffer, width * height * 3 * sizeof(float));
-    oidn::BufferRef normalBuf = device.newBuffer((float*)normalBuffer, width * height * 3 * sizeof(float));
-    oidn::BufferRef dstBuf = device.newBuffer((float*)dstBuffer, width * height * 3 * sizeof(float));
+    lux::oidn::BufferRef colorBuf = device.newBuffer((float*)srcBuffer, width * height * 3 * sizeof(float));
+    lux::oidn::BufferRef albedoBuf = device.newBuffer((float*)albedoBuffer, width * height * 3 * sizeof(float));
+    lux::oidn::BufferRef normalBuf = device.newBuffer((float*)normalBuffer, width * height * 3 * sizeof(float));
+    lux::oidn::BufferRef dstBuf = device.newBuffer((float*)dstBuffer, width * height * 3 * sizeof(float));
 
 
     filter.set("hdr", true);
 	filter.set("cleanAux", cleanAux);
 	filter.set("maxMemoryMB", oidnMemLimit);
-    filter.setImage("color", colorBuf, oidn::Format::Float3, width, height);
+    filter.setImage("color", colorBuf, lux::oidn::Format::Float3, width, height);
     if (albedoBuffer) {
-        filter.setImage("albedo", albedoBuf, oidn::Format::Float3, width, height);
+        filter.setImage("albedo", albedoBuf, lux::oidn::Format::Float3, width, height);
 
         // Normals can only be used if albedo is supplied as well
         if (normalBuffer)
-            filter.setImage("normal", normalBuf, oidn::Format::Float3, width, height);
+            filter.setImage("normal", normalBuf, lux::oidn::Format::Float3, width, height);
     }
     
-    filter.setImage("output", dstBuf, oidn::Format::Float3, width, height);
+    filter.setImage("output", dstBuf, lux::oidn::Format::Float3, width, height);
     filter.commit();
 
     SLG_LOG("IntelOIDNPlugin executing " + imageName + " filter");
@@ -108,7 +114,7 @@ void IntelOIDN::FilterImage(const string &imageName,
 	SLG_LOG("IntelOIDNPlugin " + imageName + " filter took: " << (boost::format("%.1f") % (WallClockTime() - startTime)) << "secs");
 
     const char *errorMessage;
-    if (device.getError(errorMessage) != oidn::Error::None)
+    if (device.getError(errorMessage) != lux::oidn::Error::None)
          SLG_LOG("IntelOIDNPlugin " + imageName + " filtering error: " << errorMessage);
 }
 
