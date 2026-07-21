@@ -549,7 +549,7 @@ private:
 
 	std::vector<ImagePipeline *> imagePipelines;
 	luxrays::JThreadUPtr imagePipelineThread;
-	bool isAsyncImagePipelineRunning;
+	std::atomic<bool> isAsyncImagePipelineRunning;
 
 	// Halt conditions
 	FilmConvTest *convTest;

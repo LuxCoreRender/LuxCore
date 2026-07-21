@@ -132,7 +132,7 @@ protected:
 
 	std::string deviceName;
 
-	bool started;
+	std::atomic<bool> started;
 };
 
 }
