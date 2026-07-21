@@ -110,6 +110,8 @@ set(CMAKE_FIND_PACKAGE_TARGETS_GLOBAL ON)  # Propagate Conan targets to subdirs
 set(CMAKE_VERBOSE_MAKEFILE ON)
 
 # RPATH
+# Keep these statements near the top of the top level, as they apply to
+# every subsequently created targets
 # From https://gitlab.kitware.com/cmake/community/-/wikis/doc/cmake/RPATH-handling
 # use, i.e. don't skip the full RPATH for the build tree
 set(CMAKE_BUILD_RPATH_USE_ORIGIN TRUE)
