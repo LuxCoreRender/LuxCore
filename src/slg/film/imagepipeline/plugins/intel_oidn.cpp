@@ -83,6 +83,7 @@ void IntelOIDN::FilterImage(const string &imageName,
 
     device.setErrorFunction(errorCallback);
     device.set("verbose", 3);
+	device.set("setAffinity", false);
     device.commit();
 
     lux::oidn::FilterRef filter = device.newFilter(filterType.c_str());
