@@ -26,6 +26,7 @@
 #include <fstream>
 #include <functional>
 #include <iostream>
+#include <stop_token>
 #include <vector>
 #include <unordered_set>
 #include <thread>
@@ -526,8 +527,9 @@ private:
 	void WriteAllHWBuffers();
 	void MergeSampleBuffersHW(const u_int imagePipelineIndex);
 
-	void ExecuteImagePipelineThreadImpl(const u_int index);
-	void ExecuteImagePipelineImpl(const u_int index);
+	std::stop_source imagePipeSource;
+	void ExecuteImagePipelineThreadImpl(std::stop_token stop_token, const u_int index);
+	void ExecuteImagePipelineImpl(std::stop_token stop_token, const u_int index);
 
 	template <bool overwrite>
 	void AddFilmImpl(const Film &film,

@@ -45,6 +45,8 @@ RTPathOCLRenderThread::~RTPathOCLRenderThread() {
 }
 
 void RTPathOCLRenderThread::Interrupt() {
+	if (renderThread)
+		renderThread->request_stop();
 }
 
 void RTPathOCLRenderThread::BeginSceneEdit() {
