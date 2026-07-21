@@ -36,26 +36,26 @@ using namespace slg;
 // Film image pipeline related methods
 //------------------------------------------------------------------------------
 
-void Film::SetImagePipelines(const u_int index, ImagePipeline *newImagePiepeline) {
+void Film::SetImagePipelines(const u_int index, ImagePipeline *newImagePipeline) {
 	if (index < imagePipelines.size()) {
 		// It replaces an existing image pipeline
 		delete imagePipelines[index];
-		imagePipelines[index] = newImagePiepeline;
+		imagePipelines[index] = newImagePipeline;
 	} else if (index == imagePipelines.size()) {
 		// Add a new image pipeline at the end of the vector
 		imagePipelines.resize(imagePipelines.size() + 1, NULL);
-		imagePipelines[index] = newImagePiepeline;
+		imagePipelines[index] = newImagePipeline;
 	} else
 		throw runtime_error("Wrong image pipeline index in Film::SetImagePipelines(): " + ToString(index));
 }
 
-void Film::SetImagePipelines(ImagePipeline *newImagePiepeline) {
+void Film::SetImagePipelines(ImagePipeline *newImagePipeline) {
 	for(ImagePipeline *ip: imagePipelines)
 		delete ip;
 
-	if (newImagePiepeline) {
+	if (newImagePipeline) {
 		imagePipelines.resize(1);
-		imagePipelines[0] = newImagePiepeline;
+		imagePipelines[0] = newImagePipeline;
 	} else
 		imagePipelines.resize(0);
 }
