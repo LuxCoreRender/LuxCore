@@ -899,7 +899,9 @@ void ImageMap::Init(
 	SDL_LOG("Reading texture map: " << resolvedFileName);
 
 	if (!std::filesystem::exists(resolvedFileName))
-		throw runtime_error("ImageMap file doesn't exist: " + resolvedFileName);
+		throw runtime_error(
+			"ImageMap file doesn't exist: " + resolvedFileName + "(" + GetName() + ")"
+		);
 
 
 	OIIO::attribute("openexr:core", 1);  // Nota: crash if not set
@@ -1608,7 +1610,7 @@ pair<u_int, u_int> ImageMap::GetSize(const std::string &fileName) {
 	const string resolvedFileName = SLG_FileNameResolver.ResolveFile(fileName);
 
 	if (!std::filesystem::exists(resolvedFileName))
-		throw runtime_error("ImageMap file doesn't exist: " + resolvedFileName);
+		throw runtime_error("ImageMap file doesn't exist: " + resolvedFileName + " (GetSize)");
 	else {
 		OIIO::attribute("openexr:core", 1);  // Nota: crash if not set
 		ImageSpec config;
