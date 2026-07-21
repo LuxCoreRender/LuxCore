@@ -32,6 +32,9 @@ pybind11_add_module(pyluxcore MODULE
 
 target_link_libraries(pyluxcore PRIVATE
     hwloc::hwloc
+    onetbb::onetbb
+    oidn::oidn
+    stdc++
     luxcore_static
     OpenVDB::openvdb
     pybind11::pybind11
