@@ -499,7 +499,7 @@ public:
 	virtual ~RenderConfigImpl() = default;
 
 	luxrays::PropertiesRPtr GetProperties() const;
-	const luxrays::Property GetProperty(const std::string &name) const;
+	luxrays::Property GetProperty(const std::string &name) const;
 	luxrays::PropertiesRPtr ToProperties() const;
 
 	const Scene& GetScene() const override;

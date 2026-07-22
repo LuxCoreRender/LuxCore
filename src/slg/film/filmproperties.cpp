@@ -71,7 +71,7 @@ bool Film::GetFilmSize(const Properties &cfg,
 	u_int subRegion[4];
 	bool subRegionUsed;
 	if (cfg.IsDefined("film.subregion")) {
-		const Property defaultProp = Property("film.subregion")(0, width - 1u, 0, height - 1u);
+		const Property defaultProp = std::move(Property("film.subregion")(0, width - 1u, 0, height - 1u));
 		const Property &prop = cfg.Get(defaultProp);
 
 		subRegion[0] = Max(0u, Min(width - 1, prop.Get<u_int>(0)));

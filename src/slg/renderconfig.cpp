@@ -194,6 +194,8 @@ bool RenderConfig::HasCachedKernels() {
 #endif
 }
 
+// We return an instance rather than a ref, to avoid issues in multithreaded
+// context
 const Property RenderConfig::GetProperty(const string &name) const {
 	return ToProperties()->Get(name);
 }

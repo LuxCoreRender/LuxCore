@@ -1340,7 +1340,7 @@ public:
 	 *
 	 * \return the Property with the given name.
 	 */
-	virtual const luxrays::Property GetProperty(const std::string &name) const = 0;
+	virtual luxrays::Property GetProperty(const std::string &name) const = 0;
 
 	/*!
 	 * \brief Returns a reference to all Properties (including default values)

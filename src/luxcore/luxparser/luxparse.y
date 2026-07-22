@@ -1612,7 +1612,7 @@ ri_stmt: ACCELERATOR STRING paramlist
 		if ((pointsProp.GetSize() == 0) || (pointsProp.GetSize() % 3 != 0))
 			throw runtime_error("Wrong trianglemesh/mesh point list length: " + objName);
 		// Copy all vertices
-		Property points = *pointsProp.Renamed(prefix + ".vertices");
+		PropertyUPtr points = pointsProp.Renamed(prefix + ".vertices");
 
 		const string indicesName = (name == "trianglemesh") ? "indices" : "triindices";
 		if (!props.IsDefined(indicesName))
@@ -1621,11 +1621,11 @@ ri_stmt: ACCELERATOR STRING paramlist
 		if ((indicesProp.GetSize() == 0) || (indicesProp.GetSize() % 3 != 0))
 			throw runtime_error("Wrong trianglemesh/mesh indices list length: " + objName);
 		// Copy all indices
-		Property faces = *indicesProp.Renamed(prefix + ".faces");
+		PropertyUPtr faces = indicesProp.Renamed(prefix + ".faces");
 
 		*sceneProps <<
-			points <<
-			faces <<
+			*points <<
+			*faces <<
 			Property(prefix + ".transformation")(currentTransform.m);
 
 		if (props.IsDefined("N")) {

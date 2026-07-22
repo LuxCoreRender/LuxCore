@@ -217,6 +217,16 @@ public:
 	 * \param vals is the value of the new property.
 	 */
 	Property(const std::string &propName, const PropertyValues &vals);
+
+	// No standard copy, only move
+	Property(Property& other) = delete;
+	Property& operator=(Property& other) = delete;
+	Property(Property&& other) = default;
+	Property& operator=(Property&& other) = default;
+
+	// Copy is possible only when explicitly required, and as a deep copy
+	Property Clone() const;
+
 	~Property();
 
 	/*!
@@ -385,8 +395,8 @@ public:
 	 * 
 	 * \return a reference to the modified property.
 	 */
-	template<class T0, class T1> Property &operator()(const T0 &val0, const T1 &val1) {
-		return Add(val0).Add(val1);
+	template<class T0, class T1> Property&& operator()(const T0 &val0, const T1 &val1) {
+		return std::move(Add(val0).Add(val1));
 	}
 	/*!
 	 * \brief Adds a value to a property.
@@ -401,8 +411,8 @@ public:
 	 * 
 	 * \return a reference to the modified property.
 	 */
-	template<class T0, class T1, class T2> Property &operator()(const T0 &val0, const T1 &val1, const T2 &val2) {
-		return Add(val0).Add(val1).Add(val2);
+	template<class T0, class T1, class T2> Property&& operator()(const T0 &val0, const T1 &val1, const T2 &val2) {
+		return std::move(Add(val0).Add(val1).Add(val2));
 	}
 	/*!
 	 * \brief Adds a value to a property.
@@ -418,8 +428,8 @@ public:
 	 * 
 	 * \return a reference to the modified property.
 	 */
-	template<class T0, class T1, class T2, class T3> Property &operator()(const T0 &val0, const T1 &val1, const T2 &val2, const T3 &val3) {
-		return Add(val0).Add(val1).Add(val2).Add(val3);
+	template<class T0, class T1, class T2, class T3> Property&& operator()(const T0 &val0, const T1 &val1, const T2 &val2, const T3 &val3) {
+		return std::move(Add(val0).Add(val1).Add(val2).Add(val3));
 	}
 	/*!
 	 * \brief Adds a vector of values to a property.
@@ -449,7 +459,7 @@ public:
 	 * \brief Required to work around the problem of char* to bool conversion
 	 * (instead of char* to string).
 	 */
-	Property &Add(const char *val) {
+	Property& Add(const char *val) {
 		values.push_back(std::string(val));
 		return *this;
 	}
@@ -457,19 +467,19 @@ public:
 	 * \brief Required to work around the problem of char* to bool conversion
 	 * (instead of char* to string).
 	 */
-	Property &Add(char *val) {
+	Property& Add(char *val) {
 		values.push_back(std::string(val));
 		return *this;
 	}
-	Property &operator()(const char *val) {
-		return Add(std::string(val));
+	Property&& operator()(const char *val) {
+		return std::move(Add(std::string(val)));
 	}
 	/*!
 	 * \brief Required to work around the problem of char* to bool conversion
 	 * (instead of char* to string).
 	 */
-	Property &operator()(char *val) {
-		return Add(std::string(val));
+	Property&& operator()(char *val) {
+		return std::move(Add(std::string(val)));
 	}
 	/*!
 	 * \brief Required to work around the problem of char* to bool conversion

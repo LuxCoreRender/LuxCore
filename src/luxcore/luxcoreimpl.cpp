@@ -1576,10 +1576,12 @@ PropertiesRPtr RenderConfigImpl::GetProperties() const {
 	return renderConfig->GetConfigPtr();
 }
 
-const Property RenderConfigImpl::GetProperty(const std::string &name) const {
+// We return an instance rather than a ref, to avoid issues in multithreaded
+// context
+Property RenderConfigImpl::GetProperty(const std::string &name) const {
 	API_BEGIN("{}", ToArgString(name));
 
-	const Property result = renderConfig->GetProperty(name);
+	Property result = renderConfig->GetProperty(name);
 
 	API_RETURN("{}", ToArgString(result));
 

@@ -225,7 +225,7 @@ template<> bool PropertyValue::Get<bool>() const {
 			return ret<bool>(data, dataType);
 		case BLOB_VAL:
 			throw std::runtime_error("A Blob property can not be converted to other types");
-		default:
+default:
 			throw std::runtime_error("Unknown type in PropertyValue::Get<bool>(): " + ToString(dataType));
 	}
 }
@@ -448,6 +448,10 @@ Property::Property(const string &propName, const PropertyValue &val) :
 Property::Property(const string &propName, const PropertyValues &vals) :
 	name(propName) {
 	values = vals;
+}
+
+Property Property::Clone() const {
+	return Property(name, values);
 }
 
 Property::~Property() {
@@ -980,7 +984,7 @@ const Property Properties::Get(const string &propName) const {
 	if (it == props.end())
 		throw runtime_error("Undefined property in Properties::Get(): " + propName);
 
-	return *it->second;
+	return it->second->Clone();
 }
 
 // We return an object rather than a reference to avoid issues in concurrent
@@ -989,9 +993,9 @@ const Property Properties::Get(const Property &prop) const {
 	std::lock_guard lk(mtx);
 	auto it = props.find(prop.GetName());
 	if (it == props.end())
-			return prop;
+			return prop.Clone();
 
-	return *it->second;
+	return it->second->Clone();
 }
 
 PropertyUPtr Properties::Get(
@@ -1005,7 +1009,7 @@ PropertyUPtr Properties::Get(
 	// Look for the main property name
 	auto it = props.find(name);
 	if (it != props.end())
-		return std::make_unique<Property>(*it->second);  // Found
+		return std::make_unique<Property>(it->second->Clone());  // Found
 
 	// Look for the alternative property name
 	auto itAlt = props.find(alternativeName);
@@ -1049,7 +1053,7 @@ Properties &Properties::Set(Property&& prop) {
 
 	std::lock_guard lk(mtx);
 
-	auto ptr = std::make_unique<Property>(prop);
+	auto ptr = std::make_unique<Property>(std::move(prop));
 	auto name = ptr->GetName();  // Copy
 
 	auto [it, result] = props.insert_or_assign(name, std::move(ptr));
@@ -1059,15 +1063,15 @@ Properties &Properties::Set(Property&& prop) {
 }
 
 Properties &Properties::Set(const Property &prop) {
-	return Set(Property(prop));
+	return Set(prop.Clone());
 }
 
 Properties &Properties::Set(PropertyRPtr prop) {
-	return Set(Property(*prop));
+	return Set(prop->Clone());
 }
 
 Properties &Properties::operator<<(const Property &prop) {
-	return Set(Property(prop));
+	return Set(prop.Clone());
 }
 
 Properties &Properties::operator<<(Property&& prop) {
@@ -1173,7 +1177,7 @@ PropertiesUPtr Properties::Clone() const {
 	decltype(props) copiedMap;
 
 	for (const auto& [key, value] : props) {
-		copiedMap[key] = std::make_unique<Property>(*value);
+		copiedMap[key] = std::make_unique<Property>(value->Clone());
 	}
 
 	result->props = std::move(copiedMap);

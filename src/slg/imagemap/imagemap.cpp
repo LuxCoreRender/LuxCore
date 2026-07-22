@@ -895,6 +895,7 @@ void ImageMap::Init(
 	const string resolvedFileName = SLG_FileNameResolver.ResolveFile(fileName);
 #ifndef NDEBUG
 	SDL_LOG("OIIO version: " << OIIO::openimageio_version());
+	SDL_LOG("File name: " << fileName);
 #endif
 	SDL_LOG("Reading texture map: " << resolvedFileName);
 
