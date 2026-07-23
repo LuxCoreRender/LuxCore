@@ -66,9 +66,9 @@ scene.materials.Alfa_045wheel_045discs.type = glossy2
 scene.materials.Alfa_045wheel_045discs.kd = 0.43529412 0.43529412 0.43529412
 scene.materials.Alfa_045mainbody.type = carpaint
 scene.materials.Alfa_045mainbody.kd = 0.37764707 0.018882355 0.010490197
-# Sharp, stronger clear-coat reflection
-scene.materials.Alfa_045mainbody.ks3 = 0.20 0.20 0.20
-scene.materials.Alfa_045mainbody.r3 = 0.80
+# Sharp neutral clear coat that preserves the red base under a blue HDRI.
+scene.materials.Alfa_045mainbody.ks3 = 0.15 0.15 0.15
+scene.materials.Alfa_045mainbody.r3 = 0.04
 scene.materials.Alfa_045mainbody.m3 = 0.010
 scene.materials.ground.type = glossy2
 scene.materials.ground.kd = 0.2 0.2 0.2

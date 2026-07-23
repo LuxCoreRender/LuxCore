@@ -122,6 +122,12 @@ def _setting_target(settings):
         except (TypeError, ValueError):
             pass
     return list(DEFAULT_TARGET)
+def _setting_hdr_file(settings):
+    hdr_file = settings.get("hdr_file")
+    if (isinstance(hdr_file, str) and hdr_file.lower().endswith(".hdr")
+            and os.path.isfile(hdr_file)):
+        return os.path.normpath(hdr_file)
+    return None
 
 def _ignore_luxcore_log(_message):
     pass
@@ -136,6 +142,10 @@ class CameraController(tk.Tk):
         self.iconphoto(True, self._window_icon)
         self._settings = _read_controller_settings()
         self._settings_ready = False
+        self._hdr_file = _setting_hdr_file(self._settings)
+        self._hdr_drop_wndprocs = {}
+        self._hdr_drop_callback = None
+        self._hdr_drop_api = None
         saved_resolution = self._settings.get("render_resolution")
         if saved_resolution not in RENDER_RESOLUTIONS:
             saved_resolution = "1280 x 720"
@@ -173,7 +183,7 @@ class CameraController(tk.Tk):
         self._full_restart_id = None
         self._session_mode = "full"
         self._render_stopped = False
-        self._render_backend = "PATHOCL"
+        self._render_backend = "PATHOCL / OptiX"
         self._luxcore_initialized = False
 
         self._film_buf  = array('f', [0.0] * (FILM_W * FILM_H * 3))
@@ -213,6 +223,7 @@ class CameraController(tk.Tk):
         self.protocol("WM_DELETE_WINDOW", self._on_close)
         self._update_info()
         self.after(25, self._process_restart_results)
+        self.after(100, self._enable_hdr_file_drop)
         self.after(300, self._start_session)
 
     def _save_settings(self):
@@ -227,6 +238,8 @@ class CameraController(tk.Tk):
             "auto_oidn_seconds": self.switch_sec.get(),
             "render_resolution": self.render_resolution.get(),
         }
+        if self._hdr_file:
+            settings["hdr_file"] = self._hdr_file
         temp_file = SETTINGS_FILE + ".tmp"
         try:
             with open(temp_file, "w", encoding="utf-8") as settings_file:
@@ -246,6 +259,118 @@ class CameraController(tk.Tk):
         if not self._render_stopped:
             self._stop_rendering()
         self.destroy()
+    # ── HDR file drop ────────────────────────────────────────────────────────
+    def _enable_hdr_file_drop(self):
+        """Accept .hdr files dropped on the root window or render canvas."""
+        if os.name != "nt":
+            return
+        try:
+            import ctypes
+            from ctypes import wintypes
+
+            user32 = ctypes.WinDLL("user32", use_last_error=True)
+            shell32 = ctypes.WinDLL("shell32", use_last_error=True)
+            long_ptr = ctypes.c_ssize_t
+            wndproc_type = ctypes.WINFUNCTYPE(
+                long_ptr, wintypes.HWND, wintypes.UINT, wintypes.WPARAM,
+                wintypes.LPARAM)
+
+            user32.SetWindowLongPtrW.argtypes = [
+                wintypes.HWND, ctypes.c_int, long_ptr]
+            user32.SetWindowLongPtrW.restype = long_ptr
+            user32.CallWindowProcW.argtypes = [
+                long_ptr, wintypes.HWND, wintypes.UINT, wintypes.WPARAM,
+                wintypes.LPARAM]
+            user32.CallWindowProcW.restype = long_ptr
+            shell32.DragAcceptFiles.argtypes = [wintypes.HWND, wintypes.BOOL]
+            shell32.DragQueryFileW.argtypes = [
+                wintypes.HANDLE, wintypes.UINT, wintypes.LPWSTR, wintypes.UINT]
+            shell32.DragQueryFileW.restype = wintypes.UINT
+            shell32.DragFinish.argtypes = [wintypes.HANDLE]
+
+            wm_dropfiles = 0x0233
+            gwl_wndproc = -4
+
+            def window_proc(hwnd, message, wparam, lparam):
+                try:
+                    if message == wm_dropfiles:
+                        hdrop = wintypes.HANDLE(wparam)
+                        try:
+                            file_count = shell32.DragQueryFileW(
+                                hdrop, 0xFFFFFFFF, None, 0)
+                            hdr_file = None
+                            for index in range(file_count):
+                                length = shell32.DragQueryFileW(
+                                    hdrop, index, None, 0)
+                                path_buffer = ctypes.create_unicode_buffer(length + 1)
+                                shell32.DragQueryFileW(
+                                    hdrop, index, path_buffer, length + 1)
+                                candidate = os.path.normpath(path_buffer.value)
+                                if candidate.lower().endswith(".hdr"):
+                                    hdr_file = candidate
+                                    break
+                        finally:
+                            shell32.DragFinish(hdrop)
+
+                        if hdr_file:
+                            self.after_idle(self._on_hdr_file_drop, hdr_file)
+                        else:
+                            self.after_idle(
+                                self._show_hdr_drop_error,
+                                "Drop a Radiance HDR file (.hdr) on the render viewport")
+                        return 0
+                except Exception:
+                    pass
+
+                previous_proc = self._hdr_drop_wndprocs.get(int(hwnd))
+                return user32.CallWindowProcW(
+                    previous_proc, hwnd, message, wparam, lparam)
+
+            self._hdr_drop_callback = wndproc_type(window_proc)
+            self._hdr_drop_api = (user32, shell32)
+            for hwnd in (self.winfo_id(), self._render_canvas.winfo_id()):
+                previous_proc = user32.SetWindowLongPtrW(
+                    hwnd, gwl_wndproc,
+                    long_ptr(ctypes.cast(self._hdr_drop_callback,
+                                         ctypes.c_void_p).value))
+                if previous_proc:
+                    self._hdr_drop_wndprocs[int(hwnd)] = previous_proc
+                    shell32.DragAcceptFiles(hwnd, True)
+        except Exception:
+            self._show_hdr_drop_error("HDR file drop could not be enabled")
+
+    def _show_hdr_drop_error(self, message):
+        self._info.config(text=message)
+        self._render_win.title(f"{WINDOW_TITLE} — {message}")
+
+    def _on_hdr_file_drop(self, hdr_file):
+        hdr_file = os.path.normpath(hdr_file)
+        if not hdr_file.lower().endswith(".hdr") or not os.path.isfile(hdr_file):
+            self._show_hdr_drop_error("Dropped HDR file is unavailable")
+            return
+
+        if self._render_stopped or not self._scene or not self._session:
+            self._hdr_file = hdr_file
+            self._save_settings()
+            self._render_win.title(
+                f"{WINDOW_TITLE} — HDRI selected: {os.path.basename(hdr_file)}")
+            return
+
+        self._camera_revision += 1
+        self._camera_snapshot = self._capture_camera_snapshot()
+        self._camera_restart_pending = True
+        for attr in ("_preview_restart_id", "_full_restart_id"):
+            timer_id = getattr(self, attr)
+            if timer_id:
+                self.after_cancel(timer_id)
+                setattr(self, attr, None)
+        self._render_win.title(
+            f"{WINDOW_TITLE} — Loading HDRI: {os.path.basename(hdr_file)}")
+        threading.Thread(
+            target=self._do_restart_session,
+            args=(self._render_width, self._render_height, "full",
+                  self._camera_snapshot, hdr_file),
+            daemon=True).start()
 
     # ── UI ────────────────────────────────────────────────────────────────────
     def _build_ui(self):
@@ -288,7 +413,8 @@ class CameraController(tk.Tk):
         resolution_menu.pack(side=tk.LEFT)
         resolution_menu.bind("<<ComboboxSelected>>", self._set_render_resolution)
 
-        tk.Label(panel, text="Left: pan  •  Right: orbit  •  Scroll: zoom",
+        tk.Label(panel, text="Left: pan  •  Right: orbit  •  Scroll: zoom\n"
+                             "Drop an .hdr file on the render to change the HDRI",
                  wraplength=CONTROL_W - 12, justify=tk.CENTER,
                  font=("Segoe UI", 8), fg="#888").grid(row=8, column=0, pady=(4, 0))
         self._canvas = tk.Canvas(panel, width=CONTROL_W, height=CONTROL_H, bg="#1a1a2e",
@@ -344,10 +470,14 @@ class CameraController(tk.Tk):
             pyluxcore.AddFileNameResolverPath(SCENE_DIR)
             pyluxcore.AddFileNameResolverPath(LUXCORE_ROOT)
             props = pyluxcore.Properties("ModoAlphaRomeo.cfg")
-            # PATHOCL can fail asynchronously with CUDA_ERROR_UNSUPPORTED_PTX_VERSION,
-            # leaving no exception for Tk to report and a permanently black canvas.
-            props.Set(pyluxcore.Property("renderengine.type", ["PATHCPU"]))
-            props.Set(pyluxcore.Property("accelerator.type", ["EMBREE"]))
+            # Use the CUDA device and the OptiX hardware accelerator. CPU film
+            # processing is retained so the Tk controller can read both raw and
+            # OIDN output without changing its display path.
+            props.Set(pyluxcore.Property("renderengine.type", ["PATHOCL"]))
+            props.Set(pyluxcore.Property("accelerator.type", ["OPTIX"]))
+            props.Set(pyluxcore.Property("opencl.cpu.use", [False]))
+            props.Set(pyluxcore.Property("opencl.gpu.use", [True]))
+            props.Set(pyluxcore.Property("opencl.native.threads.count", [0]))
             props.Set(pyluxcore.Property("film.hw.enable", [False]))
             props.Set(pyluxcore.Property("film.width",  [self._render_width]))
             props.Set(pyluxcore.Property("film.height", [self._render_height]))
@@ -356,13 +486,17 @@ class CameraController(tk.Tk):
             # Create Scene separately (GetScene() is non-copyable in pybind11)
             scene_file = props.Get("scene.file").GetString()
             self._scene  = pyluxcore.Scene(scene_file)
+            if self._hdr_file:
+                self._scene.Parse(pyluxcore.Properties().Set(
+                    pyluxcore.Property("scene.infinitelight.file",
+                                       [self._hdr_file])))
             self._config = pyluxcore.RenderConfig(props, self._scene)
             self._apply_camera_props()
 
             self._session = pyluxcore.RenderSession(self._config)
             self._session.Start()
             self._session_mode = "full"
-            self._render_backend = "PATHCPU"
+            self._render_backend = "PATHOCL / OptiX"
 
             self.pipeline = 0
             self._schedule_switch()
@@ -414,7 +548,8 @@ class CameraController(tk.Tk):
         self._render_win.title(f"{WINDOW_TITLE} — Restarting...")
         self.after(1, self._start_session)
 
-    def _do_restart_session(self, width, height, mode, camera_snapshot):
+    def _do_restart_session(self, width, height, mode, camera_snapshot,
+                            hdr_file=None):
         """Restart a session at the requested resolution in a background thread."""
         succeeded = False
         error_message = None
@@ -432,6 +567,10 @@ class CameraController(tk.Tk):
                         .Set(pyluxcore.Property("film.imagepipelines.1.1.prescale", [prescale]))
                         .Set(pyluxcore.Property("film.width", [width]))
                         .Set(pyluxcore.Property("film.height", [height])))
+                    if hdr_file:
+                        self._scene.Parse(pyluxcore.Properties().Set(
+                            pyluxcore.Property("scene.infinitelight.file",
+                                               [hdr_file])))
                     self._apply_camera_snapshot(camera_snapshot)
                     self._session = pyluxcore.RenderSession(self._config)
                     self._session.Start()
@@ -441,7 +580,7 @@ class CameraController(tk.Tk):
                     error_message = str(ex)
         finally:
             self._restart_results.put(
-                (mode, camera_snapshot[-1], succeeded, error_message))
+                (mode, camera_snapshot[-1], succeeded, error_message, hdr_file))
 
     def _process_restart_results(self):
         try:
@@ -451,7 +590,8 @@ class CameraController(tk.Tk):
             pass
         self.after(25, self._process_restart_results)
 
-    def _finish_restart(self, mode, started_revision, succeeded, error_message):
+    def _finish_restart(self, mode, started_revision, succeeded, error_message,
+                        hdr_file=None):
         if mode == "preview":
             self._preview_restart_in_progress = False
         if self._render_stopped:
@@ -460,6 +600,9 @@ class CameraController(tk.Tk):
             self._camera_restart_pending = False
             self._info.config(text=f"Restart failed: {error_message or 'unknown error'}")
             return
+        if hdr_file:
+            self._hdr_file = hdr_file
+            self._save_settings()
         # A preview session is a clean, complete image even when input has
         # advanced since it began. Show it for responsive feedback, then queue
         # the next snapshot. Full-resolution output remains exact-only.
