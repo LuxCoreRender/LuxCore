@@ -27,7 +27,7 @@ scene.materials.Alfa_045black.type = matte
 scene.materials.Alfa_045black.kd = 0.09196079 0.09196079 0.09196079
 scene.materials.Alfa_045sidelight.type = glass
 scene.materials.Alfa_045sidelight.kd = 0.78431374 0.78431374 0.78431374
-scene.materials.Alfa_045sidelight.emission = 11.764706 11.764706 11.764706
+scene.materials.Alfa_045sidelight.emission = 4 4 4
 scene.materials.Alfa_045small_032red.type = glossy2
 scene.materials.Alfa_045small_032red.kd = 0.70980394 0.023529412 0.023529412
 scene.materials.Alfa_045mirror.type = mirror
@@ -56,7 +56,7 @@ scene.materials.Alfa_045fl_045glass.ioroutside = 1
 scene.materials.Alfa_045fl_045glass.iorinside = 1.5
 scene.materials.Alfa_045fl_045bulb.type = matte
 scene.materials.Alfa_045fl_045bulb.kd = 1 0.9882353 0.93333334
-scene.materials.Alfa_045fl_045bulb.emission = 15 14.823529 14
+scene.materials.Alfa_045fl_045bulb.emission = 4 3.95 3.73
 scene.materials.Alfa_045fl_045lens.type = glass
 scene.materials.Alfa_045fl_045lens.kr = 1 1 1
 scene.materials.Alfa_045fl_045lens.kt = 0.7899216 0.7899216 0.7899216
@@ -130,7 +130,7 @@ scene.objects.ground.ply = ground.ply
 scene.objects.ground.material = ground
 ################################################################################
 scene.infinitelight.file = hdre_055.hdr
-scene.infinitelight.gain = 0.05 0.05 0.05
+scene.infinitelight.gain = 1.0 1.0 1.0
 # scene.infinitelight.shift = 1.0 0.0
 # Rotate HDRI +90deg around X (inverse) so Z-up scene aligns with Y-up HDRI sky
 #scene.infinitelight.transformation = 1 0 0 0  0 0 -1 0  0 1 0 0  0 0 0 1

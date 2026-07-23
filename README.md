@@ -104,6 +104,12 @@ out\install\Release\bin\luxcoreui scenes\cornell\cornell.cfg
 
 (assuming you selected Release as a build type)
 
+### Alpha Romeo interactive renderer
+
+[`scenes/AlphaRomeo/camera_controller.py`](scenes/AlphaRomeo/camera_controller.py) provides an interactive Tk controller for the Alpha Romeo scene, including camera navigation, render resolution selection, raw/OIDN output, and start/stop rendering.
+
+Its camera target/orbit, distance, exposure, Auto OIDN delay, and selected resolution persist between controller launches in `scenes/AlphaRomeo/camera_controller_settings.json`. This is local user state and is not source content to commit. See [`scenes/AlphaRomeo/README.md`](scenes/AlphaRomeo/README.md) for scene-specific renderer and HDRI details.
+
 ### LuxCoreConsole
 
 This is a simple example of a command line renderer written using LuxCore API

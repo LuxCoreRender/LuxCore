@@ -16,7 +16,7 @@ Controls:
   Space                   → force film refresh
 """
 
-import os, sys, math, re, queue, threading
+import os, sys, math, re, queue, threading, json
 from array import array
 
 # ── Bootstrap pyluxcore ────────────────────────────────────────────────────────
@@ -27,6 +27,7 @@ SCENE_FILE     = os.path.join(LUXCORE_ROOT, r"scenes\AlphaRomeo\ModoAlphaRomeo.s
 CFG_FILE       = os.path.join(LUXCORE_ROOT, r"scenes\AlphaRomeo\ModoAlphaRomeo.cfg")
 
 SCENE_DIR = os.path.join(LUXCORE_ROOT, r"scenes\AlphaRomeo")
+SETTINGS_FILE = os.path.join(SCENE_DIR, "camera_controller_settings.json")
 
 os.add_dll_directory(LUXCORE_BIN)
 sys.path.insert(0, PYLUXCORE_PATH)
@@ -41,6 +42,7 @@ from tkinter import filedialog, ttk
 DEFAULT_AZ          = 80.0
 DEFAULT_EL          = 5.0
 DEFAULT_SWITCH_SECS = 5
+DEFAULT_TARGET      = [0.0, 2.084, 0.833]
 FILM_W              = 1280
 FILM_H              = 720
 RENDER_RESOLUTIONS  = ("640 x 360", "1280 x 720", "1920 x 1080",
@@ -98,6 +100,29 @@ def read_exposure(path):
                 return float(m.group(1))
     return 1.0
 
+def _read_controller_settings():
+    try:
+        with open(SETTINGS_FILE, encoding="utf-8") as settings_file:
+            settings = json.load(settings_file)
+            return settings if isinstance(settings, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+def _setting_float(settings, name, default, minimum, maximum):
+    try:
+        return max(minimum, min(maximum, float(settings.get(name, default))))
+    except (TypeError, ValueError):
+        return default
+
+def _setting_target(settings):
+    target = settings.get("target")
+    if isinstance(target, (list, tuple)) and len(target) == 3:
+        try:
+            return [float(value) for value in target]
+        except (TypeError, ValueError):
+            pass
+    return list(DEFAULT_TARGET)
+
 def _ignore_luxcore_log(_message):
     pass
 
@@ -109,15 +134,24 @@ class CameraController(tk.Tk):
         self.resizable(False, False)
         self._window_icon = tk.PhotoImage(file=WINDOW_ICON)
         self.iconphoto(True, self._window_icon)
-
-        self.az         = tk.DoubleVar(value=DEFAULT_AZ)
-        self.el         = tk.DoubleVar(value=DEFAULT_EL)
-        self.dist       = tk.DoubleVar(value=20.0)
-        self.exposure   = tk.DoubleVar(value=read_exposure(CFG_FILE))
-        self.switch_sec = tk.IntVar(value=DEFAULT_SWITCH_SECS)
-        self.render_resolution = tk.StringVar(value="1280 x 720")
-        self._render_width = FILM_W
-        self._render_height = FILM_H
+        self._settings = _read_controller_settings()
+        self._settings_ready = False
+        saved_resolution = self._settings.get("render_resolution")
+        if saved_resolution not in RENDER_RESOLUTIONS:
+            saved_resolution = "1280 x 720"
+        self.az = tk.DoubleVar(value=_setting_float(
+            self._settings, "azimuth", DEFAULT_AZ, -3600.0, 3600.0))
+        self.el = tk.DoubleVar(value=_setting_float(
+            self._settings, "elevation", DEFAULT_EL, -89.0, 89.0))
+        self.dist = tk.DoubleVar(value=_setting_float(
+            self._settings, "distance", 20.0, 1.0, 50.0))
+        self.exposure = tk.DoubleVar(value=_setting_float(
+            self._settings, "exposure", read_exposure(CFG_FILE), 0.001, 20.0))
+        self.switch_sec = tk.IntVar(value=round(_setting_float(
+            self._settings, "auto_oidn_seconds", DEFAULT_SWITCH_SECS, 1.0, 120.0)))
+        self.render_resolution = tk.StringVar(value=saved_resolution)
+        self._render_width, self._render_height = (
+            int(value) for value in saved_resolution.split(" x "))
         self.pipeline   = 0
 
         self._drag_x    = 0
@@ -125,7 +159,7 @@ class CameraController(tk.Tk):
         self._switch_id = None
         self._skip_frames = 0
         self._gate_pass   = 0   # minimum pass count before showing new frame
-        self._target    = [0.0, 2.084, 0.833]
+        self._target = _setting_target(self._settings)
         self._session   = None
         self._config    = None
         self._scene     = None
@@ -140,6 +174,7 @@ class CameraController(tk.Tk):
         self._session_mode = "full"
         self._render_stopped = False
         self._render_backend = "PATHOCL"
+        self._luxcore_initialized = False
 
         self._film_buf  = array('f', [0.0] * (FILM_W * FILM_H * 3))
         self._rgba_buf  = array('b', [0]   * (FILM_W * FILM_H * 4))
@@ -173,9 +208,44 @@ class CameraController(tk.Tk):
         self._pan_drag_y = 0
 
         self._build_ui()
+        self._settings_ready = True
+        self.switch_sec.trace_add("write", self._on_setting_variable_changed)
+        self.protocol("WM_DELETE_WINDOW", self._on_close)
         self._update_info()
         self.after(25, self._process_restart_results)
         self.after(300, self._start_session)
+
+    def _save_settings(self):
+        if not self._settings_ready:
+            return
+        settings = {
+            "azimuth": self.az.get(),
+            "elevation": self.el.get(),
+            "distance": self.dist.get(),
+            "target": self._target,
+            "exposure": self.exposure.get(),
+            "auto_oidn_seconds": self.switch_sec.get(),
+            "render_resolution": self.render_resolution.get(),
+        }
+        temp_file = SETTINGS_FILE + ".tmp"
+        try:
+            with open(temp_file, "w", encoding="utf-8") as settings_file:
+                json.dump(settings, settings_file, indent=2)
+            os.replace(temp_file, SETTINGS_FILE)
+        except OSError:
+            try:
+                os.remove(temp_file)
+            except OSError:
+                pass
+
+    def _on_setting_variable_changed(self, *_):
+        self._save_settings()
+
+    def _on_close(self):
+        self._save_settings()
+        if not self._render_stopped:
+            self._stop_rendering()
+        self.destroy()
 
     # ── UI ────────────────────────────────────────────────────────────────────
     def _build_ui(self):
@@ -246,10 +316,11 @@ class CameraController(tk.Tk):
                   font=("Segoe UI", 9, "bold"), width=22,
                   command=self._save_film
                   ).grid(row=11, column=0, pady=(3, 6))
-        tk.Button(panel, text="Stop Rendering", bg="#9c2929", fg="white",
-                  font=("Segoe UI", 9, "bold"), width=22,
-                  command=self._stop_rendering
-                  ).grid(row=12, column=0, pady=(0, 6))
+        self._render_button = tk.Button(
+            panel, text="Stop Rendering", bg="#9c2929", fg="white",
+            font=("Segoe UI", 9, "bold"), width=22,
+            command=self._stop_rendering)
+        self._render_button.grid(row=12, column=0, pady=(0, 6))
         tk.Label(panel, text="Controls:", font=("Segoe UI", 10, "bold"),
                  anchor="w").grid(row=13, column=0, sticky="w", padx=8)
         tk.Label(panel,
@@ -264,14 +335,20 @@ class CameraController(tk.Tk):
         if self._render_stopped:
             return
         try:
-            pyluxcore.Init(_ignore_luxcore_log)
+            if not self._luxcore_initialized:
+                pyluxcore.Init(_ignore_luxcore_log)
+                self._luxcore_initialized = True
             # Add scene dir to resolver so relative paths in .scn/.cfg work
             pyluxcore.ClearFileNameResolverPaths()
             pyluxcore.AddFileNameResolverPath(".")
             pyluxcore.AddFileNameResolverPath(SCENE_DIR)
             pyluxcore.AddFileNameResolverPath(LUXCORE_ROOT)
             props = pyluxcore.Properties("ModoAlphaRomeo.cfg")
-            props.Set(pyluxcore.Property("renderengine.type", ["PATHOCL"]))
+            # PATHOCL can fail asynchronously with CUDA_ERROR_UNSUPPORTED_PTX_VERSION,
+            # leaving no exception for Tk to report and a permanently black canvas.
+            props.Set(pyluxcore.Property("renderengine.type", ["PATHCPU"]))
+            props.Set(pyluxcore.Property("accelerator.type", ["EMBREE"]))
+            props.Set(pyluxcore.Property("film.hw.enable", [False]))
             props.Set(pyluxcore.Property("film.width",  [self._render_width]))
             props.Set(pyluxcore.Property("film.height", [self._render_height]))
             props.Set(pyluxcore.Property("context.verbose", [False]))
@@ -285,35 +362,15 @@ class CameraController(tk.Tk):
             self._session = pyluxcore.RenderSession(self._config)
             self._session.Start()
             self._session_mode = "full"
-            self._render_backend = "PATHOCL"
+            self._render_backend = "PATHCPU"
 
             self.pipeline = 0
             self._schedule_switch()
             self.after(REFRESH_MS, self._update_film)
             self._info.config(text="Rendering...")
         except Exception as ex:
-            if self._config and "CUDA_ERROR_UNSUPPORTED_PTX_VERSION" in str(ex):
-                try:
-                    with self._restart_lock:
-                        if self._session and self._session.IsStarted():
-                            self._session.Stop()
-                        self._config.Parse(pyluxcore.Properties()
-                            .Set(pyluxcore.Property("renderengine.type", ["PATHCPU"]))
-                            .Set(pyluxcore.Property("accelerator.type", ["EMBREE"]))
-                            .Set(pyluxcore.Property("film.hw.enable", [False])))
-                        self._session = pyluxcore.RenderSession(self._config)
-                        self._session.Start()
-                    self._session_mode = "full"
-                    self._render_backend = "PATHCPU fallback"
-                    self.pipeline = 0
-                    self._schedule_switch()
-                    self.after(REFRESH_MS, self._update_film)
-                    self._info.config(text="CUDA PTX unsupported; rendering on CPU.")
-                    return
-                except Exception as fallback_ex:
-                    self._info.config(text=f"CPU fallback failed: {fallback_ex}")
-                    return
             self._info.config(text=f"Error: {ex}")
+            self._render_win.title(f"{WINDOW_TITLE} — Startup failed: {ex}")
 
     def _stop_rendering(self):
         """Stop refinement and preserve the most recently displayed film."""
@@ -332,7 +389,30 @@ class CameraController(tk.Tk):
         with self._restart_lock:
             if self._session and self._session.IsStarted():
                 self._session.Stop()
+        self._render_button.config(
+            text="Start Rendering", bg="#2a6a3a",
+            command=self._restart_rendering)
+        self._save_settings()
         self._render_win.title(f"{WINDOW_TITLE} — Rendering stopped")
+    def _restart_rendering(self):
+        """Start a new session after stopping without recreating the UI."""
+        if not self._render_stopped:
+            return
+        self._render_stopped = False
+        self._camera_restart_pending = False
+        self._preview_restart_in_progress = False
+        self._camera_snapshot = None
+        while True:
+            try:
+                self._restart_results.get_nowait()
+            except queue.Empty:
+                break
+        self._render_button.config(
+            text="Stop Rendering", bg="#9c2929",
+            command=self._stop_rendering)
+        self._save_settings()
+        self._render_win.title(f"{WINDOW_TITLE} — Restarting...")
+        self.after(1, self._start_session)
 
     def _do_restart_session(self, width, height, mode, camera_snapshot):
         """Restart a session at the requested resolution in a background thread."""
@@ -440,6 +520,7 @@ class CameraController(tk.Tk):
         if (width, height) == (self._render_width, self._render_height):
             return
         self._render_width, self._render_height = width, height
+        self._save_settings()
         if self._render_stopped or not self._scene or not self._session:
             return
         self._camera_revision += 1
@@ -509,6 +590,7 @@ class CameraController(tk.Tk):
     def _on_camera(self, refresh_ui=True):
         if refresh_ui:
             self._update_info()
+        self._save_settings()
         if self._scene and self._session and not self._render_stopped:
             self._camera_revision += 1
             self._camera_snapshot = self._capture_camera_snapshot()
@@ -519,6 +601,7 @@ class CameraController(tk.Tk):
 
     def _on_exposure(self):
         self._update_info()
+        self._save_settings()
         if self._scene and self._session and not self._render_stopped:
             self._camera_revision += 1
             self._camera_snapshot = self._capture_camera_snapshot()
