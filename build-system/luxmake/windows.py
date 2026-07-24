@@ -54,13 +54,13 @@ def win_recompose(args):
 
         # Rename and move OpenImageDenoise_device_cpu
         logger.info(
-            "Renaming OpenImageDenoise_device_cpu.pyd "
-            "into OpenImageDenoise_device_cpu.dll"
+            "Renaming LuxOpenImageDenoise_device_cpu.pyd "
+            "into LuxOpenImageDenoise_device_cpu.dll"
         )
         _rename(
             unpacked_wheel_path,
-            "OpenImageDenoise_device_cpu.pyd",
-            "OpenImageDenoise_device_cpu.dll",
+            "LuxOpenImageDenoise_device_cpu.pyd",
+            "LuxOpenImageDenoise_device_cpu.dll",
         )
 
         # Repack wheel
