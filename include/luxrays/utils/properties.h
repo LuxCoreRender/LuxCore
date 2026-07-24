@@ -737,6 +737,7 @@ public:
 	 * \throws std::runtime_error if the Property doesn't exist.
 	 */
 	const Property Get(const std::string &propName) const;
+	const Property Get(const char * propName) const;
 	/*!
 	 * \brief Returns a Property with the same name of the passed Property if
 	 * it has been defined or the passed Property itself (i.e. the default values).

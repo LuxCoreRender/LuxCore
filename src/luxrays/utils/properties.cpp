@@ -989,6 +989,20 @@ const Property Properties::Get(const string &propName) const {
 
 // We return an object rather than a reference to avoid issues in concurrent
 // accesses
+const Property Properties::Get(const char * propName) const {
+	std::lock_guard lk(mtx);
+	std::string propNameStr(propName);
+	auto it = props.find(propNameStr);
+	if (it == props.end())
+		throw runtime_error(
+			std::string("Undefined property in Properties::Get(): ") + propName
+		);
+
+	return it->second->Clone();
+}
+
+// We return an object rather than a reference to avoid issues in concurrent
+// accesses
 const Property Properties::Get(const Property &prop) const {
 	std::lock_guard lk(mtx);
 	auto it = props.find(prop.GetName());
