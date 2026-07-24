@@ -146,10 +146,9 @@ TextureUPtr Scene::CreateTexture(const string &texName, const Properties &props)
 	const string propName = "scene.textures." + texName;
 	const string texType = props.Get(Property(propName + ".type")("imagemap")).Get<string>();
 
-	TextureUPtr tex = NULL;
+	TextureUPtr tex;
 	if (texType == "imagemap") {
 		const string name = props.Get(Property(propName + ".file")("image.png")).Get<string>();
-
 		auto& im = imgMapCache.GetImageMap(name, ImageMapConfig(props, propName), true);
 
 		const bool randomizedTiling = props.Get(Property(propName + ".randomizedtiling.enable")(false)).Get<bool>();
