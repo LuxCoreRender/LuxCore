@@ -893,15 +893,14 @@ void ImageMap::Init(
 	const u_int heightHint
 ) {
 	const string resolvedFileName = SLG_FileNameResolver.ResolveFile(fileName);
+	SDL_LOG("Image map detected - Reading: " << resolvedFileName);
 #ifndef NDEBUG
 	SDL_LOG("OIIO version: " << OIIO::openimageio_version());
-	SDL_LOG("File name: " << fileName);
 #endif
-	SDL_LOG("Reading texture map: " << resolvedFileName);
 
 	if (!std::filesystem::exists(resolvedFileName))
 		throw runtime_error(
-			"ImageMap file doesn't exist: " + resolvedFileName + "(" + GetName() + ")"
+			"ImageMap file doesn't exist: " + resolvedFileName + " (" + GetName() + ")"
 		);
 
 

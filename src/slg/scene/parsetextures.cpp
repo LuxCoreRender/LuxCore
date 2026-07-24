@@ -93,7 +93,7 @@ using namespace slg::blender;
 void Scene::ParseTextures(const Properties &props) {
 	vector<string> texKeys = props.GetAllUniqueSubNames("scene.textures");
 	if (texKeys.size() == 0) {
-		// There are not texture definitions
+		// There is no texture definition
 		return;
 	}
 
