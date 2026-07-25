@@ -3,11 +3,11 @@
     "major": "2",
     "minor": "11",
     "patch": "0",
-    "prerelease": "dev0"
+    "prerelease": ""
   },
   "Dependencies": {
     "user": "LuxCoreRender",
-    "release": "2.2.1"
+    "release": "2.2.2"
   },
   "Build": {
     "gcc": "14",
