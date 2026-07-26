@@ -43,7 +43,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-2022, macos-15, macos-15-intel, windows-11-arm]
+        #os: [ubuntu-latest, windows-2022, macos-15, macos-15-intel, windows-11-arm]
+        os: [ubuntu-latest, windows-2022, macos-15, macos-15-intel]
     env:
       BUILD_TYPE: Release
       #CXX_VERSION: 20
