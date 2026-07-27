@@ -53,14 +53,6 @@ if(MSVC)
   set_target_properties(pyluxcore PROPERTIES SUFFIX ".pyd")
 endif(MSVC)
 
-
-if(LINUX)
-  set_target_properties(pyluxcore PROPERTIES
-    INSTALL_REMOVE_ENVIRONMENT_RPATH FALSE
-    INSTALL_RPATH "\$ORIGIN/../pyluxcore.libs"
-  )
-endif()
-
 # Install
 INSTALL(
   TARGETS pyluxcore
@@ -120,46 +112,6 @@ if(LINUX)
   install(
     PROGRAMS "${LUX_OIDN_DEVICE_CPU}"
     DESTINATION "pyluxcore.libs"
-    COMPONENT pyluxcore
-  )
-
-  find_program(PATCHELF patchelf REQUIRED)
-  install(CODE "
-    set(EXCLUDED_LIBS \"libluxcore\" \"libnvrtc\" \"ld-linux-x86-64\" \"libgomp\")
-
-    file(GLOB VENDORED_LIBS
-      \"\${CMAKE_INSTALL_PREFIX}/pyluxcore.libs/*.so*\"
-      \"\${CMAKE_INSTALL_PREFIX}/lib/*.so*\"
-    )
-    list(LENGTH VENDORED_LIBS VENDORED_LIBS_COUNT)
-    message(STATUS \"Found \${VENDORED_LIBS_COUNT} libraries in pyluxcore.libs and lib\")
-    foreach(lib \${VENDORED_LIBS})
-      get_filename_component(lib_name \${lib} NAME)
-
-      set(is_excluded FALSE)
-      foreach(prefix \${EXCLUDED_LIBS})
-        string(FIND \"\${lib_name}\" \"\${prefix}\" prefix_pos)
-        if(prefix_pos EQUAL 0)
-          set(is_excluded TRUE)
-        endif()
-      endforeach()
-
-      if(is_excluded)
-        message(STATUS \"  Skipping \${lib_name} (excluded)\")
-      else()
-        message(STATUS \"  Setting RPATH=\$ORIGIN on \${lib_name}\")
-        execute_process(
-          COMMAND ${PATCHELF} --set-rpath \"\$ORIGIN\" \${lib}
-          RESULT_VARIABLE patch_result
-          ERROR_VARIABLE patch_error
-        )
-        if(NOT patch_result EQUAL 0)
-          message(WARNING \"  Failed to patch \${lib_name}: \${patch_error}\")
-        endif()
-      endif()
-    endforeach()
-    message(STATUS \"Finished patching vendored library RPATHs\")
-    "
     COMPONENT pyluxcore
   )
 endif(LINUX)
