@@ -3,6 +3,9 @@ scene.camera.lookat.target = 0.000000 0.000000 0.823321
 scene.camera.up = 0 0 1
 scene.camera.fieldofview = 45
 ################################################################################
+scene.materials.chrome.type = mirror
+scene.materials.chrome.kr = 0.9 0.9 0.9
+
 scene.materials.Bottom.type = matte
 scene.materials.Bottom.kd = 0.11018493 0.11018493 0.11018493
 scene.materials.Alfa_045shields.type = glossy2
@@ -64,15 +67,21 @@ scene.materials.Alfa_045fl_045lens.ioroutside = 1
 scene.materials.Alfa_045fl_045lens.iorinside = 1.5
 scene.materials.Alfa_045wheel_045discs.type = glossy2
 scene.materials.Alfa_045wheel_045discs.kd = 0.43529412 0.43529412 0.43529412
-scene.materials.Alfa_045mainbody.type = carpaint
-scene.materials.Alfa_045mainbody.kd = 0.37764707 0.018882355 0.010490197
-# Sharp neutral clear coat that preserves the red base under a blue HDRI.
-scene.materials.Alfa_045mainbody.ks3 = 0.15 0.15 0.15
-scene.materials.Alfa_045mainbody.r3 = 0.04
-scene.materials.Alfa_045mainbody.m3 = 0.010
+# Base coat: measured carpaint data for bmw339
+scene.materials.Alfa_045mainbody_base.type = carpaint
+scene.materials.Alfa_045mainbody_base.kd = 0.35 0.008 0.004
+
+# Clear coat: smooth lacquer layer (IOR~1.5 -> ~4% at normal, ~100% at grazing)
+scene.materials.Alfa_045mainbody.type = glossycoating
+scene.materials.Alfa_045mainbody.base = Alfa_045mainbody_base
+scene.materials.Alfa_045mainbody.ks = 0.05 0.05 0.05
+scene.materials.Alfa_045mainbody.uroughness = 0.00003
+scene.materials.Alfa_045mainbody.vroughness = 0.00003
+scene.materials.Alfa_045mainbody.multibounce = 0
 scene.materials.ground.type = glossy2
 scene.materials.ground.kd = 0.2 0.2 0.2
 scene.materials.ground.ks = 0.6 0.6 0.6
+
 ################################################################################
 scene.objects.Bottom.ply = Bottom.ply
 scene.objects.Bottom.material = Bottom
@@ -126,11 +135,22 @@ scene.objects.Alfa_045wheel_045discs.ply = Alfa_045wheel_045discs.ply
 scene.objects.Alfa_045wheel_045discs.material = Alfa_045wheel_045discs
 scene.objects.Alfa_045mainbody.ply = Alfa_045mainbody.ply
 scene.objects.Alfa_045mainbody.material = Alfa_045mainbody
+#scene.objects.Alfa_045mainbody.material = chrome
+
+
 scene.objects.ground.ply = ground.ply
 scene.objects.ground.material = ground
 ################################################################################
-scene.infinitelight.file = hdre_055.hdr
-scene.infinitelight.gain = 1.0 1.0 1.0
+scene.lights.hdri.type = infinite
+scene.lights.hdri.file = hdre_055.hdr
+scene.lights.hdri.colorspace = nop
+scene.lights.hdri.storage = float
+scene.lights.hdri.gain = 5.0 5.0 5.0
+scene.lights.hdri.visibility.indirect.diffuse.enable = true
+scene.lights.hdri.visibility.indirect.glossy.enable = true
+scene.lights.hdri.visibility.indirect.specular.enable = true
+scene.lights.hdri.sampleupperhemisphereonly = 0
+
 # scene.infinitelight.shift = 1.0 0.0
 # Rotate HDRI +90deg around X (inverse) so Z-up scene aligns with Y-up HDRI sky
 #scene.infinitelight.transformation = 1 0 0 0  0 0 -1 0  0 1 0 0  0 0 0 1

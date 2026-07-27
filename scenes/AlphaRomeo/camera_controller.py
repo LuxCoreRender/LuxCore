@@ -526,6 +526,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             props.Set(pyluxcore.Property("opencl.cpu.use", [False]))
             props.Set(pyluxcore.Property("opencl.gpu.use", [True]))
             props.Set(pyluxcore.Property("opencl.native.threads.count", [0]))
+            props.Set(pyluxcore.Property("scene.images.resizepolicy.type", ["NONE"]))
             props.Set(pyluxcore.Property("film.hw.enable", [False]))
             props.Set(pyluxcore.Property("film.width",  [self._render_width]))
             props.Set(pyluxcore.Property("film.height", [self._render_height]))

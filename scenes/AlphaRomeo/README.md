@@ -5,6 +5,11 @@
 ```text
 python camera_controller.py
 ```
+HDR drag-and-drop requires `tkinterdnd2`:
+
+```text
+python -m pip install --user tkinterdnd2
+```
 
 ## Image pipeline and HDRI
 
@@ -25,7 +30,7 @@ The controller uses `PATHOCL` with the `OPTIX` accelerator, selecting the CUDA G
 The render-window title displays `PATHOCL / OptiX`. Film hardware processing remains disabled because the controller reads raw and OIDN film output on the host. GPU ray tracing was validated with a 320×180 Alpha Romeo render that reached 1,019 passes with every RGB channel populated.
 ## Changing the HDRI
 
-Drop a `.hdr` file onto the render viewport to replace the infinite-light image. The controller restarts the current render using the dropped HDRI and preserves the source path in `camera_controller_settings.json`; it does not copy the HDRI into the scene directory.
+Drop a `.hdr` file onto the render viewport to replace the infinite-light image. The controller uses `tkinterdnd2`'s native OLE file-drop support, restarts the current render using the dropped HDRI, and preserves the source path in `camera_controller_settings.json`; it does not copy the HDRI into the scene directory.
 ## Stopping and restarting
 
 Select **Stop Rendering** to halt refinement and retain the displayed film for saving. The same button changes to **Start Rendering**; selecting it creates a fresh session with the current camera, resolution, and exposure settings.
