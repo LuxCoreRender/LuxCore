@@ -53,14 +53,6 @@ if(MSVC)
   set_target_properties(pyluxcore PROPERTIES SUFFIX ".pyd")
 endif(MSVC)
 
-
-if(LINUX)
-  set_target_properties(pyluxcore PROPERTIES
-    INSTALL_REMOVE_ENVIRONMENT_RPATH FALSE
-    INSTALL_RPATH "\$ORIGIN/../pyluxcore.libs"
-  )
-endif()
-
 # Install
 INSTALL(
   TARGETS pyluxcore
