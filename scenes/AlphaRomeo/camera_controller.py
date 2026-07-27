@@ -16,8 +16,12 @@ Controls:
   Space                   → force film refresh
 """
 
-import os, sys, math, re, queue, threading, json
+import os, sys, math, re, queue, threading, json, hashlib, shutil, subprocess
 from array import array
+try:
+    from tkinterdnd2 import COPY, DND_FILES, TkinterDnD
+except ImportError:
+    COPY = DND_FILES = TkinterDnD = None
 
 # ── Bootstrap pyluxcore ────────────────────────────────────────────────────────
 LUXCORE_ROOT   = r"C:\Users\gcroc\Projects\LuxCore"
@@ -39,6 +43,9 @@ import tkinter as tk
 from tkinter import filedialog, ttk
 
 # ── Defaults ──────────────────────────────────────────────────────────────────
+DEFAULT_HDRI_FILE   = "hdre_055.hdr"  # fallback if settings has no valid hdr_file
+HDRI_PROXY_MAX_WIDTH = 2048
+HDRI_PROXY_CACHE_DIR = os.path.join(SCENE_DIR, ".hdri-cache")
 DEFAULT_AZ          = 80.0
 DEFAULT_EL          = 5.0
 DEFAULT_SWITCH_SECS = 5
@@ -100,6 +107,17 @@ def read_exposure(path):
                 return float(m.group(1))
     return 1.0
 
+def read_hdri_gain(path):
+    """Read the first channel of scene.lights.*.gain or scene.infinitelight.gain from a .scn file."""
+    with open(path) as f:
+        for line in f:
+            m = re.match(
+                r"scene\.(?:lights\.[^.]+|infinitelight)\.gain\s*=\s*([\d.eE+\-]+)",
+                line.strip())
+            if m:
+                return float(m.group(1))
+    return 0.01
+
 def _read_controller_settings():
     try:
         with open(SETTINGS_FILE, encoding="utf-8") as settings_file:
@@ -122,9 +140,86 @@ def _setting_target(settings):
         except (TypeError, ValueError):
             pass
     return list(DEFAULT_TARGET)
+def _is_env_map(path):
+    """Return True for file extensions LuxCore accepts as environment maps."""
+    return path.lower().endswith((".hdr", ".exr"))
+def _exr_dimensions(path):
+    """Return an EXR's (width, height), or None if ffprobe cannot inspect it."""
+    ffprobe = shutil.which("ffprobe")
+    if not ffprobe:
+        return None
+    try:
+        completed = subprocess.run(
+            [ffprobe, "-v", "error", "-select_streams", "v:0",
+             "-show_entries", "stream=width,height", "-of", "csv=p=0", path],
+            check=True, capture_output=True, text=True,
+        )
+        width, height = (int(value) for value in completed.stdout.strip().split(",", 1))
+        return width, height
+    except (OSError, ValueError, subprocess.CalledProcessError):
+        return None
+
+def _exr_proxy_path(path):
+    """Return a stable cache path tied to the source file's current contents."""
+    source_stat = os.stat(path)
+    cache_key = (
+        f"{os.path.normcase(os.path.abspath(path))}|{source_stat.st_size}|"
+        f"{source_stat.st_mtime_ns}|{HDRI_PROXY_MAX_WIDTH}"
+    )
+    digest = hashlib.sha256(cache_key.encode("utf-8")).hexdigest()[:16]
+    stem = os.path.splitext(os.path.basename(path))[0]
+    return os.path.join(
+        HDRI_PROXY_CACHE_DIR, f"{stem}-{digest}-{HDRI_PROXY_MAX_WIDTH}px.exr"
+    )
+
+def _prepare_environment_map(path):
+    """Return a cached 2K float EXR proxy for oversized EXR environment maps."""
+    if not path.lower().endswith(".exr"):
+        return path
+
+    dimensions = _exr_dimensions(path)
+    if not dimensions or max(dimensions) <= HDRI_PROXY_MAX_WIDTH:
+        return path
+    source_width, source_height = dimensions
+    scale = HDRI_PROXY_MAX_WIDTH / max(source_width, source_height)
+    target_width = max(1, round(source_width * scale))
+    target_height = max(1, round(source_height * scale))
+
+    ffmpeg = shutil.which("ffmpeg")
+    if not ffmpeg:
+        raise RuntimeError(
+            "FFmpeg is required to downsample this EXR environment map"
+        )
+
+    proxy_path = _exr_proxy_path(path)
+    if os.path.isfile(proxy_path):
+        return proxy_path
+
+    os.makedirs(HDRI_PROXY_CACHE_DIR, exist_ok=True)
+    temp_proxy_path = proxy_path + ".tmp.exr"
+    try:
+        subprocess.run(
+            [
+                ffmpeg, "-y", "-v", "error", "-i", path,
+                "-vf", f"scale={target_width}:{target_height}:flags=lanczos",
+                "-c:v", "exr", "-compression", "zip1", temp_proxy_path,
+            ],
+            check=True, capture_output=True, text=True,
+        )
+        os.replace(temp_proxy_path, proxy_path)
+    except (OSError, subprocess.CalledProcessError) as error:
+        try:
+            os.remove(temp_proxy_path)
+        except OSError:
+            pass
+        details = error.stderr.strip() if hasattr(error, "stderr") and error.stderr else str(error)
+        raise RuntimeError(f"Unable to create EXR environment-map proxy: {details}") from error
+
+    return proxy_path
+
 def _setting_hdr_file(settings):
     hdr_file = settings.get("hdr_file")
-    if (isinstance(hdr_file, str) and hdr_file.lower().endswith(".hdr")
+    if (isinstance(hdr_file, str) and _is_env_map(hdr_file)
             and os.path.isfile(hdr_file)):
         return os.path.normpath(hdr_file)
     return None
@@ -133,7 +228,7 @@ def _ignore_luxcore_log(_message):
     pass
 
 # ── Controller ────────────────────────────────────────────────────────────────
-class CameraController(tk.Tk):
+class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
     def __init__(self):
         super().__init__()
         self.title(WINDOW_TITLE)
@@ -143,9 +238,6 @@ class CameraController(tk.Tk):
         self._settings = _read_controller_settings()
         self._settings_ready = False
         self._hdr_file = _setting_hdr_file(self._settings)
-        self._hdr_drop_wndprocs = {}
-        self._hdr_drop_callback = None
-        self._hdr_drop_api = None
         saved_resolution = self._settings.get("render_resolution")
         if saved_resolution not in RENDER_RESOLUTIONS:
             saved_resolution = "1280 x 720"
@@ -157,6 +249,10 @@ class CameraController(tk.Tk):
             self._settings, "distance", 20.0, 1.0, 50.0))
         self.exposure = tk.DoubleVar(value=_setting_float(
             self._settings, "exposure", read_exposure(CFG_FILE), 0.001, 20.0))
+        saved_hdri_gain = _setting_float(
+            self._settings, "hdri_gain", read_hdri_gain(SCENE_FILE), 0.0001, 100.0)
+        self._hdri_gain_log = tk.DoubleVar(
+            value=math.log10(max(0.0001, min(100.0, saved_hdri_gain))))
         self.switch_sec = tk.IntVar(value=round(_setting_float(
             self._settings, "auto_oidn_seconds", DEFAULT_SWITCH_SECS, 1.0, 120.0)))
         self.render_resolution = tk.StringVar(value=saved_resolution)
@@ -223,7 +319,7 @@ class CameraController(tk.Tk):
         self.protocol("WM_DELETE_WINDOW", self._on_close)
         self._update_info()
         self.after(25, self._process_restart_results)
-        self.after(100, self._enable_hdr_file_drop)
+        self._enable_hdr_file_drop()
         self.after(300, self._start_session)
 
     def _save_settings(self):
@@ -235,6 +331,7 @@ class CameraController(tk.Tk):
             "distance": self.dist.get(),
             "target": self._target,
             "exposure": self.exposure.get(),
+            "hdri_gain": 10.0 ** self._hdri_gain_log.get(),
             "auto_oidn_seconds": self.switch_sec.get(),
             "render_resolution": self.render_resolution.get(),
         }
@@ -261,83 +358,26 @@ class CameraController(tk.Tk):
         self.destroy()
     # ── HDR file drop ────────────────────────────────────────────────────────
     def _enable_hdr_file_drop(self):
-        """Accept .hdr files dropped on the root window or render canvas."""
-        if os.name != "nt":
+        """Accept .hdr and .exr files through tkinterdnd2's native OLE integration."""
+        if not DND_FILES:
+            self._show_hdr_drop_error(
+                "HDR file drop requires: python -m pip install tkinterdnd2")
             return
+        self._render_canvas.drop_target_register(DND_FILES)
+        self._render_canvas.dnd_bind("<<Drop>>", self._on_hdr_file_drop_event)
+
+    def _on_hdr_file_drop_event(self, event):
         try:
-            import ctypes
-            from ctypes import wintypes
-
-            user32 = ctypes.WinDLL("user32", use_last_error=True)
-            shell32 = ctypes.WinDLL("shell32", use_last_error=True)
-            long_ptr = ctypes.c_ssize_t
-            wndproc_type = ctypes.WINFUNCTYPE(
-                long_ptr, wintypes.HWND, wintypes.UINT, wintypes.WPARAM,
-                wintypes.LPARAM)
-
-            user32.SetWindowLongPtrW.argtypes = [
-                wintypes.HWND, ctypes.c_int, long_ptr]
-            user32.SetWindowLongPtrW.restype = long_ptr
-            user32.CallWindowProcW.argtypes = [
-                long_ptr, wintypes.HWND, wintypes.UINT, wintypes.WPARAM,
-                wintypes.LPARAM]
-            user32.CallWindowProcW.restype = long_ptr
-            shell32.DragAcceptFiles.argtypes = [wintypes.HWND, wintypes.BOOL]
-            shell32.DragQueryFileW.argtypes = [
-                wintypes.HANDLE, wintypes.UINT, wintypes.LPWSTR, wintypes.UINT]
-            shell32.DragQueryFileW.restype = wintypes.UINT
-            shell32.DragFinish.argtypes = [wintypes.HANDLE]
-
-            wm_dropfiles = 0x0233
-            gwl_wndproc = -4
-
-            def window_proc(hwnd, message, wparam, lparam):
-                try:
-                    if message == wm_dropfiles:
-                        hdrop = wintypes.HANDLE(wparam)
-                        try:
-                            file_count = shell32.DragQueryFileW(
-                                hdrop, 0xFFFFFFFF, None, 0)
-                            hdr_file = None
-                            for index in range(file_count):
-                                length = shell32.DragQueryFileW(
-                                    hdrop, index, None, 0)
-                                path_buffer = ctypes.create_unicode_buffer(length + 1)
-                                shell32.DragQueryFileW(
-                                    hdrop, index, path_buffer, length + 1)
-                                candidate = os.path.normpath(path_buffer.value)
-                                if candidate.lower().endswith(".hdr"):
-                                    hdr_file = candidate
-                                    break
-                        finally:
-                            shell32.DragFinish(hdrop)
-
-                        if hdr_file:
-                            self.after_idle(self._on_hdr_file_drop, hdr_file)
-                        else:
-                            self.after_idle(
-                                self._show_hdr_drop_error,
-                                "Drop a Radiance HDR file (.hdr) on the render viewport")
-                        return 0
-                except Exception:
-                    pass
-
-                previous_proc = self._hdr_drop_wndprocs.get(int(hwnd))
-                return user32.CallWindowProcW(
-                    previous_proc, hwnd, message, wparam, lparam)
-
-            self._hdr_drop_callback = wndproc_type(window_proc)
-            self._hdr_drop_api = (user32, shell32)
-            for hwnd in (self.winfo_id(), self._render_canvas.winfo_id()):
-                previous_proc = user32.SetWindowLongPtrW(
-                    hwnd, gwl_wndproc,
-                    long_ptr(ctypes.cast(self._hdr_drop_callback,
-                                         ctypes.c_void_p).value))
-                if previous_proc:
-                    self._hdr_drop_wndprocs[int(hwnd)] = previous_proc
-                    shell32.DragAcceptFiles(hwnd, True)
-        except Exception:
-            self._show_hdr_drop_error("HDR file drop could not be enabled")
+            dropped_files = self.tk.splitlist(event.data)
+        except tk.TclError:
+            dropped_files = ()
+        for candidate in dropped_files:
+            if _is_env_map(candidate):
+                self._on_hdr_file_drop(candidate)
+                return COPY
+        self._show_hdr_drop_error(
+            "Drop a .hdr or .exr environment map on the render viewport")
+        return COPY
 
     def _show_hdr_drop_error(self, message):
         self._info.config(text=message)
@@ -345,8 +385,8 @@ class CameraController(tk.Tk):
 
     def _on_hdr_file_drop(self, hdr_file):
         hdr_file = os.path.normpath(hdr_file)
-        if not hdr_file.lower().endswith(".hdr") or not os.path.isfile(hdr_file):
-            self._show_hdr_drop_error("Dropped HDR file is unavailable")
+        if not _is_env_map(hdr_file) or not os.path.isfile(hdr_file):
+            self._show_hdr_drop_error("Dropped environment map file is unavailable")
             return
 
         if self._render_stopped or not self._scene or not self._session:
@@ -364,12 +404,15 @@ class CameraController(tk.Tk):
             if timer_id:
                 self.after_cancel(timer_id)
                 setattr(self, attr, None)
+        file_mb = os.path.getsize(hdr_file) / (1024 * 1024)
+        size_note = f"  ({file_mb:.0f} MB — may take a moment)" if file_mb > 50 else ""
         self._render_win.title(
-            f"{WINDOW_TITLE} — Loading HDRI: {os.path.basename(hdr_file)}")
+            f"{WINDOW_TITLE} — Loading HDRI: {os.path.basename(hdr_file)}{size_note}")
+        gain = 10.0 ** self._hdri_gain_log.get()
         threading.Thread(
             target=self._do_restart_session,
             args=(self._render_width, self._render_height, "full",
-                  self._camera_snapshot, hdr_file),
+                  self._camera_snapshot, hdr_file, gain),
             daemon=True).start()
 
     # ── UI ────────────────────────────────────────────────────────────────────
@@ -391,21 +434,26 @@ class CameraController(tk.Tk):
                  variable=self.exposure, length=scale_len, showvalue=False,
                  command=lambda _: self._on_exposure()).grid(row=4, column=0, **pad)
 
+        tk.Label(panel, text="HDRI Gain").grid(row=5, column=0, sticky="w", **pad)
+        tk.Scale(panel, from_=-2.0, to=3.0, resolution=0.01, orient=tk.HORIZONTAL,
+                 variable=self._hdri_gain_log, length=scale_len, showvalue=False,
+                 command=lambda _: self._on_hdri_gain()).grid(row=6, column=0, **pad)
+
         pip_frame = tk.Frame(panel)
-        pip_frame.grid(row=5, column=0, pady=(2, 0))
+        pip_frame.grid(row=7, column=0, pady=(2, 0))
         tk.Button(pip_frame, text="Raw", width=8,
                   command=lambda: self._set_pipeline(0)).pack(side=tk.LEFT, padx=2)
         tk.Button(pip_frame, text="OIDN", width=8,
                   command=lambda: self._set_pipeline(1)).pack(side=tk.LEFT, padx=2)
 
         delay_frame = tk.Frame(panel)
-        delay_frame.grid(row=6, column=0, pady=(2, 0))
+        delay_frame.grid(row=8, column=0, pady=(2, 0))
         tk.Label(delay_frame, text="Auto OIDN").pack(side=tk.LEFT, padx=(2, 3))
         tk.Spinbox(delay_frame, from_=1, to=120, textvariable=self.switch_sec,
                    width=3, font=("Segoe UI", 8)).pack(side=tk.LEFT)
         tk.Label(delay_frame, text="sec").pack(side=tk.LEFT, padx=(3, 2))
         resolution_frame = tk.Frame(panel)
-        resolution_frame.grid(row=7, column=0, pady=(3, 0))
+        resolution_frame.grid(row=9, column=0, pady=(3, 0))
         tk.Label(resolution_frame, text="Resolution").pack(side=tk.LEFT, padx=(2, 4))
         resolution_menu = ttk.Combobox(
             resolution_frame, textvariable=self.render_resolution,
@@ -414,12 +462,12 @@ class CameraController(tk.Tk):
         resolution_menu.bind("<<ComboboxSelected>>", self._set_render_resolution)
 
         tk.Label(panel, text="Left: pan  •  Right: orbit  •  Scroll: zoom\n"
-                             "Drop an .hdr file on the render to change the HDRI",
+                             "Drop a .hdr or .exr file on the render to change HDRI",
                  wraplength=CONTROL_W - 12, justify=tk.CENTER,
-                 font=("Segoe UI", 8), fg="#888").grid(row=8, column=0, pady=(4, 0))
+                 font=("Segoe UI", 8), fg="#888").grid(row=10, column=0, pady=(4, 0))
         self._canvas = tk.Canvas(panel, width=CONTROL_W, height=CONTROL_H, bg="#1a1a2e",
                                  cursor="fleur", highlightthickness=1, highlightbackground="#444")
-        self._canvas.grid(row=9, column=0, padx=6, pady=4)
+        self._canvas.grid(row=11, column=0, padx=6, pady=4)
         self._canvas.bind("<Button-1>",        self._pan_start)
         self._canvas.bind("<B1-Motion>",       self._pan_move)
         self._canvas.bind("<Button-3>",        self._drag_start)
@@ -431,7 +479,7 @@ class CameraController(tk.Tk):
         self.bind("<R>", lambda _: self._reset())
 
         btn_frame = tk.Frame(panel)
-        btn_frame.grid(row=10, column=0, pady=2)
+        btn_frame.grid(row=12, column=0, pady=2)
         for i, (lbl, az, el) in enumerate([("Front",0,12),("Side",90,10),("Rear",180,12),
                                             ("Low",30,4),("Hero",25,18),("Top",0,75)]):
             tk.Button(btn_frame, text=lbl, width=6,
@@ -441,18 +489,18 @@ class CameraController(tk.Tk):
         tk.Button(panel, text="Save Film", bg="#2a6aba", fg="white",
                   font=("Segoe UI", 9, "bold"), width=22,
                   command=self._save_film
-                  ).grid(row=11, column=0, pady=(3, 6))
+                  ).grid(row=13, column=0, pady=(3, 6))
         self._render_button = tk.Button(
             panel, text="Stop Rendering", bg="#9c2929", fg="white",
             font=("Segoe UI", 9, "bold"), width=22,
             command=self._stop_rendering)
-        self._render_button.grid(row=12, column=0, pady=(0, 6))
+        self._render_button.grid(row=14, column=0, pady=(0, 6))
         tk.Label(panel, text="Controls:", font=("Segoe UI", 10, "bold"),
-                 anchor="w").grid(row=13, column=0, sticky="w", padx=8)
+                 anchor="w").grid(row=15, column=0, sticky="w", padx=8)
         tk.Label(panel,
                  text="Left-drag: pan\nRight-drag: rotate\nScroll forward: zoom in\nScroll back: zoom out",
                  justify=tk.LEFT, anchor="w", font=("Segoe UI", 8), fg="#666"
-                 ).grid(row=14, column=0, sticky="w", padx=8, pady=(0, 6))
+                 ).grid(row=16, column=0, sticky="w", padx=8, pady=(0, 6))
 
         self._draw_minimap()
 
@@ -486,10 +534,16 @@ class CameraController(tk.Tk):
             # Create Scene separately (GetScene() is non-copyable in pybind11)
             scene_file = props.Get("scene.file").GetString()
             self._scene  = pyluxcore.Scene(scene_file)
-            if self._hdr_file:
-                self._scene.Parse(pyluxcore.Properties().Set(
-                    pyluxcore.Property("scene.infinitelight.file",
-                                       [self._hdr_file])))
+            # Apply file + gain together in one parse — separate calls would
+            # reset each other's value to default (file→"image.png", gain→1.0).
+            _source_file = self._hdr_file or DEFAULT_HDRI_FILE
+            _file = _prepare_environment_map(_source_file)
+            _gain = 10.0 ** self._hdri_gain_log.get()
+            self._scene.Parse(pyluxcore.Properties()
+                .Set(pyluxcore.Property("scene.lights.hdri.type", ["infinite"]))
+                .Set(pyluxcore.Property("scene.lights.hdri.file", [_file]))
+                .Set(pyluxcore.Property("scene.lights.hdri.colorspace", ["nop"]))
+                .Set(pyluxcore.Property("scene.lights.hdri.gain", [_gain, _gain, _gain])))
             self._config = pyluxcore.RenderConfig(props, self._scene)
             self._apply_camera_props()
 
@@ -549,7 +603,7 @@ class CameraController(tk.Tk):
         self.after(1, self._start_session)
 
     def _do_restart_session(self, width, height, mode, camera_snapshot,
-                            hdr_file=None):
+                            hdr_file=None, hdri_gain=None):
         """Restart a session at the requested resolution in a background thread."""
         succeeded = False
         error_message = None
@@ -561,16 +615,30 @@ class CameraController(tk.Tk):
                     if self._session and self._session.IsStarted():
                         self._session.Stop()
                     _, _, _, _, exp, _ = camera_snapshot
-                    prescale = 1.0 / max(exp, 0.001)
                     self._config.Parse(pyluxcore.Properties()
-                        .Set(pyluxcore.Property("film.imagepipelines.0.0.prescale", [prescale]))
-                        .Set(pyluxcore.Property("film.imagepipelines.1.1.prescale", [prescale]))
+                        .Set(pyluxcore.Property("film.imagepipelines.0.0.exposure", [exp]))
+                        .Set(pyluxcore.Property("film.imagepipelines.1.1.exposure", [exp]))
                         .Set(pyluxcore.Property("film.width", [width]))
                         .Set(pyluxcore.Property("film.height", [height])))
-                    if hdr_file:
-                        self._scene.Parse(pyluxcore.Properties().Set(
-                            pyluxcore.Property("scene.infinitelight.file",
-                                               [hdr_file])))
+                    if hdr_file or hdri_gain is not None:
+                        # Must pass file + gain together — each property defaults
+                        # the other to its fallback if sent in a separate parse.
+                        _source_file = hdr_file if hdr_file else (
+                            self._hdr_file or DEFAULT_HDRI_FILE
+                        )
+                        _file = _prepare_environment_map(_source_file)
+                        _gain = hdri_gain if hdri_gain is not None else (
+                            10.0 ** self._hdri_gain_log.get())
+                        # Use half-precision storage for large files to halve GPU memory.
+                        _file_mb = os.path.getsize(_file) / (1024 * 1024) if os.path.isfile(_file) else 0
+                        _storage = "half" if _file_mb > 50 else "float"
+                        self._scene.Parse(pyluxcore.Properties()
+                            .Set(pyluxcore.Property("scene.lights.hdri.type", ["infinite"]))
+                            .Set(pyluxcore.Property("scene.lights.hdri.file", [_file]))
+                            .Set(pyluxcore.Property("scene.lights.hdri.colorspace", ["nop"]))
+                            .Set(pyluxcore.Property("scene.lights.hdri.storage", [_storage]))
+                            .Set(pyluxcore.Property("scene.lights.hdri.gain",
+                                                    [_gain, _gain, _gain])))
                     self._apply_camera_snapshot(camera_snapshot)
                     self._session = pyluxcore.RenderSession(self._config)
                     self._session.Start()
@@ -754,6 +822,20 @@ class CameraController(tk.Tk):
                 args=(self._render_width, self._render_height, "full", self._camera_snapshot),
                 daemon=True).start()
 
+    def _on_hdri_gain(self):
+        self._update_info()
+        self._save_settings()
+        if self._scene and self._session and not self._render_stopped:
+            gain = 10.0 ** self._hdri_gain_log.get()
+            self._camera_revision += 1
+            self._camera_snapshot = self._capture_camera_snapshot()
+            self._camera_restart_pending = True
+            threading.Thread(
+                target=self._do_restart_session,
+                args=(self._render_width, self._render_height, "full",
+                      self._camera_snapshot, None, gain),
+                daemon=True).start()
+
     # ── Film display ──────────────────────────────────────────────────────────
     def _fit_image_to_viewport(self, img):
         scale = min(FILM_W / img.width, FILM_H / img.height)
@@ -929,9 +1011,11 @@ class CameraController(tk.Tk):
 
     def _update_info(self):
         az, el = self.az.get(), self.el.get()
+        gain = 10.0 ** self._hdri_gain_log.get()
         self._info.config(text=f"  az={az:6.1f}°  el={el:5.1f}°"
                                f"  dist={self.dist.get():5.2f}"
                                f"  exp={self.exposure.get():.3f}"
+                               f"  hdri={gain:.3f}"
                                f"  pipe={self.pipeline}")
         self._draw_minimap()
 
