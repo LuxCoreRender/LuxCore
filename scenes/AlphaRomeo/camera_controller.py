@@ -16,7 +16,7 @@ Controls:
   Space                   → force film refresh
 """
 
-import os, sys, math, re, queue, threading, json
+import os, sys, math, re, queue, threading, json, socket, struct
 from array import array
 try:
     from tkinterdnd2 import COPY, DND_FILES, TkinterDnD
@@ -78,7 +78,16 @@ WORLD_UP            = [0.0, 0.0, 1.0]
 WINDOW_TITLE        = "nPower Software LuxCore Renderer"
 WINDOW_ICON         = r"D:\nPowerSoftware.com\NewImages\HexigonLogoFLat.png"
 
-# ── Math helpers ──────────────────────────────────────────────────────────────
+# ── External control server ────────────────────────────────────────────────
+# camera_controller_settings.json "control_port" or the LUXCORE_CONTROL_PORT
+# environment variable selects the TCP port; 0 disables the server.
+CONTROL_HOST         = "127.0.0.1"
+DEFAULT_CONTROL_PORT = 8765
+CONTROL_MAX_HEADER   = 1 << 20    # 1 MB JSON header limit
+CONTROL_MAX_PAYLOAD  = 512 << 20  # 512 MB binary payload limit per message
+UPLOAD_APPLY_MS      = 500        # auto-apply delay after streamed uploads
+
+# ── Math helpers ──────────────────────────────────────────────────────
 def _norm(v):
     l = math.sqrt(sum(c*c for c in v))
     return [c/l for c in v] if l > 1e-10 else v
@@ -216,6 +225,76 @@ def _apply_environment_maps(scene, source_file, gain, render_hdri_background=Tru
     scene.Parse(props)
     scene.RemoveUnusedImageMaps()
 
+# ── External control protocol ───────────────────────────────────────────────
+def _recv_exact(conn, count):
+    """Read exactly count bytes from a socket or raise ConnectionError."""
+    data = bytearray()
+    while len(data) < count:
+        chunk = conn.recv(min(65536, count - len(data)))
+        if not chunk:
+            raise ConnectionError("Control connection closed")
+        data.extend(chunk)
+    return bytes(data)
+
+# The C# MeshHeader writes its buffers in this fixed order.
+_UPLOAD_SECTIONS = (("Vertices", "vertices"), ("Normals", "normals"),
+                    ("UVs", "uvs"), ("Indices", "indices"))
+
+def _header_command(header):
+    """Return the command name from cmd/Command/command header keys."""
+    for key in ("cmd", "Command", "command"):
+        value = header.get(key)
+        if isinstance(value, str) and value:
+            return value.lower()
+    return None
+
+def _control_buffer_specs(header):
+    """Map a header to its ordered binary buffer layout."""
+    buffers = header.get("buffers")
+    if isinstance(buffers, list):
+        specs = []
+        for spec in buffers:
+            if not isinstance(spec, dict):
+                raise ValueError("Each buffers entry must be a JSON object")
+            role = spec.get("role")
+            if not isinstance(role, str) or not role:
+                raise ValueError("Each buffer needs a role name")
+            specs.append((role, int(spec.get("bytes", -1))))
+        return specs
+    # upload_mesh style: named sections carrying ByteLength, fixed order.
+    specs = []
+    for key, role in _UPLOAD_SECTIONS:
+        section = header.get(key)
+        if isinstance(section, dict):
+            specs.append((role, int(section.get("ByteLength", 0))))
+    return specs
+
+def _read_control_message(conn):
+    """Read one framed message: header size, JSON header, then binary blobs."""
+    (header_size,) = struct.unpack("<I", _recv_exact(conn, 4))
+    if not 0 < header_size <= CONTROL_MAX_HEADER:
+        raise ValueError(f"Control header size out of range: {header_size}")
+    header = json.loads(_recv_exact(conn, header_size).decode("utf-8"))
+    if not isinstance(header, dict):
+        raise ValueError("Control header must be a JSON object")
+    blobs = {}
+    total = 0
+    for role, size in _control_buffer_specs(header):
+        if role in blobs:
+            raise ValueError("Each buffer needs a unique role name")
+        if size < 0:
+            raise ValueError(f"The {role} buffer size is invalid")
+        total += size
+        if total > CONTROL_MAX_PAYLOAD:
+            raise ValueError("Control payload size out of range")
+        blobs[role] = _recv_exact(conn, size)
+    return header, blobs
+
+def _send_control_message(conn, reply):
+    """Send one framed JSON reply."""
+    payload = json.dumps(reply).encode("utf-8")
+    conn.sendall(struct.pack("<I", len(payload)) + payload)
+
 # ── Controller ────────────────────────────────────────────────────────────────
 class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
     def __init__(self):
@@ -227,6 +306,18 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         self._settings = _read_controller_settings()
         self._settings_ready = False
         self._hdr_file = _setting_hdr_file(self._settings)
+        self._control_port_setting = int(_setting_float(
+            self._settings, "control_port", DEFAULT_CONTROL_PORT, 0, 65535))
+        self._control_port = self._control_port_setting
+        env_port = os.environ.get("LUXCORE_CONTROL_PORT")
+        if env_port is not None:
+            try:
+                env_value = int(env_port)
+                if 0 <= env_value <= 65535:
+                    self._control_port = env_value
+            except ValueError:
+                pass
+        self._control_socket = None
         saved_resolution = self._settings.get("render_resolution")
         if saved_resolution not in RENDER_RESOLUTIONS:
             saved_resolution = "1280 x 720"
@@ -262,6 +353,11 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         self._scene     = None
         self._restart_lock = threading.Lock()
         self._restart_results = queue.Queue()
+        self._control_commands = queue.Queue()
+        self._pending_meshes = {}
+        self._pending_scene_props = []
+        self._pending_config_props = []
+        self._upload_apply_id = None
         self._camera_restart_pending = False
         self._camera_revision = 0
         self._camera_snapshot = None
@@ -312,7 +408,9 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         self.protocol("WM_DELETE_WINDOW", self._on_close)
         self._update_info()
         self.after(25, self._process_restart_results)
+        self.after(25, self._process_control_commands)
         self._enable_hdr_file_drop()
+        self._start_control_server()
         self.after(300, self._start_session)
 
     def _save_settings(self):
@@ -328,6 +426,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             "render_hdri_background": self._render_hdri_background.get(),
             "auto_oidn_seconds": self.switch_sec.get(),
             "render_resolution": self.render_resolution.get(),
+            "control_port": self._control_port_setting,
         }
         if self._hdr_file:
             settings["hdr_file"] = self._hdr_file
@@ -347,6 +446,12 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
 
     def _on_close(self):
         self._save_settings()
+        if self._control_socket:
+            try:
+                self._control_socket.close()
+            except OSError:
+                pass
+            self._control_socket = None
         if not self._render_stopped:
             self._stop_rendering()
         self.destroy()
@@ -611,7 +716,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
 
     def _do_restart_session(self, width, height, mode, camera_snapshot,
                             hdr_file=None, hdri_gain=None,
-                            render_hdri_background=None):
+                            render_hdri_background=None, scene_update=None):
         """Restart a session at the requested resolution in a background thread."""
         succeeded = False
         error_message = None
@@ -638,6 +743,25 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
                         _apply_environment_maps(
                             self._scene, _source_file, _gain,
                             render_hdri_background)
+                    if scene_update:
+                        config_texts, meshes, scene_texts = scene_update
+                        for text in config_texts:
+                            extra = pyluxcore.Properties()
+                            extra.SetFromString(text)
+                            self._config.Parse(extra)
+                        for mesh_name, data in meshes.items():
+                            mesh_kwargs = {}
+                            if data["normals"] is not None:
+                                mesh_kwargs["normals"] = data["normals"]
+                            if data["uvs"] is not None:
+                                mesh_kwargs["uvs"] = [data["uvs"]]
+                            self._scene.DefineMeshExt(
+                                mesh_name, data["points"], data["triangles"],
+                                **mesh_kwargs)
+                        for text in scene_texts:
+                            extra = pyluxcore.Properties()
+                            extra.SetFromString(text)
+                            self._scene.Parse(extra)
                     self._apply_camera_snapshot(camera_snapshot)
                     self._session = pyluxcore.RenderSession(self._config)
                     self._session.Start()
@@ -850,6 +974,388 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
                       self._render_hdri_background.get()),
                 daemon=True).start()
 
+    # ── External control server ──────────────────────────────────────────────
+    def _start_control_server(self):
+        """Accept localhost command connections from external programs."""
+        if self._control_port <= 0:
+            return
+        try:
+            server = socket.create_server((CONTROL_HOST, self._control_port))
+        except OSError as ex:
+            self._info.config(
+                text=f"Control port {self._control_port} unavailable: {ex}")
+            return
+        self._control_socket = server
+        threading.Thread(target=self._control_accept_loop, args=(server,),
+                         daemon=True).start()
+
+    def _control_accept_loop(self, server):
+        while True:
+            try:
+                conn, _ = server.accept()
+            except OSError:
+                return
+            threading.Thread(target=self._control_client_loop, args=(conn,),
+                             daemon=True).start()
+
+    def _control_client_loop(self, conn):
+        """Serve one connection; commands run on the Tk thread via a queue."""
+        with conn:
+            while True:
+                try:
+                    header, blobs = _read_control_message(conn)
+                except (ConnectionError, OSError):
+                    return
+                except Exception as ex:
+                    try:
+                        _send_control_message(conn, {"ok": False, "error": str(ex)})
+                    except OSError:
+                        pass
+                    return
+                reply_queue = queue.Queue(maxsize=1)
+                self._control_commands.put((header, blobs, reply_queue))
+                try:
+                    reply = reply_queue.get(timeout=60.0)
+                except queue.Empty:
+                    reply = {"ok": False, "error": "Command timed out"}
+                try:
+                    _send_control_message(conn, reply)
+                except OSError:
+                    return
+
+    def _process_control_commands(self):
+        try:
+            while True:
+                header, blobs, reply_queue = self._control_commands.get_nowait()
+                try:
+                    reply = self._execute_control_command(header, blobs)
+                except Exception as ex:
+                    reply = {"ok": False, "error": str(ex)}
+                try:
+                    reply_queue.put_nowait(reply)
+                except queue.Full:
+                    pass
+        except queue.Empty:
+            pass
+        self.after(25, self._process_control_commands)
+
+    def _execute_control_command(self, header, blobs):
+        cmd = _header_command(header)
+        if cmd == "status":
+            return self._control_status()
+        if cmd == "camera":
+            if "az" in header:
+                self.az.set(float(header["az"]))
+            if "el" in header:
+                self.el.set(max(-89.0, min(89.0, float(header["el"]))))
+            if "dist" in header:
+                self.dist.set(max(1.0, min(50.0, float(header["dist"]))))
+            self._on_camera()
+            return {"ok": True, "azimuth": self.az.get(),
+                    "elevation": self.el.get(), "distance": self.dist.get()}
+        if cmd == "target":
+            xyz = header.get("xyz")
+            if not isinstance(xyz, (list, tuple)) or len(xyz) != 3:
+                raise ValueError("target needs xyz: [x, y, z]")
+            self._target = [float(value) for value in xyz]
+            self._on_camera()
+            return {"ok": True, "target": list(self._target)}
+        if cmd == "preset":
+            self._set_preset(float(header["az"]), float(header["el"]))
+            return {"ok": True}
+        if cmd == "reset":
+            self._reset()
+            return {"ok": True}
+        if cmd == "exposure":
+            self.exposure.set(max(0.001, min(20.0, float(header["value"]))))
+            self._on_exposure()
+            return {"ok": True, "exposure": self.exposure.get()}
+        if cmd == "hdri_gain":
+            gain = max(0.0001, min(100.0, float(header["value"])))
+            self._hdri_gain_log.set(math.log10(gain))
+            self._on_hdri_gain()
+            return {"ok": True, "hdri_gain": 10.0 ** self._hdri_gain_log.get()}
+        if cmd == "hdri_file":
+            path = os.path.normpath(str(header.get("path", "")))
+            if not _is_env_map(path) or not os.path.isfile(path):
+                raise ValueError("hdri_file needs an existing .hdr or .exr path")
+            self._on_hdr_file_drop(path)
+            return {"ok": True, "hdr_file": path}
+        if cmd == "background":
+            wanted = bool(header.get("hdri", True))
+            if wanted != self._render_hdri_background.get():
+                self._render_hdri_background.set(wanted)  # trace restarts render
+            return {"ok": True, "render_hdri_background": wanted}
+        if cmd == "resolution":
+            width, height = int(header["width"]), int(header["height"])
+            if not (16 <= width <= 8192 and 16 <= height <= 8192):
+                raise ValueError("resolution must be between 16 and 8192 pixels")
+            self.render_resolution.set(f"{width} x {height}")
+            self._set_render_resolution()
+            return {"ok": True, "width": self._render_width,
+                    "height": self._render_height}
+        if cmd == "pipeline":
+            index = int(header.get("index", 0))
+            if index not in (0, 1):
+                raise ValueError("pipeline index must be 0 (raw) or 1 (OIDN)")
+            self._set_pipeline(index)
+            return {"ok": True, "pipeline": self.pipeline}
+        if cmd == "stop":
+            self._stop_rendering()
+            return {"ok": True}
+        if cmd == "start":
+            self._restart_rendering()
+            return {"ok": True}
+        if cmd == "save_film":
+            saved = self._write_film_image(str(header.get("path", "")))
+            return {"ok": True, "path": saved}
+        if cmd == "define_mesh":
+            return self._stage_control_mesh(header, blobs)
+        if cmd == "upload_mesh":
+            return self._stage_uploaded_mesh(header, blobs)
+        if cmd == "scene_props":
+            text = header.get("text")
+            if not isinstance(text, str) or not text.strip():
+                raise ValueError("scene_props needs LuxCore property text")
+            self._pending_scene_props.append(text)
+            return {"ok": True,
+                    "staged_scene_props": len(self._pending_scene_props)}
+        if cmd == "config_props":
+            text = header.get("text")
+            if not isinstance(text, str) or not text.strip():
+                raise ValueError("config_props needs LuxCore property text")
+            self._pending_config_props.append(text)
+            return {"ok": True,
+                    "staged_config_props": len(self._pending_config_props)}
+        if cmd == "apply":
+            return self._apply_staged_updates()
+        if cmd == "shutdown":
+            self.after(50, self._on_close)
+            return {"ok": True}
+        raise ValueError(f"Unknown control command: {cmd}")
+
+    def _control_status(self):
+        status = {
+            "ok": True,
+            "azimuth": self.az.get(),
+            "elevation": self.el.get(),
+            "distance": self.dist.get(),
+            "target": list(self._target),
+            "exposure": self.exposure.get(),
+            "hdri_gain": 10.0 ** self._hdri_gain_log.get(),
+            "render_hdri_background": bool(self._render_hdri_background.get()),
+            "hdr_file": self._hdr_file or DEFAULT_HDRI_FILE,
+            "width": self._render_width,
+            "height": self._render_height,
+            "pipeline": self.pipeline,
+            "render_stopped": self._render_stopped,
+            "staged_meshes": sorted(self._pending_meshes),
+            "staged_scene_props": len(self._pending_scene_props),
+            "staged_config_props": len(self._pending_config_props),
+        }
+        if self._restart_lock.acquire(timeout=0.25):
+            try:
+                if (self._session and self._session.IsStarted()
+                        and not self._camera_restart_pending):
+                    self._session.UpdateStats()
+                    stats = self._session.GetStats()
+                    status["passes"] = stats.Get(
+                        "stats.renderengine.pass").GetInt()
+                    status["render_seconds"] = stats.Get(
+                        "stats.renderengine.time").GetFloat()
+                    status["samples_per_second"] = stats.Get(
+                        "stats.renderengine.total.samplesec").GetFloat()
+            finally:
+                self._restart_lock.release()
+        else:
+            status["busy"] = True
+        return status
+
+    def _stage_control_mesh(self, header, blobs):
+        """Stage a mesh from raw little-endian buffers until the next apply."""
+        try:
+            import numpy
+        except ImportError as ex:
+            raise RuntimeError(
+                "define_mesh requires numpy: python -m pip install numpy") from ex
+        name = header.get("name")
+        if not isinstance(name, str) or not name.strip():
+            raise ValueError("define_mesh needs a mesh name")
+        name = name.strip()
+
+        def read_buffer(role, dtype, stride, required):
+            data = blobs.get(role)
+            if data is None:
+                if required:
+                    raise ValueError(f"define_mesh is missing the {role} buffer")
+                return None
+            item_size = numpy.dtype(dtype).itemsize * stride
+            if not data or len(data) % item_size:
+                raise ValueError(
+                    f"The {role} buffer must hold N x {stride} {dtype} values")
+            return numpy.frombuffer(data, dtype=dtype).reshape(-1, stride)
+
+        points = read_buffer("points", numpy.float32, 3, True)
+        triangles = read_buffer("triangles", numpy.uint32, 3, True)
+        normals = read_buffer("normals", numpy.float32, 3, False)
+        uvs = read_buffer("uvs", numpy.float32, 2, False)
+        if normals is not None and len(normals) != len(points):
+            raise ValueError("normals must provide one entry per vertex")
+        if uvs is not None and len(uvs) != len(points):
+            raise ValueError("uvs must provide one entry per vertex")
+        if int(triangles.max()) >= len(points):
+            raise ValueError("A triangle index is out of range")
+        self._pending_meshes[name] = {
+            "points": points, "triangles": triangles,
+            "normals": normals, "uvs": uvs,
+        }
+        return {"ok": True, "mesh": name,
+                "vertices": int(len(points)), "triangles": int(len(triangles))}
+
+    def _stage_uploaded_mesh(self, header, blobs):
+        """Accept the C# upload_mesh layout: vertices, normals, uvs, indices."""
+        try:
+            import numpy
+        except ImportError as ex:
+            raise RuntimeError(
+                "upload_mesh requires numpy: python -m pip install numpy") from ex
+        raw_name = (header.get("MeshName") or header.get("meshName")
+                    or header.get("mesh_name"))
+        if not isinstance(raw_name, str) or not raw_name.strip():
+            raise ValueError("upload_mesh needs a MeshName")
+        # Property names cannot carry spaces or dots, so sanitize the identity.
+        name = re.sub(r"[^0-9A-Za-z_\-]", "_", raw_name.strip())
+
+        def section_components(key, default):
+            section = header.get(key)
+            if isinstance(section, dict):
+                element_size = int(section.get("ElementSize", 0))
+                if element_size in (8, 12):
+                    return element_size // 4
+                fmt = str(section.get("Format", ""))
+                if fmt.endswith("x3"):
+                    return 3
+                if fmt.endswith("x2"):
+                    return 2
+            return default
+
+        vertex_data = blobs.get("vertices")
+        index_data = blobs.get("indices")
+        if not vertex_data or not index_data:
+            raise ValueError("upload_mesh needs vertex and index buffers")
+        if len(vertex_data) % 12:
+            raise ValueError("The vertex buffer must hold N x 3 float32 values")
+        points = numpy.frombuffer(vertex_data, dtype=numpy.float32).reshape(-1, 3)
+
+        index_format = ""
+        if isinstance(header.get("Indices"), dict):
+            index_format = str(header["Indices"].get("Format", ""))
+        index_dtype = numpy.uint32 if "uint" in index_format else numpy.int32
+        if len(index_data) % 4:
+            raise ValueError("The index buffer must hold 32-bit integers")
+        flat_indices = numpy.frombuffer(index_data, dtype=index_dtype)
+        if flat_indices.size == 0 or flat_indices.size % 3:
+            raise ValueError("The index count must be a positive multiple of 3")
+        if int(flat_indices.min()) < 0 or int(flat_indices.max()) >= len(points):
+            raise ValueError("A triangle index is out of range")
+        triangles = numpy.ascontiguousarray(
+            flat_indices.astype(numpy.uint32).reshape(-1, 3))
+
+        normals = None
+        normal_data = blobs.get("normals")
+        if normal_data:
+            if len(normal_data) % 12:
+                raise ValueError("The normals buffer must hold N x 3 float32 values")
+            normals = numpy.frombuffer(
+                normal_data, dtype=numpy.float32).reshape(-1, 3)
+            if len(normals) != len(points):
+                raise ValueError("normals must provide one entry per vertex")
+
+        uvs = None
+        uv_data = blobs.get("uvs")
+        if uv_data:
+            components = section_components("UVs", 3)
+            if len(uv_data) % (4 * components):
+                raise ValueError(
+                    f"The uvs buffer must hold N x {components} float32 values")
+            uv_array = numpy.frombuffer(
+                uv_data, dtype=numpy.float32).reshape(-1, components)
+            if components == 3:
+                # IwVector3f UVs carry an unused third component.
+                uv_array = numpy.ascontiguousarray(uv_array[:, :2])
+            if len(uv_array) != len(points):
+                raise ValueError("uvs must provide one entry per vertex")
+            uvs = uv_array
+
+        self._pending_meshes[name] = {
+            "points": points, "triangles": triangles,
+            "normals": normals, "uvs": uvs,
+        }
+        create_object = bool(header.get(
+            "CreateObject", header.get("create_object", True)))
+        if create_object:
+            self._pending_scene_props.append("\n".join((
+                f"scene.materials.{name}_mat.type = matte",
+                f"scene.materials.{name}_mat.kd = 0.6 0.6 0.6",
+                f"scene.objects.{name}.shape = {name}",
+                f"scene.objects.{name}.material = {name}_mat",
+            )))
+        self._schedule_upload_apply()
+        return {"ok": True, "mesh": name,
+                "vertices": int(len(points)),
+                "triangles": int(len(triangles)),
+                "object_created": create_object}
+
+    def _schedule_upload_apply(self):
+        """Debounce one automatic apply after a burst of streamed uploads."""
+        if self._upload_apply_id:
+            self.after_cancel(self._upload_apply_id)
+        self._upload_apply_id = self.after(
+            UPLOAD_APPLY_MS, self._auto_apply_uploads)
+
+    def _auto_apply_uploads(self):
+        self._upload_apply_id = None
+        if self._render_stopped or not self._scene or not self._session:
+            return
+        if not (self._pending_meshes or self._pending_scene_props
+                or self._pending_config_props):
+            return
+        try:
+            self._apply_staged_updates()
+        except Exception as ex:
+            self._info.config(text=f"Auto apply failed: {ex}")
+
+    def _apply_staged_updates(self):
+        """Apply staged meshes and property text with one render restart."""
+        if self._upload_apply_id:
+            self.after_cancel(self._upload_apply_id)
+            self._upload_apply_id = None
+        if not (self._pending_meshes or self._pending_scene_props
+                or self._pending_config_props):
+            raise ValueError("Nothing staged: send define_mesh, scene_props, "
+                             "or config_props first")
+        if self._render_stopped or not self._scene or not self._session:
+            raise RuntimeError("Rendering is stopped: send start before apply")
+        update = (list(self._pending_config_props),
+                  dict(self._pending_meshes),
+                  list(self._pending_scene_props))
+        self._pending_config_props = []
+        self._pending_meshes = {}
+        self._pending_scene_props = []
+        self._camera_revision += 1
+        self._camera_snapshot = self._capture_camera_snapshot()
+        self._camera_restart_pending = True
+        threading.Thread(
+            target=self._do_restart_session,
+            args=(self._render_width, self._render_height, "full",
+                  self._camera_snapshot),
+            kwargs={"scene_update": update},
+            daemon=True).start()
+        return {"ok": True,
+                "meshes": sorted(update[1]),
+                "scene_prop_blocks": len(update[2]),
+                "config_prop_blocks": len(update[0])}
+
     # ── Film display ──────────────────────────────────────────────────────────
     def _fit_image_to_viewport(self, img):
         scale = min(FILM_W / img.width, FILM_H / img.height)
@@ -953,6 +1459,28 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         self._update_info()
 
     # ── Save ──────────────────────────────────────────────────────────────────
+    def _write_film_image(self, path):
+        """Write the current film to path as PNG or JPEG and return the path."""
+        if not path:
+            raise ValueError("A film output path is required")
+        path = os.path.abspath(path)
+        if self._render_stopped:
+            img = self._last_film_image
+            if img is None:
+                raise RuntimeError("No rendered film was captured before stopping")
+        else:
+            frame = self._capture_film_frame(fit_for_viewport=False)
+            if frame == "warming":
+                raise RuntimeError("Preview is still warming up")
+            if not frame:
+                raise RuntimeError("No stable rendered film is available")
+            img, _, _, _ = frame
+        if os.path.splitext(path)[1].lower() in (".jpg", ".jpeg"):
+            img.convert("RGB").save(path, "JPEG", quality=95)
+        else:
+            img.save(path, "PNG")
+        return path
+
     def _save_film(self):
         path = filedialog.asksaveasfilename(
             parent=self,
@@ -966,22 +1494,9 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         if not path:
             return
         try:
-            if self._render_stopped:
-                img = self._last_film_image
-                if img is None:
-                    raise RuntimeError("No rendered film was captured before stopping")
-            else:
-                frame = self._capture_film_frame(fit_for_viewport=False)
-                if frame == "warming":
-                    raise RuntimeError("Preview is still warming up")
-                if not frame:
-                    raise RuntimeError("No stable rendered film is available")
-                img, _, _, _ = frame
-            if os.path.splitext(path)[1].lower() in (".jpg", ".jpeg"):
-                img.convert("RGB").save(path, "JPEG", quality=95)
-            else:
-                img.save(path, "PNG")
-            self._render_win.title(f"{WINDOW_TITLE} — Saved: {os.path.basename(path)}")
+            saved = self._write_film_image(path)
+            self._render_win.title(
+                f"{WINDOW_TITLE} — Saved: {os.path.basename(saved)}")
         except Exception as ex:
             self._render_win.title(f"{WINDOW_TITLE} — Save failed: {ex}")
 

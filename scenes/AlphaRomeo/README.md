@@ -45,6 +45,26 @@ Select **Stop Rendering** to halt refinement and retain the displayed film for s
 
 The controller saves the camera target, orbit, distance, exposure, HDRI gain, background-display preference, Auto OIDN delay, and selected render resolution to `camera_controller_settings.json`. These values are restored when the controller starts again.
 
+## External control
+
+`camera_controller.py` runs a TCP command server for external programs written in any language. The port comes from `control_port` in `camera_controller_settings.json` (default `8765`) or the `LUXCORE_CONTROL_PORT` environment variable; `0` disables it. The server listens on `127.0.0.1` only.
+
+Every message is framed as a 4-byte little-endian header length, a UTF-8 JSON header, then any binary buffers announced by the header's `buffers` list (`role` plus `bytes`, sent in list order). Every message receives one framed JSON reply such as `{"ok": true, ...}` or `{"ok": false, "error": "..."}`.
+
+Immediate commands: `camera` (`az`, `el`, `dist`), `target` (`xyz`), `preset` (`az`, `el`), `reset`, `exposure` (`value`), `hdri_gain` (`value`), `hdri_file` (`path`), `background` (`hdri` true/false), `resolution` (`width`, `height`), `pipeline` (`index` 0 raw, 1 OIDN), `stop`, `start`, `save_film` (`path`), `status`, and `shutdown`.
+
+Geometry and scene content stream through staged commands, and one restart applies everything:
+
+- `define_mesh` stages a named mesh from binary buffers: `points` (float32, N x 3) and `triangles` (uint32 zero-based, M x 3) are required; `normals` (float32, N x 3) and `uvs` (float32, N x 2) are optional. Requires `numpy`.
+- `scene_props` and `config_props` stage LuxCore property text; scene objects reference staged meshes with `scene.objects.<name>.shape = <meshName>` plus a material.
+- `apply` restarts rendering once with all staged meshes and properties.
+
+This lets a C# client send raw vertex and index arrays (for example with `MemoryMarshal.AsBytes`) instead of writing `.ply` files, while `.scn` and `.cfg` content travels as plain property text.
+
+The `upload_mesh` command accepts the C# `MeshHeader` layout instead of a `buffers` list: `Command`, `MeshName`, and `Vertices`/`Normals`/`UVs`/`Indices` sections whose `ByteLength` fields describe binary buffers sent in that fixed order. Vertices and normals are float32 triples; UVs may be float32 triples (`IwVector3f`, the unused third component is dropped) or pairs; indices are flat 32-bit integers in triangle order, and empty sections are skipped. Mesh names are sanitized for LuxCore property syntax. Each upload also stages a gray matte object for the mesh unless the header sets `CreateObject` to `false`, and an automatic `apply` runs half a second after the last upload, so a client that only streams meshes sees them rendered without further commands; explicit `apply`, `scene_props`, and `config_props` still work and can restyle uploaded meshes.
+
+Run `python control_upload_test.py` in this directory to verify the interface: it checks the frame parsing offline, then launches the controller on a private port and exercises camera control, both mesh protocols, auto-apply, film saving, and shutdown. Pass `--offline` to skip the live render run.
+
 ## Generated files
 
 Film outputs, logs, and files such as `Reinhard_HDRI_Verification.png` and `camera_controller_settings.json` are local artifacts and are not source files to commit.
