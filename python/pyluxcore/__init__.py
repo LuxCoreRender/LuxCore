@@ -164,5 +164,28 @@ def get_nvrtc_capabilities():
 
     return list(archs)
 
+def try_load_libs(name, prefix):
+    """Ensure libs are loadable, in the right version for pyluxcore."""
+    if platform.system() != "Linux":
+        return  # Only for Linux
 
+    path_to_libs = _LUXFOLDER / ".." / "pyluxcore.libs"
+
+    prefix = "lib" + prefix
+    libs = [l for l in path_to_libs.iterdir() if l.name.startswith(prefix)]
+
+    # Import tbb libs
+    try:
+        handles = [
+            CDLL(l, mode=os.RTLD_DEEPBIND | os.RTLD_GLOBAL)
+            for l in libs
+        ]
+    except OSError:
+        print(f"{name}: could not load libraries (tried with {libs})")
+        return
+    print(f"{name} loaded successfully:", *(str(l) for l in libs), sep="\n  - ")
+
+print("Checking dynamic libs:")
 ensure_nvrtc()
+try_load_libs("TBB", "tbb")
+try_load_libs("OIDN", "LuxOpenImageDenoise")
