@@ -82,6 +82,7 @@ public:
 	virtual float GetImportance() const = 0;
 
 	virtual bool IsDirectLightSamplingEnabled() const = 0;
+	virtual bool IsVisibleCamera() const { return true; }
 
 	virtual bool IsVisibleIndirectDiffuse() const = 0;
 	virtual bool IsVisibleIndirectGlossy() const = 0;
@@ -155,12 +156,15 @@ class NotIntersectableLightSource : public LightSource {
 public:
 	NotIntersectableLightSource() :
 		gain(1.f), temperature(-1.f), normalizeTemperature(false),
-		id(0), importance(1.f), temperatureScale(1.f) { }
+		id(0), importance(1.f), temperatureScale(1.f),
+		isDirectLightSamplingEnabled(true) { }
 	virtual ~NotIntersectableLightSource() { }
 
 	virtual void Preprocess();
-
-	virtual bool IsDirectLightSamplingEnabled() const { return true; }
+	virtual bool IsDirectLightSamplingEnabled() const { return isDirectLightSamplingEnabled; }
+	void SetDirectLightSamplingEnabled(const bool enabled) {
+		isDirectLightSamplingEnabled = enabled;
+	}
 
 	virtual bool IsVisibleIndirectDiffuse() const { return false; }
 	virtual bool IsVisibleIndirectGlossy() const { return false; }
@@ -186,6 +190,7 @@ protected:
 	float importance;
 
 	luxrays::Spectrum temperatureScale;
+	bool isDirectLightSamplingEnabled;
 };
 
 //------------------------------------------------------------------------------
@@ -195,14 +200,17 @@ protected:
 class InfiniteLightSource : public NotIntersectableLightSource {
 public:
 	InfiniteLightSource() : isVisibleIndirectDiffuse(true),
-		isVisibleIndirectGlossy(true), isVisibleIndirectSpecular(true) { }
+		isVisibleIndirectGlossy(true), isVisibleIndirectSpecular(true),
+		isVisibleCamera(true) { }
 	virtual ~InfiniteLightSource() { }
 
 	virtual bool IsInfinite() const { return true; }
+	void SetCameraVisibility(const bool visible) { isVisibleCamera = visible; }
 
 	void SetIndirectDiffuseVisibility(const bool visible) { isVisibleIndirectDiffuse = visible; }
 	void SetIndirectGlossyVisibility(const bool visible) { isVisibleIndirectGlossy = visible; }
 	void SetIndirectSpecularVisibility(const bool visible) { isVisibleIndirectSpecular = visible; }
+	virtual bool IsVisibleCamera() const { return isVisibleCamera; }
 
 	virtual bool IsVisibleIndirectDiffuse() const { return isVisibleIndirectDiffuse; }
 	virtual bool IsVisibleIndirectGlossy() const { return isVisibleIndirectGlossy; }
@@ -214,6 +222,7 @@ public:
 
 protected:
 	bool isVisibleIndirectDiffuse, isVisibleIndirectGlossy, isVisibleIndirectSpecular;
+	bool isVisibleCamera;
 };
 
 //------------------------------------------------------------------------------

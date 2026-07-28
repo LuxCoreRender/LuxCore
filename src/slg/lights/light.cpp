@@ -84,6 +84,7 @@ PropertiesUPtr NotIntersectableLightSource::ToProperties(const ImageMapCache &im
 			Property(prefix + ".gain")(gain) <<
 			Property(prefix + ".transformation")(lightToWorld.m) <<
 			Property(prefix + ".id")(id) <<
+			Property(prefix + ".visibility.direct.enable")(isDirectLightSamplingEnabled) <<
 			Property(prefix + ".temperature")(temperature) <<
 			Property(prefix + ".temperature.normalize")(normalizeTemperature);
 
@@ -104,6 +105,7 @@ PropertiesUPtr InfiniteLightSource::ToProperties(const ImageMapCache &imgMapCach
 	auto& props = *props_ptr;
 
 	props << NotIntersectableLightSource::ToProperties(imgMapCache, useRealFileName) <<
+			Property(prefix + ".visibility.camera.enable")(isVisibleCamera) <<
 			Property(prefix + ".visibility.indirect.diffuse.enable")(isVisibleIndirectDiffuse) <<
 			Property(prefix + ".visibility.indirect.glossy.enable")(isVisibleIndirectGlossy) <<
 			Property(prefix + ".visibility.indirect.specular.enable")(isVisibleIndirectSpecular);

@@ -334,6 +334,7 @@ void CompiledScene::CompileLights() {
 				(l.IsVisibleIndirectGlossy() ? GLOSSY : NONE) |
 				(l.IsVisibleIndirectSpecular() ? SPECULAR : NONE);
 		oclLight->isDirectLightSamplingEnabled = l.IsDirectLightSamplingEnabled();
+		oclLight->isVisibleCamera = l.IsVisibleCamera();
 
 		switch (l.GetType()) {
 			case TYPE_TRIANGLE: {

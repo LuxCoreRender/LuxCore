@@ -325,6 +325,8 @@ void PathTracer::DirectHitInfiniteLight(SceneConstRef scene,
 		return;
 
 	for(EnvLightSource& envLight: scene.GetLightSources().GetEnvLightSources()) {
+		if (!bsdf && !envLight.IsVisibleCamera())
+			continue;
 		// Check if the light source is visible according the settings
 		if (!CheckDirectHitVisibilityFlags(envLight, pathInfo.depth, pathInfo.lastBSDFEvent))
 			continue;

@@ -1572,6 +1572,24 @@ ImageMapUPtr ImageMap::Resample(ImageMapConstRef map, const u_int channels,
 		}
 
 		return imgMap;
+	} else if (channels == 2) {
+		auto imgMap = AllocImageMap(2, width, height,
+				ImageMapConfig(1.f,
+					ImageMapStorage::StorageType::FLOAT,
+					map.GetStorage().GetWrapType(),
+					ImageMapStorage::ChannelSelectionType::DEFAULT));
+		auto& newStorage = imgMap->GetStorage();
+
+		for (u_int y = 0; y < height; ++y) {
+			for (u_int x = 0; x < width; ++x) {
+				const UV uv((x + .5f) / width, (y + .5f) / height);
+				const u_int index = x + y * width;
+				newStorage.SetFloat(index, map.GetFloat(uv));
+				newStorage.SetAlpha(index, map.GetAlpha(uv));
+			}
+		}
+
+		return imgMap;
 	} else if (channels == 3) {
 		auto imgMap = AllocImageMap(3, width, height,
 				ImageMapConfig(1.f,
@@ -1589,6 +1607,24 @@ ImageMapUPtr ImageMap::Resample(ImageMapConstRef map, const u_int channels,
 				newImg[index] = c.c[0];
 				newImg[index + 1] = c.c[1];
 				newImg[index + 2] = c.c[2];
+			}
+		}
+
+		return imgMap;
+	} else if (channels == 4) {
+		auto imgMap = AllocImageMap(4, width, height,
+				ImageMapConfig(1.f,
+					ImageMapStorage::StorageType::FLOAT,
+					map.GetStorage().GetWrapType(),
+					ImageMapStorage::ChannelSelectionType::DEFAULT));
+		auto& newStorage = imgMap->GetStorage();
+
+		for (u_int y = 0; y < height; ++y) {
+			for (u_int x = 0; x < width; ++x) {
+				const UV uv((x + .5f) / width, (y + .5f) / height);
+				const u_int index = x + y * width;
+				newStorage.SetSpectrum(index, map.GetSpectrum(uv));
+				newStorage.SetAlpha(index, map.GetAlpha(uv));
 			}
 		}
 

@@ -619,8 +619,9 @@ static int cuewCudaInit(void) {
 
 static int cuewNvrtcInit(void) {
   /* Library paths. */
+  const char *nvrtc_override_path = getenv("LUXRAYS_NVRTC_LIBRARY");
 #ifdef _WIN32
-  /* Expected in c:/windows/system or similar, no path needed. */
+  /* An explicit path is useful when several CUDA toolkits are installed. */
   const char *nvrtc_paths[] = {
     "nvrtc64_130_0.dll",
     "nvrtc64_120_0.dll",
@@ -656,7 +657,11 @@ static int cuewNvrtcInit(void) {
   initialized = 1;
 
   /* Load library. */
-  nvrtc_lib = dynamic_library_open_find(nvrtc_paths);
+  nvrtc_lib = (nvrtc_override_path && nvrtc_override_path[0]) ?
+      dynamic_library_open(nvrtc_override_path) : NULL;
+  if (nvrtc_lib == NULL) {
+    nvrtc_lib = dynamic_library_open_find(nvrtc_paths);
+  }
 
   if (nvrtc_lib == NULL) {
     result = CUEW_ERROR_OPEN_FAILED;

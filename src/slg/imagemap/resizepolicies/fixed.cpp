@@ -45,15 +45,19 @@ ImageMapUPtr ImageMapResizeFixedPolicy::ApplyResizePolicy(const std::string &fil
 			u_int newHeight = Max<u_int>(height * scale, minSize);
 
 			if (newWidth >= newHeight)
-				newHeight = Max<u_int>(newWidth * (width / (float)height), 1u);
+				newHeight = Max<u_int>(newWidth * (height / (float)width), 1u);
 			else
-				newWidth = Max<u_int>(newHeight * (height / (float)width), 1u);
+				newWidth = Max<u_int>(newHeight * (width / (float)height), 1u);
 
 			SDL_LOG("Scaling ImageMap: " << im->GetName() << " [from " << width << "x" << height <<
 					" to " << newWidth << "x" << newHeight <<"]");
-
-			im->Resize(newWidth, newHeight);
-			im->Preprocess();
+			const string imageMapName = im->GetName();
+			auto resizedImageMap = ImageMap::Resample(
+				*im, im->GetChannelCount(), newWidth, newHeight
+			);
+			resizedImageMap->SetName(imageMapName);
+			resizedImageMap->Preprocess();
+			im = std::move(resizedImageMap);
 		}
 	} else {
 		// Nothing to do for a scale of 1.0

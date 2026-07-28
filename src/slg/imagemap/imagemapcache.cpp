@@ -99,6 +99,7 @@ ImageMapRef ImageMapCache::GetImageMap(
 
 	// Check if it is a reference to a file
 	key = GetCacheKey(fileName, imgCfg);
+	key += applyResizePolicy ? "_#_RESIZE_POLICY" : "_#_NO_RESIZE_POLICY";
 	it = mapByKey.find(key);
 
 	if (it != mapByKey.end()) {

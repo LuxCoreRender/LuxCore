@@ -153,6 +153,7 @@ typedef struct {
 	// an OR of DIFFUSE, GLOSSY and SPECULAR.
 	BSDFEvent visibility;
 	int isDirectLightSamplingEnabled;
+	int isVisibleCamera;
 	
 	union {
 		NotIntersectableLightSource notIntersectable;

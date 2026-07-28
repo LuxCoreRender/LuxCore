@@ -265,8 +265,12 @@ LightSourceUPtr Scene::CreateLightSource(const string &name, const luxrays::Prop
 		const Transform light2World(mat);
 
 		const string imageName = props.Get(Property(propName + ".file")("image.png")).Get<string>();
-
-		auto& imgMap = imgMapCache.GetImageMap(imageName, ImageMapConfig(props, propName), false);
+		const bool applyResizePolicy = props.Get(
+			Property(propName + ".resizepolicy.enable")(true)
+		).Get<bool>();
+		auto& imgMap = imgMapCache.GetImageMap(
+			imageName, ImageMapConfig(props, propName), applyResizePolicy
+		);
 
 		auto il = std::make_unique<InfiniteLight>();
 		il->lightToWorld = light2World;
@@ -465,9 +469,18 @@ LightSourceUPtr Scene::CreateLightSource(const string &name, const luxrays::Prop
 
 	if (!lightSource->IsIntersectable()) {
 		auto& nils = static_cast<NotIntersectableLightSource&>(*lightSource);
+		nils.SetDirectLightSamplingEnabled(
+			props.Get(Property(propName + ".visibility.direct.enable")(true)).Get<bool>()
+		);
 
 		nils.temperature = props.Get(Property(propName + ".temperature")(-1.0)).Get<double>();
 		nils.normalizeTemperature = props.Get(Property(propName + ".temperature.normalize")(false)).Get<bool>();
+	}
+	if (lightSource->IsInfinite()) {
+		auto& ils = static_cast<InfiniteLightSource&>(*lightSource);
+		ils.SetCameraVisibility(
+			props.Get(Property(propName + ".visibility.camera.enable")(true)).Get<bool>()
+		);
 	}
 
 	if (props.IsDefined(propName + ".volume")) {

@@ -96,12 +96,8 @@ bool cudaKernelCache::ForcedCompilePTX(const vector<string> &kernelsParameters, 
 	cudaOpts.push_back("-Xcudafe");
 	cudaOpts.push_back("--diag_suppress=68");
 
-	// Accelerate compilation
-	cudaOpts.push_back("--Ofast-compile=min");
-	cudaOpts.push_back("--split-compile=0");
-
-	// Enable pre-compiled headers
-	cudaOpts.push_back("--pch");
+	// Note: --Ofast-compile=min, --split-compile=0, --pch require nvrtc >= 12.8
+	// Omitted for compatibility with CUDA 12.4 nvrtc
 
 	// Enable debug info
 	//cudaOpts.push_back("-G");
@@ -169,6 +165,7 @@ bool cudaKernelPersistentCache::CompilePTX(const vector<string> &kernelsParamete
 			oclKernelPersistentCache::HashString(oclKernelPersistentCache::ToOptsString(kernelsParameters))
 			+ "-" +
 			oclKernelPersistentCache::HashString(kernelSource) +
+			"_nvrtc_" + to_string(cuewNvrtcVersion()) +
                         "_compute_" + GetCuda10Architecture() + ".ptx";
 	const std::filesystem::path dirPath = GetCacheDir(appName);
 	const std::filesystem::path filePath = dirPath / kernelName;
