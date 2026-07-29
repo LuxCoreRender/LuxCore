@@ -1,0 +1,19 @@
+# Empty stage: geometry streams in through the controller's TCP interface.
+scene.camera.type = perspective
+scene.camera.lookat.orig = 10.0 -10.0 5.0
+scene.camera.lookat.target = 0.0 0.0 0.5
+scene.camera.up = 0.0 0.0 1.0
+scene.camera.fieldofview = 45.0
+# Default environment; camera_controller.py replaces this light pair at startup.
+scene.lights.hdri.type = infinite
+scene.lights.hdri.file = hdre_055.hdr
+scene.lights.hdri.gain = 1.0 1.0 1.0
+# Camera-invisible millimetre triangle defined inline (no .ply file). The
+# GPU accelerator must never see a scene with zero triangles: that state
+# crashed the render session intermittently.
+scene.materials.stage_placeholder.type = matte
+scene.materials.stage_placeholder.kd = 0.0 0.0 0.0
+scene.objects.stage_placeholder.material = stage_placeholder
+scene.objects.stage_placeholder.camerainvisible = 1
+scene.objects.stage_placeholder.vertices = -0.0005 -0.0005 -0.5 0.0005 -0.0005 -0.5 0.0 0.0005 -0.5
+scene.objects.stage_placeholder.faces = 0 1 2

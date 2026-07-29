@@ -1,5 +1,8 @@
 """
-camera_controller.py  —  Integrated pyluxcore render controller for the Alpha Romeo scene.
+camera_controller.py  —  Integrated pyluxcore render controller.
+
+Starts an empty stage (scene.scn) lit by the default HDRI; geometry and
+camera updates stream in through the TCP control interface (see README.md).
 
 No external process launches. The render session runs in-process:
   - Camera orbit/zoom  → scene edit followed by a debounced session restart
@@ -23,17 +26,18 @@ try:
 except ImportError:
     COPY = DND_FILES = TkinterDnD = None
 
-# ── Bootstrap pyluxcore ────────────────────────────────────────────────────────
-LUXCORE_ROOT   = r"C:\Users\gcroc\Projects\LuxCore"
+# ── Bootstrap pyluxcore ──────────────────────────────────────────────────────
+UI_DIR         = os.path.dirname(os.path.abspath(__file__))
+LUXCORE_ROOT   = os.path.dirname(UI_DIR)
 PYLUXCORE_PATH = os.path.join(LUXCORE_ROOT, r"out\build\src\pyluxcore\Release")
 LUXCORE_BIN    = os.path.join(LUXCORE_ROOT, r"out\install\Release\bin")
-SCENE_FILE     = os.path.join(LUXCORE_ROOT, r"scenes\AlphaRomeo\ModoAlphaRomeo.scn")
-CFG_FILE       = os.path.join(LUXCORE_ROOT, r"scenes\AlphaRomeo\ModoAlphaRomeo.cfg")
+SCENE_DIR      = UI_DIR
+SCENE_FILE     = os.path.join(SCENE_DIR, "scene.scn")
+CFG_FILE       = os.path.join(SCENE_DIR, "render.cfg")
 CUDA_12_4_NVRTC = (
     r"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.4\bin\nvrtc64_120_0.dll")
 
-SCENE_DIR = os.path.join(LUXCORE_ROOT, r"scenes\AlphaRomeo")
-SETTINGS_FILE = os.path.join(SCENE_DIR, "camera_controller_settings.json")
+SETTINGS_FILE = os.path.join(UI_DIR, "camera_controller_settings.json")
 
 os.add_dll_directory(LUXCORE_BIN)
 _nvrtc_library = os.environ.get("LUXRAYS_NVRTC_LIBRARY", CUDA_12_4_NVRTC)
@@ -43,7 +47,7 @@ if os.path.isfile(_nvrtc_library):
     os.environ["LUXRAYS_NVRTC_LIBRARY"] = _nvrtc_library
     _nvrtc_dll_directory = os.add_dll_directory(os.path.dirname(_nvrtc_library))
 sys.path.insert(0, PYLUXCORE_PATH)
-os.chdir(SCENE_DIR)  # .scn and .ply paths are relative to the scene directory
+os.chdir(SCENE_DIR)  # scene and HDRI paths are relative to this directory
 
 import pyluxcore
 from PIL import Image, ImageTk
@@ -59,7 +63,7 @@ HDRI_DOWNSAMPLE_MIN_SIZE = 64
 DEFAULT_AZ          = 80.0
 DEFAULT_EL          = 5.0
 DEFAULT_SWITCH_SECS = 5
-DEFAULT_TARGET      = [0.0, 2.084, 0.833]
+DEFAULT_TARGET      = [0.0, 0.0, 0.5]
 FILM_W              = 1280
 FILM_H              = 720
 RENDER_RESOLUTIONS  = ("640 x 360", "1280 x 720", "1920 x 1080",
@@ -113,6 +117,23 @@ def cam_axes(orig, target):
 
 def proj_axis(ax, cr, cu, scale=28):
     return _dot(ax, cr)*scale, -_dot(ax, cu)*scale
+
+def _luxcore_fieldofview(fov_degrees, axis, width, height):
+    """Convert a vertical/horizontal FOV to LuxCore's fieldofview.
+
+    LuxCore's fieldofview spans the film axis whose screen window is [-1, 1]:
+    the horizontal axis for landscape films and the vertical axis for
+    portrait films (see ProjectiveCamera::Update).
+    """
+    frame = width / float(height)
+    half_angle = math.radians(fov_degrees) * 0.5
+    if frame >= 1.0:
+        if axis == "horizontal":
+            return fov_degrees
+        return math.degrees(2.0 * math.atan(math.tan(half_angle) * frame))
+    if axis == "vertical":
+        return fov_degrees
+    return math.degrees(2.0 * math.atan(math.tan(half_angle) / frame))
 
 # ── Exposure I/O ──────────────────────────────────────────────────────────────
 def read_exposure(path):
@@ -325,8 +346,10 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             self._settings, "azimuth", DEFAULT_AZ, -3600.0, 3600.0))
         self.el = tk.DoubleVar(value=_setting_float(
             self._settings, "elevation", DEFAULT_EL, -89.0, 89.0))
-        self.dist = tk.DoubleVar(value=_setting_float(
-            self._settings, "distance", 20.0, 1.0, 50.0))
+        self._camera_distance = _setting_float(
+            self._settings, "distance", 20.0, 0.001, 1.0e9)
+        self.dist = tk.DoubleVar(
+            value=max(1.0, min(50.0, self._camera_distance)))
         self.exposure = tk.DoubleVar(value=_setting_float(
             self._settings, "exposure", read_exposure(CFG_FILE), 0.001, 20.0))
         saved_hdri_gain = _setting_float(
@@ -348,6 +371,9 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         self._skip_frames = 0
         self._gate_pass   = 0   # minimum pass count before showing new frame
         self._target = _setting_target(self._settings)
+        self._camera_up = [0.0, 0.0, 1.0]
+        self._camera_fov = None          # optional (degrees, axis) override
+        self._scene_fieldofview = 45.0   # scene default, read at session start
         self._session   = None
         self._config    = None
         self._scene     = None
@@ -419,7 +445,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         settings = {
             "azimuth": self.az.get(),
             "elevation": self.el.get(),
-            "distance": self.dist.get(),
+            "distance": self._camera_distance,
             "target": self._target,
             "exposure": self.exposure.get(),
             "hdri_gain": 10.0 ** self._hdri_gain_log.get(),
@@ -527,7 +553,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         tk.Label(panel, text="Distance").grid(row=1, column=0, sticky="w", **pad)
         tk.Scale(panel, from_=1, to=50, resolution=0.1, orient=tk.HORIZONTAL,
                  variable=self.dist, length=scale_len, showvalue=False,
-                 command=lambda _: self._on_camera()).grid(row=2, column=0, **pad)
+                 command=lambda _: self._on_distance_slider()).grid(row=2, column=0, **pad)
 
         tk.Label(panel, text="Exposure").grid(row=3, column=0, sticky="w", **pad)
         tk.Scale(panel, from_=0.001, to=20.0, resolution=0.01, orient=tk.HORIZONTAL,
@@ -620,7 +646,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             pyluxcore.AddFileNameResolverPath(".")
             pyluxcore.AddFileNameResolverPath(SCENE_DIR)
             pyluxcore.AddFileNameResolverPath(LUXCORE_ROOT)
-            props = pyluxcore.Properties("ModoAlphaRomeo.cfg")
+            props = pyluxcore.Properties(CFG_FILE)
             # Use the CUDA device and the OptiX hardware accelerator. CPU film
             # processing is retained so the Tk controller can read both raw and
             # OIDN output without changing its display path.
@@ -643,6 +669,9 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             # scene parsing, before RenderConfig owns the finished scene.
             scene_file = props.Get("scene.file").GetString()
             scene_props = pyluxcore.Properties(scene_file)
+            if scene_props.IsDefined("scene.camera.fieldofview"):
+                self._scene_fieldofview = scene_props.Get(
+                    "scene.camera.fieldofview").GetFloat()
             resize_props = pyluxcore.Properties()
             resize_props.Set(pyluxcore.Property(
                 "scene.images.resizepolicy.type", ["FIXED"]))
@@ -727,7 +756,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
                         return
                     if self._session and self._session.IsStarted():
                         self._session.Stop()
-                    _, _, _, _, exp, _ = camera_snapshot
+                    _, _, _, _, _, _, exp, _ = camera_snapshot
                     self._config.Parse(pyluxcore.Properties()
                         .Set(pyluxcore.Property("film.imagepipelines.0.0.exposure", [exp]))
                         .Set(pyluxcore.Property("film.imagepipelines.1.1.exposure", [exp]))
@@ -762,7 +791,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
                             extra = pyluxcore.Properties()
                             extra.SetFromString(text)
                             self._scene.Parse(extra)
-                    self._apply_camera_snapshot(camera_snapshot)
+                    self._apply_camera_snapshot(camera_snapshot, width, height)
                     self._session = pyluxcore.RenderSession(self._config)
                     self._session.Start()
                     self._session_mode = mode
@@ -841,12 +870,31 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             args=(self._render_width, self._render_height, "full", camera_snapshot),
             daemon=True).start()
 
-    # ── Camera ───────────────────────────────────────────────────────────────
+    # ── Camera ───────────────────────────────────────────────────────────
     def _cam_orig(self):
-        return orbit(self._target, self.dist.get(), self.az.get(), self.el.get())
+        return orbit(self._target, self._camera_distance,
+                     self.az.get(), self.el.get())
+
+    def _set_camera_distance(self, distance):
+        """Store the true camera distance; the 1-50 slider only mirrors it.
+
+        The Tk scale clamps its variable to the widget range, so external
+        distances (for example CAD-scale lookat updates) must not live in
+        the slider variable itself.
+        """
+        self._camera_distance = max(0.001, float(distance))
+        self.dist.set(max(1.0, min(50.0, self._camera_distance)))
+
+    def _on_distance_slider(self):
+        # Only user drags invoke the scale command; programmatic var writes
+        # do not, so this cannot echo a clamped mirror value back.
+        self._camera_distance = self.dist.get()
+        self._on_camera()
 
     def _capture_camera_snapshot(self):
-        return (tuple(self._target), self.dist.get(), self.az.get(), self.el.get(),
+        return (tuple(self._target), self._camera_distance,
+                self.az.get(), self.el.get(),
+                tuple(self._camera_up), self._camera_fov,
                 max(0.001, self.exposure.get()), self._camera_revision)
 
     def _set_render_resolution(self, _=None):
@@ -867,8 +915,11 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
     def _zoom_at_cursor(self, e, viewport_w, viewport_h):
         delta = -e.delta / 120 if hasattr(e, "delta") and e.delta else (
             1 if e.num == 5 else -1)
-        old_dist = self.dist.get()
-        new_dist = max(1.0, old_dist + delta * 1.0)
+        old_dist = self._camera_distance
+        # One-unit steps near the default scene scale, proportional steps
+        # for large externally-set distances.
+        zoom_step = max(1.0, old_dist * 0.05)
+        new_dist = max(0.001, old_dist + delta * zoom_step)
         if new_dist == old_dist:
             return
 
@@ -896,23 +947,35 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
                 for i in range(3)
             ]
 
-        self.dist.set(new_dist)
+        self._set_camera_distance(new_dist)
         self._on_camera()
+
+    def _camera_fieldofview(self, fov, width, height):
+        """Return the LuxCore fieldofview for an override or the scene default."""
+        if fov:
+            return _luxcore_fieldofview(fov[0], fov[1], width, height)
+        return self._scene_fieldofview
 
     def _apply_camera_props(self):
         orig = self._cam_orig()
         self._scene.Parse(pyluxcore.Properties()
             .Set(pyluxcore.Property("scene.camera.lookat.orig",   list(orig)))
             .Set(pyluxcore.Property("scene.camera.lookat.target", list(self._target)))
-            .Set(pyluxcore.Property("scene.camera.up",            [0.0, 0.0, 1.0])))
+            .Set(pyluxcore.Property("scene.camera.up",            list(self._camera_up)))
+            .Set(pyluxcore.Property("scene.camera.fieldofview",   [
+                self._camera_fieldofview(self._camera_fov,
+                                         self._render_width,
+                                         self._render_height)])))
 
-    def _apply_camera_snapshot(self, camera_snapshot):
-        target, dist, az, el, _, _ = camera_snapshot
+    def _apply_camera_snapshot(self, camera_snapshot, width, height):
+        target, dist, az, el, up, fov, _, _ = camera_snapshot
         orig = orbit(target, dist, az, el)
         self._scene.Parse(pyluxcore.Properties()
             .Set(pyluxcore.Property("scene.camera.lookat.orig",   list(orig)))
             .Set(pyluxcore.Property("scene.camera.lookat.target", list(target)))
-            .Set(pyluxcore.Property("scene.camera.up",            [0.0, 0.0, 1.0])))
+            .Set(pyluxcore.Property("scene.camera.up",            list(up)))
+            .Set(pyluxcore.Property("scene.camera.fieldofview",   [
+                self._camera_fieldofview(fov, width, height)])))
 
     def _clear_display(self):
         """Immediately paint the render canvas black to prevent ghosting."""
@@ -1049,10 +1112,13 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             if "el" in header:
                 self.el.set(max(-89.0, min(89.0, float(header["el"]))))
             if "dist" in header:
-                self.dist.set(max(1.0, min(50.0, float(header["dist"]))))
+                self._set_camera_distance(float(header["dist"]))
             self._on_camera()
             return {"ok": True, "azimuth": self.az.get(),
-                    "elevation": self.el.get(), "distance": self.dist.get()}
+                    "elevation": self.el.get(),
+                    "distance": self._camera_distance}
+        if cmd in ("lookat", "cameraeyetarget"):
+            return self._apply_lookat(header)
         if cmd == "target":
             xyz = header.get("xyz")
             if not isinstance(xyz, (list, tuple)) or len(xyz) != 3:
@@ -1134,13 +1200,68 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             return {"ok": True}
         raise ValueError(f"Unknown control command: {cmd}")
 
+    def _apply_lookat(self, header):
+        """Set the view from eye/target/up/fov (the C# CameraUpdate header)."""
+        def vector3(name, required):
+            value = header.get(name)
+            if not isinstance(value, (list, tuple)) or len(value) != 3:
+                if required:
+                    raise ValueError(f"lookat needs {name}: [x, y, z]")
+                return None
+            return [float(component) for component in value]
+
+        eye = vector3("eye", True)
+        target = vector3("target", True)
+        delta = [eye[i] - target[i] for i in range(3)]
+        distance = math.sqrt(sum(component * component for component in delta))
+        if distance < 1e-6:
+            raise ValueError("lookat eye and target must not coincide")
+        elevation = math.degrees(
+            math.asin(max(-1.0, min(1.0, delta[2] / distance))))
+        elevation = max(-89.0, min(89.0, elevation))
+        azimuth = math.degrees(math.atan2(delta[0], delta[1]))
+
+        # Zero-length up vectors (a default-constructed C# array) keep the
+        # current up; non-positive fov values (orthographic senders) keep
+        # the current field of view.
+        up = vector3("up", False)
+        if up is not None:
+            up_length = math.sqrt(sum(component * component for component in up))
+            if up_length > 1e-6:
+                self._camera_up = [component / up_length for component in up]
+        fov = header.get("fov")
+        if fov is not None:
+            fov = float(fov)
+            if fov > 0.0:
+                if not 0.5 <= fov <= 179.0:
+                    raise ValueError("fov must be between 0.5 and 179 degrees")
+                axis = str(header.get("axis", "vertical")).lower()
+                if axis not in ("vertical", "horizontal"):
+                    raise ValueError("axis must be vertical or horizontal")
+                self._camera_fov = (fov, axis)
+
+        self._target = list(target)
+        self._set_camera_distance(distance)
+        self.az.set(azimuth)
+        self.el.set(elevation)
+        self._on_camera()
+        return {"ok": True, "azimuth": azimuth, "elevation": elevation,
+                "distance": distance, "target": list(target),
+                "up": list(self._camera_up),
+                "fov": self._camera_fov[0] if self._camera_fov else None,
+                "fov_axis": self._camera_fov[1] if self._camera_fov else None}
+
     def _control_status(self):
         status = {
             "ok": True,
             "azimuth": self.az.get(),
             "elevation": self.el.get(),
-            "distance": self.dist.get(),
+            "distance": self._camera_distance,
             "target": list(self._target),
+            "eye": self._cam_orig(),
+            "up": list(self._camera_up),
+            "fov": self._camera_fov[0] if self._camera_fov else None,
+            "fov_axis": self._camera_fov[1] if self._camera_fov else None,
             "exposure": self.exposure.get(),
             "hdri_gain": 10.0 ** self._hdri_gain_log.get(),
             "render_hdri_background": bool(self._render_hdri_background.get()),
@@ -1241,6 +1362,8 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
 
         vertex_data = blobs.get("vertices")
         index_data = blobs.get("indices")
+        normal_data = blobs.get("normals");
+        uv_data = None;
         if not vertex_data or not index_data:
             raise ValueError("upload_mesh needs vertex and index buffers")
         if len(vertex_data) % 12:
@@ -1262,7 +1385,6 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             flat_indices.astype(numpy.uint32).reshape(-1, 3))
 
         normals = None
-        normal_data = blobs.get("normals")
         if normal_data:
             if len(normal_data) % 12:
                 raise ValueError("The normals buffer must hold N x 3 float32 values")
@@ -1272,7 +1394,6 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
                 raise ValueError("normals must provide one entry per vertex")
 
         uvs = None
-        uv_data = blobs.get("uvs")
         if uv_data:
             components = section_components("UVs", 3)
             if len(uv_data) % (4 * components):
@@ -1295,8 +1416,8 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             "CreateObject", header.get("create_object", True)))
         if create_object:
             self._pending_scene_props.append("\n".join((
-                f"scene.materials.{name}_mat.type = matte",
-                f"scene.materials.{name}_mat.kd = 0.6 0.6 0.6",
+                f"scene.materials.{name}_mat.type = glossy2",
+                f"scene.materials.{name}_mat.kd = 0.0 0.0 0.6",
                 f"scene.objects.{name}.shape = {name}",
                 f"scene.objects.{name}.material = {name}_mat",
             )))
@@ -1542,7 +1663,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         az, el = self.az.get(), self.el.get()
         gain = 10.0 ** self._hdri_gain_log.get()
         self._info.config(text=f"  az={az:6.1f}°  el={el:5.1f}°"
-                               f"  dist={self.dist.get():5.2f}"
+                               f"  dist={self._camera_distance:5.2f}"
                                f"  exp={self.exposure.get():.3f}"
                                f"  hdri={gain:.3f}"
                                f"  bg={'HDRI' if self._render_hdri_background.get() else 'white'}"
@@ -1575,7 +1696,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         # Scale pan speed by distance so it feels consistent at any zoom.
         # The full-size render viewport needs a lower per-pixel sensitivity
         # than the compact controller canvas.
-        scale = self.dist.get() / 600.0
+        scale = self._camera_distance / 600.0
         if e.widget is self._render_canvas:
             scale *= 0.5
         orig   = self._cam_orig()
@@ -1596,6 +1717,9 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         self._on_camera()
 
     def _reset(self):
+        # Drop external view overrides along with the orbit position.
+        self._camera_up = [0.0, 0.0, 1.0]
+        self._camera_fov = None
         self._set_preset(DEFAULT_AZ, DEFAULT_EL)
 
 

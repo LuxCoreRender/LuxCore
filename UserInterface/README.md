@@ -1,6 +1,6 @@
-# Alpha Romeo interactive renderer
+# LuxCore interactive render controller
 
-`camera_controller.py` runs the Alpha Romeo scene in a single Tk window. Start it from this directory after building the Release `pyluxcore` target:
+`camera_controller.py` renders an empty stage (`scene.scn`, camera plus the default `hdre_055.hdr` environment) in a single Tk window; geometry streams in through the external control interface described below. Start it from this directory with `StartLuxCore.bat` or, after building the Release `pyluxcore` target:
 
 ```text
 python camera_controller.py
@@ -13,14 +13,14 @@ python -m pip install --user tkinterdnd2
 
 ## Image pipeline and HDRI
 
-`ModoAlphaRomeo.cfg` uses the LuxLinear tone mapper with gamma correction for both the raw and OIDN image pipelines. Keep their values aligned:
+`render.cfg` uses the LuxLinear tone mapper with gamma correction for both the raw and OIDN image pipelines. Keep their values aligned:
 
 - `sensitivity = 100`
 - `exposure = 5.0`
 - `fstop = 2.8`
 - gamma `2.2`
 
-These settings preserve HDRI and clear-coat detail while limiting highlight clipping. `ModoAlphaRomeo.scn` selects `hdre_055.hdr` and its starting infinite-light gain; the controller's HDRI Gain slider replaces that gain at runtime.
+These settings preserve HDRI detail while limiting highlight clipping. `scene.scn` contains the camera, the default `hdre_055.hdr` environment, and a camera-invisible millimetre placeholder triangle (defined inline, no `.ply`) that keeps the GPU accelerator from ever seeing a zero-triangle scene, which crashes intermittently. The controller's HDRI Gain slider replaces the gain at runtime, and the Alpha Romeo demo assets remain untouched in `scenes/AlphaRomeo`.
 
 The controller's Exposure control updates the LuxLinear `exposure` for both pipelines and restarts rendering, so its changes apply consistently to raw and denoised output.
 
@@ -28,7 +28,7 @@ The controller's Exposure control updates the LuxLinear `exposure` for both pipe
 
 The controller uses `PATHOCL` with the `OPTIX` accelerator, selecting the CUDA GPU for hardware ray tracing. `opencl.cpu.use = 0`, `opencl.gpu.use = 1`, and `opencl.native.threads.count = 0` ensure it uses the GPU path rather than an OpenCL CPU or native render thread.
 
-The render-window title displays `PATHOCL / OptiX`. Film hardware processing remains disabled because the controller reads raw and OIDN film output on the host. GPU ray tracing was validated with a 320×180 Alpha Romeo render that reached 1,019 passes with every RGB channel populated.
+The render-window title displays `PATHOCL / OptiX`. Film hardware processing remains disabled because the controller reads raw and OIDN film output on the host.
 
 When CUDA 12.4 is installed at its standard Windows location, the controller explicitly selects its NVRTC DLL before importing `pyluxcore`. This prevents a newer installed CUDA toolkit from producing PTX that an older NVIDIA driver cannot load. Set `LUXRAYS_NVRTC_LIBRARY` to an absolute NVRTC DLL path to override that choice.
 ## Changing the HDRI
@@ -51,7 +51,9 @@ The controller saves the camera target, orbit, distance, exposure, HDRI gain, ba
 
 Every message is framed as a 4-byte little-endian header length, a UTF-8 JSON header, then any binary buffers announced by the header's `buffers` list (`role` plus `bytes`, sent in list order). Every message receives one framed JSON reply such as `{"ok": true, ...}` or `{"ok": false, "error": "..."}`.
 
-Immediate commands: `camera` (`az`, `el`, `dist`), `target` (`xyz`), `preset` (`az`, `el`), `reset`, `exposure` (`value`), `hdri_gain` (`value`), `hdri_file` (`path`), `background` (`hdri` true/false), `resolution` (`width`, `height`), `pipeline` (`index` 0 raw, 1 OIDN), `stop`, `start`, `save_film` (`path`), `status`, and `shutdown`.
+Immediate commands: `camera` (`az`, `el`, `dist`), `lookat` (below), `target` (`xyz`), `preset` (`az`, `el`), `reset`, `exposure` (`value`), `hdri_gain` (`value`), `hdri_file` (`path`), `background` (`hdri` true/false), `resolution` (`width`, `height`), `pipeline` (`index` 0 raw, 1 OIDN), `stop`, `start`, `save_film` (`path`), `status`, and `shutdown`.
+
+`lookat` (alias `cameraEyeTarget`) sets the view directly from `eye`, `target`, optional `up`, and optional `fov` in degrees with an `axis` of `vertical` (default) or `horizontal`. The controller derives its orbit state from the vectors, converts the angle to LuxCore's `fieldofview` for the current film aspect (LuxCore's value spans the wider film axis), ignores zero-length `up` vectors and non-positive `fov` values (as sent for orthographic viewports), and `reset` restores the scene's original up vector and field of view. Camera distances are not limited by the UI's 1-50 distance slider, so CAD-scale coordinates pass through exactly; no axis conversion is applied anywhere, meaning uploaded meshes and the camera share the sender's coordinate system.
 
 Geometry and scene content stream through staged commands, and one restart applies everything:
 
@@ -67,4 +69,4 @@ Run `python control_upload_test.py` in this directory to verify the interface: i
 
 ## Generated files
 
-Film outputs, logs, and files such as `Reinhard_HDRI_Verification.png` and `camera_controller_settings.json` are local artifacts and are not source files to commit.
+Film outputs, `render.log`, and `camera_controller_settings.json` are local artifacts and are not source files to commit.

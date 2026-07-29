@@ -20,13 +20,13 @@ import sys
 import tempfile
 import time
 
-SCENE_DIR = os.path.dirname(os.path.abspath(__file__))
-CONTROLLER = os.path.join(SCENE_DIR, "camera_controller.py")
-SETTINGS = os.path.join(SCENE_DIR, "camera_controller_settings.json")
+UI_DIR = os.path.dirname(os.path.abspath(__file__))
+CONTROLLER = os.path.join(UI_DIR, "camera_controller.py")
+SETTINGS = os.path.join(UI_DIR, "camera_controller_settings.json")
 TEST_PORT = 8975
 
-sys.path.insert(0, SCENE_DIR)
-import camera_controller as controller  # noqa: E402  (needs SCENE_DIR on sys.path)
+sys.path.insert(0, UI_DIR)
+import camera_controller as controller  # noqa: E402  (needs UI_DIR on sys.path)
 
 
 # ── Offline framing checks ────────────────────────────────────────────────────
@@ -110,7 +110,7 @@ def live_tests():
 
     env = dict(os.environ, LUXCORE_CONTROL_PORT=str(TEST_PORT))
     proc = subprocess.Popen([sys.executable, CONTROLLER],
-                            cwd=SCENE_DIR, env=env)
+                            cwd=UI_DIR, env=env)
 
     def restore_settings():
         if had_settings:
@@ -187,6 +187,46 @@ def live_tests():
     if not reply.get("ok") or abs(reply["azimuth"] - 95.0) > 1e-6:
         fail(f"camera command failed: {reply}")
     print("camera: OK")
+
+    # C#-style CameraUpdate: eye/target/up/fov with derived orbit state.
+    reply = send(conn, {"cmd": "cameraEyeTarget",
+                        "eye": [0.0, -10.0, 2.0], "target": [0.0, 0.0, 1.0],
+                        "up": [0.0, 0.0, 1.0], "fov": 50.0})
+    if not (reply.get("ok")
+            and abs(reply["distance"] - 10.049875) < 1e-3
+            and abs(reply["elevation"] - 5.710593) < 0.01
+            and abs(reply["azimuth"] - 180.0) < 1e-6
+            and reply["fov"] == 50.0 and reply["fov_axis"] == "vertical"):
+        fail(f"cameraEyeTarget derived the wrong view: {reply}")
+    print("cameraEyeTarget: OK")
+
+    # Orthographic senders use fov 0 and a zero up vector: both are ignored.
+    reply = send(conn, {"cmd": "lookat", "eye": [5.0, 0.0, 1.0],
+                        "target": [0.0, 0.0, 1.0], "up": [0.0, 0.0, 0.0],
+                        "fov": 0.0})
+    if not (reply.get("ok") and abs(reply["azimuth"] - 90.0) < 1e-6
+            and abs(reply["distance"] - 5.0) < 1e-9
+            and reply["fov"] == 50.0 and reply["up"] == [0.0, 0.0, 1.0]):
+        fail(f"lookat alias with ortho defaults failed: {reply}")
+    status = send(conn, {"cmd": "status"})
+    if status.get("fov") != 50.0 or status.get("up") != [0.0, 0.0, 1.0]:
+        fail(f"status does not report the lookat overrides: {status}")
+    print("lookat alias and ortho defaults: OK")
+
+    # CAD-scale distances must survive the 1-50 UI distance slider.
+    reply = send(conn, {"cmd": "cameraEyeTarget",
+                        "eye": [0.0, -400.0, 30.0], "target": [0.0, 0.0, 1.0],
+                        "up": [0.0, 0.0, 1.0], "fov": 40.0})
+    expected = (400.0 ** 2 + 29.0 ** 2) ** 0.5
+    if not (reply.get("ok") and abs(reply["distance"] - expected) < 1e-6):
+        fail(f"large-distance lookat failed: {reply}")
+    status = send(conn, {"cmd": "status"})
+    if abs(status["distance"] - expected) > 1e-6:
+        fail(f"large distance was clamped by the UI: {status['distance']}")
+    reply = send(conn, {"cmd": "camera", "az": 95.0, "el": 12.0, "dist": 18.0})
+    if not reply.get("ok") or abs(reply["distance"] - 18.0) > 1e-9:
+        fail(f"camera restore failed: {reply}")
+    print("large-distance lookat: OK")
 
     # buffers-list protocol mesh with explicit object properties.
     quad_points = struct.pack("<12f",
