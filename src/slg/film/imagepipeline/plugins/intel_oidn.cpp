@@ -43,6 +43,35 @@ void errorCallback(void* userPtr, oidn::Error error, const char* message) {
   throw std::runtime_error(message);
 }
 
+namespace {
+
+// OIDN filters process their inputs in half precision internally: NaN, Inf,
+// or values beyond the half-float range in any input buffer come back as
+// colored noise in the output (for example HDRI suns or bright skylights
+// visible in the image pipeline buffer). Clamp every input buffer to its
+// documented domain before handing it to the denoiser.
+constexpr float OIDN_MAX_INPUT_VALUE = 65504.f;
+
+void SanitizeBuffer(float *buffer, const u_int count,
+		const float minValue, const float maxValue) {
+	tbb::parallel_for(
+		tbb::blocked_range<u_int>(0, count),
+		[&](tbb::blocked_range<u_int> &range) {
+			for (u_int i = range.begin(); i < range.end(); ++i) {
+				const float value = buffer[i];
+				// NaN comparisons are always false, so NaNs land in the
+				// first branch and are replaced with the minimum.
+				if (!(value >= minValue))
+					buffer[i] = minValue;
+				else if (value > maxValue)
+					buffer[i] = maxValue;
+			}
+		}
+	);
+}
+
+}
+
 IntelOIDN::IntelOIDN(const string ft, const int m, const float s, const bool pref) {
 	filterType = ft;
 	oidnMemLimit = m;
@@ -76,7 +105,7 @@ void IntelOIDN::FilterImage(const string &imageName,
     }
 
     device.setErrorFunction(errorCallback);
-    device.set("verbose", 3);
+    device.set("verbose", 0);
     device.commit();
 
     oidn::FilterRef filter = device.newFilter(filterType.c_str());
@@ -118,7 +147,9 @@ IntelOIDN::float_buffer IntelOIDN::PrepareBuffer (
 	const GenericFrameBuffer<4, 1, float>& channel,
 	const u_int width,
 	const u_int height,
-	bool enablePrefiltering
+	bool enablePrefiltering,
+	const float minValue,
+	const float maxValue
 ) const {
 	IntelOIDN::float_buffer outBuffer(width * height * 3);
 	IntelOIDN::float_buffer tmpBuffer(outBuffer.size());
@@ -133,6 +164,8 @@ IntelOIDN::float_buffer IntelOIDN::PrepareBuffer (
 				channel.GetWeightedPixel(i, &tmpBuffer[i * 3]);
 		}
 	);
+
+	SanitizeBuffer(&tmpBuffer[0], width * height * 3, minValue, maxValue);
 
 	// Prefilter
 	if (enablePrefiltering) {
@@ -177,7 +210,8 @@ void IntelOIDN::Apply(Film &film, const u_int index) {
 			*film.channel_ALBEDO,
 			width,
 			height,
-			enablePrefiltering
+			enablePrefiltering,
+			0.f, 1.f
 		);
 	};
 
@@ -187,11 +221,16 @@ void IntelOIDN::Apply(Film &film, const u_int index) {
 			*film.channel_AVG_SHADING_NORMAL,
 			width,
 			height,
-			enablePrefiltering
+			enablePrefiltering,
+			-1.f, 1.f
 		);
 	};
 
 	SLG_LOG("IntelOIDNPlugin preparing inputs");
+
+	// The image pipeline buffer carries unbounded HDR radiance; clamp it to
+	// the range OIDN can represent before filtering.
+	SanitizeBuffer((float *)pixels, pixelCount * 3, 0.f, OIDN_MAX_INPUT_VALUE);
     if (film.HasChannel(Film::ALBEDO)) {
         if (film.HasChannel(Film::AVG_SHADING_NORMAL)) {
 			// Prepare both (and parallelize)

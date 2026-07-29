@@ -74,6 +74,9 @@ bool cudaKernelCache::ForcedCompilePTX(const vector<string> &kernelsParameters, 
   
 	vector<const char *> cudaOpts;
 	cudaOpts.push_back("--device-as-default-execution-space");
+	cudaOpts.push_back("--std=c++17");
+	const string optixIncludePath = string("--include-path=") + LUXRAYS_OPTIX_INCLUDE_DIR;
+	cudaOpts.push_back(optixIncludePath.c_str());
 	//cudaOpts.push_back("--disable-warnings");
        
         // Set target architecture, based on current device's capability

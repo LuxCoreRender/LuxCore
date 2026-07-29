@@ -77,10 +77,12 @@ void Init() {
 
 		} else {
 			isCudaAvilable = true;
-
-			// Try to initialize Optix too
-			if (optixInit() == OPTIX_SUCCESS)
+			const OptixResult optixResult = optixInit();
+			if (optixResult == OPTIX_SUCCESS)
 				isOptixAvilable = true;
+			else
+				std::cerr << "Optix initialization failed: " <<
+						optixGetErrorName(optixResult) << "\n";
 		}
 	}
 #endif

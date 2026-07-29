@@ -238,6 +238,9 @@ set(LUXRAYS_LIB_SRCS
 
 add_library(luxrays STATIC ${LUXRAYS_LIB_SRCS})
 add_definitions(-DCPP_API_EXPORTS ${VISIBILITY_FLAGS}) # for controlling visibility
+target_compile_definitions(luxrays PRIVATE
+  LUXRAYS_OPTIX_INCLUDE_DIR="${PROJECT_SOURCE_DIR}/deps/optix-9.0.0/include"
+)
 target_link_libraries(luxrays PRIVATE
   embree::embree
   openimageio::openimageio

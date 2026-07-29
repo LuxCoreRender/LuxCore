@@ -107,6 +107,9 @@ def live_tests():
     had_settings = os.path.isfile(SETTINGS)
     if had_settings:
         shutil.copyfile(SETTINGS, settings_backup)
+        # Launch with clean defaults so the run does not depend on (or
+        # disturb) the user's live camera, HDRI, and resolution state.
+        os.remove(SETTINGS)
 
     env = dict(os.environ, LUXCORE_CONTROL_PORT=str(TEST_PORT))
     proc = subprocess.Popen([sys.executable, CONTROLLER],
@@ -189,12 +192,14 @@ def live_tests():
     print("camera: OK")
 
     # C#-style CameraUpdate: eye/target/up/fov with derived orbit state.
+    # The controller intentionally halves the eye-to-target distance and
+    # derives the elevation from the halved value.
     reply = send(conn, {"cmd": "cameraEyeTarget",
                         "eye": [0.0, -10.0, 2.0], "target": [0.0, 0.0, 1.0],
                         "up": [0.0, 0.0, 1.0], "fov": 50.0})
     if not (reply.get("ok")
-            and abs(reply["distance"] - 10.049875) < 1e-3
-            and abs(reply["elevation"] - 5.710593) < 0.01
+            and abs(reply["distance"] - 5.0249378) < 1e-3
+            and abs(reply["elevation"] - 11.478923) < 0.01
             and abs(reply["azimuth"] - 180.0) < 1e-6
             and reply["fov"] == 50.0 and reply["fov_axis"] == "vertical"):
         fail(f"cameraEyeTarget derived the wrong view: {reply}")
@@ -205,7 +210,7 @@ def live_tests():
                         "target": [0.0, 0.0, 1.0], "up": [0.0, 0.0, 0.0],
                         "fov": 0.0})
     if not (reply.get("ok") and abs(reply["azimuth"] - 90.0) < 1e-6
-            and abs(reply["distance"] - 5.0) < 1e-9
+            and abs(reply["distance"] - 2.5) < 1e-9
             and reply["fov"] == 50.0 and reply["up"] == [0.0, 0.0, 1.0]):
         fail(f"lookat alias with ortho defaults failed: {reply}")
     status = send(conn, {"cmd": "status"})
@@ -213,11 +218,65 @@ def live_tests():
         fail(f"status does not report the lookat overrides: {status}")
     print("lookat alias and ortho defaults: OK")
 
+    # A rolled lookat up vector must not tilt the canonical preset views.
+    reply = send(conn, {"cmd": "lookat", "eye": [0.0, -10.0, 2.0],
+                        "target": [0.0, 0.0, 0.5], "up": [0.0, 0.7, 0.7],
+                        "fov": 45.0})
+    if not reply.get("ok") or abs(reply["up"][2] - 0.70710678) > 1e-6:
+        fail(f"tilted lookat up was not stored: {reply}")
+    reply = send(conn, {"cmd": "preset", "az": 0.0, "el": 10.0})
+    if not reply.get("ok"):
+        fail(f"preset failed: {reply}")
+    status = send(conn, {"cmd": "status"})
+    if status.get("up") != [0.0, 0.0, 1.0]:
+        fail(f"preset did not restore the world up vector: {status.get('up')}")
+    print("preset restores a level horizon: OK")
+
+    # AO clay mode swaps to the white dome and back.
+    reply = send(conn, {"cmd": "ao", "enabled": True})
+    if not (reply.get("ok") and reply["ao_mode"] is True):
+        fail(f"ao enable failed: {reply}")
+    status = send(conn, {"cmd": "status"})
+    if status.get("ao_mode") is not True:
+        fail(f"status does not report ao_mode: {status}")
+    reply = send(conn, {"cmd": "ao", "enabled": False})
+    if not (reply.get("ok") and reply["ao_mode"] is False):
+        fail(f"ao disable failed: {reply}")
+    print("ao clay mode toggles: OK")
+
+    # The HDRI ground plane toggles on and off.
+    reply = send(conn, {"cmd": "ground", "enabled": True})
+    if not (reply.get("ok") and reply["hdri_ground"] is True):
+        fail(f"ground enable failed: {reply}")
+    status = send(conn, {"cmd": "status"})
+    if status.get("hdri_ground") is not True:
+        fail(f"status does not report hdri_ground: {status}")
+    reply = send(conn, {"cmd": "ground", "enabled": False})
+    if not (reply.get("ok") and reply["hdri_ground"] is False):
+        fail(f"ground disable failed: {reply}")
+    print("hdri ground plane toggles: OK")
+
+    # lookat can also resize the render film to the sender's viewport.
+    reply = send(conn, {"cmd": "cameraEyeTarget",
+                        "eye": [0.0, -10.0, 2.0], "target": [0.0, 0.0, 0.5],
+                        "up": [0.0, 0.0, 1.0], "fov": 45.0,
+                        "width": 960, "height": 540})
+    if not (reply.get("ok") and reply["width"] == 960
+            and reply["height"] == 540):
+        fail(f"lookat viewport size failed: {reply}")
+    status = send(conn, {"cmd": "status"})
+    if status.get("width") != 960 or status.get("height") != 540:
+        fail(f"viewport size was not applied: {status}")
+    reply = send(conn, {"cmd": "resolution", "width": 1280, "height": 720})
+    if not reply.get("ok"):
+        fail(f"resolution restore failed: {reply}")
+    print("lookat viewport size: OK")
+
     # CAD-scale distances must survive the 1-50 UI distance slider.
     reply = send(conn, {"cmd": "cameraEyeTarget",
                         "eye": [0.0, -400.0, 30.0], "target": [0.0, 0.0, 1.0],
                         "up": [0.0, 0.0, 1.0], "fov": 40.0})
-    expected = (400.0 ** 2 + 29.0 ** 2) ** 0.5
+    expected = ((400.0 ** 2 + 29.0 ** 2) ** 0.5) / 2.0
     if not (reply.get("ok") and abs(reply["distance"] - expected) < 1e-6):
         fail(f"large-distance lookat failed: {reply}")
     status = send(conn, {"cmd": "status"})

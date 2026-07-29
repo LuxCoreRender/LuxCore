@@ -63,7 +63,9 @@ private:
 		const GenericFrameBuffer<4, 1, float>& channel,
 		const u_int width,
 		const u_int height,
-		bool enablePrefiltering
+		bool enablePrefiltering,
+		const float minValue,
+		const float maxValue
 	) const;
 	void FilterImage (const std::string &imageName,
 			const float *srcBuffer, float *dstBuffer,

@@ -610,7 +610,7 @@ void Scene::DeleteObject(const string &objName) {
 			const auto& mesh = oldObj.GetExtMesh();
 			const string prefix = Scene::EncodeTriangleLightNamePrefix(oldObj.GetName());
 			for (u_int i = 0; i < mesh.GetTotalTriangleCount(); ++i)
-				lightDefs.DeleteLightSource(prefix + ToString(i));
+				moveToTrash(lightDefs.DeleteLightSource(prefix + ToString(i)));
 		}
 
 		moveToTrash(objDefs.DeleteSceneObject(objName));

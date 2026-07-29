@@ -116,7 +116,6 @@ public:
 		// Build all accelerator bottom nodes
 
 		vector<OptixInstance> optixInstances;
-		vector<OptixAabb> optixBBs;
 		
 		auto uniqueMeshTraversableHandle = map<const Mesh * , OptixTraversableHandle,
 				function<bool(const Mesh * , const Mesh * )>>{
@@ -154,8 +153,6 @@ public:
 					optixInstance.instanceId = i;
 					optixInstance.visibilityMask = 1;
 					optixInstance.traversableHandle = handle;
-					// Disable transformation
-					optixInstance.flags = OPTIX_INSTANCE_FLAG_DISABLE_TRANSFORM;
 					break;
 				}
 				case TYPE_TRIANGLE_INSTANCE:
@@ -284,8 +281,6 @@ public:
 					optixInstance.instanceId = i;
 					optixInstance.visibilityMask = 1;
 					optixInstance.traversableHandle = motionMeshHandle;
-					// Disable transformation
-					optixInstance.flags = OPTIX_INSTANCE_FLAG_DISABLE_TRANSFORM;
 
 					usesMotionBlur = true;
 					break;
@@ -294,17 +289,6 @@ public:
 					throw runtime_error("Unsupported mesh type in OptixKernel(): " + ToString(mesh->GetType()));
 			}
 			
-			// Add the bounding box
-
-			optixBBs.resize(optixBBs.size() + 1);
-			OptixAabb &optixBB = optixBBs[optixBBs.size() - 1];					
-			BBox bb = mesh->GetBBox();
-			optixBB.minX = bb.pMin.x;
-			optixBB.minY = bb.pMin.y;
-			optixBB.minZ = bb.pMin.z;
-			optixBB.maxX = bb.pMax.x;
-			optixBB.maxY = bb.pMax.y;
-			optixBB.maxZ = bb.pMax.z;
 		}
 
 		LR_LOG(device.GetContext(), "Optix accelerator leafs: " << optixInstances.size());
@@ -313,12 +297,6 @@ public:
 		HardwareDeviceBuffer *optixInstancesBuff = nullptr;
 		cudaDevice->AllocBufferRO(&optixInstancesBuff, &optixInstances[0], sizeof(OptixInstance) * optixInstances.size());
 
-		
-		HardwareDeviceBuffer *optixBBsBuff = nullptr;
-		if (usesMotionBlur) {
-			// Allocate optix BBs on device
-			cudaDevice->AllocBufferRO(&optixBBsBuff, &optixBBs[0], sizeof(OptixAabb) * optixBBs.size());
-		}
 
 		// Build top level acceleration structure
 		
@@ -326,10 +304,6 @@ public:
 		buildInput.type = OPTIX_BUILD_INPUT_TYPE_INSTANCES;
 		buildInput.instanceArray.instances = ((CUDADeviceBuffer *)optixInstancesBuff)->GetCUDADevicePointer();
 		buildInput.instanceArray.numInstances = optixInstances.size();
-		if (usesMotionBlur) {
-			buildInput.instanceArray.aabbs = ((CUDADeviceBuffer *)optixBBsBuff)->GetCUDADevicePointer();
-			buildInput.instanceArray.numAabbs = optixBBs.size();
-		}
 		
 		OptixTraversableHandle topLevelHandle;
 		HardwareDeviceBuffer *topLevelOutputBuffer = nullptr;
@@ -339,8 +313,6 @@ public:
 
 		// Free instances buffer
 		cudaDevice->FreeBuffer(&optixInstancesBuff);
-		// Free BBox buffer
-		cudaDevice->FreeBuffer(&optixBBsBuff);
 
 		LR_LOG(device.GetContext(), "OptixAccel total build time: " << int((WallClockTime() - t0) * 1000) << "ms");
 
@@ -388,7 +360,7 @@ public:
 		OptixModuleCompileOptions moduleCompileOptions = {};
 		moduleCompileOptions.maxRegisterCount = OPTIX_COMPILE_DEFAULT_MAX_REGISTER_COUNT;
 		moduleCompileOptions.optLevel = OPTIX_COMPILE_OPTIMIZATION_DEFAULT;
-		moduleCompileOptions.debugLevel = OPTIX_COMPILE_DEBUG_LEVEL_LINEINFO;
+		moduleCompileOptions.debugLevel = OPTIX_COMPILE_DEBUG_LEVEL_MINIMAL;
 
 		OptixPipelineCompileOptions pipelineCompileOptions = {};
 		pipelineCompileOptions.usesMotionBlur = usesMotionBlur;
@@ -402,7 +374,7 @@ public:
 		char optixErrLog[4096];
 		size_t optixErrLogSize = sizeof(optixErrLog);
 
-		OptixResult optixErr = optixModuleCreateFromPTX(
+		OptixResult optixErr = optixModuleCreate(
 				optixContext,
 				&moduleCompileOptions,
 				&pipelineCompileOptions,
@@ -415,7 +387,7 @@ public:
 		delete[] ptx;
 
 		if (optixErr != OPTIX_SUCCESS) {
-			LR_LOG(device.GetContext(), "Optix optixModuleCreateFromPTX() error: " << endl << optixErrLog);
+			LR_LOG(device.GetContext(), "Optix optixModuleCreate() error: " << endl << optixErrLog);
 			CHECK_OPTIX_ERROR(optixErr);
 		}
 
@@ -491,7 +463,6 @@ public:
 
 		OptixPipelineLinkOptions pipelineLinkOptions = {};
 		pipelineLinkOptions.maxTraceDepth = 1;
-		pipelineLinkOptions.debugLevel = OPTIX_COMPILE_DEBUG_LEVEL_LINEINFO;
 
 		optixErrLogSize = sizeof(optixErrLog);
 		CHECK_OPTIX_ERROR(optixPipelineCreate(
@@ -736,7 +707,9 @@ void OptixKernel::EnqueueTraceRayBuffer(HardwareDeviceBuffer *rayBuff,
 		// This is always true at the moment for all render engines.
 		optixAccelParams.rayBuff = ((CUDADeviceBuffer *)rayBuff)->GetCUDADevicePointer();
 		optixAccelParams.rayHitBuff = ((CUDADeviceBuffer *)rayHitBuff)->GetCUDADevicePointer();
-		cudaDevice->EnqueueWriteBuffer(optixAccelParamsBuff, false, sizeof(OptixAccelParams), &optixAccelParams);
+		// The same host-side parameter struct is updated for every trace batch.
+		// Complete this tiny copy before it can be overwritten by the next batch.
+		cudaDevice->EnqueueWriteBuffer(optixAccelParamsBuff, true, sizeof(OptixAccelParams), &optixAccelParams);
 
 		CHECK_OPTIX_ERROR(optixLaunch(
 				optixPipeline,

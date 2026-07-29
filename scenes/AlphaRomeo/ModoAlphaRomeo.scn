@@ -11,7 +11,7 @@ scene.materials.Bottom.kd = 0.11018493 0.11018493 0.11018493
 scene.materials.Alfa_045shields.type = glossy2
 scene.materials.Alfa_045shields.kd = 0.23390196 0.23390196 0.23390196
 scene.materials.Alfa_045tire.type = matte
-scene.materials.Alfa_045tire.kd = 0.17603923 0.17603923 0.17603923
+scene.materials.Alfa_045tire.kd = 0.017603923 0.017603923 0.017603923
 scene.materials.Alfa_045logo.type = glossy2
 scene.materials.Alfa_045logo.kd = 0.6901961 0.6901961 0.6901961
 scene.materials.Alfa_045wheel_045inside.type = matte
@@ -69,6 +69,7 @@ scene.materials.Alfa_045wheel_045discs.type = glossy2
 scene.materials.Alfa_045wheel_045discs.kd = 0.43529412 0.43529412 0.43529412
 # Base coat: measured carpaint data for bmw339
 scene.materials.Alfa_045mainbody_base.type = carpaint
+scene.materials.Alfa_045mainbody_base.preset = "polaris silber"
 scene.materials.Alfa_045mainbody_base.kd = 0.35 0.008 0.004
 
 # Clear coat: smooth lacquer layer (IOR~1.5 -> ~4% at normal, ~100% at grazing)

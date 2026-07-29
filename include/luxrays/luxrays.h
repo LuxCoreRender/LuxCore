@@ -60,9 +60,9 @@ class Vector;
 
 extern void Init();
 
-inline bool isOpenCLAvilable = true;
-inline bool isCudaAvilable = true;
-inline bool isOptixAvilable = true;
+inline bool isOpenCLAvilable = false;
+inline bool isCudaAvilable = false;
+inline bool isOptixAvilable = false;
 inline std::locale cLocale("C");
 
 }

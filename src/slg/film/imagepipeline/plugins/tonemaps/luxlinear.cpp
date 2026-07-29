@@ -124,15 +124,17 @@ void LuxLinearToneMap::ApplyHW(Film &film, const u_int index) {
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.GetWidth());
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.GetHeight());
 		hardwareDevice->SetKernelArg(applyKernel, argIndex++, film.hw_IMAGEPIPELINE);
-		const float gamma = GetGammaCorrectionValue(film, index);
-		const float scale = GetScale(gamma);
-		hardwareDevice->SetKernelArg(applyKernel, argIndex++, scale);
 
 		const double tEnd = WallClockTime();
 		SLG_LOG("[LuxLinearToneMap] Kernels compilation time: " << int((tEnd - tStart) * 1000.0) << "ms");
 
 		film.ctx->SetVerbose(false);
 	}
+
+	// Always recompute scale so changes to exposure/fstop/sensitivity take effect
+	const float gamma = GetGammaCorrectionValue(film, index);
+	const float scale = GetScale(gamma);
+	hardwareDevice->SetKernelArg(applyKernel, 3, scale);
 
 	hardwareDevice->EnqueueKernel(applyKernel, HardwareDeviceRange(RoundUp(film.GetWidth() * film.GetHeight(), 256u)),
 			HardwareDeviceRange(256));

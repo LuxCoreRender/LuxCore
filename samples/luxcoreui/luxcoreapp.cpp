@@ -344,6 +344,9 @@ void LuxCoreApp::StartRendering(
 	else
 		currentTool = TOOL_CAMERA_EDIT;
 
+	// Read the image pipeline index from user-set properties (GetProperties includes -D overrides)
+	imagePipelineIndex = config->GetProperties()->Get(Property("screen.imagepipeline.index")(0u)).Get<unsigned int>();
+
 	unsigned int filmWidth = targetFilmWidth;
 	unsigned int filmHeight = targetFilmHeight;
 	if (currentTool != TOOL_IMAGE_VIEW) {
