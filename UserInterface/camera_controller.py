@@ -143,9 +143,15 @@ AO_TONEMAP = "\n".join((
 HDR_TONEMAP_REFERENCE_EXPOSURE = 5.0
 HDR_TONEMAP_REFERENCE_POSTSCALE = 1.2
 HDR_TONEMAP_BURN = 3.75
+HDR_TONEMAP_GAMMA = 2.2
 
 def _reinhard_tonemap(exposure):
-    """Property text for the normal HDRI pipelines with exposure scaling."""
+    """Complete normal HDRI pipelines with exposure scaling.
+
+    RenderConfig.Parse() replaces a pipeline's plug-in list when it receives
+    any properties for that pipeline. Keep the gamma correction and OIDN
+    plug-ins in restart properties so camera/HDRI restarts match startup.
+    """
     postscale = (HDR_TONEMAP_REFERENCE_POSTSCALE * exposure
                  / HDR_TONEMAP_REFERENCE_EXPOSURE)
     return "\n".join((
@@ -153,10 +159,16 @@ def _reinhard_tonemap(exposure):
         "film.imagepipelines.0.0.prescale = 1.0",
         f"film.imagepipelines.0.0.postscale = {postscale}",
         f"film.imagepipelines.0.0.burn = {HDR_TONEMAP_BURN}",
+        "film.imagepipelines.0.1.type = GAMMA_CORRECTION",
+        f"film.imagepipelines.0.1.value = {HDR_TONEMAP_GAMMA}",
+        "film.imagepipelines.1.0.type = INTEL_OIDN",
+        "film.imagepipelines.1.0.prefilter.enable = 0",
         "film.imagepipelines.1.1.type = TONEMAP_REINHARD02",
         "film.imagepipelines.1.1.prescale = 1.0",
         f"film.imagepipelines.1.1.postscale = {postscale}",
-        f"film.imagepipelines.1.1.burn = {HDR_TONEMAP_BURN}"))
+        f"film.imagepipelines.1.1.burn = {HDR_TONEMAP_BURN}",
+        "film.imagepipelines.1.2.type = GAMMA_CORRECTION",
+        f"film.imagepipelines.1.2.value = {HDR_TONEMAP_GAMMA}"))
 
 # ── HDRI ground plane ────────────────────────────────────────────────────────────────────
 # Two coincident disks around Z = 0. The shadow catcher (just above) is
@@ -1047,7 +1059,6 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
                                          else self._ao_mode.get())
                     if not effective_ao_mode:
                         restart_props.SetFromString(_reinhard_tonemap(exp))
-                    self._config.Parse(restart_props)
                     if (hdr_file or hdri_gain is not None
                             or render_hdri_background is not None
                             or ao_mode is not None):
@@ -1076,9 +1087,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
                                 except Exception:
                                     pass  # already absent
                         for text in config_texts:
-                            extra = pyluxcore.Properties()
-                            extra.SetFromString(text)
-                            self._config.Parse(extra)
+                            restart_props.SetFromString(text)
                         for mesh_name, data in meshes.items():
                             mesh_kwargs = {}
                             if data["normals"] is not None:
@@ -1093,6 +1102,11 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
                             extra.SetFromString(text)
                             self._scene.Parse(extra)
                     self._apply_camera_snapshot(camera_snapshot, width, height)
+                    # Scene edits may replace lights and image maps. Parse the
+                    # config only after all scene updates so its light strategy
+                    # references the new environment rather than the stopped
+                    # session's light definitions.
+                    self._config.Parse(restart_props)
                     self._session = pyluxcore.RenderSession(self._config)
                     self._session.Start()
                     self._session_mode = mode
