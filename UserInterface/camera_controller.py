@@ -19,21 +19,38 @@ Controls:
 
 import os, sys, math, re, queue, threading, json, socket, struct, ctypes, hashlib, tempfile
 from array import array
+
+UI_DIR = os.path.dirname(os.path.abspath(__file__))
+BUNDLED_PYTHON_PACKAGES = os.path.join(UI_DIR, "python", "site-packages")
+if os.path.isdir(BUNDLED_PYTHON_PACKAGES):
+    sys.path.insert(0, BUNDLED_PYTHON_PACKAGES)
 try:
     from tkinterdnd2 import COPY, DND_FILES, TkinterDnD
 except ImportError:
     COPY = DND_FILES = TkinterDnD = None
 
 # ── Bootstrap pyluxcore ──────────────────────────────────────────────────────
-UI_DIR         = os.path.dirname(os.path.abspath(__file__))
-LUXCORE_ROOT   = os.path.dirname(UI_DIR)
-PYLUXCORE_PATH = os.path.join(LUXCORE_ROOT, r"out\build\src\pyluxcore\Release")
-LUXCORE_BIN    = os.path.join(LUXCORE_ROOT, r"out\install\Release\bin")
+BUNDLED_RUNTIME_DIR = os.path.join(UI_DIR, "runtime")
+BUNDLED_PYLUXCORE_PATH = os.path.join(BUNDLED_RUNTIME_DIR, "pyluxcore")
+BUNDLED_LUXCORE_BIN = os.path.join(BUNDLED_RUNTIME_DIR, "bin")
+if os.path.isfile(os.path.join(BUNDLED_PYLUXCORE_PATH, "pyluxcore.pyd")):
+    # The portable layout keeps the controller and all native dependencies
+    # beneath one directory; scene paths remain relative to this file.
+    LUXCORE_ROOT = UI_DIR
+    PYLUXCORE_PATH = BUNDLED_PYLUXCORE_PATH
+    LUXCORE_BIN = BUNDLED_LUXCORE_BIN
+else:
+    LUXCORE_ROOT = os.path.dirname(UI_DIR)
+    PYLUXCORE_PATH = os.path.join(
+        LUXCORE_ROOT, r"out\build\src\pyluxcore\Release")
+    LUXCORE_BIN = os.path.join(LUXCORE_ROOT, r"out\install\Release\bin")
 SCENE_DIR      = UI_DIR
 SCENE_FILE     = os.path.join(SCENE_DIR, "scene.scn")
 CFG_FILE       = os.path.join(SCENE_DIR, "render.cfg")
-CUDA_12_4_NVRTC = (
-    r"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.4\bin\nvrtc64_120_0.dll")
+BUNDLED_NVRTC_LIBRARY = os.path.join(
+    BUNDLED_RUNTIME_DIR, "cuda", "nvrtc64_120_0.dll")
+CUDA_12_4_NVRTC = (BUNDLED_NVRTC_LIBRARY if os.path.isfile(BUNDLED_NVRTC_LIBRARY)
+                   else r"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.4\bin\nvrtc64_120_0.dll")
 
 SETTINGS_FILE = os.path.join(UI_DIR, "camera_controller_settings.json")
 
@@ -108,7 +125,9 @@ PREVIEW_MIN_PASSES  = 2
 FULL_RESTART_MS     = 400
 WORLD_UP            = [0.0, 0.0, 1.0]
 WINDOW_TITLE        = "nPower Software LuxCore Renderer"
-WINDOW_ICON         = r"D:\nPowerSoftware.com\NewImages\HexigonLogoFLat.png"
+WINDOW_ICON = (os.path.join(UI_DIR, "HexigonLogoFLat.png")
+               if os.path.isfile(os.path.join(UI_DIR, "HexigonLogoFLat.png"))
+               else r"D:\nPowerSoftware.com\NewImages\HexigonLogoFLat.png")
 
 # ── External control server ────────────────────────────────────────────────
 # camera_controller_settings.json "control_port" or the LUXCORE_CONTROL_PORT
@@ -927,8 +946,13 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         super().__init__()
         self.title(WINDOW_TITLE)
         self.resizable(False, False)
-        self._window_icon = tk.PhotoImage(file=WINDOW_ICON)
-        self.iconphoto(True, self._window_icon)
+        self._window_icon = None
+        if os.path.isfile(WINDOW_ICON):
+            try:
+                self._window_icon = tk.PhotoImage(file=WINDOW_ICON)
+                self.iconphoto(True, self._window_icon)
+            except tk.TclError:
+                pass
         self._settings = _read_controller_settings()
         self._settings_ready = False
         self._saved_window_geometry = _setting_window_geometry(self._settings)
@@ -2951,7 +2975,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         if create_object:
             bound_material = f"{name}_mat"
             object_lines = [
-                f"scene.materials.{name}_mat.type = glossy2",
+                f"scene.materials.{name}_mat.type = mirror",
                 f"scene.materials.{name}_mat.kd = 0.1 0.1 0.5",
             ]
             if self._ao_mode.get():

@@ -11,6 +11,16 @@ HDR drag-and-drop requires `tkinterdnd2`:
 python -m pip install --user tkinterdnd2
 ```
 
+## Standalone Windows package
+
+After building the Release `pyluxcore` target, create a self-contained controller directory with:
+
+```text
+python build_standalone.py
+```
+
+This recreates `dist/LuxCoreController`. Run `StartLuxCore.vbs` there for a windowless launch, or `StartLuxCore.bat` to retain the transient command window. The generated directory includes its own Python runtime, Python dependencies, `pyluxcore`, LuxCore DLLs, scene assets, and CUDA 12.4 NVRTC libraries; it can be moved or copied without the LuxCore source tree, a system Python installation, or a CUDA toolkit installation. It requires Windows x64 and a compatible NVIDIA display driver with OptiX support.
+
 ## Image pipeline and HDRI
 
 `render.cfg` uses the Reinhard02 tone mapper with gamma correction for both the raw and OIDN image pipelines. Its luminance roll-off preserves color separation in bright HDRI highlights instead of clipping channels independently. Keep the two pipelines aligned:
