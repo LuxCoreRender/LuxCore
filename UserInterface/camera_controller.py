@@ -179,8 +179,12 @@ HDR_TONEMAP_REFERENCE_EXPOSURE = 5.0
 HDR_TONEMAP_REFERENCE_POSTSCALE = 1.2
 HDR_TONEMAP_BURN = 3.75
 HDR_TONEMAP_GAMMA = 2.2
+HDRI_BACKGROUND_FOV = 90.0
+HDRI_BACKGROUND_CACHE_DIR = os.path.join(
+    tempfile.gettempdir(), "luxcore-hdri-background")
+HDRI_BACKGROUND_CACHE_VERSION = 1
 
-def _reinhard_tonemap(exposure):
+def _reinhard_tonemap(exposure, use_projected_background=False):
     """Complete normal HDRI pipelines with exposure scaling.
 
     RenderConfig.Parse() replaces a pipeline's plug-in list when it receives
@@ -189,21 +193,52 @@ def _reinhard_tonemap(exposure):
     """
     postscale = (HDR_TONEMAP_REFERENCE_POSTSCALE * exposure
                  / HDR_TONEMAP_REFERENCE_EXPOSURE)
+    if not use_projected_background:
+        return "\n".join((
+            "film.alphachannel.enable = 0",
+            "film.imagepipelines.0.0.type = TONEMAP_REINHARD02",
+            "film.imagepipelines.0.0.prescale = 1.0",
+            f"film.imagepipelines.0.0.postscale = {postscale}",
+            f"film.imagepipelines.0.0.burn = {HDR_TONEMAP_BURN}",
+            "film.imagepipelines.0.1.type = GAMMA_CORRECTION",
+            f"film.imagepipelines.0.1.value = {HDR_TONEMAP_GAMMA}",
+            "film.imagepipelines.1.0.type = INTEL_OIDN",
+            "film.imagepipelines.1.0.prefilter.enable = 0",
+            "film.imagepipelines.1.1.type = TONEMAP_REINHARD02",
+            "film.imagepipelines.1.1.prescale = 1.0",
+            f"film.imagepipelines.1.1.postscale = {postscale}",
+            f"film.imagepipelines.1.1.burn = {HDR_TONEMAP_BURN}",
+            "film.imagepipelines.1.2.type = GAMMA_CORRECTION",
+            f"film.imagepipelines.1.2.value = {HDR_TONEMAP_GAMMA}"))
     return "\n".join((
-        "film.imagepipelines.0.0.type = TONEMAP_REINHARD02",
-        "film.imagepipelines.0.0.prescale = 1.0",
-        f"film.imagepipelines.0.0.postscale = {postscale}",
-        f"film.imagepipelines.0.0.burn = {HDR_TONEMAP_BURN}",
-        "film.imagepipelines.0.1.type = GAMMA_CORRECTION",
-        f"film.imagepipelines.0.1.value = {HDR_TONEMAP_GAMMA}",
+        "film.alphachannel.enable = 1",
+        "film.imagepipelines.0.0.type = BACKGROUND_IMG",
+        "film.imagepipelines.0.1.type = TONEMAP_REINHARD02",
+        "film.imagepipelines.0.1.prescale = 1.0",
+        f"film.imagepipelines.0.1.postscale = {postscale}",
+        f"film.imagepipelines.0.1.burn = {HDR_TONEMAP_BURN}",
+        "film.imagepipelines.0.2.type = GAMMA_CORRECTION",
+        f"film.imagepipelines.0.2.value = {HDR_TONEMAP_GAMMA}",
         "film.imagepipelines.1.0.type = INTEL_OIDN",
         "film.imagepipelines.1.0.prefilter.enable = 0",
-        "film.imagepipelines.1.1.type = TONEMAP_REINHARD02",
-        "film.imagepipelines.1.1.prescale = 1.0",
-        f"film.imagepipelines.1.1.postscale = {postscale}",
-        f"film.imagepipelines.1.1.burn = {HDR_TONEMAP_BURN}",
-        "film.imagepipelines.1.2.type = GAMMA_CORRECTION",
-        f"film.imagepipelines.1.2.value = {HDR_TONEMAP_GAMMA}"))
+        "film.imagepipelines.1.1.type = BACKGROUND_IMG",
+        "film.imagepipelines.1.2.type = TONEMAP_REINHARD02",
+        "film.imagepipelines.1.2.prescale = 1.0",
+        f"film.imagepipelines.1.2.postscale = {postscale}",
+        f"film.imagepipelines.1.2.burn = {HDR_TONEMAP_BURN}",
+        "film.imagepipelines.1.3.type = GAMMA_CORRECTION",
+        f"film.imagepipelines.1.3.value = {HDR_TONEMAP_GAMMA}"))
+
+def _set_reinhard_tonemap(props, exposure, background_file=None):
+    """Set complete image pipelines and optionally alpha-composite an HDR backplate."""
+    props.SetFromString(_reinhard_tonemap(
+        exposure, use_projected_background=background_file is not None))
+    if background_file is None:
+        return
+    for prefix in ("film.imagepipelines.0.0", "film.imagepipelines.1.1"):
+        props.Set(pyluxcore.Property(f"{prefix}.file", [background_file]))
+        props.Set(pyluxcore.Property(f"{prefix}.colorspace", ["nop"]))
+        props.Set(pyluxcore.Property(f"{prefix}.storage", ["float"]))
 
 # ── HDRI ground plane ────────────────────────────────────────────────────────────────────
 # Two coincident disks around Z = 0. The shadow catcher (just above) is
@@ -758,6 +793,165 @@ def _aligned_hdri_file(source_file, height_degrees):
             pass
     return cache_file
 
+def _read_hdri_rgb(source_file):
+    """Decode a Radiance HDR or OpenEXR panorama to a linear float RGB array."""
+    try:
+        import numpy
+    except ImportError as ex:
+        raise RuntimeError(
+            "HDRI background projection requires numpy") from ex
+    extension = os.path.splitext(source_file)[1].lower()
+    if extension == ".hdr":
+        with open(source_file, "rb") as source:
+            _, width, height = _read_radiance_header(source)
+            rgb = numpy.empty((height, width, 3), dtype=numpy.float32)
+            for row_index in range(height):
+                rgb[row_index] = _rgbe_row_to_rgb(
+                    _read_radiance_scanline(source, width))
+            return rgb
+    if extension == ".exr":
+        try:
+            import Imath
+            import OpenEXR
+        except ImportError as ex:
+            raise RuntimeError(
+                "EXR HDRI background projection requires OpenEXR") from ex
+        width, height = _openexr_dimensions(source_file)
+        source = OpenEXR.InputFile(source_file)
+        try:
+            pixel_type = Imath.PixelType(Imath.PixelType.FLOAT)
+            channels = []
+            for channel_name in ("R", "G", "B"):
+                channels.append(numpy.frombuffer(
+                    source.channel(channel_name, pixel_type),
+                    dtype=numpy.float32).reshape(height, width))
+            return numpy.ascontiguousarray(
+                numpy.stack(channels, axis=-1), dtype=numpy.float32)
+        except Exception as ex:
+            raise ValueError(
+                "The EXR HDRI does not have readable RGB channels") from ex
+        finally:
+            source.close()
+    raise ValueError("HDRI background projection needs a .hdr or .exr file")
+
+def _write_radiance_hdr(destination_file, rgb):
+    """Write a linear float RGB image as a Radiance RGBE HDR file."""
+    height, width, channels = rgb.shape
+    if channels != 3 or width <= 0 or height <= 0:
+        raise ValueError("HDRI background projection produced an invalid image")
+    with open(destination_file, "wb") as destination:
+        destination.write(b"#?RADIANCE\nFORMAT=32-bit_rle_rgbe\n\n")
+        destination.write(f"-Y {height} +X {width}\n".encode("ascii"))
+        for row in rgb:
+            _write_radiance_scanline(
+                destination, _rgb_row_to_rgbe(row), width)
+def _background_camera_axes(origin, target, up):
+    """Return the forward, right, and corrected-up basis for an HDR backplate."""
+    forward = _norm([target[index] - origin[index] for index in range(3)])
+    if math.sqrt(sum(component * component for component in forward)) < 1e-8:
+        raise ValueError("HDRI background camera eye and target must not coincide")
+    right = _norm(_cross(forward, up))
+    if math.sqrt(sum(component * component for component in right)) < 1e-8:
+        right = _norm(_cross(forward, WORLD_UP))
+    if math.sqrt(sum(component * component for component in right)) < 1e-8:
+        right = [1.0, 0.0, 0.0]
+    corrected_up = _norm(_cross(right, forward))
+    return forward, right, corrected_up
+
+def _project_hdri_background(source_rgb, width, height, origin, target, up,
+                             rotation_degrees, gain):
+    """Project an equirectangular HDRI through a fixed 90-degree camera."""
+    try:
+        import numpy
+    except ImportError as ex:
+        raise RuntimeError(
+            "HDRI background projection requires numpy") from ex
+    if width <= 0 or height <= 0:
+        raise ValueError("HDRI background projection needs positive dimensions")
+    source_height, source_width, channels = source_rgb.shape
+    if source_width <= 0 or source_height <= 0 or channels != 3:
+        raise ValueError("HDRI background source is not an RGB panorama")
+
+    forward, right, corrected_up = _background_camera_axes(origin, target, up)
+    frame = width / float(height)
+    half_tangent = math.tan(math.radians(HDRI_BACKGROUND_FOV) * 0.5)
+    tangent_x = half_tangent if frame >= 1.0 else half_tangent * frame
+    tangent_y = half_tangent / frame if frame >= 1.0 else half_tangent
+    screen_x = ((numpy.arange(width, dtype=numpy.float32) + 0.5)
+                * (2.0 / width) - 1.0) * tangent_x
+    yaw = math.radians(rotation_degrees)
+    cos_yaw, sin_yaw = math.cos(yaw), math.sin(yaw)
+    result = numpy.empty((height, width, 3), dtype=numpy.float32)
+
+    forward_vector = numpy.asarray(forward, dtype=numpy.float32)
+    right_vector = numpy.asarray(right, dtype=numpy.float32)
+    up_vector = numpy.asarray(corrected_up, dtype=numpy.float32)
+    for row_index in range(height):
+        screen_y = (1.0 - (row_index + 0.5) * (2.0 / height)) * tangent_y
+        directions = (forward_vector
+                      + screen_x[:, None] * right_vector
+                      + screen_y * up_vector)
+        directions /= numpy.linalg.norm(directions, axis=1)[:, None]
+
+        # Infinite lights sample inverse(lightToWorld) * worldDirection.
+        local_x = directions[:, 0] * cos_yaw + directions[:, 1] * sin_yaw
+        local_y = -directions[:, 0] * sin_yaw + directions[:, 1] * cos_yaw
+        local_z = numpy.clip(directions[:, 2], -1.0, 1.0)
+        u = numpy.mod(numpy.arctan2(local_y, local_x) / (2.0 * math.pi), 1.0)
+        v = numpy.arccos(local_z) / math.pi
+
+        source_x = u * source_width - 0.5
+        left_x = numpy.floor(source_x).astype(numpy.intp) % source_width
+        right_x = (left_x + 1) % source_width
+        fraction_x = (source_x - numpy.floor(source_x))[:, None]
+        source_y = numpy.clip(v * source_height - 0.5, 0.0, source_height - 1.0)
+        lower_y = numpy.floor(source_y).astype(numpy.intp)
+        upper_y = numpy.minimum(lower_y + 1, source_height - 1)
+        fraction_y = (source_y - lower_y)[:, None]
+        lower = (source_rgb[lower_y, left_x] * (1.0 - fraction_x)
+                 + source_rgb[lower_y, right_x] * fraction_x)
+        upper = (source_rgb[upper_y, left_x] * (1.0 - fraction_x)
+                 + source_rgb[upper_y, right_x] * fraction_x)
+        result[row_index] = (lower * (1.0 - fraction_y)
+                             + upper * fraction_y) * gain
+    return result
+
+def _hdri_background_file(source_file, width, height, origin, target, up,
+                          rotation_degrees, gain):
+    """Return a cached 90-degree HDRI projection for the supplied camera view."""
+    source_file = os.path.abspath(source_file)
+    source_info = os.stat(source_file)
+    forward, _, corrected_up = _background_camera_axes(origin, target, up)
+    key = "\0".join((
+        str(HDRI_BACKGROUND_CACHE_VERSION), os.path.normcase(source_file),
+        str(source_info.st_size), str(source_info.st_mtime_ns),
+        str(int(width)), str(int(height)),
+        f"{HDRI_BACKGROUND_FOV:.6f}", f"{float(rotation_degrees):.6f}",
+        f"{float(gain):.8f}",
+        *(f"{component:.8f}" for component in forward),
+        *(f"{component:.8f}" for component in corrected_up),
+    ))
+    cache_name = hashlib.sha256(key.encode("utf-8")).hexdigest() + ".hdr"
+    os.makedirs(HDRI_BACKGROUND_CACHE_DIR, exist_ok=True)
+    cache_file = os.path.join(HDRI_BACKGROUND_CACHE_DIR, cache_name)
+    if os.path.isfile(cache_file) and os.path.getsize(cache_file) > 0:
+        return cache_file
+    temporary_file = (
+        f"{cache_file}.{os.getpid()}.{threading.get_ident()}.tmp")
+    try:
+        panorama = _read_hdri_rgb(source_file)
+        projection = _project_hdri_background(
+            panorama, width, height, origin, target, up,
+            rotation_degrees, gain)
+        _write_radiance_hdr(temporary_file, projection)
+        os.replace(temporary_file, cache_file)
+    finally:
+        try:
+            os.remove(temporary_file)
+        except FileNotFoundError:
+            pass
+    return cache_file
+
 def _hdri_ground_uv(phi, alpha, transform):
     """Map a ground-projection direction through the HDRI transform to UV."""
     # The disk's original projection is a direction in the lower hemisphere:
@@ -795,7 +989,8 @@ def _set_environment_visibility(props, prefix, camera_visible, direct_visible,
 
 def _apply_environment_maps(scene, source_file, gain, render_hdri_background=True,
                             ao_mode=False, hdri_height=0.0,
-                            hdri_rotation=0.0):
+                            hdri_rotation=0.0,
+                            composite_hdri_background=False):
     """Use a reduced lighting map plus an HDRI, white, or AO-dome background."""
     props = pyluxcore.Properties()
     lighting_prefix = "scene.lights.hdri"
@@ -854,9 +1049,11 @@ def _apply_environment_maps(scene, source_file, gain, render_hdri_background=Tru
             f"{background_prefix}.transformation", list(transform)))
         props.Set(pyluxcore.Property(
             f"{background_prefix}.resizepolicy.enable", [False]))
-        # The full-resolution background remains visible to camera,
-        # reflected, and transmitted rays.
-        _set_environment_visibility(props, background_prefix, True, False,
+        # The full-resolution map remains visible to reflected and transmitted
+        # rays. A projected backplate replaces its camera rays when geometry
+        # follows a non-90-degree sender FOV.
+        _set_environment_visibility(
+            props, background_prefix, not composite_hdri_background, False,
                                     False, False, True)
     else:
         props.Set(pyluxcore.Property(
@@ -938,6 +1135,109 @@ def _send_control_message(conn, reply):
     """Send one framed JSON reply."""
     payload = json.dumps(reply).encode("utf-8")
     conn.sendall(struct.pack("<I", len(payload)) + payload)
+_CONTROL_IDENTIFIER_RE = re.compile(r"^[A-Za-z][0-9A-Za-z_-]*$")
+_MATERIAL_PARAMETER_RE = re.compile(
+    r"^[A-Za-z][0-9A-Za-z_-]*(?:\.[A-Za-z][0-9A-Za-z_-]*)*$")
+
+def _control_identifier(value, field_name):
+    """Return a LuxCore-safe property identifier, normalizing display names."""
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{field_name} must be a non-empty string")
+    identifier = re.sub(r"[^0-9A-Za-z_-]", "_", value.strip())
+    if not _CONTROL_IDENTIFIER_RE.fullmatch(identifier):
+        raise ValueError(
+            f"{field_name} must contain a letter followed by letters, digits, "
+            "underscores, or hyphens")
+    return identifier
+
+def _material_header_value(header, canonical_name, *aliases):
+    """Read one material-header field while rejecting conflicting aliases."""
+    names = (canonical_name, *aliases)
+    values = [(name, header[name]) for name in names if name in header]
+    if len(values) > 1 and any(value != values[0][1] for _, value in values[1:]):
+        raise ValueError(f"Only one of {', '.join(names)} may be supplied")
+    return values[0][1] if values else None
+
+def _luxcore_material_value(value):
+    """Serialize a JSON scalar/vector as one safe LuxCore property value."""
+    if isinstance(value, bool):
+        return "1" if value else "0"
+    if isinstance(value, int):
+        return str(value)
+    if isinstance(value, float):
+        if not math.isfinite(value):
+            raise ValueError("material parameter values must be finite")
+        return format(value, ".15g")
+    if isinstance(value, str):
+        if not value or "\x00" in value or "\n" in value or "\r" in value:
+            raise ValueError("material string parameters must be non-empty single lines")
+        return json.dumps(value)
+    if isinstance(value, (list, tuple)):
+        if not value:
+            raise ValueError("material parameter arrays must not be empty")
+        if any(isinstance(item, (list, tuple, dict)) or item is None
+               for item in value):
+            raise ValueError(
+                "material parameter arrays may contain only JSON scalars")
+        return " ".join(_luxcore_material_value(item) for item in value)
+    raise ValueError(
+        "material parameter values must be JSON numbers, booleans, strings, "
+        "or scalar arrays")
+
+def _material_definition_text(header):
+    """Build sparse LuxCore material/object properties from a structured command."""
+    object_value = _material_header_value(header, "object", "object_name")
+    object_name = (_control_identifier(object_value, "object")
+                   if object_value is not None else None)
+    material_value = _material_header_value(header, "name", "material_name")
+    if material_value is None:
+        if object_name is None:
+            raise ValueError("define_material needs name or object")
+        material_name = f"{object_name}_mat"
+    else:
+        material_name = _control_identifier(material_value, "material name")
+
+    material_type = header.get("type")
+    if (not isinstance(material_type, str)
+            or not _CONTROL_IDENTIFIER_RE.fullmatch(material_type)):
+        raise ValueError(
+            "define_material type must contain a letter followed by letters, "
+            "digits, underscores, or hyphens")
+
+    parameters = _material_header_value(header, "parameters", "params")
+    if parameters is None:
+        parameters = {}
+    if not isinstance(parameters, dict):
+        raise ValueError("define_material parameters must be a JSON object")
+
+    base_value = _material_header_value(
+        header, "base_material", "applied_to_material")
+    base_material = (_control_identifier(base_value, "base_material")
+                     if base_value is not None else None)
+    if base_material is not None and "base" in parameters:
+        raise ValueError(
+            "Specify a base material with base_material or parameters.base, not both")
+
+    lines = [f"scene.materials.{material_name}.type = {material_type}"]
+    if base_material is not None:
+        # LuxCore's compound glossy-coating material calls its referenced
+        # material "base"; other compound types can use their native keys in
+        # parameters (for example, material1/material2 for a mix material).
+        lines.append(f"scene.materials.{material_name}.base = {base_material}")
+    for key, value in parameters.items():
+        if (not isinstance(key, str)
+                or not _MATERIAL_PARAMETER_RE.fullmatch(key)):
+            raise ValueError(
+                "material parameter names must use dot-separated LuxCore "
+                "property identifiers")
+        if key == "type":
+            raise ValueError("material type must be supplied by the type field")
+        lines.append(
+            f"scene.materials.{material_name}.{key} = "
+            f"{_luxcore_material_value(value)}")
+    if object_name is not None:
+        lines.append(f"scene.objects.{object_name}.material = {material_name}")
+    return material_name, object_name, material_type, base_material, "\n".join(lines)
 
 # ── Controller ────────────────────────────────────────────────────────────────
 class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
@@ -960,6 +1260,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         self._window_geometry_poll_id = None
         self._hdr_file = _setting_hdr_file(self._settings)
         self._active_hdri_file = self._hdr_file or DEFAULT_HDRI_FILE
+        self._background_file = None
         self._control_port_setting = int(_setting_float(
             self._settings, "control_port", DEFAULT_CONTROL_PORT, 0, 65535))
         self._control_port = self._control_port_setting
@@ -1510,9 +1811,6 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             props.Set(pyluxcore.Property("film.width",  [self._render_width]))
             props.Set(pyluxcore.Property("film.height", [self._render_height]))
             props.Set(pyluxcore.Property("context.verbose", [False]))
-            if self._ao_mode.get():
-                props.SetFromString(AO_PATH_DEPTHS)
-                props.SetFromString(AO_TONEMAP)
 
             # Supply the resize policy to Scene itself: image maps load during
             # scene parsing, before RenderConfig owns the finished scene.
@@ -1531,10 +1829,26 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             self._scene = pyluxcore.Scene(scene_props, resize_props)
             _source_file = self._hdr_file or DEFAULT_HDRI_FILE
             _gain = 10.0 ** self._hdri_gain_log.get()
+            _camera_snapshot = self._capture_camera_snapshot()
+            _projected_background = self._uses_projected_background(
+                self._camera_fov, self._render_width, self._render_height,
+                self._render_hdri_background.get(), self._ao_mode.get())
             self._active_hdri_file = _apply_environment_maps(
                 self._scene, _source_file, _gain,
                 self._render_hdri_background.get(), self._ao_mode.get(),
-                self._hdri_height.get(), self._hdri_rotation.get())
+                self._hdri_height.get(), self._hdri_rotation.get(),
+                _projected_background)
+            self._background_file = self._projected_background_file(
+                self._active_hdri_file, self._render_width, self._render_height,
+                _camera_snapshot, self._hdri_rotation.get(), _gain,
+                self._render_hdri_background.get(), self._ao_mode.get())
+            if self._ao_mode.get():
+                props.SetFromString(AO_PATH_DEPTHS)
+                props.SetFromString(AO_TONEMAP)
+                props.Set(pyluxcore.Property("film.alphachannel.enable", [False]))
+            else:
+                _set_reinhard_tonemap(
+                    props, self.exposure.get(), self._background_file)
             if self._ao_mode.get():
                 lamp_props = pyluxcore.Properties()
                 lamp_props.SetFromString(self._ao_lamp_scene_text())
@@ -1652,6 +1966,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         succeeded = False
         error_message = None
         active_hdri_file = None
+        background_file = None
         try:
             with self._restart_lock:
                 try:
@@ -1659,25 +1974,33 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
                         return
                     if self._session and self._session.IsStarted():
                         self._session.Stop()
-                    _, _, _, _, _, _, exp, _ = camera_snapshot
+                    _, _, _, _, _, fov, exp, _ = camera_snapshot
                     restart_props = (pyluxcore.Properties()
                         .Set(pyluxcore.Property("film.width", [width]))
                         .Set(pyluxcore.Property("film.height", [height])))
                     effective_ao_mode = bool(ao_mode)
-                    if not effective_ao_mode:
-                        restart_props.SetFromString(_reinhard_tonemap(exp))
+                    projected_background = self._uses_projected_background(
+                        fov, width, height, render_hdri_background,
+                        effective_ao_mode)
+                    _gain = hdri_gain if hdri_gain is not None else (
+                        10.0 ** self._hdri_gain_log.get())
                     if (hdr_file or hdri_gain is not None
                             or render_hdri_background is not None
                             or ao_mode is not None):
                         _source_file = hdr_file if hdr_file else (
                             self._hdr_file or DEFAULT_HDRI_FILE
                         )
-                        _gain = hdri_gain if hdri_gain is not None else (
-                            10.0 ** self._hdri_gain_log.get())
                         active_hdri_file = _apply_environment_maps(
                             self._scene, _source_file, _gain,
                             render_hdri_background, bool(ao_mode),
-                            hdri_height, hdri_rotation)
+                            hdri_height, hdri_rotation,
+                            projected_background)
+                    if active_hdri_file is None:
+                        active_hdri_file = self._active_hdri_file
+                    background_file = self._projected_background_file(
+                        active_hdri_file, width, height, camera_snapshot,
+                        hdri_rotation, _gain, render_hdri_background,
+                        effective_ao_mode)
                     if scene_update:
                         (config_texts, meshes, scene_texts,
                          delete_objects) = scene_update
@@ -1716,6 +2039,13 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
                             extra = pyluxcore.Properties()
                             extra.SetFromString(text)
                             self._scene.Parse(extra)
+                    if effective_ao_mode:
+                        restart_props.SetFromString(AO_TONEMAP)
+                        restart_props.Set(
+                            pyluxcore.Property("film.alphachannel.enable", [False]))
+                    else:
+                        _set_reinhard_tonemap(
+                            restart_props, exp, background_file)
                     self._apply_camera_snapshot(camera_snapshot, width, height)
                     # Scene edits may replace lights and image maps. Parse the
                     # config only after all scene updates so its light strategy
@@ -1731,7 +2061,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         finally:
             self._restart_results.put(
                 (mode, camera_snapshot[-1], succeeded, error_message, hdr_file,
-                 active_hdri_file))
+                 active_hdri_file, background_file))
 
     def _process_restart_results(self):
         """Consume completed background restart results on the Tk event loop."""
@@ -1743,7 +2073,8 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         self.after(25, self._process_restart_results)
 
     def _finish_restart(self, mode, started_revision, succeeded, error_message,
-                        hdr_file=None, active_hdri_file=None):
+                        hdr_file=None, active_hdri_file=None,
+                        background_file=None):
         """Apply a completed restart result and queue newer camera work when required."""
         if mode == "preview":
             self._preview_restart_in_progress = False
@@ -1758,6 +2089,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             self._save_settings()
         if active_hdri_file:
             self._active_hdri_file = active_hdri_file
+        self._background_file = background_file
         # A preview session is a clean, complete image even when input has
         # advanced since it began. Show it for responsive feedback, then queue
         # the next snapshot. Full-resolution output remains exact-only.
@@ -1820,6 +2152,28 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
                 self.az.get(), self.el.get(),
                 tuple(self._camera_up), self._camera_fov,
                 max(0.001, self.exposure.get()), self._camera_revision)
+
+    def _uses_projected_background(self, fov, width, height,
+                                   render_hdri_background, ao_mode):
+        """Return whether this view needs a 90-degree composited HDRI backdrop."""
+        return bool(
+            render_hdri_background and not ao_mode and fov is not None
+            and not math.isclose(
+                self._camera_fieldofview(fov, width, height),
+                HDRI_BACKGROUND_FOV, abs_tol=1e-6))
+
+    def _projected_background_file(self, source_file, width, height,
+                                   camera_snapshot, rotation_degrees, gain,
+                                   render_hdri_background, ao_mode):
+        """Return a fixed-FOV HDRI backplate when geometry uses sender framing."""
+        target, distance, azimuth, elevation, up, fov, _, _ = camera_snapshot
+        if not self._uses_projected_background(
+                fov, width, height, render_hdri_background, ao_mode):
+            return None
+        origin = orbit(target, distance, azimuth, elevation)
+        return _hdri_background_file(
+            source_file, width, height, origin, target, up,
+            rotation_degrees, gain)
 
     def _set_render_resolution(self, _=None):
         """Apply the selected base viewport resolution from the UI."""
@@ -1950,15 +2304,17 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         self._set_camera_distance(new_dist)
         self._on_camera()
 
-    def _camera_fieldofview(self, _fov, _width, _height):
-        """Return the scene FOV so the rendered HDRI keeps its wide framing.
+    def _camera_fieldofview(self, fov, width, height):
+        """Return the sender projection converted to LuxCore's wider film axis."""
+        if fov is None:
+            return self._scene_fieldofview
+        fov_degrees, axis = fov
+        return _luxcore_fieldofview(fov_degrees, axis, width, height)
 
-        External look-at messages retain their FOV metadata for protocol
-        compatibility, but never alter the LuxCore camera projection. This
-        keeps the HDRI background and scene geometry at the scene's 90-degree
-        camera angle through local navigation and asynchronous restarts.
-        """
-        return self._scene_fieldofview
+    def _background_fieldofview(self):
+        """Return the HDRI backplate FOV when an HDRI background is enabled."""
+        return (HDRI_BACKGROUND_FOV if self._render_hdri_background.get()
+                and not self._ao_mode.get() else None)
 
     def _apply_camera_props(self):
         """Apply the current camera state to the active LuxCore scene."""
@@ -2689,6 +3045,8 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             return self._stage_control_mesh(header, blobs)
         if cmd == "upload_mesh":
             return self._stage_uploaded_mesh(header, blobs)
+        if cmd == "define_material":
+            return self._stage_control_material(header)
         if cmd == "scene_props":
             text = header.get("text")
             if not isinstance(text, str) or not text.strip():
@@ -2782,6 +3140,10 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
                 "up": list(self._camera_up),
                 "fov": self._camera_fov[0] if self._camera_fov else None,
                 "fov_axis": self._camera_fov[1] if self._camera_fov else None,
+                "render_fov": self._camera_fieldofview(
+                    self._camera_fov, self._render_width, self._render_height),
+                "background_fov": self._background_fieldofview(),
+                "background_file": self._background_file,
                 "width": self._render_width, "height": self._render_height,
                 "viewport_width": self._display_w,
                 "viewport_height": self._display_h,
@@ -2802,6 +3164,10 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             "up": list(self._camera_up),
             "fov": self._camera_fov[0] if self._camera_fov else None,
             "fov_axis": self._camera_fov[1] if self._camera_fov else None,
+            "render_fov": self._camera_fieldofview(
+                self._camera_fov, self._render_width, self._render_height),
+            "background_fov": self._background_fieldofview(),
+            "background_file": self._background_file,
             "exposure": self.exposure.get(),
             "hdri_gain": 10.0 ** self._hdri_gain_log.get(),
             "hdri_height": self._hdri_height.get(),
@@ -2843,6 +3209,33 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         else:
             status["busy"] = True
         return status
+    def _stage_control_material(self, header):
+        """Stage a sparse material definition and optional binding until apply."""
+        (material_name, object_name, material_type, base_material,
+         scene_text) = _material_definition_text(header)
+        parameters = _material_header_value(header, "parameters", "params")
+        if parameters is None:
+            parameters = {}
+        self._pending_scene_props.append(scene_text)
+        if object_name in self._uploaded_objects:
+            shape_name, _ = self._uploaded_objects[object_name]
+            self._uploaded_objects[object_name] = (shape_name, material_name)
+            # AO mode intentionally retains its shared clay binding until the
+            # sender leaves that mode; the custom material is restored later.
+            if self._ao_mode.get():
+                self._pending_scene_props[-1] = "\n".join((
+                    scene_text.rsplit("\n", 1)[0],
+                    f"scene.objects.{object_name}.material = ao_white"))
+        self._schedule_upload_apply()
+        return {
+            "ok": True,
+            "material": material_name,
+            "object": object_name,
+            "type": material_type,
+            "base_material": base_material,
+            "parameters": sorted(parameters),
+            "staged_scene_props": len(self._pending_scene_props),
+        }
 
     def _stage_control_mesh(self, header, blobs):
         """Stage a mesh from raw little-endian buffers until the next apply."""
@@ -2975,8 +3368,8 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         if create_object:
             bound_material = f"{name}_mat"
             object_lines = [
-                f"scene.materials.{name}_mat.type = mirror",
-                f"scene.materials.{name}_mat.kd = 0.1 0.1 0.5",
+                f"scene.materials.{name}_mat.type = glossy2",
+                f"scene.materials.{name}_mat.kd = 0.2 0.4 0.5",
             ]
             if self._ao_mode.get():
                 # AO clay mode is active: bind to the shared white matte.
@@ -3021,7 +3414,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         if not (self._pending_meshes or self._pending_scene_props
                 or self._pending_config_props):
             raise ValueError("Nothing staged: send define_mesh, scene_props, "
-                             "or config_props first")
+                             "define_material, or config_props first")
         if self._render_stopped or not self._scene or not self._session:
             raise RuntimeError("Rendering is stopped: send start before apply")
         scene_texts = list(self._pending_scene_props)

@@ -11,6 +11,7 @@ is backed up and restored, so a full run leaves no state behind.
 """
 
 import json
+import math
 import os
 import shutil
 import socket
@@ -70,6 +71,105 @@ def frame_tests():
     (size,) = struct.unpack("<I", controller._recv_exact(a, 4))
     reply = json.loads(controller._recv_exact(a, size).decode("utf-8"))
     assert reply == {"ok": True, "value": 7}, reply
+    # Sender FOV follows its stated axis, while LuxCore's fieldofview spans
+    # the wider film axis. Convert vertical FOV for a landscape film and
+    # horizontal FOV for the matching portrait film.
+    expected_wide_fov = math.degrees(2.0 * math.atan(
+        math.tan(math.radians(50.0) * 0.5) * (16.0 / 9.0)))
+    assert math.isclose(
+        controller._luxcore_fieldofview(50.0, "vertical", 1920, 1080),
+        expected_wide_fov, rel_tol=0.0, abs_tol=1e-9)
+    assert math.isclose(
+        controller._luxcore_fieldofview(50.0, "horizontal", 1080, 1920),
+        expected_wide_fov, rel_tol=0.0, abs_tol=1e-9)
+    assert controller._luxcore_fieldofview(50.0, "horizontal", 1920, 1080) == 50.0
+    assert controller._luxcore_fieldofview(50.0, "vertical", 1080, 1920) == 50.0
+    plain_pipeline = controller._reinhard_tonemap(5.0)
+    composited_pipeline = controller._reinhard_tonemap(
+        5.0, use_projected_background=True)
+    assert "film.alphachannel.enable = 0" in plain_pipeline
+    assert "BACKGROUND_IMG" not in plain_pipeline
+    assert "film.alphachannel.enable = 1" in composited_pipeline
+    assert composited_pipeline.count("BACKGROUND_IMG") == 2
+    # Structured material definitions emit only sender-provided properties.
+    (material_name, object_name, material_type, base_material,
+     material_text) = controller._material_definition_text({
+         "cmd": "define_material",
+         "name": "Body Finish",
+         "object": "Body Panel 1",
+         "type": "glossy2",
+         "parameters": {
+             "kd": [0.7, 0.2, 0.1],
+             "uroughness": 0.15,
+             "multibounce": True,
+         },
+     })
+    assert (material_name, object_name, material_type, base_material) == (
+        "Body_Finish", "Body_Panel_1", "glossy2", None)
+    assert material_text.splitlines() == [
+        "scene.materials.Body_Finish.type = glossy2",
+        "scene.materials.Body_Finish.kd = 0.7 0.2 0.1",
+        "scene.materials.Body_Finish.uroughness = 0.15",
+        "scene.materials.Body_Finish.multibounce = 1",
+        "scene.objects.Body_Panel_1.material = Body_Finish",
+    ]
+    (material_name, object_name, material_type, base_material,
+     material_text) = controller._material_definition_text({
+         "cmd": "define_material", "object": "Bare Object", "type": "matte",
+     })
+    assert (material_name, object_name, material_type, base_material) == (
+        "Bare_Object_mat", "Bare_Object", "matte", None)
+    assert material_text.splitlines() == [
+        "scene.materials.Bare_Object_mat.type = matte",
+        "scene.objects.Bare_Object.material = Bare_Object_mat",
+    ]
+    (_, _, _, base_material, coating_text) = controller._material_definition_text({
+        "cmd": "define_material", "name": "Clear Coat", "type": "glossycoating",
+        "base_material": "Body Finish", "parameters": {"ks": [1, 1, 1]},
+    })
+    assert base_material == "Body_Finish"
+    assert coating_text.splitlines() == [
+        "scene.materials.Clear_Coat.type = glossycoating",
+        "scene.materials.Clear_Coat.base = Body_Finish",
+        "scene.materials.Clear_Coat.ks = 1 1 1",
+    ]
+    class _TestBoolean:
+        def get(self):
+            return False
+    staged = object.__new__(controller.CameraController)
+    staged._pending_scene_props = []
+    staged._uploaded_objects = {"Body_Panel_1": ("Body_Panel_1", "old_mat")}
+    staged._ao_mode = _TestBoolean()
+    scheduled = []
+    staged._schedule_upload_apply = lambda: scheduled.append(True)
+    staged_reply = controller.CameraController._stage_control_material(
+        staged, {
+            "cmd": "define_material", "name": "Body Finish",
+            "object": "Body Panel 1", "type": "matte",
+            "parameters": {"kd": [0.7, 0.2, 0.1]},
+        })
+    assert staged_reply["material"] == "Body_Finish"
+    assert staged._uploaded_objects["Body_Panel_1"] == (
+        "Body_Panel_1", "Body_Finish")
+    assert staged._pending_scene_props[0].endswith(
+        "scene.objects.Body_Panel_1.material = Body_Finish")
+    assert scheduled == [True]
+    try:
+        controller._material_definition_text({
+            "cmd": "define_material", "name": "bad", "type": "matte",
+            "parameters": {"kd": []},
+        })
+        raise SystemExit("FAILED: empty material parameter array was accepted")
+    except ValueError:
+        pass
+    try:
+        controller._material_definition_text({
+            "cmd": "define_material", "name": "bad", "type": "matte",
+            "base_material": "base", "parameters": {"base": "other"},
+        })
+        raise SystemExit("FAILED: duplicate base material was accepted")
+    except ValueError:
+        pass
 
     # Oversized headers are rejected before any allocation.
     a.sendall(struct.pack("<I", controller.CONTROL_MAX_HEADER + 1))
@@ -118,9 +218,34 @@ def hdri_alignment_tests():
         yaw = controller._hdri_yaw_matrix(37.5)
         assert yaw[2] == yaw[6] == 0.0 and yaw[10] == 1.0, yaw
 
+        # A camera-facing 90-degree HDR backplate is independent of the
+        # sender FOV used for geometry. Projection preserves its output
+        # dimensions, responds to yaw, and caches the generated HDR image.
+        import numpy
+        panorama = numpy.zeros((4, 8, 3), dtype=numpy.float32)
+        panorama[..., 0] = numpy.arange(8, dtype=numpy.float32)
+        backplate = controller._project_hdri_background(
+            panorama, 6, 4, [0.0, -10.0, 0.0], [0.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0], 0.0, 1.0)
+        rotated_backplate = controller._project_hdri_background(
+            panorama, 6, 4, [0.0, -10.0, 0.0], [0.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0], 90.0, 1.0)
+        assert backplate.shape == (4, 6, 3)
+        assert numpy.isfinite(backplate).all()
+        assert not numpy.allclose(backplate, rotated_backplate)
+        backplate_path = controller._hdri_background_file(
+            source_path, 6, 4, [0.0, -10.0, 0.0], [0.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0], 0.0, 1.0)
+        with open(backplate_path, "rb") as backplate_file:
+            _, backplate_width, backplate_height = (
+                controller._read_radiance_header(backplate_file))
+        assert (backplate_width, backplate_height) == (6, 4)
+        assert controller._hdri_background_file(
+            source_path, 6, 4, [0.0, -10.0, 0.0], [0.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0], 0.0, 1.0) == backplate_path
+
         import Imath
         import OpenEXR
-        import numpy
         exr_source_path = os.path.join(directory, "source.exr")
         exr_shifted_path = os.path.join(directory, "shifted.exr")
         pixel_type = Imath.PixelType(Imath.PixelType.FLOAT)
@@ -275,7 +400,10 @@ def live_tests():
             and abs(reply["distance"] - 5.0249378) < 1e-3
             and abs(reply["elevation"] - 5.710593) < 0.01
             and abs(reply["azimuth"] - 180.0) < 1e-6
-            and reply["fov"] == 50.0 and reply["fov_axis"] == "vertical"):
+            and reply["fov"] == 50.0 and reply["fov_axis"] == "vertical"
+            and reply["background_fov"] == 90.0
+            and abs(reply["render_fov"] - controller._luxcore_fieldofview(
+                50.0, "vertical", 1280, 720)) < 1e-9):
         fail(f"cameraEyeTarget derived the wrong view: {reply}")
     print("cameraEyeTarget: OK")
 
@@ -288,7 +416,10 @@ def live_tests():
             and reply["fov"] == 50.0 and reply["up"] == [0.0, 0.0, 1.0]):
         fail(f"lookat alias with ortho defaults failed: {reply}")
     status = send(conn, {"cmd": "status"})
-    if status.get("fov") != 50.0 or status.get("up") != [0.0, 0.0, 1.0]:
+    if (status.get("fov") != 50.0 or status.get("up") != [0.0, 0.0, 1.0]
+            or abs(status.get("render_fov", 0.0)
+                   - controller._luxcore_fieldofview(
+                       50.0, "vertical", 1280, 720)) > 1e-9):
         fail(f"status does not report the lookat overrides: {status}")
     print("lookat alias and ortho defaults: OK")
 
@@ -361,7 +492,10 @@ def live_tests():
             and isinstance(status.get("active_hdr_file"), str)
             and os.path.isfile(status["active_hdr_file"])
             and os.path.normcase(os.path.abspath(status["active_hdr_file"])) !=
-                os.path.normcase(os.path.abspath(status["hdr_file"]))):
+                os.path.normcase(os.path.abspath(status["hdr_file"]))
+            and status.get("background_fov") == 90.0
+            and isinstance(status.get("background_file"), str)
+            and os.path.isfile(status["background_file"])):
         fail(f"HDRI alignment did not produce a live render: {status}")
     print("HDRI background and vertical alignment restart: OK")
 
@@ -449,6 +583,29 @@ def live_tests():
     if not (reply.get("ok") and reply["mesh"] == "Trim_Strip"):
         fail(f"upload_mesh with empty sections failed: {reply}")
     print("upload_mesh (empty normals/uvs): OK")
+    # A sparse material definition rebinds the uploaded object and will be
+    # included in the upload command's debounced render restart.
+    reply = send(conn, {
+        "cmd": "define_material",
+        "name": "Body Finish",
+        "object": "Body Panel 1",
+        "type": "glossy2",
+        "parameters": {
+            "kd": [0.7, 0.2, 0.1],
+            "ks": [0.15, 0.15, 0.15],
+            "uroughness": 0.2,
+            "vroughness": 0.2,
+        },
+    })
+    if not (reply.get("ok")
+            and reply.get("material") == "Body_Finish"
+            and reply.get("object") == "Body_Panel_1"
+            and reply.get("type") == "glossy2"
+            and reply.get("base_material") is None
+            and reply.get("parameters") == [
+                "kd", "ks", "uroughness", "vroughness"]):
+        fail(f"define_material failed: {reply}")
+    print("define_material (sparse parameters + object binding): OK")
 
     # No explicit apply: the debounced auto-apply must consume everything.
     passes = 0
