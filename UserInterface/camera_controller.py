@@ -199,19 +199,25 @@ GROUND_CATCHER_LIFT = 2e-4    # catcher height above the mirror vs extent
 GROUND_MIRROR_KR = 1.0        # scales Fresnel reflection; 1.0 = physical
 GROUND_GRAY_KD = 0.4          # white-backdrop mode: floor albedo
 GROUND_GRAY_ROUGHNESS = 0.04  # white-backdrop mode: glossy roughness
+GROUND_GRAY_MIRROR_ROUGHNESS = 0.001
+GROUND_MIRROR_IOR = 100.0     # near-perfect Fresnel mirror at full strength
 
 # ── Math helpers ──────────────────────────────────────────────────────
 def _norm(v):
+    """Return a unit-length copy of a vector, preserving near-zero vectors."""
     l = math.sqrt(sum(c*c for c in v))
     return [c/l for c in v] if l > 1e-10 else v
 
 def _cross(a, b):
+    """Return the three-dimensional cross product of two vectors."""
     return [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]]
 
 def _dot(a, b):
+    """Return the three-dimensional dot product of two vectors."""
     return sum(a[i]*b[i] for i in range(3))
 
 def orbit(target, dist, az_deg, el_deg):
+    """Return a camera position orbiting a target at the requested spherical angles."""
     az = math.radians(az_deg)
     el = math.radians(max(-89, min(89, el_deg)))
     return [target[0] + dist*math.cos(el)*math.sin(az),
@@ -219,6 +225,7 @@ def orbit(target, dist, az_deg, el_deg):
             target[2] + dist*math.sin(el)]
 
 def cam_axes(orig, target):
+    """Return normalized camera right, up, and forward axes for an eye and target."""
     fwd   = _norm([target[i]-orig[i] for i in range(3)])
     right = _norm(_cross(fwd, WORLD_UP))
     up    = _norm(_cross(right, fwd))
@@ -244,6 +251,7 @@ def _luxcore_fieldofview(fov_degrees, axis, width, height):
 
 # ── Exposure I/O ──────────────────────────────────────────────────────────────
 def read_exposure(path):
+    """Read the current exposure from a render configuration, including legacy encodings."""
     legacy_exposure = None
     legacy_prescale = None
     with open(path) as f:
@@ -276,6 +284,7 @@ def read_hdri_gain(path):
     return 0.01
 
 def _read_controller_settings():
+    """Load persisted controller settings, returning an empty mapping when unavailable."""
     try:
         with open(SETTINGS_FILE, encoding="utf-8") as settings_file:
             settings = json.load(settings_file)
@@ -284,15 +293,18 @@ def _read_controller_settings():
         return {}
 
 def _setting_float(settings, name, default, minimum, maximum):
+    """Return a numeric setting clamped to an inclusive range or its fallback value."""
     try:
         return max(minimum, min(maximum, float(settings.get(name, default))))
     except (TypeError, ValueError):
         return default
 def _setting_bool(settings, name, default):
+    """Return a boolean setting only when its stored value is explicitly boolean."""
     value = settings.get(name, default)
     return value if isinstance(value, bool) else default
 
 def _setting_color(settings, name, default):
+    """Return a normalized six-digit hexadecimal color setting or its fallback value."""
     value = settings.get(name, default)
     if (isinstance(value, str)
             and re.fullmatch(r"#[0-9a-fA-F]{6}", value)):
@@ -300,6 +312,7 @@ def _setting_color(settings, name, default):
     return default
 
 def _setting_render_resolution(settings):
+    """Validate and normalize a persisted base viewport resolution."""
     value = settings.get("render_resolution")
     if not isinstance(value, str):
         return "1280 x 720"
@@ -311,17 +324,21 @@ def _setting_render_resolution(settings):
         return "1280 x 720"
     return f"{width} x {height}"
 def _setting_scale(settings, name, default=DEFAULT_RENDER_SCALE):
+    """Return a supported named render scale or the default scale."""
     value = settings.get(name, default)
     return value if value in RENDER_SCALE_FACTORS else DEFAULT_RENDER_SCALE
 def _setting_window_scale(settings):
     # render_scale was the short-lived name used before final-film scaling
     # became independent; retain it as a window-scale migration fallback.
+    """Read the window scale, migrating the legacy render_scale setting when necessary."""
     return _setting_scale(
         settings, "window_scale", settings.get("render_scale", DEFAULT_RENDER_SCALE))
 
 def _setting_film_scale(settings):
+    """Read and validate the persisted final-film scale."""
     return _setting_scale(settings, "film_scale")
 def _setting_final_film_resolution(settings):
+    """Return a validated exact external film-size override, if one is persisted."""
     value = settings.get("final_film_resolution")
     if not isinstance(value, str):
         return None
@@ -353,6 +370,7 @@ def _scaled_film_resolution(width, height, scale_label):
     return scaled_width, scaled_height
 
 def _setting_window_geometry(settings):
+    """Validate and normalize a persisted window size and virtual-desktop position."""
     value = settings.get("window_geometry")
     if not isinstance(value, str):
         return None
@@ -371,10 +389,12 @@ def _setting_window_geometry(settings):
     return f"{width}x{height}{x:+d}{y:+d}"
 
 def _hex_color_to_rgb(value):
+    """Convert a #RRGGBB color string to normalized RGB channel values."""
     return tuple(int(value[index:index + 2], 16) / 255.0
                  for index in (1, 3, 5))
 
 def _setting_target(settings):
+    """Return a validated three-component camera target or the default target."""
     target = settings.get("target")
     if isinstance(target, (list, tuple)) and len(target) == 3:
         try:
@@ -387,6 +407,7 @@ def _is_env_map(path):
     return path.lower().endswith((".hdr", ".exr"))
 
 def _setting_hdr_file(settings):
+    """Return a valid persisted HDRI file path, if the source still exists."""
     hdr_file = settings.get("hdr_file")
     if (isinstance(hdr_file, str) and _is_env_map(hdr_file)
             and os.path.isfile(hdr_file)):
@@ -394,6 +415,7 @@ def _setting_hdr_file(settings):
     return None
 
 def _ignore_luxcore_log(_message):
+    """Discard LuxCore log messages routed through the quiet logger callback."""
     pass
 def _environment_storage(path):
     """Retain full HDR precision for environment and HDRI-ground maps."""
@@ -402,6 +424,7 @@ def _environment_storage(path):
 def _set_environment_visibility(props, prefix, camera_visible, direct_visible,
                                 indirect_diffuse, indirect_glossy,
                                 indirect_specular):
+    """Set LuxCore ray-visibility flags for an environment-light property prefix."""
     props.Set(pyluxcore.Property(
         f"{prefix}.visibility.camera.enable", [camera_visible]))
     props.Set(pyluxcore.Property(
@@ -554,6 +577,7 @@ def _send_control_message(conn, reply):
 # ── Controller ────────────────────────────────────────────────────────────────
 class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
     def __init__(self):
+        """Initialize the controller window, persisted state, UI, renderer state, and control server."""
         super().__init__()
         self.title(WINDOW_TITLE)
         self.resizable(False, False)
@@ -691,8 +715,8 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
                                         width=FILM_W, height=FILM_H, bg="black",
                                         cursor="fleur")
         self._render_canvas.grid(row=0, column=1)
-        self._render_gain_frame = tk.Frame(self._main_frame)
-        self._render_gain_frame.grid(row=1, column=1, sticky="ew", pady=(4, 0))
+        self._render_footer_frame = tk.Frame(self._main_frame)
+        self._render_footer_frame.grid(row=1, column=1, sticky="ew", pady=(4, 0))
         self._render_win = self
         # Create a single persistent image item — updated in place, no ghosting
         self._canvas_img_id = self._render_canvas.create_image(0, 0, anchor=tk.NW)
@@ -730,6 +754,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         self.after(300, self._start_session)
 
     def _save_settings(self):
+        """Persist the current controller, viewport, render, and window settings atomically."""
         if not self._settings_ready:
             return
         settings = {
@@ -815,6 +840,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             pass
         self.geometry(f"{self.winfo_width()}x{self.winfo_height()}{x:+d}{y:+d}")
     def _save_window_geometry(self):
+        """Complete a debounced geometry save by persisting current settings."""
         self._window_geometry_save_id = None
         self._save_settings()
 
@@ -838,9 +864,11 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
                 WINDOW_GEOMETRY_POLL_MS, self._poll_window_geometry)
 
     def _on_setting_variable_changed(self, *_):
+        """Persist a Tk setting variable after it changes."""
         self._save_settings()
 
     def _on_close(self):
+        """Stop rendering, close the control socket, persist settings, and destroy the window."""
         self._save_settings()
         if self._control_socket:
             try:
@@ -862,6 +890,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         self._render_canvas.dnd_bind("<<Drop>>", self._on_hdr_file_drop_event)
 
     def _on_hdr_file_drop_event(self, event):
+        """Parse a native file-drop event and load the first valid environment map."""
         try:
             dropped_files = self.tk.splitlist(event.data)
         except tk.TclError:
@@ -875,10 +904,12 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         return COPY
 
     def _show_hdr_drop_error(self, message):
+        """Display a file-drop failure in the status area and window title."""
         self._info.config(text=message)
         self._render_win.title(f"{WINDOW_TITLE} — {message}")
 
     def _on_hdr_file_drop(self, hdr_file):
+        """Validate a dropped environment map and select or reload it for rendering."""
         hdr_file = os.path.normpath(hdr_file)
         if not _is_env_map(hdr_file) or not os.path.isfile(hdr_file):
             self._show_hdr_drop_error("Dropped environment map file is unavailable")
@@ -922,53 +953,40 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
 
     # ── UI ────────────────────────────────────────────────────────────────────
     def _build_ui(self):
+        """Create the scrollable controller panel and render-footer controls."""
         panel = self._control_panel
         pad = dict(padx=6, pady=2)
 
         self._info = tk.Label(panel, text="Starting...", font=("Consolas", 8),
                               fg="#444", justify=tk.LEFT, anchor="w")
+        tk.Label(panel, text="Controls:", font=("Segoe UI", 10, "bold"),
+                 anchor="w").grid(row=0, column=0, sticky="w", padx=8)
+        tk.Label(panel,
+                 text="Left-drag: pan\nRight-drag: rotate\nScroll forward: zoom in\n"
+                      "Scroll back: zoom out\nDrag and Drop HDR or EXR into scene",
+                 justify=tk.LEFT, anchor="w", font=("Segoe UI", 8), fg="#666"
+                 ).grid(row=1, column=0, sticky="w", padx=8, pady=(0, 6))
 
         # Distance is driven by the scroll wheel and the control interface;
         # exposure by the exposure control command and saved settings.
         tk.Checkbutton(panel, text="Render HDRI Background",
                        variable=self._render_hdri_background
-                       ).grid(row=5, column=0, sticky="w", **pad)
+                       ).grid(row=2, column=0, sticky="w", **pad)
         tk.Checkbutton(panel, text="Ambient Occlusion (clay)",
                        variable=self._ao_mode
-                       ).grid(row=6, column=0, sticky="w", **pad)
+                       ).grid(row=3, column=0, sticky="w", **pad)
         tk.Checkbutton(panel, text="HDRI Ground Plane",
                        variable=self._hdri_ground
-                       ).grid(row=7, column=0, sticky="w", **pad)
-        ground_frame = tk.LabelFrame(panel, text="Ground Appearance",
-                                     padx=3, pady=2)
-        ground_frame.grid(row=8, column=0, padx=6, pady=(2, 0), sticky="ew")
-        self._ground_color_button = tk.Button(
-            ground_frame, text="Color", width=8, command=self._choose_ground_color)
-        self._ground_color_button.grid(row=0, column=0, sticky="w")
-        self._update_ground_color_button()
-        tk.Label(ground_frame, text="Reflection strength").grid(
-            row=1, column=0, sticky="w")
-        tk.Scale(ground_frame, from_=0.0, to=1.0, resolution=0.01,
-                 orient=tk.HORIZONTAL, variable=self._ground_reflectivity,
-                 length=128, showvalue=False,
-                 command=lambda _: self._on_ground_appearance_changed()
-                 ).grid(row=1, column=1, sticky="e")
-
-        pip_frame = tk.Frame(panel)
-        pip_frame.grid(row=9, column=0, pady=(2, 0))
-        tk.Button(pip_frame, text="Raw", width=8,
-                  command=lambda: self._set_pipeline(0)).pack(side=tk.LEFT, padx=2)
-        tk.Button(pip_frame, text="OIDN", width=8,
-                  command=lambda: self._set_pipeline(1)).pack(side=tk.LEFT, padx=2)
+                       ).grid(row=4, column=0, sticky="w", **pad)
 
         delay_frame = tk.Frame(panel)
-        delay_frame.grid(row=10, column=0, pady=(2, 0))
+        delay_frame.grid(row=5, column=0, pady=(2, 0))
         tk.Label(delay_frame, text="Auto OIDN").pack(side=tk.LEFT, padx=(2, 3))
         tk.Spinbox(delay_frame, from_=1, to=120, textvariable=self.switch_sec,
                    width=3, font=("Segoe UI", 8)).pack(side=tk.LEFT)
         tk.Label(delay_frame, text="sec").pack(side=tk.LEFT, padx=(3, 2))
         resolution_frame = tk.Frame(panel)
-        resolution_frame.grid(row=11, column=0, pady=(3, 0))
+        resolution_frame.grid(row=6, column=0, pady=(3, 0))
         tk.Label(resolution_frame, text="Viewport Base").pack(
             side=tk.LEFT, padx=(2, 4))
         resolution_menu = ttk.Combobox(
@@ -977,7 +995,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         resolution_menu.pack(side=tk.LEFT)
         resolution_menu.bind("<<ComboboxSelected>>", self._set_render_resolution)
         scale_frame = tk.Frame(panel)
-        scale_frame.grid(row=12, column=0, pady=(1, 0))
+        scale_frame.grid(row=7, column=0, pady=(1, 0))
         tk.Label(scale_frame, text="Window Scale").pack(
             side=tk.LEFT, padx=(2, 4))
         window_scale_menu = ttk.Combobox(
@@ -986,7 +1004,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         window_scale_menu.pack(side=tk.LEFT)
         window_scale_menu.bind("<<ComboboxSelected>>", self._set_window_scale)
         film_scale_frame = tk.Frame(panel)
-        film_scale_frame.grid(row=13, column=0, pady=(1, 0))
+        film_scale_frame.grid(row=8, column=0, pady=(1, 0))
         tk.Label(film_scale_frame, text="Final Film Scale").pack(
             side=tk.LEFT, padx=(2, 4))
         film_scale_menu = ttk.Combobox(
@@ -1010,27 +1028,22 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         preset_menu = ttk.Combobox(
             panel, textvariable=self._preset_choice, values=preset_values,
             state="readonly", width=22)
-        preset_menu.grid(row=14, column=0, pady=(4, 2))
+        preset_menu.grid(row=9, column=0, pady=(4, 2))
         preset_menu.bind("<<ComboboxSelected>>", self._select_preset)
 
         tk.Button(panel, text="Save Film", bg="#2a6aba", fg="white",
                   font=("Segoe UI", 9, "bold"), width=22,
                   command=self._save_film
-                  ).grid(row=15, column=0, pady=(3, 6))
+                  ).grid(row=10, column=0, pady=(3, 6))
         self._render_button = tk.Button(
             panel, text="Stop Rendering", bg="#9c2929", fg="white",
             font=("Segoe UI", 9, "bold"), width=22,
             command=self._stop_rendering)
-        self._render_button.grid(row=16, column=0, pady=(0, 6))
-        tk.Label(panel, text="Controls:", font=("Segoe UI", 10, "bold"),
-                 anchor="w").grid(row=17, column=0, sticky="w", padx=8)
-        tk.Label(panel,
-                 text="Left-drag: pan\nRight-drag: rotate\nScroll forward: zoom in\n"
-                      "Scroll back: zoom out\nDrag and Drop HDR or EXR into scene",
-                 justify=tk.LEFT, anchor="w", font=("Segoe UI", 8), fg="#666"
-                 ).grid(row=18, column=0, sticky="w", padx=8, pady=(0, 6))
+        self._render_button.grid(row=11, column=0, pady=(0, 6))
 
-        gain_frame = self._render_gain_frame
+        footer = self._render_footer_frame
+        gain_frame = tk.Frame(footer)
+        gain_frame.grid(row=0, column=0, sticky="w")
         tk.Label(gain_frame, text="HDRI Gain").pack(side=tk.LEFT, padx=(2, 4))
         self._hdri_gain_value_label = tk.Label(
             gain_frame, width=6, anchor="w", font=("Consolas", 9), fg="#444")
@@ -1039,10 +1052,35 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
                  orient=tk.HORIZONTAL, variable=self._hdri_gain_jog,
                  length=144, showvalue=False,
                  command=self._adjust_hdri_gain).pack(side=tk.LEFT, padx=(4, 0))
+        pipeline_frame = tk.Frame(footer)
+        pipeline_frame.grid(row=0, column=1, sticky="w", padx=(8, 0))
+        tk.Label(pipeline_frame, text="Pipeline").pack(side=tk.LEFT, padx=(0, 4))
+        self._pipeline_choice = tk.StringVar(
+            value="OIDN" if self.pipeline == 1 else "Raw")
+        pipeline_menu = ttk.Combobox(
+            pipeline_frame, textvariable=self._pipeline_choice,
+            values=("Raw", "OIDN"), state="readonly", width=5)
+        pipeline_menu.pack(side=tk.LEFT)
+        pipeline_menu.bind("<<ComboboxSelected>>", self._select_pipeline)
+        ground_frame = tk.Frame(footer)
+        ground_frame.grid(row=1, column=0, columnspan=2, sticky="w", pady=(2, 0))
+        tk.Label(ground_frame, text="Ground Color").pack(side=tk.LEFT, padx=(2, 4))
+        self._ground_color_button = tk.Button(
+            ground_frame, text="Color", width=8, command=self._choose_ground_color)
+        self._ground_color_button.pack(side=tk.LEFT)
+        tk.Label(ground_frame, text="Reflection strength").pack(
+            side=tk.LEFT, padx=(8, 4))
+        tk.Scale(ground_frame, from_=0.0, to=1.0, resolution=0.01,
+                 orient=tk.HORIZONTAL, variable=self._ground_reflectivity,
+                 length=128, showvalue=False,
+                 command=lambda _: self._on_ground_appearance_changed()
+                 ).pack(side=tk.LEFT)
         self._update_hdri_gain_label()
+        self._update_ground_color_button()
 
     # ── Session ───────────────────────────────────────────────────────────────
     def _start_session(self):
+        """Create and start the initial LuxCore scene, configuration, and full-resolution session."""
         if self._render_stopped:
             return
         try:
@@ -1122,7 +1160,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             self._session_mode = "full"
             self._render_backend = "PATHOCL / OptiX"
 
-            self.pipeline = 0
+            self._set_pipeline(0)
             self._schedule_switch()
             self.after(REFRESH_MS, self._update_film)
             self._info.config(text="Rendering...")
@@ -1253,6 +1291,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
                 (mode, camera_snapshot[-1], succeeded, error_message, hdr_file))
 
     def _process_restart_results(self):
+        """Consume completed background restart results on the Tk event loop."""
         try:
             while True:
                 self._finish_restart(*self._restart_results.get_nowait())
@@ -1262,6 +1301,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
 
     def _finish_restart(self, mode, started_revision, succeeded, error_message,
                         hdr_file=None):
+        """Apply a completed restart result and queue newer camera work when required."""
         if mode == "preview":
             self._preview_restart_in_progress = False
         if self._render_stopped:
@@ -1284,6 +1324,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         self._reset_switch()
 
     def _queue_camera_restarts(self):
+        """Schedule responsive preview and debounced full-resolution camera restarts."""
         if self._render_stopped:
             return
         # Restart previews at a fixed cadence rather than accumulating samples
@@ -1300,6 +1341,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             self._restart_full_session)
 
     def _restart_preview_session(self):
+        """Start a low-resolution preview render for the latest camera snapshot."""
         self._preview_restart_id = None
         if self._render_stopped:
             return
@@ -1311,6 +1353,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             daemon=True).start()
 
     def _restart_full_session(self):
+        """Start a full-resolution render for the latest camera snapshot."""
         self._full_restart_id = None
         if self._render_stopped:
             return
@@ -1322,6 +1365,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
 
     # ── Camera ───────────────────────────────────────────────────────────
     def _cam_orig(self):
+        """Return the current orbit camera eye position."""
         return orbit(self._target, self._camera_distance,
                      self.az.get(), self.el.get())
 
@@ -1330,16 +1374,19 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         self._camera_distance = max(0.001, float(distance))
 
     def _capture_camera_snapshot(self):
+        """Capture immutable camera and exposure state for an asynchronous restart."""
         return (tuple(self._target), self._camera_distance,
                 self.az.get(), self.el.get(),
                 tuple(self._camera_up), self._camera_fov,
                 max(0.001, self.exposure.get()), self._camera_revision)
 
     def _set_render_resolution(self, _=None):
+        """Apply the selected base viewport resolution from the UI."""
         width, height = (int(value) for value in self.render_resolution.get().split(" x "))
         self._set_base_viewport_resolution(width, height, restart=True)
 
     def _set_window_scale(self, _=None):
+        """Apply the selected window scale and restart rendering if dimensions changed."""
         self._update_viewport_and_film(restart=True)
 
     def _set_final_film_resolution(self, width, height, restart):
@@ -1367,6 +1414,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         return changed
 
     def _set_film_scale(self, _=None):
+        """Clear any exact film override and apply the selected final-film scale."""
         self._film_resolution_override = None
         self._update_viewport_and_film(restart=True)
 
@@ -1414,6 +1462,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         return changed
 
     def _zoom_at_cursor(self, e, viewport_w, viewport_h):
+        """Zoom while preserving the focal-plane point under the viewport cursor."""
         delta = -e.delta / 120 if hasattr(e, "delta") and e.delta else (
             1 if e.num == 5 else -1)
         old_dist = self._camera_distance
@@ -1464,6 +1513,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         return self._scene_fieldofview
 
     def _apply_camera_props(self):
+        """Apply the current camera state to the active LuxCore scene."""
         orig = self._cam_orig()
         self._scene.Parse(pyluxcore.Properties()
             .Set(pyluxcore.Property("scene.camera.lookat.orig",   list(orig)))
@@ -1475,6 +1525,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
                                          self._render_height)])))
 
     def _apply_camera_snapshot(self, camera_snapshot, width, height):
+        """Apply a captured camera state to a scene using the given film dimensions."""
         target, dist, az, el, up, fov, _, _ = camera_snapshot
         orig = orbit(target, dist, az, el)
         self._scene.Parse(pyluxcore.Properties()
@@ -1493,6 +1544,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         self._render_canvas.itemconfigure(self._canvas_img_id, image=self._tk_image)
 
     def _on_camera(self, refresh_ui=True):
+        """Persist a camera change and queue preview plus full-resolution replacements."""
         if refresh_ui:
             self._update_info()
         self._save_settings()
@@ -1505,6 +1557,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             self._queue_camera_restarts()
 
     def _on_exposure(self):
+        """Persist an exposure change and restart the active render session."""
         self._update_info()
         self._save_settings()
         if self._scene and self._session and not self._render_stopped:
@@ -1517,12 +1570,14 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
                 daemon=True).start()
 
     def _update_ground_color_button(self):
+        """Synchronize the ground-color button swatch with its persisted color."""
         color = self._ground_color.get()
         self._ground_color_button.config(
             bg=color, activebackground=color,
             fg="white" if sum(_hex_color_to_rgb(color)) < 1.5 else "black")
 
     def _choose_ground_color(self):
+        """Prompt for a ground color and apply it when the user confirms."""
         _, color = colorchooser.askcolor(
             color=self._ground_color.get(), parent=self,
             title="Choose Ground Color")
@@ -1551,6 +1606,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             daemon=True).start()
 
     def _on_hdri_gain(self):
+        """Update HDRI gain UI and restart the render with the adjusted environment intensity."""
         self._update_hdri_gain_label()
         self._update_info()
         self._save_settings()
@@ -1582,10 +1638,12 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         self._on_hdri_gain()
 
     def _update_hdri_gain_label(self):
+        """Display the current linear HDRI gain beside its relative-adjustment control."""
         if hasattr(self, "_hdri_gain_value_label"):
             gain = 10.0 ** self._hdri_gain_log.get()
             self._hdri_gain_value_label.config(text=f"{gain:.4g}")
     def _on_render_hdri_background_changed(self, *_):
+        """Rebuild the environment and ground when HDRI background visibility changes."""
         self._update_info()
         self._save_settings()
         if self._scene and self._session and not self._render_stopped:
@@ -1722,6 +1780,10 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             # source -- so it receives shadows and shows glossy reflections.
             color = _hex_color_to_rgb(self._ground_color.get())
             reflectivity = self._ground_reflectivity.get()
+            roughness = (GROUND_GRAY_MIRROR_ROUGHNESS
+                         + (GROUND_GRAY_ROUGHNESS
+                            - GROUND_GRAY_MIRROR_ROUGHNESS)
+                         * (1.0 - reflectivity))
             meshes = {GROUND_MESH_NAME: {
                 "points": base_points, "triangles": triangles_array,
                 "normals": normals_array, "uvs": None,
@@ -1733,9 +1795,9 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
                 f"scene.materials.{GROUND_NAME}_mat.ks = "
                 f"{reflectivity} {reflectivity} {reflectivity}",
                 f"scene.materials.{GROUND_NAME}_mat.uroughness = "
-                f"{GROUND_GRAY_ROUGHNESS}",
+                f"{roughness}",
                 f"scene.materials.{GROUND_NAME}_mat.vroughness = "
-                f"{GROUND_GRAY_ROUGHNESS}",
+                f"{roughness}",
                 f"scene.materials.{GROUND_NAME}_mat.transparency.back = "
                 "0.0 0.0 0.0",
                 f"scene.objects.{GROUND_NAME}.shape = {GROUND_MESH_NAME}",
@@ -1759,6 +1821,10 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         }
         source = source_file or self._hdr_file or DEFAULT_HDRI_FILE
         kr = self._ground_reflectivity.get()
+        # Archglass reflection is Fresnel-limited. Raise its IOR toward a
+        # near-perfect reflector only near the slider's right endpoint, while
+        # retaining the original transparent ground at ordinary strengths.
+        mirror_ior = 2.0 + (GROUND_MIRROR_IOR - 2.0) * kr ** 6
         scene_text = "\n".join((
             f"scene.textures.{GROUND_NAME}_tex.type = imagemap",
             f'scene.textures.{GROUND_NAME}_tex.file = "'
@@ -1801,7 +1867,8 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             f"{kr} {kr} {kr}",
             f"scene.materials.{GROUND_MIRROR_NAME}_mat.kt = 1.0 1.0 1.0",
             f"scene.materials.{GROUND_MIRROR_NAME}_mat.exteriorior = 1.0",
-            f"scene.materials.{GROUND_MIRROR_NAME}_mat.interiorior = 2.0",
+            f"scene.materials.{GROUND_MIRROR_NAME}_mat.interiorior = "
+            f"{mirror_ior}",
             f"scene.objects.{GROUND_MIRROR_NAME}.shape = "
             f"{GROUND_MIRROR_MESH_NAME}",
             f"scene.objects.{GROUND_MIRROR_NAME}.material = "
@@ -1923,6 +1990,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
                          daemon=True).start()
 
     def _control_accept_loop(self, server):
+        """Accept localhost control connections and assign each to a worker thread."""
         while True:
             try:
                 conn, _ = server.accept()
@@ -1957,6 +2025,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
                     return
 
     def _process_control_commands(self):
+        """Execute queued protocol commands on the Tk thread and return their replies."""
         try:
             while True:
                 header, blobs, reply_queue = self._control_commands.get_nowait()
@@ -1973,6 +2042,17 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         self.after(25, self._process_control_commands)
 
     def _execute_control_command(self, header, blobs):
+        """Execute one normalized control command.
+
+                Args:
+                    header: Decoded command header containing command-specific fields.
+                    blobs: Binary payloads keyed by their declared roles.
+
+                Returns:
+                    A JSON-serializable protocol reply.
+
+                Raises:
+                    ValueError: If the command or its arguments are invalid."""
         cmd = _header_command(header)
         if cmd == "status":
             return self._control_status()
@@ -2091,6 +2171,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
     def _apply_lookat(self, header):
         """Set the view from eye/target/up/fov (the C# CameraUpdate header)."""
         def vector3(name, required):
+            """Return a validated three-component vector from a lookat command field."""
             value = header.get(name)
             if not isinstance(value, (list, tuple)) or len(value) != 3:
                 if required:
@@ -2166,6 +2247,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
                 "film_scale": self.film_scale.get()}
 
     def _control_status(self):
+        """Return current controller, viewport, renderer, and staged-update status."""
         status = {
             "ok": True,
             "azimuth": self.az.get(),
@@ -2228,6 +2310,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         name = name.strip()
 
         def read_buffer(role, dtype, stride, required):
+            """Decode and validate one typed mesh buffer declared by the control protocol."""
             data = blobs.get(role)
             if data is None:
                 if required:
@@ -2273,6 +2356,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         name = re.sub(r"[^0-9A-Za-z_\-]", "_", raw_name.strip())
 
         def section_components(key, default):
+            """Infer the component count declared by a C# mesh-header section."""
             section = header.get(key)
             if isinstance(section, dict):
                 element_size = int(section.get("ElementSize", 0))
@@ -2370,6 +2454,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             UPLOAD_APPLY_MS, self._auto_apply_uploads)
 
     def _auto_apply_uploads(self):
+        """Apply queued uploaded meshes after the upload debounce interval."""
         self._upload_apply_id = None
         if self._render_stopped or not self._scene or not self._session:
             return
@@ -2446,7 +2531,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         """Apply the current content request to the fixed-size top-level."""
         self.update_idletasks()
         control_height = (self._display_h
-                          + self._render_gain_frame.winfo_reqheight())
+                          + self._render_footer_frame.winfo_reqheight())
         self._control_viewport.config(height=max(1, control_height))
         self.update_idletasks()
         width = self._main_frame.winfo_reqwidth()
@@ -2462,6 +2547,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             scrollregion=(0, 0, CONTROL_W, self._control_panel.winfo_reqheight()))
 
     def _fit_image_to_viewport(self, img):
+        """Resize a rendered image to fit the active display canvas without cropping."""
         scale = min(self._display_w / img.width, self._display_h / img.height)
         width = max(1, round(img.width * scale))
         height = max(1, round(img.height * scale))
@@ -2516,6 +2602,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             return img, is_preview, stats, display_pipeline
 
     def _update_film(self):
+        """Refresh the displayed Tk image and render statistics on a timed interval."""
         try:
             frame = self._capture_film_frame()
             if frame == "warming":
@@ -2547,27 +2634,34 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         self.after(refresh_ms, self._update_film)
 
     # ── Pipeline ──────────────────────────────────────────────────────────────
-    def _set_pipeline(self, idx):
+    def _set_pipeline(self, idx, cancel_auto=True):
+        """Select a raw or OIDN image pipeline and optionally cancel automatic switching."""
         self.pipeline = idx
+        if hasattr(self, "_pipeline_choice"):
+            self._pipeline_choice.set("OIDN" if idx == 1 else "Raw")
         self._update_info()
-        if self._switch_id:
+        if cancel_auto and self._switch_id:
             self.after_cancel(self._switch_id)
             self._switch_id = None
+    def _select_pipeline(self, _):
+        """Apply the image-pipeline selection from the render-footer dropdown."""
+        self._set_pipeline(1 if self._pipeline_choice.get() == "OIDN" else 0)
 
     def _schedule_switch(self):
+        """Schedule automatic switching from raw output to OIDN."""
         if self._switch_id:
             self.after_cancel(self._switch_id)
         self._switch_id = self.after(self.switch_sec.get() * 1000, self._auto_switch)
 
     def _reset_switch(self):
-        self.pipeline = 0
+        """Return to raw output and restart the Auto OIDN countdown."""
+        self._set_pipeline(0)
         self._schedule_switch()
-        self._update_info()
 
     def _auto_switch(self):
+        """Switch the active display pipeline to OIDN when the countdown expires."""
         self._switch_id = None
-        self.pipeline   = 1
-        self._update_info()
+        self._set_pipeline(1, cancel_auto=False)
 
     # ── Save ──────────────────────────────────────────────────────────────────
     def _write_film_image(self, path):
@@ -2593,6 +2687,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         return path
 
     def _save_film(self):
+        """Prompt for an image path and save the current rendered film."""
         path = filedialog.asksaveasfilename(
             parent=self,
             title="Save Rendered Image",
@@ -2613,6 +2708,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
 
 
     def _update_info(self):
+        """Refresh the compact camera, exposure, HDRI, and pipeline status text."""
         az, el = self.az.get(), self.el.get()
         gain = 10.0 ** self._hdri_gain_log.get()
         self._info.config(text=f"  az={az:6.1f}°  el={el:5.1f}°"
@@ -2624,10 +2720,12 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
 
     # ── Input ─────────────────────────────────────────────────────────────────
     def _drag_start(self, e):
+        """Record the pointer position that begins an orbit drag."""
         self._drag_x, self._drag_y = e.x, e.y
 
     def _drag_move(self, e):
         # Orbit drags are turntable-style: level the horizon.
+        """Orbit the camera from a right-drag movement and queue a camera update."""
         self._camera_up = [0.0, 0.0, 1.0]
         self.az.set(self.az.get() + (e.x - self._drag_x) * 0.5)
         self.el.set(max(-89, min(89, self.el.get() + (e.y - self._drag_y) * 0.3)))
@@ -2638,9 +2736,11 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
 
     # ── Render canvas input ───────────────────────────────────────────────────
     def _pan_start(self, e):
+        """Record the pointer position that begins a render-viewport pan."""
         self._pan_drag_x, self._pan_drag_y = e.x, e.y
 
     def _pan_move(self, e):
+        """Pan the target in screen space from a render-viewport drag."""
         dx = e.x - self._pan_drag_x
         dy = e.y - self._pan_drag_y
         self._pan_drag_x, self._pan_drag_y = e.x, e.y
@@ -2673,11 +2773,13 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
     def _set_preset(self, az, el):
         # Preset views are canonical: restore the world up vector so a rolled
         # external lookat cannot tilt them.
+        """Apply a level canonical orbit preset and queue a camera update."""
         self._camera_up = [0.0, 0.0, 1.0]
         self.az.set(az); self.el.set(el)
         self._on_camera()
 
     def _select_preset(self, _):
+        """Apply the camera preset selected in the controller dropdown."""
         presets = {
             "Front": (0, 10), "Back": (180, 10),
             "Left Side": (-90, 10), "Right Side": (90, 10),
@@ -2691,6 +2793,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
 
     def _reset(self):
         # Drop external view overrides along with the orbit position.
+        """Restore the default orbit and clear external camera orientation overrides."""
         self._camera_up = [0.0, 0.0, 1.0]
         self._camera_fov = None
         self._set_preset(DEFAULT_AZ, DEFAULT_EL)
