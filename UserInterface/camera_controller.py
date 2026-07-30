@@ -1827,6 +1827,13 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             self._render_width, self._render_height, "full",
             self._camera_snapshot)
         return changed
+    def _set_sender_viewport_resolution(self, width, height, restart):
+        """Apply sender camera dimensions as the viewport baseline and clear film-only output."""
+        self._film_resolution_override = None
+        self._base_viewport_width = width
+        self._base_viewport_height = height
+        self.render_resolution.set(f"{width} x {height}")
+        return self._update_viewport_and_film(restart)
 
     def _set_film_scale(self, _=None):
         """Clear any exact film override and apply the selected final-film scale."""
@@ -2559,7 +2566,8 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             if "el" in header:
                 self.el.set(max(-89.0, min(89.0, float(header["el"]))))
             if "dist" in header:
-                self._set_camera_distance(float(header["dist"]))
+                # Sender distances share lookat's post-angle half-scale.
+                self._set_camera_distance(float(header["dist"]) / 2.0)
             # Orbit-parameter commands are turntable-style: level the horizon.
             self._camera_up = [0.0, 0.0, 1.0]
             self._on_camera()
@@ -2721,8 +2729,8 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
                     raise ValueError("axis must be vertical or horizontal")
                 self._camera_fov = (fov, axis)
 
-        # Optional output size: render an exact film while retaining the
-        # current viewport and window scale.
+        # Optional sender viewport size: resize the canvas/window baseline.
+        # Window and film scales still apply afterward like their UI controls.
         # Non-positive values are ignored, like fov for orthographic senders.
         width = header.get("width")
         height = header.get("height")
@@ -2733,15 +2741,17 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
                         and RENDER_MIN_DIMENSION <= height <= RENDER_MAX_DIMENSION):
                     raise ValueError(
                         "width and height must be between 16 and 8192 pixels")
-                if (width, height) != (
-                        self._render_width, self._render_height):
-                    self._set_final_film_resolution(width, height, restart=False)
+                if ((width, height) != (
+                        self._base_viewport_width, self._base_viewport_height)
+                        or self._film_resolution_override is not None):
+                    self._set_sender_viewport_resolution(
+                        width, height, restart=False)
 
         self._target = list(target)
-        distance = distance / 2.0;
-        self._set_camera_distance(distance)
         self.az.set(azimuth)
         self.el.set(elevation)
+        distance = distance / 2.0
+        self._set_camera_distance(distance)
         self._on_camera()
         return {"ok": True, "azimuth": azimuth, "elevation": elevation,
                 "distance": distance, "target": list(target),

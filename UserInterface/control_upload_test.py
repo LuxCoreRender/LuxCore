@@ -260,9 +260,10 @@ def live_tests():
     print("empty apply rejected: OK")
 
     reply = send(conn, {"cmd": "camera", "az": 95.0, "el": 12.0, "dist": 18.0})
-    if not reply.get("ok") or abs(reply["azimuth"] - 95.0) > 1e-6:
+    if not (reply.get("ok") and abs(reply["azimuth"] - 95.0) < 1e-6
+            and abs(reply["distance"] - 9.0) < 1e-6):
         fail(f"camera command failed: {reply}")
-    print("camera: OK")
+    print("camera sender distance half-scale: OK")
 
     # C#-style CameraUpdate: eye/target/up/fov with derived orbit state.
     # The controller intentionally halves the eye-to-target distance after
@@ -364,21 +365,33 @@ def live_tests():
         fail(f"HDRI alignment did not produce a live render: {status}")
     print("HDRI background and vertical alignment restart: OK")
 
-    # lookat can also resize the render film to the sender's viewport.
+    # Sender dimensions resize the visible viewport and the active film.
     reply = send(conn, {"cmd": "cameraEyeTarget",
                         "eye": [0.0, -10.0, 2.0], "target": [0.0, 0.0, 0.5],
                         "up": [0.0, 0.0, 1.0], "fov": 45.0,
                         "width": 960, "height": 540})
     if not (reply.get("ok") and reply["width"] == 960
-            and reply["height"] == 540):
+            and reply["height"] == 540
+            and reply["viewport_width"] == 960
+            and reply["viewport_height"] == 540
+            and reply["base_width"] == 960 and reply["base_height"] == 540):
         fail(f"lookat viewport size failed: {reply}")
     status = send(conn, {"cmd": "status"})
-    if status.get("width") != 960 or status.get("height") != 540:
+    if (status.get("width") != 960 or status.get("height") != 540
+            or status.get("viewport_width") != 960
+            or status.get("viewport_height") != 540
+            or status.get("base_width") != 960
+            or status.get("base_height") != 540):
         fail(f"viewport size was not applied: {status}")
     reply = send(conn, {"cmd": "resolution", "width": 1280, "height": 720})
     if not reply.get("ok"):
         fail(f"resolution restore failed: {reply}")
-    print("lookat viewport size: OK")
+    status = send(conn, {"cmd": "status"})
+    if (status.get("width") != 1280 or status.get("height") != 720
+            or status.get("viewport_width") != 960
+            or status.get("viewport_height") != 540):
+        fail(f"film-only resolution changed the viewport: {status}")
+    print("lookat viewport size and film-only resolution: OK")
 
     # CAD-scale distances must survive the 1-50 UI distance slider.
     reply = send(conn, {"cmd": "cameraEyeTarget",
@@ -391,7 +404,7 @@ def live_tests():
     if abs(status["distance"] - expected) > 1e-6:
         fail(f"large distance was clamped by the UI: {status['distance']}")
     reply = send(conn, {"cmd": "camera", "az": 95.0, "el": 12.0, "dist": 18.0})
-    if not reply.get("ok") or abs(reply["distance"] - 18.0) > 1e-9:
+    if not reply.get("ok") or abs(reply["distance"] - 9.0) > 1e-9:
         fail(f"camera restore failed: {reply}")
     print("large-distance lookat: OK")
 
