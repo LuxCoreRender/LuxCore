@@ -12,14 +12,12 @@ No external process launches. The render session runs in-process:
 Controls:
   Left-drag on render viewport → pan
   Right-drag on render viewport → orbit (azimuth / elevation)
-  Left-drag on controller       → pan
-  Right-drag on controller      → orbit (azimuth / elevation)
   Scroll wheel                 → zoom
   R                       → reset camera
   Space                   → force film refresh
 """
 
-import os, sys, math, re, queue, threading, json, socket, struct
+import os, sys, math, re, queue, threading, json, socket, struct, ctypes
 from array import array
 try:
     from tkinterdnd2 import COPY, DND_FILES, TkinterDnD
@@ -75,14 +73,23 @@ FILM_W              = 1280
 FILM_H              = 720
 RENDER_RESOLUTIONS  = ("640 x 360", "1280 x 720", "1920 x 1080",
                        "2560 x 1440", "3840 x 2160")
+RENDER_SCALE_FACTORS = {
+    "1/20": (1, 20), "1/10": (1, 10), "1/5": (1, 5),
+    "1/3": (1, 3), "1/2": (1, 2), "1": (1, 1),
+    "2": (2, 1), "3": (3, 1), "4": (4, 1), "5": (5, 1),
+}
+RENDER_SCALE_OPTIONS = tuple(RENDER_SCALE_FACTORS)
+DEFAULT_RENDER_SCALE = "1"
+RENDER_MIN_DIMENSION = 16
+RENDER_MAX_DIMENSION = 8192
 WINDOW_GEOMETRY_RE = re.compile(
     r"^(?P<width>\d+)x(?P<height>\d+)(?P<x>[+-]\d+)(?P<y>[+-]\d+)$")
 WINDOW_GEOMETRY_MIN_WIDTH = 320
 WINDOW_GEOMETRY_MIN_HEIGHT = 240
 WINDOW_GEOMETRY_MAX_SIZE = 16384
 WINDOW_GEOMETRY_MAX_POSITION = 32768
+WINDOW_GEOMETRY_POLL_MS = 250
 CONTROL_W           = 216
-CONTROL_H           = 120
 PREVIEW_W           = 192
 PREVIEW_H           = 108
 REFRESH_MS          = 250
@@ -191,7 +198,6 @@ GROUND_RADIUS_FACTOR = 20.0   # disk radius vs scene extent (2× original)
 GROUND_CATCHER_LIFT = 2e-4    # catcher height above the mirror vs extent
 GROUND_MIRROR_KR = 1.0        # scales Fresnel reflection; 1.0 = physical
 GROUND_GRAY_KD = 0.4          # white-backdrop mode: floor albedo
-GROUND_GRAY_KS = 0.3          # white-backdrop mode: glossy strength
 GROUND_GRAY_ROUGHNESS = 0.04  # white-backdrop mode: glossy roughness
 
 # ── Math helpers ──────────────────────────────────────────────────────
@@ -218,8 +224,6 @@ def cam_axes(orig, target):
     up    = _norm(_cross(right, fwd))
     return right, up, fwd
 
-def proj_axis(ax, cr, cu, scale=28):
-    return _dot(ax, cr)*scale, -_dot(ax, cu)*scale
 
 def _luxcore_fieldofview(fov_degrees, axis, width, height):
     """Convert a vertical/horizontal FOV to LuxCore's fieldofview.
@@ -306,6 +310,47 @@ def _setting_render_resolution(settings):
     if not 16 <= width <= 8192 or not 16 <= height <= 8192:
         return "1280 x 720"
     return f"{width} x {height}"
+def _setting_scale(settings, name, default=DEFAULT_RENDER_SCALE):
+    value = settings.get(name, default)
+    return value if value in RENDER_SCALE_FACTORS else DEFAULT_RENDER_SCALE
+def _setting_window_scale(settings):
+    # render_scale was the short-lived name used before final-film scaling
+    # became independent; retain it as a window-scale migration fallback.
+    return _setting_scale(
+        settings, "window_scale", settings.get("render_scale", DEFAULT_RENDER_SCALE))
+
+def _setting_film_scale(settings):
+    return _setting_scale(settings, "film_scale")
+def _setting_final_film_resolution(settings):
+    value = settings.get("final_film_resolution")
+    if not isinstance(value, str):
+        return None
+    match = re.fullmatch(r"\s*(\d+)\s*x\s*(\d+)\s*", value)
+    if not match:
+        return None
+    width, height = (int(component) for component in match.groups())
+    if not (RENDER_MIN_DIMENSION <= width <= RENDER_MAX_DIMENSION
+            and RENDER_MIN_DIMENSION <= height <= RENDER_MAX_DIMENSION):
+        return None
+    return width, height
+
+def _scaled_viewport_resolution(width, height, scale_label):
+    """Return an aspect-preserving viewport size for a named window scale."""
+    numerator, denominator = RENDER_SCALE_FACTORS[scale_label]
+    scaled_width = max(1, round(width * numerator / denominator))
+    scaled_height = max(1, round(height * numerator / denominator))
+    return scaled_width, scaled_height
+
+def _scaled_film_resolution(width, height, scale_label):
+    """Return a viewport-relative film size, clamped uniformly to 8K."""
+    numerator, denominator = RENDER_SCALE_FACTORS[scale_label]
+    scale = min(numerator / denominator,
+                RENDER_MAX_DIMENSION / max(width, height))
+    scaled_width = max(RENDER_MIN_DIMENSION, min(
+        RENDER_MAX_DIMENSION, round(width * scale)))
+    scaled_height = max(RENDER_MIN_DIMENSION, min(
+        RENDER_MAX_DIMENSION, round(height * scale)))
+    return scaled_width, scaled_height
 
 def _setting_window_geometry(settings):
     value = settings.get("window_geometry")
@@ -518,6 +563,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         self._settings_ready = False
         self._saved_window_geometry = _setting_window_geometry(self._settings)
         self._window_geometry_save_id = None
+        self._window_geometry_poll_id = None
         self._hdr_file = _setting_hdr_file(self._settings)
         self._control_port_setting = int(_setting_float(
             self._settings, "control_port", DEFAULT_CONTROL_PORT, 0, 65535))
@@ -532,6 +578,10 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
                 pass
         self._control_socket = None
         saved_resolution = _setting_render_resolution(self._settings)
+        saved_window_scale = _setting_window_scale(self._settings)
+        saved_film_scale = _setting_film_scale(self._settings)
+        saved_final_film_resolution = _setting_final_film_resolution(
+            self._settings)
         self.az = tk.DoubleVar(value=_setting_float(
             self._settings, "azimuth", DEFAULT_AZ, -3600.0, 3600.0))
         self.el = tk.DoubleVar(value=_setting_float(
@@ -544,6 +594,8 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             self._settings, "hdri_gain", read_hdri_gain(SCENE_FILE), 0.0001, 100.0)
         self._hdri_gain_log = tk.DoubleVar(
             value=math.log10(max(0.0001, min(100.0, saved_hdri_gain))))
+        self._hdri_gain_jog = tk.DoubleVar(value=0.0)
+        self._hdri_gain_jog_in_progress = False
         self._render_hdri_background = tk.BooleanVar(value=_setting_bool(
             self._settings, "render_hdri_background", True))
         self._ao_mode = tk.BooleanVar(value=_setting_bool(
@@ -552,17 +604,28 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             self._settings, "hdri_ground", False))
         self._ground_color = tk.StringVar(value=_setting_color(
             self._settings, "ground_color", "#666666"))
-        self._ground_hdri_reflectivity = tk.DoubleVar(value=_setting_float(
-            self._settings, "ground_hdri_reflectivity", GROUND_MIRROR_KR,
-            0.0, 1.0))
-        self._ground_gray_reflectivity = tk.DoubleVar(value=_setting_float(
-            self._settings, "ground_gray_reflectivity", GROUND_GRAY_KS,
+        legacy_ground_reflectivity = _setting_float(
+            self._settings, "ground_hdri_reflectivity",
+            _setting_float(self._settings, "ground_gray_reflectivity",
+                           GROUND_MIRROR_KR, 0.0, 1.0),
+            0.0, 1.0)
+        self._ground_reflectivity = tk.DoubleVar(value=_setting_float(
+            self._settings, "ground_reflectivity", legacy_ground_reflectivity,
             0.0, 1.0))
         self.switch_sec = tk.IntVar(value=round(_setting_float(
             self._settings, "auto_oidn_seconds", DEFAULT_SWITCH_SECS, 1.0, 120.0)))
         self.render_resolution = tk.StringVar(value=saved_resolution)
-        self._render_width, self._render_height = (
+        self.window_scale = tk.StringVar(value=saved_window_scale)
+        self.film_scale = tk.StringVar(value=saved_film_scale)
+        self._base_viewport_width, self._base_viewport_height = (
             int(value) for value in saved_resolution.split(" x "))
+        self._viewport_width, self._viewport_height = _scaled_viewport_resolution(
+            self._base_viewport_width, self._base_viewport_height,
+            saved_window_scale)
+        self._film_resolution_override = saved_final_film_resolution
+        self._render_width, self._render_height = (
+            saved_final_film_resolution or _scaled_film_resolution(
+                self._viewport_width, self._viewport_height, saved_film_scale))
         self.pipeline   = 0
 
         self._drag_x    = 0
@@ -613,6 +676,8 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
                                         width=FILM_W, height=FILM_H, bg="black",
                                         cursor="fleur")
         self._render_canvas.grid(row=0, column=1)
+        self._render_gain_frame = tk.Frame(self._main_frame)
+        self._render_gain_frame.grid(row=1, column=1, sticky="ew", pady=(4, 0))
         self._render_win = self
         # Create a single persistent image item — updated in place, no ghosting
         self._canvas_img_id = self._render_canvas.create_image(0, 0, anchor=tk.NW)
@@ -634,6 +699,8 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         self.bind("<Configure>", self._on_window_configure, add="+")
         if self._saved_window_geometry:
             self.after_idle(self._restore_window_geometry)
+        self._window_geometry_poll_id = self.after(
+            WINDOW_GEOMETRY_POLL_MS, self._poll_window_geometry)
         self.switch_sec.trace_add("write", self._on_setting_variable_changed)
         self._render_hdri_background.trace_add(
             "write", self._on_render_hdri_background_changed)
@@ -661,10 +728,11 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             "ao_mode": self._ao_mode.get(),
             "hdri_ground": self._hdri_ground.get(),
             "ground_color": self._ground_color.get(),
-            "ground_hdri_reflectivity": self._ground_hdri_reflectivity.get(),
-            "ground_gray_reflectivity": self._ground_gray_reflectivity.get(),
+            "ground_reflectivity": self._ground_reflectivity.get(),
             "auto_oidn_seconds": self.switch_sec.get(),
             "render_resolution": self.render_resolution.get(),
+            "window_scale": self.window_scale.get(),
+            "film_scale": self.film_scale.get(),
             "control_port": self._control_port_setting,
         }
         geometry = self._current_window_geometry()
@@ -674,6 +742,9 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             settings["window_geometry"] = self._saved_window_geometry
         if self._hdr_file:
             settings["hdr_file"] = self._hdr_file
+        if self._film_resolution_override:
+            width, height = self._film_resolution_override
+            settings["final_film_resolution"] = f"{width} x {height}"
         temp_file = SETTINGS_FILE + ".tmp"
         try:
             with open(temp_file, "w", encoding="utf-8") as settings_file:
@@ -687,15 +758,47 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
     def _current_window_geometry(self):
         """Return a validated snapshot of the current top-level geometry."""
         try:
-            geometry = self.wm_geometry()
+            x, y = self.winfo_rootx(), self.winfo_rooty()
+            if os.name == "nt":
+                frame = (ctypes.c_long * 4)()
+                hwnd = int(self.wm_frame(), 0)
+                if ctypes.windll.user32.GetWindowRect(hwnd, ctypes.byref(frame)):
+                    x, y = frame[0], frame[1]
+            # Windows reports hidden or minimized windows at this sentinel
+            # location. Retain the last real placement instead of persisting it.
+            if x <= -32000 or y <= -32000:
+                return None
+            geometry = f"{self.winfo_width()}x{self.winfo_height()}{x:+d}{y:+d}"
         except tk.TclError:
             return None
         return _setting_window_geometry({"window_geometry": geometry})
 
     def _restore_window_geometry(self):
-        """Restore the last validated size and screen position after layout."""
-        if self._saved_window_geometry:
-            self.geometry(self._saved_window_geometry)
+        """Restore size and absolute virtual-desktop position after layout."""
+        if not self._saved_window_geometry:
+            return
+        match = WINDOW_GEOMETRY_RE.fullmatch(self._saved_window_geometry)
+        if not match:
+            return
+        width = int(match.group("width"))
+        height = int(match.group("height"))
+        x = int(match.group("x"))
+        y = int(match.group("y"))
+        self.geometry(f"{width}x{height}")
+        # The after-idle callback can run before Windows maps the top-level
+        # frame, in which case SetWindowPos() is silently ignored.
+        self.after(50, self._set_window_position, x, y)
+
+    def _set_window_position(self, x, y):
+        """Move the top-level to an absolute Windows virtual-desktop position."""
+        try:
+            hwnd = int(self.wm_frame(), 0)
+            flags = 0x0001 | 0x0004 | 0x0010  # no size, z-order, or activation
+            if ctypes.windll.user32.SetWindowPos(hwnd, None, x, y, 0, 0, flags):
+                return
+        except (AttributeError, OSError, ValueError, tk.TclError):
+            pass
+        self.geometry(f"{self.winfo_width()}x{self.winfo_height()}{x:+d}{y:+d}")
     def _save_window_geometry(self):
         self._window_geometry_save_id = None
         self._save_settings()
@@ -707,6 +810,17 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         if self._window_geometry_save_id:
             self.after_cancel(self._window_geometry_save_id)
         self._window_geometry_save_id = self.after(250, self._save_window_geometry)
+    def _poll_window_geometry(self):
+        """Persist native monitor moves that do not emit Tk Configure events."""
+        self._window_geometry_poll_id = None
+        if self._settings_ready:
+            geometry = self._current_window_geometry()
+            if geometry and geometry != self._saved_window_geometry:
+                self._saved_window_geometry = geometry
+                self._save_settings()
+        if self.winfo_exists():
+            self._window_geometry_poll_id = self.after(
+                WINDOW_GEOMETRY_POLL_MS, self._poll_window_geometry)
 
     def _on_setting_variable_changed(self, *_):
         self._save_settings()
@@ -795,116 +909,122 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
     def _build_ui(self):
         panel = self._control_panel
         pad = dict(padx=6, pady=2)
-        scale_len = CONTROL_W - 16
 
         self._info = tk.Label(panel, text="Starting...", font=("Consolas", 8),
                               fg="#444", justify=tk.LEFT, anchor="w")
 
         # Distance is driven by the scroll wheel and the control interface;
         # exposure by the exposure control command and saved settings.
-        tk.Label(panel, text="HDRI Gain").grid(row=5, column=0, sticky="w", **pad)
-        tk.Scale(panel, from_=-2.0, to=3.0, resolution=0.01, orient=tk.HORIZONTAL,
-                 variable=self._hdri_gain_log, length=scale_len, showvalue=False,
-                 command=lambda _: self._on_hdri_gain()).grid(row=6, column=0, **pad)
         tk.Checkbutton(panel, text="Render HDRI Background",
                        variable=self._render_hdri_background
-                       ).grid(row=7, column=0, sticky="w", **pad)
+                       ).grid(row=5, column=0, sticky="w", **pad)
         tk.Checkbutton(panel, text="Ambient Occlusion (clay)",
                        variable=self._ao_mode
-                       ).grid(row=8, column=0, sticky="w", **pad)
+                       ).grid(row=6, column=0, sticky="w", **pad)
         tk.Checkbutton(panel, text="HDRI Ground Plane",
                        variable=self._hdri_ground
-                       ).grid(row=9, column=0, sticky="w", **pad)
+                       ).grid(row=7, column=0, sticky="w", **pad)
         ground_frame = tk.LabelFrame(panel, text="Ground Appearance",
                                      padx=3, pady=2)
-        ground_frame.grid(row=10, column=0, padx=6, pady=(2, 0), sticky="ew")
+        ground_frame.grid(row=8, column=0, padx=6, pady=(2, 0), sticky="ew")
         self._ground_color_button = tk.Button(
             ground_frame, text="Color", width=8, command=self._choose_ground_color)
         self._ground_color_button.grid(row=0, column=0, sticky="w")
         self._update_ground_color_button()
-        tk.Label(ground_frame, text="HDRI reflection").grid(
+        tk.Label(ground_frame, text="Reflection strength").grid(
             row=1, column=0, sticky="w")
         tk.Scale(ground_frame, from_=0.0, to=1.0, resolution=0.01,
-                 orient=tk.HORIZONTAL, variable=self._ground_hdri_reflectivity,
+                 orient=tk.HORIZONTAL, variable=self._ground_reflectivity,
                  length=128, showvalue=False,
                  command=lambda _: self._on_ground_appearance_changed()
                  ).grid(row=1, column=1, sticky="e")
-        tk.Label(ground_frame, text="Gray reflection").grid(
-            row=2, column=0, sticky="w")
-        tk.Scale(ground_frame, from_=0.0, to=1.0, resolution=0.01,
-                 orient=tk.HORIZONTAL, variable=self._ground_gray_reflectivity,
-                 length=128, showvalue=False,
-                 command=lambda _: self._on_ground_appearance_changed()
-                 ).grid(row=2, column=1, sticky="e")
 
         pip_frame = tk.Frame(panel)
-        pip_frame.grid(row=11, column=0, pady=(2, 0))
+        pip_frame.grid(row=9, column=0, pady=(2, 0))
         tk.Button(pip_frame, text="Raw", width=8,
                   command=lambda: self._set_pipeline(0)).pack(side=tk.LEFT, padx=2)
         tk.Button(pip_frame, text="OIDN", width=8,
                   command=lambda: self._set_pipeline(1)).pack(side=tk.LEFT, padx=2)
 
         delay_frame = tk.Frame(panel)
-        delay_frame.grid(row=12, column=0, pady=(2, 0))
+        delay_frame.grid(row=10, column=0, pady=(2, 0))
         tk.Label(delay_frame, text="Auto OIDN").pack(side=tk.LEFT, padx=(2, 3))
         tk.Spinbox(delay_frame, from_=1, to=120, textvariable=self.switch_sec,
                    width=3, font=("Segoe UI", 8)).pack(side=tk.LEFT)
         tk.Label(delay_frame, text="sec").pack(side=tk.LEFT, padx=(3, 2))
         resolution_frame = tk.Frame(panel)
-        resolution_frame.grid(row=13, column=0, pady=(3, 0))
-        tk.Label(resolution_frame, text="Resolution").pack(side=tk.LEFT, padx=(2, 4))
+        resolution_frame.grid(row=11, column=0, pady=(3, 0))
+        tk.Label(resolution_frame, text="Viewport Base").pack(
+            side=tk.LEFT, padx=(2, 4))
         resolution_menu = ttk.Combobox(
             resolution_frame, textvariable=self.render_resolution,
             values=RENDER_RESOLUTIONS, state="readonly", width=12)
         resolution_menu.pack(side=tk.LEFT)
         resolution_menu.bind("<<ComboboxSelected>>", self._set_render_resolution)
+        scale_frame = tk.Frame(panel)
+        scale_frame.grid(row=12, column=0, pady=(1, 0))
+        tk.Label(scale_frame, text="Window Scale").pack(
+            side=tk.LEFT, padx=(2, 4))
+        window_scale_menu = ttk.Combobox(
+            scale_frame, textvariable=self.window_scale,
+            values=RENDER_SCALE_OPTIONS, state="readonly", width=5)
+        window_scale_menu.pack(side=tk.LEFT)
+        window_scale_menu.bind("<<ComboboxSelected>>", self._set_window_scale)
+        film_scale_frame = tk.Frame(panel)
+        film_scale_frame.grid(row=13, column=0, pady=(1, 0))
+        tk.Label(film_scale_frame, text="Final Film Scale").pack(
+            side=tk.LEFT, padx=(2, 4))
+        film_scale_menu = ttk.Combobox(
+            film_scale_frame, textvariable=self.film_scale,
+            values=RENDER_SCALE_OPTIONS, state="readonly", width=5)
+        film_scale_menu.pack(side=tk.LEFT)
+        film_scale_menu.bind("<<ComboboxSelected>>", self._set_film_scale)
+        self._film_size_label = tk.Label(
+            film_scale_frame,
+            text=f"{self._render_width} x {self._render_height}",
+            font=("Consolas", 8), fg="#666")
+        self._film_size_label.pack(side=tk.LEFT, padx=(4, 0))
 
-        tk.Label(panel, text="Left: pan  •  Right: orbit  •  Scroll: zoom\n"
-                             "Drop a .hdr or .exr file on the render to change HDRI",
-                 wraplength=CONTROL_W - 12, justify=tk.CENTER,
-                 font=("Segoe UI", 8), fg="#888").grid(row=14, column=0, pady=(4, 0))
-        self._canvas = tk.Canvas(panel, width=CONTROL_W, height=CONTROL_H, bg="#1a1a2e",
-                                 cursor="fleur", highlightthickness=1, highlightbackground="#444")
-        self._canvas.grid(row=15, column=0, padx=6, pady=4)
-        self._canvas.bind("<Button-1>",        self._pan_start)
-        self._canvas.bind("<B1-Motion>",       self._pan_move)
-        self._canvas.bind("<Button-3>",        self._drag_start)
-        self._canvas.bind("<B3-Motion>",       self._drag_move)
-        self._canvas.bind("<MouseWheel>",      self._scroll)
-        self._canvas.bind("<Button-4>",        self._scroll)
-        self._canvas.bind("<Button-5>",        self._scroll)
         self.bind("<r>", lambda _: self._reset())
         self.bind("<R>", lambda _: self._reset())
 
-        btn_frame = tk.Frame(panel)
-        btn_frame.grid(row=16, column=0, pady=2)
-        presets = [("Front", 0, 10),              ("Back", 180, 10),
-                   ("Left Side", -90, 10),        ("Right Side", 90, 10),
-                   ("Hero Front Left", -45, 18),  ("Hero Front Right", 45, 18),
-                   ("Hero Back Left", -135, 18),  ("Hero Back Right", 135, 18),
-                   ("Top", 0, 89),                ("Bottom", 0, -89)]
-        for i, (lbl, az, el) in enumerate(presets):
-            tk.Button(btn_frame, text=lbl, width=16, font=("Segoe UI", 8),
-                      command=lambda a=az, e=el: self._set_preset(a, e)
-                      ).grid(row=i // 2, column=i % 2, padx=2, pady=1)
+        self._preset_choice = tk.StringVar(value="Camera View")
+        preset_values = ("Camera View", "Front", "Back", "Left Side", "Right Side",
+                         "Hero Front Left", "Hero Front Right", "Hero Back Left",
+                         "Hero Back Right", "Top", "Bottom")
+        preset_menu = ttk.Combobox(
+            panel, textvariable=self._preset_choice, values=preset_values,
+            state="readonly", width=22)
+        preset_menu.grid(row=14, column=0, pady=(4, 2))
+        preset_menu.bind("<<ComboboxSelected>>", self._select_preset)
 
         tk.Button(panel, text="Save Film", bg="#2a6aba", fg="white",
                   font=("Segoe UI", 9, "bold"), width=22,
                   command=self._save_film
-                  ).grid(row=17, column=0, pady=(3, 6))
+                  ).grid(row=15, column=0, pady=(3, 6))
         self._render_button = tk.Button(
             panel, text="Stop Rendering", bg="#9c2929", fg="white",
             font=("Segoe UI", 9, "bold"), width=22,
             command=self._stop_rendering)
-        self._render_button.grid(row=18, column=0, pady=(0, 6))
+        self._render_button.grid(row=16, column=0, pady=(0, 6))
         tk.Label(panel, text="Controls:", font=("Segoe UI", 10, "bold"),
-                 anchor="w").grid(row=19, column=0, sticky="w", padx=8)
+                 anchor="w").grid(row=17, column=0, sticky="w", padx=8)
         tk.Label(panel,
-                 text="Left-drag: pan\nRight-drag: rotate\nScroll forward: zoom in\nScroll back: zoom out",
+                 text="Left-drag: pan\nRight-drag: rotate\nScroll forward: zoom in\n"
+                      "Scroll back: zoom out\nDrag and Drop HDR or EXR into scene",
                  justify=tk.LEFT, anchor="w", font=("Segoe UI", 8), fg="#666"
-                 ).grid(row=20, column=0, sticky="w", padx=8, pady=(0, 6))
+                 ).grid(row=18, column=0, sticky="w", padx=8, pady=(0, 6))
 
-        self._draw_minimap()
+        gain_frame = self._render_gain_frame
+        tk.Label(gain_frame, text="HDRI Gain").pack(side=tk.LEFT, padx=(2, 4))
+        self._hdri_gain_value_label = tk.Label(
+            gain_frame, width=6, anchor="w", font=("Consolas", 9), fg="#444")
+        self._hdri_gain_value_label.pack(side=tk.LEFT)
+        tk.Scale(gain_frame, from_=-1.0, to=1.0, resolution=0.01,
+                 orient=tk.HORIZONTAL, variable=self._hdri_gain_jog,
+                 length=144, showvalue=False,
+                 command=self._adjust_hdri_gain).pack(side=tk.LEFT, padx=(4, 0))
+        self._update_hdri_gain_label()
 
     # ── Session ───────────────────────────────────────────────────────────────
     def _start_session(self):
@@ -1202,20 +1322,81 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
 
     def _set_render_resolution(self, _=None):
         width, height = (int(value) for value in self.render_resolution.get().split(" x "))
-        if (width, height) == (self._render_width, self._render_height):
-            return
-        self._render_width, self._render_height = width, height
+        self._set_base_viewport_resolution(width, height, restart=True)
+
+    def _set_window_scale(self, _=None):
+        self._update_viewport_and_film(restart=True)
+
+    def _set_final_film_resolution(self, width, height, restart):
+        """Set exact renderer output dimensions without resizing the viewport."""
+        self._film_resolution_override = width, height
+        old_film_size = self._render_width, self._render_height
         self._apply_display_size()
+        changed = (self._render_width, self._render_height) != old_film_size
+        if hasattr(self, "_film_size_label"):
+            self._film_size_label.config(
+                text=f"{self._render_width} x {self._render_height}")
         self._save_settings()
+        if not changed or not restart:
+            return changed
         if self._render_stopped or not self._scene or not self._session:
-            return
+            return changed
         self._camera_revision += 1
         self._camera_snapshot = self._capture_camera_snapshot()
         self._camera_restart_pending = True
         threading.Thread(
             target=self._do_restart_session,
-            args=(width, height, "full", self._camera_snapshot),
+            args=(self._render_width, self._render_height, "full",
+                  self._camera_snapshot),
             daemon=True).start()
+        return changed
+
+    def _set_film_scale(self, _=None):
+        self._film_resolution_override = None
+        self._update_viewport_and_film(restart=True)
+
+    def _set_base_viewport_resolution(self, width, height, restart):
+        """Set the unscaled viewport baseline and update its active film."""
+        self._base_viewport_width = width
+        self._base_viewport_height = height
+        self.render_resolution.set(f"{width} x {height}")
+        return self._update_viewport_and_film(restart)
+
+    def _update_viewport_and_film(self, restart):
+        """Apply the two scale settings and optionally restart the session."""
+        window_scale = _setting_scale(
+            {"window_scale": self.window_scale.get()}, "window_scale")
+        film_scale = _setting_scale(
+            {"film_scale": self.film_scale.get()}, "film_scale")
+        if window_scale != self.window_scale.get():
+            self.window_scale.set(window_scale)
+        if film_scale != self.film_scale.get():
+            self.film_scale.set(film_scale)
+        self._viewport_width, self._viewport_height = _scaled_viewport_resolution(
+            self._base_viewport_width, self._base_viewport_height, window_scale)
+        old_film_size = self._render_width, self._render_height
+        old_display_size = self._display_w, self._display_h
+        self._apply_display_size()
+        changed = ((self._render_width, self._render_height) != old_film_size
+                   or (self._display_w, self._display_h) != old_display_size)
+        if hasattr(self, "_film_size_label"):
+            self._film_size_label.config(
+                text=f"{self._render_width} x {self._render_height}")
+        self._save_settings()
+        if not changed or not restart:
+            return changed
+        if self._render_stopped or not self._scene or not self._session:
+            return changed
+        self._camera_revision += 1
+        self._camera_snapshot = self._capture_camera_snapshot()
+        self._camera_restart_pending = True
+        threading.Thread(
+            target=self._do_restart_session,
+            args=(self._render_width, self._render_height, "full",
+                  self._camera_snapshot),
+            daemon=True).start()
+        return changed
+
     def _zoom_at_cursor(self, e, viewport_w, viewport_h):
         delta = -e.delta / 120 if hasattr(e, "delta") and e.delta else (
             1 if e.num == 5 else -1)
@@ -1354,6 +1535,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             daemon=True).start()
 
     def _on_hdri_gain(self):
+        self._update_hdri_gain_label()
         self._update_info()
         self._save_settings()
         if self._scene and self._session and not self._render_stopped:
@@ -1367,6 +1549,26 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
                       self._camera_snapshot, None, gain,
                       self._render_hdri_background.get(), self._ao_mode.get()),
                 daemon=True).start()
+
+    def _adjust_hdri_gain(self, value):
+        """Apply one relative gain adjustment, then return the jog to center."""
+        adjustment = float(value)
+        if self._hdri_gain_jog_in_progress or abs(adjustment) < 1e-9:
+            return
+        old_log_gain = self._hdri_gain_log.get()
+        new_log_gain = max(-2.0, min(3.0, old_log_gain + adjustment * 0.1))
+        self._hdri_gain_jog_in_progress = True
+        self._hdri_gain_jog.set(0.0)
+        self._hdri_gain_jog_in_progress = False
+        if new_log_gain == old_log_gain:
+            return
+        self._hdri_gain_log.set(new_log_gain)
+        self._on_hdri_gain()
+
+    def _update_hdri_gain_label(self):
+        if hasattr(self, "_hdri_gain_value_label"):
+            gain = 10.0 ** self._hdri_gain_log.get()
+            self._hdri_gain_value_label.config(text=f"{gain:.4g}")
     def _on_render_hdri_background_changed(self, *_):
         self._update_info()
         self._save_settings()
@@ -1503,7 +1705,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             # lit by the HDRI lighting dome -- no catcher, mirror, or light
             # source -- so it receives shadows and shows glossy reflections.
             color = _hex_color_to_rgb(self._ground_color.get())
-            reflectivity = self._ground_gray_reflectivity.get()
+            reflectivity = self._ground_reflectivity.get()
             meshes = {GROUND_MESH_NAME: {
                 "points": base_points, "triangles": triangles_array,
                 "normals": normals_array, "uvs": None,
@@ -1540,7 +1742,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             },
         }
         source = source_file or self._hdr_file or DEFAULT_HDRI_FILE
-        kr = self._ground_hdri_reflectivity.get()
+        kr = self._ground_reflectivity.get()
         scene_text = "\n".join((
             f"scene.textures.{GROUND_NAME}_tex.type = imagemap",
             f'scene.textures.{GROUND_NAME}_tex.file = "'
@@ -1818,12 +2020,18 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             return {"ok": True, "hdri_ground": enabled}
         if cmd == "resolution":
             width, height = int(header["width"]), int(header["height"])
-            if not (16 <= width <= 8192 and 16 <= height <= 8192):
+            if not (RENDER_MIN_DIMENSION <= width <= RENDER_MAX_DIMENSION
+                    and RENDER_MIN_DIMENSION <= height <= RENDER_MAX_DIMENSION):
                 raise ValueError("resolution must be between 16 and 8192 pixels")
-            self.render_resolution.set(f"{width} x {height}")
-            self._set_render_resolution()
+            self._set_final_film_resolution(width, height, restart=True)
             return {"ok": True, "width": self._render_width,
-                    "height": self._render_height}
+                    "height": self._render_height,
+                    "viewport_width": self._display_w,
+                    "viewport_height": self._display_h,
+                    "base_width": self._base_viewport_width,
+                    "base_height": self._base_viewport_height,
+                    "window_scale": self.window_scale.get(),
+                    "film_scale": self.film_scale.get()}
         if cmd == "pipeline":
             index = int(header.get("index", 0))
             if index not in (0, 1):
@@ -1906,20 +2114,21 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
                     raise ValueError("axis must be vertical or horizontal")
                 self._camera_fov = (fov, axis)
 
-        # Optional viewport size: resize the render film to match the sender.
+        # Optional output size: render an exact film while retaining the
+        # current viewport and window scale.
         # Non-positive values are ignored, like fov for orthographic senders.
         width = header.get("width")
         height = header.get("height")
         if width is not None and height is not None:
             width, height = int(width), int(height)
             if width > 0 and height > 0:
-                if not (16 <= width <= 8192 and 16 <= height <= 8192):
+                if not (RENDER_MIN_DIMENSION <= width <= RENDER_MAX_DIMENSION
+                        and RENDER_MIN_DIMENSION <= height <= RENDER_MAX_DIMENSION):
                     raise ValueError(
                         "width and height must be between 16 and 8192 pixels")
-                if (width, height) != (self._render_width, self._render_height):
-                    self._render_width, self._render_height = width, height
-                    self.render_resolution.set(f"{width} x {height}")
-                    self._apply_display_size()
+                if (width, height) != (
+                        self._render_width, self._render_height):
+                    self._set_final_film_resolution(width, height, restart=False)
 
         self._target = list(target)
         distance = distance / 2.0;
@@ -1932,7 +2141,13 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
                 "up": list(self._camera_up),
                 "fov": self._camera_fov[0] if self._camera_fov else None,
                 "fov_axis": self._camera_fov[1] if self._camera_fov else None,
-                "width": self._render_width, "height": self._render_height}
+                "width": self._render_width, "height": self._render_height,
+                "viewport_width": self._display_w,
+                "viewport_height": self._display_h,
+                "base_width": self._base_viewport_width,
+                "base_height": self._base_viewport_height,
+                "window_scale": self.window_scale.get(),
+                "film_scale": self.film_scale.get()}
 
     def _control_status(self):
         status = {
@@ -1953,6 +2168,13 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             "hdr_file": self._hdr_file or DEFAULT_HDRI_FILE,
             "width": self._render_width,
             "height": self._render_height,
+            "viewport_width": self._display_w,
+            "viewport_height": self._display_h,
+            "base_width": self._base_viewport_width,
+            "base_height": self._base_viewport_height,
+            "window_scale": self.window_scale.get(),
+            "film_scale": self.film_scale.get(),
+            "final_film_resolution": self._film_resolution_override,
             "pipeline": self.pipeline,
             "render_stopped": self._render_stopped,
             "staged_meshes": sorted(self._pending_meshes),
@@ -2188,17 +2410,20 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
 
     # ── Film display ──────────────────────────────────────────────────────────
     def _apply_display_size(self):
-        """Size the render canvas 1:1 with the film, capped to the screen.
+        """Size the canvas from the viewport, then derive the final film.
 
         The window is not resizable by the user, so changing the canvas size
         resizes the whole window around it.
         """
         max_width = max(320, self.winfo_screenwidth() - CONTROL_W - 80)
         max_height = max(240, self.winfo_screenheight() - 120)
-        scale = min(1.0, max_width / self._render_width,
-                    max_height / self._render_height)
-        self._display_w = max(1, int(round(self._render_width * scale)))
-        self._display_h = max(1, int(round(self._render_height * scale)))
+        scale = min(1.0, max_width / self._viewport_width,
+                    max_height / self._viewport_height)
+        self._display_w = max(1, int(round(self._viewport_width * scale)))
+        self._display_h = max(1, int(round(self._viewport_height * scale)))
+        self._render_width, self._render_height = (
+            self._film_resolution_override or _scaled_film_resolution(
+                self._display_w, self._display_h, self.film_scale.get()))
         self._render_canvas.config(width=self._display_w,
                                    height=self._display_h)
 
@@ -2352,46 +2577,6 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         except Exception as ex:
             self._render_win.title(f"{WINDOW_TITLE} — Save failed: {ex}")
 
-    # ── Minimap ───────────────────────────────────────────────────────────────
-    def _draw_minimap(self):
-        self._canvas.delete("all")
-        w, h   = CONTROL_W, CONTROL_H
-        cx, cy = w // 2, h // 2 - 6
-        az, el = self.az.get(), self.el.get()
-        r = min(w, h) * 0.23
-
-        self._canvas.create_oval(cx-r, cy-r, cx+r, cy+r, outline="#334")
-        self._canvas.create_line(cx-r*1.25, cy, cx+r*1.25, cy, fill="#334")
-        self._canvas.create_line(cx, cy-r*1.25, cx, cy+r*1.25, fill="#334")
-
-        dx =  r * math.sin(math.radians(az)) * math.cos(math.radians(el))
-        dy = -r * math.cos(math.radians(az)) * math.cos(math.radians(el)) * 0.5 \
-             - r * math.sin(math.radians(el)) * 0.5
-        self._canvas.create_oval(cx+dx-5, cy+dy-5, cx+dx+5, cy+dy+5,
-                                 fill="#4a9eff", outline="#88ccff", width=2)
-        self._canvas.create_line(cx, cy, cx+dx, cy+dy, fill="#4a9eff")
-        for lbl, pos in [("FRONT", (cx, cy-r*1.65)), ("REAR", (cx, cy+r*1.65)),
-                          ("L", (cx-r*1.7, cy)), ("R", (cx+r*1.7, cy))]:
-            self._canvas.create_text(*pos, text=lbl, fill="#556", font=("Consolas",7))
-
-        orig = self._cam_orig()
-        cr, cu, _ = cam_axes(orig, self._target)
-        gx, gy = 42, h - 42
-        triad_scale = 30
-        axes = [([1,0,0],"#ff4444","X"),([0,1,0],"#44ff44","Y"),([0,0,1],"#4488ff","Z")]
-        axes.sort(key=lambda a: -(proj_axis(a[0], cr, cu, triad_scale)[0]**2
-                                  + proj_axis(a[0], cr, cu, triad_scale)[1]**2))
-        for ax, col, lbl in axes:
-            sx, sy = proj_axis(ax, cr, cu, triad_scale)
-            self._canvas.create_line(gx, gy, gx+sx, gy+sy, fill=col, width=3,
-                                     arrow=tk.LAST)
-            self._canvas.create_text(gx+sx*1.3, gy+sy*1.3, text=lbl,
-                                     fill=col, font=("Consolas", 10, "bold"))
-
-        pip_col = "#44ff44" if self.pipeline == 1 else "#ffaa44"
-        self._canvas.create_text(w-24, h-8,
-                                 text="OIDN" if self.pipeline==1 else "RAW",
-                                 fill=pip_col, font=("Consolas",8,"bold"))
 
     def _update_info(self):
         az, el = self.az.get(), self.el.get()
@@ -2402,7 +2587,6 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
                                f"  hdri={gain:.3f}"
                                f"  bg={'HDRI' if self._render_hdri_background.get() else 'white'}"
                                f"  pipe={self.pipeline}")
-        self._draw_minimap()
 
     # ── Input ─────────────────────────────────────────────────────────────────
     def _drag_start(self, e):
@@ -2417,8 +2601,6 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         self._update_info()
         self._on_camera(refresh_ui=False)
 
-    def _scroll(self, e):
-        self._zoom_at_cursor(e, self._canvas.winfo_width(), self._canvas.winfo_height())
 
     # ── Render canvas input ───────────────────────────────────────────────────
     def _pan_start(self, e):
@@ -2429,23 +2611,18 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         dy = e.y - self._pan_drag_y
         self._pan_drag_x, self._pan_drag_y = e.x, e.y
 
-        if e.widget is self._render_canvas:
-            # Exact screen-space pan: the focal-plane point that was under
-            # the cursor stays under it. The film fills the display canvas,
-            # so one display pixel spans
-            # 2 * distance * tan(vertical fov / 2) / display height
-            # world units at the orbit-target depth.
-            lux_fov = self._camera_fieldofview(
-                self._camera_fov, self._render_width, self._render_height)
-            half_tan = math.tan(math.radians(lux_fov) * 0.5)
-            frame = self._render_width / self._render_height
-            tan_half_v = half_tan / frame if frame >= 1.0 else half_tan
-            scale = (2.0 * self._camera_distance * tan_half_v
-                     / max(1, self._display_h))
-        else:
-            # The compact controller canvas keeps a coarser, distance-scaled
-            # feel; it does not display the render 1:1.
-            scale = self._camera_distance / 600.0
+        # Exact screen-space pan: the focal-plane point that was under
+        # the cursor stays under it. The film fills the display canvas,
+        # so one display pixel spans
+        # 2 * distance * tan(vertical fov / 2) / display height
+        # world units at the orbit-target depth.
+        lux_fov = self._camera_fieldofview(
+            self._camera_fov, self._render_width, self._render_height)
+        half_tan = math.tan(math.radians(lux_fov) * 0.5)
+        frame = self._render_width / self._render_height
+        tan_half_v = half_tan / frame if frame >= 1.0 else half_tan
+        scale = (2.0 * self._camera_distance * tan_half_v
+                 / max(1, self._display_h))
         orig   = self._cam_orig()
         cr, cu, _ = cam_axes(orig, self._target)
 
@@ -2465,6 +2642,18 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         self._camera_up = [0.0, 0.0, 1.0]
         self.az.set(az); self.el.set(el)
         self._on_camera()
+
+    def _select_preset(self, _):
+        presets = {
+            "Front": (0, 10), "Back": (180, 10),
+            "Left Side": (-90, 10), "Right Side": (90, 10),
+            "Hero Front Left": (-45, 18), "Hero Front Right": (45, 18),
+            "Hero Back Left": (-135, 18), "Hero Back Right": (135, 18),
+            "Top": (0, 89), "Bottom": (0, -89),
+        }
+        preset = presets.get(self._preset_choice.get())
+        if preset:
+            self._set_preset(*preset)
 
     def _reset(self):
         # Drop external view overrides along with the orbit position.
