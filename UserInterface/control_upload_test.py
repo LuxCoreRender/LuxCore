@@ -84,6 +84,74 @@ def frame_tests():
     print("frame tests: OK")
 
 
+def hdri_alignment_tests():
+    """Verify a positive HDRI height moves equirectangular source rows upward."""
+    with tempfile.TemporaryDirectory() as directory:
+        source_path = os.path.join(directory, "source.hdr")
+        shifted_path = os.path.join(directory, "shifted.hdr")
+        width, height = 8, 4
+        source_rows = [
+            bytes((20 + row, 10 + row, 5 + row, 136)) * width
+            for row in range(height)
+        ]
+        with open(source_path, "wb") as source:
+            source.write(b"#?RADIANCE\nFORMAT=32-bit_rle_rgbe\n\n-Y 4 +X 8\n")
+            for row in source_rows:
+                controller._write_radiance_scanline(source, row, width)
+
+        # Height is intentionally calibrated at half the panorama angular rate:
+        # four rows span 180°, so +45° shifts the source by half a row.
+        assert controller._hdri_vertical_offset_pixels(45.0, height) == 0.5
+        controller._remap_radiance_hdr(
+            source_path, shifted_path, 1.0)
+        with open(shifted_path, "rb") as shifted:
+            _, shifted_width, shifted_height = controller._read_radiance_header(
+                shifted)
+            shifted_rows = [
+                controller._read_radiance_scanline(shifted, shifted_width)
+                for _ in range(shifted_height)
+            ]
+        assert (shifted_width, shifted_height) == (width, height)
+        assert shifted_rows == [
+            source_rows[1], source_rows[2], source_rows[3], source_rows[3]], (
+                shifted_rows)
+        yaw = controller._hdri_yaw_matrix(37.5)
+        assert yaw[2] == yaw[6] == 0.0 and yaw[10] == 1.0, yaw
+
+        import Imath
+        import OpenEXR
+        import numpy
+        exr_source_path = os.path.join(directory, "source.exr")
+        exr_shifted_path = os.path.join(directory, "shifted.exr")
+        pixel_type = Imath.PixelType(Imath.PixelType.FLOAT)
+        header = OpenEXR.Header(width, height)
+        header["channels"] = {
+            name: Imath.Channel(pixel_type) for name in ("R", "G", "B")}
+        source_values = numpy.repeat(
+            numpy.arange(height, dtype=numpy.float32)[:, None], width, axis=1)
+        output = OpenEXR.OutputFile(exr_source_path, header)
+        try:
+            output.writePixels({
+                "R": source_values.tobytes(),
+                "G": (source_values + 10.0).tobytes(),
+                "B": (source_values + 20.0).tobytes(),
+            })
+        finally:
+            output.close()
+        controller._remap_openexr(exr_source_path, exr_shifted_path, 1.0)
+        shifted_exr = OpenEXR.InputFile(exr_shifted_path)
+        try:
+            shifted_values = numpy.frombuffer(
+                shifted_exr.channel("R", pixel_type),
+                dtype=numpy.float32).reshape(height, width)
+        finally:
+            shifted_exr.close()
+        assert numpy.array_equal(
+            shifted_values[:, 0], numpy.array([1.0, 2.0, 3.0, 3.0])), (
+                shifted_values[:, 0])
+    print("HDRI vertical remap: OK")
+
+
 # ── Live end-to-end run ───────────────────────────────────────────────────────
 def upload_header(mesh_name, vertex_count, index_count, uv_bytes, normal_bytes):
     """Build a header exactly like the C# MeshHeader serialization."""
@@ -119,6 +187,11 @@ def live_tests():
         if had_settings:
             shutil.copyfile(settings_backup, SETTINGS)
             os.remove(settings_backup)
+        else:
+            try:
+                os.remove(SETTINGS)
+            except FileNotFoundError:
+                pass
 
     def fail(message):
         if proc.poll() is None:
@@ -192,14 +265,14 @@ def live_tests():
     print("camera: OK")
 
     # C#-style CameraUpdate: eye/target/up/fov with derived orbit state.
-    # The controller intentionally halves the eye-to-target distance and
-    # derives the elevation from the halved value.
+    # The controller intentionally halves the eye-to-target distance after
+    # deriving elevation from the original eye-to-target direction.
     reply = send(conn, {"cmd": "cameraEyeTarget",
                         "eye": [0.0, -10.0, 2.0], "target": [0.0, 0.0, 1.0],
                         "up": [0.0, 0.0, 1.0], "fov": 50.0})
     if not (reply.get("ok")
             and abs(reply["distance"] - 5.0249378) < 1e-3
-            and abs(reply["elevation"] - 11.478923) < 0.01
+            and abs(reply["elevation"] - 5.710593) < 0.01
             and abs(reply["azimuth"] - 180.0) < 1e-6
             and reply["fov"] == 50.0 and reply["fov_axis"] == "vertical"):
         fail(f"cameraEyeTarget derived the wrong view: {reply}")
@@ -255,6 +328,41 @@ def live_tests():
     if not (reply.get("ok") and reply["hdri_ground"] is False):
         fail(f"ground disable failed: {reply}")
     print("hdri ground plane toggles: OK")
+    # Keep the HDRI background and ground plane enabled while vertically
+    # remapping the shared panorama. The restart must retain both visibility
+    # states, create an aligned cache source, and produce a fresh live render.
+    reply = send(conn, {"cmd": "background", "hdri": True})
+    if not (reply.get("ok") and reply["render_hdri_background"] is True):
+        fail(f"HDRI background enable failed: {reply}")
+    reply = send(conn, {"cmd": "ground", "enabled": True})
+    if not (reply.get("ok") and reply["hdri_ground"] is True):
+        fail(f"ground enable for alignment failed: {reply}")
+    reply = send(conn, {
+        "cmd": "hdri_alignment", "height": 7.5, "rotation": -37.5})
+    if not (reply.get("ok")
+            and abs(reply["hdri_height"] - 7.5) < 1e-6
+            and abs(reply["hdri_rotation"] + 37.5) < 1e-6):
+        fail(f"HDRI alignment update failed: {reply}")
+    deadline = time.time() + 120
+    status = {}
+    while time.time() < deadline:
+        time.sleep(1.0)
+        status = send(conn, {"cmd": "status"})
+        if (not status.get("busy") and status.get("passes", 0) >= 2
+                and abs(status.get("hdri_height", 0.0) - 7.5) < 1e-6
+                and abs(status.get("hdri_rotation", 0.0) + 37.5) < 1e-6):
+            break
+    if not (status.get("render_hdri_background") is True
+            and status.get("hdri_ground") is True
+            and status.get("passes", 0) >= 2
+            and abs(status.get("hdri_height", 0.0) - 7.5) < 1e-6
+            and abs(status.get("hdri_rotation", 0.0) + 37.5) < 1e-6
+            and isinstance(status.get("active_hdr_file"), str)
+            and os.path.isfile(status["active_hdr_file"])
+            and os.path.normcase(os.path.abspath(status["active_hdr_file"])) !=
+                os.path.normcase(os.path.abspath(status["hdr_file"]))):
+        fail(f"HDRI alignment did not produce a live render: {status}")
+    print("HDRI background and vertical alignment restart: OK")
 
     # lookat can also resize the render film to the sender's viewport.
     reply = send(conn, {"cmd": "cameraEyeTarget",
@@ -368,6 +476,7 @@ def live_tests():
 
 if __name__ == "__main__":
     frame_tests()
+    hdri_alignment_tests()
     if "--offline" in sys.argv[1:]:
         print("offline mode: skipping the live controller run")
     else:

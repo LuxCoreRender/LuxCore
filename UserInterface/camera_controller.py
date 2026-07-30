@@ -17,7 +17,7 @@ Controls:
   Space                   → force film refresh
 """
 
-import os, sys, math, re, queue, threading, json, socket, struct, ctypes
+import os, sys, math, re, queue, threading, json, socket, struct, ctypes, hashlib, tempfile
 from array import array
 try:
     from tkinterdnd2 import COPY, DND_FILES, TkinterDnD
@@ -44,6 +44,10 @@ if sys.stdout is None or sys.stderr is None:
     sys.stdout = sys.stdout or _console_log
     sys.stderr = sys.stderr or _console_log
 
+_dll_search_paths = (os.path.dirname(sys.executable), LUXCORE_BIN, PYLUXCORE_PATH)
+os.environ["PATH"] = os.pathsep.join(
+    dict.fromkeys((*_dll_search_paths, os.environ.get("PATH", ""))))
+_python_dll_directory = os.add_dll_directory(os.path.dirname(sys.executable))
 _luxcore_dll_directory = os.add_dll_directory(LUXCORE_BIN)
 _nvrtc_library = os.environ.get("LUXRAYS_NVRTC_LIBRARY", CUDA_12_4_NVRTC)
 if os.path.isfile(_nvrtc_library):
@@ -61,6 +65,10 @@ from tkinter import colorchooser, filedialog, ttk
 
 # ── Defaults ──────────────────────────────────────────────────────────────────
 DEFAULT_HDRI_FILE   = "hdre_055.hdr"  # fallback if settings has no valid hdr_file
+HDRI_ALIGNMENT_CACHE_DIR = os.path.join(
+    tempfile.gettempdir(), "luxcore-hdri-alignment")
+HDRI_ALIGNMENT_CACHE_VERSION = 1
+HDRI_GROUND_SOURCE_TOKEN = "__LUXCORE_ALIGNED_HDRI_SOURCE__"
 # Downsample large HDR/EXR lighting maps in memory to a 2K-wide proxy.
 # The camera-only background retains the original source resolution.
 HDRI_DOWNSAMPLE_SCALE = 0.125
@@ -115,14 +123,15 @@ UPLOAD_APPLY_MS      = 500        # auto-apply delay after streamed uploads
 AO_WHITE_MATERIAL = "\n".join((
     "scene.materials.ao_white.type = matte",
     "scene.materials.ao_white.kd = 1.0 1.0 1.0"))
-# The flat overhead lamp: emitted radiance and its size relative to the
-# scene bounds. At 1.25x half-extent and 0.75x height, top surfaces see
-# ~73% of the lamp's radiance, so 1.4 maps them to white after the
-# linear AO tonemap.
+# The flat overhead lamp matches the tracked geometry's XY bounding box
+# and floats directly over it, so the softbox is exactly as big as the
+# object. Its established emission is retained independently of size; the
+# lamp is hidden from glossy/specular continuation rays to keep the AO view
+# free of visible softbox reflections.
 AO_LAMP_NAME = "ao_lamp"
 AO_LAMP_EMISSION = 1.4
-AO_LAMP_HALF_EXTENT_FACTOR = 1.25
-AO_LAMP_HEIGHT_FACTOR = 0.75
+AO_LAMP_HEIGHT_FACTOR = 0.75    # lamp height above the bounds top vs extent
+AO_LAMP_MIN_HALF_EXTENT = 0.05  # minimum lamp half-size vs extent
 # The overhead softbox remains the dominant AO illumination. A small white
 # dome fill prevents curved, self-occluded areas (such as a torus crest)
 # from collapsing to absolute black because of local normal discontinuities.
@@ -195,6 +204,7 @@ GROUND_MIRROR_MESH_NAME = "hdri_ground_mirror_mesh"
 GROUND_SEGMENTS = 64          # radial columns around the disk
 GROUND_RINGS = 24             # rows at uniform view-angle steps
 GROUND_RADIUS_FACTOR = 20.0   # disk radius vs scene extent (2× original)
+GROUND_RADIUS_SCALE = 5.0     # extra enlargement of the final disk radius
 GROUND_CATCHER_LIFT = 2e-4    # catcher height above the mirror vs extent
 GROUND_MIRROR_KR = 1.0        # scales Fresnel reflection; 1.0 = physical
 GROUND_GRAY_KD = 0.4          # white-backdrop mode: floor albedo
@@ -420,6 +430,334 @@ def _ignore_luxcore_log(_message):
 def _environment_storage(path):
     """Retain full HDR precision for environment and HDRI-ground maps."""
     return "float"
+def _hdri_yaw_matrix(rotation_degrees):
+    """Return LuxCore's column-major world-Z yaw transform for an HDRI."""
+    yaw = math.radians(rotation_degrees)
+    cos_yaw, sin_yaw = math.cos(yaw), math.sin(yaw)
+    return (
+        cos_yaw, sin_yaw, 0.0, 0.0,
+        -sin_yaw, cos_yaw, 0.0, 0.0,
+        0.0, 0.0, 1.0, 0.0,
+        0.0, 0.0, 0.0, 1.0,
+    )
+
+def _hdri_vertical_offset_pixels(height_degrees, image_height):
+    """Convert a height control value to a half-rate equirectangular row offset."""
+    return float(height_degrees) * float(image_height) / 360.0
+def _read_radiance_header(stream):
+    """Read a Radiance RGBE header and its canonical equirectangular dimensions."""
+    header = bytearray()
+    first_line = stream.readline()
+    if not first_line.startswith(b"#?"):
+        raise ValueError("The HDRI is not a Radiance RGBE file")
+    header.extend(first_line)
+    while True:
+        line = stream.readline()
+        if not line:
+            raise ValueError("The Radiance HDRI header is incomplete")
+        header.extend(line)
+        if line in (b"\n", b"\r\n"):
+            break
+    if b"FORMAT=32-bit_rle_rgbe" not in header:
+        raise ValueError("Only 32-bit_rle_rgbe Radiance HDRIs can be vertically shifted")
+    resolution = stream.readline().decode("ascii", "replace").strip()
+    match = re.fullmatch(r"-Y\s+(\d+)\s+\+X\s+(\d+)", resolution)
+    if not match:
+        raise ValueError(
+            "HDRI vertical offset requires standard '-Y height +X width' orientation")
+    height, width = (int(value) for value in match.groups())
+    if width <= 0 or height <= 0:
+        raise ValueError("The Radiance HDRI dimensions are invalid")
+    return bytes(header), width, height
+
+def _read_radiance_scanline(stream, width):
+    """Read one RGBE row, accepting modern and legacy Radiance encodings."""
+    first = stream.read(4)
+    if len(first) != 4:
+        raise ValueError("The Radiance HDRI ended before all pixels were read")
+    if (8 <= width <= 0x7fff and first[0] == 2 and first[1] == 2
+            and not (first[2] & 0x80)
+            and ((first[2] << 8) | first[3]) == width):
+        components = []
+        for _ in range(4):
+            values = bytearray()
+            while len(values) < width:
+                code = stream.read(1)
+                if not code:
+                    raise ValueError("The Radiance HDRI ended inside an RLE scanline")
+                count = code[0]
+                if count > 128:
+                    count -= 128
+                    value = stream.read(1)
+                    if not value or count == 0 or len(values) + count > width:
+                        raise ValueError("The Radiance HDRI has invalid RLE data")
+                    values.extend(value * count)
+                else:
+                    literal = stream.read(count)
+                    if count == 0 or len(literal) != count or len(values) + count > width:
+                        raise ValueError("The Radiance HDRI has invalid RLE data")
+                    values.extend(literal)
+            components.append(values)
+        row = bytearray(width * 4)
+        for component, values in enumerate(components):
+            row[component::4] = values
+        return bytes(row)
+
+    row = bytearray(width * 4)
+    row[:4] = first
+    previous = first
+    index = 1
+    repeat_shift = 0
+    while index < width:
+        pixel = stream.read(4)
+        if len(pixel) != 4:
+            raise ValueError("The Radiance HDRI ended inside a legacy scanline")
+        if pixel[:3] == b"\x01\x01\x01":
+            count = pixel[3] << repeat_shift
+            if count == 0 or index + count > width:
+                raise ValueError("The Radiance HDRI has invalid legacy RLE data")
+            for _ in range(count):
+                row[index * 4:(index + 1) * 4] = previous
+                index += 1
+            repeat_shift += 8
+        else:
+            row[index * 4:(index + 1) * 4] = pixel
+            previous = pixel
+            index += 1
+            repeat_shift = 0
+    return bytes(row)
+
+def _write_radiance_component(stream, values):
+    """Write one modern Radiance RLE component stream."""
+    index = 0
+    length = len(values)
+    while index < length:
+        run = 1
+        while (index + run < length and run < 127
+               and values[index + run] == values[index]):
+            run += 1
+        if run >= 4:
+            stream.write(bytes((128 + run, values[index])))
+            index += run
+            continue
+        literal_start = index
+        while index < length:
+            run = 1
+            while (index + run < length and run < 127
+                   and values[index + run] == values[index]):
+                run += 1
+            if run >= 4 or index - literal_start >= 128:
+                break
+            index += 1
+        literal = values[literal_start:index]
+        stream.write(bytes((len(literal),)))
+        stream.write(literal)
+
+def _write_radiance_scanline(stream, row, width):
+    """Write an RGBE row using modern Radiance RLE when its width permits it."""
+    if not 8 <= width <= 0x7fff:
+        stream.write(row)
+        return
+    stream.write(bytes((2, 2, width >> 8, width & 0xff)))
+    for component in range(4):
+        _write_radiance_component(stream, row[component::4])
+
+def _rgbe_row_to_rgb(row):
+    """Decode one packed RGBE row to scene-linear float RGB values."""
+    try:
+        import numpy
+    except ImportError as ex:
+        raise RuntimeError(
+            "HDRI vertical offset requires numpy: python -m pip install numpy") from ex
+    rgbe = numpy.frombuffer(row, dtype=numpy.uint8).reshape(-1, 4)
+    rgb = numpy.zeros((len(rgbe), 3), dtype=numpy.float32)
+    active = rgbe[:, 3] != 0
+    if numpy.any(active):
+        scale = numpy.ldexp(
+            numpy.ones(int(numpy.count_nonzero(active)), dtype=numpy.float32),
+            rgbe[active, 3].astype(numpy.int16) - 136)
+        rgb[active] = rgbe[active, :3].astype(numpy.float32) * scale[:, None]
+    return rgb
+
+def _rgb_row_to_rgbe(rgb):
+    """Encode scene-linear float RGB values to one packed RGBE row."""
+    try:
+        import numpy
+    except ImportError as ex:
+        raise RuntimeError(
+            "HDRI vertical offset requires numpy: python -m pip install numpy") from ex
+    rgb = numpy.maximum(rgb, 0.0)
+    maximum = rgb.max(axis=1)
+    row = numpy.zeros((len(rgb), 4), dtype=numpy.uint8)
+    active = maximum > 1e-32
+    if numpy.any(active):
+        mantissa, exponent = numpy.frexp(maximum[active])
+        scale = mantissa * 256.0 / maximum[active]
+        row[active, :3] = numpy.clip(
+            rgb[active] * scale[:, None], 0.0, 255.0).astype(numpy.uint8)
+        row[active, 3] = numpy.clip(exponent + 128, 0, 255).astype(numpy.uint8)
+    return row.tobytes()
+
+def _interpolate_rgbe_rows(first, second, fraction):
+    """Linearly interpolate two RGBE rows in scene-linear radiance space."""
+    first_rgb = _rgbe_row_to_rgb(first)
+    second_rgb = _rgbe_row_to_rgb(second)
+    return _rgb_row_to_rgbe(first_rgb * (1.0 - fraction) + second_rgb * fraction)
+
+def _remap_radiance_hdr(source_file, destination_file, vertical_offset_pixels):
+    """Shift a Radiance RGBE panorama without loading the entire image at once."""
+    with open(source_file, "rb") as source:
+        header, width, height = _read_radiance_header(source)
+        with open(destination_file, "wb") as destination:
+            destination.write(header)
+            destination.write(f"-Y {height} +X {width}\n".encode("ascii"))
+            rows = {}
+            last_loaded = -1
+
+            def source_row(index):
+                nonlocal last_loaded
+                while last_loaded < index:
+                    last_loaded += 1
+                    rows[last_loaded] = _read_radiance_scanline(source, width)
+                return rows[index]
+
+            for output_y in range(height):
+                source_y = min(
+                    float(height - 1),
+                    max(0.0, output_y + vertical_offset_pixels))
+                lower = int(math.floor(source_y))
+                fraction = source_y - lower
+                upper = min(lower + 1, height - 1)
+                first = source_row(lower)
+                if fraction > 1e-8 and upper != lower:
+                    row = _interpolate_rgbe_rows(first, source_row(upper), fraction)
+                else:
+                    row = first
+                _write_radiance_scanline(destination, row, width)
+                for index in tuple(rows):
+                    if index < lower:
+                        del rows[index]
+def _openexr_dimensions(source_file):
+    """Return an OpenEXR HDRI's dimensions without decoding any channels."""
+    try:
+        import OpenEXR
+    except ImportError as ex:
+        raise RuntimeError("EXR HDRI vertical offset requires OpenEXR") from ex
+    source = OpenEXR.InputFile(source_file)
+    try:
+        data_window = source.header()["dataWindow"]
+        width = data_window.max.x - data_window.min.x + 1
+        height = data_window.max.y - data_window.min.y + 1
+        if width <= 0 or height <= 0:
+            raise ValueError("The EXR HDRI dimensions are invalid")
+        return width, height
+    finally:
+        source.close()
+
+def _remap_openexr(source_file, destination_file, vertical_offset_pixels):
+    """Shift an OpenEXR panorama while preserving its scene-linear float RGB."""
+    try:
+        import Imath
+        import OpenEXR
+        import numpy
+    except ImportError as ex:
+        raise RuntimeError(
+            "EXR HDRI vertical offset requires OpenEXR and numpy") from ex
+    width, height = _openexr_dimensions(source_file)
+    source = OpenEXR.InputFile(source_file)
+    try:
+        positions = numpy.clip(
+            numpy.arange(height, dtype=numpy.float32) + vertical_offset_pixels,
+            0.0, float(height - 1))
+        lower = numpy.floor(positions).astype(numpy.intp)
+        upper = numpy.minimum(lower + 1, height - 1)
+        fraction = (positions - lower).astype(numpy.float32)[:, None]
+        pixel_type = Imath.PixelType(Imath.PixelType.FLOAT)
+        channels = {}
+        for channel_name in ("R", "G", "B"):
+            try:
+                pixels = numpy.frombuffer(
+                    source.channel(channel_name, pixel_type),
+                    dtype=numpy.float32).reshape(height, width)
+            except Exception as ex:
+                raise ValueError(
+                    f"The EXR HDRI does not have a readable {channel_name} channel") from ex
+            shifted = (pixels[lower] * (1.0 - fraction)
+                       + pixels[upper] * fraction)
+            channels[channel_name] = numpy.ascontiguousarray(
+                shifted, dtype=numpy.float32).tobytes()
+        header = OpenEXR.Header(width, height)
+        header["channels"] = {
+            name: Imath.Channel(pixel_type) for name in ("R", "G", "B")}
+        output = OpenEXR.OutputFile(destination_file, header)
+        try:
+            output.writePixels(channels)
+        finally:
+            output.close()
+    finally:
+        source.close()
+
+def _aligned_hdri_file(source_file, height_degrees):
+    """Return the source HDRI or a cached equirectangular vertical remap."""
+    source_file = os.path.abspath(source_file)
+    if abs(float(height_degrees)) < 1e-8:
+        return source_file
+    if not os.path.isfile(source_file):
+        raise ValueError(f"HDRI file is unavailable: {source_file}")
+    extension = os.path.splitext(source_file)[1].lower()
+    if extension not in (".hdr", ".exr"):
+        raise ValueError("HDRI vertical offset requires a .hdr or .exr file")
+    source_info = os.stat(source_file)
+    cache_key = "\0".join((
+        str(HDRI_ALIGNMENT_CACHE_VERSION), os.path.normcase(source_file),
+        str(source_info.st_size), str(source_info.st_mtime_ns),
+        f"{float(height_degrees):.4f}"))
+    cache_name = hashlib.sha256(cache_key.encode("utf-8")).hexdigest() + extension
+    os.makedirs(HDRI_ALIGNMENT_CACHE_DIR, exist_ok=True)
+    cache_file = os.path.join(HDRI_ALIGNMENT_CACHE_DIR, cache_name)
+    if os.path.isfile(cache_file) and os.path.getsize(cache_file) > 0:
+        return cache_file
+    temporary_file = (
+        f"{cache_file}.{os.getpid()}.{threading.get_ident()}.tmp")
+    try:
+        if extension == ".hdr":
+            with open(source_file, "rb") as source:
+                _, _, height = _read_radiance_header(source)
+            _remap_radiance_hdr(
+                source_file, temporary_file,
+                _hdri_vertical_offset_pixels(height_degrees, height))
+        else:
+            _, height = _openexr_dimensions(source_file)
+            _remap_openexr(
+                source_file, temporary_file,
+                _hdri_vertical_offset_pixels(height_degrees, height))
+        os.replace(temporary_file, cache_file)
+    finally:
+        try:
+            os.remove(temporary_file)
+        except FileNotFoundError:
+            pass
+    return cache_file
+
+def _hdri_ground_uv(phi, alpha, transform):
+    """Map a ground-projection direction through the HDRI transform to UV."""
+    # The disk's original projection is a direction in the lower hemisphere:
+    # alpha=0 is the nadir at its center and alpha=pi/2 its horizon at the rim.
+    sin_alpha, cos_alpha = math.sin(alpha), math.cos(alpha)
+    world_x = sin_alpha * math.cos(phi)
+    world_y = sin_alpha * math.sin(phi)
+    world_z = -cos_alpha
+    # The infinite light samples inverse(lightToWorld) * world direction.
+    # For the orthonormal rotation matrix above that inverse is its transpose.
+    local_x = (world_x * transform[0] + world_y * transform[1]
+               + world_z * transform[2])
+    local_y = (world_x * transform[4] + world_y * transform[5]
+               + world_z * transform[6])
+    local_z = (world_x * transform[8] + world_y * transform[9]
+               + world_z * transform[10])
+    u = (math.atan2(local_y, local_x) / (2.0 * math.pi)) % 1.0
+    v = math.acos(max(-1.0, min(1.0, local_z))) / math.pi
+    return u, v
 
 def _set_environment_visibility(props, prefix, camera_visible, direct_visible,
                                 indirect_diffuse, indirect_glossy,
@@ -437,7 +775,8 @@ def _set_environment_visibility(props, prefix, camera_visible, direct_visible,
         f"{prefix}.visibility.indirect.specular.enable", [indirect_specular]))
 
 def _apply_environment_maps(scene, source_file, gain, render_hdri_background=True,
-                            ao_mode=False):
+                            ao_mode=False, hdri_height=0.0,
+                            hdri_rotation=0.0):
     """Use a reduced lighting map plus an HDRI, white, or AO-dome background."""
     props = pyluxcore.Properties()
     lighting_prefix = "scene.lights.hdri"
@@ -469,13 +808,17 @@ def _apply_environment_maps(scene, source_file, gain, render_hdri_background=Tru
                                     False, False, True)
         scene.Parse(props)
         scene.RemoveUnusedImageMaps()
-        return
+        return None
+    source_file = _aligned_hdri_file(source_file, hdri_height)
     storage = _environment_storage(source_file)
+    transform = _hdri_yaw_matrix(hdri_rotation)
     props.Set(pyluxcore.Property(f"{lighting_prefix}.type", ["infinite"]))
     props.Set(pyluxcore.Property(f"{lighting_prefix}.file", [source_file]))
     props.Set(pyluxcore.Property(f"{lighting_prefix}.colorspace", ["nop"]))
     props.Set(pyluxcore.Property(f"{lighting_prefix}.storage", [storage]))
     props.Set(pyluxcore.Property(f"{lighting_prefix}.gain", [gain, gain, gain]))
+    props.Set(pyluxcore.Property(
+        f"{lighting_prefix}.transformation", list(transform)))
     props.Set(pyluxcore.Property(f"{lighting_prefix}.resizepolicy.enable", [True]))
     # With an HDRI camera background, specular continuations use the sharp
     # background map. Otherwise they use this lighting map.
@@ -488,6 +831,8 @@ def _apply_environment_maps(scene, source_file, gain, render_hdri_background=Tru
         props.Set(pyluxcore.Property(f"{background_prefix}.colorspace", ["nop"]))
         props.Set(pyluxcore.Property(f"{background_prefix}.storage", [storage]))
         props.Set(pyluxcore.Property(f"{background_prefix}.gain", [gain, gain, gain]))
+        props.Set(pyluxcore.Property(
+            f"{background_prefix}.transformation", list(transform)))
         props.Set(pyluxcore.Property(
             f"{background_prefix}.resizepolicy.enable", [False]))
         # The full-resolution background remains visible to camera,
@@ -503,6 +848,7 @@ def _apply_environment_maps(scene, source_file, gain, render_hdri_background=Tru
 
     scene.Parse(props)
     scene.RemoveUnusedImageMaps()
+    return source_file
 
 # ── External control protocol ───────────────────────────────────────────────
 def _recv_exact(conn, count):
@@ -589,6 +935,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         self._window_geometry_save_id = None
         self._window_geometry_poll_id = None
         self._hdr_file = _setting_hdr_file(self._settings)
+        self._active_hdri_file = self._hdr_file or DEFAULT_HDRI_FILE
         self._control_port_setting = int(_setting_float(
             self._settings, "control_port", DEFAULT_CONTROL_PORT, 0, 65535))
         self._control_port = self._control_port_setting
@@ -620,6 +967,10 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             value=math.log10(max(0.0001, min(100.0, saved_hdri_gain))))
         self._hdri_gain_jog = tk.DoubleVar(value=0.0)
         self._hdri_gain_jog_in_progress = False
+        self._hdri_height = tk.DoubleVar(value=_setting_float(
+            self._settings, "hdri_height", 0.0, -45.0, 45.0))
+        self._hdri_rotation = tk.DoubleVar(value=_setting_float(
+            self._settings, "hdri_rotation", 0.0, -180.0, 180.0))
         self._render_hdri_background = tk.BooleanVar(value=_setting_bool(
             self._settings, "render_hdri_background", True))
         self._ao_mode = tk.BooleanVar(value=_setting_bool(
@@ -764,6 +1115,8 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             "target": self._target,
             "exposure": self.exposure.get(),
             "hdri_gain": 10.0 ** self._hdri_gain_log.get(),
+            "hdri_height": self._hdri_height.get(),
+            "hdri_rotation": self._hdri_rotation.get(),
             "render_hdri_background": self._render_hdri_background.get(),
             "ao_mode": self._ao_mode.get(),
             "hdri_ground": self._hdri_ground.get(),
@@ -943,13 +1296,11 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             # texture dependency, so it needs no rebuild.
             ground_meshes, ground_text = self._hdri_ground_update(hdr_file)
             scene_update = ([], ground_meshes, [ground_text], [])
-        threading.Thread(
-            target=self._do_restart_session,
-            args=(self._render_width, self._render_height, "full",
-                  self._camera_snapshot, hdr_file, gain,
-                  self._render_hdri_background.get(), self._ao_mode.get()),
-            kwargs={"scene_update": scene_update},
-            daemon=True).start()
+        self._start_restart_worker(
+            self._render_width, self._render_height, "full",
+            self._camera_snapshot, hdr_file=hdr_file, hdri_gain=gain,
+            render_hdri_background=self._render_hdri_background.get(),
+            ao_mode=self._ao_mode.get(), scene_update=scene_update)
 
     # ── UI ────────────────────────────────────────────────────────────────────
     def _build_ui(self):
@@ -975,7 +1326,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         tk.Checkbutton(panel, text="Ambient Occlusion (clay)",
                        variable=self._ao_mode
                        ).grid(row=3, column=0, sticky="w", **pad)
-        tk.Checkbutton(panel, text="HDRI Ground Plane",
+        tk.Checkbutton(panel, text="Ground Plane",
                        variable=self._hdri_ground
                        ).grid(row=4, column=0, sticky="w", **pad)
 
@@ -1040,6 +1391,30 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             font=("Segoe UI", 9, "bold"), width=22,
             command=self._stop_rendering)
         self._render_button.grid(row=11, column=0, pady=(0, 6))
+        hdri_height_frame = tk.Frame(panel)
+        hdri_height_frame.grid(row=12, column=0, sticky="ew", padx=6)
+        tk.Label(hdri_height_frame, text="HDRI Height").grid(
+            row=0, column=0, sticky="w")
+        self._hdri_height_value_label = tk.Label(
+            hdri_height_frame, width=7, anchor="e",
+            font=("Consolas", 9), fg="#444")
+        self._hdri_height_value_label.grid(row=0, column=1, sticky="e")
+        tk.Scale(hdri_height_frame, from_=-45.0, to=45.0, resolution=0.1,
+                 orient=tk.HORIZONTAL, variable=self._hdri_height,
+                 length=188, showvalue=False, command=self._on_hdri_alignment
+                 ).grid(row=1, column=0, columnspan=2, sticky="ew")
+        hdri_rotation_frame = tk.Frame(panel)
+        hdri_rotation_frame.grid(row=13, column=0, sticky="ew", padx=6, pady=(1, 0))
+        tk.Label(hdri_rotation_frame, text="HDRI Rotation").grid(
+            row=0, column=0, sticky="w")
+        self._hdri_rotation_value_label = tk.Label(
+            hdri_rotation_frame, width=7, anchor="e",
+            font=("Consolas", 9), fg="#444")
+        self._hdri_rotation_value_label.grid(row=0, column=1, sticky="e")
+        tk.Scale(hdri_rotation_frame, from_=-180.0, to=180.0, resolution=0.1,
+                 orient=tk.HORIZONTAL, variable=self._hdri_rotation,
+                 length=188, showvalue=False, command=self._on_hdri_alignment
+                 ).grid(row=1, column=0, columnspan=2, sticky="ew")
 
         footer = self._render_footer_frame
         gain_frame = tk.Frame(footer)
@@ -1076,6 +1451,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
                  command=lambda _: self._on_ground_appearance_changed()
                  ).pack(side=tk.LEFT)
         self._update_hdri_gain_label()
+        self._update_hdri_alignment_labels()
         self._update_ground_color_button()
 
     # ── Session ───────────────────────────────────────────────────────────────
@@ -1131,14 +1507,15 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             self._scene = pyluxcore.Scene(scene_props, resize_props)
             _source_file = self._hdr_file or DEFAULT_HDRI_FILE
             _gain = 10.0 ** self._hdri_gain_log.get()
-            _apply_environment_maps(
+            self._active_hdri_file = _apply_environment_maps(
                 self._scene, _source_file, _gain,
-                self._render_hdri_background.get(), self._ao_mode.get())
+                self._render_hdri_background.get(), self._ao_mode.get(),
+                self._hdri_height.get(), self._hdri_rotation.get())
             if self._ao_mode.get():
                 lamp_props = pyluxcore.Properties()
                 lamp_props.SetFromString(self._ao_lamp_scene_text())
                 self._scene.Parse(lamp_props)
-            elif self._hdri_ground.get():
+            if self._hdri_ground.get():
                 ground_meshes, ground_text = self._hdri_ground_update()
                 for mesh_name, mesh_data in ground_meshes.items():
                     mesh_kwargs = {}
@@ -1150,6 +1527,10 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
                         mesh_name, mesh_data["points"],
                         mesh_data["triangles"], **mesh_kwargs)
                 ground_props = pyluxcore.Properties()
+                if HDRI_GROUND_SOURCE_TOKEN in ground_text:
+                    ground_text = ground_text.replace(
+                        HDRI_GROUND_SOURCE_TOKEN,
+                        self._active_hdri_file.replace("\\", "/"))
                 ground_props.SetFromString(ground_text)
                 self._scene.Parse(ground_props)
             self._config = pyluxcore.RenderConfig(props, self._scene)
@@ -1210,13 +1591,43 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         self._render_win.title(f"{WINDOW_TITLE} — Restarting...")
         self.after(1, self._start_session)
 
-    def _do_restart_session(self, width, height, mode, camera_snapshot,
+    def _start_restart_worker(self, width, height, mode, camera_snapshot,
+                              hdr_file=None, hdri_gain=None,
+                              render_hdri_background=None, ao_mode=None,
+                              hdri_height=None, hdri_rotation=None,
+                              scene_update=None):
+        """Capture Tk state, then launch a renderer-only restart worker."""
+        if render_hdri_background is None:
+            render_hdri_background = bool(self._render_hdri_background.get())
+        if ao_mode is None:
+            ao_mode = bool(self._ao_mode.get())
+        if hdri_height is None:
+            hdri_height = float(self._hdri_height.get())
+        if hdri_rotation is None:
+            hdri_rotation = float(self._hdri_rotation.get())
+        threading.Thread(
+            target=self._do_restart_session,
+            args=(width, height, mode, camera_snapshot),
+            kwargs={
+                "hdr_file": hdr_file,
+                "hdri_gain": hdri_gain,
+                "render_hdri_background": render_hdri_background,
+                "ao_mode": bool(ao_mode),
+                "hdri_height": hdri_height,
+                "hdri_rotation": hdri_rotation,
+                "scene_update": scene_update,
+            },
+            daemon=True).start()
+
+    def _do_restart_session(self, width, height, mode, camera_snapshot, *,
                             hdr_file=None, hdri_gain=None,
-                            render_hdri_background=None, ao_mode=None,
+                            render_hdri_background=None, ao_mode,
+                            hdri_height=0.0, hdri_rotation=0.0,
                             scene_update=None):
         """Restart a session at the requested resolution in a background thread."""
         succeeded = False
         error_message = None
+        active_hdri_file = None
         try:
             with self._restart_lock:
                 try:
@@ -1228,8 +1639,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
                     restart_props = (pyluxcore.Properties()
                         .Set(pyluxcore.Property("film.width", [width]))
                         .Set(pyluxcore.Property("film.height", [height])))
-                    effective_ao_mode = (bool(ao_mode) if ao_mode is not None
-                                         else self._ao_mode.get())
+                    effective_ao_mode = bool(ao_mode)
                     if not effective_ao_mode:
                         restart_props.SetFromString(_reinhard_tonemap(exp))
                     if (hdr_file or hdri_gain is not None
@@ -1240,9 +1650,10 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
                         )
                         _gain = hdri_gain if hdri_gain is not None else (
                             10.0 ** self._hdri_gain_log.get())
-                        _apply_environment_maps(
+                        active_hdri_file = _apply_environment_maps(
                             self._scene, _source_file, _gain,
-                            render_hdri_background, bool(ao_mode))
+                            render_hdri_background, bool(ao_mode),
+                            hdri_height, hdri_rotation)
                     if scene_update:
                         (config_texts, meshes, scene_texts,
                          delete_objects) = scene_update
@@ -1271,6 +1682,13 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
                                 mesh_name, data["points"], data["triangles"],
                                 **mesh_kwargs)
                         for text in scene_texts:
+                            if HDRI_GROUND_SOURCE_TOKEN in text:
+                                if not active_hdri_file:
+                                    raise RuntimeError(
+                                        "HDRI ground needs an active environment map")
+                                text = text.replace(
+                                    HDRI_GROUND_SOURCE_TOKEN,
+                                    active_hdri_file.replace("\\", "/"))
                             extra = pyluxcore.Properties()
                             extra.SetFromString(text)
                             self._scene.Parse(extra)
@@ -1288,7 +1706,8 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
                     error_message = str(ex)
         finally:
             self._restart_results.put(
-                (mode, camera_snapshot[-1], succeeded, error_message, hdr_file))
+                (mode, camera_snapshot[-1], succeeded, error_message, hdr_file,
+                 active_hdri_file))
 
     def _process_restart_results(self):
         """Consume completed background restart results on the Tk event loop."""
@@ -1300,7 +1719,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         self.after(25, self._process_restart_results)
 
     def _finish_restart(self, mode, started_revision, succeeded, error_message,
-                        hdr_file=None):
+                        hdr_file=None, active_hdri_file=None):
         """Apply a completed restart result and queue newer camera work when required."""
         if mode == "preview":
             self._preview_restart_in_progress = False
@@ -1313,6 +1732,8 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         if hdr_file:
             self._hdr_file = hdr_file
             self._save_settings()
+        if active_hdri_file:
+            self._active_hdri_file = active_hdri_file
         # A preview session is a clean, complete image even when input has
         # advanced since it began. Show it for responsive feedback, then queue
         # the next snapshot. Full-resolution output remains exact-only.
@@ -1347,10 +1768,8 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             return
         self._preview_restart_in_progress = True
         camera_snapshot = self._camera_snapshot
-        threading.Thread(
-            target=self._do_restart_session,
-            args=(PREVIEW_W, PREVIEW_H, "preview", camera_snapshot),
-            daemon=True).start()
+        self._start_restart_worker(
+            PREVIEW_W, PREVIEW_H, "preview", camera_snapshot)
 
     def _restart_full_session(self):
         """Start a full-resolution render for the latest camera snapshot."""
@@ -1358,10 +1777,8 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         if self._render_stopped:
             return
         camera_snapshot = self._camera_snapshot
-        threading.Thread(
-            target=self._do_restart_session,
-            args=(self._render_width, self._render_height, "full", camera_snapshot),
-            daemon=True).start()
+        self._start_restart_worker(
+            self._render_width, self._render_height, "full", camera_snapshot)
 
     # ── Camera ───────────────────────────────────────────────────────────
     def _cam_orig(self):
@@ -1406,11 +1823,9 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         self._camera_revision += 1
         self._camera_snapshot = self._capture_camera_snapshot()
         self._camera_restart_pending = True
-        threading.Thread(
-            target=self._do_restart_session,
-            args=(self._render_width, self._render_height, "full",
-                  self._camera_snapshot),
-            daemon=True).start()
+        self._start_restart_worker(
+            self._render_width, self._render_height, "full",
+            self._camera_snapshot)
         return changed
 
     def _set_film_scale(self, _=None):
@@ -1454,11 +1869,9 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         self._camera_revision += 1
         self._camera_snapshot = self._capture_camera_snapshot()
         self._camera_restart_pending = True
-        threading.Thread(
-            target=self._do_restart_session,
-            args=(self._render_width, self._render_height, "full",
-                  self._camera_snapshot),
-            daemon=True).start()
+        self._start_restart_worker(
+            self._render_width, self._render_height, "full",
+            self._camera_snapshot)
         return changed
 
     def _zoom_at_cursor(self, e, viewport_w, viewport_h):
@@ -1506,10 +1919,14 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         self._set_camera_distance(new_dist)
         self._on_camera()
 
-    def _camera_fieldofview(self, fov, width, height):
-        """Return the LuxCore fieldofview for an override or the scene default."""
-        if fov:
-            return _luxcore_fieldofview(fov[0], fov[1], width, height)
+    def _camera_fieldofview(self, _fov, _width, _height):
+        """Return the scene FOV so the rendered HDRI keeps its wide framing.
+
+        External look-at messages retain their FOV metadata for protocol
+        compatibility, but never alter the LuxCore camera projection. This
+        keeps the HDRI background and scene geometry at the scene's 90-degree
+        camera angle through local navigation and asynchronous restarts.
+        """
         return self._scene_fieldofview
 
     def _apply_camera_props(self):
@@ -1564,10 +1981,9 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             self._camera_revision += 1
             self._camera_snapshot = self._capture_camera_snapshot()
             self._camera_restart_pending = True
-            threading.Thread(
-                target=self._do_restart_session,
-                args=(self._render_width, self._render_height, "full", self._camera_snapshot),
-                daemon=True).start()
+            self._start_restart_worker(
+                self._render_width, self._render_height, "full",
+                self._camera_snapshot)
 
     def _update_ground_color_button(self):
         """Synchronize the ground-color button swatch with its persisted color."""
@@ -1598,12 +2014,10 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         self._camera_revision += 1
         self._camera_snapshot = self._capture_camera_snapshot()
         self._camera_restart_pending = True
-        threading.Thread(
-            target=self._do_restart_session,
-            args=(self._render_width, self._render_height, "full",
-                  self._camera_snapshot),
-            kwargs={"scene_update": ([], ground_meshes, [ground_text], deletions)},
-            daemon=True).start()
+        self._start_restart_worker(
+            self._render_width, self._render_height, "full",
+            self._camera_snapshot,
+            scene_update=([], ground_meshes, [ground_text], deletions))
 
     def _on_hdri_gain(self):
         """Update HDRI gain UI and restart the render with the adjusted environment intensity."""
@@ -1615,12 +2029,11 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             self._camera_revision += 1
             self._camera_snapshot = self._capture_camera_snapshot()
             self._camera_restart_pending = True
-            threading.Thread(
-                target=self._do_restart_session,
-                args=(self._render_width, self._render_height, "full",
-                      self._camera_snapshot, None, gain,
-                      self._render_hdri_background.get(), self._ao_mode.get()),
-                daemon=True).start()
+            self._start_restart_worker(
+                self._render_width, self._render_height, "full",
+                self._camera_snapshot, hdri_gain=gain,
+                render_hdri_background=self._render_hdri_background.get(),
+                ao_mode=self._ao_mode.get())
 
     def _adjust_hdri_gain(self, value):
         """Apply one relative gain adjustment, then return the jog to center."""
@@ -1642,6 +2055,45 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         if hasattr(self, "_hdri_gain_value_label"):
             gain = 10.0 ** self._hdri_gain_log.get()
             self._hdri_gain_value_label.config(text=f"{gain:.4g}")
+
+    def _update_hdri_alignment_labels(self):
+        """Show the current HDRI vertical and horizontal alignment in degrees."""
+        if hasattr(self, "_hdri_height_value_label"):
+            self._hdri_height_value_label.config(
+                text=f"{self._hdri_height.get():+.1f}°")
+        if hasattr(self, "_hdri_rotation_value_label"):
+            self._hdri_rotation_value_label.config(
+                text=f"{self._hdri_rotation.get():+.1f}°")
+
+    def _on_hdri_alignment(self, _=None):
+        """Persist HDRI alignment and restart with matching lighting and ground UVs."""
+        self._update_hdri_alignment_labels()
+        self._update_info()
+        self._save_settings()
+        if not (self._scene and self._session and not self._render_stopped):
+            return
+        # AO uses its own neutral domes. The alignment takes effect once HDRI
+        # rendering resumes, without needlessly restarting the clay stage.
+        if self._ao_mode.get():
+            return
+        scene_update = None
+        if self._hdri_ground.get():
+            ground_meshes, ground_text = self._hdri_ground_update()
+            deletions = ([] if self._render_hdri_background.get()
+                         else [GROUND_MIRROR_NAME])
+            scene_update = ([], ground_meshes, [ground_text], deletions)
+        self._camera_revision += 1
+        self._camera_snapshot = self._capture_camera_snapshot()
+        self._camera_restart_pending = True
+        self._start_restart_worker(
+            self._render_width, self._render_height, "full",
+            self._camera_snapshot,
+            hdri_gain=10.0 ** self._hdri_gain_log.get(),
+            render_hdri_background=self._render_hdri_background.get(),
+            ao_mode=False,
+            hdri_height=self._hdri_height.get(),
+            hdri_rotation=self._hdri_rotation.get(),
+            scene_update=scene_update)
     def _on_render_hdri_background_changed(self, *_):
         """Rebuild the environment and ground when HDRI background visibility changes."""
         self._update_info()
@@ -1660,13 +2112,11 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             self._camera_revision += 1
             self._camera_snapshot = self._capture_camera_snapshot()
             self._camera_restart_pending = True
-            threading.Thread(
-                target=self._do_restart_session,
-                args=(self._render_width, self._render_height, "full",
-                      self._camera_snapshot, None, gain,
-                      self._render_hdri_background.get(), self._ao_mode.get()),
-                kwargs={"scene_update": scene_update},
-                daemon=True).start()
+            self._start_restart_worker(
+                self._render_width, self._render_height, "full",
+                self._camera_snapshot, hdri_gain=gain,
+                render_hdri_background=self._render_hdri_background.get(),
+                ao_mode=self._ao_mode.get(), scene_update=scene_update)
 
     def _tracked_scene_bounds(self):
         """Union of streamed mesh bounds, or a stage-sized box at the target."""
@@ -1682,6 +2132,10 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
 
     def _hdri_ground_update(self, source_file=None):
         """Meshes and property text for the ground plane.
+
+        With AO clay mode active: a single plain white matte disk at Z = 0
+        that joins the clay look and receives the overhead lamp's
+        occlusion shadows.
 
         With the HDRI background rendered: shadow-catcher disk just above
         Z = 0 plus an archglass mirror at Z = 0 (see block comment above
@@ -1731,32 +2185,46 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
                 center_x = 0.5 * (center_x + hit_x)
                 center_y = 0.5 * (center_y + hit_y)
         # Radius must cover the frustum plus distance from hit point to
-        # disk center, with a 3× safety margin
+        # disk center, with a 3× safety margin, then enlarged by
+        # GROUND_RADIUS_SCALE so the rim stays well out of frame.
         scene_radius = GROUND_RADIUS_FACTOR * extent
         view_radius = (frustum_half_width + camera_height) * 3.0
-        disk_radius = max(scene_radius, view_radius)
+        disk_radius = GROUND_RADIUS_SCALE * max(scene_radius, view_radius)
         points = []
         uvs = []
+        hdri_transform = _hdri_yaw_matrix(self._hdri_rotation.get())
         # Center fan: the nadir maps to the bottom image row. Each segment
-        # gets its own center vertex so u interpolates cleanly per wedge.
+        # gets its own center vertex so it continues to interpolate cleanly
+        # per wedge after HDRI yaw alignment.
         for j in range(GROUND_SEGMENTS):
             points.append((center_x, center_y, ground_z))
-            uvs.append(((j + 0.5) / GROUND_SEGMENTS, 1.0))
+            uvs.append(_hdri_ground_uv(
+                2.0 * math.pi * (j + 0.5) / GROUND_SEGMENTS,
+                1e-5, hdri_transform))
         # Rings: a hemisphere point at angle alpha from the nadir projects
-        # straight up to radius disk_radius * sin(alpha). Its u = phi / 2pi
-        # and v = theta / pi match LuxCore's ToLatLongMapping, with the
-        # horizon (v = 0.5) at the rim. The seam column is duplicated with
-        # u = 1.
+        # straight up to radius disk_radius * sin(alpha). Its direction is
+        # transformed through the same HDRI yaw as the lighting and background
+        # map before it is converted to LuxCore lat-long UVs. The texture file
+        # itself has already received the matching vertical pixel offset.
         for i in range(GROUND_RINGS):
             alpha = (math.pi / 2.0) * (i + 1) / GROUND_RINGS
             radius = disk_radius * math.sin(alpha)
-            v = 1.0 - alpha / math.pi
+            previous_u = None
             for j in range(GROUND_SEGMENTS + 1):
                 phi = 2.0 * math.pi * j / GROUND_SEGMENTS
                 points.append((center_x + radius * math.cos(phi),
                                center_y + radius * math.sin(phi),
                                ground_z))
-                uvs.append((j / GROUND_SEGMENTS, v))
+                u, v = _hdri_ground_uv(phi, alpha, hdri_transform)
+                if previous_u is not None:
+                    # Keep interpolation continuous across the lat-long seam.
+                    # The duplicate last vertex naturally becomes first_u ± 1.
+                    while u - previous_u > 0.5:
+                        u -= 1.0
+                    while u - previous_u < -0.5:
+                        u += 1.0
+                uvs.append((u, v))
+                previous_u = u
         triangles = []
         ring_start = GROUND_SEGMENTS
         for j in range(GROUND_SEGMENTS):
@@ -1774,6 +2242,21 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             numpy.array([0.0, 0.0, 1.0], dtype=numpy.float32),
             (len(points), 1))
 
+        if self._ao_mode.get():
+            # AO clay mode: a plain white matte floor joins the clay stage
+            # and receives the overhead lamp's occlusion shadows. No
+            # catcher or mirror layers.
+            meshes = {GROUND_MESH_NAME: {
+                "points": base_points, "triangles": triangles_array,
+                "normals": normals_array, "uvs": None,
+            }}
+            scene_text = "\n".join((
+                f"scene.materials.{GROUND_NAME}_mat.type = matte",
+                f"scene.materials.{GROUND_NAME}_mat.kd = 1.0 1.0 1.0",
+                f"scene.objects.{GROUND_NAME}.shape = {GROUND_MESH_NAME}",
+                f"scene.objects.{GROUND_NAME}.material = {GROUND_NAME}_mat"))
+            return meshes, scene_text
+
         if not self._render_hdri_background.get():
             # White-backdrop mode: a plain gray glossy2 floor. Real geometry
             # lit by the HDRI lighting dome -- no catcher, mirror, or light
@@ -1788,10 +2271,13 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
                 "points": base_points, "triangles": triangles_array,
                 "normals": normals_array, "uvs": None,
             }}
+            # LuxCore consumes this material color in reversed channel order
+            # (blue, green, red), so emit the picked RGB swatch as B G R to
+            # make the rendered floor match the chosen ground color.
             scene_text = "\n".join((
                 f"scene.materials.{GROUND_NAME}_mat.type = glossy2",
                 f"scene.materials.{GROUND_NAME}_mat.kd = "
-                f"{color[0]} {color[1]} {color[2]}",
+                f"{color[2]} {color[1]} {color[0]}",
                 f"scene.materials.{GROUND_NAME}_mat.ks = "
                 f"{reflectivity} {reflectivity} {reflectivity}",
                 f"scene.materials.{GROUND_NAME}_mat.uroughness = "
@@ -1828,7 +2314,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         scene_text = "\n".join((
             f"scene.textures.{GROUND_NAME}_tex.type = imagemap",
             f'scene.textures.{GROUND_NAME}_tex.file = "'
-            + source.replace("\\", "/") + '"',
+            + HDRI_GROUND_SOURCE_TOKEN + '"',
             f"scene.textures.{GROUND_NAME}_tex.colorspace = nop",
             f"scene.textures.{GROUND_NAME}_tex.storage = "
             + _environment_storage(source),
@@ -1878,28 +2364,38 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
     def _ao_lamp_scene_text(self):
         """A flat, camera-invisible area light above the tracked geometry.
 
-        The quad is sized and positioned from the union of the streamed mesh
-        bounds (falling back to a stage-sized box around the orbit target),
-        with its normal facing down so it lights the scene like a softbox.
+        The quad matches the XY bounding box of the streamed mesh bounds
+        (falling back to a stage-sized box around the orbit target) and
+        floats directly over it, its normal facing down like a softbox.
         """
         mins, maxs = self._tracked_scene_bounds()
         extent = max(maxs[0] - mins[0], maxs[1] - mins[1], maxs[2] - mins[2],
                      0.001)
         center_x = 0.5 * (mins[0] + maxs[0])
         center_y = 0.5 * (mins[1] + maxs[1])
-        half = AO_LAMP_HALF_EXTENT_FACTOR * extent
-        z = maxs[2] + AO_LAMP_HEIGHT_FACTOR * extent
+        half_x = max(0.5 * (maxs[0] - mins[0]),
+                     AO_LAMP_MIN_HALF_EXTENT * extent)
+        half_y = max(0.5 * (maxs[1] - mins[1]),
+                     AO_LAMP_MIN_HALF_EXTENT * extent)
+        height = AO_LAMP_HEIGHT_FACTOR * extent
+        z = maxs[2] + height
         emission = AO_LAMP_EMISSION
-        corners = ((center_x - half, center_y - half),
-                   (center_x - half, center_y + half),
-                   (center_x + half, center_y + half),
-                   (center_x + half, center_y - half))
+        corners = ((center_x - half_x, center_y - half_y),
+                   (center_x - half_x, center_y + half_y),
+                   (center_x + half_x, center_y + half_y),
+                   (center_x + half_x, center_y - half_y))
         vertices = " ".join(f"{x:.6g} {y:.6g} {z:.6g}" for x, y in corners)
         return "\n".join((
             f"scene.materials.{AO_LAMP_NAME}_mat.type = matte",
             f"scene.materials.{AO_LAMP_NAME}_mat.kd = 0.0 0.0 0.0",
             f"scene.materials.{AO_LAMP_NAME}_mat.emission = "
             f"{emission} {emission} {emission}",
+            # Keep the lamp as a direct light while hiding the visible
+            # softbox from a glossy or mirror reflection.
+            f"scene.materials.{AO_LAMP_NAME}_mat"
+            ".visibility.indirect.glossy.enable = 0",
+            f"scene.materials.{AO_LAMP_NAME}_mat"
+            ".visibility.indirect.specular.enable = 0",
             f"scene.objects.{AO_LAMP_NAME}.material = {AO_LAMP_NAME}_mat",
             f"scene.objects.{AO_LAMP_NAME}.camerainvisible = 1",
             f"scene.objects.{AO_LAMP_NAME}.vertices = {vertices}",
@@ -1921,10 +2417,15 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
                 f"{'ao_white' if ao else material_name}")
         meshes = {}
         if ao:
-            # The clay stage hides the HDRI ground plane along with the
-            # environment; it returns when the mode is turned off.
-            deletions = ([GROUND_NAME, GROUND_MIRROR_NAME]
-                         if self._hdri_ground.get() else [])
+            # The clay stage keeps the ground plane as a white matte floor
+            # so it participates in the AO look; only the reflective
+            # mirror layer is dropped with the environment.
+            deletions = []
+            if self._hdri_ground.get():
+                deletions = [GROUND_MIRROR_NAME]
+                ground_meshes, ground_text = self._hdri_ground_update()
+                meshes.update(ground_meshes)
+                scene_lines.append(ground_text)
             scene_lines.append(self._ao_lamp_scene_text())
             config_text = AO_PATH_DEPTHS + "\n" + AO_TONEMAP
         else:
@@ -1942,24 +2443,23 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         self._camera_revision += 1
         self._camera_snapshot = self._capture_camera_snapshot()
         self._camera_restart_pending = True
-        threading.Thread(
-            target=self._do_restart_session,
-            args=(self._render_width, self._render_height, "full",
-                  self._camera_snapshot, None, gain,
-                  self._render_hdri_background.get(), ao),
-            kwargs={"scene_update": update},
-            daemon=True).start()
+        self._start_restart_worker(
+            self._render_width, self._render_height, "full",
+            self._camera_snapshot, hdri_gain=gain,
+            render_hdri_background=self._render_hdri_background.get(),
+            ao_mode=ao, scene_update=update)
 
     def _on_hdri_ground_changed(self, *_):
         """Toggle the HDRI-textured ground plane with one render restart."""
         self._save_settings()
         if not (self._scene and self._session and not self._render_stopped):
             return
-        if self._ao_mode.get():
-            return  # the plane appears when AO clay mode turns off
         if self._hdri_ground.get():
             ground_meshes, ground_text = self._hdri_ground_update()
-            deletions = ([] if self._render_hdri_background.get()
+            # The mirror layer exists only for the non-AO HDRI background
+            # stage; drop it in the other modes.
+            deletions = ([] if (self._render_hdri_background.get()
+                                and not self._ao_mode.get())
                          else [GROUND_MIRROR_NAME])
             update = ([], ground_meshes, [ground_text], deletions)
         else:
@@ -1967,12 +2467,9 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         self._camera_revision += 1
         self._camera_snapshot = self._capture_camera_snapshot()
         self._camera_restart_pending = True
-        threading.Thread(
-            target=self._do_restart_session,
-            args=(self._render_width, self._render_height, "full",
-                  self._camera_snapshot),
-            kwargs={"scene_update": update},
-            daemon=True).start()
+        self._start_restart_worker(
+            self._render_width, self._render_height, "full",
+            self._camera_snapshot, scene_update=update)
 
     # ── External control server ──────────────────────────────────────────────
     def _start_control_server(self):
@@ -2093,6 +2590,19 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             self._hdri_gain_log.set(math.log10(gain))
             self._on_hdri_gain()
             return {"ok": True, "hdri_gain": 10.0 ** self._hdri_gain_log.get()}
+        if cmd == "hdri_alignment":
+            height = max(-45.0, min(
+                45.0, float(header.get("height", self._hdri_height.get()))))
+            rotation = max(-180.0, min(
+                180.0, float(header.get("rotation", self._hdri_rotation.get()))))
+            changed = (height != self._hdri_height.get()
+                       or rotation != self._hdri_rotation.get())
+            self._hdri_height.set(height)
+            self._hdri_rotation.set(rotation)
+            if changed:
+                self._on_hdri_alignment()
+            return {"ok": True, "hdri_height": height,
+                    "hdri_rotation": rotation}
         if cmd == "hdri_file":
             path = os.path.normpath(str(header.get("path", "")))
             if not _is_env_map(path) or not os.path.isfile(path):
@@ -2260,10 +2770,13 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             "fov_axis": self._camera_fov[1] if self._camera_fov else None,
             "exposure": self.exposure.get(),
             "hdri_gain": 10.0 ** self._hdri_gain_log.get(),
+            "hdri_height": self._hdri_height.get(),
+            "hdri_rotation": self._hdri_rotation.get(),
             "render_hdri_background": bool(self._render_hdri_background.get()),
             "ao_mode": bool(self._ao_mode.get()),
             "hdri_ground": bool(self._hdri_ground.get()),
             "hdr_file": self._hdr_file or DEFAULT_HDRI_FILE,
+            "active_hdr_file": self._active_hdri_file,
             "width": self._render_width,
             "height": self._render_height,
             "viewport_width": self._display_w,
@@ -2483,7 +2996,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             # Newly streamed geometry changes the scene bounds: rebuild the
             # AO lamp so it still hovers above everything.
             scene_texts.append(self._ao_lamp_scene_text())
-        elif self._hdri_ground.get():
+        if self._hdri_ground.get():
             # Likewise, keep the ground plane under the new scene bounds.
             ground_meshes, ground_text = self._hdri_ground_update()
             meshes.update(ground_meshes)
@@ -2498,12 +3011,9 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         self._camera_revision += 1
         self._camera_snapshot = self._capture_camera_snapshot()
         self._camera_restart_pending = True
-        threading.Thread(
-            target=self._do_restart_session,
-            args=(self._render_width, self._render_height, "full",
-                  self._camera_snapshot),
-            kwargs={"scene_update": update},
-            daemon=True).start()
+        self._start_restart_worker(
+            self._render_width, self._render_height, "full",
+            self._camera_snapshot, scene_update=update)
         return {"ok": True,
                 "meshes": sorted(update[1]),
                 "scene_prop_blocks": len(update[2]),
@@ -2557,8 +3067,10 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         return img.resize((width, height), resample)
 
     def _capture_film_frame(self, fit_for_viewport=True):
-        """Copy a stable renderer film while blocking concurrent replacement."""
-        with self._restart_lock:
+        """Copy a stable renderer film without waiting for session replacement."""
+        if not self._restart_lock.acquire(blocking=False):
+            return None
+        try:
             if (not self._session or not self._session.IsStarted()
                     or self._camera_restart_pending):
                 return None
@@ -2600,6 +3112,8 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
             self._last_film_image = native_img.copy()
             img = self._fit_image_to_viewport(native_img) if fit_for_viewport else native_img
             return img, is_preview, stats, display_pipeline
+        finally:
+            self._restart_lock.release()
 
     def _update_film(self):
         """Refresh the displayed Tk image and render statistics on a timed interval."""
