@@ -670,8 +670,23 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         # One window: controller panel on the left, render viewport on the right.
         self._main_frame = tk.Frame(self)
         self._main_frame.pack()
-        self._control_panel = tk.Frame(self._main_frame)
-        self._control_panel.grid(row=0, column=0, sticky="ns")
+        self._control_shell = tk.Frame(self._main_frame)
+        self._control_shell.grid(row=0, column=0, rowspan=2, sticky="ns")
+        self._control_viewport = tk.Canvas(
+            self._control_shell, width=CONTROL_W, height=FILM_H,
+            highlightthickness=0, borderwidth=0)
+        self._control_scrollbar = ttk.Scrollbar(
+            self._control_shell, orient=tk.VERTICAL,
+            command=self._control_viewport.yview)
+        self._control_viewport.configure(
+            yscrollcommand=self._control_scrollbar.set)
+        self._control_viewport.pack(side=tk.LEFT, fill=tk.Y)
+        self._control_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self._control_panel = tk.Frame(self._control_viewport)
+        self._control_panel_window = self._control_viewport.create_window(
+            0, 0, anchor=tk.NW, window=self._control_panel, width=CONTROL_W)
+        self._control_panel.bind(
+            "<Configure>", self._update_control_panel_scrollregion)
         self._render_canvas = tk.Canvas(self._main_frame,
                                         width=FILM_W, height=FILM_H, bg="black",
                                         cursor="fleur")
@@ -1377,6 +1392,7 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
         old_film_size = self._render_width, self._render_height
         old_display_size = self._display_w, self._display_h
         self._apply_display_size()
+        self._resize_window_to_content()
         changed = ((self._render_width, self._render_height) != old_film_size
                    or (self._display_w, self._display_h) != old_display_size)
         if hasattr(self, "_film_size_label"):
@@ -2426,6 +2442,24 @@ class CameraController(TkinterDnD.Tk if TkinterDnD else tk.Tk):
                 self._display_w, self._display_h, self.film_scale.get()))
         self._render_canvas.config(width=self._display_w,
                                    height=self._display_h)
+    def _resize_window_to_content(self):
+        """Apply the current content request to the fixed-size top-level."""
+        self.update_idletasks()
+        control_height = (self._display_h
+                          + self._render_gain_frame.winfo_reqheight())
+        self._control_viewport.config(height=max(1, control_height))
+        self.update_idletasks()
+        width = self._main_frame.winfo_reqwidth()
+        height = self._main_frame.winfo_reqheight()
+        if (width, height) != (self.winfo_width(), self.winfo_height()):
+            # Supplying only the size preserves the current virtual-desktop
+            # position, including negative coordinates on a left monitor.
+            self.geometry(f"{width}x{height}")
+
+    def _update_control_panel_scrollregion(self, _=None):
+        """Keep the left control panel accessible inside its viewport."""
+        self._control_viewport.configure(
+            scrollregion=(0, 0, CONTROL_W, self._control_panel.winfo_reqheight()))
 
     def _fit_image_to_viewport(self, img):
         scale = min(self._display_w / img.width, self._display_h / img.height)

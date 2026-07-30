@@ -40,7 +40,7 @@ Clear **Render HDRI Background** to replace the full-resolution camera map with 
 The original HDR/EXR file is never rewritten. Environment and HDRI-ground image maps always use full floating-point storage, preserving high-intensity source values without changing their dimensions. The two copies coexist only while rendering the HDRI background, so switching maps or using white removes no-longer-used image maps after the new lights are installed.
 ## Viewport and film size
 
-**Viewport Base** selects the unscaled display resolution. **Window Scale** scales that viewport by `1/20`, `1/10`, `1/5`, `1/3`, `1/2`, `1`, `2`, `3`, `4`, or `5`; the render canvas and outer window follow the scaled viewport, subject to screen bounds and the fixed control panel's minimum size.
+**Viewport Base** selects the unscaled display resolution. **Window Scale** scales that viewport by `1/20`, `1/10`, `1/5`, `1/3`, `1/2`, `1`, `2`, `3`, `4`, or `5`; the render canvas and outer window follow the scaled viewport, subject to screen bounds. When the window is shorter than the controls, the left control panel scrolls instead of preventing the whole window from shrinking.
 
 **Final Film Scale** uses the same factors independently for the LuxCore output film. It is calculated from the actual display canvas after screen fitting, retains the viewport aspect ratio as closely as integer pixels allow, and proportionally caps the longest film axis at 8192 pixels. The film-size label beside the selector shows the current renderer output. For example, a displayed `512 × 288` viewport at a final-film scale of `2` renders a `1024 × 576` film which is downsampled for display. Saved films retain the native final-film dimensions.
 
