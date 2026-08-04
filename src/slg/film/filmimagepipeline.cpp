@@ -21,7 +21,6 @@
 #include <exception>
 
 #include <boost/lexical_cast.hpp>
-#include <stop_token>
 
 #include "slg/film/film.h"
 #include "slg/film/imagepipeline/imagepipeline.h"
@@ -132,11 +131,7 @@ void Film::AsyncExecuteImagePipeline(const u_int index) {
 
 	isAsyncImagePipelineRunning = true;
 
-	auto worker = [&](std::stop_token token, unsigned int index) {
-		this->ExecuteImagePipelineThreadImpl(token, index);
-		isAsyncImagePipelineRunning = false;
-	};
-	imagePipelineThread = std::make_unique<luxrays::JThread>(worker, index);
+	imagePipelineThread = std::make_unique<luxrays::JThread>(&Film::ExecuteImagePipelineThreadImpl, this, index);
 	SetThreadName(imagePipelineThread, "LxImagePipeline");
 }
 
@@ -145,29 +140,23 @@ bool Film::HasDoneAsyncExecuteImagePipeline() {
 }
 
 void Film::WaitAsyncExecuteImagePipeline() {
-	if (!imagePipelineThread) return;  // Not launched
-									   //
-	if (imagePipelineThread->joinable()) imagePipelineThread->join();
-	isAsyncImagePipelineRunning = false;
+	if (isAsyncImagePipelineRunning)
+		imagePipelineThread->join();
 }
 
 void Film::ExecuteImagePipeline(const u_int index) {
 	if (isAsyncImagePipelineRunning)
 		throw runtime_error("ExecuteImagePipeline() called while an AsyncExecuteImagePipeline() is still running");
 
-	ExecuteImagePipelineImpl(imagePipeSource.get_token(), index);
+	ExecuteImagePipelineImpl(index);
 }
 
-void Film::ExecuteImagePipelineThreadImpl(
-	std::stop_token stop_token,
-	const u_int index
-) {
-
-    ExecuteImagePipelineImpl(stop_token, index);
+void Film::ExecuteImagePipelineThreadImpl(const u_int index) {
+        ExecuteImagePipelineImpl(index);
 	isAsyncImagePipelineRunning = false;
 }
 
-void Film::ExecuteImagePipelineImpl(std::stop_token token, const u_int index) {
+void Film::ExecuteImagePipelineImpl(const u_int index) {
 	if ((!HasChannel(RADIANCE_PER_PIXEL_NORMALIZED) && !HasChannel(RADIANCE_PER_SCREEN_NORMALIZED)) ||
 			!HasChannel(IMAGEPIPELINE)) {
 		// Nothing to do
@@ -189,7 +178,6 @@ void Film::ExecuteImagePipelineImpl(std::stop_token token, const u_int index) {
 
 	// Merge all buffers
 	//const double t1 = WallClockTime();
-	if (token.stop_requested()) return;
 	if (hwEnable && hardwareDevice)
 		MergeSampleBuffersHW(index);
 	else
@@ -202,11 +190,9 @@ void Film::ExecuteImagePipelineImpl(std::stop_token token, const u_int index) {
 	//const double p1 = WallClockTime();
 
 	// Transfer all buffers to OpenCL device memory
-	if (token.stop_requested()) return;
 	if (hwEnable && hardwareDevice && imagePipelines[index]->CanUseHW())
 		WriteAllHWBuffers();
 
-	if (token.stop_requested()) return;
 	imagePipelines[index]->Apply(*this, index);
 
 	if (hwEnable && hardwareDevice)
