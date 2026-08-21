@@ -15,10 +15,13 @@ import shlex
 import itertools
 import re
 import sysconfig
+import logging
+import sys
+import runpy
 from pathlib import Path
 
 from .constants import PARAMS
-from .utils import logger, pack, fail, Colors, get_dep_version
+from .utils import logger, pack, fail, Colors, get_dep_version, run_module
 from .build import build_and_install
 from .config import config
 from .windows import win_recompose
@@ -86,13 +89,24 @@ def _get_lib_paths():
     paths_bin = (str(p.absolute()) for p in base.rglob("**/bin"))
     paths_lib = (str(p.absolute()) for p in base.rglob("**/lib"))
     paths = itertools.chain(paths_bin, paths_lib)
-    result = [ ["-l", Path(p)] for p in paths ]
+    result = [["-l", Path(p)] for p in paths]
     result = list(itertools.chain.from_iterable(result))
     return result
 
 
+def _check_repairwheel():
+    output = run_module("repairwheel", ["-V"])
+    logger.info("repairwheel version: %s", output)
+    version = output.split(".")
+    if version < ["0", "7", "0"]:
+        fail("repairwheel >= 0.7.0 is required")
+
+
 def make_wheel(args):
     """Build a wheel."""
+    # Check repairwheel
+    _check_repairwheel()
+
     # Set default build type to debug
     PARAMS.DEFAULT_BUILD_TYPE = "Debug"
 
@@ -144,7 +158,8 @@ def make_wheel(args):
         # Check Python version in extension
         extension_path = PARAMS.INSTALL_DIR / "pyluxcore"
         extensions = [
-            f.name for f in extension_path.iterdir()
+            f.name
+            for f in extension_path.iterdir()
             if f.is_file() and f.name.startswith("pyluxcore")
         ]
         for extension in extensions:
@@ -152,7 +167,7 @@ def make_wheel(args):
         else:
             raise RuntimeError(f"No extension in {extension_path}")
         try:
-            ext_version = re.search(r'\.[^.]*?(\d+)', extension).group(1)
+            ext_version = re.search(r"\.[^.]*?(\d+)", extension).group(1)
         except AttributeError:
             logger.warn(
                 f"{Colors.WARNING2}"
@@ -164,7 +179,7 @@ def make_wheel(args):
             )
 
         soabi = sysconfig.get_config_var("SOABI")
-        abi_version = re.search(r'(\d+)', soabi).group(1)
+        abi_version = re.search(r"(\d+)", soabi).group(1)
 
         if ext_version != abi_version:
             raise RuntimeError(
@@ -234,10 +249,8 @@ def make_wheel(args):
         wheel_lib_dir = PARAMS.INSTALL_DIR / "lib"
         logger.info("Repairing wheel")
         input_path = raw_wheel_dir / wheelname
-        cmd = [
-            sys.executable,
-            "-m",
-            "repairwheel",
+        logging.basicConfig(level=logging.DEBUG)
+        args = [
             "-l",
             wheel_lib_dir,
             *_get_lib_paths(),
@@ -245,11 +258,7 @@ def make_wheel(args):
             PARAMS.WHEELHOUSE_DIR,
             input_path,
         ]
-        try:
-            result = subprocess.check_output(cmd, text=True)
-        except subprocess.CalledProcessError as err:
-            fail(err)
-        logger.info(result)
+        run_module("repairwheel", args)
 
         # And, for Windows, recompose
         if platform.system() == "Windows":

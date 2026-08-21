@@ -176,6 +176,36 @@ def pack(directory, dest_dir):
     logger.info(output)
 
 
+def run_module(module, args, hide_output=False):
+    """Run a Python module on command line.
+
+    Args:
+    module -- Name of the module (str)
+    args -- List of the arguments (list of str)
+    hide_output -- Do not display output
+
+    Returns:
+    Output from stdout & stderr
+    """
+    module = str(module)
+    if not module:
+        raise ValueError("Module cannot be empty")
+    hide_output = bool(hide_output)
+
+    command = [sys.executable, "-m"] + [module] + [str(a) for a in args]
+
+    try:
+        output = subprocess.check_output(
+            command, text=True, stderr=subprocess.STDOUT
+        )
+    except subprocess.CalledProcessError as err:
+        raise RuntimeError(err.output) from err
+
+    if not hide_output:
+        logger.info(output)
+    return output
+
+
 # Initialization
 # Set-up logger
 logger.setLevel(logging.INFO)
