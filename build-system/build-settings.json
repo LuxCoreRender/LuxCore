@@ -2,12 +2,12 @@
   "DefaultVersion": {
     "major": "2",
     "minor": "11",
-    "patch": "0",
+    "patch": "2",
     "prerelease": ""
   },
   "Dependencies": {
     "user": "LuxCoreRender",
-    "release": "2.2.2"
+    "release": "2.2.3"
   },
   "Build": {
     "gcc": "14",
