@@ -18,14 +18,22 @@ BUILD_SETTINGS_FILE = THIS_FILE.parent / ".." / "build-settings.json"
 
 with open(BUILD_SETTINGS_FILE, encoding="utf-8") as config:
     config_json = json.load(config)
+
     LUXDEPS_VERSION = config_json["Dependencies"]["release"]
+
+    version = [
+        config_json["DefaultVersion"][i]
+        for i in ("major", "minor", "patch", "prerelease")
+        if i or i == "prerelease"  # prerelease is optional...
+    ]
+    LUXCORE_VERSION = ".".join(version)
 
 
 class LuxCore(ConanFile):
     """Conan recipe."""
 
     name = "luxcore"
-    version = "2.11.0"
+    version = LUXCORE_VERSION
     user = "luxcore"
     channel = "luxcore"
 
