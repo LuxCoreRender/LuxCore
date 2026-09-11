@@ -63,17 +63,17 @@ static void DefaultDebugHandler(const char *msg) {
 
 static void LuxRaysDebugHandler(const char *msg) {
 	if (logLuxRaysEnabled)
-		luxcoreLogger->info(fmt::format("[LuxRays][%.3f] {}", (WallClockTime() - lcInitTime), msg));
+		luxcoreLogger->info(fmt::format("[LuxRays][{:.3f}] {}", WallClockTime() - lcInitTime, msg));
 }
 
 static void SDLDebugHandler(const char *msg) {
 	if (logSDLEnabled)
-		luxcoreLogger->info(fmt::format("[SDL][%.3f] {}", (WallClockTime() - lcInitTime), msg));
+		luxcoreLogger->info(fmt::format("[SDL][{:.3f}] {}", WallClockTime() - lcInitTime, msg));
 }
 
 static void SLGDebugHandler(const char *msg) {
 	if (logSDLEnabled)
-		luxcoreLogger->info(fmt::format("[LuxCore][%.3f] {}", WallClockTime() - lcInitTime, msg));
+		luxcoreLogger->info(fmt::format("[LuxCore][{:.3f}] {}", WallClockTime() - lcInitTime, msg));
 }
 
 static void UpdateLuxCoreLogger() {
@@ -107,10 +107,10 @@ void luxcore::Init(void (*LogHandler)(const char *)) {
 	slg::Init();
 
 	lcInitTime = WallClockTime();
-	
+
 	slg::LuxRays_DebugHandler = ::LuxRaysDebugHandler;
 	slg::SLG_DebugHandler = ::SLGDebugHandler;
-	slg::SLG_SDLDebugHandler = ::SDLDebugHandler;	
+	slg::SLG_SDLDebugHandler = ::SDLDebugHandler;
 
 	if (LogHandler)
 		SetLogHandler(LogHandler);
@@ -125,7 +125,7 @@ void luxcore::SetLogHandler(void (*LogHandler)(const char *)) {
 
 	// User provided handler
 	loggerCallBackHandler = LogHandler;
-	
+
 	UpdateLuxCoreLogger();
 
 	API_END();
