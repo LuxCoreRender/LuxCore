@@ -187,8 +187,8 @@ void VarianceClamping::Clamp(const Film &film, SampleResult &sampleResult) const
 			Clamp3(film.channel_DIRECT_DIFFUSE->GetPixel(x, y), sampleResult.directDiffuseReflect.c);
 
 		if (film.HasChannel(Film::DIRECT_DIFFUSE_TRANSMIT))
-			Clamp3(film.channel_DIRECT_DIFFUSE_REFLECT->GetPixel(x, y), sampleResult.directDiffuseTransmit.c);
-		else if (film.HasChannel(Film::DIRECT_DIFFUSE_TRANSMIT))
+			Clamp3(film.channel_DIRECT_DIFFUSE_TRANSMIT->GetPixel(x, y), sampleResult.directDiffuseTransmit.c);
+		else if (film.HasChannel(Film::DIRECT_DIFFUSE))
 			Clamp3(film.channel_DIRECT_DIFFUSE->GetPixel(x, y), sampleResult.directDiffuseTransmit.c);
 
 		// DIRECT_GLOSSY
@@ -199,8 +199,8 @@ void VarianceClamping::Clamp(const Film &film, SampleResult &sampleResult) const
 			Clamp3(film.channel_DIRECT_GLOSSY->GetPixel(x, y), sampleResult.directGlossyReflect.c);
 
 		if (film.HasChannel(Film::DIRECT_GLOSSY_TRANSMIT))
-			Clamp3(film.channel_DIRECT_GLOSSY_REFLECT->GetPixel(x, y), sampleResult.directGlossyTransmit.c);
-		else if (film.HasChannel(Film::DIRECT_GLOSSY_TRANSMIT))
+			Clamp3(film.channel_DIRECT_GLOSSY_TRANSMIT->GetPixel(x, y), sampleResult.directGlossyTransmit.c);
+		else if (film.HasChannel(Film::DIRECT_GLOSSY))
 			Clamp3(film.channel_DIRECT_GLOSSY->GetPixel(x, y), sampleResult.directGlossyTransmit.c);
 
 		// EMISSION
@@ -216,8 +216,8 @@ void VarianceClamping::Clamp(const Film &film, SampleResult &sampleResult) const
 			Clamp3(film.channel_INDIRECT_DIFFUSE->GetPixel(x, y), sampleResult.indirectDiffuseReflect.c);
 
 		if (film.HasChannel(Film::INDIRECT_DIFFUSE_TRANSMIT))
-			Clamp3(film.channel_INDIRECT_DIFFUSE_REFLECT->GetPixel(x, y), sampleResult.indirectDiffuseTransmit.c);
-		else if (film.HasChannel(Film::INDIRECT_DIFFUSE_TRANSMIT))
+			Clamp3(film.channel_INDIRECT_DIFFUSE_TRANSMIT->GetPixel(x, y), sampleResult.indirectDiffuseTransmit.c);
+		else if (film.HasChannel(Film::INDIRECT_DIFFUSE))
 			Clamp3(film.channel_INDIRECT_DIFFUSE->GetPixel(x, y), sampleResult.indirectDiffuseTransmit.c);
 
 		// INDIRECT_GLOSSY
@@ -228,8 +228,8 @@ void VarianceClamping::Clamp(const Film &film, SampleResult &sampleResult) const
 			Clamp3(film.channel_INDIRECT_GLOSSY->GetPixel(x, y), sampleResult.indirectGlossyReflect.c);
 
 		if (film.HasChannel(Film::INDIRECT_GLOSSY_TRANSMIT))
-			Clamp3(film.channel_INDIRECT_GLOSSY_REFLECT->GetPixel(x, y), sampleResult.indirectGlossyTransmit.c);
-		else if (film.HasChannel(Film::INDIRECT_GLOSSY_TRANSMIT))
+			Clamp3(film.channel_INDIRECT_GLOSSY_TRANSMIT->GetPixel(x, y), sampleResult.indirectGlossyTransmit.c);
+		else if (film.HasChannel(Film::INDIRECT_GLOSSY))
 			Clamp3(film.channel_INDIRECT_GLOSSY->GetPixel(x, y), sampleResult.indirectGlossyTransmit.c);
 
 		// INDIRECT_SPECULAR
@@ -240,8 +240,8 @@ void VarianceClamping::Clamp(const Film &film, SampleResult &sampleResult) const
 			Clamp3(film.channel_INDIRECT_SPECULAR->GetPixel(x, y), sampleResult.indirectSpecularReflect.c);
 
 		if (film.HasChannel(Film::INDIRECT_SPECULAR_TRANSMIT))
-			Clamp3(film.channel_INDIRECT_SPECULAR_REFLECT->GetPixel(x, y), sampleResult.indirectSpecularTransmit.c);
-		else if (film.HasChannel(Film::INDIRECT_SPECULAR_TRANSMIT))
+			Clamp3(film.channel_INDIRECT_SPECULAR_TRANSMIT->GetPixel(x, y), sampleResult.indirectSpecularTransmit.c);
+		else if (film.HasChannel(Film::INDIRECT_SPECULAR))
 			Clamp3(film.channel_INDIRECT_SPECULAR->GetPixel(x, y), sampleResult.indirectSpecularTransmit.c);
 	} else if (sampleResult.HasChannel(Film::RADIANCE_PER_SCREEN_NORMALIZED)) {
 		float expectedValue[3] = { 0.f, 0.f, 0.f };
