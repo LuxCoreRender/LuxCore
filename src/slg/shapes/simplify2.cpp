@@ -23,6 +23,7 @@
 #include <string>
 #include <limits>
 #include <cstdint>
+#include <array>
 #include <algorithm>
 #include <cstring> // for memset
 #include <functional>
@@ -942,9 +943,8 @@ private:
 	// coefficients, so they are processed in SIMD lanes (one point per
 	// lane, the 4th lane is padding). Each lane evaluates the same
 	// expression as the original scalar version.
-	void VertexError(const SymetricMatrix2 &q,
-			const Point &p1, const Point &p2, const Point &p3,
-			float *error1, float *error2, float *error3) const {
+	std::array<float, 3> VertexError(const SymetricMatrix2 &q,
+			const Point &p1, const Point &p2, const Point &p3) const {
 		// Pack the point coordinates by component, padded to the SIMD width
 		alignas(16) float x[4] = { p1.x, p2.x, p3.x, 0.f };
 		alignas(16) float y[4] = { p1.y, p2.y, p3.y, 0.f };
@@ -977,40 +977,40 @@ private:
 			for (size_t i = 0; i != 10; ++i) e[k] += constfactors[i] * q[i] * coefs1[i] * coefs2[i];
 		}
 
-		*error1 = e[0];
-		*error2 = e[1];
-		*error3 = e[2];
+		return { e[0], e[1], e[2] };
 	}
 
 	// Error for one edge
 	float CalculateCollapseError(const u_int v1Index, const u_int v2Index,
 			Point *pResult = nullptr) const {
-		const SymetricMatrix2 q = vertices[v1Index].q + vertices[v2Index].q;
+		const SimplifyVertex2 &v1 = vertices[v1Index];
+		const SimplifyVertex2 &v2 = vertices[v2Index];
+
+		const SymetricMatrix2 q = v1.q + v2.q;
 
 		// Compute interpolated vertex
-		const Point &p1 = vertices[v1Index].p;
-		const Point &p2 = vertices[v2Index].p;
+		const Point &p1 = v1.p;
+		const Point &p2 = v2.p;
 		const Point p3 = (p1 + p2) / 2;
 
 		// Error can be negative, I add 1 to have screenErrorScale can than
 		// work as expected
-		float error1, error2, error3;
-		VertexError(q, p1, p2, p3, &error1, &error2, &error3);
-		error1 += 1.f;
-		error2 += 1.f;
-		error3 += 1.f;
+		const std::array<float, 3> errors = VertexError(q, p1, p2, p3);
+		const float error1 = errors[0] + 1.f;
+		const float error2 = errors[1] + 1.f;
+		const float error3 = errors[2] + 1.f;
 
 		float error;
-		if (preserveBorder && vertices[v1Index].border) {
+		if (preserveBorder && v1.border) {
 			error = error1;
 			if (pResult)
 				*pResult = p1;
-		} else if (preserveBorder && vertices[v2Index].border) {
+		} else if (preserveBorder && v2.border) {
 			error = error2;
 			if (pResult)
 				*pResult = p2;
 		} else {
-			error = Min(error1, Min(error2, error3));
+			error = std::min(error1, std::min(error2, error3));
 
 			if (pResult) {
 				if (error1 == error)
