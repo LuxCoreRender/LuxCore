@@ -528,10 +528,15 @@ private:
 	};
 
 	// Read a reference by logical index: the global baseline plus the tail
-	// appended by the collapse context
-	const SimplifyRef2 &GetRef(const CollapseContext &ctx, const size_t index) const {
-		const size_t baseSize = refs.size();
-		return (index < baseSize) ? refs[index] : ctx.refsTail[index - baseSize];
+	// appended by the collapse context. The global baseline is stored in
+	// homogeneous arrays (see below), so the reference is returned by
+	// value
+	SimplifyRef2 GetRef(const CollapseContext &ctx, const size_t index) const {
+		const size_t baseSize = refTid.size();
+		if (index < baseSize)
+			return SimplifyRef2{ refTid[index], refTvertex[index] };
+		else
+			return ctx.refsTail[index - baseSize];
 	}
 
 	// The triangle fields in homogeneous vectors (structure of arrays):
@@ -593,7 +598,15 @@ private:
 		vertexTcount.resize(count);
 		vertexQ.resize(count);
 	}
-	std::vector<SimplifyRef2> refs;
+	// The vertex -> triangle references in homogeneous vectors (structure
+	// of arrays): the closure CSR passes (the count, the fill and the
+	// relation generator) and the border identification read only the
+	// triangle indices, so they stream the dedicated u_int array instead
+	// of fetching interleaved records to read half of them. The corner
+	// index only holds values in [0, 3), so one byte is enough. Only
+	// Flipped and UpdateTriangles need both fields (through GetRef).
+	std::vector<u_int> refTid;
+	std::vector<u_char> refTvertex;
 
 	CameraConstPtr camera;
 	float edgeScreenSize;
@@ -706,12 +719,12 @@ private:
 				vertexAlpha[i0] = triAlpha0;
 		}
 
-		const size_t tstart = refs.size() + ctx.refsTail.size();
+		const size_t tstart = refTid.size() + ctx.refsTail.size();
 
 		UpdateTriangles(i0, i0, deleted0, ctx);
 		UpdateTriangles(i0, i1, deleted1, ctx);
 
-		const size_t tcount = (refs.size() + ctx.refsTail.size()) - tstart;
+		const size_t tcount = (refTid.size() + ctx.refsTail.size()) - tstart;
 
 		// Append the new references to the local tail and repoint the vertex.
 		// The tail is simply dropped at the end of the parallel processing: the
@@ -731,7 +744,7 @@ private:
 		const u_int tcount0 = vertexTcount[i0];
 
 		for (size_t k = 0; k < tcount0; ++k) {
-			const SimplifyRef2 &ref = GetRef(ctx, tstart0 + k);
+			const SimplifyRef2 ref = GetRef(ctx, tstart0 + k);
 			const size_t tid = ref.tid;
 
 			if (triangleDeleted[tid])
@@ -784,7 +797,7 @@ private:
 		const u_int tcount = vertexTcount[vertexIndex];
 
 		for (size_t k = 0; k < tcount; ++k) {
-			const SimplifyRef2 &r = GetRef(ctx, tstart + k);
+			const SimplifyRef2 r = GetRef(ctx, tstart + k);
 			const size_t tid = r.tid;
 
 			if (triangleDeleted[tid])
@@ -893,15 +906,17 @@ private:
 		}
 
 		// Write the references with a compact per vertex cursor
-		refs.resize(GetTriangleCount() * 3);
+		const size_t refCount = GetTriangleCount() * 3;
+		refTid.resize(refCount);
+		refTvertex.resize(refCount);
 		{
 			std::vector<u_int> vertexRefCursors(vertexRefStarts);
 			for (size_t i = 0; i < GetTriangleCount(); ++i) {
 				for (size_t j = 0; j < 3; ++j) {
-					SimplifyRef2 &ref = refs[vertexRefCursors[triangleV[j][i]]++];
+					const u_int slot = vertexRefCursors[triangleV[j][i]]++;
 
-					ref.tid = u_int(i);
-					ref.tvertex = u_int(j);
+					refTid[slot] = u_int(i);
+					refTvertex[slot] = u_int(j);
 				}
 			}
 		}
@@ -919,7 +934,7 @@ private:
 				vids.clear();
 
 				for (size_t j = 0; j < vertexTcount[i]; ++j) {
-					const size_t tid = refs[vertexTstart[i] + j].tid;
+					const size_t tid = refTid[vertexTstart[i] + j];
 
 					for (size_t k = 0; k < 3; ++k) {
 						size_t ofs = 0;
@@ -1202,7 +1217,7 @@ private:
 			for (const size_t v : { triangleV[tvertex][tid],
 					triangleV[TRI_NEXT[tvertex]][tid] }) {
 				for (size_t k = 0; k < vertexTcount[v]; ++k)
-					++bucketStart[refs[vertexTstart[v] + k].tid + 1];
+					++bucketStart[refTid[vertexTstart[v] + k] + 1];
 			}
 		}
 		for (size_t tid = 0; tid < triangleCount; ++tid) {
@@ -1218,7 +1233,7 @@ private:
 				for (const size_t v : { triangleV[tvertex][tid],
 						triangleV[TRI_NEXT[tvertex]][tid] }) {
 					for (size_t k = 0; k < vertexTcount[v]; ++k)
-						bucketEntries[bucketCursor[refs[vertexTstart[v] + k].tid]++] = i;
+						bucketEntries[bucketCursor[refTid[vertexTstart[v] + k]]++] = i;
 				}
 			}
 		}
@@ -1246,7 +1261,7 @@ private:
 					auto tstart = vertexTstart[v];
 					auto tcount = vertexTcount[v];
 					for (size_t k = 0; k != tcount; ++k) {
-						const u_int tid = refs[tstart + k].tid;
+						const u_int tid = refTid[tstart + k];
 						const u_int start = bucketStart[tid];
 						const u_int end = bucketStart[tid + 1];
 						if (end - start <= 1)
