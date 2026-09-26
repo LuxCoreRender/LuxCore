@@ -808,41 +808,54 @@ private:
 			}
 		}
 
-		// Init Reference ID list
-		for (size_t i = 0; i < vertices.size(); ++i) {
-			vertices[i].tstart = 0;
-			vertices[i].tcount = 0;
-		}
-
+		// Build the vertex -> triangles reference list (a CSR over the
+		// vertices). The reference counts, the prefix offsets and the
+		// fill cursors are accumulated in compact arrays (a few MB,
+		// resident in the caches): the random increments of the count
+		// and fill passes would otherwise touch the vertex records at
+		// every step and stream the whole vertex array through the last
+		// level cache. The tstart/tcount fields are written back in the
+		// sequential prefix pass, which also covers the unused
+		// vertices (tcount 0), so no separate initialization is needed.
+		const size_t vertexCount = vertices.size();
+		std::vector<u_int> vertexRefCounts(vertexCount, 0);
 		for (size_t i = 0; i < triangles.size(); ++i) {
-			SimplifyTriangle2 &t = triangles[i];
+			const SimplifyTriangle2 &t = triangles[i];
 
-			vertices[t.v[0]].tcount++;
-			vertices[t.v[1]].tcount++;
-			vertices[t.v[2]].tcount++;
+			++vertexRefCounts[t.v[0]];
+			++vertexRefCounts[t.v[1]];
+			++vertexRefCounts[t.v[2]];
 		}
 
-		size_t tstart = 0;
-		for (size_t i = 0; i < vertices.size(); ++i) {
-			SimplifyVertex2 &v = vertices[i];
+		// Prefix sum of the reference counts and write back of the
+		// vertex fields
+		std::vector<u_int> vertexRefStarts(vertexCount);
+		{
+			size_t tstart = 0;
+			for (size_t i = 0; i < vertexCount; ++i) {
+				SimplifyVertex2 &v = vertices[i];
 
-			v.tstart = tstart;
-			tstart += v.tcount;
-			v.tcount = 0;
+				vertexRefStarts[i] = tstart;
+				v.tstart = tstart;
+				v.tcount = vertexRefCounts[i];
+
+				tstart += vertexRefCounts[i];
+			}
 		}
 
-		// Write References
+		// Write the references with a compact per vertex cursor
 		refs.resize(triangles.size() * 3);
-		for (size_t i = 0; i < triangles.size(); ++i) {
-			SimplifyTriangle2 &t = triangles[i];
+		{
+			std::vector<u_int> vertexRefCursors(vertexRefStarts);
+			for (size_t i = 0; i < triangles.size(); ++i) {
+				const SimplifyTriangle2 &t = triangles[i];
 
-			for (size_t j = 0; j < 3; ++j) {
-				SimplifyVertex2 &v = vertices[t.v[j]];
+				for (size_t j = 0; j < 3; ++j) {
+					SimplifyRef2 &ref = refs[vertexRefCursors[t.v[j]]++];
 
-				refs[v.tstart + v.tcount].tid = i;
-				refs[v.tstart + v.tcount].tvertex = j;
-
-				v.tcount++;
+					ref.tid = i;
+					ref.tvertex = j;
+				}
 			}
 		}
 
