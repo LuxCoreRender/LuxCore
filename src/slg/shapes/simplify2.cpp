@@ -768,11 +768,21 @@ private:
 			// Check if the triangle is too narrow. Same test as
 			// AbsDot(Normalize(d1), Normalize(d2)) > .999f, rewritten with
 			// squared quantities to avoid the normalizations (i.e. the
-			// square roots): |d1.d2| / (|d1| |d2|) > .999f
+			// square roots): |d1.d2| / (|d1| |d2|) > .999f. By Lagrange's
+			// identity, |d1|^2 |d2|^2 = (d1.d2)^2 + |cross|^2, so the
+			// test is derived from d1DotD2^2 and the cross product length
+			// (computed for the normal side test below) without the two
+			// extra dot products:
+			// (d1.d2)^2 (1 - c) > c |cross|^2 with c = .999f^2.
+			// (The rounding differs from the two dot products form, so
+			// borderline triangles can be judged differently)
 			const Vector d1 = vertexP[id1] - p;
 			const Vector d2 = vertexP[id2] - p;
 			const float d1DotD2 = Dot(d1, d2);
-			if (d1DotD2 * d1DotD2 > .999f * .999f * Dot(d1, d1) * Dot(d2, d2))
+			const Vector cross(Cross(d1, d2));
+			const float crossSq = Dot(cross, cross);
+			constexpr float narrowCosSq = .999f * .999f;
+			if (d1DotD2 * d1DotD2 * (1.f - narrowCosSq) > narrowCosSq * crossSq)
 				return true;
 
 			// Check if the Normal is changing side. Same test as
@@ -780,8 +790,6 @@ private:
 			// with squared quantities to avoid the square roots:
 			// (cross . N) / |cross| < .2f. A zero cross product (degenerate
 			// case) falls through like the NaN of the original test.
-			const Vector cross(Cross(d1, d2));
-			const float crossSq = Dot(cross, cross);
 			const float crossDotN = Dot(Normal(cross), triangleGeometryN[tid]);
 			if (crossSq > 0.f && (crossDotN <= 0.f ||
 					crossDotN * crossDotN < .2f * .2f * crossSq))
