@@ -252,9 +252,9 @@ public:
 
 		ResizeTriangles(triCount);
 		for (size_t i = 0; i < triCount; ++i) {
-			triangleV[0][i] = tris[i].v[0];
-			triangleV[1][i] = tris[i].v[1];
-			triangleV[2][i] = tris[i].v[2];
+			triangleV[3*i+0] = tris[i].v[0];
+			triangleV[3*i+1] = tris[i].v[1];
+			triangleV[3*i+2] = tris[i].v[2];
 		}
 	}
 
@@ -299,14 +299,14 @@ public:
 
 		TriangleBuffer newTris(triCount);
 		for (size_t i = 0; i < triCount; ++i) {
-			assert (triangleV[0][i] < vertCount);
-			newTris[i].v[0] = triangleV[0][i];
+			assert (triangleV[3*i+0] < vertCount);
+			newTris[i].v[0] = triangleV[3*i+0];
 
-			assert (triangleV[1][i] < vertCount);
-			newTris[i].v[1] = triangleV[1][i];
+			assert (triangleV[3*i+1] < vertCount);
+			newTris[i].v[1] = triangleV[3*i+1];
 
-			assert (triangleV[2][i] < vertCount);
-			newTris[i].v[2] = triangleV[2][i];
+			assert (triangleV[3*i+2] < vertCount);
+			newTris[i].v[2] = triangleV[3*i+2];
 		}
 
 		return std::make_unique<ExtTriangleMesh>(
@@ -405,9 +405,9 @@ public:
 				u_int minErrorIndex = NULL_INDEX;
 				float minError = std::numeric_limits<float>::infinity();
 				for (size_t j = 0; j < 3; ++j) {
-					const u_int i0 = triangleV[j][i];
+					const u_int i0 = triangleV[3*i+j];
 
-					const u_int i1 = triangleV[TRI_NEXT[j]][i];
+					const u_int i1 = triangleV[3*i + TRI_NEXT[j]];
 
 					// Border check
 					if (preserveBorder) {
@@ -516,7 +516,7 @@ private:
 	//
 	// During the parallel processing of closures, each thread appends the new
 	// references to its own tail (read through the global baseline, see
-	// GetRef) and counts its own deleted triangles, so that CollapseEdge
+	// the segment loops) and counts its own deleted triangles, so that CollapseEdge
 	// never mutates the shared reference list. The reference list is rebuilt
 	// from scratch by UpdateMesh at each iteration, so the tails are simply
 	// dropped at the end of the parallel processing (no merge needed).
@@ -527,24 +527,19 @@ private:
 		u_int deletedCount = 0;
 	};
 
-	// Read a reference by logical index: the global baseline plus the tail
-	// appended by the collapse context. The global baseline is stored in
-	// homogeneous arrays (see below), so the reference is returned by
-	// value
-	SimplifyRef2 GetRef(const CollapseContext &ctx, const size_t index) const {
-		const size_t baseSize = refTid.size();
-		if (index < baseSize)
-			return SimplifyRef2{ refTid[index], refTvertex[index] };
-		else
-			return ctx.refsTail[index - baseSize];
-	}
-
 	// The triangle fields in homogeneous vectors (structure of arrays):
 	// the passes use different fields (the closure passes only read the
 	// vertex indices, the flag scans only read the flags, the sort
 	// comparator only reads the errors), so each pass streams only what
 	// it uses instead of the whole interleaved record
-	std::vector<u_int> triangleV[3];
+	// The triangle vertex indices in one flat array, three consecutive
+	// entries per triangle (v(j, tid) = triangleV[3 * tid + j]): every
+	// consumer reads two or three corners of a triangle, so the
+	// interleaved chunk keeps them in the same cache line, and the flat
+	// array keeps the data pointer in a register through the hot loops
+	// (the previous array of three vectors reloaded the member pointer
+	// and re-derived the byte offset for every reference)
+	std::vector<u_int> triangleV;
 	std::vector<Normal> triangleGeometryN;
 	std::vector<float> triangleErr[3];
 	// The triangle flags as one byte per flag (and not std::vector<bool>):
@@ -556,13 +551,12 @@ private:
 	std::vector<u_char> triangleDeleted;
 	std::vector<u_char> triangleDirty;
 
-	size_t GetTriangleCount() const { return triangleV[0].size(); }
+	size_t GetTriangleCount() const { return triangleV.size() / 3; }
 
 	void ResizeTriangles(const size_t count) {
-		for (size_t j = 0; j < 3; ++j) {
-			triangleV[j].resize(count);
+		triangleV.resize(count * 3);
+		for (size_t j = 0; j < 3; ++j)
 			triangleErr[j].resize(count);
-		}
 		triangleGeometryN.resize(count);
 		triangleDeleted.resize(count);
 		triangleDirty.resize(count);
@@ -604,7 +598,7 @@ private:
 	// triangle indices, so they stream the dedicated u_int array instead
 	// of fetching interleaved records to read half of them. The corner
 	// index only holds values in [0, 3), so one byte is enough. Only
-	// Flipped and UpdateTriangles need both fields (through GetRef).
+	// Flipped and UpdateTriangles need both fields (in their segment loops).
 	std::vector<u_int> refTid;
 	std::vector<u_char> refTvertex;
 
@@ -641,9 +635,9 @@ private:
 		if (triangleDirty[trinagleIndex])
 			return false;
 
-		const u_int i0 = triangleV[startVertexIndex][trinagleIndex];
+		const u_int i0 = triangleV[3*trinagleIndex + startVertexIndex];
 
-		const u_int i1 = triangleV[TRI_NEXT[startVertexIndex]][trinagleIndex];
+		const u_int i1 = triangleV[3*trinagleIndex + TRI_NEXT[startVertexIndex]];
 
 		// Border check
 		if (vertexBorder[i0] != vertexBorder[i1])
@@ -658,31 +652,31 @@ private:
 		deleted1.resize(vertexTcount[i1]);
 
 		// Don't remove if flipped
-		if (Flipped(p, i0, i1, ctx, &deleted0))
+		if (Flipped(p, i0, i1, ctx, deleted0))
 			return false;
-		if (Flipped(p, i1, i0, ctx, &deleted1))
+		if (Flipped(p, i1, i0, ctx, deleted1))
 			return false;
 
 		// Save original vertex information
-		const Point triPoint0 = vertexP[triangleV[0][trinagleIndex]];
-		const Point triPoint1 = vertexP[triangleV[1][trinagleIndex]];
-		const Point triPoint2 = vertexP[triangleV[2][trinagleIndex]];
+		const Point triPoint0 = vertexP[triangleV[3*trinagleIndex+0]];
+		const Point triPoint1 = vertexP[triangleV[3*trinagleIndex+1]];
+		const Point triPoint2 = vertexP[triangleV[3*trinagleIndex+2]];
 
-		const Normal triNorm0 = vertexNorm[triangleV[0][trinagleIndex]];
-		const Normal triNorm1 = vertexNorm[triangleV[1][trinagleIndex]];
-		const Normal triNorm2 = vertexNorm[triangleV[2][trinagleIndex]];
+		const Normal triNorm0 = vertexNorm[triangleV[3*trinagleIndex+0]];
+		const Normal triNorm1 = vertexNorm[triangleV[3*trinagleIndex+1]];
+		const Normal triNorm2 = vertexNorm[triangleV[3*trinagleIndex+2]];
 
-		const UV triUV0 = vertexUV[triangleV[0][trinagleIndex]];
-		const UV triUV1 = vertexUV[triangleV[1][trinagleIndex]];
-		const UV triUV2 = vertexUV[triangleV[2][trinagleIndex]];
+		const UV triUV0 = vertexUV[triangleV[3*trinagleIndex+0]];
+		const UV triUV1 = vertexUV[triangleV[3*trinagleIndex+1]];
+		const UV triUV2 = vertexUV[triangleV[3*trinagleIndex+2]];
 
-		const Spectrum triCol0 = vertexCol[triangleV[0][trinagleIndex]];
-		const Spectrum triCol1 = vertexCol[triangleV[1][trinagleIndex]];
-		const Spectrum triCol2 = vertexCol[triangleV[2][trinagleIndex]];
+		const Spectrum triCol0 = vertexCol[triangleV[3*trinagleIndex+0]];
+		const Spectrum triCol1 = vertexCol[triangleV[3*trinagleIndex+1]];
+		const Spectrum triCol2 = vertexCol[triangleV[3*trinagleIndex+2]];
 
-		const float triAlpha0 = vertexAlpha[triangleV[0][trinagleIndex]];
-		const float triAlpha1 = vertexAlpha[triangleV[1][trinagleIndex]];
-		const float triAlpha2 = vertexAlpha[triangleV[2][trinagleIndex]];
+		const float triAlpha0 = vertexAlpha[triangleV[3*trinagleIndex+0]];
+		const float triAlpha1 = vertexAlpha[triangleV[3*trinagleIndex+1]];
+		const float triAlpha2 = vertexAlpha[triangleV[3*trinagleIndex+2]];
 
 		// Not flipped, so remove edge
 		vertexP[i0] = p;
@@ -737,28 +731,38 @@ private:
 	}
 
 	// Check if a triangle flips when this edge is removed
-	bool Flipped(const Point &p, const size_t i0, const size_t i1,
+	// Check if a triangle flips when this edge is removed.
+	//
+	// The update of the per reference deleted flags is a compile time
+	// decision: the candidate evaluation calls Flipped without flags
+	// (tens of millions of times per iteration) and the runtime null
+	// pointer tests disappear from the generated loop instead of being
+	// re-tested for every reference.
+	template<bool recordDeleted>
+	bool FlippedImpl(const Point &p, const size_t i0, const size_t i1,
 			const CollapseContext &ctx,
-			ScalableVector<bool> *deleted = nullptr) const {
+			ScalableVector<bool> *deleted) const {
 		const u_int tstart0 = vertexTstart[i0];
 		const u_int tcount0 = vertexTcount[i0];
 
-		for (size_t k = 0; k < tcount0; ++k) {
-			const SimplifyRef2 ref = GetRef(ctx, tstart0 + k);
+		// Process one reference: returns true when the triangle flips.
+		// (A lambda so that the two segment loops below share the source
+		// and the compiler inlines it in both)
+		auto processReference = [&](const size_t k, const SimplifyRef2 &ref) -> bool {
 			const size_t tid = ref.tid;
 
 			if (triangleDeleted[tid])
-				continue;
+				return false;
 
 			const u_int s = ref.tvertex;
-			const u_int id1 = triangleV[TRI_NEXT[s]][tid];
-			const u_int id2 = triangleV[TRI_PREV[s]][tid];
+			const u_int id1 = triangleV[3*tid + TRI_NEXT[s]];
+			const u_int id2 = triangleV[3*tid + TRI_PREV[s]];
 
 			// Delete ?
 			if (id1 == i1 || id2 == i1) {
-				if (deleted)
+				if constexpr (recordDeleted)
 					(*deleted)[k] = true;
-				continue;
+				return false;
 			}
 
 			// Check if the triangle is too narrow. Same test as
@@ -783,11 +787,47 @@ private:
 					crossDotN * crossDotN < .2f * .2f * crossSq))
 				return true;
 
-			if (deleted)
+			if constexpr (recordDeleted)
 				(*deleted)[k] = false;
+
+			return false;
+		};
+
+		// The references of the vertex are contiguous: the ones in the
+		// global baseline and the ones appended to the collapse tail form
+		// two segments, so the base/tail test is hoisted out
+		// of the loops instead of being re-evaluated (with the context
+		// reload it forces) for every reference. The candidate
+		// evaluation has an empty tail: its whole loop reads the baseline
+		// with no test at all
+		const size_t baseSize = refTid.size();
+		const size_t baseRefCount = (tstart0 < baseSize) ?
+				std::min<size_t>(tcount0, baseSize - tstart0) : 0;
+
+		for (size_t k = 0; k < baseRefCount; ++k) {
+			if (processReference(k,
+					SimplifyRef2{ refTid[tstart0 + k], refTvertex[tstart0 + k] }))
+				return true;
+		}
+		for (size_t k = baseRefCount; k < tcount0; ++k) {
+			if (processReference(k, ctx.refsTail[tstart0 + k - baseSize]))
+				return true;
 		}
 
 		return false;
+	}
+
+	// Without the per reference deleted flags (candidate evaluation)
+	bool Flipped(const Point &p, const size_t i0, const size_t i1,
+			const CollapseContext &ctx) const {
+		return FlippedImpl<false>(p, i0, i1, ctx, nullptr);
+	}
+
+	// With the per reference deleted flags (edge collapse): a reference,
+	// non null by construction
+	bool Flipped(const Point &p, const size_t i0, const size_t i1,
+			const CollapseContext &ctx, ScalableVector<bool> &deleted) const {
+		return FlippedImpl<true>(p, i0, i1, ctx, &deleted);
 	}
 
 	// Update triangle connections and edge error after a edge is collapsed
@@ -796,25 +836,41 @@ private:
 		const u_int tstart = vertexTstart[vertexIndex];
 		const u_int tcount = vertexTcount[vertexIndex];
 
-		for (size_t k = 0; k < tcount; ++k) {
-			const SimplifyRef2 r = GetRef(ctx, tstart + k);
+		// Process one reference (a lambda so that the two segment loops
+		// below share the source and the compiler inlines it in both)
+		auto processReference = [&](const size_t k, const SimplifyRef2 &r) {
 			const size_t tid = r.tid;
 
 			if (triangleDeleted[tid])
-				continue;
+				return;
 
 			if (deleted[k]) {
 				triangleDeleted[tid] = true;
 				ctx.deletedCount++;
-				continue;
+				return;
 			}
 
-			triangleV[r.tvertex][tid] = u_int(i0);
+			triangleV[3*tid + r.tvertex] = u_int(i0);
 			triangleDirty[tid] = true;
 			UpdateTriangleError(tid);
 
 			ctx.refsTail.push_back(r);
-		}
+		};
+
+		// The references of the vertex are contiguous: the ones in the
+		// global baseline and the ones appended to the collapse tail form
+		// two segments, so the base/tail test is hoisted out of
+		// the loops (like in FlippedImpl) instead of being re-evaluated
+		// for every reference
+		const size_t baseSize = refTid.size();
+		const size_t baseRefCount = (tstart < baseSize) ?
+				std::min<size_t>(tcount, baseSize - tstart) : 0;
+
+		for (size_t k = 0; k < baseRefCount; ++k)
+			processReference(k,
+					SimplifyRef2{ refTid[tstart + k], refTvertex[tstart + k] });
+		for (size_t k = baseRefCount; k < tcount; ++k)
+			processReference(k, ctx.refsTail[tstart + k - baseSize]);
 	}
 
 	// Compact triangles, compute edge error and build reference list
@@ -829,7 +885,7 @@ private:
 
 				if (dst != i) {
 					for (size_t j = 0; j < 3; ++j) {
-						triangleV[j][dst] = triangleV[j][i];
+						triangleV[3*dst+j] = triangleV[3*i+j];
 						triangleErr[j][dst] = triangleErr[j][i];
 					}
 					triangleGeometryN[dst] = triangleGeometryN[i];
@@ -852,9 +908,9 @@ private:
 				vertexQ[i] = SymetricMatrix2(0.0);
 
 			for (size_t i = 0; i < GetTriangleCount(); ++i) {
-				const u_int iv0 = triangleV[0][i];
-				const u_int iv1 = triangleV[1][i];
-				const u_int iv2 = triangleV[2][i];
+				const u_int iv0 = triangleV[3*i+0];
+				const u_int iv1 = triangleV[3*i+1];
+				const u_int iv2 = triangleV[3*i+2];
 
 				const Point &p0 = vertexP[iv0];
 
@@ -886,9 +942,9 @@ private:
 		const size_t vertexCount = GetVertexCount();
 		std::vector<u_int> vertexRefCounts(vertexCount, 0);
 		for (size_t i = 0; i < GetTriangleCount(); ++i) {
-			++vertexRefCounts[triangleV[0][i]];
-			++vertexRefCounts[triangleV[1][i]];
-			++vertexRefCounts[triangleV[2][i]];
+			++vertexRefCounts[triangleV[3*i+0]];
+			++vertexRefCounts[triangleV[3*i+1]];
+			++vertexRefCounts[triangleV[3*i+2]];
 		}
 
 		// Prefix sum of the reference counts and write back of the
@@ -913,7 +969,7 @@ private:
 			std::vector<u_int> vertexRefCursors(vertexRefStarts);
 			for (size_t i = 0; i < GetTriangleCount(); ++i) {
 				for (size_t j = 0; j < 3; ++j) {
-					const u_int slot = vertexRefCursors[triangleV[j][i]]++;
+					const u_int slot = vertexRefCursors[triangleV[3*i+j]]++;
 
 					refTid[slot] = u_int(i);
 					refTvertex[slot] = u_int(j);
@@ -938,7 +994,7 @@ private:
 
 					for (size_t k = 0; k < 3; ++k) {
 						size_t ofs = 0;
-						u_int id = triangleV[k][tid];
+						u_int id = triangleV[3*tid+k];
 
 						while (ofs < vcount.size()) {
 							if (vids[ofs] == id)
@@ -982,7 +1038,7 @@ private:
 
 			if (dst != i) {
 				for (size_t j = 0; j < 3; ++j) {
-					triangleV[j][dst] = triangleV[j][i];
+					triangleV[3*dst+j] = triangleV[3*i+j];
 					triangleErr[j][dst] = triangleErr[j][i];
 				}
 				triangleGeometryN[dst] = triangleGeometryN[i];
@@ -990,9 +1046,9 @@ private:
 				triangleDeleted[dst] = false;
 			}
 
-			vertexTcount[triangleV[0][i]] = 1;
-			vertexTcount[triangleV[1][i]] = 1;
-			vertexTcount[triangleV[2][i]] = 1;
+			vertexTcount[triangleV[3*i+0]] = 1;
+			vertexTcount[triangleV[3*i+1]] = 1;
+			vertexTcount[triangleV[3*i+2]] = 1;
 
 			++dst;
 		}
@@ -1021,9 +1077,9 @@ private:
 
 		// Remap the triangle vertex indices to the compacted vertices
 		for (size_t i = 0; i < GetTriangleCount(); ++i) {
-			triangleV[0][i] = vertexTstart[triangleV[0][i]];
-			triangleV[1][i] = vertexTstart[triangleV[1][i]];
-			triangleV[2][i] = vertexTstart[triangleV[2][i]];
+			triangleV[3*i+0] = vertexTstart[triangleV[3*i+0]];
+			triangleV[3*i+1] = vertexTstart[triangleV[3*i+1]];
+			triangleV[3*i+2] = vertexTstart[triangleV[3*i+2]];
 		}
 		ResizeVertices(dst);
 	}
@@ -1147,9 +1203,9 @@ private:
 	// screen error scale (one cached camera projection per vertex instead
 	// of two per edge)
 	void UpdateTriangleError(const size_t tid) {
-		triangleErr[0][tid] = CalculateCollapseError(triangleV[0][tid], triangleV[1][tid]);
-		triangleErr[1][tid] = CalculateCollapseError(triangleV[1][tid], triangleV[2][tid]);
-		triangleErr[2][tid] = CalculateCollapseError(triangleV[2][tid], triangleV[0][tid]);
+		triangleErr[0][tid] = CalculateCollapseError(triangleV[3*tid+0], triangleV[3*tid+1]);
+		triangleErr[1][tid] = CalculateCollapseError(triangleV[3*tid+1], triangleV[3*tid+2]);
+		triangleErr[2][tid] = CalculateCollapseError(triangleV[3*tid+2], triangleV[3*tid+0]);
 
 		if (edgeScreenSize > 0.f) {
 			const float notVisibleScale = .5f;
@@ -1157,7 +1213,7 @@ private:
 			float sx[3], sy[3];
 			bool visible[3];
 			for (size_t j = 0; j < 3; ++j) {
-				visible[j] = GetScreenPosition(triangleV[j][tid], &sx[j], &sy[j]);
+				visible[j] = GetScreenPosition(triangleV[3*tid+j], &sx[j], &sy[j]);
 			}
 
 			for (size_t j = 0; j < 3; ++j) {
@@ -1214,8 +1270,8 @@ private:
 		for (size_t i = 0; i < candidateCount; ++i) {
 			const auto tvertex = candidates[i].tvertex;
 			const size_t tid = candidates[i].tid;
-			for (const size_t v : { triangleV[tvertex][tid],
-					triangleV[TRI_NEXT[tvertex]][tid] }) {
+			for (const size_t v : { triangleV[3*tid + tvertex],
+					triangleV[3*tid + TRI_NEXT[tvertex]] }) {
 				for (size_t k = 0; k < vertexTcount[v]; ++k)
 					++bucketStart[refTid[vertexTstart[v] + k] + 1];
 			}
@@ -1230,8 +1286,8 @@ private:
 			for (size_t i = 0; i < candidateCount; ++i) {
 				const auto tvertex = candidates[i].tvertex;
 				const size_t tid = candidates[i].tid;
-				for (const size_t v : { triangleV[tvertex][tid],
-						triangleV[TRI_NEXT[tvertex]][tid] }) {
+				for (const size_t v : { triangleV[3*tid + tvertex],
+						triangleV[3*tid + TRI_NEXT[tvertex]] }) {
 					for (size_t k = 0; k < vertexTcount[v]; ++k)
 						bucketEntries[bucketCursor[refTid[vertexTstart[v] + k]]++] = i;
 				}
@@ -1256,8 +1312,8 @@ private:
 				const auto candidate = candidates[i];
 				const auto tvertex = candidate.tvertex;
 				const size_t tid = candidate.tid;
-				for (const size_t v : { triangleV[tvertex][tid],
-						triangleV[TRI_NEXT[tvertex]][tid] }) {
+				for (const size_t v : { triangleV[3*tid + tvertex],
+						triangleV[3*tid + TRI_NEXT[tvertex]] }) {
 					auto tstart = vertexTstart[v];
 					auto tcount = vertexTcount[v];
 					for (size_t k = 0; k != tcount; ++k) {
