@@ -29,17 +29,21 @@ using namespace luxrays;
 using namespace slg;
 
 namespace slg {
-FileNameResolver SLG_FileNameResolver;
+	FileNameResolver SLG_FileNameResolver;
 }
 
 void slg::Init() {
+	// Use a mutex to ensure thread-safe initialization of OpenImageIO thread pool
+	static std::mutex initMutex;
+	std::unique_lock<std::mutex> lock(initMutex);
+
 	luxrays::Init();
 
 	openvdb::initialize();
-	
+
 	// Workaround to a bug: https://github.com/OpenImageIO/oiio/issues/1795
 	OIIO::attribute ("threads", 1);
-	
+
 	SLG_FileNameResolver.Clear();
 }
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4
