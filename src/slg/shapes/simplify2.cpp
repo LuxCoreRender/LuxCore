@@ -949,14 +949,32 @@ private:
 		alignas(16) float x[4] = { p1.x, p2.x, p3.x, 0.f };
 		alignas(16) float y[4] = { p1.y, p2.y, p3.y, 0.f };
 		alignas(16) float z[4] = { p1.z, p2.z, p3.z, 0.f };
-		alignas(16) float e[4];
+		alignas(16) float e[4] = { 0.f, 0.f, 0.f, 0.f };
 
-		for (u_int k = 0; k < 4; ++k) {
+		for (size_t k = 0; k < 4; ++k) {
 			const float xv = x[k], yv = y[k], zv = z[k];
-			e[k] = q[0] * xv * xv + 2.f * q[1] * xv * yv + 2.f * q[2] * xv * zv + 2.f * q[3] * xv +
-				q[4] * yv * yv + 2.f * q[5] * yv * zv + 2.f * q[6] * yv +
-				q[7] * zv * zv + 2.f * q[8] * zv +
-				q[9];
+			constexpr std::array<float, 10> constfactors {
+				1.f, 2.f, 2.f, 2.f, 1.f, 2.f, 2.f, 1.f, 2.f, 1.f
+			};
+			const std::array<float, 10> coefs1 {
+				xv, xv, xv, xv, yv, yv, yv, zv, zv, 1.0f
+			};
+			const std::array<float, 10> coefs2 {
+				xv, yv, zv, 1.f, yv, zv, 1.f, zv, 1.f, 1.f
+			};
+
+			//e[k] =
+						//q[0] * xv * xv
+				//+ 2.f * q[1] * xv * yv
+				//+ 2.f * q[2] * xv * zv
+				//+ 2.f * q[3] * xv
+				//+		q[4] * yv * yv
+				//+ 2.f * q[5] * yv * zv
+				//+ 2.f * q[6] * yv
+				//+       q[7] * zv * zv
+				//+ 2.f * q[8] * zv
+				//+		q[9];
+			for (size_t i = 0; i != 10; ++i) e[k] += constfactors[i] * q[i] * coefs1[i] * coefs2[i];
 		}
 
 		*error1 = e[0];
