@@ -193,6 +193,15 @@ template<typename T>
 using ScalableVector = std::vector<T, tbb::scalable_allocator<T>>;
 
 
+// Rotation of the triangle corner indices: the indices that follow and
+// precede a corner, i.e. (i + 1) % 3 and (i + 2) % 3 for i in [0, 3),
+// without the modulo arithmetic. The reference and candidate vertex
+// indices are always in [0, 3) by construction (the references are
+// created with tvertex in [0, 3) and the candidates carry the same
+// values), so the lookups stay in bounds.
+constexpr u_int TRI_NEXT[3] = { 1, 2, 0 };
+constexpr u_int TRI_PREV[3] = { 2, 0, 1 };
+
 class Simplify2 {
 public:
 	Simplify2(const ExtTriangleMesh &srcMesh) {
@@ -401,7 +410,7 @@ public:
 					const u_int i0 = t.v[j];
 					const SimplifyVertex2 &v0 = vertices[i0];
 
-					const u_int i1 = t.v[(j + 1) % 3];
+					const u_int i1 = t.v[TRI_NEXT[j]];
 					const SimplifyVertex2 &v1 = vertices[i1];
 
 					// Border check
@@ -590,7 +599,7 @@ private:
 		const u_int i0 = t.v[startVertexIndex];
 		SimplifyVertex2 &v0 = vertices[i0];
 
-		const u_int i1 = t.v[(startVertexIndex + 1) % 3];
+		const u_int i1 = t.v[TRI_NEXT[startVertexIndex]];
 		SimplifyVertex2 &v1 = vertices[i1];
 
 		// Border check
@@ -698,8 +707,8 @@ private:
 				continue;
 
 			const u_int s = ref.tvertex;
-			const u_int id1 = t.v[(s + 1) % 3];
-			const u_int id2 = t.v[(s + 2) % 3];
+			const u_int id1 = t.v[TRI_NEXT[s]];
+			const u_int id2 = t.v[TRI_PREV[s]];
 
 			// Delete ?
 			if (id1 == i1 || id2 == i1) {
@@ -1090,7 +1099,7 @@ private:
 			}
 
 			for (size_t j = 0; j < 3; ++j) {
-				const size_t j1 = (j + 1) % 3;
+				const size_t j1 = TRI_NEXT[j];
 
 				float scale;
 				if (visible[j] && visible[j1]) {
@@ -1143,7 +1152,7 @@ private:
 		for (size_t i = 0; i < candidateCount; ++i) {
 			const SimplifyTriangle2& t = triangles[candidates[i].tid];
 			for (const size_t v : { t.v[candidates[i].tvertex],
-					t.v[(candidates[i].tvertex + 1) % 3] }) {
+					t.v[TRI_NEXT[candidates[i].tvertex]] }) {
 				for (size_t k = 0; k < vertices[v].tcount; ++k)
 					++bucketStart[refs[vertices[v].tstart + k].tid + 1];
 			}
@@ -1158,7 +1167,7 @@ private:
 			for (size_t i = 0; i < candidateCount; ++i) {
 				const SimplifyTriangle2& t = triangles[candidates[i].tid];
 				for (const size_t v : { t.v[candidates[i].tvertex],
-						t.v[(candidates[i].tvertex + 1) % 3] }) {
+						t.v[TRI_NEXT[candidates[i].tvertex]] }) {
 					for (size_t k = 0; k < vertices[v].tcount; ++k)
 						bucketEntries[bucketCursor[refs[vertices[v].tstart + k].tid]++] = i;
 				}
@@ -1180,11 +1189,15 @@ private:
 			// (no caching expected)
 			ScalableVector<Relation> relations;
 			for (size_t i = r1; i < r2; ++i) {
-				const SimplifyTriangle2& t = triangles[candidates[i].tid];
-				for (const size_t v : { t.v[candidates[i].tvertex],
-						t.v[(candidates[i].tvertex + 1) % 3] }) {
-					for (size_t k = 0; k < vertices[v].tcount; ++k) {
-						const u_int tid = refs[vertices[v].tstart + k].tid;
+				const auto candidate = candidates[i];
+				const SimplifyTriangle2& t = triangles[candidate.tid];
+				for (const size_t v : { t.v[candidate.tvertex],
+						t.v[TRI_NEXT[candidate.tvertex]] }) {
+					auto& vertex = vertices[v];
+					auto tstart = vertex.tstart;
+					auto tcount = vertex.tcount;
+					for (size_t k = 0; k != tcount; ++k) {
+						const u_int tid = refs[tstart + k].tid;
 						const u_int start = bucketStart[tid];
 						const u_int end = bucketStart[tid + 1];
 						if (end - start <= 1)
