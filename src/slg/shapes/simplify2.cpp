@@ -1312,17 +1312,17 @@ private:
 	};
 
 	// Process all closures using TBB parallel_reduce
-	void ProcessClosuresParallel(const std::vector<std::vector<u_int>>& closures,
+	// The closures are sorted in place, by descending size, to process the
+	// largest first and limit the load imbalance: the candidates of a
+	// closure interact, so a closure is processed serially and the biggest
+	// ones must start as early as possible
+	void ProcessClosuresParallel(std::vector<std::vector<u_int>>& closures,
 			const std::vector<SimplifyRef2>& allCandidates) {
 		if (closures.empty()) {
 			return;
 		}
 
-		// Process the largest closures first to limit the load imbalance: the
-		// candidates of a closure interact, so a closure is processed serially
-		// and the biggest ones must start as early as possible
-		std::vector<std::vector<u_int>> sortedClosures(closures.begin(), closures.end());
-		std::sort(sortedClosures.begin(), sortedClosures.end(),
+		tbb::parallel_sort(closures.begin(), closures.end(),
 				[](const std::vector<u_int>& a, const std::vector<u_int>& b) {
 					return a.size() > b.size();
 				});
@@ -1334,16 +1334,16 @@ private:
 		// are race-free and need no merge. The closures can still share
 		// vertices, but only read only (and the screen caches are
 		// precomputed, see the vertexScreen* comment).
-		ParallelClosureProcessor processor(*this, sortedClosures, allCandidates);
+		ParallelClosureProcessor processor(*this, closures, allCandidates);
 
 		// Grain size: process at least 1 closure per thread
-		const size_t grain_size = std::max<size_t>(1, sortedClosures.size() / tbb::this_task_arena::max_concurrency());
+		const size_t grain_size = std::max<size_t>(1, closures.size() / tbb::this_task_arena::max_concurrency());
 
-		SDL_LOG("Simplify2: Processing " << sortedClosures.size() << " closures on "
+		SDL_LOG("Simplify2: Processing " << closures.size() << " closures on "
 			<< tbb::this_task_arena::max_concurrency() << " threads (grain size " << grain_size << ")");
 
 		tbb::parallel_reduce(
-			tbb::blocked_range<size_t>(0, sortedClosures.size(), grain_size),
+			tbb::blocked_range<size_t>(0, closures.size(), grain_size),
 			processor
 		);
 
