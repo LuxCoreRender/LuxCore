@@ -898,42 +898,45 @@ private:
 	void CompactMesh() {
 		size_t dst = 0;
 
-		for (size_t i = 0; i < vertices.size(); ++i)
-			vertices[i].tcount = 0;
+		for (auto& vertex: vertices) vertex.tcount = 0;
 
-		for (size_t i = 0; i < triangles.size(); ++i) {
-			if (!triangles[i].deleted) {
-				const SimplifyTriangle2 &t = triangles[i];
-				triangles[dst++] = t;
+		for (auto& triangle: triangles) {
+			if (triangle.deleted) continue;
 
-				vertices[t.v[0]].tcount = 1;
-				vertices[t.v[1]].tcount = 1;
-				vertices[t.v[2]].tcount = 1;
-			}
+			triangles[dst++] = triangle;
+
+			auto& v = triangle.v;
+			vertices[v[0]].tcount = 1;
+			vertices[v[1]].tcount = 1;
+			vertices[v[2]].tcount = 1;
 		}
 		triangles.resize(dst);
 
 		dst = 0;
-		for (size_t i = 0; i < vertices.size(); ++i) {
-			if (vertices[i].tcount) {
-				vertices[i].tstart = dst;
-				vertices[dst].p = vertices[i].p;
+		for (auto& vsrc: vertices) {  // Vertex source
+			if (!vsrc.tcount) continue;
 
-				vertices[dst].norm = vertices[i].norm;
-				vertices[dst].uv = vertices[i].uv;
-				vertices[dst].col = vertices[i].col;
-				vertices[dst].alpha = vertices[i].alpha;
+			vsrc.tstart = dst;
 
-				dst++;
-			}
+			// Vertex destination
+			auto& vdest = vertices[dst];
+
+			vdest.p = vsrc.p;
+
+			vdest.norm = vsrc.norm;
+			vdest.uv = vsrc.uv;
+			vdest.col = vsrc.col;
+			vdest.alpha = vsrc.alpha;
+
+			dst++;
 		}
 
-		for (size_t i = 0; i < triangles.size(); ++i) {
-			SimplifyTriangle2 &t = triangles[i];
+		for (auto& triangle : triangles) {
 
-			t.v[0] = vertices[t.v[0]].tstart;
-			t.v[1] = vertices[t.v[1]].tstart;
-			t.v[2] = vertices[t.v[2]].tstart;
+			auto& v = triangle.v;
+			v[0] = vertices[v[0]].tstart;
+			v[1] = vertices[v[1]].tstart;
+			v[2] = vertices[v[2]].tstart;
 		}
 		vertices.resize(dst);
 	}
