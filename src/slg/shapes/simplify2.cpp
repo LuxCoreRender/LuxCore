@@ -344,7 +344,7 @@ public:
 
 		// Work on N% of all triangles for each iteration (keep only N% lowest error candidates)
 		// TODO: this should be a parameter (like target), tunable per shape
-		const float candidatePercent = 0.3f; // 30%
+		const float candidatePercent = 0.4f; // 40%
 
 		// Init
 		for (size_t i = 0; i < GetTriangleCount(); ++i)
