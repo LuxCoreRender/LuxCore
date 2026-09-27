@@ -428,9 +428,34 @@ public:
 							continue;
 					}
 
-					// Compute vertex to collapse to
+					// Reconstruct the collapse point from the choice
+					// recorded with the error by the last error update:
+					// the update evaluated the same error on the same
+					// vertex state (nothing moves the vertices between
+					// the error updates and the candidate evaluation),
+					// so this is exactly the point the error evaluation
+					// would compute again
+					//
+					// The border edges are a special case: with
+					// preserveBorder, an edge with a single border
+					// endpoint (the border check above has rejected the
+					// border-border pairs) always collapses to the
+					// border endpoint, whatever the quadric says. The
+					// recorded choice is not used for them: at the
+					// initialization pass the border flags are not
+					// computed yet, so the recorded choices of the
+					// border edges come from the general minimum error
+					// path
 					Point p;
-					CalculateCollapseError(i0, i1, &p);
+					if (preserveBorder && (vertexBorder[i0] != vertexBorder[i1]))
+						p = vertexBorder[i0] ? vertexP[i0] : vertexP[i1];
+					else {
+						const unsigned int choice = (triangleErrChoice[i] >> (2*j)) & 3;
+						if (choice == 2)
+							p = (vertexP[i0] + vertexP[i1]) / 2;
+						else
+							p = (choice == 1) ? vertexP[i1] : vertexP[i0];
+					}
 
 					// Don't remove if flipped
 					if (Flipped(p, i0, i1, candidateCtx))
@@ -605,6 +630,12 @@ private:
 	ScalableVector<u_int> triangleV;
 	ScalableVector<Normal> triangleGeometryN;
 	ScalableVector<float> triangleErr[3];
+	// The collapse point choice of each edge error (0, 1 or 2: the two
+	// endpoints or their midpoint), 2 bits per corner, packed in one byte
+	// per triangle. The choice is recorded by UpdateTriangleError together
+	// with the error, so that the candidate evaluation can reconstruct the
+	// collapse point without re-evaluating the quadric error
+	ScalableVector<unsigned char> triangleErrChoice;
 	// The triangle flags as one byte per flag (and not std::vector<bool>):
 	// the collapses of the parallel closure processing write the flags of
 	// their (disjoint) triangles from multiple threads, and the packed
@@ -620,6 +651,7 @@ private:
 		triangleV.resize(count * 3);
 		for (size_t j = 0; j < 3; ++j)
 			triangleErr[j].resize(count);
+		triangleErrChoice.resize(count);
 		triangleGeometryN.resize(count);
 		triangleDeleted.resize(count);
 		triangleDirty.resize(count);
@@ -966,6 +998,7 @@ private:
 						triangleV[3*dst+j] = triangleV[3*i+j];
 						triangleErr[j][dst] = triangleErr[j][i];
 					}
+					triangleErrChoice[dst] = triangleErrChoice[i];
 					triangleGeometryN[dst] = triangleGeometryN[i];
 					triangleDirty[dst] = triangleDirty[i];
 					triangleDeleted[dst] = false;
@@ -1119,6 +1152,7 @@ private:
 					triangleV[3*dst+j] = triangleV[3*i+j];
 					triangleErr[j][dst] = triangleErr[j][i];
 				}
+				triangleErrChoice[dst] = triangleErrChoice[i];
 				triangleGeometryN[dst] = triangleGeometryN[i];
 				triangleDirty[dst] = triangleDirty[i];
 				triangleDeleted[dst] = false;
@@ -1204,9 +1238,12 @@ private:
 		return { e[0], e[1], e[2] };
 	}
 
-	// Error for one edge
+	// Error for one edge. The optional results are the collapse point
+	// (one of the two endpoints or their midpoint) and the index of that
+	// point (0, 1 or 2), so that the point can later be reconstructed
+	// from the positions without re-evaluating the quadric error
 	float CalculateCollapseError(const size_t v1Index, const size_t v2Index,
-			Point *pResult = nullptr) const {
+			Point *pResult = nullptr, unsigned char *choiceResult = nullptr) const {
 		const SymetricMatrix2 q = vertexQ[v1Index] + vertexQ[v2Index];
 
 		// Compute interpolated vertex
@@ -1222,16 +1259,23 @@ private:
 		const float error3 = errors[2] + 1.f;
 
 		float error;
+		unsigned char choice;
 		if (preserveBorder && vertexBorder[v1Index]) {
 			error = error1;
+			choice = 0;
 			if (pResult)
 				*pResult = p1;
 		} else if (preserveBorder && vertexBorder[v2Index]) {
 			error = error2;
+			choice = 1;
 			if (pResult)
 				*pResult = p2;
 		} else {
 			error = std::min(error1, std::min(error2, error3));
+
+			// The same choice as the point selection below (the last of
+			// the minimal errors wins)
+			choice = (error3 == error) ? 2 : ((error2 == error) ? 1 : 0);
 
 			if (pResult) {
 				if (error1 == error)
@@ -1242,6 +1286,9 @@ private:
 					*pResult = p3;
 			}
 		}
+
+		if (choiceResult)
+			*choiceResult = choice;
 
 		// Adding 1.0 because error have negative values
 		return std::max(error + 1.f, 0.f);
@@ -1281,9 +1328,14 @@ private:
 	// screen error scale (one cached camera projection per vertex instead
 	// of two per edge)
 	void UpdateTriangleError(const size_t tid) {
-		triangleErr[0][tid] = CalculateCollapseError(triangleV[3*tid+0], triangleV[3*tid+1]);
-		triangleErr[1][tid] = CalculateCollapseError(triangleV[3*tid+1], triangleV[3*tid+2]);
-		triangleErr[2][tid] = CalculateCollapseError(triangleV[3*tid+2], triangleV[3*tid+0]);
+		unsigned char choice[3];
+		triangleErr[0][tid] = CalculateCollapseError(triangleV[3*tid+0], triangleV[3*tid+1], nullptr, &choice[0]);
+		triangleErr[1][tid] = CalculateCollapseError(triangleV[3*tid+1], triangleV[3*tid+2], nullptr, &choice[1]);
+		triangleErr[2][tid] = CalculateCollapseError(triangleV[3*tid+2], triangleV[3*tid+0], nullptr, &choice[2]);
+
+		// The choice of each edge travels with the error: the candidate
+		// evaluation reconstructs the collapse point from it
+		triangleErrChoice[tid] = static_cast<unsigned char>(choice[0] | (choice[1] << 2) | (choice[2] << 4));
 
 		if (edgeScreenSize > 0.f) {
 			const float notVisibleScale = .5f;
