@@ -24,6 +24,7 @@
 #include <limits>
 #include <cstdint>
 #include <array>
+#include <bit>
 #include <algorithm>
 #include <cstring> // for memset
 #include <cmath> // for sqrt, round
@@ -393,12 +394,11 @@ public:
 
 			// Build the edge candidate list and keep only the N% lowest error candidates
 			stepStartTime = WallClockTime();
-			ScalableVector<SimplifyRef2> allCandidates;
-			allCandidates.reserve(GetTriangleCount());
-
-			// Lambda to compare SimplifyRef2 by error
-			auto refCompare = [this](const SimplifyRef2 &a, const SimplifyRef2 &b) {
-				return triangleErr[a.tvertex][a.tid] < triangleErr[b.tvertex][b.tid];
+			// Lambda to compare the candidates by sort key: a single u64
+			// comparison, no error array access in the comparator and no
+			// tie-break branches (see CandidateKey)
+			const auto keyCompare = [](const CandidateKey &a, const CandidateKey &b) {
+				return a.key < b.key;
 			};
 
 			// An empty collapse context: the candidate building only reads
@@ -448,29 +448,57 @@ public:
 					candidateVertexIndex[i] = minErrorIndex;
 			});
 
-			// Collect all valid candidates
+			// Collect all valid candidates with their sort key
+			ScalableVector<CandidateKey> candidateKeys;
+			candidateKeys.reserve(GetTriangleCount());
 			for (size_t i = 0; i < GetTriangleCount(); ++i) {
-				if (candidateVertexIndex[i] != NULL_INDEX)
-					allCandidates.push_back(SimplifyRef2{ u_int(i), candidateVertexIndex[i] });
+				const u_int tvertex = candidateVertexIndex[i];
+				if (tvertex == NULL_INDEX)
+					continue;
+
+				// Order-preserving transformation of the collapse error
+				// to an unsigned integer: the IEEE-754 bit pattern is
+				// monotonic for the non-negative floats and reversed for
+				// the negative ones, so the sign bit is set for the former
+				// and the whole word is flipped for the latter
+				const std::uint32_t errorBits = std::bit_cast<std::uint32_t>(triangleErr[tvertex][i]);
+				const std::uint32_t errorKey = (errorBits & 0x80000000u) ?
+					~errorBits : (errorBits | 0x80000000u);
+
+				candidateKeys.push_back(CandidateKey{
+					(static_cast<std::uint64_t>(errorKey) << 32) | static_cast<std::uint64_t>(i),
+					SimplifyRef2{ u_int(i), tvertex } });
 			}
-			SDL_LOG("Simplify2: Found " << allCandidates.size() << " edge candidates in "
+			SDL_LOG("Simplify2: Found " << candidateKeys.size() << " edge candidates in "
 				<< (boost::format("%.3f") % (WallClockTime() - stepStartTime)) << "secs");
 
 			// Keep only the N% lowest error candidates
-			const size_t totalCandidateCount = allCandidates.size();
+			const size_t totalCandidateCount = candidateKeys.size();
 			const u_int nPercentCount = std::max(1u, Floor2UInt(totalCandidateCount * candidatePercent));
-			if (allCandidates.size() > nPercentCount) {
+			if (candidateKeys.size() > nPercentCount) {
 				// Select the N% lowest error candidates: nth_element partitions
 				// in average O(n) and only the kept prefix needs to be ordered
 				// (instead of sorting all the candidates to throw most of them
 				// away)
-				std::nth_element(allCandidates.begin(), allCandidates.begin() + nPercentCount,
-					allCandidates.end(), refCompare);
-				allCandidates.resize(nPercentCount);
+				std::nth_element(candidateKeys.begin(), candidateKeys.begin() + nPercentCount,
+					candidateKeys.end(), keyCompare);
+				candidateKeys.resize(nPercentCount);
 			}
 
 			// Sort the kept candidates by error (ascending)
-			std::sort(allCandidates.begin(), allCandidates.end(), refCompare);
+			tbb::parallel_sort(candidateKeys.begin(), candidateKeys.end(), keyCompare);
+
+			// Extract the sorted references for the downstream phases:
+			// the keys are only needed by the sort
+			ScalableVector<SimplifyRef2> allCandidates;
+			allCandidates.reserve(candidateKeys.size());
+			for (const CandidateKey &candidateKey : candidateKeys)
+				allCandidates.push_back(candidateKey.ref);
+
+			// Release the sort keys (several hundreds of MB in the first
+			// iterations)
+			ScalableVector<CandidateKey>().swap(candidateKeys);
+
 			SDL_LOG("Simplify2: Kept the " << allCandidates.size() << " lowest error candidates ("
 				<< (boost::format("%.1f") % (candidatePercent * 100.f)) << "% of " << totalCandidateCount << ")");
 
@@ -532,6 +560,19 @@ private:
 
 	struct SimplifyRef2 {
 		u_int tid, tvertex;
+	};
+
+	// Sort key of a SimplifyRef2 candidate: the 32-bit order-preserving
+	// transformation of the collapse error in the high word and the
+	// triangle index in the low word. Every triangle contributes at most
+	// one candidate, so the triangle index is unique and the key is a
+	// strict total order over distinct candidates: the comparison is a
+	// single u64 test (no error array access in the comparator, no
+	// tie-break branches) and the sorted sequence is independent of the
+	// sort algorithm and of the thread scheduling
+	struct CandidateKey {
+		std::uint64_t key;
+		SimplifyRef2 ref;
 	};
 
 	// Local working state for edge collapses.
