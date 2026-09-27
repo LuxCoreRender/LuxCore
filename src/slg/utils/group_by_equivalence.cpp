@@ -19,9 +19,12 @@
 #include "slg/utils/group_by_equivalence.h"
 
 #include <cstdint>
+#include <cstring>
+#include <memory>
 #include <numeric>
 #include <ranges>
 #include <vector>
+#include <algorithm>
 #include "oneapi/tbb.h"
 
 namespace {
@@ -47,16 +50,31 @@ using ScalableVector = std::vector<T, tbb::scalable_allocator<T>>;
 // join then merges through the logged elements only (every non root
 // became so at exactly one link, path halving never turns a root into a
 // non root), instead of scanning all the elements.
+// Deleter for the flat arrays allocated with the TBB scalable allocator
+// (scalable_malloc/scalable_free are global functions of
+// scalable_allocator.h)
+struct ScalableDelete {
+	template<typename T>
+	void operator()(T *p) const { ::scalable_free(p); }
+};
+
 class UnionFind {
-	ScalableVector<uint32_t> parent;
-	ScalableVector<unsigned char> rank;
+	// The parent and rank are flat arrays instead of vectors: a vector
+	// cannot be sized without value initializing its entries, so the
+	// identity parent would be written twice at every reduce body
+	// construction (zero fill, then iota)
+	std::unique_ptr<uint32_t[], ScalableDelete> parent;
+	std::unique_ptr<unsigned char[], ScalableDelete> rank;
 	// The elements that became non roots (one entry per effective link)
 	ScalableVector<uint32_t> nonRoots;
 
 public:
 	UnionFind() = default;
-	explicit UnionFind(const size_t count) : parent(count), rank(count, 0) {
-		std::iota(parent.begin(), parent.end(), 0u);
+	explicit UnionFind(const size_t count) :
+			parent(static_cast<uint32_t *>(::scalable_malloc(count * sizeof(uint32_t)))),
+			rank(static_cast<unsigned char *>(::scalable_malloc(count * sizeof(unsigned char)))) {
+		std::iota(parent.get(), parent.get() + count, 0u);
+		std::memset(rank.get(), 0, count);
 		// Every element becomes a non root at most once, so the log can
 		// never outgrow the element count: reserving it upfront avoids
 		// the growth reallocations of the links (the pages of the
@@ -216,6 +234,17 @@ slg::Classes BuildClassesFromUnionFind(UnionFind& uf, const size_t numElements) 
 	return classes;
 }
 
+// Grain for the parallel_reduce of the equivalence grouping: every reduce
+// body constructs a whole UnionFind over the element space (an identity
+// parent array of numElements entries, a cost independent of the body
+// range), so the body count must stay in the vicinity of the thread count
+// or the constructions dominate the grouping (a fine grain makes TBB
+// create hundreds of bodies, each paying the full construction)
+size_t GroupingGrain(const size_t iterationCount) {
+	return std::max<size_t>(1024,
+		iterationCount / size_t(2 * tbb::this_task_arena::max_concurrency()));
+}
+
 }  // namespace
 
 namespace slg {
@@ -227,7 +256,7 @@ namespace slg {
 Classes GroupByEquivalence(size_t numElements, RelationFunction relation) {
 	// Use parallel_reduce with ParallelGroupByEquivalenceFromGenerator
 	static tbb::affinity_partitioner tbb_partitioner;
-	constexpr size_t grain = 1024;
+	const size_t grain = GroupingGrain(numElements);
 
 	ParallelGroupByEquivalenceFromGenerator<RelationFunction> solver(
 		numElements, std::move(relation));
@@ -251,7 +280,7 @@ Classes GroupByEquivalence(size_t numElements, size_t iterationCount,
 	RelationFunction relation) {
 	// Use parallel_reduce with ParallelGroupByEquivalenceFromGenerator
 	static tbb::affinity_partitioner tbb_partitioner;
-	constexpr size_t grain = 1024;
+	const size_t grain = GroupingGrain(iterationCount);
 
 	ParallelGroupByEquivalenceFromGenerator<RelationFunction> solver(
 		numElements, std::move(relation));
@@ -270,9 +299,8 @@ Classes GroupByEquivalence(size_t numElements, RelationSpan relation) {
 	// Use parallel_reduce with ParallelGroupByEquivalence
 	static tbb::affinity_partitioner tbb_partitioner;
 
-	// Determine grain size based on relation size
 	const size_t relationSize = relation.size();
-	constexpr size_t grain = 1024;
+	const size_t grain = GroupingGrain(relationSize);
 
 	ParallelGroupByEquivalence<RelationSpan> solver(
 		numElements, std::move(relation));
