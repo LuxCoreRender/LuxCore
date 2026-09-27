@@ -367,14 +367,6 @@ public:
 				break;
 
 			const double iterationStartTime = WallClockTime();
-			double stepStartTime = iterationStartTime;
-
-			// Compact the deleted triangles (iteration > 0), rebuild the vertex
-			// references and clear the dirty flags (quadrics, edge errors and
-			// border flags are initialized once, at iteration 0)
-			UpdateMesh(iteration);
-			SDL_LOG("Simplify2: Mesh " << (iteration == 0 ? "initialized" : "updated") << " in "
-				<< (boost::format("%.3f") % (WallClockTime() - stepStartTime)) << "secs");
 
 			// Precompute the screen space projections of all the vertices (when
 			// enabled): the parallel phases below then never lazily write the
@@ -385,12 +377,25 @@ public:
 			// collapses still have their cache invalidated and lazily
 			// recomputed, but only within a single closure (their triangles
 			// all belong to the collapsing closure).
+			//
+			// It runs before the mesh update because the parallel edge error
+			// initialization of UpdateMesh reads the projections: nothing
+			// moves the vertices in between, so the values are the same
 			if (edgeScreenSize > 0.f) {
 				tbb::parallel_for(size_t(0), GetVertexCount(), [this](size_t i) {
 					float x, y;
 					GetScreenPosition(i, &x, &y);
 				});
 			}
+
+			double stepStartTime = WallClockTime();
+
+			// Compact the deleted triangles (iteration > 0), rebuild the vertex
+			// references and clear the dirty flags (quadrics, edge errors and
+			// border flags are initialized once, at iteration 0)
+			UpdateMesh(iteration);
+			SDL_LOG("Simplify2: Mesh " << (iteration == 0 ? "initialized" : "updated") << " in "
+				<< (boost::format("%.3f") % (WallClockTime() - stepStartTime)) << "secs");
 
 			// Build the edge candidate list and keep only the N% lowest error candidates
 			stepStartTime = WallClockTime();
@@ -1014,6 +1019,16 @@ private:
 		//
 		// Required at the beginning (iteration == 0)
 		//
+		// The quadric accumulation stays serial: the triangle sweep
+		// scatters over the shared vertices (a parallel pass would race),
+		// and the vertex-centric alternative recomputes the plane
+		// quadrics in a different context, which rounds the geometry
+		// normals differently (FMA contraction is context dependent)
+		// and changes the simplification decisions. The edge error pass
+		// is where the time goes: it is parallel (the writes are
+		// disjoint and the screen projections are precomputed before
+		// the mesh update, a lazily computed projection would be written
+		// by several threads at once)
 		if (iteration == 0) {
 			for (size_t i = 0; i < GetVertexCount(); ++i)
 				vertexQ[i] = SymetricMatrix2(0.0);
@@ -1037,8 +1052,9 @@ private:
 				vertexQ[iv2] += sm;
 			}
 
-			for (size_t i = 0; i < GetTriangleCount(); ++i)
+			tbb::parallel_for(size_t(0), GetTriangleCount(), [&](size_t i) {
 				UpdateTriangleError(i);
+			});
 		}
 
 		// Build the vertex -> triangles reference list (a CSR over the
@@ -1091,47 +1107,60 @@ private:
 		// Identify boundary : vertices[].border=0,1
 		//
 		// Required at the beginning (iteration == 0)
+		//
+		// Parallel per vertex: the identification reads only the star of
+		// the vertex and stores true in the border flag of its link
+		// vertices, a one byte idempotent write that loses no update
+		// when several threads store it at once. The zeroing is a
+		// separate pass: it must be complete before any flag is set
 		if (iteration == 0) {
-			for (size_t i = 0; i < GetVertexCount(); ++i)
+			tbb::parallel_for(size_t(0), GetVertexCount(), [this](size_t i) {
 				vertexBorder[i] = false;
+			});
 
-			ScalableVector<u_int> vcount, vids;
-			for (size_t i = 0; i < GetVertexCount(); ++i) {
-				vcount.clear();
-				vids.clear();
+			tbb::parallel_for(tbb::blocked_range<size_t>(0, GetVertexCount(), 16384),
+				[&](const tbb::blocked_range<size_t> &r) {
+					// Reused across the vertices of the range: the clear
+					// is just a size reset, no reallocation
+					ScalableVector<u_int> vcount, vids;
+					for (size_t i = r.begin(); i < r.end(); ++i) {
+						vcount.clear();
+						vids.clear();
 
-				for (size_t j = 0; j < vertexTcount[i]; ++j) {
-					const size_t tid = refTid[vertexTstart[i] + j];
+						for (size_t j = 0; j < vertexTcount[i]; ++j) {
+							const size_t tid = refTid[vertexTstart[i] + j];
 
-					for (size_t k = 0; k < 3; ++k) {
-						size_t ofs = 0;
-						u_int id = triangleV[3*tid+k];
+							for (size_t k = 0; k < 3; ++k) {
+								size_t ofs = 0;
+								u_int id = triangleV[3*tid+k];
 
-						while (ofs < vcount.size()) {
-							if (vids[ofs] == id)
-								break;
+								while (ofs < vcount.size()) {
+									if (vids[ofs] == id)
+										break;
 
-							ofs++;
+									ofs++;
+								}
+
+								if (ofs == vcount.size()) {
+									vcount.push_back(1);
+									vids.push_back(id);
+								} else
+									vcount[ofs]++;
+							}
 						}
 
-						if (ofs == vcount.size()) {
-							vcount.push_back(1);
-							vids.push_back(id);
-						} else
-							vcount[ofs]++;
+						for (size_t j = 0; j < vcount.size(); ++j) {
+							if (vcount[j] == 1)
+								vertexBorder[vids[j]] = true;
+						}
 					}
-				}
-
-				for (size_t j = 0; j < vcount.size(); ++j) {
-					if (vcount[j] == 1)
-						vertexBorder[vids[j]] = true;
-				}
-			}
+				});
 		}
 
 		// Clear dirty flag
-		for (size_t i = 0; i < GetTriangleCount(); ++i)
+		tbb::parallel_for(size_t(0), GetTriangleCount(), [&](size_t i) {
 			triangleDirty[i] = false;
+		});
 	}  // UpdateMesh
 
 	// Finally compact mesh before exiting
