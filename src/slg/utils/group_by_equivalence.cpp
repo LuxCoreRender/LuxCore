@@ -37,7 +37,7 @@ using ScalableVector = std::vector<T, tbb::scalable_allocator<T>>;
 // form the dense range [0, numElements), so the parent and rank structures
 // are plain vectors instead of hash maps.
 //
-// The parent and rank entries are uint32_t/u_char (the elements are mesh
+// The parent and rank entries are uint32_t/unsigned char (the elements are mesh
 // scale indices, below 2^32): the parent array is randomly touched by
 // every find, so shrinking it (and the rank, zero filled at every reduce
 // body construction) reduces both the cache footprint of the searches
@@ -49,7 +49,7 @@ using ScalableVector = std::vector<T, tbb::scalable_allocator<T>>;
 // non root), instead of scanning all the elements.
 class UnionFind {
 	ScalableVector<uint32_t> parent;
-	ScalableVector<u_char> rank;
+	ScalableVector<unsigned char> rank;
 	// The elements that became non roots (one entry per effective link)
 	ScalableVector<uint32_t> nonRoots;
 

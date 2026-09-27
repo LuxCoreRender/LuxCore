@@ -611,8 +611,8 @@ private:
 	// bits of a vector<bool> would share bytes between triangles: the
 	// read-modify-write of the bit updates would race and lose updates.
 	// One byte per flag keeps every write on its own address.
-	ScalableVector<u_char> triangleDeleted;
-	ScalableVector<u_char> triangleDirty;
+	ScalableVector<unsigned char> triangleDeleted;
+	ScalableVector<unsigned char> triangleDirty;
 
 	size_t GetTriangleCount() const { return triangleV.size() / 3; }
 
@@ -637,7 +637,7 @@ private:
 	ScalableVector<Spectrum> vertexCol;
 	ScalableVector<float> vertexAlpha;
 	// One byte per flag (same rationale as the triangle flags)
-	ScalableVector<u_char> vertexBorder;
+	ScalableVector<unsigned char> vertexBorder;
 	ScalableVector<u_int> vertexTstart;
 	ScalableVector<u_int> vertexTcount;
 	ScalableVector<SymetricMatrix2> vertexQ;
@@ -663,7 +663,7 @@ private:
 	// index only holds values in [0, 3), so one byte is enough. Only
 	// Flipped and UpdateTriangles need both fields (in their segment loops).
 	ScalableVector<u_int> refTid;
-	ScalableVector<u_char> refTvertex;
+	ScalableVector<unsigned char> refTvertex;
 
 	CameraConstPtr camera;
 	float edgeScreenSize;
@@ -1422,7 +1422,7 @@ private:
 
 		// The triangles spanning several regions are the seams cutting the
 		// conflict components apart
-		ScalableVector<u_char> mixedTri(GetTriangleCount());
+		ScalableVector<unsigned char> mixedTri(GetTriangleCount());
 		tbb::parallel_for(size_t(0), GetTriangleCount(), [&](size_t t) {
 			const u_int r0 = regionOfVertex[triangleV[3 * t + 0]];
 			const u_int r1 = regionOfVertex[triangleV[3 * t + 1]];
@@ -1432,7 +1432,7 @@ private:
 
 		// A candidate is deferred iff a triangle of its endpoint stars is a
 		// seam triangle
-		ScalableVector<u_char> deferred(candidateCount, 0);
+		ScalableVector<unsigned char> deferred(candidateCount, 0);
 		tbb::parallel_for(size_t(0), candidateCount, [&](size_t i) {
 			const size_t tid = candidates[i].tid;
 			const size_t tvertex = candidates[i].tvertex;
