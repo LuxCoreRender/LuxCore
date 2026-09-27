@@ -1429,12 +1429,44 @@ private:
 	// commute (either order gives the same result). This includes the shared
 	// endpoint case (the triangles around the shared vertex are common).
 	//
-	// The conflict relation is expressed as a triangle -> candidates reverse
-	// index (a CSR over the triangles, filled from the candidate endpoints
-	// through the vertex references): all the candidates in the same bucket
-	// pairwise conflict, so the (chained) buckets define the equivalence
-	// relation given to GroupByEquivalence (which relies on a parallel
-	// Union-Find).
+	// The closures are computed through an equivalent relation over the
+	// vertices, instead of the conflict relation itself (whose graph
+	// percolates: chaining its edges directly costs hundreds of millions
+	// of relations):
+	//
+	//   Two vertices are linked iff a triangle references both and both
+	//   carry at least one candidate. The closure of a candidate is the
+	//   candidate union of the connected component holding its endpoints.
+	//
+	//   (=>) If candidates i and j conflict, a triangle references an
+	//   endpoint x of i and an endpoint y of j; both vertices carry a
+	//   candidate (i and j themselves), so the triangle links x and y
+	//   and i, j land in the same component.
+	//
+	//   (<=) If an endpoint x of i and an endpoint y of j are connected
+	//   through linked vertices x = v0, ..., vk = y, every vi carries a
+	//   candidate: one candidate per intermediate vertex builds a
+	//   conflict chain from i to j (the link triangle of each hop
+	//   references an endpoint of the candidates at both hop vertices),
+	//   so i and j are also in the same closure of the conflict relation.
+	//
+	// The two relations therefore partition the candidates identically.
+	// Degenerate cases are included: the two endpoints of a candidate
+	// are linked by its own triangle, candidates sharing a vertex are
+	// linked by any triangle around the shared vertex, and a degenerate
+	// triangle just links its (possibly repeated) candidate bearing
+	// corners.
+	//
+	// The links are generated per triangle (at most two per triangle:
+	// the first candidate bearing corner linked with the other bearing
+	// ones), over the candidate bearing vertices compacted into a dense
+	// index, by the parallel Union-Find of GroupByEquivalence (the
+	// ranges iterate the triangles, the elements are the compacted
+	// vertices). The closures are gathered from the candidate lists of
+	// the member vertices, conflict free (the components are disjoint),
+	// sorted by candidate index (the greedy processing order) and
+	// deduplicated (a candidate is listed once per endpoint vertex,
+	// both in the same component).
 	//
 	// Note: the resulting closures have disjoint triangle sets, so they can
 	// be processed in parallel, but they can still share vertices (read
@@ -1446,30 +1478,16 @@ private:
 			return {};
 		}
 
-		// Build the triangle -> candidates reverse index as a CSR structure
-		// (bucket count, prefix sum, bucket fill on flat arrays): no hashing
-		// and no per bucket allocation.
-		//
-		// Atomic free construction, through a vertex -> candidates CSR:
-		// the candidates are scattered over the vertex lists of their two
-		// endpoints only (2 entries per candidate, instead of the ~2x6
-		// star triangles of the direct build), in mesh order (through a
-		// tid -> candidate index map, so the scatter stays cache coherent:
-		// the error order of the candidates would make every access a
-		// cold miss). The scatter is serial but small and coherent; its
-		// parallel versions would need either atomics or per thread
-		// histograms (gigabytes at this mesh size).
-		//
-		// The bucket of a triangle is then the concatenation of the vertex
-		// lists of its (3, possibly repeated) corners: the same multiset
-		// as the direct star fill - a candidate lands in the bucket once
-		// per (endpoint, corner) pair holding the same vertex, degenerate
-		// triangles included (the vertex references are per corner) - and
-		// the triangle passes (bucket count and fill) are conflict free:
-		// every triangle reads and writes only its own bucket. Each
-		// bucket is sorted by candidate index at fill time, so the
-		// relation chaining (std::lower_bound and the duplicate skipping)
-		// keeps finding the entries in ascending order.
+		// Build the vertex -> candidates index as a CSR structure (count,
+		// prefix sum, fill on flat arrays): the candidates are scattered
+		// over the vertex lists of their two endpoints (2 entries per
+		// candidate), in mesh order (through a tid -> candidate index
+		// map, so the scatter stays cache coherent: the error order of
+		// the candidates would make every access a cold miss). The scatter
+		// is serial but small and coherent; its parallel versions would
+		// need either atomics or per thread histograms (gigabytes at this
+		// mesh size). The vertex lists drive the relation generator (the
+		// candidate bearing test) and the closure gathering.
 		const size_t triangleCount = GetTriangleCount();
 		const size_t vertexCount = GetVertexCount();
 
@@ -1509,101 +1527,78 @@ private:
 			}
 		}
 
-		// Triangle -> candidates CSR: bucket sizes from the corner vertex
-		// list sizes (conflict free), prefix sum, fill and sort
-		ScalableVector<u_int> bucketStart(triangleCount + 1, 0);
-		tbb::parallel_for(size_t(0), triangleCount, [&](size_t t) {
-			const u_int v0 = triangleV[3*t + 0];
-			const u_int v1 = triangleV[3*t + 1];
-			const u_int v2 = triangleV[3*t + 2];
-			bucketStart[t + 1] = (vertexStart[v0 + 1] - vertexStart[v0])
-				+ (vertexStart[v1 + 1] - vertexStart[v1])
-				+ (vertexStart[v2 + 1] - vertexStart[v2]);
-		});
-		for (size_t tid = 0; tid < triangleCount; ++tid) {
-			bucketStart[tid + 1] += bucketStart[tid];
+		// Candidate bearing vertices (a vertex carries a candidate iff its
+		// list is not empty), compacted into a dense index: the elements of
+		// the vertex relation above
+		ScalableVector<u_int> candVertexOfVertex(vertexCount, NULL_INDEX);
+		ScalableVector<u_int> vertexOfCandVertex;
+		vertexOfCandVertex.reserve(vertexCount);
+		for (size_t v = 0; v < vertexCount; ++v) {
+			if (vertexStart[v + 1] > vertexStart[v]) {
+				candVertexOfVertex[v] = static_cast<u_int>(vertexOfCandVertex.size());
+				vertexOfCandVertex.push_back(static_cast<u_int>(v));
+			}
 		}
+		const size_t candVertexCount = vertexOfCandVertex.size();
 
-		ScalableVector<u_int> bucketEntries(bucketStart[triangleCount]);
-		tbb::parallel_for(size_t(0), triangleCount, [&](size_t t) {
-			// Concatenate the corner vertex lists (the corner loop keeps
-			// the degenerate triangle multiplicity: a repeated corner
-			// copies its list again, like the direct star fill)
-			const u_int dstStart = bucketStart[t];
-			u_int k = 0;
-			for (size_t j = 0; j < 3; ++j) {
-				const u_int v = triangleV[3*t + j];
-				for (u_int p = vertexStart[v], end = vertexStart[v + 1];
-						p < end; ++p)
-					bucketEntries[dstStart + k++] = vertexEntries[p];
-			}
-
-			// Sort the bucket by candidate index (insertion sort for the
-			// usual few entries, std::sort for the rare big ones)
-			if (k <= 32) {
-				for (u_int p = 1; p < k; ++p) {
-					const u_int entry = bucketEntries[dstStart + p];
-					u_int q = p;
-					while (q > 0 && bucketEntries[dstStart + q - 1] > entry) {
-						bucketEntries[dstStart + q] = bucketEntries[dstStart + q - 1];
-						--q;
-					}
-					bucketEntries[dstStart + q] = entry;
-				}
-			} else {
-				std::sort(bucketEntries.begin() + dstStart,
-					bucketEntries.begin() + dstStart + k);
-			}
-		});
-
-		// Relation generator over the triangles [r1, r2): chain the entries
-		// of each bucket pairwise (a spanning path over the bucket: all the
-		// candidates of a bucket conflict and must land in the same
-		// closure). This is the same connectivity as chaining every
-		// candidate with its next one through its star buckets, at a
-		// sequential sweep of the bucket CSR instead of the random star
-		// lookups of every candidate.
+		// Relation generator over the triangles [r1, r2): link the first
+		// candidate bearing corner of each triangle with the other bearing
+		// ones (at most two links; a repeated corner carries the same
+		// compacted vertex and would link with itself, a no op skipped)
 		auto relationGenerator =
-			[&bucketStart, &bucketEntries]
+			[this, &candVertexOfVertex]
 				(size_t r1, size_t r2) -> ScalableVector<Relation> {
 			// Scalable allocator: allocated per chunk, inside the parallel
 			// evaluation of the generator, consumed once by the Union-Find
 			// (no caching expected)
 			ScalableVector<Relation> relations;
 			for (size_t t = r1; t < r2; ++t) {
-				const u_int start = bucketStart[t];
-				const u_int end = bucketStart[t + 1];
-				if (end - start <= 1)
-					continue;
-				// Skip the duplicate entries (a triangle referencing both
-				// endpoints of an edge, or a degenerate triangle)
-				u_int prev = bucketEntries[start];
-				for (u_int p = start + 1; p < end; ++p) {
-					const u_int cur = bucketEntries[p];
-					if (cur != prev) {
-						relations.emplace_back(prev, cur);
-						prev = cur;
-					}
+				u_int link = NULL_INDEX;
+				for (size_t j = 0; j < 3; ++j) {
+					const u_int cv = candVertexOfVertex[triangleV[3*t + j]];
+					if (cv == NULL_INDEX)
+						continue;
+					if (link == NULL_INDEX)
+						link = cv;
+					else if (cv != link)
+						relations.emplace_back(link, cv);
 				}
 			}
 			return relations;
 		};
 
-		// Group the connected candidates with the parallel Union-Find.
-		// The generator is evaluated in parallel by GroupByEquivalence:
+		// Group the linked vertices with the parallel Union-Find. The
+		// generator is evaluated in parallel by GroupByEquivalence:
 		// relations are generated and united in the same parallel_reduce
 		// pass, without materializing a full relations vector. The ranges
-		// iterate the triangles, the elements are the candidates.
-		const Classes classes = GroupByEquivalence(candidateCount, GetTriangleCount(),
+		// iterate the triangles, the elements are the candidate bearing
+		// vertices.
+		const Classes classes = GroupByEquivalence(candVertexCount, GetTriangleCount(),
 				RelationFunction(relationGenerator));
 
-		// Convert the classes to closures (the GroupByEquivalence classes come
-		// with their members in ascending order, i.e. ascending error: the
-		// greedy processing order of the collapses)
-		ScalableVector<ScalableVector<u_int>> closures;
-		closures.reserve(classes.size());
-		for (const auto& indices : classes)
-			closures.push_back(ScalableVector<u_int>(indices.begin(), indices.end()));
+		// Gather the closures from the components: the candidate lists of
+		// the member vertices, sorted by candidate index (the greedy
+		// processing order) and deduplicated (a candidate is listed once
+		// per endpoint vertex, both in the same component). Conflict free
+		// per class: the components are disjoint.
+		ScalableVector<ScalableVector<u_int>> closures(classes.size());
+		tbb::parallel_for(size_t(0), classes.size(), [&](size_t c) {
+			const auto& component = classes[c];
+			size_t closureSize = 0;
+			for (const size_t cv : component) {
+				const u_int v = vertexOfCandVertex[cv];
+				closureSize += vertexStart[v + 1] - vertexStart[v];
+			}
+			auto& closure = closures[c];
+			closure.reserve(closureSize);
+			for (const size_t cv : component) {
+				const u_int v = vertexOfCandVertex[cv];
+				for (u_int p = vertexStart[v], end = vertexStart[v + 1]; p < end; ++p)
+					closure.push_back(vertexEntries[p]);
+			}
+			std::sort(closure.begin(), closure.end());
+			closure.erase(std::unique(closure.begin(), closure.end()), closure.end());
+		});
 
 		return closures;
 	}
