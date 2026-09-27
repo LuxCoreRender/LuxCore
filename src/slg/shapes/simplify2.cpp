@@ -698,9 +698,16 @@ private:
 		if (triangleDirty[trinagleIndex])
 			return false;
 
-		const u_int i0 = triangleV[3*trinagleIndex + startVertexIndex];
+		// The triangle corner vertex indices, used all along the function
+		const u_int triVertices[3] = {
+			triangleV[3*trinagleIndex+0],
+			triangleV[3*trinagleIndex+1],
+			triangleV[3*trinagleIndex+2]
+		};
 
-		const u_int i1 = triangleV[3*trinagleIndex + TRI_NEXT[startVertexIndex]];
+		const u_int i0 = triVertices[startVertexIndex];
+
+		const u_int i1 = triVertices[TRI_NEXT[startVertexIndex]];
 
 		// Border check
 		if (vertexBorder[i0] != vertexBorder[i1])
@@ -721,31 +728,31 @@ private:
 			return false;
 
 		// Save original vertex information
-		const Point triPoint0 = vertexP[triangleV[3*trinagleIndex+0]];
-		const Point triPoint1 = vertexP[triangleV[3*trinagleIndex+1]];
-		const Point triPoint2 = vertexP[triangleV[3*trinagleIndex+2]];
+		const Point triPoint0 = vertexP[triVertices[0]];
+		const Point triPoint1 = vertexP[triVertices[1]];
+		const Point triPoint2 = vertexP[triVertices[2]];
 
-		const Normal triNorm0 = vertexNorm[triangleV[3*trinagleIndex+0]];
-		const Normal triNorm1 = vertexNorm[triangleV[3*trinagleIndex+1]];
-		const Normal triNorm2 = vertexNorm[triangleV[3*trinagleIndex+2]];
+		const Normal triNorm0 = vertexNorm[triVertices[0]];
+		const Normal triNorm1 = vertexNorm[triVertices[1]];
+		const Normal triNorm2 = vertexNorm[triVertices[2]];
 
-		const UV triUV0 = vertexUV[triangleV[3*trinagleIndex+0]];
-		const UV triUV1 = vertexUV[triangleV[3*trinagleIndex+1]];
-		const UV triUV2 = vertexUV[triangleV[3*trinagleIndex+2]];
+		const UV triUV0 = vertexUV[triVertices[0]];
+		const UV triUV1 = vertexUV[triVertices[1]];
+		const UV triUV2 = vertexUV[triVertices[2]];
 
-		const Spectrum triCol0 = vertexCol[triangleV[3*trinagleIndex+0]];
-		const Spectrum triCol1 = vertexCol[triangleV[3*trinagleIndex+1]];
-		const Spectrum triCol2 = vertexCol[triangleV[3*trinagleIndex+2]];
+		const Spectrum triCol0 = vertexCol[triVertices[0]];
+		const Spectrum triCol1 = vertexCol[triVertices[1]];
+		const Spectrum triCol2 = vertexCol[triVertices[2]];
 
-		const float triAlpha0 = vertexAlpha[triangleV[3*trinagleIndex+0]];
-		const float triAlpha1 = vertexAlpha[triangleV[3*trinagleIndex+1]];
-		const float triAlpha2 = vertexAlpha[triangleV[3*trinagleIndex+2]];
+		const float triAlpha0 = vertexAlpha[triVertices[0]];
+		const float triAlpha1 = vertexAlpha[triVertices[1]];
+		const float triAlpha2 = vertexAlpha[triVertices[2]];
 
 		// Not flipped, so remove edge
 		vertexP[i0] = p;
 		// The vertex moved: invalidate its cached screen projection
 		vertexScreenValid[i0] = false;
-		vertexQ[i0] = vertexQ[i1] + vertexQ[i0];
+		vertexQ[i0] += vertexQ[i1];
 
 		// Interpolate other vertex attributes
 		float b1, b2;
