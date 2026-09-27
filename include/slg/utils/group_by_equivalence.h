@@ -83,6 +83,15 @@ using RelationFunction = std::function<RelationVector(size_t, size_t)>;
 // efficient than statically compute it beforehand
 Classes GroupByEquivalence(size_t numElements, RelationFunction relation);
 
+// Version for callable generators over an iteration space distinct from
+// the element space: the relation functor is invoked with subranges of
+// [0, iterationCount) and returns pairs of equivalent elements of
+// [0, numElements). E.g. the relations can be derived from a mesh
+// triangle range while the elements are the (fewer) mesh entities
+// referenced by the relations
+Classes GroupByEquivalence(size_t numElements, size_t iterationCount,
+	RelationFunction relation);
+
 // Version for direct ranges: relation is a span of Relation pairs
 Classes GroupByEquivalence(size_t numElements, RelationSpan relation);
 }  // namespace slg

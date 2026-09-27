@@ -393,7 +393,7 @@ public:
 
 			// Build the edge candidate list and keep only the N% lowest error candidates
 			stepStartTime = WallClockTime();
-			std::vector<SimplifyRef2> allCandidates;
+			ScalableVector<SimplifyRef2> allCandidates;
 			allCandidates.reserve(GetTriangleCount());
 
 			// Lambda to compare SimplifyRef2 by error
@@ -408,7 +408,7 @@ public:
 			// Evaluate the candidates in parallel: the loop is read-only
 			// (CalculateCollapseError and Flipped are const) and each triangle
 			// writes only its own slot
-			std::vector<u_int> candidateVertexIndex(GetTriangleCount(), NULL_INDEX);
+			ScalableVector<u_int> candidateVertexIndex(GetTriangleCount(), NULL_INDEX);
 			tbb::parallel_for(size_t(0), GetTriangleCount(),
 					[this, &candidateCtx, &candidateVertexIndex](size_t i) {
 				// Look for the (valid) triangle vertex with the minimum error
@@ -490,7 +490,7 @@ public:
 
 			// Compute candidate closures for parallel processing
 			stepStartTime = WallClockTime();
-			std::vector<std::vector<u_int>> candidateClosures = ComputeCandidateClosures(allCandidates);
+			ScalableVector<ScalableVector<u_int>> candidateClosures = ComputeCandidateClosures(allCandidates);
 			size_t maxClosureSize = 0;
 			for (const auto& closure : candidateClosures)
 				maxClosureSize = std::max(maxClosureSize, closure.size());
@@ -561,17 +561,17 @@ private:
 	// array keeps the data pointer in a register through the hot loops
 	// (the previous array of three vectors reloaded the member pointer
 	// and re-derived the byte offset for every reference)
-	std::vector<u_int> triangleV;
-	std::vector<Normal> triangleGeometryN;
-	std::vector<float> triangleErr[3];
+	ScalableVector<u_int> triangleV;
+	ScalableVector<Normal> triangleGeometryN;
+	ScalableVector<float> triangleErr[3];
 	// The triangle flags as one byte per flag (and not std::vector<bool>):
 	// the collapses of the parallel closure processing write the flags of
 	// their (disjoint) triangles from multiple threads, and the packed
 	// bits of a vector<bool> would share bytes between triangles: the
 	// read-modify-write of the bit updates would race and lose updates.
 	// One byte per flag keeps every write on its own address.
-	std::vector<u_char> triangleDeleted;
-	std::vector<u_char> triangleDirty;
+	ScalableVector<u_char> triangleDeleted;
+	ScalableVector<u_char> triangleDirty;
 
 	size_t GetTriangleCount() const { return triangleV.size() / 3; }
 
@@ -590,16 +590,16 @@ private:
 	// quadrics, the reference walks read tstart/tcount, the candidate
 	// evaluation reads the border flags), so each pass streams only
 	// what it uses instead of the whole interleaved record
-	std::vector<Point> vertexP;
-	std::vector<Normal> vertexNorm;
-	std::vector<UV> vertexUV;
-	std::vector<Spectrum> vertexCol;
-	std::vector<float> vertexAlpha;
+	ScalableVector<Point> vertexP;
+	ScalableVector<Normal> vertexNorm;
+	ScalableVector<UV> vertexUV;
+	ScalableVector<Spectrum> vertexCol;
+	ScalableVector<float> vertexAlpha;
 	// One byte per flag (same rationale as the triangle flags)
-	std::vector<u_char> vertexBorder;
-	std::vector<u_int> vertexTstart;
-	std::vector<u_int> vertexTcount;
-	std::vector<SymetricMatrix2> vertexQ;
+	ScalableVector<u_char> vertexBorder;
+	ScalableVector<u_int> vertexTstart;
+	ScalableVector<u_int> vertexTcount;
+	ScalableVector<SymetricMatrix2> vertexQ;
 
 	size_t GetVertexCount() const { return vertexP.size(); }
 
@@ -621,13 +621,13 @@ private:
 	// of fetching interleaved records to read half of them. The corner
 	// index only holds values in [0, 3), so one byte is enough. Only
 	// Flipped and UpdateTriangles need both fields (in their segment loops).
-	std::vector<u_int> refTid;
-	std::vector<u_char> refTvertex;
+	ScalableVector<u_int> refTid;
+	ScalableVector<u_char> refTvertex;
 
 	CameraConstPtr camera;
 	float edgeScreenSize;
 
-	std::vector<SimplifyRef2> candidateList;
+	ScalableVector<SimplifyRef2> candidateList;
 
 	u_int deletedTriangles;
 	bool hasNormals, hasUVs, hasColors, hasAlphas, preserveBorder;
@@ -645,10 +645,10 @@ private:
 	// closure). The validity/visibility flags are one byte per vertex (not
 	// bit packed): the bit read-modify-write of e.g. std::vector<bool>
 	// would race between closures.
-	std::vector<float> vertexScreenX;
-	std::vector<float> vertexScreenY;
-	std::vector<std::uint8_t> vertexScreenValid;    // the projection has been computed
-	std::vector<std::uint8_t> vertexScreenVisible;  // and the vertex is visible
+	ScalableVector<float> vertexScreenX;
+	ScalableVector<float> vertexScreenY;
+	ScalableVector<std::uint8_t> vertexScreenValid;    // the projection has been computed
+	ScalableVector<std::uint8_t> vertexScreenVisible;  // and the vertex is visible
 
 	bool CollapseEdge(const size_t trinagleIndex, const size_t startVertexIndex,
 			CollapseContext &ctx, ScalableVector<bool> &deleted0, ScalableVector<bool> &deleted1) {
@@ -970,7 +970,7 @@ private:
 		// sequential prefix pass, which also covers the unused
 		// vertices (tcount 0), so no separate initialization is needed.
 		const size_t vertexCount = GetVertexCount();
-		std::vector<u_int> vertexRefCounts(vertexCount, 0);
+		ScalableVector<u_int> vertexRefCounts(vertexCount, 0);
 		for (size_t i = 0; i < GetTriangleCount(); ++i) {
 			++vertexRefCounts[triangleV[3*i+0]];
 			++vertexRefCounts[triangleV[3*i+1]];
@@ -979,7 +979,7 @@ private:
 
 		// Prefix sum of the reference counts and write back of the
 		// vertex fields
-		std::vector<u_int> vertexRefStarts(vertexCount);
+		ScalableVector<u_int> vertexRefStarts(vertexCount);
 		{
 			size_t tstart = 0;
 			for (size_t i = 0; i < vertexCount; ++i) {
@@ -996,7 +996,7 @@ private:
 		refTid.resize(refCount);
 		refTvertex.resize(refCount);
 		{
-			std::vector<u_int> vertexRefCursors(vertexRefStarts);
+			ScalableVector<u_int> vertexRefCursors(vertexRefStarts);
 			for (size_t i = 0; i < GetTriangleCount(); ++i) {
 				for (size_t j = 0; j < 3; ++j) {
 					const u_int slot = vertexRefCursors[triangleV[3*i+j]]++;
@@ -1014,7 +1014,7 @@ private:
 			for (size_t i = 0; i < GetVertexCount(); ++i)
 				vertexBorder[i] = false;
 
-			std::vector<u_int> vcount, vids;
+			ScalableVector<u_int> vcount, vids;
 			for (size_t i = 0; i < GetVertexCount(); ++i) {
 				vcount.clear();
 				vids.clear();
@@ -1299,7 +1299,7 @@ private:
 	// Returns the number of deferred candidates (0 also when the deferral
 	// is skipped) and compacts the candidates in place, keeping the error
 	// order.
-	size_t DeferBoundaryCandidates(std::vector<SimplifyRef2>& candidates) {
+	size_t DeferBoundaryCandidates(ScalableVector<SimplifyRef2>& candidates) {
 		const size_t candidateCount = candidates.size();
 		if (candidateCount < minKeptCandidates)
 			return 0;
@@ -1362,7 +1362,7 @@ private:
 		const float inv1 = grid1 > 1 ? static_cast<float>(grid1) / std::max(hi1 - lo1, 1e-30f) : 0.f;
 		const float inv2 = grid2 > 1 ? static_cast<float>(grid2) / std::max(hi2 - lo2, 1e-30f) : 0.f;
 
-		std::vector<u_int> regionOfVertex(GetVertexCount());
+		ScalableVector<u_int> regionOfVertex(GetVertexCount());
 		tbb::parallel_for(size_t(0), GetVertexCount(), [&](size_t i) {
 			const Point& p = vertexP[i];
 			size_t i1 = static_cast<size_t>(std::max(0.f, (axisCoord(p, axis1) - lo1) * inv1));
@@ -1374,7 +1374,7 @@ private:
 
 		// The triangles spanning several regions are the seams cutting the
 		// conflict components apart
-		std::vector<u_char> mixedTri(GetTriangleCount());
+		ScalableVector<u_char> mixedTri(GetTriangleCount());
 		tbb::parallel_for(size_t(0), GetTriangleCount(), [&](size_t t) {
 			const u_int r0 = regionOfVertex[triangleV[3 * t + 0]];
 			const u_int r1 = regionOfVertex[triangleV[3 * t + 1]];
@@ -1384,7 +1384,7 @@ private:
 
 		// A candidate is deferred iff a triangle of its endpoint stars is a
 		// seam triangle
-		std::vector<u_char> deferred(candidateCount, 0);
+		ScalableVector<u_char> deferred(candidateCount, 0);
 		tbb::parallel_for(size_t(0), candidateCount, [&](size_t i) {
 			const size_t tid = candidates[i].tid;
 			const size_t tvertex = candidates[i].tvertex;
@@ -1440,7 +1440,7 @@ private:
 	// be processed in parallel, but they can still share vertices (read
 	// only). The screen space caches are precomputed for that reason: the
 	// lazy cache writes would otherwise race on the shared vertices.
-	std::vector<std::vector<u_int>> ComputeCandidateClosures(const std::vector<SimplifyRef2>& candidates) {
+	ScalableVector<ScalableVector<u_int>> ComputeCandidateClosures(const ScalableVector<SimplifyRef2>& candidates) {
 		const size_t candidateCount = candidates.size();
 		if (candidateCount == 0) {
 			return {};
@@ -1556,52 +1556,33 @@ private:
 			}
 		});
 
-		// Lazy relation generator: for candidates [r1, r2), look up each
-		// triangle touching their edge in the CSR and chain i with the next
-		// candidate in the bucket. Bucket entries are in ascending candidate
-		// index order (filled by iterating candidates 0..N), so
-		// std::lower_bound finds i's position. Every candidate emits its own
-		// forward link, so the full chain (c0,c1), (c1,c2), ... is
-		// reconstructed in parallel across threads.
+		// Relation generator over the triangles [r1, r2): chain the entries
+		// of each bucket pairwise (a spanning path over the bucket: all the
+		// candidates of a bucket conflict and must land in the same
+		// closure). This is the same connectivity as chaining every
+		// candidate with its next one through its star buckets, at a
+		// sequential sweep of the bucket CSR instead of the random star
+		// lookups of every candidate.
 		auto relationGenerator =
-				[this, &candidates, &bucketStart, &bucketEntries]
+			[&bucketStart, &bucketEntries]
 				(size_t r1, size_t r2) -> ScalableVector<Relation> {
 			// Scalable allocator: allocated per chunk, inside the parallel
 			// evaluation of the generator, consumed once by the Union-Find
 			// (no caching expected)
 			ScalableVector<Relation> relations;
-			for (size_t i = r1; i < r2; ++i) {
-				const auto candidate = candidates[i];
-				const auto tvertex = candidate.tvertex;
-				const size_t tid = candidate.tid;
-				for (const size_t v : { triangleV[3*tid + tvertex],
-						triangleV[3*tid + TRI_NEXT[tvertex]] }) {
-					auto tstart = vertexTstart[v];
-					auto tcount = vertexTcount[v];
-					for (size_t k = 0; k != tcount; ++k) {
-						const u_int tid = refTid[tstart + k];
-						const u_int start = bucketStart[tid];
-						const u_int end = bucketStart[tid + 1];
-						if (end - start <= 1)
-							continue;
-						// Find i in the sorted bucket. The same candidate can
-						// appear multiple times in a bucket (a triangle
-						// referencing both endpoints of the edge, or a
-						// degenerate triangle referencing an endpoint twice):
-						// skip the duplicates of i when chaining.
-						const auto it = std::lower_bound(
-								bucketEntries.begin() + start,
-								bucketEntries.begin() + end,
-								static_cast<u_int>(i));
-						// If i is found and not the last in the bucket, chain
-						// with the next candidate
-						if (it != bucketEntries.begin() + end && *it == i) {
-							auto next = std::next(it);
-							while (next != bucketEntries.begin() + end && *next == i)
-								++next;
-							if (next != bucketEntries.begin() + end)
-								relations.emplace_back(*it, *next);
-						}
+			for (size_t t = r1; t < r2; ++t) {
+				const u_int start = bucketStart[t];
+				const u_int end = bucketStart[t + 1];
+				if (end - start <= 1)
+					continue;
+				// Skip the duplicate entries (a triangle referencing both
+				// endpoints of an edge, or a degenerate triangle)
+				u_int prev = bucketEntries[start];
+				for (u_int p = start + 1; p < end; ++p) {
+					const u_int cur = bucketEntries[p];
+					if (cur != prev) {
+						relations.emplace_back(prev, cur);
+						prev = cur;
 					}
 				}
 			}
@@ -1611,17 +1592,18 @@ private:
 		// Group the connected candidates with the parallel Union-Find.
 		// The generator is evaluated in parallel by GroupByEquivalence:
 		// relations are generated and united in the same parallel_reduce
-		// pass, without materializing a relations vector.
-		const Classes classes = GroupByEquivalence(candidateCount,
+		// pass, without materializing a full relations vector. The ranges
+		// iterate the triangles, the elements are the candidates.
+		const Classes classes = GroupByEquivalence(candidateCount, GetTriangleCount(),
 				RelationFunction(relationGenerator));
 
 		// Convert the classes to closures (the GroupByEquivalence classes come
 		// with their members in ascending order, i.e. ascending error: the
 		// greedy processing order of the collapses)
-		std::vector<std::vector<u_int>> closures;
+		ScalableVector<ScalableVector<u_int>> closures;
 		closures.reserve(classes.size());
 		for (const auto& indices : classes)
-			closures.push_back(std::vector<u_int>(indices.begin(), indices.end()));
+			closures.push_back(ScalableVector<u_int>(indices.begin(), indices.end()));
 
 		return closures;
 	}
@@ -1639,8 +1621,8 @@ private:
 	// each iteration) and counts its deleted triangles.
 	class ParallelClosureProcessor {
 		Simplify2& simplify;
-		const std::vector<std::vector<u_int>>& closures;
-		const std::vector<SimplifyRef2>& allCandidates;
+		const ScalableVector<ScalableVector<u_int>>& closures;
+		const ScalableVector<SimplifyRef2>& allCandidates;
 
 		// Local state: appended refs tail and deleted triangles counter
 		CollapseContext ctx;
@@ -1652,8 +1634,8 @@ private:
 	public:
 		// Constructor for the master thread
 		ParallelClosureProcessor(Simplify2& s,
-				const std::vector<std::vector<u_int>>& c,
-				const std::vector<SimplifyRef2>& a)
+				const ScalableVector<ScalableVector<u_int>>& c,
+				const ScalableVector<SimplifyRef2>& a)
 			: simplify(s), closures(c), allCandidates(a) {
 			ctx.deletedCount = s.deletedTriangles;
 		}
@@ -1701,7 +1683,7 @@ private:
 
 	private:
 		// Process a single closure
-		void ProcessClosure(const std::vector<u_int>& closureIndices) {
+		void ProcessClosure(const ScalableVector<u_int>& closureIndices) {
 			// Scalable allocator: recreated for every closure (no caching
 			// expected), resized for every candidate
 			ScalableVector<bool> deleted0, deleted1;
@@ -1733,14 +1715,14 @@ private:
 	// descends the left spine of the range itself, so the small closures
 	// must sit there (the big ones land in the stolen right halves, where
 	// the thief threads split them among each other)
-	void ProcessClosuresParallel(std::vector<std::vector<u_int>>& closures,
-			const std::vector<SimplifyRef2>& allCandidates) {
+	void ProcessClosuresParallel(ScalableVector<ScalableVector<u_int>>& closures,
+			const ScalableVector<SimplifyRef2>& allCandidates) {
 		if (closures.empty()) {
 			return;
 		}
 
 		tbb::parallel_sort(closures.begin(), closures.end(),
-				[](const std::vector<u_int>& a, const std::vector<u_int>& b) {
+				[](const ScalableVector<u_int>& a, const ScalableVector<u_int>& b) {
 					return a.size() < b.size();
 				});
 

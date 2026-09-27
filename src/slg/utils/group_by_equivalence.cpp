@@ -18,6 +18,7 @@
 
 #include "slg/utils/group_by_equivalence.h"
 
+#include <cstdint>
 #include <numeric>
 #include <ranges>
 #include <vector>
@@ -35,14 +36,32 @@ using ScalableVector = std::vector<T, tbb::scalable_allocator<T>>;
 // Classical Union-Find (disjoint set union) on flat arrays: the elements
 // form the dense range [0, numElements), so the parent and rank structures
 // are plain vectors instead of hash maps.
+//
+// The parent and rank entries are uint32_t/u_char (the elements are mesh
+// scale indices, below 2^32): the parent array is randomly touched by
+// every find, so shrinking it (and the rank, zero filled at every reduce
+// body construction) reduces both the cache footprint of the searches
+// and the cost of the per body construction (the parent is iota filled).
+//
+// The elements that became non roots are logged at link time: a reduce
+// join then merges through the logged elements only (every non root
+// became so at exactly one link, path halving never turns a root into a
+// non root), instead of scanning all the elements.
 class UnionFind {
-	ScalableVector<size_t> parent;
-	ScalableVector<size_t> rank;
+	ScalableVector<uint32_t> parent;
+	ScalableVector<u_char> rank;
+	// The elements that became non roots (one entry per effective link)
+	ScalableVector<uint32_t> nonRoots;
 
 public:
 	UnionFind() = default;
 	explicit UnionFind(const size_t count) : parent(count), rank(count, 0) {
-		std::iota(parent.begin(), parent.end(), size_t(0));
+		std::iota(parent.begin(), parent.end(), 0u);
+		// Every element becomes a non root at most once, so the log can
+		// never outgrow the element count: reserving it upfront avoids
+		// the growth reallocations of the links (the pages of the
+		// reserved tail materialize only when touched)
+		nonRoots.reserve(count);
 	}
 
 	// Find the root of the set containing i (path halving)
@@ -61,24 +80,25 @@ public:
 
 		if (rootI == rootJ)
 			return;
-		if (rank[rootI] < rank[rootJ])
-			parent[rootI] = rootJ;
-		else if (rank[rootI] > rank[rootJ])
-			parent[rootJ] = rootI;
-		else {
-			parent[rootJ] = rootI;
+		if (rank[rootI] < rank[rootJ]) {
+			parent[rootI] = static_cast<uint32_t>(rootJ);
+			nonRoots.push_back(static_cast<uint32_t>(rootI));
+		} else if (rank[rootI] > rank[rootJ]) {
+			parent[rootJ] = static_cast<uint32_t>(rootI);
+			nonRoots.push_back(static_cast<uint32_t>(rootJ));
+		} else {
+			parent[rootJ] = static_cast<uint32_t>(rootI);
+			nonRoots.push_back(static_cast<uint32_t>(rootJ));
 			rank[rootI]++;
 		}
 	}
 
-	// Merge another UnionFind into this one: every non-root element is
-	// united with its parent, which merges all the components (the roots
-	// are reached through their members)
+	// Merge another UnionFind into this one: unite every logged non root
+	// with its (forest edge) parent, which merges all the components
+	// (the roots are reached through their members)
 	UnionFind& operator+=(const UnionFind& other) {
-		for (size_t i = 0; i < parent.size(); ++i) {
-			if (other.parent[i] != i)
-				unite(i, other.parent[i]);
-		}
+		for (const uint32_t x : other.nonRoots)
+			unite(x, other.parent[x]);
 		return *this;
 	}
 };
@@ -165,12 +185,9 @@ public:
 // allocation until the final slicing. The elements end up in ascending
 // order inside each class.
 slg::Classes BuildClassesFromUnionFind(UnionFind& uf, const size_t numElements) {
-	// Flatten all the trees to depth 1
-	for (size_t i = 0; i < numElements; ++i)
-		uf.find(i);
-
-	// Count the class sizes
-	std::vector<size_t> classStart(numElements + 1, 0);
+	// Find the root of every element (flattening the trees along the way)
+	// and count the class sizes in the same pass
+	ScalableVector<size_t> classStart(numElements + 1, 0);
 	for (size_t i = 0; i < numElements; ++i)
 		++classStart[uf.find(i) + 1];
 
@@ -178,10 +195,11 @@ slg::Classes BuildClassesFromUnionFind(UnionFind& uf, const size_t numElements) 
 	for (size_t i = 0; i < numElements; ++i)
 		classStart[i + 1] += classStart[i];
 
-	// Fill the class entries
-	std::vector<size_t> classEntries(numElements);
+	// Fill the class entries (the trees are flattened: each find is a
+	// parent lookup or two)
+	ScalableVector<size_t> classEntries(numElements);
 	{
-		std::vector<size_t> classCursor(classStart.begin(), classStart.end() - 1);
+		ScalableVector<size_t> classCursor(classStart.begin(), classStart.end() - 1);
 		for (size_t i = 0; i < numElements; ++i)
 			classEntries[classCursor[uf.find(i)]++] = i;
 	}
@@ -216,6 +234,30 @@ Classes GroupByEquivalence(size_t numElements, RelationFunction relation) {
 
 	tbb::parallel_reduce(
 		tbb::blocked_range<size_t>(0, numElements, grain),
+		solver,
+		tbb_partitioner
+	);
+
+	return BuildClassesFromUnionFind(solver.getResult(), numElements);
+}
+
+// Version for callable generators over an iteration space distinct from
+// the element space: the relation functor is invoked with subranges of
+// [0, iterationCount) and returns pairs of equivalent elements of
+// [0, numElements). E.g. the relations can be derived from a mesh
+// triangle range while the elements are the (fewer) mesh entities
+// referenced by the relations
+Classes GroupByEquivalence(size_t numElements, size_t iterationCount,
+	RelationFunction relation) {
+	// Use parallel_reduce with ParallelGroupByEquivalenceFromGenerator
+	static tbb::affinity_partitioner tbb_partitioner;
+	constexpr size_t grain = 1024;
+
+	ParallelGroupByEquivalenceFromGenerator<RelationFunction> solver(
+		numElements, std::move(relation));
+
+	tbb::parallel_reduce(
+		tbb::blocked_range<size_t>(0, iterationCount, grain),
 		solver,
 		tbb_partitioner
 	);
