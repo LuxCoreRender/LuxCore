@@ -1449,37 +1449,112 @@ private:
 		// Build the triangle -> candidates reverse index as a CSR structure
 		// (bucket count, prefix sum, bucket fill on flat arrays): no hashing
 		// and no per bucket allocation.
-		// (Kept serial: the count/fill updates of a triangle would be shared
-		// by all the candidates reading it, so the parallel version would
-		// need contended atomics.)
+		//
+		// Atomic free construction, through a vertex -> candidates CSR:
+		// the candidates are scattered over the vertex lists of their two
+		// endpoints only (2 entries per candidate, instead of the ~2x6
+		// star triangles of the direct build), in mesh order (through a
+		// tid -> candidate index map, so the scatter stays cache coherent:
+		// the error order of the candidates would make every access a
+		// cold miss). The scatter is serial but small and coherent; its
+		// parallel versions would need either atomics or per thread
+		// histograms (gigabytes at this mesh size).
+		//
+		// The bucket of a triangle is then the concatenation of the vertex
+		// lists of its (3, possibly repeated) corners: the same multiset
+		// as the direct star fill - a candidate lands in the bucket once
+		// per (endpoint, corner) pair holding the same vertex, degenerate
+		// triangles included (the vertex references are per corner) - and
+		// the triangle passes (bucket count and fill) are conflict free:
+		// every triangle reads and writes only its own bucket. Each
+		// bucket is sorted by candidate index at fill time, so the
+		// relation chaining (std::lower_bound and the duplicate skipping)
+		// keeps finding the entries in ascending order.
 		const size_t triangleCount = GetTriangleCount();
-		std::vector<u_int> bucketStart(triangleCount + 1, 0);
-		for (size_t i = 0; i < candidateCount; ++i) {
+		const size_t vertexCount = GetVertexCount();
+
+		// tid -> candidate index map (a triangle holds at most one
+		// candidate): filled in parallel without conflicts, the candidate
+		// triangles are unique
+		ScalableVector<u_int> candidateOfTid(triangleCount, NULL_INDEX);
+		tbb::parallel_for(size_t(0), candidateCount, [&](size_t i) {
+			candidateOfTid[candidates[i].tid] = static_cast<u_int>(i);
+		});
+
+		// Vertex -> candidates CSR: count, prefix sum, fill (all in mesh
+		// order)
+		ScalableVector<u_int> vertexStart(vertexCount + 1, 0);
+		for (size_t t = 0; t < triangleCount; ++t) {
+			const u_int i = candidateOfTid[t];
+			if (i == NULL_INDEX)
+				continue;
 			const auto tvertex = candidates[i].tvertex;
-			const size_t tid = candidates[i].tid;
-			for (const size_t v : { triangleV[3*tid + tvertex],
-					triangleV[3*tid + TRI_NEXT[tvertex]] }) {
-				for (size_t k = 0; k < vertexTcount[v]; ++k)
-					++bucketStart[refTid[vertexTstart[v] + k] + 1];
+			++vertexStart[triangleV[3*t + tvertex] + 1];
+			++vertexStart[triangleV[3*t + TRI_NEXT[tvertex]] + 1];
+		}
+		for (size_t v = 0; v < vertexCount; ++v) {
+			vertexStart[v + 1] += vertexStart[v];
+		}
+
+		ScalableVector<u_int> vertexEntries(vertexStart[vertexCount]);
+		{
+			ScalableVector<u_int> vertexCursor(vertexStart.begin(), vertexStart.end() - 1);
+			for (size_t t = 0; t < triangleCount; ++t) {
+				const u_int i = candidateOfTid[t];
+				if (i == NULL_INDEX)
+					continue;
+				const auto tvertex = candidates[i].tvertex;
+				vertexEntries[vertexCursor[triangleV[3*t + tvertex]]++] = i;
+				vertexEntries[vertexCursor[triangleV[3*t + TRI_NEXT[tvertex]]]++] = i;
 			}
 		}
+
+		// Triangle -> candidates CSR: bucket sizes from the corner vertex
+		// list sizes (conflict free), prefix sum, fill and sort
+		ScalableVector<u_int> bucketStart(triangleCount + 1, 0);
+		tbb::parallel_for(size_t(0), triangleCount, [&](size_t t) {
+			const u_int v0 = triangleV[3*t + 0];
+			const u_int v1 = triangleV[3*t + 1];
+			const u_int v2 = triangleV[3*t + 2];
+			bucketStart[t + 1] = (vertexStart[v0 + 1] - vertexStart[v0])
+				+ (vertexStart[v1 + 1] - vertexStart[v1])
+				+ (vertexStart[v2 + 1] - vertexStart[v2]);
+		});
 		for (size_t tid = 0; tid < triangleCount; ++tid) {
 			bucketStart[tid + 1] += bucketStart[tid];
 		}
 
-		std::vector<u_int> bucketEntries(bucketStart[triangleCount]);
-		{
-			std::vector<u_int> bucketCursor(bucketStart.begin(), bucketStart.end() - 1);
-			for (size_t i = 0; i < candidateCount; ++i) {
-				const auto tvertex = candidates[i].tvertex;
-				const size_t tid = candidates[i].tid;
-				for (const size_t v : { triangleV[3*tid + tvertex],
-						triangleV[3*tid + TRI_NEXT[tvertex]] }) {
-					for (size_t k = 0; k < vertexTcount[v]; ++k)
-						bucketEntries[bucketCursor[refTid[vertexTstart[v] + k]]++] = i;
-				}
+		ScalableVector<u_int> bucketEntries(bucketStart[triangleCount]);
+		tbb::parallel_for(size_t(0), triangleCount, [&](size_t t) {
+			// Concatenate the corner vertex lists (the corner loop keeps
+			// the degenerate triangle multiplicity: a repeated corner
+			// copies its list again, like the direct star fill)
+			const u_int dstStart = bucketStart[t];
+			u_int k = 0;
+			for (size_t j = 0; j < 3; ++j) {
+				const u_int v = triangleV[3*t + j];
+				for (u_int p = vertexStart[v], end = vertexStart[v + 1];
+						p < end; ++p)
+					bucketEntries[dstStart + k++] = vertexEntries[p];
 			}
-		}
+
+			// Sort the bucket by candidate index (insertion sort for the
+			// usual few entries, std::sort for the rare big ones)
+			if (k <= 32) {
+				for (u_int p = 1; p < k; ++p) {
+					const u_int entry = bucketEntries[dstStart + p];
+					u_int q = p;
+					while (q > 0 && bucketEntries[dstStart + q - 1] > entry) {
+						bucketEntries[dstStart + q] = bucketEntries[dstStart + q - 1];
+						--q;
+					}
+					bucketEntries[dstStart + q] = entry;
+				}
+			} else {
+				std::sort(bucketEntries.begin() + dstStart,
+					bucketEntries.begin() + dstStart + k);
+			}
+		});
 
 		// Lazy relation generator: for candidates [r1, r2), look up each
 		// triangle touching their edge in the CSR and chain i with the next
