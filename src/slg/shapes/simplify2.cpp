@@ -1084,16 +1084,60 @@ private:
 
 		// Prefix sum of the reference counts and write back of the
 		// vertex fields
+		//
+		// The scan is parallel: the final pass of tbb::parallel_scan
+		// carries the true prefix, so the written starts are exactly
+		// the ones of the sequential scan. The count and fill passes
+		// stay serial on the contrary: they are locality bound (the
+		// mesh order makes the per vertex accesses cache friendly) and
+		// the parallel alternatives cost more than they save (a
+		// partition of the vertices would re-scan the whole triangle
+		// array from every range, and a bucketed scatter would fault
+		// in hundreds of MB of temporary buffers)
 		ScalableVector<u_int> vertexRefStarts(vertexCount);
 		{
-			size_t tstart = 0;
-			for (size_t i = 0; i < vertexCount; ++i) {
-				vertexRefStarts[i] = tstart;
-				vertexTstart[i] = u_int(tstart);
-				vertexTcount[i] = vertexRefCounts[i];
+			class VertexRefStartScan {
+				Simplify2 &mesh;
+				ScalableVector<u_int> &refStarts;
+				const ScalableVector<u_int> &refCounts;
+				size_t tstart;
 
-				tstart += vertexRefCounts[i];
-			}
+			public:
+				VertexRefStartScan(Simplify2 &p_mesh,
+						ScalableVector<u_int> &p_refStarts,
+						const ScalableVector<u_int> &p_refCounts)
+					: mesh(p_mesh), refStarts(p_refStarts),
+					  refCounts(p_refCounts), tstart(0) { }
+				VertexRefStartScan(VertexRefStartScan &other, tbb::split)
+					: mesh(other.mesh), refStarts(other.refStarts),
+					  refCounts(other.refCounts), tstart(0) { }
+
+				void operator()(const tbb::blocked_range<size_t> &range, tbb::pre_scan_tag) {
+					for (size_t i = range.begin(); i < range.end(); ++i)
+						tstart += refCounts[i];
+				}
+
+				void operator()(const tbb::blocked_range<size_t> &range, tbb::final_scan_tag) {
+					for (size_t i = range.begin(); i < range.end(); ++i) {
+						refStarts[i] = u_int(tstart);
+						mesh.vertexTstart[i] = u_int(tstart);
+						mesh.vertexTcount[i] = refCounts[i];
+
+						tstart += refCounts[i];
+					}
+				}
+
+				void reverse_join(VertexRefStartScan &rhs) {
+					tstart += rhs.tstart;
+				}
+
+				void assign(VertexRefStartScan &rhs) {
+					tstart = rhs.tstart;
+				}
+			};
+
+			VertexRefStartScan startScan(*this, vertexRefStarts, vertexRefCounts);
+			tbb::parallel_scan(tbb::blocked_range<size_t>(0, vertexCount, 16384), startScan);
 		}
 
 		// Write the references with a compact per vertex cursor
