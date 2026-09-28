@@ -419,10 +419,11 @@ public:
 				// Look for the (valid) triangle vertex with the minimum error
 				u_int minErrorIndex = NULL_INDEX;
 				float minError = std::numeric_limits<float>::infinity();
+				const size_t triOffset = 3*i;
 				for (size_t j = 0; j < 3; ++j) {
-					const u_int i0 = triangleV[3*i+j];
+					const u_int i0 = triangleV[triOffset+j];
 
-					const u_int i1 = triangleV[3*i + TRI_NEXT[j]];
+					const u_int i1 = triangleV[triOffset + TRI_NEXT[j]];
 
 					// Border check
 					if (preserveBorder) {
@@ -440,7 +441,7 @@ public:
 					// the point reconstruction and screening below have
 					// no side effect, so skipping them for a corner that
 					// can not win changes nothing
-					if (!(triangleErr[j][i] < minError))
+					if (!(triangleErr[triOffset + j] < minError))
 						continue;
 
 					// Reconstruct the collapse point from the choice
@@ -479,7 +480,7 @@ public:
 						continue;
 
 					minErrorIndex = j;
-					minError = triangleErr[j][i];
+					minError = triangleErr[triOffset + j];
 				}
 
 				if (minErrorIndex != NULL_INDEX)
@@ -499,7 +500,7 @@ public:
 				// monotonic for the non-negative floats and reversed for
 				// the negative ones, so the sign bit is set for the former
 				// and the whole word is flipped for the latter
-				const std::uint32_t errorBits = std::bit_cast<std::uint32_t>(triangleErr[tvertex][i]);
+				const std::uint32_t errorBits = std::bit_cast<std::uint32_t>(triangleErr[3*i + tvertex]);
 				const std::uint32_t errorKey = (errorBits & 0x80000000u) ?
 					~errorBits : (errorBits | 0x80000000u);
 
@@ -635,7 +636,12 @@ private:
 	// and re-derived the byte offset for every reference)
 	ScalableVector<u_int> triangleV;
 	ScalableVector<Normal> triangleGeometryN;
-	ScalableVector<float> triangleErr[3];
+	// The three collapse errors of a triangle, interleaved (err(j, tid) =
+	// triangleErr[3*tid + j]): the compactions move them in one
+	// contiguous 12 byte block like the vertex indices, and the passes
+	// that read the three errors of a triangle read one cache line
+	// instead of three streams
+	ScalableVector<float> triangleErr;
 	// The collapse point choice of each edge error (0, 1 or 2: the two
 	// endpoints or their midpoint), 2 bits per corner, packed in one byte
 	// per triangle. The choice is recorded by UpdateTriangleError together
@@ -655,8 +661,7 @@ private:
 
 	void ResizeTriangles(const size_t count) {
 		triangleV.resize(count * 3);
-		for (size_t j = 0; j < 3; ++j)
-			triangleErr[j].resize(count);
+		triangleErr.resize(count * 3);
 		triangleErrChoice.resize(count);
 		triangleGeometryN.resize(count);
 		triangleDeleted.resize(count);
@@ -1166,16 +1171,31 @@ private:
 		if (iteration > 0) {
 			// Compact the triangle arrays: the fields are moved one by
 			// one (the in place slots are skipped)
+			//
+			// The move stays serial, and the parallelism stays out of
+			// it entirely (not across the triangles - an in place move
+			// is race free only strictly left to right, the destination
+			// of a move can lag deep inside the sources another thread
+			// would not have read yet - and not across the arrays
+			// either: measured, one thread per array runs 0.15s slower
+			// over the 9 iterations, the big array streams land on the
+			// efficiency cores and the wall becomes their straggling
+			// pass. The out of place alternatives pay more in scratch
+			// buffer initialization and page faulting than the whole
+			// serial move)
 			size_t dst = 0;
 			for (size_t i = 0; i < triangleCount; ++i) {
 				if (triangleDeleted[i])
 					continue;
 
 				if (dst != i) {
-					for (size_t j = 0; j < 3; ++j) {
-						triangleV[3*dst+j] = triangleV[3*i+j];
-						triangleErr[j][dst] = triangleErr[j][i];
-					}
+					// The three vertex indices and the three errors are
+					// contiguous, one copy moves each block (the ranges
+					// never overlap: a move only happens when dst < i,
+					// so the destination ends at or before the source
+					// starts)
+					std::copy_n(&triangleV[3*i], 3, &triangleV[3*dst]);
+					std::copy_n(&triangleErr[3*i], 3, &triangleErr[3*dst]);
 					triangleErrChoice[dst] = triangleErrChoice[i];
 					triangleGeometryN[dst] = triangleGeometryN[i];
 					triangleDirty[dst] = triangleDirty[i];
@@ -1208,9 +1228,10 @@ private:
 				vertexQ[i] = SymetricMatrix2(0.0);
 
 			for (size_t i = 0; i < liveTriangleCount; ++i) {
-				const u_int iv0 = triangleV[3*i+0];
-				const u_int iv1 = triangleV[3*i+1];
-				const u_int iv2 = triangleV[3*i+2];
+				const size_t triOffset = 3*i;
+				const u_int iv0 = triangleV[triOffset+0];
+				const u_int iv1 = triangleV[triOffset+1];
+				const u_int iv2 = triangleV[triOffset+2];
 
 				const Point &p0 = vertexP[iv0];
 
@@ -1242,9 +1263,10 @@ private:
 		// vertices (tcount 0), so no separate initialization is needed.
 		ScalableVector<u_int> vertexRefCounts(vertexCount, 0);
 		for (size_t i = 0; i < liveTriangleCount; ++i) {
-			++vertexRefCounts[triangleV[3*i+0]];
-			++vertexRefCounts[triangleV[3*i+1]];
-			++vertexRefCounts[triangleV[3*i+2]];
+			const size_t triOffset = 3*i;
+			++vertexRefCounts[triangleV[triOffset+0]];
+			++vertexRefCounts[triangleV[triOffset+1]];
+			++vertexRefCounts[triangleV[triOffset+2]];
 		}
 
 		// Prefix sum of the reference counts and write back of the
@@ -1312,8 +1334,9 @@ private:
 		{
 			ScalableVector<u_int> vertexRefCursors(vertexRefStarts);
 			for (size_t i = 0; i < liveTriangleCount; ++i) {
+				const size_t triOffset = 3*i;
 				for (size_t j = 0; j < 3; ++j) {
-					const u_int slot = vertexRefCursors[triangleV[3*i+j]]++;
+					const u_int slot = vertexRefCursors[triangleV[triOffset+j]]++;
 
 					refTid[slot] = u_int(i);
 					refTvertex[slot] = u_int(j);
@@ -1402,20 +1425,24 @@ private:
 		for (size_t i = 0; i < triangleCount; ++i) {
 			if (triangleDeleted[i]) continue;
 
+			const size_t triOffset = 3*i;
+
 			if (dst != i) {
-				for (size_t j = 0; j < 3; ++j) {
-					triangleV[3*dst+j] = triangleV[3*i+j];
-					triangleErr[j][dst] = triangleErr[j][i];
-				}
+				// The three vertex indices and the three errors are
+				// contiguous, one copy moves each block (the ranges
+				// never overlap: a move only happens when dst < i)
+				const size_t dstOffset = 3*dst;
+				std::copy_n(&triangleV[triOffset], 3, &triangleV[dstOffset]);
+				std::copy_n(&triangleErr[triOffset], 3, &triangleErr[dstOffset]);
 				triangleErrChoice[dst] = triangleErrChoice[i];
 				triangleGeometryN[dst] = triangleGeometryN[i];
 				triangleDirty[dst] = triangleDirty[i];
 				triangleDeleted[dst] = false;
 			}
 
-			vertexTcount[triangleV[3*i+0]] = 1;
-			vertexTcount[triangleV[3*i+1]] = 1;
-			vertexTcount[triangleV[3*i+2]] = 1;
+			vertexTcount[triangleV[triOffset+0]] = 1;
+			vertexTcount[triangleV[triOffset+1]] = 1;
+			vertexTcount[triangleV[triOffset+2]] = 1;
 
 			++dst;
 		}
@@ -1445,9 +1472,10 @@ private:
 
 		// Remap the triangle vertex indices to the compacted vertices
 		for (size_t i = 0; i < liveTriangleCount; ++i) {
-			triangleV[3*i+0] = vertexTstart[triangleV[3*i+0]];
-			triangleV[3*i+1] = vertexTstart[triangleV[3*i+1]];
-			triangleV[3*i+2] = vertexTstart[triangleV[3*i+2]];
+			const size_t triOffset = 3*i;
+			triangleV[triOffset+0] = vertexTstart[triangleV[triOffset+0]];
+			triangleV[triOffset+1] = vertexTstart[triangleV[triOffset+1]];
+			triangleV[triOffset+2] = vertexTstart[triangleV[triOffset+2]];
 		}
 		ResizeVertices(dst);
 	}
@@ -1584,10 +1612,14 @@ private:
 	// screen error scale (one cached camera projection per vertex instead
 	// of two per edge)
 	void UpdateTriangleError(const size_t tid) {
+		const size_t triOffset = 3*tid;
 		unsigned char choice[3];
-		triangleErr[0][tid] = CalculateCollapseError(triangleV[3*tid+0], triangleV[3*tid+1], nullptr, &choice[0]);
-		triangleErr[1][tid] = CalculateCollapseError(triangleV[3*tid+1], triangleV[3*tid+2], nullptr, &choice[1]);
-		triangleErr[2][tid] = CalculateCollapseError(triangleV[3*tid+2], triangleV[3*tid+0], nullptr, &choice[2]);
+		const u_int triVertex0 = triangleV[triOffset+0];
+		const u_int triVertex1 = triangleV[triOffset+1];
+		const u_int triVertex2 = triangleV[triOffset+2];
+		triangleErr[triOffset+0] = CalculateCollapseError(triVertex0, triVertex1, nullptr, &choice[0]);
+		triangleErr[triOffset+1] = CalculateCollapseError(triVertex1, triVertex2, nullptr, &choice[1]);
+		triangleErr[triOffset+2] = CalculateCollapseError(triVertex2, triVertex0, nullptr, &choice[2]);
 
 		// The choice of each edge travels with the error: the candidate
 		// evaluation reconstructs the collapse point from it
@@ -1599,7 +1631,7 @@ private:
 			float sx[3], sy[3];
 			bool visible[3];
 			for (size_t j = 0; j < 3; ++j) {
-				visible[j] = GetScreenPosition(triangleV[3*tid+j], &sx[j], &sy[j]);
+				visible[j] = GetScreenPosition(triangleV[triOffset+j], &sx[j], &sy[j]);
 			}
 
 			for (size_t j = 0; j < 3; ++j) {
@@ -1613,7 +1645,7 @@ private:
 				} else
 					scale = notVisibleScale;
 
-				triangleErr[j][tid] *= scale;
+				triangleErr[triOffset + j] *= scale;
 			}
 		}
 	}
