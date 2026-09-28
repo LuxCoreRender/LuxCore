@@ -1151,11 +1151,23 @@ private:
 
 	// Compact triangles, compute edge error and build reference list
 	void UpdateMesh(const size_t iteration) {
+		// The triangle count is loaded once per mesh state, before and
+		// after the compaction (the vertex count does not change): the
+		// passes below write through the mesh arrays, so the compiler
+		// can not hoist the vector size loads out of the loop
+		// conditions and would otherwise reload the array bounds and
+		// recompute the counts at every iteration (two loads, a
+		// subtraction and the division by three, visible in the profile
+		// of the compaction back edge)
+		const size_t triangleCount = GetTriangleCount();
+		size_t liveTriangleCount = triangleCount;
+		const size_t vertexCount = GetVertexCount();
+
 		if (iteration > 0) {
 			// Compact the triangle arrays: the fields are moved one by
 			// one (the in place slots are skipped)
 			size_t dst = 0;
-			for (size_t i = 0; i < GetTriangleCount(); ++i) {
+			for (size_t i = 0; i < triangleCount; ++i) {
 				if (triangleDeleted[i])
 					continue;
 
@@ -1174,6 +1186,7 @@ private:
 			}
 
 			ResizeTriangles(dst);
+			liveTriangleCount = dst;
 		}
 
 		// Init Quadrics by Plane & Edge Errors
@@ -1191,10 +1204,10 @@ private:
 		// the mesh update, a lazily computed projection would be written
 		// by several threads at once)
 		if (iteration == 0) {
-			for (size_t i = 0; i < GetVertexCount(); ++i)
+			for (size_t i = 0; i < vertexCount; ++i)
 				vertexQ[i] = SymetricMatrix2(0.0);
 
-			for (size_t i = 0; i < GetTriangleCount(); ++i) {
+			for (size_t i = 0; i < liveTriangleCount; ++i) {
 				const u_int iv0 = triangleV[3*i+0];
 				const u_int iv1 = triangleV[3*i+1];
 				const u_int iv2 = triangleV[3*i+2];
@@ -1213,7 +1226,7 @@ private:
 				vertexQ[iv2] += sm;
 			}
 
-			tbb::parallel_for(size_t(0), GetTriangleCount(), [&](size_t i) {
+			tbb::parallel_for(size_t(0), liveTriangleCount, [&](size_t i) {
 				UpdateTriangleError(i);
 			});
 		}
@@ -1227,9 +1240,8 @@ private:
 		// level cache. The tstart/tcount fields are written back in the
 		// sequential prefix pass, which also covers the unused
 		// vertices (tcount 0), so no separate initialization is needed.
-		const size_t vertexCount = GetVertexCount();
 		ScalableVector<u_int> vertexRefCounts(vertexCount, 0);
-		for (size_t i = 0; i < GetTriangleCount(); ++i) {
+		for (size_t i = 0; i < liveTriangleCount; ++i) {
 			++vertexRefCounts[triangleV[3*i+0]];
 			++vertexRefCounts[triangleV[3*i+1]];
 			++vertexRefCounts[triangleV[3*i+2]];
@@ -1294,12 +1306,12 @@ private:
 		}
 
 		// Write the references with a compact per vertex cursor
-		const size_t refCount = GetTriangleCount() * 3;
+		const size_t refCount = liveTriangleCount * 3;
 		refTid.resize(refCount);
 		refTvertex.resize(refCount);
 		{
 			ScalableVector<u_int> vertexRefCursors(vertexRefStarts);
-			for (size_t i = 0; i < GetTriangleCount(); ++i) {
+			for (size_t i = 0; i < liveTriangleCount; ++i) {
 				for (size_t j = 0; j < 3; ++j) {
 					const u_int slot = vertexRefCursors[triangleV[3*i+j]]++;
 
@@ -1319,11 +1331,11 @@ private:
 		// when several threads store it at once. The zeroing is a
 		// separate pass: it must be complete before any flag is set
 		if (iteration == 0) {
-			tbb::parallel_for(size_t(0), GetVertexCount(), [this](size_t i) {
+			tbb::parallel_for(size_t(0), vertexCount, [this](size_t i) {
 				vertexBorder[i] = false;
 			});
 
-			tbb::parallel_for(tbb::blocked_range<size_t>(0, GetVertexCount(), 16384),
+			tbb::parallel_for(tbb::blocked_range<size_t>(0, vertexCount, 16384),
 				[&](const tbb::blocked_range<size_t> &r) {
 					// Reused across the vertices of the range: the clear
 					// is just a size reset, no reallocation
@@ -1363,22 +1375,31 @@ private:
 		}
 
 		// Clear dirty flag
-		tbb::parallel_for(size_t(0), GetTriangleCount(), [&](size_t i) {
+		tbb::parallel_for(size_t(0), liveTriangleCount, [&](size_t i) {
 			triangleDirty[i] = false;
 		});
 	}  // UpdateMesh
 
 	// Finally compact mesh before exiting
 	void CompactMesh() {
+		// The counts are loaded once (the same rationale as in
+		// UpdateMesh: the compaction passes write through the mesh
+		// arrays in place, so the compiler can not hoist the vector
+		// size loads out of the loop conditions). The triangle count
+		// changes with the compaction, the vertex count does not
+		const size_t triangleCount = GetTriangleCount();
+		size_t liveTriangleCount;
+		const size_t vertexCount = GetVertexCount();
+
 		size_t dst = 0;
 
-		for (size_t i = 0; i < GetVertexCount(); ++i)
+		for (size_t i = 0; i < vertexCount; ++i)
 			vertexTcount[i] = 0;
 
 		// Compact the triangle arrays: the fields are moved one by one
 		// (the in place slots are skipped) and the used vertices are
 		// marked
-		for (size_t i = 0; i < GetTriangleCount(); ++i) {
+		for (size_t i = 0; i < triangleCount; ++i) {
 			if (triangleDeleted[i]) continue;
 
 			if (dst != i) {
@@ -1399,13 +1420,14 @@ private:
 			++dst;
 		}
 		ResizeTriangles(dst);
+		liveTriangleCount = dst;
 
 		// Compact the vertex arrays: only the output fields are moved
 		// (like the record compaction: the quadrics and the flags stay
 		// behind, they are not used anymore) and the new index of each
 		// survivor is kept in its own tstart slot for the remap
 		dst = 0;
-		for (size_t i = 0; i < GetVertexCount(); ++i) {
+		for (size_t i = 0; i < vertexCount; ++i) {
 			if (!vertexTcount[i]) continue;
 
 			vertexTstart[i] = u_int(dst);
@@ -1422,7 +1444,7 @@ private:
 		}
 
 		// Remap the triangle vertex indices to the compacted vertices
-		for (size_t i = 0; i < GetTriangleCount(); ++i) {
+		for (size_t i = 0; i < liveTriangleCount; ++i) {
 			triangleV[3*i+0] = vertexTstart[triangleV[3*i+0]];
 			triangleV[3*i+1] = vertexTstart[triangleV[3*i+1]];
 			triangleV[3*i+2] = vertexTstart[triangleV[3*i+2]];
