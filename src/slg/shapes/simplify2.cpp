@@ -737,7 +737,7 @@ private:
 	ScalableVector<std::uint8_t> vertexScreenVisible;  // and the vertex is visible
 
 	bool CollapseEdge(const size_t trinagleIndex, const size_t startVertexIndex,
-			CollapseContext &ctx, ScalableVector<bool> &deleted0, ScalableVector<bool> &deleted1) {
+			CollapseContext &ctx, ScalableVector<unsigned char> &deleted0, ScalableVector<unsigned char> &deleted1) {
 		if (triangleDeleted[trinagleIndex])
 			return false;
 		if (triangleDirty[trinagleIndex])
@@ -856,7 +856,7 @@ private:
 	template<bool recordDeleted>
 	bool FlippedImpl(const Point &p, const size_t i0, const size_t i1,
 			const CollapseContext &ctx,
-			ScalableVector<bool> *deleted) const {
+			ScalableVector<unsigned char> *deleted) const {
 		const u_int tstart0 = vertexTstart[i0];
 		const u_int tcount0 = vertexTcount[i0];
 
@@ -876,7 +876,7 @@ private:
 			// Delete ?
 			if (id1 == i1 || id2 == i1) {
 				if constexpr (recordDeleted)
-					(*deleted)[k] = true;
+					(*deleted)[k] = 1;
 				return false;
 			}
 
@@ -911,7 +911,7 @@ private:
 				return true;
 
 			if constexpr (recordDeleted)
-				(*deleted)[k] = false;
+				(*deleted)[k] = 0;
 
 			return false;
 		};
@@ -949,13 +949,13 @@ private:
 	// With the per reference deleted flags (edge collapse): a reference,
 	// non null by construction
 	bool Flipped(const Point &p, const size_t i0, const size_t i1,
-			const CollapseContext &ctx, ScalableVector<bool> &deleted) const {
+			const CollapseContext &ctx, ScalableVector<unsigned char> &deleted) const {
 		return FlippedImpl<true>(p, i0, i1, ctx, &deleted);
 	}
 
 	// Update triangle connections and edge error after a edge is collapsed
 	void UpdateTriangles(const size_t i0, const size_t vertexIndex,
-			const ScalableVector<bool> &deleted, CollapseContext &ctx) {
+			const ScalableVector<unsigned char> &deleted, CollapseContext &ctx) {
 		const u_int tstart = vertexTstart[vertexIndex];
 		const u_int tcount = vertexTcount[vertexIndex];
 
@@ -1936,7 +1936,7 @@ private:
 		void ProcessClosure(const ScalableVector<u_int>& closureIndices) {
 			// Scalable allocator: recreated for every closure (no caching
 			// expected), resized for every candidate
-			ScalableVector<bool> deleted0, deleted1;
+			ScalableVector<unsigned char> deleted0, deleted1;
 
 			// Process each candidate in the closure in order
 			for (size_t idx : closureIndices) {
