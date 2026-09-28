@@ -513,15 +513,8 @@ public:
 			// Keep only the N% lowest error candidates
 			const size_t totalCandidateCount = candidateKeys.size();
 			const u_int nPercentCount = std::max(1u, Floor2UInt(totalCandidateCount * candidatePercent));
-			if (candidateKeys.size() > nPercentCount) {
-				// Select the N% lowest error candidates: nth_element partitions
-				// in average O(n) and only the kept prefix needs to be ordered
-				// (instead of sorting all the candidates to throw most of them
-				// away)
-				std::nth_element(candidateKeys.begin(), candidateKeys.begin() + nPercentCount,
-					candidateKeys.end(), keyCompare);
-				candidateKeys.resize(nPercentCount);
-			}
+			if (candidateKeys.size() > nPercentCount)
+				SelectLowestKeys(candidateKeys, nPercentCount);
 
 			// Sort the kept candidates by error (ascending)
 			tbb::parallel_sort(candidateKeys.begin(), candidateKeys.end(), keyCompare);
@@ -735,6 +728,160 @@ private:
 	ScalableVector<float> vertexScreenY;
 	ScalableVector<std::uint8_t> vertexScreenValid;    // the projection has been computed
 	ScalableVector<std::uint8_t> vertexScreenVisible;  // and the vertex is visible
+
+	// Select the n lowest keys of the array: a MSB first radix descent
+	// on the 16 bit digits of the keys finds the threshold of the n
+	// lowest ones, then they are compacted out of place.
+	//
+	// The keys are unique (the triangle index is in the low bits), so
+	// the selected set is exactly the prefix std::nth_element would
+	// have partitioned with, and the sort that follows produces the
+	// same sequence whatever the order of the selected entries: the
+	// compaction does not need to preserve it.
+	//
+	// The descent histograms one digit per level into one histogram per
+	// thread (tbb::combinable, without any atomic) and combines them
+	// serially. Only the keys sharing the digits fixed so far are
+	// counted (the prefix test of the histogram passes: no compaction
+	// happens during the search). The descent always ends on an exact
+	// bin boundary - the last level at the latest, where a bin holds at
+	// most one of the unique keys - so the selected set is exactly the
+	// keys with key >> thresholdShift <= threshold, a single comparison
+	// the compaction can test.
+	//
+	// The compaction is out of place in fixed size chunks: the chunks
+	// count their selected keys, the offsets are the prefix of the
+	// counts and each chunk copies into its own slot range (disjoint,
+	// without any atomic). The swap releases the original array (several
+	// hundreds of MB in the first iterations) before the sort runs on
+	// the selected one.
+	void SelectLowestKeys(ScalableVector<CandidateKey> &keys, const size_t n) {
+		const size_t keyCount = keys.size();
+		if (keyCount <= n)
+			return;
+
+		// The digit of the level and the prefix fixed so far
+		unsigned thresholdShift;
+		std::uint64_t threshold;
+		{
+			std::uint64_t prefix = 0;
+			unsigned fixedBits = 0;
+			size_t remaining = n;
+			bool found = false;
+
+			for (unsigned level = 0; level < 4 && !found; ++level) {
+				const unsigned digitShift = 48 - 16 * level;
+
+				// Histogram of the digit of the survivors, one per
+				// thread
+				tbb::combinable<ScalableVector<u_int>> localHistograms;
+				tbb::parallel_for(tbb::blocked_range<size_t>(0, keyCount, 262144),
+					[&](const tbb::blocked_range<size_t> &r) {
+						ScalableVector<u_int> &localHistogram = localHistograms.local();
+						if (localHistogram.empty())
+							localHistogram.resize(65536, 0);
+
+						for (size_t i = r.begin(); i < r.end(); ++i) {
+							const std::uint64_t key = keys[i].key;
+
+							// Only the keys sharing the digits fixed so
+							// far (all of them at the first level)
+							if (fixedBits && (key >> (64 - fixedBits)) != prefix)
+								continue;
+
+							++localHistogram[(key >> digitShift) & 0xffffu];
+						}
+					});
+
+				// Combine the per thread histograms and scan for the
+				// bin holding the rank
+				ScalableVector<u_int> histogram(65536, 0);
+				localHistograms.combine_each([&](const ScalableVector<u_int> &localHistogram) {
+					for (size_t b = 0; b < 65536; ++b)
+						histogram[b] += localHistogram[b];
+				});
+
+				size_t cumulative = 0;
+				for (u_int digit = 0; digit < 65536; ++digit) {
+					const size_t count = histogram[digit];
+					// The prefix value of the digits fixed so far plus
+					// this one (the value of the top fixedBits + 16 bits
+					// of the key, the space of the threshold comparison
+					// below)
+					const std::uint64_t extendedPrefix = (prefix << 16) | digit;
+
+					// The rank lands on the start of the bin: only the
+					// keys below it are selected
+					if (cumulative == remaining) {
+						threshold = extendedPrefix - 1;
+						thresholdShift = 64 - fixedBits - 16;
+						found = true;
+						break;
+					}
+
+					// The rank lands inside or at the end of the bin
+					if (cumulative + count >= remaining) {
+						if (cumulative + count == remaining) {
+							// At the end: the whole bin is selected
+							threshold = extendedPrefix;
+							thresholdShift = 64 - fixedBits - 16;
+							found = true;
+							break;
+						}
+
+						// Inside: fix the digit and descend to the next
+						// level with the reduced rank
+						prefix = extendedPrefix;
+						fixedBits += 16;
+						remaining -= cumulative;
+						break;
+					}
+
+					cumulative += count;
+				}
+			}
+		}
+
+		// Compact the selected keys out of place in fixed size chunks
+		const size_t chunkSize = 262144;
+		const size_t chunkCount = (keyCount + chunkSize - 1) / chunkSize;
+		ScalableVector<size_t> chunkSelectedCounts(chunkCount, 0);
+		tbb::parallel_for(size_t(0), chunkCount, [&](size_t c) {
+			const size_t iBegin = c * chunkSize;
+			const size_t iEnd = std::min(iBegin + chunkSize, keyCount);
+
+			size_t selectedCount = 0;
+			for (size_t i = iBegin; i < iEnd; ++i) {
+				if ((keys[i].key >> thresholdShift) <= threshold)
+					++selectedCount;
+			}
+			chunkSelectedCounts[c] = selectedCount;
+		});
+
+		// The chunk offsets (the prefix of the chunk counts)
+		ScalableVector<size_t> chunkOffsets(chunkCount);
+		size_t selectedTotal = 0;
+		for (size_t c = 0; c < chunkCount; ++c) {
+			chunkOffsets[c] = selectedTotal;
+			selectedTotal += chunkSelectedCounts[c];
+		}
+
+		// The chunk slot ranges are disjoint
+		ScalableVector<CandidateKey> selectedKeys(selectedTotal);
+		tbb::parallel_for(size_t(0), chunkCount, [&](size_t c) {
+			const size_t iBegin = c * chunkSize;
+			const size_t iEnd = std::min(iBegin + chunkSize, keyCount);
+
+			size_t k = chunkOffsets[c];
+			for (size_t i = iBegin; i < iEnd; ++i) {
+				if ((keys[i].key >> thresholdShift) <= threshold)
+					selectedKeys[k++] = keys[i];
+			}
+		});
+
+		// Release the original array and take the selected one
+		keys.swap(selectedKeys);
+	}
 
 	bool CollapseEdge(const size_t trinagleIndex, const size_t startVertexIndex,
 			CollapseContext &ctx, ScalableVector<unsigned char> &deleted0, ScalableVector<unsigned char> &deleted1) {
