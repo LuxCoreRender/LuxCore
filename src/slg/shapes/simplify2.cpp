@@ -1667,15 +1667,79 @@ private:
 		// Candidate bearing vertices (a vertex carries a candidate iff its
 		// list is not empty), compacted into a dense index: the elements of
 		// the vertex relation above
+		//
+		// The compaction is the flag + prefix + scatter pattern, without
+		// any atomic: the dense index of a flagged vertex is the count of
+		// the flagged vertices before it, computed by tbb::parallel_scan
+		// (its final pass carries the true prefix, so its writes
+		// reproduce the serial running count and the dense indices are
+		// assigned in ascending vertex order), and the inverse array is
+		// filled by a disjoint scatter (a flagged vertex writes only its
+		// own dense slot)
 		ScalableVector<u_int> candVertexOfVertex(vertexCount, NULL_INDEX);
-		ScalableVector<u_int> vertexOfCandVertex;
-		vertexOfCandVertex.reserve(vertexCount);
-		for (size_t v = 0; v < vertexCount; ++v) {
-			if (vertexStart[v + 1] > vertexStart[v]) {
-				candVertexOfVertex[v] = static_cast<u_int>(vertexOfCandVertex.size());
-				vertexOfCandVertex.push_back(static_cast<u_int>(v));
+
+		// Vertex flags (one byte per vertex), computed in parallel
+		ScalableVector<unsigned char> vertexHasCandidate(vertexCount);
+		tbb::parallel_for(tbb::blocked_range<size_t>(0, vertexCount, 16384),
+			[&](const tbb::blocked_range<size_t> &r) {
+				for (size_t v = r.begin(); v < r.end(); ++v)
+					vertexHasCandidate[v] = vertexStart[v + 1] > vertexStart[v];
+			});
+
+		// Dense index scan: the final pass writes the dense index of each
+		// flagged vertex, the pre pass only accumulates the counts
+		// (without any write)
+		class VertexDenseIndexScan {
+			ScalableVector<u_int> &denseIndexOfVertex;
+			const ScalableVector<unsigned char> &hasCandidate;
+			size_t count;
+
+		public:
+			VertexDenseIndexScan(ScalableVector<u_int> &p_denseIndexOfVertex,
+					const ScalableVector<unsigned char> &p_hasCandidate)
+				: denseIndexOfVertex(p_denseIndexOfVertex),
+				  hasCandidate(p_hasCandidate),
+				  count(0) { }
+			VertexDenseIndexScan(VertexDenseIndexScan &other, tbb::split)
+				: denseIndexOfVertex(other.denseIndexOfVertex),
+				  hasCandidate(other.hasCandidate),
+				  count(0) { }
+
+			void operator()(const tbb::blocked_range<size_t> &range, tbb::pre_scan_tag) {
+				for (size_t v = range.begin(); v < range.end(); ++v)
+					count += hasCandidate[v];
 			}
-		}
+
+			void operator()(const tbb::blocked_range<size_t> &range, tbb::final_scan_tag) {
+				for (size_t v = range.begin(); v < range.end(); ++v) {
+					if (hasCandidate[v])
+						denseIndexOfVertex[v] = static_cast<u_int>(count++);
+				}
+			}
+
+			void reverse_join(VertexDenseIndexScan &rhs) {
+				count += rhs.count;
+			}
+
+			void assign(VertexDenseIndexScan &rhs) {
+				count = rhs.count;
+			}
+
+			size_t getCount() const {
+				return count;
+			}
+		};
+
+		VertexDenseIndexScan denseIndexScan(candVertexOfVertex, vertexHasCandidate);
+		tbb::parallel_scan(tbb::blocked_range<size_t>(0, vertexCount, 16384), denseIndexScan);
+
+		// Inverse mapping: disjoint scatter
+		ScalableVector<u_int> vertexOfCandVertex(denseIndexScan.getCount());
+		tbb::parallel_for(size_t(0), vertexCount, [&](size_t v) {
+			const u_int denseIndexOfVertex = candVertexOfVertex[v];
+			if (denseIndexOfVertex != NULL_INDEX)
+				vertexOfCandVertex[denseIndexOfVertex] = static_cast<u_int>(v);
+		});
 		const size_t candVertexCount = vertexOfCandVertex.size();
 
 		// Relation generator over the triangles [r1, r2): link the first
