@@ -890,16 +890,22 @@ private:
 		if (triangleDirty[trinagleIndex])
 			return false;
 
-		// The triangle corner vertex indices, used all along the function
-		const u_int triVertices[3] = {
-			triangleV[3*trinagleIndex+0],
-			triangleV[3*trinagleIndex+1],
-			triangleV[3*trinagleIndex+2]
-		};
+		// The triangle corner vertex indices, used all along the
+		// function. Three scalars: an array would sit on the stack (the
+		// dynamic corner selection below forces it out of the
+		// registers) and every constant index use would become a
+		// reload
+		const u_int triVertex0 = triangleV[3*trinagleIndex+0];
+		const u_int triVertex1 = triangleV[3*trinagleIndex+1];
+		const u_int triVertex2 = triangleV[3*trinagleIndex+2];
 
-		const u_int i0 = triVertices[startVertexIndex];
-
-		const u_int i1 = triVertices[TRI_NEXT[startVertexIndex]];
+		// The collapse endpoints, selected between the scalars (a
+		// register selection, no memory)
+		const u_int nextVertexIndex = TRI_NEXT[startVertexIndex];
+		const u_int i0 = (startVertexIndex == 0) ? triVertex0 :
+			(startVertexIndex == 1) ? triVertex1 : triVertex2;
+		const u_int i1 = (nextVertexIndex == 0) ? triVertex0 :
+			(nextVertexIndex == 1) ? triVertex1 : triVertex2;
 
 		// Border check
 		if (vertexBorder[i0] != vertexBorder[i1])
@@ -920,25 +926,25 @@ private:
 			return false;
 
 		// Save original vertex information
-		const Point triPoint0 = vertexP[triVertices[0]];
-		const Point triPoint1 = vertexP[triVertices[1]];
-		const Point triPoint2 = vertexP[triVertices[2]];
+		const Point triPoint0 = vertexP[triVertex0];
+		const Point triPoint1 = vertexP[triVertex1];
+		const Point triPoint2 = vertexP[triVertex2];
 
-		const Normal triNorm0 = vertexNorm[triVertices[0]];
-		const Normal triNorm1 = vertexNorm[triVertices[1]];
-		const Normal triNorm2 = vertexNorm[triVertices[2]];
+		const Normal triNorm0 = vertexNorm[triVertex0];
+		const Normal triNorm1 = vertexNorm[triVertex1];
+		const Normal triNorm2 = vertexNorm[triVertex2];
 
-		const UV triUV0 = vertexUV[triVertices[0]];
-		const UV triUV1 = vertexUV[triVertices[1]];
-		const UV triUV2 = vertexUV[triVertices[2]];
+		const UV triUV0 = vertexUV[triVertex0];
+		const UV triUV1 = vertexUV[triVertex1];
+		const UV triUV2 = vertexUV[triVertex2];
 
-		const Spectrum triCol0 = vertexCol[triVertices[0]];
-		const Spectrum triCol1 = vertexCol[triVertices[1]];
-		const Spectrum triCol2 = vertexCol[triVertices[2]];
+		const Spectrum triCol0 = vertexCol[triVertex0];
+		const Spectrum triCol1 = vertexCol[triVertex1];
+		const Spectrum triCol2 = vertexCol[triVertex2];
 
-		const float triAlpha0 = vertexAlpha[triVertices[0]];
-		const float triAlpha1 = vertexAlpha[triVertices[1]];
-		const float triAlpha2 = vertexAlpha[triVertices[2]];
+		const float triAlpha0 = vertexAlpha[triVertex0];
+		const float triAlpha1 = vertexAlpha[triVertex1];
+		const float triAlpha2 = vertexAlpha[triVertex2];
 
 		// Not flipped, so remove edge
 		vertexP[i0] = p;
