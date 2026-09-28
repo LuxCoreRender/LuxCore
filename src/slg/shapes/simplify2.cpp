@@ -433,6 +433,16 @@ public:
 							continue;
 					}
 
+					// A corner that can not improve the current minimum
+					// can never be recorded: this is the exact negation of
+					// the original update test (and not >=, so that a NaN
+					// error still never updates, exactly like before) and
+					// the point reconstruction and screening below have
+					// no side effect, so skipping them for a corner that
+					// can not win changes nothing
+					if (!(triangleErr[j][i] < minError))
+						continue;
+
 					// Reconstruct the collapse point from the choice
 					// recorded with the error by the last error update:
 					// the update evaluated the same error on the same
@@ -468,10 +478,8 @@ public:
 					if (Flipped(p, i1, i0, candidateCtx))
 						continue;
 
-					if (triangleErr[j][i] < minError) {
-						minErrorIndex = j;
-						minError = triangleErr[j][i];
-					}
+					minErrorIndex = j;
+					minError = triangleErr[j][i];
 				}
 
 				if (minErrorIndex != NULL_INDEX)
