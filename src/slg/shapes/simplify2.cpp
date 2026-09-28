@@ -1669,58 +1669,28 @@ private:
 			return {};
 		}
 
-		// Build the vertex -> candidates index as a CSR structure (count,
-		// prefix sum, fill on flat arrays): the candidates are scattered
-		// over the vertex lists of their two endpoints (2 entries per
-		// candidate), in mesh order (through a tid -> candidate index
-		// map, so the scatter stays cache coherent: the error order of
-		// the candidates would make every access a cold miss). The scatter
-		// is serial but small and coherent; its parallel versions would
-		// need either atomics or per thread histograms (gigabytes at this
-		// mesh size). The vertex lists drive the relation generator (the
-		// candidate bearing test) and the closure gathering.
-		const size_t triangleCount = GetTriangleCount();
+		// Candidate bearing vertices: a vertex carries a candidate iff
+		// it is the endpoint of one. The flags are marked by the
+		// candidates themselves with idempotent one byte writes (several
+		// candidates can share an endpoint, so several threads can store
+		// 1 in the flag of the same vertex: no update is lost). The
+		// relation generator and the closure building below only need
+		// this bearing test and the dense index: the vertex -> candidates
+		// lists of the previous CSR (a serial count, prefix sum and
+		// fill, plus a tid -> candidate map) were only read by the
+		// closure gathering, which now scatters the candidates directly
+		// (sorted and deduplicated by construction)
 		const size_t vertexCount = GetVertexCount();
 
-		// tid -> candidate index map (a triangle holds at most one
-		// candidate): filled in parallel without conflicts, the candidate
-		// triangles are unique
-		ScalableVector<u_int> candidateOfTid(triangleCount, NULL_INDEX);
+		ScalableVector<unsigned char> vertexHasCandidate(vertexCount, 0);
 		tbb::parallel_for(size_t(0), candidateCount, [&](size_t i) {
-			candidateOfTid[candidates[i].tid] = static_cast<u_int>(i);
+			vertexHasCandidate[triangleV[3*candidates[i].tid + candidates[i].tvertex]] = 1;
+			vertexHasCandidate[triangleV[3*candidates[i].tid + TRI_NEXT[candidates[i].tvertex]]] = 1;
 		});
 
-		// Vertex -> candidates CSR: count, prefix sum, fill (all in mesh
-		// order)
-		ScalableVector<u_int> vertexStart(vertexCount + 1, 0);
-		for (size_t t = 0; t < triangleCount; ++t) {
-			const u_int i = candidateOfTid[t];
-			if (i == NULL_INDEX)
-				continue;
-			const auto tvertex = candidates[i].tvertex;
-			++vertexStart[triangleV[3*t + tvertex] + 1];
-			++vertexStart[triangleV[3*t + TRI_NEXT[tvertex]] + 1];
-		}
-		for (size_t v = 0; v < vertexCount; ++v) {
-			vertexStart[v + 1] += vertexStart[v];
-		}
-
-		ScalableVector<u_int> vertexEntries(vertexStart[vertexCount]);
-		{
-			ScalableVector<u_int> vertexCursor(vertexStart.begin(), vertexStart.end() - 1);
-			for (size_t t = 0; t < triangleCount; ++t) {
-				const u_int i = candidateOfTid[t];
-				if (i == NULL_INDEX)
-					continue;
-				const auto tvertex = candidates[i].tvertex;
-				vertexEntries[vertexCursor[triangleV[3*t + tvertex]]++] = i;
-				vertexEntries[vertexCursor[triangleV[3*t + TRI_NEXT[tvertex]]]++] = i;
-			}
-		}
-
-		// Candidate bearing vertices (a vertex carries a candidate iff its
-		// list is not empty), compacted into a dense index: the elements of
-		// the vertex relation above
+		// Candidate bearing vertices (a vertex carries a candidate iff
+		// it is the endpoint of one), compacted into a dense index: the
+		// elements of the vertex relation above
 		//
 		// The compaction is the flag + prefix + scatter pattern, without
 		// any atomic: the dense index of a flagged vertex is the count of
@@ -1731,14 +1701,6 @@ private:
 		// filled by a disjoint scatter (a flagged vertex writes only its
 		// own dense slot)
 		ScalableVector<u_int> candVertexOfVertex(vertexCount, NULL_INDEX);
-
-		// Vertex flags (one byte per vertex), computed in parallel
-		ScalableVector<unsigned char> vertexHasCandidate(vertexCount);
-		tbb::parallel_for(tbb::blocked_range<size_t>(0, vertexCount, 16384),
-			[&](const tbb::blocked_range<size_t> &r) {
-				for (size_t v = r.begin(); v < r.end(); ++v)
-					vertexHasCandidate[v] = vertexStart[v + 1] > vertexStart[v];
-			});
 
 		// Dense index scan: the final pass writes the dense index of each
 		// flagged vertex, the pre pass only accumulates the counts
@@ -1831,28 +1793,49 @@ private:
 		const Classes classes = GroupByEquivalence(candVertexCount, GetTriangleCount(),
 				RelationFunction(relationGenerator));
 
-		// Gather the closures from the components: the candidate lists of
-		// the member vertices, sorted by candidate index (the greedy
-		// processing order) and deduplicated (a candidate is listed once
-		// per endpoint vertex, both in the same component). Conflict free
-		// per class: the components are disjoint.
+		// Build the closures by scattering the candidates in ascending
+		// index order (the greedy processing order): the closure of a
+		// candidate is the component of its endpoints (the relation
+		// generator links the two candidate bearing corners of the
+		// candidate triangle, so both endpoints are in the same
+		// component), and a candidate is scattered exactly once. Every
+		// closure therefore receives its candidates already sorted and
+		// deduplicated - the previous gather collected them from the
+		// vertex lists (once per endpoint vertex) and sorted and
+		// deduplicated the result
+		ScalableVector<u_int> closureOfCandVertex(candVertexCount);
+		tbb::parallel_for(size_t(0), classes.size(), [&](size_t c) {
+			for (const size_t cv : classes[c])
+				closureOfCandVertex[cv] = static_cast<u_int>(c);
+		});
+
+		ScalableVector<u_int> closureOfCandidate(candidateCount);
+		tbb::parallel_for(size_t(0), candidateCount, [&](size_t i) {
+			const u_int v = triangleV[3*candidates[i].tid + candidates[i].tvertex];
+			closureOfCandidate[i] = closureOfCandVertex[candVertexOfVertex[v]];
+		});
+
+		// The histogram over the closures and the scatter itself stay
+		// serial: the cursors of a closure would race otherwise
+		ScalableVector<u_int> closureStart(classes.size() + 1, 0);
+		for (size_t i = 0; i < candidateCount; ++i)
+			++closureStart[closureOfCandidate[i] + 1];
+		for (size_t c = 0; c < classes.size(); ++c)
+			closureStart[c + 1] += closureStart[c];
+
+		ScalableVector<u_int> flatClosures(candidateCount);
+		{
+			ScalableVector<u_int> closureCursor(closureStart.begin(), closureStart.end() - 1);
+			for (size_t i = 0; i < candidateCount; ++i)
+				flatClosures[closureCursor[closureOfCandidate[i]]++] = static_cast<u_int>(i);
+		}
+
+		// Slice the flat array into the closures (the slot ranges are
+		// disjoint)
 		ScalableVector<ScalableVector<u_int>> closures(classes.size());
 		tbb::parallel_for(size_t(0), classes.size(), [&](size_t c) {
-			const auto& component = classes[c];
-			size_t closureSize = 0;
-			for (const size_t cv : component) {
-				const u_int v = vertexOfCandVertex[cv];
-				closureSize += vertexStart[v + 1] - vertexStart[v];
-			}
-			auto& closure = closures[c];
-			closure.reserve(closureSize);
-			for (const size_t cv : component) {
-				const u_int v = vertexOfCandVertex[cv];
-				for (u_int p = vertexStart[v], end = vertexStart[v + 1]; p < end; ++p)
-					closure.push_back(vertexEntries[p]);
-			}
-			std::sort(closure.begin(), closure.end());
-			closure.erase(std::unique(closure.begin(), closure.end()), closure.end());
+			closures[c].assign(flatClosures.begin() + closureStart[c],
+				flatClosures.begin() + closureStart[c + 1]);
 		});
 
 		return closures;
