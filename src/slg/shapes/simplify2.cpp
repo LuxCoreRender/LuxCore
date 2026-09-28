@@ -1563,23 +1563,33 @@ private:
 			mixedTri[t] = (r0 != r1) || (r1 != r2);
 		});
 
-		// A candidate is deferred iff a triangle of its endpoint stars is a
-		// seam triangle
+		// A vertex is seam adjacent iff one of the triangles of its
+		// star is a seam triangle (the same star the reference walk of
+		// the candidate test below would scan): marked with idempotent
+		// one byte writes, like the border identification (several
+		// threads can store 1 in the flag of a shared vertex, no
+		// update is lost). The seam triangles are rare (they only cut
+		// the regions apart), so the pass streams the flags of the
+		// triangles and rarely writes
+		ScalableVector<unsigned char> seamAdjacentVertex(GetVertexCount(), 0);
+		tbb::parallel_for(size_t(0), GetTriangleCount(), [&](size_t t) {
+			if (mixedTri[t]) {
+				seamAdjacentVertex[triangleV[3 * t + 0]] = 1;
+				seamAdjacentVertex[triangleV[3 * t + 1]] = 1;
+				seamAdjacentVertex[triangleV[3 * t + 2]] = 1;
+			}
+		});
+
+		// A candidate is deferred iff one of its endpoints is seam
+		// adjacent: exactly the test of the star walk it replaces (a
+		// seam triangle in the star of one of the endpoints), two byte
+		// loads per candidate instead of the walk of the two stars
 		ScalableVector<unsigned char> deferred(candidateCount, 0);
 		tbb::parallel_for(size_t(0), candidateCount, [&](size_t i) {
 			const size_t tid = candidates[i].tid;
 			const size_t tvertex = candidates[i].tvertex;
-			for (const u_int v : { triangleV[3 * tid + tvertex],
-					triangleV[3 * tid + TRI_NEXT[tvertex]] }) {
-				const size_t tstart = vertexTstart[v];
-				const size_t tcount = vertexTcount[v];
-				for (size_t k = 0; k < tcount; ++k) {
-					if (mixedTri[refTid[tstart + k]]) {
-						deferred[i] = 1;
-						return;
-					}
-				}
-			}
+			deferred[i] = seamAdjacentVertex[triangleV[3 * tid + tvertex]] ||
+				seamAdjacentVertex[triangleV[3 * tid + TRI_NEXT[tvertex]]];
 		});
 
 		// Skip the deferral when it would leave too few candidates
