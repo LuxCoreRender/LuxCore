@@ -27,7 +27,13 @@
 
 namespace slg {
 
-using Classes = std::vector<std::vector<size_t>>;
+// The equivalence classes (one inner vector per class), allocated with
+// the TBB scalable allocator like every container of this path: the
+// classes are sliced serially by the class build and only read
+// afterwards (the parallel consumers never allocate), so the benefit
+// over the default allocator is mostly consistency
+using Classes = std::vector<std::vector<size_t, tbb::scalable_allocator<size_t>>,
+		tbb::scalable_allocator<std::vector<size_t, tbb::scalable_allocator<size_t>>>>;
 using Relation = std::pair<size_t, size_t>;
 using RelationSpan = std::span<const Relation>;
 // Vector of relations, as returned by the generators, allocated with the
