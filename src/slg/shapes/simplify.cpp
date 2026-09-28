@@ -101,16 +101,6 @@ public:
 		return m[c];
 	}
 
-	// Determinant
-	float det(
-			const u_int a11, const u_int a12, const u_int a13,
-			const u_int a21, const u_int a22, const u_int a23,
-			const u_int a31, const u_int a32, const u_int a33) const {
-		const float det = m[a11] * m[a22] * m[a33] + m[a13] * m[a21] * m[a32] + m[a12] * m[a23] * m[a31]
-				- m[a13] * m[a22] * m[a31] - m[a11] * m[a23] * m[a32] - m[a12] * m[a21] * m[a33];
-		return det;
-	}
-
 	const SymetricMatrix operator+(const SymetricMatrix &n) const {
 		return SymetricMatrix(
 				m[0] + n[0], m[1] + n[1], m[2] + n[2], m[3] + n[3],

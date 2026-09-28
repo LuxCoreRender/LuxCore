@@ -147,19 +147,6 @@ public:
 		return m[c];
 	}
 
-	// Determinant of 3x3 submatrix
-	// Note: This is for the full 4x4 matrix, but we use specific indices
-	float det(
-			const size_t a11, const size_t a12, const size_t a13,
-			const size_t a21, const size_t a22, const size_t a23,
-			const size_t a31, const size_t a32, const size_t a33) const {
-		// For a 3x3 submatrix of the 4x4 matrix
-		// Using scalar operations as SIMD doesn't help much here
-		const float det = m[a11] * m[a22] * m[a33] + m[a13] * m[a21] * m[a32] + m[a12] * m[a23] * m[a31]
-				- m[a13] * m[a22] * m[a31] - m[a11] * m[a23] * m[a32] - m[a12] * m[a21] * m[a33];
-		return det;
-	}
-
 	// Addition (loop form so the 10 float additions are SIMD vectorized
 	// by the compiler: 2x 128-bit + 1x 64-bit packed adds)
 	const SymetricMatrix2 operator+(const SymetricMatrix2 &n) const {
@@ -222,13 +209,12 @@ public:
 		const TriangleBuffer tris(srcMesh.GetTriangles());
 
 		ResizeVertices(vertCount);
-		for (size_t i = 0; i < vertCount; ++i)
-			vertexP[i] = verts[i];
+		const auto& srcVerts = verts.GetObjects();
+		std::copy(srcVerts.begin(), srcVerts.end(), vertexP.begin());
 
 		if (srcMesh.HasNormals()) {
-			const auto& norms = srcMesh.GetNormals();
-			for (auto i = 0; i < vertCount; ++i)
-				vertexNorm[i] = norms[i];
+			const auto& srcNorms = srcMesh.GetNormals().GetObjects();
+			std::copy(srcNorms.begin(), srcNorms.end(), vertexNorm.begin());
 
 			hasNormals = true;
 		} else
@@ -236,8 +222,7 @@ public:
 
 		if (srcMesh.HasUVs(0)) {
 			const auto uvs = srcMesh.GetUVs(0);
-			for (size_t i = 0; i < vertCount; ++i)
-				vertexUV[i] = uvs[i];
+			std::copy_n(uvs.get(), vertCount, vertexUV.begin());
 
 			hasUVs = true;
 		} else
@@ -245,8 +230,7 @@ public:
 
 		if (srcMesh.HasColors(0)) {
 			const auto cols = srcMesh.GetColors(0);
-			for (size_t i = 0; i < vertCount; ++i)
-				vertexCol[i] = cols[i];
+			std::copy_n(cols.get(), vertCount, vertexCol.begin());
 
 			hasColors = true;
 		} else
@@ -254,19 +238,19 @@ public:
 
 		if (srcMesh.HasAlphas(0)) {
 			const auto alphas = srcMesh.GetAlphas(0);
-			for (size_t i = 0; i < vertCount; ++i)
-				vertexAlpha[i] = alphas[i];
+			std::copy_n(alphas.get(), vertCount, vertexAlpha.begin());
 
 			hasAlphas = true;
 		} else
 			hasAlphas = false;
 
 		ResizeTriangles(triCount);
-		for (size_t i = 0; i < triCount; ++i) {
-			triangleV[3*i+0] = tris[i].v[0];
-			triangleV[3*i+1] = tris[i].v[1];
-			triangleV[3*i+2] = tris[i].v[2];
-		}
+		// The triangle corners are copied through the sub object view of
+		// the buffer: a Triangle is its three corner indices, so the
+		// flat unsigned int view is already the interleaved layout of
+		// triangleV
+		const auto& srcTris = tris.GetSubObjects();
+		std::copy(srcTris.begin(), srcTris.end(), triangleV.begin());
 	}
 
 	~Simplify2() {
@@ -277,48 +261,44 @@ public:
 		const size_t triCount = GetTriangleCount();
 
 		VertexBuffer newVertices(vertCount);
-		for (size_t i = 0; i < vertCount; ++i)
-			newVertices[i] = vertexP[i];
+		std::copy(vertexP.begin(), vertexP.end(),
+				newVertices.GetObjects().begin());
 
 		NormalBuffer newNorms;
 		if (hasNormals) {
 			newNorms.Allocate(vertCount);
-			for (auto i = 0; i < vertCount; ++i)
-				newNorms[i] = vertexNorm[i];
+			std::copy(vertexNorm.begin(), vertexNorm.end(),
+					newNorms.GetObjects().begin());
 		}
 
 		ExtMeshProp<UV>::Layer newUVs = nullptr;
 		if (hasUVs) {
 			newUVs = std::make_shared<UV[]>(vertCount);
-			for (size_t i = 0; i < vertCount; ++i)
-				newUVs[i] = vertexUV[i];
+			std::copy(vertexUV.begin(), vertexUV.end(), newUVs.get());
 		}
 
 		ExtMeshProp<Spectrum>::Layer newCols = nullptr;
 		if (hasColors) {
 			newCols = std::make_shared<Spectrum[]>(vertCount);
-			for (size_t i = 0; i < vertCount; ++i)
-				newCols[i] = vertexCol[i];
+			std::copy(vertexCol.begin(), vertexCol.end(), newCols.get());
 		}
 
 		ExtMeshProp<float>::Layer newAlphas = nullptr;
 		if (hasAlphas) {
 			newAlphas = std::make_shared<float[]>(vertCount);
-			for (size_t i = 0; i < vertCount; ++i)
-				newAlphas[i] = vertexAlpha[i];
+			std::copy(vertexAlpha.begin(), vertexAlpha.end(), newAlphas.get());
 		}
 
 		TriangleBuffer newTris(triCount);
-		for (size_t i = 0; i < triCount; ++i) {
-			assert (triangleV[3*i+0] < vertCount);
-			newTris[i].v[0] = triangleV[3*i+0];
-
-			assert (triangleV[3*i+1] < vertCount);
-			newTris[i].v[1] = triangleV[3*i+1];
-
-			assert (triangleV[3*i+2] < vertCount);
-			newTris[i].v[2] = triangleV[3*i+2];
-		}
+		// The triangle corners are copied through the sub object view of
+		// the buffer: a Triangle is its three corner indices, so the
+		// flat unsigned int view is already the interleaved layout of
+		// triangleV. The index check of the debug build covers all the
+		// corners at once
+		assert(std::all_of(triangleV.begin(), triangleV.end(),
+				[&](const u_int v) { return v < vertCount; }));
+		std::copy(triangleV.begin(), triangleV.end(),
+				newTris.GetSubObjects().begin());
 
 		return std::make_unique<ExtTriangleMesh>(
 			std::move(newVertices),
