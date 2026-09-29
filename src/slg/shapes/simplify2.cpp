@@ -192,9 +192,15 @@ using namespace slg;
 //    nothing eligible is ever stranded (a re-deferred strip would
 //    freeze at its initial density and stay visible along the region
 //    grid). The loop stops when the target triangle count is reached,
-//    or when an iteration deletes nothing; the mesh is then compacted
-//    one last time (triangles, vertices and corner remap) and written
-//    back.
+//    when an iteration deletes nothing, or when the kept batch has
+//    fallen below one ten thousandth of the first batch (the one whose
+//    error rank defined the threshold E): the drain would then chase
+//    an insignificant share of the mesh at the full cost of an
+//    iteration. The halt is mesh dependent and can not fire at all
+//    when the first batch is small (one ten thousandth of it is below
+//    one candidate), so it only engages where the tail is expensive -
+//    the large meshes. The mesh is then compacted one last time
+//    (triangles, vertices and corner remap) and written back.
 
 // SymetricMatrix for quadric error metrics
 // The 4x4 symmetric matrix has 10 unique elements:
@@ -457,6 +463,9 @@ public:
 		// collapse cheaper than E remains anywhere in the mesh
 		const float initialCandidatePercent = 0.4f;
 		float errorThreshold = 0.f;
+		// The kept count of the first iteration: the reference of the
+		// mesh dependent drain halt below
+		size_t initialKeptCandidateCount = 0;
 
 		// Init
 		for (size_t i = 0; i < GetTriangleCount(); ++i)
@@ -469,11 +478,15 @@ public:
 		vertexScreenValid.assign(GetVertexCount(), false);
 		vertexScreenVisible.assign(GetVertexCount(), false);
 
-		// Main iteration loop
 		const size_t startTriangleCount = GetTriangleCount();
 		deletedTriangles = 0;
 		u_int totalDeletedTriangles = 0;
-		for (size_t iteration = 0; iteration < 64; ++iteration) {
+		// Main iteration loop. There is no iteration limit: the loop
+		// ends when the target triangle count is reached, or when an
+		// iteration deletes nothing (the fixed error threshold makes
+		// the selection repeat itself from there), which includes the
+		// complete drain with its homogeneous error certificate
+		for (size_t iteration = 0;; ++iteration) {
 			if (startTriangleCount - totalDeletedTriangles <= targetTriangleCount)
 				break;
 
@@ -659,6 +672,10 @@ public:
 			// The kept count (the keys are released below, after the
 			// extraction of the references)
 			const size_t keptCandidateCount = candidateKeys.size();
+			// The reference of the mesh dependent drain halt: the
+			// batch of the iteration that defined the error threshold
+			if (iteration == 0)
+				initialKeptCandidateCount = keptCandidateCount;
 
 			// Sort the kept candidates by error (ascending)
 			tbb::parallel_sort(candidateKeys.begin(), candidateKeys.end(), keyCompare);
@@ -688,6 +705,25 @@ public:
 
 			SDL_LOG("Simplify2: Kept the " << allCandidates.size() << " lowest error candidates (error < "
 				<< (boost::format("%.3g") % errorThreshold) << ")");
+
+			// The mesh dependent halt of the drain: the kept batch has
+			// fallen below a negligible remnant of the one that
+			// defined the error threshold (one ten thousandth of it) -
+			// the remaining iterations would delete an insignificant
+			// share of the mesh at the full cost of one. The halt can
+			// not fire on a productive drain (the batch stays within
+			// orders of magnitude of the reference until the natural
+			// end) and can not fire at all when the first batch is
+			// small (one ten thousandth of it is below one candidate),
+			// so it only engages where the tail is expensive: the
+			// large meshes
+			if (keptCandidateCount > 0 &&
+					keptCandidateCount < initialKeptCandidateCount / 10000) {
+				SDL_LOG("Simplify2: The kept batch (" << keptCandidateCount
+					<< ") has fallen below one ten thousandth of the initial one ("
+					<< initialKeptCandidateCount << ") - stopping the drain");
+				break;
+			}
 
 			// Defer the region boundary candidates: the closures of
 			// the main batch are then confined to the regions (and no
