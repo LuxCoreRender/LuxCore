@@ -73,6 +73,126 @@ using namespace slg;
 //
 // 5/2016: Chris Rorden created minimal version for OSX/Linux/Windows compile
 
+// NOTICE - the general principles of this implementation
+//
+// This is the multithreaded successor of the single threaded
+// implementation (simplify.cpp), restructured around one hard
+// constraint: it must take exactly the same decisions, with no lock
+// and no atomic in the algorithm itself (the internals of TBB
+// excepted), reproducible run after run.
+//
+// Each iteration evaluates the collapse error of the corners of every
+// triangle, keeps the N% lowest error candidates, and collapses what
+// remains; the iterations repeat until the target triangle count is
+// reached. The principles every step follows:
+//
+// 1. Determinism comes from the structure, never from
+// synchronization. The parallel phases write disjoint targets (every
+// triangle fills only its own slot, every scatter bucket only its own
+// range), the prefixes come from the final pass of
+// tbb::parallel_scan (it carries the exact running value a serial
+// scan would produce), and the candidate keys are unique (the error
+// bits and the triangle index packed in one word), so the selected
+// set is a well defined prefix whatever the sort algorithm or the
+// thread scheduling is. A step that can not be structured this way
+// stays serial.
+//
+// 2. One record, one writer. The flags are one byte per record and
+// never bit packed (the read-modify-write of a shared byte would
+// race between threads), the per thread scratch (histograms,
+// reference tails) is written by its thread only and combined
+// serially, and the few shared writes are idempotent (storing the
+// same byte twice loses nothing). The per thread buffers are cache
+// aligned (no false sharing), the short lived multithreaded buffers
+// come from the TBB scalable allocator (no heap contention).
+//
+// 3. The closure is the unit of parallel work. The candidates whose
+// collapses conflict form the connected components of a conflict
+// graph, built by a lock free Union-Find over the relations
+// (GroupByEquivalence). One closure is processed serially by one
+// thread - nothing else touches its triangles, so no lock is needed
+// - and the closures are processed in parallel. The giant closures
+// are broken geometrically: the candidates whose star spans several
+// regions are deferred, which disconnects the graph at the region
+// seams (dropping by error can not break it, every error band keeps
+// alternate paths through the triangle cliques).
+//
+// 4. The data follows the passes. The mesh fields live in
+// homogeneous arrays (structure of arrays), one array per field, so
+// every pass streams only what it uses; the fields always consumed
+// together (the corner indices, the corner errors) are interleaved
+// so they travel in one cache line and move in one block. Every
+// index (the references, the dense ids) is built with the same CSR
+// pattern: count, prefix, disjoint scatter.
+//
+// 5. Serial is a measured decision, not a default. The passes that
+// stay serial (the in place compaction, the CSR count and fill, the
+// candidate collect) are the ones where the parallel variants
+// measured slower: they are locality bound, cluster friendly, and
+// the alternatives pay more in redundant scans, scratch
+// initialization or straggling than they save.
+//
+// 6. The float expressions are frozen in place. FMA contraction is
+// context dependent: the same expression compiled in another context
+// rounds differently, and one different rounding changes the
+// decisions. The quadric accumulation stays serial for this reason,
+// and every refactoring near the float paths is integer only or
+// re-verified against the reference run.
+//
+// 7. Every change is verified against the reference run: the per
+// iteration kept, deferred and closure counts and the final face
+// count must match bit for bit, over several runs, before the change
+// is kept.
+//
+// The main steps of the algorithm:
+//
+// 0. Initialization (once): the source mesh is copied into the
+//    structure of arrays, the quadric of every vertex is accumulated
+//    from the plane quadrics of its triangles (serial, principle 6),
+//    the collapse errors of all triangle corners are evaluated
+//    (parallel) and the border vertices are identified (parallel).
+//
+// 1. Mesh update (every iteration): the triangles deleted by the
+//    previous iteration are compacted away (in place, strictly left
+//    to right) and the vertex -> triangle reference list is rebuilt
+//    with the CSR pattern (count, prefix, fill).
+//
+// 2. Candidate evaluation (parallel, one slot per triangle): every
+//    triangle records the corner with the lowest collapse error,
+//    screened by the border rules and the two flip tests. The error
+//    and the collapse point are the ones the last error update
+//    recorded on the same vertex state: the evaluation only reads.
+//
+// 3. Selection: every candidate is keyed by its error (an order
+//    preserving transformation of the float bits) and its triangle
+//    index, the N% lowest keys are selected with an MSB first radix
+//    descent (the exact prefix std::nth_element would partition) and
+//    sorted by ascending error.
+//
+// 4. Deferral: the candidates whose endpoint star spans several
+//    regions of a grid over the bounding box are put aside for a
+//    later iteration. The cut is geometric (principle 3): it
+//    disconnects the conflict graph at the region seams, so the
+//    closures stay small.
+//
+// 5. Closure computation: the conflict graph of the kept candidates
+//    is partitioned into connected components by a lock free
+//    Union-Find (GroupByEquivalence).
+//
+// 6. Collapse (parallel, one closure per task): a closure walks its
+//    candidates in the sorted order; each collapse deletes the
+//    triangles around its edge, moves the surviving vertices to the
+//    recorded collapse point, updates the errors of the neighboring
+//    triangles and appends their references to the per thread tail.
+//    The closures own disjoint triangle sets: nothing is shared, no
+//    lock is needed.
+//
+// 7. End game: the deferred candidates come back with the next
+//    iteration. The loop stops when the target triangle count is
+//    reached, or when an iteration deletes nothing and nothing is
+//    deferred anymore; the mesh is then compacted one last time
+//    (triangles, vertices and corner remap) and written back.
+
 // SymetricMatrix for quadric error metrics
 // The 4x4 symmetric matrix has 10 unique elements:
 // [0] = m11, [1] = m12, [2] = m13, [3] = m14,
