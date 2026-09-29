@@ -24,12 +24,15 @@ scene.shapes.obj_dragon.source = obj_dragonsimplify
 #################################################################################
 scene.objects.obj_dragon.ply = obj_dragon
 scene.objects.obj_dragon.material = mat_white
-# Rotation of pi/2 around the Z axis (the dragon stands up: its length
-# +x maps to +y) followed by a rotation of pi/2 around the Y axis
-# (turning it on the spot: +x maps to -z, +z to +x), both pivoted on
-# the dragon's center by the translation row and composed into a single
-# matrix. The written form is the transpose - LuxCore applies it as a
-# row vector times matrix
+# The dragon lies along raw +x in the source mesh (length 0.205,
+# height 0.144 along raw +y, width 0.091 along raw +z, bbox center
+# (-0.005, 0.125, -0.005)). The written matrix maps raw (x, y, z) to
+# (z, x, y), pivoted on the center by the translation row: the length
+# goes to the scene y axis, the height to the scene z axis and the
+# width to the scene x axis. LuxCore's default camera up is (0, 0, 1)
+# (z-up), so in the frame the dragon reads: lying horizontal across
+# the image, back up, seen from above at an angle. The written form is
+# the transpose - LuxCore applies it as a row vector times matrix
 scene.objects.obj_dragon.transformation = 0 1 0 0  0 0 1 0  1 0 0 0  0 0.13 -0.13 1
 #################################################################################
 scene.lights.infinitelight.type = infinite
