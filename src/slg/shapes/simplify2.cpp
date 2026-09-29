@@ -171,9 +171,9 @@ using namespace slg;
 //
 // 4. Deferral: the candidates whose endpoint star spans several
 //    regions of a grid over the bounding box are put aside for a
-//    later iteration. The cut is geometric (principle 3): it
-//    disconnects the conflict graph at the region seams, so the
-//    closures stay small.
+//    second wave of the same iteration. The cut is geometric
+//    (principle 3): it disconnects the conflict graph at the region
+//    seams, so the closures of the main wave stay small.
 //
 // 5. Closure computation: the conflict graph of the kept candidates
 //    is partitioned into connected components by a lock free
@@ -187,11 +187,14 @@ using namespace slg;
 //    The closures own disjoint triangle sets: nothing is shared, no
 //    lock is needed.
 //
-// 7. End game: the deferred candidates come back with the next
-//    iteration. The loop stops when the target triangle count is
-//    reached, or when an iteration deletes nothing and nothing is
-//    deferred anymore; the mesh is then compacted one last time
-//    (triangles, vertices and corner remap) and written back.
+// 7. End game: the second wave processes the deferred seam candidates
+//    right after the region confined closures of every iteration, so
+//    nothing eligible is ever stranded (a re-deferred strip would
+//    freeze at its initial density and stay visible along the region
+//    grid). The loop stops when the target triangle count is reached,
+//    or when an iteration deletes nothing; the mesh is then compacted
+//    one last time (triangles, vertices and corner remap) and written
+//    back.
 
 // SymetricMatrix for quadric error metrics
 // The 4x4 symmetric matrix has 10 unique elements:
@@ -443,9 +446,17 @@ public:
 		camera = &scnCamera;
 		edgeScreenSize = screenSize;
 
-		// Work on N% of all triangles for each iteration (keep only N% lowest error candidates)
-		// TODO: this should be a parameter (like target), tunable per shape
-		const float candidatePercent = 0.4f; // 40%
+		// The selection is error driven: the first iteration keeps the
+		// N% lowest error candidates and the error at that rank (E)
+		// becomes the fixed threshold of the following ones - every
+		// candidate below E is collapsed until none is left (or until
+		// the target triangle count is reached, whichever comes
+		// first). The flat regions cascade (a collapse makes its
+		// neighbors cheaper), the detailed ones keep their triangles,
+		// and the run ends with the homogeneous error property: no
+		// collapse cheaper than E remains anywhere in the mesh
+		const float initialCandidatePercent = 0.4f;
+		float errorThreshold = 0.f;
 
 		// Init
 		for (size_t i = 0; i < GetTriangleCount(); ++i)
@@ -604,21 +615,65 @@ public:
 				const std::uint32_t errorKey = (errorBits & 0x80000000u) ?
 					~errorBits : (errorBits | 0x80000000u);
 
+				// The tie break of the equal errors: the triangle index
+				// scrambled by an odd multiplier (a bijection of
+				// [0, 2^32), the keys stay unique). The scramble spreads
+				// the candidates with exactly equal errors (the flat
+				// regions) uniformly over the mesh: with the raw index
+				// they were selected in storage order, and the selection
+				// boundary left storage aligned bands in the mesh
+				const std::uint32_t tieKey = u_int(i) * 0x9E3779B1u;
+
 				candidateKeys.push_back(CandidateKey{
-					(static_cast<std::uint64_t>(errorKey) << 32) | static_cast<std::uint64_t>(i),
+					(static_cast<std::uint64_t>(errorKey) << 32) | tieKey,
 					SimplifyRef2{ u_int(i), tvertex } });
 			}
 			SDL_LOG("Simplify2: Found " << candidateKeys.size() << " edge candidates in "
 				<< (boost::format("%.3f") % (WallClockTime() - stepStartTime)) << "secs");
 
-			// Keep only the N% lowest error candidates
+			// Keep the candidates below the error threshold: the first
+			// iteration takes the N% lowest ones (the rank cut that
+			// defines E), the following ones take everything below E
+			// (the inclusive test: an error equal to the threshold is
+			// kept)
 			const size_t totalCandidateCount = candidateKeys.size();
-			const u_int nPercentCount = std::max(1u, Floor2UInt(totalCandidateCount * candidatePercent));
-			if (candidateKeys.size() > nPercentCount)
-				SelectLowestKeys(candidateKeys, nPercentCount);
+			if (iteration == 0) {
+				const u_int nPercentCount = std::max(1u,
+						Floor2UInt(totalCandidateCount * initialCandidatePercent));
+				if (candidateKeys.size() > nPercentCount)
+					SelectLowestKeys(candidateKeys, nPercentCount);
+			} else {
+				// The threshold in the packed key domain: the error
+				// word of the keys is the order preserving
+				// transformation of the float error bits (see the key
+				// building above), so the selection stays a single u64
+				// comparison per candidate
+				const std::uint32_t errorBits = std::bit_cast<std::uint32_t>(errorThreshold);
+				const std::uint32_t thresholdErrorKey = (errorBits & 0x80000000u) ?
+						~errorBits : (errorBits | 0x80000000u);
+				const std::uint64_t thresholdKey =
+						(std::uint64_t(thresholdErrorKey) << 32) | 0xffffffffu;
+
+				SelectKeysBelowThreshold(candidateKeys, thresholdKey);
+			}
+			// The kept count (the keys are released below, after the
+			// extraction of the references)
+			const size_t keptCandidateCount = candidateKeys.size();
 
 			// Sort the kept candidates by error (ascending)
 			tbb::parallel_sort(candidateKeys.begin(), candidateKeys.end(), keyCompare);
+
+			// E, the error at the rank cut of the first iteration: the
+			// keys are sorted, so the last kept one carries it. The
+			// inverse of the order preserving transformation of the
+			// key building
+			if (iteration == 0 && !candidateKeys.empty()) {
+				const std::uint32_t thresholdErrorKey =
+						std::uint32_t(candidateKeys.back().key >> 32);
+				const std::uint32_t errorBits = (thresholdErrorKey & 0x80000000u) ?
+						(thresholdErrorKey & 0x7fffffffu) : ~thresholdErrorKey;
+				errorThreshold = std::bit_cast<float>(errorBits);
+			}
 
 			// Extract the sorted references for the downstream phases:
 			// the keys are only needed by the sort
@@ -631,14 +686,21 @@ public:
 			// iterations)
 			ScalableVector<CandidateKey>().swap(candidateKeys);
 
-			SDL_LOG("Simplify2: Kept the " << allCandidates.size() << " lowest error candidates ("
-				<< (boost::format("%.1f") % (candidatePercent * 100.f)) << "% of " << totalCandidateCount << ")");
+			SDL_LOG("Simplify2: Kept the " << allCandidates.size() << " lowest error candidates (error < "
+				<< (boost::format("%.3g") % errorThreshold) << ")");
 
-			// Defer the region boundary candidates: the closures are then
-			// confined to the regions (and no longer giant), while the
-			// deferred candidates just come back with the next iteration
+			// Defer the region boundary candidates: the closures of
+			// the main batch are then confined to the regions (and no
+			// longer giant). The deferred strip is processed as a
+			// second wave of the same iteration, so no candidate is
+			// ever stranded (the strip used to come back with the next
+			// iteration, but a strip whose neighborhood keeps region
+			// spanning triangles is re-deferred forever: it freezes at
+			// its initial density and stays visible along the region
+			// grid)
 			stepStartTime = WallClockTime();
-			const size_t deferredCandidates = DeferBoundaryCandidates(allCandidates);
+			ScalableVector<SimplifyRef2> stripCandidates;
+			const size_t deferredCandidates = DeferBoundaryCandidates(allCandidates, stripCandidates);
 			if (deferredCandidates > 0)
 				SDL_LOG("Simplify2: Deferred " << deferredCandidates << " region boundary candidates ("
 					<< allCandidates.size() << " kept) in "
@@ -670,15 +732,43 @@ public:
 			// merge; only the deleted triangles counter is merged (and the
 			// closure disjointness asserted) by applyResult.
 
+			// Second wave: the deferred seam candidates of the
+			// iteration, processed alone after the region confined
+			// closures. Their conflict graph reconnects through the
+			// seams (typically one big closure), so the wave is mostly
+			// serial - but the strip is thin and the closures of the
+			// main wave are complete, so nothing is shared with them.
+			// The strip coarsens with the mesh instead of freezing at
+			// its initial density
+			if (!stripCandidates.empty()) {
+				stepStartTime = WallClockTime();
+				ScalableVector<ScalableVector<u_int>> stripClosures =
+					ComputeCandidateClosures(stripCandidates);
+				ProcessClosuresParallel(stripClosures, stripCandidates);
+				SDL_LOG("Simplify2: Processed the " << stripCandidates.size()
+					<< " deferred region boundary candidates in "
+					<< (boost::format("%.3f") % (WallClockTime() - stepStartTime)) << "secs");
+			}
+
 			const u_int iterationDeletedTriangles = deletedTriangles;
 			totalDeletedTriangles += iterationDeletedTriangles;
 			SDL_LOG("Simplify2 iteration " << iteration << " (" << allCandidates.size() << " edge candidates, deleted "
 				<< iterationDeletedTriangles << "/" << totalDeletedTriangles << " of " << startTriangleCount
 				<< " triangles) in " << (boost::format("%.3f") % (WallClockTime() - iterationStartTime)) << "secs");
-			// The deferred region boundary candidates come back with the
-			// next iteration: only stop when nothing is left to do at all
-			if (iterationDeletedTriangles == 0 && deferredCandidates == 0)
+			// An iteration that deletes nothing is terminal: the
+			// threshold is fixed and the deferred candidates are
+			// processed in the same iteration, so the errors can only
+			// change with the collapses - the next iterations would
+			// repeat the same selection
+			if (iterationDeletedTriangles == 0) {
+				// The homogeneous error certificate: no collapse
+				// cheaper than the threshold remains anywhere in the
+				// mesh
+				if (keptCandidateCount == 0)
+					SDL_LOG("Simplify2: No collapse below the error threshold "
+						<< (boost::format("%.3g") % errorThreshold) << " remains (homogeneous error reached)");
 				break;
+			}
 		}
 
 		// Clean up mesh
@@ -696,12 +786,16 @@ private:
 
 	// Sort key of a SimplifyRef2 candidate: the 32-bit order-preserving
 	// transformation of the collapse error in the high word and the
-	// triangle index in the low word. Every triangle contributes at most
-	// one candidate, so the triangle index is unique and the key is a
-	// strict total order over distinct candidates: the comparison is a
-	// single u64 test (no error array access in the comparator, no
-	// tie-break branches) and the sorted sequence is independent of the
-	// sort algorithm and of the thread scheduling
+	// scrambled triangle index in the low word (an odd multiplier
+	// bijection of [0, 2^32)). Every triangle contributes at most one
+	// candidate, so the key is a strict total order over distinct
+	// candidates: the comparison is a single u64 test (no error array
+	// access in the comparator, no tie-break branches) and the sorted
+	// sequence is independent of the sort algorithm and of the thread
+	// scheduling. The scramble keeps the keys unique but orders the
+	// candidates with exactly equal errors (the flat regions)
+	// uniformly over the mesh instead of in storage order: the
+	// selection boundary used to leave storage aligned bands
 	struct CandidateKey {
 		std::uint64_t key;
 		SimplifyRef2 ref;
@@ -980,6 +1074,61 @@ private:
 			size_t k = chunkOffsets[c];
 			for (size_t i = iBegin; i < iEnd; ++i) {
 				if ((keys[i].key >> thresholdShift) <= threshold)
+					selectedKeys[k++] = keys[i];
+			}
+		});
+
+		// Release the original array and take the selected one
+		keys.swap(selectedKeys);
+	}
+	// Select the keys below a threshold: the threshold comes from the
+	// error schedule of the iteration (a value in the packed key
+	// domain, see the selection in Decimate), not from a rank, so
+	// there is no search. The keys are compacted out of place in fixed
+	// size chunks: the chunks count their selected keys, the offsets
+	// are the prefix of the counts and each chunk copies into its own
+	// slot range (disjoint, without any atomic)
+	void SelectKeysBelowThreshold(ScalableVector<CandidateKey> &keys,
+			const std::uint64_t threshold) {
+		const size_t keyCount = keys.size();
+
+		// Compact the selected keys out of place in fixed size chunks
+		const size_t chunkSize = 262144;
+		const size_t chunkCount = (keyCount + chunkSize - 1) / chunkSize;
+		ScalableVector<size_t> chunkSelectedCounts(chunkCount, 0);
+		tbb::parallel_for(size_t(0), chunkCount, [&](size_t c) {
+			const size_t iBegin = c * chunkSize;
+			const size_t iEnd = std::min(iBegin + chunkSize, keyCount);
+
+			size_t selectedCount = 0;
+			for (size_t i = iBegin; i < iEnd; ++i) {
+				if (keys[i].key <= threshold)
+					++selectedCount;
+			}
+			chunkSelectedCounts[c] = selectedCount;
+		});
+
+		// The chunk offsets (the prefix of the chunk counts)
+		ScalableVector<size_t> chunkOffsets(chunkCount);
+		size_t selectedTotal = 0;
+		for (size_t c = 0; c < chunkCount; ++c) {
+			chunkOffsets[c] = selectedTotal;
+			selectedTotal += chunkSelectedCounts[c];
+		}
+
+		// The threshold keeps every key: nothing to compact
+		if (selectedTotal == keyCount)
+			return;
+
+		// The chunk slot ranges are disjoint
+		ScalableVector<CandidateKey> selectedKeys(selectedTotal);
+		tbb::parallel_for(size_t(0), chunkCount, [&](size_t c) {
+			const size_t iBegin = c * chunkSize;
+			const size_t iEnd = std::min(iBegin + chunkSize, keyCount);
+
+			size_t k = chunkOffsets[c];
+			for (size_t i = iBegin; i < iEnd; ++i) {
+				if (keys[i].key <= threshold)
 					selectedKeys[k++] = keys[i];
 			}
 		});
@@ -1674,8 +1823,12 @@ private:
 		if (choiceResult)
 			*choiceResult = choice;
 
-		// Adding 1.0 because error have negative values
-		return std::max(error + 1.f, 0.f);
+		// The +1 is already applied above (with the error1/2/3): it was
+		// applied a second time here for a long time, and the constant
+		// dominated the geometric error by orders of magnitude on
+		// dense meshes (the selection then followed the screen scale
+		// or the float noise instead of the geometry)
+		return std::max(error, 0.f);
 	}
 
 	// Get the screen space projection (normalized coordinates) of a vertex,
@@ -1772,22 +1925,30 @@ private:
 	// parallel processing is preserved. The closures can still share
 	// vertices (read only), like before.
 	//
-	// The deferred candidates are simply regenerated by the next iteration
-	// (the candidate list is rebuilt from scratch every iteration), so the
-	// deferral needs no bookkeeping at all. The measured cost is 1-3% of
-	// the candidates per iteration. The deferral is applied after the
-	// candidate percentile cut, so the deferred candidates consume their
-	// share of the percentile budget.
+	// The deferred candidates are moved to their own list and processed
+	// as a second wave of the same iteration: a candidate whose
+	// neighborhood keeps region spanning triangles is re-deferred at
+	// every iteration, so giving the strip back to the next iteration
+	// would freeze it at its initial density (a visible strip along
+	// the region grid). The measured strip is 1-3% of the candidates
+	// per iteration. The deferral is applied after the candidate
+	// selection, so the deferred candidates consume their share of the
+	// selection.
 	//
 	// Deterministic: the regions are a pure function of the vertex
-	// positions (the bounding box reduction is schedule independent). The
-	// decisions differ from the non deferred version, though (the deferred
-	// collapses happen one iteration later).
+	// positions (the bounding box reduction is schedule independent).
+	// The decisions differ from the non deferred version, though (the
+	// deferred collapses happen in the second wave, after the region
+	// confined ones).
 	//
-	// Returns the number of deferred candidates (0 also when the deferral
-	// is skipped) and compacts the candidates in place, keeping the error
-	// order.
-	size_t DeferBoundaryCandidates(ScalableVector<SimplifyRef2>& candidates) {
+	// Returns the number of deferred candidates (0 also when the
+	// deferral is skipped), compacts the kept candidates in place
+	// keeping the error order, and moves the deferred strip to the
+	// given list (cleared first), also in error order
+	size_t DeferBoundaryCandidates(ScalableVector<SimplifyRef2>& candidates,
+			ScalableVector<SimplifyRef2>& strip) {
+		strip.clear();
+
 		const size_t candidateCount = candidates.size();
 		if (candidateCount < minKeptCandidates)
 			return 0;
@@ -1906,15 +2067,18 @@ private:
 		if (keptCount < minKeptCandidates)
 			return 0;
 
-		// Compact the candidates in place, keeping the error order
+		// Compact the kept candidates in place and move the strip out,
+		// both keeping the error order
 		size_t keptIndex = 0;
 		for (size_t i = 0; i < candidateCount; ++i) {
-			if (!deferred[i])
+			if (deferred[i])
+				strip.push_back(candidates[i]);
+			else
 				candidates[keptIndex++] = candidates[i];
 		}
-		candidates.resize(keptCount);
+		candidates.resize(keptIndex);
 
-		return candidateCount - keptCount;
+		return candidateCount - keptIndex;
 	}
 
 	// Computes candidate closures (connected components in the conflict graph)
@@ -2172,13 +2336,15 @@ private:
 		CacheAlignedVector<u_int> deletedCandidates;
 
 	public:
-		// Constructor for the master thread
+		// Constructor for the master thread. The context counter
+		// starts at zero: every call counts only its own deletions and
+		// the iteration accumulates the waves through applyResult
+		// (pre-loading the global counter here would count the main
+		// wave twice, once per wave)
 		ParallelClosureProcessor(Simplify2& s,
 				const ScalableVector<ScalableVector<u_int>>& c,
 				const ScalableVector<SimplifyRef2>& a)
-			: simplify(s), closures(c), allCandidates(a) {
-			ctx.deletedCount = s.deletedTriangles;
-		}
+			: simplify(s), closures(c), allCandidates(a) { }
 
 		// Split constructor for TBB
 		ParallelClosureProcessor(ParallelClosureProcessor& other, tbb::split)
@@ -2218,7 +2384,11 @@ private:
 			}
 #endif
 
-			simplify.deletedTriangles = ctx.deletedCount;
+			// Accumulated and not assigned: the second wave of the
+			// iteration (the deferred strip) calls this again on top of
+			// the main result (the counter is reset at the beginning
+			// of every iteration)
+			simplify.deletedTriangles += ctx.deletedCount;
 		}
 
 	private:
