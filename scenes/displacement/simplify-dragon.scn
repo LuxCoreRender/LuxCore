@@ -1,0 +1,39 @@
+scene.camera.type = "perspective"
+scene.camera.lookat.orig = 0.28 0.18 0.30
+scene.camera.lookat.target = 0.0 0.12 0.0
+scene.camera.fieldofview = 45
+#################################################################################
+scene.textures.wireframetex.type = wireframe
+scene.textures.wireframetex.width = 0.002
+scene.textures.wireframetex.border = 1.0 0.0 0.0
+scene.textures.wireframetex.inside = 1.0 1.0 1.0
+#################################################################################
+scene.materials.mat_white.type = matte
+scene.materials.mat_white.kd = wireframetex
+#################################################################################
+scene.shapes.obj_dragonply.type = mesh
+scene.shapes.obj_dragonply.ply = scenes/displacement/dragon/dragon_vrip.ply
+##
+scene.shapes.obj_dragonsimplify.type = simplify2
+scene.shapes.obj_dragonsimplify.source = obj_dragonply
+scene.shapes.obj_dragonsimplify.target = 0.1
+scene.shapes.obj_dragonsimplify.preserveborder = 1
+##
+scene.shapes.obj_dragon.type = harlequin
+scene.shapes.obj_dragon.source = obj_dragonsimplify
+#################################################################################
+scene.objects.obj_dragon.ply = obj_dragon
+scene.objects.obj_dragon.material = mat_white
+# Rotation of pi/2 around the Z axis (the dragon stands up: its length
+# +x maps to +y) followed by a rotation of pi/2 around the Y axis
+# (turning it on the spot: +x maps to -z, +z to +x), both pivoted on
+# the dragon's center by the translation row and composed into a single
+# matrix. The written form is the transpose - LuxCore applies it as a
+# row vector times matrix
+scene.objects.obj_dragon.transformation = 0 1 0 0  0 0 1 0  1 0 0 0  0 0.13 -0.13 1
+#################################################################################
+scene.lights.infinitelight.type = infinite
+scene.lights.infinitelight.file = scenes/simple-mat/sky.exr
+scene.lights.infinitelight.gamma = 1.0
+scene.lights.infinitelight.gain = 1.0 1.0 1.0
+scene.lights.infinitelight.storage = byte
