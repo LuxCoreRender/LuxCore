@@ -60,11 +60,11 @@ scene.shapes.obj_redsubdiv.source = obj_redply
 scene.shapes.obj_redsubdiv.maxlevel = 3
 scene.shapes.obj_redsubdiv.maxedgescreensize = 0.1
 #
-scene.shapes.obj_redsimplify_1.type = simplify
+scene.shapes.obj_redsimplify_1.type = simplify2
 scene.shapes.obj_redsimplify_1.source = obj_redsubdiv
 scene.shapes.obj_redsimplify_1.target = 0.5
 #
-scene.shapes.obj_redsimplify_2.type = simplify
+scene.shapes.obj_redsimplify_2.type = simplify2
 scene.shapes.obj_redsimplify_2.source = obj_redsubdiv
 scene.shapes.obj_redsimplify_2.target = 0.1
 #
