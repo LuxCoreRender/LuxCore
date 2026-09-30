@@ -501,24 +501,43 @@ public:
 			// lower
 			++invalidationGen;
 
-			// Precompute the screen space projections of all the vertices (when
-			// enabled): the parallel phases below then never lazily write the
-			// caches. Closures can share (read only) vertices, so the lazy
-			// cache writes would otherwise race between closures on the shared
-			// entries (the vertex projections are deterministic, but the writes
-			// must not happen concurrently anyway). The vertices moved by the
-			// collapses still have their cache invalidated and lazily
-			// recomputed, but only within a single closure (their triangles
-			// all belong to the collapsing closure).
+			// Precompute the screen space projections (when enabled): the
+			// parallel phases below then never lazily write the caches.
+			// Closures can share (read only) vertices, so the lazy cache
+			// writes would otherwise race between closures on the shared
+			// entries (the vertex projections are deterministic, but the
+			// writes must not happen concurrently anyway). The vertices
+			// moved by the collapses still have their cache invalidated
+			// and lazily recomputed, but only within a single closure
+			// (their triangles all belong to the collapsing closure).
 			//
-			// It runs before the mesh update because the parallel edge error
-			// initialization of UpdateMesh reads the projections: nothing
-			// moves the vertices in between, so the values are the same
-			if (edgeScreenSize > 0.f) {
-				tbb::parallel_for(size_t(0), GetVertexCount(), [this](size_t i) {
-					float x, y;
-					GetScreenPosition(i, &x, &y);
-				});
+			// It runs before the mesh update because the parallel edge
+			// error initialization of UpdateMesh reads the projections:
+			// nothing moves the vertices in between, so the values are
+			// the same
+			//
+			// The recompute touches exactly the vertices moved by the
+			// previous collapse phase: the welds are the only
+			// invalidations of the cache, and the merges of the phase
+			// recorded their list. The first iteration finds the list
+			// empty and computes the whole mesh, which starts fully
+			// invalid
+			{
+				ScalableVector<u_int> movedVertices;
+				movedVertices.swap(phaseMovedVertices);
+				if (edgeScreenSize > 0.f) {
+					if (!movedVertices.empty()) {
+						tbb::parallel_for(size_t(0), movedVertices.size(), [&](size_t i) {
+							float x, y;
+							GetScreenPosition(movedVertices[i], &x, &y);
+						});
+					} else {
+						tbb::parallel_for(size_t(0), GetVertexCount(), [this](size_t i) {
+							float x, y;
+							GetScreenPosition(i, &x, &y);
+						});
+					}
+				}
 			}
 
 			double stepStartTime = WallClockTime();
@@ -888,6 +907,18 @@ public:
 			SDL_LOG("Simplify2: Processed " << candidateClosures.size() << " closures in parallel in "
 				<< (boost::format("%.3f") % (WallClockTime() - stepStartTime)) << "secs");
 
+			// The deletions of the main wave: the strip wave below
+			// adds the rest to the counter
+			const u_int mainWaveDeletedTriangles = deletedTriangles;
+
+			// Merge the appended star segments of the main wave
+			// before the strip: the strip candidates' closures are
+			// computed from walks over the reference base (see the
+			// sparse path of ComputeCandidateClosures), and the
+			// unmerged star segments of the main wave's bodies could
+			// not be walked
+			MergeRefAppends(mainWaveDeletedTriangles);
+
 			// Note: the closures have disjoint triangle sets, so the global
 			// triangle flags written by the collapses are race-free and need no
 			// merge; only the deleted triangles counter is merged (and the
@@ -914,47 +945,10 @@ public:
 			const u_int iterationDeletedTriangles = deletedTriangles;
 			totalDeletedTriangles += iterationDeletedTriangles;
 
-			// Merge the appended star segments of the collapse phase
-			// into the reference base: the walks of the next iteration
-			// read the merged layout with the same two segment
-			// arithmetic (the base including the appends, plus the
-			// fresh per body tails of that iteration). The blocks of
-			// the split bodies land in the reduce join order: the
-			// merged layout varies with the scheduling, but the walks
-			// are order independent (an OR over the star), so the
-			// decisions are identical run after run
-			{
-				size_t appendTotal = 0;
-				for (const auto& block : iterationRefAppends)
-					appendTotal += block.first.size();
-
-				const size_t baseSize = refTid.size();
-				refTid.resize(baseSize + appendTotal);
-				refTvertex.resize(baseSize + appendTotal);
-
-				size_t offset = 0;
-				for (auto& block : iterationRefAppends) {
-					for (size_t k = 0; k < block.first.size(); ++k) {
-						refTid[baseSize + offset + k] = block.first[k].tid;
-						refTvertex[baseSize + offset + k] = block.first[k].tvertex;
-					}
-					// The repointed starts of the welded vertices were
-					// relative to their own body tail: rewrite them
-					// into the merged layout
-					for (const auto& append : block.second)
-						vertexTstart[append.vertex] =
-								u_int(baseSize + offset + append.tailStart);
-
-					offset += block.first.size();
-				}
-				iterationRefAppends.clear();
-
-				// The garbage accounting: the appended segments
-				// supersede roughly one old entry each and every
-				// deleted triangle orphans its three base entries
-				staleRefCount += appendTotal + 3 * size_t(iterationDeletedTriangles);
-				uncompactedDeletions += iterationDeletedTriangles;
-			}
+			// Merge the appended star segments of the strip wave (the
+			// accounting is per wave: the main wave merge above
+			// already carried its own deletions)
+			MergeRefAppends(iterationDeletedTriangles - mainWaveDeletedTriangles);
 			SDL_LOG("Simplify2 iteration " << iteration << " (" << allCandidates.size() << " edge candidates, deleted "
 				<< iterationDeletedTriangles << "/" << totalDeletedTriangles << " of " << startTriangleCount
 				<< " triangles) in " << (boost::format("%.3f") % (WallClockTime() - iterationStartTime)) << "secs");
@@ -1025,6 +1019,9 @@ private:
 		// the closures (one context per thread)
 		CacheAlignedVector<SimplifyRef2> refsTail;
 		CacheAlignedVector<RefAppend> refAppends;
+		// The vertices moved by the welds of the context (the screen
+		// projection recompute list of the next iteration)
+		CacheAlignedVector<u_int> movedVertices;
 		u_int deletedCount = 0;
 	};
 
@@ -1040,20 +1037,26 @@ private:
 	// array keeps the data pointer in a register through the hot loops
 	// (the previous array of three vectors reloaded the member pointer
 	// and re-derived the byte offset for every reference)
-	ScalableVector<u_int> triangleV;
-	ScalableVector<Normal> triangleGeometryN;
+	// Cache aligned: the compaction gathers stream these arrays (and
+	// the scratch below), and the swap of the gather turns the scratch
+	// into the mesh array - the alignment survives every compaction,
+	// and every pass of the next iteration (the evaluation, the
+	// collect, the star walks) reads streams starting on line
+	// boundaries
+	CacheAlignedVector<u_int> triangleV;
+	CacheAlignedVector<Normal> triangleGeometryN;
 	// The three collapse errors of a triangle, interleaved (err(j, tid) =
 	// triangleErr[3*tid + j]): the compactions move them in one
 	// contiguous 12 byte block like the vertex indices, and the passes
 	// that read the three errors of a triangle read one cache line
 	// instead of three streams
-	ScalableVector<float> triangleErr;
+	CacheAlignedVector<float> triangleErr;
 	// The collapse point choice of each edge error (0, 1 or 2: the two
 	// endpoints or their midpoint), 2 bits per corner, packed in one byte
 	// per triangle. The choice is recorded by UpdateTriangleError together
 	// with the error, so that the candidate evaluation can reconstruct the
 	// collapse point without re-evaluating the quadric error
-	ScalableVector<unsigned char> triangleErrChoice;
+	CacheAlignedVector<unsigned char> triangleErrChoice;
 	// The triangle flags as one byte per flag (and not std::vector<bool>):
 	// the collapses of the parallel closure processing write the flags of
 	// their (disjoint) triangles from multiple threads, and the packed
@@ -1061,7 +1064,7 @@ private:
 	// read-modify-write of the bit updates would race and lose updates.
 	// One byte per flag keeps every write on its own address.
 	ScalableVector<unsigned char> triangleDeleted;
-	ScalableVector<unsigned char> triangleDirty;
+	CacheAlignedVector<unsigned char> triangleDirty;
 	// The recorded candidate of every triangle (the corner its last
 	// evaluation selected, or NULL_INDEX when no corner passed) and
 	// its validity flag. The evaluation of a triangle reproduces its
@@ -1074,8 +1077,8 @@ private:
 	// flip tests read them (the tests walk the stars of the endpoints
 	// and read the slots and the positions of their triangles). The
 	// compaction moves the record and the flag with the triangle
-	ScalableVector<u_int> candidateVertexIndex;
-	ScalableVector<unsigned char> candidateValid;
+	CacheAlignedVector<u_int> candidateVertexIndex;
+	CacheAlignedVector<unsigned char> candidateValid;
 	// The per vertex generation of the star invalidation: the current
 	// iteration generation is compared against the vertex counter, so
 	// a vertex star is walked at most once per iteration however many
@@ -1096,11 +1099,25 @@ private:
 	size_t staleRefCount = 0;
 	size_t uncompactedDeletions = 0;
 	size_t rebuildLiveTriangleCount = 0;
-	// The star segments appended by the collapse phase of the current
+	// An appended star block of a collapse wave: the tail segment, the
+	// repoint records of its welded vertices and the screen projection
+	// recompute list of the vertices they moved
+	struct RefAppendBlock {
+		CacheAlignedVector<SimplifyRef2> refsTail;
+		CacheAlignedVector<RefAppend> refAppends;
+		CacheAlignedVector<u_int> movedVertices;
+	};
+	// The star segments appended by the collapse waves of the current
 	// iteration, with the repoint records of their welded vertices:
 	// handed over by the closure processors, consumed and cleared by
-	// the merge at the end of the collapse phase
-	std::vector<std::pair<CacheAlignedVector<SimplifyRef2>, CacheAlignedVector<RefAppend>>> iterationRefAppends;
+	// the merge of each wave
+	std::vector<RefAppendBlock> iterationRefAppends;
+	// The screen projection recompute list: the vertices moved by the
+	// collapse waves of the current iteration, accumulated by the
+	// merges and consumed by the precompute of the next iteration (the
+	// first iteration finds it empty and computes the whole mesh, which
+	// starts fully invalid)
+	ScalableVector<u_int> phaseMovedVertices;
 	// The evaluation cache activates only once the run is out of the
 	// production phase: while the selected batch is a large share of
 	// the mesh, the collapses rewrite nearly everything, the records
@@ -1111,6 +1128,37 @@ private:
 	// and the parallel phases, so the plain read needs no
 	// synchronization
 	bool evalCacheActive = false;
+	// The scratch buffers of the triangle compaction (UpdateMesh and
+	// CompactMesh): the surviving triangle fields are gathered out of
+	// place, one field at a time, into these persistent buffers, and
+	// the mesh array is swapped with its scratch (no copy back). They
+	// persist across the compactions: after the swap they hold the
+	// previous (larger) arrays, so the next compaction only shrinks
+	// them (a resize down initializes nothing) and the gathers
+	// overwrite them completely - the one time initialization is paid
+	// at the first compaction only. Cache aligned like the mesh arrays
+	// above: the swapped scratch keeps the alignment of the mesh arrays
+	// across the compactions
+	struct CompactionScratch {
+		CacheAlignedVector<u_int> index;
+		CacheAlignedVector<u_int> v;
+		CacheAlignedVector<float> err;
+		CacheAlignedVector<unsigned char> errChoice;
+		CacheAlignedVector<Normal> geometryN;
+		CacheAlignedVector<unsigned char> dirty;
+		CacheAlignedVector<u_int> candidateVertexIndex;
+		CacheAlignedVector<unsigned char> candidateValid;
+	} compactionScratch;
+	// The persistent candidate vertex map of the sparse closure path
+	// (ComputeCandidateClosures): only the entries of the current
+	// call's candidate endpoints are set - the star walks of the
+	// relation generator read the map at every corner of their
+	// triangles and must see NULL_INDEX everywhere else - and the
+	// entries of the previous call are cleared through the saved list
+	// below. Grown once, at the first call with few candidates
+	ScalableVector<u_int> candVertexOfVertexSparse;
+	// The endpoints set by the previous sparse call (the clear list)
+	ScalableVector<u_int> candVertexSet;
 
 	size_t GetTriangleCount() const { return triangleV.size() / 3; }
 
@@ -1410,8 +1458,12 @@ private:
 
 		// Not flipped, so remove edge
 		vertexP[i0] = p;
-		// The vertex moved: invalidate its cached screen projection
+		// The vertex moved: invalidate its cached screen projection and
+		// record it for the recompute of the next iteration (the welds
+		// are the only invalidations of the cache, so the recorded list
+		// is exactly the invalid set)
 		vertexScreenValid[i0] = false;
+		ctx.movedVertices.push_back(u_int(i0));
 		vertexQ[i0] += vertexQ[i1];
 
 		// Interpolate other vertex attributes
@@ -1664,6 +1716,72 @@ private:
 			processReference(k, ctx.refsTail[tstart + k - baseSize]);
 	}
 
+	// The compaction index scan: the running count of the surviving
+	// triangles is the destination of a survivor, so the final pass
+	// writes index[dst] = source (the compaction gathers then read the
+	// sources through it). The TBB scan guarantee: the final pass
+	// carries the true prefix, so the destinations are exactly the
+	// ones of the serial running count
+	class CompactionIndexScan {
+		const Simplify2 &mesh;
+		CacheAlignedVector<u_int> &index;
+		size_t survivorCount;
+
+	public:
+		CompactionIndexScan(const Simplify2 &p_mesh, CacheAlignedVector<u_int> &p_index)
+			: mesh(p_mesh), index(p_index), survivorCount(0) { }
+		CompactionIndexScan(CompactionIndexScan &other, tbb::split)
+			: mesh(other.mesh), index(other.index), survivorCount(0) { }
+
+		void operator()(const tbb::blocked_range<size_t> &range, tbb::pre_scan_tag) {
+			for (size_t i = range.begin(); i < range.end(); ++i)
+				survivorCount += 1u - mesh.triangleDeleted[i];
+		}
+
+		void operator()(const tbb::blocked_range<size_t> &range, tbb::final_scan_tag) {
+			for (size_t i = range.begin(); i < range.end(); ++i) {
+				if (!mesh.triangleDeleted[i])
+					index[survivorCount++] = u_int(i);
+			}
+		}
+
+		void reverse_join(CompactionIndexScan &rhs) {
+			survivorCount += rhs.survivorCount;
+		}
+
+		void assign(CompactionIndexScan &rhs) {
+			survivorCount = rhs.survivorCount;
+		}
+
+		size_t getCount() const {
+			return survivorCount;
+		}
+	};
+
+	// Gathers a triangle field through the compaction index: the
+	// scratch buffer is resized to the compacted field (a resize down
+	// initializes nothing), the destinations are filled in parallel -
+	// every range writes only its own disjoint destination slots and
+	// reads the sources through the index (read only), so the gather
+	// is race free (the in place form is not: an in place move is race
+	// free only strictly left to right, the destination of a move can
+	// lag deep inside the sources another thread would not have read
+	// yet) - and the mesh array is swapped with the compacted scratch
+	// (no copy back)
+	template<typename T>
+	void GatherTriangleField(CacheAlignedVector<T> &field, CacheAlignedVector<T> &scratchField,
+			const CacheAlignedVector<u_int> &index, const size_t liveCount, const size_t stride) {
+		scratchField.resize(liveCount * stride);
+		tbb::parallel_for(tbb::blocked_range<size_t>(0, liveCount, 16384),
+			[&](const tbb::blocked_range<size_t> &r) {
+				for (size_t d = r.begin(); d < r.end(); ++d) {
+					const size_t s = index[d];
+					std::copy_n(&field[s * stride], stride, &scratchField[d * stride]);
+				}
+			});
+		field.swap(scratchField);
+	}
+
 	// Compact triangles, compute edge error and build reference list
 	// Returns true when the compaction and the reference rebuild were
 	// deferred (see the accounting members)
@@ -1695,43 +1813,44 @@ private:
 				staleRefCount * 8 > liveNow * 3;
 
 		if (rebuildRefs && iteration > 0) {
-			// Compact the triangle arrays: the fields are moved one by
-			// one (the in place slots are skipped)
-			//
-			// The move stays serial, and the parallelism stays out of
-			// it entirely (not across the triangles - an in place move
-			// is race free only strictly left to right, the destination
-			// of a move can lag deep inside the sources another thread
-			// would not have read yet - and not across the arrays
-			// either: measured, one thread per array runs 0.15s slower
-			// over the 9 iterations, the big array streams land on the
-			// efficiency cores and the wall becomes their straggling
-			// pass. The out of place alternatives pay more in scratch
-			// buffer initialization and page faulting than the whole
-			// serial move)
-			size_t dst = 0;
-			for (size_t i = 0; i < triangleCount; ++i) {
-				if (triangleDeleted[i])
-					continue;
+			// Compact the triangle arrays through the compaction index:
+			// a parallel scan records the surviving triangles
+			// (index[dst] = source), then each field is gathered out of
+			// place in parallel (see GatherTriangleField) and the mesh
+			// array is swapped with its scratch buffer (see
+			// compactionScratch). The fields are gathered one by one (a
+			// sequential pass per field): every pass streams a single
+			// array pair and no two threads touch two different fields
+			// at once
+			compactionScratch.index.resize(triangleCount);
+			CompactionIndexScan indexScan(*this, compactionScratch.index);
+			tbb::parallel_scan(tbb::blocked_range<size_t>(0, triangleCount, 16384),
+					indexScan);
+			const size_t dst = indexScan.getCount();
 
-				if (dst != i) {
-					// The three vertex indices and the three errors are
-					// contiguous, one copy moves each block (the ranges
-					// never overlap: a move only happens when dst < i,
-					// so the destination ends at or before the source
-					// starts)
-					std::copy_n(&triangleV[3*i], 3, &triangleV[3*dst]);
-					std::copy_n(&triangleErr[3*i], 3, &triangleErr[3*dst]);
-					triangleErrChoice[dst] = triangleErrChoice[i];
-					triangleGeometryN[dst] = triangleGeometryN[i];
-					triangleDirty[dst] = triangleDirty[i];
-					candidateVertexIndex[dst] = candidateVertexIndex[i];
-					candidateValid[dst] = candidateValid[i];
-					triangleDeleted[dst] = false;
-				}
+			// The three vertex indices and the three errors are
+			// contiguous blocks, one copy moves each
+			GatherTriangleField(triangleV, compactionScratch.v,
+					compactionScratch.index, dst, 3);
+			GatherTriangleField(triangleErr, compactionScratch.err,
+					compactionScratch.index, dst, 3);
+			GatherTriangleField(triangleErrChoice, compactionScratch.errChoice,
+					compactionScratch.index, dst, 1);
+			GatherTriangleField(triangleGeometryN, compactionScratch.geometryN,
+					compactionScratch.index, dst, 1);
+			GatherTriangleField(triangleDirty, compactionScratch.dirty,
+					compactionScratch.index, dst, 1);
+			GatherTriangleField(candidateVertexIndex, compactionScratch.candidateVertexIndex,
+					compactionScratch.index, dst, 1);
+			GatherTriangleField(candidateValid, compactionScratch.candidateValid,
+					compactionScratch.index, dst, 1);
 
-				++dst;
-			}
+			// The deleted flag of a survivor is always false: the
+			// compacted flags are simply zeroed (the stale tail beyond
+			// dst is dropped by the resize below)
+			tbb::parallel_for(size_t(0), dst, [&](size_t d) {
+				triangleDeleted[d] = false;
+			});
 
 			ResizeTriangles(dst);
 			liveTriangleCount = dst;
@@ -1957,75 +2076,126 @@ private:
 		// size loads out of the loop conditions). The triangle count
 		// changes with the compaction, the vertex count does not
 		const size_t triangleCount = GetTriangleCount();
-		size_t liveTriangleCount;
 		const size_t vertexCount = GetVertexCount();
 
-		size_t dst = 0;
-
-		for (size_t i = 0; i < vertexCount; ++i)
+		// Clear the used vertex flags
+		tbb::parallel_for(size_t(0), vertexCount, [&](size_t i) {
 			vertexTcount[i] = 0;
+		});
 
-		// Compact the triangle arrays: the fields are moved one by one
-		// (the in place slots are skipped) and the used vertices are
-		// marked
-		for (size_t i = 0; i < triangleCount; ++i) {
-			if (triangleDeleted[i]) continue;
+		// Compact the triangle arrays through the compaction index:
+		// the same parallel scan and out of place gathers as the mesh
+		// update compaction (see UpdateMesh)
+		compactionScratch.index.resize(triangleCount);
+		CompactionIndexScan indexScan(*this, compactionScratch.index);
+		tbb::parallel_scan(tbb::blocked_range<size_t>(0, triangleCount, 16384),
+				indexScan);
+		const size_t dst = indexScan.getCount();
 
-			const size_t triOffset = 3*i;
+		// The three vertex indices and the three errors are
+		// contiguous blocks, one copy moves each
+		GatherTriangleField(triangleV, compactionScratch.v,
+				compactionScratch.index, dst, 3);
+		GatherTriangleField(triangleErr, compactionScratch.err,
+				compactionScratch.index, dst, 3);
+		GatherTriangleField(triangleErrChoice, compactionScratch.errChoice,
+				compactionScratch.index, dst, 1);
+		GatherTriangleField(triangleGeometryN, compactionScratch.geometryN,
+				compactionScratch.index, dst, 1);
+		GatherTriangleField(triangleDirty, compactionScratch.dirty,
+				compactionScratch.index, dst, 1);
+		GatherTriangleField(candidateVertexIndex, compactionScratch.candidateVertexIndex,
+				compactionScratch.index, dst, 1);
+		GatherTriangleField(candidateValid, compactionScratch.candidateValid,
+				compactionScratch.index, dst, 1);
 
-			if (dst != i) {
-				// The three vertex indices and the three errors are
-				// contiguous, one copy moves each block (the ranges
-				// never overlap: a move only happens when dst < i)
-				const size_t dstOffset = 3*dst;
-				std::copy_n(&triangleV[triOffset], 3, &triangleV[dstOffset]);
-				std::copy_n(&triangleErr[triOffset], 3, &triangleErr[dstOffset]);
-				triangleErrChoice[dst] = triangleErrChoice[i];
-				triangleGeometryN[dst] = triangleGeometryN[i];
-				triangleDirty[dst] = triangleDirty[i];
-				candidateVertexIndex[dst] = candidateVertexIndex[i];
-				candidateValid[dst] = candidateValid[i];
-				triangleDeleted[dst] = false;
-			}
+		tbb::parallel_for(size_t(0), dst, [&](size_t d) {
+			triangleDeleted[d] = false;
+		});
 
+		ResizeTriangles(dst);
+		const size_t liveTriangleCount = dst;
+
+		// Mark the used vertices: the idempotent one byte writes of
+		// the border identification (several threads can store 1 in
+		// the flag of a shared vertex, no update is lost)
+		tbb::parallel_for(size_t(0), liveTriangleCount, [&](size_t t) {
+			const size_t triOffset = 3*t;
 			vertexTcount[triangleV[triOffset+0]] = 1;
 			vertexTcount[triangleV[triOffset+1]] = 1;
 			vertexTcount[triangleV[triOffset+2]] = 1;
+		});
 
-			++dst;
-		}
-		ResizeTriangles(dst);
-		liveTriangleCount = dst;
+		// The new index of each used vertex (the running count of the
+		// scan), written in its own tstart slot for the remap
+		class VertexIndexScan {
+			Simplify2 &mesh;
+			size_t count;
+
+		public:
+			VertexIndexScan(Simplify2 &p_mesh)
+				: mesh(p_mesh), count(0) { }
+			VertexIndexScan(VertexIndexScan &other, tbb::split)
+				: mesh(other.mesh), count(0) { }
+
+			void operator()(const tbb::blocked_range<size_t> &range, tbb::pre_scan_tag) {
+				for (size_t i = range.begin(); i < range.end(); ++i)
+					count += mesh.vertexTcount[i];
+			}
+
+			void operator()(const tbb::blocked_range<size_t> &range, tbb::final_scan_tag) {
+				for (size_t i = range.begin(); i < range.end(); ++i) {
+					if (mesh.vertexTcount[i])
+						mesh.vertexTstart[i] = u_int(count++);
+				}
+			}
+
+			void reverse_join(VertexIndexScan &rhs) {
+				count += rhs.count;
+			}
+
+			void assign(VertexIndexScan &rhs) {
+				count = rhs.count;
+			}
+
+			size_t getCount() const {
+				return count;
+			}
+		};
+
+		VertexIndexScan vertexIndexScan(*this);
+		tbb::parallel_scan(tbb::blocked_range<size_t>(0, vertexCount, 16384),
+				vertexIndexScan);
+		const size_t vertexDst = vertexIndexScan.getCount();
 
 		// Compact the vertex arrays: only the output fields are moved
 		// (like the record compaction: the quadrics and the flags stay
-		// behind, they are not used anymore) and the new index of each
-		// survivor is kept in its own tstart slot for the remap
-		dst = 0;
+		// behind, they are not used anymore). The move stays in place
+		// and serial: an in place move is race free only strictly left
+		// to right (the destination of a move can lag deep inside the
+		// sources another thread would not have read yet)
 		for (size_t i = 0; i < vertexCount; ++i) {
-			if (!vertexTcount[i]) continue;
+			if (!vertexTcount[i])
+				continue;
 
-			vertexTstart[i] = u_int(dst);
-
-			if (dst != i) {
-				vertexP[dst] = vertexP[i];
-				vertexNorm[dst] = vertexNorm[i];
-				vertexUV[dst] = vertexUV[i];
-				vertexCol[dst] = vertexCol[i];
-				vertexAlpha[dst] = vertexAlpha[i];
+			const size_t vdst = vertexTstart[i];
+			if (vdst != i) {
+				vertexP[vdst] = vertexP[i];
+				vertexNorm[vdst] = vertexNorm[i];
+				vertexUV[vdst] = vertexUV[i];
+				vertexCol[vdst] = vertexCol[i];
+				vertexAlpha[vdst] = vertexAlpha[i];
 			}
-
-			dst++;
 		}
 
 		// Remap the triangle vertex indices to the compacted vertices
-		for (size_t i = 0; i < liveTriangleCount; ++i) {
-			const size_t triOffset = 3*i;
+		tbb::parallel_for(size_t(0), liveTriangleCount, [&](size_t t) {
+			const size_t triOffset = 3*t;
 			triangleV[triOffset+0] = vertexTstart[triangleV[triOffset+0]];
 			triangleV[triOffset+1] = vertexTstart[triangleV[triOffset+1]];
 			triangleV[triOffset+2] = vertexTstart[triangleV[triOffset+2]];
-		}
-		ResizeVertices(dst);
+		});
+		ResizeVertices(vertexDst);
 	}
 
 	// Error between vertex and Quadric, evaluated for the 3 points at
@@ -2468,6 +2638,53 @@ private:
 		return candidateCount - keptIndex;
 	}
 
+	// Merge the appended star segments of a collapse wave into the
+	// reference base: the walks of the next phase read the merged
+	// layout with the same two segment arithmetic (the base including
+	// the appends, plus the fresh per body tails of that wave). The
+	// blocks of the split bodies land in the reduce join order: the
+	// merged layout varies with the scheduling, but the walks are
+	// order independent (an OR over the star), so the decisions are
+	// identical run after run
+	void MergeRefAppends(const size_t waveDeletedTriangles) {
+		size_t appendTotal = 0;
+		for (const auto& block : iterationRefAppends)
+			appendTotal += block.refsTail.size();
+
+		const size_t baseSize = refTid.size();
+		refTid.resize(baseSize + appendTotal);
+		refTvertex.resize(baseSize + appendTotal);
+
+		size_t offset = 0;
+		for (auto& block : iterationRefAppends) {
+			for (size_t k = 0; k < block.refsTail.size(); ++k) {
+				refTid[baseSize + offset + k] = block.refsTail[k].tid;
+				refTvertex[baseSize + offset + k] = block.refsTail[k].tvertex;
+			}
+			// The repointed starts of the welded vertices were
+			// relative to their own body tail: rewrite them into
+			// the merged layout
+			for (const auto& append : block.refAppends)
+				vertexTstart[append.vertex] =
+					u_int(baseSize + offset + append.tailStart);
+
+			// The screen projection recompute list of the wave
+			phaseMovedVertices.insert(phaseMovedVertices.end(),
+					block.movedVertices.begin(), block.movedVertices.end());
+
+			offset += block.refsTail.size();
+		}
+		iterationRefAppends.clear();
+
+		// The garbage accounting: the appended segments supersede
+		// roughly one old entry each and every deleted triangle
+		// orphans its three base entries (the accounting is per wave:
+		// the deletions of the wave are counted once, by its own
+		// merge)
+		staleRefCount += appendTotal + 3 * waveDeletedTriangles;
+		uncompactedDeletions += waveDeletedTriangles;
+	}
+
 	// Computes candidate closures (connected components in the conflict graph)
 	//
 	// Two candidates conflict (i.e. their collapses are not independent) iff
@@ -2526,136 +2743,239 @@ private:
 		if (candidateCount == 0) {
 			return {};
 		}
-
-		// Candidate bearing vertices: a vertex carries a candidate iff
-		// it is the endpoint of one. The flags are marked by the
-		// candidates themselves with idempotent one byte writes (several
-		// candidates can share an endpoint, so several threads can store
-		// 1 in the flag of the same vertex: no update is lost). The
-		// relation generator and the closure building below only need
-		// this bearing test and the dense index: the vertex -> candidates
-		// lists of the previous CSR (a serial count, prefix sum and
-		// fill, plus a tid -> candidate map) were only read by the
-		// closure gathering, which now scatters the candidates directly
-		// (sorted and deduplicated by construction)
 		const size_t vertexCount = GetVertexCount();
 
-		ScalableVector<unsigned char> vertexHasCandidate(vertexCount, 0);
-		tbb::parallel_for(size_t(0), candidateCount, [&](size_t i) {
-			vertexHasCandidate[triangleV[3*candidates[i].tid + candidates[i].tvertex]] = 1;
-			vertexHasCandidate[triangleV[3*candidates[i].tid + TRI_NEXT[candidates[i].tvertex]]] = 1;
-		});
+		// The full candidate vertex map of the production path below: it
+		// stays empty on the drain path, which fills the persistent
+		// sparse member instead. The closure building at the end reads
+		// through the candidateVertexMapPtr
+		ScalableVector<u_int> candVertexOfVertex;
+		const ScalableVector<u_int> *candidateVertexMapPtr = nullptr;
+		size_t candVertexCount;
+		Classes classes;
 
-		// Candidate bearing vertices (a vertex carries a candidate iff
-		// it is the endpoint of one), compacted into a dense index: the
-		// elements of the vertex relation above
-		//
-		// The compaction is the flag + prefix + scatter pattern, without
-		// any atomic: the dense index of a flagged vertex is the count of
-		// the flagged vertices before it, computed by tbb::parallel_scan
-		// (its final pass carries the true prefix, so its writes
-		// reproduce the serial running count and the dense indices are
-		// assigned in ascending vertex order), and the inverse array is
-		// filled by a disjoint scatter (a flagged vertex writes only its
-		// own dense slot)
-		ScalableVector<u_int> candVertexOfVertex(vertexCount, NULL_INDEX);
+		// With few candidates against the mesh - the drain - the
+		// conflict graph is built from the stars of the candidate
+		// bearing vertices: a triangle links two candidate bearing
+		// corners only if it is in the star of both, so the walks visit
+		// every linking triangle (a triangle bearing several candidates
+		// is visited once per bearing corner: the repeated relations
+		// are no ops for the Union-Find). The dense indices come from
+		// the sorted endpoint list instead of the flag, scan and
+		// scatter machinery - the ranks are the same ones the global
+		// path assigns in ascending vertex order, so the two paths
+		// number the candidate bearing vertices identically and the
+		// switch is decided by the counts alone. With many candidates -
+		// the production - the walks would cost several passes over
+		// the mesh: the global machinery below is cheaper
+		if (candidateCount * 25 < vertexCount) {
+			// The endpoints of the candidates, sorted
+			ScalableVector<u_int> endpoints(candidateCount * 2);
+			tbb::parallel_for(size_t(0), candidateCount, [&](size_t i) {
+				const size_t triOffset = 3*candidates[i].tid;
+				endpoints[2*i] = triangleV[triOffset + candidates[i].tvertex];
+				endpoints[2*i + 1] = triangleV[triOffset + TRI_NEXT[candidates[i].tvertex]];
+			});
+			tbb::parallel_sort(endpoints.begin(), endpoints.end());
 
-		// Dense index scan: the final pass writes the dense index of each
-		// flagged vertex, the pre pass only accumulates the counts
-		// (without any write)
-		class VertexDenseIndexScan {
-			ScalableVector<u_int> &denseIndexOfVertex;
-			const ScalableVector<unsigned char> &hasCandidate;
-			size_t count;
+			// The persistent candidate vertex map, sparse: only the
+			// current endpoints are set - the entries of the previous
+			// call are cleared through the saved list - because the star
+			// walks below read the map at every corner of their
+			// triangles and must see NULL_INDEX everywhere else
+			if (candVertexOfVertexSparse.size() != vertexCount)
+				candVertexOfVertexSparse.resize(vertexCount, NULL_INDEX);
+			for (const u_int v : candVertexSet)
+				candVertexOfVertexSparse[v] = NULL_INDEX;
 
-		public:
-			VertexDenseIndexScan(ScalableVector<u_int> &p_denseIndexOfVertex,
-					const ScalableVector<unsigned char> &p_hasCandidate)
-				: denseIndexOfVertex(p_denseIndexOfVertex),
-				  hasCandidate(p_hasCandidate),
-				  count(0) { }
-			VertexDenseIndexScan(VertexDenseIndexScan &other, tbb::split)
-				: denseIndexOfVertex(other.denseIndexOfVertex),
-				  hasCandidate(other.hasCandidate),
-				  count(0) { }
-
-			void operator()(const tbb::blocked_range<size_t> &range, tbb::pre_scan_tag) {
-				for (size_t v = range.begin(); v < range.end(); ++v)
-					count += hasCandidate[v];
-			}
-
-			void operator()(const tbb::blocked_range<size_t> &range, tbb::final_scan_tag) {
-				for (size_t v = range.begin(); v < range.end(); ++v) {
-					if (hasCandidate[v])
-						denseIndexOfVertex[v] = static_cast<u_int>(count++);
+			// The unique endpoints, compacted in place into the sorted
+			// array: the dense indices are assigned and the array
+			// becomes the inverse map
+			size_t uniqueCount = 0;
+			for (size_t i = 0; i < endpoints.size(); ++i) {
+				if ((i == 0) || (endpoints[i] != endpoints[i - 1])) {
+					candVertexOfVertexSparse[endpoints[i]] = static_cast<u_int>(uniqueCount);
+					endpoints[uniqueCount++] = endpoints[i];
 				}
 			}
+			endpoints.resize(uniqueCount);
 
-			void reverse_join(VertexDenseIndexScan &rhs) {
-				count += rhs.count;
-			}
+			// The saved endpoint set, cleared at the next call
+			candVertexSet = endpoints;
 
-			void assign(VertexDenseIndexScan &rhs) {
-				count = rhs.count;
-			}
+			// Relation generator over the candidate bearing vertices
+			// [r1, r2): the star of each endpoint is walked and every
+			// live triangle of the star gets the same corner scan as the
+			// global generator below. The walks read the merged
+			// reference base only: the waves merge their star segments
+			// before the next closure computation (see the iteration
+			// loop)
+			auto relationGenerator =
+				[this, &endpoints](size_t r1, size_t r2) -> ScalableVector<Relation> {
+					ScalableVector<Relation> relations;
+					for (size_t r = r1; r < r2; ++r) {
+						const u_int tstart = vertexTstart[endpoints[r]];
+						const u_int tcount = vertexTcount[endpoints[r]];
+						for (size_t k = 0; k < tcount; ++k) {
+							const size_t t = refTid[tstart + k];
+							if (triangleDeleted[t])
+								continue;
 
-			size_t getCount() const {
-				return count;
-			}
-		};
+							u_int link = NULL_INDEX;
+							for (size_t j = 0; j < 3; ++j) {
+								const u_int cv = candVertexOfVertexSparse[triangleV[3*t + j]];
+								if (cv == NULL_INDEX)
+									continue;
+								if (link == NULL_INDEX)
+									link = cv;
+								else if (cv != link)
+									relations.emplace_back(link, cv);
+							}
+						}
+					}
+					return relations;
+				};
 
-		VertexDenseIndexScan denseIndexScan(candVertexOfVertex, vertexHasCandidate);
-		tbb::parallel_scan(tbb::blocked_range<size_t>(0, vertexCount, 16384), denseIndexScan);
+			// Group the linked vertices with the parallel Union-Find
+			// (the same call as the global path below: the iteration
+			// space is the candidate bearing vertices here, the
+			// triangles there)
+			classes = GroupByEquivalence(uniqueCount, uniqueCount,
+					RelationFunction(relationGenerator));
+			candidateVertexMapPtr = &candVertexOfVertexSparse;
+			candVertexCount = uniqueCount;
+		} else {
+			// Candidate bearing vertices: a vertex carries a candidate iff
+			// it is the endpoint of one. The flags are marked by the
+			// candidates themselves with idempotent one byte writes (several
+			// candidates can share an endpoint, so several threads can store
+			// 1 in the flag of the same vertex: no update is lost). The
+			// relation generator and the closure building below only need
+			// this bearing test and the dense index: the vertex -> candidates
+			// lists of the previous CSR (a serial count, prefix sum and
+			// fill, plus a tid -> candidate map) were only read by the
+			// closure gathering, which now scatters the candidates directly
+			// (sorted and deduplicated by construction)
 
-		// Inverse mapping: disjoint scatter
-		ScalableVector<u_int> vertexOfCandVertex(denseIndexScan.getCount());
-		tbb::parallel_for(size_t(0), vertexCount, [&](size_t v) {
-			const u_int denseIndexOfVertex = candVertexOfVertex[v];
-			if (denseIndexOfVertex != NULL_INDEX)
-				vertexOfCandVertex[denseIndexOfVertex] = static_cast<u_int>(v);
-		});
-		const size_t candVertexCount = vertexOfCandVertex.size();
+			ScalableVector<unsigned char> vertexHasCandidate(vertexCount, 0);
+			tbb::parallel_for(size_t(0), candidateCount, [&](size_t i) {
+				vertexHasCandidate[triangleV[3*candidates[i].tid + candidates[i].tvertex]] = 1;
+				vertexHasCandidate[triangleV[3*candidates[i].tid + TRI_NEXT[candidates[i].tvertex]]] = 1;
+			});
 
-		// Relation generator over the triangles [r1, r2): link the first
-		// candidate bearing corner of each triangle with the other bearing
-		// ones (at most two links; a repeated corner carries the same
-		// compacted vertex and would link with itself, a no op skipped)
-		auto relationGenerator =
-			[this, &candVertexOfVertex]
-				(size_t r1, size_t r2) -> ScalableVector<Relation> {
-			// Scalable allocator: allocated per chunk, inside the parallel
-			// evaluation of the generator, consumed once by the Union-Find
-			// (no caching expected)
-			ScalableVector<Relation> relations;
-			for (size_t t = r1; t < r2; ++t) {
-				// A triangle deleted by a deferred compaction links no
-				// vertices: it would merge closures the compacted mesh
-				// keeps apart
-				if (triangleDeleted[t])
-					continue;
+			// Candidate bearing vertices (a vertex carries a candidate iff
+			// it is the endpoint of one), compacted into a dense index: the
+			// elements of the vertex relation above
+			//
+			// The compaction is the flag + prefix + scatter pattern, without
+			// any atomic: the dense index of a flagged vertex is the count of
+			// the flagged vertices before it, computed by tbb::parallel_scan
+			// (its final pass carries the true prefix, so its writes
+			// reproduce the serial running count and the dense indices are
+			// assigned in ascending vertex order), and the inverse array is
+			// filled by a disjoint scatter (a flagged vertex writes only its
+			// own dense slot)
+			candVertexOfVertex.resize(vertexCount, NULL_INDEX);
 
-				u_int link = NULL_INDEX;
-				for (size_t j = 0; j < 3; ++j) {
-					const u_int cv = candVertexOfVertex[triangleV[3*t + j]];
-					if (cv == NULL_INDEX)
+			// Dense index scan: the final pass writes the dense index of each
+			// flagged vertex, the pre pass only accumulates the counts
+			// (without any write)
+			class VertexDenseIndexScan {
+				ScalableVector<u_int> &denseIndexOfVertex;
+				const ScalableVector<unsigned char> &hasCandidate;
+				size_t count;
+
+			public:
+				VertexDenseIndexScan(ScalableVector<u_int> &p_denseIndexOfVertex,
+						const ScalableVector<unsigned char> &p_hasCandidate)
+					: denseIndexOfVertex(p_denseIndexOfVertex),
+					  hasCandidate(p_hasCandidate),
+					  count(0) { }
+				VertexDenseIndexScan(VertexDenseIndexScan &other, tbb::split)
+					: denseIndexOfVertex(other.denseIndexOfVertex),
+					  hasCandidate(other.hasCandidate),
+					  count(0) { }
+
+				void operator()(const tbb::blocked_range<size_t> &range, tbb::pre_scan_tag) {
+					for (size_t v = range.begin(); v < range.end(); ++v)
+						count += hasCandidate[v];
+				}
+
+				void operator()(const tbb::blocked_range<size_t> &range, tbb::final_scan_tag) {
+					for (size_t v = range.begin(); v < range.end(); ++v) {
+						if (hasCandidate[v])
+							denseIndexOfVertex[v] = static_cast<u_int>(count++);
+					}
+				}
+
+				void reverse_join(VertexDenseIndexScan &rhs) {
+					count += rhs.count;
+				}
+
+				void assign(VertexDenseIndexScan &rhs) {
+					count = rhs.count;
+				}
+
+				size_t getCount() const {
+					return count;
+				}
+			};
+
+			VertexDenseIndexScan denseIndexScan(candVertexOfVertex, vertexHasCandidate);
+			tbb::parallel_scan(tbb::blocked_range<size_t>(0, vertexCount, 16384), denseIndexScan);
+
+			// Inverse mapping: disjoint scatter
+			ScalableVector<u_int> vertexOfCandVertex(denseIndexScan.getCount());
+			tbb::parallel_for(size_t(0), vertexCount, [&](size_t v) {
+				const u_int denseIndexOfVertex = candVertexOfVertex[v];
+				if (denseIndexOfVertex != NULL_INDEX)
+					vertexOfCandVertex[denseIndexOfVertex] = static_cast<u_int>(v);
+			});
+			candVertexCount = vertexOfCandVertex.size();
+
+			// Relation generator over the triangles [r1, r2): link the first
+			// candidate bearing corner of each triangle with the other bearing
+			// ones (at most two links; a repeated corner carries the same
+			// compacted vertex and would link with itself, a no op skipped)
+			auto relationGenerator =
+				[this, &candVertexOfVertex]
+					(size_t r1, size_t r2) -> ScalableVector<Relation> {
+				// Scalable allocator: allocated per chunk, inside the parallel
+				// evaluation of the generator, consumed once by the Union-Find
+				// (no caching expected)
+				ScalableVector<Relation> relations;
+				for (size_t t = r1; t < r2; ++t) {
+					// A triangle deleted by a deferred compaction links no
+					// vertices: it would merge closures the compacted mesh
+					// keeps apart
+					if (triangleDeleted[t])
 						continue;
-					if (link == NULL_INDEX)
-						link = cv;
-					else if (cv != link)
-						relations.emplace_back(link, cv);
-				}
-			}
-			return relations;
-		};
 
-		// Group the linked vertices with the parallel Union-Find. The
-		// generator is evaluated in parallel by GroupByEquivalence:
-		// relations are generated and united in the same parallel_reduce
-		// pass, without materializing a full relations vector. The ranges
-		// iterate the triangles, the elements are the candidate bearing
-		// vertices.
-		const Classes classes = GroupByEquivalence(candVertexCount, GetTriangleCount(),
-				RelationFunction(relationGenerator));
+					u_int link = NULL_INDEX;
+					for (size_t j = 0; j < 3; ++j) {
+						const u_int cv = candVertexOfVertex[triangleV[3*t + j]];
+						if (cv == NULL_INDEX)
+							continue;
+						if (link == NULL_INDEX)
+							link = cv;
+						else if (cv != link)
+							relations.emplace_back(link, cv);
+					}
+				}
+				return relations;
+			};
+
+			// Group the linked vertices with the parallel Union-Find. The
+			// generator is evaluated in parallel by GroupByEquivalence:
+			// relations are generated and united in the same parallel_reduce
+			// pass, without materializing a full relations vector. The ranges
+			// iterate the triangles, the elements are the candidate bearing
+			// vertices.
+			classes = GroupByEquivalence(candVertexCount, GetTriangleCount(),
+					RelationFunction(relationGenerator));
+			candidateVertexMapPtr = &candVertexOfVertex;
+		}
+		const ScalableVector<u_int> &candidateVertexMap = *candidateVertexMapPtr;
 
 		// Build the closures by scattering the candidates in ascending
 		// index order (the greedy processing order): the closure of a
@@ -2676,7 +2996,7 @@ private:
 		ScalableVector<u_int> closureOfCandidate(candidateCount);
 		tbb::parallel_for(size_t(0), candidateCount, [&](size_t i) {
 			const u_int v = triangleV[3*candidates[i].tid + candidates[i].tvertex];
-			closureOfCandidate[i] = closureOfCandVertex[candVertexOfVertex[v]];
+			closureOfCandidate[i] = closureOfCandVertex[candidateVertexMap[v]];
 		});
 
 		// The histogram over the closures and the scatter itself stay
@@ -2726,7 +3046,7 @@ private:
 
 		// The appended star blocks collected from the split bodies
 		// (moved in, never copied: the join only chains)
-		std::vector<std::pair<CacheAlignedVector<SimplifyRef2>, CacheAlignedVector<RefAppend>>> appendBlocks;
+		std::vector<RefAppendBlock> appendBlocks;
 
 		// Candidate triangles deleted by this body (for the disjointness check).
 		// Cache aligned: one per thread, appended in the parallel processing
@@ -2767,7 +3087,8 @@ private:
 			// the sibling (the reduce tree splits several levels deep,
 			// which would lose almost every appended reference)
 			appendBlocks.emplace_back(std::move(other.ctx.refsTail),
-					std::move(other.ctx.refAppends));
+					std::move(other.ctx.refAppends),
+					std::move(other.ctx.movedVertices));
 			appendBlocks.insert(appendBlocks.end(),
 					std::make_move_iterator(other.appendBlocks.begin()),
 					std::make_move_iterator(other.appendBlocks.end()));
@@ -2804,7 +3125,8 @@ private:
 			// splits). Serialized: applyResult runs on the master
 			// processor only
 			simplify.iterationRefAppends.emplace_back(std::move(ctx.refsTail),
-					std::move(ctx.refAppends));
+					std::move(ctx.refAppends),
+					std::move(ctx.movedVertices));
 			for (auto& block : appendBlocks)
 				simplify.iterationRefAppends.push_back(std::move(block));
 			appendBlocks.clear();
