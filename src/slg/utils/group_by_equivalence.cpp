@@ -90,6 +90,15 @@ public:
 		}
 		return i;
 	}
+	// The root of the element, without touching the parents: the
+	// trees are read only once the reduce is over, and the parallel
+	// classes build walks them from many threads at once
+	size_t findRoot(size_t i) const {
+		while (parent[i] != i)
+			i = parent[i];
+		return i;
+	}
+
 
 	// Union the sets containing i and j (union by rank)
 	void unite(const size_t i, const size_t j) {
@@ -202,34 +211,153 @@ public:
 // the class sizes, prefix sum and fill (CSR): no hashing and no per class
 // allocation until the final slicing. The elements end up in ascending
 // order inside each class.
-slg::Classes BuildClassesFromUnionFind(UnionFind& uf, const size_t numElements) {
-	// Find the root of every element (flattening the trees along the way)
-	// and count the class sizes in the same pass
-	ScalableVector<size_t> classStart(numElements + 1, 0);
-	for (size_t i = 0; i < numElements; ++i)
-		++classStart[uf.find(i) + 1];
+slg::Classes BuildClassesFromUnionFind(const UnionFind& uf, const size_t numElements) {
+	if (numElements == 0)
+		return {};
 
-	// Prefix sum
-	for (size_t i = 0; i < numElements; ++i)
-		classStart[i + 1] += classStart[i];
+	// The roots of the elements and the root flags, in one parallel
+	// pass: the reduce is over, so the parent trees are read only and
+	// every element can walk to its root from any thread (the serial
+	// version halved the paths along the way, which would race)
+	ScalableVector<uint32_t> rootOfElement(numElements);
+	ScalableVector<unsigned char> isRoot(numElements, 0);
+	tbb::parallel_for(size_t(0), numElements, [&](size_t i) {
+		const uint32_t root = static_cast<uint32_t>(uf.findRoot(i));
 
-	// Fill the class entries (the trees are flattened: each find is a
-	// parent lookup or two)
+		rootOfElement[i] = root;
+		isRoot[root] = 1;
+	});
+
+	// The dense class ids: the exclusive prefix over the root flags
+	// (a root receives the number of the roots before it, so the ids
+	// follow the ascending root order - the very order of the serial
+	// slicing - and the class id domain is small where the root id
+	// domain is element sized)
+	class DenseClassIdScan {
+		ScalableVector<uint32_t> &classIdOfRoot;
+		const ScalableVector<unsigned char> &isRoot;
+		size_t count;
+
+	public:
+		DenseClassIdScan(ScalableVector<uint32_t> &p_classIdOfRoot,
+				const ScalableVector<unsigned char> &p_isRoot)
+			: classIdOfRoot(p_classIdOfRoot), isRoot(p_isRoot), count(0) { }
+		DenseClassIdScan(DenseClassIdScan &other, tbb::split)
+			: classIdOfRoot(other.classIdOfRoot), isRoot(other.isRoot),
+			  count(0) { }
+
+		void operator()(const tbb::blocked_range<size_t> &range, tbb::pre_scan_tag) {
+			for (size_t r = range.begin(); r < range.end(); ++r)
+				count += isRoot[r];
+		}
+
+		void operator()(const tbb::blocked_range<size_t> &range, tbb::final_scan_tag) {
+			for (size_t r = range.begin(); r < range.end(); ++r) {
+				classIdOfRoot[r] = static_cast<uint32_t>(count);
+				count += isRoot[r];
+			}
+		}
+
+		void reverse_join(DenseClassIdScan &rhs) {
+			count += rhs.count;
+		}
+
+		void assign(DenseClassIdScan &rhs) {
+			count = rhs.count;
+		}
+
+		size_t getCount() const {
+			return count;
+		}
+	};
+
+	ScalableVector<uint32_t> classIdOfRoot(numElements);
+	DenseClassIdScan classIdScan(classIdOfRoot, isRoot);
+	tbb::parallel_scan(tbb::blocked_range<size_t>(0, numElements, 16384), classIdScan);
+	const size_t classCount = classIdScan.getCount();
+
+	// The scatter of the elements into the class segments: the fixed
+	// chunk boundary pattern over the dense class ids (count, prefix,
+	// disjoint scatter). The chunks cover ascending element ranges
+	// and scatter in ascending order, so every class receives its
+	// elements in the ascending order of the serial fill - no atomic
+	// and no post sort (the histogram matrix would be GBs over the
+	// root ids, it stays in the MBs over the dense ones). The small
+	// element counts fall back to a single chunk: the serial scatter
+	const size_t classChunkCount = (numElements < 262144) ? 1 :
+			std::min<size_t>(64, std::max<size_t>(1,
+					(size_t(1) << 24) / (classCount + 1)));
+	const size_t classChunkSize = (numElements + classChunkCount - 1) / classChunkCount;
+
+	// The map to the dense ids and the per chunk histograms, in one
+	// pass (the roots of the elements are rewritten in place: only
+	// the class ids are needed from here on)
+	ScalableVector<uint32_t> chunkCounts(classChunkCount * classCount, 0);
+	tbb::parallel_for(size_t(0), classChunkCount, [&](size_t k) {
+		const size_t iBegin = k * classChunkSize;
+		const size_t iEnd = std::min(iBegin + classChunkSize, numElements);
+
+		uint32_t * const counts = chunkCounts.data() + k * classCount;
+		for (size_t i = iBegin; i < iEnd; ++i) {
+			const uint32_t classId = classIdOfRoot[rootOfElement[i]];
+
+			rootOfElement[i] = classId;
+			++counts[classId];
+		}
+	});
+
+	// The per class totals
+	ScalableVector<size_t> classStart(classCount + 1, 0);
+	tbb::parallel_for(tbb::blocked_range<size_t>(0, classCount, 4096),
+			[&](const tbb::blocked_range<size_t> &w) {
+		for (size_t c = w.begin(); c < w.end(); ++c) {
+			size_t total = 0;
+			for (size_t k = 0; k < classChunkCount; ++k)
+				total += chunkCounts[k * classCount + c];
+			classStart[c + 1] = total;
+		}
+			});
+	for (size_t c = 0; c < classCount; ++c)
+		classStart[c + 1] += classStart[c];
+
+	// The cross chunk prefix, in place: the histogram rows become
+	// the per chunk scatter cursors
+	tbb::parallel_for(tbb::blocked_range<size_t>(0, classCount, 4096),
+			[&](const tbb::blocked_range<size_t> &w) {
+		ScalableVector<uint32_t> running(w.size());
+		for (size_t c = w.begin(); c < w.end(); ++c)
+			running[c - w.begin()] = static_cast<uint32_t>(classStart[c]);
+
+		for (size_t k = 0; k < classChunkCount; ++k) {
+			uint32_t * const row = chunkCounts.data() + k * classCount;
+			for (size_t c = w.begin(); c < w.end(); ++c) {
+				const uint32_t count = row[c];
+
+				row[c] = running[c - w.begin()];
+				running[c - w.begin()] += count;
+			}
+		}
+			});
+
+	// The scatter itself
 	ScalableVector<size_t> classEntries(numElements);
-	{
-		ScalableVector<size_t> classCursor(classStart.begin(), classStart.end() - 1);
-		for (size_t i = 0; i < numElements; ++i)
-			classEntries[classCursor[uf.find(i)]++] = i;
-	}
+	tbb::parallel_for(size_t(0), classChunkCount, [&](size_t k) {
+		const size_t iBegin = k * classChunkSize;
+		const size_t iEnd = std::min(iBegin + classChunkSize, numElements);
 
-	// Slice the entries into the output classes
-	slg::Classes classes;
-	for (size_t r = 0; r < numElements; ++r) {
-		if (classStart[r + 1] > classStart[r])
-			classes.emplace_back(
-					std::make_move_iterator(classEntries.begin() + classStart[r]),
-					std::make_move_iterator(classEntries.begin() + classStart[r + 1]));
-	}
+		uint32_t * const cursor = chunkCounts.data() + k * classCount;
+		for (size_t i = iBegin; i < iEnd; ++i)
+			classEntries[cursor[rootOfElement[i]]++] = i;
+	});
+
+	// Slice the entries into the output classes (the slot ranges are
+	// disjoint)
+	slg::Classes classes(classCount);
+	tbb::parallel_for(size_t(0), classCount, [&](size_t c) {
+		classes[c].assign(
+				std::make_move_iterator(classEntries.begin() + classStart[c]),
+				std::make_move_iterator(classEntries.begin() + classStart[c + 1]));
+	});
 
 	return classes;
 }
