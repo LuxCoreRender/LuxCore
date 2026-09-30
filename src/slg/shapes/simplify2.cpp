@@ -644,68 +644,140 @@ public:
 					candidateValid[i] = 1;
 			});
 
-			// Collect all valid candidates with their sort key
+			// Collect the candidates with their sort key, chunked out of
+			// place: the chunks count their candidates, the offsets are
+			// the prefix of the counts and each chunk fills its own slot
+			// range (disjoint, no atomic). The chunk boundaries depend
+			// only on the triangle count, so the candidate order (the
+			// ascending triangle index) is the one of the serial gather
+			// and the outcome is deterministic
+			//
+			// From the second iteration on the pass folds the selection
+			// of the drain: the threshold lives in the error word of the
+			// packed key (the threshold word carries the largest possible
+			// tie key, so a key can only fall below it through the error
+			// word alone), the chunks filter on that word and only the
+			// kept candidates are ever materialized. The full candidate
+			// array and the out of place threshold compaction disappear,
+			// while the whole count still reaches the log through the
+			// chunk counters
 			ScalableVector<CandidateKey> candidateKeys;
-			candidateKeys.reserve(GetTriangleCount());
-			for (size_t i = 0; i < GetTriangleCount(); ++i) {
-				// A triangle deleted by a deferred compaction carries
-				// no candidate: its stale record is skipped
-				if (triangleDeleted[i])
-					continue;
+			size_t totalCandidateCount;
+			{
+				const size_t triangleCount = GetTriangleCount();
+				constexpr size_t chunkSize = 16384;
+				const size_t chunkCount = (triangleCount + chunkSize - 1) / chunkSize;
 
-				const u_int tvertex = candidateVertexIndex[i];
-				if (tvertex == NULL_INDEX)
-					continue;
+				// The selection threshold of the drain in the error word
+				// domain: infinite at the first iteration (every error
+				// key is below it, so every candidate is materialized and
+				// the rank cut below does the selection)
+				std::uint32_t thresholdErrorKey = 0xffffffffu;
+				if (iteration > 0) {
+					const std::uint32_t errorBits = std::bit_cast<std::uint32_t>(errorThreshold);
+					thresholdErrorKey = (errorBits & 0x80000000u) ?
+						~errorBits : (errorBits | 0x80000000u);
+				}
 
 				// Order-preserving transformation of the collapse error
 				// to an unsigned integer: the IEEE-754 bit pattern is
 				// monotonic for the non-negative floats and reversed for
 				// the negative ones, so the sign bit is set for the former
 				// and the whole word is flipped for the latter
-				const std::uint32_t errorBits = std::bit_cast<std::uint32_t>(triangleErr[3*i + tvertex]);
-				const std::uint32_t errorKey = (errorBits & 0x80000000u) ?
-					~errorBits : (errorBits | 0x80000000u);
+				const auto errorKeyOf = [this](const size_t i, const u_int tvertex) {
+					const std::uint32_t errorBits = std::bit_cast<std::uint32_t>(triangleErr[3*i + tvertex]);
+					return (errorBits & 0x80000000u) ?
+						~errorBits : (errorBits | 0x80000000u);
+				};
 
-				// The tie break of the equal errors: the triangle index
-				// scrambled by an odd multiplier (a bijection of
-				// [0, 2^32), the keys stay unique). The scramble spreads
-				// the candidates with exactly equal errors (the flat
-				// regions) uniformly over the mesh: with the raw index
-				// they were selected in storage order, and the selection
-				// boundary left storage aligned bands in the mesh
-				const std::uint32_t tieKey = u_int(i) * 0x9E3779B1u;
+				// Count per chunk: every candidate, and the ones the
+				// threshold keeps (the fill reads the same records, so
+				// the two passes see the same mesh)
+				ScalableVector<size_t> chunkAllCounts(chunkCount, 0);
+				ScalableVector<size_t> chunkKeptCounts(chunkCount, 0);
+				tbb::parallel_for(size_t(0), chunkCount, [&](size_t c) {
+					const size_t iBegin = c * chunkSize;
+					const size_t iEnd = std::min(iBegin + chunkSize, triangleCount);
 
-				candidateKeys.push_back(CandidateKey{
-					(static_cast<std::uint64_t>(errorKey) << 32) | tieKey,
-					SimplifyRef2{ u_int(i), tvertex } });
+					size_t allCount = 0;
+					size_t keptCount = 0;
+					for (size_t i = iBegin; i < iEnd; ++i) {
+						// A triangle deleted by a deferred compaction carries
+						// no candidate: its stale record is skipped
+						if (triangleDeleted[i])
+							continue;
+
+						const u_int tvertex = candidateVertexIndex[i];
+						if (tvertex == NULL_INDEX)
+							continue;
+
+						++allCount;
+						if (errorKeyOf(i, tvertex) <= thresholdErrorKey)
+							++keptCount;
+					}
+					chunkAllCounts[c] = allCount;
+					chunkKeptCounts[c] = keptCount;
+				});
+
+				// The chunk offsets (the prefix of the kept counts)
+				ScalableVector<size_t> chunkKeptOffsets(chunkCount);
+				size_t keptTotal = 0;
+				for (size_t c = 0; c < chunkCount; ++c) {
+					chunkKeptOffsets[c] = keptTotal;
+					keptTotal += chunkKeptCounts[c];
+				}
+				totalCandidateCount = 0;
+				for (size_t c = 0; c < chunkCount; ++c)
+					totalCandidateCount += chunkAllCounts[c];
+
+				// Fill the disjoint chunk slot ranges
+				candidateKeys.resize(keptTotal);
+				tbb::parallel_for(size_t(0), chunkCount, [&](size_t c) {
+					const size_t iBegin = c * chunkSize;
+					const size_t iEnd = std::min(iBegin + chunkSize, triangleCount);
+
+					size_t k = chunkKeptOffsets[c];
+					for (size_t i = iBegin; i < iEnd; ++i) {
+						if (triangleDeleted[i])
+							continue;
+
+						const u_int tvertex = candidateVertexIndex[i];
+						if (tvertex == NULL_INDEX)
+							continue;
+
+						const std::uint32_t errorKey = errorKeyOf(i, tvertex);
+						if (errorKey > thresholdErrorKey)
+							continue;
+
+						// The tie break of the equal errors: the triangle index
+						// scrambled by an odd multiplier (a bijection of
+						// [0, 2^32), the keys stay unique). The scramble spreads
+						// the candidates with exactly equal errors (the flat
+						// regions) uniformly over the mesh: with the raw index
+						// they were selected in storage order, and the selection
+						// boundary left storage aligned bands in the mesh
+						const std::uint32_t tieKey = u_int(i) * 0x9E3779B1u;
+
+						candidateKeys[k++] = CandidateKey{
+							(static_cast<std::uint64_t>(errorKey) << 32) | tieKey,
+							SimplifyRef2{ u_int(i), tvertex } };
+					}
+				});
 			}
-			SDL_LOG("Simplify2: Found " << candidateKeys.size() << " edge candidates in "
+			SDL_LOG("Simplify2: Found " << totalCandidateCount << " edge candidates in "
 				<< (boost::format("%.3f") % (WallClockTime() - stepStartTime)) << "secs");
 
-			// Keep the candidates below the error threshold: the first
-			// iteration takes the N% lowest ones (the rank cut that
-			// defines E), the following ones take everything below E
-			// (the inclusive test: an error equal to the threshold is
+			// The selection of the first iteration is a rank cut: the N%
+			// lowest candidates, whose error rank defines the threshold
+			// E of the whole drain. The following iterations select
+			// through the fold above instead (everything at or below E,
+			// the inclusive test: an error equal to the threshold is
 			// kept)
-			const size_t totalCandidateCount = candidateKeys.size();
 			if (iteration == 0) {
 				const u_int nPercentCount = std::max(1u,
 						Floor2UInt(totalCandidateCount * initialCandidatePercent));
 				if (candidateKeys.size() > nPercentCount)
 					SelectLowestKeys(candidateKeys, nPercentCount);
-			} else {
-				// The threshold in the packed key domain: the error
-				// word of the keys is the order preserving
-				// transformation of the float error bits (see the key
-				// building above), so the selection stays a single u64
-				// comparison per candidate
-				const std::uint32_t errorBits = std::bit_cast<std::uint32_t>(errorThreshold);
-				const std::uint32_t thresholdErrorKey = (errorBits & 0x80000000u) ?
-						~errorBits : (errorBits | 0x80000000u);
-				const std::uint64_t thresholdKey =
-						(std::uint64_t(thresholdErrorKey) << 32) | 0xffffffffu;
-
-				SelectKeysBelowThreshold(candidateKeys, thresholdKey);
 			}
 			// The kept count (the keys are released below, after the
 			// extraction of the references)
@@ -1273,62 +1345,6 @@ private:
 		// Release the original array and take the selected one
 		keys.swap(selectedKeys);
 	}
-	// Select the keys below a threshold: the threshold comes from the
-	// error schedule of the iteration (a value in the packed key
-	// domain, see the selection in Decimate), not from a rank, so
-	// there is no search. The keys are compacted out of place in fixed
-	// size chunks: the chunks count their selected keys, the offsets
-	// are the prefix of the counts and each chunk copies into its own
-	// slot range (disjoint, without any atomic)
-	void SelectKeysBelowThreshold(ScalableVector<CandidateKey> &keys,
-			const std::uint64_t threshold) {
-		const size_t keyCount = keys.size();
-
-		// Compact the selected keys out of place in fixed size chunks
-		const size_t chunkSize = 262144;
-		const size_t chunkCount = (keyCount + chunkSize - 1) / chunkSize;
-		ScalableVector<size_t> chunkSelectedCounts(chunkCount, 0);
-		tbb::parallel_for(size_t(0), chunkCount, [&](size_t c) {
-			const size_t iBegin = c * chunkSize;
-			const size_t iEnd = std::min(iBegin + chunkSize, keyCount);
-
-			size_t selectedCount = 0;
-			for (size_t i = iBegin; i < iEnd; ++i) {
-				if (keys[i].key <= threshold)
-					++selectedCount;
-			}
-			chunkSelectedCounts[c] = selectedCount;
-		});
-
-		// The chunk offsets (the prefix of the chunk counts)
-		ScalableVector<size_t> chunkOffsets(chunkCount);
-		size_t selectedTotal = 0;
-		for (size_t c = 0; c < chunkCount; ++c) {
-			chunkOffsets[c] = selectedTotal;
-			selectedTotal += chunkSelectedCounts[c];
-		}
-
-		// The threshold keeps every key: nothing to compact
-		if (selectedTotal == keyCount)
-			return;
-
-		// The chunk slot ranges are disjoint
-		ScalableVector<CandidateKey> selectedKeys(selectedTotal);
-		tbb::parallel_for(size_t(0), chunkCount, [&](size_t c) {
-			const size_t iBegin = c * chunkSize;
-			const size_t iEnd = std::min(iBegin + chunkSize, keyCount);
-
-			size_t k = chunkOffsets[c];
-			for (size_t i = iBegin; i < iEnd; ++i) {
-				if (keys[i].key <= threshold)
-					selectedKeys[k++] = keys[i];
-			}
-		});
-
-		// Release the original array and take the selected one
-		keys.swap(selectedKeys);
-	}
-
 	bool CollapseEdge(const size_t trinagleIndex, const size_t startVertexIndex,
 			CollapseContext &ctx, ScalableVector<unsigned char> &deleted0, ScalableVector<unsigned char> &deleted1) {
 		if (triangleDeleted[trinagleIndex])
@@ -2186,6 +2202,114 @@ private:
 		}
 	}
 
+	// The region grid of the candidate deferral: the two partition axes,
+	// the resolution along them and the coordinate transforms. The
+	// bounding box of the vertices changes through the run (the collapse
+	// of an extreme vertex overwrites its slot with an interior point),
+	// so the grid is rebuilt at every deferral and the members below are
+	// the current iteration values, shared by the two deferral paths
+	size_t regionAxis1 = 0;
+	size_t regionAxis2 = 0;
+	size_t regionGrid1 = 0;
+	size_t regionGrid2 = 0;
+	float regionLo1 = 0.f, regionHi1 = 0.f;
+	float regionLo2 = 0.f, regionHi2 = 0.f;
+	float regionInv1 = 0.f, regionInv2 = 0.f;
+
+	// Rebuild the region grid from the current bounding box of the
+	// vertices (at the beginning of every deferral)
+	void BuildRegionGrid() {
+		// Bounding box of the vertices
+		struct BBox {
+			float lo[3], hi[3];
+			BBox() {
+				for (size_t a = 0; a < 3; ++a) {
+					lo[a] = std::numeric_limits<float>::infinity();
+					hi[a] = -std::numeric_limits<float>::infinity();
+				}
+			}
+		};
+		const BBox bbox = tbb::parallel_reduce(
+			tbb::blocked_range<size_t>(0, GetVertexCount()),
+			BBox(),
+			[this](const tbb::blocked_range<size_t>& r, BBox init) {
+				for (size_t i = r.begin(); i != r.end(); ++i) {
+					const Point& p = vertexP[i];
+					init.lo[0] = std::min(init.lo[0], p.x);
+					init.hi[0] = std::max(init.hi[0], p.x);
+					init.lo[1] = std::min(init.lo[1], p.y);
+					init.hi[1] = std::max(init.hi[1], p.y);
+					init.lo[2] = std::min(init.lo[2], p.z);
+					init.hi[2] = std::max(init.hi[2], p.z);
+				}
+				return init;
+			},
+			[](BBox x, const BBox& y) {
+				for (size_t a = 0; a < 3; ++a) {
+					x.lo[a] = std::min(x.lo[a], y.lo[a]);
+					x.hi[a] = std::max(x.hi[a], y.hi[a]);
+				}
+				return x;
+			});
+
+		// Partition along the two largest extents (e.g. the plane of a
+		// terrain like mesh, never its displacement axis)
+		const float ext[3] = { bbox.hi[0] - bbox.lo[0], bbox.hi[1] - bbox.lo[1],
+				bbox.hi[2] - bbox.lo[2] };
+		size_t axis1 = 0;
+		for (size_t a = 1; a < 3; ++a)
+			if (ext[a] > ext[axis1])
+				axis1 = a;
+		size_t axis2 = (axis1 + 1) % 3;
+		if (ext[(axis1 + 2) % 3] > ext[axis2])
+			axis2 = (axis1 + 2) % 3;
+
+		size_t grid1 = static_cast<size_t>(std::round(std::sqrt(
+				static_cast<double>(regionTarget) * ext[axis1] / std::max(ext[axis2], 1e-30f))));
+		grid1 = std::max<size_t>(1, std::min(grid1, regionTarget));
+		const size_t grid2 = std::max<size_t>(1, regionTarget / grid1);
+
+		const float lo1 = bbox.lo[axis1], hi1 = bbox.hi[axis1];
+		const float lo2 = bbox.lo[axis2], hi2 = bbox.hi[axis2];
+		const float inv1 = grid1 > 1 ? static_cast<float>(grid1) / std::max(hi1 - lo1, 1e-30f) : 0.f;
+		const float inv2 = grid2 > 1 ? static_cast<float>(grid2) / std::max(hi2 - lo2, 1e-30f) : 0.f;
+
+		regionAxis1 = axis1;
+		regionAxis2 = axis2;
+		regionGrid1 = grid1;
+		regionGrid2 = grid2;
+		regionLo1 = lo1;
+		regionHi1 = hi1;
+		regionLo2 = lo2;
+		regionHi2 = hi2;
+		regionInv1 = inv1;
+		regionInv2 = inv2;
+	}
+
+	// The region of a vertex: the grid cell of its position, the same
+	// arithmetic for the global pass and the star walk of the deferral.
+	// The intermediate values are volatile: the rounding of every step
+	// is then part of the observable behavior, so no compilation
+	// context (a vectorized build loop, a scalar star walk) can fuse
+	// the operations differently and shift a borderline vertex to the
+	// neighboring cell
+	u_int RegionOfVertex(const size_t v) const {
+		const Point& p = vertexP[v];
+		const float c1 = (regionAxis1 == 0) ? p.x : (regionAxis1 == 1) ? p.y : p.z;
+		const float c2 = (regionAxis2 == 0) ? p.x : (regionAxis2 == 1) ? p.y : p.z;
+		volatile float d1 = c1 - regionLo1;
+		volatile float d2 = c2 - regionLo2;
+		volatile float m1 = d1 * regionInv1;
+		volatile float m2 = d2 * regionInv2;
+		const float n1 = m1;
+		const float n2 = m2;
+		size_t i1 = static_cast<size_t>(std::max(0.f, n1));
+		size_t i2 = static_cast<size_t>(std::max(0.f, n2));
+		i1 = std::min(i1, regionGrid1 - 1);
+		i2 = std::min(i2, regionGrid2 - 1);
+		return static_cast<u_int>(i1 * regionGrid2 + i2);
+	}
+
 	// Defers the region boundary candidates, to break the giant closures.
 	//
 	// The closures are the connected components of the conflict graph and,
@@ -2236,120 +2360,92 @@ private:
 		if (candidateCount < minKeptCandidates)
 			return 0;
 
-		// Bounding box of the vertices
-		struct BBox {
-			float lo[3], hi[3];
-			BBox() {
-				for (size_t a = 0; a < 3; ++a) {
-					lo[a] = std::numeric_limits<float>::infinity();
-					hi[a] = -std::numeric_limits<float>::infinity();
+		// The region grid of the current mesh state (the bounding box
+		// changes with the collapses of the previous iterations)
+		BuildRegionGrid();
+
+		// The deferral test of a candidate: it is deferred iff one of its
+		// endpoints is seam adjacent, i.e. iff one of the triangles of one
+		// of the endpoint stars spans several regions of the grid (built
+		// once for the whole run, see BuildRegionGrid). With few
+		// candidates against the mesh - the drain - the test walks the two
+		// stars: the only seam flags the global pass would produce that a
+		// candidate ever reads are the ones of its endpoints, and those
+		// come exactly from the triangles of the stars. With many
+		// candidates - the production - the walk would visit the mesh
+		// several times over: the global pass (the per vertex regions and
+		// one sweep marking the seam adjacency of the spanning triangles)
+		// is cheaper. Both paths test the same predicate through the same
+		// region function, and the switch depends only on the candidate
+		// and triangle counts, so the outcome is deterministic
+		ScalableVector<unsigned char> deferred(candidateCount, 0);
+		if (candidateCount * 25 < GetTriangleCount()) {
+			// Walk the star of one endpoint: the star of a live vertex
+			// carries only its live triangles, the deleted slots are
+			// skipped through their flags
+			const auto seamAdjacentStar = [this](const size_t v) {
+				const u_int tstart = vertexTstart[v];
+				const u_int tcount = vertexTcount[v];
+				for (size_t k = 0; k < tcount; ++k) {
+					const size_t t = refTid[tstart + k];
+					if (triangleDeleted[t])
+						continue;
+
+					const u_int r0 = RegionOfVertex(triangleV[3*t + 0]);
+					const u_int r1 = RegionOfVertex(triangleV[3*t + 1]);
+					const u_int r2 = RegionOfVertex(triangleV[3*t + 2]);
+					if ((r0 != r1) || (r1 != r2))
+						return true;
 				}
-			}
-		};
-		const BBox bbox = tbb::parallel_reduce(
-			tbb::blocked_range<size_t>(0, GetVertexCount()),
-			BBox(),
-			[this](const tbb::blocked_range<size_t>& r, BBox init) {
-				for (size_t i = r.begin(); i != r.end(); ++i) {
-					const Point& p = vertexP[i];
-					init.lo[0] = std::min(init.lo[0], p.x);
-					init.hi[0] = std::max(init.hi[0], p.x);
-					init.lo[1] = std::min(init.lo[1], p.y);
-					init.hi[1] = std::max(init.hi[1], p.y);
-					init.lo[2] = std::min(init.lo[2], p.z);
-					init.hi[2] = std::max(init.hi[2], p.z);
-				}
-				return init;
-			},
-			[](BBox x, const BBox& y) {
-				for (size_t a = 0; a < 3; ++a) {
-					x.lo[a] = std::min(x.lo[a], y.lo[a]);
-					x.hi[a] = std::max(x.hi[a], y.hi[a]);
-				}
-				return x;
+				return false;
+			};
+
+			tbb::parallel_for(size_t(0), candidateCount, [&](size_t i) {
+				const size_t tid = candidates[i].tid;
+				const size_t tvertex = candidates[i].tvertex;
+				deferred[i] = seamAdjacentStar(triangleV[3*tid + tvertex]) ||
+						seamAdjacentStar(triangleV[3*tid + TRI_NEXT[tvertex]]);
+			});
+		} else {
+			ScalableVector<u_int> regionOfVertex(GetVertexCount());
+			tbb::parallel_for(size_t(0), GetVertexCount(), [&](size_t i) {
+				regionOfVertex[i] = RegionOfVertex(i);
 			});
 
-		// Partition along the two largest extents (e.g. the plane of a
-		// terrain like mesh, never its displacement axis)
-		const float ext[3] = { bbox.hi[0] - bbox.lo[0], bbox.hi[1] - bbox.lo[1],
-			bbox.hi[2] - bbox.lo[2] };
-		size_t axis1 = 0;
-		for (size_t a = 1; a < 3; ++a)
-			if (ext[a] > ext[axis1])
-				axis1 = a;
-		size_t axis2 = (axis1 + 1) % 3;
-		if (ext[(axis1 + 2) % 3] > ext[axis2])
-			axis2 = (axis1 + 2) % 3;
+			// The vertices of the triangles spanning several regions are
+			// seam adjacent: marked with idempotent one byte writes, like
+			// the border identification (several threads can store 1 in
+			// the flag of a shared vertex, no update is lost). The
+			// spanning triangles are rare (they only cut the regions
+			// apart), so the pass streams the triangles and rarely writes
+			ScalableVector<unsigned char> seamAdjacentVertex(GetVertexCount(), 0);
+			tbb::parallel_for(size_t(0), GetTriangleCount(), [&](size_t t) {
+				// A triangle deleted by a deferred compaction spans no
+				// region: it would mark its vertices seam adjacent and
+				// defer candidates the compacted mesh would keep
+				if (triangleDeleted[t])
+					return;
 
-		size_t grid1 = static_cast<size_t>(std::round(std::sqrt(
-			static_cast<double>(regionTarget) * ext[axis1] / std::max(ext[axis2], 1e-30f))));
-		grid1 = std::max<size_t>(1, std::min(grid1, regionTarget));
-		const size_t grid2 = std::max<size_t>(1, regionTarget / grid1);
+				const u_int r0 = regionOfVertex[triangleV[3*t + 0]];
+				const u_int r1 = regionOfVertex[triangleV[3*t + 1]];
+				const u_int r2 = regionOfVertex[triangleV[3*t + 2]];
+				if ((r0 != r1) || (r1 != r2)) {
+					seamAdjacentVertex[triangleV[3*t + 0]] = 1;
+					seamAdjacentVertex[triangleV[3*t + 1]] = 1;
+					seamAdjacentVertex[triangleV[3*t + 2]] = 1;
+				}
+			});
 
-		const auto axisCoord = [](const Point& p, size_t axis) {
-			return axis == 0 ? p.x : (axis == 1 ? p.y : p.z);
-		};
-		const float lo1 = bbox.lo[axis1], hi1 = bbox.hi[axis1];
-		const float lo2 = bbox.lo[axis2], hi2 = bbox.hi[axis2];
-		const float inv1 = grid1 > 1 ? static_cast<float>(grid1) / std::max(hi1 - lo1, 1e-30f) : 0.f;
-		const float inv2 = grid2 > 1 ? static_cast<float>(grid2) / std::max(hi2 - lo2, 1e-30f) : 0.f;
-
-		ScalableVector<u_int> regionOfVertex(GetVertexCount());
-		tbb::parallel_for(size_t(0), GetVertexCount(), [&](size_t i) {
-			const Point& p = vertexP[i];
-			size_t i1 = static_cast<size_t>(std::max(0.f, (axisCoord(p, axis1) - lo1) * inv1));
-			size_t i2 = static_cast<size_t>(std::max(0.f, (axisCoord(p, axis2) - lo2) * inv2));
-			i1 = std::min(i1, grid1 - 1);
-			i2 = std::min(i2, grid2 - 1);
-			regionOfVertex[i] = static_cast<u_int>(i1 * grid2 + i2);
-		});
-
-		// The triangles spanning several regions are the seams cutting the
-		// conflict components apart
-		ScalableVector<unsigned char> mixedTri(GetTriangleCount());
-		tbb::parallel_for(size_t(0), GetTriangleCount(), [&](size_t t) {
-			// A triangle deleted by a deferred compaction spans no
-			// region: it would mark its vertices seam adjacent and
-			// defer candidates the compacted mesh would keep
-			if (triangleDeleted[t]) {
-				mixedTri[t] = 0;
-				return;
-			}
-
-			const u_int r0 = regionOfVertex[triangleV[3 * t + 0]];
-			const u_int r1 = regionOfVertex[triangleV[3 * t + 1]];
-			const u_int r2 = regionOfVertex[triangleV[3 * t + 2]];
-			mixedTri[t] = (r0 != r1) || (r1 != r2);
-		});
-
-		// A vertex is seam adjacent iff one of the triangles of its
-		// star is a seam triangle (the same star the reference walk of
-		// the candidate test below would scan): marked with idempotent
-		// one byte writes, like the border identification (several
-		// threads can store 1 in the flag of a shared vertex, no
-		// update is lost). The seam triangles are rare (they only cut
-		// the regions apart), so the pass streams the flags of the
-		// triangles and rarely writes
-		ScalableVector<unsigned char> seamAdjacentVertex(GetVertexCount(), 0);
-		tbb::parallel_for(size_t(0), GetTriangleCount(), [&](size_t t) {
-			if (mixedTri[t]) {
-				seamAdjacentVertex[triangleV[3 * t + 0]] = 1;
-				seamAdjacentVertex[triangleV[3 * t + 1]] = 1;
-				seamAdjacentVertex[triangleV[3 * t + 2]] = 1;
-			}
-		});
-
-		// A candidate is deferred iff one of its endpoints is seam
-		// adjacent: exactly the test of the star walk it replaces (a
-		// seam triangle in the star of one of the endpoints), two byte
-		// loads per candidate instead of the walk of the two stars
-		ScalableVector<unsigned char> deferred(candidateCount, 0);
-		tbb::parallel_for(size_t(0), candidateCount, [&](size_t i) {
-			const size_t tid = candidates[i].tid;
-			const size_t tvertex = candidates[i].tvertex;
-			deferred[i] = seamAdjacentVertex[triangleV[3 * tid + tvertex]] ||
-				seamAdjacentVertex[triangleV[3 * tid + TRI_NEXT[tvertex]]];
-		});
+			// A candidate is deferred iff one of its endpoints is seam
+			// adjacent: two byte loads per candidate instead of the walk
+			// of the two stars
+			tbb::parallel_for(size_t(0), candidateCount, [&](size_t i) {
+				const size_t tid = candidates[i].tid;
+				const size_t tvertex = candidates[i].tvertex;
+				deferred[i] = seamAdjacentVertex[triangleV[3*tid + tvertex]] ||
+						seamAdjacentVertex[triangleV[3*tid + TRI_NEXT[tvertex]]];
+			});
+		}
 
 		// Skip the deferral when it would leave too few candidates
 		size_t keptCount = 0;
