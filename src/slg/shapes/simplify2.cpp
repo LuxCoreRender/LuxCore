@@ -24,6 +24,7 @@
 #include <limits>
 #include <cstdint>
 #include <array>
+#include <atomic>
 #include <bit>
 #include <algorithm>
 #include <cstring> // for memset
@@ -126,15 +127,18 @@ using namespace slg;
 // pattern: count, prefix, disjoint scatter.
 //
 // 5. Serial is a measured decision, not a default. The passes that
-// stay serial (the CSR count and fill, the closure scatter) are
-// the ones where the parallel variants measured slower: they are
-// locality bound, cluster friendly, and the alternatives pay more
-// in redundant scans, scratch initialization or straggling than
-// they save. The compaction and the candidate gather are parallel
-// now - through a compaction index built by a parallel scan (the
-// out of place gather, one field at a time, is race free where no
-// lock free partition of the in place move exists) and through
-// fixed chunk boundaries (count, prefix, disjoint scatter).
+// stay serial (the closure scatter) are the ones where the
+// parallel variants measured slower. The CSR count and fill of
+// the reference build are the one accepted exception to the
+// lock free rule: they run parallel on relaxed fetch_adds (the
+// atomic free variants all measured slower), and a per vertex
+// canonical sort restores the ascending star order of the
+// serial build, so the result stays bit identical. The
+// compaction and the candidate gather are parallel - through a
+// compaction index built by a parallel scan (the out of place
+// gather, one field at a time, is race free where no lock free
+// partition of the in place move exists) and through fixed
+// chunk boundaries (count, prefix, disjoint scatter).
 //
 // 6. The float expressions are frozen in place. FMA contraction is
 // context dependent: the same expression compiled in another context
@@ -172,7 +176,10 @@ using namespace slg;
 //    built by a parallel scan (one field at a time, cache aligned,
 //    the mesh array swapped with its scratch) and the vertex ->
 //    triangle reference list is rebuilt with the CSR pattern
-//    (count, prefix, fill). The appends of the collapse waves are
+//    (count, prefix, fill: the count and fill run parallel on
+//    relaxed fetch_adds, the one atomics exception, and a per
+//    vertex canonical sort restores the ascending star order
+//    of the serial build). The appends of the collapse waves are
 //    merged into the reference base at the end of every wave, so
 //    the star walks of the next phase always read one segment.
 //
@@ -987,7 +994,10 @@ public:
 			}
 
 			// Extract the sorted references for the downstream phases:
-			// the keys are only needed by the sort
+			// the keys are only needed by the sort. The extraction stays
+			// serial: the parallel assign measured slower (the resize of
+			// the destination pays a zero initialization pass of the whole
+			// array, which costs about what the parallel copy saves)
 			ScalableVector<SimplifyRef2> allCandidates;
 			allCandidates.reserve(candidateKeys.size());
 			for (const CandidateKey &candidateKey : candidateKeys)
@@ -1035,10 +1045,6 @@ public:
 				SDL_LOG("Simplify2: Deferred " << deferredCandidates << " region boundary candidates ("
 					<< allCandidates.size() << " kept) in "
 					<< (boost::format("%.3f") % (WallClockTime() - stepStartTime)) << "secs");
-
-			// Copy to candidateList in reverse order (worst first) to match original behavior
-			candidateList = allCandidates;
-			std::reverse(candidateList.begin(), candidateList.end());
 
 			// Compute candidate closures for parallel processing
 			stepStartTime = WallClockTime();
@@ -1385,8 +1391,6 @@ private:
 
 	CameraConstPtr camera;
 	float edgeScreenSize;
-
-	ScalableVector<SimplifyRef2> candidateList;
 
 	u_int deletedTriangles;
 	bool hasNormals, hasUVs, hasColors, hasAlphas, preserveBorder;
@@ -2061,21 +2065,25 @@ private:
 
 		if (rebuildRefs) {
 		// Build the vertex -> triangles reference list (a CSR over the
-		// vertices). The reference counts, the prefix offsets and the
-		// fill cursors are accumulated in compact arrays (a few MB,
-		// resident in the caches): the random increments of the count
-		// and fill passes would otherwise touch the vertex records at
-		// every step and stream the whole vertex array through the last
-		// level cache. The tstart/tcount fields are written back in the
-		// sequential prefix pass, which also covers the unused
-		// vertices (tcount 0), so no separate initialization is needed.
-		ScalableVector<u_int> vertexRefCounts(vertexCount, 0);
-		for (size_t i = 0; i < liveTriangleCount; ++i) {
+		// vertices). The counts and the fill counters below are compact
+		// atomic arrays (a few MB, resident in the caches) and the
+		// increments are relaxed fetch_adds: the one accepted exception
+		// to the lock free rule of the algorithm, because every atomic
+		// free parallel variant of these passes measured slower (the per
+		// body histograms pay more in join traffic than the count
+		// itself, the vertex partitions re-scan the triangle array,
+		// the bucketed scatters fault in hundreds of MB of temporaries).
+		// The mesh order keeps the fetch_adds effectively uncontended:
+		// every thread sweeps its own band of vertices and only the band
+		// boundaries share lines. The value initialization of the atomic
+		// array zeroes the counts
+		ScalableVector<std::atomic<u_int>> vertexRefCounts(vertexCount);
+		tbb::parallel_for(size_t(0), liveTriangleCount, [&](size_t i) {
 			const size_t triOffset = 3*i;
-			++vertexRefCounts[triangleV[triOffset+0]];
-			++vertexRefCounts[triangleV[triOffset+1]];
-			++vertexRefCounts[triangleV[triOffset+2]];
-		}
+			vertexRefCounts[triangleV[triOffset+0]].fetch_add(1, std::memory_order_relaxed);
+			vertexRefCounts[triangleV[triOffset+1]].fetch_add(1, std::memory_order_relaxed);
+			vertexRefCounts[triangleV[triOffset+2]].fetch_add(1, std::memory_order_relaxed);
+		});
 
 		// Prefix sum of the reference counts and write back of the
 		// vertex fields
@@ -2083,24 +2091,23 @@ private:
 		// The scan is parallel: the final pass of tbb::parallel_scan
 		// carries the true prefix, so the written starts are exactly
 		// the ones of the sequential scan. The count and fill passes
-		// stay serial on the contrary: they are locality bound (the
-		// mesh order makes the per vertex accesses cache friendly) and
-		// the parallel alternatives cost more than they save (a
-		// partition of the vertices would re-scan the whole triangle
-		// array from every range, and a bucketed scatter would fault
-		// in hundreds of MB of temporary buffers)
+		// are parallel too: their relaxed fetch_adds ride the mesh
+		// order (every thread sweeps its own band of vertices, the
+		// lines of the other bands are never touched), and the joins
+		// of their parallel_for invocations carry the happens before
+		// edges the next pass reads through
 		ScalableVector<u_int> vertexRefStarts(vertexCount);
 		{
 			class VertexRefStartScan {
 				Simplify2 &mesh;
 				ScalableVector<u_int> &refStarts;
-				const ScalableVector<u_int> &refCounts;
+				const ScalableVector<std::atomic<u_int>> &refCounts;
 				size_t tstart;
 
 			public:
 				VertexRefStartScan(Simplify2 &p_mesh,
 						ScalableVector<u_int> &p_refStarts,
-						const ScalableVector<u_int> &p_refCounts)
+						const ScalableVector<std::atomic<u_int>> &p_refCounts)
 					: mesh(p_mesh), refStarts(p_refStarts),
 					  refCounts(p_refCounts), tstart(0) { }
 				VertexRefStartScan(VertexRefStartScan &other, tbb::split)
@@ -2109,16 +2116,18 @@ private:
 
 				void operator()(const tbb::blocked_range<size_t> &range, tbb::pre_scan_tag) {
 					for (size_t i = range.begin(); i < range.end(); ++i)
-						tstart += refCounts[i];
+						tstart += refCounts[i].load(std::memory_order_relaxed);
 				}
 
 				void operator()(const tbb::blocked_range<size_t> &range, tbb::final_scan_tag) {
 					for (size_t i = range.begin(); i < range.end(); ++i) {
+						const u_int count = refCounts[i].load(std::memory_order_relaxed);
+						
 						refStarts[i] = u_int(tstart);
 						mesh.vertexTstart[i] = u_int(tstart);
-						mesh.vertexTcount[i] = refCounts[i];
-
-						tstart += refCounts[i];
+						mesh.vertexTcount[i] = count;
+						
+						tstart += count;
 					}
 				}
 
@@ -2135,21 +2144,64 @@ private:
 			tbb::parallel_scan(tbb::blocked_range<size_t>(0, vertexCount, 16384), startScan);
 		}
 
-		// Write the references with a compact per vertex cursor
+		// Write the references: the slot of a corner is the start of its
+		// vertex plus the number of the corners already arrived there (a
+		// relaxed fetch_add on a zero initialized atomic counter: the
+		// value initialization of the atomic array is the counter reset).
+		// The arrival order is arbitrary, so the segment of a vertex is
+		// scrambled until the canonical sort below
 		const size_t refCount = liveTriangleCount * 3;
 		refTid.resize(refCount);
 		refTvertex.resize(refCount);
 		{
-			ScalableVector<u_int> vertexRefCursors(vertexRefStarts);
-			for (size_t i = 0; i < liveTriangleCount; ++i) {
+			ScalableVector<std::atomic<u_int>> vertexRefCounters(vertexCount);
+			tbb::parallel_for(size_t(0), liveTriangleCount, [&](size_t i) {
 				const size_t triOffset = 3*i;
 				for (size_t j = 0; j < 3; ++j) {
-					const u_int slot = vertexRefCursors[triangleV[triOffset+j]]++;
-
+					const u_int v = triangleV[triOffset+j];
+					const u_int slot = vertexRefStarts[v] +
+						vertexRefCounters[v].fetch_add(1, std::memory_order_relaxed);
+					
 					refTid[slot] = u_int(i);
 					refTvertex[slot] = u_int(j);
 				}
-			}
+			});
+			
+			// The per vertex canonical sort: every vertex sorts its own
+			// segment of the (tid, corner) pairs back into the ascending
+			// order of the serial fill. The pairs are unique, so the sorted
+			// segments are byte identical to the ones of the serial build and
+			// every reader of the stars (the quadric accumulation of the
+			// initialization, the relation walks of the drain) sees exactly
+			// the same lists. The segments hold a handful of entries (the
+			// average vertex carries six triangles), the writes are
+			// disjoint, no atomic is needed
+			tbb::parallel_for(size_t(0), vertexCount, [&](size_t v) {
+				const size_t tstart = vertexTstart[v];
+				const size_t tcount = vertexTcount[v];
+				
+				for (size_t k = 1; k < tcount; ++k) {
+					const u_int tid = refTid[tstart + k];
+					const u_int tvertex = refTvertex[tstart + k];
+					
+					size_t j = k;
+					while (j > 0) {
+						const u_int prevTid = refTid[tstart + j - 1];
+						const u_int prevTvertex = refTvertex[tstart + j - 1];
+						
+						if ((prevTid < tid) ||
+							((prevTid == tid) && (prevTvertex <= tvertex)))
+							break;
+						
+						refTid[tstart + j] = prevTid;
+						refTvertex[tstart + j] = prevTvertex;
+						--j;
+					}
+					
+					refTid[tstart + j] = tid;
+					refTvertex[tstart + j] = tvertex;
+				}
+			});
 		}
 
 		// The rebuild resets the garbage accounting: the reference
