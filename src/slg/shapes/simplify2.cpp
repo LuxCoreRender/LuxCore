@@ -127,18 +127,22 @@ using namespace slg;
 // pattern: count, prefix, disjoint scatter.
 //
 // 5. Serial is a measured decision, not a default. The passes that
-// stay serial (the closure scatter) are the ones where the
-// parallel variants measured slower. The CSR count and fill of
-// the reference build are the one accepted exception to the
-// lock free rule: they run parallel on relaxed fetch_adds (the
-// atomic free variants all measured slower), and a per vertex
-// canonical sort restores the ascending star order of the
-// serial build, so the result stays bit identical. The
-// compaction and the candidate gather are parallel - through a
+// stay serial (the candidate extraction of the sort, the kept list
+// maintenance of the drain) are the ones where the parallel
+// variants measured slower. The CSR count and fill of the
+// reference build are the one accepted exception to the lock
+// free rule: they run parallel on relaxed fetch_adds, and a per
+// vertex canonical sort restores the ascending star order of the
+// serial build, so the result stays bit identical. The closure
+// scatter needed no exception: its domain is small, so the fixed
+// chunk boundary pattern (count, prefix, disjoint scatter)
+// parallelizes it without any atomic, and the chunked candidates
+// keep the ascending order of the serial scatter by construction.
+// The compaction and the candidate gather are parallel through a
 // compaction index built by a parallel scan (the out of place
 // gather, one field at a time, is race free where no lock free
-// partition of the in place move exists) and through fixed
-// chunk boundaries (count, prefix, disjoint scatter).
+// partition of the in place move exists) and through the same
+// fixed chunk boundaries.
 //
 // 6. The float expressions are frozen in place. FMA contraction is
 // context dependent: the same expression compiled in another context
@@ -225,6 +229,14 @@ using namespace slg;
 //    of a triangle sweep, and the candidate vertex map is a
 //    persistent sparse member (the ranks match the global machinery
 //    exactly, so the two paths agree).
+//    The closure scatter (the candidates gathered into the lists
+//    of their closures, in the ascending greedy order) runs with
+//    the fixed chunk boundary pattern: the chunks count into
+//    their own histograms, the per closure cross chunk prefix
+//    carves the disjoint slot ranges, and the chunks scatter
+//    there - the ascending order of the serial scatter by
+//    construction, without any atomic (the small drain
+//    batches fall back to one chunk, the serial scatter itself).
 //
 // 6. Collapse (parallel, one closure per task): a closure walks its
 //    candidates in the sorted order; each collapse deletes the
@@ -3277,20 +3289,85 @@ private:
 			closureOfCandidate[i] = closureOfCandVertex[candidateVertexMap[v]];
 		});
 
-		// The histogram over the closures and the scatter itself stay
-		// serial: the cursors of a closure would race otherwise
-		ScalableVector<u_int> closureStart(classes.size() + 1, 0);
-		for (size_t i = 0; i < candidateCount; ++i)
-			++closureStart[closureOfCandidate[i] + 1];
-		for (size_t c = 0; c < classes.size(); ++c)
+		// The histogram over the closures and the scatter itself run
+		// with the fixed chunk boundary pattern (count, prefix,
+		// disjoint scatter): the chunks count their candidates into
+		// their own histograms, the per closure cross chunk prefix
+		// turns the counts into disjoint slot ranges, and the chunks
+		// scatter their candidates there - a chunk writes only its own
+		// ranges, the cursors never race. The chunks cover ascending
+		// candidate ranges and scatter in ascending order, so every
+		// closure receives its candidates exactly as the serial scatter
+		// emitted them: no atomic and no post sort, in spite of the
+		// accepted relaxation (the closure domain is small, the chunk
+		// histogram matrix stays in the MBs where the same matrix over
+		// the vertices would be GBs). The small batches of the drain
+		// fall back to a single chunk: the very serial scatter of
+		// before, without the machinery
+		const size_t closureCount = classes.size();
+		ScalableVector<u_int> closureStart(closureCount + 1, 0);
+		
+		// The chunk count: 64 on the production batches, capped by the
+		// histogram budget (the pathological meshes with millions of
+		// tiny closures), one below 256K candidates
+		const size_t scatterChunkCount = (candidateCount < 262144) ? 1 :
+			std::min<size_t>(64, std::max<size_t>(1,
+				(size_t(1) << 24) / (closureCount + 1)));
+		const size_t scatterChunkSize =
+			(candidateCount + scatterChunkCount - 1) / scatterChunkCount;
+		
+		// The per chunk histograms, [chunk][closure]
+		ScalableVector<u_int> chunkCounts(scatterChunkCount * closureCount, 0);
+		tbb::parallel_for(size_t(0), scatterChunkCount, [&](size_t k) {
+			const size_t iBegin = k * scatterChunkSize;
+			const size_t iEnd = std::min(iBegin + scatterChunkSize, candidateCount);
+			
+			u_int * const counts = chunkCounts.data() + k * closureCount;
+			for (size_t i = iBegin; i < iEnd; ++i)
+				++counts[closureOfCandidate[i]];
+		});
+		
+		// The per closure totals
+		tbb::parallel_for(tbb::blocked_range<size_t>(0, closureCount, 4096),
+			[&](const tbb::blocked_range<size_t> &w) {
+				for (size_t c = w.begin(); c < w.end(); ++c) {
+					size_t total = 0;
+					for (size_t k = 0; k < scatterChunkCount; ++k)
+						total += chunkCounts[k * closureCount + c];
+					closureStart[c + 1] = static_cast<u_int>(total);
+				}
+			});
+		for (size_t c = 0; c < closureCount; ++c)
 			closureStart[c + 1] += closureStart[c];
-
+		
+		// The cross chunk prefix, in place: the histogram rows become
+		// the per chunk scatter cursors
+		tbb::parallel_for(tbb::blocked_range<size_t>(0, closureCount, 4096),
+			[&](const tbb::blocked_range<size_t> &w) {
+				ScalableVector<u_int> running(w.size());
+				for (size_t c = w.begin(); c < w.end(); ++c)
+					running[c - w.begin()] = closureStart[c];
+				
+				for (size_t k = 0; k < scatterChunkCount; ++k) {
+					u_int * const row = chunkCounts.data() + k * closureCount;
+					for (size_t c = w.begin(); c < w.end(); ++c) {
+						const u_int count = row[c];
+						row[c] = running[c - w.begin()];
+						running[c - w.begin()] += count;
+					}
+				}
+			});
+		
+		// The scatter itself
 		ScalableVector<u_int> flatClosures(candidateCount);
-		{
-			ScalableVector<u_int> closureCursor(closureStart.begin(), closureStart.end() - 1);
-			for (size_t i = 0; i < candidateCount; ++i)
-				flatClosures[closureCursor[closureOfCandidate[i]]++] = static_cast<u_int>(i);
-		}
+		tbb::parallel_for(size_t(0), scatterChunkCount, [&](size_t k) {
+			const size_t iBegin = k * scatterChunkSize;
+			const size_t iEnd = std::min(iBegin + scatterChunkSize, candidateCount);
+			
+			u_int * const cursor = chunkCounts.data() + k * closureCount;
+			for (size_t i = iBegin; i < iEnd; ++i)
+				flatClosures[cursor[closureOfCandidate[i]]++] = static_cast<u_int>(i);
+		});
 
 		// Slice the flat array into the closures (the slot ranges are
 		// disjoint)
