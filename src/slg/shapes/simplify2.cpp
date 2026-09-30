@@ -126,17 +126,25 @@ using namespace slg;
 // pattern: count, prefix, disjoint scatter.
 //
 // 5. Serial is a measured decision, not a default. The passes that
-// stay serial (the in place compaction, the CSR count and fill, the
-// candidate collect) are the ones where the parallel variants
-// measured slower: they are locality bound, cluster friendly, and
-// the alternatives pay more in redundant scans, scratch
-// initialization or straggling than they save.
+// stay serial (the CSR count and fill, the closure scatter) are
+// the ones where the parallel variants measured slower: they are
+// locality bound, cluster friendly, and the alternatives pay more
+// in redundant scans, scratch initialization or straggling than
+// they save. The compaction and the candidate gather are parallel
+// now - through a compaction index built by a parallel scan (the
+// out of place gather, one field at a time, is race free where no
+// lock free partition of the in place move exists) and through
+// fixed chunk boundaries (count, prefix, disjoint scatter).
 //
 // 6. The float expressions are frozen in place. FMA contraction is
 // context dependent: the same expression compiled in another context
 // rounds differently, and one different rounding changes the
-// decisions. The quadric accumulation stays serial for this reason,
-// and every refactoring near the float paths is integer only or
+// decisions. The quadric accumulation went through exactly this
+// shift when it was parallelized (the vertex-centric star sum adds
+// the same triangles in the same order, but the geometry normals
+// are computed by another pass and their last bits move): the
+// shift is a measured, accepted re-baseline, and every change
+// near the remaining float paths is either integer only or
 // re-verified against the reference run.
 //
 // 7. Every change is verified against the reference run: the per
@@ -147,21 +155,42 @@ using namespace slg;
 // The main steps of the algorithm:
 //
 // 0. Initialization (once): the source mesh is copied into the
-//    structure of arrays, the quadric of every vertex is accumulated
-//    from the plane quadrics of its triangles (serial, principle 6),
-//    the collapse errors of all triangle corners are evaluated
+//    structure of arrays, the geometry normals are computed by a
+//    parallel triangle pass, the quadric of every vertex is
+//    accumulated from the plane quadrics of its star (parallel,
+//    vertex-centric - the re-baselined step of principle 6), the
+//    collapse errors of all triangle corners are evaluated
 //    (parallel) and the border vertices are identified (parallel).
 //
-// 1. Mesh update (every iteration): the triangles deleted by the
-//    previous iteration are compacted away (in place, strictly left
-//    to right) and the vertex -> triangle reference list is rebuilt
-//    with the CSR pattern (count, prefix, fill).
+// 1. Mesh update (every iteration, deferred behind a garbage
+//    threshold): while the appended star segments and the orphaned
+//    entries of the deleted triangles stay under one eighth of the
+//    live references, the compaction and the reference rebuild are
+//    skipped entirely (the drain iterations then cost nothing per
+//    mesh step). When the threshold trips, the surviving triangle
+//    fields are gathered out of place through a compaction index
+//    built by a parallel scan (one field at a time, cache aligned,
+//    the mesh array swapped with its scratch) and the vertex ->
+//    triangle reference list is rebuilt with the CSR pattern
+//    (count, prefix, fill). The appends of the collapse waves are
+//    merged into the reference base at the end of every wave, so
+//    the star walks of the next phase always read one segment.
 //
 // 2. Candidate evaluation (parallel, one slot per triangle): every
 //    triangle records the corner with the lowest collapse error,
 //    screened by the border rules and the two flip tests. The error
 //    and the collapse point are the ones the last error update
 //    recorded on the same vertex state: the evaluation only reads.
+//    Once the kept batch falls below one percent of the live mesh
+//    (the drain), the evaluation becomes incremental: the collapses
+//    of the previous iteration invalidated exactly the records of
+//    the touched triangles (the welds are the only changes), and
+//    recomputing exactly those reproduces the full screening. The
+//    candidate gather folds the selection threshold in the same
+//    step (the threshold lives in the error word of the packed key)
+//    and, on the drain, reads a maintained list of the kept
+//    candidates instead of scanning the mesh: the list is repaired
+//    from the touched entries and the compactions remap it.
 //
 // 3. Selection: every candidate is keyed by its error (an order
 //    preserving transformation of the float bits) and its triangle
@@ -173,11 +202,22 @@ using namespace slg;
 //    regions of a grid over the bounding box are put aside for a
 //    second wave of the same iteration. The cut is geometric
 //    (principle 3): it disconnects the conflict graph at the region
-//    seams, so the closures of the main wave stay small.
+//    seams, so the closures of the main wave stay small. The region
+//    grid is rebuilt from the current bounding box at every
+//    deferral (the box shrinks as the extreme vertices collapse)
+//    and the cell arithmetic is pinned by volatile intermediates,
+//    so no compilation context can shift a borderline vertex to the
+//    neighboring cell. On the drain the test walks the two endpoint
+//    stars directly instead of building the per vertex region map.
 //
 // 5. Closure computation: the conflict graph of the kept candidates
 //    is partitioned into connected components by a lock free
-//    Union-Find (GroupByEquivalence).
+//    Union-Find (GroupByEquivalence). On the drain the relations
+//    come from star walks of the candidate bearing vertices (a
+//    triangle links two of them only from the star of both) instead
+//    of a triangle sweep, and the candidate vertex map is a
+//    persistent sparse member (the ranks match the global machinery
+//    exactly, so the two paths agree).
 //
 // 6. Collapse (parallel, one closure per task): a closure walks its
 //    candidates in the sorted order; each collapse deletes the
@@ -185,7 +225,11 @@ using namespace slg;
 //    recorded collapse point, updates the errors of the neighboring
 //    triangles and appends their references to the per thread tail.
 //    The closures own disjoint triangle sets: nothing is shared, no
-//    lock is needed.
+//    lock is needed. The reduce joins chain the per body tails, the
+//    moved vertex lists and the record invalidation lists of the
+//    split bodies (a join that keeps only the sibling's own block
+//    loses everything below it in the tree), and the wave merge
+//    carries the accumulated blocks into the reference base.
 //
 // 7. End game: the second wave processes the deferred seam candidates
 //    right after the region confined closures of every iteration, so
@@ -569,22 +613,12 @@ public:
 			// the member records: they survive the iteration, cleared by the
 			// collapses on every changed input (see UpdateTriangles) and
 			// moved by the compaction with the triangle
-			tbb::parallel_for(size_t(0), GetTriangleCount(),
-					[this, &candidateCtx](size_t i) {
-				// The recorded candidate is current: the last
-				// evaluation of this triangle ran on the same inputs
-				// (nothing touched the triangle or the stars its flip
-				// tests read since), so it would select the same corner
-				// again. Only reachable when the cache is active
-				if (evalCacheActive && candidateValid[i])
-					return;
-
-				// A triangle deleted by a deferred compaction is not
-				// evaluated: its record stays stale, the candidate
-				// collection skips it through the same flag
-				if (triangleDeleted[i])
-					return;
-
+			// The evaluation of one triangle: reads only its inputs (the
+			// errors, the positions, the flip test stars) and writes only
+			// its own record. A triangle deleted by a deferred compaction
+			// is never evaluated (its record stays stale, the collection
+			// skips it through the same flag)
+			const auto evaluateTriangle = [this, &candidateCtx](const size_t i) {
 				// Look for the (valid) triangle vertex with the minimum error
 				u_int minErrorIndex = NULL_INDEX;
 				float minError = std::numeric_limits<float>::infinity();
@@ -652,16 +686,61 @@ public:
 					minError = triangleErr[triOffset + j];
 				}
 
-				// Record the outcome: the candidate of every
-				// evaluation (the NULL_INDEX of a triangle without a
-				// passing corner is an outcome like any other), and
-				// the validity only when the cache runs - the records
-				// of an inactive cache stay invalid, so the first
-				// active evaluation recomputes the whole mesh once
 				candidateVertexIndex[i] = minErrorIndex;
 				if (evalCacheActive)
 					candidateValid[i] = 1;
-			});
+			};
+
+			// The touched triangles of the previous collapse phase (the
+			// welds are the only changes of the records, so recomputing
+			// exactly those reproduces the full evaluation). The list
+			// stays alive until the collect below: the kept candidate
+			// list maintenance needs it too
+			ScalableVector<u_int> touchedTriangles;
+			if (evalCacheActive) {
+				touchedTriangles.swap(phaseTouchedTriangles);
+
+				// Sorted and deduplicated (a triangle is recorded once
+				// per invalidated star)
+				std::sort(touchedTriangles.begin(), touchedTriangles.end());
+				touchedTriangles.erase(
+						std::unique(touchedTriangles.begin(), touchedTriangles.end()),
+						touchedTriangles.end());
+
+				// The found count of the log carries the difference of
+				// the outcomes: the previous contribution of each
+				// touched triangle leaves it (its old record, whatever
+				// happened to the triangle since) and the new outcome
+				// re-enters it (a triangle deleted by the phase carries
+				// nothing). Both are serial passes over the small list
+				size_t oldHasCount = 0;
+				for (const u_int t : touchedTriangles)
+					oldHasCount += (candidateVertexIndex[t] != NULL_INDEX);
+
+				tbb::parallel_for(size_t(0), touchedTriangles.size(),
+					[&](size_t k) {
+						const size_t i = touchedTriangles[k];
+						if (triangleDeleted[i])
+							return;
+						evaluateTriangle(i);
+					});
+
+				size_t newHasCount = 0;
+				for (const u_int t : touchedTriangles)
+					newHasCount += (!triangleDeleted[t]) &&
+						(candidateVertexIndex[t] != NULL_INDEX);
+				foundCandidateCount += size_t(std::ptrdiff_t(newHasCount) -
+						std::ptrdiff_t(oldHasCount));
+			} else {
+				// The full mesh evaluation (the cache is inactive: the
+				// records are not read)
+				tbb::parallel_for(size_t(0), GetTriangleCount(),
+					[&](size_t i) {
+						if (triangleDeleted[i])
+							return;
+						evaluateTriangle(i);
+				});
+			}
 
 			// Collect the candidates with their sort key, chunked out of
 			// place: the chunks count their candidates, the offsets are
@@ -682,106 +761,155 @@ public:
 			// chunk counters
 			ScalableVector<CandidateKey> candidateKeys;
 			size_t totalCandidateCount;
-			{
-				const size_t triangleCount = GetTriangleCount();
-				constexpr size_t chunkSize = 16384;
-				const size_t chunkCount = (triangleCount + chunkSize - 1) / chunkSize;
-
-				// The selection threshold of the drain in the error word
-				// domain: infinite at the first iteration (every error
-				// key is below it, so every candidate is materialized and
-				// the rank cut below does the selection)
-				std::uint32_t thresholdErrorKey = 0xffffffffu;
-				if (iteration > 0) {
-					const std::uint32_t errorBits = std::bit_cast<std::uint32_t>(errorThreshold);
-					thresholdErrorKey = (errorBits & 0x80000000u) ?
+			// Order-preserving transformation of the collapse error
+			// to an unsigned integer: the IEEE-754 bit pattern is
+			// monotonic for the non-negative floats and reversed for
+			// the negative ones, so the sign bit is set for the former
+			// and the whole word is flipped for the latter
+			const auto errorKeyOf = [this](const size_t i, const u_int tvertex) {
+				const std::uint32_t errorBits = std::bit_cast<std::uint32_t>(triangleErr[3*i + tvertex]);
+				return (errorBits & 0x80000000u) ?
+					~errorBits : (errorBits | 0x80000000u);
+			};
+			// The selection threshold of the drain in the error word
+			// domain: infinite at the first iteration (every error key
+			// is below it, so every candidate is materialized and the
+			// rank cut below does the selection)
+			std::uint32_t thresholdErrorKey = 0xffffffffu;
+			if (iteration > 0) {
+				const std::uint32_t errorBits = std::bit_cast<std::uint32_t>(errorThreshold);
+				thresholdErrorKey = (errorBits & 0x80000000u) ?
 						~errorBits : (errorBits | 0x80000000u);
+			}
+
+			if (evalCacheActive) {
+				// The maintenance of the kept candidate list: the touched
+				// triangles leave the list (their outcomes may have changed)
+				// and re-enter when their new records carry a candidate at
+				// or below the threshold, the deleted triangles drop. The
+				// survivors and the re-entered entries are concatenated and
+				// sorted back into the ascending order (the very order the
+				// chunks of the full collect emit, so the keys are identical)
+
+				ScalableVector<u_int> reentered;
+				size_t ti = 0;
+				size_t w = 0;
+				for (const u_int t : candidateKeptList) {
+					// Skip the touched entries: their outcome is in the
+					// re-entered set
+					while ((ti < touchedTriangles.size()) && (touchedTriangles[ti] < t))
+						++ti;
+					if ((ti < touchedTriangles.size()) && (touchedTriangles[ti] == t))
+						continue;
+					if (triangleDeleted[t])
+						continue;
+					candidateKeptList[w++] = t;
 				}
-
-				// Order-preserving transformation of the collapse error
-				// to an unsigned integer: the IEEE-754 bit pattern is
-				// monotonic for the non-negative floats and reversed for
-				// the negative ones, so the sign bit is set for the former
-				// and the whole word is flipped for the latter
-				const auto errorKeyOf = [this](const size_t i, const u_int tvertex) {
-					const std::uint32_t errorBits = std::bit_cast<std::uint32_t>(triangleErr[3*i + tvertex]);
-					return (errorBits & 0x80000000u) ?
-						~errorBits : (errorBits | 0x80000000u);
-				};
-
-				// Count per chunk: every candidate, and the ones the
-				// threshold keeps (the fill reads the same records, so
-				// the two passes see the same mesh)
-				ScalableVector<size_t> chunkAllCounts(chunkCount, 0);
-				ScalableVector<size_t> chunkKeptCounts(chunkCount, 0);
-				tbb::parallel_for(size_t(0), chunkCount, [&](size_t c) {
-					const size_t iBegin = c * chunkSize;
-					const size_t iEnd = std::min(iBegin + chunkSize, triangleCount);
-
-					size_t allCount = 0;
-					size_t keptCount = 0;
-					for (size_t i = iBegin; i < iEnd; ++i) {
-						// A triangle deleted by a deferred compaction carries
-						// no candidate: its stale record is skipped
-						if (triangleDeleted[i])
-							continue;
-
-						const u_int tvertex = candidateVertexIndex[i];
-						if (tvertex == NULL_INDEX)
-							continue;
-
-						++allCount;
-						if (errorKeyOf(i, tvertex) <= thresholdErrorKey)
-							++keptCount;
-					}
-					chunkAllCounts[c] = allCount;
-					chunkKeptCounts[c] = keptCount;
-				});
-
-				// The chunk offsets (the prefix of the kept counts)
-				ScalableVector<size_t> chunkKeptOffsets(chunkCount);
-				size_t keptTotal = 0;
-				for (size_t c = 0; c < chunkCount; ++c) {
-					chunkKeptOffsets[c] = keptTotal;
-					keptTotal += chunkKeptCounts[c];
+				candidateKeptList.resize(w);
+				for (const u_int t : touchedTriangles) {
+					if (triangleDeleted[t])
+						continue;
+					const u_int tvertex = candidateVertexIndex[t];
+					if (tvertex == NULL_INDEX)
+						continue;
+					if (errorKeyOf(t, tvertex) > thresholdErrorKey)
+						continue;
+					reentered.push_back(t);
 				}
-				totalCandidateCount = 0;
-				for (size_t c = 0; c < chunkCount; ++c)
-					totalCandidateCount += chunkAllCounts[c];
+				candidateKeptList.insert(candidateKeptList.end(),
+						reentered.begin(), reentered.end());
+				std::sort(candidateKeptList.begin(), candidateKeptList.end());
 
-				// Fill the disjoint chunk slot ranges
-				candidateKeys.resize(keptTotal);
-				tbb::parallel_for(size_t(0), chunkCount, [&](size_t c) {
-					const size_t iBegin = c * chunkSize;
-					const size_t iEnd = std::min(iBegin + chunkSize, triangleCount);
-
-					size_t k = chunkKeptOffsets[c];
-					for (size_t i = iBegin; i < iEnd; ++i) {
-						if (triangleDeleted[i])
-							continue;
-
-						const u_int tvertex = candidateVertexIndex[i];
-						if (tvertex == NULL_INDEX)
-							continue;
-
-						const std::uint32_t errorKey = errorKeyOf(i, tvertex);
-						if (errorKey > thresholdErrorKey)
-							continue;
-
-						// The tie break of the equal errors: the triangle index
-						// scrambled by an odd multiplier (a bijection of
-						// [0, 2^32), the keys stay unique). The scramble spreads
-						// the candidates with exactly equal errors (the flat
-						// regions) uniformly over the mesh: with the raw index
-						// they were selected in storage order, and the selection
-						// boundary left storage aligned bands in the mesh
-						const std::uint32_t tieKey = u_int(i) * 0x9E3779B1u;
-
-						candidateKeys[k++] = CandidateKey{
+				// The collect: the keys of the kept list (the same key
+				// building as the chunks of the full collect)
+				candidateKeys.reserve(candidateKeptList.size());
+				for (const u_int i : candidateKeptList) {
+					const u_int tvertex = candidateVertexIndex[i];
+					const std::uint32_t errorKey = errorKeyOf(i, tvertex);
+					const std::uint32_t tieKey = u_int(i) * 0x9E3779B1u;
+					candidateKeys.push_back(CandidateKey{
 							(static_cast<std::uint64_t>(errorKey) << 32) | tieKey,
-							SimplifyRef2{ u_int(i), tvertex } };
+							SimplifyRef2{ u_int(i), tvertex } });
+				}
+				totalCandidateCount = foundCandidateCount;
+			} else {
+					const size_t triangleCount = GetTriangleCount();
+					constexpr size_t chunkSize = 16384;
+					const size_t chunkCount = (triangleCount + chunkSize - 1) / chunkSize;
+
+					// Count per chunk: every candidate, and the ones the
+					// threshold keeps (the fill reads the same records, so
+					// the two passes see the same mesh)
+					ScalableVector<size_t> chunkAllCounts(chunkCount, 0);
+					ScalableVector<size_t> chunkKeptCounts(chunkCount, 0);
+					tbb::parallel_for(size_t(0), chunkCount, [&](size_t c) {
+						const size_t iBegin = c * chunkSize;
+						const size_t iEnd = std::min(iBegin + chunkSize, triangleCount);
+
+						size_t allCount = 0;
+						size_t keptCount = 0;
+						for (size_t i = iBegin; i < iEnd; ++i) {
+							// A triangle deleted by a deferred compaction carries
+							// no candidate: its stale record is skipped
+							if (triangleDeleted[i])
+								continue;
+
+							const u_int tvertex = candidateVertexIndex[i];
+							if (tvertex == NULL_INDEX)
+								continue;
+
+							++allCount;
+							if (errorKeyOf(i, tvertex) <= thresholdErrorKey)
+								++keptCount;
+						}
+						chunkAllCounts[c] = allCount;
+						chunkKeptCounts[c] = keptCount;
+					});
+
+					// The chunk offsets (the prefix of the kept counts)
+					ScalableVector<size_t> chunkKeptOffsets(chunkCount);
+					size_t keptTotal = 0;
+					for (size_t c = 0; c < chunkCount; ++c) {
+						chunkKeptOffsets[c] = keptTotal;
+						keptTotal += chunkKeptCounts[c];
 					}
-				});
+					totalCandidateCount = 0;
+					for (size_t c = 0; c < chunkCount; ++c)
+						totalCandidateCount += chunkAllCounts[c];
+
+					// Fill the disjoint chunk slot ranges
+					candidateKeys.resize(keptTotal);
+					tbb::parallel_for(size_t(0), chunkCount, [&](size_t c) {
+						const size_t iBegin = c * chunkSize;
+						const size_t iEnd = std::min(iBegin + chunkSize, triangleCount);
+
+						size_t k = chunkKeptOffsets[c];
+						for (size_t i = iBegin; i < iEnd; ++i) {
+							if (triangleDeleted[i])
+								continue;
+
+							const u_int tvertex = candidateVertexIndex[i];
+							if (tvertex == NULL_INDEX)
+								continue;
+
+							const std::uint32_t errorKey = errorKeyOf(i, tvertex);
+							if (errorKey > thresholdErrorKey)
+								continue;
+
+							// The tie break of the equal errors: the triangle index
+							// scrambled by an odd multiplier (a bijection of
+							// [0, 2^32), the keys stay unique). The scramble spreads
+							// the candidates with exactly equal errors (the flat
+							// regions) uniformly over the mesh: with the raw index
+							// they were selected in storage order, and the selection
+							// boundary left storage aligned bands in the mesh
+							const std::uint32_t tieKey = u_int(i) * 0x9E3779B1u;
+
+							candidateKeys[k++] = CandidateKey{
+								(static_cast<std::uint64_t>(errorKey) << 32) | tieKey,
+								SimplifyRef2{ u_int(i), tvertex } };
+						}
+					});
 			}
 			SDL_LOG("Simplify2: Found " << totalCandidateCount << " edge candidates in "
 				<< (boost::format("%.3f") % (WallClockTime() - stepStartTime)) << "secs");
@@ -813,6 +941,28 @@ public:
 			if (!evalCacheActive &&
 					keptCandidateCount * 100 < startTriangleCount - totalDeletedTriangles) {
 				evalCacheActive = true;
+
+				// The kept candidate list of the incremental collect: the
+				// below threshold records of the current evaluation (one
+				// mesh pass, once - the list is maintained incrementally
+				// from here on, and the compactions remap it). The found
+				// count the list no longer sees starts from the full
+				// collect of this iteration
+				for (size_t i = 0; i < GetTriangleCount(); ++i) {
+					if (triangleDeleted[i])
+						continue;
+
+					const u_int tvertex = candidateVertexIndex[i];
+					if (tvertex == NULL_INDEX)
+						continue;
+
+					if (errorKeyOf(i, tvertex) > thresholdErrorKey)
+						continue;
+
+					candidateKeptList.push_back(u_int(i));
+				}
+				foundCandidateCount = totalCandidateCount;
+
 				SDL_LOG("Simplify2: Evaluation cache active (the kept batch fell below one percent"
 						" of the live triangles)");
 			}
@@ -1022,6 +1172,10 @@ private:
 		// The vertices moved by the welds of the context (the screen
 		// projection recompute list of the next iteration)
 		CacheAlignedVector<u_int> movedVertices;
+		// The triangles whose recorded candidates the welds
+		// invalidated (the re-evaluation list of the next iteration,
+		// recorded only while the evaluation cache is active)
+		CacheAlignedVector<u_int> touchedTriangles;
 		u_int deletedCount = 0;
 	};
 
@@ -1106,6 +1260,7 @@ private:
 		CacheAlignedVector<SimplifyRef2> refsTail;
 		CacheAlignedVector<RefAppend> refAppends;
 		CacheAlignedVector<u_int> movedVertices;
+		CacheAlignedVector<u_int> touchedTriangles;
 	};
 	// The star segments appended by the collapse waves of the current
 	// iteration, with the repoint records of their welded vertices:
@@ -1118,6 +1273,20 @@ private:
 	// first iteration finds it empty and computes the whole mesh, which
 	// starts fully invalid)
 	ScalableVector<u_int> phaseMovedVertices;
+	// The incremental candidate machinery of the evaluation cache:
+	// the kept candidate list (the triangles whose record carries a
+	// candidate at or below the drain threshold, in ascending order -
+	// the collect of an active cache gathers its keys from this list
+	// instead of scanning the mesh, exactly reproducing the full
+	// collect: the same set, the same order), the found candidate
+	// count the list no longer sees (the candidates above the
+	// threshold), and the triangles whose records the collapse waves
+	// invalidated (the re-evaluation list: the welds are the only
+	// changes of the records, so recomputing exactly those
+	// reproduces the full evaluation)
+	ScalableVector<u_int> candidateKeptList;
+	size_t foundCandidateCount = 0;
+	ScalableVector<u_int> phaseTouchedTriangles;
 	// The evaluation cache activates only once the run is out of the
 	// production phase: while the selected batch is a large share of
 	// the mesh, the collapses rewrite nearly everything, the records
@@ -1631,7 +1800,7 @@ private:
 	// the iteration; the plain stores of the same value, on both the
 	// generation and the validity flag, are the principle 2 idempotent
 	// shared writes
-	void InvalidateVertexStar(const size_t v, const CollapseContext &ctx) {
+	void InvalidateVertexStar(const size_t v, CollapseContext &ctx) {
 		// The records of an inactive cache are never read: no walk
 		if (!evalCacheActive)
 			return;
@@ -1648,10 +1817,20 @@ private:
 		const size_t baseRefCount = (tstart < baseSize) ?
 				std::min<size_t>(tcount, baseSize - tstart) : 0;
 
-		for (size_t k = 0; k < baseRefCount; ++k)
-			candidateValid[refTid[tstart + k]] = 0;
-		for (size_t k = baseRefCount; k < tcount; ++k)
-			candidateValid[ctx.refsTail[tstart + k - baseSize].tid] = 0;
+		// The flags are cleared and the triangles recorded for the
+		// re-evaluation of the next iteration (a triangle invalidated
+		// by several walks is recorded several times: the list is
+		// sorted and deduplicated before use)
+		for (size_t k = 0; k < baseRefCount; ++k) {
+			const u_int t = refTid[tstart + k];
+			candidateValid[t] = 0;
+			ctx.touchedTriangles.push_back(t);
+		}
+		for (size_t k = baseRefCount; k < tcount; ++k) {
+			const u_int t = ctx.refsTail[tstart + k - baseSize].tid;
+			candidateValid[t] = 0;
+			ctx.touchedTriangles.push_back(t);
+		}
 	}
 
 	// Update triangle connections and edge error after a edge is collapsed
@@ -1694,6 +1873,8 @@ private:
 			// whose flip tests read it - they walk the stars of its
 			// other two vertices and read their slots and positions
 			candidateValid[tid] = 0;
+			if (evalCacheActive)
+				ctx.touchedTriangles.push_back(u_int(tid));
 			InvalidateVertexStar(triangleV[3*tid + TRI_NEXT[r.tvertex]], ctx);
 			InvalidateVertexStar(triangleV[3*tid + TRI_PREV[r.tvertex]], ctx);
 
@@ -1852,51 +2033,30 @@ private:
 				triangleDeleted[d] = false;
 			});
 
-			ResizeTriangles(dst);
-			liveTriangleCount = dst;
-		}
-
-		// Init Quadrics by Plane & Edge Errors
-		//
-		// Required at the beginning (iteration == 0)
-		//
-		// The quadric accumulation stays serial: the triangle sweep
-		// scatters over the shared vertices (a parallel pass would race),
-		// and the vertex-centric alternative recomputes the plane
-		// quadrics in a different context, which rounds the geometry
-		// normals differently (FMA contraction is context dependent)
-		// and changes the simplification decisions. The edge error pass
-		// is where the time goes: it is parallel (the writes are
-		// disjoint and the screen projections are precomputed before
-		// the mesh update, a lazily computed projection would be written
-		// by several threads at once)
-		if (iteration == 0) {
-			for (size_t i = 0; i < vertexCount; ++i)
-				vertexQ[i] = SymetricMatrix2(0.0);
-
-			for (size_t i = 0; i < liveTriangleCount; ++i) {
-				const size_t triOffset = 3*i;
-				const u_int iv0 = triangleV[triOffset+0];
-				const u_int iv1 = triangleV[triOffset+1];
-				const u_int iv2 = triangleV[triOffset+2];
-
-				const Point &p0 = vertexP[iv0];
-
-				const Normal geometryN(Normalize(Cross(vertexP[iv1] - p0, vertexP[iv2] - p0)));
-				triangleGeometryN[i] = geometryN;
-
-				// It doesn't matter what vertex I use here because the triangle
-				// plane will pass for all 3
-				const SymetricMatrix2 sm(geometryN.x, geometryN.y, geometryN.z,
-						-Dot(Vector(geometryN), Vector(p0)));
-				vertexQ[iv0] += sm;
-				vertexQ[iv1] += sm;
-				vertexQ[iv2] += sm;
+			// The kept candidate list and the pending touched triangles
+			// of an active evaluation cache remap through the compaction
+			// index: both walk it with their ascending triangle ids (the
+			// touched list is sorted first), the ids translate to their
+			// destinations and the deleted entries drop
+			if (evalCacheActive) {
+				const auto remapAscending = [&](ScalableVector<u_int> &list) {
+					size_t d = 0;
+					size_t w = 0;
+					for (const u_int s : list) {
+						while ((d < dst) && (compactionScratch.index[d] < s))
+							++d;
+						if ((d < dst) && (compactionScratch.index[d] == s))
+							list[w++] = u_int(d);
+					}
+					list.resize(w);
+				};
+				remapAscending(candidateKeptList);
+				std::sort(phaseTouchedTriangles.begin(), phaseTouchedTriangles.end());
+				remapAscending(phaseTouchedTriangles);
 			}
 
-			tbb::parallel_for(size_t(0), liveTriangleCount, [&](size_t i) {
-				UpdateTriangleError(i);
-			});
+			ResizeTriangles(dst);
+			liveTriangleCount = dst;
 		}
 
 		if (rebuildRefs) {
@@ -1997,6 +2157,67 @@ private:
 		staleRefCount = 0;
 		uncompactedDeletions = 0;
 		rebuildLiveTriangleCount = liveTriangleCount;
+		}
+
+		// Init Quadrics by Plane & Edge Errors
+		//
+		// Required at the beginning (iteration == 0), after the reference
+		// build (the vertex-centric accumulation below walks the stars)
+		//
+		// The geometry normals are computed by a parallel triangle pass
+		// (each triangle writes its own slot), then the quadric
+		// accumulation is vertex-centric: every vertex sums the plane
+		// quadrics of the triangles of its own star, a parallel pass over
+		// the vertices where each one writes only its own record (the
+		// triangle sweep would scatter over the shared vertices and
+		// race). The star of a vertex lists its triangles in ascending
+		// order, the same order the serial triangle sweep would add
+		// them, so the accumulation rounds identically; only the
+		// compilation context of the geometry normals differs (FMA
+		// contraction is context dependent), which shifts the last bits
+		// of the normals and with them the simplification decisions -
+		// the accepted re-baseline of this change
+		//
+		// The edge error pass is where the time goes: it is parallel
+		// (the writes are disjoint and the screen projections are
+		// precomputed before the mesh update, a lazily computed
+		// projection would be written by several threads at once)
+		if (iteration == 0) {
+			// The triangle geometry normals
+			tbb::parallel_for(size_t(0), liveTriangleCount, [&](size_t i) {
+				const size_t triOffset = 3*i;
+				const u_int iv0 = triangleV[triOffset+0];
+				const u_int iv1 = triangleV[triOffset+1];
+				const u_int iv2 = triangleV[triOffset+2];
+
+				const Point &p0 = vertexP[iv0];
+				triangleGeometryN[i] = Normal(Normalize(Cross(vertexP[iv1] - p0, vertexP[iv2] - p0)));
+			});
+
+			// The plane quadric accumulation, one vertex at a time
+			tbb::parallel_for(size_t(0), vertexCount, [&](size_t v) {
+				SymetricMatrix2 q(0.0);
+
+				const u_int tstart = vertexTstart[v];
+				const u_int tcount = vertexTcount[v];
+				for (size_t k = 0; k < tcount; ++k) {
+					const size_t tid = refTid[tstart + k];
+					const Normal &geometryN = triangleGeometryN[tid];
+
+					// It doesn't matter what vertex I use here because the
+					// triangle plane will pass for all 3
+					const Point &p0 = vertexP[triangleV[3*tid + 0]];
+					const SymetricMatrix2 sm(geometryN.x, geometryN.y, geometryN.z,
+							-Dot(Vector(geometryN), Vector(p0)));
+					q += sm;
+				}
+
+				vertexQ[v] = q;
+			});
+
+			tbb::parallel_for(size_t(0), liveTriangleCount, [&](size_t i) {
+				UpdateTriangleError(i);
+			});
 		}
 
 		// Identify boundary : vertices[].border=0,1
@@ -2672,6 +2893,11 @@ private:
 			phaseMovedVertices.insert(phaseMovedVertices.end(),
 					block.movedVertices.begin(), block.movedVertices.end());
 
+			// The record invalidation list of the wave (the
+			// re-evaluation list of the next iteration)
+			phaseTouchedTriangles.insert(phaseTouchedTriangles.end(),
+					block.touchedTriangles.begin(), block.touchedTriangles.end());
+
 			offset += block.refsTail.size();
 		}
 		iterationRefAppends.clear();
@@ -3088,7 +3314,8 @@ private:
 			// which would lose almost every appended reference)
 			appendBlocks.emplace_back(std::move(other.ctx.refsTail),
 					std::move(other.ctx.refAppends),
-					std::move(other.ctx.movedVertices));
+					std::move(other.ctx.movedVertices),
+					std::move(other.ctx.touchedTriangles));
 			appendBlocks.insert(appendBlocks.end(),
 					std::make_move_iterator(other.appendBlocks.begin()),
 					std::make_move_iterator(other.appendBlocks.end()));
@@ -3126,7 +3353,8 @@ private:
 			// processor only
 			simplify.iterationRefAppends.emplace_back(std::move(ctx.refsTail),
 					std::move(ctx.refAppends),
-					std::move(ctx.movedVertices));
+					std::move(ctx.movedVertices),
+					std::move(ctx.touchedTriangles));
 			for (auto& block : appendBlocks)
 				simplify.iterationRefAppends.push_back(std::move(block));
 			appendBlocks.clear();
