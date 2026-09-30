@@ -478,7 +478,11 @@ public:
 		vertexScreenValid.assign(GetVertexCount(), false);
 		vertexScreenVisible.assign(GetVertexCount(), false);
 
-		const size_t startTriangleCount = GetTriangleCount();
+		// The live triangle count of the run: the deferred compactions
+		// leave the deleted triangles in the arrays (skipped by the
+		// passes through their flags), so the array count still
+		// carries them and the live estimate subtracts them
+		const size_t startTriangleCount = GetTriangleCount() - uncompactedDeletions;
 		deletedTriangles = 0;
 		u_int totalDeletedTriangles = 0;
 		// Main iteration loop. There is no iteration limit: the loop
@@ -491,6 +495,11 @@ public:
 				break;
 
 			const double iterationStartTime = WallClockTime();
+
+			// A new generation for the star invalidation dedup: the
+			// per vertex counters of the previous iterations are all
+			// lower
+			++invalidationGen;
 
 			// Precompute the screen space projections of all the vertices (when
 			// enabled): the parallel phases below then never lazily write the
@@ -517,9 +526,10 @@ public:
 			// Compact the deleted triangles (iteration > 0), rebuild the vertex
 			// references and clear the dirty flags (quadrics, edge errors and
 			// border flags are initialized once, at iteration 0)
-			UpdateMesh(iteration);
+			const bool deferredUpdate = UpdateMesh(iteration);
 			SDL_LOG("Simplify2: Mesh " << (iteration == 0 ? "initialized" : "updated") << " in "
-				<< (boost::format("%.3f") % (WallClockTime() - stepStartTime)) << "secs");
+				<< (boost::format("%.3f") % (WallClockTime() - stepStartTime)) << "secs"
+				<< (deferredUpdate ? " (deferred)" : ""));
 
 			// Build the edge candidate list and keep only the N% lowest error candidates
 			stepStartTime = WallClockTime();
@@ -536,10 +546,26 @@ public:
 
 			// Evaluate the candidates in parallel: the loop is read-only
 			// (CalculateCollapseError and Flipped are const) and each triangle
-			// writes only its own slot
-			ScalableVector<u_int> candidateVertexIndex(GetTriangleCount(), NULL_INDEX);
+			// writes only its own slot. The candidate and its validity are
+			// the member records: they survive the iteration, cleared by the
+			// collapses on every changed input (see UpdateTriangles) and
+			// moved by the compaction with the triangle
 			tbb::parallel_for(size_t(0), GetTriangleCount(),
-					[this, &candidateCtx, &candidateVertexIndex](size_t i) {
+					[this, &candidateCtx](size_t i) {
+				// The recorded candidate is current: the last
+				// evaluation of this triangle ran on the same inputs
+				// (nothing touched the triangle or the stars its flip
+				// tests read since), so it would select the same corner
+				// again. Only reachable when the cache is active
+				if (evalCacheActive && candidateValid[i])
+					return;
+
+				// A triangle deleted by a deferred compaction is not
+				// evaluated: its record stays stale, the candidate
+				// collection skips it through the same flag
+				if (triangleDeleted[i])
+					return;
+
 				// Look for the (valid) triangle vertex with the minimum error
 				u_int minErrorIndex = NULL_INDEX;
 				float minError = std::numeric_limits<float>::infinity();
@@ -607,14 +633,26 @@ public:
 					minError = triangleErr[triOffset + j];
 				}
 
-				if (minErrorIndex != NULL_INDEX)
-					candidateVertexIndex[i] = minErrorIndex;
+				// Record the outcome: the candidate of every
+				// evaluation (the NULL_INDEX of a triangle without a
+				// passing corner is an outcome like any other), and
+				// the validity only when the cache runs - the records
+				// of an inactive cache stay invalid, so the first
+				// active evaluation recomputes the whole mesh once
+				candidateVertexIndex[i] = minErrorIndex;
+				if (evalCacheActive)
+					candidateValid[i] = 1;
 			});
 
 			// Collect all valid candidates with their sort key
 			ScalableVector<CandidateKey> candidateKeys;
 			candidateKeys.reserve(GetTriangleCount());
 			for (size_t i = 0; i < GetTriangleCount(); ++i) {
+				// A triangle deleted by a deferred compaction carries
+				// no candidate: its stale record is skipped
+				if (triangleDeleted[i])
+					continue;
+
 				const u_int tvertex = candidateVertexIndex[i];
 				if (tvertex == NULL_INDEX)
 					continue;
@@ -672,6 +710,21 @@ public:
 			// The kept count (the keys are released below, after the
 			// extraction of the references)
 			const size_t keptCandidateCount = candidateKeys.size();
+
+			// The production phase is over when the selected batch is
+			// a negligible share of the live mesh: the touched set is
+			// then small against the rescreening cost and the
+			// evaluation cache pays (below one percent on the stress
+			// scenes: the plane never crosses it, its drain reaches
+			// the target with the batch still at six percent, Lucy
+			// crosses it at iteration 16 and keeps it for the whole
+			// tail)
+			if (!evalCacheActive &&
+					keptCandidateCount * 100 < startTriangleCount - totalDeletedTriangles) {
+				evalCacheActive = true;
+				SDL_LOG("Simplify2: Evaluation cache active (the kept batch fell below one percent"
+						" of the live triangles)");
+			}
 			// The reference of the mesh dependent drain halt: the
 			// batch of the iteration that defined the error threshold
 			if (iteration == 0)
@@ -788,6 +841,48 @@ public:
 
 			const u_int iterationDeletedTriangles = deletedTriangles;
 			totalDeletedTriangles += iterationDeletedTriangles;
+
+			// Merge the appended star segments of the collapse phase
+			// into the reference base: the walks of the next iteration
+			// read the merged layout with the same two segment
+			// arithmetic (the base including the appends, plus the
+			// fresh per body tails of that iteration). The blocks of
+			// the split bodies land in the reduce join order: the
+			// merged layout varies with the scheduling, but the walks
+			// are order independent (an OR over the star), so the
+			// decisions are identical run after run
+			{
+				size_t appendTotal = 0;
+				for (const auto& block : iterationRefAppends)
+					appendTotal += block.first.size();
+
+				const size_t baseSize = refTid.size();
+				refTid.resize(baseSize + appendTotal);
+				refTvertex.resize(baseSize + appendTotal);
+
+				size_t offset = 0;
+				for (auto& block : iterationRefAppends) {
+					for (size_t k = 0; k < block.first.size(); ++k) {
+						refTid[baseSize + offset + k] = block.first[k].tid;
+						refTvertex[baseSize + offset + k] = block.first[k].tvertex;
+					}
+					// The repointed starts of the welded vertices were
+					// relative to their own body tail: rewrite them
+					// into the merged layout
+					for (const auto& append : block.second)
+						vertexTstart[append.vertex] =
+								u_int(baseSize + offset + append.tailStart);
+
+					offset += block.first.size();
+				}
+				iterationRefAppends.clear();
+
+				// The garbage accounting: the appended segments
+				// supersede roughly one old entry each and every
+				// deleted triangle orphans its three base entries
+				staleRefCount += appendTotal + 3 * size_t(iterationDeletedTriangles);
+				uncompactedDeletions += iterationDeletedTriangles;
+			}
 			SDL_LOG("Simplify2 iteration " << iteration << " (" << allCandidates.size() << " edge candidates, deleted "
 				<< iterationDeletedTriangles << "/" << totalDeletedTriangles << " of " << startTriangleCount
 				<< " triangles) in " << (boost::format("%.3f") % (WallClockTime() - iterationStartTime)) << "secs");
@@ -845,10 +940,19 @@ private:
 	// never mutates the shared reference list. The reference list is rebuilt
 	// from scratch by UpdateMesh at each iteration, so the tails are simply
 	// dropped at the end of the parallel processing (no merge needed).
+	// A star repoint record of the collapse phase: the welded vertex
+	// and the start of its new reference segment inside the appending
+	// body tail (relative to the base size)
+	struct RefAppend {
+		u_int vertex;
+		u_int tailStart;
+	};
+
 	struct CollapseContext {
 		// Cache aligned: the tail grows inside the parallel processing of
 		// the closures (one context per thread)
 		CacheAlignedVector<SimplifyRef2> refsTail;
+		CacheAlignedVector<RefAppend> refAppends;
 		u_int deletedCount = 0;
 	};
 
@@ -886,6 +990,55 @@ private:
 	// One byte per flag keeps every write on its own address.
 	ScalableVector<unsigned char> triangleDeleted;
 	ScalableVector<unsigned char> triangleDirty;
+	// The recorded candidate of every triangle (the corner its last
+	// evaluation selected, or NULL_INDEX when no corner passed) and
+	// its validity flag. The evaluation of a triangle reproduces its
+	// recorded outcome exactly while its inputs are unchanged, so the
+	// flag turns the evaluation from a full rescreening of the mesh
+	// into a recompute of the triangles touched by the collapses. The
+	// collapses clear the flag on every triangle whose inputs changed:
+	// the triangles of the collapsed edge stars (rewired, or with a
+	// moved vertex) and, through the star walks, the triangles whose
+	// flip tests read them (the tests walk the stars of the endpoints
+	// and read the slots and the positions of their triangles). The
+	// compaction moves the record and the flag with the triangle
+	ScalableVector<u_int> candidateVertexIndex;
+	ScalableVector<unsigned char> candidateValid;
+	// The per vertex generation of the star invalidation: the current
+	// iteration generation is compared against the vertex counter, so
+	// a vertex star is walked at most once per iteration however many
+	// collapses touch it. The concurrent plain stores of the same
+	// value are the principle 2 idempotent shared writes
+	ScalableVector<u_int> vertexInvalidatedGen;
+	u_int invalidationGen = 1;
+	// The deferred reference rebuild accounting: the star segments
+	// appended since the last rebuild (merged into the reference base
+	// at the end of every collapse phase; their superseded entries and
+	// the deleted triangles' entries stay behind as garbage until the
+	// rebuild), the triangles deleted since the last rebuild and the
+	// live triangle count right after the last rebuild. The mesh
+	// update rebuilds the reference list only when the accumulated
+	// garbage exceeds one eighth of the live references: below that
+	// the walks carry a negligible overhead and the O(live mesh)
+	// count/prefix/fill passes cost more than they save
+	size_t staleRefCount = 0;
+	size_t uncompactedDeletions = 0;
+	size_t rebuildLiveTriangleCount = 0;
+	// The star segments appended by the collapse phase of the current
+	// iteration, with the repoint records of their welded vertices:
+	// handed over by the closure processors, consumed and cleared by
+	// the merge at the end of the collapse phase
+	std::vector<std::pair<CacheAlignedVector<SimplifyRef2>, CacheAlignedVector<RefAppend>>> iterationRefAppends;
+	// The evaluation cache activates only once the run is out of the
+	// production phase: while the selected batch is a large share of
+	// the mesh, the collapses rewrite nearly everything, the records
+	// would be invalidated as fast as they are written and the star
+	// walks would cost more than the skipped rescreening saves. The
+	// switch is a latch (the drain never returns to the production
+	// ratios) and is written once per iteration, between the selection
+	// and the parallel phases, so the plain read needs no
+	// synchronization
+	bool evalCacheActive = false;
 
 	size_t GetTriangleCount() const { return triangleV.size() / 3; }
 
@@ -896,6 +1049,8 @@ private:
 		triangleGeometryN.resize(count);
 		triangleDeleted.resize(count);
 		triangleDirty.resize(count);
+		candidateVertexIndex.resize(count);
+		candidateValid.resize(count);
 	}
 
 	// The vertex fields in homogeneous vectors (structure of arrays),
@@ -927,6 +1082,7 @@ private:
 		vertexTstart.resize(count);
 		vertexTcount.resize(count);
 		vertexQ.resize(count);
+		vertexInvalidatedGen.resize(count);
 	}
 	// The vertex -> triangle references in homogeneous vectors (structure
 	// of arrays): the closure CSR passes (the count, the fill and the
@@ -1279,11 +1435,14 @@ private:
 		const size_t tcount = (refTid.size() + ctx.refsTail.size()) - tstart;
 
 		// Append the new references to the local tail and repoint the vertex.
-		// The tail is simply dropped at the end of the parallel processing: the
-		// reference list is rebuilt from scratch by UpdateMesh at each
-		// iteration, so nothing needs to be merged back.
+		// The merge at the end of the collapse phase carries the tail into
+		// the reference base when the rebuild is deferred (UpdateMesh
+		// rebuilds the whole list only when the garbage accumulated
+		// since the last rebuild exceeds its threshold), so the record
+		// below lets the merge rewrite the start into the merged layout
 		vertexTstart[i0] = u_int(tstart);
 		vertexTcount[i0] = u_int(tcount);
+		ctx.refAppends.push_back(RefAppend{ u_int(i0), u_int(tstart - refTid.size()) });
 
 		return true;
 	}
@@ -1396,6 +1555,37 @@ private:
 		return FlippedImpl<true>(p, i0, i1, ctx, &deleted);
 	}
 
+	// Invalidate the recorded candidates of the triangles of a vertex
+	// star: their flip tests walk the star and read the slots and the
+	// positions of its triangles, so any change of the star content (a
+	// deletion, a rewire, a move of a co-vertex) makes the recorded
+	// outcome stale. The per vertex generation dedups the walks within
+	// the iteration; the plain stores of the same value, on both the
+	// generation and the validity flag, are the principle 2 idempotent
+	// shared writes
+	void InvalidateVertexStar(const size_t v, const CollapseContext &ctx) {
+		// The records of an inactive cache are never read: no walk
+		if (!evalCacheActive)
+			return;
+		if (vertexInvalidatedGen[v] == invalidationGen)
+			return;
+		vertexInvalidatedGen[v] = invalidationGen;
+
+		// The references of the vertex are contiguous: the ones in
+		// the global baseline and the ones appended to the collapse
+		// tail form two segments (like in FlippedImpl)
+		const u_int tstart = vertexTstart[v];
+		const u_int tcount = vertexTcount[v];
+		const size_t baseSize = refTid.size();
+		const size_t baseRefCount = (tstart < baseSize) ?
+				std::min<size_t>(tcount, baseSize - tstart) : 0;
+
+		for (size_t k = 0; k < baseRefCount; ++k)
+			candidateValid[refTid[tstart + k]] = 0;
+		for (size_t k = baseRefCount; k < tcount; ++k)
+			candidateValid[ctx.refsTail[tstart + k - baseSize].tid] = 0;
+	}
+
 	// Update triangle connections and edge error after a edge is collapsed
 	void UpdateTriangles(const size_t i0, const size_t vertexIndex,
 			const ScalableVector<unsigned char> &deleted, CollapseContext &ctx) {
@@ -1413,12 +1603,31 @@ private:
 			if (deleted[k]) {
 				triangleDeleted[tid] = true;
 				ctx.deletedCount++;
+
+				// The triangles whose flip tests walked the deleted
+				// triangle read a changed star: their recorded
+				// candidates are stale. The walks of the two collapsed
+				// edge endpoints are redundant with the rewire branch
+				// below (the loops invalidate their stars) but the
+				// generation dedup makes them free after the first one
+				InvalidateVertexStar(triangleV[3*tid + 0], ctx);
+				InvalidateVertexStar(triangleV[3*tid + 1], ctx);
+				InvalidateVertexStar(triangleV[3*tid + 2], ctx);
 				return;
 			}
 
 			triangleV[3*tid + r.tvertex] = u_int(i0);
 			triangleDirty[tid] = true;
 			UpdateTriangleError(tid);
+
+			// The triangle slots (or the position of the moved vertex
+			// they share) changed: the recorded candidate of this
+			// triangle is stale, and so are the ones of the triangles
+			// whose flip tests read it - they walk the stars of its
+			// other two vertices and read their slots and positions
+			candidateValid[tid] = 0;
+			InvalidateVertexStar(triangleV[3*tid + TRI_NEXT[r.tvertex]], ctx);
+			InvalidateVertexStar(triangleV[3*tid + TRI_PREV[r.tvertex]], ctx);
 
 			ctx.refsTail.push_back(r);
 		};
@@ -1440,7 +1649,9 @@ private:
 	}
 
 	// Compact triangles, compute edge error and build reference list
-	void UpdateMesh(const size_t iteration) {
+	// Returns true when the compaction and the reference rebuild were
+	// deferred (see the accounting members)
+	bool UpdateMesh(const size_t iteration) {
 		// The triangle count is loaded once per mesh state, before and
 		// after the compaction (the vertex count does not change): the
 		// passes below write through the mesh arrays, so the compiler
@@ -1453,7 +1664,21 @@ private:
 		size_t liveTriangleCount = triangleCount;
 		const size_t vertexCount = GetVertexCount();
 
-		if (iteration > 0) {
+		// The reference rebuild and the compaction are deferred while
+		// the garbage accumulated since the last rebuild (the appended
+		// star segments and the orphaned entries of the deleted
+		// triangles) stays under one eighth of the live references:
+		// the walks then carry a negligible overhead, while the
+		// O(live mesh) compaction and count/prefix/fill passes
+		// dominate the cost of the drain iterations. The first
+		// iteration always rebuilds (it builds the initial list) and
+		// the deferred deletions stay in the arrays, skipped through
+		// their flags by every pass that walks the triangles
+		const size_t liveNow = rebuildLiveTriangleCount - uncompactedDeletions;
+		const bool rebuildRefs = (iteration == 0) ||
+				staleRefCount * 8 > liveNow * 3;
+
+		if (rebuildRefs && iteration > 0) {
 			// Compact the triangle arrays: the fields are moved one by
 			// one (the in place slots are skipped)
 			//
@@ -1484,6 +1709,8 @@ private:
 					triangleErrChoice[dst] = triangleErrChoice[i];
 					triangleGeometryN[dst] = triangleGeometryN[i];
 					triangleDirty[dst] = triangleDirty[i];
+					candidateVertexIndex[dst] = candidateVertexIndex[i];
+					candidateValid[dst] = candidateValid[i];
 					triangleDeleted[dst] = false;
 				}
 
@@ -1537,6 +1764,7 @@ private:
 			});
 		}
 
+		if (rebuildRefs) {
 		// Build the vertex -> triangles reference list (a CSR over the
 		// vertices). The reference counts, the prefix offsets and the
 		// fill cursors are accumulated in compact arrays (a few MB,
@@ -1629,6 +1857,13 @@ private:
 			}
 		}
 
+		// The rebuild resets the garbage accounting: the reference
+		// list is clean and the deleted triangles are compacted away
+		staleRefCount = 0;
+		uncompactedDeletions = 0;
+		rebuildLiveTriangleCount = liveTriangleCount;
+		}
+
 		// Identify boundary : vertices[].border=0,1
 		//
 		// Required at the beginning (iteration == 0)
@@ -1649,8 +1884,16 @@ private:
 					// is just a size reset, no reallocation
 					ScalableVector<u_int> vcount, vids;
 					for (size_t i = r.begin(); i < r.end(); ++i) {
+						// The distinct link vertices of a star are the
+						// vertex itself plus at most two per triangle
+						// of the star, so the bound is exact and the
+						// push backs below never reallocate (a reserve
+						// under the capacity reached by a bigger star
+						// is a no op)
 						vcount.clear();
 						vids.clear();
+						vcount.reserve(2 * vertexTcount[i] + 1);
+						vids.reserve(2 * vertexTcount[i] + 1);
 
 						for (size_t j = 0; j < vertexTcount[i]; ++j) {
 							const size_t tid = refTid[vertexTstart[i] + j];
@@ -1686,6 +1929,8 @@ private:
 		tbb::parallel_for(size_t(0), liveTriangleCount, [&](size_t i) {
 			triangleDirty[i] = false;
 		});
+
+		return !rebuildRefs;
 	}  // UpdateMesh
 
 	// Finally compact mesh before exiting
@@ -1722,6 +1967,8 @@ private:
 				triangleErrChoice[dst] = triangleErrChoice[i];
 				triangleGeometryN[dst] = triangleGeometryN[i];
 				triangleDirty[dst] = triangleDirty[i];
+				candidateVertexIndex[dst] = candidateVertexIndex[i];
+				candidateValid[dst] = candidateValid[i];
 				triangleDeleted[dst] = false;
 			}
 
@@ -2061,6 +2308,14 @@ private:
 		// conflict components apart
 		ScalableVector<unsigned char> mixedTri(GetTriangleCount());
 		tbb::parallel_for(size_t(0), GetTriangleCount(), [&](size_t t) {
+			// A triangle deleted by a deferred compaction spans no
+			// region: it would mark its vertices seam adjacent and
+			// defer candidates the compacted mesh would keep
+			if (triangleDeleted[t]) {
+				mixedTri[t] = 0;
+				return;
+			}
+
 			const u_int r0 = regionOfVertex[triangleV[3 * t + 0]];
 			const u_int r1 = regionOfVertex[triangleV[3 * t + 1]];
 			const u_int r2 = regionOfVertex[triangleV[3 * t + 2]];
@@ -2277,6 +2532,12 @@ private:
 			// (no caching expected)
 			ScalableVector<Relation> relations;
 			for (size_t t = r1; t < r2; ++t) {
+				// A triangle deleted by a deferred compaction links no
+				// vertices: it would merge closures the compacted mesh
+				// keeps apart
+				if (triangleDeleted[t])
+					continue;
+
 				u_int link = NULL_INDEX;
 				for (size_t j = 0; j < 3; ++j) {
 					const u_int cv = candVertexOfVertex[triangleV[3*t + j]];
@@ -2367,6 +2628,10 @@ private:
 		// Local state: appended refs tail and deleted triangles counter
 		CollapseContext ctx;
 
+		// The appended star blocks collected from the split bodies
+		// (moved in, never copied: the join only chains)
+		std::vector<std::pair<CacheAlignedVector<SimplifyRef2>, CacheAlignedVector<RefAppend>>> appendBlocks;
+
 		// Candidate triangles deleted by this body (for the disjointness check).
 		// Cache aligned: one per thread, appended in the parallel processing
 		CacheAlignedVector<u_int> deletedCandidates;
@@ -2398,6 +2663,18 @@ private:
 			ctx.deletedCount += other.ctx.deletedCount;
 			deletedCandidates.insert(deletedCandidates.end(),
 					other.deletedCandidates.begin(), other.deletedCandidates.end());
+
+			// Chain the sibling's appended star block (moved, no copy):
+			// its own tail and records first, then the blocks it chained
+			// from its own splits. The reduce folds every split into the
+			// left body, so anything not carried here is destroyed with
+			// the sibling (the reduce tree splits several levels deep,
+			// which would lose almost every appended reference)
+			appendBlocks.emplace_back(std::move(other.ctx.refsTail),
+					std::move(other.ctx.refAppends));
+			appendBlocks.insert(appendBlocks.end(),
+					std::make_move_iterator(other.appendBlocks.begin()),
+					std::make_move_iterator(other.appendBlocks.end()));
 		}
 
 		// Check the closure disjointness and merge the deleted triangles
@@ -2425,6 +2702,16 @@ private:
 			// the main result (the counter is reset at the beginning
 			// of every iteration)
 			simplify.deletedTriangles += ctx.deletedCount;
+
+			// Hand the appended star blocks over: the own tail and
+			// records first (the own body), then the chained ones (the
+			// splits). Serialized: applyResult runs on the master
+			// processor only
+			simplify.iterationRefAppends.emplace_back(std::move(ctx.refsTail),
+					std::move(ctx.refAppends));
+			for (auto& block : appendBlocks)
+				simplify.iterationRefAppends.push_back(std::move(block));
+			appendBlocks.clear();
 		}
 
 	private:
