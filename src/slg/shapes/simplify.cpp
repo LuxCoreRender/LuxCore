@@ -118,10 +118,13 @@
 // index (the references, the dense ids) is built with the same CSR
 // pattern: count, prefix, disjoint scatter.
 //
-// 5. Serial is a measured decision, not a default. The passes that
-// stay serial (the candidate extraction of the sort, the kept list
-// maintenance of the drain) are the ones where the parallel
-// variants measured slower. The CSR count and fill of the
+// 5. Serial is a measured decision, not a default. The pass that
+// stays serial (the candidate extraction of the sort) is the one
+// where the parallel variant measured slower. The kept list
+// maintenance of the drain was a serial pass of the same kind once -
+// its parallel form (survivor and re-entry gathers over ascending
+// sources, joined by a linear merge, so no sort) measured faster and
+// replaced it. The CSR count and fill of the
 // reference build are the one accepted exception to the lock
 // free rule: they run parallel on relaxed fetch_adds, and a per
 // vertex canonical sort restores the ascending star order of the
@@ -193,7 +196,9 @@
 //    step (the threshold lives in the error word of the packed key)
 //    and, on the drain, reads a maintained list of the kept
 //    candidates instead of scanning the mesh: the list is repaired
-//    from the touched entries and the compactions remap it.
+//    by parallel survivor and re-entry gathers (both sources
+//    ascending, so the runs merge linearly - no sort) and the
+//    compactions remap it.
 //
 // 3. Selection: every candidate is keyed by its error (an order
 //    preserving transformation of the float bits) and its triangle
