@@ -69,9 +69,14 @@
 // excepted), reproducible run after run.
 //
 // Each iteration evaluates the collapse error of the corners of every
-// triangle, keeps the N% lowest error candidates, and collapses what
-// remains; the iterations repeat until the target triangle count is
-// reached. The principles every step follows:
+// triangle and collapses the candidates below a fixed error threshold
+// E. The first iteration of a generation sets E through a rank cut of
+// the lowest error candidates, sized after the target; the iterations
+// repeat below E until the mesh has nothing cheaper left (the
+// homogeneous error property at E), the target triangle count is
+// reached, or a drain stalled above the target starts a new
+// generation with a recalibrated cut. The principles every step
+// follows:
 //
 // 1. Determinism comes from the structure, never from
 // synchronization. The parallel phases write disjoint targets (every
@@ -191,9 +196,11 @@
 //
 // 3. Selection: every candidate is keyed by its error (an order
 //    preserving transformation of the float bits) and its triangle
-//    index, the N% lowest keys are selected with an MSB first radix
-//    descent (the exact prefix std::nth_element would partition) and
-//    sorted by ascending error.
+//    index, the rank cut lowest keys are selected with an MSB first
+//    radix descent (the exact prefix std::nth_element would
+//    partition) and sorted by ascending error. The cut of the first
+//    generation follows the target; a generation started by a
+//    recalibration takes the cut measured on the stalled one.
 //
 // 4. Deferral: the candidates whose endpoint star spans several
 //    regions of a grid over the bounding box are put aside for a
@@ -240,16 +247,26 @@
 //    right after the region confined closures of every iteration, so
 //    nothing eligible is ever stranded (a re-deferred strip would
 //    freeze at its initial density and stay visible along the region
-//    grid). The loop stops when the target triangle count is reached,
-//    when an iteration deletes nothing, or when the kept batch has
-//    fallen below one ten thousandth of the first batch (the one whose
-//    error rank defined the threshold E): the drain would then chase
-//    an insignificant share of the mesh at the full cost of an
-//    iteration. The halt is mesh dependent and can not fire at all
-//    when the first batch is small (one ten thousandth of it is below
-//    one candidate), so it only engages where the tail is expensive -
-//    the large meshes. The mesh is then compacted one last time
-//    (triangles, vertices and corner remap) and written back.
+//    grid). The loop stops when the target triangle count is
+//    reached, or when the mesh has no collapse left at any error
+//    (the whole candidate pool was kept and nothing collapsed). The
+//    drain of a generation also ends on its own mesh dependent halt:
+//    when the kept batch has fallen below one ten thousandth of the
+//    generation's first batch (the one whose error rank defined the
+//    threshold E), the remaining iterations would chase an
+//    insignificant share of the mesh at the full cost of one (the
+//    halt can not fire when the first batch is small - one ten
+//    thousandth of it is below one candidate - so it only engages
+//    where the tail is expensive, the large meshes). A drain that
+//    ends above the target does not end the run: a new generation
+//    starts with a higher threshold, its rank cut recalibrated from
+//    the cascade the stalled generation measured (its deletions per
+//    candidate of its first batch) so the batch covers the remaining
+//    work, and the run converges on the target from above (the
+//    recalibrated cut doubles when the stalled generation measured
+//    no cascade at all, a bounded search for the collapsible band).
+//    The mesh is then compacted one last time (triangles, vertices
+//    and corner remap) and written back.
 
 namespace {
 
@@ -497,19 +514,28 @@ public:
 		camera = &scnCamera;
 		edgeScreenSize = screenSize;
 
-		// The selection is error driven: the first iteration keeps the
-		// N% lowest error candidates and the error at that rank (E)
-		// becomes the fixed threshold of the following ones - every
+		// The selection is error driven and organized in generations.
+		// The first iteration of a generation keeps a rank cut of the
+		// lowest error candidates and the error at that rank (E)
+		// becomes the fixed threshold of the generation: every
 		// candidate below E is collapsed until none is left (or until
 		// the target triangle count is reached, whichever comes
 		// first). The flat regions cascade (a collapse makes its
 		// neighbors cheaper), the detailed ones keep their triangles,
-		// and the run ends with the homogeneous error property: no
-		// collapse cheaper than E remains anywhere in the mesh
-		constexpr float initialCandidatePercent = 0.4f;
+		// and the drain ends with the homogeneous error property at
+		// E: no collapse cheaper than E remains anywhere in the mesh.
+		//
+		// A drain can end above the target: the mesh keeps its
+		// detailed regions. The run then starts a new generation with
+		// a higher rank cut, recalibrated from the cascade the
+		// previous generation measured (its deletions per candidate
+		// of its first batch), so the run converges on the target
+		// from above - see the recalibration at the stall points
+		// below
 		float errorThreshold = 0.f;
-		// The kept count of the first iteration: the reference of the
-		// mesh dependent drain halt below
+		// The kept count of the first iteration of the current
+		// generation: the reference of the mesh dependent drain halt
+		// below
 		size_t initialKeptCandidateCount = 0;
 
 		// Init (the byte fill lowers to memset, like the assigns below)
@@ -528,15 +554,117 @@ public:
 		// carries them and the live estimate subtracts them
 		const size_t startTriangleCount = GetTriangleCount() - uncompactedDeletions;
 		deletedTriangles = 0;
+
+		// The rank cut of the first generation in relation with the
+		// target: it is only a guess - the kept(cut) relation is
+		// convex and mesh dependent (measured: a 0.40 cut ended a
+		// drain at 0.22 of Lucy but a 0.18 cut at 0.42, while the
+		// plane follows an almost proportional relation), so no fixed
+		// formula can land a drain on an arbitrary target. The guess
+		// divides the target fraction by the amplification measured
+		// on the stress scenes (0.55: a cut of R ended the drain at
+		// about 0.55R of the mesh), which biases the first generation
+		// toward the aggressive side - the early stop of the loop
+		// trims any overshoot below the target, while a too lax
+		// threshold is the one way to stall above it - and a stalled
+		// generation is recalibrated on its own measurement anyway
+		// (below). Capped at 1 - keeping the whole first batch is the
+		// maximum aggression
+		constexpr float cascadeAmplification = 0.55f;
+		float generationCandidatePercent = std::min(1.f,
+				(targetTriangleCount / float(startTriangleCount)) / cascadeAmplification);
+		// The bookkeeping of the current generation, for the
+		// recalibration of the next one: the size of the first batch
+		// (the one that set the threshold) and the deletions of its
+		// drain
+		size_t generationFirstBatchCount = 0;
+		size_t generationDeletedTriangles = 0;
+		// The candidate pool of the last collect: the denominator of
+		// the recalibrated cut (the rank is a share of the pool of
+		// the generation's first iteration)
+		size_t lastCandidatePoolCount = 0;
+		// True while the current iteration is the first one of its
+		// generation: the iteration materializes every candidate and
+		// takes the rank cut that defines the new threshold
+		bool generationStart = true;
 		u_int totalDeletedTriangles = 0;
+
+		// The recalibration of a stalled generation: the drain has
+		// ended (nothing below E collapses anymore) but the mesh is
+		// still above the target. The next generation gets a higher
+		// threshold through a new rank cut, sized so that the cascade
+		// the stalled generation measured covers exactly the
+		// remaining work. Returns false when the run must stop
+		// instead: the target is reached, or the mesh has no collapse
+		// left at any error
+		const auto startNextGeneration = [&]() -> bool {
+			const size_t liveTriangleCount = startTriangleCount - totalDeletedTriangles;
+			if (liveTriangleCount <= targetTriangleCount)
+				return false;
+
+			const float remainingTriangleCount =
+					float(liveTriangleCount) - targetTriangleCount;
+			// The measured cascade of the stalled generation: its
+			// deletions per candidate of its first batch
+			const float cascade = (generationFirstBatchCount > 0) ?
+					float(generationDeletedTriangles) / float(generationFirstBatchCount) : 0.f;
+
+			if (cascade > 0.f) {
+				// The first batch of the next generation: the
+				// remaining work divided by the measured cascade,
+				// as a rank of the current pool
+				const float neededCandidateCount = remainingTriangleCount / cascade;
+				generationCandidatePercent = std::min(1.f,
+						neededCandidateCount / float(lastCandidatePoolCount));
+			} else if (generationCandidatePercent < 1.f) {
+				// Nothing below the threshold collapsed: the mesh has
+				// no collapsible candidate left under E, and the size
+				// of the step above E is unknown. Double the rank - a
+				// bounded search for the collapsible band - until the
+				// whole pool is kept
+				generationCandidatePercent = std::min(1.f, generationCandidatePercent * 2.f);
+			} else {
+				// The whole pool was kept and nothing collapsed: the
+				// mesh topology can not reach the target
+				SDL_LOG("Simplify: No collapse remains anywhere in the mesh ("
+						<< liveTriangleCount << " triangles left, " << targetTriangleCount
+						<< " wanted) - stopping above the target");
+				return false;
+			}
+
+			SDL_LOG("Simplify: The drain ended above the target ("
+					<< liveTriangleCount << " triangles left, " << targetTriangleCount
+					<< " wanted) - new generation with a "
+					<< (boost::format("%.3g") % (generationCandidatePercent * 100.f))
+					<< "% rank cut");
+			generationStart = true;
+			return true;
+		};
+
 		// Main iteration loop. There is no iteration limit: the loop
-		// ends when the target triangle count is reached, or when an
-		// iteration deletes nothing (the fixed error threshold makes
-		// the selection repeat itself from there), which includes the
-		// complete drain with its homogeneous error certificate
+		// ends when the target triangle count is reached, or when a
+		// drain stalls above the target and the mesh has no collapse
+		// left at any error (the whole pool was kept and nothing
+		// collapsed). The stall of a drain above the target starts
+		// the next generation instead of ending the run
 		for (size_t iteration = 0;; ++iteration) {
 			if (startTriangleCount - totalDeletedTriangles <= targetTriangleCount)
 				break;
+
+			// The first iteration of a generation materializes every
+			// candidate and takes the rank cut that defines the new
+			// threshold. The flag is consumed here: the rest of the
+			// iteration runs as the first drain step of the new
+			// threshold
+			const bool generationFirstIteration = generationStart;
+			generationStart = false;
+			// A new generation raises the threshold: the kept list of
+			// the incremental collect was maintained against the old
+			// one (its survivors stay unconditionally), so it is
+			// dropped here and rebuilt under the new threshold when
+			// the drain crosses the activation share again
+			if (generationFirstIteration)
+				evalCacheActive = false;
 
 			const double iterationStartTime = WallClockTime();
 
@@ -789,11 +917,11 @@ public:
 					~errorBits : (errorBits | 0x80000000u);
 			};
 			// The selection threshold of the drain in the error word
-			// domain: infinite at the first iteration (every error key
-			// is below it, so every candidate is materialized and the
-			// rank cut below does the selection)
+			// domain: infinite at the first iteration of a generation
+			// (every error key is below it, so every candidate is
+			// materialized and the rank cut below does the selection)
 			std::uint32_t thresholdErrorKey = 0xffffffffu;
-			if (iteration > 0) {
+			if (!generationFirstIteration) {
 				const std::uint32_t errorBits = std::bit_cast<std::uint32_t>(errorThreshold);
 				thresholdErrorKey = (errorBits & 0x80000000u) ?
 						~errorBits : (errorBits | 0x80000000u);
@@ -942,16 +1070,19 @@ public:
 			}
 			SDL_LOG("Simplify: Found " << totalCandidateCount << " edge candidates in "
 				<< (boost::format("%.3f") % (WallClockTime() - stepStartTime)) << "secs");
+			// The pool of the last collect: the denominator of the
+			// recalibrated rank cut at a stall
+			lastCandidatePoolCount = totalCandidateCount;
 
-			// The selection of the first iteration is a rank cut: the N%
-			// lowest candidates, whose error rank defines the threshold
-			// E of the whole drain. The following iterations select
-			// through the fold above instead (everything at or below E,
-			// the inclusive test: an error equal to the threshold is
-			// kept)
-			if (iteration == 0) {
+			// The selection of the first iteration of a generation is
+			// a rank cut: the lowest N% candidates, whose error rank
+			// defines the threshold E of the whole drain. The
+			// following iterations select through the fold above
+			// instead (everything at or below E, the inclusive test:
+			// an error equal to the threshold is kept)
+			if (generationFirstIteration) {
 				const u_int nPercentCount = std::max(1u,
-						Floor2UInt(totalCandidateCount * initialCandidatePercent));
+						Floor2UInt(totalCandidateCount * generationCandidatePercent));
 				if (candidateKeys.size() > nPercentCount)
 					SelectLowestKeys(candidateKeys, nPercentCount);
 			}
@@ -967,7 +1098,12 @@ public:
 			// the target with the batch still at six percent, Lucy
 			// crosses it at iteration 16 and keeps it for the whole
 			// tail)
-			if (!evalCacheActive &&
+			// (the generation's first iteration materializes below an
+			// infinite threshold: a list built there would carry the
+			// whole pool and its survivors would never leave it, so
+			// the activation waits for the drain of the new
+			// threshold)
+			if (!evalCacheActive && !generationFirstIteration &&
 					keptCandidateCount * 100 < startTriangleCount - totalDeletedTriangles) {
 				evalCacheActive = true;
 
@@ -976,7 +1112,12 @@ public:
 				// mesh pass, once - the list is maintained incrementally
 				// from here on, and the compactions remap it). The found
 				// count the list no longer sees starts from the full
-				// collect of this iteration
+				// collect of this iteration. The list is rebuilt from
+				// scratch: a previous activation of an earlier
+				// generation may have left its records behind (the
+				// maintenance and the compaction remap rely on the
+				// ascending, duplicate free order the rebuild emits)
+				candidateKeptList.clear();
 				for (size_t i = 0; i < GetTriangleCount(); ++i) {
 					if (triangleDeleted[i])
 						continue;
@@ -996,23 +1137,32 @@ public:
 						" of the live triangles)");
 			}
 			// The reference of the mesh dependent drain halt: the
-			// batch of the iteration that defined the error threshold
-			if (iteration == 0)
+			// batch of the iteration that defined the error
+			// threshold of the current generation
+			if (generationFirstIteration)
 				initialKeptCandidateCount = keptCandidateCount;
 
 			// Sort the kept candidates by error (ascending)
 			tbb::parallel_sort(candidateKeys.begin(), candidateKeys.end(), keyCompare);
 
-			// E, the error at the rank cut of the first iteration: the
-			// keys are sorted, so the last kept one carries it. The
-			// inverse of the order preserving transformation of the
-			// key building
-			if (iteration == 0 && !candidateKeys.empty()) {
-				const std::uint32_t thresholdErrorKey =
-						std::uint32_t(candidateKeys.back().key >> 32);
-				const std::uint32_t errorBits = (thresholdErrorKey & 0x80000000u) ?
-						(thresholdErrorKey & 0x7fffffffu) : ~thresholdErrorKey;
-				errorThreshold = std::bit_cast<float>(errorBits);
+			// E, the error at the rank cut of the generation's first
+			// iteration: the keys are sorted, so the last kept one
+			// carries it. The inverse of the order preserving
+			// transformation of the key building. The generation
+			// bookkeeping of the recalibration starts here too: the
+			// first batch that defined E, and the deletions of its
+			// drain reset
+			if (generationFirstIteration) {
+				generationFirstBatchCount = keptCandidateCount;
+				generationDeletedTriangles = 0;
+
+				if (!candidateKeys.empty()) {
+					const std::uint32_t thresholdErrorKey =
+							std::uint32_t(candidateKeys.back().key >> 32);
+					const std::uint32_t errorBits = (thresholdErrorKey & 0x80000000u) ?
+							(thresholdErrorKey & 0x7fffffffu) : ~thresholdErrorKey;
+					errorThreshold = std::bit_cast<float>(errorBits);
+				}
 			}
 
 			// Extract the sorted references for the downstream phases:
@@ -1048,7 +1198,13 @@ public:
 				SDL_LOG("Simplify: The kept batch (" << keptCandidateCount
 					<< ") has fallen below one ten thousandth of the initial one ("
 					<< initialKeptCandidateCount << ") - stopping the drain");
-				break;
+				// The drain of the generation is over: the current
+				// batch is dropped (it would delete an insignificant
+				// share of the mesh) and the recalibration starts a
+				// new generation or ends the run
+				if (!startNextGeneration())
+					break;
+				continue;
 			}
 
 			// Defer the region boundary candidates: the closures of
@@ -1130,19 +1286,26 @@ public:
 			SDL_LOG("Simplify iteration " << iteration << " (" << allCandidates.size() << " edge candidates, deleted "
 				<< iterationDeletedTriangles << "/" << totalDeletedTriangles << " of " << startTriangleCount
 				<< " triangles) in " << (boost::format("%.3f") % (WallClockTime() - iterationStartTime)) << "secs");
-			// An iteration that deletes nothing is terminal: the
-			// threshold is fixed and the deferred candidates are
-			// processed in the same iteration, so the errors can only
-			// change with the collapses - the next iterations would
-			// repeat the same selection
+			// The deletions of the generation's drain so far, for the
+			// recalibration at a stall
+			generationDeletedTriangles += iterationDeletedTriangles;
+			// An iteration that deletes nothing ends the drain of
+			// the generation: the threshold is fixed and the deferred
+			// candidates are processed in the same iteration, so the
+			// errors can only change with the collapses - the next
+			// iterations would repeat the same selection
 			if (iterationDeletedTriangles == 0) {
-				// The homogeneous error certificate: no collapse
-				// cheaper than the threshold remains anywhere in the
-				// mesh
+				// The homogeneous error certificate of the
+				// generation: no collapse cheaper than the threshold
+				// remains anywhere in the mesh
 				if (keptCandidateCount == 0)
 					SDL_LOG("Simplify: No collapse below the error threshold "
 						<< (boost::format("%.3g") % errorThreshold) << " remains (homogeneous error reached)");
-				break;
+				// The recalibration starts a new generation above
+				// the target, or ends the run
+				if (!startNextGeneration())
+					break;
+				continue;
 			}
 		}
 
