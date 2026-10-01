@@ -405,11 +405,20 @@ public:
 	Simplify(const ExtTriangleMesh &srcMesh) {
 		const auto vertCount = srcMesh.GetTotalVertexCount();
 		const auto triCount = srcMesh.GetTotalTriangleCount();
-		const VertexBuffer verts(srcMesh.GetVertices());
-		const TriangleBuffer tris(srcMesh.GetTriangles());
+
+		// The source fields are read straight from the spans of the
+		// mesh. The previous form constructed an intermediate Buffer
+		// from each span - a full array copy through the span
+		// constructor of Buffer (the accessors return spans, not
+		// buffers) that only lived for the std::copy below. The
+		// triangle corners are copied through the flat sub object
+		// view: a Triangle is its three corner indices, so the flat
+		// unsigned int view is already the interleaved layout of
+		// triangleV
+		const auto srcVerts = srcMesh.GetVertices();
+		const auto srcTris = srcMesh.GetTrianglesAsInts();
 
 		ResizeVertices(vertCount);
-		const auto& srcVerts = verts.GetObjects();
 		std::copy(srcVerts.begin(), srcVerts.end(), vertexP.begin());
 
 		if (srcMesh.HasNormals()) {
@@ -445,11 +454,6 @@ public:
 			hasAlphas = false;
 
 		ResizeTriangles(triCount);
-		// The triangle corners are copied through the sub object view of
-		// the buffer: a Triangle is its three corner indices, so the
-		// flat unsigned int view is already the interleaved layout of
-		// triangleV
-		const auto& srcTris = tris.GetSubObjects();
 		std::copy(srcTris.begin(), srcTris.end(), triangleV.begin());
 	}
 
