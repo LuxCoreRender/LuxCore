@@ -29,11 +29,11 @@
 #include "slg/shapes/subdiv.h"
 #include "slg/shapes/displacement.h"
 #include "slg/shapes/harlequinshape.h"
-#include "slg/shapes/simplify.h"
+#include "slg/shapes/simplify_old.h"
 #include "slg/shapes/islandaovshape.h"
 
 // Include experimental SimplifyShape2 if enabled
-#include "slg/shapes/simplify2.h"
+#include "slg/shapes/simplify.h"
 #include "slg/shapes/randomtriangleaovshape.h"
 #include "slg/shapes/edgedetectoraov.h"
 #include "slg/shapes/bevelshape.h"
@@ -422,14 +422,15 @@ ExtTriangleMeshUPtr Scene::CreateShape(const string &shapeName, const Properties
 			static_cast<ExtTriangleMesh&>(extMeshCache.GetExtMesh(sourceMeshName))
 		);
 
-	} else if (shapeType == "simplify") {
+	} else if (shapeType == "simplify_old") {
+		SDL_LOG("WARNING: the simplify_old shape type is deprecated, use simplify instead (shape: " << shapeName << ")");
 
 		const string sourceMeshName = props.Get(
 			Property(propName + ".source")("")
 		).Get<string>();
 		if (!extMeshCache.IsExtMeshDefined(sourceMeshName))
 			throw runtime_error(
-				"Unknown shape name in a simplify shape: " + shapeName
+				"Unknown shape name in a simplify_old shape: " + shapeName
 			);
 
 		const float target = props.Get(
@@ -452,14 +453,13 @@ ExtTriangleMeshUPtr Scene::CreateShape(const string &shapeName, const Properties
 			preserveBorder
 		);
 
-	} else if (shapeType == "simplify2") {
-		// Experimental SimplifyShape2
+	} else if (shapeType == "simplify") {
 		const string sourceMeshName = props.Get(
 			Property(propName + ".source")("")
 		).Get<string>();
 		if (!extMeshCache.IsExtMeshDefined(sourceMeshName))
 			throw runtime_error(
-				"Unknown shape name in a simplify2 shape: " + shapeName
+				"Unknown shape name in a simplify shape: " + shapeName
 			);
 
 		const float target = props.Get(

@@ -59,7 +59,7 @@ scene.shapes.obj_whitedisp.map = fbmtex_clamped
 #scene.shapes.obj_whitedisp.map = fbmtex
 scene.shapes.obj_whitedisp.scale = 10
 ##
-scene.shapes.obj_whitesimplify.type = simplify2
+scene.shapes.obj_whitesimplify.type = simplify
 scene.shapes.obj_whitesimplify.source = obj_whitedisp
 scene.shapes.obj_whitesimplify.target = 0.25
 scene.shapes.obj_whitesimplify.edgescreensize = 0.01

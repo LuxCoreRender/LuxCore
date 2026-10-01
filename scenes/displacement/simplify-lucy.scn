@@ -14,7 +14,7 @@ scene.materials.mat_white.kd = wireframetex
 scene.shapes.obj_lucyply.type = mesh
 scene.shapes.obj_lucyply.ply = scenes/displacement/lucy/lucy.ply
 ##
-scene.shapes.obj_lucysimplify.type = simplify2
+scene.shapes.obj_lucysimplify.type = simplify
 scene.shapes.obj_lucysimplify.source = obj_lucyply
 scene.shapes.obj_lucysimplify.target = 0.1
 scene.shapes.obj_lucysimplify.preserveborder = 1

@@ -43,7 +43,7 @@ scene.shapes.obj_whiteply.ply = scenes/displacement/large-plane.ply
 #scene.shapes.obj_whitedisp.map = fbmtex
 #scene.shapes.obj_whitedisp.scale = 1.5
 ##
-#scene.shapes.obj_whitesimplify.type = simplify
+#scene.shapes.obj_whitesimplify.type = simplify_old
 #scene.shapes.obj_whitesimplify.source = obj_whitesubdiv
 #scene.shapes.obj_whitesimplify.target = 0.1
 ##
@@ -60,11 +60,11 @@ scene.shapes.obj_redsubdiv.source = obj_redply
 scene.shapes.obj_redsubdiv.maxlevel = 3
 scene.shapes.obj_redsubdiv.maxedgescreensize = 0.1
 #
-scene.shapes.obj_redsimplify_1.type = simplify
+scene.shapes.obj_redsimplify_1.type = simplify_old
 scene.shapes.obj_redsimplify_1.source = obj_redsubdiv
 scene.shapes.obj_redsimplify_1.target = 0.5
 #
-scene.shapes.obj_redsimplify_2.type = simplify
+scene.shapes.obj_redsimplify_2.type = simplify_old
 scene.shapes.obj_redsimplify_2.source = obj_redsubdiv
 scene.shapes.obj_redsimplify_2.target = 0.1
 #

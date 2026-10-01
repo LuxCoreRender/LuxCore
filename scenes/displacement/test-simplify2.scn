@@ -15,7 +15,7 @@ scene.shapes.obj_whiteply.type = mesh
 scene.shapes.obj_whiteply.ply = scenes/displacement/large-plane.ply
 
 # Simplify2 shape - reduces to 25% of original triangles
-scene.shapes.obj_whitesimplify2.type = simplify2
+scene.shapes.obj_whitesimplify2.type = simplify
 scene.shapes.obj_whitesimplify2.source = obj_whiteply
 scene.shapes.obj_whitesimplify2.target = 0.25
 scene.shapes.obj_whitesimplify2.edgescreensize = 0.01

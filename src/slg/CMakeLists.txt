@@ -411,8 +411,8 @@ set(SLG_CORE_SRCS
   ${PROJECT_SOURCE_DIR}/src/slg/shapes/pointiness.cpp
   ${PROJECT_SOURCE_DIR}/src/slg/shapes/randomtriangleaovshape.cpp
   ${PROJECT_SOURCE_DIR}/src/slg/shapes/shape.cpp
+  ${PROJECT_SOURCE_DIR}/src/slg/shapes/simplify_old.cpp
   ${PROJECT_SOURCE_DIR}/src/slg/shapes/simplify.cpp
-  ${PROJECT_SOURCE_DIR}/src/slg/shapes/simplify2.cpp
   ${PROJECT_SOURCE_DIR}/src/slg/shapes/strands.cpp
   ${PROJECT_SOURCE_DIR}/src/slg/shapes/subdiv.cpp
   ${PROJECT_SOURCE_DIR}/src/slg/slg.cpp

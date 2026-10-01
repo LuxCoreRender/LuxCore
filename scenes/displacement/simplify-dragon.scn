@@ -14,7 +14,7 @@ scene.materials.mat_white.kd = wireframetex
 scene.shapes.obj_dragonply.type = mesh
 scene.shapes.obj_dragonply.ply = scenes/displacement/dragon/dragon_vrip.ply
 ##
-scene.shapes.obj_dragonsimplify.type = simplify2
+scene.shapes.obj_dragonsimplify.type = simplify
 scene.shapes.obj_dragonsimplify.source = obj_dragonply
 scene.shapes.obj_dragonsimplify.target = 0.1
 scene.shapes.obj_dragonsimplify.preserveborder = 1

@@ -22,7 +22,6 @@
 #include <vector>
 
 #include "slg/usings.h"
-#include "luxcore/cfg_simplify2.h"
 
 namespace luxrays {
 	class ExtTriangleMesh;
@@ -42,14 +41,14 @@ public:
 		SUBDIV,
 		DISPLACEMENT,
 		HARLEQUIN,
-		SIMPLIFY,
+		SIMPLIFY_OLD,
 		ISLANDAOV,
 		RANDOMTRIANGLEAOV,
 		EDGEDETECTORAOV,
 		BEVEL,
 		CAMERAPROJUV,
 		MERGEONDISTANCE,
-		SIMPLIFY2
+		SIMPLIFY
 	} ShapeType;
 
 	Shape() : refined(false) { }
