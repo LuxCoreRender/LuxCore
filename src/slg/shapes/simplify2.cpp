@@ -39,11 +39,6 @@
 #include "slg/utils/group_by_equivalence.h"
 #include "slg/cameras/camera.h"
 
-namespace {
-
-using namespace luxrays;
-using namespace slg;
-
 //------------------------------------------------------------------------------
 //
 // The following code is based on Sven Forstmann's quadric mesh simplification
@@ -256,34 +251,39 @@ using namespace slg;
 //    the large meshes. The mesh is then compacted one last time
 //    (triangles, vertices and corner remap) and written back.
 
-// SymetricMatrix for quadric error metrics
+namespace {
+
+using namespace luxrays;
+using namespace slg;
+
+// SymmetricMatrix for quadric error metrics
 // The 4x4 symmetric matrix has 10 unique elements:
 // [0] = m11, [1] = m12, [2] = m13, [3] = m14,
 // [4] = m22, [5] = m23, [6] = m24,
 // [7] = m33, [8] = m34,
 // [9] = m44
 
-class SymetricMatrix2 {
+class SymmetricMatrix {
 public:
 	// Storage: 10 unique elements of symmetric 4x4 matrix
-	float m[10];
+	std::array<float, 10> m;
 
 	// Default constructor - initialize to zero
-	SymetricMatrix2() {
+	SymmetricMatrix() {
 		for (size_t i = 0; i < 10; ++i) {
 			m[i] = 0.0f;
 		}
 	}
 
 	// Constructor with scalar value
-	explicit SymetricMatrix2(const float c) {
+	explicit SymmetricMatrix(const float c) {
 		for (size_t i = 0; i < 10; ++i) {
 			m[i] = c;
 		}
 	}
 
 	// Constructor with all 10 elements
-	SymetricMatrix2(
+	SymmetricMatrix(
 			const float m11, const float m12, const float m13, const float m14,
 			const float m22, const float m23, const float m24,
 			const float m33, const float m34,
@@ -303,21 +303,17 @@ public:
 	// Make plane from normal (a,b,c) and distance d: ax+by+cz+d=0
 	// This creates the outer product matrix: [a;b;c;d] * [a b c d]
 	// For a symmetric matrix, we only store the upper triangular part
-	SymetricMatrix2(const float a, const float b, const float c, const float d) {
-		// For the plane constructor, SIMD doesn't provide much benefit
-		// due to the scattered access pattern. Use scalar operations.
+	SymmetricMatrix(const float a, const float b, const float c, const float d) {
+		// Loop form so the 10 float products are SIMD vectorized by the
+		// compiler, like the addition below: the two factors of every
+		// element are built as small arrays and multiplied element-wise.
 		// This is typically called once per triangle during initialization,
 		// not in the hot path.
-		m[0] = a * a;
-		m[1] = a * b;
-		m[2] = a * c;
-		m[3] = a * d;
-		m[4] = b * b;
-		m[5] = b * c;
-		m[6] = b * d;
-		m[7] = c * c;
-		m[8] = c * d;
-		m[9] = d * d;
+		std::array<float, 10> m0{a, a, a, a, b, b, b, c, c, d};
+		std::array<float, 10> m1{a, b, c, d, b, c, d, c, d, d};
+		for (size_t i = 0; i < 10; ++i) {
+			m[i] = m0[i] * m1[i];
+		}
 	}
 
 	// Accessor for element
@@ -332,15 +328,15 @@ public:
 
 	// Addition (loop form so the 10 float additions are SIMD vectorized
 	// by the compiler: 2x 128-bit + 1x 64-bit packed adds)
-	const SymetricMatrix2 operator+(const SymetricMatrix2 &n) const {
-		SymetricMatrix2 r;
+	const SymmetricMatrix operator+(const SymmetricMatrix &n) const {
+		SymmetricMatrix r;
 		for (size_t i = 0; i < 10; ++i)
 			r.m[i] = m[i] + n.m[i];
 		return r;
 	}
 
 	// In-place addition (loop form for the same SIMD vectorization)
-	SymetricMatrix2& operator+=(const SymetricMatrix2& n) {
+	SymmetricMatrix& operator+=(const SymmetricMatrix& n) {
 		for (size_t i = 0; i < 10; ++i)
 			m[i] += n.m[i];
 
@@ -375,7 +371,7 @@ constexpr u_int TRI_NEXT[3] = { 1, 2, 0 };
 constexpr u_int TRI_PREV[3] = { 2, 0, 1 };
 
 // Target number of regions of the simplify2 boundary deferral (see
-// Simplify2::DeferBoundaryCandidates): enough regions to balance the
+// Simplify::DeferBoundaryCandidates): enough regions to balance the
 // closures across dozens of threads, at the cost of a thin deferred seam
 constexpr size_t regionTarget = 64;
 // Minimum number of kept candidates for the simplify2 boundary deferral:
@@ -383,9 +379,9 @@ constexpr size_t regionTarget = 64;
 // behaves exactly like the serial algorithm)
 constexpr size_t minKeptCandidates = 1024;
 
-class Simplify2 {
+class Simplify {
 public:
-	Simplify2(const ExtTriangleMesh &srcMesh) {
+	Simplify(const ExtTriangleMesh &srcMesh) {
 		const auto vertCount = srcMesh.GetTotalVertexCount();
 		const auto triCount = srcMesh.GetTotalTriangleCount();
 		const VertexBuffer verts(srcMesh.GetVertices());
@@ -436,7 +432,7 @@ public:
 		std::copy(srcTris.begin(), srcTris.end(), triangleV.begin());
 	}
 
-	~Simplify2() {
+	~Simplify() {
 	}
 
 	ExtTriangleMeshUPtr GetExtMesh() const {
@@ -495,11 +491,6 @@ public:
 
 	void Decimate(const float targetTriangleCount, CameraConstRef scnCamera,
 			const float screenSize, const bool border) {
-		// TODO: Implement new simplification algorithm here
-		// This is where you would put your new implementation
-
-		// For now, just log that we're using the new version
-		SDL_LOG("SimplifyShape2: Using experimental simplification algorithm");
 
 		// Call the original algorithm as fallback
 		preserveBorder = border;
@@ -515,15 +506,14 @@ public:
 		// neighbors cheaper), the detailed ones keep their triangles,
 		// and the run ends with the homogeneous error property: no
 		// collapse cheaper than E remains anywhere in the mesh
-		const float initialCandidatePercent = 0.4f;
+		constexpr float initialCandidatePercent = 0.4f;
 		float errorThreshold = 0.f;
 		// The kept count of the first iteration: the reference of the
 		// mesh dependent drain halt below
 		size_t initialKeptCandidateCount = 0;
 
-		// Init
-		for (size_t i = 0; i < GetTriangleCount(); ++i)
-			triangleDeleted[i] = false;
+		// Init (the byte fill lowers to memset, like the assigns below)
+		triangleDeleted.assign(GetTriangleCount(), false);
 
 		// Init the screen projection cache (used by UpdateTriangleError when
 		// edgeScreenSize > 0)
@@ -600,7 +590,7 @@ public:
 			// references and clear the dirty flags (quadrics, edge errors and
 			// border flags are initialized once, at iteration 0)
 			const bool deferredUpdate = UpdateMesh(iteration);
-			SDL_LOG("Simplify2: Mesh " << (iteration == 0 ? "initialized" : "updated") << " in "
+			SDL_LOG("Simplify: Mesh " << (iteration == 0 ? "initialized" : "updated") << " in "
 				<< (boost::format("%.3f") % (WallClockTime() - stepStartTime)) << "secs"
 				<< (deferredUpdate ? " (deferred)" : ""));
 
@@ -921,7 +911,7 @@ public:
 						}
 					});
 			}
-			SDL_LOG("Simplify2: Found " << totalCandidateCount << " edge candidates in "
+			SDL_LOG("Simplify: Found " << totalCandidateCount << " edge candidates in "
 				<< (boost::format("%.3f") % (WallClockTime() - stepStartTime)) << "secs");
 
 			// The selection of the first iteration is a rank cut: the N%
@@ -973,7 +963,7 @@ public:
 				}
 				foundCandidateCount = totalCandidateCount;
 
-				SDL_LOG("Simplify2: Evaluation cache active (the kept batch fell below one percent"
+				SDL_LOG("Simplify: Evaluation cache active (the kept batch fell below one percent"
 						" of the live triangles)");
 			}
 			// The reference of the mesh dependent drain halt: the
@@ -1010,7 +1000,7 @@ public:
 			// iterations)
 			ScalableVector<CandidateKey>().swap(candidateKeys);
 
-			SDL_LOG("Simplify2: Kept the " << allCandidates.size() << " lowest error candidates (error < "
+			SDL_LOG("Simplify: Kept the " << allCandidates.size() << " lowest error candidates (error < "
 				<< (boost::format("%.3g") % errorThreshold) << ")");
 
 			// The mesh dependent halt of the drain: the kept batch has
@@ -1026,7 +1016,7 @@ public:
 			// large meshes
 			if (keptCandidateCount > 0 &&
 					keptCandidateCount < initialKeptCandidateCount / 10000) {
-				SDL_LOG("Simplify2: The kept batch (" << keptCandidateCount
+				SDL_LOG("Simplify: The kept batch (" << keptCandidateCount
 					<< ") has fallen below one ten thousandth of the initial one ("
 					<< initialKeptCandidateCount << ") - stopping the drain");
 				break;
@@ -1045,7 +1035,7 @@ public:
 			ScalableVector<SimplifyRef2> stripCandidates;
 			const size_t deferredCandidates = DeferBoundaryCandidates(allCandidates, stripCandidates);
 			if (deferredCandidates > 0)
-				SDL_LOG("Simplify2: Deferred " << deferredCandidates << " region boundary candidates ("
+				SDL_LOG("Simplify: Deferred " << deferredCandidates << " region boundary candidates ("
 					<< allCandidates.size() << " kept) in "
 					<< (boost::format("%.3f") % (WallClockTime() - stepStartTime)) << "secs");
 
@@ -1055,7 +1045,7 @@ public:
 			size_t maxClosureSize = 0;
 			for (const auto& closure : candidateClosures)
 				maxClosureSize = std::max(maxClosureSize, closure.size());
-			SDL_LOG("Simplify2: Computed " << candidateClosures.size() << " closures (max size "
+			SDL_LOG("Simplify: Computed " << candidateClosures.size() << " closures (max size "
 				<< maxClosureSize << ") in "
 				<< (boost::format("%.3f") % (WallClockTime() - stepStartTime)) << "secs");
 
@@ -1063,7 +1053,7 @@ public:
 			deletedTriangles = 0;
 			stepStartTime = WallClockTime();
 			ProcessClosuresParallel(candidateClosures, allCandidates);
-			SDL_LOG("Simplify2: Processed " << candidateClosures.size() << " closures in parallel in "
+			SDL_LOG("Simplify: Processed " << candidateClosures.size() << " closures in parallel in "
 				<< (boost::format("%.3f") % (WallClockTime() - stepStartTime)) << "secs");
 
 			// The deletions of the main wave: the strip wave below
@@ -1096,7 +1086,7 @@ public:
 				ScalableVector<ScalableVector<u_int>> stripClosures =
 					ComputeCandidateClosures(stripCandidates);
 				ProcessClosuresParallel(stripClosures, stripCandidates);
-				SDL_LOG("Simplify2: Processed the " << stripCandidates.size()
+				SDL_LOG("Simplify: Processed the " << stripCandidates.size()
 					<< " deferred region boundary candidates in "
 					<< (boost::format("%.3f") % (WallClockTime() - stepStartTime)) << "secs");
 			}
@@ -1108,7 +1098,7 @@ public:
 			// accounting is per wave: the main wave merge above
 			// already carried its own deletions)
 			MergeRefAppends(iterationDeletedTriangles - mainWaveDeletedTriangles);
-			SDL_LOG("Simplify2 iteration " << iteration << " (" << allCandidates.size() << " edge candidates, deleted "
+			SDL_LOG("Simplify iteration " << iteration << " (" << allCandidates.size() << " edge candidates, deleted "
 				<< iterationDeletedTriangles << "/" << totalDeletedTriangles << " of " << startTriangleCount
 				<< " triangles) in " << (boost::format("%.3f") % (WallClockTime() - iterationStartTime)) << "secs");
 			// An iteration that deletes nothing is terminal: the
@@ -1121,7 +1111,7 @@ public:
 				// cheaper than the threshold remains anywhere in the
 				// mesh
 				if (keptCandidateCount == 0)
-					SDL_LOG("Simplify2: No collapse below the error threshold "
+					SDL_LOG("Simplify: No collapse below the error threshold "
 						<< (boost::format("%.3g") % errorThreshold) << " remains (homogeneous error reached)");
 				break;
 			}
@@ -1130,7 +1120,7 @@ public:
 		// Clean up mesh
 		const double compactStartTime = WallClockTime();
 		CompactMesh();
-		SDL_LOG("Simplify2: Mesh compacted in "
+		SDL_LOG("Simplify: Mesh compacted in "
 			<< (boost::format("%.3f") % (WallClockTime() - compactStartTime)) << "secs");
 	}
 
@@ -1366,7 +1356,7 @@ private:
 	ScalableVector<unsigned char> vertexBorder;
 	ScalableVector<u_int> vertexTstart;
 	ScalableVector<u_int> vertexTcount;
-	ScalableVector<SymetricMatrix2> vertexQ;
+	ScalableVector<SymmetricMatrix> vertexQ;
 
 	size_t GetVertexCount() const { return vertexP.size(); }
 
@@ -1911,12 +1901,12 @@ private:
 	// carries the true prefix, so the destinations are exactly the
 	// ones of the serial running count
 	class CompactionIndexScan {
-		const Simplify2 &mesh;
+		const Simplify &mesh;
 		CacheAlignedVector<u_int> &index;
 		size_t survivorCount;
 
 	public:
-		CompactionIndexScan(const Simplify2 &p_mesh, CacheAlignedVector<u_int> &p_index)
+		CompactionIndexScan(const Simplify &p_mesh, CacheAlignedVector<u_int> &p_index)
 			: mesh(p_mesh), index(p_index), survivorCount(0) { }
 		CompactionIndexScan(CompactionIndexScan &other, tbb::split)
 			: mesh(other.mesh), index(other.index), survivorCount(0) { }
@@ -2102,13 +2092,13 @@ private:
 		ScalableVector<u_int> vertexRefStarts(vertexCount);
 		{
 			class VertexRefStartScan {
-				Simplify2 &mesh;
+				Simplify &mesh;
 				ScalableVector<u_int> &refStarts;
 				const ScalableVector<std::atomic<u_int>> &refCounts;
 				size_t tstart;
 
 			public:
-				VertexRefStartScan(Simplify2 &p_mesh,
+				VertexRefStartScan(Simplify &p_mesh,
 						ScalableVector<u_int> &p_refStarts,
 						const ScalableVector<std::atomic<u_int>> &p_refCounts)
 					: mesh(p_mesh), refStarts(p_refStarts),
@@ -2251,7 +2241,7 @@ private:
 
 			// The plane quadric accumulation, one vertex at a time
 			tbb::parallel_for(size_t(0), vertexCount, [&](size_t v) {
-				SymetricMatrix2 q(0.0);
+				SymmetricMatrix q(0.0);
 
 				const u_int tstart = vertexTstart[v];
 				const u_int tcount = vertexTcount[v];
@@ -2262,7 +2252,7 @@ private:
 					// It doesn't matter what vertex I use here because the
 					// triangle plane will pass for all 3
 					const Point &p0 = vertexP[triangleV[3*tid + 0]];
-					const SymetricMatrix2 sm(geometryN.x, geometryN.y, geometryN.z,
+					const SymmetricMatrix sm(geometryN.x, geometryN.y, geometryN.z,
 							-Dot(Vector(geometryN), Vector(p0)));
 					q += sm;
 				}
@@ -2405,11 +2395,11 @@ private:
 		// The new index of each used vertex (the running count of the
 		// scan), written in its own tstart slot for the remap
 		class VertexIndexScan {
-			Simplify2 &mesh;
+			Simplify &mesh;
 			size_t count;
 
 		public:
-			VertexIndexScan(Simplify2 &p_mesh)
+			VertexIndexScan(Simplify &p_mesh)
 				: mesh(p_mesh), count(0) { }
 			VertexIndexScan(VertexIndexScan &other, tbb::split)
 				: mesh(other.mesh), count(0) { }
@@ -2479,7 +2469,7 @@ private:
 	// coefficients, so they are processed in SIMD lanes (one point per
 	// lane, the 4th lane is padding). Each lane evaluates the same
 	// expression as the original scalar version.
-	std::array<float, 3> VertexError(const SymetricMatrix2 &q,
+	std::array<float, 3> VertexError(const SymmetricMatrix &q,
 			const Point &p1, const Point &p2, const Point &p3) const {
 		// Pack the point coordinates by component, padded to the SIMD width
 		alignas(16) float x[4] = { p1.x, p2.x, p3.x, 0.f };
@@ -2522,7 +2512,7 @@ private:
 	// from the positions without re-evaluating the quadric error
 	float CalculateCollapseError(const size_t v1Index, const size_t v2Index,
 			Point *pResult = nullptr, unsigned char *choiceResult = nullptr) const {
-		const SymetricMatrix2 q = vertexQ[v1Index] + vertexQ[v2Index];
+		const SymmetricMatrix q = vertexQ[v1Index] + vertexQ[v2Index];
 
 		// Compute interpolated vertex
 		const Point &p1 = vertexP[v1Index];
@@ -3398,7 +3388,7 @@ private:
 	// (CollapseContext, dropped at the end: the reference list is rebuilt at
 	// each iteration) and counts its deleted triangles.
 	class ParallelClosureProcessor {
-		Simplify2& simplify;
+		Simplify& simplify;
 		const ScalableVector<ScalableVector<u_int>>& closures;
 		const ScalableVector<SimplifyRef2>& allCandidates;
 
@@ -3419,7 +3409,7 @@ private:
 		// the iteration accumulates the waves through applyResult
 		// (pre-loading the global counter here would count the main
 		// wave twice, once per wave)
-		ParallelClosureProcessor(Simplify2& s,
+		ParallelClosureProcessor(Simplify& s,
 				const ScalableVector<ScalableVector<u_int>>& c,
 				const ScalableVector<SimplifyRef2>& a)
 			: simplify(s), closures(c), allCandidates(a) { }
@@ -3553,7 +3543,7 @@ private:
 		// count based grains would pin the biggest closures to one thread
 		const size_t grain_size = 1;
 
-		SDL_LOG("Simplify2: Processing " << closures.size() << " closures on "
+		SDL_LOG("Simplify: Processing " << closures.size() << " closures on "
 			<< tbb::this_task_arena::max_concurrency() << " threads (grain size " << grain_size << ")");
 
 		tbb::parallel_reduce(
@@ -3589,7 +3579,7 @@ SimplifyShape2::SimplifyShape2(CameraConstPtr camera, ExtTriangleMeshRef srcMesh
 
 	const u_int targetCount = std::max(1u, Floor2UInt(srcMesh.GetTotalTriangleCount() * target));
 
-	Simplify2 simplify(srcMesh);
+	Simplify simplify(srcMesh);
 	simplify.Decimate(targetCount, *camera, edgeScreenSize, preserveBorder);
 	mesh = simplify.GetExtMesh();
 
