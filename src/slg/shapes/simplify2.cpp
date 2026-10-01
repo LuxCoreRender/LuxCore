@@ -19,7 +19,6 @@
 // Only compile this file if the feature is enabled
 
 #include <vector>
-#include <string>
 #include <limits>
 #include <cstdint>
 #include <array>
@@ -34,20 +33,13 @@
 
 #include <boost/format.hpp>
 
-#include "luxrays/core/trianglemesh.h"
 #include "luxrays/usings.h"
 #include "luxrays/core/exttrianglemesh.h"
 #include "slg/shapes/simplify2.h"
-#include "luxrays/utils/buffer.h"
-#include "slg/scene/scene.h"
-#include "slg/utils/harlequincolors.h"
 #include "slg/utils/group_by_equivalence.h"
 #include "slg/cameras/camera.h"
 
-using namespace luxrays;
-
-namespace slg {
-namespace simplify2 {
+namespace {
 
 using namespace luxrays;
 using namespace slg;
@@ -3575,13 +3567,11 @@ private:
 
 };
 
-} // namespace simplify2
+} // anonymous namespace
 
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
-
-} // namespace slg
 
 namespace slg {
 
@@ -3599,7 +3589,7 @@ SimplifyShape2::SimplifyShape2(CameraConstPtr camera, ExtTriangleMeshRef srcMesh
 
 	const u_int targetCount = std::max(1u, Floor2UInt(srcMesh.GetTotalTriangleCount() * target));
 
-	simplify2::Simplify2 simplify(srcMesh);
+	Simplify2 simplify(srcMesh);
 	simplify.Decimate(targetCount, *camera, edgeScreenSize, preserveBorder);
 	mesh = simplify.GetExtMesh();
 

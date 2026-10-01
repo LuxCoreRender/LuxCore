@@ -19,20 +19,12 @@
 #ifndef _SLG_SIMPLIFYSHAPE2_H
 #define	_SLG_SIMPLIFYSHAPE2_H
 
-#include <string>
 
 #include "luxrays/usings.h"
 #include "slg/usings.h"
 #include "slg/shapes/shape.h"
 
 namespace slg {
-
-// Simplify2 namespace for experimental mesh simplification
-namespace simplify2 {
-
-class Simplify2;
-
-} // namespace simplify2
 
 class SimplifyShape2 : public Shape {
 public:
