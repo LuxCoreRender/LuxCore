@@ -18,7 +18,6 @@
 
 // Only compile this file if the feature is enabled
 
-#include <map>
 #include <vector>
 #include <string>
 #include <limits>

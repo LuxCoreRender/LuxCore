@@ -60,9 +60,9 @@ using RelationFunction = std::function<RelationVector(size_t, size_t)>;
 // (using TBB) and should be fast for large equivalence relations.
 //
 // Two overloads are provided:
-// 1. For callable generators: GroupByEquivalence(numElements, relation)
-//    where relation is a RelationFunction (a std::function taking an
-//    interval [r1, r2) and returning a cache-aligned vector of pairs)
+// 1. For callable generators over an iteration space (which may
+//    be distinct from the element space):
+//    GroupByEquivalence(numElements, iterationCount, relation)
 // 2. For direct ranges: GroupByEquivalence(numElements, relation)
 //    where relation is a RelationSpan (std::span<const Relation>)
 //
@@ -75,19 +75,13 @@ using RelationFunction = std::function<RelationVector(size_t, size_t)>;
 //       }
 //       return pairs;
 //   };
-//   auto clusters = GroupByEquivalence(n, relation);
+//   auto clusters = GroupByEquivalence(n, n, relation);
 //
 //   // With std::span
 //   std::vector<std::pair<size_t, size_t>> pairs = {{0,1}, {2,3}};
 //   auto clusters = GroupByEquivalence(n, std::span<const Relation>(pairs));
 //
 //   // Note: std::vector<Relation> is implicitly convertible to RelationSpan
-
-// Version for callable generators: relation is a functor that takes an
-// interval [r1, r2) with r1 and r2 of size_t type and returns a vector of
-// Relation. Functor is evaluated in multithreaded process, which may be more
-// efficient than statically compute it beforehand
-Classes GroupByEquivalence(size_t numElements, RelationFunction relation);
 
 // Version for callable generators over an iteration space distinct from
 // the element space: the relation functor is invoked with subranges of

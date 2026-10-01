@@ -377,27 +377,6 @@ size_t GroupingGrain(const size_t iterationCount) {
 
 namespace slg {
 
-// Version for callable generators: relation is a functor that takes an
-// interval [r1, r2) with r1 and r2 of size_t type and returns a vector of
-// Relation. Functor is evaluated in multithreaded process, which may be more
-// efficient than statically compute it beforehand
-Classes GroupByEquivalence(size_t numElements, RelationFunction relation) {
-	// Use parallel_reduce with ParallelGroupByEquivalenceFromGenerator
-	static tbb::affinity_partitioner tbb_partitioner;
-	const size_t grain = GroupingGrain(numElements);
-
-	ParallelGroupByEquivalenceFromGenerator<RelationFunction> solver(
-		numElements, std::move(relation));
-
-	tbb::parallel_reduce(
-		tbb::blocked_range<size_t>(0, numElements, grain),
-		solver,
-		tbb_partitioner
-	);
-
-	return BuildClassesFromUnionFind(solver.getResult(), numElements);
-}
-
 // Version for callable generators over an iteration space distinct from
 // the element space: the relation functor is invoked with subranges of
 // [0, iterationCount) and returns pairs of equivalent elements of
