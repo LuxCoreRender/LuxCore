@@ -28,6 +28,7 @@
 #include <cstring> // for memset
 #include <cmath> // for sqrt, round
 #include <functional>
+#include <span>
 
 #include <oneapi/tbb.h>
 
@@ -265,8 +266,11 @@
 //    work, and the run converges on the target from above (the
 //    recalibrated cut doubles when the stalled generation measured
 //    no cascade at all, a bounded search for the collapsible band).
-//    The mesh is then compacted one last time (triangles, vertices
-//    and corner remap) and written back.
+//    The export then fuses the final compaction with the mesh
+//    construction: the surviving triangles and vertices are gathered
+//    straight into the output buffers (no compacted intermediate
+//    state, no export copy, and the internal only fields are not
+//    compacted at all - nothing reads them after the loop).
 
 namespace {
 
@@ -452,49 +456,110 @@ public:
 	~Simplify() {
 	}
 
-	ExtTriangleMeshUPtr GetExtMesh() const {
-		const size_t vertCount = GetVertexCount();
-		const size_t triCount = GetTriangleCount();
+	// The export: the final compaction and the mesh construction are
+	// fused. The surviving triangles and the surviving vertices are
+	// gathered straight into the output buffers - there is no
+	// compacted intermediate state and no export copy (the internal
+	// arrays are not read anymore after the loop, so their own
+	// compaction is skipped entirely). The compaction semantics are
+	// the ones of the mesh update compaction: the triangle index
+	// comes from the same parallel scan of the deleted flags, the
+	// used vertices get their new ids from the same running count,
+	// and the corner ids are remapped after the gather. The output is
+	// bit identical to a compaction followed by a copy: the gathers
+	// preserve the ascending source order
+	ExtTriangleMeshUPtr ExportExtMesh() {
+		const double exportStartTime = WallClockTime();
 
-		VertexBuffer newVertices(vertCount);
-		std::copy(vertexP.begin(), vertexP.end(),
-				newVertices.GetObjects().begin());
+		const size_t triangleCount = GetTriangleCount();
+		const size_t vertexCount = GetVertexCount();
+
+		// Clear the used vertex flags
+		tbb::parallel_for(size_t(0), vertexCount, [&](size_t i) {
+			vertexTcount[i] = 0;
+		});
+
+		// The compaction index of the surviving triangles
+		compactionScratch.index.resize(triangleCount);
+		CompactionIndexScan indexScan(*this, compactionScratch.index);
+		tbb::parallel_scan(tbb::blocked_range<size_t>(0, triangleCount, 16384),
+				indexScan);
+		const size_t dst = indexScan.getCount();
+
+		// The triangle corners are gathered through the flat sub object
+		// view of the buffer: a Triangle is its three corner indices,
+		// so the flat unsigned int view is already the interleaved
+		// layout of triangleV. The gather is out of place, so it runs
+		// in parallel (the same pattern as GatherTriangleField)
+		TriangleBuffer newTris(dst);
+		std::span<u_int> flatTris = newTris.GetSubObjects();
+		tbb::parallel_for(tbb::blocked_range<size_t>(0, dst, 16384),
+				[&](const tbb::blocked_range<size_t> &r) {
+					for (size_t d = r.begin(); d < r.end(); ++d) {
+						const size_t s = size_t(compactionScratch.index[d]) * 3;
+						std::copy_n(&triangleV[s], 3, &flatTris[d * 3]);
+					}
+				});
+
+		// Mark the used vertices: the corner ids are still the pre
+		// remap ones
+		tbb::parallel_for(size_t(0), dst, [&](size_t d) {
+			vertexTcount[flatTris[3*d + 0]] = 1;
+			vertexTcount[flatTris[3*d + 1]] = 1;
+			vertexTcount[flatTris[3*d + 2]] = 1;
+		});
+
+		// The new index of each used vertex (the running count of the
+		// scan), written in its own tstart slot for the remap
+		VertexIndexScan vertexIndexScan(*this);
+		tbb::parallel_scan(tbb::blocked_range<size_t>(0, vertexCount, 16384),
+				vertexIndexScan);
+		const size_t vertexDst = vertexIndexScan.getCount();
+
+		// The surviving vertices gathered straight into the output
+		// buffers, one field at a time (the established compaction
+		// pattern: the writes are disjoint, and one field per pass
+		// keeps the streams cache friendly)
+		VertexBuffer newVertices(vertexDst);
+		GatherUsedVertices(vertexP, newVertices.GetObjects());
 
 		NormalBuffer newNorms;
 		if (hasNormals) {
-			newNorms.Allocate(vertCount);
-			std::copy(vertexNorm.begin(), vertexNorm.end(),
-					newNorms.GetObjects().begin());
+			newNorms.Allocate(vertexDst);
+			GatherUsedVertices(vertexNorm, newNorms.GetObjects());
 		}
 
 		ExtMeshProp<UV>::Layer newUVs = nullptr;
 		if (hasUVs) {
-			newUVs = std::make_shared<UV[]>(vertCount);
-			std::copy(vertexUV.begin(), vertexUV.end(), newUVs.get());
+			newUVs = std::make_shared<UV[]>(vertexDst);
+			GatherUsedVertices(vertexUV, std::span<UV>(newUVs.get(), vertexDst));
 		}
 
 		ExtMeshProp<Spectrum>::Layer newCols = nullptr;
 		if (hasColors) {
-			newCols = std::make_shared<Spectrum[]>(vertCount);
-			std::copy(vertexCol.begin(), vertexCol.end(), newCols.get());
+			newCols = std::make_shared<Spectrum[]>(vertexDst);
+			GatherUsedVertices(vertexCol, std::span<Spectrum>(newCols.get(), vertexDst));
 		}
 
 		ExtMeshProp<float>::Layer newAlphas = nullptr;
 		if (hasAlphas) {
-			newAlphas = std::make_shared<float[]>(vertCount);
-			std::copy(vertexAlpha.begin(), vertexAlpha.end(), newAlphas.get());
+			newAlphas = std::make_shared<float[]>(vertexDst);
+			GatherUsedVertices(vertexAlpha, std::span<float>(newAlphas.get(), vertexDst));
 		}
 
-		TriangleBuffer newTris(triCount);
-		// The triangle corners are copied through the sub object view of
-		// the buffer: a Triangle is its three corner indices, so the
-		// flat unsigned int view is already the interleaved layout of
-		// triangleV. The index check of the debug build covers all the
-		// corners at once
-		assert(std::all_of(triangleV.begin(), triangleV.end(),
-				[&](const u_int v) { return v < vertCount; }));
-		std::copy(triangleV.begin(), triangleV.end(),
-				newTris.GetSubObjects().begin());
+		// Remap the corner ids to the compacted vertices. The index
+		// check of the debug build covers all the corners at once
+		tbb::parallel_for(size_t(0), dst, [&](size_t d) {
+			const size_t triOffset = 3*d;
+			flatTris[triOffset + 0] = vertexTstart[flatTris[triOffset + 0]];
+			flatTris[triOffset + 1] = vertexTstart[flatTris[triOffset + 1]];
+			flatTris[triOffset + 2] = vertexTstart[flatTris[triOffset + 2]];
+		});
+		assert(std::all_of(flatTris.begin(), flatTris.end(),
+				[&](const u_int v) { return v < vertexDst; }));
+
+		SDL_LOG("Simplify: Mesh compacted and exported in "
+			<< (boost::format("%.3f") % (WallClockTime() - exportStartTime)) << "secs");
 
 		return std::make_unique<ExtTriangleMesh>(
 			std::move(newVertices),
@@ -1308,12 +1373,9 @@ public:
 				continue;
 			}
 		}
-
-		// Clean up mesh
-		const double compactStartTime = WallClockTime();
-		CompactMesh();
-		SDL_LOG("Simplify: Mesh compacted in "
-			<< (boost::format("%.3f") % (WallClockTime() - compactStartTime)) << "secs");
+		// The final compaction and the export are fused: the caller
+		// takes the mesh over through ExportExtMesh, which gathers
+		// the surviving records straight into the output buffers
 	}
 
 private:
@@ -1489,7 +1551,8 @@ private:
 	// synchronization
 	bool evalCacheActive = false;
 	// The scratch buffers of the triangle compaction (UpdateMesh and
-	// CompactMesh): the surviving triangle fields are gathered out of
+	// the export of ExportExtMesh): the surviving triangle fields are
+	// gathered out of
 	// place, one field at a time, into these persistent buffers, and
 	// the mesh array is swapped with its scratch (no copy back). They
 	// persist across the compactions: after the swap they hold the
@@ -2132,6 +2195,43 @@ private:
 		}
 	};
 
+	// The new index of each used vertex (the running count of the
+	// scan), written in its own tstart slot for the remap
+	class VertexIndexScan {
+		Simplify &mesh;
+		size_t count;
+
+	public:
+		VertexIndexScan(Simplify &p_mesh)
+			: mesh(p_mesh), count(0) { }
+		VertexIndexScan(VertexIndexScan &other, tbb::split)
+			: mesh(other.mesh), count(0) { }
+
+		void operator()(const tbb::blocked_range<size_t> &range, tbb::pre_scan_tag) {
+			for (size_t i = range.begin(); i < range.end(); ++i)
+				count += mesh.vertexTcount[i];
+		}
+
+		void operator()(const tbb::blocked_range<size_t> &range, tbb::final_scan_tag) {
+			for (size_t i = range.begin(); i < range.end(); ++i) {
+				if (mesh.vertexTcount[i])
+					mesh.vertexTstart[i] = u_int(count++);
+			}
+		}
+
+		void reverse_join(VertexIndexScan &rhs) {
+			count += rhs.count;
+		}
+
+		void assign(VertexIndexScan &rhs) {
+			count = rhs.count;
+		}
+
+		size_t getCount() const {
+			return count;
+		}
+	};
+
 	// Gathers a triangle field through the compaction index: the
 	// scratch buffer is resized to the compacted field (a resize down
 	// initializes nothing), the destinations are filled in parallel -
@@ -2154,6 +2254,22 @@ private:
 				}
 			});
 		field.swap(scratchField);
+	}
+
+	// Gathers the used vertices of a field into the output view, at
+	// their new compacted index (the one of the tstart slot): the
+	// writes are disjoint (each used source vertex has its own
+	// destination slot), so the gather runs in parallel. The ascending
+	// source order is preserved
+	template<typename T>
+	void GatherUsedVertices(const ScalableVector<T> &field, std::span<T> dst) const {
+		tbb::parallel_for(tbb::blocked_range<size_t>(0, GetVertexCount(), 16384),
+			[&](const tbb::blocked_range<size_t> &r) {
+				for (size_t i = r.begin(); i < r.end(); ++i) {
+					if (vertexTcount[i])
+						dst[vertexTstart[i]] = field[i];
+				}
+			});
 	}
 
 	// Compact triangles, compute edge error and build reference list
@@ -2529,136 +2645,6 @@ private:
 
 		return !rebuildRefs;
 	}  // UpdateMesh
-
-	// Finally compact mesh before exiting
-	void CompactMesh() {
-		// The counts are loaded once (the same rationale as in
-		// UpdateMesh: the compaction passes write through the mesh
-		// arrays in place, so the compiler can not hoist the vector
-		// size loads out of the loop conditions). The triangle count
-		// changes with the compaction, the vertex count does not
-		const size_t triangleCount = GetTriangleCount();
-		const size_t vertexCount = GetVertexCount();
-
-		// Clear the used vertex flags
-		tbb::parallel_for(size_t(0), vertexCount, [&](size_t i) {
-			vertexTcount[i] = 0;
-		});
-
-		// Compact the triangle arrays through the compaction index:
-		// the same parallel scan and out of place gathers as the mesh
-		// update compaction (see UpdateMesh)
-		compactionScratch.index.resize(triangleCount);
-		CompactionIndexScan indexScan(*this, compactionScratch.index);
-		tbb::parallel_scan(tbb::blocked_range<size_t>(0, triangleCount, 16384),
-				indexScan);
-		const size_t dst = indexScan.getCount();
-
-		// The three vertex indices and the three errors are
-		// contiguous blocks, one copy moves each
-		GatherTriangleField(triangleV, compactionScratch.v,
-				compactionScratch.index, dst, 3);
-		GatherTriangleField(triangleErr, compactionScratch.err,
-				compactionScratch.index, dst, 3);
-		GatherTriangleField(triangleErrChoice, compactionScratch.errChoice,
-				compactionScratch.index, dst, 1);
-		GatherTriangleField(triangleGeometryN, compactionScratch.geometryN,
-				compactionScratch.index, dst, 1);
-		GatherTriangleField(triangleDirty, compactionScratch.dirty,
-				compactionScratch.index, dst, 1);
-		GatherTriangleField(candidateVertexIndex, compactionScratch.candidateVertexIndex,
-				compactionScratch.index, dst, 1);
-		GatherTriangleField(candidateValid, compactionScratch.candidateValid,
-				compactionScratch.index, dst, 1);
-
-		tbb::parallel_for(size_t(0), dst, [&](size_t d) {
-			triangleDeleted[d] = false;
-		});
-
-		ResizeTriangles(dst);
-		const size_t liveTriangleCount = dst;
-
-		// Mark the used vertices: the idempotent one byte writes of
-		// the border identification (several threads can store 1 in
-		// the flag of a shared vertex, no update is lost)
-		tbb::parallel_for(size_t(0), liveTriangleCount, [&](size_t t) {
-			const size_t triOffset = 3*t;
-			vertexTcount[triangleV[triOffset+0]] = 1;
-			vertexTcount[triangleV[triOffset+1]] = 1;
-			vertexTcount[triangleV[triOffset+2]] = 1;
-		});
-
-		// The new index of each used vertex (the running count of the
-		// scan), written in its own tstart slot for the remap
-		class VertexIndexScan {
-			Simplify &mesh;
-			size_t count;
-
-		public:
-			VertexIndexScan(Simplify &p_mesh)
-				: mesh(p_mesh), count(0) { }
-			VertexIndexScan(VertexIndexScan &other, tbb::split)
-				: mesh(other.mesh), count(0) { }
-
-			void operator()(const tbb::blocked_range<size_t> &range, tbb::pre_scan_tag) {
-				for (size_t i = range.begin(); i < range.end(); ++i)
-					count += mesh.vertexTcount[i];
-			}
-
-			void operator()(const tbb::blocked_range<size_t> &range, tbb::final_scan_tag) {
-				for (size_t i = range.begin(); i < range.end(); ++i) {
-					if (mesh.vertexTcount[i])
-						mesh.vertexTstart[i] = u_int(count++);
-				}
-			}
-
-			void reverse_join(VertexIndexScan &rhs) {
-				count += rhs.count;
-			}
-
-			void assign(VertexIndexScan &rhs) {
-				count = rhs.count;
-			}
-
-			size_t getCount() const {
-				return count;
-			}
-		};
-
-		VertexIndexScan vertexIndexScan(*this);
-		tbb::parallel_scan(tbb::blocked_range<size_t>(0, vertexCount, 16384),
-				vertexIndexScan);
-		const size_t vertexDst = vertexIndexScan.getCount();
-
-		// Compact the vertex arrays: only the output fields are moved
-		// (like the record compaction: the quadrics and the flags stay
-		// behind, they are not used anymore). The move stays in place
-		// and serial: an in place move is race free only strictly left
-		// to right (the destination of a move can lag deep inside the
-		// sources another thread would not have read yet)
-		for (size_t i = 0; i < vertexCount; ++i) {
-			if (!vertexTcount[i])
-				continue;
-
-			const size_t vdst = vertexTstart[i];
-			if (vdst != i) {
-				vertexP[vdst] = vertexP[i];
-				vertexNorm[vdst] = vertexNorm[i];
-				vertexUV[vdst] = vertexUV[i];
-				vertexCol[vdst] = vertexCol[i];
-				vertexAlpha[vdst] = vertexAlpha[i];
-			}
-		}
-
-		// Remap the triangle vertex indices to the compacted vertices
-		tbb::parallel_for(size_t(0), liveTriangleCount, [&](size_t t) {
-			const size_t triOffset = 3*t;
-			triangleV[triOffset+0] = vertexTstart[triangleV[triOffset+0]];
-			triangleV[triOffset+1] = vertexTstart[triangleV[triOffset+1]];
-			triangleV[triOffset+2] = vertexTstart[triangleV[triOffset+2]];
-		});
-		ResizeVertices(vertexDst);
-	}
 
 	// Error between vertex and Quadric, evaluated for the 3 points at
 	// once: the evaluations are independent and share the same quadric
@@ -3777,7 +3763,7 @@ SimplifyShape2::SimplifyShape2(CameraConstPtr camera, ExtTriangleMeshRef srcMesh
 
 	Simplify simplify(srcMesh);
 	simplify.Decimate(targetCount, *camera, edgeScreenSize, preserveBorder);
-	mesh = simplify.GetExtMesh();
+	mesh = simplify.ExportExtMesh();
 
 	SDL_LOG("SimplifyShape2: Simplified shape from " << srcMesh.GetTotalTriangleCount() << " to " << mesh->GetTotalTriangleCount() << " faces");
 
