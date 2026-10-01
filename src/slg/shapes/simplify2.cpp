@@ -701,8 +701,12 @@ public:
 				touchedTriangles.swap(phaseTouchedTriangles);
 
 				// Sorted and deduplicated (a triangle is recorded once
-				// per invalidated star)
-				std::sort(touchedTriangles.begin(), touchedTriangles.end());
+				// per invalidated star). The list reaches hundreds of
+				// thousands of entries in the drain iterations, so the
+				// sort is parallel (the sorted result is the same: the
+				// values are unique after the dedup and their order is
+				// fully determined)
+				tbb::parallel_sort(touchedTriangles.begin(), touchedTriangles.end());
 				touchedTriangles.erase(
 						std::unique(touchedTriangles.begin(), touchedTriangles.end()),
 						touchedTriangles.end());
@@ -712,25 +716,38 @@ public:
 				// touched triangle leaves it (its old record, whatever
 				// happened to the triangle since) and the new outcome
 				// re-enters it (a triangle deleted by the phase carries
-				// nothing). Both are serial passes over the small list
-				size_t oldHasCount = 0;
-				for (const u_int t : touchedTriangles)
-					oldHasCount += (candidateVertexIndex[t] != NULL_INDEX);
+				// nothing). The two counts and the re-evaluation are one
+				// parallel reduce: the list is deduplicated, so every
+				// entry is processed by exactly one body and its
+				// before/after reads see exactly the values the serial
+				// passes saw (the sums are plain integer additions, so
+				// they are exact whatever the scheduling)
+				const auto evalCounts = tbb::parallel_reduce(
+						tbb::blocked_range<size_t>(0, touchedTriangles.size()),
+						std::pair<size_t, size_t>(0, 0),
+						[&](const tbb::blocked_range<size_t> &r,
+								std::pair<size_t, size_t> acc) {
+							for (size_t k = r.begin(); k < r.end(); ++k) {
+								const size_t i = touchedTriangles[k];
 
-				tbb::parallel_for(size_t(0), touchedTriangles.size(),
-					[&](size_t k) {
-						const size_t i = touchedTriangles[k];
-						if (triangleDeleted[i])
-							return;
-						evaluateTriangle(i);
-					});
+								acc.first += (candidateVertexIndex[i] != NULL_INDEX);
 
-				size_t newHasCount = 0;
-				for (const u_int t : touchedTriangles)
-					newHasCount += (!triangleDeleted[t]) &&
-						(candidateVertexIndex[t] != NULL_INDEX);
-				foundCandidateCount += size_t(std::ptrdiff_t(newHasCount) -
-						std::ptrdiff_t(oldHasCount));
+								if (triangleDeleted[i])
+									continue;
+
+								evaluateTriangle(i);
+
+								acc.second += (candidateVertexIndex[i] != NULL_INDEX);
+							}
+							return acc;
+						},
+						[](const std::pair<size_t, size_t> &a,
+								const std::pair<size_t, size_t> &b) {
+							return std::pair<size_t, size_t>(a.first + b.first,
+									a.second + b.second);
+						});
+				foundCandidateCount += size_t(std::ptrdiff_t(evalCounts.second) -
+						std::ptrdiff_t(evalCounts.first));
 			} else {
 				// The full mesh evaluation (the cache is inactive: the
 				// records are not read)
@@ -829,11 +846,23 @@ public:
 					const std::uint32_t tieKey = u_int(i) * 0x9E3779B1u;
 					candidateKeys.push_back(CandidateKey{
 							(static_cast<std::uint64_t>(errorKey) << 32) | tieKey,
-							SimplifyRef2{ u_int(i), tvertex } });
+							SimplifyRef{ u_int(i), tvertex } });
 				}
 				totalCandidateCount = foundCandidateCount;
 			} else {
 					const size_t triangleCount = GetTriangleCount();
+					// The chunk size of the collect. The value is
+					// insensitive in the measured range (1024 to 65536,
+					// the interleaved A/B of the extremes is flat within
+					// noise), but it must stay a fixed compile time
+					// constant: the count and fill passes below share
+					// these boundaries (the fill writes the disjoint
+					// slot ranges precomputed from the per chunk counts),
+					// and the adaptive splitting of TBB is per invocation
+					// and run dependent, so it can not supply them. 2^14
+					// keeps the unit count in the thousands on the biggest
+					// meshes and in the tens on the smallest production
+					// ones
 					constexpr size_t chunkSize = 16384;
 					const size_t chunkCount = (triangleCount + chunkSize - 1) / chunkSize;
 
@@ -866,16 +895,16 @@ public:
 						chunkKeptCounts[c] = keptCount;
 					});
 
-					// The chunk offsets (the prefix of the kept counts)
+					// The chunk offsets (the prefix of the kept counts) and
+					// the whole candidate count of the log, in one pass
 					ScalableVector<size_t> chunkKeptOffsets(chunkCount);
 					size_t keptTotal = 0;
+					totalCandidateCount = 0;
 					for (size_t c = 0; c < chunkCount; ++c) {
 						chunkKeptOffsets[c] = keptTotal;
 						keptTotal += chunkKeptCounts[c];
-					}
-					totalCandidateCount = 0;
-					for (size_t c = 0; c < chunkCount; ++c)
 						totalCandidateCount += chunkAllCounts[c];
+					}
 
 					// Fill the disjoint chunk slot ranges
 					candidateKeys.resize(keptTotal);
@@ -907,7 +936,7 @@ public:
 
 							candidateKeys[k++] = CandidateKey{
 								(static_cast<std::uint64_t>(errorKey) << 32) | tieKey,
-								SimplifyRef2{ u_int(i), tvertex } };
+								SimplifyRef{ u_int(i), tvertex } };
 						}
 					});
 			}
@@ -991,7 +1020,7 @@ public:
 			// serial: the parallel assign measured slower (the resize of
 			// the destination pays a zero initialization pass of the whole
 			// array, which costs about what the parallel copy saves)
-			ScalableVector<SimplifyRef2> allCandidates;
+			ScalableVector<SimplifyRef> allCandidates;
 			allCandidates.reserve(candidateKeys.size());
 			for (const CandidateKey &candidateKey : candidateKeys)
 				allCandidates.push_back(candidateKey.ref);
@@ -1032,7 +1061,7 @@ public:
 			// its initial density and stays visible along the region
 			// grid)
 			stepStartTime = WallClockTime();
-			ScalableVector<SimplifyRef2> stripCandidates;
+			ScalableVector<SimplifyRef> stripCandidates;
 			const size_t deferredCandidates = DeferBoundaryCandidates(allCandidates, stripCandidates);
 			if (deferredCandidates > 0)
 				SDL_LOG("Simplify: Deferred " << deferredCandidates << " region boundary candidates ("
@@ -1126,11 +1155,11 @@ public:
 
 private:
 
-	struct SimplifyRef2 {
+	struct SimplifyRef {
 		u_int tid, tvertex;
 	};
 
-	// Sort key of a SimplifyRef2 candidate: the 32-bit order-preserving
+	// Sort key of a SimplifyRef candidate: the 32-bit order-preserving
 	// transformation of the collapse error in the high word and the
 	// scrambled triangle index in the low word (an odd multiplier
 	// bijection of [0, 2^32)). Every triangle contributes at most one
@@ -1144,7 +1173,7 @@ private:
 	// selection boundary used to leave storage aligned bands
 	struct CandidateKey {
 		std::uint64_t key;
-		SimplifyRef2 ref;
+		SimplifyRef ref;
 	};
 
 	// Local working state for edge collapses.
@@ -1166,7 +1195,7 @@ private:
 	struct CollapseContext {
 		// Cache aligned: the tail grows inside the parallel processing of
 		// the closures (one context per thread)
-		CacheAlignedVector<SimplifyRef2> refsTail;
+		CacheAlignedVector<SimplifyRef> refsTail;
 		CacheAlignedVector<RefAppend> refAppends;
 		// The vertices moved by the welds of the context (the screen
 		// projection recompute list of the next iteration)
@@ -1256,7 +1285,7 @@ private:
 	// repoint records of its welded vertices and the screen projection
 	// recompute list of the vertices they moved
 	struct RefAppendBlock {
-		CacheAlignedVector<SimplifyRef2> refsTail;
+		CacheAlignedVector<SimplifyRef> refsTail;
 		CacheAlignedVector<RefAppend> refAppends;
 		CacheAlignedVector<u_int> movedVertices;
 		CacheAlignedVector<u_int> touchedTriangles;
@@ -1699,7 +1728,7 @@ private:
 		// Process one reference: returns true when the triangle flips.
 		// (A lambda so that the two segment loops below share the source
 		// and the compiler inlines it in both)
-		auto processReference = [&](const size_t k, const SimplifyRef2 &ref) -> bool {
+		auto processReference = [&](const size_t k, const SimplifyRef &ref) -> bool {
 			const size_t tid = ref.tid;
 
 			if (triangleDeleted[tid])
@@ -1765,7 +1794,7 @@ private:
 
 		for (size_t k = 0; k < baseRefCount; ++k) {
 			if (processReference(k,
-					SimplifyRef2{ refTid[tstart0 + k], refTvertex[tstart0 + k] }))
+					SimplifyRef{ refTid[tstart0 + k], refTvertex[tstart0 + k] }))
 				return true;
 		}
 		for (size_t k = baseRefCount; k < tcount0; ++k) {
@@ -1838,7 +1867,7 @@ private:
 
 		// Process one reference (a lambda so that the two segment loops
 		// below share the source and the compiler inlines it in both)
-		auto processReference = [&](const size_t k, const SimplifyRef2 &r) {
+		auto processReference = [&](const size_t k, const SimplifyRef &r) {
 			const size_t tid = r.tid;
 
 			if (triangleDeleted[tid])
@@ -1889,7 +1918,7 @@ private:
 
 		for (size_t k = 0; k < baseRefCount; ++k)
 			processReference(k,
-					SimplifyRef2{ refTid[tstart + k], refTvertex[tstart + k] });
+					SimplifyRef{ refTid[tstart + k], refTvertex[tstart + k] });
 		for (size_t k = baseRefCount; k < tcount; ++k)
 			processReference(k, ctx.refsTail[tstart + k - baseSize]);
 	}
@@ -2788,8 +2817,8 @@ private:
 	// deferral is skipped), compacts the kept candidates in place
 	// keeping the error order, and moves the deferred strip to the
 	// given list (cleared first), also in error order
-	size_t DeferBoundaryCandidates(ScalableVector<SimplifyRef2>& candidates,
-			ScalableVector<SimplifyRef2>& strip) {
+	size_t DeferBoundaryCandidates(ScalableVector<SimplifyRef>& candidates,
+			ScalableVector<SimplifyRef>& strip) {
 		strip.clear();
 
 		const size_t candidateCount = candidates.size();
@@ -3009,7 +3038,7 @@ private:
 	// be processed in parallel, but they can still share vertices (read
 	// only). The screen space caches are precomputed for that reason: the
 	// lazy cache writes would otherwise race on the shared vertices.
-	ScalableVector<ScalableVector<u_int>> ComputeCandidateClosures(const ScalableVector<SimplifyRef2>& candidates) {
+	ScalableVector<ScalableVector<u_int>> ComputeCandidateClosures(const ScalableVector<SimplifyRef>& candidates) {
 		const size_t candidateCount = candidates.size();
 		if (candidateCount == 0) {
 			return {};
@@ -3390,7 +3419,7 @@ private:
 	class ParallelClosureProcessor {
 		Simplify& simplify;
 		const ScalableVector<ScalableVector<u_int>>& closures;
-		const ScalableVector<SimplifyRef2>& allCandidates;
+		const ScalableVector<SimplifyRef>& allCandidates;
 
 		// Local state: appended refs tail and deleted triangles counter
 		CollapseContext ctx;
@@ -3411,7 +3440,7 @@ private:
 		// wave twice, once per wave)
 		ParallelClosureProcessor(Simplify& s,
 				const ScalableVector<ScalableVector<u_int>>& c,
-				const ScalableVector<SimplifyRef2>& a)
+				const ScalableVector<SimplifyRef>& a)
 			: simplify(s), closures(c), allCandidates(a) { }
 
 		// Split constructor for TBB
@@ -3494,7 +3523,7 @@ private:
 
 			// Process each candidate in the closure in order
 			for (size_t idx : closureIndices) {
-				const SimplifyRef2& candidate = allCandidates[idx];
+				const SimplifyRef& candidate = allCandidates[idx];
 				auto tid = candidate.tid;
 
 				// Skip if the triangle was already deleted (e.g. by an
@@ -3520,7 +3549,7 @@ private:
 	// must sit there (the big ones land in the stolen right halves, where
 	// the thief threads split them among each other)
 	void ProcessClosuresParallel(ScalableVector<ScalableVector<u_int>>& closures,
-			const ScalableVector<SimplifyRef2>& allCandidates) {
+			const ScalableVector<SimplifyRef>& allCandidates) {
 		if (closures.empty()) {
 			return;
 		}
