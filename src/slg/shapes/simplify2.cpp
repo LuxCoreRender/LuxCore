@@ -2133,11 +2133,11 @@ private:
 				void operator()(const tbb::blocked_range<size_t> &range, tbb::final_scan_tag) {
 					for (size_t i = range.begin(); i < range.end(); ++i) {
 						const u_int count = refCounts[i].load(std::memory_order_relaxed);
-						
+
 						refStarts[i] = u_int(tstart);
 						mesh.vertexTstart[i] = u_int(tstart);
 						mesh.vertexTcount[i] = count;
-						
+
 						tstart += count;
 					}
 				}
@@ -2172,12 +2172,12 @@ private:
 					const u_int v = triangleV[triOffset+j];
 					const u_int slot = vertexRefStarts[v] +
 						vertexRefCounters[v].fetch_add(1, std::memory_order_relaxed);
-					
+
 					refTid[slot] = u_int(i);
 					refTvertex[slot] = u_int(j);
 				}
 			});
-			
+
 			// The per vertex canonical sort: every vertex sorts its own
 			// segment of the (tid, corner) pairs back into the ascending
 			// order of the serial fill. The pairs are unique, so the sorted
@@ -2190,25 +2190,25 @@ private:
 			tbb::parallel_for(size_t(0), vertexCount, [&](size_t v) {
 				const size_t tstart = vertexTstart[v];
 				const size_t tcount = vertexTcount[v];
-				
+
 				for (size_t k = 1; k < tcount; ++k) {
 					const u_int tid = refTid[tstart + k];
 					const u_int tvertex = refTvertex[tstart + k];
-					
+
 					size_t j = k;
 					while (j > 0) {
 						const u_int prevTid = refTid[tstart + j - 1];
 						const u_int prevTvertex = refTvertex[tstart + j - 1];
-						
+
 						if ((prevTid < tid) ||
 							((prevTid == tid) && (prevTvertex <= tvertex)))
 							break;
-						
+
 						refTid[tstart + j] = prevTid;
 						refTvertex[tstart + j] = prevTvertex;
 						--j;
 					}
-					
+
 					refTid[tstart + j] = tid;
 					refTvertex[tstart + j] = tvertex;
 				}
@@ -3041,7 +3041,7 @@ private:
 		ScalableVector<u_int> candVertexOfVertex;
 		const ScalableVector<u_int> *candidateVertexMapPtr = nullptr;
 		size_t candVertexCount;
-		Classes classes;
+		equiv::Classes classes;
 
 		// With few candidates against the mesh - the drain - the
 		// conflict graph is built from the stars of the candidate
@@ -3100,8 +3100,8 @@ private:
 			// before the next closure computation (see the iteration
 			// loop)
 			auto relationGenerator =
-				[this, &endpoints](size_t r1, size_t r2) -> ScalableVector<Relation> {
-					ScalableVector<Relation> relations;
+				[this, &endpoints](size_t r1, size_t r2) -> ScalableVector<equiv::Relation> {
+					ScalableVector<equiv::Relation> relations;
 					for (size_t r = r1; r < r2; ++r) {
 						const u_int tstart = vertexTstart[endpoints[r]];
 						const u_int tcount = vertexTcount[endpoints[r]];
@@ -3129,8 +3129,8 @@ private:
 			// (the same call as the global path below: the iteration
 			// space is the candidate bearing vertices here, the
 			// triangles there)
-			classes = GroupByEquivalence(uniqueCount, uniqueCount,
-					RelationFunction(relationGenerator));
+			classes = equiv::GroupByEquivalence(uniqueCount, uniqueCount,
+					equiv::RelationFunction(relationGenerator));
 			candidateVertexMapPtr = &candVertexOfVertexSparse;
 			candVertexCount = uniqueCount;
 		} else {
@@ -3228,11 +3228,11 @@ private:
 			// compacted vertex and would link with itself, a no op skipped)
 			auto relationGenerator =
 				[this, &candVertexOfVertex]
-					(size_t r1, size_t r2) -> ScalableVector<Relation> {
+					(size_t r1, size_t r2) -> ScalableVector<equiv::Relation> {
 				// Scalable allocator: allocated per chunk, inside the parallel
 				// evaluation of the generator, consumed once by the Union-Find
 				// (no caching expected)
-				ScalableVector<Relation> relations;
+				ScalableVector<equiv::Relation> relations;
 				for (size_t t = r1; t < r2; ++t) {
 					// A triangle deleted by a deferred compaction links no
 					// vertices: it would merge closures the compacted mesh
@@ -3260,8 +3260,8 @@ private:
 			// pass, without materializing a full relations vector. The ranges
 			// iterate the triangles, the elements are the candidate bearing
 			// vertices.
-			classes = GroupByEquivalence(candVertexCount, GetTriangleCount(),
-					RelationFunction(relationGenerator));
+			classes = equiv::GroupByEquivalence(candVertexCount, GetTriangleCount(),
+					equiv::RelationFunction(relationGenerator));
 			candidateVertexMapPtr = &candVertexOfVertex;
 		}
 		const ScalableVector<u_int> &candidateVertexMap = *candidateVertexMapPtr;
@@ -3305,27 +3305,42 @@ private:
 		// before, without the machinery
 		const size_t closureCount = classes.size();
 		ScalableVector<u_int> closureStart(closureCount + 1, 0);
-		
-		// The chunk count: 64 on the production batches, capped by the
-		// histogram budget (the pathological meshes with millions of
-		// tiny closures), one below 256K candidates
-		const size_t scatterChunkCount = (candidateCount < 262144) ? 1 :
-			std::min<size_t>(64, std::max<size_t>(1,
-				(size_t(1) << 24) / (closureCount + 1)));
+
+		// The chunk count: the single chunk fallback keeps the small
+		// batches (the drain and the region boundary strips) on the
+		// plain serial scatter - the chunk machinery costs about as
+		// much as the work itself at that scale, and the code
+		// degenerates to the serial scatter exactly at one chunk. The
+		// threshold sits in the empty gap of the measured batch sizes:
+		// the strips stay below ~155K candidates (the largest observed
+		// region boundary strip), the main waves start at ~800K, and
+		// 2^18 splits the gap with a wide margin on both sides. The
+		// fallback is safe at any value (the single chunk path is the
+		// serial scatter, the outcome is identical), the chunk count is
+		// capped for the load balance of the tiny batches, and the
+		// matrix budget caps the pathological meshes with millions of
+		// tiny closures at a few tens of MB
+		constexpr size_t singleChunkThreshold = 262144;
+		constexpr size_t histogramBudgetEntries = size_t(1) << 24;
+		constexpr size_t maxScatterChunks = 64;
+
+		const size_t scatterChunkCount = (candidateCount < singleChunkThreshold) ? 1 :
+			std::min<size_t>(maxScatterChunks, std::max<size_t>(1,
+				histogramBudgetEntries / (closureCount + 1)));
 		const size_t scatterChunkSize =
 			(candidateCount + scatterChunkCount - 1) / scatterChunkCount;
-		
+
 		// The per chunk histograms, [chunk][closure]
 		ScalableVector<u_int> chunkCounts(scatterChunkCount * closureCount, 0);
 		tbb::parallel_for(size_t(0), scatterChunkCount, [&](size_t k) {
 			const size_t iBegin = k * scatterChunkSize;
 			const size_t iEnd = std::min(iBegin + scatterChunkSize, candidateCount);
-			
+
 			u_int * const counts = chunkCounts.data() + k * closureCount;
 			for (size_t i = iBegin; i < iEnd; ++i)
 				++counts[closureOfCandidate[i]];
 		});
-		
+
 		// The per closure totals
 		tbb::parallel_for(tbb::blocked_range<size_t>(0, closureCount, 4096),
 			[&](const tbb::blocked_range<size_t> &w) {
@@ -3338,7 +3353,7 @@ private:
 			});
 		for (size_t c = 0; c < closureCount; ++c)
 			closureStart[c + 1] += closureStart[c];
-		
+
 		// The cross chunk prefix, in place: the histogram rows become
 		// the per chunk scatter cursors
 		tbb::parallel_for(tbb::blocked_range<size_t>(0, closureCount, 4096),
@@ -3346,7 +3361,7 @@ private:
 				ScalableVector<u_int> running(w.size());
 				for (size_t c = w.begin(); c < w.end(); ++c)
 					running[c - w.begin()] = closureStart[c];
-				
+
 				for (size_t k = 0; k < scatterChunkCount; ++k) {
 					u_int * const row = chunkCounts.data() + k * closureCount;
 					for (size_t c = w.begin(); c < w.end(); ++c) {
@@ -3356,13 +3371,13 @@ private:
 					}
 				}
 			});
-		
+
 		// The scatter itself
 		ScalableVector<u_int> flatClosures(candidateCount);
 		tbb::parallel_for(size_t(0), scatterChunkCount, [&](size_t k) {
 			const size_t iBegin = k * scatterChunkSize;
 			const size_t iEnd = std::min(iBegin + scatterChunkSize, candidateCount);
-			
+
 			u_int * const cursor = chunkCounts.data() + k * closureCount;
 			for (size_t i = iBegin; i < iEnd; ++i)
 				flatClosures[cursor[closureOfCandidate[i]]++] = static_cast<u_int>(i);

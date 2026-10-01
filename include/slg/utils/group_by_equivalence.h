@@ -20,12 +20,16 @@
 
 #include <vector>
 #include <utility>
-#include <ranges>
 #include <functional>
 #include <span>
-#include <oneapi/tbb.h>
+// The scalable allocator of the typedefs only: the umbrella header
+// drags the whole TBB into every consumer of this header, and the
+// declarations need nothing else from it
+#include <oneapi/tbb/scalable_allocator.h>
 
 namespace slg {
+
+namespace equiv {
 
 // The equivalence classes (one inner vector per class), allocated with
 // the TBB scalable allocator like every container of this path: the
@@ -69,7 +73,7 @@ using RelationFunction = std::function<RelationVector(size_t, size_t)>;
 // Usage examples:
 //   // With a callable generator (functor or lambda)
 //   auto relation = [&](size_t r1, size_t r2) {
-//       slg::RelationVector pairs;
+//       slg::equiv::RelationVector pairs;
 //       for (size_t i = r1; i < r2; ++i) {
 //           if (condition(i)) pairs.emplace_back(i, i+1);
 //       }
@@ -94,6 +98,8 @@ Classes GroupByEquivalence(size_t numElements, size_t iterationCount,
 
 // Version for direct ranges: relation is a span of Relation pairs
 Classes GroupByEquivalence(size_t numElements, RelationSpan relation);
+}  // namespace equiv
+
 }  // namespace slg
 
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

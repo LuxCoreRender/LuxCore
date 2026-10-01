@@ -211,7 +211,7 @@ public:
 // the class sizes, prefix sum and fill (CSR): no hashing and no per class
 // allocation until the final slicing. The elements end up in ascending
 // order inside each class.
-slg::Classes BuildClassesFromUnionFind(const UnionFind& uf, const size_t numElements) {
+slg::equiv::Classes BuildClassesFromUnionFind(const UnionFind& uf, const size_t numElements) {
 	if (numElements == 0)
 		return {};
 
@@ -282,11 +282,26 @@ slg::Classes BuildClassesFromUnionFind(const UnionFind& uf, const size_t numElem
 	// and scatter in ascending order, so every class receives its
 	// elements in the ascending order of the serial fill - no atomic
 	// and no post sort (the histogram matrix would be GBs over the
-	// root ids, it stays in the MBs over the dense ones). The small
-	// element counts fall back to a single chunk: the serial scatter
-	const size_t classChunkCount = (numElements < 262144) ? 1 :
-			std::min<size_t>(64, std::max<size_t>(1,
-					(size_t(1) << 24) / (classCount + 1)));
+	// root ids, it stays in the MBs over the dense ones).
+	//
+	// The single chunk fallback: the chunk machinery (the histogram
+	// matrix and its passes) costs about as much as the work itself on
+	// the small calls, so they keep the plain serial scatter - the
+	// code degenerates to it exactly at one chunk. The threshold sits
+	// in the empty gap of the measured call sizes: the incremental
+	// users of the utility stay below ~110K elements, the full scale
+	// calls start at ~390K, and 2^18 splits the gap with a wide margin
+	// on both sides. The fallback is safe at any value (the single
+	// chunk path is the serial scatter, the outcome is identical),
+	// and the matrix budget caps the pathological element sets with
+	// millions of tiny classes at a few tens of MB
+	constexpr size_t singleChunkThreshold = 262144;
+	constexpr size_t histogramBudgetEntries = size_t(1) << 24;
+	constexpr size_t maxScatterChunks = 64;
+
+	const size_t classChunkCount = (numElements < singleChunkThreshold) ? 1 :
+			std::min<size_t>(maxScatterChunks, std::max<size_t>(1,
+					histogramBudgetEntries / (classCount + 1)));
 	const size_t classChunkSize = (numElements + classChunkCount - 1) / classChunkCount;
 
 	// The map to the dense ids and the per chunk histograms, in one
@@ -352,7 +367,7 @@ slg::Classes BuildClassesFromUnionFind(const UnionFind& uf, const size_t numElem
 
 	// Slice the entries into the output classes (the slot ranges are
 	// disjoint)
-	slg::Classes classes(classCount);
+	slg::equiv::Classes classes(classCount);
 	tbb::parallel_for(size_t(0), classCount, [&](size_t c) {
 		classes[c].assign(
 				std::make_move_iterator(classEntries.begin() + classStart[c]),
@@ -376,6 +391,8 @@ size_t GroupingGrain(const size_t iterationCount) {
 }  // namespace
 
 namespace slg {
+
+namespace equiv {
 
 // Version for callable generators over an iteration space distinct from
 // the element space: the relation functor is invoked with subranges of
@@ -421,6 +438,8 @@ Classes GroupByEquivalence(size_t numElements, RelationSpan relation) {
 	return BuildClassesFromUnionFind(solver.getResult(), numElements);
 }
 
+
+}  // namespace equiv
 
 }  // namespace slg
 
