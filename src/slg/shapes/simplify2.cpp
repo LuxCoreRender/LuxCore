@@ -1294,7 +1294,7 @@ private:
 	// iteration, with the repoint records of their welded vertices:
 	// handed over by the closure processors, consumed and cleared by
 	// the merge of each wave
-	std::vector<RefAppendBlock> iterationRefAppends;
+	ScalableVector<RefAppendBlock> iterationRefAppends;
 	// The screen projection recompute list: the vertices moved by the
 	// collapse waves of the current iteration, accumulated by the
 	// merges and consumed by the precompute of the next iteration (the
@@ -3426,7 +3426,7 @@ private:
 
 		// The appended star blocks collected from the split bodies
 		// (moved in, never copied: the join only chains)
-		std::vector<RefAppendBlock> appendBlocks;
+		ScalableVector<RefAppendBlock> appendBlocks;
 
 		// Candidate triangles deleted by this body (for the disjointness check).
 		// Cache aligned: one per thread, appended in the parallel processing
