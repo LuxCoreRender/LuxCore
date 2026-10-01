@@ -1588,6 +1588,7 @@ private:
 		// Release the original array and take the selected one
 		keys.swap(selectedKeys);
 	}
+
 	bool CollapseEdge(const size_t trinagleIndex, const size_t startVertexIndex,
 			CollapseContext &ctx, ScalableVector<unsigned char> &deleted0, ScalableVector<unsigned char> &deleted1) {
 		if (triangleDeleted[trinagleIndex])
@@ -1600,9 +1601,10 @@ private:
 		// dynamic corner selection below forces it out of the
 		// registers) and every constant index use would become a
 		// reload
-		const u_int triVertex0 = triangleV[3*trinagleIndex+0];
-		const u_int triVertex1 = triangleV[3*trinagleIndex+1];
-		const u_int triVertex2 = triangleV[3*trinagleIndex+2];
+		const size_t triOffset = 3*trinagleIndex;
+		const u_int triVertex0 = triangleV[triOffset+0];
+		const u_int triVertex1 = triangleV[triOffset+1];
+		const u_int triVertex2 = triangleV[triOffset+2];
 
 		// The collapse endpoints, selected between the scalars (a
 		// register selection, no memory)
@@ -1735,8 +1737,9 @@ private:
 				return false;
 
 			const u_int s = ref.tvertex;
-			const u_int id1 = triangleV[3*tid + TRI_NEXT[s]];
-			const u_int id2 = triangleV[3*tid + TRI_PREV[s]];
+			const size_t triOffset = 3*tid;
+			const u_int id1 = triangleV[triOffset + TRI_NEXT[s]];
+			const u_int id2 = triangleV[triOffset + TRI_PREV[s]];
 
 			// Delete ?
 			if (id1 == i1 || id2 == i1) {
@@ -1869,6 +1872,7 @@ private:
 		// below share the source and the compiler inlines it in both)
 		auto processReference = [&](const size_t k, const SimplifyRef &r) {
 			const size_t tid = r.tid;
+			const size_t triOffset = 3*tid;
 
 			if (triangleDeleted[tid])
 				return;
@@ -1883,13 +1887,13 @@ private:
 				// edge endpoints are redundant with the rewire branch
 				// below (the loops invalidate their stars) but the
 				// generation dedup makes them free after the first one
-				InvalidateVertexStar(triangleV[3*tid + 0], ctx);
-				InvalidateVertexStar(triangleV[3*tid + 1], ctx);
-				InvalidateVertexStar(triangleV[3*tid + 2], ctx);
+				InvalidateVertexStar(triangleV[triOffset + 0], ctx);
+				InvalidateVertexStar(triangleV[triOffset + 1], ctx);
+				InvalidateVertexStar(triangleV[triOffset + 2], ctx);
 				return;
 			}
 
-			triangleV[3*tid + r.tvertex] = u_int(i0);
+			triangleV[triOffset + r.tvertex] = u_int(i0);
 			triangleDirty[tid] = true;
 			UpdateTriangleError(tid);
 
@@ -1901,8 +1905,8 @@ private:
 			candidateValid[tid] = 0;
 			if (evalCacheActive)
 				ctx.touchedTriangles.push_back(u_int(tid));
-			InvalidateVertexStar(triangleV[3*tid + TRI_NEXT[r.tvertex]], ctx);
-			InvalidateVertexStar(triangleV[3*tid + TRI_PREV[r.tvertex]], ctx);
+			InvalidateVertexStar(triangleV[triOffset + TRI_NEXT[r.tvertex]], ctx);
+			InvalidateVertexStar(triangleV[triOffset + TRI_PREV[r.tvertex]], ctx);
 
 			ctx.refsTail.push_back(r);
 		};
