@@ -1000,51 +1000,64 @@ public:
 				// The maintenance of the kept candidate list: the touched
 				// triangles leave the list (their outcomes may have changed)
 				// and re-enter when their new records carry a candidate at
-				// or below the threshold, the deleted triangles drop. The
-				// survivors and the re-entered entries are concatenated and
-				// sorted back into the ascending order (the very order the
-				// chunks of the full collect emit, so the keys are identical)
+				// or below the threshold, the deleted triangles drop. Both
+				// filters run over ascending sources (the list is kept
+				// ascending, and the touched list is sorted and its filter
+				// preserves the order), so the two gathers come out sorted
+				// and the new list is their merge - a linear pass, no sort
+				// (the previous form concatenated and sorted the whole list,
+				// a serial O(n log n) sort of up to several million entries
+				// in every drain iteration, plus a serial filter walk and a
+				// serial key build). The result is the same sorted union, so
+				// the order the chunks of the full collect emit is preserved
+				// and the keys stay identical
 
-				ScalableVector<u_int> reentered;
-				size_t ti = 0;
-				size_t w = 0;
-				for (const u_int t : candidateKeptList) {
-					// Skip the touched entries: their outcome is in the
-					// re-entered set
-					while ((ti < touchedTriangles.size()) && (touchedTriangles[ti] < t))
-						++ti;
-					if ((ti < touchedTriangles.size()) && (touchedTriangles[ti] == t))
-						continue;
+				const auto isSurvivor = [&](const size_t i) {
+					const u_int t = candidateKeptList[i];
+					return !triangleDeleted[t] &&
+							!std::binary_search(touchedTriangles.begin(), touchedTriangles.end(), t);
+				};
+				keptListScratch.resize(candidateKeptList.size());
+				PredicateGatherScan survivorScan(candidateKeptList, keptListScratch, isSurvivor);
+				tbb::parallel_scan(tbb::blocked_range<size_t>(0, candidateKeptList.size(), 16384),
+						survivorScan);
+				const size_t survivorCount = survivorScan.getCount();
+
+				const auto reenters = [&](const size_t i) {
+					const u_int t = touchedTriangles[i];
 					if (triangleDeleted[t])
-						continue;
-					candidateKeptList[w++] = t;
-				}
-				candidateKeptList.resize(w);
-				for (const u_int t : touchedTriangles) {
-					if (triangleDeleted[t])
-						continue;
+						return false;
 					const u_int tvertex = candidateVertexIndex[t];
 					if (tvertex == NULL_INDEX)
-						continue;
-					if (errorKeyOf(t, tvertex) > thresholdErrorKey)
-						continue;
-					reentered.push_back(t);
-				}
-				candidateKeptList.insert(candidateKeptList.end(),
-						reentered.begin(), reentered.end());
-				std::sort(candidateKeptList.begin(), candidateKeptList.end());
+						return false;
+					return errorKeyOf(t, tvertex) <= thresholdErrorKey;
+				};
+				ScalableVector<u_int> reentered(touchedTriangles.size());
+				PredicateGatherScan reentryScan(touchedTriangles, reentered, reenters);
+				tbb::parallel_scan(tbb::blocked_range<size_t>(0, touchedTriangles.size(), 16384),
+						reentryScan);
+				const size_t reenteredCount = reentryScan.getCount();
+
+				candidateKeptList.resize(survivorCount + reenteredCount);
+				std::merge(keptListScratch.begin(), keptListScratch.begin() + survivorCount,
+						reentered.begin(), reentered.begin() + reenteredCount,
+						candidateKeptList.begin());
 
 				// The collect: the keys of the kept list (the same key
-				// building as the chunks of the full collect)
-				candidateKeys.reserve(candidateKeptList.size());
-				for (const u_int i : candidateKeptList) {
+				// building as the chunks of the full collect), one disjoint
+				// write per entry (the resize pays a zero initialization
+				// pass, but the parallel writes win against the previous
+				// serial push backs)
+				candidateKeys.resize(candidateKeptList.size());
+				tbb::parallel_for(size_t(0), candidateKeptList.size(), [&](const size_t k) {
+					const u_int i = candidateKeptList[k];
 					const u_int tvertex = candidateVertexIndex[i];
 					const std::uint32_t errorKey = errorKeyOf(i, tvertex);
 					const std::uint32_t tieKey = u_int(i) * 0x9E3779B1u;
-					candidateKeys.push_back(CandidateKey{
+					candidateKeys[k] = CandidateKey{
 							(static_cast<std::uint64_t>(errorKey) << 32) | tieKey,
-							SimplifyRef{ u_int(i), tvertex } });
-				}
+							SimplifyRef{ u_int(i), tvertex } };
+				});
 				totalCandidateCount = foundCandidateCount;
 			} else {
 					const size_t triangleCount = GetTriangleCount();
@@ -1542,6 +1555,9 @@ private:
 	// changes of the records, so recomputing exactly those
 	// reproduces the full evaluation)
 	ScalableVector<u_int> candidateKeptList;
+	// The survivor scratch of the kept list maintenance (the scan+gather
+	// destination: it persists so the drain iterations only shrink it)
+	ScalableVector<u_int> keptListScratch;
 	size_t foundCandidateCount = 0;
 	ScalableVector<u_int> phaseTouchedTriangles;
 	// The evaluation cache activates only once the run is out of the
@@ -2196,6 +2212,52 @@ private:
 
 		size_t getCount() const {
 			return survivorCount;
+		}
+	};
+
+	// Gathers the entries of a source range that pass a predicate, at
+	// the running count of the scan (the compaction pattern: the
+	// writes are disjoint, and the ascending source order is
+	// preserved, so an ascending source comes out sorted). Used by the
+	// kept candidate list maintenance, whose two filters (the
+	// survivors and the re-entered entries) both run over ascending
+	// sources and both feed a merge
+	template<typename Predicate>
+	class PredicateGatherScan {
+		const ScalableVector<u_int> &source;
+		ScalableVector<u_int> &dst;
+		Predicate pred;
+		size_t count;
+
+	public:
+		PredicateGatherScan(const ScalableVector<u_int> &p_source,
+				ScalableVector<u_int> &p_dst, Predicate p_pred)
+			: source(p_source), dst(p_dst), pred(p_pred), count(0) { }
+		PredicateGatherScan(PredicateGatherScan &other, tbb::split)
+			: source(other.source), dst(other.dst), pred(other.pred), count(0) { }
+
+		void operator()(const tbb::blocked_range<size_t> &range, tbb::pre_scan_tag) {
+			for (size_t i = range.begin(); i < range.end(); ++i)
+				count += pred(i);
+		}
+
+		void operator()(const tbb::blocked_range<size_t> &range, tbb::final_scan_tag) {
+			for (size_t i = range.begin(); i < range.end(); ++i) {
+				if (pred(i))
+					dst[count++] = source[i];
+			}
+		}
+
+		void reverse_join(PredicateGatherScan &rhs) {
+			count += rhs.count;
+		}
+
+		void assign(PredicateGatherScan &rhs) {
+			count = rhs.count;
+		}
+
+		size_t getCount() const {
+			return count;
 		}
 	};
 
