@@ -459,7 +459,8 @@ public:
 			hasAlphas = false;
 
 		ResizeTriangles(triCount);
-		std::copy(srcTris.begin(), srcTris.end(), triangleV.begin());
+		for (size_t t = 0; t < triCount; ++t)
+			std::copy_n(&srcTris[3*t], 3, &triangleFlip[t].v[0]);
 	}
 
 	~Simplify() {
@@ -505,8 +506,8 @@ public:
 		tbb::parallel_for(tbb::blocked_range<size_t>(0, dst, 16384),
 				[&](const tbb::blocked_range<size_t> &r) {
 					for (size_t d = r.begin(); d < r.end(); ++d) {
-						const size_t s = size_t(compactionScratch.index[d]) * 3;
-						std::copy_n(&triangleV[s], 3, &flatTris[d * 3]);
+						const u_int s = compactionScratch.index[d];
+						std::copy_n(&triangleFlip[s].v[0], 3, &flatTris[d * 3]);
 					}
 				});
 
@@ -826,9 +827,9 @@ public:
 				float minError = std::numeric_limits<float>::infinity();
 				const size_t triOffset = 3*i;
 				for (size_t j = 0; j < 3; ++j) {
-					const u_int i0 = triangleV[triOffset+j];
+					const u_int i0 = triangleFlip[i].v[j];
 
-					const u_int i1 = triangleV[triOffset + TRI_NEXT[j]];
+					const u_int i1 = triangleFlip[i].v[TRI_NEXT[j]];
 
 					// Border check
 					if (preserveBorder) {
@@ -1460,7 +1461,7 @@ private:
 	// comparator only reads the errors), so each pass streams only what
 	// it uses instead of the whole interleaved record
 	// The triangle vertex indices in one flat array, three consecutive
-	// entries per triangle (v(j, tid) = triangleV[3 * tid + j]): every
+	// entries per triangle (v(j, tid) = triangleFlip[tid].v[j]): every
 	// consumer reads two or three corners of a triangle, so the
 	// interleaved chunk keeps them in the same cache line, and the flat
 	// array keeps the data pointer in a register through the hot loops
@@ -1472,8 +1473,36 @@ private:
 	// and every pass of the next iteration (the evaluation, the
 	// collect, the star walks) reads streams starting on line
 	// boundaries
-	CacheAlignedVector<u_int> triangleV;
-	CacheAlignedVector<Normal> triangleGeometryN;
+	// The aligned position record: a Point padded to the 16 byte
+	// SIMD width, so the array elements never straddle a cache line
+	// (four per 64 byte line exactly) and the block copies of the
+	// streaming passes move aligned 16 byte chunks
+	struct alignas(16) VPoint : Point {
+		using Point::Point;
+
+		VPoint &operator=(const Point &p) {
+			Point::operator=(p);
+			return *this;
+		}
+	};
+	CacheAlignedVector<VPoint> vertexP;
+	// The per triangle record of the flip test: the corner indices
+	// and the geometry normal travel together (the flip test reads
+	// both for every reference of its star walks, the hottest loop
+	// of the run), so one line carries what one reference needs.
+	// The record carries no heading alignment on purpose: measured,
+	// the line straddling of the drifting records (the 24 byte
+	// payload does not divide the 64 byte line) costs less than the
+	// padding of an aligned record - the alignment inflates the
+	// array by 33 to 167 percent, and the capacity pressure loses
+	// more than the saved second line fetches win (the 64 byte
+	// aligned record measured +1.4s on the plane, the 32 byte one
+	// measured flat, the packed one below)
+	struct TriangleFlipRecord {
+		u_int v[3];
+		Normal geometryN;
+	};
+	CacheAlignedVector<TriangleFlipRecord> triangleFlip;
 	// The three collapse errors of a triangle, interleaved (err(j, tid) =
 	// triangleErr[3*tid + j]): the compactions move them in one
 	// contiguous 12 byte block like the vertex indices, and the passes
@@ -1589,10 +1618,9 @@ private:
 	// across the compactions
 	struct CompactionScratch {
 		CacheAlignedVector<u_int> index;
-		CacheAlignedVector<u_int> v;
+		CacheAlignedVector<TriangleFlipRecord> flip;
 		CacheAlignedVector<float> err;
 		CacheAlignedVector<unsigned char> errChoice;
-		CacheAlignedVector<Normal> geometryN;
 		CacheAlignedVector<unsigned char> dirty;
 		CacheAlignedVector<u_int> candidateVertexIndex;
 		CacheAlignedVector<unsigned char> candidateValid;
@@ -1608,13 +1636,12 @@ private:
 	// The endpoints set by the previous sparse call (the clear list)
 	ScalableVector<u_int> candVertexSet;
 
-	size_t GetTriangleCount() const { return triangleV.size() / 3; }
+	size_t GetTriangleCount() const { return triangleFlip.size(); }
 
 	void ResizeTriangles(const size_t count) {
-		triangleV.resize(count * 3);
+		triangleFlip.resize(count);
 		triangleErr.resize(count * 3);
 		triangleErrChoice.resize(count);
-		triangleGeometryN.resize(count);
 		triangleDeleted.resize(count);
 		triangleDirty.resize(count);
 		candidateVertexIndex.resize(count);
@@ -1627,7 +1654,6 @@ private:
 	// quadrics, the reference walks read tstart/tcount, the candidate
 	// evaluation reads the border flags), so each pass streams only
 	// what it uses instead of the whole interleaved record
-	ScalableVector<Point> vertexP;
 	ScalableVector<Normal> vertexNorm;
 	ScalableVector<UV> vertexUV;
 	ScalableVector<Spectrum> vertexCol;
@@ -1852,10 +1878,9 @@ private:
 		// dynamic corner selection below forces it out of the
 		// registers) and every constant index use would become a
 		// reload
-		const size_t triOffset = 3*trinagleIndex;
-		const u_int triVertex0 = triangleV[triOffset+0];
-		const u_int triVertex1 = triangleV[triOffset+1];
-		const u_int triVertex2 = triangleV[triOffset+2];
+		const u_int triVertex0 = triangleFlip[trinagleIndex].v[0];
+		const u_int triVertex1 = triangleFlip[trinagleIndex].v[1];
+		const u_int triVertex2 = triangleFlip[trinagleIndex].v[2];
 
 		// The collapse endpoints, selected between the scalars (a
 		// register selection, no memory)
@@ -2004,9 +2029,8 @@ private:
 				return false;
 
 			const u_int s = ref.tvertex;
-			const size_t triOffset = 3*tid;
-			const u_int id1 = triangleV[triOffset + TRI_NEXT[s]];
-			const u_int id2 = triangleV[triOffset + TRI_PREV[s]];
+			const u_int id1 = triangleFlip[tid].v[TRI_NEXT[s]];
+			const u_int id2 = triangleFlip[tid].v[TRI_PREV[s]];
 
 			// Delete ?
 			if (id1 == i1 || id2 == i1) {
@@ -2040,7 +2064,7 @@ private:
 			// with squared quantities to avoid the square roots:
 			// (cross . N) / |cross| < .2f. A zero cross product (degenerate
 			// case) falls through like the NaN of the original test.
-			const float crossDotN = Dot(Normal(cross), triangleGeometryN[tid]);
+			const float crossDotN = Dot(Normal(cross), triangleFlip[tid].geometryN);
 			if (crossSq > 0.f && (crossDotN <= 0.f ||
 					crossDotN * crossDotN < .2f * .2f * crossSq))
 				return true;
@@ -2139,7 +2163,6 @@ private:
 		// below share the source and the compiler inlines it in both)
 		auto processReference = [&](const size_t k, const SimplifyRef &r) {
 			const size_t tid = r.tid;
-			const size_t triOffset = 3*tid;
 
 			if (triangleDeleted[tid])
 				return;
@@ -2154,13 +2177,13 @@ private:
 				// edge endpoints are redundant with the rewire branch
 				// below (the loops invalidate their stars) but the
 				// generation dedup makes them free after the first one
-				InvalidateVertexStar(triangleV[triOffset + 0], ctx);
-				InvalidateVertexStar(triangleV[triOffset + 1], ctx);
-				InvalidateVertexStar(triangleV[triOffset + 2], ctx);
+				InvalidateVertexStar(triangleFlip[tid].v[0], ctx);
+				InvalidateVertexStar(triangleFlip[tid].v[1], ctx);
+				InvalidateVertexStar(triangleFlip[tid].v[2], ctx);
 				return;
 			}
 
-			triangleV[triOffset + r.tvertex] = u_int(i0);
+			triangleFlip[tid].v[r.tvertex] = u_int(i0);
 			triangleDirty[tid] = true;
 			UpdateTriangleError(tid);
 
@@ -2172,8 +2195,8 @@ private:
 			candidateValid[tid] = 0;
 			if (evalCacheActive)
 				ctx.touchedTriangles.push_back(u_int(tid));
-			InvalidateVertexStar(triangleV[triOffset + TRI_NEXT[r.tvertex]], ctx);
-			InvalidateVertexStar(triangleV[triOffset + TRI_PREV[r.tvertex]], ctx);
+			InvalidateVertexStar(triangleFlip[tid].v[TRI_NEXT[r.tvertex]], ctx);
+			InvalidateVertexStar(triangleFlip[tid].v[TRI_PREV[r.tvertex]], ctx);
 
 			ctx.refsTail.push_back(r);
 		};
@@ -2348,8 +2371,8 @@ private:
 	// writes are disjoint (each used source vertex has its own
 	// destination slot), so the gather runs in parallel. The ascending
 	// source order is preserved
-	template<typename T>
-	void GatherUsedVertices(const ScalableVector<T> &field, std::span<T> dst) const {
+	template<typename F, typename D>
+	void GatherUsedVertices(const F &field, std::span<D> dst) const {
 		tbb::parallel_for(tbb::blocked_range<size_t>(0, GetVertexCount(), 16384),
 			[&](const tbb::blocked_range<size_t> &r) {
 				for (size_t i = r.begin(); i < r.end(); ++i) {
@@ -2407,13 +2430,11 @@ private:
 
 			// The three vertex indices and the three errors are
 			// contiguous blocks, one copy moves each
-			GatherTriangleField(triangleV, compactionScratch.v,
-					compactionScratch.index, dst, 3);
+			GatherTriangleField(triangleFlip, compactionScratch.flip,
+					compactionScratch.index, dst, 1);
 			GatherTriangleField(triangleErr, compactionScratch.err,
 					compactionScratch.index, dst, 3);
 			GatherTriangleField(triangleErrChoice, compactionScratch.errChoice,
-					compactionScratch.index, dst, 1);
-			GatherTriangleField(triangleGeometryN, compactionScratch.geometryN,
 					compactionScratch.index, dst, 1);
 			GatherTriangleField(triangleDirty, compactionScratch.dirty,
 					compactionScratch.index, dst, 1);
@@ -2471,10 +2492,9 @@ private:
 		// array zeroes the counts
 		ScalableVector<std::atomic<u_int>> vertexRefCounts(vertexCount);
 		tbb::parallel_for(size_t(0), liveTriangleCount, [&](size_t i) {
-			const size_t triOffset = 3*i;
-			vertexRefCounts[triangleV[triOffset+0]].fetch_add(1, std::memory_order_relaxed);
-			vertexRefCounts[triangleV[triOffset+1]].fetch_add(1, std::memory_order_relaxed);
-			vertexRefCounts[triangleV[triOffset+2]].fetch_add(1, std::memory_order_relaxed);
+			vertexRefCounts[triangleFlip[i].v[0]].fetch_add(1, std::memory_order_relaxed);
+			vertexRefCounts[triangleFlip[i].v[1]].fetch_add(1, std::memory_order_relaxed);
+			vertexRefCounts[triangleFlip[i].v[2]].fetch_add(1, std::memory_order_relaxed);
 		});
 
 		// Prefix sum of the reference counts and write back of the
@@ -2548,9 +2568,8 @@ private:
 		{
 			ScalableVector<std::atomic<u_int>> vertexRefCounters(vertexCount);
 			tbb::parallel_for(size_t(0), liveTriangleCount, [&](size_t i) {
-				const size_t triOffset = 3*i;
 				for (size_t j = 0; j < 3; ++j) {
-					const u_int v = triangleV[triOffset+j];
+					const u_int v = triangleFlip[i].v[j];
 					const u_int slot = vertexRefStarts[v] +
 						vertexRefCounters[v].fetch_add(1, std::memory_order_relaxed);
 
@@ -2629,13 +2648,12 @@ private:
 		if (iteration == 0) {
 			// The triangle geometry normals
 			tbb::parallel_for(size_t(0), liveTriangleCount, [&](size_t i) {
-				const size_t triOffset = 3*i;
-				const u_int iv0 = triangleV[triOffset+0];
-				const u_int iv1 = triangleV[triOffset+1];
-				const u_int iv2 = triangleV[triOffset+2];
+				const u_int iv0 = triangleFlip[i].v[0];
+				const u_int iv1 = triangleFlip[i].v[1];
+				const u_int iv2 = triangleFlip[i].v[2];
 
 				const Point &p0 = vertexP[iv0];
-				triangleGeometryN[i] = Normal(Normalize(Cross(vertexP[iv1] - p0, vertexP[iv2] - p0)));
+				triangleFlip[i].geometryN = Normal(Normalize(Cross(vertexP[iv1] - p0, vertexP[iv2] - p0)));
 			});
 
 			// The plane quadric accumulation, one vertex at a time
@@ -2646,11 +2664,11 @@ private:
 				const u_int tcount = vertexTcount[v];
 				for (size_t k = 0; k < tcount; ++k) {
 					const size_t tid = refTid[tstart + k];
-					const Normal &geometryN = triangleGeometryN[tid];
+					const Normal &geometryN = triangleFlip[tid].geometryN;
 
 					// It doesn't matter what vertex I use here because the
 					// triangle plane will pass for all 3
-					const Point &p0 = vertexP[triangleV[3*tid + 0]];
+					const Point &p0 = vertexP[triangleFlip[tid].v[0]];
 					const SymmetricMatrix sm(geometryN.x, geometryN.y, geometryN.z,
 							-Dot(Vector(geometryN), Vector(p0)));
 					q += sm;
@@ -2700,7 +2718,7 @@ private:
 
 							for (size_t k = 0; k < 3; ++k) {
 								size_t ofs = 0;
-								u_int id = triangleV[3*tid+k];
+								u_int id = triangleFlip[tid].v[k];
 
 								while (ofs < vcount.size()) {
 									if (vids[ofs] == id)
@@ -2871,9 +2889,9 @@ private:
 	void UpdateTriangleError(const size_t tid) {
 		const size_t triOffset = 3*tid;
 		unsigned char choice[3];
-		const u_int triVertex0 = triangleV[triOffset+0];
-		const u_int triVertex1 = triangleV[triOffset+1];
-		const u_int triVertex2 = triangleV[triOffset+2];
+		const u_int triVertex0 = triangleFlip[tid].v[0];
+		const u_int triVertex1 = triangleFlip[tid].v[1];
+		const u_int triVertex2 = triangleFlip[tid].v[2];
 		triangleErr[triOffset+0] = CalculateCollapseError(triVertex0, triVertex1, nullptr, &choice[0]);
 		triangleErr[triOffset+1] = CalculateCollapseError(triVertex1, triVertex2, nullptr, &choice[1]);
 		triangleErr[triOffset+2] = CalculateCollapseError(triVertex2, triVertex0, nullptr, &choice[2]);
@@ -2888,7 +2906,7 @@ private:
 			float sx[3], sy[3];
 			bool visible[3];
 			for (size_t j = 0; j < 3; ++j) {
-				visible[j] = GetScreenPosition(triangleV[triOffset+j], &sx[j], &sy[j]);
+				visible[j] = GetScreenPosition(triangleFlip[tid].v[j], &sx[j], &sy[j]);
 			}
 
 			for (size_t j = 0; j < 3; ++j) {
@@ -3096,9 +3114,9 @@ private:
 					if (triangleDeleted[t])
 						continue;
 
-					const u_int r0 = RegionOfVertex(triangleV[3*t + 0]);
-					const u_int r1 = RegionOfVertex(triangleV[3*t + 1]);
-					const u_int r2 = RegionOfVertex(triangleV[3*t + 2]);
+					const u_int r0 = RegionOfVertex(triangleFlip[t].v[0]);
+					const u_int r1 = RegionOfVertex(triangleFlip[t].v[1]);
+					const u_int r2 = RegionOfVertex(triangleFlip[t].v[2]);
 					if ((r0 != r1) || (r1 != r2))
 						return true;
 				}
@@ -3108,8 +3126,8 @@ private:
 			tbb::parallel_for(size_t(0), candidateCount, [&](size_t i) {
 				const size_t tid = candidates[i].tid;
 				const size_t tvertex = candidates[i].tvertex;
-				deferred[i] = seamAdjacentStar(triangleV[3*tid + tvertex]) ||
-						seamAdjacentStar(triangleV[3*tid + TRI_NEXT[tvertex]]);
+				deferred[i] = seamAdjacentStar(triangleFlip[tid].v[tvertex]) ||
+						seamAdjacentStar(triangleFlip[tid].v[TRI_NEXT[tvertex]]);
 			});
 		} else {
 			ScalableVector<u_int> regionOfVertex(GetVertexCount());
@@ -3131,13 +3149,13 @@ private:
 				if (triangleDeleted[t])
 					return;
 
-				const u_int r0 = regionOfVertex[triangleV[3*t + 0]];
-				const u_int r1 = regionOfVertex[triangleV[3*t + 1]];
-				const u_int r2 = regionOfVertex[triangleV[3*t + 2]];
+				const u_int r0 = regionOfVertex[triangleFlip[t].v[0]];
+				const u_int r1 = regionOfVertex[triangleFlip[t].v[1]];
+				const u_int r2 = regionOfVertex[triangleFlip[t].v[2]];
 				if ((r0 != r1) || (r1 != r2)) {
-					seamAdjacentVertex[triangleV[3*t + 0]] = 1;
-					seamAdjacentVertex[triangleV[3*t + 1]] = 1;
-					seamAdjacentVertex[triangleV[3*t + 2]] = 1;
+					seamAdjacentVertex[triangleFlip[t].v[0]] = 1;
+					seamAdjacentVertex[triangleFlip[t].v[1]] = 1;
+					seamAdjacentVertex[triangleFlip[t].v[2]] = 1;
 				}
 			});
 
@@ -3147,8 +3165,8 @@ private:
 			tbb::parallel_for(size_t(0), candidateCount, [&](size_t i) {
 				const size_t tid = candidates[i].tid;
 				const size_t tvertex = candidates[i].tvertex;
-				deferred[i] = seamAdjacentVertex[triangleV[3*tid + tvertex]] ||
-						seamAdjacentVertex[triangleV[3*tid + TRI_NEXT[tvertex]]];
+				deferred[i] = seamAdjacentVertex[triangleFlip[tid].v[tvertex]] ||
+						seamAdjacentVertex[triangleFlip[tid].v[TRI_NEXT[tvertex]]];
 			});
 		}
 
@@ -3313,8 +3331,8 @@ private:
 			ScalableVector<u_int> endpoints(candidateCount * 2);
 			tbb::parallel_for(size_t(0), candidateCount, [&](size_t i) {
 				const size_t triOffset = 3*candidates[i].tid;
-				endpoints[2*i] = triangleV[triOffset + candidates[i].tvertex];
-				endpoints[2*i + 1] = triangleV[triOffset + TRI_NEXT[candidates[i].tvertex]];
+				endpoints[2*i] = triangleFlip[candidates[i].tid].v[candidates[i].tvertex];
+				endpoints[2*i + 1] = triangleFlip[candidates[i].tid].v[TRI_NEXT[candidates[i].tvertex]];
 			});
 			tbb::parallel_sort(endpoints.begin(), endpoints.end());
 
@@ -3363,7 +3381,7 @@ private:
 
 							u_int link = NULL_INDEX;
 							for (size_t j = 0; j < 3; ++j) {
-								const u_int cv = candVertexOfVertexSparse[triangleV[3*t + j]];
+								const u_int cv = candVertexOfVertexSparse[triangleFlip[t].v[j]];
 								if (cv == NULL_INDEX)
 									continue;
 								if (link == NULL_INDEX)
@@ -3399,8 +3417,8 @@ private:
 
 			ScalableVector<unsigned char> vertexHasCandidate(vertexCount, 0);
 			tbb::parallel_for(size_t(0), candidateCount, [&](size_t i) {
-				vertexHasCandidate[triangleV[3*candidates[i].tid + candidates[i].tvertex]] = 1;
-				vertexHasCandidate[triangleV[3*candidates[i].tid + TRI_NEXT[candidates[i].tvertex]]] = 1;
+				vertexHasCandidate[triangleFlip[candidates[i].tid].v[candidates[i].tvertex]] = 1;
+				vertexHasCandidate[triangleFlip[candidates[i].tid].v[TRI_NEXT[candidates[i].tvertex]]] = 1;
 			});
 
 			// Candidate bearing vertices (a vertex carries a candidate iff
@@ -3493,7 +3511,7 @@ private:
 
 					u_int link = NULL_INDEX;
 					for (size_t j = 0; j < 3; ++j) {
-						const u_int cv = candVertexOfVertex[triangleV[3*t + j]];
+						const u_int cv = candVertexOfVertex[triangleFlip[t].v[j]];
 						if (cv == NULL_INDEX)
 							continue;
 						if (link == NULL_INDEX)
@@ -3535,7 +3553,7 @@ private:
 
 		ScalableVector<u_int> closureOfCandidate(candidateCount);
 		tbb::parallel_for(size_t(0), candidateCount, [&](size_t i) {
-			const u_int v = triangleV[3*candidates[i].tid + candidates[i].tvertex];
+			const u_int v = triangleFlip[candidates[i].tid].v[candidates[i].tvertex];
 			closureOfCandidate[i] = closureOfCandVertex[candidateVertexMap[v]];
 		});
 
