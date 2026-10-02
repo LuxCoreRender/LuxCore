@@ -826,10 +826,10 @@ public:
 				u_int minErrorIndex = NULL_INDEX;
 				float minError = std::numeric_limits<float>::infinity();
 				const size_t triOffset = 3*i;
+				const auto &triFlip = triangleFlip[i];
 				for (size_t j = 0; j < 3; ++j) {
-					const u_int i0 = triangleFlip[i].v[j];
-
-					const u_int i1 = triangleFlip[i].v[TRI_NEXT[j]];
+				const u_int i0 = triFlip.v[j];
+				const u_int i1 = triFlip.v[TRI_NEXT[j]];
 
 					// Border check
 					if (preserveBorder) {
@@ -1878,9 +1878,10 @@ private:
 		// dynamic corner selection below forces it out of the
 		// registers) and every constant index use would become a
 		// reload
-		const u_int triVertex0 = triangleFlip[trinagleIndex].v[0];
-		const u_int triVertex1 = triangleFlip[trinagleIndex].v[1];
-		const u_int triVertex2 = triangleFlip[trinagleIndex].v[2];
+		const auto& vFlip = triangleFlip[trinagleIndex].v;
+		const u_int triVertex0 = vFlip[0];
+		const u_int triVertex1 = vFlip[1];
+		const u_int triVertex2 = vFlip[2];
 
 		// The collapse endpoints, selected between the scalars (a
 		// register selection, no memory)
@@ -1904,15 +1905,13 @@ private:
 		// attempts of the Lucy run. The border check above guarantees
 		// equal border flags here, so the border branch of the record
 		// is not needed
+		const unsigned int choice =
+			(triangleErrChoice[trinagleIndex] >> (2*startVertexIndex)) & 3;
 		Point p;
-		{
-			const unsigned int choice =
-				(triangleErrChoice[trinagleIndex] >> (2*startVertexIndex)) & 3;
-			if (choice == 2)
-				p = (vertexP[i0] + vertexP[i1]) / 2;
-			else
-				p = (choice == 1) ? vertexP[i1] : vertexP[i0];
-		}
+		if (choice == 2)
+			p = (vertexP[i0] + vertexP[i1]) / 2;
+		else
+			p = (choice == 1) ? vertexP[i1] : vertexP[i0];
 
 		// true/false if the triangles referencing the vertex are deleted
 		deleted0.resize(vertexTcount[i0]);
@@ -1955,34 +1954,48 @@ private:
 		ctx.movedVertices.push_back(u_int(i0));
 		vertexQ[i0] += vertexQ[i1];
 
-		// Interpolate other vertex attributes
-		float b1, b2;
-		if (Triangle::GetBaryCoords(
-				triPoint0,
-				triPoint1,
-				triPoint2,
-				p, &b1, &b2)) {
-			const float b0 = 1.f - b1 - b2;
+		// Interpolate the other vertex attributes. The collapse point
+		// lies on the (i0, i1) edge of this triangle - an endpoint or
+		// the midpoint, per the choice above - so its barycentric
+		// coordinates against the triangle are the convex combination
+		// of the two edge corners only: the third corner carries no
+		// weight. The former general form (the cross products and the
+		// length ratios of a ray hit test) computed these weights
+		// through a long detour, from a float noise standpoint: the
+		// float midpoint sits about one ulp off the geometric edge
+		// line, so the computed weights carried a third corner term
+		// of the rounding scale, and the containment test of the hit
+		// form then failed at random on the sign of that noise -
+		// those welds fell back to the corner attributes of an
+		// arbitrary corner. The trivial weights are the exact
+		// coordinates of the point, and the interpolated attributes
+		// of the former noise driven fallback cases change with them
+		// (the collapse decisions, the positions and the face counts
+		// are untouched - verified against the reference oracles).
+		// Only the exactly degenerate triangle keeps a guard: the
+		// welds can align the three corners exactly, and the former
+		// NaN weights detected it and kept the corner attributes
+		const Vector crossTri = Cross(triPoint1 - triPoint0, triPoint2 - triPoint0);
+		const bool degenerate = (crossTri.x == 0.f) && (crossTri.y == 0.f) && (crossTri.z == 0.f);
 
-			if (hasNormals)
-				vertexNorm[i0] = Normalize(b0 * triNorm0 + b1 * triNorm1 + b2 * triNorm2);
-			if (hasUVs)
-				vertexUV[i0] = b0 * triUV0 + b1 * triUV1 + b2 * triUV2;
-			if (hasColors)
-				vertexCol[i0] = b0 * triCol0 + b1 * triCol1 + b2 * triCol2;
-			if (hasAlphas)
-				vertexAlpha[i0] = b0 * triAlpha0 + b1 * triAlpha1 + b2 * triAlpha2;
+		float b[3] = { 0.f, 0.f, 0.f };
+		if (!degenerate) {
+			b[startVertexIndex] = (choice == 0) ? 1.f : ((choice == 2) ? .5f : 0.f);
+			b[nextVertexIndex] = 1.f - b[startVertexIndex];
 		} else {
-			// Must be a malformed triangle
-			if (hasNormals)
-				vertexNorm[i0] = triNorm0;
-			if (hasUVs)
-				vertexUV[i0] = triUV0;
-			if (hasColors)
-				vertexCol[i0] = triCol0;
-			if (hasAlphas)
-				vertexAlpha[i0] = triAlpha0;
+			b[0] = 1.f;
+			b[1] = 0.f;
+			b[2] = 0.f;
 		}
+
+		if (hasNormals)
+			vertexNorm[i0] = Normalize(b[0] * triNorm0 + b[1] * triNorm1 + b[2] * triNorm2);
+		if (hasUVs)
+			vertexUV[i0] = b[0] * triUV0 + b[1] * triUV1 + b[2] * triUV2;
+		if (hasColors)
+			vertexCol[i0] = b[0] * triCol0 + b[1] * triCol1 + b[2] * triCol2;
+		if (hasAlphas)
+			vertexAlpha[i0] = b[0] * triAlpha0 + b[1] * triAlpha1 + b[2] * triAlpha2;
 
 		const size_t tstart = refTid.size() + ctx.refsTail.size();
 
@@ -2029,8 +2042,9 @@ private:
 				return false;
 
 			const u_int s = ref.tvertex;
-			const u_int id1 = triangleFlip[tid].v[TRI_NEXT[s]];
-			const u_int id2 = triangleFlip[tid].v[TRI_PREV[s]];
+			const auto &vFlip = triangleFlip[tid].v;
+			const u_int id1 = vFlip[TRI_NEXT[s]];
+			const u_int id2 = vFlip[TRI_PREV[s]];
 
 			// Delete ?
 			if (id1 == i1 || id2 == i1) {
@@ -2047,7 +2061,14 @@ private:
 			// test is derived from d1DotD2^2 and the cross product length
 			// (computed for the normal side test below) without the two
 			// extra dot products:
-			// (d1.d2)^2 (1 - c) > c |cross|^2 with c = .999f^2.
+			// (d1.d2)^2 (1 - c) > c |cross|^2 with c = .999f^2,
+			// folded to the constant ratio C = (1 - c) / c so the
+			// test costs one multiply less (the two sides of the
+			// comparison round through another sequence than the
+			// unfolded form, but the reference runs measured no
+			// borderline triangle judged differently: the exported
+			// mesh checksums and the decision traces are identical
+			// on all the stress scenes)
 			// (The rounding differs from the two dot products form, so
 			// borderline triangles can be judged differently)
 			const Vector d1 = vertexP[id1] - p;
@@ -2056,7 +2077,8 @@ private:
 			const Vector cross(Cross(d1, d2));
 			const float crossSq = Dot(cross, cross);
 			constexpr float narrowCosSq = .999f * .999f;
-			if (d1DotD2 * d1DotD2 * (1.f - narrowCosSq) > narrowCosSq * crossSq)
+			constexpr float C = (1.f - narrowCosSq) / narrowCosSq;
+			if (d1DotD2 * d1DotD2 * C - crossSq > 0.f)
 				return true;
 
 			// Check if the Normal is changing side. Same test as
@@ -2064,10 +2086,12 @@ private:
 			// with squared quantities to avoid the square roots:
 			// (cross . N) / |cross| < .2f. A zero cross product (degenerate
 			// case) falls through like the NaN of the original test.
-			const float crossDotN = Dot(Normal(cross), triangleFlip[tid].geometryN);
-			if (crossSq > 0.f && (crossDotN <= 0.f ||
-					crossDotN * crossDotN < .2f * .2f * crossSq))
-				return true;
+			if (crossSq > 0.f) {
+				const float crossDotN = Dot(Normal(cross), triangleFlip[tid].geometryN);
+				if (crossDotN <= 0.f) return true;
+				constexpr float D = .2f * .2f;
+				if (std::signbit(crossDotN * crossDotN - D * crossSq)) return true;
+			}
 
 			if constexpr (recordDeleted)
 				(*deleted)[k] = 0;
@@ -2177,13 +2201,15 @@ private:
 				// edge endpoints are redundant with the rewire branch
 				// below (the loops invalidate their stars) but the
 				// generation dedup makes them free after the first one
-				InvalidateVertexStar(triangleFlip[tid].v[0], ctx);
-				InvalidateVertexStar(triangleFlip[tid].v[1], ctx);
-				InvalidateVertexStar(triangleFlip[tid].v[2], ctx);
+				const auto &vFlipDel = triangleFlip[tid].v;
+				InvalidateVertexStar(vFlipDel[0], ctx);
+				InvalidateVertexStar(vFlipDel[1], ctx);
+				InvalidateVertexStar(vFlipDel[2], ctx);
 				return;
 			}
 
-			triangleFlip[tid].v[r.tvertex] = u_int(i0);
+			auto &vFlipRewire = triangleFlip[tid].v;
+			vFlipRewire[r.tvertex] = u_int(i0);
 			triangleDirty[tid] = true;
 			UpdateTriangleError(tid);
 
@@ -2195,8 +2221,8 @@ private:
 			candidateValid[tid] = 0;
 			if (evalCacheActive)
 				ctx.touchedTriangles.push_back(u_int(tid));
-			InvalidateVertexStar(triangleFlip[tid].v[TRI_NEXT[r.tvertex]], ctx);
-			InvalidateVertexStar(triangleFlip[tid].v[TRI_PREV[r.tvertex]], ctx);
+			InvalidateVertexStar(vFlipRewire[TRI_NEXT[r.tvertex]], ctx);
+			InvalidateVertexStar(vFlipRewire[TRI_PREV[r.tvertex]], ctx);
 
 			ctx.refsTail.push_back(r);
 		};
@@ -2492,9 +2518,10 @@ private:
 		// array zeroes the counts
 		ScalableVector<std::atomic<u_int>> vertexRefCounts(vertexCount);
 		tbb::parallel_for(size_t(0), liveTriangleCount, [&](size_t i) {
-			vertexRefCounts[triangleFlip[i].v[0]].fetch_add(1, std::memory_order_relaxed);
-			vertexRefCounts[triangleFlip[i].v[1]].fetch_add(1, std::memory_order_relaxed);
-			vertexRefCounts[triangleFlip[i].v[2]].fetch_add(1, std::memory_order_relaxed);
+			const auto &vFlip = triangleFlip[i].v;
+			vertexRefCounts[vFlip[0]].fetch_add(1, std::memory_order_relaxed);
+			vertexRefCounts[vFlip[1]].fetch_add(1, std::memory_order_relaxed);
+			vertexRefCounts[vFlip[2]].fetch_add(1, std::memory_order_relaxed);
 		});
 
 		// Prefix sum of the reference counts and write back of the
@@ -2648,12 +2675,13 @@ private:
 		if (iteration == 0) {
 			// The triangle geometry normals
 			tbb::parallel_for(size_t(0), liveTriangleCount, [&](size_t i) {
-				const u_int iv0 = triangleFlip[i].v[0];
-				const u_int iv1 = triangleFlip[i].v[1];
-				const u_int iv2 = triangleFlip[i].v[2];
+					auto &triFlip = triangleFlip[i];
+					const u_int iv0 = triFlip.v[0];
+					const u_int iv1 = triFlip.v[1];
+					const u_int iv2 = triFlip.v[2];
 
 				const Point &p0 = vertexP[iv0];
-				triangleFlip[i].geometryN = Normal(Normalize(Cross(vertexP[iv1] - p0, vertexP[iv2] - p0)));
+					triFlip.geometryN = Normal(Normalize(Cross(vertexP[iv1] - p0, vertexP[iv2] - p0)));
 			});
 
 			// The plane quadric accumulation, one vertex at a time
@@ -2664,11 +2692,12 @@ private:
 				const u_int tcount = vertexTcount[v];
 				for (size_t k = 0; k < tcount; ++k) {
 					const size_t tid = refTid[tstart + k];
-					const Normal &geometryN = triangleFlip[tid].geometryN;
+					const auto &triFlip = triangleFlip[tid];
+					const Normal &geometryN = triFlip.geometryN;
 
 					// It doesn't matter what vertex I use here because the
 					// triangle plane will pass for all 3
-					const Point &p0 = vertexP[triangleFlip[tid].v[0]];
+					const Point &p0 = vertexP[triFlip.v[0]];
 					const SymmetricMatrix sm(geometryN.x, geometryN.y, geometryN.z,
 							-Dot(Vector(geometryN), Vector(p0)));
 					q += sm;
@@ -2889,9 +2918,10 @@ private:
 	void UpdateTriangleError(const size_t tid) {
 		const size_t triOffset = 3*tid;
 		unsigned char choice[3];
-		const u_int triVertex0 = triangleFlip[tid].v[0];
-		const u_int triVertex1 = triangleFlip[tid].v[1];
-		const u_int triVertex2 = triangleFlip[tid].v[2];
+		const auto &vFlip = triangleFlip[tid].v;
+		const u_int triVertex0 = vFlip[0];
+		const u_int triVertex1 = vFlip[1];
+		const u_int triVertex2 = vFlip[2];
 		triangleErr[triOffset+0] = CalculateCollapseError(triVertex0, triVertex1, nullptr, &choice[0]);
 		triangleErr[triOffset+1] = CalculateCollapseError(triVertex1, triVertex2, nullptr, &choice[1]);
 		triangleErr[triOffset+2] = CalculateCollapseError(triVertex2, triVertex0, nullptr, &choice[2]);
@@ -3114,9 +3144,10 @@ private:
 					if (triangleDeleted[t])
 						continue;
 
-					const u_int r0 = RegionOfVertex(triangleFlip[t].v[0]);
-					const u_int r1 = RegionOfVertex(triangleFlip[t].v[1]);
-					const u_int r2 = RegionOfVertex(triangleFlip[t].v[2]);
+					const auto &vFlip = triangleFlip[t].v;
+					const u_int r0 = RegionOfVertex(vFlip[0]);
+					const u_int r1 = RegionOfVertex(vFlip[1]);
+					const u_int r2 = RegionOfVertex(vFlip[2]);
 					if ((r0 != r1) || (r1 != r2))
 						return true;
 				}
@@ -3126,8 +3157,9 @@ private:
 			tbb::parallel_for(size_t(0), candidateCount, [&](size_t i) {
 				const size_t tid = candidates[i].tid;
 				const size_t tvertex = candidates[i].tvertex;
-				deferred[i] = seamAdjacentStar(triangleFlip[tid].v[tvertex]) ||
-						seamAdjacentStar(triangleFlip[tid].v[TRI_NEXT[tvertex]]);
+				const auto &vFlip = triangleFlip[tid].v;
+				deferred[i] = seamAdjacentStar(vFlip[tvertex]) ||
+						seamAdjacentStar(vFlip[TRI_NEXT[tvertex]]);
 			});
 		} else {
 			ScalableVector<u_int> regionOfVertex(GetVertexCount());
@@ -3149,13 +3181,14 @@ private:
 				if (triangleDeleted[t])
 					return;
 
-				const u_int r0 = regionOfVertex[triangleFlip[t].v[0]];
-				const u_int r1 = regionOfVertex[triangleFlip[t].v[1]];
-				const u_int r2 = regionOfVertex[triangleFlip[t].v[2]];
+				const auto &vFlip = triangleFlip[t].v;
+				const u_int r0 = regionOfVertex[vFlip[0]];
+				const u_int r1 = regionOfVertex[vFlip[1]];
+				const u_int r2 = regionOfVertex[vFlip[2]];
 				if ((r0 != r1) || (r1 != r2)) {
-					seamAdjacentVertex[triangleFlip[t].v[0]] = 1;
-					seamAdjacentVertex[triangleFlip[t].v[1]] = 1;
-					seamAdjacentVertex[triangleFlip[t].v[2]] = 1;
+					seamAdjacentVertex[vFlip[0]] = 1;
+					seamAdjacentVertex[vFlip[1]] = 1;
+					seamAdjacentVertex[vFlip[2]] = 1;
 				}
 			});
 
@@ -3165,8 +3198,9 @@ private:
 			tbb::parallel_for(size_t(0), candidateCount, [&](size_t i) {
 				const size_t tid = candidates[i].tid;
 				const size_t tvertex = candidates[i].tvertex;
-				deferred[i] = seamAdjacentVertex[triangleFlip[tid].v[tvertex]] ||
-						seamAdjacentVertex[triangleFlip[tid].v[TRI_NEXT[tvertex]]];
+				const auto &vFlip = triangleFlip[tid].v;
+				deferred[i] = seamAdjacentVertex[vFlip[tvertex]] ||
+						seamAdjacentVertex[vFlip[TRI_NEXT[tvertex]]];
 			});
 		}
 
@@ -3331,8 +3365,9 @@ private:
 			ScalableVector<u_int> endpoints(candidateCount * 2);
 			tbb::parallel_for(size_t(0), candidateCount, [&](size_t i) {
 				const size_t triOffset = 3*candidates[i].tid;
-				endpoints[2*i] = triangleFlip[candidates[i].tid].v[candidates[i].tvertex];
-				endpoints[2*i + 1] = triangleFlip[candidates[i].tid].v[TRI_NEXT[candidates[i].tvertex]];
+				const auto &vFlip = triangleFlip[candidates[i].tid].v;
+				endpoints[2*i] = vFlip[candidates[i].tvertex];
+				endpoints[2*i + 1] = vFlip[TRI_NEXT[candidates[i].tvertex]];
 			});
 			tbb::parallel_sort(endpoints.begin(), endpoints.end());
 
@@ -3417,8 +3452,9 @@ private:
 
 			ScalableVector<unsigned char> vertexHasCandidate(vertexCount, 0);
 			tbb::parallel_for(size_t(0), candidateCount, [&](size_t i) {
-				vertexHasCandidate[triangleFlip[candidates[i].tid].v[candidates[i].tvertex]] = 1;
-				vertexHasCandidate[triangleFlip[candidates[i].tid].v[TRI_NEXT[candidates[i].tvertex]]] = 1;
+				const auto &vFlip = triangleFlip[candidates[i].tid].v;
+				vertexHasCandidate[vFlip[candidates[i].tvertex]] = 1;
+				vertexHasCandidate[vFlip[TRI_NEXT[candidates[i].tvertex]]] = 1;
 			});
 
 			// Candidate bearing vertices (a vertex carries a candidate iff
