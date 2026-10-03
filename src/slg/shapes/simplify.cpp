@@ -54,17 +54,51 @@
 //
 // (C) by Sven Forstmann in 2014
 //
-// License : MIT
-// http://opensource.org/licenses/MIT
+// The original code is distributed under the MIT License: the license
+// notice is at the end of this file. The LuxCoreRender modifications
+// of this file are distributed under the Apache License, Version 2.0
+// (the header of this file).
 //
 // https://github.com/sp4cerat/Fast-Quadric-Mesh-Simplification
 //
 // 5/2016: Chris Rorden created minimal version for OSX/Linux/Windows compile
+//
+// 10/2026: Howetuft implemented an original, parallel, lock-free, optimized
+//          version of the algorithm,
+//
+// Many new aspects are introduced:
+// - original parallel, lock free algorithm, heavily relying on new original
+//   concept of "closure" (connected components of conflict graph)
+// - closure imbalencement by grid partitioning
+// - extensive use of oneTBB (parallel for, scan, reduce and sort)
+// - memory optimization for parallel tasks: scalable allocations and
+//   cache alignment
+// - lock free CSR index construction (count, prefix, disjoint scatter)
+//   for the parallel passes
+// - use of SIMD
+// - float computation optimization
+// - efficient long tail handling (drain)
+// - error driven generations: the algorithm halts on error-level - not on
+//   count of decimated vertices nor loop limit. The rank cut of the first
+//   iteration fixes the threshold of the drain, and a stall above the target
+//   starts a recalibrated new generation that converges on the target
+// - incremental evaluation on the drain: only the triangles touched by
+//   the previous collapses are re-evaluated, and the kept candidates
+//   stay in a maintained list instead of a mesh rescan
+// - deferred compaction and reference rebuild, amortized behind a
+//   garbage threshold
+//
+// The result is more than an order of magnitude faster than the single
+// threaded original on the large stress meshes.
+//
+
+
+
 
 // NOTICE - the general principles of this implementation
 //
 // This is the multithreaded successor of the single threaded
-// implementation (simplify.cpp), restructured around one hard
+// implementation (simplify_old.cpp), restructured around one hard
 // constraint: it must take exactly the same decisions, with no lock
 // and no atomic in the algorithm itself (the internals of TBB
 // excepted), reproducible run after run.
@@ -396,11 +430,11 @@ using ScalableVector = std::vector<T, tbb::scalable_allocator<T>>;
 constexpr u_int TRI_NEXT[3] = { 1, 2, 0 };
 constexpr u_int TRI_PREV[3] = { 2, 0, 1 };
 
-// Target number of regions of the simplify2 boundary deferral (see
+// Target number of regions of the simplify boundary deferral (see
 // Simplify::DeferBoundaryCandidates): enough regions to balance the
 // closures across dozens of threads, at the cost of a thin deferred seam
 constexpr size_t regionTarget = 64;
-// Minimum number of kept candidates for the simplify2 boundary deferral:
+// Minimum number of kept candidates for the simplify boundary deferral:
 // below it, the end game is faster without the deferral machinery (and
 // behaves exactly like the serial algorithm)
 constexpr size_t minKeptCandidates = 1024;
@@ -514,9 +548,10 @@ public:
 		// Mark the used vertices: the corner ids are still the pre
 		// remap ones
 		tbb::parallel_for(size_t(0), dst, [&](size_t d) {
-			vertexTcount[flatTris[3*d + 0]] = 1;
-			vertexTcount[flatTris[3*d + 1]] = 1;
-			vertexTcount[flatTris[3*d + 2]] = 1;
+			auto triOffset = 3*d;
+			vertexTcount[flatTris[triOffset + 0]] = 1;
+			vertexTcount[flatTris[triOffset + 1]] = 1;
+			vertexTcount[flatTris[triOffset + 2]] = 1;
 		});
 
 		// The new index of each used vertex (the running count of the
@@ -607,11 +642,10 @@ public:
 		// of its first batch), so the run converges on the target
 		// from above - see the recalibration at the stall points
 		// below
-		float errorThreshold = 0.f;
-		// The kept count of the first iteration of the current
-		// generation: the reference of the mesh dependent drain halt
-		// below
-		size_t initialKeptCandidateCount = 0;
+		// The state carried across the iterations: the run totals,
+		// the threshold of the current generation and the
+		// bookkeeping of its recalibration (see GenerationState)
+		GenerationState gen;
 
 		// Init (the byte fill lowers to memset, like the assigns below)
 		triangleDeleted.assign(GetTriangleCount(), false);
@@ -627,7 +661,7 @@ public:
 		// leave the deleted triangles in the arrays (skipped by the
 		// passes through their flags), so the array count still
 		// carries them and the live estimate subtracts them
-		const size_t startTriangleCount = GetTriangleCount() - uncompactedDeletions;
+		gen.startTriangleCount = GetTriangleCount() - uncompactedDeletions;
 		deletedTriangles = 0;
 
 		// The rank cut of the first generation in relation with the
@@ -646,23 +680,8 @@ public:
 		// (below). Capped at 1 - keeping the whole first batch is the
 		// maximum aggression
 		constexpr float cascadeAmplification = 0.55f;
-		float generationCandidatePercent = std::min(1.f,
-				(targetTriangleCount / float(startTriangleCount)) / cascadeAmplification);
-		// The bookkeeping of the current generation, for the
-		// recalibration of the next one: the size of the first batch
-		// (the one that set the threshold) and the deletions of its
-		// drain
-		size_t generationFirstBatchCount = 0;
-		size_t generationDeletedTriangles = 0;
-		// The candidate pool of the last collect: the denominator of
-		// the recalibrated cut (the rank is a share of the pool of
-		// the generation's first iteration)
-		size_t lastCandidatePoolCount = 0;
-		// True while the current iteration is the first one of its
-		// generation: the iteration materializes every candidate and
-		// takes the rank cut that defines the new threshold
-		bool generationStart = true;
-		u_int totalDeletedTriangles = 0;
+		gen.generationCandidatePercent = std::min(1.f,
+				(targetTriangleCount / float(gen.startTriangleCount)) / cascadeAmplification);
 
 		// The recalibration of a stalled generation: the drain has
 		// ended (nothing below E collapses anymore) but the mesh is
@@ -673,7 +692,7 @@ public:
 		// instead: the target is reached, or the mesh has no collapse
 		// left at any error
 		const auto startNextGeneration = [&]() -> bool {
-			const size_t liveTriangleCount = startTriangleCount - totalDeletedTriangles;
+			const size_t liveTriangleCount = gen.startTriangleCount - gen.totalDeletedTriangles;
 			if (liveTriangleCount <= targetTriangleCount)
 				return false;
 
@@ -681,23 +700,23 @@ public:
 					float(liveTriangleCount) - targetTriangleCount;
 			// The measured cascade of the stalled generation: its
 			// deletions per candidate of its first batch
-			const float cascade = (generationFirstBatchCount > 0) ?
-					float(generationDeletedTriangles) / float(generationFirstBatchCount) : 0.f;
+			const float cascade = (gen.generationFirstBatchCount > 0) ?
+					float(gen.generationDeletedTriangles) / float(gen.generationFirstBatchCount) : 0.f;
 
 			if (cascade > 0.f) {
 				// The first batch of the next generation: the
 				// remaining work divided by the measured cascade,
 				// as a rank of the current pool
 				const float neededCandidateCount = remainingTriangleCount / cascade;
-				generationCandidatePercent = std::min(1.f,
-						neededCandidateCount / float(lastCandidatePoolCount));
-			} else if (generationCandidatePercent < 1.f) {
+				gen.generationCandidatePercent = std::min(1.f,
+						neededCandidateCount / float(gen.lastCandidatePoolCount));
+			} else if (gen.generationCandidatePercent < 1.f) {
 				// Nothing below the threshold collapsed: the mesh has
 				// no collapsible candidate left under E, and the size
 				// of the step above E is unknown. Double the rank - a
 				// bounded search for the collapsible band - until the
 				// whole pool is kept
-				generationCandidatePercent = std::min(1.f, generationCandidatePercent * 2.f);
+				gen.generationCandidatePercent = std::min(1.f, gen.generationCandidatePercent * 2.f);
 			} else {
 				// The whole pool was kept and nothing collapsed: the
 				// mesh topology can not reach the target
@@ -710,9 +729,9 @@ public:
 			SDL_LOG("Simplify: The drain ended above the target ("
 					<< liveTriangleCount << " triangles left, " << targetTriangleCount
 					<< " wanted) - new generation with a "
-					<< (boost::format("%.3g") % (generationCandidatePercent * 100.f))
+					<< (boost::format("%.3g") % (gen.generationCandidatePercent * 100.f))
 					<< "% rank cut");
-			generationStart = true;
+			gen.generationStart = true;
 			return true;
 		};
 
@@ -723,7 +742,7 @@ public:
 		// collapsed). The stall of a drain above the target starts
 		// the next generation instead of ending the run
 		for (size_t iteration = 0;; ++iteration) {
-			if (startTriangleCount - totalDeletedTriangles <= targetTriangleCount)
+			if (gen.startTriangleCount - gen.totalDeletedTriangles <= targetTriangleCount)
 				break;
 
 			// The first iteration of a generation materializes every
@@ -731,8 +750,8 @@ public:
 			// threshold. The flag is consumed here: the rest of the
 			// iteration runs as the first drain step of the new
 			// threshold
-			const bool generationFirstIteration = generationStart;
-			generationStart = false;
+			const bool generationFirstIteration = gen.generationStart;
+			gen.generationStart = false;
 			// A new generation raises the threshold: the kept list of
 			// the incremental collect was maintained against the old
 			// one (its survivors stay unconditionally), so it is
@@ -748,47 +767,14 @@ public:
 			// lower
 			++invalidationGen;
 
-			// Precompute the screen space projections (when enabled): the
-			// parallel phases below then never lazily write the caches.
-			// Closures can share (read only) vertices, so the lazy cache
-			// writes would otherwise race between closures on the shared
-			// entries (the vertex projections are deterministic, but the
-			// writes must not happen concurrently anyway). The vertices
-			// moved by the collapses still have their cache invalidated
-			// and lazily recomputed, but only within a single closure
-			// (their triangles all belong to the collapsing closure).
-			//
-			// It runs before the mesh update because the parallel edge
-			// error initialization of UpdateMesh reads the projections:
-			// nothing moves the vertices in between, so the values are
-			// the same
-			//
-			// The recompute touches exactly the vertices moved by the
-			// previous collapse phase: the welds are the only
-			// invalidations of the cache, and the merges of the phase
-			// recorded their list. The first iteration finds the list
-			// empty and computes the whole mesh, which starts fully
-			// invalid
-			{
-				ScalableVector<u_int> movedVertices;
-				movedVertices.swap(phaseMovedVertices);
-				if (edgeScreenSize > 0.f) {
-					if (!movedVertices.empty()) {
-						tbb::parallel_for(size_t(0), movedVertices.size(), [&](size_t i) {
-							float x, y;
-							GetScreenPosition(movedVertices[i], &x, &y);
-						});
-					} else {
-						tbb::parallel_for(size_t(0), GetVertexCount(), [this](size_t i) {
-							float x, y;
-							GetScreenPosition(i, &x, &y);
-						});
-					}
-				}
-			}
+			// The screen projection precompute the edge error
+			// initialization of the mesh update below reads (the
+			// method carries the full rationale)
+			PrecomputeScreenProjections();
 
 			double stepStartTime = WallClockTime();
 
+			// Step 1 of the notice: the mesh update
 			// Compact the deleted triangles (iteration > 0), rebuild the vertex
 			// references and clear the dirty flags (quadrics, edge errors and
 			// border flags are initialized once, at iteration 0)
@@ -797,478 +783,26 @@ public:
 				<< (boost::format("%.3f") % (WallClockTime() - stepStartTime)) << "secs"
 				<< (deferredUpdate ? " (deferred)" : ""));
 
-			// Build the edge candidate list and keep only the N% lowest error candidates
+			// Step 2 of the notice: the candidate evaluation and the
+			// collect
 			stepStartTime = WallClockTime();
-			// Lambda to compare the candidates by sort key: a single u64
-			// comparison, no error array access in the comparator and no
-			// tie-break branches (see CandidateKey)
-			const auto keyCompare = [](const CandidateKey &a, const CandidateKey &b) {
-				return a.key < b.key;
-			};
-
-			// An empty collapse context: the candidate building only reads
-			// the global baseline references (no tail)
-			CollapseContext candidateCtx;
-
-			// Evaluate the candidates in parallel: the loop is read-only
-			// (CalculateCollapseError and Flipped are const) and each triangle
-			// writes only its own slot. The candidate and its validity are
-			// the member records: they survive the iteration, cleared by the
-			// collapses on every changed input (see UpdateTriangles) and
-			// moved by the compaction with the triangle
-			// The evaluation of one triangle: reads only its inputs (the
-			// errors, the positions, the flip test stars) and writes only
-			// its own record. A triangle deleted by a deferred compaction
-			// is never evaluated (its record stays stale, the collection
-			// skips it through the same flag)
-			const auto evaluateTriangle = [this, &candidateCtx](const size_t i) {
-				// Look for the (valid) triangle vertex with the minimum error
-				u_int minErrorIndex = NULL_INDEX;
-				float minError = std::numeric_limits<float>::infinity();
-				const size_t triOffset = 3*i;
-				const auto &triFlip = triangleFlip[i];
-				for (size_t j = 0; j < 3; ++j) {
-				const u_int i0 = triFlip.v[j];
-				const u_int i1 = triFlip.v[TRI_NEXT[j]];
-
-					// Border check
-					if (preserveBorder) {
-						if (vertexBorder[i0] && vertexBorder[i1])
-							continue;
-					} else {
-						if (vertexBorder[i0] != vertexBorder[i1])
-							continue;
-					}
-
-					// A corner that can not improve the current minimum
-					// can never be recorded: this is the exact negation of
-					// the original update test (and not >=, so that a NaN
-					// error still never updates, exactly like before) and
-					// the point reconstruction and screening below have
-					// no side effect, so skipping them for a corner that
-					// can not win changes nothing
-					if (!(triangleErr[triOffset + j] < minError))
-						continue;
-
-					// Reconstruct the collapse point from the choice
-					// recorded with the error by the last error update:
-					// the update evaluated the same error on the same
-					// vertex state (nothing moves the vertices between
-					// the error updates and the candidate evaluation),
-					// so this is exactly the point the error evaluation
-					// would compute again
-					//
-					// The border edges are a special case: with
-					// preserveBorder, an edge with a single border
-					// endpoint (the border check above has rejected the
-					// border-border pairs) always collapses to the
-					// border endpoint, whatever the quadric says. The
-					// recorded choice is not used for them: at the
-					// initialization pass the border flags are not
-					// computed yet, so the recorded choices of the
-					// border edges come from the general minimum error
-					// path
-					Point p;
-					if (preserveBorder && (vertexBorder[i0] != vertexBorder[i1]))
-						p = vertexBorder[i0] ? vertexP[i0] : vertexP[i1];
-					else {
-						const unsigned int choice = (triangleErrChoice[i] >> (2*j)) & 3;
-						if (choice == 2)
-							p = (vertexP[i0] + vertexP[i1]) / 2;
-						else
-							p = (choice == 1) ? vertexP[i1] : vertexP[i0];
-					}
-
-					// Don't remove if flipped
-					if (Flipped(p, i0, i1, candidateCtx))
-						continue;
-					if (Flipped(p, i1, i0, candidateCtx))
-						continue;
-
-					minErrorIndex = j;
-					minError = triangleErr[triOffset + j];
-				}
-
-				candidateVertexIndex[i] = minErrorIndex;
-				if (evalCacheActive)
-					candidateValid[i] = 1;
-			};
-
-			// The touched triangles of the previous collapse phase (the
-			// welds are the only changes of the records, so recomputing
-			// exactly those reproduces the full evaluation). The list
-			// stays alive until the collect below: the kept candidate
-			// list maintenance needs it too
-			ScalableVector<u_int> touchedTriangles;
-			if (evalCacheActive) {
-				touchedTriangles.swap(phaseTouchedTriangles);
-
-				// Sorted and deduplicated (a triangle is recorded once
-				// per invalidated star). The list reaches hundreds of
-				// thousands of entries in the drain iterations, so the
-				// sort is parallel (the sorted result is the same: the
-				// values are unique after the dedup and their order is
-				// fully determined)
-				tbb::parallel_sort(touchedTriangles.begin(), touchedTriangles.end());
-				touchedTriangles.erase(
-						std::unique(touchedTriangles.begin(), touchedTriangles.end()),
-						touchedTriangles.end());
-
-				// The found count of the log carries the difference of
-				// the outcomes: the previous contribution of each
-				// touched triangle leaves it (its old record, whatever
-				// happened to the triangle since) and the new outcome
-				// re-enters it (a triangle deleted by the phase carries
-				// nothing). The two counts and the re-evaluation are one
-				// parallel reduce: the list is deduplicated, so every
-				// entry is processed by exactly one body and its
-				// before/after reads see exactly the values the serial
-				// passes saw (the sums are plain integer additions, so
-				// they are exact whatever the scheduling)
-				const auto evalCounts = tbb::parallel_reduce(
-						tbb::blocked_range<size_t>(0, touchedTriangles.size()),
-						std::pair<size_t, size_t>(0, 0),
-						[&](const tbb::blocked_range<size_t> &r,
-								std::pair<size_t, size_t> acc) {
-							for (size_t k = r.begin(); k < r.end(); ++k) {
-								const size_t i = touchedTriangles[k];
-
-								acc.first += (candidateVertexIndex[i] != NULL_INDEX);
-
-								if (triangleDeleted[i])
-									continue;
-
-								evaluateTriangle(i);
-
-								acc.second += (candidateVertexIndex[i] != NULL_INDEX);
-							}
-							return acc;
-						},
-						[](const std::pair<size_t, size_t> &a,
-								const std::pair<size_t, size_t> &b) {
-							return std::pair<size_t, size_t>(a.first + b.first,
-									a.second + b.second);
-						});
-				foundCandidateCount += size_t(std::ptrdiff_t(evalCounts.second) -
-						std::ptrdiff_t(evalCounts.first));
-			} else {
-				// The full mesh evaluation (the cache is inactive: the
-				// records are not read)
-				tbb::parallel_for(size_t(0), GetTriangleCount(),
-					[&](size_t i) {
-						if (triangleDeleted[i])
-							return;
-						evaluateTriangle(i);
-				});
-			}
-
-			// Collect the candidates with their sort key, chunked out of
-			// place: the chunks count their candidates, the offsets are
-			// the prefix of the counts and each chunk fills its own slot
-			// range (disjoint, no atomic). The chunk boundaries depend
-			// only on the triangle count, so the candidate order (the
-			// ascending triangle index) is the one of the serial gather
-			// and the outcome is deterministic
-			//
-			// From the second iteration on the pass folds the selection
-			// of the drain: the threshold lives in the error word of the
-			// packed key (the threshold word carries the largest possible
-			// tie key, so a key can only fall below it through the error
-			// word alone), the chunks filter on that word and only the
-			// kept candidates are ever materialized. The full candidate
-			// array and the out of place threshold compaction disappear,
-			// while the whole count still reaches the log through the
-			// chunk counters
-			ScalableVector<CandidateKey> candidateKeys;
-			size_t totalCandidateCount;
-			// Order-preserving transformation of the collapse error
-			// to an unsigned integer: the IEEE-754 bit pattern is
-			// monotonic for the non-negative floats and reversed for
-			// the negative ones, so the sign bit is set for the former
-			// and the whole word is flipped for the latter
-			const auto errorKeyOf = [this](const size_t i, const u_int tvertex) {
-				const std::uint32_t errorBits = std::bit_cast<std::uint32_t>(triangleErr[3*i + tvertex]);
-				return (errorBits & 0x80000000u) ?
-					~errorBits : (errorBits | 0x80000000u);
-			};
-			// The selection threshold of the drain in the error word
-			// domain: infinite at the first iteration of a generation
-			// (every error key is below it, so every candidate is
-			// materialized and the rank cut below does the selection)
-			std::uint32_t thresholdErrorKey = 0xffffffffu;
-			if (!generationFirstIteration) {
-				const std::uint32_t errorBits = std::bit_cast<std::uint32_t>(errorThreshold);
-				thresholdErrorKey = (errorBits & 0x80000000u) ?
-						~errorBits : (errorBits | 0x80000000u);
-			}
-
-			if (evalCacheActive) {
-				// The maintenance of the kept candidate list: the touched
-				// triangles leave the list (their outcomes may have changed)
-				// and re-enter when their new records carry a candidate at
-				// or below the threshold, the deleted triangles drop. Both
-				// filters run over ascending sources (the list is kept
-				// ascending, and the touched list is sorted and its filter
-				// preserves the order), so the two gathers come out sorted
-				// and the new list is their merge - a linear pass, no sort
-				// (the previous form concatenated and sorted the whole list,
-				// a serial O(n log n) sort of up to several million entries
-				// in every drain iteration, plus a serial filter walk and a
-				// serial key build). The result is the same sorted union, so
-				// the order the chunks of the full collect emit is preserved
-				// and the keys stay identical
-
-				const auto isSurvivor = [&](const size_t i) {
-					const u_int t = candidateKeptList[i];
-					return !triangleDeleted[t] &&
-							!std::binary_search(touchedTriangles.begin(), touchedTriangles.end(), t);
-				};
-				keptListScratch.resize(candidateKeptList.size());
-				PredicateGatherScan survivorScan(candidateKeptList, keptListScratch, isSurvivor);
-				tbb::parallel_scan(tbb::blocked_range<size_t>(0, candidateKeptList.size(), 16384),
-						survivorScan);
-				const size_t survivorCount = survivorScan.getCount();
-
-				const auto reenters = [&](const size_t i) {
-					const u_int t = touchedTriangles[i];
-					if (triangleDeleted[t])
-						return false;
-					const u_int tvertex = candidateVertexIndex[t];
-					if (tvertex == NULL_INDEX)
-						return false;
-					return errorKeyOf(t, tvertex) <= thresholdErrorKey;
-				};
-				ScalableVector<u_int> reentered(touchedTriangles.size());
-				PredicateGatherScan reentryScan(touchedTriangles, reentered, reenters);
-				tbb::parallel_scan(tbb::blocked_range<size_t>(0, touchedTriangles.size(), 16384),
-						reentryScan);
-				const size_t reenteredCount = reentryScan.getCount();
-
-				candidateKeptList.resize(survivorCount + reenteredCount);
-				std::merge(keptListScratch.begin(), keptListScratch.begin() + survivorCount,
-						reentered.begin(), reentered.begin() + reenteredCount,
-						candidateKeptList.begin());
-
-				// The collect: the keys of the kept list (the same key
-				// building as the chunks of the full collect), one disjoint
-				// write per entry (the resize pays a zero initialization
-				// pass, but the parallel writes win against the previous
-				// serial push backs)
-				candidateKeys.resize(candidateKeptList.size());
-				tbb::parallel_for(size_t(0), candidateKeptList.size(), [&](const size_t k) {
-					const u_int i = candidateKeptList[k];
-					const u_int tvertex = candidateVertexIndex[i];
-					const std::uint32_t errorKey = errorKeyOf(i, tvertex);
-					const std::uint32_t tieKey = u_int(i) * 0x9E3779B1u;
-					candidateKeys[k] = CandidateKey{
-							(static_cast<std::uint64_t>(errorKey) << 32) | tieKey,
-							SimplifyRef{ u_int(i), tvertex } };
-				});
-				totalCandidateCount = foundCandidateCount;
-			} else {
-					const size_t triangleCount = GetTriangleCount();
-					// The chunk size of the collect. The value is
-					// insensitive in the measured range (1024 to 65536,
-					// the interleaved A/B of the extremes is flat within
-					// noise), but it must stay a fixed compile time
-					// constant: the count and fill passes below share
-					// these boundaries (the fill writes the disjoint
-					// slot ranges precomputed from the per chunk counts),
-					// and the adaptive splitting of TBB is per invocation
-					// and run dependent, so it can not supply them. 2^14
-					// keeps the unit count in the thousands on the biggest
-					// meshes and in the tens on the smallest production
-					// ones
-					constexpr size_t chunkSize = 16384;
-					const size_t chunkCount = (triangleCount + chunkSize - 1) / chunkSize;
-
-					// Count per chunk: every candidate, and the ones the
-					// threshold keeps (the fill reads the same records, so
-					// the two passes see the same mesh)
-					ScalableVector<size_t> chunkAllCounts(chunkCount, 0);
-					ScalableVector<size_t> chunkKeptCounts(chunkCount, 0);
-					tbb::parallel_for(size_t(0), chunkCount, [&](size_t c) {
-						const size_t iBegin = c * chunkSize;
-						const size_t iEnd = std::min(iBegin + chunkSize, triangleCount);
-
-						size_t allCount = 0;
-						size_t keptCount = 0;
-						for (size_t i = iBegin; i < iEnd; ++i) {
-							// A triangle deleted by a deferred compaction carries
-							// no candidate: its stale record is skipped
-							if (triangleDeleted[i])
-								continue;
-
-							const u_int tvertex = candidateVertexIndex[i];
-							if (tvertex == NULL_INDEX)
-								continue;
-
-							++allCount;
-							if (errorKeyOf(i, tvertex) <= thresholdErrorKey)
-								++keptCount;
-						}
-						chunkAllCounts[c] = allCount;
-						chunkKeptCounts[c] = keptCount;
-					});
-
-					// The chunk offsets (the prefix of the kept counts) and
-					// the whole candidate count of the log, in one pass
-					ScalableVector<size_t> chunkKeptOffsets(chunkCount);
-					size_t keptTotal = 0;
-					totalCandidateCount = 0;
-					for (size_t c = 0; c < chunkCount; ++c) {
-						chunkKeptOffsets[c] = keptTotal;
-						keptTotal += chunkKeptCounts[c];
-						totalCandidateCount += chunkAllCounts[c];
-					}
-
-					// Fill the disjoint chunk slot ranges
-					candidateKeys.resize(keptTotal);
-					tbb::parallel_for(size_t(0), chunkCount, [&](size_t c) {
-						const size_t iBegin = c * chunkSize;
-						const size_t iEnd = std::min(iBegin + chunkSize, triangleCount);
-
-						size_t k = chunkKeptOffsets[c];
-						for (size_t i = iBegin; i < iEnd; ++i) {
-							if (triangleDeleted[i])
-								continue;
-
-							const u_int tvertex = candidateVertexIndex[i];
-							if (tvertex == NULL_INDEX)
-								continue;
-
-							const std::uint32_t errorKey = errorKeyOf(i, tvertex);
-							if (errorKey > thresholdErrorKey)
-								continue;
-
-							// The tie break of the equal errors: the triangle index
-							// scrambled by an odd multiplier (a bijection of
-							// [0, 2^32), the keys stay unique). The scramble spreads
-							// the candidates with exactly equal errors (the flat
-							// regions) uniformly over the mesh: with the raw index
-							// they were selected in storage order, and the selection
-							// boundary left storage aligned bands in the mesh
-							const std::uint32_t tieKey = u_int(i) * 0x9E3779B1u;
-
-							candidateKeys[k++] = CandidateKey{
-								(static_cast<std::uint64_t>(errorKey) << 32) | tieKey,
-								SimplifyRef{ u_int(i), tvertex } };
-						}
-					});
-			}
-			SDL_LOG("Simplify: Found " << totalCandidateCount << " edge candidates in "
+			ScalableVector<u_int> touchedTriangles = EvaluateCandidates();
+			CollectedCandidates collected = CollectCandidates(touchedTriangles,
+					generationFirstIteration, gen.errorThreshold);
+			SDL_LOG("Simplify: Found " << collected.poolCount << " edge candidates in "
 				<< (boost::format("%.3f") % (WallClockTime() - stepStartTime)) << "secs");
 			// The pool of the last collect: the denominator of the
 			// recalibrated rank cut at a stall
-			lastCandidatePoolCount = totalCandidateCount;
+			gen.lastCandidatePoolCount = collected.poolCount;
 
-			// The selection of the first iteration of a generation is
-			// a rank cut: the lowest N% candidates, whose error rank
-			// defines the threshold E of the whole drain. The
-			// following iterations select through the fold above
-			// instead (everything at or below E, the inclusive test:
-			// an error equal to the threshold is kept)
-			if (generationFirstIteration) {
-				const u_int nPercentCount = std::max(1u,
-						Floor2UInt(totalCandidateCount * generationCandidatePercent));
-				if (candidateKeys.size() > nPercentCount)
-					SelectLowestKeys(candidateKeys, nPercentCount);
-			}
-			// The kept count (the keys are released below, after the
-			// extraction of the references)
-			const size_t keptCandidateCount = candidateKeys.size();
-
-			// The production phase is over when the selected batch is
-			// a negligible share of the live mesh: the touched set is
-			// then small against the rescreening cost and the
-			// evaluation cache pays (below one percent on the stress
-			// scenes: the plane never crosses it, its drain reaches
-			// the target with the batch still at six percent, Lucy
-			// crosses it at iteration 16 and keeps it for the whole
-			// tail)
-			// (the generation's first iteration materializes below an
-			// infinite threshold: a list built there would carry the
-			// whole pool and its survivors would never leave it, so
-			// the activation waits for the drain of the new
-			// threshold)
-			if (!evalCacheActive && !generationFirstIteration &&
-					keptCandidateCount * 100 < startTriangleCount - totalDeletedTriangles) {
-				evalCacheActive = true;
-
-				// The kept candidate list of the incremental collect: the
-				// below threshold records of the current evaluation (one
-				// mesh pass, once - the list is maintained incrementally
-				// from here on, and the compactions remap it). The found
-				// count the list no longer sees starts from the full
-				// collect of this iteration. The list is rebuilt from
-				// scratch: a previous activation of an earlier
-				// generation may have left its records behind (the
-				// maintenance and the compaction remap rely on the
-				// ascending, duplicate free order the rebuild emits)
-				candidateKeptList.clear();
-				for (size_t i = 0; i < GetTriangleCount(); ++i) {
-					if (triangleDeleted[i])
-						continue;
-
-					const u_int tvertex = candidateVertexIndex[i];
-					if (tvertex == NULL_INDEX)
-						continue;
-
-					if (errorKeyOf(i, tvertex) > thresholdErrorKey)
-						continue;
-
-					candidateKeptList.push_back(u_int(i));
-				}
-				foundCandidateCount = totalCandidateCount;
-
-				SDL_LOG("Simplify: Evaluation cache active (the kept batch fell below one percent"
-						" of the live triangles)");
-			}
-			// The reference of the mesh dependent drain halt: the
-			// batch of the iteration that defined the error
-			// threshold of the current generation
-			if (generationFirstIteration)
-				initialKeptCandidateCount = keptCandidateCount;
-
-			// Sort the kept candidates by error (ascending)
-			tbb::parallel_sort(candidateKeys.begin(), candidateKeys.end(), keyCompare);
-
-			// E, the error at the rank cut of the generation's first
-			// iteration: the keys are sorted, so the last kept one
-			// carries it. The inverse of the order preserving
-			// transformation of the key building. The generation
-			// bookkeeping of the recalibration starts here too: the
-			// first batch that defined E, and the deletions of its
-			// drain reset
-			if (generationFirstIteration) {
-				generationFirstBatchCount = keptCandidateCount;
-				generationDeletedTriangles = 0;
-
-				if (!candidateKeys.empty()) {
-					const std::uint32_t thresholdErrorKey =
-							std::uint32_t(candidateKeys.back().key >> 32);
-					const std::uint32_t errorBits = (thresholdErrorKey & 0x80000000u) ?
-							(thresholdErrorKey & 0x7fffffffu) : ~thresholdErrorKey;
-					errorThreshold = std::bit_cast<float>(errorBits);
-				}
-			}
-
-			// Extract the sorted references for the downstream phases:
-			// the keys are only needed by the sort. The extraction stays
-			// serial: the parallel assign measured slower (the resize of
-			// the destination pays a zero initialization pass of the whole
-			// array, which costs about what the parallel copy saves)
-			ScalableVector<SimplifyRef> allCandidates;
-			allCandidates.reserve(candidateKeys.size());
-			for (const CandidateKey &candidateKey : candidateKeys)
-				allCandidates.push_back(candidateKey.ref);
-
-			// Release the sort keys (several hundreds of MB in the first
-			// iterations)
-			ScalableVector<CandidateKey>().swap(candidateKeys);
-
-			SDL_LOG("Simplify: Kept the " << allCandidates.size() << " lowest error candidates (error < "
-				<< (boost::format("%.3g") % errorThreshold) << ")");
+			// Step 3 of the notice: the selection. The first
+			// iteration of a generation takes the rank cut that
+			// defines the threshold E of its drain; the others keep
+			// everything at or below E (the fold of the collect). The
+			// evaluation cache activates here too, when the kept
+			// batch falls below one percent of the live mesh
+			SelectedCandidates selected = SelectCandidates(gen, std::move(collected),
+					generationFirstIteration);
 
 			// The mesh dependent halt of the drain: the kept batch has
 			// fallen below a negligible remnant of the one that
@@ -1281,11 +815,11 @@ public:
 			// small (one ten thousandth of it is below one candidate),
 			// so it only engages where the tail is expensive: the
 			// large meshes
-			if (keptCandidateCount > 0 &&
-					keptCandidateCount < initialKeptCandidateCount / 10000) {
-				SDL_LOG("Simplify: The kept batch (" << keptCandidateCount
+			if (selected.keptCount > 0 &&
+					selected.keptCount < gen.initialKeptCandidateCount / 10000) {
+				SDL_LOG("Simplify: The kept batch (" << selected.keptCount
 					<< ") has fallen below one ten thousandth of the initial one ("
-					<< initialKeptCandidateCount << ") - stopping the drain");
+					<< gen.initialKeptCandidateCount << ") - stopping the drain");
 				// The drain of the generation is over: the current
 				// batch is dropped (it would delete an insignificant
 				// share of the mesh) and the recalibration starts a
@@ -1295,6 +829,7 @@ public:
 				continue;
 			}
 
+			// Step 4 of the notice: the deferral
 			// Defer the region boundary candidates: the closures of
 			// the main batch are then confined to the regions (and no
 			// longer giant). The deferred strip is processed as a
@@ -1306,77 +841,24 @@ public:
 			// grid)
 			stepStartTime = WallClockTime();
 			ScalableVector<SimplifyRef> stripCandidates;
-			const size_t deferredCandidates = DeferBoundaryCandidates(allCandidates, stripCandidates);
+			const size_t deferredCandidates = DeferBoundaryCandidates(selected.candidates, stripCandidates);
 			if (deferredCandidates > 0)
 				SDL_LOG("Simplify: Deferred " << deferredCandidates << " region boundary candidates ("
-					<< allCandidates.size() << " kept) in "
+					<< selected.candidates.size() << " kept) in "
 					<< (boost::format("%.3f") % (WallClockTime() - stepStartTime)) << "secs");
 
-			// Compute candidate closures for parallel processing
-			stepStartTime = WallClockTime();
-			ScalableVector<ScalableVector<u_int>> candidateClosures = ComputeCandidateClosures(allCandidates);
-			size_t maxClosureSize = 0;
-			for (const auto& closure : candidateClosures)
-				maxClosureSize = std::max(maxClosureSize, closure.size());
-			SDL_LOG("Simplify: Computed " << candidateClosures.size() << " closures (max size "
-				<< maxClosureSize << ") in "
-				<< (boost::format("%.3f") % (WallClockTime() - stepStartTime)) << "secs");
-
-			// Process closures in parallel using TBB parallel_reduce
-			deletedTriangles = 0;
-			stepStartTime = WallClockTime();
-			ProcessClosuresParallel(candidateClosures, allCandidates);
-			SDL_LOG("Simplify: Processed " << candidateClosures.size() << " closures in parallel in "
-				<< (boost::format("%.3f") % (WallClockTime() - stepStartTime)) << "secs");
-
-			// The deletions of the main wave: the strip wave below
-			// adds the rest to the counter
-			const u_int mainWaveDeletedTriangles = deletedTriangles;
-
-			// Merge the appended star segments of the main wave
-			// before the strip: the strip candidates' closures are
-			// computed from walks over the reference base (see the
-			// sparse path of ComputeCandidateClosures), and the
-			// unmerged star segments of the main wave's bodies could
-			// not be walked
-			MergeRefAppends(mainWaveDeletedTriangles);
-
-			// Note: the closures have disjoint triangle sets, so the global
-			// triangle flags written by the collapses are race-free and need no
-			// merge; only the deleted triangles counter is merged (and the
-			// closure disjointness asserted) by applyResult.
-
-			// Second wave: the deferred seam candidates of the
-			// iteration, processed alone after the region confined
-			// closures. Their conflict graph reconnects through the
-			// seams (typically one big closure), so the wave is mostly
-			// serial - but the strip is thin and the closures of the
-			// main wave are complete, so nothing is shared with them.
-			// The strip coarsens with the mesh instead of freezing at
-			// its initial density
-			if (!stripCandidates.empty()) {
-				stepStartTime = WallClockTime();
-				ScalableVector<ScalableVector<u_int>> stripClosures =
-					ComputeCandidateClosures(stripCandidates);
-				ProcessClosuresParallel(stripClosures, stripCandidates);
-				SDL_LOG("Simplify: Processed the " << stripCandidates.size()
-					<< " deferred region boundary candidates in "
-					<< (boost::format("%.3f") % (WallClockTime() - stepStartTime)) << "secs");
-			}
-
-			const u_int iterationDeletedTriangles = deletedTriangles;
-			totalDeletedTriangles += iterationDeletedTriangles;
-
-			// Merge the appended star segments of the strip wave (the
-			// accounting is per wave: the main wave merge above
-			// already carried its own deletions)
-			MergeRefAppends(iterationDeletedTriangles - mainWaveDeletedTriangles);
-			SDL_LOG("Simplify iteration " << iteration << " (" << allCandidates.size() << " edge candidates, deleted "
-				<< iterationDeletedTriangles << "/" << totalDeletedTriangles << " of " << startTriangleCount
+			// Steps 5 and 6 of the notice: the closure computation of
+			// the candidates and the two collapse waves (the main
+			// batch first, then the deferred region boundary strip)
+			const u_int iterationDeletedTriangles =
+					CollapseCandidateWaves(selected.candidates, stripCandidates);
+			gen.totalDeletedTriangles += iterationDeletedTriangles;
+			SDL_LOG("Simplify iteration " << iteration << " (" << selected.candidates.size() << " edge candidates, deleted "
+				<< iterationDeletedTriangles << "/" << gen.totalDeletedTriangles << " of " << gen.startTriangleCount
 				<< " triangles) in " << (boost::format("%.3f") % (WallClockTime() - iterationStartTime)) << "secs");
 			// The deletions of the generation's drain so far, for the
 			// recalibration at a stall
-			generationDeletedTriangles += iterationDeletedTriangles;
+			gen.generationDeletedTriangles += iterationDeletedTriangles;
 			// An iteration that deletes nothing ends the drain of
 			// the generation: the threshold is fixed and the deferred
 			// candidates are processed in the same iteration, so the
@@ -1386,9 +868,9 @@ public:
 				// The homogeneous error certificate of the
 				// generation: no collapse cheaper than the threshold
 				// remains anywhere in the mesh
-				if (keptCandidateCount == 0)
+				if (selected.keptCount == 0)
 					SDL_LOG("Simplify: No collapse below the error threshold "
-						<< (boost::format("%.3g") % errorThreshold) << " remains (homogeneous error reached)");
+						<< (boost::format("%.3g") % gen.errorThreshold) << " remains (homogeneous error reached)");
 				// The recalibration starts a new generation above
 				// the target, or ends the run
 				if (!startNextGeneration())
@@ -1423,6 +905,702 @@ private:
 		std::uint64_t key;
 		SimplifyRef ref;
 	};
+
+	// The state carried across the iterations of Decimate: the
+	// run totals, the threshold of the current generation and
+	// the bookkeeping of its recalibration. The step methods
+	// read and write it, and the recalibration
+	// (startNextGeneration in Decimate) resets the bookkeeping
+	// at every new generation
+	struct GenerationState {
+		// The live triangle count of the run: the deferred
+		// compactions leave the deleted triangles in the arrays
+		// (skipped by the passes through their flags), so the
+		// array count still carries them and the live estimate
+		// subtracts them
+		size_t startTriangleCount;
+		// The deletions of the whole run, of all the generations
+		u_int totalDeletedTriangles = 0;
+		// E, the error threshold of the current generation: the
+		// rank cut of its first iteration sets it and its drain
+		// collapses everything below it
+		float errorThreshold = 0.f;
+		// The kept count of the first iteration of the current
+		// generation: the reference of the mesh dependent drain
+		// halt
+		size_t initialKeptCandidateCount = 0;
+		// The rank cut of the first iteration of the generation,
+		// recalibrated from the cascade the previous one measures
+		float generationCandidatePercent = 0.f;
+		// The bookkeeping of the current generation, for the
+		// recalibration of the next one: the size of the first
+		// batch (the one that set the threshold) and the
+		// deletions of its drain
+		size_t generationFirstBatchCount = 0;
+		size_t generationDeletedTriangles = 0;
+		// The candidate pool of the last collect: the denominator
+		// of the recalibrated cut (the rank is a share of the
+		// pool of the generation's first iteration)
+		size_t lastCandidatePoolCount = 0;
+		// True while the current iteration is the first one of
+		// its generation: the iteration materializes every
+		// candidate and takes the rank cut that defines the new
+		// threshold
+		bool generationStart = true;
+	};
+
+	// The collect output: the packed keys of the candidates below
+	// the drain threshold (the sort input of the selection), the
+	// whole candidate count of the log and of the rank cut, and
+	// the threshold in the error word domain (the activation of
+	// the evaluation cache filters the kept list rebuild on it)
+	struct CollectedCandidates {
+		ScalableVector<CandidateKey> keys;
+		size_t poolCount;
+		std::uint32_t thresholdErrorKey;
+	};
+	// The selection output: the selected references sorted by
+	// ascending error (the input of the deferral and of the
+	// closures) and the kept count (the reference of the drain
+	// halt)
+	struct SelectedCandidates {
+		ScalableVector<SimplifyRef> candidates;
+		size_t keptCount;
+	};
+
+	// Precompute the screen space projections (when enabled): the
+	// parallel phases of the iteration then never lazily write the caches.
+	// Closures can share (read only) vertices, so the lazy cache
+	// writes would otherwise race between closures on the shared
+	// entries (the vertex projections are deterministic, but the
+	// writes must not happen concurrently anyway). The vertices
+	// moved by the collapses still have their cache invalidated
+	// and lazily recomputed, but only within a single closure
+	// (their triangles all belong to the collapsing closure).
+	//
+	// It runs before the mesh update because the parallel edge
+	// error initialization of UpdateMesh reads the projections:
+	// nothing moves the vertices in between, so the values are
+	// the same
+	//
+	// The recompute touches exactly the vertices moved by the
+	// previous collapse phase: the welds are the only
+	// invalidations of the cache, and the merges of the phase
+	// recorded their list. The first iteration finds the list
+	// empty and computes the whole mesh, which starts fully
+	// invalid
+	void PrecomputeScreenProjections() {
+		ScalableVector<u_int> movedVertices;
+		movedVertices.swap(phaseMovedVertices);
+		if (edgeScreenSize > 0.f) {
+			if (!movedVertices.empty()) {
+				tbb::parallel_for(size_t(0), movedVertices.size(), [&](size_t i) {
+					float x, y;
+					GetScreenPosition(movedVertices[i], &x, &y);
+				});
+			} else {
+				tbb::parallel_for(size_t(0), GetVertexCount(), [this](size_t i) {
+					float x, y;
+					GetScreenPosition(i, &x, &y);
+				});
+			}
+		}
+	}
+
+	// Order-preserving transformation of the collapse error to
+	// an unsigned integer: the IEEE-754 bit pattern is monotonic
+	// for the non-negative floats and reversed for the negative
+	// ones, so the sign bit is set for the former and the whole
+	// word is flipped for the latter
+	std::uint32_t ErrorKeyOf(const size_t i, const u_int tvertex) const {
+		const std::uint32_t errorBits = std::bit_cast<std::uint32_t>(triangleErr[3*i + tvertex]);
+		return (errorBits & 0x80000000u) ?
+			~errorBits : (errorBits | 0x80000000u);
+	}
+
+	// The candidate evaluation of notice step 2 (parallel, one
+	// slot per triangle): every triangle records the corner with
+	// the lowest collapse error, screened by the border rules and
+	// the two flip tests. On the drain (the evaluation cache
+	// active) the pass is incremental: only the triangles touched
+	// by the previous collapse phase are re-evaluated, and the
+	// found count of the log carries the difference of their
+	// outcomes. Returns the deduplicated touched list: the kept
+	// candidate list maintenance of the collect reads it too
+	ScalableVector<u_int> EvaluateCandidates() {
+		// An empty collapse context: the candidate building only reads
+		// the global baseline references (no tail)
+		CollapseContext candidateCtx;
+
+		// Evaluate the candidates in parallel: the loop is read-only
+		// (CalculateCollapseError and Flipped are const) and each triangle
+		// writes only its own slot. The candidate and its validity are
+		// the member records: they survive the iteration, cleared by the
+		// collapses on every changed input (see UpdateTriangles) and
+		// moved by the compaction with the triangle
+		// The evaluation of one triangle: reads only its inputs (the
+		// errors, the positions, the flip test stars) and writes only
+		// its own record. A triangle deleted by a deferred compaction
+		// is never evaluated (its record stays stale, the collection
+		// skips it through the same flag)
+		const auto evaluateTriangle = [this, &candidateCtx](const size_t i) {
+			// Look for the (valid) triangle vertex with the minimum error
+			u_int minErrorIndex = NULL_INDEX;
+			float minError = std::numeric_limits<float>::infinity();
+			const size_t triOffset = 3*i;
+			const auto &triFlip = triangleFlip[i];
+			for (size_t j = 0; j < 3; ++j) {
+			const u_int i0 = triFlip.v[j];
+			const u_int i1 = triFlip.v[TRI_NEXT[j]];
+
+				// Border check
+				if (preserveBorder) {
+					if (vertexBorder[i0] && vertexBorder[i1])
+						continue;
+				} else {
+					if (vertexBorder[i0] != vertexBorder[i1])
+						continue;
+				}
+
+				// A corner that can not improve the current minimum
+				// can never be recorded: this is the exact negation of
+				// the original update test (and not >=, so that a NaN
+				// error still never updates, exactly like before) and
+				// the point reconstruction and screening below have
+				// no side effect, so skipping them for a corner that
+				// can not win changes nothing
+				if (!(triangleErr[triOffset + j] < minError))
+					continue;
+
+				// Reconstruct the collapse point from the choice
+				// recorded with the error by the last error update:
+				// the update evaluated the same error on the same
+				// vertex state (nothing moves the vertices between
+				// the error updates and the candidate evaluation),
+				// so this is exactly the point the error evaluation
+				// would compute again
+				//
+				// The border edges are a special case: with
+				// preserveBorder, an edge with a single border
+				// endpoint (the border check above has rejected the
+				// border-border pairs) always collapses to the
+				// border endpoint, whatever the quadric says. The
+				// recorded choice is not used for them: at the
+				// initialization pass the border flags are not
+				// computed yet, so the recorded choices of the
+				// border edges come from the general minimum error
+				// path
+				Point p;
+				if (preserveBorder && (vertexBorder[i0] != vertexBorder[i1]))
+					p = vertexBorder[i0] ? vertexP[i0] : vertexP[i1];
+				else {
+					const unsigned int choice = (triangleErrChoice[i] >> (2*j)) & 3;
+					if (choice == 2)
+						p = (vertexP[i0] + vertexP[i1]) / 2;
+					else
+						p = (choice == 1) ? vertexP[i1] : vertexP[i0];
+				}
+
+				// Don't remove if flipped
+				if (Flipped(p, i0, i1, candidateCtx))
+					continue;
+				if (Flipped(p, i1, i0, candidateCtx))
+					continue;
+
+				minErrorIndex = j;
+				minError = triangleErr[triOffset + j];
+			}
+
+			candidateVertexIndex[i] = minErrorIndex;
+			if (evalCacheActive)
+				candidateValid[i] = 1;
+		};
+
+		// The touched triangles of the previous collapse phase (the
+		// welds are the only changes of the records, so recomputing
+		// exactly those reproduces the full evaluation). The list is
+		// returned to the caller: the kept candidate list
+		// maintenance of the collect reads it
+		ScalableVector<u_int> touchedTriangles;
+		if (evalCacheActive) {
+			touchedTriangles.swap(phaseTouchedTriangles);
+
+			// Sorted and deduplicated (a triangle is recorded once
+			// per invalidated star). The star of a vertex is the fan
+			// of the triangles sharing it, what the vertex ->
+			// triangles references list holds: the star of v below
+			// is {t0, t1, t2, t3}
+			//
+			//         a--------b
+			//         | \ t0 / |
+			//         |  \ /   |
+			//         | t3 v t1 |
+			//         |  / \   |
+			//         | / t2 \ |
+			//         d--------c
+			//
+			// A triangle belongs to the three stars of its corners
+			// (t0 above belongs to the stars of a, b and v), so a
+			// collapse phase records it once per invalidated star
+			// and the dedup below drops the repeats. The list
+			// reaches hundreds of thousands of entries in the
+			// drain iterations, so the sort is parallel (the
+			// sorted result is the same: the values are unique
+			// after the dedup and their order is fully determined)
+			tbb::parallel_sort(touchedTriangles.begin(), touchedTriangles.end());
+			touchedTriangles.erase(
+					std::unique(touchedTriangles.begin(), touchedTriangles.end()),
+					touchedTriangles.end());
+
+			// The found count of the log carries the difference of
+			// the outcomes: the previous contribution of each
+			// touched triangle leaves it (its old record, whatever
+			// happened to the triangle since) and the new outcome
+			// re-enters it (a triangle deleted by the phase carries
+			// nothing). The two counts and the re-evaluation are one
+			// parallel reduce: the list is deduplicated, so every
+			// entry is processed by exactly one body and its
+			// before/after reads see exactly the values the serial
+			// passes saw (the sums are plain integer additions, so
+			// they are exact whatever the scheduling)
+			const auto evalCounts = tbb::parallel_reduce(
+					tbb::blocked_range<size_t>(0, touchedTriangles.size()),
+					std::pair<size_t, size_t>(0, 0),
+					[&](const tbb::blocked_range<size_t> &r,
+							std::pair<size_t, size_t> acc) {
+						for (size_t k = r.begin(); k < r.end(); ++k) {
+							const size_t i = touchedTriangles[k];
+
+							acc.first += (candidateVertexIndex[i] != NULL_INDEX);
+
+							if (triangleDeleted[i])
+								continue;
+
+							evaluateTriangle(i);
+
+							acc.second += (candidateVertexIndex[i] != NULL_INDEX);
+						}
+						return acc;
+					},
+					[](const std::pair<size_t, size_t> &a,
+							const std::pair<size_t, size_t> &b) {
+						return std::pair<size_t, size_t>(a.first + b.first,
+								a.second + b.second);
+					});
+			foundCandidateCount += size_t(std::ptrdiff_t(evalCounts.second) -
+					std::ptrdiff_t(evalCounts.first));
+		} else {
+			// The full mesh evaluation (the cache is inactive: the
+			// records are not read)
+			tbb::parallel_for(size_t(0), GetTriangleCount(),
+				[&](size_t i) {
+					if (triangleDeleted[i])
+						return;
+					evaluateTriangle(i);
+			});
+		}
+		return touchedTriangles;
+	}
+
+	// The candidate collect of notice step 2: the candidates
+	// below the drain threshold are packed with their sort key,
+	// chunked out of place. On the drain the collect maintains
+	// the kept candidate list (the survivors and the re-entries,
+	// merged linearly) and reads it instead of scanning the mesh.
+	// Returns the keys, the whole candidate count of the log and
+	// of the recalibrated rank cut, and the threshold in the
+	// error word domain (the activation of the evaluation cache
+	// filters the kept list rebuild on it)
+	CollectedCandidates CollectCandidates(const ScalableVector<u_int> &touchedTriangles,
+			const bool generationFirstIteration, const float errorThreshold) {
+		// Collect the candidates with their sort key, chunked out of
+		// place: the chunks count their candidates, the offsets are
+		// the prefix of the counts and each chunk fills its own slot
+		// range (disjoint, no atomic). The chunk boundaries depend
+		// only on the triangle count, so the candidate order (the
+		// ascending triangle index) is the one of the serial gather
+		// and the outcome is deterministic
+		//
+		// From the second iteration on the pass folds the selection
+		// of the drain: the threshold lives in the error word of the
+		// packed key (the threshold word carries the largest possible
+		// tie key, so a key can only fall below it through the error
+		// word alone), the chunks filter on that word and only the
+		// kept candidates are ever materialized. The full candidate
+		// array and the out of place threshold compaction disappear,
+		// while the whole count still reaches the log through the
+		// chunk counters
+		ScalableVector<CandidateKey> candidateKeys;
+		size_t totalCandidateCount;
+		// The selection threshold of the drain in the error word
+		// domain: infinite at the first iteration of a generation
+		// (every error key is below it, so every candidate is
+		// materialized and the rank cut of SelectCandidates does
+		// the selection)
+		std::uint32_t thresholdErrorKey = 0xffffffffu;
+		if (!generationFirstIteration) {
+			const std::uint32_t errorBits = std::bit_cast<std::uint32_t>(errorThreshold);
+			thresholdErrorKey = (errorBits & 0x80000000u) ?
+					~errorBits : (errorBits | 0x80000000u);
+		}
+
+		if (evalCacheActive) {
+			// The maintenance of the kept candidate list: the touched
+			// triangles leave the list (their outcomes may have changed)
+			// and re-enter when their new records carry a candidate at
+			// or below the threshold, the deleted triangles drop. Both
+			// filters run over ascending sources (the list is kept
+			// ascending, and the touched list is sorted and its filter
+			// preserves the order), so the two gathers come out sorted
+			// and the new list is their merge - a linear pass, no sort
+			// (the previous form concatenated and sorted the whole list,
+			// a serial O(n log n) sort of up to several million entries
+			// in every drain iteration, plus a serial filter walk and a
+			// serial key build). The result is the same sorted union, so
+			// the order the chunks of the full collect emit is preserved
+			// and the keys stay identical
+
+			const auto isSurvivor = [&](const size_t i) {
+				const u_int t = candidateKeptList[i];
+				return !triangleDeleted[t] &&
+						!std::binary_search(touchedTriangles.begin(), touchedTriangles.end(), t);
+			};
+			keptListScratch.resize(candidateKeptList.size());
+			PredicateGatherScan survivorScan(candidateKeptList, keptListScratch, isSurvivor);
+			tbb::parallel_scan(tbb::blocked_range<size_t>(0, candidateKeptList.size(), 16384),
+					survivorScan);
+			const size_t survivorCount = survivorScan.getCount();
+
+			const auto reenters = [&](const size_t i) {
+				const u_int t = touchedTriangles[i];
+				if (triangleDeleted[t])
+					return false;
+				const u_int tvertex = candidateVertexIndex[t];
+				if (tvertex == NULL_INDEX)
+					return false;
+				return ErrorKeyOf(t, tvertex) <= thresholdErrorKey;
+			};
+			ScalableVector<u_int> reentered(touchedTriangles.size());
+			PredicateGatherScan reentryScan(touchedTriangles, reentered, reenters);
+			tbb::parallel_scan(tbb::blocked_range<size_t>(0, touchedTriangles.size(), 16384),
+					reentryScan);
+			const size_t reenteredCount = reentryScan.getCount();
+
+			candidateKeptList.resize(survivorCount + reenteredCount);
+			std::merge(keptListScratch.begin(), keptListScratch.begin() + survivorCount,
+					reentered.begin(), reentered.begin() + reenteredCount,
+					candidateKeptList.begin());
+
+			// The collect: the keys of the kept list (the same key
+			// building as the chunks of the full collect), one disjoint
+			// write per entry (the resize pays a zero initialization
+			// pass, but the parallel writes win against the previous
+			// serial push backs)
+			candidateKeys.resize(candidateKeptList.size());
+			tbb::parallel_for(size_t(0), candidateKeptList.size(), [&](const size_t k) {
+				const u_int i = candidateKeptList[k];
+				const u_int tvertex = candidateVertexIndex[i];
+				const std::uint32_t errorKey = ErrorKeyOf(i, tvertex);
+				const std::uint32_t tieKey = u_int(i) * 0x9E3779B1u;
+				candidateKeys[k] = CandidateKey{
+						(static_cast<std::uint64_t>(errorKey) << 32) | tieKey,
+						SimplifyRef{ u_int(i), tvertex } };
+			});
+			totalCandidateCount = foundCandidateCount;
+		} else {
+				const size_t triangleCount = GetTriangleCount();
+				// The chunk size of the collect. The value is
+				// insensitive in the measured range (1024 to 65536,
+				// the interleaved A/B of the extremes is flat within
+				// noise), but it must stay a fixed compile time
+				// constant: the count and fill passes below share
+				// these boundaries (the fill writes the disjoint
+				// slot ranges precomputed from the per chunk counts),
+				// and the adaptive splitting of TBB is per invocation
+				// and run dependent, so it can not supply them. 2^14
+				// keeps the unit count in the thousands on the biggest
+				// meshes and in the tens on the smallest production
+				// ones
+				constexpr size_t chunkSize = 16384;
+				const size_t chunkCount = (triangleCount + chunkSize - 1) / chunkSize;
+
+				// Count per chunk: every candidate, and the ones the
+				// threshold keeps (the fill reads the same records, so
+				// the two passes see the same mesh)
+				ScalableVector<size_t> chunkAllCounts(chunkCount, 0);
+				ScalableVector<size_t> chunkKeptCounts(chunkCount, 0);
+				tbb::parallel_for(size_t(0), chunkCount, [&](size_t c) {
+					const size_t iBegin = c * chunkSize;
+					const size_t iEnd = std::min(iBegin + chunkSize, triangleCount);
+
+					size_t allCount = 0;
+					size_t keptCount = 0;
+					for (size_t i = iBegin; i < iEnd; ++i) {
+						// A triangle deleted by a deferred compaction carries
+						// no candidate: its stale record is skipped
+						if (triangleDeleted[i])
+							continue;
+
+						const u_int tvertex = candidateVertexIndex[i];
+						if (tvertex == NULL_INDEX)
+							continue;
+
+						++allCount;
+						if (ErrorKeyOf(i, tvertex) <= thresholdErrorKey)
+							++keptCount;
+					}
+					chunkAllCounts[c] = allCount;
+					chunkKeptCounts[c] = keptCount;
+				});
+
+				// The chunk offsets (the prefix of the kept counts) and
+				// the whole candidate count of the log, in one pass
+				ScalableVector<size_t> chunkKeptOffsets(chunkCount);
+				size_t keptTotal = 0;
+				totalCandidateCount = 0;
+				for (size_t c = 0; c < chunkCount; ++c) {
+					chunkKeptOffsets[c] = keptTotal;
+					keptTotal += chunkKeptCounts[c];
+					totalCandidateCount += chunkAllCounts[c];
+				}
+
+				// Fill the disjoint chunk slot ranges
+				candidateKeys.resize(keptTotal);
+				tbb::parallel_for(size_t(0), chunkCount, [&](size_t c) {
+					const size_t iBegin = c * chunkSize;
+					const size_t iEnd = std::min(iBegin + chunkSize, triangleCount);
+
+					size_t k = chunkKeptOffsets[c];
+					for (size_t i = iBegin; i < iEnd; ++i) {
+						if (triangleDeleted[i])
+							continue;
+
+						const u_int tvertex = candidateVertexIndex[i];
+						if (tvertex == NULL_INDEX)
+							continue;
+
+						const std::uint32_t errorKey = ErrorKeyOf(i, tvertex);
+						if (errorKey > thresholdErrorKey)
+							continue;
+
+						// The tie break of the equal errors: the triangle index
+						// scrambled by an odd multiplier (a bijection of
+						// [0, 2^32), the keys stay unique). The scramble spreads
+						// the candidates with exactly equal errors (the flat
+						// regions) uniformly over the mesh: with the raw index
+						// they were selected in storage order, and the selection
+						// boundary left storage aligned bands in the mesh
+						const std::uint32_t tieKey = u_int(i) * 0x9E3779B1u;
+
+						candidateKeys[k++] = CandidateKey{
+							(static_cast<std::uint64_t>(errorKey) << 32) | tieKey,
+							SimplifyRef{ u_int(i), tvertex } };
+					}
+				});
+		}
+		return { std::move(candidateKeys), totalCandidateCount, thresholdErrorKey };
+	}
+	// The selection of notice step 3: every candidate is keyed
+	// by its error (an order preserving transformation of the
+	// float bits) and its triangle index. The first iteration of
+	// a generation takes the rank cut whose last key defines the
+	// threshold E of the drain; the following iterations receive
+	// only the below threshold candidates from the collect. The
+	// evaluation cache activates here, when the kept batch falls
+	// below one percent of the live mesh (the rebuild of the kept
+	// list is the one time it scans the whole mesh). Returns the
+	// selected references sorted by ascending error and the kept
+	// count (the reference of the drain halt)
+	SelectedCandidates SelectCandidates(GenerationState &gen,
+			CollectedCandidates collected, const bool generationFirstIteration) {
+		// Lambda to compare the candidates by sort key: a single u64
+		// comparison, no error array access in the comparator and no
+		// tie-break branches (see CandidateKey)
+		const auto keyCompare = [](const CandidateKey &a, const CandidateKey &b) {
+			return a.key < b.key;
+		};
+
+		// The selection of the first iteration of a generation is
+		// a rank cut: the lowest N% candidates, whose error rank
+		// defines the threshold E of the whole drain. The
+		// following iterations select through the fold of the
+		// collect instead (everything at or below E, the inclusive test:
+		// an error equal to the threshold is kept)
+		if (generationFirstIteration) {
+			const u_int nPercentCount = std::max(1u,
+					Floor2UInt(collected.poolCount * gen.generationCandidatePercent));
+			if (collected.keys.size() > nPercentCount)
+				SelectLowestKeys(collected.keys, nPercentCount);
+		}
+		// The kept count (the keys are released below, after the
+		// extraction of the references)
+		const size_t keptCandidateCount = collected.keys.size();
+
+		// The production phase is over when the selected batch is
+		// a negligible share of the live mesh: the touched set is
+		// then small against the rescreening cost and the
+		// evaluation cache pays (below one percent on the stress
+		// scenes: the plane never crosses it, its drain reaches
+		// the target with the batch still at six percent, Lucy
+		// crosses it at iteration 16 and keeps it for the whole
+		// tail)
+		// (the generation's first iteration materializes below an
+		// infinite threshold: a list built there would carry the
+		// whole pool and its survivors would never leave it, so
+		// the activation waits for the drain of the new
+		// threshold)
+		if (!evalCacheActive && !generationFirstIteration &&
+				keptCandidateCount * 100 < gen.startTriangleCount - gen.totalDeletedTriangles) {
+			evalCacheActive = true;
+
+			// The kept candidate list of the incremental collect: the
+			// below threshold records of the current evaluation (one
+			// mesh pass, once - the list is maintained incrementally
+			// from here on, and the compactions remap it). The found
+			// count the list no longer sees starts from the full
+			// collect of this iteration. The list is rebuilt from
+			// scratch: a previous activation of an earlier
+			// generation may have left its records behind (the
+			// maintenance and the compaction remap rely on the
+			// ascending, duplicate free order the rebuild emits)
+			candidateKeptList.clear();
+			for (size_t i = 0; i < GetTriangleCount(); ++i) {
+				if (triangleDeleted[i])
+					continue;
+
+				const u_int tvertex = candidateVertexIndex[i];
+				if (tvertex == NULL_INDEX)
+					continue;
+
+				if (ErrorKeyOf(i, tvertex) > collected.thresholdErrorKey)
+					continue;
+
+				candidateKeptList.push_back(u_int(i));
+			}
+			foundCandidateCount = collected.poolCount;
+
+			SDL_LOG("Simplify: Evaluation cache active (the kept batch fell below one percent"
+					" of the live triangles)");
+		}
+		// The reference of the mesh dependent drain halt: the
+		// batch of the iteration that defined the error
+		// threshold of the current generation
+		if (generationFirstIteration)
+			gen.initialKeptCandidateCount = keptCandidateCount;
+
+		// Sort the kept candidates by error (ascending)
+		tbb::parallel_sort(collected.keys.begin(), collected.keys.end(), keyCompare);
+
+		// E, the error at the rank cut of the generation's first
+		// iteration: the keys are sorted, so the last kept one
+		// carries it. The inverse of the order preserving
+		// transformation of the key building. The generation
+		// bookkeeping of the recalibration starts here too: the
+		// first batch that defined E, and the deletions of its
+		// drain reset
+		if (generationFirstIteration) {
+			gen.generationFirstBatchCount = keptCandidateCount;
+			gen.generationDeletedTriangles = 0;
+
+			if (!collected.keys.empty()) {
+				const std::uint32_t thresholdErrorKey =
+						std::uint32_t(collected.keys.back().key >> 32);
+				const std::uint32_t errorBits = (thresholdErrorKey & 0x80000000u) ?
+						(thresholdErrorKey & 0x7fffffffu) : ~thresholdErrorKey;
+				gen.errorThreshold = std::bit_cast<float>(errorBits);
+			}
+		}
+
+		// Extract the sorted references for the downstream phases:
+		// the keys are only needed by the sort. The extraction stays
+		// serial: the parallel assign measured slower (the resize of
+		// the destination pays a zero initialization pass of the whole
+		// array, which costs about what the parallel copy saves)
+		ScalableVector<SimplifyRef> allCandidates;
+		allCandidates.reserve(collected.keys.size());
+		for (const CandidateKey &candidateKey : collected.keys)
+			allCandidates.push_back(candidateKey.ref);
+
+		// Release the sort keys (several hundreds of MB in the first
+		// iterations)
+		ScalableVector<CandidateKey>().swap(collected.keys);
+
+		SDL_LOG("Simplify: Kept the " << allCandidates.size() << " lowest error candidates (error < "
+			<< (boost::format("%.3g") % gen.errorThreshold) << ")");
+
+		return { std::move(allCandidates), keptCandidateCount };
+	}
+
+	// The collapse waves of notice steps 5 and 6: the closures of
+	// the main batch are computed and processed in parallel, the
+	// appended star segments of the wave are merged, then the
+	// deferred region boundary strip runs alone (its closures
+	// reconnect through the seams). Returns the triangles deleted
+	// by the whole iteration
+	u_int CollapseCandidateWaves(const ScalableVector<SimplifyRef> &allCandidates,
+			const ScalableVector<SimplifyRef> &stripCandidates) {
+		// Compute candidate closures for parallel processing
+		double stepStartTime = WallClockTime();
+		ScalableVector<ScalableVector<u_int>> candidateClosures = ComputeCandidateClosures(allCandidates);
+		size_t maxClosureSize = 0;
+		for (const auto& closure : candidateClosures)
+			maxClosureSize = std::max(maxClosureSize, closure.size());
+		SDL_LOG("Simplify: Computed " << candidateClosures.size() << " closures (max size "
+			<< maxClosureSize << ") in "
+			<< (boost::format("%.3f") % (WallClockTime() - stepStartTime)) << "secs");
+
+		// Process closures in parallel using TBB parallel_reduce
+		deletedTriangles = 0;
+		stepStartTime = WallClockTime();
+		ProcessClosuresParallel(candidateClosures, allCandidates);
+		SDL_LOG("Simplify: Processed " << candidateClosures.size() << " closures in parallel in "
+			<< (boost::format("%.3f") % (WallClockTime() - stepStartTime)) << "secs");
+
+		// The deletions of the main wave: the strip wave below
+		// adds the rest to the counter
+		const u_int mainWaveDeletedTriangles = deletedTriangles;
+
+		// Merge the appended star segments of the main wave
+		// before the strip: the strip candidates' closures are
+		// computed from walks over the reference base (see the
+		// sparse path of ComputeCandidateClosures), and the
+		// unmerged star segments of the main wave's bodies could
+		// not be walked
+		MergeRefAppends(mainWaveDeletedTriangles);
+
+		// Note: the closures have disjoint triangle sets, so the global
+		// triangle flags written by the collapses are race-free and need no
+		// merge; only the deleted triangles counter is merged (and the
+		// closure disjointness asserted) by applyResult.
+
+		// Second wave: the deferred seam candidates of the
+		// iteration, processed alone after the region confined
+		// closures. Their conflict graph reconnects through the
+		// seams (typically one big closure), so the wave is mostly
+		// serial - but the strip is thin and the closures of the
+		// main wave are complete, so nothing is shared with them.
+		// The strip coarsens with the mesh instead of freezing at
+		// its initial density
+		if (!stripCandidates.empty()) {
+			stepStartTime = WallClockTime();
+			ScalableVector<ScalableVector<u_int>> stripClosures =
+				ComputeCandidateClosures(stripCandidates);
+			ProcessClosuresParallel(stripClosures, stripCandidates);
+			SDL_LOG("Simplify: Processed the " << stripCandidates.size()
+				<< " deferred region boundary candidates in "
+				<< (boost::format("%.3f") % (WallClockTime() - stepStartTime)) << "secs");
+		}
+
+		const u_int iterationDeletedTriangles = deletedTriangles;
+
+		// Merge the appended star segments of the strip wave (the
+		// accounting is per wave: the main wave merge above
+		// already carried its own deletions)
+		MergeRefAppends(iterationDeletedTriangles - mainWaveDeletedTriangles);
+
+		return iterationDeletedTriangles;
+	}
+
 
 	// Local working state for edge collapses.
 	//
@@ -2494,7 +2672,13 @@ private:
 					list.resize(w);
 				};
 				remapAscending(candidateKeptList);
-				std::sort(phaseTouchedTriangles.begin(), phaseTouchedTriangles.end());
+				// The remap merge-walk below needs the ascending order.
+				// Like the found step sort, the list reaches hundreds of
+				// thousands of entries in the drain iterations, so the
+				// sort is parallel (the sorted sequence is the same:
+				// until the found step dedup, the equal u_int values
+				// are indistinguishable)
+				tbb::parallel_sort(phaseTouchedTriangles.begin(), phaseTouchedTriangles.end());
 				remapAscending(phaseTouchedTriangles);
 			}
 
@@ -3920,5 +4104,30 @@ ExtTriangleMeshUPtr SimplifyShape2::RefineImpl(SceneConstRef scene) {
 }
 
 } // namespace slg
+
+//------------------------------------------------------------------------------
+//
+// The MIT License notice of the original code this file derives from:
+//
+// Copyright (c) 2014 Sven Forstmann
+//
+// Permission is hereby granted, free of charge, to any person obtaining
+// a copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to
+// permit persons to whom the Software is furnished to do so, subject to
+// the following conditions:
+//
+// The above copyright notice and this permission notice shall be
+// included in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+// IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+// CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+// TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+// SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4
