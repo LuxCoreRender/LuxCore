@@ -18,121 +18,126 @@
 
 #include "slg/utils/group_by_equivalence.h"
 
-#include <cstdint>
-#include <cstring>
-#include <memory>
-#include <numeric>
 #include <ranges>
-#include <vector>
-#include <algorithm>
+#include <unordered_map>
 #include "oneapi/tbb.h"
+#include "oneapi/tbb/cache_aligned_allocator.h"
+#include "tsl/robin_map.h"
 
 namespace {
 
-// Vector with the TBB scalable allocator (tbbmalloc): the UnionFind arrays
-// are allocated per reduce body (one pair per thread, constructed inside
-// the parallel execution), and tbbmalloc serves each thread from its own
-// cache, avoiding contention on the shared heap
-template<typename T>
-using ScalableVector = std::vector<T, tbb::scalable_allocator<T>>;
+using ClassMap = tsl::robin_map<size_t, std::vector<size_t>>;
 
-// Classical Union-Find (disjoint set union) on flat arrays: the elements
-// form the dense range [0, numElements), so the parent and rank structures
-// are plain vectors instead of hash maps.
-//
-// The parent and rank entries are uint32_t/unsigned char (the elements are mesh
-// scale indices, below 2^32): the parent array is randomly touched by
-// every find, so shrinking it (and the rank, zero filled at every reduce
-// body construction) reduces both the cache footprint of the searches
-// and the cost of the per body construction (the parent is iota filled).
-//
-// The elements that became non roots are logged at link time: a reduce
-// join then merges through the logged elements only (every non root
-// became so at exactly one link, path halving never turns a root into a
-// non root), instead of scanning all the elements.
-// Deleter for the flat arrays allocated with the TBB scalable allocator
-// (scalable_malloc/scalable_free are global functions of
-// scalable_allocator.h)
-struct ScalableDelete {
-	template<typename T>
-	void operator()(T *p) const { ::scalable_free(p); }
-};
-
-class UnionFind {
-	// The parent and rank are flat arrays instead of vectors: a vector
-	// cannot be sized without value initializing its entries, so the
-	// identity parent would be written twice at every reduce body
-	// construction (zero fill, then iota)
-	std::unique_ptr<uint32_t[], ScalableDelete> parent;
-	std::unique_ptr<unsigned char[], ScalableDelete> rank;
-	// The elements that became non roots (one entry per effective link)
-	ScalableVector<uint32_t> nonRoots;
-
+// This is the classical Union-Find algorithm,
+// in a parallel implementation (tbb powered)
+class alignas(std::hardware_destructive_interference_size) UnionFind {
 public:
-	UnionFind() = default;
-	explicit UnionFind(const size_t count) :
-			parent(static_cast<uint32_t *>(::scalable_malloc(count * sizeof(uint32_t)))),
-			rank(static_cast<unsigned char *>(::scalable_malloc(count * sizeof(unsigned char)))) {
-		std::iota(parent.get(), parent.get() + count, 0u);
-		std::memset(rank.get(), 0, count);
-		// Every element becomes a non root at most once, so the log can
-		// never outgrow the element count: reserving it upfront avoids
-		// the growth reallocations of the links (the pages of the
-		// reserved tail materialize only when touched)
-		nonRoots.reserve(count);
+    UnionFind() {}
+    explicit UnionFind(const size_t count) {
+		reserve(count);
+	}
+	UnionFind(const UnionFind& other) :
+		parent(other.parent, Allocator()),
+		rank(other.rank, Allocator())
+	{}
+	UnionFind(UnionFind&& other) :
+		parent(std::move(other.parent)),
+		rank(std::move(other.rank))
+	{}
+	UnionFind& operator=(const UnionFind& other) {
+		parent = other.parent;
+		rank = other.rank;
+		return (*this);
+	}
+	UnionFind& operator=(UnionFind&& other) {
+		parent = std::move(other.parent);
+		rank = std::move(other.rank);
+		return (*this);
 	}
 
-	// Find the root of the set containing i (path halving)
-	size_t find(size_t i) {
-		while (parent[i] != i) {
-			parent[i] = parent[parent[i]];
-			i = parent[i];
-		}
-		return i;
+    // Find the root of the set containing element i
+    size_t find(const size_t i) {
+        if (parent.find(i) == parent.end()) {
+            parent[i] = i;
+            rank[i] = 0;
+        }
+        if (parent[i] != i) {
+            parent[i] = find(parent[i]);  // Path compression
+        }
+        return parent[i];
+    }
+
+    // Union the sets containing elements i and j
+    void unite(const size_t i, const size_t j) {
+        const size_t rootI = find(i);
+        const size_t rootJ = find(j);
+
+        if (rootI != rootJ) {
+            // Union by rank
+            if (rank[rootI] > rank[rootJ]) {
+                parent[rootJ] = rootI;
+            } else if (rank[rootI] < rank[rootJ]) {
+                parent[rootI] = rootJ;
+            } else {
+                parent[rootJ] = rootI;
+                rank[rootI]++;
+            }
+        }
+    }
+
+	// Reserve space
+	void reserve(const size_t count) {
+		parent.reserve(count);
+		rank.reserve(count);
 	}
-	// The root of the element, without touching the parents: the
-	// trees are read only once the reduce is over, and the parallel
-	// classes build walks them from many threads at once
-	size_t findRoot(size_t i) const {
-		while (parent[i] != i)
-			i = parent[i];
-		return i;
+
+    // Overload the += operator to merge two UnionFind instances
+    UnionFind operator+=(const UnionFind& other) {
+        for (const auto& pair : other.parent) {
+            unite(pair.first, pair.second);
+        }
+        return (*this);
+    }
+
+    size_t size() const {
+		return parent.size();
 	}
 
-
-	// Union the sets containing i and j (union by rank)
-	void unite(const size_t i, const size_t j) {
-		const size_t rootI = find(i);
-		const size_t rootJ = find(j);
-
-		if (rootI == rootJ)
-			return;
-		if (rank[rootI] < rank[rootJ]) {
-			parent[rootI] = static_cast<uint32_t>(rootJ);
-			nonRoots.push_back(static_cast<uint32_t>(rootI));
-		} else if (rank[rootI] > rank[rootJ]) {
-			parent[rootJ] = static_cast<uint32_t>(rootI);
-			nonRoots.push_back(static_cast<uint32_t>(rootJ));
+	// Find without compression
+	size_t find_readonly(const size_t i) const {
+		auto res = parent.find(i);
+        if (res != parent.end()) {
+			return res->second;
 		} else {
-			parent[rootJ] = static_cast<uint32_t>(rootI);
-			nonRoots.push_back(static_cast<uint32_t>(rootJ));
-			rank[rootI]++;
+			return i;
 		}
 	}
 
-	// Merge another UnionFind into this one: unite every logged non root
-	// with its (forest edge) parent, which merges all the components
-	// (the roots are reached through their members)
-	UnionFind& operator+=(const UnionFind& other) {
-		for (const uint32_t x : other.nonRoots)
-			unite(x, other.parent[x]);
-		return *this;
-	}
+private:
+	using Allocator =
+		tbb::cache_aligned_allocator<std::pair<const size_t, size_t>>;
+	using Hash = std::hash<size_t>;
+	using Equal = std::equal_to<size_t>;
+    std::unordered_map<size_t, size_t, Hash, Equal, Allocator> parent;
+    std::unordered_map<size_t, size_t, Hash, Equal, Allocator> rank;
+
+    friend std::ostream& operator<<(std::ostream& os, const UnionFind& uf);
 };
 
-// Processes the equivalence relations in parallel: each thread unions its
-// range of relations into its own UnionFind, merged by the reduce step.
-// The UnionFind trees are valid at any time (only complete merges).
+std::ostream& operator<<(std::ostream& os, const UnionFind& uf) {
+    os << "Parent: ";
+    for (const auto& pair : uf.parent) {
+        os << "(" << pair.first << ", " << pair.second << ") ";
+    }
+    os << "\nRank: ";
+    for (const auto& pair : uf.rank) {
+        os << "(" << pair.first << ", " << pair.second << ") ";
+    }
+    return os;
+}
+
+// Parallel GroupByEquivalence builder for use with tbb::parallel_reduce
+// Processes equivalence relations in parallel using UnionFind
 template<typename Range>
 class ParallelGroupByEquivalence {
 	UnionFind dsu;
@@ -140,11 +145,19 @@ class ParallelGroupByEquivalence {
 	Range relation;
 
 public:
+	// Constructor (plain)
 	ParallelGroupByEquivalence(size_t p_numPoints, Range p_relation)
-		: dsu(p_numPoints), numPoints(p_numPoints), relation(std::move(p_relation)) {}
+		: numPoints(p_numPoints),
+		  relation(std::move(p_relation)),
+		  dsu(p_numPoints)
+	{}
 
+	// Constructor (split)
 	ParallelGroupByEquivalence(ParallelGroupByEquivalence& x, tbb::split)
-		: dsu(x.numPoints), numPoints(x.numPoints), relation(x.relation) {}
+		: numPoints(x.numPoints),
+		  relation(x.relation),
+		  dsu(x.numPoints)
+	{}
 
 	// Body: process a range of indices into the relation
 	void operator()(const tbb::blocked_range<size_t>& r) {
@@ -156,16 +169,19 @@ public:
 		}
 	}
 
-	// Reduction: merge the sibling UnionFind into this one
+	// Reduction: merge two UnionFind instances
 	void join(ParallelGroupByEquivalence& rhs) {
+		if (dsu.size() < rhs.dsu.size()) {
+			std::swap(dsu, rhs.dsu);
+		}
 		dsu += rhs.dsu;
 	}
 
-	UnionFind& getResult() {
+	// Access the resulting UnionFind
+	UnionFind getResult() const {
 		return dsu;
 	}
 };
-
 // Helper class for building UnionFind from a callable generator
 // using tbb::parallel_reduce
 template<typename Generator>
@@ -198,224 +214,161 @@ public:
 	}
 
 	void join(ParallelGroupByEquivalenceFromGenerator<Generator>& rhs) {
+		if (dsu.size() < rhs.dsu.size()) {
+			std::swap(dsu, rhs.dsu);
+		}
 		dsu += rhs.dsu;
 	}
 
-	UnionFind& getResult() {
-		return dsu;
-	}
+	UnionFind getResult() const { return dsu; }
 };
 
-// Build the classes from a final UnionFind: flatten the trees (single
-// threaded: the union-find is not used concurrently anymore), then count
-// the class sizes, prefix sum and fill (CSR): no hashing and no per class
-// allocation until the final slicing. The elements end up in ascending
-// order inside each class.
-slg::equiv::Classes BuildClassesFromUnionFind(const UnionFind& uf, const size_t numElements) {
-	if (numElements == 0)
-		return {};
 
-	// The roots of the elements and the root flags, in one parallel
-	// pass: the reduce is over, so the parent trees are read only and
-	// every element can walk to its root from any thread (the serial
-	// version halved the paths along the way, which would race)
-	ScalableVector<uint32_t> rootOfElement(numElements);
-	ScalableVector<unsigned char> isRoot(numElements, 0);
-	tbb::parallel_for(size_t(0), numElements, [&](size_t i) {
-		const uint32_t root = static_cast<uint32_t>(uf.findRoot(i));
+// Helper class for building ClassMap from UnionFind using tbb::parallel_reduce
+class BuildClassMapFromUnionFind {
+	const UnionFind& uf;
+	ClassMap classMap;
 
-		rootOfElement[i] = root;
-		isRoot[root] = 1;
-	});
+public:
+	BuildClassMapFromUnionFind(const UnionFind& p_uf, size_t reserveSize = 0)
+		: uf(p_uf) {
+		classMap.reserve(reserveSize);
+	}
 
-	// The dense class ids: the exclusive prefix over the root flags
-	// (a root receives the number of the roots before it, so the ids
-	// follow the ascending root order - the very order of the serial
-	// slicing - and the class id domain is small where the root id
-	// domain is element sized)
-	class DenseClassIdScan {
-		ScalableVector<uint32_t> &classIdOfRoot;
-		const ScalableVector<unsigned char> &isRoot;
-		size_t count;
+	BuildClassMapFromUnionFind(BuildClassMapFromUnionFind& x, tbb::split)
+		: uf(x.uf) {}
 
-	public:
-		DenseClassIdScan(ScalableVector<uint32_t> &p_classIdOfRoot,
-				const ScalableVector<unsigned char> &p_isRoot)
-			: classIdOfRoot(p_classIdOfRoot), isRoot(p_isRoot), count(0) { }
-		DenseClassIdScan(DenseClassIdScan &other, tbb::split)
-			: classIdOfRoot(other.classIdOfRoot), isRoot(other.isRoot),
-			  count(0) { }
-
-		void operator()(const tbb::blocked_range<size_t> &range, tbb::pre_scan_tag) {
-			for (size_t r = range.begin(); r < range.end(); ++r)
-				count += isRoot[r];
+	void operator()(const tbb::blocked_range<size_t>& r) {
+		ClassMap localClassMap;
+		for (size_t i = r.begin(); i < r.end(); ++i) {
+			const size_t root = uf.find_readonly(i);
+			localClassMap[root].push_back(i);
 		}
-
-		void operator()(const tbb::blocked_range<size_t> &range, tbb::final_scan_tag) {
-			for (size_t r = range.begin(); r < range.end(); ++r) {
-				classIdOfRoot[r] = static_cast<uint32_t>(count);
-				count += isRoot[r];
+		// Merge local into classMap
+		for (auto& [root, indices] : localClassMap) {
+			auto it = classMap.find(root);
+			if (it != classMap.end()) {
+				// Need to use non-const access for insert
+				classMap[root].insert(
+					classMap[root].end(),
+					std::make_move_iterator(indices.begin()),
+					std::make_move_iterator(indices.end())
+				);
+			} else {
+				classMap[root] = std::move(indices);
 			}
 		}
+	}
 
-		void reverse_join(DenseClassIdScan &rhs) {
-			count += rhs.count;
-		}
-
-		void assign(DenseClassIdScan &rhs) {
-			count = rhs.count;
-		}
-
-		size_t getCount() const {
-			return count;
-		}
-	};
-
-	ScalableVector<uint32_t> classIdOfRoot(numElements);
-	DenseClassIdScan classIdScan(classIdOfRoot, isRoot);
-	tbb::parallel_scan(tbb::blocked_range<size_t>(0, numElements, 16384), classIdScan);
-	const size_t classCount = classIdScan.getCount();
-
-	// The scatter of the elements into the class segments: the fixed
-	// chunk boundary pattern over the dense class ids (count, prefix,
-	// disjoint scatter). The chunks cover ascending element ranges
-	// and scatter in ascending order, so every class receives its
-	// elements in the ascending order of the serial fill - no atomic
-	// and no post sort (the histogram matrix would be GBs over the
-	// root ids, it stays in the MBs over the dense ones).
-	//
-	// The single chunk fallback: the chunk machinery (the histogram
-	// matrix and its passes) costs about as much as the work itself on
-	// the small calls, so they keep the plain serial scatter - the
-	// code degenerates to it exactly at one chunk. The threshold sits
-	// in the empty gap of the measured call sizes: the incremental
-	// users of the utility stay below ~110K elements, the full scale
-	// calls start at ~390K, and 2^18 splits the gap with a wide margin
-	// on both sides. The fallback is safe at any value (the single
-	// chunk path is the serial scatter, the outcome is identical),
-	// and the matrix budget caps the pathological element sets with
-	// millions of tiny classes at a few tens of MB
-	constexpr size_t singleChunkThreshold = 262144;
-	constexpr size_t histogramBudgetEntries = size_t(1) << 24;
-	constexpr size_t maxScatterChunks = 64;
-
-	const size_t classChunkCount = (numElements < singleChunkThreshold) ? 1 :
-			std::min<size_t>(maxScatterChunks, std::max<size_t>(1,
-					histogramBudgetEntries / (classCount + 1)));
-	const size_t classChunkSize = (numElements + classChunkCount - 1) / classChunkCount;
-
-	// The map to the dense ids and the per chunk histograms, in one
-	// pass (the roots of the elements are rewritten in place: only
-	// the class ids are needed from here on)
-	ScalableVector<uint32_t> chunkCounts(classChunkCount * classCount, 0);
-	tbb::parallel_for(size_t(0), classChunkCount, [&](size_t k) {
-		const size_t iBegin = k * classChunkSize;
-		const size_t iEnd = std::min(iBegin + classChunkSize, numElements);
-
-		uint32_t * const counts = chunkCounts.data() + k * classCount;
-		for (size_t i = iBegin; i < iEnd; ++i) {
-			const uint32_t classId = classIdOfRoot[rootOfElement[i]];
-
-			rootOfElement[i] = classId;
-			++counts[classId];
-		}
-	});
-
-	// The per class totals
-	ScalableVector<size_t> classStart(classCount + 1, 0);
-	tbb::parallel_for(tbb::blocked_range<size_t>(0, classCount, 4096),
-			[&](const tbb::blocked_range<size_t> &w) {
-		for (size_t c = w.begin(); c < w.end(); ++c) {
-			size_t total = 0;
-			for (size_t k = 0; k < classChunkCount; ++k)
-				total += chunkCounts[k * classCount + c];
-			classStart[c + 1] = total;
-		}
-			});
-	for (size_t c = 0; c < classCount; ++c)
-		classStart[c + 1] += classStart[c];
-
-	// The cross chunk prefix, in place: the histogram rows become
-	// the per chunk scatter cursors
-	tbb::parallel_for(tbb::blocked_range<size_t>(0, classCount, 4096),
-			[&](const tbb::blocked_range<size_t> &w) {
-		ScalableVector<uint32_t> running(w.size());
-		for (size_t c = w.begin(); c < w.end(); ++c)
-			running[c - w.begin()] = static_cast<uint32_t>(classStart[c]);
-
-		for (size_t k = 0; k < classChunkCount; ++k) {
-			uint32_t * const row = chunkCounts.data() + k * classCount;
-			for (size_t c = w.begin(); c < w.end(); ++c) {
-				const uint32_t count = row[c];
-
-				row[c] = running[c - w.begin()];
-				running[c - w.begin()] += count;
+	void join(BuildClassMapFromUnionFind& rhs) {
+		// Merge rhs.classMap into this->classMap
+		for (auto& [root, indices] : rhs.classMap) {
+			auto it = classMap.find(root);
+			if (it != classMap.end()) {
+				// Need to use non-const access for insert
+				classMap[root].insert(
+					classMap[root].end(),
+					std::make_move_iterator(indices.begin()),
+					std::make_move_iterator(indices.end())
+				);
+			} else {
+				classMap[root] = std::move(indices);
 			}
 		}
-			});
+	}
 
-	// The scatter itself
-	ScalableVector<size_t> classEntries(numElements);
-	tbb::parallel_for(size_t(0), classChunkCount, [&](size_t k) {
-		const size_t iBegin = k * classChunkSize;
-		const size_t iEnd = std::min(iBegin + classChunkSize, numElements);
+	const ClassMap& getResult() const { return classMap; }
+};
 
-		uint32_t * const cursor = chunkCounts.data() + k * classCount;
-		for (size_t i = iBegin; i < iEnd; ++i)
-			classEntries[cursor[rootOfElement[i]]++] = i;
-	});
+// Helper class for parallel conversion of ClassMap to Classes
+class ConvertClassMapToClasses {
+	const ClassMap& classMap;
+	slg::Classes result;
+	std::vector<ClassMap::const_iterator> iters;
 
-	// Slice the entries into the output classes (the slot ranges are
-	// disjoint)
-	slg::equiv::Classes classes(classCount);
-	tbb::parallel_for(size_t(0), classCount, [&](size_t c) {
-		classes[c].assign(
-				std::make_move_iterator(classEntries.begin() + classStart[c]),
-				std::make_move_iterator(classEntries.begin() + classStart[c + 1]));
-	});
+public:
+	ConvertClassMapToClasses(const ClassMap& p_classMap)
+		: classMap(p_classMap) {
+		iters.reserve(classMap.size());
+		for (auto it = classMap.begin(); it != classMap.end(); ++it) {
+			iters.push_back(it);
+		}
+	}
 
-	return classes;
-}
+	ConvertClassMapToClasses(ConvertClassMapToClasses& x, tbb::split)
+		: classMap(x.classMap) {}
 
-// Grain for the parallel_reduce of the equivalence grouping: every reduce
-// body constructs a whole UnionFind over the element space (an identity
-// parent array of numElements entries, a cost independent of the body
-// range), so the body count must stay in the vicinity of the thread count
-// or the constructions dominate the grouping (a fine grain makes TBB
-// create hundreds of bodies, each paying the full construction)
-size_t GroupingGrain(const size_t iterationCount) {
-	return std::max<size_t>(1024,
-		iterationCount / size_t(2 * tbb::this_task_arena::max_concurrency()));
+	void operator()(const tbb::blocked_range<size_t>& r) {
+		const size_t start = r.begin();
+		const size_t end = r.end();
+		for (size_t i = start; i < end; ++i) {
+			result.push_back(iters[i]->second);
+		}
+	}
+
+	void join(ConvertClassMapToClasses& rhs) {
+		// Move rhs.result into this->result
+		result.insert(
+			result.end(),
+			std::make_move_iterator(rhs.result.begin()),
+			std::make_move_iterator(rhs.result.end())
+		);
+	}
+
+	slg::Classes getResult() && { return std::move(result); }
+};
+
+// Helper function to build Classes from a UnionFind
+slg::Classes BuildClassesFromUnionFind(const UnionFind& uf, size_t numElements) {
+	// Build class map from UnionFind using parallel_reduce with helper class
+	static tbb::affinity_partitioner tbb_class_partitioner;
+	constexpr size_t class_grain = 1024;
+
+	BuildClassMapFromUnionFind classMapBuilder(uf,
+		numElements / class_grain + 1);
+	tbb::parallel_reduce(
+		tbb::blocked_range<size_t>(0, numElements, class_grain),
+		classMapBuilder,
+		tbb_class_partitioner
+	);
+	// Convert ClassMap to Classes using parallel_reduce
+	const ClassMap& finalClassMap = classMapBuilder.getResult();
+
+	static tbb::affinity_partitioner tbb_convert_partitioner;
+
+	ConvertClassMapToClasses converter(finalClassMap);
+	tbb::parallel_reduce(
+		tbb::blocked_range<size_t>(0, finalClassMap.size(), class_grain),
+		converter,
+		tbb_convert_partitioner
+	);
+
+	return std::move(converter).getResult();
 }
 
 }  // namespace
 
 namespace slg {
 
-namespace equiv {
-
-// Version for callable generators over an iteration space distinct from
-// the element space: the relation functor is invoked with subranges of
-// [0, iterationCount) and returns pairs of equivalent elements of
-// [0, numElements). E.g. the relations can be derived from a mesh
-// triangle range while the elements are the (fewer) mesh entities
-// referenced by the relations
-Classes GroupByEquivalence(size_t numElements, size_t iterationCount,
-	RelationFunction relation) {
+// Version for callable generators: relation is a functor that takes an
+// interval [r1, r2) with r1 and r2 of size_t type and returns a vector of
+// Relation
+Classes GroupByEquivalence(size_t numElements, RelationFunction relation) {
 	// Use parallel_reduce with ParallelGroupByEquivalenceFromGenerator
 	static tbb::affinity_partitioner tbb_partitioner;
-	const size_t grain = GroupingGrain(iterationCount);
+	constexpr size_t grain = 1024;
 
 	ParallelGroupByEquivalenceFromGenerator<RelationFunction> solver(
 		numElements, std::move(relation));
 
 	tbb::parallel_reduce(
-		tbb::blocked_range<size_t>(0, iterationCount, grain),
+		tbb::blocked_range<size_t>(0, numElements, grain),
 		solver,
 		tbb_partitioner
 	);
 
-	return BuildClassesFromUnionFind(solver.getResult(), numElements);
+	UnionFind uf = solver.getResult();
+	return BuildClassesFromUnionFind(uf, numElements);
 }
 
 // Version for direct ranges: relation is a span of Relation pairs
@@ -423,8 +376,9 @@ Classes GroupByEquivalence(size_t numElements, RelationSpan relation) {
 	// Use parallel_reduce with ParallelGroupByEquivalence
 	static tbb::affinity_partitioner tbb_partitioner;
 
+	// Determine grain size based on relation size
 	const size_t relationSize = relation.size();
-	const size_t grain = GroupingGrain(relationSize);
+	constexpr size_t grain = 1024;
 
 	ParallelGroupByEquivalence<RelationSpan> solver(
 		numElements, std::move(relation));
@@ -435,11 +389,10 @@ Classes GroupByEquivalence(size_t numElements, RelationSpan relation) {
 		tbb_partitioner
 	);
 
-	return BuildClassesFromUnionFind(solver.getResult(), numElements);
+	UnionFind uf = solver.getResult();
+	return BuildClassesFromUnionFind(uf, numElements);
 }
 
-
-}  // namespace equiv
 
 }  // namespace slg
 

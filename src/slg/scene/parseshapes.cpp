@@ -29,11 +29,8 @@
 #include "slg/shapes/subdiv.h"
 #include "slg/shapes/displacement.h"
 #include "slg/shapes/harlequinshape.h"
-#include "slg/shapes/simplify_old.h"
-#include "slg/shapes/islandaovshape.h"
-
-// Include experimental SimplifyShape2 if enabled
 #include "slg/shapes/simplify.h"
+#include "slg/shapes/islandaovshape.h"
 #include "slg/shapes/randomtriangleaovshape.h"
 #include "slg/shapes/edgedetectoraov.h"
 #include "slg/shapes/bevelshape.h"
@@ -422,38 +419,8 @@ ExtTriangleMeshUPtr Scene::CreateShape(const string &shapeName, const Properties
 			static_cast<ExtTriangleMesh&>(extMeshCache.GetExtMesh(sourceMeshName))
 		);
 
-	} else if (shapeType == "simplify_old") {
-		SDL_LOG("WARNING: the simplify_old shape type is deprecated, use simplify instead (shape: " << shapeName << ")");
-
-		const string sourceMeshName = props.Get(
-			Property(propName + ".source")("")
-		).Get<string>();
-		if (!extMeshCache.IsExtMeshDefined(sourceMeshName))
-			throw runtime_error(
-				"Unknown shape name in a simplify_old shape: " + shapeName
-			);
-
-		const float target = props.Get(
-			Property(propName + ".target")(.25f)
-		).Get<double>();
-		const float edgeScreenSize = Clamp(
-			props.Get(Property(propName + ".edgescreensize")(0.0)).Get<double>(),
-			0.0,
-			1.0
-		);
-		const bool preserveBorder = props.Get(
-			Property(propName + ".preserveborder")(false)
-		).Get<bool>();
-
-		shape = std::make_unique<SimplifyShape>(
-			CameraPtr(&GetCamera()),
-			static_cast<ExtTriangleMesh&>(extMeshCache.GetExtMesh(sourceMeshName)),
-			target,
-			edgeScreenSize,
-			preserveBorder
-		);
-
 	} else if (shapeType == "simplify") {
+
 		const string sourceMeshName = props.Get(
 			Property(propName + ".source")("")
 		).Get<string>();
@@ -474,7 +441,7 @@ ExtTriangleMeshUPtr Scene::CreateShape(const string &shapeName, const Properties
 			Property(propName + ".preserveborder")(false)
 		).Get<bool>();
 
-		shape = std::make_unique<SimplifyShape2>(
+		shape = std::make_unique<SimplifyShape>(
 			CameraPtr(&GetCamera()),
 			static_cast<ExtTriangleMesh&>(extMeshCache.GetExtMesh(sourceMeshName)),
 			target,

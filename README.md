@@ -12,6 +12,22 @@ You can find more information about at https://www.luxcorerender.org
 
 ### Building
 
+#### Default branch
+
+Warning:
+
+From 11 September 2026, the default branch is `main`.
+
+If your local environment is still based on the old `master` branch, and
+provided that your remote is `origin`, use the following command to rename your
+default branch:
+```
+git branch -m master main
+git fetch origin
+git branch -u origin/main main
+git remote set-head origin -a
+```
+
 #### Build documentation
 Complete build documentation can be found in the wiki: https://wiki.luxcorerender.org/Building_LuxCoreRender.
 
