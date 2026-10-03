@@ -2,7 +2,7 @@
 
 ## Overview
 
-The **legacy Simplify shape** algorithm in `src/slg/shapes/simplify.cpp` is based on **Sven Forstmann's Fast Quadric Mesh Simplification** (MIT license). This document provides a detailed explanation of the algorithm.
+The **legacy Simplify shape** algorithm in `src/slg/shapes/simplify_old.cpp` is based on **Sven Forstmann's Fast Quadric Mesh Simplification** (MIT license). This document provides a detailed explanation of the algorithm.
 
 ---
 
@@ -772,4 +772,4 @@ The algorithm is particularly useful for:
 ---
 
 *Documentation generated: 2026-09-11*
-*Source: src/slg/shapes/simplify.cpp*
+*Source: src/slg/shapes/simplify_old.cpp*
