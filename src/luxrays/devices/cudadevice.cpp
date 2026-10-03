@@ -24,6 +24,7 @@
 #include "luxrays/devices/ocldevice.h"
 #include "luxrays/devices/cudadevice.h"
 #include "luxrays/kernels/kernels.h"
+#include <chrono>
 
 using namespace std;
 using namespace luxrays;
@@ -252,6 +253,8 @@ HardwareDeviceProgramUPtr CUDADevice::CompileProgram(
 	LR_LOG(deviceContext, "[" << programName << "] Compiling kernels");
 	LR_LOG(deviceContext, "[" << programName << "] Cache directory: " << kernelCache->GetCacheDir(kernelCache->GetApplicationName()));
 
+	auto startTime = std::chrono::high_resolution_clock::now();
+
 	const string cudaProgramSource = GetKernelSource(programSource);
 
 	bool cached;
@@ -266,6 +269,10 @@ HardwareDeviceProgramUPtr CUDADevice::CompileProgram(
 			LR_LOG(deviceContext, "[" << programName << "] CUDA program compilation warnings: " << endl << error);
 		}
 	}
+
+	auto endTime = std::chrono::high_resolution_clock::now();
+	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
+	LR_LOG(deviceContext, "[" << programName << "] Compilation completed in " << duration.count() << " ms");
 
 	if (cached) {
 		LR_LOG(deviceContext, "[" << programName << "] Program cached");

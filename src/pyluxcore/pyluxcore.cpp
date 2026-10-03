@@ -2199,6 +2199,11 @@ PYBIND11_MODULE(pyluxcore, m) {
   m.def("AddFileNameResolverPath", &AddFileNameResolverPath);
   m.def("GetFileNameResolverPaths", &GetFileNameResolverPaths);
 
+  // Kernel cache management
+  m.def("ClearCUDAKernelCache", &ClearCUDAKernelCache, "Clear all CUDA kernel caches");
+  m.def("ClearOCLKernelCache", &ClearOCLKernelCache, "Clear all OpenCL kernel caches");
+  m.def("ClearAllKernelCaches", &ClearAllKernelCaches, "Clear all kernel caches (CUDA and OpenCL)");
+
   m.def("KernelCacheFill", &LuxCore_KernelCacheFill1);
   m.def("KernelCacheFill", &LuxCore_KernelCacheFill2);
 
