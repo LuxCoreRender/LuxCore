@@ -102,3 +102,4 @@ CMakeUserPresets.json
 .vs/
 .vscode/
 tags
+scenes/displacement/lucy/lucy.ply

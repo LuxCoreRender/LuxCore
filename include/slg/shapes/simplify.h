@@ -1,5 +1,5 @@
 /***************************************************************************
- * Copyright 1998-2020 by authors (see AUTHORS.txt)                        *
+ * Copyright 1998-2026 by authors (see AUTHORS.txt)                        *
  *                                                                         *
  *   This file is part of LuxCoreRender.                                   *
  *                                                                         *
@@ -16,10 +16,9 @@
  * limitations under the License.                                          *
  ***************************************************************************/
 
-#ifndef _SLG_SIMPLIFYSHAPE_H
-#define	_SLG_SIMPLIFYSHAPE_H
+#ifndef _SLG_SIMPLIFYSHAPE2_H
+#define	_SLG_SIMPLIFYSHAPE2_H
 
-#include <string>
 
 #include "luxrays/usings.h"
 #include "slg/usings.h"
@@ -27,11 +26,11 @@
 
 namespace slg {
 
-class SimplifyShape : public Shape {
+class SimplifyShape2 : public Shape {
 public:
-	SimplifyShape(CameraConstPtr camera, luxrays::ExtTriangleMeshRef srcMesh,
+	SimplifyShape2(CameraConstPtr camera, luxrays::ExtTriangleMeshRef srcMesh,
 			const float target, const float edgeScreenSize, const bool preserveBorder);
-	virtual ~SimplifyShape();
+	virtual ~SimplifyShape2();
 
 	virtual ShapeType GetType() const override { return SIMPLIFY; }
 
@@ -40,7 +39,8 @@ protected:
 
 };
 
-}
+} // namespace slg
 
-#endif	/* _SLG_SIMPLIFYSHAPE_H */
+
+#endif	/* _SLG_SIMPLIFYSHAPE2_H */
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

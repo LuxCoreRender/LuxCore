@@ -1,0 +1,43 @@
+scene.camera.type = "perspective"
+scene.camera.lookat.orig = 0.21 0.15 0.21
+scene.camera.lookat.target = 0.0 0.1 0.0
+scene.camera.fieldofview = 45
+#################################################################################
+scene.textures.wireframetex.type = wireframe
+scene.textures.wireframetex.width = 0.002
+scene.textures.wireframetex.border = 1.0 0.0 0.0
+scene.textures.wireframetex.inside = 1.0 1.0 1.0
+#################################################################################
+scene.materials.mat_white.type = matte
+scene.materials.mat_white.kd = wireframetex
+#################################################################################
+scene.shapes.obj_lucyply.type = mesh
+scene.shapes.obj_lucyply.ply = scenes/displacement/lucy/lucy.ply
+##
+scene.shapes.obj_lucysimplify.type = simplify_old
+scene.shapes.obj_lucysimplify.source = obj_lucyply
+scene.shapes.obj_lucysimplify.target = 0.1
+scene.shapes.obj_lucysimplify.preserveborder = 1
+##
+scene.shapes.obj_lucy.type = harlequin
+scene.shapes.obj_lucy.source = obj_lucysimplify
+#################################################################################
+scene.objects.obj_lucy.ply = obj_lucy
+scene.objects.obj_lucy.material = mat_white
+# The statue stands along +z in the raw mesh (millimeter scale, bbox
+# center (690.76, -121.53, 192.63), wings spread along raw +x, head at
+# the +z end). LuxCore's default camera up is (0, 0, 1), so the
+# identity rotation keeps her standing upright with her head at the top
+# of the frame, and the rotation of -pi/4 around the scene z axis (her
+# vertical) turns her on the spot: her raw +x (the wings) maps to the
+# (+x, -y) diagonal, away from the camera quadrant. The 1e-4 scale
+# brings her to scene scale and the translation row pivots the bbox
+# center at (0, 0.1, 0). The written form is the transpose - LuxCore
+# applies it as a row vector times matrix
+scene.objects.obj_lucy.transformation = 0.00007071068 -0.00007071068 0 0  0.00007071068 0.00007071068 0 0  0 0 0.0001 0  -0.04025022 0.15743736 -0.01926266 1
+#################################################################################
+scene.lights.infinitelight.type = infinite
+scene.lights.infinitelight.file = scenes/simple-mat/sky.exr
+scene.lights.infinitelight.gamma = 1.0
+scene.lights.infinitelight.gain = 1.0 1.0 1.0
+scene.lights.infinitelight.storage = byte

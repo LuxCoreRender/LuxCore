@@ -18,6 +18,7 @@
 
 #include "luxrays/core/trianglemesh.h"
 #include "luxrays/utils/buffer.h"
+#include <memory>
 #include <unordered_map>
 #include <format>
 
@@ -1111,7 +1112,7 @@ struct Surface {
 		int numAllRefinedValues = numRegularRefinedValues + numLocalRefinedValues;
 
 		// Allocate output
-		std::unique_ptr<T[]> refinedValues(new T[numAllRefinedValues]);
+		auto refinedValues = std::make_unique<T[]>(numAllRefinedValues);
 
 		// Copy base values in refined values
 		std::memcpy(&refinedValues.get()[0], &baseValues[0], numBaseValues * sizeof(T));
@@ -1286,7 +1287,7 @@ struct Surface {
 		int numCoords = tessCoords.size();
 
 		// Allocate output structure
-		auto tessValues = std::unique_ptr<T[]>(new T[numCoords]);
+		auto tessValues = std::make_unique<T[]>(numCoords);
 
 		const auto& topology = refiner->GetLevel(0);
 
