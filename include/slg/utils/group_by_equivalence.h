@@ -20,16 +20,33 @@
 
 #include <vector>
 #include <utility>
-#include <ranges>
 #include <functional>
 #include <span>
+// The scalable allocator of the typedefs only: the umbrella header
+// drags the whole TBB into every consumer of this header, and the
+// declarations need nothing else from it
+#include <oneapi/tbb/scalable_allocator.h>
 
 namespace slg {
 
-using Classes = std::vector<std::vector<size_t>>;
+namespace equiv {
+
+// The equivalence classes (one inner vector per class), allocated with
+// the TBB scalable allocator like every container of this path: the
+// classes are sliced serially by the class build and only read
+// afterwards (the parallel consumers never allocate), so the benefit
+// over the default allocator is mostly consistency
+using Classes = std::vector<std::vector<size_t, tbb::scalable_allocator<size_t>>,
+		tbb::scalable_allocator<std::vector<size_t, tbb::scalable_allocator<size_t>>>>;
 using Relation = std::pair<size_t, size_t>;
 using RelationSpan = std::span<const Relation>;
-using RelationFunction = std::function<std::vector<Relation>(size_t, size_t)>;
+// Vector of relations, as returned by the generators, allocated with the
+// TBB scalable allocator: the generator is evaluated in parallel (one call
+// per chunk) and the returned buffer is consumed once by the Union-Find,
+// so these short-lived allocations are served from the per-thread caches
+// of tbbmalloc
+using RelationVector = std::vector<Relation, tbb::scalable_allocator<Relation>>;
+using RelationFunction = std::function<RelationVector(size_t, size_t)>;
 
 // GroupByEquivalence computes the quotient set (equivalence classes) from an
 // equivalence relation.
@@ -41,26 +58,28 @@ using RelationFunction = std::function<std::vector<Relation>(size_t, size_t)>;
 // equivalent, GroupByEquivalence groups all elements into disjoint classes
 // where each class contains all elements that are transitively equivalent.
 //
+// Each class contains its elements in ascending order.
+//
 // The function relies on a parallel implementation of the Union-Find algorithm
 // (using TBB) and should be fast for large equivalence relations.
 //
 // Two overloads are provided:
-// 1. For callable generators: GroupByEquivalence(numElements, relation)
-//    where relation is a RelationFunction (std::function<std::vector<Relation>
-//    (size_t, size_t)>) that takes an interval [r1, r2) and returns pairs
+// 1. For callable generators over an iteration space (which may
+//    be distinct from the element space):
+//    GroupByEquivalence(numElements, iterationCount, relation)
 // 2. For direct ranges: GroupByEquivalence(numElements, relation)
 //    where relation is a RelationSpan (std::span<const Relation>)
 //
 // Usage examples:
 //   // With a callable generator (functor or lambda)
 //   auto relation = [&](size_t r1, size_t r2) {
-//       std::vector<std::pair<size_t, size_t>> pairs;
+//       slg::equiv::RelationVector pairs;
 //       for (size_t i = r1; i < r2; ++i) {
 //           if (condition(i)) pairs.emplace_back(i, i+1);
 //       }
 //       return pairs;
 //   };
-//   auto clusters = GroupByEquivalence(n, relation);
+//   auto clusters = GroupByEquivalence(n, n, relation);
 //
 //   // With std::span
 //   std::vector<std::pair<size_t, size_t>> pairs = {{0,1}, {2,3}};
@@ -68,14 +87,19 @@ using RelationFunction = std::function<std::vector<Relation>(size_t, size_t)>;
 //
 //   // Note: std::vector<Relation> is implicitly convertible to RelationSpan
 
-// Version for callable generators: relation is a functor that takes an
-// interval [r1, r2) with r1 and r2 of size_t type and returns a vector of
-// Relation. Functor is evaluated in multithreaded process, which may be more
-// efficient than statically compute it beforehand
-Classes GroupByEquivalence(size_t numElements, RelationFunction relation);
+// Version for callable generators over an iteration space distinct from
+// the element space: the relation functor is invoked with subranges of
+// [0, iterationCount) and returns pairs of equivalent elements of
+// [0, numElements). E.g. the relations can be derived from a mesh
+// triangle range while the elements are the (fewer) mesh entities
+// referenced by the relations
+Classes GroupByEquivalence(size_t numElements, size_t iterationCount,
+	RelationFunction relation);
 
 // Version for direct ranges: relation is a span of Relation pairs
 Classes GroupByEquivalence(size_t numElements, RelationSpan relation);
+}  // namespace equiv
+
 }  // namespace slg
 
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

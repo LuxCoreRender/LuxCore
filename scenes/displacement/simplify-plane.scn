@@ -48,9 +48,10 @@ scene.shapes.obj_whiteply.ply = scenes/displacement/large-plane.ply
 ##
 scene.shapes.obj_whitesubdiv.type = subdiv
 scene.shapes.obj_whitesubdiv.source = obj_whiteply
-scene.shapes.obj_whitesubdiv.maxlevel = 8
+scene.shapes.obj_whitesubdiv.maxlevel = 12
 #
 scene.shapes.obj_whitedisp.type = displacement
+scene.shapes.obj_whitesubdiv.enhanced = 1
 scene.shapes.obj_whitedisp.source = obj_whitesubdiv
 scene.shapes.obj_whitedisp.offset = 0.0
 scene.shapes.obj_whitedisp.normalsmooth = 1

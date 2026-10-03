@@ -446,7 +446,7 @@ ClusterMap GroupPoints(const Partition& partition, size_t numPoints, u_int toler
 	);
 
 	// Now use GroupByEquivalence with all pairs
-	const auto classes = slg::GroupByEquivalence(numPoints, std::span(allPairs));
+	const auto classes = slg::equiv::GroupByEquivalence(numPoints, std::span(allPairs));
 
 	// Convert Classes to ClusterMap
 	ClusterMap clusterMap;

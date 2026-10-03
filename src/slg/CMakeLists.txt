@@ -39,6 +39,8 @@ generate_doc(slg)
 
 link_directories (${LuxRays_LIB_DIR})
 
+
+
 add_definitions(-DCPP_API_EXPORTS ${VISIBILITY_FLAGS}) # for controlling visibility
 
 ###########################################################################
@@ -409,6 +411,7 @@ set(SLG_CORE_SRCS
   ${PROJECT_SOURCE_DIR}/src/slg/shapes/pointiness.cpp
   ${PROJECT_SOURCE_DIR}/src/slg/shapes/randomtriangleaovshape.cpp
   ${PROJECT_SOURCE_DIR}/src/slg/shapes/shape.cpp
+  ${PROJECT_SOURCE_DIR}/src/slg/shapes/simplify_old.cpp
   ${PROJECT_SOURCE_DIR}/src/slg/shapes/simplify.cpp
   ${PROJECT_SOURCE_DIR}/src/slg/shapes/strands.cpp
   ${PROJECT_SOURCE_DIR}/src/slg/shapes/subdiv.cpp
