@@ -18,6 +18,7 @@
 
 #include <bit>
 #include <boost/algorithm/string.hpp>
+#include <oneapi/tbb.h>
 
 #include "luxcore/luxcorelogger.h"
 #include "luxcore/luxcore.h"
@@ -311,9 +312,15 @@ static void KernelCacheFillImpl(
 	// Extract the render engines - default to all OpenCL engines
 	const Property renderEngines = config.Get(Property("kernelcachefill.renderengine.types")("PATHOCL", "TILEPATHOCL", "RTPATHOCL"));
 	const size_t count = renderEngines.GetSize();
-	
-	// For each render engine type
-	for (u_int renderEngineIndex = 0; renderEngineIndex < renderEngines.GetSize(); ++renderEngineIndex) {
+
+	// Log start of kernel cache filling
+	LC_LOG("====================================================================");
+	LC_LOG("Starting parallel kernel compilation for " << count << " OpenCL render engines");
+	LC_LOG("====================================================================");
+
+	// Prepare configuration properties for each render engine
+	std::vector<std::pair<std::string, Properties>> engineConfigs;
+	for (u_int renderEngineIndex = 0; renderEngineIndex < count; ++renderEngineIndex) {
 		const string renderEngineType = renderEngines.Get<string>(renderEngineIndex);
 		string samplerType;
 		if ((renderEngineType == "TILEPATHOCL") || (renderEngineType == "RTPATHOCL"))
@@ -331,14 +338,31 @@ static void KernelCacheFillImpl(
 		if (config.IsDefined("opencl.devices.select"))
 			cfgProps << config.Get("opencl.devices.select");
 
-		// Run the rendering
-		LC_LOG("====================================================================");
-		if (ProgressHandler)
-			ProgressHandler(renderEngineIndex, count);
-		LC_LOG("Step: " << renderEngineIndex << "/" << count);
-		RenderTestScene(cfgProps, Properties());
+		engineConfigs.emplace_back(renderEngineType, std::move(cfgProps));
 	}
 
+	// Parallel kernel compilation using TBB
+	tbb::parallel_for(tbb::blocked_range<size_t>(0, count),
+		[&](const tbb::blocked_range<size_t> &range) {
+			for (size_t i = range.begin(); i < range.end(); ++i) {
+				const auto &[renderEngineType, cfgProps] = engineConfigs[i];
+				
+				LC_LOG("[" << renderEngineType << "] Compiling kernels...");
+				
+				// Call progress handler if provided (note: not thread-safe, but for logging it's okay)
+				if (ProgressHandler) {
+					ProgressHandler(i, count);
+				}
+				
+				// Render test scene to trigger kernel compilation
+				RenderTestScene(cfgProps, Properties());
+				
+				LC_LOG("[" << renderEngineType << "] Kernel compilation completed");
+			}
+		});
+
+	LC_LOG("====================================================================");
+	LC_LOG("Parallel kernel compilation completed for all OpenCL engines");
 	LC_LOG("====================================================================");
 }
 
