@@ -227,8 +227,7 @@ vector<string> CUDADevice::AddKernelOpts(const vector<string> &programParameters
 #elif defined (__linux__)
 	cudaProgramParameters.push_back("-D LUXRAYS_OS_LINUX");
 #endif
-	// Suppress NVIDIA CUDA compiler warning #20283 about #line directives preventing precompiled header creation
-	cudaProgramParameters.push_back("--diag-suppress 20283");
+
 
 	cudaProgramParameters.insert(cudaProgramParameters.end(),
 			additionalCompileOpts.begin(), additionalCompileOpts.end());
