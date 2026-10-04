@@ -198,9 +198,11 @@ int main(int argc, char *argv[]) {
 			luxcore::ClearAllKernelCaches();
 
 			LC_LOG("Filling kernel caches...");
-			// Create properties for kernel cache filling
+			// Create properties for kernel cache filling - include all OpenCL engines
 			auto fillProps = std::make_unique<Properties>();
 			fillProps->Set(cmdLineProp);
+			// Explicitly specify all OpenCL render engines to ensure kernels are compiled for each
+			fillProps->Set(Property("kernelcachefill.renderengine.types")("PATHOCL", "TILEPATHOCL", "RTPATHOCL"));
 			luxcore::KernelCacheFill(fillProps, nullptr);
 
 			LC_LOG("Kernel caches filled successfully");

@@ -308,7 +308,7 @@ static void KernelCacheFillImpl(
 ) {
 	auto& config = *configPtr;
 
-	// Extract the render engines
+	// Extract the render engines - default to all OpenCL engines
 	const Property renderEngines = config.Get(Property("kernelcachefill.renderengine.types")("PATHOCL", "TILEPATHOCL", "RTPATHOCL"));
 	const size_t count = renderEngines.GetSize();
 	
