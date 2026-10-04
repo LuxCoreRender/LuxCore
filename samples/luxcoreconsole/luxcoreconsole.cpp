@@ -126,6 +126,7 @@ int main(int argc, char *argv[]) {
 
 		bool removeUnused = false;
 		bool showDevicesStats = false;
+		bool fillKernelCaches = false;
 		Properties cmdLineProp;
 		string configFileName;
 		for (int i = 1; i < argc; i++) {
@@ -141,7 +142,8 @@ int main(int argc, char *argv[]) {
 							" -D [property name] [property value]" << endl <<
 							" -d [current directory path]" << endl <<
 							" -c <remove all unused meshes, materials, textures and image maps>" << endl <<
-							" -s" << endl <<
+							" -s <show devices stats>" << endl <<
+							" -k <fill kernel caches>" << endl <<
 							" -h <display this help and exit>");
 					exit(EXIT_SUCCESS);
 				}
@@ -169,6 +171,8 @@ int main(int argc, char *argv[]) {
 				
 				else if (argv[i][1] == 's') showDevicesStats = true;
 
+				else if (argv[i][1] == 'k') fillKernelCaches = true;
+
 				else {
 					LC_LOG("Invalid option: " << argv[i]);
 					exit(EXIT_FAILURE);
@@ -186,6 +190,23 @@ int main(int argc, char *argv[]) {
 				} else
 					throw runtime_error("Unknown file extension: " + fileName);
 			}
+		}
+
+		// Handle fill kernel caches option (doesn't require a config file)
+		if (fillKernelCaches) {
+			LC_LOG("Clearing kernel caches...");
+			luxcore::ClearAllKernelCaches();
+
+			LC_LOG("Filling kernel caches...");
+			// Create properties for kernel cache filling - include all OpenCL engines
+			auto fillProps = std::make_unique<Properties>();
+			fillProps->Set(cmdLineProp);
+			// Explicitly specify all OpenCL render engines to ensure kernels are compiled for each
+			fillProps->Set(Property("kernelcachefill.renderengine.types")("PATHOCL", "TILEPATHOCL", "RTPATHOCL"));
+			luxcore::KernelCacheFill(fillProps, nullptr);
+
+			LC_LOG("Kernel caches filled successfully");
+			return EXIT_SUCCESS;
 		}
 
 		// Load the Scene

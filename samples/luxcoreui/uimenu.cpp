@@ -25,6 +25,7 @@
 
 #include "luxcoreapp.h"
 #include "luxrays/utils/properties.h"
+#include "luxcore/luxcore.h"
 
 using namespace std;
 using namespace luxrays;
@@ -200,6 +201,17 @@ void LuxCoreApp::MenuRendering()
         Property("scene.epsilon.min")(0.000123f) <<
         Property("scene.epsilon.max")(0.123f);*/
     KernelCacheFill(props, KernelCacheFillProgressHandler);
+  }
+
+  if (isGPURenderingAvailable() && ImGui::MenuItem("Clear kernel cache")) {
+    if (session) {
+      // Stop any current rendering
+      DeleteRendering();
+    }
+
+    // Clear all kernel caches
+    ClearAllKernelCaches();
+    LA_LOG("All kernel caches cleared");
   }
 
   ImGui::Separator();

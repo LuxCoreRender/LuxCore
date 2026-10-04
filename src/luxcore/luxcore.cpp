@@ -35,6 +35,13 @@
 #include "luxcore/luxcoreimpl.h"
 #include "luxcore/luxcorelogger.h"
 
+#if !defined(LUXRAYS_DISABLE_CUDA)
+#include "luxrays/utils/cudacache.h"
+#endif
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+#include "luxrays/utils/oclcache.h"
+#endif
+
 using namespace std;
 using namespace luxrays;
 using namespace luxcore;
@@ -274,6 +281,43 @@ vector<string> luxcore::GetFileNameResolverPaths() {
 	API_RETURN("{}", ToArgString(result));
 
 	return result;
+}
+
+//------------------------------------------------------------------------------
+// Kernel Cache Management
+//------------------------------------------------------------------------------
+
+void luxcore::ClearCUDAKernelCache() {
+	API_BEGIN_NOARGS();
+	
+#if !defined(LUXRAYS_DISABLE_CUDA)
+	luxrays::cudaKernelPersistentCache::ClearAllCaches();
+#endif
+	
+	API_END();
+}
+
+void luxcore::ClearOCLKernelCache() {
+	API_BEGIN_NOARGS();
+	
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	luxrays::oclKernelPersistentCache::ClearAllCaches();
+#endif
+	
+	API_END();
+}
+
+void luxcore::ClearAllKernelCaches() {
+	API_BEGIN_NOARGS();
+	
+#if !defined(LUXRAYS_DISABLE_CUDA)
+	luxrays::cudaKernelPersistentCache::ClearAllCaches();
+#endif
+#if !defined(LUXRAYS_DISABLE_OPENCL)
+	luxrays::oclKernelPersistentCache::ClearAllCaches();
+#endif
+	
+	API_END();
 }
 
 //------------------------------------------------------------------------------

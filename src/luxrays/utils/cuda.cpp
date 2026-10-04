@@ -22,6 +22,10 @@
 #include <iostream>
 #include <fstream>
 #include <string.h>
+#include <mutex>
+#include <atomic>
+#include <vector>
+#include <oneapi/tbb.h>
 
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/algorithm/string/trim.hpp>
@@ -37,6 +41,9 @@
 
 using namespace std;
 using namespace luxrays;
+
+// Static members for parallel compilation
+std::atomic<bool> cudaKernelPersistentCache::parallelCompilationEnabled(false);
 
 static string GetCuda10Architecture() {
 	CUdevice device;
@@ -99,6 +106,10 @@ bool cudaKernelCache::ForcedCompilePTX(
 	cudaOpts.push_back("-Xcudafe");
 	cudaOpts.push_back("--diag_suppress=68");
 
+	// To suppress warning: warning #20283-D: PCH creation disabled because #line directive encountered
+	cudaOpts.push_back("-Xcudafe");
+	cudaOpts.push_back("--diag_suppress=20283");
+
 	// Accelerate compilation
 	//cudaOpts.push_back("--Ofast-compile=min"); # Only 12.9+
 	cudaOpts.push_back("--split-compile=0");
@@ -143,6 +154,18 @@ bool cudaKernelCache::ForcedCompilePTX(
 }
 
 //------------------------------------------------------------------------------
+// Parallel compilation system using TBB
+//------------------------------------------------------------------------------
+
+void cudaKernelPersistentCache::SetParallelCompilation(bool enable) {
+	parallelCompilationEnabled = enable;
+}
+
+bool cudaKernelPersistentCache::IsParallelCompilationEnabled() {
+	return parallelCompilationEnabled;
+}
+
+//------------------------------------------------------------------------------
 // cudaKernelPersistentCache
 //------------------------------------------------------------------------------
 
@@ -178,81 +201,88 @@ bool cudaKernelPersistentCache::CompilePTX(const vector<string> &kernelsParamete
 	const string fileName = filePath.generic_string();
 
 	*cached = false;
-	if (!std::filesystem::exists(filePath)) {
-		// It isn't available, compile the source
+	
+	// Thread-safe cache access
+	{
+		std::lock_guard<std::mutex> lock(cacheMutex);
+		
+		if (std::filesystem::exists(filePath)) {
+			const size_t fileSize = std::filesystem::file_size(filePath);
 
-		// Create the file only if the binaries include something
-		if (ForcedCompilePTX(kernelsParameters, kernelSource, programName, ptx, ptxSize, error)) {
-			// Add the kernel to the cache
-			std::filesystem::create_directories(dirPath);
+			if (fileSize > 4) {
+				*ptxSize = fileSize - 4;
 
-			// The use of std::filesystem::path is required for UNICODE support: fileName
-			// is supposed to be UTF-8 encoded.
-			std::ofstream file(std::filesystem::path(fileName),
+				*ptx = std::make_unique<char[]>(*ptxSize);
+
+				// The use of std::filesystem::path is required for UNICODE support: fileName
+				// is supposed to be UTF-8 encoded.
+				std::ifstream file(std::filesystem::path(fileName),
+						std::ifstream::in | std::ifstream::binary);
+
+				// Read the binary hash
+				u_int hashBin;
+				file.read((char *)&hashBin, sizeof(int));
+
+				file.read(ptx->get(), *ptxSize);
+				// Check for errors
+				char buf[512];
+				if (file.fail()) {
+					sprintf(buf, "Unable to read kernel file cache %s", fileName.c_str());
+					throw runtime_error(buf);
+				}
+
+				file.close();
+
+				// Check the binary hash
+				if (hashBin != oclKernelPersistentCache::HashBin(ptx->get(), *ptxSize)) {
+					// Something wrong in the file, remove the file and retry
+					std::filesystem::remove(filePath);
+					return CompilePTX(kernelsParameters, kernelSource, programName, ptx, ptxSize, cached, error);
+				} else {
+					*cached = true;
+
+					return true;
+				}
+			} else {
+				// Something wrong in the file, remove the file and retry
+				std::filesystem::remove(filePath);
+				return CompilePTX(kernelsParameters, kernelSource, programName, ptx, ptxSize, cached, error);
+			}
+		}
+	}
+	
+	// It isn't available, compile the source
+	// Create the file only if the binaries include something
+	if (ForcedCompilePTX(kernelsParameters, kernelSource, programName, ptx, ptxSize, error)) {
+		// Add the kernel to the cache (thread-safe)
+		std::lock_guard<std::mutex> lock(cacheMutex);
+		
+		std::filesystem::create_directories(dirPath);
+
+		// The use of std::filesystem::path is required for UNICODE support: fileName
+		// is supposed to be UTF-8 encoded.
+		std::ofstream file(std::filesystem::path(fileName),
 					std::ofstream::out |
 					std::ofstream::binary |
 					std::ofstream::trunc);
 
-			// Write the binary hash
-			const u_int hashBin = oclKernelPersistentCache::HashBin(ptx->get(), *ptxSize);
-			file.write((char *)&hashBin, sizeof(int));
+		// Write the binary hash
+		const u_int hashBin = oclKernelPersistentCache::HashBin(ptx->get(), *ptxSize);
+		file.write((char *)&hashBin, sizeof(int));
 
-			file.write(ptx->get(), *ptxSize);
-			// Check for errors
-			char buf[512];
-			if (file.fail()) {
-				sprintf(buf, "Unable to write kernel file cache %s", fileName.c_str());
-				throw runtime_error(buf);
-			}
-
-			file.close();
-
-			return true;
-		} else
-			return false;
-	} else {
-		const size_t fileSize = std::filesystem::file_size(filePath);
-
-		if (fileSize > 4) {
-			*ptxSize = fileSize - 4;
-
-			*ptx = std::make_unique<char[]>(*ptxSize);
-
-			// The use of std::filesystem::path is required for UNICODE support: fileName
-			// is supposed to be UTF-8 encoded.
-			std::ifstream file(std::filesystem::path(fileName),
-					std::ifstream::in | std::ifstream::binary);
-
-			// Read the binary hash
-			u_int hashBin;
-			file.read((char *)&hashBin, sizeof(int));
-
-			file.read(ptx->get(), *ptxSize);
-			// Check for errors
-			char buf[512];
-			if (file.fail()) {
-				sprintf(buf, "Unable to read kernel file cache %s", fileName.c_str());
-				throw runtime_error(buf);
-			}
-
-			file.close();
-
-			// Check the binary hash
-			if (hashBin != oclKernelPersistentCache::HashBin(ptx->get(), *ptxSize)) {
-				// Something wrong in the file, remove the file and retry
-				std::filesystem::remove(filePath);
-				return CompilePTX(kernelsParameters, kernelSource, programName, ptx, ptxSize, cached, error);
-			} else {
-				*cached = true;
-
-				return true;
-			}
-		} else {
-			// Something wrong in the file, remove the file and retry
-			std::filesystem::remove(filePath);
-			return CompilePTX(kernelsParameters, kernelSource, programName, ptx, ptxSize, cached, error);
+		file.write(ptx->get(), *ptxSize);
+		// Check for errors
+		char buf[512];
+		if (file.fail()) {
+			sprintf(buf, "Unable to write kernel file cache %s", fileName.c_str());
+			throw runtime_error(buf);
 		}
-	}
+
+		file.close();
+
+		return true;
+	} else
+		return false;
 }
 
 CUmodule cudaKernelPersistentCache::Compile(const vector<string> &kernelsParameters,
@@ -267,6 +297,97 @@ CUmodule cudaKernelPersistentCache::Compile(const vector<string> &kernelsParamet
 		return module;
 	} else
 		return nullptr;
+}
+
+std::vector<CUmodule> cudaKernelPersistentCache::CompileMultiple(
+		const std::vector<std::tuple<std::vector<std::string>, std::string, std::string>> &kernels,
+		std::vector<bool> *cached, std::vector<std::string> *errors) {
+	
+	std::vector<CUmodule> modules(kernels.size(), nullptr);
+	
+	if (!IsParallelCompilationEnabled() || kernels.empty()) {
+		// Fallback to sequential compilation
+		if (cached) cached->resize(kernels.size());
+		if (errors) errors->resize(kernels.size());
+		
+		for (size_t i = 0; i < kernels.size(); ++i) {
+			const auto &[params, source, name] = kernels[i];
+			bool isCached = false;
+			std::string error;
+			
+			modules[i] = Compile(params, source, name, &isCached, &error);
+			
+			if (cached) (*cached)[i] = isCached;
+			if (errors) (*errors)[i] = error;
+		}
+		
+		return modules;
+	}
+	
+	// Parallel compilation using TBB
+	if (cached) cached->resize(kernels.size());
+	if (errors) errors->resize(kernels.size());
+	
+	tbb::parallel_for(tbb::blocked_range<size_t>(0, kernels.size()),
+		[&](const tbb::blocked_range<size_t> &range) {
+			for (size_t i = range.begin(); i < range.end(); ++i) {
+				const auto &[params, source, name] = kernels[i];
+				bool isCached = false;
+				std::string error;
+				
+				modules[i] = Compile(params, source, name, &isCached, &error);
+				
+				if (cached) (*cached)[i] = isCached;
+				if (errors) (*errors)[i] = error;
+			}
+		});
+	
+	return modules;
+}
+
+//------------------------------------------------------------------------------
+// Cache management
+//------------------------------------------------------------------------------
+
+void cudaKernelPersistentCache::ClearCache() {
+	const std::filesystem::path cacheDir = GetCacheDir(appName);
+	
+	if (std::filesystem::exists(cacheDir)) {
+		std::lock_guard<std::mutex> lock(cacheMutex);
+		std::filesystem::remove_all(cacheDir);
+		std::filesystem::create_directories(cacheDir); // Recreate the directory
+	}
+}
+
+void cudaKernelPersistentCache::ClearKernelCache(const std::string &kernelName) {
+	const std::filesystem::path cacheDir = GetCacheDir(appName);
+	const std::filesystem::path kernelPath = cacheDir / kernelName;
+	
+	if (std::filesystem::exists(kernelPath)) {
+		std::lock_guard<std::mutex> lock(cacheMutex);
+		std::filesystem::remove(kernelPath);
+	}
+}
+
+void cudaKernelPersistentCache::ClearAllCaches() {
+	const std::filesystem::path baseCacheDir = luxrays::GetCacheDir() / "cuda_kernel_cache";
+	
+	if (std::filesystem::exists(baseCacheDir)) {
+		// Use a separate mutex for global operations
+		static std::mutex globalCacheMutex;
+		std::lock_guard<std::mutex> lock(globalCacheMutex);
+		std::filesystem::remove_all(baseCacheDir);
+		std::filesystem::create_directories(baseCacheDir); // Recreate the directory
+	}
+}
+
+// Global initialization for parallel compilation
+void cudaKernelPersistentCache::InitializeParallelCompilationSystem() {
+	SetParallelCompilation(true);
+}
+
+void cudaKernelPersistentCache::ShutdownParallelCompilationSystem() {
+	SetParallelCompilation(false);
 }
 
 #endif

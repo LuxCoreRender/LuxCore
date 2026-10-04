@@ -26,6 +26,10 @@
 
 #if !defined(LUXRAYS_DISABLE_CUDA)
 
+#include <mutex>
+#include <atomic>
+#include <oneapi/tbb.h>
+
 namespace luxrays {
 
 class cudaKernelCache {
@@ -42,7 +46,7 @@ public:
 		std::unique_ptr<char[]> * ptx, size_t *ptxSize, std::string *error);
 };
 
-// WARNING: this class is not thread safe !
+// Thread-safe class for CUDA kernel compilation with parallel support
 class cudaKernelPersistentCache : public cudaKernelCache {
 public:
 	cudaKernelPersistentCache(const std::string &applicationName);
@@ -61,8 +65,47 @@ public:
 	std::string GetApplicationName() {
 		return appName;
 	}
+
+	//------------------------------------------------------------------------------
+	// Cache management
+	//------------------------------------------------------------------------------
+
+	// Clear all cached kernels for this application
+	void ClearCache();
+
+	// Clear a specific kernel from cache
+	void ClearKernelCache(const std::string &kernelName);
+
+	// Clear all CUDA kernel caches (all applications)
+	static void ClearAllCaches();
+
+	//------------------------------------------------------------------------------
+	// Parallel compilation support
+	//------------------------------------------------------------------------------
+
+	// Enable/disable parallel compilation
+	static void SetParallelCompilation(bool enable);
+	static bool IsParallelCompilationEnabled();
+
+	// Compile multiple kernels in parallel using TBB
+	std::vector<CUmodule> CompileMultiple(
+		const std::vector<std::tuple<std::vector<std::string>, std::string, std::string>> &kernels,
+		std::vector<bool> *cached = nullptr,
+		std::vector<std::string> *errors = nullptr
+	);
+
 private:
 	std::string appName;
+	
+	// Thread safety
+	std::mutex cacheMutex;
+	
+	// Parallel compilation state
+	static std::atomic<bool> parallelCompilationEnabled;
+	
+	// Global system initialization
+	static void InitializeParallelCompilationSystem();
+	static void ShutdownParallelCompilationSystem();
 };
 
 }

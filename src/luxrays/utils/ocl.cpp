@@ -21,6 +21,10 @@
 #include <iostream>
 #include <string.h>
 #include <fstream>
+#include <mutex>
+#include <atomic>
+#include <vector>
+#include <oneapi/tbb.h>
 
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/algorithm/string/trim.hpp>
@@ -33,6 +37,9 @@
 
 using namespace std;
 using namespace luxrays;
+
+// Static members for parallel compilation
+std::atomic<bool> oclKernelPersistentCache::parallelCompilationEnabled(false);
 
 // Helper function to get error string
 string luxrays::oclErrorString(cl_int error) {
@@ -249,8 +256,7 @@ cl_program oclKernelPersistentCache::Compile(cl_context context, cl_device_id de
 	if (errorStr)
 		*errorStr = "";
 
-	// Check if the kernel is available inside the cache
-
+	// Get device info (thread-safe, no shared state)
 	cl_platform_id platform;
 	CHECK_OCL_ERROR(clGetDeviceInfo(device, CL_DEVICE_PLATFORM, sizeof(cl_platform_id), &platform, nullptr));
 	
@@ -276,38 +282,103 @@ cl_program oclKernelPersistentCache::Compile(cl_context context, cl_device_id de
 	const std::filesystem::path filePath = dirPath / kernelName;
 	const string fileName = filePath.generic_string();
 	
-	if (!std::filesystem::exists(filePath)) {
-		// It isn't available, compile the source
-		cl_program program = ForcedCompile(context, device,
-				kernelsParameters, kernelSource, errorStr);
-		if (!program)
-			return nullptr;
+	// Thread-safe cache access
+	bool useCache = false;
+	cl_program cachedProgram = nullptr;
+	
+	{
+		std::lock_guard<std::mutex> lock(cacheMutex);
+		
+		if (std::filesystem::exists(filePath)) {
+			useCache = true;
+			const size_t fileSize = std::filesystem::file_size(filePath);
 
-		// Obtain the binaries of the sources
-		size_t binsCount;
-		CHECK_OCL_ERROR(clGetProgramInfo(program, CL_PROGRAM_BINARY_SIZES, 0, nullptr, &binsCount));
+			if (fileSize > 4) {
+				const size_t kernelSize = fileSize - 4;
 
-		size_t *binsSizes = (size_t *)alloca(binsCount * sizeof(size_t));
-		CHECK_OCL_ERROR(clGetProgramInfo(program, CL_PROGRAM_BINARY_SIZES, binsCount, binsSizes, nullptr));
+				vector<char> kernelBin(kernelSize);
 
-		// Create the file only if the binaries include something
-		if (binsSizes[0] > 0) {
-			// Using here alloca() can trigger a stack overflow on Windows for
-			// large kernel binaries
-			std::unique_ptr<char[]> bin(new char[binsSizes[0]]);
-			char *bins = bin.get();
-			CHECK_OCL_ERROR(clGetProgramInfo(program, CL_PROGRAM_BINARIES, sizeof(char *), &bins, nullptr));
+				// The use of std::filesystem::path is required for UNICODE support: fileName
+				// is supposed to be UTF-8 encoded.
+				std::ifstream file(std::filesystem::path(fileName),
+					std::ifstream::in | std::ifstream::binary);
 
-			// Add the kernel to the cache
+				// Read the binary hash
+				u_int hashBin;
+				file.read((char *)&hashBin, sizeof(int));
+
+				file.read(&kernelBin[0], kernelSize);
+
+				// Check for errors
+				char buf[512];
+				if (file.fail()) {
+					sprintf(buf, "Unable to read kernel file cache %s", fileName.c_str());
+					throw runtime_error(buf);
+				}
+
+				file.close();
+
+				// Check the binary hash
+				if (hashBin != HashBin(&kernelBin[0], kernelSize)) {
+					// Something wrong in the file, remove it
+					std::filesystem::remove(filePath);
+				} else {
+					// Cache is valid, compile from binaries
+					vector<const unsigned char *> bins(1);
+					bins[0] = (unsigned char *)&kernelBin[0];
+					cl_int error;
+					cachedProgram = clCreateProgramWithBinary(context, 1, &device, &kernelSize, 
+							&bins[0], nullptr, &error);
+					CHECK_OCL_ERROR(error);
+					
+					error = clBuildProgram(cachedProgram, 1, &device, nullptr, nullptr, nullptr);
+					CHECK_OCL_ERROR(error);
+					
+					if (cached)
+						*cached = true;
+				}
+			}
+		}
+	}
+	
+	if (useCache && cachedProgram) {
+		return cachedProgram;
+	}
+	
+	// It isn't available or cache was invalid, compile the source
+	cl_program program = ForcedCompile(context, device,
+			kernelsParameters, kernelSource, errorStr);
+	if (!program)
+		return nullptr;
+
+	// Obtain the binaries of the sources
+	size_t binsCount;
+	CHECK_OCL_ERROR(clGetProgramInfo(program, CL_PROGRAM_BINARY_SIZES, 0, nullptr, &binsCount));
+
+	size_t *binsSizes = (size_t *)alloca(binsCount * sizeof(size_t));
+	CHECK_OCL_ERROR(clGetProgramInfo(program, CL_PROGRAM_BINARY_SIZES, binsCount, binsSizes, nullptr));
+
+	// Create the file only if the binaries include something
+	if (binsSizes[0] > 0) {
+		// Using here alloca() can trigger a stack overflow on Windows for
+		// large kernel binaries
+		std::unique_ptr<char[]> bin(new char[binsSizes[0]]);
+		char *bins = bin.get();
+		CHECK_OCL_ERROR(clGetProgramInfo(program, CL_PROGRAM_BINARIES, sizeof(char *), &bins, nullptr));
+
+		// Add the kernel to the cache (thread-safe)
+		std::lock_guard<std::mutex> lock(cacheMutex);
+		
+		// Recheck if file exists (another thread might have created it)
+		if (!std::filesystem::exists(filePath)) {
 			std::filesystem::create_directories(dirPath);
 
 			// The use of std::filesystem::path is required for UNICODE support: fileName
 			// is supposed to be UTF-8 encoded.
-
 			std::ofstream file(std::filesystem::path(fileName),
-				std::ofstream::out |
-				std::ofstream::binary |
-				std::ofstream::trunc);
+					std::ofstream::out |
+					std::ofstream::binary |
+					std::ofstream::trunc);
 
 			// Write the binary hash
 			const u_int hashBin = HashBin(bins, binsSizes[0]);
@@ -323,67 +394,127 @@ cl_program oclKernelPersistentCache::Compile(cl_context context, cl_device_id de
 
 			file.close();
 		}
+	}
 
-		if (cached)
-			*cached = false;
+	if (cached)
+		*cached = false;
 
-		return program;
-	} else {
-		const size_t fileSize = std::filesystem::file_size(filePath);
+	return program;
+}
 
-		if (fileSize > 4) {
-			const size_t kernelSize = fileSize - 4;
+//------------------------------------------------------------------------------
+// Parallel compilation system using TBB
+//------------------------------------------------------------------------------
 
-			vector<char> kernelBin(kernelSize);
+void oclKernelPersistentCache::SetParallelCompilation(bool enable) {
+	parallelCompilationEnabled = enable;
+}
 
-			// The use of std::filesystem::path is required for UNICODE support: fileName
-			// is supposed to be UTF-8 encoded.
-			std::ifstream file(std::filesystem::path(fileName),
-				std::ifstream::in | std::ifstream::binary);
+bool oclKernelPersistentCache::IsParallelCompilationEnabled() {
+	return parallelCompilationEnabled;
+}
 
-			// Read the binary hash
-			u_int hashBin;
-			file.read((char *)&hashBin, sizeof(int));
-
-			file.read(&kernelBin[0], kernelSize);
-
-			// Check for errors
-			char buf[512];
-			if (file.fail()) {
-				sprintf(buf, "Unable to read kernel file cache %s", fileName.c_str());
-				throw runtime_error(buf);
-			}
-
-			file.close();
-
-			// Check the binary hash
-			if (hashBin != HashBin(&kernelBin[0], kernelSize)) {
-				// Something wrong in the file, remove the file and retry
-				std::filesystem::remove(filePath);
-				return Compile(context, device, kernelsParameters, kernelSource, cached, errorStr);
-			} else {
-				// Compile from the binaries
-				vector<const unsigned char *> bins(1);
-				bins[0] = (unsigned char *)&kernelBin[0];
-				cl_int error;
-				cl_program program = clCreateProgramWithBinary(context, 1, &device, &kernelSize, 
-						&bins[0],
-						nullptr, &error);
-				CHECK_OCL_ERROR(error);
-				
-				error = clBuildProgram(program, 1, &device, nullptr, nullptr, nullptr);
-				CHECK_OCL_ERROR(error);
-
-				if (cached)
-					*cached = true;
-
-				return program;
-			}
-		} else {
-			// Something wrong in the file, remove the file and retry
-			std::filesystem::remove(filePath);
-			return Compile(context, device, kernelsParameters, kernelSource, cached, errorStr);
+std::vector<cl_program> oclKernelPersistentCache::CompileMultiple(
+		cl_context context, cl_device_id device,
+		const std::vector<std::tuple<std::vector<std::string>, std::string>> &kernels,
+		std::vector<bool> *cached, std::vector<std::string> *errors) {
+	
+	std::vector<cl_program> programs(kernels.size(), nullptr);
+	
+	if (!IsParallelCompilationEnabled() || kernels.empty()) {
+		// Fallback to sequential compilation
+		if (cached) cached->resize(kernels.size());
+		if (errors) errors->resize(kernels.size());
+		
+		for (size_t i = 0; i < kernels.size(); ++i) {
+			const auto &[params, source] = kernels[i];
+			bool isCached = false;
+			std::string error;
+			
+			programs[i] = Compile(context, device, params, source, &isCached, &error);
+			
+			if (cached) (*cached)[i] = isCached;
+			if (errors) (*errors)[i] = error;
 		}
+		
+		return programs;
+	}
+	
+	// Parallel compilation using TBB
+	if (cached) cached->resize(kernels.size());
+	if (errors) errors->resize(kernels.size());
+	
+	tbb::parallel_for(tbb::blocked_range<size_t>(0, kernels.size()),
+		[&](const tbb::blocked_range<size_t> &range) {
+			for (size_t i = range.begin(); i < range.end(); ++i) {
+				const auto &[params, source] = kernels[i];
+				bool isCached = false;
+				std::string error;
+				
+				programs[i] = Compile(context, device, params, source, &isCached, &error);
+				
+				if (cached) (*cached)[i] = isCached;
+				if (errors) (*errors)[i] = error;
+			}
+		});
+	
+	return programs;
+}
+
+//------------------------------------------------------------------------------
+// Cache management
+//------------------------------------------------------------------------------
+
+void oclKernelPersistentCache::ClearCache() {
+	const std::filesystem::path cacheDir = GetCacheDir(appName);
+	
+	if (std::filesystem::exists(cacheDir)) {
+		std::lock_guard<std::mutex> lock(cacheMutex);
+		std::filesystem::remove_all(cacheDir);
+		std::filesystem::create_directories(cacheDir); // Recreate the directory
+	}
+}
+
+void oclKernelPersistentCache::ClearKernelCache(cl_context context, cl_device_id device, const std::string &kernelName) {
+	// Get device info to build the cache path
+	cl_platform_id platform;
+	CHECK_OCL_ERROR(clGetDeviceInfo(device, CL_DEVICE_PLATFORM, sizeof(cl_platform_id), &platform, nullptr));
+	
+	size_t platformNameSize;
+	CHECK_OCL_ERROR(clGetPlatformInfo(platform, CL_PLATFORM_VENDOR, 0, nullptr, &platformNameSize));
+	char *platformNameChar = (char *)alloca(platformNameSize * sizeof(char));
+	CHECK_OCL_ERROR(clGetPlatformInfo(platform, CL_PLATFORM_VENDOR, platformNameSize, platformNameChar, nullptr));
+	string platformName = boost::trim_copy(string(platformNameChar));
+
+	size_t deviceNameSize;
+	CHECK_OCL_ERROR(clGetDeviceInfo(device, CL_DEVICE_NAME, 0, nullptr, &deviceNameSize));
+	char *deviceNameChar = (char *)alloca(deviceNameSize * sizeof(char));
+	CHECK_OCL_ERROR(clGetDeviceInfo(device, CL_DEVICE_NAME, deviceNameSize, deviceNameChar, nullptr));
+	string deviceName = boost::trim_copy(string(deviceNameChar));
+	
+	cl_uint deviceUnitsUInt;
+	CHECK_OCL_ERROR(clGetDeviceInfo(device, CL_DEVICE_MAX_COMPUTE_UNITS, sizeof(cl_uint), &deviceUnitsUInt, nullptr));
+	string deviceUnits = ToString(deviceUnitsUInt);
+
+	const std::filesystem::path dirPath = GetCacheDir(appName) / SanitizeFileName(platformName) /
+		SanitizeFileName(deviceName) / SanitizeFileName(deviceUnits);
+	const std::filesystem::path kernelPath = dirPath / kernelName;
+	
+	if (std::filesystem::exists(kernelPath)) {
+		std::lock_guard<std::mutex> lock(cacheMutex);
+		std::filesystem::remove(kernelPath);
+	}
+}
+
+void oclKernelPersistentCache::ClearAllCaches() {
+	const std::filesystem::path baseCacheDir = luxrays::GetCacheDir() / "ocl_kernel_cache";
+	
+	if (std::filesystem::exists(baseCacheDir)) {
+		// Use a separate mutex for global operations
+		static std::mutex globalCacheMutex;
+		std::lock_guard<std::mutex> lock(globalCacheMutex);
+		std::filesystem::remove_all(baseCacheDir);
+		std::filesystem::create_directories(baseCacheDir); // Recreate the directory
 	}
 }
 

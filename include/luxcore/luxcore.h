@@ -262,6 +262,21 @@ CPP_EXPORT CPP_API void AddFileNameResolverPath(const std::string &path);
 CPP_EXPORT CPP_API std::vector<std::string> GetFileNameResolverPaths();
 
 /*!
+ * \brief Clear all CUDA kernel caches.
+ */
+CPP_EXPORT CPP_API void ClearCUDAKernelCache();
+
+/*!
+ * \brief Clear all OpenCL kernel caches.
+ */
+CPP_EXPORT CPP_API void ClearOCLKernelCache();
+
+/*!
+ * \brief Clear all kernel caches (CUDA and OpenCL).
+ */
+CPP_EXPORT CPP_API void ClearAllKernelCaches();
+
+/*!
  * \brief Film stores all the outputs of a rendering. It can be obtained
  * from a RenderSession or as stand alone object loaded from a file.
  */

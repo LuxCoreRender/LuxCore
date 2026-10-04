@@ -26,6 +26,7 @@
 #include "luxrays/devices/ocldevice.h"
 #include "luxrays/kernels/kernels.h"
 #include "luxrays/utils/strutils.h"
+#include <chrono>
 
 using namespace std;
 
@@ -200,6 +201,8 @@ HardwareDeviceProgramUPtr OpenCLDevice::CompileProgram(
 #elif defined (__linux__)
 	oclProgramParameters.push_back("-D LUXRAYS_OS_LINUX");
 #endif
+	// Suppress Intel OpenCL compiler warning #20283 about #line directives preventing precompiled header creation
+	oclProgramParameters.push_back("-diag-disable 20283");
 
 	oclProgramParameters.insert(oclProgramParameters.end(),
 			additionalCompileOpts.begin(), additionalCompileOpts.end());
@@ -208,6 +211,7 @@ HardwareDeviceProgramUPtr OpenCLDevice::CompileProgram(
 	LR_LOG(deviceContext, "[" << programName << "] Compiling kernels ");
 	LR_LOG(deviceContext, "[" << programName << "] Cache directory: " << oclKernelPersistentCache::GetCacheDir(dynamic_cast<oclKernelPersistentCache*>(kernelCache.get())->GetApplicationName()));
 
+	auto startTime = std::chrono::high_resolution_clock::now();
 
 	const string oclProgramSource =
 		luxrays::ocl::KernelSource_ocldevice_funcs +
@@ -223,6 +227,10 @@ HardwareDeviceProgramUPtr OpenCLDevice::CompileProgram(
 
 		throw runtime_error(programName + " OpenCL program compilation error");
 	}
+
+	auto endTime = std::chrono::high_resolution_clock::now();
+	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
+	LR_LOG(deviceContext, "[" << programName << "] Compilation completed in " << duration.count() << " ms");
 
 	if (cached) {
 		LR_LOG(deviceContext, "[" << programName << "] Program cached");

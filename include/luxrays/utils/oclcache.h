@@ -24,6 +24,9 @@
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
 
+#include <mutex>
+#include <atomic>
+#include <oneapi/tbb.h>
 #include "luxrays/utils/ocl.h"
 
 namespace luxrays {
@@ -58,7 +61,7 @@ public:
 	}
 };
 
-// WARNING: this class is not thread safe !
+// Thread-safe class for OpenCL kernel compilation with parallel support
 class oclKernelPersistentCache : public oclKernelCache {
 public:
 	oclKernelPersistentCache(const std::string &applicationName);
@@ -67,6 +70,21 @@ public:
 	virtual cl_program Compile(cl_context context, cl_device_id device,
 		const std::vector<std::string> &kernelsParameters, const std::string &kernelSource,
 		bool *cached, std::string *errorStr);
+
+	// Parallel compilation support
+	//------------------------------------------------------------------------------
+
+	// Enable/disable parallel compilation
+	static void SetParallelCompilation(bool enable);
+	static bool IsParallelCompilationEnabled();
+
+	// Compile multiple kernels in parallel using TBB
+	std::vector<cl_program> CompileMultiple(
+		cl_context context, cl_device_id device,
+		const std::vector<std::tuple<std::vector<std::string>, std::string>> &kernels,
+		std::vector<bool> *cached = nullptr,
+		std::vector<std::string> *errors = nullptr
+	);
 
 	static std::string HashString(const std::string &ss);
 	static u_int HashBin(const char *s, const size_t size);
@@ -77,8 +95,27 @@ public:
 		return appName;
 	}
 
+	//------------------------------------------------------------------------------
+	// Cache management
+	//------------------------------------------------------------------------------
+
+	// Clear all cached kernels for this application
+	void ClearCache();
+
+	// Clear a specific kernel from cache
+	void ClearKernelCache(cl_context context, cl_device_id device, const std::string &kernelName);
+
+	// Clear all OpenCL kernel caches (all applications)
+	static void ClearAllCaches();
+
 private:
 	std::string appName;
+	
+	// Thread safety
+	std::mutex cacheMutex;
+	
+	// Parallel compilation state
+	static std::atomic<bool> parallelCompilationEnabled;
 };
 
 }
