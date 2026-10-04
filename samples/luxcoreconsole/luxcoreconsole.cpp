@@ -192,11 +192,8 @@ int main(int argc, char *argv[]) {
 			}
 		}
 
-		// Handle fill kernel caches option
+		// Handle fill kernel caches option (doesn't require a config file)
 		if (fillKernelCaches) {
-			if (configFileName.compare("") == 0)
-				throw runtime_error("You must specify a configuration file with -k option");
-
 			LC_LOG("Clearing kernel caches...");
 			luxcore::ClearAllKernelCaches();
 
