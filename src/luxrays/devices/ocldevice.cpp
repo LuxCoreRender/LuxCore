@@ -201,6 +201,8 @@ HardwareDeviceProgramUPtr OpenCLDevice::CompileProgram(
 #elif defined (__linux__)
 	oclProgramParameters.push_back("-D LUXRAYS_OS_LINUX");
 #endif
+	// Suppress Intel OpenCL compiler warning about #line directives preventing PCH creation
+	oclProgramParameters.push_back("-diag-disable 20283");
 
 	oclProgramParameters.insert(oclProgramParameters.end(),
 			additionalCompileOpts.begin(), additionalCompileOpts.end());
