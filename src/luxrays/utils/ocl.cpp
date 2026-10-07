@@ -55,6 +55,31 @@ std::string GetOpenCLVendor(cl_device_id device) {
 	return std::string(platformNameChar);
 }
 
+// OpenCL compiler information
+std::string GetOpenCLCompilerInfo(cl_device_id device) {
+	cl_platform_id platform;
+	CHECK_OCL_ERROR(clGetDeviceInfo(device, CL_DEVICE_PLATFORM, sizeof(cl_platform_id), &platform, nullptr));
+
+	std::size_t platformVersionSize;
+	CHECK_OCL_ERROR(clGetPlatformInfo(platform, CL_PLATFORM_VERSION, 0, nullptr, &platformVersionSize));
+	char *platformVersionChar = (char *)alloca(platformVersionSize * sizeof(char));
+	CHECK_OCL_ERROR(clGetPlatformInfo(platform, CL_PLATFORM_VERSION, platformVersionSize, platformVersionChar, nullptr));
+	const std::string platformVersion = boost::trim_copy(std::string(platformVersionChar));
+
+	std::size_t driverVersionSize;
+	CHECK_OCL_ERROR(clGetDeviceInfo(device, CL_DRIVER_VERSION, 0, nullptr, &driverVersionSize));
+	char *driverVersionChar = (char *)alloca(driverVersionSize * sizeof(char));
+	CHECK_OCL_ERROR(clGetDeviceInfo(device, CL_DRIVER_VERSION, driverVersionSize, driverVersionChar, nullptr));
+	const std::string driverVersion = boost::trim_copy(std::string(driverVersionChar));
+
+	cl_bool compilerAvailable;
+	CHECK_OCL_ERROR(clGetDeviceInfo(device, CL_DEVICE_COMPILER_AVAILABLE, sizeof(cl_bool), &compilerAvailable, nullptr));
+
+	return GetOpenCLVendor(device) + " " + platformVersion +
+		" (driver: " + driverVersion +
+		", compiler " + (compilerAvailable ? "available" : "not available") + ")";
+}
+
 // Helper function to get error std::string
 std::string oclErrorString(cl_int error) {
 	switch (error) {
@@ -227,6 +252,8 @@ std::filesystem::path oclKernelPersistentCache::GetCacheDir(const std::string &a
 }
 
 oclKernelPersistentCache::oclKernelPersistentCache(const std::string &applicationName) {
+	// Enable parallel compilation by default
+	SetParallelCompilation(true);
 	appName = applicationName;
 
 	// Crate the cache directory

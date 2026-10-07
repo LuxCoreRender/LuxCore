@@ -201,13 +201,12 @@ HardwareDeviceProgramUPtr OpenCLDevice::CompileProgram(
 #elif defined (__linux__)
 	oclProgramParameters.push_back("-D LUXRAYS_OS_LINUX");
 #endif
-	// Suppress Intel OpenCL compiler warning #20283 about #line directives preventing precompiled header creation
-	oclProgramParameters.push_back("-diag-disable 20283");
 
 	oclProgramParameters.insert(oclProgramParameters.end(),
 			additionalCompileOpts.begin(), additionalCompileOpts.end());
 
 	LR_LOG(deviceContext, "[" << programName << "] Compiler options: " << oclKernelPersistentCache::ToOptsString(oclProgramParameters));
+	LR_LOG(deviceContext, "[" << programName << "] OpenCL compiler: " << GetOpenCLCompilerInfo(deviceDesc.GetOCLDevice()));
 	LR_LOG(deviceContext, "[" << programName << "] Compiling kernels ");
 	LR_LOG(deviceContext, "[" << programName << "] Cache directory: " << oclKernelPersistentCache::GetCacheDir(dynamic_cast<oclKernelPersistentCache*>(kernelCache.get())->GetApplicationName()));
 
@@ -253,6 +252,81 @@ HardwareDeviceProgramUPtr OpenCLDevice::CompileProgram(
 	oclDeviceProgram.Set(oclProgram);
 
 	return std::move(program);
+}
+
+std::vector<HardwareDeviceProgramUPtr> OpenCLDevice::CompilePrograms(
+	const std::vector<ProgramRequest> &requests
+) {
+	if (requests.empty())
+		return std::vector<HardwareDeviceProgramUPtr>();
+
+	auto startTime = std::chrono::high_resolution_clock::now();
+
+	// Apply the same preprocessing of CompileProgram() to all requests
+	std::vector<std::tuple<std::vector<std::string>, std::string>> kernels;
+	kernels.reserve(requests.size());
+	for (const auto &request : requests) {
+		std::vector<std::string> oclProgramParameters = request.parameters;
+		oclProgramParameters.push_back("-D LUXRAYS_OPENCL_DEVICE");
+#if defined (__APPLE__)
+		oclProgramParameters.push_back("-D LUXRAYS_OS_APPLE");
+#elif defined (WIN32)
+		oclProgramParameters.push_back("-D LUXRAYS_OS_WINDOWS");
+#elif defined (__linux__)
+		oclProgramParameters.push_back("-D LUXRAYS_OS_LINUX");
+#endif
+		oclProgramParameters.insert(oclProgramParameters.end(),
+				additionalCompileOpts.begin(), additionalCompileOpts.end());
+
+		LR_LOG(deviceContext, "[" << request.name << "] Compiler options: " <<
+			oclKernelPersistentCache::ToOptsString(oclProgramParameters));
+
+		kernels.push_back(std::make_tuple(oclProgramParameters,
+			luxrays::ocl::KernelSource_ocldevice_funcs + request.source));
+	}
+
+	LR_LOG(deviceContext, "[" << requests.size() << " programs] Compiling kernels in parallel");
+
+	std::vector<bool> cached;
+	std::vector<std::string> errors;
+	std::vector<cl_program> oclPrograms = kernelCache->CompileMultiple(
+			oclContext, deviceDesc.GetOCLDevice(), kernels, &cached, &errors);
+
+	// Check for errors
+	for (std::size_t i = 0; i < requests.size(); ++i) {
+		if (!oclPrograms[i]) {
+			LR_LOG(deviceContext, "[" << requests[i].name << "] OpenCL program compilation error" << endl << errors[i]);
+
+			// Release the programs compiled so far
+			for (std::size_t j = 0; j < requests.size(); ++j) {
+				if (oclPrograms[j])
+					CHECK_OCL_ERROR(clReleaseProgram(oclPrograms[j]));
+			}
+
+			throw runtime_error(requests[i].name + " OpenCL program compilation error");
+		}
+	}
+
+	// Wrap the cl_programs in HardwareDevicePrograms
+	std::vector<HardwareDeviceProgramUPtr> programs;
+	programs.reserve(requests.size());
+	for (std::size_t i = 0; i < requests.size(); ++i) {
+		auto [program, oclDeviceProgram] =
+			CreateUniquePtr<HardwareDeviceProgram, OpenCLDeviceProgram>();
+
+		oclDeviceProgram.Set(oclPrograms[i]);
+
+		programs.push_back(std::move(program));
+	}
+
+	auto endTime = std::chrono::high_resolution_clock::now();
+	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
+	for (std::size_t i = 0; i < requests.size(); ++i) {
+		LR_LOG(deviceContext, "[" << requests[i].name << "] Compilation completed in " <<
+			duration.count() << " ms" << (cached[i] ? " (cached)" : ""));
+	}
+
+	return programs;
 }
 
 HardwareDeviceKernelUPtr OpenCLDevice::GetKernel(

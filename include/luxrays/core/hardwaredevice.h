@@ -160,6 +160,25 @@ public:
 		const std::string &programName
 	) = 0;
 
+	// Compile a batch of programs. The default implementation compiles the
+	// programs sequentially; devices supporting parallel compilation override
+	// this method.
+	struct ProgramRequest {
+		std::vector<std::string> parameters;
+		std::string source;
+		std::string name;
+	};
+	virtual std::vector<HardwareDeviceProgramUPtr> CompilePrograms(
+		const std::vector<ProgramRequest> &requests
+	) {
+		std::vector<HardwareDeviceProgramUPtr> programs;
+		programs.reserve(requests.size());
+		for (const auto &request : requests)
+			programs.push_back(CompileProgram(
+					request.parameters, request.source, request.name));
+		return programs;
+	}
+
 	virtual HardwareDeviceKernelUPtr GetKernel(
 		HardwareDeviceProgramRef program,
 		const std::string &kernelName
