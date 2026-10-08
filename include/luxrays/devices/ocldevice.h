@@ -303,6 +303,11 @@ public:
 			const std::string &programName
 	) override;
 
+	// Compile a batch of programs in parallel
+	virtual std::vector<HardwareDeviceProgramUPtr> CompilePrograms(
+		const std::vector<ProgramRequest> &requests
+	) override;
+
 	virtual HardwareDeviceKernelUPtr GetKernel(
 		HardwareDeviceProgramRef program,
 		const std::string &kernelName

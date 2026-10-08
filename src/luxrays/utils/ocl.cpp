@@ -35,14 +35,53 @@
 #include "luxrays/utils/oclcache.h"
 #include "luxrays/utils/config.h"
 
-using namespace std;
-using namespace luxrays;
+namespace luxrays {
+
+
 
 // Static members for parallel compilation
 std::atomic<bool> oclKernelPersistentCache::parallelCompilationEnabled(false);
 
-// Helper function to get error string
-string luxrays::oclErrorString(cl_int error) {
+// OpenCL vendor detection
+std::string GetOpenCLVendor(cl_device_id device) {
+	cl_platform_id platform;
+	CHECK_OCL_ERROR(clGetDeviceInfo(device, CL_DEVICE_PLATFORM, sizeof(cl_platform_id), &platform, nullptr));
+	
+	std::size_t platformNameSize;
+	CHECK_OCL_ERROR(clGetPlatformInfo(platform, CL_PLATFORM_VENDOR, 0, nullptr, &platformNameSize));
+	char *platformNameChar = (char *)alloca(platformNameSize * sizeof(char));
+	CHECK_OCL_ERROR(clGetPlatformInfo(platform, CL_PLATFORM_VENDOR, platformNameSize, platformNameChar, nullptr));
+	
+	return std::string(platformNameChar);
+}
+
+// OpenCL compiler information
+std::string GetOpenCLCompilerInfo(cl_device_id device) {
+	cl_platform_id platform;
+	CHECK_OCL_ERROR(clGetDeviceInfo(device, CL_DEVICE_PLATFORM, sizeof(cl_platform_id), &platform, nullptr));
+
+	std::size_t platformVersionSize;
+	CHECK_OCL_ERROR(clGetPlatformInfo(platform, CL_PLATFORM_VERSION, 0, nullptr, &platformVersionSize));
+	char *platformVersionChar = (char *)alloca(platformVersionSize * sizeof(char));
+	CHECK_OCL_ERROR(clGetPlatformInfo(platform, CL_PLATFORM_VERSION, platformVersionSize, platformVersionChar, nullptr));
+	const std::string platformVersion = boost::trim_copy(std::string(platformVersionChar));
+
+	std::size_t driverVersionSize;
+	CHECK_OCL_ERROR(clGetDeviceInfo(device, CL_DRIVER_VERSION, 0, nullptr, &driverVersionSize));
+	char *driverVersionChar = (char *)alloca(driverVersionSize * sizeof(char));
+	CHECK_OCL_ERROR(clGetDeviceInfo(device, CL_DRIVER_VERSION, driverVersionSize, driverVersionChar, nullptr));
+	const std::string driverVersion = boost::trim_copy(std::string(driverVersionChar));
+
+	cl_bool compilerAvailable;
+	CHECK_OCL_ERROR(clGetDeviceInfo(device, CL_DEVICE_COMPILER_AVAILABLE, sizeof(cl_bool), &compilerAvailable, nullptr));
+
+	return GetOpenCLVendor(device) + " " + platformVersion +
+		" (driver: " + driverVersion +
+		", compiler " + (compilerAvailable ? "available" : "not available") + ")";
+}
+
+// Helper function to get error std::string
+std::string oclErrorString(cl_int error) {
 	switch (error) {
 		case CL_SUCCESS:
 			return "CL_SUCCESS";
@@ -153,8 +192,8 @@ string luxrays::oclErrorString(cl_int error) {
 // oclKernelCache
 //------------------------------------------------------------------------------
 
-string oclKernelCache::ToOptsString(const vector<string> &kernelsParameters) {
-	string result;
+std::string oclKernelCache::ToOptsString(const std::vector<std::string> &kernelsParameters) {
+	std::string result;
 	
 	for	(auto const &p : kernelsParameters) {
 		if (result.length() != 0)
@@ -166,29 +205,29 @@ string oclKernelCache::ToOptsString(const vector<string> &kernelsParameters) {
 }
 
 cl_program oclKernelCache::ForcedCompile(cl_context context, cl_device_id device,
-		const vector<string> &kernelsParameters, const string &kernelSource,
-		string *errorStr) {
+		const std::vector<std::string> &kernelsParameters, const std::string &kernelSource,
+		std::string *errorStr) {
 	if (errorStr)
 		*errorStr = "";
 
 	const char *kernelSources[1] = { kernelSource.c_str() };
-	const size_t sourceSizes[1] = { kernelSource.length() };
+	const std::size_t sourceSizes[1] = { kernelSource.length() };
 	cl_int error;
 	cl_program program = clCreateProgramWithSource(context, 1, kernelSources, sourceSizes, &error);
 	CHECK_OCL_ERROR(error);
 
-	const string optsStr = ToOptsString(kernelsParameters);
+	const std::string optsStr = ToOptsString(kernelsParameters);
 	error = clBuildProgram(program, 1, &device, optsStr.c_str(), nullptr, nullptr);
 	if (error != CL_SUCCESS) {
 		if (errorStr) {
-			string logStr;
+			std::string logStr;
 			if (program) {
-				size_t valueSize;
+				std::size_t valueSize;
 				CHECK_OCL_ERROR(clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, 0, nullptr, &valueSize));
 				char *value = (char *)alloca(valueSize * sizeof(char));
 				CHECK_OCL_ERROR(clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, valueSize, value, nullptr));
 
-				logStr = string(value);
+				logStr = std::string(value);
 			} else
 				logStr = "Build info not available";
 
@@ -208,11 +247,13 @@ cl_program oclKernelCache::ForcedCompile(cl_context context, cl_device_id device
 // oclKernelPersistentCache
 //------------------------------------------------------------------------------
 
-std::filesystem::path oclKernelPersistentCache::GetCacheDir(const string &applicationName) {
+std::filesystem::path oclKernelPersistentCache::GetCacheDir(const std::string &applicationName) {
 	return luxrays::GetCacheDir() / "ocl_kernel_cache" / SanitizeFileName(applicationName);
 }
 
-oclKernelPersistentCache::oclKernelPersistentCache(const string &applicationName) {
+oclKernelPersistentCache::oclKernelPersistentCache(const std::string &applicationName) {
+	// Enable parallel compilation by default
+	SetParallelCompilation(true);
 	appName = applicationName;
 
 	// Crate the cache directory
@@ -225,16 +266,16 @@ oclKernelPersistentCache::~oclKernelPersistentCache() {
 // Bob Jenkins's One-at-a-Time hash
 // From: http://eternallyconfuzzled.com/tuts/algorithms/jsw_tut_hashing.aspx
 
-string oclKernelPersistentCache::HashString(const string &ss) {
+std::string oclKernelPersistentCache::HashString(const std::string &ss) {
 	const u_int hash = HashBin(ss.c_str(), ss.length());
 
 	char buf[9];
 	sprintf(buf, "%08x", hash);
 
-	return string(buf);
+	return std::string(buf);
 }
 
-u_int oclKernelPersistentCache::HashBin(const char *s, const size_t size) {
+u_int oclKernelPersistentCache::HashBin(const char *s, const std::size_t size) {
 	u_int hash = 0;
 
 	for (u_int i = 0; i < size; ++i) {
@@ -251,8 +292,8 @@ u_int oclKernelPersistentCache::HashBin(const char *s, const size_t size) {
 }
 
 cl_program oclKernelPersistentCache::Compile(cl_context context, cl_device_id device,
-		const vector<string> &kernelsParameters, const string &kernelSource,
-		bool *cached, string *errorStr) {
+		const std::vector<std::string> &kernelsParameters, const std::string &kernelSource,
+		bool *cached, std::string *errorStr) {
 	if (errorStr)
 		*errorStr = "";
 
@@ -260,27 +301,27 @@ cl_program oclKernelPersistentCache::Compile(cl_context context, cl_device_id de
 	cl_platform_id platform;
 	CHECK_OCL_ERROR(clGetDeviceInfo(device, CL_DEVICE_PLATFORM, sizeof(cl_platform_id), &platform, nullptr));
 	
-	size_t platformNameSize;
+	std::size_t platformNameSize;
 	CHECK_OCL_ERROR(clGetPlatformInfo(platform, CL_PLATFORM_VENDOR, 0, nullptr, &platformNameSize));
 	char *platformNameChar = (char *)alloca(platformNameSize * sizeof(char));
 	CHECK_OCL_ERROR(clGetPlatformInfo(platform, CL_PLATFORM_VENDOR, platformNameSize, platformNameChar, nullptr));
-	string platformName = boost::trim_copy(string(platformNameChar));
+	std::string platformName = boost::trim_copy(std::string(platformNameChar));
 
-	size_t deviceNameSize;
+	std::size_t deviceNameSize;
 	CHECK_OCL_ERROR(clGetDeviceInfo(device, CL_DEVICE_NAME, 0, nullptr, &deviceNameSize));
 	char *deviceNameChar = (char *)alloca(deviceNameSize * sizeof(char));
 	CHECK_OCL_ERROR(clGetDeviceInfo(device, CL_DEVICE_NAME, deviceNameSize, deviceNameChar, nullptr));
-	string deviceName = boost::trim_copy(string(deviceNameChar));
+	std::string deviceName = boost::trim_copy(std::string(deviceNameChar));
 	
 	cl_uint deviceUnitsUInt;
 	CHECK_OCL_ERROR(clGetDeviceInfo(device, CL_DEVICE_MAX_COMPUTE_UNITS, sizeof(cl_uint), &deviceUnitsUInt, nullptr));
-	string deviceUnits = ToString(deviceUnitsUInt);
+	std::string deviceUnits = ToString(deviceUnitsUInt);
 
-	const string kernelName = HashString(ToOptsString(kernelsParameters)) + "-" + HashString(kernelSource) + ".ocl";
+	const std::string kernelName = HashString(ToOptsString(kernelsParameters)) + "-" + HashString(kernelSource) + ".ocl";
 	const std::filesystem::path dirPath = GetCacheDir(appName) / SanitizeFileName(platformName) /
 		SanitizeFileName(deviceName) / SanitizeFileName(deviceUnits);
 	const std::filesystem::path filePath = dirPath / kernelName;
-	const string fileName = filePath.generic_string();
+	const std::string fileName = filePath.generic_string();
 	
 	// Thread-safe cache access
 	bool useCache = false;
@@ -291,12 +332,12 @@ cl_program oclKernelPersistentCache::Compile(cl_context context, cl_device_id de
 		
 		if (std::filesystem::exists(filePath)) {
 			useCache = true;
-			const size_t fileSize = std::filesystem::file_size(filePath);
+			const std::size_t fileSize = std::filesystem::file_size(filePath);
 
 			if (fileSize > 4) {
-				const size_t kernelSize = fileSize - 4;
+				const std::size_t kernelSize = fileSize - 4;
 
-				vector<char> kernelBin(kernelSize);
+				std::vector<char> kernelBin(kernelSize);
 
 				// The use of std::filesystem::path is required for UNICODE support: fileName
 				// is supposed to be UTF-8 encoded.
@@ -313,7 +354,7 @@ cl_program oclKernelPersistentCache::Compile(cl_context context, cl_device_id de
 				char buf[512];
 				if (file.fail()) {
 					sprintf(buf, "Unable to read kernel file cache %s", fileName.c_str());
-					throw runtime_error(buf);
+					throw std::runtime_error(buf);
 				}
 
 				file.close();
@@ -324,7 +365,7 @@ cl_program oclKernelPersistentCache::Compile(cl_context context, cl_device_id de
 					std::filesystem::remove(filePath);
 				} else {
 					// Cache is valid, compile from binaries
-					vector<const unsigned char *> bins(1);
+					std::vector<const unsigned char *> bins(1);
 					bins[0] = (unsigned char *)&kernelBin[0];
 					cl_int error;
 					cachedProgram = clCreateProgramWithBinary(context, 1, &device, &kernelSize, 
@@ -352,10 +393,10 @@ cl_program oclKernelPersistentCache::Compile(cl_context context, cl_device_id de
 		return nullptr;
 
 	// Obtain the binaries of the sources
-	size_t binsCount;
+	std::size_t binsCount;
 	CHECK_OCL_ERROR(clGetProgramInfo(program, CL_PROGRAM_BINARY_SIZES, 0, nullptr, &binsCount));
 
-	size_t *binsSizes = (size_t *)alloca(binsCount * sizeof(size_t));
+	std::size_t *binsSizes = (std::size_t *)alloca(binsCount * sizeof(std::size_t));
 	CHECK_OCL_ERROR(clGetProgramInfo(program, CL_PROGRAM_BINARY_SIZES, binsCount, binsSizes, nullptr));
 
 	// Create the file only if the binaries include something
@@ -389,7 +430,7 @@ cl_program oclKernelPersistentCache::Compile(cl_context context, cl_device_id de
 			char buf[512];
 			if (file.fail()) {
 				sprintf(buf, "Unable to write kernel file cache %s", fileName.c_str());
-				throw runtime_error(buf);
+				throw std::runtime_error(buf);
 			}
 
 			file.close();
@@ -426,7 +467,7 @@ std::vector<cl_program> oclKernelPersistentCache::CompileMultiple(
 		if (cached) cached->resize(kernels.size());
 		if (errors) errors->resize(kernels.size());
 		
-		for (size_t i = 0; i < kernels.size(); ++i) {
+		for (std::size_t i = 0; i < kernels.size(); ++i) {
 			const auto &[params, source] = kernels[i];
 			bool isCached = false;
 			std::string error;
@@ -444,9 +485,9 @@ std::vector<cl_program> oclKernelPersistentCache::CompileMultiple(
 	if (cached) cached->resize(kernels.size());
 	if (errors) errors->resize(kernels.size());
 	
-	tbb::parallel_for(tbb::blocked_range<size_t>(0, kernels.size()),
-		[&](const tbb::blocked_range<size_t> &range) {
-			for (size_t i = range.begin(); i < range.end(); ++i) {
+	tbb::parallel_for(tbb::blocked_range<std::size_t>(0, kernels.size()),
+		[&](const tbb::blocked_range<std::size_t> &range) {
+			for (std::size_t i = range.begin(); i < range.end(); ++i) {
 				const auto &[params, source] = kernels[i];
 				bool isCached = false;
 				std::string error;
@@ -480,21 +521,21 @@ void oclKernelPersistentCache::ClearKernelCache(cl_context context, cl_device_id
 	cl_platform_id platform;
 	CHECK_OCL_ERROR(clGetDeviceInfo(device, CL_DEVICE_PLATFORM, sizeof(cl_platform_id), &platform, nullptr));
 	
-	size_t platformNameSize;
+	std::size_t platformNameSize;
 	CHECK_OCL_ERROR(clGetPlatformInfo(platform, CL_PLATFORM_VENDOR, 0, nullptr, &platformNameSize));
 	char *platformNameChar = (char *)alloca(platformNameSize * sizeof(char));
 	CHECK_OCL_ERROR(clGetPlatformInfo(platform, CL_PLATFORM_VENDOR, platformNameSize, platformNameChar, nullptr));
-	string platformName = boost::trim_copy(string(platformNameChar));
+	std::string platformName = boost::trim_copy(std::string(platformNameChar));
 
-	size_t deviceNameSize;
+	std::size_t deviceNameSize;
 	CHECK_OCL_ERROR(clGetDeviceInfo(device, CL_DEVICE_NAME, 0, nullptr, &deviceNameSize));
 	char *deviceNameChar = (char *)alloca(deviceNameSize * sizeof(char));
 	CHECK_OCL_ERROR(clGetDeviceInfo(device, CL_DEVICE_NAME, deviceNameSize, deviceNameChar, nullptr));
-	string deviceName = boost::trim_copy(string(deviceNameChar));
+	std::string deviceName = boost::trim_copy(std::string(deviceNameChar));
 	
 	cl_uint deviceUnitsUInt;
 	CHECK_OCL_ERROR(clGetDeviceInfo(device, CL_DEVICE_MAX_COMPUTE_UNITS, sizeof(cl_uint), &deviceUnitsUInt, nullptr));
-	string deviceUnits = ToString(deviceUnitsUInt);
+	std::string deviceUnits = ToString(deviceUnitsUInt);
 
 	const std::filesystem::path dirPath = GetCacheDir(appName) / SanitizeFileName(platformName) /
 		SanitizeFileName(deviceName) / SanitizeFileName(deviceUnits);
@@ -510,7 +551,7 @@ void oclKernelPersistentCache::ClearAllCaches() {
 	const std::filesystem::path baseCacheDir = luxrays::GetCacheDir() / "ocl_kernel_cache";
 	
 	if (std::filesystem::exists(baseCacheDir)) {
-		// Use a separate mutex for global operations
+		// Use a separate std::mutex for global operations
 		static std::mutex globalCacheMutex;
 		std::lock_guard<std::mutex> lock(globalCacheMutex);
 		std::filesystem::remove_all(baseCacheDir);
@@ -518,7 +559,7 @@ void oclKernelPersistentCache::ClearAllCaches() {
 	}
 }
 
-void luxrays::CheckOpenCLError(const cl_int err, const char *file, const int line) {
+void CheckOpenCLError(const cl_int err, const char *file, const int line) {
   	if (err != CL_SUCCESS) {
 		std::string msg = std::string("OpenCL driver API error ")
 			+ std::string("(code: ") + ToString(err)
@@ -529,6 +570,7 @@ void luxrays::CheckOpenCLError(const cl_int err, const char *file, const int lin
 	}
 }
 
+}  // namespace luxrays
 
 #endif
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4

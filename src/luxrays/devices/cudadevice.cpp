@@ -292,6 +292,68 @@ HardwareDeviceProgramUPtr CUDADevice::CompileProgram(
 	return static_cast<HardwareDeviceProgramUPtr>(std::move(cudaDeviceProgram));
 }
 
+std::vector<HardwareDeviceProgramUPtr> CUDADevice::CompilePrograms(
+	const std::vector<ProgramRequest> &requests
+) {
+	if (requests.empty())
+		return std::vector<HardwareDeviceProgramUPtr>();
+
+	auto startTime = std::chrono::high_resolution_clock::now();
+
+	// Apply the same preprocessing of CompileProgram() to all requests
+	std::vector<std::tuple<std::vector<std::string>, std::string, std::string>> kernels;
+	kernels.reserve(requests.size());
+	for (const auto &request : requests) {
+		auto cudaProgramParameters = AddKernelOpts(request.parameters);
+
+		LR_LOG(deviceContext, "[" << request.name << "] Compiler options: " << oclKernelPersistentCache::ToOptsString(cudaProgramParameters));
+
+		kernels.push_back(std::make_tuple(cudaProgramParameters,
+			GetKernelSource(request.source), request.name));
+	}
+
+	LR_LOG(deviceContext, "[" << requests.size() << " programs] Compiling kernels in parallel");
+
+	std::vector<bool> cached;
+	std::vector<std::string> errors;
+	std::vector<CUmodule> modules = kernelCache->CompileMultiple(kernels, &cached, &errors);
+
+	// Check for errors
+	for (std::size_t i = 0; i < requests.size(); ++i) {
+		if (!modules[i]) {
+			LR_LOG(deviceContext, "[" << requests[i].name << "] CUDA program compilation error: " << endl << errors[i]);
+
+			throw runtime_error(requests[i].name + " CUDA program compilation error");
+		} else {
+			if (errors[i].length() > 0) {
+				LR_LOG(deviceContext, "[" << requests[i].name << "] CUDA program compilation warnings: " << endl << errors[i]);
+			}
+		}
+	}
+
+	// Wrap the modules in HardwareDevicePrograms
+	std::vector<HardwareDeviceProgramUPtr> programs;
+	programs.reserve(requests.size());
+	for (std::size_t i = 0; i < requests.size(); ++i) {
+		auto cudaDeviceProgram = std::make_unique<CUDADeviceProgram>();
+
+		cudaDeviceProgram->Set(modules[i]);
+
+		loadedModules.push_back(modules[i]);
+
+		programs.push_back(static_cast<HardwareDeviceProgramUPtr>(std::move(cudaDeviceProgram)));
+	}
+
+	auto endTime = std::chrono::high_resolution_clock::now();
+	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
+	for (std::size_t i = 0; i < requests.size(); ++i) {
+		LR_LOG(deviceContext, "[" << requests[i].name << "] Compilation completed in " <<
+			duration.count() << " ms" << (cached[i] ? " (cached)" : ""));
+	}
+
+	return programs;
+}
+
 HardwareDeviceKernelUPtr CUDADevice::GetKernel(
 		HardwareDeviceProgramRef program,
 		const string &kernelName
