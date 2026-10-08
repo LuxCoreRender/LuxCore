@@ -39,13 +39,12 @@
 
 #include <optix_function_table_definition.h>
 
-using namespace std;
-using namespace luxrays;
+namespace luxrays {
 
 // Static members for parallel compilation
 std::atomic<bool> cudaKernelPersistentCache::parallelCompilationEnabled(false);
 
-static string GetCuda10Architecture() {
+static std::string GetCuda10Architecture() {
 	CUdevice device;
 	int major, minor;
 	CHECK_CUDA_ERROR(cuCtxGetDevice(&device));
@@ -65,7 +64,7 @@ static string GetCuda10Architecture() {
 		//minor = 5;
 	//}
 
-	return to_string(major) + to_string(minor);
+	return std::to_string(major) + std::to_string(minor);
 }
 
 //------------------------------------------------------------------------------
@@ -73,31 +72,31 @@ static string GetCuda10Architecture() {
 //------------------------------------------------------------------------------
 
 bool cudaKernelCache::ForcedCompilePTX(
-	const vector<string> &kernelsParameters, const string &kernelSource,
-	const string &programName, std::unique_ptr<char[]> * ptx, size_t *ptxSize, string *error
+	const std::vector<std::string> &kernelsParameters, const std::string &kernelSource,
+	const std::string &programName, std::unique_ptr<char[]> * ptx, std::size_t *ptxSize, std::string *error
 ) {
 	if (error)
 		*error = "";
 
 	nvrtcProgram prog;
 	CHECK_NVRTC_ERROR(nvrtcCreateProgram(&prog, kernelSource.c_str(), programName.c_str(), 0, nullptr, nullptr));
-  
-	vector<const char *> cudaOpts;
+
+	std::vector<const char *> cudaOpts;
 	cudaOpts.push_back("--device-as-default-execution-space");
 	//cudaOpts.push_back("--disable-warnings");
-       
+
         // Set target architecture, based on current device's capability
-        string targetArch = "--gpu-architecture=compute_" + GetCuda10Architecture();
+        std::string targetArch = "--gpu-architecture=compute_" + GetCuda10Architecture();
         cudaOpts.push_back(targetArch.c_str());
 
 	// To display warning numbers
 	cudaOpts.push_back("-Xcudafe");
 	cudaOpts.push_back("--display_error_number");
-	
+
 	// To suppress warning: warning #550-D: variable "xyz" was set but never used
 	cudaOpts.push_back("-Xcudafe");
 	cudaOpts.push_back("--diag_suppress=550");
-	
+
 	// To suppress warning: warning #1055-D: types cannot be declared in anonymous unions
 	cudaOpts.push_back("-Xcudafe");
 	cudaOpts.push_back("--diag_suppress=1055");
@@ -133,12 +132,12 @@ bool cudaKernelCache::ForcedCompilePTX(
 			cudaOpts.size(),
 			(cudaOpts.size() > 0) ? &cudaOpts[0] : nullptr);
 
-	size_t logSize;
+	std::size_t logSize;
 	CHECK_NVRTC_ERROR(nvrtcGetProgramLogSize(prog, &logSize));
 	auto log = std::make_unique<char[]>(logSize);
 	CHECK_NVRTC_ERROR(nvrtcGetProgramLog(prog, log.get()));
 
-	*error = string(log.get());
+	*error = std::string(log.get());
 
 	if (compilationResult != NVRTC_SUCCESS)
 		return false;
@@ -169,11 +168,11 @@ bool cudaKernelPersistentCache::IsParallelCompilationEnabled() {
 // cudaKernelPersistentCache
 //------------------------------------------------------------------------------
 
-std::filesystem::path cudaKernelPersistentCache::GetCacheDir(const string &applicationName) {
+std::filesystem::path cudaKernelPersistentCache::GetCacheDir(const std::string &applicationName) {
 	return luxrays::GetCacheDir() / "cuda_kernel_cache" / SanitizeFileName(applicationName);
 }
 
-cudaKernelPersistentCache::cudaKernelPersistentCache(const string &applicationName) {
+cudaKernelPersistentCache::cudaKernelPersistentCache(const std::string &applicationName) {
 	appName = applicationName;
 
 	// Crate the cache directory
@@ -183,31 +182,31 @@ cudaKernelPersistentCache::cudaKernelPersistentCache(const string &applicationNa
 cudaKernelPersistentCache::~cudaKernelPersistentCache() {
 }
 
-bool cudaKernelPersistentCache::CompilePTX(const vector<string> &kernelsParameters,
-		const string &kernelSource, const string &programName,
-		std::unique_ptr<char[]> *ptx, size_t *ptxSize, bool *cached, string *error) {
+bool cudaKernelPersistentCache::CompilePTX(const std::vector<std::string> &kernelsParameters,
+		const std::string &kernelSource, const std::string &programName,
+		std::unique_ptr<char[]> *ptx, std::size_t *ptxSize, bool *cached, std::string *error) {
 	if (error)
 		*error = "";
 
 	// Check if the kernel is available in the cache
 
-	const string kernelName =
+	const std::string kernelName =
 			oclKernelPersistentCache::HashString(oclKernelPersistentCache::ToOptsString(kernelsParameters))
 			+ "-" +
 			oclKernelPersistentCache::HashString(kernelSource) +
                         "_compute_" + GetCuda10Architecture() + ".ptx";
 	const std::filesystem::path dirPath = GetCacheDir(appName);
 	const std::filesystem::path filePath = dirPath / kernelName;
-	const string fileName = filePath.generic_string();
+	const std::string fileName = filePath.generic_string();
 
 	*cached = false;
-	
+
 	// Thread-safe cache access
 	{
 		std::lock_guard<std::mutex> lock(cacheMutex);
-		
+
 		if (std::filesystem::exists(filePath)) {
-			const size_t fileSize = std::filesystem::file_size(filePath);
+			const std::size_t fileSize = std::filesystem::file_size(filePath);
 
 			if (fileSize > 4) {
 				*ptxSize = fileSize - 4;
@@ -228,7 +227,7 @@ bool cudaKernelPersistentCache::CompilePTX(const vector<string> &kernelsParamete
 				char buf[512];
 				if (file.fail()) {
 					sprintf(buf, "Unable to read kernel file cache %s", fileName.c_str());
-					throw runtime_error(buf);
+					throw std::runtime_error(buf);
 				}
 
 				file.close();
@@ -250,13 +249,13 @@ bool cudaKernelPersistentCache::CompilePTX(const vector<string> &kernelsParamete
 			}
 		}
 	}
-	
+
 	// It isn't available, compile the source
 	// Create the file only if the binaries include something
 	if (ForcedCompilePTX(kernelsParameters, kernelSource, programName, ptx, ptxSize, error)) {
 		// Add the kernel to the cache (thread-safe)
 		std::lock_guard<std::mutex> lock(cacheMutex);
-		
+
 		std::filesystem::create_directories(dirPath);
 
 		// The use of std::filesystem::path is required for UNICODE support: fileName
@@ -275,7 +274,7 @@ bool cudaKernelPersistentCache::CompilePTX(const vector<string> &kernelsParamete
 		char buf[512];
 		if (file.fail()) {
 			sprintf(buf, "Unable to write kernel file cache %s", fileName.c_str());
-			throw runtime_error(buf);
+			throw std::runtime_error(buf);
 		}
 
 		file.close();
@@ -285,11 +284,11 @@ bool cudaKernelPersistentCache::CompilePTX(const vector<string> &kernelsParamete
 		return false;
 }
 
-CUmodule cudaKernelPersistentCache::Compile(const vector<string> &kernelsParameters,
-		const string &kernelSource, const string &programName,
-		bool *cached, string *error) {
+CUmodule cudaKernelPersistentCache::Compile(const std::vector<std::string> &kernelsParameters,
+		const std::string &kernelSource, const std::string &programName,
+		bool *cached, std::string *error) {
 	std::unique_ptr<char[]> ptx;
-	size_t ptxSize;
+	std::size_t ptxSize;
 	if (CompilePTX(kernelsParameters, kernelSource, programName, &ptx, &ptxSize, cached, error)) {
 		CUmodule module;
 		CHECK_CUDA_ERROR(cuModuleLoadDataEx(&module, ptx.get(), 0, 0, 0));
@@ -302,46 +301,46 @@ CUmodule cudaKernelPersistentCache::Compile(const vector<string> &kernelsParamet
 std::vector<CUmodule> cudaKernelPersistentCache::CompileMultiple(
 		const std::vector<std::tuple<std::vector<std::string>, std::string, std::string>> &kernels,
 		std::vector<bool> *cached, std::vector<std::string> *errors) {
-	
+
 	std::vector<CUmodule> modules(kernels.size(), nullptr);
-	
+
 	if (!IsParallelCompilationEnabled() || kernels.empty()) {
 		// Fallback to sequential compilation
 		if (cached) cached->resize(kernels.size());
 		if (errors) errors->resize(kernels.size());
-		
-		for (size_t i = 0; i < kernels.size(); ++i) {
+
+		for (std::size_t i = 0; i < kernels.size(); ++i) {
 			const auto &[params, source, name] = kernels[i];
 			bool isCached = false;
 			std::string error;
-			
+
 			modules[i] = Compile(params, source, name, &isCached, &error);
-			
+
 			if (cached) (*cached)[i] = isCached;
 			if (errors) (*errors)[i] = error;
 		}
-		
+
 		return modules;
 	}
-	
+
 	// Parallel compilation using TBB
 	if (cached) cached->resize(kernels.size());
 	if (errors) errors->resize(kernels.size());
-	
-	tbb::parallel_for(tbb::blocked_range<size_t>(0, kernels.size()),
-		[&](const tbb::blocked_range<size_t> &range) {
-			for (size_t i = range.begin(); i < range.end(); ++i) {
+
+	tbb::parallel_for(tbb::blocked_range<std::size_t>(0, kernels.size()),
+		[&](const tbb::blocked_range<std::size_t> &range) {
+			for (std::size_t i = range.begin(); i < range.end(); ++i) {
 				const auto &[params, source, name] = kernels[i];
 				bool isCached = false;
 				std::string error;
-				
+
 				modules[i] = Compile(params, source, name, &isCached, &error);
-				
+
 				if (cached) (*cached)[i] = isCached;
 				if (errors) (*errors)[i] = error;
 			}
 		});
-	
+
 	return modules;
 }
 
@@ -351,7 +350,7 @@ std::vector<CUmodule> cudaKernelPersistentCache::CompileMultiple(
 
 void cudaKernelPersistentCache::ClearCache() {
 	const std::filesystem::path cacheDir = GetCacheDir(appName);
-	
+
 	if (std::filesystem::exists(cacheDir)) {
 		std::lock_guard<std::mutex> lock(cacheMutex);
 		std::filesystem::remove_all(cacheDir);
@@ -362,7 +361,7 @@ void cudaKernelPersistentCache::ClearCache() {
 void cudaKernelPersistentCache::ClearKernelCache(const std::string &kernelName) {
 	const std::filesystem::path cacheDir = GetCacheDir(appName);
 	const std::filesystem::path kernelPath = cacheDir / kernelName;
-	
+
 	if (std::filesystem::exists(kernelPath)) {
 		std::lock_guard<std::mutex> lock(cacheMutex);
 		std::filesystem::remove(kernelPath);
@@ -371,9 +370,9 @@ void cudaKernelPersistentCache::ClearKernelCache(const std::string &kernelName) 
 
 void cudaKernelPersistentCache::ClearAllCaches() {
 	const std::filesystem::path baseCacheDir = luxrays::GetCacheDir() / "cuda_kernel_cache";
-	
+
 	if (std::filesystem::exists(baseCacheDir)) {
-		// Use a separate mutex for global operations
+		// Use a separate std::mutex for global operations
 		static std::mutex globalCacheMutex;
 		std::lock_guard<std::mutex> lock(globalCacheMutex);
 		std::filesystem::remove_all(baseCacheDir);
@@ -389,6 +388,8 @@ void cudaKernelPersistentCache::InitializeParallelCompilationSystem() {
 void cudaKernelPersistentCache::ShutdownParallelCompilationSystem() {
 	SetParallelCompilation(false);
 }
+
+}  // namespace luxrays
 
 #endif
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4
