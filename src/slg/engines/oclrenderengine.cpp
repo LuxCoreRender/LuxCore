@@ -203,6 +203,7 @@ PropertiesUPtr OCLRenderEngine::GetDefaultProps() {
 #endif
 			Property("opencl.gpu.workgroup.size")(32) <<
 			Property("opencl.devices.select")("") <<
+			Property("opencl.splitkernels.enable")(true) <<
 			Property("opencl.native.threads.count")((u_int)GetHardwareThreadCount()) <<
 			Property("opencl.outofcore.enable")(false) <<
 			Property("cuda.optix.devices.select")("");

@@ -354,12 +354,18 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 	// multiple programs concurrently. NVIDIA users are expected to use the
 	// CUDA path (where the monolithic source is kept: nvrtc is fast and the
 	// driver serializes concurrent builds anyway).
+	//
+	// The feature can be disabled with opencl.splitkernels.enable = 0 (e.g. in
+	// case of a driver deadlocking on concurrent builds).
 	const bool isCUDADevice = (intersectionDevice.GetDeviceDesc().GetType() & DEVICE_TYPE_CUDA_ALL) != 0;
+	const bool splitKernels = !isCUDADevice &&
+			renderEngine->renderConfig.GetConfig().Get(
+				Property("opencl.splitkernels.enable")(true)).Get<bool>();
 
 	std::vector<HardwareDevice::ProgramRequest> requests;
 	std::unordered_map<std::string, std::size_t> microKernelIndex;
 
-	if (!isCUDADevice) {
+	if (splitKernels) {
 		const auto microKernelSources = SplitMicroKernelSources(microKernelSource);
 
 		for (std::size_t i = 0; i < microKernelSources.size(); ++i)
