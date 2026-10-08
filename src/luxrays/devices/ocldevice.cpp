@@ -285,6 +285,7 @@ std::vector<HardwareDeviceProgramUPtr> OpenCLDevice::CompilePrograms(
 			luxrays::ocl::KernelSource_ocldevice_funcs + request.source));
 	}
 
+	LR_LOG(deviceContext, "[" << requests.size() << " programs] OpenCL compiler: " << GetOpenCLCompilerInfo(deviceDesc.GetOCLDevice()));
 	LR_LOG(deviceContext, "[" << requests.size() << " programs] Compiling kernels in parallel");
 
 	std::vector<bool> cached;
