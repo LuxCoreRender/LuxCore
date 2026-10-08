@@ -106,7 +106,7 @@ bool cudaKernelCache::ForcedCompilePTX(
 	cudaOpts.push_back("--diag_suppress=68");
 
 	// Accelerate compilation
-	//cudaOpts.push_back("--Ofast-compile=min"); # Only 12.9+
+	cudaOpts.push_back("--Ofast-compile=min"); // Requires nvrtc 12.9+
 	cudaOpts.push_back("--split-compile=0");
 
 	// Enable debug info
