@@ -105,16 +105,9 @@ bool cudaKernelCache::ForcedCompilePTX(
 	cudaOpts.push_back("-Xcudafe");
 	cudaOpts.push_back("--diag_suppress=68");
 
-	// To suppress warning: warning #20283-D: PCH creation disabled because #line directive encountered
-	cudaOpts.push_back("-Xcudafe");
-	cudaOpts.push_back("--diag_suppress=20283");
-
 	// Accelerate compilation
 	//cudaOpts.push_back("--Ofast-compile=min"); # Only 12.9+
 	cudaOpts.push_back("--split-compile=0");
-
-	// Enable pre-compiled headers
-	cudaOpts.push_back("--pch");
 
 	// Enable debug info
 	//cudaOpts.push_back("-G");
