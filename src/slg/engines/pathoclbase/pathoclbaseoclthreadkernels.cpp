@@ -45,6 +45,42 @@ using namespace slg;
 // PathOCLBaseOCLRenderThread kernels related methods
 //------------------------------------------------------------------------------
 
+// Split the micro-kernels source in a (kernel name, source chunk) pair for
+// each __kernel. All chunks share the preamble (i.e. the text before the first
+// __kernel) of the source.
+static std::vector<std::pair<std::string, std::string>> SplitMicroKernelSources(
+	const std::string &src
+) {
+	std::vector<std::pair<std::string, std::string>> chunks;
+
+	static const std::string marker = "__kernel void ";
+
+	const std::size_t first = src.find(marker);
+	if (first == std::string::npos)
+		return chunks;
+
+	const std::string preamble = src.substr(0, first);
+
+	std::size_t pos = first;
+	while (pos != std::string::npos) {
+		const std::size_t nameStart = pos + marker.size();
+		const std::size_t nameEnd = src.find('(', nameStart);
+		if (nameEnd == std::string::npos)
+			throw runtime_error("Syntax error in micro-kernels source in PathOCLBaseOCLRenderThread::InitKernels()");
+		const std::string name = src.substr(nameStart, nameEnd - nameStart);
+
+		const std::size_t next = src.find(marker, pos + marker.size());
+		const std::string chunk = src.substr(pos,
+			(next == std::string::npos) ? std::string::npos : next - pos);
+
+		chunks.push_back(std::make_pair(name, preamble + chunk));
+
+		pos = next;
+	}
+
+	return chunks;
+}
+
 std::tuple<HardwareDeviceKernelUPtr, size_t>
 PathOCLBaseOCLRenderThread::CompileKernel(
 		HardwareIntersectionDeviceRef device,
@@ -245,8 +281,7 @@ string PathOCLBaseOCLRenderThread::GetKernelSources() {
 			slg::ocl::KernelSource_scene_funcs <<
 			slg::ocl::KernelSource_pgic_funcs <<
 			// PathOCL Funcs
-			slg::ocl::KernelSource_pathoclbase_funcs <<
-			slg::ocl::KernelSource_pathoclbase_kernels_micro;
+			slg::ocl::KernelSource_pathoclbase_funcs;
 
 	return ssKernel.str();
 }
@@ -278,6 +313,10 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 			MachineEpsilon::GetMin(), MachineEpsilon::GetMax());
 
 	const string kernelSource = GetKernelSources();
+	const string microKernelSource = slg::ocl::KernelSource_pathoclbase_kernels_micro;
+	// The full source (i.e. including micro-kernels) is used for the hash and
+	// the debug dump
+	const string fullKernelSource = kernelSource + microKernelSource;
 
 	if (renderEngine->writeKernelsToFile) {
 		// Some debug code to write the OpenCL kernel source to a file
@@ -286,7 +325,7 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 		string kernelDefs = oclKernelPersistentCache::ToOptsString(kernelsParameters);
 		boost::replace_all(kernelDefs, "-D", "\n#define");
 		boost::replace_all(kernelDefs, "=", " ");
-		kernelFile << kernelDefs << endl << endl << kernelSource << endl;
+		kernelFile << kernelDefs << endl << endl << fullKernelSource << endl;
 		kernelFile.close();
 	}
 
@@ -300,7 +339,7 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 	// Build the kernel source/parameters hash
 	const string newKernelSrcHash = oclKernelPersistentCache::HashString(oclKernelPersistentCache::ToOptsString(kernelsParameters))
 			+ "-" +
-			oclKernelPersistentCache::HashString(kernelSource);
+			oclKernelPersistentCache::HashString(fullKernelSource);
 	if (newKernelSrcHash == kernelSrcHash) {
 		// There is no need to re-compile the kernel
 		return;
@@ -309,7 +348,35 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 
 	SLG_LOG("[PathOCLBaseRenderThread::" << threadIndex << "] Compiling kernels ");
 
-	auto program = intersectionDevice.CompileProgram(kernelsParameters, kernelSource, "PathOCL kernel");
+	// On OpenCL devices, split the micro-kernels in single-kernel programs so
+	// that they can be compiled in parallel by the driver. It is worth because
+	// drivers running the compiler on the host (i.e. AMD, Intel) can compile
+	// multiple programs concurrently. NVIDIA users are expected to use the
+	// CUDA path (where the monolithic source is kept: nvrtc is fast and the
+	// driver serializes concurrent builds anyway).
+	const bool isCUDADevice = (intersectionDevice.GetDeviceDesc().GetType() & DEVICE_TYPE_CUDA_ALL) != 0;
+
+	std::vector<HardwareDevice::ProgramRequest> requests;
+	std::unordered_map<std::string, std::size_t> microKernelIndex;
+
+	if (!isCUDADevice) {
+		const auto microKernelSources = SplitMicroKernelSources(microKernelSource);
+
+		for (std::size_t i = 0; i < microKernelSources.size(); ++i)
+			microKernelIndex[microKernelSources[i].first] = i;
+
+		// The first request is the program with the regular kernels (i.e.
+		// Film_Clear, InitSeed, Init, etc.), the following ones are one program
+		// per micro-kernel. Each micro-kernel program includes the same base
+		// source (i.e. all shared functions and types) as the first program.
+		requests.reserve(1 + microKernelSources.size());
+		requests.push_back({ kernelsParameters, kernelSource, "PathOCL kernel" });
+		for (const auto &[name, source] : microKernelSources)
+			requests.push_back({ kernelsParameters, kernelSource + source, "PathOCL kernel " + name });
+	} else
+		requests.push_back({ kernelsParameters, fullKernelSource, "PathOCL kernel" });
+
+	auto programs = intersectionDevice.CompilePrograms(requests);
 
 	std::tuple<HardwareDeviceKernelUPtr&, size_t&, const char *>
 	kernels[] = {
@@ -319,7 +386,7 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 	};
 
 	for (auto& [kernel, workGroupSize, name] : kernels) {
-		std::tie(kernel, workGroupSize) = CompileKernel(intersectionDevice, *program, name);
+		std::tie(kernel, workGroupSize) = CompileKernel(intersectionDevice, *programs[0], name);
 	}
 
 
@@ -341,8 +408,12 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 	advancePathsWorkGroupSize = std::numeric_limits<size_t>::max();
 
 	for (auto& [microKernel, name] : microKernels) {
+		// Find the program with this micro-kernel (all the micro-kernels are
+		// in the same program unless the source has been split)
+		const std::size_t programIndex = microKernelIndex.empty() ? 0 : 1 + microKernelIndex[name];
+
 		// Compile kernel
-		auto [kernel, workGroupSize] = CompileKernel(intersectionDevice, *program, name);
+		auto [kernel, workGroupSize] = CompileKernel(intersectionDevice, *programs[programIndex], name);
 
 		// Assign to class members
 		microKernel = std::move(kernel);
