@@ -53,6 +53,10 @@ using namespace luxrays;
 using namespace slg;
 using namespace std;
 
+// Set by luxcore::KernelCacheFill() in order to compile the kernels
+// without rendering anything
+bool slg::compileOnlyMode = false;
+
 //------------------------------------------------------------------------------
 // PathOCLBaseRenderEngine
 //------------------------------------------------------------------------------
@@ -62,6 +66,7 @@ PathOCLBaseRenderEngine::PathOCLBaseRenderEngine(RenderConfigRef rcfg,
 		compiledScene(nullptr), oclSampler(nullptr),
 		oclPixelFilter(nullptr), photonGICache(nullptr), lightSamplerSharedData(nullptr) {
 	writeKernelsToFile = false;
+	compileOnly = false;
 
 	//--------------------------------------------------------------------------
 	// Allocate all devices
@@ -325,6 +330,10 @@ void PathOCLBaseRenderEngine::StartLockLess() {
 	SLG_LOG("[PathOCLBaseRenderEngine] OpenCL max. page memory size: " << maxMemPageSize / 1024 << "Kbytes");
 
 	writeKernelsToFile = cfg.Get(Property("opencl.kernel.writetofile")(false)).Get<bool>();
+
+	// Set by luxcore::KernelCacheFill() in order to compile the kernels
+	// without rendering anything
+	compileOnly = compileOnlyMode;
 
 	//--------------------------------------------------------------------------
 	// Allocate PhotonGICache if enabled

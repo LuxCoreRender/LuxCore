@@ -46,6 +46,10 @@ extern void (*SLG_DebugHandler)(const char *msg); // SLG handler
 // Empty debug handler
 extern void NullDebugHandler(const char *msg);
 
+// Set to true only during a luxcore::KernelCacheFill() call in order to
+// compile the kernels without rendering anything
+extern bool compileOnlyMode;
+
 #define SLG_LOG(a) { if (slg::SLG_DebugHandler) { std::stringstream _SLG_LOG_LOCAL_SS; _SLG_LOG_LOCAL_SS << a; slg::SLG_DebugHandler(_SLG_LOG_LOCAL_SS.str().c_str()); } }
 
 #if defined(WIN32) && !defined(__CYGWIN__)
