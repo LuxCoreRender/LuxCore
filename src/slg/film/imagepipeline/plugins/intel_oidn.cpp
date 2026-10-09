@@ -19,6 +19,7 @@
 #if !defined(LUXCORE_DISABLE_OIDN)
 
 #include <math.h>
+#include <algorithm>
 
 #include <boost/format.hpp>
 
@@ -49,11 +50,13 @@ void errorCallback(void* userPtr, lux::oidn::Error error, const char* message) {
   throw std::runtime_error(message);
 }
 
-IntelOIDN::IntelOIDN(const string ft, const int m, const float s, const bool pref) {
+IntelOIDN::IntelOIDN(const string ft, const int m, const float s, const bool pref,
+		const float fs) {
 	filterType = ft;
 	oidnMemLimit = m;
 	sharpness = s;
 	enablePrefiltering = pref;
+	fireflySigma = fs;
 }
 
 IntelOIDN::IntelOIDN() {
@@ -61,10 +64,100 @@ IntelOIDN::IntelOIDN() {
 	oidnMemLimit = 6000;
 	sharpness = 0.f;
 	enablePrefiltering = true;
+	fireflySigma = 0.f;
 }
 
 ImagePipelinePlugin *IntelOIDN::Copy() const {
-	return new IntelOIDN(filterType, oidnMemLimit, sharpness, enablePrefiltering);
+	return new IntelOIDN(filterType, oidnMemLimit, sharpness, enablePrefiltering, fireflySigma);
+}
+
+// Scale outliers down to the local median + k * MAD (5x5 window on luma).
+// Median/MAD are robust estimators: a dense cluster of fireflies can not
+// inflate the detection threshold the way it would inflate a box
+// mean/variance. Fireflies are the worst OIDN input: the network
+// interprets them as features and smears them into large blobs.
+void IntelOIDN::SuppressFireflies(float *buf, const u_int width, const u_int height) const {
+	if (fireflySigma <= 0.f)
+		return;
+
+	const u_int pixelCount = width * height;
+	float_buffer luma(pixelCount), med(pixelCount), mad(pixelCount);
+	const u_int r = 2; // 5x5 window
+
+	tbb::parallel_for(tbb::blocked_range<u_int>(0, pixelCount), [&](tbb::blocked_range<u_int> &rr) {
+		for (u_int i = rr.begin(); i < rr.end(); ++i)
+			luma[i] = buf[i * 3] * .2126f + buf[i * 3 + 1] * .7152f + buf[i * 3 + 2] * .0722f;
+	});
+
+	// Median, then MAD (median absolute deviation)
+	tbb::parallel_for(tbb::blocked_range<u_int>(0, pixelCount), [&](tbb::blocked_range<u_int> &rr) {
+		float scratch[25];
+		for (u_int i = rr.begin(); i < rr.end(); ++i) {
+			const u_int x = i % width, y = i / width;
+			const u_int x0 = (x > r) ? x - r : 0;
+			const u_int x1 = Min(x + r, width - 1u);
+			const u_int y0 = (y > r) ? y - r : 0;
+			const u_int y1 = Min(y + r, height - 1u);
+			u_int n = 0;
+			for (u_int yy = y0; yy <= y1; ++yy)
+				for (u_int xx = x0; xx <= x1; ++xx)
+					scratch[n++] = luma[yy * width + xx];
+			std::nth_element(scratch, scratch + n / 2, scratch + n);
+			med[i] = scratch[n / 2];
+		}
+	});
+	tbb::parallel_for(tbb::blocked_range<u_int>(0, pixelCount), [&](tbb::blocked_range<u_int> &rr) {
+		float scratch[25];
+		for (u_int i = rr.begin(); i < rr.end(); ++i) {
+			const u_int x = i % width, y = i / width;
+			const u_int x0 = (x > r) ? x - r : 0;
+			const u_int x1 = Min(x + r, width - 1u);
+			const u_int y0 = (y > r) ? y - r : 0;
+			const u_int y1 = Min(y + r, height - 1u);
+			u_int n = 0;
+			for (u_int yy = y0; yy <= y1; ++yy)
+				for (u_int xx = x0; xx <= x1; ++xx)
+					scratch[n++] = fabsf(luma[yy * width + xx] - med[i]);
+			std::nth_element(scratch, scratch + n / 2, scratch + n);
+			mad[i] = scratch[n / 2];
+		}
+	});
+
+	// An outlier only counts as a firefly when it is also isolated: the
+	// pixel must dominate its neighbourhood (real detail is correlated
+	// across pixels, so the neighbour maximum already rides high). Reads
+	// only luma, writes only buf, so the pass is order independent.
+	tbb::parallel_for(tbb::blocked_range<u_int>(0, pixelCount), [&](tbb::blocked_range<u_int> &rr) {
+		for (u_int i = rr.begin(); i < rr.end(); ++i) {
+			// 1.4826 rescales MAD to a sigma-equivalent spread
+			const float limit = med[i] + fireflySigma * (1.4826f * mad[i] + 1e-4f);
+			if (!(luma[i] > limit) || (luma[i] <= 1e-6f))
+				continue;
+
+			// Ring maximum: the 5x5 border around the 3x3 core, so small
+			// clusters (2x2) are still detected
+			const int x = (int)(i % width), y = (int)(i / width);
+			float ringMax = 0.f;
+			for (int dy = -2; dy <= 2; ++dy)
+				for (int dx = -2; dx <= 2; ++dx) {
+					if ((abs(dx) <= 1) && (abs(dy) <= 1))
+						continue;
+					const int xx = x + dx, yy = y + dy;
+					if ((xx >= 0) && (xx < (int)width) && (yy >= 0) && (yy < (int)height))
+						ringMax = Max(ringMax, luma[yy * width + xx]);
+				}
+
+			// How much brighter than the ring a pixel must be to count as isolated
+			const float isolationRatio = 1.3f;
+			if (luma[i] > isolationRatio * ringMax) {
+				// An Inf luma gives scale 0: the pixel is dropped
+				const float scale = isinf(luma[i]) ? 0.f : (limit / luma[i]);
+				buf[i * 3] *= scale;
+				buf[i * 3 + 1] *= scale;
+				buf[i * 3 + 2] *= scale;
+			}
+		}
+	});
 }
 
 
@@ -174,6 +267,17 @@ void IntelOIDN::Apply(Film &film, const u_int index) {
     const u_int pixelCount = width * height;
 
 	float_buffer outputBuffer(3 * pixelCount);
+
+	// The denoiser input. Fireflies are suppressed only in a copy: the
+	// input is also what the sharpness blend mixes back in.
+	const float *inputBuffer = (const float *)pixels;
+	float_buffer suppressedBuffer;
+	if (fireflySigma > 0.f) {
+		SLG_LOG("IntelOIDNPlugin firefly suppression (sigma " << fireflySigma << ")");
+		suppressedBuffer.assign(inputBuffer, inputBuffer + 3 * pixelCount);
+		SuppressFireflies(&suppressedBuffer[0], width, height);
+		inputBuffer = &suppressedBuffer[0];
+	}
 	float_buffer albedoBuffer;
 	float_buffer normalBuffer;
 
@@ -217,7 +321,7 @@ void IntelOIDN::Apply(Film &film, const u_int index) {
 
 
 	SLG_LOG("IntelOIDNPlugin filtering image");
-	FilterImage("Image Pipeline", (float *)pixels, &outputBuffer[0],
+	FilterImage("Image Pipeline", inputBuffer, &outputBuffer[0],
 			(albedoBuffer.size() > 0) ? &albedoBuffer[0] : nullptr,
 			(normalBuffer.size() > 0) ? &normalBuffer[0] : nullptr,
 			width, height, enablePrefiltering);
@@ -231,7 +335,7 @@ void IntelOIDN::Apply(Film &film, const u_int index) {
 				for (size_t j = r.cols().begin(); j < r.cols().end(); ++j) {
 					pixels[i].c[j] = std::lerp(
 						outputBuffer[i * 3 + j],
-						pixels[i].c[j],
+						inputBuffer[i * 3 + j],
 						sharpness
 					);
 				}
