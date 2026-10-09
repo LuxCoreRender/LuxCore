@@ -151,6 +151,8 @@ bool TracePhotonsThread::TracePhotonPath(RandomGenerator &rndGen,
 			//------------------------------------------------------------------
 
 			LightPathInfo pathInfo;
+			// The light path starts inside the volume of the light source
+			pathInfo.volume.AddVolume(light->volume);
 			for (;;) {
 				const u_int sampleOffset = sampleBootSize +	pathInfo.depth.depth * sampleStepSize;
 
