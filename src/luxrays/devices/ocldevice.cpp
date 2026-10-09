@@ -90,6 +90,23 @@ void OpenCLDeviceDescription::GetPlatformsList(std::vector<cl_platform_id> &plat
 	CHECK_OCL_ERROR(clGetPlatformIDs(platformsCount, &platformsList[0], nullptr));
 }
 
+// From cl_khr_device_uuid, not defined by clew
+#if !defined(CL_DEVICE_UUID_KHR)
+#define CL_DEVICE_UUID_KHR 0x106A
+#endif
+#if !defined(CL_UUID_SIZE_KHR)
+#define CL_UUID_SIZE_KHR 16
+#endif
+
+// The UUID of a device (cl_khr_device_uuid), empty if it is not available
+static string GetOCLDeviceUUID(const cl_device_id oclDevice) {
+	unsigned char uuid[CL_UUID_SIZE_KHR];
+	if (clGetDeviceInfo(oclDevice, CL_DEVICE_UUID_KHR, sizeof(uuid), uuid, nullptr) != CL_SUCCESS)
+		return "";
+
+	return string(reinterpret_cast<const char *>(uuid), sizeof(uuid));
+}
+
 void OpenCLDeviceDescription::AddDeviceDescs(
 	const cl_platform_id oclPlatform,
 	const DeviceType filter,
@@ -115,7 +132,26 @@ void OpenCLDeviceDescription::AddDeviceDescs(
 	// Build the descriptions
 	for (size_t i = 0; i < deviceCount; ++i) {
 		DeviceType devType = GetOCLDeviceType(devices[i]);
-		if (filter & devType) {
+		if (!(filter & devType))
+			continue;
+
+		// The same device can be listed by more than one platform (i.e. with
+		// 2 NVIDIA drivers installed, like GeForce and Quadro ones, each ICD
+		// lists all the GPUs): only the first one is used, otherwise the
+		// device would run more than one render thread
+		const string uuid = GetOCLDeviceUUID(devices[i]);
+		bool duplicate = false;
+		if (!uuid.empty()) {
+			for (const auto &desc : descriptions) {
+				if ((desc->GetType() & DEVICE_TYPE_OPENCL_ALL) &&
+						(GetOCLDeviceUUID(static_cast<const OpenCLDeviceDescription &>(*desc).GetOCLDevice()) == uuid)) {
+					duplicate = true;
+					break;
+				}
+			}
+		}
+
+		if (!duplicate) {
 			descriptions.push_back(
 				std::make_unique<OpenCLDeviceDescription>(devices[i], i)
 			);
