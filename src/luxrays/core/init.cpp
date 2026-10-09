@@ -45,7 +45,14 @@ void Init() {
 #endif
 
 #if !defined(LUXRAYS_DISABLE_CUDA)
-	if (cuewInit(CUEW_INIT_CUDA | CUEW_INIT_NVRTC) == CUEW_SUCCESS) {
+	// isCudaAvilable/isOptixAvilable default to true: clear them unless CUDA is
+	// fully initialized, otherwise a missing nvrtc or failed cuInit leaves
+	// CUDA "available" and device enumeration fails (even for OpenCL renders)
+	isCudaAvilable = false;
+	isOptixAvilable = false;
+	if (cuewInit(CUEW_INIT_CUDA | CUEW_INIT_NVRTC) != CUEW_SUCCESS) {
+		std::cerr << "CUDA disabled: CUDA driver or nvrtc library not found\n";
+	} else {
 		// Was:
 		//CHECK_CUDA_ERROR(cuInit(0));
 
