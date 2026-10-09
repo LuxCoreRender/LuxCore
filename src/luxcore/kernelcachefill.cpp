@@ -23,6 +23,7 @@
 #include "luxcore/luxcorelogger.h"
 #include "luxcore/luxcore.h"
 #include "luxcore/luxcoreimpl.h"
+#include "slg/slg.h"
 #include "luxrays/utils/buffer.h"
 
 using namespace std;
@@ -168,11 +169,6 @@ static void CreateBox(
 }
 
 static void RenderTestScene(const Properties &cfgSetUpProps, const Properties &scnSetUpProps) {
-	LC_LOG("Creating kernel cache entry with configuration properties:");
-	LC_LOG(cfgSetUpProps);
-	LC_LOG("And scene properties:");
-	LC_LOG(scnSetUpProps);
-
 	// Build the scene to render
 	auto sceneptr = Scene::Create();
 	auto& scene = *sceneptr;
@@ -289,7 +285,9 @@ static void RenderTestScene(const Properties &cfgSetUpProps, const Properties &s
 	RenderConfigRPtr config = RenderConfig::Create(std::move(cfgProps), sceneptr);
 	auto session = RenderSession::Create(config);
 
-	// Start the rendering
+	// Start the session: the kernels are compiled here (and stored in the
+	// kernel cache). slg::compileOnlyMode is set so no rendering thread is
+	// started.
 	session->Start();
 
 	session->UpdateStats();
@@ -297,16 +295,52 @@ static void RenderTestScene(const Properties &cfgSetUpProps, const Properties &s
 	// Save the rendered image
 	//session->GetFilm().SaveOutputs();
 
-	// Stop the rendering
+	// Stop the session
 	session->Stop();
 
 	LC_LOG("Done.");
 }
 
+// Set the slg::compileOnlyMode flag (in order to compile the kernels without
+// rendering anything) and temporarily disable the LuxRays, SDL and SLG
+// sub-system logs in order to hide the messages related to the dummy scenes
+// used to compile the kernels.
+class KernelCacheFillMode {
+public:
+	KernelCacheFillMode() {
+		compileOnlyModeSaved = slg::compileOnlyMode;
+		slg::compileOnlyMode = true;
+
+		logLuxRaysEnabledSaved = logLuxRaysEnabled;
+		logSDLEnabledSaved = logSDLEnabled;
+		logSLGEnabledSaved = logSLGEnabled;
+
+		logLuxRaysEnabled = false;
+		logSDLEnabled = false;
+		logSLGEnabled = false;
+	}
+
+	~KernelCacheFillMode() {
+		slg::compileOnlyMode = compileOnlyModeSaved;
+
+		logLuxRaysEnabled = logLuxRaysEnabledSaved;
+		logSDLEnabled = logSDLEnabledSaved;
+		logSLGEnabled = logSLGEnabledSaved;
+	}
+
+private:
+	bool compileOnlyModeSaved;
+	bool logLuxRaysEnabledSaved, logSDLEnabledSaved, logSLGEnabledSaved;
+};
+
 static void KernelCacheFillImpl(
 	PropertiesRPtr configPtr,
 	void (*ProgressHandler)(const size_t, const size_t)
 ) {
+	// Compile the kernels without rendering anything and hide the log
+	// messages related to the dummy scenes
+	KernelCacheFillMode fillMode;
+
 	auto& config = *configPtr;
 
 	// Extract the render engines - default to all OpenCL engines
@@ -329,8 +363,10 @@ static void KernelCacheFillImpl(
 			samplerType = "SOBOL";
 		
 		Properties cfgProps;
-		cfgProps << 
+		cfgProps <<
 				Property("renderengine.type")(renderEngineType) <<
+				// Native threads are of no use for kernel compilation
+				Property("opencl.native.threads.count")(0u) <<
 				Property("sampler.type")(samplerType) <<
 				config.Get(Property("scene.epsilon.min")(DEFAULT_EPSILON_MIN)) <<
 				config.Get(Property("scene.epsilon.max")(DEFAULT_EPSILON_MAX));
@@ -354,7 +390,8 @@ static void KernelCacheFillImpl(
 					ProgressHandler(i, count);
 				}
 				
-				// Render test scene to trigger kernel compilation
+				// Build the test scene and compile its kernels
+				// (slg::compileOnlyMode is set, so nothing is rendered)
 				RenderTestScene(cfgProps, Properties());
 				
 				LC_LOG("[" << renderEngineType << "] Kernel compilation completed");

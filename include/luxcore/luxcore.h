@@ -178,7 +178,10 @@ CPP_EXPORT CPP_API void ParseLXS(
 );
 
 /*!
- * \brief File the OpenCL kernel cache with entries
+ * \brief Fill the OpenCL kernel cache with entries
+ *
+ * The kernels are compiled and stored in the cache without rendering
+ * anything.
  *
  * \param config defines how to fill the cache. The supported properties are:
  * kernelcachefill.renderengine.types, kernelcachefill.sampler.types,

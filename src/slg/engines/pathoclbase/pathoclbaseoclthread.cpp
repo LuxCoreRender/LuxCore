@@ -147,6 +147,14 @@ void PathOCLBaseOCLRenderThread::Start() {
 	started = true;
 
 	InitRender();
+
+	if (renderEngine->compileOnly) {
+		// The kernels have been compiled and stored in the cache by
+		// InitRender(). Just fill the kernel cache, no rendering.
+		threadDone = true;
+		return;
+	}
+
 	StartRenderThread();
 }
 

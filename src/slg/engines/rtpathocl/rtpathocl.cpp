@@ -91,12 +91,24 @@ void RTPathOCLRenderEngine::StartLockLess() {
 	cameraIsUsingCustomBokeh = (renderConfig.GetScene().GetCamera().GetType() == Camera::PERSPECTIVE) &&
 			(dynamic_cast<const PerspectiveCamera*>(&renderConfig.GetScene().GetCamera()))->bokehDistributionImageMap;
 
+	if (compileOnly)
+		// The render threads are not started (so no one will arrive at
+		// the barrier): I can not use syncBarrier here
+		return;
+
 	// To synchronize the start of all threads
 	syncType = SYNCTYPE_NONE;
 	syncBarrier->arrive_and_wait();
 }
 
 void RTPathOCLRenderEngine::StopLockLess() {
+	if (compileOnly) {
+		// The render threads have not been started: there is nothing to
+		// synchronize (and no renderThread to stop)
+		TilePathOCLRenderEngine::StopLockLess();
+		return;
+	}
+
 	syncType = SYNCTYPE_STOP;
 	syncBarrier->arrive_and_wait();
 

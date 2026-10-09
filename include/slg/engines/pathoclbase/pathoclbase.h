@@ -90,6 +90,7 @@ protected:
 	
 	std::vector<std::string> additionalOpenCLKernelOptions, additionalCUDAKernelOptions;
 	bool writeKernelsToFile;
+	bool compileOnly;
 
 	// Pixel filter related variables
 	std::vector<float> pixelFilterDistribution;
