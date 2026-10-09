@@ -839,6 +839,8 @@ void PathTracer::RenderLightSample(IntersectionDeviceRef device,
 		assert (!lightPathFlux.IsNaN() && !lightPathFlux.IsInf());
 
 		LightPathInfo pathInfo;
+		// The light path starts inside the volume of the light source
+		pathInfo.volume.AddVolume(light->volume);
 
 		/*
 		// Sample a point on the camera lens

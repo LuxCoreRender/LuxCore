@@ -61,7 +61,7 @@ typedef enum {
 class LightSource : public luxrays::NamedObject {
 public:
 	LightSource() : NamedObject("light"), lightSceneIndex(0),
-			volume(nullptr) { }
+			volume(nullptr), autoVolume(true) { }
 	virtual ~LightSource() { }
 
 	virtual void Preprocess() = 0;
@@ -118,6 +118,9 @@ public:
 
 	u_int lightSceneIndex;
 	VolumeConstPtr volume;
+	// If the volume is not defined by the scene but computed from the
+	// position of the light source (see Scene::UpdateLightVolumes())
+	bool autoVolume;
 };
 
 //------------------------------------------------------------------------------

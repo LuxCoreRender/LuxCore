@@ -21,6 +21,8 @@
 #include "slg/core/sdl.h"
 #include "slg/scene/scene.h"
 #include "slg/cameras/camera.h"
+#include "slg/lights/trianglelight.h"
+#include <unordered_map>
 
 using namespace std;
 using namespace luxrays;
@@ -32,6 +34,47 @@ using namespace slg;
 
 void Scene::PreprocessCamera(const u_int filmWidth, const u_int filmHeight, const u_int *filmSubRegion) {
 	camera->Update(filmWidth, filmHeight, filmSubRegion);
+}
+
+// The volume of the light sources without a volume defined by the scene is
+// the one including their position (otherwise the light paths of a light
+// source inside a volume would ignore it, i.e. its scattering and the volume
+// boundary crossings)
+void Scene::UpdateLightVolumes() {
+	// All the triangles of a mesh light have the same volume
+	unordered_map<const SceneObject *, VolumeConstPtr> meshLightVolumes;
+
+	for (u_int i = 0; i < lightDefs.GetSize(); ++i) {
+		LightSourceRef light = lightDefs.GetLightSource(i);
+		if (!light.autoVolume)
+			continue;
+
+		if (light.IsEnvironmental()) {
+			// The light paths start from outside the scene
+			light.volume = nullptr;
+			continue;
+		}
+
+		const SceneObject *sceneObject = nullptr;
+		if (light.GetType() == TYPE_TRIANGLE) {
+			sceneObject = static_cast<const TriangleLight &>(light).sceneObject;
+			auto it = meshLightVolumes.find(sceneObject);
+			if (it != meshLightVolumes.end()) {
+				light.volume = it->second;
+				continue;
+			}
+		}
+
+		// The origin of an emitted ray is the position of the light source
+		Ray ray;
+		float emissionPdfW;
+		light.Emit(*this, 0.f, .5f, .5f, .5f, .5f, .5f, ray, emissionPdfW);
+		light.volume = (emissionPdfW > 0.f) ? GetPointVolume(ray) :
+			(HasDefaultWorldVolume() ? VolumeConstPtr(&GetDefaultWorldVolume()) : VolumeConstPtr(nullptr));
+
+		if (sceneObject)
+			meshLightVolumes[sceneObject] = light.volume;
+	}
 }
 
 void Scene::Preprocess(Context& ctx, const u_int filmWidth, const u_int filmHeight,
@@ -96,6 +139,7 @@ void Scene::Preprocess(Context& ctx, const u_int filmWidth, const u_int filmHeig
 			editActions.Has(LIGHT_TYPES_EDIT) ||
 			editActions.Has(IMAGEMAPS_EDIT)) {
 		lightDefs.Preprocess(*this, useRTMode);
+		UpdateLightVolumes();
 	}
 
 	// And for visibility maps

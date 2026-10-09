@@ -32,7 +32,7 @@ PropertiesUPtr LightSource::ToProperties(const ImageMapCache &imgMapCache, const
 	const string prefix = "scene.lights." + GetName();
 
 	auto props = std::make_unique<Properties>();
-	if (volume)
+	if (volume && !autoVolume)
 		props->Set(Property(prefix + ".volume")(volume->GetName()));
 
 	return props;

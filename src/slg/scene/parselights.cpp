@@ -474,6 +474,7 @@ LightSourceUPtr Scene::CreateLightSource(const string &name, const luxrays::Prop
 		auto& vol = matDefs.GetMaterial(props.Get(propName + ".volume").Get<string>());
 		try {
 			lightSource->volume = dynamic_cast<const Volume *>(std::addressof(vol));
+			lightSource->autoVolume = false;
 		} catch (std::bad_cast&) {
 			throw runtime_error("\"" + lightName + "\" light volume is a material: " + vol.GetName());
 		}
