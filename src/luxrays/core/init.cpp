@@ -39,13 +39,19 @@ namespace luxrays {
 void Init() {
 
 #if !defined(LUXRAYS_DISABLE_OPENCL)
-	if (clewInit() == CLEW_SUCCESS) {
-		isOpenCLAvilable = true;
-	}
+	// Report OpenCL as available only if the OpenCL library can be loaded
+	isOpenCLAvilable = (clewInit() == CLEW_SUCCESS);
+	if (!isOpenCLAvilable)
+		std::cerr << "OpenCL disabled: OpenCL library not found\n";
 #endif
 
 #if !defined(LUXRAYS_DISABLE_CUDA)
-	if (cuewInit(CUEW_INIT_CUDA | CUEW_INIT_NVRTC) == CUEW_SUCCESS) {
+	// Report CUDA/Optix as available only once fully initialized
+	isCudaAvilable = false;
+	isOptixAvilable = false;
+	if (cuewInit(CUEW_INIT_CUDA | CUEW_INIT_NVRTC) != CUEW_SUCCESS) {
+		std::cerr << "CUDA disabled: CUDA driver or nvrtc library not found\n";
+	} else {
 		// Was:
 		//CHECK_CUDA_ERROR(cuInit(0));
 
