@@ -854,4 +854,71 @@ string Scene::EncodeTriangleLightNamePrefix(const string &objectName) {
 
 ImageMapConstSPtr Scene::GetRandomImageMap() const { return randomImageMap; }
 
+//------------------------------------------------------------------------------
+// GetPointVolume
+//------------------------------------------------------------------------------
+
+VolumeConstPtr Scene::GetPointVolume(const Ray &startRay) const {
+	// The ray is followed through all the surfaces to find the volumes
+	// including the origin: the interior volumes of the surfaces exited
+	// without having been entered along the ray (and the exterior volume of
+	// the first surface entered, if defined, before exiting any of them).
+	// Only the objects with an interior volume are counted as entered (they
+	// have to be closed meshes while other objects, i.e. the planes of area
+	// lights, can be open).
+	Ray ray = startRay;
+	const float originalMaxT = ray.maxt;
+	u_int enteredCount = 0;
+	// From the innermost to the outermost
+	vector<VolumeConstPtr> containingVolumes;
+	VolumeConstPtr innerExteriorVolume = nullptr;
+	// Avoid an endless loop (i.e. with degenerate triangles)
+	for (u_int i = 0; i < 256; ++i) {
+		RayHit rayHit;
+		if (!dataSet->GetAccelerator(ACCEL_EMBREE)->Intersect(&ray, &rayHit))
+			break;
+
+		auto& sceneObject = objDefs.GetSceneObject(rayHit.meshIndex);
+		auto& mesh = sceneObject.GetExtMesh();
+		auto& material = sceneObject.GetMaterial();
+
+		Transform local2world;
+		mesh.GetLocal2World(ray.time, local2world);
+		const Normal geometryN = mesh.GetGeometryNormal(local2world, rayHit.triangleIndex);
+		const bool intoObject = (Dot(ray.d, geometryN) < 0.f);
+
+		const VolumeConstPtr interiorVolume = material.GetInteriorVolume();
+		if (intoObject) {
+			if ((enteredCount == 0) && containingVolumes.empty() && !innerExteriorVolume)
+				innerExteriorVolume = material.GetExteriorVolume();
+
+			if (interiorVolume)
+				++enteredCount;
+		} else if (interiorVolume) {
+			if (enteredCount == 0)
+				containingVolumes.push_back(interiorVolume);
+			else
+				--enteredCount;
+		}
+
+		// Continue after the hit point
+		ray.mint = rayHit.t + MachineEpsilon::E(rayHit.t);
+		ray.maxt = originalMaxT;
+		if ((ray.mint == rayHit.t) || (ray.mint >= ray.maxt))
+			break;
+	}
+
+	// The current volume of a path entering all the volumes from the outside
+	// (so the volume priorities are applied like for any other path)
+	PathVolumeInfo volInfo;
+	for (auto it = containingVolumes.rbegin(); it != containingVolumes.rend(); ++it)
+		volInfo.AddVolume(*it);
+	volInfo.AddVolume(innerExteriorVolume);
+
+	if (volInfo.HasCurrentVolume())
+		return VolumeConstPtr(&volInfo.GetCurrentVolume());
+	else
+		return HasDefaultWorldVolume() ? VolumeConstPtr(&GetDefaultWorldVolume()) : VolumeConstPtr(nullptr);
+}
+
 // vim: autoindent noexpandtab tabstop=4 shiftwidth=4
