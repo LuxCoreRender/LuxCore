@@ -44,7 +44,7 @@ public:
 
 	virtual cl_program Compile(cl_context context, cl_device_id device,
 		const std::vector<std::string> &kernelsParameters, const std::string &kernelSource,
-		bool *cached, std::string *errorStr) = 0;
+		bool *cached, std::string *errorStr, bool *fromSPIRV = nullptr) = 0;
 
 	// Compile multiple kernel programs. The default implementation compiles
 	// them sequentially; derived classes may compile them in parallel.
@@ -52,25 +52,31 @@ public:
 		cl_context context, cl_device_id device,
 		const std::vector<std::tuple<std::vector<std::string>, std::string>> &kernels,
 		std::vector<bool> *cached = nullptr,
-		std::vector<std::string> *errors = nullptr
+		std::vector<std::string> *errors = nullptr,
+		std::vector<bool> *fromSPIRV = nullptr
 	) {
 		std::vector<cl_program> programs(kernels.size(), nullptr);
 		if (cached)
 			cached->resize(kernels.size());
 		if (errors)
 			errors->resize(kernels.size());
+		if (fromSPIRV)
+			fromSPIRV->resize(kernels.size());
 
 		for (std::size_t i = 0; i < kernels.size(); ++i) {
 			const auto &[params, source] = kernels[i];
 			bool isCached = false;
+			bool isFromSPIRV = false;
 			std::string error;
 
-			programs[i] = Compile(context, device, params, source, &isCached, &error);
+			programs[i] = Compile(context, device, params, source, &isCached, &error, &isFromSPIRV);
 
 			if (cached)
 				(*cached)[i] = isCached;
 			if (errors)
 				(*errors)[i] = error;
+			if (fromSPIRV)
+				(*fromSPIRV)[i] = isFromSPIRV;
 		}
 
 		return programs;
@@ -105,7 +111,7 @@ public:
 
 	virtual cl_program Compile(cl_context context, cl_device_id device,
 		const std::vector<std::string> &kernelsParameters, const std::string &kernelSource,
-		bool *cached, std::string *errorStr);
+		bool *cached, std::string *errorStr, bool *fromSPIRV = nullptr);
 
 	// Parallel compilation support
 	//------------------------------------------------------------------------------
@@ -119,7 +125,8 @@ public:
 		cl_context context, cl_device_id device,
 		const std::vector<std::tuple<std::vector<std::string>, std::string>> &kernels,
 		std::vector<bool> *cached = nullptr,
-		std::vector<std::string> *errors = nullptr
+		std::vector<std::string> *errors = nullptr,
+		std::vector<bool> *fromSPIRV = nullptr
 	);
 
 	static std::string HashString(const std::string &ss);

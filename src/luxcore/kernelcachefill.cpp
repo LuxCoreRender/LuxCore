@@ -302,20 +302,22 @@ static void RenderTestScene(const Properties &cfgSetUpProps, const Properties &s
 }
 
 // Set the slg::compileOnlyMode flag (in order to compile the kernels without
-// rendering anything) and temporarily disable the LuxRays, SDL and SLG
-// sub-system logs in order to hide the messages related to the dummy scenes
-// used to compile the kernels.
+// rendering anything) and temporarily disable the SDL and SLG sub-system
+// logs in order to hide the messages related to the dummy scenes used to
+// compile the kernels.
+//
+// Note: the LuxRays sub-system log is left enabled because it carries the
+// kernel compilation messages (i.e. compilation time and SPIR-V translation
+// information) and it is not chatty about the dummy scenes.
 class KernelCacheFillMode {
 public:
 	KernelCacheFillMode() {
 		compileOnlyModeSaved = slg::compileOnlyMode;
 		slg::compileOnlyMode = true;
 
-		logLuxRaysEnabledSaved = logLuxRaysEnabled;
 		logSDLEnabledSaved = logSDLEnabled;
 		logSLGEnabledSaved = logSLGEnabled;
 
-		logLuxRaysEnabled = false;
 		logSDLEnabled = false;
 		logSLGEnabled = false;
 	}
@@ -323,14 +325,13 @@ public:
 	~KernelCacheFillMode() {
 		slg::compileOnlyMode = compileOnlyModeSaved;
 
-		logLuxRaysEnabled = logLuxRaysEnabledSaved;
 		logSDLEnabled = logSDLEnabledSaved;
 		logSLGEnabled = logSLGEnabledSaved;
 	}
 
 private:
 	bool compileOnlyModeSaved;
-	bool logLuxRaysEnabledSaved, logSDLEnabledSaved, logSLGEnabledSaved;
+	bool logSDLEnabledSaved, logSLGEnabledSaved;
 };
 
 static void KernelCacheFillImpl(
@@ -378,6 +379,7 @@ static void KernelCacheFillImpl(
 	}
 
 	// Parallel kernel compilation using TBB
+	const double compilationStartTime = WallClockTime();
 	tbb::parallel_for(tbb::blocked_range<size_t>(0, count),
 		[&](const tbb::blocked_range<size_t> &range) {
 			for (size_t i = range.begin(); i < range.end(); ++i) {
@@ -399,7 +401,8 @@ static void KernelCacheFillImpl(
 		});
 
 	LC_LOG("====================================================================");
-	LC_LOG("Parallel kernel compilation completed for all OpenCL engines");
+	LC_LOG("Parallel kernel compilation completed for all OpenCL engines in " <<
+			(WallClockTime() - compilationStartTime) << " seconds");
 	LC_LOG("====================================================================");
 }
 

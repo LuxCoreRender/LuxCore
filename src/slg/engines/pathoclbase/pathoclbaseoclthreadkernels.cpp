@@ -33,6 +33,7 @@
 
 #include "slg/slg.h"
 #include "slg/kernels/kernels.h"
+#include "slg/kernels/kernelsources.h"
 #include "slg/renderconfig.h"
 #include "slg/engines/pathoclbase/pathoclbase.h"
 #include "slg/samplers/sobol.h"
@@ -45,41 +46,6 @@ using namespace slg;
 // PathOCLBaseOCLRenderThread kernels related methods
 //------------------------------------------------------------------------------
 
-// Split the micro-kernels source in a (kernel name, source chunk) pair for
-// each __kernel. All chunks share the preamble (i.e. the text before the first
-// __kernel) of the source.
-static std::vector<std::pair<std::string, std::string>> SplitMicroKernelSources(
-	const std::string &src
-) {
-	std::vector<std::pair<std::string, std::string>> chunks;
-
-	static const std::string marker = "__kernel void ";
-
-	const std::size_t first = src.find(marker);
-	if (first == std::string::npos)
-		return chunks;
-
-	const std::string preamble = src.substr(0, first);
-
-	std::size_t pos = first;
-	while (pos != std::string::npos) {
-		const std::size_t nameStart = pos + marker.size();
-		const std::size_t nameEnd = src.find('(', nameStart);
-		if (nameEnd == std::string::npos)
-			throw runtime_error("Syntax error in micro-kernels source in PathOCLBaseOCLRenderThread::InitKernels()");
-		const std::string name = src.substr(nameStart, nameEnd - nameStart);
-
-		const std::size_t next = src.find(marker, pos + marker.size());
-		const std::string chunk = src.substr(pos,
-			(next == std::string::npos) ? std::string::npos : next - pos);
-
-		chunks.push_back(std::make_pair(name, preamble + chunk));
-
-		pos = next;
-	}
-
-	return chunks;
-}
 
 std::tuple<HardwareDeviceKernelUPtr, size_t>
 PathOCLBaseOCLRenderThread::CompileKernel(
@@ -109,11 +75,7 @@ void PathOCLBaseOCLRenderThread::GetKernelParamters(
 	const string renderEngineType,
 	const float epsilonMin, const float epsilonMax
 ) {
-	params.push_back("-D LUXRAYS_OPENCL_KERNEL");
-	params.push_back("-D SLG_OPENCL_KERNEL");
-	params.push_back("-D RENDER_ENGINE_" + renderEngineType);
-	params.push_back("-D PARAM_RAY_EPSILON_MIN=" + ToString(epsilonMin) + "f");
-	params.push_back("-D PARAM_RAY_EPSILON_MAX=" + ToString(epsilonMax) + "f");
+	slg::ocl::GetKernelParamters(params, renderEngineType, epsilonMin, epsilonMax);
 
 	try {
 		const auto& oclDeviceDesc =
@@ -129,161 +91,7 @@ void PathOCLBaseOCLRenderThread::GetKernelParamters(
 }
 
 string PathOCLBaseOCLRenderThread::GetKernelSources() {
-	// Compile sources
-	stringstream ssKernel;
-	ssKernel <<
-			// OpenCL LuxRays Types
-			luxrays::ocl::KernelSource_luxrays_types <<
-			luxrays::ocl::KernelSource_bvhbuild_types <<
-			luxrays::ocl::KernelSource_randomgen_types <<
-			luxrays::ocl::KernelSource_uv_types <<
-			luxrays::ocl::KernelSource_point_types <<
-			luxrays::ocl::KernelSource_vector_types <<
-			luxrays::ocl::KernelSource_normal_types <<
-			luxrays::ocl::KernelSource_triangle_types <<
-			luxrays::ocl::KernelSource_ray_types <<
-			luxrays::ocl::KernelSource_bbox_types <<
-			luxrays::ocl::KernelSource_epsilon_types <<
-			luxrays::ocl::KernelSource_color_types <<
-			luxrays::ocl::KernelSource_frame_types <<
-			luxrays::ocl::KernelSource_matrix4x4_types <<
-			luxrays::ocl::KernelSource_quaternion_types <<
-			luxrays::ocl::KernelSource_transform_types <<
-			luxrays::ocl::KernelSource_motionsystem_types <<
-			luxrays::ocl::KernelSource_trianglemesh_types <<
-			luxrays::ocl::KernelSource_exttrianglemesh_types <<
-			// OpenCL LuxRays Funcs
-			luxrays::ocl::KernelSource_randomgen_funcs <<
-			luxrays::ocl::KernelSource_atomic_funcs <<
-			luxrays::ocl::KernelSource_epsilon_funcs <<
-			luxrays::ocl::KernelSource_utils_funcs <<
-			luxrays::ocl::KernelSource_mc_funcs <<
-			luxrays::ocl::KernelSource_vector_funcs <<
-			luxrays::ocl::KernelSource_ray_funcs <<
-			luxrays::ocl::KernelSource_bbox_funcs <<
-			luxrays::ocl::KernelSource_color_funcs <<
-			luxrays::ocl::KernelSource_frame_funcs <<
-			luxrays::ocl::KernelSource_matrix4x4_funcs <<
-			luxrays::ocl::KernelSource_quaternion_funcs <<
-			luxrays::ocl::KernelSource_transform_funcs <<
-			luxrays::ocl::KernelSource_motionsystem_funcs <<
-			luxrays::ocl::KernelSource_triangle_funcs <<
-			luxrays::ocl::KernelSource_exttrianglemesh_funcs <<
-			// OpenCL SLG Types
-			slg::ocl::KernelSource_sceneobject_types <<
-			slg::ocl::KernelSource_scene_types <<
-			slg::ocl::KernelSource_hitpoint_types <<
-			slg::ocl::KernelSource_imagemap_types <<
-			slg::ocl::KernelSource_mapping_types <<
-			slg::ocl::KernelSource_texture_types <<
-			slg::ocl::KernelSource_bsdf_types <<
-			slg::ocl::KernelSource_material_types <<
-			slg::ocl::KernelSource_volume_types <<
-			slg::ocl::KernelSource_sampleresult_types <<
-			slg::ocl::KernelSource_film_types <<
-			slg::ocl::KernelSource_filter_types <<
-			slg::ocl::KernelSource_sampler_types <<
-			slg::ocl::KernelSource_camera_types <<
-			slg::ocl::KernelSource_light_types <<
-			slg::ocl::KernelSource_dlsc_types <<
-			slg::ocl::KernelSource_elvc_types <<
-			slg::ocl::KernelSource_pgic_types <<
-			// OpenCL SLG Funcs
-			slg::ocl::KernelSource_mortoncurve_funcs <<
-			slg::ocl::KernelSource_evalstack_funcs <<
-			slg::ocl::KernelSource_hitpoint_funcs << // Required by mapping funcs
-			slg::ocl::KernelSource_mapping_funcs <<
-			slg::ocl::KernelSource_imagemap_funcs <<
-			slg::ocl::KernelSource_texture_bump_funcs <<
-			slg::ocl::KernelSource_texture_noise_funcs <<
-			slg::ocl::KernelSource_texture_blender_noise_funcs <<
-			slg::ocl::KernelSource_texture_blender_noise_funcs2 <<
-			slg::ocl::KernelSource_texture_blender_funcs <<
-			slg::ocl::KernelSource_texture_abs_funcs <<
-			slg::ocl::KernelSource_texture_bilerp_funcs <<
-			slg::ocl::KernelSource_texture_blackbody_funcs <<
-			slg::ocl::KernelSource_texture_bombing_funcs <<
-			slg::ocl::KernelSource_texture_brick_funcs <<
-			slg::ocl::KernelSource_texture_clamp_funcs <<
-			slg::ocl::KernelSource_texture_colordepth_funcs <<
-			slg::ocl::KernelSource_texture_densitygrid_funcs <<
-			slg::ocl::KernelSource_texture_distort_funcs <<
-			slg::ocl::KernelSource_texture_fresnelcolor_funcs <<
-			slg::ocl::KernelSource_texture_fresnelconst_funcs <<
-			slg::ocl::KernelSource_texture_hitpoint_funcs <<
-			slg::ocl::KernelSource_texture_hsv_funcs <<
-			slg::ocl::KernelSource_texture_irregulardata_funcs <<
-			slg::ocl::KernelSource_texture_triplanar_funcs <<
-			slg::ocl::KernelSource_texture_imagemap_funcs <<
-			slg::ocl::KernelSource_texture_others_funcs <<
-			slg::ocl::KernelSource_texture_random_funcs <<
-			slg::ocl::KernelSource_texture_funcs_evalops <<
-			slg::ocl::KernelSource_texture_funcs;
-
-	ssKernel <<
-			slg::ocl::KernelSource_materialdefs_funcs_generic <<
-			slg::ocl::KernelSource_materialdefs_funcs_default <<
-			slg::ocl::KernelSource_materialdefs_funcs_thinfilmcoating <<
-			slg::ocl::KernelSource_materialdefs_funcs_archglass <<
-			slg::ocl::KernelSource_materialdefs_funcs_carpaint <<
-			slg::ocl::KernelSource_materialdefs_funcs_clearvol <<
-			slg::ocl::KernelSource_materialdefs_funcs_cloth <<
-			slg::ocl::KernelSource_materialdefs_funcs_disney <<
-			slg::ocl::KernelSource_materialdefs_funcs_glass <<
-			slg::ocl::KernelSource_materialdefs_funcs_glossy2 <<
-			slg::ocl::KernelSource_materialdefs_funcs_glossycoating <<
-			slg::ocl::KernelSource_materialdefs_funcs_glossytranslucent <<
-			slg::ocl::KernelSource_materialdefs_funcs_heterogeneousvol <<
-			slg::ocl::KernelSource_materialdefs_funcs_homogeneousvol <<
-			slg::ocl::KernelSource_materialdefs_funcs_matte <<
-			slg::ocl::KernelSource_materialdefs_funcs_matte_translucent <<
-			slg::ocl::KernelSource_materialdefs_funcs_metal2 <<
-			slg::ocl::KernelSource_materialdefs_funcs_mirror <<
-			slg::ocl::KernelSource_materialdefs_funcs_mix <<
-			slg::ocl::KernelSource_materialdefs_funcs_null <<
-			slg::ocl::KernelSource_materialdefs_funcs_roughglass <<
-			slg::ocl::KernelSource_materialdefs_funcs_roughmatte_translucent <<
-			slg::ocl::KernelSource_materialdefs_funcs_twosided <<
-			slg::ocl::KernelSource_materialdefs_funcs_velvet <<
-			slg::ocl::KernelSource_material_funcs_evalops <<
-			slg::ocl::KernelSource_material_funcs;
-
-	ssKernel <<
-			slg::ocl::KernelSource_pathdepthinfo_types <<
-			slg::ocl::KernelSource_pathvolumeinfo_types <<
-			slg::ocl::KernelSource_pathinfo_types <<
-			slg::ocl::KernelSource_pathtracer_types <<
-			// PathOCL types
-			slg::ocl::KernelSource_pathoclbase_datatypes;
-
-	ssKernel <<
-			slg::ocl::KernelSource_bsdfutils_funcs << // Must be before volumeinfo_funcs
-			slg::ocl::KernelSource_volume_funcs <<
-			slg::ocl::KernelSource_pathdepthinfo_funcs <<
-			slg::ocl::KernelSource_pathvolumeinfo_funcs <<
-			slg::ocl::KernelSource_pathinfo_funcs <<
-			slg::ocl::KernelSource_camera_funcs <<
-			slg::ocl::KernelSource_dlsc_funcs <<
-			slg::ocl::KernelSource_elvc_funcs <<
-			slg::ocl::KernelSource_lightstrategy_funcs <<
-			slg::ocl::KernelSource_light_funcs <<
-			slg::ocl::KernelSource_filter_funcs <<
-			slg::ocl::KernelSource_sampleresult_funcs <<
-			slg::ocl::KernelSource_filmdenoiser_funcs <<
-			slg::ocl::KernelSource_film_funcs <<
-			slg::ocl::KernelSource_varianceclamping_funcs <<
-			slg::ocl::KernelSource_sampler_random_funcs <<
-			slg::ocl::KernelSource_sampler_sobol_funcs <<
-			slg::ocl::KernelSource_sampler_metropolis_funcs <<
-			slg::ocl::KernelSource_sampler_tilepath_funcs <<
-			slg::ocl::KernelSource_sampler_funcs <<
-			slg::ocl::KernelSource_bsdf_funcs <<
-			slg::ocl::KernelSource_scene_funcs <<
-			slg::ocl::KernelSource_pgic_funcs <<
-			// PathOCL Funcs
-			slg::ocl::KernelSource_pathoclbase_funcs;
-
-	return ssKernel.str();
+	return slg::ocl::GetPathOCLBaseKernelSources();
 }
 
 void PathOCLBaseOCLRenderThread::InitKernels() {
@@ -357,8 +165,14 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 	//
 	// The feature can be disabled with opencl.splitkernels.enable = 0 (e.g. in
 	// case of a driver deadlocking on concurrent builds).
+	//
+	// If there is an embedded pre-compiled SPIR-V module for the monolithic
+	// source, the split is not used: all the kernels are loaded from the one
+	// program obtained by translating the SPIR-V module (there is nothing
+	// left to compile in parallel).
 	const bool isCUDADevice = (intersectionDevice.GetDeviceDesc().GetType() & DEVICE_TYPE_CUDA_ALL) != 0;
-	const bool splitKernels = !isCUDADevice &&
+	const bool hasEmbeddedSPIRV = intersectionDevice.HasEmbeddedSPIRV(kernelsParameters, fullKernelSource);
+	const bool splitKernels = !isCUDADevice && !hasEmbeddedSPIRV &&
 			renderEngine->renderConfig.GetConfig().Get(
 				Property("opencl.splitkernels.enable")(true)).Get<bool>();
 
@@ -366,7 +180,7 @@ void PathOCLBaseOCLRenderThread::InitKernels() {
 	std::unordered_map<std::string, std::size_t> microKernelIndex;
 
 	if (splitKernels) {
-		const auto microKernelSources = SplitMicroKernelSources(microKernelSource);
+		const auto microKernelSources = ocl::SplitMicroKernelSources(microKernelSource);
 
 		for (std::size_t i = 0; i < microKernelSources.size(); ++i)
 			microKernelIndex[microKernelSources[i].first] = i;

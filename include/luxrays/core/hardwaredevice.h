@@ -160,6 +160,15 @@ public:
 		const std::string &programName
 	) = 0;
 
+	// Return true if there is an embedded pre-compiled SPIR-V module matching
+	// the given program parameters and source (i.e. if the program can be
+	// built by just translating the SPIR-V module instead of compiling the
+	// source).
+	virtual bool HasEmbeddedSPIRV(const std::vector<std::string> &programParameters,
+		const std::string &programSource) const {
+		return false;
+	}
+
 	// Compile a batch of programs. The default implementation compiles the
 	// programs sequentially; devices supporting parallel compilation override
 	// this method.

@@ -80,10 +80,10 @@ add_library(luxcore_static STATIC ${LUXCORE_SRC} "${generated_header_dir}/cfg.h"
 target_link_libraries(luxcore PRIVATE
     onetbb::onetbb
     oidn::oidn
-    slg-core
-    slg-film
-    slg-kernels
-    luxrays
+    # The OpenCL kernel sources are spread over the luxrays, slg-kernels and
+    # slg-core archives with mutual references between them: the archives
+    # have to be searched repeatedly
+    "$<LINK_GROUP:RESCAN,slg-core,slg-film,slg-kernels,luxrays,spirv-embedded>"
     bcd
     robin_hood::robin_hood
     boost::boost
@@ -96,10 +96,7 @@ target_link_libraries(luxcore PRIVATE
     luxparser
 )
 target_link_libraries(luxcore_static PRIVATE
-    slg-core
-    slg-film
-    slg-kernels
-    luxrays
+    "$<LINK_GROUP:RESCAN,slg-core,slg-film,slg-kernels,luxrays,spirv-embedded>"
     bcd
     robin_hood::robin_hood
     boost::boost
