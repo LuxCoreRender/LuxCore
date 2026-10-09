@@ -753,10 +753,14 @@ bool Scene::Intersect(IntersectionDevicePtr device,
 		if (rayVolume) {
 			// This applies volume transmittance too
 			//
-			// Note: by using passThrough here, I introduce subtle correlation
-			// between scattering events and pass-through events
+			// The scattering uses its own pseudo-random number: passThrough
+			// is also the pass-through event of the hit point (i.e. used by
+			// glass to choose between reflection and transmission) and the
+			// segments without a scattering event would always select the
+			// same BSDF event
+			const float scatterU = TauswortheRandomGenerator(passThrough).floatValue();
 			Spectrum emis;
-			const float t = rayVolume->Scatter(*ray, passThrough, volInfo->IsScatteredStart(),
+			const float t = rayVolume->Scatter(*ray, scatterU, volInfo->IsScatteredStart(),
 					connectionThroughput, &emis);
 
 			// Add the volume emitted light to the appropriate light group
