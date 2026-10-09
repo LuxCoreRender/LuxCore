@@ -44,7 +44,7 @@ class IntelOIDN : public ImagePipelinePlugin {
 public:
 	IntelOIDN(const std::string filterType,
 			const int oidnMemLimit, const float sharpness,
-			bool enablePrefiltering);
+			bool enablePrefiltering, const float fireflySigma = 0.f);
 
 	virtual ImagePipelinePlugin *Copy() const;
 
@@ -70,6 +70,9 @@ private:
 			const float *albedoBuffer, const float *normalBuffer,
 			const u_int width, const u_int height,
 			const bool cleanAux) const;
+	// Local outlier suppression of the denoiser input (keeps OIDN from
+	// smearing fireflies into blobs)
+	void SuppressFireflies(float *buf, const u_int width, const u_int height) const;
 	
 	template<class Archive> void serialize(Archive &ar, const u_int version) {
 		ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(ImagePipelinePlugin);
@@ -78,6 +81,8 @@ private:
 		ar & jTileCount;
 		ar & sharpness;
 		ar & enablePrefiltering;
+		if (version >= 5)
+			ar & fireflySigma;
 	}
 
 	std::string filterType;
@@ -86,12 +91,14 @@ private:
 	int oidnMemLimit; //needs to be signed int for OIDN call
 	float sharpness;
 	bool enablePrefiltering;
+	// Firefly suppression threshold in units of local sigma (0 = off)
+	float fireflySigma;
 };
 
 }
 
 
-BOOST_CLASS_VERSION(slg::IntelOIDN, 4)
+BOOST_CLASS_VERSION(slg::IntelOIDN, 5)
 
 BOOST_CLASS_EXPORT_KEY(slg::IntelOIDN)
 
