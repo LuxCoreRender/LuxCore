@@ -33,6 +33,7 @@
 #include "luxrays/utils/utils.h"
 #include "luxrays/utils/oclerror.h"
 #include "luxrays/utils/oclcache.h"
+#include "luxrays/utils/embeddedspirv.h"
 #include "luxrays/utils/config.h"
 
 namespace luxrays {
@@ -244,6 +245,64 @@ cl_program oclKernelCache::ForcedCompile(cl_context context, cl_device_id device
 }
 
 //------------------------------------------------------------------------------
+// Embedded pre-compiled SPIR-V module translation
+//------------------------------------------------------------------------------
+
+typedef cl_program (CL_API_CALL *PFN_clCreateProgramWithIL)(cl_context,
+	const void *, std::size_t, cl_int *);
+
+// Translate the embedded pre-compiled SPIR-V module (if any) matching the
+// kernel. It returns nullptr if there is no embedded module, if the device
+// doesn't support the SPIR-V ingestion or if the translation fails; the caller
+// falls back to the compilation of the source.
+static cl_program CompileFromEmbeddedSPIRV(cl_context context, cl_device_id device,
+		const std::vector<std::string> &kernelsParameters, const std::string &kernelSource) {
+	// Check if the device supports the ingestion of SPIR-V modules
+	cl_int error;
+	std::size_t extSize;
+	error = clGetDeviceInfo(device, CL_DEVICE_EXTENSIONS, 0, nullptr, &extSize);
+	if (error != CL_SUCCESS)
+		return nullptr;
+	std::vector<char> extStr(extSize);
+	error = clGetDeviceInfo(device, CL_DEVICE_EXTENSIONS, extSize, &extStr[0], nullptr);
+	if (error != CL_SUCCESS || !strstr(&extStr[0], "cl_khr_il_program"))
+		return nullptr;
+
+	// Check if there is an embedded pre-compiled SPIR-V module for this kernel
+	const std::string hash = oclKernelPersistentCache::HashString(
+			oclKernelPersistentCache::ToOptsString(kernelsParameters)) +
+		"-" + oclKernelPersistentCache::HashString(kernelSource);
+	std::size_t spvSize;
+	const unsigned char *spvData = GetEmbeddedSPIRVModule(hash, &spvSize);
+	if (!spvData)
+		return nullptr;
+
+	// clCreateProgramWithIL is provided by the cl_khr_il_program extension
+	// with OpenCL < 2.1
+	cl_platform_id platform;
+	error = clGetDeviceInfo(device, CL_DEVICE_PLATFORM, sizeof(cl_platform_id), &platform, nullptr);
+	if (error != CL_SUCCESS)
+		return nullptr;
+	auto clCreateProgramWithILFn = (PFN_clCreateProgramWithIL)
+		clGetExtensionFunctionAddressForPlatform(platform, "clCreateProgramWithIL");
+	if (!clCreateProgramWithILFn)
+		return nullptr;
+
+	cl_program program = clCreateProgramWithILFn(context, spvData, spvSize, &error);
+	if (error != CL_SUCCESS)
+		return nullptr;
+
+	// The -D parameters are already baked in the SPIR-V module
+	error = clBuildProgram(program, 1, &device, nullptr, nullptr, nullptr);
+	if (error != CL_SUCCESS) {
+		clReleaseProgram(program);
+		return nullptr;
+	}
+
+	return program;
+}
+
+//------------------------------------------------------------------------------
 // oclKernelPersistentCache
 //------------------------------------------------------------------------------
 
@@ -293,9 +352,11 @@ u_int oclKernelPersistentCache::HashBin(const char *s, const std::size_t size) {
 
 cl_program oclKernelPersistentCache::Compile(cl_context context, cl_device_id device,
 		const std::vector<std::string> &kernelsParameters, const std::string &kernelSource,
-		bool *cached, std::string *errorStr) {
+		bool *cached, std::string *errorStr, bool *fromSPIRV) {
 	if (errorStr)
 		*errorStr = "";
+	if (fromSPIRV)
+		*fromSPIRV = false;
 
 	// Get device info (thread-safe, no shared state)
 	cl_platform_id platform;
@@ -385,10 +446,19 @@ cl_program oclKernelPersistentCache::Compile(cl_context context, cl_device_id de
 	if (useCache && cachedProgram) {
 		return cachedProgram;
 	}
-	
-	// It isn't available or cache was invalid, compile the source
-	cl_program program = ForcedCompile(context, device,
-			kernelsParameters, kernelSource, errorStr);
+
+	// Try to translate the embedded pre-compiled SPIR-V module (if any)
+	// before falling back to the compilation of the source
+	cl_program program = CompileFromEmbeddedSPIRV(context, device,
+			kernelsParameters, kernelSource);
+
+	// It isn't available or the translation failed, compile the source
+	if (program) {
+		if (fromSPIRV)
+			*fromSPIRV = true;
+	} else
+		program = ForcedCompile(context, device,
+				kernelsParameters, kernelSource, errorStr);
 	if (!program)
 		return nullptr;
 
@@ -458,47 +528,54 @@ bool oclKernelPersistentCache::IsParallelCompilationEnabled() {
 std::vector<cl_program> oclKernelPersistentCache::CompileMultiple(
 		cl_context context, cl_device_id device,
 		const std::vector<std::tuple<std::vector<std::string>, std::string>> &kernels,
-		std::vector<bool> *cached, std::vector<std::string> *errors) {
-	
+		std::vector<bool> *cached, std::vector<std::string> *errors,
+		std::vector<bool> *fromSPIRV) {
+
 	std::vector<cl_program> programs(kernels.size(), nullptr);
-	
+
 	if (!IsParallelCompilationEnabled() || kernels.empty()) {
 		// Fallback to sequential compilation
 		if (cached) cached->resize(kernels.size());
 		if (errors) errors->resize(kernels.size());
-		
+		if (fromSPIRV) fromSPIRV->resize(kernels.size());
+
 		for (std::size_t i = 0; i < kernels.size(); ++i) {
 			const auto &[params, source] = kernels[i];
 			bool isCached = false;
+			bool isFromSPIRV = false;
 			std::string error;
-			
-			programs[i] = Compile(context, device, params, source, &isCached, &error);
-			
+
+			programs[i] = Compile(context, device, params, source, &isCached, &error, &isFromSPIRV);
+
 			if (cached) (*cached)[i] = isCached;
 			if (errors) (*errors)[i] = error;
+			if (fromSPIRV) (*fromSPIRV)[i] = isFromSPIRV;
 		}
-		
+
 		return programs;
 	}
-	
+
 	// Parallel compilation using TBB
 	if (cached) cached->resize(kernels.size());
 	if (errors) errors->resize(kernels.size());
-	
+	if (fromSPIRV) fromSPIRV->resize(kernels.size());
+
 	tbb::parallel_for(tbb::blocked_range<std::size_t>(0, kernels.size()),
 		[&](const tbb::blocked_range<std::size_t> &range) {
 			for (std::size_t i = range.begin(); i < range.end(); ++i) {
 				const auto &[params, source] = kernels[i];
 				bool isCached = false;
+				bool isFromSPIRV = false;
 				std::string error;
-				
-				programs[i] = Compile(context, device, params, source, &isCached, &error);
-				
+
+				programs[i] = Compile(context, device, params, source, &isCached, &error, &isFromSPIRV);
+
 				if (cached) (*cached)[i] = isCached;
 				if (errors) (*errors)[i] = error;
+				if (fromSPIRV) (*fromSPIRV)[i] = isFromSPIRV;
 			}
 		});
-	
+
 	return programs;
 }
 

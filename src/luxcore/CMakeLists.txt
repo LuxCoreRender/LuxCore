@@ -80,10 +80,8 @@ add_library(luxcore_static STATIC ${LUXCORE_SRC} "${generated_header_dir}/cfg.h"
 target_link_libraries(luxcore PRIVATE
     onetbb::onetbb
     oidn::oidn
-    slg-core
-    slg-film
-    slg-kernels
-    luxrays
+    # See the KERNEL_ARCHIVES_LINK definition in the main CMakeLists.txt
+    ${KERNEL_ARCHIVES_LINK}
     bcd
     robin_hood::robin_hood
     boost::boost
@@ -96,10 +94,8 @@ target_link_libraries(luxcore PRIVATE
     luxparser
 )
 target_link_libraries(luxcore_static PRIVATE
-    slg-core
-    slg-film
-    slg-kernels
-    luxrays
+    # See the KERNEL_ARCHIVES_LINK definition in the main CMakeLists.txt
+    ${KERNEL_ARCHIVES_LINK}
     bcd
     robin_hood::robin_hood
     boost::boost

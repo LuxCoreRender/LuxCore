@@ -308,6 +308,14 @@ public:
 		const std::vector<ProgramRequest> &requests
 	) override;
 
+	virtual bool HasEmbeddedSPIRV(const std::vector<std::string> &programParameters,
+		const std::string &programSource) const override;
+
+	// Return the parameters used to compile a program: the given parameters
+	// plus the device and OS related ones plus the additional compile options
+	std::vector<std::string> GetCompleteProgramParameters(
+		const std::vector<std::string> &programParameters) const;
+
 	virtual HardwareDeviceKernelUPtr GetKernel(
 		HardwareDeviceProgramRef program,
 		const std::string &kernelName

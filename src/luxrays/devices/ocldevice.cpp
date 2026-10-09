@@ -26,6 +26,7 @@
 #include "luxrays/devices/ocldevice.h"
 #include "luxrays/kernels/kernels.h"
 #include "luxrays/utils/strutils.h"
+#include "luxrays/utils/embeddedspirv.h"
 #include <chrono>
 
 using namespace std;
@@ -224,11 +225,10 @@ void OpenCLDevice::Stop() {
 // Kernels handling for hardware (aka GPU) only applications
 //------------------------------------------------------------------------------
 
-HardwareDeviceProgramUPtr OpenCLDevice::CompileProgram(
-	const vector<string> &programParameters, const string &programSource,	
-	const string &programName
-) {
-	std::vector <std::string> oclProgramParameters = programParameters;
+std::vector<std::string> OpenCLDevice::GetCompleteProgramParameters(
+	const vector<string> &programParameters
+) const {
+	std::vector<std::string> oclProgramParameters = programParameters;
 	oclProgramParameters.push_back("-D LUXRAYS_OPENCL_DEVICE");
 #if defined (__APPLE__)
 	oclProgramParameters.push_back("-D LUXRAYS_OS_APPLE");
@@ -240,6 +240,31 @@ HardwareDeviceProgramUPtr OpenCLDevice::CompileProgram(
 
 	oclProgramParameters.insert(oclProgramParameters.end(),
 			additionalCompileOpts.begin(), additionalCompileOpts.end());
+
+	return oclProgramParameters;
+}
+
+bool OpenCLDevice::HasEmbeddedSPIRV(const std::vector<std::string> &programParameters,
+		const std::string &programSource) const {
+	// The source compiled at run time includes the OpenCL device functions
+	// preamble (see CompilePrograms())
+	const std::string fullSource =
+		luxrays::ocl::KernelSource_ocldevice_funcs + programSource;
+
+	const std::string hash = oclKernelPersistentCache::HashString(
+			oclKernelPersistentCache::ToOptsString(GetCompleteProgramParameters(programParameters))) +
+		"-" + oclKernelPersistentCache::HashString(fullSource);
+
+	std::size_t spvSize;
+	return GetEmbeddedSPIRVModule(hash, &spvSize) != nullptr;
+}
+
+HardwareDeviceProgramUPtr OpenCLDevice::CompileProgram(
+	const vector<string> &programParameters, const string &programSource,
+	const string &programName
+) {
+	const std::vector<std::string> oclProgramParameters =
+		GetCompleteProgramParameters(programParameters);
 
 	LR_LOG(deviceContext, "[" << programName << "] Compiler options: " << oclKernelPersistentCache::ToOptsString(oclProgramParameters));
 	LR_LOG(deviceContext, "[" << programName << "] OpenCL compiler: " << GetOpenCLCompilerInfo(deviceDesc.GetOCLDevice()));
@@ -253,10 +278,11 @@ HardwareDeviceProgramUPtr OpenCLDevice::CompileProgram(
 		programSource;
 
 	bool cached;
+	bool fromSPIRV = false;
 	string error;
 	cl_program oclProgram = kernelCache->Compile(oclContext, deviceDesc.GetOCLDevice(),
 			oclProgramParameters, oclProgramSource,
-			&cached, &error);
+			&cached, &error, &fromSPIRV);
 	if (!oclProgram) {
 		LR_LOG(deviceContext, "[" << programName << "] OpenCL program compilation error" << endl << error);
 
@@ -265,7 +291,8 @@ HardwareDeviceProgramUPtr OpenCLDevice::CompileProgram(
 
 	auto endTime = std::chrono::high_resolution_clock::now();
 	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
-	LR_LOG(deviceContext, "[" << programName << "] Compilation completed in " << duration.count() << " ms");
+	LR_LOG(deviceContext, "[" << programName << "] Compilation completed in " << duration.count() << " ms" <<
+			(fromSPIRV ? " (translated from embedded SPIR-V)" : " (compiled from source)"));
 
 	if (cached) {
 		LR_LOG(deviceContext, "[" << programName << "] Program cached");
@@ -302,17 +329,8 @@ std::vector<HardwareDeviceProgramUPtr> OpenCLDevice::CompilePrograms(
 	std::vector<std::tuple<std::vector<std::string>, std::string>> kernels;
 	kernels.reserve(requests.size());
 	for (const auto &request : requests) {
-		std::vector<std::string> oclProgramParameters = request.parameters;
-		oclProgramParameters.push_back("-D LUXRAYS_OPENCL_DEVICE");
-#if defined (__APPLE__)
-		oclProgramParameters.push_back("-D LUXRAYS_OS_APPLE");
-#elif defined (WIN32)
-		oclProgramParameters.push_back("-D LUXRAYS_OS_WINDOWS");
-#elif defined (__linux__)
-		oclProgramParameters.push_back("-D LUXRAYS_OS_LINUX");
-#endif
-		oclProgramParameters.insert(oclProgramParameters.end(),
-				additionalCompileOpts.begin(), additionalCompileOpts.end());
+		const std::vector<std::string> oclProgramParameters =
+			GetCompleteProgramParameters(request.parameters);
 
 		LR_LOG(deviceContext, "[" << request.name << "] Compiler options: " <<
 			oclKernelPersistentCache::ToOptsString(oclProgramParameters));
@@ -325,9 +343,10 @@ std::vector<HardwareDeviceProgramUPtr> OpenCLDevice::CompilePrograms(
 	LR_LOG(deviceContext, "[" << requests.size() << " programs] Compiling kernels in parallel");
 
 	std::vector<bool> cached;
+	std::vector<bool> fromSPIRV;
 	std::vector<std::string> errors;
 	std::vector<cl_program> oclPrograms = kernelCache->CompileMultiple(
-			oclContext, deviceDesc.GetOCLDevice(), kernels, &cached, &errors);
+			oclContext, deviceDesc.GetOCLDevice(), kernels, &cached, &errors, &fromSPIRV);
 
 	// Check for errors
 	for (std::size_t i = 0; i < requests.size(); ++i) {
@@ -360,7 +379,9 @@ std::vector<HardwareDeviceProgramUPtr> OpenCLDevice::CompilePrograms(
 	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
 	for (std::size_t i = 0; i < requests.size(); ++i) {
 		LR_LOG(deviceContext, "[" << requests[i].name << "] Compilation completed in " <<
-			duration.count() << " ms" << (cached[i] ? " (cached)" : ""));
+			duration.count() << " ms" <<
+			(cached[i] ? " (cached)" :
+				(fromSPIRV[i] ? " (translated from embedded SPIR-V)" : " (compiled from source)")));
 	}
 
 	return programs;
