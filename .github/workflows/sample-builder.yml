@@ -259,16 +259,19 @@ jobs:
             # with C++20 (in particular: joining threads)
 
             # llvm
-            brew install llvm@20
-            LLVM_PREFIX=$(brew --prefix llvm@20)
+            # Note: llvm@21 (as in the wheel-builder) because llvm@20
+            # doesn't implement all the C++23 ranges features used by the
+            # code (i.e. std::ranges::views::join_with)
+            brew install llvm@21
+            LLVM_PREFIX=$(brew --prefix llvm@21)
             echo "CC=clang" >> $GITHUB_ENV
             echo "CXX=clang++" >> $GITHUB_ENV
             echo "AR=llvm-ar" >> $GITHUB_ENV
             echo "RANLIB=llvm-ranlib" >> $GITHUB_ENV
 
             # lld
-            brew install lld@20
-            LLD_PREFIX=$(brew --prefix lld@20)
+            brew install lld@21
+            LLD_PREFIX=$(brew --prefix lld@21)
 
             # Set paths
             echo "PATH=${LLVM_PREFIX}/bin:${LLD_PREFIX}/bin:$PATH" >> $GITHUB_ENV
