@@ -351,10 +351,17 @@ jobs:
             GH_TOKEN=${{ secrets.GITHUB_TOKEN }}
             LUX_BUILD_TYPE=${{ env.BUILD_TYPE }}
             DEPS_WITHOUT_SUDO=1
-          # The pre-baked SPIR-V modules (from the bake-spirv job) are used
-          # for the OpenCL kernels pre-compilation: inside the container,
-          # the repository is mounted under /project
-          CIBW_ENVIRONMENT_LINUX: LUXRAYS_SPIRV_BAKED_DIR=/project/spirv-baked
+          # Note: CIBW_ENVIRONMENT_LINUX REPLACES CIBW_ENVIRONMENT (not in
+          # addition to it): it must repeat the whole environment, plus the
+          # pre-baked SPIR-V modules directory (inside the container, the
+          # repository is mounted under /project)
+          CIBW_ENVIRONMENT_LINUX: >
+            SKBUILD_CMAKE_ARGS='--preset conan-default;--log-level=VERBOSE;-DLUXCORE_VERSION=${{ steps.output-version.outputs.version }};-G Ninja Multi-Config'
+            SKBUILD_CMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
+            GH_TOKEN=${{ secrets.GITHUB_TOKEN }}
+            LUX_BUILD_TYPE=${{ env.BUILD_TYPE }}
+            DEPS_WITHOUT_SUDO=1
+            LUXRAYS_SPIRV_BAKED_DIR=/project/spirv-baked
           CIBW_ENVIRONMENT_PASS_LINUX: |
             CC
             CXX
