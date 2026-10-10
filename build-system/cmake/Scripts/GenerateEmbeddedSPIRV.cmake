@@ -25,7 +25,9 @@ if(NOT DEFINED INPUT_DIR OR NOT DEFINED OUTPUT_DIR)
   message(FATAL_ERROR "Usage: cmake -DINPUT_DIR=... -DOUTPUT_DIR=... -P GenerateEmbeddedSPIRV.cmake")
 endif()
 
-set(MAX_STRING_LITERAL_SIZE 60000)
+# The MSVC C2026 ('string too big') limit on a string literal is 16380
+# bytes: stay safely below it (GCC and Clamp have much higher limits)
+set(MAX_STRING_LITERAL_SIZE 16000)
 
 file(STRINGS ${INPUT_DIR}/spirvmanifest.txt SPIRV_MANIFEST)
 
