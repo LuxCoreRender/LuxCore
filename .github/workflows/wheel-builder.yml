@@ -77,11 +77,23 @@ jobs:
         with:
           python-version: 3.13
 
-      - name: Install clang
+      - name: Install build tools
         shell: bash
         run: |
           sudo apt-get update -y
+
+          # GCC 14 is required by the project (the runner default is 13)
+          sudo apt-get install -y gcc-14 g++-14
+          echo "CC=gcc-14" >> $GITHUB_ENV
+          echo "CXX=g++-14" >> $GITHUB_ENV
+
+          # On Ubuntu, the clang SPIR-V target delegates to the external
+          # SPIRV-LLVM-Translator: install the version matching the clang
+          # one and expose it with the name clang looks for
           sudo apt-get install -y clang
+          CLANG_MAJOR=$(clang --version | grep -oE 'version [0-9]+' | grep -oE '[0-9]+')
+          sudo apt-get install -y "llvm-spirv-${CLANG_MAJOR}"
+          sudo ln -sf "/usr/bin/llvm-spirv-${CLANG_MAJOR}" /usr/local/bin/llvm-spirv
 
           # Check the exact capability needed by the bake (i.e. the
           # compilation of OpenCL C in SPIR-V format)
@@ -92,8 +104,15 @@ jobs:
       - name: Install dependencies
         shell: bash
         run: |
-          pip install conan wheel
-          echo "$GH_TOKEN" | gh auth login --with-token
+          # Note: conan is pinned (a too old version may be already
+          # installed) and cmake is installed through pip (it may be
+          # missing, depending on the runner environment)
+          pip install "conan==2.21" cmake ninja wheel
+          # 'gh' is used only for the dependencies attestation check and is
+          # optional (a warning is printed if it is not available)
+          if command -v gh > /dev/null; then
+            echo "$GH_TOKEN" | gh auth login --with-token
+          fi
           make deps
 
       - name: Bake the SPIR-V modules
