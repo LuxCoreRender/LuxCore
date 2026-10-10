@@ -178,13 +178,17 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          choco install llvm -y --no-progress
+          # The runner image ships a preinstalled (older) LLVM: choco install
+          # would be a no-op, upgrade is required to get a recent one
+          # (the spirv64 target is available from LLVM 18)
+          choco upgrade llvm -y --no-progress
           # Note: choco updates the machine PATH but the current shell
           # doesn't see it, so clang must be invoked by its full path.
           # GITHUB_PATH makes the runner PREPEND the directory for the
           # following steps: the clang bundled with Visual Studio (used as
           # fallback by find_program) is built without the SPIR-V target.
           $llvmClang = "C:\Program Files\LLVM\bin\clang.exe"
+          & $llvmClang --version
           if (-not ((& $llvmClang --print-targets) -match "spirv64")) {
             Write-Error "clang lacks the spirv64 target"
             exit 1
