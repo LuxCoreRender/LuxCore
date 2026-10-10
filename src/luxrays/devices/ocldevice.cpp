@@ -242,6 +242,12 @@ std::vector<std::string> OpenCLDevice::GetCompleteProgramParameters(
 
 bool OpenCLDevice::HasEmbeddedSPIRV(const std::vector<std::string> &programParameters,
 		const std::string &programSource) const {
+	// The device must support the ingestion of the SPIR-V modules, else the
+	// embedded modules can not be used (and the kernels would silently fall
+	// back to the source compilation)
+	if (!oclKernelPersistentCache::SupportsSPIRVIngestion(deviceDesc.GetOCLDevice()))
+		return false;
+
 	// The source compiled at run time includes the OpenCL device functions
 	// preamble (see CompilePrograms())
 	const std::string fullSource =

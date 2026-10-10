@@ -243,17 +243,39 @@ typedef cl_program (CL_API_CALL *PFN_clCreateProgramWithIL)(cl_context,
 // kernel. It returns nullptr if there is no embedded module, if the device
 // doesn't support the SPIR-V ingestion or if the translation fails; the caller
 // falls back to the compilation of the source.
-static cl_program CompileFromEmbeddedSPIRV(cl_context context, cl_device_id device,
-		const std::vector<std::string> &kernelsParameters, const std::string &kernelSource) {
+bool oclKernelPersistentCache::SupportsSPIRVIngestion(cl_device_id device,
+		cl_platform_id *platform) {
 	// Check if the device supports the ingestion of SPIR-V modules
 	cl_int error;
 	std::size_t extSize;
 	error = clGetDeviceInfo(device, CL_DEVICE_EXTENSIONS, 0, nullptr, &extSize);
 	if (error != CL_SUCCESS)
-		return nullptr;
+		return false;
 	std::vector<char> extStr(extSize);
 	error = clGetDeviceInfo(device, CL_DEVICE_EXTENSIONS, extSize, &extStr[0], nullptr);
 	if (error != CL_SUCCESS || !strstr(&extStr[0], "cl_khr_il_program"))
+		return false;
+
+	cl_platform_id devPlatform;
+	error = clGetDeviceInfo(device, CL_DEVICE_PLATFORM, sizeof(cl_platform_id), &devPlatform, nullptr);
+	if (error != CL_SUCCESS)
+		return false;
+
+	// clCreateProgramWithIL is provided by the cl_khr_il_program extension
+	// with OpenCL < 2.1
+	if (!clGetExtensionFunctionAddressForPlatform(devPlatform, "clCreateProgramWithIL"))
+		return false;
+
+	if (platform)
+		*platform = devPlatform;
+	return true;
+}
+
+static cl_program CompileFromEmbeddedSPIRV(cl_context context, cl_device_id device,
+		const std::vector<std::string> &kernelsParameters, const std::string &kernelSource) {
+	// Check if the device supports the ingestion of SPIR-V modules
+	cl_platform_id platform;
+	if (!oclKernelPersistentCache::SupportsSPIRVIngestion(device, &platform))
 		return nullptr;
 
 	// Check if there is an embedded pre-compiled SPIR-V module for this kernel
@@ -265,17 +287,12 @@ static cl_program CompileFromEmbeddedSPIRV(cl_context context, cl_device_id devi
 	if (!spvData)
 		return nullptr;
 
-	// clCreateProgramWithIL is provided by the cl_khr_il_program extension
-	// with OpenCL < 2.1
-	cl_platform_id platform;
-	error = clGetDeviceInfo(device, CL_DEVICE_PLATFORM, sizeof(cl_platform_id), &platform, nullptr);
-	if (error != CL_SUCCESS)
-		return nullptr;
 	auto clCreateProgramWithILFn = (PFN_clCreateProgramWithIL)
 		clGetExtensionFunctionAddressForPlatform(platform, "clCreateProgramWithIL");
 	if (!clCreateProgramWithILFn)
 		return nullptr;
 
+	cl_int error;
 	cl_program program = clCreateProgramWithILFn(context, spvData, spvSize, &error);
 	if (error != CL_SUCCESS)
 		return nullptr;
