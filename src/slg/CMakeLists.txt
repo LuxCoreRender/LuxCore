@@ -587,7 +587,10 @@ if(LUXRAYS_PRECOMPILE_SPIRV AND NOT LUXRAYS_DISABLE_OPENCL AND NOT CMAKE_CROSSCO
         -DINPUT_DIR=${spirv_baked_dir}
         -DOUTPUT_DIR=${spirv_dir}
         -P "${PROJECT_SOURCE_DIR}/build-system/cmake/Scripts/GenerateEmbeddedSPIRV.cmake"
-      DEPENDS ${spirv_baked_dir}/spirvmanifest.txt ${spirv_spv_files}
+      DEPENDS
+        ${spirv_baked_dir}/spirvmanifest.txt
+        ${spirv_spv_files}
+        "${PROJECT_SOURCE_DIR}/build-system/cmake/Scripts/GenerateEmbeddedSPIRV.cmake"
       COMMENT "Generating the embedded SPIR-V modules registry"
     )
 
