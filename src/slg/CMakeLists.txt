@@ -674,6 +674,12 @@ target_link_libraries(slg-kernels PRIVATE boost::boost OpenMP::OpenMP_CXX)
 
 option(LUXRAYS_PRECOMPILE_SPIRV "Pre-compile the OpenCL kernels in SPIR-V format at build time" ON)
 
+if(LUXRAYS_PRECOMPILE_SPIRV AND APPLE)
+  # Apple OpenCL doesn't support the ingestion of SPIR-V modules
+  # (cl_khr_il_program): there is no point in baking them
+  set(LUXRAYS_PRECOMPILE_SPIRV OFF)
+endif()
+
 if(LUXRAYS_PRECOMPILE_SPIRV AND NOT LUXRAYS_DISABLE_OPENCL AND NOT CMAKE_CROSSCOMPILING)
   find_program(CLANG_EXECUTABLE NAMES clang clang-20 clang-19 clang-18 clang-17)
 

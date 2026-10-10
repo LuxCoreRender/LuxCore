@@ -167,6 +167,18 @@ jobs:
         with:
           arch: ${{ runner.arch == 'ARM64' && 'arm64' || 'x64' }}
 
+      - name: Install LLVM (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          choco install llvm -y --no-progress
+          # LLVM is required for the OpenCL kernels pre-compilation in
+          # SPIR-V format: fail if it doesn't support the needed target
+          if (-not ((clang --print-targets) -match "spirv64")) {
+            Write-Error "clang lacks the spirv64 target"
+            exit 1
+          }
+
       - name: Prepare Linux
         if: runner.os == 'Linux'
         shell: bash
@@ -293,6 +305,11 @@ jobs:
             GH_TOKEN=${{ secrets.GITHUB_TOKEN }}
             LUX_BUILD_TYPE=${{ env.BUILD_TYPE }}
             DEPS_WITHOUT_SUDO=1
+          # Make the conda-installed clang (used for the OpenCL kernels
+          # pre-compilation in SPIR-V format, see CIBW_BEFORE_ALL_LINUX)
+          # available in the build step: the build shell doesn't source the
+          # conan .bashrc set up by conda init
+          CIBW_ENVIRONMENT_LINUX: PATH=/project/miniconda3/bin:$PATH
           CIBW_ENVIRONMENT_PASS_LINUX: |
             CC
             CXX
@@ -336,6 +353,12 @@ jobs:
             # Install gh
             conda install gh --channel conda-forge -y
             echo ${{ secrets.GITHUB_TOKEN }} | gh auth login --with-token
+
+            # Install clang (with SPIR-V target support) for the OpenCL
+            # kernels pre-compilation
+            conda install "conda-forge::clang>=18" -y
+            clang --print-targets | grep -q spirv64 \
+              || (echo "clang lacks the spirv64 target" && false)
 
             # Manylinux_2_34 compatibility (for future use)
             if [[ ${{ env.GLIBC_VERSION }} != 2_28 ]]; then
