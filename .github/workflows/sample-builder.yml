@@ -189,8 +189,16 @@ jobs:
           # fallback by find_program) is built without the SPIR-V target.
           $llvmClang = "C:\Program Files\LLVM\bin\clang.exe"
           & $llvmClang --version
-          if (-not ((& $llvmClang --print-targets) -match "spirv64")) {
-            Write-Error "clang lacks the spirv64 target"
+
+          # Check the exact capability needed by the build (i.e. the
+          # compilation of OpenCL C in SPIR-V format) instead of the
+          # target list
+          Set-Content -Path "$env:TEMP\spirv-probe.cl" -Value "__kernel void LuxCoreSPIRVProbe() {}"
+          & $llvmClang --target=spirv64-unknown-unknown -x cl -c "$env:TEMP\spirv-probe.cl" -o "$env:TEMP\spirv-probe.spv"
+          if ($LASTEXITCODE -ne 0 -or -not (Test-Path "$env:TEMP\spirv-probe.spv")) {
+            # Diagnosis: the available targets
+            & $llvmClang --print-targets
+            Write-Error "clang can not compile OpenCL C in SPIR-V format (see the target list above)"
             exit 1
           }
           Add-Content $env:GITHUB_PATH "C:\Program Files\LLVM\bin"
@@ -321,10 +329,13 @@ jobs:
             ccache -p
 
             # Install clang (with SPIR-V target support) for the OpenCL
-            # kernels pre-compilation
+            # kernels pre-compilation. Check the exact capability needed
+            # by the build (i.e. the compilation of OpenCL C in SPIR-V
+            # format) instead of the target list
             conda install "conda-forge::clang>=18" -y
-            clang --print-targets | grep -q spirv64 \
-              || (echo "clang lacks the spirv64 target" && false)
+            echo "__kernel void LuxCoreSPIRVProbe() {}" > /tmp/spirv-probe.cl
+            clang --target=spirv64-unknown-unknown -x cl -c /tmp/spirv-probe.cl -o /tmp/spirv-probe.spv \
+              || (echo "clang can not compile OpenCL C in SPIR-V format" && false)
 
             # Build
             make deps

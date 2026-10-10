@@ -684,15 +684,21 @@ if(LUXRAYS_PRECOMPILE_SPIRV AND NOT LUXRAYS_DISABLE_OPENCL AND NOT CMAKE_CROSSCO
   find_program(CLANG_EXECUTABLE NAMES clang clang-20 clang-19 clang-18 clang-17)
 
   if(CLANG_EXECUTABLE)
-    # Check if the clang supports the SPIR-V target
+    # Check if the clang can compile OpenCL C in SPIR-V format (the target
+    # list given by --print-targets is not reliable across builds)
+    set(spirv_probe_cl "${CMAKE_BINARY_DIR}/spirv-probe.cl")
+    set(spirv_probe_spv "${CMAKE_BINARY_DIR}/spirv-probe.spv")
+    file(WRITE ${spirv_probe_cl} "__kernel void LuxCoreSPIRVProbe() {}\n")
     execute_process(
-      COMMAND ${CLANG_EXECUTABLE} --print-targets
-      OUTPUT_VARIABLE CLANG_TARGETS
-      OUTPUT_STRIP_TRAILING_WHITESPACE
-      ERROR_QUIET
+      COMMAND ${CLANG_EXECUTABLE} --target=spirv64-unknown-unknown -x cl
+      -c ${spirv_probe_cl} -o ${spirv_probe_spv}
+      RESULT_VARIABLE CLANG_SPIRV_PROBE_RESULT
+      OUTPUT_QUIET ERROR_QUIET
     )
+    file(REMOVE ${spirv_probe_cl})
 
-    if("${CLANG_TARGETS}" MATCHES "spirv64")
+    if(CLANG_SPIRV_PROBE_RESULT EQUAL 0)
+      file(REMOVE ${spirv_probe_spv})
       message(STATUS "Pre-compiling the OpenCL kernels in SPIR-V format with ${CLANG_EXECUTABLE}")
 
       set(spirv_dir "${GENERATED_DIR}/spirv")
